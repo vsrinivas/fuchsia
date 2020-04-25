@@ -1,0 +1,62 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.hardware.ram.metrics;
+
+using zx;
+
+const uint32 MAX_COUNT_CHANNELS = 8;
+
+/// Configures bus hardware to make one measurement.
+struct BandwidthMeasurementConfig {
+    /// How many bus cycles to perform the measurement over.
+    uint64 cycles_to_measure;
+    /// Contains which ports to aggregate for each channel.
+    array<uint64>:MAX_COUNT_CHANNELS channels;
+};
+
+/// Contains the actual buys cycles granted to each channel. Not all hardware
+/// supports all 3 counters. If a counter is not supported the value
+///  returned is zero.
+struct GrantedCyclesResult {
+    uint64 read_cycles;
+    uint64 write_cycles;
+    uint64 readwrite_cycles;
+};
+
+struct BandwidthInfo {
+    // Time when the measurement started.
+    zx.time timestamp;
+    array<GrantedCyclesResult>:MAX_COUNT_CHANNELS channels;
+};
+
+/// Interface to obtain memory bandwidth usage measurements from hardware
+/// cycle counters. The interface supports up to 6 hardware counters
+/// (called channels) which aggregate up to 64 unique buses (called ports).
+///
+/// An example of a possible configuration:
+/// channel[0] <- A53x4 + M3x1
+/// channel[1] <- gpu
+/// channel[2] <- vpu + h264_decoder + hdmi
+/// channel[3] <- image_isp + h264_encoder
+///
+/// The number of channels and which bit patterns to use for each port
+/// are hardware specific. Proper estimation of actual bandwidth and
+/// bandwidth percentage utilization also requires knowledge of the memory
+/// configuration and possibly clock rates.
+///
+protocol Device {
+    /// Trigger one measurement. This can be called again before the reply
+    /// arrives but it won't be serviced until previous requests are completed.
+    ///
+    /// The return on success is the measurement.
+    ///
+    /// The return on failure are as follows:
+    /// ZX_ERR_INVALID_ARGS : The BandwidthMeasurementConfig values are incorrect.
+    /// ZX_ERR_NOT_SUPPORTED : The BandwidthMeasurementConfig values are not supported
+    /// by the hardware.
+    /// ZX_ERR_SHOULD_WAIT : Too many requests pending. A future request might succeed.
+    /// Other errors indicate internal failure.
+    MeasureBandwidth(BandwidthMeasurementConfig config) -> (BandwidthInfo info) error zx.status;
+};
