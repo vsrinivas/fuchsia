@@ -311,7 +311,6 @@ impl PhyManagerApi for PhyManager {
         }
     }
 
-    /// Destroys the interface associated with the given interface ID.
     async fn destroy_ap_iface(&mut self, iface_id: u16) -> Result<(), PhyManagerError> {
         let iface_info = match self.query_iface(iface_id).await? {
             Some(iface_info) => iface_info,

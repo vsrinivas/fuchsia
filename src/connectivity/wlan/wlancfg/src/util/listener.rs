@@ -6,12 +6,12 @@
 ///!
 use {
     fidl_fuchsia_wlan_policy as fidl_policy,
-    futures::{channel::mpsc, prelude::*, select, stream::FuturesUnordered, Future},
+    futures::{channel::mpsc, future::BoxFuture, prelude::*, select, stream::FuturesUnordered},
 };
 
 pub trait Listener<U> {
     /// Sends an update to the listener.  Returns itself boxed if the update was sent successfully.
-    fn notify_listener(self, update: U) -> Box<dyn Future<Output = Option<Box<Self>>> + Unpin>;
+    fn notify_listener(self, update: U) -> BoxFuture<'static, Option<Box<Self>>>;
 }
 
 pub trait UpdateCloner {
@@ -98,10 +98,10 @@ impl Listener<fidl_policy::ClientStateSummary> for fidl_policy::ClientStateUpdat
     fn notify_listener(
         self,
         update: fidl_policy::ClientStateSummary,
-    ) -> Box<dyn Future<Output = Option<Box<Self>>> + Unpin> {
+    ) -> BoxFuture<'static, Option<Box<Self>>> {
         let fut =
             async move { self.on_client_state_update(update).await.ok().map(|()| Box::new(self)) };
-        Box::new(Box::pin(fut))
+        fut.boxed()
     }
 }
 
@@ -109,6 +109,55 @@ impl Listener<fidl_policy::ClientStateSummary> for fidl_policy::ClientStateUpdat
 pub type ClientMessage =
     Message<fidl_policy::ClientStateUpdatesProxy, fidl_policy::ClientStateSummary>;
 pub type ClientMessageSender = mpsc::UnboundedSender<ClientMessage>;
+
+impl UpdateCloner for fidl_policy::AccessPointState {
+    fn clone(&self) -> fidl_policy::AccessPointState {
+        fidl_policy::AccessPointState {
+            state: self.state,
+            mode: self.mode,
+            band: self.band,
+            frequency: self.frequency,
+            clients: self
+                .clients
+                .as_ref()
+                .map(|info| fidl_policy::ConnectedClientInformation { count: info.count }),
+        }
+    }
+
+    fn default() -> fidl_policy::AccessPointState {
+        fidl_policy::AccessPointState {
+            state: None,
+            mode: None,
+            band: None,
+            frequency: None,
+            clients: None,
+        }
+    }
+}
+
+impl Listener<fidl_policy::AccessPointState> for fidl_policy::AccessPointStateUpdatesProxy {
+    fn notify_listener(
+        self,
+        update: fidl_policy::AccessPointState,
+    ) -> BoxFuture<'static, Option<Box<Self>>> {
+        let fut = async move {
+            // If there is no state information, send back an empty set of updates.
+            let mut update = match update.state {
+                Some(_) => vec![update],
+                None => vec![],
+            };
+            let mut iter = update.drain(..);
+            let fut = self.on_access_point_state_update(&mut iter);
+            fut.await.ok().map(|()| Box::new(self))
+        };
+        fut.boxed()
+    }
+}
+
+// Helpful aliases for servicing Ap updates
+pub type ApMessage =
+    Message<fidl_policy::AccessPointStateUpdatesProxy, fidl_policy::AccessPointState>;
+pub type ApMessageSender = mpsc::UnboundedSender<ApMessage>;
 
 #[cfg(test)]
 mod tests {
