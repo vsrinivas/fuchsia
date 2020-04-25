@@ -51,6 +51,15 @@ source_set("debug") {
   ]
 }
 
+# Sources for utility classes.  Classes here should be small and self-contained, having no
+# dependencies.
+source_set("util") {
+  public = [
+    "intrusive_list.h",
+    "task_queue.h",
+  ]
+}
+
 # Sources for Linux porting compatibility.
 source_set("linuxisms") {
   sources = [
@@ -152,7 +161,6 @@ source_set("core") {
     "fweh.h",
     "fwil.h",
     "fwil_types.h",
-    "intrusive_list.h",
     "proto.h",
     "regs.h",
     "soc.h",
