@@ -71,7 +71,7 @@ void dwc3_ep_fifo_release(dwc3_t* dwc, unsigned ep_num) {
 
 void dwc3_ep_start_transfer(dwc3_t* dwc, unsigned ep_num, unsigned type, zx_paddr_t buffer,
                             size_t length, bool send_zlp) {
-  zxlogf(LTRACE, "dwc3_ep_start_transfer ep %u type %u length %zu", ep_num, type, length);
+  zxlogf(SERIAL, "dwc3_ep_start_transfer ep %u type %u length %zu", ep_num, type, length);
 
   // special case: EP0_OUT and EP0_IN use the same fifo
   dwc3_endpoint_t* ep = (ep_num == EP0_IN ? &dwc->eps[EP0_OUT] : &dwc->eps[ep_num]);
@@ -271,7 +271,7 @@ void dwc3_ep_xfer_started(dwc3_t* dwc, unsigned ep_num, unsigned rsrc_id) {
 }
 
 void dwc3_ep_xfer_not_ready(dwc3_t* dwc, unsigned ep_num, unsigned stage) {
-  zxlogf(LTRACE, "dwc3_ep_xfer_not_ready ep %u state %d", ep_num, dwc->ep0_state);
+  zxlogf(SERIAL, "dwc3_ep_xfer_not_ready ep %u state %d", ep_num, dwc->ep0_state);
 
   if (ep_num == EP0_OUT || ep_num == EP0_IN) {
     dwc3_ep0_xfer_not_ready(dwc, ep_num, stage);
@@ -285,7 +285,7 @@ void dwc3_ep_xfer_not_ready(dwc3_t* dwc, unsigned ep_num, unsigned stage) {
 }
 
 void dwc3_ep_xfer_complete(dwc3_t* dwc, unsigned ep_num) {
-  zxlogf(LTRACE, "dwc3_ep_xfer_complete ep %u state %d", ep_num, dwc->ep0_state);
+  zxlogf(SERIAL, "dwc3_ep_xfer_complete ep %u state %d", ep_num, dwc->ep0_state);
 
   if (ep_num >= countof(dwc->eps)) {
     zxlogf(ERROR, "dwc3_ep_xfer_complete: bad ep_num %u", ep_num);

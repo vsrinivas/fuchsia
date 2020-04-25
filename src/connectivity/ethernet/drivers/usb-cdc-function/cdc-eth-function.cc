@@ -316,7 +316,7 @@ static zx_status_t cdc_send_locked(usb_cdc_t* cdc, ethernet_netbuf_t* netbuf) {
   tx_req->header.length = length;
   ssize_t bytes_copied = usb_request_copy_to(tx_req, byte_data, tx_req->header.length, 0);
   if (bytes_copied < 0) {
-    zxlogf(LERROR, "%s: failed to copy data into send req (error %zd)", __func__, bytes_copied);
+    zxlogf(SERIAL, "%s: failed to copy data into send req (error %zd)", __func__, bytes_copied);
     zx_status_t status = usb_req_list_add_tail(&cdc->bulk_in_reqs, tx_req, cdc->parent_req_size);
     ZX_DEBUG_ASSERT(status == ZX_OK);
     return ZX_ERR_INTERNAL;
@@ -347,7 +347,7 @@ static void cdc_ethernet_impl_queue_tx(void* context, uint32_t options, ethernet
     return;
   }
 
-  zxlogf(LTRACE, "%s: sending %zu bytes", __func__, length);
+  zxlogf(SERIAL, "%s: sending %zu bytes", __func__, length);
 
   mtx_lock(&cdc->tx_mutex);
   if (cdc->unbound) {
@@ -385,7 +385,7 @@ static ethernet_impl_protocol_ops_t ethernet_impl_ops = []() {
 static void cdc_intr_complete(void* ctx, usb_request_t* req) {
   auto* cdc = static_cast<usb_cdc_t*>(ctx);
 
-  zxlogf(LTRACE, "%s %d %ld", __func__, req->response.status, req->response.actual);
+  zxlogf(SERIAL, "%s %d %ld", __func__, req->response.status, req->response.actual);
 
   mtx_lock(&cdc->intr_mutex);
   zx_status_t status = usb_req_list_add_tail(&cdc->intr_reqs, req, cdc->parent_req_size);
@@ -463,7 +463,7 @@ static void cdc_send_notifications(usb_cdc_t* cdc) {
 static void cdc_rx_complete(void* ctx, usb_request_t* req) {
   auto* cdc = static_cast<usb_cdc_t*>(ctx);
 
-  zxlogf(LTRACE, "%s %d %ld", __func__, req->response.status, req->response.actual);
+  zxlogf(SERIAL, "%s %d %ld", __func__, req->response.status, req->response.actual);
 
   if (req->response.status == ZX_ERR_IO_NOT_PRESENT) {
     mtx_lock(&cdc->rx_mutex);
@@ -495,7 +495,7 @@ static void cdc_rx_complete(void* ctx, usb_request_t* req) {
 
 static void cdc_tx_complete(void* ctx, usb_request_t* req) {
   auto* cdc = static_cast<usb_cdc_t*>(ctx);
-  zxlogf(LTRACE, "%s %d %ld", __func__, req->response.status, req->response.actual);
+  zxlogf(SERIAL, "%s %d %ld", __func__, req->response.status, req->response.actual);
   if (cdc->unbound) {
     return;
   }

@@ -383,7 +383,7 @@ zx_status_t xhci_queue_transfer(xhci_t* xhci, usb_request_t* req) {
   uint8_t ep_index = xhci_endpoint_index(req->header.ep_address);
   __UNUSED usb_setup_t* setup = (ep_index == 0 ? &req->setup : nullptr);
 
-  zxlogf(LSPEW, "xhci_queue_transfer slot_id: %d setup: %p ep_index: %d length: %lu", slot_id,
+  zxlogf(SERIAL, "xhci_queue_transfer slot_id: %d setup: %p ep_index: %d length: %lu", slot_id,
          setup, ep_index, req->header.length);
 
   int rh_index = xhci_get_root_hub_index(xhci, slot_id);
@@ -551,7 +551,7 @@ static void xhci_control_complete(void* ctx, usb_request_t* req) {
 zx_status_t xhci_control_request(xhci_t* xhci, uint32_t slot_id, uint8_t request_type,
                                  uint8_t request, uint16_t value, uint16_t index, void* data,
                                  uint16_t length, size_t* out_actual) {
-  zxlogf(LTRACE,
+  zxlogf(SERIAL,
          "xhci_control_request slot_id: %d type: 0x%02X req: %d value: %d index: %d "
          "length: %d\n",
          slot_id, request_type, request, value, index, length);
@@ -626,7 +626,7 @@ zx_status_t xhci_get_descriptor(xhci_t* xhci, uint32_t slot_id, uint8_t type, ui
 }
 
 void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
-  zxlogf(LTRACE, "xhci_handle_transfer_event: %08X %08X %08X %08X", ((uint32_t*)trb)[0],
+  zxlogf(SERIAL, "xhci_handle_transfer_event: %08X %08X %08X %08X", ((uint32_t*)trb)[0],
          ((uint32_t*)trb)[1], ((uint32_t*)trb)[2], ((uint32_t*)trb)[3]);
 
   uint32_t control = XHCI_READ32(&trb->control);

@@ -45,7 +45,7 @@ static void dwc3_handle_ep_event(dwc3_t* dwc, uint32_t event) {
 }
 
 static void dwc3_handle_event(dwc3_t* dwc, uint32_t event) {
-  zxlogf(LTRACE, "dwc3_handle_event %08X", event);
+  zxlogf(SERIAL, "dwc3_handle_event %08X", event);
   if (!(event & DEPEVT_NON_EP)) {
     dwc3_handle_ep_event(dwc, event);
     return;

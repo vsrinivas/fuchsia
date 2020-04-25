@@ -108,14 +108,14 @@ zx_status_t UsbTest::Init() {
 }
 
 void UsbTest::TestIntrComplete(usb_request_t* req) {
-  zxlogf(LTRACE, "%s %d %ld", __func__, req->response.status, req->response.actual);
+  zxlogf(SERIAL, "%s %d %ld", __func__, req->response.status, req->response.actual);
 
   fbl::AutoLock lock(&lock_);
   intr_reqs_.push(usb::Request<void>(req, parent_req_size_));
 }
 
 void UsbTest::TestBulkOutComplete(usb_request_t* req) {
-  zxlogf(LTRACE, "%s %d %ld", __func__, req->response.status, req->response.actual);
+  zxlogf(SERIAL, "%s %d %ld", __func__, req->response.status, req->response.actual);
 
   if (req->response.status == ZX_ERR_IO_NOT_PRESENT) {
     fbl::AutoLock lock(&lock_);
@@ -160,7 +160,7 @@ void UsbTest::TestBulkOutComplete(usb_request_t* req) {
 }
 
 void UsbTest::TestBulkInComplete(usb_request_t* req) {
-  zxlogf(LTRACE, "%s %d %ld", __func__, req->response.status, req->response.actual);
+  zxlogf(SERIAL, "%s %d %ld", __func__, req->response.status, req->response.actual);
 
   fbl::AutoLock lock(&lock_);
   bulk_in_reqs_.push(usb::Request<void>(req, parent_req_size_));

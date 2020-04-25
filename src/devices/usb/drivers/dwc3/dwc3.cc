@@ -325,7 +325,7 @@ static void dwc3_request_queue(void* ctx, usb_request_t* req, const usb_request_
   auto* req_int = USB_REQ_TO_INTERNAL(req);
   req_int->complete_cb = *cb;
 
-  zxlogf(LTRACE, "dwc3_request_queue ep: %u", req->header.ep_address);
+  zxlogf(SERIAL, "dwc3_request_queue ep: %u", req->header.ep_address);
   unsigned ep_num = dwc3_ep_num(req->header.ep_address);
   if (ep_num < 2 || ep_num >= countof(dwc->eps)) {
     zxlogf(ERROR, "dwc3_request_queue: bad ep address 0x%02X", req->header.ep_address);

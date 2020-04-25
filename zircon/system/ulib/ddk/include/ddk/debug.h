@@ -46,6 +46,11 @@ __BEGIN_CDECLS
 // They are not displayed by default.
 #define DDK_LOG_SPEW ZX_LOG_SPEW
 
+// Serial messages are intended for low-level debugging, and
+// should always be written to debuglog. They are not displayed
+// by default.
+#define DDK_LOG_SERIAL ZX_LOG_LOCAL
+
 // Debug1 through Debug4 messages are driver specific, and not
 // displayed by default.  Consult driver source or documentation
 // to learn if these messages exist for a specific driver and
@@ -54,20 +59,6 @@ __BEGIN_CDECLS
 #define DDK_LOG_DEBUG2 ZX_LOG_DEBUG2
 #define DDK_LOG_DEBUG3 ZX_LOG_DEBUG3
 #define DDK_LOG_DEBUG4 ZX_LOG_DEBUG4
-
-// Local variants of log levels.  These levels will flag debug
-// messages so they do not get sent over the network.  They're
-// useful for network core or driver logging that would otherwise
-// spiral out of control as it logs about packets about logging...
-#define DDK_LOG_LERROR (ZX_LOG_ERROR | ZX_LOG_LOCAL)
-#define DDK_LOG_LWARN (ZX_LOG_WARN | ZX_LOG_LOCAL)
-#define DDK_LOG_LINFO (ZX_LOG_INFO | ZX_LOG_LOCAL)
-#define DDK_LOG_LTRACE (ZX_LOG_TRACE | ZX_LOG_LOCAL)
-#define DDK_LOG_LSPEW (ZX_LOG_SPEW | ZX_LOG_LOCAL)
-#define DDK_LOG_LDEBUG1 (ZX_LOG_DEBUG1 | ZX_LOG_LOCAL)
-#define DDK_LOG_LDEBUG2 (ZX_LOG_DEBUG2 | ZX_LOG_LOCAL)
-#define DDK_LOG_LDEBUG3 (ZX_LOG_DEBUG3 | ZX_LOG_LOCAL)
-#define DDK_LOG_LDEBUG4 (ZX_LOG_DEBUG4 | ZX_LOG_LOCAL)
 
 // Do not use this function directly, use zxlog_level_enabled() instead.
 bool driver_log_severity_enabled_internal(const zx_driver_t* drv, uint32_t flag);

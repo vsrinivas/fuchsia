@@ -19,7 +19,7 @@ void xhci_print_trb(xhci_transfer_ring_t* ring, xhci_trb_t* trb) {
   uint64_t paddr =
       physmap->second + (reinterpret_cast<size_t>(ring->current_trb) - physmap->first.virt_start);
 
-  zxlogf(LSPEW, "trb[%03zu] %p: %08X %08X %08X %08X", index, (void*)paddr, ptr[0], ptr[1], ptr[2],
+  zxlogf(SERIAL, "trb[%03zu] %p: %08X %08X %08X %08X", index, (void*)paddr, ptr[0], ptr[1], ptr[2],
          ptr[3]);
 }
 
