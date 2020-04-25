@@ -2,6 +2,14 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+group("formatjson5") {
+  testonly = true
+  public_deps = [
+    "//build/tools/formatjson5:formatjson5_test($host_toolchain)",
+    "//build/tools/formatjson5:install",
+  ]
+}
+
 group("json_merge") {
   testonly = true
   public_deps = [

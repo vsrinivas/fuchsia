@@ -9,7 +9,6 @@ group("tests") {
     "fidl-fuchsia-pkg-ext:tests",
     "fidl-fuchsia-pkg-rewrite-ext:tests",
     "fuchsia_backoff:fuchsia_backoff_tests",
-    "json5format:tests",
     "library_loader:tests",
     "runner:tests",
   ]
