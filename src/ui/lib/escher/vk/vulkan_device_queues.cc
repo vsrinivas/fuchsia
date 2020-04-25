@@ -396,7 +396,6 @@ VulkanDeviceQueues::VulkanDeviceQueues(vk::Device device, vk::PhysicalDevice phy
                                        VulkanInstancePtr instance, Params params, Caps caps)
     : device_(device),
       physical_device_(physical_device),
-      dispatch_loader_(instance->vk_instance(), device_),
       main_queue_(main_queue),
       main_queue_family_(main_queue_family),
       transfer_queue_(transfer_queue),
@@ -404,7 +403,9 @@ VulkanDeviceQueues::VulkanDeviceQueues(vk::Device device, vk::PhysicalDevice phy
       instance_(std::move(instance)),
       params_(std::move(params)),
       caps_(std::move(caps)),
-      proc_addrs_(PopulateProcAddrs(device_, params_)) {}
+      proc_addrs_(PopulateProcAddrs(device_, params_)) {
+  dispatch_loader_.init(instance_->vk_instance(), device_);
+}
 
 VulkanDeviceQueues::~VulkanDeviceQueues() { device_.destroy(); }
 

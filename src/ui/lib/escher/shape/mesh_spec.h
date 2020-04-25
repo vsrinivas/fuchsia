@@ -15,7 +15,7 @@ namespace escher {
 // These are the attributes which can be present in a MeshSpec.  Each of them has a semantic meaning
 // which is distinct from its representation.  For example, kPosition2 and kUV are both represented
 // as vec2, but the data meant for one shouldn't be confused with the other.
-enum class MeshAttribute {
+enum class MeshAttribute : uint32_t {
   // vec2.  Position of the vertex, to be transformed by model-view-projection
   // (MVP) matrix.
   kPosition2D = 1,
@@ -51,7 +51,7 @@ struct MeshAttributeBindingLocations {
 };
 
 // Describes all of the attributes that are associated with a specific vertex binding.
-using MeshAttributes = vk::Flags<MeshAttribute, uint32_t>;
+using MeshAttributes = vk::Flags<MeshAttribute>;
 
 inline MeshAttributes operator|(MeshAttribute bit0, MeshAttribute bit1) {
   return MeshAttributes(bit0) | bit1;
