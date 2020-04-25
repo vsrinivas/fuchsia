@@ -16,12 +16,16 @@
 
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
+#include <lib/fit/defer.h>
 #include <lib/syslog/cpp/logger.h>
 #include <net/ethernet.h>
 
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fsl/vmo/file.h"
 #include "src/lib/fsl/vmo/strings.h"
+#include <zircon/status.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 namespace nl {
 namespace Weave {
@@ -48,7 +52,7 @@ constexpr char kDeviceInfoConfigKey_FirmwareRevision[] = "firmware-revision";
 constexpr char kDeviceInfoConfigKey_ProductId[] = "product-id";
 constexpr char kDeviceInfoConfigKey_VendorId[] = "vendor-id";
 // Maximum number of chars in hex for a uint64_t
-constexpr int kWeaveDeviceIdMaxLength = 16 + 1;
+constexpr int kWeaveDeviceIdMaxLength = 16;
 }  // unnamed namespace
 
 /* Singleton instance of the ConfigurationManager implementation object for the Fuchsia. */
@@ -156,31 +160,66 @@ WEAVE_ERROR ConfigurationManagerImpl::_GetFirmwareRevision(char* buf, size_t buf
                                           &out_len);
 }
 
-zx_status_t ConfigurationManagerImpl::ReadFactoryFile(const char* filename, char* output) {
+zx_status_t ConfigurationManagerImpl::ReadFactoryFile(const char* path, char* buf, size_t buf_size,
+                                                      size_t* out_len) {
+  fuchsia::io::DirectorySyncPtr factory_directory;
   zx_status_t status;
-  int weave_dir_fd;
-  status = fdio_fd_create(factory_directory_.Unbind().TakeChannel().release(), &weave_dir_fd);
-  if (status != ZX_OK || weave_dir_fd <= 0) {
-    FX_LOGS(ERROR) << "Failed to open factory store";
+  struct stat statbuf;
+  int dir_fd;
+
+  // Open the factory store directory as a file descriptor.
+  status = factory_store_provider_->GetFactoryStore(factory_directory.NewRequest());
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "Failed to get factory store: " << zx_status_get_string(status);
+    return status;
+  }
+  status = fdio_fd_create(factory_directory.Unbind().TakeChannel().release(), &dir_fd);
+  if (status != ZX_OK || dir_fd < 0) {
+    FX_LOGS(ERROR) << "Failed to open factory store: " << zx_status_get_string(status);
     return status;
   }
 
+  auto close_dir_defer = fit::defer([&] { close(dir_fd); });
+
   // Grab the fd of the corresponding file path and validate.
-  int weave_file = openat(weave_dir_fd, filename, O_RDONLY);
-  if (weave_file <= 0) {
-    FX_LOGS(ERROR) << "Failed to open " << filename << ": " << strerror(errno);
+  int fd = openat(dir_fd, path, O_RDONLY);
+  if (fd < 0) {
+    FX_LOGS(ERROR) << "Failed to open " << path << ": " << strerror(errno);
     return ZX_ERR_IO;
   }
 
-  // Copy the contents of the file into a large-enough string, then resize.
-  int size = read(weave_file, output, kWeaveDeviceIdMaxLength);
-  if (size <= 0) {
+  auto close_fd_defer = fit::defer([&] { close(fd); });
+
+  // Check the size of the file.
+  if (fstat(fd, &statbuf) < 0) {
+    FX_LOGS(ERROR) << "Could not stat file: " << path << ": " << strerror(errno);
+    return ZX_ERR_IO;
+  }
+  size_t file_size = static_cast<size_t>(statbuf.st_size);
+  if (file_size > buf_size) {
+    FX_LOGS(ERROR) << "File too large for buffer: File size = " << file_size
+                   << ", buffer size = " << buf_size;
+    return ZX_ERR_BUFFER_TOO_SMALL;
+  }
+
+  // Read up to buf_size bytes into buf.
+  size_t total_read = 0;
+  ssize_t current_read = 0;
+  while ((current_read = read(fd, buf + total_read, buf_size - total_read)) > 0) {
+    total_read += current_read;
+  }
+
+  // Store the total size read.
+  if (out_len) {
+    *out_len = total_read;
+  }
+
+  // Confirm that the last read was successful.
+  if (current_read < 0) {
     FX_LOGS(ERROR) << "Failed to read from file: " << strerror(errno);
-    close(weave_file);
-    return ZX_ERR_IO;
+    status = ZX_ERR_IO;
   }
 
-  close(weave_file);
   return status;
 }
 
@@ -199,7 +238,10 @@ WEAVE_ERROR ConfigurationManagerImpl::_GetDeviceId(uint64_t& device_id) {
   size_t out_size;
   err = device_info_->ReadConfigValueStr(kDeviceInfoConfigKey_DeviceIdPath, path, sizeof(path),
                                          &out_size);
-  if (err != WEAVE_NO_ERROR) {
+  if (err == WEAVE_NO_ERROR) {
+    err = GetDeviceIdFromFactory(path, &device_id);
+    FXL_CHECK(err == WEAVE_NO_ERROR) << "Failed getting device id from factory at path: " << path;
+    StoreManufacturerDeviceId(device_id);
     return err;
   }
 
@@ -214,12 +256,9 @@ WEAVE_ERROR ConfigurationManagerImpl::_GetDeviceId(uint64_t& device_id) {
 zx_status_t ConfigurationManagerImpl::GetDeviceIdFromFactory(const char* path,
                                                              uint64_t* factory_device_id) {
   zx_status_t status;
-  char output[kWeaveDeviceIdMaxLength] = {'\0'};
+  char output[kWeaveDeviceIdMaxLength + 1] = {'\0'};
 
-  FXL_CHECK(factory_store_provider_->GetFactoryStore(factory_directory_.NewRequest()) == ZX_OK)
-      << "Failed to get factory store";
-
-  status = ReadFactoryFile(path, output);
+  status = ReadFactoryFile(path, output, kWeaveDeviceIdMaxLength, nullptr);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "ReadFactoryfile failed " << status;
     return status;

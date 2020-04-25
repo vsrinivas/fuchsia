@@ -316,6 +316,37 @@ TEST_F(ConfigurationManagerTest, GetPairingCode) {
   EXPECT_STREQ(pairing_code, kExpectedPairingCode);
 }
 
+TEST_F(ConfigurationManagerTest, ReadFactoryFile) {
+  constexpr size_t kBufSize = 32;
+  constexpr char kFilename[] = "test_file";
+  const std::string data = "test_file_contents";
+  char buf[kBufSize] = {};
+  size_t out_len;
+
+  auto fake_dir = std::make_unique<FakeDirectory>();
+  EXPECT_EQ(ZX_OK, fake_dir->AddResource(kFilename, data));
+  GetFactoryProvider()->AttachDir(std::move(fake_dir));
+
+  EXPECT_EQ(cfg_mgr_->ReadFactoryFile(kFilename, buf, kBufSize, &out_len), ZX_OK);
+
+  EXPECT_EQ(out_len, data.length());
+  EXPECT_EQ(std::string(buf, out_len), data);
+}
+
+TEST_F(ConfigurationManagerTest, ReadFactoryFileLargerThanExpected) {
+  constexpr size_t kBufSize = 16;
+  constexpr char kFilename[] = "test_file";
+  const std::string data = "test_file_contents -- test_file_contents";
+  char buf[kBufSize] = {};
+  size_t out_len;
+
+  auto fake_dir = std::make_unique<FakeDirectory>();
+  EXPECT_EQ(ZX_OK, fake_dir->AddResource(kFilename, data));
+  GetFactoryProvider()->AttachDir(std::move(fake_dir));
+
+  EXPECT_EQ(cfg_mgr_->ReadFactoryFile(kFilename, buf, kBufSize, &out_len), ZX_ERR_BUFFER_TOO_SMALL);
+}
+
 TEST_F(ConfigurationManagerTest, SetAndGetDeviceId) {
   const std::string test_device_id_file("test_device_id");
   const std::string test_device_id_data("1234ABCD");

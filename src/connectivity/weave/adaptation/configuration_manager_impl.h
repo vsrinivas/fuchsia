@@ -74,7 +74,6 @@ class ConfigurationManagerImpl final
 
   static ConfigurationManagerImpl sInstance;
 
-  zx_status_t ReadFactoryFile(const char* filename, char* output);
   zx_status_t GetDeviceIdFromFactory(const char* path, uint64_t* factory_device_id);
 
   std::unique_ptr<sys::ComponentContext> context_;
@@ -83,13 +82,17 @@ class ConfigurationManagerImpl final
   fuchsia::wlan::device::service::DeviceServiceSyncPtr wlan_device_service_;
   std::unique_ptr<Internal::WeaveConfigReader> device_info_;
   fuchsia::factory::WeaveFactoryStoreProviderSyncPtr factory_store_provider_;
-  fuchsia::io::DirectorySyncPtr factory_directory_;
 
   WEAVE_ERROR GetAndStoreHWInfo();
   WEAVE_ERROR GetAndStorePairingCode();
 
  public:
   ConfigurationManagerImpl(std::unique_ptr<sys::ComponentContext> context);
+
+  // Read a file from the factory partition into |buf| up to a maximum of
+  // |buf_size| bytes. If not null, the total number of bytes read in is stored
+  // in *|out_len|.
+  zx_status_t ReadFactoryFile(const char* path, char* buf, size_t buf_size, size_t* out_len);
 };
 
 /**
