@@ -285,6 +285,14 @@ void Device::CreateIface(wlan_device::CreateIfaceRequest req, CreateIfaceCallbac
     uint16_t iface_id;
     wlanphy_impl_create_iface_req_t create_req{.role = role,
                                                .sme_channel = req.sme_channel.release()};
+    if (req.init_mac_addr.has_value()) {
+      create_req.has_init_mac_addr = true;
+      std::copy(req.init_mac_addr.value().begin(), req.init_mac_addr.value().end(),
+                create_req.init_mac_addr);
+    } else {
+      create_req.has_init_mac_addr = false;
+    }
+
     resp.status = wlanphy_impl_.ops->create_iface(wlanphy_impl_.ctx, &create_req, &iface_id);
     resp.iface_id = iface_id;
   } else {

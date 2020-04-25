@@ -25,14 +25,21 @@ zx_status_t SimTest::Init() {
 
 zx_status_t SimTest::CreateInterface(wlan_info_mac_role_t role,
                                      const wlanif_impl_ifc_protocol& sme_protocol,
-                                     std::unique_ptr<SimInterface>* ifc_out) {
+                                     std::unique_ptr<SimInterface>* ifc_out,
+                                     std::optional<common::MacAddr> mac_addr) {
   zx_status_t status;
   std::unique_ptr<SimInterface> sim_ifc = std::make_unique<SimInterface>();
   if ((status = sim_ifc->Init()) != ZX_OK) {
     return status;
   }
 
-  wlanphy_impl_create_iface_req_t req = {.role = role, .sme_channel = sim_ifc->ch_mlme_};
+  wlanphy_impl_create_iface_req_t req = {
+      .role = role,
+      .sme_channel = sim_ifc->ch_mlme_,
+      .has_init_mac_addr = mac_addr ? true : false,
+  };
+  if (mac_addr)
+    memcpy(req.init_mac_addr, mac_addr.value().byte, WLAN_ETH_ALEN);
 
   if ((status = device_->WlanphyImplCreateIface(&req, &sim_ifc->iface_id_)) != ZX_OK) {
     return status;
@@ -57,6 +64,6 @@ zx_status_t SimTest::CreateInterface(wlan_info_mac_role_t role,
 
   *ifc_out = std::move(sim_ifc);
   return ZX_OK;
-}
+}  // namespace wlan::brcmfmac
 
 }  // namespace wlan::brcmfmac

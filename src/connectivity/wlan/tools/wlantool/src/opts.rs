@@ -164,6 +164,14 @@ pub enum IfaceCmd {
         )]
         /// role of the new iface
         role: RoleArg,
+
+        #[structopt(
+            short = "m",
+            long = "macaddr",
+            help = "Optional mac addr when we create an iface"
+        )]
+        /// initial mac address for this iface
+        mac_addr: Option<String>,
     },
 
     #[structopt(name = "del")]

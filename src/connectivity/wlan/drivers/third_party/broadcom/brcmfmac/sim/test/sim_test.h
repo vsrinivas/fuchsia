@@ -61,7 +61,8 @@ class SimTest : public ::testing::Test, public simulation::StationIfc {
   // callbacks
   zx_status_t CreateInterface(wlan_info_mac_role_t role,
                               const wlanif_impl_ifc_protocol& sme_protocol,
-                              std::unique_ptr<SimInterface>* ifc_out);
+                              std::unique_ptr<SimInterface>* ifc_out,
+                              std::optional<common::MacAddr> mac_addr = std::nullopt);
 
   // Fake device manager
   std::shared_ptr<simulation::FakeDevMgr> dev_mgr_;

@@ -365,7 +365,8 @@ async fn create_iface(
     phy_id: u16,
     role: MacRole,
 ) -> Result<u16, PhyManagerError> {
-    let mut request = fidl_service::CreateIfaceRequest { phy_id, role };
+    // TODO: For now the initial MAC address is set to none, pass a valid value when everything is ready.
+    let mut request = fidl_service::CreateIfaceRequest { phy_id, role, mac_addr: None };
     let create_iface_response = match proxy.create_iface(&mut request).await {
         Ok((status, iface_response)) => {
             if fuchsia_zircon::ok(status).is_err() || iface_response.is_none() {

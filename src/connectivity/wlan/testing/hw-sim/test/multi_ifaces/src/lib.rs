@@ -31,7 +31,7 @@ async fn multiple_interfaces_per_phy() {
     assert_eq!(resp.phys.len(), 1);
 
     let phy_id = resp.phys[0].phy_id;
-    let mut req = CreateIfaceRequest { phy_id, role: Client };
+    let mut req = CreateIfaceRequest { phy_id, role: Client, mac_addr: None };
     let (status, resp) = wlanstack_svc.create_iface(&mut req).await.expect("creating a new iface");
     assert_eq!(status, ZX_OK);
 

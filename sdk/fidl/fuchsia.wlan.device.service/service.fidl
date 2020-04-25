@@ -50,6 +50,7 @@ struct ListIfacesResponse {
 struct CreateIfaceRequest {
     uint16 phy_id;
     fuchsia.wlan.device.MacRole role;
+    bytes:6? mac_addr;
 };
 
 struct CreateIfaceResponse {

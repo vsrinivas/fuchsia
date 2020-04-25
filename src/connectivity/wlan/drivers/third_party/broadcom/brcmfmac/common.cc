@@ -157,7 +157,6 @@ zx_status_t brcmf_set_macaddr_from_firmware(struct brcmf_if* ifp) {
 static zx_status_t brcmf_set_macaddr(struct brcmf_if* ifp) {
   uint8_t mac_addr[ETH_ALEN];
   int32_t fw_err = 0;
-
   zx_status_t err = brcmf_bus_get_bootloader_macaddr(ifp->drvr->bus_if, mac_addr);
   if (err != ZX_OK) {
     // If desired, fall back to firmware mac address

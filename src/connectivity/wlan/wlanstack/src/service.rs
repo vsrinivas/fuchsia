@@ -307,9 +307,13 @@ async fn create_iface<'a>(
         })
         .map(|(p, c)| (p, Some(c.into_channel())))?;
 
-    let mut phy_req = fidl_wlan_dev::CreateIfaceRequest { role: req.role, sme_channel };
+    let mut phy_req = fidl_wlan_dev::CreateIfaceRequest {
+        role: req.role,
+        sme_channel,
+        init_mac_addr: req.mac_addr,
+    };
     let r = phy.proxy.create_iface(&mut phy_req).await.map_err(move |e| {
-        error!("Error sending 'CreateIface' request to phy #{}: {}", req.phy_id, e);
+        error!("Error sending 'CreateIface' request to phy #{}: {}", phy_id, e);
         zx::Status::INTERNAL
     })?;
     zx::Status::ok(r.status)?;
@@ -626,7 +630,7 @@ mod tests {
     }
 
     #[test]
-    fn create_iface_success() {
+    fn create_iface_without_mac_success() {
         let mut exec = fasync::Executor::new().expect("Failed to create an executor");
         let (phy_map, _phy_map_events) = PhyMap::new();
         let phy_map = Arc::new(phy_map);
@@ -640,7 +644,11 @@ mod tests {
         let create_fut = super::create_iface(
             &iface_counter,
             &phy_map,
-            fidl_svc::CreateIfaceRequest { phy_id: 10, role: fidl_wlan_dev::MacRole::Client },
+            fidl_svc::CreateIfaceRequest {
+                phy_id: 10,
+                role: fidl_wlan_dev::MacRole::Client,
+                mac_addr: None,
+            },
         );
         pin_mut!(create_fut);
         let fut_result = exec.run_until_stalled(&mut create_fut);
@@ -694,6 +702,77 @@ mod tests {
     }
 
     #[test]
+    fn create_iface_with_mac_success() {
+        let mut exec = fasync::Executor::new().expect("Failed to create an executor");
+        let (phy_map, _phy_map_events) = PhyMap::new();
+        let phy_map = Arc::new(phy_map);
+
+        let (phy, mut phy_stream) = fake_phy("/dev/null");
+        phy_map.insert(10, phy);
+
+        // Initiate a CreateIface request. The returned future should not be able
+        // to produce a result immediately
+        let iface_counter = IfaceCounter::new_with_value(5);
+        let mac_addr = Some(vec![1, 2, 3, 4, 5, 6]);
+
+        let create_fut = super::create_iface(
+            &iface_counter,
+            &phy_map,
+            fidl_svc::CreateIfaceRequest { phy_id: 10, role: fidl_wlan_dev::MacRole::Ap, mac_addr },
+        );
+        pin_mut!(create_fut);
+        assert_variant!(exec.run_until_stalled(&mut create_fut), Poll::Pending);
+
+        let responder = assert_variant!(exec.run_until_stalled(&mut phy_stream.next()),
+            Poll::Ready(Some(Ok(PhyRequest::Query { responder }))) => responder
+        );
+        responder
+            .send(&mut fidl_wlan_dev::QueryResponse {
+                status: zx::sys::ZX_OK,
+                info: fidl_wlan_dev::PhyInfo {
+                    driver_features: vec![DriverFeature::TempDirectSmeChannel],
+                    ..fake_phy_info()
+                },
+            })
+            .expect("failed to send QueryResponse");
+
+        // Continue running create iface request.
+        assert_variant!(exec.run_until_stalled(&mut create_fut), Poll::Pending);
+
+        let (req, responder) = assert_variant!(exec.run_until_stalled(&mut phy_stream.next()),
+            Poll::Ready(Some(Ok(PhyRequest::CreateIface { req, responder }))) => (req, responder)
+        );
+
+        // Since we requested the Ap role, the request to the phy should also have
+        // the Ap role
+        assert_eq!(fidl_wlan_dev::MacRole::Ap, req.role);
+        let res = match req.init_mac_addr {
+            None => false,
+            Some(mac_addr) => {
+                assert_eq!(mac_addr, [1, 2, 3, 4, 5, 6]);
+                true
+            }
+        };
+        assert!(res);
+
+        // Pretend that the interface was created with local id 123.
+        responder
+            .send(&mut fidl_wlan_dev::CreateIfaceResponse { status: zx::sys::ZX_OK, iface_id: 123 })
+            .expect("failed to send CreateIfaceResponse");
+
+        // The original future should resolve into a response.
+        let response = assert_variant!(exec.run_until_stalled(&mut create_fut),
+            Poll::Ready(Ok(response)) => response
+        );
+
+        assert_eq!(5, response.id);
+        assert_eq!(
+            device::PhyOwnership { phy_id: 10, phy_assigned_id: 123 },
+            response.phy_ownership
+        );
+    }
+
+    #[test]
     fn create_iface_not_found() {
         let mut exec = fasync::Executor::new().expect("Failed to create an executor");
         let (phy_map, _phy_map_events) = PhyMap::new();
@@ -703,7 +782,11 @@ mod tests {
         let fut = super::create_iface(
             &iface_counter,
             &phy_map,
-            fidl_svc::CreateIfaceRequest { phy_id: 10, role: fidl_wlan_dev::MacRole::Client },
+            fidl_svc::CreateIfaceRequest {
+                phy_id: 10,
+                role: fidl_wlan_dev::MacRole::Client,
+                mac_addr: None,
+            },
         );
         pin_mut!(fut);
         assert_variant!(

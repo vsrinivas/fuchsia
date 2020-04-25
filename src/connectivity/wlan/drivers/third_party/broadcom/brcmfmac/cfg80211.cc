@@ -389,6 +389,26 @@ static bool brcmf_is_apmode(struct brcmf_cfg80211_vif* vif) {
   return iftype == WLAN_INFO_MAC_ROLE_AP;
 }
 
+static bool brcmf_is_existing_macaddr(brcmf_pub* drvr, const uint8_t mac_addr[WLAN_ETH_ALEN],
+                                      bool is_ap) {
+  if (is_ap) {
+    for (uint16_t i = 0; i < BRCMF_MAX_IFS; i++) {
+      if (drvr->iflist[i] != nullptr && !memcmp(drvr->iflist[i]->mac_addr, mac_addr, ETH_ALEN)) {
+        return true;
+      }
+    }
+  } else {
+    for (uint16_t i = 0; i < BRCMF_MAX_IFS; i++) {
+      struct brcmf_if* iface = drvr->iflist[i];
+      if (iface != nullptr && iface->vif->wdev.iftype != WLAN_INFO_MAC_ROLE_CLIENT &&
+          !memcmp(iface->mac_addr, mac_addr, ETH_ALEN)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 zx_status_t brcmf_cfg80211_add_iface(brcmf_pub* drvr, const char* name, struct vif_params* params,
                                      const wlanphy_impl_create_iface_req_t* req,
                                      struct wireless_dev** wdev_out) {
@@ -410,6 +430,9 @@ zx_status_t brcmf_cfg80211_add_iface(brcmf_pub* drvr, const char* name, struct v
 
   switch (req->role) {
     case WLAN_INFO_MAC_ROLE_AP:
+      if (req->has_init_mac_addr && brcmf_is_existing_macaddr(drvr, req->init_mac_addr, true)) {
+        return ZX_ERR_ALREADY_EXISTS;
+      }
       err = brcmf_ap_add_vif(drvr->config, name, wdev_out);
       if (err == ZX_OK) {
         brcmf_cfg80211_update_proto_addr_mode(*wdev_out);
@@ -418,6 +441,12 @@ zx_status_t brcmf_cfg80211_add_iface(brcmf_pub* drvr, const char* name, struct v
           (*wdev_out)->iftype = req->role;
           if (ndev)
             ndev->sme_channel = zx::channel(req->sme_channel);
+          if (req->has_init_mac_addr) {
+            err = brcmf_set_iface_macaddr(true, ndev, req->init_mac_addr);
+            if (err != ZX_OK) {
+              return err;
+            }
+          }
         }
         return ZX_OK;
       } else {
@@ -426,6 +455,9 @@ zx_status_t brcmf_cfg80211_add_iface(brcmf_pub* drvr, const char* name, struct v
       }
       break;
     case WLAN_INFO_MAC_ROLE_CLIENT:
+      if (req->has_init_mac_addr && brcmf_is_existing_macaddr(drvr, req->init_mac_addr, false)) {
+        return ZX_ERR_ALREADY_EXISTS;
+      }
       bsscfgidx = brcmf_get_prealloced_bsscfgidx(drvr);
       if (bsscfgidx >= 0) {
         wdev = &drvr->iflist[bsscfgidx]->vif->wdev;
@@ -433,6 +465,12 @@ zx_status_t brcmf_cfg80211_add_iface(brcmf_pub* drvr, const char* name, struct v
         ndev = drvr->iflist[bsscfgidx]->ndev;
         ndev->sme_channel = zx::channel(req->sme_channel);
         ndev->needs_free_net_device = false;
+        if (req->has_init_mac_addr) {
+          err = brcmf_set_iface_macaddr(false, ndev, req->init_mac_addr);
+          if (err != ZX_OK) {
+            return err;
+          }
+        }
         return ZX_OK;
       } else {
         return ZX_ERR_NO_MEMORY;
@@ -3043,6 +3081,30 @@ void brcmf_if_eapol_req(net_device* ndev, const wlanif_eapol_req_t* req) {
           : confirm.result_code == WLAN_EAPOL_RESULT_TRANSMISSION_FAILURE ? "failure" : "unknown");
 
   wlanif_impl_ifc_eapol_conf(&ndev->if_proto, &confirm);
+}
+
+/*For now this function should always be called when adding iface*/
+zx_status_t brcmf_set_iface_macaddr(bool is_ap, net_device* ndev,
+                                    const uint8_t mac_addr[WLAN_ETH_ALEN]) {
+  struct brcmf_if* ifp = ndev_to_if(ndev);
+  int32_t fw_err = 0;
+  zx_status_t err = ZX_OK;
+
+  BRCMF_DBG(TRACE, "Enter");
+  // If the existing mac_addr of this iface is the same as it is, just return success.
+  if (!memcmp(ifp->mac_addr, mac_addr, WLAN_ETH_ALEN)) {
+    return ZX_OK;
+  }
+
+  err = brcmf_fil_iovar_data_set(ifp, "cur_etheraddr", mac_addr, ETH_ALEN, &fw_err);
+  if (err != ZX_OK) {
+    BRCMF_ERR("Setting mac address failed: %s, fw err %s\n", zx_status_get_string(err),
+              brcmf_fil_get_errstr(fw_err));
+    return err;
+  }
+
+  memcpy(ifp->mac_addr, mac_addr, sizeof(ifp->mac_addr));
+  return err;
 }
 
 static void brcmf_get_bwcap(struct brcmf_if* ifp, uint32_t bw_cap[]) {

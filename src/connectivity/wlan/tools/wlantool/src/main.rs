@@ -107,8 +107,13 @@ fn is_valid_country_str(country: &String) -> bool {
 
 async fn do_iface(cmd: opts::IfaceCmd, wlan_svc: WlanSvc) -> Result<(), Error> {
     match cmd {
-        opts::IfaceCmd::New { phy_id, role } => {
-            let mut req = wlan_service::CreateIfaceRequest { phy_id, role: role.into() };
+        opts::IfaceCmd::New { phy_id, role, mac_addr } => {
+            let mac_addr: Option<Vec<u8>> = match mac_addr {
+                Some(s) => Some(s.parse::<MacAddr>()?.0.to_vec()),
+                None => None,
+            };
+
+            let mut req = wlan_service::CreateIfaceRequest { phy_id, role: role.into(), mac_addr };
 
             let response =
                 wlan_svc.create_iface(&mut req).await.context("error getting response")?;
