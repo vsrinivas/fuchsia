@@ -8,4 +8,5 @@ fidl("fuchsia.exception") {
     "handler.fidl",
     "process_limbo.fidl",
   ]
+  public_deps = [ "//zircon/vdso/zx" ]
 }

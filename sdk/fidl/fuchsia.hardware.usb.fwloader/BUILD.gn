@@ -6,5 +6,8 @@ import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.hardware.usb.fwloader") {
   sources = [ "usb-fwloader.fidl" ]
-  public_deps = [ "//zircon/system/fidl/fuchsia-mem" ]
+  public_deps = [
+    "//zircon/system/fidl/fuchsia-mem",
+    "//zircon/vdso/zx",
+  ]
 }

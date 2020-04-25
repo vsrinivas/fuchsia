@@ -36,6 +36,7 @@ fidl("fuchsia.device.mock") {
   # TODO(44278): Remove when converting this file to proper GN build idioms.
   testonly = false
   sources = [ "mock-device.test.fidl" ]
+  public_deps = [ "//zircon/vdso/zx" ]
 }
 
 migrated_manifest("mock-device-manifest") {

@@ -12,4 +12,5 @@ fidl("fuchsia.overnet.protocol") {
     "stream_socket.fidl",
     "zircon_proxy.fidl",
   ]
+  public_deps = [ "//zircon/vdso/zx" ]
 }

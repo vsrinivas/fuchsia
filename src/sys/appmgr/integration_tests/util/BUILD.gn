@@ -18,6 +18,8 @@ fidl("data_file_reader_writer") {
   name = "test.appmgr.integration"
 
   sources = [ "data_file_reader_writer.fidl" ]
+
+  public_deps = [ "//zircon/vdso/zx" ]
 }
 
 source_set("data_file_reader_writer_util") {

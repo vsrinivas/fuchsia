@@ -6,4 +6,5 @@ import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.hardware.cpu.ctrl") {
   sources = [ "ctrl.fidl" ]
+  public_deps = [ "//zircon/vdso/zx" ]
 }

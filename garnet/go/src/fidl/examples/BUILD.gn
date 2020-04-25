@@ -14,6 +14,10 @@ template("fidl_example") {
     name = "fidl.examples.$nick"
 
     sources = [ "//zircon/tools/fidl/examples/${target_name}.test.fidl" ]
+
+    if (defined(invoker.public_deps)) {
+      public_deps = invoker.public_deps
+    }
   }
 }
 
@@ -57,6 +61,7 @@ fidl_example("example-9") {
 }
 fidl_example("protocol-ordinals") {
   nick = "ordinals"
+  public_deps = [ "//zircon/vdso/zx" ]
 }
 fidl_example("tables") {
 }

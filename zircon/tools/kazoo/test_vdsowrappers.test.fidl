@@ -2,9 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library zz;
-
-using zx;
+library zx;
 
 using vector_void = vector<byte>;
 
@@ -14,8 +12,8 @@ using vector_void = vector<byte>;
 protocol Syscall {
     // Typical case.
     [blocking]
-    BlockingWrite(handle<vmo> handle, vector_void buffer, uint64 offset) -> (zx.status status);
+    BlockingWrite(handle<vmo> handle, vector_void buffer, uint64 offset) -> (status status);
 
     // Special case for abigen's test wrapper.
-    TestWrapper(int32 a, int32 b, int32 c) -> (zx.status status);
+    TestWrapper(int32 a, int32 b, int32 c) -> (status status);
 };

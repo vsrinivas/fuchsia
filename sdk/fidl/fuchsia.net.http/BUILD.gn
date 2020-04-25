@@ -12,5 +12,6 @@ fidl("fuchsia.net.http") {
   public_deps = [
     "//sdk/fidl/fuchsia.url",
     "//zircon/system/fidl/fuchsia-mem",
+    "//zircon/vdso/zx",
   ]
 }

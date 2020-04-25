@@ -9,4 +9,5 @@ fidl_library("fuchsia-hardware-nand") {
     "nand.fidl",
     "ram-nand.fidl",
   ]
+  public_deps = [ "$zx/vdso/zx" ]
 }

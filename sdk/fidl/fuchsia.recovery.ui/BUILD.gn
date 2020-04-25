@@ -8,4 +8,5 @@ fidl("fuchsia.recovery.ui") {
   sdk_category = "partner"
   name = "fuchsia.recovery.ui"
   sources = [ "countdown.fidl" ]
+  public_deps = [ "//zircon/vdso/zx" ]
 }

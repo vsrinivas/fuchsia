@@ -9,6 +9,7 @@ import("//build/unification/images/migrated_manifest.gni")
 
 fidl("fuchsia.device.schedule.work.test") {
   sources = [ "schedule-work.test.fidl" ]
+  public_deps = [ "//zircon/vdso/zx" ]
 }
 
 driver_module("ddk-schedule-work-test") {

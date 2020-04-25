@@ -7,4 +7,5 @@ import("$zx_build/public/gn/fidl.gni")
 fidl_library("fuchsia-sysinfo") {
   sdk = true
   sources = [ "sysinfo.fidl" ]
+  public_deps = [ "$zx/vdso/zx" ]
 }

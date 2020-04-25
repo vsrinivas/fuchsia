@@ -20,4 +20,5 @@ fidl_library("fuchsia-sysmem") {
     "secure_mem.fidl",
     "usages.fidl",
   ]
+  public_deps = [ "$zx/vdso/zx" ]
 }

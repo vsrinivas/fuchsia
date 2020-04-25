@@ -11,4 +11,6 @@ fidl("fuchsia.virtualaudio") {
   sdk_category = "internal"
 
   sources = [ "virtual_audio.fidl" ]
+
+  public_deps = [ "//zircon/vdso/zx" ]
 }

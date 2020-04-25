@@ -9,5 +9,5 @@ fidl("fuchsia.lowpan.spinel") {
 
   sources = [ "spinel.fidl" ]
 
-  public_deps = []
+  public_deps = [ "//zircon/vdso/zx" ]
 }

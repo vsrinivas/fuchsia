@@ -47,12 +47,12 @@ OutgoingDirectory::OutgoingDirectory(async_dispatcher_t* dispatcher)
   root_->AddEntry("debug", debug_);
 }
 
-zx_status_t OutgoingDirectory::Serve(zx::channel request_directory) {
+zx_status_t OutgoingDirectory::Serve(::zx::channel request_directory) {
   return vfs_.ServeDirectory(root_, std::move(request_directory));
 }
 
 zx_status_t OutgoingDirectory::ServeFromStartupInfo() {
-  return Serve(zx::channel(zx_take_startup_handle(PA_DIRECTORY_REQUEST)));
+  return Serve(::zx::channel(zx_take_startup_handle(PA_DIRECTORY_REQUEST)));
 }
 
 zx_status_t OutgoingDirectory::AddNamedService(ServiceHandler handler, fit::string_view service,

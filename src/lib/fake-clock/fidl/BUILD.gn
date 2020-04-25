@@ -7,4 +7,5 @@ import("//build/fidl/fidl.gni")
 fidl("fidl") {
   name = "fuchsia.testing"
   sources = [ "fake_clock.fidl" ]
+  public_deps = [ "//zircon/vdso/zx" ]
 }

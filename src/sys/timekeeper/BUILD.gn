@@ -12,6 +12,7 @@ import("//build/testing/environments.gni")
 
 fidl("fuchsia.time") {
   sources = [ "utc.fidl" ]
+  public_deps = [ "//zircon/vdso/zx" ]
 }
 
 package("timekeeper") {

@@ -7,4 +7,5 @@ import("$zx_build/public/gn/fidl.gni")
 fidl_library("fuchsia-ldsvc") {
   sdk = true
   sources = [ "ldsvc.fidl" ]
+  public_deps = [ "$zx/vdso/zx" ]
 }

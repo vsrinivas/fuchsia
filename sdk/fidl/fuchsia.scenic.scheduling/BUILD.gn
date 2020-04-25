@@ -4,4 +4,6 @@ fidl("fuchsia.scenic.scheduling") {
   sdk_category = "partner"
 
   sources = [ "prediction_info.fidl" ]
+
+  public_deps = [ "//zircon/vdso/zx" ]
 }

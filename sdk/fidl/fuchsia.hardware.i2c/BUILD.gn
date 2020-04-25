@@ -6,4 +6,5 @@ import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.hardware.i2c") {
   sources = [ "i2c.fidl" ]
+  public_deps = [ "//zircon/vdso/zx" ]
 }

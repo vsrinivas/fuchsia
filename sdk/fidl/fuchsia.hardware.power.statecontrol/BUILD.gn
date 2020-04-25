@@ -8,4 +8,5 @@ fidl("fuchsia.hardware.power.statecontrol") {
   sdk_category = "partner"
   api = "fuchsia.hardware.power.statecontrol.api"
   sources = [ "admin.fidl" ]
+  public_deps = [ "//zircon/vdso/zx" ]
 }

@@ -41,6 +41,7 @@ executable("bin") {
 fidl("fidl.test.llcpp.basictypes") {
   visibility = [ ":*" ]
   sources = [ "basictypes.test.fidl" ]
+  public_deps = [ "//zircon/vdso/zx" ]
 }
 
 fidl("fidl.test.llcpp.controlflow") {

@@ -12,4 +12,5 @@ fidl("fuchsia.hardware.goldfish") {
     "goldfish_control.fidl",
     "goldfish_pipe.fidl",
   ]
+  public_deps = [ "//zircon/vdso/zx" ]
 }

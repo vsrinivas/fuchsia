@@ -6,4 +6,5 @@ import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.hardware.usb.device") {
   sources = [ "usb-device.fidl" ]
+  public_deps = [ "//zircon/vdso/zx" ]
 }

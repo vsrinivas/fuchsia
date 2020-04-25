@@ -6,4 +6,5 @@ import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.tracing.kernel") {
   sources = [ "ktrace.fidl" ]
+  public_deps = [ "//zircon/vdso/zx" ]
 }

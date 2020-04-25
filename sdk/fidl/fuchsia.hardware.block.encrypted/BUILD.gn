@@ -6,4 +6,5 @@ import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.hardware.block.encrypted") {
   sources = [ "devicemanager.fidl" ]
+  public_deps = [ "$zx/vdso/zx" ]
 }

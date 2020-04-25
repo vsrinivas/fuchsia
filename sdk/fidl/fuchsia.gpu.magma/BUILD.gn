@@ -12,4 +12,5 @@ fidl("fuchsia.gpu.magma") {
   ]
 
   sources = [ "magma.fidl" ]
+  public_deps = [ "//zircon/vdso/zx" ]
 }

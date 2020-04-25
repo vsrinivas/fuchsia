@@ -6,4 +6,5 @@ import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.hardware.spi") {
   sources = [ "spi.fidl" ]
+  public_deps = [ "$zx/vdso/zx" ]
 }

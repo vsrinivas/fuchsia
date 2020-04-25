@@ -6,4 +6,5 @@ import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.hardware.usb.virtual.bus") {
   sources = [ "usb-virtual-bus.fidl" ]
+  public_deps = [ "$zx/vdso/zx" ]
 }

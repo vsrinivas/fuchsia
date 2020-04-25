@@ -6,4 +6,5 @@ import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.tracing.controller") {
   sources = [ "trace_controller.fidl" ]
+  public_deps = [ "//zircon/vdso/zx" ]
 }

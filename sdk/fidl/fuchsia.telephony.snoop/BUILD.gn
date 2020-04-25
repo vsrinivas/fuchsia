@@ -6,4 +6,5 @@ import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.telephony.snoop") {
   sources = [ "tel-snoop.fidl" ]
+  public_deps = [ "//zircon/vdso/zx" ]
 }

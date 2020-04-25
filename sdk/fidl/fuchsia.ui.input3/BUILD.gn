@@ -17,5 +17,6 @@ fidl("fuchsia.ui.input3") {
   public_deps = [
     "//sdk/fidl/fuchsia.input",
     "//sdk/fidl/fuchsia.ui.views",
+    "//zircon/vdso/zx",
   ]
 }

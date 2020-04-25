@@ -7,5 +7,8 @@ import("$zx_build/public/gn/fidl.gni")
 fidl_library("fuchsia-io") {
   sdk = true
   sources = [ "io.fidl" ]
-  public_deps = [ "$zx/system/fidl/fuchsia-mem" ]
+  public_deps = [
+    "$zx/system/fidl/fuchsia-mem",
+    "$zx/vdso/zx",
+  ]
 }

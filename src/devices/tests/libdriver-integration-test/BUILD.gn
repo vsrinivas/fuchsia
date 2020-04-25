@@ -74,5 +74,5 @@ fidl("mock-device") {
 
   sources = [ "//src/devices/tests/mock-device/mock-device.test.fidl" ]
 
-  public_deps = []
+  public_deps = [ "//zircon/vdso/zx" ]
 }

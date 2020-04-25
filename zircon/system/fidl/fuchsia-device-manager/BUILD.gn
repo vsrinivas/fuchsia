@@ -11,4 +11,5 @@ fidl_library("fuchsia-device-manager") {
     "coordinator.fidl",
     "debug.fidl",
   ]
+  public_deps = [ "$zx/vdso/zx" ]
 }

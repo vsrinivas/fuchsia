@@ -9,4 +9,5 @@ fidl("fuchsia.diagnostics.stream") {
     "record.fidl",
     "source.fidl",
   ]
+  public_deps = [ "//zircon/vdso/zx" ]
 }

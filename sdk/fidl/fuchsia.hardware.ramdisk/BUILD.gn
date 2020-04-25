@@ -6,4 +6,5 @@ import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.hardware.ramdisk") {
   sources = [ "ramdisk.fidl" ]
+  public_deps = [ "$zx/vdso/zx" ]
 }

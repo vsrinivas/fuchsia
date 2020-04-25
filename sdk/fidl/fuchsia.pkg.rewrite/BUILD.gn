@@ -12,4 +12,5 @@ fidl("fuchsia.pkg.rewrite") {
   ]
 
   sources = [ "rewrite.fidl" ]
+  public_deps = [ "//zircon/vdso/zx" ]
 }

@@ -5,4 +5,5 @@
 import("//build/fidl/fidl.gni")
 fidl("fuchsia.buttons") {
   sources = [ "buttons.fidl" ]
+  public_deps = [ "//zircon/vdso/zx" ]
 }

@@ -12,4 +12,6 @@ fidl("fuchsia.update.installer") {
     "installer.fidl",
     "progress.fidl",
   ]
+
+  public_deps = [ "//zircon/vdso/zx" ]
 }

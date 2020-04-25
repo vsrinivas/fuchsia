@@ -9,4 +9,5 @@ fidl("fuchsia.hardware.mediacodec") {
     "mediacodec.fidl",
     "tester.fidl",
   ]
+  public_deps = [ "//zircon/vdso/zx" ]
 }

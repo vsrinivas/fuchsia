@@ -6,5 +6,8 @@ import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.net.name") {
   sources = [ "lookup_admin.fidl" ]
-  public_deps = [ "//zircon/system/fidl/fuchsia-net" ]
+  public_deps = [
+    "//zircon/system/fidl/fuchsia-net",
+    "//zircon/vdso/zx",
+  ]
 }

@@ -85,7 +85,7 @@ class OutgoingDirectory final {
   // ZX_ERR_BAD_HANDLE: |directory_request| is not a valid handle.
   //
   // ZX_ERR_ACCESS_DENIED: |directory_request| has insufficient rights.
-  zx_status_t Serve(zx::channel directory_request);
+  zx_status_t Serve(::zx::channel directory_request);
 
   // Starts serving the outgoing directory on the channel provided to this
   // process at startup as |PA_DIRECTORY_REQUEST|.

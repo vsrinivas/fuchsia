@@ -9,6 +9,7 @@ import("//build/unification/images/migrated_manifest.gni")
 
 fidl("fuchsia.device.lifecycle.test") {
   sources = [ "lifecycle.test.fidl" ]
+  public_deps = [ "//zircon/vdso/zx" ]
 }
 
 driver_module("ddk-lifecycle-test") {

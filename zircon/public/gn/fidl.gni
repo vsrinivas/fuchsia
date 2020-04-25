@@ -239,8 +239,9 @@ template("fidl_library") {
   fidl_name = string_replace(fidl_target, "-", ".")
   fidl_path = string_replace(fidl_name, ".", "/")
 
-  # Collect the dependencies on other FIDL libraries, and canonicalize them.
   fidl_library_deps = []
+
+  # Collect the dependencies on other FIDL libraries, and canonicalize them.
   if (defined(invoker.public_deps)) {
     foreach(label, invoker.public_deps) {
       assert(get_label_info(label, "toolchain") == current_toolchain,

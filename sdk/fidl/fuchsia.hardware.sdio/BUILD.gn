@@ -6,4 +6,5 @@ import("$zx_build/public/gn/fidl.gni")
 
 fidl_library("fuchsia-hardware-sdio") {
   sources = [ "sdio.fidl" ]
+  public_deps = [ "//zircon/vdso/zx" ]
 }

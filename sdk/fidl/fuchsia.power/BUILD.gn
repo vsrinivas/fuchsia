@@ -6,6 +6,7 @@ import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.power") {
   sources = [ "battery.fidl" ]
+  public_deps = [ "//zircon/vdso/zx" ]
 }
 
 fidl("fuchsia.power.test") {

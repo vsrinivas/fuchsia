@@ -19,5 +19,8 @@ fidl("fuchsia.net.mdns") {
 
   sources = [ "mdns.fidl" ]
 
-  public_deps = [ "//zircon/system/fidl/fuchsia-net" ]
+  public_deps = [
+    "//zircon/system/fidl/fuchsia-net",
+    "//zircon/vdso/zx",
+  ]
 }

@@ -6,4 +6,5 @@ import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.hardware.cpu.insntrace") {
   sources = [ "insntrace.fidl" ]
+  public_deps = [ "//zircon/vdso/zx" ]
 }

@@ -12,4 +12,5 @@ fidl("fuchsia.hardware.audio") {
     "ring_buffer.fidl",
     "stream.fidl",
   ]
+  public_deps = [ "//zircon/vdso/zx" ]
 }

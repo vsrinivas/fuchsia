@@ -11,4 +11,5 @@ fidl("fuchsia.identity.authentication") {
     "mechanisms.fidl",
     "overview.fidl",
   ]
+  public_deps = [ "//zircon/vdso/zx" ]
 }

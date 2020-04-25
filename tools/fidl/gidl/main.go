@@ -136,6 +136,13 @@ func main() {
 	// For simplicity, we do not allow FIDL that GIDL depends on to have
 	// dependent libraries. This makes it much simpler to have everything
 	// in the IR, and avoid cross-references.
+
+	// TODO(fxbug.dev/7802): While transitioning "zx" from [Internal] to a normal
+	// library, tolerate but ignore a dependency on zx.
+	if len(fidl.Libraries) == 1 && fidl.Libraries[0].Name == "zx" {
+		fidl.Libraries = make([]fidlir.Library, 0)
+	}
+
 	if len(fidl.Libraries) != 0 {
 		var libs []string
 		for _, l := range fidl.Libraries {

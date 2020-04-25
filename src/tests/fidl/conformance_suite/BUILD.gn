@@ -25,4 +25,6 @@ fidl("conformance_fidl") {
     "//src/tests/fidl/conformance_suite/transformer.test.fidl",
     "//src/tests/fidl/conformance_suite/union.test.fidl",
   ]
+
+  public_deps = [ "//zircon/vdso/zx" ]
 }

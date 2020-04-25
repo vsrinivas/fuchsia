@@ -2,12 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library zz;
+library zx;
 
-using zx;
-
-using time = int64;
-using ticks = int64;
 using mutable_vector_void = vector<byte>;
 
 [Transport="Syscall"]
@@ -15,7 +11,7 @@ protocol Kwrap {
     // Simple out ptr.
     SimpleCase() -> (time time);
 
-    MultipleInHandles(vector<handle> handles) -> (zx.status status);
+    MultipleInHandles(vector<handle> handles) -> (status status);
 
     // vdsocall excluded.
     [vdsocall]
@@ -31,15 +27,15 @@ protocol Kwrap {
             uint64 offset,
             uint64 size,
             mutable_vector_void buffer) ->
-        (zx.status status);
+        (status status);
 
     // Output handle copied properly.
-    OutputHandle() -> (zx.status status, handle<event> event);
+    OutputHandle() -> (status status, handle<event> event);
 
     // When two output handles, status and copy are verified before any bytes
     // returned.
-    TwoOutputHandle() -> (zx.status status, handle<event> out0, handle<event> out1);
+    TwoOutputHandle() -> (status status, handle<event> out0, handle<event> out1);
 
     [testonly]
-    CompiledOut() -> (zx.status status);
+    CompiledOut() -> (status status);
 };

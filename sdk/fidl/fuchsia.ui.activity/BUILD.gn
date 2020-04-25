@@ -17,5 +17,5 @@ fidl("fuchsia.ui.activity") {
     "tracker.fidl",
   ]
 
-  public_deps = []
+  public_deps = [ "//zircon/vdso/zx" ]
 }

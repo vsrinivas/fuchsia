@@ -8,4 +8,5 @@ fidl("fuchsia.hardware.ethernet") {
   sdk_category = "partner"
   api = "fuchsia.hardware.ethernet.api"
   sources = [ "ethernet.fidl" ]
+  public_deps = [ "//zircon/vdso/zx" ]
 }

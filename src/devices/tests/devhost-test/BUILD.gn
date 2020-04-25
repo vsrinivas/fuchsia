@@ -9,6 +9,7 @@ import("//build/unification/images/migrated_manifest.gni")
 fidl("fuchsia.device.devhost.test") {
   #visibility = [ ":*" ]
   sources = [ "test.fidl" ]
+  public_deps = [ "//zircon/vdso/zx" ]
 }
 
 driver_module("devhost-test") {

@@ -53,6 +53,12 @@ template("fostr_fidl") {
                              "visibility",
                              "amendments_path",
                            ])
+    if (!defined(deps)) {
+      deps = []
+    }
+    if (target_name != "zx") {
+      deps += [ "//garnet/public/lib/fostr/fidl/zx" ]
+    }
 
     fidl_target = "$fidl_target"
 
