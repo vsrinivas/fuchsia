@@ -54,28 +54,28 @@ void VmoHelper<DEBUG>::printoffsetinvmo(uint32_t offset) {}
 void VmoHelper<true>::printoffsetinvmo(uint32_t offset) {
   io_buffer_cache_flush_invalidate(&buffer_, 0, buffer_.size);
 
-  zxlogf(DEBUG1, "Current position: 0x%04x. data: ", offset);
+  zxlogf(SPEW, "Current position: 0x%04x. data: ", offset);
 
   // Print some offsets to probe the data.
   static const uint32_t offsets[] = {0, 0x1000, 0x2000, 0x3000, 0x4000, 0x5000, 0x6000, 0x7000};
 
   for (const auto& offset : offsets) {
-    zxlogf(DEBUG1, " 0x%04x: 0x%08lx,", offset,
+    zxlogf(SPEW, " 0x%04x: 0x%08lx,", offset,
            *(reinterpret_cast<uintptr_t*>(offset + ring_buffer_virt_)));
   }
 
   // print the last frame of data:
-  zxlogf(DEBUG1, "offset is at: 0x%x", offset);
+  zxlogf(SPEW, "offset is at: 0x%x", offset);
 
   if (offset > 32) {
     uint8_t* frame_start =
         reinterpret_cast<uint8_t*>(static_cast<uintptr_t>(offset) - 32 + ring_buffer_virt_);
     for (int i = 0; i < 32; i++) {
-      zxlogf(DEBUG1, "%d: 0x%x, ", i, (frame_start[i] & 0xff));
+      zxlogf(SPEW, "%d: 0x%x, ", i, (frame_start[i] & 0xff));
     }
   }
 
-  zxlogf(DEBUG1, "");
+  zxlogf(SPEW, "");
 }
 
 template <bool DEBUG>

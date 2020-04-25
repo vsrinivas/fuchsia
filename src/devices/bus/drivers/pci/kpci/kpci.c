@@ -21,7 +21,7 @@
 
 #include "kpci-private.h"
 
-#define KPCIDBG(f, x...) zxlogf(DEBUG1, "%s: " f, __func__, x)
+#define KPCIDBG(f, x...) zxlogf(SPEW, "%s: " f, __func__, x)
 #define KPCIERR(f, x...) zxlogf(ERROR, "%s: " f, __func__, x)
 
 // Convenience reply methods.

@@ -34,7 +34,7 @@ namespace {
 zx_status_t LargeConfigGet(DspChannel* ipc, uint16_t module_id, uint8_t instance_id,
                            BaseFWParamType large_param_id, fbl::Span<uint8_t> buffer,
                            size_t* bytes_received) {
-  GLOBAL_LOG(DEBUG1, "LARGE_CONFIG_GET (mod %u inst %u large_param_id %u)\n", module_id,
+  GLOBAL_LOG(SPEW, "LARGE_CONFIG_GET (mod %u inst %u large_param_id %u)\n", module_id,
              instance_id, to_underlying(large_param_id));
 
   if (buffer.size_bytes() > IPC_EXT_DATA_OFF_MAX_SIZE) {
@@ -54,7 +54,7 @@ zx_status_t LargeConfigGet(DspChannel* ipc, uint16_t module_id, uint8_t instance
     return result.code();
   }
 
-  GLOBAL_LOG(DEBUG1,
+  GLOBAL_LOG(SPEW,
              "LARGE_CONFIG_GET (mod %u inst %u large_param_id %u) success: received %ld byte(s).\n",
              module_id, instance_id, to_underlying(large_param_id), bytes_received_local);
   if (bytes_received != nullptr) {
@@ -117,7 +117,7 @@ StatusOr<DspModuleId> DspModuleController::CreateModule(DspModuleType type,
   if (!instance_id.ok()) {
     return instance_id.status();
   }
-  GLOBAL_LOG(DEBUG1, "CreateModule(type %u, inst %u)\n", type, instance_id.ValueOrDie());
+  GLOBAL_LOG(SPEW, "CreateModule(type %u, inst %u)\n", type, instance_id.ValueOrDie());
 
   // Create the module.
   Status result = channel_->SendWithData(
@@ -127,7 +127,7 @@ StatusOr<DspModuleId> DspModuleController::CreateModule(DspModuleType type,
                             static_cast<uint16_t>(data.size())),
       data, fbl::Span<uint8_t>(), nullptr);
   if (!result.ok()) {
-    GLOBAL_LOG(DEBUG1, "CreateModule failed: %s\n", result.ToString().c_str());
+    GLOBAL_LOG(SPEW, "CreateModule failed: %s\n", result.ToString().c_str());
     return PrependMessage(fbl::StringPrintf("Failed to create module of type %u (instance #%u)",
                                             type, instance_id.ValueOrDie()),
                           result);
@@ -146,13 +146,13 @@ StatusOr<DspPipelineId> DspModuleController::CreatePipeline(uint8_t priority, ui
     return Status(ZX_ERR_NO_RESOURCES, "Too many pipelines created.");
   }
   uint8_t id = pipelines_allocated_++;
-  GLOBAL_LOG(DEBUG1, "CreatePipeline(inst %u)\n", id);
+  GLOBAL_LOG(SPEW, "CreatePipeline(inst %u)\n", id);
 
   // Create the pipeline.
   Status result = channel_->Send(IPC_CREATE_PIPELINE_PRI(id, priority, memory_pages),
                                  IPC_CREATE_PIPELINE_EXT(low_power));
   if (!result.ok()) {
-    GLOBAL_LOG(DEBUG1, "CreatePipeline failed: %s", result.ToString().c_str());
+    GLOBAL_LOG(SPEW, "CreatePipeline failed: %s", result.ToString().c_str());
     return PrependMessage(fbl::StringPrintf("Failed to create pipeline #%u", id), result);
   }
 
@@ -162,7 +162,7 @@ StatusOr<DspPipelineId> DspModuleController::CreatePipeline(uint8_t priority, ui
 // Connect an output pin of one module to the input pin of another.
 Status DspModuleController::BindModules(DspModuleId source_module, uint8_t src_output_pin,
                                         DspModuleId dest_module, uint8_t dest_input_pin) {
-  GLOBAL_LOG(DEBUG1, "BindModules (mod %u inst %u):%u --> (mod %u, inst %u):%u\n",
+  GLOBAL_LOG(SPEW, "BindModules (mod %u inst %u):%u --> (mod %u, inst %u):%u\n",
              source_module.type, source_module.id, src_output_pin, dest_module.type, dest_module.id,
              dest_input_pin);
 
@@ -171,7 +171,7 @@ Status DspModuleController::BindModules(DspModuleId source_module, uint8_t src_o
               source_module.type),
       IPC_BIND_UNBIND_EXT(dest_module.type, dest_module.id, dest_input_pin, src_output_pin));
   if (!result.ok()) {
-    GLOBAL_LOG(DEBUG1, "BindModules failed: %s", result.ToString().c_str());
+    GLOBAL_LOG(SPEW, "BindModules failed: %s", result.ToString().c_str());
     return result;
   }
 
@@ -181,13 +181,13 @@ Status DspModuleController::BindModules(DspModuleId source_module, uint8_t src_o
 // Enable/disable the given pipeline.
 Status DspModuleController::SetPipelineState(DspPipelineId pipeline, PipelineState state,
                                              bool sync_stop_start) {
-  GLOBAL_LOG(DEBUG1, "SetPipelineStatus(pipeline=%u, state=%u, sync_stop_start=%s)\n", pipeline.id,
+  GLOBAL_LOG(SPEW, "SetPipelineStatus(pipeline=%u, state=%u, sync_stop_start=%s)\n", pipeline.id,
              static_cast<unsigned int>(state), sync_stop_start ? "true" : "false");
 
   Status result = channel_->Send(IPC_SET_PIPELINE_STATE_PRI(pipeline.id, state),
                                  IPC_SET_PIPELINE_STATE_EXT(false, sync_stop_start));
   if (!result.ok()) {
-    GLOBAL_LOG(DEBUG1, "SetPipelineStatus failed: %s", result.ToString().c_str());
+    GLOBAL_LOG(SPEW, "SetPipelineStatus failed: %s", result.ToString().c_str());
     return result;
   }
 

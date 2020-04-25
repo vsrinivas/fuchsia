@@ -29,10 +29,6 @@ static void usage(void) {
       "    \"info\" or \"i\":    DDK_LOG_INFO\n"
       "    \"trace\" or \"t\":   DDK_LOG_TRACE\n"
       "    \"spew\" or \"s\":    DDK_LOG_SPEW\n"
-      "    \"debug1\" or \"d1\": DDK_LOG_DEBUG1\n"
-      "    \"debug2\" or \"d2\": DDK_LOG_DEBUG2\n"
-      "    \"debug3\" or \"d3\": DDK_LOG_DEBUG3\n"
-      "    \"debug4\" or \"d4\": DDK_LOG_DEBUG4\n"
       "\n"
       "  With no options provided, driverctl log will print the current log flags for the driver.\n"
       "  A flag may have a '+' or '-' prepended. In that case the flag will be toggled\n"
@@ -116,18 +112,6 @@ int main(int argc, char** argv) {
       if (flags & DDK_LOG_SPEW) {
         printf(" SPEW");
       }
-      if (flags & DDK_LOG_DEBUG1) {
-        printf(" DEBUG1");
-      }
-      if (flags & DDK_LOG_DEBUG2) {
-        printf(" DEBUG2");
-      }
-      if (flags & DDK_LOG_DEBUG3) {
-        printf(" DEBUG3");
-      }
-      if (flags & DDK_LOG_DEBUG4) {
-        printf(" DEBUG4");
-      }
       printf("\n");
     }
     return ret;
@@ -169,14 +153,6 @@ int main(int argc, char** argv) {
       flag = DDK_LOG_TRACE;
     } else if (!strcasecmp(arg, "s") || !strcasecmp(arg, "spew")) {
       flag = DDK_LOG_SPEW;
-    } else if (!strcasecmp(arg, "d1") || !strcasecmp(arg, "debug1")) {
-      flag = DDK_LOG_DEBUG1;
-    } else if (!strcasecmp(arg, "d2") || !strcasecmp(arg, "debug2")) {
-      flag = DDK_LOG_DEBUG2;
-    } else if (!strcasecmp(arg, "d3") || !strcasecmp(arg, "debug3")) {
-      flag = DDK_LOG_DEBUG3;
-    } else if (!strcasecmp(arg, "d4") || !strcasecmp(arg, "debug4")) {
-      flag = DDK_LOG_DEBUG4;
     } else {
       fprintf(stderr, "unknown flag %s\n", arg);
       ret = -1;

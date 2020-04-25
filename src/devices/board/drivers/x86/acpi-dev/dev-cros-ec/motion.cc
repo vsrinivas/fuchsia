@@ -63,7 +63,7 @@ AcpiCrOsEcMotionDevice::~AcpiCrOsEcMotionDevice() {}
 void AcpiCrOsEcMotionDevice::NotifyHandler(ACPI_HANDLE handle, UINT32 value, void* ctx) {
   auto dev = reinterpret_cast<AcpiCrOsEcMotionDevice*>(ctx);
 
-  zxlogf(DEBUG1, "acpi-cros-ec-motion: got event 0x%x", value);
+  zxlogf(SPEW, "acpi-cros-ec-motion: got event 0x%x", value);
   switch (value) {
     case 0x80:
       fbl::AutoLock guard(&dev->hid_lock_);
@@ -407,7 +407,7 @@ zx_status_t AcpiCrOsEcMotionDevice::SetKbWakeAngle(int16_t angle) {
 }
 
 zx_status_t AcpiCrOsEcMotionDevice::FifoRead(struct ec_response_motion_sensor_data* data) {
-  zxlogf(DEBUG1, "acpi-cros-ec-motion: FifoRead");
+  zxlogf(SPEW, "acpi-cros-ec-motion: FifoRead");
 
   struct ec_params_motion_sense cmd = {};
   struct __packed {
@@ -427,14 +427,14 @@ zx_status_t AcpiCrOsEcMotionDevice::FifoRead(struct ec_response_motion_sensor_da
     return ZX_ERR_IO;
   }
   if (rsp.count != 1) {
-    zxlogf(DEBUG1, "acpi-cros-ec-motion: FifoRead found no reports");
+    zxlogf(SPEW, "acpi-cros-ec-motion: FifoRead found no reports");
     return ZX_ERR_SHOULD_WAIT;
   }
   if (actual != sizeof(rsp)) {
     return ZX_ERR_IO;
   }
 
-  zxlogf(DEBUG1, "acpi-cros-ec-motion: sensor=%u flags=%#x val=(%d, %d, %d)", rsp.data.sensor_num,
+  zxlogf(SPEW, "acpi-cros-ec-motion: sensor=%u flags=%#x val=(%d, %d, %d)", rsp.data.sensor_num,
          rsp.data.flags, rsp.data.data[0], rsp.data.data[1], rsp.data.data[2]);
   memcpy(data, &rsp.data, sizeof(*data));
   return ZX_OK;

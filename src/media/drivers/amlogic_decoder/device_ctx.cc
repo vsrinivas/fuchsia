@@ -65,8 +65,7 @@ zx_status_t DeviceCtx::Bind(zx_device_t* parent) {
   // Let's migrate from DLOG(""); to LOG(TRACE, ""); ... LOG(DEBUG4, "");
 #if AMLOGIC_DLOG_ENABLE
   driver_set_log_flags(driver_get_log_flags() | DDK_LOG_ERROR | DDK_LOG_WARN | DDK_LOG_INFO |
-                       DDK_LOG_TRACE | DDK_LOG_SPEW | DDK_LOG_DEBUG1 | DDK_LOG_DEBUG2 |
-                       DDK_LOG_DEBUG3 | DDK_LOG_DEBUG4);
+                       DDK_LOG_TRACE | DDK_LOG_SPEW);
 #endif
 
   device_add_args_t vc_video_args = {};

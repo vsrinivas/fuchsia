@@ -51,15 +51,6 @@ __BEGIN_CDECLS
 // by default.
 #define DDK_LOG_SERIAL ZX_LOG_LOCAL
 
-// Debug1 through Debug4 messages are driver specific, and not
-// displayed by default.  Consult driver source or documentation
-// to learn if these messages exist for a specific driver and
-// what they're used for.
-#define DDK_LOG_DEBUG1 ZX_LOG_DEBUG1
-#define DDK_LOG_DEBUG2 ZX_LOG_DEBUG2
-#define DDK_LOG_DEBUG3 ZX_LOG_DEBUG3
-#define DDK_LOG_DEBUG4 ZX_LOG_DEBUG4
-
 // Do not use this function directly, use zxlog_level_enabled() instead.
 bool driver_log_severity_enabled_internal(const zx_driver_t* drv, uint32_t flag);
 

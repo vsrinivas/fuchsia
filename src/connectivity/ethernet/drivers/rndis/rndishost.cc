@@ -37,15 +37,15 @@
 static bool command_succeeded(const void* buf, uint32_t type, size_t length) {
   const auto* header = static_cast<const rndis_header_complete*>(buf);
   if (header->msg_type != type) {
-    zxlogf(DEBUG1, "Bad type: Actual: %x, Expected: %x.", header->msg_type, type);
+    zxlogf(SPEW, "Bad type: Actual: %x, Expected: %x.", header->msg_type, type);
     return false;
   }
   if (header->msg_length != length) {
-    zxlogf(DEBUG1, "Bad length: Actual: %u, Expected: %zu.", header->msg_length, length);
+    zxlogf(SPEW, "Bad length: Actual: %u, Expected: %zu.", header->msg_length, length);
     return false;
   }
   if (header->status != RNDIS_STATUS_SUCCESS) {
-    zxlogf(DEBUG1, "Bad status: %x.", header->status);
+    zxlogf(SPEW, "Bad status: %x.", header->status);
     return false;
   }
   return true;
@@ -178,7 +178,7 @@ void RndisHost::ReadComplete(usb_request_t* request) {
   if (request->response.status == ZX_OK && ifc_.ops) {
     Recv(request);
   } else {
-    zxlogf(DEBUG1, "rndis read complete: bad status = %d", request->response.status);
+    zxlogf(SPEW, "rndis read complete: bad status = %d", request->response.status);
   }
 
   // TODO: Only usb_request_queue if the device is online.
