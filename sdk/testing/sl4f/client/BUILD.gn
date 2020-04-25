@@ -32,6 +32,7 @@ dart_library("client") {
     "src/ssh.dart",
     "src/storage.dart",
     "src/test.dart",
+    "src/tiles.dart",
     "src/trace_processing/metrics/common.dart",
     "src/trace_processing/metrics/cpu_metrics.dart",
     "src/trace_processing/metrics/drm_fps.dart",

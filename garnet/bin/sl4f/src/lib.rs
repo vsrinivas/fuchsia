@@ -29,6 +29,7 @@ pub mod scenic;
 pub mod server;
 pub mod setui;
 pub mod test;
+pub mod tiles;
 pub mod traceutil;
 pub mod tracing;
 pub mod update;

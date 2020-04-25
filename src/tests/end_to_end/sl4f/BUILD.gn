@@ -14,6 +14,7 @@ dart_test("sl4f_test") {
     "performance_test.dart",
     "setui_test.dart",
     "storage_test.dart",
+    "tiles_test.dart",
   ]
 
   deps = [
