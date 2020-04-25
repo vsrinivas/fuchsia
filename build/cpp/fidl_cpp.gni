@@ -154,8 +154,21 @@ template("fidl_cpp_library") {
 
   main_target_name = target_name
   config_target_name = main_target_name + "__config"
+
   generation_target_name =
       "${invoker.root_target}_${invoker.generator}_generate"
+
+  generated_deps = []
+  if (defined(invoker.generated_deps_target_suffix)) {
+    foreach(dep, invoker.generated_deps_target_suffix) {
+      if (dep == "") {
+        dep = invoker.root_target
+      } else {
+        dep = "${invoker.root_target}_${dep}"
+      }
+      generated_deps += [ ":$dep" ]
+    }
+  }
 
   library_name = target_name
   if (defined(invoker.name)) {
@@ -195,11 +208,11 @@ template("fidl_cpp_library") {
     # Let dependencies use `#include "$file_stem.h"`.
     public_configs = [ ":$config_target_name" ]
 
-    public_deps = [
-      ":$generation_target_name($fidl_toolchain)",
-      ":${invoker.root_target}($fidl_toolchain)",
-      ":${invoker.root_target}_tables",
-    ]
+    public_deps = generated_deps + [
+                    ":$generation_target_name($fidl_toolchain)",
+                    ":${invoker.root_target}($fidl_toolchain)",
+                    ":${invoker.root_target}_tables",
+                  ]
 
     foreach(dep, invoker.library_public_deps) {
       label = get_label_info(dep, "label_no_toolchain")
@@ -298,6 +311,8 @@ template("fidl_cpp") {
         name = library_name
         generator = generator_settings.fidlgen_generator
         generated_source_base = generator_settings.output_stem
+        forward_variables_from(generator_settings,
+                               [ "generated_deps_target_suffix" ])
         root_target = target_name
         additional_public_deps = generator_settings.additional_public_deps
       }
