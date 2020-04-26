@@ -527,13 +527,13 @@ From //build/config/BUILD.gn:13
 
 **Current value (from the default):** `"fuchsia"`
 
-From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/6d8b196150da4bca59c5a9c3a8a20f33467ea3c2/build/crashpad_buildconfig.gni#22)
+From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/17a515d33dc56b9d6a3c982d2d2e81c61ff9ba41/build/crashpad_buildconfig.gni#22)
 
 ### crashpad_use_boringssl_for_http_transport_socket
 
 **Current value (from the default):** `true`
 
-From [//third_party/crashpad/util/net/tls.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/6d8b196150da4bca59c5a9c3a8a20f33467ea3c2/util/net/tls.gni#22)
+From [//third_party/crashpad/util/net/tls.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/17a515d33dc56b9d6a3c982d2d2e81c61ff9ba41/util/net/tls.gni#22)
 
 ### create_kernel_service_snapshot
 
