@@ -96,7 +96,7 @@ impl VulkanShader {
         };
 
         // glslangValidator -V shaders/name.comp -o shaders/name-noopt.comp.spv
-        // spirv-opt -O shaders/name-noopt.comp.spv -o shaders/name.comp.sp
+        // spirv-opt -O shaders/name-noopt.comp.spv -o shaders/name.comp.spv
         let mut file = File::open(format!("/pkg/data/shaders/{}.comp.spv", name))
             .expect(&format!("failed to open file /pkg/data/shaders/{}.comp.spv", name));
         let mut shader = vec![];
@@ -331,8 +331,12 @@ impl SpinelContext {
                 };
             }
 
-            static FORMATS: &'static [(vk::Format, &str)] =
-                &[with_name!(FORMAT_B8G8R8A8_UNORM), with_name!(FORMAT_R8G8B8A8_UNORM)];
+            static FORMATS: &'static [(vk::Format, &str)] = &[
+                with_name!(FORMAT_B8G8R8A8_SRGB),
+                with_name!(FORMAT_R8G8B8A8_SRGB),
+                with_name!(FORMAT_B8G8R8A8_UNORM),
+                with_name!(FORMAT_R8G8B8A8_UNORM),
+            ];
 
             let mut preferred_format = vk::FORMAT_UNDEFINED;
             let mut preferred_format_features = 0;
@@ -923,12 +927,17 @@ impl Context<Spinel> for SpinelContext {
             }
 
             if exposure_distance.x.abs() > 1 || exposure_distance.y.abs() > 1 {
+                let motioncopy_shader_name = match self.vulkan.format {
+                    vk::FORMAT_B8G8R8A8_SRGB | vk::FORMAT_R8G8B8A8_SRGB => "motioncopy-srgb",
+                    vk::FORMAT_B8G8R8A8_UNORM | vk::FORMAT_R8G8B8A8_UNORM => "motioncopy-unorm",
+                    _ => panic!("Unsupported image format {}", self.vulkan.format),
+                };
                 let motioncopy_shader = self.vulkan.motioncopy_shader.get_or_insert_with(|| {
                     VulkanShader::new(
                         vk,
                         device,
                         descriptor_set_layout,
-                        "motioncopy",
+                        motioncopy_shader_name,
                         mem::size_of::<MotionCopyParams>(),
                     )
                 });

@@ -26,18 +26,20 @@ layout (push_constant) uniform PushConstantBlock {
     uint extent;
 } params;
 
-const float GAMMA = 2.2;
+#ifndef GAMMA
+#define GAMMA 2.2
+#endif
 
-// Takes a sRGB value and return its linear form.
-vec4 toLinear(vec4 srgb)
+// Takes a non-linear color value and return its linear form.
+vec4 toLinear(vec4 color)
 {
-    return vec4(pow(srgb.rgb, vec3(GAMMA)), srgb.a);
+    return vec4(pow(color.rgb, vec3(GAMMA)), color.a);
 }
 
-// Takes a linear value and return its sRGB form.
-vec4 toGamma(vec4 linear)
+// Takes a linear color value and return its non-linear form.
+vec4 toGamma(vec4 color)
 {
-    return vec4(pow(linear.rgb, vec3(1.0 / GAMMA)), linear.a);
+    return vec4(pow(color.rgb, vec3(1.0 / GAMMA)), color.a);
 }
 
 // Takes a source image offset and returns its texel coordinate.

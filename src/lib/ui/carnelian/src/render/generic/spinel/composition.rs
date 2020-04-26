@@ -197,6 +197,8 @@ impl SpinelComposition {
         unsafe {
             spn_styling_background_over_encoder(&mut cmds_leave[0], self.background_color.as_ptr());
         }
+        // TODO: Use sRGB opcoode when surface has UNORM format.
+        // https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=49033
         cmds_leave[3] = SpnCommand::SpnStylingOpcodeColorAccStoreToSurface;
 
         group_layers(spn_styling, top_group, &self.layers, 0);

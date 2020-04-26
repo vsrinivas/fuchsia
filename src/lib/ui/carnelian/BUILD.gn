@@ -214,7 +214,8 @@ package("infinite-scroll-rs") {
 
   shaders = [
     "copy.comp.spv",
-    "motioncopy.comp.spv",
+    "motioncopy-unorm.comp.spv",
+    "motioncopy-srgb.comp.spv",
   ]
 
   foreach(shader, shaders) {
