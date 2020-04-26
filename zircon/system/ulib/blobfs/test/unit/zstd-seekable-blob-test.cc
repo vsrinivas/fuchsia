@@ -16,7 +16,6 @@
 #include <zircon/device/block.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
-#include <fbl/auto_call.h>
 
 #include <limits>
 #include <memory>
@@ -24,6 +23,7 @@
 #include <blobfs/common.h>
 #include <blobfs/mkfs.h>
 #include <block-client/cpp/fake-device.h>
+#include <fbl/auto_call.h>
 #include <zxtest/base/test.h>
 #include <zxtest/zxtest.h>
 
@@ -81,8 +81,8 @@ class ZSTDSeekableBlobTest : public zxtest::Test {
   void CheckRead(uint32_t node_index, std::vector<uint8_t>* buf, std::vector<uint8_t>* expected_buf,
                  uint64_t data_byte_offset, uint64_t num_bytes) {
     uint8_t* expected = expected_buf->data() + data_byte_offset;
-    ASSERT_OK(compressed_blob_collection()->Read(node_index, buf->data(), data_byte_offset,
-                                                 num_bytes));
+    ASSERT_OK(
+        compressed_blob_collection()->Read(node_index, buf->data(), data_byte_offset, num_bytes));
     ASSERT_BYTES_EQ(expected, buf->data(), num_bytes);
   }
 
@@ -185,10 +185,9 @@ class ZSTDSeekAndReadTest : public ZSTDSeekableBlobTest {
 
     // Construct BlobFS with non-seekable ZSTD algorithm. This should cause errors in the seekable
     // read path.
-    ASSERT_OK(Blobfs::CreateWithWriteCompressionAlgorithm(loop_.dispatcher(), std::move(device),
-                                                          &options,
-                                                          CompressionAlgorithm::ZSTD_SEEKABLE,
-                                                          zx::resource(), &fs_));
+    ASSERT_OK(Blobfs::CreateWithWriteCompressionAlgorithm(
+        loop_.dispatcher(), std::move(device), &options, CompressionAlgorithm::ZSTD_SEEKABLE,
+        zx::resource(), &fs_));
 
     ASSERT_OK(ZSTDSeekableBlobCollection::Create(vmoid_registry(), space_manager(),
                                                  transaction_handler(), node_finder(),
@@ -199,7 +198,6 @@ class ZSTDSeekAndReadTest : public ZSTDSeekableBlobTest {
     AddBlobWithSrcFunction(out_info, ZeroToSevenBitShiftBlobSrcFunction);
   }
 };
-
 
 class NullNodeFinder : public NodeFinder {
  public:
@@ -232,7 +230,8 @@ TEST_F(ZSTDSeekAndReadTest, ComputeCorrectBlocks) {
   const uint64_t read_buffer_num_bytes = fbl::round_up(blob_data_size, kBlobfsBlockSize);
   ASSERT_OK(zx::vmo::create(read_buffer_num_bytes, 0, &read_buffer_vmo));
   fzl::VmoMapper mapper;
-  ASSERT_OK(mapper.Map(read_buffer_vmo, 0, read_buffer_num_bytes, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE));
+  ASSERT_OK(
+      mapper.Map(read_buffer_vmo, 0, read_buffer_num_bytes, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE));
   auto unmap = fbl::MakeAutoCall([&]() { mapper.Unmap(); });
   storage::OwnedVmoid vmoid(vmoid_registry());
   ASSERT_OK(vmoid.AttachVmo(read_buffer_vmo));

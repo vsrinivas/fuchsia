@@ -885,8 +885,7 @@ zx_status_t Blobfs::PopulateCompressedTransferVmo(uint64_t offset, uint64_t leng
 
   // Assume |AlignForVerification| already called on |offset| and |length|.
   ZX_DEBUG_ASSERT(offset % kBlobfsBlockSize == 0);
-  ZX_DEBUG_ASSERT(length % kBlobfsBlockSize == 0 ||
-                  offset + length == info->data_length_bytes);
+  ZX_DEBUG_ASSERT(length % kBlobfsBlockSize == 0 || offset + length == info->data_length_bytes);
 
   fzl::VmoMapper mapping;
   // We need to unmap the transfer VMO before its pages can be transferred to the destination VMO,

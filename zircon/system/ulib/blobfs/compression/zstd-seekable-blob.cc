@@ -20,8 +20,8 @@
 #include <fs/trace.h>
 #include <zstd/zstd_seekable.h>
 
-#include "zstd-seekable.h"
 #include "zstd-seekable-blob-collection.h"
+#include "zstd-seekable.h"
 
 namespace blobfs {
 
@@ -219,22 +219,25 @@ int ZSTDRead(void* void_ptr_zstd_seekable_file, void* buf, size_t num_bytes) {
   uint32_t data_block_start = static_cast<uint32_t>(data_block_start64);
   uint64_t data_byte_end;
   if (add_overflow(data_byte_offset, num_bytes, &data_byte_end)) {
-    FS_TRACE_ERROR("[blobfs][zstd-seekable] Oversized data block end: data_byte_offset=%lu, num_bytes=%lu\n",
-                   data_byte_offset, num_bytes);
+    FS_TRACE_ERROR(
+        "[blobfs][zstd-seekable] Oversized data block end: data_byte_offset=%lu, num_bytes=%lu\n",
+        data_byte_offset, num_bytes);
     file->status = ZX_ERR_OUT_OF_RANGE;
     return -1;
   }
   uint64_t data_block_end64 = fbl::round_up(data_byte_end, kBlobfsBlockSize) / kBlobfsBlockSize;
   uint64_t num_blocks64;
   if (sub_overflow(data_block_end64, data_block_start64, &num_blocks64)) {
-    FS_TRACE_ERROR("[blobfs][zstd-seekable] Block calculation error: (data_block_end=%lu - data_block_start=%lu) should be non-negative\n",
-                   data_block_end64, data_block_start64);
+    FS_TRACE_ERROR(
+        "[blobfs][zstd-seekable] Block calculation error: (data_block_end=%lu - "
+        "data_block_start=%lu) should be non-negative\n",
+        data_block_end64, data_block_start64);
     file->status = ZX_ERR_INTERNAL;
     return -1;
   }
   if (num_blocks64 > std::numeric_limits<uint32_t>::max()) {
-    FS_TRACE_ERROR("[blobfs][zstd-seekable] Oversized number of blocks: %lu > %u\n",
-                   num_blocks64, std::numeric_limits<uint32_t>::max());
+    FS_TRACE_ERROR("[blobfs][zstd-seekable] Oversized number of blocks: %lu > %u\n", num_blocks64,
+                   std::numeric_limits<uint32_t>::max());
     file->status = ZX_ERR_OUT_OF_RANGE;
     return -1;
   }
