@@ -176,8 +176,10 @@ impl SpinelComposition {
 
         unsafe {
             spn!(spn_styling_group_parents(spn_styling, top_group, PARENTS, ptr::null_mut()));
-            spn!(spn_styling_group_range_lo(spn_styling, top_group, 0));
-            spn!(spn_styling_group_range_lo(spn_styling, top_group, len - 1));
+            if len != 0 {
+                spn!(spn_styling_group_range_lo(spn_styling, top_group, 0));
+                spn!(spn_styling_group_range_hi(spn_styling, top_group, len - 1));
+            }
         }
 
         let cmds_enter = unsafe {
