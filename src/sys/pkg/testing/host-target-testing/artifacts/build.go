@@ -97,7 +97,7 @@ func (b *ArchiveBuild) GetPaver(ctx context.Context) (paver.Paver, error) {
 	paveScript := filepath.Join(buildArchiveDir, "pave.sh")
 	paveZedbootScript := filepath.Join(buildArchiveDir, "pave-zedboot.sh")
 
-	return paver.NewBuildPaver(paveZedbootScript, paveScript, b.sshPublicKey), nil
+	return paver.NewBuildPaver(paveZedbootScript, paveScript, paver.SSHPublicKey(b.sshPublicKey))
 }
 
 func (b *ArchiveBuild) Pave(ctx context.Context, deviceName string) error {
@@ -134,6 +134,6 @@ func (b *FuchsiaDirBuild) GetPaver(ctx context.Context) (paver.Paver, error) {
 	return paver.NewBuildPaver(
 		filepath.Join(b.dir, "pave-zedboot.sh"),
 		filepath.Join(b.dir, "pave.sh"),
-		b.sshPublicKey,
-	), nil
+		paver.SSHPublicKey(b.sshPublicKey),
+	)
 }

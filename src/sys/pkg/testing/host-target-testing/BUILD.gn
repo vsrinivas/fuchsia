@@ -18,7 +18,7 @@ go_library("host-target-testing") {
   ]
 }
 
-test_packages = []
+test_packages = [ "paver" ]
 foreach(testpkg, test_packages) {
   go_test("host-target-testing-${testpkg}-test") {
     gopackages = [ "fuchsia.googlesource.com/host_target_testing/${testpkg}" ]
@@ -31,6 +31,6 @@ group("tests") {
 
   public_deps = []
   foreach(testpkg, test_packages) {
-    public_deps += [ ":host-target-testing-${testpkg}-test" ]
+    public_deps += [ ":host-target-testing-${testpkg}-test($host_toolchain)" ]
   }
 }
