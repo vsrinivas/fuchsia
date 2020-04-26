@@ -888,15 +888,10 @@ zx_status_t Blobfs::PopulateCompressedTransferVmo(uint64_t offset, uint64_t leng
   ZX_DEBUG_ASSERT(length % kBlobfsBlockSize == 0 ||
                   offset + length == info->data_length_bytes);
 
-  FS_TRACE_ERROR("\n\nPopulating compressed transfer vmo offset=%lu, length=%lu, data_length_bytes=%lu\n\n", offset, length, info->data_length_bytes);
-
   fzl::VmoMapper mapping;
   // We need to unmap the transfer VMO before its pages can be transferred to the destination VMO,
   // via |zx_pager_supply_pages|.
-  auto unmap = fbl::MakeAutoCall([&]() {
-    FS_TRACE_ERROR("\n\nUnmapping uncompressed space buffer\n\n");
-    mapping.Unmap();
-  });
+  auto unmap = fbl::MakeAutoCall([&]() { mapping.Unmap(); });
 
   // Map the transfer VMO in order to pass it to |ZSTDSeekableBlobCollection::Read|.
   zx_status_t status = mapping.Map(transfer_buffer_, 0, length, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
@@ -904,9 +899,6 @@ zx_status_t Blobfs::PopulateCompressedTransferVmo(uint64_t offset, uint64_t leng
     FS_TRACE_ERROR("blobfs: Failed to map transfer buffer: %s\n", zx_status_get_string(status));
     return status;
   }
-
-  FS_TRACE_ERROR("\n\nUncompressed space buffer is %lx, %lx", reinterpret_cast<uint64_t>(mapping.start()), reinterpret_cast<uint64_t>(mapping.start()) + length);
-  FS_TRACE_ERROR("\n\nUncompressed space buffer first byte contains %x\n\n", *static_cast<uint8_t*>(mapping.start()));
 
   status = compressed_blobs_for_paging_->Read(
       info->identifier, static_cast<uint8_t*>(mapping.start()), offset, length);
