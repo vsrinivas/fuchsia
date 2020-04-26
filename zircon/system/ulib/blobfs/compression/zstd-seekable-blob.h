@@ -67,6 +67,19 @@ class ZSTDSeekableBlob : public RandomAccessCompressedBlob {
   std::unique_ptr<ZSTDCompressedBlockCollection> compressed_block_collection_;
 };
 
+// Type used for opaque pointer in ZSTD Seekable custom |seek()| and |read()| API.
+struct ZSTDSeekableFile {
+  ZSTDSeekableBlob* blob;
+  ZSTDCompressedBlockCollection* blocks;
+  unsigned long long byte_offset;
+  unsigned long long num_bytes;
+  zx_status_t status;
+};
+
+// ZSTD Seekable custom |seek()| and |read()| API.
+int ZSTDSeek(void* void_ptr_zstd_seekable_file, long long byte_offset, int origin);
+int ZSTDRead(void* void_ptr_zstd_seekable_file, void* buf, size_t num_bytes);
+
 }  // namespace blobfs
 
 #endif  // ZIRCON_SYSTEM_ULIB_BLOBFS_COMPRESSION_ZSTD_SEEKABLE_BLOB_H_
