@@ -160,7 +160,7 @@ func (p *Printer) newTmplParams() tmplParams {
 		HeaderTag:              headerTag,
 		HIncludePath:           p.hIncludePath,
 		LibraryNameWithSlashes: strings.Join(targetMt.name.LibraryName().Parts(), "/"),
-		TargetType:             targetMt.nameToType(),
+		TargetType:             p.fmtType(targetMt.name),
 		Namespaces:             namespaces,
 	}
 }
@@ -183,7 +183,7 @@ func (p *Printer) WriteCc() {
 		panic(err.Error())
 	}
 
-	p.buf.WriteString("\n")
+	allMethods := make(map[methodID]*method)
 	for len(p.toPrint) != 0 {
 		mt, remaining := p.toPrint[0], p.toPrint[1:]
 		p.toPrint = remaining
@@ -191,8 +191,28 @@ func (p *Printer) WriteCc() {
 			continue
 		}
 		p.done[mt] = true
-		mt.write(p)
-		p.writef("\n")
+
+		methods := []*method{
+			mt.newMeasureMethod(),
+			mt.newMeasureOutOfLineMethod(p),
+		}
+		if mt.hasHandles {
+			methods = append(methods, mt.newMeasureHandlesMethod())
+		}
+		for _, m := range methods {
+			allMethods[m.id] = m
+		}
+	}
+
+	// TODO(fxb/50010): Collect and apply method pruning before printing.
+	methodsToPrint := make([]methodID, 0, len(allMethods))
+	for id := range allMethods {
+		methodsToPrint = append(methodsToPrint, id)
+	}
+	sort.Sort(byTargetTypeThenKind(methodsToPrint))
+	for _, id := range methodsToPrint {
+		p.buf.WriteString("\n")
+		allMethods[id].print(p)
 	}
 
 	if err := ccBottom.Execute(p.buf, params); err != nil {
@@ -221,56 +241,73 @@ func (p *Printer) add(mt *MeasuringTape) {
 	}
 }
 
-func (mt *MeasuringTape) write(p *Printer) {
-	p.writef("void Measure(const %s& value) {\n", mt.nameToType())
-	p.indent(func() {
-		switch mt.kind {
-		case kUnion:
-			p.writef("num_bytes_ += sizeof(fidl_xunion_t);\n")
-		case kStruct:
-			p.writef("num_bytes_ += FIDL_ALIGN(%d);\n", mt.inlineNumBytes)
-			if mt.hasHandles {
-				p.writef("MeasureHandles(value);\n")
-			}
-		case kTable:
-			p.writef("num_bytes_ += sizeof(fidl_table_t);\n")
-		default:
-			log.Panicf("should not be reachable for kind %v", mt.kind)
+func (mt *MeasuringTape) assertOnlyStructUnionTable() {
+	switch mt.kind {
+	case kUnion:
+		return
+	case kStruct:
+		return
+	case kTable:
+		return
+	default:
+		log.Panicf("should not be reachable for kind %v", mt.kind)
+	}
+}
+
+func (mt *MeasuringTape) newMeasureMethod() *method {
+	mt.assertOnlyStructUnionTable()
+
+	var body block
+	switch mt.kind {
+	case kUnion:
+		body.emitAddNumBytes("sizeof(fidl_xunion_t)")
+	case kStruct:
+		body.emitAddNumBytes("FIDL_ALIGN(%d)", mt.inlineNumBytes)
+		if mt.hasHandles {
+			body.emitInvoke(mt.methodIDOf(measureHandles), "value")
 		}
-		p.writef("MeasureOutOfLine(value);\n")
-	})
-	p.writef("}\n")
-	p.writef("\n")
-	p.writef("void MeasureOutOfLine(const %s& value) {\n", mt.nameToType())
-	p.indent(func() {
-		switch mt.kind {
-		case kUnion:
-			mt.writeUnionOutOfLine(p)
-		case kStruct:
-			mt.writeStructOutOfLine(p)
-		case kTable:
-			mt.writeTableOutOfLine(p)
-		}
-	})
-	p.writef("}\n")
+	case kTable:
+		body.emitAddNumBytes("sizeof(fidl_table_t)")
+	}
+	body.emitInvoke(mt.methodIDOf(measureOutOfLine), "value")
+	return newMethod(mt.methodIDOf(measure), &body)
+}
+
+func (mt *MeasuringTape) newMeasureOutOfLineMethod(p *Printer) *method {
+	mt.assertOnlyStructUnionTable()
+
+	var body block
+	switch mt.kind {
+	case kUnion:
+		mt.writeUnionOutOfLine(p, &body)
+	case kStruct:
+		mt.writeStructOutOfLine(p, &body)
+	case kTable:
+		mt.writeTableOutOfLine(p, &body)
+	}
+	return newMethod(mt.methodIDOf(measureOutOfLine), &body)
+}
+
+func (mt *MeasuringTape) newMeasureHandlesMethod() *method {
+	mt.assertOnlyStructUnionTable()
+
+	var body block
 	if mt.hasHandles {
-		p.writef("\n")
-		p.writef("void MeasureHandles(const %s& value) {\n", mt.nameToType())
-		p.indent(func() {
-			switch mt.kind {
-			case kStruct:
-				for _, member := range mt.members {
-					if member.mt.kind == kHandle {
-						// TODO(fxb/49488): Conditionally increase for nullable handles.
-						p.writef("num_handles_ += 1;\n")
-					} else if member.mt.hasHandles {
-						p.writef("MeasureHandles(value.%s);\n", fidlcommon.ToSnakeCase(member.name))
-					}
+		switch mt.kind {
+		case kStruct:
+			for _, member := range mt.members {
+				if member.mt.kind == kHandle {
+					// TODO(fxb/49488): Conditionally increase for nullable handles.
+					body.emitAddNumHandles("1")
+				} else if member.mt.hasHandles {
+					body.emitInvoke(
+						member.mt.methodIDOf(measureHandles),
+						"value.%s", fidlcommon.ToSnakeCase(member.name))
 				}
 			}
-		})
-		p.writef("}\n")
+		}
 	}
+	return newMethod(mt.methodIDOf(measureHandles), &body)
 }
 
 type invokeKind int
@@ -305,20 +342,18 @@ func (op derefOp) String() string {
 	case pointerDeref:
 		return "->"
 	default:
-		log.Panic("incorrect fieldKind")
+		log.Panicf("should not be reachable for op %v", op)
 		return ""
 	}
 }
 
-func (member *measuringTapeMember) guardNullableAccess(p *Printer, fieldMode fieldKind, fn func(derefOp)) {
+func (member *measuringTapeMember) guardNullableAccess(body *block, fieldMode fieldKind, fn func(*block, derefOp)) {
 	if member.mt.nullable {
-		p.writef("if (%s) {\n", member.accessor(fieldMode))
-		p.indent(func() {
-			fn(pointerDeref)
-		})
-		p.writef("}\n")
+		var guardBody block
+		body.emitGuard(member.accessor(fieldMode), &guardBody)
+		fn(&guardBody, pointerDeref)
 	} else {
-		fn(directDeref)
+		fn(body, directDeref)
 	}
 }
 
@@ -336,26 +371,25 @@ func (member *measuringTapeMember) accessor(fieldMode fieldKind) string {
 	}
 }
 
-func (member *measuringTapeMember) writeInvoke(p *Printer, mode invokeKind, fieldMode fieldKind) {
+func (member *measuringTapeMember) writeInvoke(p *Printer, body *block, mode invokeKind, fieldMode fieldKind) {
 	switch member.mt.kind {
 	case kString:
 		if mode == inlineAndOutOfLine {
-			p.writef("num_bytes_ += sizeof(fidl_string_t);\n")
+			body.emitAddNumBytes("sizeof(fidl_string_t)")
 		}
-		member.guardNullableAccess(p, fieldMode, func(op derefOp) {
-			p.writef("num_bytes_ += FIDL_ALIGN(%s%slength());\n",
-				member.accessor(fieldMode), op)
+		member.guardNullableAccess(body, fieldMode, func(guardBody *block, op derefOp) {
+			guardBody.emitAddNumBytes("FIDL_ALIGN(%s%slength())", member.accessor(fieldMode), op)
 		})
 	case kVector:
 		if mode == inlineAndOutOfLine {
-			p.writef("num_bytes_ += sizeof(fidl_vector_t);\n")
+			body.emitAddNumBytes("sizeof(fidl_vector_t)")
 		}
-		member.guardNullableAccess(p, fieldMode, func(op derefOp) {
+		member.guardNullableAccess(body, fieldMode, func(guardBody *block, op derefOp) {
 			if mode == inlineAndOutOfLine {
 				if member.mt.elementMt.kind == kHandle ||
 					(!member.mt.elementMt.hasOutOfLine && member.mt.elementMt.hasHandles) {
 					// TODO(fxb/49488): Conditionally increase for nullable handles.
-					p.writef("num_handles_ += %s%ssize() * %d;\n",
+					guardBody.emitAddNumHandles("%s%ssize() * %d",
 						member.accessor(fieldMode), op, member.mt.elementMt.inlineNumHandles)
 				}
 			}
@@ -368,22 +402,23 @@ func (member *measuringTapeMember) writeInvoke(p *Printer, mode invokeKind, fiel
 				if op == pointerDeref {
 					deref = "*"
 				}
-				p.writef("for (const auto& %s : %s%s) {\n", memberMt.name, deref, member.accessor(fieldMode))
-				p.indent(func() {
-					memberMt.writeInvoke(p, inlineAndOutOfLine, localVar)
-				})
-				p.writef("}\n")
+				var iterateBody block
+				guardBody.emitIterate(
+					memberMt.name,
+					fmt.Sprintf("%s%s", deref, member.accessor(fieldMode)),
+					&iterateBody)
+				memberMt.writeInvoke(p, &iterateBody, inlineAndOutOfLine, localVar)
 			} else {
-				p.writef("num_bytes_ += FIDL_ALIGN(%s%ssize() * %d);\n",
+				guardBody.emitAddNumBytes("FIDL_ALIGN(%s%ssize() * %d)",
 					member.accessor(fieldMode), op, member.mt.elementMt.inlineNumBytes)
 			}
 		})
 	case kArray:
 		if mode == inlineAndOutOfLine {
-			p.writef("num_bytes_ += FIDL_ALIGN(%d);\n", member.mt.inlineNumBytes)
+			body.emitAddNumBytes("FIDL_ALIGN(%d)", member.mt.inlineNumBytes)
 			if member.mt.elementMt.kind == kHandle || (!member.mt.hasOutOfLine && member.mt.hasHandles) {
 				// TODO(fxb/49488): Conditionally increase for nullable handles.
-				p.writef("num_handles_ += %d;\n", member.mt.inlineNumHandles)
+				body.emitAddNumHandles("%d", member.mt.inlineNumHandles)
 			}
 		}
 		if member.mt.hasOutOfLine {
@@ -391,81 +426,66 @@ func (member *measuringTapeMember) writeInvoke(p *Printer, mode invokeKind, fiel
 				name: fmt.Sprintf("%s_elem", member.name),
 				mt:   member.mt.elementMt,
 			}
-			p.writef("for (const auto& %s : %s) {\n", memberMt.name, member.accessor(fieldMode))
-			p.indent(func() {
-				memberMt.writeInvoke(p, outOfLineOnly, localVar)
-			})
-			p.writef("}\n")
+			var iterateBody block
+			body.emitIterate(memberMt.name, member.accessor(fieldMode), &iterateBody)
+			memberMt.writeInvoke(p, &iterateBody, outOfLineOnly, localVar)
 		}
 	case kPrimitive:
 		if mode == inlineAndOutOfLine {
-			p.writef("num_bytes_ += 8;\n")
+			body.emitAddNumBytes("8")
 		}
 	case kHandle:
 		if mode == inlineAndOutOfLine {
-			p.writef("num_bytes_ += 8;\n")
+			body.emitAddNumBytes("8")
 			// TODO(fxb/49488): Conditionally increase for nullable handles.
-			p.writef("num_handles_ += 1;\n")
+			body.emitAddNumHandles("1")
 		}
 	default:
 		p.add(member.mt)
-		member.guardNullableAccess(p, fieldMode, func(_ derefOp) {
+		member.guardNullableAccess(body, fieldMode, func(guardBody *block, _ derefOp) {
 			switch mode {
 			case inlineAndOutOfLine:
-				p.writef("Measure(%s);\n", member.accessor(fieldMode))
+				guardBody.emitInvoke(member.mt.methodIDOf(measure), member.accessor(fieldMode))
 			case outOfLineOnly:
-				p.writef("MeasureOutOfLine(%s);\n", member.accessor(fieldMode))
+				guardBody.emitInvoke(member.mt.methodIDOf(measureOutOfLine), member.accessor(fieldMode))
 			}
 		})
 	}
 }
 
-func (mt *MeasuringTape) writeStructOutOfLine(p *Printer) {
+func (mt *MeasuringTape) writeStructOutOfLine(p *Printer, body *block) {
 	for _, member := range mt.members {
-		member.writeInvoke(p, outOfLineOnly, directAccessField)
+		member.writeInvoke(p, body, outOfLineOnly, directAccessField)
 	}
 }
 
-func (mt *MeasuringTape) writeUnionOutOfLine(p *Printer) {
-	p.writef("switch (value.Which()) {\n")
-	p.indent(func() {
-		for _, member := range mt.members {
-			p.writef("case %s:\n", mt.memberNameToUnionTag(member.name))
-			p.indent(func() {
-				member.writeInvoke(p, inlineAndOutOfLine, throughAccessorField)
-				p.writef("break;\n")
-			})
-		}
-		p.writef("case %s:\n", mt.memberNameToInvalidUnionTag())
-		p.indent(func() {
-			p.writef("MaxOut();\n")
-			p.writef("break;\n")
-		})
-	})
-	p.writef("}\n")
-}
+func (mt *MeasuringTape) writeUnionOutOfLine(p *Printer, body *block) {
+	variants := make(map[string]*block)
 
-func (mt *MeasuringTape) writeTableOutOfLine(p *Printer) {
-	p.writef("int32_t max_ordinal = 0;\n")
+	// known
 	for _, member := range mt.members {
-		p.writef("if (value.has_%s()) {\n", fidlcommon.ToSnakeCase(member.name))
-		p.indent(func() {
-			member.writeInvoke(p, inlineAndOutOfLine, throughAccessorField)
-			p.writef("max_ordinal = %d;\n", member.ordinal)
-		})
-		p.writef("}\n")
+		var variantBody block
+		variants[member.name] = &variantBody
+		member.writeInvoke(p, &variantBody, inlineAndOutOfLine, throughAccessorField)
 	}
-	p.writef("num_bytes_ += sizeof(fidl_envelope_t) * max_ordinal;\n")
+
+	// unknown
+	{
+		var variantBody block
+		variantBody.emitMaxOut()
+		variants[unknownVariant] = &variantBody
+	}
+
+	body.emitSelectVariant("value", mt.name, variants)
 }
 
-func (mt *MeasuringTape) nameToType() string {
-	return fmt.Sprintf("::%s::%s", strings.Join(mt.name.LibraryName().Parts(), "::"), mt.name.DeclarationName())
-}
-
-func (mt *MeasuringTape) memberNameToUnionTag(memberName string) string {
-	return fmt.Sprintf("%s::Tag::k%s", mt.nameToType(), fidlcommon.ToUpperCamelCase(memberName))
-}
-
-func (mt *MeasuringTape) memberNameToInvalidUnionTag() string {
-	return fmt.Sprintf("%s::Tag::Invalid", mt.nameToType())
+func (mt *MeasuringTape) writeTableOutOfLine(p *Printer, body *block) {
+	body.emitDeclareMaxOrdinal()
+	for _, member := range mt.members {
+		var guardBody block
+		body.emitGuard(fmt.Sprintf("value.has_%s()", fidlcommon.ToSnakeCase(member.name)), &guardBody)
+		member.writeInvoke(p, &guardBody, inlineAndOutOfLine, throughAccessorField)
+		guardBody.emitSetMaxOrdinal(member.ordinal)
+	}
+	body.emitAddNumBytes("sizeof(fidl_envelope_t) * max_ordinal")
 }
