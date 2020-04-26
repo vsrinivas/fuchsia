@@ -315,6 +315,10 @@ package("shapes-rs") {
       dest = "shapes-rs.cmx"
     },
   ]
+
+  public_deps = vulkan_validation_layers.public_deps
+  loadable_modules = vulkan_validation_layers.loadable_modules
+  resources = vulkan_validation_layers.resources
 }
 
 rustc_binary("spinning_square") {
@@ -392,6 +396,10 @@ package("gamma-rs") {
       dest = "gamma-rs.cmx"
     },
   ]
+
+  public_deps = vulkan_validation_layers.public_deps
+  loadable_modules = vulkan_validation_layers.loadable_modules
+  resources = vulkan_validation_layers.resources
 }
 
 test_package("carnelian-render-tests") {
