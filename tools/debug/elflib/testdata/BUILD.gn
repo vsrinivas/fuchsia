@@ -10,6 +10,9 @@ host_test_data("testdata") {
     "libc.elf.stripped",
     "libc.yaml",
     "libc.yaml.section-only",
+
+    #"pe-aa64.efi" TODO: Go's debug/pe doesn't support it yet.
+    "pe-x64.efi",
   ]
   outputs = [ "$root_out_dir/testdata/elflib/{{source_file_part}}" ]
 }

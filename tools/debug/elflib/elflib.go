@@ -23,6 +23,8 @@ const NT_GNU_BUILD_ID uint32 = 3
 // DebugFileSuffix is the file suffix used by unstripped debug binaries.
 const DebugFileSuffix = ".debug"
 
+const pdbMagic = "Microsoft C/C++ MSF 7.00\r\n\x1aDS\x00\x00\x00"
+
 // BinaryFileRef represents a reference to an ELF file. The build id
 // and filepath are stored here. BinaryFileRefs can verify that their
 // build id matches their contents.
@@ -47,6 +49,15 @@ func newBuildIDError(err error, filename string) *buildIDError {
 
 func (b buildIDError) Error() string {
 	return fmt.Sprintf("error reading %s: %v", b.filename, b.err)
+}
+
+// TODO: kludge: PDB is way too complicated to decode enough to find the
+// GUID easily.  This is just a trivial hack to check if a file looks like
+// a PDB file so it can be exempted from proper build ID checking.
+func IsPDBFile(file io.ReaderAt) bool {
+	magicBytes := make([]byte, len(pdbMagic))
+	_, err := file.ReadAt(magicBytes, 0)
+	return err == nil && bytes.Equal(magicBytes, []byte(pdbMagic))
 }
 
 // Verify verifies that the build id of b matches the build id found in the file.
@@ -129,7 +140,7 @@ func forEachNote(note []byte, endian binary.ByteOrder, entryFn func(noteEntry)) 
 	}
 }
 
-func getBuildIDs(filename string, endian binary.ByteOrder, data io.ReaderAt, size uint64) ([][]byte, error) {
+func parseBuildIDs(filename string, endian binary.ByteOrder, data io.ReaderAt, size uint64) ([][]byte, error) {
 	noteBytes := make([]byte, size)
 	_, err := data.ReadAt(noteBytes, 0)
 	if err != nil {
@@ -149,6 +160,10 @@ func getBuildIDs(filename string, endian binary.ByteOrder, data io.ReaderAt, siz
 func GetBuildIDs(filename string, file io.ReaderAt) ([][]byte, error) {
 	elfFile, err := elf.NewFile(file)
 	if err != nil {
+		// If it's not ELF, maybe it's PE?
+		if out, peErr := PEGetBuildIDs(filename, file); peErr == nil {
+			return out, peErr
+		}
 		return nil, fmt.Errorf("could not parse ELF file %s: %w", filename, err)
 	}
 	if len(elfFile.Progs) == 0 && len(elfFile.Sections) == 0 {
@@ -166,7 +181,7 @@ func GetBuildIDs(filename string, file io.ReaderAt) ([][]byte, error) {
 		if section == nil || section.Type != elf.SHT_NOTE {
 			continue
 		}
-		buildIDs, err := getBuildIDs(filename, endian, section, section.Size)
+		buildIDs, err := parseBuildIDs(filename, endian, section, section.Size)
 		if err != nil {
 			return out, err
 		}
@@ -182,7 +197,7 @@ func GetBuildIDs(filename string, file io.ReaderAt) ([][]byte, error) {
 		if prog == nil || prog.Type != elf.PT_NOTE {
 			continue
 		}
-		buildIDs, err := getBuildIDs(filename, endian, prog, prog.Filesz)
+		buildIDs, err := parseBuildIDs(filename, endian, prog, prog.Filesz)
 		if err != nil {
 			return out, err
 		}
