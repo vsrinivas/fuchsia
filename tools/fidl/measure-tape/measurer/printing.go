@@ -347,9 +347,37 @@ func (member *measuringTapeMember) writeInvoke(p *Printer, mode invokeKind, fiel
 				member.accessor(fieldMode), op)
 		})
 	case kVector:
-		// TODO(fxb/49480): Support measuring vectors.
-		p.writef("// TODO: vectors are not measured yet.\n")
-		p.writef("MaxOut();\n")
+		if mode == inlineAndOutOfLine {
+			p.writef("num_bytes_ += sizeof(fidl_vector_t);\n")
+		}
+		member.guardNullableAccess(p, fieldMode, func(op derefOp) {
+			if mode == inlineAndOutOfLine {
+				if member.mt.elementMt.kind == kHandle ||
+					(!member.mt.elementMt.hasOutOfLine && member.mt.elementMt.hasHandles) {
+					// TODO(fxb/49488): Conditionally increase for nullable handles.
+					p.writef("num_handles_ += %s%ssize() * %d;\n",
+						member.accessor(fieldMode), op, member.mt.elementMt.inlineNumHandles)
+				}
+			}
+			if member.mt.elementMt.hasOutOfLine {
+				memberMt := measuringTapeMember{
+					name: fmt.Sprintf("%s_elem", member.name),
+					mt:   member.mt.elementMt,
+				}
+				var deref string
+				if op == pointerDeref {
+					deref = "*"
+				}
+				p.writef("for (const auto& %s : %s%s) {\n", memberMt.name, deref, member.accessor(fieldMode))
+				p.indent(func() {
+					memberMt.writeInvoke(p, inlineAndOutOfLine, localVar)
+				})
+				p.writef("}\n")
+			} else {
+				p.writef("num_bytes_ += FIDL_ALIGN(%s%ssize() * %d);\n",
+					member.accessor(fieldMode), op, member.mt.elementMt.inlineNumBytes)
+			}
+		})
 	case kArray:
 		if mode == inlineAndOutOfLine {
 			p.writef("num_bytes_ += FIDL_ALIGN(%d);\n", member.mt.inlineNumBytes)

@@ -130,9 +130,16 @@ func (m *Measurer) createMeasuringTape(kd keyedDecl) (*MeasuringTape, error) {
 			hasOutOfLine:   true,
 		}
 	case vectorDecl:
+		elementMt, err := m.createMeasuringTape(decl.elementDecl)
+		if err != nil {
+			return nil, err
+		}
 		tape = &MeasuringTape{
-			kind: kVector,
-			// TODO(fxb/49480): Support measuring vectors.
+			kind:           kVector,
+			hasHandles:     elementMt.hasHandles,
+			elementMt:      elementMt,
+			inlineNumBytes: 16, // sizeof(fidl_vector_t)
+			hasOutOfLine:   true,
 		}
 	case arrayDecl:
 		elementMt, err := m.createMeasuringTape(decl.elementDecl)

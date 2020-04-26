@@ -678,8 +678,7 @@ class MeasuringTape {
   }
   
   void MeasureOutOfLine(const ::fuchsia::ui::gfx::SetClipPlanesCmd& value) {
-    // TODO: vectors are not measured yet.
-    MaxOut();
+    num_bytes_ += FIDL_ALIGN(value.clip_planes.size() * 16);
   }
   
   void Measure(const ::fuchsia::ui::gfx::SetPointLightPositionCmd& value) {

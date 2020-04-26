@@ -17,7 +17,16 @@ union TopLevelUnion {
     9: array<Table>:2 array_of_two_tables;
     10: array<Union>:2 array_of_two_unions;
     11: StructWithTwoArrays struct_with_two_arrays;
-    12: array<StructWithHandle>:3 array_of_three_structs_with_handles;
+    12: array<StructWithOneHandle>:3 array_of_three_structs_with_one_handle;
+    21: array<StructWithTwoHandles>:3 array_of_three_structs_with_two_handles;
+    13: vector<byte> vector_of_bytes;
+    14: vector<string> vector_of_strings;
+    15: vector<handle> vector_of_handles;
+    16: vector<Table> vector_of_tables;
+    17: vector<Union> vector_of_unions;
+    18: StructWithTwoVectors struct_with_two_vectors;
+    19: vector<StructWithOneHandle> vector_of_structs_with_one_handle;
+    20: vector<StructWithTwoHandles> vector_of_structs_with_two_handles;
 };
 
 // 16 bytes + FIDL_ALIGN(string length)
@@ -51,8 +60,21 @@ struct StructWithTwoArrays {
 };
 
 // 9 bytes
-struct StructWithHandle {
+struct StructWithOneHandle {
     uint8 tiny1;
     handle<vmo> vmo;
     uint8 tiny2;
+};
+
+// 12 bytes
+struct StructWithTwoHandles {
+    uint8 tiny1;
+    handle<vmo> vmo1;
+    handle<vmo> vmo2;
+};
+
+// 32 bytes
+struct StructWithTwoVectors {
+    vector<byte>? vector_of_bytes;
+    vector<string>? vector_of_strings;
 };

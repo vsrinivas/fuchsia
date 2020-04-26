@@ -41,10 +41,12 @@ func (m *Measurer) toDecl(typ fidlir.Type) keyedDecl {
 			},
 		}
 	case fidlir.VectorType:
-		// TODO(fxb/49480): Support measuring vectors.
-		return keyedDecl{key: "", decl: vectorDecl{
-			elementDecl: m.toDecl(*typ.ElementType),
-		}}
+		return keyedDecl{
+			nullable: typ.Nullable,
+			decl: vectorDecl{
+				elementDecl: m.toDecl(*typ.ElementType),
+			},
+		}
 	case fidlir.StringType:
 		return keyedDecl{
 			nullable: typ.Nullable,
