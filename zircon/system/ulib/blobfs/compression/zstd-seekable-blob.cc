@@ -247,7 +247,6 @@ int ZSTDRead(void* void_ptr_zstd_seekable_file, void* buf, size_t num_bytes) {
   uint32_t num_blocks = static_cast<uint32_t>(num_blocks64);
 
   // Delegate block-level read to compressed block collection.
-  FS_TRACE_ERROR("\n\nfile->block->Read(%u, %u)\n\n", data_block_start, num_blocks);
   zx_status_t status = file->blocks->Read(data_block_start, num_blocks);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("[blobfs][zstd-seekable] Failed to read blocks: %s\n",
