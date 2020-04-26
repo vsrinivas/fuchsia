@@ -25,13 +25,64 @@
 namespace blobfs {
 
 namespace {
-struct ZSTDSeekableFile {
-  ZSTDSeekableBlob* blob;
-  ZSTDCompressedBlockCollection* blocks;
-  unsigned long long byte_offset;
-  unsigned long long num_bytes;
-  zx_status_t status;
-};
+
+int ComputeOffsetAndNumBytesForRead(ZSTDSeekableFile* file, size_t num_bytes, uint32_t* out_data_block_offset, uint32_t* out_num_blocks, uint64_t* out_data_byte_offset) {
+  // |file->byte_offset| does not account for ZSTD seekable header.
+  uint64_t data_byte_offset;
+  if (add_overflow(kZSTDSeekableHeaderSize, file->byte_offset, &data_byte_offset)) {
+    FS_TRACE_ERROR("[blobfs][zstd-seekable] ZSTD header + file offset overflow: file_offset=%llu\n",
+                   file->byte_offset);
+    file->status = ZX_ERR_OUT_OF_RANGE;
+    return -1;
+  }
+
+  // Safely convert units: Bytes to blocks.
+  uint64_t data_block_start64 = data_byte_offset / kBlobfsBlockSize;
+  if (data_block_start64 > std::numeric_limits<uint32_t>::max()) {
+    FS_TRACE_ERROR("[blobfs][zstd-seekable] Oversized data block start: %lu / %u = %lu > %u\n",
+                   data_byte_offset, kBlobfsBlockSize, data_block_start64,
+                   std::numeric_limits<uint32_t>::max());
+    file->status = ZX_ERR_OUT_OF_RANGE;
+    return -1;
+  }
+  uint32_t data_block_start = static_cast<uint32_t>(data_block_start64);
+
+  // Compute raw offset to end before determining which blocks must be read.
+  uint64_t data_byte_end;
+  if (add_overflow(data_byte_offset, num_bytes, &data_byte_end)) {
+    FS_TRACE_ERROR(
+        "[blobfs][zstd-seekable] Oversized data block end: data_byte_offset=%lu, num_bytes=%lu\n",
+        data_byte_offset, num_bytes);
+    file->status = ZX_ERR_OUT_OF_RANGE;
+    return -1;
+  }
+
+  // Round up to nearest block from end, then subtract start to determine number of blocks.
+  uint64_t data_block_end64 = fbl::round_up(data_byte_end, kBlobfsBlockSize) / kBlobfsBlockSize;
+  uint64_t num_blocks64;
+  if (sub_overflow(data_block_end64, data_block_start64, &num_blocks64)) {
+    FS_TRACE_ERROR(
+        "[blobfs][zstd-seekable] Block calculation error: (data_block_end=%lu - "
+        "data_block_start=%lu) should be non-negative\n",
+        data_block_end64, data_block_start64);
+    file->status = ZX_ERR_INTERNAL;
+    return -1;
+  }
+  if (num_blocks64 > std::numeric_limits<uint32_t>::max()) {
+    FS_TRACE_ERROR("[blobfs][zstd-seekable] Oversized number of blocks: %lu > %u\n", num_blocks64,
+                   std::numeric_limits<uint32_t>::max());
+    file->status = ZX_ERR_OUT_OF_RANGE;
+    return -1;
+  }
+  uint32_t num_blocks = static_cast<uint32_t>(num_blocks64);
+
+  *out_data_block_offset = data_block_start;
+  *out_num_blocks = num_blocks;
+  *out_data_byte_offset = data_byte_offset;
+  return 0;
+}
+
+}  // namespace
 
 // ZSTD Seekable Format API function for `ZSTD_seekable_customFile`.
 int ZSTDRead(void* void_ptr_zstd_seekable_file, void* buf, size_t num_bytes) {
@@ -44,35 +95,18 @@ int ZSTDRead(void* void_ptr_zstd_seekable_file, void* buf, size_t num_bytes) {
 
   TRACE_DURATION("blobfs", "ZSTDRead", "byte_offset", file->byte_offset, "bytes", num_bytes);
 
-  // |file->byte_offset| does not account for ZSTD seekable header.
-  uint64_t data_byte_offset;
-  if (add_overflow(kZSTDSeekableHeaderSize, file->byte_offset, &data_byte_offset)) {
-    FS_TRACE_ERROR("[blobfs][zstd-seekable] ZSTD header + file offset overflow: file_offset=%llu\n",
-                   file->byte_offset);
-    file->status = ZX_ERR_OUT_OF_RANGE;
-    return -1;
+  if (num_bytes == 0) {
+    return 0;
   }
 
-  // Safely convert units: Bytes to blocks.
-  uint64_t data_block_offset64 = data_byte_offset / kBlobfsBlockSize;
-  if (data_block_offset64 > std::numeric_limits<uint32_t>::max()) {
-    FS_TRACE_ERROR("[blobfs][zstd-seekable] Oversized data block offset: %lu / %u = %lu > %u\n",
-                   data_byte_offset, kBlobfsBlockSize, data_block_offset64,
-                   std::numeric_limits<uint32_t>::max());
-    file->status = ZX_ERR_OUT_OF_RANGE;
-    return -1;
+  uint32_t data_block_offset;
+  uint32_t num_blocks;
+  uint64_t data_byte_offset;
+  int result = ComputeOffsetAndNumBytesForRead(file, num_bytes, &data_block_offset, &num_blocks, &data_byte_offset);
+  if (result != 0) {
+    // Note: |zx_status_t|, tracing/logging managed by |ComputeOffsetAndNumBytesForRead|.
+    return result;
   }
-  uint32_t data_block_offset = static_cast<uint32_t>(data_block_offset64);
-  uint64_t num_blocks64 = fbl::round_up(num_bytes, kBlobfsBlockSize) / kBlobfsBlockSize;
-  if (num_blocks64 > std::numeric_limits<uint32_t>::max()) {
-    FS_TRACE_ERROR(
-        "[blobfs][zstd-seekable] Oversized number of blocks: round_up(%lu, %u) / %u = %lu > %u\n",
-        num_bytes, kBlobfsBlockSize, kBlobfsBlockSize, num_blocks64,
-        std::numeric_limits<uint32_t>::max());
-    file->status = ZX_ERR_OUT_OF_RANGE;
-    return -1;
-  }
-  uint32_t num_blocks = static_cast<uint32_t>(num_blocks64);
 
   // Delegate block-level read to compressed block collection.
   zx_status_t status = file->blocks->Read(data_block_offset, num_blocks);
@@ -177,8 +211,6 @@ int ZSTDSeek(void* void_ptr_zstd_seekable_file, long long byte_offset, int origi
   file->byte_offset = new_byte_offset;
   return 0;
 }
-
-}  // namespace
 
 zx_status_t ZSTDSeekableBlob::Create(
     fzl::VmoMapper* mapped_vmo,
