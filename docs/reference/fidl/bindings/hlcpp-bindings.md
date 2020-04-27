@@ -147,10 +147,12 @@ enum class Color : uint32_t {
 
 Given a struct declaration:
 
+```fidl
 struct Color {
     uint32 id;
     string name = "red";
 };
+```
 
 The FIDL toolchain generates a `final` `WebPage` with `public`
 members and methods.
@@ -355,9 +357,9 @@ protocol or its methods.
 Clients do not use the `TicTacToe` class directly. Instead, the FIDL
 toolchain generates two aliases for the classes used to make calls to
 a server implementing the `TicTacToe` protocol: `TicTacToePtr`, which
-aliases `fidl::InterfacePtr<TicTacToeProtocol>` representing an async
+aliases `fidl::InterfacePtr<TicTacToe>` representing an async
 client, and `TicTacToeSyncPtr`, which aliases
-`fidl::SynchronousInterfacePtr<TicTacToeProtocol>` representing a synchronous client.
+`fidl::SynchronousInterfacePtr<TicTacToe>` representing a synchronous client.
 
 When dereferenced, `TicTacToePtr` and `TicTacToeSyncPtr` return a proxy
 class that implements `TicTacToe`, which is how the client makes requests to
@@ -371,7 +373,7 @@ Examples on how to set up and bind an `InterfacePtr` or a
 ### Server
 
 Implementing a server for a FIDL protocol involves providing a concrete
-implementation of `TicTacToeProtocol`.
+implementation of `TicTacToe`.
 
 Examples on how to set up and bind a server implementation are covered in the
 HLCPP tutorial.
