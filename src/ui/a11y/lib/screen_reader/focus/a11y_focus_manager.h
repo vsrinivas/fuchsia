@@ -9,6 +9,7 @@
 
 #include <unordered_map>
 
+#include "src/ui/a11y/lib/annotation/focus_highlight_manager.h"
 #include "src/ui/a11y/lib/focus_chain/accessibility_focus_chain_listener.h"
 #include "src/ui/a11y/lib/focus_chain/accessibility_focus_chain_requester.h"
 
@@ -43,7 +44,8 @@ class A11yFocusManager : public AccessibilityFocusChainListener {
 
   // |focus_chain_requester| and |registry| must outlive this object.
   explicit A11yFocusManager(AccessibilityFocusChainRequester* focus_chain_requester,
-                            AccessibilityFocusChainRegistry* registry);
+                            AccessibilityFocusChainRegistry* registry,
+                            FocusHighlightManager* focus_highlight_manager);
   virtual ~A11yFocusManager();
 
   // Returns the current a11y focus if it exists.
@@ -64,6 +66,10 @@ class A11yFocusManager : public AccessibilityFocusChainListener {
   // |AccessibilityFocusChainListener|
   void OnViewFocus(zx_koid_t view_ref_koid) override;
 
+  // Removes current highlights (if any), and highlights node specified by identifier |{koid,
+  // node_id}|.
+  void UpdateHighlights();
+
   // Map for storing node_id which is in a11y focus for every viewref_koid.
   // By default, root-node(node_id = 0) is set for a view in a11y focus.
   std::unordered_map<zx_koid_t /* viewref_koid */, uint32_t /* node_id */>
@@ -77,6 +83,9 @@ class A11yFocusManager : public AccessibilityFocusChainListener {
 
   // Used to register this class as a listener of Focus Chain Updates for a11y.
   AccessibilityFocusChainRegistry* const registry_ = nullptr;
+
+  // Used to manipulate semantic annotations.
+  FocusHighlightManager* const focus_highlight_manager_ = nullptr;
 
   fxl::WeakPtrFactory<AccessibilityFocusChainListener> weak_ptr_factory_;
 };

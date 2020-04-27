@@ -52,10 +52,10 @@ class ViewWrapper {
   virtual fuchsia::ui::views::ViewRef ViewRefClone() const;
 
   // Highlights node with id |node_id|.
-  void HighlightNode(uint32_t node_id);
+  virtual void HighlightNode(uint32_t node_id);
 
   // Clears contents of annotation view.
-  void ClearHighlights();
+  virtual void ClearHighlights();
 
  private:
   // Helper function to draw highlight arround currently annotated node.

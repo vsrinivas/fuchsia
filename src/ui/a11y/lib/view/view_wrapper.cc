@@ -64,6 +64,10 @@ void ViewWrapper::ClearHighlights() {
 }
 
 void ViewWrapper::DrawHighlight() {
+  if (!annotation_view_) {
+    return;
+  }
+
   if (!annotation_state_.has_annotations || !annotation_state_.annotated_node_id.has_value()) {
     return;
   }
@@ -84,11 +88,16 @@ void ViewWrapper::DrawHighlight() {
   }
 
   auto bounding_box = annotated_node->location();
-
   annotation_view_->DrawHighlight(bounding_box);
 }
 
-void ViewWrapper::HideHighlights() { annotation_view_->DetachViewContents(); }
+void ViewWrapper::HideHighlights() {
+  if (!annotation_view_) {
+    return;
+  }
+
+  annotation_view_->DetachViewContents();
+}
 
 std::unique_ptr<ViewWrapper> ViewWrapperFactory::CreateViewWrapper(
     fuchsia::ui::views::ViewRef view_ref, std::unique_ptr<SemanticTreeService> tree_service_ptr,

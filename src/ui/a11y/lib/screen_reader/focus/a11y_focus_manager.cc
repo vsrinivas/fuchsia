@@ -15,9 +15,14 @@
 namespace a11y {
 
 A11yFocusManager::A11yFocusManager(AccessibilityFocusChainRequester* focus_chain_requester,
-                                   AccessibilityFocusChainRegistry* registry)
-    : focus_chain_requester_(focus_chain_requester), registry_(registry), weak_ptr_factory_(this) {
+                                   AccessibilityFocusChainRegistry* registry,
+                                   FocusHighlightManager* focus_highlight_manager)
+    : focus_chain_requester_(focus_chain_requester),
+      registry_(registry),
+      focus_highlight_manager_(focus_highlight_manager),
+      weak_ptr_factory_(this) {
   FX_DCHECK(registry_);
+  FX_DCHECK(focus_highlight_manager_);
   registry_->Register(weak_ptr_factory_.GetWeakPtr());
 }
 
@@ -42,6 +47,7 @@ void A11yFocusManager::SetA11yFocus(zx_koid_t koid, uint32_t node_id,
   if (koid == currently_focused_view_) {
     // Same view a11y focus change.
     focused_node_in_view_map_[koid] = node_id;
+    UpdateHighlights();
     set_focus_callback(true);
     return;
   }
@@ -54,17 +60,30 @@ void A11yFocusManager::SetA11yFocus(zx_koid_t koid, uint32_t node_id,
           // Update current a11y focus to the given viewref and node_id.
           focused_node_in_view_map_[koid] = node_id;
           currently_focused_view_ = koid;
+          UpdateHighlights();
           callback(true);
         }
       });
 }
 
 void A11yFocusManager::OnViewFocus(zx_koid_t view_ref_koid) {
-  currently_focused_view_ = view_ref_koid;
-  const auto it = focused_node_in_view_map_.find(currently_focused_view_);
-  if (it == focused_node_in_view_map_.end()) {
-    focused_node_in_view_map_[currently_focused_view_] = kRootNodeId;
+  uint32_t newly_focused_node_id = kRootNodeId;
+  if (focused_node_in_view_map_.find(view_ref_koid) != focused_node_in_view_map_.end()) {
+    newly_focused_node_id = focused_node_in_view_map_[view_ref_koid];
   }
+
+  currently_focused_view_ = view_ref_koid;
+  focused_node_in_view_map_[currently_focused_view_] = newly_focused_node_id;
+  UpdateHighlights();
+}
+
+void A11yFocusManager::UpdateHighlights() {
+  FocusHighlightManager::SemanticNodeIdentifier newly_focused_node;
+
+  newly_focused_node.koid = currently_focused_view_;
+  newly_focused_node.node_id = focused_node_in_view_map_[currently_focused_view_];
+
+  focus_highlight_manager_->UpdateHighlight(newly_focused_node);
 }
 
 }  // namespace a11y

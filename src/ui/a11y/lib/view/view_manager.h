@@ -12,6 +12,7 @@
 #include <lib/vfs/cpp/pseudo_file.h>
 #include <zircon/types.h>
 
+#include "src/ui/a11y/lib/annotation/focus_highlight_manager.h"
 #include "src/ui/a11y/lib/semantics/semantic_tree_service.h"
 #include "src/ui/a11y/lib/semantics/semantics_source.h"
 #include "src/ui/a11y/lib/view/view_wrapper.h"
@@ -35,7 +36,8 @@ class SemanticTreeServiceFactory {
 // information for a particular View while Semantic Consumers query available
 // semantic information managed by this service.
 class ViewManager : public fuchsia::accessibility::semantics::SemanticsManager,
-                    public SemanticsSource {
+                    public SemanticsSource,
+                    public FocusHighlightManager {
  public:
   explicit ViewManager(std::unique_ptr<SemanticTreeServiceFactory> factory,
                        std::unique_ptr<ViewWrapperFactory> view_wrapper_factory,
@@ -61,6 +63,12 @@ class ViewManager : public fuchsia::accessibility::semantics::SemanticsManager,
   // |SemanticsSource|
   const fuchsia::accessibility::semantics::Node* GetPreviousNode(zx_koid_t koid,
                                                                  uint32_t node_id) const override;
+
+  // |FocusHighlightManager|
+  void ClearHighlight() override;
+
+  // |FocusHighlightManager|
+  void UpdateHighlight(SemanticNodeIdentifier newly_highlighted_node) override;
 
   // |SemanticsSource|
   void ExecuteHitTesting(
@@ -101,6 +109,8 @@ class ViewManager : public fuchsia::accessibility::semantics::SemanticsManager,
       wait_map_;
 
   bool semantics_enabled_ = false;
+
+  std::optional<SemanticNodeIdentifier> highlighted_node_ = std::nullopt;
 
   std::unique_ptr<SemanticTreeServiceFactory> factory_;
 

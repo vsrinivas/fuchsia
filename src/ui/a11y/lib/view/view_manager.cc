@@ -147,6 +147,36 @@ const fuchsia::accessibility::semantics::Node* ViewManager::GetPreviousNode(
   return tree_weak_ptr->GetPreviousNode(node_id);
 }
 
+void ViewManager::ClearHighlight() {
+  if (!highlighted_node_.has_value()) {
+    return;
+  }
+
+  auto it = view_wrapper_map_.find(highlighted_node_->koid);
+  if (it == view_wrapper_map_.end()) {
+    FX_LOGS(ERROR) << "ViewManager::UpdateHighlights: Invalid previously highlighted view koid: "
+                   << highlighted_node_->koid;
+  } else {
+    FX_DCHECK(it->second);
+    it->second->ClearHighlights();
+  }
+
+  highlighted_node_ = std::nullopt;
+}
+void ViewManager::UpdateHighlight(SemanticNodeIdentifier newly_highlighted_node) {
+  ClearHighlight();
+
+  auto it = view_wrapper_map_.find(newly_highlighted_node.koid);
+  if (it == view_wrapper_map_.end()) {
+    FX_LOGS(ERROR) << "ViewManager::UpdateHighlights: Invalid newly highlighted view koid: "
+                   << newly_highlighted_node.koid;
+  } else {
+    FX_DCHECK(it->second);
+    it->second->HighlightNode(newly_highlighted_node.node_id);
+    highlighted_node_ = std::make_optional<SemanticNodeIdentifier>(newly_highlighted_node);
+  }
+}
+
 void ViewManager::ExecuteHitTesting(
     zx_koid_t koid, fuchsia::math::PointF local_point,
     fuchsia::accessibility::semantics::SemanticListener::HitTestCallback callback) {

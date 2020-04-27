@@ -195,8 +195,8 @@ A11yManagerState A11yManagerState::withSettings(
 }
 
 std::unique_ptr<a11y::ScreenReader> App::InitializeScreenReader() {
-  auto a11y_focus_manager = std::make_unique<a11y::A11yFocusManager>(focus_chain_manager_.get(),
-                                                                     focus_chain_manager_.get());
+  auto a11y_focus_manager = std::make_unique<a11y::A11yFocusManager>(
+      focus_chain_manager_.get(), focus_chain_manager_.get(), view_manager_);
   auto screen_reader_context =
       std::make_unique<a11y::ScreenReaderContext>(std::move(a11y_focus_manager));
   return std::make_unique<a11y::ScreenReader>(std::move(screen_reader_context), view_manager_,

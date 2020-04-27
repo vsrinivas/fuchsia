@@ -51,6 +51,30 @@ class MockSemanticTreeServiceFactory : public a11y::SemanticTreeServiceFactory {
   a11y::SemanticTreeService* service_ = nullptr;
 };
 
+class MockViewWrapper : public a11y::ViewWrapper {
+ public:
+  MockViewWrapper(
+      fuchsia::ui::views::ViewRef view_ref,
+      std::unique_ptr<a11y::SemanticTreeService> tree_service_ptr,
+      fidl::InterfaceRequest<fuchsia::accessibility::semantics::SemanticTree> semantic_tree_request,
+      // TODO: Remove default values once user classes have been updated.
+      sys::ComponentContext* context = nullptr,
+      std::unique_ptr<a11y::AnnotationViewFactoryInterface> annotation_view_factory = nullptr)
+      : ViewWrapper(std::move(view_ref), std::move(tree_service_ptr),
+                    std::move(semantic_tree_request), context, std::move(annotation_view_factory)) {
+  }
+  ~MockViewWrapper() override = default;
+
+  void HighlightNode(uint32_t node_id) override { highlighted_node_ = std::make_optional(node_id); }
+
+  void ClearHighlights() override { highlighted_node_ = std::nullopt; }
+
+  std::optional<uint32_t> GetHighlightedNode() const { return highlighted_node_; }
+
+ private:
+  std::optional<uint32_t> highlighted_node_;
+};
+
 class MockViewWrapperFactory : public a11y::ViewWrapperFactory {
  public:
   MockViewWrapperFactory() = default;
@@ -62,17 +86,17 @@ class MockViewWrapperFactory : public a11y::ViewWrapperFactory {
       fidl::InterfaceRequest<fuchsia::accessibility::semantics::SemanticTree> semantic_tree_request)
       override {
     auto koid = a11y::GetKoid(view_ref);
-    auto view_wrapper = a11y::ViewWrapperFactory::CreateViewWrapper(
+    auto view_wrapper = std::make_unique<MockViewWrapper>(
         std::move(view_ref), std::move(tree_service_ptr), std::move(semantic_tree_request));
     view_wrappers_[koid] = view_wrapper.get();
 
-    return view_wrapper;
+    return std::move(view_wrapper);
   }
 
-  a11y::ViewWrapper* GetViewWrapper(zx_koid_t koid) { return view_wrappers_[koid]; }
+  MockViewWrapper* GetViewWrapper(zx_koid_t koid) { return view_wrappers_[koid]; }
 
  private:
-  std::map<zx_koid_t, a11y::ViewWrapper*> view_wrappers_;
+  std::map<zx_koid_t, MockViewWrapper*> view_wrappers_;
 };
 
 class ViewManagerTest : public gtest::TestLoopFixture {
@@ -273,6 +297,36 @@ TEST_F(ViewManagerTest, SemanticsSourcePerformAction) {
   EXPECT_EQ(semantic_provider_->GetRequestedAction(),
             fuchsia::accessibility::semantics::Action::DEFAULT);
   EXPECT_EQ(semantic_provider_->GetRequestedActionNodeId(), 0u);
+}
+
+TEST_F(ViewManagerTest, FocusHighlightManagerDrawAndClearHighlights) {
+  view_manager_->SetSemanticsEnabled(true);
+  RunLoopUntilIdle();
+
+  std::vector<a11y::SemanticTree::TreeUpdate> node_updates;
+  node_updates.emplace_back(CreateTestNode(0u, "test_label_0", {1u}));
+  node_updates.emplace_back(CreateTestNode(1u, "test_label_1"));
+  ApplyNodeUpdates(std::move(node_updates));
+
+  a11y::FocusHighlightManager::SemanticNodeIdentifier newly_highlighted_node;
+  newly_highlighted_node.koid = semantic_provider_->koid();
+  newly_highlighted_node.node_id = 1u;
+
+  view_manager_->UpdateHighlight(newly_highlighted_node);
+
+  auto highlighted_view = view_wrapper_factory_ptr_->GetViewWrapper(semantic_provider_->koid());
+  ASSERT_TRUE(highlighted_view);
+  auto highlighted_node = highlighted_view->GetHighlightedNode();
+  EXPECT_TRUE(highlighted_node.has_value());
+  EXPECT_EQ(highlighted_node, newly_highlighted_node.node_id);
+
+  view_manager_->ClearHighlight();
+
+  auto maybe_highlighted_view =
+      view_wrapper_factory_ptr_->GetViewWrapper(semantic_provider_->koid());
+  ASSERT_TRUE(maybe_highlighted_view);
+  auto maybe_highlighted_node = maybe_highlighted_view->GetHighlightedNode();
+  EXPECT_FALSE(maybe_highlighted_node.has_value());
 }
 
 }  // namespace accessibility_test

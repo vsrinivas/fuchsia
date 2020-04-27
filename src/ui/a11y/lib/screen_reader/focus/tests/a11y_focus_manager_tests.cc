@@ -8,6 +8,7 @@
 #include <gtest/gtest.h>
 
 #include "src/lib/syslog/cpp/logger.h"
+#include "src/ui/a11y/lib/annotation/tests/mocks/mock_focus_highlight_manager.h"
 #include "src/ui/a11y/lib/focus_chain/tests/mocks/mock_focus_chain_registry.h"
 #include "src/ui/a11y/lib/focus_chain/tests/mocks/mock_focus_chain_requester.h"
 #include "src/ui/a11y/lib/screen_reader/focus/a11y_focus_manager.h"
@@ -19,8 +20,8 @@ namespace accessibility_test {
 class A11yFocusManagerTest : public gtest::RealLoopFixture {
  public:
   void SetUp() override {
-    a11y_focus_manager_ = std::make_unique<a11y::A11yFocusManager>(&mock_focus_chain_requester_,
-                                                                   &mock_focus_chain_registry_);
+    a11y_focus_manager_ = std::make_unique<a11y::A11yFocusManager>(
+        &mock_focus_chain_requester_, &mock_focus_chain_registry_, &mock_focus_highlight_manager_);
   }
 
   // Helper function to check if the given ViewRef has a11y focus.
@@ -29,10 +30,14 @@ class A11yFocusManagerTest : public gtest::RealLoopFixture {
     ASSERT_TRUE(a11y_focus.has_value());
     EXPECT_EQ(view_ref_helper.koid(), a11y_focus.value().view_ref_koid);
     EXPECT_EQ(node_id, a11y_focus.value().node_id);
+    auto highlighted_node = mock_focus_highlight_manager_.GetHighlightedNode();
+    EXPECT_EQ(highlighted_node->koid, view_ref_helper.koid());
+    EXPECT_EQ(highlighted_node->node_id, node_id);
   }
 
   MockAccessibilityFocusChainRequester mock_focus_chain_requester_;
   MockAccessibilityFocusChainRegistry mock_focus_chain_registry_;
+  MockFocusHighlightManager mock_focus_highlight_manager_;
   std::unique_ptr<a11y::A11yFocusManager> a11y_focus_manager_;
 };
 
