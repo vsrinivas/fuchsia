@@ -6,6 +6,8 @@
 #include <lib/pci/root.h>
 #include <stdio.h>
 
+#include <array>
+
 #include <acpica/acpi.h>
 #include <ddk/debug.h>
 
@@ -535,6 +537,13 @@ zx_status_t pci_report_current_resources(zx_handle_t root_resource_handle) {
   return ZX_OK;
 }
 
+zx_protocol_device_t acpi_device_proto = [] {
+  zx_protocol_device_t ops = {};
+  ops.version = DEVICE_OPS_VERSION;
+  ops.release = free;
+  return ops;
+}();
+
 // This pci_init initializes the kernel pci driver and is not compiled in at the same time as the
 // userspace pci driver under development.
 zx_status_t pci_init(zx_device_t* sysdev, ACPI_HANDLE object, ACPI_DEVICE_INFO* info,
@@ -568,16 +577,36 @@ zx_status_t pci_init(zx_device_t* sysdev, ACPI_HANDLE object, ACPI_DEVICE_INFO* 
     // Publish PCI root as /dev/sys/ level.
     // Only publish one PCI root device for all PCI roots
     // TODO: store context for PCI root protocol
-    zx_device_t* pcidev = publish_device(sysdev, ctx->platform_bus(), object, info, "pci",
-                                         ZX_PROTOCOL_PCIROOT, get_pciroot_ops());
-    ctx->set_found_pci(pcidev != nullptr);
+    std::array<zx_device_prop_t, 4> props;
+    auto args = get_device_add_args("pci", info, &props);
+    auto device = std::make_unique<AcpiDevice>(sysdev, object, ctx->platform_bus());
+
+    args.version = DEVICE_ADD_ARGS_VERSION;
+    args.ctx = device.get();
+    args.ops = &acpi_device_proto;
+    // The AcpiDevice implements both the Acpi protocol and the Pciroot protocol. We may find a
+    // better way to do this in the future, but kernel PCI will eventually be removed anyway, at
+    // which point we'll need to refactor it all anyway.
+    args.proto_id = ZX_PROTOCOL_PCIROOT;
+    args.proto_ops = get_pciroot_ops();
+
+    if (zx_status_t status = device_add(sysdev, &args, device->mutable_zxdev()); status != ZX_OK) {
+      zxlogf(ERROR, "acpi: error %d in device_add, parent=%s(%p)", status,
+             device_get_name(sysdev), sysdev);
+    } else {
+      zxlogf(ERROR, "acpi: published device %s(%p), parent=%s(%p), handle=%p", args.name,
+             device.get(), device_get_name(sysdev), sysdev, device->acpi_handle());
+      ctx->set_found_pci(true);
+      // device_add takes ownership of args.ctx, but only on success.
+      device.release();
+    }
   }
   // Get the PCI base bus number
   zx_status_t status = acpi_bbn_call(object, ctx->mutable_last_pci());
   if (status != ZX_OK) {
     zxlogf(ERROR,
            "acpi: failed to get PCI base bus number for device '%s' "
-           "(status %u)\n",
+           "(status %u)",
            (const char*)&info->Name, status);
   }
 

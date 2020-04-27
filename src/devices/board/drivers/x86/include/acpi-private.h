@@ -5,10 +5,10 @@
 #define SRC_DEVICES_BOARD_DRIVERS_X86_INCLUDE_ACPI_PRIVATE_H_
 #include <vector>
 
-#include <ddk/device.h>
-#include <ddk/protocol/acpi.h>
 #include <ddk/protocol/auxdata.h>
 #include <ddk/protocol/pciroot.h>
+#include <ddktl/device.h>
+#include <ddktl/protocol/acpi.h>
 #include <fbl/mutex.h>
 
 #include "resources.h"
@@ -63,33 +63,45 @@ struct AcpiDeviceIrqResource {
   uint8_t pin;
 };
 
-struct acpi_device_t {
-  zx_device_t* zxdev;
-  zx_device_t* platform_bus;
+class AcpiDevice;
+using AcpiType = ddk::Device<AcpiDevice>;
+class AcpiDevice : public AcpiType, public ddk::AcpiProtocol<AcpiDevice, ddk::base_protocol> {
+ public:
+  AcpiDevice(zx_device_t* parent, ACPI_HANDLE acpi_handle, zx_device_t* platform_bus)
+      : AcpiType{parent}, acpi_handle_{acpi_handle}, platform_bus_{platform_bus} {}
 
-  mutable fbl::Mutex lock;
+  void AcpiDeviceStub() {}
 
-  bool got_resources;
+  // DDK mix-in impls.
+  void DdkRelease() { delete this; }
 
-  // port resources from _CRS
-  std::vector<AcpiDevicePioResource> pio_resources;
+  ACPI_HANDLE acpi_handle() const { return acpi_handle_; }
+  zx_device_t* platform_bus() const { return platform_bus_; }
+  zx_device_t** mutable_zxdev() { return &zxdev_; }
 
-  // memory resources from _CRS
-  std::vector<AcpiDeviceMmioResource> mmio_resources;
+  zx_status_t AcpiGetPio(uint32_t index, zx::resource* out_pio);
+  zx_status_t AcpiGetMmio(uint32_t index, acpi_mmio* out_mmio);
+  zx_status_t AcpiMapInterrupt(int64_t which_irq, zx::interrupt* handle);
+  zx_status_t AcpiGetBti(uint32_t bdf, uint32_t index, zx::bti* bti);
+  zx_status_t AcpiConnectSysmem(zx::channel connection);
+  zx_status_t AcpiRegisterSysmemHeap(uint64_t heap, zx::channel connection);
 
-  // interrupt resources from _CRS
-  std::vector<AcpiDeviceIrqResource> irqs;
+ private:
+  // Handle to the corresponding ACPI node
+  ACPI_HANDLE acpi_handle_;
 
-  // handle to the corresponding ACPI node
-  ACPI_HANDLE ns_node;
+  zx_device_t* platform_bus_;
+
+  mutable fbl::Mutex lock_;
+  bool got_resources_ = false;
+
+  // Port, memory, and interrupt resources from _CRS respectively
+  std::vector<AcpiDevicePioResource> pio_resources_;
+  std::vector<AcpiDeviceMmioResource> mmio_resources_;
+  std::vector<AcpiDeviceIrqResource> irqs_;
 
   zx_status_t ReportCurrentResources();
   ACPI_STATUS AddResource(ACPI_RESOURCE*);
-  zx_status_t AcpiOpGetPioLocked(uint32_t index, zx_handle_t* out_pio);
-  zx_status_t AcpiOpGetMmioLocked(uint32_t index, acpi_mmio* out_mmio);
-  zx_status_t AcpiOpMapInterruptLocked(int64_t which_irq, zx_handle_t* out_handle);
-  zx_status_t AcpiOpConnectSysmemLocked(zx_handle_t handle) const;
-  zx_status_t AcpiOpRegisterSysmemHeapLocked(uint64_t heap, zx_handle_t handle) const;
 };
 
 class AcpiWalker {
@@ -121,6 +133,8 @@ class AcpiWalker {
   }
 
  private:
+  zx_device_t* PublishAcpiDevice(const char* name, ACPI_HANDLE handle, ACPI_DEVICE_INFO* info);
+
   zx_device_t* sys_root_;
   zx_device_t* acpi_root_;
   zx_device_t* platform_bus_;
@@ -138,9 +152,8 @@ struct pci_child_auxdata_ctx_t {
 
 // TODO(cja): this is here because of kpci.cc and can be removed once
 // kernel pci is out of the tree.
-zx_device_t* publish_device(zx_device_t* parent, zx_device_t* platform_bus, ACPI_HANDLE handle,
-                            ACPI_DEVICE_INFO* info, const char* name, uint32_t protocol_id,
-                            void* protocol_ops);
+device_add_args_t get_device_add_args(const char* name, ACPI_DEVICE_INFO* info,
+                                      std::array<zx_device_prop_t, 4>* out_props);
 
 const zx_protocol_device_t* get_acpi_root_device_proto(void);
 

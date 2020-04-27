@@ -403,6 +403,22 @@ class Multibindable : public base_mixin {
 template <class D, template <typename> class... Mixins>
 class Device : public ::ddk::internal::base_device<D, Mixins...> {
  public:
+  zx_status_t DdkAdd(const char* name, device_add_args_t args) {
+    if (this->zxdev_ != nullptr) {
+      return ZX_ERR_BAD_STATE;
+    }
+
+    args.version = DEVICE_ADD_ARGS_VERSION;
+    args.name = name;
+    // Since we are stashing this as a D*, we can use ctx in all
+    // the callback functions and cast it directly to a D*.
+    args.ctx = static_cast<D*>(this);
+    args.ops = &this->ddk_device_proto_;
+    AddProtocol(&args);
+
+    return device_add(this->parent_, &args, &this->zxdev_);
+  }
+
   zx_status_t DdkAdd(const char* name, uint32_t flags = 0, zx_device_prop_t* props = nullptr,
                      uint32_t prop_count = 0, uint32_t proto_id = 0,
                      const char* proxy_args = nullptr,
@@ -411,30 +427,19 @@ class Device : public ::ddk::internal::base_device<D, Mixins...> {
                      const uint8_t power_state_count = 0,
                      const device_performance_state_info_t* perf_power_states = nullptr,
                      const uint8_t perf_power_state_count = 0) {
-    if (this->zxdev_ != nullptr) {
-      return ZX_ERR_BAD_STATE;
-    }
-
-    device_add_args_t args = {};
-    args.version = DEVICE_ADD_ARGS_VERSION;
-    args.name = name;
-    // Since we are stashing this as a D*, we can use ctx in all
-    // the callback functions and cast it directly to a D*.
-    args.ctx = static_cast<D*>(this);
-    args.ops = &this->ddk_device_proto_;
-    args.flags = flags;
-    args.props = props;
-    args.prop_count = prop_count;
-    args.proto_id = proto_id;
-    args.proxy_args = proxy_args;
-    args.client_remote = client_remote;
-    args.power_states = power_states;
-    args.power_state_count = power_state_count;
-    args.performance_states = perf_power_states;
-    args.performance_state_count = perf_power_state_count;
-    AddProtocol(&args);
-
-    return device_add(this->parent_, &args, &this->zxdev_);
+    device_add_args_t args{
+        .props = props,
+        .prop_count = prop_count,
+        .power_states = power_states,
+        .power_state_count = power_state_count,
+        .performance_states = perf_power_states,
+        .performance_state_count = perf_power_state_count,
+        .proto_id = proto_id,
+        .proxy_args = proxy_args,
+        .flags = flags,
+        .client_remote = client_remote,
+    };
+    return DdkAdd(name, args);
   }
 
   zx_status_t DdkAddComposite(const char* name, const composite_device_desc_t* comp_desc) {

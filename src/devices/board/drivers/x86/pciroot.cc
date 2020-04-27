@@ -126,7 +126,7 @@ static ACPI_STATUS pci_child_data_callback(ACPI_HANDLE object, uint32_t nesting_
 
 static zx_status_t pciroot_op_get_auxdata(void* context, const char* args, void* data, size_t bytes,
                                           size_t* actual) {
-  acpi_device_t* dev = (acpi_device_t*)context;
+  AcpiDevice* dev = (AcpiDevice*)context;
 
   char type[16];
   uint32_t bus_id, dev_id, func_id;
@@ -150,7 +150,7 @@ static zx_status_t pciroot_op_get_auxdata(void* context, const char* args, void*
   uint32_t addr = (dev_id << 16) | func_id;
 
   // Look for the child node with this device and function id
-  ACPI_STATUS acpi_status = AcpiWalkNamespace(ACPI_TYPE_DEVICE, dev->ns_node, 1,
+  ACPI_STATUS acpi_status = AcpiWalkNamespace(ACPI_TYPE_DEVICE, dev->acpi_handle(), 1,
                                               find_pci_child_callback, NULL, &addr, &pci_node);
   if ((acpi_status != AE_OK) && (acpi_status != AE_CTRL_TERMINATE)) {
     return acpi_to_zx_status(acpi_status);
@@ -200,9 +200,9 @@ static zx_status_t pciroot_op_get_bti(void* context, uint32_t bdf, uint32_t inde
 }
 
 static zx_status_t pciroot_op_connect_sysmem(void* context, zx_handle_t handle) {
-  acpi_device_t* dev = (acpi_device_t*)context;
+  AcpiDevice* dev = (AcpiDevice*)context;
   sysmem_protocol_t sysmem;
-  zx_status_t status = device_get_protocol(dev->platform_bus, ZX_PROTOCOL_SYSMEM, &sysmem);
+  zx_status_t status = device_get_protocol(dev->platform_bus(), ZX_PROTOCOL_SYSMEM, &sysmem);
   if (status != ZX_OK) {
     zx_handle_close(handle);
     return status;
