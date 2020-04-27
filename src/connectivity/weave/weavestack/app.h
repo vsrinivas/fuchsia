@@ -33,6 +33,7 @@ class App {
   zx_status_t WaitForFd(int fd, uint32_t events);
   zx_status_t StartFdWaiters(void);
   void ClearWaiters();
+  void ClearFds();
   void FdHandler(zx_status_t status, uint32_t zero);
   struct {
     fd_set read_fds;

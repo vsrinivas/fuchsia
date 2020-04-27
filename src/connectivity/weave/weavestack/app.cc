@@ -21,10 +21,25 @@ App::App() = default;
 
 App::~App() { Quit(); }
 
+void App::ClearWaiters() {
+  waiters_.clear();
+  if (sleep_task_ != nullptr) {
+    sleep_task_->Cancel();
+  }
+}
+
+void App::ClearFds() {
+  FD_ZERO(&fds_.read_fds);
+  FD_ZERO(&fds_.write_fds);
+  FD_ZERO(&fds_.except_fds);
+  fds_.num_fds = 0;
+}
+
 void App::Quit() {
   loop_.Quit();
   loop_.JoinThreads();
   ClearWaiters();
+  ClearFds();
   PlatformMgrImpl().ShutdownWeaveStack();
 }
 
@@ -61,9 +76,9 @@ zx_status_t App::WaitForFd(int fd, uint32_t events) {
 
 // TODO(fxb/47096): tracks the integration test.
 zx_status_t App::StartFdWaiters(void) {
-  ClearWaiters();
   struct timeval sleep_time;
   memcpy(&sleep_time, &MAX_SELECT_SLEEP_TIME, sizeof(sleep_time));
+  ClearFds();
   PlatformMgrImpl().GetSystemLayer().PrepareSelect(fds_.num_fds, &fds_.read_fds, &fds_.write_fds,
                                                    &fds_.except_fds, sleep_time);
   PlatformMgrImpl().GetInetLayer().PrepareSelect(fds_.num_fds, &fds_.read_fds, &fds_.write_fds,
@@ -93,16 +108,6 @@ zx_status_t App::StartFdWaiters(void) {
   zx::duration duration(ZX_SEC(sleep_time.tv_sec) + ZX_USEC(sleep_time.tv_usec));
   return sleep_task_->PostDelayed(loop_.dispatcher(), duration);
 }
-void App::ClearWaiters() {
-  waiters_.clear();
-  FD_ZERO(&fds_.read_fds);
-  FD_ZERO(&fds_.write_fds);
-  FD_ZERO(&fds_.except_fds);
-  fds_.num_fds = 0;
-  if (sleep_task_ != nullptr) {
-    sleep_task_->Cancel();
-  }
-}
 
 void App::FdHandler(zx_status_t status, uint32_t zero) {
   if (status == ZX_ERR_CANCELED) {
@@ -118,6 +123,10 @@ void App::FdHandler(zx_status_t status, uint32_t zero) {
     loop_.Shutdown();
     return;
   }
+
+  // HandleSelectResult may respond by closing fds passed to it. The |waiters_| list
+  // of FDWaiters must be cleared while the socket is still open to avoid assertion failures.
+  ClearWaiters();
 
   PlatformMgrImpl().GetSystemLayer().HandleSelectResult(res, &fds_.read_fds, &fds_.write_fds,
                                                         &fds_.except_fds);
