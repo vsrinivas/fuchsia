@@ -1,0 +1,17 @@
+toc:
+  - title: "Overview"
+    path: /docs/development/languages/fidl/guides/README.md
+  - title: "Running FIDL"
+    path: /docs/development/languages/fidl/guides/cli.md
+  - title: "Style Guide"
+    path: /docs/development/languages/fidl/guides/style.md
+  - title: "Designing APIs"
+    path: /docs/development/languages/fidl/guides/api-design.md
+  - title: "Evolving APIs"
+    path: /docs/development/languages/fidl/guides/abi-compat.md
+  - title: "Maxing Out Pagination"
+    path: /docs/development/languages/fidl/guides/max-out-pagination.md
+  - title: "Picking Between C, LLCPP, and HLCPP Bindings"
+    path: /docs/development/languages/fidl/guides/c-family-comparison.md
+  - title: "Editor Support"
+    path: /docs/development/languages/fidl/guides/editors.md

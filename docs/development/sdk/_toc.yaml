@@ -16,6 +16,8 @@ toc:
       path: /docs/development/sdk/integrating.md
     - title: "Understanding SDK metadata"
       path: /docs/development/sdk/understanding_metadata.md
+    - title: "\"Core\" SDK Documentation"
+      path: /docs/development/sdk/documentation/README.md
     - title: "Bootserver"
       path: /docs/development/sdk/documentation/bootserver.md
     - title: "Compilation"

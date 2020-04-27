@@ -1,0 +1,17 @@
+#  Developer Guides
+
+* [Running FIDL][cli] &mdash; quick CLI overview of the various programs in the FIDL toolchain
+* [Style Guide][style]
+* [Designing APIs][designing-apis]
+* [Evolving APIs][evolving-apis] &mdash; details the possible transitions for each FIDL type,
+  taking into account API and ABI compatibility
+* [Maxing Out Pagination][pagination] &mdash; help on determining how much data can fit into a single
+   message
+* [C Family Binding Comparison][c-family] &mdash; how to decide which binding (HLCPP, LLCPP, or C) to use
+
+[cli]: /docs/development/languages/fidl/guides/cli.md
+[style]: /docs/development/languages/fidl/guides/style.md
+[designing-apis]: /docs/development/languages/fidl/guides/api-design.md
+[evolving-apis]: /docs/development/languages/fidl/guides/abi-compat.md
+[pagination]: /docs/development/languages/fidl/guides/max-out-pagination.md
+[c-family]: /docs/development/languages/fidl/guides/c-family-comparison.md
