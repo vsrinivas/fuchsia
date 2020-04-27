@@ -8,10 +8,6 @@ using zx;
 
 // For an overview see //zircon/driver_interfaces/audio_streaming.md
 
-using clock_domain = uint32;
-const clock_domain CLOCK_DOMAIN_MONOTONIC = 0x00000000;
-const clock_domain CLOCK_DOMAIN_EXTERNAL = 0xFFFFFFFF;
-
 table RingBufferProperties {
     /// The driver's best estimate of the external delay (in nanoseconds) present in the
     /// presentation pipeline for the chosen format. When precisely synchronizing presentation
@@ -49,24 +45,10 @@ table RingBufferProperties {
     /// in this API.
     2: uint32 fifo_depth;
 
-    /// An identifier for the clock domain in which this hardware operates. If the hardware is
-    /// operating in CLOCK_DOMAIN_MONOTONIC, its nominal rate is locked to that of the
-    /// ZX_CLOCK_MONOTONIC time reference. Given the start time, and a nominal rate, the position
-    /// of the playback/capture pointer may always be calculated using a clock monotonic timestamp
-    /// as the pointer's movement is locked to that of ZX_CLOCK_MONOTONIC.
-    ///
-    /// Other values indicate that playback/capture is not locked to ZX_CLOCK_MONOTONIC, and moves
-    /// at its own rate depending on a number of factors. Client will need to make use of the
-    /// timing information present in the position notification updates in order to recover the
-    /// clock of the audio stream. The clock_domain comes from an system wide entity (or instance a
-    /// platform bus or clock tree/global driver). Audio drivers retrieve clock_domain from such
-    /// system wide entity.
-    3: clock_domain clock_domain;
-
     /// When set to true, indicates that clients need to make sure that their data has been flushed
     /// all the way to physical memory (in the case of playback) or that their view of the ring
     /// buffer will need to be invalidated before read (in the case of capture).
-    4: bool needs_cache_flush_or_invalidate;
+    3: bool needs_cache_flush_or_invalidate;
 };
 
 struct RingBufferPositionInfo {

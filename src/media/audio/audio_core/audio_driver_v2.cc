@@ -137,6 +137,7 @@ zx_status_t AudioDriverV2::GetDriverInfo() {
   // - gain capabilities.
   // - current gain state.
   // - supported format list.
+  // - clock domain.
 
   // Get unique IDs, strings and gain capabilites.
   stream_config_fidl_->GetProperties([this](fuchsia::hardware::audio::StreamProperties props) {
@@ -163,8 +164,12 @@ zx_status_t AudioDriverV2::GetDriverInfo() {
     if (props.has_product()) {
       product_name_ = props.product();
     }
-    auto res =
-        OnDriverInfoFetched(kDriverInfoHasUniqueId | kDriverInfoHasMfrStr | kDriverInfoHasProdStr);
+
+    clock_domain_ = props.clock_domain();
+    AUD_VLOG(TRACE) << "Received clock domain " << clock_domain_;
+
+    auto res = OnDriverInfoFetched(kDriverInfoHasUniqueId | kDriverInfoHasMfrStr |
+                                   kDriverInfoHasProdStr | kDriverInfoHasClockDomain);
     if (res != ZX_OK) {
       ShutdownSelf("Failed to update info fetched.", res);
     }
@@ -311,8 +316,6 @@ zx_status_t AudioDriverV2::Configure(const Format& format, zx::duration min_ring
     AUD_VLOG(TRACE) << "Received external delay " << external_delay_.get();
     uint32_t fifo_depth_bytes = props.fifo_depth();
     AUD_VLOG(TRACE) << "Received fifo depth " << fifo_depth_bytes;
-    clock_domain_ = props.clock_domain();
-    AUD_VLOG(TRACE) << "Received clock domain " << clock_domain_;
 
     auto format = GetFormat();
     auto bytes_per_frame = format->bytes_per_frame();

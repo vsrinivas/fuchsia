@@ -61,6 +61,7 @@ void FakeAudioDriverV2::GetProperties(
   props.set_gain_step_db(0.001f);
   props.set_plug_detect_capabilities(
       fuchsia::hardware::audio::PlugDetectCapabilities::CAN_ASYNC_NOTIFY);
+  props.set_clock_domain(clock_domain_);
 
   callback(std::move(props));
 }
@@ -115,7 +116,6 @@ void FakeAudioDriverV2::GetProperties(
 
   props.set_external_delay(external_delay_.get());
   props.set_fifo_depth(fifo_depth_);
-  props.set_clock_domain(clock_domain_);
   props.set_needs_cache_flush_or_invalidate(false);
 
   callback(std::move(props));

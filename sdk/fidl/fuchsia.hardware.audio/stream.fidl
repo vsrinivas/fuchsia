@@ -18,6 +18,10 @@ const uint32 MAX_COUNT_SUPPORTED_BYTES_PER_SAMPLE = 8;
 const uint32 MAX_COUNT_SUPPORTED_VALID_BITS_PER_SAMPLE = 8;
 const uint32 MAX_COUNT_FORMATS = 64;
 
+using clock_domain = uint32;
+const clock_domain CLOCK_DOMAIN_MONOTONIC = 0x00000000;
+const clock_domain CLOCK_DOMAIN_EXTERNAL = 0xFFFFFFFF;
+
 enum SampleFormat : uint8 {
     /// Signed Linear Pulse Code Modulation samples at the host endianness.
     PCM_SIGNED = 1;
@@ -153,6 +157,20 @@ table StreamProperties {
 
     /// UI string for the product name. If not included, the product name is unspecified.
     10: string:MAX_UI_STRING_SIZE product;
+
+    /// An identifier for the clock domain in which this hardware operates. If the hardware is
+    /// operating in CLOCK_DOMAIN_MONOTONIC, its nominal rate is locked to that of the
+    /// ZX_CLOCK_MONOTONIC time reference. Given the start time, and a nominal rate, the position
+    /// of the playback/capture pointer may always be calculated using a clock monotonic timestamp
+    /// as the pointer's movement is locked to that of ZX_CLOCK_MONOTONIC.
+    ///
+    /// Other values indicate that playback/capture is not locked to ZX_CLOCK_MONOTONIC, and moves
+    /// at its own rate depending on a number of factors. Client will need to make use of the
+    /// timing information present in the position notification updates in order to recover the
+    /// clock of the audio stream. The clock_domain comes from an system wide entity (or instance a
+    /// platform bus or clock tree/global driver). Audio drivers retrieve clock_domain from such
+    /// system wide entity. Must be included.
+    11: clock_domain clock_domain;
 };
 
 protocol StreamConfig {

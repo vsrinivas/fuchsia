@@ -399,9 +399,10 @@ class AudioDriverV2 : public AudioDriver {
   static constexpr uint32_t kDriverInfoHasProdStr = (1u << 2);
   static constexpr uint32_t kDriverInfoHasGainState = (1u << 3);
   static constexpr uint32_t kDriverInfoHasFormats = (1u << 4);
+  static constexpr uint32_t kDriverInfoHasClockDomain = (1u << 5);
   static constexpr uint32_t kDriverInfoHasAll = kDriverInfoHasUniqueId | kDriverInfoHasMfrStr |
                                                 kDriverInfoHasProdStr | kDriverInfoHasGainState |
-                                                kDriverInfoHasFormats;
+                                                kDriverInfoHasFormats | kDriverInfoHasClockDomain;
 
   // Counter of received position notifications since START.
   uint32_t position_notification_count_ = 0;
