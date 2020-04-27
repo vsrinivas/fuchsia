@@ -39,6 +39,14 @@ executable("echo_gtest_client") {
   ]
 }
 
+executable("huge_gtest_runner_example") {
+  output_name = "huge_gtest_runner_example"
+  testonly = true
+  sources = [ "huge_gtest.cc" ]
+
+  deps = [ "//src/lib/fxl/test:gtest_main" ]
+}
+
 group("test_data") {
   testonly = true
   public_deps = [
@@ -46,6 +54,7 @@ group("test_data") {
     ":gtest-runner-example-tests",
     ":gtest_runner_no_tests",
     ":gtest_runner_sample_tests",
+    ":huge_gtest_runner_example",
   ]
 }
 
@@ -55,6 +64,7 @@ package("gtest-runner-example-tests") {
     ":echo_gtest_client",
     ":gtest_runner_no_tests",
     ":gtest_runner_sample_tests",
+    ":huge_gtest_runner_example",
     "//examples/components/routing/echo_server",
   ]
 
@@ -73,6 +83,10 @@ package("gtest-runner-example-tests") {
     {
       name = "echo_gtest_client_example"
       dest = "echo_gtest_client"
+    },
+    {
+      name = "huge_gtest_runner_example"
+      dest = "huge_gtest"
     },
   ]
 
@@ -96,6 +110,10 @@ package("gtest-runner-example-tests") {
     {
       path = rebase_path("//examples/components/routing/meta/echo_server.cml")
       dest = "echo_server.cm"
+    },
+    {
+      path = "meta/huge_gtest.cml"
+      dest = "huge_gtest.cm"
     },
   ]
 }

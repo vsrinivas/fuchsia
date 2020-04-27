@@ -10,12 +10,11 @@ use {
     },
     fidl_fuchsia_process as fproc, fidl_fuchsia_test as ftest,
     fidl_fuchsia_test::{Invocation, Result_ as TestResult, RunListenerProxy, Status},
-    fuchsia_async as fasync,
-    fuchsia_syslog::{fx_log_err, fx_log_info, fx_vlog},
-    fuchsia_zircon as zx,
+    fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::future::abortable,
     futures::future::AbortHandle,
     futures::prelude::*,
+    log::{debug, error, info},
     serde::{Deserialize, Serialize},
     std::{
         path::Path,
@@ -191,12 +190,12 @@ impl SuiteServer for TestServer {
             match fut.await {
                 Ok(result) => {
                     if let Err(e) = result {
-                        fx_log_err!("server failed for test {}: {:?}", test_url, e);
+                        error!("server failed for test {}: {:?}", test_url, e);
                     }
                 }
-                Err(e) => fx_log_err!("server aborted for test {}: {:?}", test_url, e),
+                Err(e) => error!("server aborted for test {}: {:?}", test_url, e),
             }
-            fx_vlog!(1, "Done running server for {}.", test_url);
+            debug!("Done running server for {}.", test_url);
 
             // Even if `serve_test_suite` failed, clean local data directory as these files are no
             // longer needed and they are consuming space.
@@ -207,11 +206,9 @@ impl SuiteServer for TestServer {
             .expect("Cannot open data directory");
             if let Err(e) = files_async::remove_dir_recursive(&test_data_dir, &test_data_name).await
             {
-                fx_log_err!(
+                error!(
                     "error deleting temp data dir '{}/{}': {:?}",
-                    test_data_parent,
-                    test_data_name,
-                    e
+                    test_data_parent, test_data_name, e
                 );
             }
         });
@@ -253,7 +250,7 @@ impl TestServer {
         run_listener: &RunListenerProxy,
     ) -> Result<(), RunTestError> {
         let test = invocation.name.as_ref().ok_or(RunTestError::TestCaseName)?.to_string();
-        fx_log_info!("Running test {}", test);
+        info!("Running test {}", test);
 
         let names = vec![self.test_data_namespace()?];
 
@@ -302,7 +299,7 @@ impl TestServer {
         // collect stdout in background before waiting for process termination.
         let std_reader = LogStreamReader::new(stdlogger);
 
-        fx_log_info!("Waiting for test to finish: {}", test);
+        debug!("Waiting for test to finish: {}", test);
 
         // wait for test to end.
         fasync::OnSignals::new(&process, zx::Signals::PROCESS_TERMINATED)
@@ -310,13 +307,13 @@ impl TestServer {
             .map_err(KernelError::ProcessExit)
             .unwrap();
 
-        fx_log_info!("Collecting logs for {}", test);
+        debug!("Collecting logs for {}", test);
         let logs = std_reader.get_logs().await?;
 
         // TODO(4610): logs might not be utf8, fix the code.
         let output = from_utf8(&logs)?;
 
-        fx_log_info!("Opening output file for {}", test);
+        debug!("Opening output file for {}", test);
 
         // read test result file.
         let result_str = match read_file(&self.output_dir_proxy, &test_list_file).await {
@@ -338,10 +335,10 @@ impl TestServer {
             }
         };
 
-        fx_log_info!("parse output file for {}", test);
+        debug!("parse output file for {}", test);
         let test_list: TestOutput =
             serde_json::from_str(&result_str).map_err(RunTestError::JsonParse)?;
-        fx_log_info!("parsed output file for {}", test);
+        debug!("parsed output file for {}", test);
 
         // parse test results.
         if test_list.testsuites.len() != 1 || test_list.testsuites[0].testsuite.len() != 1 {
@@ -377,7 +374,7 @@ impl TestServer {
                     .map_err(RunTestError::SendFinish)?;
             }
         }
-        fx_log_info!("test finish {}", test);
+        debug!("test finish {}", test);
         Ok(())
     }
 
@@ -448,7 +445,7 @@ impl TestServer {
             // TODO(4610): logs might not be utf8, fix the code.
             let output = from_utf8(&logs)?;
             // TODO(45858): Add a error logger to API so that we can display test stdout logs.
-            fx_log_err!("Failed getting list of tests:\n{}", output);
+            error!("Failed getting list of tests:\n{}", output);
             return Err(EnumerationError::ListTest);
         }
         let result_str = match read_file(&self.output_dir_proxy, &test_list_file).await {
@@ -458,7 +455,7 @@ impl TestServer {
 
                 // TODO(4610): logs might not be utf8, fix the code.
                 let output = from_utf8(&logs)?;
-                fx_log_err!(
+                error!(
                     "Failed getting list of tests from {}:\n{}",
                     test_list_file.display(),
                     output
@@ -514,9 +511,7 @@ impl TestServer {
                             }
                             Ok(())
                         }
-                        .unwrap_or_else(|e: anyhow::Error| {
-                            fx_log_err!("error serving tests: {:?}", e)
-                        }),
+                        .unwrap_or_else(|e: anyhow::Error| error!("error serving tests: {:?}", e)),
                     );
                 }
                 ftest::SuiteRequest::Run { tests, options: _, listener, .. } => {
@@ -670,6 +665,33 @@ mod tests {
             TestServer::new(test_data.proxy()?, "some_name".to_owned(), "some_path".to_owned());
 
         assert_eq!(server.enumerate_tests(component.clone()).await?, Vec::<String>::new());
+
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn enumerate_huge_tests() -> Result<(), Error> {
+        let test_data = TestDataDir::new()?;
+
+        let ns = create_ns_from_current_ns(vec![("/pkg", OPEN_RIGHT_READABLE)])?;
+
+        let component = Arc::new(Component {
+            url: "fuchsia-pkg://fuchsia.com/huge_test#test.cm".to_owned(),
+            name: "test.cm".to_owned(),
+            binary: "bin/huge_test".to_owned(),
+            args: vec![],
+            ns: ns,
+            job: current_job!(),
+        });
+        let mut server =
+            TestServer::new(test_data.proxy()?, "some_name".to_owned(), "some_path".to_owned());
+
+        let mut expected = vec![];
+        for i in 0..1000 {
+            let s = format!("HugeStress/HugeTest.Test/{}", i);
+            expected.push(s);
+        }
+        assert_eq!(server.enumerate_tests(component.clone()).await?, expected);
 
         Ok(())
     }

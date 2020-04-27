@@ -169,3 +169,26 @@ async fn launch_and_test_echo_test() {
     ];
     assert_eq!(expected_events, events);
 }
+
+/*
+// fxb/50793: ignore doesn't work right now.
+// Stress test with a very large gtest suite.
+#[fuchsia_async::run_singlethreaded(test)]
+#[ignore = "Timeouts on CQ bots"]
+async fn launch_and_run_hugetest() {
+    let test_url = "fuchsia-pkg://fuchsia.com/gtest-runner-example-tests#meta/huge_gtest.cm";
+    let events = run_test(test_url).await.unwrap();
+
+    let mut expected_events = vec![];
+
+    for i in 0..1000 {
+        let s = format!("HugeStress/HugeTest.Test/{}", i);
+        expected_events.extend(vec![
+            TestEvent::test_case_started(&s),
+            TestEvent::test_case_finished(&s, TestResult::Passed),
+        ])
+    }
+    expected_events.push(TestEvent::test_finished());
+    assert_eq!(expected_events, events);
+}
+*/
