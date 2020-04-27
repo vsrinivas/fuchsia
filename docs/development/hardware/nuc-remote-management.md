@@ -17,10 +17,8 @@ configuration.
     + Return to AMT Configuration and enable __Activate Network Access__.
     + Exit Intel ME settings and save your changes.
 
-#### Enabling Intel AMT or vPro KVM
-
-The Intel AMT or vPro KVM needs to be enabled before use. These are enabled
-using the `wsman` command-line utility.
+The Intel AMT serial-over-LAN and vPro KVM needs to be enabled before
+use. These are enabled using the `wsman` command-line utility.
 
 These instructions assume you have set the `AMT_HOST` variable which
 contains the IPv4 address you configured in the Intel ME settings,
@@ -30,6 +28,18 @@ is the VNC password.
 Note: Password must be _exactly_ 8 characters long, contain both lowercase and
 uppercase characters, at least one digit and at least one non alpha-numeric
 character.
+
+#### Intel AMT serial-over-LAN
+
+1. Enable AMT redirection service:
+
+    ```
+    wsman put http://intel.com/wbem/wscim/1/amt-schema/1/AMT_RedirectionService -h ${AMT_HOST} -P 16992 -u admin -p ${AMT_PASSWORD} -k ListenerEnabled=true
+    ```
+
+Now, you can remotely access the NUC using [amtterm](https://git.kraxel.org/cgit/amtterm/): `amtterm -u admin -p ${AMT_PASWORD} ${AMT_HOST}`.
+
+#### Intel vPro KVM
 
 1. Set the VNC password:
 
