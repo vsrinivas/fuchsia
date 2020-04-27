@@ -10,6 +10,7 @@
 #include <zircon/status.h>
 
 #include <fbl/auto_lock.h>
+#include <fbl/string_printf.h>
 
 #include "connection_destroyer.h"
 #include "driver_host.h"
@@ -144,10 +145,9 @@ void DeviceControllerConnection::BindDriver(::fidl::StringView driver_path_view,
 
   // Check for driver test flags.
   bool tests_default = getenv_bool("driver.tests.enable", false);
-  char tmp[128];
-  snprintf(tmp, sizeof(tmp), "driver.%s.tests.enable", drv->name());
+  auto option = fbl::StringPrintf("driver.%s.tests.enable", drv->name());
   zx::channel test_output;
-  if (getenv_bool(tmp, tests_default) && drv->has_run_unit_tests_op()) {
+  if (getenv_bool(option.data(), tests_default) && drv->has_run_unit_tests_op()) {
     zx::channel test_input;
     zx::channel::create(0, &test_input, &test_output);
     bool tests_passed = drv->RunUnitTestsOp(dev, std::move(test_input));

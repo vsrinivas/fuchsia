@@ -12,6 +12,7 @@
 
 #include "composite_device.h"
 #include "driver_host.h"
+#include "log.h"
 
 zx_device::zx_device(DriverHostContext* ctx) : driver_host_context_(ctx) {}
 
@@ -201,18 +202,16 @@ void zx_device::fbl_recycle() TA_NO_THREAD_SAFETY_ANALYSIS {
   if (this->flags & DEV_FLAG_BUSY) {
     // this can happen if creation fails
     // the caller to device_add() will free it
-    printf("device: %p(%s): ref=0, busy, not releasing\n", this, this->name);
+    LOGD(WARNING, fbl::RefPtr(this), "Not releasing device %p, it is busy", this);
     return;
   }
-#if TRACE_ADD_REMOVE
-  printf("device: %p(%s): ref=0. releasing.\n", this, this->name);
-#endif
+  VLOGD(1, fbl::RefPtr(this), "Releasing device %p", this);
 
   if (!(this->flags & DEV_FLAG_DEAD)) {
-    printf("device: %p(%s): not yet dead (this is bad)\n", this, this->name);
+    LOGD(WARNING, fbl::RefPtr(this), "Releasing device %p which is not yet dead", this);
   }
   if (!this->children.is_empty()) {
-    printf("device: %p(%s): still has children! not good.\n", this, this->name);
+    LOGD(WARNING, fbl::RefPtr(this), "Releasing device %p which still has children", this);
   }
 
   composite_.reset();

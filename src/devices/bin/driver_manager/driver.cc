@@ -16,6 +16,7 @@
 #include <new>
 
 #include <driver-info/driver-info.h>
+#include <fbl/string_printf.h>
 
 #include "env.h"
 #include "fdio.h"
@@ -30,9 +31,8 @@ struct AddContext {
 
 bool is_driver_disabled(const char* name) {
   // driver.<driver_name>.disable
-  char opt[16 + DRIVER_NAME_LEN_MAX];
-  snprintf(opt, 16 + DRIVER_NAME_LEN_MAX, "driver.%s.disable", name);
-  return getenv_bool(opt, false);
+  auto option = fbl::StringPrintf("driver.%s.disable", name);
+  return getenv_bool(option.data(), false);
 }
 
 void found_driver(zircon_driver_note_payload_t* note, const zx_bind_inst_t* bi, void* cookie) {
@@ -95,12 +95,8 @@ void find_loadable_drivers(const char* path, DriverLoadCallback func) {
     if (de->d_type != DT_REG) {
       continue;
     }
-    char libname[256 + 32];
-    int r = snprintf(libname, sizeof(libname), "%s/%s", path, de->d_name);
-    if ((r < 0) || (r >= (int)sizeof(libname))) {
-      continue;
-    }
-    context.libname = libname;
+    auto libname = fbl::StringPrintf("%s/%s", path, de->d_name);
+    context.libname = libname.data();
 
     int fd = openat(dirfd(dir), de->d_name, O_RDONLY);
     if (fd < 0) {
@@ -110,9 +106,9 @@ void find_loadable_drivers(const char* path, DriverLoadCallback func) {
     close(fd);
 
     if (status == ZX_ERR_NOT_FOUND) {
-      LOGF(INFO, "Missing info from driver '%s'", libname);
+      LOGF(INFO, "Missing info from driver '%s'", libname.data());
     } else if (status != ZX_OK) {
-      LOGF(ERROR, "Failed to read info from driver '%s': %s", libname,
+      LOGF(ERROR, "Failed to read info from driver '%s': %s", libname.data(),
            zx_status_get_string(status));
     }
   }

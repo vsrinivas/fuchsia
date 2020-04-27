@@ -601,8 +601,8 @@ zx_status_t Device::HandleRead() {
     }
   }
 
-  LOGF(ERROR, "Received unexpected protocol (ordinal %#16lx) for device %p '%s'", hdr->ordinal,
-       this, name_.data());
+  LOGF(ERROR, "Unsupported FIDL protocol (ordinal %#16lx) for device %p '%s'", hdr->ordinal, this,
+       name_.data());
   zx_handle_close_many(fidl_msg.handles, fidl_msg.num_handles);
   return ZX_ERR_IO;
 }
