@@ -29,7 +29,7 @@ WEAVE_ERROR GenericPlatformManagerImpl_Fuchsia<ImplClass>::_InitWeaveStack(void)
 
     err = ConfigurationMgr().Init();
     if (err != WEAVE_NO_ERROR) {
-      FX_LOGS(ERROR) << "Configuration manager init failed: " << ErrorStr(err);
+      FX_LOGS(ERROR) << "ConfigurationManager init failed: " << ErrorStr(err);
       return err;
     }
 
@@ -39,7 +39,7 @@ WEAVE_ERROR GenericPlatformManagerImpl_Fuchsia<ImplClass>::_InitWeaveStack(void)
     new (&SystemLayer) System::Layer();
     err = SystemLayer.Init(nullptr);
     if (err != WEAVE_SYSTEM_NO_ERROR) {
-      FX_LOGS(ERROR) << "System layer init failed: " << ErrorStr(err);
+      FX_LOGS(ERROR) << "SystemLayer init failed: " << ErrorStr(err);
       return err;
     }
 
@@ -47,13 +47,13 @@ WEAVE_ERROR GenericPlatformManagerImpl_Fuchsia<ImplClass>::_InitWeaveStack(void)
     new (&InetLayer) Inet::InetLayer();
     err = InetLayer.Init(SystemLayer, nullptr);
     if (err != INET_NO_ERROR) {
-      FX_LOGS(ERROR) << "Inet layer init failed: " << ErrorStr(err);
+      FX_LOGS(ERROR) << "InetLayer init failed: " << ErrorStr(err);
       return err;
     }
 
     // Initialize the Weave fabric state object.
     new (&FabricState) WeaveFabricState();
-    err = FabricState.Init(ConfigurationMgr().GetGroupKeyStore());
+    err = FabricState.Init();
     if (err != WEAVE_NO_ERROR) {
       FX_LOGS(ERROR) << "FabricState init failed: " << ErrorStr(err);
       return err;
@@ -69,13 +69,13 @@ WEAVE_ERROR GenericPlatformManagerImpl_Fuchsia<ImplClass>::_InitWeaveStack(void)
     new (&MessageLayer) WeaveMessageLayer();
     err = MessageLayer.Init(&initContext);
     if (err != WEAVE_NO_ERROR) {
-      FX_LOGS(ERROR) << "Message layer init failed: "<< ErrorStr(err);
+      FX_LOGS(ERROR) << "MessageLayer init failed: "<< ErrorStr(err);
       return err;
     }
 
     err = ExchangeMgr.Init(&MessageLayer);
     if (err != WEAVE_NO_ERROR) {
-      FX_LOGS(ERROR) << "Exchange manager init failed: "<< ErrorStr(err);
+      FX_LOGS(ERROR) << "ExchangeManager init failed: "<< ErrorStr(err);
       return err;
     }
 
@@ -83,31 +83,35 @@ WEAVE_ERROR GenericPlatformManagerImpl_Fuchsia<ImplClass>::_InitWeaveStack(void)
     new (&SecurityMgr) WeaveSecurityManager();
     err = SecurityMgr.Init(ExchangeMgr, SystemLayer);
     if (err != WEAVE_NO_ERROR) {
-      FX_LOGS(ERROR) << "Security manager init failed: " << ErrorStr(err);
+      FX_LOGS(ERROR) << "SecurityManager init failed: " << ErrorStr(err);
       return err;
+    }
+
+    // Perform dynamic configuration of the core Weave objects based on stored settings.
+    //
+    // NB: In general, initialization of Device Layer objects should happen *after* this call
+    // as their initialization methods may rely on the proper initialization of the core
+    // objects.
+    err = ConfigurationMgr().ConfigureWeaveStack();
+    if (err != WEAVE_NO_ERROR) {
+      FX_LOGS(ERROR) << "ConfigurationManager dynamic config failed: " << ErrorStr(err);
     }
 
     err = DeviceDescriptionSvr().Init();
     if (err != WEAVE_NO_ERROR) {
-      FX_LOGS(ERROR) << "device DeviceDescription init failed: "<< ErrorStr(err);
+      FX_LOGS(ERROR) << "DeviceDescriptionServer init failed: "<< ErrorStr(err);
       return err;
     }
 
     err = DeviceControlSvr().Init();
     if (err != WEAVE_NO_ERROR) {
-      FX_LOGS(ERROR) << "device control svr init failed: " << ErrorStr(err);
+      FX_LOGS(ERROR) << "DeviceControlServer init failed: " << ErrorStr(err);
       return err;
     }
 
     err = FabricProvisioningSvr().Init();
     if (err != WEAVE_NO_ERROR) {
-      FX_LOGS(ERROR) << "FabricProvisioningSvr init failed: " << ErrorStr(err);
-      return err;
-    }
-
-    err = ConfigurationMgr().GetDeviceId(FabricState.LocalNodeId);
-    if (err != WEAVE_NO_ERROR) {
-      FX_LOGS(ERROR) << "GetDeviceId failed " << ErrorStr(err);
+      FX_LOGS(ERROR) << "FabricProvisioningServer init failed: " << ErrorStr(err);
       return err;
     }
 
