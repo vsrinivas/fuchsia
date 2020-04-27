@@ -294,7 +294,8 @@ class EfiDevicePartitionerTests : public zxtest::Test {
   IsolatedDevmgr devmgr_;
 };
 
-TEST_F(EfiDevicePartitionerTests, InitializeWithoutGptFails) {
+// TODO(fxb/42894): Re-enable after de-flaking
+TEST_F(EfiDevicePartitionerTests, DISABLED_InitializeWithoutGptFails) {
   std::unique_ptr<BlockDevice> gpt_dev;
   ASSERT_NO_FATAL_FAILURES(BlockDevice::Create(devmgr_.devfs_root(), kEmptyType, &gpt_dev));
 
@@ -304,7 +305,7 @@ TEST_F(EfiDevicePartitionerTests, InitializeWithoutGptFails) {
             ZX_OK);
 }
 
-TEST_F(EfiDevicePartitionerTests, InitializeWithoutFvmFails) {
+TEST_F(EfiDevicePartitionerTests, DISABLED_InitializeWithoutFvmFails) {
   std::unique_ptr<BlockDevice> gpt_dev;
   ASSERT_NO_FATAL_FAILURES(BlockDevice::Create(devmgr_.devfs_root(), kEmptyType, &gpt_dev));
 
@@ -319,10 +320,9 @@ TEST_F(EfiDevicePartitionerTests, InitializeWithoutFvmFails) {
             ZX_OK);
 }
 
-TEST_F(EfiDevicePartitionerTests, AddPartitionZirconB) {
+TEST_F(EfiDevicePartitionerTests, DISABLED_AddPartitionZirconB) {
   std::unique_ptr<BlockDevice> gpt_dev;
-  // 128MiB
-  constexpr uint64_t kBlockCount = ((128LU << 20)) / kBlockSize + kGptBlockCount;
+  constexpr uint64_t kBlockCount = (1LU << 26) / kBlockSize;
   ASSERT_NO_FATAL_FAILURES(
       BlockDevice::Create(devmgr_.devfs_root(), kEmptyType, kBlockCount, &gpt_dev));
   fbl::unique_fd gpt_fd(dup(gpt_dev->fd()));
@@ -334,10 +334,9 @@ TEST_F(EfiDevicePartitionerTests, AddPartitionZirconB) {
   ASSERT_OK(partitioner->AddPartition(PartitionSpec(paver::Partition::kZirconB), nullptr));
 }
 
-TEST_F(EfiDevicePartitionerTests, AddPartitionFvm) {
+TEST_F(EfiDevicePartitionerTests, DISABLED_AddPartitionFvm) {
   std::unique_ptr<BlockDevice> gpt_dev;
-  // 16GiB
-  constexpr uint64_t kBlockCount = (16LU << 30) / kBlockSize + kGptBlockCount;
+  constexpr uint64_t kBlockCount = (1LU << 34) / kBlockSize;
   ASSERT_NO_FATAL_FAILURES(
       BlockDevice::Create(devmgr_.devfs_root(), kEmptyType, kBlockCount, &gpt_dev));
   fbl::unique_fd gpt_fd(dup(gpt_dev->fd()));
@@ -350,7 +349,7 @@ TEST_F(EfiDevicePartitionerTests, AddPartitionFvm) {
       partitioner->AddPartition(PartitionSpec(paver::Partition::kFuchsiaVolumeManager), nullptr));
 }
 
-TEST_F(EfiDevicePartitionerTests, AddPartitionTooSmall) {
+TEST_F(EfiDevicePartitionerTests, DISABLED_AddPartitionTooSmall) {
   std::unique_ptr<BlockDevice> gpt_dev;
   ASSERT_NO_FATAL_FAILURES(BlockDevice::Create(devmgr_.devfs_root(), kEmptyType, &gpt_dev));
   fbl::unique_fd gpt_fd(dup(gpt_dev->fd()));
@@ -362,10 +361,9 @@ TEST_F(EfiDevicePartitionerTests, AddPartitionTooSmall) {
   ASSERT_NE(partitioner->AddPartition(PartitionSpec(paver::Partition::kZirconB), nullptr), ZX_OK);
 }
 
-TEST_F(EfiDevicePartitionerTests, AddedPartitionIsFindable) {
+TEST_F(EfiDevicePartitionerTests, DISABLED_AddedPartitionIsFindable) {
   std::unique_ptr<BlockDevice> gpt_dev;
-  // 128MiB
-  constexpr uint64_t kBlockCount = (128LU << 20) / kBlockSize + kGptBlockCount;
+  constexpr uint64_t kBlockCount = (1LU << 26) / kBlockSize;
   ASSERT_NO_FATAL_FAILURES(
       BlockDevice::Create(devmgr_.devfs_root(), kEmptyType, kBlockCount, &gpt_dev));
   fbl::unique_fd gpt_fd(dup(gpt_dev->fd()));
@@ -379,10 +377,9 @@ TEST_F(EfiDevicePartitionerTests, AddedPartitionIsFindable) {
   ASSERT_NE(partitioner->FindPartition(PartitionSpec(paver::Partition::kZirconA), nullptr), ZX_OK);
 }
 
-TEST_F(EfiDevicePartitionerTests, InitializePartitionsWithoutExplicitDevice) {
+TEST_F(EfiDevicePartitionerTests, DISABLED_InitializePartitionsWithoutExplicitDevice) {
   std::unique_ptr<BlockDevice> gpt_dev;
-  // 16GiB
-  constexpr uint64_t kBlockCount = (16LU << 30) / kBlockSize + kGptBlockCount;
+  constexpr uint64_t kBlockCount = (1LU << 34) / kBlockSize;
   ASSERT_NO_FATAL_FAILURES(
       BlockDevice::Create(devmgr_.devfs_root(), kEmptyType, kBlockCount, &gpt_dev));
   fbl::unique_fd gpt_fd(dup(gpt_dev->fd()));
@@ -401,10 +398,10 @@ TEST_F(EfiDevicePartitionerTests, InitializePartitionsWithoutExplicitDevice) {
                                                     paver::Arch::kX64, std::nullopt, &partitioner));
 }
 
-TEST_F(EfiDevicePartitionerTests, InitializeWithMultipleCandidateGPTsFailsWithoutExplicitDevice) {
+TEST_F(EfiDevicePartitionerTests,
+       DISABLED_InitializeWithMultipleCandidateGPTsFailsWithoutExplicitDevice) {
   std::unique_ptr<BlockDevice> gpt_dev1, gpt_dev2;
-  // 16GiB
-  constexpr uint64_t kBlockCount = (16LU << 30) / kBlockSize + kGptBlockCount;
+  constexpr uint64_t kBlockCount = (1LU << 34) / kBlockSize;
   ASSERT_NO_FATAL_FAILURES(
       BlockDevice::Create(devmgr_.devfs_root(), kEmptyType, kBlockCount, &gpt_dev1));
   fbl::unique_fd gpt_fd(dup(gpt_dev1->fd()));
@@ -434,10 +431,9 @@ TEST_F(EfiDevicePartitionerTests, InitializeWithMultipleCandidateGPTsFailsWithou
             ZX_OK);
 }
 
-TEST_F(EfiDevicePartitionerTests, InitializeWithTwoCandidateGPTsSucceedsAfterWipingOne) {
+TEST_F(EfiDevicePartitionerTests, DISABLED_InitializeWithTwoCandidateGPTsSucceedsAfterWipingOne) {
   std::unique_ptr<BlockDevice> gpt_dev1, gpt_dev2;
-  // 16GiB
-  constexpr uint64_t kBlockCount = (16LU << 30) / kBlockSize + kGptBlockCount;
+  constexpr uint64_t kBlockCount = (1LU << 34) / kBlockSize;
   ASSERT_NO_FATAL_FAILURES(
       BlockDevice::Create(devmgr_.devfs_root(), kEmptyType, kBlockCount, &gpt_dev1));
   fbl::unique_fd gpt_fd(dup(gpt_dev1->fd()));
@@ -467,10 +463,9 @@ TEST_F(EfiDevicePartitionerTests, InitializeWithTwoCandidateGPTsSucceedsAfterWip
                                                     paver::Arch::kX64, std::nullopt, &partitioner));
 }
 
-TEST_F(EfiDevicePartitionerTests, AddedPartitionRemovedAfterWipePartitions) {
+TEST_F(EfiDevicePartitionerTests, DISABLED_AddedPartitionRemovedAfterWipePartitions) {
   std::unique_ptr<BlockDevice> gpt_dev;
-  // 128MiB
-  constexpr uint64_t kBlockCount = (128LU << 20) / kBlockSize + kGptBlockCount;
+  constexpr uint64_t kBlockCount = (1LU << 26) / kBlockSize;
   ASSERT_NO_FATAL_FAILURES(
       BlockDevice::Create(devmgr_.devfs_root(), kEmptyType, kBlockCount, &gpt_dev));
   fbl::unique_fd gpt_fd(dup(gpt_dev->fd()));
@@ -485,7 +480,7 @@ TEST_F(EfiDevicePartitionerTests, AddedPartitionRemovedAfterWipePartitions) {
   ASSERT_NOT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kZirconB), nullptr));
 }
 
-TEST_F(EfiDevicePartitionerTests, InitPartitionTables) {
+TEST_F(EfiDevicePartitionerTests, DISABLED_InitPartitionTables) {
   // 32 GiB disk.
   constexpr uint64_t kBlockSize = 512;
   constexpr uint64_t kBlockCount = (32LU << 30) / kBlockSize;
@@ -558,7 +553,7 @@ TEST_F(EfiDevicePartitionerTests, InitPartitionTables) {
   EXPECT_EQ(partition_size, 0x8000 * kBlockSize);
 }
 
-TEST_F(EfiDevicePartitionerTests, SupportsPartition) {
+TEST_F(EfiDevicePartitionerTests, DISABLED_SupportsPartition) {
   std::unique_ptr<BlockDevice> gpt_dev;
   constexpr uint64_t kBlockCount = (1LU << 30) / kBlockSize;
   ASSERT_NO_FATAL_FAILURES(
@@ -588,7 +583,7 @@ TEST_F(EfiDevicePartitionerTests, SupportsPartition) {
       partitioner->SupportsPartition(PartitionSpec(paver::Partition::kZirconA, "foo_type")));
 }
 
-TEST_F(EfiDevicePartitionerTests, ValidatePayload) {
+TEST_F(EfiDevicePartitionerTests, DISABLED_ValidatePayload) {
   std::unique_ptr<BlockDevice> gpt_dev;
   constexpr uint64_t kBlockCount = (1LU << 30) / kBlockSize;
   ASSERT_NO_FATAL_FAILURES(
@@ -653,7 +648,7 @@ class CrosDevicePartitionerTests : public zxtest::Test {
   IsolatedDevmgr devmgr_;
 };
 
-TEST_F(CrosDevicePartitionerTests, InitPartitionTables) {
+TEST_F(CrosDevicePartitionerTests, DISABLED_InitPartitionTables) {
   std::unique_ptr<BlockDevice> disk;
   ASSERT_NO_FATAL_FAILURES(CreateCrosDisk(32 * kGibibyte, &disk));
 
@@ -696,7 +691,7 @@ TEST_F(CrosDevicePartitionerTests, InitPartitionTables) {
       partitioner->FindPartition(PartitionSpec(paver::Partition::kFuchsiaVolumeManager), nullptr));
 }
 
-TEST_F(CrosDevicePartitionerTests, SupportsPartition) {
+TEST_F(CrosDevicePartitionerTests, DISABLED_SupportsPartition) {
   // Create a 32 GiB disk.
   std::unique_ptr<BlockDevice> disk;
   ASSERT_NO_FATAL_FAILURES(CreateCrosDisk(32 * kGibibyte, &disk));
@@ -724,7 +719,7 @@ TEST_F(CrosDevicePartitionerTests, SupportsPartition) {
       partitioner->SupportsPartition(PartitionSpec(paver::Partition::kZirconA, "foo_type")));
 }
 
-TEST_F(CrosDevicePartitionerTests, ValidatePayload) {
+TEST_F(CrosDevicePartitionerTests, DISABLED_ValidatePayload) {
   // Create a 32 GiB disk.
   std::unique_ptr<BlockDevice> disk;
   ASSERT_NO_FATAL_FAILURES(CreateCrosDisk(32 * kGibibyte, &disk));
@@ -753,7 +748,7 @@ TEST_F(CrosDevicePartitionerTests, ValidatePayload) {
                                          fbl::Span<uint8_t>()));
 }
 
-TEST_F(CrosDevicePartitionerTests, InitPartitionTablesForRecoveredDevice) {
+TEST_F(CrosDevicePartitionerTests, DISABLED_InitPartitionTablesForRecoveredDevice) {
   std::unique_ptr<BlockDevice> disk;
   ASSERT_NO_FATAL_FAILURES(CreateCrosDisk(32 * kGibibyte, &disk));
 
@@ -812,7 +807,7 @@ uint64_t CrosGptPriorityFlags(uint8_t priority) {
   return flags;
 }
 
-TEST_F(CrosDevicePartitionerTests, KernelPriority) {
+TEST_F(CrosDevicePartitionerTests, DISABLED_KernelPriority) {
   // Create a 32 GiB disk.
   std::unique_ptr<BlockDevice> disk;
   ASSERT_NO_FATAL_FAILURES(CreateCrosDisk(32 * kGibibyte, &disk));
@@ -984,7 +979,8 @@ class SherlockPartitionerTests : public zxtest::Test {
   IsolatedDevmgr devmgr_;
 };
 
-TEST_F(SherlockPartitionerTests, InitializeWithoutGptFails) {
+// TODO(fxb/42894): Re-enable after de-flaking
+TEST_F(SherlockPartitionerTests, DISABLED_InitializeWithoutGptFails) {
   std::unique_ptr<BlockDevice> gpt_dev;
   ASSERT_NO_FATAL_FAILURES(BlockDevice::Create(devmgr_.devfs_root(), kEmptyType, &gpt_dev));
 
@@ -994,7 +990,7 @@ TEST_F(SherlockPartitionerTests, InitializeWithoutGptFails) {
             ZX_OK);
 }
 
-TEST_F(SherlockPartitionerTests, InitializeWithoutFvmFails) {
+TEST_F(SherlockPartitionerTests, DISABLED_InitializeWithoutFvmFails) {
   std::unique_ptr<BlockDevice> gpt_dev;
   ASSERT_NO_FATAL_FAILURES(BlockDevice::Create(devmgr_.devfs_root(), kEmptyType, &gpt_dev));
 
@@ -1009,7 +1005,7 @@ TEST_F(SherlockPartitionerTests, InitializeWithoutFvmFails) {
             ZX_OK);
 }
 
-TEST_F(SherlockPartitionerTests, AddPartitionNotSupported) {
+TEST_F(SherlockPartitionerTests, DISABLED_AddPartitionNotSupported) {
   std::unique_ptr<BlockDevice> gpt_dev;
   constexpr uint64_t kBlockCount = (1LU << 26) / kBlockSize;
   ASSERT_NO_FATAL_FAILURES(
@@ -1024,7 +1020,7 @@ TEST_F(SherlockPartitionerTests, AddPartitionNotSupported) {
                 ZX_ERR_NOT_SUPPORTED);
 }
 
-TEST_F(SherlockPartitionerTests, InitializePartitionTable) {
+TEST_F(SherlockPartitionerTests, DISABLED_InitializePartitionTable) {
   std::unique_ptr<BlockDevice> gpt_dev;
   constexpr uint64_t kBlockSize = 512;
   constexpr uint64_t kBlockCount = 0x748034;
@@ -1101,7 +1097,7 @@ TEST_F(SherlockPartitionerTests, InitializePartitionTable) {
                                        &partition));
 }
 
-TEST_F(SherlockPartitionerTests, FindBootloader) {
+TEST_F(SherlockPartitionerTests, DISABLED_FindBootloader) {
   std::unique_ptr<BlockDevice> gpt_dev;
   ASSERT_NO_FATAL_FAILURES(
       BlockDevice::Create(devmgr_.devfs_root(), kEmptyType, kBlockCount, kBlockSize, &gpt_dev));
@@ -1131,7 +1127,7 @@ TEST_F(SherlockPartitionerTests, FindBootloader) {
       PartitionSpec(paver::Partition::kBootloader, "skip_metadata"), &partition));
 }
 
-TEST_F(SherlockPartitionerTests, SupportsPartition) {
+TEST_F(SherlockPartitionerTests, DISABLED_SupportsPartition) {
   std::unique_ptr<BlockDevice> gpt_dev;
   constexpr uint64_t kBlockCount = (1LU << 26) / kBlockSize;
   ASSERT_NO_FATAL_FAILURES(
