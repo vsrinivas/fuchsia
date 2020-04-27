@@ -5,6 +5,7 @@ package testsharder
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -32,11 +33,16 @@ func TestMultiplyShards(t *testing.T) {
 		Tags:       []string{},
 	}
 	makeTest := func(id int, os string) build.Test {
-		return build.Test{
+		test := build.Test{
 			Name: fmt.Sprintf("test%d", id),
-			Path: fmt.Sprintf("/path/to/test/%d", id),
 			OS:   os,
 		}
+		if os == "fuchsia" {
+			test.PackageURL = fmt.Sprintf("fuchsia-pkg://fuchsia.com/test%d", id)
+		} else {
+			test.Path = fmt.Sprintf("/path/to/test/%d", id)
+		}
+		return test
 	}
 
 	shard := func(env build.Environment, os string, ids ...int) *Shard {
@@ -82,6 +88,7 @@ func TestMultiplyShards(t *testing.T) {
 		targetDuration  time.Duration
 		targetTestCount int
 		expected        []*Shard
+		err             error
 	}{
 		{
 			name: "empty os matches any os",
@@ -148,6 +155,18 @@ func TestMultiplyShards(t *testing.T) {
 			},
 		},
 		{
+			name: "runs defaults to 1 if no configuration values are set",
+			shards: []*Shard{
+				shard(env1, "fuchsia", 1),
+			},
+			multipliers: []TestModifier{
+				makeTestModifier(1, "fuchsia", 0),
+			},
+			expected: []*Shard{
+				multShard(env1, "fuchsia", 1, 1),
+			},
+		},
+		{
 			name: "does not exceed max runs if totalRuns is unset",
 			shards: []*Shard{
 				shard(env1, "fuchsia", 1),
@@ -163,6 +182,50 @@ func TestMultiplyShards(t *testing.T) {
 				multShard(env1, "fuchsia", 1, multipliedTestMaxRuns),
 			},
 		},
+		{
+			name: "uses regex matches if no tests match exactly",
+			shards: []*Shard{
+				shard(env1, "fuchsia", 210),
+			},
+			multipliers: []TestModifier{
+				{Name: "1", TotalRuns: 1},
+			},
+			expected: []*Shard{
+				multShard(env1, "fuchsia", 210, 1),
+			},
+		},
+		{
+			name: "matches on test path/package URL as well as GN name",
+			shards: []*Shard{
+				shard(env1, "fuchsia", 1),
+			},
+			multipliers: []TestModifier{
+				{Name: "fuchsia-pkg", TotalRuns: 1},
+			},
+			expected: []*Shard{
+				multShard(env1, "fuchsia", 1, 1),
+			},
+		},
+		{
+			name: "rejects multiplier that matches too many tests",
+			shards: []*Shard{
+				shard(env1, "fuchsia", 10, 11, 12, 13, 14, 15),
+			},
+			multipliers: []TestModifier{
+				makeTestModifier(1, "fuchsia", 1),
+			},
+			err: errTooManyMultiplierMatches,
+		},
+		{
+			name: "rejects invalid multiplier regex",
+			shards: []*Shard{
+				shard(env1, "fuchsia", 1),
+			},
+			multipliers: []TestModifier{
+				{Name: "["},
+			},
+			err: errInvalidMultiplierRegex,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -170,13 +233,19 @@ func TestMultiplyShards(t *testing.T) {
 			// `expected` includes only the multiplied shards, but we want to make
 			// sure multiplication of shards leaves the original shards as-is.
 			expected := append(tc.shards, tc.expected...)
-			actual := MultiplyShards(
+			actual, err := MultiplyShards(
 				tc.shards,
 				tc.multipliers,
 				tc.testDurations,
 				tc.targetDuration,
 				tc.targetTestCount,
 			)
+			if !errors.Is(err, tc.err) {
+				t.Fatalf("got unexpected error %v, expected: %v", err, tc.err)
+			}
+			if err != nil {
+				return
+			}
 			assertEqual(t, expected, actual)
 		})
 	}

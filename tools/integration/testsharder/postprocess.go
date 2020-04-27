@@ -11,17 +11,33 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 	"time"
 
 	"go.fuchsia.dev/fuchsia/tools/build/lib"
+	"go.fuchsia.dev/fuchsia/tools/testing/util"
 )
 
 // The maximum number of runs that testsharder will calculate for a multiplied
 // test if totalRuns is unset.
-// TODO(olivernewman): Apply a maximum to user-specified values too.
+// TODO(olivernewman): Apply a maximum to user-specified values too, but
+// probably not in testsharder since we'll want to get feedback to users ASAP if
+// validation fails.
 const multipliedTestMaxRuns = 2000
+
+// The maximum number of tests that a multiplier can match. testsharder will
+// fail if this is exceeded.
+const maxMatchesPerMultiplier = 5
+
+// MultiplyShards will return an error that unwraps to this if a multiplier's
+// "name" field does not compile to a valid regex.
+var errInvalidMultiplierRegex = fmt.Errorf("invalid multiplier regex")
+
+// MultiplyShards will return an error that unwraps to this if a multiplier
+// matches too many tests.
+var errTooManyMultiplierMatches = fmt.Errorf("a multiplier cannot match more than %d tests", maxMatchesPerMultiplier)
 
 func ExtractDeps(shards []*Shard, fuchsiaBuildDir string) error {
 	for _, shard := range shards {
@@ -86,42 +102,81 @@ func MultiplyShards(
 	// WithTargetDuration instead of the original target duration.
 	targetDuration time.Duration,
 	targetTestCount int,
-) []*Shard {
-	for _, shard := range shards {
-		for _, multiplier := range multipliers {
+) ([]*Shard, error) {
+	for _, multiplier := range multipliers {
+		type multiplierMatch struct {
+			shard     *Shard
+			test      build.Test
+			totalRuns int
+		}
+		var exactMatches []*multiplierMatch
+		var regexMatches []*multiplierMatch
+
+		nameRegex, err := regexp.Compile(multiplier.Name)
+		if err != nil {
+			return nil, fmt.Errorf("%w %q: %s", errInvalidMultiplierRegex, multiplier.Name, err)
+		}
+
+		for _, shard := range shards {
 			for _, test := range shard.Tests {
-				if multiplier.Name != test.Name {
-					continue
-				}
 				// An empty OS matches all OSes.
 				if multiplier.OS != "" && multiplier.OS != test.OS {
 					continue
 				}
-				if multiplier.TotalRuns == 0 {
-					if targetDuration > 0 {
-						expectedDuration := testDurations.Get(test).MedianDuration
-						// We want to keep the total runs to a reasonable number
-						// in case test duration data is out of date and the
-						// test takes longer than expected.
-						multiplier.TotalRuns = min(
-							int(targetDuration)/int(expectedDuration),
-							multipliedTestMaxRuns,
-						)
-					} else if targetTestCount > 0 {
-						multiplier.TotalRuns = targetTestCount
-					} else {
-						multiplier.TotalRuns = 1
-					}
+
+				match := &multiplierMatch{shard: shard, test: test}
+				uniqueName := util.UniqueName(test)
+				if multiplier.Name == test.Name || multiplier.Name == uniqueName {
+					exactMatches = append(exactMatches, match)
+				} else if nameRegex.FindString(test.Name) != "" || nameRegex.FindString(uniqueName) != "" {
+					regexMatches = append(regexMatches, match)
+				} else {
+					continue
 				}
-				shards = append(shards, &Shard{
-					Name:  "multiplied:" + shard.Name + "-" + normalizeTestName(test.Name),
-					Tests: multiplyTest(test, multiplier.TotalRuns),
-					Env:   shard.Env,
-				})
+
+				if multiplier.TotalRuns > 0 {
+					match.totalRuns = multiplier.TotalRuns
+				} else if targetDuration > 0 {
+					expectedDuration := testDurations.Get(test).MedianDuration
+					// We want to keep the total runs to a reasonable number
+					// in case test duration data is out of date and the
+					// test takes longer than expected.
+					match.totalRuns = min(
+						int(targetDuration)/int(expectedDuration),
+						multipliedTestMaxRuns,
+					)
+				} else if targetTestCount > 0 {
+					match.totalRuns = targetTestCount
+				} else {
+					match.totalRuns = 1
+				}
 			}
 		}
+
+		// We'll only consider partial regex matches if we have no exact
+		// matches.
+		matches := exactMatches
+		if len(matches) == 0 {
+			matches = regexMatches
+		}
+
+		if len(matches) > maxMatchesPerMultiplier {
+			return nil, fmt.Errorf(
+				"multiplier %q matches too many tests (%d): %w",
+				multiplier.Name, len(matches), errTooManyMultiplierMatches,
+			)
+		}
+
+		for _, m := range matches {
+			shards = append(shards, &Shard{
+				Name:  "multiplied:" + m.shard.Name + "-" + normalizeTestName(m.test.Name),
+				Tests: multiplyTest(m.test, m.totalRuns),
+				Env:   m.shard.Env,
+			})
+		}
 	}
-	return shards
+
+	return shards, nil
 }
 
 func min(a, b int) int {
@@ -235,7 +290,7 @@ func (h *subshardHeap) Pop() interface{} {
 	return s
 }
 
-// shardByTime breaks a sigle original shard into numNewShards subshards such
+// shardByTime breaks a single original shard into numNewShards subshards such
 // that each subshard has approximately the same expected total duration.
 //
 // It does this using a greedy approximation algorithm for static multiprocessor

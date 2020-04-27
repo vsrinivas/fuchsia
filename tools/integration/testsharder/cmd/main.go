@@ -107,7 +107,10 @@ func execute() error {
 		if err != nil {
 			return err
 		}
-		shards = testsharder.MultiplyShards(shards, multipliers, testDurations, targetDuration, targetTestCount)
+		shards, err = testsharder.MultiplyShards(shards, multipliers, testDurations, targetDuration, targetTestCount)
+		if err != nil {
+			return err
+		}
 	}
 
 	shards = testsharder.WithTargetDuration(shards, targetDuration, targetTestCount, maxShardsPerEnvironment, testDurations)
