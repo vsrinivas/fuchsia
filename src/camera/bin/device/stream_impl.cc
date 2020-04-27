@@ -42,7 +42,14 @@ StreamImpl::StreamImpl(const fuchsia::camera3::StreamProperties& properties,
 
 StreamImpl::~StreamImpl() {
   Unbind(legacy_stream_);
-  loop_.Quit();
+  async::PostTask(loop_.dispatcher(), [this] {
+    for (auto& it : frame_waiters_) {
+      // TODO(50018): async::Wait destructor ordering edge case
+      it.second->Cancel();
+      it.second = nullptr;
+    }
+    loop_.Quit();
+  });
   loop_.JoinThreads();
 }
 

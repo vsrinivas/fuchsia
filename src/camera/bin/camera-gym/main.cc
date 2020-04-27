@@ -16,6 +16,7 @@
 #include <lib/syslog/cpp/logger.h>
 
 #include "src/camera/bin/camera-gym/buffer_collage.h"
+#include "src/camera/bin/camera-gym/lifecycle_impl.h"
 #include "src/camera/bin/camera-gym/stream_cycler.h"
 
 int main(int argc, char* argv[]) {
@@ -124,6 +125,10 @@ int main(int argc, char* argv[]) {
 
   // Publish the view service.
   context->outgoing()->AddPublicService(collage->GetHandler());
+
+  // Publish a handler for the Lifecycle protocol that cleanly quits the component.
+  LifecycleImpl lifecycle([&] { loop.Quit(); });
+  context->outgoing()->AddPublicService(lifecycle.GetHandler());
 
   // Run the loop.
   status = loop.Run();

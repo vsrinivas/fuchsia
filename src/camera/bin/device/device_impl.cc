@@ -18,7 +18,7 @@ DeviceImpl::DeviceImpl() : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
 
 DeviceImpl::~DeviceImpl() {
   Unbind(controller_);
-  loop_.Quit();
+  async::PostTask(loop_.dispatcher(), [this] { loop_.Quit(); });
   loop_.JoinThreads();
 }
 

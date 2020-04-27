@@ -235,7 +235,9 @@ void BufferCollage::PostSetVisibility(bool visible) {
   uint8_t channel_value = visible ? 255 : 0;
   async::PostTask(loop_.dispatcher(), [this, channel_value] {
     for (auto& view : collection_views_) {
-      view.second.material->SetColor(channel_value, channel_value, channel_value, 255);
+      if (view.second.material) {
+        view.second.material->SetColor(channel_value, channel_value, channel_value, 255);
+      }
     }
     session_->Present(zx::clock::get_monotonic(), [](fuchsia::images::PresentationInfo info) {});
   });
