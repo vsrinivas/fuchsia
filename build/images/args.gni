@@ -40,13 +40,32 @@ declare_args() {
   # package.
   update_kernels = []
 
-  # Prebuilt bootloader image to be included into update (OTA) package and
-  # paving process.
+  # (deprecated) Prebuilt bootloader image to be included into update (OTA)
+  # package and paving process.
+  #
+  # See `firmware_prebuilts` instead.
   bootloader_prebuilt = ""
 
-  # HW revision of the bootloader to be included into OTA package and paving
-  # process.
+  # (deprecated)  HW revision of the bootloader to be included into OTA package
+  # and paving process.
+  #
+  # See `firmware_prebuilts_path_suffix` instead.
   bootloader_hw_revision = ""
+
+  # List of prebuilt firmware blobs to include in update packages.
+  #
+  # Each entry in the list is a scope defining `path` and `type`. A build can
+  # only have a single firmware blob of each `type`.
+  #
+  # Note that `firmware_prebuilts_path_suffix` will be automatically appended to
+  # all `path` variables, so do not include the suffix here.
+  firmware_prebuilts = []
+
+  # Suffix to append to all `firmware_prebuilts` paths.
+  #
+  # Typically this indicates the hardware revision, and is made available so
+  # that users can easily switch revisions using a single arg.
+  firmware_prebuilts_path_suffix = ""
 
   # Path to manifest file containing data to place into the initial /data
   # partition.
