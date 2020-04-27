@@ -24,7 +24,7 @@ dart_test("sl4f_test") {
     "//third_party/dart-pkg/pub/test",
   ]
 
-  non_dart_deps = [ ":runtime_deps" ]
+  non_dart_deps = [ ":runtime_deps($host_toolchain)" ]
 
   environments = [
     nuc_env,
@@ -39,12 +39,14 @@ dart_test("sl4f_test") {
   ]
 }
 
-host_test_data("runtime_deps") {
-  sources = [ "$root_out_dir/trace2json" ]
+if (is_host) {
+  host_test_data("runtime_deps") {
+    sources = [ "$root_out_dir/trace2json" ]
 
-  outputs = [ "$target_gen_dir/runtime_deps/{{source_file_part}}" ]
+    outputs = [ "$target_gen_dir/runtime_deps/{{source_file_part}}" ]
 
-  deps = [ "//garnet/bin/trace2json:bin" ]
+    deps = [ "//garnet/bin/trace2json:bin" ]
+  }
 }
 
 group("test") {

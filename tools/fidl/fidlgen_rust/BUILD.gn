@@ -28,30 +28,22 @@ install_host_tools("host") {
   outputs = [ "fidlgen_rust" ]
 }
 
-go_test("fidlgen_rust_test") {
-  gopackages = [ "fidlgen_rust/codegen" ]
+if (is_host) {
+  go_test("fidlgen_rust_test") {
+    gopackages = [ "fidlgen_rust/codegen" ]
 
-  deps = [
-    ":lib",
-    "//garnet/go/src/fidl:fidlgen_test_lib",
-  ]
-  non_go_deps = [ ":copies" ]
-}
+    deps = [
+      ":lib",
+      "//garnet/go/src/fidl:fidlgen_test_lib",
+    ]
+    non_go_deps = [ ":test_data"]
+  }
 
-group("copies") {
-  testonly = true
-  deps = [
-    ":copy_rustfmt",
-    ":copy_rustfmt_toml",
-  ]
-}
-
-host_test_data("copy_rustfmt") {
-  sources = [ "//prebuilt/third_party/rust/$host_platform/bin/rustfmt" ]
-  outputs = [ "$root_out_dir/test_data/fidlgen_rust/rustfmt" ]
-}
-
-host_test_data("copy_rustfmt_toml") {
-  sources = [ "//rustfmt.toml" ]
-  outputs = [ "$root_out_dir/test_data/fidlgen_rust/rustfmt.toml" ]
+  host_test_data("test_data") {
+    sources = [
+      "//prebuilt/third_party/rust/$host_platform/bin/rustfmt",
+      "//rustfmt.toml",
+    ]
+    outputs = [ "$root_out_dir/test_data/fidlgen_rust/{{source_file_part}}" ]
+  }
 }

@@ -29,7 +29,9 @@ def main():
         os.makedirs(grouped_test_dir)
 
     tests = filter(lambda src: src.endswith('_test.dart'), args.source)
-    assert len(tests) > 0, 'a least one *_test.dart file must be passed in under |sources|'
+    assert len(
+        tests
+    ) > 0, 'a least one *_test.dart file must be passed in under |sources|'
     imports = ["import 'package:test/test.dart';"]
     invocations = []
     for test in tests:

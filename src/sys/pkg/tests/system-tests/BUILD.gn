@@ -10,42 +10,44 @@ import("//build/testing/environments.gni")
 import("//build/testing/host_test_data.gni")
 import("//src/sys/pkg/tests/system-tests/system-tests.gni")
 
-host_test_data("copy") {
-  sources = [
-    "$host_tools_dir/device-finder",
-    "//prebuilt/tools/artifacts/artifacts",
-    "//prebuilt/tools/lkgb/lkgb",
-  ]
-  outputs = [ "$root_out_dir/test_data/system-tests/{{source_file_part}}" ]
-  public_deps = [ "//tools/net/dev_finder:host($host_toolchain)" ]
-}
+if (is_host) {
+  host_test_data("test_data") {
+    sources = [
+      "$host_tools_dir/device-finder",
+      "//prebuilt/tools/artifacts/artifacts",
+      "//prebuilt/tools/lkgb/lkgb",
+    ]
+    outputs = [ "$root_out_dir/test_data/system-tests/{{source_file_part}}" ]
+    public_deps = [ "//tools/net/dev_finder:host($host_toolchain)" ]
+  }
 
-go_library("system_tests_lib") {
-  testonly = true
-  name = "fuchsia.googlesource.com/system_tests"
-  deps = [ "//src/sys/pkg/testing/host-target-testing" ]
-  non_go_deps = [ ":copy" ]
-}
+  go_library("system_tests_lib") {
+    testonly = true
+    name = "fuchsia.googlesource.com/system_tests"
+    deps = [ "//src/sys/pkg/testing/host-target-testing" ]
+    non_go_deps = [ ":test_data" ]
+  }
 
-go_test("system_tests_reboot") {
-  gopackages = [ "fuchsia.googlesource.com/system_tests/reboot_test" ]
-  disabled = true
-  deps = [ ":system_tests_lib" ]
-  non_go_deps = [ "//garnet/bin/sl4f" ]
-}
+  go_test("system_tests_reboot") {
+    gopackages = [ "fuchsia.googlesource.com/system_tests/reboot_test" ]
+    disabled = true
+    deps = [ ":system_tests_lib" ]
+    non_go_deps = [ "//garnet/bin/sl4f" ]
+  }
 
-go_test("system_tests_tracking") {
-  gopackages = [ "fuchsia.googlesource.com/system_tests/tracking_test" ]
-  disabled = true
-  deps = [ ":system_tests_lib" ]
-  non_go_deps = [ "//garnet/bin/sl4f" ]
-}
+  go_test("system_tests_tracking") {
+    gopackages = [ "fuchsia.googlesource.com/system_tests/tracking_test" ]
+    disabled = true
+    deps = [ ":system_tests_lib" ]
+    non_go_deps = [ "//garnet/bin/sl4f" ]
+  }
 
-go_test("system_tests_upgrade") {
-  gopackages = [ "fuchsia.googlesource.com/system_tests/upgrade_test" ]
-  disabled = true
-  deps = [ ":system_tests_lib" ]
-  non_go_deps = [ "//garnet/bin/sl4f" ]
+  go_test("system_tests_upgrade") {
+    gopackages = [ "fuchsia.googlesource.com/system_tests/upgrade_test" ]
+    disabled = true
+    deps = [ ":system_tests_lib" ]
+    non_go_deps = [ "//garnet/bin/sl4f" ]
+  }
 }
 
 group("system_tests") {

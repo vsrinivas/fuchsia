@@ -27,39 +27,34 @@ install_host_tools("fidl") {
   outputs = [ "fidlgen_llcpp" ]
 }
 
-go_library("fidlgen_test_lib") {
-  testonly = true
-  deps = [ ":fidl_lib" ]
-  if (is_linux || is_mac) {
+if (is_host) {
+  go_library("fidlgen_test_lib") {
+    testonly = true
+    deps = [ ":fidl_lib" ]
     non_go_deps = [ "compiler/backend/goldens" ]
   }
-}
 
-go_test("fidlgen_llcpp_test") {
-  gopackages = [ "fidl/compiler/llcpp_backend/codegen" ]
+  go_test("fidlgen_llcpp_test") {
+    gopackages = [ "fidl/compiler/llcpp_backend/codegen" ]
 
-  deps = [ ":fidlgen_test_lib" ]
-  non_go_deps = [ ":clang_format_copy_group" ]
-}
+    deps = [ ":fidlgen_test_lib" ]
+    non_go_deps = [ ":clang_format" ]
+  }
 
-group("clang_format_copy_group") {
-  testonly = true
-  deps = [ ":copy_clang_format" ]
-}
+  host_test_data("clang_format") {
+    sources = [ "//prebuilt/third_party/clang/$host_platform/bin/clang-format" ]
+    outputs = [ "$root_out_dir/test_data/fidlgen/clang-format" ]
+  }
 
-host_test_data("copy_clang_format") {
-  sources = [ "//prebuilt/third_party/clang/$host_platform/bin/clang-format" ]
-  outputs = [ "$root_out_dir/test_data/fidlgen/clang-format" ]
-}
+  go_test("fidlgen_common_test") {
+    gopackages = [ "fidl/compiler/backend/common" ]
 
-go_test("fidlgen_common_test") {
-  gopackages = [ "fidl/compiler/backend/common" ]
+    deps = [ ":fidlgen_test_lib" ]
+  }
 
-  deps = [ ":fidlgen_test_lib" ]
-}
+  go_test("fidlgen_types_test") {
+    gopackages = [ "fidl/compiler/backend/types" ]
 
-go_test("fidlgen_types_test") {
-  gopackages = [ "fidl/compiler/backend/types" ]
-
-  deps = [ ":fidlgen_test_lib" ]
+    deps = [ ":fidlgen_test_lib" ]
+  }
 }

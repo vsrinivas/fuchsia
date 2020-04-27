@@ -41,22 +41,19 @@ go_binary("fidlgen") {
   ]
 }
 
-go_test("fidlgen_hlcpp_test") {
-  gopackages = [ "fidlgen_hlcpp/codegen" ]
+if (is_host) {
+  go_test("fidlgen_hlcpp_test") {
+    gopackages = [ "fidlgen_hlcpp/codegen" ]
 
-  deps = [
-    ":lib",
-    "//garnet/go/src/fidl:fidlgen_test_lib",
-  ]
-  non_go_deps = [ ":clang_format_copy_group" ]
-}
+    deps = [
+      ":lib",
+      "//garnet/go/src/fidl:fidlgen_test_lib",
+    ]
+    non_go_deps = [ ":clang_format" ]
+  }
 
-group("clang_format_copy_group") {
-  testonly = true
-  deps = [ ":copy_clang_format" ]
-}
-
-host_test_data("copy_clang_format") {
-  sources = [ "//prebuilt/third_party/clang/$host_platform/bin/clang-format" ]
-  outputs = [ "$root_out_dir/test_data/fidlgen_hlcpp/clang-format" ]
+  host_test_data("clang_format") {
+    sources = [ "//prebuilt/third_party/clang/$host_platform/bin/clang-format" ]
+    outputs = [ "$root_out_dir/test_data/fidlgen_hlcpp/clang-format" ]
+  }
 }

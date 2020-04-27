@@ -17,7 +17,7 @@ dart_test("screen_is_not_black_test") {
     "//third_party/dart-pkg/pub/test",
   ]
 
-  non_dart_deps = [ ":runtime_deps" ]
+  non_dart_deps = [ ":runtime_deps($host_toolchain)" ]
 
   environments = [
     # Runs on "main" builders (try and ci) in NUC environments.
@@ -42,12 +42,14 @@ dart_test("screen_is_not_black_test") {
   ]
 }
 
-host_test_data("runtime_deps") {
-  sources = [ "$root_out_dir/catapult_converter" ]
+if (is_host) {
+  host_test_data("runtime_deps") {
+    sources = [ "$root_out_dir/catapult_converter" ]
 
-  outputs = [ "$target_gen_dir/runtime_deps/{{source_file_part}}" ]
+    outputs = [ "$target_gen_dir/runtime_deps/{{source_file_part}}" ]
 
-  deps = [ "//garnet/bin/catapult_converter:converter_bin" ]
+    deps = [ "//garnet/bin/catapult_converter:converter_bin" ]
+  }
 }
 
 group("test") {

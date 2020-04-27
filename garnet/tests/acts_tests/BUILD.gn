@@ -6,9 +6,11 @@ import("//build/dart/test.gni")
 import("//build/testing/environments.gni")
 import("//build/testing/host_test_data.gni")
 
-host_test_data("acts") {
-  sources = [ "//prebuilt/test_data/connectivity/acts/acts.zip" ]
-  outputs = [ "$target_gen_dir/acts/{{source_file_part}}" ]
+if (is_host) {
+  host_test_data("acts") {
+    sources = [ "//prebuilt/test_data/connectivity/acts/acts.zip" ]
+    outputs = [ "$target_gen_dir/acts/{{source_file_part}}" ]
+  }
 }
 
 specs = [
@@ -62,7 +64,7 @@ foreach(spec, specs) {
       "//third_party/dart-pkg/pub/test",
     ]
 
-    non_dart_deps = [ ":acts" ]
+    non_dart_deps = [ ":acts($host_toolchain)" ]
 
     environments = [
       {

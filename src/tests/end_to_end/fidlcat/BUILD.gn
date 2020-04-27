@@ -20,7 +20,7 @@ dart_test("fidlcat_test") {
     "//third_party/dart-pkg/pub/test",
   ]
 
-  non_dart_deps = [ ":runtime_deps" ]
+  non_dart_deps = [ ":runtime_deps($host_toolchain)" ]
 
   args = [ "--data-dir=" + rebase_path(_shared_out_dir) ]
 
@@ -65,34 +65,36 @@ generate_symbols("echo_client_cpp_sym") {
   output = "${target_gen_dir}/echo_client_cpp.debug"
 }
 
-host_test_data("runtime_deps") {
-  sources = [
-    # We have to list all of the FIDL IR we need here explicitly here because it will not
-    # otherwise be present when we execute the test. This must be kept in sync with the
-    # list of FIDL IR in the test itself.
-    "$_shared_out_dir/fidling/gen/garnet/examples/fidl/services/echo.fidl.json",
-    "$_shared_out_dir/fidling/gen/sdk/fidl/fuchsia.sys/fuchsia.sys.fidl.json",
-    "$_shared_out_dir/fidling/gen/zircon/system/fidl/fuchsia-io/fuchsia-io.fidl.json",
-    "$_shared_out_dir/fidling/gen/zircon/system/fidl/fuchsia-mem/fuchsia-mem.fidl.json",
-    "$host_tools_dir/fidlcat",
-    "${target_gen_dir}/echo_client_cpp.debug",
-  ]
+if (is_host) {
+  host_test_data("runtime_deps") {
+    sources = [
+      # We have to list all of the FIDL IR we need here explicitly here because it will not
+      # otherwise be present when we execute the test. This must be kept in sync with the
+      # list of FIDL IR in the test itself.
+      "$_shared_out_dir/fidling/gen/garnet/examples/fidl/services/echo.fidl.json",
+      "$_shared_out_dir/fidling/gen/sdk/fidl/fuchsia.sys/fuchsia.sys.fidl.json",
+      "$_shared_out_dir/fidling/gen/zircon/system/fidl/fuchsia-io/fuchsia-io.fidl.json",
+      "$_shared_out_dir/fidling/gen/zircon/system/fidl/fuchsia-mem/fuchsia-mem.fidl.json",
+      "$host_tools_dir/fidlcat",
+      "${target_gen_dir}/echo_client_cpp.debug",
+    ]
 
-  outputs = [ "$target_gen_dir/runtime_deps/{{source_file_part}}" ]
+    outputs = [ "$target_gen_dir/runtime_deps/{{source_file_part}}" ]
 
-  deps = [
-    ":echo_client_cpp_sym",
-    "//garnet/examples/fidl/echo_client_cpp",
-    "//garnet/examples/fidl/echo_server_cpp",
-    "//garnet/examples/fidl/services:echo",
-    "//garnet/packages/prod:run",
-    "//garnet/packages/tools:sl4f",
-    "//sdk/fidl/fuchsia.sys($fidl_toolchain)",
-    "//src/developer/debug/debug_agent",
-    "//tools/fidlcat:fidlcat_host($host_toolchain)",
-    "//zircon/system/fidl/fuchsia-io($fidl_toolchain)",
-    "//zircon/system/fidl/fuchsia-mem($fidl_toolchain)",
-  ]
+    deps = [
+      ":echo_client_cpp_sym",
+      "//garnet/examples/fidl/echo_client_cpp",
+      "//garnet/examples/fidl/echo_server_cpp",
+      "//garnet/examples/fidl/services:echo",
+      "//garnet/packages/prod:run",
+      "//garnet/packages/tools:sl4f",
+      "//sdk/fidl/fuchsia.sys($fidl_toolchain)",
+      "//src/developer/debug/debug_agent",
+      "//tools/fidlcat:fidlcat_host($host_toolchain)",
+      "//zircon/system/fidl/fuchsia-io($fidl_toolchain)",
+      "//zircon/system/fidl/fuchsia-mem($fidl_toolchain)",
+    ]
+  }
 }
 
 group("tests") {

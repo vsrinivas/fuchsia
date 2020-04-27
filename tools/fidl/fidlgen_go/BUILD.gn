@@ -28,11 +28,13 @@ install_host_tools("host") {
   outputs = [ "fidlgen_go" ]
 }
 
-go_test("fidlgen_go_test") {
-  gopackages = [ "fidlgen_go/codegen" ]
+if (is_host) {
+  go_test("fidlgen_go_test") {
+    gopackages = [ "fidlgen_go/codegen" ]
 
-  deps = [
-    ":lib",
-    "//garnet/go/src/fidl:fidlgen_test_lib",
-  ]
+    deps = [
+      ":lib",
+      "//garnet/go/src/fidl:fidlgen_test_lib",
+    ]
+  }
 }

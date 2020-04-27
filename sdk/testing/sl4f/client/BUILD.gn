@@ -96,15 +96,17 @@ dart_test("sl4f_client_tests") {
     "//third_party/dart-pkg/pub/test",
   ]
 
-  non_dart_deps = [ ":runtime_deps" ]
+  non_dart_deps = [ ":runtime_deps($host_toolchain)" ]
 }
 
-host_test_data("runtime_deps") {
-  sources = [ "${root_out_dir}/fake_zedmon" ]
+if (is_host) {
+  host_test_data("runtime_deps") {
+    sources = [ "${root_out_dir}/fake_zedmon" ]
 
-  outputs = [ "$target_gen_dir/runtime_deps/{{source_file_part}}" ]
+    outputs = [ "$target_gen_dir/runtime_deps/{{source_file_part}}" ]
 
-  deps = [ "//tools/zedmon:fake_zedmon_bin" ]
+    deps = [ "//tools/zedmon:fake_zedmon_bin" ]
+  }
 }
 
 group("tests") {

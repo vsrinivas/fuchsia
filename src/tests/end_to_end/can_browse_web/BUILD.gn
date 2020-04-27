@@ -16,7 +16,7 @@ dart_test("can_browse_web_test") {
     "//third_party/dart-pkg/pub/test",
   ]
 
-  non_dart_deps = [ ":runtime_deps" ]
+  non_dart_deps = [ ":runtime_deps($host_toolchain)" ]
 
   environments = [
     {
@@ -36,10 +36,12 @@ dart_test("can_browse_web_test") {
   ]
 }
 
-host_test_data("runtime_deps") {
-  sources = [ "//prebuilt/third_party/chromedriver/linux-x64/chromedriver" ]
+if (is_host) {
+  host_test_data("runtime_deps") {
+    sources = [ "//prebuilt/third_party/chromedriver/linux-x64/chromedriver" ]
 
-  outputs = [ "$target_gen_dir/runtime_deps/{{source_file_part}}" ]
+    outputs = [ "$target_gen_dir/runtime_deps/{{source_file_part}}" ]
+  }
 }
 
 group("test") {

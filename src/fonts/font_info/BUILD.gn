@@ -39,7 +39,9 @@ rustc_test("font_info_test_bin") {
     "//third_party/rust_crates:thiserror",
   ]
   source_root = "tests/tests.rs"
-  non_rust_deps = [ ":test_data" ]
+  if (is_host) {
+    non_rust_deps = [ ":test_data" ]
+  }
 }
 
 # Needed for testing on Fuchsia
@@ -60,10 +62,11 @@ test_package("font_info_tests") {
   ]
 }
 
-# Needed for testing on host
-host_test_data("test_data") {
-  sources = [ "//src/fonts/test_data/sample_font.ttf" ]
-  outputs = [ "$root_out_dir/test_data/font_info/{{source_file_part}}" ]
+if (is_host) {
+  host_test_data("test_data") {
+    sources = [ "//src/fonts/test_data/sample_font.ttf" ]
+    outputs = [ "$root_out_dir/test_data/font_info/{{source_file_part}}" ]
+  }
 }
 
 group("tests") {

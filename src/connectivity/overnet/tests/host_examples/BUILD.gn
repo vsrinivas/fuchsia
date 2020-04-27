@@ -6,56 +6,45 @@ import("//build/rust/rustc_binary.gni")
 import("//build/testing/environments.gni")
 import("//build/testing/host_test_data.gni")
 
-host_test_data("copy_test_commands") {
-  sources = [
-    get_label_info(
-            "//src/connectivity/overnet/examples/echo:bin($host_toolchain)",
-            "root_out_dir") + "/overnet_echo",
-    get_label_info(
-            "//src/connectivity/overnet/examples/interface_passing:bin($host_toolchain)",
-            "root_out_dir") + "/overnet_interface_passing",
-    get_label_info(
-            "//src/connectivity/overnet/examples/socket_passing:bin($host_toolchain)",
-            "root_out_dir") + "/overnet_socket_passing",
-    get_label_info(
-            "//src/connectivity/overnet/tools/ascendd:bin($host_toolchain)",
-            "root_out_dir") + "/ascendd",
-    get_label_info("//src/connectivity/overnet/tools/onet:bin($host_toolchain)",
-                   "root_out_dir") + "/onet",
-  ]
+if (is_host) {
+  host_test_data("test_commands") {
+    sources = [
+      "$root_out_dir/ascendd",
+      "$root_out_dir/onet",
+      "$root_out_dir/overnet_echo",
+      "$root_out_dir/overnet_interface_passing",
+      "$root_out_dir/overnet_socket_passing",
+    ]
 
-  outputs = [
-    "$root_out_dir/overnet_host_examples_test_commands/{{source_file_part}}",
-  ]
+    outputs = [
+      "$root_out_dir/overnet_host_examples_test_commands/{{source_file_part}}",
+    ]
 
-  deps = [
-    "//src/connectivity/overnet/examples/echo:bin($host_toolchain)",
-    "//src/connectivity/overnet/examples/interface_passing:bin($host_toolchain)",
-    "//src/connectivity/overnet/examples/socket_passing:bin($host_toolchain)",
-    "//src/connectivity/overnet/tools/ascendd:bin($host_toolchain)",
-    "//src/connectivity/overnet/tools/onet:bin($host_toolchain)",
-  ]
-}
+    deps = [
+      "//src/connectivity/overnet/examples/echo:bin($host_toolchain)",
+      "//src/connectivity/overnet/examples/interface_passing:bin($host_toolchain)",
+      "//src/connectivity/overnet/examples/socket_passing:bin($host_toolchain)",
+      "//src/connectivity/overnet/tools/ascendd:bin($host_toolchain)",
+      "//src/connectivity/overnet/tools/onet:bin($host_toolchain)",
+    ]
+  }
 
-rustc_binary("bin") {
-  testonly = true
-  name = "overnet_host_examples"
-  with_unit_tests = true
-  edition = "2018"
-  deps = [
-    "//src/connectivity/overnet/lib/hoist",
-    "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:argh",
-    "//third_party/rust_crates:lazy_static",
-    "//third_party/rust_crates:parking_lot",
-    "//third_party/rust_crates:rand",
-    "//third_party/rust_crates:tempfile",
-  ]
-  non_rust_deps = [ ":copy_test_commands" ]
-  test_environments = [
-    linux_env,
-    mac_env,
-  ]
+  rustc_binary("bin") {
+    testonly = true
+    name = "overnet_host_examples"
+    with_unit_tests = true
+    edition = "2018"
+    deps = [
+      "//src/connectivity/overnet/lib/hoist",
+      "//third_party/rust_crates:anyhow",
+      "//third_party/rust_crates:argh",
+      "//third_party/rust_crates:lazy_static",
+      "//third_party/rust_crates:parking_lot",
+      "//third_party/rust_crates:rand",
+      "//third_party/rust_crates:tempfile",
+    ]
+    non_rust_deps = [ ":test_commands" ]
+  }
 }
 
 group("tests") {

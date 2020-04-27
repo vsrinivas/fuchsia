@@ -6,45 +6,47 @@ import("//build/host.gni")
 import("//build/rust/rustc_test.gni")
 import("//build/testing/host_test_data.gni")
 
-rustc_test("icu_data_extractor_tests") {
-  edition = "2018"
-  source_root = "tests.rs"
-  deps = [
-    "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:pretty_assertions",
-    "//third_party/rust_crates:regex",
-  ]
+if (is_host) {
+  rustc_test("icu_data_extractor_tests") {
+    edition = "2018"
+    source_root = "tests.rs"
+    deps = [
+      "//third_party/rust_crates:anyhow",
+      "//third_party/rust_crates:pretty_assertions",
+      "//third_party/rust_crates:regex",
+    ]
 
-  # Must depend directly on these in order to have access to them in CQ
-  non_rust_deps = [ ":test_files" ]
-}
+    # Must depend directly on these in order to have access to them in CQ
+    non_rust_deps = [ ":test_files" ]
+  }
 
-host_test_data("copy_icudtl_dat") {
-  sources = [ "//third_party/icu/common/icudtl.dat" ]
-  outputs =
-      [ "$root_out_dir/test_data/icu_data_extractor/{{source_file_part}}" ]
-}
+  host_test_data("icudtl_dat") {
+    sources = [ "//third_party/icu/common/icudtl.dat" ]
+    outputs =
+        [ "$root_out_dir/test_data/icu_data_extractor/{{source_file_part}}" ]
+  }
 
-host_test_data("copy_tzres") {
-  sources = [
-    "//third_party/icu/tzres/metaZones.res",
-    "//third_party/icu/tzres/timezoneTypes.res",
-    "//third_party/icu/tzres/zoneinfo64.res",
-  ]
-  outputs = [
-    "$root_out_dir/test_data/icu_data_extractor/tzres/{{source_file_part}}",
-  ]
-}
+  host_test_data("tzres") {
+    sources = [
+      "//third_party/icu/tzres/metaZones.res",
+      "//third_party/icu/tzres/timezoneTypes.res",
+      "//third_party/icu/tzres/zoneinfo64.res",
+    ]
+    outputs = [
+      "$root_out_dir/test_data/icu_data_extractor/tzres/{{source_file_part}}",
+    ]
+  }
 
-group("test_files") {
-  testonly = true
-  data_deps = [
-    ":copy_icudtl_dat",
-    ":copy_tzres",
-    "//src/lib/icu/tools/extractor:icu_data_extractor($host_toolchain)",
-  ]
-  metadata = {
-    test_runtime_deps = [ "$root_out_dir/icu_data_extractor" ]
+  group("test_files") {
+    testonly = true
+    data_deps = [
+      ":icudtl_dat",
+      ":tzres",
+      "//src/lib/icu/tools/extractor:icu_data_extractor($host_toolchain)",
+    ]
+    metadata = {
+      test_runtime_deps = [ "$root_out_dir/icu_data_extractor" ]
+    }
   }
 }
 

@@ -22,17 +22,19 @@ rustc_binary("bin") {
 dart_test("zedmon_client_manual_test") {
   sources = [ "zedmon_client_manual_test.dart" ]
   deps = [ "//third_party/dart-pkg/pub/test" ]
-  non_dart_deps = [ ":runtime_deps" ]
+  non_dart_deps = [ ":runtime_deps($host_toolchain)" ]
 
   # This test should only be run manually for now.
   environments = []
 }
 
-host_test_data("runtime_deps") {
-  sources = [ "$root_out_dir/zedmon" ]
-  outputs = [ "$target_gen_dir/runtime_deps/{{source_file_part}}" ]
+if (is_host) {
+  host_test_data("runtime_deps") {
+    sources = [ "$root_out_dir/zedmon" ]
+    outputs = [ "$target_gen_dir/runtime_deps/{{source_file_part}}" ]
 
-  deps = [ ":bin" ]
+    deps = [ ":bin" ]
+  }
 }
 
 group("zedmon_client") {
