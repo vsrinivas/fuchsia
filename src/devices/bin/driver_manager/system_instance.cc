@@ -626,8 +626,12 @@ int SystemInstance::ConsoleStarter(llcpp::fuchsia::boot::Arguments::SyncClient* 
            zx_status_get_string(status));
       return status;
     }
-    LOGF(INFO, "Console shell '%s' terminated (started=%d exited=%d, return_code=%ld), restarting",
-         argv_sh[0], proc_info.started, proc_info.exited, proc_info.return_code);
+    // We log this to stderr so that it goes out to the debuglog. This is useful
+    // for folks who are using serial, as it gives them an inline indication
+    // that console shell has terminated.
+    fprintf(stderr,
+            "Console shell '%s' terminated (started=%d exited=%d, return_code=%ld), restarting\n",
+            argv_sh[0], proc_info.started, proc_info.exited, proc_info.return_code);
   }
   /* NOTREACHED */
   return ZX_OK;
