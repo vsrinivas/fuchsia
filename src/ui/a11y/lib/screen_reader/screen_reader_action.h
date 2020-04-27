@@ -51,6 +51,12 @@ class ScreenReaderAction {
       ActionContext* context, ActionData process_data,
       fuchsia::accessibility::semantics::SemanticListener::HitTestCallback callback);
 
+  // Returns a promise that executes an accessibility action targeting the semantic tree
+  // corresponding to |view_ref_koid|, on the node |node_id|. An error is thrown if the semantic
+  // tree can't be found or if the semantic provider did not handle this action.
+  fit::promise<> ExecuteAccessibilityActionPromise(
+      zx_koid_t view_ref_koid, uint32_t node_id, fuchsia::accessibility::semantics::Action action);
+
   // Returns a promise that sets a new A11y Focus. If the operation is not successful, throws an
   // error.
   fit::promise<> SetA11yFocusPromise(const uint32_t node_id, zx_koid_t view_koid);

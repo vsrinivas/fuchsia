@@ -31,6 +31,20 @@ void ScreenReaderAction::ExecuteHitTesting(
                                                process_data.local_point, std::move(callback));
 }
 
+fit::promise<> ScreenReaderAction::ExecuteAccessibilityActionPromise(
+    zx_koid_t view_ref_koid, uint32_t node_id, fuchsia::accessibility::semantics::Action action) {
+  fit::bridge<> bridge;
+  action_context_->semantics_source->PerformAccessibilityAction(
+      view_ref_koid, node_id, action,
+      [completer = std::move(bridge.completer)](bool handled) mutable {
+        if (!handled) {
+          return completer.complete_error();
+        }
+        completer.complete_ok();
+      });
+  return bridge.consumer.promise_or(fit::error());
+}
+
 fit::promise<> ScreenReaderAction::SetA11yFocusPromise(const uint32_t node_id,
                                                        zx_koid_t view_koid) {
   fit::bridge<> bridge;

@@ -28,16 +28,15 @@ void SwipeAction::Run(ActionData process_data) {
   FX_DCHECK(action_context_->semantics_source);
 
   // Get the new node base on ActionType.
-
   const fuchsia::accessibility::semantics::Node* new_node;
   switch (action_type_) {
     case kNextAction:
-      new_node = action_context_->semantics_source->GetNextNode(a11y_focus.value().view_ref_koid,
-                                                                a11y_focus.value().node_id);
+      new_node = action_context_->semantics_source->GetNextNode(a11y_focus->view_ref_koid,
+                                                                a11y_focus->node_id);
       break;
     case kPreviousAction:
-      new_node = action_context_->semantics_source->GetPreviousNode(
-          a11y_focus.value().view_ref_koid, a11y_focus.value().node_id);
+      new_node = action_context_->semantics_source->GetPreviousNode(a11y_focus->view_ref_koid,
+                                                                    a11y_focus->node_id);
       break;
     default:
       new_node = nullptr;
@@ -50,10 +49,14 @@ void SwipeAction::Run(ActionData process_data) {
 
   uint32_t new_node_id = new_node->node_id();
   auto promise =
-      SetA11yFocusPromise(new_node_id, a11y_focus.value().view_ref_koid)
+      ExecuteAccessibilityActionPromise(a11y_focus->view_ref_koid, new_node_id,
+                                        fuchsia::accessibility::semantics::Action::SHOW_ON_SCREEN)
+          .and_then([this, new_node_id, a11y_focus]() mutable {
+            return SetA11yFocusPromise(new_node_id, a11y_focus->view_ref_koid);
+          })
           .and_then([this]() { return CancelTts(); })
           .and_then([this, a11y_focus, new_node_id]() mutable {
-            return BuildUtteranceFromNodePromise(a11y_focus.value().view_ref_koid, new_node_id);
+            return BuildUtteranceFromNodePromise(a11y_focus->view_ref_koid, new_node_id);
           })
           .and_then([this](fuchsia::accessibility::tts::Utterance& utterance) mutable {
             return EnqueueUtterancePromise(std::move(utterance));

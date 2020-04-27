@@ -93,6 +93,7 @@ class SwipeActionTest : public gtest::TestLoopFixture {
         });
     RunLoopUntilIdle();
   }
+
   void AddNodeToSemanticTree() {
     // Creating test nodes to update.
     Node root_node = CreateTestNode(kRootNodeId, kRootNodeLabel);
@@ -249,6 +250,8 @@ TEST_F(SwipeActionTest, NextActionPerformed) {
   next_action.Run(action_data);
   RunLoopUntilIdle();
 
+  ASSERT_EQ(semantic_provider_.GetRequestedAction(),
+            fuchsia::accessibility::semantics::Action::SHOW_ON_SCREEN);
   ASSERT_TRUE(a11y_focus_manager_ptr_->IsSetA11yFocusCalled());
   EXPECT_TRUE(mock_tts_engine_.ReceivedCancel());
   EXPECT_EQ(next_node_id, a11y_focus_manager_ptr_->GetA11yFocus().value().node_id);
@@ -285,6 +288,8 @@ TEST_F(SwipeActionTest, PreviousActionPerformed) {
   previous_action.Run(action_data);
   RunLoopUntilIdle();
 
+  ASSERT_EQ(semantic_provider_.GetRequestedAction(),
+            fuchsia::accessibility::semantics::Action::SHOW_ON_SCREEN);
   ASSERT_TRUE(a11y_focus_manager_ptr_->IsSetA11yFocusCalled());
   EXPECT_TRUE(mock_tts_engine_.ReceivedCancel());
   EXPECT_EQ(previous_node_id, a11y_focus_manager_ptr_->GetA11yFocus().value().node_id);

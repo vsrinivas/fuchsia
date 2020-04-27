@@ -23,7 +23,6 @@ void MockSemanticListener::OnAccessibilityActionRequested(
         callback) {
   received_action_ = action;
   action_node_id_ = node_id;
-  // Return true to indicate that OnAccessibilityActionRequested is called.
   callback(true);
 }
 
