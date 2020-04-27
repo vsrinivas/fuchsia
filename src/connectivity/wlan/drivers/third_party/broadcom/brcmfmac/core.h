@@ -129,7 +129,6 @@ struct brcmf_pub {
 
   /* Dongle media info */
   char fwver[BRCMF_DRIVER_FIRMWARE_VERSION_LEN];
-  uint8_t mac[ETH_ALEN]; /* MAC address obtained from dongle */
 
   struct brcmf_if* iflist[BRCMF_MAX_IFS];
   int32_t if2bss[BRCMF_MAX_IFS];

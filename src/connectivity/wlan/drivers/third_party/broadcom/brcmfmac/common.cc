@@ -150,7 +150,6 @@ zx_status_t brcmf_set_macaddr_from_firmware(struct brcmf_if* ifp) {
   }
 
   memcpy(ifp->mac_addr, mac_addr, sizeof(ifp->mac_addr));
-  memcpy(ifp->drvr->mac, ifp->mac_addr, sizeof(ifp->drvr->mac));
   return ZX_OK;
 }
 
@@ -177,7 +176,6 @@ static zx_status_t brcmf_set_macaddr(struct brcmf_if* ifp) {
   }
 
   memcpy(ifp->mac_addr, mac_addr, sizeof(ifp->mac_addr));
-  memcpy(ifp->drvr->mac, ifp->mac_addr, sizeof(ifp->drvr->mac));
   return ZX_OK;
 }
 

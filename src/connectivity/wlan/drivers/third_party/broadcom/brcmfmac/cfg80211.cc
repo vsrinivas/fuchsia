@@ -300,7 +300,6 @@ static zx_status_t brcmf_set_ap_macaddr(struct brcmf_if* ifp) {
 
   // Update the driver interface with the new mac address
   memcpy(ifp->mac_addr, mac_addr, sizeof(ifp->mac_addr));
-  memcpy(ifp->drvr->mac, ifp->mac_addr, sizeof(ifp->drvr->mac));
   return ZX_OK;
 }
 
