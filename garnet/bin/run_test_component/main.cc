@@ -31,6 +31,7 @@
 #include <memory>
 #include <string>
 
+#include "garnet/bin/run_test_component/component.h"
 #include "garnet/bin/run_test_component/env_config.h"
 #include "garnet/bin/run_test_component/log_collector.h"
 #include "garnet/bin/run_test_component/run_test_component.h"
@@ -155,17 +156,13 @@ std::string log_level(int32_t severity) {
   return stream.str();
 }
 
-std::shared_ptr<sys::ServiceDirectory> launch_observer(
-    const fuchsia::sys::LauncherPtr& launcher,
-    fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller) {
+std::unique_ptr<run::Component> launch_observer(const fuchsia::sys::LauncherPtr& launcher,
+                                                async_dispatcher_t* dispatcher) {
   fuchsia::sys::LaunchInfo launch_info{.url =
                                            "fuchsia-pkg://fuchsia.com/archivist#meta/observer.cmx"};
   launch_info.arguments = {"--disable-log-connector"};
-  auto observer_svc = sys::ServiceDirectory::CreateWithRequest(&launch_info.directory_request);
-  launch_info.out = sys::CloneFileDescriptor(STDOUT_FILENO);
-  launch_info.err = sys::CloneFileDescriptor(STDERR_FILENO);
-  launcher->CreateComponent(std::move(launch_info), std::move(controller));
-  return observer_svc;
+
+  return run::Component::Launch(launcher, std::move(launch_info), dispatcher);
 }
 
 }  // namespace
@@ -239,7 +236,6 @@ int main(int argc, const char** argv) {
     return 1;
   }
 
-  fuchsia::sys::ComponentControllerPtr controller;
   fuchsia::sys::EnvironmentPtr parent_env;
   fuchsia::sys::LauncherPtr launcher;
   std::unique_ptr<sys::testing::EnclosingEnvironment> enclosing_env;
@@ -256,8 +252,7 @@ int main(int argc, const char** argv) {
         });
       });
 
-  fuchsia::sys::ComponentControllerPtr observer_component_ptr;
-  std::shared_ptr<sys::ServiceDirectory> observer_svc = nullptr;
+  std::unique_ptr<run::Component> observer_component = nullptr;
 
   auto map_entry = config.url_map()->find(parse_result.launch_info.url);
   if (map_entry != config.url_map()->end()) {
@@ -271,8 +266,7 @@ int main(int argc, const char** argv) {
     if (!ConnectToRequiredEnvironment(map_entry->second, parent_env.NewRequest().TakeChannel())) {
       return 1;
     }
-    parse_result.launch_info.out = sys::CloneFileDescriptor(STDOUT_FILENO);
-    parse_result.launch_info.err = sys::CloneFileDescriptor(STDERR_FILENO);
+
     parent_env->GetLauncher(launcher.NewRequest());
   } else {
     namespace_services->Connect(parent_env.NewRequest());
@@ -303,10 +297,11 @@ int main(int argc, const char** argv) {
     if (collect_isolated_logs) {
       fuchsia::sys::LauncherPtr launcher;
       parent_env->GetLauncher(launcher.NewRequest());
-      observer_svc = launch_observer(launcher, observer_component_ptr.NewRequest());
+      observer_component = launch_observer(launcher, loop.dispatcher());
 
       test_env_services->AddService<fuchsia::logger::LogSink>(
-          [observer_svc](fidl::InterfaceRequest<fuchsia::logger::LogSink> request) {
+          [observer_svc = observer_component->svc()](
+              fidl::InterfaceRequest<fuchsia::logger::LogSink> request) {
             observer_svc->Connect(std::move(request));
           });
     }
@@ -332,9 +327,9 @@ int main(int argc, const char** argv) {
         std::move(env_label), parent_env, std::move(test_env_services), std::move(env_opt));
 
     if (collect_isolated_logs) {
-      ZX_ASSERT(observer_svc != nullptr);
+      ZX_ASSERT(observer_component != nullptr);
       // this will launch the service and also collect logs.
-      auto log_ptr = observer_svc->Connect<fuchsia::logger::Log>();
+      auto log_ptr = observer_component->svc()->Connect<fuchsia::logger::Log>();
 
       fidl::InterfaceHandle<fuchsia::logger::LogListenerSafe> log_listener;
       auto options = std::make_unique<fuchsia::logger::LogFilterOptions>();
@@ -354,7 +349,8 @@ int main(int argc, const char** argv) {
     printf("Running test in realm: %s\n", env_label.c_str());
   }
 
-  launcher->CreateComponent(std::move(parse_result.launch_info), controller.NewRequest());
+  auto test_component =
+      run::Component::Launch(launcher, std::move(parse_result.launch_info), loop.dispatcher());
 
   int64_t ret_code = 1;
 
@@ -363,8 +359,8 @@ int main(int argc, const char** argv) {
 
   if (parse_result.timeout > 0) {
     timeout_task = std::make_unique<async::TaskClosure>(
-        [&controller, &program_name, &loop, &timed_out, &ret_code]() {
-          controller->Kill();
+        [&test_component, &program_name, &loop, &timed_out, &ret_code]() {
+          test_component->controller()->Kill();
           timed_out = true;
           ret_code = -ZX_ERR_TIMED_OUT;
           fprintf(stderr, "%s canceled due to timeout.\n", program_name.c_str());
@@ -374,22 +370,22 @@ int main(int argc, const char** argv) {
     timeout_task->PostDelayed(loop.dispatcher(), zx::sec(parse_result.timeout));
   }
 
-  controller.events().OnTerminated = [&ret_code, &program_name, &loop, &timed_out](
-                                         int64_t return_code,
-                                         TerminationReason termination_reason) {
-    // component was killed due to timeout, don't collect results.
-    if (timed_out) {
-      return;
-    }
-    if (termination_reason != TerminationReason::EXITED) {
-      fprintf(stderr, "%s: %s\n", program_name.c_str(),
-              sys::HumanReadableTerminationReason(termination_reason).c_str());
-    }
+  test_component->controller().events().OnTerminated =
+      [&ret_code, &program_name, &loop, &timed_out](int64_t return_code,
+                                                    TerminationReason termination_reason) {
+        // component was killed due to timeout, don't collect results.
+        if (timed_out) {
+          return;
+        }
+        if (termination_reason != TerminationReason::EXITED) {
+          fprintf(stderr, "%s: %s\n", program_name.c_str(),
+                  sys::HumanReadableTerminationReason(termination_reason).c_str());
+        }
 
-    ret_code = return_code;
+        ret_code = return_code;
 
-    loop.Quit();
-  };
+        loop.Quit();
+      };
 
   loop.Run();
   loop.ResetQuit();
@@ -402,7 +398,7 @@ int main(int argc, const char** argv) {
   // Wait and process all messages in the queue.
   loop.RunUntilIdle();
 
-  if (observer_svc) {
+  if (observer_component) {
     ZX_ASSERT(enclosing_env);
     ZX_ASSERT(log_collector);
     enclosing_env->Kill([&loop]() { loop.Quit(); });
@@ -413,10 +409,14 @@ int main(int argc, const char** argv) {
     // collect all logs
     log_collector->NotifyOnUnBind([&loop]() { loop.Quit(); });
 
-    auto observer_ptr = observer_svc->Connect<fuchsia::diagnostics::test::Controller>();
+    auto observer_ptr =
+        observer_component->svc()->Connect<fuchsia::diagnostics::test::Controller>();
     observer_ptr->Stop();
     loop.Run();
     loop.ResetQuit();
+
+    // now that observer is dead, make sure to collect its output
+    loop.RunUntilIdle();
   }
 
   return ret_code;

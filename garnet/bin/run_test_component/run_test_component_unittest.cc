@@ -183,6 +183,7 @@ TEST(RunTest, ParseArgs) {
         "run_test_component_unittests.cmx",
         "fuchsia-pkg://fuchsia.com/run_test_component_test#meta/"
         "coverage_component.cmx",
+        "fuchsia-pkg://fuchsia.com/run_test_component_test#meta/component_to_test_standard_out.cmx",
         "fuchsia-pkg://fuchsia.com/run_test_component_test#meta/logging_component.cmx"};
     const char* argv[] = {kBinName, "run_test_component"};
     auto result = ParseArgs(env_services, 2, argv);

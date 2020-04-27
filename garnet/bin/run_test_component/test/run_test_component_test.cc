@@ -183,14 +183,13 @@ TEST_F(RunFixture, TestTimeout) {
   ASSERT_EQ(process_info.return_code, -ZX_ERR_TIMED_OUT);
 }
 
-void run_logging_component(std::string log_level, std::string* output) {
+void run_component(const std::string& component_url, std::vector<const char*>& args,
+                   std::string* output) {
   std::vector<const char*> run_d_command_argv = {"/bin/run-test-component"};
-  std::string log_severity = std::string("--min-severity-logs=") + log_level;
-  if (!log_level.empty()) {
-    run_d_command_argv.push_back(log_severity.c_str());
+  if (!args.empty()) {
+    run_d_command_argv.insert(run_d_command_argv.end(), args.begin(), args.end());
   }
-  run_d_command_argv.push_back(
-      "fuchsia-pkg://fuchsia.com/run_test_component_test#meta/logging_component.cmx");
+  run_d_command_argv.push_back(component_url.c_str());
   run_d_command_argv.push_back(nullptr);
 
   auto job = zx::job::default_job();
@@ -208,7 +207,6 @@ void run_logging_component(std::string log_level, std::string* output) {
                                  .handle = handle,
                              }};
   };
-
   // collect stdout/err from run_test_component.
   int temp_fds[2] = {-1, -1};
   ASSERT_EQ(pipe(temp_fds), 0) << strerror(errno);
@@ -248,7 +246,7 @@ void run_logging_component(std::string log_level, std::string* output) {
       process.get_info(ZX_INFO_PROCESS, &process_info, sizeof(process_info), nullptr, nullptr),
       ZX_OK);
 
-  ASSERT_EQ(process_info.return_code, 0);
+  EXPECT_EQ(process_info.return_code, 0);
 
   char buf[4096] = {0};
 
@@ -257,6 +255,16 @@ void run_logging_component(std::string log_level, std::string* output) {
   ASSERT_LT(len, 4096);
 
   *output = std::string(buf);
+}
+
+void run_logging_component(std::string log_level, std::string* output) {
+  std::vector<const char*> args = {};
+  std::string log_severity = std::string("--min-severity-logs=") + log_level;
+  if (!log_level.empty()) {
+    args.push_back(log_severity.c_str());
+  }
+  return run_component(
+      "fuchsia-pkg://fuchsia.com/run_test_component_test#meta/logging_component.cmx", args, output);
 }
 
 TEST_F(RunFixture, TestIsolatedLogsWithDefaultSeverity) {
@@ -279,6 +287,19 @@ TEST_F(RunFixture, TestIsolatedLogsWithLowerSeverity) {
   std::string got;
   run_logging_component("DEBUG", &got);
   EXPECT_NE(got.find("VLOG(1): my debug message."), std::string::npos) << "got: " << got;
+  EXPECT_NE(got.find("INFO: my info message."), std::string::npos) << "got: " << got;
+  EXPECT_NE(got.find("WARNING: my warn message."), std::string::npos) << "got: " << got;
+}
+
+TEST_F(RunFixture, TestOutput) {
+  std::string got;
+  std::vector<const char*> empty = {};
+  run_component(
+      "fuchsia-pkg://fuchsia.com/run_test_component_test#meta/component_to_test_standard_out.cmx",
+      empty, &got);
+  EXPECT_NE(got.find("writing to stdout\n"), std::string::npos) << "got: " << got;
+  EXPECT_NE(got.find("writing to stderr\n"), std::string::npos) << "got: " << got;
+  EXPECT_NE(got.find("writing second message to stdout\n"), std::string::npos) << "got: " << got;
   EXPECT_NE(got.find("INFO: my info message."), std::string::npos) << "got: " << got;
   EXPECT_NE(got.find("WARNING: my warn message."), std::string::npos) << "got: " << got;
 }

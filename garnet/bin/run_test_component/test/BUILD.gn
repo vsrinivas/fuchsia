@@ -53,11 +53,23 @@ executable("coverage_component") {
   ]
 }
 
+rustc_binary("component_to_test_standard_out") {
+  name = "component_to_test_standard_out"
+  source_root = "./component_to_test_standard_out.rs"
+  edition = "2018"
+
+  deps = [
+    "//src/lib/syslog/rust:syslog",
+    "//third_party/rust_crates:log",
+  ]
+}
+
 test_package("run_test_component_test") {
   deprecated_shell = true
 
   deps = [
     ":bin",
+    ":component_to_test_standard_out",
     ":coverage_component",
     "//src/diagnostics/archivist/tests/logs:logging_component",
   ]
@@ -68,6 +80,9 @@ test_package("run_test_component_test") {
     },
     {
       name = "logging_component"
+    },
+    {
+      name = "component_to_test_standard_out"
     },
   ]
 
@@ -80,6 +95,10 @@ test_package("run_test_component_test") {
       path = rebase_path(
               "//src/diagnostics/archivist/tests/meta/logging_component.cmx")
       dest = "logging_component.cmx"
+    },
+    {
+      path = rebase_path("meta/component_to_test_standard_out.cmx")
+      dest = "component_to_test_standard_out.cmx"
     },
   ]
 

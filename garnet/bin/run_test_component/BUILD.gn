@@ -10,9 +10,13 @@ source_set("lib") {
   testonly = true
 
   sources = [
+    "component.cc",
+    "component.h",
     "env_config.h",
     "log_collector.cc",
     "log_collector.h",
+    "output_collector.cc",
+    "output_collector.h",
     "run_test_component.cc",
     "run_test_component.h",
     "test_metadata.cc",
@@ -95,6 +99,7 @@ executable("test_bin") {
 
   sources = [
     "log_collector_unittests.cc",
+    "output_collector_unittests.cc",
     "run_test_component_unittest.cc",
     "test_metadata_unittest.cc",
   ]
