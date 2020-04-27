@@ -11,10 +11,10 @@
 
 #include <vector>
 
+#include <gtest/gtest.h>
 #include <vulkan/vulkan.h>
 
 #include "fuchsia/sysmem/cpp/fidl.h"
-#include "gtest/gtest.h"
 #include "src/graphics/tests/common/utils.h"
 #include "src/graphics/tests/common/vulkan_context.h"
 

@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/ui/examples/escher/waterfall/waterfall_demo.h"
 #include "src/ui/lib/escher/renderer/frame.h"
 #include "src/ui/lib/escher/test/common/gtest_escher.h"

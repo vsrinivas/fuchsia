@@ -7,7 +7,8 @@
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 
-#include "gmock/gmock.h"
+#include <gmock/gmock.h>
+
 #include "sdk/lib/sys/cpp/testing/service_directory_provider.h"
 #include "src/cobalt/bin/app/testapp_metrics_registry.cb.h"
 #include "src/cobalt/bin/testapp/fake_timekeeper.h"

@@ -5,7 +5,8 @@
 #include <chrono>
 #include <thread>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "magma_util/dlog.h"
 #include "magma_util/semaphore_port.h"
 

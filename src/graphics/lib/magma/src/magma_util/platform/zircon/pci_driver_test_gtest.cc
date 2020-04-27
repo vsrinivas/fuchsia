@@ -4,7 +4,8 @@
 
 #define MAGMA_DLOG_ENABLE 1
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "helper/platform_device_helper.h"
 #include "magma_util/dlog.h"
 

@@ -25,8 +25,8 @@
 #include <vector>
 
 #include <fidl/examples/echo/cpp/fidl.h>
+#include <gtest/gtest.h>
 
-#include "gtest/gtest.h"
 #include "src/lib/fxl/logging.h"
 
 namespace sysmgr {

@@ -7,7 +7,8 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/ledger/bin/app/flags.h"
 #include "src/ledger/bin/platform/platform.h"
 #include "src/ledger/bin/platform/scoped_tmp_location.h"

@@ -8,9 +8,9 @@
 #include <queue>
 #include <thread>
 
+#include <gtest/gtest.h>
 #include <vulkan/vulkan.h>
 
-#include "gtest/gtest.h"
 #include "src/lib/fxl/test/test_settings.h"
 #include "vkreadback.h"
 

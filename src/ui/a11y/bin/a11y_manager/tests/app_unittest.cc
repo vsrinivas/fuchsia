@@ -11,7 +11,8 @@
 #include <lib/sys/cpp/testing/component_context_provider.h>
 #include <lib/vfs/cpp/pseudo_dir.h>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/lib/syslog/cpp/logger.h"
 #include "src/ui/a11y/bin/a11y_manager/tests/mocks/mock_color_transform_handler.h"
 #include "src/ui/a11y/bin/a11y_manager/tests/mocks/mock_focus_chain.h"

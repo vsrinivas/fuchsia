@@ -6,7 +6,8 @@
 
 #include <string.h>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/ledger/lib/memory/ref_ptr.h"
 #include "src/ledger/lib/vmo/sized_vmo.h"
 #include "src/ledger/lib/vmo/strings.h"

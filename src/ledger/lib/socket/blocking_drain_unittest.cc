@@ -8,7 +8,8 @@
 
 #include <vector>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/ledger/lib/socket/strings.h"
 
 namespace ledger {

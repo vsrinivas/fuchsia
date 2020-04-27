@@ -12,7 +12,8 @@
 #include <map>
 #include <memory>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/modular/lib/async/cpp/operation.h"
 #include "src/modular/lib/testing/test_with_ledger.h"
 

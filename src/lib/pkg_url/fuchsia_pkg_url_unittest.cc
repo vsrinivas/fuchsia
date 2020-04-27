@@ -4,7 +4,7 @@
 
 #include "src/lib/pkg_url/fuchsia_pkg_url.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 namespace component {
 namespace {

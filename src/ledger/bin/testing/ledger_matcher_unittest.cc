@@ -6,7 +6,8 @@
 
 #include <lib/fidl/cpp/optional.h>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/ledger/lib/vmo/strings.h"
 
 using testing::HasSubstr;

@@ -10,8 +10,9 @@
 #include <lib/sys/cpp/outgoing_directory.h>
 #include <lib/zx/channel.h>
 
+#include <gtest/gtest.h>
+
 #include "echo_server.h"
-#include "gtest/gtest.h"
 
 namespace {
 

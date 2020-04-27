@@ -9,8 +9,8 @@
 #include <zircon/fidl.h>
 
 #include <fidl/test/misc/cpp/fidl.h>
+#include <gtest/gtest.h>
 
-#include "gtest/gtest.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/test/async_loop_for_test.h"
 #include "lib/fidl/txn_header.h"
@@ -626,7 +626,8 @@ TEST(MessageReader, DoubleReentrantUnbind) {
 
   EXPECT_EQ(ZX_OK, h2.write(0, &test_msg0, test_msg0_size, nullptr, 0));
   EXPECT_EQ(ZX_OK, h2.write(0, &test_msg1, test_msg1_size, nullptr, 0));
-  EXPECT_EQ(ZX_OK, h2.write(0, &test_msg2, test_msg2_size, nullptr, 0));;
+  EXPECT_EQ(ZX_OK, h2.write(0, &test_msg2, test_msg2_size, nullptr, 0));
+  ;
 
   EXPECT_TRUE(reader.is_bound());
 

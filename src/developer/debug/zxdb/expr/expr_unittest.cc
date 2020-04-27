@@ -4,7 +4,8 @@
 
 #include "src/developer/debug/zxdb/expr/expr.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/developer/debug/zxdb/expr/mock_eval_context.h"
 #include "src/developer/debug/zxdb/symbols/modified_type.h"
 #include "src/developer/debug/zxdb/symbols/type_test_support.h"

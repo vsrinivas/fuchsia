@@ -4,12 +4,13 @@
 
 #include "src/cobalt/bin/app/configuration_data.h"
 
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
+
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
 #include "third_party/abseil-cpp/absl/strings/match.h"
-#include "third_party/googletest/googlemock/include/gmock/gmock.h"
-#include "third_party/googletest/googletest/include/gtest/gtest.h"
 
 namespace cobalt::test {
 

@@ -9,8 +9,9 @@
 
 #include <thread>
 
+#include <gtest/gtest.h>
+
 #include "../vkreadback/vkreadback.h"
-#include "gtest/gtest.h"
 #include "helper/test_device_helper.h"
 #include "magma.h"
 #include "magma_vendor_queries.h"

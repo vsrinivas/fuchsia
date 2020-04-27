@@ -12,12 +12,13 @@
 
 #include <memory>
 
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
+
 #include "src/developer/feedback/testing/cobalt_test_fixture.h"
 #include "src/developer/feedback/testing/stubs/cobalt_logger_factory.h"
 #include "src/developer/feedback/testing/unit_test_fixture.h"
 #include "src/lib/syslog/cpp/logger.h"
-#include "third_party/googletest/googlemock/include/gmock/gmock.h"
-#include "third_party/googletest/googletest/include/gtest/gtest.h"
 
 namespace feedback {
 namespace {

@@ -5,9 +5,9 @@
 #include <fuchsia/modular/testing/cpp/fidl.h>
 #include <lib/fidl/cpp/optional.h>
 
+#include <gmock/gmock.h>
 #include <src/modular/lib/modular_config/modular_config_constants.h>
 
-#include "gmock/gmock.h"
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/modular/bin/sessionmgr/testing/annotations_matchers.h"
 #include "src/modular/lib/modular_test_harness/cpp/fake_module.h"

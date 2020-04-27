@@ -6,7 +6,8 @@
 #include <time.h>
 #include <unistd.h>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/developer/debug/shared/fd_watcher.h"
 #include "src/developer/debug/shared/platform_message_loop.h"
 

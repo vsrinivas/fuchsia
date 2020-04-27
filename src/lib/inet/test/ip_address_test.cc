@@ -4,7 +4,7 @@
 
 #include "src/lib/inet/ip_address.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 namespace inet {
 namespace test {

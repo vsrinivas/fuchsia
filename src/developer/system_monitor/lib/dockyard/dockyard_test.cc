@@ -6,7 +6,8 @@
 
 #include <climits>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/developer/system_monitor/lib/dockyard/dockyard_service_impl.h"
 #include "src/developer/system_monitor/lib/dockyard/test_sample_generator.h"
 

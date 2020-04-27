@@ -16,10 +16,11 @@
 
 #include <thread>
 
+#include <gmock/gmock.h>
+
 #include "fake_rtc_device.h"
 #include "fuchsia/hardware/rtc/cpp/fidl.h"
 #include "garnet/bin/network_time/timezone.h"
-#include "gmock/gmock.h"
 #include "local_roughtime_server.h"
 #include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/files/unique_fd.h"

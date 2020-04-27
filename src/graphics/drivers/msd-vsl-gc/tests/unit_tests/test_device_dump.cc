@@ -4,7 +4,8 @@
 
 #include <array>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/graphics/drivers/msd-vsl-gc/src/command_buffer.h"
 #include "test_command_buffer.h"
 

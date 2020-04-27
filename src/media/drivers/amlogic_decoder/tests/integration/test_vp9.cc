@@ -5,10 +5,10 @@
 #include <byteswap.h>
 #include <zircon/compiler.h>
 
+#include <gtest/gtest.h>
 #include <openssl/sha.h>
 
 #include "amlogic-video.h"
-#include "gtest/gtest.h"
 #include "hevcdec.h"
 #include "macros.h"
 #include "pts_manager.h"

@@ -4,7 +4,8 @@
 
 #include "src/developer/debug/zxdb/console/actions.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/developer/debug/shared/platform_message_loop.h"
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/common/test_with_loop.h"

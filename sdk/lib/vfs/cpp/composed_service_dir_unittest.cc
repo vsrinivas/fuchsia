@@ -12,8 +12,7 @@
 #include <lib/vfs/cpp/testing/dir_test_util.h>
 
 #include <fidl/examples/echo/cpp/fidl.h>
-
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 namespace {
 

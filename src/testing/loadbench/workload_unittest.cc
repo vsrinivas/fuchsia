@@ -8,7 +8,7 @@
 
 #include <fstream>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 namespace {
 void MakeTestFile(const std::string filepath, const std::string contents) {

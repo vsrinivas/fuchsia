@@ -8,7 +8,7 @@
 #include <netinet/in.h>
 #include <sys/socket.h>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 // TODO(iyerm): 10s seems too long for our test-cases
 const int32_t kTimeout = 10000;  // 10 seconds

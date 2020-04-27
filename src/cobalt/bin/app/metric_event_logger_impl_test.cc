@@ -6,7 +6,8 @@
 
 #include <memory>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/lib/cobalt/cpp/metric_event_builder.h"
 #include "third_party/cobalt/src/logger/fake_logger.h"
 

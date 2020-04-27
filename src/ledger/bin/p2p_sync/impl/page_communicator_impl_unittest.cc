@@ -15,8 +15,9 @@
 
 // gtest matchers are in gmock and we cannot include the specific header file
 // directly as it is private to the library.
-#include "gmock/gmock.h"
-#include "gtest/gtest.h"
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
+
 #include "src/ledger/bin/p2p_sync/impl/device_mesh.h"
 #include "src/ledger/bin/p2p_sync/impl/encoding.h"
 #include "src/ledger/bin/p2p_sync/impl/message_generated.h"

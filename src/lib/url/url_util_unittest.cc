@@ -3,7 +3,9 @@
 // found in the LICENSE file.
 
 #include "src/lib/url/url_util.h"
-#include "gtest/gtest.h"
+
+#include <gtest/gtest.h>
+
 #include "src/lib/fxl/macros.h"
 #include "src/lib/url/third_party/mozilla/url_parse.h"
 #include "src/lib/url/url_canon.h"

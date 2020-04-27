@@ -9,10 +9,10 @@
 //
 //
 
+#include <gtest/gtest.h>
 #include <vulkan/vulkan.h>
 
 #include "env_spn_vk_target.h"
-#include "gtest/gtest.h"
 
 //
 //

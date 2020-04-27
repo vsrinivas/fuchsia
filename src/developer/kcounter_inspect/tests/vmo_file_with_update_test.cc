@@ -4,13 +4,14 @@
 
 #include "src/developer/kcounter_inspect/vmo_file_with_update.h"
 
+#include <gtest/gtest.h>
+
 #include "fuchsia/kernel/cpp/fidl.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fidl/cpp/interface_handle.h"
 #include "lib/gtest/real_loop_fixture.h"
 #include "lib/sys/cpp/testing/service_directory_provider.h"
 #include "src/lib/fxl/logging.h"
-#include "third_party/googletest/googletest/include/gtest/gtest.h"
 
 namespace {
 

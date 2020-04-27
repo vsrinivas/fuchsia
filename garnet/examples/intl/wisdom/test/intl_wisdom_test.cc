@@ -2,21 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <stdint.h>
-#include <stdio.h>
-#include <unistd.h>
-#include <fstream>
-#include <string>
-#include <vector>
-
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/sys/cpp/file_descriptor.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <unistd.h>
 
-#include "gmock/gmock.h"
-#include "gtest/gtest.h"
+#include <fstream>
+#include <string>
+#include <vector>
+
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
+
 #include "src/lib/files/file.h"
 #include "src/lib/files/scoped_temp_dir.h"
 
@@ -77,11 +78,10 @@ class IntlWisdomTest : public TestWithEnvironment {
         .url = url,
         .out = sys::CloneFileDescriptor(fileno(out_file_)),
         .err = sys::CloneFileDescriptor(fileno(err_file_)),
-        .arguments =
-            std::vector<std::string>({
-                "--timestamp=2018-11-01T12:34:56Z",
-                "--timezone=America/Los_Angeles",
-            }),
+        .arguments = std::vector<std::string>({
+            "--timestamp=2018-11-01T12:34:56Z",
+            "--timezone=America/Los_Angeles",
+        }),
     };
 
     ComponentControllerPtr controller;
@@ -89,38 +89,34 @@ class IntlWisdomTest : public TestWithEnvironment {
     return controller;
   }
 
-  const  std::string& out_file_path() const {
-    return out_file_path_;
-  }
+  const std::string& out_file_path() const { return out_file_path_; }
 
-  const std::string& err_file_path() const {
-      return err_file_path_;
-  }
+  const std::string& err_file_path() const { return err_file_path_; }
 
   // Syncs the files used for recording stdout and stderr.
   void SyncWrites() {
-      fsync(fileno(out_file_));
-      fsync(fileno(err_file_));
+    fsync(fileno(out_file_));
+    fsync(fileno(err_file_));
   }
 
   void RunWisdomClientAndServer(const std::string& package_url) {
-      std::string expected_output;
-      IntlWisdomTest::ReadFile("/pkg/data/golden-output.txt", expected_output);
+    std::string expected_output;
+    IntlWisdomTest::ReadFile("/pkg/data/golden-output.txt", expected_output);
 
-      ComponentControllerPtr controller = LaunchClientWithServer(package_url);
-      ASSERT_TRUE(RunComponentUntilTerminated(std::move(controller), nullptr));
-      // Ensures that the data we just wrote is available for subsequent reading
-      // in the assertions.  Not doing so can result in assertions not seeing
-      // the just-written content.
-      SyncWrites();
+    ComponentControllerPtr controller = LaunchClientWithServer(package_url);
+    ASSERT_TRUE(RunComponentUntilTerminated(std::move(controller), nullptr));
+    // Ensures that the data we just wrote is available for subsequent reading
+    // in the assertions.  Not doing so can result in assertions not seeing
+    // the just-written content.
+    SyncWrites();
 
-      std::string actual_output;
-      ReadFile(out_file_path(), actual_output);
-      std::string stderr_output;
-      ReadFile(err_file_path(), stderr_output);
-      ASSERT_EQ(actual_output, expected_output)
-          << "stdout:\n" << actual_output
-          << "\n:stderr:\n" << stderr_output;
+    std::string actual_output;
+    ReadFile(out_file_path(), actual_output);
+    std::string stderr_output;
+    ReadFile(err_file_path(), stderr_output);
+    ASSERT_EQ(actual_output, expected_output) << "stdout:\n"
+                                              << actual_output << "\n:stderr:\n"
+                                              << stderr_output;
   }
 
  private:

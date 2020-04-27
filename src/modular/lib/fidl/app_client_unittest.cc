@@ -8,9 +8,8 @@
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/testing/fake_launcher.h>
 
+#include <gtest/gtest.h>
 #include <test/peridot/lib/fidl/appclient/cpp/fidl.h>
-
-#include "gtest/gtest.h"
 
 namespace modular_testing {
 namespace {

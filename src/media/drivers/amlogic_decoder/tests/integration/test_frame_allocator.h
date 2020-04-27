@@ -11,8 +11,9 @@
 
 #include <random>
 
+#include <gtest/gtest.h>
+
 #include "amlogic-video.h"
-#include "gtest/gtest.h"
 #include "macros.h"
 #include "tests/test_basic_client.h"
 #include "video_decoder.h"

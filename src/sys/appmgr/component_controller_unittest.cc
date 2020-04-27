@@ -11,9 +11,9 @@
 #include <fs/pseudo_file.h>
 #include <fs/remote_dir.h>
 #include <fs/synchronous_vfs.h>
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
 
-#include "gmock/gmock.h"
-#include "gtest/gtest.h"
 #include "lib/gtest/real_loop_fixture.h"
 #include "src/lib/fsl/handles/object_info.h"
 #include "src/lib/fxl/log_settings.h"

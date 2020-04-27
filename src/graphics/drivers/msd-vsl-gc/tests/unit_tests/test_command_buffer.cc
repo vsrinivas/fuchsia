@@ -4,7 +4,8 @@
 
 #include "test_command_buffer.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "helper/platform_device_helper.h"
 #include "src/graphics/drivers/msd-vsl-gc/src/command_buffer.h"
 #include "src/graphics/drivers/msd-vsl-gc/src/instructions.h"

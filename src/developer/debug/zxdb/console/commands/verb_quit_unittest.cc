@@ -4,7 +4,8 @@
 
 #include "src/developer/debug/zxdb/console/commands/verb_quit.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/developer/debug/zxdb/client/remote_api_test.h"
 #include "src/developer/debug/zxdb/console/mock_console.h"
 

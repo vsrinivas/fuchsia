@@ -13,9 +13,10 @@
 #include <map>
 #include <memory>
 
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
+
 #include "fuchsia/ledger/cpp/fidl.h"
-#include "gmock/gmock.h"
-#include "gtest/gtest.h"
 #include "src/ledger/bin/app/active_page_manager.h"
 #include "src/ledger/bin/app/constants.h"
 #include "src/ledger/bin/app/fidl/serialization_size.h"

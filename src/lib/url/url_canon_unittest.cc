@@ -2,12 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/lib/url/url_canon.h"
+
 #include <errno.h>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/lib/fxl/macros.h"
 #include "src/lib/url/third_party/mozilla/url_parse.h"
-#include "src/lib/url/url_canon.h"
 #include "src/lib/url/url_canon_internal.h"
 #include "src/lib/url/url_canon_stdstring.h"
 #include "src/lib/url/url_test_utils.h"

@@ -4,7 +4,7 @@
 
 #include "src/ledger/lib/files/detached_path.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 namespace ledger {
 namespace {

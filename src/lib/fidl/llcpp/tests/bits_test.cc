@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <fidl/llcpp/types/test/llcpp/fidl.h>
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 TEST(Bits, BitwiseOperators) {
   using namespace llcpp::fidl::llcpp::types::test;

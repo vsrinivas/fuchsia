@@ -6,7 +6,8 @@
 #include <lib/ui/scenic/cpp/commands.h>
 #include <zircon/syscalls.h>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "sdk/lib/ui/scenic/cpp/view_token_pair.h"
 #include "src/ui/lib/escher/paper/paper_renderer.h"
 #include "src/ui/lib/escher/paper/paper_scene.h"

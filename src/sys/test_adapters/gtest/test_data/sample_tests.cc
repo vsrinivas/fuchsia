@@ -4,7 +4,7 @@
 
 #include <stdio.h>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 TEST(SampleTest1, SimpleFail) { EXPECT_FALSE(true); }
 

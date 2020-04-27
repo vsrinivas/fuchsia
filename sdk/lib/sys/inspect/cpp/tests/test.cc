@@ -14,18 +14,18 @@
 #include <lib/sys/cpp/testing/test_with_environment.h>
 #include <zircon/device/vfs.h>
 
+#include <gmock/gmock.h>
 #include <src/lib/fxl/strings/substitute.h>
 
-#include "gmock/gmock.h"
 #include "src/lib/files/glob.h"
 
 namespace {
 
 using ::fxl::Substitute;
+using sys::testing::EnclosingEnvironment;
+using ::testing::_;
 using ::testing::Contains;
 using ::testing::UnorderedElementsAre;
-using ::testing::_;
-using sys::testing::EnclosingEnvironment;
 using namespace inspect::testing;
 
 constexpr char kTestComponent[] =
@@ -122,8 +122,8 @@ TEST_F(SysInspectTest, ReadHealth) {
   EXPECT_THAT(result.value(),
               ChildrenMatch(Contains(NodeMatches(
                   AllOf(NameMatches("fuchsia.inspect.Health"),
-                        PropertyList(UnorderedElementsAre(
-                            StringIs("status", "OK"), IntIs("start_timestamp_nanos", _))))))));
+                        PropertyList(UnorderedElementsAre(StringIs("status", "OK"),
+                                                          IntIs("start_timestamp_nanos", _))))))));
 }
 
 }  // namespace

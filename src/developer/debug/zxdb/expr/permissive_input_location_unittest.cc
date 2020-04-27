@@ -4,7 +4,8 @@
 
 #include "src/developer/debug/zxdb/expr/permissive_input_location.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/developer/debug/zxdb/symbols/function.h"
 #include "src/developer/debug/zxdb/symbols/index_test_support.h"
 #include "src/developer/debug/zxdb/symbols/mock_module_symbols.h"

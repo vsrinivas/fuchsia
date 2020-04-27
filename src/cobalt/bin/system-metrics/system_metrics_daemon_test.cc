@@ -15,7 +15,8 @@
 #include <future>
 #include <thread>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "lib/fidl/cpp/binding_set.h"
 #include "src/cobalt/bin/system-metrics/metrics_registry.cb.h"
 #include "src/cobalt/bin/system-metrics/testing/fake_cpu_stats_fetcher.h"

@@ -12,9 +12,9 @@
 #include <fstream>
 #include <string>
 
+#include <gtest/gtest.h>
 #include <task-utils/walker.h>
 
-#include "gtest/gtest.h"
 #include "src/developer/shell/josh/lib/js_testing_utils.h"
 #include "zx.h"
 

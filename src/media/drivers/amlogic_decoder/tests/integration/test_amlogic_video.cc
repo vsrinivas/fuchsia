@@ -5,9 +5,9 @@
 #include <zircon/compiler.h>
 
 #include <fbl/algorithm.h>
+#include <gtest/gtest.h>
 
 #include "amlogic-video.h"
-#include "gtest/gtest.h"
 #include "macros.h"
 #include "tests/test_support.h"
 

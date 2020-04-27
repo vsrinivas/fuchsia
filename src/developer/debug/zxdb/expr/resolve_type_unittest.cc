@@ -4,7 +4,8 @@
 
 #include "src/developer/debug/zxdb/expr/resolve_type.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/developer/debug/zxdb/expr/find_name.h"
 #include "src/developer/debug/zxdb/symbols/collection.h"
 #include "src/developer/debug/zxdb/symbols/dwarf_tag.h"

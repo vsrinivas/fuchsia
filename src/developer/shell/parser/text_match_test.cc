@@ -4,7 +4,8 @@
 
 #include "src/developer/shell/parser/text_match.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/developer/shell/parser/ast_test.h"
 
 namespace shell::parser {

@@ -12,6 +12,9 @@
 #include <cstdint>
 #include <memory>
 
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
+
 #include "sdk/lib/inspect/testing/cpp/inspect.h"
 #include "src/developer/feedback/crash_reports/config.h"
 #include "src/developer/feedback/crash_reports/constants.h"
@@ -19,8 +22,6 @@
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/syslog/cpp/logger.h"
 #include "src/lib/timekeeper/test_clock.h"
-#include "third_party/googletest/googlemock/include/gmock/gmock.h"
-#include "third_party/googletest/googletest/include/gtest/gtest.h"
 
 namespace feedback {
 namespace {

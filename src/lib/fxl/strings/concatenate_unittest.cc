@@ -3,7 +3,8 @@
 // found in the LICENSE file.
 
 #include "src/lib/fxl/strings/concatenate.h"
-#include "gtest/gtest.h"
+
+#include <gtest/gtest.h>
 
 namespace fxl {
 namespace {

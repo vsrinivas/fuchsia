@@ -4,7 +4,8 @@
 
 #include <type_traits>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "mock/mock_bus_mapper.h"
 #include "msd_intel_connection.h"
 

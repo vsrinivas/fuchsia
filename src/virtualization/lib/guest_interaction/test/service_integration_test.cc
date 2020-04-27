@@ -10,8 +10,9 @@
 #include <lib/sys/cpp/file_descriptor.h>
 #include <unistd.h>
 
+#include <gtest/gtest.h>
+
 #include "fuchsia/netemul/guest/cpp/fidl.h"
-#include "gtest/gtest.h"
 #include "src/lib/fxl/logging.h"
 #include "src/virtualization/lib/guest_interaction/common.h"
 #include "src/virtualization/lib/guest_interaction/test/integration_test_lib.h"

@@ -3,7 +3,9 @@
 // found in the LICENSE file.
 
 #include "src/lib/fxl/strings/ascii.h"
-#include "gtest/gtest.h"
+
+#include <gtest/gtest.h>
+
 #include "src/lib/fxl/strings/string_view.h"
 
 namespace fxl {

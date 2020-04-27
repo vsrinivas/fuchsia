@@ -6,7 +6,8 @@
 
 #include <lib/fit/function.h>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/ledger/lib/callback/waiter.h"
 #include "src/ledger/lib/coroutine/coroutine_impl.h"
 #include "src/ledger/lib/memory/ref_ptr.h"

@@ -4,7 +4,7 @@
 
 #include "src/lib/callback/destruction_sentinel.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 namespace callback {
 namespace {

@@ -4,7 +4,8 @@
 
 #include <thread>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "magma_util/dlog.h"
 #include "msd_intel_semaphore.h"
 

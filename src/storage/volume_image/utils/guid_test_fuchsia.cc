@@ -7,8 +7,8 @@
 #include <string_view>
 
 #include <gpt/guid.h>
+#include <gtest/gtest.h>
 
-#include "gtest/gtest.h"
 #include "src/storage/volume_image/utils/guid.h"
 
 namespace storage::volume_image {

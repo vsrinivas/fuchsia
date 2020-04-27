@@ -4,7 +4,7 @@
 
 #include "lib/media/cpp/timeline_function.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 namespace media {
 namespace {

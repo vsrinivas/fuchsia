@@ -4,7 +4,8 @@
 
 #include "src/modular/lib/module_manifest/module_manifest_xdr.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/modular/lib/fidl/json_xdr.h"
 
 void ExpectBasicManifest(const char manifest_str[]) {

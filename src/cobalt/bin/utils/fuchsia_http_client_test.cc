@@ -8,6 +8,9 @@
 
 #include <memory>
 
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
+
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/gtest/test_loop_fixture.h"
@@ -16,8 +19,6 @@
 #include "src/lib/fsl/socket/strings.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/syslog/cpp/logger.h"
-#include "third_party/googletest/googlemock/include/gmock/gmock.h"
-#include "third_party/googletest/googletest/include/gtest/gtest.h"
 
 namespace cobalt {
 namespace utils {

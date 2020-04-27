@@ -4,7 +4,7 @@
 
 #include "src/developer/debug/shared/address_range.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 namespace debug_ipc {
 

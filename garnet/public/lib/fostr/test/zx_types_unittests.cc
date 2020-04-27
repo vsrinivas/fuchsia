@@ -24,7 +24,8 @@
 
 #include <sstream>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "lib/fostr/zx_types.h"
 #include "src/lib/fsl/handles/object_info.h"
 

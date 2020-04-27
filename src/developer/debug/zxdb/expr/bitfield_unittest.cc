@@ -4,7 +4,8 @@
 
 #include "src/developer/debug/zxdb/expr/bitfield.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/developer/debug/zxdb/common/test_with_loop.h"
 #include "src/developer/debug/zxdb/expr/eval_operators.h"
 #include "src/developer/debug/zxdb/expr/expr_token.h"

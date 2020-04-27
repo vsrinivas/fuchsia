@@ -6,9 +6,9 @@
 #include <zircon/status.h>
 
 #include <ddk/debug.h>
+#include <gtest/gtest.h>
 
 #include "../device.h"
-#include "gtest/gtest.h"
 
 #define NUM_DEVS (10)
 

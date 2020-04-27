@@ -6,8 +6,9 @@
 
 #include <string>
 
-#include "gmock/gmock.h"
-#include "gtest/gtest.h"
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
+
 #include "rapidjson/document.h"
 #include "src/lib/json_parser/json_parser.h"
 
@@ -113,7 +114,8 @@ TEST_F(ProgramMetadataTest, ParseDataWithArgs) {
   EXPECT_TRUE(program.IsBinaryNull());
   EXPECT_TRUE(program.IsDataNull());
   std::string error;
-  EXPECT_TRUE(ParseFrom(&program, R"JSON({ "data": "data/component", "args": ["-v", "-q"] })JSON", &error));
+  EXPECT_TRUE(
+      ParseFrom(&program, R"JSON({ "data": "data/component", "args": ["-v", "-q"] })JSON", &error));
   EXPECT_FALSE(program.IsDataNull());
   EXPECT_TRUE(program.IsBinaryNull());
   EXPECT_EQ("data/component", program.data());

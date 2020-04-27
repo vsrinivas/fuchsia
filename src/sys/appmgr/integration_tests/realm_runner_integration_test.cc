@@ -14,9 +14,9 @@
 #include <vector>
 
 #include <fidl/examples/echo/cpp/fidl.h>
+#include <gmock/gmock.h>
 
 #include "fuchsia/sys/cpp/fidl.h"
-#include "gmock/gmock.h"
 #include "lib/async-loop/cpp/loop.h"
 #include "lib/async-loop/default.h"
 #include "lib/async-loop/loop.h"

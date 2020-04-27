@@ -5,14 +5,17 @@
 #include <fuchsia/examples/cpp/fidl.h>
 #include <lib/fostr/fidl/fuchsia/examples/formatting.h>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "lib/fidl/cpp/builder.h"
 
 namespace fuchsia {
 namespace examples {
 
 template <typename T>
-bool operator==(const T& lhs, const T& rhs) { return ::fidl::Equals(lhs, rhs); }
+bool operator==(const T& lhs, const T& rhs) {
+  return ::fidl::Equals(lhs, rhs);
+}
 
 // By using fostr, the << operator is automatically overloaded in the proper
 // namespace. Otherwise, you can define a custom operator as so:

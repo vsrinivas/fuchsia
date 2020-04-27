@@ -4,7 +4,8 @@
 
 #include "src/ledger/bin/storage/testing/storage_matcher.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/ledger/bin/storage/public/constants.h"
 #include "src/ledger/bin/storage/testing/id_and_parent_ids_commit.h"
 #include "src/ledger/lib/convert/convert.h"

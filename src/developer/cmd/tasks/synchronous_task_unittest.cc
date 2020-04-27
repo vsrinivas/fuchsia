@@ -4,7 +4,8 @@
 
 #include "src/developer/cmd/tasks/synchronous_task.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/developer/cmd/legacy/builtins.h"
 
 namespace {

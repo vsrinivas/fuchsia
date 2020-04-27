@@ -18,7 +18,7 @@ extern "C" {
 #include "bitarr.h"
 }
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 TEST(BitArr, FindFirstBit_SubWord) {
   BITARR(arr, 5);

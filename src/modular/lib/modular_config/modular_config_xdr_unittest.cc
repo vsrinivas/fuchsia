@@ -11,7 +11,8 @@
 #include <algorithm>
 #include <cctype>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/lib/files/file.h"
 
 namespace modular {

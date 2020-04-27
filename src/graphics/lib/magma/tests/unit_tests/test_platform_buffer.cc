@@ -4,7 +4,8 @@
 
 #include <vector>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "magma_util/macros.h"
 #include "platform_buffer.h"
 

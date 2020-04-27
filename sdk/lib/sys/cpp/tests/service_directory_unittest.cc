@@ -8,8 +8,7 @@
 #include <lib/zx/channel.h>
 
 #include <fidl/examples/echo/cpp/fidl.h>
-
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 TEST(ServiceDirectoryTest, Control) {
   zx::channel svc_client, svc_server;

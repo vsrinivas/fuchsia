@@ -20,10 +20,9 @@
 #include <fbl/algorithm.h>
 #include <fs-management/fvm.h>
 #include <fs-management/mount.h>
+#include <gtest/gtest.h>
 #include <ramdevice-client/ramdisk.h>
 #include <zxcrypt/fdio-volume.h>
-
-#include "gtest/gtest.h"
 
 namespace {
 

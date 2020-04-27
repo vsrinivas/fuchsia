@@ -19,8 +19,8 @@
 
 #include <fs/service.h>
 #include <fs/synchronous_vfs.h>
+#include <gtest/gtest.h>
 
-#include "gtest/gtest.h"
 #include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/fxl/macros.h"
 #include "src/modular/lib/fidl/array_to_string.h"

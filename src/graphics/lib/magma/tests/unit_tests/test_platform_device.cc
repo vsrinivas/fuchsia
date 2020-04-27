@@ -5,7 +5,8 @@
 #include <chrono>
 #include <thread>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "helper/platform_device_helper.h"
 #include "platform_device.h"
 #include "platform_thread.h"

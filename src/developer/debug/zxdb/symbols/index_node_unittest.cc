@@ -4,7 +4,8 @@
 
 #include "src/developer/debug/zxdb/symbols/index_node.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
 
 namespace zxdb {

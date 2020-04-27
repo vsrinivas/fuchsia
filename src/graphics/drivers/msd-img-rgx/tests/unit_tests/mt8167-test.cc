@@ -4,7 +4,8 @@
 
 #include <array>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/graphics/drivers/msd-img-rgx/mtk/mt8167s-gpu.h"
 
 namespace {

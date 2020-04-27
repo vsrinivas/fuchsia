@@ -6,7 +6,7 @@
 
 #include <string>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 namespace debugger_utils {
 namespace {

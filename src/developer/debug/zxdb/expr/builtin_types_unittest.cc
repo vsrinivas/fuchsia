@@ -4,7 +4,7 @@
 
 #include "src/developer/debug/zxdb/expr/builtin_types.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 namespace zxdb {
 

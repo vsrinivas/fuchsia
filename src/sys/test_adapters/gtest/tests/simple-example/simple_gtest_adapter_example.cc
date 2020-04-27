@@ -4,6 +4,6 @@
 
 #include <stdio.h>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 TEST(SimpleTest, Test) { EXPECT_TRUE(true); }

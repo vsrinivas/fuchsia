@@ -6,7 +6,8 @@
 
 #include <zircon/process.h>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "root_resource.h"
 
 class TaskTreeForTesting : public ::harvester::TaskTree {

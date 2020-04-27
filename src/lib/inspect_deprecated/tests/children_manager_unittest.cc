@@ -17,8 +17,9 @@
 #include <utility>
 #include <vector>
 
-#include "gmock/gmock.h"
-#include "gtest/gtest.h"
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
+
 #include "src/lib/callback/auto_cleanable.h"
 #include "src/lib/callback/capture.h"
 #include "src/lib/fxl/memory/weak_ptr.h"

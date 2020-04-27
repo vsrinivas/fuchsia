@@ -7,7 +7,7 @@
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 namespace scpi {
 namespace testing {

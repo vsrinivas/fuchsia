@@ -4,7 +4,8 @@
 
 #include <math.h>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "lib/ui/scenic/cpp/commands.h"
 #include "src/ui/scenic/lib/gfx/resources/shapes/circle_shape.h"
 #include "src/ui/scenic/lib/gfx/resources/shapes/rectangle_shape.h"

@@ -6,7 +6,7 @@
 
 #include <limits>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 namespace zxdb {
 
@@ -41,7 +41,7 @@ TEST(DataExtractor, Numbers) {
   ext.Read<uint64_t>();
   EXPECT_EQ(8u, ext.cur());
   EXPECT_FALSE(ext.Read<uint64_t>());  // Read fails.
-  EXPECT_EQ(8u, ext.cur());  // Position is unchanged.
+  EXPECT_EQ(8u, ext.cur());            // Position is unchanged.
 }
 
 TEST(DataExtractor, Manual) {

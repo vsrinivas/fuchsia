@@ -6,7 +6,7 @@
 
 #include <utility>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 class DockyardProxyGrpcTest : public ::testing::Test {
  public:
@@ -15,9 +15,9 @@ class DockyardProxyGrpcTest : public ::testing::Test {
 
 TEST_F(DockyardProxyGrpcTest, ExtractPathsFromSampleList) {
   harvester::SampleList in = {
-    {"path1", 0UL},
-    {"path2", 19UL},
-    {"path1", 42UL},
+      {"path1", 0UL},
+      {"path2", 19UL},
+      {"path1", 42UL},
   };
   std::vector<const std::string*> out(in.size());
 
@@ -31,9 +31,9 @@ TEST_F(DockyardProxyGrpcTest, ExtractPathsFromSampleList) {
 TEST_F(DockyardProxyGrpcTest, BuildSampleListById) {
   std::vector<dockyard::DockyardId> id_list = {13, 8, 13};
   harvester::SampleList sample_list = {
-    {"path1", 0UL},
-    {"path2", 19UL},
-    {"path1", 42UL},
+      {"path1", 0UL},
+      {"path2", 19UL},
+      {"path1", 42UL},
   };
   harvester::SampleListById out(id_list.size());
 

@@ -6,9 +6,9 @@
 
 #include <lib/async/default.h>
 
+#include <gtest/gtest.h>
 #include <hw/pci.h>
 
-#include "gtest/gtest.h"
 #include "src/virtualization/bin/vmm/bits.h"
 
 namespace {

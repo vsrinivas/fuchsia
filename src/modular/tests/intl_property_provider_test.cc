@@ -4,8 +4,9 @@
 
 #include <lib/modular/testing/cpp/test_harness_builder.h>
 
+#include <gtest/gtest.h>
+
 #include "fuchsia/modular/session/cpp/fidl.h"
-#include "gtest/gtest.h"
 #include "intl_property_provider_test_client.h"
 #include "src/modular/lib/app_driver/cpp/module_driver.h"
 #include "src/modular/lib/modular_test_harness/cpp/fake_module.h"
@@ -21,8 +22,8 @@ constexpr char kIntentAction[] = "action";
 class IntlPropertyProviderTest : public modular_testing::TestHarnessFixture {
  public:
   IntlPropertyProviderTest() {
-    test_module_ = std::make_unique<modular_testing::FakeModule>(
-        modular_testing::FakeComponent::Args{
+    test_module_ =
+        std::make_unique<modular_testing::FakeModule>(modular_testing::FakeComponent::Args{
             .url = modular_testing::TestHarnessBuilder::GenerateFakeUrl("FakeIntlClientModule"),
             .sandbox_services =
                 {

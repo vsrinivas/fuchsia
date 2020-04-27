@@ -4,8 +4,9 @@
 
 #include "gather_inspectable.h"
 
+#include <gtest/gtest.h>
+
 #include "dockyard_proxy_fake.h"
-#include "gtest/gtest.h"
 
 class GatherInspectableTest : public ::testing::Test {
  public:

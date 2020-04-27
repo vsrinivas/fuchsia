@@ -15,9 +15,9 @@
 #include <algorithm>
 #include <vector>
 
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "gmock/gmock.h"
 #include "src/lib/syslog/cpp/logger.h"
 #include "src/ui/a11y/bin/a11y_manager/tests/util/util.h"
 #include "src/ui/a11y/lib/semantics/semantic_tree.h"

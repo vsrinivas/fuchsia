@@ -11,7 +11,8 @@
 #include <memory>
 #include <string>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/test/async_loop_for_test.h"
 #include "lib/fidl/cpp/test/frobinator_impl.h"

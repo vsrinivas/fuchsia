@@ -7,7 +7,8 @@
 
 #include <fuchsia/modular/cpp/fidl.h>
 
-#include "gmock/gmock.h"
+#include <gmock/gmock.h>
+
 #include "lib/fostr/fidl/fuchsia/modular/formatting.h"
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/syslog/cpp/logger.h"

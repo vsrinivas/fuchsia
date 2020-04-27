@@ -4,7 +4,8 @@
 
 #include "src/lib/callback/scoped_callback.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/lib/fxl/macros.h"
 
 namespace callback {

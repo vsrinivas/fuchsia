@@ -8,8 +8,9 @@
 #include <lib/async-loop/default.h>
 #include <lib/fidl/cpp/message_buffer.h>
 
+#include <gtest/gtest.h>
+
 #include "fidl/test/frobinator/cpp/fidl.h"
-#include "gtest/gtest.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/test/async_loop_for_test.h"
 #include "lib/fidl/cpp/test/frobinator_impl.h"

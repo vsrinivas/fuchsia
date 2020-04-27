@@ -9,7 +9,7 @@
 #include <lib/syslog/wire_format.h>
 #include <lib/zx/socket.h>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 __BEGIN_CDECLS
 

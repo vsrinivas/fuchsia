@@ -6,7 +6,8 @@
 
 #include <tuple>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/developer/shell/parser/ast.h"
 
 namespace shell::parser {

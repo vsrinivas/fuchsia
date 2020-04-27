@@ -9,7 +9,8 @@
 #include <string>
 #include <tuple>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "rapidjson/document.h"
 #include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/json_parser/json_parser.h"

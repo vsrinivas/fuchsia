@@ -9,8 +9,9 @@
 
 #include <memory>
 
+#include <gtest/gtest.h>
+
 #include "echo_server.h"
-#include "gtest/gtest.h"
 #include "lib/async/dispatcher.h"
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/vfs/cpp/service.h"

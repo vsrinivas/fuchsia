@@ -4,7 +4,8 @@
 
 #include "src/developer/debug/zxdb/console/format_frame.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/developer/debug/shared/platform_message_loop.h"
 #include "src/developer/debug/zxdb/client/mock_frame.h"
 #include "src/developer/debug/zxdb/client/mock_stack_delegate.h"

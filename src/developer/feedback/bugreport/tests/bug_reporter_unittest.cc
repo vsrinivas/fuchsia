@@ -12,13 +12,14 @@
 #include <memory>
 #include <string>
 
+#include <gtest/gtest.h>
+
 #include "src/developer/feedback/testing/stubs/data_provider.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/syslog/cpp/logger.h"
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
-#include "third_party/googletest/googletest/include/gtest/gtest.h"
 
 namespace feedback {
 namespace {

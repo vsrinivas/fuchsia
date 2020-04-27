@@ -10,7 +10,8 @@ int etnaviv_cl_test_gc7000(int argc, char* argv[]);
 #include <chrono>
 #include <thread>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "helper/platform_device_helper.h"
 #include "magma_util/macros.h"
 #include "src/graphics/drivers/msd-vsl-gc/src/address_space.h"

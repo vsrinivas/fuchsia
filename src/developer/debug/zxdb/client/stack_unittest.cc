@@ -6,7 +6,8 @@
 
 #include <map>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/zxdb/client/frame_fingerprint.h"

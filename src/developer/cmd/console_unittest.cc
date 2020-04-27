@@ -19,9 +19,9 @@
 #include <utility>
 
 #include <fbl/unique_fd.h>
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
 
-#include "gmock/gmock.h"
-#include "gtest/gtest.h"
 #include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 
 namespace {

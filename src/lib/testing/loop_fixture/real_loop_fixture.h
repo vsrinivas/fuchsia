@@ -10,7 +10,8 @@
 #include <lib/fit/function.h>
 #include <lib/zx/time.h>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/lib/fxl/macros.h"
 
 namespace gtest {

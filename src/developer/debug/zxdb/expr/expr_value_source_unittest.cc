@@ -4,7 +4,7 @@
 
 #include "src/developer/debug/zxdb/expr/expr_value_source.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 namespace zxdb {
 

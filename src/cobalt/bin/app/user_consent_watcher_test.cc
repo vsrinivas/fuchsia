@@ -7,9 +7,10 @@
 #include <fuchsia/settings/cpp/fidl.h>
 #include <lib/gtest/test_loop_fixture.h>
 
+#include <gtest/gtest.h>
+
 #include "sdk/lib/sys/cpp/testing/service_directory_provider.h"
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
-#include "third_party/googletest/googletest/include/gtest/gtest.h"
 
 namespace cobalt {
 

@@ -5,7 +5,7 @@
 #ifndef SRC_GRAPHICS_TESTS_ICD_LOAD_ICD_LOAD_H_
 #define SRC_GRAPHICS_TESTS_ICD_LOAD_ICD_LOAD_H_
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 class IcdLoadTest {
  public:

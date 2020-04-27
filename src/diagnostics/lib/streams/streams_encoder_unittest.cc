@@ -9,7 +9,8 @@
 #include <iostream>
 #include <vector>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/diagnostics/lib/streams/encode.h"
 
 TEST(StreamsRecordEncoder, Writable) {

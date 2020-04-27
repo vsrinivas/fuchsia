@@ -4,7 +4,8 @@
 
 #include "src/developer/debug/zxdb/expr/index_walker.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/developer/debug/zxdb/expr/expr_parser.h"
 #include "src/developer/debug/zxdb/symbols/index.h"
 

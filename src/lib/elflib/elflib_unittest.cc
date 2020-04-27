@@ -14,7 +14,7 @@
 #include <algorithm>
 #include <iterator>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 namespace elflib {
 namespace {

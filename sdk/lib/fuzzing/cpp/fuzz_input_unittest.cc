@@ -7,7 +7,7 @@
 #include <cstdint>
 #include <cstdlib>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 namespace {
 

@@ -4,7 +4,8 @@
 
 #include "src/developer/debug/zxdb/symbols/process_symbols.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/developer/debug/ipc/records.h"
 #include "src/developer/debug/zxdb/symbols/loaded_module_symbols.h"
 #include "src/developer/debug/zxdb/symbols/module_symbols.h"

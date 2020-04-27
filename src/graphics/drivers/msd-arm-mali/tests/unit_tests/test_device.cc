@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "helper/platform_device_helper.h"
 #include "mock/mock_mmio.h"
 #include "msd_arm_device.h"

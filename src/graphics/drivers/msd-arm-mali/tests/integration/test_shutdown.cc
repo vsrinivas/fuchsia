@@ -11,7 +11,8 @@
 #include <shared_mutex>
 #include <thread>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "helper/test_device_helper.h"
 #include "magma.h"
 #include "magma_util/macros.h"

@@ -17,11 +17,11 @@
 #include <thread>
 
 #include <fbl/ref_ptr.h>
+#include <gtest/gtest.h>
 #include <ramdevice-client/ramdisk.h>
 #include <ramdevice-client/ramnand.h>
 
 #include "fbl/auto_call.h"
-#include "gtest/gtest.h"
 
 namespace ftl_proxy {
 namespace {

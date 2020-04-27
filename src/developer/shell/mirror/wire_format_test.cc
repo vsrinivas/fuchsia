@@ -16,7 +16,8 @@
 #include <string>
 #include <vector>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/developer/shell/mirror/common.h"
 #include "src/developer/shell/mirror/test_shared.h"
 

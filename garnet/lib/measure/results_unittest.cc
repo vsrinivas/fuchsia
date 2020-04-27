@@ -4,7 +4,7 @@
 
 #include "garnet/lib/measure/results.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 namespace tracing {
 namespace measure {

@@ -4,7 +4,8 @@
 
 #include "src/developer/debug/zxdb/symbols/code_block.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/developer/debug/zxdb/symbols/function.h"
 #include "src/developer/debug/zxdb/symbols/symbol_context.h"
 #include "src/developer/debug/zxdb/symbols/symbol_test_parent_setter.h"

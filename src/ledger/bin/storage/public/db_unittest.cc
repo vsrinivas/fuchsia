@@ -6,7 +6,8 @@
 
 #include <lib/async/cpp/task.h>
 
-#include "gmock/gmock.h"
+#include <gmock/gmock.h>
+
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"

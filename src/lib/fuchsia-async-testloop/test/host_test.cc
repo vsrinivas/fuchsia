@@ -5,8 +5,9 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-testing/test_loop.h>
 
+#include <gtest/gtest.h>
+
 #include "garnet/public/lib/gtest/test_loop_fixture.h"
-#include "gtest/gtest.h"
 #include "src/lib/fxl/logging.h"
 
 extern "C" {

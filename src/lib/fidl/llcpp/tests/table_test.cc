@@ -3,8 +3,7 @@
 // found in the LICENSE file.
 
 #include <fidl/llcpp/types/test/llcpp/fidl.h>
-
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 TEST(Table, UnownedBuilderBuildTablePrimitive) {
   namespace test = llcpp::fidl::llcpp::types::test;

@@ -8,9 +8,9 @@
 #include <lib/async/default.h>
 #include <lib/sys/cpp/testing/component_interceptor.h>
 
+#include <gtest/gtest.h>
 #include <src/lib/files/glob.h>
 
-#include "gtest/gtest.h"
 #include "lib/sys/cpp/testing/test_with_environment.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
@@ -113,10 +113,8 @@ TEST_F(BasemgrLauncherTest, BasemgrLauncherDestroysRunningBasemgr) {
 
   // Check that the first instance of basemgr no longer exists in the hub and that it has been
   // replaced with another instance.
-  RunLoopUntil([&] {
-    return files::Glob(service_path).size() == 0; });
-  RunLoopUntil([&] {
-    return files::Glob(kBasemgrHubPathForTests).size() == 1; });
+  RunLoopUntil([&] { return files::Glob(service_path).size() == 0; });
+  RunLoopUntil([&] { return files::Glob(kBasemgrHubPathForTests).size() == 1; });
 }
 
 // Ensures basemgr isn't launched when bad arguments are provided to basemgr_launcher.

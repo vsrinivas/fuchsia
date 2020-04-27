@@ -5,9 +5,9 @@
 #include <lib/fzl/owned-vmo-mapper.h>
 #include <lib/image-format/image_format.h>
 
+#include <gtest/gtest.h>
 #include <src/lib/syslog/cpp/logger.h>
 
-#include "gtest/gtest.h"
 #include "src/camera/lib/image_writer/hsv_generator.h"
 #include "src/camera/lib/image_writer/image_format_rgba.h"
 

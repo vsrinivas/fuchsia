@@ -12,9 +12,8 @@
 #include <thread>
 #include <vector>
 
+#include <gtest/gtest.h>
 #include <vulkan/vulkan.h>
-
-#include "gtest/gtest.h"
 
 #define PRINT_STDERR(format, ...) \
   fprintf(stderr, "%s:%d " format "\n", __FILE__, __LINE__, ##__VA_ARGS__)

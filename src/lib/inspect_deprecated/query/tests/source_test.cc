@@ -7,12 +7,12 @@
 #include <lib/fdio/directory.h>
 #include <lib/vfs/cpp/vmo_file.h>
 
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
 #include <src/lib/files/file.h>
 
 #include "fixture.h"
 #include "fuchsia/io/cpp/fidl.h"
-#include "gmock/gmock.h"
-#include "gtest/gtest.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fidl/cpp/interface_request.h"

@@ -6,7 +6,8 @@
 
 #include <fuchsia/modular/cpp/fidl.h>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/modular/bin/sessionctl/session_ctl_constants.h"
 #include "src/modular/bin/sessionmgr/puppet_master/puppet_master_impl.h"
 #include "src/modular/lib/testing/test_story_command_executor.h"

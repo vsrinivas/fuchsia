@@ -6,7 +6,7 @@
 
 #include <fuchsia/ui/gfx/cpp/fidl.h>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 namespace scenic {
 

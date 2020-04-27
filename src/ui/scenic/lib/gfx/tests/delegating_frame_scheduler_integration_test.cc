@@ -4,7 +4,8 @@
 
 #include <lib/ui/scenic/cpp/commands.h>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/ui/lib/escher/flib/fence.h"
 #include "src/ui/scenic/lib/gfx/engine/session.h"
 #include "src/ui/scenic/lib/gfx/resources/image_pipe.h"

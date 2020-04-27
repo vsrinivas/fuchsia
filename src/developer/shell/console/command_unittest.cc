@@ -4,8 +4,8 @@
 
 #include "src/developer/shell/console/command.h"
 
-#include "gmock/gmock.h"
-#include "gtest/gtest.h"
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
 
 namespace shell::console {
 

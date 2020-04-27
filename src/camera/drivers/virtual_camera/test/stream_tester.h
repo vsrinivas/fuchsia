@@ -6,7 +6,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 #ifndef SRC_CAMERA_DRIVERS_VIRTUAL_CAMERA_TEST_STREAM_TESTER_H_
 #define SRC_CAMERA_DRIVERS_VIRTUAL_CAMERA_TEST_STREAM_TESTER_H_

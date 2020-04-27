@@ -4,7 +4,8 @@
 
 #include "src/ledger/bin/filesystem/get_directory_content_size.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/ledger/bin/platform/platform.h"
 #include "src/ledger/bin/platform/scoped_tmp_location.h"
 #include "src/ledger/lib/files/detached_path.h"

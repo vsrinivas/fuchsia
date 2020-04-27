@@ -6,7 +6,8 @@
 
 #include <stdlib.h>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/developer/debug/zxdb/common/file_util.h"
 #include "src/developer/debug/zxdb/common/scoped_temp_file.h"
 

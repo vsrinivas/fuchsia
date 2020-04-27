@@ -4,7 +4,8 @@
 
 #include "src/developer/debug/zxdb/console/format_node_console.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/developer/debug/zxdb/common/test_with_loop.h"
 #include "src/developer/debug/zxdb/console/async_output_buffer_test_util.h"
 #include "src/developer/debug/zxdb/console/string_util.h"

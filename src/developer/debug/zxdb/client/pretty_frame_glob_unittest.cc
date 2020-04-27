@@ -4,7 +4,8 @@
 
 #include "src/developer/debug/zxdb/client/pretty_frame_glob.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/developer/debug/zxdb/symbols/function.h"
 #include "src/developer/debug/zxdb/symbols/location.h"
 

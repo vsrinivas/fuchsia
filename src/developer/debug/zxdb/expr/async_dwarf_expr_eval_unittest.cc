@@ -4,7 +4,8 @@
 
 #include "src/developer/debug/zxdb/expr/async_dwarf_expr_eval.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "src/developer/debug/zxdb/common/test_with_loop.h"
 #include "src/developer/debug/zxdb/expr/eval_context_impl.h"

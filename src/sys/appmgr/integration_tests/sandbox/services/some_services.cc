@@ -11,8 +11,9 @@
 #include <string>
 #include <vector>
 
-#include "gmock/gmock.h"
-#include "gtest/gtest.h"
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
+
 #include "src/lib/files/directory.h"
 #include "src/sys/appmgr/integration_tests/sandbox/namespace_test.h"
 

@@ -6,8 +6,8 @@
 
 #include <fbl/ref_ptr.h>
 #include <fs/pseudo_dir.h>
+#include <gtest/gtest.h>
 
-#include "gtest/gtest.h"
 #include "src/sys/appmgr/hub/realm_hub.h"
 
 namespace component {

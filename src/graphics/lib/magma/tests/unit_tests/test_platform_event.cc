@@ -4,7 +4,8 @@
 
 #include <thread>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "platform_event.h"
 
 class TestEvent {

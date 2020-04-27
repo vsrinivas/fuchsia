@@ -7,19 +7,20 @@
 #include <lib/sys/cpp/component_context.h>
 #include <lib/zx/channel.h>
 
+#include <gtest/gtest.h>
+
 #include "echo_server.h"
-#include "gtest/gtest.h"
 
 class ComponentContextTest : public gtest::RealLoopFixture {
  public:
   void SetUp() override {
     ASSERT_EQ(ZX_OK, zx::channel::create(0, &outgoing_client_, &outgoing_server_));
   }
+
  protected:
   void QueryEcho() {
-    fdio_service_connect_at(
-        outgoing_client_.get(), "svc/fidl.examples.echo.Echo",
-        echo_client_.NewRequest(dispatcher()).TakeChannel().release());
+    fdio_service_connect_at(outgoing_client_.get(), "svc/fidl.examples.echo.Echo",
+                            echo_client_.NewRequest(dispatcher()).TakeChannel().release());
 
     echo_client_->EchoString("hello", [this](fidl::StringPtr value) { echo_result_ = *value; });
   }
@@ -43,8 +44,8 @@ TEST_F(ComponentContextTest, ServeInConstructor) {
 
   // Starts serving outgoing directory immediately. Will process Echo request
   // the next time async loop will run.
-  context_ = std::make_unique<sys::ComponentContext>(
-      sys::ServiceDirectory::CreateFromNamespace(), std::move(outgoing_server_));
+  context_ = std::make_unique<sys::ComponentContext>(sys::ServiceDirectory::CreateFromNamespace(),
+                                                     std::move(outgoing_server_));
 
   // Now publish the service. It's not too late as long as the run loop hasn't
   // run after ComponentContext creation.

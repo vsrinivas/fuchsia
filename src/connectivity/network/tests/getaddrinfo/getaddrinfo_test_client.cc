@@ -9,7 +9,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 TEST(GetAddrInfoTest, GetAddrInfoTest) {
   struct addrinfo hints;

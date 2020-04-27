@@ -9,8 +9,8 @@
 #include <list>
 #include <ostream>
 
-#include "gmock/gmock.h"
-#include "gtest/gtest.h"
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
 
 // GoogleTest Matcher implementation to make intrusive_list<> comparison easier.
 MATCHER_P(ListContains, values, "") {

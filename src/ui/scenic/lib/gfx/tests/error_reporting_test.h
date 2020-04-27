@@ -8,7 +8,8 @@
 #include <string>
 #include <vector>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "lib/gtest/test_loop_fixture.h"
 #include "src/lib/fxl/logging.h"
 #include "src/ui/scenic/lib/scenic/event_reporter.h"

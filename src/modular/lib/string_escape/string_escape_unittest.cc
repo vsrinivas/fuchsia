@@ -4,7 +4,7 @@
 
 #include "src/modular/lib/string_escape/string_escape.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 using fxl::StringView;
 

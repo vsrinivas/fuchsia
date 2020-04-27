@@ -4,7 +4,8 @@
 
 #include "src/ui/bin/root_presenter/displays/display_configuration.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/ui/bin/root_presenter/displays/display_model.h"
 
 namespace root_presenter {

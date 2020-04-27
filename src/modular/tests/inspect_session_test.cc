@@ -12,9 +12,9 @@
 #include <lib/inspect/contrib/cpp/archive_reader.h>
 #include <zircon/device/vfs.h>
 
+#include <gmock/gmock.h>
 #include <sdk/lib/inspect/testing/cpp/inspect.h>
 
-#include "gmock/gmock.h"
 #include "src/lib/files/glob.h"
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/strings/substitute.h"

@@ -3,9 +3,10 @@
 // found in the LICENSE file.
 
 #include "garnet/bin/network_time/time_server_config.h"
-#include "src/lib/files/scoped_temp_dir.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
+#include "src/lib/files/scoped_temp_dir.h"
 
 #define INVALID_CONFIGS 4
 

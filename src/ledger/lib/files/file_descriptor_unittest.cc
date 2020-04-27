@@ -6,7 +6,8 @@
 
 #include <string>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/ledger/lib/files/eintr_wrapper.h"
 #include "src/ledger/lib/files/file.h"
 #include "src/ledger/lib/files/scoped_tmp_dir.h"

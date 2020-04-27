@@ -4,7 +4,8 @@
 
 #include "src/developer/debug/zxdb/expr/parsed_identifier.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/developer/debug/zxdb/expr/expr_parser.h"
 
 namespace zxdb {

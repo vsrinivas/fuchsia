@@ -6,8 +6,7 @@
 #include <lib/fidl/llcpp/memory.h>
 
 #include <fbl/string.h>
-
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 TEST(Memory, TrackingPointerUnowned) {
   uint32_t obj;

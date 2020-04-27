@@ -4,7 +4,7 @@
 
 #include "src/developer/system_monitor/bin/dockyard_host/dockyard_host.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 class SystemMonitorDockyardHostTest : public ::testing::Test {
  public:

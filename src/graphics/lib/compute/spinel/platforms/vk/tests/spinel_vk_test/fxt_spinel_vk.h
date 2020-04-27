@@ -9,8 +9,9 @@
 //
 //
 
+#include <gtest/gtest.h>
+
 #include "env.h"
-#include "gtest/gtest.h"
 #include "spinel/spinel_vk.h"
 
 //

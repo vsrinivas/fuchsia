@@ -11,7 +11,8 @@
 
 #include <thread>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "helper/test_device_helper.h"
 #include "magma.h"
 #include "magma_arm_mali_types.h"

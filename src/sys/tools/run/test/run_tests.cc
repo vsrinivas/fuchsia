@@ -10,7 +10,7 @@
 #include <lib/sys/cpp/testing/fake_launcher.h>
 #include <lib/sys/cpp/testing/service_directory_provider.h>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 TEST(Run, Daemonize) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);

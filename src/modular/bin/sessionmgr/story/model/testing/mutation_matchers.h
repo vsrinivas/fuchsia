@@ -7,7 +7,8 @@
 
 #include <fuchsia/modular/storymodel/cpp/fidl.h>
 
-#include "gmock/gmock.h"  // For MATCHER macros.
+#include <gmock/gmock.h>  // For MATCHER macros.
+
 #include "lib/fostr/fidl/fuchsia/modular/formatting.h"
 #include "lib/fostr/fidl/fuchsia/modular/storymodel/formatting.h"
 

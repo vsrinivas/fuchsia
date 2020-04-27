@@ -22,7 +22,8 @@
 
 #include <iostream>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/lib/fxl/logging.h"
 
 // This test exercises the touch input dispatch path from Root Presenter to a Scenic client. It is a

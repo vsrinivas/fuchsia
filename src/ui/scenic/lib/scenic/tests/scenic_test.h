@@ -10,7 +10,8 @@
 #include <lib/sys/cpp/component_context.h>
 #include <lib/ui/scenic/cpp/session.h>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/ui/scenic/lib/scenic/scenic.h"
 
 namespace scenic_impl {

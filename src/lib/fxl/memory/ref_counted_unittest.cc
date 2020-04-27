@@ -8,7 +8,8 @@
 
 #include "src/lib/fxl/memory/ref_counted.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/lib/fxl/macros.h"
 
 #if defined(__clang__)

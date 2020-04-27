@@ -14,8 +14,9 @@
 
 #include <thread>
 
-#include "gmock/gmock.h"
-#include "gtest/gtest.h"
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
+
 #include "lib/inspect/cpp/inspect.h"
 #include "lib/inspect/cpp/reader.h"
 #include "lib/inspect/service/cpp/reader.h"

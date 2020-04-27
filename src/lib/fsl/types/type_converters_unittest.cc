@@ -8,7 +8,8 @@
 
 #include <array>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "lib/fidl/cpp/vector.h"
 
 namespace {

@@ -4,8 +4,9 @@
 
 #include "gather_memory_digest.h"
 
+#include <gtest/gtest.h>
+
 #include "dockyard_proxy_fake.h"
-#include "gtest/gtest.h"
 #include "root_resource.h"
 
 class GatherMemoryDigestTest : public ::testing::Test {};

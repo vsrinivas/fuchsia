@@ -4,7 +4,7 @@
 
 #include "src/developer/debug/zxdb/console/format_table.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 namespace zxdb {
 

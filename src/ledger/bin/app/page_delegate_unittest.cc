@@ -6,7 +6,8 @@
 
 #include <fuchsia/ledger/cpp/fidl.h>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/ledger/bin/app/active_page_manager.h"
 #include "src/ledger/bin/app/merging/merge_resolver.h"
 #include "src/ledger/bin/storage/fake/fake_page_storage.h"

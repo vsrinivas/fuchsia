@@ -6,10 +6,11 @@
 
 #include <lib/async/cpp/executor.h>
 
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
+
 #include "lib/fit/function_traits.h"
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
-#include "third_party/googletest/googlemock/include/gmock/gmock.h"
-#include "third_party/googletest/googletest/include/gtest/gtest.h"
 
 namespace feedback {
 namespace fit {

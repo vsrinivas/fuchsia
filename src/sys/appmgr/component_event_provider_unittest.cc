@@ -10,7 +10,8 @@
 #include <lib/sys/cpp/testing/fake_component.h>
 #include <unistd.h>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "lib/sys/cpp/testing/component_context_provider.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/scoped_temp_dir.h"

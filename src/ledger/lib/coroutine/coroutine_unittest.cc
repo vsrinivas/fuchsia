@@ -6,8 +6,9 @@
 #include <lib/fit/function.h>
 #include <lib/zx/time.h>
 
-#include "gmock/gmock.h"
-#include "gtest/gtest.h"
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
+
 #include "src/ledger/lib/coroutine/coroutine_impl.h"
 #include "src/ledger/lib/logging/logging.h"
 

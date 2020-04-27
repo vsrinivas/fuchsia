@@ -10,7 +10,8 @@
 #include <lib/fit/function.h>
 #include <lib/fit/single_threaded_executor.h>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/modular/bin/sessionmgr/story/model/apply_mutations.h"
 #include "src/modular/bin/sessionmgr/story/model/testing/mutation_matchers.h"
 #include "src/modular/lib/ledger_client/ledger_client.h"

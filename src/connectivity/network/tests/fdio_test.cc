@@ -17,8 +17,8 @@
 #include <thread>
 
 #include <fbl/unique_fd.h>
+#include <gtest/gtest.h>
 
-#include "gtest/gtest.h"
 #include "src/lib/testing/predicates/status.h"
 #include "util.h"
 

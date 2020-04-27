@@ -5,12 +5,13 @@
 #include <fuchsia/mem/cpp/fidl.h>
 #include <lib/sys/cpp/service_directory.h>
 
+#include <gtest/gtest.h>
+
 #include "src/developer/feedback/bugreport/bug_reporter.h"
 #include "src/developer/feedback/utils/archive.h"
 #include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/fsl/vmo/file.h"
 #include "src/lib/fsl/vmo/sized_vmo.h"
-#include "third_party/googletest/googletest/include/gtest/gtest.h"
 
 namespace feedback {
 namespace {

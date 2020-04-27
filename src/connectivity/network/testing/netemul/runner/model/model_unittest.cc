@@ -4,8 +4,9 @@
 
 #include <iostream>
 
+#include <gtest/gtest.h>
+
 #include "config.h"
-#include "gtest/gtest.h"
 
 namespace netemul {
 namespace config {

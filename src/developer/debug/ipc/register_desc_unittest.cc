@@ -4,7 +4,8 @@
 
 #include "src/developer/debug/ipc/register_desc.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/developer/debug/ipc/protocol.h"
 
 namespace debug_ipc {

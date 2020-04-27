@@ -4,7 +4,7 @@
 
 #include "lib/fidl/cpp/clone.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 #ifdef __Fuchsia__
 #include <lib/zx/channel.h>

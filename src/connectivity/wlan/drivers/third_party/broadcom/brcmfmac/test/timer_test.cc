@@ -21,7 +21,8 @@
 #include <lib/sync/completion.h>
 #include <zircon/types.h>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/workqueue.h"
 
 namespace wlan::brcmfmac {

@@ -10,7 +10,8 @@
 #include <lib/gtest/test_loop_fixture.h>
 #include <zircon/syscalls.h>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/ui/lib/escher/test/common/gtest_vulkan.h"
 #include "src/ui/lib/escher/util/fuchsia_utils.h"
 #include "src/ui/scenic/lib/display/display_manager.h"

@@ -4,16 +4,16 @@
 
 #include <sstream>
 
+#include <gtest/gtest.h>
+
 #include "build/tools/json_merge/json_merge.h"
-#include "gtest/gtest.h"
 
 namespace {
 
 class JsonMerge : public ::testing::Test {
  protected:
   void AddInput(const std::string& filename, const std::string& input) {
-    inputs.push_back({.name = filename,
-                      .contents = std::make_unique<std::istringstream>(input)});
+    inputs.push_back({.name = filename, .contents = std::make_unique<std::istringstream>(input)});
   }
 
   int Merge(bool minify) { return JSONMerge(inputs, output, errors, minify); }
@@ -24,9 +24,7 @@ class JsonMerge : public ::testing::Test {
 
   void ExpectNoErrors() { EXPECT_TRUE(Errors().empty()); }
 
-  void ExpectError(const std::string& expected_error) {
-    EXPECT_EQ(Errors(), expected_error);
-  }
+  void ExpectError(const std::string& expected_error) { EXPECT_EQ(Errors(), expected_error); }
 
  private:
   std::vector<input_file> inputs;

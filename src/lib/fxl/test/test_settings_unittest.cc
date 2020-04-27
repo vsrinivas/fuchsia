@@ -7,8 +7,9 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#include "gmock/gmock.h"
-#include "gtest/gtest.h"
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
+
 #include "src/lib/files/unique_fd.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings.h"

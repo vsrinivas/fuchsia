@@ -9,8 +9,9 @@
 #include <utility>
 #include <vector>
 
+#include <gtest/gtest.h>
+
 #include "fuchsia/ledger/cpp/fidl.h"
-#include "gtest/gtest.h"
 #include "src/ledger/bin/app/constants.h"
 #include "src/ledger/bin/app/fidl/serialization_size.h"
 #include "src/ledger/bin/fidl/include/types.h"

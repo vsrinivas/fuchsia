@@ -4,7 +4,7 @@
 
 #include "src/ui/scenic/lib/scheduling/present2_info.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 namespace scheduling {
 namespace test {
@@ -84,4 +84,4 @@ TEST(Present2InfoTest, CoalescePresent2InfosFromSingleSession) {
 }
 
 }  // namespace test
-}  // namespace scenic_impl
+}  // namespace scheduling

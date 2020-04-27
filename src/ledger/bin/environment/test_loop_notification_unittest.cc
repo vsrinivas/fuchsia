@@ -6,7 +6,8 @@
 
 #include <lib/async/cpp/task.h>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/ledger/lib/loop_fixture/test_loop_fixture.h"
 
 namespace ledger {

@@ -4,7 +4,8 @@
 
 #include "src/ledger/bin/cloud_sync/impl/aggregator.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/ledger/bin/cloud_sync/public/sync_state_watcher.h"
 
 namespace cloud_sync {

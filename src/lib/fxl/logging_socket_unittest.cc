@@ -6,8 +6,9 @@
 #include <lib/syslog/wire_format.h>
 #include <lib/zx/socket.h>
 
-#include "gmock/gmock.h"
-#include "gtest/gtest.h"
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
+
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings.h"
 #include "src/lib/fxl/log_settings_command_line.h"

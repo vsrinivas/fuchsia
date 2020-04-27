@@ -10,7 +10,8 @@
 
 #include <vector>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/sys/appmgr/integration_tests/sandbox/namespace_test.h"
 
 // This test runs multiple components in the same environment, and checks that

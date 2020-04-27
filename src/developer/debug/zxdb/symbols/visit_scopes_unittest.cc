@@ -4,7 +4,8 @@
 
 #include "src/developer/debug/zxdb/symbols/visit_scopes.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/developer/debug/zxdb/symbols/collection.h"
 #include "src/developer/debug/zxdb/symbols/inheritance_path.h"
 #include "src/developer/debug/zxdb/symbols/inherited_from.h"
@@ -22,11 +23,10 @@ TEST(VisitScopes, ClassHierarchy) {
   VisitLog visited;
 
   // A single class with no hierarchy.
-  VisitResult result =
-      VisitClassHierarchy(derived.get(), [&visited](const InheritancePath& path) {
-        visited.push_back(path);
-        return VisitResult::kContinue;
-      });
+  VisitResult result = VisitClassHierarchy(derived.get(), [&visited](const InheritancePath& path) {
+    visited.push_back(path);
+    return VisitResult::kContinue;
+  });
   EXPECT_EQ(VisitResult::kContinue, result);
   VisitLog expected{{{derived}}};
   EXPECT_EQ(expected, visited);
@@ -66,8 +66,7 @@ TEST(VisitScopes, ClassHierarchy) {
     return path.base() == mid1.get() ? VisitResult::kDone : VisitResult::kContinue;
   });
   EXPECT_EQ(VisitResult::kDone, result);  // Should have found mid1.
-  expected = VisitLog{{{derived}},
-                      {{derived}, {mid1_inh, mid1}}};
+  expected = VisitLog{{{derived}}, {{derived}, {mid1_inh, mid1}}};
   EXPECT_EQ(expected, visited);
 }
 

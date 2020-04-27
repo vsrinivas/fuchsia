@@ -4,7 +4,7 @@
 
 #include "src/lib/pkg_url/url_resolver.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 namespace component {
 namespace {

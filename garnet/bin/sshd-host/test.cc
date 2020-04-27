@@ -10,8 +10,9 @@
 #include <string>
 #include <thread>
 
+#include <gtest/gtest.h>
+
 #include "garnet/bin/sshd-host/service.h"
-#include "gtest/gtest.h"
 
 namespace sshd_host {
 TEST(SshdHostTest, TestMakeChildJob) {

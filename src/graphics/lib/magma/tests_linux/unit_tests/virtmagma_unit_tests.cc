@@ -12,11 +12,11 @@
 #include <fstream>
 #include <string>
 
+#include <gtest/gtest.h>
 #include <rapidjson/document.h>
 #include <rapidjson/istreamwrapper.h>
 #include <vulkan/vulkan.h>
 
-#include "gtest/gtest.h"
 #include "magma.h"
 
 class VirtMagmaTest : public ::testing::Test {

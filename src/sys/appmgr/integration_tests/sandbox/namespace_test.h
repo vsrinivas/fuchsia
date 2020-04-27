@@ -15,7 +15,7 @@
 #include <memory>
 #include <string>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 class NamespaceTest : public sys::testing::TestWithEnvironment {
  protected:

@@ -4,7 +4,8 @@
 
 #include "src/ledger/lib/files/path.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/ledger/lib/files/directory.h"
 #include "src/ledger/lib/files/scoped_tmp_dir.h"
 #include "src/ledger/lib/files/unique_fd.h"

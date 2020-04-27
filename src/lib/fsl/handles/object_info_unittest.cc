@@ -12,7 +12,7 @@
 
 #include <thread>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 namespace fsl {
 namespace {

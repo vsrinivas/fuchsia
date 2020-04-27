@@ -9,7 +9,8 @@
 #include <lib/async-loop/default.h>
 #include <unistd.h>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/scoped_temp_dir.h"

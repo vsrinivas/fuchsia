@@ -4,7 +4,7 @@
 
 #include "src/modular/lib/base64url/base64url.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 namespace base64url {
 namespace {

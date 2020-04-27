@@ -4,7 +4,7 @@
 
 #include "src/storage/volume_image/options.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 namespace storage::volume_image {
 namespace {

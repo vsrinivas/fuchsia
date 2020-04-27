@@ -5,8 +5,8 @@
 #include <list>
 
 #include <fidl/test/misc/cpp/fidl.h>
+#include <gtest/gtest.h>
 
-#include "gtest/gtest.h"
 #include "lib/fidl/cpp/clone.h"
 #include "lib/fidl/cpp/optional.h"
 

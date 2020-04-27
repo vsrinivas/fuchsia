@@ -7,7 +7,7 @@
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/zx/eventpair.h>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 namespace lib_ui_gfx_util_tests {
 

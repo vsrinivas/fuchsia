@@ -4,7 +4,8 @@
 
 #include "src/developer/debug/zxdb/expr/identifier_glob.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/developer/debug/zxdb/expr/expr_parser.h"
 #include "src/lib/fxl/logging.h"
 

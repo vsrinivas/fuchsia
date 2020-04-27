@@ -4,7 +4,7 @@
 
 #include "src/developer/debug/zxdb/console/string_util.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 namespace zxdb {
 

@@ -10,7 +10,7 @@
 #include <filesystem>
 #include <fstream>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 namespace shell {
 

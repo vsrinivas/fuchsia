@@ -6,7 +6,8 @@
 
 #include <filesystem>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/developer/debug/zxdb/common/host_util.h"
 
 namespace zxdb {

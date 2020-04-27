@@ -6,7 +6,8 @@
 
 #include <limits>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/developer/debug/zxdb/client/filter.h"
 #include "src/developer/debug/zxdb/client/mock_breakpoint.h"
 #include "src/developer/debug/zxdb/client/mock_breakpoint_location.h"

@@ -20,9 +20,8 @@
 #include <vector>
 
 #include <example/cpp/fidl.h>
+#include <gtest/gtest.h>
 #include <transformerintegration/test/cpp/fidl.h>
-
-#include "gtest/gtest.h"
 
 namespace test = ::transformerintegration::test;
 

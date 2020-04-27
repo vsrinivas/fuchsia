@@ -10,7 +10,8 @@
 #include <condition_variable>
 #include <thread>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/developer/debug/debug_agent/arch_provider_impl.h"
 
 namespace debug_agent {

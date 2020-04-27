@@ -4,7 +4,8 @@
 
 #include <thread>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "helper/platform_device_helper.h"
 #include "magma_util/macros.h"
 #include "platform_pci_device.h"

@@ -10,7 +10,8 @@
 
 #include <thread>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "helper/inflight_list.h"
 #include "helper/test_device_helper.h"
 #include "magma.h"

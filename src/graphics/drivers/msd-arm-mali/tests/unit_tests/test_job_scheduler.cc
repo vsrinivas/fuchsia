@@ -6,7 +6,8 @@
 #include <utility>
 #include <vector>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "job_scheduler.h"
 #include "mock/mock_bus_mapper.h"
 #include "msd_arm_connection.h"

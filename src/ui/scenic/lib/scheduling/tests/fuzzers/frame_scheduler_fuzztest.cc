@@ -6,8 +6,8 @@
 #include <lib/async/default.h>
 
 #include <fuzzer/FuzzedDataProvider.h>
+#include <gtest/gtest.h>
 
-#include "gtest/gtest.h"
 #include "src/ui/scenic/lib/scheduling/constant_frame_predictor.h"
 #include "src/ui/scenic/lib/scheduling/default_frame_scheduler.h"
 #include "src/ui/scenic/lib/scheduling/tests/mocks/frame_scheduler_mocks.h"

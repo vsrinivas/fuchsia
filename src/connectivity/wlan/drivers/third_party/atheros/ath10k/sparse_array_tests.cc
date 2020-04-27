@@ -18,7 +18,7 @@ extern "C" {
 #include "sparse_array.h"
 }
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 TEST(SparseArray, BasicFunctionality) {
   constexpr size_t numElems = 10;

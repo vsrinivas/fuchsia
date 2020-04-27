@@ -9,9 +9,8 @@
 #include <zircon/fidl.h>
 #include <zircon/status.h>
 
+#include <gtest/gtest.h>
 #include <llcpptest/transitional/test/llcpp/fidl.h>
-
-#include "gtest/gtest.h"
 
 namespace test = ::llcpp::llcpptest::transitional::test;
 
@@ -32,7 +31,7 @@ class Server : public test::TransitionMethods::Interface {
 
 class TransitionalTest : public ::testing::Test {
  protected:
-  virtual  void SetUp() {
+  virtual void SetUp() {
     loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigAttachToCurrentThread);
     ASSERT_EQ(loop_->StartThread("test_llcpp_transitional_server"), ZX_OK);
     ASSERT_EQ(zx::channel::create(0, &client_end_, &server_end_), ZX_OK);

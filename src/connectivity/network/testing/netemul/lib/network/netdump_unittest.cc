@@ -4,7 +4,8 @@
 
 #include "src/connectivity/network/testing/netemul/lib/network/netdump.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/connectivity/network/testing/netemul/lib/network/netdump_parser.h"
 
 namespace netemul {

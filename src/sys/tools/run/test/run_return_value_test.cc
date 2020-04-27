@@ -8,7 +8,8 @@
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/lib/files/file.h"
 
 static constexpr char kRunPath[] = "/bin/run";

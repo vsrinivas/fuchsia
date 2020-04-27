@@ -7,7 +7,8 @@
 #include <chrono>
 #include <thread>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "platform_connection.h"
 #include "platform_connection_client.h"
 #ifdef __linux__

@@ -4,7 +4,7 @@
 
 #include "src/media/playback/mediaplayer/util/incident.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 namespace media_player {
 namespace {

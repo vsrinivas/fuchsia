@@ -6,9 +6,9 @@
 
 #include <array>
 
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "gmock/gmock.h"
 #include "src/lib/fxl/logging.h"
 
 using flatland::TransformGraph;

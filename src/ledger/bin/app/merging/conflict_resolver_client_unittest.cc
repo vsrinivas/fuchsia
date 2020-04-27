@@ -8,7 +8,8 @@
 #include <memory>
 #include <string>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/ledger/bin/app/constants.h"
 #include "src/ledger/bin/app/merging/custom_merge_strategy.h"
 #include "src/ledger/bin/app/merging/merge_resolver.h"

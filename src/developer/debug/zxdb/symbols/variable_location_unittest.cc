@@ -4,7 +4,8 @@
 
 #include "src/developer/debug/zxdb/symbols/variable_location.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/developer/debug/zxdb/symbols/symbol_context.h"
 
 namespace zxdb {

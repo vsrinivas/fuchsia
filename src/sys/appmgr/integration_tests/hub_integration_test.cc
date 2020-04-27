@@ -11,10 +11,10 @@
 #include <lib/sys/cpp/testing/test_with_environment.h>
 
 #include <fidl/examples/echo/cpp/fidl.h>
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
 
 #include "garnet/bin/sysmgr/config.h"
-#include "gmock/gmock.h"
-#include "gtest/gtest.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/glob.h"

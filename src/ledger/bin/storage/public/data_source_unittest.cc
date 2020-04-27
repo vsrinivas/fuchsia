@@ -4,8 +4,9 @@
 
 #include "src/ledger/bin/storage/public/data_source.h"
 
-#include "gmock/gmock.h"
-#include "gtest/gtest.h"
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
+
 #include "src/ledger/bin/platform/ledger_memory_estimator.h"
 #include "src/ledger/bin/platform/platform.h"
 #include "src/ledger/lib/convert/convert.h"

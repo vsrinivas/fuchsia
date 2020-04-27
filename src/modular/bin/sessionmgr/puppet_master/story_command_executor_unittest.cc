@@ -6,7 +6,7 @@
 
 #include <fuchsia/modular/cpp/fidl.h>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 namespace modular {
 namespace {

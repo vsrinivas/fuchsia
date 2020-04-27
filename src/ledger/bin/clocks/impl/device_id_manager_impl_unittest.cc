@@ -9,7 +9,8 @@
 #include <memory>
 #include <random>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/ledger/bin/platform/scoped_tmp_location.h"
 #include "src/ledger/bin/storage/fake/fake_db.h"
 #include "src/ledger/bin/testing/test_with_environment.h"

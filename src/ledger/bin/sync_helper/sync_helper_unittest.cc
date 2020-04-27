@@ -4,7 +4,8 @@
 
 #include "src/ledger/bin/sync_helper/sync_helper.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/ledger/lib/callback/set_when_called.h"
 
 namespace ledger {

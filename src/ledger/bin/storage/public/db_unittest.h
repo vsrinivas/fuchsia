@@ -11,7 +11,8 @@
 #include <functional>
 #include <memory>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/ledger/bin/platform/scoped_tmp_location.h"
 #include "src/ledger/bin/storage/public/db.h"
 #include "src/ledger/bin/testing/test_with_environment.h"

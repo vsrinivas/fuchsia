@@ -10,8 +10,9 @@
 
 #include <optional>
 
-#include "gmock/gmock.h"
-#include "gtest/gtest.h"
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
+
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/gtest/test_loop_fixture.h"
 #include "src/lib/syslog/cpp/logger.h"

@@ -5,7 +5,8 @@
 #include <lib/fdio/directory.h>
 #include <lib/zx/channel.h>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "platform_handle.h"
 #include "platform_sysmem_connection.h"
 

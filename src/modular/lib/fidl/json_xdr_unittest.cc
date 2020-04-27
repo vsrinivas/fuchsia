@@ -7,9 +7,8 @@
 #include <map>
 #include <vector>
 
+#include <gtest/gtest.h>
 #include <test/peridot/lib/fidl/jsonxdr/cpp/fidl.h>
-
-#include "gtest/gtest.h"
 
 namespace modular {
 namespace {

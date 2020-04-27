@@ -6,9 +6,9 @@
 
 #include <memory>
 
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "gmock/gmock.h"
 #include "lib/gtest/test_loop_fixture.h"
 #include "src/lib/fxl/logging.h"
 #include "src/ui/scenic/lib/flatland/uber_struct_system.h"

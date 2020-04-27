@@ -5,8 +5,8 @@
 #include <fidl/examples/echo/cpp/fidl.h>
 #include <fs/service.h>
 #include <fs/synchronous_vfs.h>
+#include <gtest/gtest.h>
 
-#include "gtest/gtest.h"
 #include "lib/gtest/real_loop_fixture.h"
 #include "src/lib/fxl/strings/substitute.h"
 #include "src/sys/appmgr/service_provider_dir_impl.h"

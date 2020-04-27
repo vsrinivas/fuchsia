@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "platform_pci_device.h"
 #include "sys_driver/magma_driver.h"
 #include "sys_driver/magma_system_connection.h"

@@ -4,8 +4,8 @@
 
 #include "src/ledger/bin/app/delaying_facade.h"
 
-#include "gmock/gmock.h"
-#include "gtest/gtest.h"
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
 
 namespace ledger {
 namespace {

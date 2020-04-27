@@ -10,7 +10,7 @@
 #include <lib/fit/function.h>
 #include <lib/zx/time.h>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 namespace ledger {
 

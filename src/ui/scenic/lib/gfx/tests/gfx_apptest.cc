@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "lib/ui/scenic/cpp/commands.h"
 #include "src/ui/lib/escher/flib/release_fence_signaller.h"
 #include "src/ui/scenic/lib/gfx/gfx_system.h"

@@ -4,7 +4,8 @@
 
 #include "src/connectivity/network/mdns/service/dns_reading.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/connectivity/network/mdns/service/packet_reader.h"
 
 namespace mdns {

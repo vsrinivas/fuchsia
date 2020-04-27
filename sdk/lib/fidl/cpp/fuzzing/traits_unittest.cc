@@ -11,7 +11,7 @@
 #include <string>
 #include <utility>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 namespace {
 

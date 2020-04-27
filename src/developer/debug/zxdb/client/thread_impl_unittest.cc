@@ -4,7 +4,8 @@
 
 #include "src/developer/debug/zxdb/client/thread_impl.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/zxdb/client/frame.h"
 #include "src/developer/debug/zxdb/client/mock_frame.h"

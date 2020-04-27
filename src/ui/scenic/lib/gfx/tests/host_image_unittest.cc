@@ -4,7 +4,8 @@
 
 #include "src/ui/scenic/lib/gfx/resources/host_image.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "lib/images/cpp/images.h"
 #include "lib/ui/scenic/cpp/commands.h"
 #include "src/ui/lib/escher/test/common/gtest_vulkan.h"

@@ -4,7 +4,7 @@
 
 #include "src/developer/debug/zxdb/console/output_buffer.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 namespace zxdb {
 

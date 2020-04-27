@@ -22,7 +22,8 @@
 #include <string>
 #include <vector>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/lib/fxl/logging.h"
 #include "src/lib/ui/base_view/base_view.h"
 

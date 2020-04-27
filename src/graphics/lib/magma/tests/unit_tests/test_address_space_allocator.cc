@@ -4,7 +4,8 @@
 
 #include <list>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "magma_util/dlog.h"
 #include "magma_util/retry_allocator.h"
 #include "magma_util/simple_allocator.h"

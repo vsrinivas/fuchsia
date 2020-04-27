@@ -6,8 +6,9 @@
 
 #include <lib/async/cpp/task.h>
 
-#include "gmock/gmock.h"
-#include "gtest/gtest.h"
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
+
 #include "src/ledger/bin/app/constants.h"
 #include "src/ledger/bin/platform/fd.h"
 #include "src/ledger/bin/platform/scoped_tmp_location.h"

@@ -4,8 +4,9 @@
 
 #include "src/ui/scenic/lib/gfx/engine/image_pipe_updater.h"
 
-#include "gmock/gmock.h"
-#include "gtest/gtest.h"
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
+
 #include "lib/gtest/test_loop_fixture.h"
 #include "src/ui/scenic/lib/gfx/resources/image_pipe_base.h"
 #include "src/ui/scenic/lib/gfx/tests/mocks/mocks.h"

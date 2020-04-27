@@ -4,7 +4,8 @@
 
 #include "src/developer/debug/zxdb/expr/eval_context_impl.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "src/developer/debug/shared/platform_message_loop.h"
 #include "src/developer/debug/zxdb/common/err.h"

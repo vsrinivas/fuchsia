@@ -4,7 +4,7 @@
 
 #include "src/ledger/lib/callback/scoped_callback.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 namespace ledger {
 namespace {

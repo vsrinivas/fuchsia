@@ -4,8 +4,9 @@
 
 #include "sample_bundle.h"
 
+#include <gtest/gtest.h>
+
 #include "dockyard_proxy_fake.h"
-#include "gtest/gtest.h"
 
 class SampleBundleTest : public ::testing::Test {
  public:

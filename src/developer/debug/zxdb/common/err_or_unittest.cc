@@ -4,7 +4,7 @@
 
 #include "src/developer/debug/zxdb/common/err_or.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 namespace zxdb {
 

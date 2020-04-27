@@ -9,7 +9,8 @@
 #include <mutex>
 #include <thread>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/developer/shell/mirror/client.h"
 #include "src/developer/shell/mirror/command_line_options.h"
 #include "src/developer/shell/mirror/server.h"

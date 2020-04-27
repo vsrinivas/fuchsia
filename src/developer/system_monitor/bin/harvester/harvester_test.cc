@@ -9,8 +9,9 @@
 #include <lib/async-loop/loop.h>
 #include <lib/async-testing/dispatcher_stub.h>
 
+#include <gtest/gtest.h>
+
 #include "dockyard_proxy_fake.h"
-#include "gtest/gtest.h"
 #include "root_resource.h"
 
 namespace {

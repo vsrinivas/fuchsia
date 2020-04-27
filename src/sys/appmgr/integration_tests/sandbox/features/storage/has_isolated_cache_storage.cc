@@ -8,7 +8,8 @@
 #include <chrono>
 #include <thread>
 
-#include "gmock/gmock.h"
+#include <gmock/gmock.h>
+
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 #include "src/sys/appmgr/integration_tests/sandbox/namespace_test.h"

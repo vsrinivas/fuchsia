@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fdio/spawn.h>
 #include <lib/zx/event.h>
 #include <lib/zx/socket.h>
 
-#include <lib/fdio/spawn.h>
+#include <gtest/gtest.h>
 
 #include "garnet/lib/debugger_utils/jobs.h"
 #include "garnet/lib/debugger_utils/test_helper.h"
 #include "garnet/lib/debugger_utils/util.h"
-#include "gtest/gtest.h"
 
 namespace debugger_utils {
 namespace {

@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <gtest/gtest.h>
+
 #include "src/lib/ui/input/gesture.h"
 #include "src/ui/lib/glm_workaround/glm_workaround.h"
-#include "third_party/googletest/googletest/include/gtest/gtest.h"
 
 namespace {
 

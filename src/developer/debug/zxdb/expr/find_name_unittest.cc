@@ -4,7 +4,8 @@
 
 #include "src/developer/debug/zxdb/expr/find_name.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "src/developer/debug/zxdb/expr/eval_test_support.h"
 #include "src/developer/debug/zxdb/expr/expr_parser.h"

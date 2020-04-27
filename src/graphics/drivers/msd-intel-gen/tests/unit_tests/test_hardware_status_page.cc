@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "hardware_status_page.h"
 
 using unique_ptr_void_free = std::unique_ptr<void, decltype(&free)>;

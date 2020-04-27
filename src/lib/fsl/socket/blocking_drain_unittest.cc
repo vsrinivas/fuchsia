@@ -8,7 +8,8 @@
 
 #include <vector>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/lib/fsl/socket/strings.h"
 
 namespace fsl {

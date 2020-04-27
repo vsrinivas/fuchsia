@@ -6,8 +6,9 @@
 
 #include <lib/zx/time.h>
 
+#include <gtest/gtest.h>
+
 #include "src/lib/syslog/cpp/logger.h"
-#include "third_party/googletest/googletest/include/gtest/gtest.h"
 
 namespace feedback {
 namespace {

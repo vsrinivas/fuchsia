@@ -8,7 +8,8 @@
 #include <lib/fidl/cpp/message_builder.h>
 #include <lib/zx/channel.h>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "lib/fidl/cpp/internal/proxy_controller.h"
 #include "lib/fidl/cpp/internal/stub.h"
 #include "lib/fidl/cpp/string.h"

@@ -7,8 +7,9 @@
 #include <string>
 #include <vector>
 
+#include <gtest/gtest.h>
+
 #include "garnet/lib/measure/test_events.h"
-#include "gtest/gtest.h"
 
 namespace tracing {
 namespace measure {

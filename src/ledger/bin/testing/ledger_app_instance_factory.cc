@@ -6,7 +6,8 @@
 
 #include <lib/fidl/cpp/clone.h>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/ledger/bin/platform/fd.h"
 
 namespace ledger {

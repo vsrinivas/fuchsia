@@ -4,7 +4,8 @@
 
 #include "src/ui/scenic/lib/gfx/snapshot/snapshotter.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "lib/ui/scenic/cpp/commands.h"
 #include "src/lib/fsl/vmo/vector.h"
 #include "src/lib/fxl/logging.h"

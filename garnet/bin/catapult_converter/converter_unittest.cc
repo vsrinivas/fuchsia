@@ -6,7 +6,8 @@
 
 #include <zircon/compiler.h>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "rapidjson/error/en.h"
 #include "rapidjson/filereadstream.h"
 #include "rapidjson/filewritestream.h"

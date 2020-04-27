@@ -7,7 +7,8 @@
 #include <lib/fidl/cpp/clone.h>
 #include <lib/gtest/test_loop_fixture.h>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/lib/fsl/types/type_converters.h"
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/syslog/cpp/logger.h"

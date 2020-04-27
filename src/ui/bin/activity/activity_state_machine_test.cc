@@ -2,7 +2,7 @@
 
 #include <fuchsia/ui/activity/cpp/fidl.h>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 namespace activity {
 

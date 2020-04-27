@@ -22,7 +22,8 @@
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "lib/gtest/test_loop_fixture.h"
 #include "src/lib/fsl/handles/object_info.h"
 

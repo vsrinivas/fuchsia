@@ -4,7 +4,8 @@
 
 #include "src/ledger/lib/convert/convert.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/ledger/lib/convert/bytes_test_generated.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 

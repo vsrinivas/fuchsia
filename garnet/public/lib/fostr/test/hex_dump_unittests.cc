@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/fostr/hex_dump.h"
-
 #include <sstream>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
+#include "lib/fostr/hex_dump.h"
 
 namespace fostr {
 namespace {

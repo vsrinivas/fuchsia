@@ -8,9 +8,8 @@
 #include <zircon/fidl.h>
 #include <zircon/status.h>
 
+#include <gtest/gtest.h>
 #include <llcpptest/flexible/test/llcpp/fidl.h>
-
-#include "gtest/gtest.h"
 
 namespace test = ::llcpp::llcpptest::flexible::test;
 

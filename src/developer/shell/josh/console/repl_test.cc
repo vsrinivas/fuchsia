@@ -11,7 +11,8 @@
 #include <queue>
 #include <string>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "li.h"
 #include "src/developer/shell/josh/lib/runtime.h"
 #include "src/lib/line_input/line_input.h"

@@ -4,7 +4,7 @@
 
 #include "src/lib/json_parser/rapidjson_validation.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 namespace json_parser {
 

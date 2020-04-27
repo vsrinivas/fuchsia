@@ -9,8 +9,9 @@
 #include <memory>
 #include <utility>
 
-#include "gmock/gmock.h"
-#include "gtest/gtest.h"
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
+
 #include "src/modular/bin/sessionmgr/testing/annotations_matchers.h"
 
 namespace modular::annotations {

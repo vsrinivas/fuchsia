@@ -9,8 +9,9 @@
 #include <algorithm>
 #include <string>
 
-#include "gmock/gmock.h"
-#include "gtest/gtest.h"
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
+
 #include "src/ledger/bin/app/constants.h"
 #include "src/ledger/bin/app/merging/test_utils.h"
 #include "src/ledger/bin/encryption/primitives/hash.h"

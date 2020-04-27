@@ -4,8 +4,9 @@
 
 #include <zircon/compiler.h>
 
+#include <gtest/gtest.h>
+
 #include "fbl/algorithm.h"
-#include "gtest/gtest.h"
 #include "mock/mock_mmio.h"
 #include "platform_buffer.h"
 #include "power_manager.h"

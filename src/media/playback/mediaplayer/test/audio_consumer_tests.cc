@@ -16,7 +16,8 @@
 #include <queue>
 #include <type_traits>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "lib/media/cpp/timeline_function.h"
 #include "lib/media/cpp/timeline_rate.h"
 #include "lib/media/cpp/type_converters.h"

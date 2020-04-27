@@ -4,7 +4,7 @@
 
 #include <lib/fidl/llcpp/aligned.h>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 TEST(Aligned, Initialization) {
   fidl::aligned<int> x(1);

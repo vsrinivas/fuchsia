@@ -4,7 +4,8 @@
 
 #include "src/developer/debug/zxdb/console/async_output_buffer.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/developer/debug/zxdb/common/err.h"
 
 namespace zxdb {

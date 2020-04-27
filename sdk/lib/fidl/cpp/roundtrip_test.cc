@@ -9,8 +9,8 @@
 #include <iostream>
 
 #include <fidl/test/misc/cpp/fidl.h>
+#include <gtest/gtest.h>
 
-#include "gtest/gtest.h"
 #include "lib/fidl/cpp/clone.h"
 #include "lib/fidl/cpp/test/test_util.h"
 

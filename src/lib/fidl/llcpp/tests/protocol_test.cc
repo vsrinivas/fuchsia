@@ -16,9 +16,8 @@
 
 #include <cstdint>
 
+#include <gtest/gtest.h>
 #include <llcpptest/protocol/test/llcpp/fidl.h>
-
-#include "gtest/gtest.h"
 
 namespace test = ::llcpp::llcpptest::protocol::test;
 

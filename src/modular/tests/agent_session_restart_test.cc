@@ -6,9 +6,9 @@
 #include <fuchsia/modular/testing/cpp/fidl.h>
 #include <fuchsia/testing/modular/cpp/fidl.h>
 
+#include <gmock/gmock.h>
 #include <sdk/lib/modular/testing/cpp/fake_agent.h>
 
-#include "gmock/gmock.h"
 #include "src/modular/lib/modular_test_harness/cpp/fake_module.h"
 #include "src/modular/lib/modular_test_harness/cpp/fake_session_shell.h"
 #include "src/modular/lib/modular_test_harness/cpp/test_harness_fixture.h"

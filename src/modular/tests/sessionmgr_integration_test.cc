@@ -10,7 +10,8 @@
 #include <lib/modular/testing/cpp/fake_agent.h>
 #include <lib/modular/testing/cpp/fake_component.h>
 
-#include "gmock/gmock.h"
+#include <gmock/gmock.h>
+
 #include "src/lib/files/glob.h"
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/modular/lib/modular_test_harness/cpp/fake_module.h"

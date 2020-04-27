@@ -5,7 +5,7 @@
 #include <lib/fidl/llcpp/aligned.h>
 #include <lib/fidl/llcpp/buffer_allocator.h>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 TEST(BufferAllocator, MultipleArgumentMake) {
   struct A {

@@ -18,9 +18,9 @@
 #include <vector>
 
 #include <fidl/test/compatibility/cpp/fidl.h>
+#include <gtest/gtest.h>
 
 #include "garnet/public/lib/fidl/compatibility_test/echo_client_app.h"
-#include "gtest/gtest.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "src/lib/files/path.h"
 #include "src/lib/fxl/strings/split_string.h"

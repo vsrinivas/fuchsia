@@ -12,9 +12,8 @@
 #include <vector>
 
 #include <fidl/llcpp/types/test/llcpp/fidl.h>
+#include <gtest/gtest.h>
 #include <src/lib/fidl/llcpp/tests/test_utils.h>
-
-#include "gtest/gtest.h"
 
 namespace llcpp_test = ::llcpp::fidl::llcpp::types::test;
 

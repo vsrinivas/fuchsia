@@ -9,7 +9,7 @@
 
 #include <lib/gtest/test_loop_fixture.h>
 #include "src/lib/files/file.h"
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 #include "environment_config.h"
 
 namespace nl::Weave::DeviceLayer::Internal {

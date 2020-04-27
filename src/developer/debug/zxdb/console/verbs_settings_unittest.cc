@@ -4,7 +4,8 @@
 
 #include "src/developer/debug/zxdb/console/verbs_settings.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/developer/debug/shared/platform_message_loop.h"
 #include "src/developer/debug/zxdb/client/execution_scope.h"
 #include "src/developer/debug/zxdb/client/mock_remote_api.h"

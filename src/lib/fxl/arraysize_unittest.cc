@@ -3,7 +3,8 @@
 // found in the LICENSE file.
 
 #include "src/lib/fxl/arraysize.h"
-#include "gtest/gtest.h"
+
+#include <gtest/gtest.h>
 
 namespace fxl {
 namespace {

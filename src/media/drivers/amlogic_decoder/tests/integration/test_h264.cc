@@ -4,9 +4,10 @@
 
 #include <zircon/compiler.h>
 
+#include <gtest/gtest.h>
+
 #include "amlogic-video.h"
 #include "bear_h264_hashes.h"
-#include "gtest/gtest.h"
 #include "h264_decoder.h"
 #include "h264_utils.h"
 #include "macros.h"

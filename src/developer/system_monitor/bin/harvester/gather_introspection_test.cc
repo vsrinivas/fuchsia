@@ -4,8 +4,9 @@
 
 #include "gather_introspection.h"
 
+#include <gtest/gtest.h>
+
 #include "dockyard_proxy_fake.h"
-#include "gtest/gtest.h"
 
 class GatherIntrospectionTest : public ::testing::Test {
  public:

@@ -4,7 +4,7 @@
 
 #include "src/developer/system_monitor/lib/gt_log.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 namespace gt {
 

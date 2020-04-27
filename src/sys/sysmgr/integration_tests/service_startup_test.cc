@@ -14,9 +14,9 @@
 
 #include <fidl/examples/echo/cpp/fidl.h>
 #include <gmock/gmock.h>
+#include <gtest/gtest.h>
 #include <test/sysmgr/cpp/fidl.h>
 
-#include "gtest/gtest.h"
 #include "src/sys/appmgr/appmgr.h"
 
 namespace sysmgr {

@@ -5,10 +5,10 @@
 // This test should run with no access to fuchsia.device.NameProvider.
 
 #include <fuchsia/device/cpp/fidl.h>
-#include <sys/utsname.h>
 #include <limits.h>
+#include <sys/utsname.h>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 namespace {
 

@@ -9,9 +9,9 @@
 #include <mutex>
 #include <thread>
 
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "gmock/gmock.h"
 #include "src/lib/fxl/logging.h"
 #include "src/ui/scenic/lib/flatland/global_topology_data.h"
 #include "src/ui/scenic/lib/flatland/transform_handle.h"

@@ -11,9 +11,9 @@
 #include <thread>
 #include <vector>
 
+#include <gtest/gtest.h>
 #include <vulkan/vulkan.h>
 
-#include "gtest/gtest.h"
 #include "platform_semaphore.h"
 
 #define PRINT_STDERR(format, ...) \

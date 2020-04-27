@@ -5,8 +5,9 @@
 #include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 
+#include <gtest/gtest.h>
+
 #include "echo_server.h"
-#include "gtest/gtest.h"
 
 namespace {
 

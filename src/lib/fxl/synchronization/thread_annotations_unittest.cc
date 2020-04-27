@@ -14,7 +14,8 @@
 
 #include <mutex>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/lib/fxl/macros.h"
 
 // Uncomment these to enable particular compilation failure tests.

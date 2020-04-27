@@ -11,10 +11,11 @@
 #include <string>
 #include <vector>
 
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
+
 #include "sdk/lib/inspect/testing/cpp/inspect.h"
 #include "src/lib/syslog/cpp/logger.h"
-#include "third_party/googletest/googlemock/include/gmock/gmock.h"
-#include "third_party/googletest/googletest/include/gtest/gtest.h"
 
 namespace feedback {
 namespace {

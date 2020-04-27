@@ -6,7 +6,7 @@
 
 #include <lib/gtest/test_loop_fixture.h>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 namespace modular {
 namespace {

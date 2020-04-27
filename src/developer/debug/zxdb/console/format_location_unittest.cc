@@ -4,7 +4,8 @@
 
 #include "src/developer/debug/zxdb/console/format_location.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/console/console_context.h"
 #include "src/developer/debug/zxdb/symbols/elf_symbol.h"

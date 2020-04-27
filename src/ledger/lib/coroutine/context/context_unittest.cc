@@ -7,7 +7,8 @@
 #include <lib/fit/function.h>
 #include <string.h>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "third_party/abseil-cpp/absl/base/attributes.h"
 
 namespace context {

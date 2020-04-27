@@ -12,8 +12,9 @@
 
 #include <memory>
 
+#include <gtest/gtest.h>
+
 #include "fuchsia/media/cpp/fidl.h"
-#include "gtest/gtest.h"
 #include "lib/async/cpp/task.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fit/function.h"

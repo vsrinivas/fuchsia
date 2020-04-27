@@ -4,7 +4,8 @@
 
 #include "src/developer/debug/zxdb/client/system_impl.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/developer/debug/shared/zx_status.h"
 #include "src/developer/debug/zxdb/client/frame.h"
 #include "src/developer/debug/zxdb/client/job_context_impl.h"

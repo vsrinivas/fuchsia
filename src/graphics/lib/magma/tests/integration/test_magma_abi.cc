@@ -20,7 +20,8 @@
 #include "platform_trace_provider.h"
 #endif
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "magma.h"
 #include "magma_common_defs.h"
 

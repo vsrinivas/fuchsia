@@ -19,7 +19,8 @@
 #include <string>
 #include <vector>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/lib/fxl/logging.h"
 #include "src/ui/lib/escher/forward_declarations.h"
 #include "src/ui/scenic/lib/gfx/engine/engine.h"

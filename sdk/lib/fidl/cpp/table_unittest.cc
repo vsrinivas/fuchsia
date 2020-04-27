@@ -5,8 +5,7 @@
 #include <lib/fidl/cpp/comparison.h>
 
 #include <fidl/test/misc/cpp/fidl.h>
-
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 namespace fidl {
 namespace {

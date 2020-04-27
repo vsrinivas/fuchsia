@@ -4,7 +4,8 @@
 
 #include "src/ui/scenic/lib/gfx/resources/image_pipe.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "lib/ui/scenic/cpp/commands.h"
 #include "src/ui/lib/escher/flib/fence.h"
 #include "src/ui/lib/escher/util/image_utils.h"

@@ -4,7 +4,7 @@
 
 #include "src/cobalt/bin/utils/base64.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 namespace cobalt {
 TEST(Base64, EncodeBytes) {

@@ -3,7 +3,9 @@
 // found in the LICENSE file.
 
 #include "garnet/lib/process/process_builder.h"
-#include "gtest/gtest.h"
+
+#include <gtest/gtest.h>
+
 #include "lib/sys/cpp/service_directory.h"
 
 namespace process {

@@ -4,7 +4,8 @@
 
 #include "src/developer/debug/zxdb/symbols/line_table.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/developer/debug/zxdb/symbols/mock_line_table.h"
 #include "src/developer/debug/zxdb/symbols/symbol_context.h"
 

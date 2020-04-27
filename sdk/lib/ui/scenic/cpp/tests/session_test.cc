@@ -2,13 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/gtest/test_loop_fixture.h>
-#include <zircon/types.h>
-#include <lib/zx/channel.h>
-
-#include "gtest/gtest.h"
-#include "lib/ui/scenic/cpp/commands.h"
 #include "sdk/lib/ui/scenic/cpp/session.h"
+
+#include <lib/gtest/test_loop_fixture.h>
+#include <lib/zx/channel.h>
+#include <zircon/types.h>
+
+#include <gtest/gtest.h>
+
+#include "lib/ui/scenic/cpp/commands.h"
 
 namespace {
 
@@ -43,9 +45,7 @@ class ScenicSessionFlushTest : public ::gtest::TestLoopFixture {
     session_ = std::make_unique<MockScenicSession>(std::move(client));
   }
 
-  void TearDown() override {
-    session_.reset();
-  }
+  void TearDown() override { session_.reset(); }
 };
 
 TEST_F(ScenicSessionFlushTest, AddOneInputCommand) {

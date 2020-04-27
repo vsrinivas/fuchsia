@@ -4,8 +4,9 @@
 
 #include "src/ledger/bin/platform/fuchsia_platform.h"
 
-#include "gmock/gmock.h"
-#include "gtest/gtest.h"
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
+
 #include "src/ledger/bin/platform/scoped_tmp_location.h"
 
 namespace ledger {

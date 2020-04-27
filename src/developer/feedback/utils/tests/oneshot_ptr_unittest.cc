@@ -7,11 +7,12 @@
 #include <fuchsia/update/channel/cpp/fidl.h>
 #include <lib/async/cpp/executor.h>
 
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
+
 #include "src/developer/feedback/testing/stubs/channel_provider.h"
 #include "src/developer/feedback/testing/unit_test_fixture.h"
 #include "src/lib/fxl/strings/string_printf.h"
-#include "third_party/googletest/googlemock/include/gmock/gmock.h"
-#include "third_party/googletest/googletest/include/gtest/gtest.h"
 
 namespace feedback {
 namespace fidl {

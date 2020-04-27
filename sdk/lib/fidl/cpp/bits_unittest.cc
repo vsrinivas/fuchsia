@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 #include <fidl/test/misc/cpp/fidl.h>
+#include <gtest/gtest.h>
 
-#include "gtest/gtest.h"
 #include "lib/fidl/cpp/builder.h"
 
 namespace fidl {

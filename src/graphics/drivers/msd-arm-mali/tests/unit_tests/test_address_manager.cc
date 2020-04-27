@@ -4,8 +4,9 @@
 
 #include <future>
 
+#include <gtest/gtest.h>
+
 #include "address_manager.h"
-#include "gtest/gtest.h"
 #include "mock/mock_bus_mapper.h"
 #include "mock/mock_mmio.h"
 #include "platform_mmio.h"

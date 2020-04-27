@@ -8,7 +8,8 @@
 #include <lib/zx/eventpair.h>
 #include <zircon/types.h>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/lib/fsl/handles/object_info.h"
 #include "src/ui/scenic/lib/gfx/tests/error_reporting_test.h"
 

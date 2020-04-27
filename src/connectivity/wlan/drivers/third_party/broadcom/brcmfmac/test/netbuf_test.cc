@@ -8,7 +8,8 @@
 
 #include <memory>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/debug.h"
 
 namespace wlan {

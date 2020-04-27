@@ -4,7 +4,7 @@
 
 #include "src/lib/cobalt/cpp/cobalt_event_builder.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 namespace cobalt {
 

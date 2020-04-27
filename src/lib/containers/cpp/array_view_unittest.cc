@@ -4,7 +4,7 @@
 
 #include "src/lib/containers/cpp/array_view.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 namespace containers {
 

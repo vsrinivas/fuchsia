@@ -8,9 +8,9 @@
 
 #include <fbl/auto_call.h>
 #include <fbl/function.h>
+#include <gtest/gtest.h>
 
 #include "../virtual_camera2_control.h"
-#include "gtest/gtest.h"
 #include "stream_tester.h"
 
 namespace camera {

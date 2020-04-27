@@ -10,7 +10,8 @@
 #include <queue>
 #include <unordered_map>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/connectivity/network/mdns/service/mdns_agent.h"
 
 namespace mdns {

@@ -6,7 +6,7 @@
 
 #include <lib/zx/time.h>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 class SystemMonitorRootResourceTest : public ::testing::Test {};
 

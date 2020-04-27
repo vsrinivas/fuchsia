@@ -28,10 +28,10 @@
 #include <fidl/examples/echo/cpp/fidl.h>
 #include <fs/pseudo_dir.h>
 #include <fs/synchronous_vfs.h>
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
 #include <test/appmgr/integration/cpp/fidl.h>
 
-#include "gmock/gmock.h"
-#include "gtest/gtest.h"
 #include "src/lib/files/glob.h"
 #include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/fxl/logging.h"

@@ -11,7 +11,8 @@
 #include <lib/sys/cpp/testing/component_context_provider.h>
 #include <zircon/status.h>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 namespace root_presenter {

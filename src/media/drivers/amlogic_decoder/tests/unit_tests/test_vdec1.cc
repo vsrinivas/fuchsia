@@ -4,8 +4,9 @@
 
 #include <memory>
 
+#include <gtest/gtest.h>
+
 #include "amlogic-video.h"
-#include "gtest/gtest.h"
 #include "tests/test_support.h"
 #include "vdec1.h"
 

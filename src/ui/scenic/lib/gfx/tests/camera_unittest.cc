@@ -4,7 +4,8 @@
 
 #include "src/ui/scenic/lib/gfx/resources/camera.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "lib/ui/scenic/cpp/commands.h"
 #include "src/ui/lib/escher/scene/viewing_volume.h"
 #include "src/ui/lib/escher/util/epsilon_compare.h"

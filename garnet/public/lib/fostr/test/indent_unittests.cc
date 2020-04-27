@@ -4,9 +4,9 @@
 
 #include <sstream>
 
-#include "lib/fostr/indent.h"
+#include <gtest/gtest.h>
 
-#include "gtest/gtest.h"
+#include "lib/fostr/indent.h"
 
 namespace fostr {
 namespace {

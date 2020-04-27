@@ -4,7 +4,7 @@
 
 #include "src/virtualization/bin/vmm/dev_mem.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 namespace {
 

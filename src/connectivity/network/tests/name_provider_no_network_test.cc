@@ -11,7 +11,7 @@
 #include <sys/utsname.h>
 #include <zircon/status.h>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 namespace {
 

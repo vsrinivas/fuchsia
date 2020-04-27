@@ -11,7 +11,8 @@
 #include <algorithm>
 #include <map>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/lib/syslog/cpp/logger.h"
 
 constexpr uint32_t kBufferLifetimeOrdinal = 1;

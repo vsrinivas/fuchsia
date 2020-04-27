@@ -24,6 +24,9 @@
 #include <utility>
 #include <vector>
 
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
+
 #include "src/developer/feedback/crash_reports/config.h"
 #include "src/developer/feedback/crash_reports/constants.h"
 #include "src/developer/feedback/crash_reports/info/info_context.h"
@@ -46,8 +49,6 @@
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/syslog/cpp/logger.h"
 #include "src/lib/timekeeper/test_clock.h"
-#include "third_party/googletest/googlemock/include/gmock/gmock.h"
-#include "third_party/googletest/googletest/include/gtest/gtest.h"
 
 namespace feedback {
 namespace {

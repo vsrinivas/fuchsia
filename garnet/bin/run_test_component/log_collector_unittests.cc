@@ -11,8 +11,9 @@
 #include <string>
 #include <vector>
 
+#include <gtest/gtest.h>
+
 #include "garnet/bin/run_test_component/log_collector.h"
-#include "gtest/gtest.h"
 
 TEST(LogCollector, DoubleBind) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);

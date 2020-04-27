@@ -2,8 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <gtest/gtest.h>
+
 #include "../timestamp_extrapolator.h"
-#include "gtest/gtest.h"
 
 constexpr uint64_t k48000HzDualPCMBytesPerSecond = 48000 * sizeof(uint16_t) * 2;
 constexpr uint64_t k48000HzDualPCMByteDuration = ZX_SEC(1) / 48000 / sizeof(uint16_t) / 2;

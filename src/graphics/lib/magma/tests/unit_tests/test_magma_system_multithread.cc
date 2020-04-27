@@ -5,7 +5,8 @@
 #include <thread>
 #include <vector>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "helper/platform_device_helper.h"
 #include "msd_intel_gen_query.h"
 #include "sys_driver/magma_driver.h"

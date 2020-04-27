@@ -12,7 +12,8 @@
 
 #include <functional>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/testing/ledger_app_instance_factory.h"
 #include "src/ledger/lib/rng/random.h"

@@ -4,7 +4,8 @@
 
 #include "src/developer/debug/zxdb/console/commands/verb_watch.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/developer/debug/zxdb/client/mock_frame.h"
 #include "src/developer/debug/zxdb/client/mock_remote_api.h"
 #include "src/developer/debug/zxdb/console/commands/breakpoint_command_test.h"

@@ -6,7 +6,8 @@
 
 #include <limits>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/developer/debug/zxdb/client/memory_dump.h"
 
 namespace zxdb {

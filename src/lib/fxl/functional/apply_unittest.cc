@@ -4,9 +4,9 @@
 
 #include "src/lib/fxl/functional/apply.h"
 
-#include "gtest/gtest.h"
-
 #include <memory>
+
+#include <gtest/gtest.h>
 
 namespace fxl {
 namespace {

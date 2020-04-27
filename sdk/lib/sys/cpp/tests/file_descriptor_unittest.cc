@@ -4,7 +4,7 @@
 
 #include <lib/sys/cpp/file_descriptor.h>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 namespace {
 

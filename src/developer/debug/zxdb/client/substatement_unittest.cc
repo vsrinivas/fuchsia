@@ -4,7 +4,8 @@
 
 #include "src/developer/debug/zxdb/client/substatement.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/developer/debug/zxdb/client/arch_info.h"
 #include "src/developer/debug/zxdb/client/memory_dump.h"
 #include "src/developer/debug/zxdb/symbols/mock_module_symbols.h"

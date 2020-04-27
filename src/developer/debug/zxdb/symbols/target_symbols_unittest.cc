@@ -4,7 +4,8 @@
 
 #include "src/developer/debug/zxdb/symbols/target_symbols.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/developer/debug/zxdb/symbols/mock_module_symbols.h"
 #include "src/developer/debug/zxdb/symbols/process_symbols_test_setup.h"
 

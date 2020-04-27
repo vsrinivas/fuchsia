@@ -6,8 +6,9 @@
 
 #include <algorithm>
 
+#include <gtest/gtest.h>
+
 #include "../chunk_input_stream.h"
-#include "gtest/gtest.h"
 #include "src/lib/syslog/cpp/logger.h"
 #include "test_codec_packets.h"
 

@@ -4,7 +4,8 @@
 
 #include "src/developer/debug/zxdb/console/command_parser.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/console/command.h"
 #include "src/developer/debug/zxdb/console/nouns.h"

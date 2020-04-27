@@ -8,7 +8,7 @@
 #include <fuchsia/logger/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 namespace netemul {
 namespace testing {

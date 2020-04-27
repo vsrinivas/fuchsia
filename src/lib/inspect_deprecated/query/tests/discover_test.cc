@@ -9,9 +9,10 @@
 #include <lib/vfs/cpp/pseudo_dir.h>
 #include <lib/vfs/cpp/pseudo_file.h>
 
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
+
 #include "fixture.h"
-#include "gmock/gmock.h"
-#include "gtest/gtest.h"
 #include "src/lib/files/glob.h"
 #include "src/lib/inspect_deprecated/query/location.h"
 

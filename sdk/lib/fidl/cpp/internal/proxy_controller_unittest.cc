@@ -8,7 +8,8 @@
 #include <lib/fidl/cpp/message_builder.h>
 #include <lib/zx/channel.h>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "lib/fidl/cpp/string.h"
 #include "lib/fidl/cpp/test/async_loop_for_test.h"
 #include "lib/fidl/cpp/test/fidl_types.h"

@@ -6,8 +6,9 @@
 
 #include <future>
 
+#include <gtest/gtest.h>
+
 #include "amlogic-video.h"
-#include "gtest/gtest.h"
 #include "mpeg12_decoder.h"
 #include "tests/test_basic_client.h"
 #include "tests/test_support.h"

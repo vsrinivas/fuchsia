@@ -19,8 +19,9 @@
 #include <string>
 #include <utility>
 
-#include "gmock/gmock.h"
-#include "gtest/gtest.h"
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
+
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/scoped_temp_dir.h"
@@ -261,17 +262,17 @@ TEST_F(TestMetadataTest, ValidSystemServices) {
     TestMetadata tm;
     EXPECT_TRUE(ParseFrom(&tm, json));
     EXPECT_EQ(tm.system_services().size(), 16u);
-    EXPECT_THAT(tm.system_services(),
-                ::testing::ElementsAre(
-                    fuchsia::boot::FactoryItems::Name_, fuchsia::boot::ReadOnlyLog::Name_,
-                    fuchsia::boot::RootJob::Name_, fuchsia::boot::RootResource::Name_,
-                    fuchsia::boot::WriteOnlyLog::Name_, fuchsia::device::NameProvider::Name_,
-                    fuchsia::kernel::Counter::Name_, fuchsia::net::Connectivity::Name_,
-                    fuchsia::net::stack::Stack::Name_, fuchsia::netstack::Netstack::Name_,
-                    fuchsia::scheduler::ProfileProvider::Name_,
-                    fuchsia::sys::test::CacheControl::Name_, fuchsia::sysmem::Allocator::Name_,
-                    fuchsia::ui::scenic::Scenic::Name_, fuchsia::ui::policy::Presenter::Name_,
-                    fuchsia::vulkan::loader::Loader::Name_));
+    EXPECT_THAT(
+        tm.system_services(),
+        ::testing::ElementsAre(
+            fuchsia::boot::FactoryItems::Name_, fuchsia::boot::ReadOnlyLog::Name_,
+            fuchsia::boot::RootJob::Name_, fuchsia::boot::RootResource::Name_,
+            fuchsia::boot::WriteOnlyLog::Name_, fuchsia::device::NameProvider::Name_,
+            fuchsia::kernel::Counter::Name_, fuchsia::net::Connectivity::Name_,
+            fuchsia::net::stack::Stack::Name_, fuchsia::netstack::Netstack::Name_,
+            fuchsia::scheduler::ProfileProvider::Name_, fuchsia::sys::test::CacheControl::Name_,
+            fuchsia::sysmem::Allocator::Name_, fuchsia::ui::scenic::Scenic::Name_,
+            fuchsia::ui::policy::Presenter::Name_, fuchsia::vulkan::loader::Loader::Name_));
   }
 
   json = CreateManifestJson(R"(

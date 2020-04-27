@@ -10,7 +10,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/fidl/cpp/interface_ptr.h>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 namespace util {
 

@@ -8,7 +8,8 @@
 #include <iomanip>
 #include <iostream>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "lib/fostr/hex_dump.h"
 #include "src/connectivity/network/mdns/service/mdns_interface_transceiver.h"
 #include "src/lib/syslog/cpp/logger.h"

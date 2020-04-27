@@ -4,7 +4,7 @@
 
 #include "dockyard_proxy_fake.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 namespace harvester {
 

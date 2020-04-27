@@ -9,10 +9,10 @@
 //
 //
 
+#include <gtest/gtest.h>
 #include <vulkan/vulkan.h>
 
 #include "env_vk_instance.h"
-#include "gtest/gtest.h"
 #include "hotsort_vk.h"
 #include "spinel/spinel_vk.h"
 

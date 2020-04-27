@@ -5,9 +5,9 @@
 #include "src/lib/inspect_deprecated/health/health.h"
 
 #include <abs_clock/clock.h>
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
 
-#include "gmock/gmock.h"
-#include "gtest/gtest.h"
 #include "src/lib/inspect_deprecated/reader.h"
 #include "src/lib/inspect_deprecated/testing/inspect.h"
 

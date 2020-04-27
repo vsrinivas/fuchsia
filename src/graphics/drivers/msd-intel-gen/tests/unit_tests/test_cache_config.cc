@@ -2,8 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <gtest/gtest.h>
+
 #include "cache_config.h"
-#include "gtest/gtest.h"
 #include "instructions.h"
 #include "msd_intel_buffer.h"
 #include "registers.h"

@@ -4,8 +4,8 @@
 
 #include "src/ledger/lib/rng/test_random.h"
 
-#include "gmock/gmock.h"
-#include "gtest/gtest.h"
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
 
 namespace ledger {
 namespace {

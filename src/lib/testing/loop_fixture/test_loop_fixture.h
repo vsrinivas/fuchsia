@@ -10,7 +10,8 @@
 
 #include <functional>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/lib/fxl/macros.h"
 
 namespace gtest {

@@ -9,7 +9,7 @@
 #include <set>
 #include <unordered_set>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 struct DestructionState {
   bool destructor_called = false;

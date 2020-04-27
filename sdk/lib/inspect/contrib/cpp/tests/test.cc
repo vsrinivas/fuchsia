@@ -7,9 +7,8 @@
 #include <lib/inspect/contrib/cpp/archive_reader.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
 
+#include <gmock/gmock.h>
 #include <rapidjson/pointer.h>
-
-#include "gmock/gmock.h"
 
 namespace component {
 namespace {

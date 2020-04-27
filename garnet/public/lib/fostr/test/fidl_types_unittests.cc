@@ -10,8 +10,9 @@
 
 #include <sstream>
 
+#include <gtest/gtest.h>
+
 #include "fuchsia/example/fostr/cpp/fidl.h"
-#include "gtest/gtest.h"
 #include "lib/fidl/cpp/vector.h"
 #include "lib/fostr/fidl_types.h"
 #include "src/lib/fsl/handles/object_info.h"

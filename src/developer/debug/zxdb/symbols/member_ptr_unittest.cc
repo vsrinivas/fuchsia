@@ -4,7 +4,8 @@
 
 #include "src/developer/debug/zxdb/symbols/member_ptr.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/developer/debug/zxdb/symbols/base_type.h"
 #include "src/developer/debug/zxdb/symbols/collection.h"
 #include "src/developer/debug/zxdb/symbols/function_type.h"

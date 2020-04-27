@@ -6,7 +6,8 @@
 
 #include <stdio.h>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/lib/fxl/test/test_settings.h"
 
 namespace zxdb {

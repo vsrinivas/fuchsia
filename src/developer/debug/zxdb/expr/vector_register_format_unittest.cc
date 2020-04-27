@@ -4,7 +4,8 @@
 
 #include "src/developer/debug/zxdb/expr/vector_register_format.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/developer/debug/zxdb/symbols/array_type.h"
 #include "src/developer/debug/zxdb/symbols/base_type.h"
 

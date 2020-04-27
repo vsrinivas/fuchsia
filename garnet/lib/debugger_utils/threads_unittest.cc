@@ -6,20 +6,23 @@
 #define _ALL_SOURCE  // Enables thrd_create_with_name in <threads.h>.
 #endif
 
-#include <stddef.h>
-#include <string>
-#include <threads.h>
-#include <zircon/syscalls/object.h>
-#include <zircon/threads.h>
+#include "garnet/lib/debugger_utils/threads.h"
+
 #include <lib/zx/event.h>
 #include <lib/zx/process.h>
 #include <lib/zx/time.h>
+#include <stddef.h>
+#include <threads.h>
+#include <zircon/syscalls/object.h>
+#include <zircon/threads.h>
+
+#include <string>
+
+#include <gtest/gtest.h>
 
 #include "garnet/lib/debugger_utils/jobs.h"
-#include "garnet/lib/debugger_utils/threads.h"
 #include "garnet/lib/debugger_utils/util.h"
 #include "src/lib/fxl/logging.h"
-#include "gtest/gtest.h"
 
 namespace debugger_utils {
 namespace {

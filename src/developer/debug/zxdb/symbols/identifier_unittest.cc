@@ -4,7 +4,8 @@
 
 #include "src/developer/debug/zxdb/symbols/identifier.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/developer/debug/zxdb/common/err.h"
 
 namespace zxdb {

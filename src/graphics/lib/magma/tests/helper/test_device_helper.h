@@ -11,7 +11,8 @@
 
 #include <filesystem>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "magma.h"
 
 namespace magma {

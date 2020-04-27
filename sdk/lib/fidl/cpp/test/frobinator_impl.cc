@@ -8,7 +8,8 @@
 
 #include <utility>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "lib/fit/result.h"
 
 namespace fidl {

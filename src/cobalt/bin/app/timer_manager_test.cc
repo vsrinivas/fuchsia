@@ -4,8 +4,9 @@
 
 #include "src/cobalt/bin/app/timer_manager.h"
 
+#include <gtest/gtest.h>
+
 #include "lib/gtest/test_loop_fixture.h"
-#include "third_party/googletest/googletest/include/gtest/gtest.h"
 
 namespace cobalt {
 

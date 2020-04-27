@@ -6,7 +6,7 @@
 
 #include <cmath>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 namespace media::audio::test {
 

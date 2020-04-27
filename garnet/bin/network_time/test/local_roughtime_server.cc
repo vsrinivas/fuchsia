@@ -11,7 +11,8 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "settable_time_source.h"
 #include "src/lib/fxl/logging.h"
 #include "third_party/roughtime/protocol.h"

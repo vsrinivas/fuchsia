@@ -4,7 +4,8 @@
 
 #include "src/ledger/bin/cloud_sync/impl/clock_pack.h"
 
-#include "gmock/gmock.h"
+#include <gmock/gmock.h>
+
 #include "src/ledger/bin/cloud_sync/impl/testing/test_page_storage.h"
 #include "src/ledger/bin/encryption/fake/fake_encryption_service.h"
 #include "src/ledger/bin/storage/public/types.h"

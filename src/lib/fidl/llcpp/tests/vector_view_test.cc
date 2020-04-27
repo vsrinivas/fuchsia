@@ -4,7 +4,7 @@
 
 #include <lib/fidl/llcpp/vector_view.h>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 TEST(VectorView, DefaultConstructor) {
   fidl::VectorView<int32_t> vv;

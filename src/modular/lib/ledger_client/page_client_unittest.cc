@@ -6,7 +6,8 @@
 
 #include <memory>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/lib/fxl/macros.h"
 #include "src/lib/syslog/cpp/logger.h"
 #include "src/modular/lib/fidl/array_to_string.h"

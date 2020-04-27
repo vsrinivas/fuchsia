@@ -11,13 +11,14 @@
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/vfs/cpp/vmo_file.h>
 
+#include <gtest/gtest.h>
+
 #include "src/lib/files/file.h"
 #include "src/lib/files/glob.h"
 #include "src/lib/fxl/log_settings.h"
 #include "src/lib/fxl/strings/split_string.h"
 #include "src/lib/fxl/strings/substitute.h"
 #include "src/lib/inspect_deprecated/reader.h"
-#include "third_party/googletest/googletest/include/gtest/gtest.h"
 
 namespace {
 

@@ -4,7 +4,8 @@
 
 #include "src/developer/debug/zxdb/client/process_symbol_data_provider.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "src/developer/debug/zxdb/client/mock_process.h"
 #include "src/developer/debug/zxdb/client/session.h"

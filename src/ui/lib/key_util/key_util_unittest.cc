@@ -4,7 +4,8 @@
 
 #include "src/ui/lib/key_util/key_util.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "hid-parser/usages.h"
 #include "hid/usages.h"
 

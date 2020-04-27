@@ -4,7 +4,8 @@
 
 #include "src/ui/scenic/lib/scheduling/delegating_frame_scheduler.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/ui/scenic/lib/scheduling/tests/mocks/frame_scheduler_mocks.h"
 
 namespace scheduling {

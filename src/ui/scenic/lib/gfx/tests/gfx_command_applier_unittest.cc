@@ -4,7 +4,8 @@
 
 #include "src/ui/scenic/lib/gfx/engine/gfx_command_applier.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "lib/ui/scenic/cpp/commands.h"
 #include "src/ui/scenic/lib/gfx/tests/session_test.h"
 

@@ -10,8 +10,9 @@
 #include <string>
 #include <utility>
 
-#include "gmock/gmock.h"
-#include "gtest/gtest.h"
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
+
 #include "src/ledger/bin/app/constants.h"
 #include "src/ledger/bin/app/merging/last_one_wins_merge_strategy.h"
 #include "src/ledger/bin/app/merging/test_utils.h"

@@ -6,8 +6,9 @@
 
 #include <string>
 
+#include <gtest/gtest.h>
+
 #include "src/lib/timekeeper/test_clock.h"
-#include "third_party/googletest/googletest/include/gtest/gtest.h"
 
 namespace feedback {
 namespace {

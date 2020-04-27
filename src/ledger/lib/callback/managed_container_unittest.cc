@@ -4,7 +4,8 @@
 
 #include "src/ledger/lib/callback/managed_container.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/ledger/lib/callback/set_when_called.h"
 
 namespace ledger {

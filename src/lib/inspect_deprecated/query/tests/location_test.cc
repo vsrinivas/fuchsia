@@ -7,11 +7,10 @@
 #include <algorithm>
 #include <iterator>
 
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
 #include <src/lib/files/directory.h>
 #include <src/lib/files/path.h>
-
-#include "gmock/gmock.h"
-#include "gtest/gtest.h"
 
 using inspect_deprecated::Location;
 

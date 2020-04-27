@@ -7,8 +7,9 @@
 #include <fuchsia/modular/cpp/fidl.h>
 #include <lib/fidl/cpp/optional.h>
 
-#include "gmock/gmock.h"
-#include "gtest/gtest.h"
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
+
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/syslog/cpp/logger.h"
 #include "src/modular/bin/sessionmgr/testing/annotations_matchers.h"

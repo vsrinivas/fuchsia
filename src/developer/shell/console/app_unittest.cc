@@ -6,8 +6,9 @@
 
 #include <utility>
 
-#include "gmock/gmock.h"
-#include "gtest/gtest.h"
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
+
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 namespace {

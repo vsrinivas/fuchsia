@@ -10,10 +10,11 @@
 #include <sstream>
 #include <vector>
 
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
+
 #include "fuchsia/shell/llcpp/fidl.h"
 #include "fuchsia/sys/cpp/fidl.h"
-#include "gmock/gmock.h"
-#include "gtest/gtest.h"
 #include "lib/async-loop/cpp/loop.h"
 #include "lib/sys/cpp/component_context.h"
 #include "src/developer/shell/console/ast_builder.h"

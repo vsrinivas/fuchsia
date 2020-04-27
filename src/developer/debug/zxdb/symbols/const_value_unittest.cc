@@ -4,7 +4,7 @@
 
 #include "src/developer/debug/zxdb/symbols/const_value.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 namespace zxdb {
 

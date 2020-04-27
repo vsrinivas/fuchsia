@@ -4,7 +4,8 @@
 
 #include "src/developer/debug/zxdb/expr/resolve_base.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "src/developer/debug/zxdb/common/test_with_loop.h"
 #include "src/developer/debug/zxdb/expr/mock_eval_context.h"

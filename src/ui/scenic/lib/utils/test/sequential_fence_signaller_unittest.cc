@@ -4,7 +4,8 @@
 
 #include "src/ui/scenic/lib/utils/sequential_fence_signaller.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/ui/scenic/lib/utils/test/util.h"
 
 namespace utils {

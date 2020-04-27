@@ -4,7 +4,7 @@
 
 #include "src/sys/appmgr/util.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 namespace component {
 namespace {

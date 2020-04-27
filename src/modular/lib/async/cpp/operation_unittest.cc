@@ -8,7 +8,8 @@
 #include <lib/async/default.h>
 #include <lib/gtest/test_loop_fixture.h>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/modular/lib/async/cpp/future.h"
 

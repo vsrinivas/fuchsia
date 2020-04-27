@@ -7,7 +7,7 @@
 #include <lib/fit/defer.h>
 #include <lib/fit/function.h>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 class CodecAdapterSWDummy : public CodecAdapterSW<fit::deferred_action<fit::closure>> {
  public:

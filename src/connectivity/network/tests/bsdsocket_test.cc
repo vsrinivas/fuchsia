@@ -22,8 +22,8 @@
 
 #include <fbl/auto_call.h>
 #include <fbl/unique_fd.h>
+#include <gtest/gtest.h>
 
-#include "gtest/gtest.h"
 #include "util.h"
 
 namespace {

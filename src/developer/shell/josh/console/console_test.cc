@@ -13,7 +13,7 @@
 #include <fstream>
 #include <string>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 // Sanity check test to make sure Hello World works.
 TEST(Console, Sanity) {

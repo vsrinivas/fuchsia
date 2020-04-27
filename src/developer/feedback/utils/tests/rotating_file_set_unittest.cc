@@ -4,11 +4,12 @@
 
 #include "src/developer/feedback/utils/rotating_file_set.h"
 
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
+
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
 #include "src/lib/files/scoped_temp_dir.h"
-#include "third_party/googletest/googlemock/include/gmock/gmock.h"
-#include "third_party/googletest/googletest/include/gtest/gtest.h"
 
 namespace feedback {
 namespace {

@@ -4,7 +4,8 @@
 
 #include "src/ledger/bin/storage/public/object.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/lib/vmo/strings.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"

@@ -12,7 +12,8 @@
 #include <utility>
 #include <vector>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/lib/callback/capture.h"
 #include "src/ledger/lib/convert/convert.h"

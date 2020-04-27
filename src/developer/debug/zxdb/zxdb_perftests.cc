@@ -4,7 +4,8 @@
 
 #include <lib/cmdline/args_parser.h>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/developer/debug/zxdb/common/perf_test.h"
 
 namespace {

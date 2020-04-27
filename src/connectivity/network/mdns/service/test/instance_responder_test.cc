@@ -6,7 +6,8 @@
 
 #include <lib/zx/time.h>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/connectivity/network/mdns/service/mdns_names.h"
 #include "src/connectivity/network/mdns/service/test/agent_test.h"
 

@@ -4,7 +4,8 @@
 
 #include "src/ledger/bin/app/page_availability_manager.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/ledger/bin/testing/test_with_environment.h"
 #include "src/ledger/lib/callback/set_when_called.h"
 

@@ -7,7 +7,8 @@
 #include <lib/async/dispatcher.h>
 #include <lib/fit/function.h>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/ledger/bin/app/constants.h"
 #include "src/ledger/bin/clocks/testing/device_id_manager_empty_impl.h"
 #include "src/ledger/bin/encryption/primitives/hash.h"

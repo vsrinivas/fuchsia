@@ -6,7 +6,8 @@
 
 #include <fstream>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/developer/shell/mirror/wire_format.h"
 
 namespace shell::mirror {

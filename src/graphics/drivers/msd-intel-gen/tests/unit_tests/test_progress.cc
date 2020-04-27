@@ -2,8 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <gtest/gtest.h>
+
 #include "gpu_progress.h"
-#include "gtest/gtest.h"
 
 constexpr uint32_t kTimeoutMs = 1000;
 

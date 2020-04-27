@@ -8,7 +8,8 @@
 
 #include <limits>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace bupsplit {

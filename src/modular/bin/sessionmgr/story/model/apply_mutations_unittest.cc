@@ -9,7 +9,7 @@
 #include <lib/fit/function.h>
 #include <lib/fit/single_threaded_executor.h>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 using fuchsia::modular::StoryState;
 using fuchsia::modular::StoryVisibilityState;

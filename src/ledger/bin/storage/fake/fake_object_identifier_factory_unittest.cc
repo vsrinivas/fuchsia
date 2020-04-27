@@ -4,8 +4,9 @@
 
 #include "src/ledger/bin/storage/fake/fake_object_identifier_factory.h"
 
-#include "gmock/gmock.h"
-#include "gtest/gtest.h"
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
+
 #include "src/ledger/bin/storage/public/types.h"
 
 namespace storage {

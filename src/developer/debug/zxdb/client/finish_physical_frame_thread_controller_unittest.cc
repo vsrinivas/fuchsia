@@ -4,7 +4,8 @@
 
 #include "src/developer/debug/zxdb/client/finish_physical_frame_thread_controller.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/developer/debug/zxdb/client/inline_thread_controller_test.h"
 #include "src/developer/debug/zxdb/client/process.h"
 #include "src/developer/debug/zxdb/client/test_thread_observer.h"

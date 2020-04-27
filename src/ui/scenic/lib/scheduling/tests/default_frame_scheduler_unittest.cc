@@ -4,7 +4,8 @@
 
 #include <lib/gtest/test_loop_fixture.h>
 
-#include "gmock/gmock.h"
+#include <gmock/gmock.h>
+
 #include "src/ui/scenic/lib/gfx/tests/mocks/util.h"
 #include "src/ui/scenic/lib/scheduling/tests/frame_scheduler_test.h"
 

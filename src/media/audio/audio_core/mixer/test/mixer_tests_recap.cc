@@ -3,7 +3,8 @@
 
 #include "src/media/audio/audio_core/mixer/test/mixer_tests_recap.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/media/audio/audio_core/mixer/test/audio_result.h"
 #include "src/media/audio/audio_core/mixer/test/mixer_tests_shared.h"
 

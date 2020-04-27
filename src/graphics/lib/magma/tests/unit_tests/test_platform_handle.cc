@@ -4,7 +4,8 @@
 
 #include <unistd.h>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "platform_buffer.h"
 #include "platform_handle.h"
 

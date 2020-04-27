@@ -7,8 +7,9 @@
 #include <algorithm>
 #include <map>
 
+#include <gtest/gtest.h>
+
 #include "../output_sink.h"
-#include "gtest/gtest.h"
 #include "test_codec_packets.h"
 
 TEST(OutputSink, Basic) {

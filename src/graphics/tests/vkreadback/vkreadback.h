@@ -13,9 +13,8 @@
 
 #include <vector>
 
+#include <gtest/gtest.h>
 #include <vulkan/vulkan.h>
-
-#include "gtest/gtest.h"
 
 // Supports Fuchsia external memory extension.
 class VkReadbackTest {

@@ -4,7 +4,8 @@
 
 #include <fuchsia/intl/cpp/fidl.h>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "lib/fostr/fidl/fuchsia/intl/formatting.h"
 #include "locale_util.h"
 #include "src/lib/fidl_fuchsia_intl_ext/cpp/fidl_ext.h"

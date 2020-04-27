@@ -6,7 +6,8 @@
 
 #include <lib/async/cpp/task.h>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/ledger/bin/testing/test_with_environment.h"
 
 namespace ledger {

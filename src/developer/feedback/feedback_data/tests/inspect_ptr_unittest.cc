@@ -14,12 +14,13 @@
 #include <string>
 #include <vector>
 
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
+
 #include "src/developer/feedback/feedback_data/attachments/aliases.h"
 #include "src/developer/feedback/testing/stubs/inspect_archive.h"
 #include "src/developer/feedback/testing/stubs/inspect_batch_iterator.h"
 #include "src/developer/feedback/testing/unit_test_fixture.h"
-#include "third_party/googletest/googlemock/include/gmock/gmock.h"
-#include "third_party/googletest/googletest/include/gtest/gtest.h"
 
 namespace feedback {
 namespace {

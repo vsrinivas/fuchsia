@@ -10,7 +10,8 @@
 
 #include <cstdlib>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/lib/fxl/macros.h"
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 #include "src/lib/ui/input/input_device_impl.h"

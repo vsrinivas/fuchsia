@@ -6,7 +6,7 @@
 
 #include <unordered_set>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 TEST(UnownedPtr, Constructor) {
   int32_t val = 1;

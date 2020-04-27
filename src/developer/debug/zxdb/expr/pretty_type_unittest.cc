@@ -4,7 +4,8 @@
 
 #include "src/developer/debug/zxdb/expr/pretty_type.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/developer/debug/zxdb/common/test_with_loop.h"
 #include "src/developer/debug/zxdb/expr/eval_context.h"
 #include "src/developer/debug/zxdb/expr/format_node.h"

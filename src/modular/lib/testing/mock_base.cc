@@ -4,7 +4,8 @@
 
 #include "src/modular/lib/testing/mock_base.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/lib/syslog/cpp/logger.h"
 
 namespace modular_testing {

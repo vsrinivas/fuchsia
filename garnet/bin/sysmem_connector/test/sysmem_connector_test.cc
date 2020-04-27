@@ -10,7 +10,8 @@
 #include <lib/fdio/fdio.h>
 #include <lib/sys/cpp/component_context.h>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "lib/fidl/cpp/interface_ptr.h"
 #include "src/lib/fxl/logging.h"
 

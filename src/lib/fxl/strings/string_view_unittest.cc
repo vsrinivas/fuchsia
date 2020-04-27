@@ -4,12 +4,12 @@
 
 #include "src/lib/fxl/strings/string_view.h"
 
+#include <lib/fit/function.h>
+
 #include <functional>
 #include <type_traits>
 
-#include <lib/fit/function.h>
-
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 namespace fxl {
 namespace {

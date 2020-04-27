@@ -6,8 +6,9 @@
 #include <lib/inspect/cpp/reader.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 
+#include <gtest/gtest.h>
+
 #include "garnet/bin/timezone/timezone.h"
-#include "gtest/gtest.h"
 #include "lib/sys/inspect/cpp/component.h"
 #include "zircon/system/ulib/inspect/include/lib/inspect/cpp/hierarchy.h"
 #include "zircon/system/ulib/inspect/include/lib/inspect/cpp/reader.h"

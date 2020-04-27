@@ -4,9 +4,10 @@
 
 #include <limits>
 
+#include <gtest/gtest.h>
+
 #include "address_manager.h"
 #include "gpu_mapping.h"
-#include "gtest/gtest.h"
 #include "mock/mock_bus_mapper.h"
 #include "msd_arm_buffer.h"
 #include "msd_arm_connection.h"

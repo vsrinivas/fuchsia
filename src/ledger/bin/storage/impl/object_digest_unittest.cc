@@ -4,7 +4,8 @@
 
 #include "src/ledger/bin/storage/impl/object_digest.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/ledger/bin/encryption/primitives/hash.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 

@@ -13,8 +13,8 @@
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
+#include <gtest/gtest.h>
 
-#include "gtest/gtest.h"
 #include "lib/gtest/test_loop_fixture.h"
 #include "src/ui/input/lib/hid-input-report/fidl.h"
 #include "src/ui/input/testing/fake_input_report_device/fake.h"

@@ -8,7 +8,8 @@
 
 #include <memory>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/ledger/lib/logging/logging.h"
 
 namespace ledger {

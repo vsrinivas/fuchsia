@@ -15,7 +15,8 @@
 
 #include <fuchsia/modular/cpp/fidl.h>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/lib/fsl/vmo/strings.h"
 
 using fuchsia::modular::Intent;

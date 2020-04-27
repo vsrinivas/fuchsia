@@ -6,7 +6,8 @@
 
 #include <string>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/ledger/bin/storage/public/types.h"
 
 namespace encryption {

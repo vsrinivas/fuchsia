@@ -6,8 +6,9 @@
 
 #include <zircon/process.h>
 
+#include <gtest/gtest.h>
+
 #include "dockyard_proxy_fake.h"
-#include "gtest/gtest.h"
 #include "root_resource.h"
 
 class GatherTasksTest : public ::testing::Test {

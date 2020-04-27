@@ -6,7 +6,8 @@
 
 #include <lib/zx/vmo.h>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/lib/fsl/handles/object_info.h"
 
 namespace scenic_impl::gfx::test {

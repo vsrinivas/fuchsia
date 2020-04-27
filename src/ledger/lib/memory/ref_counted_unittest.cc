@@ -8,7 +8,7 @@
 
 #include "src/ledger/lib/memory/ref_counted.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 #if defined(__clang__)
 #define ALLOW_PESSIMIZING_MOVE(code_line)                                                     \

@@ -5,7 +5,8 @@
 #include <lib/ui/scenic/cpp/commands.h>
 #include <zircon/syscalls.h>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/ui/lib/escher/impl/vulkan_utils.h"
 #include "src/ui/lib/escher/test/common/gtest_vulkan.h"
 #include "src/ui/scenic/lib/gfx/tests/vk_session_test.h"

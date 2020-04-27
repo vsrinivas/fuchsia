@@ -4,7 +4,7 @@
 
 #include "src/lib/timekeeper/test_clock.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 namespace timekeeper {
 namespace {

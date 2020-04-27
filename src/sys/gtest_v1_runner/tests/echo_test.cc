@@ -4,9 +4,9 @@
 #include <lib/sys/cpp/service_directory.h>
 
 #include <fidl/examples/echo/cpp/fidl.h>
+#include <gtest/gtest.h>
 
 #include "lib/fidl/cpp/binding.h"
-#include "third_party/googletest/googletest/include/gtest/gtest.h"
 
 TEST(EchoTest, TestEcho) {
   printf("hello echo\n");

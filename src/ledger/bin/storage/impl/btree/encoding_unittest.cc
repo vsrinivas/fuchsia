@@ -4,8 +4,9 @@
 
 #include "src/ledger/bin/storage/impl/btree/encoding.h"
 
-#include "gmock/gmock.h"
-#include "gtest/gtest.h"
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
+
 #include "src/ledger/bin/encryption/fake/fake_encryption_service.h"
 #include "src/ledger/bin/storage/impl/btree/tree_node_generated.h"
 #include "src/ledger/bin/storage/impl/object_identifier_encoding.h"

@@ -4,7 +4,8 @@
 
 #include "src/developer/debug/zxdb/console/analyze_memory.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/developer/debug/zxdb/client/mock_frame.h"
 #include "src/developer/debug/zxdb/client/mock_process.h"
 #include "src/developer/debug/zxdb/client/session.h"

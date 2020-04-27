@@ -4,7 +4,7 @@
 
 #include "src/ledger/bin/storage/public/types.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 namespace storage {
 namespace {

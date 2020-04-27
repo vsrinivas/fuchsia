@@ -4,7 +4,7 @@
 
 #include "src/lib/inet/socket_address.h"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 namespace inet {
 namespace test {

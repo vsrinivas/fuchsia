@@ -16,7 +16,7 @@
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 namespace {
 

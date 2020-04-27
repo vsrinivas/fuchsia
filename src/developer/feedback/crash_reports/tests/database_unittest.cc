@@ -13,6 +13,9 @@
 
 #include <utility>
 
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
+
 #include "src/developer/feedback/crash_reports/info/info_context.h"
 #include "src/developer/feedback/crash_reports/tests/crashpad_database_gremlin.h"
 #include "src/developer/feedback/testing/cobalt_test_fixture.h"
@@ -24,8 +27,6 @@
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/syslog/cpp/logger.h"
 #include "src/lib/timekeeper/test_clock.h"
-#include "third_party/googletest/googlemock/include/gmock/gmock.h"
-#include "third_party/googletest/googletest/include/gtest/gtest.h"
 
 namespace feedback {
 namespace {

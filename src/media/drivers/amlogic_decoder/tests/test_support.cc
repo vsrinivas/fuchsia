@@ -7,8 +7,7 @@
 #include <lib/zx/vmar.h>
 
 #include <ddk/driver.h>
-
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 static zx_device_t* g_parent_device;
 

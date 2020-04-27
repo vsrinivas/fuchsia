@@ -12,11 +12,12 @@
 #include <memory>
 #include <optional>
 
+#include <gtest/gtest.h>
+
 #include "src/developer/feedback/crash_reports/settings.h"
 #include "src/developer/feedback/testing/fakes/privacy_settings.h"
 #include "src/developer/feedback/testing/unit_test_fixture.h"
 #include "src/lib/fxl/logging.h"
-#include "third_party/googletest/googletest/include/gtest/gtest.h"
 
 namespace feedback {
 namespace {

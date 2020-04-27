@@ -19,11 +19,11 @@
 #include <iostream>
 
 #include <fbl/unique_fd.h>
+#include <gtest/gtest.h>
 
 #include "fuchsia/io/cpp/fidl.h"
 #include "fuchsia/io/test/cpp/fidl.h"
 #include "fuchsia/sys/cpp/fidl.h"
-#include "gtest/gtest.h"
 
 fidl::InterfaceHandle<fuchsia::io::Directory> StartTestHarness(
     sys::ComponentContext* context, std::string harness_name,

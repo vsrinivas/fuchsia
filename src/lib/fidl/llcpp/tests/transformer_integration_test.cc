@@ -19,9 +19,9 @@
 #include <vector>
 
 #include <example/llcpp/fidl.h>
+#include <gtest/gtest.h>
 #include <transformerintegration/test/llcpp/fidl.h>
 
-#include "gtest/gtest.h"
 #include "src/lib/fidl/llcpp/tests/test_utils.h"
 
 namespace test = ::llcpp::transformerintegration::test;

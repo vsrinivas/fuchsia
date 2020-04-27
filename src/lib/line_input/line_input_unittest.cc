@@ -6,7 +6,8 @@
 
 #include <optional>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/lib/line_input/test_line_input.h"
 
 namespace line_input {

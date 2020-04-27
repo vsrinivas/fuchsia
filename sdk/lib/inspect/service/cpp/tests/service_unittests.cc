@@ -10,7 +10,7 @@
 #include <lib/inspect/service/cpp/service.h>
 #include <lib/inspect/testing/cpp/inspect.h>
 
-#include "gmock/gmock.h"
+#include <gmock/gmock.h>
 
 using inspect::Inspector;
 

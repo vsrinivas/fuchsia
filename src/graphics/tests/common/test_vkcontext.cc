@@ -7,7 +7,8 @@
 #include <chrono>
 #include <vector>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
 #include "src/graphics/tests/common/utils.h"
 #include "src/graphics/tests/common/vulkan_context.h"
 #include "src/lib/fxl/test/test_settings.h"
