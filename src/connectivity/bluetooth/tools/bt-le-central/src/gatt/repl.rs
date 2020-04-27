@@ -139,7 +139,7 @@ async fn handle_cmd(line: String, client: &GattClientPtr) -> Result<(), Error> {
         Some(Ok(Cmd::ReadChr)) => do_read_chr(&args, client).await,
         Some(Ok(Cmd::ReadLongChr)) => do_read_long_chr(&args, client).await,
         Some(Ok(Cmd::WriteChr)) => do_write_chr(args, client).await,
-        Some(Ok(Cmd::WriteLongChr)) => do_write_long_chr(&args, client).await,
+        Some(Ok(Cmd::WriteLongChr)) => do_write_long_chr(args, client).await,
         Some(Ok(Cmd::ReadDesc)) => do_read_desc(&args, client).await,
         Some(Ok(Cmd::ReadLongDesc)) => do_read_long_desc(&args, client).await,
         Some(Ok(Cmd::WriteDesc)) => do_write_desc(args, client).await,

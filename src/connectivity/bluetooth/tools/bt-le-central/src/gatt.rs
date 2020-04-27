@@ -7,8 +7,8 @@ use {
     fidl::encoding::Decodable as FidlDecodable,
     fidl::endpoints,
     fidl_fuchsia_bluetooth_gatt::{
-        Characteristic as FidlCharacteristic, ClientProxy, RemoteServiceEvent, RemoteServiceProxy,
-        ServiceInfo, WriteOptions,
+        Characteristic as FidlCharacteristic, ClientProxy, ReliableMode, RemoteServiceEvent,
+        RemoteServiceProxy, ServiceInfo, WriteOptions,
     },
     fuchsia_async as fasync,
     fuchsia_bluetooth::error::Error as BTError,
@@ -166,12 +166,18 @@ async fn write_characteristic(
 
 async fn write_long_characteristic(
     svc: &RemoteServiceProxy,
+    reliable_mode: ReliableMode,
     id: u64,
     offset: u16,
     value: Vec<u8>,
 ) -> Result<(), Error> {
     let status = svc
-        .write_long_characteristic(id, offset, &value, WriteOptions::new_empty())
+        .write_long_characteristic(
+            id,
+            offset,
+            &value,
+            WriteOptions { reliable_mode: Some(reliable_mode), ..WriteOptions::new_empty() },
+        )
         .await
         .map_err(|_| BTError::new("Failed to send message"))?;
 
@@ -407,13 +413,20 @@ async fn do_write_chr<'a>(mut args: Vec<&'a str>, client: &'a GattClientPtr) -> 
 }
 
 async fn do_write_long_chr<'a>(
-    args: &'a [&'a str],
+    mut args: Vec<&'a str>,
     client: &'a GattClientPtr,
 ) -> Result<(), Error> {
     if args.len() < 3 {
         println!("usage: {}", Cmd::WriteLongDesc.cmd_help());
         return Ok(());
     }
+
+    let reliable_mode: ReliableMode = if args[0] == "-r" {
+        args.remove(0);
+        ReliableMode::Enabled
+    } else {
+        ReliableMode::Disabled
+    };
 
     let id: u64 = match args[0].parse() {
         Err(_) => {
@@ -439,7 +452,7 @@ async fn do_write_long_chr<'a>(
             Ok(())
         }
         Ok(v) => match &client.read().active_proxy {
-            Some(svc) => write_long_characteristic(svc, id, offset, v).await,
+            Some(svc) => write_long_characteristic(svc, reliable_mode, id, offset, v).await,
             None => {
                 println!("no service connected");
                 Ok(())
