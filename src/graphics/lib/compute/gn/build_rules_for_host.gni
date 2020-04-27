@@ -13,7 +13,7 @@ if (_is_fuchsia_tree) {
 }
 
 # A target that provides the GTest main() function for the host.
-graphics_compute_gtest_main_target = "//third_party/googletest:gtest_main"
+graphics_compute_gtest_main_target = "//src/lib/fxl/test:gtest_main"
 
 # A target providing access to Vulkan at compile time when added to deps.
 # TODO(SPN-14): Change this to a more recent upstream.

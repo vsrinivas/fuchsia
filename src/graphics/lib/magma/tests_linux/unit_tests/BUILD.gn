@@ -10,8 +10,8 @@ executable("virtmagma_unit_tests_linux") {
 
   deps = [
     "//src/graphics/lib/magma/src/libmagma_linux",
+    "//src/lib/fxl/test:gtest_main",
     "//src/lib/vulkan:headers",
-    "//third_party/googletest:gtest_main",
     "//third_party/rapidjson",
   ]
 

@@ -73,8 +73,8 @@ executable("gesture_tests") {
 
   deps = [
     ":gesture",
+    "//src/lib/fxl/test:gtest_main",
     "//src/lib/syslog/cpp",
     "//third_party/googletest:gtest",
-    "//third_party/googletest:gtest_main",
   ]
 }

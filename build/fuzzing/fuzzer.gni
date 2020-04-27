@@ -181,7 +181,7 @@ template("fuzzer") {
     deps += [
       ":$corpus_target",
       "//src/lib/fuzzing/cpp:fuzzer_test",
-      "//third_party/googletest:gtest_main",
+      "//src/lib/fxl/test:gtest_main",
     ]
   }
 

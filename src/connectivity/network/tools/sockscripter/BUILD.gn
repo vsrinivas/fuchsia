@@ -37,8 +37,8 @@ executable("sockscripter_test") {
 
   deps = [
     ":src",
+    "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
-    "//third_party/googletest:gtest_main",
   ]
 }
 

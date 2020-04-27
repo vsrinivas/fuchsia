@@ -54,7 +54,7 @@ test("fuzz_input_unittests") {
 
   deps = [
     ":cpp",
-    "//third_party/googletest:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
   ]
 }
 
