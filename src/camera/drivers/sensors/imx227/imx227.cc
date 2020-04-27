@@ -148,7 +148,7 @@ void Imx227Device::Write8(uint16_t addr, uint8_t val) {
   buf[1] = static_cast<uint8_t>(addr & kByteMask);
   buf[2] = val;
 
-  zx_status_t status = i2c_.WriteSync(buf.data(), 3);
+  zx_status_t status = i2c_.WriteSync(buf.data(), buf.size());
   if (status != ZX_OK) {
     zxlogf(ERROR,
            "Imx227Device: could not write reg addr/val: 0x%08x/0x%08x status: "
