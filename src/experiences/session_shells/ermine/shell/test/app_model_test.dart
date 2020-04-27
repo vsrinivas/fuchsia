@@ -160,6 +160,7 @@ void main() {
 
   test('Should toggle fullscreen for focused story.', () async {
     final story = MockErmineStory();
+    when(clustersModel.hasStories).thenReturn(true);
     when(clustersModel.focusedStory).thenReturn(story);
 
     appModel.onFullscreen();
@@ -169,6 +170,18 @@ void main() {
     expect(appModel.isFullscreen, true);
     appModel.onFullscreen();
     verify(story.restore()).called(1);
+  });
+
+  test('Should hide Overview if stores are present', () async {
+    when(clustersModel.hasStories).thenReturn(false);
+
+    appModel.onCancel();
+    expect(appModel.overviewVisibility.value, true);
+
+    when(clustersModel.hasStories).thenReturn(true);
+
+    appModel.onCancel();
+    expect(appModel.overviewVisibility.value, false);
   });
 
   test('Should not go fullscreen if no story is in focus.', () async {

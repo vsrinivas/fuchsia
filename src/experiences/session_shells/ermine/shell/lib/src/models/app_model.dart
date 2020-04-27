@@ -236,7 +236,7 @@ class AppModel {
     statusVisibility.value = false;
     helpVisibility.value = false;
     recentsVisibility.value = false;
-    overviewVisibility.value = overviewVisibility.value || !hasStories;
+    overviewVisibility.value = !hasStories;
   }
 
   /// Called when the user wants to delete the story.
