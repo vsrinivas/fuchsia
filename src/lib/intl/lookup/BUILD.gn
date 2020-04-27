@@ -6,10 +6,16 @@ import("//build/package.gni")
 
 group("lookup") {
   testonly = true
-  public_deps = [ "rust" ]
+  public_deps = [
+    "cpp",
+    "rust",
+  ]
 }
 
 group("tests") {
   testonly = true
-  public_deps = [ "rust:tests" ]
+  public_deps = [
+    "cpp:tests",
+    "rust:tests",
+  ]
 }

@@ -15,6 +15,15 @@ extern "C" {
 // Opaque returned type.
 struct intl_lookup_t;
 
+// The vtable for intl_lookup_t.  We only change from default values for tests,
+// when we substitute a fake version of intl_lookup_t.  The vtable is explicit
+// since we're using the C ABI.
+typedef struct {
+  intl_lookup_t* (*op_new)(size_t, char*[], int8_t*);
+  void (*op_delete)(intl_lookup_t*);
+  char* (*op_string)(intl_lookup_t*, uint64_t, int8_t*);
+} intl_lookup_ops_t;
+
 // Caller must take ownership of the returned pointer.
 intl_lookup_t* intl_lookup_new(size_t len, char* locale_ids[], int8_t* status);
 

@@ -1,0 +1,81 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/test/test_package.gni")
+
+group("cpp") {
+  testonly = true
+  public_deps = [
+    ":intl-lookup-cpp",
+    ":pkg",
+    ":tests",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":intl-lookup-cpp-tests" ]
+}
+
+source_set("lib") {
+  sources = [
+    "lookup.cc",
+    "lookup.h",
+  ]
+
+  public_deps = [
+    "//src/lib/intl/lookup/rust:lib",
+    "//third_party/googletest:gtest_prod",
+    "//zircon/public/lib/fit",
+  ]
+}
+
+executable("intl-lookup-cpp") {
+  testonly = true
+  sources = [ "main.cc" ]
+  deps = [ ":lib" ]
+}
+
+executable("intl_lookup_cpp_unittests") {
+  testonly = true
+  sources = [ "lookup_test.cc" ]
+  deps = [
+    ":lib",
+    "//garnet/public/lib/gtest",
+    "//src/lib/fxl/test:gtest_main",
+  ]
+}
+
+package("pkg") {
+  testonly = true
+  package_name = "intl-lookup-cpp"
+
+  binaries = [
+    {
+      name = "intl-lookup-cpp"
+      dest = "intl-lookup-cpp"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/intl-lookup-cpp.cmx")
+      dest = "intl-lookup-cpp.cmx"
+    },
+  ]
+
+  deps = [ ":intl-lookup-cpp" ]
+}
+
+test_package("intl-lookup-cpp-tests") {
+  deps = [ ":intl_lookup_cpp_unittests" ]
+
+  tests = [
+    {
+      name = "intl_lookup_cpp_unittests"
+      environments = basic_envs
+    },
+  ]
+}
