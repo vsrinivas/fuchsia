@@ -40,10 +40,8 @@ int main(int argc, char* argv[]) {
   }
 
   // Create the collage.
-  auto collage_result = camera::BufferCollage::Create(std::move(scenic), std::move(allocator), [&] {
-    FX_LOGS(INFO) << "BufferCollage stopped. Quitting loop.";
-    loop.Quit();
-  });
+  auto collage_result =
+      camera::BufferCollage::Create(std::move(scenic), std::move(allocator), [&] { loop.Quit(); });
   if (collage_result.is_error()) {
     FX_PLOGS(ERROR, collage_result.error()) << "Failed to create BufferCollage.";
     return EXIT_FAILURE;
@@ -130,13 +128,6 @@ int main(int argc, char* argv[]) {
   LifecycleImpl lifecycle([&] { loop.Quit(); });
   context->outgoing()->AddPublicService(lifecycle.GetHandler());
 
-  // Run the loop.
-  status = loop.Run();
-  if (status == ZX_ERR_CANCELED) {
-    FX_LOGS(INFO) << "Main loop terminated normally.";
-  } else {
-    FX_LOGS(WARNING) << "Main loop terminated abnormally.";
-    return EXIT_FAILURE;
-  }
-  return 0;
+  loop.Run();
+  return EXIT_SUCCESS;
 }

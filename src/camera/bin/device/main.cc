@@ -67,8 +67,6 @@ int main(int argc, char* argv[]) {
                    });
   ZX_ASSERT(wait.Begin(loop.dispatcher()) == ZX_OK);
 
-  // Run should return only if the device enters an unrecoverable state.
-  status = loop.Run();
-  FX_PLOGS(FATAL, status) << "Loop exited unexpectedly.";
-  return EXIT_FAILURE;
+  loop.Run();
+  return EXIT_SUCCESS;
 }

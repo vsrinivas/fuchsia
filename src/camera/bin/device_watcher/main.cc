@@ -111,8 +111,6 @@ int main(int argc, char* argv[]) {
 
   context->outgoing()->AddPublicService(tester.GetHandler());
 
-  // Run should never return.
-  status = loop.Run();
-  FX_PLOGS(FATAL, status) << "Loop exited unexpectedly.";
-  return EXIT_FAILURE;
+  loop.Run();
+  return EXIT_SUCCESS;
 }

@@ -28,10 +28,7 @@ int main(int argc, const char** argv) {
         return camera::DemoView::Create(std::move(context), &loop, chaos);
       },
       &loop);
-  zx_status_t status = loop.Run();
-  if (status != ZX_ERR_CANCELED) {
-    FX_LOGS(WARNING) << "Main thread terminated abnormally";
-    return status == ZX_OK ? -1 : status;
-  }
-  return 0;
+
+  loop.Run();
+  return EXIT_SUCCESS;
 }
