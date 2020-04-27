@@ -10,12 +10,12 @@
 #include <zircon/types.h>
 
 #include <arch/hypervisor.h>
-#include <arch/x86/pvclock.h>
+#include <arch/x86/pv.h>
 #include <hypervisor/guest_physical_address_space.h>
 #include <ktl/atomic.h>
 #include <vm/physmap.h>
 
-#include "pvclock_priv.h"
+#include "pv_priv.h"
 
 namespace {
 
@@ -69,8 +69,8 @@ namespace {
 DECLARE_SINGLETON_MUTEX(UpdateBootTimeLock);
 }  // namespace
 
-zx_status_t pvclock_update_boot_time(hypervisor::GuestPhysicalAddressSpace* gpas,
-                                     zx_vaddr_t guest_paddr) {
+zx_status_t pv_clock_update_boot_time(hypervisor::GuestPhysicalAddressSpace* gpas,
+                                      zx_vaddr_t guest_paddr) {
   // KVM doesn't provide any protection against concurrent wall time requests from different
   // VCPUs, but documentation doesn't mention that it cannot happen and moreover it properly
   // protects per VCPU system time. Therefore to be on the safer side we use one global mutex
@@ -78,18 +78,18 @@ zx_status_t pvclock_update_boot_time(hypervisor::GuestPhysicalAddressSpace* gpas
   static uint32_t version TA_GUARDED(UpdateBootTimeLock::Get());
 
   hypervisor::GuestPtr guest_ptr;
-  zx_status_t status = gpas->CreateGuestPtr(guest_paddr, sizeof(pvclock_boot_time),
-                                            "pvclock-boot-time-guest-mapping", &guest_ptr);
+  zx_status_t status = gpas->CreateGuestPtr(guest_paddr, sizeof(pv_clock_boot_time),
+                                            "pv_clock-boot-time-guest-mapping", &guest_ptr);
   if (status != ZX_OK) {
     return status;
   }
-  auto boot_time = guest_ptr.as<pvclock_boot_time>();
+  auto boot_time = guest_ptr.as<pv_clock_boot_time>();
   ZX_DEBUG_ASSERT(boot_time != nullptr);
   memset(boot_time, 0, sizeof(*boot_time));
 
   Guard<Mutex> guard(UpdateBootTimeLock::Get());
   zx_time_t time = utc_offset.load();
-  // See the comment for pvclock_boot_time structure in arch/x86/pvclock.h
+  // See the comment for pv_clock_boot_time structure in arch/x86/pv.h
   atomic_store_relaxed_u32(&boot_time->version, version + 1);
   ktl::atomic_thread_fence(ktl::memory_order_seq_cst);
   boot_time->seconds = static_cast<uint32_t>(time / ZX_SEC(1));
@@ -100,23 +100,24 @@ zx_status_t pvclock_update_boot_time(hypervisor::GuestPhysicalAddressSpace* gpas
   return ZX_OK;
 }
 
-zx_status_t pvclock_reset_clock(PvClockState* pvclock, hypervisor::GuestPhysicalAddressSpace* gpas,
-                                zx_vaddr_t guest_paddr) {
+zx_status_t pv_clock_reset_clock(PvClockState* pv_clock,
+                                 hypervisor::GuestPhysicalAddressSpace* gpas,
+                                 zx_vaddr_t guest_paddr) {
   zx_status_t status =
-      gpas->CreateGuestPtr(guest_paddr, sizeof(pvclock_system_time),
-                           "pvclock-system-time-guest-mapping", &pvclock->guest_ptr);
+      gpas->CreateGuestPtr(guest_paddr, sizeof(pv_clock_system_time),
+                           "pv_clock-system-time-guest-mapping", &pv_clock->guest_ptr);
   if (status != ZX_OK) {
     return status;
   }
-  pvclock->system_time = pvclock->guest_ptr.as<pvclock_system_time>();
-  ZX_DEBUG_ASSERT(pvclock->system_time != nullptr);
-  memset(pvclock->system_time, 0, sizeof(*pvclock->system_time));
+  pv_clock->system_time = pv_clock->guest_ptr.as<pv_clock_system_time>();
+  ZX_DEBUG_ASSERT(pv_clock->system_time != nullptr);
+  memset(pv_clock->system_time, 0, sizeof(*pv_clock->system_time));
   return ZX_OK;
 }
 
-void pvclock_update_system_time(PvClockState* pvclock,
-                                hypervisor::GuestPhysicalAddressSpace* gpas) {
-  if (!pvclock->system_time) {
+void pv_clock_update_system_time(PvClockState* pv_clock,
+                                 hypervisor::GuestPhysicalAddressSpace* gpas) {
+  if (!pv_clock->system_time) {
     return;
   }
 
@@ -124,30 +125,30 @@ void pvclock_update_system_time(PvClockState* pvclock,
   int8_t tsc_shift;
   calculate_scale_factor(ticks_per_second(), &tsc_mul, &tsc_shift);
 
-  // See the comment for pvclock_boot_time structure in arch/x86/pvclock.h
-  pvclock_system_time* system_time = pvclock->system_time;
-  atomic_store_relaxed_u32(&system_time->version, pvclock->version + 1);
+  // See the comment for pv_clock_boot_time structure in arch/x86/pv.h
+  pv_clock_system_time* system_time = pv_clock->system_time;
+  atomic_store_relaxed_u32(&system_time->version, pv_clock->version + 1);
   ktl::atomic_thread_fence(ktl::memory_order_seq_cst);
   system_time->tsc_mul = tsc_mul;
   system_time->tsc_shift = tsc_shift;
   system_time->system_time = current_time();
   system_time->tsc_timestamp = _rdtsc();
-  system_time->flags = pvclock->is_stable ? kKvmSystemTimeStable : 0;
+  system_time->flags = pv_clock->is_stable ? kKvmSystemTimeStable : 0;
   ktl::atomic_thread_fence(ktl::memory_order_seq_cst);
-  atomic_store_relaxed_u32(&system_time->version, pvclock->version + 2);
-  pvclock->version += 2;
+  atomic_store_relaxed_u32(&system_time->version, pv_clock->version + 2);
+  pv_clock->version += 2;
 }
 
-void pvclock_stop_clock(PvClockState* pvclock) {
-  pvclock->system_time = nullptr;
-  pvclock->guest_ptr.reset();
+void pv_clock_stop_clock(PvClockState* pv_clock) {
+  pv_clock->system_time = nullptr;
+  pv_clock->guest_ptr.reset();
 }
 
-zx_status_t pvclock_populate_offset(hypervisor::GuestPhysicalAddressSpace* gpas,
-                                    zx_vaddr_t guest_paddr) {
+zx_status_t pv_clock_populate_offset(hypervisor::GuestPhysicalAddressSpace* gpas,
+                                     zx_vaddr_t guest_paddr) {
   hypervisor::GuestPtr guest_ptr;
   zx_status_t status = gpas->CreateGuestPtr(guest_paddr, sizeof(PvClockOffset),
-                                            "pvclock-offset-guest-mapping", &guest_ptr);
+                                            "pv_clock-offset-guest-mapping", &guest_ptr);
   if (status != ZX_OK) {
     return status;
   }

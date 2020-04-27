@@ -7,7 +7,7 @@
 source_set("hypervisor") {
   sources = [
     "guest.cc",
-    "pvclock.cc",
+    "pv.cc",
     "vcpu.cc",
     "vmexit.cc",
     "vmx.S",

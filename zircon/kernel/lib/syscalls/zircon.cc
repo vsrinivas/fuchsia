@@ -68,8 +68,8 @@ zx_status_t sys_nanosleep(zx_time_t deadline) {
 
 // This must be accessed atomically from any given thread.
 //
-// NOTE(abdulla): This is used by pvclock. If logic here is changed, please
-// update pvclock too.
+// NOTE(abdulla): This is used by pv_clock. If logic here is changed, please
+// update pv_clock too.
 ktl::atomic<int64_t> utc_offset;
 
 zx_status_t sys_clock_get(zx_clock_t clock_id, user_out_ptr<zx_time_t> out_time) {

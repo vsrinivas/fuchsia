@@ -122,7 +122,7 @@ zx_library("x86") {
     "ops.S",
     "perf_mon.cc",
     "proc_trace.cc",
-    "pvclock.cc",
+    "pv.cc",
     "registers.cc",
     "retpoline.S",
     "smp.cc",

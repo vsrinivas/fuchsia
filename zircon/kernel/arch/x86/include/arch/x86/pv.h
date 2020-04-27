@@ -4,8 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#ifndef ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_X86_PVCLOCK_H_
-#define ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_X86_PVCLOCK_H_
+#ifndef ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_X86_PV_H_
+#define ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_X86_PV_H_
 
 #include <zircon/types.h>
 
@@ -23,7 +23,7 @@ static constexpr uint8_t kKvmSystemTimeStable = 1u << 0;
 // Both structures below are part of the ABI used by Xen and KVM, this ABI is not
 // defined by use we just follow it. For more detail please refer to the
 // documentation (https://www.kernel.org/doc/Documentation/virtual/kvm/msr.txt).
-struct pvclock_boot_time {
+struct pv_clock_boot_time {
   // With multiple VCPUs it is possible that one VCPU can try to read boot time
   // while we are updating it because another VCPU asked for the update. In this
   // case odd version value serves as an indicator for the guest that update is
@@ -36,9 +36,9 @@ struct pvclock_boot_time {
   uint32_t seconds;
   uint32_t nseconds;
 };
-static_assert(sizeof(struct pvclock_boot_time) == 12, "sizeof(pvclock_boot_time) should be 12");
+static_assert(sizeof(struct pv_clock_boot_time) == 12, "sizeof(pv_clock_boot_time) should be 12");
 
-struct pvclock_system_time {
+struct pv_clock_system_time {
   uint32_t version;
   uint32_t pad0;
   uint64_t tsc_timestamp;
@@ -48,10 +48,11 @@ struct pvclock_system_time {
   uint8_t flags;
   uint8_t pad1[2];
 };
-static_assert(sizeof(struct pvclock_system_time) == 32, "sizeof(pvclock_system_time) should be 32");
+static_assert(sizeof(struct pv_clock_system_time) == 32,
+              "sizeof(pv_clock_system_time) should be 32");
 
-zx_status_t pvclock_init();
-bool pvclock_is_stable();
-uint64_t pvclock_get_tsc_freq();
+zx_status_t pv_clock_init();
+bool pv_clock_is_stable();
+uint64_t pv_clock_get_tsc_freq();
 
-#endif  // ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_X86_PVCLOCK_H_
+#endif  // ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_X86_PV_H_

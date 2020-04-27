@@ -321,7 +321,7 @@ struct InterruptCommandRegister {
 };
 
 zx_status_t vmexit_handler(AutoVmcs* vmcs, GuestState* guest_state,
-                           LocalApicState* local_apic_state, PvClockState* pvclock,
+                           LocalApicState* local_apic_state, PvClockState* pv_clock,
                            hypervisor::GuestPhysicalAddressSpace* gpas, hypervisor::TrapMap* traps,
                            zx_port_packet_t* packet);
 

@@ -23,7 +23,7 @@
 #include <arch/x86.h>
 #include <arch/x86/apic.h>
 #include <arch/x86/feature.h>
-#include <arch/x86/pvclock.h>
+#include <arch/x86/pv.h>
 #include <arch/x86/timer_freq.h>
 #include <dev/interrupt.h>
 #include <fbl/algorithm.h>
@@ -394,10 +394,10 @@ static uint64_t calibrate_tsc_count(uint16_t duration_ms) {
   return best_time;
 }
 
-static void calibrate_tsc(bool has_pvclock) {
+static void calibrate_tsc(bool has_pv_clock) {
   ASSERT(arch_ints_disabled());
 
-  const uint64_t tsc_freq = has_pvclock ? pvclock_get_tsc_freq() : x86_lookup_tsc_freq();
+  const uint64_t tsc_freq = has_pv_clock ? pv_clock_get_tsc_freq() : x86_lookup_tsc_freq();
   if (tsc_freq != 0) {
     uint64_t N = 1'000'000'000;
     uint64_t D = tsc_freq;
@@ -470,13 +470,13 @@ static void pc_init_timer(uint level) {
   }
   invariant_tsc = x86_feature_test(X86_FEATURE_INVAR_TSC);
 
-  bool has_pvclock = x86_hypervisor_has_pv_clock();
-  if (has_pvclock) {
-    zx_status_t status = pvclock_init();
+  bool has_pv_clock = x86_hypervisor_has_pv_clock();
+  if (has_pv_clock) {
+    zx_status_t status = pv_clock_init();
     if (status == ZX_OK) {
-      invariant_tsc = pvclock_is_stable();
+      invariant_tsc = pv_clock_is_stable();
     } else {
-      has_pvclock = false;
+      has_pv_clock = false;
     }
   }
 
@@ -502,7 +502,7 @@ static void pc_init_timer(uint level) {
   }
 
   if (use_invariant_tsc) {
-    calibrate_tsc(has_pvclock);
+    calibrate_tsc(has_pv_clock);
 
     // Program PIT in the software strobe configuration, but do not load
     // the count.  This will pause the PIT.
@@ -522,7 +522,7 @@ static void pc_init_timer(uint level) {
     if (constant_tsc || invariant_tsc) {
       // Calibrate the TSC even though it's not as good as we want, so we
       // can still let folks still use it for cheap timing.
-      calibrate_tsc(has_pvclock);
+      calibrate_tsc(has_pv_clock);
     }
 
     if (has_hpet && (!force_wallclock || !strcmp(force_wallclock, "hpet"))) {

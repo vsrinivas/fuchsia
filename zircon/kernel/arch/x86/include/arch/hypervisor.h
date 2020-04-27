@@ -78,11 +78,11 @@ struct LocalApicState {
 
 // System time is time since boot time and boot time is some fixed point in the past. This
 // structure keeps track of the state required to update system time in guest.
-struct pvclock_system_time;
+struct pv_clock_system_time;
 struct PvClockState {
   bool is_stable = false;
   uint32_t version = 0;
-  pvclock_system_time* system_time = nullptr;
+  pv_clock_system_time* system_time = nullptr;
   hypervisor::GuestPtr guest_ptr;
 };
 
@@ -105,7 +105,7 @@ class Vcpu {
   Thread* const thread_;
   ktl::atomic<bool> running_;
   LocalApicState local_apic_state_;
-  PvClockState pvclock_state_;
+  PvClockState pv_clock_state_;
   VmxState vmx_state_;
   VmxPage host_msr_page_;
   VmxPage guest_msr_page_;

@@ -13,7 +13,7 @@
 #include <arch/x86/descriptor.h>
 #include <arch/x86/feature.h>
 #include <arch/x86/platform_access.h>
-#include <arch/x86/pvclock.h>
+#include <arch/x86/pv.h>
 #include <fbl/auto_call.h>
 #include <hypervisor/cpu.h>
 #include <hypervisor/ktrace.h>
@@ -23,7 +23,7 @@
 #include <vm/pmm.h>
 #include <vm/vm_object.h>
 
-#include "pvclock_priv.h"
+#include "pv_priv.h"
 #include "vcpu_priv.h"
 #include "vmexit_priv.h"
 #include "vmx_cpu_state_priv.h"
@@ -695,8 +695,9 @@ zx_status_t Vcpu::Create(Guest* guest, zx_vaddr_t entry, ktl::unique_ptr<Vcpu>* 
     return status;
   }
 
-  vcpu->pvclock_state_.is_stable =
-      x86_hypervisor_has_pv_clock() ? pvclock_is_stable() : x86_feature_test(X86_FEATURE_INVAR_TSC);
+  vcpu->pv_clock_state_.is_stable = x86_hypervisor_has_pv_clock()
+                                        ? pv_clock_is_stable()
+                                        : x86_feature_test(X86_FEATURE_INVAR_TSC);
 
   VmxInfo vmx_info;
   status = vcpu->host_msr_page_.Alloc(vmx_info, 0);
@@ -935,7 +936,7 @@ zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
     RestoreGuestExtendedRegisters(vmcs.Read(VmcsFieldXX::GUEST_CR4));
 
     // Updates guest system time if the guest subscribed to updates.
-    pvclock_update_system_time(&pvclock_state_, guest_->AddressSpace());
+    pv_clock_update_system_time(&pv_clock_state_, guest_->AddressSpace());
 
     if (x86_cpu_should_l1d_flush_on_vmentry()) {
       // L1TF: Flush L1D$ before entering vCPU. If the CPU is affected by MDS, also flush
@@ -977,7 +978,7 @@ zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
       dprintf(INFO, "VCPU resume failed: %#lx\n", error);
     } else {
       vmx_state_.resume = true;
-      status = vmexit_handler(&vmcs, &vmx_state_.guest_state, &local_apic_state_, &pvclock_state_,
+      status = vmexit_handler(&vmcs, &vmx_state_.guest_state, &local_apic_state_, &pv_clock_state_,
                               guest_->AddressSpace(), guest_->Traps(), packet);
     }
   } while (status == ZX_OK);

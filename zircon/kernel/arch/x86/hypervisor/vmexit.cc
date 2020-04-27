@@ -18,7 +18,7 @@
 #include <arch/x86/apic.h>
 #include <arch/x86/feature.h>
 #include <arch/x86/mmu.h>
-#include <arch/x86/pvclock.h>
+#include <arch/x86/pv.h>
 #include <explicit-memory/bytes.h>
 #include <fbl/canary.h>
 #include <hypervisor/interrupt_tracker.h>
@@ -31,7 +31,7 @@
 #include <vm/physmap.h>
 #include <vm/pmm.h>
 
-#include "pvclock_priv.h"
+#include "pv_priv.h"
 #include "vcpu_priv.h"
 #include "vmexit_priv.h"
 
@@ -798,7 +798,7 @@ static zx_status_t handle_apic_wrmsr(const ExitInfo& exit_info, AutoVmcs* vmcs,
 
 static zx_status_t handle_kvm_wrmsr(const ExitInfo& exit_info, AutoVmcs* vmcs,
                                     GuestState* guest_state, LocalApicState* local_apic_state,
-                                    PvClockState* pvclock,
+                                    PvClockState* pv_clock,
                                     hypervisor::GuestPhysicalAddressSpace* gpas) {
   zx_paddr_t guest_paddr = BITS(guest_state->rax, 31, 0) | (BITS(guest_state->rdx, 31, 0) << 32);
 
@@ -808,14 +808,14 @@ static zx_status_t handle_kvm_wrmsr(const ExitInfo& exit_info, AutoVmcs* vmcs,
     case kKvmSystemTimeMsr:
       vmcs->Invalidate();
       if ((guest_paddr & 1) != 0)
-        return pvclock_reset_clock(pvclock, gpas, guest_paddr & ~static_cast<zx_paddr_t>(1));
+        return pv_clock_reset_clock(pv_clock, gpas, guest_paddr & ~static_cast<zx_paddr_t>(1));
       else
-        pvclock_stop_clock(pvclock);
+        pv_clock_stop_clock(pv_clock);
       return ZX_OK;
     case kKvmBootTimeOld:
     case kKvmBootTime:
       vmcs->Invalidate();
-      return pvclock_update_boot_time(gpas, guest_paddr);
+      return pv_clock_update_boot_time(gpas, guest_paddr);
     default:
       local_apic_state->interrupt_tracker.VirtualInterrupt(X86_INT_GP_FAULT);
       return ZX_OK;
@@ -823,7 +823,7 @@ static zx_status_t handle_kvm_wrmsr(const ExitInfo& exit_info, AutoVmcs* vmcs,
 }
 
 static zx_status_t handle_wrmsr(const ExitInfo& exit_info, AutoVmcs* vmcs, GuestState* guest_state,
-                                LocalApicState* local_apic_state, PvClockState* pvclock,
+                                LocalApicState* local_apic_state, PvClockState* pv_clock,
                                 hypervisor::GuestPhysicalAddressSpace* gpas,
                                 zx_port_packet* packet) {
   // On execution of wrmsr, rcx specifies the MSR and edx:eax contains the value to be written.
@@ -867,7 +867,7 @@ static zx_status_t handle_wrmsr(const ExitInfo& exit_info, AutoVmcs* vmcs, Guest
     case kKvmSystemTimeMsr:
     case kKvmBootTimeOld:
     case kKvmBootTime:
-      return handle_kvm_wrmsr(exit_info, vmcs, guest_state, local_apic_state, pvclock, gpas);
+      return handle_kvm_wrmsr(exit_info, vmcs, guest_state, local_apic_state, pv_clock, gpas);
     default:
       dprintf(INFO, "Unhandled wrmsr %#lx\n", guest_state->rcx);
       local_apic_state->interrupt_tracker.VirtualInterrupt(X86_INT_GP_FAULT);
@@ -1076,7 +1076,7 @@ static zx_status_t handle_vmcall(const ExitInfo& exit_info, AutoVmcs* vmcs,
         guest_state->rax = VmCallStatus::OP_NOT_SUPPORTED;
         break;
       }
-      zx_status_t status = pvclock_populate_offset(gpas, info.arg[0]);
+      zx_status_t status = pv_clock_populate_offset(gpas, info.arg[0]);
       if (status != ZX_OK) {
         dprintf(INFO, "Populating lock offset failed with %d\n", status);
         guest_state->rax = VmCallStatus::FAULT;
@@ -1097,7 +1097,7 @@ static zx_status_t handle_vmcall(const ExitInfo& exit_info, AutoVmcs* vmcs,
 }
 
 zx_status_t vmexit_handler(AutoVmcs* vmcs, GuestState* guest_state,
-                           LocalApicState* local_apic_state, PvClockState* pvclock,
+                           LocalApicState* local_apic_state, PvClockState* pv_clock,
                            hypervisor::GuestPhysicalAddressSpace* gpas, hypervisor::TrapMap* traps,
                            zx_port_packet_t* packet) {
   zx_status_t status;
@@ -1147,7 +1147,7 @@ zx_status_t vmexit_handler(AutoVmcs* vmcs, GuestState* guest_state,
       LTRACEF("handling WRMSR %#lx\n\n", guest_state->rcx);
       ktrace_vcpu_exit(VCPU_WRMSR, exit_info.guest_rip);
       GUEST_STATS_INC(wrmsr_instructions);
-      status = handle_wrmsr(exit_info, vmcs, guest_state, local_apic_state, pvclock, gpas, packet);
+      status = handle_wrmsr(exit_info, vmcs, guest_state, local_apic_state, pv_clock, gpas, packet);
       break;
     case ExitReason::ENTRY_FAILURE_GUEST_STATE:
     case ExitReason::ENTRY_FAILURE_MSR_LOADING:

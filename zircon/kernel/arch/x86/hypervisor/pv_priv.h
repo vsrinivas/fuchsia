@@ -4,8 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#ifndef ZIRCON_KERNEL_ARCH_X86_HYPERVISOR_PVCLOCK_PRIV_H_
-#define ZIRCON_KERNEL_ARCH_X86_HYPERVISOR_PVCLOCK_PRIV_H_
+#ifndef ZIRCON_KERNEL_ARCH_X86_HYPERVISOR_PV_PRIV_H_
+#define ZIRCON_KERNEL_ARCH_X86_HYPERVISOR_PV_PRIV_H_
 
 #include <zircon/types.h>
 
@@ -30,23 +30,25 @@ struct PvClockOffset {
 } __PACKED;
 
 // Updates guest boot time.
-zx_status_t pvclock_update_boot_time(hypervisor::GuestPhysicalAddressSpace* gpas,
-                                     zx_vaddr_t guest_paddr);
+zx_status_t pv_clock_update_boot_time(hypervisor::GuestPhysicalAddressSpace* gpas,
+                                      zx_vaddr_t guest_paddr);
 
 // Remembers guest physical address for KVM clock system time structure and enables updates
 // to guest system time.
-zx_status_t pvclock_reset_clock(PvClockState* pvclock, hypervisor::GuestPhysicalAddressSpace* gpas,
-                                zx_vaddr_t guest_paddr);
+zx_status_t pv_clock_reset_clock(PvClockState* pv_clock,
+                                 hypervisor::GuestPhysicalAddressSpace* gpas,
+                                 zx_vaddr_t guest_paddr);
 
 // Disables updates to guest system time.
-void pvclock_stop_clock(PvClockState* pvclock);
+void pv_clock_stop_clock(PvClockState* pv_clock);
 
 // Updates guest system time. If updates disabled does nothing.
-void pvclock_update_system_time(PvClockState* pvclock, hypervisor::GuestPhysicalAddressSpace* gpas);
+void pv_clock_update_system_time(PvClockState* pv_clock,
+                                 hypervisor::GuestPhysicalAddressSpace* gpas);
 
 // Populates mapping between TSC and wall time per guest request. guest_padds contains
 // physical address of PvClockOffset structure where the result should be stored.
-zx_status_t pvclock_populate_offset(hypervisor::GuestPhysicalAddressSpace* gpas,
-                                    zx_vaddr_t guest_paddr);
+zx_status_t pv_clock_populate_offset(hypervisor::GuestPhysicalAddressSpace* gpas,
+                                     zx_vaddr_t guest_paddr);
 
-#endif  // ZIRCON_KERNEL_ARCH_X86_HYPERVISOR_PVCLOCK_PRIV_H_
+#endif  // ZIRCON_KERNEL_ARCH_X86_HYPERVISOR_PV_PRIV_H_
