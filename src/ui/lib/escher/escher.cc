@@ -24,6 +24,7 @@
 #include "src/ui/lib/escher/util/trace_macros.h"
 #include "src/ui/lib/escher/vk/gpu_allocator.h"
 #include "src/ui/lib/escher/vk/impl/descriptor_set_allocator.h"
+#include "src/ui/lib/escher/vk/impl/descriptor_set_allocator_cache.h"
 #include "src/ui/lib/escher/vk/impl/framebuffer_allocator.h"
 #include "src/ui/lib/escher/vk/impl/pipeline_layout_cache.h"
 #include "src/ui/lib/escher/vk/impl/render_pass_cache.h"
@@ -105,6 +106,8 @@ Escher::Escher(VulkanDeviceQueuesPtr device, HackFilesystemPtr filesystem)
   sampler_cache_ = std::make_unique<SamplerCache>(resource_recycler_->GetWeakPtr());
   mesh_manager_ = NewMeshManager(command_buffer_pool(), transfer_command_buffer_pool(),
                                  gpu_allocator(), resource_recycler());
+  descriptor_set_allocator_cache_ =
+      std::make_unique<impl::DescriptorSetAllocatorCache>(vk_device());
   pipeline_layout_cache_ = std::make_unique<impl::PipelineLayoutCache>(resource_recycler());
   render_pass_cache_ = std::make_unique<impl::RenderPassCache>(resource_recycler());
   framebuffer_allocator_ =
@@ -137,7 +140,7 @@ Escher::~Escher() {
   render_pass_cache_.reset();
   pipeline_layout_cache_.reset();
   mesh_manager_.reset();
-  descriptor_set_allocators_.clear();
+  descriptor_set_allocator_cache_.reset();
   sampler_cache_.reset();
 
   // ResourceRecyclers must be released before the CommandBufferSequencer is,
@@ -265,13 +268,12 @@ FramePtr Escher::NewFrame(const char* trace_literal, uint64_t frame_number, bool
   // it is finished being used in a previous frame.
   // TODO(ES-103): The correct solution is not to use multiple Frames per frame.
   if (requested_type != CommandBuffer::Type::kTransfer) {
-    for (auto& pair : descriptor_set_allocators_) {
-      // TODO(ES-199): Nothing calls Clear() on the DescriptorSetAllocators, so
-      // their internal allocations are currently able to grow without bound.
-      // DescriptorSets are not managed by ResourceRecyclers, so just
-      // adding a call to Clear() here would be dangerous.
-      pair.second->BeginFrame();
-    }
+    // TODO(ES-199): Nothing calls Clear() on the DescriptorSetAllocators, so
+    // their internal allocations are currently able to grow without bound.
+    // DescriptorSets are not managed by ResourceRecyclers, so just
+    // adding a call to Clear() here would be dangerous.
+    descriptor_set_allocator_cache_->BeginFrame();
+    pipeline_layout_cache_->BeginFrame();
   }
   if (requested_type == CommandBuffer::Type::kGraphics) {
     image_view_allocator_->BeginFrame();
@@ -283,38 +285,5 @@ FramePtr Escher::NewFrame(const char* trace_literal, uint64_t frame_number, bool
 }
 
 uint64_t Escher::GetNumGpuBytesAllocated() { return gpu_allocator()->GetTotalBytesAllocated(); }
-
-impl::DescriptorSetAllocator* Escher::GetDescriptorSetAllocator(
-    const impl::DescriptorSetLayout& layout, const SamplerPtr& immutable_sampler) {
-  TRACE_DURATION("gfx", "escher::Escher::GetDescriptorSetAllocator");
-  static_assert(sizeof(impl::DescriptorSetLayout) == 32, "hash code below must be updated");
-  Hasher h;
-  if (immutable_sampler)
-    h.struc(immutable_sampler->vk());
-  h.u32(layout.sampled_image_mask);
-  h.u32(layout.storage_image_mask);
-  h.u32(layout.uniform_buffer_mask);
-  h.u32(layout.storage_buffer_mask);
-  h.u32(layout.sampled_buffer_mask);
-  h.u32(layout.input_attachment_mask);
-  h.u32(layout.fp_mask);
-  h.u32(static_cast<uint32_t>(layout.stages));
-  Hash hash = h.value();
-
-  auto it = descriptor_set_allocators_.find(hash);
-  if (it != descriptor_set_allocators_.end()) {
-    FXL_DCHECK(layout == it->second->layout()) << "hash collision.";
-    return it->second.get();
-  }
-
-  TRACE_DURATION("gfx", "escher::Escher::GetDescriptorSetAllocator[creation]");
-  auto new_allocator = new impl::DescriptorSetAllocator(vk_device(), layout, immutable_sampler);
-
-  // TODO(ES-200): This hash table never decreases in size. Users of Escher that
-  // generate unique descriptor set layouts (e.g., with immutable samplers) can
-  // cause this system to cache unbounded amounts of memory.
-  descriptor_set_allocators_.emplace_hint(it, hash, new_allocator);
-  return new_allocator;
-}
 
 }  // namespace escher

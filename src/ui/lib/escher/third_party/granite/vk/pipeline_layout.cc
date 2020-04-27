@@ -28,7 +28,7 @@
 #include "src/ui/lib/escher/escher.h"
 #include "src/ui/lib/escher/impl/vulkan_utils.h"
 #include "src/ui/lib/escher/resources/resource_recycler.h"
-#include "src/ui/lib/escher/vk/impl/descriptor_set_allocator.h"
+#include "src/ui/lib/escher/vk/impl/descriptor_set_allocator_cache.h"
 
 namespace escher {
 
@@ -44,8 +44,9 @@ PipelineLayout::PipelineLayout(ResourceRecycler* resource_recycler,
     // TODO(ES-83): don't ask for an allocator if the set is masked?
     // Would be nice, but then we wouldn't have a layout available for the
     // skipped sets.
-    descriptor_set_allocators_[i] = escher()->GetDescriptorSetAllocator(
-        spec.descriptor_set_layouts(i), spec.immutable_sampler());
+    descriptor_set_allocators_[i] =
+        escher()->descriptor_set_allocator_cache()->ObtainDescriptorSetAllocator(
+            spec.descriptor_set_layouts(i), spec.immutable_sampler());
     set_layouts[i] = descriptor_set_allocators_[i]->vk_layout();
     if (spec.descriptor_set_mask() & (1u << i)) {
       // When creating a layout via vk::Device::CreatePipelineLayout(), Vulkan

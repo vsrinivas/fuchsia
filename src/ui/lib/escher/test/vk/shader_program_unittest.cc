@@ -21,6 +21,7 @@
 #include "src/ui/lib/escher/util/image_utils.h"
 #include "src/ui/lib/escher/util/string_utils.h"
 #include "src/ui/lib/escher/vk/command_buffer.h"
+#include "src/ui/lib/escher/vk/impl/pipeline_layout_cache.h"
 #include "src/ui/lib/escher/vk/pipeline_builder.h"
 #include "src/ui/lib/escher/vk/shader_module_template.h"
 #include "src/ui/lib/escher/vk/shader_variant_args.h"
@@ -353,7 +354,8 @@ VK_TEST_F(ShaderProgramTest, GeneratePipelineDirectly) {
   // TODO(ES-183): remove PaperRenderer shader dependency.
   auto program = ClearPipelineStash(escher->GetProgram(escher::kNoLightingProgramData));
   EXPECT_TRUE(program);
-  PipelineLayout* pipeline_layout = program->ObtainPipelineLayout(nullptr);
+  PipelineLayoutPtr pipeline_layout =
+      program->ObtainPipelineLayout(escher->pipeline_layout_cache(), nullptr);
 
   // 3): create a RenderPass.
   // NOTE: typically, RenderPasses are lazily generated/cached by
@@ -368,7 +370,7 @@ VK_TEST_F(ShaderProgramTest, GeneratePipelineDirectly) {
 
   // 5) Build a pipeline (smoke-test).
   EXPECT_EQ(0U, program->stashed_graphics_pipeline_count());
-  vk::Pipeline pipeline_orig = cbps.FlushGraphicsPipeline(pipeline_layout, program.get());
+  vk::Pipeline pipeline_orig = cbps.FlushGraphicsPipeline(pipeline_layout.get(), program.get());
   EXPECT_EQ(1U, program->stashed_graphics_pipeline_count());
 
   // 6) Verify that, when blending is disabled, we get the same cached pipeline with different
@@ -394,18 +396,18 @@ VK_TEST_F(ShaderProgramTest, GeneratePipelineDirectly) {
 
   cbps.SetBlendFactors(src_color_blend, src_alpha_blend, dst_color_blend, dst_alpha_blend);
   cbps.SetBlendOp(color_op, alpha_op);
-  vk::Pipeline pipeline2 = cbps.FlushGraphicsPipeline(pipeline_layout, program.get());
+  vk::Pipeline pipeline2 = cbps.FlushGraphicsPipeline(pipeline_layout.get(), program.get());
   EXPECT_EQ(pipeline_orig, pipeline2);
 
   // 7) Verify that, when blending is enabled, different blend-ops and blend-factors result in
   // different pipelines.
   cbps.SetBlendEnable(true);
-  vk::Pipeline pipeline3 = cbps.FlushGraphicsPipeline(pipeline_layout, program.get());
+  vk::Pipeline pipeline3 = cbps.FlushGraphicsPipeline(pipeline_layout.get(), program.get());
   cbps.SetBlendFactors(src_color_blend_orig, src_alpha_blend_orig, dst_color_blend_orig,
                        dst_alpha_blend_orig);
-  vk::Pipeline pipeline4 = cbps.FlushGraphicsPipeline(pipeline_layout, program.get());
+  vk::Pipeline pipeline4 = cbps.FlushGraphicsPipeline(pipeline_layout.get(), program.get());
   cbps.SetBlendOp(color_op_orig, alpha_op_orig);
-  vk::Pipeline pipeline5 = cbps.FlushGraphicsPipeline(pipeline_layout, program.get());
+  vk::Pipeline pipeline5 = cbps.FlushGraphicsPipeline(pipeline_layout.get(), program.get());
   EXPECT_NE(pipeline_orig, pipeline3);
   EXPECT_NE(pipeline_orig, pipeline4);
   EXPECT_NE(pipeline_orig, pipeline5);
@@ -417,19 +419,19 @@ VK_TEST_F(ShaderProgramTest, GeneratePipelineDirectly) {
   // the blend-factor is eConstantColor.
   cbps.potential_static_state()->blend_constants[0] = 0.77f;
   cbps.potential_static_state()->blend_constants[3] = 0.66f;
-  vk::Pipeline pipeline6 = cbps.FlushGraphicsPipeline(pipeline_layout, program.get());
+  vk::Pipeline pipeline6 = cbps.FlushGraphicsPipeline(pipeline_layout.get(), program.get());
   EXPECT_EQ(pipeline5, pipeline6);
   cbps.potential_static_state()->blend_constants[0] = 0.55f;
   cbps.potential_static_state()->blend_constants[3] = 0.44f;
-  vk::Pipeline pipeline7 = cbps.FlushGraphicsPipeline(pipeline_layout, program.get());
+  vk::Pipeline pipeline7 = cbps.FlushGraphicsPipeline(pipeline_layout.get(), program.get());
   EXPECT_EQ(pipeline5, pipeline7);
   cbps.SetBlendFactors(vk::BlendFactor::eConstantColor, vk::BlendFactor::eConstantColor,
                        vk::BlendFactor::eConstantColor, vk::BlendFactor::eConstantColor);
-  vk::Pipeline pipeline8 = cbps.FlushGraphicsPipeline(pipeline_layout, program.get());
+  vk::Pipeline pipeline8 = cbps.FlushGraphicsPipeline(pipeline_layout.get(), program.get());
   EXPECT_NE(pipeline7, pipeline8);
   cbps.potential_static_state()->blend_constants[0] = 0.77f;
   cbps.potential_static_state()->blend_constants[3] = 0.66f;
-  vk::Pipeline pipeline9 = cbps.FlushGraphicsPipeline(pipeline_layout, program.get());
+  vk::Pipeline pipeline9 = cbps.FlushGraphicsPipeline(pipeline_layout.get(), program.get());
   EXPECT_NE(pipeline6, pipeline9);
   // This is similar to comparing 5 vs. 6, except this time the blend-factor is eConstantCOlor.
   EXPECT_NE(pipeline8, pipeline9);
@@ -444,8 +446,10 @@ VK_TEST_F(ShaderProgramTest, PipelineBuilder) {
   auto program2 = ClearPipelineStash(escher->GetProgram(escher::kPointLightProgramData));
   EXPECT_TRUE(program1);
   EXPECT_TRUE(program2);
-  PipelineLayout* pipeline_layout1 = program1->ObtainPipelineLayout(nullptr);
-  PipelineLayout* pipeline_layout2 = program2->ObtainPipelineLayout(nullptr);
+  PipelineLayoutPtr pipeline_layout1 =
+      program1->ObtainPipelineLayout(escher->pipeline_layout_cache(), nullptr);
+  PipelineLayoutPtr pipeline_layout2 =
+      program2->ObtainPipelineLayout(escher->pipeline_layout_cache(), nullptr);
 
   // 3): create a RenderPass.
   // NOTE: typically, RenderPasses are lazily generated/cached by
@@ -462,10 +466,10 @@ VK_TEST_F(ShaderProgramTest, PipelineBuilder) {
   // and the other without.  These will be passed to PipelineBuilder instances.
   BlockAllocator allocator(128);
   auto create_info1 =
-      cbps.InitGraphicsPipelineCreateInfo(&allocator, pipeline_layout1, program1.get());
+      cbps.InitGraphicsPipelineCreateInfo(&allocator, pipeline_layout1.get(), program1.get());
   cbps.SetStencilTest(true);
   auto create_info2 =
-      cbps.InitGraphicsPipelineCreateInfo(&allocator, pipeline_layout2, program2.get());
+      cbps.InitGraphicsPipelineCreateInfo(&allocator, pipeline_layout2.get(), program2.get());
 
   // 6) This callback will be invoked after set_log_pipeline_creation_callback() has injected
   // it into a PipelineBuilder.
@@ -783,6 +787,45 @@ VK_TEST_F(ShaderProgramTest, GeneratePipelines) {
   // keep anything alive, and it shouldn't cause problems in e.g.
   // CommandBufferPool due to a forever-straggling buffer.
   EXPECT_TRUE(cb->Submit(nullptr));
+}
+
+// This tests if PipelineLayoutCache is keeping elements alive when ObtainPipelineLayout() is used.
+VK_TEST_F(ShaderProgramTest, ObtainPipelineLayoutHitsPipelineLayoutCache) {
+  auto escher = test::GetEscher();
+  auto program = ClearPipelineStash(escher->GetProgram(escher::kNoLightingProgramData));
+  EXPECT_TRUE(program);
+
+  // We should use cache to generate pipeline layouts.
+  auto* cache = escher->pipeline_layout_cache();
+  cache->Clear();
+  PipelineLayoutPtr pipeline_layout1 =
+      program->ObtainPipelineLayout(escher->pipeline_layout_cache(), nullptr);
+  EXPECT_EQ(1u, cache->size());
+  PipelineLayoutPtr pipeline_layout2 =
+      program->ObtainPipelineLayout(escher->pipeline_layout_cache(), nullptr);
+  EXPECT_EQ(1u, cache->size());
+  EXPECT_EQ(pipeline_layout1.get(), pipeline_layout2.get());
+
+  // After a number of frames pipeline layout falls out of |cache|.
+  const int kNumFrames = 5;
+  uint64_t frame_number_ = 0;
+  for (int i = 0; i < kNumFrames; ++i) {
+    auto frame = escher->NewFrame("ShaderProgramTest", ++frame_number_);
+    frame->EndFrame(SemaphorePtr(), [] {});
+  }
+  EXPECT_EQ(0u, cache->size());
+
+  // ObtainPipelineLayout keeps pipeline layout alive.
+  PipelineLayoutPtr first_pipeline_layout =
+      program->ObtainPipelineLayout(escher->pipeline_layout_cache(), nullptr);
+  for (int i = 0; i < kNumFrames; ++i) {
+    auto frame = escher->NewFrame("ShaderProgramTest", ++frame_number_);
+    PipelineLayoutPtr cur_pipeline_layout =
+        program->ObtainPipelineLayout(escher->pipeline_layout_cache(), nullptr);
+    frame->EndFrame(SemaphorePtr(), [] {});
+    EXPECT_EQ(first_pipeline_layout.get(), cur_pipeline_layout.get());
+  }
+  EXPECT_EQ(1u, cache->size());
 }
 
 }  // anonymous namespace

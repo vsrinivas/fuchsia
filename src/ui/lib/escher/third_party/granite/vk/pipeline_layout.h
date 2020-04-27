@@ -34,6 +34,7 @@
 #include "src/ui/lib/escher/util/enum_count.h"
 #include "src/ui/lib/escher/util/hashable.h"
 #include "src/ui/lib/escher/util/hasher.h"
+#include "src/ui/lib/escher/vk/impl/descriptor_set_allocator.h"
 #include "src/ui/lib/escher/vk/sampler.h"
 #include "src/ui/lib/escher/vk/shader_stage.h"
 #include "src/ui/lib/escher/vk/vulkan_limits.h"
@@ -75,6 +76,7 @@ struct PipelineLayoutSpec : public Hashable {
     }
     push_constant_layout_hash_ = h.value();
   }
+  virtual ~PipelineLayoutSpec() = default;
 
   const SamplerPtr& immutable_sampler() const { return immutable_sampler_; }
 
@@ -140,7 +142,7 @@ class PipelineLayout : public Resource {
 
   impl::DescriptorSetAllocator* GetDescriptorSetAllocator(unsigned set_index) const {
     FXL_DCHECK(set_index < VulkanLimits::kNumDescriptorSets);
-    return descriptor_set_allocators_[set_index];
+    return descriptor_set_allocators_[set_index].get();
   }
 
  private:
@@ -148,7 +150,7 @@ class PipelineLayout : public Resource {
   // This PipelineLayoutSpec will be used for hashes and equality tests, so it
   // should match the construction parameter and not be mutated.
   const impl::PipelineLayoutSpec spec_;
-  impl::DescriptorSetAllocator* descriptor_set_allocators_[VulkanLimits::kNumDescriptorSets] = {};
+  impl::DescriptorSetAllocatorPtr descriptor_set_allocators_[VulkanLimits::kNumDescriptorSets] = {};
 };
 
 using PipelineLayoutPtr = fxl::RefPtr<PipelineLayout>;

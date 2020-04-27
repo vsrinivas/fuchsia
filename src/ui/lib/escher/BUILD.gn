@@ -378,6 +378,8 @@ template("escher_library") {
       "vk/image_view.h",
       "vk/impl/descriptor_set_allocator.cc",
       "vk/impl/descriptor_set_allocator.h",
+      "vk/impl/descriptor_set_allocator_cache.cc",
+      "vk/impl/descriptor_set_allocator_cache.h",
       "vk/impl/framebuffer.cc",
       "vk/impl/framebuffer.h",
       "vk/impl/framebuffer_allocator.cc",

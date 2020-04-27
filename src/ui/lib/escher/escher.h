@@ -99,9 +99,6 @@ class Escher final : public MeshBuilderFactory, public ShaderProgramFactory {
 
   uint64_t GetNumGpuBytesAllocated();
 
-  impl::DescriptorSetAllocator* GetDescriptorSetAllocator(const impl::DescriptorSetLayout& layout,
-                                                          const SamplerPtr& immutable_sampler);
-
   // Do periodic housekeeping.  This is called by Renderer::EndFrame(), so you
   // don't need to call it if your application is constantly rendering.
   // However, if your app enters a "quiet period" then you might want to
@@ -135,6 +132,9 @@ class Escher final : public MeshBuilderFactory, public ShaderProgramFactory {
   SamplerCache* sampler_cache() { return sampler_cache_.get(); }
   impl::MeshManager* mesh_manager() { return mesh_manager_.get(); }
   impl::PipelineLayoutCache* pipeline_layout_cache() { return pipeline_layout_cache_.get(); }
+  impl::DescriptorSetAllocatorCache* descriptor_set_allocator_cache() {
+    return descriptor_set_allocator_cache_.get();
+  }
   impl::RenderPassCache* render_pass_cache() const { return render_pass_cache_.get(); }
   impl::FramebufferAllocator* framebuffer_allocator() const { return framebuffer_allocator_.get(); }
   ImageViewAllocator* image_view_allocator() const { return image_view_allocator_.get(); }
@@ -190,6 +190,7 @@ class Escher final : public MeshBuilderFactory, public ShaderProgramFactory {
   std::unique_ptr<DefaultShaderProgramFactory> shader_program_factory_;
   std::unique_ptr<PipelineBuilder> pipeline_builder_;
 
+  std::unique_ptr<impl::DescriptorSetAllocatorCache> descriptor_set_allocator_cache_;
   std::unique_ptr<impl::PipelineLayoutCache> pipeline_layout_cache_;
 
   std::unique_ptr<impl::RenderPassCache> render_pass_cache_;
@@ -198,8 +199,6 @@ class Escher final : public MeshBuilderFactory, public ShaderProgramFactory {
   std::unique_ptr<impl::FrameManager> frame_manager_;
 
   std::unique_ptr<ChainedSemaphoreGenerator> semaphore_chain_;
-
-  HashMap<Hash, std::unique_ptr<impl::DescriptorSetAllocator>> descriptor_set_allocators_;
 
   bool supports_timer_queries_ = false;
   float timestamp_period_ = 0.f;

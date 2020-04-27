@@ -556,7 +556,7 @@ class CommandBuffer : public Reffable {
   vk::PipelineLayout current_vk_pipeline_layout_;
 
   ShaderProgram* current_program_ = nullptr;
-  PipelineLayout* current_pipeline_layout_ = nullptr;
+  PipelineLayoutPtr current_pipeline_layout_;
 
   vk::Viewport viewport_ = {};
   vk::Rect2D scissor_ = {};

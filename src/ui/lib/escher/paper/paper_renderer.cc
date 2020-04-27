@@ -777,18 +777,19 @@ static void BindMeshSpecHelper(CommandBufferPipelineState* cbps, const MeshSpec&
 }
 
 // Helper for WarmPipelineAndRenderPassCaches.
-static void WarmProgramHelper(const ShaderProgramPtr& program, CommandBufferPipelineState* cbps,
+static void WarmProgramHelper(impl::PipelineLayoutCache* pipeline_layout_cache,
+                              const ShaderProgramPtr& program, CommandBufferPipelineState* cbps,
                               const std::vector<SamplerPtr>& immutable_samplers) {
   TRACE_DURATION("gfx", "PaperRenderer::WarmProgramHelper");
 
   // Generate pipeline which doesn't require an immutable sampler.
-  PipelineLayout* layout = program->ObtainPipelineLayout(nullptr);
-  cbps->FlushGraphicsPipeline(layout, program.get());
+  PipelineLayoutPtr layout = program->ObtainPipelineLayout(pipeline_layout_cache, nullptr);
+  cbps->FlushGraphicsPipeline(layout.get(), program.get());
 
   // Generate pipelines which require immutable samplers.
   for (auto& sampler : immutable_samplers) {
-    PipelineLayout* layout = program->ObtainPipelineLayout(sampler);
-    cbps->FlushGraphicsPipeline(layout, program.get());
+    PipelineLayoutPtr layout = program->ObtainPipelineLayout(pipeline_layout_cache, sampler);
+    cbps->FlushGraphicsPipeline(layout.get(), program.get());
   }
 }
 
@@ -830,26 +831,31 @@ void PaperRenderer::WarmPipelineAndRenderPassCaches(
     case PaperRendererShadowType::kNone: {
       if (escher->supports_wireframe()) {
         cbps.SetToDefaultState(CommandBuffer::DefaultState::kWireframe);
-        WarmProgramHelper(escher->GetProgram(kNoLightingProgramData), &cbps, immutable_samplers);
+        WarmProgramHelper(escher->pipeline_layout_cache(),
+                          escher->GetProgram(kNoLightingProgramData), &cbps, immutable_samplers);
       }
 
       cbps.SetToDefaultState(CommandBuffer::DefaultState::kOpaque);
-      WarmProgramHelper(escher->GetProgram(kAmbientLightProgramData), &cbps, immutable_samplers);
+      WarmProgramHelper(escher->pipeline_layout_cache(),
+                        escher->GetProgram(kAmbientLightProgramData), &cbps, immutable_samplers);
 
       cbps.SetToDefaultState(CommandBuffer::DefaultState::kTranslucent);
-      WarmProgramHelper(escher->GetProgram(kNoLightingProgramData), &cbps, immutable_samplers);
+      WarmProgramHelper(escher->pipeline_layout_cache(), escher->GetProgram(kNoLightingProgramData),
+                        &cbps, immutable_samplers);
     } break;
     case PaperRendererShadowType::kShadowVolume: {
       // Wireframe shapes (not shadow volumes).
       if (escher->supports_wireframe()) {
         cbps.SetToDefaultState(CommandBuffer::DefaultState::kWireframe);
-        WarmProgramHelper(escher->GetProgram(kNoLightingProgramData), &cbps, immutable_samplers);
+        WarmProgramHelper(escher->pipeline_layout_cache(),
+                          escher->GetProgram(kNoLightingProgramData), &cbps, immutable_samplers);
       }
 
       // Ambient opaque.
       {
         cbps.SetToDefaultState(CommandBuffer::DefaultState::kOpaque);
-        WarmProgramHelper(escher->GetProgram(kAmbientLightProgramData), &cbps, immutable_samplers);
+        WarmProgramHelper(escher->pipeline_layout_cache(),
+                          escher->GetProgram(kAmbientLightProgramData), &cbps, immutable_samplers);
       }
 
       // Set state common to both stencil shadow "geometry" and "lighting" passes.
@@ -869,7 +875,8 @@ void PaperRenderer::WarmPipelineAndRenderPassCaches(
                                 vk::StencilOp::eKeep, vk::StencilOp::eKeep);
         cbps.SetStencilBackOps(vk::CompareOp::eAlways, vk::StencilOp::eDecrementAndWrap,
                                vk::StencilOp::eKeep, vk::StencilOp::eKeep);
-        WarmProgramHelper(escher->GetProgram(kShadowVolumeGeometryProgramData), &cbps,
+        WarmProgramHelper(escher->pipeline_layout_cache(),
+                          escher->GetProgram(kShadowVolumeGeometryProgramData), &cbps,
                           immutable_samplers);
       }
 
@@ -883,9 +890,11 @@ void PaperRenderer::WarmPipelineAndRenderPassCaches(
         cbps.SetStencilBackOps(vk::CompareOp::eAlways, vk::StencilOp::eKeep, vk::StencilOp::eKeep,
                                vk::StencilOp::eKeep);
 
-        WarmProgramHelper(escher->GetProgram(kPointLightProgramData), &cbps, immutable_samplers);
+        WarmProgramHelper(escher->pipeline_layout_cache(),
+                          escher->GetProgram(kPointLightProgramData), &cbps, immutable_samplers);
 
-        WarmProgramHelper(escher->GetProgram(kPointLightFalloffProgramData), &cbps,
+        WarmProgramHelper(escher->pipeline_layout_cache(),
+                          escher->GetProgram(kPointLightFalloffProgramData), &cbps,
                           immutable_samplers);
       }
 
@@ -895,14 +904,16 @@ void PaperRenderer::WarmPipelineAndRenderPassCaches(
         cbps.SetStencilTest(false);
         cbps.SetWireframe(true);
         cbps.SetCullMode(vk::CullModeFlagBits::eNone);
-        WarmProgramHelper(escher->GetProgram(kShadowVolumeGeometryDebugProgramData), &cbps,
+        WarmProgramHelper(escher->pipeline_layout_cache(),
+                          escher->GetProgram(kShadowVolumeGeometryDebugProgramData), &cbps,
                           immutable_samplers);
       }
 
       // Translucent.
       {
         cbps.SetToDefaultState(CommandBuffer::DefaultState::kTranslucent);
-        WarmProgramHelper(escher->GetProgram(kNoLightingProgramData), &cbps, immutable_samplers);
+        WarmProgramHelper(escher->pipeline_layout_cache(),
+                          escher->GetProgram(kNoLightingProgramData), &cbps, immutable_samplers);
       }
 
     } break;

@@ -6,6 +6,7 @@
 #define SRC_UI_LIB_ESCHER_VK_SHADER_PROGRAM_H_
 
 #include "src/ui/lib/escher/resources/resource.h"
+#include "src/ui/lib/escher/third_party/granite/vk/pipeline_layout.h"
 #include "src/ui/lib/escher/util/enum_cast.h"
 #include "src/ui/lib/escher/util/enum_count.h"
 #include "src/ui/lib/escher/util/hash.h"
@@ -50,7 +51,8 @@ class ShaderProgram : public Resource, private ShaderModuleListener {
   // TODO(ES-202): This code-flow assumes that ShaderPrograms source from, at
   // most, a single sampler. This is a blocking bug for implementing, e.g.,
   // ES-159.
-  PipelineLayout* ObtainPipelineLayout(const SamplerPtr& immutable_sampler);
+  PipelineLayoutPtr ObtainPipelineLayout(impl::PipelineLayoutCache* pipeline_layout_cache,
+                                         const SamplerPtr& immutable_sampler);
 
   // Return the module corresponding to the specified shader stage, or nullptr
   // if the program has no shader for that stage (e.g. many graphics programs
@@ -70,12 +72,10 @@ class ShaderProgram : public Resource, private ShaderModuleListener {
   ShaderProgram(ResourceRecycler* resource_recycler, std::vector<ShaderModulePtr> shader_modules);
   ShaderProgram(ResourceRecycler* resource_recycler, ShaderModulePtr shader_module);
 
-  // Used by ClearCurrentPipelineLayout() and ClearPipelineStash() as an easy
-  // way to have the ResourceRecycler keep the obsolete pipelines alive until
-  // safe to destroy them.
+  // Used by ClearPipelineStash() as an easy way to have the ResourceRecycler keep the obsolete
+  // pipelines alive until safe to destroy them.
   explicit ShaderProgram(ResourceManager* owner);
   void OnShaderModuleUpdated(ShaderModule* shader_module) override;
-  void ClearPipelineLayout();
   void ClearPipelineStash();
 
   std::array<ShaderModulePtr, EnumCount<ShaderStage>()> shader_modules_;
@@ -86,7 +86,7 @@ class ShaderProgram : public Resource, private ShaderModuleListener {
   // refresh) this cache is never cleared.
   HashMap<Hash, vk::Pipeline> graphics_pipelines_;
 
-  PipelineLayoutPtr pipeline_layout_;
+  std::optional<impl::PipelineLayoutSpec> pipeline_layout_spec_;
 };
 
 // Inline function definitions.

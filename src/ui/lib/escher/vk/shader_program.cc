@@ -7,7 +7,6 @@
 #include "src/ui/lib/escher/escher.h"
 #include "src/ui/lib/escher/impl/vulkan_utils.h"
 #include "src/ui/lib/escher/resources/resource_recycler.h"
-#include "src/ui/lib/escher/third_party/granite/vk/pipeline_layout.h"
 #include "src/ui/lib/escher/third_party/granite/vk/shader_utils.h"
 #include "src/ui/lib/escher/util/enum_cast.h"
 #include "src/ui/lib/escher/util/hasher.h"
@@ -64,26 +63,7 @@ ShaderProgram::~ShaderProgram() {
 
 ShaderProgram::ShaderProgram(ResourceManager* manager) : Resource(manager) {}
 
-void ShaderProgram::OnShaderModuleUpdated(ShaderModule* shader_module) {
-  ClearPipelineLayout();
-  ClearPipelineStash();
-}
-
-void ShaderProgram::ClearPipelineLayout() {
-  if (!pipeline_layout_)
-    return;
-
-  // We must keep the obsolete pipeline layout alive for just as long as it
-  // takes for this object's ref-count to hit zero.  The easiest way to do this
-  // is to move them into another ShaderProgram and immediately deref it.
-  auto keep_alive = new ShaderProgram(owner());
-  keep_alive->KeepAlive(sequence_number());
-  keep_alive->pipeline_layout_ = std::move(pipeline_layout_);
-  pipeline_layout_ = nullptr;
-
-  // Allow the ref-count to immediately hit zero.
-  fxl::AdoptRef(keep_alive);
-}
+void ShaderProgram::OnShaderModuleUpdated(ShaderModule* shader_module) { ClearPipelineStash(); }
 
 void ShaderProgram::ClearPipelineStash() {
   if (graphics_pipelines_.empty())
@@ -101,27 +81,15 @@ void ShaderProgram::ClearPipelineStash() {
   fxl::AdoptRef(keep_alive);
 }
 
-PipelineLayout* ShaderProgram::ObtainPipelineLayout(const SamplerPtr& immutable_sampler) {
+PipelineLayoutPtr ShaderProgram::ObtainPipelineLayout(
+    impl::PipelineLayoutCache* pipeline_layout_cache, const SamplerPtr& immutable_sampler) {
   TRACE_DURATION("gfx", "escher::ShaderProgram::ObtainPipelineLayout");
-  // If we already have a pipeline layout, and the immutable sampler matches,
+  // If we already have a pipeline layout spec, and the immutable sampler matches,
   // just use that.
-  if (pipeline_layout_ && pipeline_layout_->spec().immutable_sampler() == immutable_sampler) {
-    return pipeline_layout_.get();
+  if (!pipeline_layout_spec_ || pipeline_layout_spec_->immutable_sampler() != immutable_sampler) {
+    pipeline_layout_spec_ = impl::GeneratePipelineLayoutSpec(shader_modules_, immutable_sampler);
   }
-
-  // Clear out the old pipeline layout, if there is one.
-  ClearPipelineLayout();
-
-  FXL_DCHECK(!pipeline_layout_);
-
-  impl::PipelineLayoutSpec spec =
-      impl::GeneratePipelineLayoutSpec(shader_modules_, immutable_sampler);
-
-  // TODO(ES-201): This code assumes we only need to cache a single pipeline
-  // layout per shader program. Immutable samplers ruin that assumption.
-  pipeline_layout_ = escher()->pipeline_layout_cache()->ObtainPipelineLayout(spec);
-
-  return pipeline_layout_.get();
+  return pipeline_layout_cache->ObtainPipelineLayout(pipeline_layout_spec_.value());
 }
 
 }  // namespace escher

@@ -7,7 +7,7 @@
 
 #include "src/ui/lib/escher/forward_declarations.h"
 #include "src/ui/lib/escher/third_party/granite/vk/pipeline_layout.h"
-#include "src/ui/lib/escher/util/hash_map.h"
+#include "src/ui/lib/escher/util/hash_cache.h"
 
 namespace escher {
 namespace impl {
@@ -21,13 +21,21 @@ class PipelineLayoutCache {
   // already present in the cache.
   const PipelineLayoutPtr& ObtainPipelineLayout(const PipelineLayoutSpec& layout);
 
-  // TODO(ES-201): There is currently no eviction policy for this cache, as
-  // Escher never calls this function.
-  void Clear();
+  void BeginFrame();
+
+  // Return the number of layouts in the cache.
+  size_t size() const { return layouts_.size(); }
+
+  // Clears layout cache.
+  void Clear() { layouts_.Clear(); }
 
  private:
+  struct CacheItem : public HashCacheItem<CacheItem> {
+    PipelineLayoutPtr layout;
+  };
+
+  HashCache<CacheItem, DefaultObjectPoolPolicy<CacheItem>> layouts_;
   ResourceRecycler* recycler_;
-  HashMap<Hash, PipelineLayoutPtr> layouts_;
 };
 
 }  // namespace impl

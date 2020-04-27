@@ -111,6 +111,7 @@ typedef fxl::WeakPtr<UniformBufferPool> UniformBufferPoolWeakPtr;
 
 // From escher/vk/impl
 class DescriptorSetAllocator;
+class DescriptorSetAllocatorCache;
 class Framebuffer;
 class FramebufferAllocator;
 class PipelineLayoutCache;

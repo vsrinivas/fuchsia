@@ -526,14 +526,14 @@ void CommandBuffer::FlushComputePipeline() {
   TRACE_DURATION("gfx", "escher::CommandBuffer::FlushComputePipeline");
   const bool log_pipeline_creation = !allow_renderpass_and_pipeline_creation_;
   current_vk_pipeline_ = pipeline_state_.FlushComputePipeline(
-      current_pipeline_layout_, current_program_, log_pipeline_creation);
+      current_pipeline_layout_.get(), current_program_, log_pipeline_creation);
 }
 
 void CommandBuffer::FlushGraphicsPipeline() {
   TRACE_DURATION("gfx", "escher::CommandBuffer::FlushGraphicsPipeline");
   const bool log_pipeline_creation = !allow_renderpass_and_pipeline_creation_;
   current_vk_pipeline_ = pipeline_state_.FlushGraphicsPipeline(
-      current_pipeline_layout_, current_program_, log_pipeline_creation);
+      current_pipeline_layout_.get(), current_program_, log_pipeline_creation);
 }
 
 void CommandBuffer::FlushDescriptorSets() {
@@ -865,7 +865,8 @@ void CommandBuffer::SetShaderProgram(ShaderProgram* program, const SamplerPtr& i
   SetDirty(kDirtyPipelineBit | kDirtyDynamicBits);
 
   auto old_pipeline_layout = current_pipeline_layout_;
-  current_pipeline_layout_ = program->ObtainPipelineLayout(immutable_sampler);
+  current_pipeline_layout_ =
+      program->ObtainPipelineLayout(escher_->pipeline_layout_cache(), immutable_sampler);
 
   current_vk_pipeline_layout_ = current_pipeline_layout_->vk();
   impl_->KeepAlive(current_pipeline_layout_);

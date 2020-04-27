@@ -14,18 +14,17 @@ PipelineLayoutCache::PipelineLayoutCache(ResourceRecycler* recycler) : recycler_
 PipelineLayoutCache::~PipelineLayoutCache() = default;
 
 const PipelineLayoutPtr& PipelineLayoutCache::ObtainPipelineLayout(const PipelineLayoutSpec& spec) {
-  auto it = layouts_.find(spec.hash());
-  if (it != end(layouts_)) {
-    FXL_DCHECK(it->second->spec() == spec);
-    return it->second;
-  }
+  auto pair = layouts_.Obtain(spec.hash());
 
-  auto pair = layouts_.insert(
-      std::make_pair(spec.hash(), fxl::MakeRefCounted<PipelineLayout>(recycler_, spec)));
-  return pair.first->second;
+  if (!pair.second) {
+    FXL_DCHECK(!pair.first->layout);
+    pair.first->layout = fxl::MakeRefCounted<PipelineLayout>(recycler_, spec);
+  }
+  FXL_DCHECK(pair.first->layout);
+  return pair.first->layout;
 }
 
-void PipelineLayoutCache::Clear() { layouts_.clear(); }
+void PipelineLayoutCache::BeginFrame() { layouts_.BeginFrame(); }
 
 }  // namespace impl
 }  // namespace escher

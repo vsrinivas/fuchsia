@@ -6,11 +6,12 @@
 #define SRC_UI_LIB_ESCHER_VK_IMPL_DESCRIPTOR_SET_ALLOCATOR_H_
 
 #include <map>
-#include <vulkan/vulkan.hpp>
 
 #include "src/ui/lib/escher/third_party/granite/vk/descriptor_set_layout.h"
 #include "src/ui/lib/escher/util/hash_cache.h"
 #include "src/ui/lib/escher/vk/sampler.h"
+
+#include <vulkan/vulkan.hpp>
 
 namespace escher {
 namespace impl {
@@ -87,6 +88,8 @@ class DescriptorSetAllocator {
   // (e.g., FramebufferAllocator).
   HashCache<CacheItem, PoolPolicy> cache_;
 };
+
+typedef std::shared_ptr<DescriptorSetAllocator> DescriptorSetAllocatorPtr;
 
 }  // namespace impl
 }  // namespace escher
