@@ -161,7 +161,7 @@ async fn test_observer_stop_api() {
         verbosity: 0,
         filter_by_tid: false,
         tid: 0,
-        tags: vec![],
+        tags: vec!["logging component".to_owned()],
     };
     let (send_logs, recv_logs) = mpsc::unbounded();
     let l = Listener { send_logs };
@@ -184,7 +184,6 @@ async fn test_observer_stop_api() {
     assert_eq!(
         logs,
         vec![
-            (INFO, "Logging started.".to_owned()),
             (-1, "my debug message.".to_owned()),
             (INFO, "my info message.".to_owned()),
             (WARN, "my warn message.".to_owned()),
