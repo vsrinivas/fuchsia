@@ -48,7 +48,7 @@ fbl::String GetTestFilter() {
   printf("Found board %s\n", board_name);
 
   if (!strcmp(board_name, "qemu")) {
-    return "*Qemu*";
+    return "*QemuArm64*";
   } else if (!strcmp(board_name, "vim2")) {
     return "*Vim2*";
   } else if (!strcmp(board_name, "vim3")) {
@@ -97,7 +97,7 @@ class DeviceEnumerationTest : public zxtest::Test {
   }
 };
 
-TEST_F(DeviceEnumerationTest, QemuTest) {
+TEST_F(DeviceEnumerationTest, QemuArm64Test) {
   static const char* kDevicePaths[] = {
       "sys/platform/qemu-bus",
       "sys/platform/00:00:6/rtc",
