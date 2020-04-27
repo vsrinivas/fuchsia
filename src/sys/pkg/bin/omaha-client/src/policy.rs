@@ -86,10 +86,13 @@ impl Policy for FuchsiaPolicy {
                     //
                     // PartialComplexTime::complete_with(ComplexTime) accomplises this by adding
                     // the missing bound on the monotonic timeline.
-                    last_wall_time @ PartialComplexTime::Wall(_) => {
+                    _last_wall_time @ PartialComplexTime::Wall(_) => {
                         info!("Using Startup Mode logic.");
                         CheckTiming::builder()
-                            .time(last_wall_time.complete_with(policy_data.current_time) + interval)
+                            // TODO Switch back the line below after channel is in vbmeta
+                            //      (fxb/39970)
+                            // .time(last_wall_time.complete_with(policy_data.current_time) + interval)
+                            .time(policy_data.current_time + STARTUP_DELAY)
                             .minimum_wait(STARTUP_DELAY)
                             .build()
                     }
@@ -221,7 +224,6 @@ mod tests {
     use super::*;
     use omaha_client::installer::stub::StubPlan;
     use omaha_client::time::{ComplexTime, MockTimeSource};
-    use std::time::Instant;
 
     /// Test that the correct next update time is calculated for the normal case where a check was
     /// recently done and the next needs to be scheduled.
@@ -319,10 +321,13 @@ mod tests {
         //       2) a normal poll interval from the persisted last update time (wall)
         //  - There's a minimum wait of STARTUP_DELAY
         let expected = CheckTiming::builder()
-            .time((
-                last_update_time.checked_to_system_time().unwrap() + PERIODIC_INTERVAL,
-                Instant::from(now) + PERIODIC_INTERVAL,
-            ))
+            // TODO Switch back the line below after channel is in vbmeta
+            //      (fxb/39970)
+            // .time((
+            //     last_update_time.checked_to_system_time().unwrap() + PERIODIC_INTERVAL,
+            //     Instant::from(now) + PERIODIC_INTERVAL,
+            // ))
+            .time(now + STARTUP_DELAY)
             .minimum_wait(STARTUP_DELAY)
             .build();
         debug_print_check_timing_test_data(
@@ -369,10 +374,13 @@ mod tests {
         //       2) a normal interval from the persisted last update time (wall)
         //  - There's a minimum wait of STARTUP_DELAY
         let expected = CheckTiming::builder()
-            .time((
-                last_update_time.checked_to_system_time().unwrap() + PERIODIC_INTERVAL,
-                Instant::from(now) + PERIODIC_INTERVAL,
-            ))
+            // TODO Switch back the line below after channel is in vbmeta
+            //      (fxb/39970)
+            // .time((
+            //     last_update_time.checked_to_system_time().unwrap() + PERIODIC_INTERVAL,
+            //     Instant::from(now) + PERIODIC_INTERVAL,
+            // ))
+            .time(now + STARTUP_DELAY)
             .minimum_wait(STARTUP_DELAY)
             .build();
         debug_print_check_timing_test_data(
