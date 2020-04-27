@@ -11,10 +11,16 @@ The configuration file should be packaged via the build rule `modular_config`,
 which will validate your file against a schema. You must then include the
 modular_config() target in the product's base packages.
 
+The file may contain (non-standard JSON) C-style comments
+(`/* block */` and `// inline`).
+
 ## Example
 
 ```
 {
+  /* This is a block comment.
+     Comments are ignored. */
+  // This is an inline comment. Comments are ignored.
   "basemgr": {
     "enable_cobalt": false,
     "use_session_shell_for_story_shell_factory": true,

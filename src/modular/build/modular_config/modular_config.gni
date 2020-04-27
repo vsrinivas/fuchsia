@@ -13,6 +13,9 @@ declare_args() {
 
 # Validates a modular framework configuration file against a schema
 #
+# Ensures the file is valid JSON, with optional (non-standard JSON)
+# C-style comments (`/* block */` and `// inline`).
+#
 # Parameters
 #   config (required)
 #     This is a modular framework configuration file that needs to be validated.
@@ -28,6 +31,7 @@ template("modular_config_validate") {
 
     data = invoker.config
     schema = "//sdk/docs/modular_config_schema.json"
+    allow_comments = true
   }
 }
 
@@ -52,12 +56,8 @@ template("modular_config") {
 
   config_data(target_name + "_basemgr.config") {
     for_pkg = "sysmgr"
-    sources = [
-      "//src/modular/build/modular_config/basemgr.config",
-    ]
-    outputs = [
-      "basemgr.config",
-    ]
+    sources = [ "//src/modular/build/modular_config/basemgr.config" ]
+    outputs = [ "basemgr.config" ]
   }
 
   # By default, add the sysmgr config to automatically launch basemgr.cmx,
@@ -70,12 +70,8 @@ template("modular_config") {
 
   config_data(invoker.target_name) {
     for_pkg = "basemgr"
-    sources = [
-      rebase_path(invoker.config),
-    ]
-    outputs = [
-      "startup.config",
-    ]
+    sources = [ rebase_path(invoker.config) ]
+    outputs = [ "startup.config" ]
 
     deps = config_data_deps
   }

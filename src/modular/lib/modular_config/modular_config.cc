@@ -6,26 +6,38 @@
 
 #include <fcntl.h>
 
+#include <rapidjson/document.h>
+#include <rapidjson/error/en.h>
+
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
 #include "src/lib/fxl/strings/substitute.h"
-#include "src/lib/json_parser/pretty_print.h"
 #include "src/lib/syslog/cpp/logger.h"
 #include "src/modular/lib/fidl/json_xdr.h"
 #include "src/modular/lib/modular_config/modular_config_constants.h"
 #include "src/modular/lib/modular_config/modular_config_xdr.h"
 
+// Flags passed to RapidJSON that control JSON parsing behavior.
+// This is used to enable parsing non-standard JSON syntax, like comments.
+constexpr unsigned kModularConfigParseFlags = rapidjson::kParseCommentsFlag;
+
 namespace modular {
 namespace {
-std::string GetSectionAsString(const rapidjson::Document& doc, const std::string& section_name) {
+
+rapidjson::Document GetSectionAsDoc(const rapidjson::Document& doc,
+                                    const std::string& section_name) {
+  rapidjson::Document section_doc;
+
   auto config_json = doc.FindMember(section_name);
-  if (config_json == doc.MemberEnd()) {
-    // |section_name| was not found
-    return "{}";
+  if (config_json != doc.MemberEnd()) {
+    section_doc.CopyFrom(config_json->value, section_doc.GetAllocator());
+  } else {
+    // |section_name| was not found; return an empty object
+    section_doc.SetObject();
   }
 
-  return json_parser::JsonValueToString(config_json->value);
+  return section_doc;
 }
 
 std::string StripLeadingSlash(std::string str) {
@@ -39,7 +51,7 @@ std::string StripLeadingSlash(std::string str) {
 ModularConfigReader::ModularConfigReader(fbl::unique_fd dir_fd) {
   FX_CHECK(dir_fd.get() >= 0);
 
-  // 1.  Figure out where the config file is.
+  // 1. Figure out where the config file is.
   std::string config_path = files::JoinPath(StripLeadingSlash(modular_config::kOverriddenConfigDir),
                                             modular_config::kStartupConfigFilePath);
   if (!files::IsFileAt(dir_fd.get(), config_path)) {
@@ -47,20 +59,21 @@ ModularConfigReader::ModularConfigReader(fbl::unique_fd dir_fd) {
                                   modular_config::kStartupConfigFilePath);
   }
 
-  // 2. Parse the JSON out of the config file.
-  json::JSONParser json_parser;
-  auto doc = json_parser.ParseFromFileAt(dir_fd.get(), config_path);
+  // 2. Read the file
+  std::string config;
+  if (!files::ReadFileToStringAt(dir_fd.get(), config_path, &config)) {
+    FX_LOGS(ERROR) << "Failed to read file: " << config_path;
+    return;
+  }
 
-  ParseConfig(std::move(json_parser), std::move(doc), config_path);
+  // 3. Parse the JSON
+  ParseConfig(config, config_path);
 }
 
 ModularConfigReader::ModularConfigReader(std::string config) {
   constexpr char kPathForErrorStrings[] = ".";
-  // Parse the JSON out of the config string.
-  json::JSONParser json_parser;
-  auto doc = json_parser.ParseFromString(config, kPathForErrorStrings);
 
-  ParseConfig(std::move(json_parser), std::move(doc), kPathForErrorStrings);
+  ParseConfig(config, kPathForErrorStrings);
 }
 
 // static
@@ -68,28 +81,30 @@ ModularConfigReader ModularConfigReader::CreateFromNamespace() {
   return ModularConfigReader(fbl::unique_fd(open("/", O_RDONLY)));
 }
 
-ModularConfigReader::~ModularConfigReader() {}
+void ModularConfigReader::ParseConfig(const std::string& config, const std::string& config_path) {
+  rapidjson::Document doc;
 
-void ModularConfigReader::ParseConfig(json::JSONParser json_parser, rapidjson::Document doc,
-                                      std::string config_path) {
-  std::string basemgr_json;
-  std::string sessionmgr_json;
-  if (json_parser.HasError()) {
-    FX_LOGS(ERROR) << "Error while parsing " << config_path
-                   << " to string. Error: " << json_parser.error_str();
-    // Leave |basemgr_config_| and |sessionmgr_config_| empty-initialized.
-    basemgr_json = "{}";
-    sessionmgr_json = "{}";
+  rapidjson::Document basemgr_doc;
+  rapidjson::Document sessionmgr_doc;
+
+  doc.Parse<kModularConfigParseFlags>(config);
+  if (doc.HasParseError()) {
+    FX_LOGS(ERROR) << "Failed to parse " << config_path << ": "
+                   << rapidjson::GetParseError_En(doc.GetParseError()) << " ("
+                   << doc.GetErrorOffset() << ")";
+    // Initialze |sessionmgr_config_| and |sessionmgr_config_| with defaults.
+    basemgr_doc.SetObject();
+    sessionmgr_doc.SetObject();
   } else {
     // Parse the `basemgr` and `sessionmgr` sections out of the config.
-    basemgr_json = GetSectionAsString(doc, modular_config::kBasemgrConfigName);
-    sessionmgr_json = GetSectionAsString(doc, modular_config::kSessionmgrConfigName);
+    basemgr_doc = GetSectionAsDoc(doc, modular_config::kBasemgrConfigName);
+    sessionmgr_doc = GetSectionAsDoc(doc, modular_config::kSessionmgrConfigName);
   }
 
-  if (!XdrRead(basemgr_json, &basemgr_config_, XdrBasemgrConfig)) {
+  if (!XdrRead(&basemgr_doc, &basemgr_config_, XdrBasemgrConfig)) {
     FX_LOGS(ERROR) << "Unable to parse 'basemgr' from " << config_path;
   }
-  if (!XdrRead(sessionmgr_json, &sessionmgr_config_, XdrSessionmgrConfig)) {
+  if (!XdrRead(&sessionmgr_doc, &sessionmgr_config_, XdrSessionmgrConfig)) {
     FX_LOGS(ERROR) << "Unable to parse 'sessionmgr' from " << config_path;
   }
 }

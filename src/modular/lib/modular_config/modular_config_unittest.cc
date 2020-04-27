@@ -244,3 +244,29 @@ TEST_F(ModularConfigReaderTest, GetConfigAsStringDoesntChangeValues) {
   EXPECT_EQ(agent_service_name, sessionmgr_config.agent_service_index().at(0).service_name());
   EXPECT_EQ(agent_url, sessionmgr_config.agent_service_index().at(0).agent_url());
 }
+
+// Test that ModularConfigReader accepts JSON documents that contain comments
+TEST_F(ModularConfigReaderTest, ParseComments) {
+  std::string config_contents = R"({
+    "basemgr": {
+      /* This is
+       * a comment */
+      "session_shells": [
+        {
+          // This is another comment
+          "url": "fuchsia-pkg://example.com/test#meta/test.cmx"
+        }
+      ]
+    }
+  })";
+
+  modular::PseudoDirServer server(modular::MakeFilePathWithContents(
+      files::JoinPath(modular_config::kOverriddenConfigDir, modular_config::kStartupConfigFilePath),
+      config_contents));
+
+  modular::ModularConfigReader reader(server.OpenAt("."));
+  auto config = reader.GetBasemgrConfig();
+
+  // Verify that ModularConfigReader parsed the config.
+  EXPECT_EQ(1u, config.session_shell_map().size());
+}
