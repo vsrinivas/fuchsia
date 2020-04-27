@@ -49,6 +49,7 @@ group("tools") {
     "//src/sys/tools/cs",
     "//src/sys/tools/runmany",
     "//src/ui/tools/tiles_ctl",
+    "//third_party/boringssl:boringssl_tool",
     "//third_party/curl",
     "//third_party/iperf",
     "//third_party/openssh-portable:openssh-tools",
