@@ -118,73 +118,71 @@ enum class SyscallReturnType {
   kUint64,
 };
 
-void BtiPermName(uint32_t perm, std::ostream& os);
-void CachePolicyName(uint32_t cache_policy, std::ostream& os);
-void ClockName(zx_clock_t clock, std::ostream& os);
-void ExceptionChannelTypeName(uint32_t type, std::ostream& os);
-void ExceptionStateName(uint32_t state, std::ostream& os);
-void FeatureKindName(uint32_t feature_kind, std::ostream& os);
-void GuestTrapName(zx_guest_trap_t trap, std::ostream& os);
-void InfoMapsTypeName(zx_info_maps_type_t type, std::ostream& os);
-void InterruptFlagsName(uint32_t flags, std::ostream& os);
-void IommuTypeName(uint32_t type, std::ostream& os);
-void KtraceControlActionName(uint32_t action, std::ostream& os);
-void ObjPropsName(zx_obj_props_t obj_props, std::ostream& os);
-void PacketGuestVcpuTypeName(uint8_t type, std::ostream& os);
-void PacketPageRequestCommandName(uint16_t command, std::ostream& os);
-void PciBarTypeName(uint32_t type, std::ostream& os);
-void PolicyActionName(uint32_t action, std::ostream& os);
-void PolicyConditionName(uint32_t condition, std::ostream& os);
-void PolicyTopicName(uint32_t topic, std::ostream& os);
-void PortPacketTypeName(uint32_t type, std::ostream& os);
-void ProfileInfoFlagsName(uint32_t flags, std::ostream& os);
-void PropTypeName(uint32_t type, std::ostream& os);
-void RsrcKindName(zx_rsrc_kind_t kind, std::ostream& os);
-void SignalName(zx_signals_t signals, std::ostream& os);
-void SocketCreateOptionsName(uint32_t options, std::ostream& os);
-void SocketReadOptionsName(uint32_t options, std::ostream& os);
-void SocketShutdownOptionsName(uint32_t options, std::ostream& os);
-void StatusName(const fidl_codec::Colors& colors, zx_status_t status, std::ostream& os);
-void SystemEventTypeName(zx_system_event_type_t type, std::ostream& os);
-void SystemPowerctlName(uint32_t powerctl, std::ostream& os);
-void ThreadStateName(uint32_t state, std::ostream& os);
-void ThreadStateTopicName(zx_thread_state_topic_t topic, std::ostream& os);
-void TimerOptionName(uint32_t option, std::ostream& os);
-void TopicName(uint32_t topic, std::ostream& os);
-void VcpuName(uint32_t type, std::ostream& os);
-void VmOptionName(zx_vm_option_t option, std::ostream& os);
-void VmoCreationOptionName(uint32_t option, std::ostream& os);
-void VmoOpName(uint32_t op, std::ostream& os);
-void VmoOptionName(uint32_t option, std::ostream& os);
-void VmoTypeName(uint32_t type, std::ostream& os);
+void BtiPermName(uint32_t perm, fidl_codec::PrettyPrinter& printer);
+void CachePolicyName(uint32_t cache_policy, fidl_codec::PrettyPrinter& printer);
+void ClockName(zx_clock_t clock, fidl_codec::PrettyPrinter& printer);
+void ExceptionChannelTypeName(uint32_t type, fidl_codec::PrettyPrinter& printer);
+void ExceptionStateName(uint32_t state, fidl_codec::PrettyPrinter& printer);
+void FeatureKindName(uint32_t feature_kind, fidl_codec::PrettyPrinter& printer);
+void GuestTrapName(zx_guest_trap_t trap, fidl_codec::PrettyPrinter& printer);
+void InfoMapsTypeName(zx_info_maps_type_t type, fidl_codec::PrettyPrinter& printer);
+void InterruptFlagsName(uint32_t flags, fidl_codec::PrettyPrinter& printer);
+void IommuTypeName(uint32_t type, fidl_codec::PrettyPrinter& printer);
+void KtraceControlActionName(uint32_t action, fidl_codec::PrettyPrinter& printer);
+void ObjPropsName(zx_obj_props_t obj_props, fidl_codec::PrettyPrinter& printer);
+void PacketGuestVcpuTypeName(uint8_t type, fidl_codec::PrettyPrinter& printer);
+void PacketPageRequestCommandName(uint16_t command, fidl_codec::PrettyPrinter& printer);
+void PciBarTypeName(uint32_t type, fidl_codec::PrettyPrinter& printer);
+void PolicyActionName(uint32_t action, fidl_codec::PrettyPrinter& printer);
+void PolicyConditionName(uint32_t condition, fidl_codec::PrettyPrinter& printer);
+void PolicyTopicName(uint32_t topic, fidl_codec::PrettyPrinter& printer);
+void PortPacketTypeName(uint32_t type, fidl_codec::PrettyPrinter& printer);
+void ProfileInfoFlagsName(uint32_t flags, fidl_codec::PrettyPrinter& printer);
+void PropTypeName(uint32_t type, fidl_codec::PrettyPrinter& printer);
+void RsrcKindName(zx_rsrc_kind_t kind, fidl_codec::PrettyPrinter& printer);
+void SignalName(zx_signals_t signals, fidl_codec::PrettyPrinter& printer);
+void SocketCreateOptionsName(uint32_t options, fidl_codec::PrettyPrinter& printer);
+void SocketReadOptionsName(uint32_t options, fidl_codec::PrettyPrinter& printer);
+void SocketShutdownOptionsName(uint32_t options, fidl_codec::PrettyPrinter& printer);
+void StatusName(zx_status_t status, fidl_codec::PrettyPrinter& printer);
+void SystemEventTypeName(zx_system_event_type_t type, fidl_codec::PrettyPrinter& printer);
+void SystemPowerctlName(uint32_t powerctl, fidl_codec::PrettyPrinter& printer);
+void ThreadStateName(uint32_t state, fidl_codec::PrettyPrinter& printer);
+void ThreadStateTopicName(zx_thread_state_topic_t topic, fidl_codec::PrettyPrinter& printer);
+void TimerOptionName(uint32_t option, fidl_codec::PrettyPrinter& printer);
+void TopicName(uint32_t topic, fidl_codec::PrettyPrinter& printer);
+void VcpuName(uint32_t type, fidl_codec::PrettyPrinter& printer);
+void VmOptionName(zx_vm_option_t option, fidl_codec::PrettyPrinter& printer);
+void VmoCreationOptionName(uint32_t option, fidl_codec::PrettyPrinter& printer);
+void VmoOpName(uint32_t op, fidl_codec::PrettyPrinter& printer);
+void VmoOptionName(uint32_t option, fidl_codec::PrettyPrinter& printer);
+void VmoTypeName(uint32_t type, fidl_codec::PrettyPrinter& printer);
 std::string_view TypeName(SyscallType type);
-void DisplayType(const fidl_codec::Colors& colors, SyscallType type, std::ostream& os);
+void DisplayType(SyscallType type, fidl_codec::PrettyPrinter& printer);
 
 class DisplayDuration {
  public:
-  DisplayDuration(const fidl_codec::Colors& colors, zx_duration_t duration_ns)
-      : colors_(colors), duration_ns_(duration_ns) {}
-  [[nodiscard]] const fidl_codec::Colors& colors() const { return colors_; }
+  DisplayDuration(zx_duration_t duration_ns) : duration_ns_(duration_ns) {}
   [[nodiscard]] zx_duration_t duration_ns() const { return duration_ns_; }
 
  private:
-  const fidl_codec::Colors& colors_;
   const zx_duration_t duration_ns_;
 };
 
-inline std::ostream& operator<<(std::ostream& os, const DisplayDuration& duration) {
+inline fidl_codec::PrettyPrinter& operator<<(fidl_codec::PrettyPrinter& printer,
+                                             const DisplayDuration& duration) {
   if (duration.duration_ns() == ZX_TIME_INFINITE) {
-    os << duration.colors().blue << "ZX_TIME_INFINITE" << duration.colors().reset;
-    return os;
+    printer << fidl_codec::Blue << "ZX_TIME_INFINITE" << fidl_codec::ResetColor;
+    return printer;
   }
   if (duration.duration_ns() == ZX_TIME_INFINITE_PAST) {
-    os << duration.colors().blue << "ZX_TIME_INFINITE_PAST" << duration.colors().reset;
-    return os;
+    printer << fidl_codec::Blue << "ZX_TIME_INFINITE_PAST" << fidl_codec::ResetColor;
+    return printer;
   }
   int64_t duration_ns = duration.duration_ns();
-  os << duration.colors().blue;
+  printer << fidl_codec::Blue;
   if (duration_ns < 0) {
-    os << '-';
+    printer << '-';
     duration_ns = -duration_ns;
   }
   const char* separator = "";
@@ -197,26 +195,26 @@ inline std::ostream& operator<<(std::ostream& os, const DisplayDuration& duratio
       if (hours != 0) {
         int64_t days = hours / kHoursPerDay;
         if (days != 0) {
-          os << days << " days";
+          printer << days << " days";
           separator = ", ";
         }
-        os << separator << (hours % kHoursPerDay) << " hours";
+        printer << separator << (hours % kHoursPerDay) << " hours";
         separator = ", ";
       }
-      os << separator << (minutes % kMinutesPerHour) << " minutes";
+      printer << separator << (minutes % kMinutesPerHour) << " minutes";
       separator = ", ";
     }
-    os << separator << (seconds % kSecondsPerMinute) << " seconds";
+    printer << separator << (seconds % kSecondsPerMinute) << " seconds";
     if (nanoseconds != 0) {
-      os << " and " << nanoseconds << " nano seconds";
+      printer << " and " << nanoseconds << " nano seconds";
     }
   } else if (nanoseconds != 0) {
-    os << nanoseconds << " nano seconds";
+    printer << nanoseconds << " nano seconds";
   } else {
-    os << "0 seconds";
+    printer << "0 seconds";
   }
-  os << duration.colors().reset;
-  return os;
+  printer << fidl_codec::ResetColor;
+  return printer;
 }
 
 class DisplayStatus {
@@ -228,42 +226,41 @@ class DisplayStatus {
   const zx_status_t status_;
 };
 
-inline std::ostream& operator<<(std::ostream& os, const DisplayStatus& status) {
-  os << fidl_codec::StatusName(status.status());
-  return os;
+inline fidl_codec::PrettyPrinter& operator<<(fidl_codec::PrettyPrinter& printer,
+                                             const DisplayStatus& status) {
+  printer << fidl_codec::StatusName(status.status());
+  return printer;
 }
 
 class DisplayTime {
  public:
-  DisplayTime(const fidl_codec::Colors& colors, zx_time_t time_ns)
-      : colors_(colors), time_ns_(time_ns) {}
-  [[nodiscard]] const fidl_codec::Colors& colors() const { return colors_; }
+  DisplayTime(zx_time_t time_ns) : time_ns_(time_ns) {}
   [[nodiscard]] zx_time_t time_ns() const { return time_ns_; }
 
  private:
-  const fidl_codec::Colors& colors_;
   const zx_time_t time_ns_;
 };
 
-inline std::ostream& operator<<(std::ostream& os, const DisplayTime& time) {
+inline fidl_codec::PrettyPrinter& operator<<(fidl_codec::PrettyPrinter& printer,
+                                             const DisplayTime& time) {
   if (time.time_ns() == ZX_TIME_INFINITE) {
-    os << time.colors().blue << "ZX_TIME_INFINITE" << time.colors().reset;
+    printer << fidl_codec::Blue << "ZX_TIME_INFINITE" << fidl_codec::ResetColor;
   } else if (time.time_ns() == ZX_TIME_INFINITE_PAST) {
-    os << time.colors().blue << "ZX_TIME_INFINITE_PAST" << time.colors().reset;
+    printer << fidl_codec::Blue << "ZX_TIME_INFINITE_PAST" << fidl_codec::ResetColor;
   } else {
     time_t value = time.time_ns() / fidl_codec::kOneBillion;
     struct tm tm;
     if (localtime_r(&value, &tm) == &tm) {
       char buffer[100];
       strftime(buffer, sizeof(buffer), "%c", &tm);
-      os << time.colors().blue << buffer << " and ";
+      printer << fidl_codec::Blue << buffer << " and ";
       snprintf(buffer, sizeof(buffer), "%09" PRId64, time.time_ns() % fidl_codec::kOneBillion);
-      os << buffer << " ns" << time.colors().reset;
+      printer << buffer << " ns" << fidl_codec::ResetColor;
     } else {
-      os << time.colors().red << "unknown time" << time.colors().reset;
+      printer << fidl_codec::Red << "unknown time" << fidl_codec::ResetColor;
     }
   }
-  return os;
+  return printer;
 }
 
 typedef struct {

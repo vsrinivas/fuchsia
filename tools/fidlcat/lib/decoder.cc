@@ -64,31 +64,35 @@ std::vector<std::string_view> CleanPath(const zxdb::FileLine& file_line) {
   return path_elements;
 }
 
-void DisplayStackFrame(const fidl_codec::Colors& colors, std::string_view line_header,
-                       const std::vector<zxdb::Location>& caller_locations, std::ostream& os) {
+void DisplayStackFrame(const std::vector<zxdb::Location>& caller_locations,
+                       fidl_codec::PrettyPrinter& printer) {
+  bool header_on_every_line = printer.header_on_every_line();
+  // We want a header on every stack frame line.
+  printer.set_header_on_every_line(true);
   for (const auto& location : caller_locations) {
     if (location.is_valid()) {
       const zxdb::LazySymbol& symbol = location.symbol();
-      os << line_header << colors.yellow_background << "at " << colors.red;
+      printer << fidl_codec::YellowBackground << "at " << fidl_codec::Red;
       if (location.is_symbolized()) {
         std::vector<std::string_view> file = CleanPath(location.file_line());
         // Display the optimized path.
         const char* separator = "";
         for (const auto& item : file) {
-          os << separator << item;
+          printer << separator << item;
           separator = "/";
         }
-        os << colors.reset << colors.yellow_background << ':' << colors.blue
-           << location.file_line().line() << colors.reset;
+        printer << fidl_codec::ResetColor << fidl_codec::YellowBackground << ':' << fidl_codec::Blue
+                << location.file_line().line() << fidl_codec::ResetColor;
       } else {
-        os << std::hex << location.address() << colors.reset << std::dec;
+        printer << std::hex << location.address() << fidl_codec::ResetColor << std::dec;
       }
       if (symbol.is_valid()) {
-        os << ' ' << symbol.Get()->GetFullName();
+        printer << ' ' << symbol.Get()->GetFullName();
       }
-      os << '\n';
+      printer << '\n';
     }
   }
+  printer.set_header_on_every_line(header_on_every_line);
 }
 
 }  // namespace fidlcat

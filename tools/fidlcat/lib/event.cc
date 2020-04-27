@@ -9,7 +9,14 @@
 namespace fidlcat {
 
 void FidlcatPrinter::DisplayHandle(const zx_handle_info_t& handle) {
-  decoder_->DisplayHandle(handle, colors(), os());
+  fidl_codec::DisplayHandle(handle, *this);
+  const fidl_codec::semantic::HandleDescription* known_handle =
+      inference_.GetHandleDescription(process_id_, handle.handle);
+  if (known_handle != nullptr) {
+    (*this) << '(';
+    known_handle->Display(*this);
+    (*this) << ')';
+  }
 }
 
 void FidlcatPrinter::DisplayStatus(zx_status_t status) {

@@ -27,13 +27,13 @@ namespace fidlcat {
 
 #define BtiPermNameCase(name)      \
   if ((perm & (name)) == (name)) { \
-    os << separator << #name;      \
+    printer << separator << #name; \
     separator = " | ";             \
   }
 
-void BtiPermName(uint32_t perm, std::ostream& os) {
+void BtiPermName(uint32_t perm, fidl_codec::PrettyPrinter& printer) {
   if (perm == 0) {
-    os << "0";
+    printer << "0";
     return;
   }
   const char* separator = "";
@@ -46,43 +46,43 @@ void BtiPermName(uint32_t perm, std::ostream& os) {
 
 #define CachePolicyNameCase(name) \
   case name:                      \
-    os << #name;                  \
+    printer << #name;             \
     return
 
-void CachePolicyName(uint32_t cache_policy, std::ostream& os) {
+void CachePolicyName(uint32_t cache_policy, fidl_codec::PrettyPrinter& printer) {
   switch (cache_policy) {
     CachePolicyNameCase(ZX_CACHE_POLICY_CACHED);
     CachePolicyNameCase(ZX_CACHE_POLICY_UNCACHED);
     CachePolicyNameCase(ZX_CACHE_POLICY_UNCACHED_DEVICE);
     CachePolicyNameCase(ZX_CACHE_POLICY_WRITE_COMBINING);
     default:
-      os << cache_policy;
+      printer << cache_policy;
       return;
   }
 }
 
 #define ClockNameCase(name) \
   case name:                \
-    os << #name;            \
+    printer << #name;       \
     return
 
-void ClockName(zx_clock_t clock, std::ostream& os) {
+void ClockName(zx_clock_t clock, fidl_codec::PrettyPrinter& printer) {
   switch (clock) {
     ClockNameCase(ZX_CLOCK_MONOTONIC);
     ClockNameCase(ZX_CLOCK_UTC);
     ClockNameCase(ZX_CLOCK_THREAD);
     default:
-      os << clock;
+      printer << clock;
       return;
   }
 }
 
 #define ExceptionChannelTypeNameCase(name) \
   case name:                               \
-    os << #name;                           \
+    printer << #name;                      \
     return
 
-void ExceptionChannelTypeName(uint32_t type, std::ostream& os) {
+void ExceptionChannelTypeName(uint32_t type, fidl_codec::PrettyPrinter& printer) {
   switch (type) {
     ExceptionChannelTypeNameCase(ZX_EXCEPTION_CHANNEL_TYPE_NONE);
     ExceptionChannelTypeNameCase(ZX_EXCEPTION_CHANNEL_TYPE_DEBUGGER);
@@ -91,86 +91,86 @@ void ExceptionChannelTypeName(uint32_t type, std::ostream& os) {
     ExceptionChannelTypeNameCase(ZX_EXCEPTION_CHANNEL_TYPE_JOB);
     ExceptionChannelTypeNameCase(ZX_EXCEPTION_CHANNEL_TYPE_JOB_DEBUGGER);
     default:
-      os << static_cast<uint32_t>(type);
+      printer << static_cast<uint32_t>(type);
       return;
   }
 }
 
 #define ExceptionStateNameCase(name) \
   case name:                         \
-    os << #name;                     \
+    printer << #name;                \
     return
 
-void ExceptionStateName(uint32_t state, std::ostream& os) {
+void ExceptionStateName(uint32_t state, fidl_codec::PrettyPrinter& printer) {
   switch (state) {
     ExceptionStateNameCase(ZX_EXCEPTION_STATE_TRY_NEXT);
     ExceptionStateNameCase(ZX_EXCEPTION_STATE_HANDLED);
     default:
-      os << static_cast<uint32_t>(state);
+      printer << static_cast<uint32_t>(state);
       return;
   }
 }
 
 #define FeatureKindNameCase(name) \
   case name:                      \
-    os << #name;                  \
+    printer << #name;             \
     return
 
-void FeatureKindName(uint32_t feature_kind, std::ostream& os) {
+void FeatureKindName(uint32_t feature_kind, fidl_codec::PrettyPrinter& printer) {
   switch (feature_kind) {
     FeatureKindNameCase(ZX_FEATURE_KIND_CPU);
     FeatureKindNameCase(ZX_FEATURE_KIND_HW_BREAKPOINT_COUNT);
     FeatureKindNameCase(ZX_FEATURE_KIND_HW_WATCHPOINT_COUNT);
     default:
-      os << feature_kind;
+      printer << feature_kind;
       return;
   }
 }
 
 #define GuestTrapNameCase(name) \
   case name:                    \
-    os << #name;                \
+    printer << #name;           \
     return
 
-void GuestTrapName(zx_guest_trap_t trap, std::ostream& os) {
+void GuestTrapName(zx_guest_trap_t trap, fidl_codec::PrettyPrinter& printer) {
   switch (trap) {
     GuestTrapNameCase(ZX_GUEST_TRAP_BELL);
     GuestTrapNameCase(ZX_GUEST_TRAP_MEM);
     GuestTrapNameCase(ZX_GUEST_TRAP_IO);
     default:
-      os << trap;
+      printer << trap;
       return;
   }
 }
 
 #define InfoMapsTypeCase(name) \
   case name:                   \
-    os << #name;               \
+    printer << #name;          \
     return
 
-void InfoMapsTypeName(zx_info_maps_type_t type, std::ostream& os) {
+void InfoMapsTypeName(zx_info_maps_type_t type, fidl_codec::PrettyPrinter& printer) {
   switch (type) {
     InfoMapsTypeCase(ZX_INFO_MAPS_TYPE_NONE);
     InfoMapsTypeCase(ZX_INFO_MAPS_TYPE_ASPACE);
     InfoMapsTypeCase(ZX_INFO_MAPS_TYPE_VMAR);
     InfoMapsTypeCase(ZX_INFO_MAPS_TYPE_MAPPING);
     default:
-      os << type;
+      printer << type;
       return;
   }
 }
 
 #define InterruptFlagsCase(name) \
   case name:                     \
-    os << #name;                 \
+    printer << #name;            \
     break
 
 #define InterruptFlagsNameFlag(name) \
   if ((flags & (name)) == (name)) {  \
-    os << " | " << #name;            \
+    printer << " | " << #name;       \
   }
 
-void InterruptFlagsName(uint32_t flags, std::ostream& os) {
+void InterruptFlagsName(uint32_t flags, fidl_codec::PrettyPrinter& printer) {
   switch (flags & ZX_INTERRUPT_MODE_MASK) {
     InterruptFlagsCase(ZX_INTERRUPT_MODE_DEFAULT);
     InterruptFlagsCase(ZX_INTERRUPT_MODE_EDGE_LOW);
@@ -179,7 +179,7 @@ void InterruptFlagsName(uint32_t flags, std::ostream& os) {
     InterruptFlagsCase(ZX_INTERRUPT_MODE_LEVEL_HIGH);
     InterruptFlagsCase(ZX_INTERRUPT_MODE_EDGE_BOTH);
     default:
-      os << (flags & ZX_INTERRUPT_MODE_MASK);
+      printer << (flags & ZX_INTERRUPT_MODE_MASK);
       break;
   }
   InterruptFlagsNameFlag(ZX_INTERRUPT_REMAP_IRQ);
@@ -188,25 +188,25 @@ void InterruptFlagsName(uint32_t flags, std::ostream& os) {
 
 #define IommuTypeNameCase(name) \
   case name:                    \
-    os << #name;                \
+    printer << #name;           \
     return
 
-void IommuTypeName(uint32_t type, std::ostream& os) {
+void IommuTypeName(uint32_t type, fidl_codec::PrettyPrinter& printer) {
   switch (type) {
     IommuTypeNameCase(ZX_IOMMU_TYPE_DUMMY);
     IommuTypeNameCase(ZX_IOMMU_TYPE_INTEL);
     default:
-      os << type;
+      printer << type;
       return;
   }
 }
 
 #define KtraceControlActionNameCase(name) \
   case name:                              \
-    os << #name;                          \
+    printer << #name;                     \
     return
 
-void KtraceControlActionName(uint32_t action, std::ostream& os) {
+void KtraceControlActionName(uint32_t action, fidl_codec::PrettyPrinter& printer) {
   constexpr uint32_t KTRACE_ACTION_START = 1;
   constexpr uint32_t KTRACE_ACTION_STOP = 2;
   constexpr uint32_t KTRACE_ACTION_REWIND = 3;
@@ -217,78 +217,78 @@ void KtraceControlActionName(uint32_t action, std::ostream& os) {
     KtraceControlActionNameCase(KTRACE_ACTION_REWIND);
     KtraceControlActionNameCase(KTRACE_ACTION_NEW_PROBE);
     default:
-      os << action;
+      printer << action;
       return;
   }
 }
 
 #define ObjPropsNameCase(name) \
   case name:                   \
-    os << #name;               \
+    printer << #name;          \
     return
 
-void ObjPropsName(zx_obj_props_t obj_props, std::ostream& os) {
+void ObjPropsName(zx_obj_props_t obj_props, fidl_codec::PrettyPrinter& printer) {
   switch (obj_props) {
     ObjPropsNameCase(ZX_OBJ_PROP_NONE);
     ObjPropsNameCase(ZX_OBJ_PROP_WAITABLE);
     default:
-      os << obj_props;
+      printer << obj_props;
       return;
   }
 }
 
 #define PacketGuestVcpuTypeNameCase(name) \
   case name:                              \
-    os << #name;                          \
+    printer << #name;                     \
     return
 
-void PacketGuestVcpuTypeName(uint8_t type, std::ostream& os) {
+void PacketGuestVcpuTypeName(uint8_t type, fidl_codec::PrettyPrinter& printer) {
   switch (type) {
     PacketGuestVcpuTypeNameCase(ZX_PKT_GUEST_VCPU_INTERRUPT);
     PacketGuestVcpuTypeNameCase(ZX_PKT_GUEST_VCPU_STARTUP);
     default:
-      os << static_cast<uint32_t>(type);
+      printer << static_cast<uint32_t>(type);
       return;
   }
 }
 
 #define PacketPageRequestCommandNameCase(name) \
   case name:                                   \
-    os << #name;                               \
+    printer << #name;                          \
     return
 
-void PacketPageRequestCommandName(uint16_t command, std::ostream& os) {
+void PacketPageRequestCommandName(uint16_t command, fidl_codec::PrettyPrinter& printer) {
   switch (command) {
     PacketPageRequestCommandNameCase(ZX_PAGER_VMO_READ);
     PacketPageRequestCommandNameCase(ZX_PAGER_VMO_COMPLETE);
     default:
-      os << static_cast<uint32_t>(command);
+      printer << static_cast<uint32_t>(command);
       return;
   }
 }
 
 #define PciBarTypeNameCase(name) \
   case name:                     \
-    os << #name;                 \
+    printer << #name;            \
     return
 
-void PciBarTypeName(uint32_t type, std::ostream& os) {
+void PciBarTypeName(uint32_t type, fidl_codec::PrettyPrinter& printer) {
   switch (type) {
     PciBarTypeNameCase(ZX_PCI_BAR_TYPE_UNUSED);
     PciBarTypeNameCase(ZX_PCI_BAR_TYPE_MMIO);
     PciBarTypeNameCase(ZX_PCI_BAR_TYPE_PIO);
     default:
-      os << static_cast<uint32_t>(type);
+      printer << static_cast<uint32_t>(type);
       return;
   }
 }
 
 #define PolicyNameCase(name) \
   case name:                 \
-    os << #name;             \
+    printer << #name;        \
     return
 
-void PolicyActionName(uint32_t action, std::ostream& os) {
+void PolicyActionName(uint32_t action, fidl_codec::PrettyPrinter& printer) {
   switch (action) {
     PolicyNameCase(ZX_POL_ACTION_ALLOW);
     PolicyNameCase(ZX_POL_ACTION_DENY);
@@ -296,12 +296,12 @@ void PolicyActionName(uint32_t action, std::ostream& os) {
     PolicyNameCase(ZX_POL_ACTION_DENY_EXCEPTION);
     PolicyNameCase(ZX_POL_ACTION_KILL);
     default:
-      os << action;
+      printer << action;
       return;
   }
 }
 
-void PolicyConditionName(uint32_t condition, std::ostream& os) {
+void PolicyConditionName(uint32_t condition, fidl_codec::PrettyPrinter& printer) {
   switch (condition) {
     PolicyNameCase(ZX_POL_BAD_HANDLE);
     PolicyNameCase(ZX_POL_WRONG_OBJECT);
@@ -319,27 +319,27 @@ void PolicyConditionName(uint32_t condition, std::ostream& os) {
     PolicyNameCase(ZX_POL_NEW_PROFILE);
     PolicyNameCase(ZX_POL_AMBIENT_MARK_VMO_EXEC);
     default:
-      os << condition;
+      printer << condition;
       return;
   }
 }
 
-void PolicyTopicName(uint32_t topic, std::ostream& os) {
+void PolicyTopicName(uint32_t topic, fidl_codec::PrettyPrinter& printer) {
   switch (topic) {
     PolicyNameCase(ZX_JOB_POL_BASIC);
     PolicyNameCase(ZX_JOB_POL_TIMER_SLACK);
     default:
-      os << topic;
+      printer << topic;
       return;
   }
 }
 
 #define PortPacketTypeNameCase(name) \
   case name:                         \
-    os << #name;                     \
+    printer << #name;                \
     return
 
-void PortPacketTypeName(uint32_t type, std::ostream& os) {
+void PortPacketTypeName(uint32_t type, fidl_codec::PrettyPrinter& printer) {
   switch (type) {
     PortPacketTypeNameCase(ZX_PKT_TYPE_USER);
     PortPacketTypeNameCase(ZX_PKT_TYPE_SIGNAL_ONE);
@@ -350,20 +350,20 @@ void PortPacketTypeName(uint32_t type, std::ostream& os) {
     PortPacketTypeNameCase(ZX_PKT_TYPE_INTERRUPT);
     PortPacketTypeNameCase(ZX_PKT_TYPE_PAGE_REQUEST);
     default:
-      os << "port_packet_type=" << type;
+      printer << "port_packet_type=" << type;
       return;
   }
 }
 
 #define ProfileInfoFlagsNameCase(name) \
   if ((flags & (name)) == (name)) {    \
-    os << separator << #name;          \
+    printer << separator << #name;     \
     separator = " | ";                 \
   }
 
-void ProfileInfoFlagsName(uint32_t flags, std::ostream& os) {
+void ProfileInfoFlagsName(uint32_t flags, fidl_codec::PrettyPrinter& printer) {
   if (flags == 0) {
-    os << "0";
+    printer << "0";
     return;
   }
   const char* separator = "";
@@ -373,10 +373,10 @@ void ProfileInfoFlagsName(uint32_t flags, std::ostream& os) {
 
 #define PropTypeNameCase(name) \
   case name:                   \
-    os << #name;               \
+    printer << #name;          \
     return
 
-void PropTypeName(uint32_t type, std::ostream& os) {
+void PropTypeName(uint32_t type, fidl_codec::PrettyPrinter& printer) {
   switch (type) {
     PropTypeNameCase(ZX_PROP_NAME);
     PropTypeNameCase(ZX_PROP_REGISTER_FS);
@@ -388,17 +388,17 @@ void PropTypeName(uint32_t type, std::ostream& os) {
     PropTypeNameCase(ZX_PROP_JOB_KILL_ON_OOM);
     PropTypeNameCase(ZX_PROP_EXCEPTION_STATE);
     default:
-      os << type;
+      printer << type;
       return;
   }
 }
 
 #define RsrcKindNameCase(name) \
   case name:                   \
-    os << #name;               \
+    printer << #name;          \
     return
 
-void RsrcKindName(zx_rsrc_kind_t kind, std::ostream& os) {
+void RsrcKindName(zx_rsrc_kind_t kind, fidl_codec::PrettyPrinter& printer) {
   switch (kind) {
     RsrcKindNameCase(ZX_RSRC_KIND_MMIO);
     RsrcKindNameCase(ZX_RSRC_KIND_IRQ);
@@ -409,24 +409,24 @@ void RsrcKindName(zx_rsrc_kind_t kind, std::ostream& os) {
     RsrcKindNameCase(ZX_RSRC_KIND_SMC);
     RsrcKindNameCase(ZX_RSRC_KIND_COUNT);
     default:
-      os << kind;
+      printer << kind;
       return;
   }
 }
 
 #define SignalNameCase(name)          \
   if ((signals & (name)) == (name)) { \
-    os << separator << #name;         \
+    printer << separator << #name;    \
     separator = " | ";                \
   }
 
-void SignalName(zx_signals_t signals, std::ostream& os) {
+void SignalName(zx_signals_t signals, fidl_codec::PrettyPrinter& printer) {
   if (signals == 0) {
-    os << "0";
+    printer << "0";
     return;
   }
   if (signals == __ZX_OBJECT_SIGNAL_ALL) {
-    os << "__ZX_OBJECT_SIGNAL_ALL";
+    printer << "__ZX_OBJECT_SIGNAL_ALL";
     return;
   }
   const char* separator = "";
@@ -466,42 +466,42 @@ void SignalName(zx_signals_t signals, std::ostream& os) {
 
 #define SocketCreateOptionsNameCase(name) \
   case name:                              \
-    os << #name;                          \
+    printer << #name;                     \
     return
 
-void SocketCreateOptionsName(uint32_t options, std::ostream& os) {
+void SocketCreateOptionsName(uint32_t options, fidl_codec::PrettyPrinter& printer) {
   switch (options) {
     SocketCreateOptionsNameCase(ZX_SOCKET_STREAM);
     SocketCreateOptionsNameCase(ZX_SOCKET_DATAGRAM);
     default:
-      os << static_cast<uint32_t>(options);
+      printer << static_cast<uint32_t>(options);
       return;
   }
 }
 
 #define SocketReadOptionsNameCase(name) \
   case name:                            \
-    os << #name;                        \
+    printer << #name;                   \
     return
 
-void SocketReadOptionsName(uint32_t options, std::ostream& os) {
+void SocketReadOptionsName(uint32_t options, fidl_codec::PrettyPrinter& printer) {
   switch (options) {
     SocketReadOptionsNameCase(ZX_SOCKET_PEEK);
     default:
-      os << static_cast<uint32_t>(options);
+      printer << static_cast<uint32_t>(options);
       return;
   }
 }
 
 #define SocketShutdownOptionsNameCase(name) \
   if ((options & (name)) == (name)) {       \
-    os << separator << #name;               \
+    printer << separator << #name;          \
     separator = " | ";                      \
   }
 
-void SocketShutdownOptionsName(uint32_t options, std::ostream& os) {
+void SocketShutdownOptionsName(uint32_t options, fidl_codec::PrettyPrinter& printer) {
   if (options == 0) {
-    os << "0";
+    printer << "0";
     return;
   }
   const char* separator = "";
@@ -509,35 +509,35 @@ void SocketShutdownOptionsName(uint32_t options, std::ostream& os) {
   SocketShutdownOptionsNameCase(ZX_SOCKET_SHUTDOWN_READ);
 }
 
-void StatusName(const fidl_codec::Colors& colors, zx_status_t status, std::ostream& os) {
+void StatusName(zx_status_t status, fidl_codec::PrettyPrinter& printer) {
   if (status == ZX_OK) {
-    os << colors.green;
+    printer << fidl_codec::Green;
   } else {
-    os << colors.red;
+    printer << fidl_codec::Red;
   }
-  os << fidl_codec::StatusName(status) << colors.reset;
+  printer << fidl_codec::StatusName(status) << fidl_codec::ResetColor;
 }
 
 #define SystemEventTypeNameCase(name) \
   case name:                          \
-    os << #name;                      \
+    printer << #name;                 \
     return
 
-void SystemEventTypeName(zx_system_event_type_t type, std::ostream& os) {
+void SystemEventTypeName(zx_system_event_type_t type, fidl_codec::PrettyPrinter& printer) {
   switch (type) {
     SystemEventTypeNameCase(ZX_SYSTEM_EVENT_OUT_OF_MEMORY);
     default:
-      os << type;
+      printer << type;
       return;
   }
 }
 
 #define SystemPowerctlNameCase(name) \
   case name:                         \
-    os << #name;                     \
+    printer << #name;                \
     return
 
-void SystemPowerctlName(uint32_t powerctl, std::ostream& os) {
+void SystemPowerctlName(uint32_t powerctl, fidl_codec::PrettyPrinter& printer) {
   switch (powerctl) {
     SystemPowerctlNameCase(ZX_SYSTEM_POWERCTL_ENABLE_ALL_CPUS);
     SystemPowerctlNameCase(ZX_SYSTEM_POWERCTL_DISABLE_ALL_CPUS_BUT_PRIMARY);
@@ -548,17 +548,17 @@ void SystemPowerctlName(uint32_t powerctl, std::ostream& os) {
     SystemPowerctlNameCase(ZX_SYSTEM_POWERCTL_REBOOT_RECOVERY);
     SystemPowerctlNameCase(ZX_SYSTEM_POWERCTL_SHUTDOWN);
     default:
-      os << powerctl;
+      printer << powerctl;
       return;
   }
 }
 
 #define ThreadStateNameCase(name) \
   case name:                      \
-    os << #name;                  \
+    printer << #name;             \
     return
 
-void ThreadStateName(uint32_t state, std::ostream& os) {
+void ThreadStateName(uint32_t state, fidl_codec::PrettyPrinter& printer) {
   switch (state) {
     ThreadStateNameCase(ZX_THREAD_STATE_NEW);
     ThreadStateNameCase(ZX_THREAD_STATE_RUNNING);
@@ -576,17 +576,17 @@ void ThreadStateName(uint32_t state, std::ostream& os) {
     ThreadStateNameCase(ZX_THREAD_STATE_BLOCKED_INTERRUPT);
     ThreadStateNameCase(ZX_THREAD_STATE_BLOCKED_PAGER);
     default:
-      os << static_cast<uint32_t>(state);
+      printer << static_cast<uint32_t>(state);
       return;
   }
 }
 
 #define ThreadStateTopicNameCase(name) \
   case name:                           \
-    os << #name;                       \
+    printer << #name;                  \
     return
 
-void ThreadStateTopicName(zx_thread_state_topic_t topic, std::ostream& os) {
+void ThreadStateTopicName(zx_thread_state_topic_t topic, fidl_codec::PrettyPrinter& printer) {
   switch (topic) {
     ThreadStateTopicNameCase(ZX_THREAD_STATE_GENERAL_REGS);
     ThreadStateTopicNameCase(ZX_THREAD_STATE_FP_REGS);
@@ -596,33 +596,33 @@ void ThreadStateTopicName(zx_thread_state_topic_t topic, std::ostream& os) {
     ThreadStateTopicNameCase(ZX_THREAD_X86_REGISTER_FS);
     ThreadStateTopicNameCase(ZX_THREAD_X86_REGISTER_GS);
     default:
-      os << static_cast<uint32_t>(topic);
+      printer << static_cast<uint32_t>(topic);
       return;
   }
 }
 
 #define TimerOptionNameCase(name) \
   case name:                      \
-    os << #name;                  \
+    printer << #name;             \
     return
 
-void TimerOptionName(uint32_t option, std::ostream& os) {
+void TimerOptionName(uint32_t option, fidl_codec::PrettyPrinter& printer) {
   switch (option) {
     TimerOptionNameCase(ZX_TIMER_SLACK_CENTER);
     TimerOptionNameCase(ZX_TIMER_SLACK_EARLY);
     TimerOptionNameCase(ZX_TIMER_SLACK_LATE);
     default:
-      os << option;
+      printer << option;
       return;
   }
 }
 
 #define TopicNameCase(name) \
   case name:                \
-    os << #name;            \
+    printer << #name;       \
     return
 
-void TopicName(uint32_t topic, std::ostream& os) {
+void TopicName(uint32_t topic, fidl_codec::PrettyPrinter& printer) {
   switch (topic) {
     TopicNameCase(ZX_INFO_NONE);
     TopicNameCase(ZX_INFO_HANDLE_VALID);
@@ -648,41 +648,41 @@ void TopicName(uint32_t topic, std::ostream& os) {
     TopicNameCase(ZX_INFO_VMO);
     TopicNameCase(ZX_INFO_JOB);
     default:
-      os << "topic=" << topic;
+      printer << "topic=" << topic;
       return;
   }
 }
 
 #define VcpuNameCase(name) \
   case name:               \
-    os << #name;           \
+    printer << #name;      \
     return
 
-void VcpuName(uint32_t type, std::ostream& os) {
+void VcpuName(uint32_t type, fidl_codec::PrettyPrinter& printer) {
   switch (type) {
     VcpuNameCase(ZX_VCPU_STATE);
     VcpuNameCase(ZX_VCPU_IO);
     default:
-      os << type;
+      printer << type;
       return;
   }
 }
 
 #define VmOptionAlign(name) \
   case name:                \
-    os << #name;            \
+    printer << #name;       \
     separator = " | ";      \
     break;
 
 #define VmOptionCase(name)           \
   if ((option & (name)) == (name)) { \
-    os << separator << #name;        \
+    printer << separator << #name;   \
     separator = " | ";               \
   }
 
-void VmOptionName(zx_vm_option_t option, std::ostream& os) {
+void VmOptionName(zx_vm_option_t option, fidl_codec::PrettyPrinter& printer) {
   if (option == 0) {
-    os << "0";
+    printer << "0";
     return;
   }
   const char* separator = "";
@@ -712,7 +712,7 @@ void VmOptionName(zx_vm_option_t option, std::ostream& os) {
     VmOptionAlign(ZX_VM_ALIGN_4GB);
     default:
       if ((option >> ZX_VM_ALIGN_BASE) != 0) {
-        os << (option >> ZX_VM_ALIGN_BASE);
+        printer << (option >> ZX_VM_ALIGN_BASE);
       }
       break;
   }
@@ -733,13 +733,13 @@ void VmOptionName(zx_vm_option_t option, std::ostream& os) {
 
 #define VmoCreationOptionNameCase(name) \
   if ((options & (name)) == (name)) {   \
-    os << separator << #name;           \
+    printer << separator << #name;      \
     separator = " | ";                  \
   }
 
-void VmoCreationOptionName(uint32_t options, std::ostream& os) {
+void VmoCreationOptionName(uint32_t options, fidl_codec::PrettyPrinter& printer) {
   if (options == 0) {
-    os << "0";
+    printer << "0";
     return;
   }
   const char* separator = "";
@@ -748,10 +748,10 @@ void VmoCreationOptionName(uint32_t options, std::ostream& os) {
 
 #define VmoOpNameCase(name) \
   case name:                \
-    os << #name;            \
+    printer << #name;       \
     return
 
-void VmoOpName(uint32_t op, std::ostream& os) {
+void VmoOpName(uint32_t op, fidl_codec::PrettyPrinter& printer) {
   switch (op) {
     VmoOpNameCase(ZX_VMO_OP_COMMIT);
     VmoOpNameCase(ZX_VMO_OP_DECOMMIT);
@@ -762,20 +762,20 @@ void VmoOpName(uint32_t op, std::ostream& os) {
     VmoOpNameCase(ZX_VMO_OP_CACHE_CLEAN);
     VmoOpNameCase(ZX_VMO_OP_CACHE_CLEAN_INVALIDATE);
     default:
-      os << op;
+      printer << op;
       return;
   }
 }
 
 #define VmoOptionNameCase(name)       \
   if ((options & (name)) == (name)) { \
-    os << separator << #name;         \
+    printer << separator << #name;    \
     separator = " | ";                \
   }
 
-void VmoOptionName(uint32_t options, std::ostream& os) {
+void VmoOptionName(uint32_t options, fidl_codec::PrettyPrinter& printer) {
   if (options == 0) {
-    os << "0";
+    printer << "0";
     return;
   }
   const char* separator = "";
@@ -787,14 +787,14 @@ void VmoOptionName(uint32_t options, std::ostream& os) {
 
 #define VmoTypeNameCase(name)      \
   if ((type & (name)) == (name)) { \
-    os << " | " << #name;          \
+    printer << " | " << #name;     \
   }
 
-void VmoTypeName(uint32_t type, std::ostream& os) {
+void VmoTypeName(uint32_t type, fidl_codec::PrettyPrinter& printer) {
   if ((type & 1) == ZX_INFO_VMO_TYPE_PHYSICAL) {
-    os << "ZX_INFO_VMO_TYPE_PHYSICAL";
+    printer << "ZX_INFO_VMO_TYPE_PHYSICAL";
   } else {
-    os << "ZX_INFO_VMO_TYPE_PAGED";
+    printer << "ZX_INFO_VMO_TYPE_PAGED";
   }
   VmoTypeNameCase(ZX_INFO_VMO_RESIZABLE);
   VmoTypeNameCase(ZX_INFO_VMO_IS_COW_CLONE);
@@ -953,8 +953,8 @@ std::string_view TypeName(SyscallType type) {
   }
 }
 
-void DisplayType(const fidl_codec::Colors& colors, SyscallType type, std::ostream& os) {
-  os << ":" << colors.green << TypeName(type) << colors.reset << ": ";
+void DisplayType(SyscallType type, fidl_codec::PrettyPrinter& printer) {
+  printer << ":" << fidl_codec::Green << TypeName(type) << fidl_codec::ResetColor << ": ";
 }
 
 }  // namespace fidlcat

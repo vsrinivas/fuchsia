@@ -23,10 +23,10 @@ constexpr int kUint32Precision = 8;
 
 #define ObjTypeNameCase(name) \
   case name:                  \
-    os << #name;              \
+    printer << #name;         \
     return
 
-void ObjTypeName(zx_obj_type_t obj_type, std::ostream& os) {
+void ObjTypeName(zx_obj_type_t obj_type, PrettyPrinter& printer) {
   switch (obj_type) {
     ObjTypeNameCase(ZX_OBJ_TYPE_NONE);
     ObjTypeNameCase(ZX_OBJ_TYPE_PROCESS);
@@ -55,20 +55,20 @@ void ObjTypeName(zx_obj_type_t obj_type, std::ostream& os) {
     ObjTypeNameCase(ZX_OBJ_TYPE_PAGER);
     ObjTypeNameCase(ZX_OBJ_TYPE_EXCEPTION);
     default:
-      os << obj_type;
+      printer << obj_type;
       return;
   }
 }
 
-#define RightsNameCase(name)    \
-  if ((rights & (name)) != 0) { \
-    os << separator << #name;   \
-    separator = " | ";          \
+#define RightsNameCase(name)       \
+  if ((rights & (name)) != 0) {    \
+    printer << separator << #name; \
+    separator = " | ";             \
   }
 
-void RightsName(zx_rights_t rights, std::ostream& os) {
+void RightsName(zx_rights_t rights, PrettyPrinter& printer) {
   if (rights == 0) {
-    os << "ZX_RIGHT_NONE";
+    printer << "ZX_RIGHT_NONE";
     return;
   }
   const char* separator = "";
@@ -95,20 +95,21 @@ void RightsName(zx_rights_t rights, std::ostream& os) {
   RightsNameCase(ZX_RIGHT_SAME_RIGHTS);
 }
 
-void DisplayHandle(const Colors& colors, const zx_handle_info_t& handle, std::ostream& os) {
-  os << colors.red;
+void DisplayHandle(const zx_handle_info_t& handle, PrettyPrinter& printer) {
+  printer << Red;
   if (handle.type != ZX_OBJ_TYPE_NONE) {
-    ObjTypeName(handle.type, os);
-    os << ':';
+    ObjTypeName(handle.type, printer);
+    printer << ':';
   }
-  os << std::hex << std::setfill('0') << std::setw(kUint32Precision) << handle.handle << std::dec
-     << std::setw(0);
+  char buffer[kUint32Precision + 1];
+  snprintf(buffer, sizeof(buffer), "%08x", handle.handle);
+  printer << buffer;
   if (handle.rights != 0) {
-    os << colors.blue << '(';
-    RightsName(handle.rights, os);
-    os << ')';
+    printer << Blue << '(';
+    RightsName(handle.rights, printer);
+    printer << ')';
   }
-  os << colors.reset;
+  printer << ResetColor;
 }
 
 }  // namespace fidl_codec

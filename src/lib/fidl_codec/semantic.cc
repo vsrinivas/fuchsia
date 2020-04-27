@@ -221,14 +221,14 @@ std::string_view HandleDescription::Convert(uint32_t type) {
   }
 }
 
-void HandleDescription::Display(const fidl_codec::Colors& colors, std::ostream& os) const {
+void HandleDescription::Display(PrettyPrinter& printer) const {
   if (!type_.empty()) {
-    os << colors.green << type_ << colors.reset;
+    printer << Green << type_ << ResetColor;
     if (fd_ != -1) {
-      os << ':' << colors.blue << fd_ << colors.reset;
+      printer << ':' << Blue << fd_ << ResetColor;
     }
     if (!path_.empty()) {
-      os << ':' << colors.blue << path_ << colors.reset;
+      printer << ':' << Blue << path_ << ResetColor;
     }
   }
 }

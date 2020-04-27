@@ -18,32 +18,31 @@
 
 namespace fidlcat {
 
-void DisplayString(const fidl_codec::Colors& colors, const char* string, size_t size,
-                   std::ostream& os) {
+void DisplayString(const char* string, size_t size, fidl_codec::PrettyPrinter& printer) {
   if (string == nullptr) {
-    os << "nullptr\n";
+    printer << "nullptr\n";
   } else {
     if (size == 0) {
-      os << "empty\n";
+      printer << "empty\n";
     } else {
-      os << colors.red << '"';
+      printer << fidl_codec::Red << '"';
       for (size_t i = 0; i < size; ++i) {
         char value = string[i];
         switch (value) {
           case 0:
             break;
           case '\\':
-            os << "\\\\";
+            printer << "\\\\";
             break;
           case '\n':
-            os << "\\n";
+            printer << "\\n";
             break;
           default:
-            os << value;
+            printer << value;
             break;
         }
       }
-      os << '"' << colors.reset;
+      printer << '"' << fidl_codec::ResetColor;
     }
   }
 }
@@ -88,47 +87,42 @@ std::unique_ptr<fidl_codec::Value> SyscallInputOutputBase::GenerateValue(Syscall
   return std::make_unique<fidl_codec::InvalidValue>();
 }
 
-void SyscallInputOutputStringBuffer::DisplayOutline(SyscallDisplayDispatcher* dispatcher,
-                                                    SyscallDecoder* decoder, Stage stage,
-                                                    std::string_view line_header, int tabs,
-                                                    std::ostream& os) const {
-  os << line_header << std::string((tabs + 1) * fidl_codec::kTabSize, ' ') << name();
-  const fidl_codec::Colors& colors = dispatcher->colors();
-  os << ':' << colors.green << "string" << colors.reset << ": ";
+void SyscallInputOutputStringBuffer::DisplayOutline(SyscallDecoder* decoder, Stage stage,
+                                                    fidl_codec::PrettyPrinter& printer) const {
+  printer << name();
+  printer << ':' << fidl_codec::Green << "string" << fidl_codec::ResetColor << ": ";
   const char* const* buffer = buffer_->Content(decoder, stage);
   if (buffer == nullptr) {
-    os << colors.red << "nullptr" << colors.reset;
+    printer << fidl_codec::Red << "nullptr" << fidl_codec::ResetColor;
   } else {
     uint32_t count = count_->Value(decoder, stage);
     if (count == 0) {
-      os << "empty\n";
+      printer << "empty\n";
       return;
     }
     const char* separator = "";
     for (uint32_t i = 0; i < count; ++i) {
       if (buffer[i] != nullptr) {
-        os << separator;
+        printer << separator;
         const char* string = reinterpret_cast<const char*>(
             decoder->BufferContent(stage, reinterpret_cast<uint64_t>(buffer[i])));
         size_t string_size = (string == nullptr) ? 0 : strnlen(string, max_size_);
-        DisplayString(colors, string, string_size, os);
+        DisplayString(string, string_size, printer);
         separator = ", ";
       }
     }
   }
-  os << '\n';
+  printer << '\n';
 }
 
-const char* SyscallInputOutputFixedSizeString::DisplayInline(SyscallDisplayDispatcher* dispatcher,
-                                                             SyscallDecoder* decoder, Stage stage,
-                                                             const char* separator,
-                                                             std::ostream& os) const {
-  const fidl_codec::Colors& colors = dispatcher->colors();
-  os << separator;
-  os << name() << ':' << colors.green << "string" << colors.reset << ": ";
+const char* SyscallInputOutputFixedSizeString::DisplayInline(
+    SyscallDecoder* decoder, Stage stage, const char* separator,
+    fidl_codec::PrettyPrinter& printer) const {
+  printer << separator;
+  printer << name() << ':' << fidl_codec::Green << "string" << fidl_codec::ResetColor << ": ";
   const char* string = string_->Content(decoder, stage);
   size_t string_size = (string == nullptr) ? 0 : strnlen(string, string_size_);
-  DisplayString(colors, string, string_size, os);
+  DisplayString(string, string_size, printer);
   return ", ";
 }
 

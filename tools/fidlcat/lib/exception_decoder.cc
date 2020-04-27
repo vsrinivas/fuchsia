@@ -59,17 +59,21 @@ void ExceptionDecoder::Destroy() {
 }
 
 void ExceptionDisplay::ExceptionDecoded(ExceptionDecoder* decoder) {
-  const fidl_codec::Colors& colors = dispatcher_->colors();
-  line_header_ = decoder->process_name() + ' ' + colors.red +
-                 std::to_string(decoder->process_id()) + colors.reset + ':' + colors.red +
-                 std::to_string(decoder->thread_id()) + colors.reset + ' ';
-
   os_ << '\n';
 
-  // Display caller locations.
-  DisplayStackFrame(dispatcher_->colors(), line_header_, decoder->caller_locations(), os_);
+  const fidl_codec::Colors& colors = dispatcher_->colors();
+  std::string line_header = decoder->process_name() + ' ' + colors.red +
+                            std::to_string(decoder->process_id()) + colors.reset + ':' +
+                            colors.red + std::to_string(decoder->thread_id()) + colors.reset + ' ';
+  FidlcatPrinter printer(dispatcher_->inference(), decoder->process_id(),
+                         dispatcher_->dump_messages(),
+                         dispatcher_->message_decoder_dispatcher().display_options().pretty_print,
+                         os_, dispatcher_->colors(), line_header, dispatcher_->columns(), true);
 
-  os_ << line_header_ << colors.red << "thread stopped on exception" << colors.reset << '\n';
+  // Display caller locations.
+  DisplayStackFrame(decoder->caller_locations(), printer);
+
+  printer << fidl_codec::Red << "thread stopped on exception" << fidl_codec::ResetColor << '\n';
 
   // Now our job is done, we can destroy the object.
   decoder->Destroy();

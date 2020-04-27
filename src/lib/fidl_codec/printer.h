@@ -54,6 +54,10 @@ class PrettyPrinter {
   const Colors& colors() const { return colors_; }
   bool pretty_print() const { return pretty_print_; }
   int max_line_size() const { return max_line_size_; }
+  bool header_on_every_line() const { return header_on_every_line_; }
+  void set_header_on_every_line(bool header_on_every_line) {
+    header_on_every_line_ = header_on_every_line;
+  }
   int remaining_size() const { return remaining_size_; }
 
   bool LineEmpty() const { return need_to_print_header_; }
@@ -86,6 +90,12 @@ class PrettyPrinter {
   }
 
   PrettyPrinter& operator<<(int32_t data) {
+    FXL_DCHECK((os_.flags() & os_.basefield) == os_.dec);
+    *this << std::to_string(data);
+    return *this;
+  }
+
+  PrettyPrinter& operator<<(int64_t data) {
     FXL_DCHECK((os_.flags() & os_.basefield) == os_.dec);
     *this << std::to_string(data);
     return *this;
@@ -152,7 +162,7 @@ class PrettyPrinter {
   const bool pretty_print_;
   const std::string_view line_header_;
   const int max_line_size_;
-  const bool header_on_every_line_ = false;
+  bool header_on_every_line_;
   bool need_to_print_header_ = true;
   int line_header_size_ = 0;
   int tabulations_;
@@ -197,6 +207,27 @@ class Indent {
 
  private:
   PrettyPrinter& printer_;
+};
+
+// Scope which increments the indentation several times.
+class MultiIndent {
+ public:
+  explicit MultiIndent(PrettyPrinter& printer, int count) : printer_(printer), count_(count) {
+    while (count > 0) {
+      printer.IncrementTabulations();
+      --count;
+    }
+  }
+  ~MultiIndent() {
+    while (count_ > 0) {
+      printer_.DecrementTabulations();
+      --count_;
+    }
+  }
+
+ private:
+  PrettyPrinter& printer_;
+  int count_;
 };
 
 }  // namespace fidl_codec

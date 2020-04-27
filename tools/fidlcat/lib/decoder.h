@@ -37,8 +37,8 @@ class DecoderError {
   std::stringstream message_;
 };
 
-void DisplayStackFrame(const fidl_codec::Colors& colors, std::string_view line_header,
-                       const std::vector<zxdb::Location>& caller_locations, std::ostream& os);
+void DisplayStackFrame(const std::vector<zxdb::Location>& caller_locations,
+                       fidl_codec::PrettyPrinter& printer);
 
 }  // namespace fidlcat
 

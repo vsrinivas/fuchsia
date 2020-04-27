@@ -169,10 +169,6 @@ class SyscallDecoder {
     return error_.Set(type);
   }
 
-  // Display a handle. Also display the data we have inferered for this handle (if any).
-  void DisplayHandle(const zx_handle_info_t& handle_info, const fidl_codec::Colors& colors,
-                     std::ostream& os);
-
   // Load the value for a buffer or a struct (field or argument).
   void LoadMemory(uint64_t address, size_t size, std::vector<uint8_t>* destination);
 
@@ -318,7 +314,6 @@ class SyscallDisplay : public SyscallUse {
  private:
   SyscallDisplayDispatcher* const dispatcher_;
   std::ostream& os_;
-  std::string line_header_;
 };
 
 class SyscallCompare : public SyscallDisplay {

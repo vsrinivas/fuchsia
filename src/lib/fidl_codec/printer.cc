@@ -45,7 +45,7 @@ PrettyPrinter::PrettyPrinter(std::ostream& os, const Colors& colors, bool pretty
 }
 
 void PrettyPrinter::DisplayHandle(const zx_handle_info_t& handle) {
-  fidl_codec::DisplayHandle(colors_, handle, os_);
+  fidl_codec::DisplayHandle(handle, *this);
 }
 
 void PrettyPrinter::DisplayTime(zx_time_t time_ns) {

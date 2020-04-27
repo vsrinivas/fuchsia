@@ -86,7 +86,6 @@ class ExceptionDisplay : public ExceptionUse {
  private:
   SyscallDisplayDispatcher* const dispatcher_;
   std::ostream& os_;
-  std::string line_header_;
 };
 
 }  // namespace fidlcat

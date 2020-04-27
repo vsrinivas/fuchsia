@@ -22,12 +22,14 @@ class SyscallDecoder;
 // Printer which allows us to print the infered data for handles.
 class FidlcatPrinter : public fidl_codec::PrettyPrinter {
  public:
-  FidlcatPrinter(SyscallDecoder* decoder, bool dump_messages, bool pretty_print, std::ostream& os,
-                 const fidl_codec::Colors& colors, std::string_view line_header, int max_line_size,
-                 bool header_on_every_line, int tabulations = 0)
+  FidlcatPrinter(const Inference& inference, uint64_t process_id, bool dump_messages,
+                 bool pretty_print, std::ostream& os, const fidl_codec::Colors& colors,
+                 std::string_view line_header, int max_line_size, bool header_on_every_line,
+                 int tabulations = 0)
       : PrettyPrinter(os, colors, pretty_print, line_header, max_line_size, header_on_every_line,
                       tabulations),
-        decoder_(decoder),
+        inference_(inference),
+        process_id_(process_id),
         dump_messages_(dump_messages) {}
 
   bool DumpMessages() const override { return dump_messages_; }
@@ -43,7 +45,8 @@ class FidlcatPrinter : public fidl_codec::PrettyPrinter {
       const std::map<const fidl_codec::StructMember*, std::unique_ptr<fidl_codec::Value>>& values);
 
  private:
-  SyscallDecoder* decoder_;
+  const Inference& inference_;
+  const uint64_t process_id_;
   const bool dump_messages_;
 };
 

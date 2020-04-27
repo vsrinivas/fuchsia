@@ -212,7 +212,7 @@ class HandleDescription {
   static std::string_view Convert(uint32_t type);
 
   // Display the information we have about a handle.
-  void Display(const fidl_codec::Colors& colors, std::ostream& os) const;
+  void Display(PrettyPrinter& printer) const;
 
  private:
   // Type of the handle. This can be a predefined type (when set by Convert) or
