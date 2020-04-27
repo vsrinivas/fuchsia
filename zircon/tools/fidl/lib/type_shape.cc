@@ -739,19 +739,26 @@ class MaxOutOfLineVisitor final : public TypeShapeVisitor<DataSize> {
 
   std::any Visit(const flat::Table& object) override {
     DataSize max_out_of_line = 0;
-    size_t envelope_array_size = 0;
 
     for (const auto& member : object.members) {
       max_out_of_line += ObjectAlign(UnalignedSize(member, wire_format())) + MaxOutOfLine(member);
-
-      // TODO(fxb/35773): The following if() check excludes reserved table members from the
-      // out-of-line calculation, which is incorrect. The correct thing to do is to _include_
-      // reserved table fields in the out-of-line-calculation, and only exclude reserved fields if
-      // they're at the end of the table definition. The code is like this to preserve bug-for-bug
-      // compatibility with the previous typeshape implementation. See the bug for more details.
-      if (member.maybe_used)
-        envelope_array_size++;
     }
+
+    // The maximum number of envelopes is determined by the maximum _unreserved_ ordinal.
+    // Any trailing reserved ordinals MUST NOT be present in the array of envelopes.
+    // For example, a table that looks like 
+    // "table T { 1: int32 i; 2: reserved; 3: uint32 u; 4: reserved; }"
+    // has an envelope array size of 3, not 4.
+    assert(object.members.size() <= INT32_MAX);
+    int max_unreserved_index = -1;
+    for (int i = static_cast<int>(object.members.size()) - 1; i >= 0; i--) {
+      if (object.members.at(i).maybe_used) {
+        max_unreserved_index = i;
+        break;
+      }
+    }
+
+    const size_t envelope_array_size = max_unreserved_index == -1 ? 0 : max_unreserved_index + 1;
 
     constexpr DataSize kEnvelopeSize = 16;
     return DataSize(envelope_array_size) * kEnvelopeSize + max_out_of_line;

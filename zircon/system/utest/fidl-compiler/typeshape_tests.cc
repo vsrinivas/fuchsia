@@ -484,6 +484,19 @@ table SomeReserved {
   4: reserved;
 };
 
+table LastNonReserved {
+  1: reserved;
+  2: reserved;
+  3: bool b;
+};
+
+table LastReserved {
+  1: bool b;
+  2: bool b2;
+  3: reserved;
+  4: reserved;
+};
+
 table AllReserved {
   1: reserved;
   2: reserved;
@@ -499,6 +512,28 @@ table OneReserved {
   auto some_reserved = test_library.LookupTable("SomeReserved");
   ASSERT_NONNULL(some_reserved);
   EXPECT_TRUE(CheckTypeShape(some_reserved, Expected{
+                                                .inline_size = 16,
+                                                .alignment = 8,
+                                                .max_out_of_line = 64,
+                                                .depth = 2,
+                                                .has_padding = true,
+                                                .has_flexible_envelope = true,
+                                            }));
+
+  auto last_non_reserved = test_library.LookupTable("LastNonReserved");
+  ASSERT_NONNULL(last_non_reserved);
+  EXPECT_TRUE(CheckTypeShape(last_non_reserved, Expected{
+                                                .inline_size = 16,
+                                                .alignment = 8,
+                                                .max_out_of_line = 56,
+                                                .depth = 2,
+                                                .has_padding = true,
+                                                .has_flexible_envelope = true,
+                                            }));
+
+  auto last_reserved = test_library.LookupTable("LastReserved");
+  ASSERT_NONNULL(last_reserved);
+  EXPECT_TRUE(CheckTypeShape(last_reserved, Expected{
                                                 .inline_size = 16,
                                                 .alignment = 8,
                                                 .max_out_of_line = 48,

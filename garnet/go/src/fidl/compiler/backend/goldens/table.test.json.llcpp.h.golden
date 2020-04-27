@@ -72,7 +72,7 @@ class SimpleTable final {
       &v1_fidl_test_json_SimpleTableTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 48;
+  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 96;
   static constexpr bool HasPointer = true;
 
   class Builder;
@@ -563,7 +563,7 @@ class NewerSimpleTable final {
       &v1_fidl_test_json_NewerSimpleTableTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 72;
+  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 120;
   static constexpr bool HasPointer = true;
 
   class Builder;
