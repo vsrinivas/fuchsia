@@ -606,8 +606,7 @@ mod test {
     #[test]
     fn test_list_tests() -> Result<(), Error> {
         let mut output = String::new();
-        let url = "fuchsia-pkg://fuchsia.com/gtest_adapter_echo_example#meta/echo_test_realm.cm"
-            .to_string();
+        let url = "fuchsia-pkg://fuchsia.com/dummy-package#meta/echo_test_realm.cm".to_string();
         let cmd = TestCommand { url, devices: None, list: true, tests: None };
         hoist::run(async move {
             let writer = unsafe { BufWriter::new(output.as_mut_vec()) };
@@ -630,8 +629,7 @@ mod test {
         selector: Option<String>,
     ) -> Result<(), Error> {
         let mut output = String::new();
-        let url = "fuchsia-pkg://fuchsia.com/gtest_adapter_echo_example#meta/echo_test_realm.cm"
-            .to_string();
+        let url = "fuchsia-pkg://fuchsia.com/dummy-package#meta/echo_test_realm.cm".to_string();
         let cmd = TestCommand { url, devices: None, list: false, tests: selector };
         hoist::run(async move {
             let writer = unsafe { BufWriter::new(output.as_mut_vec()) };
@@ -667,8 +665,7 @@ mod test {
     #[test]
     fn test_run_tests_with_invalid_selector() -> Result<(), Error> {
         let mut output = String::new();
-        let url = "fuchsia-pkg://fuchsia.com/gtest_adapter_echo_example#meta/echo_test_realm.cm"
-            .to_string();
+        let url = "fuchsia-pkg://fuchsia.com/dummy-package#meta/echo_test_realm.cm".to_string();
         let cmd = TestCommand { url, devices: None, list: false, tests: Some("[".to_string()) };
         hoist::run(async move {
             let writer = unsafe { BufWriter::new(output.as_mut_vec()) };
