@@ -18,12 +18,13 @@ const (
 )
 
 type TestCaseResult struct {
-	Name     string
-	Status   TestCaseStatus
-	Duration time.Duration
+	Name     string         `json:"name"`
+	Status   TestCaseStatus `json:"status"`
+	Duration time.Duration  `json:"duration_nanos"`
 }
 
 func makeTestCaseResult(name []byte, status TestCaseStatus, duration []byte) TestCaseResult {
+	// Turn e.g. "4 ms" to "4ms" before we feed it into ParseDuration
 	durationString := strings.ReplaceAll(string(duration), " ", "")
 	parsedDuration, _ := time.ParseDuration(durationString)
 	return TestCaseResult{string(name), status, parsedDuration}

@@ -15,6 +15,7 @@ go_library("runtests") {
     "//tools/lib/osmisc",
     "//tools/lib/retry",
     "//tools/net/tftp",
+    "//tools/testing/testparser",
   ]
 }
 

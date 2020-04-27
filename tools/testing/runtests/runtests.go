@@ -6,6 +6,7 @@
 package runtests
 
 import (
+	testparser "go.fuchsia.dev/fuchsia/tools/testing/testparser/lib"
 	"time"
 )
 
@@ -64,6 +65,9 @@ type TestDetails struct {
 
 	// Result is the result of the test.
 	Result TestResult `json:"result"`
+
+	// Cases is individual test case results.
+	Cases []testparser.TestCaseResult `json:"cases"`
 
 	// DataSinks gives the data sinks attached to a test.
 	DataSinks DataSinkMap `json:"data_sinks,omitempty"`

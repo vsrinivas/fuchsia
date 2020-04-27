@@ -26,6 +26,7 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/net/sshutil"
 	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
 	tap "go.fuchsia.dev/fuchsia/tools/testing/tap/lib"
+	testparser "go.fuchsia.dev/fuchsia/tools/testing/testparser/lib"
 	testrunner "go.fuchsia.dev/fuchsia/tools/testing/testrunner/lib"
 	"go.fuchsia.dev/fuchsia/tools/testing/util"
 )
@@ -248,6 +249,7 @@ func runTest(ctx context.Context, test build.Test, t tester) (*testrunner.TestRe
 		Stdout:    stdout.Bytes(),
 		Stderr:    stderr.Bytes(),
 		Result:    result,
+		Cases:     testparser.Parse(stdout.Bytes()),
 		StartTime: startTime,
 		EndTime:   endTime,
 		DataSinks: dataSinks,

@@ -5,37 +5,35 @@
 package testparser
 
 import (
-	"reflect"
+	"bytes"
+	"encoding/json"
 	"testing"
 )
 
-func testCase(t *testing.T, stdout string, want []TestCaseResult) {
-	parsed := Parse([]byte(stdout))
-	if !reflect.DeepEqual(parsed, want) {
-		t.Errorf("Parse(stdout) = %v; want %v", parsed, want)
-	}
+func compactJson(jsonBytes []byte) []byte {
+	buffer := bytes.NewBuffer([]byte{})
+	json.Compact(buffer, jsonBytes)
+	return buffer.Bytes()
 }
 
-func testData(name string, status TestCaseStatus, duration string) TestCaseResult {
-	return makeTestCaseResult([]byte(name), status, []byte(duration))
+func indentJson(jsonBytes []byte) []byte {
+	buffer := bytes.NewBuffer([]byte{})
+	json.Indent(buffer, jsonBytes, "", "\t")
+	return buffer.Bytes()
 }
 
-func TestMakeTestCaseResult(t *testing.T) {
-	name := "TestSuiteName.TestCaseName"
-	actual := testData(name, Pass, "4ms")
-	if actual.Name != name {
-		t.Errorf("Name = %v; want %v", actual.Name, name)
-	}
-	if actual.Status != Pass {
-		t.Errorf("Status = %v; want Pass", actual.Status)
-	}
-	if actual.Duration.Milliseconds() != 4 {
-		t.Errorf("actual.Duration = %v; want 4 millis", actual.Duration)
+func testCase(t *testing.T, stdout string, want string) {
+	t.Helper()
+	actual, _ := json.Marshal(Parse([]byte(stdout)))
+	if !bytes.Equal(actual, compactJson([]byte(want))) {
+		actualIndented := string(indentJson(actual))
+		wantIndented := string(indentJson([]byte(want)))
+		t.Errorf("Parse(stdout) = `\n%v\n`; want `\n%v\n``", actualIndented, wantIndented)
 	}
 }
 
 func TestParseEmpty(t *testing.T) {
-	testCase(t, "", []TestCaseResult{})
+	testCase(t, "", "[]")
 }
 
 func TestParseInvalid(t *testing.T) {
@@ -45,7 +43,7 @@ Its fleece was white as snow
 And everywhere that Mary went
 The lamb was sure to go
 `
-	testCase(t, stdout, []TestCaseResult{})
+	testCase(t, stdout, "[]")
 }
 
 func TestParseGoogleTest(t *testing.T) {
@@ -79,17 +77,56 @@ Their prints get interleaved with the results.
 [==========] 9 tests from 1 test suite ran. (38 ms total)
 [  PASSED  ] 9 tests.
 `
-	testCase(t, stdout, []TestCaseResult{
-		testData("SynonymDictTest.IsInitializedEmpty", Pass, "4ms"),
-		testData("SynonymDictTest.ReadingEmptyFileReturnsFalse", Pass, "3ms"),
-		testData("SynonymDictTest.ReadingNonexistentFileReturnsFalse", Pass, "4ms"),
-		testData("SynonymDictTest.LoadDictionary", Pass, "4ms"),
-		testData("SynonymDictTest.GetSynonymsReturnsListOfWords", Pass, "4ms"),
-		testData("SynonymDictTest.GetSynonymsWhenNoSynonymsAreAvailable", Pass, "4ms"),
-		testData("SynonymDictTest.AllWordsAreSynonymsOfEachOther", Pass, "4ms"),
-		testData("SynonymDictTest.GetSynonymsReturnsListOfWordsWithStubs", Fail, "4ms"),
-		testData("SynonymDictTest.CompoundWordBug", Skip, "4ms"),
-	})
+	want := `
+[
+	{
+        	"name": "SynonymDictTest.IsInitializedEmpty",
+        	"status": "Pass",
+        	"duration_nanos": 4000000
+       	},
+       	{
+       		"name": "SynonymDictTest.ReadingEmptyFileReturnsFalse",
+       		"status": "Pass",
+       		"duration_nanos": 3000000
+       	},
+       	{
+       		"name": "SynonymDictTest.ReadingNonexistentFileReturnsFalse",
+       		"status": "Pass",
+		"duration_nanos": 4000000
+	},
+	{
+		"name": "SynonymDictTest.LoadDictionary",
+		"status": "Pass",
+		"duration_nanos": 4000000
+	},
+	{
+		"name": "SynonymDictTest.GetSynonymsReturnsListOfWords",
+		"status": "Pass",
+		"duration_nanos": 4000000
+	},
+	{
+		"name": "SynonymDictTest.GetSynonymsWhenNoSynonymsAreAvailable",
+		"status": "Pass",
+		"duration_nanos": 4000000
+	},
+	{
+		"name": "SynonymDictTest.AllWordsAreSynonymsOfEachOther",
+		"status": "Pass",
+		"duration_nanos": 4000000
+	},
+	{
+		"name": "SynonymDictTest.GetSynonymsReturnsListOfWordsWithStubs",
+		"status": "Fail",
+		"duration_nanos": 4000000
+	},
+	{
+		"name": "SynonymDictTest.CompoundWordBug",
+		"status": "Skip",
+		"duration_nanos": 4000000
+	}
+]
+`
+	testCase(t, stdout, want)
 }
 
 func TestParseGo(t *testing.T) {
@@ -110,11 +147,34 @@ func TestParseGo(t *testing.T) {
 --- SKIP: TestSkip (0.00s)
 FAIL
 `
-	testCase(t, stdout, []TestCaseResult{
-		testData("TestParseEmpty", Pass, "0.01s"),
-		testData("TestParseInvalid", Pass, "0.02s"),
-		testData("TestParseGoogleTest", Fail, "3.00s"),
-		testData("TestFail", Fail, "0.00s"),
-		testData("TestSkip", Skip, "0.00s"),
-	})
+	want := `
+[
+	{
+		"name": "TestParseEmpty",
+		"status": "Pass",
+		"duration_nanos": 10000000
+	},
+	{
+		"name": "TestParseInvalid",
+		"status": "Pass",
+		"duration_nanos": 20000000
+	},
+	{
+		"name": "TestParseGoogleTest",
+		"status": "Fail",
+		"duration_nanos": 3000000000
+	},
+	{
+		"name": "TestFail",
+		"status": "Fail",
+		"duration_nanos": 0
+	},
+	{
+		"name": "TestSkip",
+		"status": "Skip",
+		"duration_nanos": 0
+	}
+]
+`
+	testCase(t, stdout, want)
 }

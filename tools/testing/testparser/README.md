@@ -10,4 +10,7 @@ Parses stdout from common test frameworks.
 
 ## Testing
 
-`fx test testparser_tests`
+```
+fx set --with //tools/testing/testparser:tests
+fx test testparser_tests
+```

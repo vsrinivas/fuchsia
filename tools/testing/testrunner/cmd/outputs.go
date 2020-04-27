@@ -49,6 +49,7 @@ func (o *testOutputs) record(result testrunner.TestResult) error {
 		GNLabel:        result.GNLabel,
 		OutputFile:     outputRelPath,
 		Result:         result.Result,
+		Cases:          result.Cases,
 		StartTime:      result.StartTime,
 		DurationMillis: duration.Milliseconds(),
 		DataSinks:      runtests.DataSinkMap(result.DataSinks),

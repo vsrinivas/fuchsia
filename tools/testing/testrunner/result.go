@@ -6,9 +6,9 @@
 package testrunner
 
 import (
-	"time"
-
 	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
+	testparser "go.fuchsia.dev/fuchsia/tools/testing/testparser/lib"
+	"time"
 )
 
 // TestResult is the result of executing a test.
@@ -21,6 +21,9 @@ type TestResult struct {
 
 	// Result describes whether the test passed or failed.
 	Result runtests.TestResult
+
+	// Cases describes individual test cases.
+	Cases []testparser.TestCaseResult
 
 	// DataSinks gives the data sinks attached to a test.
 	DataSinks runtests.DataSinkReference
