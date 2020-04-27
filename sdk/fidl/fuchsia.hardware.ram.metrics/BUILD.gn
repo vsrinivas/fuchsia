@@ -6,4 +6,5 @@ import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.hardware.ram.metrics") {
   sources = [ "metrics.fidl" ]
+  public_deps = [ "//zircon/vdso/zx" ]
 }
