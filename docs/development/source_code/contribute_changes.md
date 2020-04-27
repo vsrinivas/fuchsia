@@ -97,8 +97,6 @@ For the tags, use `[docs]` for documentation, `[zircon]` for zircon, `[fidl]` fo
 
 See these examples:
 
-*   [https://fuchsia-review.googlesource.com/c/zircon/+/112976](https://fuchsia-review.googlesource.com/c/zircon/+/112976)
-*   [https://fuchsia-review.googlesource.com/c/garnet/+/110795](https://fuchsia-review.googlesource.com/c/garnet/+/110795)
 *   [https://fuchsia-review.googlesource.com/c/peridot/+/113955](https://fuchsia-review.googlesource.com/c/peridot/+/113955)
 *   [https://fuchsia-review.googlesource.com/c/topaz/+/114013](https://fuchsia-review.googlesource.com/c/topaz/+/114013)
 
