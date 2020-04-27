@@ -7,6 +7,10 @@
 
 namespace media::audio::mixer {
 
+// Whether to enable verbose debugging of filter creation. Setting to true
+// decreases performance slightly. See fxr/383524.
+static const bool kEnableVerboseDebugging = false;
+
 // Display the filter table values.
 void Filter::DisplayTable(const CoefficientTable& filter_coefficients) {
   FX_LOGS(INFO) << "Filter: src rate " << source_rate_ << ", dest rate " << dest_rate_
@@ -151,8 +155,10 @@ void SincFilter::SetUpFilterCoefficients() {
     auto sin_theta = sin(theta);
     auto sinc_theta = sin_theta / theta;
 
-    FX_VLOGS(SPEW) << "Sinc[" << std::hex << idx << "] -- Factors 1:" << idx_over_frac_one
-                   << ", 2:" << theta << ", 3:" << sin_theta << ", 4:" << sinc_theta;
+    if constexpr (kEnableVerboseDebugging) {
+      FX_VLOGS(SPEW) << "Sinc[" << std::hex << idx << "] -- Factors 1:" << idx_over_frac_one
+                     << ", 2:" << theta << ", 3:" << sin_theta << ", 4:" << sinc_theta;
+    }
 
     // Then window the filter. Here we choose a VonHann window, but Kaiser or others can work too.
     //
@@ -162,11 +168,13 @@ void SincFilter::SetUpFilterCoefficients() {
     auto cos_pi_frac_width = cos(pi_fraction_width);
     auto raised_cosine = cos_pi_frac_width * 0.5 + 0.5;
 
-    FX_VLOGS(SPEW) << "VonHann window[" << std::hex << idx
-                   << "] -- Fraction of width:" << fraction_width
-                   << ", PI * fraction_width:" << pi_fraction_width
-                   << ", COS(PI * fraction_width):" << cos_pi_frac_width
-                   << ", Raised-cosine (result):" << raised_cosine;
+    if constexpr (kEnableVerboseDebugging) {
+      FX_VLOGS(SPEW) << "VonHann window[" << std::hex << idx
+                     << "] -- Fraction of width:" << fraction_width
+                     << ", PI * fraction_width:" << pi_fraction_width
+                     << ", COS(PI * fraction_width):" << cos_pi_frac_width
+                     << ", Raised-cosine (result):" << raised_cosine;
+    }
 
     filter_coefficients_[idx] = sinc_theta * raised_cosine;
   }
