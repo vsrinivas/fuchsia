@@ -10,7 +10,7 @@
 namespace minfs {
 namespace {
 
-const uint32_t kBlockSize = 8192;
+const int kBlockSize = 8192;
 
 class Device : public storage::VmoidRegistry {
  public:
@@ -53,16 +53,20 @@ TEST(ResizeableVmoBufferTest, Shrink) {
 }
 
 TEST(ResizeableVmoBufferTest, Zero) {
+  constexpr int kBlocks = 10;
   ResizeableVmoBuffer buffer(kBlockSize);
   ASSERT_OK(buffer.Attach("test", &device));
   auto detach = fbl::MakeAutoCall([&]() { EXPECT_OK(buffer.Detach(&device)); });
-  ASSERT_OK(buffer.Grow(5));
-  memset(buffer.Data(0), 'a', kBlockSize);
-  buffer.Zero(13, 21);
-  const char* p = reinterpret_cast<const char*>(buffer.Data(0));
-  for (unsigned i = 0; i < kBlockSize; ++i) {
-    if (i < 13 || i >= 13 + 21) {
-      EXPECT_EQ('a', p[i]);
+  ASSERT_OK(buffer.Grow(kBlocks));
+  static const uint8_t kFill = 0xaf;
+  memset(buffer.Data(0), kFill, kBlocks * kBlockSize);
+  constexpr int kStart = 5;
+  constexpr int kLength = 3;
+  buffer.Zero(kStart, kLength);
+  uint8_t* p = reinterpret_cast<uint8_t*>(buffer.Data(0));
+  for (int i = 0; i < kBlocks * kBlockSize; ++i) {
+    if (i < kStart * kBlockSize || i >= (kStart + kLength) * kBlockSize) {
+      EXPECT_EQ(kFill, p[i]);
     } else {
       EXPECT_EQ(0, p[i]);
     }

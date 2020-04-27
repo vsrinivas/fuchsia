@@ -36,6 +36,10 @@ class BlockBuffer {
 
   // Returns data starting at block |index| in the buffer.
   virtual const void* Data(size_t index) const = 0;
+
+  // Zero |count| blocks from |index|. Subclasses might override to provide a more efficient
+  // implementation.
+  virtual void Zero(size_t index, size_t count);
 };
 
 }  // namespace storage

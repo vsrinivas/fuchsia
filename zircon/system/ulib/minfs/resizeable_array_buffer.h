@@ -32,11 +32,6 @@ public:
     return ZX_OK;
   }
 
-  // Unlike other methods, this takes a byte offset and length.
-  void Zero(size_t offset, size_t length) {
-    memset(reinterpret_cast<uint8_t*>(Data(0)) + offset, 0, length);
-  }
-
   [[nodiscard]] zx_status_t Shrink(size_t block_count);
   [[nodiscard]] zx_status_t Grow(size_t block_count);
 };

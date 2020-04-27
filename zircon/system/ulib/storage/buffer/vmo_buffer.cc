@@ -83,4 +83,9 @@ const void* VmoBuffer::Data(size_t index) const {
                                        (index * block_size_));
 }
 
+void VmoBuffer::Zero(size_t index, size_t count) {
+  ZX_ASSERT(mapper_.vmo().op_range(ZX_VMO_OP_ZERO, index * BlockSize(),
+                                   count * BlockSize(), nullptr, 0) == ZX_OK);
+}
+
 }  // namespace storage

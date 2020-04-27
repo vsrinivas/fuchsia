@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_ULIB_MINFS_VNODE_BUFFER_H_
-#define ZIRCON_SYSTEM_ULIB_MINFS_VNODE_BUFFER_H_
+#ifndef ZIRCON_SYSTEM_ULIB_MINFS_RESIZEABLE_BUFFER_H_
+#define ZIRCON_SYSTEM_ULIB_MINFS_RESIZEABLE_BUFFER_H_
 
 #ifdef __Fuchsia__
 #include "resizeable_vmo_buffer.h"
@@ -14,11 +14,11 @@
 namespace minfs {
 
 #ifdef __Fuchsia__
-using VnodeBufferType = ResizeableVmoBuffer;
+using ResizeableBufferType = ResizeableVmoBuffer;
 #else
-using VnodeBufferType = ResizeableArrayBuffer;
+using ResizeableBufferType = ResizeableArrayBuffer;
 #endif
 
 }  // namespace minfs
 
-#endif  // ZIRCON_SYSTEM_ULIB_MINFS_VNODE_BUFFER_H_
+#endif  // ZIRCON_SYSTEM_ULIB_MINFS_RESIZEABLE_BUFFER_H_

@@ -15,7 +15,10 @@ zx_library("buffer") {
     "storage/buffer/array_buffer.h",
   ]
   host = true
-  sources = [ "array_buffer.cc" ]
+  sources = [
+    "array_buffer.cc",
+    "block_buffer.cc",
+  ]
   static = true
 
   if (is_fuchsia) {

@@ -35,12 +35,13 @@ TEST(ResizeableArrayBufferTest, Shrink) {
 }
 
 TEST(ResizeableArrayBufferTest, Zero) {
-  ResizeableArrayBuffer buffer(5, kBlockSize);
-  memset(buffer.Data(0), 'a', kBlockSize);
-  buffer.Zero(13, 21);
+  constexpr int kBlocks = 5;
+  ResizeableArrayBuffer buffer(kBlocks, kBlockSize);
+  memset(buffer.Data(0), 'a', kBlocks * kBlockSize);
+  buffer.Zero(1, 2);
   const char* p = reinterpret_cast<const char*>(buffer.Data(0));
-  for (unsigned i = 0; i < kBlockSize; ++i) {
-    if (i < 13 || i >= 13 + 21) {
+  for (unsigned i = 0; i < kBlocks * kBlockSize; ++i) {
+    if (i < 1 * kBlockSize || i >= 3 * kBlockSize) {
       EXPECT_EQ('a', p[i]);
     } else {
       EXPECT_EQ(0, p[i]);

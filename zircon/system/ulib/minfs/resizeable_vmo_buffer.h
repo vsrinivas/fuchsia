@@ -14,6 +14,7 @@
 
 namespace minfs {
 
+// A resizeable VMO buffer. The buffer isn't usable until Attach is called.
 class ResizeableVmoBuffer : public storage::BlockBuffer {
  public:
   using Handle = vmoid_t;
@@ -48,8 +49,7 @@ class ResizeableVmoBuffer : public storage::BlockBuffer {
   [[nodiscard]] zx_status_t Attach(const char* name, storage::VmoidRegistry* device);
   zx_status_t Detach(storage::VmoidRegistry* device);
 
-  // Unlike other methods, this takes a byte offset and length.
-  void Zero(size_t offset, size_t length);
+  void Zero(size_t index, size_t count) override;
 
  private:
   ResizeableVmoBuffer();
