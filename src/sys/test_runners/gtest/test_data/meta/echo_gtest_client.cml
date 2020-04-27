@@ -1,0 +1,18 @@
+// Component manifest for the `echo_gtest_client`.
+// It connects to echo server and passes back test results.
+{
+    program: {
+        binary: "bin/echo_gtest_client",
+    },
+    use: [
+        { runner: "gtest_runner" },
+        { protocol: "/svc/fidl.examples.routing.echo.Echo" },
+        { protocol: "/svc/fuchsia.logger.LogSink" },
+    ],
+    expose: [
+        {
+            protocol: "/svc/fuchsia.test.Suite",
+            from: "self",
+        },
+    ],
+}

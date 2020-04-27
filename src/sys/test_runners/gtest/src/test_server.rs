@@ -538,8 +538,6 @@ impl TestServer {
     }
 }
 
-// TODO(45854): Add integration tests once changes are made to component_manager_for_test to
-// support runners. Currently test has to create a root cml file to offer runner to the test.
 #[cfg(test)]
 mod tests {
     use {

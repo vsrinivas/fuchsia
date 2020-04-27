@@ -93,25 +93,10 @@ test_package("gtest_runner_tests") {
   ]
 }
 
-package("gtest_runner_example_tests") {
-  testonly = true
-  deps = [ "test_data" ]
-
-  binaries = [
-    {
-      name = "gtest_runner_sample_tests"
-      dest = "sample_tests"
-    },
-  ]
-  meta = [
-    {
-      path = rebase_path("meta/sample_tests.cml")
-      dest = "sample_tests.cm"
-    },
-  ]
-}
-
 group("tests") {
   testonly = true
-  deps = [ ":gtest_runner_tests" ]
+  deps = [
+    ":gtest_runner_tests",
+    "tests",
+  ]
 }

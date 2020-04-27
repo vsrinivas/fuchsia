@@ -22,7 +22,7 @@ Examples to demonstrate how to write v2 test
 To run this example:
 
 ```bash
-fx run-test gtest_runner_example_tests
+fx run-test gtest-runner-example-tests
 ```
 
 ## Limitations

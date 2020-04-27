@@ -67,6 +67,6 @@ group("tests") {
     ":test_manager_test",
     "//examples/tests:example-tests",
     "//src/sys/test_manager",
-    "//src/sys/test_runners/gtest:gtest_runner_example_tests",
+    "//src/sys/test_runners/gtest/test_data:gtest-runner-example-tests",
   ]
 }

@@ -1,0 +1,49 @@
+// Component test example which injects echo_server and launches echo_gtest_client
+// which is a test which connects to this injected server, tests it and
+// passes back result using `fuchsia.test.Suite`
+{
+    // Two children: a server and client. "echo_gtest_client" has "eager" startup so it
+    // will be started along with the realm.
+    children: [
+        {
+            name: "echo_server",
+            url: "fuchsia-pkg://fuchsia.com/gtest-runner-example-tests#meta/echo_server.cm",
+        },
+        {
+            name: "echo_gtest_client",
+            url: "fuchsia-pkg://fuchsia.com/gtest-runner-example-tests#meta/echo_gtest_client.cm",
+            startup: "eager",
+        },
+    ],
+
+    // Route Echo service from server to client.
+    offer: [
+        // Offer the ELF runner to children.
+        {
+            runner: "elf",
+            from: "realm",
+            to: [ "#echo_server" ],
+        },
+        {
+            runner: "gtest_runner",
+            from: "realm",
+            to: [ "#echo_gtest_client" ],
+        },
+        {
+            protocol: "/svc/fidl.examples.routing.echo.Echo",
+            from: "#echo_server",
+            to: [ "#echo_gtest_client" ],
+        },
+        {
+            protocol: "/svc/fuchsia.logger.LogSink",
+            from: "realm",
+            to: [ "#echo_gtest_client" ],
+        },
+    ],
+    expose: [
+        {
+            protocol: "/svc/fuchsia.test.Suite",
+            from: "#echo_gtest_client",
+        },
+    ],
+}

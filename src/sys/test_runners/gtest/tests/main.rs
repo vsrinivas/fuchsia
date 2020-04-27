@@ -1,13 +1,9 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-//! This unit tests a library which uses v2 framework APIs, so it needs to be launched as a
-//! v2 component.
-
 use {
     anyhow::{format_err, Context as _, Error},
-    fasync::OnSignals,
     fidl::endpoints,
     fidl_fuchsia_io::DirectoryMarker,
     fidl_fuchsia_sys2 as fsys, fidl_fuchsia_test as ftest,
@@ -16,11 +12,7 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::client,
     fuchsia_component::client::connect_to_protocol_at_dir,
-    fuchsia_zircon as zx,
     futures::{channel::mpsc, prelude::*},
-    std::collections::HashSet,
-    std::iter::FromIterator,
-    std::mem::drop,
     test_executor::TestEvent,
     test_executor::TestResult,
 };
@@ -57,7 +49,7 @@ async fn launch_test(
     Ok((suite_proxy, controller_proxy))
 }
 
-async fn run_test(test_url: &str) -> Result<HashSet<TestEvent>, Error> {
+async fn run_test(test_url: &str) -> Result<Vec<TestEvent>, Error> {
     let (suite_proxy, _keep_alive) = launch_test(test_url).await?;
 
     let (sender, recv) = mpsc::channel(1);
@@ -70,16 +62,16 @@ async fn run_test(test_url: &str) -> Result<HashSet<TestEvent>, Error> {
 
     let events = recv.collect::<Vec<_>>().await;
 
-    let mut set = HashSet::new();
+    let mut test_events = vec![];
 
-    // break logs as they can come in any order.
+    // break logs as they can be grouped in any way.
     for event in events {
         match event {
             TestEvent::LogMessage { test_case_name, msg } => {
                 let logs = msg.split("\n");
                 for log in logs {
                     if log.len() > 0 {
-                        set.insert(TestEvent::LogMessage {
+                        test_events.push(TestEvent::LogMessage {
                             test_case_name: test_case_name.clone(),
                             msg: log.to_string(),
                         });
@@ -87,85 +79,21 @@ async fn run_test(test_url: &str) -> Result<HashSet<TestEvent>, Error> {
                 }
             }
             event => {
-                set.insert(event);
+                test_events.push(event);
             }
         };
     }
 
     test_fut.await.map_err(|e| format_err!("Error running test: {}", e))?;
-    Ok(set)
+    Ok(test_events)
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
-async fn killing_controller_should_kill_test() {
-    let (suite_proxy, keep_alive) =
-        launch_test("fuchsia-pkg://fuchsia.com/example-tests#meta/echo_test_realm.cm")
-            .await
-            .unwrap();
-
-    drop(keep_alive);
-
-    let suite_channel = suite_proxy.into_channel().unwrap();
-    // wait for suite server to die.
-    let signals = OnSignals::new(&suite_channel, zx::Signals::OBJECT_PEER_CLOSED);
-    signals.await.expect("wait signal failed");
-}
-
-#[fuchsia_async::run_singlethreaded(test)]
-async fn calling_kill_should_kill_test() {
-    let (suite_proxy, controller) =
-        launch_test("fuchsia-pkg://fuchsia.com/example-tests#meta/echo_test_realm.cm")
-            .await
-            .unwrap();
-
-    controller.kill().unwrap();
-
-    let suite_channel = suite_proxy.into_channel().unwrap();
-    // wait for suite server to die.
-    let signals = OnSignals::new(&suite_channel, zx::Signals::OBJECT_PEER_CLOSED);
-    signals.await.expect("wait signal failed");
-}
-
-#[fuchsia_async::run_singlethreaded(test)]
-async fn launch_and_test_echo_test() {
-    let test_url = "fuchsia-pkg://fuchsia.com/example-tests#meta/echo_test_realm.cm";
-    let events = run_test(test_url).await.unwrap();
-
-    let expected_events = vec![
-        TestEvent::test_case_started("EchoTest"),
-        TestEvent::test_case_finished("EchoTest", TestResult::Passed),
-        TestEvent::test_finished(),
-    ];
-    assert_eq!(HashSet::from_iter(expected_events), events);
-}
-
-#[fuchsia_async::run_singlethreaded(test)]
-async fn launch_and_test_no_on_finished() {
-    let test_url =
-        "fuchsia-pkg://fuchsia.com/example-tests#meta/no-onfinished-after-test-example.cm";
-
-    let events = run_test(test_url).await.unwrap();
-
-    let test_cases = ["Example.Test1", "Example.Test2", "Example.Test3"];
-    let mut expected_events = vec![];
-    for case in &test_cases {
-        expected_events.push(TestEvent::test_case_started(case));
-        for i in 1..=3 {
-            expected_events.push(TestEvent::log_message(case, &format!("log{} for {}", i, case)));
-        }
-        expected_events.push(TestEvent::test_case_finished(case, TestResult::Passed));
-    }
-
-    assert_eq!(HashSet::from_iter(expected_events), events);
-}
-
-#[fuchsia_async::run_singlethreaded(test)]
-async fn launch_and_test_gtest_runner_sample_test() {
+async fn launch_and_run_sample_test() {
     let test_url = "fuchsia-pkg://fuchsia.com/gtest-runner-example-tests#meta/sample_tests.cm";
+    let mut events = run_test(test_url).await.unwrap();
 
-    let events = run_test(test_url).await.unwrap();
-
-    let expected_events = vec![
+    let mut expected_events = vec![
         TestEvent::test_case_started("SampleTest1.Crashing"),
         TestEvent::log_message("SampleTest1.SimpleFail", "Expected: false"),
         TestEvent::log_message("SampleTest1.Crashing", "  Actual: true"),
@@ -214,38 +142,30 @@ async fn launch_and_test_gtest_runner_sample_test() {
         ),
         TestEvent::test_finished(),
     ];
-    assert_eq!(HashSet::from_iter(expected_events), events);
+    expected_events.sort();
+    events.sort();
+    assert_eq!(expected_events, events);
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
-async fn no_suite_service_test() {
-    let (suite_proxy, _keep_alive) =
-        launch_test("fuchsia-pkg://fuchsia.com/test_manager_test#meta/no_suite_service.cm")
-            .await
-            .unwrap();
+async fn launch_and_run_empty_test() {
+    let test_url = "fuchsia-pkg://fuchsia.com/gtest-runner-example-tests#meta/empty_test.cm";
+    let events = run_test(test_url).await.unwrap();
 
-    let suite_channel = suite_proxy.into_channel().unwrap();
-    // wait for suite server to die as test doesn't expose suite service.
-    let signals = OnSignals::new(&suite_channel, zx::Signals::OBJECT_PEER_CLOSED);
-    signals.await.expect("wait signal failed");
+    let expected_events = vec![TestEvent::test_finished()];
+
+    assert_eq!(expected_events, events);
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
-async fn test_not_resolved() {
-    let proxy = connect_test_manager().await.unwrap();
-    let (_suite_proxy, suite_server_end) = fidl::endpoints::create_proxy().unwrap();
-    let (_controller_proxy, controller_server_end) = fidl::endpoints::create_proxy().unwrap();
+async fn launch_and_test_echo_test() {
+    let test_url = "fuchsia-pkg://fuchsia.com/gtest-runner-example-tests#meta/echo_test_realm.cm";
+    let events = run_test(test_url).await.unwrap();
 
-    assert_eq!(
-        proxy
-            .launch_suite(
-                "fuchsia-pkg://fuchsia.com/test_manager_test#meta/invalid_cml.cm",
-                LaunchOptions {},
-                suite_server_end,
-                controller_server_end
-            )
-            .await
-            .unwrap(),
-        Err(ftest_manager::LaunchError::InstanceCannotResolve)
-    );
+    let expected_events = vec![
+        TestEvent::test_case_started("EchoTest.TestEcho"),
+        TestEvent::test_case_finished("EchoTest.TestEcho", TestResult::Passed),
+        TestEvent::test_finished(),
+    ];
+    assert_eq!(expected_events, events);
 }
