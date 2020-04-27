@@ -34,7 +34,6 @@ We have shell scripts that run all of a layer's benchmarks at every commit to th
 
 * Garnet: [//garnet/tests/benchmarks](/garnet/tests/benchmarks)
 * Fuchsia: [//src/tests/benchmarks](/src/tests/benchmarks)
-* Topaz: [//topaz/tests/benchmarks](https://fuchsia.googlesource.com/topaz/+/master/tests/benchmarks)
 
 These shell scripts are written using a helper library called [benchmarking].  Add a
 command to the appropriate script to execute your test.  See the existing commands for
