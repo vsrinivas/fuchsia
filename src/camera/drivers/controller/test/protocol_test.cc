@@ -574,8 +574,13 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     auto output_node = static_cast<OutputNode*>(fr_head_node->child_nodes().at(0).get());
 
     // Set streaming on.
+    auto initial_start_count = fake_isp_.start_stream_counter();
     output_node->client_stream()->Start();
+    auto updated_start_count = fake_isp_.start_stream_counter();
+    EXPECT_EQ(updated_start_count, initial_start_count + 1);
     EXPECT_NO_FATAL_FAILURE(output_node->client_stream()->Start());
+    // Check if the ISP StartStream() was invoked twice.
+    EXPECT_EQ(fake_isp_.start_stream_counter(), updated_start_count + 1);
   }
 
   void TestInUseBufferCounts() {
