@@ -12,8 +12,6 @@ toc:
   path: /docs/development/languages/dart/ides.md
 - title: "Logging"
   path: /docs/development/languages/dart/logging.md
-- title: "Mod integration testing with Topaz"
-  path: /docs/development/languages/dart/mod_integration_testing.md
 - title: "Flutter module development"
   path: /docs/development/languages/dart/mods.md
 - title: "Dart style guide"

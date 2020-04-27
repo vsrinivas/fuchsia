@@ -13,9 +13,6 @@ Multiple Dart test targets are available:
 - [flutter_test] is just like dart_test except the dart:ui package is made
   available to it, so it can test widget code.
 
-For information on integration testing [Flutter mods](mods.md), see [mod
-integration testing](mod_integration_testing.md).
-
 Note that in order to be built and run on bots, the test targets need to be
 included in the packages that are configured to run there. For example, in
 topaz this can be achieved by adding those tests to `//topaz/packages/tests`.
