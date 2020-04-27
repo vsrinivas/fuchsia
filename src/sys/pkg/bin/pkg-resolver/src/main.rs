@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{Context as _, Error},
+    anyhow::{anyhow, Context as _, Error},
     cobalt_client::traits::AsEventCode as _,
     cobalt_sw_delivery_registry as metrics,
     fidl_fuchsia_pkg::PackageCacheMarker,
@@ -14,6 +14,7 @@ use {
     fuchsia_syslog::{self, fx_log_err, fx_log_info},
     fuchsia_trace as trace,
     futures::{prelude::*, stream::FuturesUnordered},
+    itertools::Itertools as _,
     parking_lot::RwLock,
     std::{io, sync::Arc, time::Instant},
     system_image::CachePackages,
@@ -163,7 +164,7 @@ async fn main_inner_async(startup_time: Instant) -> Result<(), Error> {
                     stream,
                     cobalt_sender.clone(),
                 )
-                .unwrap_or_else(|e| fx_log_err!("failed to spawn_local {:?}", e)),
+                .unwrap_or_else(|e| fx_log_err!("failed to spawn_local {:#}", anyhow!(e))),
             )
         }
     };
@@ -182,7 +183,7 @@ async fn main_inner_async(startup_time: Instant) -> Result<(), Error> {
                     cobalt_sender.clone(),
                 )
                 .unwrap_or_else(|e| {
-                    fx_log_err!("Failed to spawn_local font_resolver_service {:?}", e)
+                    fx_log_err!("Failed to spawn_local font_resolver_service {:#}", anyhow!(e))
                 }),
             )
         }
@@ -196,7 +197,7 @@ async fn main_inner_async(startup_time: Instant) -> Result<(), Error> {
                 let mut repo_service = RepositoryService::new(repo_manager);
                 repo_service.run(stream).await
             }
-            .unwrap_or_else(|e| fx_log_err!("error encountered: {:?}", e)),
+            .unwrap_or_else(|e| fx_log_err!("error encountered: {:#}", anyhow!(e))),
         )
     };
 
@@ -205,7 +206,7 @@ async fn main_inner_async(startup_time: Instant) -> Result<(), Error> {
 
         fasync::spawn_local(
             async move { rewrite_service.handle_client(stream).await }
-                .unwrap_or_else(|e| fx_log_err!("while handling rewrite client {:?}", e)),
+                .unwrap_or_else(|e| fx_log_err!("while handling rewrite client {:#}", anyhow!(e))),
         )
     };
 
@@ -214,7 +215,7 @@ async fn main_inner_async(startup_time: Instant) -> Result<(), Error> {
         fasync::spawn_local(async move {
             experiment::run_admin_service(experiment_state, stream)
                 .await
-                .unwrap_or_else(|e| fx_log_err!("while handling admin client {:?}", e))
+                .unwrap_or_else(|e| fx_log_err!("while handling admin client {:#}", anyhow!(e)))
         });
     };
 
@@ -257,7 +258,7 @@ fn load_repo_manager(
         if config.enable_dynamic_configuration() { Some(DYNAMIC_REPO_PATH) } else { None };
     match RepositoryManagerBuilder::new(dynamic_repo_path, experiments)
         .unwrap_or_else(|(builder, err)| {
-            fx_log_err!("error loading dynamic repo config: {}", err);
+            fx_log_err!("error loading dynamic repo config: {:#}", anyhow!(err));
             builder
         })
         .inspect_node(node)
@@ -275,23 +276,22 @@ fn load_repo_manager(
         }
         Err((builder, errs)) => {
             for err in errs {
-                match &err {
-                    crate::repository_manager::LoadError::Io { path: _, error }
-                        if error.kind() == io::ErrorKind::NotFound =>
-                    {
-                        fx_log_info!("no statically configured repositories present");
-                    }
-                    _ => fx_log_err!("error loading static repo config: {}", err),
-                };
-
                 let dimension_result: metrics::RepositoryManagerLoadStaticConfigsMetricDimensionResult
-                    = err.into();
+                    = (&err).into();
                 cobalt_sender.log_event_count(
                     metrics::REPOSITORY_MANAGER_LOAD_STATIC_CONFIGS_METRIC_ID,
                     dimension_result.as_event_code(),
                     0,
                     1
                 );
+                match &err {
+                    crate::repository_manager::LoadError::Io { path: _, error }
+                        if error.kind() == io::ErrorKind::NotFound =>
+                    {
+                        fx_log_info!("no statically configured repositories present");
+                    }
+                    _ => fx_log_err!("error loading static repo config: {:#}", anyhow!(err)),
+                };
             }
             builder
         }
@@ -311,8 +311,8 @@ async fn load_rewrite_manager(
         .unwrap_or_else(|(builder, err)| {
             if err.kind() != io::ErrorKind::NotFound {
                 fx_log_err!(
-                    "unable to load dynamic rewrite rules from disk, using defaults: {}",
-                    err
+                    "unable to load dynamic rewrite rules from disk, using defaults: {:#}",
+                    anyhow!(err)
                 );
             }
             builder
@@ -321,7 +321,7 @@ async fn load_rewrite_manager(
         .static_rules_path(STATIC_RULES_PATH)
         .unwrap_or_else(|(builder, err)| {
             if err.kind() != io::ErrorKind::NotFound {
-                fx_log_err!("unable to load static rewrite rules from disk: {}", err);
+                fx_log_err!("unable to load static rewrite rules from disk: {:#}", anyhow!(err));
             }
             builder
         });
@@ -343,7 +343,7 @@ async fn load_rewrite_manager(
             builder.build()
         }
         Err(err) => {
-            fx_log_err!("Failed to create rewrite rule for ota channel with error: {:?}. Falling back to defaults.", err);
+            fx_log_err!("Failed to create rewrite rule for ota channel with error, falling back to defaults. {:#}", anyhow!(err));
             builder.build()
         }
     }
@@ -362,10 +362,10 @@ fn load_font_package_manager(mut cobalt_sender: CobaltSender) -> FontPackageMana
             builder
         }
         Err((builder, errs)) => {
-            let errors = errs
-                .iter()
-                .filter(|err| {
-                    let dimension_result: metrics::FontManagerLoadStaticRegistryMetricDimensionResult = (*err).into();
+            let err_str = format!("{:#}", errs
+                .into_iter()
+                .filter_map(|err| {
+                    let dimension_result: metrics::FontManagerLoadStaticRegistryMetricDimensionResult = (&err).into();
                     cobalt_sender.log_event_count(
                         metrics::FONT_MANAGER_LOAD_STATIC_REGISTRY_METRIC_ID,
                         dimension_result.as_event_code(),
@@ -373,15 +373,15 @@ fn load_font_package_manager(mut cobalt_sender: CobaltSender) -> FontPackageMana
                         1
                     );
                     if err.is_not_found() {
-                        fx_log_info!("no font package registry present");
-                        false
+                        fx_log_info!("no font package registry present: {:#}", anyhow!(err));
+                        None
                     } else {
-                        true
+                        Some(anyhow!(err))
                     }
                 })
-                .fold(String::new(), |acc, err| acc + "\n" + format!("{}", err).as_str());
-            if !errors.is_empty() {
-                fx_log_err!("error(s) loading font package registry:{}", errors);
+                .format("; "));
+            if !err_str.is_empty() {
+                fx_log_err!("error(s) loading font package registry: {}", err_str);
             }
             builder
         }
@@ -398,7 +398,7 @@ async fn load_system_cache_list() -> system_image::CachePackages {
     let system_image = match system_image {
         Ok(s) => s,
         Err(e) => {
-            fx_log_err!("failed to open system image: {}", e);
+            fx_log_err!("failed to open system image: {:#}", anyhow!(e));
             return empty;
         }
     };
@@ -406,7 +406,7 @@ async fn load_system_cache_list() -> system_image::CachePackages {
     let cache_file = match cache_file {
         Ok(f) => f,
         Err(e) => {
-            fx_log_err!("failed to open data/cache_packages: {}", e);
+            fx_log_err!("failed to open data/cache_packages: {:#}", anyhow!(e));
             return empty;
         }
     };
@@ -415,7 +415,7 @@ async fn load_system_cache_list() -> system_image::CachePackages {
     match cache_list {
         Ok(cl) => cl,
         Err(e) => {
-            fx_log_err!("error opening package cache: {}", e);
+            fx_log_err!("error opening package cache: {:#}", anyhow!(e));
             empty
         }
     }

@@ -7,7 +7,7 @@ use {
     fuchsia_url::pkg_url::PkgUrl,
     std::{
         collections::BTreeSet,
-        fmt, fs, io,
+        fs, io,
         path::{Path, PathBuf},
     },
     thiserror::Error,
@@ -41,7 +41,7 @@ impl FontPackageManagerBuilder {
     }
 
     /// Adds a single font [PkgUrl].
-    #[allow(dead_code)] // Currently only used in test. Might be used elsewhere in the future.
+    #[cfg(test)]
     pub fn add_package_url(mut self, package_url: PkgUrl) -> Result<Self, (Self, LoadError)> {
         match validate_package_url(None::<PathBuf>, &package_url) {
             Ok(()) => {
@@ -85,13 +85,9 @@ impl FontPackageManagerBuilder {
 fn load_font_packages_registry<P: AsRef<Path>>(path: P) -> Result<Vec<PkgUrl>, Vec<LoadError>> {
     let file_path = path.as_ref();
     match fs::File::open(&file_path) {
-        Ok(f) => match serde_json::from_reader(io::BufReader::new(f)) {
+        Ok(f) => match serde_json::from_reader::<_, Vec<PkgUrl>>(io::BufReader::new(f)) {
             Ok(package_urls) => {
-                let package_urls: Vec<PkgUrl> = package_urls;
-                match validate_package_urls(file_path, &package_urls) {
-                    Ok(()) => Ok(package_urls),
-                    Err(errs) => Err(errs),
-                }
+                validate_package_urls(file_path, &package_urls).map(|()| package_urls)
             }
             Err(err) => Err(vec![LoadError::Parse { path: file_path.to_path_buf(), error: err }]),
         },
@@ -110,10 +106,7 @@ fn validate_package_url<P: AsRef<Path>>(
         Ok(())
     } else {
         Err(LoadError::PkgUrl {
-            path: match file_path {
-                Some(path) => Some(path.as_ref().to_path_buf()),
-                None => None,
-            },
+            path: file_path.map(|p| p.as_ref().to_owned()),
             bad_url: package_url.clone(),
         })
     }
@@ -146,23 +139,28 @@ fn validate_package_urls<P: AsRef<Path>>(
 /// [FontPackageManager].
 #[derive(Debug, Error)]
 pub enum LoadError {
-    /// Error in reading a font package registry file.
+    #[error("error reading a font package registry file: {path}")]
     Io {
         /// The problematic file path.
         path: PathBuf,
+        #[source]
         error: io::Error,
     },
 
-    /// Error in parsing the JSON contents of a font package registry file.
+    #[error("error parsing the JSON contents of a font package registry file: {path}")]
     Parse {
         /// The problematic file path.
         path: PathBuf,
+        #[source]
         error: serde_json::Error,
     },
 
-    /// Semantic problem with a (syntactically valid) [PkgUrl].
+    #[error(
+        "semantic problem with a (syntactically valid) PkgUrl possibly obtained from a file. \
+             path: {path:?}, url: {bad_url}"
+    )]
     PkgUrl {
-        /// The file path from which the URL was read, if applicable.
+        /// The file path from which the URL was read.
         path: Option<PathBuf>,
         /// The problematic `PkgUrl`.
         bad_url: PkgUrl,
@@ -175,28 +173,6 @@ impl LoadError {
         match self {
             LoadError::Io { path: _, error } => error.kind() == io::ErrorKind::NotFound,
             _ => false,
-        }
-    }
-}
-
-impl fmt::Display for LoadError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            LoadError::Io { path, error } => {
-                write!(f, "file {} failed to load: {}", path.display(), error)
-            }
-            LoadError::Parse { path, error } => {
-                write!(f, "file {} failed to parse: {}", path.display(), error)
-            }
-            LoadError::PkgUrl { path, bad_url } => match path {
-                Some(path) => write!(
-                    f,
-                    "file {} contains invalid font package URL: {}",
-                    path.display(),
-                    bad_url
-                ),
-                None => write!(f, "invalid font package URL: {}", bad_url),
-            },
         }
     }
 }

@@ -4,11 +4,12 @@
 
 use {
     crate::{
-        cache::{BlobFetcher, CacheError, PackageCache, ToResolveStatus},
+        cache::{BlobFetcher, CacheError, MerkleForError, PackageCache, ToResolveStatus},
         experiment::Experiments,
         inspect_util::{self, InspectableRepositoryConfig},
         repository::Repository,
     },
+    anyhow::anyhow,
     cobalt_sw_delivery_registry as metrics,
     fidl_fuchsia_pkg_ext::{BlobId, RepositoryConfig, RepositoryConfigs},
     fuchsia_cobalt::CobaltSender,
@@ -20,7 +21,7 @@ use {
     parking_lot::{Mutex, RwLock},
     std::{
         collections::{btree_set, hash_map::Entry, BTreeSet, HashMap},
-        fmt, fs, io,
+        fs, io,
         ops::Deref,
         path::{Path, PathBuf},
         sync::Arc,
@@ -223,7 +224,7 @@ impl RepositoryManager {
         match result {
             Ok(()) => {}
             Err(err) => {
-                fx_log_err!("error while saving repositories: {}", err);
+                fx_log_err!("error while saving repositories: {:#}", anyhow!(err));
             }
         }
     }
@@ -251,12 +252,9 @@ impl RepositoryManager {
 
         async move {
             let repo = fut.await?;
-            crate::cache::cache_package(repo, &config, url, cache, blob_fetcher).await.map_err(
-                |e| {
-                    fx_log_err!("while fetching package {} using rust tuf: {}", url, e);
-                    GetPackageError::Cache(e)
-                },
-            )
+            crate::cache::cache_package(repo, &config, url, cache, blob_fetcher)
+                .await
+                .map_err(Into::into)
         }
         .boxed_local()
     }
@@ -264,11 +262,11 @@ impl RepositoryManager {
     pub fn get_package_hash<'a>(
         &self,
         url: &'a PkgUrl,
-    ) -> LocalBoxFuture<'a, Result<BlobId, GetPackageError>> {
+    ) -> LocalBoxFuture<'a, Result<BlobId, GetPackageHashError>> {
         let config = if let Some(config) = self.get(url.repo()) {
             Arc::clone(config)
         } else {
-            return futures::future::ready(Err(GetPackageError::RepoNotFound)).boxed_local();
+            return futures::future::ready(Err(GetPackageHashError::RepoNotFound)).boxed_local();
         };
 
         let repo = open_cached_or_new_repository(
@@ -281,10 +279,10 @@ impl RepositoryManager {
 
         async move {
             let repo = repo.await?;
-            crate::cache::merkle_for_url(repo, url).await.map(|(blob_id, _)| blob_id).map_err(|e| {
-                fx_log_err!("while fetching package hash {} using rust tuf: {}", url, e);
-                GetPackageError::Cache(CacheError::MerkleFor(e))
-            })
+            crate::cache::merkle_for_url(repo, url)
+                .await
+                .map(|(blob_id, _)| blob_id)
+                .map_err(Into::into)
         }
         .boxed_local()
     }
@@ -308,10 +306,7 @@ async fn open_cached_or_new_repository(
     let mut repo = Arc::new(futures::lock::Mutex::new(
         Repository::new(&config, cobalt_sender, inspect_node.create_child(url.host()))
             .await
-            .map_err(|e| {
-                fx_log_err!("Could not create Repository for {}: {:?}", config.repo_url(), e);
-                OpenRepoError(e)
-            })?,
+            .map_err(|e| OpenRepoError { repo_url: config.repo_url().clone(), source: e })?,
     ));
 
     // It's still possible we raced with some other connection attempt
@@ -628,33 +623,28 @@ fn load_configs_file<T: AsRef<Path>>(path: T) -> Result<Vec<RepositoryConfig>, L
 #[derive(Debug, Error)]
 pub enum LoadError {
     /// This [std::io::Error] error occurred while reading the file.
-    Io { path: PathBuf, error: io::Error },
+    #[error("file {path} io error")]
+    Io {
+        path: PathBuf,
+        #[source]
+        error: io::Error,
+    },
 
     /// This file failed to parse into a valid [RepositoryConfigs].
-    Parse { path: PathBuf, error: serde_json::Error },
+    #[error("file {path} failed to parse")]
+    Parse {
+        path: PathBuf,
+        #[source]
+        error: serde_json::Error,
+    },
 
     /// This [RepositoryManager] already contains a config for this repo_url.
+    #[error("repository config for {} was overridden", .replaced_config.repo_url())]
     Overridden { replaced_config: RepositoryConfig },
 }
 
-impl fmt::Display for LoadError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            LoadError::Io { path, error } => {
-                write!(f, "file {} failed to parse: {}", path.display(), error)
-            }
-            LoadError::Parse { path, error } => {
-                write!(f, "file {} failed to parse: {}", path.display(), error)
-            }
-            LoadError::Overridden { replaced_config } => {
-                write!(f, "repository config for {} was overridden", replaced_config.repo_url())
-            }
-        }
-    }
-}
-
-impl From<LoadError> for metrics::RepositoryManagerLoadStaticConfigsMetricDimensionResult {
-    fn from(error: LoadError) -> Self {
+impl From<&LoadError> for metrics::RepositoryManagerLoadStaticConfigsMetricDimensionResult {
+    fn from(error: &LoadError) -> Self {
         match error {
             LoadError::Io { .. } => {
                 metrics::RepositoryManagerLoadStaticConfigsMetricDimensionResult::Io
@@ -704,8 +694,12 @@ pub enum RemoveError {
 }
 
 #[derive(Debug, Error)]
-#[error("unable to open repository: {0}")]
-pub struct OpenRepoError(#[source] anyhow::Error);
+#[error("Could not create Repository for {repo_url}")]
+pub struct OpenRepoError {
+    repo_url: RepoUrl,
+    #[source]
+    source: anyhow::Error,
+}
 
 impl ToResolveStatus for OpenRepoError {
     fn to_resolve_status(&self) -> Status {
@@ -718,11 +712,23 @@ pub enum GetPackageError {
     #[error("repo not found")]
     RepoNotFound,
 
-    #[error("while opening the repo: {0}")]
+    #[error("while opening the repo")]
     OpenRepo(#[from] OpenRepoError),
 
-    #[error("while caching the package: {0}")]
+    #[error("while caching the package")]
     Cache(#[from] CacheError),
+}
+
+#[derive(Debug, Error)]
+pub enum GetPackageHashError {
+    #[error("repo not found")]
+    RepoNotFound,
+
+    #[error("while opening the repo")]
+    OpenRepo(#[from] OpenRepoError),
+
+    #[error("while getting the merkle")]
+    MerkleFor(#[from] MerkleForError),
 }
 
 impl ToResolveStatus for GetPackageError {
@@ -731,6 +737,16 @@ impl ToResolveStatus for GetPackageError {
             GetPackageError::RepoNotFound => Status::ADDRESS_UNREACHABLE,
             GetPackageError::OpenRepo(err) => err.to_resolve_status(),
             GetPackageError::Cache(err) => err.to_resolve_status(),
+        }
+    }
+}
+
+impl ToResolveStatus for GetPackageHashError {
+    fn to_resolve_status(&self) -> Status {
+        match self {
+            GetPackageHashError::RepoNotFound => Status::ADDRESS_UNREACHABLE,
+            GetPackageHashError::OpenRepo(err) => err.to_resolve_status(),
+            GetPackageHashError::MerkleFor(err) => err.to_resolve_status(),
         }
     }
 }

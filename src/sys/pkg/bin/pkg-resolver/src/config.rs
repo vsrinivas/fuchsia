@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    anyhow::anyhow,
     fuchsia_syslog::{fx_log_err, fx_log_info},
     serde::Deserialize,
     std::{
@@ -27,13 +28,13 @@ impl Config {
         let f = match File::open("/config/data/config.json") {
             Ok(f) => f,
             Err(e) => {
-                fx_log_info!("no config found, using defaults: {:?}", e.kind());
+                fx_log_info!("no config found, using defaults: {:#}", anyhow!(e));
                 return Config::default();
             }
         };
 
         Self::load(BufReader::new(f)).unwrap_or_else(|e| {
-            fx_log_err!("unable to load config, using defaults: {:?}", e);
+            fx_log_err!("unable to load config, using defaults: {:#}", anyhow!(e));
             Config::default()
         })
     }
@@ -53,14 +54,8 @@ impl Config {
 
 #[derive(Debug, Error)]
 enum ConfigLoadError {
-    #[error("parse error: {}", _0)]
-    Parse(serde_json::Error),
-}
-
-impl From<serde_json::Error> for ConfigLoadError {
-    fn from(e: serde_json::Error) -> Self {
-        Self::Parse(e)
-    }
+    #[error("parse error")]
+    Parse(#[from] serde_json::Error),
 }
 
 #[cfg(test)]

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    anyhow::anyhow,
     fidl_fuchsia_pkg_rewrite_ext::{Rule, RuleConfig, RuleInspectState},
     fuchsia_inspect::{self as inspect, Property},
     fuchsia_syslog::fx_log_err,
@@ -61,7 +62,11 @@ impl RewriteManager {
                     return res;
                 }
                 Some(Err(err)) => {
-                    fx_log_err!("re-write rule {:?} produced an invalid URL, ignoring rule", err);
+                    fx_log_err!(
+                        "ignoring rewrite rule {:?} that produced an invalid URL: {:#}",
+                        rule,
+                        anyhow!(err)
+                    );
                 }
                 _ => {}
             }

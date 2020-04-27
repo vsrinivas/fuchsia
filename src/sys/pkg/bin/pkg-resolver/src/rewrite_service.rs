@@ -4,7 +4,7 @@
 
 use {
     crate::rewrite_manager::{CommitError, RewriteManager},
-    anyhow::Error,
+    anyhow::{anyhow, Error},
     fidl_fuchsia_pkg_rewrite::{
         EditTransactionRequest, EditTransactionRequestStream, EngineRequest, EngineRequestStream,
         RuleIteratorRequest, RuleIteratorRequestStream,
@@ -64,8 +64,8 @@ impl RewriteService {
     }
 
     pub(self) fn handle_test_apply(&self, url: &str) -> Result<PkgUrl, Status> {
-        let url = url.parse().map_err(|e| {
-            fx_log_err!("client provided invalid URL ({:?}): {:?}", url, e);
+        let url = url.parse::<PkgUrl>().map_err(|e| {
+            fx_log_err!("client provided invalid URL ({:?}): {:#}", url, anyhow!(e));
             Status::INVALID_ARGS
         })?;
 
@@ -142,7 +142,7 @@ impl RewriteService {
                 Ok(())
             }
             .unwrap_or_else(|e: Error| {
-                fx_log_err!("while serving rewrite rule edit transaction: {:?}", e)
+                fx_log_err!("while serving rewrite rule edit transaction: {:#}", anyhow!(e))
             }),
         )
     }
@@ -161,7 +161,7 @@ impl RewriteService {
                 Ok(())
             }
             .unwrap_or_else(|e: fidl::Error| {
-                fx_log_err!("while serving rewrite rule iterator: {:?}", e)
+                fx_log_err!("while serving rewrite rule iterator: {:#}", anyhow!(e))
             }),
         );
     }

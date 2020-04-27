@@ -7,11 +7,11 @@ use {
         cache::{BlobFetcher, CacheError, MerkleForError, PackageCache, ToResolveStatus as _},
         font_package_manager::FontPackageManager,
         queue,
-        repository_manager::GetPackageError,
         repository_manager::RepositoryManager,
+        repository_manager::{GetPackageError, GetPackageHashError},
         rewrite_manager::RewriteManager,
     },
-    anyhow::Error,
+    anyhow::{anyhow, Error},
     cobalt_sw_delivery_registry as metrics,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{self, DirectoryMarker},
@@ -157,11 +157,13 @@ async fn hash_from_repo_or_cache(
     pkg_url: &PkgUrl,
 ) -> Result<BlobId, Status> {
     let rewritten_url = rewrite_url(rewriter, &pkg_url)?;
+    // The RwLock created by `.read()` must not exist across the `.await` (to e.g. prevent
+    // deadlock). Rust temporaries are kept alive for the duration of the innermost enclosing
+    // statement, so the following two lines should not be combined.
     let fut = repo_manager.read().get_package_hash(&rewritten_url);
-    let res = fut.await;
-    let res = match res {
+    match fut.await {
         Ok(b) => Ok(b),
-        Err(e @ GetPackageError::Cache(CacheError::MerkleFor(MerkleForError::NotFound))) => {
+        Err(e @ GetPackageHashError::MerkleFor(MerkleForError::NotFound)) => {
             // If we can get metadata but the repo doesn't know about the package,
             // it shouldn't be in the cache, and we wouldn't trust it if it was.
             Err(e)
@@ -171,10 +173,26 @@ async fn hash_from_repo_or_cache(
             // system/data/cache_packages (not to be confused with the package cache).
             // The system cache doesn't know about rewrite rules, so use the original url.
             // Return the existing error if not found in the cache.
-            lookup_from_system_cache(&pkg_url, system_cache_list).ok_or(e)
+            if let Some(cached) = lookup_from_system_cache(&pkg_url, system_cache_list) {
+                fx_log_info!(
+                    "Failed to get hash using TUF, but found package in cache: {:#}",
+                    anyhow!(e)
+                );
+                Ok(cached)
+            } else {
+                Err(e)
+            }
         }
-    };
-    res.map_err(|e| e.to_resolve_status())
+    }
+    .map_err(|e| {
+        let status = e.to_resolve_status();
+        fx_log_err!("error getting hash {} as {}: {:#}", pkg_url, rewritten_url, anyhow!(e));
+        status
+    })
+    .map(|b| {
+        fx_log_info!("get_hash for {} as {} to {}", pkg_url, rewritten_url, b);
+        b
+    })
 }
 
 async fn package_from_repo_or_cache(
@@ -202,10 +220,22 @@ async fn package_from_repo_or_cache(
             // system/data/cache_packages (not to be confused with the package cache).
             // The system cache doesn't know about rewrite rules, so use the original url.
             // Return the existing error if not found in the cache.
-            lookup_from_system_cache(&pkg_url, system_cache_list).ok_or(e)
+            if let Some(cached) = lookup_from_system_cache(&pkg_url, system_cache_list) {
+                fx_log_info!(
+                    "Failed to get package using TUF, but found package in cache: {:#}",
+                    anyhow!(e)
+                );
+                Ok(cached)
+            } else {
+                Err(e)
+            }
         }
     }
-    .map_err(|e| e.to_resolve_status())
+    .map_err(|e| {
+        let status = e.to_resolve_status();
+        fx_log_err!("error resolving {} as {}: {:#}", pkg_url, rewritten_url, anyhow!(e));
+        status
+    })
     .map(|b| {
         fx_log_info!("resolved {} as {} to {}", pkg_url, rewritten_url, b);
         b
@@ -238,9 +268,9 @@ fn lookup_from_system_cache<'a>(
         Ok(p) => p,
         Err(e) => {
             fx_log_err!(
-                "cache fallback: PackagePath::name_and_variant failed for url {}: {}",
+                "cache fallback: PackagePath::name_and_variant failed for url {}: {:#}",
                 url,
-                e
+                anyhow!(e)
             );
             return None;
         }
@@ -394,13 +424,14 @@ where
 }
 
 fn handle_bad_package_url(parse_error: ParseError, pkg_url: &str) -> Status {
-    fx_log_err!("failed to parse package url {:?}: {}", pkg_url, parse_error);
+    fx_log_err!("failed to parse package url {:?}: {:#}", pkg_url, anyhow!(parse_error));
     Status::INVALID_ARGS
 }
 
 fn handle_bad_package_open(open_error: crate::cache::PackageOpenError, pkg_url: &str) -> Status {
-    fx_log_err!("failed to open package url {:?}: {}", pkg_url, open_error);
-    Status::from(open_error)
+    let status = (&open_error).into();
+    fx_log_err!("failed to open package url {:?}: {:#}", pkg_url, anyhow!(open_error));
+    status
 }
 
 fn result_to_resolve_duration_result_code(

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 use {
     crate::repository_manager::RepositoryManager,
-    anyhow::{format_err, Error},
+    anyhow::{anyhow, format_err, Error},
     fidl_fuchsia_pkg_rewrite_ext::Rule,
     fuchsia_component::client::connect_to_service,
     fuchsia_inspect::{self as inspect, Property as _, StringProperty},
@@ -72,7 +72,7 @@ where
             );
         }
         Err(e) => {
-            fx_log_info!("Unable to load channel from vbmeta: {:?}", e);
+            fx_log_info!("Unable to load channel from vbmeta: {:#}", anyhow!(e));
         }
     };
 
@@ -80,7 +80,7 @@ where
     let channel_config = match read_channel_config() {
         Ok(channel_config) => channel_config,
         Err(e) => {
-            fx_log_info!("Unable to load channel from sysconfig: {}", e);
+            fx_log_info!("Unable to load channel from sysconfig: {:#}", anyhow!(e));
             return Ok(None);
         }
     };

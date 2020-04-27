@@ -4,6 +4,7 @@
 
 use {
     crate::{clock, inspect_util, metrics_util::tuf_error_as_update_tuf_client_event_code},
+    anyhow::anyhow,
     cobalt_sw_delivery_registry as metrics,
     fidl_fuchsia_pkg_ext::MirrorConfig,
     fuchsia_async as fasync,
@@ -322,7 +323,11 @@ where
                     HandleSseEndState::Reconnect => (),
                 },
                 Err(e) => {
-                    fx_log_err!("AutoClient for {:?} error connecting: {:?}", self.auto_url, e);
+                    fx_log_err!(
+                        "AutoClient for {:?} error connecting: {:#}",
+                        self.auto_url,
+                        anyhow!(e)
+                    );
                 }
             }
             Self::wait_before_reconnecting().await;
@@ -375,9 +380,9 @@ where
                         self.inspect.update_attempt_count.increment();
                         if let Err(e) = updating_client.lock().await.update().await {
                             fx_log_err!(
-                                "AutoClient for {:?} error updating TUF client: {:?}",
+                                "AutoClient for {:?} error updating TUF client: {:#}",
                                 self.auto_url,
-                                e
+                                anyhow!(e)
                             );
                         }
                     } else {
@@ -386,9 +391,9 @@ where
                 }
                 Err(e) => {
                     fx_log_err!(
-                        "AutoClient for {:?} event stream read error: {:?}",
+                        "AutoClient for {:?} event stream read error: {:#}",
                         self.auto_url,
-                        e
+                        anyhow!(e)
                     );
                     return HandleSseEndState::Reconnect;
                 }

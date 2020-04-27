@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use crate::repository_manager::{InsertError, RemoveError, RepositoryManager};
+use anyhow::anyhow;
 use fidl_fuchsia_pkg::{
     MirrorConfig as FidlMirrorConfig, RepositoryConfig as FidlRepositoryConfig,
     RepositoryIteratorRequest, RepositoryIteratorRequestStream, RepositoryManagerRequest,
@@ -67,7 +68,7 @@ impl RepositoryService {
         let repo = match RepositoryConfig::try_from(repo) {
             Ok(repo) => repo,
             Err(err) => {
-                fx_log_err!("invalid repository config: {}", err);
+                fx_log_err!("invalid repository config: {:#}", anyhow!(err));
                 return Err(Status::INVALID_ARGS);
             }
         };
@@ -84,7 +85,7 @@ impl RepositoryService {
         let repo_url = match RepoUrl::parse(&repo_url) {
             Ok(repo_url) => repo_url,
             Err(err) => {
-                fx_log_err!("invalid repository URL: {}", err);
+                fx_log_err!("invalid repository URL: {:#}", anyhow!(err));
                 return Err(Status::INVALID_ARGS);
             }
         };
@@ -134,7 +135,7 @@ impl RepositoryService {
                 }
                 Ok(())
             }
-            .unwrap_or_else(|e: anyhow::Error| fx_log_err!("error running list protocol: {:?}", e)),
+            .unwrap_or_else(|e: anyhow::Error| fx_log_err!("error running list protocol: {:#}", e)),
         );
     }
 }

@@ -4,6 +4,7 @@
 
 use {
     crate::{queue, repository::Repository, repository_manager::Stats},
+    anyhow::anyhow,
     cobalt_client::traits::AsEventCode as _,
     cobalt_sw_delivery_registry as metrics,
     fidl::endpoints::ServerEnd,
@@ -124,24 +125,18 @@ impl PackageCache {
 
 #[derive(Debug, Error)]
 pub enum PackageOpenError {
-    #[error("fidl error: {}", _0)]
-    Fidl(fidl::Error),
+    #[error("fidl error")]
+    Fidl(#[from] fidl::Error),
 
     #[error("package not found")]
     NotFound,
 
-    #[error("package cache returned unexpected status: {}", _0)]
+    #[error("package cache returned unexpected status: {0}")]
     UnexpectedStatus(Status),
 }
 
-impl From<fidl::Error> for PackageOpenError {
-    fn from(err: fidl::Error) -> Self {
-        Self::Fidl(err)
-    }
-}
-
-impl From<PackageOpenError> for Status {
-    fn from(x: PackageOpenError) -> Self {
+impl From<&PackageOpenError> for Status {
+    fn from(x: &PackageOpenError) -> Self {
         match x {
             PackageOpenError::NotFound => Status::NOT_FOUND,
             _ => Status::INTERNAL,
@@ -169,7 +164,11 @@ pub async fn cache_package<'a>(
 
     // If the package already exists, we are done.
     if cache.package_exists(merkle).await.unwrap_or_else(|e| {
-        fx_log_err!("unable to check if {} is already cached, assuming it isn't: {}", url, e);
+        fx_log_err!(
+            "unable to check if {} is already cached, assuming it isn't: {:#}",
+            url,
+            anyhow!(e)
+        );
         false
     }) {
         return Ok(merkle);
@@ -219,35 +218,17 @@ pub async fn cache_package<'a>(
 
 #[derive(Debug, Error)]
 pub enum CacheError {
-    #[error("fidl error: {}", _0)]
-    Fidl(fidl::Error),
+    #[error("fidl error")]
+    Fidl(#[from] fidl::Error),
 
-    #[error("while looking up merkle root for package: {}", _0)]
-    MerkleFor(MerkleForError),
+    #[error("while looking up merkle root for package")]
+    MerkleFor(#[source] MerkleForError),
 
-    #[error("while listing needed blobs for package: {}", _0)]
-    ListNeeds(pkgfs::needs::ListNeedsError),
+    #[error("while listing needed blobs for package")]
+    ListNeeds(#[from] pkgfs::needs::ListNeedsError),
 
-    #[error("while fetching blobs for package: {}", _0)]
-    Fetch(Arc<FetchError>),
-}
-
-impl From<pkgfs::needs::ListNeedsError> for CacheError {
-    fn from(x: pkgfs::needs::ListNeedsError) -> Self {
-        CacheError::ListNeeds(x)
-    }
-}
-
-impl From<fidl::Error> for CacheError {
-    fn from(x: fidl::Error) -> Self {
-        Self::Fidl(x)
-    }
-}
-
-impl From<Arc<FetchError>> for CacheError {
-    fn from(x: Arc<FetchError>) -> Self {
-        Self::Fetch(x)
-    }
+    #[error("while fetching blobs for package")]
+    Fetch(#[from] Arc<FetchError>),
 }
 
 pub(crate) trait ToResolveStatus {
@@ -350,17 +331,17 @@ pub enum MerkleForError {
     #[error("the package was not found in the repository")]
     NotFound,
 
-    #[error("tuf returned an unexpected error: {}", _0)]
-    TufError(tuf::error::Error),
+    #[error("tuf returned an unexpected error")]
+    TufError(#[source] tuf::error::Error),
 
-    #[error("the target path is not safe: {}", _0)]
-    InvalidTargetPath(tuf::error::Error),
+    #[error("the target path is not safe")]
+    InvalidTargetPath(#[source] tuf::error::Error),
 
     #[error("the target description does not have custom metadata")]
     NoCustomMetadata,
 
-    #[error("serde value could not be converted: {}", _0)]
-    SerdeError(serde_json::Error),
+    #[error("serde value could not be converted")]
+    SerdeError(#[source] serde_json::Error),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -581,8 +562,8 @@ async fn download_blob(
 
 #[derive(Debug, Error)]
 pub enum FetchError {
-    #[error("could not create blob: {0}")]
-    CreateBlob(pkgfs::install::BlobCreateError),
+    #[error("could not create blob")]
+    CreateBlob(#[source] pkgfs::install::BlobCreateError),
 
     #[error("Blob fetch of {uri}: http request expected 200, got {code}")]
     BadHttpStatus { code: hyper::StatusCode, uri: String },
@@ -602,27 +583,27 @@ pub enum FetchError {
     #[error("Blob fetch of {uri}: downloaded blob was too large")]
     BlobTooLarge { uri: String },
 
-    #[error("failed to truncate blob: {0}")]
-    Truncate(pkgfs::install::BlobTruncateError),
+    #[error("failed to truncate blob")]
+    Truncate(#[source] pkgfs::install::BlobTruncateError),
 
-    #[error("failed to write blob data: {0}")]
-    Write(pkgfs::install::BlobWriteError),
+    #[error("failed to write blob data")]
+    Write(#[source] pkgfs::install::BlobWriteError),
 
-    #[error("hyper error while fetching {uri}: {e}")]
+    #[error("hyper error while fetching {uri}")]
     Hyper {
         #[source]
         e: hyper::Error,
         uri: String,
     },
 
-    #[error("http error while fetching {uri}: {e}")]
+    #[error("http error while fetching {uri}")]
     Http {
         #[source]
         e: hyper::http::Error,
         uri: String,
     },
 
-    #[error("blob url error: {0}")]
+    #[error("blob url error")]
     BlobUrl(#[source] http_uri_ext::Error),
 }
 
