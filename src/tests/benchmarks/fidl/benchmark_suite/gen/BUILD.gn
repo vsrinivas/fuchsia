@@ -1,0 +1,22 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/go/go_binary.gni")
+import("//build/go/go_library.gni")
+import("//build/host.gni")
+
+go_library("lib") {
+  name = "regen_fidl_benchmark_suite"
+}
+
+go_binary("regen_fidl_benchmark_suite") {
+  gopackage = "regen_fidl_benchmark_suite"
+
+  deps = [ ":lib" ]
+}
+
+install_host_tools("host") {
+  deps = [ ":regen_fidl_benchmark_suite" ]
+  outputs = [ "regen_fidl_benchmark_suite" ]
+}
