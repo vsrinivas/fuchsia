@@ -26,6 +26,7 @@ if (current_toolchain == host_toolchain) {
       blobstats_dart_file,
       "--output=" + rebase_path(target_out_dir),
     ]
+    path = rebase_path("$dart_sdk/bin/dart", root_build_dir)
     environments = [ host_env ]
   }
 }

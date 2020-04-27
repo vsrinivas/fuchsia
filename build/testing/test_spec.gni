@@ -15,9 +15,8 @@ import("//build/testing/platforms.gni")
 #   name (required)
 #     [string] The test name.
 #
-#   path (optional)
-#     [string]: The path on the target OS at which the test will be installed. If
-#     unset, command is required.
+#   path (optional for fuchsia; required for host)
+#     [string]: The path on the target OS at which the test will be installed.
 #
 #   target (required)
 #     [string]: The test target.
@@ -55,8 +54,9 @@ template("test_spec") {
 
   assert(defined(invoker.name), "name must be defined.")
 
-  assert(defined(invoker.path) || defined(invoker.command),
-         "path or command must be defined.")
+  if (is_host) {
+    assert(defined(invoker.path), "path is required for host-side tests")
+  }
   forward_variables_from(invoker, [ "environments" ])
 
   # Set default environments: QEMU for a fuchsia test, and VMs for linux and mac
