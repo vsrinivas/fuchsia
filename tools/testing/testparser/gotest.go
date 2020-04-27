@@ -9,10 +9,10 @@ import (
 )
 
 var (
-	goTestPreamblePattern = regexp.MustCompile("==================== Test output for \\S*:")
-	goTestPassCasePattern = regexp.MustCompile("--- PASS: (\\S*) \\(([\\w\\.]*)\\)")
-	goTestFailCasePattern = regexp.MustCompile("--- FAIL: (\\S*) \\(([\\w\\.]*)\\)")
-	goTestSkipCasePattern = regexp.MustCompile("--- SKIP: (\\S*) \\(([\\w\\.]*)\\)")
+	goTestPreamblePattern = regexp.MustCompile(`==================== Test output for \S*:`)
+	goTestPassCasePattern = regexp.MustCompile(`--- PASS: (\S*) \(([^\)]*)\)`)
+	goTestFailCasePattern = regexp.MustCompile(`--- FAIL: (\S*) \(([^\)]*)\)`)
+	goTestSkipCasePattern = regexp.MustCompile(`--- SKIP: (\S*) \(([^\)]*)\)`)
 )
 
 func parseGoTest(lines [][]byte) []TestCaseResult {
@@ -20,15 +20,15 @@ func parseGoTest(lines [][]byte) []TestCaseResult {
 	for _, line := range lines {
 		var m [][]byte
 		if m = goTestPassCasePattern.FindSubmatch(line); m != nil {
-			res = append(res, makeTestCaseResult(m[1], Pass, m[2]))
+			res = append(res, makeTestCaseResult(m[1], Pass, m[2], "Go"))
 			continue
 		}
 		if m = goTestFailCasePattern.FindSubmatch(line); m != nil {
-			res = append(res, makeTestCaseResult(m[1], Fail, m[2]))
+			res = append(res, makeTestCaseResult(m[1], Fail, m[2], "Go"))
 			continue
 		}
 		if m = goTestSkipCasePattern.FindSubmatch(line); m != nil {
-			res = append(res, makeTestCaseResult(m[1], Skip, m[2]))
+			res = append(res, makeTestCaseResult(m[1], Skip, m[2], "Go"))
 			continue
 		}
 	}

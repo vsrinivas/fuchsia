@@ -9,7 +9,12 @@ go_library("testparser") {
   name = "go.fuchsia.dev/fuchsia/tools/testing/testparser/lib"
 }
 
-go_test("tests") {
+group("tests") {
+  testonly = true
+  deps = [ ":test($host_toolchain)" ]
+}
+
+go_test("test") {
   output_name = "testparser_tests"
   gopackages = [ "go.fuchsia.dev/fuchsia/tools/testing/testparser/lib" ]
   deps = [ ":testparser" ]

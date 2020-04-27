@@ -9,10 +9,10 @@ import (
 )
 
 var (
-	googleTestPreamblePattern = regexp.MustCompile("\\[==========\\] Running \\d* tests from \\d* test suite(s)?.")
-	googleTestPassCasePattern = regexp.MustCompile("\\[       OK \\] (\\S*) \\(([\\w\\s\\.]*)\\)")
-	googleTestFailCasePattern = regexp.MustCompile("\\[  FAILED  \\] (\\S*) \\(([\\w\\s\\.]*)\\)")
-	googleTestSkipCasePattern = regexp.MustCompile("\\[  SKIPPED \\] (\\S*) \\(([\\w\\s\\.]*)\\)")
+	googleTestPreamblePattern = regexp.MustCompile(`\[==========\] Running \d* tests? from \d* test (?:(?:suites?)|(?:cases?))\.`)
+	googleTestPassCasePattern = regexp.MustCompile(`\[       OK \] (\S*) \(([^\)]*)\)`)
+	googleTestFailCasePattern = regexp.MustCompile(`\[  FAILED  \] (\S*) \(([^\)]*)\)`)
+	googleTestSkipCasePattern = regexp.MustCompile(`\[  SKIPPED \] (\S*) \(([^\)]*)\)`)
 )
 
 func parseGoogleTest(lines [][]byte) []TestCaseResult {
@@ -20,15 +20,15 @@ func parseGoogleTest(lines [][]byte) []TestCaseResult {
 	for _, line := range lines {
 		var m [][]byte
 		if m = googleTestPassCasePattern.FindSubmatch(line); m != nil {
-			res = append(res, makeTestCaseResult(m[1], Pass, m[2]))
+			res = append(res, makeTestCaseResult(m[1], Pass, m[2], "GoogleTest"))
 			continue
 		}
 		if m = googleTestFailCasePattern.FindSubmatch(line); m != nil {
-			res = append(res, makeTestCaseResult(m[1], Fail, m[2]))
+			res = append(res, makeTestCaseResult(m[1], Fail, m[2], "GoogleTest"))
 			continue
 		}
 		if m = googleTestSkipCasePattern.FindSubmatch(line); m != nil {
-			res = append(res, makeTestCaseResult(m[1], Skip, m[2]))
+			res = append(res, makeTestCaseResult(m[1], Skip, m[2], "GoogleTest"))
 			continue
 		}
 	}

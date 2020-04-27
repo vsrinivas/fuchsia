@@ -82,47 +82,56 @@ Their prints get interleaved with the results.
 	{
         	"name": "SynonymDictTest.IsInitializedEmpty",
         	"status": "Pass",
-        	"duration_nanos": 4000000
+        	"duration_nanos": 4000000,
+		"format": "GoogleTest"
        	},
        	{
        		"name": "SynonymDictTest.ReadingEmptyFileReturnsFalse",
        		"status": "Pass",
-       		"duration_nanos": 3000000
+       		"duration_nanos": 3000000,
+		"format": "GoogleTest"
        	},
        	{
        		"name": "SynonymDictTest.ReadingNonexistentFileReturnsFalse",
        		"status": "Pass",
-		"duration_nanos": 4000000
+		"duration_nanos": 4000000,
+		"format": "GoogleTest"
 	},
 	{
 		"name": "SynonymDictTest.LoadDictionary",
 		"status": "Pass",
-		"duration_nanos": 4000000
+		"duration_nanos": 4000000,
+		"format": "GoogleTest"
 	},
 	{
 		"name": "SynonymDictTest.GetSynonymsReturnsListOfWords",
 		"status": "Pass",
-		"duration_nanos": 4000000
+		"duration_nanos": 4000000,
+		"format": "GoogleTest"
 	},
 	{
 		"name": "SynonymDictTest.GetSynonymsWhenNoSynonymsAreAvailable",
 		"status": "Pass",
-		"duration_nanos": 4000000
+		"duration_nanos": 4000000,
+		"format": "GoogleTest"
 	},
 	{
 		"name": "SynonymDictTest.AllWordsAreSynonymsOfEachOther",
 		"status": "Pass",
-		"duration_nanos": 4000000
+		"duration_nanos": 4000000,
+		"format": "GoogleTest"
 	},
 	{
 		"name": "SynonymDictTest.GetSynonymsReturnsListOfWordsWithStubs",
 		"status": "Fail",
-		"duration_nanos": 4000000
+		"duration_nanos": 4000000,
+		"format": "GoogleTest"
 	},
 	{
 		"name": "SynonymDictTest.CompoundWordBug",
 		"status": "Skip",
-		"duration_nanos": 4000000
+		"duration_nanos": 4000000,
+		"format": "GoogleTest"
 	}
 ]
 `
@@ -152,27 +161,250 @@ FAIL
 	{
 		"name": "TestParseEmpty",
 		"status": "Pass",
-		"duration_nanos": 10000000
+		"duration_nanos": 10000000,
+		"format": "Go"
 	},
 	{
 		"name": "TestParseInvalid",
 		"status": "Pass",
-		"duration_nanos": 20000000
+		"duration_nanos": 20000000,
+		"format": "Go"
 	},
 	{
 		"name": "TestParseGoogleTest",
 		"status": "Fail",
-		"duration_nanos": 3000000000
+		"duration_nanos": 3000000000,
+		"format": "Go"
 	},
 	{
 		"name": "TestFail",
 		"status": "Fail",
-		"duration_nanos": 0
+		"duration_nanos": 0,
+		"format": "Go"
 	},
 	{
 		"name": "TestSkip",
 		"status": "Skip",
-		"duration_nanos": 0
+		"duration_nanos": 0,
+		"format": "Go"
+	}
+]
+`
+	testCase(t, stdout, want)
+}
+
+func TestParseRust(t *testing.T) {
+	stdout := `
+running 3 tests
+test tests::ignored_test ... ignored
+test tests::test_add_hundred ... ok
+test tests::test_add ... FAILED
+
+failures:
+
+---- tests::test_add stdout ----
+thread 'tests::test_add' panicked at 'assertion failed: ` + "`(left == right)`" + `
+  left: ` + "`1`" + `,
+ right: ` + "`2`" + `', src/lib.rs:12:9
+note: run with ` + "`RUST_BACKTRACE=1`" + ` environment variable to display a backtrace
+
+
+failures:
+    tests::test_add
+
+test result: FAILED. 1 passed; 1 failed; 1 ignored; 0 measured; 0 filtered out
+`
+	want := `
+[
+        {
+                "name": "tests::ignored_test",
+                "status": "Skip",
+                "duration_nanos": 0,
+		"format": "Rust"
+        },
+        {
+                "name": "tests::test_add_hundred",
+                "status": "Pass",
+                "duration_nanos": 0,
+		"format": "Rust"
+        },
+        {
+                "name": "tests::test_add",
+                "status": "Fail",
+                "duration_nanos": 0,
+		"format": "Rust"
+        }
+]
+`
+	testCase(t, stdout, want)
+}
+
+func TestParseZircon(t *testing.T) {
+	stdout := `
+CASE minfs_truncate_tests                               [STARTED] 
+    TestTruncateSmall                                   [RUNNING] [PASSED] (1 ms)
+    (TestTruncateLarge<1 << 10, 1000>)                  [RUNNING] [PASSED] (20414 ms)
+    (TestTruncateLarge<1 << 15, 500>)                   [RUNNING] [PASSED] (10012 ms)
+    (TestTruncateLarge<1 << 20, 500>)                   [RUNNING] [PASSED] (10973 ms)
+    (TestTruncateLarge<1 << 25, 500>)                   [IGNORED]
+CASE minfs_truncate_tests                               [PASSED]
+
+CASE minfs_sparse_tests                                 [STARTED] 
+    (test_sparse<0, 0, kBlockSize>)                     [RUNNING] [PASSED] (19 ms)
+    (test_sparse<kBlockSize / 2, 0, kBlockSize>)        [RUNNING] [PASSED] (20 ms)
+    (test_sparse<kBlockSize / 2, kBlockSize, kBlockSize>) [RUNNING] [PASSED] (19 ms)
+    (test_sparse<kBlockSize, 0, kBlockSize>)            [RUNNING] [PASSED] (19 ms)
+    (test_sparse<kBlockSize, kBlockSize / 2, kBlockSize>) [RUNNING] [PASSED] (19 ms)
+    (test_sparse<kBlockSize * kDirectBlocks, kBlockSize * kDirectBlocks - kBlockSize, kBlockSize * 2>) [RUNNING] [PASSED] (20 ms)
+    (test_sparse<kBlockSize * kDirectBlocks, kBlockSize * kDirectBlocks - kBlockSize, kBlockSize * 32>) [RUNNING] [PASSED] (24 ms)
+    (test_sparse<kBlockSize * kDirectBlocks + kBlockSize, kBlockSize * kDirectBlocks - kBlockSize, kBlockSize * 32>) [RUNNING] [PASSED] (24 ms)
+    (test_sparse<kBlockSize * kDirectBlocks + kBlockSize, kBlockSize * kDirectBlocks + 2 * kBlockSize, kBlockSize * 32>) [RUNNING] [PASSED] (25 ms)
+CASE minfs_sparse_tests                                 [PASSED]
+
+CASE minfs_rw_workers_test                              [STARTED] 
+    TestWorkSingleThread                                [RUNNING] [PASSED] (40920 ms)
+CASE minfs_rw_workers_test                              [PASSED]
+
+CASE minfs_maxfile_tests                                [STARTED] 
+    test_maxfile                                        [RUNNING] [PASSED] (62243 ms)
+CASE minfs_maxfile_tests                                [PASSED]
+
+CASE minfs_directory_tests                              [STARTED] 
+    TestDirectoryLarge                                  [RUNNING] [PASSED] (3251 ms)
+    TestDirectoryReaddir                                [RUNNING] [PASSED] (69 ms)
+    TestDirectoryReaddirLarge                           [RUNNING] [PASSED] (6414 ms)
+CASE minfs_directory_tests                              [PASSED]
+
+CASE minfs_basic_tests                                  [STARTED] 
+    test_basic                                          [RUNNING] [PASSED] (21 ms)
+CASE minfs_basic_tests                                  [PASSED]
+====================================================
+Results for test binary "host_x64-asan/fs-host":
+    SUCCESS!  All test cases passed!
+    CASES:  6     SUCCESS:  6     FAILED:  0   
+====================================================
+`
+	want := `
+[
+	{
+		"name": "TestTruncateSmall",
+		"status": "Pass",
+		"duration_nanos": 1000000,
+		"format": "Zircon utest"
+	},
+	{
+		"name": "(TestTruncateLarge\u003c1 \u003c\u003c 10, 1000\u003e)",
+		"status": "Pass",
+		"duration_nanos": 20414000000,
+		"format": "Zircon utest"
+	},
+	{
+		"name": "(TestTruncateLarge\u003c1 \u003c\u003c 15, 500\u003e)",
+		"status": "Pass",
+		"duration_nanos": 10012000000,
+		"format": "Zircon utest"
+	},
+	{
+		"name": "(TestTruncateLarge\u003c1 \u003c\u003c 20, 500\u003e)",
+		"status": "Pass",
+		"duration_nanos": 10973000000,
+		"format": "Zircon utest"
+	},
+	{
+		"name": "(TestTruncateLarge\u003c1 \u003c\u003c 25, 500\u003e)",
+		"status": "Skip",
+		"duration_nanos": 0,
+		"format": "Zircon utest"
+	},
+	{
+		"name": "(test_sparse\u003c0, 0, kBlockSize\u003e)",
+		"status": "Pass",
+		"duration_nanos": 19000000,
+		"format": "Zircon utest"
+	},
+	{
+		"name": "(test_sparse\u003ckBlockSize / 2, 0, kBlockSize\u003e)",
+		"status": "Pass",
+		"duration_nanos": 20000000,
+		"format": "Zircon utest"
+	},
+	{
+		"name": "(test_sparse\u003ckBlockSize / 2, kBlockSize, kBlockSize\u003e)",
+		"status": "Pass",
+		"duration_nanos": 19000000,
+		"format": "Zircon utest"
+	},
+	{
+		"name": "(test_sparse\u003ckBlockSize, 0, kBlockSize\u003e)",
+		"status": "Pass",
+		"duration_nanos": 19000000,
+		"format": "Zircon utest"
+	},
+	{
+		"name": "(test_sparse\u003ckBlockSize, kBlockSize / 2, kBlockSize\u003e)",
+		"status": "Pass",
+		"duration_nanos": 19000000,
+		"format": "Zircon utest"
+	},
+	{
+		"name": "(test_sparse\u003ckBlockSize * kDirectBlocks, kBlockSize * kDirectBlocks - kBlockSize, kBlockSize * 2\u003e)",
+		"status": "Pass",
+		"duration_nanos": 20000000,
+		"format": "Zircon utest"
+	},
+	{
+		"name": "(test_sparse\u003ckBlockSize * kDirectBlocks, kBlockSize * kDirectBlocks - kBlockSize, kBlockSize * 32\u003e)",
+		"status": "Pass",
+		"duration_nanos": 24000000,
+		"format": "Zircon utest"
+	},
+	{
+		"name": "(test_sparse\u003ckBlockSize * kDirectBlocks + kBlockSize, kBlockSize * kDirectBlocks - kBlockSize, kBlockSize * 32\u003e)",
+		"status": "Pass",
+		"duration_nanos": 24000000,
+		"format": "Zircon utest"
+	},
+	{
+		"name": "(test_sparse\u003ckBlockSize * kDirectBlocks + kBlockSize, kBlockSize * kDirectBlocks + 2 * kBlockSize, kBlockSize * 32\u003e)",
+		"status": "Pass",
+		"duration_nanos": 25000000,
+		"format": "Zircon utest"
+	},
+	{
+		"name": "TestWorkSingleThread",
+		"status": "Pass",
+		"duration_nanos": 40920000000,
+		"format": "Zircon utest"
+	},
+	{
+		"name": "test_maxfile",
+		"status": "Pass",
+		"duration_nanos": 62243000000,
+		"format": "Zircon utest"
+	},
+	{
+		"name": "TestDirectoryLarge",
+		"status": "Pass",
+		"duration_nanos": 3251000000,
+		"format": "Zircon utest"
+	},
+	{
+		"name": "TestDirectoryReaddir",
+		"status": "Pass",
+		"duration_nanos": 69000000,
+		"format": "Zircon utest"
+	},
+	{
+		"name": "TestDirectoryReaddirLarge",
+		"status": "Pass",
+		"duration_nanos": 6414000000,
+		"format": "Zircon utest"
+	},
+	{
+		"name": "test_basic",
+		"status": "Pass",
+		"duration_nanos": 21000000,
+		"format": "Zircon utest"
 	}
 ]
 `

@@ -15,13 +15,22 @@ import (
 // If no structured results were identified, an empty slice is returned.
 func Parse(stdout []byte) []TestCaseResult {
 	lines := bytes.Split(stdout, []byte{'\n'})
-	res := []*regexp.Regexp{googleTestPreamblePattern, goTestPreamblePattern}
+	res := []*regexp.Regexp{
+		googleTestPreamblePattern,
+		goTestPreamblePattern,
+		rustTestPreamblePattern,
+		zirconUtestPreamblePattern,
+	}
 	match := firstMatch(lines, res)
 	switch match {
 	case googleTestPreamblePattern:
 		return parseGoogleTest(lines)
 	case goTestPreamblePattern:
 		return parseGoTest(lines)
+	case rustTestPreamblePattern:
+		return parseRustTest(lines)
+	case zirconUtestPreamblePattern:
+		return parseZirconUtest(lines)
 	// TODO(shayba): add support for more test frameworks
 	default:
 		return []TestCaseResult{}
