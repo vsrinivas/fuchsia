@@ -116,6 +116,14 @@ void ErrorReporter::PrintReports() {
                               enable_color_, squiggle_size);
     fprintf(stderr, "%s\n", warning_str.c_str());
   }
+  if (!errors_.empty() && warnings_.empty()) {
+    fprintf(stderr, "%zu error(s) reported.\n", errors_.size());
+  } else if (errors_.empty() && !warnings_.empty()) {
+    fprintf(stderr, "%zu warning(s) reported.\n", warnings_.size());
+  } else if (!errors_.empty() && !warnings_.empty()) {
+    fprintf(stderr, "%zu error(s) and %zu warning(s) reported.\n",
+            errors_.size(), warnings_.size());
+  }
 }
 
 }  // namespace error_reporter

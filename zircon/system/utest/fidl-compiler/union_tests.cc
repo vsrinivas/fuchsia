@@ -96,8 +96,9 @@ union Foo {
 
 )FIDL");
   ASSERT_FALSE(library.Compile());
-  ASSERT_EQ(library.errors().size(), 1u);
+  ASSERT_EQ(library.errors().size(), 2u);
   ASSERT_ERR(library.errors().at(0), fidl::ErrMissingOrdinalBeforeType);
+  ASSERT_ERR(library.errors().at(1), fidl::ErrMissingOrdinalBeforeType);
 
   END_TEST;
 }
@@ -273,8 +274,9 @@ union Foo {
 
 )FIDL");
   ASSERT_FALSE(library.Compile());
-  ASSERT_EQ(library.errors().size(), 1u);
+  ASSERT_EQ(library.errors().size(), 2u);
   ASSERT_ERR(library.errors().at(0), fidl::ErrUnexpectedTokenOfKind);
+  ASSERT_ERR(library.errors().at(1), fidl::ErrMissingOrdinalBeforeType);
 
   END_TEST;
 }

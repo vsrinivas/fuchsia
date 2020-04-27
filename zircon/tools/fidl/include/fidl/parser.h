@@ -143,38 +143,58 @@ class Parser {
     previous_token_ = token;
   }
 
-  // ConsumeToken consumes a token, and matches using the predicate |p|.
-  // See #OfKind, and #IdentifierOfSubkind for the two expected predicates.
-  //
-  // If the token is not retained on return, is_discarded should be true.
-  // That allows the parser to track its source location, in case it should
-  // become interesting to the AST.
+  enum class OnNoMatch {
+    kReportAndConsume,  // on failure, report error and return consumed token
+    kReportAndRecover,  // on failure, report error and return std::nullopt
+    kIgnore,            // on failure, return std::nullopt
+  };
+
+  // ReadToken matches on the next token using the predicate |p|, which returns
+  // a unique_ptr<BaseError> on failure, or nullptr on a match.
+  // See #OfKind, and #IdentifierOfSubkind for the two most common predicates.
+  // If the predicate doesn't match, ReadToken follows the OnNoMatch enum.
   template <class Predicate>
-  Token ConsumeToken(Predicate p, bool is_discarded = false) {
+  std::optional<Token> ReadToken(Predicate p, OnNoMatch on_no_match) {
     std::unique_ptr<BaseError> error = p(Peek());
     if (error) {
-      Fail(std::move(error));
+      switch (on_no_match) {
+        case OnNoMatch::kReportAndConsume:
+          Fail(std::move(error));
+          break;
+        case OnNoMatch::kReportAndRecover:
+          Fail(std::move(error));
+          recovered_errors_++;
+          return std::nullopt;
+        case OnNoMatch::kIgnore:
+          return std::nullopt;
+      }
     }
-    auto token = last_token_;
+    auto token = previous_token_ = last_token_;
     last_token_ = Lex();
     UpdateMarks(token);
-
     return token;
+  }
+
+  // ConsumeToken consumes a token whether or not it matches, and if it doesn't
+  // match, it reports an error.
+  template <class Predicate>
+  std::optional<Token> ConsumeToken(Predicate p) {
+    return ReadToken(p, OnNoMatch::kReportAndConsume);
+  }
+
+  // ConsumeTokenOrRecover consumes a token if-and-only-if it matches the given
+  // predicate |p|. If it doesn't match, it reports an error, then marks that
+  // error as recovered, essentially continuing as if the token had been there.
+  template <class Predicate>
+  std::optional<Token> ConsumeTokenOrRecover(Predicate p) {
+    return ReadToken(p, OnNoMatch::kReportAndRecover);
   }
 
   // MaybeConsumeToken consumes a token if-and-only-if it matches the given
   // predicate |p|.
-  // See #OfKind, and #IdentifierOfSubkind for the two expected predicates.
   template <class Predicate>
-  bool MaybeConsumeToken(Predicate p) {
-    std::unique_ptr<BaseError> error = p(Peek());
-    if (error) {
-      return false;
-    }
-    previous_token_ = last_token_;
-    UpdateMarks(last_token_);
-    last_token_ = Lex();
-    return true;
+  std::optional<Token> MaybeConsumeToken(Predicate p) {
+    return ReadToken(p, OnNoMatch::kIgnore);
   }
 
   static auto OfKind(Token::Kind expected_kind) {
@@ -300,7 +320,11 @@ class Parser {
   //    parsing scope. For example, we just parsed a decl with an error, and
   //    recovered, but are now at the end of the file.
   //    A signal to `break` out of the current parsing loop.
-  RecoverResult Recover();
+  RecoverResult RecoverToEndOfDecl();
+  RecoverResult RecoverToEndOfMember();
+
+  // Utility function used by RecoverTo* methods
+  bool ConsumeTokensUntil(std::set<Token::Kind> tokens);
 
   // Indicates whether we are currently able to continue parsing.
   // Typically when the parser reports an error, it then attempts to recover

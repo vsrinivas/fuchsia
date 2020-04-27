@@ -43,8 +43,8 @@ constexpr ErrorDef ErrOrdinalsMustStartAtOne(
     "ordinals must start at 1");
 constexpr ErrorDef ErrCompoundAliasIdentifier(
     "alias identifiers cannot contain '.'");
-constexpr ErrorDef ErrBitsMustHaveOneMember(
-    "must have at least one bits member");
+constexpr ErrorDef ErrMustHaveOneMember(
+    "must have at least one member");
 constexpr ErrorDef ErrCannotAttachAttributesToCompose(
     "Cannot attach attributes to compose stanza");
 constexpr ErrorDef ErrUnrecognizedProtocolMember(
