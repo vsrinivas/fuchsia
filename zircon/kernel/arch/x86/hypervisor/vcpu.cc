@@ -696,7 +696,7 @@ zx_status_t Vcpu::Create(Guest* guest, zx_vaddr_t entry, ktl::unique_ptr<Vcpu>* 
   }
 
   vcpu->pvclock_state_.is_stable =
-      pvclock_is_present() ? pvclock_is_stable() : x86_feature_test(X86_FEATURE_INVAR_TSC);
+      x86_hypervisor_has_pv_clock() ? pvclock_is_stable() : x86_feature_test(X86_FEATURE_INVAR_TSC);
 
   VmxInfo vmx_info;
   status = vcpu->host_msr_page_.Alloc(vmx_info, 0);

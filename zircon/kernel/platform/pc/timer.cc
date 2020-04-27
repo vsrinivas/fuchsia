@@ -470,7 +470,7 @@ static void pc_init_timer(uint level) {
   }
   invariant_tsc = x86_feature_test(X86_FEATURE_INVAR_TSC);
 
-  bool has_pvclock = pvclock_is_present();
+  bool has_pvclock = x86_hypervisor_has_pv_clock();
   if (has_pvclock) {
     zx_status_t status = pvclock_init();
     if (status == ZX_OK) {

@@ -7,7 +7,6 @@
 #ifndef ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_X86_PVCLOCK_H_
 #define ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_X86_PVCLOCK_H_
 
-#include <zircon/compiler.h>
 #include <zircon/types.h>
 
 static constexpr uint32_t kKvmSystemTimeMsrOld = 0x12;
@@ -52,7 +51,6 @@ struct pvclock_system_time {
 static_assert(sizeof(struct pvclock_system_time) == 32, "sizeof(pvclock_system_time) should be 32");
 
 zx_status_t pvclock_init();
-bool pvclock_is_present();
 bool pvclock_is_stable();
 uint64_t pvclock_get_tsc_freq();
 

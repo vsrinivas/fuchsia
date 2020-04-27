@@ -61,6 +61,9 @@ bool g_amd_retpoline;
 bool g_disable_spec_mitigations;
 
 enum x86_hypervisor_list x86_hypervisor;
+bool g_hypervisor_has_pv_clock;
+bool g_hypervisor_has_pv_eoi;
+bool g_hypervisor_has_pv_ipi;
 
 static ktl::atomic<bool> g_cpuid_initialized;
 
@@ -149,6 +152,12 @@ void x86_feature_init(void) {
   cpu_id::CpuId cpuid;
   x86_microarch_config = get_microarch_config(&cpuid);
   x86_hypervisor = get_hypervisor();
+  g_hypervisor_has_pv_clock =
+      x86_hypervisor == X86_HYPERVISOR_KVM && x86_feature_test(X86_FEATURE_KVM_PV_CLOCK);
+  g_hypervisor_has_pv_eoi =
+      x86_hypervisor == X86_HYPERVISOR_KVM && x86_feature_test(X86_FEATURE_KVM_PV_EOI);
+  g_hypervisor_has_pv_ipi =
+      x86_hypervisor == X86_HYPERVISOR_KVM && x86_feature_test(X86_FEATURE_KVM_PV_IPI);
   g_x86_feature_has_smap = x86_feature_test(X86_FEATURE_SMAP);
   g_x86_feature_fsgsbase = x86_feature_test(X86_FEATURE_FSGSBASE);
   g_x86_feature_pcid_good =
@@ -231,14 +240,14 @@ void x86_cpu_feature_late_init(void) {
   // Mitigate Spectre V4 (Speculative Store Bypass) if requested.
   if (x86_cpu_should_mitigate_ssb()) {
     switch (x86_vendor) {
-    case X86_VENDOR_AMD:
-      x86_amd_cpu_set_ssbd(&cpuid, &msr);
-      break;
-    case X86_VENDOR_INTEL:
-      x86_intel_cpu_set_ssbd(&cpuid, &msr);
-      break;
-    default:
-      break;
+      case X86_VENDOR_AMD:
+        x86_amd_cpu_set_ssbd(&cpuid, &msr);
+        break;
+      case X86_VENDOR_INTEL:
+        x86_intel_cpu_set_ssbd(&cpuid, &msr);
+        break;
+      default:
+        break;
     }
   }
 
@@ -352,6 +361,10 @@ void x86_feature_debug(void) {
       {X86_FEATURE_HYPERVISOR, "hypervisor"},
       {X86_FEATURE_PT, "pt"},
       {X86_FEATURE_HWP, "hwp"},
+      {X86_FEATURE_KVM_PV_CLOCK, "pv_clock"},
+      {X86_FEATURE_KVM_PV_CLOCK_STABLE, "pv_clock_stable"},
+      {X86_FEATURE_KVM_PV_EOI, "pv_eoi"},
+      {X86_FEATURE_KVM_PV_IPI, "pv_ipi"},
   };
 
   const char* vendor_string = nullptr;

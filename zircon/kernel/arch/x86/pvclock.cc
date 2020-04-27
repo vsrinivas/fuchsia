@@ -45,13 +45,9 @@ zx_status_t pvclock_init(void) {
   return ZX_OK;
 }
 
-bool pvclock_is_present(void) {
-  return x86_hypervisor == X86_HYPERVISOR_KVM && x86_feature_test(X86_FEATURE_KVM_PVCLOCK);
-}
-
 bool pvclock_is_stable() {
   bool is_stable = (system_time->flags & kKvmSystemTimeStable) ||
-                   x86_feature_test(X86_FEATURE_KVM_PVCLOCK_STABLE);
+                   x86_feature_test(X86_FEATURE_KVM_PV_CLOCK_STABLE);
   printf("pvclock: Clocksource is %sstable\n", (is_stable ? "" : "not "));
   return is_stable;
 }

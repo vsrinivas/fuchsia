@@ -184,8 +184,10 @@ void x86_feature_debug(void);
 #define X86_FEATURE_ARCH_CAPABILITIES X86_CPUID_BIT(0x7, 3, 29)
 #define X86_FEATURE_SSBD X86_CPUID_BIT(0x7, 3, 31)
 
-#define X86_FEATURE_KVM_PVCLOCK X86_CPUID_BIT(0x40000001, 0, 3)
-#define X86_FEATURE_KVM_PVCLOCK_STABLE X86_CPUID_BIT(0x40000001, 0, 24)
+#define X86_FEATURE_KVM_PV_CLOCK X86_CPUID_BIT(0x40000001, 0, 3)
+#define X86_FEATURE_KVM_PV_EOI X86_CPUID_BIT(0x40000001, 0, 6)
+#define X86_FEATURE_KVM_PV_IPI X86_CPUID_BIT(0x40000001, 0, 11)
+#define X86_FEATURE_KVM_PV_CLOCK_STABLE X86_CPUID_BIT(0x40000001, 0, 24)
 #define X86_FEATURE_AMD_TOPO X86_CPUID_BIT(0x80000001, 2, 22)
 #define X86_FEATURE_SYSCALL X86_CPUID_BIT(0x80000001, 3, 11)
 #define X86_FEATURE_NX X86_CPUID_BIT(0x80000001, 3, 20)
@@ -307,6 +309,21 @@ enum x86_hypervisor_list {
 
 extern enum x86_hypervisor_list x86_hypervisor;
 
+static inline bool x86_hypervisor_has_pv_clock(void) {
+  extern bool g_hypervisor_has_pv_clock;
+  return g_hypervisor_has_pv_clock;
+}
+
+static inline bool x86_hypervisor_has_pv_eoi(void) {
+  extern bool g_hypervisor_has_pv_eoi;
+  return g_hypervisor_has_pv_eoi;
+}
+
+static inline bool x86_hypervisor_has_pv_ipi(void) {
+  extern bool g_hypervisor_has_pv_ipi;
+  return g_hypervisor_has_pv_ipi;
+}
+
 /* returns 0 if unknown, otherwise value in Hz */
 typedef uint64_t (*x86_get_timer_freq_func_t)(void);
 
@@ -390,7 +407,7 @@ static inline bool x86_cpu_has_enhanced_ibrs(void) {
 
 enum Turbostate {
   ENABLED,
-  DISABLED
+  DISABLED,
 };
 
 // Vendor-specific per-cpu init functions, in amd.cpp/intel.cpp
