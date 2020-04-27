@@ -51,7 +51,7 @@ where
     W: Write + Sync,
 {
     pub async fn new(writer: W) -> Result<Self, Error> {
-        setup_logger("ffx");
+        setup_logger("ffx").await;
         let mut peer_id = Cli::<W>::find_daemon().await?;
         let daemon_proxy = Cli::<W>::create_daemon_proxy(&mut peer_id).await?;
         Ok(Self { daemon_proxy, writer })
@@ -442,7 +442,7 @@ async fn async_main() -> Result<(), Error> {
             Ok(())
         }
         Subcommand::Daemon(_) => start_daemon().await,
-        Subcommand::Config(c) => exec_config(c, writer),
+        Subcommand::Config(c) => exec_config(c, writer).await,
         Subcommand::Test(t) => {
             match Cli::new(writer).await.unwrap().test(t).await {
                 Ok(_) => {

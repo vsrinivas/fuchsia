@@ -17,7 +17,7 @@ use {
 
 pub struct Config<'a> {
     data: Option<FileBacked>,
-    environment_variables: EnvironmentVariable,
+    environment_variables: EnvironmentVariable<'a>,
     heuristics: Heuristic<'a>,
     runtime: Runtime,
 }
@@ -78,8 +78,8 @@ impl<'a> Config<'a> {
     pub fn new(
         env: &Environment,
         build_dir: &Option<String>,
-        environment_variables: HashMap<&'static str, Vec<&'static str>>,
-        heuristics: HashMap<&'a str, HeuristicFn>,
+        environment_variables: &'a HashMap<&'static str, Vec<&'static str>>,
+        heuristics: &'a HashMap<&'static str, HeuristicFn>,
         runtime: Ffx,
     ) -> Result<Self, Error> {
         Ok(Self {
@@ -92,8 +92,8 @@ impl<'a> Config<'a> {
 
     #[cfg(test)]
     fn new_without_perisist_config(
-        environment_variables: HashMap<&'static str, Vec<&'static str>>,
-        heuristics: HashMap<&'a str, HeuristicFn>,
+        environment_variables: &'a HashMap<&'static str, Vec<&'static str>>,
+        heuristics: &'a HashMap<&'static str, HeuristicFn>,
         runtime: Ffx,
     ) -> Result<Self, Error> {
         Ok(Self {
@@ -185,8 +185,12 @@ mod test {
         heuristics.insert(heuristic_key, test_heuristic);
         heuristics.insert(heuristic_key_2, test_heuristic);
 
-        let config =
-            Config::new_without_perisist_config(HashMap::new(), heuristics, test_cli_params(""))?;
+        let environment_variables = HashMap::new();
+        let config = Config::new_without_perisist_config(
+            &environment_variables,
+            &heuristics,
+            test_cli_params(""),
+        )?;
 
         let missing_key = "whatever";
 
@@ -209,9 +213,11 @@ mod test {
         environment_variables.insert(env_key, vec![env_var_1, env_var_2, env_var_3]);
         environment_variables.insert(env_key_2, vec![env_var_4]);
 
+        let heuristics = HashMap::new();
+
         let config = Config::new_without_perisist_config(
-            environment_variables,
-            HashMap::new(),
+            &environment_variables,
+            &heuristics,
             test_cli_params(""),
         )?;
 
@@ -236,9 +242,13 @@ mod test {
     fn test_config_runtime() -> Result<(), Error> {
         let (key_1, value_1) = ("test 1", "test 2");
         let (key_2, value_2) = ("test 3", "test 4");
+
+        let environment_variables = HashMap::new();
+        let heuristics = HashMap::new();
+
         let config = Config::new_without_perisist_config(
-            HashMap::new(),
-            HashMap::new(),
+            &environment_variables,
+            &heuristics,
             test_cli_params(&format!("{}={}, {}={}", key_1, value_1, key_2, value_2)),
         )?;
 
@@ -270,8 +280,8 @@ mod test {
         let (key_1, value_1) = ("test_1", "test_1_runtime");
         let (key_2, value_2) = ("test_2", "test_2_runtime");
         let config = Config::new_without_perisist_config(
-            environment_variables,
-            heuristics,
+            &environment_variables,
+            &heuristics,
             test_cli_params(&format!("{}={}, {}={}", key_1, value_1, key_2, value_2)),
         )?;
 

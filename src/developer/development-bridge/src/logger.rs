@@ -14,28 +14,28 @@ fn debug_config() -> Config {
         .build()
 }
 
-fn log_location(name: &str) -> String {
+async fn log_location(name: &str) -> String {
     let log_file = format!("{}.log", name);
-    let mut log_dir = get_config_str(LOG_DIR, "");
+    let mut log_dir = get_config_str(LOG_DIR, "").await;
     if log_dir.len() > 0 && !log_dir.ends_with(std::path::MAIN_SEPARATOR) {
         log_dir = format!("{}{}", log_dir, std::path::MAIN_SEPARATOR);
     }
     format!("{}{}", log_dir, log_file)
 }
 
-fn is_enabled() -> bool {
-    get_config_bool(LOG_ENABLED, false)
+async fn is_enabled() -> bool {
+    get_config_bool(LOG_ENABLED, false).await
 }
 
-pub(crate) fn setup_logger(name: &str) {
-    if !is_enabled() {
+pub(crate) async fn setup_logger(name: &str) {
+    if !is_enabled().await {
         return;
     }
     let file = OpenOptions::new()
         .write(true)
         .append(true)
         .create(true)
-        .open(log_location(name))
+        .open(log_location(name).await)
         .expect("could not open log file");
     CombinedLogger::init(vec![
         TermLogger::new(LevelFilter::Error, Config::default(), TerminalMode::Mixed)

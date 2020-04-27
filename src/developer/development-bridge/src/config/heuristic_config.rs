@@ -7,16 +7,16 @@ use {crate::config::api::ReadConfig, serde_json::Value, std::collections::HashMa
 pub(crate) type HeuristicFn = fn(key: &str) -> Option<Value>;
 
 pub(crate) struct Heuristic<'a> {
-    heuristics: HashMap<&'a str, HeuristicFn>,
+    heuristics: &'a HashMap<&'static str, HeuristicFn>,
 }
 
 impl<'a> Heuristic<'a> {
-    pub(crate) fn new(heuristics: HashMap<&'a str, HeuristicFn>) -> Self {
+    pub(crate) fn new(heuristics: &'a HashMap<&'static str, HeuristicFn>) -> Self {
         Self { heuristics }
     }
 }
 
-impl<'a> ReadConfig for Heuristic<'a> {
+impl ReadConfig for Heuristic<'_> {
     fn get(&self, key: &str) -> Option<Value> {
         self.heuristics.get(key).map(|r| r(key)).flatten()
     }
@@ -40,7 +40,7 @@ mod test {
         heuristics.insert(heuristic_key, test_heuristic);
         heuristics.insert(heuristic_key_2, test_heuristic);
 
-        let config = Heuristic::new(heuristics);
+        let config = Heuristic::new(&heuristics);
 
         let missing_key = "whatever";
 

@@ -3,47 +3,48 @@
 // found in the LICENSE file.
 
 use {
-    crate::config::api::{ConfigLevel, ReadConfig, WriteConfig},
+    crate::config::api::ConfigLevel,
     crate::config::args::{
         ConfigCommand, EnvAccessCommand, EnvCommand, EnvSetCommand, GetCommand, RemoveCommand,
         SetCommand, SubCommand,
     },
     crate::config::environment::Environment,
-    crate::config::{find_env_file, load_config, save_config},
+    crate::config::{
+        find_env_file, get_config, remove_config_with_build_dir as remove_config,
+        set_config_with_build_dir as set_config,
+    },
     anyhow::{anyhow, Error},
     serde_json::Value,
     std::collections::HashMap,
     std::io::Write,
 };
 
-pub fn exec_config<W: Write + Sync>(config: ConfigCommand, writer: W) -> Result<(), Error> {
+pub(crate) async fn exec_config<W: Write + Sync>(
+    config: ConfigCommand,
+    writer: W,
+) -> Result<(), Error> {
     match config.sub {
         SubCommand::Env(env) => exec_env(env, writer),
-        SubCommand::Get(get) => exec_get(get, writer),
-        SubCommand::Set(set) => exec_set(set),
-        SubCommand::Remove(remove) => exec_remove(remove),
+        SubCommand::Get(get) => exec_get(get, writer).await,
+        SubCommand::Set(set) => exec_set(set).await,
+        SubCommand::Remove(remove) => exec_remove(remove).await,
     }
 }
 
-fn exec_get<W: Write + Sync>(get: GetCommand, mut writer: W) -> Result<(), Error> {
-    let config = load_config(&get.build_dir)?;
-    match config.get(&get.name) {
+async fn exec_get<W: Write + Sync>(get: GetCommand, mut writer: W) -> Result<(), Error> {
+    match get_config(&get.name).await? {
         Some(v) => writeln!(writer, "{}: {}", get.name, v)?,
         None => writeln!(writer, "{}: none", get.name)?,
     };
     Ok(())
 }
 
-fn exec_set(set: SetCommand) -> Result<(), Error> {
-    let mut config = load_config(&set.build_dir)?;
-    config.set(&set.level, &set.name, Value::String(set.value))?;
-    save_config(&mut config, set.build_dir)
+async fn exec_set(set: SetCommand) -> Result<(), Error> {
+    set_config(set.level, &set.name, Value::String(set.value), set.build_dir).await
 }
 
-fn exec_remove(set: RemoveCommand) -> Result<(), Error> {
-    let mut config = load_config(&set.build_dir)?;
-    config.remove(&set.level, &set.name)?;
-    save_config(&mut config, set.build_dir)
+async fn exec_remove(set: RemoveCommand) -> Result<(), Error> {
+    remove_config(set.level, &set.name, set.build_dir).await
 }
 
 fn exec_env_set(env: &mut Environment, s: EnvSetCommand, file: String) -> Result<(), Error> {

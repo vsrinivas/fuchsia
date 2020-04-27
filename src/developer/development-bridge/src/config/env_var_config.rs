@@ -4,17 +4,17 @@
 
 use {crate::config::api::ReadConfig, serde_json::Value, std::collections::HashMap};
 
-pub(crate) struct EnvironmentVariable {
-    environment_variables: HashMap<&'static str, Vec<&'static str>>,
+pub(crate) struct EnvironmentVariable<'a> {
+    environment_variables: &'a HashMap<&'static str, Vec<&'static str>>,
 }
 
-impl EnvironmentVariable {
-    pub(crate) fn new(environment_variables: HashMap<&'static str, Vec<&'static str>>) -> Self {
+impl<'a> EnvironmentVariable<'a> {
+    pub(crate) fn new(environment_variables: &'a HashMap<&'static str, Vec<&'static str>>) -> Self {
         Self { environment_variables }
     }
 }
 
-impl ReadConfig for EnvironmentVariable {
+impl ReadConfig for EnvironmentVariable<'_> {
     fn get(&self, key: &str) -> Option<Value> {
         match self.environment_variables.get(key) {
             Some(vars) => vars
@@ -47,7 +47,7 @@ mod test {
         environment_variables.insert(env_key, vec![env_var_1, env_var_2, env_var_3]);
         environment_variables.insert(env_key_2, vec![env_var_4]);
 
-        let config = EnvironmentVariable::new(environment_variables);
+        let config = EnvironmentVariable::new(&environment_variables);
 
         let missing_key = "whatever";
         assert_eq!(None, config.get(missing_key));

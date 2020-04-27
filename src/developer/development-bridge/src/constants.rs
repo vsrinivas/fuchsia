@@ -29,3 +29,6 @@ pub const MAX_RETRY_COUNT: u32 = 30;
 pub const AUTOSTART_MIN_RETRY_COUNT: u32 = 15;
 // Delay between retry attempts to find the RCS.
 pub const RETRY_DELAY: Duration = Duration::from_millis(200);
+
+// Timeout for the config cache.
+pub const CONFIG_CACHE_TIMEOUT: Duration = Duration::from_secs(3);

@@ -37,6 +37,26 @@ impl Environment {
         }
     }
 
+    pub(crate) fn try_load(file: Option<String>) -> Self {
+        match file {
+            Some(f) => {
+                let reader = Environment::reader(&f);
+                if reader.is_err() {
+                    Self { user: None, build: None, global: None, defaults: None }
+                } else {
+                    match Environment::load_from_reader(reader.expect("environment file reader")) {
+                        Ok(env) => env,
+                        Err(e) => {
+                            log::error!("Error loading environment: {}", e);
+                            Self { user: None, build: None, global: None, defaults: None }
+                        }
+                    }
+                }
+            }
+            None => Self { user: None, build: None, global: None, defaults: None },
+        }
+    }
+
     pub fn load(file: &str) -> Result<Self, Error> {
         Environment::load_from_reader(Environment::reader(file)?)
     }

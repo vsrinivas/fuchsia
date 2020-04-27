@@ -411,7 +411,7 @@ pub async fn start() -> Result<(), Error> {
     if is_daemon_running() {
         return Ok(());
     }
-    setup_logger("ffx.daemon");
+    setup_logger("ffx.daemon").await;
     let child = onet::start_ascendd().await;
     let daemon = Daemon::new(Some(child)).await?;
     exec_server(daemon, true).await
