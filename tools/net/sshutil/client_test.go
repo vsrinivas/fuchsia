@@ -5,8 +5,10 @@
 package sshutil
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"io"
 	"testing"
 	"time"
 
@@ -159,6 +161,61 @@ func TestKeepalive(t *testing.T) {
 
 func TestRun(t *testing.T) {
 	ctx := context.Background()
+
+	t.Run("runs a command", func(t *testing.T) {
+		// Set up a server that will respond to a command:
+		//
+		// "pass": with "pass stdout" as STDOUT, "pass stderr" as STDERR.
+		// "fail": with "fail stdout" as STDOUT, "failstderr" as STDERR.
+		client, _, cleanup := setUpClient(
+			ctx,
+			t,
+			onNewExecChannel(func(cmd string, stdout io.Writer, stderr io.Writer) int {
+				switch cmd {
+				case "pass":
+					stdout.Write([]byte("pass stdout"))
+					stderr.Write([]byte("pass stderr"))
+					return 0
+				case "fail":
+					stdout.Write([]byte("fail stdout"))
+					stderr.Write([]byte("fail stderr"))
+					return 1
+				default:
+					t.Errorf("unexpected command %q", cmd)
+					return 255
+				}
+			}),
+			nil,
+		)
+		defer cleanup()
+
+		check := func(cmd string, expectedExitStatus int, expectedStdout string, expectedStderr string) {
+			var stdout bytes.Buffer
+			var stderr bytes.Buffer
+			err := client.Run(ctx, []string{cmd}, &stdout, &stderr)
+			if expectedExitStatus == 0 {
+				if err != nil {
+					t.Errorf("command %q failed: %v", cmd, err)
+				}
+			} else if err != nil {
+				if e, ok := err.(*ssh.ExitError); !ok || e.ExitStatus() != expectedExitStatus {
+					t.Errorf("command %q failed: %v", cmd, err)
+				}
+			}
+			actualStdout := stdout.String()
+			actualStderr := stderr.String()
+
+			if expectedStdout != actualStdout {
+				t.Errorf("expected stdout for %q to be %q, not %q", cmd, expectedStdout, actualStdout)
+			}
+			if expectedStderr != actualStderr {
+				t.Errorf("expected stderr for %q to be %q, not %q", cmd, expectedStderr, actualStderr)
+			}
+		}
+
+		check("pass", 0, "pass stdout", "pass stderr")
+		check("fail", 1, "fail stdout", "fail stderr")
+	})
 
 	t.Run("stops running command if context canceled", func(t *testing.T) {
 		// By not passing an `onNewChannel` function we ensure that the command

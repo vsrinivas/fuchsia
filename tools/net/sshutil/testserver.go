@@ -14,6 +14,7 @@ import (
 	"crypto/rsa"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"net"
 
@@ -190,4 +191,50 @@ func genPassword(length int) (string, error) {
 		return "", err
 	}
 	return fmt.Sprintf("%x", buf), nil
+}
+
+// onChannelExec is a helper method for creating a sshServer.onNewChannel which
+// will call a callback if the new channel request is a session with a single
+// request to execute a command. Any other channel or request type will result
+// in a panic.
+func onNewExecChannel(f func(cmd string, stdout io.Writer, stderr io.Writer) int) func(ssh.NewChannel) {
+	return func(newChannel ssh.NewChannel) {
+		if newChannel.ChannelType() != "session" {
+			newChannel.Reject(ssh.UnknownChannelType, "unknown channel type")
+			return
+		}
+
+		ch, reqs, err := newChannel.Accept()
+		if err != nil {
+			log.Panicf("error accepting channel: %v", err)
+		}
+
+		go func() {
+			defer ch.Close()
+
+			req := <-reqs
+			switch req.Type {
+			case "exec":
+				var execMsg struct{ Command string }
+				if err := ssh.Unmarshal(req.Payload, &execMsg); err != nil {
+					log.Panicf("failed to unmarshal payload: %v", err)
+				}
+				if err := req.Reply(true, nil); err != nil {
+					log.Panicf("failed to send reply: %v", err)
+				}
+
+				exitStatus := f(execMsg.Command, ch, ch.Stderr())
+
+				exitMsg := struct {
+					ExitStatus uint32
+				}{ExitStatus: uint32(exitStatus)}
+
+				if _, err := ch.SendRequest("exit-status", false, ssh.Marshal(&exitMsg)); err != nil {
+					log.Panicf("failed to send exit status: %v", err)
+				}
+			default:
+				log.Panicf("unexpected request type: %v", req.Type)
+			}
+		}()
+	}
 }
