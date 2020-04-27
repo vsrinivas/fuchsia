@@ -7,33 +7,26 @@ This guide provides instructions for the following tasks:
 
 ## Prerequisites
 
-Fuchsia's [bootstrap script](/scripts/bootstrap) requires Python, cURL, unzip,
-and Git to be up-to-date.
+The Fuchsia project requires `python`, `curl`, `unzip`, and `git` to be
+up-to-date:
 
-### Linux
+*   For Linux, install or update the following packages:
 
-Install or update the following packages:
+    ```posix-terminal
+    sudo apt-get install build-essential curl git python unzip
+    ```
 
-```posix-terminal
-sudo apt-get install build-essential curl git python unzip
-```
+    Note: Fuchsia recommends the version of Git to be 2.24 or higher.
 
-### macOS
-
-Do the following:
-
-1.  Install the Xcode command line tool:
+*   For macOS, install the Xcode command line tool:
 
     ```posix-terminal
     xcode-select --install
     ```
 
-1.  Install the latest version of
-    [Xcode](https://developer.apple.com/xcode/){:.external}.
-
 ## Download Fuchsia source {#download-fuchsia-source}
 
-Fuchsia's bootstrap script creates a `fuchsia` directory and downloads the
+Fuchsia's [bootstrap script](/scripts/bootstrap) creates a `fuchsia` directory and downloads the
 content of the Fuchsia source repository to this new directory.
 
 To download the Fuchsia source, do the following:
@@ -55,9 +48,6 @@ To download the Fuchsia source, do the following:
     ```
 
     Downloading may take up to 60 minutes.
-
-To learn how the Fuchsia source code is organized, see
-[Source code layout](/docs/concepts/source_code/layout.md).
 
 ### Authentication error
 
@@ -178,6 +168,6 @@ In either case, you need `jiri` in your `PATH`.
 
 ## See also
 
-For the next steps, see
+See
 [Configure and build Fuchsia](/docs/getting_started.md#configure-and-build-fuchsia)
-in the Getting started guide.
+in the Getting started guide for the next steps.
