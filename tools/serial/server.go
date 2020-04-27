@@ -80,36 +80,42 @@ func (s *Server) Run(ctx context.Context, listener net.Listener) error {
 	}()
 
 	go func() {
-		conn, err := listener.Accept()
-		if err != nil {
-			errs <- err
-			return
-		}
-		defer conn.Close()
-
-		// net.Conn does not feature a SetWriteBuffer method, but all of its
-		// main net implementations do.
-		wbs, ok := conn.(writeBufferSetter)
-		if ok {
-			if err := wbs.SetWriteBuffer(s.opts.WriteBufferSize); err != nil {
+		// We allow consecutive connections, but only one at a given time.
+		// When a client connection is closed, copying to/from the socket
+		// will hit syscall errors (which will be swallowed) and we begin
+		// a new iteration.
+		for {
+			conn, err := listener.Accept()
+			if err != nil {
 				errs <- err
 				return
 			}
-		}
+			defer conn.Close()
 
-		// conn -> serial
-		go func() {
-			for {
-				if _, err := io.Copy(s.serial, conn); sanitizeError(ctx, err) != nil {
-					errs <- fmt.Errorf("failed to read from the connection: %v", err)
+			// net.Conn does not feature a SetWriteBuffer method, but all of its
+			// main net implementations do.
+			wbs, ok := conn.(writeBufferSetter)
+			if ok {
+				if err := wbs.SetWriteBuffer(s.opts.WriteBufferSize); err != nil {
+					errs <- err
+					return
 				}
 			}
-		}()
 
-		// ring buffer -> conn
-		for {
-			if _, err := io.Copy(conn, rb); sanitizeError(ctx, err) != nil {
-				errs <- fmt.Errorf("failed to copy data to the connection: %v", err)
+			// conn -> serial
+			go func() {
+				for {
+					if _, err := io.Copy(s.serial, conn); sanitizeError(ctx, err) != nil {
+						errs <- fmt.Errorf("failed to read from the connection: %v", err)
+					}
+				}
+			}()
+
+			// ring buffer -> conn
+			for {
+				if _, err := io.Copy(conn, rb); sanitizeError(ctx, err) != nil {
+					errs <- fmt.Errorf("failed to copy data to the connection: %v", err)
+				}
 			}
 		}
 	}()
