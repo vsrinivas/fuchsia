@@ -5,6 +5,7 @@ sysconf
 __ctype_get_mb_cur_max
 isalnum
 isalpha
+isdigit
 islower
 isprint
 isspace
@@ -58,6 +59,7 @@ posix_memalign
 realloc
 
 # IO - no implementation needed (pending fxb/13095)
+fchmod
 chdir
 chmod
 close
@@ -90,6 +92,7 @@ statvfs
 stderr
 stdout
 symlink
+umask
 uname
 unlink
 write
