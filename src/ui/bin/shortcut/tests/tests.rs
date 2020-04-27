@@ -239,6 +239,7 @@ async fn test_modifiers_not_activated_on_release() -> Result<(), Error> {
 #[fasync::run_singlethreaded(test)]
 async fn test_modifiers_activated_on_release() -> Result<(), Error> {
     let mut service = ShortcutService::new().await?;
+
     // Set shortcut for LEFT_META
     let shortcut = ui_shortcut::Shortcut {
         id: Some(TEST_SHORTCUT_ID),
@@ -259,16 +260,14 @@ async fn test_modifiers_activated_on_release() -> Result<(), Error> {
     };
     service.registry.register_shortcut(shortcut).await.expect("register_shortcut left_meta+q");
 
-    let was_handled = service
-        .press_key(
-            ui_input::Key::LeftMeta,
-            Some(ui_input::Modifiers::LeftMeta | ui_input::Modifiers::Meta),
-        )
-        .await
-        .expect("Press LeftMeta");
+    let was_handled =
+        service.press_key(ui_input::Key::LeftMeta, None).await.expect("Press LeftMeta");
     assert_eq!(false, was_handled);
 
-    let was_handled_fut = service.release_key(ui_input::Key::LeftMeta, None);
+    let was_handled_fut = service.release_key(
+        ui_input::Key::LeftMeta,
+        Some(ui_input::Modifiers::LeftMeta | ui_input::Modifiers::Meta),
+    );
 
     service
         .handle_shortcut_activation(|id| {
