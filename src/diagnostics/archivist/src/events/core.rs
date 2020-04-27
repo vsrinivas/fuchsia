@@ -55,7 +55,7 @@ impl EventStreamServer {
             match request {
                 fsys::EventStreamRequest::OnEvent { event, .. } => {
                     if let Ok(event) = event.try_into() {
-                        self.send(event).await?;
+                        self.send(event).await;
                     }
                 }
             }
@@ -63,8 +63,11 @@ impl EventStreamServer {
         Ok(())
     }
 
-    async fn send(&mut self, event: ComponentEvent) -> Result<(), Error> {
-        self.sender.send(event).await.map_err(|e| format_err!("Failed to send: {:?}", e))
+    async fn send(&mut self, event: ComponentEvent) {
+        // Ignore Err(SendError) result. If we fail to send it means that the archivist has been
+        // stopped and therefore the receving end of this channel is closed. A send operation can
+        // only fail if this is the case.
+        let _ = self.sender.send(event).await;
     }
 }
 

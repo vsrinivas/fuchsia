@@ -4,7 +4,7 @@
 
 use {
     crate::events::types::*,
-    anyhow::{format_err, Context as _, Error},
+    anyhow::{Context as _, Error},
     fidl_fuchsia_io::DirectoryMarker,
     fidl_fuchsia_sys_internal::{
         ComponentEventListenerMarker, ComponentEventListenerRequest,
@@ -61,9 +61,9 @@ impl EventListenerServer {
 
     fn spawn(self, stream: ComponentEventListenerRequestStream) {
         fasync::spawn(async move {
-            self.handle_request_stream(stream)
-                .await
-                .unwrap_or_else(|e: Error| error!("failed to run tree server: {:?}", e));
+            self.handle_request_stream(stream).await.unwrap_or_else(|e: Error| {
+                error!("failed to run v1 events processing server: {:?}", e)
+            });
         });
     }
 
@@ -108,7 +108,7 @@ impl EventListenerServer {
                 component_id,
                 component_data_map: None,
             }))
-            .await?;
+            .await;
         }
         Ok(())
     }
@@ -121,7 +121,7 @@ impl EventListenerServer {
                 component_id,
                 component_data_map: None,
             }))
-            .await?;
+            .await;
         }
         Ok(())
     }
@@ -138,13 +138,16 @@ impl EventListenerServer {
                 component_id,
                 data_directory_proxy: directory.into_proxy().ok(),
             }))
-            .await?;
+            .await;
         }
         Ok(())
     }
 
-    async fn send_event(&mut self, event: ComponentEvent) -> Result<(), Error> {
-        self.sender.send(event).await.map_err(|e| format_err!("Failed to send: {:?}", e))
+    async fn send_event(&mut self, event: ComponentEvent) {
+        // Ignore Err(SendError) result. If we fail to send it means that the archivist has been
+        // stopped and therefore the receving end of this channel is closed. A send operation can
+        // only fail if this is the case.
+        let _ = self.sender.send(event).await;
     }
 }
 
