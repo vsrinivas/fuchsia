@@ -53,7 +53,6 @@ group("tools") {
     "//third_party/iperf",
     "//third_party/openssh-portable:openssh-tools",
     "//tools",
-    "//tools/fidl/gidl:host",
     "//tools/whereiscl:host($host_toolchain)",
   ]
 }

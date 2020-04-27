@@ -5,6 +5,7 @@
 import("//build/go/go_binary.gni")
 import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
+import("//build/host.gni")
 import("//build/testing/host_test_data.gni")
 
 go_library("lib") {
@@ -20,6 +21,11 @@ go_binary("fidlgen_rust") {
     ":lib",
     "//garnet/go/src/fidl:fidl_lib",
   ]
+}
+
+install_host_tools("host") {
+  deps = [ ":fidlgen_rust" ]
+  outputs = [ "fidlgen_rust" ]
 }
 
 go_test("fidlgen_rust_test") {
