@@ -20,7 +20,6 @@ use {
     log::{debug, error, info, trace},
 };
 
-static LOG_VERBOSITY: u16 = 1;
 static MAX_REDIRECTS: u8 = 10;
 static DEFAULT_DEADLINE_DURATION: zx::Duration = zx::Duration::from_seconds(15);
 
@@ -400,7 +399,6 @@ fn spawn_server(stream: net_http::LoaderRequestStream) {
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     fuchsia_syslog::init()?;
-    fuchsia_syslog::set_verbosity(LOG_VERBOSITY);
     let mut fs = ServiceFs::new();
     fs.dir("svc").add_fidl_service(spawn_server);
     fs.take_and_serve_directory_handle()?;
