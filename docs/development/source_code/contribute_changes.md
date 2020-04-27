@@ -8,7 +8,13 @@ To submit your contribution to the Fuchsia project, follow the instructions in t
 ## Prerequisites
 
 Before you submit your first contribution to the Fuchsia project, you need to
-[sign the Google Contributor License Agreements (CLA)](#sign-the-google-cla) and [generate a cookie to authenticate you in Gerrit](#generate-a-cookie).
+
+1. [Download the Fuchsia source code](/docs/development/source_code/README.md)
+
+   Note: You may want to complete the next prerequisite as downloading the Fuchsia source code may take a long time.
+
+1. [Sign the Google Contributor License Agreements (CLA)](#sign-the-google-cla)
+1. [Generate a cookie to authenticate you in Gerrit](#generate-a-cookie)
 
 ### Sign the Google CLA {#sign-the-google-cla}
 
