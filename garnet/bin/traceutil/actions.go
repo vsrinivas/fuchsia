@@ -36,6 +36,7 @@ type captureTraceConfig struct {
 	Detach               bool
 	Decouple             bool
 	Spawn                bool
+	Triggers             string
 }
 
 func newCaptureTraceConfig(f *flag.FlagSet) *captureTraceConfig {
@@ -72,6 +73,12 @@ func newCaptureTraceConfig(f *flag.FlagSet) *captureTraceConfig {
 		"Don't stop tracing when the traced program exits.")
 	f.BoolVar(&config.Spawn, "spawn", false,
 		"Use fdio_spawn to run a legacy app. Detach will have no effect when using this option.")
+	f.StringVar(
+		&config.Triggers,
+		"triggers",
+		"",
+		"Alert->action mappings: <alert>:<action>,...",
+	)
 
 	return config
 }
@@ -171,6 +178,14 @@ func captureTrace(config *captureTraceConfig, conn *TargetConnection, traceOutpu
 		cmd = append(cmd, "--spawn")
 	}
 
+	if len(config.Triggers) > 0 {
+		args, err := expandTriggerArgs(config.Triggers)
+		if err != nil {
+			return err
+		}
+		cmd = append(cmd, args...)
+	}
+
 	// The program to run must appear last.
 	// TODO(PT-130): The handling of embedded spaces in the command
 	// and its arguments could be better.
@@ -237,4 +252,24 @@ func convertToJson(generator string, compressedInput bool, outputPath string, in
 		fmt.Println("done.")
 	}
 	return err
+}
+
+func expandTriggerArgs(value string) ([]string, error) {
+	triggers := strings.Split(value, ",")
+	result := []string{}
+	for _, trigger := range triggers {
+		parts := strings.Split(trigger, ":")
+		if len(parts) != 2 || len(parts[0]) == 0 || len(parts[1]) == 0 {
+			return nil, fmt.Errorf("Error in trigger argument: %s, expected <alert>:<action>", trigger)
+		}
+		if len(parts[0]) > 14 {
+			return nil, fmt.Errorf("Alert name too long (>14) in trigger argument: %s", trigger)
+		}
+		if parts[1] != "stop" {
+			return nil, fmt.Errorf("Unrecognized action in trigger argument: %s", trigger)
+		}
+
+		result = append(result, "--trigger="+trigger)
+	}
+	return result, nil
 }
