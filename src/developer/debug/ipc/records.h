@@ -87,6 +87,11 @@ struct ExceptionRecord {
       uint64_t far;
     } arm64;
   } arch;
+
+  // Whether the corresponding exception is second-chance (i.e., that the
+  // debugger will get a second chance to handle the exception after the
+  // process exception channel fails to do so).
+  bool second_chance = false;
 };
 
 // Note: see "ps" source:
