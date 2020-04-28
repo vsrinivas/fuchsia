@@ -372,7 +372,7 @@ async fn do_read_long_chr<'a>(args: &'a [&'a str], client: &'a GattClientPtr) ->
 
 async fn do_write_chr<'a>(mut args: Vec<&'a str>, client: &'a GattClientPtr) -> Result<(), Error> {
     if args.len() < 2 {
-        println!("usage: write-chr [-w] <id> <value>");
+        println!("usage: {}", Cmd::WriteChr.cmd_help());
         return Ok(());
     }
 
@@ -417,7 +417,7 @@ async fn do_write_long_chr<'a>(
     client: &'a GattClientPtr,
 ) -> Result<(), Error> {
     if args.len() < 3 {
-        println!("usage: {}", Cmd::WriteLongDesc.cmd_help());
+        println!("usage: {}", Cmd::WriteLongChr.cmd_help());
         return Ok(());
     }
 

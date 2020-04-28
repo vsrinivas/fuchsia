@@ -92,6 +92,7 @@ group("tests") {
     "bt-avrcp-controller:tests",
     "bt-bredr-profile:tests",
     "bt-cli:tests",
+    "bt-le-central:tests",
     "bt-le-peripheral:tests",
     "bt-snoop:tests",
     "tests",
