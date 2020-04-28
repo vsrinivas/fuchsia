@@ -184,18 +184,19 @@ zx_status_t DeviceCtx::Bind() {
       soc_type_ = SocType::kG12B;
       break;
     default:
-      ENCODE_ERROR("Unknown soc pid: %d\n", info.pid);
+      ENCODE_ERROR("Unknown soc pid: %d", info.pid);
       return ZX_ERR_INVALID_ARGS;
   }
 
-  status = load_firmware(parent(), "h264_enc.bin", firmware_vmo_.reset_and_get_address(),
-                         &firmware_size_);
+  status = load_firmware(parent(), "h264_enc.bin", firmware_package_vmo_.reset_and_get_address(),
+                         &firmware_package_size_);
   if (status != ZX_OK) {
-    ENCODE_ERROR("Couldn't load firmware\n");
+    ENCODE_ERROR("Couldn't load firmware");
     return status;
   }
 
-  zx::vmar::root_self()->map(0, firmware_vmo_, 0, firmware_size_, ZX_VM_PERM_READ, &firmware_ptr_);
+  zx::vmar::root_self()->map(0, firmware_package_vmo_, 0, firmware_package_size_, ZX_VM_PERM_READ,
+                             &firmware_package_ptr_);
 
   sysmem_sync_ptr_.Bind(ConnectToSysmem());
   if (!sysmem_sync_ptr_) {
@@ -217,17 +218,122 @@ zx_status_t DeviceCtx::Bind() {
   return status;
 }
 
+zx_status_t DeviceCtx::ParseFirmwarePackage() {
+  constexpr std::string_view kEncFirmwareName = "ga_h264_enc_cabac.bin";
+  constexpr uint32_t kMaxFirmwareSize = 8 * 4096;
+
+  if (!firmware_package_ptr_) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  // TODO(50890) unify this code with similar parsing code over in decoder
+
+  constexpr uint32_t kFirmwareHeaderSize = 512;
+  struct FirmwareHeader {
+    uint32_t magic;
+    uint32_t checksum;
+    char name[32];
+    char cpu[16];
+    char format[32];
+    char version[32];
+    char author[32];
+    char date[32];
+    char commit[16];
+    uint32_t data_size;
+    uint32_t time;
+  };
+
+  constexpr uint32_t kPackageMagic = ('P' << 24 | 'A' << 16 | 'C' << 8 | 'K');
+  constexpr uint32_t kPackageHeaderSize = 256;
+  struct PackageHeader {
+    uint32_t magic;
+    uint32_t size;
+    uint32_t checksum;
+  };
+
+  constexpr uint32_t kPackageEntryHeaderSize = 256;
+  struct PackageEntryHeader {
+    char name[32];
+    char format[32];
+    char cpu[32];
+    uint32_t length;
+  };
+
+  if (firmware_package_size_ < kPackageHeaderSize) {
+    return ZX_ERR_NO_MEMORY;
+  }
+
+  uint32_t offset = 0;
+  auto header = reinterpret_cast<PackageHeader*>(firmware_package_ptr_ + offset);
+
+  if (header->magic != kPackageMagic) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  offset += kPackageHeaderSize;
+
+  while (offset < firmware_package_size_) {
+    if (offset + kPackageEntryHeaderSize > firmware_package_size_) {
+      return ZX_ERR_NO_MEMORY;
+    }
+
+    auto entry = reinterpret_cast<PackageEntryHeader*>(firmware_package_ptr_ + offset);
+
+    offset += kPackageEntryHeaderSize;
+
+    if (offset + entry->length > firmware_package_size_) {
+      return ZX_ERR_NO_MEMORY;
+    }
+
+    if (kFirmwareHeaderSize > entry->length) {
+      return ZX_ERR_NO_MEMORY;
+    }
+
+    auto firmware_header = reinterpret_cast<FirmwareHeader*>(firmware_package_ptr_ + offset);
+    if (firmware_header->data_size + kFirmwareHeaderSize > entry->length) {
+      return ZX_ERR_NO_MEMORY;
+    }
+
+    if (firmware_header->data_size > kMaxFirmwareSize) {
+      return ZX_ERR_NO_MEMORY;
+    }
+
+    // TODO(afoxley) check crc
+
+    if (kEncFirmwareName.compare(0, kEncFirmwareName.size(), firmware_header->name,
+                                 strnlen(firmware_header->name, sizeof(firmware_header->name))) ==
+        0) {
+      firmware_ptr_ = firmware_package_ptr_ + offset + kFirmwareHeaderSize;
+      firmware_size_ = firmware_header->data_size;
+      return ZX_OK;
+    }
+
+    offset += entry->length;
+  }
+
+  return ZX_ERR_NOT_FOUND;
+}
+
 zx_status_t DeviceCtx::LoadFirmware() {
   io_buffer_t firmware_buffer;
-  const uint64_t kFirmwareSize = 8 * 4096;
   const uint32_t kDmaCount = 0x1000;
-  // Most buffers should be 64-kbyte aligned.
-  const uint32_t kBufferAlignShift = 16;
+  // Request page alignment.
+  const uint32_t kBufferAlignShift = 0;
   const char* kBufferName = "EncFirmware";
 
   HcodecAssistMmcCtrl1::Get().FromValue(HcodecAssistMmcCtrl1::kCtrl).WriteTo(&dosbus_);
 
-  zx_status_t status = io_buffer_init_aligned(&firmware_buffer, bti_.get(), kFirmwareSize,
+  if (!firmware_ptr_) {
+    zx_status_t status = ParseFirmwarePackage();
+    if (status != ZX_OK) {
+      ENCODE_ERROR("Couldn't parse firmware package: %d", status);
+      return status;
+    }
+  }
+
+  ZX_DEBUG_ASSERT(firmware_ptr_ && firmware_size_);
+
+  zx_status_t status = io_buffer_init_aligned(&firmware_buffer, bti_.get(), firmware_size_,
                                               kBufferAlignShift, IO_BUFFER_RW | IO_BUFFER_CONTIG);
   if (status != ZX_OK) {
     ENCODE_ERROR("Failed to make firmware buffer");
@@ -237,9 +343,8 @@ zx_status_t DeviceCtx::LoadFirmware() {
   zx_object_set_property(firmware_buffer.vmo_handle, ZX_PROP_NAME, kBufferName,
                          strlen(kBufferName));
 
-  memcpy(io_buffer_virt(&firmware_buffer), reinterpret_cast<void*>(firmware_ptr_),
-         std::min(firmware_size_, kFirmwareSize));
-  io_buffer_cache_flush(&firmware_buffer, 0, kFirmwareSize);
+  memcpy(io_buffer_virt(&firmware_buffer), reinterpret_cast<void*>(firmware_ptr_), firmware_size_);
+  io_buffer_cache_flush(&firmware_buffer, 0, firmware_size_);
 
   BarrierAfterFlush();
 

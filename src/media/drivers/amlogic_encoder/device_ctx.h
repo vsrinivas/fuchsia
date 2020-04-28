@@ -135,6 +135,8 @@ class DeviceCtx : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_MEDIA
   void InterruptInit();
   zx_status_t BufferAlloc();
   zx_status_t CanvasInit();
+  // populates firmware_ptr_ and firmware_size_
+  zx_status_t ParseFirmwarePackage();
   zx_status_t LoadFirmware();
   void Reset();
   // configures hcodec block with frame and pic count info.
@@ -155,9 +157,12 @@ class DeviceCtx : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_MEDIA
   AoRegisterIo aobus_;
   HiuRegisterIo hiubus_;
   zx::bti bti_;
-  zx::vmo firmware_vmo_;
+  zx::vmo firmware_package_vmo_;
+  uintptr_t firmware_package_ptr_ = 0;
+  uint64_t firmware_package_size_ = 0;
+  // points into firmware_package_ptr_ at parsed out location
   uintptr_t firmware_ptr_ = 0;
-  uint64_t firmware_size_ = 0;
+  uint32_t firmware_size_ = 0;
   bool needs_reset_ = false;
 
   EncoderStatus hw_status_;
