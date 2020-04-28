@@ -2,28 +2,29 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <errno.h>
+#include <fcntl.h>
+#include <fuchsia/sysmem/c/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
+#include <lib/async/cpp/task.h>
+#include <lib/fdio/cpp/caller.h>
+#include <lib/fdio/directory.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/fdio/watcher.h>
 #include <lib/sysmem-connector/sysmem-connector.h>
+#include <lib/zx/channel.h>
+#include <lib/zx/process.h>
+#include <stdio.h>
+#include <threads.h>
+
+#include <queue>
 
 #include <fbl/auto_lock.h>
 #include <fbl/function.h>
 #include <fbl/mutex.h>
 #include <fbl/unique_fd.h>
-#include <fuchsia/sysmem/c/fidl.h>
-#include <lib/async/cpp/task.h>
-#include <lib/async-loop/cpp/loop.h>
-#include <lib/async-loop/default.h>
-#include <lib/fdio/watcher.h>
-#include <lib/fdio/fd.h>
-#include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
-#include <lib/fdio/cpp/caller.h>
-#include <lib/zx/channel.h>
-
-#include <fcntl.h>
-#include <errno.h>
-#include <queue>
-#include <stdio.h>
-#include <threads.h>
 
 // The actual sysmem FIDL server is in the sysmem driver.  The code that watches
 // for the driver and sends sysmem service requests to the driver is in
@@ -177,6 +178,11 @@ zx_status_t SysmemConnector::DeviceAdded(int dirfd, int event, const char* filen
     // keep watching for another device instance.
     return ZX_OK;
   }
+  char process_name[ZX_MAX_NAME_LEN] = "";
+  status = zx::process::self()->get_property(ZX_PROP_NAME, process_name, sizeof(process_name));
+  ZX_DEBUG_ASSERT(status == ZX_OK);
+  printf("sysmem-connector: %s connected to sysmem driver %s\n", process_name, filename);
+  fflush(stdout);
 
   driver_connector_client_ = std::move(driver_connector_client);
   ZX_DEBUG_ASSERT(driver_connector_client_);
