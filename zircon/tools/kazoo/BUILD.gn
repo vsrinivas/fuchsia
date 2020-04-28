@@ -5,24 +5,30 @@
 import("$zx/public/gn/host_tool_action.gni")
 
 if (defined(zx)) {
+  # Kazoo can be built for both the ZN and GN build. In the GN case,
+  # provide appropriate implementations for the zx_xxx() templates used
+  # in this file.
+  if (zx != "/") {
+    assert(current_toolchain == host_toolchain,
+           "current_toolchain=$current_toolchain, expected $host_toolchain")
+
+    import("//build/unification/zx_host_tool.gni")
+    import("//build/unification/zx_library.gni")
+    import("//build/unification/zx_test.gni")
+  }
+
   config("kazoo_config") {
     visibility = [ ":*" ]
     include_dirs = [ rebase_path("../..") ]
-
-    # rapidjson is header-only, but sets these defines from its build file. We
-    # can't depend on it directly until build unification.
-    defines = [
-      "RAPIDJSON_HAS_STDSTRING",
-      "RAPIDJSON_HAS_CXX11_RANGE_FOR",
-      "RAPIDJSON_HAS_CXX11_RVALUE_REFS",
-      "RAPIDJSON_HAS_CXX11_TYPETRAITS",
-      "RAPIDJSON_HAS_CXX11_NOEXCEPT",
-    ]
-    include_dirs += [ "$zx/../third_party/rapidjson/include" ]
   }
 
   zx_library("kazoo_lib") {
     host = true
+
+    if (zx != "/") {
+      # NOTE: The unification zx_library() template requires an sdk field.
+      sdk = "source"
+    }
 
     configs += [ ":kazoo_config" ]
 
@@ -51,17 +57,30 @@ if (defined(zx)) {
     ]
 
     deps = [ "$zx/system/public" ]
+
+    public_deps = [ "$zx/../third_party/rapidjson" ]
   }
 
   zx_host_tool("kazoo") {
     configs += [ ":kazoo_config" ]
 
+    if (zx != "/") {
+      # The Fuchsia infra scripts will error if there are two host tools
+      # with the same name, even if they are generated in different directories.
+      # Note that this requires any compiled_action() instance to use
+      # "//zircon/tools/kazoo" for the 'tool' argument, and
+      # "kazoo-gn" for the 'tool_output_name' argument.
+      output_name = "kazoo-gn"
+    }
+
     sources = [ "main.cc" ]
 
-    deps = [
-      ":kazoo_lib",
-      "$zx/system/ulib/cmdline",
-    ]
+    deps = [ ":kazoo_lib" ]
+    if (zx == "/") {
+      deps += [ "$zx/system/ulib/cmdline" ]
+    } else {
+      deps += [ "$zx/public/lib/cmdline" ]
+    }
   }
 
   zx_test("tests") {
@@ -97,7 +116,7 @@ if (defined(zx)) {
     ]
   }
 
-  host_tool_action_foreach("test_files_fidl_to_json") {
+  zx_host_tool_action_foreach("test_files_fidl_to_json") {
     tool = "$zx/tools/fidl:fidlc"
 
     args = [
@@ -132,7 +151,7 @@ if (defined(zx)) {
     ]
   }
 
-  host_tool_action_foreach("test_files_fidl_to_json_zxio") {
+  zx_host_tool_action_foreach("test_files_fidl_to_json_zxio") {
     tool = "$zx/tools/fidl:fidlc"
 
     args = [

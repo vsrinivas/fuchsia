@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx/public/gn/host_tool_action.gni")
 import("zx_binary.gni")
 
 template("zx_host_tool") {
@@ -15,5 +16,11 @@ template("zx_host_tool") {
     host_tool(target_name) {
       forward_variables_from(invoker, "*")
     }
+  }
+}
+
+template("zx_host_tool_action_foreach") {
+  host_tool_action_foreach(target_name) {
+    forward_variables_from(invoker, "*")
   }
 }
