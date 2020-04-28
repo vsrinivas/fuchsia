@@ -280,8 +280,8 @@ test_package("guest_integration_tests") {
     {
       name = "guest_integration_tests"
 
-      # TODO(37320): The tests are temporarily disabled for vim2_env due to an unresolved bug.
-      environments = [ nuc_env ]
+      # TODO(fxbug.dev/50820): Fix on ASan and switch back to [ nuc_env ].
+      environments = nuc_env_fails_on_asan
     },
   ]
 }
