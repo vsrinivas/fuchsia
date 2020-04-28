@@ -95,6 +95,9 @@ static struct io_apic* apic_io_resolve_global_irq(uint32_t irq);
 // Utility for finding the right IO APIC for a specific global IRQ, can fail
 static struct io_apic* apic_io_resolve_global_irq_no_panic(uint32_t irq);
 
+// Routine to print the ioapic state
+static void apic_io_debug_nolock() TA_REQ(io_apic_lock::Get());
+
 // Track all IO APICs in the system
 static fbl::Array<io_apic> io_apics;
 static uint32_t num_io_apics;
@@ -268,8 +271,9 @@ void apic_io_mask_irq(uint32_t global_irq, bool mask) {
     reg |= IO_APIC_RTE_MASKED;
   } else {
     /* If we are unmasking, we had better have been assigned a valid vector */
-    DEBUG_ASSERT((IO_APIC_RTE_GET_VECTOR(reg) >= X86_INT_PLATFORM_BASE) &&
-                 (IO_APIC_RTE_GET_VECTOR(reg) <= X86_INT_PLATFORM_MAX));
+    DEBUG_ASSERT_MSG((IO_APIC_RTE_GET_VECTOR(reg) >= X86_INT_PLATFORM_BASE) &&
+                         (IO_APIC_RTE_GET_VECTOR(reg) <= X86_INT_PLATFORM_MAX),
+                     "reg = %#lx RTE_GET_VECTOR(reg) = %u", reg, IO_APIC_RTE_GET_VECTOR(reg));
     reg &= ~IO_APIC_RTE_MASKED;
   }
   apic_io_write_redirection_entry(io_apic, global_irq, reg);
@@ -409,8 +413,7 @@ void apic_io_restore(void) {
   }
 }
 
-void apic_io_debug(void) {
-  Guard<SpinLock, NoIrqSave> guard{io_apic_lock::Get()};
+static void apic_io_debug_nolock(void) {
   for (uint32_t i = 0; i < num_io_apics; ++i) {
     struct io_apic* apic = &io_apics[i];
     printf("IO APIC idx %u:\n", i);
@@ -428,4 +431,15 @@ void apic_io_debug(void) {
              (uint8_t)reg, (reg & (1 << 12)) ? "pending" : "", (reg & (1 << 14)) ? "RIRR" : "");
     }
   }
+  printf("ISA Overrides:\n");
+  for (const auto& o : isa_overrides) {
+    if (o.remapped) {
+      printf("  isa_irq %u global_irq %u\n", o.isa_irq, o.global_irq);
+    }
+  }
+}
+
+void apic_io_debug(void) {
+  Guard<SpinLock, IrqSave> guard{io_apic_lock::Get()};
+  apic_io_debug_nolock();
 }
