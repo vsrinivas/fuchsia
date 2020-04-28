@@ -86,6 +86,7 @@ where
             }
             State::CheckingForUpdates => {
                 self.last_update_start_time = clock::now();
+                self.platform_metrics_emitter.emit(platform::Event::CheckingForUpdates);
             }
             State::ErrorCheckingForUpdate => {
                 self.platform_metrics_emitter.emit(platform::Event::ErrorCheckingForUpdate);
@@ -93,22 +94,26 @@ where
             State::NoUpdateAvailable => {
                 self.platform_metrics_emitter.emit(platform::Event::NoUpdateAvailable);
             }
+            State::InstallingUpdate => {
+                self.platform_metrics_emitter.emit(platform::Event::InstallingUpdate {
+                    target_version: self.target_version.as_deref(),
+                });
+            }
             State::InstallationDeferredByPolicy => {
                 self.platform_metrics_emitter.emit(platform::Event::InstallationDeferredByPolicy {
-                    target_version: self.target_version.as_deref().unwrap_or(""),
+                    target_version: self.target_version.as_deref(),
                 });
             }
             State::InstallationError => {
                 self.platform_metrics_emitter.emit(platform::Event::InstallationError {
-                    target_version: self.target_version.as_deref().unwrap_or(""),
+                    target_version: self.target_version.as_deref(),
                 });
             }
             State::WaitingForReboot => {
                 self.platform_metrics_emitter.emit(platform::Event::WaitingForReboot {
-                    target_version: self.target_version.as_deref().unwrap_or(""),
+                    target_version: self.target_version.as_deref(),
                 });
             }
-            State::InstallingUpdate => {}
         }
         FidlServer::on_state_change(Rc::clone(&self.fidl_server), state).await
     }

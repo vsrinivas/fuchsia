@@ -22,7 +22,9 @@ use {
         client::{App, AppBuilder},
         server::{NestedEnvironment, ServiceFs},
     },
-    fuchsia_inspect::{assert_inspect_tree, reader::NodeHierarchy, testing::AnyProperty},
+    fuchsia_inspect::{
+        assert_inspect_tree, reader::NodeHierarchy, testing::TreeAssertion, tree_assertion,
+    },
     fuchsia_pkg_testing::get_inspect_hierarchy,
     fuchsia_zircon::{self as zx, Status},
     futures::{channel::mpsc, prelude::*},
@@ -243,47 +245,14 @@ impl TestEnv {
         .await
     }
 
-    async fn assert_platform_metrics_event_target_version(
-        &self,
-        event_name: &'static str,
-        target_version: &'static str,
-    ) {
-        let hierarchy = self.inspect_hierarchy().await;
-
+    async fn assert_platform_metrics(&self, children: TreeAssertion) {
         assert_inspect_tree!(
-            hierarchy,
-            root: contains {
+            self.inspect_hierarchy().await,
+            "root": contains {
                 "platform_metrics": {
                     "events": contains {
                         "capacity": 50u64,
-                        "children": {
-                            "0": {
-                                "event": event_name,
-                                "ts": AnyProperty,
-                                "target-version": target_version,
-                            }
-                        }
-                    }
-                }
-            }
-        );
-    }
-
-    async fn assert_platform_metrics_event_no_target_version(&self, event_name: &'static str) {
-        let hierarchy = self.inspect_hierarchy().await;
-
-        assert_inspect_tree!(
-            hierarchy,
-            root: contains {
-                "platform_metrics": {
-                    "events": contains {
-                        "capacity": 50u64,
-                        "children": {
-                            "0": {
-                                "event": event_name,
-                                "ts": AnyProperty,
-                            }
-                        }
+                        children,
                     }
                 }
             }
@@ -535,7 +504,22 @@ async fn test_omaha_client_update() {
     assert_matches!(last_progress, Some(_));
     assert!(waiting_for_reboot);
 
-    env.assert_platform_metrics_event_target_version("WaitingForReboot", "0.1.2.3").await;
+    env.assert_platform_metrics(tree_assertion!(
+        "children": {
+            "0": contains {
+                "event": "CheckingForUpdates",
+            },
+            "1": contains {
+                "event": "InstallingUpdate",
+                "target-version": "0.1.2.3",
+            },
+            "2": contains {
+                "event": "WaitingForReboot",
+                "target-version": "0.1.2.3",
+            }
+        }
+    ))
+    .await;
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -592,7 +576,22 @@ async fn test_omaha_client_update_error() {
     }
     assert!(installation_error);
 
-    env.assert_platform_metrics_event_target_version("InstallationError", "0.1.2.3").await;
+    env.assert_platform_metrics(tree_assertion!(
+        "children": {
+            "0": contains {
+                "event": "CheckingForUpdates",
+            },
+            "1": contains {
+                "event": "InstallingUpdate",
+                "target-version": "0.1.2.3",
+            },
+            "2": contains {
+                "event": "InstallationError",
+                "target-version": "0.1.2.3",
+            }
+        }
+    ))
+    .await;
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -610,7 +609,17 @@ async fn test_omaha_client_no_update() {
     .await;
     assert_matches!(stream.next().await, None);
 
-    env.assert_platform_metrics_event_no_target_version("NoUpdateAvailable").await;
+    env.assert_platform_metrics(tree_assertion!(
+        "children": {
+            "0": contains {
+                "event": "CheckingForUpdates",
+            },
+            "1": contains {
+                "event": "NoUpdateAvailable",
+            },
+        }
+    ))
+    .await;
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -628,7 +637,17 @@ async fn test_omaha_client_invalid_response() {
     .await;
     assert_matches!(stream.next().await, None);
 
-    env.assert_platform_metrics_event_no_target_version("ErrorCheckingForUpdate").await;
+    env.assert_platform_metrics(tree_assertion!(
+        "children": {
+            "0": contains {
+                "event": "CheckingForUpdates",
+            },
+            "1": contains {
+                "event": "ErrorCheckingForUpdate",
+            }
+        }
+    ))
+    .await;
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -649,7 +668,18 @@ async fn test_omaha_client_invalid_url() {
     .await;
     assert_matches!(stream.next().await, None);
 
-    env.assert_platform_metrics_event_target_version("InstallationError", "0.1.2.3").await;
+    env.assert_platform_metrics(tree_assertion!(
+        "children": {
+            "0": contains {
+                "event": "CheckingForUpdates",
+            },
+            "1": contains {
+                "event": "InstallationError",
+                "target-version": "0.1.2.3",
+            }
+        }
+    ))
+    .await;
 }
 
 #[fasync::run_singlethreaded(test)]
