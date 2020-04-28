@@ -1054,8 +1054,7 @@ zx_status_t Vcpu::WriteState(const zx_vcpu_io_t& io_state) {
   if ((io_state.access_size != 1) && (io_state.access_size != 2) && (io_state.access_size != 4)) {
     return ZX_ERR_INVALID_ARGS;
   }
-
-  ASSERT(sizeof(vmx_state_.guest_state.rax) >= io_state.access_size);
+  static_assert(sizeof(vmx_state_.guest_state.rax) >= 4);
   memcpy(&vmx_state_.guest_state.rax, io_state.data, io_state.access_size);
   return ZX_OK;
 }
