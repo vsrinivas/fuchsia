@@ -126,9 +126,11 @@ TEST_F(FtlUtilTest, GetFtlTopologicalPathIgnoresNonFtlDevices) {
   });
   auto worker_cleanup = fbl::MakeAutoCall([&] { worker.join(); });
 
+  ASSERT_EQ(ZX_OK, wait_for_device_at(root(), "misc/ramctl", zx::duration::infinite().get()));
   for (uint64_t i = 0; i < 20; ++i) {
     ramdisk_client_t* ramdisk = nullptr;
     ASSERT_EQ(ZX_OK, ramdisk_create_at(root(), 512, 20, &ramdisk));
+    clients.push_back(ramdisk);
   }
 
   sync_completion_wait(&before, zx::time::infinite().get());
