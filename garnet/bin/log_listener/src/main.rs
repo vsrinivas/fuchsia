@@ -7,7 +7,7 @@
 //! `log_listener` listens to messages from `fuchsia.logger.Log` and prints them to stdout and/or
 //! writes them to disk.
 
-use anyhow::{Context as _, Error};
+use anyhow::{format_err, Context as _, Error};
 use chrono::TimeZone;
 use fuchsia_async as fasync;
 use fuchsia_syslog_listener as syslog_listener;
@@ -780,26 +780,18 @@ fn fmt_regex_icase(capture_name: &str, search_key: &str) -> String {
     format!(r#"(?i)(?P<{}>(?:{}))"#, capture_name, search_key)
 }
 
-fn main() {
+fn main() -> Result<(), Error> {
     let args: Vec<String> = env::args().collect();
     if args.len() > 1 && (args[1] == "--help" || args[1] == "-h") {
-        println!("{}\n", help(args[0].as_ref()));
-        return;
+        return Err(format_err!("{}\n", help(args[0].as_ref())));
     }
-    let mut options = match parse_flags(&args[1..]) {
-        Err(e) => {
-            eprintln!("{}\n{}\n", e, help(args[0].as_ref()));
-            return;
-        }
-        Ok(o) => o,
-    };
+    let mut options =
+        parse_flags(&args[1..]).map_err(|e| format_err!("{}\n{}\n", e, help(args[0].as_ref())))?;
 
     let sleep_time = time::Duration::from_millis(options.local.startup_sleep);
     thread::sleep(sleep_time);
 
-    if let Err(e) = run_log_listener(Some(&mut options)) {
-        eprintln!("LogListenerSafe: Error: {:?}", e);
-    }
+    run_log_listener(Some(&mut options))
 }
 
 #[cfg(test)]

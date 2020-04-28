@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/log_listener_return_code_test"
+    }
+}

@@ -66,12 +66,40 @@ package("log_listener") {
   }
 }
 
+executable("log_listener_return_code_test") {
+  testonly = true
+
+  sources = [ "log_listener_return_code_test.cc" ]
+
+  libs = [ "zircon" ]
+
+  deps = [
+    "//src/lib/files",
+    "//src/lib/fxl/test:gtest_main",
+    "//zircon/public/lib/fdio",
+  ]
+}
+
 test_package("log_listener_tests") {
-  deps = [ ":bin_test" ]
+  deps = [
+    ":bin",
+    ":bin_test",
+    ":log_listener_return_code_test",
+  ]
+
+  binaries = [
+    {
+      name = "log_listener"
+    },
+  ]
 
   tests = [
     {
       name = "log_listener_bin_test"
+      environments = basic_envs
+    },
+    {
+      name = "log_listener_return_code_test"
       environments = basic_envs
     },
   ]

@@ -30,7 +30,7 @@ Unit tests for `log_listener` are available in the `log_listener_tests`
 package.
 
 ```
-$ fx run-test log_listener_tests
+$ fx test log_listener_tests
 ```
 
 ## Source layout
