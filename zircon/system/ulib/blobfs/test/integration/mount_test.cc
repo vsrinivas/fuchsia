@@ -25,6 +25,7 @@
 #include <zxtest/zxtest.h>
 
 #include "blobfs.h"
+#include "fdio_test.h"
 #include "runner.h"
 #include "test/blob_utils.h"
 
@@ -38,66 +39,13 @@ zx_rights_t get_rights(const zx::object_base& handle) {
   return status == ZX_OK ? info.rights : ZX_RIGHT_NONE;
 }
 
-class MountTest : public zxtest::Test {
+// Uses the default layout of kDataRootOnly.
+using DataMountTest = blobfs::FdioTest;
+
+// Variant that sets the layout to kExportDirectory.
+class OutgoingMountTest : public blobfs::FdioTest {
  public:
-  explicit MountTest(blobfs::ServeLayout layout) : layout_(layout) {}
-
-  void SetUp() final {
-    ASSERT_OK(ramdisk_create(512, 1 << 16, &ramdisk_));
-    ASSERT_OK(mkfs(ramdisk_get_path(ramdisk_), DISK_FORMAT_BLOBFS, launch_stdio_sync,
-                   &default_mkfs_options));
-
-    fbl::unique_fd block_fd(ramdisk_get_block_fd(ramdisk_));
-    zx::channel block_channel;
-    ASSERT_OK(fdio_fd_clone(block_fd.get(), block_channel.reset_and_get_address()));
-    std::unique_ptr<block_client::RemoteBlockDevice> device;
-    ASSERT_OK(block_client::RemoteBlockDevice::Create(std::move(block_channel), &device));
-
-    blobfs::MountOptions options;
-    zx::channel root_client, root_server;
-    ASSERT_OK(zx::channel::create(0, &root_client, &root_server));
-
-    loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
-
-    std::unique_ptr<blobfs::Runner> runner;
-    ASSERT_OK(blobfs::Runner::Create(loop_.get(), std::move(device), &options,
-                                     std::move(vmex_resource_), &runner));
-    ASSERT_OK(runner->ServeRoot(std::move(root_server), layout_));
-    ASSERT_OK(loop_->StartThread("blobfs test dispatcher"));
-    runner_ = std::move(runner);
-
-    ASSERT_OK(fdio_fd_create(root_client.release(), root_fd_.reset_and_get_address()));
-    ASSERT_TRUE(root_fd_.is_valid());
-  }
-
-  void TearDown() final {
-    zx::channel root_client;
-    ASSERT_OK(fdio_fd_transfer(root_fd_.release(), root_client.reset_and_get_address()));
-    ASSERT_OK(fio::DirectoryAdmin::Call::Unmount(zx::unowned_channel(root_client)).status());
-    ASSERT_OK(ramdisk_destroy(ramdisk_));
-  }
-
- protected:
-  int root_fd() const { return root_fd_.get(); }
-  void set_vmex_resource(zx::resource resource) { vmex_resource_ = std::move(resource); }
-
- private:
-  blobfs::ServeLayout layout_;
-  zx::resource vmex_resource_;
-  ramdisk_client_t* ramdisk_ = nullptr;
-  std::unique_ptr<async::Loop> loop_;
-  std::unique_ptr<blobfs::Runner> runner_;
-  fbl::unique_fd root_fd_;
-};
-
-class DataMountTest : public MountTest {
- public:
-  DataMountTest() : MountTest(blobfs::ServeLayout::kDataRootOnly) {}
-};
-
-class OutgoingMountTest : public MountTest {
- public:
-  OutgoingMountTest() : MountTest(blobfs::ServeLayout::kExportDirectory) {}
+  OutgoingMountTest() { set_layout(blobfs::ServeLayout::kExportDirectory); }
 };
 
 class ExecutableMountTest : public DataMountTest {
