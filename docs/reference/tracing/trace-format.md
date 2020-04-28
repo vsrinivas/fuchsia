@@ -48,7 +48,7 @@ or save them to a file for later consumption.
 
 The Fuchsia trace format has the following encoding primitives:
 
-* [Atmos](#atmos)
+* [Atoms](#atoms)
 * [Records](#records)
 * [Archives](#archives)
 * [Timestamps](#timestamps)
@@ -58,7 +58,7 @@ The Fuchsia trace format has the following encoding primitives:
 * [Kernel object information](#kernel-object-information)
 * [Arguments](#arguments)
 
-### Atoms {#atmos}
+### Atoms {#atoms}
 
 Each record is constructed as a sequence of atoms.
 
