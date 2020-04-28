@@ -112,10 +112,11 @@ for src_path in `find "${FIDLC_IR_DIR}" -name '*.test.json.golden'`; do
     mv "${GOLDENS_DIR}/${llcpp_header_name}" "${GOLDENS_DIR}/${llcpp_header_name}.golden"
     mv "${GOLDENS_DIR}/${llcpp_source_name}" "${GOLDENS_DIR}/${llcpp_source_name}.golden"
 
-    # libfuzzer expects at least one protocol definition or it will fail.
-    # Add sources that contain a protocol. Remove libfuzzer golden files from a source that (no
-    # longer) contains a golden file.
-    if grep -q '^protocol ' "${src_path}"; then
+    # libfuzzer expects at least one nonempty protocol definition or it will fail.
+    # Add sources that contain a protocol with at least one method.
+    # Remove libfuzzer golden files from a source that (no longer) contains a golden file.
+    # The regex \[[^]] means a literal [ followed by anything except ].
+    if tr -d '[:space:]' < "${src_path}" | grep -q '"methods":\[[^]]' ; then
         GOLDENS+=(
             "${libfuzzer_header_name}.golden",
             "${libfuzzer_source_name}.golden",
@@ -166,6 +167,9 @@ done
 printf "%s\n" "${GOLDENS[@]//,}" | sort >> "${GOLDENS_DIR}/goldens.txt"
 
 > "${GOLDENS_DIR}/OWNERS"
-find "${EXAMPLE_DIR}/../.." "tools/fidl/fidlgen_rust"  -name 'OWNERS' -exec cat {} \; | grep -v -e "^#" | awk 'NF' | sort -u > "${GOLDENS_DIR}/OWNERS"
+find "${EXAMPLE_DIR}/../.." \
+    "tools/fidl/fidlgen_"{go,hlcpp,rust,libfuzzer,syzkaller} \
+    -name 'OWNERS' -exec cat {} \; \
+    | grep -v -e "^#" | awk 'NF' | sort -u > "${GOLDENS_DIR}/OWNERS"
 echo "" >> "${GOLDENS_DIR}/OWNERS"
 echo "# COMPONENT: FIDL>Testing" >> "${GOLDENS_DIR}/OWNERS"

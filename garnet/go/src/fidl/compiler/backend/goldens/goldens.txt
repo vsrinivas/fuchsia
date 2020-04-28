@@ -29,6 +29,8 @@ doc_comments.test.json
 doc_comments.test.json.cc.golden
 doc_comments.test.json.go.golden
 doc_comments.test.json.h.golden
+doc_comments.test.json.libfuzzer.cc.golden
+doc_comments.test.json.libfuzzer.h.golden
 doc_comments.test.json.llcpp.cc.golden
 doc_comments.test.json.llcpp.h.golden
 doc_comments.test.json.rs.golden
@@ -38,6 +40,8 @@ empty_struct.test.json
 empty_struct.test.json.cc.golden
 empty_struct.test.json.go.golden
 empty_struct.test.json.h.golden
+empty_struct.test.json.libfuzzer.cc.golden
+empty_struct.test.json.libfuzzer.h.golden
 empty_struct.test.json.llcpp.cc.golden
 empty_struct.test.json.llcpp.h.golden
 empty_struct.test.json.rs.golden
@@ -56,6 +60,8 @@ error.test.json
 error.test.json.cc.golden
 error.test.json.go.golden
 error.test.json.h.golden
+error.test.json.libfuzzer.cc.golden
+error.test.json.libfuzzer.h.golden
 error.test.json.llcpp.cc.golden
 error.test.json.llcpp.h.golden
 error.test.json.rs.golden
@@ -74,6 +80,8 @@ foreign_type_in_response_used_through_compose.test.json
 foreign_type_in_response_used_through_compose.test.json.cc.golden
 foreign_type_in_response_used_through_compose.test.json.go.golden
 foreign_type_in_response_used_through_compose.test.json.h.golden
+foreign_type_in_response_used_through_compose.test.json.libfuzzer.cc.golden
+foreign_type_in_response_used_through_compose.test.json.libfuzzer.h.golden
 foreign_type_in_response_used_through_compose.test.json.llcpp.cc.golden
 foreign_type_in_response_used_through_compose.test.json.llcpp.h.golden
 foreign_type_in_response_used_through_compose.test.json.rs.golden
@@ -101,6 +109,8 @@ inheritance.test.json
 inheritance.test.json.cc.golden
 inheritance.test.json.go.golden
 inheritance.test.json.h.golden
+inheritance.test.json.libfuzzer.cc.golden
+inheritance.test.json.libfuzzer.h.golden
 inheritance.test.json.llcpp.cc.golden
 inheritance.test.json.llcpp.h.golden
 inheritance.test.json.rs.golden
@@ -110,6 +120,8 @@ inheritance_with_recursive_decl.test.json
 inheritance_with_recursive_decl.test.json.cc.golden
 inheritance_with_recursive_decl.test.json.go.golden
 inheritance_with_recursive_decl.test.json.h.golden
+inheritance_with_recursive_decl.test.json.libfuzzer.cc.golden
+inheritance_with_recursive_decl.test.json.libfuzzer.h.golden
 inheritance_with_recursive_decl.test.json.llcpp.cc.golden
 inheritance_with_recursive_decl.test.json.llcpp.h.golden
 inheritance_with_recursive_decl.test.json.rs.golden
@@ -119,6 +131,8 @@ nullable.test.json
 nullable.test.json.cc.golden
 nullable.test.json.go.golden
 nullable.test.json.h.golden
+nullable.test.json.libfuzzer.cc.golden
+nullable.test.json.libfuzzer.h.golden
 nullable.test.json.llcpp.cc.golden
 nullable.test.json.llcpp.h.golden
 nullable.test.json.rs.golden
@@ -128,6 +142,8 @@ placement_of_attributes.test.json
 placement_of_attributes.test.json.cc.golden
 placement_of_attributes.test.json.go.golden
 placement_of_attributes.test.json.h.golden
+placement_of_attributes.test.json.libfuzzer.cc.golden
+placement_of_attributes.test.json.libfuzzer.h.golden
 placement_of_attributes.test.json.llcpp.cc.golden
 placement_of_attributes.test.json.llcpp.h.golden
 placement_of_attributes.test.json.rs.golden
@@ -137,6 +153,8 @@ protocol_request.test.json
 protocol_request.test.json.cc.golden
 protocol_request.test.json.go.golden
 protocol_request.test.json.h.golden
+protocol_request.test.json.libfuzzer.cc.golden
+protocol_request.test.json.libfuzzer.h.golden
 protocol_request.test.json.llcpp.cc.golden
 protocol_request.test.json.llcpp.h.golden
 protocol_request.test.json.rs.golden
@@ -146,6 +164,8 @@ protocols.test.json
 protocols.test.json.cc.golden
 protocols.test.json.go.golden
 protocols.test.json.h.golden
+protocols.test.json.libfuzzer.cc.golden
+protocols.test.json.libfuzzer.h.golden
 protocols.test.json.llcpp.cc.golden
 protocols.test.json.llcpp.h.golden
 protocols.test.json.rs.golden
@@ -155,6 +175,8 @@ request_flexible_envelope.test.json
 request_flexible_envelope.test.json.cc.golden
 request_flexible_envelope.test.json.go.golden
 request_flexible_envelope.test.json.h.golden
+request_flexible_envelope.test.json.libfuzzer.cc.golden
+request_flexible_envelope.test.json.libfuzzer.h.golden
 request_flexible_envelope.test.json.llcpp.cc.golden
 request_flexible_envelope.test.json.llcpp.h.golden
 request_flexible_envelope.test.json.rs.golden
@@ -164,6 +186,8 @@ service.test.json
 service.test.json.cc.golden
 service.test.json.go.golden
 service.test.json.h.golden
+service.test.json.libfuzzer.cc.golden
+service.test.json.libfuzzer.h.golden
 service.test.json.llcpp.cc.golden
 service.test.json.llcpp.h.golden
 service.test.json.rs.golden
@@ -199,6 +223,8 @@ transitive_dependencies_compose.test.json
 transitive_dependencies_compose.test.json.cc.golden
 transitive_dependencies_compose.test.json.go.golden
 transitive_dependencies_compose.test.json.h.golden
+transitive_dependencies_compose.test.json.libfuzzer.cc.golden
+transitive_dependencies_compose.test.json.libfuzzer.h.golden
 transitive_dependencies_compose.test.json.llcpp.cc.golden
 transitive_dependencies_compose.test.json.llcpp.h.golden
 transitive_dependencies_compose.test.json.rs.golden
@@ -235,6 +261,8 @@ union.test.json
 union.test.json.cc.golden
 union.test.json.go.golden
 union.test.json.h.golden
+union.test.json.libfuzzer.cc.golden
+union.test.json.libfuzzer.h.golden
 union.test.json.llcpp.cc.golden
 union.test.json.llcpp.h.golden
 union.test.json.rs.golden
