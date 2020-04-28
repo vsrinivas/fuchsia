@@ -172,6 +172,7 @@ fn check_container_attrs(d: &syn::DeriveInput) -> Result<(), Error> {
 }
 
 /// The `Unit` derive macro. Requires that the type is a named struct.
+/// Type- and lifetime parameters are supported if they are ignored.
 ///
 /// The only supported field-level attribute is `inspect(skip)`.
 // TODO(fxbug.dev/50504): Add support for more types, such as enums.
@@ -207,6 +208,8 @@ fn derive_unit_inner(ast: DeriveInput) -> Result<proc_macro2::TokenStream, Error
 
     let inspect_data_ident = format_ident!("_{}InspectData", name);
     let struct_decls = unit_fields.iter().map(|f| f.struct_decl());
+
+    let (impl_generics, ty_generics, where_clause) = ast.generics.split_for_impl();
     let create_struct_exprs = unit_fields.iter().map(|f| f.create_struct_expr());
     let update_stmts = unit_fields.iter().map(|f| f.update_stmt());
 
@@ -217,14 +220,14 @@ fn derive_unit_inner(ast: DeriveInput) -> Result<proc_macro2::TokenStream, Error
             _inspect_node: ::fuchsia_inspect::Node,
         }
 
-        impl fuchsia_inspect_derive::Unit for #name {
+        impl #impl_generics ::fuchsia_inspect_derive::Unit for #name #ty_generics #where_clause {
 
             type Data = #inspect_data_ident;
 
-            fn inspect_create<T: AsRef<str>>(
+            fn inspect_create(
                 &self,
                 parent: &::fuchsia_inspect::Node,
-                name: T
+                name: impl AsRef<str>
             ) -> Self::Data {
                 let _inspect_node = parent.create_child(name);
                 #inspect_data_ident {
@@ -242,6 +245,7 @@ fn derive_unit_inner(ast: DeriveInput) -> Result<proc_macro2::TokenStream, Error
 
 /// The `Inspect` derive macro. Requires that the type is a named struct
 /// with an `inspect_node` field of type `fuchsia_inspect::Node`.
+/// Type- and lifetime parameters are supported if they are ignored.
 ///
 /// The only supported field-level attribute is `inspect(skip)`.
 #[proc_macro_derive(Inspect, attributes(inspect))]
@@ -285,11 +289,14 @@ fn derive_inspect_inner(ast: DeriveInput) -> Result<proc_macro2::TokenStream, Er
         ));
     }
 
+    let (impl_generics, ty_generics, where_clause) = ast.generics.split_for_impl();
     let iattach_stmts = inspect_fields.iter().map(|f| f.iattach_stmt());
 
     Ok(quote! {
 
-        impl fuchsia_inspect_derive::Inspect for &mut #name {
+        impl #impl_generics ::fuchsia_inspect_derive::Inspect for &mut #name #ty_generics
+            #where_clause
+        {
             fn iattach(
                 self,
                 parent: &::fuchsia_inspect::Node,

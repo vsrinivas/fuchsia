@@ -66,6 +66,14 @@ struct BasicTypes {
     t_vec_u8: Vec<u8>,
 }
 
+// Support type and lifetime parameters in a limitied fashion
+#[derive(Unit)]
+struct GenericUnit<'a, T> {
+    #[inspect(skip)]
+    _convoluted: &'a T,
+    easy: String,
+}
+
 #[derive(Default)]
 struct PowerYak {
     name: IValue<String>,
@@ -149,6 +157,15 @@ mod inner {
             self.age.iupdate();
         }
     }
+}
+
+// Support type and lifetime parameters in a limitied fashion
+#[derive(Inspect)]
+struct GenericYak<'a, T: Unit> {
+    #[inspect(skip)]
+    _age: &'a u16,
+    special_ability: IValue<T>,
+    inspect_node: Node,
 }
 
 #[test]
@@ -273,6 +290,25 @@ fn unit_basic_types() {
         }
     });
     std::mem::drop(basic_data);
+    assert_inspect_tree!(inspector, root: {});
+}
+
+#[test]
+fn unit_generic() {
+    let inspector = Inspector::new();
+    let root = inspector.root();
+    let a = "some_ref".to_string();
+    let mut generic_unit = GenericUnit { _convoluted: &a, easy: "owned".to_string() };
+    let mut inspect_data = generic_unit.inspect_create(&root, "a_struct");
+    assert_inspect_tree!(inspector, root: {
+        a_struct: { easy: "owned" }
+    });
+    generic_unit.easy = "owned altered".to_string();
+    generic_unit.inspect_update(&mut inspect_data);
+    assert_inspect_tree!(inspector, root: {
+        a_struct: { easy: "owned altered" }
+    });
+    std::mem::drop(inspect_data);
     assert_inspect_tree!(inspector, root: {});
 }
 
@@ -475,6 +511,28 @@ async fn derive_inspect_nested_interior_mut() -> Result<(), AttachError> {
         },
     }});
     std::mem::drop(yak_mut);
+    assert_inspect_tree!(inspector, root: {});
+    Ok(())
+}
+
+#[test]
+fn derive_inspect_generic() -> Result<(), AttachError> {
+    let inspector = Inspector::new();
+    let age = 4u16;
+    let mut yak = GenericYak {
+        _age: &age,
+        special_ability: IValue::new("monomorphization".to_string()),
+        inspect_node: Node::default(),
+    };
+    yak.iattach(inspector.root(), "generic_yak")?;
+    assert_inspect_tree!(inspector, root: { generic_yak: {
+        special_ability: "monomorphization",
+    }});
+    yak.special_ability.iset("lifetime parameterization".to_string());
+    assert_inspect_tree!(inspector, root: { generic_yak: {
+        special_ability: "lifetime parameterization",
+    }});
+    std::mem::drop(yak);
     assert_inspect_tree!(inspector, root: {});
     Ok(())
 }

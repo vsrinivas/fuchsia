@@ -43,7 +43,7 @@ pub trait Unit {
 
     /// Insert an inspect subtree at `parent[name]` with values from `self` and return
     /// the inspect data.
-    fn inspect_create<T: AsRef<str>>(&self, parent: &Node, name: T) -> Self::Data;
+    fn inspect_create(&self, parent: &Node, name: impl AsRef<str>) -> Self::Data;
 
     /// Update the inspect subtree owned by the inspect data with values from self.
     fn inspect_update(&self, data: &mut Self::Data);
@@ -52,7 +52,7 @@ pub trait Unit {
 impl Unit for String {
     type Data = StringProperty;
 
-    fn inspect_create<T: AsRef<str>>(&self, parent: &Node, name: T) -> Self::Data {
+    fn inspect_create(&self, parent: &Node, name: impl AsRef<str>) -> Self::Data {
         parent.create_string(name, self)
     }
 
@@ -64,7 +64,7 @@ impl Unit for String {
 impl Unit for Vec<u8> {
     type Data = BytesProperty;
 
-    fn inspect_create<T: AsRef<str>>(&self, parent: &Node, name: T) -> Self::Data {
+    fn inspect_create(&self, parent: &Node, name: impl AsRef<str>) -> Self::Data {
         parent.create_bytes(name, &self)
     }
 
@@ -86,7 +86,7 @@ macro_rules! impl_unit_primitive {
                 impl Unit for $impl_t {
                     type Data = [<$prop_name_cap Property>];
 
-                    fn inspect_create<T: AsRef<str>>(&self, parent: &Node, name: T) -> Self::Data {
+                    fn inspect_create(&self, parent: &Node, name: impl AsRef<str>) -> Self::Data {
                         parent.[<create_ $prop_name>](name, *self as $inspect_t)
                     }
 
@@ -115,7 +115,7 @@ pub trait Render {
     type Data: Default;
 
     /// Initializes the inspect data from the current state of base.
-    fn create<T: AsRef<str>>(base: &Self::Base, parent: &Node, name: T) -> Self::Data;
+    fn create(base: &Self::Base, parent: &Node, name: impl AsRef<str>) -> Self::Data;
 
     /// Updates the inspect data from the current state of base.
     fn update(base: &Self::Base, data: &mut Self::Data);
@@ -219,7 +219,7 @@ impl<B: Unit> Render for ValueMarker<B> {
     type Base = B;
     type Data = B::Data;
 
-    fn create<U: AsRef<str>>(base: &Self::Base, parent: &Node, name: U) -> Self::Data {
+    fn create(base: &Self::Base, parent: &Node, name: impl AsRef<str>) -> Self::Data {
         base.inspect_create(parent, name)
     }
 
@@ -245,7 +245,7 @@ impl<B: fmt::Debug> Render for DebugMarker<B> {
     type Base = B;
     type Data = StringProperty;
 
-    fn create<U: AsRef<str>>(base: &Self::Base, parent: &Node, name: U) -> Self::Data {
+    fn create(base: &Self::Base, parent: &Node, name: impl AsRef<str>) -> Self::Data {
         parent.create_string(name, &format!("{:?}", base))
     }
 
