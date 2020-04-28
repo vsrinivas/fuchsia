@@ -220,3 +220,130 @@ impl MockPaverService {
         Ok(())
     }
 }
+
+#[cfg(test)]
+pub mod tests {
+    use {
+        super::*,
+        fidl_fuchsia_mem::Buffer,
+        fidl_fuchsia_paver as paver,
+        fuchsia_zircon::{self as zx, VmoOptions},
+        matches::assert_matches,
+    };
+
+    struct MockPaverForTest {
+        pub paver: Arc<MockPaverService>,
+        pub data_sink: paver::DataSinkProxy,
+        pub boot_manager: paver::BootManagerProxy,
+    }
+
+    impl MockPaverForTest {
+        pub fn new<F>(f: F) -> Self
+        where
+            F: FnOnce(MockPaverServiceBuilder) -> MockPaverServiceBuilder,
+        {
+            let paver = f(MockPaverServiceBuilder::new());
+            let paver = Arc::new(paver.build());
+            let (proxy, stream) = fidl::endpoints::create_proxy_and_stream::<paver::PaverMarker>()
+                .expect("Creating paver endpoints");
+
+            fasync::spawn(
+                Arc::clone(&paver)
+                    .run_paver_service(stream)
+                    .unwrap_or_else(|_| panic!("Failed to run paver")),
+            );
+
+            let (data_sink, server) = fidl::endpoints::create_proxy::<paver::DataSinkMarker>()
+                .expect("Creating data sink endpoints");
+            proxy.find_data_sink(server).expect("Finding data sink");
+            let (boot_manager, server) =
+                fidl::endpoints::create_proxy::<paver::BootManagerMarker>()
+                    .expect("Creating boot manager endpoints");
+            proxy.find_boot_manager(server).expect("Finding boot manager");
+
+            MockPaverForTest { paver, data_sink, boot_manager }
+        }
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    pub async fn test_events() -> Result<(), Error> {
+        let paver = MockPaverForTest::new(|p| p);
+        let data = "hello there".as_bytes();
+        let vmo =
+            Vmo::create_with_opts(VmoOptions::RESIZABLE, data.len() as u64).expect("Creating VMO");
+        vmo.write(data, 0).expect("writing to VMO");
+        paver
+            .data_sink
+            .write_asset(
+                paver::Configuration::A,
+                paver::Asset::Kernel,
+                &mut Buffer { vmo, size: data.len() as u64 },
+            )
+            .await
+            .expect("Writing asset");
+
+        let result = paver
+            .boot_manager
+            .query_active_configuration()
+            .await
+            .expect("Querying active configuration")
+            .expect("Querying active configuration (2)");
+        assert_eq!(result, paver::Configuration::A);
+        paver
+            .boot_manager
+            .set_configuration_active(paver::Configuration::B)
+            .await
+            .expect("Setting active configuration");
+
+        assert_eq!(
+            paver.paver.take_events(),
+            vec![
+                PaverEvent::WriteAsset {
+                    configuration: paver::Configuration::A,
+                    asset: paver::Asset::Kernel,
+                    payload: data.to_vec()
+                },
+                PaverEvent::QueryActiveConfiguration,
+                PaverEvent::SetConfigurationActive { configuration: paver::Configuration::B },
+            ]
+        );
+
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    pub async fn test_hook() -> Result<(), Error> {
+        let hook = |_: &PaverEvent| zx::Status::NOT_SUPPORTED;
+        let paver = MockPaverForTest::new(|p| p.call_hook(hook));
+
+        assert_eq!(
+            Err(zx::Status::NOT_SUPPORTED.into_raw()),
+            paver.boot_manager.query_active_configuration().await?
+        );
+
+        assert_eq!(paver.paver.take_events(), vec![PaverEvent::QueryActiveConfiguration]);
+
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    pub async fn test_active_config() -> Result<(), Error> {
+        let paver = MockPaverForTest::new(|p| p.active_config(paver::Configuration::B));
+        assert_eq!(
+            Ok(paver::Configuration::B),
+            paver.boot_manager.query_active_configuration().await?
+        );
+        assert_eq!(paver.paver.take_events(), vec![PaverEvent::QueryActiveConfiguration]);
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    pub async fn test_boot_manager_epitaph() -> Result<(), Error> {
+        let paver =
+            MockPaverForTest::new(|p| p.boot_manager_close_with_epitaph(zx::Status::NOT_SUPPORTED));
+
+        let result = paver.boot_manager.query_active_configuration().await;
+        assert_matches!(result, Err(fidl::Error::ClientChannelClosed(zx::Status::NOT_SUPPORTED)));
+        Ok(())
+    }
+}

@@ -21,4 +21,22 @@ rustc_library("mock-paver") {
     "//third_party/rust_crates:parking_lot",
     "//zircon/system/fidl/fuchsia-mem:fuchsia-mem-rustc",
   ]
+
+  test_deps = [ "//third_party/rust_crates:matches" ]
+}
+
+test_package("mock-paver-tests") {
+  deps = [ ":mock-paver_test" ]
+
+  tests = [
+    {
+      name = "mock_paver_lib_test"
+      dest = "mock-paver-lib-test"
+    },
+  ]
+}
+
+group("tests") {
+  testonly = true
+  public_deps = [ ":mock-paver-tests" ]
 }
