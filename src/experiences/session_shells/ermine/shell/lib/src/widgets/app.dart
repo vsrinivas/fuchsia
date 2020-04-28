@@ -53,18 +53,27 @@ class App extends StatelessWidget {
                   fit: StackFit.expand,
                   children: <Widget>[
                     // Recents.
-                    RecentsContainer(model: model),
+                    buildRecents(model),
 
                     // Overview or Home.
                     AnimatedBuilder(
                       animation: model.overviewVisibility,
                       builder: (context, _) => model.overviewVisibility.value
-                          ? OverviewContainer(model: model)
-                          : HomeContainer(model: model),
+                          ? buildOverview(model)
+                          : buildHome(model),
                     ),
                   ],
                 )),
           );
         });
   }
+
+  @visibleForTesting
+  Widget buildRecents(AppModel model) => RecentsContainer(model: model);
+
+  @visibleForTesting
+  Widget buildOverview(AppModel model) => OverviewContainer(model: model);
+
+  @visibleForTesting
+  Widget buildHome(AppModel model) => HomeContainer(model: model);
 }
