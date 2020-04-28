@@ -108,6 +108,53 @@ zx_status_t FakeSdmmcDevice::SdmmcRequest(sdmmc_req_t* req) {
       Write(req->arg * kBlockSize, fbl::Span<const uint8_t>(virt_buffer, req_size));
       break;
     }
+    case MMC_ERASE_GROUP_START:
+      if ((req->arg & kBadRegionMask) == kBadRegionStart) {
+        erase_group_start_.reset();
+        erase_group_end_.reset();
+        return ZX_ERR_IO;
+      }
+
+      if (erase_group_end_) {
+        req->response[0] = MMC_STATUS_ERASE_SEQ_ERR;
+        erase_group_start_.reset();
+        erase_group_end_.reset();
+      } else {
+        erase_group_start_ = req->arg;
+      }
+      break;
+    case MMC_ERASE_GROUP_END:
+      if ((req->arg & kBadRegionMask) == kBadRegionStart) {
+        erase_group_start_.reset();
+        erase_group_end_.reset();
+        return ZX_ERR_IO;
+      }
+
+      if (!erase_group_start_) {
+        req->response[0] = MMC_STATUS_ERASE_SEQ_ERR;
+        erase_group_start_.reset();
+        erase_group_end_.reset();
+      } else if (req->arg < erase_group_start_) {
+        req->response[0] = MMC_STATUS_ERASE_PARAM;
+        erase_group_start_.reset();
+        erase_group_end_.reset();
+      } else {
+        erase_group_end_ = req->arg;
+      }
+      break;
+    case SDMMC_ERASE:
+      if (!erase_group_start_ || !erase_group_end_) {
+        req->response[0] = MMC_STATUS_ERASE_SEQ_ERR;
+      } else if (req->arg != MMC_ERASE_DISCARD_ARG || *erase_group_start_ > *erase_group_end_) {
+        req->response[0] = MMC_STATUS_ERASE_PARAM;
+      } else {
+        Erase(*erase_group_start_ * kBlockSize,
+              (*erase_group_end_ - *erase_group_start_ + 1) * kBlockSize);
+      }
+
+      erase_group_start_.reset();
+      erase_group_end_.reset();
+      break;
     case SDIO_IO_RW_DIRECT: {
       const uint32_t address =
           (req->arg & SDIO_IO_RW_DIRECT_REG_ADDR_MASK) >> SDIO_IO_RW_DIRECT_REG_ADDR_LOC;
@@ -138,7 +185,7 @@ zx_status_t FakeSdmmcDevice::SdmmcRequest(sdmmc_req_t* req) {
       } else {
         memcpy(virt_buffer, Read(address, transfer_size, function).data(), transfer_size);
       }
-      __FALLTHROUGH;
+      break;
     }
     default:
       break;
@@ -195,6 +242,23 @@ void FakeSdmmcDevice::Write(size_t address, fbl::Span<const uint8_t> data, uint8
     memcpy(sectors[start & kBlockMask].get() + write_offset, data_ptr, write_size);
 
     data_ptr += write_size;
+  }
+}
+
+void FakeSdmmcDevice::Erase(size_t address, size_t size, uint8_t func) {
+  std::map<size_t, std::unique_ptr<uint8_t[]>>& sectors = sectors_[func];
+  for (size_t start = address; start < address + size; start = (start & kBlockMask) + kBlockSize) {
+    if (sectors.find(start & kBlockMask) == sectors.end()) {
+      continue;
+    }
+
+    const size_t erase_offset = start - (start & kBlockMask);
+    const size_t erase_size = std::min(kBlockSize - erase_offset, size - start + address);
+    if (erase_offset == 0 && erase_size == kBlockSize) {
+      sectors.erase(start & kBlockMask);
+    } else {
+      memset(sectors[start & kBlockMask].get() + erase_offset, 0xff, erase_size);
+    }
   }
 }
 

@@ -148,6 +148,7 @@ class FakeSdmmcDevice : public ddk::SdmmcProtocol<FakeSdmmcDevice> {
   void Write(size_t address, const T& data, uint8_t func = 0) {
     Write(address, fbl::Span<const uint8_t>(data.data(), data.size() * sizeof(data[0])), func);
   }
+  void Erase(size_t address, size_t size, uint8_t func = 0);
 
   void TriggerInBandInterrupt();
 
@@ -182,6 +183,8 @@ class FakeSdmmcDevice : public ddk::SdmmcProtocol<FakeSdmmcDevice> {
   sdmmc_bus_width_t bus_width_ = SDMMC_BUS_WIDTH_ONE;
   uint32_t bus_freq_ = 0;
   sdmmc_timing_t timing_ = SDMMC_TIMING_MAX;
+  std::optional<uint32_t> erase_group_start_;
+  std::optional<uint32_t> erase_group_end_;
 };
 
 }  // namespace sdmmc

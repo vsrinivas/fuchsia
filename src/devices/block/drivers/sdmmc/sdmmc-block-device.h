@@ -105,7 +105,9 @@ class SdmmcBlockDevice : public SdmmcBlockDeviceType {
   void SetBlockInfo(uint32_t block_size, uint64_t block_count);
 
  private:
-  zx_status_t DoTxn(const BlockOperation& txn, const EmmcPartition partition) TA_REQ(lock_);
+  zx_status_t ReadWrite(const block_read_write_t& txn, const EmmcPartition partition) TA_REQ(lock_);
+  zx_status_t Trim(const block_trim_t& txn, const EmmcPartition partition) TA_REQ(lock_);
+  zx_status_t SetPartition(const EmmcPartition partition) TA_REQ(lock_);
   int WorkerThread();
 
   zx_status_t WaitForTran();

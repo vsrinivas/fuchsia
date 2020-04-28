@@ -157,6 +157,8 @@ zx_status_t SdmmcBlockDevice::ProbeSd() {
     return st;
   }
 
+  // TODO(bradenkell): Read SD_STATUS to see if the card supports discard (trim).
+
   // If this card supports 4 bit mode, then put it into 4 bit mode.
   const uint32_t supported_bus_widths = scr[1] & 0xf;
   if (supported_bus_widths & 0x4) {

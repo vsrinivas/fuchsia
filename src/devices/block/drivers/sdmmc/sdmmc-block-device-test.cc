@@ -41,6 +41,7 @@ class SdmmcBlockDeviceTest : public zxtest::Test {
       uint8_t* const ext_csd = reinterpret_cast<uint8_t*>(req->virt_buffer) + req->buf_offset;
       *reinterpret_cast<uint32_t*>(&ext_csd[212]) = htole32(kBlockCount);
       ext_csd[MMC_EXT_CSD_PARTITION_CONFIG] = 0xa8;
+      ext_csd[MMC_EXT_CSD_EXT_CSD_REV] = 6;
       ext_csd[MMC_EXT_CSD_PARTITION_SWITCH_TIME] = 0;
       ext_csd[MMC_EXT_CSD_BOOT_SIZE_MULT] = 0x10;
       ext_csd[MMC_EXT_CSD_GENERIC_CMD6_TIME] = 0;
@@ -95,27 +96,34 @@ class SdmmcBlockDeviceTest : public zxtest::Test {
     *out_op = block::Operation<OperationContext>::Alloc(kBlockOpSize);
     ASSERT_TRUE(*out_op);
 
-    *(*out_op)->operation() = block_op_t{
-        .rw =
-            {
-                .command = command,
-                .extra = 0,
-                .vmo = ZX_HANDLE_INVALID,
-                .length = length,
-                .offset_dev = offset,
-                .offset_vmo = 0,
-            },
-    };
+    if (command == BLOCK_OP_READ || command == BLOCK_OP_WRITE) {
+      (*out_op)->operation()->rw = {
+          .command = command,
+          .extra = 0,
+          .vmo = ZX_HANDLE_INVALID,
+          .length = length,
+          .offset_dev = offset,
+          .offset_vmo = 0,
+      };
 
-    if ((command == BLOCK_OP_READ || command == BLOCK_OP_WRITE) && length > 0) {
-      OperationContext* const ctx = (*out_op)->private_storage();
-      const size_t vmo_size =
-          fbl::round_up<size_t, size_t>(length * FakeSdmmcDevice::kBlockSize, PAGE_SIZE);
-      ASSERT_OK(ctx->mapper.CreateAndMap(vmo_size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr,
-                                         &ctx->vmo));
-      ctx->completed = false;
-      ctx->status = ZX_OK;
-      (*out_op)->operation()->rw.vmo = ctx->vmo.get();
+      if (length > 0) {
+        OperationContext* const ctx = (*out_op)->private_storage();
+        const size_t vmo_size =
+            fbl::round_up<size_t, size_t>(length * FakeSdmmcDevice::kBlockSize, PAGE_SIZE);
+        ASSERT_OK(ctx->mapper.CreateAndMap(vmo_size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr,
+                                           &ctx->vmo));
+        ctx->completed = false;
+        ctx->status = ZX_OK;
+        (*out_op)->operation()->rw.vmo = ctx->vmo.get();
+      }
+    } else if (command == BLOCK_OP_TRIM) {
+      (*out_op)->operation()->trim = {
+          .command = command,
+          .length = length,
+          .offset_dev = offset,
+      };
+    } else {
+      (*out_op)->operation()->command = command;
     }
   }
 
@@ -141,10 +149,18 @@ class SdmmcBlockDeviceTest : public zxtest::Test {
     }
   }
 
-  void CheckVmo(const fzl::VmoMapper& mapper, uint32_t length) {
-    const uint8_t* ptr = reinterpret_cast<uint8_t*>(mapper.start());
+  void CheckVmo(const fzl::VmoMapper& mapper, uint32_t length, uint64_t offset = 0) {
+    const uint8_t* ptr = reinterpret_cast<uint8_t*>(mapper.start()) + (offset * test_block_.size());
     for (uint32_t i = 0; i < length; i++, ptr += test_block_.size()) {
       EXPECT_BYTES_EQ(ptr, test_block_.data(), test_block_.size());
+    }
+  }
+
+  void CheckVmoErased(const fzl::VmoMapper& mapper, uint32_t length, uint64_t offset = 0) {
+    const size_t blocks_to_u32 = test_block_.size() / sizeof(uint32_t);
+    const uint32_t* data = reinterpret_cast<uint32_t*>(mapper.start()) + (offset * blocks_to_u32);
+    for (uint32_t i = 0; i < (length * blocks_to_u32); i++) {
+      EXPECT_EQ(data[i], 0xffff'ffff);
     }
   }
 
@@ -468,6 +484,115 @@ TEST_F(SdmmcBlockDeviceTest, SendCmd12OnCommandFailure) {
   EXPECT_OK(sync_completion_wait(&ctx2.completion, zx::duration::infinite().get()));
   EXPECT_TRUE(op2->private_storage()->completed);
   EXPECT_EQ(sdmmc_.command_counts().at(SDMMC_STOP_TRANSMISSION), 2);
+}
+
+// TODO(49028): Enable these tests once trim is enabled.
+TEST_F(SdmmcBlockDeviceTest, DISABLED_Trim) {
+  AddDevice();
+
+  std::optional<block::Operation<OperationContext>> op1;
+  ASSERT_NO_FATAL_FAILURES(MakeBlockOp(BLOCK_OP_WRITE, 10, 100, &op1));
+
+  std::optional<block::Operation<OperationContext>> op2;
+  ASSERT_NO_FATAL_FAILURES(MakeBlockOp(BLOCK_OP_FLUSH, 0, 0, &op2));
+
+  std::optional<block::Operation<OperationContext>> op3;
+  ASSERT_NO_FATAL_FAILURES(MakeBlockOp(BLOCK_OP_READ, 10, 100, &op3));
+
+  std::optional<block::Operation<OperationContext>> op4;
+  ASSERT_NO_FATAL_FAILURES(MakeBlockOp(BLOCK_OP_TRIM, 1, 103, &op4));
+
+  std::optional<block::Operation<OperationContext>> op5;
+  ASSERT_NO_FATAL_FAILURES(MakeBlockOp(BLOCK_OP_READ, 10, 100, &op5));
+
+  std::optional<block::Operation<OperationContext>> op6;
+  ASSERT_NO_FATAL_FAILURES(MakeBlockOp(BLOCK_OP_TRIM, 3, 106, &op6));
+
+  std::optional<block::Operation<OperationContext>> op7;
+  ASSERT_NO_FATAL_FAILURES(MakeBlockOp(BLOCK_OP_READ, 10, 100, &op7));
+
+  FillVmo(op1->private_storage()->mapper, 10);
+
+  CallbackContext ctx(7);
+
+  user_.Queue(op1->operation(), OperationCallback, &ctx);
+  user_.Queue(op2->operation(), OperationCallback, &ctx);
+  user_.Queue(op3->operation(), OperationCallback, &ctx);
+  user_.Queue(op4->operation(), OperationCallback, &ctx);
+  user_.Queue(op5->operation(), OperationCallback, &ctx);
+  user_.Queue(op6->operation(), OperationCallback, &ctx);
+  user_.Queue(op7->operation(), OperationCallback, &ctx);
+
+  EXPECT_OK(sync_completion_wait(&ctx.completion, zx::duration::infinite().get()));
+
+  ASSERT_NO_FATAL_FAILURES(CheckVmo(op3->private_storage()->mapper, 10, 0));
+
+  ASSERT_NO_FATAL_FAILURES(CheckVmo(op5->private_storage()->mapper, 3, 0));
+  ASSERT_NO_FATAL_FAILURES(CheckVmoErased(op5->private_storage()->mapper, 1, 3));
+  ASSERT_NO_FATAL_FAILURES(CheckVmo(op5->private_storage()->mapper, 6, 4));
+
+  ASSERT_NO_FATAL_FAILURES(CheckVmo(op7->private_storage()->mapper, 3, 0));
+  ASSERT_NO_FATAL_FAILURES(CheckVmoErased(op7->private_storage()->mapper, 1, 3));
+  ASSERT_NO_FATAL_FAILURES(CheckVmo(op7->private_storage()->mapper, 2, 4));
+  ASSERT_NO_FATAL_FAILURES(CheckVmoErased(op7->private_storage()->mapper, 3, 6));
+  ASSERT_NO_FATAL_FAILURES(CheckVmo(op7->private_storage()->mapper, 1, 9));
+
+  EXPECT_OK(op1->private_storage()->status);
+  EXPECT_OK(op2->private_storage()->status);
+  EXPECT_OK(op3->private_storage()->status);
+  EXPECT_OK(op4->private_storage()->status);
+  EXPECT_OK(op5->private_storage()->status);
+  EXPECT_OK(op6->private_storage()->status);
+  EXPECT_OK(op7->private_storage()->status);
+}
+
+TEST_F(SdmmcBlockDeviceTest, DISABLED_TrimErrors) {
+  AddDevice();
+
+  std::optional<block::Operation<OperationContext>> op1;
+  ASSERT_NO_FATAL_FAILURES(MakeBlockOp(BLOCK_OP_TRIM, 10, 10, &op1));
+
+  std::optional<block::Operation<OperationContext>> op2;
+  ASSERT_NO_FATAL_FAILURES(
+      MakeBlockOp(BLOCK_OP_TRIM, 10, FakeSdmmcDevice::kBadRegionStart | 0x40, &op2));
+
+  std::optional<block::Operation<OperationContext>> op3;
+  ASSERT_NO_FATAL_FAILURES(
+      MakeBlockOp(BLOCK_OP_TRIM, 10, FakeSdmmcDevice::kBadRegionStart - 5, &op3));
+
+  std::optional<block::Operation<OperationContext>> op4;
+  ASSERT_NO_FATAL_FAILURES(MakeBlockOp(BLOCK_OP_TRIM, 10, 100, &op4));
+
+  std::optional<block::Operation<OperationContext>> op5;
+  ASSERT_NO_FATAL_FAILURES(MakeBlockOp(BLOCK_OP_TRIM, 10, 110, &op5));
+
+  sdmmc_.set_command_callback(MMC_ERASE_GROUP_START, [](sdmmc_req_t* req) {
+    if (req->arg == 100) {
+      req->response[0] |= MMC_STATUS_ERASE_SEQ_ERR;
+    }
+  });
+
+  sdmmc_.set_command_callback(MMC_ERASE_GROUP_END, [](sdmmc_req_t* req) {
+    if (req->arg == 119) {
+      req->response[0] |= MMC_STATUS_ADDR_OUT_OF_RANGE;
+    }
+  });
+
+  CallbackContext ctx(5);
+
+  user_.Queue(op1->operation(), OperationCallback, &ctx);
+  user_.Queue(op2->operation(), OperationCallback, &ctx);
+  user_.Queue(op3->operation(), OperationCallback, &ctx);
+  user_.Queue(op4->operation(), OperationCallback, &ctx);
+  user_.Queue(op5->operation(), OperationCallback, &ctx);
+
+  EXPECT_OK(sync_completion_wait(&ctx.completion, zx::duration::infinite().get()));
+
+  EXPECT_OK(op1->private_storage()->status);
+  EXPECT_NOT_OK(op2->private_storage()->status);
+  EXPECT_NOT_OK(op3->private_storage()->status);
+  EXPECT_NOT_OK(op4->private_storage()->status);
+  EXPECT_NOT_OK(op5->private_storage()->status);
 }
 
 TEST_F(SdmmcBlockDeviceTest, DdkLifecycle) {
