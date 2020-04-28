@@ -152,9 +152,7 @@ class ThreadStarter {
     }
   }
 
-  void GrowStackVmo() {
-    ASSERT_EQ(stack_handle_.set_size(kStackSize), ZX_OK);
-  }
+  void GrowStackVmo() { ASSERT_EQ(stack_handle_.set_size(kStackSize), ZX_OK); }
 
   bool StartThread(zxr_thread_entry_t entry, void* arg) {
     return zxr_thread_start(thread_, stack_, kStackSize, entry, arg) == ZX_OK;
@@ -917,9 +915,7 @@ static void TestSuspendWaitAsyncSignalDeliveryWorker() {
 }
 
 // Test signal delivery of suspended threads via single async wait.
-TEST(Threads, SuspendSingleWaitAsyncSignalDelivery) {
-  TestSuspendWaitAsyncSignalDeliveryWorker();
-}
+TEST(Threads, SuspendSingleWaitAsyncSignalDelivery) { TestSuspendWaitAsyncSignalDeliveryWorker(); }
 
 // Test signal delivery of suspended threads via repeating async wait.
 TEST(Threads, SuspendRepeatingWaitAsyncSignalDelivery) {
@@ -1197,6 +1193,31 @@ TEST(Threads, WritingVectorRegisterState) {
   zx_thread_state_vector_regs_t regs;
   setup.DoSave(&save_vector_regs_and_exit_thread, &regs);
   EXPECT_TRUE(vector_regs_expect_eq(regs_to_set, regs));
+}
+
+// Test for fxbug.dev/50632: Make sure zx_thread_write_state doesn't overwrite
+// reserved bits in mxcsr (x64 only).
+TEST(Threads, WriteThreadStateWithInvalidMxcsrIsInvalidArgs) {
+#if defined(__x86_64__)
+  RegisterWriteSetup<zx_thread_state_vector_regs_t> setup;
+  setup.Init();
+
+  zx_thread_state_vector_regs_t start_values;
+  ASSERT_OK(zx_thread_read_state(setup.thread_handle(), ZX_THREAD_STATE_VECTOR_REGS, &start_values,
+                                 sizeof(start_values)));
+
+  zx_thread_state_vector_regs_t regs_to_set;
+  vector_regs_fill_test_values(&regs_to_set);
+  regs_to_set.mxcsr = 0xffffffff;
+
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS,
+            zx_thread_write_state(setup.thread_handle(), ZX_THREAD_STATE_VECTOR_REGS, &regs_to_set,
+                                  sizeof(regs_to_set)));
+
+  zx_thread_state_vector_regs_t end_values;
+  setup.DoSave(&save_vector_regs_and_exit_thread, &end_values);
+  EXPECT_TRUE(vector_regs_expect_eq(start_values, end_values));
+#endif  // defined(__x86_64__)
 }
 
 // This test starts a thread which reads and writes from TLS.

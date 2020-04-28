@@ -87,6 +87,28 @@ void x86_fill_in_iframe_from_gregs(x86_iframe_t* out, const zx_thread_state_gene
 // Whether an operation gets thread state or sets it.
 enum class RegAccess { kGet, kSet };
 
+// Checks whether the mxcsr register has unsupported bits.
+// The processor specifies which flags of the mxcsr are supported via the
+// mxcsr_mask obtained with the fxsave instruction.
+//
+// The manuals mention that it is possible for the mask to be 0, and specify
+// 0x000ffbf as the default value.
+//
+// For details see:
+//   Intel 64 and IA-32 Architectures Software Developer’s Manual
+//     Volume 1: Basic Architecture
+//     Section: 11.6.6 Guidelines for Writing to the MXCSR Register
+//   AMD64 Architecture Programmer’s Manual
+//     Volume 2: System Programming
+//     Section: 11.5.9  MXCSR State Management
+static inline bool mxcsr_is_valid(uint32_t mxcsr, uint32_t mxcsr_mask) {
+  if (mxcsr_mask == 0x0) {
+    mxcsr_mask = 0x0000ffbf;
+  }
+
+  return mxcsr & ~mxcsr_mask;
+}
+
 // Backend for arch_get_vector_regs and arch_set_vector_regs. This does a read or write of the
 // thread to or from the regs structure.
 zx_status_t x86_get_set_vector_regs(Thread* thread, zx_thread_state_vector_regs* regs,
@@ -121,6 +143,14 @@ zx_status_t x86_get_set_vector_regs(Thread* thread, zx_thread_state_vector_regs*
           thread->arch_.extended_register_state, X86_XSAVE_STATE_INDEX_SSE, mark_present,
           &comp_size));
   DEBUG_ASSERT(save);  // Legacy getter should always succeed.
+
+  // fxbug.dev/50632: Overwriting the reserved bits of the mxcsr register
+  // causes a #GP Fault. We need to check against the mxcsr_mask to see if the
+  // proposed mxcsr is valid.
+  if (access == RegAccess::kSet && mxcsr_is_valid(regs->mxcsr, save->mxcsr_mask)) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
   for (int i = 0; i < kNumSSERegs; i++) {
     get_set_memcpy(&regs->zmm[i].v[0], &save->xmm[i], kXmmRegSize);
   }
@@ -244,8 +274,8 @@ zx_status_t arch_set_general_regs(Thread* thread, const zx_thread_state_general_
       x86_fill_in_syscall_from_gregs(thread->arch_.suspended_general_regs.syscall, in);
       break;
     }
-  default:
-    ASSERT(false);
+    default:
+      ASSERT(false);
   }
 
   thread->arch_.fs_base = in->fs_base;
