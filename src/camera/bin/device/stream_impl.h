@@ -66,7 +66,7 @@ class StreamImpl {
    public:
     Client(StreamImpl& stream, uint64_t id,
            fidl::InterfaceRequest<fuchsia::camera3::Stream> request);
-    ~Client();
+    ~Client() override;
 
     // Posts a task to transfer ownership of the given frame to this client.
     void PostSendFrame(fuchsia::camera3::FrameInfo frame);

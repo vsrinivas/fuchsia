@@ -313,10 +313,6 @@ TEST_F(DeviceTest, RequestStreamFromController) {
         buffers->Close();
       });
   constexpr uint32_t kBufferId = 42;
-  fuchsia::camera2::FrameAvailableInfo info;
-  info.frame_status = fuchsia::camera2::FrameStatus::OK;
-  info.buffer_id = kBufferId;
-  info.metadata.set_timestamp(0);
   bool callback_received = false;
   stream->GetNextFrame([&](fuchsia::camera3::FrameInfo info) {
     EXPECT_EQ(info.buffer_index, kBufferId);
@@ -325,6 +321,10 @@ TEST_F(DeviceTest, RequestStreamFromController) {
   bool frame_sent = false;
   while (!HasFailure() && !frame_sent) {
     RunLoopUntilIdle();
+    fuchsia::camera2::FrameAvailableInfo info;
+    info.frame_status = fuchsia::camera2::FrameStatus::OK;
+    info.buffer_id = kBufferId;
+    info.metadata.set_timestamp(0);
     zx_status_t status = controller_->SendFrameViaLegacyStream(std::move(info));
     if (status == ZX_OK) {
       frame_sent = true;

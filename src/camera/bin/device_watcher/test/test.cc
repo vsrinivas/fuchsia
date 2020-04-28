@@ -14,7 +14,7 @@
 class DeviceWatcherTest : public gtest::TestLoopFixture {
  protected:
   DeviceWatcherTest() : context_(sys::ComponentContext::CreateAndServeOutgoingDirectory()) {}
-  virtual void SetUp() override {
+  void SetUp() override {
     ASSERT_EQ(context_->svc()->Connect(watcher_.NewRequest()), ZX_OK);
     watcher_.set_error_handler([](zx_status_t status) {
       ADD_FAILURE() << "DeviceWatcher server disconnected: " << status;
@@ -26,7 +26,7 @@ class DeviceWatcherTest : public gtest::TestLoopFixture {
     RunLoopUntilIdle();
   }
 
-  virtual void TearDown() override {
+  void TearDown() override {
     tester_ = nullptr;
     watcher_ = nullptr;
     RunLoopUntilIdle();
@@ -43,7 +43,7 @@ constexpr uint16_t kFakeProductId = 0xABCD;
 class FakeCamera : public fuchsia::hardware::camera::Device,
                    public fuchsia::camera2::hal::Controller {
  public:
-  FakeCamera(fidl::InterfaceRequest<fuchsia::hardware::camera::Device> request)
+  explicit FakeCamera(fidl::InterfaceRequest<fuchsia::hardware::camera::Device> request)
       : camera_binding_(this, std::move(request)), controller_binding_(this) {}
   void GetChannel(zx::channel channel) override {}
   void GetChannel2(zx::channel channel) override {

@@ -116,14 +116,14 @@ void StreamImpl::OnFrameAvailable(fuchsia::camera2::FrameAvailableInfo info) {
   // to the driver.
   auto waiter =
       std::make_unique<async::Wait>(fence.get(), ZX_EVENTPAIR_PEER_CLOSED, 0,
-                                    [this, fence = std::move(fence), index = frame.buffer_index](
+                                    [this, fence = std::move(fence), index = info.buffer_id](
                                         async_dispatcher_t* dispatcher, async::WaitBase* wait,
                                         zx_status_t status, const zx_packet_signal_t* signal) {
                                       legacy_stream_->ReleaseFrame(index);
                                       frame_waiters_.erase(index);
                                     });
   ZX_ASSERT(waiter->Begin(loop_.dispatcher()) == ZX_OK);
-  frame_waiters_[frame.buffer_index] = std::move(waiter);
+  frame_waiters_[info.buffer_id] = std::move(waiter);
 
   // Send the frame to any pending recipients.
   SendFrames();

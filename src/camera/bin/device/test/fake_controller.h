@@ -22,7 +22,7 @@
 class FakeController : public fuchsia::camera2::hal::Controller {
  public:
   FakeController();
-  ~FakeController();
+  ~FakeController() override;
   static fit::result<std::unique_ptr<FakeController>, zx_status_t> Create(
       fidl::InterfaceRequest<fuchsia::camera2::hal::Controller> request);
   static std::vector<fuchsia::camera2::hal::Config> GetDefaultConfigs();

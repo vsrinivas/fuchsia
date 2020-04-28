@@ -79,7 +79,7 @@ class DeviceImpl {
    public:
     Client(DeviceImpl& device, uint64_t id,
            fidl::InterfaceRequest<fuchsia::camera3::Device> request);
-    ~Client();
+    ~Client() override;
 
     // Posts a task to inform the client of a new configuration.
     void PostConfigurationUpdated(uint32_t index);

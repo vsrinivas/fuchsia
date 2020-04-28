@@ -49,13 +49,13 @@ class DeviceWatcherImpl {
   // Implements the server endpoint for a single client, and maintains per-client state.
   class Client : public fuchsia::camera3::DeviceWatcher {
    public:
-    Client(DeviceWatcherImpl& watcher);
+    explicit Client(DeviceWatcherImpl& watcher);
     static fit::result<std::unique_ptr<Client>, zx_status_t> Create(
         DeviceWatcherImpl& watcher, ClientId id,
         fidl::InterfaceRequest<fuchsia::camera3::DeviceWatcher> request,
         async_dispatcher_t* dispatcher);
     void UpdateDevices(const DevicesMap& devices);
-    operator bool();
+    explicit operator bool();
 
    private:
     void CheckDevicesChanged();

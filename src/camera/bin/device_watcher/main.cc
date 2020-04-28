@@ -35,7 +35,8 @@ static fit::result<fuchsia::hardware::camera::DeviceHandle, zx_status_t> GetCame
 class DeviceWatcherTesterImpl : public fuchsia::camera::test::DeviceWatcherTester {
  public:
   using InjectDeviceCallback = fit::function<void(fuchsia::hardware::camera::DeviceHandle)>;
-  DeviceWatcherTesterImpl(InjectDeviceCallback callback) : callback_(std::move(callback)) {}
+  explicit DeviceWatcherTesterImpl(InjectDeviceCallback callback)
+      : callback_(std::move(callback)) {}
   fidl::InterfaceRequestHandler<fuchsia::camera::test::DeviceWatcherTester> GetHandler() {
     return fit::bind_member(this, &DeviceWatcherTesterImpl::OnNewRequest);
   }
