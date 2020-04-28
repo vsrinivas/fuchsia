@@ -35,6 +35,7 @@ if (is_fuchsia) {
     ]
     public_deps = [ "//zircon/system/fidl/fuchsia-hardware-block-volume:c" ]
     deps = [
+      "//sdk/fidl/fuchsia.fshost:fuchsia.fshost_llcpp",
       "//third_party/boringssl",
       "//zircon/public/lib/digest",
       "//zircon/public/lib/fbl",
@@ -46,7 +47,6 @@ if (is_fuchsia) {
       "//zircon/public/lib/pretty",
       "//zircon/public/lib/zx",
       "//zircon/system/fidl/fuchsia-boot:llcpp",
-      "//zircon/system/fidl/fuchsia-fshost:llcpp",
       "//zircon/system/fidl/fuchsia-hardware-block:c",
       "//zircon/system/fidl/fuchsia-hardware-block:llcpp",
       "//zircon/system/fidl/fuchsia-hardware-block-partition:c",

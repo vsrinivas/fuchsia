@@ -2,9 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx_build/public/gn/fidl.gni")
+import("//build/fidl/fidl.gni")
 
-fidl_library("fuchsia-fshost") {
+fidl("fuchsia.fshost") {
   sources = [ "fshost.fidl" ]
-  public_deps = [ "$zx/system/fidl/fuchsia-io" ]
+  public_deps = [ "//zircon/system/fidl/fuchsia-io" ]
 }
