@@ -99,7 +99,7 @@ fn run(opt: Opt) -> Result<(), Error> {
         .with_context(|| format!("Unable to instantiate template {:?}", template_type))?;
 
     if opt.verbose {
-        log::set_max_level(LevelFilter::Debug);
+        log::set_max_level(LevelFilter::Info);
     } else {
         log::set_max_level(LevelFilter::Error);
     }
