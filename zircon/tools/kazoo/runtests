@@ -15,57 +15,16 @@ fx ninja -C out/default.zircon \
 
 out/default.zircon/host-x64-linux-clang/obj/tools/kazoo/kazoo-test.debug --gtest_break_on_failure
 
-out/default.zircon/host-x64-linux-clang/obj/tools/fidl/fidlc \
-      --json /tmp/syscalls.json \
-      --files zircon/vdso/*.fidl
+# An rspfile appears to be the only way to get the path to these tools in the
+# real build, so pass those through directly to avoid more contortions, even
+# though it makes for weird arguments to the test script.
+echo host-x64-linux-clang/obj/tools/fidl/fidlc > /tmp/fidlc.rsp
+echo host-x64-linux-clang/obj/tools/kazoo/kazoo.debug > /tmp/kazoo.rsp
 
-mkdir -p /tmp/kazoo-output
-
-out/default.zircon/host-x64-linux-clang/obj/tools/kazoo/kazoo.debug \
-  --category=/tmp/kazoo-output/syscall-category.inc \
-  --go-syscall-arm64-asm=/tmp/kazoo-output/syscalls_fuchsia_arm64.go \
-  --go-syscall-stubs=/tmp/kazoo-output/syscalls_fuchsia.go \
-  --go-syscall-x86-asm=/tmp/kazoo-output/syscalls_fuchsia_amd64.go \
-  --go-vdso-arm64-calls=/tmp/kazoo-output/vdso_fuchsia_arm64.s \
-  --go-vdso-keys=/tmp/kazoo-output/vdso_keys_fuchsia.go \
-  --go-vdso-x86-calls=/tmp/kazoo-output/vdso_fuchsia_amd64.s \
-  --json=/tmp/kazoo-output/definitions.json \
-  --kernel-header=/tmp/kazoo-output/kernel-header.h \
-  --kernel-wrappers=/tmp/kazoo-output/kernel-wrappers.inc \
-  --ktrace=/tmp/kazoo-output/ktrace.inc \
-  --rust=/tmp/kazoo-output/definitions.rs \
-  --private-header=/tmp/kazoo-output/kernel.inc \
-  --public-header=/tmp/kazoo-output/syscalls.inc \
-  --syscall-numbers=/tmp/kazoo-output/syscall-numbers.h \
-  /tmp/syscalls.json
-
-grep TODO! /tmp/kazoo-output/* || true
-
-echo Outputs written to /tmp/kazoo-output/ for manual inspection.
-
-function show_if_changed() {
-  if ! cmp --quiet "/tmp/kazoo-previous/$1" "/tmp/kazoo-output/$1"
-  then
-    echo "CHANGED: $1"
-    p4merge "/tmp/kazoo-previous/$1" "/tmp/kazoo-output/$1" &
-  fi
-}
-
-# If you:
-#   rm -rf /tmp/kazoo-previous/ && mv /tmp/kazoo-output /tmp/kazoo-previous
-# for a build at origin/master, then this will note any differences from
-# master vs. the current work.
-if [ -d "/tmp/kazoo-previous/" ]; then
-  show_if_changed "definitions.json"
-  show_if_changed "definitions.rs"
-  show_if_changed "kernel-header.h"
-  show_if_changed "kernel-wrappers.inc"
-  show_if_changed "kernel.inc"
-  show_if_changed "ktrace.inc"
-  show_if_changed "syscall-category.inc"
-  show_if_changed "syscall-numbers.h"
-  show_if_changed "syscalls.inc"
-  show_if_changed "syscalls_fuchsia.go"
-  show_if_changed "syscalls_fuchsia_amd64.go"
-  show_if_changed "vdso_keys_fuchsia.go"
-fi
+zircon/tools/kazoo/golden-test \
+  --fidlc /tmp/fidlc.rsp \
+  --kazoo /tmp/kazoo.rsp \
+  --builddir out/default.zircon \
+  --syscalls zircon/vdso \
+  --p4merge \
+  --output-touch /dev/null

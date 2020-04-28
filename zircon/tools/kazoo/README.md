@@ -42,3 +42,7 @@ implementation.
 
 These can be run using `./runtests` which will also run fidlc and kazoo and generate all the outputs
 into /tmp for inspection. It should be run with a cwd of `//zircon/tools/kazoo` as `./runtests`.
+
+There is also a "golden"-style run, which compares the output of running kazoo on the current real
+syscalls, and diffs vs. //zircon/tools/kazoo/golden.txt. Instructions will be printed on how to
+update this if output changes.

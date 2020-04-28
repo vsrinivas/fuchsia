@@ -219,7 +219,7 @@ std::string GetGoNameImpl(const Type& type) {
     void operator()(const TypeVoid&) { ret = "void"; }
     void operator()(const TypeZxBasicAlias& zx_basic_alias) { ret = zx_basic_alias.go_name(); }
 
-    void operator()(const TypeAlias& alias) { ret = "<TODO!>"; }
+    void operator()(const TypeAlias& alias) { ret = "zx_" + alias.alias_data().base_name() + "_t"; }
     void operator()(const TypeEnum& enm) { ret = "zx_" + enm.enum_data().base_name() + "_t"; }
     void operator()(const TypeHandle& handle) { ret = "Handle"; }
     void operator()(const TypePointer& pointer) {
@@ -273,6 +273,8 @@ std::string GetGoName(const Type& type) {
     return "HandleDisposition";
   if (name == "zx_handle_info_t")
     return "int";
+  if (name == "zx_off_t")
+    return "uint64";
   if (name == "zx_pci_bar_t")
     return "uintptr";
   if (name == "zx_pci_init_arg_t")
@@ -285,6 +287,8 @@ std::string GetGoName(const Type& type) {
     return "int";
   if (name == "zx_rights_t")
     return "Rights";
+  if (name == "zx_stream_seek_origin_t")
+    return "uint32";
   if (name == "zx_smc_parameters_t")
     return "SMCParameters";
   if (name == "zx_smc_result_t")
@@ -329,6 +333,8 @@ std::string GetNativeGoName(const Type& type) {
     return "uintptr";
   if (name == "Vm_option")
     return "uint32";
+  if (name == "String_view")
+    return "unsafe.Pointer";
   if (name == "zx_channel_call_args_t")
     return "uintptr";
   if (name == "zx_clock_t")
@@ -337,6 +343,8 @@ std::string GetNativeGoName(const Type& type) {
     return "uintptr";
   if (name == "zx_handle_info_t")
     return "int";
+  if (name == "zx_off_t")
+    return "uint64";
   if (name == "zx_pci_bar_t")
     return "uintptr";
   if (name == "zx_pci_init_arg_t")
@@ -348,6 +356,8 @@ std::string GetNativeGoName(const Type& type) {
   if (name == "zx_profile_info_t")
     return "int";
   if (name == "zx_rights_t")
+    return "uint32";
+  if (name == "zx_stream_seek_origin_t")
     return "uint32";
   if (name == "zx_smc_parameters_t")
     return "uintptr";
