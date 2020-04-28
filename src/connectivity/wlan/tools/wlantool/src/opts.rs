@@ -235,8 +235,8 @@ pub struct ClientConnectCmd {
         default_value = "passive",
         raw(possible_values = "&ScanTypeArg::variants()"),
         raw(case_insensitive = "true"),
-        help = "Experimental. Default scan type on each channel. \
-                Behavior may differ on DFS channel"
+        help = "Deprecated. Setting this field will not affect scan behavior during \
+                connect for FullMAC"
     )]
     pub scan_type: ScanTypeArg,
     #[structopt(raw(required = "true"))]

@@ -64,7 +64,7 @@ pub async fn connect(
             override_primary_chan: false,
             primary_chan: 0,
         },
-        scan_type: fidl_common::ScanType::Passive,
+        deprecated_scan_type: fidl_common::ScanType::Passive,
     };
 
     let _result = iface_sme_proxy.connect(&mut req, Some(connection_remote))?;

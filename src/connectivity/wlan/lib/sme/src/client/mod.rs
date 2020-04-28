@@ -238,7 +238,15 @@ impl ClientSme {
         self.state = self.state.take().map(|state| state.cancel_ongoing_connect(&mut self.context));
 
         let ssid = req.ssid;
-        info!("SME received a connect command. Initiating a join scan with targted SSID");
+        // We want to default to Active scan so that for routers that support WSC, we can retrieve
+        // AP metadata from the probe response. However, for SoftMAC, we default to passive scan
+        // because we do not have a proper active scan implementation for DFS channels.
+        let scan_type = if self.context.is_softmac {
+            req.deprecated_scan_type
+        } else {
+            fidl_common::ScanType::Active
+        };
+        info!("SME received a connect command. Initiating a join scan with targeted SSID");
         let (canceled_token, req) = self.scan_sched.enqueue_scan_to_join(JoinScan {
             ssid: ssid.clone(),
             token: ConnectConfig {
@@ -246,7 +254,7 @@ impl ClientSme {
                 credential: req.credential,
                 radio_cfg: RadioConfig::from_fidl(req.radio_cfg),
             },
-            scan_type: req.scan_type,
+            scan_type,
         });
         // If the new scan replaced an existing pending JoinScan, notify the existing transaction
         if let Some(token) = canceled_token {
@@ -1209,6 +1217,47 @@ mod tests {
         });
     }
 
+    #[test]
+    fn test_on_connect_command_default_to_active_scan() {
+        let (mut sme, mut mlme_stream, _info_stream, _time_stream) = create_sme();
+        sme.context.is_softmac = false;
+        assert_eq!(Status { connected_to: None, connecting_to: None }, sme.status());
+
+        let credential = fidl_sme::Credential::None(fidl_sme::Empty);
+        let _recv = sme.on_connect_command(connect_req(b"foo".to_vec(), credential));
+        assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::Scan(req))) => {
+            assert_eq!(req.scan_type, fidl_mlme::ScanTypes::Active);
+        });
+    }
+
+    #[test]
+    fn test_on_connect_command_softmac_adhere_to_scan_type_arg_passive() {
+        let (mut sme, mut mlme_stream, _info_stream, _time_stream) = create_sme();
+        sme.context.is_softmac = true;
+        assert_eq!(Status { connected_to: None, connecting_to: None }, sme.status());
+
+        let credential = fidl_sme::Credential::None(fidl_sme::Empty);
+        let _recv = sme.on_connect_command(connect_req(b"foo".to_vec(), credential));
+        assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::Scan(req))) => {
+            assert_eq!(req.scan_type, fidl_mlme::ScanTypes::Passive);
+        });
+    }
+
+    #[test]
+    fn test_on_connect_command_softmac_adhere_to_scan_type_arg_active() {
+        let (mut sme, mut mlme_stream, _info_stream, _time_stream) = create_sme();
+        sme.context.is_softmac = true;
+        assert_eq!(Status { connected_to: None, connecting_to: None }, sme.status());
+
+        let mut req = connect_req(b"foo".to_vec(), fidl_sme::Credential::None(fidl_sme::Empty));
+        req.deprecated_scan_type = fidl_common::ScanType::Active;
+        let _recv = sme.on_connect_command(req);
+        assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::Scan(req))) => {
+            assert_eq!(req.scan_type, fidl_mlme::ScanTypes::Active);
+        });
+
+    }
+
     fn assert_connect_result(
         connect_result_receiver: &mut oneshot::Receiver<ConnectResult>,
         expected: ConnectResult,
@@ -1228,7 +1277,7 @@ mod tests {
             ssid,
             credential,
             radio_cfg: RadioConfig::default().to_fidl(),
-            scan_type: fidl_common::ScanType::Passive,
+            deprecated_scan_type: fidl_common::ScanType::Passive,
         }
     }
 

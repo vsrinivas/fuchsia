@@ -382,7 +382,7 @@ async fn handle_client_request_connect(
             override_primary_chan: false,
             primary_chan: 0,
         },
-        scan_type: fidl_common::ScanType::Passive,
+        deprecated_scan_type: fidl_common::ScanType::Passive,
     };
     let (local, remote) = fidl::endpoints::create_proxy().map_err(|e| {
         RequestError::new().with_cause(format_err!("failed to create proxy: {:?}", e))

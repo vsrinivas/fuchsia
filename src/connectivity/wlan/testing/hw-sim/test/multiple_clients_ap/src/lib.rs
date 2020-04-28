@@ -113,7 +113,7 @@ async fn multiple_clients_ap() {
         ssid: SSID.to_vec(),
         credential: Credential::None(fidl_sme::Empty {}),
         radio_cfg: RadioConfig::new(Phy::Ht, Cbw::Cbw20, CHANNEL.primary).to_fidl(),
-        scan_type: fidl_common::ScanType::Passive,
+        deprecated_scan_type: fidl_common::ScanType::Passive,
     };
     let client1_connect_fut = connect(&client1_sme, &mut client1_connect_req);
     pin_mut!(client1_connect_fut);
@@ -143,7 +143,7 @@ async fn multiple_clients_ap() {
         ssid: SSID.to_vec(),
         credential: Credential::None(fidl_sme::Empty {}),
         radio_cfg: RadioConfig::new(Phy::Ht, Cbw::Cbw20, CHANNEL.primary).to_fidl(),
-        scan_type: fidl_common::ScanType::Passive,
+        deprecated_scan_type: fidl_common::ScanType::Passive,
     };
     let client2_connect_fut = connect(&client2_sme, &mut client2_connect_req);
     pin_mut!(client2_connect_fut);

@@ -4,9 +4,7 @@
 
 use {
     super::*,
-    crate::{
-        error::{FrameParseError, FrameParseResult},
-    },
+    crate::error::{FrameParseError, FrameParseResult},
     anyhow::{self, format_err, Context},
     std::convert::TryInto,
     zerocopy::ByteSlice,

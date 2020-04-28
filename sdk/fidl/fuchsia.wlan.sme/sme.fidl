@@ -100,7 +100,10 @@ struct ConnectRequest {
     Credential credential;
 
     RadioConfig radio_cfg;
-    fuchsia.wlan.common.ScanType scan_type;
+    /// Deprecated. SME makes internal decision on whether to perform a passive or active
+    /// scan during connect. Setting this field will not affect anything for FullMAC, but
+    /// currently SoftMAC still honor this argument.
+    fuchsia.wlan.common.ScanType deprecated_scan_type;
 };
 
 struct ClientStatusResponse {

@@ -394,7 +394,7 @@ fn start_connect_txn(
             override_primary_chan: false,
             primary_chan: 0,
         },
-        scan_type: fidl_common::ScanType::Passive,
+        deprecated_scan_type: fidl_common::ScanType::Passive,
     };
     sme.connect(&mut req, Some(remote))?;
     Ok(connect_txn)

@@ -243,7 +243,7 @@ async fn do_client_connect(cmd: opts::ClientConnectCmd, wlan_svc: WlanSvc) -> Re
             override_primary_chan: false,
             primary_chan: 0,
         },
-        scan_type: scan_type.into(),
+        deprecated_scan_type: scan_type.into(),
     };
     sme.connect(&mut req, Some(remote)).context("error sending connect request")?;
     handle_connect_transaction(local).await
