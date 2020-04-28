@@ -396,7 +396,6 @@ zx_status_t Imx227Device::CameraSensorStopStreaming() {
     return ZX_ERR_BAD_STATE;
   }
   ctx_.streaming_flag = 0;
-  Write8(kModeSelectReg, 0x00);
   HwDeInit();
   return ZX_OK;
 }
