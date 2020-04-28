@@ -33,7 +33,7 @@ class PendingDeallocations;
 // This class is not assignable, copyable, or moveable.
 class AllocatorReservation {
  public:
-  AllocatorReservation(Allocator* allocator) : allocator_(*allocator) {}
+  AllocatorReservation(Allocator* allocator);
 
   // Not copyable or movable.
   AllocatorReservation(const AllocatorReservation&) = delete;

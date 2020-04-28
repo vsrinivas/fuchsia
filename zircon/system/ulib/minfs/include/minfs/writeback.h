@@ -65,14 +65,14 @@ class Transaction final : public PendingWork {
   void EnqueueMetadata(storage::Operation operation, storage::BlockBuffer* buffer) final;
   void EnqueueData(storage::Operation operation, storage::BlockBuffer* buffer) final;
 
+  size_t AllocateBlock() final {
+    return block_reservation_.Allocate();
+  }
+
   ////////////////
   // Other methods.
   size_t AllocateInode() {
     return inode_reservation_.Allocate();
-  }
-
-  size_t AllocateBlock() {
-    return block_reservation_.Allocate();
   }
 
   void PinVnode(fbl::RefPtr<VnodeMinfs> vnode);

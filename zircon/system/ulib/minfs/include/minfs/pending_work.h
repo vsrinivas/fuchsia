@@ -33,6 +33,9 @@ class PendingWork {
   // Write to data blocks must be done in a separate transaction from metadata updates to ensure
   // that all user data goes out to disk before associated metadata.
   virtual void EnqueueData(storage::Operation operation, storage::BlockBuffer* buffer) = 0;
+
+  // Allocates a block in the data section and returns the block allocated.
+  virtual size_t AllocateBlock() = 0;
 };
 }  // namespace minfs
 

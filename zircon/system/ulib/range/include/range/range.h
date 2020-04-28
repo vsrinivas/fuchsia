@@ -5,13 +5,12 @@
 #ifndef RANGE_RANGE_H_
 #define RANGE_RANGE_H_
 
-#include <lib/fit/result.h>
 #include <zircon/assert.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
 #include <algorithm>
-#include <limits>
+#include <type_traits>
 
 namespace range {
 

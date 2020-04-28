@@ -70,6 +70,8 @@ class FakeTransaction : public PendingWork {
 
   void EnqueueData(storage::Operation operation, storage::BlockBuffer* buffer) final {}
 
+  size_t AllocateBlock() final { return 0; }
+
   size_t BlockCount() { return metadata_operations_.BlockCount(); }
 
  private:

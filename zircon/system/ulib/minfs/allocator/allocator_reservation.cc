@@ -12,6 +12,7 @@
 
 namespace minfs {
 
+AllocatorReservation::AllocatorReservation(Allocator* allocator) : allocator_(*allocator) {}
 AllocatorReservation::~AllocatorReservation() { Cancel(); }
 
 zx_status_t AllocatorReservation::Reserve(PendingWork* transaction, size_t reserved) {

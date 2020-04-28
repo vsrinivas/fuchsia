@@ -6,15 +6,5 @@ zx_library("range") {
   sdk = "source"
   sdk_headers = [ "range/range.h" ]
   sources = [ "range.cc" ]
-  public_deps = [
-    # "$zx/system/ulib/fbl:headers",
-  ]
-  deps = [
-    "$zx/system/ulib/async",
-    "$zx/system/ulib/async:async-cpp",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zircon-internal",
-    "$zx/system/ulib/zx",
-    "$zx/third_party/ulib/zstd",
-  ]
+  host = true
 }
