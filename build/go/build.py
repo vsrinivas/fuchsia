@@ -188,6 +188,7 @@ def main():
         'CGO_CXXFLAGS': cflags_joined,
         'CGO_LDFLAGS': ldflags_joined,
         'CGO_ENABLED': '1',
+        'TMPDIR': os.getenv('TMPDIR'),
     }
 
     if args.target:
