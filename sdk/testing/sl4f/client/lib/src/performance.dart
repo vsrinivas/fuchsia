@@ -78,14 +78,13 @@ Map<String, dynamic> _renameChromiumProcessesInFuchsiaTrace(
 final _log = Logger('Performance');
 
 class Performance {
-  // Environment variable names used by the catapult converter to tag the test results.
-  static const String _builderNameVarName = 'BUILDER_NAME';
-  static const String _buildbucketBucketVarName = 'BUILDBUCKET_BUCKET';
+  // Names of environment variables used for tagging test results when
+  // uploading to the Catapult performance dashboard.
+  static const String _catapultDashboardMasterVarName =
+      'CATAPULT_DASHBOARD_MASTER';
+  static const String _catapultDashboardBotVarName = 'CATAPULT_DASHBOARD_BOT';
   static const String _buildbucketIdVarName = 'BUILDBUCKET_ID';
   static const String _buildCreateTimeVarName = 'BUILD_CREATE_TIME';
-  static const String _inputCommitHostVarName = 'INPUT_COMMIT_HOST';
-  static const String _inputCommitProjectVarName = 'INPUT_COMMIT_PROJECT';
-  static const String _inputCommitRefVarName = 'INPUT_COMMIT_REF';
 
   final Sl4f _sl4f;
   final Dump _dump;
@@ -364,56 +363,42 @@ class Performance {
       {bool uploadToCatapultDashboard = true}) async {
     _log.info('Converting the results into the catapult format');
 
-    var bot = '', logurl = '', master = '', timestamp = 0;
+    bool uploadEnabled = uploadToCatapultDashboard;
 
-    final builderName = environment[_builderNameVarName];
-    final buildbucketBucket = environment[_buildbucketBucketVarName];
+    var master = environment[_catapultDashboardMasterVarName];
+    var bot = environment[_catapultDashboardBotVarName];
     final buildbucketId = environment[_buildbucketIdVarName];
     final buildCreateTime = environment[_buildCreateTimeVarName];
-    final inputCommitRef = environment[_inputCommitRefVarName];
-    final inputCommitHost = environment[_inputCommitHostVarName];
-    final inputCommitProject = environment[_inputCommitProjectVarName];
 
-    final envVars = [
-      builderName,
-      buildbucketBucket,
-      buildbucketId,
-      buildCreateTime,
-      inputCommitRef,
-      inputCommitHost,
-      inputCommitProject
-    ];
-
-    if (envVars.every((str) => str == null)) {
+    String logurl;
+    int timestamp;
+    if (master == null && bot == null) {
       _log.info(
           'convertResults: Infra env vars are not set; treating as a local run.');
       bot = 'local-bot';
       master = 'local-master';
       logurl = 'http://ci.example.com/build/300';
       timestamp = new DateTime.now().millisecondsSinceEpoch;
-    } else if (envVars.every((str) => str != null)) {
+      // Disable uploading so that we don't accidentally upload with the
+      // dummy values set here.
+      uploadEnabled = false;
+    } else if (master != null &&
+        bot != null &&
+        buildbucketId != null &&
+        buildCreateTime != null) {
       logurl = 'https://ci.chromium.org/b/$buildbucketId';
-      bot = builderName;
       timestamp = int.parse(buildCreateTime);
-      master =
-          '${inputCommitHost.replaceFirst('.googlesource.com', '')}.$inputCommitProject.$buildbucketBucket';
-      const releasesRefPrefix = 'refs/heads/releases/';
-      if (inputCommitRef.startsWith(releasesRefPrefix)) {
-        master += '.${inputCommitRef.substring(releasesRefPrefix.length)}';
-      } else {
-        assert(inputCommitRef == 'refs/heads/master');
-      }
     } else {
-      throw ArgumentError('Some but not all of the infra env vars were set');
+      throw ArgumentError(
+          'Catapult-related infra env vars are not set consistently');
     }
 
     final resultsPath = result.absolute.path;
     // The infra recipe looks for the filename extension '.catapult_json',
     // so uploading to the Catapult performance dashboard is disabled if we
     // use a different extension.
-    final catapultExtension = uploadToCatapultDashboard
-        ? '.catapult_json'
-        : '.catapult_json_disabled';
+    final catapultExtension =
+        uploadEnabled ? '.catapult_json' : '.catapult_json_disabled';
     final outputFileName =
         _removeSuffix(resultsPath, '.fuchsiaperf.json') + catapultExtension;
 
