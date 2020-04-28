@@ -616,6 +616,7 @@ func (c *compiler) compileInterface(val types.Interface) Interface {
 }
 
 func Compile(fidlData types.Root) Root {
+	fidlData = fidlData.ForBindings("syzkaller")
 	root := Root{}
 	libraryName := types.ParseLibraryName(fidlData.Name)
 	c := compiler{

@@ -1,0 +1,42 @@
+library test.name;
+
+// This file tests that all the bindings respect BindingsDenylist, and that the
+// attribute works on all declaration kinds. Each binding should include the
+// AllBindings constant and one other declaration. The associations are chosen
+// to make this work (e.g. libfuzzer needs to have a protocol, only certain
+// bindings emit anything for an empty service, etc.).
+
+[BindingsDenylist = "there_are_no_bindings_with_this_name"]
+const uint32 AllBindings = 0;
+
+[BindingsDenylist = "cpp, dart, go, libfuzzer, llcpp, rust"]
+bits OnlySyzkaller {
+    A = 1;
+};
+
+[BindingsDenylist = "cpp, go, libfuzzer, llcpp, rust, syzkaller"]
+enum OnlyDart {
+    A = 1;
+};
+
+[BindingsDenylist = "cpp, dart, libfuzzer, llcpp, rust, syzkaller"]
+struct OnlyGo {
+};
+
+[BindingsDenylist = "cpp, dart, go, libfuzzer, llcpp, syzkaller"]
+table OnlyRust {
+};
+
+[BindingsDenylist = "cpp, dart, go, libfuzzer, rust, syzkaller"]
+union OnlyLlcpp {
+    1: uint32 x;
+};
+
+[BindingsDenylist = "cpp, dart, go, llcpp, rust, syzkaller"]
+protocol OnlyLibfuzzer {
+    LibfuzzerNeedsNonemptyProtocol() -> ();
+};
+
+[BindingsDenylist = "dart, go, libfuzzer, llcpp, rust, syzkaller"]
+service OnlyHlcpp {
+};

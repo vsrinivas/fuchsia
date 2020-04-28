@@ -1235,9 +1235,13 @@ func compile(r types.Root, namespaceFormatter func(types.LibraryIdentifier, stri
 }
 
 func CompileHL(r types.Root) Root {
-	return compile(r, formatNamespace)
+	return compile(r.ForBindings("cpp"), formatNamespace)
 }
 
 func CompileLL(r types.Root) Root {
-	return compile(r, formatLLNamespace)
+	return compile(r.ForBindings("llcpp"), formatLLNamespace)
+}
+
+func CompileLibFuzzer(r types.Root) Root {
+	return compile(r.ForBindings("libfuzzer"), formatNamespace)
 }

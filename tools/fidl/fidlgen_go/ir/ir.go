@@ -998,6 +998,7 @@ func joinLibraryIdentifier(lib types.LibraryIdentifier, sep string) string {
 
 // Compile translates parsed FIDL IR into golang backend IR for code generation.
 func Compile(fidlData types.Root) Root {
+	fidlData = fidlData.ForBindings("go")
 	libraryName := types.ParseLibraryName(fidlData.Name)
 	libraryPath := compileLibraryIdentifier(libraryName)
 

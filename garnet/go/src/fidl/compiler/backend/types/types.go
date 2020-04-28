@@ -460,6 +460,21 @@ func (el Attributes) Transports() map[string]bool {
 	return transports
 }
 
+// BindingsDenylistIncludes returns true if the comma-separated BindingsDenyList
+// attribute includes targetLanguage (meaning the bindings for targetLanguage
+// should not emit this declaration).
+func (el Attributes) BindingsDenylistIncludes(targetLanguage string) bool {
+	raw, ok := el.LookupAttribute("BindingsDenylist")
+	if ok && raw.Value != "" {
+		for _, language := range strings.Split(raw.Value, ",") {
+			if strings.TrimSpace(language) == targetLanguage {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // TypeShape represents the shape of the type on the wire.
 // See JSON IR schema, e.g. fidlc --json-schema
 type TypeShape struct {
@@ -787,4 +802,72 @@ func (r *Root) DeclsWithDependencies() DeclMap {
 		}
 	}
 	return decls
+}
+
+// ForBindings filters out declarations that should be omitted in the given
+// language bindings based on BindingsDenylist attributes. It returns a new Root
+// and does not modify r.
+func (r *Root) ForBindings(language string) Root {
+	res := Root{
+		Name:      r.Name,
+		Libraries: r.Libraries,
+		Decls:     make(DeclMap, len(r.Decls)),
+	}
+
+	for _, v := range r.Consts {
+		if !v.BindingsDenylistIncludes(language) {
+			res.Consts = append(res.Consts, v)
+			res.Decls[v.Name] = r.Decls[v.Name]
+		}
+	}
+	for _, v := range r.Bits {
+		if !v.BindingsDenylistIncludes(language) {
+			res.Bits = append(res.Bits, v)
+			res.Decls[v.Name] = r.Decls[v.Name]
+		}
+	}
+	for _, v := range r.Enums {
+		if !v.BindingsDenylistIncludes(language) {
+			res.Enums = append(res.Enums, v)
+			res.Decls[v.Name] = r.Decls[v.Name]
+		}
+	}
+	for _, v := range r.Interfaces {
+		if !v.BindingsDenylistIncludes(language) {
+			res.Interfaces = append(res.Interfaces, v)
+			res.Decls[v.Name] = r.Decls[v.Name]
+		}
+	}
+	for _, v := range r.Services {
+		if !v.BindingsDenylistIncludes(language) {
+			res.Services = append(res.Services, v)
+			res.Decls[v.Name] = r.Decls[v.Name]
+		}
+	}
+	for _, v := range r.Structs {
+		if !v.BindingsDenylistIncludes(language) {
+			res.Structs = append(res.Structs, v)
+			res.Decls[v.Name] = r.Decls[v.Name]
+		}
+	}
+	for _, v := range r.Tables {
+		if !v.BindingsDenylistIncludes(language) {
+			res.Tables = append(res.Tables, v)
+			res.Decls[v.Name] = r.Decls[v.Name]
+		}
+	}
+	for _, v := range r.Unions {
+		if !v.BindingsDenylistIncludes(language) {
+			res.Unions = append(res.Unions, v)
+			res.Decls[v.Name] = r.Decls[v.Name]
+		}
+	}
+
+	for _, d := range r.DeclOrder {
+		if _, ok := res.Decls[d]; ok {
+			res.DeclOrder = append(res.DeclOrder, d)
+		}
+	}
+
+	return res
 }

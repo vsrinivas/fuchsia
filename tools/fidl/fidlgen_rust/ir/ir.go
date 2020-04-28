@@ -1245,6 +1245,7 @@ func (dc *derivesCompiler) fillDerivesForType(ogType types.Type) derives {
 }
 
 func Compile(r types.Root) Root {
+	r = r.ForBindings("rust")
 	root := Root{}
 	thisLibParsed := types.ParseLibraryName(r.Name)
 	c := compiler{

@@ -61,7 +61,7 @@ func (gen *FidlGenerator) GenerateSource(wr io.Writer, tree cpp.Root) error {
 
 // GenerateFidl generates all files required for the C++ libfuzzer code.
 func (gen FidlGenerator) GenerateFidl(fidl types.Root, config *types.Config, clangFormatPath string) error {
-	tree := cpp.CompileHL(fidl)
+	tree := cpp.CompileLibFuzzer(fidl)
 	prepareTree(fidl.Name, &tree)
 
 	headerPath := config.OutputBase + ".h"
