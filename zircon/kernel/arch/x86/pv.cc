@@ -1,4 +1,4 @@
-// Copyright 2018 The Fuchsia Authors
+// Copyright 2020 The Fuchsia Authors
 //
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file or at
@@ -11,9 +11,16 @@
 #include <arch/ops.h>
 #include <arch/x86.h>
 #include <arch/x86/feature.h>
+#include <arch/x86/registers.h>
+#include <arch/x86/platform_access.h>
 #include <kernel/atomic.h>
+#include <ktl/atomic.h>
 #include <vm/physmap.h>
 #include <vm/pmm.h>
+#include <zircon/types.h>
+
+// Paravirtual functions, to execute some functions in a Hypervisor-specific way.
+// The paravirtual optimizations in this file are implemented by kvm/qemu.
 
 static volatile pv_clock_boot_time* boot_time = nullptr;
 static volatile pv_clock_system_time* system_time = nullptr;
@@ -77,3 +84,42 @@ uint64_t pv_clock_get_tsc_freq() {
   }
   return tsc_khz * 1000;
 }
+
+namespace pv {
+
+static PvEoi g_pv_eoi[SMP_MAX_CPUS];
+
+PvEoi* PvEoi::get() {
+  return &g_pv_eoi[arch_curr_cpu_num()];
+}
+
+void PvEoi::Enable(MsrAccess* msr) {
+  paddr_t state_page_paddr;
+  zx_status_t status = pmm_alloc_page(0, &state_page_, &state_page_paddr);
+  ZX_ASSERT(status == ZX_OK);
+
+  arch_zero_page(paddr_to_physmap(state_page_paddr));
+  state_ = static_cast<uint64_t*>(paddr_to_physmap(state_page_paddr));
+  msr->write_msr(X86_MSR_KVM_PV_EOI_EN, state_page_paddr | X86_MSR_KVM_PV_EOI_EN_ENABLE);
+
+  enabled_.store(true, ktl::memory_order_release);
+}
+
+void PvEoi::Disable(MsrAccess* msr) {
+  // Mark as disabled before writing to the MSR; otherwise an interrupt appearing in the window
+  // between the two could fail to EOI via the legacy mechanism.
+  enabled_.store(false, ktl::memory_order_release);
+  msr->write_msr(X86_MSR_KVM_PV_EOI_EN, 0);
+  pmm_free_page(state_page_);
+}
+
+bool PvEoi::Eoi() {
+  if (!enabled_.load(ktl::memory_order_relaxed)) {
+    return false;
+  }
+
+  uint64_t old_val = atomic_swap_u64(state_, 0u);
+  return old_val != 0;
+}
+
+}  // namespace pv

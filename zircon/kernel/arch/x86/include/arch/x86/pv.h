@@ -1,4 +1,4 @@
-// Copyright 2018 The Fuchsia Authors
+// Copyright 2020 The Fuchsia Authors
 //
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file or at
@@ -7,6 +7,8 @@
 #ifndef ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_X86_PV_H_
 #define ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_X86_PV_H_
 
+#include <ktl/atomic.h>
+#include <vm/pmm.h>
 #include <zircon/types.h>
 
 static constexpr uint32_t kKvmSystemTimeMsrOld = 0x12;
@@ -54,5 +56,35 @@ static_assert(sizeof(struct pv_clock_system_time) == 32,
 zx_status_t pv_clock_init();
 bool pv_clock_is_stable();
 uint64_t pv_clock_get_tsc_freq();
+
+class MsrAccess;
+
+namespace pv {
+
+class PvEoi final {
+ public:
+  // Get the current CPU's PV_EOI state.
+  static PvEoi* get();
+
+  // Enable PV_EOI for the current CPU. After it is enabled, callers may use Eoi() rather than
+  // access a local APIC register if desired.
+  void Enable(MsrAccess* msr);
+
+  // Disable PV_EOI for the current CPU.
+  void Disable(MsrAccess* msr);
+
+  // Attempt to acknowledge and signal an end-of-interrupt (EOI) for the current CPU via a
+  // paravirtual interface. If a fast acknowledge was not available, the function returns
+  // false and the caller must signal an EOI via the legacy mechanism.
+  bool Eoi();
+
+ private:
+  vm_page_t* state_page_;
+  uint64_t* state_;
+
+  ktl::atomic<bool> enabled_;
+};
+
+}  // namespace pv
 
 #endif  // ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_X86_PV_H_

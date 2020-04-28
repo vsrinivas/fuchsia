@@ -18,6 +18,7 @@
 #include <arch/x86/hwp.h>
 #include <arch/x86/mmu.h>
 #include <arch/x86/platform_access.h>
+#include <arch/x86/pv.h>
 #include <fbl/algorithm.h>
 #include <ktl/atomic.h>
 #include <platform/pc/bootbyte.h>
@@ -265,6 +266,11 @@ void x86_cpu_feature_late_init(void) {
                     gCmdline.GetBool("kernel.x86.turbo", /*default_value=*/true)
                         ? Turbostate::ENABLED
                         : Turbostate::DISABLED);
+
+  // If we are running under a hypervisor and paravirtual EOI (PV_EOI) is available, enable it.
+  if (x86_hypervisor_has_pv_eoi()) {
+    pv::PvEoi::get()->Enable(&msr);
+  }
 }
 
 static enum x86_hypervisor_list get_hypervisor() {

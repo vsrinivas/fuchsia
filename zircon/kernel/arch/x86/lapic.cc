@@ -20,6 +20,7 @@
 #include <arch/x86/feature.h>
 #include <arch/x86/interrupts.h>
 #include <arch/x86/mp.h>
+#include <arch/x86/pv.h>
 #include <dev/interrupt.h>
 #include <vm/vm_aspace.h>
 
@@ -271,6 +272,9 @@ void apic_send_broadcast_ipi(uint8_t vector, enum apic_interrupt_delivery_mode d
 }
 
 void apic_issue_eoi(void) {
+  if (pv::PvEoi::get()->Eoi()) {
+    return;
+  }
   // Write 0 to the EOI address to issue an EOI
   lapic_reg_write(LAPIC_REG_EOI, 0);
 }

@@ -122,6 +122,10 @@
 #define X86_MSR_K7_HWCR 0xc0010015                 /* AMD Hardware Configuration */
 #define X86_MSR_K7_HWCR_CPB_DISABLE (1ull << 25)   /* Set to disable turbo ('boost') */
 
+// KVM MSRs
+#define X86_MSR_KVM_PV_EOI_EN 0x4b564d04           /* Enable paravirtual fast APIC EOI */
+#define X86_MSR_KVM_PV_EOI_EN_ENABLE (1ull << 0)
+
 /* EFLAGS/RFLAGS */
 #define X86_FLAGS_CF (1 << 0)
 #define X86_FLAGS_PF (1 << 2)
