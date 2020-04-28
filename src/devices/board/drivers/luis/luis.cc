@@ -69,6 +69,11 @@ int Luis::Thread() {
     return thrd_error;
   }
 
+  if (SpiInit() != ZX_OK) {
+    zxlogf(ERROR, "%s: SpiInit() failed", __func__);
+    return thrd_error;
+  }
+
   if (PowerInit() != ZX_OK) {
     zxlogf(ERROR, "%s: PowerInit() failed", __func__);
     return thrd_error;

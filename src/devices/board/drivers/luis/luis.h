@@ -43,6 +43,7 @@ class Luis : public ddk::Device<Luis> {
   zx_status_t I2cInit();
   zx_status_t SdioInit();
   zx_status_t PowerInit();
+  zx_status_t SpiInit();
 
   const ddk::PBusProtocolClient pbus_;
   const pdev_board_info_t board_info_;

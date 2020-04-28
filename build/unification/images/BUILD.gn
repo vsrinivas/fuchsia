@@ -479,6 +479,7 @@ aggregate_manifest("migrated-image") {
       "//src/devices/serial/drivers/ftdi:ftdi-fake-usb-manifest",
       "//src/devices/serial/drivers/usb-cdc-acm:fake-usb-cdc-acm-manifest",
       "//src/devices/serial/drivers/virtio-console:virtio_console-manifest",
+      "//src/devices/spi/drivers/dw-spi:dw-spi-manifest",
       "//src/devices/spi/drivers/mtk-spi:mtk-spi-manifest",
       "//src/devices/tests/bind-debugger-test:bind-debugger-test-driver-manifest",
       "//src/devices/tests/bind-fail-test:bind-fail-test-manifest",

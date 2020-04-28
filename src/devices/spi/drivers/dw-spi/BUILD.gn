@@ -1,11 +1,11 @@
-# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
 import("//build/config/fuchsia/rules.gni")
 import("//build/unification/images/migrated_manifest.gni")
 
-driver_module("luis") {
+driver_module("dw-spi") {
   defines = [ "_ALL_SOURCE" ]
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
@@ -13,35 +13,22 @@ driver_module("luis") {
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
-  sources = [
-    "luis-clock.cc",
-    "luis-emmc.cc",
-    "luis-gpio.cc",
-    "luis-i2c.cc",
-    "luis-power.cc",
-    "luis-sdio.cc",
-    "luis-spi.cc",
-    "luis-thermal.cc",
-    "luis-usb.cc",
-    "luis.cc",
-  ]
+  sources = [ "dw-spi.cc" ]
   deps = [
-    "//sdk/banjo/ddk.protocol.gpioimpl",
     "//sdk/banjo/ddk.protocol.platform.bus",
-    "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal_llcpp",
-    "//src/devices/lib/as370",
+    "//sdk/banjo/ddk.protocol.platform.device",
+    "//sdk/banjo/ddk.protocol.spiimpl",
     "//src/devices/lib/driver",
-    "//src/devices/usb/lib/usb",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/mmio",
-    "//zircon/public/lib/zircon-internal",
-    "//zircon/public/lib/zx",
+    "//zircon/public/lib/sync",
+    "//zircon/system/dev/lib/device-protocol-pdev",
+    "//zircon/system/dev/lib/device-protocol-platform-device",
   ]
 }
 
-migrated_manifest("luis-manifest") {
-  deps = [ ":luis" ]
+migrated_manifest("dw-spi-manifest") {
+  deps = [ ":dw-spi" ]
 }

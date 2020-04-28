@@ -52,6 +52,7 @@ __BEGIN_CDECLS
 #define PDEV_DID_GOODIX_GTX8X           37  // Goodix GTx8X touch controllers
 #define PDEV_DID_RADAR_SENSOR           38  // Radar Sensor
 #define PDEV_DID_POWER_DOMAIN_COMPOSITE 39  // Power domain, as a composite device
+#define PDEV_DID_DW_SPI                 40  // Designware SPI
 
 // QEMU emulator
 #define PDEV_VID_QEMU               1
