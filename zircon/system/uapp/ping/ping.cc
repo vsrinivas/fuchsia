@@ -18,14 +18,13 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <memory>
 
 #define USEC_TO_MSEC(x) (float(x) / 1000.0)
 
-const int MAX_PAYLOAD_SIZE_BYTES = 1400;
-
 typedef struct {
   icmphdr hdr;
-  uint8_t payload[MAX_PAYLOAD_SIZE_BYTES];
+  char payload[1];  // Variable data length.
 } __PACKED packet_t;
 
 struct Options {
@@ -59,11 +58,6 @@ struct Options {
       return false;
     }
 
-    if (payload_size_bytes >= MAX_PAYLOAD_SIZE_BYTES) {
-      fprintf(stderr, "payload size must be smaller than: %d\n", MAX_PAYLOAD_SIZE_BYTES);
-      return false;
-    }
-
     if (payload_size_bytes < min_payload_size_bytes) {
       fprintf(stderr, "payload size must be more than: %ld\n", min_payload_size_bytes);
       return false;
@@ -94,7 +88,7 @@ struct Options {
     fprintf(stderr, "\t-i interval(ms): Time interval between pings (default = 1000)\n");
     fprintf(stderr, "\t-t timeout(ms): Timeout waiting for ping response (default = 1000)\n");
     fprintf(stderr, "\t-I scope_id: IPv6 address scope ID (default = 0)\n");
-    fprintf(stderr, "\t-s size(bytes): Number of payload bytes (default = %ld, max 1400)\n",
+    fprintf(stderr, "\t-s size(bytes): Number of payload bytes (default = %ld)\n",
             payload_size_bytes);
     fprintf(stderr, "\t-h: View this help message\n\n");
     return -1;
@@ -293,22 +287,26 @@ int main(int argc, char** argv) {
   }
 
   uint16_t sequence = 1;
-  packet_t packet, received_packet;
+
+  size_t sent_packet_size = offsetof(packet_t, payload) + options.payload_size_bytes;
+  std::unique_ptr<uint8_t[]> sent(new uint8_t[sent_packet_size]),
+      rcvd(new uint8_t[sent_packet_size]);
+  auto packet = reinterpret_cast<packet_t*>(sent.get());
+  auto received_packet = reinterpret_cast<packet_t*>(rcvd.get());
+
   ssize_t r = 0;
-  ssize_t sent_packet_size = 0;
   const zx_ticks_t ticks_per_usec = zx_ticks_per_second() / 1000000;
 
   while (options.count-- > 0) {
-    memset(&packet, 0, sizeof(packet));
-    packet.hdr.type = type;
-    packet.hdr.code = 0;
-    packet.hdr.un.echo.id = 0;
-    packet.hdr.un.echo.sequence = htons(sequence++);
-    strcpy(reinterpret_cast<char*>(packet.payload), ping_message);
+    memset(packet, 0, sent_packet_size);
+    packet->hdr.type = type;
+    packet->hdr.code = 0;
+    packet->hdr.un.echo.id = 0;
+    packet->hdr.un.echo.sequence = htons(sequence++);
+    strcpy(packet->payload, ping_message);
     // Netstack will overwrite the checksum
     zx_ticks_t before = zx_ticks_get();
-    sent_packet_size = sizeof(packet.hdr) + options.payload_size_bytes;
-    r = sendto(s, &packet, sent_packet_size, 0, info->ai_addr, info->ai_addrlen);
+    r = sendto(s, packet, sent_packet_size, 0, info->ai_addr, info->ai_addrlen);
     if (r < 0) {
       fprintf(stderr, "ping: Could not send packet\n");
       return -1;
@@ -320,10 +318,10 @@ int main(int argc, char** argv) {
     switch (poll(&fd, 1, static_cast<int>(options.timeout_msec))) {
       case 1:
         if (fd.revents & POLLIN) {
-          r = recvfrom(s, &received_packet, sizeof(received_packet), 0, NULL, NULL);
-          if (!ValidateReceivedPacket(packet, sent_packet_size, received_packet, r, options)) {
+          r = recvfrom(s, received_packet, sent_packet_size, 0, NULL, NULL);
+          if (!ValidateReceivedPacket(*packet, sent_packet_size, *received_packet, r, options)) {
             fprintf(stderr, "ping: Received packet didn't match sent packet: %d\n",
-                    packet.hdr.un.echo.sequence);
+                    packet->hdr.un.echo.sequence);
           }
           break;
         } else {
@@ -343,7 +341,7 @@ int main(int argc, char** argv) {
       return -1;
     }
     zx_ticks_t after = zx_ticks_get();
-    int seq = ntohs(packet.hdr.un.echo.sequence);
+    int seq = ntohs(packet->hdr.un.echo.sequence);
     uint64_t usec = (after - before) / ticks_per_usec;
     stats.Update(usec);
     printf("%" PRIu64 " bytes from %s : icmp_seq=%d rtt=%.3f ms\n", r, options.host, seq,
