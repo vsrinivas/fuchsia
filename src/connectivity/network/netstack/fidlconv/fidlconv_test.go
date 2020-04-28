@@ -165,3 +165,39 @@ func TestForwardingEntryAndTcpipRouteConversions(t *testing.T) {
 		}
 	}
 }
+
+func TestToNetSocketAddress(t *testing.T) {
+	var expectIpv4 fidlnet.SocketAddress
+	expectIpv4.SetIpv4(fidlnet.Ipv4SocketAddress{
+		Address: fidlnet.Ipv4Address{
+			Addr: [4]uint8{192, 168, 0, 1},
+		},
+		Port: 8080,
+	})
+	converted := ToNetSocketAddress(tcpip.FullAddress{
+		NIC:  0,
+		Addr: "\xC0\xA8\x00\x01",
+		Port: 8080,
+	})
+	if converted != expectIpv4 {
+		t.Errorf("bad IPv4 conversion.\nExpected: %+v\nGot: %+v", expectIpv4, converted)
+	}
+
+	var expectIpv6 fidlnet.SocketAddress
+	expectIpv6.SetIpv6(fidlnet.Ipv6SocketAddress{
+		Address: fidlnet.Ipv6Address{
+			Addr: [16]uint8{0x20, 0x01, 0x48, 0x60, 0x48, 0x60, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x88, 0x88},
+		},
+		Port:      8080,
+		ZoneIndex: 2,
+	})
+	converted = ToNetSocketAddress(tcpip.FullAddress{
+		NIC:  2,
+		Addr: "\x20\x01\x48\x60\x48\x60\x00\x00\x00\x00\x00\x00\x00\x00\x88\x88",
+		Port: 8080,
+	})
+
+	if converted != expectIpv6 {
+		t.Errorf("bad IPv6 conversion.\nExpected: %+v\nGot: %+v", expectIpv6, converted)
+	}
+}

@@ -5,7 +5,13 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.net.name") {
-  sources = [ "lookup_admin.fidl" ]
+  sdk_category = "partner"
+  api = "fuchsia.net.name.api"
+  sources = [
+    "dns.fidl",
+    "lookup_admin.fidl",
+    "server_watcher.fidl",
+  ]
   public_deps = [
     "//zircon/system/fidl/fuchsia-net",
     "//zircon/vdso/zx",

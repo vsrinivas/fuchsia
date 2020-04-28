@@ -13,6 +13,7 @@ import (
 
 	"fidl/fuchsia/hardware/ethernet"
 	"fidl/fuchsia/net"
+	"fidl/fuchsia/net/name"
 	"fidl/fuchsia/net/stack"
 	"fidl/fuchsia/netstack"
 
@@ -256,6 +257,28 @@ func TestFuchsiaNetStack(t *testing.T) {
 			t.Fatalf("got ni.isIpForwardingEnabled() = %v, want = t", enabled)
 		}
 	})
+}
+
+func TestDnsServerWatcher(t *testing.T) {
+	ns := newNetstack(t)
+	watcherCollection, err := newDnsServerWatcherCollection(ns.dnsClient)
+	if err != nil {
+		t.Fatalf("failed to create watcher collection: %s", err)
+	}
+	defer watcherCollection.Close()
+	ni := stackImpl{ns: ns, dnsWatchers: watcherCollection}
+	request, watcher, err := name.NewDnsServerWatcherWithCtxInterfaceRequest()
+	if err != nil {
+		t.Fatalf("failed to create watcher request: %s", err)
+	}
+	defer watcher.Close()
+	err = ni.GetDnsServerWatcher(context.Background(), request)
+	if err != nil {
+		t.Fatalf("failed to get watcher: %s", err)
+	}
+	if watcherCollection.bindingSet.Size() != 1 {
+		t.Fatalf("failed to install DnsServerWatcher binding expected 1 binding in set, got %d", watcherCollection.bindingSet.Size())
+	}
 }
 
 func (ni *stackImpl) isPacketFilterEnabled(id uint64) (bool, error) {

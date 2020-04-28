@@ -46,6 +46,30 @@ func ToNetIpAddress(addr tcpip.Address) netfidl.IpAddress {
 	return out
 }
 
+func ToNetSocketAddress(addr tcpip.FullAddress) netfidl.SocketAddress {
+	var out netfidl.SocketAddress
+	switch l := len(addr.Addr); l {
+	case net.IPv4len:
+		var ipv4 netfidl.Ipv4Address
+		copy(ipv4.Addr[:], addr.Addr)
+		out.SetIpv4(netfidl.Ipv4SocketAddress{
+			Address: ipv4,
+			Port:    addr.Port,
+		})
+	case net.IPv6len:
+		var ipv6 netfidl.Ipv6Address
+		copy(ipv6.Addr[:], addr.Addr)
+		out.SetIpv6(netfidl.Ipv6SocketAddress{
+			Address:   ipv6,
+			Port:      addr.Port,
+			ZoneIndex: uint64(addr.NIC),
+		})
+	default:
+		panic(fmt.Sprintf("invalid IP address length = %d: %x", l, addr.Addr))
+	}
+	return out
+}
+
 func ToTCPIPSubnet(sn netfidl.Subnet) tcpip.Subnet {
 	a := toNet(sn.Addr)
 	m := net.CIDRMask(int(sn.PrefixLen), len(a)*8)

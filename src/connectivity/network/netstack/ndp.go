@@ -388,7 +388,7 @@ func (n *ndpDispatcher) start(ctx context.Context) {
 					lifetime = -1
 				}
 
-				n.ns.dnsClient.UpdateExpiringServers(servers, lifetime)
+				n.ns.dnsClient.UpdateNdpServers(servers, lifetime)
 
 			default:
 				panic(fmt.Sprintf("unrecognized event type: %T", event))

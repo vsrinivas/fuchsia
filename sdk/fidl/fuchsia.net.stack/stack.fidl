@@ -6,6 +6,7 @@ library fuchsia.net.stack;
 
 using fuchsia.hardware.ethernet;
 using fuchsia.net;
+using fuchsia.net.name;
 using fuchsia.posix.socket;
 
 /// A list of IP addresses for an interface.
@@ -186,6 +187,9 @@ protocol Stack {
 
     /// Disable IP Forwarding.
     DisableIpForwarding() -> ();
+
+    /// Get a [`fuchsia.net.name/DnsServerWatcher`].
+    GetDnsServerWatcher(request<fuchsia.net.name.DnsServerWatcher> watcher);
 
     // Events
 

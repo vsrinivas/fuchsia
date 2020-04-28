@@ -7,6 +7,7 @@ package netstack
 import (
 	"context"
 	"fmt"
+	"netstack/dns"
 	"syscall/zx"
 	"syscall/zx/dispatch"
 	"syscall/zx/zxwait"
@@ -582,9 +583,9 @@ func TestLinkDown(t *testing.T) {
 	}
 }
 
-func containsFullAddress(list []tcpip.FullAddress, item tcpip.FullAddress) bool {
+func containsFullAddress(list []dns.Server, item tcpip.FullAddress) bool {
 	for _, i := range list {
-		if i == item {
+		if i.Address == item {
 			return true
 		}
 	}

@@ -5,10 +5,12 @@
 package dns
 
 import (
+	"fidl/fuchsia/net/name"
 	"testing"
 	"time"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"gvisor.dev/gvisor/pkg/tcpip"
 )
 
@@ -24,16 +26,16 @@ const (
 var (
 	addr1 = tcpip.FullAddress{
 		Addr: "\xfe\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01",
-		Port: defaultDNSPort,
+		Port: DefaultDNSPort,
 	}
 	// Address is the same as addr1, but differnt port.
 	addr2 = tcpip.FullAddress{
 		Addr: "\xfe\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01",
-		Port: defaultDNSPort + 1,
+		Port: DefaultDNSPort + 1,
 	}
 	addr3 = tcpip.FullAddress{
 		Addr: "\xfe\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02",
-		Port: defaultDNSPort + 2,
+		Port: DefaultDNSPort + 2,
 	}
 	// Should assume default port of 53.
 	addr4 = tcpip.FullAddress{
@@ -42,33 +44,84 @@ var (
 	}
 	addr5 = tcpip.FullAddress{
 		Addr: "\x0a\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x05",
-		Port: defaultDNSPort,
+		Port: DefaultDNSPort,
 	}
 	addr6 = tcpip.FullAddress{
 		Addr: "\x0a\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x06",
-		Port: defaultDNSPort,
+		Port: DefaultDNSPort,
 	}
 	addr7 = tcpip.FullAddress{
 		Addr: "\x0a\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x07",
-		Port: defaultDNSPort,
+		Port: DefaultDNSPort,
 	}
 	addr8 = tcpip.FullAddress{
 		Addr: "\x0a\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x08",
-		Port: defaultDNSPort,
+		Port: DefaultDNSPort,
 	}
 	addr9 = tcpip.FullAddress{
 		Addr: "\x0a\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x09",
-		Port: defaultDNSPort,
+		Port: DefaultDNSPort,
 	}
 	addr10 = tcpip.FullAddress{
 		Addr: "\x0a\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x0a",
-		Port: defaultDNSPort,
+		Port: DefaultDNSPort,
 	}
 )
 
-func containsFullAddress(list []tcpip.FullAddress, item tcpip.FullAddress) bool {
+func toNDPConfiguredServer(addr tcpip.FullAddress) Server {
+	return Server{
+		Address: addr,
+		Source: name.DnsServerSource{
+			I_dnsServerSourceTag: name.DnsServerSourceNdp,
+			Ndp: name.NdpDnsServerSource{
+				SourceInterface:        uint64(addr.NIC),
+				SourceInterfacePresent: addr.NIC != 0,
+			},
+		},
+	}
+}
+
+func toDHCPConfiguredServer(addr tcpip.Address, sourceNIC tcpip.NICID) Server {
+	return Server{
+		Address: tcpip.FullAddress{
+			Addr: addr,
+			Port: DefaultDNSPort,
+		},
+		Source: name.DnsServerSource{
+			I_dnsServerSourceTag: name.DnsServerSourceDhcp,
+			Dhcp: name.DhcpDnsServerSource{
+				SourceInterface:        uint64(sourceNIC),
+				SourceInterfacePresent: sourceNIC != 0,
+			},
+		},
+	}
+}
+
+func toStaticConfiguredServer(addr tcpip.Address) Server {
+	return Server{
+		Address: tcpip.FullAddress{
+			Addr: addr,
+			Port: DefaultDNSPort,
+		},
+		Source: name.DnsServerSource{
+			I_dnsServerSourceTag: name.DnsServerSourceStaticSource,
+		},
+	}
+}
+
+func containsConfiguredServer(list []Server, item Server) bool {
 	for _, i := range list {
 		if i == item {
+			return true
+		}
+	}
+
+	return false
+}
+
+func containsFullAddress(list []Server, item tcpip.FullAddress) bool {
+	for _, i := range list {
+		if i.Address == item {
 			return true
 		}
 	}
@@ -88,16 +141,18 @@ func containsAddress(list []tcpip.Address, item tcpip.Address) bool {
 
 func TestGetServersCacheNoDuplicates(t *testing.T) {
 	addr3 := addr3
-	addr3.Port = defaultDNSPort
+	addr3.Port = DefaultDNSPort
 	addr4WithPort := addr4
-	addr4WithPort.Port = defaultDNSPort
+	addr4WithPort.Port = DefaultDNSPort
 
 	d := makeServersConfig()
 
-	d.UpdateExpiringServers([]tcpip.FullAddress{addr1, addr2, addr2, addr3, addr4, addr8}, longLifetime)
-	runtimeServers1 := []tcpip.Address{addr5.Addr, addr5.Addr, addr6.Addr, addr7.Addr}
-	runtimeServers2 := []tcpip.Address{addr6.Addr, addr7.Addr, addr8.Addr, addr9.Addr}
-	d.SetRuntimeServers([]*[]tcpip.Address{&runtimeServers1, &runtimeServers2})
+	d.UpdateNdpServers([]tcpip.FullAddress{addr1, addr2, addr2, addr3, addr4, addr8}, longLifetime)
+	dhcpServers1 := []tcpip.Address{addr5.Addr, addr5.Addr, addr6.Addr, addr7.Addr}
+	dhcpServers2 := []tcpip.Address{addr6.Addr, addr7.Addr, addr8.Addr, addr9.Addr}
+	d.UpdateDhcpServers(1, &dhcpServers1)
+	d.UpdateDhcpServers(2, &dhcpServers2)
+
 	d.SetDefaultServers([]tcpip.Address{addr3.Addr, addr9.Addr, addr10.Addr, addr10.Addr})
 	servers := d.GetServersCache()
 	if !containsFullAddress(servers, addr1) {
@@ -137,47 +192,50 @@ func TestGetServersCacheNoDuplicates(t *testing.T) {
 
 func TestGetServersCacheOrdering(t *testing.T) {
 	addr4WithPort := addr4
-	addr4WithPort.Port = defaultDNSPort
+	addr4WithPort.Port = DefaultDNSPort
 
 	d := makeServersConfig()
 
-	d.UpdateExpiringServers([]tcpip.FullAddress{addr1, addr2, addr3, addr4}, longLifetime)
-	runtimeServers1 := []tcpip.Address{addr5.Addr, addr6.Addr}
-	runtimeServers2 := []tcpip.Address{addr7.Addr, addr8.Addr}
-	d.SetRuntimeServers([]*[]tcpip.Address{&runtimeServers1, &runtimeServers2})
+	d.UpdateNdpServers([]tcpip.FullAddress{addr1, addr2, addr3, addr4}, longLifetime)
+	dhcpServers1 := []tcpip.Address{addr5.Addr, addr6.Addr}
+	dhcpServers2 := []tcpip.Address{addr7.Addr, addr8.Addr}
+	d.UpdateDhcpServers(1, &dhcpServers1)
+	d.UpdateDhcpServers(2, &dhcpServers2)
+
 	d.SetDefaultServers([]tcpip.Address{addr9.Addr, addr10.Addr})
 	servers := d.GetServersCache()
-	expiringServers := servers[:4]
-	runtimeServers := servers[4:8]
+	ndpServers := servers[:4]
+	dhcpServers := servers[4:8]
 	defaultServers := servers[8:]
-	if !containsFullAddress(expiringServers, addr1) {
-		t.Errorf("expected %+v to be in the expiring server cache, got = %+v", addr1, expiringServers)
+
+	if !containsConfiguredServer(ndpServers, toNDPConfiguredServer(addr1)) {
+		t.Errorf("expected %+v to be in the NDP server cache, got = %+v", addr1, ndpServers)
 	}
-	if !containsFullAddress(expiringServers, addr2) {
-		t.Errorf("expected %+v to be in the expiring server cache, got = %+v", addr2, expiringServers)
+	if !containsConfiguredServer(ndpServers, toNDPConfiguredServer(addr2)) {
+		t.Errorf("expected %+v to be in the NDP server cache, got = %+v", addr2, ndpServers)
 	}
-	if !containsFullAddress(expiringServers, addr3) {
-		t.Errorf("expected %+v to be in the expiring server cache, got = %+v", addr3, expiringServers)
+	if !containsConfiguredServer(ndpServers, toNDPConfiguredServer(addr3)) {
+		t.Errorf("expected %+v to be in the NDP server cache, got = %+v", addr3, ndpServers)
 	}
-	if !containsFullAddress(expiringServers, addr4WithPort) {
-		t.Errorf("expected %+v to be in the expiring server cache, got = %+v", addr4WithPort, expiringServers)
+	if !containsConfiguredServer(ndpServers, toNDPConfiguredServer(addr4WithPort)) {
+		t.Errorf("expected %+v to be in the NDP server cache, got = %+v", addr4WithPort, ndpServers)
 	}
-	if !containsFullAddress(runtimeServers, addr5) {
-		t.Errorf("expected %+v to be in the runtime server cache, got = %+v", addr5, runtimeServers)
+	if !containsConfiguredServer(dhcpServers, toDHCPConfiguredServer(addr5.Addr, 1)) {
+		t.Errorf("expected %+v to be in the DHCP server cache, got = %+v", addr5, dhcpServers)
 	}
-	if !containsFullAddress(runtimeServers, addr6) {
-		t.Errorf("expected %+v to be in the runtime server cache, got = %+v", addr6, runtimeServers)
+	if !containsConfiguredServer(dhcpServers, toDHCPConfiguredServer(addr6.Addr, 1)) {
+		t.Errorf("expected %+v to be in the DHCP server cache, got = %+v", addr6, dhcpServers)
 	}
-	if !containsFullAddress(runtimeServers, addr7) {
-		t.Errorf("expected %+v to be in the runtime server cache, got = %+v", addr7, runtimeServers)
+	if !containsConfiguredServer(dhcpServers, toDHCPConfiguredServer(addr7.Addr, 2)) {
+		t.Errorf("expected %+v to be in the DHCP server cache, got = %+v", addr7, dhcpServers)
 	}
-	if !containsFullAddress(runtimeServers, addr8) {
-		t.Errorf("expected %+v to be in the runtime server cache, got = %+v", addr8, runtimeServers)
+	if !containsConfiguredServer(dhcpServers, toDHCPConfiguredServer(addr8.Addr, 2)) {
+		t.Errorf("expected %+v to be in the DHCP server cache, got = %+v", addr8, dhcpServers)
 	}
-	if !containsFullAddress(defaultServers, addr9) {
+	if !containsConfiguredServer(defaultServers, toStaticConfiguredServer(addr9.Addr)) {
 		t.Errorf("expected %+v to be in the default server cache, got = %+v", addr9, defaultServers)
 	}
-	if !containsFullAddress(defaultServers, addr10) {
+	if !containsConfiguredServer(defaultServers, toStaticConfiguredServer(addr10.Addr)) {
 		t.Errorf("expected %+v to be in the default server cache, got = %+v", addr10, defaultServers)
 	}
 	if l := len(servers); l != 10 {
@@ -189,7 +247,7 @@ func TestRemoveAllServersWithNIC(t *testing.T) {
 	addr3 := addr3
 	addr3.NIC = addr4.NIC
 	addr4WithPort := addr4
-	addr4WithPort.Port = defaultDNSPort
+	addr4WithPort.Port = DefaultDNSPort
 
 	d := makeServersConfig()
 
@@ -237,10 +295,12 @@ func TestRemoveAllServersWithNIC(t *testing.T) {
 	}
 
 	d.SetDefaultServers([]tcpip.Address{addr5.Addr, addr6.Addr})
-	runtimeServers1 := []tcpip.Address{addr7.Addr, addr8.Addr}
-	runtimeServers2 := []tcpip.Address{addr9.Addr, addr10.Addr}
-	d.SetRuntimeServers([]*[]tcpip.Address{&runtimeServers1, &runtimeServers2})
-	d.UpdateExpiringServers([]tcpip.FullAddress{addr1, addr2, addr3, addr4}, longLifetime)
+	dhcpServers1 := []tcpip.Address{addr7.Addr, addr8.Addr}
+	dhcpServers2 := []tcpip.Address{addr9.Addr, addr10.Addr}
+	d.UpdateDhcpServers(1, &dhcpServers1)
+	d.UpdateDhcpServers(2, &dhcpServers2)
+
+	d.UpdateNdpServers([]tcpip.FullAddress{addr1, addr2, addr3, addr4}, longLifetime)
 	expectAllAddresses()
 
 	// Should do nothing since a NIC is not specified.
@@ -290,7 +350,7 @@ func TestGetServersCache(t *testing.T) {
 	addr3 := addr3
 	addr3.NIC = addr4.NIC
 	addr4WithPort := addr4
-	addr4WithPort.Port = defaultDNSPort
+	addr4WithPort.Port = DefaultDNSPort
 
 	d.SetDefaultServers([]tcpip.Address{addr5.Addr, addr6.Addr})
 	servers := d.GetServersCache()
@@ -308,9 +368,11 @@ func TestGetServersCache(t *testing.T) {
 		t.FailNow()
 	}
 
-	runtimeServers1 := []tcpip.Address{addr7.Addr, addr8.Addr}
-	runtimeServers2 := []tcpip.Address{addr9.Addr, addr10.Addr}
-	d.SetRuntimeServers([]*[]tcpip.Address{&runtimeServers1, &runtimeServers2})
+	dhcpServers1 := []tcpip.Address{addr7.Addr, addr8.Addr}
+	dhcpServers2 := []tcpip.Address{addr9.Addr, addr10.Addr}
+	d.UpdateDhcpServers(1, &dhcpServers1)
+	d.UpdateDhcpServers(2, &dhcpServers2)
+
 	servers = d.GetServersCache()
 	if !containsFullAddress(servers, addr5) {
 		t.Errorf("expected %+v to be in the server cache, got = %+v", addr5, servers)
@@ -338,7 +400,7 @@ func TestGetServersCache(t *testing.T) {
 		t.FailNow()
 	}
 
-	d.UpdateExpiringServers([]tcpip.FullAddress{addr1, addr2, addr3, addr4}, longLifetime)
+	d.UpdateNdpServers([]tcpip.FullAddress{addr1, addr2, addr3, addr4}, longLifetime)
 	servers = d.GetServersCache()
 	if !containsFullAddress(servers, addr1) {
 		t.Errorf("expected %+v to be in the server cache, got = %+v", addr1, servers)
@@ -375,7 +437,10 @@ func TestGetServersCache(t *testing.T) {
 	}
 
 	// Should get the same results since there were no updates.
-	if diff := cmp.Diff(servers, d.GetServersCache()); diff != "" {
+	if diff := cmp.Diff(servers, d.GetServersCache(), cmpopts.IgnoreUnexported(name.DnsServerSource{},
+		name.StaticDnsServerSource{},
+		name.DhcpDnsServerSource{},
+		name.NdpDnsServerSource{})); diff != "" {
 		t.Errorf("d.GetServersCache() mismatch (-want +got):\n%s", diff)
 	}
 
@@ -383,7 +448,9 @@ func TestGetServersCache(t *testing.T) {
 		t.FailNow()
 	}
 
-	d.SetRuntimeServers(nil)
+	d.UpdateDhcpServers(1, nil)
+	d.UpdateDhcpServers(2, nil)
+
 	servers = d.GetServersCache()
 	if !containsFullAddress(servers, addr1) {
 		t.Errorf("expected %+v to be in the server cache, got = %+v", addr1, servers)
@@ -446,20 +513,20 @@ func TestGetServersCache(t *testing.T) {
 		t.FailNow()
 	}
 
-	d.UpdateExpiringServers([]tcpip.FullAddress{addr1, addr2}, 0)
+	d.UpdateNdpServers([]tcpip.FullAddress{addr1, addr2}, 0)
 	servers = d.GetServersCache()
 	if l := len(servers); l != 0 {
 		t.Errorf("got len(servers) = %d, want = 0; servers = %+v", l, servers)
 	}
 }
 
-func TestExpiringServersDefaultDNSPort(t *testing.T) {
+func TestNDPServersDefaultDNSPort(t *testing.T) {
 	d := makeServersConfig()
 
 	addr4WithPort := addr4
-	addr4WithPort.Port = defaultDNSPort
+	addr4WithPort.Port = DefaultDNSPort
 
-	d.UpdateExpiringServers([]tcpip.FullAddress{addr4}, longLifetime)
+	d.UpdateNdpServers([]tcpip.FullAddress{addr4}, longLifetime)
 	servers := d.GetServersCache()
 	if !containsFullAddress(servers, addr4WithPort) {
 		t.Errorf("expected %+v to be in the server cache, got = %+v", addr4WithPort, servers)
@@ -469,10 +536,10 @@ func TestExpiringServersDefaultDNSPort(t *testing.T) {
 	}
 }
 
-func TestExpiringServersUpdateWithDuplicates(t *testing.T) {
+func TestNDPServersUpdateWithDuplicates(t *testing.T) {
 	d := makeServersConfig()
 
-	d.UpdateExpiringServers([]tcpip.FullAddress{addr1, addr1, addr1}, longLifetime)
+	d.UpdateNdpServers([]tcpip.FullAddress{addr1, addr1, addr1}, longLifetime)
 	servers := d.GetServersCache()
 	if !containsFullAddress(servers, addr1) {
 		t.Errorf("expected %+v to be in the server cache, got = %+v", addr1, servers)
@@ -482,10 +549,10 @@ func TestExpiringServersUpdateWithDuplicates(t *testing.T) {
 	}
 }
 
-func TestExpiringServersAddAndUpdate(t *testing.T) {
+func TestNDPServersAddAndUpdate(t *testing.T) {
 	d := makeServersConfig()
 
-	d.UpdateExpiringServers([]tcpip.FullAddress{addr1, addr2}, longLifetime)
+	d.UpdateNdpServers([]tcpip.FullAddress{addr1, addr2}, longLifetime)
 	servers := d.GetServersCache()
 	if !containsFullAddress(servers, addr1) {
 		t.Errorf("expected %+v to be in the server cache, got = %+v", addr1, servers)
@@ -502,7 +569,7 @@ func TestExpiringServersAddAndUpdate(t *testing.T) {
 	}
 
 	// Refresh addr1 and addr2, add addr3.
-	d.UpdateExpiringServers([]tcpip.FullAddress{addr1, addr3, addr2}, longLifetime)
+	d.UpdateNdpServers([]tcpip.FullAddress{addr1, addr3, addr2}, longLifetime)
 	servers = d.GetServersCache()
 	if !containsFullAddress(servers, addr1) {
 		t.Errorf("expected %+v to be in the server cache, got = %+v", addr1, servers)
@@ -522,7 +589,7 @@ func TestExpiringServersAddAndUpdate(t *testing.T) {
 	}
 
 	// Lifetime of 0 should remove servers if they exist.
-	d.UpdateExpiringServers([]tcpip.FullAddress{addr4, addr1}, 0)
+	d.UpdateNdpServers([]tcpip.FullAddress{addr4, addr1}, 0)
 	servers = d.GetServersCache()
 	if containsFullAddress(servers, addr1) {
 		t.Errorf("expected %+v to not be in the server cache, got = %+v", addr1, servers)
@@ -541,12 +608,12 @@ func TestExpiringServersAddAndUpdate(t *testing.T) {
 	}
 }
 
-func TestExpiringServersExpireImmediatelyTimer(t *testing.T) {
+func TestNDPServersExpireImmediatelyTimer(t *testing.T) {
 	t.Parallel()
 
 	d := makeServersConfig()
 
-	d.UpdateExpiringServers([]tcpip.FullAddress{addr1, addr2}, shortLifetime)
+	d.UpdateNdpServers([]tcpip.FullAddress{addr1, addr2}, shortLifetime)
 	for elapsedTime := time.Duration(0); elapsedTime <= shortLifetimeTimeout; elapsedTime += incrementalTimeout {
 		time.Sleep(incrementalTimeout)
 		servers := d.GetServersCache()
@@ -562,19 +629,19 @@ func TestExpiringServersExpireImmediatelyTimer(t *testing.T) {
 	}
 }
 
-func TestExpiringServersExpireAfterUpdate(t *testing.T) {
+func TestNDPServersExpireAfterUpdate(t *testing.T) {
 	t.Parallel()
 
 	d := makeServersConfig()
 
-	d.UpdateExpiringServers([]tcpip.FullAddress{addr1, addr2}, longLifetime)
+	d.UpdateNdpServers([]tcpip.FullAddress{addr1, addr2}, longLifetime)
 	servers := d.GetServersCache()
 	if l := len(servers); l != 2 {
 		t.Fatalf("got len(servers) = %d, want = 2; servers = %+v", l, servers)
 	}
 
 	// addr2 and addr3 should expire, but addr1 should stay.
-	d.UpdateExpiringServers([]tcpip.FullAddress{addr2, addr3}, shortLifetime)
+	d.UpdateNdpServers([]tcpip.FullAddress{addr2, addr3}, shortLifetime)
 	for elapsedTime := time.Duration(0); elapsedTime <= shortLifetimeTimeout; elapsedTime += incrementalTimeout {
 		time.Sleep(incrementalTimeout)
 		servers = d.GetServersCache()
@@ -611,19 +678,19 @@ func TestExpiringServersExpireAfterUpdate(t *testing.T) {
 	}
 }
 
-func TestExpiringServersInfiniteLifetime(t *testing.T) {
+func TestNDPServersInfiniteLifetime(t *testing.T) {
 	t.Parallel()
 
 	d := makeServersConfig()
 
-	d.UpdateExpiringServers([]tcpip.FullAddress{addr1, addr2}, middleLifetime)
+	d.UpdateNdpServers([]tcpip.FullAddress{addr1, addr2}, middleLifetime)
 	servers := d.GetServersCache()
 	if l := len(servers); l != 2 {
 		t.Fatalf("got len(servers) = %d, want = 2; servers = %+v", l, servers)
 	}
 
 	// addr1 should expire, but addr2 and addr3 should be valid forever.
-	d.UpdateExpiringServers([]tcpip.FullAddress{addr2, addr3}, -1)
+	d.UpdateNdpServers([]tcpip.FullAddress{addr2, addr3}, -1)
 	for elapsedTime := time.Duration(0); elapsedTime < middleLifetimeTimeout; elapsedTime += incrementalTimeout {
 		time.Sleep(incrementalTimeout)
 		servers = d.GetServersCache()
@@ -663,7 +730,7 @@ func TestExpiringServersInfiniteLifetime(t *testing.T) {
 		t.FailNow()
 	}
 
-	d.UpdateExpiringServers([]tcpip.FullAddress{addr2, addr3}, middleLifetime)
+	d.UpdateNdpServers([]tcpip.FullAddress{addr2, addr3}, middleLifetime)
 	for elapsedTime := time.Duration(0); elapsedTime <= middleLifetimeTimeout; elapsedTime += incrementalTimeout {
 		time.Sleep(incrementalTimeout)
 		servers = d.GetServersCache()

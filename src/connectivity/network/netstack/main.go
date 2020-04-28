@@ -241,6 +241,7 @@ func Main() {
 		nameProvider: np,
 		stack:        stk,
 	}
+
 	ndpDisp.ns = ns
 	ndpDisp.start(ctx)
 
@@ -351,11 +352,18 @@ func Main() {
 		},
 	)
 
+	dnsWatchers, err := newDnsServerWatcherCollection(ns.dnsClient)
+	if err != nil {
+		syslog.Fatalf("could not create DNS server watcher collection: %s", err)
+	}
+	ns.dnsClient.SetOnServersChanged(dnsWatchers.NotifyServersChanged)
+
 	var stackService stack.StackService
 	appCtx.OutgoingService.AddService(
 		stack.StackName,
 		&stack.StackWithCtxStub{Impl: &stackImpl{
-			ns: ns,
+			ns:          ns,
+			dnsWatchers: dnsWatchers,
 		}},
 		func(s fidl.Stub, c zx.Channel, ctx fidl.Context) error {
 			_, err := stackService.BindingSet.AddToDispatcher(s, c, ns.dispatcher, nil)

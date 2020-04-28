@@ -135,6 +135,11 @@ impl<C: StackContext> StackFidlWorker<C> {
             StackRequest::DisableIpForwarding { responder: _ } => {
                 // TODO(toshik)
             }
+            StackRequest::GetDnsServerWatcher { watcher, control_handle: _ } => {
+                let () = watcher
+                    .close_with_epitaph(fuchsia_zircon::Status::NOT_SUPPORTED)
+                    .unwrap_or_else(|e| debug!("failed to close DNS server watcher {:?}", e));
+            }
         }
     }
 }

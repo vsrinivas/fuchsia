@@ -17,6 +17,7 @@ import (
 
 	"fidl/fuchsia/hardware/ethernet"
 	"fidl/fuchsia/net"
+	"fidl/fuchsia/net/name"
 	"fidl/fuchsia/net/stack"
 	"fidl/fuchsia/netstack"
 
@@ -27,7 +28,8 @@ import (
 )
 
 type stackImpl struct {
-	ns *Netstack
+	ns          *Netstack
+	dnsWatchers *dnsServerWatcherCollection
 }
 
 func getInterfaceInfo(nicInfo tcpipstack.NICInfo) stack.InterfaceInfo {
@@ -420,6 +422,10 @@ func (ni *stackImpl) EnableIpForwarding(fidl.Context) error {
 func (ni *stackImpl) DisableIpForwarding(fidl.Context) error {
 	ni.ns.stack.SetForwarding(false)
 	return nil
+}
+
+func (ni *stackImpl) GetDnsServerWatcher(ctx_ fidl.Context, watcher name.DnsServerWatcherWithCtxInterfaceRequest) error {
+	return ni.dnsWatchers.Bind(watcher)
 }
 
 type logImpl struct {

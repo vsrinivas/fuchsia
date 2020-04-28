@@ -538,16 +538,16 @@ func (ifs *ifState) dhcpAcquired(oldAddr, newAddr tcpip.AddressWithPrefix, confi
 		ifs.ns.onInterfacesChanged()
 	}
 
-	if updated := ifs.setDNSServers(config.DNS); updated {
+	ifs.mu.Lock()
+	if updated := ifs.setDNSServersLocked(config.DNS); updated {
 		syslog.Infof("NIC %s: setting DNS servers: %s", name, config.DNS)
-		ifs.ns.dnsClient.SetRuntimeServers(ifs.ns.getRuntimeDNSServerRefs())
 	}
+	ifs.mu.Unlock()
 }
 
-// setDNSServers updates the receiver's dnsServers if necessary and returns
+// setDNSServersLocked updates the receiver's dnsServers if necessary and returns
 // whether they were updated.
-func (ifs *ifState) setDNSServers(servers []tcpip.Address) bool {
-	ifs.mu.Lock()
+func (ifs *ifState) setDNSServersLocked(servers []tcpip.Address) bool {
 	sameDNS := len(ifs.mu.dnsServers) == len(servers)
 	if sameDNS {
 		for i := range ifs.mu.dnsServers {
@@ -559,8 +559,8 @@ func (ifs *ifState) setDNSServers(servers []tcpip.Address) bool {
 	}
 	if !sameDNS {
 		ifs.mu.dnsServers = servers
+		ifs.ns.dnsClient.UpdateDhcpServers(ifs.nicid, &ifs.mu.dnsServers)
 	}
-	ifs.mu.Unlock()
 
 	return !sameDNS
 }
@@ -617,6 +617,7 @@ func (ifs *ifState) stateChange(s link.State) {
 
 		// Remove DNS servers through ifs.
 		ifs.ns.dnsClient.RemoveAllServersWithNIC(ifs.nicid)
+		ifs.setDNSServersLocked(nil)
 
 		// TODO(crawshaw): more cleanup to be done here:
 		// 	- remove link endpoint
@@ -689,44 +690,7 @@ func (ifs *ifState) stateChange(s link.State) {
 	ifs.mu.state = s
 	ifs.mu.Unlock()
 
-	ifs.ns.dnsClient.SetRuntimeServers(ifs.ns.getRuntimeDNSServerRefs())
 	ifs.ns.onInterfacesChanged()
-}
-
-// Return a slice of references to each NIC's DNS servers.
-// The caller takes ownership of the returned slice.
-func (ns *Netstack) getRuntimeDNSServerRefs() []*[]tcpip.Address {
-	nicInfos := ns.stack.NICInfo()
-	refs := make([]*[]tcpip.Address, 0, len(nicInfos))
-	for _, nicInfo := range nicInfos {
-		ifs := nicInfo.Context.(*ifState)
-		ifs.mu.Lock()
-		refs = append(refs, &ifs.mu.dnsServers)
-		ifs.mu.Unlock()
-	}
-	return refs
-}
-
-func (ns *Netstack) getdnsServers() []tcpip.Address {
-	defaultServers := ns.dnsClient.GetDefaultServers()
-	uniqServers := make(map[tcpip.Address]struct{})
-
-	nicInfos := ns.stack.NICInfo()
-	for _, nicInfo := range nicInfos {
-		ifs := nicInfo.Context.(*ifState)
-		ifs.mu.Lock()
-		for _, server := range ifs.mu.dnsServers {
-			uniqServers[server] = struct{}{}
-		}
-		ifs.mu.Unlock()
-	}
-
-	out := make([]tcpip.Address, 0, len(defaultServers)+len(uniqServers))
-	out = append(out, defaultServers...)
-	for server := range uniqServers {
-		out = append(out, server)
-	}
-	return out
 }
 
 var nameProviderErrorLogged uint32 = 0

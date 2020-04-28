@@ -1,0 +1,23 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.net.name;
+
+/// Provides a hanging get interface to watch for DNS servers configuration.
+protocol DnsServerWatcher {
+    /// Returns a list of DNS servers.
+    ///
+    /// First call always returns a snapshot of the current list of servers or blocks if an empty
+    /// list would be returned. Subsequent calls will block until the list of servers changes.
+    ///
+    /// The list of servers changes over time by configuration or network topology changes,
+    /// expiration, etc. Callers must repeatedly call `WatchServers` and replace any previously
+    /// returned `servers` with new ones to avoid using stale or expired entries.
+    ///
+    /// It is invalid to call `WatchServers` while a previous call is still pending. Doing so will
+    /// cause the `DnsServerWatcher` channel to be closed.
+    ///
+    /// - response `servers` The list of servers to use for DNS resolution, in priority order.
+    WatchServers() -> (vector<DnsServer>:MAX servers);
+};

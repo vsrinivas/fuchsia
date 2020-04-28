@@ -10,6 +10,7 @@ fidl("fuchsia.net.stack") {
   sources = [ "stack.fidl" ]
   public_deps = [
     "//sdk/fidl/fuchsia.hardware.ethernet",
+    "//sdk/fidl/fuchsia.net.name",
     "//zircon/system/fidl/fuchsia-net",
     "//zircon/system/fidl/fuchsia-posix-socket",
   ]

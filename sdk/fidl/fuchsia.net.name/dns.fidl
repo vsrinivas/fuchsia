@@ -1,0 +1,43 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.net.name;
+
+using fuchsia.net;
+
+/// Extra information about statically set DNS servers.
+table StaticDnsServerSource {
+};
+
+/// Extra information about DNS servers discovered through DHCP.
+table DhcpDnsServerSource {
+    /// The interface index over which this server was discovered.
+    1: uint64 source_interface;
+};
+
+/// Extra information about DNS servers discovered through NDP.
+table NdpDnsServerSource {
+    /// The interface index over which this server was discovered.
+    1: uint64 source_interface;
+};
+
+/// The configuration source for a [`fuchsia.net.name/DnsServer`].
+union DnsServerSource {
+    /// The server is statically configured through
+    /// [`fuchsia.net.name/LookupAdmin.SetDefaultServers`].
+    1: StaticDnsServerSource static_source;
+    /// The server was discovered through DHCP.
+    2: DhcpDnsServerSource dhcp;
+    /// The server was discovered through an NDP Router Advertisement.
+    3: NdpDnsServerSource ndp;
+};
+
+/// A DNS server configuration.
+table DnsServer {
+    /// The server's address, must be provided.
+    1: fuchsia.net.SocketAddress address;
+    /// The configuration source for this server. Defaults to
+    /// [`fuchsia.net.name/DnsServerSource.static_source`].
+    2: DnsServerSource source;
+};

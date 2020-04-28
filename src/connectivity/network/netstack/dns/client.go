@@ -37,8 +37,8 @@ import (
 	"gvisor.dev/gvisor/pkg/waiter"
 )
 
-// defaultDNSPort is the default port used by DNS servers.
-const defaultDNSPort = 53
+// DefaultDNSPort is the default port used by DNS servers.
+const DefaultDNSPort = 53
 
 // Client is a DNS client.
 type Client struct {
@@ -261,23 +261,24 @@ func (c *Client) tryOneName(name dnsmessage.Name, qtype dnsmessage.Type) (dnsmes
 
 	for i := 0; i < c.config.attempts; i++ {
 		for _, server := range servers {
-			msg, err := c.exchange(server, name, qtype, c.config.timeout)
+			serverAddress := server.Address
+			msg, err := c.exchange(serverAddress, name, qtype, c.config.timeout)
 			if err != nil {
 				lastErr = &Error{
 					Err:    err.Error(),
 					Name:   name.String(),
-					Server: &server,
+					Server: &serverAddress,
 				}
 				continue
 			}
 			// libresolv continues to the next server when it receives
 			// an invalid referral response. See golang.org/issue/15434.
 			if msg.RCode == dnsmessage.RCodeSuccess && !msg.Authoritative && !msg.RecursionAvailable && len(msg.Answers) == 0 && len(msg.Additionals) == 0 {
-				lastErr = &Error{Err: "lame referral", Name: name.String(), Server: &server}
+				lastErr = &Error{Err: "lame referral", Name: name.String(), Server: &serverAddress}
 				continue
 			}
 
-			cname, rrs, err := answer(name, server, msg, qtype)
+			cname, rrs, err := answer(name, serverAddress, msg, qtype)
 			// If answer errored for rcodes dnsRcodeSuccess or dnsRcodeNameError,
 			// it means the response in msg was not useful and trying another
 			// server probably won't help. Return now in those cases.
