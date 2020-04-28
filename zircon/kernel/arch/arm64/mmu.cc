@@ -500,10 +500,15 @@ zx_status_t ArmArchVmAspace::SplitLargePage(vaddr_t vaddr, uint index_shift, uin
     new_page_table[i] = mapped_paddr | attrs;
   }
 
+  // Ensure all zeroing becomes visible prior to page table installation.
   __dmb(ARM_MB_ISHST);
 
   page_table[pt_index] = paddr | MMU_PTE_L012_DESCRIPTOR_TABLE;
   LTRACEF("pte %p[%#" PRIxPTR "] = %#" PRIx64 "\n", page_table, pt_index, page_table[pt_index]);
+
+  // ensure that the update is observable from hardware page table walkers before TLB
+  // operations can occur.
+  __dsb(ARM_MB_ISHST);
 
   FlushTLBEntry(vaddr, false);
 
@@ -590,8 +595,9 @@ ssize_t ArmArchVmAspace::UnmapPageTable(vaddr_t vaddr, vaddr_t vaddr_rel, size_t
         LTRACEF("pte %p[0x%lx] = 0 (was page table)\n", page_table, index);
         page_table[index] = MMU_PTE_DESCRIPTOR_INVALID;
 
-        // ensure that the update is observable from hardware page table walkers
-        __dmb(ARM_MB_ISHST);
+        // ensure that the update is observable from hardware page table walkers before TLB
+        // operations can occur.
+        __dsb(ARM_MB_ISHST);
 
         // flush the non terminal TLB entry
         FlushTLBEntry(vaddr, false);
@@ -602,8 +608,9 @@ ssize_t ArmArchVmAspace::UnmapPageTable(vaddr_t vaddr, vaddr_t vaddr_rel, size_t
       LTRACEF("pte %p[0x%lx] = 0\n", page_table, index);
       page_table[index] = MMU_PTE_DESCRIPTOR_INVALID;
 
-      // ensure that the update is observable from hardware page table walkers
-      __dmb(ARM_MB_ISHST);
+      // ensure that the update is observable from hardware page table walkers before TLB
+      // operations can occur.
+      __dsb(ARM_MB_ISHST);
 
       // flush the terminal TLB entry
       FlushTLBEntry(vaddr, true);
@@ -755,8 +762,9 @@ zx_status_t ArmArchVmAspace::ProtectPageTable(vaddr_t vaddr_in, vaddr_t vaddr_re
       LTRACEF("pte %p[%#" PRIxPTR "] = %#" PRIx64 "\n", page_table, index, pte);
       page_table[index] = pte;
 
-      // ensure that the update is observable from hardware page table walkers
-      __dmb(ARM_MB_ISHST);
+      // ensure that the update is observable from hardware page table walkers before TLB
+      // operations can occur.
+      __dsb(ARM_MB_ISHST);
 
       // flush the terminal TLB entry
       FlushTLBEntry(vaddr, true);
