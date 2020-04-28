@@ -146,7 +146,7 @@ void main() {
     String serverIp;
 
     if (proto == Protocol.udp) {
-      protocolOption = '-u';
+      protocolOption = '--udp';
     }
 
     if (deviceLocal) {
@@ -163,7 +163,7 @@ void main() {
     if (send && !recv) {
       // This reverses the default direction of traffic flow such that
       // the target device sends traffic.
-      dirOption = '-R';
+      dirOption = '--reverse';
     }
 
     if (deviceLocal) {
@@ -178,15 +178,15 @@ void main() {
     var msgSizes = {64, 1024, 1400};
     for (var size in msgSizes) {
       var cmdArgs = [
-        '-c',
+        '--client',
         serverIp,
-        '-p',
+        '--port',
         '$port',
-        '-l',
+        '--length',
         '$size',
-        '-J',
+        '--json',
         protocolOption,
-        '-b',
+        '--bitrate',
         '$bwValue',
         dirOption,
         '--get-server-output'
@@ -218,15 +218,17 @@ void main() {
 
   Future<void> startIperfServer(PerfTestHelper helper) async {
     // Start iperf server on the target device.
-    await helper.sl4fDriver.ssh.start('/bin/run $componentUrl -s -p $port -J',
+    await helper.sl4fDriver.ssh.start(
+        '/bin/run $componentUrl --server --port $port --json',
         mode: ProcessStartMode.detached);
     // Poll until the server is accepting connections.
     for (var i = 0; i < 5; i++) {
       await Future.delayed(Duration(seconds: 1));
-      // Check whether the iperf server is accepting connections by running the
-      // iperf client on localhost with 1KB transmit ('-n 1').
-      final result = await helper.sl4fDriver.ssh
-          .run('/bin/run $componentUrl -c 127.0.0.1 -p $port -n 1');
+      // Check whether the iperf server is accepting connections by running
+      // the iperf client on localhost and telling it to transfer only a
+      // minimal amount of data (by passing '--bytes 1').
+      final result = await helper.sl4fDriver.ssh.run(
+          '/bin/run $componentUrl --client 127.0.0.1 --port $port --bytes 1');
       if (result.exitCode == 0) {
         return;
       }
