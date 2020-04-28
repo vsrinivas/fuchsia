@@ -44,6 +44,21 @@ const (
 	TraceLevel
 )
 
+// Copied from Go log so callers don't need to also import log.
+const (
+	Ldate         = 1 << iota             // the date in the local time zone: 2009/01/23
+	Ltime                                 // the time in the local time zone: 01:23:23
+	Lmicroseconds                         // microsecond resolution: 01:23:23.123123.  assumes Ltime.
+	Llongfile                             // full file name and line number: /a/b/c/d.go:23
+	Lshortfile                            // final file name element and line number: d.go:23. overrides Llongfile
+	LUTC                                  // if Ldate or Ltime is set, use UTC rather than the local time zone
+	Lmsgprefix                            // move the "prefix" from the beginning of the line to before the message
+	LstdFlags     = Ldate | Lmicroseconds // initial values for the standard logger
+)
+
+// StartDepth defines the starting point for the call depth when entering the logger.
+const startDepth = 2
+
 // String returns the string representation of the LogLevel.
 func (l *LogLevel) String() string {
 	switch *l {
@@ -99,108 +114,148 @@ func NewLogger(loggerLevel LogLevel, color color.Color, outWriter, errWriter io.
 	}
 	l := &Logger{
 		LoggerLevel:   loggerLevel,
-		goLogger:      goLog.New(outWriter, "", goLog.Ldate|goLog.Lmicroseconds),
-		goErrorLogger: goLog.New(errWriter, "", goLog.Ldate|goLog.Lmicroseconds),
+		goLogger:      goLog.New(outWriter, "", LstdFlags),
+		goErrorLogger: goLog.New(errWriter, "", LstdFlags),
 		color:         color,
 		prefix:        prefix,
 	}
 	return l
 }
 
-func (l *Logger) log(prefix, format string, a ...interface{}) {
-	l.goLogger.Printf("%s%s%s", l.prefix, prefix, fmt.Sprintf(format, a...))
+func (l *Logger) SetFlags(flags int) {
+	l.goLogger.SetFlags(flags)
+	l.goErrorLogger.SetFlags(flags)
+}
+
+func (l *Logger) log(callDepth int, prefix, format string, a ...interface{}) {
+	l.goLogger.Output(callDepth+1, fmt.Sprintf("%s%s%s", l.prefix, prefix, fmt.Sprintf(format, a...)))
 }
 
 // Logf logs the string based on the loglevel of the string and the LogLevel of the logger.
-func (l *Logger) Logf(loglevel LogLevel, format string, a ...interface{}) {
+func (l *Logger) logf(callDepth int, loglevel LogLevel, format string, a ...interface{}) {
 	switch loglevel {
 	case InfoLevel:
-		l.Infof(format, a...)
+		l.infof(callDepth+1, format, a...)
 	case DebugLevel:
-		l.Debugf(format, a...)
+		l.debugf(callDepth+1, format, a...)
 	case TraceLevel:
-		l.Tracef(format, a...)
+		l.tracef(callDepth+1, format, a...)
 	case WarningLevel:
-		l.Warningf(format, a...)
+		l.warningf(callDepth+1, format, a...)
 	case ErrorLevel:
-		l.Errorf(format, a...)
+		l.errorf(callDepth+1, format, a...)
 	case FatalLevel:
-		l.Fatalf(format, a...)
+		l.fatalf(callDepth+1, format, a...)
 	default:
 		panic(fmt.Sprintf("Undefined loglevel: %v, log message: %s", loglevel, fmt.Sprintf(format, a...)))
 	}
 }
 
 func Logf(ctx context.Context, logLevel LogLevel, format string, a ...interface{}) {
+	logf(startDepth, ctx, logLevel, format, a...)
+}
+
+func logf(callDepth int, ctx context.Context, logLevel LogLevel, format string, a ...interface{}) {
 	if v, ok := ctx.Value(globalLoggerKeyType{}).(*Logger); ok && v != nil {
-		v.Logf(logLevel, format, a...)
+		v.logf(callDepth+1, logLevel, format, a...)
 	} else {
-		goLog.Printf(format, a...)
+		goLog.Output(callDepth+1, fmt.Sprintf(format, a...))
 	}
 }
 
 // Infof logs the string if the logger is at least InfoLevel.
 func (l *Logger) Infof(format string, a ...interface{}) {
+	l.infof(startDepth, format, a...)
+}
+
+// infof logs the string if the logger is at least InfoLevel.
+func (l *Logger) infof(callDepth int, format string, a ...interface{}) {
 	if l.LoggerLevel >= InfoLevel {
-		l.log("", format, a...)
+		l.log(callDepth+1, "", format, a...)
 	}
 }
 
 func Infof(ctx context.Context, format string, a ...interface{}) {
-	Logf(ctx, InfoLevel, format, a...)
+	logf(startDepth, ctx, InfoLevel, format, a...)
 }
 
 // Debugf logs the string if the logger is at least DebugLevel.
 func (l *Logger) Debugf(format string, a ...interface{}) {
+	l.debugf(startDepth, format, a...)
+}
+
+// Debugf logs the string if the logger is at least DebugLevel.
+func (l *Logger) debugf(callDepth int, format string, a ...interface{}) {
 	if l.LoggerLevel >= DebugLevel {
-		l.log(l.color.Cyan("DEBUG: "), format, a...)
+		l.log(callDepth+1, l.color.Cyan("DEBUG: "), format, a...)
 	}
 }
 
 func Debugf(ctx context.Context, format string, a ...interface{}) {
-	Logf(ctx, DebugLevel, format, a...)
+	logf(startDepth, ctx, DebugLevel, format, a...)
 }
 
 // Tracef logs the string if the logger is at least TraceLevel.
 func (l *Logger) Tracef(format string, a ...interface{}) {
+	l.tracef(startDepth, format, a...)
+}
+
+// Tracef logs the string if the logger is at least TraceLevel.
+func (l *Logger) tracef(callDepth int, format string, a ...interface{}) {
 	if l.LoggerLevel >= TraceLevel {
-		l.log(l.color.Blue("TRACE: "), format, a...)
+		l.log(callDepth+1, l.color.Blue("TRACE: "), format, a...)
 	}
 }
 
 func Tracef(ctx context.Context, format string, a ...interface{}) {
-	Logf(ctx, TraceLevel, format, a...)
+	logf(startDepth, ctx, TraceLevel, format, a...)
 }
 
 // Warningf logs the string if the logger is at least WarningLevel.
 func (l *Logger) Warningf(format string, a ...interface{}) {
+	l.warningf(startDepth, format, a...)
+}
+
+// Warningf logs the string if the logger is at least WarningLevel.
+func (l *Logger) warningf(callDepth int, format string, a ...interface{}) {
 	if l.LoggerLevel >= WarningLevel {
-		l.log(l.color.Yellow("WARN: "), format, a...)
+		l.log(callDepth+1, l.color.Yellow("WARN: "), format, a...)
 	}
 }
 
 func Warningf(ctx context.Context, format string, a ...interface{}) {
-	Logf(ctx, WarningLevel, format, a...)
+	logf(startDepth, ctx, WarningLevel, format, a...)
 }
 
 // Errorf logs the string if the logger is at least ErrorLevel.
 func (l *Logger) Errorf(format string, a ...interface{}) {
+	l.errorf(startDepth, format, a...)
+}
+
+// Errorf logs the string if the logger is at least ErrorLevel.
+func (l *Logger) errorf(callDepth int, format string, a ...interface{}) {
 	if l.LoggerLevel >= ErrorLevel {
-		l.goErrorLogger.Printf("%s%s%s", l.prefix, l.color.Red("ERROR: "), fmt.Sprintf(format, a...))
+		l.goErrorLogger.Output(callDepth+1, fmt.Sprintf("%s%s%s", l.prefix, l.color.Red("ERROR: "), fmt.Sprintf(format, a...)))
 	}
 }
 
 func Errorf(ctx context.Context, format string, a ...interface{}) {
-	Logf(ctx, ErrorLevel, format, a...)
+	logf(startDepth, ctx, ErrorLevel, format, a...)
 }
 
 // Fatalf logs the string if the logger is at least FatalLevel.
 func (l *Logger) Fatalf(format string, a ...interface{}) {
+	l.fatalf(startDepth, format, a...)
+}
+
+// Fatalf logs the string if the logger is at least FatalLevel.
+func (l *Logger) fatalf(callDepth int, format string, a ...interface{}) {
 	if l.LoggerLevel >= FatalLevel {
-		l.goErrorLogger.Fatalf("%s%s%s", l.prefix, l.color.Red("FATAL: "), fmt.Sprintf(format, a...))
+		l.goErrorLogger.Output(callDepth+1, fmt.Sprintf("%s%s%s", l.prefix, l.color.Red("FATAL: "), fmt.Sprintf(format, a...)))
+		os.Exit(1)
 	}
 }
 
 func Fatalf(ctx context.Context, format string, a ...interface{}) {
-	Logf(ctx, FatalLevel, format, a...)
+	logf(startDepth, ctx, FatalLevel, format, a...)
 }

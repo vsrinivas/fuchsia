@@ -5,9 +5,11 @@
 package logger
 
 import (
+	"bytes"
 	"context"
-	goLog "log"
+	"fmt"
 	"os"
+	"regexp"
 	"testing"
 
 	"go.fuchsia.dev/fuchsia/tools/lib/color"
@@ -32,7 +34,7 @@ func TestNewLogger(t *testing.T) {
 	logger := NewLogger(InfoLevel, color.NewColor(color.ColorAuto), nil, nil, prefix)
 	logFlags, errFlags := logger.goLogger.Flags(), logger.goErrorLogger.Flags()
 
-	correctFlags := (goLog.Ldate|goLog.Lmicroseconds)
+	correctFlags := (Ldate | Lmicroseconds)
 
 	if logFlags != correctFlags || errFlags != correctFlags {
 		t.Fatalf("New loggers should have the proper flags set for both standard and error logging. Expected: \n%+v and %+v\n but got: \n%+v and %+v", correctFlags, correctFlags, logFlags, errFlags)
@@ -41,5 +43,42 @@ func TestNewLogger(t *testing.T) {
 	logPrefix := logger.prefix
 	if logPrefix != prefix {
 		t.Fatalf("New loggers should use the specified prefix on creation. Expected: \n%+v\n but got: \n%+v", prefix, logPrefix)
+	}
+}
+
+func TestNewLoggerSetFlags(t *testing.T) {
+	flags := Ldate | Lshortfile
+	logger := NewLogger(InfoLevel, color.NewColor(color.ColorAuto), nil, nil, "")
+	logger.SetFlags(flags)
+	logFlags, errFlags := logger.goLogger.Flags(), logger.goErrorLogger.Flags()
+
+	if logFlags != flags || errFlags != flags {
+		t.Fatalf("Loggers should have the flags passed into `SetFlags`. Expected: \n%+v and %+v\n but got: \n%+v and %+v", flags, flags, logFlags, errFlags)
+	}
+}
+
+func TestCallDepth(t *testing.T) {
+	prefix := "cdprefix "
+	infoLog, errLog := "Info log", "Error log"
+	outBuffer, errBuffer := new(bytes.Buffer), new(bytes.Buffer)
+	logger := NewLogger(DebugLevel, color.NewColor(color.ColorAuto), outBuffer, errBuffer, prefix)
+	logger.SetFlags(Ldate | Lshortfile)
+
+	logger.Infof(infoLog)
+	logger.Errorf(errLog)
+
+	outBytes, errBytes := outBuffer.Bytes(), errBuffer.Bytes()
+
+	matched, err := regexp.Match(
+		fmt.Sprintf(`\d{4}\/\d{2}\/\d{2} logger_test.go:\d+: %s%s`, prefix, infoLog),
+		outBytes)
+	if err != nil || !matched {
+		t.Fatalf("Stdout output was not as expected. Got: %s", outBytes)
+	}
+	matched, err = regexp.Match(
+		fmt.Sprintf(`\d{4}\/\d{2}\/\d{2} logger_test.go:\d+: %s%s%s`, prefix, regexp.QuoteMeta(logger.color.Red("ERROR: ")), errLog),
+		errBytes)
+	if err != nil || !matched {
+		t.Fatalf("Stderr output was not as expeced. Got: %s", errBytes)
 	}
 }
