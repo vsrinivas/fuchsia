@@ -23,8 +23,8 @@
 #include "src/developer/feedback/testing/stubs/cobalt_logger_factory.h"
 #include "src/developer/feedback/testing/stubs/product_info_provider.h"
 #include "src/developer/feedback/testing/unit_test_fixture.h"
-#include "src/developer/feedback/utils/cobalt.h"
-#include "src/developer/feedback/utils/cobalt_event.h"
+#include "src/developer/feedback/utils/cobalt/event.h"
+#include "src/developer/feedback/utils/cobalt/logger.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/split_string.h"
 
@@ -59,7 +59,7 @@ class ProductInfoProviderTest : public UnitTestFixture,
   Annotations GetProductInfo(const AnnotationKeys& allowlist = {},
                              const zx::duration timeout = zx::sec(1)) {
     SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
-    Cobalt cobalt(dispatcher(), services());
+    cobalt::Logger cobalt(dispatcher(), services());
 
     ProductInfoProvider provider(dispatcher(), services(), timeout, &cobalt);
     auto promise = provider.GetAnnotations(allowlist);
@@ -223,7 +223,7 @@ TEST_F(ProductInfoProviderTest, Check_CobaltLogsTimeout) {
 
   ASSERT_TRUE(product_info.empty());
   EXPECT_THAT(ReceivedCobaltEvents(), ElementsAreArray({
-                                          CobaltEvent(TimedOutData::kProductInfo),
+                                          cobalt::Event(cobalt::TimedOutData::kProductInfo),
                                       }));
 }
 

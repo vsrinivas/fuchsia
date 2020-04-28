@@ -158,7 +158,7 @@ executable("cobalt_unittest") {
     "//src/developer/feedback/testing:gtest_with_syslog_main",
     "//src/developer/feedback/testing:unit_test_fixture",
     "//src/developer/feedback/testing/stubs:cobalt",
-    "//src/developer/feedback/utils:cobalt",
+    "//src/developer/feedback/utils/cobalt",
     "//src/lib/timekeeper:testing",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",

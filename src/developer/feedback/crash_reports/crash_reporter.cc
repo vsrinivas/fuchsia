@@ -20,7 +20,7 @@
 #include "src/developer/feedback/crash_reports/config.h"
 #include "src/developer/feedback/crash_reports/crash_server.h"
 #include "src/developer/feedback/crash_reports/report_util.h"
-#include "src/developer/feedback/utils/cobalt_metrics.h"
+#include "src/developer/feedback/utils/cobalt/metrics.h"
 #include "src/developer/feedback/utils/fidl/channel_provider_ptr.h"
 #include "src/developer/feedback/utils/fit/timeout.h"
 #include "src/lib/files/file.h"
@@ -124,7 +124,7 @@ void CrashReporter::File(fuchsia::feedback::CrashReport report, FileCallback cal
   if (!report.has_program_name()) {
     FX_LOGS(ERROR) << "Invalid crash report. No program name. Won't file.";
     callback(::fit::error(ZX_ERR_INVALID_ARGS));
-    info_.LogCrashState(CrashState::kDropped);
+    info_.LogCrashState(cobalt::CrashState::kDropped);
     return;
   }
   FX_LOGS(INFO) << "Generating crash report for " << report.program_name();
@@ -175,11 +175,11 @@ void CrashReporter::File(fuchsia::feedback::CrashReport report, FileCallback cal
             if (!queue_->Add(program_name, std::move(attachments), std::move(minidump),
                              annotations)) {
               FX_LOGS(ERROR) << "Error adding new report to the queue";
-              info_.LogCrashState(CrashState::kDropped);
+              info_.LogCrashState(cobalt::CrashState::kDropped);
               return ::fit::error();
             }
 
-            info_.LogCrashState(CrashState::kFiled);
+            info_.LogCrashState(cobalt::CrashState::kFiled);
             return ::fit::ok();
           })
           .then([callback = std::move(callback)](::fit::result<void>& result) {

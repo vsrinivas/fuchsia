@@ -11,7 +11,7 @@
 
 #include <memory>
 
-#include "src/developer/feedback/utils/cobalt_metrics.h"
+#include "src/developer/feedback/utils/cobalt/metrics.h"
 #include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
@@ -44,21 +44,21 @@ Cobalt::~Cobalt() {
   FX_CHECK(logger_querier_) << "logger_querier_ disconnected. Cannot reset mock_cobalt, aborting";
 
   // Reset the logger so tests can be run repeatedly.
-  FX_CHECK(logger_querier_->ResetLogger(kProjectId, LogMethod::LOG_EVENT) == ZX_OK)
+  FX_CHECK(logger_querier_->ResetLogger(cobalt::kProjectId, LogMethod::LOG_EVENT) == ZX_OK)
       << "Failed to reset EVENT events, aborting";
-  FX_CHECK(logger_querier_->ResetLogger(kProjectId, LogMethod::LOG_EVENT_COUNT) == ZX_OK)
+  FX_CHECK(logger_querier_->ResetLogger(cobalt::kProjectId, LogMethod::LOG_EVENT_COUNT) == ZX_OK)
       << "Failed to reset EVENT_COUNT events, aborting";
-  FX_CHECK(logger_querier_->ResetLogger(kProjectId, LogMethod::LOG_ELAPSED_TIME) == ZX_OK)
+  FX_CHECK(logger_querier_->ResetLogger(cobalt::kProjectId, LogMethod::LOG_ELAPSED_TIME) == ZX_OK)
       << "Failed to reset ELAPSED_TIME events, aborting";
-  FX_CHECK(logger_querier_->ResetLogger(kProjectId, LogMethod::LOG_FRAME_RATE) == ZX_OK)
+  FX_CHECK(logger_querier_->ResetLogger(cobalt::kProjectId, LogMethod::LOG_FRAME_RATE) == ZX_OK)
       << "Failed to reset FRAME_RATE events, aborting";
-  FX_CHECK(logger_querier_->ResetLogger(kProjectId, LogMethod::LOG_MEMORY_USAGE) == ZX_OK)
+  FX_CHECK(logger_querier_->ResetLogger(cobalt::kProjectId, LogMethod::LOG_MEMORY_USAGE) == ZX_OK)
       << "Failed to reset MEMORY_USAGE events, aborting";
-  FX_CHECK(logger_querier_->ResetLogger(kProjectId, LogMethod::LOG_INT_HISTOGRAM) == ZX_OK)
+  FX_CHECK(logger_querier_->ResetLogger(cobalt::kProjectId, LogMethod::LOG_INT_HISTOGRAM) == ZX_OK)
       << "Failed to reset INT_HISTOGRAM events, aborting";
-  FX_CHECK(logger_querier_->ResetLogger(kProjectId, LogMethod::LOG_COBALT_EVENT) == ZX_OK)
+  FX_CHECK(logger_querier_->ResetLogger(cobalt::kProjectId, LogMethod::LOG_COBALT_EVENT) == ZX_OK)
       << "Failed to reset COBALT_EVENT events, aborting";
-  FX_CHECK(logger_querier_->ResetLogger(kProjectId, LogMethod::LOG_COBALT_EVENTS) == ZX_OK)
+  FX_CHECK(logger_querier_->ResetLogger(cobalt::kProjectId, LogMethod::LOG_COBALT_EVENTS) == ZX_OK)
       << "Failed to reset COBALT_EVENTS events, aborting";
 }
 
@@ -85,7 +85,7 @@ std::vector<EventCodeType> Cobalt::GetAllEventsOfType(size_t num_expected,
   // returning nothing. Then to get the rest of the N sent events we must make at most N calls to
   // WatchLogs() since we're guaranteed that each call will return with at least one new event.
   for (size_t i = 0; i < num_expected + 1 && all_events.size() < num_expected; ++i) {
-    FX_CHECK(logger_querier_->WatchLogs(kProjectId, log_method, &result) == ZX_OK);
+    FX_CHECK(logger_querier_->WatchLogs(cobalt::kProjectId, log_method, &result) == ZX_OK);
     GetNewEventsOfType<EventCodeType>(result, &all_events);
   }
 

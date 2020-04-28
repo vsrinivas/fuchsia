@@ -16,7 +16,7 @@
 #include <gtest/gtest.h>
 
 #include "src/developer/feedback/testing/fakes/cobalt.h"
-#include "src/developer/feedback/utils/cobalt_metrics.h"
+#include "src/developer/feedback/utils/cobalt/metrics.h"
 #include "src/lib/fsl/vmo/strings.h"
 
 namespace feedback {
@@ -55,11 +55,11 @@ class CrashReportsIntegrationTest : public testing::Test {
 TEST_F(CrashReportsIntegrationTest, CrashReporter_SmokeTest) {
   FileCrashReport();
 
-  EXPECT_THAT(fake_cobalt_->GetAllEventsOfType<CrashState>(
+  EXPECT_THAT(fake_cobalt_->GetAllEventsOfType<cobalt::CrashState>(
                   /*num_expected=*/2, fuchsia::cobalt::test::LogMethod::LOG_EVENT),
               UnorderedElementsAreArray({
-                  CrashState::kFiled,
-                  CrashState::kArchived,
+                  cobalt::CrashState::kFiled,
+                  cobalt::CrashState::kArchived,
               }));
 }
 

@@ -2,8 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//third_party/cobalt/metrics_registry.gni")
-
 visibility = [ "//src/developer/feedback/*" ]
 
 ###############################################################################
@@ -26,31 +24,6 @@ source_set("archive") {
     "//src/lib/fxl",
     "//src/lib/syslog/cpp",
     "//third_party/zlib:minizip",
-  ]
-}
-
-source_set("cobalt") {
-  sources = [
-    "cobalt.cc",
-    "cobalt.h",
-    "cobalt_event.cc",
-    "cobalt_event.h",
-    "cobalt_metrics.h",
-  ]
-
-  public_deps = [
-    ":metrics_registry",
-    "//sdk/lib/sys/cpp",
-    "//src/lib/backoff:backoff",
-    "//src/lib/timekeeper",
-    "//src/lib/timekeeper:system",
-    "//zircon/public/lib/fit",
-    "//zircon/system/fidl/fuchsia-cobalt",
-  ]
-
-  deps = [
-    "//src/lib/fxl",
-    "//src/lib/syslog/cpp",
   ]
 }
 
@@ -134,16 +107,4 @@ source_set("utc_time_provider") {
     ":time",
     "//src/lib/syslog/cpp",
   ]
-}
-
-###############################################################################
-# METRICS
-###############################################################################
-metrics_registry("metrics_registry") {
-  # This must match the ID of our Cobalt project as specified in:
-  # third_party/cobalt_config/projects.yaml
-  project_id = 4228153068
-  namespace = "cobalt_registry"
-  generate_cc = true
-  generate_binarypb = false
 }

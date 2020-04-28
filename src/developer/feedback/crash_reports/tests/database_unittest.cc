@@ -21,7 +21,7 @@
 #include "src/developer/feedback/testing/cobalt_test_fixture.h"
 #include "src/developer/feedback/testing/stubs/cobalt_logger_factory.h"
 #include "src/developer/feedback/testing/unit_test_fixture.h"
-#include "src/developer/feedback/utils/cobalt_metrics.h"
+#include "src/developer/feedback/utils/cobalt/metrics.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/path.h"
 #include "src/lib/fsl/vmo/strings.h"
@@ -221,7 +221,7 @@ TEST_F(DatabaseTest, Check_DatabaseIsEmpty_OnPruneDatabaseWithZeroSize) {
   EXPECT_EQ(database_->GarbageCollect(), 1u);
   RunLoopUntilIdle();
   EXPECT_THAT(ReceivedCobaltEvents(), UnorderedElementsAreArray({
-                                          CobaltEvent(CrashState::kGarbageCollected),
+                                          cobalt::Event(cobalt::CrashState::kGarbageCollected),
                                       }));
 
   EXPECT_TRUE(GetAttachmentsDirContents().empty());
@@ -262,7 +262,7 @@ TEST_F(DatabaseTest, Check_DatabaseHasOnlyOneReport_OnPruneDatabaseWithSizeForOn
   EXPECT_EQ(database_->GarbageCollect(), 1u);
   RunLoopUntilIdle();
   EXPECT_THAT(ReceivedCobaltEvents(), UnorderedElementsAreArray({
-                                          CobaltEvent(CrashState::kGarbageCollected),
+                                          cobalt::Event(cobalt::CrashState::kGarbageCollected),
                                       }));
 
   // We cannot expect the set of attachments, the completed reports, and the pending reports to be
@@ -345,11 +345,12 @@ TEST_F(DatabaseTest, Check_ReportInCompleted_MarkAsUploaded) {
   // Mark a report as uploaded and check that it's in completed/.
   ASSERT_TRUE(database_->MarkAsUploaded(std::move(upload_report), "server_report_id"));
   RunLoopUntilIdle();
-  EXPECT_THAT(ReceivedCobaltEvents(), UnorderedElementsAreArray({
-                                          CobaltEvent(CrashState::kUploaded),
-                                          CobaltEvent(UploadAttemptState::kUploadAttempt, 1u),
-                                          CobaltEvent(UploadAttemptState::kUploaded, 1u),
-                                      }));
+  EXPECT_THAT(ReceivedCobaltEvents(),
+              UnorderedElementsAreArray({
+                  cobalt::Event(cobalt::CrashState::kUploaded),
+                  cobalt::Event(cobalt::UploadAttemptState::kUploadAttempt, 1u),
+                  cobalt::Event(cobalt::UploadAttemptState::kUploaded, 1u),
+              }));
 
   EXPECT_THAT(GetCompletedDirContents(), UnorderedElementsAreArray({
                                              GetMetadataFilepath(local_report_id),
@@ -366,7 +367,7 @@ TEST_F(DatabaseTest, Check_ReportInCompleted_Archive) {
   ASSERT_TRUE(database_->Archive(local_report_id));
   RunLoopUntilIdle();
   EXPECT_THAT(ReceivedCobaltEvents(), UnorderedElementsAreArray({
-                                          CobaltEvent(CrashState::kArchived),
+                                          cobalt::Event(cobalt::CrashState::kArchived),
                                       }));
 }
 
@@ -384,11 +385,12 @@ TEST_F(DatabaseTest, Attempt_GetUploadReport_AfterMarkAsCompleted) {
   // Mark a report as uploaded and check that it's in completed/.
   ASSERT_TRUE(database_->MarkAsUploaded(std::move(upload_report), "server_report_id"));
   RunLoopUntilIdle();
-  EXPECT_THAT(ReceivedCobaltEvents(), UnorderedElementsAreArray({
-                                          CobaltEvent(CrashState::kUploaded),
-                                          CobaltEvent(UploadAttemptState::kUploadAttempt, 1u),
-                                          CobaltEvent(UploadAttemptState::kUploaded, 1u),
-                                      }));
+  EXPECT_THAT(ReceivedCobaltEvents(),
+              UnorderedElementsAreArray({
+                  cobalt::Event(cobalt::CrashState::kUploaded),
+                  cobalt::Event(cobalt::UploadAttemptState::kUploadAttempt, 1u),
+                  cobalt::Event(cobalt::UploadAttemptState::kUploaded, 1u),
+              }));
 
   EXPECT_EQ(database_->GetUploadReport(local_report_id), nullptr);
 }
@@ -402,7 +404,7 @@ TEST_F(DatabaseTest, Attempt_GetUploadReport_AfterArchive) {
   ASSERT_TRUE(database_->Archive(local_report_id));
   RunLoopUntilIdle();
   EXPECT_THAT(ReceivedCobaltEvents(), UnorderedElementsAreArray({
-                                          CobaltEvent(CrashState::kArchived),
+                                          cobalt::Event(cobalt::CrashState::kArchived),
                                       }));
 
   EXPECT_EQ(database_->GetUploadReport(local_report_id), nullptr);
@@ -442,7 +444,7 @@ TEST_F(DatabaseTest, Attempt_GetUploadReport_AfterReportIsPruned) {
   EXPECT_EQ(database_->GarbageCollect(), 1u);
   RunLoopUntilIdle();
   EXPECT_THAT(ReceivedCobaltEvents(), UnorderedElementsAreArray({
-                                          CobaltEvent(CrashState::kGarbageCollected),
+                                          cobalt::Event(cobalt::CrashState::kGarbageCollected),
                                       }));
 
   // Get the |UUID| of the pruned report and attempt to get a report for it.
@@ -489,7 +491,7 @@ TEST_F(DatabaseTest, Attempt_Archive_AfterReportIsPruned) {
   EXPECT_EQ(database_->GarbageCollect(), 1u);
   RunLoopUntilIdle();
   EXPECT_THAT(ReceivedCobaltEvents(), UnorderedElementsAreArray({
-                                          CobaltEvent(CrashState::kGarbageCollected),
+                                          cobalt::Event(cobalt::CrashState::kGarbageCollected),
                                       }));
 
   // Determine the |UUID| of the pruned report and attempt to archive it.
@@ -520,11 +522,12 @@ TEST_F(DatabaseTest, Check_InspectTree_ReportUploaded) {
   database_->IncrementUploadAttempt(local_report_id);
   EXPECT_TRUE(database_->MarkAsUploaded(std::move(upload_report), "server_report_id"));
   RunLoopUntilIdle();
-  EXPECT_THAT(ReceivedCobaltEvents(), UnorderedElementsAreArray({
-                                          CobaltEvent(CrashState::kUploaded),
-                                          CobaltEvent(UploadAttemptState::kUploadAttempt, 1u),
-                                          CobaltEvent(UploadAttemptState::kUploaded, 1u),
-                                      }));
+  EXPECT_THAT(ReceivedCobaltEvents(),
+              UnorderedElementsAreArray({
+                  cobalt::Event(cobalt::CrashState::kUploaded),
+                  cobalt::Event(cobalt::UploadAttemptState::kUploadAttempt, 1u),
+                  cobalt::Event(cobalt::UploadAttemptState::kUploaded, 1u),
+              }));
   EXPECT_THAT(InspectTree(),
               ChildrenMatch(Contains(AllOf(
                   NodeMatches(NameMatches("reports")),
@@ -558,7 +561,7 @@ TEST_F(DatabaseTest, Check_InspectTree_ReportArchived) {
   EXPECT_TRUE(database_->Archive(local_report_id));
   RunLoopUntilIdle();
   EXPECT_THAT(ReceivedCobaltEvents(), UnorderedElementsAreArray({
-                                          CobaltEvent(CrashState::kArchived),
+                                          cobalt::Event(cobalt::CrashState::kArchived),
                                       }));
   EXPECT_THAT(
       InspectTree(),
@@ -591,7 +594,7 @@ TEST_F(DatabaseTest, Check_InspectTree_ReportGarbageCollected) {
   EXPECT_EQ(database_->GarbageCollect(), 1u);
   RunLoopUntilIdle();
   EXPECT_THAT(ReceivedCobaltEvents(), UnorderedElementsAreArray({
-                                          CobaltEvent(CrashState::kGarbageCollected),
+                                          cobalt::Event(cobalt::CrashState::kGarbageCollected),
                                       }));
   EXPECT_THAT(InspectTree(),
               ChildrenMatch(IsSupersetOf({
@@ -623,9 +626,10 @@ TEST_F(DatabaseTest, Check_CobaltLogsInitializeFailure) {
   EXPECT_FALSE(SetUpDatabase(/*max_size_in_kb=*/1024u));
 
   RunLoopUntilIdle();
-  EXPECT_THAT(ReceivedCobaltEvents(), UnorderedElementsAreArray({
-                                          CobaltEvent(CrashpadFunctionError::kInitializeDatabase),
-                                      }));
+  EXPECT_THAT(ReceivedCobaltEvents(),
+              UnorderedElementsAreArray({
+                  cobalt::Event(cobalt::CrashpadFunctionError::kInitializeDatabase),
+              }));
 }
 
 TEST_F(DatabaseTest, Check_CobaltLogsPrepareNewCrashReportFailure) {
@@ -639,7 +643,7 @@ TEST_F(DatabaseTest, Check_CobaltLogsPrepareNewCrashReportFailure) {
   RunLoopUntilIdle();
   EXPECT_THAT(ReceivedCobaltEvents(),
               UnorderedElementsAreArray({
-                  CobaltEvent(CrashpadFunctionError::kPrepareNewCrashReport),
+                  cobalt::Event(cobalt::CrashpadFunctionError::kPrepareNewCrashReport),
               }));
 }
 
@@ -654,7 +658,7 @@ TEST_F(DatabaseTest, Check_CobaltLogsFinishedWritingCrashReportFailure) {
   RunLoopUntilIdle();
   EXPECT_THAT(ReceivedCobaltEvents(),
               UnorderedElementsAreArray({
-                  CobaltEvent(CrashpadFunctionError::kFinishedWritingCrashReport),
+                  cobalt::Event(cobalt::CrashpadFunctionError::kFinishedWritingCrashReport),
               }));
 }
 
@@ -671,7 +675,7 @@ TEST_F(DatabaseTest, Check_CobaltLogsGetReportForUploadingFailure) {
   RunLoopUntilIdle();
   EXPECT_THAT(ReceivedCobaltEvents(),
               UnorderedElementsAreArray({
-                  CobaltEvent(CrashpadFunctionError::kGetReportForUploading),
+                  cobalt::Event(cobalt::CrashpadFunctionError::kGetReportForUploading),
               }));
 }
 
@@ -688,11 +692,12 @@ TEST_F(DatabaseTest, Check_CobaltLogsRecordUploadCompleteFailure) {
   EXPECT_FALSE(database_->MarkAsUploaded(std::move(upload_report), "server_report_id"));
 
   RunLoopUntilIdle();
-  EXPECT_THAT(ReceivedCobaltEvents(), UnorderedElementsAreArray({
-                                          CobaltEvent(CrashState::kUploaded),
-                                          CobaltEvent(UploadAttemptState::kUploaded, 0u),
-                                          CobaltEvent(CrashpadFunctionError::kRecordUploadComplete),
-                                      }));
+  EXPECT_THAT(ReceivedCobaltEvents(),
+              UnorderedElementsAreArray({
+                  cobalt::Event(cobalt::CrashState::kUploaded),
+                  cobalt::Event(cobalt::UploadAttemptState::kUploaded, 0u),
+                  cobalt::Event(cobalt::CrashpadFunctionError::kRecordUploadComplete),
+              }));
 }
 
 TEST_F(DatabaseTest, Check_CobaltLogsSkipReportUploadFailure) {
@@ -706,10 +711,11 @@ TEST_F(DatabaseTest, Check_CobaltLogsSkipReportUploadFailure) {
   EXPECT_FALSE(database_->Archive(uuid));
 
   RunLoopUntilIdle();
-  EXPECT_THAT(ReceivedCobaltEvents(), UnorderedElementsAreArray({
-                                          CobaltEvent(CrashState::kArchived),
-                                          CobaltEvent(CrashpadFunctionError::kSkipReportUpload),
-                                      }));
+  EXPECT_THAT(ReceivedCobaltEvents(),
+              UnorderedElementsAreArray({
+                  cobalt::Event(cobalt::CrashState::kArchived),
+                  cobalt::Event(cobalt::CrashpadFunctionError::kSkipReportUpload),
+              }));
 }
 
 }  // namespace

@@ -11,7 +11,7 @@
 #include <utility>
 
 #include "src/developer/feedback/testing/stubs/fidl_server.h"
-#include "src/developer/feedback/utils/cobalt_event.h"
+#include "src/developer/feedback/utils/cobalt/event.h"
 
 namespace feedback {
 namespace stubs {
@@ -21,8 +21,8 @@ class CobaltLoggerBase : public SINGLE_BINDING_STUB_FIDL_SERVER(fuchsia::cobalt,
  public:
   virtual ~CobaltLoggerBase() = default;
 
-  const CobaltEvent& LastEvent() const { return events_.back(); }
-  const std::vector<CobaltEvent>& Events() const { return events_; }
+  const cobalt::Event& LastEvent() const { return events_.back(); }
+  const std::vector<cobalt::Event>& Events() const { return events_; }
 
   bool WasLogEventCalled() const { return WasFunctionCalled(Function::LogEvent); }
   bool WasLogEventCountCalled() const { return WasFunctionCalled(Function::LogEventCount); }
@@ -78,7 +78,7 @@ class CobaltLoggerBase : public SINGLE_BINDING_STUB_FIDL_SERVER(fuchsia::cobalt,
     return was_function_called_ & static_cast<uint32_t>(f);
   }
 
-  std::vector<CobaltEvent> events_;
+  std::vector<cobalt::Event> events_;
 
   // Store whether or not a function was called in a bit field.
   uint32_t was_function_called_ = 0;

@@ -10,18 +10,18 @@
 #include <ostream>
 #include <type_traits>
 
-#include "src/developer/feedback/utils/cobalt_metrics.h"
+#include "src/developer/feedback/utils/cobalt/metrics.h"
 
 namespace feedback {
+namespace cobalt {
 
-struct CobaltEvent {
-  CobaltEvent(CobaltEventType type, uint32_t metric_id, const std::vector<uint32_t>& dimensions,
-              uint64_t count)
+struct Event {
+  Event(EventType type, uint32_t metric_id, const std::vector<uint32_t>& dimensions, uint64_t count)
       : type(type), metric_id(metric_id), dimensions(dimensions), count(count) {}
 
   // Define constructors that allow for the omission of a metric id.
   template <typename DimensionType>
-  explicit CobaltEvent(DimensionType dimension)
+  explicit Event(DimensionType dimension)
       : type(EventTypeForEventCode(dimension)),
         metric_id(MetricIDForEventCode(dimension)),
         dimensions({static_cast<uint32_t>(dimension)}),
@@ -30,7 +30,7 @@ struct CobaltEvent {
   }
 
   template <typename DimensionType>
-  CobaltEvent(DimensionType dimension, uint64_t count)
+  Event(DimensionType dimension, uint64_t count)
       : type(EventTypeForEventCode(dimension)),
         metric_id(MetricIDForEventCode(dimension)),
         dimensions({static_cast<uint32_t>(dimension)}),
@@ -40,8 +40,8 @@ struct CobaltEvent {
 
   template <typename DimensionTypesH, typename... DimensionTypesT,
             typename = std::enable_if_t<(std::is_enum_v<DimensionTypesT> && ...)>>
-  explicit CobaltEvent(DimensionTypesH dimensions_h, DimensionTypesT... dimensions_t)
-      : type(CobaltEventType::kMultidimensionalOccurrence),
+  explicit Event(DimensionTypesH dimensions_h, DimensionTypesT... dimensions_t)
+      : type(EventType::kMultidimensionalOccurrence),
         metric_id(MetricIDForEventCode(dimensions_h, dimensions_t...)),
         dimensions(std::vector<uint32_t>({
             static_cast<uint32_t>(dimensions_h),
@@ -53,7 +53,7 @@ struct CobaltEvent {
 
   std::string ToString() const;
 
-  CobaltEventType type;
+  EventType type;
   uint32_t metric_id = 0;
   std::vector<uint32_t> dimensions;
 
@@ -63,9 +63,10 @@ struct CobaltEvent {
   };
 };
 
-bool operator==(const CobaltEvent& lhs, const CobaltEvent& rhs);
-std::ostream& operator<<(std::ostream& os, const CobaltEvent& event);
+bool operator==(const Event& lhs, const Event& rhs);
+std::ostream& operator<<(std::ostream& os, const Event& event);
 
+}  // namespace cobalt
 }  // namespace feedback
 
 #endif  // SRC_DEVELOPER_FEEDBACK_UTILS_COBALT_EVENT_H_

@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/feedback/utils/cobalt.h"
-
 #include <lib/zx/time.h>
 
 #include <limits>
@@ -18,13 +16,15 @@
 #include "src/developer/feedback/testing/stubs/cobalt_logger.h"
 #include "src/developer/feedback/testing/stubs/cobalt_logger_factory.h"
 #include "src/developer/feedback/testing/unit_test_fixture.h"
-#include "src/developer/feedback/utils/cobalt_event.h"
-#include "src/developer/feedback/utils/cobalt_metrics.h"
+#include "src/developer/feedback/utils/cobalt/event.h"
+#include "src/developer/feedback/utils/cobalt/logger.h"
+#include "src/developer/feedback/utils/cobalt/metrics.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 #include "src/lib/timekeeper/test_clock.h"
 
 namespace feedback {
+namespace cobalt {
 namespace {
 
 constexpr uint32_t kMaxQueueSize = 500u;
@@ -42,7 +42,7 @@ class CobaltTest : public UnitTestFixture, public CobaltTestFixture {
   CobaltTest()
       : CobaltTestFixture(/*unit_test_fixture=*/this),
         clock_(new timekeeper::TestClock()),
-        cobalt_(std::make_unique<Cobalt>(dispatcher(), services(),
+        cobalt_(std::make_unique<Logger>(dispatcher(), services(),
                                          std::unique_ptr<timekeeper::TestClock>(clock_))) {}
 
  protected:
@@ -61,14 +61,14 @@ class CobaltTest : public UnitTestFixture, public CobaltTestFixture {
     events_.emplace_back(kEventCode, kAnotherEventCode);
   }
 
-  const std::vector<CobaltEvent> SentCobaltEvents() { return events_; }
+  const std::vector<Event> SentCobaltEvents() { return events_; }
 
   // The lifetime of |clock_| is managed by |cobalt_|.
   timekeeper::TestClock* clock_;
-  std::unique_ptr<Cobalt> cobalt_;
+  std::unique_ptr<Logger> cobalt_;
 
  private:
-  std::vector<CobaltEvent> events_;
+  std::vector<Event> events_;
 };
 
 TEST_F(CobaltTest, Check_Log) {
@@ -98,11 +98,10 @@ TEST_F(CobaltTest, Check_Timer) {
 
   RunLoopUntilIdle();
 
-  EXPECT_THAT(
-      ReceivedCobaltEvents(),
-      UnorderedElementsAreArray({
-          CobaltEvent(BugreportGenerationFlow::kSuccess, (kEndTime - kStartTime).to_usecs()),
-      }));
+  EXPECT_THAT(ReceivedCobaltEvents(),
+              UnorderedElementsAreArray({
+                  Event(BugreportGenerationFlow::kSuccess, (kEndTime - kStartTime).to_usecs()),
+              }));
 }
 
 TEST_F(CobaltTest, Check_LoggerLosesConnection_BeforeLoggingEvents) {
@@ -167,7 +166,7 @@ TEST_F(CobaltTest, Check_QueueReachesMaxSize) {
 
   CloseLoggerConnection();
 
-  std::vector<CobaltEvent> events;
+  std::vector<Event> events;
   for (size_t i = 0; i < kMaxQueueSize; ++i) {
     cobalt_->LogOccurrence(kEventCode);
     events.emplace_back(kEventCode);
@@ -237,4 +236,5 @@ TEST_F(CobaltTest, SmokeTest_NoLoggerFactoryServer) {
 }
 
 }  // namespace
+}  // namespace cobalt
 }  // namespace feedback

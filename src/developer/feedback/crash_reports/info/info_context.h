@@ -13,7 +13,7 @@
 #include <memory>
 
 #include "src/developer/feedback/crash_reports/info/inspect_manager.h"
-#include "src/developer/feedback/utils/cobalt.h"
+#include "src/developer/feedback/utils/cobalt/logger.h"
 
 namespace feedback {
 
@@ -25,11 +25,11 @@ class InfoContext {
       : inspect_manager_(root_node, clock), cobalt_(dispatcher, services) {}
 
   InspectManager &InspectManager() { return inspect_manager_; }
-  Cobalt &Cobalt() { return cobalt_; }
+  cobalt::Logger &Cobalt() { return cobalt_; }
 
  private:
   class InspectManager inspect_manager_;
-  class Cobalt cobalt_;
+  class cobalt::Logger cobalt_;
 };
 
 }  // namespace feedback

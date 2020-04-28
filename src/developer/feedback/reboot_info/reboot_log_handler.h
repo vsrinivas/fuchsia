@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_FEEDBACK_BOOT_LOG_CHECKER_REBOOT_LOG_HANDLER_H_
-#define SRC_DEVELOPER_FEEDBACK_BOOT_LOG_CHECKER_REBOOT_LOG_HANDLER_H_
+#ifndef SRC_DEVELOPER_FEEDBACK_REBOOT_INFO_REBOOT_LOG_HANDLER_H_
+#define SRC_DEVELOPER_FEEDBACK_REBOOT_INFO_REBOOT_LOG_HANDLER_H_
 
 #include <fuchsia/cobalt/cpp/fidl.h>
 #include <fuchsia/feedback/cpp/fidl.h>
@@ -16,7 +16,7 @@
 #include <memory>
 #include <string>
 
-#include "src/developer/feedback/utils/cobalt.h"
+#include "src/developer/feedback/utils/cobalt/logger.h"
 #include "src/lib/fsl/vmo/sized_vmo.h"
 #include "src/lib/fxl/functional/cancelable_callback.h"
 
@@ -35,7 +35,7 @@ namespace internal {
 
 // The information extracted from the reboot log.
 struct RebootInfo {
-  RebootReason reboot_reason;
+  cobalt::RebootReason reboot_reason;
   std::optional<zx::duration> uptime;
 };
 
@@ -66,10 +66,10 @@ class RebootLogHandler {
   // CancelableClosure so we can cancel it if we are done another way.
   fxl::CancelableClosure delayed_crash_reporting_;
 
-  Cobalt cobalt_;
+  cobalt::Logger cobalt_;
 };
 
 }  // namespace internal
 }  // namespace feedback
 
-#endif  // SRC_DEVELOPER_FEEDBACK_BOOT_LOG_CHECKER_REBOOT_LOG_HANDLER_H_
+#endif  // SRC_DEVELOPER_FEEDBACK_REBOOT_INFO_REBOOT_LOG_HANDLER_H_

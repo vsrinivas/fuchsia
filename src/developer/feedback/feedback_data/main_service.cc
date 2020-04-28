@@ -20,9 +20,9 @@ const char kConfigPath[] = "/pkg/data/config.json";
 
 }  // namespace
 
-std::unique_ptr<MainService> MainService::TryCreate(
-    async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-    inspect::Node* root_node) {
+std::unique_ptr<MainService> MainService::TryCreate(async_dispatcher_t* dispatcher,
+                                                    std::shared_ptr<sys::ServiceDirectory> services,
+                                                    inspect::Node* root_node) {
   Config config;
   if (const zx_status_t status = ParseConfig(kConfigPath, &config); status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Failed to read config file at " << kConfigPath;
@@ -35,8 +35,8 @@ std::unique_ptr<MainService> MainService::TryCreate(
 }
 
 MainService::MainService(async_dispatcher_t* dispatcher,
-                             std::shared_ptr<sys::ServiceDirectory> services,
-                             inspect::Node* root_node, Config config)
+                         std::shared_ptr<sys::ServiceDirectory> services, inspect::Node* root_node,
+                         Config config)
     : dispatcher_(dispatcher),
       inspect_manager_(root_node),
       cobalt_(dispatcher_, services),

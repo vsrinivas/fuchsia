@@ -41,8 +41,8 @@
 #include "src/developer/feedback/testing/stubs/network_reachability_provider.h"
 #include "src/developer/feedback/testing/stubs/utc_provider.h"
 #include "src/developer/feedback/testing/unit_test_fixture.h"
-#include "src/developer/feedback/utils/cobalt_event.h"
-#include "src/developer/feedback/utils/cobalt_metrics.h"
+#include "src/developer/feedback/utils/cobalt/event.h"
+#include "src/developer/feedback/utils/cobalt/metrics.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
@@ -902,12 +902,13 @@ TEST_F(CrashReporterTest, Check_CobaltAfterSuccessfulUpload) {
 
   EXPECT_TRUE(FileOneCrashReport().is_ok());
 
-  EXPECT_THAT(ReceivedCobaltEvents(), UnorderedElementsAreArray({
-                                          CobaltEvent(CrashState::kFiled),
-                                          CobaltEvent(CrashState::kUploaded),
-                                          CobaltEvent(UploadAttemptState::kUploadAttempt, 1u),
-                                          CobaltEvent(UploadAttemptState::kUploaded, 1u),
-                                      }));
+  EXPECT_THAT(ReceivedCobaltEvents(),
+              UnorderedElementsAreArray({
+                  cobalt::Event(cobalt::CrashState::kFiled),
+                  cobalt::Event(cobalt::CrashState::kUploaded),
+                  cobalt::Event(cobalt::UploadAttemptState::kUploadAttempt, 1u),
+                  cobalt::Event(cobalt::UploadAttemptState::kUploaded, 1u),
+              }));
 }
 
 TEST_F(CrashReporterTest, Check_CobaltAfterInvalidInputCrashReport) {
@@ -918,7 +919,7 @@ TEST_F(CrashReporterTest, Check_CobaltAfterInvalidInputCrashReport) {
 
   EXPECT_TRUE(FileOneEmptyCrashReport().is_error());
   EXPECT_THAT(ReceivedCobaltEvents(), UnorderedElementsAreArray({
-                                          CobaltEvent(CrashState::kDropped),
+                                          cobalt::Event(cobalt::CrashState::kDropped),
                                       }));
 }
 

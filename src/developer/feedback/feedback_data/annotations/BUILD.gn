@@ -50,7 +50,7 @@ source_set("board_info_provider") {
   public_deps = [
     ":aliases",
     "//sdk/fidl/fuchsia.hwinfo",
-    "//src/developer/feedback/utils:cobalt",
+    "//src/developer/feedback/utils/cobalt",
     "//src/developer/feedback/utils/fidl:oneshot_ptr",
   ]
 
@@ -79,7 +79,7 @@ source_set("channel_provider") {
     ":aliases",
     "//sdk/fidl/fuchsia.update.channel",
     "//sdk/lib/sys/cpp",
-    "//src/developer/feedback/utils:cobalt",
+    "//src/developer/feedback/utils/cobalt",
     "//src/lib/fxl",
     "//zircon/public/lib/async",
     "//zircon/public/lib/zx",
@@ -107,7 +107,7 @@ source_set("product_info_provider") {
   public_deps = [
     ":aliases",
     "//sdk/fidl/fuchsia.hwinfo",
-    "//src/developer/feedback/utils:cobalt",
+    "//src/developer/feedback/utils/cobalt",
     "//src/developer/feedback/utils/fidl:oneshot_ptr",
   ]
 

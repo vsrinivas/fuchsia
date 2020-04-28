@@ -12,14 +12,14 @@
 #include <vector>
 
 #include "src/developer/feedback/feedback_data/annotations/annotation_provider.h"
-#include "src/developer/feedback/utils/cobalt.h"
+#include "src/developer/feedback/utils/cobalt/logger.h"
 
 namespace feedback {
 
 // Get the annotation providers that will collect the annotations in |allowlist_|.
 std::vector<std::unique_ptr<AnnotationProvider>> GetProviders(
     async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-    zx::duration timeout, Cobalt* cobalt);
+    zx::duration timeout, cobalt::Logger* cobalt);
 
 }  // namespace feedback
 

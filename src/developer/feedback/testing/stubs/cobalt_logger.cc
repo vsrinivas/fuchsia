@@ -11,34 +11,34 @@ namespace {
 using fuchsia::cobalt::Status;
 using LogEventCallback = fuchsia::cobalt::Logger::LogEventCallback;
 
-CobaltEventType DetermineCobaltEventType(uint32_t metric_id, uint32_t event_code) {
+cobalt::EventType DetermineCobaltEventType(uint32_t metric_id, uint32_t event_code) {
   // This swtich statement needs to be updated if any new count or time elapsed metrics are added.
   // We need to use a single event code of each event type as a canary to get the metric id.
   switch (metric_id) {
-    case MetricIDForEventCode(BugreportGenerationFlow::kUnknown):
-      return CobaltEventType::kTimeElapsed;
-    case MetricIDForEventCode(UploadAttemptState::kUnknown):
-      return CobaltEventType::kCount;
-    case MetricIDForEventCode(RebootReason::kOOM):
-    case MetricIDForEventCode(CrashState::kUnknown):
-    case MetricIDForEventCode(CrashpadFunctionError::kUnknown):
-    case MetricIDForEventCode(TimedOutData::kUnknown):
+    case MetricIDForEventCode(cobalt::BugreportGenerationFlow::kUnknown):
+      return cobalt::EventType::kTimeElapsed;
+    case MetricIDForEventCode(cobalt::UploadAttemptState::kUnknown):
+      return cobalt::EventType::kCount;
+    case MetricIDForEventCode(cobalt::RebootReason::kOOM):
+    case MetricIDForEventCode(cobalt::CrashState::kUnknown):
+    case MetricIDForEventCode(cobalt::CrashpadFunctionError::kUnknown):
+    case MetricIDForEventCode(cobalt::TimedOutData::kUnknown):
     default:
-      return CobaltEventType::kOccurrence;
+      return cobalt::EventType::kOccurrence;
   }
 }
 
 }  // namespace
 
 void CobaltLoggerBase::SetLastEvent(uint32_t metric_id, uint32_t event_code, uint64_t count) {
-  events_.push_back(
-      CobaltEvent(DetermineCobaltEventType(metric_id, event_code), metric_id, {event_code}, count));
+  events_.push_back(cobalt::Event(DetermineCobaltEventType(metric_id, event_code), metric_id,
+                                  {event_code}, count));
 }
 
 void CobaltLoggerBase::SetLastEvent(uint32_t metric_id, std::vector<uint32_t> event_codes,
                                     uint64_t count) {
   events_.push_back(
-      CobaltEvent(CobaltEventType::kMultidimensionalOccurrence, metric_id, event_codes, count));
+      cobalt::Event(cobalt::EventType::kMultidimensionalOccurrence, metric_id, event_codes, count));
 }
 
 void CobaltLogger::LogEvent(uint32_t metric_id, uint32_t event_code, LogEventCallback callback) {

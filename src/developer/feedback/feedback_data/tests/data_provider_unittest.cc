@@ -146,8 +146,8 @@ class DataProviderTest : public UnitTestFixture, public CobaltTestFixture {
     // heap and then give |cobalt_| ownership of it. This allows us to control the time perceived by
     // |cobalt_|.
     clock_ = new timekeeper::TestClock();
-    cobalt_ = std::make_unique<Cobalt>(dispatcher(), services(),
-                                       std::unique_ptr<timekeeper::TestClock>(clock_));
+    cobalt_ = std::make_unique<cobalt::Logger>(dispatcher(), services(),
+                                               std::unique_ptr<timekeeper::TestClock>(clock_));
     SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
   }
 
@@ -209,7 +209,7 @@ class DataProviderTest : public UnitTestFixture, public CobaltTestFixture {
   DeviceIdProvider device_id_provider_;
   // The lifetime of |clock_| is managed by |cobalt_|.
   timekeeper::TestClock* clock_;
-  std::unique_ptr<Cobalt> cobalt_;
+  std::unique_ptr<cobalt::Logger> cobalt_;
   std::unique_ptr<Datastore> datastore_;
 
  protected:
@@ -345,11 +345,10 @@ TEST_F(DataProviderTest, GetData_SmokeTest) {
     ASSERT_TRUE(data.has_attachment_bundle());
   }
 
-  EXPECT_THAT(
-      ReceivedCobaltEvents(),
-      UnorderedElementsAreArray({
-          CobaltEvent(BugreportGenerationFlow::kSuccess, kDefaultBugReportFlowDuration.to_usecs()),
-      }));
+  EXPECT_THAT(ReceivedCobaltEvents(), UnorderedElementsAreArray({
+                                          cobalt::Event(cobalt::BugreportGenerationFlow::kSuccess,
+                                                        kDefaultBugReportFlowDuration.to_usecs()),
+                                      }));
 }
 
 TEST_F(DataProviderTest, GetData_AnnotationsAsAttachment) {

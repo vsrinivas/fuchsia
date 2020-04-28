@@ -22,8 +22,8 @@
 #include "src/developer/feedback/testing/stubs/board_info_provider.h"
 #include "src/developer/feedback/testing/stubs/cobalt_logger_factory.h"
 #include "src/developer/feedback/testing/unit_test_fixture.h"
-#include "src/developer/feedback/utils/cobalt.h"
-#include "src/developer/feedback/utils/cobalt_event.h"
+#include "src/developer/feedback/utils/cobalt/event.h"
+#include "src/developer/feedback/utils/cobalt/logger.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/split_string.h"
 
@@ -54,7 +54,7 @@ class BoardInfoProviderTest : public UnitTestFixture, public CobaltTestFixture {
   Annotations GetBoardInfo(const AnnotationKeys& allowlist = {},
                            const zx::duration timeout = zx::sec(1)) {
     SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
-    Cobalt cobalt(dispatcher(), services());
+    cobalt::Logger cobalt(dispatcher(), services());
 
     BoardInfoProvider provider(dispatcher(), services(), timeout, &cobalt);
     auto promise = provider.GetAnnotations(allowlist);
@@ -188,7 +188,7 @@ TEST_F(BoardInfoProviderTest, Check_CobaltLogsTimeout) {
 
   ASSERT_TRUE(board_info.empty());
   EXPECT_THAT(ReceivedCobaltEvents(), ElementsAreArray({
-                                          CobaltEvent(TimedOutData::kBoardInfo),
+                                          cobalt::Event(cobalt::TimedOutData::kBoardInfo),
                                       }));
 }
 

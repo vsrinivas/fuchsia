@@ -153,7 +153,7 @@ source_set("crash_reporter") {
 
   deps = [
     ":report_util",
-    "//src/developer/feedback/utils:cobalt",
+    "//src/developer/feedback/utils/cobalt",
     "//src/lib/syslog/cpp",
   ]
 }
@@ -183,7 +183,7 @@ source_set("database") {
 
   public_deps = [
     "//src/developer/feedback/crash_reports/info",
-    "//src/developer/feedback/utils:cobalt",
+    "//src/developer/feedback/utils/cobalt",
     "//src/lib/fxl",
     "//third_party/crashpad/client",
     "//third_party/crashpad/util",

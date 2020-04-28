@@ -17,6 +17,8 @@ void CrashReporterInfo::ExposeSettings(feedback::Settings* settings) {
   context_->InspectManager().ExposeSettings(settings);
 }
 
-void CrashReporterInfo::LogCrashState(CrashState state) { context_->Cobalt().LogOccurrence(state); }
+void CrashReporterInfo::LogCrashState(cobalt::CrashState state) {
+  context_->Cobalt().LogOccurrence(state);
+}
 
 }  // namespace feedback

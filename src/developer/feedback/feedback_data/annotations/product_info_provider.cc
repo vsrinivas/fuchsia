@@ -50,7 +50,7 @@ bool IsRequired(const AnnotationKey& annotation) {
 
 ProductInfoProvider::ProductInfoProvider(async_dispatcher_t* dispatcher,
                                          std::shared_ptr<sys::ServiceDirectory> services,
-                                         zx::duration timeout, Cobalt* cobalt)
+                                         zx::duration timeout, cobalt::Logger* cobalt)
     : dispatcher_(dispatcher), services_(services), timeout_(timeout), cobalt_(cobalt) {}
 
 ::fit::promise<Annotations> ProductInfoProvider::GetAnnotations(const AnnotationKeys& allowlist) {
@@ -62,7 +62,7 @@ ProductInfoProvider::ProductInfoProvider(async_dispatcher_t* dispatcher,
   auto product_info_ptr = std::make_unique<internal::ProductInfoPtr>(dispatcher_, services_);
 
   auto product_info = product_info_ptr->GetProductInfo(fit::Timeout(
-      timeout_, /*action=*/[=] { cobalt_->LogOccurrence(TimedOutData::kProductInfo); }));
+      timeout_, /*action=*/[=] { cobalt_->LogOccurrence(cobalt::TimedOutData::kProductInfo); }));
 
   return fit::ExtendArgsLifetimeBeyondPromise(std::move(product_info),
                                               /*args=*/std::move(product_info_ptr))

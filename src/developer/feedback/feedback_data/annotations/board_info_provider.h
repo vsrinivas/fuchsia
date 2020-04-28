@@ -13,7 +13,7 @@
 
 #include "src/developer/feedback/feedback_data/annotations/aliases.h"
 #include "src/developer/feedback/feedback_data/annotations/annotation_provider.h"
-#include "src/developer/feedback/utils/cobalt.h"
+#include "src/developer/feedback/utils/cobalt/logger.h"
 #include "src/developer/feedback/utils/fidl/oneshot_ptr.h"
 #include "src/developer/feedback/utils/fit/timeout.h"
 #include "src/lib/fxl/macros.h"
@@ -25,7 +25,7 @@ class BoardInfoProvider : public AnnotationProvider {
  public:
   // fuchsia.hwinfo.Board is expected to be in |services|.
   BoardInfoProvider(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-                    zx::duration timeout, Cobalt* cobalt);
+                    zx::duration timeout, cobalt::Logger* cobalt);
 
   ::fit::promise<Annotations> GetAnnotations(const AnnotationKeys& allowlist) override;
 
@@ -33,7 +33,7 @@ class BoardInfoProvider : public AnnotationProvider {
   async_dispatcher_t* dispatcher_;
   const std::shared_ptr<sys::ServiceDirectory> services_;
   const zx::duration timeout_;
-  Cobalt* cobalt_;
+  cobalt::Logger* cobalt_;
 };
 
 namespace internal {

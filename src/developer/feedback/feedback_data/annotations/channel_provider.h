@@ -13,7 +13,7 @@
 
 #include "src/developer/feedback/feedback_data/annotations/aliases.h"
 #include "src/developer/feedback/feedback_data/annotations/annotation_provider.h"
-#include "src/developer/feedback/utils/cobalt.h"
+#include "src/developer/feedback/utils/cobalt/logger.h"
 #include "src/lib/fxl/macros.h"
 
 namespace feedback {
@@ -22,7 +22,7 @@ class ChannelProvider : public AnnotationProvider {
  public:
   // fuchsia.update.channel.Provider is expected to be in |services|.
   ChannelProvider(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-                  zx::duration timeout, Cobalt* cobalt);
+                  zx::duration timeout, cobalt::Logger* cobalt);
 
   ::fit::promise<Annotations> GetAnnotations(const AnnotationKeys& allowlist) override;
 
@@ -30,7 +30,7 @@ class ChannelProvider : public AnnotationProvider {
   async_dispatcher_t* dispatcher_;
   const std::shared_ptr<sys::ServiceDirectory> services_;
   const zx::duration timeout_;
-  Cobalt* cobalt_;
+  cobalt::Logger* cobalt_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ChannelProvider);
 };

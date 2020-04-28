@@ -13,7 +13,7 @@
 #include <memory>
 
 #include "src/developer/feedback/feedback_data/datastore.h"
-#include "src/developer/feedback/utils/cobalt.h"
+#include "src/developer/feedback/utils/cobalt/logger.h"
 
 namespace feedback {
 
@@ -21,7 +21,7 @@ namespace feedback {
 class DataProvider : public fuchsia::feedback::DataProvider {
  public:
   DataProvider(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-               Cobalt* cobalt, Datastore* datastore);
+               cobalt::Logger* cobalt, Datastore* datastore);
 
   // |fuchsia.feedback.DataProvider|
   void GetData(GetDataCallback callback) override;
@@ -31,7 +31,7 @@ class DataProvider : public fuchsia::feedback::DataProvider {
  private:
   async_dispatcher_t* dispatcher_;
   const std::shared_ptr<sys::ServiceDirectory> services_;
-  Cobalt* cobalt_;
+  cobalt::Logger* cobalt_;
   Datastore* datastore_;
   async::Executor executor_;
 };

@@ -31,7 +31,7 @@
 #include "src/developer/feedback/testing/stubs/logger.h"
 #include "src/developer/feedback/testing/stubs/product_info_provider.h"
 #include "src/developer/feedback/testing/unit_test_fixture.h"
-#include "src/developer/feedback/utils/cobalt.h"
+#include "src/developer/feedback/utils/cobalt/logger.h"
 #include "src/developer/feedback/utils/file_size.h"
 #include "src/developer/feedback/utils/rotating_file_set.h"
 #include "src/lib/files/file.h"
@@ -73,7 +73,7 @@ class DatastoreTest : public UnitTestFixture, public CobaltTestFixture {
 
   void SetUp() override {
     SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
-    cobalt_ = std::make_unique<Cobalt>(dispatcher(), services());
+    cobalt_ = std::make_unique<cobalt::Logger>(dispatcher(), services());
   }
 
  protected:
@@ -182,7 +182,7 @@ class DatastoreTest : public UnitTestFixture, public CobaltTestFixture {
  private:
   async::Executor executor_;
   DeviceIdProvider device_id_provider_;
-  std::unique_ptr<Cobalt> cobalt_;
+  std::unique_ptr<cobalt::Logger> cobalt_;
   std::unique_ptr<Datastore> datastore_;
 
   // Stubs servers.
@@ -496,8 +496,8 @@ TEST_F(DatastoreTest, GetAttachments_CobaltLogsTimeouts) {
   ASSERT_TRUE(attachments.is_error());
 
   EXPECT_THAT(ReceivedCobaltEvents(), UnorderedElementsAreArray({
-                                          CobaltEvent(TimedOutData::kInspect),
-                                          CobaltEvent(TimedOutData::kSystemLog),
+                                          cobalt::Event(cobalt::TimedOutData::kInspect),
+                                          cobalt::Event(cobalt::TimedOutData::kSystemLog),
                                       }));
 }
 

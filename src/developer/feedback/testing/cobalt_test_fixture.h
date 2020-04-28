@@ -12,7 +12,7 @@
 
 #include "src/developer/feedback/testing/stubs/cobalt_logger_factory.h"
 #include "src/developer/feedback/testing/unit_test_fixture.h"
-#include "src/developer/feedback/utils/cobalt.h"
+#include "src/developer/feedback/utils/cobalt/logger.h"
 #include "src/lib/fxl/logging.h"
 
 namespace feedback {
@@ -29,7 +29,7 @@ class CobaltTestFixture {
     }
   }
 
-  const std::vector<CobaltEvent>& ReceivedCobaltEvents() const {
+  const std::vector<cobalt::Event>& ReceivedCobaltEvents() const {
     return logger_factory_server_->Events();
   }
 

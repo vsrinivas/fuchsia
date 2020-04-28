@@ -26,8 +26,8 @@
 #include "src/developer/feedback/testing/fakes/cobalt.h"
 #include "src/developer/feedback/testing/gmatchers.h"
 #include "src/developer/feedback/utils/archive.h"
-#include "src/developer/feedback/utils/cobalt_metrics.h"
-#include "src/developer/feedback/utils/metrics_registry.cb.h"
+#include "src/developer/feedback/utils/cobalt/metrics.h"
+#include "src/developer/feedback/utils/cobalt/metrics_registry.cb.h"
 #include "src/lib/files/file.h"
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/logging.h"
@@ -369,10 +369,10 @@ TEST_F(FeedbackDataIntegrationTest, DataProvider_GetData_CheckCobalt) {
 
   ::fit::result<Data, zx_status_t> result = std::move(out_result);
   ASSERT_TRUE(result.is_ok());
-  EXPECT_THAT(fake_cobalt_->GetAllEventsOfType<BugreportGenerationFlow>(
+  EXPECT_THAT(fake_cobalt_->GetAllEventsOfType<cobalt::BugreportGenerationFlow>(
                   /*num_expected=*/1u, fuchsia::cobalt::test::LogMethod::LOG_ELAPSED_TIME),
               UnorderedElementsAreArray({
-                  BugreportGenerationFlow::kSuccess,
+                  cobalt::BugreportGenerationFlow::kSuccess,
               }));
 }
 

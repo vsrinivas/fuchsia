@@ -21,7 +21,7 @@
 #include "src/developer/feedback/testing/stubs/channel_provider.h"
 #include "src/developer/feedback/testing/stubs/cobalt_logger_factory.h"
 #include "src/developer/feedback/testing/unit_test_fixture.h"
-#include "src/developer/feedback/utils/cobalt_event.h"
+#include "src/developer/feedback/utils/cobalt/event.h"
 #include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
@@ -45,7 +45,7 @@ class ChannelProviderTest : public UnitTestFixture, public CobaltTestFixture {
       const AnnotationKeys& allowlist = {kAnnotationSystemUpdateChannelCurrent},
       const zx::duration timeout = zx::sec(1)) {
     SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
-    Cobalt cobalt(dispatcher(), services());
+    cobalt::Logger cobalt(dispatcher(), services());
 
     ChannelProvider provider(dispatcher(), services(), timeout, &cobalt);
     auto promise = provider.GetAnnotations(allowlist);
@@ -129,7 +129,7 @@ TEST_F(ChannelProviderTest, Fail_ChannelProviderServerNeverReturns) {
 
   ASSERT_FALSE(result);
   EXPECT_THAT(ReceivedCobaltEvents(), UnorderedElementsAreArray({
-                                          CobaltEvent(TimedOutData::kChannel),
+                                          cobalt::Event(cobalt::TimedOutData::kChannel),
                                       }));
 }
 

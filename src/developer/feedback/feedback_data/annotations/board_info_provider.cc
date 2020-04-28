@@ -32,7 +32,7 @@ const AnnotationKeys kSupportedAnnotations = {
 
 BoardInfoProvider::BoardInfoProvider(async_dispatcher_t* dispatcher,
                                      std::shared_ptr<sys::ServiceDirectory> services,
-                                     zx::duration timeout, Cobalt* cobalt)
+                                     zx::duration timeout, cobalt::Logger* cobalt)
     : dispatcher_(dispatcher), services_(services), timeout_(timeout), cobalt_(cobalt) {}
 
 ::fit::promise<Annotations> BoardInfoProvider::GetAnnotations(const AnnotationKeys& allowlist) {
@@ -43,8 +43,8 @@ BoardInfoProvider::BoardInfoProvider(async_dispatcher_t* dispatcher,
 
   auto board_info_ptr = std::make_unique<internal::BoardInfoPtr>(dispatcher_, services_);
 
-  auto board_info = board_info_ptr->GetBoardInfo(
-      fit::Timeout(timeout_, /*action=*/[=] { cobalt_->LogOccurrence(TimedOutData::kBoardInfo); }));
+  auto board_info = board_info_ptr->GetBoardInfo(fit::Timeout(
+      timeout_, /*action=*/[=] { cobalt_->LogOccurrence(cobalt::TimedOutData::kBoardInfo); }));
 
   return fit::ExtendArgsLifetimeBeyondPromise(std::move(board_info),
                                               /*args=*/std::move(board_info_ptr))

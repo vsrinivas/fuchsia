@@ -102,7 +102,7 @@ source_set("data_provider") {
   public_deps = [
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/lib/sys/cpp",
-    "//src/developer/feedback/utils:cobalt",
+    "//src/developer/feedback/utils/cobalt",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/zx",
@@ -138,7 +138,7 @@ source_set("datastore") {
     "//sdk/lib/sys/cpp",
     "//src/developer/feedback/feedback_data/annotations:aliases",
     "//src/developer/feedback/feedback_data/attachments:aliases",
-    "//src/developer/feedback/utils:cobalt",
+    "//src/developer/feedback/utils/cobalt",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/zx",
@@ -202,7 +202,7 @@ source_set("main_service") {
     ":datastore",
     ":device_id_provider",
     ":inspect_manager",
-    "//src/developer/feedback/utils:cobalt",
+    "//src/developer/feedback/utils/cobalt",
     "//src/lib/fxl",
     "//zircon/public/lib/async-loop-cpp",
   ]

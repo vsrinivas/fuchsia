@@ -12,8 +12,8 @@
 #include "src/developer/feedback/feedback_data/annotations/aliases.h"
 #include "src/developer/feedback/feedback_data/attachments/aliases.h"
 #include "src/developer/feedback/feedback_data/device_id_provider.h"
-#include "src/developer/feedback/utils/cobalt.h"
-#include "src/developer/feedback/utils/cobalt_metrics.h"
+#include "src/developer/feedback/utils/cobalt/logger.h"
+#include "src/developer/feedback/utils/cobalt/metrics.h"
 #include "src/developer/feedback/utils/fit/timeout.h"
 
 namespace feedback {
@@ -34,7 +34,7 @@ namespace feedback {
 class Datastore {
  public:
   Datastore(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-            Cobalt* cobalt, const AnnotationKeys& annotation_allowlist,
+            cobalt::Logger* cobalt, const AnnotationKeys& annotation_allowlist,
             const AttachmentKeys& attachment_allowlist, DeviceIdProvider* device_id_provider);
 
   ::fit::promise<Annotations> GetAnnotations();
@@ -52,11 +52,11 @@ class Datastore {
   const Annotations& GetExtraAnnotations() const { return extra_annotations_; }
 
  private:
-  fit::Timeout MakeCobaltTimeout(TimedOutData data);
+  fit::Timeout MakeCobaltTimeout(cobalt::TimedOutData data);
 
   async_dispatcher_t* dispatcher_;
   const std::shared_ptr<sys::ServiceDirectory> services_;
-  Cobalt* cobalt_;
+  cobalt::Logger* cobalt_;
   const AnnotationKeys annotation_allowlist_;
   const AttachmentKeys attachment_allowlist_;
 

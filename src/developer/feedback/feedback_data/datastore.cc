@@ -18,7 +18,7 @@
 #include "src/developer/feedback/feedback_data/attachments/static_attachments.h"
 #include "src/developer/feedback/feedback_data/attachments/system_log_ptr.h"
 #include "src/developer/feedback/feedback_data/constants.h"
-#include "src/developer/feedback/utils/cobalt_metrics.h"
+#include "src/developer/feedback/utils/cobalt/metrics.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/syslog/cpp/logger.h"
 
@@ -31,7 +31,7 @@ const zx::duration kTimeout = zx::sec(30);
 }  // namespace
 
 Datastore::Datastore(async_dispatcher_t* dispatcher,
-                     std::shared_ptr<sys::ServiceDirectory> services, Cobalt* cobalt,
+                     std::shared_ptr<sys::ServiceDirectory> services, cobalt::Logger* cobalt,
                      const AnnotationKeys& annotation_allowlist,
                      const AttachmentKeys& attachment_allowlist,
                      DeviceIdProvider* device_id_provider)
@@ -151,11 +151,14 @@ Datastore::Datastore(async_dispatcher_t* dispatcher,
 
 ::fit::promise<AttachmentValue> Datastore::BuildAttachmentValue(const AttachmentKey& key) {
   if (key == kAttachmentLogKernel) {
-    return CollectKernelLog(dispatcher_, services_, MakeCobaltTimeout(TimedOutData::kKernelLog));
+    return CollectKernelLog(dispatcher_, services_,
+                            MakeCobaltTimeout(cobalt::TimedOutData::kKernelLog));
   } else if (key == kAttachmentLogSystem) {
-    return CollectSystemLog(dispatcher_, services_, MakeCobaltTimeout(TimedOutData::kSystemLog));
+    return CollectSystemLog(dispatcher_, services_,
+                            MakeCobaltTimeout(cobalt::TimedOutData::kSystemLog));
   } else if (key == kAttachmentInspect) {
-    return CollectInspectData(dispatcher_, services_, MakeCobaltTimeout(TimedOutData::kInspect));
+    return CollectInspectData(dispatcher_, services_,
+                              MakeCobaltTimeout(cobalt::TimedOutData::kInspect));
   }
   // There are static attachments in the allowlist that we just skip here.
   return ::fit::make_result_promise<AnnotationValue>(::fit::error());
@@ -173,7 +176,7 @@ bool Datastore::TrySetExtraAnnotations(const Annotations& extra_annotations) {
   }
 }
 
-fit::Timeout Datastore::MakeCobaltTimeout(TimedOutData data) {
+fit::Timeout Datastore::MakeCobaltTimeout(cobalt::TimedOutData data) {
   return fit::Timeout(kTimeout,
                       /*action=*/[cobalt = cobalt_, data] { cobalt->LogOccurrence(data); });
 }

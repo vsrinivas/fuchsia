@@ -9,7 +9,7 @@
 
 #include "src/developer/feedback/crash_reports/info/info_context.h"
 #include "src/developer/feedback/crash_reports/settings.h"
-#include "src/developer/feedback/utils/cobalt_metrics.h"
+#include "src/developer/feedback/utils/cobalt/metrics.h"
 
 namespace feedback {
 
@@ -21,7 +21,7 @@ struct CrashReporterInfo {
   // Exposes the mutable settings of the crash reporter.
   void ExposeSettings(feedback::Settings* settings);
 
-  void LogCrashState(CrashState state);
+  void LogCrashState(cobalt::CrashState state);
 
  private:
   std::shared_ptr<InfoContext> context_;

@@ -15,7 +15,6 @@
 #include "src/developer/feedback/crash_reports/info/database_info.h"
 #include "src/developer/feedback/crash_reports/info/info_context.h"
 #include "src/developer/feedback/crash_reports/upload_report.h"
-#include "src/developer/feedback/utils/cobalt.h"
 #include "src/lib/fxl/macros.h"
 #include "third_party/crashpad/client/crash_report_database.h"
 #include "third_party/crashpad/util/misc/uuid.h"

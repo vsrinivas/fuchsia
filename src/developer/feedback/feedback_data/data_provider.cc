@@ -38,7 +38,7 @@ const zx::duration kScreenshotTimeout = zx::sec(10);
 }  // namespace
 
 DataProvider::DataProvider(async_dispatcher_t* dispatcher,
-                           std::shared_ptr<sys::ServiceDirectory> services, Cobalt* cobalt,
+                           std::shared_ptr<sys::ServiceDirectory> services, cobalt::Logger* cobalt,
                            Datastore* datastore)
     : dispatcher_(dispatcher),
       services_(services),
@@ -124,9 +124,9 @@ void DataProvider::GetData(GetDataCallback callback) {
           .then([this, callback = std::move(callback),
                  timer_id](::fit::result<Data, zx_status_t>& result) {
             if (result.is_error()) {
-              cobalt_->LogElapsedTime(BugreportGenerationFlow::kFailure, timer_id);
+              cobalt_->LogElapsedTime(cobalt::BugreportGenerationFlow::kFailure, timer_id);
             } else {
-              cobalt_->LogElapsedTime(BugreportGenerationFlow::kSuccess, timer_id);
+              cobalt_->LogElapsedTime(cobalt::BugreportGenerationFlow::kSuccess, timer_id);
             }
             callback(std::move(result));
           });
@@ -136,9 +136,10 @@ void DataProvider::GetData(GetDataCallback callback) {
 
 void DataProvider::GetScreenshot(ImageEncoding encoding, GetScreenshotCallback callback) {
   auto promise =
-      TakeScreenshot(dispatcher_, services_,
-                     fit::Timeout(kScreenshotTimeout,
-                                  [this] { cobalt_->LogOccurrence(TimedOutData::kScreenshot); }))
+      TakeScreenshot(
+          dispatcher_, services_,
+          fit::Timeout(kScreenshotTimeout,
+                       [this] { cobalt_->LogOccurrence(cobalt::TimedOutData::kScreenshot); }))
           .and_then([encoding](fuchsia::ui::scenic::ScreenshotData& raw_screenshot)
                         -> ::fit::result<Screenshot> {
             Screenshot screenshot;

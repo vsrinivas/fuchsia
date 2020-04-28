@@ -18,7 +18,7 @@
 #include "src/developer/feedback/feedback_data/datastore.h"
 #include "src/developer/feedback/feedback_data/device_id_provider.h"
 #include "src/developer/feedback/feedback_data/inspect_manager.h"
-#include "src/developer/feedback/utils/cobalt.h"
+#include "src/developer/feedback/utils/cobalt/logger.h"
 #include "src/lib/fxl/macros.h"
 
 namespace feedback {
@@ -32,11 +32,11 @@ class MainService {
   // Returns nullptr if the agent cannot be instantiated, e.g., because the underlying DataProvider
   // cannot be instantiated.
   static std::unique_ptr<MainService> TryCreate(async_dispatcher_t* dispatcher,
-                                                  std::shared_ptr<sys::ServiceDirectory> services,
-                                                  inspect::Node* root_node);
+                                                std::shared_ptr<sys::ServiceDirectory> services,
+                                                inspect::Node* root_node);
 
   MainService(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-                inspect::Node* root_node, Config config);
+              inspect::Node* root_node, Config config);
 
   void SpawnSystemLogRecorder();
 
@@ -54,7 +54,7 @@ class MainService {
  private:
   async_dispatcher_t* dispatcher_;
   InspectManager inspect_manager_;
-  Cobalt cobalt_;
+  cobalt::Logger cobalt_;
 
   DeviceIdProvider device_id_provider_;
   ::fidl::BindingSet<fuchsia::feedback::DeviceIdProvider> device_id_provider_connections_;

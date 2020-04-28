@@ -246,7 +246,7 @@ class QueueTest : public UnitTestFixture, CobaltTestFixture {
   std::unique_ptr<StubCrashServer> crash_server_;
   std::unique_ptr<inspect::Inspector> inspector_;
   std::shared_ptr<InfoContext> info_context_;
-  std::shared_ptr<Cobalt> cobalt_;
+  std::shared_ptr<cobalt::Logger> cobalt_;
 };
 
 TEST_F(QueueTest, Check_EmptyQueue_OnZeroAdds) {

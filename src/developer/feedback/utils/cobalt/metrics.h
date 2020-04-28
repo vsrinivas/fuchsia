@@ -5,9 +5,10 @@
 #ifndef SRC_DEVELOPER_FEEDBACK_UTILS_COBALT_METRICS_H_
 #define SRC_DEVELOPER_FEEDBACK_UTILS_COBALT_METRICS_H_
 
-#include "src/developer/feedback/utils/metrics_registry.cb.h"
+#include "src/developer/feedback/utils/cobalt/metrics_registry.cb.h"
 
 namespace feedback {
+namespace cobalt {
 
 constexpr auto kProjectId = cobalt_registry::kProjectId;
 
@@ -125,37 +126,38 @@ inline constexpr uint32_t MetricIDForEventCode(const EventCodeTypesH event_code,
   return checker.metric_id;
 }
 
-enum class CobaltEventType {
+enum class EventType {
   kOccurrence,
   kCount,
   kTimeElapsed,
   kMultidimensionalOccurrence,
 };
 
-inline constexpr CobaltEventType EventTypeForEventCode(const BugreportGenerationFlow status) {
-  return CobaltEventType::kTimeElapsed;
+inline constexpr EventType EventTypeForEventCode(const BugreportGenerationFlow status) {
+  return EventType::kTimeElapsed;
 }
 
-inline constexpr CobaltEventType EventTypeForEventCode(const TimedOutData data) {
-  return CobaltEventType::kOccurrence;
+inline constexpr EventType EventTypeForEventCode(const TimedOutData data) {
+  return EventType::kOccurrence;
 }
 
-inline constexpr CobaltEventType EventTypeForEventCode(const RebootReason reason) {
-  return CobaltEventType::kOccurrence;
+inline constexpr EventType EventTypeForEventCode(const RebootReason reason) {
+  return EventType::kOccurrence;
 }
 
-inline constexpr CobaltEventType EventTypeForEventCode(const CrashState state) {
-  return CobaltEventType::kOccurrence;
+inline constexpr EventType EventTypeForEventCode(const CrashState state) {
+  return EventType::kOccurrence;
 }
 
-inline constexpr CobaltEventType EventTypeForEventCode(const UploadAttemptState state) {
-  return CobaltEventType::kCount;
+inline constexpr EventType EventTypeForEventCode(const UploadAttemptState state) {
+  return EventType::kCount;
 }
 
-inline constexpr CobaltEventType EventTypeForEventCode(const CrashpadFunctionError function) {
-  return CobaltEventType::kOccurrence;
+inline constexpr EventType EventTypeForEventCode(const CrashpadFunctionError function) {
+  return EventType::kOccurrence;
 }
 
+}  // namespace cobalt
 }  // namespace feedback
 
 #endif  // SRC_DEVELOPER_FEEDBACK_UTILS_COBALT_METRICS_H_

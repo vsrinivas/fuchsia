@@ -13,7 +13,7 @@
 
 #include "src/developer/feedback/testing/stubs/cobalt_logger.h"
 #include "src/developer/feedback/testing/stubs/fidl_server.h"
-#include "src/developer/feedback/utils/cobalt_event.h"
+#include "src/developer/feedback/utils/cobalt/event.h"
 
 namespace feedback {
 namespace stubs {
@@ -25,8 +25,8 @@ class CobaltLoggerFactoryBase
   CobaltLoggerFactoryBase(std::unique_ptr<CobaltLoggerBase> logger) : logger_(std::move(logger)) {}
   virtual ~CobaltLoggerFactoryBase() {}
 
-  const CobaltEvent& LastEvent() const { return logger_->LastEvent(); }
-  const std::vector<CobaltEvent>& Events() const { return logger_->Events(); }
+  const cobalt::Event& LastEvent() const { return logger_->LastEvent(); }
+  const std::vector<cobalt::Event>& Events() const { return logger_->Events(); }
 
   bool WasLogEventCalled() const { return logger_->WasLogEventCalled(); }
   bool WasLogEventCountCalled() const { return logger_->WasLogEventCountCalled(); }

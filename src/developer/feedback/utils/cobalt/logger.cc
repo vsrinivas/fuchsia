@@ -2,18 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/feedback/utils/cobalt.h"
+#include "src/developer/feedback/utils/cobalt/logger.h"
 
 #include <lib/async/cpp/task.h>
 #include <lib/zx/time.h>
 
 #include <string>
 
-#include "src/developer/feedback/utils/cobalt_metrics.h"
+#include "src/developer/feedback/utils/cobalt/metrics.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
+namespace cobalt {
 namespace {
 
 using async::PostDelayedTask;
@@ -45,7 +46,7 @@ uint64_t CurrentTimeUSecs(const std::unique_ptr<timekeeper::Clock>& clock) {
 
 }  // namespace
 
-Cobalt::Cobalt(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
+Logger::Logger(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
                std::unique_ptr<timekeeper::Clock> clock)
     : dispatcher_(dispatcher),
       services_(services),
@@ -61,7 +62,7 @@ Cobalt::Cobalt(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirec
   ConnectToLogger(std::move(logger_request));
 }
 
-void Cobalt::Shutdown() {
+void Logger::Shutdown() {
   shut_down_ = true;
 
   pending_events_.clear();
@@ -73,7 +74,7 @@ void Cobalt::Shutdown() {
   logger_.Unbind();
 }
 
-void Cobalt::ConnectToLogger(::fidl::InterfaceRequest<fuchsia::cobalt::Logger> logger_request) {
+void Logger::ConnectToLogger(::fidl::InterfaceRequest<fuchsia::cobalt::Logger> logger_request) {
   // Connect to the LoggerFactory.
   logger_factory_ = services_->Connect<LoggerFactory>();
 
@@ -90,14 +91,14 @@ void Cobalt::ConnectToLogger(::fidl::InterfaceRequest<fuchsia::cobalt::Logger> l
         if (status == Status::OK) {
           logger_reconnection_backoff_.Reset();
         } else {
-          FX_LOGS(ERROR) << "Failed to set up Cobalt: " << ToString(status);
+          FX_LOGS(ERROR) << "Failed to set up Logger: " << ToString(status);
           logger_.Unbind();
           RetryConnectingToLogger();
         }
       });
 }
 
-void Cobalt::RetryConnectingToLogger() {
+void Logger::RetryConnectingToLogger() {
   if (logger_) {
     return;
   }
@@ -116,7 +117,7 @@ void Cobalt::RetryConnectingToLogger() {
       logger_reconnection_backoff_.GetNext());
 }
 
-void Cobalt::LogEvent(CobaltEvent event) {
+void Logger::LogEvent(Event event) {
   FX_CHECK(!shut_down_);
   if (pending_events_.size() >= kMaxPendingEvents) {
     FX_LOGS(INFO) << StringPrintf("Dropping Cobalt event %s - too many pending events (%lu)",
@@ -129,7 +130,7 @@ void Cobalt::LogEvent(CobaltEvent event) {
   SendEvent(event_id);
 }
 
-uint64_t Cobalt::StartTimer() {
+uint64_t Logger::StartTimer() {
   FX_CHECK(!shut_down_);
 
   const uint64_t timer_id = next_event_id_++;
@@ -137,7 +138,7 @@ uint64_t Cobalt::StartTimer() {
   return timer_id;
 }
 
-void Cobalt::SendEvent(uint64_t event_id) {
+void Logger::SendEvent(uint64_t event_id) {
   if (!logger_) {
     return;
   }
@@ -145,7 +146,7 @@ void Cobalt::SendEvent(uint64_t event_id) {
   if (pending_events_.find(event_id) == pending_events_.end()) {
     return;
   }
-  CobaltEvent& event = pending_events_.at(event_id);
+  Event& event = pending_events_.at(event_id);
 
   auto cb = [this, event_id, &event](Status status) {
     if (status != Status::OK) {
@@ -159,18 +160,18 @@ void Cobalt::SendEvent(uint64_t event_id) {
   };
 
   switch (event.type) {
-    case CobaltEventType::kOccurrence:
+    case EventType::kOccurrence:
       logger_->LogEvent(event.metric_id, event.dimensions[0], std::move(cb));
       break;
-    case CobaltEventType::kCount:
+    case EventType::kCount:
       logger_->LogEventCount(event.metric_id, event.dimensions[0], /*component=*/"",
                              /*period_duration_micros=*/0u, event.count, std::move(cb));
       break;
-    case CobaltEventType::kTimeElapsed:
+    case EventType::kTimeElapsed:
       logger_->LogElapsedTime(event.metric_id, event.dimensions[0], /*component=*/"",
                               /*elapsed_micros=*/event.usecs_elapsed, std::move(cb));
       break;
-    case CobaltEventType::kMultidimensionalOccurrence:
+    case EventType::kMultidimensionalOccurrence:
       fuchsia::cobalt::CobaltEvent cobalt_event;
       cobalt_event.metric_id = event.metric_id;
       cobalt_event.event_codes = event.dimensions;
@@ -182,16 +183,17 @@ void Cobalt::SendEvent(uint64_t event_id) {
   }
 }
 
-void Cobalt::SendAllPendingEvents() {
+void Logger::SendAllPendingEvents() {
   for (const auto& [event_id, _] : pending_events_) {
     SendEvent(event_id);
   }
 }
 
-uint64_t Cobalt::GetTimerDurationUSecs(uint64_t timer_id) const {
+uint64_t Logger::GetTimerDurationUSecs(uint64_t timer_id) const {
   FX_CHECK(timer_starts_usecs_.find(timer_id) != timer_starts_usecs_.end());
 
   return CurrentTimeUSecs(clock_) - timer_starts_usecs_.at(timer_id);
 }
 
+}  // namespace cobalt
 }  // namespace feedback

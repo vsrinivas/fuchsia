@@ -24,8 +24,8 @@ source_set("info") {
     "//sdk/lib/sys/inspect/cpp",
     "//src/developer/feedback/crash_reports:config",
     "//src/developer/feedback/crash_reports:settings",
-    "//src/developer/feedback/utils:cobalt",
     "//src/developer/feedback/utils:inspect_protocol_stats",
+    "//src/developer/feedback/utils/cobalt",
     "//src/lib/timekeeper",
   ]
 

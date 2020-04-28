@@ -23,8 +23,8 @@
 #include "src/developer/feedback/testing/stubs/cobalt_logger_factory.h"
 #include "src/developer/feedback/testing/stubs/crash_reporter.h"
 #include "src/developer/feedback/testing/unit_test_fixture.h"
-#include "src/developer/feedback/utils/cobalt.h"
-#include "src/developer/feedback/utils/cobalt_event.h"
+#include "src/developer/feedback/utils/cobalt/event.h"
+#include "src/developer/feedback/utils/cobalt/logger.h"
 #include "src/lib/files/scoped_temp_dir.h"
 
 namespace feedback {
@@ -41,7 +41,7 @@ struct TestParam {
   std::string input_reboot_log;
   std::string output_crash_signature;
   std::optional<zx::duration> output_uptime;
-  RebootReason output_cobalt_event_code;
+  cobalt::RebootReason output_event_code;
 };
 
 class RebootLogHandlerTest : public UnitTestFixture,
@@ -91,63 +91,63 @@ INSTANTIATE_TEST_SUITE_P(WithVariousRebootLogs, RebootLogHandlerTest,
                                  "ZIRCON REBOOT REASON (KERNEL PANIC)\n\nUPTIME (ms)\n74715002",
                                  "fuchsia-kernel-panic",
                                  zx::msec(74715002),
-                                 RebootReason::kKernelPanic,
+                                 cobalt::RebootReason::kKernelPanic,
                              },
                              {
                                  "KernelPanicCrashLogNoUptime",
                                  "ZIRCON REBOOT REASON (KERNEL PANIC)",
                                  "fuchsia-kernel-panic",
                                  std::nullopt,
-                                 RebootReason::kKernelPanic,
+                                 cobalt::RebootReason::kKernelPanic,
                              },
                              {
                                  "KernelPanicCrashLogWrongUptime",
                                  "ZIRCON REBOOT REASON (KERNEL PANIC)\n\nUNRECOGNIZED",
                                  "fuchsia-kernel-panic",
                                  std::nullopt,
-                                 RebootReason::kKernelPanic,
+                                 cobalt::RebootReason::kKernelPanic,
                              },
                              {
                                  "OutOfMemoryLog",
                                  "ZIRCON REBOOT REASON (OOM)\n\nUPTIME (ms)\n65487494",
                                  "fuchsia-oom",
                                  zx::msec(65487494),
-                                 RebootReason::kOOM,
+                                 cobalt::RebootReason::kOOM,
                              },
                              {
                                  "OutOfMemoryLogNoUptime",
                                  "ZIRCON REBOOT REASON (OOM)",
                                  "fuchsia-oom",
                                  std::nullopt,
-                                 RebootReason::kOOM,
+                                 cobalt::RebootReason::kOOM,
                              },
                              {
                                  "SoftwareWatchdogFired",
                                  "ZIRCON REBOOT REASON (SW WATCHDOG)",
                                  "fuchsia-sw-watchdog",
                                  std::nullopt,
-                                 RebootReason::kSoftwareWatchdog,
+                                 cobalt::RebootReason::kSoftwareWatchdog,
                              },
                              {
                                  "HardwareWatchdogFired",
                                  "ZIRCON REBOOT REASON (HW WATCHDOG)",
                                  "fuchsia-hw-watchdog",
                                  std::nullopt,
-                                 RebootReason::kHardwareWatchdog,
+                                 cobalt::RebootReason::kHardwareWatchdog,
                              },
                              {
                                  "BrownoutPowerSupplyFailure",
                                  "ZIRCON REBOOT REASON (BROWNOUT)",
                                  "fuchsia-brownout",
                                  std::nullopt,
-                                 RebootReason::kBrownout,
+                                 cobalt::RebootReason::kBrownout,
                              },
                              {
                                  "UnrecognizedCrashTypeInRebootLog",
                                  "UNRECOGNIZED CRASH TYPE",
                                  "fuchsia-kernel-panic",
                                  std::nullopt,
-                                 RebootReason::kKernelPanic,
+                                 cobalt::RebootReason::kKernelPanic,
                              },
                          })),
                          [](const testing::TestParamInfo<TestParam>& info) {
@@ -169,7 +169,7 @@ TEST_P(RebootLogHandlerTest, Succeed) {
   fit::result<void> result = HandleRebootLog();
   EXPECT_EQ(result.state(), kOk);
 
-  EXPECT_THAT(ReceivedCobaltEvents(), ElementsAre(CobaltEvent(param.output_cobalt_event_code)));
+  EXPECT_THAT(ReceivedCobaltEvents(), ElementsAre(cobalt::Event(param.output_event_code)));
 }
 
 TEST_F(RebootLogHandlerTest, Succeed_CleanReboot) {
@@ -179,7 +179,7 @@ TEST_F(RebootLogHandlerTest, Succeed_CleanReboot) {
   ::fit::result<void> result = HandleRebootLog();
   EXPECT_EQ(result.state(), kOk);
 
-  EXPECT_THAT(ReceivedCobaltEvents(), ElementsAre(CobaltEvent(RebootReason::kClean)));
+  EXPECT_THAT(ReceivedCobaltEvents(), ElementsAre(cobalt::Event(cobalt::RebootReason::kClean)));
 }
 
 TEST_F(RebootLogHandlerTest, Succeed_ColdBoot) {
@@ -188,7 +188,7 @@ TEST_F(RebootLogHandlerTest, Succeed_ColdBoot) {
   ::fit::result<void> result = HandleRebootLog();
   EXPECT_EQ(result.state(), kOk);
 
-  EXPECT_THAT(ReceivedCobaltEvents(), ElementsAre(CobaltEvent(RebootReason::kCold)));
+  EXPECT_THAT(ReceivedCobaltEvents(), ElementsAre(cobalt::Event(cobalt::RebootReason::kCold)));
 }
 
 TEST_F(RebootLogHandlerTest, Fail_EmptyRebootLog) {
@@ -207,7 +207,8 @@ TEST_F(RebootLogHandlerTest, Fail_CrashReporterNotAvailable) {
   ::fit::result<void> result = HandleRebootLog();
   EXPECT_EQ(result.state(), kError);
 
-  EXPECT_THAT(ReceivedCobaltEvents(), ElementsAre(CobaltEvent(RebootReason::kKernelPanic)));
+  EXPECT_THAT(ReceivedCobaltEvents(),
+              ElementsAre(cobalt::Event(cobalt::RebootReason::kKernelPanic)));
 }
 
 TEST_F(RebootLogHandlerTest, Fail_CrashReporterClosesConnection) {
@@ -218,7 +219,8 @@ TEST_F(RebootLogHandlerTest, Fail_CrashReporterClosesConnection) {
   ::fit::result<void> result = HandleRebootLog();
   EXPECT_EQ(result.state(), kError);
 
-  EXPECT_THAT(ReceivedCobaltEvents(), ElementsAre(CobaltEvent(RebootReason::kKernelPanic)));
+  EXPECT_THAT(ReceivedCobaltEvents(),
+              ElementsAre(cobalt::Event(cobalt::RebootReason::kKernelPanic)));
 }
 
 TEST_F(RebootLogHandlerTest, Fail_CrashReporterFailsToFile) {
@@ -229,7 +231,8 @@ TEST_F(RebootLogHandlerTest, Fail_CrashReporterFailsToFile) {
   ::fit::result<void> result = HandleRebootLog();
   EXPECT_EQ(result.state(), kError);
 
-  EXPECT_THAT(ReceivedCobaltEvents(), ElementsAre(CobaltEvent(RebootReason::kKernelPanic)));
+  EXPECT_THAT(ReceivedCobaltEvents(),
+              ElementsAre(cobalt::Event(cobalt::RebootReason::kKernelPanic)));
 }
 
 TEST_F(RebootLogHandlerTest, Fail_CallHandleTwice) {
