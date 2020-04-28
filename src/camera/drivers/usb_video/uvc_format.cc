@@ -172,7 +172,9 @@ zx_status_t UvcFormatList::ParseUsbDescriptor(usb_video_vc_desc_header* format_d
         if (desc == NULL) {
           break;
         }
-
+        if ((desc->wHeight == 0) || (desc->wWidth == 0)) {
+          return ZX_ERR_INVALID_ARGS;
+        }
         // Intervals are specified in 100 ns units.
         double framesPerSec = 1 / (desc->dwDefaultFrameInterval * 100 / 1e9);
         zxlogf(TRACE, "%s (%u x %u) %.2f frames / sec",
