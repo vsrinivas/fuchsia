@@ -49,7 +49,7 @@ while read -r lib_path; do
 
     echo -e "\033[1mexample: ${lib_name}\033[0m"
     echo "  json ir: ${lib_name} > ${json_name}"
-    echo "  coding table: ${src_name} > ${coding_tables_name}"
+    echo "  coding table: ${lib_name} > ${coding_tables_name}"
     cd "${FUCHSIA_DIR}/${lib_path}"
     ${FIDLC} \
         --json "../../goldens/${json_name}" \
