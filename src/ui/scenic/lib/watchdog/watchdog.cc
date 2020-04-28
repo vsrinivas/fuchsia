@@ -67,6 +67,8 @@ void WatchdogImpl::HandleTimer() {
     auto duration_since_last_response = async::Now(watchdog_dispatcher_) - last_update_timestamp_;
     mutex_.unlock();
 
+    backtrace_request();
+
     FXL_LOG(WARNING) << "The watched thread is not responsive for " << warning_interval_.to_msecs()
                      << " ms. "
                      << "It has been " << duration_since_last_response.to_msecs()
@@ -74,8 +76,6 @@ void WatchdogImpl::HandleTimer() {
                      << "Please see klog for backtrace of all threads.";
 
     if (duration_since_last_response >= timeout_) {
-      backtrace_request();
-
       FXL_CHECK(false) << "Fatal: Scenic watchdog has detected timeout for more than "
                        << timeout_.to_msecs() << " ms in Scenic main thread.";
     }
