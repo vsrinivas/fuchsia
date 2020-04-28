@@ -268,11 +268,6 @@ void Imx227Device::CameraSensorDeInit() {
 
 zx_status_t Imx227Device::CameraSensorGetInfo(camera_sensor_info_t* out_info) {
   std::lock_guard guard(lock_);
-
-  if (out_info == nullptr) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-
   memcpy(out_info, &ctx_.param, sizeof(camera_sensor_info_t));
   return ZX_OK;
 }
@@ -281,10 +276,6 @@ zx_status_t Imx227Device::CameraSensorGetSupportedModes(camera_sensor_mode_t* ou
                                                         size_t modes_count,
                                                         size_t* out_modes_actual) {
   std::lock_guard guard(lock_);
-  if (out_modes_list == nullptr || out_modes_actual == nullptr) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-
   if (modes_count > supported_modes.size()) {
     return ZX_ERR_INVALID_ARGS;
   }
