@@ -12,7 +12,7 @@ Outline:
 - [Initial v2 components](#v2-components)
 - [Initial v1 components](#v1-components)
 
-## [Bootloader]{#bootloader}
+## Bootloader {#bootloader}
 
 When the machine first powers on, the hardware reads the
 [bootloader][bootloader] out of firmware and starts running it on the system.
@@ -45,7 +45,7 @@ reimaging the A or B partition with it.
 ![A diagram showing the bootloader selecting the A partition, which contains a
 ZBI](images/bootloader-and-abr.png)
 
-## [Kernel]{kernel}
+## Kernel {#kernel}
 
 [Once the kernel (zircon) is running on the system][bootloader-and-kernel] its
 main objective is to start [userspace][userspace], where processes can be run.
@@ -54,7 +54,7 @@ lot in this stage (especially compared to Linux). The executable for the first
 user process is baked into the kernel, which the kernel copies into a new
 process and starts. This program is called [userboot][userboot].
 
-## [Initial processes]{#initial-processes}
+## Initial processes {#initial-processes}
 
 Userboot is carefully constructed to be [easy for the kernel to
 start][userboot-loading], because otherwise the kernel would have to implement a
@@ -97,31 +97,33 @@ force restarts the system.
 ![A diagram showing that userboot comes first, then bootsvc, then component
 manager](images/userboot-bootsvc-cm.png)
 
-## [Component manager]{#component-manager}
+## Component manager {#component-manager}
 
 [Component manager][component-manager] is the program that drives the v2
 component framework. This framework controls how and when programs are run and
 which capabilities these programs can access from other programs. A program run
 by this framework is referred to as a [component][component].
 
-The components that component manager runs are organized into a tree. As of
-today, this tree is somewhat flat, with a root node (the root component)
-containing a series of children. Three particularly notable children are driver
-manager, fshost, and appmgr (more on what these do later). The root component is
-a non-executable component, which means that there is no program running on the
-system that corresponds to this component; it exists solely for organizational
-purposes.
+The components that component manager runs are organized into a tree. There is a
+root component, and it has two children named bootstrap and core. Bootstrap's
+children are the parts of the system needed to get the system functional enough
+to run more complex software like appmgr.
 
-![A diagram showing that fshost, driver manager, and appmgr are all children of
-component manager](images/fshost-in-v2.png)
+The root, bootstrap, and core components are non-executable components, which
+means that they have no program running on the system that corresponds to them.
+They exists solely for organizational purposes.
 
-## [Initial v2 components]{v2-components}
+![A diagram showing that fshost and driver manager, are children of the
+bootstrap component, appmgr is a child of the core component, and core and
+bootstrap are children of the root component](images/v2-topology.png)
+
+## Initial v2 components {#v2-components}
 
 ### Background
 
-There are three main components, driver manager, fshost, and appmgr, that work
-together to bring the system from an early boot state to running useful,
-user-facing software.
+There are two important components under bootstrap, fshost and driver manager.
+These two components work together to bring up a functional enough system for
+appmgr, which then starts up all the user-facing software.
 
 #### driver manager
 
@@ -209,7 +211,7 @@ component, fshost starting due to the /pkgfs-delayed handle, driver manager
 starting due to the /dev handle, block devices appearing, filesystems appearing,
 and then appmgr successfully starting.](images/boot-sequence-diagram.png)
 
-## [Initial v1 components]{v1-components}
+## Initial v1 components {#v1-components}
 
 When appmgr is started it creates a top-level realm called the "app"
 [realm][v1-realm]. Into this realm it launches the first v1 component,
@@ -237,7 +239,7 @@ with services provided by appmgr. It is at this point that the remaining set of
 components on the system can be run.
 
 [ZBI]: /docs/glossary.md#zircon-boot-image
-[aopmgr-exposes]: https://fuchsia.googlesource.com/fuchsia/+/7cf46e0c7a8e5e4c78dba846f867ab96bcce5c5b/src/sys/appmgr/meta/appmgr.cml#168
+[appmgr-exposes]: https://fuchsia.googlesource.com/fuchsia/+/7cf46e0c7a8e5e4c78dba846f867ab96bcce5c5b/src/sys/appmgr/meta/appmgr.cml#168
 [appmgr-is-eager]: https://fuchsia.googlesource.com/fuchsia/+/5a6fe7db58d2869ccfbb22caf53343d40e57c6ba/src/sys/root/meta/root.cml#14
 [appmgr-pkg]: https://fuchsia.googlesource.com/fuchsia/+/5a6fe7db58d2869ccfbb22caf53343d40e57c6ba/src/sys/appmgr/BUILD.gn#159
 [appmgr-uses]: https://fuchsia.googlesource.com/fuchsia/+/7cf46e0c7a8e5e4c78dba846f867ab96bcce5c5b/src/sys/appmgr/meta/appmgr.cml#40
