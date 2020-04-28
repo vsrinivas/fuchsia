@@ -44,7 +44,39 @@ struct HeaderPrefix {
     urg_ptr: U16,
 }
 
+const DATA_OFFSET_OFFSET: u8 = 12;
+const DATA_OFFSET_MAX: u8 = (1 << (16 - DATA_OFFSET_OFFSET)) - 1;
+const FLAGS_MAX: u16 = (1 << 9) - 1;
+
 impl HeaderPrefix {
+    fn new(
+        src_port: u16,
+        dst_port: u16,
+        seq_num: u32,
+        ack: u32,
+        data_offset: u8,
+        flags: u16,
+        window_size: u16,
+        checksum: [u8; 2],
+        urg_ptr: u16,
+    ) -> HeaderPrefix {
+        debug_assert!(data_offset <= DATA_OFFSET_MAX);
+        debug_assert!(flags <= FLAGS_MAX);
+
+        HeaderPrefix {
+            src_port: U16::new(src_port),
+            dst_port: U16::new(dst_port),
+            seq_num: U32::new(seq_num),
+            ack: U32::new(ack),
+            data_offset_reserved_flags: U16::new(
+                (u16::from(data_offset) << DATA_OFFSET_OFFSET) | flags,
+            ),
+            window_size: U16::new(window_size),
+            checksum,
+            urg_ptr: U16::new(urg_ptr),
+        }
+    }
+
     fn data_offset(&self) -> u8 {
         (self.data_offset_reserved_flags.get() >> 12) as u8
     }
@@ -413,28 +445,27 @@ impl<A: IpAddress> PacketBuilder for TcpSegmentBuilder<A> {
 
     fn serialize(&self, buffer: &mut SerializeBuffer) {
         let mut header = buffer.header();
-        // implements BufferViewMut, giving us take_obj_xxx_zero methods
+        // implements BufferViewMut, giving us write_obj_front method
         let mut header = &mut header;
 
-        // SECURITY: Use _zero constructor to ensure we zero memory to
-        // prevent leaking information from packets previously stored in
-        // this buffer.
-        let mut hdr_prefix =
-            header.take_obj_front_zero::<HeaderPrefix>().expect("too few bytes for TCP header");
-
-        hdr_prefix.src_port = U16::new(self.src_port);
-        hdr_prefix.dst_port = U16::new(self.dst_port);
-        hdr_prefix.seq_num = U32::new(self.seq_num);
-        hdr_prefix.ack = U32::new(self.ack_num);
-        // Data Offset is hard-coded to 5 until we support serializing
-        // options.
-        hdr_prefix.data_offset_reserved_flags = U16::new((5u16 << 12) | self.flags);
-        hdr_prefix.window_size = U16::new(self.window_size);
-        // We don't support setting the Urgent Pointer.
-        hdr_prefix.urg_ptr = U16::ZERO;
-        // Initialize the checksum to 0 so that we will get the correct
-        // value when we compute it below.
-        hdr_prefix.checksum = [0, 0];
+        header
+            .write_obj_front(&HeaderPrefix::new(
+                self.src_port,
+                self.dst_port,
+                self.seq_num,
+                self.ack_num,
+                // Data Offset is hard-coded to 5 until we support
+                // serializing options
+                5,
+                self.flags,
+                self.window_size,
+                // Initialize the checksum to 0 so that we will get the
+                // correct value when we compute it below.
+                [0, 0],
+                // We don't support setting the Urgent Pointer.
+                0,
+            ))
+            .expect("too few bytes for TCP header prefix");
 
         #[rustfmt::skip]
         let checksum = compute_transport_checksum_serialize(
@@ -625,13 +656,18 @@ mod tests {
     // checksum (assuming no body and the src/dst IPs TEST_SRC_IPV4 and
     // TEST_DST_IPV4).
     fn new_hdr_prefix() -> HeaderPrefix {
-        let mut hdr_prefix = HeaderPrefix::default();
-        hdr_prefix.src_port = U16::new(1);
-        hdr_prefix.dst_port = U16::new(2);
-        // data offset of 5
-        hdr_prefix.data_offset_reserved_flags = U16::new(5u16 << 12);
-        hdr_prefix.checksum = [0x9f, 0xce];
-        hdr_prefix
+        HeaderPrefix::new(
+            1,
+            2,
+            0,
+            0,
+            // Data Offset of 5
+            5,
+            0,
+            0,
+            [0x9f, 0xce],
+            0,
+        )
     }
 
     #[test]

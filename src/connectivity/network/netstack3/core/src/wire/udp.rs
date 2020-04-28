@@ -360,32 +360,26 @@ impl<A: IpAddress> PacketBuilder for UdpPacketBuilder<A> {
 
         let total_len = buffer.len();
         let mut header = buffer.header();
-        // implements BufferViewMut, giving us take_obj_xxx_zero methods
+        // implements BufferViewMut, giving us write_obj_front method
         let mut header = &mut header;
 
-        // SECURITY: Use _zero constructor to ensure we zero memory to
-        // prevent leaking information from packets previously stored in
-        // this buffer.
-        let mut header =
-            header.take_obj_front_zero::<Header>().expect("too few bytes for UDP header");
-
-        header.src_port = U16::new(self.src_port.map(NonZeroU16::get).unwrap_or(0));
-        header.dst_port = U16::new(self.dst_port.get());
-
-        let len_field = total_len.try_into().unwrap_or_else(|_| {
-            if A::Version::VERSION.is_v6() {
-                // See comment in max_body_len
-                0u16
-            } else {
-                panic!(
-                "total UDP packet length of {} bytes overflows 16-bit length field of UDP header",
-                total_len)
-            }
-        });
-        header.length = U16::new(len_field);
-        // Initialize the checksum to 0 so that we will get the correct
-        // value when we compute it below.
-        header.checksum = [0, 0];
+        header.write_obj_front(&Header {
+            src_port: U16::new(self.src_port.map(NonZeroU16::get).unwrap_or(0)),
+            dst_port: U16::new(self.dst_port.get()),
+            length: U16::new(total_len.try_into().unwrap_or_else(|_| {
+                if A::Version::VERSION.is_v6() {
+                    // See comment in max_body_len
+                    0u16
+                } else {
+                    panic!(
+                    "total UDP packet length of {} bytes overflows 16-bit length field of UDP header",
+                    total_len)
+                }
+            })),
+            // Initialize the checksum to 0 so that we will get the correct
+            // value when we compute it below.
+            checksum: [0, 0],
+        }).expect("too few bytes for UDP header");
 
         let mut checksum =
             compute_transport_checksum_serialize(self.src_ip, self.dst_ip, IpProto::Udp, buffer)

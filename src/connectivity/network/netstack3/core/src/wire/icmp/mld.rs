@@ -129,8 +129,6 @@ pub(crate) struct Mldv1Message {
     /// Max Response Delay, in units of milliseconds.
     pub(crate) max_response_delay: U16,
     /// Initialized to zero by the sender; ignored by receivers.
-    // TODO(rheacock): remove `#[cfg(test)]` when this is used.
-    #[cfg(test)]
     reserved: U16,
     /// In a Query message, the Multicast Address field is set to zero when
     /// sending a General Query, and set to a specific IPv6 multicast address
@@ -218,13 +216,14 @@ impl<M: Mldv1MessageType> Mldv1MessageBuilder<M> {
 
     fn serialize_message(&self, mut buf: &mut [u8]) {
         use packet::BufferViewMut;
-
         let mut bytes = &mut buf;
-        let mut message =
-            bytes.take_obj_front_zero::<Mldv1Message>().expect("Too few bytes for MLDv1 message");
-
-        message.max_response_delay = self.max_resp_delay.as_code();
-        message.group_addr = self.group_addr.into();
+        bytes
+            .write_obj_front(&Mldv1Message {
+                max_response_delay: self.max_resp_delay.as_code(),
+                reserved: U16::ZERO,
+                group_addr: self.group_addr.into(),
+            })
+            .expect("too few bytes for MLDv1 message");
     }
 }
 

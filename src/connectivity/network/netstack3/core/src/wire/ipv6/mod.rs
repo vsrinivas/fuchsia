@@ -173,7 +173,44 @@ pub(crate) struct FixedHeader {
     dst_ip: Ipv6Addr,
 }
 
+const IP_VERSION: u8 = 6;
+const VERSION_OFFSET: u8 = 4;
+const DS_OFFSET: u8 = 2;
+const DS_MAX: u8 = (1 << (8 - DS_OFFSET)) - 1;
+const ECN_MAX: u8 = (1 << DS_OFFSET) - 1;
+const FLOW_LABEL_MAX: u32 = (1 << 20) - 1;
+
 impl FixedHeader {
+    fn new(
+        ds: u8,
+        ecn: u8,
+        flow_label: u32,
+        payload_len: u16,
+        next_hdr: u8,
+        hop_limit: u8,
+        src_ip: Ipv6Addr,
+        dst_ip: Ipv6Addr,
+    ) -> FixedHeader {
+        debug_assert!(ds <= DS_MAX);
+        debug_assert!(ecn <= ECN_MAX);
+        debug_assert!(flow_label <= FLOW_LABEL_MAX);
+
+        let traffic_class = (ds << DS_OFFSET) | ecn;
+        FixedHeader {
+            version_tc_flowlabel: [
+                IP_VERSION << VERSION_OFFSET | traffic_class >> 4,
+                (traffic_class << 4) | ((flow_label >> 16) as u8),
+                (flow_label >> 8) as u8,
+                flow_label as u8,
+            ],
+            payload_len: U16::new(payload_len),
+            next_hdr,
+            hop_limit,
+            src_ip,
+            dst_ip,
+        }
+    }
+
     fn version(&self) -> u8 {
         self.version_tc_flowlabel[0] >> 4
     }
@@ -322,7 +359,7 @@ impl<B: ByteSlice> FromRaw<Ipv6PacketRaw<B>, ()> for Ipv6Packet<B> {
             );
         }
 
-        Ok(Ipv6Packet { fixed_hdr, extension_hdrs, body: body, proto })
+        Ok(Ipv6Packet { fixed_hdr, extension_hdrs, body, proto })
     }
 }
 
@@ -773,30 +810,33 @@ fn next_multiple_of_eight(x: usize) -> usize {
 }
 
 impl Ipv6PacketBuilder {
-    fn serialize_fixed_hdr<B: ByteSliceMut>(
+    fn serialize_fixed_hdr<B: ByteSliceMut, BV: BufferViewMut<B>>(
         &self,
-        fixed_hdr: &mut LayoutVerified<B, FixedHeader>,
+        mut buffer: BV,
         payload_len: usize,
         next_hdr: u8,
     ) {
-        fixed_hdr.version_tc_flowlabel = [
-            (6u8 << 4) | self.ds >> 2,
-            ((self.ds & 0b11) << 6) | (self.ecn << 4) | (self.flowlabel >> 16) as u8,
-            ((self.flowlabel >> 8) & 0xFF) as u8,
-            (self.flowlabel & 0xFF) as u8,
-        ];
-        // The caller promises to supply a body whose length does not exceed
-        // max_body_len. Doing this as a debug_assert (rather than an assert) is
-        // fine because, with debug assertions disabled, we'll just write an
-        // incorrect header value, which is acceptable if the caller has
-        // violated their contract.
-        debug_assert!(payload_len <= core::u16::MAX as usize);
-        let payload_len = payload_len as u16;
-        fixed_hdr.payload_len = U16::new(payload_len);
-        fixed_hdr.next_hdr = next_hdr;
-        fixed_hdr.hop_limit = self.hop_limit;
-        fixed_hdr.src_ip = self.src_ip;
-        fixed_hdr.dst_ip = self.dst_ip;
+        buffer
+            .write_obj_front(&FixedHeader::new(
+                self.ds,
+                self.ecn,
+                self.flowlabel,
+                {
+                    // The caller promises to supply a body whose length
+                    // does not exceed max_body_len. Doing this as a
+                    // debug_assert (rather than an assert) is fine because,
+                    // with debug assertions disabled, we'll just write an
+                    // incorrect header value, which is acceptable if the
+                    // caller has violated their contract.
+                    debug_assert!(payload_len <= core::u16::MAX as usize);
+                    payload_len as u16
+                },
+                next_hdr,
+                self.hop_limit,
+                self.src_ip,
+                self.dst_ip,
+            ))
+            .expect("not enough bytes for IPv6 fixed header");
     }
 }
 
@@ -808,13 +848,7 @@ impl PacketBuilder for Ipv6PacketBuilder {
 
     fn serialize(&self, buffer: &mut SerializeBuffer) {
         let (mut header, body, _) = buffer.parts();
-        // implements BufferViewMut, giving us take_obj_xxx_zero methods
-        let mut header = &mut header;
-
-        // TODO(tkilbourn): support extension headers
-        let mut fixed_hdr =
-            header.take_obj_front_zero::<FixedHeader>().expect("too few bytes for IPv6 header");
-        self.serialize_fixed_hdr(&mut fixed_hdr, body.len(), self.next_hdr);
+        self.serialize_fixed_hdr(&mut header, body.len(), self.next_hdr);
     }
 }
 
@@ -828,11 +862,11 @@ impl<'a, I: Clone + Iterator<Item = &'a HopByHopOption<'a>>> PacketBuilder
 
     fn serialize(&self, buffer: &mut SerializeBuffer) {
         let (mut header, body, _) = buffer.parts();
-        let mut header = &mut header;
-
-        let mut fixed_hdr =
-            header.take_obj_front_zero::<FixedHeader>().expect("too few bytes for IPv6 header");
         let aligned_hbh_len = self.aligned_hbh_len();
+        // The next header in the fixed header now should be 0 (Hop-by-Hop Extension Header)
+        self.prefix_builder.serialize_fixed_hdr(&mut header, body.len() + aligned_hbh_len, 0);
+        // header implements BufferViewMut
+        let mut header = &mut header;
         let mut hbh_extension_header = header
             .take_back_zero(aligned_hbh_len)
             .expect("too few bytes for Hop-by-Hop extension header");
@@ -845,8 +879,6 @@ impl<'a, I: Clone + Iterator<Item = &'a HopByHopOption<'a>>> PacketBuilder
         // After the first two bytes, we can serialize our real options.
         let options = hbh_pointer.take_rest_front_zero();
         self.hbh_options.serialize_records(options);
-        // The next header in the fixed header now should be 0 (Hop-by-Hop Extension Header)
-        self.prefix_builder.serialize_fixed_hdr(&mut fixed_hdr, body.len() + aligned_hbh_len, 0);
     }
 }
 
@@ -854,7 +886,6 @@ impl<'a, I: Clone + Iterator<Item = &'a HopByHopOption<'a>>> PacketBuilder
 mod tests {
     use std::ops::Deref;
 
-    use byteorder::{ByteOrder, NetworkEndian};
     use packet::{Buf, InnerPacketBuilder, ParseBuffer, Serializer};
 
     use super::ext_hdrs::*;
@@ -923,14 +954,7 @@ mod tests {
 
     // Return a new FixedHeader with reasonable defaults.
     fn new_fixed_hdr() -> FixedHeader {
-        let mut fixed_hdr = FixedHeader::default();
-        NetworkEndian::write_u32(&mut fixed_hdr.version_tc_flowlabel[..], 0x6020_0077);
-        fixed_hdr.payload_len = U16::ZERO;
-        fixed_hdr.next_hdr = IpProto::Tcp.into();
-        fixed_hdr.hop_limit = 64;
-        fixed_hdr.src_ip = DEFAULT_SRC_IP;
-        fixed_hdr.dst_ip = DEFAULT_DST_IP;
-        fixed_hdr
+        FixedHeader::new(0, 2, 0x77, 0, IpProto::Tcp.into(), 64, DEFAULT_SRC_IP, DEFAULT_DST_IP)
     }
 
     #[test]

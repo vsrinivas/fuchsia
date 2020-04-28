@@ -36,21 +36,14 @@ struct Header {
 }
 
 impl Header {
-    fn set_htype(&mut self, htype: ArpHardwareType, hlen: u8) -> &mut Header {
-        self.htype = U16::new(htype as u16);
-        self.hlen = hlen;
-        self
-    }
-
-    fn set_ptype(&mut self, ptype: EtherType, plen: u8) -> &mut Header {
-        self.ptype = U16::new(ptype.into());
-        self.plen = plen;
-        self
-    }
-
-    fn set_op(&mut self, op: ArpOp) -> &mut Header {
-        self.oper = U16::new(op as u16);
-        self
+    fn new<HwAddr: HType, ProtoAddr: PType>(op: ArpOp) -> Header {
+        Header {
+            htype: U16::new(<HwAddr as HType>::HTYPE as u16),
+            hlen: <HwAddr as HType>::HLEN,
+            ptype: U16::new(<ProtoAddr as PType>::PTYPE.into()),
+            plen: <ProtoAddr as PType>::PLEN,
+            oper: U16::new(op as u16),
+        }
     }
 }
 
@@ -125,28 +118,6 @@ unsafe impl<HwAddr: AsBytes + Unaligned, ProtoAddr: AsBytes + Unaligned> AsBytes
     // We're doing a bad thing, but it's necessary until derive(AsBytes)
     // supports type parameters.
     fn only_derive_is_allowed_to_implement_this_trait() {}
-}
-
-impl<HwAddr: Copy, ProtoAddr: Copy> Body<HwAddr, ProtoAddr> {
-    fn set_sha(&mut self, sha: HwAddr) -> &mut Self {
-        self.sha = sha;
-        self
-    }
-
-    fn set_spa(&mut self, spa: ProtoAddr) -> &mut Self {
-        self.spa = spa;
-        self
-    }
-
-    fn set_tha(&mut self, tha: HwAddr) -> &mut Self {
-        self.tha = tha;
-        self
-    }
-
-    fn set_tpa(&mut self, tpa: ProtoAddr) -> &mut Self {
-        self.tpa = tpa;
-        self
-    }
 }
 
 /// An ARP packet.
@@ -291,21 +262,14 @@ where
     }
 
     fn serialize(&self, mut buffer: &mut [u8]) {
-        // implements BufferViewMut, giving us take_obj_xxx_zero methods
+        // implements BufferViewMut, giving us write_obj_front method
         let mut buffer = &mut buffer;
-
-        // SECURITY: Use _zero constructors to ensure we zero memory to prevent
-        // leaking information from packets previously stored in this buffer.
-        let mut header =
-            buffer.take_obj_front_zero::<Header>().expect("not enough bytes for an ARP packet");
-        let mut body = buffer
-            .take_obj_front_zero::<Body<HwAddr, ProtoAddr>>()
-            .expect("not enough bytes for an ARP packet");
-        header
-            .set_htype(<HwAddr as HType>::HTYPE, <HwAddr as HType>::HLEN)
-            .set_ptype(<ProtoAddr as PType>::PTYPE, <ProtoAddr as PType>::PLEN)
-            .set_op(self.op);
-        body.set_sha(self.sha).set_spa(self.spa).set_tha(self.tha).set_tpa(self.tpa);
+        buffer
+            .write_obj_front(&Header::new::<HwAddr, ProtoAddr>(self.op))
+            .expect("too few bytes for ARP packet");
+        buffer
+            .write_obj_front(&Body { sha: self.sha, spa: self.spa, tha: self.tha, tpa: self.tpa })
+            .expect("too few bytes for ARP packet");
     }
 }
 
@@ -366,12 +330,7 @@ mod tests {
 
     // Return a new Header for an Ethernet/IPv4 ARP request.
     fn new_header() -> Header {
-        let mut header = Header::default();
-        header
-            .set_htype(<Mac as HType>::HTYPE, <Mac as HType>::HLEN)
-            .set_ptype(<Ipv4Addr as PType>::PTYPE, <Ipv4Addr as PType>::PLEN)
-            .set_op(ArpOp::Request);
-        header
+        Header::new::<Mac, Ipv4Addr>(ArpOp::Request)
     }
 
     #[test]
@@ -537,7 +496,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "not enough bytes for an ARP packet")]
+    #[should_panic(expected = "too few bytes for ARP packet")]
     fn test_serialize_panic_insufficient_packet_space() {
         // Test that a buffer which doesn't leave enough room for the packet is
         // rejected.

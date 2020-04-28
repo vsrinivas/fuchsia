@@ -240,22 +240,27 @@ impl PacketBuilder for EthernetFrameBuilder {
         // implements BufferViewMut, giving us take_obj_xxx_zero methods
         let mut header = &mut header;
 
-        // SECURITY: Use _zero constructors to ensure we zero memory to
-        // prevent leaking information from packets previously stored in
-        // this buffer.
-        let mut hdr_prefix = header
-            .take_obj_front_zero::<HeaderPrefix>()
+        header
+            .write_obj_front(&HeaderPrefix { src_mac: self.src_mac, dst_mac: self.dst_mac })
             .expect("too few bytes for Ethernet header");
-        let mut ethertype =
-            header.take_obj_front_zero::<U16>().expect("too few bytes for Ethernet header");
+        header
+            .write_obj_front(&U16::new(self.ethertype))
+            .expect("too few bytes for Ethernet header");
 
-        if total_len < 60 {
-            panic!("total frame size of {} bytes is below minimum frame size of 60", total_len);
-        }
+        // NOTE(joshlf): This doesn't include the tag. If we ever add support
+        // for serializing tags, we will need to update this.
+        let min_frame_size = ETHERNET_MIN_BODY_LEN_NO_TAG
+            + core::mem::size_of::<HeaderPrefix>()
+            + core::mem::size_of::<U16>();
 
-        hdr_prefix.src_mac = self.src_mac;
-        hdr_prefix.dst_mac = self.dst_mac;
-        ethertype.set(self.ethertype);
+        // Assert this here so that if there isn't enough space for even an
+        // Ethernet header, we report that more specific error.
+        assert!(
+            total_len >= min_frame_size,
+            "total frame size of {} bytes is below minimum frame size of {}",
+            total_len,
+            min_frame_size,
+        );
     }
 }
 

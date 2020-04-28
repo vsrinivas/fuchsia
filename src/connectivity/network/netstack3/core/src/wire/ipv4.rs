@@ -9,7 +9,6 @@ use core::convert::TryFrom;
 use core::fmt::{self, Debug, Formatter};
 use core::ops::Range;
 
-use byteorder::{ByteOrder, NetworkEndian};
 use internet_checksum::Checksum;
 use net_types::ip::{Ipv4, Ipv4Addr};
 use packet::records::options::OptionsRaw;
@@ -55,7 +54,7 @@ pub(crate) const IPV4_TTL_OFFSET: usize = 8;
 pub(crate) const IPV4_CHECKSUM_OFFSET: usize = 10;
 
 #[allow(missing_docs)]
-#[derive(Default, FromBytes, AsBytes, Unaligned)]
+#[derive(FromBytes, AsBytes, Unaligned)]
 #[repr(C)]
 pub(crate) struct HeaderPrefix {
     version_ihl: u8,
@@ -70,20 +69,68 @@ pub(crate) struct HeaderPrefix {
     dst_ip: Ipv4Addr,
 }
 
+const IP_VERSION: u8 = 4;
+const VERSION_OFFSET: u8 = 4;
+const IHL_MASK: u8 = 0xF;
+const IHL_MAX: u8 = (1 << VERSION_OFFSET) - 1;
+const DSCP_OFFSET: u8 = 2;
+const DSCP_MAX: u8 = (1 << (8 - DSCP_OFFSET)) - 1;
+const ECN_MAX: u8 = (1 << DSCP_OFFSET) - 1;
+const FLAGS_OFFSET: u8 = 13;
+const FLAGS_MAX: u8 = (1 << (16 - FLAGS_OFFSET)) - 1;
+const FRAG_OFF_MAX: u16 = (1 << FLAGS_OFFSET) - 1;
+
 impl HeaderPrefix {
+    fn new(
+        ihl: u8,
+        dscp: u8,
+        ecn: u8,
+        total_len: u16,
+        id: u16,
+        flags: u8,
+        frag_off: u16,
+        ttl: u8,
+        proto: u8,
+        hdr_checksum: [u8; 2],
+        src_ip: Ipv4Addr,
+        dst_ip: Ipv4Addr,
+    ) -> HeaderPrefix {
+        debug_assert!(ihl <= IHL_MAX);
+        debug_assert!(dscp <= DSCP_MAX);
+        debug_assert!(ecn <= ECN_MAX);
+        debug_assert!(flags <= FLAGS_MAX);
+        debug_assert!(frag_off <= FRAG_OFF_MAX);
+
+        HeaderPrefix {
+            version_ihl: (IP_VERSION << VERSION_OFFSET) | ihl,
+            dscp_ecn: (dscp << DSCP_OFFSET) | ecn,
+            total_len: U16::new(total_len),
+            id: U16::new(id),
+            flags_frag_off: ((u16::from(flags) << FLAGS_OFFSET) | frag_off).to_be_bytes(),
+            ttl,
+            proto,
+            src_ip,
+            dst_ip,
+            hdr_checksum,
+        }
+    }
+
     fn version(&self) -> u8 {
-        self.version_ihl >> 4
+        self.version_ihl >> VERSION_OFFSET
     }
 
     /// Get the Internet Header Length (IHL).
     pub(crate) fn ihl(&self) -> u8 {
-        self.version_ihl & 0xF
+        self.version_ihl & IHL_MASK
     }
 
     /// The More Fragments (MF) flag.
     pub(crate) fn mf_flag(&self) -> bool {
-        // the flags are the top 3 bits, so we need to shift by an extra 5 bits
-        self.flags_frag_off[0] & (1 << (5 + MF_FLAG_OFFSET)) > 0
+        // `FLAGS_OFFSET` refers to the offset within the 2-byte array
+        // containing both the flags and the fragment offset. Since we're
+        // accessing the first byte directly, we shift by an extra `FLAGS_OFFSET
+        // - 8` bits, not by an extra `FLAGS_OFFSET` bits.
+        self.flags_frag_off[0] & (1 << ((FLAGS_OFFSET - 8) + MF_FLAG_OFFSET)) > 0
     }
 }
 
@@ -467,17 +514,12 @@ impl<'a, I: Clone + Iterator<Item = &'a Ipv4Option<'a>>> PacketBuilder
 
     fn serialize(&self, buffer: &mut SerializeBuffer) {
         let (mut header, body, _) = buffer.parts();
-        // implements BufferViewMut, giving us take_obj_xxx_zero methods
+        // implements BufferViewMut
         let mut header = &mut header;
-
-        // SECURITY: Use _zero constructor to ensure we zero memory to prevent
-        // leaking information from packets previously stored in this buffer.
-        let mut hdr_prefix =
-            header.take_obj_front_zero::<HeaderPrefix>().expect("too few bytes for IPv4 header");
         let opt_len = self.aligned_options_len();
         let options = header.take_back_zero(opt_len).expect("too few bytes for Ipv4 options");
         self.options.serialize_records(options);
-        self.prefix_builder.assemble(&mut hdr_prefix, options, body.len());
+        self.prefix_builder.write_header_prefix(header, options, body.len());
     }
 }
 
@@ -583,37 +625,45 @@ impl Ipv4PacketBuilder {
 }
 
 impl Ipv4PacketBuilder {
-    /// Fill in the `HeaderPrefix` part according to the given `options` and `body`.
-    fn assemble<B: ByteSliceMut>(
+    /// Writes a `HeaderPrefix` to the beginning of `buffer` according to the
+    /// given `options` and `body`.
+    fn write_header_prefix<B: ByteSliceMut, BV: BufferViewMut<B>>(
         &self,
-        hdr_prefix: &mut LayoutVerified<B, HeaderPrefix>,
+        mut buffer: BV,
         options: &[u8],
         body_len: usize,
     ) {
-        let header_len = hdr_prefix.bytes().len() + options.len();
+        let header_len = core::mem::size_of::<HeaderPrefix>() + options.len();
         let total_len = header_len + body_len;
         assert_eq!(header_len % 4, 0);
         let ihl: u8 = u8::try_from(header_len / 4).expect("Header too large");
-        hdr_prefix.version_ihl = (4u8 << 4) | ihl;
-        hdr_prefix.dscp_ecn = (self.dscp << 2) | self.ecn;
-        // The caller promises to supply a body whose length does not exceed
-        // max_body_len. Doing this as a debug_assert (rather than an assert) is
-        // fine because, with debug assertions disabled, we'll just write an
-        // incorrect header value, which is acceptable if the caller has
-        // violated their contract.
-        debug_assert!(total_len <= core::u16::MAX as usize);
-        hdr_prefix.total_len = U16::new(total_len as u16);
-        hdr_prefix.id = U16::new(self.id);
-        NetworkEndian::write_u16(
-            &mut hdr_prefix.flags_frag_off,
-            ((u16::from(self.flags)) << 13) | self.frag_off,
+
+        let mut hdr_prefix = HeaderPrefix::new(
+            ihl,
+            self.dscp,
+            self.ecn,
+            {
+                // The caller promises to supply a body whose length does not
+                // exceed max_body_len. Doing this as a debug_assert (rather
+                // than an assert) is fine because, with debug assertions
+                // disabled, we'll just write an incorrect header value, which
+                // is acceptable if the caller has violated their contract.
+                debug_assert!(total_len <= core::u16::MAX as usize);
+                total_len as u16
+            },
+            self.id,
+            self.flags,
+            self.frag_off,
+            self.ttl,
+            self.proto,
+            [0, 0], // header checksum
+            self.src_ip,
+            self.dst_ip,
         );
-        hdr_prefix.ttl = self.ttl;
-        hdr_prefix.proto = self.proto;
-        hdr_prefix.src_ip = self.src_ip;
-        hdr_prefix.dst_ip = self.dst_ip;
-        let checksum = compute_header_checksum(hdr_prefix.bytes(), options);
+
+        let checksum = compute_header_checksum(hdr_prefix.as_bytes(), options);
         hdr_prefix.hdr_checksum = checksum;
+        buffer.write_obj_front(&hdr_prefix).expect("too few bytes for IPv4 header prefix");
     }
 }
 
@@ -624,20 +674,13 @@ impl PacketBuilder for Ipv4PacketBuilder {
 
     fn serialize(&self, buffer: &mut SerializeBuffer) {
         let (mut header, body, _) = buffer.parts();
-        // implements BufferViewMut, giving us take_obj_xxx_zero methods
-        let mut header = &mut header;
-
-        // SECURITY: Use _zero constructor to ensure we zero memory to prevent
-        // leaking information from packets previously stored in this buffer.
-        let mut hdr_prefix =
-            header.take_obj_front_zero::<HeaderPrefix>().expect("too few bytes for IPv4 header");
-        self.assemble(&mut hdr_prefix, &[][..], body.len());
+        self.write_header_prefix(&mut header, &[][..], body.len());
     }
 }
 
 // bit positions into the flags bits
-const DF_FLAG_OFFSET: u32 = 1;
-const MF_FLAG_OFFSET: u32 = 0;
+const DF_FLAG_OFFSET: u8 = 1;
+const MF_FLAG_OFFSET: u8 = 0;
 
 pub(crate) mod options {
     use byteorder::{ByteOrder, NetworkEndian, WriteBytesExt};
@@ -826,16 +869,20 @@ mod tests {
     // Return a new HeaderPrefix with reasonable defaults, including a valid
     // header checksum.
     fn new_hdr_prefix() -> HeaderPrefix {
-        let mut hdr_prefix = HeaderPrefix::default();
-        hdr_prefix.version_ihl = (4 << 4) | 5;
-        hdr_prefix.total_len = U16::new(20);
-        hdr_prefix.id = U16::new(0x0102);
-        hdr_prefix.ttl = 0x03;
-        hdr_prefix.proto = IpProto::Tcp.into();
-        hdr_prefix.src_ip = DEFAULT_SRC_IP;
-        hdr_prefix.dst_ip = DEFAULT_DST_IP;
-        hdr_prefix.hdr_checksum = [0xa6, 0xcf];
-        hdr_prefix
+        HeaderPrefix::new(
+            5,
+            0,
+            0,
+            20,
+            0x0102,
+            0,
+            0,
+            0x03,
+            IpProto::Tcp.into(),
+            [0xa6, 0xcf],
+            DEFAULT_SRC_IP,
+            DEFAULT_DST_IP,
+        )
     }
 
     #[test]
