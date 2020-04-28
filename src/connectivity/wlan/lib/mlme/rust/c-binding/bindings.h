@@ -241,8 +241,6 @@ extern "C" void client_mlme_timeout_fired(wlan_client_mlme_t *mlme,
 
 extern "C" int32_t client_mlme_handle_eth_frame(wlan_client_mlme_t *mlme, wlan_span_t frame);
 
-extern "C" int32_t mlme_is_valid_open_auth_resp(wlan_span_t auth_resp);
-
 extern "C" void mlme_sequence_manager_delete(mlme_sequence_manager_t *mgr);
 
 extern "C" mlme_sequence_manager_t *mlme_sequence_manager_new(void);

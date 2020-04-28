@@ -97,13 +97,17 @@ impl Authenticating {
     fn on_auth_frame(&self, sta: &mut BoundClient<'_>, auth_hdr: &mac::AuthHdr) -> Result<(), ()> {
         sta.ctx.timer.cancel_event(self.timeout);
 
-        match auth::is_valid_open_ap_resp(auth_hdr) {
-            Ok(()) => {
+        let frame_type = auth::validate_ap_resp(auth_hdr).map_err(|e| {
+            error!("authentication with BSS failed: {}", e);
+            sta.send_authenticate_conf(fidl_mlme::AuthenticateResultCodes::AuthenticationRejected);
+        })?;
+        match frame_type {
+            auth::ValidFrame::Open => {
                 sta.send_authenticate_conf(fidl_mlme::AuthenticateResultCodes::Success);
                 Ok(())
             }
-            Err(e) => {
-                error!("authentication with BSS failed: {}", e);
+            _ => {
+                error!("authentication with BSS failed: unhandled auth type {:?}", frame_type);
                 sta.send_authenticate_conf(
                     fidl_mlme::AuthenticateResultCodes::AuthenticationRejected,
                 );
@@ -745,6 +749,9 @@ statemachine!(
     Authenticating => Authenticated,
     Authenticated => Associating,
     Associating => Associated,
+
+    // Multi-step authentication (SAE):
+    Authenticating => Authenticating,
 
     // Timeout:
     Authenticating => Joined,

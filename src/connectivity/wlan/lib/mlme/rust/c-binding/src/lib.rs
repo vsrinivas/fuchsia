@@ -6,10 +6,6 @@
 
 // Explicitly declare usage for cbindgen.
 
-#[macro_use]
-pub mod utils;
-
 pub mod ap;
-pub mod auth;
 pub mod client;
 pub mod sequence;
