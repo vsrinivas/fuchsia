@@ -155,44 +155,119 @@ As a change author, when you add or modify tests, you should tell the
 infrastructure to run those tests multiple times with a MULTIPLY field in the
 commit message. You would add something like this to your commit message:
 
-```json
-MULTIPLY: `[
-  {
-    "name": <test name, e.g., "foo_bin_test">,
-    "os": <one of "fuchsia", "linux", "mac"; defaults to "fuchsia">,
-    "total_runs": <any positive int; defaults to 1; suggested value is 30>
-  }
-]`
+```txt
+MULTIPLY: test_name (os): run_count
 ```
 
-The test name and OS **must match** a test in `out/default/tests.json`.
-This file is created after you run `fx set` inside of your Fuchsia directory.
+For example:
 
-An example CL description should look like:
-
-```json
-[foo] Add new foo compatibility tests
-
-This change adds a new test.
-
-MULTIPLY: `[
-  {
-    "name": "foo_tests",
-    "total_runs": 30
-  },
-  {
-    "name": "foo_host_tests",
-    "os": "linux",
-    "total_runs": 30
-  }
-]`
+```txt
+MULTIPLY: foo_tests (fuchsia): 30
 ```
+
+Note: "os" and "run_count" are both optional; see [below](#multiply-examples)
+for more examples.
 
 You should then choose a tryjob that runs your tests. These tests show as
 separate shards for each test, which run that test as many times as the
-specified `total_runs`. The timeout for running these tests is 40 minutes. If a
-test takes too long, the shard may time out. It is recommended that you start
-with a `total_runs` of `30`.
+specified run count. The timeout for running these tests is 40 minutes on
+most builders. If a test takes too long, the shard may time out.
+
+The test name can be any of the following:
+
+* The basename of the test's GN target, as seen in the "name" field of each
+  entry in `out/default/tests.json`. This file is created after you run `fx
+  set` inside of your Fuchsia directory.
+* The test package URL (for fuchsia tests) or path (for host tests). This is
+  the name that Flake Fetcher uses to refer to tests.
+* A regular expression (using Go's [regular expression
+  syntax](https://github.com/google/re2/wiki/Syntax)) that matches either of
+  the above fields. However, note that if a single multiplier matches more
+  than 5 different tests, it will be rejected (to prevent accidental DoSing).
+  If this happens to you, simply edit your commit message locally or in the
+  Gerrit UI to make your regular expression more specific.
+
+The "os" field, if specified, should be either "fuchsia", "linux", or "mac".
+If left unset, the multiplier will match any test, regardless of the test's
+operating system, as long as the name matches.
+
+If "run_count" is left unspecified, the infrastructure will use historical
+test duration data to calculate a number of runs that will produce a single
+multiplied test shard whose duration is similar to the expected duration of
+the other shards (although the calculated run count will be limited to a
+maximum of 2000). Longer tests will be run fewer times, shorter tests more
+times.
+
+Note: If your CL increases a test's duration, then the historical duration
+data may no longer be accurate and the number of runs calculated by the
+infrastructure may cause the shard to time out. In this case, you'll have to
+edit the commit message and specify a lower number of runs.
+
+#### Syntax examples {#multiply-examples}
+
+* Title-case "Multiply" can be used instead of all-caps "MULTIPLY":
+
+  ```txt
+  Multiply: foo_tests (fuchsia): 30
+  ```
+
+* If you leave out the OS, the multiplier will be applied to any test that
+  matches the multiplier name, regardless of OS:
+
+  ```txt
+  Multiply: foo_tests: 30
+  ```
+
+* If you leave out the number of runs, the infrastructure will calculate a
+  number of runs that will fill up exactly one shard:
+
+  ```txt
+  Multiply: foo_tests (linux)
+  ```
+
+* You can also leave out both the OS and the number of runs:
+
+  ```txt
+  Multiply: foo_tests
+  ```
+
+* To multiply more than one test, add extra "Multiply" lines:
+
+  ```txt
+  Multiply: foo_tests
+  Multiply: bar_tests
+  ```
+
+* Comma-separated multipliers in a single line are also supported:
+
+  ```txt
+  Multiply: foo_tests: 5, bar_tests (fuchsia): 6
+  ```
+
+* You can reference fuchsia tests by package URL and host tests by path:
+
+  ```txt
+  Multiply: fuchsia-pkg://fuchsia.com/foo_tests#meta/foo_tests.cmx
+  Multiply: host_x64/bar_tests
+  ```
+
+* Regex and substring matching is also supported:
+
+  ```txt
+  Multiply: fuchsia.com/foo_tests
+  ```
+
+* This JSON syntax is also valid:
+
+  ```json
+  Multiply: `[
+    {
+      "name": "foo_bin_test",
+      "os": "fuchsia",
+      "total_runs": 30
+    }
+  ]`
+  ```
 
 ### Tests should not sleep
 
