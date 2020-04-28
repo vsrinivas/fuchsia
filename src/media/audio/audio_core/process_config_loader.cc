@@ -40,6 +40,7 @@ static constexpr char kJsonKeySupportedStreamTypes[] = "supported_stream_types";
 static constexpr char kJsonKeySupportedOutputStreamTypes[] = "supported_output_stream_types";
 static constexpr char kJsonKeyEligibleForLoopback[] = "eligible_for_loopback";
 static constexpr char kJsonKeyIndependentVolumeControl[] = "independent_volume_control";
+static constexpr char kJsonKeyDriverGainDb[] = "driver_gain_db";
 static constexpr char kJsonKeyThermalPolicy[] = "thermal_policy";
 static constexpr char kJsonKeyTargetName[] = "target_name";
 static constexpr char kJsonKeyStates[] = "states";
@@ -302,6 +303,13 @@ ParseOutputDeviceProfileFromJsonObject(const rapidjson::Value& value,
     independent_volume_control = independent_volume_control_it->value.GetBool();
   }
 
+  float driver_gain_db = 0.0;
+  auto driver_gain_db_it = value.FindMember(kJsonKeyDriverGainDb);
+  if (driver_gain_db_it != value.MemberEnd()) {
+    FX_DCHECK(driver_gain_db_it->value.IsNumber());
+    driver_gain_db = driver_gain_db_it->value.GetDouble();
+  }
+
   StreamUsageSet supported_stream_types;
   auto supported_stream_types_it = value.FindMember(kJsonKeySupportedOutputStreamTypes);
   if (supported_stream_types_it != value.MemberEnd()) {
@@ -342,9 +350,9 @@ ParseOutputDeviceProfileFromJsonObject(const rapidjson::Value& value,
   }
 
   return fit::ok(std::make_pair(
-      device_id,
-      DeviceConfig::OutputDeviceProfile(eligible_for_loopback, std::move(supported_stream_types),
-                                        independent_volume_control, std::move(pipeline_config))));
+      device_id, DeviceConfig::OutputDeviceProfile(
+                     eligible_for_loopback, std::move(supported_stream_types),
+                     independent_volume_control, std::move(pipeline_config), driver_gain_db)));
 }
 
 ThermalConfig::Entry ParseThermalPolicyEntryFromJsonObject(const rapidjson::Value& value) {

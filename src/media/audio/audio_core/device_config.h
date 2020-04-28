@@ -20,8 +20,8 @@ class DeviceConfig {
  public:
   class DeviceProfile {
    public:
-    DeviceProfile(StreamUsageSet supported_usages)
-        : usage_support_set_(std::move(supported_usages)) {}
+    DeviceProfile(StreamUsageSet supported_usages, float driver_gain_db = 0.0)
+        : usage_support_set_(std::move(supported_usages)), driver_gain_db_(driver_gain_db) {}
 
     virtual ~DeviceProfile() = default;
 
@@ -31,8 +31,11 @@ class DeviceConfig {
 
     virtual const std::shared_ptr<LoudnessTransform>& loudness_transform() const;
 
+    float driver_gain_db() const { return driver_gain_db_; }
+
    private:
     StreamUsageSet usage_support_set_;
+    float driver_gain_db_;
   };
 
   // A routing profile for a device.
@@ -43,8 +46,9 @@ class DeviceConfig {
 
     OutputDeviceProfile(bool eligible_for_loopback, StreamUsageSet supported_usages,
                         bool independent_volume_control = false,
-                        PipelineConfig pipeline_config = PipelineConfig::Default())
-        : DeviceProfile(std::move(supported_usages)),
+                        PipelineConfig pipeline_config = PipelineConfig::Default(),
+                        float driver_gain_db = 0.0)
+        : DeviceProfile(std::move(supported_usages), driver_gain_db),
           eligible_for_loopback_(eligible_for_loopback),
           independent_volume_control_(independent_volume_control),
           pipeline_config_(std::move(pipeline_config)) {}
