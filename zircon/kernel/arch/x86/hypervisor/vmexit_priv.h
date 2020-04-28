@@ -233,9 +233,10 @@ enum class CrAccessType : uint8_t {
 
 enum VmCallStatus : int64_t {
     OK                  = 0,
+    NOT_PERMITTED       = -1,
     FAULT               = -14,
-    OP_NOT_SUPPORTED    = -95,
-    NO_SYS              = -1000,
+    NOT_SUPPORTED       = -95,
+    UNKNOWN_HYPERCALL   = -1000,
 };
 
 enum class VmCallType : uint64_t {

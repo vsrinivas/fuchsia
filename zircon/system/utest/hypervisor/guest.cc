@@ -65,7 +65,8 @@ DECLARE_TEST_FUNCTION(vcpu_compat_mode)
 DECLARE_TEST_FUNCTION(vcpu_syscall)
 DECLARE_TEST_FUNCTION(vcpu_sysenter)
 DECLARE_TEST_FUNCTION(vcpu_sysenter_compat)
-DECLARE_TEST_FUNCTION(vcpu_vmcall)
+DECLARE_TEST_FUNCTION(vcpu_vmcall_invalid_number)
+DECLARE_TEST_FUNCTION(vcpu_vmcall_invalid_cpl)
 DECLARE_TEST_FUNCTION(vcpu_extended_registers)
 DECLARE_TEST_FUNCTION(guest_set_trap_with_io)
 #endif
@@ -114,7 +115,8 @@ static zx_status_t get_hypervisor_resource(zx::resource* resource) {
 
 #ifdef __aarch64__
 
-static zx_status_t get_interrupt_controller_info(fuchsia::sysinfo::InterruptControllerInfoPtr* info) {
+static zx_status_t get_interrupt_controller_info(
+    fuchsia::sysinfo::InterruptControllerInfoPtr* info) {
   fuchsia::sysinfo::SysInfoSyncPtr sysinfo = get_sysinfo();
 
   zx_status_t fidl_status;
@@ -948,11 +950,11 @@ static bool vcpu_sysenter_compat() {
   END_TEST;
 }
 
-static bool vcpu_vmcall() {
+static bool vcpu_vmcall_invalid_number() {
   BEGIN_TEST;
 
   test_t test;
-  ASSERT_TRUE(setup(&test, vcpu_vmcall_start, vcpu_vmcall_end));
+  ASSERT_TRUE(setup(&test, vcpu_vmcall_invalid_number_start, vcpu_vmcall_invalid_number_end));
   if (!test.supported) {
     // The hypervisor isn't supported, so don't run the test.
     return true;
@@ -963,8 +965,29 @@ static bool vcpu_vmcall() {
   zx_vcpu_state_t vcpu_state;
   ASSERT_EQ(test.vcpu.read_state(ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state)), ZX_OK);
 
-  const uint64_t kVmCallNoSys = -1000;
-  EXPECT_EQ(vcpu_state.rax, kVmCallNoSys);
+  const uint64_t kUnknownHypercall = -1000;
+  EXPECT_EQ(vcpu_state.rax, kUnknownHypercall);
+
+  END_TEST;
+}
+
+static bool vcpu_vmcall_invalid_cpl() {
+  BEGIN_TEST;
+
+  test_t test;
+  ASSERT_TRUE(setup(&test, vcpu_vmcall_invalid_cpl_start, vcpu_vmcall_invalid_cpl_end));
+  if (!test.supported) {
+    // The hypervisor isn't supported, so don't run the test.
+    return true;
+  }
+
+  ASSERT_TRUE(resume_and_clean_exit(&test));
+
+  zx_vcpu_state_t vcpu_state;
+  ASSERT_EQ(test.vcpu.read_state(ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state)), ZX_OK);
+
+  const uint64_t kNotPermitted = -1;
+  EXPECT_EQ(vcpu_state.rax, kNotPermitted);
 
   END_TEST;
 }
@@ -1099,7 +1122,8 @@ RUN_TEST(vcpu_compat_mode)
 RUN_TEST(vcpu_syscall)
 RUN_TEST(vcpu_sysenter)
 RUN_TEST(vcpu_sysenter_compat)
-RUN_TEST(vcpu_vmcall)
+RUN_TEST(vcpu_vmcall_invalid_number)
+RUN_TEST(vcpu_vmcall_invalid_cpl)
 RUN_TEST(vcpu_extended_registers)
 RUN_TEST(vcpu_write_state_io_invalid_size)
 RUN_TEST(guest_set_trap_with_io)

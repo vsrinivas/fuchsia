@@ -405,11 +405,29 @@ vcpu_sysenter_compat_done:
     movq $0, (EXIT_TEST_ADDR)
 FUNCTION vcpu_sysenter_compat_end
 
-FUNCTION vcpu_vmcall_start
+FUNCTION vcpu_vmcall_invalid_number_start
     movq $(INVALID_HYPERCALL), %rax
     vmcall
     movq $0, (EXIT_TEST_ADDR)
-FUNCTION vcpu_vmcall_end
+FUNCTION vcpu_vmcall_invalid_number_end
+
+FUNCTION vcpu_vmcall_invalid_cpl_start
+    init_interrupt_handling vcpu_vmcall_invalid_cpl_start
+
+    xor %eax, %eax
+    mov $((USER_CODE_64_SELECTOR << 16) | CODE_64_SELECTOR), %edx
+    mov $X86_MSR_IA32_STAR, %ecx
+    wrmsr
+
+    pushfq
+    mov $ABSOLUTE_ADDR(vcpu_vmcall_invalid_cpl_start, vcpu_vmcall_invalid_cpl_ring3), %rcx
+    sysretq
+
+vcpu_vmcall_invalid_cpl_ring3:
+    movq $(INVALID_HYPERCALL), %rax
+    vmcall
+    movq $0, (EXIT_TEST_ADDR)
+FUNCTION vcpu_vmcall_invalid_cpl_end
 
 FUNCTION vcpu_extended_registers_start
     // Enable SSE instructions.

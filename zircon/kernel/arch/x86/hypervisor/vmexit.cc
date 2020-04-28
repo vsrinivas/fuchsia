@@ -1066,14 +1066,21 @@ static zx_status_t handle_vmcall(const ExitInfo& exit_info, AutoVmcs* vmcs,
                                  hypervisor::GuestPhysicalAddressSpace* gpas,
                                  GuestState* guest_state) {
   next_rip(exit_info, vmcs);
-  vmcs->Invalidate();
 
+  const uint32_t access_rights = vmcs->Read(VmcsField32::GUEST_SS_ACCESS_RIGHTS);
+  if ((access_rights & kGuestXxAccessRightsDplUser) != 0) {
+    // We only accept a VMCALL if CPL is 0.
+    guest_state->rax = VmCallStatus::NOT_PERMITTED;
+    return ZX_OK;
+  }
+
+  vmcs->Invalidate();
   VmCallInfo info(guest_state);
   switch (info.type) {
     case VmCallType::CLOCK_PAIRING: {
       if (info.arg[1] != 0) {
         dprintf(INFO, "CLOCK_PAIRING hypercall doesn't support clock type %lu\n", info.arg[1]);
-        guest_state->rax = VmCallStatus::OP_NOT_SUPPORTED;
+        guest_state->rax = VmCallStatus::NOT_SUPPORTED;
         break;
       }
       zx_status_t status = pv_clock_populate_offset(gpas, info.arg[0]);
@@ -1086,10 +1093,10 @@ static zx_status_t handle_vmcall(const ExitInfo& exit_info, AutoVmcs* vmcs,
       break;
     }
     default:
-      dprintf(INFO, "Unknown VMCALL(%lu) (arg0=%#lx, arg1=%#lx, arg2=%#lx, arg3=%#lx)\n",
+      dprintf(INFO, "Unknown hypercall %lu (arg0=%#lx, arg1=%#lx, arg2=%#lx, arg3=%#lx)\n",
               static_cast<unsigned long>(info.type), info.arg[0], info.arg[1], info.arg[2],
               info.arg[3]);
-      guest_state->rax = VmCallStatus::NO_SYS;
+      guest_state->rax = VmCallStatus::UNKNOWN_HYPERCALL;
       break;
   }
   // We never fail in case of hypercalls, we just return/propagate errors to the caller.

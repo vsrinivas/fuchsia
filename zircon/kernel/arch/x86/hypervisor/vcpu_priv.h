@@ -71,6 +71,7 @@ static const uint32_t kGuestXxAccessRightsTypeE         = 1u << 2;
 static const uint32_t kGuestXxAccessRightsTypeCode      = 1u << 3;
 // See Volume 3, Section 3.4.5.1 for valid non-system selector types.
 static const uint32_t kGuestXxAccessRightsS             = 1u << 4;
+static const uint32_t kGuestXxAccessRightsDplUser       = 3u << 5;
 static const uint32_t kGuestXxAccessRightsP             = 1u << 7;
 static const uint32_t kGuestXxAccessRightsL             = 1u << 13;
 static const uint32_t kGuestXxAccessRightsD             = 1u << 14;
