@@ -6,6 +6,7 @@ import("//build/board.gni")
 import("//build/config/fuchsia/zbi.gni")
 import("//build/images/args.gni")
 import("//build/images/boot.gni")
+import("//build/images/bootfs_manifest_additions.gni")
 import("//build/images/custom_signing.gni")
 import("//build/images/manifest.gni")
 import("//build/images/ta.gni")
@@ -49,43 +50,24 @@ action("devmgr_config.txt") {
   }
 }
 
-coordinator_label = "//src/devices:devices.bootfs"
-coordinator_target_dir = get_label_info(coordinator_label, "target_out_dir")
-coordinator_target_name = get_label_info(coordinator_label, "name")
-coordinator_manifest = coordinator_target_dir + "/" + coordinator_target_name
-
-component_manager_label = "//src/sys/component_manager:component_manager.bootfs"
-component_manager_target_dir =
-    get_label_info(component_manager_label, "target_out_dir")
-component_manager_target_name = get_label_info(component_manager_label, "name")
-component_manager_manifest =
-    component_manager_target_dir + "/" + component_manager_target_name
-
-root_manifests_label = "//src/sys/bootstrap:root_manifests.bootfs"
-root_manifests_target_dir =
-    get_label_info(root_manifests_label, "target_out_dir")
-root_manifests_target_name = get_label_info(root_manifests_label, "name")
-root_manifests_manifest =
-    root_manifests_target_dir + "/" + root_manifests_target_name
+additional_manifests = []
+foreach(label, bootfs_manifest_additions) {
+  target_dir = get_label_info(label, "target_out_dir")
+  target_name = get_label_info(label, "name")
+  additional_manifests += [ target_dir + "/" + target_name ]
+}
 
 zbi("bringup") {
   testonly = true
 
   deps = [
-    ":boot.manifest",
-    ":devmgr_config.txt",
-    component_manager_label,
-    coordinator_label,
-    root_manifests_label,
-  ]
+           ":boot.manifest",
+           ":devmgr_config.txt",
+         ] + bootfs_manifest_additions
 
   boot_manifest_outputs = get_target_outputs(":boot.manifest")
-  inputs = [ boot_manifest_outputs[0] ] + [
-             component_manager_manifest,
-             coordinator_manifest,
-             root_manifests_manifest,
-             zircon_kernel_zbi,
-           ]
+  inputs = [ boot_manifest_outputs[0] ] + [ zircon_kernel_zbi ] +
+           additional_manifests
 
   manifest = [
     {

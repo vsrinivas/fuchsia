@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/images/bootfs_manifest.gni")
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/test/test_package.gni")
@@ -34,11 +35,14 @@ rustc_binary("bin") {
   ]
 }
 
-generate_manifest("installer.bootfs") {
+bootfs_manifest("installer.manifest") {
   deps = [ ":bin" ]
 
-  args = [ "--entry=bin/installer=" +
-           rebase_path("$root_build_dir/installer", root_build_dir) ]
+  binaries = [
+    {
+      name = "installer"
+    },
+  ]
 }
 
 test_package("installer-tests") {

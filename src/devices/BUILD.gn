@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/images/bootfs_manifest.gni")
 import("//build/package.gni")
 
 group("devices") {
@@ -39,7 +40,7 @@ group("tests") {
   ]
 }
 
-generate_manifest("devices.bootfs") {
+bootfs_manifest("devices.manifest") {
   deps = [
     "bin",
     "lib/driver",
@@ -48,19 +49,22 @@ generate_manifest("devices.bootfs") {
   ]
 
   # TODO(bwb): match the file in the image to the respective build name
-  args = [
-    "--entry=bin/driver_manager=" +
-        rebase_path("$root_build_dir/driver_manager", root_build_dir),
-    "--entry=bin/driver_host=" +
-        rebase_path("$root_build_dir/driver_host", root_build_dir),
+  binaries = [
+    {
+      name = "driver_host"
+    },
 
     # Inject Virtcon into the ZBI
     # TODO(41410): Remove when unified build exists.
-    "--entry=bin/virtual-console=" +
-        rebase_path("$root_build_dir/virtual-console", root_build_dir),
+    {
+      name = "virtual-console"
+    },
+  ]
 
+  drivers = [
     # Drivers for ZBI injection
-    "--entry=driver/hid-input-report.so=" +
-        rebase_path("$root_build_dir/hid-input-report.so", root_build_dir),
+    {
+      name = "hid-input-report.so"
+    },
   ]
 }

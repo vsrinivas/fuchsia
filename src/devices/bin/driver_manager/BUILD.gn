@@ -2,11 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/images/bootfs_manifest.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
-import("//src/sys/cmc/build/cml.gni")
 
 group("tests") {
   testonly = true
@@ -109,10 +109,6 @@ executable("driver_manager") {
   defines = [ "_ALL_SOURCE=1" ]
 }
 
-cm("driver_manager.cm") {
-  data = rebase_path("meta/driver_manager.cml")
-}
-
 test("driver_manager_test") {
   sources = [
     "binding_test.cc",
@@ -155,6 +151,20 @@ test_package("driver_manager_tests") {
     {
       name = "driver_manager_test"
       environments = basic_envs
+    },
+  ]
+}
+
+bootfs_manifest("driver_manager.manifest") {
+  deps = [ ":driver_manager" ]
+  binaries = [
+    {
+      name = "driver_manager"
+    },
+  ]
+  meta = [
+    {
+      path = rebase_path("meta/driver_manager.cml")
     },
   ]
 }

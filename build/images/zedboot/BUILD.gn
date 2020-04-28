@@ -6,6 +6,7 @@ import("//build/board.gni")
 import("//build/config/fuchsia/zbi.gni")
 import("//build/images/args.gni")
 import("//build/images/boot.gni")
+import("//build/images/bootfs_manifest_additions.gni")
 import("//build/images/custom_signing.gni")
 import("//build/images/custom_signing.gni")
 import("//build/images/manifest.gni")
@@ -116,50 +117,27 @@ generated_file("zxcrypt_config.txt") {
   contents = zxcrypt_key_source
 }
 
-component_manager_label = "//src/sys/component_manager:component_manager.bootfs"
-component_manager_target_dir =
-    get_label_info(component_manager_label, "target_out_dir")
-component_manager_target_name = get_label_info(component_manager_label, "name")
-component_manager_manifest =
-    component_manager_target_dir + "/" + component_manager_target_name
+bootfs_manifest_additions += [ "//src/sys/installer:installer.manifest" ]
 
-coordinator_label = "//src/devices:devices.bootfs"
-coordinator_target_dir = get_label_info(coordinator_label, "target_out_dir")
-coordinator_target_name = get_label_info(coordinator_label, "name")
-coordinator_manifest = coordinator_target_dir + "/" + coordinator_target_name
-
-installer_label = "//src/sys/installer:installer.bootfs"
-installer_target_dir = get_label_info(installer_label, "target_out_dir")
-installer_target_name = get_label_info(installer_label, "name")
-installer_manifest = installer_target_dir + "/" + installer_target_name
-
-root_manifests_label = "//src/sys/bootstrap:root_manifests.bootfs"
-root_manifests_target_dir =
-    get_label_info(root_manifests_label, "target_out_dir")
-root_manifests_target_name = get_label_info(root_manifests_label, "name")
-root_manifests_manifest =
-    root_manifests_target_dir + "/" + root_manifests_target_name
+additional_manifests = []
+foreach(label, bootfs_manifest_additions) {
+  target_dir = get_label_info(label, "target_out_dir")
+  target_name = get_label_info(label, "name")
+  additional_manifests += [ target_dir + "/" + target_name ]
+}
 
 # Note: This output is also used by a script in //scripts/verify_cmdline_params.
 zbi("zbi") {
   output_name = "zedboot"
   deps = [
-    ":devmgr_config.txt",
-    ":zedboot.manifest",
-    ":zxcrypt_config.txt",
-    component_manager_label,
-    coordinator_label,
-    installer_label,
-    root_manifests_label,
-  ]
+           ":devmgr_config.txt",
+           ":zedboot.manifest",
+           ":zxcrypt_config.txt",
+         ] + bootfs_manifest_additions
   inputs = [
-    component_manager_manifest,
-    coordinator_manifest,
-    installer_manifest,
-    root_manifests_manifest,
-    zircon_kernel_zbi,
-    manifest_file,
-  ]
+             zircon_kernel_zbi,
+             manifest_file,
+           ] + additional_manifests
   manifest =
       [ "config/zxcrypt=" +
         rebase_path("$target_out_dir/zxcrypt_config.txt", root_build_dir) ]
