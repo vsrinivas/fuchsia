@@ -1,0 +1,17 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("test") {
+  testonly = true
+  deps = [ ":mmio-ptr-unittest" ]
+}
+
+zx_test("mmio-ptr-unittest") {
+  sources = [ "mmio-ptr-unittest.cc" ]
+  deps = [
+    "$zx/system/dev/lib/mmio-ptr:mmio-ptr-fake",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/zxtest",
+  ]
+}
