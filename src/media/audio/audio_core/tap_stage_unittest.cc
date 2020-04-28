@@ -84,7 +84,7 @@ class TapStageTest : public testing::ThreadingModelFixture {
     EXPECT_EQ(buffer->length(), FractionalFrames<uint32_t>(frame_count));
     auto& arr = as_array<float, frame_count>(buffer->payload());
     EXPECT_THAT(arr, Each(FloatEq(expected_sample)));
-    stream->ReadUnlock(release);
+    buffer->set_is_fully_consumed(release);
   }
 
   uint32_t tap_frame_offset_;

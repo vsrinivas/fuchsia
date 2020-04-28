@@ -97,53 +97,47 @@ std::optional<ReadableStream::Buffer> PacketQueue::ReadLock(zx::time now, int64_
   std::lock_guard<std::mutex> locker(pending_mutex_);
 
   FX_DCHECK(!processing_in_progress_);
-  processing_in_progress_ = true;
-
-  if (pending_packet_queue_.size()) {
-    auto packet = pending_packet_queue_.front();
-    bool is_continuous = !flushed_;
-    flushed_ = false;
-    return {ReadableStream::Buffer(packet->start(), packet->length(), packet->payload(),
-                                   is_continuous)};
-  } else {
+  if (!pending_packet_queue_.size()) {
     return std::nullopt;
   }
+
+  processing_in_progress_ = true;
+  auto& packet = pending_packet_queue_.front();
+  bool is_continuous = !flushed_;
+  flushed_ = false;
+  return std::make_optional<ReadableStream::Buffer>(
+      packet->start(), packet->length(), packet->payload(), is_continuous,
+      [this](bool fully_consumed) { this->ReadUnlock(fully_consumed); });
 }
 
-void PacketQueue::ReadUnlock(bool release_buffer) {
+void PacketQueue::ReadUnlock(bool fully_consumed) {
   TRACE_DURATION("audio", "PacketQueue::ReadUnlock");
-  {
-    std::lock_guard<std::mutex> locker(pending_mutex_);
-    FX_DCHECK(processing_in_progress_);
-    processing_in_progress_ = false;
+  std::lock_guard<std::mutex> locker(pending_mutex_);
 
-    // Did a flush take place while we were working?  If so release each of the packets waiting to
-    // be flushed back to the service thread, then release each of the flush tokens.
-    if (!pending_flush_packet_queue_.empty() || !pending_flush_token_queue_.empty()) {
-      for (auto& ptr : pending_flush_packet_queue_) {
-        ptr = nullptr;
-      }
+  FX_DCHECK(processing_in_progress_);
+  processing_in_progress_ = false;
 
-      for (auto& ptr : pending_flush_token_queue_) {
-        ptr = nullptr;
-      }
-
-      pending_flush_packet_queue_.clear();
-      pending_flush_token_queue_.clear();
-
-      return;
+  // Did a flush take place while we were working?  If so release each of the packets waiting to
+  // be flushed back to the service thread, then release each of the flush tokens.
+  if (!pending_flush_packet_queue_.empty() || !pending_flush_token_queue_.empty()) {
+    for (auto& ptr : pending_flush_packet_queue_) {
+      ptr = nullptr;
     }
 
-    // If the sink wants us to release the front of the pending queue, and no flush operation
-    // happened while they were processing, then there had better be a packet at the front of the
-    // queue to release.
-
-    // Assert that user either got no packet when they locked the queue (because queue was empty),
-    // or that they got the front of the queue and that front of the queue has not changed.
-    FX_DCHECK(!release_buffer || !pending_packet_queue_.empty());
-    if (release_buffer) {
-      pending_packet_queue_.pop_front();
+    for (auto& ptr : pending_flush_token_queue_) {
+      ptr = nullptr;
     }
+
+    pending_flush_packet_queue_.clear();
+    pending_flush_token_queue_.clear();
+    return;
+  }
+
+  // If the buffer was fully consumed, release the first packet. The queue must not be empty,
+  // unless the queue was flushed between ReadLock and ReadUnlock, but that case is handled above.
+  if (fully_consumed) {
+    FX_DCHECK(!pending_packet_queue_.empty());
+    pending_packet_queue_.pop_front();
   }
 }
 

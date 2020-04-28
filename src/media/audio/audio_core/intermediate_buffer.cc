@@ -25,7 +25,7 @@ std::optional<WritableStream::Buffer> IntermediateBuffer::WriteLock(zx::time ref
                                                                     int64_t frame,
                                                                     uint32_t frame_count) {
   auto clamped_length = std::min<uint32_t>(frame_count, frame_count_);
-  return WritableStream::Buffer(frame, clamped_length, vmo_.start());
+  return std::make_optional<WritableStream::Buffer>(frame, clamped_length, vmo_.start());
 }
 
 WritableStream::TimelineFunctionSnapshot IntermediateBuffer::ReferenceClockToFractionalFrames()

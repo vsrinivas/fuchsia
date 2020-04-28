@@ -92,12 +92,25 @@ EffectsStage::EffectsStage(std::shared_ptr<ReadableStream> source,
   SetMinLeadTime(zx::duration(0));
 }
 
+std::optional<ReadableStream::Buffer> EffectsStage::DupCurrentBlock() {
+  // To minimize duplicate work, ReadLock saves the last buffer it got from source_->ReadBlock().
+  // We can discard this buffer once the caller tells us that the buffer has been fully consumed.
+  return std::make_optional<ReadableStream::Buffer>(
+      current_block_->start(), current_block_->length(), current_block_->payload(),
+      current_block_->is_continuous(), [this](bool fully_consumed) {
+        if (fully_consumed) {
+          current_block_ = std::nullopt;
+        }
+      });
+}
+
 std::optional<ReadableStream::Buffer> EffectsStage::ReadLock(zx::time ref_time, int64_t frame,
                                                              uint32_t frame_count) {
   TRACE_DURATION("audio", "EffectsStage::ReadLock", "frame", frame, "length", frame_count);
+
   // If we have a partially consumed block, return that here.
   if (current_block_ && frame >= current_block_->start() && frame < current_block_->end()) {
-    return current_block_;
+    return DupCurrentBlock();
   }
 
   // New frames are requested. Block-align the start frame and length.
@@ -112,13 +125,18 @@ std::optional<ReadableStream::Buffer> EffectsStage::ReadLock(zx::time ref_time, 
 
   current_block_ = source_->ReadLock(ref_time, aligned_first_frame, aligned_frame_count);
   if (current_block_) {
+    // TODO(50669): We assume that ReadLock always returns exactly the frames we request. This is
+    // not true in general, but in practice it's true because source_ is always a MixStage that
+    // outputs to an IntermediateBuffer.
     FX_DCHECK(current_block_->start().Floor() == aligned_first_frame);
     FX_DCHECK(current_block_->length().Floor() == aligned_frame_count);
 
     auto payload = static_cast<float*>(current_block_->payload());
     effects_processor_->ProcessInPlace(aligned_frame_count, payload);
+    return DupCurrentBlock();
   }
-  return current_block_;
+
+  return std::nullopt;
 }
 
 BaseStream::TimelineFunctionSnapshot EffectsStage::ReferenceClockToFractionalFrames() const {

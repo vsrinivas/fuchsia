@@ -30,7 +30,6 @@ class EffectsStage : public ReadableStream {
   // |media::audio::ReadableStream|
   std::optional<ReadableStream::Buffer> ReadLock(zx::time ref_time, int64_t frame,
                                                  uint32_t frame_count) override;
-  void ReadUnlock(bool release_buffer) override { source_->ReadUnlock(release_buffer); }
   void Trim(zx::time trim_threshold) override { source_->Trim(trim_threshold); }
   TimelineFunctionSnapshot ReferenceClockToFractionalFrames() const override;
   void SetMinLeadTime(zx::duration lead_time) override;
@@ -45,6 +44,7 @@ class EffectsStage : public ReadableStream {
   }
 
  private:
+  std::optional<ReadableStream::Buffer> DupCurrentBlock();
   zx::duration ComputeIntrinsicMinLeadTime() const;
 
   std::shared_ptr<ReadableStream> source_;

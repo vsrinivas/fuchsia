@@ -88,7 +88,6 @@ class ReadableRingBuffer : public ReadableStream, public BaseRingBuffer {
   // |media::audio::ReadableStream|
   std::optional<ReadableStream::Buffer> ReadLock(zx::time now, int64_t frame,
                                                  uint32_t frame_count) override;
-  void ReadUnlock(bool release_buffer) override {}
   void Trim(zx::time trim_threshold) override {}
   BaseStream::TimelineFunctionSnapshot ReferenceClockToFractionalFrames() const override;
 };
@@ -105,9 +104,6 @@ class WritableRingBuffer : public WritableStream, public BaseRingBuffer {
   // |media::audio::WritableStream|
   std::optional<WritableStream::Buffer> WriteLock(zx::time now, int64_t frame,
                                                   uint32_t frame_count) override;
-  // TODO(50442): Technically this should remember memory range that was locked and flush cache for
-  // that range.
-  void WriteUnlock() override {}
   BaseStream::TimelineFunctionSnapshot ReferenceClockToFractionalFrames() const override;
 };
 

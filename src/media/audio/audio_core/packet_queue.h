@@ -43,7 +43,6 @@ class PacketQueue : public ReadableStream {
   // |media::audio::ReadableStream|
   std::optional<ReadableStream::Buffer> ReadLock(zx::time now, int64_t frame,
                                                  uint32_t frame_count) override;
-  void ReadUnlock(bool release_buffer) override;
   void Trim(zx::time ref_time) override;
   TimelineFunctionSnapshot ReferenceClockToFractionalFrames() const override;
   void ReportUnderflow(FractionalFrames<int64_t> frac_source_start,
@@ -53,6 +52,8 @@ class PacketQueue : public ReadableStream {
                               int64_t dest_mix_offset) override;
 
  private:
+  void ReadUnlock(bool fully_consumed);
+
   std::mutex flush_mutex_;
   mutable std::mutex pending_mutex_;
 

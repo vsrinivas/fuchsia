@@ -65,11 +65,6 @@ class OutputPipeline : public ReadableStream {
     FX_DCHECK(stream_);
     return stream_->ReadLock(ref_time, frame, frame_count);
   }
-  void ReadUnlock(bool release_buffer) override {
-    TRACE_DURATION("audio", "OutputPipeline::ReadUnlock");
-    FX_DCHECK(stream_);
-    stream_->ReadUnlock(release_buffer);
-  }
   void Trim(zx::time trim) override {
     TRACE_DURATION("audio", "OutputPipeline::Trim");
     FX_CHECK(stream_);

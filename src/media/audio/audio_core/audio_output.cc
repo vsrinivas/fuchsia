@@ -59,7 +59,6 @@ void AudioOutput::Process() {
       auto buf = pipeline_->ReadLock(now, mix_frames->start, mix_frames->length);
       FX_CHECK(buf);
       FinishMixJob(*mix_frames, reinterpret_cast<float*>(buf->payload()));
-      pipeline_->ReadUnlock(true);
     } else {
       pipeline_->Trim(now);
     }

@@ -8,6 +8,7 @@
 #include <lib/zx/clock.h>
 
 #include <limits>
+#include <memory>
 
 #include <trace/event.h>
 
@@ -102,11 +103,14 @@ std::optional<ReadableStream::Buffer> MixStage::ReadLock(zx::time now, int64_t f
   size_t bytes_to_zero = cur_mix_job_.buf_frames * format().bytes_per_frame();
   std::memset(cur_mix_job_.buf, 0, bytes_to_zero);
   ForEachSource(TaskType::Mix, now);
-  return {ReadableStream::Buffer(output_buffer->start(), output_buffer->length(), cur_mix_job_.buf,
-                                 true)};
-}
 
-void MixStage::ReadUnlock(bool release_buffer) { TRACE_DURATION("audio", "MixStage::ReadUnlock"); }
+  // Transfer output_buffer ownership to the read lock via this destructor.
+  // TODO(50669): If this buffer is not fully consumed, we should save this buffer and reuse it for
+  // the next call to ReadLock, rather than mixing new data.
+  return std::make_optional<ReadableStream::Buffer>(
+      output_buffer->start(), output_buffer->length(), output_buffer->payload(), true,
+      [output_buffer = std::move(output_buffer)](bool) mutable { output_buffer = std::nullopt; });
+}
 
 BaseStream::TimelineFunctionSnapshot MixStage::ReferenceClockToFractionalFrames() const {
   TRACE_DURATION("audio", "MixStage::ReferenceClockToFractionalFrames");
@@ -168,11 +172,14 @@ void MixStage::MixStream(ReadableStream* stream, Mixer* mixer, zx::time ref_time
     return;
   }
 
-  bool release_buffer;
-  std::optional<ReadableStream::Buffer> stream_buffer;
-  while (true) {
-    release_buffer = false;
+  // Calculate the first sampling point for the initial job, in source sub-frames. Use timestamps
+  // for the first and last dest frames we need, translated into the source (frac_frame) timeline.
+  auto& info = mixer->bookkeeping();
+  auto frac_source_for_first_mix_job_frame =
+      FractionalFrames<int64_t>::FromRaw(info.dest_frames_to_frac_source_frames(
+          cur_mix_job_.start_pts_of + cur_mix_job_.frames_produced));
 
+  while (true) {
     // At this point we know we need to consume some source data, but we don't yet know how much.
     // Here is how many destination frames we still need to produce, for this mix job.
     uint32_t dest_frames_left = cur_mix_job_.buf_frames - cur_mix_job_.frames_produced;
@@ -180,22 +187,15 @@ void MixStage::MixStream(ReadableStream* stream, Mixer* mixer, zx::time ref_time
       break;
     }
 
-    // Calculate this job's first and last sampling points, in source sub-frames. Use timestamps
-    // for the first and last dest frames we need, translated into the source (frac_frame)
-    // timeline.
-    auto& info = mixer->bookkeeping();
-    auto frac_source_for_first_mix_job_frame =
-        stream_buffer ? stream_buffer->end()
-                      : FractionalFrames<int64_t>::FromRaw(info.dest_frames_to_frac_source_frames(
-                            cur_mix_job_.start_pts_of + cur_mix_job_.frames_produced));
+    // Calculate this job's last sampling point.
     FractionalFrames<int64_t> source_frames =
         FractionalFrames<int64_t>::FromRaw(
             info.dest_frames_to_frac_source_frames.rate().Scale(dest_frames_left)) +
         mixer->pos_filter_width();
 
     // Try to grab the packet queue's front.
-    stream_buffer = stream->ReadLock(ref_time, frac_source_for_first_mix_job_frame.Floor(),
-                                     source_frames.Ceiling());
+    auto stream_buffer = stream->ReadLock(ref_time, frac_source_for_first_mix_job_frame.Floor(),
+                                          source_frames.Ceiling());
 
     // If the queue is empty, then we are done.
     if (!stream_buffer) {
@@ -209,7 +209,8 @@ void MixStage::MixStream(ReadableStream* stream, Mixer* mixer, zx::time ref_time
 
     // Now process the packet at the front of the renderer's queue. If the packet has been
     // entirely consumed, pop it off the front and proceed to the next. Otherwise, we are done.
-    release_buffer = ProcessMix(stream, mixer, *stream_buffer);
+    auto fully_consumed = ProcessMix(stream, mixer, *stream_buffer);
+    stream_buffer->set_is_fully_consumed(fully_consumed);
 
     // If we have mixed enough destination frames, we are done with this mix, regardless of what
     // we should now do with the source packet.
@@ -218,15 +219,12 @@ void MixStage::MixStream(ReadableStream* stream, Mixer* mixer, zx::time ref_time
     }
     // If we still need to produce more destination data, but could not complete this source
     // packet (we're paused, or the packet is in the future), then we are done.
-    if (!release_buffer) {
+    if (!fully_consumed) {
       break;
     }
-    // We did consume this entire source packet, and we should keep mixing.
-    stream->ReadUnlock(release_buffer);
-  }
 
-  // Unlock queue (completing packet if needed) and proceed to the next source.
-  stream->ReadUnlock(release_buffer);
+    frac_source_for_first_mix_job_frame = stream_buffer->end();
+  }
 
   // Note: there is no point in doing this for Trim tasks, but it doesn't hurt anything, and it's
   // easier than adding another function to ForEachSource to run after each renderer is processed,

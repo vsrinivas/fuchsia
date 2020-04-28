@@ -20,7 +20,6 @@ class FakeStream : public ReadableStream {
 
   // |media::audio::ReadableStream|
   std::optional<Buffer> ReadLock(zx::time now, int64_t frame, uint32_t frame_count);
-  void ReadUnlock(bool release_buffer) {}
   void Trim(zx::time trim_threshold) {}
   TimelineFunctionSnapshot ReferenceClockToFractionalFrames() const;
 

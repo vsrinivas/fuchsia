@@ -66,15 +66,23 @@ TEST_F(EffectsStageTest, ApplyEffectsToSourceStream) {
   // Enqueue 10ms of frames in the packet queue.
   stream->PushPacket(packet_factory.CreatePacket(1.0, zx::msec(10)));
 
-  // Read from the effects stage. Since our effect adds 1.0 to each sample, and we populated the
-  // packet with 1.0 samples, we expect to see only 2.0 samples in the result.
-  auto buf = effects_stage->ReadLock(zx::time(0) + zx::msec(10), 0, 480);
-  ASSERT_TRUE(buf);
-  ASSERT_EQ(0u, buf->start().Floor());
-  ASSERT_EQ(480u, buf->length().Floor());
+  {
+    // Read from the effects stage. Since our effect adds 1.0 to each sample, and we populated the
+    // packet with 1.0 samples, we expect to see only 2.0 samples in the result.
+    auto buf = effects_stage->ReadLock(zx::time(0) + zx::msec(10), 0, 480);
+    ASSERT_TRUE(buf);
+    ASSERT_EQ(0u, buf->start().Floor());
+    ASSERT_EQ(480u, buf->length().Floor());
 
-  auto& arr = as_array<float, 480>(buf->payload());
-  EXPECT_THAT(arr, Each(FloatEq(2.0f)));
+    auto& arr = as_array<float, 480>(buf->payload());
+    EXPECT_THAT(arr, Each(FloatEq(2.0f)));
+  }
+
+  {
+    // Read again. This should be null, because there are no more packets.
+    auto buf = effects_stage->ReadLock(zx::time(0) + zx::msec(10), 0, 480);
+    ASSERT_FALSE(buf);
+  }
 }
 
 TEST_F(EffectsStageTest, BlockAlignRequests) {

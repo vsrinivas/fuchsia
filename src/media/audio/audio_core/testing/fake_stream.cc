@@ -17,7 +17,7 @@ FakeStream::FakeStream(const Format& format, size_t max_buffer_size) : ReadableS
 std::optional<ReadableStream::Buffer> FakeStream::ReadLock(zx::time now, int64_t frame,
                                                            uint32_t frame_count) {
   FX_CHECK(frame_count * format().bytes_per_frame() < buffer_size_);
-  return {ReadableStream::Buffer(frame, frame_count, buffer_.get(), true)};
+  return std::make_optional<ReadableStream::Buffer>(frame, frame_count, buffer_.get(), true);
 }
 
 ReadableStream::TimelineFunctionSnapshot FakeStream::ReferenceClockToFractionalFrames() const {

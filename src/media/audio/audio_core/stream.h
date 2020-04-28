@@ -12,8 +12,6 @@
 
 #include <optional>
 
-#include <fbl/ref_ptr.h>
-
 #include "src/media/audio/audio_core/format.h"
 #include "src/media/audio/audio_core/packet.h"
 
@@ -51,12 +49,35 @@ class ReadableStream : public BaseStream {
 
   class Buffer {
    public:
-    Buffer(int64_t start, uint32_t length, void* payload, bool is_continuous)
-        : Buffer(FractionalFrames<int64_t>(start), FractionalFrames<uint32_t>(length), payload,
-                 is_continuous) {}
+    using DestructorT = fit::callback<void(bool fully_consumed)>;
+
+    Buffer(int64_t start, uint32_t length, void* payload, bool is_continuous,
+           DestructorT dtor = nullptr)
+        : dtor_(std::move(dtor)),
+          payload_(payload),
+          start_(start),
+          length_(length),
+          is_continuous_(is_continuous) {}
+
     Buffer(FractionalFrames<int64_t> start, FractionalFrames<uint32_t> length, void* payload,
-           bool is_continuous)
-        : payload_(payload), start_(start), length_(length), is_continuous_(is_continuous) {}
+           bool is_continuous, DestructorT dtor = nullptr)
+        : dtor_(std::move(dtor)),
+          payload_(payload),
+          start_(start),
+          length_(length),
+          is_continuous_(is_continuous) {}
+
+    ~Buffer() {
+      if (dtor_) {
+        dtor_(is_fully_consumed_);
+      }
+    }
+
+    Buffer(Buffer&& rhs) = default;
+    Buffer& operator=(Buffer&& rhs) = default;
+
+    Buffer(const Buffer& rhs) = delete;
+    Buffer& operator=(const Buffer& rhs) = delete;
 
     FractionalFrames<int64_t> start() const { return start_; }
     FractionalFrames<int64_t> end() const { return start_ + length_; }
@@ -73,27 +94,28 @@ class ReadableStream : public BaseStream {
     // based on the continuity of the stream.
     bool is_continuous() const { return is_continuous_; }
 
+    // Call this to indicate whether the buffer was fully consumed.
+    // By default, we assume this is true.
+    void set_is_fully_consumed(bool fully_consumed) { is_fully_consumed_ = fully_consumed; }
+
    private:
+    DestructorT dtor_;
     void* payload_;
     FractionalFrames<int64_t> start_;
     FractionalFrames<uint32_t> length_;
     bool is_continuous_;
+    bool is_fully_consumed_ = true;
   };
 
   // ReadLock acquires a read lock on the stream and returns a buffer representing the requested
-  // time range. Returns nullopt if no data is available for that time range.
+  // time range. Returns nullopt if no data is available for that time range. The buffer will remain
+  // locked until it is destructed.
   //
-  // Each ReadLock call must be paired with a ReadUnlock call to unlock the stream, even when
-  // ReadLock returns nullopt. Doing so ensures that sources which are attempting to flush the
-  // pending queue are forced to wait if the front of the queue is involved in a mixing operation.
-  // This, in turn, guarantees that audio packets are always returned to the user in the order which
-  // they were queued in without forcing AudioRenderers to wait to queue new data if a mix operation
-  // is in progress.
+  // For each stream, it is not legal to hold more than one lock at a time.
   //
-  // When calling ReadUnlock, the caller should set release_buffer=true iff the buffer was fully
-  // consumed.
+  // TODO(50669): Some implementations (e.g., PacketQueue) disregard the requested time range and
+  // can return data from any time range. Specify if this is allowed and fix implementations if not.
   virtual std::optional<Buffer> ReadLock(zx::time now, int64_t frame, uint32_t frame_count) = 0;
-  virtual void ReadUnlock(bool release_buffer) = 0;
 
   // Trims the stream by releasing any frames before |trim_threshold|.
   virtual void Trim(zx::time trim_threshold) = 0;
@@ -114,10 +136,22 @@ class WritableStream : public BaseStream {
 
   class Buffer {
    public:
-    Buffer(int64_t start, uint32_t length, void* payload)
-        : Buffer(FractionalFrames<int64_t>(start), FractionalFrames<uint32_t>(length), payload) {}
-    Buffer(FractionalFrames<int64_t> start, FractionalFrames<uint32_t> length, void* payload)
-        : payload_(payload), start_(start), length_(length) {}
+    using DestructorT = fit::callback<void()>;
+
+    Buffer(int64_t start, uint32_t length, void* payload, DestructorT dtor = nullptr)
+        : dtor_(std::move(dtor)), payload_(payload), start_(start), length_(length) {}
+
+    ~Buffer() {
+      if (dtor_) {
+        dtor_();
+      }
+    }
+
+    Buffer(Buffer&& rhs) = default;
+    Buffer& operator=(Buffer&& rhs) = default;
+
+    Buffer(const Buffer& rhs) = delete;
+    Buffer& operator=(const Buffer& rhs) = delete;
 
     FractionalFrames<int64_t> start() const { return start_; }
     FractionalFrames<int64_t> end() const { return start_ + length_; }
@@ -125,18 +159,18 @@ class WritableStream : public BaseStream {
     void* payload() const { return payload_; }
 
    private:
+    DestructorT dtor_;
     void* payload_;
     FractionalFrames<int64_t> start_;
     FractionalFrames<uint32_t> length_;
   };
 
   // WriteLock acquires a write lock on the stream and returns a buffer representing the requested
-  // time range. Returns nullopt if no data is available for that time range.
+  // time range. Returns nullopt if no data is available for that time range. The buffer will remain
+  // locked until it is destructed.
   //
-  // Each WriteLock call must be paired with a WriteUnlock call to unlock the stream, even when
-  // WriteLock returns nullopt.
+  // For each stream, it is not legal to hold more than one lock at a time.
   virtual std::optional<Buffer> WriteLock(zx::time now, int64_t frame, uint32_t frame_count) = 0;
-  virtual void WriteUnlock() = 0;
 };
 
 }  // namespace media::audio

@@ -139,7 +139,6 @@ TEST_F(MixStageTest, MixUniformFormats) {
     EXPECT_THAT(arr1, Each(FloatEq(0.8f)));
     auto& arr2 = as_array<float, 96>(buf->payload(), 96);
     EXPECT_THAT(arr2, Each(FloatEq(0.9f)));
-    mix_stage_->ReadUnlock(true);
   }
 
   output_frame_start += output_frame_count;
@@ -154,7 +153,6 @@ TEST_F(MixStageTest, MixUniformFormats) {
     EXPECT_THAT(arr1, Each(FloatEq(0.9f)));
     auto& arr2 = as_array<float, 96>(buf->payload(), 96);
     EXPECT_THAT(arr2, Each(FloatEq(0.8f)));
-    mix_stage_->ReadUnlock(true);
   }
 
   output_frame_start += output_frame_count;
@@ -169,7 +167,6 @@ TEST_F(MixStageTest, MixUniformFormats) {
     EXPECT_THAT(arr1, Each(FloatEq(0.8f)));
     auto& arr2 = as_array<float, 96>(buf->payload(), 96);
     EXPECT_THAT(arr2, Each(FloatEq(0.6f)));
-    mix_stage_->ReadUnlock(true);
   }
 }
 
@@ -200,7 +197,6 @@ TEST_F(MixStageTest, MixFromRingBuffersSinc) {
     ASSERT_TRUE(buf);
     ASSERT_EQ(buf->start().Floor(), 0u);
     ASSERT_EQ(buf->length().Floor(), kRequestedFrames);
-    mix_stage_->ReadUnlock(true);
 
     auto& arr = as_array<float, kRequestedFrames>(buf->payload(), 0);
     EXPECT_THAT(arr, Each(FloatEq(kRingBufferSampleValue1)));
@@ -211,7 +207,6 @@ TEST_F(MixStageTest, MixFromRingBuffersSinc) {
     ASSERT_TRUE(buf);
     ASSERT_EQ(buf->start().Floor(), kRequestedFrames);
     ASSERT_EQ(buf->length().Floor(), kRequestedFrames);
-    mix_stage_->ReadUnlock(true);
 
     auto& arr = as_array<float, 2 * kRequestedFrames>(buf->payload(), 0);
     EXPECT_THAT(arr, Each(FloatEq(kRingBufferSampleValue2)));

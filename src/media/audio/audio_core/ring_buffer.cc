@@ -4,6 +4,8 @@
 
 #include "src/media/audio/audio_core/ring_buffer.h"
 
+#include <memory>
+
 #include <trace/event.h>
 
 #include "src/lib/syslog/cpp/logger.h"
@@ -21,15 +23,17 @@ template <>
 struct BufferTraits<ReadableRingBuffer> {
   static std::optional<ReadableStream::Buffer> MakeBuffer(int64_t start, uint32_t length,
                                                           void* payload) {
-    return {ReadableStream::Buffer(start, length, payload, true)};
+    return std::make_optional<ReadableStream::Buffer>(start, length, payload, true);
   }
 };
 
 template <>
 struct BufferTraits<WritableRingBuffer> {
+  // TODO(50442): Technically the destructor should flush cache for the memory range that was locked
+  // when is_hardware_buffer == true.
   static std::optional<WritableStream::Buffer> MakeBuffer(int64_t start, uint32_t length,
                                                           void* payload) {
-    return {WritableStream::Buffer(start, length, payload)};
+    return std::make_optional<WritableStream::Buffer>(start, length, payload);
   }
 };
 
