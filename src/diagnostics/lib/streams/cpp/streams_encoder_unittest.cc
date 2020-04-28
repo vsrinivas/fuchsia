@@ -11,7 +11,7 @@
 
 #include <gtest/gtest.h>
 
-#include "src/diagnostics/lib/streams/encode.h"
+#include "src/diagnostics/lib/streams/cpp/encode.h"
 
 TEST(StreamsRecordEncoder, Writable) {
   // Create Buffer
