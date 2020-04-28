@@ -50,7 +50,7 @@ Booting Zircon on the VIM2 requires a custom bootloader.
 ### [Googlers only]
 Within Google, this can be found at [go/vim2-bootloader](http://go.corp.google.com/vim2-bootloader). Download the .bin file and follow the instructions in the document.
 
-If you are not at Google, hang on until we make this publicly available.
+If you are not at Google, the bootloader can be found at [third-party-mirror.googlesource.com/u-boot/](https://third-party-mirror.googlesource.com/u-boot/), in the vim2 branch.
 
 To find out what version of the bootloader you have, grep for "zircon-bootloader"
 in the kernel boot log. You should see something like: "cmdline: zircon-bootloader=0.11"
