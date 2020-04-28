@@ -39,16 +39,21 @@ executable("audio_driver_tests_bin") {
   output_name = "audio_driver_tests"
 
   sources = [
-    "audio_driver_test.cc",
-    "audio_driver_test.h",
+    "admin_test.cc",
+    "admin_test.h",
+    "basic_test.cc",
+    "basic_test.h",
+    "main.cc",
+    "test_base.cc",
+    "test_base.h",
   ]
 
   deps = [
     "//sdk/fidl/fuchsia.hardware.audio",
     "//sdk/fidl/fuchsia.media",
     "//src/lib/fsl",
-    "//src/lib/fxl/test:gtest_main",
     "//src/lib/fxl/test:test_settings",
+    "//src/lib/testing/loop_fixture",
     "//src/media/audio/lib/logging",
     "//src/media/audio/lib/test:message_transceiver",
     "//src/media/audio/lib/test:test_fixture",
