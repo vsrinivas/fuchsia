@@ -38,6 +38,11 @@ TEST_F(Imx227DeviceTest, SetMode) {
   EXPECT_NOT_OK(imx227_device_->CameraSensorSetMode(0xFF));
 }
 
+TEST_F(Imx227DeviceTest, PoweredUp) {
+  EXPECT_OK(imx227_device_->CameraSensorSetMode(kValidSensorMode));
+  EXPECT_TRUE(imx227_device_->CameraSensorIsPoweredUp());
+}
+
 TEST_F(Imx227DeviceTest, StartAndStopStreaming) {
   EXPECT_NE(ZX_OK, imx227_device_->CameraSensorStopStreaming());
   EXPECT_EQ(ZX_OK, imx227_device_->CameraSensorStartStreaming());

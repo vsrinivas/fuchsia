@@ -92,25 +92,38 @@ struct CameraSensorInfo {
 protocol CameraSensor {
     // Initializes the Camera Sensor.
     Init() -> (zx.status s);
+
     // De-Initializes the Camera Sensor.
     DeInit() -> ();
+
     // Sets the Camera Sensor Mode to one of the supported modes.
     SetMode(uint8 mode) -> (zx.status s);
+
     // Start streaming from the camera sensor.
     StartStreaming() -> (zx.status s);
+
     // Stop steaming.
     StopStreaming() -> (zx.status s);
+
     // Change Analog Gain.
     SetAnalogGain(int32 gain) -> (int32 gain);
+
     // Change Digital Gain.
     SetDigitalGain(int32 gain) -> (int32 gain);
+
     // Set Integration Time.
     SetIntegrationTime(int32 int_time) -> (zx.status s);
+
     // Update the sensor with new parameters.
     Update() -> (zx.status s);
+
     // Gets the Sensor Parameters.
     GetInfo() -> (zx.status s, CameraSensorInfo info);
+
     // Get the supported modes.
     GetSupportedModes() ->(zx.status s, vector<CameraSensorMode> modes);
+
+    // Returns the sensor power state.
+    IsPoweredUp() -> (bool s);
 };
 

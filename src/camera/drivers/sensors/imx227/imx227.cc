@@ -157,6 +157,11 @@ void Imx227Device::Write8(uint16_t addr, uint8_t val) {
   }
 }
 
+bool Imx227Device::CameraSensorIsPoweredUp() {
+  std::lock_guard guard(lock_);
+  return ValidateSensorID();
+}
+
 bool Imx227Device::ValidateSensorID() {
   uint16_t sensor_id = Read16(kSensorModelIdReg);
   if (sensor_id != kSensorId) {

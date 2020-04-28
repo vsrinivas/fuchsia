@@ -105,6 +105,7 @@ class Imx227Device : public DeviceType,
   zx_status_t CameraSensorGetInfo(camera_sensor_info_t* out_info);
   zx_status_t CameraSensorGetSupportedModes(camera_sensor_mode_t* out_modes_list,
                                             size_t modes_count, size_t* out_modes_actual);
+  bool CameraSensorIsPoweredUp();
 
   // OTP
 
