@@ -6,7 +6,7 @@
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:70
+From //build/images/args.gni:89
 
 ### add_qemu_to_build_archives
 Whether to include images necessary to run Fuchsia in QEMU in build
@@ -14,7 +14,7 @@ archives.
 
 **Current value (from the default):** `false`
 
-From //build/images/args.gni:77
+From //build/images/args.gni:96
 
 ### additional_bootserver_arguments
 Additional bootserver args to add to pave.sh. New uses of this should be
@@ -24,7 +24,7 @@ with specific boards, due to driver and hardware challenges.
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:83
+From //build/images/args.gni:102
 
 ### all_font_file_paths
 List of file paths to every font asset. Populated in fonts.gni.
@@ -38,7 +38,7 @@ Build boot images that prefer Zedboot over local boot (only for EFI).
 
 **Current value (from the default):** `false`
 
-From //build/images/args.gni:95
+From //build/images/args.gni:114
 
 ### asan_default_options
 Default [AddressSanitizer](https://clang.llvm.org/docs/AddressSanitizer.html)
@@ -301,20 +301,24 @@ From //products/core.gni:11
 From //build/images/args.gni:14
 
 ### bootloader_hw_revision
-HW revision of the bootloader to be included into OTA package and paving
-process.
+(deprecated)  HW revision of the bootloader to be included into OTA package
+and paving process.
+
+See `firmware_prebuilts_path_suffix` instead.
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:49
+From //build/images/args.gni:53
 
 ### bootloader_prebuilt
-Prebuilt bootloader image to be included into update (OTA) package and
-paving process.
+(deprecated) Prebuilt bootloader image to be included into update (OTA)
+package and paving process.
+
+See `firmware_prebuilts` instead.
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:45
+From //build/images/args.gni:47
 
 ### build_all_vp9_file_decoder_conformance_tests
 
@@ -434,7 +438,7 @@ non-production GN labels. Build will fail if such dependency is found.
 
 **Current value (from the default):** `false`
 
-From //build/images/args.gni:89
+From //build/images/args.gni:108
 
 ### clang_lib_dir
 Path to Clang lib directory.
@@ -466,7 +470,7 @@ Whether to compress the blobfs image.
 
 **Current value (from the default):** `true`
 
-From //build/images/args.gni:92
+From //build/images/args.gni:111
 
 ### concurrent_dart_jobs
 Maximum number of Dart processes to run in parallel.
@@ -527,13 +531,13 @@ From //build/config/BUILD.gn:13
 
 **Current value (from the default):** `"fuchsia"`
 
-From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/be57546feac6e014117d7336ebce673d6fd1cd29/build/crashpad_buildconfig.gni#22)
+From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/bac601e785fc85bd83dd98239514ea3bfc645635/build/crashpad_buildconfig.gni#22)
 
 ### crashpad_use_boringssl_for_http_transport_socket
 
 **Current value (from the default):** `true`
 
-From [//third_party/crashpad/util/net/tls.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/be57546feac6e014117d7336ebce673d6fd1cd29/util/net/tls.gni#22)
+From [//third_party/crashpad/util/net/tls.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/bac601e785fc85bd83dd98239514ea3bfc645635/util/net/tls.gni#22)
 
 ### create_kernel_service_snapshot
 
@@ -735,7 +739,7 @@ partition.
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:53
+From //build/images/args.gni:72
 
 ### debian_guest_earlycon
 
@@ -857,7 +861,7 @@ You can still build //build/images:netboot explicitly even if enable_netboot is 
 
 **Current value (from the default):** `false`
 
-From //build/images/args.gni:58
+From //build/images/args.gni:77
 
 ### enable_user_pci
 
@@ -948,7 +952,7 @@ From //build/config/BUILDCONFIG.gn:651
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:72
+From //build/images/args.gni:91
 
 ### fidl_write_v1_wireformat
 TODO(fxb/41298): This is a temporary change to activate writing the
@@ -972,6 +976,29 @@ TODO(45680): remove this hack.
 **Current value (from the default):** `false`
 
 From //build/unification/images/BUILD.gn:14
+
+### firmware_prebuilts
+List of prebuilt firmware blobs to include in update packages.
+
+Each entry in the list is a scope defining `path` and `type`. A build can
+only have a single firmware blob of each `type`.
+
+Note that `firmware_prebuilts_path_suffix` will be automatically appended to
+all `path` variables, so do not include the suffix here.
+
+**Current value (from the default):** `[]`
+
+From //build/images/args.gni:62
+
+### firmware_prebuilts_path_suffix
+Suffix to append to all `firmware_prebuilts` paths.
+
+Typically this indicates the hardware revision, and is made available so
+that users can easily switch revisions using a single arg.
+
+**Current value (from the default):** `""`
+
+From //build/images/args.gni:68
 
 ### flutter_default_app
 
@@ -1222,7 +1249,7 @@ Include fvm.blob.sparse.blk image into the build if set to true
 
 **Current value (from the default):** `false`
 
-From //build/images/args.gni:102
+From //build/images/args.gni:121
 
 ### include_internal_fonts
 Set to true to include internal fonts in the build.
@@ -1660,7 +1687,7 @@ From //products/core.gni:19
 
 **Overridden from the default:** `[]`
 
-From //build/images/args.gni:61
+From //build/images/args.gni:80
 
 **Current value for `target_cpu = "x64"`:** `["//build/images:config-data", "//build/images:shell-commands", "//src/sys/component_index:component_index"]`
 
@@ -1668,7 +1695,7 @@ From //products/core.gni:19
 
 **Overridden from the default:** `[]`
 
-From //build/images/args.gni:61
+From //build/images/args.gni:80
 
 ### minfs_maximum_bytes
 
@@ -1787,13 +1814,13 @@ From //build/persist_logs.gni:13
 
 **Current value (from the default):** `"//src/security/policy/pkgfs_non_static_pkgs_allowlist_eng.txt"`
 
-From //build/images/args.gni:99
+From //build/images/args.gni:118
 
 ### pre_erase_flash
 
 **Current value (from the default):** `false`
 
-From //build/images/args.gni:73
+From //build/images/args.gni:92
 
 ### prebuilt_dart_sdk
 Directory containing prebuilt Dart SDK.
@@ -2061,7 +2088,7 @@ From //build/config/BUILDCONFIG.gn:697
 
 **Current value (from the default):** `false`
 
-From //build/images/args.gni:71
+From //build/images/args.gni:90
 
 ### size_checker_input
 The input to the size checker.
@@ -2454,19 +2481,19 @@ From //build/fuchsia/sdk.gni:8
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:67
+From //build/images/args.gni:86
 
 ### vbmeta_b_partition
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:68
+From //build/images/args.gni:87
 
 ### vbmeta_r_partition
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:69
+From //build/images/args.gni:88
 
 ### vendor_linting
 Whether libraries under //vendor should be linted.
@@ -2588,7 +2615,7 @@ arguments to fx flash script
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:64
+From //build/images/args.gni:83
 
 ### zircon_args
 [Zircon GN build arguments](/docs/gen/zircon_build_arguments.md).
@@ -2625,7 +2652,7 @@ From //build/config/fuchsia/BUILD.gn:219
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:65
+From //build/images/args.gni:84
 
 ### zircon_build_root
 
@@ -2668,7 +2695,7 @@ From //BUILD.gn:60
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:66
+From //build/images/args.gni:85
 
 ### zircon_tracelog
 Where to emit a tracelog from Zircon's GN run. No trace will be produced if
