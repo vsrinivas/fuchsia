@@ -582,7 +582,7 @@ impl App {
 
     fn focus_first_view(&mut self) {
         if let Some(controller) = self.view_controllers.values_mut().nth(0) {
-            controller.focus();
+            controller.focus(true);
         }
     }
 

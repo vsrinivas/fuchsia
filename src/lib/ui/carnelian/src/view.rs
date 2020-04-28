@@ -595,8 +595,8 @@ impl ViewController {
         fasync::spawn_local(f);
     }
 
-    pub(crate) fn focus(&mut self) {
-        self.assistant.handle_focus_event(true).expect("handle_focus_event");
+    pub(crate) fn focus(&mut self, focus: bool) {
+        self.assistant.handle_focus_event(focus).expect("handle_focus_event");
         self.update();
     }
 
@@ -624,16 +624,21 @@ impl ViewController {
                 }
                 _ => (),
             },
-            fidl_fuchsia_ui_scenic::Event::Input(event) => {
-                let messages = self.strategy.handle_scenic_input_event(
-                    &self.make_view_details(),
-                    &mut self.assistant,
-                    &event,
-                );
-                for msg in messages {
-                    self.send_message(msg);
+            fidl_fuchsia_ui_scenic::Event::Input(event) => match event {
+                fidl_fuchsia_ui_input::InputEvent::Focus(focus_event) => {
+                    self.focus(focus_event.focused);
                 }
-            }
+                _ => {
+                    let messages = self.strategy.handle_scenic_input_event(
+                        &self.make_view_details(),
+                        &mut self.assistant,
+                        &event,
+                    );
+                    for msg in messages {
+                        self.send_message(msg);
+                    }
+                }
+            },
             _ => (),
         });
     }
