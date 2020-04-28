@@ -184,11 +184,11 @@ test("fshost-test") {
     "//zircon/public/lib/cobalt-client",
     "//zircon/public/lib/fidl-async",
     "//zircon/public/lib/in-memory-logger",
-    "//zircon/public/lib/mock-boot-arguments",
     "//zircon/public/lib/zxtest",
     "//zircon/system/fidl/fuchsia-boot:llcpp",
     "//zircon/system/fidl/fuchsia-io:c",
     "//zircon/system/ulib/loader-service",
+    "//zircon/system/ulib/mock-boot-arguments",
   ]
 
   # TODO(46432): Fix the leaks and remove this.

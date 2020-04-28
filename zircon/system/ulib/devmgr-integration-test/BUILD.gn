@@ -49,13 +49,13 @@ zx_library("devmgr-integration-test") {
     "//zircon/public/lib/fidl-async-cpp",
     "//zircon/public/lib/fs",
     "//zircon/public/lib/fzl",
-    "//zircon/public/lib/mock-boot-arguments",
     "//zircon/public/lib/syslog",
     "//zircon/public/lib/zx",
     "//zircon/system/fidl/fuchsia-boot:c",
     "//zircon/system/fidl/fuchsia-boot:llcpp",
     "//zircon/system/fidl/fuchsia-process:c",
     "//zircon/system/fidl/fuchsia-scheduler:c",
+    "//zircon/system/ulib/mock-boot-arguments",
   ]
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
 }

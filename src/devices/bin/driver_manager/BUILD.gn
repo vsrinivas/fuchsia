@@ -128,8 +128,8 @@ test("driver_manager_test") {
 
   deps = [
     ":lib",
-    "//zircon/public/lib/mock-boot-arguments",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/mock-boot-arguments",
   ]
 
   # TODO(46714): Fix the leaks and remove this.

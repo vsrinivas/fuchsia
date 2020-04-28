@@ -2,16 +2,28 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36548.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/unification/zx_library.gni")
+
 zx_library("mock-boot-arguments") {
   sdk = "source"
   sdk_headers = [ "mock-boot-arguments/server.h" ]
   sources = [ "server.cc" ]
 
   deps = [
-    "$zx/system/fidl/fuchsia-boot:llcpp",
-    "$zx/system/ulib/async",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fidl",
-    "$zx/system/ulib/fidl-async",
+    "//zircon/public/lib/async",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fidl",
+    "//zircon/public/lib/fidl-async",
+    "//zircon/system/fidl/fuchsia-boot:llcpp",
   ]
 }
