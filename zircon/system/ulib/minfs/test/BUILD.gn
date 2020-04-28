@@ -42,6 +42,7 @@ test("minfs-unit") {
   test_group = "fs"
   sources = [
     "unit/bcache_test.cc",
+    "unit/buffer_view_test.cc",
     "unit/command_handler_test.cc",
     "unit/disk_struct_test.cc",
     "unit/format_test.cc",

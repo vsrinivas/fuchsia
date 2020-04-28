@@ -40,6 +40,7 @@ zx_library("minfs") {
     "allocator/allocator_reservation.cc",
     "allocator/metadata.cc",
     "allocator/storage_common.cc",
+    "buffer_view.cc",
     "directory.cc",
     "file.cc",
     "fsck.cc",
