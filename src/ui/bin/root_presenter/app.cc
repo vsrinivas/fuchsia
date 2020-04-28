@@ -23,11 +23,11 @@
 
 namespace root_presenter {
 
-App::App(const fxl::CommandLine& command_line, async::Loop* loop)
+App::App(const fxl::CommandLine& command_line, async_dispatcher_t* dispatcher)
     : component_context_(sys::ComponentContext::CreateAndServeOutgoingDirectory()),
       input_reader_(this),
       fdr_manager_(std::make_unique<FactoryResetManager>(*component_context_.get())),
-      activity_notifier_(loop->dispatcher(), ActivityNotifierImpl::kDefaultInterval,
+      activity_notifier_(dispatcher, ActivityNotifierImpl::kDefaultInterval,
                          *component_context_.get()),
       focuser_binding_(this),
       media_buttons_handler_(&activity_notifier_) {
@@ -51,21 +51,14 @@ void App::RegisterMediaButtonsListener(
 void App::PresentView(
     fuchsia::ui::views::ViewHolderToken view_holder_token,
     fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request) {
-  PresentView(std::move(view_holder_token), std::move(presentation_request),
-              /*clobber_previous_presentation=*/false);
-}
+  if (presentation_) {
+    FXL_LOG(ERROR) << "Support for multiple simultaneous presentations has been removed. To "
+                      "replace a view, use PresentOrReplaceView";
+    // Reject the request.
+    presentation_request.Close(ZX_ERR_ALREADY_BOUND);
+    return;
+  }
 
-void App::PresentOrReplaceView(
-    fuchsia::ui::views::ViewHolderToken view_holder_token,
-    fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request) {
-  PresentView(std::move(view_holder_token), std::move(presentation_request),
-              /*clobber_previous_presentation=*/true);
-}
-
-void App::PresentView(
-    fuchsia::ui::views::ViewHolderToken view_holder_token,
-    fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request,
-    bool clobber_previous_presentation) {
   InitializeServices();
 
   int32_t display_startup_rotation_adjustment = 0;
@@ -80,96 +73,40 @@ void App::PresentView(
 
   auto presentation = std::make_unique<Presentation>(
       scenic_.get(), session_.get(), compositor_->id(), std::move(view_holder_token),
-      std::move(presentation_request), &activity_notifier_, display_startup_rotation_adjustment,
-      [this](bool yield_to_next) {
-        if (yield_to_next) {
-          SwitchToNextPresentation();
-        } else {
-          SwitchToPreviousPresentation();
-        }
-      },
-      &media_buttons_handler_);
+      std::move(presentation_request), &activity_notifier_, display_startup_rotation_adjustment);
 
-  SetPresentation(std::move(presentation), clobber_previous_presentation);
+  SetPresentation(std::move(presentation));
 }
 
-void App::SetPresentation(std::unique_ptr<Presentation> presentation, bool clobber_presentation) {
-  if (clobber_presentation && !presentations_.empty()) {
-    ReplacePresentationWith(std::move(presentation));
-  } else {
-    AddPresentation(std::move(presentation));
+void App::PresentOrReplaceView(
+    fuchsia::ui::views::ViewHolderToken view_holder_token,
+    fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request) {
+  if (presentation_) {
+    ShutdownPresentation();
   }
+  PresentView(std::move(view_holder_token), std::move(presentation_request));
 }
 
-void App::AddPresentation(std::unique_ptr<Presentation> presentation) {
-  // TODO(41929): Once we're confident no one is using multiple presentations, assert this never
-  // happens.
-  if (!presentations_.empty()) {
-    FXL_LOG(WARNING)
-        << "Using multiple presentations is deprecated. Call PresentOrReplaceView() to "
-           "force replacement of current presentation.";
-    zx::nanosleep(zx::deadline_after(zx::sec(1)));
-  }
+void App::SetPresentation(std::unique_ptr<Presentation> presentation) {
+  FXL_DCHECK(presentation);
+  FXL_DCHECK(!presentation_);
+  presentation_ = std::move(presentation);
 
   for (auto& it : devices_by_id_) {
-    presentation->OnDeviceAdded(it.second.get());
+    presentation_->OnDeviceAdded(it.second.get());
   }
 
-  presentations_.push_back(std::move(presentation));
-  SwitchToPresentation(presentations_.size() - 1);
-}
-
-void App::ReplacePresentationWith(std::unique_ptr<Presentation> presentation) {
-  FXL_DCHECK(presentations_.size() == 1)
-      << "Can only replace presentation when there is a single instance.";
-  ShutdownPresentation(/*presentation_idx=*/0);
-  AddPresentation(std::move(presentation));
-}
-
-void App::ShutdownPresentation(size_t presentation_idx) {
-  if (presentation_idx == active_presentation_idx_) {
-    // This works fine when idx == 0, because the previous idx
-    // chosen will also be 0, and it will be an no-op within
-    // SwitchToPreviousPresentation. Finally, at the end of the
-    // callback, everything will be cleaned up.
-    SwitchToPreviousPresentation();
-  }
-
-  presentations_.erase(presentations_.begin() + presentation_idx);
-  if (presentation_idx < active_presentation_idx_) {
-    // Adjust index into presentations_.
-    active_presentation_idx_--;
-  }
-
-  if (presentations_.empty()) {
-    layer_stack_->RemoveAllLayers();
-    active_presentation_idx_ = std::numeric_limits<size_t>::max();
-  }
-}
-
-void App::SwitchToPresentation(const size_t presentation_idx) {
-  FXL_DCHECK(presentation_idx < presentations_.size());
-  if (presentation_idx == active_presentation_idx_) {
-    return;
-  }
-  active_presentation_idx_ = presentation_idx;
-  layer_stack_->RemoveAllLayers();
-  layer_stack_->AddLayer(presentations_[presentation_idx]->layer());
-
+  layer_stack_->AddLayer(presentation_->layer());
   if (magnifier_) {
-    presentations_[presentation_idx]->RegisterWithMagnifier(magnifier_.get());
+    presentation_->RegisterWithMagnifier(magnifier_.get());
   }
 
   session_->Present(0, [](fuchsia::images::PresentationInfo info) {});
 }
 
-void App::SwitchToNextPresentation() {
-  SwitchToPresentation((active_presentation_idx_ + 1) % presentations_.size());
-}
-
-void App::SwitchToPreviousPresentation() {
-  SwitchToPresentation((active_presentation_idx_ + presentations_.size() - 1) %
-                       presentations_.size());
+void App::ShutdownPresentation() {
+  presentation_.reset();
+  layer_stack_->RemoveAllLayers();
 }
 
 void App::RegisterDevice(
@@ -186,9 +123,8 @@ void App::RegisterDevice(
   // Dependent components inside presentations register with the handler (passed
   // at construction) to receive such events.
   if (!media_buttons_handler_.OnDeviceAdded(input_device.get())) {
-    for (auto& presentation : presentations_) {
-      presentation->OnDeviceAdded(input_device.get());
-    }
+    if (presentation_)
+      presentation_->OnDeviceAdded(input_device.get());
   }
 
   devices_by_id_.emplace(device_id, std::move(input_device));
@@ -201,9 +137,8 @@ void App::OnDeviceDisconnected(ui_input::InputDeviceImpl* input_device) {
   FXL_VLOG(1) << "UnregisterDevice " << input_device->id();
 
   if (!media_buttons_handler_.OnDeviceRemoved(input_device->id())) {
-    for (auto& presentation : presentations_) {
-      presentation->OnDeviceRemoved(input_device->id());
-    }
+    if (presentation_)
+      presentation_->OnDeviceRemoved(input_device->id());
   }
 
   devices_by_id_.erase(input_device->id());
@@ -230,29 +165,26 @@ void App::OnReport(ui_input::InputDeviceImpl* input_device,
     return;
   }
 
-  if (presentations_.size() == 0) {
+  if (!presentation_) {
     return;
   }
 
-  FXL_DCHECK(active_presentation_idx_ < presentations_.size());
-  FXL_VLOG(3) << "OnReport to " << active_presentation_idx_;
-
   // Input events are only reported to the active presentation.
   TRACE_FLOW_BEGIN("input", "report_to_presentation", report.trace_id);
-  presentations_[active_presentation_idx_]->OnReport(input_device->id(), std::move(report));
+  presentation_->OnReport(input_device->id(), std::move(report));
 }
 
 void App::InitializeServices() {
   if (!scenic_) {
     component_context_->svc()->Connect(scenic_.NewRequest());
     scenic_.set_error_handler([this](zx_status_t error) {
-      FXL_LOG(ERROR) << "Scenic died, destroying all presentations.";
+      FXL_LOG(ERROR) << "Scenic died, destroying presentation.";
       Reset();
     });
 
     session_ = std::make_unique<scenic::Session>(scenic_.get(), view_focuser_.NewRequest());
     session_->set_error_handler([this](zx_status_t error) {
-      FXL_LOG(ERROR) << "Session died, destroying all presentations.";
+      FXL_LOG(ERROR) << "Session died, destroying presentation.";
       Reset();
     });
     session_->set_event_handler([this](std::vector<fuchsia::ui::scenic::Event> events) {
@@ -295,9 +227,8 @@ void App::InitializeServices() {
 }
 
 void App::Reset() {
-  presentations_.clear();            // must be first, holds pointers to services
+  presentation_.reset();             // must be first, holds pointers to services
   color_transform_handler_.reset();  // session_ ptr may not be valid
-  active_presentation_idx_ = std::numeric_limits<size_t>::max();
   layer_stack_ = nullptr;
   compositor_ = nullptr;
   session_ = nullptr;
@@ -309,28 +240,10 @@ void App::HandleScenicEvent(const fuchsia::ui::scenic::Event& event) {
     case fuchsia::ui::scenic::Event::Tag::kGfx:
       switch (event.gfx().Which()) {
         case fuchsia::ui::gfx::Event::Tag::kViewDisconnected: {
-          auto& evt = event.gfx().view_disconnected();
-
-          FXL_LOG(INFO) << "ViewHolder " << evt.view_holder_id << " disconnected, "
-                        << presentations_.size() << " presentations currently active.";
-
-          // When ReplacePresentationWith() is called, there is a race between the release of the
-          // root presenter's ViewHolder, and the release of the child Presentation's View. if the
-          // ViewHolder is released first, then the child will receive a kViewDisconnected message.
-          // If the child is released first, then we will receive a kViewDisconnected message.
-          // However, since we have already removed the Presentation from |presentations_|, this
-          // message will fail to find an associated Presentation object. Failing to find a
-          // presentation that matches the view holder ID is not a bug, it is just a sign that this
-          // safe race condition occurred.
-          for (size_t idx = 0; idx < presentations_.size(); ++idx) {
-            if (evt.view_holder_id == presentations_[idx]->view_holder().id()) {
-              FXL_LOG(INFO)
-                  << "Root presenter: Content view terminated, shutting down presentation " << idx;
-              ShutdownPresentation(idx);
-              break;
-            }
-          }
-
+          FXL_DCHECK(presentation_ && event.gfx().view_disconnected().view_holder_id ==
+                                          presentation_->view_holder().id());
+          FXL_LOG(INFO) << "Root presenter: Content view terminated.";
+          ShutdownPresentation();
           break;
         }
         default: {

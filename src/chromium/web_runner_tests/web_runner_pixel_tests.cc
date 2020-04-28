@@ -117,7 +117,7 @@ class PixelTest : public gtest::RealLoopFixture {
     auto presenter = context_->svc()->Connect<fuchsia::ui::policy::Presenter>();
     presenter.set_error_handler(
         [](zx_status_t status) { FAIL() << "presenter: " << zx_status_get_string(status); });
-    presenter->PresentView(std::move(view_holder_token), nullptr);
+    presenter->PresentOrReplaceView(std::move(view_holder_token), nullptr);
 
     return std::move(view_token);
   }

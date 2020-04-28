@@ -1,5 +1,23 @@
 {
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.ui.scenic.Scenic": "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx"
+            }
+        }
+    },
     "program": {
         "binary": "test/root_presenter_unittests"
+    },
+    "sandbox": {
+        "dev": [
+            "class/input"
+        ],
+        "features": [
+            "config-data"
+        ],
+        "services": [
+            "fuchsia.ui.scenic.Scenic"
+        ]
     }
 }
