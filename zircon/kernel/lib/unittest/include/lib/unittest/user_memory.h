@@ -31,21 +31,27 @@ class UserMemory {
   static ktl::unique_ptr<UserMemory> Create(size_t size);
   virtual ~UserMemory();
   vaddr_t base() { return mapping_->base(); }
+
+  // TODO(30033): These direct accesses to non-kernel memory are funnelled
+  // through these two functions, which can be annotated to suppress asan.
   template <typename T>
-  T* out() {
-    return reinterpret_cast<T*>(base());
+  void put(const T& value, size_t i = 0) {
+    reinterpret_cast<T*>(base())[i] = value;
   }
+
   template <typename T>
-  const T* in() {
-    return reinterpret_cast<T*>(base());
+  T get(size_t i = 0) {
+    return reinterpret_cast<const T*>(base())[i];
   }
+
   template <typename T>
   user_out_ptr<T> user_out() {
-    return make_user_out_ptr<T>(out<T>());
+    return make_user_out_ptr(reinterpret_cast<T*>(base()));
   }
+
   template <typename T>
   user_in_ptr<const T> user_in() {
-    return make_user_in_ptr<const T>(in<T>());
+    return make_user_in_ptr(reinterpret_cast<const T*>(base()));
   }
 
   // Ensures the mapping is committed and mapped such that usages will cause no faults.
