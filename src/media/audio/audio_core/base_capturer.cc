@@ -158,15 +158,12 @@ fit::result<std::shared_ptr<Mixer>, zx_status_t> BaseCapturer::InitializeSourceL
     case State::OperatingAsync:
     case State::AsyncStopping:
     case State::AsyncStoppingCallbackPending:
+    case State::WaitingForVmo:
       return fit::ok(mix_stage_->AddInput(std::move(stream)));
 
     // If we are shut down, then I'm not sure why new links are being added, but
     // just go ahead and reject this one. We will be going away shortly.
     case State::Shutdown:
-    // If we have not received a VMO yet, then we are still waiting for the user
-    // to commit to a format. We should not be establishing links before the
-    // capturer is ready.
-    case State::WaitingForVmo:
       return fit::error(ZX_ERR_BAD_STATE);
   }
 }
@@ -234,12 +231,6 @@ void BaseCapturer::AddPayloadBuffer(uint32_t id, zx::vmo payload_buf_vmo) {
                             << ", frames:" << payload_buf_frames_
                             << ", bytes/frame:" << format_.bytes_per_frame();
 
-  // Allocate our MixStage for mixing.
-  //
-  // TODO(39886): Limit this to something more reasonable than the entire user-provided VMO.
-  mix_stage_ = std::make_shared<MixStage>(format_, payload_buf_frames_,
-                                          clock_mono_to_fractional_dest_frames_);
-
   // Map the VMO into our process.
   res = payload_buf_.Map(payload_buf_vmo, /*offset=*/0, payload_buf_size,
                          /*map_flags=*/ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
@@ -273,14 +264,11 @@ void BaseCapturer::AddPayloadBuffer(uint32_t id, zx::vmo payload_buf_vmo) {
     FX_LOGS(ERROR) << "Failed to select output producer";
     return;
   }
-  FX_DCHECK(context_.link_matrix().SourceLinkCount(*this) == 0u)
-      << "No links should be established before a capturer has a payload buffer";
 
   // Mark ourselves as routable now that we're fully configured. Although we might still fail to
   // create links to audio sources, we have successfully configured this capturer's mode, so we are
   // now in the OperatingSync state.
   UpdateState(State::OperatingSync);
-
   cleanup.cancel();
 }
 
@@ -1003,6 +991,13 @@ void BaseCapturer::UpdateFormat(Format format) {
 
   FX_DCHECK(tmp <= std::numeric_limits<uint32_t>::max());
   FX_DCHECK(max_frames_per_capture_ > 0);
+
+  // Allocate our MixStage for mixing.
+  //
+  // TODO(39886): Limit this to something smaller than one second of frames.
+  uint32_t max_mix_frames = format_.frames_per_second();
+  mix_stage_ =
+      std::make_shared<MixStage>(format_, max_mix_frames, clock_mono_to_fractional_dest_frames_);
 }
 
 // Eventually, we'll set the optimal clock according to the source where it is initially routed.

@@ -146,6 +146,8 @@ source_set("audio_core_lib") {
     "threading_model.cc",
     "threading_model.h",
     "throttle_output.h",
+    "ultrasound_capturer.cc",
+    "ultrasound_capturer.h",
     "ultrasound_factory.cc",
     "ultrasound_factory.h",
     "ultrasound_renderer.cc",

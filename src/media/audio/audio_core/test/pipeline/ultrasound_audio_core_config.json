@@ -41,6 +41,13 @@
   "input_devices": [
     {
       "device_id": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "supported_stream_types": [
+        "capture:background",
+        "capture:foreground",
+        "capture:system_agent",
+        "capture:communications",
+        "capture:ultrasound"
+      ],
       "rate": 96000
     }
   ]

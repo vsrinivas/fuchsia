@@ -133,6 +133,7 @@ class BaseCapturer : public AudioObject, public fuchsia::media::AudioCapturer {
   const zx::clock& reference_clock() const { return reference_clock_; }
   void set_optimal_clock(zx::clock optimal_clock) { optimal_clock_ = std::move(optimal_clock); }
   void set_reference_clock(zx::clock ref_clock) { reference_clock_ = std::move(ref_clock); }
+  fidl::Binding<fuchsia::media::AudioCapturer>& binding() { return binding_; }
 
  private:
   void UpdateState(State new_state);

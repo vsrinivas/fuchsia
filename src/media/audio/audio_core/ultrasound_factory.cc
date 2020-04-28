@@ -5,6 +5,7 @@
 #include "src/media/audio/audio_core/ultrasound_factory.h"
 
 #include "src/media/audio/audio_core/route_graph.h"
+#include "src/media/audio/audio_core/ultrasound_capturer.h"
 #include "src/media/audio/audio_core/ultrasound_renderer.h"
 
 namespace media::audio {
@@ -20,7 +21,17 @@ UltrasoundFactory::UltrasoundFactory(Context* context) : context_(*context) {
 
 void UltrasoundFactory::CreateCapturer(
     fidl::InterfaceRequest<fuchsia::media::AudioCapturer> request,
-    CreateCapturerCallback callback) {}
+    CreateCapturerCallback callback) {
+  auto capturer =
+      std::make_unique<UltrasoundCapturer>(std::move(request), &context_, std::move(callback));
+  auto capturer_raw = capturer.get();
+  // Ultrasound capturers are immediately routable.
+  context_.route_graph().AddCapturer(std::move(capturer));
+  context_.route_graph().SetCapturerRoutingProfile(
+      *capturer_raw,
+      RoutingProfile{.routable = true,
+                     .usage = StreamUsage::WithCaptureUsage(CaptureUsage::ULTRASOUND)});
+}
 
 void UltrasoundFactory::CreateRenderer(
     fidl::InterfaceRequest<fuchsia::media::AudioRenderer> request,
