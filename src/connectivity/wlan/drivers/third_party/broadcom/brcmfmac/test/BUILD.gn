@@ -26,6 +26,17 @@ executable("channel_conversion_test") {
   ]
 }
 
+executable("cfg80211_test") {
+  output_name = "cfg80211_test"
+  testonly = true
+  sources = [ "cfg80211_test.cc" ]
+  deps = [
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
+    "//src/lib/fxl/test:gtest_main",
+    "//zircon/system/dev/lib/fake_ddk",
+  ]
+}
+
 executable("debug_test") {
   output_name = "debug_test"
   testonly = true
@@ -159,6 +170,7 @@ unittest_package("brcmfmac_test") {
   foreach(test_name,
           [
             "channel_conversion_test",
+            "cfg80211_test",
             "debug_test",
             "dma_buffer_test",
             "dma_pool_test",

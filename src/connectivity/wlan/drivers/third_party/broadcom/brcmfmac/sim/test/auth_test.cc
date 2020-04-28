@@ -303,15 +303,15 @@ void AuthTest::OnAuthConf(const wlanif_auth_confirm_t* resp) {
     ie[offset++] = WLAN_IE_TYPE_VENDOR_SPECIFIC;
     ie[offset++] = 22;  // The length of following content.
 
-    memcpy(&ie[offset], WPA_OUI, TLV_OUI_LEN);  // WPA OUI for multicast cipher suite.
+    memcpy(&ie[offset], MSFT_OUI, TLV_OUI_LEN);
     offset += TLV_OUI_LEN;
-    ie[offset++] = 1;  // Set oui type.
+    ie[offset++] = WPA_OUI_TYPE;
 
     // These two bytes are 16-bit version number.
     ie[offset++] = 1;  // Lower byte
     ie[offset++] = 0;  // Higher byte
 
-    memcpy(&ie[offset], WPA_OUI, TLV_OUI_LEN);  // WPA OUI for multicast cipher suite.
+    memcpy(&ie[offset], MSFT_OUI, TLV_OUI_LEN);
     offset += TLV_OUI_LEN;
     ie[offset++] = WPA_CIPHER_TKIP;  // Set multicast cipher suite.
 
@@ -319,7 +319,7 @@ void AuthTest::OnAuthConf(const wlanif_auth_confirm_t* resp) {
     ie[offset++] = 1;  // Lower byte
     ie[offset++] = 0;  // Higher byte
 
-    memcpy(&ie[offset], WPA_OUI, TLV_OUI_LEN);
+    memcpy(&ie[offset], MSFT_OUI, TLV_OUI_LEN);
     offset += TLV_OUI_LEN;               // The second WPA OUI.
     ie[offset++] = WPA_CIPHER_CCMP_128;  // Set unicast cipher suite.
 
@@ -327,7 +327,7 @@ void AuthTest::OnAuthConf(const wlanif_auth_confirm_t* resp) {
     ie[offset++] = 1;  // Lower byte
     ie[offset++] = 0;  // Higher byte
 
-    memcpy(&ie[offset], WPA_OUI, TLV_OUI_LEN);  // WPA OUI for auth management suite.
+    memcpy(&ie[offset], MSFT_OUI, TLV_OUI_LEN);  // WPA OUI for auth management suite.
     offset += TLV_OUI_LEN;
     ie[offset++] = RSN_AKM_PSK;  // Set auth management suite.
 

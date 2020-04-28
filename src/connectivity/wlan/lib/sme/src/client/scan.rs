@@ -7,11 +7,15 @@ use {
     fidl_fuchsia_wlan_common as fidl_common,
     fidl_fuchsia_wlan_mlme::{self as fidl_mlme, BssDescription, ScanRequest, ScanResultCodes},
     std::{
-        collections::{HashMap, HashSet},
+        collections::{hash_map, HashMap, HashSet},
         mem,
         sync::Arc,
     },
-    wlan_common::channel::{Cbw, Channel},
+    wlan_common::{
+        bss::BssDescriptionExt,
+        channel::{Cbw, Channel},
+        ie,
+    },
 };
 
 const PASSIVE_SCAN_CHANNEL_MS: u32 = 200;
@@ -172,11 +176,11 @@ impl<D, J> ScanScheduler<D, J> {
             ScanState::NotScanning | ScanState::StaleJoinScan { .. } => {}
             ScanState::ScanningToJoin { cmd, bss_map, .. } => {
                 if cmd.ssid == msg.bss.ssid {
-                    bss_map.insert(msg.bss.bssid, msg.bss);
+                    maybe_insert_bss(bss_map, msg.bss);
                 }
             }
             ScanState::ScanningToDiscover { bss_map, .. } => {
-                bss_map.insert(msg.bss.bssid, msg.bss);
+                maybe_insert_bss(bss_map, msg.bss);
             }
         }
     }
@@ -272,6 +276,26 @@ impl<D, J> ScanScheduler<D, J> {
                 }
             }
             _ => None,
+        }
+    }
+}
+
+fn maybe_insert_bss(bss_map: &mut HashMap<BssId, BssDescription>, bss: BssDescription) {
+    match bss_map.entry(bss.bssid) {
+        hash_map::Entry::Occupied(mut entry) => {
+            let existing_bss = entry.get_mut();
+            let existing_has_manufacturer = existing_bss.has_wsc_attr(ie::wsc::Id::MANUFACTURER);
+            let new_has_manufacturer = bss.has_wsc_attr(ie::wsc::Id::MANUFACTURER);
+            // Do not replace the BSS in the BSS map if we are going to lose information.
+            // It's likely that the new scan result comes from a beacon while the old scan
+            // result comes from a probe response.
+            if existing_has_manufacturer && !new_has_manufacturer {
+                return;
+            }
+            *existing_bss = bss;
+        }
+        hash_map::Entry::Vacant(entry) => {
+            entry.insert(bss);
         }
     }
 }
@@ -377,7 +401,9 @@ const SUPPORTED_CHANNELS: &[u8] = &[
 mod tests {
     use super::*;
 
-    use crate::client::test_utils::{fake_bss_with_bssid, fake_unprotected_bss_description};
+    use crate::client::test_utils::{
+        fake_bss_with_bssid, fake_bss_with_vendor_ies, fake_unprotected_bss_description,
+    };
     use crate::clone_utils::clone_bss_desc;
     use crate::test_utils;
     use wlan_common::assert_variant;
@@ -784,6 +810,77 @@ mod tests {
             scan_type: fidl_common::ScanType::Active,
         });
         assert_eq!(req.expect("expect ScanRequest").channel_list, Some(vec![1]));
+    }
+
+    #[test]
+    fn test_bss_map_retain_information() {
+        let mut sched = create_sched();
+        let req = sched
+            .enqueue_scan_to_discover(DiscoveryScan::new(10, fidl_common::ScanType::Active))
+            .expect("expected a ScanRequest");
+        let txn_id = req.txn_id;
+        sched.on_mlme_scan_result(fidl_mlme::ScanResult {
+            txn_id,
+            bss: fake_unprotected_bss_description(b"foo".to_vec()),
+        });
+        sched.on_mlme_scan_result(fidl_mlme::ScanResult {
+            txn_id,
+            bss: fake_bss_with_vendor_ies(b"foo".to_vec(), probe_resp_wsc_ie()),
+        });
+        sched.on_mlme_scan_result(fidl_mlme::ScanResult {
+            txn_id,
+            bss: fake_unprotected_bss_description(b"foo".to_vec()),
+        });
+        let (result, _req) = sched.on_mlme_scan_end(fidl_mlme::ScanEnd {
+            txn_id,
+            code: fidl_mlme::ScanResultCodes::Success,
+        });
+
+        let (_tokens, result) = assert_variant!(result,
+            ScanResult::DiscoveryFinished { tokens, result } => (tokens, result),
+            "expected discovery scan to be completed"
+        );
+        let scan_list = result.expect("expected a successful scan result");
+        assert_eq!(scan_list.len(), 1);
+        // The second scan result should be retained since it contains the AP manufacturer
+        // information, which the other ones don't.
+        assert_eq!(scan_list[0].vendor_ies, Some(probe_resp_wsc_ie()));
+    }
+
+    fn probe_resp_wsc_ie() -> Vec<u8> {
+        #[rustfmt::skip]
+        let ie = vec![
+            0xdd, 0x8c,                   // Vendor IE + Length
+            0x00, 0x50, 0xf2, 0x04,       // OUI type for WSC
+            0x10, 0x4a, 0x00, 0x01, 0x10, // Version
+            0x10, 0x44, 0x00, 0x01, 0x02, // WiFi Protected Setup State
+            0x10, 0x57, 0x00, 0x01, 0x01, // AP Setup Locked
+            0x10, 0x3b, 0x00, 0x01, 0x03, // Response Type
+            // UUID-E
+            0x10, 0x47, 0x00, 0x10,
+            0x3b, 0x3b, 0xe3, 0x66, 0x80, 0x84, 0x4b, 0x03,
+            0xbb, 0x66, 0x45, 0x2a, 0xf3, 0x00, 0x59, 0x22,
+            // Manufacturer
+            0x10, 0x21, 0x00, 0x15,
+            0x41, 0x53, 0x55, 0x53, 0x54, 0x65, 0x6b, 0x20, 0x43, 0x6f, 0x6d, 0x70,
+            0x75, 0x74, 0x65, 0x72, 0x20, 0x49, 0x6e, 0x63, 0x2e,
+            // Model name
+            0x10, 0x23, 0x00, 0x08, 0x52, 0x54, 0x2d, 0x41, 0x43, 0x35, 0x38, 0x55,
+            // Model number
+            0x10, 0x24, 0x00, 0x03, 0x31, 0x32, 0x33,
+            // Serial number
+            0x10, 0x42, 0x00, 0x05, 0x31, 0x32, 0x33, 0x34, 0x35,
+            // Primary device type
+            0x10, 0x54, 0x00, 0x08, 0x00, 0x06, 0x00, 0x50, 0xf2, 0x04, 0x00, 0x01,
+            // Device name
+            0x10, 0x11, 0x00, 0x0b,
+            0x41, 0x53, 0x55, 0x53, 0x20, 0x52, 0x6f, 0x75, 0x74, 0x65, 0x72,
+            // Config methods
+            0x10, 0x08, 0x00, 0x02, 0x20, 0x0c,
+            // Vendor extension
+            0x10, 0x49, 0x00, 0x06, 0x00, 0x37, 0x2a, 0x00, 0x01, 0x20,
+        ];
+        ie
     }
 
     fn create_sched() -> ScanScheduler<i32, i32> {

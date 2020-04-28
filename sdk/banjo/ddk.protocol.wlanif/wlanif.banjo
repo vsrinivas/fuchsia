@@ -42,7 +42,7 @@ struct WlanifScanReq {
 
 /// IEEE Std 802.11-2016, 9.4.2.25.1
 const uint32 WLAN_RSNE_MAX_LEN = 255;
-const uint32 WLAN_VIE_MAX_LEN = 255;
+const uint32 WLAN_VIE_MAX_LEN = 510;  // max length for two elements (WPA and WSC)
 
 struct WlanifBssDescription {
     array<uint8>:WLAN_ETH_ALEN bssid;

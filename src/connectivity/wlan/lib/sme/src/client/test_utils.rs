@@ -66,6 +66,13 @@ pub fn fake_bss_with_rates(ssid: Ssid, rates: Vec<u8>) -> fidl_mlme::BssDescript
     fidl_mlme::BssDescription { rates, ..fake_unprotected_bss_description(ssid) }
 }
 
+pub fn fake_bss_with_vendor_ies(ssid: Ssid, vendor_ies: Vec<u8>) -> fidl_mlme::BssDescription {
+    fidl_mlme::BssDescription {
+        vendor_ies: Some(vendor_ies),
+        ..fake_unprotected_bss_description(ssid)
+    }
+}
+
 pub fn fake_unprotected_bss_description(ssid: Ssid) -> fidl_mlme::BssDescription {
     fake_bss_description(ssid, None)
 }
@@ -119,6 +126,7 @@ pub fn fake_bss_info() -> BssInfo {
         channel: 1,
         protection: Protection::Wpa2Personal,
         compatible: true,
+        probe_resp_wsc: None,
     }
 }
 

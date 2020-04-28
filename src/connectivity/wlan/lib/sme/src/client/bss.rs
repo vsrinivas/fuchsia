@@ -9,7 +9,7 @@ use {
     std::{cmp::Ordering, collections::HashSet},
     wlan_common::{
         bss::{BssDescriptionExt, Protection},
-        ie::rsn::rsne,
+        ie::{rsn::rsne, wsc},
     },
 };
 
@@ -23,6 +23,20 @@ impl ClientConfig {
 
     /// Converts a given BssDescription into a BssInfo.
     pub fn convert_bss_description(&self, bss: &BssDescription) -> BssInfo {
+        let mut probe_resp_wsc = None;
+        match bss.find_wsc_ie() {
+            Some(ie) => match wsc::parse_probe_resp_wsc(ie) {
+                Ok(wsc) => probe_resp_wsc = Some(wsc),
+                Err(_e) => {
+                    // Parsing could fail because the WSC IE comes from a beacon, which does
+                    // not contain all the information that a probe response WSC is expected
+                    // to have. We don't have the information to distinguish between a beacon
+                    // and a probe response, so we let this case fail silently.
+                }
+            },
+            None => (),
+        }
+
         BssInfo {
             bssid: bss.bssid.clone(),
             ssid: bss.ssid.clone(),
@@ -31,6 +45,7 @@ impl ClientConfig {
             channel: bss.chan.primary,
             protection: bss.get_protection(),
             compatible: self.is_bss_compatible(bss),
+            probe_resp_wsc,
         }
     }
 
@@ -86,6 +101,7 @@ pub struct BssInfo {
     pub channel: u8,
     pub protection: Protection,
     pub compatible: bool,
+    pub probe_resp_wsc: Option<wsc::ProbeRespWsc>,
 }
 
 fn get_rx_dbm(bss: &BssDescription) -> i8 {
@@ -237,6 +253,7 @@ mod tests {
                 channel: 1,
                 protection: Protection::Wpa2Personal,
                 compatible: true,
+                probe_resp_wsc: None,
             }
         );
 
@@ -250,6 +267,7 @@ mod tests {
                 channel: 1,
                 protection: Protection::Wep,
                 compatible: false,
+                probe_resp_wsc: None,
             }
         );
 
@@ -264,6 +282,7 @@ mod tests {
                 channel: 1,
                 protection: Protection::Wep,
                 compatible: true,
+                probe_resp_wsc: None,
             }
         );
     }

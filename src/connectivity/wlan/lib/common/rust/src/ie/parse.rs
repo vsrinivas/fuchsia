@@ -211,6 +211,10 @@ pub fn parse_vendor_ie<B: ByteSlice>(raw_body: B) -> FrameParseResult<VendorIe<B
                     let (_type, body) = reader.into_remaining().split_at(1);
                     VendorIe::MsftLegacyWpa(body)
                 }
+                Some(wsc::VENDOR_SPECIFIC_TYPE) => {
+                    let (_type, body) = reader.into_remaining().split_at(1);
+                    VendorIe::Wsc(body)
+                }
                 _ => VendorIe::Unknown { oui, body: reader.into_remaining() },
             }
         }

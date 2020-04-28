@@ -1077,7 +1077,7 @@ static bool brcmf_valid_wpa_oui(uint8_t* oui, bool is_rsn_ie) {
     return (memcmp(oui, RSN_OUI, TLV_OUI_LEN) == 0);
   }
 
-  return (memcmp(oui, WPA_OUI, TLV_OUI_LEN) == 0);
+  return (memcmp(oui, MSFT_OUI, TLV_OUI_LEN) == 0);
 }
 
 static zx_status_t brcmf_configure_wpaie(struct brcmf_if* ifp, const struct brcmf_vs_tlv* wpa_ie,
@@ -1369,10 +1369,11 @@ static zx_status_t brcmf_cfg80211_get_station(struct net_device* ndev, const uin
   return err;
 }
 
-static inline bool brcmf_tlv_has_wpa_ie(const uint8_t* ie) {
-  return (ie[TLV_LEN_OFF] >= TLV_OUI_LEN + TLV_LEN_OFF &&
-          !memcmp(&ie[TLV_BODY_OFF], WPA_OUI, TLV_OUI_LEN) &&
-          ie[TLV_BODY_OFF + TLV_OUI_LEN] == WPA_OUI_TYPE);
+static inline bool brcmf_tlv_ie_has_msft_type(const uint8_t* ie, uint8_t oui_type) {
+  return (ie[TLV_LEN_OFF] >= TLV_OUI_LEN + TLV_OUI_TYPE_LEN &&
+          !memcmp(&ie[TLV_BODY_OFF], MSFT_OUI, TLV_OUI_LEN) &&
+          // The byte after OUI is OUI type
+          ie[TLV_BODY_OFF + TLV_OUI_LEN] == oui_type);
 }
 
 static struct brcmf_vs_tlv* brcmf_find_wpaie(const uint8_t* ie_buf, uint32_t ie_len) {
@@ -1382,7 +1383,7 @@ static struct brcmf_vs_tlv* brcmf_find_wpaie(const uint8_t* ie_buf, uint32_t ie_
     uint8_t type = ie_buf[offset];
     uint8_t length = ie_buf[offset + TLV_LEN_OFF];
     if (type == WLAN_IE_TYPE_VENDOR_SPECIFIC) {
-      if (brcmf_tlv_has_wpa_ie(ie_buf + offset)) {
+      if (brcmf_tlv_ie_has_msft_type(ie_buf + offset, WPA_OUI_TYPE)) {
         BRCMF_DBG(CONN, "Found WPA IE\n");
         return (struct brcmf_vs_tlv*)(ie_buf + offset);
       }
@@ -1853,9 +1854,11 @@ void brcmf_cfg80211_rx(struct brcmf_if* ifp, const void* data, size_t size) {
   }
 }
 
-static void brcmf_extract_ies(const uint8_t* ie, size_t ie_len, wlanif_bss_description_t* bss) {
+void brcmf_extract_ies(const uint8_t* ie, size_t ie_len, wlanif_bss_description_t* bss) {
+  bss->vendor_ie_len = 0;
   size_t offset = 0;
   bool wpa_ie_extracted = false;
+  bool wsc_ie_extracted = false;
 
   while (offset < ie_len) {
     uint8_t type = ie[offset];
@@ -1885,10 +1888,22 @@ static void brcmf_extract_ies(const uint8_t* ie, size_t ie_len, wlanif_bss_descr
         break;
       }
       case WLAN_IE_TYPE_VENDOR_SPECIFIC: {
-        if (!wpa_ie_extracted && (brcmf_tlv_has_wpa_ie(ie + offset))) {
-          bss->vendor_ie_len = length + TLV_HDR_LEN;
-          memcpy(bss->vendor_ie, ie + offset, bss->vendor_ie_len);
-          wpa_ie_extracted = true;
+        bool extract_wpa_ie =
+            !wpa_ie_extracted && brcmf_tlv_ie_has_msft_type(ie + offset, WPA_OUI_TYPE);
+        bool extract_wsc_ie =
+            !wsc_ie_extracted && brcmf_tlv_ie_has_msft_type(ie + offset, WSC_OUI_TYPE);
+        if (extract_wpa_ie || extract_wsc_ie) {
+          size_t this_ie_len = length + TLV_HDR_LEN;
+          if (bss->vendor_ie_len + this_ie_len < WLAN_VIE_MAX_LEN) {
+            memcpy(bss->vendor_ie + bss->vendor_ie_len, ie + offset, this_ie_len);
+            bss->vendor_ie_len += this_ie_len;
+            if (extract_wpa_ie) {
+              wpa_ie_extracted = true;
+            }
+            if (extract_wsc_ie) {
+              wsc_ie_extracted = true;
+            }
+          }
         }
         break;
       }
@@ -2315,7 +2330,7 @@ static zx_status_t brcmf_parse_vndr_ies(const uint8_t* vndr_ie_buf, uint32_t vnd
       goto next;
     }
     /* if wpa or wme ie, do not add ie */
-    if (!memcmp(vndrie->oui, (uint8_t*)WPA_OUI, TLV_OUI_LEN) &&
+    if (!memcmp(vndrie->oui, (uint8_t*)MSFT_OUI, TLV_OUI_LEN) &&
         ((vndrie->oui_type == WPA_OUI_TYPE) || (vndrie->oui_type == WME_OUI_TYPE))) {
       BRCMF_DBG(TRACE, "Found WPA/WME oui. Do not add it\n");
       goto next;

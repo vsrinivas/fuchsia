@@ -63,12 +63,13 @@
 #define TLV_HDR_LEN   2  /* header length */
 #define TLV_BODY_OFF  2  /* body offset */
 #define TLV_OUI_LEN   3  /* oui id length */
+#define TLV_OUI_TYPE_LEN 1
 
-#define WPA_OUI "\x00\x50\xF2" /* WPA OUI */
+#define MSFT_OUI "\x00\x50\xF2"
 #define WPA_OUI_TYPE 1
-#define RSN_OUI "\x00\x0F\xAC" /* RSN OUI */
+#define WSC_OUI_TYPE 4
+#define RSN_OUI "\x00\x0F\xAC"
 #define WME_OUI_TYPE 2
-#define WPS_OUI_TYPE 4
 
 #define VS_IE_FIXED_HDR_LEN 6
 #define WPA_IE_VERSION_LEN 2
@@ -511,5 +512,6 @@ void brcmf_if_stop_capture_frames(net_device* ndev);
 zx_status_t brcmf_if_set_multicast_promisc(net_device* ndev, bool enable);
 void brcmf_if_data_queue_tx(net_device* ndev, uint32_t options, ethernet_netbuf_t* netbuf,
                             ethernet_impl_queue_tx_callback completion_cb, void* cookie);
+void brcmf_extract_ies(const uint8_t* ie, size_t ie_len, wlanif_bss_description_t* bss);
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_CFG80211_H_

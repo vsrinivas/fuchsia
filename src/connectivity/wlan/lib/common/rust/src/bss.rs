@@ -96,6 +96,11 @@ pub trait BssDescriptionExt {
     /// Search for WPA Info Element and parse it. If no WPA Info Element is found, or a WPA Info
     /// Element is found but is not valid, return an error.
     fn get_wpa_ie(&self) -> Result<ie::wpa::WpaIe, anyhow::Error>;
+    /// Search for the WiFi Simple Configuration Info Element. If found, return the body.
+    fn find_wsc_ie(&self) -> Option<&[u8]>;
+    /// Return true if an attribute is present in the WiFi Simple Configuration element.
+    /// If the element or the attribute does not exist, return false.
+    fn has_wsc_attr(&self, id: ie::wsc::Id) -> bool;
 }
 
 impl BssDescriptionExt for fidl_mlme::BssDescription {
@@ -192,6 +197,26 @@ impl BssDescriptionExt for fidl_mlme::BssDescription {
     fn get_wpa_ie(&self) -> Result<ie::wpa::WpaIe, anyhow::Error> {
         ie::parse_wpa_ie(self.find_wpa_ie().ok_or(format_err!("no wpa ie found"))?)
             .map_err(|e| e.into())
+    }
+
+    fn find_wsc_ie(&self) -> Option<&[u8]> {
+        let ies = self.vendor_ies.as_ref()?;
+        ie::Reader::new(&ies[..])
+            .filter_map(|(id, ie)| match id {
+                ie::Id::VENDOR_SPECIFIC => match ie::parse_vendor_ie(ie) {
+                    Ok(ie::VendorIe::Wsc(body)) => Some(&body[..]),
+                    _ => None,
+                },
+                _ => None,
+            })
+            .next()
+    }
+
+    fn has_wsc_attr(&self, id: ie::wsc::Id) -> bool {
+        match self.find_wsc_ie() {
+            Some(bytes) => ie::wsc::Reader::new(bytes).find(|attr| id == attr.0).is_some(),
+            None => false,
+        }
     }
 }
 

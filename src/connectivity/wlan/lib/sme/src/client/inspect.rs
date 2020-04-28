@@ -12,7 +12,7 @@ use {
         hmac::hmac,
     },
     parking_lot::Mutex,
-    wlan_common::{format::MacFmt, mac::MacAddr},
+    wlan_common::{format::MacFmt, ie::wsc, mac::MacAddr},
     wlan_inspect::iface_mgr::IfaceTree,
 };
 
@@ -203,7 +203,7 @@ impl StatusNode {
 }
 
 pub struct BssInfoNode {
-    _node: Node,
+    node: Node,
     bssid: StringProperty,
     bssid_hash: StringProperty,
     ssid: StringProperty,
@@ -212,6 +212,7 @@ pub struct BssInfoNode {
     snr_db: IntProperty,
     channel: UintProperty,
     protection: StringProperty,
+    wsc: Option<BssWscNode>,
 }
 
 impl BssInfoNode {
@@ -225,7 +226,7 @@ impl BssInfoNode {
         let channel = node.create_uint("channel", bss_info.channel as u64);
         let protection = node.create_string("protection", format!("{}", bss_info.protection));
         Self {
-            _node: node,
+            node,
             bssid,
             bssid_hash,
             ssid,
@@ -234,6 +235,7 @@ impl BssInfoNode {
             snr_db,
             channel,
             protection,
+            wsc: None,
         }
     }
 
@@ -246,6 +248,45 @@ impl BssInfoNode {
         self.snr_db.set(bss_info.snr_db as i64);
         self.channel.set(bss_info.channel as u64);
         self.protection.set(&format!("{}", bss_info.protection));
+        match &bss_info.probe_resp_wsc {
+            Some(wsc) => match self.wsc.as_mut() {
+                Some(wsc_node) => wsc_node.update(wsc),
+                None => self.wsc = Some(BssWscNode::new(self.node.create_child("wsc"), wsc)),
+            },
+            None => {
+                self.wsc.take();
+            }
+        }
+    }
+}
+
+pub struct BssWscNode {
+    _node: Node,
+    manufacturer: StringProperty,
+    model_name: StringProperty,
+    model_number: StringProperty,
+    device_name: StringProperty,
+}
+
+impl BssWscNode {
+    fn new(node: Node, wsc: &wsc::ProbeRespWsc) -> Self {
+        let manufacturer =
+            node.create_string("manufacturer", String::from_utf8_lossy(&wsc.manufacturer[..]));
+        let model_name =
+            node.create_string("model_name", String::from_utf8_lossy(&wsc.model_name[..]));
+        let model_number =
+            node.create_string("model_number", String::from_utf8_lossy(&wsc.model_number[..]));
+        let device_name =
+            node.create_string("device_name", String::from_utf8_lossy(&wsc.device_name[..]));
+
+        Self { _node: node, manufacturer, model_name, model_number, device_name }
+    }
+
+    fn update(&mut self, wsc: &wsc::ProbeRespWsc) {
+        self.manufacturer.set(&String::from_utf8_lossy(&wsc.manufacturer[..]));
+        self.model_name.set(&String::from_utf8_lossy(&wsc.model_name[..]));
+        self.model_number.set(&String::from_utf8_lossy(&wsc.model_number[..]));
+        self.device_name.set(&String::from_utf8_lossy(&wsc.device_name[..]));
     }
 }
 

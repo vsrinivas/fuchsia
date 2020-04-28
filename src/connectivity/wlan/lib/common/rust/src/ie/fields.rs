@@ -759,6 +759,9 @@ pub enum VendorIe<B: ByteSlice> {
     // This does not contain the first byte of the IE body, since this byte identifies the IE as
     // WPA rather than another MSFT vendor IE.
     MsftLegacyWpa(B),
+    // WiFi Simple Configuration element.
+    // Like WPA, this does not contain the bytes identifying the IE as WSC.
+    Wsc(B),
     // IEEE Std 802.11-2016, 9.4.2.26
     Unknown { oui: Oui, body: B },
 }

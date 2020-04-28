@@ -5,6 +5,7 @@
 pub mod intersect;
 pub mod rsn;
 pub mod wpa;
+pub mod wsc;
 
 mod constants;
 mod fake_ies;
