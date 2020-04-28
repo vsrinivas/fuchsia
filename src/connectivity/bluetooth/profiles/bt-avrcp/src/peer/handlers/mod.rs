@@ -673,22 +673,24 @@ fn send_control_response(
     result: Result<Box<dyn PacketEncodable>, StatusCode>,
     pdu_id: PduId,
 ) -> Result<(), Error> {
-    match result {
-        Ok(encodable) => match encodable.encode_packet() {
-            Ok(packet) => command
-                .send_response(AvcResponseType::Accepted, &packet[..])
-                .map_err(|e| Error::AvctpError(e)),
-            Err(e) => {
-                fx_log_err!("Error trying to encode response packet. Sending internal_error rejection to peer {:?}", e);
-                send_avc_reject(&command, u8::from(&pdu_id), StatusCode::InternalError)
-            }
-        },
+    let encodable = match result {
         Err(status_code) => {
             fx_log_err!(
-                "Error trying to encode response packet. Sending rejection to peer {:?}",
+                "Error handling command for {:?} - responding {:?} to peer",
+                pdu_id,
                 status_code
             );
-            send_avc_reject(&command, u8::from(&pdu_id), status_code)
+            return send_avc_reject(&command, u8::from(&pdu_id), status_code);
+        }
+        Ok(encodable) => encodable,
+    };
+    match encodable.encode_packet() {
+        Ok(packet) => command
+            .send_response(AvcResponseType::Accepted, &packet[..])
+            .map_err(|e| Error::AvctpError(e)),
+        Err(e) => {
+            fx_log_err!("Error encoding response - sending InternalError to peer: {:?}", e);
+            send_avc_reject(&command, u8::from(&pdu_id), StatusCode::InternalError)
         }
     }
 }
