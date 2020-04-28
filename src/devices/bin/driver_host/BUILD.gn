@@ -87,9 +87,9 @@ test("driver_host_test") {
   deps = [
     ":common",
     "//sdk/fidl/fuchsia.device.test:fuchsia.device.test_llcpp",
-    "//zircon/public/lib/devmgr-integration-test",
     "//zircon/public/lib/fidl-async-cpp",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/devmgr-integration-test",
     "//zircon/system/ulib/driver-integration-test",
   ]
 

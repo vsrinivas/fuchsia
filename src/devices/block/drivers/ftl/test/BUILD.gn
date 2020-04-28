@@ -63,7 +63,6 @@ test("ftl-integration") {
   ]
   include_dirs = [ "//src/devices/block/drivers/ftl" ]
   deps = [
-    "//zircon/public/lib/devmgr-integration-test",
     "//zircon/public/lib/devmgr-launcher",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
@@ -75,6 +74,7 @@ test("ftl-integration") {
     "//zircon/system/fidl/fuchsia-hardware-block:c",
     "//zircon/system/fidl/fuchsia-hardware-block:llcpp",
     "//zircon/system/fidl/fuchsia-hardware-nand:c",
+    "//zircon/system/ulib/devmgr-integration-test",
     "//zircon/system/ulib/ramdevice-client",
   ]
 }

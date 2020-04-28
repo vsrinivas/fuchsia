@@ -109,7 +109,6 @@ aggregate_manifest("legacy-aux") {
     "backtrace",
 #------------------
 #------------------
-    "devmgr-integration-test",
 #------------------
 #------------------
     "devmgr-launcher",

@@ -2,6 +2,18 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36548.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/unification/zx_library.gni")
+
 zx_library("devmgr-integration-test") {
   sdk = "shared"
   sdk_headers = [ "lib/devmgr-integration-test/fixture.h" ]
@@ -15,36 +27,35 @@ zx_library("devmgr-integration-test") {
   ]
   public_deps = [
     # <lib/devmgr-integration-test/fixture.h> has #include <lib/devmgr-launcher/launch.h>.
-    "$zx/system/ulib/devmgr-launcher:headers",
+    "//zircon/public/lib/devmgr-launcher",
 
     # <lib/devmgr-integration-test/fixture.h> has #include <fbl/unique_fd.h>.
-    "$zx/system/ulib/fbl:headers",
+    "//zircon/public/lib/fbl",
 
     # <lib/devmgr-integration-test/fixture.h> has #include <lib/fit/function.h>.
-    "$zx/system/ulib/fit:headers",
+    "//zircon/public/lib/fit",
 
     # <lib/devmgr-integration-test/fixture.h> has #include <lib/zx/channel.h>.
-    "$zx/system/ulib/zx:headers",
+    "//zircon/public/lib/zx",
   ]
   deps = [
-    "$zx/system/fidl/fuchsia-boot:c",
-    "$zx/system/fidl/fuchsia-boot:llcpp",
-    "$zx/system/fidl/fuchsia-process:c",
-    "$zx/system/fidl/fuchsia-scheduler:c",
-    "$zx/system/ulib/async-loop:async-loop-cpp",
-    "$zx/system/ulib/async-loop:async-loop-default.static",
-    "$zx/system/ulib/ddk",
-    "$zx/system/ulib/devmgr-launcher",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/fdio-caller",
-    "$zx/system/ulib/fidl-async",
-    "$zx/system/ulib/fidl-async:fidl-async-cpp",
-    "$zx/system/ulib/fs",
-    "$zx/system/ulib/fzl",
-    "$zx/system/ulib/mock-boot-arguments",
-    "$zx/system/ulib/syslog",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zx",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/devmgr-launcher",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/fdio-caller",
+    "//zircon/public/lib/fidl-async",
+    "//zircon/public/lib/fidl-async-cpp",
+    "//zircon/public/lib/fs",
+    "//zircon/public/lib/fzl",
+    "//zircon/public/lib/mock-boot-arguments",
+    "//zircon/public/lib/syslog",
+    "//zircon/public/lib/zx",
+    "//zircon/system/fidl/fuchsia-boot:c",
+    "//zircon/system/fidl/fuchsia-boot:llcpp",
+    "//zircon/system/fidl/fuchsia-process:c",
+    "//zircon/system/fidl/fuchsia-scheduler:c",
   ]
-  configs += [ "$zx_build/public/gn/config:static-libc++" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
 }

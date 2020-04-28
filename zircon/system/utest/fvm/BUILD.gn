@@ -36,7 +36,6 @@ executable("fvm") {
     "//zircon/public/lib/block-client",
     "//zircon/public/lib/boringssl",
     "//zircon/public/lib/cksum",
-    "//zircon/public/lib/devmgr-integration-test",
     "//zircon/public/lib/devmgr-launcher",
     "//zircon/public/lib/digest",
     "//zircon/public/lib/fbl",
@@ -58,6 +57,7 @@ executable("fvm") {
     "//zircon/system/fidl/fuchsia-hardware-block-volume:c",
     "//zircon/system/fidl/fuchsia-io:c",
     "//zircon/system/ulib/blobfs",
+    "//zircon/system/ulib/devmgr-integration-test",
     "//zircon/system/ulib/fs-management",
     "//zircon/system/ulib/fvm-devices",
     "//zircon/system/ulib/minfs",
@@ -78,9 +78,9 @@ executable("fvm-integration") {
   }
 
   deps = [
-    "//zircon/public/lib/devmgr-integration-test",
     "//zircon/public/lib/devmgr-launcher",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/devmgr-integration-test",
     "//zircon/system/ulib/fvm-devices",
   ]
 }

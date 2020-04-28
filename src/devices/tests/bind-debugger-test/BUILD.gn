@@ -22,10 +22,10 @@ executable("tests") {
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/ddk",
-    "//zircon/public/lib/devmgr-integration-test",
     "//zircon/public/lib/fdio",
     "//zircon/system/fidl/fuchsia-device:llcpp",
     "//zircon/system/fidl/fuchsia-device-manager",
+    "//zircon/system/ulib/devmgr-integration-test",
   ]
 }
 

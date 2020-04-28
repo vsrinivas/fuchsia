@@ -44,7 +44,6 @@ test("ddk-runcompatibilityhook") {
   sources = [ "test.cc" ]
   deps = [
     "//zircon/public/lib/ddk",
-    "//zircon/public/lib/devmgr-integration-test",
     "//zircon/public/lib/devmgr-launcher",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
@@ -52,6 +51,7 @@ test("ddk-runcompatibilityhook") {
     "//zircon/public/lib/zxtest",
     "//zircon/system/fidl/fuchsia-device:llcpp",
     "//zircon/system/fidl/fuchsia-device-manager:c",
+    "//zircon/system/ulib/devmgr-integration-test",
     "//zircon/system/ulib/driver-integration-test",
   ]
 }

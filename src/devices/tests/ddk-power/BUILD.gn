@@ -53,7 +53,6 @@ test("ddk-power") {
   deps = [
     ":fuchsia.device.power.test_llcpp",
     "//zircon/public/lib/ddk",
-    "//zircon/public/lib/devmgr-integration-test",
     "//zircon/public/lib/devmgr-launcher",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
@@ -61,6 +60,7 @@ test("ddk-power") {
     "//zircon/public/lib/zxtest",
     "//zircon/system/fidl/fuchsia-device:llcpp",
     "//zircon/system/fidl/fuchsia-device-manager:c",
+    "//zircon/system/ulib/devmgr-integration-test",
     "//zircon/system/ulib/driver-integration-test",
   ]
 }
