@@ -148,6 +148,8 @@ source_set("audio_core_lib") {
     "throttle_output.h",
     "ultrasound_factory.cc",
     "ultrasound_factory.h",
+    "ultrasound_renderer.cc",
+    "ultrasound_renderer.h",
     "usage_gain_reporter_impl.cc",
     "usage_gain_reporter_impl.h",
     "usage_reporter_impl.cc",

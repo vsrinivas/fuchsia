@@ -35,6 +35,10 @@ test_package("audio_pipeline_tests") {
       path = "audio_core_config_with_inversion_filter.json"
       dest = "audio_core_config_with_inversion_filter/audio_core_config.json"
     },
+    {
+      path = "ultrasound_audio_core_config.json"
+      dest = "ultrasound/audio_core_config.json"
+    },
   ]
 
   tests = [
@@ -58,14 +62,18 @@ executable("audio_pipeline_tests_bin") {
     "audio_pipeline_test.cc",
     "hermetic_audio_pipeline_test.cc",
     "hermetic_audio_pipeline_test.h",
+    "ultrasound_test.cc",
   ]
 
   deps = [
     "//sdk/fidl/fuchsia.media",
+    "//sdk/fidl/fuchsia.ultrasound",
     "//sdk/fidl/fuchsia.virtualaudio",
     "//sdk/lib/media/cpp:no_converters",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/syslog/cpp",
+    "//src/media/audio/lib/clock",
+    "//src/media/audio/lib/clock/testing",
     "//src/media/audio/lib/logging",
     "//src/media/audio/lib/test:hermetic_audio_test",
     "//zircon/public/lib/fzl",

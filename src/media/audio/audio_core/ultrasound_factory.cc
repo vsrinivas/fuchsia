@@ -4,6 +4,9 @@
 
 #include "src/media/audio/audio_core/ultrasound_factory.h"
 
+#include "src/media/audio/audio_core/route_graph.h"
+#include "src/media/audio/audio_core/ultrasound_renderer.h"
+
 namespace media::audio {
 
 std::unique_ptr<UltrasoundFactory> UltrasoundFactory::CreateAndServe(Context* context) {
@@ -21,6 +24,17 @@ void UltrasoundFactory::CreateCapturer(
 
 void UltrasoundFactory::CreateRenderer(
     fidl::InterfaceRequest<fuchsia::media::AudioRenderer> request,
-    CreateRendererCallback callback) {}
+    CreateRendererCallback callback) {
+  auto renderer =
+      std::make_unique<UltrasoundRenderer>(std::move(request), &context_, std::move(callback));
+  auto renderer_raw = renderer.get();
+  // Ultrasound renderers are immediately routable.
+  context_.route_graph().AddRenderer(std::move(renderer));
+  context_.route_graph().SetRendererRoutingProfile(
+      *renderer_raw, RoutingProfile{
+                         .routable = true,
+                         .usage = StreamUsage::WithRenderUsage(RenderUsage::ULTRASOUND),
+                     });
+}
 
 }  // namespace media::audio

@@ -1,0 +1,47 @@
+{
+  "volume_curve": [
+      {"level":0.0, "db":-120.0},
+      {"level":1.0, "db":   0.0}
+  ],
+  "output_devices": [
+    {
+      "device_id": "ffffffffffffffffffffffffffffffff",
+      "supported_stream_types": [
+        "render:media",
+        "render:interruption",
+        "render:background",
+        "render:communications",
+        "render:system_agent",
+        "render:ultrasound",
+        "capture:loopback"
+      ],
+      "pipeline":  {
+        "name": "linearize",
+        "streams": [
+          "render:ultrasound"
+        ],
+        "output_rate": 96000,
+        "inputs": [
+          {
+            "name": "mix",
+            "streams": [
+              "render:media",
+              "render:interruption",
+              "render:background",
+              "render:communications",
+              "render:system_agent"
+            ],
+            "output_rate": 48000,
+            "loopback": true
+          }
+        ]
+      }
+    }
+  ],
+  "input_devices": [
+    {
+      "device_id": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "rate": 96000
+    }
+  ]
+}

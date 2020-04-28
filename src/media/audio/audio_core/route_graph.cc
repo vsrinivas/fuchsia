@@ -74,8 +74,6 @@ void RouteGraph::AddRenderer(std::unique_ptr<AudioObject> renderer) {
 void RouteGraph::SetRendererRoutingProfile(const AudioObject& renderer, RoutingProfile profile) {
   TRACE_DURATION("audio", "RouteGraph::SetRendererRoutingProfile");
   FX_DCHECK(renderer.is_audio_renderer());
-  FX_DCHECK(renderer.format_valid() || !profile.routable)
-      << "AudioRenderer without PCM format was added to route graph";
   AUD_VLOG(TRACE) << "Setting renderer route profile: " << &renderer;
 
   auto it = renderers_.find(&renderer);
