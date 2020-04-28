@@ -159,6 +159,7 @@ DDK_PROTOCOL_DEF(USB_HCI_TEST,            135, "usb-hci-test", 0)
 DDK_PROTOCOL_DEF(ACPI_DEVICE,             136, "acpi-device", 0)
 DDK_PROTOCOL_DEF(VIRTUALBUS_TEST,         137, "virtual-bus-test", 0)
 DDK_PROTOCOL_DEF(TEST_ASIX_FUNCTION,      138, "test-asix-function", 0)
+DDK_PROTOCOL_DEF(RPMB,                    139, "rpmb", 0)
 
 #undef DDK_PROTOCOL_DEF
 #endif
