@@ -192,19 +192,17 @@ func (p *Printer) WriteCc() {
 		}
 		p.done[mt] = true
 
-		methods := []*method{
+		for _, m := range []*method{
 			mt.newMeasureMethod(),
 			mt.newMeasureOutOfLineMethod(p),
-		}
-		if mt.hasHandles {
-			methods = append(methods, mt.newMeasureHandlesMethod())
-		}
-		for _, m := range methods {
+			mt.newMeasureHandlesMethod(),
+		} {
 			allMethods[m.id] = m
 		}
 	}
 
-	// TODO(fxb/50010): Collect and apply method pruning before printing.
+	pruneEmptyMethods(allMethods)
+
 	methodsToPrint := make([]methodID, 0, len(allMethods))
 	for id := range allMethods {
 		methodsToPrint = append(methodsToPrint, id)
@@ -342,7 +340,7 @@ func (op derefOp) String() string {
 	case pointerDeref:
 		return "->"
 	default:
-		log.Panicf("should not be reachable for op %v", op)
+		log.Panicf("should not be reachable for op %d", int(op))
 		return ""
 	}
 }

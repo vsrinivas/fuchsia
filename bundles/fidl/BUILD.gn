@@ -37,6 +37,7 @@ group("tests") {
     "//tools/fidl/gidl:gidl_golang_test($host_toolchain)",
     "//tools/fidl/gidl:gidl_mixer_test($host_toolchain)",
     "//tools/fidl/gidl:gidl_parser_test($host_toolchain)",
+    "//tools/fidl/measure-tape:unit-tests($host_toolchain)",
     "//tools/fidl/measure-tape-tests",
   ]
 }

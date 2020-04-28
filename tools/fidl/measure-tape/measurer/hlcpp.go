@@ -20,7 +20,7 @@ import (
 // this will be refactored to use a visitor pattern, and only exported types.
 
 func (b *block) print(p *Printer) {
-	for _, stmt := range b.stmts {
+	b.forAllStatements(func(stmt *statement) {
 		switch stmt.kind {
 		case maxOut:
 			p.writef("MaxOut();\n")
@@ -68,7 +68,7 @@ func (b *block) print(p *Printer) {
 		case setMaxOrdinal:
 			p.writef("max_ordinal = %s;\n", stmt.args[0])
 		}
-	}
+	})
 }
 
 func (b *method) print(p *Printer) {

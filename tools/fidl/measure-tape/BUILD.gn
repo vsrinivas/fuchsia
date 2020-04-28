@@ -4,6 +4,7 @@
 
 import("//build/go/go_binary.gni")
 import("//build/go/go_library.gni")
+import("//build/go/go_test.gni")
 import("//build/host.gni")
 
 go_library("lib") {
@@ -14,6 +15,12 @@ go_library("lib") {
 
 go_binary("measure-tape") {
   gopackage = "measure-tape"
+
+  deps = [ ":lib" ]
+}
+
+go_test("unit-tests") {
+  gopackages = [ "measure-tape/measurer" ]
 
   deps = [ ":lib" ]
 }

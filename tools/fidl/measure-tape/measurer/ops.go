@@ -61,6 +61,8 @@ type statement struct {
 	body       *block
 	targetType fidlcommon.Name
 	variants   map[string]*block
+
+	deleted bool
 }
 
 type methodKind int
@@ -203,6 +205,15 @@ func (b *block) emitSetMaxOrdinal(ordinal int) {
 	})
 }
 
+func (b *block) forAllStatements(fn func(stmt *statement)) {
+	for i := 0; i < len(b.stmts); i++ {
+		if b.stmts[i].deleted {
+			continue
+		}
+		fn(&b.stmts[i])
+	}
+}
+
 type method struct {
 	id   methodID
 	body *block
@@ -212,5 +223,29 @@ func newMethod(id methodID, body *block) *method {
 	return &method{
 		id:   id,
 		body: body,
+	}
+}
+
+// forAllStatements traverses all statements of a method but makes no guarantees
+// as to the order in which the traversal is perfomed.
+func (m *method) forAllStatements(fn func(stmt *statement)) {
+	var (
+		b             *block
+		blocksToVisit = []*block{m.body}
+	)
+	for len(blocksToVisit) != 0 {
+		b, blocksToVisit = blocksToVisit[0], blocksToVisit[1:]
+		if b == nil {
+			continue
+		}
+		b.forAllStatements(func(stmt *statement) {
+			if stmt.body != nil {
+				blocksToVisit = append(blocksToVisit, stmt.body)
+			}
+			for _, body := range stmt.variants {
+				blocksToVisit = append(blocksToVisit, body)
+			}
+			fn(stmt)
+		})
 	}
 }

@@ -24,86 +24,42 @@ class MeasuringTape {
 
   void Measure(const ::fuchsia::images::ImageInfo& value) {
     num_bytes_ += FIDL_ALIGN(32);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::images::ImageInfo& value) {
   }
 
   void Measure(const ::fuchsia::ui::gfx::AddChildCmd& value) {
     num_bytes_ += FIDL_ALIGN(8);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::gfx::AddChildCmd& value) {
   }
 
   void Measure(const ::fuchsia::ui::gfx::AddLayerCmd& value) {
     num_bytes_ += FIDL_ALIGN(8);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::gfx::AddLayerCmd& value) {
   }
 
   void Measure(const ::fuchsia::ui::gfx::AddLightCmd& value) {
     num_bytes_ += FIDL_ALIGN(8);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::gfx::AddLightCmd& value) {
   }
 
   void Measure(const ::fuchsia::ui::gfx::AddPartCmd& value) {
     num_bytes_ += FIDL_ALIGN(8);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::gfx::AddPartCmd& value) {
   }
 
   void Measure(const ::fuchsia::ui::gfx::AmbientLightArgs& value) {
     num_bytes_ += FIDL_ALIGN(4);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::gfx::AmbientLightArgs& value) {
   }
 
   void Measure(const ::fuchsia::ui::gfx::BindMeshBuffersCmd& value) {
     num_bytes_ += FIDL_ALIGN(88);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::gfx::BindMeshBuffersCmd& value) {
-    MeasureOutOfLine(value.vertex_format);
-    MeasureOutOfLine(value.bounding_box);
   }
 
   void Measure(const ::fuchsia::ui::gfx::BoundingBox& value) {
     num_bytes_ += FIDL_ALIGN(24);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::gfx::BoundingBox& value) {
-    MeasureOutOfLine(value.min);
-    MeasureOutOfLine(value.max);
   }
 
   void Measure(const ::fuchsia::ui::gfx::BufferArgs& value) {
     num_bytes_ += FIDL_ALIGN(12);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::gfx::BufferArgs& value) {
   }
 
   void Measure(const ::fuchsia::ui::gfx::CameraArgs& value) {
     num_bytes_ += FIDL_ALIGN(4);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::gfx::CameraArgs& value) {
   }
 
   void Measure(const ::fuchsia::ui::gfx::CircleArgs& value) {
@@ -117,44 +73,22 @@ class MeasuringTape {
 
   void Measure(const ::fuchsia::ui::gfx::ClipNodeArgs& value) {
     num_bytes_ += FIDL_ALIGN(4);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::gfx::ClipNodeArgs& value) {
   }
 
   void Measure(const ::fuchsia::ui::gfx::ColorRgb& value) {
     num_bytes_ += FIDL_ALIGN(12);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::gfx::ColorRgb& value) {
   }
 
   void Measure(const ::fuchsia::ui::gfx::ColorRgbValue& value) {
     num_bytes_ += FIDL_ALIGN(16);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::gfx::ColorRgbValue& value) {
-    MeasureOutOfLine(value.value);
   }
 
   void Measure(const ::fuchsia::ui::gfx::ColorRgba& value) {
     num_bytes_ += FIDL_ALIGN(4);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::gfx::ColorRgba& value) {
   }
 
   void Measure(const ::fuchsia::ui::gfx::ColorRgbaValue& value) {
     num_bytes_ += FIDL_ALIGN(8);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::gfx::ColorRgbaValue& value) {
-    MeasureOutOfLine(value.value);
   }
 
   void Measure(const ::fuchsia::ui::gfx::Command& value) {
@@ -338,20 +272,12 @@ class MeasuringTape {
     }
   }
 
-  void MeasureHandles(const ::fuchsia::ui::gfx::Command& value) {
-  }
-
   void Measure(const ::fuchsia::ui::gfx::CompositorArgs& value) {
     num_bytes_ += FIDL_ALIGN(4);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::gfx::CompositorArgs& value) {
   }
 
   void Measure(const ::fuchsia::ui::gfx::CreateResourceCmd& value) {
     num_bytes_ += FIDL_ALIGN(32);
-    MeasureHandles(value);
     MeasureOutOfLine(value);
   }
 
@@ -359,73 +285,37 @@ class MeasuringTape {
     MeasureOutOfLine(value.resource);
   }
 
-  void MeasureHandles(const ::fuchsia::ui::gfx::CreateResourceCmd& value) {
-    MeasureHandles(value.resource);
-  }
-
   void Measure(const ::fuchsia::ui::gfx::DetachChildrenCmd& value) {
     num_bytes_ += FIDL_ALIGN(4);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::gfx::DetachChildrenCmd& value) {
   }
 
   void Measure(const ::fuchsia::ui::gfx::DetachCmd& value) {
     num_bytes_ += FIDL_ALIGN(4);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::gfx::DetachCmd& value) {
   }
 
   void Measure(const ::fuchsia::ui::gfx::DetachLightCmd& value) {
     num_bytes_ += FIDL_ALIGN(4);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::gfx::DetachLightCmd& value) {
   }
 
   void Measure(const ::fuchsia::ui::gfx::DetachLightsCmd& value) {
     num_bytes_ += FIDL_ALIGN(4);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::gfx::DetachLightsCmd& value) {
   }
 
   void Measure(const ::fuchsia::ui::gfx::DirectionalLightArgs& value) {
     num_bytes_ += FIDL_ALIGN(4);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::gfx::DirectionalLightArgs& value) {
   }
 
   void Measure(const ::fuchsia::ui::gfx::DisplayCompositorArgs& value) {
     num_bytes_ += FIDL_ALIGN(4);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::gfx::DisplayCompositorArgs& value) {
   }
 
   void Measure(const ::fuchsia::ui::gfx::EntityNodeArgs& value) {
     num_bytes_ += FIDL_ALIGN(4);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::gfx::EntityNodeArgs& value) {
   }
 
   void Measure(const ::fuchsia::ui::gfx::ExportResourceCmdDeprecated& value) {
     num_bytes_ += FIDL_ALIGN(8);
     MeasureHandles(value);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::gfx::ExportResourceCmdDeprecated& value) {
   }
 
   void MeasureHandles(const ::fuchsia::ui::gfx::ExportResourceCmdDeprecated& value) {
@@ -434,40 +324,19 @@ class MeasuringTape {
 
   void Measure(const ::fuchsia::ui::gfx::FactoredTransform& value) {
     num_bytes_ += FIDL_ALIGN(52);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::gfx::FactoredTransform& value) {
-    MeasureOutOfLine(value.translation);
-    MeasureOutOfLine(value.scale);
-    MeasureOutOfLine(value.anchor);
-    MeasureOutOfLine(value.rotation);
   }
 
   void Measure(const ::fuchsia::ui::gfx::FloatValue& value) {
     num_bytes_ += FIDL_ALIGN(8);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::gfx::FloatValue& value) {
   }
 
   void Measure(const ::fuchsia::ui::gfx::ImageArgs& value) {
     num_bytes_ += FIDL_ALIGN(40);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::gfx::ImageArgs& value) {
-    MeasureOutOfLine(value.info);
   }
 
   void Measure(const ::fuchsia::ui::gfx::ImagePipe2Args& value) {
     num_bytes_ += FIDL_ALIGN(4);
     MeasureHandles(value);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::gfx::ImagePipe2Args& value) {
   }
 
   void MeasureHandles(const ::fuchsia::ui::gfx::ImagePipe2Args& value) {
@@ -477,10 +346,6 @@ class MeasuringTape {
   void Measure(const ::fuchsia::ui::gfx::ImagePipeArgs& value) {
     num_bytes_ += FIDL_ALIGN(4);
     MeasureHandles(value);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::gfx::ImagePipeArgs& value) {
   }
 
   void MeasureHandles(const ::fuchsia::ui::gfx::ImagePipeArgs& value) {
@@ -490,10 +355,6 @@ class MeasuringTape {
   void Measure(const ::fuchsia::ui::gfx::ImagePipeCompositorArgs& value) {
     num_bytes_ += FIDL_ALIGN(4);
     MeasureHandles(value);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::gfx::ImagePipeCompositorArgs& value) {
   }
 
   void MeasureHandles(const ::fuchsia::ui::gfx::ImagePipeCompositorArgs& value) {
@@ -503,10 +364,6 @@ class MeasuringTape {
   void Measure(const ::fuchsia::ui::gfx::ImportResourceCmdDeprecated& value) {
     num_bytes_ += FIDL_ALIGN(12);
     MeasureHandles(value);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::gfx::ImportResourceCmdDeprecated& value) {
   }
 
   void MeasureHandles(const ::fuchsia::ui::gfx::ImportResourceCmdDeprecated& value) {
@@ -515,44 +372,23 @@ class MeasuringTape {
 
   void Measure(const ::fuchsia::ui::gfx::LayerArgs& value) {
     num_bytes_ += FIDL_ALIGN(4);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::gfx::LayerArgs& value) {
   }
 
   void Measure(const ::fuchsia::ui::gfx::LayerStackArgs& value) {
     num_bytes_ += FIDL_ALIGN(4);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::gfx::LayerStackArgs& value) {
   }
 
   void Measure(const ::fuchsia::ui::gfx::MaterialArgs& value) {
     num_bytes_ += FIDL_ALIGN(4);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::gfx::MaterialArgs& value) {
   }
 
   void Measure(const ::fuchsia::ui::gfx::Matrix4Value& value) {
     num_bytes_ += FIDL_ALIGN(68);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::gfx::Matrix4Value& value) {
-    MeasureOutOfLine(value.value);
   }
 
   void Measure(const ::fuchsia::ui::gfx::MemoryArgs& value) {
     num_bytes_ += FIDL_ALIGN(24);
     MeasureHandles(value);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::gfx::MemoryArgs& value) {
   }
 
   void MeasureHandles(const ::fuchsia::ui::gfx::MemoryArgs& value) {
@@ -561,51 +397,26 @@ class MeasuringTape {
 
   void Measure(const ::fuchsia::ui::gfx::MeshArgs& value) {
     num_bytes_ += FIDL_ALIGN(1);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::gfx::MeshArgs& value) {
   }
 
   void Measure(const ::fuchsia::ui::gfx::MeshVertexFormat& value) {
     num_bytes_ += FIDL_ALIGN(12);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::gfx::MeshVertexFormat& value) {
   }
 
   void Measure(const ::fuchsia::ui::gfx::OpacityNodeArgsHACK& value) {
     num_bytes_ += FIDL_ALIGN(4);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::gfx::OpacityNodeArgsHACK& value) {
   }
 
   void Measure(const ::fuchsia::ui::gfx::PointLightArgs& value) {
     num_bytes_ += FIDL_ALIGN(4);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::gfx::PointLightArgs& value) {
   }
 
   void Measure(const ::fuchsia::ui::gfx::Quaternion& value) {
     num_bytes_ += FIDL_ALIGN(16);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::gfx::Quaternion& value) {
   }
 
   void Measure(const ::fuchsia::ui::gfx::QuaternionValue& value) {
     num_bytes_ += FIDL_ALIGN(20);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::gfx::QuaternionValue& value) {
-    MeasureOutOfLine(value.value);
   }
 
   void Measure(const ::fuchsia::ui::gfx::RectangleArgs& value) {
@@ -620,34 +431,18 @@ class MeasuringTape {
 
   void Measure(const ::fuchsia::ui::gfx::ReleaseResourceCmd& value) {
     num_bytes_ += FIDL_ALIGN(4);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::gfx::ReleaseResourceCmd& value) {
   }
 
   void Measure(const ::fuchsia::ui::gfx::RemoveAllLayersCmd& value) {
     num_bytes_ += FIDL_ALIGN(4);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::gfx::RemoveAllLayersCmd& value) {
   }
 
   void Measure(const ::fuchsia::ui::gfx::RemoveLayerCmd& value) {
     num_bytes_ += FIDL_ALIGN(8);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::gfx::RemoveLayerCmd& value) {
   }
 
   void Measure(const ::fuchsia::ui::gfx::RendererArgs& value) {
     num_bytes_ += FIDL_ALIGN(4);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::gfx::RendererArgs& value) {
   }
 
   void Measure(const ::fuchsia::ui::gfx::RendererParam& value) {
@@ -775,9 +570,6 @@ class MeasuringTape {
     }
   }
 
-  void MeasureHandles(const ::fuchsia::ui::gfx::ResourceArgs& value) {
-  }
-
   void Measure(const ::fuchsia::ui::gfx::RoundedRectangleArgs& value) {
     num_bytes_ += FIDL_ALIGN(144);
     MeasureOutOfLine(value);
@@ -794,104 +586,50 @@ class MeasuringTape {
 
   void Measure(const ::fuchsia::ui::gfx::SceneAddAmbientLightCmd& value) {
     num_bytes_ += FIDL_ALIGN(8);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::gfx::SceneAddAmbientLightCmd& value) {
   }
 
   void Measure(const ::fuchsia::ui::gfx::SceneAddDirectionalLightCmd& value) {
     num_bytes_ += FIDL_ALIGN(8);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::gfx::SceneAddDirectionalLightCmd& value) {
   }
 
   void Measure(const ::fuchsia::ui::gfx::SceneAddPointLightCmd& value) {
     num_bytes_ += FIDL_ALIGN(8);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::gfx::SceneAddPointLightCmd& value) {
   }
 
   void Measure(const ::fuchsia::ui::gfx::SceneArgs& value) {
     num_bytes_ += FIDL_ALIGN(4);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::gfx::SceneArgs& value) {
   }
 
   void Measure(const ::fuchsia::ui::gfx::SendSizeChangeHintCmdHACK& value) {
     num_bytes_ += FIDL_ALIGN(12);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::gfx::SendSizeChangeHintCmdHACK& value) {
   }
 
   void Measure(const ::fuchsia::ui::gfx::SetAnchorCmd& value) {
     num_bytes_ += FIDL_ALIGN(20);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::gfx::SetAnchorCmd& value) {
-    MeasureOutOfLine(value.value);
   }
 
   void Measure(const ::fuchsia::ui::gfx::SetCameraClipSpaceTransformCmd& value) {
     num_bytes_ += FIDL_ALIGN(16);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::gfx::SetCameraClipSpaceTransformCmd& value) {
-    MeasureOutOfLine(value.translation);
   }
 
   void Measure(const ::fuchsia::ui::gfx::SetCameraCmd& value) {
     num_bytes_ += FIDL_ALIGN(8);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::gfx::SetCameraCmd& value) {
   }
 
   void Measure(const ::fuchsia::ui::gfx::SetCameraPoseBufferCmd& value) {
     num_bytes_ += FIDL_ALIGN(32);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::gfx::SetCameraPoseBufferCmd& value) {
   }
 
   void Measure(const ::fuchsia::ui::gfx::SetCameraProjectionCmd& value) {
     num_bytes_ += FIDL_ALIGN(12);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::gfx::SetCameraProjectionCmd& value) {
-    MeasureOutOfLine(value.fovy);
   }
 
   void Measure(const ::fuchsia::ui::gfx::SetCameraTransformCmd& value) {
     num_bytes_ += FIDL_ALIGN(52);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::gfx::SetCameraTransformCmd& value) {
-    MeasureOutOfLine(value.eye_position);
-    MeasureOutOfLine(value.eye_look_at);
-    MeasureOutOfLine(value.eye_up);
   }
 
   void Measure(const ::fuchsia::ui::gfx::SetClipCmd& value) {
     num_bytes_ += FIDL_ALIGN(12);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::gfx::SetClipCmd& value) {
   }
 
   void Measure(const ::fuchsia::ui::gfx::SetClipPlanesCmd& value) {
@@ -905,67 +643,34 @@ class MeasuringTape {
 
   void Measure(const ::fuchsia::ui::gfx::SetColorCmd& value) {
     num_bytes_ += FIDL_ALIGN(12);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::gfx::SetColorCmd& value) {
-    MeasureOutOfLine(value.color);
   }
 
   void Measure(const ::fuchsia::ui::gfx::SetDisableClippingCmd& value) {
     num_bytes_ += FIDL_ALIGN(8);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::gfx::SetDisableClippingCmd& value) {
   }
 
   void Measure(const ::fuchsia::ui::gfx::SetDisplayColorConversionCmdHACK& value) {
     num_bytes_ += FIDL_ALIGN(64);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::gfx::SetDisplayColorConversionCmdHACK& value) {
   }
 
   void Measure(const ::fuchsia::ui::gfx::SetDisplayRotationCmdHACK& value) {
     num_bytes_ += FIDL_ALIGN(8);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::gfx::SetDisplayRotationCmdHACK& value) {
   }
 
   void Measure(const ::fuchsia::ui::gfx::SetEnableDebugViewBoundsCmd& value) {
     num_bytes_ += FIDL_ALIGN(8);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::gfx::SetEnableDebugViewBoundsCmd& value) {
   }
 
   void Measure(const ::fuchsia::ui::gfx::SetEventMaskCmd& value) {
     num_bytes_ += FIDL_ALIGN(8);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::gfx::SetEventMaskCmd& value) {
   }
 
   void Measure(const ::fuchsia::ui::gfx::SetHitTestBehaviorCmd& value) {
     num_bytes_ += FIDL_ALIGN(8);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::gfx::SetHitTestBehaviorCmd& value) {
   }
 
   void Measure(const ::fuchsia::ui::gfx::SetImportFocusCmdDEPRECATED& value) {
     num_bytes_ += FIDL_ALIGN(1);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::gfx::SetImportFocusCmdDEPRECATED& value) {
   }
 
   void Measure(const ::fuchsia::ui::gfx::SetLabelCmd& value) {
@@ -979,70 +684,34 @@ class MeasuringTape {
 
   void Measure(const ::fuchsia::ui::gfx::SetLayerStackCmd& value) {
     num_bytes_ += FIDL_ALIGN(8);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::gfx::SetLayerStackCmd& value) {
   }
 
   void Measure(const ::fuchsia::ui::gfx::SetLightColorCmd& value) {
     num_bytes_ += FIDL_ALIGN(20);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::gfx::SetLightColorCmd& value) {
-    MeasureOutOfLine(value.color);
   }
 
   void Measure(const ::fuchsia::ui::gfx::SetLightDirectionCmd& value) {
     num_bytes_ += FIDL_ALIGN(20);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::gfx::SetLightDirectionCmd& value) {
-    MeasureOutOfLine(value.direction);
   }
 
   void Measure(const ::fuchsia::ui::gfx::SetMaterialCmd& value) {
     num_bytes_ += FIDL_ALIGN(8);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::gfx::SetMaterialCmd& value) {
   }
 
   void Measure(const ::fuchsia::ui::gfx::SetOpacityCmd& value) {
     num_bytes_ += FIDL_ALIGN(8);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::gfx::SetOpacityCmd& value) {
   }
 
   void Measure(const ::fuchsia::ui::gfx::SetPointLightFalloffCmd& value) {
     num_bytes_ += FIDL_ALIGN(12);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::gfx::SetPointLightFalloffCmd& value) {
-    MeasureOutOfLine(value.falloff);
   }
 
   void Measure(const ::fuchsia::ui::gfx::SetPointLightPositionCmd& value) {
     num_bytes_ += FIDL_ALIGN(20);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::gfx::SetPointLightPositionCmd& value) {
-    MeasureOutOfLine(value.position);
   }
 
   void Measure(const ::fuchsia::ui::gfx::SetRendererCmd& value) {
     num_bytes_ += FIDL_ALIGN(8);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::gfx::SetRendererCmd& value) {
   }
 
   void Measure(const ::fuchsia::ui::gfx::SetRendererParamCmd& value) {
@@ -1056,115 +725,55 @@ class MeasuringTape {
 
   void Measure(const ::fuchsia::ui::gfx::SetRotationCmd& value) {
     num_bytes_ += FIDL_ALIGN(24);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::gfx::SetRotationCmd& value) {
-    MeasureOutOfLine(value.value);
   }
 
   void Measure(const ::fuchsia::ui::gfx::SetScaleCmd& value) {
     num_bytes_ += FIDL_ALIGN(20);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::gfx::SetScaleCmd& value) {
-    MeasureOutOfLine(value.value);
   }
 
   void Measure(const ::fuchsia::ui::gfx::SetShapeCmd& value) {
     num_bytes_ += FIDL_ALIGN(8);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::gfx::SetShapeCmd& value) {
   }
 
   void Measure(const ::fuchsia::ui::gfx::SetSizeCmd& value) {
     num_bytes_ += FIDL_ALIGN(16);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::gfx::SetSizeCmd& value) {
-    MeasureOutOfLine(value.value);
   }
 
   void Measure(const ::fuchsia::ui::gfx::SetStereoCameraProjectionCmd& value) {
     num_bytes_ += FIDL_ALIGN(140);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::gfx::SetStereoCameraProjectionCmd& value) {
-    MeasureOutOfLine(value.left_projection);
-    MeasureOutOfLine(value.right_projection);
   }
 
   void Measure(const ::fuchsia::ui::gfx::SetTagCmd& value) {
     num_bytes_ += FIDL_ALIGN(8);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::gfx::SetTagCmd& value) {
   }
 
   void Measure(const ::fuchsia::ui::gfx::SetTextureCmd& value) {
     num_bytes_ += FIDL_ALIGN(8);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::gfx::SetTextureCmd& value) {
   }
 
   void Measure(const ::fuchsia::ui::gfx::SetTranslationCmd& value) {
     num_bytes_ += FIDL_ALIGN(20);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::gfx::SetTranslationCmd& value) {
-    MeasureOutOfLine(value.value);
   }
 
   void Measure(const ::fuchsia::ui::gfx::SetViewHolderBoundsColorCmd& value) {
     num_bytes_ += FIDL_ALIGN(20);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::gfx::SetViewHolderBoundsColorCmd& value) {
-    MeasureOutOfLine(value.color);
   }
 
   void Measure(const ::fuchsia::ui::gfx::SetViewPropertiesCmd& value) {
     num_bytes_ += FIDL_ALIGN(56);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::gfx::SetViewPropertiesCmd& value) {
-    MeasureOutOfLine(value.properties);
   }
 
   void Measure(const ::fuchsia::ui::gfx::ShapeNodeArgs& value) {
     num_bytes_ += FIDL_ALIGN(4);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::gfx::ShapeNodeArgs& value) {
   }
 
   void Measure(const ::fuchsia::ui::gfx::StereoCameraArgs& value) {
     num_bytes_ += FIDL_ALIGN(4);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::gfx::StereoCameraArgs& value) {
   }
 
   void Measure(const ::fuchsia::ui::gfx::TakeSnapshotCmdDEPRECATED& value) {
     num_bytes_ += FIDL_ALIGN(8);
     MeasureHandles(value);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::gfx::TakeSnapshotCmdDEPRECATED& value) {
   }
 
   void MeasureHandles(const ::fuchsia::ui::gfx::TakeSnapshotCmdDEPRECATED& value) {
@@ -1228,20 +837,10 @@ class MeasuringTape {
 
   void Measure(const ::fuchsia::ui::gfx::Vector2Value& value) {
     num_bytes_ += FIDL_ALIGN(12);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::gfx::Vector2Value& value) {
-    MeasureOutOfLine(value.value);
   }
 
   void Measure(const ::fuchsia::ui::gfx::Vector3Value& value) {
     num_bytes_ += FIDL_ALIGN(16);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::gfx::Vector3Value& value) {
-    MeasureOutOfLine(value.value);
   }
 
   void Measure(const ::fuchsia::ui::gfx::ViewArgs& value) {
@@ -1251,7 +850,6 @@ class MeasuringTape {
   }
 
   void MeasureOutOfLine(const ::fuchsia::ui::gfx::ViewArgs& value) {
-    MeasureOutOfLine(value.token);
     if (value.debug_name) {
       num_bytes_ += FIDL_ALIGN(value.debug_name->length());
     }
@@ -1268,9 +866,6 @@ class MeasuringTape {
   }
 
   void MeasureOutOfLine(const ::fuchsia::ui::gfx::ViewArgs3& value) {
-    MeasureOutOfLine(value.token);
-    MeasureOutOfLine(value.control_ref);
-    MeasureOutOfLine(value.view_ref);
     if (value.debug_name) {
       num_bytes_ += FIDL_ALIGN(value.debug_name->length());
     }
@@ -1289,7 +884,6 @@ class MeasuringTape {
   }
 
   void MeasureOutOfLine(const ::fuchsia::ui::gfx::ViewHolderArgs& value) {
-    MeasureOutOfLine(value.token);
     if (value.debug_name) {
       num_bytes_ += FIDL_ALIGN(value.debug_name->length());
     }
@@ -1301,45 +895,22 @@ class MeasuringTape {
 
   void Measure(const ::fuchsia::ui::gfx::ViewProperties& value) {
     num_bytes_ += FIDL_ALIGN(52);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::gfx::ViewProperties& value) {
-    MeasureOutOfLine(value.bounding_box);
-    MeasureOutOfLine(value.inset_from_min);
-    MeasureOutOfLine(value.inset_from_max);
   }
 
   void Measure(const ::fuchsia::ui::gfx::mat4& value) {
     num_bytes_ += FIDL_ALIGN(64);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::gfx::mat4& value) {
   }
 
   void Measure(const ::fuchsia::ui::gfx::vec2& value) {
     num_bytes_ += FIDL_ALIGN(8);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::gfx::vec2& value) {
   }
 
   void Measure(const ::fuchsia::ui::gfx::vec3& value) {
     num_bytes_ += FIDL_ALIGN(12);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::gfx::vec3& value) {
   }
 
   void Measure(const ::fuchsia::ui::gfx::vec4& value) {
     num_bytes_ += FIDL_ALIGN(16);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::gfx::vec4& value) {
   }
 
   void Measure(const ::fuchsia::ui::input::Command& value) {
@@ -1369,52 +940,26 @@ class MeasuringTape {
 
   void Measure(const ::fuchsia::ui::input::KeyboardEvent& value) {
     num_bytes_ += FIDL_ALIGN(32);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::input::KeyboardEvent& value) {
   }
 
   void Measure(const ::fuchsia::ui::input::PointerEvent& value) {
     num_bytes_ += FIDL_ALIGN(48);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::input::PointerEvent& value) {
   }
 
   void Measure(const ::fuchsia::ui::input::SendKeyboardInputCmd& value) {
     num_bytes_ += FIDL_ALIGN(40);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::input::SendKeyboardInputCmd& value) {
-    MeasureOutOfLine(value.keyboard_event);
   }
 
   void Measure(const ::fuchsia::ui::input::SendPointerInputCmd& value) {
     num_bytes_ += FIDL_ALIGN(56);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::input::SendPointerInputCmd& value) {
-    MeasureOutOfLine(value.pointer_event);
   }
 
   void Measure(const ::fuchsia::ui::input::SetHardKeyboardDeliveryCmd& value) {
     num_bytes_ += FIDL_ALIGN(1);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::input::SetHardKeyboardDeliveryCmd& value) {
   }
 
   void Measure(const ::fuchsia::ui::input::SetParallelDispatchCmd& value) {
     num_bytes_ += FIDL_ALIGN(1);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::input::SetParallelDispatchCmd& value) {
   }
 
   void Measure(const ::fuchsia::ui::scenic::Command& value) {
@@ -1439,9 +984,6 @@ class MeasuringTape {
     }
   }
 
-  void MeasureHandles(const ::fuchsia::ui::scenic::Command& value) {
-  }
-
   void Measure(const ::fuchsia::ui::views::Command& value) {
     num_bytes_ += sizeof(fidl_xunion_t);
     MeasureOutOfLine(value);
@@ -1461,10 +1003,6 @@ class MeasuringTape {
   void Measure(const ::fuchsia::ui::views::ViewHolderToken& value) {
     num_bytes_ += FIDL_ALIGN(4);
     MeasureHandles(value);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::views::ViewHolderToken& value) {
   }
 
   void MeasureHandles(const ::fuchsia::ui::views::ViewHolderToken& value) {
@@ -1474,10 +1012,6 @@ class MeasuringTape {
   void Measure(const ::fuchsia::ui::views::ViewRef& value) {
     num_bytes_ += FIDL_ALIGN(4);
     MeasureHandles(value);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::views::ViewRef& value) {
   }
 
   void MeasureHandles(const ::fuchsia::ui::views::ViewRef& value) {
@@ -1487,10 +1021,6 @@ class MeasuringTape {
   void Measure(const ::fuchsia::ui::views::ViewRefControl& value) {
     num_bytes_ += FIDL_ALIGN(4);
     MeasureHandles(value);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::views::ViewRefControl& value) {
   }
 
   void MeasureHandles(const ::fuchsia::ui::views::ViewRefControl& value) {
@@ -1500,10 +1030,6 @@ class MeasuringTape {
   void Measure(const ::fuchsia::ui::views::ViewToken& value) {
     num_bytes_ += FIDL_ALIGN(4);
     MeasureHandles(value);
-    MeasureOutOfLine(value);
-  }
-
-  void MeasureOutOfLine(const ::fuchsia::ui::views::ViewToken& value) {
   }
 
   void MeasureHandles(const ::fuchsia::ui::views::ViewToken& value) {
