@@ -33,7 +33,6 @@ class IspStreamProtocol {
   }
 
   void Stop() {
-    ZX_ASSERT(started_);
     ZX_ASSERT(ZX_OK == protocol_.ops->stop(protocol_.ctx));
     started_ = false;
   }

@@ -388,6 +388,23 @@ TEST_F(ControllerProtocolTest, TestMultipleStartStreaming) {
   EXPECT_EQ(fake_isp_.start_stream_counter(), updated_start_count + 1);
 }
 
+TEST_F(ControllerProtocolTest, TestMultipleStopStreaming) {
+  auto stream_type = kStreamTypeFR;
+  fuchsia::camera2::StreamPtr stream;
+  ASSERT_EQ(ZX_OK, SetupStream(kDebugConfig, stream_type, stream));
+
+  auto fr_head_node = pipeline_manager_->full_resolution_stream();
+  auto output_node = static_cast<OutputNode*>(fr_head_node->child_nodes().at(0).get());
+
+  // Set streaming off.
+  auto initial_stop_count = fake_isp_.stop_stream_counter();
+  output_node->client_stream()->Stop();
+  auto updated_stop_count = fake_isp_.stop_stream_counter();
+  EXPECT_EQ(updated_stop_count, initial_stop_count + 1);
+  EXPECT_NO_FATAL_FAILURE(output_node->client_stream()->Stop());
+  EXPECT_EQ(fake_isp_.stop_stream_counter(), updated_stop_count + 1);
+}
+
 TEST_F(ControllerProtocolTest, TestMonitorMultiStreamFRBadOrder) {
   auto stream_type1 = kStreamTypeDS | kStreamTypeML;
   auto stream_type2 = kStreamTypeFR | kStreamTypeML;
