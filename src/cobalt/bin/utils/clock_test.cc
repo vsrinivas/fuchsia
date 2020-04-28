@@ -8,6 +8,7 @@
 #include <fuchsia/time/cpp/fidl_test_base.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 
+#include <future>
 #include <optional>
 
 #include <gmock/gmock.h>
@@ -108,6 +109,22 @@ TEST_F(FuchsiaSystemClockTest, NowAfterInitialized) {
   RunLoopUntilIdle();
 
   EXPECT_NE(clock_->now(), std::nullopt);
+}
+
+// Tests our use of an atomic_bool. We can set |accurate_| true in
+// one thread and read it as true in another thread.
+TEST_F(FuchsiaSystemClockTest, NowFromAnotherThread) {
+  fuchsia::time::UtcState utc_state;
+  utc_state.set_source(fuchsia::time::UtcSource::EXTERNAL);
+  utc_state.set_timestamp(1234);
+
+  EXPECT_CALL(utc_impl_, MockWatchState).WillRepeatedly(Return(&utc_state));
+
+  clock_->AwaitExternalSource([]() {});
+
+  RunLoopUntilIdle();
+
+  EXPECT_NE(std::async(std::launch::async, [this]() { return clock_->now(); }).get(), std::nullopt);
 }
 
 }  // namespace cobalt

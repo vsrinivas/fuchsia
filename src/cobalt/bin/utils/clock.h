@@ -56,7 +56,7 @@ class FuchsiaSystemClock : public FuchsiaSystemClockInterface {
 
   fuchsia::time::UtcPtr utc_;
   std::function<void()> callback_;
-  bool accurate_ = false;
+  std::atomic_bool accurate_ = false;
 };
 
 }  // namespace cobalt
