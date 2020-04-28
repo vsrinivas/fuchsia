@@ -28,13 +28,14 @@ controlled as a single entity.
 ## SYSCALLS
 
  - [`zx_job_create()`] - create a new child job.
- - [`zx_process_create()`] - create a new process within a job.
  - [`zx_job_set_critical()`] - set a process as critical to a job.
  - [`zx_job_set_policy()`] - set policy for new processes in the job.
+ - [`zx_process_create()`] - create a new process within a job.
  - [`zx_task_create_exception_channel()`] - listen for task exceptions
  - [`zx_task_kill()`] - cause a task to stop running.
 
 [`zx_job_create()`]: /docs/reference/syscalls/job_create.md
+[`zx_job_set_critical()`]: /docs/reference/syscalls/job_set_critical.md
 [`zx_job_set_policy()`]: /docs/reference/syscalls/job_set_policy.md
 [`zx_process_create()`]: /docs/reference/syscalls/process_create.md
 [`zx_task_create_exception_channel()`]: /docs/reference/syscalls/task_create_exception_channel.md
