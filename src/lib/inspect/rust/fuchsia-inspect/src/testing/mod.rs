@@ -8,6 +8,7 @@ pub use crate::{
         macros::{AnyProperty, NodeHierarchyGetter, PropertyAssertion, TreeAssertion},
         reader::{ComponentSelector, InspectDataFetcher},
     },
+    tree_assertion,
 };
 
 #[macro_use]

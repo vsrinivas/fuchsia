@@ -13,11 +13,122 @@ use {
     std::{borrow::Cow, collections::HashSet},
 };
 
-/// Macro to simplify tree matching in tests. The first argument is the actual tree and can be
-/// a NodeHierarchy or an Inspector. The second argument is an matcher/assertion expression to
-/// compare against the tree.
+/// Macro to simplify creating `TreeAssertion`s. Commonly used indirectly through the second
+/// parameter of `assert_inspect_tree!`. See `assert_inspect_tree!` for more usage examples.
 ///
-/// Each leaf value must be a type that implements `PropertyAssertion`.
+/// Each leaf value must be a type that implements either `PropertyAssertion` or `TreeAssertion`.
+///
+/// Example:
+/// ```
+/// // Manual creation of `TreeAssertion`.
+/// let mut root = TreeAssertion::new("root", true);
+/// root.add_property_assertion("a-string-property", Box::new("expected-string-value"));
+/// let mut child = TreeAssertion::new("child", true);
+/// child.add_property_assertion("any-property", Box::new(AnyProperty));
+/// root.add_child_assertion(child);
+/// root.add_child_assertion(opaque_child);
+///
+/// // Creation with `tree_assertion!`.
+/// let root = tree_assertion!(
+///     root: {
+///         "a-string-property": "expected-string-value",
+///         child: {
+///             "any-property": AnyProperty,
+///         },
+///         opaque_child, // required trailing comma for `TreeAssertion` expressions
+///     }
+/// );
+///
+/// Note that `TreeAssertion`s given directly to the macro must always be followed by `,`.
+#[macro_export]
+macro_rules! tree_assertion {
+    (@build $tree_assertion:expr,) => {};
+
+    // Exact match of tree
+    (@build $tree_assertion:expr, var $key:ident: { $($sub:tt)* }) => {{
+        #[allow(unused_mut)]
+        let mut child_tree_assertion = TreeAssertion::new($key, true);
+        tree_assertion!(@build child_tree_assertion, $($sub)*);
+        $tree_assertion.add_child_assertion(child_tree_assertion);
+    }};
+    (@build $tree_assertion:expr, var $key:ident: { $($sub:tt)* }, $($rest:tt)*) => {{
+        tree_assertion!(@build $tree_assertion, var $key: { $($sub)* });
+        tree_assertion!(@build $tree_assertion, $($rest)*);
+    }};
+
+    // Partial match of tree
+    (@build $tree_assertion:expr, var $key:ident: contains { $($sub:tt)* }) => {{
+        #[allow(unused_mut)]
+        let mut child_tree_assertion = TreeAssertion::new($key, false);
+        tree_assertion!(@build child_tree_assertion, $($sub)*);
+        $tree_assertion.add_child_assertion(child_tree_assertion);
+    }};
+    (@build $tree_assertion:expr, var $key:ident: contains { $($sub:tt)* }, $($rest:tt)*) => {{
+        tree_assertion!(@build $tree_assertion, var $key: contains { $($sub)* });
+        tree_assertion!(@build $tree_assertion, $($rest)*);
+    }};
+
+    // Matching properties of a tree
+    (@build $tree_assertion:expr, var $key:ident: $assertion:expr) => {{
+        $tree_assertion.add_property_assertion($key, Box::new($assertion))
+    }};
+    (@build $tree_assertion:expr, var $key:ident: $assertion:expr, $($rest:tt)*) => {{
+        tree_assertion!(@build $tree_assertion, var $key: $assertion);
+        tree_assertion!(@build $tree_assertion, $($rest)*);
+    }};
+
+    // Key identifier format
+    (@build $tree_assertion:expr, $key:ident: $($rest:tt)+) => {{
+        let key = stringify!($key);
+        tree_assertion!(@build $tree_assertion, var key: $($rest)+);
+    }};
+    // Allows string literal for key
+    (@build $tree_assertion:expr, $key:tt: $($rest:tt)+) => {{
+        let key: &'static str = $key;
+        tree_assertion!(@build $tree_assertion, var key: $($rest)+);
+    }};
+    // Allows an expression that resolves into a String for key
+    (@build $tree_assertion:expr, $key:expr => $($rest:tt)+) => {{
+        let key_string : String = $key;
+        let key = &key_string;
+        tree_assertion!(@build $tree_assertion, var key: $($rest)+);
+    }};
+    // Allows an expression that resolves into a TreeAssertion
+    (@build $tree_assertion:expr, $child_assertion:expr, $($rest:tt)*) => {{
+        $tree_assertion.add_child_assertion($child_assertion);
+        tree_assertion!(@build $tree_assertion, $($rest)*);
+    }};
+
+    // Entry points
+    (var $key:ident: { $($sub:tt)* }) => {{
+        use $crate::testing::TreeAssertion;
+        #[allow(unused_mut)]
+        let mut tree_assertion = TreeAssertion::new($key, true);
+        tree_assertion!(@build tree_assertion, $($sub)*);
+        tree_assertion
+    }};
+    (var $key:ident: contains { $($sub:tt)* }) => {{
+        use $crate::testing::TreeAssertion;
+        #[allow(unused_mut)]
+        let mut tree_assertion = TreeAssertion::new($key, false);
+        tree_assertion!(@build tree_assertion, $($sub)*);
+        tree_assertion
+    }};
+    ($key:ident: $($rest:tt)+) => {{
+        let key = stringify!($key);
+        tree_assertion!(var key: $($rest)+)
+    }};
+    ($key:tt: $($rest:tt)+) => {{
+        let key: &'static str = $key;
+        tree_assertion!(var key: $($rest)+)
+    }};
+}
+
+/// Macro to simplify tree matching in tests. The first argument is the actual tree passed as a
+/// `NodeHierarchyGetter` (e.g. a `NodeHierarchy` or an `Inspector`). The second argument is given
+/// to `tree_assertion!` which creates a `TreeAssertion` to validate the tree.
+///
+/// Each leaf value must be a type that implements either `PropertyAssertion` or `TreeAssertion`.
 ///
 /// Example:
 /// ```
@@ -46,19 +157,22 @@ use {
 ///    ],
 /// };
 ///
-/// assert_inspect_tree!(node_hierarchy, key: {
-///     sub: AnyProperty,   // only verify that `sub` is a property of `key`
-///     sub2: "sub2_value",
-///     child1: {
-///         child1_sub: 10i64,
-///     },
-///     child2: {
-///         child2_sub: 20u64,
-///     },
-/// });
+/// assert_inspect_tree!(
+///     node_hierarchy,
+///     key: {
+///         sub: AnyProperty,   // only verify that `sub` is a property of `key`
+///         sub2: "sub2_value",
+///         child1: {
+///             child1_sub: 10i64,
+///         },
+///         child2: {
+///             child2_sub: 20u64,
+///         },
+///     }
+/// );
 /// ```
 ///
-/// In order to do partial match on a tree, use the `contains` keyword:
+/// In order to do a partial match on a tree, use the `contains` keyword:
 /// ```
 /// assert_inspect_tree!(node_hierarchy, key: contains {
 ///     sub: "sub_value",
@@ -66,7 +180,7 @@ use {
 /// });
 /// ```
 ///
-/// In order to do a match on a tree where they keys need to be computed (they are some
+/// In order to do a match on a tree where the keys need to be computed (they are some
 /// expression), you'll need to use `=>` instead of `:`:
 ///
 /// ```
@@ -76,12 +190,21 @@ use {
 /// ```
 /// Note that `key_fn` has to return a `String`.
 ///
-/// The first argument can be an Inspector, in which case the whole tree is read from the Tree and
-/// matched against:
+/// The first argument can be an `Inspector`, in which case the whole tree is read from the
+/// `Inspector` and matched against:
 /// ```
 /// let inspector = Inspector::new().unwrap();
 /// assert_inspect_tree!(inspector, root: {});
 /// ```
+///
+/// `TreeAssertion`s made elsewhere can be included bodily in the macro, but must always be followed
+/// by a trailing comma:
+/// assert_inspect_tree!(
+///     node_hierarchy,
+///     key: {
+///         make_child_tree_assertion(), // required trailing comma
+///     }
+/// );
 ///
 /// A tree may contain multiple properties or children with the same name. This macro does *not*
 /// support matching against them, and will throw an error if it detects duplicates. This is
@@ -89,84 +212,12 @@ use {
 /// behavior for reading properties or children with duplicate names is not well defined.
 #[macro_export]
 macro_rules! assert_inspect_tree {
-    (@build $tree_assertion:expr,) => {};
-
-    // Exact match of tree
-    (@build $tree_assertion:expr, var $key:ident: { $($sub:tt)* }) => {{
-        #[allow(unused_mut)]
-        let mut child_tree_assertion = TreeAssertion::new($key, true);
-        assert_inspect_tree!(@build child_tree_assertion, $($sub)*);
-        $tree_assertion.add_child_assertion(child_tree_assertion);
-    }};
-    (@build $tree_assertion:expr, var $key:ident: { $($sub:tt)* }, $($rest:tt)*) => {{
-        assert_inspect_tree!(@build $tree_assertion, var $key: { $($sub)* });
-        assert_inspect_tree!(@build $tree_assertion, $($rest)*);
-    }};
-
-    // Partial match of tree
-    (@build $tree_assertion:expr, var $key:ident: contains { $($sub:tt)* }) => {{
-        #[allow(unused_mut)]
-        let mut child_tree_assertion = TreeAssertion::new($key, false);
-        assert_inspect_tree!(@build child_tree_assertion, $($sub)*);
-        $tree_assertion.add_child_assertion(child_tree_assertion);
-    }};
-    (@build $tree_assertion:expr, var $key:ident: contains { $($sub:tt)* }, $($rest:tt)*) => {{
-        assert_inspect_tree!(@build $tree_assertion, var $key: contains { $($sub)* });
-        assert_inspect_tree!(@build $tree_assertion, $($rest)*);
-    }};
-
-    // Matching properties of a tree
-    (@build $tree_assertion:expr, var $key:ident: $assertion:expr) => {{
-        $tree_assertion.add_property_assertion($key, Box::new($assertion))
-    }};
-    (@build $tree_assertion:expr, var $key:ident: $assertion:expr, $($rest:tt)*) => {{
-        assert_inspect_tree!(@build $tree_assertion, var $key: $assertion);
-        assert_inspect_tree!(@build $tree_assertion, $($rest)*);
-    }};
-
-    // Key identifier format
-    (@build $tree_assertion:expr, $key:ident: $($rest:tt)+) => {{
-        let key = stringify!($key);
-        assert_inspect_tree!(@build $tree_assertion, var key: $($rest)+);
-    }};
-    // Allows string literal for key
-    (@build $tree_assertion:expr, $key:tt: $($rest:tt)+) => {{
-        let key: &'static str = $key;
-        assert_inspect_tree!(@build $tree_assertion, var key: $($rest)+);
-    }};
-    // Allows an expression that resolves into a String for key
-    (@build $tree_assertion:expr, $key:expr => $($rest:tt)+) => {{
-        let key_string : String = $key;
-        let key = &key_string;
-        assert_inspect_tree!(@build $tree_assertion, var key: $($rest)+);
-    }};
-
-    // Entry points
-    ($node_hierarchy:expr, var $key:ident: { $($sub:tt)* }) => {{
-        use $crate::testing::{NodeHierarchyGetter, TreeAssertion};
-        #[allow(unused_mut)]
-        let mut tree_assertion = TreeAssertion::new($key, true);
-        assert_inspect_tree!(@build tree_assertion, $($sub)*);
+    ($node_hierarchy:expr, $($rest:tt)+) => {{
+        use $crate::testing::{NodeHierarchyGetter as _, tree_assertion};
+        let tree_assertion = tree_assertion!($($rest)+);
         if let Err(e) = tree_assertion.run($node_hierarchy.get_node_hierarchy().as_ref()) {
             panic!("tree assertion fails: {}", e);
         }
-    }};
-    ($node_hierarchy:expr, var $key:ident: contains { $($sub:tt)* }) => {{
-        use $crate::testing::{NodeHierarchyGetter, TreeAssertion};
-        #[allow(unused_mut)]
-        let mut tree_assertion = TreeAssertion::new($key, false);
-        assert_inspect_tree!(@build tree_assertion, $($sub)*);
-        if let Err(e) = tree_assertion.run($node_hierarchy.get_node_hierarchy().as_ref()) {
-            panic!("tree assertion fails: {}", e);
-        }
-    }};
-    ($node_hierarchy:expr, $key:ident: $($rest:tt)+) => {{
-        let key = stringify!($key);
-        assert_inspect_tree!($node_hierarchy, var key: $($rest)+);
-    }};
-    ($node_hierarchy:expr, $key:tt: $($rest:tt)+) => {{
-        let key: &'static str = $key;
-        assert_inspect_tree!($node_hierarchy, var key: $($rest)+);
     }};
 }
 
@@ -666,12 +717,32 @@ mod tests {
 
     #[test]
     fn test_matching_with_expression_as_key() {
-        let propreties = vec![Property::String("sub".to_string(), "sub_value".to_string())];
-        let partial = PartialNodeHierarchy::new("root", propreties, vec![]);
+        let properties = vec![Property::String("sub".to_string(), "sub_value".to_string())];
+        let partial = PartialNodeHierarchy::new("root", properties, vec![]);
         let value = || "sub_value";
         let key = || "sub".to_string();
         assert_inspect_tree!(partial, root: {
             key() => value(),
+        });
+    }
+
+    #[test]
+    fn test_matching_tree_assertion_expression() {
+        let node_hierarchy = complex_tree();
+        let child1 = tree_assertion!(
+            child1: {
+                child1_sub: 10i64,
+            }
+        );
+        assert_inspect_tree!(node_hierarchy, key: {
+            sub: "sub_value",
+            sub2: "sub2_value",
+            child1,
+            tree_assertion!(
+                child2: {
+                    child2_sub: 20u64,
+                }
+            ),
         });
     }
 
