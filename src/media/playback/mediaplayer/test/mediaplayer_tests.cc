@@ -31,6 +31,7 @@ static constexpr uint32_t kSinkFeedMaxPacketSize = 4096;
 static constexpr uint32_t kSinkFeedMaxPacketCount = 10;
 
 constexpr char kBearFilePath[] = "/pkg/data/media_test_data/bear.mp4";
+constexpr char kOpusFilePath[] = "/pkg/data/media_test_data/sfx-opus-441.webm";
 
 // Base class for mediaplayer tests.
 class MediaPlayerTests : public sys::testing::TestWithEnvironment {
@@ -408,9 +409,70 @@ TEST_F(MediaPlayerTests, ElementarySourceWithBogus) {
 
 // Play a real A/V file from beginning to end.
 TEST_F(MediaPlayerTests, PlayBear) {
-  // TODO(dalesat): Use ExpectPackets for audio.
-  // This doesn't currently work, because the decoder behaves differently on
-  // different targets.
+  // Previously, we were getting different audio packets for arm64 vs x64. This doesn't appear
+  // to be happening anymore, but in case it recurs, we dump packets here. The output can be used
+  // to create a second list of packets to expect.
+  fake_audio_.renderer().DumpPackets();
+  fake_audio_.renderer().ExpectPackets(
+      {{1024, 8192, 0x0a68b3995a50a648},   {2048, 8192, 0x93bf522ee77e9d50},
+       {3072, 8192, 0x89cc3bcedd6034be},   {4096, 8192, 0x40931af9f379dd00},
+       {5120, 8192, 0x79dc4cfe61738988},   {6144, 8192, 0x2c831d823db62908},
+       {7168, 8192, 0x71561155059a2950},   {8192, 8192, 0x4581449f2e040ff0},
+       {9216, 8192, 0xb0429eeed8b7424e},   {10240, 8192, 0x5e7007ebe169fcc0},
+       {11264, 8192, 0x585fe50f30788fd8},  {12288, 8192, 0x7cba92a4ecaf59a2},
+       {13312, 8192, 0x8521ccbccc4d771e},  {14336, 8192, 0x5694e56b0fd93cc8},
+       {15360, 8192, 0x14abced62917c788},  {16384, 8192, 0x8e7f3918fa412a02},
+       {17408, 8192, 0xf095ec04d2238644},  {18432, 8192, 0x886cab3f4e3f9610},
+       {19456, 8192, 0x874a3d8d0f4e2190},  {20480, 8192, 0x1f70d5763dadf9ac},
+       {21504, 8192, 0x2619ff3221cbab46},  {22528, 8192, 0x33aa3594808f6b10},
+       {23552, 8192, 0x2da9b93cacd110a4},  {24576, 8192, 0x2f0def95d105b68c},
+       {25600, 8192, 0xef9acc73b96291c4},  {26624, 8192, 0xca8ed12c8f4b7b06},
+       {27648, 8192, 0x0ea5eddd4cc5e3bc},  {28672, 8192, 0xafe4007e4779438e},
+       {29696, 8192, 0xcefebc7fe3257f9e},  {30720, 8192, 0x4294978d0dc213ee},
+       {31744, 8192, 0x53ca41b8a5175774},  {32768, 8192, 0x9a16b082e9e5a95e},
+       {33792, 8192, 0x1a849b5e1f4ee80a},  {34816, 8192, 0xd1741d4e44972fea},
+       {35840, 8192, 0x7ecf5a82a4adf9a6},  {36864, 8192, 0x2878988793205f22},
+       {37888, 8192, 0x35a41b25f24ec2b8},  {38912, 8192, 0x2714de582b48ebc6},
+       {39936, 8192, 0xc8fdea128f0285f4},  {40960, 8192, 0xc5ab19b2405542ca},
+       {41984, 8192, 0x5d5d781722ba0392},  {43008, 8192, 0x02fe263969ba81a6},
+       {44032, 8192, 0x1acc5b7c24d197d4},  {45056, 8192, 0x18d713e058acfec8},
+       {46080, 8192, 0x83573b4a6f02c8da},  {47104, 8192, 0xacffcaaff833e850},
+       {48128, 8192, 0xa0cffe3e485c46c4},  {49152, 8192, 0xffd5680f78b7f7a2},
+       {50176, 8192, 0xc950e93a5272cda8},  {51200, 8192, 0x375e4dc1dc28eea4},
+       {52224, 8192, 0x5648dd0ed9d9d9d4},  {53248, 8192, 0xac945623bf04f5b6},
+       {54272, 8192, 0x3cff2936986fcdc8},  {55296, 8192, 0xbc049d18bdcca182},
+       {56320, 8192, 0x8d3646f2e29da29c},  {57344, 8192, 0xb5e72da09cd9f5b4},
+       {58368, 8192, 0x8597406852caa548},  {59392, 8192, 0x5221d69a113d9688},
+       {60416, 8192, 0xc4c0bdef8e07fb12},  {61440, 8192, 0x804e43c36110196e},
+       {62464, 8192, 0xd1d3ae38126dd618},  {63488, 8192, 0x846d01cfa3be6500},
+       {64512, 8192, 0xecca760a67eff43a},  {65536, 8192, 0x6624720182df5730},
+       {66560, 8192, 0x41eb3d61d94b2224},  {67584, 8192, 0x015efd07043b4e4c},
+       {68608, 8192, 0x2d4d9823e0e63b64},  {69632, 8192, 0xd5a845cbf966e23a},
+       {70656, 8192, 0x24c6ccf454693f72},  {71680, 8192, 0x368bea38398d5ecc},
+       {72704, 8192, 0x3602a6b0602a9458},  {73728, 8192, 0x48ea44911825e784},
+       {74752, 8192, 0x53e549d74eb26de0},  {75776, 8192, 0x3f7f7f5c7ee3d14e},
+       {76800, 8192, 0xdcafb6baa55625f6},  {77824, 8192, 0x472b007f3bc3c45c},
+       {78848, 8192, 0x53a8ecc580fff982},  {79872, 8192, 0xf59a57769900ca62},
+       {80896, 8192, 0xcc380147f73a1528},  {81920, 8192, 0x4f4b79f5ad21e67e},
+       {82944, 8192, 0xcee2192004c8066c},  {83968, 8192, 0x84672c98f8a1da4c},
+       {84992, 8192, 0x229246edd7b6c31c},  {86016, 8192, 0x3f3f4d7f8fcd62b4},
+       {87040, 8192, 0x46bc2a4e9e6d40ca},  {88064, 8192, 0xa6901df8e4afcc48},
+       {89088, 8192, 0x8e96017b64980fd8},  {90112, 8192, 0xdd9001f337c6a932},
+       {91136, 8192, 0xac5913cdd15b8a72},  {92160, 8192, 0xd9d59a367d561d4c},
+       {93184, 8192, 0xa76421aaa4b469c8},  {94208, 8192, 0x2e27a33a898c0056},
+       {95232, 8192, 0xb71592d727280bc0},  {96256, 8192, 0xb73b2e5a682cbf60},
+       {97280, 8192, 0x36d9f03861277c10},  {98304, 8192, 0xffa1d33f4aea2e40},
+       {99328, 8192, 0x4359627a59f6552e},  {100352, 8192, 0x82a76e3c810aee68},
+       {101376, 8192, 0x60066a5773c5dee2}, {102400, 8192, 0x809989d272e85654},
+       {103424, 8192, 0xd1cdd52e37d58702}, {104448, 8192, 0xe332d1115653f36c},
+       {105472, 8192, 0xa1189ac1a76c3bd0}, {106496, 8192, 0xaa20304ceb8e6daa},
+       {107520, 8192, 0x913ac8dcdc5cef52}, {108544, 8192, 0x891883b9326cd0f4},
+       {109568, 8192, 0xe8fbce45cf3990a4}, {110592, 8192, 0xc9301a9ef899455c},
+       {111616, 8192, 0x56cd5306b56e027a}, {112640, 8192, 0x5a1b088bce12b0f8},
+       {113664, 8192, 0xc697191375e99274}, {114688, 8192, 0x4d0f0798a59771c4},
+       {115712, 8192, 0x6571a4ff90e63490}, {116736, 8192, 0x20ffb62fff517f00},
+       {117760, 8192, 0x20ffb62fff517f00}, {118784, 8192, 0x20ffb62fff517f00},
+       {119808, 8192, 0x20ffb62fff517f00}, {120832, 8192, 0x20ffb62fff517f00}});
 
   fake_scenic_.session().SetExpectations(
       1,
@@ -476,6 +538,46 @@ TEST_F(MediaPlayerTests, PlayBear) {
   Execute();
   EXPECT_TRUE(fake_audio_.renderer().expected());
   EXPECT_TRUE(fake_scenic_.session().expected());
+}
+
+// Play an opus file from beginning to end.
+TEST_F(MediaPlayerTests, PlayOpus) {
+  // The decoder works a bit differently on x64 vs arm64, hence the two lists here.
+  fake_audio_.renderer().ExpectPackets({{-336, 1296, 0x47ff30edd64831d6},
+                                        {312, 1920, 0xcc4016bbb348e52b},
+                                        {1272, 1920, 0xe54a89514c636028},
+                                        {2232, 1920, 0x8ef31ce86009d7da},
+                                        {3192, 1920, 0x36490fe70ca3bb81},
+                                        {4152, 1920, 0x4a8bdd8e9c2f42bb},
+                                        {5112, 1920, 0xbc8cea1839f0299e},
+                                        {6072, 1920, 0x868a68451d7ab814},
+                                        {7032, 1920, 0x84ac9b11a685a9a9},
+                                        {7992, 1920, 0xe4359c110afe8adb},
+                                        {8952, 1920, 0x2092c7fbf2ff0f0c},
+                                        {9912, 1920, 0x8002d77665736d63},
+                                        {10872, 1920, 0x541b415fbdc7b268},
+                                        {11832, 1920, 0xe81ef757a5953573},
+                                        {12792, 1920, 0xbc70aba0ed44f7dc}});
+  fake_audio_.renderer().ExpectPackets({{-336, 1296, 0xbf1f56243e245a2c},
+                                        {312, 1920, 0x670e69ee3076c4b2},
+                                        {1272, 1920, 0xe0667e312e65207d},
+                                        {2232, 1920, 0x291ffa6baf5dd2b1},
+                                        {3192, 1920, 0x1b408d840e27bcc1},
+                                        {4152, 1920, 0xdbf5034a75bc761b},
+                                        {5112, 1920, 0x46fa968eb705415b},
+                                        {7032, 1920, 0x7256d4c58d7afe56},
+                                        {7992, 1920, 0xb2a7bc50ce80c898},
+                                        {8952, 1920, 0xb314415fd9c3a694},
+                                        {9912, 1920, 0x34d9ce067ffacc37},
+                                        {11832, 1920, 0x05fd64442f53c5cc},
+                                        {12792, 1920, 0x3e2a98426c8680d0}});
+
+  commands_.SetFile(kOpusFilePath);
+  commands_.Play();
+  QuitOnEndOfStream();
+
+  Execute();
+  EXPECT_TRUE(fake_audio_.renderer().expected());
 }
 
 // Play a real A/V file from beginning to end, retaining audio packets. This

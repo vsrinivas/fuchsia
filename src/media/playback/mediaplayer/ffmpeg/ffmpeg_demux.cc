@@ -402,6 +402,10 @@ PacketPtr FfmpegDemuxImpl::PullPacket(size_t* stream_index_out) {
   }
 
   ffmpeg::AvPacketPtr av_packet = ffmpeg::AvPacket::Create();
+  if (av_packet->side_data) {
+    FX_LOGS(WARNING) << "ON CREATE, av_packet->side_data 0x" << std::hex
+                     << reinterpret_cast<uintptr_t>(av_packet->side_data);
+  }
 
   av_packet->data = nullptr;
   av_packet->size = 0;
@@ -415,9 +419,22 @@ PacketPtr FfmpegDemuxImpl::PullPacket(size_t* stream_index_out) {
   *stream_index_out = static_cast<size_t>(av_packet->stream_index);
   // TODO(dalesat): What if the packet has no PTS or duration?
   next_pts_ = av_packet->pts + av_packet->duration;
-  // TODO(dalesat): Implement packet side data.
-  FX_DCHECK(av_packet->side_data == nullptr) << "side data not implemented";
-  FX_DCHECK(av_packet->side_data_elems == 0);
+
+  if (av_packet->side_data) {
+    FX_DCHECK(av_packet->side_data_elems > 0);
+    auto side_data = av_packet->side_data;
+    for (int i = 0; i < av_packet->side_data_elems; ++i, ++side_data) {
+      switch (side_data->type) {
+        case AV_PKT_DATA_SKIP_SAMPLES:
+          // TODO(dalesat): Implement sample skipping.
+          break;
+        default:
+          // TODO(dalesat): Handle more side-data types.
+          FX_DCHECK(false) << "Unhandled side data type " << side_data->type;
+          break;
+      }
+    }
+  }
 
   int64_t pts = (av_packet->pts == AV_NOPTS_VALUE) ? Packet::kNoPts : av_packet->pts;
   bool keyframe = av_packet->flags & AV_PKT_FLAG_KEY;

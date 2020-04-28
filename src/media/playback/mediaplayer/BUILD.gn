@@ -220,6 +220,11 @@ test_package("mediaplayer_tests") {
               "//garnet/test_data/media/third_party/chromium_media_test_data/bear-1280x720.mp4")
       dest = "media_test_data/bear.mp4"
     },
+    {
+      path = rebase_path(
+              "//garnet/test_data/media/third_party/chromium_media_test_data/sfx-opus-441.webm")
+      dest = "media_test_data/sfx-opus-441.webm"
+    },
   ]
 }
 

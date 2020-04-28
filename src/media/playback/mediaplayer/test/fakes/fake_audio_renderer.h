@@ -39,8 +39,7 @@ class FakeAudioRenderer : public fuchsia::media::AudioRenderer,
   // Indicates that the renderer should verify supplied packets against the
   // indicated PacketInfos.
   void ExpectPackets(const std::vector<PacketInfo>&& expected_packets_info) {
-    expected_packets_info_ = std::move(expected_packets_info);
-    expected_packets_info_iter_ = expected_packets_info_.begin();
+    packet_expecters_.emplace_back(std::move(expected_packets_info));
   }
 
   // Returns true if everything has gone as expected so far.
@@ -50,10 +49,19 @@ class FakeAudioRenderer : public fuchsia::media::AudioRenderer,
       return false;
     }
 
-    if (!expected_packets_info_.empty() &&
-        expected_packets_info_iter_ != expected_packets_info_.end()) {
-      FX_LOGS(ERROR) << "Expected packets did not arrive.";
-      return false;
+    if (!packet_expecters_.empty()) {
+      bool expecter_done = false;
+      for (auto& expecter : packet_expecters_) {
+        if (expecter.done()) {
+          expecter_done = true;
+          break;
+        }
+      }
+
+      if (!expecter_done) {
+        FX_LOGS(ERROR) << "Expected packets did not arrive.";
+        return false;
+      }
     }
 
     if ((delay_packet_retirement_pts_ != fuchsia::media::NO_TIMESTAMP) && !packet_queue_.empty()) {
@@ -123,6 +131,19 @@ class FakeAudioRenderer : public fuchsia::media::AudioRenderer,
   void SetMute(bool muted) override;
 
  private:
+  class PacketExpecter {
+   public:
+    PacketExpecter(const std::vector<PacketInfo>&& info);
+
+    bool IsExpected(const fuchsia::media::StreamPacket& packet, const void* start);
+
+    bool done() const { return iter_ == info_.end(); }
+
+   private:
+    std::vector<PacketInfo> info_;
+    std::vector<PacketInfo>::iterator iter_;
+  };
+
   // Determines if we care currently playing.
   bool progressing() { return timeline_function_.invertible(); }
 
@@ -151,8 +172,7 @@ class FakeAudioRenderer : public fuchsia::media::AudioRenderer,
 
   bool dump_packets_ = false;
   uint64_t packets_received_;
-  std::vector<PacketInfo> expected_packets_info_;
-  std::vector<PacketInfo>::iterator expected_packets_info_iter_;
+  std::vector<PacketExpecter> packet_expecters_;
 
   std::queue<std::pair<fuchsia::media::StreamPacket, SendPacketCallback>> packet_queue_;
 

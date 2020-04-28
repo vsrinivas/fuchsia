@@ -43,6 +43,8 @@ class FfmpegAudioDecoder : public FfmpegDecoderBase {
   // it aligns on 32 sample (not byte) boundaries.
   static const int kChannelAlign = 32;
 
+  bool copy_or_interleave_ = false;
+
   // For interleaving, if needed.
   std::unique_ptr<LpcmUtil> lpcm_util_;
 

@@ -29,6 +29,18 @@ FfmpegAudioDecoder::FfmpegAudioDecoder(AvCodecContextPtr av_codec_context)
   if (av_sample_fmt_is_planar(context()->sample_fmt)) {
     // Prepare for interleaving.
     lpcm_util_ = LpcmUtil::Create(*stream_type_->audio());
+    copy_or_interleave_ = true;
+  }
+
+  // Codec-specific code goes here.
+  switch (context()->codec_id) {
+    case AV_CODEC_ID_OPUS:
+      // The opus decoder allocates buffers six times as large as the resulting payload. We need
+      // to copy the payloads, so we don't use up all the buffer space available to the renderer.
+      copy_or_interleave_ = true;
+      break;
+    default:
+      break;
   }
 }
 
@@ -48,6 +60,8 @@ void FfmpegAudioDecoder::OnNewInputPacket(const PacketPtr& packet) {
   }
 
   context()->reordered_opaque = packet->discontinuity() ? 1 : 0;
+  context()->pkt_timebase.num = pts_rate().reference_delta();
+  context()->pkt_timebase.den = pts_rate().subject_delta();
 }
 
 int FfmpegAudioDecoder::BuildAVFrame(const AVCodecContext& av_codec_context, AVFrame* av_frame) {
@@ -63,10 +77,11 @@ int FfmpegAudioDecoder::BuildAVFrame(const AVCodecContext& av_codec_context, AVF
     return buffer_size;
   }
 
-  // Get the right payload buffer. If we need to interleave later, we just get
+  // Get the right payload buffer. If we need to copy or interleave later, we just get
   // a buffer allocated using malloc. If not, we ask the stage for a buffer.
-  fbl::RefPtr<PayloadBuffer> buffer = lpcm_util_ ? PayloadBuffer::CreateWithMalloc(buffer_size)
-                                                 : AllocatePayloadBuffer(buffer_size);
+  fbl::RefPtr<PayloadBuffer> buffer = copy_or_interleave_
+                                          ? PayloadBuffer::CreateWithMalloc(buffer_size)
+                                          : AllocatePayloadBuffer(buffer_size);
 
   if (!buffer) {
     // TODO(dalesat): Record/report packet drop.
@@ -143,20 +158,24 @@ PacketPtr FfmpegAudioDecoder::CreateOutputPacket(const AVFrame& av_frame,
 
   uint64_t payload_size = stream_type_->audio()->min_buffer_size(av_frame.nb_samples);
 
-  if (lpcm_util_) {
-    // We need to interleave. The non-interleaved frames are in
+  if (copy_or_interleave_) {
+    // We need to copy or interleave. The original frames are in
     // |payload_buffer|, which was allocated from system memory. That buffer
     // will get released later in ReleaseBufferForAvFrame. We need a new
-    // buffer for the interleaved frames, which we get from the stage.
+    // buffer for the output payload, which we get from the stage.
     auto new_payload_buffer = AllocatePayloadBuffer(payload_size);
     if (!new_payload_buffer) {
       // TODO(dalesat): Record/report packet drop.
       return nullptr;
     }
 
-    lpcm_util_->Interleave(payload_buffer->data(),
-                           av_frame.linesize[0] * stream_type_->audio()->channels(),
-                           new_payload_buffer->data(), av_frame.nb_samples);
+    if (lpcm_util_) {
+      lpcm_util_->Interleave(payload_buffer->data(),
+                             av_frame.linesize[0] * stream_type_->audio()->channels(),
+                             new_payload_buffer->data(), av_frame.nb_samples);
+    } else {
+      memcpy(new_payload_buffer->data(), payload_buffer->data(), payload_size);
+    }
 
     // |new_payload_buffer| is the buffer we want to attach to the |Packet|.
     // This assignment drops the reference to the original |payload_buffer|, so

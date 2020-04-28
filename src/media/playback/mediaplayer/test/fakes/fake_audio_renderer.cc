@@ -64,23 +64,19 @@ void FakeAudioRenderer::SendPacket(fuchsia::media::StreamPacket packet,
               << std::dec << " },\n";
   }
 
-  if (!expected_packets_info_.empty()) {
-    if (expected_packets_info_iter_ == expected_packets_info_.end()) {
-      FX_LOGS(ERROR) << "packet supplied after expected packets";
-      expected_ = false;
+  if (!packet_expecters_.empty()) {
+    bool expecter_ok = false;
+    
+    for (auto& expecter : packet_expecters_) {
+      if (expecter.IsExpected(packet, vmo_mapper_.start())) {
+        expecter_ok = true;
+      }
     }
 
-    if (expected_packets_info_iter_->pts() != packet.pts ||
-        expected_packets_info_iter_->size() != packet.payload_size ||
-        expected_packets_info_iter_->hash() !=
-            PacketInfo::Hash(
-                reinterpret_cast<uint8_t*>(vmo_mapper_.start()) + packet.payload_offset,
-                packet.payload_size)) {
+    if (!expecter_ok) {
       FX_LOGS(ERROR) << "supplied packet doesn't match expected packet info";
       expected_ = false;
     }
-
-    ++expected_packets_info_iter_;
   }
 
   packet_queue_.push(std::make_pair(packet, std::move(callback)));
@@ -208,6 +204,25 @@ void FakeAudioRenderer::MaybeScheduleRetirement() {
         MaybeScheduleRetirement();
       },
       zx::time(reference_time));
+}
+
+FakeAudioRenderer::PacketExpecter::PacketExpecter(const std::vector<PacketInfo>&& info)
+    : info_(std::move(info)), iter_(info_.begin()) {}
+
+bool FakeAudioRenderer::PacketExpecter::IsExpected(const fuchsia::media::StreamPacket& packet,
+                                                   const void* start) {
+  if (iter_ == info_.end()) {
+    return false;
+  }
+
+  if (iter_->pts() != packet.pts || iter_->size() != packet.payload_size ||
+      iter_->hash() !=
+          PacketInfo::Hash(reinterpret_cast<const uint8_t*>(start) + packet.payload_offset,
+                           packet.payload_size)) {
+  }
+
+  ++iter_;
+  return true;
 }
 
 }  // namespace test
