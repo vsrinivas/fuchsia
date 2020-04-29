@@ -21,9 +21,7 @@ struct DpcSystem;
 // A DPC may not execute on the original current CPU if it is hotunplugged/offlined.
 // DPCs may block, though this may starve other queued work.
 
-class Dpc
-    : public fbl::DoublyLinkedListable<Dpc*, fbl::DefaultObjectTag,
-                                       fbl::NodeOptions::AllowCopy | fbl::NodeOptions::AllowMove> {
+class Dpc : public fbl::DoublyLinkedListable<Dpc*, fbl::NodeOptions::AllowCopyMove> {
  public:
   using Func = void(Dpc*);
 

@@ -79,9 +79,9 @@ class WAVLTraits {
     struct Tag3 {};
 
     using TaggedContainableBaseClasses =
-        fbl::ContainableBaseClasses<WAVLTreeContainable<PtrType, Tag1>,
-                                    WAVLTreeContainable<PtrType, Tag2>,
-                                    WAVLTreeContainable<PtrType, Tag3>>;
+        fbl::ContainableBaseClasses<TaggedWAVLTreeContainable<PtrType, Tag1>,
+                                    TaggedWAVLTreeContainable<PtrType, Tag2>,
+                                    TaggedWAVLTreeContainable<PtrType, Tag3>>;
 
     using TaggedType1 = TaggedWAVLTree<KeyType, PtrType, Tag1>;
     using TaggedType2 = TaggedWAVLTree<KeyType, PtrType, Tag2>;
@@ -379,7 +379,7 @@ class BalanceTestObj {
   BalanceTestKeyType min_subtree_key_;
   BalanceTestKeyType max_subtree_key_;
   BalanceTestObj* erase_deck_ptr_;
-  WAVLTreeNodeState<BalanceTestObjPtr, kDefaultWAVLTreeNodeOptions, int32_t> wavl_node_state_;
+  WAVLTreeNodeState<BalanceTestObjPtr, NodeOptions::None, int32_t> wavl_node_state_;
 };
 
 // Only enable heavy weight testing when asked to do so.

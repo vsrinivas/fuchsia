@@ -161,9 +161,7 @@ class SequenceContainerTestEnvironment;
 // specific type SinglyLinkedList<T> must expose a SinglyLinkedListNodeState<T>
 // to the list implementation via the supplied traits.  See
 // DefaultSinglyLinkedListTraits<T>
-constexpr NodeOptions kDefaultSinglyLinkedListNodeOptions = NodeOptions::None;
-
-template <typename T, NodeOptions Options = kDefaultSinglyLinkedListNodeOptions>
+template <typename T, NodeOptions Options = NodeOptions::None>
 struct SinglyLinkedListNodeState
     : public internal::CommonNodeStateBase<SinglyLinkedListNodeState<T, Options>> {
  private:
@@ -209,7 +207,7 @@ struct SinglyLinkedListNodeState
   typename PtrTraits::RawPtrType next_ = nullptr;
 };
 
-template <typename T, typename TagType, NodeOptions Options>
+template <typename T, NodeOptions Options, typename TagType>
 struct SinglyLinkedListable;
 
 // DefaultSinglyLinkedListNodeState<T>
@@ -247,15 +245,14 @@ struct DefaultSinglyLinkedListTraits {
 //
 // A helper class which makes it simple to exist on a singly linked list.
 // Simply derive your object from SinglyLinkedListable and you are done.
-template <typename T, typename TagType_ = DefaultObjectTag,
-          NodeOptions Options = kDefaultSinglyLinkedListNodeOptions>
+template <typename T, NodeOptions Options = NodeOptions::None, typename TagType_ = DefaultObjectTag>
 struct SinglyLinkedListable {
  public:
   using TagType = TagType_;
   static constexpr NodeOptions kNodeOptions = Options;
 
   bool InContainer() const {
-    using Node = SinglyLinkedListable<T, TagType, Options>;
+    using Node = SinglyLinkedListable<T, Options, TagType>;
     return Node::sll_node_state_.InContainer();
   }
 
@@ -778,6 +775,9 @@ using SizedSinglyLinkedList = SinglyLinkedList<T, NodeTraits, TagType, SizeOrder
 //
 template <typename T, typename TagType, typename NodeTraits = DefaultSinglyLinkedListTraits<T>>
 using TaggedSinglyLinkedList = SinglyLinkedList<T, NodeTraits, TagType, SizeOrder::N>;
+
+template <typename T, typename TagType, NodeOptions Options = NodeOptions::None>
+using TaggedSinglyLinkedListable = SinglyLinkedListable<T, Options, TagType>;
 
 // SizedTaggedSinglyLinkedList<> is a variant of TaggedSinglyLinkedList which
 // also specifies O(1) access size().

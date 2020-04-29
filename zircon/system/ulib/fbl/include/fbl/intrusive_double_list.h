@@ -47,9 +47,7 @@ class SequenceContainerTestEnvironment;
 }  // namespace intrusive_containers
 }  // namespace tests
 
-constexpr NodeOptions kDefaultDoublyLinkedListNodeOptions = NodeOptions::None;
-
-template <typename T, NodeOptions Options = kDefaultDoublyLinkedListNodeOptions>
+template <typename T, NodeOptions Options = NodeOptions::None>
 struct DoublyLinkedListNodeState
     : public internal::CommonNodeStateBase<DoublyLinkedListNodeState<T, Options>> {
  private:
@@ -96,7 +94,7 @@ struct DoublyLinkedListNodeState
   typename PtrTraits::RawPtrType prev_ = nullptr;
 };
 
-template <typename T, typename TagType, NodeOptions Options>
+template <typename T, NodeOptions Options, typename TagType>
 struct DoublyLinkedListable;
 
 template <typename T>
@@ -117,15 +115,14 @@ struct DefaultDoublyLinkedListTraits {
   }
 };
 
-template <typename T, typename TagType_ = DefaultObjectTag,
-          NodeOptions Options = kDefaultDoublyLinkedListNodeOptions>
+template <typename T, NodeOptions Options = NodeOptions::None, typename TagType_ = DefaultObjectTag>
 struct DoublyLinkedListable {
  public:
   using TagType = TagType_;
   static constexpr NodeOptions kNodeOptions = Options;
 
   bool InContainer() const {
-    using Node = DoublyLinkedListable<T, TagType, Options>;
+    using Node = DoublyLinkedListable<T, Options, TagType>;
     return Node::dll_node_state_.InContainer();
   }
 
@@ -804,6 +801,9 @@ using SizedDoublyLinkedList = DoublyLinkedList<T, NodeTraits, TagType, SizeOrder
 //
 template <typename T, typename TagType, typename NodeTraits = DefaultDoublyLinkedListTraits<T>>
 using TaggedDoublyLinkedList = DoublyLinkedList<T, NodeTraits, TagType, SizeOrder::N>;
+
+template <typename T, typename TagType, NodeOptions Options = NodeOptions::None>
+using TaggedDoublyLinkedListable = DoublyLinkedListable<T, Options, TagType>;
 
 // SizedTaggedDoublyLinkedList<> is a variant of TaggedDoublyLinkedList which
 // also specifies O(1) access size().

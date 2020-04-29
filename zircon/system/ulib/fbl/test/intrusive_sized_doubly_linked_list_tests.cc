@@ -39,9 +39,9 @@ class SizedDLLTraits {
     struct Tag3 {};
 
     using TaggedContainableBaseClasses =
-        fbl::ContainableBaseClasses<DoublyLinkedListable<PtrType, Tag1>,
-                                    DoublyLinkedListable<PtrType, Tag2>,
-                                    DoublyLinkedListable<PtrType, Tag3>>;
+        fbl::ContainableBaseClasses<TaggedDoublyLinkedListable<PtrType, Tag1>,
+                                    TaggedDoublyLinkedListable<PtrType, Tag2>,
+                                    TaggedDoublyLinkedListable<PtrType, Tag3>>;
 
     using TaggedType1 = SizedTaggedDoublyLinkedList<PtrType, Tag1>;
     using TaggedType2 = SizedTaggedDoublyLinkedList<PtrType, Tag2>;

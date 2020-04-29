@@ -191,8 +191,8 @@ std::unique_ptr<Buffer> GetBuffer(size_t len);
 //
 // Packets have their default move constructor invoked during testing, so their
 // intrusive nodes need to permit moving.
-class Packet : public fbl::DoublyLinkedListable<std::unique_ptr<Packet>, fbl::DefaultObjectTag,
-                                                fbl::NodeOptions::AllowMove> {
+class Packet
+    : public fbl::DoublyLinkedListable<std::unique_ptr<Packet>, fbl::NodeOptions::AllowMove> {
  public:
   typedef uint8_t value_type;
 

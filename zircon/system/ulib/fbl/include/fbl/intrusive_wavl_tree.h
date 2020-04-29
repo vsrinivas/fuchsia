@@ -131,7 +131,7 @@ struct WAVLTreeNodeState<PtrType, Options, DefaultWAVLTreeRankType>
   void double_demote_rank() {}
 };
 
-template <typename PtrType, typename TagType, NodeOptions Options>
+template <typename PtrType, NodeOptions Options, typename TagType>
 struct WAVLTreeContainable;
 
 template <typename PtrType>
@@ -152,13 +152,13 @@ struct DefaultWAVLTreeTraits {
   }
 };
 
-template <typename PtrType, typename TagType_ = DefaultObjectTag,
-          NodeOptions Options = kDefaultWAVLTreeNodeOptions>
+template <typename PtrType, NodeOptions Options = NodeOptions::None,
+          typename TagType_ = DefaultObjectTag>
 struct WAVLTreeContainable {
  public:
   using TagType = TagType_;
   bool InContainer() const {
-    using Node = WAVLTreeContainable<PtrType, TagType, Options>;
+    using Node = WAVLTreeContainable<PtrType, Options, TagType>;
     return Node::wavl_node_state_.InContainer();
   }
 
@@ -1934,6 +1934,9 @@ template <typename KeyType, typename PtrType, typename TagType,
           typename NodeTraits = DefaultWAVLTreeTraits<PtrType>,
           typename Observer = tests::intrusive_containers::DefaultWAVLTreeObserver>
 using TaggedWAVLTree = WAVLTree<KeyType, PtrType, KeyTraits, NodeTraits, TagType, Observer>;
+
+template <typename PtrType, typename TagType, NodeOptions Options = NodeOptions::None>
+using TaggedWAVLTreeContainable = WAVLTreeContainable<PtrType, Options, TagType>;
 
 template <typename KeyType, typename PtrType, typename KeyTraits, typename NodeTraits,
           typename TagType, typename Obs>

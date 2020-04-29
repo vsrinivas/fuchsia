@@ -135,7 +135,6 @@ struct DefaultWAVLTreeObserver {
 }  // namespace intrusive_containers
 }  // namespace tests
 
-constexpr NodeOptions kDefaultWAVLTreeNodeOptions = NodeOptions::None;
 using DefaultWAVLTreeRankType = bool;
 
 // Prototypes for the WAVL tree node state.  By default, we just use a bool to
@@ -152,7 +151,7 @@ using DefaultWAVLTreeRankType = bool;
 //
 template <typename PtrType, NodeOptions Options, typename RankType>  // Fwd decl
 struct WAVLTreeNodeStateBase;
-template <typename PtrType, NodeOptions Options = kDefaultWAVLTreeNodeOptions,
+template <typename PtrType, NodeOptions Options = NodeOptions::None,
           typename RankType = DefaultWAVLTreeRankType>  // Partial spec
 struct WAVLTreeNodeState;
 

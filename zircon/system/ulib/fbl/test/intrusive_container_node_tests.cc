@@ -149,7 +149,7 @@ TEST(IntrusiveContainerNodeTest, EmbeddedSingleNode) {
 
 TEST(IntrusiveContainerNodeTest, DefaultSingleNode) {
   // Check to make sure that we can find a node in our object using the default mix-ins.
-  struct SLL : public fbl::SinglyLinkedListable<SLL*, fbl::DefaultObjectTag, NodeOptTag1> {
+  struct SLL : public fbl::SinglyLinkedListable<SLL*, NodeOptTag1> {
     uint32_t a, b, c;
   } test_sll_obj;
 
@@ -159,7 +159,7 @@ TEST(IntrusiveContainerNodeTest, DefaultSingleNode) {
                 "Default traits found the wrong node!");
   ASSERT_TRUE(Range::Of(FindSLLNode(test_sll_obj)).ContainedBy(Range::Of(test_sll_obj)));
 
-  struct DLL : public fbl::DoublyLinkedListable<DLL*, fbl::DefaultObjectTag, NodeOptTag2> {
+  struct DLL : public fbl::DoublyLinkedListable<DLL*, NodeOptTag2> {
     uint32_t a, b, c;
   } test_dll_obj;
 
@@ -168,7 +168,7 @@ TEST(IntrusiveContainerNodeTest, DefaultSingleNode) {
                 "Default traits found the wrong node!");
   ASSERT_TRUE(Range::Of(FindDLLNode(test_dll_obj)).ContainedBy(Range::Of(test_dll_obj)));
 
-  struct WAVL : public fbl::WAVLTreeContainable<WAVL*, fbl::DefaultObjectTag, NodeOptTag3> {
+  struct WAVL : public fbl::WAVLTreeContainable<WAVL*, NodeOptTag3> {
     uint32_t a, b, c;
   } test_wavl_obj;
 
@@ -182,9 +182,9 @@ TEST(IntrusiveContainerNodeTest, MultipleSLLTaggedNodes) {
   // Check to make sure that we can locate each of our different node types in structures which use
   // the ContainableBaseClasses helper.
   struct SLL
-      : public fbl::ContainableBaseClasses<fbl::SinglyLinkedListable<SLL*, TagType1, NodeOptTag1>,
-                                           fbl::SinglyLinkedListable<SLL*, TagType2, NodeOptTag2>,
-                                           fbl::SinglyLinkedListable<SLL*, TagType3, NodeOptTag3>> {
+      : public fbl::ContainableBaseClasses<fbl::SinglyLinkedListable<SLL*, NodeOptTag1, TagType1>,
+                                           fbl::SinglyLinkedListable<SLL*, NodeOptTag2, TagType2>,
+                                           fbl::SinglyLinkedListable<SLL*, NodeOptTag3, TagType3>> {
     uint32_t a, b, c;
   } test_sll_obj;
 
@@ -213,9 +213,9 @@ TEST(IntrusiveContainerNodeTest, MultipleDLLTaggedNodes) {
   // Check to make sure that we can locate each of our different node types in structures which use
   // the ContainableBaseClasses helper.
   struct DLL
-      : public fbl::ContainableBaseClasses<fbl::DoublyLinkedListable<DLL*, TagType1, NodeOptTag1>,
-                                           fbl::DoublyLinkedListable<DLL*, TagType2, NodeOptTag2>,
-                                           fbl::DoublyLinkedListable<DLL*, TagType3, NodeOptTag3>> {
+      : public fbl::ContainableBaseClasses<fbl::DoublyLinkedListable<DLL*, NodeOptTag1, TagType1>,
+                                           fbl::DoublyLinkedListable<DLL*, NodeOptTag2, TagType2>,
+                                           fbl::DoublyLinkedListable<DLL*, NodeOptTag3, TagType3>> {
     uint32_t a, b, c;
   } test_dll_obj;
 
@@ -244,9 +244,9 @@ TEST(IntrusiveContainerNodeTest, MultipleWAVLTaggedNodes) {
   // Check to make sure that we can locate each of our different node types in structures which use
   // the ContainableBaseClasses helper.
   struct WAVL
-      : public fbl::ContainableBaseClasses<fbl::WAVLTreeContainable<WAVL*, TagType1, NodeOptTag1>,
-                                           fbl::WAVLTreeContainable<WAVL*, TagType2, NodeOptTag2>,
-                                           fbl::WAVLTreeContainable<WAVL*, TagType3, NodeOptTag3>> {
+      : public fbl::ContainableBaseClasses<fbl::WAVLTreeContainable<WAVL*, NodeOptTag1, TagType1>,
+                                           fbl::WAVLTreeContainable<WAVL*, NodeOptTag2, TagType2>,
+                                           fbl::WAVLTreeContainable<WAVL*, NodeOptTag3, TagType3>> {
     uint32_t a, b, c;
   } test_wavl_obj;
 
@@ -276,9 +276,9 @@ TEST(IntrusiveContainerNodeTest, MultipleDifferentTaggedNodes) {
   // Check to make sure that we can locate each of our different node types in structures which use
   // the ContainableBaseClasses helper.
   struct Obj
-      : public fbl::ContainableBaseClasses<fbl::SinglyLinkedListable<Obj*, TagType1, NodeOptTag1>,
-                                           fbl::DoublyLinkedListable<Obj*, TagType2, NodeOptTag2>,
-                                           fbl::WAVLTreeContainable<Obj*, TagType3, NodeOptTag3>> {
+      : public fbl::ContainableBaseClasses<fbl::SinglyLinkedListable<Obj*, NodeOptTag1, TagType1>,
+                                           fbl::DoublyLinkedListable<Obj*, NodeOptTag2, TagType2>,
+                                           fbl::WAVLTreeContainable<Obj*, NodeOptTag3, TagType3>> {
     uint32_t a, b, c;
   } test_obj;
 
@@ -318,9 +318,9 @@ TEST(IntrusiveContainerNodeTest, MultipleDifferentTaggedNodes) {
 TEST(IntrusiveContainerNodeTest, MultipleDifferentDefaultNodes) {
   // Nodes are still permitted to have multiple default Containable mix-ins, as
   // long as the mix-ins are for different types of containers.
-  struct Obj : public fbl::SinglyLinkedListable<Obj*, fbl::DefaultObjectTag, NodeOptTag1>,
-               public fbl::DoublyLinkedListable<Obj*, fbl::DefaultObjectTag, NodeOptTag2>,
-               public fbl::WAVLTreeContainable<Obj*, fbl::DefaultObjectTag, NodeOptTag3> {
+  struct Obj : public fbl::SinglyLinkedListable<Obj*, NodeOptTag1>,
+               public fbl::DoublyLinkedListable<Obj*, NodeOptTag2>,
+               public fbl::WAVLTreeContainable<Obj*, NodeOptTag3> {
     uint32_t a, b, c;
   } test_obj;
 
@@ -351,15 +351,15 @@ TEST(IntrusiveContainerNodeTest, ComplicatedContainables) {
   // all three of the default base mix-ins, as well as multiple instances of
   // each of the tagged node types in a ContainedBaseClasses expression.
   struct Obj
-      : public fbl::SinglyLinkedListable<Obj*, fbl::DefaultObjectTag, NodeOptTag1>,
-        public fbl::DoublyLinkedListable<Obj*, fbl::DefaultObjectTag, NodeOptTag2>,
-        public fbl::WAVLTreeContainable<Obj*, fbl::DefaultObjectTag, NodeOptTag3>,
-        public fbl::ContainableBaseClasses<fbl::SinglyLinkedListable<Obj*, TagType4, NodeOptTag4>,
-                                           fbl::DoublyLinkedListable<Obj*, TagType5, NodeOptTag5>,
-                                           fbl::WAVLTreeContainable<Obj*, TagType6, NodeOptTag6>,
-                                           fbl::SinglyLinkedListable<Obj*, TagType7, NodeOptTag7>,
-                                           fbl::DoublyLinkedListable<Obj*, TagType8, NodeOptTag8>,
-                                           fbl::WAVLTreeContainable<Obj*, TagType9, NodeOptTag9>> {
+      : public fbl::SinglyLinkedListable<Obj*, NodeOptTag1>,
+        public fbl::DoublyLinkedListable<Obj*, NodeOptTag2>,
+        public fbl::WAVLTreeContainable<Obj*, NodeOptTag3>,
+        public fbl::ContainableBaseClasses<fbl::SinglyLinkedListable<Obj*, NodeOptTag4, TagType4>,
+                                           fbl::DoublyLinkedListable<Obj*, NodeOptTag5, TagType5>,
+                                           fbl::WAVLTreeContainable<Obj*, NodeOptTag6, TagType6>,
+                                           fbl::SinglyLinkedListable<Obj*, NodeOptTag7, TagType7>,
+                                           fbl::DoublyLinkedListable<Obj*, NodeOptTag8, TagType8>,
+                                           fbl::WAVLTreeContainable<Obj*, NodeOptTag9, TagType9>> {
     uint32_t a, b, c;
   } test_obj;
 
@@ -418,15 +418,15 @@ TEST(IntrusiveContainerNodeTest, ContainerNodeTypeMatches) {
   // NodeType as defined by the mix-ins.  Start with the same complicated struct
   // we used for "ComplexContainables".
   struct Obj
-      : public fbl::SinglyLinkedListable<Obj*, fbl::DefaultObjectTag, NodeOptTag1>,
-        public fbl::DoublyLinkedListable<Obj*, fbl::DefaultObjectTag, NodeOptTag2>,
-        public fbl::WAVLTreeContainable<Obj*, fbl::DefaultObjectTag, NodeOptTag3>,
-        public fbl::ContainableBaseClasses<fbl::SinglyLinkedListable<Obj*, TagType4, NodeOptTag4>,
-                                           fbl::DoublyLinkedListable<Obj*, TagType5, NodeOptTag5>,
-                                           fbl::WAVLTreeContainable<Obj*, TagType6, NodeOptTag6>,
-                                           fbl::SinglyLinkedListable<Obj*, TagType7, NodeOptTag7>,
-                                           fbl::DoublyLinkedListable<Obj*, TagType8, NodeOptTag8>,
-                                           fbl::WAVLTreeContainable<Obj*, TagType9, NodeOptTag9>> {
+      : public fbl::SinglyLinkedListable<Obj*, NodeOptTag1>,
+        public fbl::DoublyLinkedListable<Obj*, NodeOptTag2>,
+        public fbl::WAVLTreeContainable<Obj*, NodeOptTag3>,
+        public fbl::ContainableBaseClasses<fbl::SinglyLinkedListable<Obj*, NodeOptTag4, TagType4>,
+                                           fbl::DoublyLinkedListable<Obj*, NodeOptTag5, TagType5>,
+                                           fbl::WAVLTreeContainable<Obj*, NodeOptTag6, TagType6>,
+                                           fbl::SinglyLinkedListable<Obj*, NodeOptTag7, TagType7>,
+                                           fbl::DoublyLinkedListable<Obj*, NodeOptTag8, TagType8>,
+                                           fbl::WAVLTreeContainable<Obj*, NodeOptTag9, TagType9>> {
     uint32_t GetKey() const { return a; }
     uint32_t a, b, c;
   } test_obj;
@@ -483,19 +483,19 @@ TEST(IntrusiveContainerNodeTest, SingleNodeInContainer) {
   // the templates expand properly when asked to do so with custom NodeOptions.
   // The actual functionality of InConainer is tested with the
   // container-specific tests.
-  struct SLL : public fbl::SinglyLinkedListable<SLL*, fbl::DefaultObjectTag, NodeOptTag1> {
+  struct SLL : public fbl::SinglyLinkedListable<SLL*, NodeOptTag1> {
     uint32_t a, b, c;
   } test_sll_obj;
   ASSERT_FALSE(test_sll_obj.InContainer());
   ASSERT_FALSE(fbl::InContainer(test_sll_obj));  // Check the standalone version too
 
-  struct DLL : public fbl::DoublyLinkedListable<DLL*, fbl::DefaultObjectTag, NodeOptTag2> {
+  struct DLL : public fbl::DoublyLinkedListable<DLL*, NodeOptTag2> {
     uint32_t a, b, c;
   } test_dll_obj;
   ASSERT_FALSE(test_dll_obj.InContainer());
   ASSERT_FALSE(fbl::InContainer(test_dll_obj));  // Check the standalone version too
 
-  struct WAVL : public fbl::WAVLTreeContainable<WAVL*, fbl::DefaultObjectTag, NodeOptTag3> {
+  struct WAVL : public fbl::WAVLTreeContainable<WAVL*, NodeOptTag3> {
     uint32_t a, b, c;
   } test_wavl_obj;
   ASSERT_FALSE(test_wavl_obj.InContainer());
@@ -506,12 +506,12 @@ TEST(IntrusiveContainerNodeTest, MultiNodeInContainer) {
   // Check to be sure that the standalone version of InContainer works with
   // tagged types, both with and without custom node options.
   struct Obj
-      : public fbl::ContainableBaseClasses<fbl::SinglyLinkedListable<Obj*, TagType1>,
-                                           fbl::DoublyLinkedListable<Obj*, TagType2>,
-                                           fbl::WAVLTreeContainable<Obj*, TagType3>,
-                                           fbl::SinglyLinkedListable<Obj*, TagType4, NodeOptTag4>,
-                                           fbl::DoublyLinkedListable<Obj*, TagType5, NodeOptTag5>,
-                                           fbl::WAVLTreeContainable<Obj*, TagType6, NodeOptTag6>> {
+      : public fbl::ContainableBaseClasses<fbl::TaggedSinglyLinkedListable<Obj*, TagType1>,
+                                           fbl::TaggedDoublyLinkedListable<Obj*, TagType2>,
+                                           fbl::TaggedWAVLTreeContainable<Obj*, TagType3>,
+                                           fbl::SinglyLinkedListable<Obj*, NodeOptTag4, TagType4>,
+                                           fbl::DoublyLinkedListable<Obj*, NodeOptTag5, TagType5>,
+                                           fbl::WAVLTreeContainable<Obj*, NodeOptTag6, TagType6>> {
     uint32_t a, b, c;
   } test_obj;
 
@@ -529,22 +529,19 @@ TEST(IntrusiveContainerNodeTest, MultiNodeInContainer) {
 namespace {
 
 template <fbl::NodeOptions Options>
-struct TestSLLObj
-    : public fbl::SinglyLinkedListable<TestSLLObj<Options>*, fbl::DefaultObjectTag, Options> {};
+struct TestSLLObj : public fbl::SinglyLinkedListable<TestSLLObj<Options>*, Options> {};
 
 template <fbl::NodeOptions Options>
 using TestSLLContainer = fbl::SinglyLinkedList<TestSLLObj<Options>*>;
 
 template <fbl::NodeOptions Options>
-struct TestDLLObj
-    : public fbl::DoublyLinkedListable<TestDLLObj<Options>*, fbl::DefaultObjectTag, Options> {};
+struct TestDLLObj : public fbl::DoublyLinkedListable<TestDLLObj<Options>*, Options> {};
 
 template <fbl::NodeOptions Options>
 using TestDLLContainer = fbl::DoublyLinkedList<TestDLLObj<Options>*>;
 
 template <fbl::NodeOptions Options>
-struct TestWAVLObj
-    : public fbl::WAVLTreeContainable<TestWAVLObj<Options>*, fbl::DefaultObjectTag, Options> {
+struct TestWAVLObj : public fbl::WAVLTreeContainable<TestWAVLObj<Options>*, Options> {
   TestWAVLObj() = default;
 
   // Make sure that our keys are always unique even though we are using the

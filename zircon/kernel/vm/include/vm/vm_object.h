@@ -71,8 +71,8 @@ struct GlobalListTag {};
 // into an address space via VmAddressRegion::CreateVmMapping
 class VmObject : public fbl::RefCountedUpgradeable<VmObject>,
                  public fbl::ContainableBaseClasses<
-                     fbl::DoublyLinkedListable<VmObject*, internal::ChildListTag>,
-                     fbl::DoublyLinkedListable<VmObject*, internal::GlobalListTag>> {
+                     fbl::TaggedDoublyLinkedListable<VmObject*, internal::ChildListTag>,
+                     fbl::TaggedDoublyLinkedListable<VmObject*, internal::GlobalListTag>> {
  public:
   // public API
   virtual zx_status_t Resize(uint64_t size) { return ZX_ERR_NOT_SUPPORTED; }

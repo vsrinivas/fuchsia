@@ -39,9 +39,9 @@ class SizedSLLTraits {
     struct Tag3 {};
 
     using TaggedContainableBaseClasses =
-        fbl::ContainableBaseClasses<SinglyLinkedListable<PtrType, Tag1>,
-                                    SinglyLinkedListable<PtrType, Tag2>,
-                                    SinglyLinkedListable<PtrType, Tag3>>;
+        fbl::ContainableBaseClasses<TaggedSinglyLinkedListable<PtrType, Tag1>,
+                                    TaggedSinglyLinkedListable<PtrType, Tag2>,
+                                    TaggedSinglyLinkedListable<PtrType, Tag3>>;
 
     using TaggedType1 = SizedTaggedSinglyLinkedList<PtrType, Tag1>;
     using TaggedType2 = SizedTaggedSinglyLinkedList<PtrType, Tag2>;

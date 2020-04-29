@@ -175,10 +175,10 @@ struct ContainableBaseClassEnumerator<> {
   using TagTypes = std::tuple<>;
 };
 
-template <template <typename, typename, NodeOptions> class Containable, typename PtrType,
-          typename TagType, NodeOptions Options, typename... Rest>
-struct ContainableBaseClassEnumerator<Containable<PtrType, TagType, Options>, Rest...>
-    : public Containable<PtrType, TagType, Options>,
+template <template <typename, NodeOptions, typename> class Containable, typename PtrType,
+          NodeOptions Options, typename TagType, typename... Rest>
+struct ContainableBaseClassEnumerator<Containable<PtrType, Options, TagType>, Rest...>
+    : public Containable<PtrType, Options, TagType>,
       public ContainableBaseClassEnumerator<Rest...> {
   static_assert(internal::ContainerPtrTraits<PtrType>::CanCopy || sizeof...(Rest) == 0,
                 "You can't have a unique_ptr in multiple containers at once.");
@@ -189,7 +189,7 @@ struct ContainableBaseClassEnumerator<Containable<PtrType, TagType, Options>, Re
                 "All tag types used with fbl::ContainableBaseClassEnumerator must be unique.");
 
   using ContainableTypes = decltype(std::tuple_cat(
-      std::declval<std::tuple<Containable<PtrType, TagType, Options>>>(),
+      std::declval<std::tuple<Containable<PtrType, Options, TagType>>>(),
       std::declval<typename ContainableBaseClassEnumerator<Rest...>::ContainableTypes>()));
   using TagTypes = decltype(
       std::tuple_cat(std::declval<std::tuple<TagType>>(),

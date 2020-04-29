@@ -84,9 +84,9 @@ class HTDLLTraits {
     struct Tag3 {};
 
     using TaggedContainableBaseClasses =
-        fbl::ContainableBaseClasses<DoublyLinkedListable<PtrType, Tag1>,
-                                    DoublyLinkedListable<PtrType, Tag2>,
-                                    DoublyLinkedListable<PtrType, Tag3>>;
+        fbl::ContainableBaseClasses<TaggedDoublyLinkedListable<PtrType, Tag1>,
+                                    TaggedDoublyLinkedListable<PtrType, Tag2>,
+                                    TaggedDoublyLinkedListable<PtrType, Tag3>>;
 
     using TaggedType1 = HashTable<size_t, PtrType, TaggedDoublyLinkedList<PtrType, Tag1>>;
     using TaggedType2 = HashTable<size_t, PtrType, TaggedDoublyLinkedList<PtrType, Tag2>>;
