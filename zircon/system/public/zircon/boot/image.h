@@ -451,6 +451,11 @@ typedef struct {
 } zbi_topology_cluster_t;
 
 typedef struct {
+    // Unique id of this cache node. No other semantics are assumed.
+    uint32_t cache_id;
+} zbi_topology_cache_t;
+
+typedef struct {
   // Starting and ending memory addresses of this numa region.
   uint64_t start_address;
   uint64_t end_address;
@@ -475,6 +480,7 @@ typedef struct {
         zbi_topology_processor_t processor;
         zbi_topology_cluster_t cluster;
         zbi_topology_numa_region_t numa_region;
+        zbi_topology_cache_t cache;
     } entity;
 } zbi_topology_node_t;
 

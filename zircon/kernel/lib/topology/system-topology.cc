@@ -5,6 +5,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <lib/system-topology.h>
+#include <zircon/boot/image.h>
 #include <zircon/errors.h>
 
 #include <ktl/move.h>
@@ -87,6 +88,9 @@ zx_status_t Graph::Initialize(Graph* graph, const zbi_topology_node_t* flat_node
         break;
       case ZBI_TOPOLOGY_ENTITY_NUMA_REGION:
         node->entity.numa_region = flat_node->entity.numa_region;
+        break;
+      case ZBI_TOPOLOGY_ENTITY_CACHE:
+        node->entity.cache = flat_node->entity.cache;
         break;
       default:
         // Other types don't have attached info.

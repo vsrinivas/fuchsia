@@ -32,6 +32,7 @@ struct Node {
     zbi_topology_processor_t processor;
     zbi_topology_cluster_t cluster;
     zbi_topology_numa_region_t numa_region;
+    zbi_topology_cache_t cache;
   } entity;
   Node* parent;
   fbl::Vector<Node*> children;

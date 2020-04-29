@@ -6,6 +6,7 @@
 
 #include "arch/x86/system_topology.h"
 
+#include <debug.h>
 #include <lib/system-topology.h>
 #include <pow2.h>
 #include <stdio.h>
@@ -13,6 +14,8 @@
 
 #include <algorithm>
 
+#include <fbl/alloc_checker.h>
+#include <kernel/topology.h>
 #include <ktl/unique_ptr.h>
 #include <lk/init.h>
 
@@ -24,10 +27,11 @@ using cpu_id::Topology;
 
 // TODO(edcoyne): move to fbl::Vector::resize().
 template <typename T>
-zx_status_t GrowVector(size_t new_size, fbl::Vector<T>* vector, fbl::AllocChecker* checker) {
+zx_status_t GrowVector(size_t new_size, fbl::Vector<T>* vector) {
   for (size_t i = vector->size(); i < new_size; i++) {
-    vector->push_back(T(), checker);
-    if (!checker->check()) {
+    fbl::AllocChecker checker;
+    vector->push_back(T(), &checker);
+    if (!checker.check()) {
       return ZX_ERR_NO_MEMORY;
     }
   }
@@ -68,17 +72,19 @@ class SharedCache {
   SharedCache() {
     node_.entity_type = ZBI_TOPOLOGY_ENTITY_CACHE;
     node_.parent_index = ZBI_TOPOLOGY_NO_PARENT;
+    node_.entity.cache.cache_id = 0;
   }
 
-  zx_status_t GetCore(int index, Core** core, fbl::AllocChecker* checker) {
-    auto status = GrowVector(index + 1, &cores_, checker);
+  zx_status_t GetCore(int index, Core** core) {
+    auto status = GrowVector(index + 1, &cores_);
     if (status != ZX_OK) {
       return status;
     }
 
     if (!cores_[index]) {
-      cores_[index].reset(new (checker) Core());
-      if (!checker->check()) {
+      fbl::AllocChecker checker;
+      cores_[index].reset(new (&checker) Core());
+      if (!checker.check()) {
         return ZX_ERR_NO_MEMORY;
       }
     }
@@ -87,6 +93,8 @@ class SharedCache {
 
     return ZX_OK;
   }
+
+  void SetCacheId(uint32_t cache_id) { node_.entity.cache.cache_id = cache_id; }
 
   void SetFlatParent(uint16_t parent_index) { node_.parent_index = parent_index; }
 
@@ -106,15 +114,16 @@ class Die {
     node_.parent_index = ZBI_TOPOLOGY_NO_PARENT;
   }
 
-  zx_status_t GetCache(int index, SharedCache** cache, fbl::AllocChecker* checker) {
-    auto status = GrowVector(index + 1, &caches_, checker);
+  zx_status_t GetCache(int index, SharedCache** cache) {
+    auto status = GrowVector(index + 1, &caches_);
     if (status != ZX_OK) {
       return status;
     }
 
     if (!caches_[index]) {
-      caches_[index].reset(new (checker) SharedCache());
-      if (!checker->check()) {
+      fbl::AllocChecker checker;
+      caches_[index].reset(new (&checker) SharedCache());
+      if (!checker.check()) {
         return ZX_ERR_NO_MEMORY;
       }
     }
@@ -124,15 +133,16 @@ class Die {
     return ZX_OK;
   }
 
-  zx_status_t GetCore(int index, Core** core, fbl::AllocChecker* checker) {
-    auto status = GrowVector(index + 1, &cores_, checker);
+  zx_status_t GetCore(int index, Core** core) {
+    auto status = GrowVector(index + 1, &cores_);
     if (status != ZX_OK) {
       return status;
     }
 
     if (!cores_[index]) {
-      cores_[index].reset(new (checker) Core());
-      if (!checker->check()) {
+      fbl::AllocChecker checker;
+      cores_[index].reset(new (&checker) Core());
+      if (!checker.check()) {
         return ZX_ERR_NO_MEMORY;
       }
     }
@@ -172,12 +182,12 @@ class ApicDecoder {
     const auto topology = cpuid.ReadTopology();
     const auto cache = topology.highest_level_cache();
     cache_shift = cache.shift_width;
-    LTRACEF("Top cache level: %u shift: %u size: %#lx\n", cache.level, cache.shift_width,
+    dprintf(INFO, "Top cache level: %u shift: %u size: %#lx\n", cache.level, cache.shift_width,
             cache.size_bytes);
 
     const auto levels_opt = topology.levels();
     if (!levels_opt) {
-      printf("ERROR: Unable to determine topology from cpuid. Falling back to flat!\n");
+      dprintf(INFO, "ERROR: Unable to determine topology from cpuid. Falling back to flat!\n");
     }
 
     // If cpuid failed to provide levels fallback to one that just treats
@@ -272,7 +282,10 @@ zx_status_t GenerateTree(const cpu_id::CpuId& cpuid, const AcpiTables& acpi_tabl
     const uint32_t smt_id = decoder.smt_id(apic_id);
 
     if (die_id >= dies->size()) {
-      GrowVector(die_id + 1, dies, &checker);
+      status = GrowVector(die_id + 1, dies);
+      if (status != ZX_OK) {
+        return status;
+      }
     }
     auto& die = (*dies)[die_id];
     if (!die) {
@@ -284,15 +297,18 @@ zx_status_t GenerateTree(const cpu_id::CpuId& cpuid, const AcpiTables& acpi_tabl
 
     SharedCache* cache = nullptr;
     if (decoder.has_cache_info()) {
-      status = die->GetCache(decoder.cache_id(apic_id), &cache, &checker);
+      status = die->GetCache(decoder.cache_id(apic_id), &cache);
       if (status != ZX_OK) {
         return status;
       }
     }
+    if (cache) {
+      cache->SetCacheId(decoder.cache_id(apic_id));
+    }
 
     Core* core = nullptr;
-    status = (cache != nullptr) ? cache->GetCore(decoder.core_id(apic_id), &core, &checker)
-                                : die->GetCore(decoder.core_id(apic_id), &core, &checker);
+    status = (cache != nullptr) ? cache->GetCore(decoder.core_id(apic_id), &core)
+                                : die->GetCore(decoder.core_id(apic_id), &core);
     if (status != ZX_OK) {
       return status;
     }
@@ -301,8 +317,8 @@ zx_status_t GenerateTree(const cpu_id::CpuId& cpuid, const AcpiTables& acpi_tabl
     core->SetPrimary(is_primary);
     core->AddThread(logical_id, apic_id);
 
-    LTRACEF("apic: %#4x logical: %3u die: %u cache: %u core: %u thread: %u \n", apic_id, logical_id,
-            die_id, decoder.cache_id(apic_id), decoder.core_id(apic_id), smt_id);
+    dprintf(INFO, "apic: %#4x logical: %3u die: %u cache: %u core: %u thread: %u \n", apic_id,
+            logical_id, die_id, decoder.cache_id(apic_id), decoder.core_id(apic_id), smt_id);
   }
 
   return ZX_OK;
@@ -436,21 +452,12 @@ zx_status_t GenerateAndInitSystemTopology() {
   const auto status =
       x86::GenerateFlatTopology(cpu_id::CpuId(), AcpiTables(&table_provider), &topology);
   if (status != ZX_OK) {
-    printf("ERROR: failed to generate flat topology from cpuid and acpi data! : %d\n", status);
+    dprintf(CRITICAL, "ERROR: failed to generate flat topology from cpuid and acpi data! : %d\n",
+            status);
     return status;
   }
 
   return system_topology::Graph::InitializeSystemTopology(topology.data(), topology.size());
-}
-
-void SystemTopologyInit(uint32_t) {
-  auto status = GenerateAndInitSystemTopology();
-  if (status != ZX_OK) {
-    printf("ERROR: Auto topology generation failed, falling back to only boot core! status: %d\n",
-           status);
-    status = system_topology::Graph::InitializeSystemTopology(&kFallbackTopology, 1);
-    ZX_ASSERT(status == ZX_OK);
-  }
 }
 
 }  // namespace
@@ -475,7 +482,7 @@ zx_status_t GenerateFlatTopology(const cpu_id::CpuId& cpuid, const AcpiTables& a
   if (status == ZX_ERR_NOT_FOUND) {
     // This is not a critical error. Systems, such as qemu, may not have the
     // tables present to enumerate NUMA information.
-    LTRACEF("Unable to attach NUMA information, missing ACPI tables.\n");
+    dprintf(INFO, "System topology: Unable to attach NUMA information, missing ACPI tables.\n");
   } else if (status != ZX_OK) {
     return status;
   }
@@ -485,4 +492,13 @@ zx_status_t GenerateFlatTopology(const cpu_id::CpuId& cpuid, const AcpiTables& a
 
 }  // namespace x86
 
-LK_INIT_HOOK(system_topology_init, SystemTopologyInit, LK_INIT_LEVEL_VM + 2)
+void topology_init() {
+  auto status = GenerateAndInitSystemTopology();
+  if (status != ZX_OK) {
+    dprintf(CRITICAL,
+            "ERROR: Auto topology generation failed, falling back to only boot core! status: %d\n",
+            status);
+    status = system_topology::Graph::InitializeSystemTopology(&kFallbackTopology, 1);
+    ZX_ASSERT(status == ZX_OK);
+  }
+}

@@ -705,3 +705,7 @@ static void arm_resource_dispatcher_init_hook(unsigned int rl) {
 }
 
 LK_INIT_HOOK(arm_resource_init, arm_resource_dispatcher_init_hook, LK_INIT_LEVEL_HEAP)
+
+void topology_init() {
+  // This platform initializes the topology earlier than this standard hook.
+}

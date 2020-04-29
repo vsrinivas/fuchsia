@@ -68,4 +68,4 @@ void percpu::InitializeSecondary(uint32_t /*init_level*/) {
 
 // Allocate secondary percpu instances before booting other processors, after
 // vm and system topology are initialized.
-LK_INIT_HOOK(percpu_heap_init, percpu::InitializeSecondary, LK_INIT_LEVEL_VM + 3)
+LK_INIT_HOOK(percpu_heap_init, percpu::InitializeSecondary, LK_INIT_LEVEL_KERNEL)

@@ -25,6 +25,7 @@
 #include <kernel/mutex.h>
 #include <kernel/percpu.h>
 #include <kernel/thread.h>
+#include <kernel/topology.h>
 #include <lk/init.h>
 #include <vm/init.h>
 #include <vm/vm.h>
@@ -84,8 +85,13 @@ void lk_main() {
   dprintf(SPEW, "initializing vm\n");
   vm_init();
 
+  // initialize the system topology
+  lk_primary_cpu_init_level(LK_INIT_LEVEL_VM, LK_INIT_LEVEL_TOPOLOGY - 1);
+  dprintf(SPEW, "initializing system topology\n");
+  topology_init();
+
   // initialize the kernel
-  lk_primary_cpu_init_level(LK_INIT_LEVEL_VM, LK_INIT_LEVEL_KERNEL - 1);
+  lk_primary_cpu_init_level(LK_INIT_LEVEL_TOPOLOGY, LK_INIT_LEVEL_KERNEL - 1);
   dprintf(SPEW, "initializing kernel\n");
   kernel_init();
 
