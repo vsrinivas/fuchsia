@@ -14,6 +14,9 @@ Outline:
 
 ## Bootloader {#bootloader}
 
+Note: this section only applies to arm64. How the machine gets to a running
+kernel varies by architecture.
+
 When the machine first powers on, the hardware reads the
 [bootloader][bootloader] out of firmware and starts running it on the system.
 The job of the bootloader is to initialize the hardware to a suitable state for
