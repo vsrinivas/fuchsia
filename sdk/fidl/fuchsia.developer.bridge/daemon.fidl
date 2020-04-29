@@ -5,9 +5,14 @@
 library fuchsia.developer.bridge;
 using fuchsia.developer.remotecontrol as rc;
 
+enum DaemonError {
+    TARGET_CACHE_ERROR = 1;
+    TARGET_STATE_ERROR = 2;
+    RCS_CONNECTION_ERROR = 3;
+};
+
 [Discoverable]
 protocol Daemon {
-    compose rc.RemoteControl;
     /// Returns the input.
     EchoString(string:256 value) -> (string:256 response);
 
@@ -17,4 +22,7 @@ protocol Daemon {
 
     /// Make the daemon exit.
     Quit() -> (bool success);
+
+    GetRemoteControl(request<rc.RemoteControl> remote) -> () error
+        DaemonError;
 };

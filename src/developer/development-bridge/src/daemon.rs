@@ -15,12 +15,13 @@ use {
     async_std::task,
     async_trait::async_trait,
     fidl::endpoints::{ClientEnd, RequestStream, ServiceMarker},
-    fidl_fuchsia_developer_bridge::{DaemonMarker, DaemonRequest, DaemonRequestStream},
-    fidl_fuchsia_developer_remotecontrol::{ComponentControlError, RemoteControlMarker},
+    fidl_fuchsia_developer_bridge::{
+        DaemonError, DaemonMarker, DaemonRequest, DaemonRequestStream,
+    },
+    fidl_fuchsia_developer_remotecontrol::RemoteControlMarker,
     fidl_fuchsia_overnet::{
         ServiceConsumerProxyInterface, ServiceProviderRequest, ServiceProviderRequestStream,
     },
-    fidl_fuchsia_test_manager as ftest_manager,
     futures::channel::mpsc,
     futures::lock::Mutex,
     futures::prelude::*,
@@ -227,6 +228,7 @@ impl Daemon {
     }
 
     pub async fn handle_request(&self, req: DaemonRequest, quiet: bool) -> Result<(), Error> {
+        log::debug!("daemon received request: {:?}", req);
         match req {
             DaemonRequest::EchoString { value, responder } => {
                 if !quiet {
@@ -236,61 +238,6 @@ impl Daemon {
                 if !quiet {
                     log::info!("echo response sent successfully");
                 }
-            }
-            DaemonRequest::StartComponent {
-                component_url,
-                args,
-                component_stdout: stdout,
-                component_stderr: stderr,
-                controller,
-                responder,
-            } => {
-                if !quiet {
-                    log::info!(
-                        "Received run component request for string {:?}:{:?}",
-                        component_url,
-                        args
-                    );
-                }
-
-                let target = match self.target_from_cache().await {
-                    Ok(t) => t,
-                    Err(e) => {
-                        log::warn!("{}", e);
-                        responder
-                            .send(&mut Err(ComponentControlError::ComponentControlFailure))
-                            .context("sending error response")?;
-                        return Ok(());
-                    }
-                };
-                let target_state =
-                    match target.wait_for_state_with_rcs(MAX_RETRY_COUNT, RETRY_DELAY).await {
-                        Ok(state) => state,
-                        Err(e) => {
-                            log::warn!("{}", e);
-                            responder
-                                .send(&mut Err(ComponentControlError::ComponentControlFailure))
-                                .context("sending error response")?;
-                            return Ok(());
-                        }
-                    };
-                responder
-                    .send(
-                        &mut target_state
-                            .rcs
-                            .as_ref()
-                            .unwrap()
-                            .proxy
-                            .start_component(
-                                &component_url,
-                                &mut args.iter().map(|s| s.as_str()),
-                                stdout,
-                                stderr,
-                                controller,
-                            )
-                            .await?,
-                    )
-                    .context("error sending response")?;
             }
             DaemonRequest::ListTargets { value, responder } => {
                 if !quiet {
@@ -313,6 +260,36 @@ impl Daemon {
                     ),
                 };
                 responder.send(response.as_ref()).context("error sending response")?;
+            }
+            DaemonRequest::GetRemoteControl { remote, responder } => {
+                let target = match self.target_from_cache().await {
+                    Ok(t) => t,
+                    Err(e) => {
+                        log::warn!("{}", e);
+                        responder
+                            .send(&mut Err(DaemonError::TargetCacheError))
+                            .context("sending error response")?;
+                        return Ok(());
+                    }
+                };
+                let mut target_state =
+                    match target.wait_for_state_with_rcs(MAX_RETRY_COUNT, RETRY_DELAY).await {
+                        Ok(state) => state,
+                        Err(e) => {
+                            log::warn!("{}", e);
+                            responder
+                                .send(&mut Err(DaemonError::TargetStateError))
+                                .context("sending error response")?;
+                            return Ok(());
+                        }
+                    };
+                let mut response = target_state
+                    .rcs
+                    .as_mut()
+                    .unwrap()
+                    .copy_to_channel(remote.into_channel())
+                    .map_err(|_| DaemonError::RcsConnectionError);
+                responder.send(&mut response).context("error sending response")?;
             }
             DaemonRequest::Quit { responder } => {
                 if !quiet {
@@ -340,41 +317,6 @@ impl Daemon {
                 }
 
                 std::process::exit(0);
-            }
-            DaemonRequest::LaunchSuite { test_url, suite, controller, responder } => {
-                if !quiet {
-                    log::info!("Received launch suite request for '{:?}'", test_url);
-                }
-                let target = match self.target_from_cache().await {
-                    Ok(t) => t,
-                    Err(e) => {
-                        log::warn!("{}", e);
-                        responder
-                            .send(&mut Err(ftest_manager::LaunchError::InternalError))
-                            .context("sending error response")?;
-                        return Ok(());
-                    }
-                };
-                let target_state = target.state.lock().await;
-                match &target_state.rcs {
-                    Some(rcs) => match rcs.proxy.launch_suite(&test_url, suite, controller).await {
-                        Ok(mut r) => {
-                            responder.send(&mut r).context("sending LaunchSuite response")?
-                        }
-                        Err(_) => responder
-                            .send(&mut Err(ftest_manager::LaunchError::InternalError))
-                            .context("sending LaunchSuite error")?,
-                    },
-                    None => {
-                        log::warn!("no RCS state available from target '{}'", target.nodename);
-                        responder
-                            .send(&mut Err(ftest_manager::LaunchError::InternalError))
-                            .context("sending LaunchSuite error")?;
-                    }
-                }
-            }
-            _ => {
-                log::info!("Unsupported method");
             }
         }
         Ok(())
@@ -450,7 +392,7 @@ mod test {
     use fidl::endpoints::create_proxy;
     use fidl_fuchsia_developer_bridge::DaemonMarker;
     use fidl_fuchsia_developer_remotecontrol::{
-        ComponentControllerMarker, RemoteControlMarker, RemoteControlProxy, RemoteControlRequest,
+        RemoteControlMarker, RemoteControlProxy, RemoteControlRequest,
     };
     use fidl_fuchsia_overnet_protocol::NodeId;
     use std::collections::HashSet;
@@ -554,49 +496,14 @@ mod test {
     }
 
     #[test]
-    fn test_start_component() -> Result<(), Error> {
-        let url = "fuchsia-pkg://fuchsia.com/test#meta/test.cmx";
-        let args = vec!["test1".to_string(), "test2".to_string()];
+    fn test_getting_rcs_multiple_targets() -> Result<(), Error> {
         let (daemon_proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<DaemonMarker>().unwrap();
-        let (_, server_end) = create_proxy::<ComponentControllerMarker>()?;
-        let (sout, _) =
-            fidl::Socket::create(fidl::SocketOpts::STREAM).context("failed to create socket")?;
-        let (serr, _) =
-            fidl::Socket::create(fidl::SocketOpts::STREAM).context("failed to create socket")?;
-        hoist::run(async move {
-            let _ctrl = spawn_daemon_server_with_fake_target(stream).await;
-            // There isn't a lot we can test here right now since this method has an empty response.
-            // We just check for an Ok(()) and leave it to a real integration test to test behavior.
-            daemon_proxy
-                .start_component(url, &mut args.iter().map(|s| s.as_str()), sout, serr, server_end)
-                .await
-                .unwrap()
-                .unwrap();
-        });
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_start_component_multiple_targets() -> Result<(), Error> {
-        let url = "fuchsia-pkg://fuchsia.com/test#meta/test.cmx";
-        let args = vec!["test1".to_string(), "test2".to_string()];
-        let (daemon_proxy, stream) =
-            fidl::endpoints::create_proxy_and_stream::<DaemonMarker>().unwrap();
-        let (_, server_end) = create_proxy::<ComponentControllerMarker>()?;
-        let (sout, _) =
-            fidl::Socket::create(fidl::SocketOpts::STREAM).context("failed to create socket")?;
-        let (serr, _) =
-            fidl::Socket::create(fidl::SocketOpts::STREAM).context("failed to create socket")?;
+        let (_, remote_server_end) = create_proxy::<RemoteControlMarker>()?;
         hoist::run(async move {
             let mut ctrl = spawn_daemon_server_with_fake_target(stream).await;
             ctrl.send_target(Target::new("bazmumble", Utc::now())).await;
-            match daemon_proxy
-                .start_component(url, &mut args.iter().map(|s| s.as_str()), sout, serr, server_end)
-                .await
-                .unwrap()
-            {
+            match daemon_proxy.get_remote_control(remote_server_end).await.unwrap() {
                 Ok(_) => panic!("failure expected for multiple targets"),
                 _ => (),
             }

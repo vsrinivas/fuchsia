@@ -11,6 +11,7 @@ use {
     anyhow::{anyhow, format_err, Context, Error},
     fidl::endpoints::{create_proxy, ServiceMarker},
     fidl_fuchsia_developer_bridge::{DaemonMarker, DaemonProxy},
+    fidl_fuchsia_developer_remotecontrol::RemoteControlMarker,
     fidl_fuchsia_developer_remotecontrol::{ComponentControllerEvent, ComponentControllerMarker},
     fidl_fuchsia_overnet::ServiceConsumerProxyInterface,
     fidl_fuchsia_overnet_protocol::NodeId,
@@ -201,11 +202,23 @@ where
             })?;
         }
 
-        match self
+        let (remote_proxy, remote_server_end) = create_proxy::<RemoteControlMarker>()?;
+
+        let _result = self
             .daemon_proxy
-            .start_component(&url, &mut args.iter().map(|s| s.as_str()), sout, serr, server_end)
-            .await?
-        {
+            .get_remote_control(remote_server_end)
+            .await
+            .context("launch_test call failed")
+            .map_err(|e| format_err!("error getting remote: {:?}", e))?;
+
+        let f = remote_proxy.start_component(
+            &url,
+            &mut args.iter().map(|s| s.as_str()),
+            sout,
+            serr,
+            server_end,
+        );
+        match f.await? {
             Ok(_) => {}
             Err(_) => {
                 return Err(anyhow!(
@@ -224,13 +237,20 @@ where
 
         log::info!("launching test suite {}", suite_url);
 
-        self.daemon_proxy
+        let (remote_proxy, remote_server_end) = create_proxy::<RemoteControlMarker>()?;
+
+        let _result = self
+            .daemon_proxy
+            .get_remote_control(remote_server_end)
+            .await
+            .context("launch_test call failed")
+            .map_err(|e| format_err!("error getting remote: {:?}", e))?;
+
+        let _result = remote_proxy
             .launch_suite(&suite_url, suite_server_end, controller_server_end)
             .await
             .context("launch_test call failed")?
             .map_err(|e| format_err!("error launching test: {:?}", e))?;
-
-        log::info!("launched suite, getting tests");
 
         let (case_iterator, test_server_end) = create_proxy::<CaseIteratorMarker>()?;
         suite_proxy
@@ -302,7 +322,16 @@ where
         log::info!("launching test suite {}", suite_url);
         writeln!(self.writer, "*** Launching {} ***", suite_url)?;
 
-        self.daemon_proxy
+        let (remote_proxy, remote_server_end) = create_proxy::<RemoteControlMarker>()?;
+
+        let _result = self
+            .daemon_proxy
+            .get_remote_control(remote_server_end)
+            .await
+            .context("launch_test call failed")
+            .map_err(|e| format_err!("error getting remote: {:?}", e))?;
+
+        let _result = remote_proxy
             .launch_suite(&suite_url, suite_server_end, controller_server_end)
             .await
             .context("launch_test call failed")?
@@ -475,11 +504,42 @@ fn main() {
 mod test {
     use super::*;
     use fidl_fuchsia_developer_bridge::{DaemonMarker, DaemonProxy, DaemonRequest};
+    use fidl_fuchsia_developer_remotecontrol::{RemoteControlRequest, RemoteControlRequestStream};
     use fidl_fuchsia_test::{
         Case, CaseIteratorRequest, CaseIteratorRequestStream, CaseListenerMarker, Result_, Status,
         SuiteRequest, SuiteRequestStream,
     };
     use std::io::BufWriter;
+
+    fn spawn_fake_remote_server(mut stream: RemoteControlRequestStream, num_tests: usize) {
+        hoist::spawn(async move {
+            while let Ok(req) = stream.try_next().await {
+                match req {
+                    Some(RemoteControlRequest::StartComponent {
+                        component_url: _,
+                        args: _,
+                        component_stdout: _,
+                        component_stderr: _,
+                        controller: _,
+                        responder,
+                    }) => {
+                        let _ = responder.send(&mut Ok(()));
+                    }
+                    Some(RemoteControlRequest::LaunchSuite {
+                        test_url: _,
+                        suite,
+                        controller: _,
+                        responder,
+                    }) => {
+                        let suite_request_stream = suite.into_stream().unwrap();
+                        spawn_fake_suite_server(suite_request_stream, num_tests);
+                        let _ = responder.send(&mut Ok(()));
+                    }
+                    _ => assert!(false),
+                }
+            }
+        });
+    }
 
     fn spawn_fake_iterator_server(values: Vec<String>, mut stream: CaseIteratorRequestStream) {
         let mut iter = values.into_iter().map(|name| Case { name: Some(name) });
@@ -549,24 +609,9 @@ mod test {
                     Some(DaemonRequest::EchoString { value, responder }) => {
                         let _ = responder.send(value.as_ref());
                     }
-                    Some(DaemonRequest::StartComponent {
-                        component_url: _,
-                        args: _,
-                        component_stdout: _,
-                        component_stderr: _,
-                        controller: _,
-                        responder,
-                    }) => {
-                        let _ = responder.send(&mut Ok(()));
-                    }
-                    Some(DaemonRequest::LaunchSuite {
-                        test_url: _,
-                        suite,
-                        controller: _,
-                        responder,
-                    }) => {
-                        let suite_request_stream = suite.into_stream().unwrap();
-                        spawn_fake_suite_server(suite_request_stream, num_tests);
+                    Some(DaemonRequest::GetRemoteControl { remote, responder }) => {
+                        let get_remote_request_stream = remote.into_stream().unwrap();
+                        spawn_fake_remote_server(get_remote_request_stream, num_tests);
                         let _ = responder.send(&mut Ok(()));
                     }
                     _ => assert!(false),

@@ -34,7 +34,7 @@ async fn exec_server() -> Result<(), Error> {
     let fidl_fut = fs.collect::<()>();
 
     let sc = service.clone();
-    let onet_fut = stream.for_each(move |svc| {
+    let onet_fut = stream.for_each_concurrent(None, move |svc| {
         let ServiceProviderRequest::ConnectToService {
             chan,
             info: _,

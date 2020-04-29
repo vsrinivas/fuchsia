@@ -56,13 +56,22 @@ impl Display for RCSConnectionError {
 impl RCSConnection {
     pub async fn new(id: &mut NodeId) -> Result<Self, Error> {
         let (s, p) = fidl::Channel::create().context("failed to create zx channel")?;
-        let svc = hoist::connect_as_service_consumer()?;
-        svc.connect_to_service(id, RemoteControlMarker::NAME, s)?;
+        let _result = RCSConnection::connect_to_service(id, s)?;
         let proxy = RemoteControlProxy::new(
             fidl::AsyncChannel::from_channel(p).context("failed to make async channel")?,
         );
 
         Ok(Self { proxy, overnet_id: id.clone() })
+    }
+
+    pub fn copy_to_channel(&mut self, channel: fidl::Channel) -> Result<(), Error> {
+        RCSConnection::connect_to_service(&mut self.overnet_id, channel)
+    }
+
+    fn connect_to_service(overnet_id: &mut NodeId, channel: fidl::Channel) -> Result<(), Error> {
+        let svc = hoist::connect_as_service_consumer()?;
+        svc.connect_to_service(overnet_id, RemoteControlMarker::NAME, channel)
+            .map_err(|e| anyhow!("Error connecting to RCS: {}", e))
     }
 
     // For testing.
