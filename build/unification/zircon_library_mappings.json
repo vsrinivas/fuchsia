@@ -5,6 +5,11 @@
     "sdk": false
   },
   {
+    "label": "//zircon/system/ulib/fdio-caller:fdio-caller",
+    "name": "fdio-caller",
+    "sdk": false
+  },
+  {
     "label": "//zircon/system/ulib/fidl-utils:fidl-utils",
     "name": "fidl-utils",
     "sdk": false

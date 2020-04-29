@@ -24,13 +24,13 @@ zx_library("blktest") {
     "//zircon/public/lib/block-client",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
-    "//zircon/public/lib/fdio-caller",
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/pretty",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/unittest",
     "//zircon/public/lib/zx",
     "//zircon/system/fidl/fuchsia-hardware-block:c",
+    "//zircon/system/ulib/fdio-caller",
   ]
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
 }

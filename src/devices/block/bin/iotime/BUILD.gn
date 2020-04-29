@@ -10,11 +10,11 @@ executable("iotime") {
   deps = [
     "//zircon/public/lib/block-client",
     "//zircon/public/lib/fdio",
-    "//zircon/public/lib/fdio-caller",
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
     "//zircon/system/fidl/fuchsia-hardware-block:c",
+    "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/ramdevice-client",
   ]
 }

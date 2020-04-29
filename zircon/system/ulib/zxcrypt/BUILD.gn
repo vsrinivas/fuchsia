@@ -66,7 +66,7 @@ zx_library("zxcrypt-fdio") {
   ]
   public_deps = [
     # <zxcrypt/fdio-volume.h> has #include <lib/fdio/cpp/caller.h>
-    "//zircon/public/lib/fdio-caller",
+    "//zircon/system/ulib/fdio-caller",
 
     # <zxcrypt/volume.h> has #include <crypto/aead.h> (among others).
     "//zircon/system/ulib/zircon-crypto",
@@ -77,7 +77,6 @@ zx_library("zxcrypt-fdio") {
     "//zircon/public/lib/boringssl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
-    "//zircon/public/lib/fdio-caller",
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
@@ -85,6 +84,7 @@ zx_library("zxcrypt-fdio") {
     "//zircon/system/fidl/fuchsia-device:llcpp",
     "//zircon/system/fidl/fuchsia-hardware-block:c",
     "//zircon/system/fidl/fuchsia-hardware-block-volume:c",
+    "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/kms-stateless",
     "//zircon/system/ulib/ramdevice-client:ramdevice-client-static",
   ]

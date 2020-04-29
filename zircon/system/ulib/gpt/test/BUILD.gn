@@ -40,13 +40,13 @@ test("gpt-unit") {
     "//zircon/public/lib/cksum",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
-    "//zircon/public/lib/fdio-caller",
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/gpt",
     "//zircon/public/lib/mbr",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/fidl/fuchsia-hardware-block:c",
+    "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/ramdevice-client",
   ]
 }

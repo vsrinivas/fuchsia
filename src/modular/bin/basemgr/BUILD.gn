@@ -91,7 +91,7 @@ source_set("wait_for_minfs") {
 
   deps = [
     "//src/lib/syslog/cpp",
-    "//zircon/public/lib/fdio-caller",
+    "//zircon/system/ulib/fdio-caller",
   ]
 }
 
