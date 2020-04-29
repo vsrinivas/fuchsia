@@ -101,8 +101,8 @@ pub async fn load_vmo<'a>(
 }
 
 /// parses a config string from the `fuchsia.ldsvc.Loader` service. See
-/// `//docs/zircon/program_loading.md` for a description of the format. Returns the set of
-/// directories which should be searched for objects.
+/// `//docs/concepts/booting/program_loading.md` for a description of the format. Returns the set
+/// of directories which should be searched for objects.
 fn parse_config_string(
     dir_proxy: &DirectoryProxy,
     config: &str,
@@ -153,6 +153,8 @@ mod tests {
             pkg_lib = io_util::open_directory(&pkg_lib, &Path::new("asan-ubsan"), rights)?;
         } else if entries.iter().any(|f| &f as &str == "asan") {
             pkg_lib = io_util::open_directory(&pkg_lib, &Path::new("asan"), rights)?;
+        } else if entries.iter().any(|f| &f as &str == "profile") {
+            pkg_lib = io_util::open_directory(&pkg_lib, &Path::new("profile"), rights)?;
         }
 
         let (loader_proxy, loader_service) = fidl::endpoints::create_proxy::<LoaderMarker>()?;
