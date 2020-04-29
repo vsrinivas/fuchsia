@@ -1,0 +1,34 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+import("//build/package.gni")
+import("//build/rust/rustc_binary.gni")
+
+group("hello-world-e2e") {
+  deps = [ ":pkg" ]
+}
+
+rustc_binary("bin") {
+  name = "hello-world-e2e"
+  edition = "2018"
+
+  deps = []
+}
+
+package("pkg") {
+  deps = [ ":bin" ]
+  package_name = "hello-world-e2e"
+
+  binaries = [
+    {
+      name = "hello_world_e2e"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/hello-world-e2e.cml")
+      dest = "hello-world-e2e.cm"
+    },
+  ]
+}

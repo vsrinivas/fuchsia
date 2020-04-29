@@ -60,6 +60,7 @@ kernel_cmdline_args += [
 cache_package_labels += [
   "//src/tests/end_to_end/bundles:end_to_end_deps",
   "//src/tests/end_to_end/bundles:workstation_end_to_end_deps",
+  "//src/developer/development-bridge/testing/ffx-e2e:ffx-e2e-deps",
 ]
 
 cache_package_labels -=
@@ -75,4 +76,6 @@ universe_package_labels += [
   # "//src/tests/end_to_end/can_browse_web:test",
   "//src/tests/end_to_end/inspect_metrics:test",
   "//src/tests/end_to_end/copy_files:test",
+
+  "//src/developer/development-bridge/testing/ffx-e2e:test",
 ]
