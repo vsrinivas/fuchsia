@@ -53,6 +53,9 @@ const (
 	// This is eventually consumed by crash reporting infrastructure.
 	buildIDsTxt = "build-ids.txt"
 
+	// The blobs manifest.
+	blobManifestName = "blobs.json"
+
 	// Constants for upload retries.
 	uploadRetryBackoff = 1 * time.Second
 	maxUploadAttempts  = 4
@@ -86,7 +89,10 @@ Uploads artifacts from a build to $GCS_BUCKET with the following structure:
 │   │   │   ├── $UUID
 │   │   │   │   ├── build-ids.txt
 │   │   │   │   ├── jiri.snapshot
+│   │   │   │   ├── images
+│   │   │   │   │   └── <images>
 │   │   │   │   ├── packages
+│   │   │   │   │   ├── blobs.json
 │   │   │   │   │   ├── repository
 │   │   │   │   │   │   ├── targets
 │   │   │   │   │   │   │   └── <package repo target files>
@@ -97,7 +103,7 @@ Uploads artifacts from a build to $GCS_BUCKET with the following structure:
 │   │   │   │   │   └── <build API module JSON>
 │   │   │   │   ├── tools
 │   │   │   │   │   └── <OS>-<CPU>
-|	│   │   │   │   │   └── <tool names>
+│   │   │   │   │       └── <tool names>
 
 flags:
 
@@ -173,7 +179,12 @@ func (cmd upCommand) execute(ctx context.Context, buildDir string) error {
 		},
 	}
 
-	var files []artifactory.Upload
+	files := []artifactory.Upload{
+		{
+			Source:      path.Join(buildDir, blobManifestName),
+			Destination: path.Join(buildsUUIDDir, packageDirName, blobManifestName),
+		},
+	}
 
 	images := artifactory.ImageUploads(m, path.Join(buildsUUIDDir, imageDirName))
 	files = append(files, images...)
