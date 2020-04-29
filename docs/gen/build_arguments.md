@@ -619,7 +619,7 @@ This defaults to JIT, use `fx set <ARCH> --args
 
 **Current value (from the default):** `"dart_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/a37840891d98bc151052104a2cc37d7f58c81577/runtime/dart/dart_component.gni#19)
+From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/18f48bad5f9dbc364020d21cf0e7863bc26ff8c9/runtime/dart/dart_component.gni#19)
 
 ### dart_enable_wasm
 Whether dart:wasm should be enabled.
@@ -634,7 +634,7 @@ we use to build products.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/a37840891d98bc151052104a2cc37d7f58c81577/runtime/dart/config.gni#10)
+From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/18f48bad5f9dbc364020d21cf0e7863bc26ff8c9/runtime/dart/config.gni#10)
 
 ### dart_lib_export_symbols
 Whether libdart should export the symbols of the Dart API.
@@ -684,7 +684,7 @@ Whether experimental space dart mode is enabled for Dart applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:35](https://fuchsia.googlesource.com/topaz/+/a37840891d98bc151052104a2cc37d7f58c81577/runtime/dart/dart_component.gni#35)
+From [//topaz/runtime/dart/dart_component.gni:35](https://fuchsia.googlesource.com/topaz/+/18f48bad5f9dbc364020d21cf0e7863bc26ff8c9/runtime/dart/dart_component.gni#35)
 
 ### dart_target_arch
 Explicitly set the target architecture to use a simulator.
@@ -911,6 +911,13 @@ product).
 
 From //third_party/dart/runtime/runtime_args.gni:88
 
+### exclude_testonly_syscalls
+If true, excludes syscalls with the [testonly] attribute.
+
+**Current value (from the default):** `false`
+
+From //zircon/vdso/vdso.gni:7
+
 ### expat_build_root
 
 **Current value (from the default):** `"//third_party/expat"`
@@ -1004,7 +1011,7 @@ From //build/images/args.gni:68
 
 **Current value (from the default):** `"flutter_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/a37840891d98bc151052104a2cc37d7f58c81577/runtime/dart/dart_component.gni#12)
+From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/18f48bad5f9dbc364020d21cf0e7863bc26ff8c9/runtime/dart/dart_component.gni#12)
 
 ### flutter_driver_enabled
 Enables/Disables flutter driver using '--args=flutter_driver_enabled=[true/false]'
@@ -1019,14 +1026,14 @@ From //build/testing/flutter_driver.gni:9
 
 **Current value (from the default):** `true`
 
-From [//topaz/runtime/dart/dart_component.gni:26](https://fuchsia.googlesource.com/topaz/+/a37840891d98bc151052104a2cc37d7f58c81577/runtime/dart/dart_component.gni#26)
+From [//topaz/runtime/dart/dart_component.gni:26](https://fuchsia.googlesource.com/topaz/+/18f48bad5f9dbc364020d21cf0e7863bc26ff8c9/runtime/dart/dart_component.gni#26)
 
 ### flutter_space_dart
 Whether experimental space dart mode is enabled for Flutter applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/a37840891d98bc151052104a2cc37d7f58c81577/runtime/dart/dart_component.gni#32)
+From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/18f48bad5f9dbc364020d21cf0e7863bc26ff8c9/runtime/dart/dart_component.gni#32)
 
 ### font_catalog_paths
 
