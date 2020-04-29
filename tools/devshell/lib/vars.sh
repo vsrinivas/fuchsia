@@ -13,7 +13,7 @@ fi
 # not, and is present to allow negatively affected users to turn the
 # feature off. This flag will be removed once the migration is
 # complete. Tracking Bug: fxb/49230
-export FX_ENABLE_IPV4="${FX_ENABLE_IPV4:-true}"
+export FX_ENABLE_IPV4="${FX_ENABLE_IPV4:-false}"
 
 export FUCHSIA_DIR="$(dirname $(dirname $(dirname "${devshell_lib_dir}")))"
 export FUCHSIA_OUT_DIR="${FUCHSIA_OUT_DIR:-${FUCHSIA_DIR}/out}"
