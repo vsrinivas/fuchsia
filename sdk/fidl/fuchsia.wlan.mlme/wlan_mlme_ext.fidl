@@ -138,3 +138,8 @@ struct NegotiatedCapabilities {
     HtCapabilities? ht_cap;
     VhtCapabilities? vht_cap;
 };
+
+struct PmkInfo {
+    bytes pmk;
+    bytes pmkid;
+};

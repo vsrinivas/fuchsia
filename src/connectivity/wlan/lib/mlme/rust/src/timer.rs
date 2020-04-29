@@ -50,6 +50,7 @@ impl<E> Timer<E> {
     }
 
     pub fn schedule_event(&mut self, deadline: zx::Time, event: E) -> EventId {
+        println!("Scheduling event...");
         let event_id = (self.scheduler.schedule)(self.scheduler.cookie, deadline.into_nanos());
         self.events.insert(event_id, event);
         event_id
@@ -71,6 +72,18 @@ impl<E> Timer<E> {
     #[cfg(test)]
     pub fn scheduled_event_count(&self) -> usize {
         self.events.len()
+    }
+}
+
+impl<E: PartialEq> Timer<E> {
+    #[cfg(test)]
+    pub fn scheduled_events(&self, event_type: E) -> Vec<EventId> {
+        self.events
+            .iter()
+            .filter(|(_, event)| *event == &event_type)
+            .map(|(id, _)| id)
+            .cloned()
+            .collect()
     }
 }
 

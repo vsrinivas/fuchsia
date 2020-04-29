@@ -251,4 +251,4 @@ extern "C" uint32_t mlme_sequence_manager_next_sns1(mlme_sequence_manager_t *mgr
 extern "C" uint32_t mlme_sequence_manager_next_sns2(mlme_sequence_manager_t *mgr,
                                                     const uint8_t (*sta_addr)[6], uint16_t tid);
 
-#endif /* SRC_CONNECTIVITY_WLAN_LIB_MLME_RUST_C_BINDING_BINDINGS_H_ */
+#endif  // SRC_CONNECTIVITY_WLAN_LIB_MLME_RUST_C_BINDING_BINDINGS_H_

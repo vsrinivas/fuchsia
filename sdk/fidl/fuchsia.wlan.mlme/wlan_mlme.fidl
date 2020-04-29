@@ -744,6 +744,8 @@ protocol MLME {
 
     -> OnChannelSwitched(ChannelSwitchInfo info);
 
+    -> OnPmkAvailable(PmkInfo info);
+
     // For SoftMAC drivers only. Let SME inform MLME about the capability negotiation outcome.
     // TODO(43063): If we are able to intersect the capabilities with beacon before associating,
     // remove this function and the capabilities from AssociateConfirm and use AssociateRequest.

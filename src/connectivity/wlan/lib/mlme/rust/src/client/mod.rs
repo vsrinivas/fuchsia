@@ -12,7 +12,7 @@ mod stats;
 
 use {
     crate::{
-        auth,
+        akm_algorithm,
         block_ack::{BlockAckTx, ADDBA_REQ_FRAME_LEN, ADDBA_RESP_FRAME_LEN},
         buffer::{BufferProvider, OutBuf},
         device::{Device, TxFlags},
@@ -20,7 +20,7 @@ use {
         logger,
         timer::*,
     },
-    anyhow::format_err,
+    anyhow::{self, format_err},
     banjo_ddk_protocol_wlan_info as banjo_wlan_info, banjo_ddk_protocol_wlan_mac as banjo_wlan_mac,
     channel_listener::{ChannelListenerSource, ChannelListenerState},
     channel_scheduler::ChannelScheduler,
@@ -38,6 +38,7 @@ use {
         mac::{self, Aid, Bssid, MacAddr, PowerState},
         mgmt_writer,
         sequence::SequenceManager,
+        time::TimeUnit,
         wmm,
     },
     wlan_frame_writer::{write_frame, write_frame_with_dynamic_buf, write_frame_with_fixed_buf},
@@ -316,7 +317,7 @@ impl ClientMlme {
                             &mut self.chan_sched,
                             &mut self.channel_state,
                         )
-                        .handle_timed_event(other_event);
+                        .handle_timed_event(other_event, event_id);
                 }
             }
         }
@@ -446,6 +447,33 @@ pub struct BoundClient<'a> {
     channel_state: &'a mut ChannelListenerState,
 }
 
+impl<'a> akm_algorithm::AkmAction for BoundClient<'a> {
+    type EventId = EventId;
+
+    fn send_auth_frame(
+        &mut self,
+        auth_type: mac::AuthAlgorithmNumber,
+        seq_num: u16,
+        result_code: mac::StatusCode,
+        auth_content: &[u8],
+    ) -> Result<(), anyhow::Error> {
+        self.send_auth_frame(auth_type, seq_num, result_code, auth_content).map_err(|e| e.into())
+    }
+
+    fn publish_pmk(&mut self, pmk: fidl_mlme::PmkInfo) {
+        self.send_pmk_info(pmk);
+    }
+
+    fn schedule_auth_timeout(&mut self, duration: TimeUnit) -> EventId {
+        let deadline = self.ctx.timer.now() + duration.into();
+        self.ctx.timer.schedule_event(deadline, TimedEvent::Authenticating)
+    }
+
+    fn cancel_auth_timeout(&mut self, id: EventId) {
+        self.ctx.timer.cancel_event(id)
+    }
+}
+
 impl<'a> BoundClient<'a> {
     /// Delivers a single MSDU to the STA's underlying device. The MSDU is delivered as an
     /// Ethernet II frame.
@@ -470,8 +498,13 @@ impl<'a> BoundClient<'a> {
             .map_err(|s| Error::Status(format!("could not deliver Ethernet II frame"), s))
     }
 
-    /// Sends an authentication frame using Open System authentication.
-    pub fn send_open_auth_frame(&mut self) -> Result<(), Error> {
+    pub fn send_auth_frame(
+        &mut self,
+        auth_type: mac::AuthAlgorithmNumber,
+        seq_num: u16,
+        result_code: mac::StatusCode,
+        auth_content: &[u8],
+    ) -> Result<(), Error> {
         let (buf, bytes_written) = write_frame!(&mut self.ctx.buf_provider, {
             headers: {
                 mac::MgmtHdr: &mgmt_writer::mgmt_hdr_to_ap(
@@ -483,12 +516,22 @@ impl<'a> BoundClient<'a> {
                     mac::SequenceControl(0)
                         .with_seq_num(self.ctx.seq_mgr.next_sns1(&self.sta.bssid.0) as u16)
                 ),
-                mac::AuthHdr: &auth::make_open_client_req(),
-            }
+                mac::AuthHdr: &mac::AuthHdr {
+                    auth_alg_num: auth_type,
+                    auth_txn_seq_num: seq_num,
+                    status_code: result_code,
+                },
+            },
+            body: auth_content,
         })?;
         let out_buf = OutBuf::from(buf, bytes_written);
         self.send_mgmt_or_ctrl_frame(out_buf)
             .map_err(|s| Error::Status(format!("error sending open auth frame"), s))
+    }
+
+    /// Sends an authentication frame using Open System authentication.
+    pub fn send_open_auth_frame(&mut self) -> Result<(), Error> {
+        self.send_auth_frame(mac::AuthAlgorithmNumber::OPEN, 1, mac::StatusCode::SUCCESS, &[])
     }
 
     /// Sends an association request frame based on device capability.
@@ -720,8 +763,8 @@ impl<'a> BoundClient<'a> {
     }
 
     /// Called when a previously scheduled `TimedEvent` fired.
-    pub fn handle_timed_event(&mut self, event: TimedEvent) {
-        self.sta.state = Some(self.sta.state.take().unwrap().on_timed_event(self, event))
+    pub fn handle_timed_event(&mut self, event: TimedEvent, event_id: EventId) {
+        self.sta.state = Some(self.sta.state.take().unwrap().on_timed_event(self, event, event_id))
     }
 
     /// Called when an arbitrary frame was received over the air.
@@ -751,11 +794,15 @@ impl<'a> BoundClient<'a> {
 
     /// Sends an MLME-AUTHENTICATE.confirm message to the SME with authentication type
     /// `Open System` as only open authentication is supported.
-    fn send_authenticate_conf(&mut self, result_code: fidl_mlme::AuthenticateResultCodes) {
+    fn send_authenticate_conf(
+        &mut self,
+        auth_type: fidl_mlme::AuthenticationTypes,
+        result_code: fidl_mlme::AuthenticateResultCodes,
+    ) {
         let result = self.ctx.device.access_sme_sender(|sender| {
             sender.send_authenticate_conf(&mut fidl_mlme::AuthenticateConfirm {
                 peer_sta_address: self.sta.bssid.0,
-                auth_type: fidl_mlme::AuthenticationTypes::OpenSystem,
+                auth_type,
                 result_code,
                 auth_content: None,
             })
@@ -864,6 +911,15 @@ impl<'a> BoundClient<'a> {
         });
         if let Err(e) = result {
             error!("error sending MLME-DEAUTHENTICATE.indication: {}", e);
+        }
+    }
+
+    /// Sends a PmkInfo to SME to indicate that some handshake has produced a PMK.
+    fn send_pmk_info(&mut self, mut pmk_info: fidl_mlme::PmkInfo) {
+        let result =
+            self.ctx.device.access_sme_sender(|sender| sender.send_on_pmk_available(&mut pmk_info));
+        if let Err(e) = result {
+            error!("error sending OnPmkInfo: {}", e);
         }
     }
 
