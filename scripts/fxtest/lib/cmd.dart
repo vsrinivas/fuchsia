@@ -49,8 +49,9 @@ class FuchsiaTestCommand {
   /// Translator between [TestEvent] instances and output for the user.
   final OutputFormatter outputFormatter;
 
-  /// Wrapper around tests and [Process] instances.
-  final TestRunner testRunner;
+  /// Function that yields disposable wrappers around tests and [Process]
+  /// instances.
+  final TestRunner Function(TestsConfig) testRunnerBuilder;
 
   int _numberOfTests;
 
@@ -59,14 +60,19 @@ class FuchsiaTestCommand {
     @required this.fuchsiaLocator,
     @required this.outputFormatter,
     @required this.testsConfig,
-    TestRunner testRunner,
-  })  : _numberOfTests = 0,
-        testRunner = testRunner ?? SymbolizingTestRunner(fx: fuchsiaLocator.fx);
+    @required this.testRunnerBuilder,
+  }) : _numberOfTests = 0 {
+    if (outputFormatter == null) {
+      throw AssertionError('`outputFormatter` must not be null');
+    }
+    stream.listen(outputFormatter.update);
+  }
 
   factory FuchsiaTestCommand.fromConfig(
     TestsConfig testsConfig, {
+    @required TestRunner Function(TestsConfig) testRunnerBuilder,
     FuchsiaLocator fuchsiaLocator,
-    TestRunner testRunner,
+    OutputFormatter outputFormatter,
   }) {
     fuchsiaLocator = fuchsiaLocator ?? FuchsiaLocator.shared;
     return FuchsiaTestCommand(
@@ -76,8 +82,9 @@ class FuchsiaTestCommand {
               fuchsiaLocator: fuchsiaLocator,
             ),
       fuchsiaLocator: fuchsiaLocator,
-      outputFormatter: OutputFormatter.fromConfig(testsConfig),
-      testRunner: testRunner,
+      outputFormatter:
+          outputFormatter ?? OutputFormatter.fromConfig(testsConfig),
+      testRunnerBuilder: testRunnerBuilder,
       testsConfig: testsConfig,
     );
   }
@@ -95,7 +102,6 @@ class FuchsiaTestCommand {
   }
 
   Future<void> runTestSuite(TestsManifestReader manifestReader) async {
-    stream.listen(outputFormatter.update);
     var parsedManifest = await readManifest(manifestReader);
 
     manifestReader.reportOnTestBundles(
@@ -108,13 +114,9 @@ class FuchsiaTestCommand {
       // Let the output formatter know that we're done parsing and
       // emitting preliminary events
       emitEvent(BeginningTests());
-      await runTests(parsedManifest.testBundles).forEach((event) {
-        emitEvent(event);
-        if (event is TestResult && !event.isSuccess) {
-          exitCode = 2;
-        }
-      });
+      await runTests(parsedManifest.testBundles);
     } on FailFastException catch (_) {
+      // Non-zero exit code indicates generic but fatal failure
       exitCode = 2;
     }
     emitEvent(AllTestsCompleted());
@@ -139,21 +141,25 @@ class FuchsiaTestCommand {
 
   TestBundle testBundleBuilder(TestDefinition testDefinition) =>
       TestBundle.build(
-        realtimeOutputSink: getRealtimeOutputSink(),
-        testRunner: testRunner,
+        fxSuffix: fuchsiaLocator.fx,
+        realtimeOutputSink: (String val) => emitEvent(TestOutputEvent(val)),
+        timeElapsedSink: (Duration duration, String cmd, String output) =>
+            emitEvent(TimeElapsedEvent(duration, cmd, output)),
+        testRunnerBuilder: testRunnerBuilder,
         testDefinition: testDefinition,
         testsConfig: testsConfig,
         workingDirectory: fuchsiaLocator.buildDir,
       );
 
-  Function(String) getRealtimeOutputSink() => testsConfig.flags.allOutput
-      ? (String val) => emitEvent(TestInfo(val, requiresPadding: false))
-      : null;
-
-  Stream<TestEvent> runTests(List<TestBundle> testBundles) async* {
+  Future<void> runTests(List<TestBundle> testBundles) async {
     var count = 0;
     for (TestBundle testBundle in testBundles) {
-      yield* testBundle.run();
+      await testBundle.run().forEach((TestEvent event) {
+        emitEvent(event);
+        if (event is TestResult && !event.isSuccess) {
+          exitCode = 2;
+        }
+      });
 
       count += 1;
       _numberOfTests = count;

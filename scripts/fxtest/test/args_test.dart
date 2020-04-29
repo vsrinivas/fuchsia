@@ -1,42 +1,14 @@
-import 'dart:io';
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
 import 'package:async/async.dart';
 import 'package:test/test.dart';
 import 'package:fxtest/fxtest.dart';
-import 'package:meta/meta.dart';
 import 'package:mockito/mockito.dart';
+import 'helpers.dart';
 
 class MockEnvReader extends Mock implements EnvReader {}
-
-// Mock this because it creates processes
-class FakeTestRunner extends Fake implements TestRunner {
-  final int exitCode;
-
-  FakeTestRunner(this.exitCode);
-  FakeTestRunner.passing() : exitCode = 0;
-  FakeTestRunner.failing() : exitCode = 2;
-
-  @override
-  Future<ProcessResult> run(
-    String command,
-    List<String> args, {
-    @required String fx,
-    @required String workingDirectory,
-    Function(String) realtimeOutputSink,
-    Function(String) realtimeErrorSink,
-  }) async {
-    String _stdout = args.join(' ');
-    if (realtimeOutputSink != null) {
-      realtimeOutputSink(_stdout);
-    }
-    String _stderr = workingDirectory.toString();
-    if (realtimeErrorSink != null) {
-      realtimeErrorSink(_stderr);
-    }
-    return Future.value(
-      ProcessResult(1, exitCode, _stdout, _stderr),
-    );
-  }
-}
 
 void main() {
   group('test name arguments are parsed correctly', () {
@@ -134,7 +106,8 @@ void main() {
       );
       var cmd = FuchsiaTestCommand.fromConfig(
         testsConfig,
-        testRunner: FakeTestRunner.passing(),
+        testRunnerBuilder: (TestsConfig testsConfig) =>
+            FakeTestRunner.passing(),
       );
       ParsedManifest manifest = tr.aggregateTests(
         eventEmitter: _ignoreEvents,
@@ -163,7 +136,8 @@ void main() {
       );
       var cmd = FuchsiaTestCommand.fromConfig(
         testsConfig,
-        testRunner: FakeTestRunner.passing(),
+        testRunnerBuilder: (TestsConfig testsConfig) =>
+            FakeTestRunner.passing(),
       );
       ParsedManifest manifest = tr.aggregateTests(
         eventEmitter: _ignoreEvents,

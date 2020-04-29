@@ -1,8 +1,8 @@
-import 'dart:io';
 import 'package:fxtest/fxtest.dart';
 import 'package:meta/meta.dart';
 import 'package:mockito/mockito.dart';
 import 'package:test/test.dart';
+import 'helpers.dart';
 
 class MockEnvReader extends Mock implements EnvReader {}
 
@@ -23,16 +23,18 @@ class FuchsiaTestCommandCliFake extends FuchsiaTestCommandCli {
 }
 
 class FuchsiaTestCommandFake extends FuchsiaTestCommand {
-  FuchsiaTestCommandFake({outputFormatter, testsConfig})
-      : super(
+  FuchsiaTestCommandFake({
+    OutputFormatter outputFormatter,
+    TestsConfig testsConfig,
+  }) : super(
           analyticsReporter: AnalyticsFaker(),
           fuchsiaLocator: FuchsiaLocator.shared,
           outputFormatter: outputFormatter,
           testsConfig: testsConfig,
+          testRunnerBuilder: (testsConfig) => TestRunner(),
         );
   @override
   Future<void> runTestSuite(TestsManifestReader manifestReader) async {
-    stream.listen(outputFormatter.update);
     emitEvent(BeginningTests());
   }
 }
@@ -54,37 +56,6 @@ class AnalyticsFaker extends AnalyticsReporter {
     String label,
   }) async {
     reportHistory.add([subcommand, action, label]);
-  }
-}
-
-// Mock this because it creates processes
-class FakeTestRunner extends Fake implements TestRunner {
-  final int exitCode;
-
-  FakeTestRunner(this.exitCode);
-  FakeTestRunner.passing() : exitCode = 0;
-  FakeTestRunner.failing() : exitCode = 2;
-
-  @override
-  Future<ProcessResult> run(
-    String command,
-    List<String> args, {
-    @required String fx,
-    @required String workingDirectory,
-    Function(String) realtimeOutputSink,
-    Function(String) realtimeErrorSink,
-  }) async {
-    String _stdout = args.join(' ');
-    if (realtimeOutputSink != null) {
-      realtimeOutputSink(_stdout);
-    }
-    String _stderr = workingDirectory.toString();
-    if (realtimeErrorSink != null) {
-      realtimeErrorSink(_stderr);
-    }
-    return Future.value(
-      ProcessResult(1, exitCode, _stdout, _stderr),
-    );
   }
 }
 
@@ -192,27 +163,30 @@ void main() {
     var envReader = MockEnvReader();
     when(envReader.getEnv('FUCHSIA_DIR')).thenReturn('/root/path/fuchsia');
     var fuchsiaLocator = FuchsiaLocator(envReader: envReader);
-    var testBundles = <TestBundle>[
-      TestBundle(
-        TestDefinition(
-          buildDir: '/',
-          command: ['asdf'],
-          fx: fuchsiaLocator.fx,
-          name: 'Big Test',
-          os: 'linux',
-        ),
-        workingDirectory: '.',
-        testRunner: FakeTestRunner.passing(),
-      ),
-    ];
+    var testsConfig = TestsConfig.fromRawArgs(rawArgs: []);
     test('functions on real test runs', () async {
       var cmd = FuchsiaTestCommand(
         analyticsReporter: AnalyticsFaker(),
         fuchsiaLocator: fuchsiaLocator,
-        outputFormatter: null,
+        outputFormatter: OutputFormatter.fromConfig(
+          testsConfig,
+          buffer: OutputBuffer.locMemIO(),
+        ),
+        testRunnerBuilder: (testsConfig) => FakeTestRunner.passing(),
         testsConfig: TestsConfig.fromRawArgs(rawArgs: []),
       );
-      await cmd.runTests(testBundles).forEach((event) {});
+      var testBundles = <TestBundle>[
+        cmd.testBundleBuilder(
+          TestDefinition(
+            buildDir: '/',
+            command: ['asdf'],
+            fx: fuchsiaLocator.fx,
+            name: 'Big Test',
+            os: 'linux',
+          ),
+        ),
+      ];
+      await cmd.runTests(testBundles);
       await cmd.cleanUp();
       expect(
         // ignore: avoid_as
@@ -226,10 +200,25 @@ void main() {
       var cmd = FuchsiaTestCommand(
         analyticsReporter: AnalyticsFaker(),
         fuchsiaLocator: fuchsiaLocator,
-        outputFormatter: null,
+        outputFormatter: OutputFormatter.fromConfig(
+          testsConfig,
+          buffer: OutputBuffer.locMemIO(),
+        ),
+        testRunnerBuilder: (testsConfig) => FakeTestRunner.passing(),
         testsConfig: TestsConfig.fromRawArgs(rawArgs: ['--dry']),
       );
-      await cmd.runTests(testBundles).forEach((event) {});
+      var testBundles = <TestBundle>[
+        cmd.testBundleBuilder(
+          TestDefinition(
+            buildDir: '/',
+            command: ['asdf'],
+            fx: fuchsiaLocator.fx,
+            name: 'Big Test',
+            os: 'linux',
+          ),
+        ),
+      ];
+      await cmd.runTests(testBundles);
       await cmd.cleanUp();
       expect(
         // ignore: avoid_as

@@ -96,7 +96,12 @@ class FuchsiaTestCommandCli {
   }
 
   FuchsiaTestCommand buildCommand(TestsConfig testsConfig) =>
-      FuchsiaTestCommand.fromConfig(testsConfig);
+      FuchsiaTestCommand.fromConfig(
+        testsConfig,
+        testRunnerBuilder: (TestsConfig testsConfig) => SymbolizingTestRunner(
+          fx: testsConfig.fuchsiaLocator.fx,
+        ),
+      );
 
   Future<void> terminateEarly() async {
     _cmd?.emitEvent(AllTestsCompleted());

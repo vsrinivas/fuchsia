@@ -18,49 +18,77 @@ class Emoji {
 }
 
 abstract class OutputFormatter {
-  final bool verbose;
-  final bool shouldColorizeOutput;
+  final bool isVerbose;
+  final bool simpleOutput;
   final bool hasRealTimeOutput;
   final Duration slowTestThreshold;
   final List<TestInfo> _infoEvents;
   final List<TestStarted> _testStartedEvents;
   final List<TestResult> _testResultEvents;
   final OutputBuffer _buffer;
+  DateTime _testSuiteStartTime;
+  DateTime _lastTestStartTime;
   bool _hasStartedTests;
+  bool _currentTestIsSlow;
+  bool _lastTestHadOutput;
+  int _numPassed;
+  int _numRun;
+  int _numFailed;
 
   OutputFormatter({
-    @required this.verbose,
+    @required this.isVerbose,
     @required this.hasRealTimeOutput,
     @required this.slowTestThreshold,
-    this.shouldColorizeOutput = true,
+    this.simpleOutput = false,
     OutputBuffer buffer,
   })  : _testResultEvents = [],
         _infoEvents = [],
         _testStartedEvents = [],
-        _buffer = buffer ?? OutputBuffer(),
-        _hasStartedTests = false;
+        _numPassed = 0,
+        _numRun = 0,
+        _numFailed = 0,
+        _buffer = buffer ?? OutputBuffer.realIO(),
+        _currentTestIsSlow = false,
+        _hasStartedTests = false,
+        _lastTestHadOutput = false;
 
-  factory OutputFormatter.fromConfig(TestsConfig testsConfig) {
+  factory OutputFormatter.fromConfig(
+    TestsConfig testsConfig, {
+    OutputBuffer buffer,
+  }) {
     if (testsConfig.flags.infoOnly) {
       return InfoFormatter();
     }
-    var slowTestThreshold = testsConfig.flags.warnSlowerThan > 0
-        ? Duration(seconds: testsConfig.flags.warnSlowerThan)
+    var slowTestThreshold = testsConfig.flags.slowThreshold > 0
+        ? Duration(seconds: testsConfig.flags.slowThreshold)
         : null;
-    return testsConfig.flags.isVerbose
-        ? VerboseOutputFormatter(
-            hasRealTimeOutput: testsConfig.flags.allOutput,
-            slowTestThreshold: slowTestThreshold,
-            shouldColorizeOutput: testsConfig.flags.simpleOutput,
-          )
-        : CondensedOutputFormatter(
-            slowTestThreshold: slowTestThreshold,
-            shouldColorizeOutput: testsConfig.flags.simpleOutput,
-          );
+    return StandardOutputFormatter(
+      buffer: buffer,
+      hasRealTimeOutput: testsConfig.flags.allOutput,
+      isVerbose: testsConfig.flags.isVerbose || testsConfig.flags.allOutput,
+      simpleOutput: testsConfig.flags.simpleOutput,
+      slowTestThreshold: slowTestThreshold,
+    );
   }
 
   bool get hasStartedTests => _hasStartedTests;
-  int get numFailures => _testResultEvents.where((ev) => !ev.isSuccess).length;
+  int get numFailures => _numFailed;
+
+  String get testExecutionTime => _getExecutionTime(_lastTestStartTime);
+  String get suiteExecutionTime => _getExecutionTime(_testSuiteStartTime);
+
+  String _getExecutionTime(DateTime _startTime) {
+    Duration elapsedTime = DateTime.now().difference(_startTime);
+    String minutes = elapsedTime.inMinutes.toString().padLeft(2, '0');
+    String seconds = (elapsedTime.inSeconds % 60).toString().padLeft(2, '0');
+    return '$minutes:$seconds';
+  }
+
+  String get ratioDisplay {
+    var passed = colorize(_numPassed.toString(), [green]);
+    var run = colorize(_numRun.toString(), [numFailures == 0 ? green : red]);
+    return '[$passed/$run]';
+  }
 
   /// Future that resolves when the stdout closes for any reason
   Future get stdOutClosedFuture => _buffer.stdOutClosedFuture();
@@ -71,11 +99,11 @@ abstract class OutputFormatter {
   void forcefullyClose() => _buffer.forcefullyClose();
 
   String colorize(String content, Iterable<AnsiCode> args) {
-    return shouldColorizeOutput ? wrapWith(content, args) : content;
+    return simpleOutput ? content : wrapWith(content, args);
   }
 
   String addEmoji(Emoji emoji) {
-    return shouldColorizeOutput ? emoji.emoji : emoji.fallback;
+    return simpleOutput ? emoji.fallback : emoji.emoji;
   }
 
   /// Accepts a [TestEvent] and updates the output buffer.
@@ -91,12 +119,32 @@ abstract class OutputFormatter {
   }
 
   void _updateAfterEvent(TestEvent event) {
+    var _now = DateTime.now();
     if (event is BeginningTests) {
       _hasStartedTests = true;
+      _testSuiteStartTime = _now;
     } else if (event is TestStarted) {
+      _currentTestIsSlow = false;
+      _lastTestStartTime = _now;
+      _numRun += 1;
       _handleTestStarted(event);
     } else if (event is TestResult) {
+      (event.isSuccess) ? _numPassed += 1 : _numFailed += 1;
       _handleTestResult(event);
+    } else if (event is TestOutputEvent) {
+      // This must always come before `TestInfo`, because it is a subclass
+      _handleTestOutputEvent(event);
+    } else if (event is TimeElapsedEvent) {
+      // We do nothing with time events during realtime output -- the user is
+      // already getting constant updates
+      if (hasRealTimeOutput) return;
+      if (event.timeElapsed >= slowTestThreshold) {
+        if (!_currentTestIsSlow) {
+          _currentTestIsSlow = true;
+          _handleSlowTest(event);
+        }
+      }
+      _handleTimeElapsedEvent(event);
     } else if (event is TestInfo) {
       _handleTestInfo(event);
     } else if (event is AllTestsCompleted) {
@@ -104,87 +152,99 @@ abstract class OutputFormatter {
     }
   }
 
+  /// Handles every [TimeElapsedEvent] instance, regardless of whether the test
+  /// has yet been deemed "slow".
+  void _handleTimeElapsedEvent(TimeElapsedEvent event);
+
+  /// Handles only the first [TimeElapsedEvent] that passes the slow threshold.
+  void _handleSlowTest(TimeElapsedEvent event) {
+    var hint =
+        colorize('(adjust this value with the -s|--slow flag)', [darkGray]);
+    _buffer
+      ..addLine(
+        colorize(
+            ' >> Runtime has exceeded ${slowTestThreshold.inSeconds} '
+            'seconds $hint',
+            [magenta]),
+      )
+      ..addLines(event.output);
+  }
+
+  /// Generic info events handler.
   void _handleTestInfo(TestInfo event);
+
+  /// Handler for the stream of stdout and stderr content produced by running
+  /// tests.
+  void _handleTestOutputEvent(TestOutputEvent event) {
+    if (_currentTestIsSlow || hasRealTimeOutput) {
+      _lastTestHadOutput = true;
+      return _handleTestInfo(event);
+    }
+  }
+
+  /// Handles the event that fires as each test beings execution.
   void _handleTestStarted(TestStarted event);
+
+  /// Handles the event that fires as each test completes execution.
   void _handleTestResult(TestResult event);
+
+  /// Produces summarizing content for the user. Called once.
   void _finalizeOutput();
 
   void _reportSummary() {
+    _buffer.reduceEmptyRowsTo(0);
     if (_testResultEvents.isEmpty) {
-      _buffer.addLines(['', 'Ran zero tests']);
+      _buffer.addLines(['Ran zero tests']);
       return;
     }
     String failures = numFailures != 1 ? 'failures' : 'failure';
     String verb = _testResultEvents.last.isDryRun ? 'Faked' : 'Ran';
+    var verboseHint = !isVerbose && !cleanEndOfOutput
+        ? wrapWith(' (use the -v flag to see each test)', [darkGray])
+        : '';
     String summary =
-        '$verb ${_testResultEvents.length} tests with $numFailures $failures';
+        '$verb ${_testResultEvents.length} tests with $numFailures $failures$verboseHint';
     if (numFailures == 0) {
       summary = '${addEmoji(Emoji.party)}  ${colorize(summary, [
         green
       ])} ${addEmoji(Emoji.party)}';
     }
-    _buffer.addLines(['', summary]);
+    _buffer.addLines([summary]);
   }
 
-  void _reportFailedTests() {
-    if (numFailures == 0) {
-      return;
-    }
-    var failed = [
-      for (var event in _testResultEvents)
-        if (!event.isSuccess) //
-          event.message
-    ];
-    _buffer.addLines([
-      ' ',
-      ...failed,
-    ]);
-  }
-
-  static String humanizeRuntime(Duration runtime) {
-    List<String> tokens = [];
-    Duration remainingTime = runtime;
-    int numHours = remainingTime.inHours;
-    if (numHours > 0) {
-      remainingTime = remainingTime ~/ (Duration.secondsPerHour * numHours);
-      tokens.add('$numHours hour${numHours > 1 ? "s" : ""}');
-    }
-    int numMinutes = remainingTime.inMinutes;
-    if (numMinutes > 0) {
-      remainingTime = remainingTime ~/ (Duration.secondsPerMinute * numMinutes);
-      tokens.add('$numMinutes minute${numMinutes > 1 ? "s" : ""}');
-    }
-    int numSeconds = remainingTime.inSeconds;
-    if (numSeconds > 0) {
-      tokens.add('$numSeconds second${numSeconds > 1 ? "s" : ""}');
-    }
-    return tokens.join(', ');
-  }
+  bool get cleanEndOfOutput =>
+      // Did the last test end with verbose output?
+      !isVerbose &&
+      !_currentTestIsSlow &&
+      !hasRealTimeOutput &&
+      // Did the last test fail?
+      (_testResultEvents.isNotEmpty && _testResultEvents.last.isSuccess);
 }
 
-/// Output wrapper that values sharing as much info as possible.
+/// Default output wrapper inspired by both Dart's test runner and fx build's
+/// standard output.
 ///
-/// Aims to print something like this:
+/// Aims to print something like this (when no tests fail):
 /// ```txt
 ///  $ fx test --limit 2 -v
 ///    Found N total tests in //out/default/tests.json
 ///    Will run 2 tests
 ///
-///     > √ fx run-test test_1_name
-///     > √ fx run-test test_2_name
+///    [2/2] 00:01 √ All tests completed
 ///
 ///    🎉  Ran 2 tests with 0 failures 🎉
 /// ```
-class VerboseOutputFormatter extends OutputFormatter {
-  VerboseOutputFormatter({
+class StandardOutputFormatter extends OutputFormatter {
+  StandardOutputFormatter({
     @required bool hasRealTimeOutput,
-    bool shouldColorizeOutput = true,
+    bool simpleOutput = true,
     Duration slowTestThreshold,
     OutputBuffer buffer,
+    bool isVerbose,
   }) : super(
-          verbose: true,
+          isVerbose: isVerbose,
           hasRealTimeOutput: hasRealTimeOutput,
-          shouldColorizeOutput: shouldColorizeOutput,
+          simpleOutput: simpleOutput,
           slowTestThreshold: slowTestThreshold,
           buffer: buffer,
         );
@@ -204,17 +264,35 @@ class VerboseOutputFormatter extends OutputFormatter {
   }
 
   @override
+  void _handleTimeElapsedEvent(TimeElapsedEvent event) {}
+
+  @override
   void _handleTestStarted(TestStarted event) {
     String testName = colorize(event.testName, [cyan]);
     // Add some padding for our first test event
     if (_testStartedEvents.length == 1) {
       _buffer.addLine('');
     }
-    _buffer.addSubstring('${addEmoji(Emoji.thinking)}  $testName');
+    _lastTestHadOutput = false;
+
+    var output =
+        '$ratioDisplay $testExecutionTime ${addEmoji(Emoji.thinking)}  $testName';
+    if (isVerbose) {
+      _buffer.addLine(output);
+    } else {
+      // Add some more padding for our first test event
+      if (_testStartedEvents.length == 1) {
+        _buffer.addLine('');
+      }
+      _buffer.updateLines([output]);
+    }
   }
 
+  /// Prints something like "[numPassed/numRun] TT:TT <emoji> <test-name>"
   @override
   void _handleTestResult(TestResult event) {
+    if (_lastTestHadOutput) _buffer.addLines(['']);
+
     String testName = colorize(event.testName, [cyan]);
     String emoji = event.isDryRun
         ? colorize('(dry run)', [darkGray])
@@ -222,120 +300,43 @@ class VerboseOutputFormatter extends OutputFormatter {
             ? '${addEmoji(Emoji.check)} '
             : '${addEmoji(Emoji.x)} ';
 
-    String runtime =
-        slowTestThreshold != null && event.runtime > slowTestThreshold
-            ? colorize(
-                ' (${OutputFormatter.humanizeRuntime(event.runtime)})',
-                [lightRed, styleBold],
-              )
-            : '';
+    var output = '$ratioDisplay $testExecutionTime $emoji $testName';
 
     // When piping realtime output to the user, we don't want to remove the
-    // last line. Usually, the last line is the ":thinking_emoji: <test info>"
-    // line, which we replace in favor of the results line, but in this scenario,
+    // last line. Usually, the last line is what indicates a new test is underway,
+    // which we replace in favor of the results line, but in this scenario,
     // it's likely some output from the test.
-    // _buffer.updateLines(['$emoji $testName$runtime']);
-    if (hasRealTimeOutput) {
-      _buffer.addLines(['$emoji $testName$runtime']);
+    // We do the same for slow tests because we print realtime output for them.
+    if (hasRealTimeOutput || _currentTestIsSlow) {
+      _buffer.addLines([output]);
     } else {
-      _buffer.updateLines(['$emoji $testName$runtime']);
+      _buffer.updateLines([output]);
     }
+
+    // Report for failed messages
+    if (!event.isSuccess && event.message != null) {
+      // But only if not already doing realtime
+      if (!hasRealTimeOutput && !_currentTestIsSlow) {
+        _buffer.addLines([event.message, '']);
+      }
+    }
+  }
+
+  void _finalizeLastTestLine() {
+    if (!cleanEndOfOutput) return;
+    var verboseHint = wrapWith(
+      ' (use the -v flag to see each test)',
+      [darkGray],
+    );
+    _buffer.updateLines([
+      '$ratioDisplay $suiteExecutionTime All tests completed$verboseHint',
+    ]);
   }
 
   @override
   void _finalizeOutput() {
-    _reportFailedTests();
+    _finalizeLastTestLine();
     _reportSummary();
-  }
-}
-
-/// Output wrapper that favors reduced output size.
-///
-/// Aims to print something like this:
-/// ```txt
-///  $ fx test --limit 2
-///    Found N total tests in //out/default/tests.json
-///    Will run 2 tests
-///
-///     ..
-///
-///    🎉  Ran 2 tests with 0 failures 🎉
-/// ```
-class CondensedOutputFormatter extends OutputFormatter {
-  final List<TestInfo> _hiddenInfo;
-
-  CondensedOutputFormatter({
-    shouldColorizeOutput = true,
-    slowTestThreshold,
-    OutputBuffer buffer,
-  })  : _hiddenInfo = [],
-        super(
-          verbose: false,
-          hasRealTimeOutput: false,
-          shouldColorizeOutput: shouldColorizeOutput,
-          slowTestThreshold: slowTestThreshold,
-          buffer: buffer,
-        );
-
-  @override
-  void _handleTestStarted(TestStarted event) {
-    if (_testStartedEvents.length == 1) {
-      _buffer.addLine('');
-    }
-  }
-
-  @override
-  void _handleTestResult(TestResult event) {
-    _buffer.addSubstring(event.isSuccess
-        ? colorize('.', event.isDryRun ? [darkGray] : [])
-        : colorize('F', [red]));
-  }
-
-  @override
-  void _handleTestInfo(TestInfo event) {
-    // Don't print any further info messages once we start running tests,
-    // since we're going to spit them all out at the end
-    if (!hasStartedTests) {
-      _buffer.addLine(event.message);
-    } else {
-      _hiddenInfo.add(event);
-    }
-  }
-
-  @override
-  void _finalizeOutput() {
-    _reportSquashedInfo();
-    _reportFailedTests();
-    _reportSummary();
-  }
-
-  void _reportSquashedInfo() {
-    if (_hiddenInfo.isNotEmpty) {
-      for (TestInfo event in _hiddenInfo) {
-        _buffer.addLine(event.message);
-      }
-      _buffer.addLine('');
-    }
-
-    if (slowTestThreshold != null) {
-      List<String> slowTests = [];
-      for (TestResult event in _testResultEvents) {
-        if (event.runtime > slowTestThreshold) {
-          String runtime = colorize(
-              '(${OutputFormatter.humanizeRuntime(event.runtime)})',
-              [darkGray, styleBold]);
-          slowTests.add(
-            '${event.testName} $runtime',
-          );
-        }
-      }
-      if (slowTests.isNotEmpty) {
-        _buffer.addLines([
-          '',
-          ...slowTests,
-        ]);
-      }
-    }
   }
 }
 
@@ -348,10 +349,10 @@ class CondensedOutputFormatter extends OutputFormatter {
 class InfoFormatter extends OutputFormatter {
   InfoFormatter()
       : super(
-          buffer: OutputBuffer(cursorStartsOnNewLine: true),
+          buffer: OutputBuffer.realIO(cursorStartsOnNewLine: true),
           hasRealTimeOutput: false,
           slowTestThreshold: Duration(seconds: 0),
-          verbose: false,
+          isVerbose: false,
         );
 
   @override
@@ -368,6 +369,8 @@ class InfoFormatter extends OutputFormatter {
   void _handleTestResult(TestResult event) {}
   @override
   void _finalizeOutput() {}
+  @override
+  void _handleTimeElapsedEvent(TimeElapsedEvent event) {}
 }
 
 List<String> infoPrint(TestDefinition testDefinition) {

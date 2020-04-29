@@ -28,8 +28,8 @@ final ArgParser fxTestArgParser = ArgParser()
       help: 'If true, only runs device tests. The opposite of `--host`')
   ..addMultiOption('and',
       abbr: 'a',
-      help: 'When present, adds additional requirements to the preceding '
-          '`testName` filter')
+      help: '''When present, adds additional requirements to the preceding
+`testName` filter''')
   ..addFlag('printtests',
       defaultsTo: false,
       negatable: false,
@@ -61,23 +61,28 @@ final ArgParser fxTestArgParser = ArgParser()
   ..addOption('limit',
       defaultsTo: null,
       help: 'If passed, ends test suite execution after N tests')
-  ..addOption('warnslow',
-      defaultsTo: null,
-      help: 'If passed, prints a debug message for each test that takes '
-          'longer\nthan N seconds to execute')
+  ..addOption('slow',
+      defaultsTo: '2',
+      abbr: 's',
+      help: '''When set to a non-zero value, triggers output for any test that
+takes longer than N seconds to execute.
+
+Note: This has no impact if the -o flag is also set.
+Note: The -s flag used to be an abbreviation for --simple.''')
   ..addOption('realm',
       abbr: 'R',
       defaultsTo: null,
-      help: 'If passed, runs the tests in a named realm instead of a '
-          'randomized one. ')
+      help: '''If passed, runs the tests in a named realm instead of a
+randomized\none.''')
   ..addFlag('exact',
       defaultsTo: false,
       help: 'If true, does not perform any fuzzy-matching on tests')
   ..addFlag('skipped',
-      abbr: 's',
       defaultsTo: false,
       negatable: false,
-      help: 'If true, prints a debug statement about each skipped test')
+      help: '''If true, prints a debug statement about each skipped test.
+
+Note: The old `-s` abbreviation now applies to `--simple`.''')
   ..addFlag('simple',
       defaultsTo: false,
       negatable: false,
@@ -91,8 +96,8 @@ final ArgParser fxTestArgParser = ArgParser()
       abbr: 'u',
       defaultsTo: false,
       negatable: false,
-      help: 'If true, will reduce unsupported tests to a warning and '
-          'continue executing.\nThis is dangerous outside of the local '
-          'development cycle, as "unsupported"\ntests are likely a problem '
-          'with this command, not the tests.')
+      help: '''If true, will reduce unsupported tests to a warning and continue
+executing. This is dangerous outside of the local development
+cycle, as "unsupported" tests are likely a problem with this
+command and not the tests.''')
   ..addFlag('verbose', abbr: 'v', defaultsTo: false, negatable: false);

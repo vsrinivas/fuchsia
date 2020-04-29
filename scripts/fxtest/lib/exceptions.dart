@@ -3,7 +3,7 @@ import 'package:fxtest/fxtest.dart';
 class BuildException implements Exception {
   final String buildHandle;
   final int exitCode;
-  BuildException(this.buildHandle, [this.exitCode = 2]);
+  BuildException(this.buildHandle, [this.exitCode = failureExitCode]);
   @override
   String toString() => 'BuildException: Failed to run `$buildHandle` :: '
       'Exit Code: $exitCode';

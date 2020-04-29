@@ -59,13 +59,32 @@ class TestResult extends TestEvent {
   String toString() => '<TestResult $testName: $exitCode>';
 }
 
+/// Various updates to display to the user in real time.
 class TestInfo extends TestEvent {
   final String message;
+
+  /// Determines the presence or absence of a cosmetic spacer line.
+  ///
+  /// Debug statements often require this to de-clutter output, but, for example,
+  /// raw stack traces are pre-formatted and thus must not receive any additional
+  /// cosmetic treatment.
   final bool requiresPadding;
   TestInfo(this.message, {this.requiresPadding = true});
 
   @override
   String toString() => '<TestInfo $message>';
+}
+
+/// Specialized version of [TestInfo] that users can opt-in to via the "-o"
+/// flag.
+class TestOutputEvent extends TestInfo {
+  TestOutputEvent(String message, {bool requiresPadding = false})
+      : super(
+          message,
+          requiresPadding: requiresPadding,
+        );
+  @override
+  String toString() => '<TestOutputEvent $message>';
 }
 
 class TestStarted extends TestEvent {
@@ -84,3 +103,14 @@ class TestStarted extends TestEvent {
 class BeginningTests extends TestEvent {}
 
 class AllTestsCompleted extends TestEvent {}
+
+class TimeElapsedEvent extends TestEvent {
+  final Duration timeElapsed;
+  final String command;
+  final List<String> output;
+  TimeElapsedEvent(this.timeElapsed, this.command, String _output)
+      : output = _output.split('\n');
+
+  @override
+  String toString() => '<TimeElapsedEvent $timeElapsed :: $command />';
+}

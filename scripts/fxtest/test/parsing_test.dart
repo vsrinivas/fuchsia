@@ -141,6 +141,8 @@ void main() {
         .thenReturn('/root/path/fuchsia/out/default');
     var fuchsiaLocator = FuchsiaLocator(envReader: envReader);
 
+    TestRunner buildTestRunner(TestsConfig testsConfig) => TestRunner();
+
     void _ignoreEvents(TestEvent _) {}
     TestsManifestReader tr = TestsManifestReader();
     List<TestDefinition> testDefinitions = [
@@ -160,8 +162,6 @@ void main() {
       ),
     ];
 
-    var testRunner = TestRunner();
-
     // Helper function to parse lots of data for tests
     ParsedManifest parseFromArgs({
       List<String> args = const [],
@@ -170,7 +170,7 @@ void main() {
       TestsConfig testsConfig = TestsConfig.fromRawArgs(rawArgs: args);
       var cmd = FuchsiaTestCommand.fromConfig(
         testsConfig,
-        testRunner: TestRunner(),
+        testRunnerBuilder: buildTestRunner,
       );
       return tr.aggregateTests(
         eventEmitter: _ignoreEvents,
@@ -274,7 +274,7 @@ void main() {
       TestsConfig testsConfig = TestsConfig.fromRawArgs(rawArgs: ['fancy']);
       var cmd = FuchsiaTestCommand.fromConfig(
         testsConfig,
-        testRunner: testRunner,
+        testRunnerBuilder: buildTestRunner,
       );
       ParsedManifest parsedManifest = tr.aggregateTests(
         eventEmitter: _ignoreEvents,
@@ -293,7 +293,7 @@ void main() {
           TestsConfig.fromRawArgs(rawArgs: ['fancy', '--host']);
       var cmd = FuchsiaTestCommand.fromConfig(
         testsConfig,
-        testRunner: testRunner,
+        testRunnerBuilder: buildTestRunner,
       );
       ParsedManifest parsedManifest = tr.aggregateTests(
         eventEmitter: _ignoreEvents,
@@ -322,7 +322,7 @@ void main() {
         ]);
       var cmd = FuchsiaTestCommand.fromConfig(
         testsConfig,
-        testRunner: testRunner,
+        testRunnerBuilder: buildTestRunner,
       );
       ParsedManifest parsedManifest = tr.aggregateTests(
         eventEmitter: _ignoreEvents,
@@ -356,7 +356,7 @@ void main() {
         ]);
       var cmd = FuchsiaTestCommand.fromConfig(
         testsConfig,
-        testRunner: testRunner,
+        testRunnerBuilder: buildTestRunner,
       );
       ParsedManifest parsedManifest = tr.aggregateTests(
         eventEmitter: _ignoreEvents,
@@ -375,6 +375,7 @@ void main() {
     when(envReader.getEnv('FUCHSIA_BUILD_DIR'))
         .thenReturn('/root/path/fuchsia/out/default');
     var fuchsiaLocator = FuchsiaLocator(envReader: envReader);
+    TestRunner buildTestRunner(TestsConfig testsConfig) => TestRunner();
 
     void _ignoreEvents(TestEvent _) {}
     TestsManifestReader tr = TestsManifestReader();
@@ -417,7 +418,7 @@ void main() {
       );
       var cmd = FuchsiaTestCommand.fromConfig(
         testsConfig,
-        testRunner: TestRunner(),
+        testRunnerBuilder: buildTestRunner,
       );
       ParsedManifest parsedManifest = tr.aggregateTests(
         eventEmitter: _ignoreEvents,
@@ -433,7 +434,7 @@ void main() {
       TestsConfig testsConfig = TestsConfig.fromRawArgs(rawArgs: ['pkg1']);
       var cmd = FuchsiaTestCommand.fromConfig(
         testsConfig,
-        testRunner: TestRunner(),
+        testRunnerBuilder: buildTestRunner,
       );
       ParsedManifest parsedManifest = tr.aggregateTests(
         eventEmitter: _ignoreEvents,
@@ -453,7 +454,7 @@ void main() {
           TestsConfig.fromRawArgs(rawArgs: ['//gnsubtree', '-a', 'test1']);
       var cmd = FuchsiaTestCommand.fromConfig(
         testsConfig,
-        testRunner: TestRunner(),
+        testRunnerBuilder: buildTestRunner,
       );
       ParsedManifest parsedManifest = tr.aggregateTests(
         eventEmitter: _ignoreEvents,
@@ -471,7 +472,7 @@ void main() {
       TestsConfig testsConfig = TestsConfig.fromRawArgs(rawArgs: ['test1']);
       var cmd = FuchsiaTestCommand.fromConfig(
         testsConfig,
-        testRunner: TestRunner(),
+        testRunnerBuilder: buildTestRunner,
       );
       ParsedManifest parsedManifest = tr.aggregateTests(
         eventEmitter: _ignoreEvents,
@@ -493,7 +494,7 @@ void main() {
       );
       var cmd = FuchsiaTestCommand.fromConfig(
         testsConfig,
-        testRunner: TestRunner(),
+        testRunnerBuilder: buildTestRunner,
       );
       ParsedManifest parsedManifest = tr.aggregateTests(
         eventEmitter: _ignoreEvents,

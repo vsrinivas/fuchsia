@@ -3,9 +3,61 @@
 // found in the LICENSE file.
 
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io' as io;
-
+import 'dart:math';
 import 'package:fxtest/exceptions.dart';
+
+abstract class StandardOut {
+  void write(String line);
+  void writeln(String line);
+  Future<dynamic> get done;
+  Future<dynamic> close();
+}
+
+class RealStandardOut implements StandardOut {
+  @override
+  void write(String line) => io.stdout.write(line);
+  @override
+  void writeln(String line) => io.stdout.writeln(line);
+  @override
+  Future<dynamic> get done => io.stdout.done;
+  @override
+  Future<dynamic> close() => io.stdout.close();
+}
+
+class LocMemStandardOut implements StandardOut {
+  bool isOpen;
+  final List<String> buffer;
+  final Completer<dynamic> _done;
+  LocMemStandardOut()
+      : isOpen = true,
+        buffer = [],
+        _done = Completer<dynamic>();
+  @override
+  void write(String line) => isOpen
+      // If the buffer is empty,
+      ? buffer.isEmpty //
+          // add the line as the first element
+          ? buffer.add(line)
+          // otherwise, append the line
+          : buffer.last += line
+      // And if we weren't even open, raise an error
+      : throw io.StdoutException('IO is closed.');
+  @override
+  void writeln(String line) =>
+      isOpen ? buffer.add(line) : throw io.StdoutException('IO is closed.');
+  @override
+  Future<dynamic> get done => _done.future;
+  @override
+  Future<dynamic> close() {
+    isOpen = false;
+    !_done.isCompleted
+        ? _done.complete()
+        : throw io.StdoutException('IO is already closed.');
+    return _done.future;
+  }
+}
 
 /// Wrapper around iteratively build command line output.
 ///
@@ -15,7 +67,7 @@ import 'package:fxtest/exceptions.dart';
 /// Usage:
 ///
 /// ```dart
-/// OutputBuffer outputBuffer = OutputBuffer(standardOut: stdout);
+/// OutputBuffer outputBuffer = OutputBuffer(stdout: stdout);
 ///
 /// // Prints "this will appear on its own line\n"
 /// outputBuffer.addLine('this will appear on its own line');
@@ -29,12 +81,11 @@ import 'package:fxtest/exceptions.dart';
 /// outputBuffer.addLine('but now back to whole lines')
 /// ```
 class OutputBuffer {
-  /// The actual content of our output. Can be built and flushed iteratively.
-  final List<String> _buffer;
+  /// The actual stuff of our output. Can be built and flushed iteratively.
+  final List<String> content;
 
-  /// The ultimate destination for our output. If not provided, defaults to
-  /// the global [Stdout]
-  final io.IOSink _stdout;
+  /// Helper which implements all necessary functions of [io.stdout].
+  final StandardOut stdout;
 
   /// Set to `true` if we previously entered a trailing newline for cosmetic
   /// purposes. Useful when we hope to emit whole lines after emitting
@@ -56,21 +107,37 @@ class OutputBuffer {
   /// reaches its natural conclusion.
   final Completer _stdoutCompleter;
 
+  /// OS-aware line splitting resource.
+  final _splitter = LineSplitter();
+
   final _ansiEscape = String.fromCharCode(27);
 
-  OutputBuffer({
-    io.IOSink stdout,
+  OutputBuffer._({
+    this.stdout,
 
     // Controls how the buffer should receive its first content.
     // Does not have a visual impact immediately
     bool cursorStartsOnNewLine = false,
-  })  : _buffer = [],
+  })  : content = [],
         _stdoutCompleter = Completer(),
-        _isCursorOnNewline = cursorStartsOnNewLine,
-        _stdout = stdout ?? io.stdout {
-    /// Listen to the actual `_stdout.done` future and resolve our approximation
+        _isCursorOnNewline = cursorStartsOnNewLine ?? false {
+    /// Listen to the actual `stdout.done` future and resolve our approximation
     /// with an error if that closes before the test suite completes.
-    _stdout.done.catchError((err) => _closeFutureWithError());
+    stdout.done.catchError((err) => _closeFutureWithError());
+  }
+
+  factory OutputBuffer.realIO({bool cursorStartsOnNewLine}) {
+    return OutputBuffer._(
+      cursorStartsOnNewLine: cursorStartsOnNewLine,
+      stdout: RealStandardOut(),
+    );
+  }
+
+  factory OutputBuffer.locMemIO({bool cursorStartsOnNewLine}) {
+    return OutputBuffer._(
+      cursorStartsOnNewLine: cursorStartsOnNewLine,
+      stdout: LocMemStandardOut(),
+    );
   }
 
   void _closeFutureWithError() => !_stdoutCompleter.isCompleted
@@ -87,9 +154,7 @@ class OutputBuffer {
 
   void forcefullyClose() => _closeFutureWithError();
 
-  void _clearLines([int lines]) {
-    lines ??= 1;
-
+  void _clearLines([int lines = 1]) {
     if (_isCursorOnNewline) {
       _cursorUp();
       _isCursorOnNewline = false;
@@ -106,37 +171,37 @@ class OutputBuffer {
   }
 
   void _clearLine() {
-    _stdout
+    stdout
       ..write('$_ansiEscape[2K') // clear line
       ..write('$_ansiEscape[0G'); // cursor to 0-index on current line
   }
 
   void _cursorUp() {
-    _stdout.write('$_ansiEscape[1A'); // cursor up
+    stdout.write('$_ansiEscape[1A'); // cursor up
   }
 
   /// Appends additional characters to the last line of the buffer
   void addSubstring(String msg, {bool shouldFlush = true}) {
-    if (_buffer.isEmpty) {
-      _buffer.add('');
+    if (content.isEmpty) {
+      content.add('');
     }
-    _buffer.last += msg;
+    content.last += msg;
 
     if (shouldFlush) {
-      _stdout.write(msg);
+      stdout.write(msg);
       _isCursorOnNewline = false;
     }
   }
 
   /// Adds an additional line to the end of the buffer
   void addLine(String msg, {bool shouldFlush = true}) {
-    addLines([msg], shouldFlush: shouldFlush);
+    addLines(_splitter.convert(msg), shouldFlush: shouldFlush);
   }
 
   /// Adds N additional lines to the end of the buffer
   void addLines(List<String> msgs, {bool shouldFlush = true}) {
     if (!_isCursorOnNewline) {
-      _stdout.writeln('');
+      stdout.writeln('');
       _isCursorOnNewline = true;
     }
     msgs.forEach(_registerLine);
@@ -148,7 +213,7 @@ class OutputBuffer {
   /// Gracefully handles adding lines that themselves contain newlines, since
   /// otherwise that breaks some assumptions.
   void _registerLine(String line) {
-    _buffer.addAll(line.split('\n'));
+    content.addAll(_splitter.convert(line));
   }
 
   /// Replaces the content of individual lines in the buffer and, optionally,
@@ -159,43 +224,89 @@ class OutputBuffer {
   /// with a list of 3 strings, indices 7, 8, and 9 (the last three elements)
   /// will be replaced.
   void updateLines(List<String> msgs, {bool shouldFlush = true}) {
-    while (msgs.length > _buffer.length) {
-      _buffer.add('');
+    while (msgs.length > content.length) {
+      content.add('');
     }
+    List<String> replacedLines = content.sublist(content.length - msgs.length);
     for (int count in Iterable<int>.generate(msgs.length)) {
-      int indexToReplace = _buffer.length - msgs.length + count;
-      _buffer[indexToReplace] = msgs[count];
+      int indexToReplace = content.length - msgs.length + count;
+      content[indexToReplace] = msgs[count];
     }
 
     if (shouldFlush) {
-      _clearLines(msgs.length);
+      var numToFlush = _getTerminalRowsFromLines(replacedLines);
+      _clearLines(numToFlush);
       _flushLines(msgs);
     }
   }
 
-  /// Eliminates lines off the end of the buffer and moves the cursor up the
-  /// same number of lines.
-  void stripLines(int numLines) {
-    _buffer.removeRange(_buffer.length - numLines, _buffer.length);
-    _clearLines(numLines);
+  /// Calculates how much various strings had to wrap on the current terminal.
+  ///
+  /// This is important because printing one extra long sentence will wrap onto
+  /// multiple rows in the terminal, but then clearing "a line" does not go back
+  /// to the last newline -- but instead just clears a given terminal row.
+  int _getTerminalRowsFromLines(List<String> lines) {
+    if (!io.stdout.hasTerminal) {
+      return lines.length;
+    }
+    var rowsPerLine = lines.fold<int>(0, (previousValue, line) {
+      var bareLine = _stripAnsi(line).length;
+      var numWholeLines = bareLine ~/ io.stdout.terminalColumns;
+      var numPartialLines = bareLine % io.stdout.terminalColumns > 0 ? 1 : 0;
+      return previousValue + numWholeLines + numPartialLines;
+    });
+    return max(rowsPerLine, lines.length);
+  }
+
+  String _stripAnsi(String val) {
+    var re = RegExp(r'(\x9B|\x1B\[)[0-?]*[ -\/]*[@-~]');
+    return val.replaceAll(re, '');
   }
 
   /// Sends a list of strings to the [stdout]. Is completely unaware of the
   /// [buffer], so calling this directly can desync the internal state from what
   /// is rendered in the terminal.
   void _flushLines(List<String> lines) {
-    _stdout.writeln(lines.join('\n'));
+    stdout.writeln(lines.join('\n'));
     _isCursorOnNewline = true;
+  }
+
+  /// Scans the end of the buffer and sets the amount of trailing newlines
+  /// (represented by empty strings in our list of strings) to the desired level.
+  /// If the passed number is greater than the current number of empty lines,
+  /// an appropriate amount of newlines are added.
+  void reduceEmptyRowsTo(int number) {
+    bool stillLookingForLineWithContent = true;
+    int depth = 0;
+    while (stillLookingForLineWithContent) {
+      if (content[content.length - depth - 1].isEmpty) {
+        depth += 1;
+      } else {
+        stillLookingForLineWithContent = false;
+      }
+    }
+    if (depth > number) {
+      _clearLines(depth - number);
+    } else if (depth <= number) {
+      var emptyLines = <String>[];
+      for (var counter = 0; counter < (number - depth + 1); counter++) {
+        emptyLines.add('');
+      }
+      addLines(emptyLines);
+    }
   }
 
   /// Writes the entire [buffer] to the [stdout].
   void flush({int start, int end}) {
-    _flushLines(_buffer.sublist(start ?? 0, end ?? _buffer.length));
+    _flushLines(content.sublist(start ?? 0, end ?? content.length));
   }
 
   /// Clears the [stdout], without touching the [buffer]. If you are not
   /// planning to re-flush, you should consider also resetting [buffer].
   void clear() {
-    _clearLines(_isCursorOnNewline ? _buffer.length : _buffer.length - 1);
+    int allRows = _getTerminalRowsFromLines(content);
+    // If the cursor is currently on a new line, deleting *all* the lines will
+    // go so far back as to delete the original prompt
+    _clearLines(_isCursorOnNewline ? allRows : allRows - 1);
   }
 }

@@ -29,7 +29,7 @@ class Flags {
   final bool shouldPrintSkipped;
   final bool shouldRandomizeTestOrder;
   final bool shouldSilenceUnsupported;
-  final int warnSlowerThan;
+  final int slowThreshold;
   Flags({
     this.dryRun = false,
     this.isVerbose = false,
@@ -46,7 +46,7 @@ class Flags {
     this.shouldRandomizeTestOrder = false,
     this.shouldRebuild = true,
     this.shouldSilenceUnsupported = false,
-    this.warnSlowerThan = 0,
+    this.slowThreshold = 0,
   });
 
   factory Flags.fromArgResults(ArgResults argResults) {
@@ -58,7 +58,7 @@ class Flags {
       isVerbose: argResults['verbose'] || argResults['output'],
       limit: int.parse(argResults['limit'] ?? '0'),
       realm: argResults['realm'],
-      simpleOutput: !argResults['simple'],
+      simpleOutput: argResults['simple'],
       shouldFailFast: argResults['fail'],
       shouldOnlyRunDeviceTests: argResults['device'],
       shouldOnlyRunHostTests: argResults['host'],
@@ -69,7 +69,7 @@ class Flags {
           (argResults['build'] == null || argResults['build']),
       shouldRandomizeTestOrder: argResults['random'],
       shouldSilenceUnsupported: argResults['silenceunsupported'],
-      warnSlowerThan: int.parse(argResults['warnslow'] ?? '0'),
+      slowThreshold: int.parse(argResults['slow'] ?? '0'),
     );
   }
 
@@ -89,7 +89,7 @@ class Flags {
   shouldPrintSkipped: $shouldPrintSkipped
   shouldRandomizeTestOrder: $shouldRandomizeTestOrder
   shouldSilenceUnsupported: $shouldSilenceUnsupported
-  warnSlowerThan: $warnSlowerThan
+  slowThreshold: $slowThreshold
 >''';
 }
 
@@ -122,11 +122,13 @@ class TestsConfig {
   final List<String> runnerTokens;
   final TestArguments testArguments;
   final List<List<String>> testNameGroups;
+  final FuchsiaLocator fuchsiaLocator;
   TestsConfig({
     @required this.flags,
     @required this.runnerTokens,
     @required this.testArguments,
     @required this.testNameGroups,
+    @required this.fuchsiaLocator,
   });
 
   factory TestsConfig.fromRawArgs({
@@ -143,6 +145,7 @@ class TestsConfig {
     Flags flags = Flags.fromArgResults(_testArguments.parsedArgs);
     return TestsConfig(
       flags: flags,
+      fuchsiaLocator: fuchsiaLocator ?? FuchsiaLocator.shared,
       runnerTokens:
           flags.realm != null ? ['--realm-label=${flags.realm}'] : const [],
       testArguments: _testArguments,

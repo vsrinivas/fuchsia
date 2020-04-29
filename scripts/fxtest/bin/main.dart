@@ -95,7 +95,8 @@ StreamSubscription _sigintSub;
 final _cleanup = <Future Function()>[];
 void registerCleanUp(Future Function() c) => _cleanup.add(c);
 
-void cleanUpAndExit([ProcessSignal signal, int _exitCode = 2]) async {
+void cleanUpAndExit(
+    [ProcessSignal signal, int _exitCode = failureExitCode]) async {
   // Kick off all registered clean up functions.
   List<Future> cleanUpFutures = _cleanup
       .map((Function cleanUpFunction) async => cleanUpFunction())

@@ -5,18 +5,19 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'package:fxtest/fxtest.dart';
 import 'package:meta/meta.dart';
 
-class ProcessArgs {
-  final String command;
-  final List<String> args;
-  ProcessArgs(this.command, this.args);
-
-  @override
-  String toString() => '$command ${args.join(' ')}';
-}
-
+/// Disposable runner which executes a single test and presents its output in
+/// realtime (via streams) and aggregates for the end (via a [StringBuffer]).
 class TestRunner {
+  final StreamController<String> _stdoutController;
+
+  TestRunner() : _stdoutController = StreamController<String>();
+
+  Stream<String> get output => _stdoutController.stream;
+  void addOutput(String content) => _stdoutController.sink.add(content);
+
   /// Wrapper which runs commands and not only collects all output for a
   /// [ProcessResult], but also optionally emits realtime events from nested
   /// stdout.
@@ -31,8 +32,6 @@ class TestRunner {
     String command,
     List<String> args, {
     @required String workingDirectory,
-    Function(String) realtimeOutputSink,
-    Function(String) realtimeErrorSink,
   }) async {
     var processArgs = _buildProcessArgs(command, args);
     Process process = await Process.start(
@@ -45,9 +44,7 @@ class TestRunner {
     process.stdout.transform(utf8.decoder).transform(LineSplitter()).listen(
       (String val) {
         _stdOut.writeln(val);
-        if (realtimeOutputSink != null) {
-          realtimeOutputSink(val);
-        }
+        addOutput(val);
       },
     );
 
@@ -55,14 +52,14 @@ class TestRunner {
     process.stderr.transform(utf8.decoder).transform(LineSplitter()).listen(
       (String val) {
         _stdErr.writeln(val);
-        if (realtimeErrorSink != null) {
-          realtimeErrorSink(val);
-        }
+        addOutput(val);
       },
     );
 
     // Wait for test to actually end.
     int _exitCode = await process.exitCode;
+
+    await close();
 
     // Return the same thing as if we'd used `Process.run`.
     return ProcessResult(
@@ -73,8 +70,12 @@ class TestRunner {
     );
   }
 
-  ProcessArgs _buildProcessArgs(String command, List<String> args) {
-    return ProcessArgs(command, args);
+  Future close() {
+    return _stdoutController.close();
+  }
+
+  _ProcessArgs _buildProcessArgs(String command, List<String> args) {
+    return _ProcessArgs(command, args);
   }
 }
 
@@ -85,18 +86,30 @@ class SymbolizingTestRunner extends TestRunner {
     @required this.fx,
   }) : assert(fx != null && fx != '');
 
+  factory SymbolizingTestRunner.builder(TestsConfig testsConfig) =>
+      SymbolizingTestRunner(fx: testsConfig.fuchsiaLocator.fx);
+
   @override
-  ProcessArgs _buildProcessArgs(String command, List<String> args) {
-    return ProcessArgs('bash', [
+  _ProcessArgs _buildProcessArgs(String command, List<String> args) {
+    return _ProcessArgs('bash', [
       // `-o pipefail` forwards the exitcode from `command` (the test itself)
       // instead of the always-zero exitcode from symbolize
       '-o',
       'pipefail',
       // `-c` keeps the pipe in the domain of `bash`, and not in the domain of
-      // `fx shell ...`, which leads to "can't find fx" errors (since that's)
-      // not on the device
+      // `fx shell ...`, which leads to "can't find fx" errors (since that's
+      // not on the device)
       '-c',
       [command, ...args, '|', fx, 'symbolize'].join(' ')
     ]);
   }
+}
+
+class _ProcessArgs {
+  final String command;
+  final List<String> args;
+  _ProcessArgs(this.command, this.args);
+
+  @override
+  String toString() => '$command ${args.join(' ')}';
 }
