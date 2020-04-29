@@ -54,7 +54,7 @@ zx_status_t DmaBuffer::Create(const zx::bti& bti, uint32_t cache_policy, size_t 
     // For VMOs with ZX_CACHE_POLICY_CACHED, we can use zx::vmo::create_contiguous(), since
     // contiguous VMOs are by default cached.
     if ((status = zx::vmo::create_contiguous(bti, size, 0, &dma_buffer->vmo_)) != ZX_OK) {
-      BRCMF_ERR("Failed to create contiguous VMO, size=%zu: %s\n", size,
+      BRCMF_ERR("Failed to create contiguous VMO, size=%zu: %s", size,
                 zx_status_get_string(status));
       return status;
     }
@@ -65,16 +65,16 @@ zx_status_t DmaBuffer::Create(const zx::bti& bti, uint32_t cache_policy, size_t 
     // and we can only ensure that these are contiguous up to ZX_PAGE_SIZE.
     if (size > ZX_PAGE_SIZE) {
       BRCMF_ERR(
-          "Failed to create uncached large VMO, size=%zu (ZX_PAGE_SIZE=%zu), cache_policy=0x%08x\n",
+          "Failed to create uncached large VMO, size=%zu (ZX_PAGE_SIZE=%zu), cache_policy=0x%08x",
           size, static_cast<size_t>(ZX_PAGE_SIZE), cache_policy);
       return ZX_ERR_NO_MEMORY;
     }
     if ((status = zx::vmo::create(size, 0, &dma_buffer->vmo_)) != ZX_OK) {
-      BRCMF_ERR("Failed to create VMO, size=%zu: %s\n", size, zx_status_get_string(status));
+      BRCMF_ERR("Failed to create VMO, size=%zu: %s", size, zx_status_get_string(status));
       return status;
     }
     if ((status = dma_buffer->vmo_.set_cache_policy(cache_policy)) != ZX_OK) {
-      BRCMF_ERR("Failed to set cache policy, cache_policy=0x%08x: %s\n", cache_policy,
+      BRCMF_ERR("Failed to set cache policy, cache_policy=0x%08x: %s", cache_policy,
                 zx_status_get_string(status));
       return status;
     }
@@ -84,11 +84,11 @@ zx_status_t DmaBuffer::Create(const zx::bti& bti, uint32_t cache_policy, size_t 
   zx_info_vmo_t vmo_info = {};
   if ((status = dma_buffer->vmo_.get_info(ZX_INFO_VMO, &vmo_info, sizeof(vmo_info), nullptr,
                                           nullptr)) != ZX_OK) {
-    BRCMF_ERR("Failed to get VMO info: %s\n", zx_status_get_string(status));
+    BRCMF_ERR("Failed to get VMO info: %s", zx_status_get_string(status));
     return status;
   }
   if (vmo_info.cache_policy != cache_policy) {
-    BRCMF_ERR("Failed to set cache policy, expected=0x%08x actual=0x%08x\n", cache_policy,
+    BRCMF_ERR("Failed to set cache policy, expected=0x%08x actual=0x%08x", cache_policy,
               vmo_info.cache_policy);
     return ZX_ERR_NO_MEMORY;
   }
@@ -96,7 +96,7 @@ zx_status_t DmaBuffer::Create(const zx::bti& bti, uint32_t cache_policy, size_t 
 
   uint64_t actual_vmo_size = 0;
   if ((status = dma_buffer->vmo_.get_size(&actual_vmo_size)) != ZX_OK) {
-    BRCMF_ERR("Failed to get VMO size, size=%zu: %s\n", size, zx_status_get_string(status));
+    BRCMF_ERR("Failed to get VMO size, size=%zu: %s", size, zx_status_get_string(status));
     return status;
   }
   dma_buffer->size_ = static_cast<size_t>(actual_vmo_size);
@@ -104,7 +104,7 @@ zx_status_t DmaBuffer::Create(const zx::bti& bti, uint32_t cache_policy, size_t 
   // Pin it.
   if ((status = bti.pin(bti_pin_options, dma_buffer->vmo_, 0, dma_buffer->size_,
                         &dma_buffer->dma_address_, 1, &dma_buffer->pmt_)) != ZX_OK) {
-    BRCMF_ERR("Failed to pin VMO: %s\n", zx_status_get_string(status));
+    BRCMF_ERR("Failed to pin VMO: %s", zx_status_get_string(status));
     return status;
   }
 
@@ -114,7 +114,7 @@ zx_status_t DmaBuffer::Create(const zx::bti& bti, uint32_t cache_policy, size_t 
 
 zx_status_t DmaBuffer::Map(uint32_t vmar_options) {
   if (address_ != 0) {
-    BRCMF_ERR("Already mapped, vmar_options=0x%08x, old=0x%08x\n", vmar_options, vmar_options);
+    BRCMF_ERR("Already mapped, vmar_options=0x%08x, old=0x%08x", vmar_options, vmar_options);
     return ZX_ERR_BAD_STATE;
   }
 
@@ -126,12 +126,12 @@ zx_status_t DmaBuffer::Unmap() {
   zx_status_t status = ZX_OK;
 
   if (address_ == 0) {
-    BRCMF_ERR("Not mapped\n");
+    BRCMF_ERR("Not mapped");
     return ZX_ERR_BAD_STATE;
   }
 
   if ((status = zx::vmar::root_self()->unmap(address_, size_)) != ZX_OK) {
-    BRCMF_ERR("Failed to unmap: %s\n", zx_status_get_string(status));
+    BRCMF_ERR("Failed to unmap: %s", zx_status_get_string(status));
     return status;
   }
 
@@ -142,8 +142,7 @@ zx_status_t DmaBuffer::Unmap() {
 zx_status_t DmaBuffer::Map(const zx::vmar& vmar, uint32_t vmar_options, uintptr_t* out_address) {
   zx_status_t status = ZX_OK;
   if ((status = vmar.map(0, vmo_, 0, size_, vmar_options, out_address)) != ZX_OK) {
-    BRCMF_ERR("Failed to map, vmar_options=0x%08x: %s\n", vmar_options,
-              zx_status_get_string(status));
+    BRCMF_ERR("Failed to map, vmar_options=0x%08x: %s", vmar_options, zx_status_get_string(status));
     return status;
   }
 

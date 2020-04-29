@@ -88,7 +88,7 @@ ConsoleLogger::~ConsoleLogger() { interrupt_master_->RemoveInterruptHandler(this
 uint32_t ConsoleLogger::HandleInterrupt(uint32_t mailboxint) {
   std::string console;
   while (!(console = firmware_->ReadConsole()).empty()) {
-    BRCMF_INFO("%s\n", console.c_str());
+    BRCMF_INFO("%s", console.c_str());
   }
   return 0;
 }
@@ -121,21 +121,21 @@ zx_status_t RunPcieBusComponentsTest(zx_device_t* parent) {
 
   std::unique_ptr<PcieBuscore> pcie_buscore;
   if ((status = PcieBuscore::Create(parent, &pcie_buscore)) != ZX_OK) {
-    BRCMF_ERR("PcieBuscore creation failed: %s\n", zx_status_get_string(status));
+    BRCMF_ERR("PcieBuscore creation failed: %s", zx_status_get_string(status));
     return status;
   }
 
   // Make sure the bus chip was brought up successfully.
   const auto chip = pcie_buscore->chip();
   if (chip == nullptr) {
-    BRCMF_ERR("No bus chip found\n");
+    BRCMF_ERR("No bus chip found");
     return ZX_ERR_NO_RESOURCES;
   }
   if (chip->chip == 0) {
-    BRCMF_ERR("No bus chip ID found\n");
+    BRCMF_ERR("No bus chip ID found");
     return ZX_ERR_NO_RESOURCES;
   }
-  BRCMF_INFO("Found bus chip 0x%x rev. %d\n", chip->chip, chip->chiprev);
+  BRCMF_INFO("Found bus chip 0x%x rev. %d", chip->chip, chip->chiprev);
 
   // Check that we can do a register read to confirm the bus chip information.
   const uint32_t chipreg = PcieBuscore::GetBuscoreOps()->read32(
@@ -143,7 +143,7 @@ zx_status_t RunPcieBusComponentsTest(zx_device_t* parent) {
   const uint32_t chipreg_chip = (chipreg & CID_ID_MASK);
   const uint32_t chipreg_rev = ((chipreg & CID_REV_MASK) >> CID_REV_SHIFT);
   if (chip->chip != chipreg_chip || chip->chiprev != chipreg_rev) {
-    BRCMF_ERR("Bus chip read returned chip 0x%x rev. %d, expected 0x%x rev. %d\n", chipreg_chip,
+    BRCMF_ERR("Bus chip read returned chip 0x%x rev. %d, expected 0x%x rev. %d", chipreg_chip,
               chipreg_rev, chip->chip, chip->chiprev);
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -155,24 +155,24 @@ zx_status_t RunPcieBusComponentsTest(zx_device_t* parent) {
     {
       PcieBuscore::CoreRegs pcie2_core_coreregs;
       if (pcie2_core_coreregs.is_valid()) {
-        BRCMF_ERR("Empty CoreRegs instance should not be valid\n");
+        BRCMF_ERR("Empty CoreRegs instance should not be valid");
         return ZX_ERR_BAD_STATE;
       }
       if ((status = pcie_buscore->GetCoreRegs(CHIPSET_PCIE2_CORE, &pcie2_core_coreregs)) != ZX_OK) {
-        BRCMF_ERR("Failed to get CoreRegs instance for PCIE2_CORE: %s\n",
+        BRCMF_ERR("Failed to get CoreRegs instance for PCIE2_CORE: %s",
                   zx_status_get_string(status));
         return status;
       }
       PcieBuscore::CoreRegs arm_cr4_coreregs;
       if ((status = pcie_buscore->GetCoreRegs(CHIPSET_ARM_CR4_CORE, &arm_cr4_coreregs)) == ZX_OK) {
-        BRCMF_ERR("Got conflicting CoreRegs instance for ARM_CR4_CORE: %s\n",
+        BRCMF_ERR("Got conflicting CoreRegs instance for ARM_CR4_CORE: %s",
                   zx_status_get_string(status));
         return status;
       }
       PcieBuscore::CoreRegs pcie2_core_coreregs_2;
       if ((status = pcie_buscore->GetCoreRegs(CHIPSET_PCIE2_CORE, &pcie2_core_coreregs_2)) !=
           ZX_OK) {
-        BRCMF_ERR("Failed to get simultaneous CoreRegs instance for PCIE2_CORE: %s\n",
+        BRCMF_ERR("Failed to get simultaneous CoreRegs instance for PCIE2_CORE: %s",
                   zx_status_get_string(status));
         return status;
       }
@@ -184,7 +184,7 @@ zx_status_t RunPcieBusComponentsTest(zx_device_t* parent) {
     // ARM_CR4_CORE.
     PcieBuscore::CoreRegs arm_cr4_coreregs;
     if ((status = pcie_buscore->GetCoreRegs(CHIPSET_ARM_CR4_CORE, &arm_cr4_coreregs)) != ZX_OK) {
-      BRCMF_ERR("Failed to get CoreRegs instance for ARM_CR4_CORE: %s\n",
+      BRCMF_ERR("Failed to get CoreRegs instance for ARM_CR4_CORE: %s",
                 zx_status_get_string(status));
       return status;
     }
@@ -195,16 +195,16 @@ zx_status_t RunPcieBusComponentsTest(zx_device_t* parent) {
   std::unique_ptr<DmaBuffer> dma_buffer;
   if ((status = pcie_buscore->CreateDmaBuffer(ZX_CACHE_POLICY_CACHED, kDmaBufferSize,
                                               &dma_buffer)) != ZX_OK) {
-    BRCMF_ERR("DMA buffer creation failed: %s\n", zx_status_get_string(status));
+    BRCMF_ERR("DMA buffer creation failed: %s", zx_status_get_string(status));
     return status;
   }
   if ((status = dma_buffer->Map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE)) != ZX_OK) {
-    BRCMF_ERR("DMA buffer map failed: %s\n", zx_status_get_string(status));
+    BRCMF_ERR("DMA buffer map failed: %s", zx_status_get_string(status));
     return status;
   }
   if (!dma_buffer->is_valid() || dma_buffer->dma_address() == 0 ||
       dma_buffer->size() != kDmaBufferSize) {
-    BRCMF_ERR("PcieBuscore created invalid DMA buffer: is_valid=%d, dma_address=0x%zx, size=%zu\n",
+    BRCMF_ERR("PcieBuscore created invalid DMA buffer: is_valid=%d, dma_address=0x%zx, size=%zu",
               dma_buffer->is_valid(), static_cast<size_t>(dma_buffer->dma_address()),
               dma_buffer->size());
     return ZX_ERR_NO_RESOURCES;
@@ -214,32 +214,32 @@ zx_status_t RunPcieBusComponentsTest(zx_device_t* parent) {
   std::vector dma_read_data(kDmaBufferSize, '\0');
   std::memcpy(dma_read_data.data(), reinterpret_cast<void*>(dma_buffer->address()), kDmaBufferSize);
   if (!std::equal(dma_data.begin(), dma_data.end(), dma_read_data.begin())) {
-    BRCMF_ERR("DMA buffer read did not return written data\n");
+    BRCMF_ERR("DMA buffer read did not return written data");
     return ZX_ERR_IO_DATA_INTEGRITY;
   }
 
   std::unique_ptr<PcieFirmware> pcie_firmware;
   if ((status = PcieFirmware::Create(&device, pcie_buscore.get(), &pcie_firmware)) != ZX_OK) {
-    BRCMF_ERR("PcieFirmware creation failed: %s\n", zx_status_get_string(status));
+    BRCMF_ERR("PcieFirmware creation failed: %s", zx_status_get_string(status));
     return status;
   }
-  BRCMF_INFO("Firmware console output:\n");
+  BRCMF_INFO("Firmware console output:");
   std::string console;
   while (!(console = pcie_firmware->ReadConsole()).empty()) {
-    BRCMF_INFO("%s\n", console.c_str());
+    BRCMF_INFO("%s", console.c_str());
   }
 
   std::unique_ptr<PcieRingMaster> pcie_ring_master;
   if ((status = PcieRingMaster::Create(pcie_buscore.get(), pcie_firmware.get(),
                                        &pcie_ring_master)) != ZX_OK) {
-    BRCMF_ERR("PcieRingMaster creation failed: %s\n", zx_status_get_string(status));
+    BRCMF_ERR("PcieRingMaster creation failed: %s", zx_status_get_string(status));
     return status;
   }
 
   std::unique_ptr<PcieInterruptMaster> pcie_interrupt_master;
   if ((status = PcieInterruptMaster::Create(device.parent(), pcie_buscore.get(),
                                             &pcie_interrupt_master)) != ZX_OK) {
-    BRCMF_ERR("PcieInterruptMaster creation failed: %s\n", zx_status_get_string(status));
+    BRCMF_ERR("PcieInterruptMaster creation failed: %s", zx_status_get_string(status));
     return status;
   }
 
@@ -257,13 +257,13 @@ zx_status_t RunPcieDeviceComponentsTest(zx_device_t* parent) {
 
   std::unique_ptr<PcieBus> pcie_bus;
   if ((status = PcieBus::Create(&device, &pcie_bus)) != ZX_OK) {
-    BRCMF_ERR("PcieBus creation failed: %s\n", zx_status_get_string(status));
+    BRCMF_ERR("PcieBus creation failed: %s", zx_status_get_string(status));
     return status;
   }
 
   // Check that the chip bringup was successful.
   if (pcie_bus->GetBusOps()->get_ramsize(device.drvr()->bus_if) == 0) {
-    BRCMF_ERR("PcieBus returned 0 ramsize\n");
+    BRCMF_ERR("PcieBus returned 0 ramsize");
     return ZX_ERR_NO_RESOURCES;
   }
 
@@ -271,7 +271,7 @@ zx_status_t RunPcieDeviceComponentsTest(zx_device_t* parent) {
   if ((status = MsgbufProto::Create(&device, pcie_bus->GetDmaBufferProvider(),
                                     pcie_bus->GetDmaRingProvider(),
                                     pcie_bus->GetInterruptProvider(), &msgbuf_proto)) != ZX_OK) {
-    BRCMF_ERR("MsgbufProto creation failed: %s\n", zx_status_get_string(status));
+    BRCMF_ERR("MsgbufProto creation failed: %s", zx_status_get_string(status));
     return status;
   }
 
@@ -286,27 +286,27 @@ zx_status_t RunPcieDriverTest(zx_device_t* parent) {
 
   pci_protocol_t pci = {};
   if (device_get_protocol(parent, ZX_PROTOCOL_PCI, &pci) == ZX_OK) {
-    BRCMF_INFO("Running PCIE tests\n");
+    BRCMF_INFO("Running PCIE tests");
 
     // Unit tests for the different components of the driver.
     if ((status = RunPcieBusComponentsTest(parent)) != ZX_OK) {
-      BRCMF_ERR("PCIE bus components test failed: %s\n", zx_status_get_string(status));
+      BRCMF_ERR("PCIE bus components test failed: %s", zx_status_get_string(status));
       return status;
     }
     if ((status = RunPcieDeviceComponentsTest(parent)) != ZX_OK) {
-      BRCMF_ERR("PCIE device components test failed: %s\n", zx_status_get_string(status));
+      BRCMF_ERR("PCIE device components test failed: %s", zx_status_get_string(status));
       return status;
     }
 
     // One overall integration test for the entire driver.
     PcieDevice* device = nullptr;
     if ((status = PcieDevice::Create(parent, &device)) != ZX_OK) {
-      BRCMF_ERR("PCIE device integration test failed: %s\n", zx_status_get_string(status));
+      BRCMF_ERR("PCIE device integration test failed: %s", zx_status_get_string(status));
       return status;
     }
     device->DdkAsyncRemove();
 
-    BRCMF_INFO("PCIE tests passed\n");
+    BRCMF_INFO("PCIE tests passed");
   }
 
   return ZX_OK;

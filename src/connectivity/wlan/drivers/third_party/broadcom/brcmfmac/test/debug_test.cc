@@ -43,18 +43,18 @@ TEST(DebugTest, DumpNoCrash) {
   // First test all sizes from [0,100]
   size_t max_test_size = std::min<size_t>(100, buffer_size);
   for (size_t i = 0; i < max_test_size; i++) {
-    BRCMF_DBG_HEX_DUMP(true, buffer, i, "buffer size of %d", i);
-    BRCMF_DBG_STRING_DUMP(true, buffer, i, "string size of %d", i);
+    BRCMF_DBG_HEX_DUMP(true, buffer, i, "buffer size of %zu", i);
+    BRCMF_DBG_STRING_DUMP(true, buffer, i, "string size of %zu", i);
   }
 
   // Test upper limits of hex dump
-  for (size_t i = kMaxHexDumpBytes - 1; i <= kMaxHexDumpBytes + 1; i++) {
-    BRCMF_DBG_HEX_DUMP(true, buffer, i, "buffer size of %d", i);
+  for (size_t i = kMaxHexDumpBytes - 1; i < kMaxHexDumpBytes + 2; i++) {
+    BRCMF_DBG_HEX_DUMP(true, buffer, i, "buffer size of %zu", i);
   }
 
   // Test upper limits of string dump
-  for (size_t i = kMaxStringDumpBytes - 1; i <= kMaxStringDumpBytes + 1; i++) {
-    BRCMF_DBG_STRING_DUMP(true, buffer, i, "string size of %d", i);
+  for (size_t i = kMaxStringDumpBytes - 1; i < kMaxStringDumpBytes + 2; i++) {
+    BRCMF_DBG_STRING_DUMP(true, buffer, i, "string size of %zu", i);
   }
 };
 

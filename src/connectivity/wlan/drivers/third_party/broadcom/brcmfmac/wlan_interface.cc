@@ -210,7 +210,7 @@ zx_status_t WlanInterface::SetCountry(brcmf_pub* drvr, const wlanphy_country_t* 
     return ZX_ERR_INVALID_ARGS;
   }
   const unsigned char* code = country->alpha2;
-  BRCMF_ERR("WlanInterface::SetCountry() %c%c\n", code[0], code[1]);
+  BRCMF_ERR("WlanInterface::SetCountry() %c%c", code[0], code[1]);
   return brcmf_set_country(drvr, country);
 }
 

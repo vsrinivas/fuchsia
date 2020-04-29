@@ -597,7 +597,7 @@ static uint32_t brcmf_fws_hanger_get_free_slot(struct brcmf_fws_hanger* h) {
       i = 0;
     }
   }
-  BRCMF_ERR("all slots occupied\n");
+  BRCMF_ERR("all slots occupied");
   h->failed_slotfind++;
   i = BRCMF_FWS_HANGER_MAXITEMS;
 done:
@@ -611,7 +611,7 @@ static zx_status_t brcmf_fws_hanger_pushpkt(struct brcmf_fws_hanger* h, struct b
   }
 
   if (h->items[slot_id].state != BRCMF_FWS_HANGER_ITEM_STATE_FREE) {
-    BRCMF_ERR("slot is not free\n");
+    BRCMF_ERR("slot is not free");
     h->failed_to_push++;
     return ZX_ERR_BAD_STATE;
   }
@@ -629,7 +629,7 @@ static inline zx_status_t brcmf_fws_hanger_poppkt(struct brcmf_fws_hanger* h, ui
   }
 
   if (h->items[slot_id].state == BRCMF_FWS_HANGER_ITEM_STATE_FREE) {
-    BRCMF_ERR("entry not in use\n");
+    BRCMF_ERR("entry not in use");
     h->failed_to_pop++;
     return ZX_ERR_BAD_STATE;
   }
@@ -649,7 +649,7 @@ static zx_status_t brcmf_fws_hanger_mark_suppressed(struct brcmf_fws_hanger* h, 
   }
 
   if (h->items[slot_id].state == BRCMF_FWS_HANGER_ITEM_STATE_FREE) {
-    BRCMF_ERR("entry not in use\n");
+    BRCMF_ERR("entry not in use");
     return ZX_ERR_BAD_STATE;
   }
 
@@ -693,7 +693,7 @@ static void brcmf_fws_macdesc_set_name(struct brcmf_fws_info* fws,
 
 static void brcmf_fws_macdesc_init(struct brcmf_fws_mac_descriptor* desc, uint8_t* addr,
                                    uint8_t ifidx) {
-  BRCMF_DBG(TRACE, "enter: desc %p ea=%pM, ifidx=%u\n", desc, addr, ifidx);
+  BRCMF_DBG(TRACE, "enter: desc %p ea=%pM, ifidx=%u", desc, addr, ifidx);
   desc->occupied = 1;
   desc->state = BRCMF_FWS_STATE_OPEN;
   desc->requested_credit = 0;
@@ -707,7 +707,7 @@ static void brcmf_fws_macdesc_init(struct brcmf_fws_mac_descriptor* desc, uint8_
 }
 
 static void brcmf_fws_macdesc_deinit(struct brcmf_fws_mac_descriptor* desc) {
-  BRCMF_DBG(TRACE, "enter: ea=%pM, ifidx=%u\n", desc->ea, desc->interface_id);
+  BRCMF_DBG(TRACE, "enter: ea=%pM, ifidx=%u", desc->ea, desc->interface_id);
   desc->occupied = 0;
   desc->state = BRCMF_FWS_STATE_CLOSE;
   desc->requested_credit = 0;
@@ -814,7 +814,7 @@ static void brcmf_fws_bus_txq_cleanup(struct brcmf_fws_info* fws,
 
   err = brcmf_bus_gettxq(fws->drvr->bus_if, &txq);
   if (err != ZX_OK) {
-    BRCMF_DBG(TRACE, "no txq to clean up\n");
+    BRCMF_DBG(TRACE, "no txq to clean up");
     return;
   }
 
@@ -863,7 +863,7 @@ static uint8_t brcmf_fws_hdrpush(struct brcmf_fws_info* fws, struct brcmf_netbuf
   uint32_t pkttag = brcmf_workspace(netbuf)->htod;
   uint16_t pktseq = brcmf_workspace(netbuf)->htod_seq;
 
-  BRCMF_DBG(TRACE, "enter: %s, idx=%d hslot=%d htod %X seq %X\n", entry->name,
+  BRCMF_DBG(TRACE, "enter: %s, idx=%d hslot=%d htod %X seq %X", entry->name,
             brcmf_netbuf_if_flags_get_field(netbuf, INDEX), (pkttag) >> 8 & 0xffff,
             brcmf_workspace(netbuf)->htod, brcmf_workspace(netbuf)->htod_seq);
   if (entry->send_tim_signal) {
@@ -895,7 +895,7 @@ static uint8_t brcmf_fws_hdrpush(struct brcmf_fws_info* fws, struct brcmf_netbuf
     wlh[1] = BRCMF_FWS_TYPE_PENDING_TRAFFIC_BMP_LEN;
     wlh[2] = entry->mac_handle;
     wlh[3] = entry->traffic_pending_bmp;
-    BRCMF_DBG(TRACE, "adding TIM info: handle %d bmp 0x%X\n", entry->mac_handle,
+    BRCMF_DBG(TRACE, "adding TIM info: handle %d bmp 0x%X", entry->mac_handle,
               entry->traffic_pending_bmp);
     wlh += BRCMF_FWS_TYPE_PENDING_TRAFFIC_BMP_LEN + 2;
     entry->traffic_lastreported_bmp = entry->traffic_pending_bmp;
@@ -977,7 +977,7 @@ static void brcmf_fws_flow_control_check(struct brcmf_fws_info* fws, struct pktq
 }
 
 static zx_status_t brcmf_fws_rssi_indicate(struct brcmf_fws_info* fws, int8_t rssi) {
-  BRCMF_DBG(CTL, "rssi %d\n", rssi);
+  BRCMF_DBG(CTL, "rssi %d", rssi);
   return ZX_OK;
 }
 
@@ -996,7 +996,7 @@ static int brcmf_fws_macdesc_indicate(struct brcmf_fws_info* fws, uint8_t type, 
   entry = &fws->desc.nodes[mac_handle & 0x1F];
   if (type == BRCMF_FWS_TYPE_MACDESC_DEL) {
     if (entry->occupied) {
-      BRCMF_DBG(TRACE, "deleting %s mac %pM\n", entry->name, addr);
+      BRCMF_DBG(TRACE, "deleting %s mac %pM", entry->name, addr);
       brcmf_fws_lock(fws);
       brcmf_fws_macdesc_cleanup(fws, entry, -1);
       brcmf_fws_macdesc_deinit(entry);
@@ -1016,22 +1016,22 @@ static int brcmf_fws_macdesc_indicate(struct brcmf_fws_info* fws, uint8_t type, 
       brcmf_fws_macdesc_set_name(fws, entry);
       brcmu_pktq_init(&entry->psq, BRCMF_FWS_PSQ_PREC_COUNT, BRCMF_FWS_PSQ_LEN);
       brcmf_fws_unlock(fws);
-      BRCMF_DBG(TRACE, "add %s mac %pM\n", entry->name, addr);
+      BRCMF_DBG(TRACE, "add %s mac %pM", entry->name, addr);
     } else {
       fws->stats.mac_update_failed++;
     }
   } else {
     if (entry != existing) {
-      BRCMF_DBG(TRACE, "copy mac %s\n", existing->name);
+      BRCMF_DBG(TRACE, "copy mac %s", existing->name);
       brcmf_fws_lock(fws);
       memcpy(entry, existing, offsetof(struct brcmf_fws_mac_descriptor, psq));
       entry->mac_handle = mac_handle;
       brcmf_fws_macdesc_deinit(existing);
       brcmf_fws_macdesc_set_name(fws, entry);
       brcmf_fws_unlock(fws);
-      BRCMF_DBG(TRACE, "relocate %s mac %pM\n", entry->name, addr);
+      BRCMF_DBG(TRACE, "relocate %s mac %pM", entry->name, addr);
     } else {
-      BRCMF_DBG(TRACE, "use existing\n");
+      BRCMF_DBG(TRACE, "use existing");
       WARN_ON(entry->mac_handle != mac_handle);
       /* TODO: what should we do here: continue, reinit, .. */
     }
@@ -1050,7 +1050,7 @@ static enum brcmf_fws_should_schedule brcmf_fws_macdesc_state_indicate(struct br
   entry = &fws->desc.nodes[mac_handle & 0x1F];
   if (!entry->occupied) {
     fws->stats.mac_ps_update_failed++;
-    BRCMF_ERR("Unoccupied entry\n");
+    BRCMF_ERR("Unoccupied entry");
     return BRCMF_FWS_NOSCHEDULE;
   }
   brcmf_fws_lock(fws);
@@ -1082,19 +1082,19 @@ static enum brcmf_fws_should_schedule brcmf_fws_interface_state_indicate(struct 
   ifidx = data[0];
 
   if (ifidx >= BRCMF_MAX_IFS) {
-    BRCMF_ERR("ifidx %d bigger than BRCMF_MAX_IFS\n", ifidx);
+    BRCMF_ERR("ifidx %d bigger than BRCMF_MAX_IFS", ifidx);
     ret = BRCMF_FWS_NOSCHEDULE;
     goto fail;
   }
 
   entry = &fws->desc.iface[ifidx];
   if (!entry->occupied) {
-    BRCMF_ERR("Entry %d unoccupied\n", ifidx);
+    BRCMF_ERR("Entry %d unoccupied", ifidx);
     ret = BRCMF_FWS_NOSCHEDULE;
     goto fail;
   }
 
-  BRCMF_DBG(TRACE, "%s (%d): %s\n", brcmf_fws_get_tlv_name(static_cast<brcmf_fws_tlv_type>(type)),
+  BRCMF_DBG(TRACE, "%s (%d): %s", brcmf_fws_get_tlv_name(static_cast<brcmf_fws_tlv_type>(type)),
             type, entry->name);
   brcmf_fws_lock(fws);
   switch (type) {
@@ -1107,7 +1107,7 @@ static enum brcmf_fws_should_schedule brcmf_fws_interface_state_indicate(struct 
       ret = BRCMF_FWS_NOSCHEDULE;
       break;
     default:
-      BRCMF_ERR("Invalid type %d\n", type);
+      BRCMF_ERR("Invalid type %d", type);
       ret = BRCMF_FWS_NOSCHEDULE;
       brcmf_fws_unlock(fws);
       goto fail;
@@ -1131,11 +1131,11 @@ static enum brcmf_fws_should_schedule brcmf_fws_request_indicate(struct brcmf_fw
     } else {
       fws->stats.packet_request_failed++;
     }
-    BRCMF_ERR("Unoccupied entry %d\n", data[1] & 0x1F);
+    BRCMF_ERR("Unoccupied entry %d", data[1] & 0x1F);
     return BRCMF_FWS_NOSCHEDULE;
   }
 
-  BRCMF_DBG(TRACE, "%s (%d): %s cnt %d bmp %d\n",
+  BRCMF_DBG(TRACE, "%s (%d): %s cnt %d bmp %d",
             brcmf_fws_get_tlv_name(static_cast<brcmf_fws_tlv_type>(type)), type, entry->name,
             data[0], data[2]);
   brcmf_fws_lock(fws);
@@ -1157,14 +1157,14 @@ static void brcmf_fws_macdesc_use_req_credit(struct brcmf_fws_mac_descriptor* en
     brcmf_netbuf_if_flags_set_field(netbuf, REQUESTED, 1);
     brcmf_netbuf_if_flags_set_field(netbuf, REQ_CREDIT, 1);
     if (entry->state != BRCMF_FWS_STATE_CLOSE) {
-      BRCMF_ERR("requested credit set while mac not closed!\n");
+      BRCMF_ERR("requested credit set while mac not closed!");
     }
   } else if (entry->requested_packet > 0) {
     entry->requested_packet--;
     brcmf_netbuf_if_flags_set_field(netbuf, REQUESTED, 1);
     brcmf_netbuf_if_flags_set_field(netbuf, REQ_CREDIT, 0);
     if (entry->state != BRCMF_FWS_STATE_CLOSE) {
-      BRCMF_ERR("requested packet set while mac not closed!\n");
+      BRCMF_ERR("requested packet set while mac not closed!");
     }
   } else {
     brcmf_netbuf_if_flags_set_field(netbuf, REQUESTED, 0);
@@ -1236,11 +1236,11 @@ static zx_status_t brcmf_fws_enq(struct brcmf_fws_info* fws, enum brcmf_fws_netb
 
   entry = brcmf_workspace(p)->mac;
   if (entry == NULL) {
-    BRCMF_ERR("no mac descriptor found for netbuf %p\n", p);
+    BRCMF_ERR("no mac descriptor found for netbuf %p", p);
     return ZX_ERR_NOT_FOUND;
   }
 
-  BRCMF_DBG(DATA, "enter: fifo %d netbuf %p\n", fifo, p);
+  BRCMF_DBG(DATA, "enter: fifo %d netbuf %p", fifo, p);
   if (state == BRCMF_FWS_NETBUFSTATE_SUPPRESSED) {
     prec += 1;
     qfull_stat = &fws->stats.supprq_full_error;
@@ -1371,7 +1371,7 @@ static struct brcmf_netbuf* brcmf_fws_deq(struct brcmf_fws_info* fws, int fifo) 
   }
   p = NULL;
 done:
-  BRCMF_DBG(DATA, "exit: fifo %d netbuf %p\n", fifo, p);
+  BRCMF_DBG(DATA, "exit: fifo %d netbuf %p", fifo, p);
   return p;
 }
 
@@ -1388,7 +1388,7 @@ static zx_status_t brcmf_fws_txstatus_suppressed(struct brcmf_fws_info* fws, int
   if (!entry->suppressed) {
     entry->suppressed = true;
     entry->suppr_transit_count = entry->transit_count;
-    BRCMF_DBG(DATA, "suppress %s: transit %d\n", entry->name, entry->transit_count);
+    BRCMF_DBG(DATA, "suppress %s: transit %d", entry->name, entry->transit_count);
   }
 
   entry->generation = genbit;
@@ -1424,7 +1424,7 @@ static zx_status_t brcmf_fws_txs_process(struct brcmf_fws_info* fws, uint8_t fla
   struct brcmf_fws_mac_descriptor* entry = NULL;
   struct brcmf_if* ifp;
 
-  BRCMF_DBG(DATA, "flags %d\n", flags);
+  BRCMF_DBG(DATA, "flags %d", flags);
 
   if (flags == BRCMF_FWS_TXSTATUS_DISCARD) {
     fws->stats.txs_discard++;
@@ -1439,12 +1439,12 @@ static zx_status_t brcmf_fws_txs_process(struct brcmf_fws_info* fws, uint8_t fla
   } else if (flags == BRCMF_FWS_TXSTATUS_HOST_TOSSED) {
     fws->stats.txs_host_tossed++;
   } else {
-    BRCMF_ERR("unexpected txstatus\n");
+    BRCMF_ERR("unexpected txstatus");
   }
 
   ret = brcmf_fws_hanger_poppkt(&fws->hanger, hslot, &netbuf, remove_from_hanger);
   if (ret != ZX_OK) {
-    BRCMF_ERR("no packet in hanger slot: hslot=%d\n", hslot);
+    BRCMF_ERR("no packet in hanger slot: hslot=%d", hslot);
     return ret;
   }
 
@@ -1463,7 +1463,7 @@ static zx_status_t brcmf_fws_txs_process(struct brcmf_fws_info* fws, uint8_t fla
     entry->suppr_transit_count--;
   }
 
-  BRCMF_DBG(DATA, "%s flags %d htod %X seq %X\n", entry->name, flags, workspace->htod, seq);
+  BRCMF_DBG(DATA, "%s flags %d htod %X seq %X", entry->name, flags, workspace->htod, seq);
 
   /* pick up the implicit credit from this packet */
   fifo = brcmf_netbuf_htod_tag_get_field(netbuf, FIFO);
@@ -1497,17 +1497,17 @@ static enum brcmf_fws_should_schedule brcmf_fws_fifocreditback_indicate(struct b
   int i;
 
   if (fws->fcmode != BRCMF_FWS_FCMODE_EXPLICIT_CREDIT) {
-    BRCMF_DBG(INFO, "ignored\n");
+    BRCMF_DBG(INFO, "ignored");
     return BRCMF_FWS_NOSCHEDULE;
   }
 
-  BRCMF_DBG(DATA, "enter: data %pM\n", data);
+  BRCMF_DBG(DATA, "enter: data %pM", data);
   brcmf_fws_lock(fws);
   for (i = 0; i < BRCMF_FWS_FIFO_COUNT; i++) {
     brcmf_fws_return_credits(fws, i, data[i]);
   }
 
-  BRCMF_DBG(DATA, "map: credit %x delay %x\n", fws->fifo_credit_map, fws->fifo_delay_map);
+  BRCMF_DBG(DATA, "map: credit %x delay %x", fws->fifo_credit_map, fws->fifo_delay_map);
   brcmf_fws_unlock(fws);
   return BRCMF_FWS_SCHEDULE;
 }
@@ -1545,7 +1545,7 @@ static zx_status_t brcmf_fws_dbg_seqnum_check(struct brcmf_fws_info* fws, uint8_
   uint32_t timestamp;
 
   memcpy(&timestamp, &data[2], sizeof(timestamp));
-  BRCMF_DBG(CTL, "received: seq %d, timestamp %d\n", data[1], timestamp);
+  BRCMF_DBG(CTL, "received: seq %d, timestamp %d", data[1], timestamp);
   return ZX_OK;
 }
 
@@ -1556,7 +1556,7 @@ static zx_status_t brcmf_fws_notify_credit_map(struct brcmf_if* ifp,
   uint8_t* credits = static_cast<decltype(credits)>(data);
 
   if (e->datalen < BRCMF_FWS_FIFO_COUNT) {
-    BRCMF_ERR("event payload too small (%d)\n", e->datalen);
+    BRCMF_ERR("event payload too small (%d)", e->datalen);
     return ZX_ERR_INVALID_ARGS;
   }
   if (fws->creditmap_received) {
@@ -1565,7 +1565,7 @@ static zx_status_t brcmf_fws_notify_credit_map(struct brcmf_if* ifp,
 
   fws->creditmap_received = true;
 
-  BRCMF_DBG(TRACE, "enter: credits %pM\n", credits);
+  BRCMF_DBG(TRACE, "enter: credits %pM", credits);
   brcmf_fws_lock(fws);
   for (i = 0; i < (int)countof(fws->fifo_credit); i++) {
     if (*credits) {
@@ -1599,7 +1599,7 @@ static void brcmf_rxreorder_get_netbuf_list(struct brcmf_ampdu_rx_reorder* rfi, 
   brcmf_netbuf_list_init(netbuf_list);
 
   if (rfi->pend_pkts == 0) {
-    BRCMF_DBG(INFO, "no packets in reorder queue\n");
+    BRCMF_DBG(INFO, "no packets in reorder queue");
     return;
   }
 
@@ -1631,7 +1631,7 @@ void brcmf_fws_rxreorder(struct brcmf_if* ifp, struct brcmf_netbuf* pkt) {
 
   /* validate flags and flow id */
   if (flags == 0xFF) {
-    BRCMF_ERR("invalid flags...so ignore this packet\n");
+    BRCMF_ERR("invalid flags...so ignore this packet");
     brcmf_netif_rx(ifp, pkt->data, pkt->len);
     brcmu_pkt_buf_free_netbuf(pkt);
     return;
@@ -1639,10 +1639,10 @@ void brcmf_fws_rxreorder(struct brcmf_if* ifp, struct brcmf_netbuf* pkt) {
 
   rfi = ifp->drvr->reorder_flows[flow_id];
   if (flags & BRCMF_RXREORDER_DEL_FLOW) {
-    BRCMF_DBG(INFO, "flow-%d: delete\n", flow_id);
+    BRCMF_DBG(INFO, "flow-%d: delete", flow_id);
 
     if (rfi == NULL) {
-      BRCMF_DBG(INFO, "received flags to cleanup, but no flow (%d) yet\n", flow_id);
+      BRCMF_DBG(INFO, "received flags to cleanup, but no flow (%d) yet", flow_id);
       brcmf_netif_rx(ifp, pkt->data, pkt->len);
       brcmu_pkt_buf_free_netbuf(pkt);
       return;
@@ -1663,10 +1663,10 @@ void brcmf_fws_rxreorder(struct brcmf_if* ifp, struct brcmf_netbuf* pkt) {
     buf_size += (max_idx + 1) * sizeof(pkt);
 
     /* allocate space for flow reorder info */
-    BRCMF_DBG(INFO, "flow-%d: start, maxidx %d\n", flow_id, max_idx);
+    BRCMF_DBG(INFO, "flow-%d: start, maxidx %d", flow_id, max_idx);
     rfi = static_cast<decltype(rfi)>(calloc(1, buf_size));
     if (rfi == NULL) {
-      BRCMF_ERR("failed to alloc buffer\n");
+      BRCMF_ERR("failed to alloc buffer");
       brcmf_netif_rx(ifp, pkt->data, pkt->len);
       brcmu_pkt_buf_free_netbuf(pkt);
       return;
@@ -1688,7 +1688,7 @@ void brcmf_fws_rxreorder(struct brcmf_if* ifp, struct brcmf_netbuf* pkt) {
     rfi->max_idx = reorder_data[BRCMF_RXREORDER_MAXIDX_OFFSET];
     rfi->pktslots[rfi->cur_idx] = pkt;
     rfi->pend_pkts++;
-    BRCMF_DBG(DATA, "flow-%d: new hole %d (%d), pending %d\n", flow_id, rfi->cur_idx, rfi->exp_idx,
+    BRCMF_DBG(DATA, "flow-%d: new hole %d (%d), pending %d", flow_id, rfi->cur_idx, rfi->exp_idx,
               rfi->pend_pkts);
   } else if (flags & BRCMF_RXREORDER_CURIDX_VALID) {
     cur_idx = reorder_data[BRCMF_RXREORDER_CURIDX_OFFSET];
@@ -1698,14 +1698,14 @@ void brcmf_fws_rxreorder(struct brcmf_if* ifp, struct brcmf_netbuf* pkt) {
       /* still in the current hole */
       /* enqueue the current on the buffer chain */
       if (rfi->pktslots[cur_idx] != NULL) {
-        BRCMF_DBG(INFO, "HOLE: ERROR buffer pending..free it\n");
+        BRCMF_DBG(INFO, "HOLE: ERROR buffer pending..free it");
         brcmu_pkt_buf_free_netbuf(rfi->pktslots[cur_idx]);
         rfi->pktslots[cur_idx] = NULL;
       }
       rfi->pktslots[cur_idx] = pkt;
       rfi->pend_pkts++;
       rfi->cur_idx = cur_idx;
-      BRCMF_DBG(DATA, "flow-%d: store pkt %d (%d), pending %d\n", flow_id, cur_idx, exp_idx,
+      BRCMF_DBG(DATA, "flow-%d: store pkt %d (%d), pending %d", flow_id, cur_idx, exp_idx,
                 rfi->pend_pkts);
 
       /* can return now as there is no reorder
@@ -1715,7 +1715,7 @@ void brcmf_fws_rxreorder(struct brcmf_if* ifp, struct brcmf_netbuf* pkt) {
     }
     if (rfi->exp_idx == cur_idx) {
       if (rfi->pktslots[cur_idx] != NULL) {
-        BRCMF_DBG(INFO, "error buffer pending..free it\n");
+        BRCMF_DBG(INFO, "error buffer pending..free it");
         brcmu_pkt_buf_free_netbuf(rfi->pktslots[cur_idx]);
         rfi->pktslots[cur_idx] = NULL;
       }
@@ -1725,19 +1725,19 @@ void brcmf_fws_rxreorder(struct brcmf_if* ifp, struct brcmf_netbuf* pkt) {
       /* got the expected one. flush from current to expected
        * and update expected
        */
-      BRCMF_DBG(DATA, "flow-%d: expected %d (%d), pending %d\n", flow_id, cur_idx, exp_idx,
+      BRCMF_DBG(DATA, "flow-%d: expected %d (%d), pending %d", flow_id, cur_idx, exp_idx,
                 rfi->pend_pkts);
 
       rfi->cur_idx = cur_idx;
       rfi->exp_idx = exp_idx;
 
       brcmf_rxreorder_get_netbuf_list(rfi, cur_idx, exp_idx, &reorder_list);
-      BRCMF_DBG(DATA, "flow-%d: freeing buffers %d, pending %d\n", flow_id,
+      BRCMF_DBG(DATA, "flow-%d: freeing buffers %d, pending %d", flow_id,
                 brcmf_netbuf_list_length(&reorder_list), rfi->pend_pkts);
     } else {
       uint8_t end_idx;
 
-      BRCMF_DBG(DATA, "flow-%d (0x%x): both moved, old %d/%d, new %d/%d\n", flow_id, flags,
+      BRCMF_DBG(DATA, "flow-%d (0x%x): both moved, old %d/%d, new %d/%d", flow_id, flags,
                 rfi->cur_idx, rfi->exp_idx, cur_idx, exp_idx);
       if (flags & BRCMF_RXREORDER_FLUSH_ALL) {
         end_idx = rfi->exp_idx;
@@ -1761,7 +1761,7 @@ void brcmf_fws_rxreorder(struct brcmf_if* ifp, struct brcmf_netbuf* pkt) {
     /* explicity window move updating the expected index */
     exp_idx = reorder_data[BRCMF_RXREORDER_EXPIDX_OFFSET];
 
-    BRCMF_DBG(DATA, "flow-%d (0x%x): change expected: %d -> %d\n", flow_id, flags, rfi->exp_idx,
+    BRCMF_DBG(DATA, "flow-%d (0x%x): change expected: %d -> %d", flow_id, flags, rfi->exp_idx,
               exp_idx);
     if (flags & BRCMF_RXREORDER_FLUSH_ALL) {
       end_idx = rfi->exp_idx;
@@ -1794,7 +1794,7 @@ void brcmf_fws_hdrpull(struct brcmf_if* ifp, int16_t siglen, struct brcmf_netbuf
   zx_status_t err;
   enum brcmf_fws_should_schedule schedule_status;
 
-  BRCMF_DBG(HDRS, "enter: ifidx %d, netbuflen %u, siglen %d\n", ifp->ifidx, netbuf->len, siglen);
+  BRCMF_DBG(HDRS, "enter: ifidx %d, netbuflen %u, siglen %d", ifp->ifidx, netbuf->len, siglen);
 
   WARN_ON(siglen > (int32_t)netbuf->len);
 
@@ -1828,7 +1828,7 @@ void brcmf_fws_hdrpull(struct brcmf_if* ifp, int16_t siglen, struct brcmf_netbuf
     data = signal_data + 2;
 
     err = brcmf_fws_get_tlv_len(fws, static_cast<brcmf_fws_tlv_type>(type), &tlv_len);
-    BRCMF_DBG(HDRS, "tlv type=%s (%d), len=%d (%d:%d)\n",
+    BRCMF_DBG(HDRS, "tlv type=%s (%d), len=%d (%d:%d)",
               brcmf_fws_get_tlv_name(static_cast<brcmf_fws_tlv_type>(type)), type, len, err,
               tlv_len);
 
@@ -1947,11 +1947,11 @@ static void brcmf_fws_rollback_toq(struct brcmf_fws_info* fws, struct brcmf_netb
 
     pktout = brcmu_pktq_penq_head(&entry->psq, qidx, netbuf);
     if (pktout == NULL) {
-      BRCMF_ERR("%s queue %d full\n", entry->name, qidx);
+      BRCMF_ERR("%s queue %d full", entry->name, qidx);
       rc = ZX_ERR_NO_RESOURCES;
     }
   } else {
-    BRCMF_ERR("%s entry removed\n", entry->name);
+    BRCMF_ERR("%s entry removed", entry->name);
     rc = ZX_ERR_NOT_FOUND;
   }
 
@@ -1982,7 +1982,7 @@ static zx_status_t brcmf_fws_borrow_credit(struct brcmf_fws_info* fws) {
         fws->fifo_credit_map &= ~(1 << lender_ac);
       }
       fws->fifo_credit_map |= (1 << BRCMF_FWS_FIFO_AC_BE);
-      BRCMF_DBG(DATA, "borrow credit from: %d\n", lender_ac);
+      BRCMF_DBG(DATA, "borrow credit from: %d", lender_ac);
       return ZX_OK;
     }
   }
@@ -2012,7 +2012,7 @@ static zx_status_t brcmf_fws_commit_netbuf(struct brcmf_fws_info* fws, int fifo,
   brcmf_fws_unlock(fws);
   rc = brcmf_proto_txdata(fws->drvr, ifidx, data_offset, netbuf);
   brcmf_fws_lock(fws);
-  BRCMF_DBG(DATA, "%s flags %X htod %X bus_tx %d\n", entry->name, workspace->if_flags,
+  BRCMF_DBG(DATA, "%s flags %X htod %X bus_tx %d", entry->name, workspace->if_flags,
             workspace->htod, rc);
   if (rc != ZX_OK) {
     entry->transit_count--;
@@ -2065,7 +2065,7 @@ zx_status_t brcmf_fws_process_netbuf(struct brcmf_if* ifp, struct brcmf_netbuf* 
   bool multicast = address_is_multicast(eh->h_dest);
   zx_status_t rc = ZX_OK;
 
-  BRCMF_DBG(DATA, "tx proto=0x%X\n", be16toh(eh->h_proto));
+  BRCMF_DBG(DATA, "tx proto=0x%X", be16toh(eh->h_proto));
 
   /* set control buffer information */
   workspace->if_flags = 0;
@@ -2082,13 +2082,12 @@ zx_status_t brcmf_fws_process_netbuf(struct brcmf_if* ifp, struct brcmf_netbuf* 
   }
 
   workspace->mac_status = brcmf_fws_macdesc_find(fws, ifp, eh->h_dest, &workspace->mac);
-  BRCMF_DBG(DATA, "%s mac %pM multi %d fifo %d\n", workspace->mac->name, eh->h_dest, multicast,
-            fifo);
+  BRCMF_DBG(DATA, "%s mac %pM multi %d fifo %d", workspace->mac->name, eh->h_dest, multicast, fifo);
   if (brcmf_fws_assign_htod(fws, netbuf, fifo) == ZX_OK) {
     brcmf_fws_enq(fws, BRCMF_FWS_NETBUFSTATE_DELAYED, fifo, netbuf);
     brcmf_fws_schedule_deq(fws);
   } else {
-    BRCMF_ERR("drop netbuf: no hanger slot\n");
+    BRCMF_ERR("drop netbuf: no hanger slot");
     brcmf_txfinalize(ifp, eh, false);
     brcmu_pkt_buf_free_netbuf(netbuf);
     rc = ZX_ERR_NO_MEMORY;
@@ -2101,7 +2100,7 @@ zx_status_t brcmf_fws_process_netbuf(struct brcmf_if* ifp, struct brcmf_netbuf* 
 void brcmf_fws_reset_interface(struct brcmf_if* ifp) {
   struct brcmf_fws_mac_descriptor* entry = ifp->fws_desc;
 
-  BRCMF_DBG(TRACE, "enter: bsscfgidx=%d\n", ifp->bsscfgidx);
+  BRCMF_DBG(TRACE, "enter: bsscfgidx=%d", ifp->bsscfgidx);
   if (!entry) {
     return;
   }
@@ -2122,7 +2121,7 @@ void brcmf_fws_add_interface(struct brcmf_if* ifp) {
   brcmf_fws_macdesc_init(entry, ifp->mac_addr, ifp->ifidx);
   brcmf_fws_macdesc_set_name(fws, entry);
   brcmu_pktq_init(&entry->psq, BRCMF_FWS_PSQ_PREC_COUNT, BRCMF_FWS_PSQ_LEN);
-  BRCMF_DBG(TRACE, "added %s\n", entry->name);
+  BRCMF_DBG(TRACE, "added %s", entry->name);
 }
 
 void brcmf_fws_del_interface(struct brcmf_if* ifp) {
@@ -2135,7 +2134,7 @@ void brcmf_fws_del_interface(struct brcmf_if* ifp) {
 
   brcmf_fws_lock(fws);
   ifp->fws_desc = NULL;
-  BRCMF_DBG(TRACE, "deleting %s\n", entry->name);
+  BRCMF_DBG(TRACE, "deleting %s", entry->name);
   brcmf_fws_macdesc_deinit(entry);
   brcmf_fws_cleanup(fws, ifp->ifidx);
   brcmf_fws_unlock(fws);
@@ -2234,7 +2233,7 @@ zx_status_t brcmf_fws_attach(struct brcmf_pub* drvr, struct brcmf_fws_info** fws
 
   if ((drvr->bus_if->always_use_fws_queue == false) && (fws->fcmode == BRCMF_FWS_FCMODE_NONE)) {
     fws->avoid_queueing = true;
-    BRCMF_DBG(INFO, "FWS queueing will be avoided\n");
+    BRCMF_DBG(INFO, "FWS queueing will be avoided");
     if (fws_out) {
       *fws_out = fws;
     }
@@ -2243,7 +2242,7 @@ zx_status_t brcmf_fws_attach(struct brcmf_pub* drvr, struct brcmf_fws_info** fws
 
   fws->fws_wq = new WorkQueue("brcmf_fws_wq");
   if (fws->fws_wq == NULL) {
-    BRCMF_ERR("workqueue creation failed\n");
+    BRCMF_ERR("workqueue creation failed");
     rc = ZX_ERR_NO_RESOURCES;
     goto fail;
   }
@@ -2256,12 +2255,12 @@ zx_status_t brcmf_fws_attach(struct brcmf_pub* drvr, struct brcmf_fws_info** fws
 
   rc = brcmf_fweh_register(drvr, BRCMF_E_FIFO_CREDIT_MAP, brcmf_fws_notify_credit_map);
   if (rc != ZX_OK) {
-    BRCMF_ERR("register credit map handler failed\n");
+    BRCMF_ERR("register credit map handler failed");
     goto fail;
   }
   rc = brcmf_fweh_register(drvr, BRCMF_E_BCMC_CREDIT_SUPPORT, brcmf_fws_notify_bcmc_credit_support);
   if (rc != ZX_OK) {
-    BRCMF_ERR("register bcmc credit handler failed\n");
+    BRCMF_ERR("register bcmc credit handler failed");
     brcmf_fweh_unregister(drvr, BRCMF_E_FIFO_CREDIT_MAP);
     goto fail;
   }
@@ -2273,13 +2272,13 @@ zx_status_t brcmf_fws_attach(struct brcmf_pub* drvr, struct brcmf_fws_info** fws
   fws->fw_signals = true;
   ifp = brcmf_get_ifp(drvr, 0);
   if (brcmf_fil_iovar_int_set(ifp, "tlv", tlv, nullptr) != ZX_OK) {
-    BRCMF_ERR("failed to set bdcv2 tlv signaling\n");
+    BRCMF_ERR("failed to set bdcv2 tlv signaling");
     fws->fcmode = BRCMF_FWS_FCMODE_NONE;
     fws->fw_signals = false;
   }
 
   if (brcmf_fil_iovar_int_set(ifp, "ampdu_hostreorder", 1, nullptr) != ZX_OK) {
-    BRCMF_DBG(INFO, "enabling AMPDU host-reorder failed\n");
+    BRCMF_DBG(INFO, "enabling AMPDU host-reorder failed");
   }
 
   /* Enable seq number reuse, if supported */
@@ -2296,10 +2295,10 @@ zx_status_t brcmf_fws_attach(struct brcmf_pub* drvr, struct brcmf_fws_info** fws
   brcmf_fws_hanger_init(&fws->hanger);
   brcmf_fws_macdesc_init(&fws->desc.other, NULL, 0);
   brcmf_fws_macdesc_set_name(fws, &fws->desc.other);
-  BRCMF_DBG(INFO, "added %s\n", fws->desc.other.name);
+  BRCMF_DBG(INFO, "added %s", fws->desc.other.name);
   brcmu_pktq_init(&fws->desc.other.psq, BRCMF_FWS_PSQ_PREC_COUNT, BRCMF_FWS_PSQ_LEN);
 
-  BRCMF_DBG(INFO, "%s bdcv2 tlv signaling [%x]\n", fws->fw_signals ? "enabled" : "disabled", tlv);
+  BRCMF_DBG(INFO, "%s bdcv2 tlv signaling [%x]", fws->fw_signals ? "enabled" : "disabled", tlv);
   if (fws_out) {
     *fws_out = fws;
   }

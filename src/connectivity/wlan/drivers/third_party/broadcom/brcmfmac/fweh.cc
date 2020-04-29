@@ -111,10 +111,10 @@ static zx_status_t brcmf_fweh_call_event_handler(struct brcmf_if* ifp,
     if (fweh->evt_handler[code]) {
       err = fweh->evt_handler[code](ifp, emsg, data);
     } else {
-      BRCMF_ERR("unhandled event %d ignored\n", code);
+      BRCMF_ERR("unhandled event %d ignored", code);
     }
   } else {
-    BRCMF_ERR("no interface object\n");
+    BRCMF_ERR("no interface object");
   }
   return err;
 }
@@ -131,22 +131,22 @@ void brcmf_fweh_handle_if_event(struct brcmf_pub* drvr, struct brcmf_event_msg* 
   struct brcmf_if* ifp;
   zx_status_t err = ZX_OK;
 
-  BRCMF_DBG(EVENT, "action: %u ifidx: %u bsscfgidx: %u flags: %u role: %u\n", ifevent->action,
+  BRCMF_DBG(EVENT, "action: %u ifidx: %u bsscfgidx: %u flags: %u role: %u", ifevent->action,
             ifevent->ifidx, ifevent->bsscfgidx, ifevent->flags, ifevent->role);
 
   if (ifevent->flags & BRCMF_E_IF_FLAG_NOIF) {
-    BRCMF_DBG(EVENT, "event can be ignored\n");
+    BRCMF_DBG(EVENT, "event can be ignored");
     return;
   }
   if (ifevent->ifidx >= BRCMF_MAX_IFS) {
-    BRCMF_ERR("invalid interface index: %u\n", ifevent->ifidx);
+    BRCMF_ERR("invalid interface index: %u", ifevent->ifidx);
     return;
   }
 
   ifp = drvr->iflist[ifevent->bsscfgidx];
 
   if (ifevent->action == BRCMF_E_IF_ADD) {
-    BRCMF_DBG(EVENT, "adding %s (%pM)\n", emsg->ifname, emsg->addr);
+    BRCMF_DBG(EVENT, "adding %s (%pM)", emsg->ifname, emsg->addr);
     err = brcmf_add_if(drvr, ifevent->bsscfgidx, ifevent->ifidx, emsg->ifname, emsg->addr, &ifp);
     if (err != ZX_OK) {
       return;
@@ -191,9 +191,8 @@ static void brcmf_fweh_handle_event(brcmf_pub* drvr, struct brcmf_fweh_queue_ite
   struct brcmf_event_msg_be* emsg_be;
   struct brcmf_event_msg emsg;
 
-  BRCMF_DBG(EVENT, "event %s (%u) ifidx %u bsscfg %u addr %pM\n",
-            brcmf_fweh_event_name(event->code), event->code, event->emsg.ifidx,
-            event->emsg.bsscfgidx, event->emsg.addr);
+  BRCMF_DBG(EVENT, "event %s (%u) ifidx %u bsscfg %u addr %pM", brcmf_fweh_event_name(event->code),
+            event->code, event->emsg.ifidx, event->emsg.bsscfgidx, event->emsg.addr);
 
   /* convert event message */
   emsg_be = &event->emsg;
@@ -209,10 +208,10 @@ static void brcmf_fweh_handle_event(brcmf_pub* drvr, struct brcmf_fweh_queue_ite
   emsg.ifidx = emsg_be->ifidx;
   emsg.bsscfgidx = emsg_be->bsscfgidx;
 
-  BRCMF_DBG(EVENT, "  version %u flags %u status %u reason %u\n", emsg.version, emsg.flags,
+  BRCMF_DBG(EVENT, "  version %u flags %u status %u reason %u", emsg.version, emsg.flags,
             emsg.status, emsg.reason);
   BRCMF_DBG_HEX_DUMP(BRCMF_IS_ON(EVENT), event->data, std::min<uint32_t>(emsg.datalen, 64),
-                     "event payload, len=%d\n", emsg.datalen);
+                     "event payload, len=%d", emsg.datalen);
 
   /* special handling of interface event */
   if (event->code == BRCMF_E_IF) {
@@ -228,7 +227,7 @@ static void brcmf_fweh_handle_event(brcmf_pub* drvr, struct brcmf_fweh_queue_ite
 
   err = brcmf_fweh_call_event_handler(ifp, event->code, &emsg, event->data);
   if (err != ZX_OK) {
-    BRCMF_ERR("event handler failed (%d)\n", event->code);
+    BRCMF_ERR("event handler failed (%d)", event->code);
     err = ZX_OK;
   }
 event_free:
@@ -314,11 +313,11 @@ void brcmf_fweh_detach(struct brcmf_pub* drvr) {
 zx_status_t brcmf_fweh_register(struct brcmf_pub* drvr, enum brcmf_fweh_event_code code,
                                 brcmf_fweh_handler_t handler) {
   if (drvr->fweh.evt_handler[code]) {
-    BRCMF_ERR("Exit: event code %d already registered\n", code);
+    BRCMF_ERR("Exit: event code %d already registered", code);
     return ZX_ERR_ALREADY_EXISTS;
   }
   drvr->fweh.evt_handler[code] = handler;
-  BRCMF_DBG(TRACE, "Exit: event handler registered for %s\n", brcmf_fweh_event_name(code));
+  BRCMF_DBG(TRACE, "Exit: event handler registered for %s", brcmf_fweh_event_name(code));
   return ZX_OK;
 }
 
@@ -329,7 +328,7 @@ zx_status_t brcmf_fweh_register(struct brcmf_pub* drvr, enum brcmf_fweh_event_co
  * @code: event code.
  */
 void brcmf_fweh_unregister(struct brcmf_pub* drvr, enum brcmf_fweh_event_code code) {
-  BRCMF_DBG(TRACE, "event handler cleared for %s\n", brcmf_fweh_event_name(code));
+  BRCMF_DBG(TRACE, "event handler cleared for %s", brcmf_fweh_event_name(code));
   drvr->fweh.evt_handler[code] = NULL;
 }
 
@@ -347,19 +346,19 @@ zx_status_t brcmf_fweh_activate_events(struct brcmf_if* ifp) {
   memset(eventmask, 0, sizeof(eventmask));
   for (i = 0; i < BRCMF_E_LAST; i++) {
     if (ifp->drvr->fweh.evt_handler[i]) {
-      BRCMF_DBG(EVENT, "enable event %s\n",
+      BRCMF_DBG(EVENT, "enable event %s",
                 brcmf_fweh_event_name(static_cast<brcmf_fweh_event_code>(i)));
       setbit(eventmask, i);
     }
   }
 
   /* want to handle IF event as well */
-  BRCMF_DBG(EVENT, "enable event IF\n");
+  BRCMF_DBG(EVENT, "enable event IF");
   setbit(eventmask, BRCMF_E_IF);
 
   err = brcmf_fil_iovar_data_set(ifp, "event_msgs", eventmask, BRCMF_EVENTING_MASK_LEN, &fw_err);
   if (err != ZX_OK) {
-    BRCMF_ERR("Set event_msgs error: %s, fw err %s\n", zx_status_get_string(err),
+    BRCMF_ERR("Set event_msgs error: %s, fw err %s", zx_status_get_string(err),
               brcmf_fil_get_errstr(fw_err));
   }
 

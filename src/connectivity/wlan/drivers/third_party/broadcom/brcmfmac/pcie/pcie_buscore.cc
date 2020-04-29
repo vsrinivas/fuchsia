@@ -178,26 +178,26 @@ zx_status_t PcieBuscore::Create(zx_device_t* device, std::unique_ptr<PcieBuscore
   // Get the PCI resources necessary to operate this device.
   auto pci_proto = std::make_unique<ddk::PciProtocolClient>();
   if ((status = ddk::PciProtocolClient::CreateFromDevice(device, pci_proto.get())) != ZX_OK) {
-    BRCMF_ERR("ddk::PciProtocolClient::CreateFromDevice() failed: %s\n",
+    BRCMF_ERR("ddk::PciProtocolClient::CreateFromDevice() failed: %s",
               zx_status_get_string(status));
     return status;
   }
   if ((status = pci_proto->EnableBusMaster(true)) != ZX_OK) {
-    BRCMF_ERR("Failed to enable PCIE bus master: %s\n", zx_status_get_string(status));
+    BRCMF_ERR("Failed to enable PCIE bus master: %s", zx_status_get_string(status));
     return status;
   }
   zx_pci_bar_t bar0_info = {};
   if ((status = pci_proto->GetBar(0, &bar0_info)) != ZX_OK) {
-    BRCMF_ERR("Failed to get BAR0: %s\n", zx_status_get_string(status));
+    BRCMF_ERR("Failed to get BAR0: %s", zx_status_get_string(status));
     return status;
   }
   zx_pci_bar_t bar2_info = {};
   if ((status = pci_proto->GetBar(2, &bar2_info)) != ZX_OK) {
-    BRCMF_ERR("Failed to get BAR2: %s\n", zx_status_get_string(status));
+    BRCMF_ERR("Failed to get BAR2: %s", zx_status_get_string(status));
     return status;
   }
   if (bar2_info.size == 0 || bar2_info.handle == ZX_HANDLE_INVALID) {
-    BRCMF_ERR("BAR2 invalid: size=%zu, handle=%u\n", bar2_info.size, bar2_info.handle);
+    BRCMF_ERR("BAR2 invalid: size=%zu, handle=%u", bar2_info.size, bar2_info.handle);
     return ZX_ERR_NO_RESOURCES;
   }
 
@@ -206,17 +206,17 @@ zx_status_t PcieBuscore::Create(zx_device_t* device, std::unique_ptr<PcieBuscore
   {
     size_t vmo_size = 0;
     if ((status = zx_vmo_get_size(bar0_info.handle, &vmo_size)) != ZX_OK) {
-      BRCMF_ERR("Failed to get BAR0 VMO size: %s\n", zx_status_get_string(status));
+      BRCMF_ERR("Failed to get BAR0 VMO size: %s", zx_status_get_string(status));
       return status;
     }
     std::optional<ddk::MmioBuffer> mmio;
     if ((status = ddk::MmioBuffer::Create(0, vmo_size, zx::vmo(bar0_info.handle),
                                           ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio)) != ZX_OK) {
-      BRCMF_ERR("Failed to create BAR0 MmioBuffer: %s\n", zx_status_get_string(status));
+      BRCMF_ERR("Failed to create BAR0 MmioBuffer: %s", zx_status_get_string(status));
       return status;
     }
     if (mmio->get_size() != BRCMF_PCIE_REG_MAP_SIZE) {
-      BRCMF_ERR("BAR0 mapped size=%zu, expected %zu\n", mmio->get_size(), BRCMF_PCIE_REG_MAP_SIZE);
+      BRCMF_ERR("BAR0 mapped size=%zu, expected %u", mmio->get_size(), BRCMF_PCIE_REG_MAP_SIZE);
       return ZX_ERR_NO_RESOURCES;
     }
     regs_mmio = std::make_unique<ddk::MmioBuffer>(std::move(mmio.value()));
@@ -225,13 +225,13 @@ zx_status_t PcieBuscore::Create(zx_device_t* device, std::unique_ptr<PcieBuscore
   {
     size_t vmo_size = 0;
     if ((status = zx_vmo_get_size(bar2_info.handle, &vmo_size)) != ZX_OK) {
-      BRCMF_ERR("Failed to get BAR2 VMO size: %s\n", zx_status_get_string(status));
+      BRCMF_ERR("Failed to get BAR2 VMO size: %s", zx_status_get_string(status));
       return status;
     }
     std::optional<ddk::MmioBuffer> mmio;
     if ((status = ddk::MmioBuffer::Create(0, vmo_size, zx::vmo(bar2_info.handle),
                                           ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio)) != ZX_OK) {
-      BRCMF_ERR("Failed to create BAR2 MmioBuffer: %s\n", zx_status_get_string(status));
+      BRCMF_ERR("Failed to create BAR2 MmioBuffer: %s", zx_status_get_string(status));
       return status;
     }
     tcm_mmio = std::make_unique<ddk::MmioBuffer>(std::move(mmio.value()));
@@ -243,7 +243,7 @@ zx_status_t PcieBuscore::Create(zx_device_t* device, std::unique_ptr<PcieBuscore
   buscore->tcm_mmio_ = std::move(tcm_mmio);
 
   if ((status = brcmf_chip_attach(buscore.get(), GetBuscoreOps(), &buscore->chip_)) != ZX_OK) {
-    BRCMF_ERR("Failed to attach chip: %s\n", zx_status_get_string(status));
+    BRCMF_ERR("Failed to attach chip: %s", zx_status_get_string(status));
     return status;
   }
 
@@ -252,7 +252,7 @@ zx_status_t PcieBuscore::Create(zx_device_t* device, std::unique_ptr<PcieBuscore
     const auto core = brcmf_chip_get_core(buscore->chip(), CHIPSET_PCIE2_CORE);
     CoreRegs core_regs(buscore.get(), core->base);
     if (!core_regs.is_valid()) {
-      BRCMF_ERR("Failed to get PCIE2 core regs\n");
+      BRCMF_ERR("Failed to get PCIE2 core regs");
       return ZX_ERR_BAD_STATE;
     }
     core_regs.RegWrite(BRCMF_PCIE_PCIE2REG_CONFIGADDR, BRCMF_PCIE_CFGREG_REG_BAR2_CONFIG);
@@ -379,7 +379,7 @@ zx_status_t PcieBuscore::AcquireBar0Window(uint32_t base) {
   std::lock_guard lock(bar0_window_mutex_);
   if (window_address != bar0_window_address_) {
     if (bar0_window_refcount_ > 0) {
-      BRCMF_ERR("Failed to acquire BAR0 window\n");
+      BRCMF_ERR("Failed to acquire BAR0 window");
       return ZX_ERR_ALREADY_BOUND;
     }
     ConfigWrite(BRCMF_PCIE_BAR0_WINDOW, window_address);
@@ -490,7 +490,7 @@ zx_status_t PcieBuscore::ResetDevice(brcmf_chip* chip) {
     for (const uint16_t offset : kCfgOffsets) {
       core_regs.RegWrite(BRCMF_PCIE_PCIE2REG_CONFIGADDR, offset);
       const uint32_t value = core_regs.RegRead(BRCMF_PCIE_PCIE2REG_CONFIGDATA);
-      BRCMF_DBG(PCIE, "Buscore device reset: config offset=0x%04x, value=0x%04x\n", offset, value);
+      BRCMF_DBG(PCIE, "Buscore device reset: config offset=0x%04x, value=0x%04x", offset, value);
       core_regs.RegWrite(BRCMF_PCIE_PCIE2REG_CONFIGDATA, value);
     }
   }

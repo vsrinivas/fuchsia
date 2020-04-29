@@ -85,7 +85,7 @@ const FirmwareMapping* GetFirmwareMapping(brcmf_bus_type bus_type, uint32_t chip
       break;
   }
 
-  BRCMF_ERR("No firmware/NVRAM mapping found for bus_type=%d, chipid=0x%x, chiprev=%d\n",
+  BRCMF_ERR("No firmware/NVRAM mapping found for bus_type=%d, chipid=0x%x, chiprev=%d",
             static_cast<int>(bus_type), chipid, chiprev);
   return nullptr;
 }
@@ -96,13 +96,13 @@ zx_status_t LoadBinaryFromFile(Device* device, std::string_view filename, std::s
   size_t vmo_size = 0;
   const auto filepath = std::string(kDefaultFirmwarePath).append(filename);
   if ((status = device->LoadFirmware(filepath.c_str(), &vmo_handle, &vmo_size)) != ZX_OK) {
-    BRCMF_ERR("Failed to load filepath %s: %s\n", filepath.c_str(), zx_status_get_string(status));
+    BRCMF_ERR("Failed to load filepath %s: %s", filepath.c_str(), zx_status_get_string(status));
     return status;
   }
 
   std::string binary_data(vmo_size, '\0');
   if ((status = zx_vmo_read(vmo_handle, binary_data.data(), 0, binary_data.size())) != ZX_OK) {
-    BRCMF_ERR("Failed to read filepath %s: %s\n", filepath.c_str(), zx_status_get_string(status));
+    BRCMF_ERR("Failed to read filepath %s: %s", filepath.c_str(), zx_status_get_string(status));
     return status;
   }
 
@@ -231,7 +231,7 @@ zx_status_t ParseNvramBinary(std::string_view nvram, std::string* parsed_nvram_o
     }
     const std::string_view key(&*key_begin, read_iter - key_begin);
     if (read_iter == key_begin) {
-      BRCMF_ERR("Invalid NVRAM key \"%.s*\" at line %d\n", static_cast<int>(key.size()), key.data(),
+      BRCMF_ERR("Invalid NVRAM key \"%*s\" at line %d", static_cast<int>(key.size()), key.data(),
                 line_index);
       return ZX_ERR_INVALID_ARGS;
     }
@@ -239,14 +239,14 @@ zx_status_t ParseNvramBinary(std::string_view nvram, std::string* parsed_nvram_o
     // Find the "=" separator for the value, possibly surrounded by blankspace.
     skip_past_blank();
     if (read_iter == nvram.cend() || *read_iter != '=') {
-      BRCMF_ERR("Missing NVRAM value for key \"%.*s\" at line %d\n", static_cast<int>(key.size()),
+      BRCMF_ERR("Missing NVRAM value for key \"%*s\" at line %d", static_cast<int>(key.size()),
                 key.data(), line_index);
       return ZX_ERR_INVALID_ARGS;
     }
     ++read_iter;
     skip_past_blank();
     if (read_iter == nvram.cend()) {
-      BRCMF_ERR("Missing NVRAM value for key \"%.*s\" at line %d\n", static_cast<int>(key.size()),
+      BRCMF_ERR("Missing NVRAM value for key \"%*s\" at line %d", static_cast<int>(key.size()),
                 key.data(), line_index);
       return ZX_ERR_INVALID_ARGS;
     }
@@ -266,7 +266,7 @@ zx_status_t ParseNvramBinary(std::string_view nvram, std::string* parsed_nvram_o
     // The rest of the line is either whitespace to a newline, or a comment.
     skip_past_newline();
     if (*(read_iter - 1) != '\n') {
-      BRCMF_ERR("Missing NVRAM newline after value for key \"%.*s\" at line %d\n",
+      BRCMF_ERR("Missing NVRAM newline after value for key \"%*s\" at line %d",
                 static_cast<int>(key.size()), key.data(), line_index);
       return ZX_ERR_INVALID_ARGS;
     }
@@ -277,7 +277,7 @@ zx_status_t ParseNvramBinary(std::string_view nvram, std::string* parsed_nvram_o
       continue;
     } else if (key.compare(0, 7, "devpath") == 0 || key.compare(0, 5, "pcie/") == 0) {
       // These features are not supported, yet.
-      BRCMF_ERR("Unsupported NVRAM key \"%.*s\" at line %d\n", static_cast<int>(key.size()),
+      BRCMF_ERR("Unsupported NVRAM key \"%*s\" at line %d", static_cast<int>(key.size()),
                 key.data(), line_index);
       continue;
     } else if (key.compare("boardrev") == 0) {

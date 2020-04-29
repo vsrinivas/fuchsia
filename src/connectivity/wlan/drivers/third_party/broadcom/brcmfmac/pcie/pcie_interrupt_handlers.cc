@@ -30,7 +30,7 @@ uint32_t PcieSleepInterruptHandler::HandleInterrupt(uint32_t mailboxint) {
   const uint32_t d2h_mb_data = buscore_->TcmRead<uint32_t>(d2h_mb_data_address_);
   if (d2h_mb_data != 0) {
     buscore_->TcmWrite<uint32_t>(d2h_mb_data_address_, 0);
-    BRCMF_ERR("PCIE sleep states not supported, d2h_mb_data=0x%08x\n", d2h_mb_data);
+    BRCMF_ERR("PCIE sleep states not supported, d2h_mb_data=0x%08x", d2h_mb_data);
   }
 
   return kInterruptMask;
@@ -55,7 +55,7 @@ uint32_t PcieConsoleInterruptHandler::HandleInterrupt(uint32_t mailboxint) {
 void PcieConsoleInterruptHandler::Log() {
   std::string console;
   while (!(console = firmware_->ReadConsole()).empty()) {
-    BRCMF_INFO("%s\n", console.c_str());
+    BRCMF_INFO("%s", console.c_str());
   }
 }
 

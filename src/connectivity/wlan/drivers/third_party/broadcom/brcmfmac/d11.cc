@@ -225,7 +225,7 @@ uint16_t channel_to_chanspec(const brcmu_d11inf* d11inf, const wlan_channel_t* c
     case WLAN_CHANNEL_BANDWIDTH__160:
     case WLAN_CHANNEL_BANDWIDTH__80P80:
     default:
-      BRCMF_ERR("unsupported channel width\n");
+      BRCMF_ERR("unsupported channel width");
       break;
   }
 
@@ -260,7 +260,7 @@ void chanspec_to_channel(const brcmu_d11inf* d11_inf, uint16_t chanspec, wlan_ch
           break;
       }
     default:
-      BRCMF_ERR("unsupported channel width\n");
+      BRCMF_ERR("unsupported channel width");
       break;
   }
 }

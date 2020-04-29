@@ -61,7 +61,7 @@ struct brcmf_if* brcmf_get_ifp(struct brcmf_pub* drvr, int ifidx) {
   int32_t bsscfgidx;
 
   if (ifidx < 0 || ifidx >= BRCMF_MAX_IFS) {
-    BRCMF_ERR("ifidx %d out of range\n", ifidx);
+    BRCMF_ERR("ifidx %d out of range", ifidx);
     return NULL;
   }
 
@@ -89,24 +89,24 @@ void brcmf_configure_arp_nd_offload(struct brcmf_if* ifp, bool enable) {
   /* is simply not supported and err 0 will be returned                 */
   err = brcmf_fil_iovar_int_set(ifp, "arp_ol", mode, &fw_err);
   if (err != ZX_OK) {
-    BRCMF_DBG(TRACE, "failed to set ARP offload mode to 0x%x, err=%s, fw_err=%s\n", mode,
+    BRCMF_DBG(TRACE, "failed to set ARP offload mode to 0x%x, err=%s, fw_err=%s", mode,
               zx_status_get_string(err), brcmf_fil_get_errstr(fw_err));
   } else {
     err = brcmf_fil_iovar_int_set(ifp, "arpoe", enable, &fw_err);
     if (err != ZX_OK) {
-      BRCMF_DBG(TRACE, "failed to configure (%d) ARP offload err=%s, fw_err=%s\n", enable,
+      BRCMF_DBG(TRACE, "failed to configure (%d) ARP offload err=%s, fw_err=%s", enable,
                 zx_status_get_string(err), brcmf_fil_get_errstr(fw_err));
     } else {
-      BRCMF_DBG(TRACE, "successfully configured (%d) ARP offload to 0x%x\n", enable, mode);
+      BRCMF_DBG(TRACE, "successfully configured (%d) ARP offload to 0x%x", enable, mode);
     }
   }
 
   err = brcmf_fil_iovar_int_set(ifp, "ndoe", enable, &fw_err);
   if (err != ZX_OK) {
-    BRCMF_DBG(TRACE, "failed to configure (%d) ND offload err=%s, fw_err=%s\n", enable,
+    BRCMF_DBG(TRACE, "failed to configure (%d) ND offload err=%s, fw_err=%s", enable,
               zx_status_get_string(err), brcmf_fil_get_errstr(fw_err));
   } else {
-    BRCMF_DBG(TRACE, "successfully configured (%d) ND offload to 0x%x\n", enable, mode);
+    BRCMF_DBG(TRACE, "successfully configured (%d) ND offload to 0x%x", enable, mode);
   }
 }
 
@@ -124,7 +124,7 @@ static void _brcmf_set_multicast_list(WorkItem* work) {
 
   ifp = containerof(work, struct brcmf_if, multicast_work);
 
-  BRCMF_DBG(TRACE, "Enter, bsscfgidx=%d\n", ifp->bsscfgidx);
+  BRCMF_DBG(TRACE, "Enter, bsscfgidx=%d", ifp->bsscfgidx);
 
   ndev = ifp->ndev;
 
@@ -155,7 +155,7 @@ static void _brcmf_set_multicast_list(WorkItem* work) {
 
   err = brcmf_fil_iovar_data_set(ifp, "mcast_list", buf, buflen, &fw_err);
   if (err != ZX_OK) {
-    BRCMF_ERR("Setting mcast_list failed: %s, fw err %s\n", zx_status_get_string(err),
+    BRCMF_ERR("Setting mcast_list failed: %s, fw err %s", zx_status_get_string(err),
               brcmf_fil_get_errstr(fw_err));
     cmd_value = cnt ? true : cmd_value;
   }
@@ -169,7 +169,7 @@ static void _brcmf_set_multicast_list(WorkItem* work) {
    */
   err = brcmf_fil_iovar_int_set(ifp, "allmulti", cmd_value, &fw_err);
   if (err != ZX_OK) {
-    BRCMF_ERR("Setting allmulti failed: %s, fw err %s\n", zx_status_get_string(err),
+    BRCMF_ERR("Setting allmulti failed: %s, fw err %s", zx_status_get_string(err),
               brcmf_fil_get_errstr(fw_err));
   }
 
@@ -177,7 +177,7 @@ static void _brcmf_set_multicast_list(WorkItem* work) {
   cmd_value = (ndev->flags & IFF_PROMISC) ? true : false;
   err = brcmf_fil_cmd_int_set(ifp, BRCMF_C_SET_PROMISC, cmd_value, &fw_err);
   if (err != ZX_OK) {
-    BRCMF_ERR("Setting BRCMF_C_SET_PROMISC failed, %s, fw err %s\n", zx_status_get_string(err),
+    BRCMF_ERR("Setting BRCMF_C_SET_PROMISC failed, %s, fw err %s", zx_status_get_string(err),
               brcmf_fil_get_errstr(fw_err));
   }
   brcmf_configure_arp_nd_offload(ifp, !cmd_value);
@@ -188,14 +188,14 @@ zx_status_t brcmf_netdev_set_mac_address(struct net_device* ndev, uint8_t* addr)
   zx_status_t err;
   int32_t fw_err = 0;
 
-  BRCMF_DBG(TRACE, "Enter, bsscfgidx=%d\n", ifp->bsscfgidx);
+  BRCMF_DBG(TRACE, "Enter, bsscfgidx=%d", ifp->bsscfgidx);
 
   err = brcmf_fil_iovar_data_set(ifp, "cur_etheraddr", addr, ETH_ALEN, &fw_err);
   if (err != ZX_OK) {
-    BRCMF_ERR("Setting cur_etheraddr failed: %s, fw err %s\n", zx_status_get_string(err),
+    BRCMF_ERR("Setting cur_etheraddr failed: %s, fw err %s", zx_status_get_string(err),
               brcmf_fil_get_errstr(fw_err));
   } else {
-    BRCMF_DBG(TRACE, "updated to %pM\n", addr);
+    BRCMF_DBG(TRACE, "updated to %pM", addr);
     memcpy(ifp->mac_addr, addr, ETH_ALEN);
     memcpy(ifp->ndev->dev_addr, ifp->mac_addr, ETH_ALEN);
   }
@@ -216,11 +216,11 @@ void brcmf_netdev_start_xmit(struct net_device* ndev,
   struct ethhdr eh;
   const size_t netbuf_size = netbuf->size();
 
-  BRCMF_DBG(DATA, "Enter, bsscfgidx=%d\n", ifp->bsscfgidx);
+  BRCMF_DBG(DATA, "Enter, bsscfgidx=%d", ifp->bsscfgidx);
 
   /* Can the device send data? */
   if (drvr->bus_if->state != BRCMF_BUS_UP) {
-    BRCMF_ERR("xmit rejected state=%d\n", drvr->bus_if->state);
+    BRCMF_ERR("xmit rejected state=%d", drvr->bus_if->state);
     netif_stop_queue(ndev);
     ret = ZX_ERR_UNAVAILABLE;
     goto done;
@@ -258,7 +258,7 @@ void brcmf_txflowblock_if(struct brcmf_if* ifp, enum brcmf_netif_stop_reason rea
     return;
   }
 
-  BRCMF_DBG(TRACE, "enter: bsscfgidx=%d stop=0x%X reason=%d state=%d\n", ifp->bsscfgidx,
+  BRCMF_DBG(TRACE, "enter: bsscfgidx=%d stop=0x%X reason=%d state=%d", ifp->bsscfgidx,
             ifp->netif_stop, reason, state);
 
   // spin_lock_irqsave(&ifp->netif_stop_lock, flags);
@@ -292,7 +292,7 @@ void brcmf_netif_rx(struct brcmf_if* ifp, const void* data, size_t size) {
   ifp->ndev->stats.rx_bytes += size;
   ifp->ndev->stats.rx_packets++;
 
-  BRCMF_DBG(DATA, "rx proto=0x%X len %d\n", be16toh(eh->h_proto), size);
+  BRCMF_DBG(DATA, "rx proto=0x%X len %zu", be16toh(eh->h_proto), size);
   brcmf_cfg80211_rx(ifp, data, size);
 }
 
@@ -317,10 +317,10 @@ static zx_status_t brcmf_rx_hdrpull(struct brcmf_pub* drvr, struct brcmf_netbuf*
 void brcmf_rx_frame(brcmf_pub* drvr, brcmf_netbuf* netbuf, bool handle_event) {
   struct brcmf_if* ifp;
 
-  BRCMF_DBG(DATA, "Enter: %s: rxp=%p\n", device_get_name(drvr->zxdev), netbuf);
+  BRCMF_DBG(DATA, "Enter: %s: rxp=%p", device_get_name(drvr->zxdev), netbuf);
 
   if (brcmf_rx_hdrpull(drvr, netbuf, &ifp)) {
-    BRCMF_DBG(TEMP, "hdrpull returned nonzero\n");
+    BRCMF_DBG(TEMP, "hdrpull returned nonzero");
     return;
   }
 
@@ -341,7 +341,7 @@ void brcmf_rx_frame(brcmf_pub* drvr, brcmf_netbuf* netbuf, bool handle_event) {
 void brcmf_rx_event(brcmf_pub* drvr, brcmf_netbuf* netbuf) {
   struct brcmf_if* ifp;
 
-  BRCMF_DBG(EVENT, "Enter: %s: rxp=%p\n", device_get_name(drvr->zxdev), netbuf);
+  BRCMF_DBG(EVENT, "Enter: %s: rxp=%p", device_get_name(drvr->zxdev), netbuf);
 
   if (brcmf_rx_hdrpull(drvr, netbuf, &ifp)) {
     return;
@@ -367,7 +367,7 @@ void brcmf_txfinalize(struct brcmf_if* ifp, const struct ethhdr* eh, bool succes
 static zx_status_t brcmf_netdev_stop(struct net_device* ndev) {
   struct brcmf_if* ifp = ndev_to_if(ndev);
 
-  BRCMF_DBG(TRACE, "Enter, bsscfgidx=%d\n", ifp->bsscfgidx);
+  BRCMF_DBG(TRACE, "Enter, bsscfgidx=%d", ifp->bsscfgidx);
 
   brcmf_cfg80211_down(ndev);
 
@@ -384,11 +384,11 @@ zx_status_t brcmf_netdev_open(struct net_device* ndev) {
   struct brcmf_bus* bus_if = drvr->bus_if;
   uint32_t toe_ol;
 
-  BRCMF_DBG(TRACE, "Enter, bsscfgidx=%d\n", ifp->bsscfgidx);
+  BRCMF_DBG(TRACE, "Enter, bsscfgidx=%d", ifp->bsscfgidx);
 
   /* If bus is not ready, can't continue */
   if (bus_if->state != BRCMF_BUS_UP) {
-    BRCMF_ERR("failed bus is not ready\n");
+    BRCMF_ERR("failed bus is not ready");
     return ZX_ERR_UNAVAILABLE;
   }
 
@@ -403,19 +403,19 @@ zx_status_t brcmf_netdev_open(struct net_device* ndev) {
   }
 
   if (brcmf_cfg80211_up(ndev) != ZX_OK) {
-    BRCMF_ERR("failed to bring up cfg80211\n");
+    BRCMF_ERR("failed to bring up cfg80211");
     return ZX_ERR_IO;
   }
 
   /* Clear, carrier, set when connected or AP mode. */
-  BRCMF_DBG(TEMP, "* * Would have called netif_carrier_off(ndev);\n");
+  BRCMF_DBG(TEMP, "* * Would have called netif_carrier_off(ndev);");
   return ZX_OK;
 }
 
 zx_status_t brcmf_net_attach(struct brcmf_if* ifp, bool rtnl_locked) {
   struct brcmf_pub* drvr = ifp->drvr;
   struct net_device* ndev = ifp->ndev;
-  BRCMF_DBG(TRACE, "Enter-New, bsscfgidx=%d mac=%pM\n", ifp->bsscfgidx, ifp->mac_addr);
+  BRCMF_DBG(TRACE, "Enter-New, bsscfgidx=%d mac=%pM", ifp->bsscfgidx, ifp->mac_addr);
 
   ndev->needed_headroom += drvr->hdrlen;
   ifp->multicast_work = WorkItem(_brcmf_set_multicast_list);
@@ -432,7 +432,7 @@ static void brcmf_net_detach(struct net_device* ndev, bool rtnl_locked) {
 void brcmf_net_setcarrier(struct brcmf_if* ifp, bool on) {
   struct net_device* ndev;
 
-  BRCMF_DBG(TRACE, "Enter, bsscfgidx=%d carrier=%d\n", ifp->bsscfgidx, on);
+  BRCMF_DBG(TRACE, "Enter, bsscfgidx=%d carrier=%d", ifp->bsscfgidx, on);
 
   ndev = ifp->ndev;
   brcmf_txflowblock_if(ifp, BRCMF_NETIF_STOP_REASON_DISCONNECTED, !on);
@@ -457,7 +457,7 @@ zx_status_t brcmf_add_if(struct brcmf_pub* drvr, int32_t bsscfgidx, int32_t ifid
     *if_out = NULL;
   }
 
-  BRCMF_DBG(TRACE, "Enter, bsscfgidx=%d, ifidx=%d\n", bsscfgidx, ifidx);
+  BRCMF_DBG(TRACE, "Enter, bsscfgidx=%d, ifidx=%d", bsscfgidx, ifidx);
 
   ifp = drvr->iflist[bsscfgidx];
   /*
@@ -466,12 +466,12 @@ zx_status_t brcmf_add_if(struct brcmf_pub* drvr, int32_t bsscfgidx, int32_t ifid
    */
   if (ifp) {
     if (ifidx) {
-      BRCMF_ERR("ERROR: netdev:%s already exists\n", ifp->ndev->name);
+      BRCMF_ERR("ERROR: netdev:%s already exists", ifp->ndev->name);
       netif_stop_queue(ifp->ndev);
       brcmf_net_detach(ifp->ndev, false);
       drvr->iflist[bsscfgidx] = NULL;
     } else {
-      BRCMF_DBG(INFO, "netdev:%s ignore IF event\n", ifp->ndev->name);
+      BRCMF_DBG(INFO, "netdev:%s ignore IF event", ifp->ndev->name);
       return ZX_ERR_INVALID_ARGS;
     }
   }
@@ -501,13 +501,13 @@ zx_status_t brcmf_add_if(struct brcmf_pub* drvr, int32_t bsscfgidx, int32_t ifid
   if (mac_addr != NULL) {
     memcpy(ifp->mac_addr, mac_addr, ETH_ALEN);
   }
-  BRCMF_DBG(TRACE, " ==== if:%s (%pM) created ===\n", name, ifp->mac_addr);
+  BRCMF_DBG(TRACE, " ==== if:%s (%pM) created ===", name, ifp->mac_addr);
   if (if_out) {
     *if_out = ifp;
   }
   // This is probably unnecessary - just test/verify after taking it out please!
   zx_nanosleep(zx_deadline_after(ZX_MSEC(50)));
-  BRCMF_DBG(TRACE, "Exit\n");
+  BRCMF_DBG(TRACE, "Exit");
   return ZX_OK;
 }
 
@@ -517,10 +517,10 @@ static void brcmf_del_if(struct brcmf_pub* drvr, int32_t bsscfgidx, bool rtnl_lo
   ifp = drvr->iflist[bsscfgidx];
   drvr->iflist[bsscfgidx] = NULL;
   if (!ifp) {
-    BRCMF_ERR("Null interface, bsscfgidx=%d\n", bsscfgidx);
+    BRCMF_ERR("Null interface, bsscfgidx=%d", bsscfgidx);
     return;
   }
-  BRCMF_DBG(TRACE, "Enter, bsscfgidx=%d, ifidx=%d\n", bsscfgidx, ifp->ifidx);
+  BRCMF_DBG(TRACE, "Enter, bsscfgidx=%d, ifidx=%d", bsscfgidx, ifp->ifidx);
   if (drvr->if2bss[ifp->ifidx] == bsscfgidx) {
     drvr->if2bss[ifp->ifidx] = BRCMF_BSSIDX_INVALID;
   }
@@ -546,13 +546,13 @@ void brcmf_remove_interface(struct brcmf_if* ifp, bool rtnl_locked) {
   if (!ifp || WARN_ON(ifp->drvr->iflist[ifp->bsscfgidx] != ifp)) {
     return;
   }
-  BRCMF_DBG(TRACE, "Enter, bsscfgidx=%d, ifidx=%d\n", ifp->bsscfgidx, ifp->ifidx);
+  BRCMF_DBG(TRACE, "Enter, bsscfgidx=%d, ifidx=%d", ifp->bsscfgidx, ifp->ifidx);
   brcmf_proto_del_if(ifp->drvr, ifp);
   brcmf_del_if(ifp->drvr, ifp->bsscfgidx, rtnl_locked);
 }
 
 zx_status_t brcmf_attach(brcmf_pub* drvr) {
-  BRCMF_DBG(TRACE, "Enter\n");
+  BRCMF_DBG(TRACE, "Enter");
 
   if (!drvr->bus_if || !drvr->settings) {
     return ZX_ERR_BAD_STATE;
@@ -569,7 +569,7 @@ zx_status_t brcmf_bus_started(brcmf_pub* drvr) {
   struct brcmf_if* ifp;
   zx_status_t err;
 
-  BRCMF_DBG(TRACE, "Enter\n");
+  BRCMF_DBG(TRACE, "Enter");
 
   /* add primary networking interface */
   // TODO(WLAN-740): Name uniqueness
@@ -590,7 +590,7 @@ zx_status_t brcmf_bus_started(brcmf_pub* drvr) {
   if (!bus_if->chip) {
     bus_if->chip = drvr->revinfo.fwrevinfo.chipnum;
     bus_if->chiprev = drvr->revinfo.fwrevinfo.chiprev;
-    BRCMF_DBG(INFO, "firmware revinfo: chip %x (%d) rev %d\n", bus_if->chip, bus_if->chip,
+    BRCMF_DBG(INFO, "firmware revinfo: chip %x (%d) rev %d", bus_if->chip, bus_if->chip,
               bus_if->chiprev);
   }
   brcmf_feat_attach(drvr);
@@ -617,7 +617,7 @@ zx_status_t brcmf_bus_started(brcmf_pub* drvr) {
   return ZX_OK;
 
 fail:
-  BRCMF_ERR("failed: %d\n", ret);
+  BRCMF_ERR("failed: %d", ret);
   if (drvr->config) {
     brcmf_cfg80211_detach(drvr->config);
     drvr->config = NULL;
@@ -651,7 +651,7 @@ void brcmf_dev_reset(brcmf_pub* drvr) {
 
 void brcmf_detach(brcmf_pub* drvr) {
   int32_t i;
-  BRCMF_DBG(TRACE, "Enter\n");
+  BRCMF_DBG(TRACE, "Enter");
 
   if (drvr == NULL) {
     return;
@@ -703,7 +703,7 @@ void brcmf_free_net_device(struct net_device* dev) {
 }
 
 void brcmf_enable_tx(struct net_device* dev) {
-  BRCMF_DBG(INFO, " * * NOTE: brcmf_enable_tx called. Enable TX. (Was netif_wake_queue)\n");
+  BRCMF_DBG(INFO, " * * NOTE: brcmf_enable_tx called. Enable TX. (Was netif_wake_queue)");
 }
 void brcmf_netdev_wait_pend8021x(struct brcmf_if* ifp) {
   zx_status_t result;
@@ -715,12 +715,12 @@ void brcmf_netdev_wait_pend8021x(struct brcmf_if* ifp) {
   result = sync_completion_wait(&ifp->pend_8021x_wait, ZX_MSEC(MAX_WAIT_FOR_8021X_TX_MSEC));
 
   if (result != ZX_OK) {
-    BRCMF_ERR("Timed out waiting for no pending 802.1x packets\n");
+    BRCMF_ERR("Timed out waiting for no pending 802.1x packets");
   }
 }
 
 void brcmf_bus_change_state(struct brcmf_bus* bus, enum brcmf_bus_state state) {
-  BRCMF_DBG(TRACE, "%d -> %d\n", bus->state, state);
+  BRCMF_DBG(TRACE, "%d -> %d", bus->state, state);
   bus->state = state;
 
 #if 0
@@ -733,8 +733,8 @@ void brcmf_bus_change_state(struct brcmf_bus* bus, enum brcmf_bus_state state) {
       if ((drvr->iflist[ifidx]) && (drvr->iflist[ifidx]->ndev)) {
         ndev = drvr->iflist[ifidx]->ndev;
         // TODO(cphoenix): Implement Fuchsia equivalent of...
-        // BRCMF_DBG(INFO, "This code called netif_wake_queue(ndev)\n");
-        // BRCMF_DBG(INFO, "  if netif_queue_stopped(ndev). Do the Fuchsia equivalent.\n");
+        // BRCMF_DBG(INFO, "This code called netif_wake_queue(ndev)");
+        // BRCMF_DBG(INFO, "  if netif_queue_stopped(ndev). Do the Fuchsia equivalent.");
       }
     }
   }

@@ -57,16 +57,16 @@ static zx_status_t brcmf_proto_bcdc_msg(struct brcmf_pub* drvr, int ifidx, uint 
   uint32_t flags;
   if (cmd == BRCMF_C_GET_VAR) {
     // buf starts with a NULL-terminated string
-    BRCMF_DBG(BCDC, "Getting iovar '%.*s'\n", len, buf);
+    BRCMF_DBG(BCDC, "Getting iovar '%.*s'", len, buf);
   } else if (cmd == BRCMF_C_SET_VAR) {
     // buf starts with a NULL-terminated string
-    BRCMF_DBG(BCDC, "Setting iovar '%.*s'\n", len, buf);
+    BRCMF_DBG(BCDC, "Setting iovar '%.*s'", len, buf);
   } else {
-    BRCMF_DBG(BCDC, "Enter\n");
+    BRCMF_DBG(BCDC, "Enter");
   }
 
   BRCMF_DBG_HEX_DUMP(BRCMF_IS_ON(BCDC) && BRCMF_IS_ON(BYTES), buf, len,
-                     "Sending BCDC Message (%u bytes)\n", len);
+                     "Sending BCDC Message (%u bytes)", len);
 
   memset(msg, 0, sizeof(struct brcmf_proto_bcdc_dcmd));
 
@@ -96,7 +96,7 @@ static zx_status_t brcmf_proto_bcdc_cmplt(struct brcmf_pub* drvr, uint32_t id, u
   zx_status_t ret;
   struct brcmf_bcdc* bcdc = (struct brcmf_bcdc*)drvr->proto->pd;
 
-  BRCMF_DBG(BCDC, "Enter\n");
+  BRCMF_DBG(BCDC, "Enter");
   len += sizeof(struct brcmf_proto_bcdc_dcmd);
   do {
     ret = brcmf_bus_rxctl(drvr->bus_if, (unsigned char*)&bcdc->msg, len, rxlen_out);
@@ -107,7 +107,7 @@ static zx_status_t brcmf_proto_bcdc_cmplt(struct brcmf_pub* drvr, uint32_t id, u
 
   uint32_t actual_len = bcdc->msg.len;
   BRCMF_DBG_HEX_DUMP(BRCMF_IS_ON(BCDC) && BRCMF_IS_ON(BYTES), bcdc->buf, actual_len,
-                     "Received BCDC Message (%u bytes)\n", actual_len);
+                     "Received BCDC Message (%u bytes)", actual_len);
 
   return ret;
 }
@@ -122,12 +122,12 @@ static zx_status_t brcmf_proto_bcdc_query_dcmd(struct brcmf_pub* drvr, int ifidx
   int rxlen;
   uint32_t id, flags;
 
-  BRCMF_DBG(BCDC, "Enter, cmd %d len %d\n", cmd, len);
+  BRCMF_DBG(BCDC, "Enter, cmd %d len %d", cmd, len);
 
   *fwerr = ZX_OK;
   ret = brcmf_proto_bcdc_msg(drvr, ifidx, cmd, buf, len, false);
   if (ret != ZX_OK) {
-    BRCMF_ERR("brcmf_proto_bcdc_msg failed w/status %d\n", ret);
+    BRCMF_ERR("brcmf_proto_bcdc_msg failed w/status %d", ret);
     goto done;
   }
 
@@ -145,7 +145,7 @@ retry:
     goto retry;
   }
   if (id != bcdc->reqid) {
-    BRCMF_ERR("%s: unexpected request id %d (expected %d)\n",
+    BRCMF_ERR("%s: unexpected request id %d (expected %d)",
               brcmf_ifname(brcmf_get_ifp(drvr, ifidx)), id, bcdc->reqid);
     ret = ZX_ERR_BAD_STATE;
     goto done;
@@ -180,7 +180,7 @@ static zx_status_t brcmf_proto_bcdc_set_dcmd(struct brcmf_pub* drvr, int ifidx, 
   uint32_t flags, id;
   int rxlen_out;
 
-  BRCMF_DBG(BCDC, "Enter, cmd %d len %d\n", cmd, len);
+  BRCMF_DBG(BCDC, "Enter, cmd %d len %d", cmd, len);
 
   *fwerr = ZX_OK;
   ret = brcmf_proto_bcdc_msg(drvr, ifidx, cmd, buf, len, true);
@@ -190,7 +190,7 @@ static zx_status_t brcmf_proto_bcdc_set_dcmd(struct brcmf_pub* drvr, int ifidx, 
 
   ret = brcmf_proto_bcdc_cmplt(drvr, bcdc->reqid, len, &rxlen_out);
   if (ret != ZX_OK) {
-    BRCMF_DBG(TEMP, "Just got back from message cmplt, result %d\n", ret);
+    BRCMF_DBG(TEMP, "Just got back from message cmplt, result %d", ret);
     goto done;
   }
 
@@ -198,7 +198,7 @@ static zx_status_t brcmf_proto_bcdc_set_dcmd(struct brcmf_pub* drvr, int ifidx, 
   id = (flags & BCDC_DCMD_ID_MASK) >> BCDC_DCMD_ID_SHIFT;
 
   if (id != bcdc->reqid) {
-    BRCMF_ERR("%s: unexpected request id %d (expected %d)\n",
+    BRCMF_ERR("%s: unexpected request id %d (expected %d)",
               brcmf_ifname(brcmf_get_ifp(drvr, ifidx)), id, bcdc->reqid);
     ret = ZX_ERR_BAD_STATE;
     goto done;
@@ -219,7 +219,7 @@ static void brcmf_proto_bcdc_hdrpush(struct brcmf_pub* drvr, int ifidx, uint8_t 
                                      struct brcmf_netbuf* pktbuf) {
   struct brcmf_proto_bcdc_header* h;
 
-  BRCMF_DBG(BCDC, "Enter\n");
+  BRCMF_DBG(BCDC, "Enter");
 
   /* Push BDC header used to convey priority for buses that don't */
   brcmf_netbuf_grow_head(pktbuf, BCDC_HEADER_LEN);
@@ -241,11 +241,11 @@ static zx_status_t brcmf_proto_bcdc_hdrpull(struct brcmf_pub* drvr, bool do_fws,
   struct brcmf_proto_bcdc_header* h;
   struct brcmf_if* tmp_if;
 
-  BRCMF_DBG(BCDC, "Enter\n");
+  BRCMF_DBG(BCDC, "Enter");
 
   /* Pop BCDC header used to convey priority for buses that don't */
   if (pktbuf->len <= BCDC_HEADER_LEN) {
-    BRCMF_DBG(INFO, "rx data too short (%d <= %d)\n", pktbuf->len, BCDC_HEADER_LEN);
+    BRCMF_DBG(INFO, "rx data too short (%d <= %d)", pktbuf->len, BCDC_HEADER_LEN);
     return ZX_ERR_IO_DATA_INTEGRITY;
   }
 
@@ -253,16 +253,16 @@ static zx_status_t brcmf_proto_bcdc_hdrpull(struct brcmf_pub* drvr, bool do_fws,
 
   tmp_if = brcmf_get_ifp(drvr, BCDC_GET_IF_IDX(h));
   if (!tmp_if) {
-    BRCMF_DBG(INFO, "no matching ifp found\n");
+    BRCMF_DBG(INFO, "no matching ifp found");
     return ZX_ERR_NOT_FOUND;
   }
   if (((h->flags & BCDC_FLAG_VER_MASK) >> BCDC_FLAG_VER_SHIFT) != BCDC_PROTO_VER) {
-    BRCMF_ERR("%s: non-BCDC packet received, flags 0x%x\n", brcmf_ifname(tmp_if), h->flags);
+    BRCMF_ERR("%s: non-BCDC packet received, flags 0x%x", brcmf_ifname(tmp_if), h->flags);
     return ZX_ERR_IO_DATA_INTEGRITY;
   }
 
   if (h->flags & BCDC_FLAG_SUM_GOOD) {
-    BRCMF_DBG(BCDC, "%s: BDC rcv, good checksum, flags 0x%x\n", brcmf_ifname(tmp_if), h->flags);
+    BRCMF_DBG(BCDC, "%s: BDC rcv, good checksum, flags 0x%x", brcmf_ifname(tmp_if), h->flags);
     pktbuf->ip_summed = CHECKSUM_UNNECESSARY;
   }
 
@@ -325,7 +325,7 @@ static int brcmf_proto_bcdc_txdata(struct brcmf_pub* drvr, int ifidx, uint8_t of
 }
 
 void brcmf_proto_bcdc_txflowblock(brcmf_pub* drvr, bool state) {
-  BRCMF_DBG(TRACE, "Enter\n");
+  BRCMF_DBG(TRACE, "Enter");
   brcmf_fws_bus_blocked(drvr, state);
 }
 
@@ -397,7 +397,7 @@ zx_status_t brcmf_proto_bcdc_attach(struct brcmf_pub* drvr) {
 
   /* ensure that the msg buf directly follows the cdc msg struct */
   if ((unsigned long)(&bcdc->msg + 1) != (unsigned long)bcdc->buf) {
-    BRCMF_ERR("struct brcmf_proto_bcdc is not correctly defined\n");
+    BRCMF_ERR("struct brcmf_proto_bcdc is not correctly defined");
     goto fail;
   }
 

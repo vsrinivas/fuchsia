@@ -101,11 +101,11 @@ zx_status_t PcieFirmware::Create(Device* device, PcieBuscore* buscore,
       return status;
     }
     // A missing NVRAM binary is not a fatal error.
-    BRCMF_INFO("NVRAM binary not found\n");
+    BRCMF_INFO("NVRAM binary not found");
   }
 
   if (firmware_binary.size() < 4) {
-    BRCMF_ERR("Invalid firmware binary size %zu\n", firmware_binary.size());
+    BRCMF_ERR("Invalid firmware binary size %zu", firmware_binary.size());
     return ZX_ERR_IO_INVALID;
   }
   uint32_t resetintr = 0;
@@ -145,7 +145,7 @@ zx_status_t PcieFirmware::Create(Device* device, PcieBuscore* buscore,
     brcmf_chip_resetcore(core, 0, 0, 0);
   }
   if (!brcmf_chip_set_active(buscore->chip(), resetintr)) {
-    BRCMF_ERR("Failed to set chip active\n");
+    BRCMF_ERR("Failed to set chip active");
     return ZX_ERR_IO_NOT_PRESENT;
   }
 
@@ -161,7 +161,7 @@ zx_status_t PcieFirmware::Create(Device* device, PcieBuscore* buscore,
     }
     ++poll_iteration;
     if (poll_iteration >= kFirmwareBootTimeout / kFirmwareBootIteration) {
-      BRCMF_ERR("Firmware init timed out\n");
+      BRCMF_ERR("Firmware init timed out");
       return ZX_ERR_TIMED_OUT;
     }
     zx::nanosleep(zx::deadline_after(kFirmwareBootIteration));
@@ -171,13 +171,13 @@ zx_status_t PcieFirmware::Create(Device* device, PcieBuscore* buscore,
   std::unique_ptr<DmaBuffer> dma_d2h_scratch_buffer;
   if ((status = buscore->CreateDmaBuffer(ZX_CACHE_POLICY_CACHED, kDmaD2hScratchBufferSize,
                                          &dma_d2h_scratch_buffer)) != ZX_OK) {
-    BRCMF_ERR("Failed to create D2H scratch buffer: %s\n", zx_status_get_string(status));
+    BRCMF_ERR("Failed to create D2H scratch buffer: %s", zx_status_get_string(status));
     return status;
   }
   std::unique_ptr<DmaBuffer> dma_d2h_ringupdate_buffer;
   if ((status = buscore->CreateDmaBuffer(ZX_CACHE_POLICY_CACHED, kDmaD2hRingupdateBufferSize,
                                          &dma_d2h_ringupdate_buffer)) != ZX_OK) {
-    BRCMF_ERR("Failed to create D2H ringupdate buffer: %s\n", zx_status_get_string(status));
+    BRCMF_ERR("Failed to create D2H ringupdate buffer: %s", zx_status_get_string(status));
     return status;
   }
 

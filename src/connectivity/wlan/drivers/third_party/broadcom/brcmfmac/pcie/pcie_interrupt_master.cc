@@ -32,7 +32,7 @@ PcieInterruptMaster::PcieInterruptMaster() = default;
 
 PcieInterruptMaster::~PcieInterruptMaster() {
   if (!pci_interrupt_handlers_.empty()) {
-    BRCMF_ERR("%zu interrupt handlers registered at shutdown\n", pci_interrupt_handlers_.size());
+    BRCMF_ERR("%zu interrupt handlers registered at shutdown", pci_interrupt_handlers_.size());
   }
   if (pci_interrupt_thread_.joinable()) {
     zx_port_packet_t packet = {};
@@ -50,7 +50,7 @@ zx_status_t PcieInterruptMaster::Create(
 
   PcieBuscore::CoreRegs pci_core_regs;
   if ((status = buscore->GetCoreRegs(CHIPSET_PCIE2_CORE, &pci_core_regs)) != ZX_OK) {
-    BRCMF_ERR("Failed to get PCIE2 core regs: %s\n", zx_status_get_string(status));
+    BRCMF_ERR("Failed to get PCIE2 core regs: %s", zx_status_get_string(status));
     return status;
   }
 
@@ -60,28 +60,28 @@ zx_status_t PcieInterruptMaster::Create(
   // Get the PCI resources necessary to operate this device.
   auto pci_proto = std::make_unique<ddk::PciProtocolClient>();
   if ((status = ddk::PciProtocolClient::CreateFromDevice(device, pci_proto.get())) != ZX_OK) {
-    BRCMF_ERR("ddk::PciProtocolClient::CreateFromDevice() failed: %s\n",
+    BRCMF_ERR("ddk::PciProtocolClient::CreateFromDevice() failed: %s",
               zx_status_get_string(status));
     return status;
   }
   if ((status = pci_proto->SetIrqMode(ZX_PCIE_IRQ_MODE_MSI, 1)) != ZX_OK) {
-    BRCMF_ERR("Failed to set MSI interrupt mode: %s\n", zx_status_get_string(status));
+    BRCMF_ERR("Failed to set MSI interrupt mode: %s", zx_status_get_string(status));
     return status;
   }
 
   zx::interrupt pci_interrupt;
   if ((status = pci_proto->MapInterrupt(0, &pci_interrupt)) != ZX_OK) {
-    BRCMF_ERR("Failed to map MSI interrupt: %s\n", zx_status_get_string(status));
+    BRCMF_ERR("Failed to map MSI interrupt: %s", zx_status_get_string(status));
     return status;
   }
 
   zx::port pci_interrupt_port;
   if ((status = zx::port::create(ZX_PORT_BIND_TO_INTERRUPT, &pci_interrupt_port)) != ZX_OK) {
-    BRCMF_ERR("Failed to create interrupt port: %s\n", zx_status_get_string(status));
+    BRCMF_ERR("Failed to create interrupt port: %s", zx_status_get_string(status));
     return status;
   }
   if ((status = pci_interrupt.bind(pci_interrupt_port, 0, ZX_INTERRUPT_BIND)) != ZX_OK) {
-    BRCMF_ERR("Failed to bind interrupt: %s\n", zx_status_get_string(status));
+    BRCMF_ERR("Failed to bind interrupt: %s", zx_status_get_string(status));
     return status;
   }
 
@@ -129,7 +129,7 @@ void PcieInterruptMaster::InterruptServiceFunction() {
   while (true) {
     zx_port_packet_t packet = {};
     if ((status = pci_interrupt_port_.wait(zx::time::infinite(), &packet)) != ZX_OK) {
-      BRCMF_ERR("Failed to wait for PCI interrupt port: %s\n", zx_status_get_string(status));
+      BRCMF_ERR("Failed to wait for PCI interrupt port: %s", zx_status_get_string(status));
       break;
     }
 
@@ -165,14 +165,14 @@ void PcieInterruptMaster::InterruptServiceFunction() {
           *status = ZX_OK;
         }
       } else {
-        BRCMF_ERR("Invalid user command packet: %d\n", command);
+        BRCMF_ERR("Invalid user command packet: %d", command);
         continue;
       }
 
       sync_completion_signal(completion);
       continue;
     } else if (packet.type != ZX_PKT_TYPE_INTERRUPT) {
-      BRCMF_ERR("Invalid packet type %d\n", packet.type);
+      BRCMF_ERR("Invalid packet type %d", packet.type);
       continue;
     }
 

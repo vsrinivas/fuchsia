@@ -168,7 +168,7 @@ zx_status_t PcieRingMaster::Create(PcieBuscore* buscore, PcieFirmware* firmware,
         (max_submission_rings + max_completion_rings) * ring_index_size * 2;
     if ((status = buscore->CreateDmaBuffer(ZX_CACHE_POLICY_UNCACHED_DEVICE, index_buffer_size,
                                            &index_buffer)) != ZX_OK) {
-      BRCMF_ERR("Failed to create index buffer, size %zu: %s\n", index_buffer_size,
+      BRCMF_ERR("Failed to create index buffer, size %zu: %s", index_buffer_size,
                 zx_status_get_string(status));
       return status;
     }
@@ -198,7 +198,7 @@ zx_status_t PcieRingMaster::Create(PcieBuscore* buscore, PcieFirmware* firmware,
 
   PcieBuscore::CoreRegs pci_core_regs;
   if ((status = buscore->GetCoreRegs(CHIPSET_PCIE2_CORE, &pci_core_regs)) != ZX_OK) {
-    BRCMF_ERR("Failed to get PCIE2 core regs: %s\n", zx_status_get_string(status));
+    BRCMF_ERR("Failed to get PCIE2 core regs: %s", zx_status_get_string(status));
     return status;
   }
 
@@ -231,7 +231,7 @@ zx_status_t PcieRingMaster::Create(PcieBuscore* buscore, PcieFirmware* firmware,
   std::unique_ptr<WriteDmaRing> control_submit_ring;
   if ((status = ring_master->CreateWriteDmaRing(kControlSubmitRingConfig, &control_submit_ring)) !=
       ZX_OK) {
-    BRCMF_ERR("Failed to create control submit ring: %s\n", zx_status_get_string(status));
+    BRCMF_ERR("Failed to create control submit ring: %s", zx_status_get_string(status));
     return status;
   }
   UpdateRingState(buscore, ring_state_offset, *control_submit_ring);
@@ -239,7 +239,7 @@ zx_status_t PcieRingMaster::Create(PcieBuscore* buscore, PcieFirmware* firmware,
   std::unique_ptr<WriteDmaRing> rx_buffer_submit_ring;
   if ((status = ring_master->CreateWriteDmaRing(kRxBufferSubmitRingConfig,
                                                 &rx_buffer_submit_ring)) != ZX_OK) {
-    BRCMF_ERR("Failed to create rx buffer submit ring: %s\n", zx_status_get_string(status));
+    BRCMF_ERR("Failed to create rx buffer submit ring: %s", zx_status_get_string(status));
     return status;
   }
   UpdateRingState(buscore, ring_state_offset, *rx_buffer_submit_ring);
@@ -249,7 +249,7 @@ zx_status_t PcieRingMaster::Create(PcieBuscore* buscore, PcieFirmware* firmware,
   std::unique_ptr<ReadDmaRing> control_complete_ring;
   if ((status = ring_master->CreateReadDmaRing(kControlCompleteRingConfig,
                                                &control_complete_ring)) != ZX_OK) {
-    BRCMF_ERR("Failed to create control complete ring: %s\n", zx_status_get_string(status));
+    BRCMF_ERR("Failed to create control complete ring: %s", zx_status_get_string(status));
     return status;
   }
   UpdateRingState(buscore, ring_state_offset, *control_complete_ring);
@@ -257,7 +257,7 @@ zx_status_t PcieRingMaster::Create(PcieBuscore* buscore, PcieFirmware* firmware,
   std::unique_ptr<ReadDmaRing> tx_complete_ring;
   if ((status = ring_master->CreateReadDmaRing(kTxCompleteRingConfig, &tx_complete_ring)) !=
       ZX_OK) {
-    BRCMF_ERR("Failed to create tx complete ring: %s\n", zx_status_get_string(status));
+    BRCMF_ERR("Failed to create tx complete ring: %s", zx_status_get_string(status));
     return status;
   }
   UpdateRingState(buscore, ring_state_offset, *tx_complete_ring);
@@ -265,7 +265,7 @@ zx_status_t PcieRingMaster::Create(PcieBuscore* buscore, PcieFirmware* firmware,
   std::unique_ptr<ReadDmaRing> rx_complete_ring;
   if ((status = ring_master->CreateReadDmaRing(kRxCompleteRingConfig, &rx_complete_ring)) !=
       ZX_OK) {
-    BRCMF_ERR("Failed to create rx complete ring: %s\n", zx_status_get_string(status));
+    BRCMF_ERR("Failed to create rx complete ring: %s", zx_status_get_string(status));
     return status;
   }
   UpdateRingState(buscore, ring_state_offset, *rx_complete_ring);
@@ -305,7 +305,7 @@ zx_status_t PcieRingMaster::CreateFlowRing(int flow_ring_index,
   zx_status_t status = ZX_OK;
 
   if (static_cast<size_t>(flow_ring_index) >= static_cast<size_t>(dma_config_.max_flow_rings)) {
-    BRCMF_ERR("Invalid flow ring index %d, max %d\n", flow_ring_index, dma_config_.max_flow_rings);
+    BRCMF_ERR("Invalid flow ring index %d, max %d", flow_ring_index, dma_config_.max_flow_rings);
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -313,7 +313,7 @@ zx_status_t PcieRingMaster::CreateFlowRing(int flow_ring_index,
   ring_config.ring_index += flow_ring_index;
   std::unique_ptr<WriteDmaRing> flow_ring;
   if ((status = CreateWriteDmaRing(ring_config, &flow_ring)) != ZX_OK) {
-    BRCMF_ERR("Failed to create flow ring %d: %s\n", flow_ring_index, zx_status_get_string(status));
+    BRCMF_ERR("Failed to create flow ring %d: %s", flow_ring_index, zx_status_get_string(status));
     return status;
   }
 
@@ -328,7 +328,7 @@ zx_status_t PcieRingMaster::CreateReadDmaRing(const DmaRingConfig& config,
   const size_t ring_buffer_size = config.item_size * config.item_capacity;
   if ((status = buscore_->CreateDmaBuffer(ZX_CACHE_POLICY_CACHED, ring_buffer_size,
                                           &ring_buffer)) != ZX_OK) {
-    BRCMF_ERR("Failed to create read DMA ring %d: %s\n", config.ring_index,
+    BRCMF_ERR("Failed to create read DMA ring %d: %s", config.ring_index,
               zx_status_get_string(status));
     return status;
   }
@@ -353,7 +353,7 @@ zx_status_t PcieRingMaster::CreateWriteDmaRing(const DmaRingConfig& config,
   const size_t ring_buffer_size = config.item_size * config.item_capacity;
   if ((status = buscore_->CreateDmaBuffer(ZX_CACHE_POLICY_CACHED, ring_buffer_size,
                                           &ring_buffer)) != ZX_OK) {
-    BRCMF_ERR("Failed to create write DMA ring %d: %s\n", config.ring_index,
+    BRCMF_ERR("Failed to create write DMA ring %d: %s", config.ring_index,
               zx_status_get_string(status));
     return status;
   }

@@ -101,10 +101,10 @@ zx_status_t brcmf_sim_register(brcmf_pub* drvr, std::unique_ptr<brcmf_bus>* out_
   simdev->settings = std::make_unique<brcmf_mp_device>();
   bus_if->bus_priv.sim = simdev.get();
 
-  BRCMF_DBG(SIM, "Registering simulator target\n");
+  BRCMF_DBG(SIM, "Registering simulator target");
   status = brcmf_sim_probe(bus_if.get());
   if (status != ZX_OK) {
-    BRCMF_ERR("sim_probe failed: %s\n", zx_status_get_string(status));
+    BRCMF_ERR("sim_probe failed: %s", zx_status_get_string(status));
     return status;
   }
 
@@ -113,13 +113,13 @@ zx_status_t brcmf_sim_register(brcmf_pub* drvr, std::unique_ptr<brcmf_bus>* out_
   drvr->settings = simdev->settings.get();
   status = brcmf_attach(drvr);
   if (status != ZX_OK) {
-    BRCMF_ERR("brcmf_attach failed\n");
+    BRCMF_ERR("brcmf_attach failed");
     return status;
   }
 
   status = brcmf_proto_bcdc_attach(drvr);
   if (status != ZX_OK) {
-    BRCMF_ERR("brcmf_proto_bcdc_attach failed: %s\n", zx_status_get_string(status));
+    BRCMF_ERR("brcmf_proto_bcdc_attach failed: %s", zx_status_get_string(status));
     return status;
   }
 
@@ -128,7 +128,7 @@ zx_status_t brcmf_sim_register(brcmf_pub* drvr, std::unique_ptr<brcmf_bus>* out_
 
   status = brcmf_bus_started(drvr);
   if (status != ZX_OK) {
-    BRCMF_ERR("Failed to start (simulated) bus\n");
+    BRCMF_ERR("Failed to start (simulated) bus");
     return status;
   }
 
@@ -145,7 +145,7 @@ zx_status_t brcmf_sim_register(brcmf_pub* drvr, std::unique_ptr<brcmf_bus>* out_
 void brcmf_sim_rx_event(brcmf_simdev* simdev, std::unique_ptr<std::vector<uint8_t>> buffer) {
   uint32_t packet_len = buffer->size();
   if (packet_len < ETH_HLEN) {
-    BRCMF_ERR("Malformed packet\n");
+    BRCMF_ERR("Malformed packet");
     return;
   }
   brcmf_netbuf* netbuf = brcmf_netbuf_allocate(packet_len);

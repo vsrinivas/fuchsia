@@ -51,7 +51,7 @@ struct brcmf_pno_info {
 zx_status_t brcmf_pno_attach(struct brcmf_cfg80211_info* cfg) {
   struct brcmf_pno_info* pi;
 
-  BRCMF_DBG(TRACE, "enter\n");
+  BRCMF_DBG(TRACE, "enter");
   pi = static_cast<decltype(pi)>(calloc(1, sizeof(*pi)));
   if (!pi) {
     return ZX_ERR_NO_MEMORY;
@@ -65,7 +65,7 @@ zx_status_t brcmf_pno_attach(struct brcmf_cfg80211_info* cfg) {
 void brcmf_pno_detach(struct brcmf_cfg80211_info* cfg) {
   struct brcmf_pno_info* pi;
 
-  BRCMF_DBG(TRACE, "enter\n");
+  BRCMF_DBG(TRACE, "enter");
   pi = cfg->pno;
   cfg->pno = NULL;
 

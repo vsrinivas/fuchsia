@@ -153,7 +153,7 @@ zx_status_t PcieBus::RxCtl(unsigned char* msg, uint len, int* rxlen_out) {
   return ZX_OK;
 }
 
-void PcieBus::WowlConfig(bool enabled) { BRCMF_ERR("PcieBus::WowlConfig unimplemented\n"); }
+void PcieBus::WowlConfig(bool enabled) { BRCMF_ERR("PcieBus::WowlConfig unimplemented"); }
 
 size_t PcieBus::GetRamsize() {
   return pcie_buscore_->chip()->ramsize - pcie_buscore_->chip()->srsize;
@@ -186,7 +186,7 @@ zx_status_t PcieBus::GetFwname(uint chip, uint chiprev, unsigned char* fw_name,
 }
 
 zx_status_t PcieBus::GetBootloaderMacaddr(uint8_t* mac_addr) {
-  BRCMF_ERR("PcieBus::GetBootloaderMacaddr unimplemented\n");
+  BRCMF_ERR("PcieBus::GetBootloaderMacaddr unimplemented");
   return ZX_ERR_NOT_SUPPORTED;
 }
 

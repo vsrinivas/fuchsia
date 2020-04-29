@@ -75,13 +75,13 @@ zx_status_t Device::WlanphyImplCreateIface(const wlanphy_impl_create_iface_req_t
   switch (req->role) {
     case WLAN_INFO_MAC_ROLE_CLIENT: {
       if (client_interface_ != nullptr) {
-        BRCMF_ERR("Device::WlanphyImplCreateIface() client interface already exists\n");
+        BRCMF_ERR("Device::WlanphyImplCreateIface() client interface already exists");
         return ZX_ERR_NO_RESOURCES;
       }
 
       if ((status = brcmf_cfg80211_add_iface(brcmf_pub_.get(), kClientInterfaceName, nullptr, req,
                                              &wdev)) != ZX_OK) {
-        BRCMF_ERR("Device::WlanphyImplCreateIface() failed to create Client interface, %s\n",
+        BRCMF_ERR("Device::WlanphyImplCreateIface() failed to create Client interface, %s",
                   zx_status_get_string(status));
         return status;
       }
@@ -99,13 +99,13 @@ zx_status_t Device::WlanphyImplCreateIface(const wlanphy_impl_create_iface_req_t
     }
     case WLAN_INFO_MAC_ROLE_AP: {
       if (ap_interface_ != nullptr) {
-        BRCMF_ERR("Device::WlanphyImplCreateIface() AP interface already exists\n");
+        BRCMF_ERR("Device::WlanphyImplCreateIface() AP interface already exists");
         return ZX_ERR_NO_RESOURCES;
       }
 
       if ((status = brcmf_cfg80211_add_iface(brcmf_pub_.get(), kApInterfaceName, nullptr, req,
                                              &wdev)) != ZX_OK) {
-        BRCMF_ERR("Device::WlanphyImplCreateIface() failed to create AP interface, %s\n",
+        BRCMF_ERR("Device::WlanphyImplCreateIface() failed to create AP interface, %s",
                   zx_status_get_string(status));
         return status;
       }
@@ -120,7 +120,7 @@ zx_status_t Device::WlanphyImplCreateIface(const wlanphy_impl_create_iface_req_t
       break;
     };
     default: {
-      BRCMF_ERR("Device::WlanphyImplCreateIface() MAC role %d not supported\n", req->role);
+      BRCMF_ERR("Device::WlanphyImplCreateIface() MAC role %d not supported", req->role);
       return ZX_ERR_NOT_SUPPORTED;
     }
   }
@@ -139,7 +139,7 @@ zx_status_t Device::WlanphyImplDestroyIface(uint16_t iface_id) {
       }
       if ((status = brcmf_cfg80211_del_iface(brcmf_pub_->config, client_interface_->wdev())) !=
           ZX_OK) {
-        BRCMF_ERR("Device::WlanphyImplDestroyIface() failed to cleanup STA interface, %s\n",
+        BRCMF_ERR("Device::WlanphyImplDestroyIface() failed to cleanup STA interface, %s",
                   zx_status_get_string(status));
         return status;
       }
@@ -152,7 +152,7 @@ zx_status_t Device::WlanphyImplDestroyIface(uint16_t iface_id) {
         return ZX_ERR_NOT_FOUND;
       }
       if ((status = brcmf_cfg80211_del_iface(brcmf_pub_->config, ap_interface_->wdev())) != ZX_OK) {
-        BRCMF_ERR("Device::WlanphyImplDestroyIface() failed to destroy AP interface, %s\n",
+        BRCMF_ERR("Device::WlanphyImplDestroyIface() failed to destroy AP interface, %s",
                   zx_status_get_string(status));
         return status;
       }
