@@ -227,6 +227,31 @@ bool fp_regs_expect_eq(const zx_thread_state_fp_regs_t& regs1,
 #endif
 }
 
+bool vector_regs_expect_unsupported_are_zero(const zx_thread_state_vector_regs_t& regs) {
+#if defined(__x86_64__)
+  BEGIN_HELPER;
+  // For the first 16 ZMM registers, we currently support only the lowest 256-bits.  All others
+  // should be 0.
+  for (int reg = 0; reg < 16; reg++) {
+    for (int i = 4; i < 8; i++) {
+      EXPECT_EQ(regs.zmm[reg].v[i], 0);
+    }
+  }
+  // The next 16 ZMM registers are unsupported.
+  for (int reg = 16; reg < 32; reg++) {
+    for (int i = 0; i < 8; i++) {
+      EXPECT_EQ(regs.zmm[reg].v[i], 0);
+    }
+  }
+  END_HELPER;
+#elif defined(__aarch64__)
+  // All features/fields are supported on arm64.
+  return true;
+#else
+#error Unsupported architecture
+#endif
+}
+
 bool vector_regs_expect_eq(const zx_thread_state_vector_regs_t& regs1,
                            const zx_thread_state_vector_regs_t& regs2) {
   BEGIN_HELPER;

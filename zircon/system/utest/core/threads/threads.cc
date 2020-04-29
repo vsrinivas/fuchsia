@@ -1016,10 +1016,12 @@ TEST(Threads, ReadingVectorRegisterState) {
                  reinterpret_cast<uintptr_t>(&spin_address));
 
   zx_thread_state_vector_regs_t regs;
+  memset(&regs, 0xff, sizeof(regs));
   ASSERT_EQ(
       zx_thread_read_state(setup.thread_handle(), ZX_THREAD_STATE_VECTOR_REGS, &regs, sizeof(regs)),
       ZX_OK);
 
+  ASSERT_TRUE(vector_regs_expect_unsupported_are_zero(regs));
   ASSERT_TRUE(vector_regs_expect_eq(regs, vector_regs_expected));
 }
 
@@ -1186,6 +1188,8 @@ TEST(Threads, WritingVectorRegisterState) {
 
   zx_thread_state_vector_regs_t regs_to_set;
   vector_regs_fill_test_values(&regs_to_set);
+  ASSERT_TRUE(vector_regs_expect_unsupported_are_zero(regs_to_set));
+
   ASSERT_EQ(zx_thread_write_state(setup.thread_handle(), ZX_THREAD_STATE_VECTOR_REGS, &regs_to_set,
                                   sizeof(regs_to_set)),
             ZX_OK);
@@ -1193,6 +1197,42 @@ TEST(Threads, WritingVectorRegisterState) {
   zx_thread_state_vector_regs_t regs;
   setup.DoSave(&save_vector_regs_and_exit_thread, &regs);
   EXPECT_TRUE(vector_regs_expect_eq(regs_to_set, regs));
+}
+
+TEST(Threads, WritingVectorRegisterState_UnsupportedFieldsIgnored) {
+  RegisterWriteSetup<zx_thread_state_vector_regs_t> setup;
+  setup.Init();
+
+  zx_thread_state_vector_regs_t regs;
+  vector_regs_fill_test_values(&regs);
+
+#if defined(__x86_64__)
+  // Fill in the fields corresponding to unsupported features so we can later verify they are zeroed
+  // out by |zx_thread_read_state|.
+  for (int reg = 0; reg < 16; reg++) {
+    for (int i = 5; i < 8; i++) {
+      regs.zmm[reg].v[i] = 0xfffffffffffffffful;
+    }
+  }
+  for (int reg = 16; reg < 32; reg++) {
+    for (int i = 0; i < 8; i++) {
+      regs.zmm[reg].v[i] = 0xfffffffffffffffful;
+    }
+  }
+#endif
+
+  ASSERT_EQ(zx_thread_write_state(setup.thread_handle(), ZX_THREAD_STATE_VECTOR_REGS, &regs,
+                                  sizeof(regs)),
+            ZX_OK);
+  ASSERT_EQ(
+      zx_thread_read_state(setup.thread_handle(), ZX_THREAD_STATE_VECTOR_REGS, &regs, sizeof(regs)),
+      ZX_OK);
+
+  ASSERT_TRUE(vector_regs_expect_unsupported_are_zero(regs));
+
+  zx_thread_state_vector_regs_t vector_regs_expected;
+  vector_regs_fill_test_values(&vector_regs_expected);
+  ASSERT_TRUE(vector_regs_expect_eq(regs, vector_regs_expected));
 }
 
 // Test for fxbug.dev/50632: Make sure zx_thread_write_state doesn't overwrite

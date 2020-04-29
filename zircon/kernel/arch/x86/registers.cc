@@ -293,15 +293,8 @@ bool x86_extended_register_enable_feature(enum x86_extended_register_feature fea
       return false;
     }
     case X86_EXTENDED_REGISTER_AVX512: {
-      const uint64_t xsave_avx512 = X86_XSAVE_STATE_BIT_AVX512_OPMASK |
-                                    X86_XSAVE_STATE_BIT_AVX512_LOWERZMM_HIGH |
-                                    X86_XSAVE_STATE_BIT_AVX512_HIGHERZMM;
-
-      if (!xsave_supported || (xcr0_component_bitmap & xsave_avx512) != xsave_avx512) {
-        return false;
-      }
-      x86_xsetbv(0, x86_xgetbv(0) | xsave_avx512);
-      break;
+      /* Currently unsupported */
+      return false;
     }
     case X86_EXTENDED_REGISTER_PT: {
       if (!xsaves_supported || !(xss_component_bitmap & X86_XSAVE_STATE_BIT_PT)) {

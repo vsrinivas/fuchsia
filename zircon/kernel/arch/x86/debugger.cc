@@ -169,43 +169,6 @@ zx_status_t x86_get_set_vector_regs(Thread* thread, zx_thread_state_vector_regs*
     }
   }
 
-  // AVX-512 opmask registers (8 64-bit registers). Optional.
-  constexpr int kNumOpmaskRegs = 8;
-  uint64_t* opmask = static_cast<uint64_t*>(x86_get_extended_register_state_component(
-      thread->arch_.extended_register_state, X86_XSAVE_STATE_INDEX_AVX512_OPMASK, mark_present,
-      &comp_size));
-  if (opmask) {
-    DEBUG_ASSERT(comp_size == kNumOpmaskRegs * sizeof(uint64_t));
-    for (int i = 0; i < kNumOpmaskRegs; i++) {
-      get_set_memcpy(&regs->opmask[i], &opmask[i], sizeof(uint64_t));
-    }
-  }
-
-  // AVX-512 high bits (256 bits extra each) for ZMM0-15.
-  constexpr int kZmmHighSize = 32;  // Additional bytes in each register.
-  uint8_t* zmm_highbits = static_cast<uint8_t*>(x86_get_extended_register_state_component(
-      thread->arch_.extended_register_state, X86_XSAVE_STATE_INDEX_AVX512_LOWERZMM_HIGH,
-      mark_present, &comp_size));
-  if (zmm_highbits) {
-    DEBUG_ASSERT(comp_size == kZmmHighSize * kNumSSERegs);
-    for (int i = 0; i < kNumSSERegs; i++) {
-      get_set_memcpy(&regs->zmm[i].v[4], &zmm_highbits[i * kZmmHighSize], kZmmHighSize);
-    }
-  }
-
-  // AVX-512 registers 16-31 (512 bits each) are in component 7.
-  constexpr int kNumZmmHighRegs = 16;  // Extra registers added over xmm/ymm.
-  constexpr int kZmmRegSize = 64;      // Total register size.
-  uint8_t* zmm_highregs = static_cast<uint8_t*>(x86_get_extended_register_state_component(
-      thread->arch_.extended_register_state, X86_XSAVE_STATE_INDEX_AVX512_HIGHERZMM, mark_present,
-      &comp_size));
-  if (zmm_highregs) {
-    DEBUG_ASSERT(comp_size == kNumZmmHighRegs * kZmmRegSize);
-    for (int i = 0; i < kNumZmmHighRegs; i++) {
-      get_set_memcpy(&regs->zmm[i + kNumSSERegs], &zmm_highregs[i * kZmmRegSize], kZmmRegSize);
-    }
-  }
-
   return ZX_OK;
 }
 

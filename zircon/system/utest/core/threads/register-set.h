@@ -48,6 +48,10 @@ bool vector_regs_expect_eq(const zx_thread_state_vector_regs_t& regs1,
 bool debug_regs_expect_eq(const char* file, int line, const zx_thread_state_debug_regs_t& regs1,
                           const zx_thread_state_debug_regs_t& regs2);
 
+// Returns true if fields corresponding to unsupported vector features are 0 or if there are no
+// unsupported vector features.
+bool vector_regs_expect_unsupported_are_zero(const zx_thread_state_vector_regs_t& regs);
+
 // The functions below are assembly.
 __BEGIN_CDECLS
 
