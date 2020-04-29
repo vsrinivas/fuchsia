@@ -8,13 +8,17 @@
 
 mod board;
 mod image;
+mod images;
 mod update_mode;
+mod util;
 
 pub use crate::{
     board::VerifyBoardError,
-    image::OpenImageError,
+    image::{Image, OpenImageError},
+    images::{ImageList, ResolveImagesError, UnverifiedImageList},
     update_mode::{ParseUpdateModeError, UpdateMode},
 };
+
 use fidl_fuchsia_io::DirectoryProxy;
 
 /// An open handle to an "update" package.
@@ -29,9 +33,24 @@ impl UpdatePackage {
         Self { proxy }
     }
 
-    /// Opens the image with the given `name` as a resizable VMO buffer.
-    pub async fn open_image(&self, name: &str) -> Result<fidl_fuchsia_mem::Buffer, OpenImageError> {
-        image::open(&self.proxy, name).await
+    /// Searches for the requested images in the update package, returning the resolved sequence of
+    /// images in the same order as the requests.
+    ///
+    /// If a request ends in `[_type]`, that request is expanded to all found images with the
+    /// prefix of the request, sorted alphabetically.
+    pub async fn resolve_images(
+        &self,
+        requests: &[String],
+    ) -> Result<UnverifiedImageList, ResolveImagesError> {
+        images::resolve_images(&self.proxy, requests).await
+    }
+
+    /// Opens the given `image` as a resizable VMO buffer.
+    pub async fn open_image(
+        &self,
+        image: &Image,
+    ) -> Result<fidl_fuchsia_mem::Buffer, OpenImageError> {
+        image::open(&self.proxy, image).await
     }
 
     /// Verifies the board file has the given `contents`.
@@ -61,6 +80,10 @@ impl TestUpdatePackage {
         )
         .expect("temp dir to open");
         Self { temp_dir, update_pkg: UpdatePackage::new(update_pkg_proxy) }
+    }
+
+    fn proxy(&self) -> &DirectoryProxy {
+        &self.update_pkg.proxy
     }
 
     async fn add_file(self, path: impl AsRef<std::path::Path>, contents: impl AsRef<[u8]>) -> Self {

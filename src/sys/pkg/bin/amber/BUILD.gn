@@ -81,7 +81,7 @@ package("amber") {
 
   resources = [
     {
-      path = rebase_path("system_updater/images")
+      path = rebase_path("../system-updater/images")
       dest = "images"
     },
   ]

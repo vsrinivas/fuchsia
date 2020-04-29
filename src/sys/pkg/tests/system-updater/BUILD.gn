@@ -57,7 +57,7 @@ test_package("system-updater-integration-tests") {
 
   resources = [
     {
-      path = rebase_path("//src/sys/pkg/bin/amber/system_updater/images")
+      path = rebase_path("//src/sys/pkg/bin/system-updater/images")
       dest = "images"
     },
   ]
