@@ -119,16 +119,7 @@ bool OneFingerNTapRecognizer::ValidateEvent(
     const fuchsia::ui::input::accessibility::PointerEvent& pointer_event) const {
   // Validate pointer event for one finger tap.
   return ValidatePointerEvent(gesture_start_info_, pointer_event) &&
-         ValidatePointerEventForTap(pointer_event);
-  ;
-}
-
-bool OneFingerNTapRecognizer::ValidatePointerEventForTap(
-    const fuchsia::ui::input::accessibility::PointerEvent& pointer_event) const {
-  // Check if the new pointer event is under the threshold value for the move.
-  auto dx = pointer_event.ndc_point().x - gesture_start_info_.starting_ndc_position.x;
-  auto dy = pointer_event.ndc_point().y - gesture_start_info_.starting_ndc_position.y;
-  return dx * dx + dy * dy <= kGestureMoveThreshold * kGestureMoveThreshold;
+         PointerEventIsValidTap(gesture_start_info_, pointer_event);
 }
 
 void OneFingerNTapRecognizer::OnContestStarted(std::unique_ptr<ContestMember> contest_member) {

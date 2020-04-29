@@ -64,11 +64,6 @@ class OneFingerNTapRecognizer : public GestureRecognizer {
   // Contains validation logic which is needed for PointerEvent.
   bool ValidateEvent(const fuchsia::ui::input::accessibility::PointerEvent& pointer_event) const;
 
-  // Helper function to check if the provided pointer event is valid for current tap gesture being
-  // performed, by verifying the move threshold.
-  bool ValidatePointerEventForTap(
-      const fuchsia::ui::input::accessibility::PointerEvent& pointer_event) const;
-
   // Checks if required number of taps are recognized.
   bool CheckIfGestureIsDetected() const;
 

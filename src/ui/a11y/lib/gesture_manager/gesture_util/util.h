@@ -54,6 +54,11 @@ void ResetGestureContext(GestureContext* gesture_context);
 bool ValidatePointerEvent(const GestureInfo gesture_start_info,
                           const fuchsia::ui::input::accessibility::PointerEvent& pointer_event);
 
+// Helper function to check if the provided pointer event is valid for current tap gesture being
+// performed, by verifying the move threshold.
+bool PointerEventIsValidTap(const GestureInfo& gesture_start_info,
+                            const fuchsia::ui::input::accessibility::PointerEvent& pointer_event);
+
 }  // namespace a11y
 
 #endif  // SRC_UI_A11Y_LIB_GESTURE_MANAGER_GESTURE_UTIL_UTIL_H_
