@@ -538,8 +538,8 @@ zx_status_t dc_callback_handler(port_handler_t* ph, zx_signals_t signals, uint32
             handle_displays_changed(std::move(added), std::move(removed));
             return ZX_OK;
           },
-      .on_vsync = [](uint64_t display_id, uint64_t timestamp,
-                     fidl::VectorView<uint64_t> images) { return ZX_OK; },
+      .on_vsync = [](uint64_t display_id, uint64_t timestamp, fidl::VectorView<uint64_t> images,
+                     uint64_t cookie) { return ZX_OK; },
       .on_client_ownership_change =
           [](bool has_ownership) {
             handle_ownership_change(has_ownership);

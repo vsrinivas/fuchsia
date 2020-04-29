@@ -23,8 +23,8 @@ class DisplayControllerListener {
   using OnDisplaysChangedCallback = std::function<void(
       std::vector<fuchsia::hardware::display::Info> added, std::vector<uint64_t> removed)>;
   using OnClientOwnershipChangeCallback = std::function<void(bool has_ownership)>;
-  using OnVsyncCallback =
-      std::function<void(uint64_t display_id, uint64_t timestamp, std::vector<uint64_t> images)>;
+  using OnVsyncCallback = std::function<void(uint64_t display_id, uint64_t timestamp,
+                                             std::vector<uint64_t> images, uint64_t cookie)>;
 
   // Binds to a Display fuchsia::hardware::display::Controller with channels |device| and
   // with display controller |controller|. |controller_handle| is the raw handle wrapped by

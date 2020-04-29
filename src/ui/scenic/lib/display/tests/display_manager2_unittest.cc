@@ -373,7 +373,8 @@ TEST_F(DisplayManagerTest, ClaimDisplay) {
           EXPECT_EQ(kTestImageId, images[0]);
         });
 
-    display_controller_objs.mock->events().OnVsync(kTestDisplayId2, kTestTimestamp, {kTestImageId});
+    display_controller_objs.mock->events().OnVsync(kTestDisplayId2, kTestTimestamp, {kTestImageId},
+                                                   0);
     RunLoopUntilIdle();
     EXPECT_TRUE(vsync_received);
   }
@@ -384,7 +385,8 @@ TEST_F(DisplayManagerTest, ClaimDisplay) {
   display_controller_objs.mock->events().OnDisplaysChanged(
       /* added */ {CreateFakeDisplayInfo(kTestDisplayId3)},
       /* removed */ {kTestDisplayId2});
-  display_controller_objs.mock->events().OnVsync(kTestDisplayId3, kTestTimestamp, {kTestImageId});
+  display_controller_objs.mock->events().OnVsync(kTestDisplayId3, kTestTimestamp, {kTestImageId},
+                                                 0);
   RunLoopUntilIdle();
 
   // Claim the display again.

@@ -119,8 +119,8 @@ void CoreDisplayTest::SetUp() {
               has_display = true;
               return ZX_OK;
             },
-        .on_vsync = [](uint64_t display_id, uint64_t timestamp,
-                       fidl::VectorView<uint64_t> images) { return ZX_ERR_NEXT; },
+        .on_vsync = [](uint64_t display_id, uint64_t timestamp, fidl::VectorView<uint64_t> images,
+                       uint64_t cookie) { return ZX_ERR_NEXT; },
         .on_client_ownership_change = [](bool has_ownership) { return ZX_ERR_NEXT; },
         .unknown = []() { return ZX_ERR_STOP; }});
     ASSERT_FALSE(status != ZX_OK && status != ZX_ERR_NEXT);

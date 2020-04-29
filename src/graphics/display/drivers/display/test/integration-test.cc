@@ -15,6 +15,8 @@
 #include <zxtest/zxtest.h>
 
 // clang-format off
+#include "lib/zx/clock.h"
+#include "lib/zx/time.h"
 #include "test/base.h"
 #include "test/fidl_client.h"
 
@@ -48,6 +50,12 @@ class IntegrationTest : public TestBase {
             controller()->primary_client_->enable_vsync_);
   }
 
+  bool vsync_acknowledge_delivered(uint64_t cookie) {
+    fbl::AutoLock l(controller()->mtx());
+    fbl::AutoLock cl(&controller()->primary_client_->mtx_);
+    return controller()->primary_client_->handler_.LatestAckedCookie() == cookie;
+  }
+
   void SendVsyncAfterUnbind(std::unique_ptr<TestFidlClient> client, uint64_t display_id) {
     fbl::AutoLock l(controller()->mtx());
     // Reseting client will *start* client tear down.
@@ -61,6 +69,16 @@ class IntegrationTest : public TestBase {
   bool primary_client_dead() {
     fbl::AutoLock l(controller()->mtx());
     return controller()->primary_client_ == nullptr;
+  }
+
+  uint32_t get_client_vsync_buffer_size() {
+    fbl::AutoLock l(controller()->mtx());
+    return controller()->primary_client_->kVsyncBufferSize;
+  }
+
+  void client_proxy_send_vsync() {
+    fbl::AutoLock l(controller()->mtx());
+    controller()->active_client_->OnDisplayVsync(0, 0, nullptr, 0);
   }
 
   // |TestBase|
@@ -232,4 +250,149 @@ TEST_F(IntegrationTest, SendVsyncsAfterClientDies) {
   auto id = primary_client->display_id();
   SendVsyncAfterUnbind(std::move(primary_client), id);
 }
+
+TEST_F(IntegrationTest, AcknowledgeVsync) {
+  auto primary_client = std::make_unique<TestFidlClient>(sysmem_.get());
+  ASSERT_TRUE(primary_client->CreateChannel(display_fidl()->get(), /*is_vc=*/false));
+  ASSERT_TRUE(primary_client->Bind(dispatcher()));
+  EXPECT_TRUE(
+      RunLoopWithTimeoutOrUntil([this]() { return primary_client_connected(); }, zx::sec(1)));
+  EXPECT_EQ(0, primary_client->vsync_count());
+  client_proxy_send_vsync();
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
+      [p = primary_client.get()]() { return p->vsync_count() == 1; }, zx::sec(1)));
+
+  // acknowledge
+  {
+    fbl::AutoLock lock(primary_client->mtx());
+    primary_client->dc_->AcknowledgeVsync(primary_client->get_cookie());
+  }
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
+      [this, p = primary_client.get()]() { return vsync_acknowledge_delivered(p->get_cookie()); },
+      zx::sec(1)));
+}
+
+TEST_F(IntegrationTest, DISABLED_AcknowledgeVsyncAfterQueueFull) {
+  auto primary_client = std::make_unique<TestFidlClient>(sysmem_.get());
+  ASSERT_TRUE(primary_client->CreateChannel(display_fidl()->get(), /*is_vc=*/false));
+  ASSERT_TRUE(primary_client->Bind(dispatcher()));
+  EXPECT_TRUE(
+      RunLoopWithTimeoutOrUntil([this]() { return primary_client_connected(); }, zx::sec(1)));
+
+  uint32_t vsync_ack_rate = (primary_client->displays_[0].vsync_acknowledge_rate_) << 1;
+  EXPECT_EQ(0, primary_client->vsync_count());
+
+  // start sending vsync
+  for (uint64_t i = 0; i < vsync_ack_rate; i++) {
+    client_proxy_send_vsync();
+  }
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
+      [p = primary_client.get(), vsync_ack_rate]() { return p->vsync_count() == vsync_ack_rate; },
+      zx::sec(3)));
+
+  // this will print the number of vsyncs received if above fails
+  EXPECT_EQ(vsync_ack_rate, primary_client->vsync_count());
+
+  // at this point, we should not get any more vsyncs. let's confirm by sending 10 vsyncs
+  constexpr uint32_t kNumVsync = 10;
+  for (uint64_t i = 0; i < kNumVsync; i++) {
+    client_proxy_send_vsync();
+  }
+  // vsync count should remain the same
+  EXPECT_EQ(vsync_ack_rate, primary_client->vsync_count());
+
+  // acknowledge
+  {
+    fbl::AutoLock lock(primary_client->mtx());
+    primary_client->dc_->AcknowledgeVsync(primary_client->get_cookie());
+  }
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
+      [this, p = primary_client.get()]() { return vsync_acknowledge_delivered(p->get_cookie()); },
+      zx::sec(1)));
+
+  // After acknowledge, we should expect to get all the stored messages + the latest vsync
+  client_proxy_send_vsync();
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
+      [p = primary_client.get(), vsync_ack_rate]() {
+        return p->vsync_count() == vsync_ack_rate + kNumVsync + 1;
+      },
+      zx::sec(3)));
+  // this will print the number of vsyncs received if above fails
+  EXPECT_EQ(vsync_ack_rate + kNumVsync + 1, primary_client->vsync_count());
+}
+
+TEST_F(IntegrationTest, DISABLED_AcknowledgeVsyncAfterLongTime) {
+  auto primary_client = std::make_unique<TestFidlClient>(sysmem_.get());
+  ASSERT_TRUE(primary_client->CreateChannel(display_fidl()->get(), /*is_vc=*/false));
+  ASSERT_TRUE(primary_client->Bind(dispatcher()));
+  EXPECT_TRUE(
+      RunLoopWithTimeoutOrUntil([this]() { return primary_client_connected(); }, zx::sec(1)));
+
+  uint32_t vsync_ack_rate = (primary_client->displays_[0].vsync_acknowledge_rate_) << 1;
+  EXPECT_EQ(0, primary_client->vsync_count());
+
+  // start sending vsync
+  for (uint64_t i = 0; i < vsync_ack_rate; i++) {
+    client_proxy_send_vsync();
+  }
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
+      [p = primary_client.get(), vsync_ack_rate]() { return p->vsync_count() == vsync_ack_rate; },
+      zx::sec(3)));
+  // this will print the number of vsyncs received if above fails
+  EXPECT_EQ(vsync_ack_rate, primary_client->vsync_count());
+
+  // at this point, we should not get any more vsyncs. let's confirm by sending <lots> of vsync
+  uint32_t num_of_vsyncs = get_client_vsync_buffer_size() * 10;
+  for (uint64_t i = 0; i < num_of_vsyncs; i++) {
+    client_proxy_send_vsync();
+  }
+  // vsync count should remain the same
+  EXPECT_EQ(vsync_ack_rate, primary_client->vsync_count());
+
+  // acknowledge
+  {
+    fbl::AutoLock lock(primary_client->mtx());
+    primary_client->dc_->AcknowledgeVsync(primary_client->get_cookie());
+  }
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
+      [this, p = primary_client.get()]() { return vsync_acknowledge_delivered(p->get_cookie()); },
+      zx::sec(1)));
+
+  // After acknowledge, we should expect to get all the stored messages + the latest vsync
+  client_proxy_send_vsync();
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
+      [p = primary_client.get(), vsync_ack_rate, this]() {
+        return p->vsync_count() == vsync_ack_rate + get_client_vsync_buffer_size() + 1;
+      },
+      zx::sec(3)));
+  // this will print the number of vsyncs received if above fails
+  EXPECT_EQ(vsync_ack_rate + get_client_vsync_buffer_size() + 1, primary_client->vsync_count());
+}
+
+TEST_F(IntegrationTest, InvalidVSyncCookie) {
+  auto primary_client = std::make_unique<TestFidlClient>(sysmem_.get());
+  ASSERT_TRUE(primary_client->CreateChannel(display_fidl()->get(), /*is_vc=*/false));
+  ASSERT_TRUE(primary_client->Bind(dispatcher()));
+  EXPECT_TRUE(
+      RunLoopWithTimeoutOrUntil([this]() { return primary_client_connected(); }, zx::sec(1)));
+  EXPECT_EQ(0, primary_client->vsync_count());
+  client_proxy_send_vsync();
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
+      [p = primary_client.get()]() { return p->vsync_count() == 1; }, zx::sec(1)));
+
+  // acknowledge
+  {
+    fbl::AutoLock lock(primary_client->mtx());
+    primary_client->dc_->AcknowledgeVsync(0xdeadbeef);
+  }
+  EXPECT_FALSE(RunLoopWithTimeoutOrUntil(
+      [this, p = primary_client.get()]() { return vsync_acknowledge_delivered(p->get_cookie()); },
+      zx::sec(1)));
+
+  client_proxy_send_vsync();
+  EXPECT_FALSE(RunLoopWithTimeoutOrUntil(
+      [p = primary_client.get()]() { return p->vsync_count() == 2; }, zx::sec(1)));
+  EXPECT_EQ(1, primary_client->vsync_count());
+}
+
 }  // namespace display

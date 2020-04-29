@@ -38,6 +38,9 @@ class Display {
 
   void set_grayscale(bool grayscale) { grayscale_ = grayscale; }
 
+  // returns the maximum number of vsyncs received before acknowledgement is required
+  uint32_t get_vsync_ack_rate() const { return vsync_acknowledge_rate_; }
+
   void Dump();
 
  private:
@@ -59,6 +62,8 @@ class Display {
   uint32_t vertical_size_mm_;
   // flag used to indicate whether the values are actual values or fallback
   bool using_fallback_sizes_;
+  // Maximum number of vsyncs recieved before acknowledgement is required
+  uint32_t vsync_acknowledge_rate_;
 };
 
 }  // namespace display

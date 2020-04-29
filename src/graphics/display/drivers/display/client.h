@@ -33,6 +33,7 @@
 #include <fbl/vector.h>
 
 #include "controller.h"
+#include "fbl/ring_buffer.h"
 #include "fence.h"
 #include "id-map.h"
 #include "image.h"
@@ -117,6 +118,7 @@ class Client : public llcpp::fuchsia::hardware::display::Controller::Interface {
 
   // Used for testing
   sync_completion_t* fidl_unbound() { return &fidl_unbound_; }
+  uint64_t LatestAckedCookie() const { return acked_cookie_; }
 
  private:
   void ImportVmoImage(llcpp::fuchsia::hardware::display::ImageConfig image_config, zx::vmo vmo,
@@ -180,6 +182,7 @@ class Client : public llcpp::fuchsia::hardware::display::Controller::Interface {
 
   void ReleaseCapture(uint64_t image_id, ReleaseCaptureCompleter::Sync _completer) override;
 
+  void AcknowledgeVsync(uint64_t cookie, AcknowledgeVsyncCompleter::Sync _completer) override;
   // Cleans up layer state associated with an image. If image == nullptr, then
   // cleans up all image state. Return true if a current layer was modified.
   bool CleanUpImage(Image* image);
@@ -239,6 +242,8 @@ class Client : public llcpp::fuchsia::hardware::display::Controller::Interface {
   uint64_t capture_fence_id_ = INVALID_ID;
   uint64_t current_capture_image_ = INVALID_ID;
   uint64_t pending_capture_release_image_ = INVALID_ID;
+
+  uint64_t acked_cookie_ = 0;
 };
 
 // ClientProxy manages interactions between its Client instance and the ddk and the
@@ -287,6 +292,9 @@ class ClientProxy : public ClientParent {
   // Test helpers
   size_t TEST_imported_images_count() const { return handler_.TEST_imported_images_count(); }
 
+  // define this constant here so we can access it for test
+  static constexpr uint32_t kVsyncBufferSize = 10;
+
  protected:
   void CloseOnControllerLoop();
   friend IntegrationTest;
@@ -308,6 +316,19 @@ class ClientProxy : public ClientParent {
   static constexpr uint32_t kChannelOomPrintFreq = 600;  // 1 per 10 seconds (assuming 60fps)
   uint32_t chn_oom_print_freq_ = 0;
   uint64_t total_oom_errors_ = 0;
+
+  using vsync_msg_t = struct vsync_msg {
+    uint64_t display_id;
+    zx_time_t timestamp;
+    uint64_t* image_ids;
+    size_t count;
+    uint64_t cookie;
+  };
+
+  fbl::RingBuffer<vsync_msg_t, kVsyncBufferSize> buffered_vsync_messages_;
+  uint64_t last_cookie_sequence_sent_ = 0;
+  uint64_t initial_cookie_ = 0;
+  uint64_t cookie_sequence_ = 0;
 };
 
 }  // namespace display

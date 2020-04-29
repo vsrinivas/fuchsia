@@ -423,6 +423,7 @@ pub struct VSyncMessage {
     pub display_id: u64,
     pub timestamp: u64,
     pub images: Vec<u64>,
+    pub cookie: u64,
 }
 
 pub struct FrameBuffer {
@@ -607,9 +608,14 @@ impl FrameBuffer {
             fasync::spawn_local(
                 stream
                     .map_ok(move |request| match request {
-                        ControllerEvent::OnVsync { display_id, timestamp, images } => {
+                        ControllerEvent::OnVsync { display_id, timestamp, images, cookie } => {
                             vsync_sender
-                                .unbounded_send(VSyncMessage { display_id, timestamp, images })
+                                .unbounded_send(VSyncMessage {
+                                    display_id,
+                                    timestamp,
+                                    images,
+                                    cookie,
+                                })
                                 .unwrap_or_else(|e| eprintln!("{:?}", e));
                         }
                         _ => (),

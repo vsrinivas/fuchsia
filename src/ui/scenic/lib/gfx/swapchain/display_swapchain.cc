@@ -397,7 +397,7 @@ void DisplaySwapchain::OnFrameRendered(size_t frame_index, zx::time render_finis
 }
 
 void DisplaySwapchain::OnVsync(uint64_t display_id, uint64_t timestamp,
-                               std::vector<uint64_t> image_ids) {
+                               std::vector<uint64_t> image_ids, uint64_t cookie) {
   if (on_vsync_) {
     on_vsync_(zx::time(timestamp));
   }

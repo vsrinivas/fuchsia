@@ -60,6 +60,9 @@ zx::event client_event_;
 std::unique_ptr<sysmem::BufferCollection::SyncClient> collection_;
 zx::vmo capture_vmo;
 
+uint64_t vsync_count_ = 0;
+uint32_t vsync_ack_rate_ = 0;
+
 enum TestBundle {
   SIMPLE = 0,  // BUNDLE0
   FLIP,        // BUNDLE1
@@ -127,25 +130,25 @@ static bool bind_display(const char* controller, fbl::Vector<Display>* displays)
   fidl::Message msg(fidl::BytePart(byte_buffer, ZX_CHANNEL_MAX_MSG_BYTES), fidl::HandlePart());
   while (displays->is_empty()) {
     printf("Waiting for display\n");
-    if (ZX_OK !=
-        dc->HandleEvents({
-            .on_displays_changed =
-                [&displays](::fidl::VectorView<fhd::Info> added,
-                            ::fidl::VectorView<uint64_t> removed) {
-                  for (size_t i = 0; i < added.count(); i++) {
-                    displays->push_back(Display(added[i]));
-                  }
-                  return ZX_OK;
-                },
-            .on_vsync = [](uint64_t display_id, uint64_t timestamp,
-                           ::fidl::VectorView<uint64_t> images) { return ZX_ERR_INVALID_ARGS; },
-            .on_client_ownership_change =
-                [](bool owns) {
-                  has_ownership = owns;
-                  return ZX_OK;
-                },
-            .unknown = []() { return ZX_ERR_STOP; },
-        })) {
+    if (ZX_OK != dc->HandleEvents({
+                     .on_displays_changed =
+                         [&displays](::fidl::VectorView<fhd::Info> added,
+                                     ::fidl::VectorView<uint64_t> removed) {
+                           for (size_t i = 0; i < added.count(); i++) {
+                             displays->push_back(Display(added[i]));
+                           }
+                           return ZX_OK;
+                         },
+                     .on_vsync = [](uint64_t display_id, uint64_t timestamp,
+                                    ::fidl::VectorView<uint64_t> images,
+                                    uint64_t cookie) { return ZX_ERR_INVALID_ARGS; },
+                     .on_client_ownership_change =
+                         [](bool owns) {
+                           has_ownership = owns;
+                           return ZX_OK;
+                         },
+                     .unknown = []() { return ZX_ERR_STOP; },
+                 })) {
       printf("Got unexpected message\n");
       return false;
     }
@@ -235,7 +238,8 @@ zx_status_t wait_for_vsync(const fbl::Vector<std::unique_ptr<VirtualLayer>>& lay
             return ZX_ERR_STOP;
           },
       .on_vsync =
-          [&layers](uint64_t display_id, uint64_t timestamp, ::fidl::VectorView<uint64_t> images) {
+          [&layers](uint64_t display_id, uint64_t timestamp, ::fidl::VectorView<uint64_t> images,
+                    uint64_t cookie) {
             for (auto& layer : layers) {
               uint64_t id = layer->image_id(display_id);
               if (id == 0) {
@@ -252,6 +256,11 @@ zx_status_t wait_for_vsync(const fbl::Vector<std::unique_ptr<VirtualLayer>>& lay
               if (!layer->is_done()) {
                 return ZX_ERR_NEXT;
               }
+            }
+            // ack
+            if (++vsync_count_ >= vsync_ack_rate_) {
+              dc->AcknowledgeVsync(cookie);
+              vsync_count_ = 0;
             }
             return ZX_OK;
           },
@@ -679,6 +688,8 @@ int main(int argc, const char* argv[]) {
   for (unsigned i = 0; i < displays.size(); i++) {
     display_layers.push_back(fbl::Vector<uint64_t>());
   }
+
+  vsync_ack_rate_ = displays[0].get_vsync_ack_rate();
 
   argc--;
   argv++;

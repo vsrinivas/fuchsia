@@ -25,6 +25,7 @@ TestFidlClient::Display::Display(const fhd::Info& info) {
   manufacturer_name_ = fbl::String(info.manufacturer_name.data());
   monitor_name_ = fbl::String(info.monitor_name.data());
   monitor_serial_ = fbl::String(info.monitor_serial.data());
+  vsync_acknowledge_rate_ = info.vsync_acknowledge_rate;
   image_config_.height = modes_[0].vertical_resolution;
   image_config_.width = modes_[0].horizontal_resolution;
   image_config_.pixel_format = pixel_formats_[0];
@@ -81,8 +82,8 @@ bool TestFidlClient::Bind(async_dispatcher_t* dispatcher) {
               }
               return ZX_OK;
             },
-        .on_vsync = [](uint64_t display_id, uint64_t timestamp,
-                       ::fidl::VectorView<uint64_t> images) { return ZX_ERR_INVALID_ARGS; },
+        .on_vsync = [](uint64_t display_id, uint64_t timestamp, ::fidl::VectorView<uint64_t> images,
+                       uint64_t cookie) { return ZX_ERR_INVALID_ARGS; },
         .on_client_ownership_change =
             [this](bool owns) {
               has_ownership_ = owns;
@@ -135,10 +136,12 @@ void TestFidlClient::OnEventMsgAsync(async_dispatcher_t* dispatcher, async::Wait
                                 ::fidl::VectorView<uint64_t>) { return ZX_OK; },
       // The FIDL bindings do not know that the caller holds mtx(), so we can't TA_REQ(mtx()) here.
       .on_vsync =
-          [this](uint64_t, uint64_t, ::fidl::VectorView<uint64_t>) TA_NO_THREAD_SAFETY_ANALYSIS {
-            vsync_count_++;
-            return ZX_OK;
-          },
+          [this](uint64_t, uint64_t, ::fidl::VectorView<uint64_t>, uint64_t cookie)
+              TA_NO_THREAD_SAFETY_ANALYSIS {
+                vsync_count_++;
+                cookie_ = cookie;
+                return ZX_OK;
+              },
       .on_client_ownership_change = [](bool) { return ZX_OK; },
       .unknown = []() { return ZX_ERR_STOP; },
   });

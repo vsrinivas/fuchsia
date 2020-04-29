@@ -106,7 +106,8 @@ class DisplaySwapchain : public Swapchain {
   // as a render target.
   void OnFrameRendered(size_t frame_index, zx::time render_finished_time);
 
-  void OnVsync(uint64_t display_id, uint64_t timestamp, std::vector<uint64_t> image_ids);
+  void OnVsync(uint64_t display_id, uint64_t timestamp, std::vector<uint64_t> image_ids,
+               uint64_t cookie);
 
   // Generates or releases an event ID that can be used with the display interface. The event can be
   // signaled even after ReleaseEvent if it was referenced in a Flip that's pending.
