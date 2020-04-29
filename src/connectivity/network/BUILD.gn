@@ -26,6 +26,7 @@ group("tests") {
     "dhcp:dhcp_tests",
     "dhcp:dhcpd_tests",
     "dhcpd-cli:dhcpd_cli_tests",
+    "dhcpv6:tests",
     "dns:dns_resolver_tests",
     "dns:dns_tests",
     "drivers:tests",
