@@ -1,26 +1,28 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-use std::collections::{HashMap, HashSet};
-use std::fmt;
-use std::fmt::{Debug, Display};
-use std::net::{IpAddr, SocketAddr};
-use std::sync::Arc;
-use std::time::Duration;
 
-use anyhow::{anyhow, Context, Error};
-use async_std::sync::RwLock;
-use async_std::task;
-use chrono::{DateTime, Utc};
-use fidl::endpoints::ServiceMarker;
-use fidl_fuchsia_developer_remotecontrol::{
-    IdentifyHostError, InterfaceAddress, IpAddress, RemoteControlMarker, RemoteControlProxy,
+use {
+    crate::net::IsLinkLocal,
+    anyhow::{anyhow, Context, Error},
+    async_std::sync::RwLock,
+    async_std::task,
+    chrono::{DateTime, Utc},
+    fidl::endpoints::ServiceMarker,
+    fidl_fuchsia_developer_remotecontrol::{
+        IdentifyHostError, InterfaceAddress, IpAddress, RemoteControlMarker, RemoteControlProxy,
+    },
+    fidl_fuchsia_overnet::ServiceConsumerProxyInterface,
+    fidl_fuchsia_overnet_protocol::NodeId,
+    futures::lock::{Mutex, MutexGuard},
+    std::collections::{HashMap, HashSet},
+    std::fmt,
+    std::fmt::{Debug, Display},
+    std::net::{IpAddr, SocketAddr},
+    std::process::Child,
+    std::sync::Arc,
+    std::time::Duration,
 };
-use fidl_fuchsia_overnet::ServiceConsumerProxyInterface;
-use fidl_fuchsia_overnet_protocol::NodeId;
-use futures::lock::{Mutex, MutexGuard};
-
-use crate::net::IsLinkLocal;
 
 #[derive(Debug, Clone)]
 pub struct RCSConnection {
@@ -70,15 +72,18 @@ impl RCSConnection {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct TargetState {
     pub rcs: Option<RCSConnection>,
     pub overnet_started: bool,
+    // Note that Child is not Send, so it needs its own Mutex. We expose
+    // the mutex here so that operations on the Option can be atomic (e.g. 'replace if None').
+    pub host_pipe: Mutex<Option<Child>>,
 }
 
 impl TargetState {
     pub fn new() -> Self {
-        Self { rcs: None, overnet_started: false }
+        Self { rcs: None, overnet_started: false, host_pipe: Mutex::new(None) }
     }
 }
 
@@ -98,6 +103,13 @@ impl Target {
             state: Mutex::new(TargetState::new()),
             addrs: Mutex::new(HashSet::new()),
         }
+    }
+
+    // TODO(fxb/50708) remove this once we've resolved the possible deadlocks that result
+    // without it.
+    pub async fn clone_addrs(&self) -> HashSet<TargetAddr> {
+        let addrs = self.addrs.lock().await;
+        return addrs.clone();
     }
 
     pub async fn to_string_async(&self) -> String {
@@ -411,6 +423,17 @@ mod test {
                 last_response: Mutex::new(block_on(self.last_response.lock()).clone()),
                 state: Mutex::new(block_on(self.state.lock()).clone()),
                 addrs: Mutex::new(block_on(self.addrs.lock()).clone()),
+            }
+        }
+    }
+
+    impl Clone for TargetState {
+        fn clone(&self) -> Self {
+            Self {
+                rcs: self.rcs.clone(),
+                overnet_started: self.overnet_started,
+                // host_pipe is not used in tests.
+                host_pipe: Mutex::new(None),
             }
         }
     }

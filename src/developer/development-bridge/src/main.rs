@@ -37,6 +37,7 @@ mod logger;
 mod mdns;
 mod net;
 mod onet;
+mod ssh;
 mod target;
 mod util;
 
@@ -415,7 +416,11 @@ async fn async_main() -> Result<(), Error> {
         Subcommand::List(c) => {
             match Cli::new(writer).await?.list_targets(c.nodename).await {
                 Ok(r) => {
-                    println!("{}", r.as_str());
+                    let mut r = r.as_str();
+                    if r.is_empty() {
+                        r = "No devices found.";
+                    }
+                    println!("{}", r);
                 }
                 Err(e) => {
                     println!("ERROR: {:?}", e);

@@ -3,13 +3,23 @@
 // found in the LICENSE file.
 #[cfg(not(target_os = "linux"))]
 pub(crate) mod imp {
-    use {crate::config::heuristic_config::HeuristicFn, std::collections::HashMap};
+    use {
+        crate::config::heuristic_config::HeuristicFn,
+        crate::config::heuristic_fns::find_ssh_keys,
+        crate::constants::{SSH_PORT, SSH_PRIV, SSH_PUB},
+        std::collections::HashMap,
+    };
 
     pub(crate) fn heuristics() -> HashMap<&'static str, HeuristicFn> {
-        HashMap::new()
+        let mut heuristics = HashMap::<&str, HeuristicFn>::new();
+        heuristics.insert(SSH_PUB, find_ssh_keys);
+        heuristics.insert(SSH_PRIV, find_ssh_keys);
+        heuristics
     }
 
     pub(crate) fn env_vars() -> HashMap<&'static str, Vec<&'static str>> {
-        HashMap::new()
+        let mut environment_variables = HashMap::new();
+        environment_variables.insert(SSH_PORT, vec!["FUCHSIA_SSH_PORT"]);
+        environment_variables
     }
 }

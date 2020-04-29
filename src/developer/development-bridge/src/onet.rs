@@ -3,14 +3,17 @@
 // found in the LICENSE file.
 
 use crate::constants::SOCKET;
+use crate::ssh::build_ssh_command;
+use crate::target::{Target, TargetAddr};
+use std::collections::HashSet;
 use std::io::{Read, Write};
-use std::process::{Child, Command, Stdio};
+use std::process::{Child, Stdio};
 
-use anyhow::{Context, Error};
+use anyhow::{anyhow, Context, Error};
 use fidl_fuchsia_overnet::MeshControllerProxyInterface;
 use futures::io::{AsyncReadExt, AsyncWriteExt};
 
-pub async fn start_ascendd() -> Child {
+pub async fn start_ascendd() {
     log::info!("Starting ascendd");
     hoist::spawn(async move {
         ascendd_lib::run_ascendd(ascendd_lib::Opt {
@@ -20,33 +23,31 @@ pub async fn start_ascendd() -> Child {
         .await
         .unwrap();
     });
-    log::info!("Connecting to target");
-    let mut process = Command::new("fx")
-        .arg("shell")
-        .arg("onet")
-        .arg("host-pipe")
+}
+
+pub async fn connect_to_onet(target: &Target, addrs: HashSet<TargetAddr>) -> Result<Child, Error> {
+    log::info!("Connecting to target: {}", target.nodename);
+    let mut process = build_ssh_command(addrs, vec!["onet", "host-pipe"])
+        .await?
         .stdout(Stdio::piped())
         .stdin(Stdio::piped())
         .spawn()
-        .context("running target overnet pipe")
-        .unwrap();
-    let (pipe_rx, pipe_tx) = futures::AsyncReadExt::split(
-        overnet_pipe().context("creating local overnet pipe").unwrap(),
-    );
+        .context("running target overnet pipe")?;
+    let (pipe_rx, pipe_tx) =
+        futures::AsyncReadExt::split(overnet_pipe().context("creating local overnet pipe")?);
     futures::future::try_join(
         copy_target_stdout_to_pipe(
-            process.stdout.take().expect("unable to get stdout from target pipe"),
+            process.stdout.take().ok_or(anyhow!("unable to get stdout from target pipe"))?,
             pipe_tx,
         ),
         copy_pipe_to_target_stdin(
             pipe_rx,
-            process.stdin.take().expect("unable to get stdin from target pipe"),
+            process.stdin.take().ok_or(anyhow!("unable to get stdin from target pipe"))?,
         ),
     )
-    .await
-    .unwrap();
+    .await?;
 
-    return process;
+    Ok(process)
 }
 
 pub fn overnet_pipe() -> Result<fidl::AsyncSocket, Error> {

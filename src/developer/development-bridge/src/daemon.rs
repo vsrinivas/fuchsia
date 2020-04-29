@@ -9,6 +9,7 @@ use {
     crate::mdns::MdnsTargetFinder,
     crate::ok_or_continue,
     crate::onet,
+    crate::ssh::build_ssh_command,
     crate::target::{RCSConnection, Target, TargetCollection},
     anyhow::{anyhow, Context, Error},
     async_std::task,
@@ -24,8 +25,6 @@ use {
     futures::lock::Mutex,
     futures::prelude::*,
     hoist::spawn,
-    std::cell::RefCell,
-    std::process::{Child, Command},
     std::rc::Rc,
     std::sync::Arc,
     std::time::Duration,
@@ -42,11 +41,33 @@ struct RCSActivatorHook {}
 #[async_trait]
 impl DiscoveryHook for RCSActivatorHook {
     async fn on_new_target(&self, target: &Arc<Target>, _tc: &Arc<TargetCollection>) {
+        let addrs_clone = target.clone_addrs().await;
         let mut state = target.state.lock().await;
         if state.overnet_started {
             return;
         }
-        match Daemon::start_remote_control(&target.nodename).await {
+
+        {
+            let mut host_pipe = state.host_pipe.lock().await;
+
+            if host_pipe.is_none() {
+                match onet::connect_to_onet(&target, addrs_clone).await {
+                    Ok(c) => {
+                        host_pipe.replace(c);
+                    }
+                    Err(e) => {
+                        log::warn!(
+                            "failed to start host-pipe process for '{}': {}",
+                            target.nodename,
+                            e
+                        );
+                        return;
+                    }
+                }
+            }
+        }
+
+        match Daemon::start_remote_control(&target).await {
             Ok(()) => state.overnet_started = true,
             Err(e) => {
                 log::warn!("unable to start remote control for '{}': {}", target.nodename, e);
@@ -62,22 +83,19 @@ pub struct Daemon {
     target_collection: Arc<TargetCollection>,
 
     discovered_target_hooks: Arc<Mutex<Vec<Rc<dyn DiscoveryHook>>>>,
-    ascendd_child: Rc<RefCell<Option<Child>>>,
 }
 
 impl Daemon {
-    pub async fn new(ascendd_child: Option<Child>) -> Result<Daemon, Error> {
+    pub async fn new() -> Result<Daemon, Error> {
         log::info!("Starting daemon overnet server");
         let (tx, rx) = mpsc::unbounded::<Target>();
         let target_collection = Arc::new(TargetCollection::new());
         let discovered_target_hooks = Arc::new(Mutex::new(Vec::<Rc<dyn DiscoveryHook>>::new()));
         Daemon::spawn_receiver_loop(rx, target_collection.clone(), discovered_target_hooks.clone());
         Daemon::spawn_onet_discovery(target_collection.clone());
-        let r = Rc::new(RefCell::new(ascendd_child));
         let mut d = Daemon {
             target_collection: target_collection.clone(),
             discovered_target_hooks: discovered_target_hooks.clone(),
-            ascendd_child: r.clone(),
         };
         d.register_hook(RCSActivatorHook::default()).await;
 
@@ -118,15 +136,11 @@ impl Daemon {
     }
 
     #[cfg(test)]
-    pub fn new_with_rx(
-        rx: mpsc::UnboundedReceiver<Target>,
-        ascendd_child: Option<Child>,
-    ) -> Daemon {
+    pub fn new_with_rx(rx: mpsc::UnboundedReceiver<Target>) -> Daemon {
         let target_collection = Arc::new(TargetCollection::new());
         let discovered_target_hooks = Arc::new(Mutex::new(Vec::<Rc<dyn DiscoveryHook>>::new()));
         Daemon::spawn_receiver_loop(rx, target_collection.clone(), discovered_target_hooks.clone());
-        let r = Rc::new(RefCell::new(ascendd_child));
-        Daemon { target_collection, discovered_target_hooks, ascendd_child: r.clone() }
+        Daemon { target_collection, discovered_target_hooks }
     }
 
     pub async fn handle_requests_from_stream(
@@ -175,16 +189,18 @@ impl Daemon {
         });
     }
 
-    async fn start_remote_control(nodename: &String) -> Result<(), Error> {
+    async fn start_remote_control(target: &Target) -> Result<(), Error> {
         for _ in 0..MAX_RETRY_COUNT {
-            let output = Command::new("fx")
-            .arg("-d")
-            .arg(nodename)
-            .arg("run")
-            .arg("fuchsia-pkg://fuchsia.com/remote-control-runner#meta/remote-control-runner.cmx")
-            .stdin(std::process::Stdio::null())
-            .output()
-            .context("Failed to run fx")?;
+            let args = [
+                "run",
+                "fuchsia-pkg://fuchsia.com/remote-control-runner#meta/remote-control-runner.cmx",
+            ];
+            let mut cmd = build_ssh_command(target.clone_addrs().await, args.to_vec()).await?;
+
+            let output = cmd
+                .stdin(std::process::Stdio::null())
+                .output()
+                .context("Failed to SSH into device")?;
             if output.stdout.starts_with(b"Successfully") {
                 return Ok(());
             }
@@ -311,10 +327,16 @@ impl Daemon {
                     Err(e) => log::error!("failed to remove socket file: {}", e),
                 }
 
-                let c = self.ascendd_child.clone();
-                let mut child = c.borrow_mut();
-                if child.is_some() {
-                    child.as_mut().unwrap().kill()?;
+                let targets = self.target_collection.targets().await;
+
+                for t in targets.iter() {
+                    let t = t.clone();
+
+                    let state = t.state.lock().await;
+                    let mut child_lock = state.host_pipe.lock().await;
+                    if let Some(mut child) = child_lock.take() {
+                        child.kill()?;
+                    }
                 }
 
                 std::process::exit(0);
@@ -412,8 +434,8 @@ pub async fn start() -> Result<(), Error> {
         return Ok(());
     }
     setup_logger("ffx.daemon").await;
-    let child = onet::start_ascendd().await;
-    let daemon = Daemon::new(Some(child)).await?;
+    onet::start_ascendd().await;
+    let daemon = Daemon::new().await?;
     exec_server(daemon, true).await
 }
 
@@ -480,7 +502,7 @@ mod test {
         let (target_in, target_out) = mpsc::unbounded::<Target>();
         let (target_ready_channel_in, target_ready_channel_out) = mpsc::unbounded::<bool>();
         spawn(async move {
-            let mut d = Daemon::new_with_rx(target_out, None);
+            let mut d = Daemon::new_with_rx(target_out);
             d.register_hook(TestHookFakeRCS::new(target_ready_channel_in)).await;
             d.handle_requests_from_stream(stream, false)
                 .await
@@ -660,7 +682,7 @@ mod test {
         hoist::run(async move {
             let (tx_from_callback, mut rx_from_callback) = mpsc::unbounded::<bool>();
             let (tx, rx) = mpsc::unbounded::<Target>();
-            let mut daemon = Daemon::new_with_rx(rx, None);
+            let mut daemon = Daemon::new_with_rx(rx);
             daemon.register_hook(TestHookFirst { callbacks_done: tx_from_callback.clone() }).await;
             daemon.register_hook(TestHookSecond { callbacks_done: tx_from_callback }).await;
             tx.unbounded_send(Target::new("nothin", Utc::now())).unwrap();

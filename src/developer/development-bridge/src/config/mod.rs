@@ -24,6 +24,7 @@ mod env_var_config;
 mod environment;
 mod file_backed_config;
 mod heuristic_config;
+mod heuristic_fns;
 mod persistent_config;
 mod priority_config;
 mod runtime_config;
