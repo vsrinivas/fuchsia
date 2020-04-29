@@ -68,8 +68,8 @@ fn main() -> Result<(), Error> {
     let mut archivist = archivist::Archivist::new(archivist_configuration)?;
     archivist
         .install_logger_services()
-        .set_legacy_event_provider(legacy_event_provider)
-        .set_event_source(event_source);
+        .add_event_source("v1", Box::new(legacy_event_provider))
+        .add_event_source("v2", Box::new(event_source));
     archivist.log_manager().spawn_internal_sink(log_server, log_name)?;
 
     if !opt.disable_log_connector {

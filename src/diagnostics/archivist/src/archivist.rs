@@ -3,11 +3,14 @@
 // found in the LICENSE file.
 
 use {
-    crate::{archive, archive_accessor, configs, data_stats, diagnostics, events, inspect, logs},
+    crate::{
+        archive, archive_accessor, configs, data_stats, diagnostics,
+        events::{stream::EventStream, types::EventSource},
+        inspect, logs,
+    },
     anyhow::{format_err, Error},
     fidl_fuchsia_diagnostics_test::{ControllerRequest, ControllerRequestStream},
-    fidl_fuchsia_sys2::EventSourceProxy,
-    fidl_fuchsia_sys_internal::{ComponentEventProviderProxy, LogConnectorProxy, SourceIdentity},
+    fidl_fuchsia_sys_internal::{LogConnectorProxy, SourceIdentity},
     fuchsia_async as fasync,
     fuchsia_component::server::{ServiceFs, ServiceObj},
     fuchsia_inspect::{component, health::Reporter},
@@ -16,7 +19,6 @@ use {
         channel::mpsc,
         future::{self, abortable, Either, FutureObj},
         prelude::*,
-        stream,
     },
     io_util,
     parking_lot::RwLock,
@@ -69,11 +71,8 @@ pub struct Archivist {
     /// Stream which will recieve all the futures to process LogSink connections.
     log_sinks: Option<mpsc::UnboundedReceiver<FutureObj<'static, ()>>>,
 
-    /// Provider to collect component events from v1.
-    legacy_event_provider: Option<ComponentEventProviderProxy>,
-
-    /// Provider to collect component events from v2.
-    event_source: Option<EventSourceProxy>,
+    /// Listes for events coming from v1 and v2.
+    event_stream: EventStream,
 
     /// Recieve stop signal to kill this archivist.
     stop_recv: Option<mpsc::Receiver<()>>,
@@ -81,42 +80,23 @@ pub struct Archivist {
 
 impl Archivist {
     async fn collect_component_events(
-        legacy_provider: Option<ComponentEventProviderProxy>,
-        event_source: Option<EventSourceProxy>,
+        event_stream: EventStream,
         state: archive::ArchivistState,
         pipeline_exists: bool,
     ) -> Result<(), Error> {
-        let events_result = events::listen(
-            legacy_provider,
-            event_source,
-            diagnostics::root().create_child("event_stats"),
-        )
-        .await;
-
-        let events = match events_result {
-            Ok(events) => {
-                if !pipeline_exists {
-                    component::health().set_unhealthy("Pipeline config has an error");
-                } else {
-                    component::health().set_ok();
-                }
-                events
-            }
-            Err(e) => {
-                component::health().set_unhealthy(&format!(
-                    "Failed to listen for component lifecycle events: {:?}",
-                    e
-                ));
-                stream::empty().boxed()
-            }
-        };
+        let events = event_stream.listen().await;
+        if !pipeline_exists {
+            component::health().set_unhealthy("Pipeline config has an error");
+        } else {
+            component::health().set_ok();
+        }
         archive::run_archivist(state, events).await
     }
 
     // Sets log connector which is used to server attributed LogSink.
     pub fn set_log_connector(&mut self, log_connector: LogConnectorProxy) -> &mut Self {
         self.log_manager.spawn_log_consumer(log_connector);
-        return self;
+        self
     }
 
     /// Install controller service.
@@ -126,7 +106,7 @@ impl Archivist {
             .dir("svc")
             .add_fidl_service(move |stream| spawn_controller(stream, stop_sender.clone()));
         self.stop_recv = Some(stop_recv);
-        return self;
+        self
     }
 
     /// Installs `LogSink` and `Log` services. Panics if called twice.
@@ -149,29 +129,22 @@ impl Archivist {
                 }
             });
         self.log_sinks = Some(sinks);
-        return self;
-    }
-
-    pub fn set_event_source(&mut self, source: EventSourceProxy) -> &mut Self {
-        assert!(self.event_source.is_none(), "set_event_source called twice.");
-        self.event_source = Some(source);
         self
     }
 
     // Sets event provider which is used to collect component events, Panics if called twice.
-    pub fn set_legacy_event_provider(
+    pub fn add_event_source(
         &mut self,
-        provider: ComponentEventProviderProxy,
+        name: impl Into<String>,
+        source: Box<dyn EventSource>,
     ) -> &mut Self {
-        assert!(self.legacy_event_provider.is_none(), "set_legacy_event_provider called twice.");
-        self.legacy_event_provider = Some(provider);
-        return self;
+        self.event_stream.add_source(name, source);
+        self
     }
 
     /// Creates new instance, sets up inspect and adds 'archive' directory to output folder.
     /// Also installs `fuchsia.diagnostics.Archive` service.
-    /// Call `install_logger_services`, `set_event_source` and `set_legacy_event_provider` for
-    /// further setup.
+    /// Call `install_logger_services`, `add_event_source`.
     pub fn new(archivist_configuration: configs::Config) -> Result<Self, Error> {
         let log_manager = logs::LogManager::new(diagnostics::root().create_child("log_stats"));
 
@@ -227,6 +200,7 @@ impl Archivist {
             all_archive_accessor.spawn_archive_accessor_server(stream)
         });
 
+        let events_node = diagnostics::root().create_child("event_stats");
         Ok(Self {
             fs,
             state: archivist_state,
@@ -235,8 +209,7 @@ impl Archivist {
             _pipeline_nodes: vec![pipelines_node, feedback_pipeline, legacy_pipeline],
             _pipeline_configs: vec![feedback_config, legacy_config],
             log_manager,
-            legacy_event_provider: None,
-            event_source: None,
+            event_stream: EventStream::new(events_node),
             stop_recv: None,
         })
     }
@@ -255,15 +228,9 @@ impl Archivist {
         // Start servcing all outgoing services.
         let run_outgoing = self.fs.collect::<()>().map(Ok);
         // collect events.
-        let run_event_collection = match (self.legacy_event_provider, self.event_source) {
-            (None, None) => Either::Right(future::ok(())),
-            (provider, source) => Either::Left(Self::collect_component_events(
-                provider,
-                source,
-                self.state,
-                self.pipeline_exists,
-            )),
-        };
+        let run_event_collection =
+            Self::collect_component_events(self.event_stream, self.state, self.pipeline_exists);
+
         // Process messages from log sink.
         let all_msg = async move {
             log_sinks
@@ -331,7 +298,7 @@ mod tests {
                 .expect("cannot connect to log sink");
             let mut s = Self { log_sink: Some(log_sink), sock: None };
             s.sock = Some(s.connect());
-            return s;
+            s
         }
 
         fn connect(&self) -> zx::Socket {
@@ -342,8 +309,9 @@ mod tests {
                 .unwrap()
                 .connect(sin)
                 .expect("unable to send socket to log sink");
-            return sout;
+            sout
         }
+
         /// kills current sock and creates new connection.
         fn add_new_connection(&mut self) {
             self.kill_sock();
@@ -443,7 +411,7 @@ mod tests {
             run_log_listener_with_proxy(&log_proxy, l, Some(&mut options), false).await.unwrap();
         });
 
-        return recv_logs;
+        recv_logs
     }
 
     #[fasync::run_singlethreaded(test)]

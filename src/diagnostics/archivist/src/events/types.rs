@@ -4,6 +4,7 @@
 
 use {
     anyhow::{format_err, Error},
+    async_trait::async_trait,
     fidl_fuchsia_inspect::TreeProxy,
     fidl_fuchsia_inspect_deprecated::InspectProxy,
     fidl_fuchsia_io::DirectoryProxy,
@@ -18,6 +19,11 @@ use {
         ops::{Deref, DerefMut},
     },
 };
+
+#[async_trait]
+pub trait EventSource: Sync + Send {
+    async fn listen(&self, sender: mpsc::Sender<ComponentEvent>) -> Result<(), Error>;
+}
 
 /// The capacity for bounded channels used by this implementation.
 pub static CHANNEL_CAPACITY: usize = 1024;

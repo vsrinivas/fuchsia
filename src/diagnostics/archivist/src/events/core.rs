@@ -3,27 +3,29 @@
 // found in the LICENSE file.
 
 use {
-    crate::events::types::{ComponentEvent, ComponentEventChannel},
+    crate::events::types::{ComponentEvent, ComponentEventChannel, EventSource},
     anyhow::{format_err, Context, Error},
+    async_trait::async_trait,
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     futures::{channel::mpsc, SinkExt, TryStreamExt},
     log::error,
     std::convert::TryInto,
 };
 
-/// Subscribe to component lifecycle events.
-/// |node| is the node where stats about events seen will be recorded.
-pub async fn listen(
-    event_source: fsys::EventSourceProxy,
-    sender: mpsc::Sender<ComponentEvent>,
-) -> Result<(), Error> {
-    let (client_end, request_stream) =
-        fidl::endpoints::create_request_stream::<fsys::EventStreamMarker>()?;
-    let mut event_names = vec!["running", "started", "stopped", "diagnostics_ready"].into_iter();
-    let subscription = event_source.subscribe(&mut event_names, client_end);
-    subscription.await?.map_err(|error| format_err!("Error: {:?}", error))?;
-    EventStreamServer::new(sender).spawn(request_stream);
-    Ok(())
+#[async_trait]
+impl EventSource for fsys::EventSourceProxy {
+    /// Subscribe to component lifecycle events.
+    /// |node| is the node where stats about events seen will be recorded.
+    async fn listen(&self, sender: mpsc::Sender<ComponentEvent>) -> Result<(), Error> {
+        let (client_end, request_stream) =
+            fidl::endpoints::create_request_stream::<fsys::EventStreamMarker>()?;
+        let mut event_names =
+            vec!["running", "started", "stopped", "diagnostics_ready"].into_iter();
+        let subscription = self.subscribe(&mut event_names, client_end);
+        subscription.await?.map_err(|error| format_err!("Error: {:?}", error))?;
+        EventStreamServer::new(sender).spawn(request_stream);
+        Ok(())
+    }
 }
 
 struct EventStreamServer {
@@ -85,7 +87,7 @@ mod tests {
     async fn event_stream() {
         let (source_proxy, stream_receiver) = spawn_fake_event_source();
         let (sender, mut event_stream) = mpsc::channel(CHANNEL_CAPACITY);
-        listen(source_proxy, sender).await.expect("failed to listen");
+        source_proxy.listen(sender).await.expect("failed to listen");
         let stream_server = stream_receiver.await.into_proxy().expect("get stream proxy");
 
         // Send a `Started` event.

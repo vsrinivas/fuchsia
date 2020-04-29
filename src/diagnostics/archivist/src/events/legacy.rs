@@ -5,58 +5,38 @@
 use {
     crate::events::types::*,
     anyhow::{Context as _, Error},
+    async_trait::async_trait,
     fidl_fuchsia_io::DirectoryMarker,
     fidl_fuchsia_sys_internal::{
         ComponentEventListenerMarker, ComponentEventListenerRequest,
         ComponentEventListenerRequestStream, ComponentEventProviderProxy, SourceIdentity,
     },
     fuchsia_async as fasync,
-    fuchsia_inspect::{self as inspect, NumericProperty},
-    fuchsia_inspect_contrib::{inspect_log, nodes::BoundedListNode},
     futures::{channel::mpsc, SinkExt, TryStreamExt},
     log::error,
     std::convert::TryInto,
 };
 
-/// Subscribe to component lifecycle events.
-/// |node| is the node where stats about events seen will be recorded.
-pub fn listen(
-    provider: ComponentEventProviderProxy,
-    sender: mpsc::Sender<ComponentEvent>,
-    node: inspect::Node,
-) -> Result<(), Error> {
-    let (events_client_end, listener_request_stream) =
-        fidl::endpoints::create_request_stream::<ComponentEventListenerMarker>()?;
-    provider.set_listener(events_client_end)?;
-    EventListenerServer::new(sender, node).spawn(listener_request_stream);
-    Ok(())
+#[async_trait]
+impl EventSource for ComponentEventProviderProxy {
+    /// Subscribe to component lifecycle events.
+    /// |node| is the node where stats about events seen will be recorded.
+    async fn listen(&self, sender: mpsc::Sender<ComponentEvent>) -> Result<(), Error> {
+        let (events_client_end, listener_request_stream) =
+            fidl::endpoints::create_request_stream::<ComponentEventListenerMarker>()?;
+        self.set_listener(events_client_end)?;
+        EventListenerServer::new(sender).spawn(listener_request_stream);
+        Ok(())
+    }
 }
 
 struct EventListenerServer {
-    sender: ComponentEventChannel,
-
-    // Inspect stats
-    _node: inspect::Node,
-    components_started: inspect::UintProperty,
-    components_stopped: inspect::UintProperty,
-    diagnostics_directories_seen: inspect::UintProperty,
-    component_log_node: BoundedListNode,
+    sender: mpsc::Sender<ComponentEvent>,
 }
 
 impl EventListenerServer {
-    fn new(sender: ComponentEventChannel, node: inspect::Node) -> Self {
-        let components_started = node.create_uint("components_started", 0);
-        let components_stopped = node.create_uint("components_stopped", 0);
-        let diagnostics_directories_seen = node.create_uint("diagnostics_directories_seen", 0);
-        let component_log_node = BoundedListNode::new(node.create_child("recent_events"), 50);
-        Self {
-            sender,
-            _node: node,
-            components_started,
-            components_stopped,
-            diagnostics_directories_seen,
-            component_log_node,
-        }
+    fn new(sender: ComponentEventChannel) -> Self {
+        Self { sender }
     }
 
     fn spawn(self, stream: ComponentEventListenerRequestStream) {
@@ -93,17 +73,8 @@ impl EventListenerServer {
         Ok(())
     }
 
-    fn log_inspect(&mut self, event_name: &str, identifier: &ComponentIdentifier) {
-        inspect_log!(self.component_log_node,
-            event: event_name,
-            moniker: identifier.to_string(),
-        );
-    }
-
     async fn handle_on_start(&mut self, component: SourceIdentity) -> Result<(), Error> {
         if let Ok(component_id) = component.try_into() {
-            self.components_started.add(1);
-            self.log_inspect("START", &component_id);
             self.send_event(ComponentEvent::Start(ComponentEventData {
                 component_id,
                 component_data_map: None,
@@ -115,8 +86,6 @@ impl EventListenerServer {
 
     async fn handle_on_stop(&mut self, component: SourceIdentity) -> Result<(), Error> {
         if let Ok(component_id) = component.try_into() {
-            self.components_stopped.add(1);
-            self.log_inspect("STOP", &component_id);
             self.send_event(ComponentEvent::Stop(ComponentEventData {
                 component_id,
                 component_data_map: None,
@@ -132,8 +101,6 @@ impl EventListenerServer {
         directory: fidl::endpoints::ClientEnd<DirectoryMarker>,
     ) -> Result<(), Error> {
         if let Ok(component_id) = component.try_into() {
-            self.diagnostics_directories_seen.add(1);
-            self.log_inspect("DIAGNOSTICS_DIR_READY", &component_id);
             self.send_event(ComponentEvent::DiagnosticsReady(InspectReaderData {
                 component_id,
                 data_directory_proxy: directory.into_proxy().ok(),
@@ -160,7 +127,6 @@ mod tests {
             ComponentEventProviderMarker, ComponentEventProviderRequest, SourceIdentity,
         },
         fuchsia_async as fasync,
-        fuchsia_inspect::assert_inspect_tree,
         futures::{channel::oneshot, StreamExt, TryStreamExt},
     };
 
@@ -198,10 +164,8 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn component_event_stream() {
         let (provider_proxy, listener_receiver) = spawn_fake_component_event_provider();
-        let inspector = inspect::Inspector::new();
         let (sender, receiver) = mpsc::channel(CHANNEL_CAPACITY);
-        listen(provider_proxy, sender, inspector.root().create_child("events"))
-            .expect("failed to listen");
+        provider_proxy.listen(sender).await.expect("failed to listen");
         let mut event_stream = receiver.boxed();
         let listener = listener_receiver
             .await
@@ -239,31 +203,6 @@ mod tests {
 
         let event = event_stream.next().await.unwrap();
         assert_eq!(event, ComponentEvent::Stop(identity.clone().into()));
-
-        assert_inspect_tree!(inspector, root: {
-            events: {
-                components_started: 1u64,
-                components_stopped: 1u64,
-                diagnostics_directories_seen: 1u64,
-                recent_events: {
-                    "0": {
-                        "@time": inspect::testing::AnyProperty,
-                        event: "START",
-                        moniker: "root/a/test.cmx:12345"
-                    },
-                    "1": {
-                        "@time": inspect::testing::AnyProperty,
-                        event: "DIAGNOSTICS_DIR_READY",
-                        moniker: "root/a/test.cmx:12345"
-                    },
-                    "2": {
-                        "@time": inspect::testing::AnyProperty,
-                        event: "STOP",
-                        moniker: "root/a/test.cmx:12345"
-                    }
-                }
-            }
-        });
     }
 
     fn spawn_fake_component_event_provider() -> (
