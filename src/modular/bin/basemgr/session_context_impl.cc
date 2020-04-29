@@ -96,11 +96,25 @@ std::string GetSessionId(bool is_ephemeral_account) {
     return existing_sessions[0];
   }
 
-  FX_LOGS(WARNING) << "Creating session by picking the first of " << existing_sessions.size()
-                   << " existing directories.";
+  // Walk through all existing sessions looking for the standard session id, which we use if we
+  // find it, and the lexicographically minimum session id which we use otherwise.
+  std::string lowest_session = existing_sessions[0];
+  for (const auto& existing_session : existing_sessions) {
+    if (existing_session == std::string(kStandardSessionId)) {
+      FX_LOGS(WARNING) << "Creating session using one of multiple existing accounts with fixed ID.";
+      ReportEvent(
+          ModularLifetimeEventsMetricDimensionEventType::CreateSessionUnverifiableFixedAccount);
+      return existing_session;
+    }
+    if (existing_session < lowest_session) {
+      lowest_session = existing_session;
+    }
+  }
+  FX_LOGS(WARNING) << "Creating session by picking the lowest of " << existing_sessions.size()
+                   << " existing directories. Fixed ID was not found.";
   ReportEvent(
       ModularLifetimeEventsMetricDimensionEventType::CreateSessionUnverifiablePersistentAccount);
-  return existing_sessions[0];
+  return lowest_session;
 }
 
 }  // namespace
