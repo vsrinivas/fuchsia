@@ -234,23 +234,47 @@ void MediaApp::DisplayConfigurationSettings() {
   printf("\nContent is ");
   if (output_signal_type_ == kOutputTypeNoise) {
     printf("white noise");
+  } else if (output_signal_type_ == kOutputTypePinkNoise) {
+    printf("pink noise");
   } else {
-    printf("a %f Hz %s wave", frequency_,
-           (output_signal_type_ == kOutputTypeSquare)
-               ? "square"
-               : (output_signal_type_ == kOutputTypeSawtooth) ? "triangle" : "sine");
+    printf("a %.3f Hz ", frequency_);
+    if (output_signal_type_ == kOutputTypeSquare) {
+      printf("square wave");
+    } else if (output_signal_type_ == kOutputTypeSine) {
+      printf("sine wave");
+    } else if (output_signal_type_ == kOutputTypeSawtooth) {
+      printf("rising sawtooth wave");
+    } else if (output_signal_type_ == kOutputTypeRamp) {
+      printf("isosceles ramp");
+    }
   }
+  printf(" with amplitude %.4f", amplitude_);
 
-  printf(", amplitude %f", amplitude_);
   if (ramp_stream_gain_) {
     printf(",\nramping stream gain from %.3f dB to %.3f dB over %.6lf seconds (%ld nanoseconds)",
            stream_gain_db_, ramp_target_gain_db_,
            static_cast<double>(ramp_duration_nsec_) / 1000000000, ramp_duration_nsec_);
   } else if (set_stream_gain_) {
-    printf(", at stream gain %.3f dB", stream_gain_db_);
+    printf(",\nsetting stream gain to %.3f dB", stream_gain_db_);
   }
   if (set_stream_mute_) {
-    printf(", after explicitly %s this stream", stream_mute_ ? "muting" : "unmuting");
+    printf(",\n after explicitly %s this stream", stream_mute_ ? "muting" : "unmuting");
+  }
+
+  if (set_usage_gain_ || set_usage_volume_) {
+    printf(",\nafter setting ");
+    if (set_usage_gain_) {
+      printf("%s gain to %.3f dB%s", usage_str, usage_gain_db_, (set_usage_volume_ ? " and " : ""));
+    }
+    if (set_usage_volume_) {
+      printf("%s volume to %.1f", usage_str, usage_volume_);
+    }
+  }
+
+  printf(".\nThe generated signal will play for %.3f seconds", duration_secs_);
+
+  if (save_to_file_) {
+    printf(" and will be saved to '%s'", file_name_.c_str());
   }
 
   printf(".\nThe stream's reference clock will be ");
@@ -272,23 +296,12 @@ void MediaApp::DisplayConfigurationSettings() {
       break;
   }
 
-  printf(".\nSignal will play for %.3f seconds, using %u %stimestamped buffers of %u frames",
-         duration_secs_, total_num_mapped_payloads_, (!use_pts_ ? "non-" : ""),
-         frames_per_payload_);
+  printf(".\nThe renderer will transport data using %u %stimestamped buffers of %u frames",
+         total_num_mapped_payloads_, (!use_pts_ ? "non-" : ""), frames_per_payload_);
 
   if (set_continuity_threshold_) {
     printf(",\nhaving set the PTS continuity threshold to %f seconds",
            pts_continuity_threshold_secs_);
-  }
-
-  if (set_usage_gain_ || set_usage_volume_) {
-    printf(",\nafter setting ");
-    if (set_usage_gain_) {
-      printf("%s gain to %.3f dB%s", usage_str, usage_gain_db_, (set_usage_volume_ ? " and " : ""));
-    }
-    if (set_usage_volume_) {
-      printf("%s volume to %.1f", usage_str, usage_volume_);
-    }
   }
 
   printf(".\n\n");
@@ -354,9 +367,9 @@ void MediaApp::AcquireAudioRenderer(sys::ComponentContext* app_context) {
 
     // ... now just let the instance of audio go out of scope.
     //
-    // Although we could technically call gain_control_'s SetMute|SetGain|SetGainWithRamp here and
-    // then disconnect it (like we do for audio_core and audio), we instead maintain our GainControl
-    // throughout playback, just in case we someday want to change gain during playback.
+    // Although we could technically call gain_control_'s SetMute|SetGain|SetGainWithRamp here,
+    // then disconnect it (like we do for audio_core and audio), we instead maintain our
+    // GainControl throughout playback, in case we someday want to change gain during playback.
   }
 
   SetAudioRendererEvents();
@@ -402,11 +415,11 @@ void MediaApp::InitializeAudibleRenderer() {
         CLI_CHECK_OK(status, "zx::clock::update failed");
       }
 
-      // The clock we send to AudioRenderer cannot have ZX_RIGHT_WRITE. Most clients would retain
-      // their custom clocks for subsequent rate-adjustment, and thus would use 'duplicate' to
-      // create the rights-reduced clock. This app doesn't yet allow rate-adjustment during playback
-      // (we also don't need this clock to read the current ref time: we call GetReferenceClock
-      // later), so we use 'replace' (not 'duplicate').
+      // The clock we send to AudioRenderer cannot have ZX_RIGHT_WRITE. Most clients would
+      // retain their custom clocks for subsequent rate-adjustment, and thus would use
+      // 'duplicate' to create the rights-reduced clock. This app doesn't yet allow
+      // rate-adjustment during playback (we also don't need this clock to read the current ref
+      // time: we call GetReferenceClock later), so we use 'replace' (not 'duplicate').
       auto rights = ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER | ZX_RIGHT_READ;
       status = custom_clock.replace(rights, &reference_clock_to_set);
       CLI_CHECK_OK(status, "zx::clock::duplicate failed");
@@ -439,8 +452,8 @@ void MediaApp::InitializeAudibleRenderer() {
 }
 
 void MediaApp::InitializeWavWriter() {
-  // 24-bit buffers use 32-bit samples (lowest byte zero), and when this particular utility saves
-  // to .wav file, we save the entire 32 bits.
+  // 24-bit buffers use 32-bit samples (lowest byte zero), and when this particular utility
+  // saves to .wav file, we save the entire 32 bits.
   if (save_to_file_) {
     wav_writer_initialized_ = wav_writer_.Initialize(file_name_.c_str(), sample_format_,
                                                      num_channels_, frame_rate_, sample_size_ * 8);
@@ -486,6 +499,17 @@ void MediaApp::GetClockAndStart() {
 // Called from the GetReferenceClock callback
 void MediaApp::Play() {
   if (num_packets_to_send_ > 0) {
+    zx::time ref_now;
+    auto status = reference_clock_.read(ref_now.get_address());
+    CLI_CHECK(status == ZX_OK || Shutdown(), "zx::clock::read failed during init: " << status);
+
+    // read current time and use it as our rand48 seed ...
+    srand48(ref_now.get());
+    // ... before generating random data to prime our pink noise generator
+    if (output_signal_type_ == kOutputTypePinkNoise) {
+      PrimePinkNoiseFilter();
+    }
+
     // We can only send down as many packets as will concurrently fit into our payload buffer.
     // The rest will be sent, one at a time, from a previous packet's completion callback.
     uint32_t num_packets_to_prime =
@@ -494,11 +518,8 @@ void MediaApp::Play() {
       SendPacket();
     }
 
-    zx::time ref_now;
-    auto status = reference_clock_.read(ref_now.get_address());
+    status = reference_clock_.read(ref_now.get_address());
     CLI_CHECK(status == ZX_OK || Shutdown(), "zx::clock::read failed during Play(): " << status);
-
-    srand48(ref_now.get());
 
     reference_start_time_ = use_pts_ ? ref_now + kPlayStartupDelay + min_lead_time_ : kNoTimeStamp;
     media_start_time_ = use_pts_ ? zx::time(0) : kNoTimeStamp;
@@ -543,9 +564,9 @@ void MediaApp::Play() {
 // We have a set of buffers each backed by its own VMO, with each buffer sub-divided into
 // uniformly-sized zones, called payloads.
 //
-// We round robin packets across each buffer, wrapping around to the start of each buffer once the
-// end is encountered. For example, with 2 buffers that can each hold 2 payloads, we would send
-// audio packets in the following order:
+// We round robin packets across each buffer, wrapping around to the start of each buffer once
+// the end is encountered. For example, with 2 buffers that can each hold 2 payloads, we would
+// send audio packets in the following order:
 //
 //  ------------------------
 // | buffer_id | payload_id |
@@ -595,68 +616,113 @@ void MediaApp::GenerateAudioForPacket(const AudioPacket& audio_packet, uint64_t 
   switch (sample_format_) {
     case fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32:
       WriteAudioIntoBuffer<int32_t>(reinterpret_cast<int32_t*>(audio_buff), payload_frames,
-                                    frames_per_payload_ * packet_num, output_signal_type_,
-                                    num_channels_, frames_per_period_, amplitude_scalar_);
+                                    frames_per_payload_ * packet_num);
       break;
     case fuchsia::media::AudioSampleFormat::SIGNED_16:
       WriteAudioIntoBuffer<int16_t>(reinterpret_cast<int16_t*>(audio_buff), payload_frames,
-                                    frames_per_payload_ * packet_num, output_signal_type_,
-                                    num_channels_, frames_per_period_, amplitude_scalar_);
+                                    frames_per_payload_ * packet_num);
       break;
     case fuchsia::media::AudioSampleFormat::FLOAT:
       WriteAudioIntoBuffer<float>(reinterpret_cast<float*>(audio_buff), payload_frames,
-                                  frames_per_payload_ * packet_num, output_signal_type_,
-                                  num_channels_, frames_per_period_, amplitude_scalar_);
+                                  frames_per_payload_ * packet_num);
       break;
     default:
       CLI_CHECK(false, "Unknown AudioSampleFormat");
   }
 }
 
+// Allocate memory for history values; advance the filter through its initial transient
+void MediaApp::PrimePinkNoiseFilter() {
+  input_history_ = std::make_unique<HistoryBuffer[]>(num_channels_);
+  output_history_ = std::make_unique<HistoryBuffer[]>(num_channels_);
+
+  // Skip the filter's initial transient response by pre-generating 1430 frames, the filter's T60
+  // (-60 decay) interval, computed by "T60 = round(log(1000)/(1-max(abs(roots(kFeedBack)))))"
+  for (auto i = 0u; i < 1430u; ++i) {
+    AdvancePinkNoiseFrame();
+  }
+}
+
+// Generate a pink-noise frame, using a four-stage filter with kFeedFwd and kFeedBack coefficients.
+void MediaApp::AdvancePinkNoiseFrame() {
+  // For each channel, calculate a new output based on cached vals plus a new random input value
+  for (uint32_t chan = 0; chan < num_channels_; ++chan) {
+    (void)NextPinkNoiseSample(chan);
+  }
+}
+
+// Calculate and retrieve the new pink-noise sample value for this channel
+double MediaApp::NextPinkNoiseSample(uint32_t chan) {
+  //
+  // First, shift our previous inputs and outputs into the past, by one frame
+  for (size_t i = 3; i > 0; --i) {
+    output_history_[chan][i] = output_history_[chan][i - 1];
+    input_history_[chan][i] = input_history_[chan][i - 1];
+  }
+  // (both [chan][0] values are now stale, but we overwrite them immediately)
+
+  //
+  // Second, generate the initial white-noise input
+  input_history_[chan][0] = drand48() * 2.0 - 1.0;
+
+  //
+  // Finally, apply the filter to {input + cached input/output values} to get the new output val.
+  output_history_[chan][0] =
+      (input_history_[chan][0] * kFeedFwd[0] + input_history_[chan][1] * kFeedFwd[1] +
+       input_history_[chan][2] * kFeedFwd[2] + input_history_[chan][3] * kFeedFwd[3]) -
+      (output_history_[chan][1] * kFeedBack[1] + output_history_[chan][2] * kFeedBack[2] +
+       output_history_[chan][3] * kFeedBack[3]);
+
+  return output_history_[chan][0];
+}
+
 // Write signal into the next section of our buffer. Track how many total frames since playback
 // started, to handle arbitrary frequencies of type double.
 template <typename SampleType>
 void MediaApp::WriteAudioIntoBuffer(SampleType* audio_buffer, uint32_t num_frames,
-                                    uint64_t frames_since_start, OutputSignalType signal_type,
-                                    uint32_t num_chans, double frames_per_period,
-                                    double amp_scalar) {
-  const double rads_per_frame = 2.0 * M_PI / frames_per_period;  // Radians/Frame.
+                                    uint64_t frames_since_start) {
+  const double rads_per_frame = 2.0 * M_PI / frames_per_period_;  // Radians/Frame.
 
   for (uint32_t frame = 0; frame < num_frames; ++frame, ++frames_since_start) {
     // Generated signal value, before applying amplitude scaling.
     double raw_val;
 
-    for (auto chan_num = 0u; chan_num < num_chans; ++chan_num) {
-      switch (signal_type) {
+    for (auto chan_num = 0u; chan_num < num_channels_; ++chan_num) {
+      switch (output_signal_type_) {
         case kOutputTypeSine:
           raw_val = sin(rads_per_frame * frames_since_start);
           break;
         case kOutputTypeSquare:
           raw_val =
-              (fmod(frames_since_start, frames_per_period) >= frames_per_period / 2) ? -1.0 : 1.0;
+              (fmod(frames_since_start, frames_per_period_) >= frames_per_period_ / 2) ? -1.0 : 1.0;
           break;
         case kOutputTypeSawtooth:
-          raw_val = (fmod(frames_since_start / frames_per_period, 1.0) * 2.0) - 1.0;
+          raw_val = (fmod(frames_since_start / frames_per_period_, 1.0) * 2.0) - 1.0;
+          break;
+        case kOutputTypeRamp:
+          raw_val = (abs(fmod(frames_since_start / frames_per_period_, 1.0) - 0.5) * 4.0) - 1.0;
           break;
         case kOutputTypeNoise:
-          // TODO(49237): consider making multiple drand() calls at different frequencies.
-          // This would also enable alternate sonic profiles such as "pink" noise.
           raw_val = drand48() * 2.0 - 1.0;
+          break;
+        case kOutputTypePinkNoise:
+          raw_val = NextPinkNoiseSample(chan_num);
           break;
       }
 
       // Final generated signal value
       SampleType val;
       if constexpr (std::is_same_v<SampleType, float>) {
-        val = raw_val * amp_scalar;
-      } else if constexpr (std::is_same_v<SampleType, int32_t>) {  // 24-bit in 32-bit container:
-        val = lround(raw_val * amp_scalar / 256.0);                // round at bit 8, and
-        val = val << 8;                                            // leave bits 0-7 blank
+        val = raw_val * amplitude_scalar_;
+      } else if constexpr (std::is_same_v<SampleType,
+                                          int32_t>) {       // 24-bit in 32-bit container:
+        val = lround(raw_val * amplitude_scalar_ / 256.0);  // round at bit 8, and
+        val = val << 8;                                     // leave bits 0-7 blank
       } else {
-        val = lround(raw_val * amp_scalar);
+        val = lround(raw_val * amplitude_scalar_);
       }
 
-      audio_buffer[frame * num_chans + chan_num] = val;
+      audio_buffer[frame * num_channels_ + chan_num] = val;
     }
   }
 }

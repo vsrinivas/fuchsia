@@ -20,8 +20,10 @@ constexpr char kFrameRateDefaultHz[] = "48000";
 constexpr char kSineWaveSwitch[] = "sine";
 constexpr char kSquareWaveSwitch[] = "square";
 constexpr char kSawtoothWaveSwitch[] = "saw";
-constexpr char kWhiteNoiseSwitch[] = "noise";
+constexpr char kRampWaveSwitch[] = "ramp";
 constexpr char kFrequencyDefaultHz[] = "440.0";
+constexpr char kWhiteNoiseSwitch[] = "noise";
+constexpr char kPinkNoiseSwitch[] = "pink";
 
 constexpr char kDurationSwitch[] = "dur";
 constexpr char kDurationDefaultSecs[] = "2.0";
@@ -90,30 +92,22 @@ void usage(const char* prog_name) {
   printf("Generate and play an audio signal to the preferred output device.\n");
   printf("\nValid options:\n");
 
-  printf("\n    By default, stream format is %s-channel, float32, %s Hz frame rate, %s usage\n",
-         kNumChannelsDefault, kFrameRateDefaultHz, kRenderUsageDefault);
+  printf("\n    By default, stream format is %s-channel, float32 samples at %s Hz frame rate\n",
+         kNumChannelsDefault, kFrameRateDefaultHz);
   printf("  --%s=<NUM_CHANS>\t Specify number of channels\n", kNumChannelsSwitch);
   printf("  --%s\t\t Use 16-bit integer samples\n", kInt16FormatSwitch);
   printf("  --%s\t\t Use 24-in-32-bit integer samples (left-justified 'padded-24')\n",
          kInt24FormatSwitch);
   printf("  --%s=<FRAME_RATE>\t Set frame rate in Hz\n", kFrameRateSwitch);
-  printf("  --%s=<RENDER_USAGE> Set stream render usage. RENDER_USAGE must be one of:\n\t\t\t ",
-         kRenderUsageSwitch);
-  for (auto it = kRenderUsageOptions.cbegin(); it != kRenderUsageOptions.cend(); ++it) {
-    printf("%s", it->first);
-    if (it + 1 != kRenderUsageOptions.cend()) {
-      printf(", ");
-    } else {
-      printf("\n");
-    }
-  }
 
   printf("\n    By default, signal is a sine wave. If no frequency is provided, %s Hz is used\n",
          kFrequencyDefaultHz);
   printf("  --%s[=<FREQ>]  \t Play sine wave at given frequency (Hz)\n", kSineWaveSwitch);
   printf("  --%s[=<FREQ>]  \t Play square wave at given frequency\n", kSquareWaveSwitch);
   printf("  --%s[=<FREQ>]  \t Play rising sawtooth wave at given frequency\n", kSawtoothWaveSwitch);
+  printf("  --%s[=<FREQ>]  \t Play rising-then-falling ramp at given frequency\n", kRampWaveSwitch);
   printf("  --%s  \t\t Play pseudo-random 'white' noise\n", kWhiteNoiseSwitch);
+  printf("  --%s  \t\t Play pseudo-random 'pink' (1/f) noise\n", kPinkNoiseSwitch);
 
   printf("\n    By default, play signal for %s seconds, at amplitude %s\n", kDurationDefaultSecs,
          kAmplitudeDefaultScale);
@@ -124,6 +118,26 @@ void usage(const char* prog_name) {
          kSaveToFileDefaultName);
 
   printf("\n    Subsequent settings (e.g. gain, timestamps) do not affect .wav file contents\n");
+
+  printf("\n    By default, use a %s stream and do not change this RENDER_USAGE's volume or gain\n",
+         kRenderUsageDefault);
+  printf("  --%s=<RENDER_USAGE> Set stream render usage. RENDER_USAGE must be one of:\n\t\t\t ",
+         kRenderUsageSwitch);
+  for (auto it = kRenderUsageOptions.cbegin(); it != kRenderUsageOptions.cend(); ++it) {
+    printf("%s", it->first);
+    if (it + 1 != kRenderUsageOptions.cend()) {
+      printf(", ");
+    } else {
+      printf("\n");
+    }
+  }
+  printf("  --%s[=<VOLUME>] Set render usage volume (min %.1f, max %.1f, default %s)\n",
+         kRenderUsageVolumeSwitch, fuchsia::media::audio::MIN_VOLUME,
+         fuchsia::media::audio::MAX_VOLUME, kRenderUsageVolumeDefault);
+  printf("  --%s[=<DB>]\t Set render usage gain, in dB (min %.1f, max %.1f, default %s)\n",
+         kRenderUsageGainSwitch, fuchsia::media::audio::MUTED_GAIN_DB, kUnityGainDb,
+         kRenderUsageGainDefaultDb);
+  printf("    Changes to these system-wide volume/gain settings persist after the utility runs.\n");
 
   printf("\n    Use the default reference clock unless specified otherwise\n");
   printf("  --%s\t Request and use the 'optimal' reference clock provided by the Audio service\n",
@@ -163,14 +177,6 @@ void usage(const char* prog_name) {
          kStreamRampTargetGainSwitch, kStreamRampSwitch);
   printf("  --%s=<MSECS>\t Set a specific ramp duration in milliseconds. Implies '--%s'\n",
          kStreamRampDurationSwitch, kStreamRampSwitch);
-
-  printf("\n    By default, both volume and gain for this RENDER_USAGE are unchanged\n");
-  printf("  --%s[=<DB>]\t Set render usage gain, in dB (min %.1f, max %.1f, default %s)\n",
-         kRenderUsageGainSwitch, fuchsia::media::audio::MUTED_GAIN_DB, kUnityGainDb,
-         kRenderUsageGainDefaultDb);
-  printf("  --%s[=<VOLUME>] Set render usage volume (min %.1f, max %.1f, default %s)\n",
-         kRenderUsageVolumeSwitch, fuchsia::media::audio::MIN_VOLUME,
-         fuchsia::media::audio::MAX_VOLUME, kRenderUsageVolumeDefault);
 
   printf("\n  --%s\t\t Play signal using an ultrasound renderer\n", kUltrasoundSwitch);
 
@@ -259,8 +265,13 @@ int main(int argc, const char** argv) {
   } else if (command_line.HasOption(kSawtoothWaveSwitch)) {
     media_app.set_output_type(kOutputTypeSawtooth);
     command_line.GetOptionValue(kSawtoothWaveSwitch, &frequency_str);
+  } else if (command_line.HasOption(kRampWaveSwitch)) {
+    media_app.set_output_type(kOutputTypeRamp);
+    command_line.GetOptionValue(kRampWaveSwitch, &frequency_str);
   } else if (command_line.HasOption(kWhiteNoiseSwitch)) {
     media_app.set_output_type(kOutputTypeNoise);
+  } else if (command_line.HasOption(kPinkNoiseSwitch)) {
+    media_app.set_output_type(kOutputTypePinkNoise);
   } else {
     media_app.set_output_type(kOutputTypeSine);
   }

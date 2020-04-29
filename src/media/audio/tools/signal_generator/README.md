@@ -9,11 +9,14 @@ AudioCore, AudioRenderer, VolumeControl and GainControl FIDL protocols.
       [--chans=<NUM_CHANS>]
       [--int16 | --int24]
       [--rate=<FRAME_RATE>]
-      [--usage=<RENDER_USAGE>]
-      [--sine[=<FREQ>] | --square[=<FREQ>] | --saw[=<FREQ>] | --noise]
+      [--sine[=<FREQ>] | --square[=<FREQ>] | --saw[=<FREQ>] | --ramp[=<FREQ>] | --noise | --pink]
       [--dur=<DURATION_SEC>]
       [--amp=<AMPL>]
       [--wav[=<FILEPATH>]]
+      [--usage=<RENDER_USAGE>]
+      [--usage-vol[=<USAGE_VOLUME>]]
+      [--usage-gain[=<USAGE_GAIN_DB>]]
+      [--optimal-clock | --monotonic-clock | --custom-clock | --rate-adjust[=<PPM>]]
       [--pts]
       [--threshold=<SECS>]
       [--frames=<FRAMES>]
@@ -23,26 +26,24 @@ AudioCore, AudioRenderer, VolumeControl and GainControl FIDL protocols.
       [--ramp]
       [--end-gain=<RAMP_END_DB>]
       [--ramp-dur=<RAMP_DURATION_MSEC>]
-      [--usage-gain[=<USAGE_GAIN_DB>]]
-      [--usage-vol[=<USAGE_VOLUME>]]
       [--v]
       [--help | --?]
 
 These optional parameters are interpreted as follows:
 
-      By default, stream format is 2-channel, float32, 48000 Hz frame rate, MEDIA usage
+      By default, stream format is 2-channel, float32 samples at 48000 Hz frame rate
     --chans=<NUM_CHANS>      Specify number of channels
     --int16                  Use 16-bit integer samples
     --int24                  Use 24-in-32-bit integer samples (left-justified 'padded-24')
     --rate=<FRAME_RATE>      Set frame rate in Hz
-    --usage=<RENDER_USAGE>   Set stream render usage. RENDER_USAGE must be one of:
-                             BACKGROUND, MEDIA, INTERRUPTION, SYSTEM_AGENT, COMMUNICATION
 
       By default, signal is a sine wave. If no frequency is provided, 440.0 Hz is used
     --sine[=<FREQ>]          Play sine wave at given frequency (Hz)
     --square[=<FREQ>]        Play square wave at given frequency
     --saw[=<FREQ>]           Play rising sawtooth wave at given frequency
+    --ramp[=<FREQ>]          Play rising-then-falling ramp at given frequency
     --noise                  Play pseudo-random 'white' noise
+    --pink                   Play pseudo-random 'pink' (1/f) noise
 
       By default, play signal for 2.0 seconds, at amplitude 0.25
     --dur=<DURATION_SECS>    Set playback length, in seconds
@@ -51,6 +52,13 @@ These optional parameters are interpreted as follows:
     --wav[=<FILEPATH>]       Save to .wav file (default '/tmp/signal_generator.wav')
 
       Subsequent settings (e.g. gain, timestamps) do not affect .wav file contents
+
+      By default, use a MEDIA stream and do not change the volume or gain for this RENDER_USAGE
+    --usage=<RENDER_USAGE>   Set stream render usage. RENDER_USAGE must be one of:
+                             BACKGROUND, MEDIA, INTERRUPTION, SYSTEM_AGENT, COMMUNICATION
+    --usage-vol[=<VOLUME>]   Set render usage volume (min 0.0, max 1.0, default 0.50)
+    --usage-gain[=<DB>]      Set render usage gain, in dB (min -160.0, max 0.0, default 0.0)
+      Changes to these system-wide volume/gain settings persist after the utility runs
 
       Use the default reference clock unless specified otherwise
     --optimal-clock          Request and use the 'optimal' reference clock provided by the Audio service
@@ -72,10 +80,6 @@ These optional parameters are interpreted as follows:
                              If '--gain' is not provided, ramping starts at unity stream gain (0.0 dB)
     --end-gain=<TARGET_DB>   Set a different ramp target gain (dB). Implies '--ramp'
     --ramp-dur=<MSECS>       Set a specific ramp duration in milliseconds. Implies '--ramp'
-
-      By default, both volume and gain for this RENDER_USAGE are unchanged
-    --usage-gain[=<DB>]      Set render usage gain, in dB (min -160.0, max 0.0, default 0.0)
-    --usage-vol[=<VOLUME>]   Set render usage volume (min 0.0, max 1.0, default 0.50)
 
     --ultrasound             Play signal using an ultrasound renderer
 

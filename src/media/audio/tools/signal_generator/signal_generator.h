@@ -17,9 +17,11 @@ constexpr float kUnityGainDb = 0.0f;
 
 typedef enum {
   kOutputTypeNoise,
+  kOutputTypePinkNoise,
   kOutputTypeSine,
   kOutputTypeSquare,
   kOutputTypeSawtooth,
+  kOutputTypeRamp,
 } OutputSignalType;
 // TODO(49220): refactor signal-generation to make it easier for new generators to be added.
 
@@ -131,11 +133,15 @@ class MediaApp {
     fzl::VmoMapper* vmo;
   };
   AudioPacket CreateAudioPacket(uint64_t packet_num);
+
+  void PrimePinkNoiseFilter();
+  void AdvancePinkNoiseFrame();
+  double NextPinkNoiseSample(uint32_t chan_num);
+
   void GenerateAudioForPacket(const AudioPacket& packet, uint64_t packet_num);
   template <typename SampleType>
-  static void WriteAudioIntoBuffer(SampleType* audio_buffer, uint32_t num_frames,
-                                   uint64_t frames_since_start, OutputSignalType signal_type,
-                                   uint32_t num_chans, double frames_per_period, double amp_scalar);
+  void WriteAudioIntoBuffer(SampleType* audio_buffer, uint32_t num_frames,
+                            uint64_t frames_since_start);
 
   bool Shutdown();
   fit::closure quit_callback_;
@@ -211,6 +217,13 @@ class MediaApp {
   float usage_volume_;
 
   bool verbose_ = false;
+
+  // This 4-stage feedforward/feedback filter attenuates by 1/f to convert white noise to pink.
+  static constexpr double kFeedFwd[] = {0.049922035, -0.095993537, 0.050612699, -0.004408786};
+  static constexpr double kFeedBack[] = {1, -2.494956002, 2.017265875, -0.522189400};
+  typedef double HistoryBuffer[4];
+  std::unique_ptr<HistoryBuffer[]> input_history_;
+  std::unique_ptr<HistoryBuffer[]> output_history_;
 
   bool ultrasound_ = false;
 };
