@@ -5,7 +5,6 @@
 #include "fidl/lexer.h"
 
 #include <assert.h>
-#include <zircon/compiler.h>
 
 #include <map>
 
@@ -189,7 +188,7 @@ Token Lexer::LexStringLiteral() {
         // This escaping logic is incorrect for the input: "\\"
         if (last != '\\')
           return Finish(Token::Kind::kStringLiteral);
-        __FALLTHROUGH;
+        [[fallthrough]];
       default:
         last = next;
     }
@@ -263,7 +262,7 @@ Token Lexer::Lex() {
           Consume();
           return Finish(Token::Kind::kArrow);
         }
-        __FALLTHROUGH;
+        [[fallthrough]];
       case '0':
       case '1':
       case '2':
