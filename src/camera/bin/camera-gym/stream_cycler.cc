@@ -69,7 +69,6 @@ void StreamCycler::SetHandlers(StreamCycler::AddCollectionHandler on_add_collect
 
 // TODO(48506): Hard code stream ID
 constexpr uint32_t kConfigId = 1;
-constexpr uint32_t kStreamId = 2;
 
 void StreamCycler::WatchDevicesCallback(std::vector<fuchsia::camera3::WatchDevicesEvent> events) {
   for (auto& event : events) {
@@ -81,35 +80,17 @@ void StreamCycler::WatchDevicesCallback(std::vector<fuchsia::camera3::WatchDevic
       // Fetch camera configurations
       device_->GetConfigurations(
           [this](std::vector<fuchsia::camera3::Configuration> configurations) {
-            // Assuming the configuration needed is actually there.
-            ZX_ASSERT(configurations.size() > kConfigId);
-            ZX_ASSERT(configurations[kConfigId].streams.size() > kStreamId);
-            auto image_format = configurations[kConfigId].streams[kStreamId].image_format;
+            configurations_ = std::move(configurations);
 
-            // Connect to specific stream
+            ZX_ASSERT(configurations_.size() > kConfigId);
+            ZX_ASSERT(!configurations_[kConfigId].streams.empty());
             device_->SetCurrentConfiguration(kConfigId);
-            auto stream_request = stream_.NewRequest(loop_.dispatcher());
-            device_->WatchCurrentConfiguration(
-                [this, stream_request = std::move(stream_request)](uint32_t index) mutable {
-                  device_->ConnectToStream(kStreamId, std::move(stream_request));
-                });
-
-            // Allocate buffer collection
-            fuchsia::sysmem::BufferCollectionTokenHandle token_orig;
-            allocator_->AllocateSharedCollection(token_orig.NewRequest());
-            stream_->SetBufferCollection(std::move(token_orig));
-            stream_->WatchBufferCollection(
-                [this, image_format](fuchsia::sysmem::BufferCollectionTokenHandle token_back) {
-                  if (add_collection_handler_) {
-                    // TODO(48506): support more than one stream
-                    add_collection_handler_returned_value_ =
-                        add_collection_handler_(std::move(token_back), image_format);
-                  } else {
-                    token_back.BindSync()->Close();
-                  }
-                  // Kick start the stream
-                  stream_->GetNextFrame(fit::bind_member(this, &StreamCycler::OnNextFrame));
-                });
+            device_->WatchCurrentConfiguration([this](uint32_t index) {
+              const uint32_t stream_count = configurations_[kConfigId].streams.size();
+              for (uint32_t stream_index = 0; stream_index < stream_count; ++stream_index) {
+                ConnectToStream(kConfigId, stream_index);
+              }
+            });
           });
     }
   }
@@ -118,15 +99,51 @@ void StreamCycler::WatchDevicesCallback(std::vector<fuchsia::camera3::WatchDevic
   watcher_->WatchDevices(fit::bind_member(this, &StreamCycler::WatchDevicesCallback));
 }
 
-void StreamCycler::OnNextFrame(fuchsia::camera3::FrameInfo frame_info) {
+void StreamCycler::ConnectToStream(uint32_t config_index, uint32_t stream_index) {
+  ZX_ASSERT(configurations_.size() > config_index);
+  ZX_ASSERT(configurations_[config_index].streams.size() > stream_index);
+  auto image_format = configurations_[config_index].streams[stream_index].image_format;
+
+  // Connect to specific stream
+  StreamInfo new_stream_info;
+  stream_infos_.emplace(stream_index, std::move(new_stream_info));
+  auto& stream = stream_infos_[stream_index].stream;
+  auto stream_request = stream.NewRequest(loop_.dispatcher());
+
+  // Allocate buffer collection
+  fuchsia::sysmem::BufferCollectionTokenHandle token_orig;
+  allocator_->AllocateSharedCollection(token_orig.NewRequest());
+  stream->SetBufferCollection(std::move(token_orig));
+  stream->WatchBufferCollection([this, image_format, stream_index,
+                                 &stream](fuchsia::sysmem::BufferCollectionTokenHandle token_back) {
+    if (add_collection_handler_) {
+      auto& stream_info = stream_infos_[stream_index];
+      stream_info.add_collection_handler_returned_value =
+          add_collection_handler_(std::move(token_back), image_format);
+    } else {
+      token_back.BindSync()->Close();
+    }
+    // Kick start the stream
+    stream->GetNextFrame([this, stream_index](fuchsia::camera3::FrameInfo frame_info) {
+      OnNextFrame(stream_index, std::move(frame_info));
+    });
+  });
+
+  device_->ConnectToStream(stream_index, std::move(stream_request));
+}
+
+void StreamCycler::OnNextFrame(uint32_t stream_index, fuchsia::camera3::FrameInfo frame_info) {
   if (show_buffer_handler_) {
-    // TODO(48506): support more than one stream
-    show_buffer_handler_(add_collection_handler_returned_value_, frame_info.buffer_index,
+    auto& stream_info = stream_infos_[stream_index];
+    show_buffer_handler_(stream_info.add_collection_handler_returned_value, frame_info.buffer_index,
                          std::move(frame_info.release_fence));
   } else {
     frame_info.release_fence.reset();
   }
-  stream_->GetNextFrame(fit::bind_member(this, &StreamCycler::OnNextFrame));
+  auto& stream = stream_infos_[stream_index].stream;
+  stream->GetNextFrame([this, stream_index](fuchsia::camera3::FrameInfo frame_info) {
+    OnNextFrame(stream_index, std::move(frame_info));
+  });
 }
 
 }  // namespace camera
