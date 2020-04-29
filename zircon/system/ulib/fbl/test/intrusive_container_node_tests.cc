@@ -5,6 +5,7 @@
 #include <array>
 #include <type_traits>
 
+#include <fbl/auto_call.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/intrusive_single_list.h>
 #include <fbl/intrusive_wavl_tree.h>
@@ -522,4 +523,417 @@ TEST(IntrusiveContainerNodeTest, MultiNodeInContainer) {
   ASSERT_FALSE(fbl::InContainer<TagType6>(test_obj));
 }
 
+// Start a new anon namespace for the Copy/Move node tests.  We are going to
+// define some boilerplate node and container types for the tests, and we don't
+// want their definitions to leak out into the rest of the test environment.
+namespace {
+
+template <fbl::NodeOptions Options>
+struct TestSLLObj
+    : public fbl::SinglyLinkedListable<TestSLLObj<Options>*, fbl::DefaultObjectTag, Options> {};
+
+template <fbl::NodeOptions Options>
+using TestSLLContainer = fbl::SinglyLinkedList<TestSLLObj<Options>*>;
+
+template <fbl::NodeOptions Options>
+struct TestDLLObj
+    : public fbl::DoublyLinkedListable<TestDLLObj<Options>*, fbl::DefaultObjectTag, Options> {};
+
+template <fbl::NodeOptions Options>
+using TestDLLContainer = fbl::DoublyLinkedList<TestDLLObj<Options>*>;
+
+template <fbl::NodeOptions Options>
+struct TestWAVLObj
+    : public fbl::WAVLTreeContainable<TestWAVLObj<Options>*, fbl::DefaultObjectTag, Options> {
+  TestWAVLObj() = default;
+
+  // Make sure that our keys are always unique even though we are using the
+  // implicit default constructor and assignment operators.
+  uint64_t GetKey() const { return reinterpret_cast<uint64_t>(this); }
+};
+
+template <fbl::NodeOptions Options>
+using TestWAVLContainer = fbl::WAVLTree<uint64_t, TestWAVLObj<Options>*>;
+
+// By default, none of these operations will be allowed at compile time.
+// Sadly, negative compilation testing here involves enabling each of these
+// cases and making sure that it properly fails to compile.
+template <typename Container>
+void CopyTestHelper() {
+  using Obj = typename Container::ValueType;
+  constexpr bool kAnyCopyAllowed =
+      Container::NodeTraits::NodeState::kNodeOptions &
+      (fbl::NodeOptions::AllowCopy | fbl::NodeOptions::AllowCopyFromContainer);
+  constexpr bool kFromContainerAllowed =
+      Container::NodeTraits::NodeState::kNodeOptions & fbl::NodeOptions::AllowCopyFromContainer;
+
+  // Copy construct while not in a container
+  Obj A, C;
+  Obj B{A};
+
+  ASSERT_FALSE(A.InContainer());
+  ASSERT_FALSE(B.InContainer());
+  ASSERT_FALSE(C.InContainer());
+
+  // Copy assign while not in a container
+  C = A;
+
+  ASSERT_FALSE(A.InContainer());
+  ASSERT_FALSE(C.InContainer());
+
+  // Don't bother to expand any of the subsequent tests if no copy of any form
+  // is allowed.
+  if constexpr (kAnyCopyAllowed) {
+    // Make sure that we always clean our container before allowing the
+    // container, or any nodes in the container the chance to destruct.
+    Container container;
+    auto cleanup = fbl::MakeAutoCall([&container]() { container.clear(); });
+
+    // For these tests, we want A and B to be in the container, while C is not
+    // in the container.  Also, keep track of who is initially first the
+    // container and who is second.  While we can control the order of elements
+    // in the container for sequenced container, we are using object pointers as
+    // keys for the WAVL objects, whose order we cannot control as well.
+    if constexpr (Container::IsAssociative) {
+      container.insert(&A);
+      container.insert(&B);
+    } else {
+      container.push_front(&A);
+      container.push_front(&B);
+    }
+
+    const auto& first_obj = container.front();
+    const auto& second_obj = *(++container.begin());
+
+    // No matter what we do with the rest of these tests, the positions of A and
+    // B in the container, and the fact that C is _not_ in the container, should
+    // remain unchanged.  Make a small lambda that we can use to check this over
+    // and over again.
+    auto SanityCheckABC = [&]() {
+      ASSERT_TRUE(A.InContainer());
+      ASSERT_TRUE(B.InContainer());
+      ASSERT_FALSE(C.InContainer());
+      ASSERT_EQ(&first_obj, &container.front());
+      ASSERT_EQ(&second_obj, &(*(++container.begin())));
+    };
+    ASSERT_NO_FAILURES(SanityCheckABC());
+
+    if constexpr (kFromContainerAllowed || !ZX_DEBUG_ASSERT_IMPLEMENTED) {
+      // Attempt to copy construct D from A which is currently in the container.
+      // This should succeed as we are either explicitly allowed to do this (by
+      // NodeOptions), or because DEBUG_ASSERTs are not enabled in this build.
+      // Once the construction has happened, both A and B should still be in the
+      // container, and their positions unchanged.
+      Obj D{container.front()};
+      ASSERT_FALSE(D.InContainer());
+      ASSERT_NO_FAILURES(SanityCheckABC());
+
+      // Assignment from A (in the container) to C (not in container) should
+      // succeed for the same reason and preserve all of the same things.
+      C = container.front();
+      ASSERT_NO_FAILURES(SanityCheckABC());
+
+      // Assignment from C (not in the container) to A (in container) should
+      // succeed.
+      container.front() = C;
+      ASSERT_NO_FAILURES(SanityCheckABC());
+
+      // Finally, assignment from A to B (both in the container) should succeed,
+      // but not change anything about the positions of A or B in the container.
+      B = container.front();
+      ASSERT_NO_FAILURES(SanityCheckABC());
+    } else {
+      // ASSERT_DEATH is only defined for __Fuchsia__
+#ifdef __Fuchsia__
+      // Do tests we did in the other half of this `if`, but this time, expect
+      // them to result in death.  The NodeOptions do not allow us to do these
+      // copies, and DEBUG_ASSERTs are enabled.
+
+      // Copy construct a D.
+      auto copy_construct_D = [&container]() { Obj D{container.front()}; };
+      ASSERT_DEATH(copy_construct_D);
+      ASSERT_NO_FAILURES(SanityCheckABC());
+
+      // Assign A (in container) to C (not in container)
+      auto copy_assign_A_to_C_lambda = [&container, &C]() { C = container.front(); };
+      ASSERT_DEATH(copy_assign_A_to_C_lambda);
+      ASSERT_NO_FAILURES(SanityCheckABC());
+
+      // Assign C (not in container) to A (in container)
+      auto copy_assign_C_to_A_lambda = [&container, &C]() { container.front() = C; };
+      ASSERT_DEATH(copy_assign_C_to_A_lambda);
+      ASSERT_NO_FAILURES(SanityCheckABC());
+
+      // Assign A (not in container) to B (in container)
+      auto copy_assign_A_to_B_lambda = [&A, &B]() { B = A; };
+      ASSERT_DEATH(copy_assign_A_to_B_lambda);
+      ASSERT_NO_FAILURES(SanityCheckABC());
+      ASSERT_TRUE(A.InContainer());
+      ASSERT_TRUE(B.InContainer());
+      ASSERT_FALSE(C.InContainer());
+#endif
+    }
+  }
+}
+
+template <typename Container>
+void MoveTestHelper() {
+  // Same tests as the CopyTestHelper, but this time use Move instead.
+  using Obj = typename Container::ValueType;
+  constexpr bool kAnyMoveAllowed =
+      Container::NodeTraits::NodeState::kNodeOptions &
+      (fbl::NodeOptions::AllowMove | fbl::NodeOptions::AllowMoveFromContainer);
+  constexpr bool kFromContainerAllowed =
+      Container::NodeTraits::NodeState::kNodeOptions & fbl::NodeOptions::AllowMoveFromContainer;
+  // Move construct while not in a container
+  Obj A, C;
+  Obj B{std::move(A)};
+
+  ASSERT_FALSE(A.InContainer());
+  ASSERT_FALSE(B.InContainer());
+  ASSERT_FALSE(C.InContainer());
+
+  // Move assign while not in a container
+  C = std::move(A);
+
+  ASSERT_FALSE(A.InContainer());
+  ASSERT_FALSE(C.InContainer());
+
+  // Don't bother to expand any of the subsequent tests if no move of any form
+  // is allowed.
+  if constexpr (kAnyMoveAllowed) {
+    // Make sure that we always clean our container before allowing the
+    // container, or any nodes in the container the chance to destruct.
+    Container container;
+    auto cleanup = fbl::MakeAutoCall([&container]() { container.clear(); });
+
+    // For these tests, we want A and B to be in the container, while C is not
+    // in the container.  Also, keep track of who is initially first the
+    // container and who is second.  While we can control the order of elements
+    // in the container for sequenced container, we are using object pointers as
+    // keys for the WAVL objects, whose order we cannot control as well.
+    if constexpr (Container::IsAssociative) {
+      container.insert(&A);
+      container.insert(&B);
+    } else {
+      container.push_front(&B);
+      container.push_front(&A);
+    }
+
+    const auto& first_obj = container.front();
+    const auto& second_obj = *(++container.begin());
+
+    // No matter what we do with the rest of these tests, the positions of A and
+    // B in the container, and the fact that C is _not_ in the container, should
+    // remain unchanged.  Make a small lambda that we can use to check this over
+    // and over again.
+    auto SanityCheckABC = [&]() {
+      ASSERT_TRUE(A.InContainer());
+      ASSERT_TRUE(B.InContainer());
+      ASSERT_FALSE(C.InContainer());
+      ASSERT_EQ(&first_obj, &container.front());
+      ASSERT_EQ(&second_obj, &(*(++container.begin())));
+    };
+    ASSERT_NO_FAILURES(SanityCheckABC());
+
+    if constexpr (kFromContainerAllowed || !ZX_DEBUG_ASSERT_IMPLEMENTED) {
+      // Attempt to move construct D from A which is currently in the container.
+      // This should succeed as we are either explicitly allowed to do this (by
+      // NodeOptions), or because DEBUG_ASSERTs are not enabled in this build.
+      // Once the construction has happened, both A and B should still be in the
+      // container, and their positions unchanged.
+      Obj D{std::move(container.front())};
+      ASSERT_FALSE(D.InContainer());
+      ASSERT_NO_FAILURES(SanityCheckABC());
+
+      // Move assignment from A (in the container) to C (not in container) should
+      // succeed for the same reason and preserve all of the same things.
+      C = std::move(container.front());
+      ASSERT_NO_FAILURES(SanityCheckABC());
+
+      // Assignment from C (not in the container) to A (in container) should
+      // succeed.
+      container.front() = std::move(C);
+      ASSERT_NO_FAILURES(SanityCheckABC());
+
+      // Finally, assignment from A to B (both in the container) should succeed,
+      // but not change anything about the positions of A or B in the container.
+      B = std::move(A);
+      ASSERT_NO_FAILURES(SanityCheckABC());
+    } else {
+      // ASSERT_DEATH is only defined for __Fuchsia__
+#ifdef __Fuchsia__
+      // Do tests we did in the other half of this `if`, but this time, expect
+      // them to result in death.  The NodeOptions do not allow us to do these
+      // copies, and DEBUG_ASSERTs are enabled.
+
+      // Move construct a D.
+      auto move_construct_D = [&container]() { Obj D{std::move(container.front())}; };
+      ASSERT_DEATH(move_construct_D);
+      ASSERT_NO_FAILURES(SanityCheckABC());
+
+      // Assign A (in container) to C (not in container)
+      auto move_assign_A_to_C_lambda = [&container, &C]() { C = std::move(container.front()); };
+      ASSERT_DEATH(move_assign_A_to_C_lambda);
+      ASSERT_NO_FAILURES(SanityCheckABC());
+
+      // Assign C (not in container) to A (in container)
+      auto move_assign_C_to_A_lambda = [&container, &C]() { container.front() = std::move(C); };
+      ASSERT_DEATH(move_assign_C_to_A_lambda);
+      ASSERT_NO_FAILURES(SanityCheckABC());
+
+      // Assign A (not in container) to B (in container)
+      auto move_assign_A_to_B_lambda = [&A, &B]() { B = std::move(A); };
+      ASSERT_DEATH(move_assign_A_to_B_lambda);
+      ASSERT_NO_FAILURES(SanityCheckABC());
+#endif
+    }
+  }
+}
+
+TEST(IntrusiveContainerNodeTest, CopyAndMoveDisallowed) {
+  using Opts [[maybe_unused]] = fbl::NodeOptions;
+#if TEST_WILL_NOT_COMPILE || 0
+  ASSERT_NO_FAILURES(CopyTestHelper<TestSLLContainer<Opts::None>>());
+  ASSERT_NO_FAILURES(MoveTestHelper<TestSLLContainer<Opts::None>>());
+#endif
+
+#if TEST_WILL_NOT_COMPILE || 0
+  ASSERT_NO_FAILURES(CopyTestHelper<TestDLLContainer<Opts::None>>());
+  ASSERT_NO_FAILURES(MoveTestHelper<TestDLLContainer<Opts::None>>());
+#endif
+
+#if TEST_WILL_NOT_COMPILE || 0
+  ASSERT_NO_FAILURES(CopyTestHelper<TestWAVLContainer<Opts::None>>());
+  ASSERT_NO_FAILURES(MoveTestHelper<TestWAVLContainer<Opts::None>>());
+#endif
+}
+
+TEST(IntrusiveContainerNodeTest, CopyAllowedOutsideOfContainer) {
+  using Opts = fbl::NodeOptions;
+  ASSERT_NO_FAILURES(CopyTestHelper<TestSLLContainer<Opts::AllowCopy>>());
+#if TEST_WILL_NOT_COMPILE || 0
+  ASSERT_NO_FAILURES(MoveTestHelper<TestSLLContainer<Opts::AllowCopy>>());
+#endif
+
+  ASSERT_NO_FAILURES(CopyTestHelper<TestDLLContainer<Opts::AllowCopy>>());
+#if TEST_WILL_NOT_COMPILE || 0
+  ASSERT_NO_FAILURES(MoveTestHelper<TestDLLContainer<Opts::AllowCopy>>());
+#endif
+
+  ASSERT_NO_FAILURES(CopyTestHelper<TestWAVLContainer<Opts::AllowCopy>>());
+#if TEST_WILL_NOT_COMPILE || 0
+  ASSERT_NO_FAILURES(MoveTestHelper<TestWAVLContainer<Opts::AllowCopy>>());
+#endif
+}
+
+TEST(IntrusiveContainerNodeTest, CopyAllowedWhileInsideContainer) {
+  using Opts = fbl::NodeOptions;
+  ASSERT_NO_FAILURES(CopyTestHelper<TestSLLContainer<Opts::AllowCopyFromContainer>>());
+#if TEST_WILL_NOT_COMPILE || 0
+  ASSERT_NO_FAILURES(MoveTestHelper<TestSLLContainer<Opts::AllowCopyFromContainer>>());
+#endif
+
+  ASSERT_NO_FAILURES(CopyTestHelper<TestDLLContainer<Opts::AllowCopyFromContainer>>());
+#if TEST_WILL_NOT_COMPILE || 0
+  ASSERT_NO_FAILURES(MoveTestHelper<TestDLLContainer<Opts::AllowCopyFromContainer>>());
+#endif
+
+  ASSERT_NO_FAILURES(CopyTestHelper<TestWAVLContainer<Opts::AllowCopyFromContainer>>());
+#if TEST_WILL_NOT_COMPILE || 0
+  ASSERT_NO_FAILURES(MoveTestHelper<TestWAVLContainer<Opts::AllowCopyFromContainer>>());
+#endif
+}
+
+TEST(IntrusiveContainerNodeTest, MoveAllowedOutsideOfContainer) {
+  using Opts = fbl::NodeOptions;
+#if TEST_WILL_NOT_COMPILE || 0
+  ASSERT_NO_FAILURES(CopyTestHelper<TestSLLContainer<Opts::AllowMove>>());
+#endif
+  ASSERT_NO_FAILURES(MoveTestHelper<TestSLLContainer<Opts::AllowMove>>());
+
+#if TEST_WILL_NOT_COMPILE || 0
+  ASSERT_NO_FAILURES(CopyTestHelper<TestDLLContainer<Opts::AllowMove>>());
+#endif
+  ASSERT_NO_FAILURES(MoveTestHelper<TestDLLContainer<Opts::AllowMove>>());
+
+#if TEST_WILL_NOT_COMPILE || 0
+  ASSERT_NO_FAILURES(CopyTestHelper<TestWAVLContainer<Opts::AllowMove>>());
+#endif
+  ASSERT_NO_FAILURES(MoveTestHelper<TestWAVLContainer<Opts::AllowMove>>());
+}
+
+TEST(IntrusiveContainerNodeTest, MoveAllowedWhileInsideContainer) {
+  using Opts = fbl::NodeOptions;
+#if TEST_WILL_NOT_COMPILE || 0
+  ASSERT_NO_FAILURES(CopyTestHelper<TestSLLContainer<Opts::AllowMoveFromContainer>>());
+#endif
+  ASSERT_NO_FAILURES(MoveTestHelper<TestSLLContainer<Opts::AllowMoveFromContainer>>());
+
+#if TEST_WILL_NOT_COMPILE || 0
+  ASSERT_NO_FAILURES(CopyTestHelper<TestDLLContainer<Opts::AllowMoveFromContainer>>());
+#endif
+  ASSERT_NO_FAILURES(MoveTestHelper<TestDLLContainer<Opts::AllowMoveFromContainer>>());
+
+#if TEST_WILL_NOT_COMPILE || 0
+  ASSERT_NO_FAILURES(CopyTestHelper<TestWAVLContainer<Opts::AllowMoveFromContainer>>());
+#endif
+  ASSERT_NO_FAILURES(MoveTestHelper<TestWAVLContainer<Opts::AllowMoveFromContainer>>());
+}
+
+TEST(IntrusiveContainerNodeTest, CopyMoveAllowedOutsideOfContainer) {
+  using Opts = fbl::NodeOptions;
+
+  // Test both the long form (using the option | operator) as well as the
+  // shorthand (CopyMove) form of the option flags.
+  ASSERT_NO_FAILURES(CopyTestHelper<TestSLLContainer<Opts::AllowCopy | Opts::AllowMove>>());
+  ASSERT_NO_FAILURES(MoveTestHelper<TestSLLContainer<Opts::AllowCopy | Opts::AllowMove>>());
+  ASSERT_NO_FAILURES(CopyTestHelper<TestSLLContainer<Opts::AllowCopyMove>>());
+  ASSERT_NO_FAILURES(MoveTestHelper<TestSLLContainer<Opts::AllowCopyMove>>());
+
+  ASSERT_NO_FAILURES(CopyTestHelper<TestDLLContainer<Opts::AllowCopy | Opts::AllowMove>>());
+  ASSERT_NO_FAILURES(MoveTestHelper<TestDLLContainer<Opts::AllowCopy | Opts::AllowMove>>());
+  ASSERT_NO_FAILURES(CopyTestHelper<TestDLLContainer<Opts::AllowCopyMove>>());
+  ASSERT_NO_FAILURES(MoveTestHelper<TestDLLContainer<Opts::AllowCopyMove>>());
+
+  ASSERT_NO_FAILURES(CopyTestHelper<TestWAVLContainer<Opts::AllowCopy | Opts::AllowMove>>());
+  ASSERT_NO_FAILURES(MoveTestHelper<TestWAVLContainer<Opts::AllowCopy | Opts::AllowMove>>());
+  ASSERT_NO_FAILURES(CopyTestHelper<TestWAVLContainer<Opts::AllowCopyMove>>());
+  ASSERT_NO_FAILURES(MoveTestHelper<TestWAVLContainer<Opts::AllowCopyMove>>());
+}
+
+TEST(IntrusiveContainerNodeTest, CopyMoveAllowedWhileInsideContainer) {
+  using Opts = fbl::NodeOptions;
+
+  // Test both the long form (using the option | operator) as well as the
+  // shorthand (CopyMove) form of the option flags.
+  ASSERT_NO_FAILURES(
+      CopyTestHelper<
+          TestSLLContainer<Opts::AllowCopyFromContainer | Opts::AllowMoveFromContainer>>());
+  ASSERT_NO_FAILURES(
+      MoveTestHelper<
+          TestSLLContainer<Opts::AllowCopyFromContainer | Opts::AllowMoveFromContainer>>());
+  ASSERT_NO_FAILURES(CopyTestHelper<TestSLLContainer<Opts::AllowCopyMoveFromContainer>>());
+  ASSERT_NO_FAILURES(MoveTestHelper<TestSLLContainer<Opts::AllowCopyMoveFromContainer>>());
+
+  ASSERT_NO_FAILURES(
+      CopyTestHelper<
+          TestDLLContainer<Opts::AllowCopyFromContainer | Opts::AllowMoveFromContainer>>());
+  ASSERT_NO_FAILURES(
+      MoveTestHelper<
+          TestDLLContainer<Opts::AllowCopyFromContainer | Opts::AllowMoveFromContainer>>());
+  ASSERT_NO_FAILURES(CopyTestHelper<TestDLLContainer<Opts::AllowCopyMoveFromContainer>>());
+  ASSERT_NO_FAILURES(MoveTestHelper<TestDLLContainer<Opts::AllowCopyMoveFromContainer>>());
+
+  ASSERT_NO_FAILURES(
+      CopyTestHelper<
+          TestWAVLContainer<Opts::AllowCopyFromContainer | Opts::AllowMoveFromContainer>>());
+  ASSERT_NO_FAILURES(
+      MoveTestHelper<
+          TestWAVLContainer<Opts::AllowCopyFromContainer | Opts::AllowMoveFromContainer>>());
+  ASSERT_NO_FAILURES(CopyTestHelper<TestWAVLContainer<Opts::AllowCopyMoveFromContainer>>());
+  ASSERT_NO_FAILURES(MoveTestHelper<TestWAVLContainer<Opts::AllowCopyMoveFromContainer>>());
+}
+
+}  // namespace
 }  // namespace

@@ -159,11 +159,6 @@ RUN_ZXTEST(DoublyLinkedListTest, UPDDTE,  FindIf)
 RUN_ZXTEST(DoublyLinkedListTest, UPCDTE,  FindIf)
 RUN_ZXTEST(DoublyLinkedListTest, RPTE,    FindIf)
 
-RUN_ZXTEST(DoublyLinkedListTest, UMTE,    NodeState)
-RUN_ZXTEST(DoublyLinkedListTest, UPDDTE,  NodeState)
-RUN_ZXTEST(DoublyLinkedListTest, UPCDTE,  NodeState)
-RUN_ZXTEST(DoublyLinkedListTest, RPTE,    NodeState)
-
 //////////////////////////////////////////
 // Sequence container specific tests.
 //////////////////////////////////////////

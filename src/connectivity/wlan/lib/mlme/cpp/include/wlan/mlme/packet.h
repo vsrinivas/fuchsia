@@ -188,7 +188,11 @@ std::unique_ptr<Buffer> GetBuffer(size_t len);
 
 // A Packet wraps a buffer with information about the recipient/sender and
 // length of the data within the buffer.
-class Packet : public fbl::DoublyLinkedListable<std::unique_ptr<Packet>> {
+//
+// Packets have their default move constructor invoked during testing, so their
+// intrusive nodes need to permit moving.
+class Packet : public fbl::DoublyLinkedListable<std::unique_ptr<Packet>, fbl::DefaultObjectTag,
+                                                fbl::NodeOptions::AllowMove> {
  public:
   typedef uint8_t value_type;
 

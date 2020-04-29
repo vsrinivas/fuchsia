@@ -10,6 +10,7 @@
 #include <utility>
 
 #include <fbl/algorithm.h>
+#include <fbl/intrusive_container_node_utils.h>
 #include <fbl/intrusive_container_utils.h>
 #include <fbl/intrusive_pointer_traits.h>
 
@@ -49,9 +50,13 @@ class SequenceContainerTestEnvironment;
 constexpr NodeOptions kDefaultDoublyLinkedListNodeOptions = NodeOptions::None;
 
 template <typename T, NodeOptions Options = kDefaultDoublyLinkedListNodeOptions>
-struct DoublyLinkedListNodeState {
-  using PtrTraits = internal::ContainerPtrTraits<T>;
+struct DoublyLinkedListNodeState
+    : public internal::CommonNodeStateBase<DoublyLinkedListNodeState<T, Options>> {
+ private:
+  using Base = internal::CommonNodeStateBase<DoublyLinkedListNodeState<T, Options>>;
 
+ public:
+  using PtrTraits = internal::ContainerPtrTraits<T>;
   static constexpr NodeOptions kNodeOptions = Options;
 
   constexpr DoublyLinkedListNodeState() {}
@@ -66,32 +71,19 @@ struct DoublyLinkedListNodeState {
   bool IsValid() const { return ((next_ == nullptr) == (prev_ == nullptr)); }
   bool InContainer() const { return (next_ != nullptr); }
 
-  // Copy-construct a node.
-  //
-  // It is an error to copy a node that's in a container. Attempting to do so
-  // will result in an assertion failure or a default constructed node if
-  // assertions are not enabled.
-  DoublyLinkedListNodeState(const DoublyLinkedListNodeState& other) : DoublyLinkedListNodeState() {
-    ZX_DEBUG_ASSERT(!other.InContainer());
-  }
-
-  // Copy-assign a node.
-  //
-  // It is an error to copy-assign to or from a node that's in a
-  // container. Attempting to do so will result in an assertion failure or a
-  // no-op if assertions are not enabled.
-  //
-  // |this| will not be modified.
+  // Defer to CommonNodeStateBase for enforcement of the various copy/move
+  // rules.  Make sure, however, that we explicitly do not allow our own default
+  // construction/assignment operators change anything about our state.
+  DoublyLinkedListNodeState(const DoublyLinkedListNodeState& other) : Base(other) {}
   DoublyLinkedListNodeState& operator=(const DoublyLinkedListNodeState& other) {
-    ZX_DEBUG_ASSERT(!InContainer());
-    ZX_DEBUG_ASSERT(!other.InContainer());
-    // To avoid corrupting the container, |this| must remain unmodified.
+    this->Base::operator=(other);
     return *this;
   }
-
-  // Move-construction and move-assignment have the same behavior as
-  // copy-construction and copy-assignment, respectively. |other| and |this| are
-  // never modified.
+  DoublyLinkedListNodeState(DoublyLinkedListNodeState&& other) : Base(std::move(other)) {}
+  DoublyLinkedListNodeState& operator=(DoublyLinkedListNodeState&& other) {
+    this->Base::operator=(std::move(other));
+    return *this;
+  }
 
  private:
   template <typename, typename, typename, SizeOrder>

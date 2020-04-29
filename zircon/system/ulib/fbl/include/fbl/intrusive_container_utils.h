@@ -55,8 +55,63 @@ struct DefaultKeyedObjectTraits {
 
 // A set of flag-style options which can be applied to container nodes in order
 // to control and sanity check their behavior and compatibility at compile time.
+//
+// To control node options, users pass a set of options to either the
+// containable mix-in class (SinglyLinkedLisable, DoublyLinkedListable, or
+// WAVLTreeContainable), or directly to the node instance in the case that the
+// user is specifying custom container traits.
 enum class NodeOptions : uint64_t {
   None = 0,
+
+  // By default, nodes will not allow either copy construction or copy
+  // assignment. Directly copying the contents of node storage for a structure
+  // which is currently in a container cannot be allowed.  The result would be
+  // to have two objects, one of which is actually in a container, and the other
+  // of which is only sort-of in the container.
+  //
+  // Because of this, if code attempts to expand either the copy constructor or
+  // assignment operator, by default it will trigger a static assert.
+  //
+  // It may be the case, however, that a user wishes to allow copying of their
+  // structure while the source and destination structure are _not_ in any
+  // containers.  In this case, pass the NodeOptions::AllowCopy flag.  Nodes
+  // will permit copying, but will runtime ZX_DEBUG_ASSERT if either the source
+  // or destination exist within a container at the time of the copy.  In builds
+  // with ZX_DEBUG_ASSERTs disabled, neither the source nor the destination's
+  // internal node contents will be modified.  So, in the case of the following
+  // code:
+  //
+  //   MyStructure& A = *(container.begin());
+  //   MyStructure  B = A;
+  //   MyStructure& C = get_a_structure_reference_from_somewhere();
+  //   C = A;
+  //
+  // ++ A will remain in the container unmodified.
+  // ++ B will be in no container (as it was just constructed).
+  // ++ C either will either remain in its container if it had been in one, or
+  //      will remain in no container if not.
+  //
+  // Finally, it is possible that a user actually _does_ wish to copy the
+  // contents of a structure out of a container using either copy construction
+  // or using copy assignment.  If this is the case, pass the
+  // NodeOptions::AllowCopyFromContainer flag.  In addition to allowing the copy
+  // constructor and assignment operators, the debug asserts will be disabled in
+  // this situation.  Users may copy the contents of their node, but not mutate
+  // any container membership state as part of the process.
+  //
+  AllowCopy = (1 << 0),
+  AllowCopyFromContainer = (1 << 1),
+
+  // See the AllowCopy and AllowCopyFromConainer flags for details.  AllowMove
+  // and AllowMoveFromContainer are the same, simply applied to the rvalue
+  // constructor and assignment operators of the node.
+  AllowMove = (1 << 2),
+  AllowMoveFromContainer = (1 << 3),
+
+  // Convenience definitions
+  AllowCopyMove = static_cast<uint64_t>(AllowCopy) | static_cast<uint64_t>(AllowMove),
+  AllowCopyMoveFromContainer =
+      static_cast<uint64_t>(AllowCopyFromContainer) | static_cast<uint64_t>(AllowMoveFromContainer),
 
   // Reserved bits reserved for testing purposes and should always be ignored by
   // node implementations.

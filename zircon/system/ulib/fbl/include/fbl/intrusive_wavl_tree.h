@@ -10,6 +10,7 @@
 #include <utility>
 
 #include <fbl/algorithm.h>
+#include <fbl/intrusive_container_node_utils.h>
 #include <fbl/intrusive_container_utils.h>
 #include <fbl/intrusive_pointer_traits.h>
 #include <fbl/intrusive_wavl_tree_internal.h>
@@ -72,7 +73,12 @@ class WAVLBalanceTestObserver;
 }  // namespace tests
 
 template <typename PtrType, NodeOptions Options, typename RankType>
-struct WAVLTreeNodeStateBase {
+struct WAVLTreeNodeStateBase
+    : public internal::CommonNodeStateBase<WAVLTreeNodeStateBase<PtrType, Options, RankType>> {
+ private:
+  using Base = internal::CommonNodeStateBase<WAVLTreeNodeStateBase<PtrType, Options, RankType>>;
+
+ public:
   using PtrTraits = internal::ContainerPtrTraits<PtrType>;
   static constexpr NodeOptions kNodeOptions = Options;
 
@@ -81,32 +87,19 @@ struct WAVLTreeNodeStateBase {
   bool IsValid() const { return (parent_ || (!parent_ && !left_ && !right_)); }
   bool InContainer() const { return (parent_ != nullptr); }
 
-  // Copy-construct a node.
-  //
-  // It is an error to copy a node that's in a container. Attempting to do so
-  // will result in an assertion failure or a default constructed node if
-  // assertions are not enabled.
-  WAVLTreeNodeStateBase(const WAVLTreeNodeStateBase& other) : WAVLTreeNodeStateBase() {
-    ZX_DEBUG_ASSERT(!other.InContainer());
-  }
-
-  // Copy-assign a node.
-  //
-  // It is an error to copy-assign to or from a node that's in a
-  // container. Attempting to do so will result in an assertion failure or a
-  // no-op if assertions are not enabled.
-  //
-  // |this| will not be modified.
+  // Defer to CommonNodeStateBase for enforcement of the various copy/move
+  // rules.  Make sure, however, that we explicitly do not allow our own default
+  // construction/assignment operators change anything about our state.
+  WAVLTreeNodeStateBase(const WAVLTreeNodeStateBase& other) : Base(other) {}
   WAVLTreeNodeStateBase& operator=(const WAVLTreeNodeStateBase& other) {
-    ZX_DEBUG_ASSERT(!InContainer());
-    ZX_DEBUG_ASSERT(!other.InContainer());
-    // To avoid corrupting the container, |this| must remain unmodified.
+    this->Base::operator=(other);
     return *this;
   }
-
-  // Move-construction and move-assignment have the same behavior as
-  // copy-construction and copy-assignment, respectively. |other| and |this| are
-  // never modified.
+  WAVLTreeNodeStateBase(WAVLTreeNodeStateBase&& other) : Base(std::move(other)) {}
+  WAVLTreeNodeStateBase& operator=(WAVLTreeNodeStateBase&& other) {
+    this->Base::operator=(std::move(other));
+    return *this;
+  }
 
  protected:
   template <typename, typename, typename, typename, typename, typename>
@@ -123,6 +116,14 @@ struct WAVLTreeNodeStateBase {
 template <typename PtrType, NodeOptions Options>
 struct WAVLTreeNodeState<PtrType, Options, DefaultWAVLTreeRankType>
     : public WAVLTreeNodeStateBase<PtrType, Options, DefaultWAVLTreeRankType> {
+  WAVLTreeNodeState() = default;
+
+  // Defer to WAVLTreeNodeStateBase for enforcement of the various copy/move rules.
+  WAVLTreeNodeState(const WAVLTreeNodeState&) = default;
+  WAVLTreeNodeState& operator=(const WAVLTreeNodeState&) = default;
+  WAVLTreeNodeState(WAVLTreeNodeState&&) = default;
+  WAVLTreeNodeState& operator=(WAVLTreeNodeState&&) = default;
+
   bool rank_parity() const { return this->rank_; }
   void promote_rank() { this->rank_ = !this->rank_; }
   void double_promote_rank() {}

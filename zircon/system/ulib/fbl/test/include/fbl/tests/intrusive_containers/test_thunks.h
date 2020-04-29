@@ -40,7 +40,6 @@ struct TestThunks {
   MAKE_TEST_THUNK(IterCopyPointer)
   MAKE_TEST_THUNK(EraseIf)
   MAKE_TEST_THUNK(FindIf)
-  MAKE_TEST_THUNK(NodeState)
 
   // Sequence specific tests
   MAKE_TEST_THUNK(PushFront)
