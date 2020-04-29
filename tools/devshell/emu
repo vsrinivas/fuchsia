@@ -313,6 +313,10 @@ if (( HTTP )); then
 fi
 
 if (( GRPC )); then
+  if [[ "$(uname -s)" == "Darwin" ]]; then
+    echo "WebRTC feature is not supported on macOS"
+    exit 1
+  fi
   OPTIONS+=("-grpc" "$GRPC")
   OPTIONS+=("-rtcfps" "$RTCFPS")
   if [[ -n "$TURNCFG" ]]; then

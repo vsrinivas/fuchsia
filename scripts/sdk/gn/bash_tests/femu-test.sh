@@ -156,25 +156,32 @@ INPUT
   # Need to configure a DISPLAY so that we can get past the graphics error checks
   export DISPLAY="fakedisplay"
 
-  # Run command with the default grpcwebproxy.
-  BT_EXPECT gn-test-run-bash-script "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/femu.sh" \
-    -x 1234
+  if is-mac; then
+    # grpcwebproxy does not work on OSX, so check there is an error message
+    BT_EXPECT_FAIL gn-test-run-bash-script "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/femu.sh" \
+      -x 1234 \
+      > femu_error_output.txt 2>&1
+  else
+    # Run command with the default grpcwebproxy.
+    BT_EXPECT gn-test-run-bash-script "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/femu.sh" \
+      -x 1234
 
-  # Verify that the default grpcwebproxy binary is called correctly
-  # shellcheck disable=SC1090
-  source "${FUCHSIA_WORK_DIR}/emulator/grpcwebproxy-${PLATFORM}-${GRPCWEBPROXY_LABEL}/grpcwebproxy.mock_state"
-  gn-test-check-mock-partial --backend_addr localhost:5556
-  gn-test-check-mock-partial --server_http_debug_port 1234
+    # Verify that the default grpcwebproxy binary is called correctly
+    # shellcheck disable=SC1090
+    source "${FUCHSIA_WORK_DIR}/emulator/grpcwebproxy-${PLATFORM}-${GRPCWEBPROXY_LABEL}/grpcwebproxy.mock_state"
+    gn-test-check-mock-partial --backend_addr localhost:5556
+    gn-test-check-mock-partial --server_http_debug_port 1234
 
-  # Run command and test the -X for a manually provided grpcwebproxy.
-  BT_EXPECT gn-test-run-bash-script "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/femu.sh" \
-    -x 1234 -X "${BT_TEMP_DIR}/mocked/grpcwebproxy-dir"
+    # Run command and test the -X for a manually provided grpcwebproxy.
+    BT_EXPECT gn-test-run-bash-script "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/femu.sh" \
+      -x 1234 -X "${BT_TEMP_DIR}/mocked/grpcwebproxy-dir"
 
-  # Verify that the grpcwebproxy binary is called correctly
-  # shellcheck disable=SC1090
-  source "${BT_TEMP_DIR}/mocked/grpcwebproxy-dir/grpcwebproxy.mock_state"
-  gn-test-check-mock-partial --backend_addr localhost:5556
-  gn-test-check-mock-partial --server_http_debug_port 1234
+    # Verify that the grpcwebproxy binary is called correctly
+    # shellcheck disable=SC1090
+    source "${BT_TEMP_DIR}/mocked/grpcwebproxy-dir/grpcwebproxy.mock_state"
+    gn-test-check-mock-partial --backend_addr localhost:5556
+    gn-test-check-mock-partial --server_http_debug_port 1234
+  fi
 }
 
 # Test initialization. Note that we copy various tools/devshell files and need to replicate the
