@@ -354,22 +354,16 @@ class Performance {
   /// This converts the results to Catapult format.  If uploading to Catapult is
   /// enabled, this puts the resulting file in a directory with a filename
   /// indicating that it should be uploaded.
-  ///
-  /// TODO(fxb/23091): Remove the uploadToCatapultDashboard argument once all
-  /// the performance tests are moved over to using SL4F and this argument is
-  /// unused.
-  Future<void> convertResults(
-      String converterPath, File result, Map<String, String> environment,
-      {bool uploadToCatapultDashboard = true}) async {
+  Future<void> convertResults(String converterPath, File result,
+      Map<String, String> environment) async {
     _log.info('Converting the results into the catapult format');
-
-    bool uploadEnabled = uploadToCatapultDashboard;
 
     var master = environment[_catapultDashboardMasterVarName];
     var bot = environment[_catapultDashboardBotVarName];
     final buildbucketId = environment[_buildbucketIdVarName];
     final buildCreateTime = environment[_buildCreateTimeVarName];
 
+    bool uploadEnabled = true;
     String logurl;
     int timestamp;
     if (master == null && bot == null) {

@@ -134,8 +134,7 @@ void main() {
         'netstack_iperf_results', 'fuchsiaperf.json', jsonEncode(results));
     // Translate fuchsiaperf.json to Catapult format.
     await helper.performance.convertResults('runtime_deps/catapult_converter',
-        fuchsiaperfFile, Platform.environment,
-        uploadToCatapultDashboard: false);
+        fuchsiaperfFile, Platform.environment);
   }
 
   Future<void> runIperfClientTests(PerfTestHelper helper, Protocol proto,

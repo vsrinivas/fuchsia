@@ -46,13 +46,8 @@ class PerfTestHelper {
     final localResultsFile =
         await storage.dumpFile(resultsFile, 'results', 'fuchsiaperf.json');
 
-    // TODO(fxb/23091): Enable uploading to the Catapult dashboard after
-    // this test has been removed from the old benchmarks runner (in
-    // src/tests/benchmarks), and after we are able to test via trybots
-    // what would get uploaded (TODO(fxb/39941)).
     await performance.convertResults('runtime_deps/catapult_converter',
-        localResultsFile, Platform.environment,
-        uploadToCatapultDashboard: false);
+        localResultsFile, Platform.environment);
   }
 }
 
