@@ -339,7 +339,11 @@ static int mount_common(const char* disk_path, const char* mount_path, disk_form
   // fd consumed by mount. By default, mount waits until the filesystem is
   // ready to accept commands.
   zx_status_t status;
-  if ((status = mount(fd.release(), mount_path, fs_type, &default_mount_options,
+  mount_options_t options = default_mount_options;
+  // Uncomment the following line to force an fsck at the end of every transaction (where
+  // supported).
+  // options.fsck_after_every_transaction = true;
+  if ((status = mount(fd.release(), mount_path, fs_type, &options,
                       launch_stdio_async)) != ZX_OK) {
     fprintf(stderr, "Could not mount %s filesystem\n", disk_format_string(fs_type));
     return status;

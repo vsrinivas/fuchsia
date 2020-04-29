@@ -29,6 +29,9 @@ typedef struct init_options {
   bool enable_pager;
   // Write files uncompressed. Disables compression (if supported).
   bool write_uncompressed;
+  // If true, run fsck after every transaction (if supported). This is for testing/debugging
+  // purposes.
+  bool fsck_after_every_transaction;
   // Provide a launch callback function pointer for configuring how the underlying filesystem
   // process is launched.
   LaunchCallback callback;

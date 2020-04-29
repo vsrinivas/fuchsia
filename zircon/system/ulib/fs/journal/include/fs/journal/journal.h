@@ -95,9 +95,11 @@ class Journal final : public fit::executor {
   // Transmits operations contains metadata, which must be updated atomically with respect
   // to power failures if journaling is enabled.
   //
-  // Multiple requests to WriteMetadata are ordered. They are ordered by the invocation
-  // of the |WriteMetadata| method, not by the completion of the returned promise.
-  Promise WriteMetadata(fbl::Vector<storage::UnbufferedOperation> operations);
+  // Multiple requests to WriteMetadata are ordered. They are ordered by the invocation of the
+  // |WriteMetadata| method, not by the completion of the returned promise. If provided, |callback|
+  // will be invoked when the metadata has been submitted to the underlying device.
+  Promise WriteMetadata(fbl::Vector<storage::UnbufferedOperation> operations,
+                        fit::callback<void(zx_status_t)> callback = {});
 
   // Transmits operations containing trim requests, which must be ordered with respect
   // to metadata writes.

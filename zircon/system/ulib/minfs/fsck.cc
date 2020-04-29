@@ -792,6 +792,8 @@ zx_status_t MinfsChecker::Create(std::unique_ptr<Bcache> bc, const FsckOptions& 
     options.repair_filesystem = false;
     options.use_journal = false;
   }
+  options.fsck_after_every_transaction = false;
+  options.readonly = fsck_options.read_only;
   std::unique_ptr<Minfs> fs;
   zx_status_t status = Minfs::Create(std::move(bc), options, &fs);
   if (status != ZX_OK) {

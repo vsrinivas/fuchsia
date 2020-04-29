@@ -128,9 +128,9 @@ zx_status_t CheckSlices(const Superblock* info, size_t blocks_per_slice,
     size_t fvm_count = ranges[i].count;
 
     if (!ranges[i].allocated || fvm_count < minfs_count) {
-      // Currently, since Minfs can only grow new slices, it should not be possible for
-      // the FVM to report a slice size smaller than what is reported by Minfs. In this
-      // case, automatically fail without trying to resolve the situation, as it is
+      // Currently, since Minfs can only grow new slices (except for the one instance below), it
+      // should not be possible for the FVM to report a slice size smaller than what is reported by
+      // Minfs. In this case, automatically fail without trying to resolve the situation, as it is
       // possible that Minfs structures are allocated in the slices that have been lost.
       FS_TRACE_ERROR("minfs: mismatched slice count\n");
       return ZX_ERR_IO_DATA_INTEGRITY;
@@ -561,12 +561,18 @@ void Minfs::CommitTransaction(std::unique_ptr<Transaction> transaction) {
   if (!data_operations.is_empty() && !metadata_operations.is_empty()) {
     journal_->schedule_task(
         journal_->WriteData(std::move(data_operations))
-        .and_then(journal_->WriteMetadata(std::move(metadata_operations)))
+        .and_then(journal_->WriteMetadata(std::move(metadata_operations),
+                                          [this](zx_status_t status){
+                                            MaybeFsckAtEndOfTransaction(status);
+                                          })
         .inspect(ReleaseObject(transaction->RemovePinnedVnodes()))
-        .inspect(ReleaseObject(transaction->block_reservation().TakePendingDeallocations())));
+        .inspect(ReleaseObject(transaction->block_reservation().TakePendingDeallocations()))));
   } else if (!metadata_operations.is_empty()) {
     journal_->schedule_task(
-        journal_->WriteMetadata(std::move(metadata_operations))
+        journal_->WriteMetadata(std::move(metadata_operations),
+                                [this](zx_status_t status){
+                                  MaybeFsckAtEndOfTransaction(status);
+                                })
         .inspect(ReleaseObject(transaction->RemovePinnedVnodes()))
         .inspect(ReleaseObject(transaction->block_reservation().TakePendingDeallocations())));
   } else if (!data_operations.is_empty()) {
@@ -577,6 +583,20 @@ void Minfs::CommitTransaction(std::unique_ptr<Transaction> transaction) {
   }
 #else
   bc_->RunRequests(transaction->TakeOperations());
+#endif
+}
+
+void Minfs::MaybeFsckAtEndOfTransaction(zx_status_t status) {
+#ifdef __Fuchsia__
+  if (status == ZX_OK && mount_options_.fsck_after_every_transaction) {
+    bc_->Pause();
+    {
+      std::unique_ptr<Bcache> bcache;
+      ZX_ASSERT(Bcache::Create(bc_->device(), bc_->Maxblk(), &bcache) == ZX_OK);
+      ZX_ASSERT(Fsck(std::move(bcache), FsckOptions{ .read_only = true }, &bcache) == ZX_OK);
+    }
+    bc_->Resume();
+  }
 #endif
 }
 
@@ -593,23 +613,25 @@ void Minfs::Sync(SyncCallback closure) {
 #ifdef __Fuchsia__
 Minfs::Minfs(std::unique_ptr<Bcache> bc, std::unique_ptr<SuperblockManager> sb,
              std::unique_ptr<Allocator> block_allocator, std::unique_ptr<InodeManager> inodes,
-             uint64_t fs_id)
+             uint64_t fs_id, const MountOptions& mount_options)
     : bc_(std::move(bc)),
       sb_(std::move(sb)),
       block_allocator_(std::move(block_allocator)),
       inodes_(std::move(inodes)),
       fs_id_(fs_id),
-      limits_(sb_->Info()) {}
+      limits_(sb_->Info()),
+      mount_options_(mount_options) {}
 #else
 Minfs::Minfs(std::unique_ptr<Bcache> bc, std::unique_ptr<SuperblockManager> sb,
              std::unique_ptr<Allocator> block_allocator, std::unique_ptr<InodeManager> inodes,
-             BlockOffsets offsets)
+             BlockOffsets offsets, const MountOptions& mount_options)
     : bc_(std::move(bc)),
       sb_(std::move(sb)),
       block_allocator_(std::move(block_allocator)),
       inodes_(std::move(inodes)),
       offsets_(std::move(offsets)),
-      limits_(sb_->Info()) {}
+      limits_(sb_->Info()),
+      mount_options_(mount_options) {}
 #endif
 
 Minfs::~Minfs() { vnode_hash_.clear(); }
@@ -1068,6 +1090,7 @@ void InitializeDirectory(void* bdata, ino_t ino_self, ino_t ino_parent) {
 
 zx_status_t Minfs::ReadInitialBlocks(const Superblock& info, std::unique_ptr<Bcache> bc,
                                      std::unique_ptr<SuperblockManager> sb,
+                                     const MountOptions& mount_options,
                                      std::unique_ptr<Minfs>* out_minfs) {
 #ifdef __Fuchsia__
   const blk_t abm_start_block = sb->Info().abm_block;
@@ -1141,11 +1164,12 @@ zx_status_t Minfs::ReadInitialBlocks(const Superblock& info, std::unique_ptr<Bca
   }
 
   *out_minfs = std::unique_ptr<Minfs>(
-      new Minfs(std::move(bc), std::move(sb), std::move(block_allocator), std::move(inodes), id));
+      new Minfs(std::move(bc), std::move(sb), std::move(block_allocator), std::move(inodes), id,
+                mount_options));
 #else
   *out_minfs =
       std::unique_ptr<Minfs>(new Minfs(std::move(bc), std::move(sb), std::move(block_allocator),
-                                       std::move(inodes), std::move(offsets)));
+                                       std::move(inodes), std::move(offsets), mount_options));
 #endif
   return ZX_OK;
 }
@@ -1205,7 +1229,7 @@ zx_status_t Minfs::Create(std::unique_ptr<Bcache> bc, const MountOptions& option
   }
 
   std::unique_ptr<Minfs> fs;
-  status = Minfs::ReadInitialBlocks(info, std::move(bc), std::move(sb), &fs);
+  status = Minfs::ReadInitialBlocks(info, std::move(bc), std::move(sb), options, &fs);
   if (status != ZX_OK) {
     return status;
   }
@@ -1218,7 +1242,7 @@ zx_status_t Minfs::Create(std::unique_ptr<Bcache> bc, const MountOptions& option
       FS_TRACE_ERROR("minfs: Cannot initialize journal\n");
       return status;
     }
-  } else {
+  } else if (!options.readonly) {
     status = fs->InitializeUnjournalledWriteback();
     if (status != ZX_OK) {
       FS_TRACE_ERROR("minfs: Cannot initialize non-journal writeback\n");
@@ -1255,12 +1279,12 @@ zx_status_t Minfs::Create(std::unique_ptr<Bcache> bc, const MountOptions& option
       return status;
     }
   }
-  if (options.readonly_after_initialization) {
+  if (!options.readonly && options.readonly_after_initialization) {
     // The filesystem should still be "writable"; we set the dirty bit while
     // purging the unlinked list. Invoking StopWriteback here unsets the dirty bit.
     fs->StopWriteback();
   }
-  fs->SetReadonly(options.readonly_after_initialization);
+  fs->SetReadonly(options.readonly || options.readonly_after_initialization);
   fs->mount_state_ = {
       .readonly_after_initialization = options.readonly_after_initialization,
       .collect_metrics = options.metrics,
@@ -1270,6 +1294,9 @@ zx_status_t Minfs::Create(std::unique_ptr<Bcache> bc, const MountOptions& option
   };
 #endif
 
+  if (options.fsck_after_every_transaction) {
+    FS_TRACE_ERROR("minfs: Will fsck after every transaction\n");
+  }
   *out = std::move(fs);
   return ZX_OK;
 }

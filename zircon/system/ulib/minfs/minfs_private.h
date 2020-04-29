@@ -274,6 +274,8 @@ class Minfs :
   // Complete a transaction by enqueueing its WritebackWork to the WritebackQueue.
   void CommitTransaction(std::unique_ptr<Transaction> transaction) final;
 
+  void MaybeFsckAtEndOfTransaction(zx_status_t status);
+
 #ifdef __Fuchsia__
   // Returns the capacity of the writeback buffer, in blocks.
   size_t WritebackCapacity() const {
@@ -384,17 +386,19 @@ class Minfs :
   Allocator& GetBlockAllocator() final { return *block_allocator_; }
   Allocator& GetInodeAllocator() final { return inodes_->inode_allocator(); }
 
+  const MountOptions& mount_options() { return mount_options_; }
+
  private:
   using HashTable = fbl::HashTable<ino_t, VnodeMinfs*>;
 
 #ifdef __Fuchsia__
   Minfs(std::unique_ptr<Bcache> bc, std::unique_ptr<SuperblockManager> sb,
         std::unique_ptr<Allocator> block_allocator, std::unique_ptr<InodeManager> inodes,
-        uint64_t fs_id);
+        uint64_t fs_id, const MountOptions& mount_options);
 #else
   Minfs(std::unique_ptr<Bcache> bc, std::unique_ptr<SuperblockManager> sb,
         std::unique_ptr<Allocator> block_allocator, std::unique_ptr<InodeManager> inodes,
-        BlockOffsets offsets);
+        BlockOffsets offsets, const MountOptions& mount_options);
 #endif
 
   // Internal version of VnodeLookup which may also return unlinked vnodes.
@@ -416,6 +420,7 @@ class Minfs :
   // Reads blocks from disk. Only to be called during "construction".
   static zx_status_t ReadInitialBlocks(const Superblock& info, std::unique_ptr<Bcache> bc,
                                        std::unique_ptr<SuperblockManager> sb,
+                                       const MountOptions& mount_options,
                                        std::unique_ptr<Minfs>* out_minfs);
 
   // Updates the clean bit and oldest revision in the super block.
@@ -447,6 +452,7 @@ class Minfs :
   MinfsMetrics metrics_ = {};
   std::unique_ptr<fs::Journal> journal_;
   uint64_t fs_id_ = 0;
+  // TODO(fxb/51057): Git rid of MountState.
   MountState mount_state_ = {};
 #else
   // Store start block + length for all extents. These may differ from info block for
@@ -455,6 +461,7 @@ class Minfs :
 #endif
 
   TransactionLimits limits_;
+  MountOptions mount_options_;
 };
 
 #ifdef __Fuchsia__

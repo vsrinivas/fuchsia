@@ -42,6 +42,10 @@ zx_status_t ReconstructAllocCounts(fs::TransactionHandler* transaction_handler,
 struct FsckOptions {
   // If true, try and repair the file-system if necessary.
   bool repair = false;
+
+  // If true, treat the volume as read-only and refrain from sending any writes to the volume,
+  // including marking the volume as cleanly unmounted.
+  bool read_only = false;
 };
 
 // Updates generation_count and checksum of the superblock.

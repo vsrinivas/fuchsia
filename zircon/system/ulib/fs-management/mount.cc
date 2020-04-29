@@ -105,6 +105,7 @@ zx_status_t StartFilesystem(fbl::unique_fd device_fd, disk_format_t df,
       .enable_journal = options->enable_journal,
       .enable_pager = options->enable_pager,
       .write_uncompressed = options->write_uncompressed,
+      .fsck_after_every_transaction = options->fsck_after_every_transaction,
       .callback = cb,
   };
 
@@ -135,6 +136,7 @@ const mount_options_t default_mount_options = {
     .enable_pager = false,
     .write_uncompressed = false,
     .register_fs = true,
+    .fsck_after_every_transaction = false,
 };
 
 const mkfs_options_t default_mkfs_options = {

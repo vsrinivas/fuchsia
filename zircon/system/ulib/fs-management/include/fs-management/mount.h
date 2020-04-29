@@ -27,6 +27,8 @@ typedef struct mount_options {
   bool write_uncompressed;
   // If true will register with /svc/fuchsia.fshost.Registry.
   bool register_fs;
+  // If set, run fsck after every transaction.
+  bool fsck_after_every_transaction;
 } mount_options_t;
 
 __EXPORT

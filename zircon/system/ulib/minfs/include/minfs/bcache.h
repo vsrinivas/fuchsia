@@ -12,6 +12,7 @@
 #include <inttypes.h>
 
 #include <atomic>
+#include <shared_mutex>
 
 #include <fbl/algorithm.h>
 #include <fbl/array.h>
@@ -58,11 +59,17 @@ class Bcache : public fs::DeviceTransactionHandler, public storage::VmoidRegistr
   ////////////////
   // fs::TransactionHandler interface.
 
+  zx_status_t RunRequests(
+      const std::vector<storage::BufferedOperation>& operations) override {
+    std::shared_lock lock(mutex_);
+    return DeviceTransactionHandler::RunRequests(operations);
+  }
+
   uint64_t BlockNumberToDevice(uint64_t block_num) const final {
     return block_num * kMinfsBlockSize / info_.block_size;
   }
 
-  block_client::BlockDevice* GetDevice() final { return device_.get(); }
+  block_client::BlockDevice* GetDevice() final { return device_; }
 
   uint32_t DeviceBlockSize() const;
 
@@ -81,30 +88,43 @@ class Bcache : public fs::DeviceTransactionHandler, public storage::VmoidRegistr
   ////////////////
   // Other methods.
 
-  // This factory allows building this object from a BlockDevice.
+  // This factory allows building this object from a BlockDevice. Bcache can take ownership of the
+  // device (the first Create method), or not (the second Create method).
   static zx_status_t Create(std::unique_ptr<block_client::BlockDevice> device, uint32_t max_blocks,
+                            std::unique_ptr<Bcache>* out);
+
+  static zx_status_t Create(block_client::BlockDevice* device, uint32_t max_blocks,
                             std::unique_ptr<Bcache>* out);
 
   // Returns the maximum number of available blocks,
   // assuming the filesystem is non-resizable.
   uint32_t Maxblk() const { return max_blocks_; }
 
-  block_client::BlockDevice* device() { return device_.get(); }
-  const block_client::BlockDevice* device() const { return device_.get(); }
+  block_client::BlockDevice* device() { return device_; }
+  const block_client::BlockDevice* device() const { return device_; }
 
   zx_status_t Sync();
 
+  // Blocks all I/O operations to the underlying device (that go via the RunRequests method). This
+  // does *not* block operations that go directly to the device.
+  void Pause();
+
+  // Resumes all I/O operations paused by the Pause method.
+  void Resume();
+
  private:
-  Bcache(std::unique_ptr<block_client::BlockDevice> device, uint32_t max_blocks);
+  Bcache(block_client::BlockDevice* device, uint32_t max_blocks);
 
   // Used during initialization of this object.
   zx_status_t VerifyDeviceInfo();
 
   uint32_t max_blocks_;
   fuchsia_hardware_block_BlockInfo info_ = {};
-  std::unique_ptr<block_client::BlockDevice> device_;
+  std::unique_ptr<block_client::BlockDevice> owned_device_;  // The device, if owned.
+  block_client::BlockDevice* device_;  // Pointer to the device, irrespective of ownership.
   // This buffer is used as internal scratch space for the "Readblk/Writeblk" methods.
   storage::VmoBuffer buffer_;
+  std::shared_mutex mutex_;
 };
 
 #else  // __Fuchsia__

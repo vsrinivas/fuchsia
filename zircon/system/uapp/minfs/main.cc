@@ -117,13 +117,14 @@ int usage(const std::vector<Command>& commands) {
           "usage: minfs [ <option>* ] <command> [ <arg>* ]\n"
           "\n"
           "options:\n"
-          "    -v|--verbose                  Some debug messages\n"
-          "    -r|--readonly                 Mount filesystem read-only (after repair)\n"
-          "    -j|--journal                  Enable journaling for writeback\n"
-          "    -m|--metrics                  Collect filesystem metrics\n"
-          "    -s|--fvm_data_slices SLICES   When mkfs on top of FVM,\n"
-          "                                  preallocate |SLICES| slices of data. \n"
-          "    -h|--help                     Display this message\n"
+          "    -v|--verbose                    Some debug messages\n"
+          "    -r|--readonly                   Mount filesystem read-only (after repair)\n"
+          "    -j|--journal                    Enable journaling for writeback\n"
+          "    -m|--metrics                    Collect filesystem metrics\n"
+          "    -s|--fvm_data_slices SLICES     When mkfs on top of FVM,\n"
+          "                                    preallocate |SLICES| slices of data. \n"
+          "    --fsck_after_every_transaction  Run fsck after every transaction.\n"
+          "    -h|--help                       Display this message\n"
           "\n"
           "On Fuchsia, MinFS takes the block device argument by handle.\n"
           "This can make 'minfs' commands hard to invoke from command line.\n"
@@ -180,6 +181,7 @@ int main(int argc, char** argv) {
         {"journal", no_argument, nullptr, 'j'},
         {"verbose", no_argument, nullptr, 'v'},
         {"fvm_data_slices", required_argument, nullptr, 's'},
+        {"fsck_after_every_transaction", no_argument, nullptr, 'f'},
         {"help", no_argument, nullptr, 'h'},
         {nullptr, 0, nullptr, 0},
     };
@@ -203,6 +205,9 @@ int main(int argc, char** argv) {
         break;
       case 's':
         options.fvm_data_slices = static_cast<uint32_t>(strtoul(optarg, nullptr, 0));
+        break;
+      case 'f':
+        options.fsck_after_every_transaction = true;
         break;
       case 'h':
       default:

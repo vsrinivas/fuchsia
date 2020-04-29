@@ -114,6 +114,8 @@ class ConsistencyCheckerFixtureVerbose : public zxtest::Test {
   Minfs& fs() { return *fs_; }
   std::unique_ptr<Minfs> TakeFs() { return std::move(fs_); }
 
+  void MarkDirectoryEntryMissing(size_t offset, std::unique_ptr<Bcache>* bcache);
+
  private:
   std::unique_ptr<Minfs> fs_;
 };
@@ -239,41 +241,35 @@ TEST_F(ConsistencyCheckerFixtureVerbose, PurgedFileWithBadMagic) {
   ASSERT_NOT_OK(Fsck(std::move(bcache), FsckOptions{ .repair = true }, &bcache));
 }
 
-TEST_F(ConsistencyCheckerFixtureVerbose, MissingDotEntry) {
+void ConsistencyCheckerFixtureVerbose::MarkDirectoryEntryMissing(
+    size_t offset, std::unique_ptr<Bcache>* bcache) {
+  blk_t root_dir_block;
   {
     fbl::RefPtr<VnodeMinfs> root;
-    EXPECT_OK(fs().VnodeGet(&root, kMinfsRootIno));
-    // Read the block containing the directory entry.
-    uint8_t data[kMinfsBlockSize];
-    Bcache& bcache = *fs().GetMutableBcache();
-    blk_t root_dir_block = root->GetInode()->dnum[0] + fs().Info().dat_block;
-    ASSERT_OK(bcache.Readblk(root_dir_block, data));
-    Dirent* de = reinterpret_cast<Dirent*>(data);
-    de->ino = 0;
-    ASSERT_OK(bcache.Writeblk(root_dir_block, data));
+    EXPECT_OK(fs_->VnodeGet(&root, kMinfsRootIno));
+    root_dir_block = root->GetInode()->dnum[0] + fs().Info().dat_block;
   }
 
+  destroy_fs(bcache);
+
+  uint8_t data[kMinfsBlockSize];
+  ASSERT_OK((*bcache)->Readblk(root_dir_block, data));
+  Dirent* de = reinterpret_cast<Dirent*>(&data[0] + offset);
+  de->ino = 0;
+  ASSERT_OK((*bcache)->Writeblk(root_dir_block, data));
+}
+
+TEST_F(ConsistencyCheckerFixtureVerbose, MissingDotEntry) {
   std::unique_ptr<Bcache> bcache;
-  destroy_fs(&bcache);
+  MarkDirectoryEntryMissing(0, &bcache);
+
   ASSERT_NOT_OK(Fsck(std::move(bcache), FsckOptions{ .repair = true }, &bcache));
 }
 
 TEST_F(ConsistencyCheckerFixtureVerbose, MissingDotDotEntry) {
-  {
-    fbl::RefPtr<VnodeMinfs> root;
-    EXPECT_OK(fs().VnodeGet(&root, kMinfsRootIno));
-    // Read the block containing the directory entry.
-    uint8_t data[kMinfsBlockSize];
-    Bcache& bcache = *fs().GetMutableBcache();
-    blk_t root_dir_block = root->GetInode()->dnum[0] + fs().Info().dat_block;
-    ASSERT_OK(bcache.Readblk(root_dir_block, data));
-    Dirent* de = reinterpret_cast<Dirent*>(&data[0] + DirentSize(1));
-    de->ino = 0;
-    ASSERT_OK(bcache.Writeblk(root_dir_block, data));
-  }
-
   std::unique_ptr<Bcache> bcache;
-  destroy_fs(&bcache);
+  MarkDirectoryEntryMissing(DirentSize(1), &bcache);
+
   ASSERT_NOT_OK(Fsck(std::move(bcache), FsckOptions{ .repair = true }, &bcache));
 }
 

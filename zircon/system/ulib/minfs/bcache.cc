@@ -28,14 +28,13 @@
 
 namespace minfs {
 
-// Static.
 std::unique_ptr<block_client::BlockDevice> Bcache::Destroy(std::unique_ptr<Bcache> bcache) {
   {
     // Destroy the VmoBuffer before extracting the underlying device, as it needs
     // to de-register itself from the underlying block device to be terminated.
     __UNUSED auto unused = std::move(bcache->buffer_);
   }
-  return std::move(bcache->device_);
+  return std::move(bcache->owned_device_);
 }
 
 zx_status_t Bcache::Readblk(blk_t bno, void* data) {
@@ -101,10 +100,18 @@ zx_status_t FdToBlockDevice(fbl::unique_fd& fd, std::unique_ptr<block_client::Bl
   return ZX_OK;
 }
 
-// Static.
 zx_status_t Bcache::Create(std::unique_ptr<block_client::BlockDevice> device, uint32_t max_blocks,
                            std::unique_ptr<Bcache>* out) {
-  std::unique_ptr<Bcache> bcache(new Bcache(std::move(device), max_blocks));
+  zx_status_t status = Create(device.get(), max_blocks, out);
+  if (status == ZX_OK) {
+    (*out)->owned_device_ = std::move(device);
+  }
+  return status;
+}
+
+zx_status_t Bcache::Create(block_client::BlockDevice* device, uint32_t max_blocks,
+                           std::unique_ptr<Bcache>* out) {
+  std::unique_ptr<Bcache> bcache(new Bcache(device, max_blocks));
 
   zx_status_t status =
       bcache->buffer_.Initialize(bcache.get(), 1, kMinfsBlockSize, "scratch-block");
@@ -123,8 +130,8 @@ zx_status_t Bcache::Create(std::unique_ptr<block_client::BlockDevice> device, ui
 
 uint32_t Bcache::DeviceBlockSize() const { return info_.block_size; }
 
-Bcache::Bcache(std::unique_ptr<block_client::BlockDevice> device, uint32_t max_blocks)
-    : max_blocks_(max_blocks), device_(std::move(device)) {}
+Bcache::Bcache(block_client::BlockDevice* device, uint32_t max_blocks)
+    : max_blocks_(max_blocks), device_(device) {}
 
 zx_status_t Bcache::VerifyDeviceInfo() {
   zx_status_t status = device_->BlockGetInfo(&info_);
@@ -139,6 +146,14 @@ zx_status_t Bcache::VerifyDeviceInfo() {
     return ZX_ERR_BAD_STATE;
   }
   return ZX_OK;
+}
+
+void Bcache::Pause() {
+  mutex_.lock();
+}
+
+void Bcache::Resume() {
+  mutex_.unlock();
 }
 
 }  // namespace minfs

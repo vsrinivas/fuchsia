@@ -106,7 +106,8 @@ Journal::Promise Journal::WriteData(fbl::Vector<storage::UnbufferedOperation> op
   }
 }
 
-Journal::Promise Journal::WriteMetadata(fbl::Vector<storage::UnbufferedOperation> operations) {
+Journal::Promise Journal::WriteMetadata(fbl::Vector<storage::UnbufferedOperation> operations,
+                                        fit::callback<void(zx_status_t)> callback) {
   if (!journal_buffer_) {
     ZX_DEBUG_ASSERT(!writer_.IsJournalingEnabled());
     return WriteData(std::move(operations));
@@ -142,8 +143,13 @@ Journal::Promise Journal::WriteMetadata(fbl::Vector<storage::UnbufferedOperation
 
   // Return the deferred action to write the metadata operations to the device.
   auto promise =
-      fit::make_promise([this, work = std::move(work)]() mutable -> fit::result<void, zx_status_t> {
-        return writer_.WriteMetadata(std::move(work));
+      fit::make_promise([this, work = std::move(work), callback = std::move(callback)]() mutable
+                        -> fit::result<void, zx_status_t> {
+          fit::result<void, zx_status_t> result = writer_.WriteMetadata(std::move(work));
+          if (callback) {
+            callback(result.is_ok() ? ZX_OK : result.error());
+          }
+          return result;
       });
 
   // Ensure all metadata operations are completed in order.

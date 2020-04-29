@@ -60,6 +60,11 @@ enum class ServeLayout {
 };
 
 struct MountOptions {
+  // When true, no changes are made to the file-system, including marking the volume as clean. This
+  // differs from readonly_after_initialization which might replay the journal and mark the volume
+  // as clean.
+  // TODO(fxb/51056): Unify the readonly and readonly_after_initialization flags.
+  bool readonly = false;
   // Determines whether the filesystem will be accessible as read-only.
   // This does not mean that access to the block device is exclusively read-only;
   // the filesystem can still perform internal operations (like journal replay)
@@ -74,6 +79,8 @@ struct MountOptions {
   bool repair_filesystem = true;
   // Determines if the journal will be used to perform writeback.
   bool use_journal = true;
+  // For testing only: if true, run fsck after every transaction.
+  bool fsck_after_every_transaction = false;
 
   // Number of slices to preallocate for data when the filesystem is created.
   uint32_t fvm_data_slices = 1;
