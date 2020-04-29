@@ -9,7 +9,6 @@ import (
 	"log"
 	"os"
 	"path"
-	"strings"
 	"text/template"
 	"time"
 )
@@ -19,19 +18,23 @@ var fidlTmpl = template.Must(template.New("fidlTmpl").Parse(
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// GENERATED FILE: Regen with out/default/host-tools/regen_fidl_benchmark_suite
+
 library benchmarkfidl;
 
-{{ .Definitions }}
+{{ range .Definitions }}
+{{ . }}
+{{ end -}}
 `))
 
 func writeFidl(w io.Writer, definitions []string) error {
-	allDefs := strings.ReplaceAll(
-		strings.Join(definitions, "\n\n"),
-		"\t",
-		"    ")
+	var formattedDefs []string
+	for _, def := range definitions {
+		formattedDefs = append(formattedDefs, format(0, def))
+	}
 	return fidlTmpl.Execute(w, map[string]interface{}{
 		"Year":        time.Now().Year(),
-		"Definitions": allDefs,
+		"Definitions": formattedDefs,
 	})
 }
 

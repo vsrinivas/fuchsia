@@ -17,4 +17,5 @@ benchmark_suite_gidl_files = [
   "//src/tests/benchmarks/fidl/benchmark_suite/table_all_unset.gidl",
   "//src/tests/benchmarks/fidl/benchmark_suite/table_single_set.gidl",
   "//src/tests/benchmarks/fidl/benchmark_suite/table_reserved_last_set.gidl",
+  "//src/tests/benchmarks/fidl/benchmark_suite/union.gidl",
 ]

@@ -7,6 +7,7 @@ package main
 func allFidlFiles() []FidlFile {
 	return []FidlFile{
 		ByteArrayFidl,
+		UnionFidl,
 	}
 }
 
@@ -15,5 +16,6 @@ func allGidlFiles() []GidlFile {
 		ByteArrayGidl,
 		GpuMagmaGidl,
 		HardwareDisplayGidl,
+		UnionGidl,
 	}
 }

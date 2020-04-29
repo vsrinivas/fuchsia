@@ -19,6 +19,8 @@ var gidlTmpl = template.Must(template.New("gidlTmpl").Parse(
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// GENERATED FILE: Regen with out/default/host-tools/regen_fidl_benchmark_suite
+
 {{- range .Benchmarks }}
 
 benchmark("{{ .Name }}") {
@@ -57,43 +59,6 @@ func formatBindingList(bindings []Binding) string {
 	return "[" + strings.Join(strs, ", ") + "]"
 }
 
-// Strip out existing indentation and use count of open braces to place new indentation.
-func fixValueIndentation(value string) string {
-	indentationMark := "    "
-	nIndent := 1
-	var builder strings.Builder
-
-	runes := []rune(strings.Trim(value, " \t\n"))
-	for i := 0; i < len(runes); i++ {
-		r := runes[i]
-		builder.WriteRune(r)
-		switch r {
-		case '{', '[':
-			nIndent++
-		case '}', ']':
-			nIndent--
-		case '\n':
-		loop:
-			for i+1 < len(runes) {
-				switch runes[i+1] {
-				case ' ', '\t':
-					i++
-				default:
-					break loop
-				}
-			}
-			effectiveIndent := nIndent
-			if i+1 < len(runes) && (runes[i+1] == '}' || runes[i+1] == ']') {
-				effectiveIndent--
-			}
-			if i+1 == len(runes) || runes[i+1] != '\n' {
-				builder.WriteString(strings.Repeat(indentationMark, effectiveIndent))
-			}
-		}
-	}
-	return builder.String()
-}
-
 func genGidlFile(filepath string, gidl GidlFile) error {
 	var results []gidlResult
 	for _, benchmark := range gidl.Benchmarks {
@@ -103,7 +68,7 @@ func genGidlFile(filepath string, gidl GidlFile) error {
 		}
 		results = append(results, gidlResult{
 			Name:      benchmark.Name,
-			Value:     fixValueIndentation(value),
+			Value:     format(1, value),
 			Allowlist: formatBindingList(benchmark.Allowlist),
 			Denylist:  formatBindingList(benchmark.Denylist),
 		})

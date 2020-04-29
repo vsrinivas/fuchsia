@@ -20,6 +20,7 @@ benchmark_suite_fidl_files = [
   "struct_field.test.fidl",
   "table.test.fidl",
   "table_reserved.test.fidl",
+  "union.test.fidl",
 ]
 
 fidl("benchmark_suite_fidl") {
