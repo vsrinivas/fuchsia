@@ -44,12 +44,13 @@ pub fn with_tls_encoded<T, E: From<Error>>(
 }
 
 /// Rounds `x` up if necessary so that it is a multiple of `align`.
+///
+/// Requires `align` to be a (nonzero) power of two.
 pub fn round_up_to_align(x: usize, align: usize) -> usize {
-    if align == 0 {
-        x
-    } else {
-        ((x + align - 1) / align) * align
-    }
+    debug_assert_ne!(align, 0);
+    debug_assert_eq!(align & (align - 1), 0);
+    // https://en.wikipedia.org/wiki/Data_structure_alignment#Computing_padding
+    (x + align - 1) & !(align - 1)
 }
 
 /// Split off the first element from a slice.
@@ -603,7 +604,7 @@ impl<'a> Decoder<'a> {
 /// A trait for specifying the inline layout of an encoded object.
 pub trait Layout {
     /// Returns the minimum required alignment of the inline portion of the
-    /// encoded object.
+    /// encoded object. It must be a (nonzero) power of two.
     fn inline_align(context: &Context) -> usize
     where
         Self: Sized;
@@ -2395,8 +2396,8 @@ pub struct TransactionMessage<'a, T> {
 }
 
 impl<T: Layout> Layout for TransactionMessage<'_, T> {
-    fn inline_align(_context: &Context) -> usize {
-        0
+    fn inline_align(context: &Context) -> usize {
+        cmp::max(<TransactionHeader as Layout>::inline_align(context), T::inline_align(context))
     }
     fn inline_size(context: &Context) -> usize {
         <TransactionHeader as Layout>::inline_size(context) + T::inline_size(context)
@@ -2577,7 +2578,7 @@ tuple_impls!(
 // In this case the response type is std::result::Result<(), i32>, but the ()
 // represents an empty struct, which has size 1. To accommodate this, the encode
 // and decode methods on std::result::Result handle the () case specially.
-impl_layout!((), align: 0, size: 0);
+impl_layout!((), align: 1, size: 0);
 
 impl Encodable for () {
     fn encode(&mut self, _: &mut Encoder<'_>) -> Result<()> {
