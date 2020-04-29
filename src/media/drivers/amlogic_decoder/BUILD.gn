@@ -148,6 +148,7 @@ if (target_cpu == "arm64") {
       "//sdk/banjo/ddk.protocol.platform.device",
       "//sdk/banjo/ddk.protocol.sysmem",
       "//sdk/banjo/ddk.protocol.tee",
+      "//sdk/fidl/fuchsia.tee",
       "//src/devices/bus/lib/device-protocol-platform-device",
       "//src/devices/lib/driver",
       "//zircon/public/lib/async-cpp",
@@ -163,7 +164,6 @@ if (target_cpu == "arm64") {
       "//zircon/public/lib/sync",
       "//zircon/public/lib/trace-driver",
       "//zircon/public/lib/zx",
-      "//zircon/system/fidl/fuchsia-tee",
       "//zircon/system/ulib/tee-client-api",
     ]
     deps = [

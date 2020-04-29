@@ -192,7 +192,6 @@ group("fidl") {
     "fuchsia-sysmem",
 #------------------
 #------------------
-    "fuchsia-tee",
 #------------------
 #------------------
     "fuchsia-tee-manager",
