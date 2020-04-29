@@ -75,24 +75,34 @@ TEST_F(DumpVisitorTest, ViewAndViewHolderDebugNames) {
 
   scenic::ViewRefPair view_ref_pair = scenic::ViewRefPair::New();
 
+  const std::string kViewDebugName = "test_debug_name1";
+  const std::string kViewHolderDebugName = "test_debug_name2";
+
   ViewPtr view = fxl::MakeRefCounted<View>(
       session(), next_id++, std::move(view_ref_pair.control_ref), std::move(view_ref_pair.view_ref),
-      "test_debug_name1", session()->shared_error_reporter(), session()->view_tree_updater(),
+      kViewDebugName, session()->shared_error_reporter(), session()->view_tree_updater(),
       session()->event_reporter()->GetWeakPtr());
 
   ViewHolderPtr view_holder = fxl::MakeRefCounted<ViewHolder>(
-      session(), session()->id(), next_id++, /* is_annotation */ false, "test_debug_name2",
+      session(), session()->id(), next_id++, /* is_annotation */ false, kViewHolderDebugName,
       session()->shared_error_reporter(), session()->view_tree_updater());
 
   std::ostringstream ostream;
   std::unordered_set<GlobalId, GlobalId::Hash> visited;
-  DumpVisitor::VisitorContext context(ostream, &visited);
+  std::map<GlobalId, std::string> view_debug_names;
+  std::map<GlobalId, std::string> view_holder_debug_names;
+  DumpVisitor::VisitorContext context(ostream, &visited, &view_debug_names,
+                                      &view_holder_debug_names);
   DumpVisitor visitor(std::move(context));
   visitor.Visit(view.get());
+  ASSERT_EQ(view_debug_names.size(), 1U);
+  EXPECT_EQ(view_holder_debug_names.size(), 0U);
+  EXPECT_EQ(view_debug_names.begin()->second, kViewDebugName);
 
-  EXPECT_TRUE(ostream.str().find("debug_name=test_debug_name1") != std::string::npos);
   visitor.Visit(view_holder.get());
-  EXPECT_TRUE(ostream.str().find("debug_name=test_debug_name2") != std::string::npos);
+  EXPECT_EQ(view_debug_names.size(), 1U);
+  ASSERT_EQ(view_holder_debug_names.size(), 1U);
+  EXPECT_EQ(view_holder_debug_names.begin()->second, kViewHolderDebugName);
 }
 
 }  // namespace test

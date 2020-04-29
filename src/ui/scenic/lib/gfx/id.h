@@ -19,7 +19,8 @@ struct GlobalId {
   GlobalId() : session_id(0), resource_id(0) {}
   GlobalId(SessionId s, ResourceId r) : session_id(s), resource_id(r) {}
 
-  explicit operator bool();
+  explicit operator bool() const;
+  explicit operator std::string() const;
 
   struct Hash {
     size_t operator()(const GlobalId& id) const {
@@ -36,6 +37,9 @@ struct GlobalId {
 
 bool operator==(const GlobalId& lhs, const GlobalId& rhs);
 bool operator!=(const GlobalId& lhs, const GlobalId& rhs);
+
+// |session_id| has priority over |resource_id|.
+bool operator<(const GlobalId& lhs, const GlobalId& rhs);
 
 std::ostream& operator<<(std::ostream& os, const GlobalId& value);
 

@@ -7,6 +7,7 @@
 
 #include <cstdint>
 #include <iosfwd>
+#include <map>
 #include <unordered_set>
 
 #include "src/ui/lib/escher/vk/image.h"
@@ -26,12 +27,27 @@ class DumpVisitor : public ResourceVisitor {
   // The VisitorContext is only valid during a DumpVisitor pass, and should not
   // be accessed outside of that.
   struct VisitorContext {
-    VisitorContext(std::ostream& out, std::unordered_set<GlobalId, GlobalId::Hash>* visited_list)
-        : output(out), visited(visited_list) {}
-    VisitorContext(const VisitorContext&& other) : output(other.output), visited(other.visited) {}
+    VisitorContext(std::ostream& out, std::unordered_set<GlobalId, GlobalId::Hash>* visited_list,
+                   std::map<GlobalId, std::string>* view_debug_name_map = nullptr,
+                   std::map<GlobalId, std::string>* view_holder_debug_name_map = nullptr)
+        : output(out),
+          visited(visited_list),
+          view_debug_names(view_debug_name_map),
+          view_holder_debug_names(view_holder_debug_name_map) {}
+    VisitorContext(const VisitorContext&& other)
+        : output(other.output),
+          visited(other.visited),
+          view_debug_names(other.view_debug_names),
+          view_holder_debug_names(other.view_holder_debug_names) {}
 
     std::ostream& output;
-    std::unordered_set<GlobalId, GlobalId::Hash>* visited;
+    std::unordered_set<GlobalId, GlobalId::Hash>* visited = nullptr;
+
+    // NOTE: these debug names used to be included in the text written to |output|.  However, they
+    // be considered to be PII which should not be allowed through privacy filters.  Instead, it is
+    // gathered separately so that it can be filtered separately from the rest of the scene dump.
+    std::map<GlobalId, std::string>* view_debug_names = nullptr;
+    std::map<GlobalId, std::string>* view_holder_debug_names = nullptr;
   };
 
   DumpVisitor(VisitorContext context);

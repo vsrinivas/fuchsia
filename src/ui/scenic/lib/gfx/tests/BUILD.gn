@@ -152,6 +152,7 @@ executable("unittests") {
     "hittest_accumulator_unittest.cc",
     "hittest_global_unittest.cc",
     "host_image_unittest.cc",
+    "id_unittest.cc",
     "image_pipe2_unittest.cc",
     "image_pipe_render_unittest.cc",
     "image_pipe_unittest.cc",

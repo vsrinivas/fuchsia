@@ -91,12 +91,18 @@ void DumpVisitor::Visit(ImagePipeBase* r) {
   EndItem();
 }
 
+// NOTE: unlike the other visited types, there is no Begin/EndItem() pair in this method, because
+// we don't want to add an additional layer of nesting when calling this from Visit(ViewNode*).
 void DumpVisitor::Visit(View* r) {
   ViewHolder* vh = r->view_holder();
   WriteProperty("view") << r->global_id() << "->" << (vh ? vh->global_id() : GlobalId());
-  WriteProperty("debug_name") << r->debug_name();
   WriteProperty("view_ref_koid") << r->view_ref_koid();
   VisitResource(r);
+
+  // Debug names are considered PII, therefore not included in the textual scene dump.
+  if (context_.view_debug_names && !r->debug_name().empty()) {
+    (*context_.view_debug_names)[r->global_id()] = r->debug_name();
+  }
 }
 
 void DumpVisitor::Visit(ViewNode* r) {
@@ -112,10 +118,14 @@ void DumpVisitor::Visit(ViewHolder* r) {
   BeginItem("ViewHolder", r);
   View* v = r->view();
   WriteProperty("view_holder") << r->global_id() << "->" << (v ? v->global_id() : GlobalId());
-  WriteProperty("debug_name") << r->debug_name();
   WriteProperty("focus_change") << r->GetViewProperties().focus_change;
   VisitNode(r);
   EndItem();
+
+  // Debug names are considered PII, therefore not included in the textual scene dump.
+  if (context_.view_holder_debug_names && !r->debug_name().empty()) {
+    (*context_.view_holder_debug_names)[r->global_id()] = r->debug_name();
+  }
 }
 
 void DumpVisitor::Visit(EntityNode* r) {

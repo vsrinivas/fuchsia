@@ -91,14 +91,32 @@ void Engine::InitializeInspectObjects() {
       insp.GetRoot().CreateString(kSceneDump, "(no compositors)", &insp);
     } else {
       std::ostringstream output;
+      std::map<GlobalId, std::string> view_debug_names;
+      std::map<GlobalId, std::string> view_holder_debug_names;
       output << std::endl;
       for (auto& c : scene_graph_.compositors()) {
         output << "========== BEGIN COMPOSITOR DUMP ======================" << std::endl;
-        DumpVisitor visitor(DumpVisitor::VisitorContext(output, nullptr));
+        DumpVisitor visitor(DumpVisitor::VisitorContext(output, nullptr, &view_debug_names,
+                                                        &view_holder_debug_names));
         c->Accept(&visitor);
         output << "============ END COMPOSITOR DUMP ======================";
       }
       insp.GetRoot().CreateString(kSceneDump, output.str(), &insp);
+
+      // The debug names of Views/ViewHolders are omitted from the "kSceneDump" string created
+      // above, because they may contain PII.  Instead, we write the mappings from
+      // View/ViewHolder -> name as separate properties, which can be filtered out when reporting
+      // feedback.
+      auto view_names = insp.GetRoot().CreateChild("scene_dump_named_views");
+      auto view_holder_names = insp.GetRoot().CreateChild("scene_dump_named_view_holders");
+      for (auto& pair : view_debug_names) {
+        view_names.CreateString(static_cast<std::string>(pair.first), pair.second, &insp);
+      }
+      for (auto& pair : view_holder_debug_names) {
+        view_holder_names.CreateString(static_cast<std::string>(pair.first), pair.second, &insp);
+      }
+      insp.emplace(std::move(view_names));
+      insp.emplace(std::move(view_holder_names));
     }
     return fit::make_ok_promise(std::move(insp));
   });
