@@ -88,6 +88,7 @@ class FakeAudioDriverV1 {
   void HandleCommandGetUniqueId(const audio_stream_cmd_get_unique_id_req_t& request);
   void HandleCommandGetString(const audio_stream_cmd_get_string_req_t& request);
   void HandleCommandGetGain(const audio_stream_cmd_get_gain_req_t& request);
+  void HandleCommandSetGain(const audio_stream_cmd_set_gain_req_t& request);
   void HandleCommandGetFormats(const audio_stream_cmd_get_formats_req_t& request);
   void HandleCommandSetFormat(const audio_stream_cmd_set_format_req_t& request);
   void HandleCommandPlugDetect(const audio_stream_cmd_plug_detect_req_t& request);

@@ -353,10 +353,13 @@ void DriverOutput::OnDriverInfoFetched() {
 
   zx_status_t res;
 
-  pipeline_config_ = {ProcessConfig::instance()
-                          .device_config()
-                          .output_device_profile(driver()->persistent_unique_id())
-                          .pipeline_config()};
+  auto output_device_profile = ProcessConfig::instance().device_config().output_device_profile(
+      driver()->persistent_unique_id());
+  float driver_gain_db = output_device_profile.driver_gain_db();
+  AudioDeviceSettings::GainState gain_state = {.gain_db = driver_gain_db, .muted = false};
+  driver()->SetGain(gain_state, AUDIO_SGF_GAIN_VALID | AUDIO_SGF_MUTE_VALID);
+
+  pipeline_config_ = {output_device_profile.pipeline_config()};
 
   uint32_t pref_fps = pipeline_config_->root().output_rate;
   uint32_t pref_chan = kDefaultChannelCount;

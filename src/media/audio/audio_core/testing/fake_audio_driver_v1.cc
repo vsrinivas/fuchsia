@@ -70,7 +70,7 @@ void FakeAudioDriverV1::OnInboundStreamError(zx_status_t status) {}
 void FakeAudioDriverV1::OnInboundStreamMessage(test::MessageTransceiver::Message message) {
   auto& header = message.BytesAs<audio_cmd_hdr_t>();
   last_stream_command_ = header.cmd;
-  switch (header.cmd) {
+  switch (header.cmd & ~AUDIO_FLAG_NO_ACK) {
     case AUDIO_STREAM_CMD_GET_FORMATS:
       HandleCommandGetFormats(message.BytesAs<audio_stream_cmd_get_formats_req_t>());
       break;
@@ -79,6 +79,9 @@ void FakeAudioDriverV1::OnInboundStreamMessage(test::MessageTransceiver::Message
       break;
     case AUDIO_STREAM_CMD_GET_GAIN:
       HandleCommandGetGain(message.BytesAs<audio_stream_cmd_get_gain_req_t>());
+      break;
+    case AUDIO_STREAM_CMD_SET_GAIN:
+      HandleCommandSetGain(message.BytesAs<audio_stream_cmd_set_gain_req_t>());
       break;
     case AUDIO_STREAM_CMD_GET_UNIQUE_ID:
       HandleCommandGetUniqueId(message.BytesAs<audio_stream_cmd_get_unique_id_req_t>());
@@ -153,6 +156,8 @@ void FakeAudioDriverV1::HandleCommandGetGain(const audio_stream_cmd_get_gain_req
   zx_status_t status = stream_transceiver_.SendMessage(response_message);
   EXPECT_EQ(ZX_OK, status);
 }
+
+void FakeAudioDriverV1::HandleCommandSetGain(const audio_stream_cmd_set_gain_req_t& request) {}
 
 void FakeAudioDriverV1::HandleCommandGetFormats(const audio_stream_cmd_get_formats_req_t& request) {
   // Multiple reponses isn't implemented yet.
