@@ -13,5 +13,7 @@ func allFidlFiles() []FidlFile {
 func allGidlFiles() []GidlFile {
 	return []GidlFile{
 		ByteArrayGidl,
+		GpuMagmaGidl,
+		HardwareDisplayGidl,
 	}
 }

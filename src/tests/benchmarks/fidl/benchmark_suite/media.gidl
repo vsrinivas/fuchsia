@@ -1,0 +1,16 @@
+
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+benchmark("Media/StreamPacket") {
+    value = StreamPacket{
+        pts: 0x7fffffffffffffff,
+        payload_buffer_id: 1,
+        payload_offset: 8,
+        payload_size: 128,
+        flags: 0,
+        buffer_config: 0,
+        stream_segment_id: 0,
+    },
+}

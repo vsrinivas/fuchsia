@@ -10,7 +10,10 @@ import("//tools/fidl/gidl/gidl.gni")
 benchmark_suite_fidl_files = [
   "byte_array.test.fidl",
   "byte_vector.test.fidl",
+  "gpu_magma.test.fidl",
+  "hardware_display.test.fidl",
   "inline.test.fidl",
+  "media.test.fidl",
   "result.test.fidl",
   "socket.test.fidl",
   "string.test.fidl",

@@ -5,7 +5,10 @@
 benchmark_suite_gidl_files = [
   "//src/tests/benchmarks/fidl/benchmark_suite/byte_array.gidl",
   "//src/tests/benchmarks/fidl/benchmark_suite/byte_vector.gidl",
+  "//src/tests/benchmarks/fidl/benchmark_suite/gpu_magma.gidl",
+  "//src/tests/benchmarks/fidl/benchmark_suite/hardware_display.gidl",
   "//src/tests/benchmarks/fidl/benchmark_suite/inline.gidl",
+  "//src/tests/benchmarks/fidl/benchmark_suite/media.gidl",
   "//src/tests/benchmarks/fidl/benchmark_suite/result.gidl",
   "//src/tests/benchmarks/fidl/benchmark_suite/socket.gidl",
   "//src/tests/benchmarks/fidl/benchmark_suite/string.gidl",

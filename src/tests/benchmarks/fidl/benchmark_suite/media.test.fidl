@@ -1,0 +1,17 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library benchmarkfidl;
+
+// Based on fuchsia.media.StreamSource.StreamPacket, used in
+// AudioCapturerOnPacketProducedEvent:
+struct StreamPacket {
+    int64 pts = 0x7fffffffffffffff;
+    uint32 payload_buffer_id;
+    uint64 payload_offset;
+    uint64 payload_size;
+    uint32 flags = 0;
+    uint64 buffer_config = 0;
+    uint64 stream_segment_id = 0;
+};
