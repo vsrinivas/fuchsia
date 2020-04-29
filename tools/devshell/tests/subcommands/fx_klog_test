@@ -20,7 +20,7 @@ BT_SET_UP() {
   source "${BT_TEMP_DIR}/tools/devshell/tests/lib/fuchsia-mock.sh"
   fx="$(btf::setup_fx)"
   symbolize="$(btf::make_hosttools_mock symbolize)"
-  loglistener="$(btf::make_zircontools_mock loglistener)"
+  loglistener="$(btf::make_installed_hosttools_mock loglistener)"
 }
 
 TEST_klog_local() {
