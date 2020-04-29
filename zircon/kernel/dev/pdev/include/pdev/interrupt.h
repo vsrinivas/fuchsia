@@ -33,7 +33,7 @@ struct pdev_interrupt_ops {
   uint32_t (*get_base_vector)(void);
   uint32_t (*get_max_vector)(void);
   unsigned int (*remap)(unsigned int vector);
-  zx_status_t (*send_ipi)(cpu_mask_t target, mp_ipi_t ipi);
+  void (*send_ipi)(cpu_mask_t target, mp_ipi_t ipi);
   void (*init_percpu_early)(void);
   void (*init_percpu)(void);
   void (*handle_irq)(iframe_t* frame);

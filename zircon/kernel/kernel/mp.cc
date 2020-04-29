@@ -164,8 +164,7 @@ void mp_sync_exec(mp_ipi_target_t target, cpu_mask_t mask, mp_sync_task_t task, 
   spin_unlock(&mp.ipi_task_lock);
 
   // let CPUs know to begin executing
-  __UNUSED zx_status_t status = arch_mp_send_ipi(MP_IPI_TARGET_MASK, mask, MP_IPI_GENERIC);
-  DEBUG_ASSERT(status == ZX_OK);
+  arch_mp_send_ipi(MP_IPI_TARGET_MASK, mask, MP_IPI_GENERIC);
 
   if (targetting_self) {
     bool previous_blocking_disallowed = arch_blocking_disallowed();

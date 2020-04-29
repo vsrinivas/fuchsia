@@ -17,12 +17,12 @@
 __BEGIN_CDECLS
 
 /* send inter processor interrupt, if supported */
-zx_status_t arch_mp_send_ipi(mp_ipi_target_t target, cpu_mask_t mask, mp_ipi_t ipi);
+void arch_mp_send_ipi(mp_ipi_target_t target, cpu_mask_t mask, mp_ipi_t ipi);
 
 /* Reschedules tasks on the cpus specified by mask. Mask will not
  * contain the local cpu_id. Will be called under the thread lock.
  */
-zx_status_t arch_mp_reschedule(cpu_mask_t mask);
+void arch_mp_reschedule(cpu_mask_t mask);
 /* Sets the idle state of the current cpu. Will be called under the
  * thread lock. */
 void arch_prepare_current_cpu_idle_state(bool idle);

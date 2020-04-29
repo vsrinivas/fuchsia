@@ -302,7 +302,7 @@ int x86_apic_id_to_cpu_num(uint32_t apic_id) {
   return -1;
 }
 
-zx_status_t arch_mp_reschedule(cpu_mask_t mask) {
+void arch_mp_reschedule(cpu_mask_t mask) {
   DEBUG_ASSERT(thread_lock_held());
 
   cpu_mask_t needs_ipi = 0;
@@ -329,7 +329,9 @@ zx_status_t arch_mp_reschedule(cpu_mask_t mask) {
     needs_ipi = mask;
   }
 
-  return needs_ipi ? arch_mp_send_ipi(MP_IPI_TARGET_MASK, needs_ipi, MP_IPI_RESCHEDULE) : ZX_OK;
+  if (needs_ipi) {
+    arch_mp_send_ipi(MP_IPI_TARGET_MASK, needs_ipi, MP_IPI_RESCHEDULE);
+  }
 }
 
 void arch_prepare_current_cpu_idle_state(bool idle) {
@@ -372,7 +374,7 @@ __NO_RETURN int arch_idle_thread_routine(void*) {
   }
 }
 
-zx_status_t arch_mp_send_ipi(mp_ipi_target_t target, cpu_mask_t mask, mp_ipi_t ipi) {
+void arch_mp_send_ipi(mp_ipi_target_t target, cpu_mask_t mask, mp_ipi_t ipi) {
   uint8_t vector = 0;
   switch (ipi) {
     case MP_IPI_GENERIC:
@@ -404,8 +406,6 @@ zx_status_t arch_mp_send_ipi(mp_ipi_target_t target, cpu_mask_t mask, mp_ipi_t i
     default:
       panic("Unexpected MP IPI target: %u", static_cast<uint32_t>(target));
   }
-
-  return ZX_OK;
 }
 
 void x86_ipi_halt_handler(void*) {

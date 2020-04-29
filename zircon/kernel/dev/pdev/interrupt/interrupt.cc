@@ -57,9 +57,7 @@ static zx_status_t default_get_config(unsigned int vector, enum interrupt_trigge
 static bool default_is_valid(unsigned int vector, uint32_t flags) { return false; }
 static unsigned int default_remap(unsigned int vector) { return 0; }
 
-static zx_status_t default_send_ipi(cpu_mask_t target, mp_ipi_t ipi) {
-  return ZX_ERR_NOT_CONFIGURED;
-}
+static void default_send_ipi(cpu_mask_t target, mp_ipi_t ipi) {}
 
 static void default_init_percpu_early() {}
 
@@ -146,8 +144,8 @@ bool is_valid_interrupt(unsigned int vector, uint32_t flags) {
 
 unsigned int remap_interrupt(unsigned int vector) { return intr_ops->remap(vector); }
 
-zx_status_t interrupt_send_ipi(cpu_mask_t target, mp_ipi_t ipi) {
-  return intr_ops->send_ipi(target, ipi);
+void interrupt_send_ipi(cpu_mask_t target, mp_ipi_t ipi) {
+  intr_ops->send_ipi(target, ipi);
 }
 
 void interrupt_init_percpu() { intr_ops->init_percpu(); }

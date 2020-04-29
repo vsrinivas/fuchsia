@@ -363,7 +363,7 @@ static void gic_handle_irq(iframe_t* frame) {
 
 static void gic_handle_fiq(iframe_t* frame) { PANIC_UNIMPLEMENTED; }
 
-static zx_status_t gic_send_ipi(cpu_mask_t target, mp_ipi_t ipi) {
+static void gic_send_ipi(cpu_mask_t target, mp_ipi_t ipi) {
   uint gic_ipi_num = ipi + ipi_base;
 
   // filter out targets outside of the range of cpus we care about
@@ -372,8 +372,6 @@ static zx_status_t gic_send_ipi(cpu_mask_t target, mp_ipi_t ipi) {
     LTRACEF("target 0x%x, gic_ipi %u\n", target, gic_ipi_num);
     arm_gic_sgi(gic_ipi_num, ARM_GIC_SGI_FLAG_NS, target);
   }
-
-  return ZX_OK;
 }
 
 static interrupt_eoi arm_ipi_halt_handler(void*) {

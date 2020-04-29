@@ -74,11 +74,11 @@ void arch_prepare_current_cpu_idle_state(bool idle) {
   // no-op
 }
 
-zx_status_t arch_mp_reschedule(cpu_mask_t mask) {
-  return arch_mp_send_ipi(MP_IPI_TARGET_MASK, mask, MP_IPI_RESCHEDULE);
+void arch_mp_reschedule(cpu_mask_t mask) {
+  arch_mp_send_ipi(MP_IPI_TARGET_MASK, mask, MP_IPI_RESCHEDULE);
 }
 
-zx_status_t arch_mp_send_ipi(mp_ipi_target_t target, cpu_mask_t mask, mp_ipi_t ipi) {
+void arch_mp_send_ipi(mp_ipi_target_t target, cpu_mask_t mask, mp_ipi_t ipi) {
   LTRACEF("target %d mask %#x, ipi %d\n", target, mask, ipi);
 
   // translate the high level target + mask mechanism into just a mask
@@ -93,7 +93,7 @@ zx_status_t arch_mp_send_ipi(mp_ipi_target_t target, cpu_mask_t mask, mp_ipi_t i
     case MP_IPI_TARGET_MASK:;
   }
 
-  return interrupt_send_ipi(mask, ipi);
+  interrupt_send_ipi(mask, ipi);
 }
 
 void arm64_init_percpu_early(void) {

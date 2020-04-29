@@ -60,7 +60,7 @@ bool is_valid_interrupt(unsigned int vector, uint32_t flags);
 unsigned int remap_interrupt(unsigned int vector);
 
 // sends an inter-processor interrupt
-zx_status_t interrupt_send_ipi(cpu_mask_t target, mp_ipi_t ipi);
+void interrupt_send_ipi(cpu_mask_t target, mp_ipi_t ipi);
 
 // performs per-cpu initialization for the interrupt controller
 void interrupt_init_percpu(void);
