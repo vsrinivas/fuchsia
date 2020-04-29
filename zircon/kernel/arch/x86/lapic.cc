@@ -277,8 +277,7 @@ static void pv_mask_ipi(cpu_mask_t mask, uint32_t request) {
 void apic_send_broadcast_self_ipi(uint8_t vector, enum apic_interrupt_delivery_mode dm) {
   uint32_t request = ICR_LEVEL_ASSERT | ICR_DELIVERY_MODE(dm) | ICR_VECTOR(vector);
   if (x86_hypervisor_has_pv_ipi()) {
-    cpu_mask_t mask = (1u << arch_max_num_cpus()) - 1;
-    pv_mask_ipi(mask, request);
+    pv_mask_ipi(CPU_MASK_ALL, request);
     return;
   }
 
@@ -299,7 +298,7 @@ void apic_send_broadcast_self_ipi(uint8_t vector, enum apic_interrupt_delivery_m
 void apic_send_broadcast_ipi(uint8_t vector, enum apic_interrupt_delivery_mode dm) {
   uint32_t request = ICR_LEVEL_ASSERT | ICR_DELIVERY_MODE(dm) | ICR_VECTOR(vector);
   if (x86_hypervisor_has_pv_ipi()) {
-    cpu_mask_t mask = ((1u << arch_max_num_cpus()) - 1) & ~(1u << arch_curr_cpu_num());
+    cpu_mask_t mask = mask_all_but_one(arch_curr_cpu_num());
     pv_mask_ipi(mask, request);
     return;
   }

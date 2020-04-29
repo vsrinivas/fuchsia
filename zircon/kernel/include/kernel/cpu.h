@@ -30,6 +30,10 @@ static inline cpu_mask_t cpu_num_to_mask(cpu_num_t num) {
   return ((cpu_mask_t)1u << num);
 }
 
+static inline cpu_mask_t mask_all_but_one(cpu_num_t num) {
+  return CPU_MASK_ALL ^ cpu_num_to_mask(num);
+}
+
 static inline cpu_num_t highest_cpu_set(cpu_mask_t mask) {
   if (mask == 0) {
     return 0;
