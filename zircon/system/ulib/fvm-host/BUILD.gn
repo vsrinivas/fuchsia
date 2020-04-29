@@ -60,8 +60,8 @@ zx_library("fvm-host") {
     "//zircon/public/lib/fvm",
     "//zircon/public/lib/lz4",
     "//zircon/public/lib/safemath",
-    "//zircon/public/lib/transaction",
     "//zircon/system/ulib/blobfs",
+    "//zircon/system/ulib/fs/transaction",
     "//zircon/system/ulib/minfs",
   ]
 }

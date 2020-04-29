@@ -33,11 +33,11 @@ zx_library("test_support") {
   public_deps = [
     "//zircon/public/lib/buffer",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/transaction",
     "//zircon/public/lib/zxtest",
     "//zircon/system/fidl/fuchsia-io:llcpp",
     "//zircon/system/ulib/devmgr-integration-test",
     "//zircon/system/ulib/fs-management",
+    "//zircon/system/ulib/fs/transaction",
     "//zircon/system/ulib/ramdevice-client",
   ]
 
@@ -47,13 +47,13 @@ zx_library("test_support") {
     "//zircon/public/lib/fdio-caller",
     "//zircon/public/lib/fvm",
     "//zircon/public/lib/fzl",
-    "//zircon/public/lib/transaction",
     "//zircon/public/lib/zxtest",
     "//zircon/system/fidl/fuchsia-device:llcpp",
     "//zircon/system/fidl/fuchsia-hardware-block:c",
     "//zircon/system/ulib/devmgr-integration-test",
     "//zircon/system/ulib/devmgr-launcher",
     "//zircon/system/ulib/fs-management",
+    "//zircon/system/ulib/fs/transaction",
     "//zircon/system/ulib/ramdevice-client",
   ]
 }

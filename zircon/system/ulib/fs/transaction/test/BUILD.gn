@@ -31,8 +31,8 @@ test("fs-transaction") {
     }
   }
   deps = [
-    "//zircon/public/lib/transaction",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/fs/transaction",
   ]
   if (is_fuchsia) {
     sources = [

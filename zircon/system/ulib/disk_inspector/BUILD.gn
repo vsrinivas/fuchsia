@@ -51,7 +51,7 @@ if (is_fuchsia) {
         "//zircon/public/lib/buffer",
         "//zircon/public/lib/fit",
         "//zircon/public/lib/fs",
-        "//zircon/public/lib/transaction",
+        "//zircon/system/ulib/fs/transaction",
       ]
 
       deps += [
@@ -69,18 +69,18 @@ if (is_fuchsia) {
 
   source_set("disk_inspector") {
     public = [
-      "include/disk_inspector/inspector_transaction_handler.h",
-      "include/disk_inspector/command_handler.h",
+      "include/disk_inspector/buffer_factory.h",
       "include/disk_inspector/command.h",
+      "include/disk_inspector/command_handler.h",
       "include/disk_inspector/common_types.h",
       "include/disk_inspector/disk_inspector.h",
       "include/disk_inspector/disk_obj.h",
       "include/disk_inspector/disk_struct.h",
+      "include/disk_inspector/inspector_transaction_handler.h",
+      "include/disk_inspector/loader.h",
       "include/disk_inspector/supported_types.h",
       "include/disk_inspector/type_utils.h",
-      "include/disk_inspector/buffer_factory.h",
       "include/disk_inspector/vmo_buffer_factory.h",
-      "include/disk_inspector/loader.h",
     ]
 
     public_configs = [ ":headers_config" ]

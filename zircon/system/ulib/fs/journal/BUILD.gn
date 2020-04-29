@@ -64,8 +64,8 @@ zx_library("journal") {
       "//zircon/public/lib/fzl",
       "//zircon/public/lib/operation",
       "//zircon/public/lib/range",
-      "//zircon/public/lib/transaction",
       "//zircon/system/ulib/disk_inspector",
+      "//zircon/system/ulib/fs/transaction",
     ]
     deps += [
       "//zircon/public/lib/buffer",
@@ -74,8 +74,8 @@ zx_library("journal") {
       "//zircon/public/lib/operation",
       "//zircon/public/lib/range",
       "//zircon/public/lib/sync",
-      "//zircon/public/lib/transaction",
       "//zircon/system/ulib/disk_inspector",
+      "//zircon/system/ulib/fs/transaction",
     ]
   }
 }
