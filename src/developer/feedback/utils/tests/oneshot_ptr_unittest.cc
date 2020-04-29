@@ -12,6 +12,7 @@
 
 #include "src/developer/feedback/testing/stubs/channel_provider.h"
 #include "src/developer/feedback/testing/unit_test_fixture.h"
+#include "src/developer/feedback/utils/errors.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace feedback {
@@ -90,6 +91,7 @@ TEST_F(OneShotPtrTest, Fail_ClosedChannel) {
 
   const auto result = ExecutePromise(channel_ptr.WaitForDone());
   EXPECT_TRUE(result.is_error());
+  EXPECT_EQ(result.error(), Error::kDefault);
 }
 
 TEST_F(OneShotPtrTest, Fail_Timeout) {

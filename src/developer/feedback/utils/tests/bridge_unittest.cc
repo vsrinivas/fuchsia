@@ -6,10 +6,7 @@
 
 #include <lib/async/cpp/executor.h>
 
-#include <gmock/gmock.h>
-#include <gtest/gtest.h>
-
-#include "lib/fit/function_traits.h"
+#include "src/developer/feedback/utils/errors.h"
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 namespace feedback {
@@ -23,9 +20,9 @@ class BridgeTest : public gtest::TestLoopFixture {
   BridgeTest() : executor_(dispatcher()) {}
 
  protected:
-  template <typename V = void, typename E = void>
-  Bridge<V, E> CreateBridge() {
-    return Bridge<V, E>(dispatcher(), "test");
+  template <typename V = void>
+  Bridge<V> CreateBridge() {
+    return Bridge<V>(dispatcher(), "test");
   }
 
   template <typename V, typename E>
@@ -42,7 +39,6 @@ class BridgeTest : public gtest::TestLoopFixture {
     return out_result;
   }
 
- private:
   async::Executor executor_;
 };
 
@@ -61,13 +57,15 @@ TEST_F(BridgeTest, ExecutesIfTimeout) {
   bool timeout_did_run = false;
 
   auto bridge = CreateBridge<>();
+  Error error = Error::kNotSet;
 
-  EXPECT_TRUE(ExecutePromise(
-                  bridge.WaitForDone(Timeout(kTimeout, /*action=*/[&] { timeout_did_run = true; })),
-                  kTimeout)
-                  .is_error());
+  executor_.schedule_task(
+      bridge.WaitForDone(Timeout(kTimeout, /*action=*/[&] { timeout_did_run = true; }))
+          .or_else([&](const Error& result) { error = result; }));
+  RunLoopFor(kTimeout);
 
   EXPECT_TRUE(timeout_did_run);
+  EXPECT_EQ(error, Error::kDefault);
 }
 
 TEST_F(BridgeTest, CompleteError) {
@@ -75,7 +73,7 @@ TEST_F(BridgeTest, CompleteError) {
 
   auto bridge = CreateBridge<>();
 
-  bridge.CompleteError();
+  bridge.CompleteError(Error::kDefault);
 
   EXPECT_TRUE(bridge.IsAlreadyDone());
   EXPECT_TRUE(ExecutePromise(
@@ -93,7 +91,7 @@ TEST_F(BridgeTest, CompleteOk) {
 
   EXPECT_TRUE(bridge.IsAlreadyDone());
 
-  ::fit::result<std::string> result = ExecutePromise(bridge.WaitForDone());
+  ::fit::result<std::string, Error> result = ExecutePromise(bridge.WaitForDone());
   EXPECT_TRUE(result.is_ok());
   EXPECT_EQ(result.value(), "ok");
 }

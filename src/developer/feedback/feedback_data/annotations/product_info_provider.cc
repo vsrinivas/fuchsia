@@ -15,6 +15,7 @@
 #include "src/developer/feedback/feedback_data/annotations/aliases.h"
 #include "src/developer/feedback/feedback_data/annotations/utils.h"
 #include "src/developer/feedback/feedback_data/constants.h"
+#include "src/developer/feedback/utils/errors.h"
 #include "src/developer/feedback/utils/fit/promise.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/join_strings.h"
@@ -162,7 +163,9 @@ ProductInfoPtr::ProductInfoPtr(async_dispatcher_t* dispatcher,
     product_ptr_.CompleteOk(std::move(product_info));
   });
 
-  return product_ptr_.WaitForDone(std::move(timeout));
+  return product_ptr_.WaitForDone(std::move(timeout)).or_else([](const Error& error) {
+    return ::fit::error();
+  });
 }
 
 }  // namespace internal

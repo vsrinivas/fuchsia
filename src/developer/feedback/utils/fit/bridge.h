@@ -14,6 +14,7 @@
 
 #include <type_traits>
 
+#include "src/developer/feedback/utils/errors.h"
 #include "src/developer/feedback/utils/fit/timeout.h"
 #include "src/lib/syslog/cpp/logger.h"
 
@@ -22,7 +23,7 @@ namespace fit {
 
 // Wrapper around ::fit::bridge with the ability to post a task that that will complete the bridge
 // at a certain point in the future if the bridge hasn't already been completed.
-template <typename V = void, typename E = void>
+template <typename V = void>
 class Bridge {
  public:
   Bridge(async_dispatcher_t* dispatcher, const std::string& task_name)
@@ -41,25 +42,27 @@ class Bridge {
     }
   }
 
-  void CompleteError() {
+  void CompleteError(Error error) {
     if (bridge_.completer) {
-      bridge_.completer.complete_error();
+      bridge_.completer.complete_error(error);
     }
   }
 
   bool IsAlreadyDone() const { return !bridge_.completer; }
 
   // Get the promise that will be ungated when |bridge_| is completed.
-  ::fit::promise<V, E> WaitForDone() { return bridge_.consumer.promise_or(::fit::error()); }
+  ::fit::promise<V, Error> WaitForDone() {
+    return bridge_.consumer.promise_or(::fit::error(Error::kDefault));
+  }
 
   // Start the timeout and get the promise that will be ungated when |bridge_| is completed.
-  ::fit::promise<V, E> WaitForDone(Timeout timeout) {
+  ::fit::promise<V, Error> WaitForDone(Timeout timeout) {
     timeout_ = std::move(timeout);
 
     if (zx_status_t status = timeout_task_.PostDelayed(dispatcher_, timeout_.value);
         status != ZX_OK) {
       FX_PLOGS(ERROR, status) << "Failed to post timeout task, aborting " << task_name_;
-      return ::fit::make_result_promise<V, E>(::fit::error());
+      return ::fit::make_result_promise<V, Error>(::fit::error(Error::kDefault));
     }
 
     return WaitForDone();
@@ -76,12 +79,12 @@ class Bridge {
       (*timeout_.action)();
     }
 
-    bridge_.completer.complete_error();
+    bridge_.completer.complete_error(Error::kDefault);
   }
 
   async_dispatcher_t* dispatcher_;
   const std::string task_name_;
-  ::fit::bridge<V, E> bridge_;
+  ::fit::bridge<V, Error> bridge_;
 
   async::TaskClosureMethod<Bridge, &Bridge::AtTimeout> timeout_task_{this};
 

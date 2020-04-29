@@ -9,6 +9,7 @@
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
+#include "src/developer/feedback/utils/errors.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/syslog/cpp/logger.h"
 
@@ -38,17 +39,17 @@ DataProviderPtr::DataProviderPtr(async_dispatcher_t* dispatcher,
 
     if (result.is_error()) {
       FX_PLOGS(WARNING, result.error()) << "Failed to fetch feedback data";
-      pending_calls_.CompleteError(id);
+      pending_calls_.CompleteError(id, Error::kDefault);
     } else {
       pending_calls_.CompleteOk(id, result.take_value());
     }
   });
 
   return pending_calls_.WaitForDone(id, fit::Timeout(timeout))
-      .then([id, this](::fit::result<Data>& result) {
+      .then([id, this](::fit::result<Data, Error>& result) -> ::fit::result<Data> {
         // We need to move the result before erasing the bridge because |result| is passed as a
         // reference.
-        ::fit::result<Data> data = std::move(result);
+        ::fit::result<Data, Error> data = std::move(result);
 
         pending_calls_.Delete(id);
 
@@ -57,7 +58,11 @@ DataProviderPtr::DataProviderPtr(async_dispatcher_t* dispatcher,
           connection_.Unbind();
         }
 
-        return data;
+        if (data.is_error()) {
+          return ::fit::error();
+        } else {
+          return ::fit::ok(data.take_value());
+        }
       });
 }
 
@@ -71,7 +76,7 @@ void DataProviderPtr::Connect() {
   connection_.set_error_handler([this](zx_status_t status) {
     FX_PLOGS(ERROR, status) << "Lost connection to fuchsia.feedback.DataProvider";
 
-    pending_calls_.CompleteAllError();
+    pending_calls_.CompleteAllError(Error::kDefault);
   });
 }
 

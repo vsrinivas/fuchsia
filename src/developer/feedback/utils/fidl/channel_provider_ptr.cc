@@ -8,6 +8,7 @@
 
 #include <memory>
 
+#include "src/developer/feedback/utils/errors.h"
 #include "src/developer/feedback/utils/fit/promise.h"
 #include "src/lib/fxl/logging.h"
 
@@ -39,7 +40,9 @@ ChannelProviderPtr::ChannelProviderPtr(async_dispatcher_t* dispatcher,
     channel_ptr_.CompleteOk(channel);
   });
 
-  return channel_ptr_.WaitForDone(std::move(timeout));
+  return channel_ptr_.WaitForDone(std::move(timeout)).or_else([](const Error& error) {
+    return ::fit::error();
+  });
 }
 
 }  // namespace fidl

@@ -11,6 +11,7 @@
 #include <cstdint>
 #include <map>
 
+#include "src/developer/feedback/utils/errors.h"
 #include "src/developer/feedback/utils/fit/bridge.h"
 #include "src/developer/feedback/utils/fit/timeout.h"
 
@@ -18,7 +19,7 @@ namespace feedback {
 namespace fit {
 
 // Manages access to multiple Bridge objects, allowing access through an id.
-template <typename V = void, typename E = void>
+template <typename V = void>
 class BridgeMap {
  public:
   BridgeMap(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
@@ -61,15 +62,15 @@ class BridgeMap {
     }
   }
 
-  void CompleteError(uint64_t id) {
+  void CompleteError(uint64_t id, Error error) {
     if (Contains(id)) {
-      bridges_.at(id).CompleteError();
+      bridges_.at(id).CompleteError(error);
     }
   }
 
-  void CompleteAllError() {
+  void CompleteAllError(Error error) {
     for (auto& [_, bridge] : bridges_) {
-      bridge.CompleteError();
+      bridge.CompleteError(error);
     }
   }
 
@@ -84,26 +85,26 @@ class BridgeMap {
 
   // Get the promise that will be ungated when the bridge at |id| is completed. An error is returned
   // if the bridge doesn't exist.
-  ::fit::promise<V, E> WaitForDone(uint64_t id) {
+  ::fit::promise<V, Error> WaitForDone(uint64_t id) {
     if (Contains(id)) {
       return bridges_.at(id).WaitForDone();
     }
 
-    return ::fit::make_result_promise<V, E>(::fit::error());
+    return ::fit::make_result_promise<V>(::fit::error(Error::kDefault));
   }
 
   // Start the timeout and get the promise that will be ungated when the bridge at |id| is
   // completed. An error if returned if the bridge doesn't exist.
-  ::fit::promise<V, E> WaitForDone(uint64_t id, Timeout timeout) {
+  ::fit::promise<V, Error> WaitForDone(uint64_t id, Timeout timeout) {
     if (Contains(id)) {
       return bridges_.at(id).WaitForDone(std::move(timeout));
     }
-    return ::fit::make_result_promise<V, E>(::fit::error());
+    return ::fit::make_result_promise<V>(::fit::error(Error::kDefault));
   }
 
  private:
   async_dispatcher_t* dispatcher_;
-  std::map<uint64_t, Bridge<V, E>> bridges_;
+  std::map<uint64_t, Bridge<V>> bridges_;
   uint64_t next_id_ = 1;
 };
 

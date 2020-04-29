@@ -11,6 +11,7 @@
 #include <lib/fit/promise.h>
 #include <lib/sys/cpp/service_directory.h>
 
+#include "src/developer/feedback/utils/errors.h"
 #include "src/developer/feedback/utils/fit/bridge.h"
 #include "src/developer/feedback/utils/fit/timeout.h"
 #include "src/lib/fxl/logging.h"
@@ -41,7 +42,7 @@ namespace fidl {
 //
 // Any additional attempts to dereference |channel_ptr| in GetChannel() would cause the program to
 // check-fail.
-template <typename Interface, typename V = void, typename E = void>
+template <typename Interface, typename V = void>
 class OneShotPtr {
  public:
   OneShotPtr(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services)
@@ -59,11 +60,11 @@ class OneShotPtr {
     bridge_.CompleteOk(std::move(value));
   }
 
-  void CompleteError() { bridge_.CompleteError(); }
+  void CompleteError(Error error) { bridge_.CompleteError(error); }
 
-  ::fit::promise<V, E> WaitForDone() { return bridge_.WaitForDone(); }
+  ::fit::promise<V, Error> WaitForDone() { return bridge_.WaitForDone(); }
 
-  ::fit::promise<V, E> WaitForDone(fit::Timeout timeout) {
+  ::fit::promise<V, Error> WaitForDone(fit::Timeout timeout) {
     return bridge_.WaitForDone(std::move(timeout));
   }
 
@@ -83,7 +84,7 @@ class OneShotPtr {
 
       FX_PLOGS(ERROR, status) << "Lost connection to " << Interface::Name_;
 
-      bridge_.CompleteError();
+      bridge_.CompleteError(Error::kDefault);
     });
 
     return connection_.get();
@@ -94,7 +95,7 @@ class OneShotPtr {
 
  private:
   const std::shared_ptr<sys::ServiceDirectory> services_;
-  fit::Bridge<V, E> bridge_;
+  fit::Bridge<V> bridge_;
 
   bool oneshot_used_ = false;
 };

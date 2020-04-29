@@ -16,6 +16,7 @@
 #include <string>
 #include <vector>
 
+#include "src/developer/feedback/utils/errors.h"
 #include "src/developer/feedback/utils/log_format.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/syslog/cpp/logger.h"
@@ -58,17 +59,22 @@ LogListener::LogListener(async_dispatcher_t* dispatcher,
     }
 
     FX_PLOGS(ERROR, status) << "LogListenerSafe error";
-    logger_.CompleteError();
+    logger_.CompleteError(Error::kDefault);
   });
 
   // Resets |log_many_called_| for the new call to DumpLogs().
   log_many_called_ = false;
   logger_->DumpLogsSafe(std::move(log_listener_h), /*options=*/nullptr);
 
-  return logger_.WaitForDone(std::move(timeout)).then([this](::fit::result<void>& result) {
-    binding_.Close(ZX_OK);
-    return std::move(result);
-  });
+  return logger_.WaitForDone(std::move(timeout))
+      .then([this](::fit::result<void, Error>& result) -> ::fit::result<void> {
+        binding_.Close(ZX_OK);
+        if (result.is_ok()) {
+          return ::fit::ok();
+        } else {
+          return ::fit::error();
+        }
+      });
 }
 
 void LogListener::LogMany(::std::vector<fuchsia::logger::LogMessage> messages,

@@ -27,6 +27,10 @@ source_set("archive") {
   ]
 }
 
+source_set("errors") {
+  sources = [ "errors.h" ]
+}
+
 source_set("files") {
   sources = [
     "file_size.h",

@@ -122,6 +122,7 @@ executable("bridge_unittest") {
 
   deps = [
     "//src/developer/feedback/testing:gtest_with_syslog_main",
+    "//src/developer/feedback/utils:errors",
     "//src/developer/feedback/utils/fit",
     "//src/lib/testing/loop_fixture",
     "//third_party/googletest:gmock",
@@ -247,6 +248,7 @@ executable("oneshot_ptr_unittest") {
     "//src/developer/feedback/testing:gtest_with_syslog_main",
     "//src/developer/feedback/testing:unit_test_fixture",
     "//src/developer/feedback/testing/stubs:channel_provider",
+    "//src/developer/feedback/utils:errors",
     "//src/developer/feedback/utils/fidl:oneshot_ptr",
     "//src/lib/fxl",
     "//third_party/googletest:gmock",

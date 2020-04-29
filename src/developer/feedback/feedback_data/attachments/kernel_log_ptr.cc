@@ -7,6 +7,7 @@
 #include <inttypes.h>
 #include <zircon/syscalls/log.h>
 
+#include "src/developer/feedback/utils/errors.h"
 #include "src/developer/feedback/utils/fit/promise.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
@@ -54,14 +55,16 @@ BootLog::BootLog(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDir
 
     if (kernel_log.empty()) {
       FX_LOGS(ERROR) << "Empty kernel log";
-      log_ptr_.CompleteError();
+      log_ptr_.CompleteError(Error::kDefault);
       return;
     }
 
     log_ptr_.CompleteOk(kernel_log);
   });
 
-  return log_ptr_.WaitForDone(std::move(timeout));
+  return log_ptr_.WaitForDone(std::move(timeout)).or_else([](const Error& error) {
+    return ::fit::error();
+  });
 }
 
 }  // namespace feedback

@@ -14,6 +14,7 @@
 #include <string>
 #include <vector>
 
+#include "src/developer/feedback/utils/errors.h"
 #include "src/developer/feedback/utils/fit/promise.h"
 #include "src/developer/feedback/utils/fit/timeout.h"
 #include "src/lib/fsl/vmo/strings.h"
@@ -47,7 +48,7 @@ Inspect::Inspect(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDir
 
   // We wait on one way to finish the flow, joining whichever data has been collected.
   return archive_.WaitForDone(std::move(timeout))
-      .then([this](::fit::result<>& result) -> ::fit::result<AttachmentValue> {
+      .then([this](::fit::result<void, Error>& result) -> ::fit::result<AttachmentValue> {
         if (!result.is_ok()) {
           FX_LOGS(WARNING)
               << "Inspect data collection was interrupted - Inspect data may be partial or missing";
@@ -73,7 +74,7 @@ void Inspect::SetUp() {
     }
 
     FX_PLOGS(ERROR, status) << "Lost connection to fuchsia.diagnostics.BatchIterator";
-    archive_.CompleteError();
+    archive_.CompleteError(Error::kDefault);
   });
 }
 
@@ -96,7 +97,7 @@ void Inspect::AppendNextInspectBatch() {
 
     if (result.is_err()) {
       FX_LOGS(ERROR) << "Failed to retrieve next Inspect batch: " << result.err();
-      archive_.CompleteError();
+      archive_.CompleteError(Error::kDefault);
       return;
     }
 

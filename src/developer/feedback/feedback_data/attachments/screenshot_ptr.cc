@@ -6,6 +6,7 @@
 
 #include <lib/async/cpp/task.h>
 
+#include "src/developer/feedback/utils/errors.h"
 #include "src/developer/feedback/utils/fit/promise.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/syslog/cpp/logger.h"
@@ -40,13 +41,15 @@ Scenic::Scenic(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirec
 
     if (!success) {
       FX_LOGS(ERROR) << "Scenic failed to take screenshot";
-      scenic_.CompleteError();
+      scenic_.CompleteError(Error::kDefault);
     } else {
       scenic_.CompleteOk(std::move(raw_screenshot));
     }
   });
 
-  return scenic_.WaitForDone(std::move(timeout));
+  return scenic_.WaitForDone(std::move(timeout)).or_else([](const Error& error) {
+    return ::fit::error();
+  });
 }
 
 }  // namespace feedback
