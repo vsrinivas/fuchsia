@@ -260,8 +260,7 @@ build_api_module("binaries") {
   data_keys = [ "binaries" ]
   deps = [
     ":binaries.zircon",
-    "//build/images:packages",
-    "//sdk",
+    ":default",
   ]
 }
 
