@@ -15,11 +15,11 @@ use fidl_fuchsia_input_report as hid_input_report;
 use fidl_fuchsia_ui_app::{ViewProviderRequest, ViewProviderRequestStream};
 use fidl_fuchsia_ui_policy::PresenterMarker;
 use fidl_fuchsia_ui_scenic::{ScenicMarker, ScenicProxy, SessionListenerRequest};
-use fidl_fuchsia_ui_views::ViewToken;
+use fidl_fuchsia_ui_views::{ViewRef, ViewRefControl, ViewToken};
 use fuchsia_async::{self as fasync, DurationExt, Timer};
 use fuchsia_component::{self as component, client::connect_to_service};
 use fuchsia_framebuffer::{FrameBuffer, FrameUsage, VSyncMessage};
-use fuchsia_scenic::{Session, SessionPtr, ViewTokenPair};
+use fuchsia_scenic::{Session, SessionPtr, ViewRefPair, ViewTokenPair};
 use fuchsia_zircon::{self as zx, Duration, DurationNum, Time};
 use futures::{
     channel::mpsc::{unbounded, UnboundedSender},
@@ -379,7 +379,7 @@ pub struct App {
 
 pub(crate) enum MessageInternal {
     ServiceConnection(zx::Channel, &'static str),
-    CreateView(ViewToken),
+    CreateView(ViewToken, ViewRefControl, ViewRef),
     ScenicEvent(Vec<fidl_fuchsia_ui_scenic::Event>, ViewKey),
     ScenicPresentDone(ViewKey),
     Update(ViewKey),
@@ -445,8 +445,8 @@ impl App {
                     Err(e) => eprintln!("error asyncifying channel: {:?}", e),
                 }
             }
-            MessageInternal::CreateView(view_token) => {
-                self.create_view_scenic(view_token).await?;
+            MessageInternal::CreateView(view_token, control_ref, view_ref) => {
+                self.create_view_scenic(view_token, control_ref, view_ref).await?;
             }
             MessageInternal::ScenicEvent(events, view_id) => {
                 self.handle_session_event(view_id, events);
@@ -518,11 +518,13 @@ impl App {
             let assistant_creator = assistant_creator_func(&app_context);
             let assistant = assistant_creator.await?;
             let mut token = ViewTokenPair::new().context("ViewTokenPair::new")?;
+            let ViewRefPair { control_ref, view_ref } =
+                ViewRefPair::new().context("ViewRefPair::new")?;
             let mut app = App::new(Some(internal_sender));
             let mut frame_count = 0;
             let supports_scenic = app.app_init_common_async(assistant).await?;
             if supports_scenic {
-                app.create_view_scenic(token.view_token)
+                app.create_view_scenic(token.view_token, control_ref, view_ref)
                     .await
                     .context("app.create_view")
                     .expect("create_view failed");
@@ -655,7 +657,12 @@ impl App {
         self.assistant.as_ref().unwrap().signals_wait_event()
     }
 
-    async fn create_view_scenic(&mut self, view_token: ViewToken) -> Result<(), Error> {
+    async fn create_view_scenic(
+        &mut self,
+        view_token: ViewToken,
+        control_ref: ViewRefControl,
+        view_ref: ViewRef,
+    ) -> Result<(), Error> {
         let session = self.setup_session()?;
         let view_mode = self.get_view_mode();
         let view_assistant = match view_mode {
@@ -665,6 +672,8 @@ impl App {
         let mut view_controller = ViewController::new(
             self.next_key,
             view_token,
+            control_ref,
+            view_ref,
             view_mode,
             session,
             view_assistant,
@@ -731,13 +740,27 @@ impl App {
                 fasync::spawn_local(
                     stream
                         .try_for_each(move |req| {
-                            let token = match req {
-                                ViewProviderRequest::CreateView { token, .. } => token,
-                                ViewProviderRequest::CreateViewWithViewRef { token, .. } => token,
+                            let (token, control_ref, view_ref) = match req {
+                                ViewProviderRequest::CreateView { token, .. } => {
+                                    // We do not get passed a view ref so create our own
+                                    let ViewRefPair { control_ref, view_ref } =
+                                        ViewRefPair::new().expect("unable to create view ref pair");
+                                    (token, control_ref, view_ref)
+                                }
+                                ViewProviderRequest::CreateViewWithViewRef {
+                                    token,
+                                    view_ref_control,
+                                    view_ref,
+                                    ..
+                                } => (token, view_ref_control, view_ref),
                             };
                             let view_token = ViewToken { value: token };
                             sender
-                                .unbounded_send(MessageInternal::CreateView(view_token))
+                                .unbounded_send(MessageInternal::CreateView(
+                                    view_token,
+                                    control_ref,
+                                    view_ref,
+                                ))
                                 .expect("send");
                             futures::future::ready(Ok(()))
                         })

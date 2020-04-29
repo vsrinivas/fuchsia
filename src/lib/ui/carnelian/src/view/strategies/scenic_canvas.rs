@@ -21,7 +21,7 @@ use fidl_fuchsia_images::{
     Tiling, Transform,
 };
 use fidl_fuchsia_sysmem::ImageFormat2;
-use fidl_fuchsia_ui_views::ViewToken;
+use fidl_fuchsia_ui_views::{ViewRef, ViewRefControl, ViewToken};
 use fuchsia_async::{self as fasync, OnSignals};
 use fuchsia_framebuffer::{
     sysmem::{minimum_row_bytes, BufferCollectionAllocator},
@@ -206,9 +206,12 @@ impl ScenicCanvasViewStrategy {
     pub(crate) async fn new(
         session: &SessionPtr,
         view_token: ViewToken,
+        control_ref: ViewRefControl,
+        view_ref: ViewRef,
         app_sender: UnboundedSender<MessageInternal>,
     ) -> Result<ViewStrategyPtr, Error> {
-        let scenic_resources = ScenicResources::new(session, view_token, app_sender);
+        let scenic_resources =
+            ScenicResources::new(session, view_token, control_ref, view_ref, app_sender);
         let (image_pipe_client, server_end) = create_endpoints::<ImagePipe2Marker>()?;
         let image_pipe = ImagePipe2::new(session.clone(), server_end);
         let content_material = Material::new(session.clone());

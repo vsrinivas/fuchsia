@@ -18,7 +18,7 @@ use crate::{
 use anyhow::Error;
 use fidl_fuchsia_ui_gfx::{self as gfx, Metrics, ViewProperties};
 use fidl_fuchsia_ui_input::SetHardKeyboardDeliveryCmd;
-use fidl_fuchsia_ui_views::ViewToken;
+use fidl_fuchsia_ui_views::{ViewRef, ViewRefControl, ViewToken};
 use fuchsia_async::{self as fasync, Interval};
 use fuchsia_framebuffer::ImageId;
 use fuchsia_scenic::{EntityNode, SessionPtr, View};
@@ -368,9 +368,17 @@ impl ScenicResources {
     fn new(
         session: &SessionPtr,
         view_token: ViewToken,
+        control_ref: ViewRefControl,
+        view_ref: ViewRef,
         app_sender: UnboundedSender<MessageInternal>,
     ) -> ScenicResources {
-        let view = View::new(session.clone(), view_token, Some(String::from("Carnelian View")));
+        let view = View::new3(
+            session.clone(),
+            view_token,
+            control_ref,
+            view_ref,
+            Some(String::from("Carnelian View")),
+        );
         let root_node = EntityNode::new(session.clone());
         root_node.resource().set_event_mask(gfx::METRICS_EVENT_MASK);
         view.add_child(&root_node);
@@ -443,6 +451,8 @@ impl ViewController {
     pub(crate) async fn new(
         key: ViewKey,
         view_token: ViewToken,
+        control_ref: ViewRefControl,
+        view_ref: ViewRef,
         mode: ViewMode,
         session: SessionPtr,
         mut view_assistant: ViewAssistantPtr,
@@ -450,11 +460,25 @@ impl ViewController {
     ) -> Result<ViewController, Error> {
         let strategy = match mode {
             ViewMode::Canvas => {
-                ScenicCanvasViewStrategy::new(&session, view_token, app_sender.clone()).await?
+                ScenicCanvasViewStrategy::new(
+                    &session,
+                    view_token,
+                    control_ref,
+                    view_ref,
+                    app_sender.clone(),
+                )
+                .await?
             }
             ViewMode::Render(render_options) => {
-                RenderViewStrategy::new(&session, render_options, view_token, app_sender.clone())
-                    .await?
+                RenderViewStrategy::new(
+                    &session,
+                    render_options,
+                    view_token,
+                    control_ref,
+                    view_ref,
+                    app_sender.clone(),
+                )
+                .await?
             }
         };
 

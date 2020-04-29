@@ -3,7 +3,9 @@
 // found in the LICENSE file.
 
 mod cmd;
+mod view_ref_pair;
 mod view_token_pair;
+pub use self::view_ref_pair::*;
 pub use self::view_token_pair::*;
 
 use fidl::endpoints::ServerEnd;
@@ -15,11 +17,11 @@ use fidl_fuchsia_ui_gfx::{
     AmbientLightArgs, CameraArgs, CircleArgs, ColorRgb, ColorRgba, DirectionalLightArgs,
     DisplayCompositorArgs, EntityNodeArgs, ImageArgs, ImagePipe2Args, LayerArgs, LayerStackArgs,
     MaterialArgs, MemoryArgs, PointLightArgs, RectangleArgs, RendererArgs, ResourceArgs,
-    RoundedRectangleArgs, SceneArgs, ShapeNodeArgs, Value, ViewArgs, ViewHolderArgs,
+    RoundedRectangleArgs, SceneArgs, ShapeNodeArgs, Value, ViewArgs, ViewArgs3, ViewHolderArgs,
     ViewProperties,
 };
 use fidl_fuchsia_ui_scenic::{Command, Present2Args, SessionEventStream, SessionProxy};
-use fidl_fuchsia_ui_views::{ViewHolderToken, ViewToken};
+use fidl_fuchsia_ui_views::{ViewHolderToken, ViewRef, ViewRefControl, ViewToken};
 use fuchsia_zircon::{Event, HandleBased, Rights, Status, Vmo};
 use mapped_vmo::Mapping;
 use parking_lot::Mutex;
@@ -571,6 +573,19 @@ impl View {
     pub fn new(session: SessionPtr, token: ViewToken, debug_name: Option<String>) -> View {
         let args = ViewArgs { token: token, debug_name: debug_name };
         View { resource: Resource::new(session, ResourceArgs::View(args)) }
+    }
+
+    /// Creates a new view using the ViewArgs3 resource which allows the user to
+    /// use view_refs.
+    pub fn new3(
+        session: SessionPtr,
+        token: ViewToken,
+        control_ref: ViewRefControl,
+        view_ref: ViewRef,
+        debug_name: Option<String>,
+    ) -> View {
+        let args = ViewArgs3 { token, control_ref, view_ref, debug_name };
+        View { resource: Resource::new(session, ResourceArgs::View3(args)) }
     }
 
     pub fn id(&self) -> u32 {
