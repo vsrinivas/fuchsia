@@ -1447,7 +1447,7 @@ btf::_run_tests_in_isolation() {
   if [[ ${#BT_TEST_FUNCTIONS} == 0 ]]; then
     BT_TEST_FUNCTIONS=(
       $(btf::_get_test_functions)
-    )
+    ) || return $?
   fi
 
   local has_filter=false
