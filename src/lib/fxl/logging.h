@@ -13,7 +13,6 @@
 #include <limits>
 #include <sstream>
 
-#include "src/lib/fxl/fxl_export.h"
 #include "src/lib/fxl/log_level.h"
 #include "src/lib/fxl/macros.h"
 
@@ -24,7 +23,7 @@ class LogMessageVoidify {
   void operator&(std::ostream&) {}
 };
 
-class FXL_EXPORT LogMessage {
+class LogMessage {
  public:
   LogMessage(LogSeverity severity, const char* file, int line, const char* condition,
              const char* tag
@@ -51,7 +50,7 @@ class FXL_EXPORT LogMessage {
 };
 
 // LogFirstNState is used by the macro FXL_LOG_FIRST_N below.
-class FXL_EXPORT LogFirstNState {
+class LogFirstNState {
  public:
   bool ShouldLog(uint32_t n);
 
@@ -60,11 +59,11 @@ class FXL_EXPORT LogFirstNState {
 };
 
 // Gets the FXL_VLOG default verbosity level.
-FXL_EXPORT int GetVlogVerbosity();
+int GetVlogVerbosity();
 
 // Returns true if |severity| is at or above the current minimum log level.
 // LOG_FATAL and above is always true.
-FXL_EXPORT bool ShouldCreateLogMessage(LogSeverity severity);
+bool ShouldCreateLogMessage(LogSeverity severity);
 
 }  // namespace fxl
 

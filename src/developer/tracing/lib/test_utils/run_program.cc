@@ -19,23 +19,21 @@
 namespace tracing {
 namespace test {
 
-void AppendLoggingArgs(std::vector<std::string>* argv, const char* prefix) {
+void AppendLoggingArgs(std::vector<std::string>* argv, const char* prefix,
+                       const fxl::LogSettings& log_settings) {
   // Transfer our log settings to the subprogram.
-  auto log_settings = fxl::GetLogSettings();
   std::string log_file_arg;
   std::string verbose_or_quiet_arg;
   if (log_settings.log_file != "") {
-    log_file_arg = fxl::StringPrintf("%s--log-file=%s", prefix,
-                                     log_settings.log_file.c_str());
+    log_file_arg = fxl::StringPrintf("%s--log-file=%s", prefix, log_settings.log_file.c_str());
     argv->push_back(log_file_arg);
   }
   if (log_settings.min_log_level != 0) {
     if (log_settings.min_log_level < 0) {
-      verbose_or_quiet_arg = fxl::StringPrintf("%s--verbose=%d", prefix,
-                                               -log_settings.min_log_level);
-    } else {
       verbose_or_quiet_arg =
-          fxl::StringPrintf("%s--quiet=%d", prefix, log_settings.min_log_level);
+          fxl::StringPrintf("%s--verbose=%d", prefix, -log_settings.min_log_level);
+    } else {
+      verbose_or_quiet_arg = fxl::StringPrintf("%s--quiet=%d", prefix, log_settings.min_log_level);
     }
     argv->push_back(verbose_or_quiet_arg);
   }
@@ -64,9 +62,8 @@ zx_status_t SpawnProgram(const zx::job& job, const std::vector<std::string>& arg
   return RunProgram(job, argv, num_actions, spawn_actions, out_process);
 }
 
-zx_status_t RunProgram(const zx::job& job, const std::vector<std::string>& argv,
-                       size_t num_actions, const fdio_spawn_action_t* actions,
-                       zx::process* out_process) {
+zx_status_t RunProgram(const zx::job& job, const std::vector<std::string>& argv, size_t num_actions,
+                       const fdio_spawn_action_t* actions, zx::process* out_process) {
   std::vector<const char*> c_argv;
   StringArgvToCArgv(argv, &c_argv);
 
@@ -109,8 +106,8 @@ bool WaitAndGetReturnCode(const std::string& program_name, const zx::process& pr
   return true;
 }
 
-bool RunProgramAndWait(const zx::job& job, const std::vector<std::string>& argv,
-                       size_t num_actions, const fdio_spawn_action_t* actions) {
+bool RunProgramAndWait(const zx::job& job, const std::vector<std::string>& argv, size_t num_actions,
+                       const fdio_spawn_action_t* actions) {
   zx::process subprocess;
 
   auto status = RunProgram(job, argv, num_actions, actions, &subprocess);
@@ -195,8 +192,8 @@ bool WaitAndGetReturnCode(const std::string& program_name, async::Loop* loop,
   }
 }
 
-bool RunComponentAndWait(async::Loop* loop, sys::ComponentContext* context,
-                         const std::string& app, const std::vector<std::string>& args,
+bool RunComponentAndWait(async::Loop* loop, sys::ComponentContext* context, const std::string& app,
+                         const std::vector<std::string>& args,
                          std::unique_ptr<fuchsia::sys::FlatNamespace> flat_namespace) {
   fuchsia::sys::ComponentControllerPtr component_controller;
   if (!RunComponent(context, app, args, std::move(flat_namespace), &component_controller)) {

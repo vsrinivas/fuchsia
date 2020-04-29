@@ -21,6 +21,9 @@
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/test/test_settings.h"
 
+// Defined in gtest_main.cc
+extern fxl::LogSettings g_log_settings;
+
 namespace tracing {
 namespace test {
 
@@ -28,8 +31,8 @@ namespace {
 
 // |relative_tspec_path| is a relative path, from /pkg.
 static void RunAndVerify(const char* relative_tspec_path) {
-  ASSERT_TRUE(RunTspec(relative_tspec_path, kRelativeOutputFilePath));
-  ASSERT_TRUE(VerifyTspec(relative_tspec_path, kRelativeOutputFilePath));
+  ASSERT_TRUE(RunTspec(relative_tspec_path, kRelativeOutputFilePath, g_log_settings));
+  ASSERT_TRUE(VerifyTspec(relative_tspec_path, kRelativeOutputFilePath, g_log_settings));
 }
 
 TEST(Oneshot, FillBuffer) { RunAndVerify("data/oneshot.tspec"); }
@@ -41,7 +44,8 @@ TEST(CircularWithTrigger, FillBufferAndAlert) { RunAndVerify("data/circular_trig
 TEST(Streaming, FillBuffer) { RunAndVerify("data/streaming.tspec"); }
 
 TEST(NestedTestEnvironment, Test) {
-  ASSERT_TRUE(RunTspec("data/nested_environment_test.tspec", kRelativeOutputFilePath));
+  ASSERT_TRUE(
+      RunTspec("data/nested_environment_test.tspec", kRelativeOutputFilePath, g_log_settings));
 }
 
 // A class for adding an extra provider to the test.
@@ -56,7 +60,7 @@ class ExtraProvider : public ::testing::Test {
   void SetUp() override {
     zx::job job{};  // -> default job
     argv_.push_back(GetProgramPath());
-    AppendLoggingArgs(&argv_, "");
+    AppendLoggingArgs(&argv_, "", g_log_settings);
     zx::eventpair their_event;
     auto status = zx::eventpair::create(0u, &our_event_, &their_event);
     if (status != ZX_OK) {

@@ -7,7 +7,6 @@
 
 #include <string>
 
-#include "src/lib/fxl/fxl_export.h"
 #include "src/lib/fxl/log_level.h"
 
 namespace fxl {
@@ -33,22 +32,18 @@ struct LogSettings {
 };
 
 // Sets the active log settings for the current process.
-FXL_EXPORT void SetLogSettings(const LogSettings& settings);
+void SetLogSettings(const LogSettings& settings);
 
 // Sets the active log settings and tags for the current process. |tags| is not
 // used on host.
-FXL_EXPORT void SetLogSettings(const LogSettings& settings,
-                               const std::initializer_list<std::string>& tags);
+void SetLogSettings(const LogSettings& settings, const std::initializer_list<std::string>& tags);
 
 // Sets the log tags without modifying the settings. This is ignored on the host.
-FXL_EXPORT void SetLogTags(const std::initializer_list<std::string>& tags);
-
-// Gets the active log settings for the current process.
-FXL_EXPORT LogSettings GetLogSettings();
+void SetLogTags(const std::initializer_list<std::string>& tags);
 
 // Gets the minimum log level for the current process. Never returns a value
 // higher than LOG_FATAL.
-FXL_EXPORT int GetMinLogLevel();
+LogSeverity GetMinLogLevel();
 
 }  // namespace fxl
 

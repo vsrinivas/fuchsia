@@ -7,11 +7,15 @@
 #include "garnet/lib/perfmon/controller.h"
 #include "run_test.h"
 #include "src/lib/fxl/command_line.h"
+#include "src/lib/fxl/log_settings.h"
+#include "src/lib/fxl/log_settings_command_line.h"
 #include "src/lib/fxl/test/test_settings.h"
 #include "verify_test.h"
 
+static fxl::LogSettings g_log_settings;
+
 static void RunAndVerify(const char* spec_path) {
-  ASSERT_TRUE(RunSpec(spec_path));
+  ASSERT_TRUE(RunSpec(spec_path, g_log_settings));
   VerifySpec(spec_path);
 }
 
@@ -51,6 +55,7 @@ int main(int argc, char** argv) {
   auto cl = fxl::CommandLineFromArgcArgv(argc, argv);
   if (!fxl::SetTestSettings(cl))
     return EXIT_FAILURE;
+  fxl::ParseLogSettings(cl, &g_log_settings);
 
   // Early exit if there is no perfmon device. We could be running on QEMU.
   bool is_supported = false;

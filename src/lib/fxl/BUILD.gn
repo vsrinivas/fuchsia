@@ -16,34 +16,29 @@ source_set("common") {
   ]
 }
 
-if (is_fuchsia) {
-  fxl_logging_type = "shared_library"
-} else {
-  fxl_logging_type = "source_set"
-}
-
-target(fxl_logging_type, "fxl_logging") {
-  # Some of these sources store static global state that may impose potential
-  # constraints on dynamic linking.
+source_set("fxl_logging") {
   sources = [
     "debug/debugger.cc",
     "debug/debugger.h",
     "log_level.h",
     "log_settings.cc",
     "log_settings.h",
-    "log_settings_state.cc",
     "logging.cc",
     "logging.h",
+    "logging_backend.h",
   ]
 
   public_deps = [ ":common" ]
 
   if (is_fuchsia) {
+    sources += [ "logging_backend_fuchsia.cc" ]
     libs = [ "zircon" ]
     public_deps += [
       "//zircon/public/lib/syslog",
       "//zircon/public/lib/zx",
     ]
+  } else {
+    sources += [ "logging_backend_host.cc" ]
   }
 }
 
@@ -146,6 +141,7 @@ static_library("fxl") {
     libs = [ "zircon" ]
   }
 }
+
 executable("fxl_unittests") {
   testonly = true
 

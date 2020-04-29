@@ -25,9 +25,9 @@ namespace {
 
 class LoggingFixture : public ::testing::Test {
  public:
-  LoggingFixture() : old_settings_(GetLogSettings()), old_stderr_(dup(STDERR_FILENO)) {}
+  LoggingFixture() : old_severity_(GetMinLogLevel()), old_stderr_(dup(STDERR_FILENO)) {}
   ~LoggingFixture() {
-    SetLogSettings(old_settings_);
+    SetLogSettings({.min_log_level = old_severity_});
 #ifdef __Fuchsia__
     // Go back to using STDERR.
     fx_logger_t* logger = fx_log_get_logger();
@@ -38,7 +38,7 @@ class LoggingFixture : public ::testing::Test {
   }
 
  private:
-  LogSettings old_settings_;
+  LogSeverity old_severity_;
   int old_stderr_;
 };
 

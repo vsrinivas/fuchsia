@@ -18,6 +18,8 @@
 #include <string>
 #include <vector>
 
+#include "src/lib/fxl/log_settings.h"
+
 namespace tracing {
 namespace test {
 
@@ -25,19 +27,18 @@ namespace test {
 // |prefix| is prepended to each argument.
 // For example, if |prefix| is "--foo=" and verbosity is 2, then
 // "--foo=--verbose=2" will be appended to |argv|.
-void AppendLoggingArgs(std::vector<std::string>* argv, const char* prefix);
+void AppendLoggingArgs(std::vector<std::string>* argv, const char* prefix,
+                       const fxl::LogSettings& log_settings);
 
 // Wrapper around |fdio_spawn_etc()|.
 // If |arg_handle| is not ZX_HANDLE_INVALID, then it is passed to the
 // process with id PA_USER0.
-zx_status_t SpawnProgram(const zx::job& job,
-                         const std::vector<std::string>& argv,
+zx_status_t SpawnProgram(const zx::job& job, const std::vector<std::string>& argv,
                          zx_handle_t arg_handle, zx::process* out_process);
 
 // Wrapper around |fdio_spawn_etc()|.
-zx_status_t RunProgram(const zx::job& job, const std::vector<std::string>& argv,
-                       size_t num_actions, const fdio_spawn_action_t* actions,
-                       zx::process* out_process);
+zx_status_t RunProgram(const zx::job& job, const std::vector<std::string>& argv, size_t num_actions,
+                       const fdio_spawn_action_t* actions, zx::process* out_process);
 
 // Wait for |process| to exit.
 // |program_name| is for logging purposes.
@@ -46,8 +47,8 @@ bool WaitAndGetReturnCode(const std::string& program_name, const zx::process& pr
 
 // Wrapper on |RunProgram(),WaitAndGetReturnCode()|.
 // The program must exit with a zero return code for success.
-bool RunProgramAndWait(const zx::job& job, const std::vector<std::string>& argv,
-                       size_t num_actions, const fdio_spawn_action_t* actions);
+bool RunProgramAndWait(const zx::job& job, const std::vector<std::string>& argv, size_t num_actions,
+                       const fdio_spawn_action_t* actions);
 
 // Run an app within |context|.
 // |app| is the component's URL.
@@ -64,8 +65,8 @@ bool WaitAndGetReturnCode(const std::string& program_name, async::Loop* loop,
 
 // Wrapper on |RunComponent(),WaitAndGetReturnCode()|.
 // The program must exit with a zero return code for success.
-bool RunComponentAndWait(async::Loop* loop, sys::ComponentContext* context,
-                         const std::string& app, const std::vector<std::string>& args,
+bool RunComponentAndWait(async::Loop* loop, sys::ComponentContext* context, const std::string& app,
+                         const std::vector<std::string>& args,
                          std::unique_ptr<fuchsia::sys::FlatNamespace> flat_namespace);
 
 }  // namespace test

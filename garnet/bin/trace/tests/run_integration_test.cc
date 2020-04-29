@@ -34,8 +34,10 @@ static void PrintUsageString() { std::cout << kUsageString << std::endl; }
 
 int main(int argc, char *argv[]) {
   auto cl = fxl::CommandLineFromArgcArgv(argc, argv);
-  if (!fxl::SetLogSettingsFromCommandLine(cl))
+  fxl::LogSettings log_settings;
+  if (!fxl::ParseLogSettings(cl, &log_settings))
     return EXIT_FAILURE;
+  fxl::SetLogSettings(log_settings);
 
   if (cl.HasOption("help", nullptr)) {
     PrintUsageString();
@@ -52,11 +54,13 @@ int main(int argc, char *argv[]) {
 
   tracing::test::InitComponentContext();
 
-  if (!tracing::test::RunTspec(relative_tspec_path, tracing::test::kRelativeOutputFilePath)) {
+  if (!tracing::test::RunTspec(relative_tspec_path, tracing::test::kRelativeOutputFilePath,
+                               log_settings)) {
     return EXIT_FAILURE;
   }
 
-  if (!tracing::test::VerifyTspec(relative_tspec_path, tracing::test::kRelativeOutputFilePath)) {
+  if (!tracing::test::VerifyTspec(relative_tspec_path, tracing::test::kRelativeOutputFilePath,
+                                  log_settings)) {
     return EXIT_FAILURE;
   }
 

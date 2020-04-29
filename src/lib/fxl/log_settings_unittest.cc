@@ -20,14 +20,14 @@ namespace {
 
 class LogSettingsFixture : public ::testing::Test {
  public:
-  LogSettingsFixture() : old_settings_(GetLogSettings()), old_stderr_(dup(STDERR_FILENO)) {}
+  LogSettingsFixture() : old_severity_(GetMinLogLevel()), old_stderr_(dup(STDERR_FILENO)) {}
   ~LogSettingsFixture() {
-    SetLogSettings(old_settings_);
+    SetLogSettings({.min_log_level = old_severity_});
     dup2(old_stderr_.get(), STDERR_FILENO);
   }
 
  private:
-  LogSettings old_settings_;
+  LogSeverity old_severity_;
   fbl::unique_fd old_stderr_;
 };
 
@@ -94,9 +94,6 @@ TEST_F(LogSettingsFixture, SetAndGet) {
   LogSettings new_settings;
   new_settings.min_log_level = -20;
   SetLogSettings(new_settings);
-
-  LogSettings current_settings = GetLogSettings();
-  EXPECT_EQ(new_settings.min_log_level, current_settings.min_log_level);
   EXPECT_EQ(new_settings.min_log_level, GetMinLogLevel());
 }
 
@@ -104,20 +101,16 @@ TEST_F(LogSettingsFixture, SetValidOptions) {
   EXPECT_TRUE(
       SetLogSettingsFromCommandLine(CommandLineFromInitializerList({"argv0", "--verbose=20"})));
 
-  LogSettings current_settings = GetLogSettings();
-  EXPECT_EQ(-20, current_settings.min_log_level);
   EXPECT_EQ(-20, GetMinLogLevel());
 }
 
 TEST_F(LogSettingsFixture, SetInvalidOptions) {
-  LogSettings old_settings = GetLogSettings();
+  LogSeverity old_severity = GetMinLogLevel();
 
   EXPECT_FALSE(SetLogSettingsFromCommandLine(
       CommandLineFromInitializerList({"argv0", "--verbose=garbage"})));
 
-  LogSettings current_settings = GetLogSettings();
-  EXPECT_EQ(old_settings.min_log_level, current_settings.min_log_level);
-  EXPECT_EQ(old_settings.min_log_level, GetMinLogLevel());
+  EXPECT_EQ(old_severity, GetMinLogLevel());
 }
 
 TEST_F(LogSettingsFixture, SetValidLogFile) {
@@ -128,8 +121,6 @@ TEST_F(LogSettingsFixture, SetValidLogFile) {
   ASSERT_TRUE(temp_dir.NewTempFile(&new_settings.log_file));
   SetLogSettings(new_settings);
 
-  LogSettings current_settings = GetLogSettings();
-  EXPECT_EQ(new_settings.log_file, current_settings.log_file);
   FXL_LOG(INFO) << kTestMessage;
 
   ASSERT_EQ(0, access(new_settings.log_file.c_str(), R_OK));
@@ -139,14 +130,9 @@ TEST_F(LogSettingsFixture, SetValidLogFile) {
 }
 
 TEST_F(LogSettingsFixture, SetInvalidLogFile) {
-  LogSettings old_settings = GetLogSettings();
-
   LogSettings new_settings;
   new_settings.log_file = "\\\\//invalid-path";
   SetLogSettings(new_settings);
-
-  LogSettings current_settings = GetLogSettings();
-  EXPECT_EQ(old_settings.log_file.c_str(), current_settings.log_file);
 
   EXPECT_NE(0, access(new_settings.log_file.c_str(), R_OK));
 }

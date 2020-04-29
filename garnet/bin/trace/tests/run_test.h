@@ -13,6 +13,8 @@
 #include <string>
 #include <vector>
 
+#include "src/lib/fxl/log_settings.h"
+
 namespace tracing {
 namespace test {
 
@@ -47,13 +49,14 @@ bool RunTraceAndWait(const zx::job& job, const std::vector<std::string>& args);
 // We don't need to pass a context to RunTspec because the trace program
 // is currently a system app. If that changes then we will need a context
 // to run the trace too.
-bool RunTspec(const std::string& relative_tspec_path,
-              const std::string& relative_output_file_path);
+bool RunTspec(const std::string& relative_tspec_path, const std::string& relative_output_file_path,
+              const fxl::LogSettings& log_settings);
 
 // N.B. This is a synchronous call that uses an internal async loop.
 // ("synchronous" meaning that it waits for the verifier to complete).
 bool VerifyTspec(const std::string& relative_tspec_path,
-                 const std::string& relative_output_file_path);
+                 const std::string& relative_output_file_path,
+                 const fxl::LogSettings& log_settings);
 
 }  // namespace test
 }  // namespace tracing

@@ -24,9 +24,9 @@
 // that resolves to the component path.
 const char kCpuperfProgramPath[] = "/bin/cpuperf";
 
-static void AppendLoggingArgs(std::vector<std::string>* argv) {
+static void AppendLoggingArgs(std::vector<std::string>* argv,
+                              const fxl::LogSettings& log_settings) {
   // Transfer our log settings to the subprogram.
-  auto log_settings = fxl::GetLogSettings();
   std::string log_file_arg;
   std::string verbose_or_quiet_arg;
   if (log_settings.log_file != "") {
@@ -51,9 +51,10 @@ static void StringArgvToCArgv(const std::vector<std::string>& argv,
   c_argv->push_back(nullptr);
 }
 
-static void BuildCpuperfProgramArgv(const std::string& spec_path, std::vector<std::string>* argv) {
+static void BuildCpuperfProgramArgv(const std::string& spec_path, std::vector<std::string>* argv,
+                                    const fxl::LogSettings& log_settings) {
   argv->push_back(kCpuperfProgramPath);
-  AppendLoggingArgs(argv);
+  AppendLoggingArgs(argv, log_settings);
   argv->push_back(fxl::StringPrintf("--spec-file=%s", spec_path.c_str()));
 }
 
@@ -105,13 +106,13 @@ static zx_status_t WaitAndGetExitCode(const std::string& program_name, const zx:
   return ZX_OK;
 }
 
-bool RunSpec(const std::string& spec_path) {
+bool RunSpec(const std::string& spec_path, const fxl::LogSettings& log_settings) {
   FXL_LOG(INFO) << "Running spec " << spec_path;
   zx::job job{};  // -> default job
   zx::process subprocess;
 
   std::vector<std::string> argv;
-  BuildCpuperfProgramArgv(spec_path, &argv);
+  BuildCpuperfProgramArgv(spec_path, &argv, log_settings);
 
   auto status = SpawnProgram(job, argv, &subprocess);
   if (status != ZX_OK) {

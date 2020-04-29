@@ -55,13 +55,14 @@ static bool ReadTspec(const std::string& tspec_path, tracing::Spec* spec) {
 
 static bool BuildTraceProgramArgs(const std::string& relative_tspec_path,
                                   const std::string& relative_output_file_path,
-                                  std::vector<std::string>* args) {
+                                  std::vector<std::string>* args,
+                                  const fxl::LogSettings& log_settings) {
   tracing::Spec spec;
   if (!ReadTspec(std::string(kTestPackagePath) + "/" + relative_tspec_path, &spec)) {
     return false;
   }
 
-  AppendLoggingArgs(args, "");
+  AppendLoggingArgs(args, "", log_settings);
   args->push_back("record");
   args->push_back(fxl::StringPrintf(
       "--spec-file=%s",
@@ -70,7 +71,7 @@ static bool BuildTraceProgramArgs(const std::string& relative_tspec_path,
       "--output-file=%s",
       (std::string(kSpawnedTestTmpPath) + "/" + relative_output_file_path).c_str()));
 
-  AppendLoggingArgs(args, "--append-args=");
+  AppendLoggingArgs(args, "--append-args=", log_settings);
 
   // Note that |relative_tspec_path| cannot have a comma.
   args->push_back(
@@ -84,8 +85,9 @@ static bool BuildTraceProgramArgs(const std::string& relative_tspec_path,
 
 static void BuildVerificationProgramArgs(const std::string& tspec_path,
                                          const std::string& output_file_path,
-                                         std::vector<std::string>* args) {
-  AppendLoggingArgs(args, "");
+                                         std::vector<std::string>* args,
+                                         const fxl::LogSettings& log_settings) {
+  AppendLoggingArgs(args, "", log_settings);
 
   args->push_back("verify");
   args->push_back(tspec_path);
@@ -195,10 +197,10 @@ static bool RunTraceComponentAndWait(const std::string& app, const std::vector<s
   return RunComponentAndWait(&loop, context, app, args, std::move(flat_namespace));
 }
 
-bool RunTspec(const std::string& relative_tspec_path,
-              const std::string& relative_output_file_path) {
+bool RunTspec(const std::string& relative_tspec_path, const std::string& relative_output_file_path,
+              const fxl::LogSettings& log_settings) {
   std::vector<std::string> args;
-  if (!BuildTraceProgramArgs(relative_tspec_path, relative_output_file_path, &args)) {
+  if (!BuildTraceProgramArgs(relative_tspec_path, relative_output_file_path, &args, log_settings)) {
     return false;
   }
 
@@ -209,7 +211,8 @@ bool RunTspec(const std::string& relative_tspec_path,
 }
 
 bool VerifyTspec(const std::string& relative_tspec_path,
-                 const std::string& relative_output_file_path) {
+                 const std::string& relative_output_file_path,
+                 const fxl::LogSettings& log_settings) {
   tracing::Spec spec;
   if (!ReadTspec(std::string(kTestPackagePath) + "/" + relative_tspec_path, &spec)) {
     return false;
@@ -222,7 +225,7 @@ bool VerifyTspec(const std::string& relative_tspec_path,
   BuildVerificationProgramArgs(
       (std::string(spec.spawn ? kSpawnedTestPackagePath : kTestPackagePath) + "/" +
        relative_tspec_path),
-      std::string(kSpawnedTestTmpPath) + "/" + relative_output_file_path, &args);
+      std::string(kSpawnedTestTmpPath) + "/" + relative_output_file_path, &args, log_settings);
 
   FXL_LOG(INFO) << "Verifying tspec " << relative_tspec_path << ", output file "
                 << relative_output_file_path;

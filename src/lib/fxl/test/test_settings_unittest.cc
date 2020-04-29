@@ -24,11 +24,11 @@ using ::testing::StrEq;
 class TestSettingsFixture : public ::testing::Test {
  public:
   TestSettingsFixture()
-      : old_settings_(GetLogSettings()),
+      : old_severity_(GetMinLogLevel()),
         old_stderr_(dup(STDERR_FILENO)),
         random_seed_(getenv("TEST_LOOP_RANDOM_SEED")) {}
   ~TestSettingsFixture() {
-    SetLogSettings(old_settings_);
+    SetLogSettings({.min_log_level = old_severity_});
     dup2(old_stderr_.get(), STDERR_FILENO);
     if (random_seed_) {
       setenv("TEST_LOOP_RANDOM_SEED", random_seed_, /*overwrite=*/true);
@@ -38,7 +38,7 @@ class TestSettingsFixture : public ::testing::Test {
   }
 
  private:
-  LogSettings old_settings_;
+  LogSeverity old_severity_;
   fbl::unique_fd old_stderr_;
   char *random_seed_;
 };
