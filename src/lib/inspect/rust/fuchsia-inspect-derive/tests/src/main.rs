@@ -142,6 +142,38 @@ impl AutoYak {
     }
 }
 
+// No inspect node, automatically forwards node to inner node
+#[derive(Inspect)]
+struct AutoYakWrapper {
+    // Attaches the inner field to parent[name]
+    #[inspect(forward)]
+    inner: parking_lot::Mutex<AutoYak>,
+
+    // Attaches `wrapper_data` directly to parent, ignoring the requested name
+    wrapper_data: IValue<String>,
+}
+
+impl From<AutoYak> for AutoYakWrapper {
+    fn from(yak: AutoYak) -> Self {
+        let inner = yak.into();
+        let wrapper_data = "some data".to_string().into();
+        Self { inner, wrapper_data }
+    }
+}
+
+// No inspect node, attaches name and age directly to the parent
+#[derive(Inspect)]
+struct NodeLessYak {
+    name: IValue<String>,
+    age: IValue<u16>,
+}
+
+impl NodeLessYak {
+    fn new(name: String, age: u16) -> Self {
+        Self { name: name.into(), age: age.into() }
+    }
+}
+
 mod inner {
     use super::*;
 
@@ -511,6 +543,40 @@ async fn derive_inspect_nested_interior_mut() -> Result<(), AttachError> {
         },
     }});
     std::mem::drop(yak_mut);
+    assert_inspect_tree!(inspector, root: {});
+    Ok(())
+}
+
+#[fasync::run_until_stalled(test)]
+async fn derive_inspect_forward() -> Result<(), AttachError> {
+    let inspector = Inspector::new();
+    let mut yak = AutoYakWrapper::from(AutoYak::new("Sebastian".to_string()));
+    yak.iattach(inspector.root(), "my_yak")?;
+    assert_inspect_tree!(inspector, root: {
+        my_yak: {
+            name: "Sebastian",
+            ty: "Icelandic",
+            child: {
+                age: 0u64,
+            },
+        },
+        wrapper_data: "some data",
+    });
+    std::mem::drop(yak);
+    assert_inspect_tree!(inspector, root: {});
+    Ok(())
+}
+
+#[fasync::run_until_stalled(test)]
+async fn derive_inspect_nodeless() -> Result<(), AttachError> {
+    let inspector = Inspector::new();
+    let mut yak = NodeLessYak::new("Sebastian".to_string(), 2);
+    yak.iattach(inspector.root(), "ignored")?;
+    assert_inspect_tree!(inspector, root: {
+        name: "Sebastian",
+        age: 2u64,
+    });
+    std::mem::drop(yak);
     assert_inspect_tree!(inspector, root: {});
     Ok(())
 }
