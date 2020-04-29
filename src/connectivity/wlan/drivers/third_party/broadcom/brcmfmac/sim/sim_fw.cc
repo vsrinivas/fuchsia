@@ -18,6 +18,9 @@
 
 #include <zircon/assert.h>
 
+#include <cstddef>
+#include <memory>
+
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/bcdc.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/brcm_hw_ids.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/brcmu_d11.h"
@@ -112,23 +115,30 @@ zx_status_t SimFirmware::BcdcVarOp(uint16_t ifidx, brcmf_proto_bcdc_dcmd* dcmd, 
                                    size_t len, bool is_set) {
   zx_status_t status = ZX_OK;
 
-  char* str_begin = reinterpret_cast<char*>(data);
-  uint8_t* str_end = static_cast<uint8_t*>(memchr(str_begin, '\0', dcmd->len));
-  if (str_end == nullptr) {
-    BRCMF_DBG(SIM, "SET_VAR: iovar name not null-terminated");
-    return ZX_ERR_INVALID_ARGS;
-  }
-
-  size_t str_len = str_end - data;
-
-  // IovarsSet returns the input unchanged
-  // IovarsGet modifies the buffer in-place
   if (is_set) {
-    void* value_start = str_end + 1;
-    size_t value_len = dcmd->len - (str_len + 1);
-    status = IovarsSet(ifidx, str_begin, value_start, value_len);
+    // The command consists of a NUL-terminated name, followed by a value.
+    const char* const name_begin = reinterpret_cast<char*>(data);
+    const char* const name_end = static_cast<const char*>(memchr(name_begin, '\0', dcmd->len));
+    if (name_end == nullptr) {
+      BRCMF_DBG(SIM, "SET_VAR: iovar name not null-terminated");
+      return ZX_ERR_INVALID_ARGS;
+    }
+    const char* const value_begin = name_end + 1;
+    const size_t value_size = dcmd->len - (value_begin - name_begin);
+
+    // Since we're passing the value as a buffer down to users that may expect to be able to cast
+    // directly into it, make a suitably aligned copy here.
+    static constexpr auto align_val = static_cast<std::align_val_t>(alignof(std::max_align_t));
+    const auto aligned_delete = [](char* buffer) { operator delete[](buffer, align_val); };
+    std::unique_ptr<char, decltype(aligned_delete)> value_buffer(
+        static_cast<char*>(operator new[](value_size, align_val)), aligned_delete);
+    std::memcpy(value_buffer.get(), value_begin, value_size);
+
+    // IovarsSet returns the input unchanged
+    status = IovarsSet(ifidx, name_begin, value_buffer.get(), value_size);
   } else {
-    status = IovarsGet(ifidx, str_begin, data, dcmd->len);
+    // IovarsGet modifies the buffer in-place
+    status = IovarsGet(ifidx, reinterpret_cast<const char*>(data), data, dcmd->len);
   }
 
   if (status == ZX_OK) {
