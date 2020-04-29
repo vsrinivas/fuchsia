@@ -221,6 +221,23 @@ class MagmaExecuteMsdVsi : public testing::Test {
     EXPECT_STREQ(data, kHelloWorld);
   }
 
+  void TestExecuteMmuException() {
+    static constexpr size_t kCodeSize = 4096;
+
+    std::shared_ptr<EtnaCommandStream> command_stream = CreateEtnaCommandStream(kCodeSize);
+    ASSERT_TRUE(command_stream);
+
+    constexpr uint32_t kLinkCommand = 0x40000000;
+    // Jump to an unmapped address.
+    command_stream->WriteCommand(kLinkCommand | 0x8 /* arbitrary prefetch */);
+    command_stream->WriteCommand(next_gpu_addr_);
+
+    static constexpr uint32_t kTimeoutMs = 10;
+    ExecuteCommand(command_stream, kTimeoutMs);
+
+    EXPECT_EQ(MAGMA_STATUS_CONNECTION_LOST, magma_get_error(magma_vsi_.GetConnection()));
+  }
+
  private:
   MagmaVsi magma_vsi_;
 
@@ -262,4 +279,12 @@ TEST_F(MagmaExecuteMsdVsi, ExecuteMany) {
     TearDown();
     SetUp();
   }
+}
+
+TEST_F(MagmaExecuteMsdVsi, MmuExceptionRecovery) {
+  TestExecuteMmuException();
+  TearDown();
+  // Verify new commands complete successfully.
+  SetUp();
+  Test();
 }
