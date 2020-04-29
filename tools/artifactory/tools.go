@@ -13,10 +13,14 @@ import (
 )
 
 var (
-	toolsToUpload = map[string]struct{}{
-		"zbi":                   struct{}{},
-		"fvm":                   struct{}{},
-		"mtd-redundant-storage": struct{}{},
+	toolsToUpload = map[string]string{
+		"zbi":                   "zbi",
+		"fvm":                   "fvm",
+		"mtd-redundant-storage": "mtd-redundant-storage",
+		// TODO(fxb/38517): We can remove this different destination
+		// name once the go bootserver has replaced the old c bootserver
+		// and is called bootserver instead of bootserver_new.
+		"bootserver_new": "bootserver",
 	}
 )
 
@@ -25,7 +29,7 @@ func ToolUploads(mods *build.Modules, namespace string) []Upload {
 	return toolUploads(mods, toolsToUpload, namespace)
 }
 
-func toolUploads(mods toolModules, whitelist map[string]struct{}, namespace string) []Upload {
+func toolUploads(mods toolModules, whitelist map[string]string, namespace string) []Upload {
 	var uploads []Upload
 	for _, tool := range mods.Tools() {
 		if _, ok := whitelist[tool.Name]; !ok {
@@ -33,7 +37,7 @@ func toolUploads(mods toolModules, whitelist map[string]struct{}, namespace stri
 		}
 		uploads = append(uploads, Upload{
 			Source:      filepath.Join(mods.BuildDir(), tool.Path),
-			Destination: path.Join(namespace, fmt.Sprintf("%s-%s", tool.OS, tool.CPU), tool.Name),
+			Destination: path.Join(namespace, fmt.Sprintf("%s-%s", tool.OS, tool.CPU), whitelist[tool.Name]),
 		})
 	}
 	return uploads

@@ -71,13 +71,13 @@ func TestToolUploads(t *testing.T) {
 		},
 		{
 			Source:      filepath.Join("BUILD_DIR", "host_x64", "C"),
-			Destination: "namespace/linux-x64/C",
+			Destination: "namespace/linux-x64/C_dest",
 		},
 	}
 
-	whitelist := map[string]struct{}{
-		"A": struct{}{},
-		"C": struct{}{},
+	whitelist := map[string]string{
+		"A": "A",
+		"C": "C_dest",
 	}
 	actual := toolUploads(m, whitelist, "namespace")
 	if !reflect.DeepEqual(actual, expected) {
