@@ -11,6 +11,15 @@
 
 #include "src/lib/fidl_codec/library_loader.h"
 
+// Generated with go/fidlbolt using this text:
+// library fidl.examples.echo;
+//
+// [Discoverable]
+// protocol Echo {
+//     EchoString(string? value) -> (string? response);
+//     -> OnPong();
+// };
+
 std::string echo_service = R"({
   "version": "0.0.1",
   "name": "fidl.examples.echo",
@@ -22,8 +31,8 @@ std::string echo_service = R"({
     {
       "name": "fidl.examples.echo/Echo",
       "location": {
-        "filename": "../../garnet/examples/fidl/services/echo.test.fidl",
-        "line": 8,
+        "filename": "fidlbolt.fidl",
+        "line": 4,
         "column": 10
       },
       "maybe_attributes": [
@@ -38,8 +47,8 @@ std::string echo_service = R"({
           "generated_ordinal": 2936880781197466513,
           "name": "EchoString",
           "location": {
-            "filename": "../../garnet/examples/fidl/services/echo.test.fidl",
-            "line": 9,
+            "filename": "fidlbolt.fidl",
+            "line": 5,
             "column": 5
           },
           "has_request": true,
@@ -51,54 +60,18 @@ std::string echo_service = R"({
               },
               "name": "value",
               "location": {
-                "filename": "../../garnet/examples/fidl/services/echo.test.fidl",
-                "line": 9,
+                "filename": "fidlbolt.fidl",
+                "line": 5,
                 "column": 24
               },
-              "size": 16,
-              "max_out_of_line": 4294967295,
-              "alignment": 8,
-              "offset": 16,
-              "max_handles": 0,
-              "field_shape_old": {
-                "offset": 16,
-                "padding": 0
-              },
               "field_shape_v1": {
-                "offset": 16,
-                "padding": 0
-              },
-              "field_shape_v1_no_ee": {
                 "offset": 16,
                 "padding": 0
               }
             }
           ],
-          "maybe_request_size": 32,
-          "maybe_request_alignment": 8,
-          "maybe_request_has_padding": true,
-          "experimental_maybe_request_has_flexible_envelope": false,
-          "maybe_request_type_shape_old": {
-            "inline_size": 32,
-            "alignment": 8,
-            "depth": 1,
-            "max_handles": 0,
-            "max_out_of_line": 4294967295,
-            "has_padding": true,
-            "has_flexible_envelope": false,
-            "contains_union": false
-          },
+          "maybe_request_payload": "fidl.examples.echo/SomeLongAnonymousPrefix0",
           "maybe_request_type_shape_v1": {
-            "inline_size": 32,
-            "alignment": 8,
-            "depth": 1,
-            "max_handles": 0,
-            "max_out_of_line": 4294967295,
-            "has_padding": true,
-            "has_flexible_envelope": false,
-            "contains_union": false
-          },
-          "maybe_request_type_shape_v1_no_ee": {
             "inline_size": 32,
             "alignment": 8,
             "depth": 1,
@@ -117,43 +90,17 @@ std::string echo_service = R"({
               },
               "name": "response",
               "location": {
-                "filename": "../../garnet/examples/fidl/services/echo.test.fidl",
-                "line": 9,
+                "filename": "fidlbolt.fidl",
+                "line": 5,
                 "column": 43
               },
-              "size": 16,
-              "max_out_of_line": 4294967295,
-              "alignment": 8,
-              "offset": 16,
-              "max_handles": 0,
-              "field_shape_old": {
-                "offset": 16,
-                "padding": 0
-              },
               "field_shape_v1": {
-                "offset": 16,
-                "padding": 0
-              },
-              "field_shape_v1_no_ee": {
                 "offset": 16,
                 "padding": 0
               }
             }
           ],
-          "maybe_response_size": 32,
-          "maybe_response_alignment": 8,
-          "maybe_response_has_padding": true,
-          "experimental_maybe_response_has_flexible_envelope": false,
-          "maybe_response_type_shape_old": {
-            "inline_size": 32,
-            "alignment": 8,
-            "depth": 1,
-            "max_handles": 0,
-            "max_out_of_line": 4294967295,
-            "has_padding": true,
-            "has_flexible_envelope": false,
-            "contains_union": false
-          },
+          "maybe_response_payload": "fidl.examples.echo/SomeLongAnonymousPrefix1",
           "maybe_response_type_shape_v1": {
             "inline_size": 32,
             "alignment": 8,
@@ -164,13 +111,27 @@ std::string echo_service = R"({
             "has_flexible_envelope": false,
             "contains_union": false
           },
-          "maybe_response_type_shape_v1_no_ee": {
-            "inline_size": 32,
+          "is_composed": false
+        },
+        {
+          "ordinal": 7323483735821647872,
+          "generated_ordinal": 1120886698987607603,
+          "name": "OnPong",
+          "location": {
+            "filename": "fidlbolt.fidl",
+            "line": 6,
+            "column": 8
+          },
+          "has_request": false,
+          "has_response": true,
+          "maybe_response": [],
+          "maybe_response_type_shape_v1": {
+            "inline_size": 16,
             "alignment": 8,
-            "depth": 1,
+            "depth": 0,
             "max_handles": 0,
-            "max_out_of_line": 4294967295,
-            "has_padding": true,
+            "max_out_of_line": 0,
+            "has_padding": false,
             "has_flexible_envelope": false,
             "contains_union": false
           },
@@ -179,74 +140,94 @@ std::string echo_service = R"({
       ]
     }
   ],
-  "service_declarations": [
+  "service_declarations": [],
+  "struct_declarations": [
     {
-      "name": "fidl.examples.echo/EchoService",
+      "name": "fidl.examples.echo/SomeLongAnonymousPrefix0",
       "location": {
-        "filename": "../../garnet/examples/fidl/services/echo.test.fidl",
-        "line": 13,
-        "column": 9
+        "filename": "fidlbolt.fidl",
+        "line": 5,
+        "column": 15
       },
-      "maybe_attributes": [
-        {
-          "name": "Doc",
-          "value": " A service with multiple Echo protocol implementations.\n"
-        }
-      ],
+      "anonymous": true,
       "members": [
         {
           "type": {
-            "kind": "identifier",
-            "identifier": "fidl.examples.echo/Echo",
-            "nullable": false
+            "kind": "string",
+            "nullable": true
           },
-          "name": "foo",
+          "name": "value",
           "location": {
-            "filename": "../../garnet/examples/fidl/services/echo.test.fidl",
-            "line": 15,
-            "column": 10
+            "filename": "fidlbolt.fidl",
+            "line": 5,
+            "column": 24
           },
-          "maybe_attributes": [
-            {
-              "name": "Doc",
-              "value": " An implementation of `Echo` that prefixes its output with \"foo: \".\n"
-            }
-          ]
-        },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 0
+          }
+        }
+      ],
+      "type_shape_v1": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 4294967295,
+        "has_padding": true,
+        "has_flexible_envelope": false,
+        "contains_union": false
+      }
+    },
+    {
+      "name": "fidl.examples.echo/SomeLongAnonymousPrefix1",
+      "location": {
+        "filename": "fidlbolt.fidl",
+        "line": 5,
+        "column": 34
+      },
+      "anonymous": true,
+      "members": [
         {
           "type": {
-            "kind": "identifier",
-            "identifier": "fidl.examples.echo/Echo",
-            "nullable": false
+            "kind": "string",
+            "nullable": true
           },
-          "name": "bar",
+          "name": "response",
           "location": {
-            "filename": "../../garnet/examples/fidl/services/echo.test.fidl",
-            "line": 17,
-            "column": 10
+            "filename": "fidlbolt.fidl",
+            "line": 5,
+            "column": 43
           },
-          "maybe_attributes": [
-            {
-              "name": "Doc",
-              "value": " An implementation of `Echo` that prefixes its output with \"bar: \".\n"
-            }
-          ]
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 0
+          }
         }
-      ]
+      ],
+      "type_shape_v1": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 4294967295,
+        "has_padding": true,
+        "has_flexible_envelope": false,
+        "contains_union": false
+      }
     }
   ],
-  "struct_declarations": [],
   "table_declarations": [],
   "union_declarations": [],
-  "xunion_declarations": [],
   "type_alias_declarations": [],
   "declaration_order": [
-    "fidl.examples.echo/Echo",
-    "fidl.examples.echo/EchoService"
+    "fidl.examples.echo/Echo"
   ],
   "declarations": {
     "fidl.examples.echo/Echo": "interface",
-    "fidl.examples.echo/EchoService": "service"
+    "fidl.examples.echo/SomeLongAnonymousPrefix0": "struct",
+    "fidl.examples.echo/SomeLongAnonymousPrefix1": "struct",
+    "fidl.examples.echo/SomeLongAnonymousPrefix2": "struct"
   }
 }
 )";

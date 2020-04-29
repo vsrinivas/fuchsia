@@ -523,10 +523,10 @@ void FidlMessageValue::PrintMessageBody(PrettyPrinter& printer) const {
     }
   }
   if (matched_response() && (!is_request_ || unknown_direction_)) {
-    printer << fidl_codec::WhiteOnMagenta << (received_ ? "received" : "sent") << " response"
-            << fidl_codec::ResetColor << ' ' << fidl_codec::Green
-            << method_->enclosing_interface().name() << '.' << method_->name()
-            << fidl_codec::ResetColor << " = ";
+    printer << fidl_codec::WhiteOnMagenta << (received_ ? "received" : "sent")
+            << ((method_->request() != nullptr) ? " response" : " event") << fidl_codec::ResetColor
+            << ' ' << fidl_codec::Green << method_->enclosing_interface().name() << '.'
+            << method_->name() << fidl_codec::ResetColor << " = ";
     if (printer.pretty_print()) {
       decoded_response_->PrettyPrint(nullptr, printer);
       printer << '\n';
@@ -558,14 +558,16 @@ void FidlMessageValue::PrintMessageBody(PrettyPrinter& printer) const {
     }
   }
   if (!response_errors_.empty()) {
-    printer << fidl_codec::Red << (received_ ? "received" : "sent") << " response errors"
+    printer << fidl_codec::Red << (received_ ? "received" : "sent")
+            << ((method_->request() != nullptr) ? " response errors" : " event errors")
             << fidl_codec::ResetColor << ":\n";
     {
       Indent indent(printer);
       printer << response_errors_;
     }
     if (decoded_response_ != nullptr) {
-      printer << fidl_codec::WhiteOnMagenta << (received_ ? "received" : "sent") << " response"
+      printer << fidl_codec::WhiteOnMagenta << (received_ ? "received" : "sent")
+              << ((method_->request() != nullptr) ? " response" : " event")
               << fidl_codec::ResetColor << ' ' << fidl_codec::Green
               << method_->enclosing_interface().name() << '.' << method_->name()
               << fidl_codec::ResetColor << " = ";

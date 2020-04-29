@@ -14,6 +14,9 @@ std::vector<uint8_t> hello_world = {
     0x0b, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
     0x68, 0x65, 0x6c, 0x6c, 0x6f, 0x20, 0x77, 0x6f, 0x72, 0x6c, 0x64, 0x00, 0x00, 0x00, 0x00, 0x00};
 
+std::vector<uint8_t> on_pong = {0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x01,
+                                0x33, 0xd6, 0x9d, 0x96, 0x83, 0x30, 0x8e, 0x0f};
+
 // zx_channel_write_tests.
 
 std::unique_ptr<SystemCallTest> ZxChannelWrite(int64_t result, std::string_view result_name,
@@ -64,6 +67,33 @@ WRITE_DISPLAY_TEST(
     "ff, ff, ff, ff\x1B[0m, ff, ff, ff, ff, \n"
     "      0020: \x1B[31m68, 65, 6c, 6c\x1B[0m, 6f, 20, 77, 6f\x1B[31m, "
     "72, 6c, 64, 00\x1B[0m, 00, 00, 00, 00\x1B[0m\n"
+    "  -> \x1B[32mZX_OK\x1B[0m\n");
+
+// Event tests.
+
+#define WRITE_EVENT_TEST_CONTENT(errno, dump_messages, expected)                             \
+  set_dump_messages(dump_messages);                                                          \
+  auto loader = GetTestLibraryLoader();                                                      \
+  PerformDisplayTest(                                                                        \
+      "$plt(zx_channel_write)",                                                              \
+      ZxChannelWrite(errno, #errno, kHandle, 0, on_pong.data(), on_pong.size(), nullptr, 0), \
+      expected, loader)
+
+#define WRITE_EVENT_TEST(name, errno, dump_messages, expected) \
+  TEST_F(InterceptionWorkflowTestX64, name) {                  \
+    WRITE_EVENT_TEST_CONTENT(errno, dump_messages, expected);  \
+  }                                                            \
+  TEST_F(InterceptionWorkflowTestArm, name) {                  \
+    WRITE_EVENT_TEST_CONTENT(errno, dump_messages, expected);  \
+  }
+
+WRITE_EVENT_TEST(
+    EventWriteDecoded, ZX_OK, false,
+    "\n"
+    "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m zx_channel_write("
+    "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
+    "options:\x1B[32muint32\x1B[0m: \x1B[34m0\x1B[0m)\n"
+    "  \x1B[45m\x1B[37msent event\x1B[0m \x1B[32mfidl.examples.echo/Echo.OnPong\x1B[0m = {}\n"
     "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 }  // namespace fidlcat
