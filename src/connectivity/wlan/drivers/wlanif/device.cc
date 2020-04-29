@@ -970,6 +970,10 @@ zx_status_t Device::EthStart(const ethernet_ifc_protocol_t* ifc) {
   std::lock_guard<std::mutex> lock(lock_);
   ethernet_ifc_ = *ifc;
   eth_started_ = true;
+  if (eth_online_) {
+    ethernet_ifc_status(&ethernet_ifc_, ETHERNET_STATUS_ONLINE);
+  }
+  // TODO(51009): Inform SME that ethernet has started.
   return ZX_OK;
 }
 
@@ -1038,8 +1042,12 @@ zx_status_t Device::EthSetParam(uint32_t param, int32_t value, const void* data,
 }
 
 void Device::SetEthernetStatusLocked(bool online) {
-  if (eth_started_) {
-    ethernet_ifc_status(&ethernet_ifc_, online ? ETHERNET_STATUS_ONLINE : 0);
+  // TODO(51009): Let SME handle these changes.
+  if (online != eth_online_) {
+    eth_online_ = online;
+    if (eth_started_) {
+      ethernet_ifc_status(&ethernet_ifc_, online ? ETHERNET_STATUS_ONLINE : 0);
+    }
   }
 }
 

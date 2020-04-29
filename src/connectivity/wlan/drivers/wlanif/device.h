@@ -109,6 +109,7 @@ class Device : public ::fuchsia::wlan::mlme::MLME {
   bool protected_bss_ __TA_GUARDED(lock_) = false;
 
   bool eth_started_ __TA_GUARDED(lock_) = false;
+  bool eth_online_ __TA_GUARDED(lock_) = false;
   ethernet_ifc_protocol_t ethernet_ifc_ __TA_GUARDED(lock_);
 
   wlanif_query_info query_info_;

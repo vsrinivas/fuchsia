@@ -271,6 +271,13 @@ TEST(AssocReqHandling, MultipleAssocReq) {
 
 struct EthernetTestFixture : public ::testing::Test {
   void TestEthernetAgainstRole(wlan_info_mac_role_t role);
+  void InitDeviceWithRole(wlan_info_mac_role_t role);
+  void SetEthernetOnline(uint32_t expected_status = ETHERNET_STATUS_ONLINE) {
+    device_.SetControlledPort(::fuchsia::wlan::mlme::SetControlledPortRequest{
+        .state = ::fuchsia::wlan::mlme::ControlledPortState::OPEN});
+    ASSERT_EQ(ethernet_status_, expected_status);
+  }
+  void TearDown() override { device_.EthUnbind(); }
 
   wlanif_impl_protocol_ops_t proto_ops_ = EmptyProtoOps();
   wlanif_impl_protocol_t proto_{.ops = &proto_ops_, .ctx = this};
@@ -280,7 +287,7 @@ struct EthernetTestFixture : public ::testing::Test {
   ethernet_ifc_protocol_t eth_proto_ = {.ops = &eth_ops_, .ctx = this};
   fake_ddk::Bind fake_ddk_;
   wlan_info_mac_role_t role_ = WLAN_INFO_MAC_ROLE_CLIENT;
-  uint32_t ethernet_status_;
+  uint32_t ethernet_status_{0};
 };
 
 #define ETH_DEV(c) static_cast<EthernetTestFixture*>(c)
@@ -288,34 +295,36 @@ static void hook_query(void* ctx, wlanif_query_info_t* info) { info->role = ETH_
 static void hook_eth_status(void* ctx, uint32_t status) { ETH_DEV(ctx)->ethernet_status_ = status; }
 #undef ETH_DEV
 
-void EthernetTestFixture::TestEthernetAgainstRole(wlan_info_mac_role_t role) {
+void EthernetTestFixture::InitDeviceWithRole(wlan_info_mac_role_t role) {
   role_ = role;
   proto_ops_.query = hook_query;
   eth_proto_.ops->status = hook_eth_status;
   ASSERT_EQ(device_.Bind(), ZX_OK);
+}
+
+void EthernetTestFixture::TestEthernetAgainstRole(wlan_info_mac_role_t role) {
+  InitDeviceWithRole(role);
   device_.EthStart(&eth_proto_);
 
-  ethernet_status_ = ETHERNET_STATUS_ONLINE;
+  SetEthernetOnline();
   wlanif_deauth_indication_t deauth_ind{.reason_code = WLAN_DEAUTH_REASON_AP_INITIATED};
   device_.DeauthenticateInd(&deauth_ind);
   ASSERT_EQ(ethernet_status_, role_ == WLAN_INFO_MAC_ROLE_CLIENT ? 0u : ETHERNET_STATUS_ONLINE);
 
-  ethernet_status_ = ETHERNET_STATUS_ONLINE;
+  SetEthernetOnline();
   wlanif_deauth_confirm_t deauth_conf{};
   device_.DeauthenticateConf(&deauth_conf);
   ASSERT_EQ(ethernet_status_, role_ == WLAN_INFO_MAC_ROLE_CLIENT ? 0u : ETHERNET_STATUS_ONLINE);
 
-  ethernet_status_ = ETHERNET_STATUS_ONLINE;
+  SetEthernetOnline();
   wlanif_disassoc_indication_t disassoc_ind{.reason_code = WLAN_DEAUTH_REASON_AP_INITIATED};
   device_.DisassociateInd(&disassoc_ind);
   ASSERT_EQ(ethernet_status_, role_ == WLAN_INFO_MAC_ROLE_CLIENT ? 0u : ETHERNET_STATUS_ONLINE);
 
-  ethernet_status_ = ETHERNET_STATUS_ONLINE;
+  SetEthernetOnline();
   wlanif_disassoc_confirm_t disassoc_conf{};
   device_.DisassociateConf(&disassoc_conf);
   ASSERT_EQ(ethernet_status_, role_ == WLAN_INFO_MAC_ROLE_CLIENT ? 0u : ETHERNET_STATUS_ONLINE);
-
-  device_.EthUnbind();
 }
 
 TEST_F(EthernetTestFixture, ClientIfaceDisablesEthernetOnDisconnect) {
@@ -324,4 +333,20 @@ TEST_F(EthernetTestFixture, ClientIfaceDisablesEthernetOnDisconnect) {
 
 TEST_F(EthernetTestFixture, ApIfaceDoesNotAffectEthernetOnClientDisconnect) {
   TestEthernetAgainstRole(WLAN_INFO_MAC_ROLE_AP);
+}
+
+TEST_F(EthernetTestFixture, StartThenSetOnline) {
+  InitDeviceWithRole(WLAN_INFO_MAC_ROLE_AP);  // role doesn't matter
+  device_.EthStart(&eth_proto_);
+  ASSERT_EQ(ethernet_status_, 0u);
+  SetEthernetOnline();
+  ASSERT_EQ(ethernet_status_, ETHERNET_STATUS_ONLINE);
+}
+
+TEST_F(EthernetTestFixture, OnlineThenStart) {
+  InitDeviceWithRole(WLAN_INFO_MAC_ROLE_AP);  // role doesn't matter
+  SetEthernetOnline(0);
+  ASSERT_EQ(ethernet_status_, 0u);
+  device_.EthStart(&eth_proto_);
+  ASSERT_EQ(ethernet_status_, ETHERNET_STATUS_ONLINE);
 }
