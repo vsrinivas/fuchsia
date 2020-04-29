@@ -5,15 +5,18 @@
 use {
     crate::model::{
         error::ModelError,
-        hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
+        hooks::{
+            Event, EventError, EventErrorPayload, EventPayload, EventType, Hook, HooksRegistration,
+        },
         model::Model,
         moniker::AbsoluteMoniker,
+        realm::Realm,
         rights::{Rights, READ_RIGHTS, WRITE_RIGHTS},
     },
     async_trait::async_trait,
     cm_rust::{CapabilityPath, ExposeDecl, ExposeDirectoryDecl, ExposeProtocolDecl},
-    fidl::endpoints::ServerEnd,
-    fidl_fuchsia_io::{self as fio, DirectoryEvent, DirectoryProxy, NodeMarker},
+    fidl::endpoints::{Proxy, ServerEnd},
+    fidl_fuchsia_io::{self as fio, DirectoryProxy, NodeEvent, NodeMarker, NodeProxy},
     fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::stream::StreamExt,
     io_util,
@@ -46,21 +49,46 @@ impl CapabilityReadyNotifier {
         outgoing_dir: &DirectoryProxy,
         expose_decls: Vec<ExposeDecl>,
     ) -> Result<(), ModelError> {
-        let outgoing_dir = io_util::clone_directory(
-            &outgoing_dir,
-            fio::CLONE_FLAG_SAME_RIGHTS | fio::OPEN_FLAG_DESCRIBE,
-        )
-        .map_err(|_| ModelError::open_directory_error(target_moniker.clone(), "/"))?;
+        // Forward along errors into the new task so that dispatch can forward the
+        // error as an event.
+        let outgoing_node_result = async move {
+            let outgoing_dir = io_util::clone_directory(
+                &outgoing_dir,
+                fio::CLONE_FLAG_SAME_RIGHTS | fio::OPEN_FLAG_DESCRIBE,
+            )
+            .map_err(|_| ModelError::open_directory_error(target_moniker.clone(), "/"))?;
+            let outgoing_dir_channel = outgoing_dir
+                .into_channel()
+                .map_err(|_| ModelError::open_directory_error(target_moniker.clone(), "/"))?;
+            Ok(NodeProxy::from_channel(outgoing_dir_channel))
+        }
+        .await;
 
         // Don't block the handling on the event on the exposed capabilities being ready
         let this = self.clone();
         let moniker = target_moniker.clone();
         fasync::spawn(async move {
-            if let Err(e) = this.wait_for_on_open(&outgoing_dir, &moniker).await {
-                error!("Failed waiting for OnOpen on outgoing dir for {}: {:?}", moniker, e);
+            // If we can't find the realm then we can't dispatch any CapabilityReady event,
+            // error or otherwise. This isn't necessarily an error as the model or realm might've been
+            // destroyed in the intervening time, so we just exit early.
+            let target_realm = match this.model.upgrade() {
+                Some(model) => {
+                    if let Ok(realm) = model.look_up_realm(&moniker).await {
+                        realm
+                    } else {
+                        return;
+                    }
+                }
+                None => return,
+            };
+
+            if let Err(e) = this
+                .dispatch_capabilities_ready(outgoing_node_result, expose_decls, &target_realm)
+                .await
+            {
+                error!("Failed CapabilityReady dispatch for {}: {:?}", moniker, e);
                 return;
             }
-            this.dispatch_capabilities_ready(outgoing_dir, expose_decls, &moniker).await;
         });
         Ok(())
     }
@@ -69,89 +97,125 @@ impl CapabilityReadyNotifier {
     /// serving that directory. The directory should have been cloned/opened with DESCRIBE.
     async fn wait_for_on_open(
         &self,
-        outgoing_dir: &DirectoryProxy,
+        node: &NodeProxy,
         target_moniker: &AbsoluteMoniker,
+        path: String,
     ) -> Result<(), ModelError> {
-        let mut events = outgoing_dir.take_event_stream();
+        let mut events = node.take_event_stream();
         match events.next().await {
-            Some(Ok(DirectoryEvent::OnOpen_ { s: status, info: _ })) => zx::Status::ok(status)
-                .map_err(|_| ModelError::open_directory_error(target_moniker.clone(), "/")),
-            _ => Err(ModelError::open_directory_error(target_moniker.clone(), "/")),
+            Some(Ok(NodeEvent::OnOpen_ { s: status, info: _ })) => zx::Status::ok(status)
+                .map_err(|_| ModelError::open_directory_error(target_moniker.clone(), path)),
+            _ => Err(ModelError::open_directory_error(target_moniker.clone(), path)),
         }
     }
 
-    /// Waits for the exposed directory to be ready and then notifies about all the capabilities
+    /// Waits for the outgoing directory to be ready and then notifies hooks of all the capabilities
     /// inside it that were exposed to the framework by the component.
     async fn dispatch_capabilities_ready(
         &self,
-        outgoing_dir: DirectoryProxy,
+        outgoing_node_result: Result<NodeProxy, ModelError>,
         expose_decls: Vec<ExposeDecl>,
-        target_moniker: &AbsoluteMoniker,
-    ) {
+        target_realm: &Arc<Realm>,
+    ) -> Result<(), ModelError> {
+        // Forward along the result for opening the outgoing directory into the CapabilityReady
+        // dispatch in order to propagate any potential errors as an event.
+        let outgoing_dir_result = async move {
+            let outgoing_node = outgoing_node_result?;
+            self.wait_for_on_open(&outgoing_node, &target_realm.abs_moniker, "/".to_string())
+                .await?;
+            io_util::node_to_directory(outgoing_node).map_err(|_| {
+                ModelError::open_directory_error(target_realm.abs_moniker.clone(), "/")
+            })
+        }
+        .await;
+
         for expose_decl in expose_decls {
             match expose_decl {
                 ExposeDecl::Directory(ExposeDirectoryDecl { target_path, rights, .. }) => {
                     self.dispatch_capability_ready(
-                        &outgoing_dir,
+                        &target_realm,
+                        outgoing_dir_result.as_ref(),
                         fio::MODE_TYPE_DIRECTORY,
                         Rights::from(rights.unwrap_or(*READ_RIGHTS)),
                         target_path,
-                        target_moniker.clone(),
                     )
                     .await
                 }
                 ExposeDecl::Protocol(ExposeProtocolDecl { target_path, .. }) => {
                     self.dispatch_capability_ready(
-                        &outgoing_dir,
+                        &target_realm,
+                        outgoing_dir_result.as_ref(),
                         fio::MODE_TYPE_SERVICE,
                         Rights::from(*WRITE_RIGHTS),
                         target_path,
-                        target_moniker.clone(),
                     )
                     .await
                 }
                 _ => Ok(()),
             }
             .unwrap_or_else(|e| {
-                error!("Error notifying capability ready for {}: {:?}", target_moniker, e)
+                error!("Error notifying capability ready for {}: {:?}", target_realm.abs_moniker, e)
             });
         }
+
+        Ok(())
     }
 
-    /// Dispatches an event with the directory at the given `path` inside the `directory`
+    /// Dispatches an event with the directory at the given `target_path` inside the provided
+    /// outgoing directory if the capability is available.
     async fn dispatch_capability_ready(
         &self,
-        dir_proxy: &DirectoryProxy,
+        target_realm: &Arc<Realm>,
+        outgoing_dir_result: Result<&DirectoryProxy, &ModelError>,
         mode: u32,
         rights: Rights,
         target_path: CapabilityPath,
-        target_moniker: AbsoluteMoniker,
     ) -> Result<(), ModelError> {
-        let realm = match self.model.upgrade() {
-            Some(model) => model.look_up_realm(&target_moniker).await?,
-            None => return Err(ModelError::ModelNotAvailable),
-        };
-
         // DirProxy.open fails on absolute paths.
         let path = target_path.to_string();
         let canonicalized_path = io_util::canonicalize_path(&path);
-        let (node, server_end) = fidl::endpoints::create_proxy::<NodeMarker>().unwrap();
 
-        dir_proxy
-            .open(
-                rights.into_legacy(),
-                mode,
-                &canonicalized_path,
-                ServerEnd::new(server_end.into_channel()),
-            )
-            .map_err(|_| {
-                ModelError::open_directory_error(target_moniker.clone(), canonicalized_path)
-            })?;
+        let node_result = async move {
+            let outgoing_dir = outgoing_dir_result.map_err(|e| e.clone())?;
 
-        let event = Event::new(target_moniker, Ok(EventPayload::CapabilityReady { path, node }));
-        realm.hooks.dispatch(&event).await?;
+            let (node, server_end) = fidl::endpoints::create_proxy::<NodeMarker>().unwrap();
 
-        Ok(())
+            outgoing_dir
+                .open(
+                    rights.into_legacy() | fio::OPEN_FLAG_DESCRIBE,
+                    mode,
+                    &canonicalized_path,
+                    ServerEnd::new(server_end.into_channel()),
+                )
+                .map_err(|_| {
+                    ModelError::open_directory_error(
+                        target_realm.abs_moniker.clone(),
+                        target_path.to_string(),
+                    )
+                })?;
+            self.wait_for_on_open(&node, &target_realm.abs_moniker, canonicalized_path.to_string())
+                .await?;
+            Ok(node)
+        }
+        .await;
+
+        match node_result {
+            Ok(node) => {
+                let event = Event::new(
+                    target_realm.abs_moniker.clone(),
+                    Ok(EventPayload::CapabilityReady { path, node }),
+                );
+                target_realm.hooks.dispatch(&event).await
+            }
+            Err(e) => {
+                let event = Event::new(
+                    target_realm.abs_moniker.clone(),
+                    Err(EventError::new(&e, EventErrorPayload::CapabilityReady { path })),
+                );
+                target_realm.hooks.dispatch(&event).await?;
+                return Err(e);
+            }
+        }
     }
 }
 

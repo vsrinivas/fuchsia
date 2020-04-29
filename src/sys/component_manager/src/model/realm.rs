@@ -11,7 +11,7 @@ use {
             environment::Environment,
             error::ModelError,
             exposed_dir::ExposedDir,
-            hooks::{Event, EventError, EventPayload, EventType, Hooks},
+            hooks::{Event, EventError, EventErrorPayload, EventPayload, Hooks},
             moniker::{AbsoluteMoniker, ChildMoniker, ExtendedMoniker, InstanceId, PartialMoniker},
             namespace::IncomingNamespace,
             resolver::Resolver,
@@ -297,7 +297,7 @@ impl Realm {
             Err(e) => {
                 let event = Event::new(
                     self.abs_moniker.clone(),
-                    Err(EventError::new(&e, EventType::Resolved)),
+                    Err(EventError::new(&e, EventErrorPayload::Resolved)),
                 );
                 self.hooks.dispatch(&event).await?;
                 return Err(e);
@@ -1080,7 +1080,7 @@ pub mod tests {
         crate::model::{
             binding::Binder,
             events::{event::SyncMode, stream::EventStream},
-            hooks::EventType,
+            hooks::{EventErrorPayload, EventType},
             rights::READ_RIGHTS,
             testing::{
                 mocks::{ControlMessage, ControllerActionResponse, MockController},
@@ -1092,6 +1092,7 @@ pub mod tests {
         fuchsia_async as fasync,
         fuchsia_zircon::{self as zx, AsHandleRef, Koid},
         futures::lock::Mutex,
+        matches::assert_matches,
         std::{boxed::Box, collections::HashMap, sync::Arc, task::Poll},
     };
 
@@ -1594,12 +1595,10 @@ pub mod tests {
             event_stream.wait_until(EventType::CapabilityReady, vec![].into()).await.unwrap().event;
 
         assert_eq!(event.target_moniker, AbsoluteMoniker::root());
-        match event.result {
-            Ok(EventPayload::CapabilityReady { path, .. }) => {
-                assert_eq!(path, "/diagnostics");
-            }
-            payload => panic!("Expected capability ready. Got: {:?}", payload),
-        }
+        assert_matches!(event.result,
+                        Err(EventError {
+                            event_error_payload:
+                                EventErrorPayload::CapabilityReady { path }, .. }) if path == "/diagnostics");
     }
 
     #[fasync::run_singlethreaded(test)]

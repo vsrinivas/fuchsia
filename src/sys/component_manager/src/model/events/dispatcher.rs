@@ -8,7 +8,9 @@ use {
             event::{Event, SyncMode},
             filter::EventFilter,
         },
-        hooks::{Event as ComponentEvent, EventPayload, HasEventType},
+        hooks::{
+            Event as ComponentEvent, EventError, EventErrorPayload, EventPayload, HasEventType,
+        },
         moniker::AbsoluteMoniker,
     },
     anyhow::Error,
@@ -100,6 +102,12 @@ impl EventDispatcher {
     fn find_scope(&self, event: &ComponentEvent) -> Option<&ScopeMetadata> {
         let filterable_fields = match &event.result {
             Ok(EventPayload::CapabilityReady { path, .. }) => Some(hashmap! {
+                "path".to_string() => DictionaryValue::Str(path.into())
+            }),
+            Err(EventError {
+                event_error_payload: EventErrorPayload::CapabilityReady { path },
+                ..
+            }) => Some(hashmap! {
                 "path".to_string() => DictionaryValue::Str(path.into())
             }),
             _ => None,

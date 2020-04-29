@@ -24,5 +24,11 @@
             to: "framework",
             rights: [ "r*" ],
         },
+        {
+            directory: "/bleep",
+            from: "self",
+            to: "framework",
+            rights: [ "r*" ],
+        },
     ],
 }

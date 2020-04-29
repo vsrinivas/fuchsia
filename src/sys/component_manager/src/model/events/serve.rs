@@ -13,7 +13,7 @@ use {
                 source::EventSource,
                 stream::EventStream,
             },
-            hooks::{EventError, EventPayload, EventResult, HasEventType},
+            hooks::{EventError, EventErrorPayload, EventPayload, EventResult, HasEventType},
             moniker::{AbsoluteMoniker, RelativeMoniker},
         },
     },
@@ -99,34 +99,47 @@ fn maybe_create_event_result(
 ) -> Result<Option<fsys::EventResult>, fidl::Error> {
     match event_result {
         Ok(EventPayload::CapabilityReady { path, node }) => {
-            maybe_create_capability_ready_payload(path.to_string(), node)
+            Ok(Some(fsys::EventResult::Payload(fsys::EventPayload::CapabilityReady(
+                create_capability_ready_payload(path.to_string(), node)?,
+            ))))
         }
         Ok(EventPayload::CapabilityRouted { source, capability_provider, .. }) => {
             Ok(maybe_create_capability_routed_payload(scope, source, capability_provider.clone()))
         }
+        Err(EventError {
+            source,
+            event_error_payload: EventErrorPayload::CapabilityReady { path },
+        }) => Ok(Some(fsys::EventResult::Error(fsys::EventError {
+            error_payload: Some(fsys::EventErrorPayload::CapabilityReady(
+                fsys::CapabilityReadyError { path: Some(path.to_string()) },
+            )),
+            description: Some(format!("{}", source)),
+            ..fsys::EventError::empty()
+        }))),
         Err(EventError { source, .. }) => Ok(Some(fsys::EventResult::Error(fsys::EventError {
             description: Some(format!("{}", source)),
+            ..fsys::EventError::empty()
         }))),
         _ => Ok(None),
     }
 }
 
-fn maybe_create_capability_ready_payload(
+fn create_capability_ready_payload(
     path: String,
     node: &NodeProxy,
-) -> Result<Option<fsys::EventResult>, fidl::Error> {
-    let (node_clone, server_end) = fidl::endpoints::create_proxy()?;
-    node.clone(fio::CLONE_FLAG_SAME_RIGHTS, server_end)?;
-    let node_client_end = node_clone
-        .into_channel()
-        .expect("could not convert directory to channel")
-        .into_zx_channel()
-        .into();
-    let payload = fsys::CapabilityReadyPayload { path: Some(path), node: Some(node_client_end) };
-    Ok(Some(fsys::EventResult::Payload(fsys::EventPayload {
-        capability_ready: Some(payload),
-        ..fsys::EventPayload::empty()
-    })))
+) -> Result<fsys::CapabilityReadyPayload, fidl::Error> {
+    let node = {
+        let (node_clone, server_end) = fidl::endpoints::create_proxy()?;
+        node.clone(fio::CLONE_FLAG_SAME_RIGHTS, server_end)?;
+        let node_client_end = node_clone
+            .into_channel()
+            .expect("could not convert directory to channel")
+            .into_zx_channel()
+            .into();
+        Some(node_client_end)
+    };
+
+    Ok(fsys::CapabilityReadyPayload { path: Some(path), node })
 }
 
 fn maybe_create_capability_routed_payload(
@@ -169,11 +182,8 @@ fn maybe_create_capability_routed_payload(
         }
     });
 
-    let routing_payload = Some(fsys::RoutingPayload { routing_protocol, capability_id, source });
-    Some(fsys::EventResult::Payload(fsys::EventPayload {
-        routing_payload,
-        ..fsys::EventPayload::empty()
-    }))
+    let payload = fsys::CapabilityRoutedPayload { routing_protocol, capability_id, source };
+    Some(fsys::EventResult::Payload(fsys::EventPayload::CapabilityRouted(payload)))
 }
 
 /// Creates the basic FIDL Event object containing the event type, target_realm

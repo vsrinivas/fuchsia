@@ -60,32 +60,38 @@ async fn main() -> Result<(), Error> {
         "/bar".to_string() => vec![format!("baz/{}", ftest::TriggerMarker::SERVICE_NAME).to_string()],
     };
 
-    for _ in 0..2 {
+    for _ in 0..3 {
         let event = event_stream.expect_type::<CapabilityReady>().await?;
         let (node_clone, server_end) = fidl::endpoints::create_proxy().expect("create proxy");
-        event
-            .unwrap_payload()
-            .node
-            .clone(fio::CLONE_FLAG_SAME_RIGHTS, server_end)
-            .expect("clone node");
-        let directory = io_util::node_to_directory(node_clone).expect("node to directory");
+        match &event.result {
+            Ok(payload) => {
+                payload.node.clone(fio::CLONE_FLAG_SAME_RIGHTS, server_end).expect("clone node");
+                let directory = io_util::node_to_directory(node_clone).expect("node to directory");
 
-        let entries = list_entries(&directory).await;
-        assert_eq!(&entries, expected_entries.get(&event.unwrap_payload().path).expect("entries"));
+                let entries = list_entries(&directory).await;
+                assert_eq!(&entries, expected_entries.get(&payload.path).expect("entries"));
 
-        call_trigger(
-            &directory,
-            expected_entries.get(&event.unwrap_payload().path).expect("entries"),
-        )
-        .await;
+                call_trigger(&directory, expected_entries.get(&payload.path).expect("entries"))
+                    .await;
 
-        let _ = echo
-            .echo_string(Some(&format!(
-                "Saw {} on {}",
-                event.unwrap_payload().path,
-                event.target_moniker()
-            )))
-            .await;
+                let _ = echo
+                    .echo_string(Some(&format!(
+                        "Saw {} on {}",
+                        payload.path,
+                        event.target_moniker()
+                    )))
+                    .await;
+            }
+            Err(error) => {
+                let _ = echo
+                    .echo_string(Some(&format!(
+                        "error {} on {}",
+                        error.path,
+                        event.target_moniker()
+                    )))
+                    .await;
+            }
+        }
         event.resume().await?;
     }
 
@@ -101,7 +107,7 @@ async fn main() -> Result<(), Error> {
         .await?;
 
     if timed_out {
-        let _ = echo.echo_string(Some(&format!("Correctly timed out on 3rd event"))).await;
+        let _ = echo.echo_string(Some(&format!("Correctly timed out on 4th event"))).await;
     } else {
         panic!("Got unexpected third event");
     }

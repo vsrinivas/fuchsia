@@ -250,7 +250,9 @@ impl TryFrom<fsys::Event> for ComponentEvent {
                     .event_result
                     .and_then(|result| {
                         match result {
-                            fsys::EventResult::Payload(payload) => payload.capability_ready,
+                            fsys::EventResult::Payload(fsys::EventPayload::CapabilityReady(
+                                payload,
+                            )) => Some(payload),
                             fsys::EventResult::Error(_) => {
                                 // TODO: result.error carries information about errors that happened
                                 // in component_manager. We should dump those in diagnostics.

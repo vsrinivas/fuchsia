@@ -24,6 +24,7 @@
             filter: {
                 path: [
                     "/bar",
+                    "/bleep",
                     "/foo",
                 ],
             },

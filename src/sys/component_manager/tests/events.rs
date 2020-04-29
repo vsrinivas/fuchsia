@@ -674,17 +674,12 @@ impl TryFrom<&fsys::Event> for EventMatcher {
             event.target_moniker.as_ref().ok_or_else(|| format_err!("No target moniker"))?.clone(),
         );
         let payload = match &event.event_result {
-            Some(fsys::EventResult::Payload(p)) => Some(p),
+            Some(fsys::EventResult::Payload(fsys::EventPayload::CapabilityRouted(p))) => Some(p),
             _ => None,
         };
 
         let capability_id = if let Some(event_payload) = payload {
-            event_payload
-                .routing_payload
-                .as_ref()
-                .ok_or_else(|| format_err!("No event payload"))?
-                .capability_id
-                .to_owned()
+            event_payload.capability_id.to_owned()
         } else {
             None
         };
@@ -778,7 +773,6 @@ macro_rules! create_event {
         event_name: $event_name:ident,
         payload: {
             struct_name: $payload_struct_name:ident,
-            field_name: $payload_name:ident,
             data: {$(
                 {
                     name: $data_name:ident,
@@ -791,6 +785,15 @@ macro_rules! create_event {
                     ty: $protocol_ty:ty,
                 }
             )*},
+        },
+        error_payload: {
+            struct_name: $error_payload_struct_name:ident,
+            data: {$(
+                {
+                    name: $error_data_name:ident,
+                    ty: $error_data_ty:ty,
+                }
+            )*},
         }
     ) => {
         pub struct $payload_struct_name {
@@ -798,11 +801,17 @@ macro_rules! create_event {
             $(pub $data_name: $data_ty,)*
         }
 
+        #[derive(Debug)]
+        pub struct $error_payload_struct_name {
+            $(pub $error_data_name: $error_data_ty,)*
+            pub description: String,
+        }
+
         pub struct $event_type {
             target_moniker: String,
             handler: Option<fsys::HandlerProxy>,
             timestamp: zx::Time,
-            pub result: Result<$payload_struct_name, EventError>,
+            pub result: Result<$payload_struct_name, $error_payload_struct_name>,
         }
 
         impl $event_type {
@@ -846,21 +855,22 @@ macro_rules! create_event {
                 // Extract the payload from the Event object.
                 let result = match event.event_result {
                     Some(fsys::EventResult::Payload(payload)) => {
-                        let $payload_name = payload.$payload_name.ok_or(
-                            format_err!("Missing $payload_name from EventPayload object")
-                        )?;
+                        let payload = match payload {
+                            fsys::EventPayload::$event_type(payload) => Ok(payload),
+                            _ => Err(format_err!("Incorrect payload type")),
+                        }?;
 
                         // Extract the additional data from the Payload object.
                         $(
-                            let $data_name: $data_ty = $payload_name.$data_name.ok_or(
-                                format_err!("Missing $data_name from $payload_name object")
+                            let $data_name: $data_ty = payload.$data_name.ok_or(
+                                format_err!("Missing $data_name from $event_type object")
                             )?;
                         )*
 
                         // Extract the additional protocols from the Payload object.
                         $(
-                            let $protocol_name: $protocol_ty = $payload_name.$protocol_name.ok_or(
-                                format_err!("Missing $protocol_name from $payload_name object")
+                            let $protocol_name: $protocol_ty = payload.$protocol_name.ok_or(
+                                format_err!("Missing $protocol_name from $event_type object")
                             )?.into_proxy()?;
                         )*
 
@@ -868,8 +878,30 @@ macro_rules! create_event {
                         Ok(Ok(payload))
                     },
                     Some(fsys::EventResult::Error(err)) => {
-                        Ok(Err(EventError { description: err.description.ok_or(
-                                format_err!("Missing error description"))? }))
+                        let description = err.description.ok_or(
+                            format_err!("Missing error description")
+                            )?;
+
+                        let error_payload = err.error_payload.ok_or(
+                            format_err!("Missing error_payload from EventError object")
+                            )?;
+
+                        let err = match error_payload {
+                            fsys::EventErrorPayload::$event_type(err) => Ok(err),
+                            _ => Err(format_err!("Incorrect payload type")),
+                        }?;
+
+                        // Extract the additional data from the Payload object.
+                        $(
+                            let $error_data_name: $error_data_ty =
+                                err.$error_data_name.ok_or(
+                                    format_err!("Missing $error_data_name from $error_payload_name object")
+                                )?;
+                        )*
+
+                        let error_payload =
+                            $error_payload_struct_name { $($error_data_name,)* description };
+                        Ok(Err(error_payload))
                     },
                     None => Err(format_err!("Missing event_result from Event object")),
                     _ => Err(format_err!("Unexpected event result")),
@@ -960,7 +992,6 @@ create_event!(
     event_name: capability_ready,
     payload: {
         struct_name: CapabilityReadyPayload,
-        field_name: capability_ready,
         data: {
             {
                 name: path,
@@ -973,14 +1004,22 @@ create_event!(
                 ty: fio::NodeProxy,
             }
         },
+    },
+    error_payload: {
+        struct_name: CapabilityReadyError,
+        data: {
+            {
+                name: path,
+                ty: String,
+            }
+        },
     }
 );
 create_event!(
     event_type: CapabilityRouted,
     event_name: capability_routed,
     payload: {
-        struct_name: RoutingPayload,
-        field_name: routing_payload,
+        struct_name: CapabilityRoutedPayload,
         data: {
             {
                 name: source,
@@ -995,6 +1034,15 @@ create_event!(
             {
                 name: routing_protocol,
                 ty: fsys::RoutingProtocolProxy,
+            }
+        },
+    },
+    error_payload: {
+        struct_name: CapabilityRoutedError,
+        data: {
+            {
+                name: capability_id,
+                ty: String,
             }
         },
     }

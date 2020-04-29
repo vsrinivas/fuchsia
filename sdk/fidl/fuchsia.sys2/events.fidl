@@ -101,15 +101,41 @@ table EventError {
     /// TODO(fxb/49792): We should be sending structured errors, and not simply strings.
     /// This is a placeholder pending further internal component manager refactors.
     1: string:MAX_ERROR_DESCRIPTION_LENGTH description;
+
+    /// The error payload of the event if any.
+    2: EventErrorPayload error_payload;
+};
+
+/// Encapsulates additional data for some event errors.
+flexible union EventErrorPayload {
+    /// Payload for CapabilityReady events
+    1: CapabilityReadyError capability_ready;
+
+    /// Payload for CapabilityRouted events
+    2: CapabilityRoutedError capability_routed;
+};
+
+/// Error payload for CapabilityReady events
+table CapabilityReadyError {
+    /// The path of the capability.
+    1: string:fuchsia.component.MAX_PATH_LENGTH path;
+};
+
+/// Error payload for CapabilityRouted events
+table CapabilityRoutedError {
+    /// Identifier of capability being requested.
+    /// For a path-based capability, this is the path.
+    /// For a runner capability, this is the name.
+    1: string:MAX_CAPABILITY_ID_LENGTH capability_id;
 };
 
 /// Encapsulates additional data/protocols for some event types.
-table EventPayload {
+flexible union EventPayload {
     /// Payload for CapabilityReady events
     1: CapabilityReadyPayload capability_ready;
 
     /// Payload for CapabilityRouted events
-    2: RoutingPayload routing_payload;
+    2: CapabilityRoutedPayload capability_routed;
 };
 
 /// Payload for CapabilityReady events
@@ -122,7 +148,7 @@ table CapabilityReadyPayload {
 };
 
 /// Payload for CapabilityRouted events
-table RoutingPayload {
+table CapabilityRoutedPayload {
     /// Allows setting a capability provider for
     /// CapabilityRouted events
     /// This will not be available with an async event.

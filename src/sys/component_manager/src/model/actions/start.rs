@@ -6,7 +6,7 @@ use {
     crate::model::{
         error::ModelError,
         exposed_dir::ExposedDir,
-        hooks::{Event, EventError, EventPayload, EventType, RuntimeInfo},
+        hooks::{Event, EventError, EventErrorPayload, EventPayload, RuntimeInfo},
         moniker::AbsoluteMoniker,
         namespace::IncomingNamespace,
         realm::{BindReason, ExecutionState, Realm, Runtime, WeakRealm},
@@ -92,8 +92,10 @@ pub(super) async fn do_start(
             start_context
         }
         Err(e) => {
-            let event =
-                Event::new(realm.abs_moniker.clone(), Err(EventError::new(&e, EventType::Started)));
+            let event = Event::new(
+                realm.abs_moniker.clone(),
+                Err(EventError::new(&e, EventErrorPayload::Started)),
+            );
             realm.hooks.dispatch(&event).await?;
             return Err(e);
         }

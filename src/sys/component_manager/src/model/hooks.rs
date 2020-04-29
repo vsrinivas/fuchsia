@@ -107,6 +107,27 @@ macro_rules! events {
                 }
             }
         }
+
+        impl HasEventType for EventErrorPayload {
+            fn event_type(&self) -> EventType {
+                match self {
+                    $(
+                        EventErrorPayload::$name { .. } => EventType::$name,
+                    )*
+                }
+            }
+        }
+
+        impl fmt::Display for EventErrorPayload {
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                write!(f, "{}", match self {
+                    $(
+                        EventErrorPayload::$name { .. } => stringify!($string_name),
+                    )*
+                }
+                .to_string())
+            }
+        }
     };
 }
 
@@ -148,18 +169,52 @@ impl Into<CapabilityName> for EventType {
 #[derive(Debug, Clone)]
 pub struct EventError {
     pub source: ModelError,
-    pub event_type: EventType,
+    pub event_error_payload: EventErrorPayload,
 }
 
 impl EventError {
-    pub fn new(err: &ModelError, event_type: EventType) -> Self {
-        Self { source: err.clone(), event_type }
+    pub fn new(err: &ModelError, event_error_payload: EventErrorPayload) -> Self {
+        Self { source: err.clone(), event_error_payload }
     }
+}
+
+#[derive(Clone)]
+pub enum EventErrorPayload {
+    // Keep the events listed below in alphabetical order!
+    CapabilityReady { path: String },
+    CapabilityRouted,
+    Destroyed,
+    Discovered,
+    MarkedForDestruction,
+    Resolved,
+    Started,
+    Stopped,
+    Running,
 }
 
 impl HasEventType for EventError {
     fn event_type(&self) -> EventType {
-        self.event_type.clone()
+        self.event_error_payload.event_type()
+    }
+}
+
+impl fmt::Debug for EventErrorPayload {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        let mut formatter = fmt.debug_struct("EventErrorPayload");
+        formatter.field("type", &self.event_type());
+        match self {
+            EventErrorPayload::CapabilityReady { path, .. } => {
+                formatter.field("path", &path).finish()
+            }
+            EventErrorPayload::CapabilityRouted
+            | EventErrorPayload::Destroyed
+            | EventErrorPayload::Discovered
+            | EventErrorPayload::MarkedForDestruction
+            | EventErrorPayload::Resolved
+            | EventErrorPayload::Started
+            | EventErrorPayload::Stopped
+            | EventErrorPayload::Running => formatter.finish(),
+        }
     }
 }
 
@@ -667,7 +722,7 @@ mod tests {
             root.clone(),
             Err(EventError::new(
                 &ModelError::instance_not_found(root.clone()),
-                EventType::Resolved,
+                EventErrorPayload::Resolved,
             )),
         );
         hooks.dispatch(&event).await.expect("Unable to call hooks.");

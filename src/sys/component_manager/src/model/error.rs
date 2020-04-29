@@ -86,7 +86,7 @@ pub enum ModelError {
     AddEntryError { moniker: AbsoluteMoniker, entry_name: String },
     #[error("failed to remove entry {}", entry_name)]
     RemoveEntryError { entry_name: String },
-    #[error("open directory error")]
+    #[error("failed to open directory '{}' for component '{}'", relative_path, moniker)]
     OpenDirectoryError { moniker: AbsoluteMoniker, relative_path: String },
     #[error("insufficient resources to complete operation")]
     InsufficientResources,

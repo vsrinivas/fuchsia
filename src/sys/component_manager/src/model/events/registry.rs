@@ -174,7 +174,7 @@ mod tests {
     use {
         super::*,
         crate::model::{
-            hooks::{Event as ComponentEvent, EventError, EventPayload},
+            hooks::{Event as ComponentEvent, EventError, EventErrorPayload, EventPayload},
             moniker::AbsoluteMoniker,
             testing::test_helpers::*,
         },
@@ -196,7 +196,7 @@ mod tests {
             root.clone(),
             Err(EventError::new(
                 &ModelError::instance_not_found(root.clone()),
-                EventType::Resolved,
+                EventErrorPayload::Resolved,
             )),
         );
         registry.dispatch(&event).await
@@ -287,7 +287,7 @@ mod tests {
             event.result,
             Err(EventError {
                 source: ModelError::InstanceNotFound { .. },
-                event_type: EventType::Resolved,
+                event_error_payload: EventErrorPayload::Resolved,
             })
         );
     }

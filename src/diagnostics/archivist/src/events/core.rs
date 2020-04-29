@@ -112,13 +112,12 @@ mod tests {
             .on_event(fsys::Event {
                 event_type: Some(fsys::EventType::CapabilityReady),
                 target_moniker: Some("./foo:0/bar:0".to_string()),
-                event_result: Some(fsys::EventResult::Payload(fsys::EventPayload {
-                    capability_ready: Some(fsys::CapabilityReadyPayload {
+                event_result: Some(fsys::EventResult::Payload(
+                    fsys::EventPayload::CapabilityReady(fsys::CapabilityReadyPayload {
                         path: Some("/diagnostics".to_string()),
                         node: Some(node),
                     }),
-                    ..fsys::EventPayload::empty()
-                })),
+                )),
                 ..fsys::Event::empty()
             })
             .expect("send diagnostics ready event ok");
