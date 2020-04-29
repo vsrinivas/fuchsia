@@ -326,7 +326,7 @@ func saveReport(report *codecoverage.CoverageReport, filename string) error {
 	defer f.Close()
 	w := zlib.NewWriter(f)
 	defer w.Close()
-	if err := json.NewEncoder(f).Encode(report); err != nil {
+	if err := json.NewEncoder(w).Encode(report); err != nil {
 		return fmt.Errorf("cannot marshal report: %w", err)
 	}
 	return nil
