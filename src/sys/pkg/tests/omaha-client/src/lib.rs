@@ -659,6 +659,10 @@ async fn test_omaha_client_invalid_url() {
         &mut stream,
         &[
             State::CheckingForUpdates(CheckingForUpdatesData {}),
+            State::InstallingUpdate(InstallingData {
+                update: update_info(),
+                installation_progress: progress(None),
+            }),
             State::InstallationError(InstallationErrorData {
                 update: update_info(),
                 installation_progress: progress(None),
@@ -674,6 +678,10 @@ async fn test_omaha_client_invalid_url() {
                 "event": "CheckingForUpdates",
             },
             "1": contains {
+                "event": "InstallingUpdate",
+                "target-version": "0.1.2.3",
+            },
+            "2": contains {
                 "event": "InstallationError",
                 "target-version": "0.1.2.3",
             }

@@ -738,6 +738,8 @@ where
                 Ok(plan) => plan,
                 Err(e) => {
                     error!("Unable to construct install plan! {}", e);
+                    // report_error emits InstallationError, need to emit InstallingUpdate first
+                    self.set_state(State::InstallingUpdate, co).await;
                     self.report_error(
                         &request_params,
                         EventErrorCode::ConstructInstallPlan,
@@ -774,6 +776,8 @@ where
                 }
                 UpdateDecision::DeniedByPolicy => {
                     warn!("Install plan was denied by Policy, see Policy logs for reasoning");
+                    // report_error emits InstallationError, need to emit InstallingUpdate first
+                    self.set_state(State::InstallingUpdate, co).await;
                     self.report_error(&request_params, EventErrorCode::DeniedByPolicy, &apps, co)
                         .await;
                     return Ok(Self::make_response(response, update_check::Action::DeniedByPolicy));
