@@ -1,2 +1,3 @@
 sdk://dart/sl4f
 sdk://docs/metadata_schemas
+sdk://tools/x64/trace2json

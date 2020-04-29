@@ -79,7 +79,16 @@ sdk("e2e_testing") {
 
   api = "e2e_testing.api"
 
-  deps = [ "//sdk/testing/sl4f/client:client_sdk($dart_toolchain)" ]
+  deps = [
+    ":e2e_testing_tools",
+    "//sdk/testing/sl4f/client:client_sdk($dart_toolchain)",
+  ]
+}
+
+sdk_molecule("e2e_testing_tools") {
+  visibility = [ ":*" ]
+
+  deps = [ "//garnet/bin/trace2json:bin_sdk($host_toolchain)" ]
 }
 
 sdk_molecule("fidl") {
