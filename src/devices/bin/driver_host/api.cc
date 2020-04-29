@@ -404,11 +404,11 @@ __EXPORT bool driver_log_severity_enabled_internal(const zx_driver_t* drv, uint3
 __EXPORT void driver_logf_internal(const zx_driver_t* drv, uint32_t flag, const char* msg, ...) {
   va_list args;
   va_start(args, msg);
-  if (drv != nullptr) {
+  if (drv != nullptr && flag != DDK_LOG_SERIAL) {
     fx_logger_logvf(drv->logger(), flag_to_severity(flag), drv->name(), msg, args);
   } else {
-    // If we have been invoked outside of the context of a driver, use vfprintf.
-    // Typically, this is due to being run within a test.
+    // If we have been invoked outside of the context of a driver, or if |flag|
+    // is DDK_LOG_SERIAL, use vfprintf.
     vfprintf(stderr, msg, args);
   }
   va_end(args);
