@@ -7,9 +7,10 @@
 #ifndef ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_X86_PV_H_
 #define ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_X86_PV_H_
 
+#include <zircon/types.h>
+
 #include <ktl/atomic.h>
 #include <vm/pmm.h>
-#include <zircon/types.h>
 
 static constexpr uint32_t kKvmSystemTimeMsrOld = 0x12;
 static constexpr uint32_t kKvmSystemTimeMsr = 0x4b564d01;
@@ -56,6 +57,15 @@ static_assert(sizeof(struct pv_clock_system_time) == 32,
 zx_status_t pv_clock_init();
 bool pv_clock_is_stable();
 uint64_t pv_clock_get_tsc_freq();
+
+// Send para-virtualized IPI.
+//
+// @param mask_low Low part of CPU mask.
+// @param mask_high High part of CPU mask.
+// @param start_id APIC ID that the CPU mask starts at.
+// @param icr APIC ICR value.
+// @return The number of CPUs that the IPI was delivered to, or an error value.
+int pv_ipi(uint64_t mask_low, uint64_t mask_high, uint64_t start_id, uint64_t icr);
 
 class MsrAccess;
 

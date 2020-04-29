@@ -7,17 +7,17 @@
 #include "arch/x86/pv.h"
 
 #include <lib/arch/intrin.h>
+#include <zircon/types.h>
 
 #include <arch/ops.h>
 #include <arch/x86.h>
 #include <arch/x86/feature.h>
-#include <arch/x86/registers.h>
 #include <arch/x86/platform_access.h>
+#include <arch/x86/registers.h>
 #include <kernel/atomic.h>
 #include <ktl/atomic.h>
 #include <vm/physmap.h>
 #include <vm/pmm.h>
-#include <zircon/types.h>
 
 // Paravirtual functions, to execute some functions in a Hypervisor-specific way.
 // The paravirtual optimizations in this file are implemented by kvm/qemu.
@@ -85,13 +85,34 @@ uint64_t pv_clock_get_tsc_freq() {
   return tsc_khz * 1000;
 }
 
+int pv_ipi(uint64_t mask_low, uint64_t mask_high, uint64_t start_id, uint64_t icr) {
+  static constexpr uint32_t kPvIpiNum = 10;
+
+  int ret;
+  switch (x86_vendor) {
+    case X86_VENDOR_INTEL:
+      __asm__ __volatile__("vmcall"
+                           : "=a"(ret)
+                           : "a"(kPvIpiNum), "b"(mask_low), "c"(mask_high), "d"(start_id), "S"(icr)
+                           : "memory");
+      break;
+    case X86_VENDOR_AMD:
+      __asm__ __volatile__("vmmcall"
+                           : "=a"(ret)
+                           : "a"(kPvIpiNum), "b"(mask_low), "c"(mask_high), "d"(start_id), "S"(icr)
+                           : "memory");
+      break;
+    default:
+      PANIC_UNIMPLEMENTED;
+  }
+  return ret;
+}
+
 namespace pv {
 
 static PvEoi g_pv_eoi[SMP_MAX_CPUS];
 
-PvEoi* PvEoi::get() {
-  return &g_pv_eoi[arch_curr_cpu_num()];
-}
+PvEoi* PvEoi::get() { return &g_pv_eoi[arch_curr_cpu_num()]; }
 
 void PvEoi::Enable(MsrAccess* msr) {
   paddr_t state_page_paddr;

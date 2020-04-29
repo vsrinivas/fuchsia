@@ -388,41 +388,21 @@ zx_status_t arch_mp_send_ipi(mp_ipi_target_t target, cpu_mask_t mask, mp_ipi_t i
       vector = X86_INT_IPI_HALT;
       break;
     default:
-      panic("Unexpected MP IPI value: %u", (uint)ipi);
+      panic("Unexpected MP IPI value: %u", static_cast<uint32_t>(ipi));
   }
 
-  if (target == MP_IPI_TARGET_ALL_BUT_LOCAL) {
-    apic_send_broadcast_ipi(vector, DELIVERY_MODE_FIXED);
-    return ZX_OK;
-  } else if (target == MP_IPI_TARGET_ALL) {
-    apic_send_broadcast_self_ipi(vector, DELIVERY_MODE_FIXED);
-    return ZX_OK;
-  }
-
-  ASSERT(x86_num_cpus <= sizeof(mask) * CHAR_BIT);
-
-  cpu_mask_t remaining = mask;
-  uint cpu_id = 0;
-  while (remaining && cpu_id < x86_num_cpus) {
-    if (remaining & 1) {
-      struct x86_percpu* percpu;
-      if (cpu_id == 0) {
-        percpu = &bp_percpu;
-      } else {
-        percpu = &ap_percpus[cpu_id - 1];
-      }
-      /* Reschedule IPIs may occur before all CPUs are fully up.  Just
-       * ignore attempts to send them to down CPUs. */
-      if (ipi != MP_IPI_RESCHEDULE) {
-        DEBUG_ASSERT(percpu->apic_id != INVALID_APIC_ID);
-      }
-      /* Make sure the CPU is actually up before sending the IPI */
-      if (percpu->apic_id != INVALID_APIC_ID) {
-        apic_send_ipi(vector, (uint8_t)percpu->apic_id, DELIVERY_MODE_FIXED);
-      }
-    }
-    remaining >>= 1;
-    cpu_id++;
+  switch (target) {
+    case MP_IPI_TARGET_ALL_BUT_LOCAL:
+      apic_send_broadcast_ipi(vector, DELIVERY_MODE_FIXED);
+      break;
+    case MP_IPI_TARGET_ALL:
+      apic_send_broadcast_self_ipi(vector, DELIVERY_MODE_FIXED);
+      break;
+    case MP_IPI_TARGET_MASK:
+      apic_send_mask_ipi(vector, mask, DELIVERY_MODE_FIXED);
+      break;
+    default:
+      panic("Unexpected MP IPI target: %u", static_cast<uint32_t>(target));
   }
 
   return ZX_OK;

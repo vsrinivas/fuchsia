@@ -5,6 +5,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <assert.h>
+#include <bits.h>
 #include <debug.h>
 #include <err.h>
 #include <lib/arch/intrin.h>
@@ -196,8 +197,8 @@ uint8_t apic_bsp_id(void) {
 }
 
 static inline void apic_wait_for_ipi_send(void) {
-  while (lapic_reg_read(LAPIC_REG_IRQ_CMD_LOW) & ICR_DELIVERY_PENDING)
-    ;
+  while (lapic_reg_read(LAPIC_REG_IRQ_CMD_LOW) & ICR_DELIVERY_PENDING) {
+  }
 }
 
 // We only support physical destination modes for now
@@ -205,9 +206,12 @@ static inline void apic_wait_for_ipi_send(void) {
 void apic_send_ipi(uint8_t vector, uint32_t dst_apic_id, enum apic_interrupt_delivery_mode dm) {
   // we only support 8 bit apic ids
   DEBUG_ASSERT(dst_apic_id < UINT8_MAX);
-
-  uint32_t request = ICR_VECTOR(vector) | ICR_LEVEL_ASSERT;
-  request |= ICR_DELIVERY_MODE(dm);
+  uint32_t request = ICR_LEVEL_ASSERT | ICR_DELIVERY_MODE(dm) | ICR_VECTOR(vector);
+  if (x86_hypervisor_has_pv_ipi()) {
+    __UNUSED int ret = pv_ipi(1, 0, dst_apic_id, request);
+    DEBUG_ASSERT(ret >= 0);
+    return;
+  }
 
   spin_lock_saved_state_t state;
   arch_interrupt_save(&state, 0);
@@ -222,9 +226,14 @@ void apic_send_ipi(uint8_t vector, uint32_t dst_apic_id, enum apic_interrupt_del
 }
 
 void apic_send_self_ipi(uint8_t vector, enum apic_interrupt_delivery_mode dm) {
-  uint32_t request = ICR_VECTOR(vector) | ICR_LEVEL_ASSERT;
-  request |= ICR_DELIVERY_MODE(dm) | ICR_DST_SELF;
+  uint32_t request = ICR_LEVEL_ASSERT | ICR_DELIVERY_MODE(dm) | ICR_VECTOR(vector);
+  if (x86_hypervisor_has_pv_ipi()) {
+    __UNUSED int ret = pv_ipi(1, 0, x86_get_percpu()->apic_id, request);
+    DEBUG_ASSERT(ret >= 0);
+    return;
+  }
 
+  request |= ICR_DST_SELF;
   spin_lock_saved_state_t state;
   arch_interrupt_save(&state, 0);
   if (x2apic_enabled) {
@@ -237,11 +246,43 @@ void apic_send_self_ipi(uint8_t vector, enum apic_interrupt_delivery_mode dm) {
   arch_interrupt_restore(state, 0);
 }
 
+static void pv_mask_ipi(cpu_mask_t mask, uint32_t request) {
+  // |mask_size| represents the number of bits in a CPU mask. As each CPU mask
+  // is a uint64_t, there are ofcourse 64 bits in a CPU mask.
+  constexpr uint64_t mask_size = 64;
+  uint64_t masks[(UINT8_MAX + 1) / mask_size] = {};
+  // pv_ipi() requires a 128 bit CPU mask. Verify that the number of masks is
+  // divisible by 2, so we can provide the low and high part of the CPU mask.
+  static_assert(std::size(masks) % 2 == 0);
+
+  const cpu_num_t num_cpus = std::min(arch_max_num_cpus(), highest_cpu_set(mask) + 1);
+  for (cpu_num_t cpu_id = lowest_cpu_set(mask); cpu_id < num_cpus; cpu_id++) {
+    if (BIT(mask, cpu_id)) {
+      struct x86_percpu* percpu = cpu_id == 0 ? &bp_percpu : &ap_percpus[cpu_id - 1];
+      if (percpu->apic_id != INVALID_APIC_ID) {
+        masks[percpu->apic_id / mask_size] |= 1ull << (percpu->apic_id % mask_size);
+      }
+    }
+  }
+
+  for (size_t i = 0; i < std::size(masks); i += 2) {
+    if (masks[i] || masks[i + 1]) {
+      __UNUSED int ret = pv_ipi(masks[i], masks[i + 1], i * mask_size, request);
+      DEBUG_ASSERT(ret >= 0);
+    }
+  }
+}
+
 // Broadcast to everyone including self
 void apic_send_broadcast_self_ipi(uint8_t vector, enum apic_interrupt_delivery_mode dm) {
-  uint32_t request = ICR_VECTOR(vector) | ICR_LEVEL_ASSERT;
-  request |= ICR_DELIVERY_MODE(dm) | ICR_DST_ALL;
+  uint32_t request = ICR_LEVEL_ASSERT | ICR_DELIVERY_MODE(dm) | ICR_VECTOR(vector);
+  if (x86_hypervisor_has_pv_ipi()) {
+    cpu_mask_t mask = (1u << arch_max_num_cpus()) - 1;
+    pv_mask_ipi(mask, request);
+    return;
+  }
 
+  request |= ICR_DST_ALL;
   spin_lock_saved_state_t state;
   arch_interrupt_save(&state, 0);
   if (x2apic_enabled) {
@@ -256,9 +297,14 @@ void apic_send_broadcast_self_ipi(uint8_t vector, enum apic_interrupt_delivery_m
 
 // Broadcast to everyone excluding self
 void apic_send_broadcast_ipi(uint8_t vector, enum apic_interrupt_delivery_mode dm) {
-  uint32_t request = ICR_VECTOR(vector) | ICR_LEVEL_ASSERT;
-  request |= ICR_DELIVERY_MODE(dm) | ICR_DST_ALL_MINUS_SELF;
+  uint32_t request = ICR_LEVEL_ASSERT | ICR_DELIVERY_MODE(dm) | ICR_VECTOR(vector);
+  if (x86_hypervisor_has_pv_ipi()) {
+    cpu_mask_t mask = ((1u << arch_max_num_cpus()) - 1) & ~(1u << arch_curr_cpu_num());
+    pv_mask_ipi(mask, request);
+    return;
+  }
 
+  request |= ICR_DST_ALL_MINUS_SELF;
   spin_lock_saved_state_t state;
   arch_interrupt_save(&state, 0);
   if (x2apic_enabled) {
@@ -269,6 +315,25 @@ void apic_send_broadcast_ipi(uint8_t vector, enum apic_interrupt_delivery_mode d
     apic_wait_for_ipi_send();
   }
   arch_interrupt_restore(state, 0);
+}
+
+void apic_send_mask_ipi(uint8_t vector, cpu_mask_t mask, enum apic_interrupt_delivery_mode dm) {
+  DEBUG_ASSERT(arch_max_num_cpus() <= sizeof(mask) * CHAR_BIT);
+  if (x86_hypervisor_has_pv_ipi()) {
+    uint32_t request = ICR_LEVEL_ASSERT | ICR_DELIVERY_MODE(dm) | ICR_VECTOR(vector);
+    pv_mask_ipi(mask, request);
+    return;
+  }
+
+  const cpu_num_t num_cpus = std::min(arch_max_num_cpus(), highest_cpu_set(mask) + 1);
+  for (cpu_num_t cpu_id = lowest_cpu_set(mask); cpu_id < num_cpus; cpu_id++) {
+    if (BIT(mask, cpu_id)) {
+      struct x86_percpu* percpu = cpu_id == 0 ? &bp_percpu : &ap_percpus[cpu_id - 1];
+      if (percpu->apic_id != INVALID_APIC_ID) {
+        apic_send_ipi(vector, (uint8_t)percpu->apic_id, dm);
+      }
+    }
+  }
 }
 
 void apic_issue_eoi(void) {
