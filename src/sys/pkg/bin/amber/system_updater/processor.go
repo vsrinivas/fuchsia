@@ -458,7 +458,10 @@ func ValidateImgs(imgs []Image, updatePkg *UpdatePackage, updateMode UpdateMode)
 	return nil
 }
 
-func WriteImgs(dataSink *paver.DataSinkWithCtxInterface, bootManager *paver.BootManagerWithCtxInterface, imgs []Image, updatePkg *UpdatePackage, updateMode UpdateMode) error {
+func WriteImgs(dataSink *paver.DataSinkWithCtxInterface, bootManager *paver.BootManagerWithCtxInterface, imgs []Image, updatePkg *UpdatePackage, updateMode UpdateMode, skipRecovery bool) error {
+	if updateMode == UpdateModeForceRecovery && skipRecovery == true {
+		return fmt.Errorf("can't force recovery when skipping recovery image installation")
+	}
 	syslog.Infof("Writing images %+v from update package", imgs)
 	activeConfig, err := queryActiveConfig(bootManager)
 	if err != nil {
@@ -480,7 +483,7 @@ func WriteImgs(dataSink *paver.DataSinkWithCtxInterface, bootManager *paver.Boot
 	}
 
 	for _, img := range imgs {
-		if err := writeImg(dataSink, img, updatePkg, targetConfig); err != nil {
+		if err := writeImg(dataSink, img, updatePkg, targetConfig, skipRecovery); err != nil {
 			return err
 		}
 	}
@@ -600,7 +603,7 @@ func writeAsset(svc *paver.DataSinkWithCtxInterface, configuration paver.Configu
 	return nil
 }
 
-func writeImg(svc *paver.DataSinkWithCtxInterface, img Image, updatePkg *UpdatePackage, targetConfig *paver.Configuration) error {
+func writeImg(svc *paver.DataSinkWithCtxInterface, img Image, updatePkg *UpdatePackage, targetConfig *paver.Configuration, skipRecovery bool) error {
 	f, err := updatePkg.Open(img.Filename())
 	if err != nil {
 		syslog.Warnf("img_writer: %q image not found, skipping", img.Filename())
@@ -686,12 +689,20 @@ func writeImg(svc *paver.DataSinkWithCtxInterface, img Image, updatePkg *UpdateP
 			}
 		}
 	case "zedboot", "zedboot.signed":
-		writeImg = func() error {
-			return writeAsset(svc, paver.ConfigurationRecovery, paver.AssetKernel, buffer)
+		if skipRecovery {
+			return nil
+		} else {
+			writeImg = func() error {
+				return writeAsset(svc, paver.ConfigurationRecovery, paver.AssetKernel, buffer)
+			}
 		}
 	case "recovery.vbmeta":
-		writeImg = func() error {
-			return writeAsset(svc, paver.ConfigurationRecovery, paver.AssetVerifiedBootMetadata, buffer)
+		if skipRecovery {
+			return nil
+		} else {
+			writeImg = func() error {
+				return writeAsset(svc, paver.ConfigurationRecovery, paver.AssetVerifiedBootMetadata, buffer)
+			}
 		}
 	case "bootloader":
 		// Keep support for update packages still using the older "bootloader"

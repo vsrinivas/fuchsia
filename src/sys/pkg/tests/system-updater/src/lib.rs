@@ -207,6 +207,9 @@ impl TestEnv {
         if let Some(reboot) = args.reboot {
             v.append(&mut vec!["--reboot".to_string(), format!("{}", reboot)]);
         }
+        if let Some(skip_recovery) = args.skip_recovery {
+            v.append(&mut vec!["--skip-recovery".to_string(), format!("{}", skip_recovery)]);
+        }
 
         self.run_system_updater_args(v).await
     }
@@ -266,6 +269,7 @@ struct SystemUpdaterArgs<'a> {
     target: &'a str,
     update: Option<&'a str>,
     reboot: Option<bool>,
+    skip_recovery: Option<bool>,
 }
 
 struct MockResolverService {
@@ -575,6 +579,7 @@ async fn test_system_update() {
         target: "m3rk13",
         update: None,
         reboot: None,
+        skip_recovery: None,
     })
     .await
     .expect("run system_updater");
@@ -615,6 +620,7 @@ async fn test_system_update_force_recovery() {
         target: "m3rk13",
         update: None,
         reboot: None,
+        skip_recovery: None,
     })
     .await
     .expect("run system_updater");
@@ -675,6 +681,7 @@ async fn test_packages_json_takes_precedence() {
         target: "m3rk13",
         update: None,
         reboot: None,
+        skip_recovery: None,
     })
     .await
     .expect("run system_updater");
@@ -719,6 +726,7 @@ async fn test_metrics_report_untrusted_tuf_repo() {
             target: "m3rk13",
             update: None,
             reboot: None,
+            skip_recovery: None,
         })
         .await;
     assert!(result.is_err(), "system_updater succeeded when it should fail");
@@ -755,6 +763,7 @@ async fn test_system_update_no_reboot() {
         target: "m3rk13",
         update: None,
         reboot: Some(false),
+        skip_recovery: None,
     })
     .await
     .expect("run system_updater");
@@ -795,6 +804,7 @@ async fn test_system_update_force_recovery_reboots_regardless_of_reboot_arg() {
         target: "m3rk13",
         update: None,
         reboot: Some(false),
+        skip_recovery: None,
     })
     .await
     .expect("run system_updater");
@@ -820,6 +830,7 @@ async fn test_broken_logger() {
         target: "m3rk13",
         update: None,
         reboot: None,
+        skip_recovery: None,
     })
     .await
     .expect("run system_updater");
@@ -853,6 +864,7 @@ async fn test_failing_package_fetch() {
             target: "m3rk13",
             update: None,
             reboot: None,
+            skip_recovery: None,
         })
         .await;
     assert!(result.is_err(), "system_updater succeeded when it should fail");
@@ -897,6 +909,7 @@ async fn test_normal_requires_zbi() {
             target: "m3rk13",
             update: None,
             reboot: None,
+            skip_recovery: None,
         })
         .await;
     assert!(result.is_err(), "system_updater succeeded when it should fail");
@@ -923,6 +936,7 @@ async fn test_force_recovery_rejects_zbi() {
             target: "m3rk13",
             update: None,
             reboot: None,
+            skip_recovery: None,
         })
         .await;
     assert!(result.is_err(), "system_updater succeeded when it should fail");
@@ -950,6 +964,7 @@ async fn test_validate_board() {
         target: "m3rk13",
         update: None,
         reboot: None,
+        skip_recovery: None,
     })
     .await
     .expect("success");
@@ -981,6 +996,7 @@ async fn test_invalid_board() {
             target: "m3rk13",
             update: None,
             reboot: None,
+            skip_recovery: None,
         })
         .await;
     assert!(result.is_err(), "system_updater succeeded when it should fail");
@@ -1020,6 +1036,7 @@ async fn test_writes_bootloader() {
         target: "m3rk13",
         update: None,
         reboot: None,
+        skip_recovery: None,
     })
     .await
     .expect("success");
@@ -1064,6 +1081,7 @@ async fn test_writes_recovery() {
         target: "m3rk13",
         update: None,
         reboot: None,
+        skip_recovery: None,
     })
     .await
     .expect("success");
@@ -1108,6 +1126,7 @@ async fn test_writes_recovery_vbmeta() {
         target: "m3rk13",
         update: None,
         reboot: None,
+        skip_recovery: None,
     })
     .await
     .expect("success");
@@ -1156,6 +1175,7 @@ async fn test_writes_fuchsia_vbmeta() {
         target: "m3rk13",
         update: None,
         reboot: None,
+        skip_recovery: None,
     })
     .await
     .expect("success");
@@ -1173,6 +1193,46 @@ async fn test_writes_fuchsia_vbmeta() {
                 configuration: paver::Configuration::B,
                 asset: paver::Asset::VerifiedBootMetadata,
                 payload: b"fake zbi vbmeta".to_vec(),
+            },
+            PaverEvent::SetConfigurationActive { configuration: paver::Configuration::B },
+        ]
+    );
+
+    assert_eq!(*env.space_service.called.lock(), 1);
+    assert_eq!(*env.reboot_service.called.lock(), 1);
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_skips_recovery_vbmeta() {
+    let mut env = TestEnv::new();
+
+    env.register_package("update", "upd4t3")
+        .add_file(
+            "packages",
+            "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
+        )
+        .add_file("zbi", "fake zbi")
+        .add_file("zedboot", "new recovery")
+        .add_file("recovery.vbmeta", "new recovery vbmeta");
+
+    env.run_system_updater(SystemUpdaterArgs {
+        initiator: "manual",
+        target: "m3rk13",
+        update: None,
+        reboot: None,
+        skip_recovery: Some(true),
+    })
+    .await
+    .expect("success");
+
+    assert_eq!(
+        env.paver_service.take_events(),
+        vec![
+            PaverEvent::QueryActiveConfiguration,
+            PaverEvent::WriteAsset {
+                configuration: paver::Configuration::B,
+                asset: paver::Asset::Kernel,
+                payload: b"fake zbi".to_vec(),
             },
             PaverEvent::SetConfigurationActive { configuration: paver::Configuration::B },
         ]
@@ -1201,6 +1261,7 @@ async fn do_test_working_image_write_with_abr(
         target: "m3rk13",
         update: None,
         reboot: None,
+        skip_recovery: None,
     })
     .await
     .expect("success");
@@ -1264,6 +1325,7 @@ async fn test_working_image_with_unsupported_abr() {
         target: "m3rk13",
         update: None,
         reboot: None,
+        skip_recovery: None,
     })
     .await
     .expect("success");
@@ -1320,6 +1382,7 @@ async fn test_failing_image_write() {
             target: "m3rk13",
             update: None,
             reboot: None,
+            skip_recovery: None,
         })
         .await;
     assert!(result.is_err(), "system_updater succeeded when it should fail");
@@ -1358,6 +1421,7 @@ async fn test_uses_custom_update_package() {
         target: "m3rk13",
         update: Some("fuchsia-pkg://fuchsia.com/another-update/4"),
         reboot: None,
+        skip_recovery: None,
     })
     .await
     .expect("run system_updater");
@@ -1382,6 +1446,7 @@ async fn test_requires_update_package() {
             target: "m3rk13",
             update: None,
             reboot: None,
+            skip_recovery: None,
         })
         .await;
     assert!(result.is_err(), "system_updater succeeded when it should fail");
@@ -1405,6 +1470,7 @@ async fn test_rejects_invalid_update_package_url() {
             target: "m3rk13",
             update: Some(bogus_url),
             reboot: None,
+            skip_recovery: None,
         })
         .await;
     assert!(result.is_err(), "system_updater succeeded when it should fail");
@@ -1480,6 +1546,7 @@ async fn test_writes_firmware() {
         target: "m3rk13",
         update: None,
         reboot: None,
+        skip_recovery: None,
     })
     .await
     .expect("success");
@@ -1523,6 +1590,7 @@ async fn test_writes_multiple_firmware_types() {
         target: "m3rk13",
         update: None,
         reboot: None,
+        skip_recovery: None,
     })
     .await
     .expect("success");
@@ -1586,6 +1654,7 @@ async fn test_unsupported_firmware_type() {
         target: "m3rk13",
         update: None,
         reboot: None,
+        skip_recovery: None,
     })
     .await
     .expect("success");
@@ -1633,6 +1702,7 @@ async fn test_write_firmware_failure() {
         target: "m3rk13",
         update: None,
         reboot: None,
+        skip_recovery: None,
     })
     .await
     .expect_err("update should fail");

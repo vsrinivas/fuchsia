@@ -29,6 +29,7 @@ var (
 	targetVersion string
 	updateURL     string
 	reboot        bool
+	skipRecovery  bool
 )
 
 func run(ctx *appcontext.Context) (err error) {
@@ -150,7 +151,7 @@ func run(ctx *appcontext.Context) (err error) {
 	}
 
 	phase = metrics.PhaseImageWrite
-	if err := WriteImgs(dataSink, bootManager, imgs, updatePkg, updateMode); err != nil {
+	if err := WriteImgs(dataSink, bootManager, imgs, updatePkg, updateMode, skipRecovery); err != nil {
 		return fmt.Errorf("error writing image file: %s", err)
 	}
 
@@ -265,7 +266,7 @@ func Main() {
 	metrics.Register(ctx)
 
 	// Can't use a bool var since not allowed in the argument scheme we want (--foo bar).
-	var rebootString string
+	var rebootString, skipRecoveryString string
 
 	flag.Var(&InitiatorValue{&initiator}, "initiator", "what started this update: manual or automatic")
 	start := flag.Int64("start", time.Now().UnixNano(), "start time of update attempt, as unix nanosecond timestamp")
@@ -273,6 +274,7 @@ func Main() {
 	flag.StringVar(&targetVersion, "target", "", "target OS version")
 	flag.StringVar(&updateURL, "update", "fuchsia-pkg://fuchsia.com/update", "update package URL")
 	flag.StringVar(&rebootString, "reboot", "true", "if true, reboot the system after successful OTA")
+	flag.StringVar(&skipRecoveryString, "skip-recovery", "false", "if true, don't update the recovery image")
 	flag.Parse()
 
 	if len(flag.Args()) != 0 {
@@ -287,6 +289,12 @@ func Main() {
 	if e != nil {
 		fmt.Printf("Unable to parse reboot string: [%v]. Assuming reboot=true", e)
 		reboot = true
+	}
+
+	skipRecovery, e = strconv.ParseBool(skipRecoveryString)
+	if e != nil {
+		fmt.Printf("Unable to parse skip-recovery string: [%v]. Assuming skip-recovery=false", e)
+		skipRecovery = false
 	}
 
 	if err := run(ctx); err != nil {
