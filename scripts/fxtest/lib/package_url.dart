@@ -70,7 +70,7 @@ class PackageUrl {
   /// ```
   /// fuchsia-pkg://fuchsia.com/pkg-name/variant?hash=1234#meta/component-name.cmx
   /// ```
-  final String resourcePath;
+  final String fullComponentName;
 
   /// Component name without the extension.
   ///
@@ -83,14 +83,15 @@ class PackageUrl {
   /// ```
   /// fuchsia-pkg://fuchsia.com/pkg-name/variant?hash=1234#meta/component-name.cmx
   /// ```
-  final String rawResource;
+  final String componentName;
+
   PackageUrl({
     @required this.host,
     @required this.packageName,
     @required this.packageVariant,
     @required this.hash,
-    @required this.resourcePath,
-    @required this.rawResource,
+    @required this.fullComponentName,
+    @required this.componentName,
   });
 
   PackageUrl.none()
@@ -98,8 +99,8 @@ class PackageUrl {
         hash = null,
         packageName = null,
         packageVariant = null,
-        resourcePath = null,
-        rawResource = null;
+        fullComponentName = null,
+        componentName = null;
 
   /// Breaks out a canonical Fuchsia URL into its constituent parts.
   ///
@@ -112,8 +113,8 @@ class PackageUrl {
   ///   'packageName': 'package_name',
   ///   'packageVariant': 'variant',
   ///   'hash': '1234',
-  ///   'resourcePath': 'PATH.cmx',
-  ///   'rawResource': 'PATH',
+  ///   'fullComponentName': 'PATH.cmx',
+  ///   'componentName': 'PATH',
   /// );
   /// ```
   factory PackageUrl.fromString(String packageUrl) {
@@ -130,25 +131,25 @@ class PackageUrl {
       packageVariant:
           parsedUri.pathSegments.length > 1 ? parsedUri.pathSegments[1] : null,
       hash: parsedUri.queryParameters['hash'],
-      resourcePath: PackageUrl._removeMetaPrefix(parsedUri.fragment),
-      rawResource: PackageUrl._removeMetaPrefix(
+      fullComponentName: PackageUrl._removeMetaPrefix(parsedUri.fragment),
+      componentName: PackageUrl._removeMetaPrefix(
         PackageUrl._removeExtension(parsedUri.fragment),
       ),
     );
   }
 
-  static String _removeMetaPrefix(String resourcePath) {
+  static String _removeMetaPrefix(String fullComponentName) {
     const token = 'meta/';
-    return resourcePath.startsWith(token)
-        ? resourcePath.substring(token.length)
-        : resourcePath;
+    return fullComponentName.startsWith(token)
+        ? fullComponentName.substring(token.length)
+        : fullComponentName;
   }
 
-  static String _removeExtension(String resourcePath) {
+  static String _removeExtension(String fullComponentName) {
     // Guard against uninteresting edge cases
-    if (resourcePath == null || !resourcePath.contains('.')) {
-      return resourcePath ?? '';
+    if (fullComponentName == null || !fullComponentName.contains('.')) {
+      return fullComponentName ?? '';
     }
-    return resourcePath.substring(0, resourcePath.lastIndexOf('.'));
+    return fullComponentName.substring(0, fullComponentName.lastIndexOf('.'));
   }
 }

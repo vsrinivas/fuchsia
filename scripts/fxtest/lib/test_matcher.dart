@@ -13,16 +13,22 @@ class TestMatcher {
     PermutatedTestsConfig testConfig, {
     bool exactMatching,
   }) {
+    var testNameGroup = testConfig.testNameGroup;
     // Start by looping over all provided rules in this group
-    for (String testName in testConfig.testNameGroup ?? [null]) {
+    for (MatchableTestName matcher in testNameGroup) {
       // To begin, each testName is declared as unmatched
       bool hasMatchedTestName = false;
       // Give each checker a chance to match against the rule
       for (var checker in checkers) {
         // When a checker matches a testName, mark it and break out of the inner
         // loop, since additional matches for that testName are meaningless
-        if (checker.canHandle(testName, testConfig.flags, testDefinition,
-            exactMatching: exactMatching)) {
+        if (checker.canHandle(
+          matcher?.testNameToken,
+          matcher?.matchType,
+          testConfig.flags,
+          testDefinition,
+          exactMatching: exactMatching,
+        )) {
           hasMatchedTestName = true;
           break;
         }

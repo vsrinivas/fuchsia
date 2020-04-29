@@ -6,7 +6,7 @@ import 'package:fxtest/fxtest.dart';
 import 'package:meta/meta.dart';
 
 /// Helper which pairs positional test name arguments with any trailing `-a`
-/// arguments.
+/// arguments, or, similarly, `-p` arguments with any trailing `-c` arguments.
 ///
 /// Also translates any test name value of "." to the current working directory,
 /// since we can safely assume "." will never be an actual test name.
@@ -27,6 +27,14 @@ class TestNamesCollector {
   /// this value would be:
   ///
   ///   > `[test_one, -a, filter_one, test_two, --flag_one, --flag_two,]`
+  ///
+  /// If the user executed:
+  ///
+  ///   > `fx test -p pkg-name -c comp-name`
+  ///
+  /// this value would unsurprisingly be:
+  ///
+  ///   > `[-p, pkg-name, -c, comp-name]`
   final List<String> rawArgs;
 
   /// Extracted testNames from the set of arguments passed to `fx test`. For
@@ -37,6 +45,14 @@ class TestNamesCollector {
   /// this value would be:
   ///
   ///   > `[test_one, test_two]`
+  ///
+  /// If the user executed:
+  ///
+  ///   > `fx test test_one -p pkg-name -c comp-name`
+  ///
+  /// this value would be:
+  ///
+  ///   > `[test_one]`
   final List<String> testNames;
 
   TestNamesCollector({
@@ -67,70 +83,107 @@ class TestNamesCollector {
   ///
   /// ```
   /// [
-  ///   [test_one, filter_one],
-  ///   [test_two, filter_two, filter_two_b],
-  ///   [test_three]
+  ///   [<MatchableTestName "test_one">, <MatchableTestName "filter_one">],
+  ///   [<MatchableTestName "test_two>, <MatchableTestName "filter_two">, <MatchableTestName "filter_two_b">],
+  ///   [<MatchableTestName "test_three">]
   /// ]
   /// ```
-  List<List<String>> collect() {
-    List<List<String>> groupedTestFilters = [];
+  List<List<MatchableTestName>> collect() {
+    List<List<MatchableTestName>> groupedTestFilters = [];
     var seenRootNames = <String>{};
+    var args = _ListEmitter<String>(rawArgs);
 
-    if (testNames.isEmpty) {
-      return groupedTestFilters;
-    }
-
-    int counter = 0;
-    while (counter < rawArgs.length) {
-      var arg = rawArgs[counter];
-      counter += 1;
+    while (args.hasMore()) {
+      var arg = args.take();
       if (seenRootNames.contains(arg)) {
         continue;
       }
+      _ArgumentsProgress argsProgress;
       if (testNames.contains(arg)) {
         seenRootNames.add(arg);
-        groupedTestFilters.add([arg]);
+        groupedTestFilters.add([MatchableTestName.unrestricted(arg)]);
+        argsProgress = _takeAndFilters(
+          args,
+          testNames,
+        );
+      } else if (['--package', '-p'].contains(arg)) {
+        // Break out if we're at the end and had a dangling `-p` flag.
+        if (!args.hasMore()) break;
+
+        var nextArg = args.take();
+        groupedTestFilters.add([MatchableTestName.packageName(nextArg)]);
+        argsProgress = _takeComponentFilters(
+          args,
+          testNames,
+        );
+      } else if (['--component', '-c'].contains(arg)) {
+        // Break out if we're at the end and had a dangling `-c` flag.
+        if (!args.hasMore()) break;
+
+        var nextArg = args.take();
+        groupedTestFilters.add([MatchableTestName.componentName(nextArg)]);
       }
-      _ArgumentsProgress argsProgress = _takeAdditionalFilters(
-        counter,
-        rawArgs,
-        testNames,
-      );
-      counter = argsProgress.counter;
-      if (argsProgress.additionalFilters.isNotEmpty) {
-        groupedTestFilters[groupedTestFilters.length - 1]
-            .addAll(argsProgress.additionalFilters);
+      if (argsProgress != null) {
+        if (argsProgress.additionalFilters.isNotEmpty) {
+          groupedTestFilters[groupedTestFilters.length - 1]
+              .addAll(argsProgress.additionalFilters);
+        }
+        args = argsProgress.args;
       }
+    }
+    if (groupedTestFilters.isEmpty) {
+      groupedTestFilters.add([MatchableTestName.empty()]);
     }
     return groupedTestFilters;
   }
 
-  _ArgumentsProgress _takeAdditionalFilters(
-    int counter,
-    List<String> args,
+  _ArgumentsProgress _takeComponentFilters(
+    _ListEmitter<String> args,
     List<String> testNames,
   ) {
-    int _counter = counter;
-    final additionalFilters = <String>[];
+    final additionalFilters = <MatchableTestName>[];
 
-    // ignore: literal_only_boolean_expressions
-    while (true) {
-      // Stop 1 item early because a trailing `-a` flag is definitionally not
-      // followed by another token
-      if (_counter >= args.length - 1) {
+    // Stop 1 item early because a trailing `-c` flag is definitionally
+    // not followed by another token
+    while (args.hasNMore(2)) {
+      var arg = args.peek();
+      if (['--component', '-c'].contains(arg)) {
+        // Confirm our peek
+        args.take();
+        var nextArg = args.take();
+        additionalFilters.add(MatchableTestName.componentName(nextArg));
+      } else {
         break;
       }
-      var arg = args[_counter];
-      if (['--all', '-a'].contains(arg)) {
-        var nextFilter = args[_counter + 1];
-        additionalFilters.addAll(nextFilter.split(','));
-        _counter += 1;
-      } else if (testNames.contains(arg)) {
-        break;
-      }
-      _counter += 1;
     }
-    return _ArgumentsProgress(_counter, additionalFilters);
+    return _ArgumentsProgress(args, additionalFilters);
+  }
+
+  _ArgumentsProgress _takeAndFilters(
+    _ListEmitter<String> args,
+    List<String> testNames,
+  ) {
+    final additionalFilters = <MatchableTestName>[];
+
+    // Stop 1 item early because a trailing `-a` flag is definitionally
+    // not followed by another token
+    while (args.hasNMore(2)) {
+      var arg = args.peek();
+      if (['--all', '-a'].contains(arg)) {
+        // Confirm our peek
+        args.take();
+        var nextFilter = args.take();
+        additionalFilters.addAll(
+          nextFilter
+              .split(',')
+              .map((testName) => MatchableTestName.unrestricted(testName))
+              .toList(),
+        );
+      } else {
+        break;
+      }
+    }
+    return _ArgumentsProgress(args, additionalFilters);
   }
 
   static List<String> _processTestList(
@@ -158,8 +211,84 @@ class TestNamesCollector {
   }
 }
 
+/// Helper that tracks progress through the positionally-aware parsing of
+/// raw arguments.
 class _ArgumentsProgress {
-  final int counter;
-  final List<String> additionalFilters;
-  _ArgumentsProgress(this.counter, this.additionalFilters);
+  final _ListEmitter<String> args;
+  final List<MatchableTestName> additionalFilters;
+  _ArgumentsProgress(this.args, this.additionalFilters);
+}
+
+class _ListEmitter<T> {
+  final List<T> _list;
+  int _counter = 0;
+  _ListEmitter(this._list);
+
+  /// Look at the next item in the list without advancing the marker.
+  T peek() => _list.length > _counter ? _list[_counter] : null;
+
+  /// Look at the next item in the list and advance the marker.
+  T take() {
+    if (_counter == _list.length) return null;
+    _counter += 1;
+    return _list[_counter - 1];
+  }
+
+  bool hasMore() => hasNMore(1);
+  bool hasNMore(int numberMore) => _list.length - _counter >= numberMore;
+}
+
+enum MatchType {
+  /// Default rule which can match against any portion of a [TestDefinition].
+  unrestricted,
+
+  /// Specialized rule which indicates only matching against package names.
+  packageName,
+
+  /// Specialized rule which indicates only matching against component names.
+  componentName,
+}
+
+/// Container for a [String] used to match against different parts of test names
+/// with an additional [MatchType] attribute which optionally specifies
+/// limitations on parts of a [TestDefinition] eligible for matching.
+class MatchableTestName {
+  final String testNameToken;
+  final MatchType matchType;
+
+  /// Generic constructor which accepts all paramters. Not preferred for
+  /// external use.
+  MatchableTestName._(this.testNameToken, this.matchType);
+
+  /// Helper constructor for unrestricted matchers.
+  factory MatchableTestName.unrestricted(String testNameToken) =>
+      MatchableTestName._(testNameToken, MatchType.unrestricted);
+
+  /// Helper constructor for package-name matchers.
+  factory MatchableTestName.packageName(String testNameToken) =>
+      MatchableTestName._(testNameToken, MatchType.packageName);
+
+  /// Helper constructor for component-name matchers.
+  factory MatchableTestName.componentName(String testNameToken) =>
+      MatchableTestName._(testNameToken, MatchType.componentName);
+
+  /// Helper constructor for when there are zero test name tokens whatsoever.
+  factory MatchableTestName.empty() =>
+      MatchableTestName._(null, MatchType.unrestricted);
+
+  @override
+  bool operator ==(dynamic other) {
+    return identical(this, other) ||
+        (other is MatchableTestName &&
+            runtimeType == other.runtimeType &&
+            testNameToken == other.testNameToken &&
+            matchType == other.matchType);
+  }
+
+  @override
+  int get hashCode => testNameToken.hashCode ^ matchType.hashCode;
+
+  @override
+  String toString() =>
+      '<MatchableTestName ${matchType.toString().split('.')[1]}::"$testNameToken" />';
 }

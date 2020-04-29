@@ -40,10 +40,11 @@ class TestsManifestReader {
   TestsManifestReader()
       : matcher = TestMatcher(checkers: [
           NoArgumentsChecker(),
-          ComponentTestChecker(),
-          FullUrlComponentChecker(),
-          UrlNameComponentChecker(),
-          NameMatchChecker(),
+          LabelChecker(),
+          NameChecker(),
+          PackageUrlChecker(),
+          PackageNameChecker(),
+          ComponentNameChecker(),
           PathMatchChecker(),
         ]);
 

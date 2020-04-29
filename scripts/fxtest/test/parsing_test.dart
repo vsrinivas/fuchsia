@@ -412,6 +412,27 @@ void main() {
       ),
     ];
 
+    test('specifies a non-trailing component name with no package name', () {
+      TestsConfig testsConfig = TestsConfig.fromRawArgs(
+        rawArgs: ['-c', 'test2', '//host/test'],
+      );
+      var cmd = FuchsiaTestCommand.fromConfig(
+        testsConfig,
+        testRunnerBuilder: buildTestRunner,
+      );
+      ParsedManifest parsedManifest = tr.aggregateTests(
+        eventEmitter: _ignoreEvents,
+        testBundleBuilder: cmd.testBundleBuilder,
+        testDefinitions: tds,
+        testsConfig: testsConfig,
+      );
+
+      var bundles = parsedManifest.testBundles;
+      expect(bundles, hasLength(2));
+      expect(bundles[0].testDefinition.name, 'pkg 1 test 2');
+      expect(bundles[1].testDefinition.name, '//host/test');
+    });
+
     test('specifies an impossible combination of two valid filters', () {
       TestsConfig testsConfig = TestsConfig.fromRawArgs(
         rawArgs: ['pkg1', '-a', '//host/test'],

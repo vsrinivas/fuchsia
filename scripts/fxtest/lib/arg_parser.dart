@@ -26,6 +26,16 @@ final ArgParser fxTestArgParser = ArgParser()
       defaultsTo: false,
       negatable: false,
       help: 'If true, only runs device tests. The opposite of `--host`')
+  ..addMultiOption('package',
+      abbr: 'p',
+      help: 'Matches tests against their Fuchsia package Name',
+      splitCommas: false)
+  ..addMultiOption('component',
+      abbr: 'c',
+      help: '''Matches tests against their Fuchsia component Name. When
+--package is also specified, results are filtered both by package
+and component.''',
+      splitCommas: false)
   ..addMultiOption('and',
       abbr: 'a',
       help: '''When present, adds additional requirements to the preceding

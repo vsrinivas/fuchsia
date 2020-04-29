@@ -121,8 +121,8 @@ class TestsConfig {
   final Flags flags;
   final List<String> runnerTokens;
   final TestArguments testArguments;
-  final List<List<String>> testNameGroups;
   final FuchsiaLocator fuchsiaLocator;
+  final List<List<MatchableTestName>> testNameGroups;
   TestsConfig({
     @required this.flags,
     @required this.runnerTokens,
@@ -163,7 +163,7 @@ class TestsConfig {
       );
       return;
     }
-    for (List<String> testNameGroup in testNameGroups) {
+    for (List<MatchableTestName> testNameGroup in testNameGroups) {
       yield PermutatedTestsConfig(
         flags: flags,
         testNameGroup: testNameGroup,
@@ -175,7 +175,7 @@ class TestsConfig {
 /// An expanded set of flags passed to `fx test` against which all available
 /// tests will be examined.
 class PermutatedTestsConfig {
-  final List<String> testNameGroup;
+  final List<MatchableTestName> testNameGroup;
   final Flags flags;
   PermutatedTestsConfig({
     @required this.flags,

@@ -8,6 +8,10 @@ import 'package:path/path.dart' as p;
 /// A filter on compatibility between various `fx test ...` invocations
 /// and flavors of desired behavior.
 abstract class Checker {
+  /// List of [MatchType]s a certain [Checker] is allowed to evaluate. Do not
+  /// bother adding [MatchType.unrestricted], as that is always allowed to pass.
+  List<MatchType> allowedMatchTypes = const [];
+
   /// Provides compatibility checks for given `fx test` parameters. Returns
   /// `true` if `testsConfig` is compatible with `testDefinition`.
   ///
@@ -16,12 +20,18 @@ abstract class Checker {
   /// Checkers out of Mixins and avoid requiring a combinatorial amount of
   /// Checker subclasses to solve the possibly combinatorial amount of
   /// situations.
-  bool canHandle(String testName, Flags flags, TestDefinition testDefinition,
+  bool canHandle(String testName, MatchType matchType, Flags flags,
+      TestDefinition testDefinition,
       {bool exactMatching}) {
     return _testPassesFlags(flags, testDefinition) &&
-        _testPassesNameCheck(testName, testDefinition,
+        _matchTypeIsAllowed(matchType) &&
+        _testPassesNullAwareNameCheck(testName, testDefinition,
             exactMatching: exactMatching);
   }
+
+  bool _matchTypeIsAllowed(MatchType matchType) =>
+      matchType == MatchType.unrestricted ||
+      allowedMatchTypes.contains(matchType);
 
   /// Compares a [TestDefinition] against the complete set of flags provided by
   /// the developer.
@@ -41,6 +51,20 @@ abstract class Checker {
     return true;
   }
 
+  /// Wrapper around [_testPassesNameCheck] which handles the case where the
+  /// [testName] is [null], because that logic is straightforward and this way,
+  /// no other implementations have to worry about [null] values.
+  bool _testPassesNullAwareNameCheck(
+    String testName,
+    TestDefinition testDefinition, {
+    bool exactMatching,
+  }) {
+    return testName == null
+        ? this is NoArgumentsChecker
+        : _testPassesNameCheck(testName, testDefinition,
+            exactMatching: exactMatching);
+  }
+
   /// Compares a [TestDefinition] against a single `testName` parameter provided
   /// by the developer.
   ///
@@ -52,35 +76,29 @@ abstract class Checker {
       {bool exactMatching});
 }
 
-class ComponentTestChecker extends Checker {
-  /// Returns `true` if the [TestDefinition] from `tests.json` both starts
-  /// with "//" and starts with our `testName` value.
+class LabelChecker extends Checker {
+  /// Returns `true` if the [TestDefinition]'s `"label"` field starts with
+  /// the given [testName].
   @override
   bool _testPassesNameCheck(String testName, TestDefinition testDefinition,
       {bool exactMatching}) {
-    if (exactMatching) {
-      return testName == testDefinition.name ||
-          testName == testDefinition.label;
-    }
-    return testName != null &&
-        testName.startsWith('//') &&
-        (testDefinition.name.startsWith(testName) ||
-            (testDefinition.label != null &&
-                testDefinition.label.startsWith(testName)));
+    if (testDefinition.label == null) return false;
+    return exactMatching
+        ? testName == testDefinition.label
+        : testDefinition.label.startsWith(testName);
   }
 }
 
-class NameMatchChecker extends Checker {
+class NameChecker extends Checker {
   @override
   bool _testPassesNameCheck(String testName, TestDefinition testDefinition,
       {bool exactMatching}) {
+    if (testDefinition.name == null) return false;
     return testName.toLowerCase() == testDefinition.name.toLowerCase();
   }
 }
 
-class FullUrlComponentChecker extends Checker {
-  static const _fuchsiaPkgPrefix = 'fuchsia-pkg://';
-
+class PackageUrlChecker extends Checker {
   /// Returns `true` if passed `testName` is both a validated Fuchsia Package
   /// URL and matches a [TestDefinition] from `tests.json`
   @override
@@ -89,35 +107,50 @@ class FullUrlComponentChecker extends Checker {
     if (exactMatching) {
       return testName == testDefinition.packageUrl;
     }
-    return testName != null &&
-        testName.startsWith(FullUrlComponentChecker._fuchsiaPkgPrefix) &&
-        testDefinition.packageUrl != null &&
+    return testDefinition.packageUrl != null &&
         testDefinition.packageUrl.startsWith(testName);
   }
 }
 
-class UrlNameComponentChecker extends Checker {
+class ComponentNameChecker extends Checker {
+  @override
+  List<MatchType> get allowedMatchTypes => [MatchType.componentName];
+
+  /// Returns `true` if passed `testName` matches the `componentName` chunk of
+  /// this [TestDefinition] instance's [PackageUrl] object
+  @override
+  bool _testPassesNameCheck(String testName, TestDefinition testDefinition,
+      {bool exactMatching}) {
+    return (testName == testDefinition.parsedUrl?.fullComponentName ||
+        testName == testDefinition.parsedUrl?.componentName);
+  }
+}
+
+class PackageNameChecker extends Checker {
+  @override
+  List<MatchType> get allowedMatchTypes => [MatchType.packageName];
+
   /// Returns `true` if passed `testName` matches the `packageName` chunk of
   /// this [TestDefinition] instance's [PackageUrl] object
   @override
   bool _testPassesNameCheck(String testName, TestDefinition testDefinition,
       {bool exactMatching}) {
-    return testName != null &&
-        (testName == testDefinition.parsedUrl.packageName ||
-            testName == testDefinition.parsedUrl.resourcePath ||
-            testName == testDefinition.parsedUrl.rawResource);
+    return testName == testDefinition.parsedUrl?.packageName;
   }
 }
 
 /// Checker that green-lights every test if a user passed no test names, but
 /// is a no-op otherwise.
 class NoArgumentsChecker extends Checker {
-  /// Returns [true] if the supplied `testName` is `null`. AKA, if the developer
-  /// executed `fx test` with no positional arguments (but possibly some flags).
+  // Never called when the value is actually `null`, due to the structure of
+  // `Checker`, so must always return `false`.
   @override
-  bool _testPassesNameCheck(String testName, TestDefinition testDefinition,
-          {bool exactMatching}) =>
-      testName == null;
+  bool _testPassesNameCheck(
+    String testName,
+    TestDefinition testDefinition, {
+    bool exactMatching,
+  }) =>
+      false;
 }
 
 /// Checker that green-lights a test that matches or descends from a supplied
