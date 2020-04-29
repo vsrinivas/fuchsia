@@ -680,7 +680,7 @@ impl<T: ReadableBlockContainer + WritableBlockContainer + BlockContainerEq> Bloc
     /// Sets the value of a DOUBLE_VALUE block.
     pub fn set_double_value(&self, value: f64) -> Result<(), Error> {
         self.check_type(BlockType::DoubleValue)?;
-        let mut payload = self.read_payload();
+        let mut payload = Payload(0);
         payload.set_numeric_value(value.to_bits());
         self.write_payload(payload);
         Ok(())
@@ -700,7 +700,7 @@ impl<T: ReadableBlockContainer + WritableBlockContainer + BlockContainerEq> Bloc
     /// Sets the value of an INT_VALUE block.
     pub fn set_int_value(&self, value: i64) -> Result<(), Error> {
         self.check_type(BlockType::IntValue)?;
-        let mut payload = self.read_payload();
+        let mut payload = Payload(0);
         payload.set_numeric_value(LittleEndian::read_u64(&value.to_le_bytes()));
         self.write_payload(payload);
         Ok(())
@@ -720,7 +720,7 @@ impl<T: ReadableBlockContainer + WritableBlockContainer + BlockContainerEq> Bloc
     /// Sets the value of a UINT_VALUE block.
     pub fn set_uint_value(&self, value: u64) -> Result<(), Error> {
         self.check_type(BlockType::UintValue)?;
-        let mut payload = self.read_payload();
+        let mut payload = Payload(0);
         payload.set_numeric_value(value);
         self.write_payload(payload);
         Ok(())
@@ -740,7 +740,7 @@ impl<T: ReadableBlockContainer + WritableBlockContainer + BlockContainerEq> Bloc
     /// Sets the value of a BOOL_VALUE block.
     pub fn set_bool_value(&self, value: bool) -> Result<(), Error> {
         self.check_type(BlockType::BoolValue)?;
-        let mut payload = self.read_payload();
+        let mut payload = Payload(0);
         payload.set_numeric_value(value as u64);
         self.write_payload(payload);
         Ok(())
