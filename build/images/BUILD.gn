@@ -1543,6 +1543,21 @@ action("update_packages.manifest") {
   ]
 }
 
+action("update_packages.manifest.json") {
+  visibility = [ ":update.manifest" ]
+  testonly = true
+
+  outputs = [ "$target_out_dir/$target_name" ]
+  deps = [ ":update_meta_far_merkle_index" ]
+  inputs = [ update_meta_far_merkle_index ]
+
+  script = "generate_packages_json.py"
+  args = [
+    rebase_path(update_meta_far_merkle_index, root_build_dir),
+    rebase_path(outputs[0], root_build_dir),
+  ]
+}
+
 # The update package manifest contains the pkgsvr_index and the target
 # system kernel images.
 action("update.manifest") {
@@ -1553,6 +1568,10 @@ action("update.manifest") {
     {
       target = "packages"
       deps = [ ":update_packages.manifest" ]
+    },
+    {
+      target = "packages.json"
+      deps = [ ":update_packages.manifest.json" ]
     },
 
     # Add the meta/package JSON file that makes this the "update" package.
@@ -1653,6 +1672,21 @@ action("update_prime_packages.manifest") {
   ]
 }
 
+action("update_prime_packages.manifest.json") {
+  visibility = [ ":update_prime.manifest" ]
+  testonly = true
+
+  outputs = [ "$target_out_dir/$target_name" ]
+  deps = [ ":update_prime_meta_far_merkle_index" ]
+  inputs = [ update_prime_meta_far_merkle_index ]
+
+  script = "generate_packages_json.py"
+  args = [
+    rebase_path(update_prime_meta_far_merkle_index, root_build_dir),
+    rebase_path(outputs[0], root_build_dir),
+  ]
+}
+
 action("update_prime.manifest") {
   visibility = [ ":*" ]
   testonly = true
@@ -1666,11 +1700,14 @@ action("update_prime.manifest") {
   deps = [
     ":update.manifest",
     ":update_prime_packages.manifest",
+    ":update_prime_packages.manifest.json",
     zbi_prime.dep,
   ]
   update_manifest_outputs = get_target_outputs(":update.manifest")
   update_prime_packages_manifest_outputs =
       get_target_outputs(":update_prime_packages.manifest")
+  update_prime_packages_manifest_json_outputs =
+      get_target_outputs(":update_prime_packages.manifest.json")
   zbi_outputs = get_target_outputs(zbi_prime.dep)
 
   sources = update_manifest_outputs
@@ -1681,6 +1718,10 @@ action("update_prime.manifest") {
     "--rewrite",
     "packages={target}=" +
         rebase_path(update_prime_packages_manifest_outputs[0], root_build_dir),
+    "--rewrite",
+    "packages.json={target}=" +
+        rebase_path(update_prime_packages_manifest_json_outputs[0],
+                    root_build_dir),
     "--rewrite",
     zbi_prime.updater + "={target}=" +
         rebase_path(zbi_outputs[0], root_build_dir),
