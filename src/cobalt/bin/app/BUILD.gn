@@ -87,10 +87,10 @@ executable("app") {
 
   deps = [
     ":lib",
+    "//sdk/fidl/fuchsia.sysinfo",
     "//zircon/public/lib/trace",
     "//zircon/public/lib/trace-provider-with-fdio",
     "//zircon/system/fidl/fuchsia-scheduler",
-    "//zircon/system/fidl/fuchsia-sysinfo",
   ]
 }
 

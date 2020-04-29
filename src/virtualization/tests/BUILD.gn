@@ -135,6 +135,7 @@ source_set("lib") {
     "//garnet/public/lib/fostr",
     "//garnet/public/lib/fostr/fidl/fuchsia.ui.gfx",
     "//garnet/public/lib/fostr/fidl/fuchsia.ui.scenic",
+    "//sdk/fidl/fuchsia.sysinfo",
     "//sdk/fidl/fuchsia.virtualization",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
@@ -144,7 +145,6 @@ source_set("lib") {
     "//src/virtualization/lib/vsh:client",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
-    "//zircon/system/fidl/fuchsia-sysinfo",
   ]
   public_deps = [
     "//sdk/fidl/fuchsia.netstack",

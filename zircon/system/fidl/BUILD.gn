@@ -186,7 +186,6 @@ group("fidl") {
     "fuchsia-storage-metrics",
 #------------------
 #------------------
-    "fuchsia-sysinfo",
 #------------------
 #------------------
     "fuchsia-sysmem",

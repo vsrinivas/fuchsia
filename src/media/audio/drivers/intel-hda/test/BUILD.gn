@@ -19,12 +19,12 @@ source_set("test_libs") {
   ]
   public_deps = [
     "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_c",
+    "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo_c",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxio",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/fidl/fuchsia-sysinfo:c",
     "//zircon/system/ulib/audio-proto-utils",
     "//zircon/system/ulib/audio-utils",
     "//zircon/system/ulib/intel-hda",

@@ -53,6 +53,7 @@ source_set("src") {
     "//sdk/fidl/fuchsia.net.stack",
     "//sdk/fidl/fuchsia.netstack",
     "//sdk/fidl/fuchsia.sys",
+    "//sdk/fidl/fuchsia.sysinfo",
     "//sdk/fidl/fuchsia.virtualization",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:enclosing_environment",
@@ -79,7 +80,6 @@ source_set("src") {
     "//zircon/public/lib/memfs-cpp",
     "//zircon/public/lib/zx",
     "//zircon/system/fidl/fuchsia-net",
-    "//zircon/system/fidl/fuchsia-sysinfo",
   ]
 
   public_deps = [

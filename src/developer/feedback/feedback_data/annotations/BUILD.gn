@@ -142,12 +142,12 @@ source_set("static_annotations") {
 
   deps = [
     ":utils",
+    "//sdk/fidl/fuchsia.sysinfo",
     "//src/developer/feedback/feedback_data:constants",
     "//src/lib/files",
     "//src/lib/fxl",
     "//src/lib/syslog/cpp",
     "//zircon/public/lib/fdio",
-    "//zircon/system/fidl/fuchsia-sysinfo",
   ]
 }
 

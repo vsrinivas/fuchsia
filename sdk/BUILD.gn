@@ -141,6 +141,7 @@ sdk_molecule("fidl") {
     "//sdk/fidl/fuchsia.settings:fuchsia.settings_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.sys.test:fuchsia.sys.test_sdk($fidl_toolchain)",
+    "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.ui.activity:fuchsia.ui.activity_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.ui.activity.control:fuchsia.ui.activity.control_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.ui.app:fuchsia.ui.app_sdk($fidl_toolchain)",
@@ -169,7 +170,6 @@ sdk_molecule("fidl") {
     "//zircon/system/fidl/fuchsia-mem:fuchsia-mem_sdk($fidl_toolchain)",
     "//zircon/system/fidl/fuchsia-posix-socket:fuchsia-posix-socket_sdk($fidl_toolchain)",
     "//zircon/system/fidl/fuchsia-process:fuchsia-process_sdk($fidl_toolchain)",
-    "//zircon/system/fidl/fuchsia-sysinfo:fuchsia-sysinfo_sdk($fidl_toolchain)",
     "//zircon/system/fidl/fuchsia-tracing-provider:fuchsia-tracing-provider_sdk($fidl_toolchain)",
   ]
 }

@@ -16,6 +16,7 @@ rustc_binary("bin") {
 
   deps = [
     "//sdk/fidl/fuchsia.paver:fuchsia.paver-rustc",
+    "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo-rustc",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
@@ -31,7 +32,6 @@ rustc_binary("bin") {
     "//zircon/system/fidl/fuchsia-hardware-block:fuchsia-hardware-block-rustc",
     "//zircon/system/fidl/fuchsia-hardware-block-partition:fuchsia-hardware-block-partition-rustc",
     "//zircon/system/fidl/fuchsia-mem:fuchsia-mem-rustc",
-    "//zircon/system/fidl/fuchsia-sysinfo:fuchsia-sysinfo-rustc",
   ]
 }
 

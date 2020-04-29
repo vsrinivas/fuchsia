@@ -30,6 +30,7 @@ executable("sysinfo") {
     "sysinfo.cc",
   ]
   deps = [
+    "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo_llcpp",
     "//src/sys/lib/stdout-to-debuglog",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/ddk",
@@ -37,7 +38,6 @@ executable("sysinfo") {
     "//zircon/public/lib/fidl-async-cpp",
     "//zircon/public/lib/fs",
     "//zircon/system/fidl/fuchsia-boot:llcpp",
-    "//zircon/system/fidl/fuchsia-sysinfo:llcpp",
     "//zircon/system/ulib/svc",
   ]
 }

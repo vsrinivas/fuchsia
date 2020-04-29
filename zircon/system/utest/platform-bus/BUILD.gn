@@ -21,6 +21,7 @@ test("platform-bus") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "main.cc" ]
   deps = [
+    "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo_llcpp",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/devmgr-launcher",
     "//zircon/public/lib/fbl",
@@ -28,7 +29,6 @@ test("platform-bus") {
     "//zircon/public/lib/libzbi",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/fidl/fuchsia-sysinfo:llcpp",
     "//zircon/system/ulib/devmgr-integration-test",
   ]
 }

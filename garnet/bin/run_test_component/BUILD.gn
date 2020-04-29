@@ -31,6 +31,7 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.net.stack",
     "//sdk/fidl/fuchsia.netstack",
     "//sdk/fidl/fuchsia.sys.test",
+    "//sdk/fidl/fuchsia.sysinfo",
     "//sdk/fidl/fuchsia.ui.policy",
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/fidl/fuchsia.vulkan.loader",
@@ -48,7 +49,6 @@ source_set("lib") {
     "//zircon/system/fidl/fuchsia-net",
     "//zircon/system/fidl/fuchsia-posix-socket",
     "//zircon/system/fidl/fuchsia-scheduler",
-    "//zircon/system/fidl/fuchsia-sysinfo",
     "//zircon/system/fidl/fuchsia-sysmem",
   ]
 }
