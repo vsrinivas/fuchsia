@@ -178,7 +178,9 @@ class FifoHolder {
 
   void WaitOnFifoSignal() {
     zx_status_t status = fifo_signal_wait_.Begin(dispatcher_);
-    if (status != ZX_OK) {
+    // ZX_ERR_ALREADY_EXISTS is returned if the waiter is already installed, which is an expected
+    // error. Avoid unnecessary logging on it.
+    if (status != ZX_OK && status != ZX_ERR_ALREADY_EXISTS) {
       fprintf(stderr, "EthernetClient can't wait on fifo signal: %s\n",
               zx_status_get_string(status));
     }
