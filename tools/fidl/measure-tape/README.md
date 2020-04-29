@@ -1,5 +1,9 @@
 # measure-tape
 
+A measure tape simplifies maximizing the number of elements which can be batched
+at once over a FIDL channel communication. More details on this topic are
+provided in the guide [max out pagination].
+
 A measure tape lets you measure the size which FIDL values will take on the
 wire, both in terms of number of bytes and number of handles. The
 `measure-tape` tool automatically generates code to create a measure tape for a
@@ -33,6 +37,46 @@ _This template must be imported with
    `:fuchsia.images`, `:fuchsia.ui.gfx`, `:fuchsia.ui.input`,
    `:fuchsia.ui.scenic`, `:fuchsia.ui.views`
 
+## Using a measure tape
+
+When constructing batches, use the measure tape to determine the size of
+individual elements, and aggregate this size along with the batch being
+constructed for transmission.
+
+The following is a simplified [example][go-example] taking many `Element` and
+sending batches of `vector<Element>` over a hypothetical `SendNext` FIDL method.
+
+The example assumes that `Element` contains no handles. If your data contains
+handles, be sure to also aggregate the handle count.
+
+```go
+func sendInBatches(elements []Element, over YourFavoriteFidlBinding) {
+	var (
+		batchSize = baseBatchSize
+		batch     []Element
+	)
+	for _, element := range elements {
+		size := Measure(element)
+		if zxMaxChannelBytes < batchSize+size {
+			over.SendNext(batch)
+			batch = nil
+			batchSize = baseBatchSize
+		}
+		batch = append(batch, element)
+		batchSize += size
+	}
+	if len(batch) != 0 {
+		over.SendNext(batch)
+	}
+}
+
+// sizeof(fidl_message_header_t) + sizeof(fidl_vector_t)
+const baseBatchSize int = 32
+```
+
+An [interactive verion of this example][go-example] is hosted on the Go
+Playground.
+
 ## Contributing
 
     fx set core.x64 --with //tools/fidl/measure-tape:host
@@ -54,5 +98,9 @@ Then
 ## Testing
 
 ```
-fx test measure-tape-tests 
+fx test measure-tape-tests
 ```
+
+<!-- xrefs -->
+[max out pagination]: /docs/development/languages/fidl/guides/max-out-pagination.md
+[go-example]: https://play.golang.org/p/KODYMAEg88L
