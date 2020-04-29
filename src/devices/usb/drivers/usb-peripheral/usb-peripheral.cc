@@ -412,7 +412,7 @@ zx_status_t UsbPeripheral::GetDescriptor(uint8_t request_type, uint16_t value, u
     return ZX_OK;
   }
 
-  zxlogf(ERROR, "%s unsupported value: %d index: %d", __func__, value, index);
+  zxlogf(TRACE, "%s unsupported value: %d index: %d", __func__, value, index);
   return ZX_ERR_NOT_SUPPORTED;
 }
 
