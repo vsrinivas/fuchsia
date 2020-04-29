@@ -4,12 +4,14 @@
 
 #include "src/sys/appmgr/component_controller_impl.h"
 
+#include <fuchsia/inspect/cpp/fidl.h>
 #include <lib/async/default.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fit/bridge.h>
 #include <lib/fit/function.h>
+#include <lib/inspect/service/cpp/service.h>
 #include <zircon/types.h>
 
 #include <cinttypes>
@@ -21,6 +23,9 @@
 #include <fs/service.h>
 #include <trace/event.h>
 
+#include "fbl/ref_ptr.h"
+#include "lib/inspect/service/cpp/service.h"
+#include "lib/vfs/cpp/service.h"
 #include "src/lib/fsl/handles/object_info.h"
 #include "src/lib/fxl/logging.h"
 #include "src/sys/appmgr/component_container.h"
@@ -261,26 +266,24 @@ ComponentControllerImpl::ComponentControllerImpl(
       process_(std::move(process)),
       koid_(std::to_string(fsl::GetKoid(process_.get()))),
       wait_(this, process_.get(), ZX_TASK_TERMINATED),
-      system_objects_directory_(DuplicateProcess(process_)) {
+      system_diagnostics_(DuplicateProcess(process_)) {
   zx_status_t status = wait_.Begin(async_get_default_dispatcher());
   FXL_DCHECK(status == ZX_OK);
 
   hub()->SetJobId(std::to_string(fsl::GetKoid(job_.get())));
   hub()->SetProcessId(koid_);
 
-  // Serve connections to the system_objects interface.
-  auto system_objects = fbl::MakeRefCounted<fs::PseudoDir>();
-  system_objects->AddEntry(
-      fuchsia::inspect::deprecated::Inspect::Name_,
-      fbl::MakeRefCounted<fs::Service>([this](zx::channel channel) {
-        system_directory_bindings_.AddBinding(
-            system_objects_directory_.object(),
-            fidl::InterfaceRequest<fuchsia::inspect::deprecated::Inspect>(std::move(channel)),
-            nullptr);
-        return ZX_OK;
-      }));
+  // Serve connections to the system_diagnostics interface.
+  auto system_diagnostics = fbl::MakeRefCounted<fs::PseudoDir>();
+  system_diagnostics->AddEntry(
+      fuchsia::inspect::Tree::Name_,
+      fbl::AdoptRef(new fs::Service(
+          [handler = inspect::MakeTreeHandler(&system_diagnostics_.inspector())](zx::channel chan) {
+            handler(fidl::InterfaceRequest<fuchsia::inspect::Tree>(std::move(chan)));
+            return ZX_OK;
+          })));
 
-  hub()->AddEntry("system_objects", system_objects);
+  hub()->AddEntry("system_diagnostics", system_diagnostics);
 
   hub()->AddIncomingServices(this->incoming_services());
 
@@ -301,6 +304,9 @@ ComponentControllerImpl::~ComponentControllerImpl() {
 
     SendOnTerminationEvent(-1, TerminationReason::UNKNOWN);
   }
+
+  // Clean up system diagnostics before deleting the backing objects.
+  hub()->dir()->RemoveEntry("system_diagnostics");
 }
 
 void ComponentControllerImpl::Kill() {

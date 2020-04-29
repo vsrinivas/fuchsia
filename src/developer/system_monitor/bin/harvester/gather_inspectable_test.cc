@@ -13,7 +13,7 @@ class GatherInspectableTest : public ::testing::Test {
   void SetUp() override {}
 };
 
-TEST_F(GatherInspectableTest, Inspectable) {
+TEST_F(GatherInspectableTest, DISABLED_Inspectable) {
   zx_handle_t root_resource = 0;
   harvester::DockyardProxyFake dockyard_proxy;
 

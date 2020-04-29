@@ -254,7 +254,7 @@ impl Options {
         let path = locations
             .into_iter()
             .map(|loc| loc.path.to_string_lossy().to_string())
-            .filter(|p| !p.contains("/system_objects"))
+            .filter(|p| !p.contains("/system_diagnostics"))
             .collect();
         Ok(Self {
             mode: ModeCommand::Cat,

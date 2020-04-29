@@ -76,12 +76,10 @@ executable("hub_tests") {
     "//garnet/bin/sysmgr:lib",
     "//garnet/examples/fidl/services:echo",
     "//sdk/lib/sys/cpp",
-    "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration",
+    "//sdk/lib/sys/inspect/cpp",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
-    "//src/lib/inspect_deprecated/query",
-    "//src/lib/inspect_deprecated/testing",
     "//third_party/googletest:gmock",
     "//zircon/public/lib/async-cpp",
   ]

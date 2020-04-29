@@ -2,10 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/inspect/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async/cpp/executor.h>
 #include <lib/async/default.h>
 #include <lib/fdio/directory.h>
+#include <lib/inspect/service/cpp/reader.h>
 #include <lib/sys/cpp/file_descriptor.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
@@ -15,18 +17,14 @@
 #include <gtest/gtest.h>
 
 #include "garnet/bin/sysmgr/config.h"
+#include "lib/inspect/cpp/hierarchy.h"
+#include "lib/inspect/cpp/vmo/types.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/glob.h"
 #include "src/lib/fxl/strings/concatenate.h"
 #include "src/lib/fxl/strings/join_strings.h"
 #include "src/lib/fxl/strings/string_printf.h"
-#include "src/lib/inspect_deprecated/query/discover.h"
-#include "src/lib/inspect_deprecated/query/location.h"
-#include "src/lib/inspect_deprecated/query/read.h"
-#include "src/lib/inspect_deprecated/testing/inspect.h"
-
-using namespace inspect_deprecated::testing;
 
 namespace component {
 namespace {
@@ -163,7 +161,7 @@ TEST_F(HubTest, ScopePolicy) {
   RunComponent(nested_env->launcher_ptr(), kGlobUrl, {"/hub/c/glob.cmx"}, 0);
 }
 
-TEST_F(HubTest, SystemObjects) {
+TEST_F(HubTest, SystemDiagnostics) {
   std::string glob_url = "fuchsia-pkg://fuchsia.com/glob#meta/glob.cmx";
 
   auto nested_env = CreateNewEnclosingEnvironment("hubscopepolicytest", CreateServices());
@@ -171,10 +169,10 @@ TEST_F(HubTest, SystemObjects) {
   RunComponent(launcher_ptr(), glob_url, {"/hub/r/hubscopepolicytest/"}, 0);
 
   // test that we can see system objects
-  RunComponent(nested_env->launcher_ptr(), glob_url, {"/hub/c/glob.cmx/*/system_objects"}, 0);
+  RunComponent(nested_env->launcher_ptr(), glob_url, {"/hub/c/glob.cmx/*/system_diagnostics"}, 0);
 }
 
-TEST_F(HubTest, SystemObjectsThreads) {
+TEST_F(HubTest, SystemDiagnosticsData) {
   std::string url =
       "fuchsia-pkg://fuchsia.com/appmgr_integration_tests#meta/"
       "appmgr_integration_tests_inspect_test_app.cmx";
@@ -189,31 +187,55 @@ TEST_F(HubTest, SystemObjectsThreads) {
   controller.events().OnDirectoryReady = [&] { ready = true; };
   RunLoopUntil([&] { return ready; });
 
-  auto paths = inspect_deprecated::SyncSearchGlobs(
-      {fxl::StringPrintf("/hub/r/%s/*/c/appmgr_integration_tests_inspect_test_app.cmx/*/"
-                         "system_objects/*",
-                         env_name.c_str())});
+  std::vector<std::string> paths;
+  for (auto val : files::Glob(
+           fxl::StringPrintf("/hub/r/%s/*/c/appmgr_integration_tests_inspect_test_app.cmx/*/"
+                             "system_diagnostics/*",
+                             env_name.c_str()))) {
+    paths.emplace_back(std::move(val));
+  }
 
   ASSERT_EQ(1U, paths.size());
 
-  auto read = inspect_deprecated::ReadLocation(paths[0]);
+  fuchsia::inspect::TreePtr tree;
+  fdio_service_connect(paths[0].c_str(), tree.NewRequest().TakeChannel().release());
+  auto read = inspect::ReadFromTree(std::move(tree));
   async::Executor executor_(dispatcher());
 
-  fit::result<inspect_deprecated::Source, std::string> result;
-  executor_.schedule_task(read.then(
-      [&](fit::result<inspect_deprecated::Source, std::string>& res) { result = std::move(res); }));
+  fit::result<inspect::Hierarchy> result;
+  executor_.schedule_task(
+      read.then([&](fit::result<inspect::Hierarchy>& res) { result = std::move(res); }));
 
   RunLoopUntil([&] { return !!result; });
 
-  ASSERT_TRUE(result.is_ok()) << result.take_error();
+  ASSERT_TRUE(result.is_ok());
 
-  auto* stacks = result.value().GetHierarchy().GetByPath({"threads", "all_thread_stacks"});
-  ASSERT_NE(nullptr, stacks);
-  EXPECT_THAT(*stacks, NodeMatches(PropertyList(ElementsAre(StringPropertyIs(
-                           "stacks", "\nERROR (CF-812): Full thread dump disabled")))));
+  auto* threads = result.value().GetByPath({"threads"});
+  ASSERT_NE(nullptr, threads);
+  EXPECT_NE(0u, threads->children().size());
+  auto* stack = threads->children()[0].GetByPath({"stack"});
+  ASSERT_NE(nullptr, stack);
+  auto* dump = stack->node().get_property<inspect::StringPropertyValue>("dump");
+  ASSERT_NE(nullptr, dump);
+
+  auto* handle_count = result.value().GetByPath({"handle_count"});
+  ASSERT_NE(nullptr, handle_count);
+  auto* vmo = handle_count->node().get_property<inspect::UintPropertyValue>("vmo");
+  ASSERT_NE(nullptr, vmo);
+  EXPECT_NE(0u, vmo->value());
+
+  auto* memory = result.value().GetByPath({"memory"});
+  ASSERT_NE(nullptr, memory);
+  std::vector<std::string> names;
+  for (const auto& prop : memory->node().properties()) {
+    names.emplace_back(prop.name());
+  }
+
+  EXPECT_THAT(names, testing::UnorderedElementsAre("mapped_bytes", "shared_bytes", "private_bytes",
+                                                   "scaled_shared_bytes"));
 }
 
-TEST_F(HubTest, SystemObjectsThreadsInUseWhileFreed) {
+TEST_F(HubTest, SystemDiagnosticsInUseWhileFreed) {
   std::string url =
       "fuchsia-pkg://fuchsia.com/appmgr_integration_tests#meta/"
       "appmgr_integration_tests_inspect_test_app.cmx";
@@ -228,29 +250,42 @@ TEST_F(HubTest, SystemObjectsThreadsInUseWhileFreed) {
   controller.events().OnDirectoryReady = [&] { ready = true; };
   RunLoopUntil([&] { return ready; });
 
-  auto paths = inspect_deprecated::SyncSearchGlobs(
-      {fxl::StringPrintf("/hub/r/%s/*/c/appmgr_integration_tests_inspect_test_app.cmx/*/"
-                         "system_objects/*",
-                         env_name.c_str())});
+  std::vector<std::string> paths;
+  for (auto val : files::Glob(
+           fxl::StringPrintf("/hub/r/%s/*/c/appmgr_integration_tests_inspect_test_app.cmx/*/"
+                             "system_diagnostics/*",
+                             env_name.c_str()))) {
+    paths.emplace_back(std::move(val));
+  }
 
   ASSERT_EQ(1U, paths.size());
 
-  async::Executor executor_(dispatcher());
+  fuchsia::inspect::TreePtr tree;
 
-  fuchsia::inspect::deprecated::InspectPtr inspect;
-  auto endpoint = paths[0].AbsoluteFilePath();
-  zx_status_t status =
-      fdio_service_connect(endpoint.c_str(), inspect.NewRequest().TakeChannel().release());
-  ASSERT_EQ(ZX_OK, status);
-  auto reader = std::make_unique<inspect_deprecated::ObjectReader>(std::move(inspect));
+  fdio_service_connect(paths[0].c_str(), tree.NewRequest().TakeChannel().release());
 
-  bool reader_open = false;
-  executor_.schedule_task(reader->Read().and_then(
-      [&](fuchsia::inspect::deprecated::Object& unused) { reader_open = true; }));
-  RunLoopUntil([&] { return reader_open; });
+  // Get the name of a single child.
+  fuchsia::inspect::TreeNameIteratorPtr iterator;
+  tree->ListChildNames(iterator.NewRequest());
+  std::vector<std::string> child_names;
+  iterator->GetNext([&](std::vector<std::string> names) { child_names = std::move(names); });
+  RunLoopUntil([&] { return !child_names.empty(); });
 
-  auto open_child = reader->OpenChild("threads");
+  // Open the child.
+  fuchsia::inspect::TreePtr child;
+  bool error = false;
+  child.set_error_handler([&](zx_status_t unused) { error = true; });
+  tree->OpenChild(child_names[0], child.NewRequest());
 
+  {
+    // Ensure we can get the child's content.
+    bool done = false;
+    child->GetContent([&](fuchsia::inspect::TreeContent unused) { done = true; });
+    RunLoopUntil([&] { return done || error; });
+    ASSERT_FALSE(error);
+  }
+
+  // Terminate the component while holding a reference to one of the lazy nodes.
   bool terminated = false;
   controller.events().OnTerminated = [&](uint64_t status, fuchsia::sys::TerminationReason reason) {
     terminated = true;
@@ -259,28 +294,12 @@ TEST_F(HubTest, SystemObjectsThreadsInUseWhileFreed) {
   RunLoopUntil([&] { return terminated; });
   controller.Unbind();
 
-  std::unique_ptr<inspect_deprecated::ObjectReader> all_stack_reader;
-  executor_.schedule_task(
-      open_child
-          .and_then([&](inspect_deprecated::ObjectReader& next) {
-            return next.OpenChild("all_thread_stacks");
-          })
-          .and_then([&](inspect_deprecated::ObjectReader& next) {
-            all_stack_reader = std::make_unique<inspect_deprecated::ObjectReader>(std::move(next));
-          }));
-
-  RunLoopUntil([&] { return !!all_stack_reader; });
-  reader.reset();
-
-  // At this point in time we have an open FIDL connection to a node in the
-  // SystemObjectsDirectory. Accessing that node should not cause a crash and
-  // will give no visible error.
-  fit::result<fuchsia::inspect::deprecated::Object> result;
-  executor_.schedule_task(all_stack_reader->Read().then(
-      [&](fit::result<fuchsia::inspect::deprecated::Object>& res) { result = std::move(res); }));
-
-  RunLoopUntil([&] { return !!result; });
-  EXPECT_TRUE(result.is_ok());
+  bool done = false;
+  // Try to construct lazy node content. This should not succeed, but the appmgr should not crash.
+  child->GetContent([&](fuchsia::inspect::TreeContent unused) { done = true; });
+  RunLoopUntil([&] { return done || error; });
+  EXPECT_TRUE(error);
+  EXPECT_FALSE(done);
 }
 
 }  // namespace

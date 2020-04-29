@@ -5,7 +5,6 @@
 #ifndef SRC_SYS_APPMGR_COMPONENT_CONTROLLER_IMPL_H_
 #define SRC_SYS_APPMGR_COMPONENT_CONTROLLER_IMPL_H_
 
-#include <fuchsia/inspect/deprecated/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async/cpp/executor.h>
 #include <lib/async/cpp/wait.h>
@@ -23,7 +22,7 @@
 #include "src/sys/appmgr/hub/component_hub.h"
 #include "src/sys/appmgr/hub/hub_info.h"
 #include "src/sys/appmgr/namespace.h"
-#include "src/sys/appmgr/system_objects_directory.h"
+#include "src/sys/appmgr/system_diagnostics_directory.h"
 
 namespace component {
 
@@ -148,8 +147,6 @@ class ComponentControllerBase : public fuchsia::sys::ComponentController {
 
   fuchsia::io::DirectoryPtr exported_dir_;
 
-  fuchsia::inspect::deprecated::InspectPtr inspect_checker_;
-
   // guards against sending this event two times
   bool on_terminated_event_sent_ = false;
 
@@ -189,10 +186,7 @@ class ComponentControllerImpl : public ComponentControllerBase {
 
   async::WaitMethod<ComponentControllerImpl, &ComponentControllerImpl::Handler> wait_;
 
-  SystemObjectsDirectory system_objects_directory_;
-
-  fidl::BindingSet<fuchsia::inspect::deprecated::Inspect, std::shared_ptr<component::Object>>
-      system_directory_bindings_;
+  SystemDiagnosticsDirectory system_diagnostics_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ComponentControllerImpl);
 };
