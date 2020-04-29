@@ -257,6 +257,9 @@ func Main() {
 		ns.dispatcher = dispatcher
 	}
 
+	dnsWatchers := newDnsServerWatcherCollection(ns.dispatcher, ns.dnsClient)
+	ns.dnsClient.SetOnServersChanged(dnsWatchers.NotifyServersChanged)
+
 	var posixSocketProviderService socket.ProviderService
 
 	socketProviderImpl := providerImpl{ns: ns}
@@ -351,12 +354,6 @@ func Main() {
 			return err
 		},
 	)
-
-	dnsWatchers, err := newDnsServerWatcherCollection(ns.dnsClient)
-	if err != nil {
-		syslog.Fatalf("could not create DNS server watcher collection: %s", err)
-	}
-	ns.dnsClient.SetOnServersChanged(dnsWatchers.NotifyServersChanged)
 
 	var stackService stack.StackService
 	appCtx.OutgoingService.AddService(

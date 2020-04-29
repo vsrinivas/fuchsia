@@ -7,7 +7,7 @@ package netstack
 import (
 	"context"
 	"sync"
-	"syscall/zx"
+	"syscall/zx/dispatch"
 	"testing"
 	"time"
 
@@ -17,6 +17,8 @@ import (
 	"fidl/fuchsia/net"
 	"fidl/fuchsia/net/name"
 
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"gvisor.dev/gvisor/pkg/tcpip"
 )
 
@@ -49,20 +51,15 @@ var (
 	}
 )
 
-func newDnsServer(address net.SocketAddress, source name.DnsServerSource, nicid tcpip.NICID) name.DnsServer {
-	return name.DnsServer{
-		Address:        address,
-		AddressPresent: true,
-		Source:         source,
-		SourcePresent:  true,
-	}
+func makeDnsServer(address net.SocketAddress, source name.DnsServerSource) name.DnsServer {
+	var s name.DnsServer
+	s.SetAddress(address)
+	s.SetSource(source)
+	return s
 }
 
-func createCollection(t *testing.T) *dnsServerWatcherCollection {
-	watcherCollection, err := newDnsServerWatcherCollection(dns.NewClient(nil))
-	if err != nil {
-		t.Fatalf("failed to create dnsServerWatcherCollection: %s", err)
-	}
+func createCollection(dispatcher *dispatch.Dispatcher) *dnsServerWatcherCollection {
+	watcherCollection := newDnsServerWatcherCollection(dispatcher, dns.NewClient(nil))
 	watcherCollection.dnsClient.SetOnServersChanged(watcherCollection.NotifyServersChanged)
 	return watcherCollection
 }
@@ -79,29 +76,40 @@ func bindWatcher(t *testing.T, watcherCollection *dnsServerWatcherCollection) *n
 }
 
 func TestDnsWatcherResolvesAndBlocks(t *testing.T) {
-	watcherCollection := createCollection(t)
-	defer watcherCollection.Close()
+	dispatcher, err := dispatch.NewDispatcher()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var wg sync.WaitGroup
+	defer func() {
+		dispatcher.Close()
+		wg.Wait()
+	}()
 
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+
+		dispatcher.Serve()
+	}()
+
+	watcherCollection := createCollection(dispatcher)
 	watcherCollection.dnsClient.SetDefaultServers([]tcpip.Address{defaultServerIpv4, defaultServerIpv6})
 
 	watcher := bindWatcher(t, watcherCollection)
-	defer watcher.Close()
+	defer func() {
+		_ = watcher.Close()
+	}()
 
 	servers, err := watcher.WatchServers(context.Background())
 	if err != nil {
 		t.Fatalf("failed to call WatchServers: %s", err)
 	}
-	if len(servers) != 2 {
-		t.Fatalf("wrong number of servers, expected 2 got %d: %v", len(servers), servers)
-	}
-
-	expect := newDnsServer(defaultServerIPv4SocketAddress, staticDnsSource, 0)
-	if servers[0] != expect {
-		t.Fatalf("incorrect server in first position.\nExpected: %+v\nGot: %+v", expect, servers[0])
-	}
-	expect = newDnsServer(defaultServerIpv6SocketAddress, staticDnsSource, 0)
-	if servers[1] != expect {
-		t.Fatalf("incorrect server in first second position.\nExpected: %+v\nGot: %+v", expect, servers[1])
+	if diff := cmp.Diff([]name.DnsServer{
+		makeDnsServer(defaultServerIPv4SocketAddress, staticDnsSource),
+		makeDnsServer(defaultServerIpv6SocketAddress, staticDnsSource),
+	}, servers, cmpopts.IgnoreTypes(struct{}{})); diff != "" {
+		t.Fatalf("WatchServers() mismatch (-want +got):\n%s", diff)
 	}
 
 	type watchServersResult struct {
@@ -109,8 +117,6 @@ func TestDnsWatcherResolvesAndBlocks(t *testing.T) {
 		err     error
 	}
 
-	var wg sync.WaitGroup
-	wg.Add(1)
 	c := make(chan watchServersResult)
 	go func() {
 		servers, err := watcher.WatchServers(context.Background())
@@ -135,105 +141,126 @@ func TestDnsWatcherResolvesAndBlocks(t *testing.T) {
 		t.Fatalf("WatchServers failed: %s", result.err)
 	}
 
-	if len(result.servers) != 0 {
-		t.Fatalf("got %+v, expected empty slice", result.servers)
+	if diff := cmp.Diff([]name.DnsServer{}, result.servers); diff != "" {
+		t.Fatalf("WatchServers() mismatch (-want +got):\n%s", diff)
 	}
 }
 
 func TestDnsWatcherCancelledContext(t *testing.T) {
-	watcherCollection := createCollection(t)
-	defer watcherCollection.Close()
+	dispatcher, err := dispatch.NewDispatcher()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer dispatcher.Close()
 
-	watcher := &dnsServerWatcher{
+	watcherCollection := createCollection(dispatcher)
+	watcher := dnsServerWatcher{
 		dnsClient:  watcherCollection.dnsClient,
 		dispatcher: watcherCollection.dispatcher,
-		channel:    zx.Channel(zx.HANDLE_INVALID),
+		broadcast:  &watcherCollection.broadcast,
 	}
-	watcher.broadcast = &watcherCollection.broadcast
 
 	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
 
-	go cancel()
-
-	_, err := watcher.WatchServers(ctx)
-	if err == nil {
-		t.Fatalf("expected error due to cancelled context")
+	if _, err := watcher.WatchServers(ctx); err == nil {
+		t.Fatal("expected cancelled context to produce an error")
 	}
+
 	watcher.mu.Lock()
-	defer watcher.mu.Unlock()
 	if !watcher.mu.isDead {
-		t.Fatalf("watcher must be marked as dead on context cancellation")
+		t.Errorf("watcher must be marked as dead on context cancellation")
 	}
 	if watcher.mu.isHanging {
-		t.Fatalf("watcher must not be marked as hanging on context cancellation")
+		t.Errorf("watcher must not be marked as hanging on context cancellation")
 	}
+	watcher.mu.Unlock()
 }
 
 func TestDnsWatcherDisallowMultiplePending(t *testing.T) {
 	t.Skip("Go bindings don't currently support simultaneous calls, test is invalid.")
-	watcherCollection := createCollection(t)
-	defer watcherCollection.Close()
+	dispatcher, err := dispatch.NewDispatcher()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer dispatcher.Close()
+	watcherCollection := createCollection(dispatcher)
 
 	watcher := bindWatcher(t, watcherCollection)
-	defer watcher.Close()
+	defer func() {
+		_ = watcher.Close()
+	}()
 
 	var wg sync.WaitGroup
-	wg.Add(2)
+	defer wg.Wait()
 
-	watchServers := func() {
-		_, err := watcher.WatchServers(context.Background())
-		if err == nil {
-			t.Errorf("non-nil error watching servers, expected error")
-		}
-		wg.Done()
+	for i := 0; i < 2; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			_, err := watcher.WatchServers(context.Background())
+			if err == nil {
+				t.Errorf("non-nil error watching servers, expected error")
+			}
+		}()
 	}
-
-	go watchServers()
-	go watchServers()
-
-	wg.Wait()
 }
 
 func TestDnsWatcherMultipleWatchers(t *testing.T) {
-	watcherCollection := createCollection(t)
-	defer watcherCollection.Close()
+	dispatcher, err := dispatch.NewDispatcher()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var wg sync.WaitGroup
+	defer func() {
+		dispatcher.Close()
+		wg.Wait()
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+
+		dispatcher.Serve()
+	}()
+
+	watcherCollection := createCollection(dispatcher)
 
 	watcher1 := bindWatcher(t, watcherCollection)
-	defer watcher1.Close()
+	defer func() {
+		_ = watcher1.Close()
+	}()
 
 	watcher2 := bindWatcher(t, watcherCollection)
-	defer watcher2.Close()
+	defer func() {
+		_ = watcher2.Close()
+	}()
 
-	var wg sync.WaitGroup
-	wg.Add(2)
+	func() {
+		// Wait for these goroutines to do their thing before allowing the outer
+		// defers to tear down the watchers.
+		var wg sync.WaitGroup
+		defer wg.Wait()
 
-	checkWatcher := func(watcher *name.DnsServerWatcherWithCtxInterface) {
-		defer wg.Done()
-		servers, err := watcher.WatchServers(context.Background())
-		if err != nil {
-			t.Errorf("WatchServers failed: %s", err)
-			return
+		for _, watcher := range []*name.DnsServerWatcherWithCtxInterface{watcher1, watcher2} {
+			wg.Add(1)
+			go func(watcher *name.DnsServerWatcherWithCtxInterface) {
+				defer wg.Done()
+				servers, err := watcher.WatchServers(context.Background())
+				if err != nil {
+					t.Errorf("WatchServers failed: %s", err)
+					return
+				}
+				if diff := cmp.Diff([]name.DnsServer{
+					makeDnsServer(defaultServerIPv4SocketAddress, staticDnsSource),
+				}, servers, cmpopts.IgnoreTypes(struct{}{})); diff != "" {
+					t.Errorf("WatchServers() mismatch (-want +got):\n%s", diff)
+				}
+			}(watcher)
 		}
-		expectedServer := fidlconv.ToNetSocketAddress(tcpip.FullAddress{
-			NIC:  0,
-			Addr: defaultServerIpv4,
-			Port: dns.DefaultDNSPort,
-		})
-		if len(servers) != 1 {
-			t.Errorf("bad server list.\nExpected: %+v\nGot: %+v", []net.SocketAddress{expectedServer}, servers)
-			return
-		}
-		if servers[0].Address != expectedServer {
-			t.Errorf("wrong server returned.\nExpected: %+v.\nGot: %+v", expectedServer, servers[0])
-		}
-	}
 
-	go checkWatcher(watcher1)
-	go checkWatcher(watcher2)
-
-	watcherCollection.dnsClient.SetDefaultServers([]tcpip.Address{defaultServerIpv4})
-
-	wg.Wait()
+		watcherCollection.dnsClient.SetDefaultServers([]tcpip.Address{defaultServerIpv4})
+	}()
 }
 
 func TestDnsWatcherServerListEquality(t *testing.T) {
@@ -276,11 +303,28 @@ func TestDnsWatcherServerListEquality(t *testing.T) {
 }
 
 func TestDnsWatcherDifferentAddressTypes(t *testing.T) {
-	watcherCollection := createCollection(t)
-	defer watcherCollection.Close()
+	dispatcher, err := dispatch.NewDispatcher()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var wg sync.WaitGroup
+	defer func() {
+		dispatcher.Close()
+		wg.Wait()
+	}()
 
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+
+		dispatcher.Serve()
+	}()
+
+	watcherCollection := createCollection(dispatcher)
 	watcher := bindWatcher(t, watcherCollection)
-	defer watcher.Close()
+	defer func() {
+		_ = watcher.Close()
+	}()
 
 	watcherCollection.dnsClient.SetDefaultServers([]tcpip.Address{defaultServerIpv4})
 	watcherCollection.dnsClient.UpdateDhcpServers(0, &[]tcpip.Address{altServerIpv4})

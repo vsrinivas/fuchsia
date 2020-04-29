@@ -7,6 +7,7 @@ package netstack
 import (
 	"context"
 	"fmt"
+	"syscall/zx/dispatch"
 	"testing"
 
 	"netstack/fidlconv"
@@ -261,23 +262,26 @@ func TestFuchsiaNetStack(t *testing.T) {
 
 func TestDnsServerWatcher(t *testing.T) {
 	ns := newNetstack(t)
-	watcherCollection, err := newDnsServerWatcherCollection(ns.dnsClient)
-	if err != nil {
-		t.Fatalf("failed to create watcher collection: %s", err)
+	{
+		dispatcher, err := dispatch.NewDispatcher()
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer dispatcher.Close()
+		ns.dispatcher = dispatcher
 	}
-	defer watcherCollection.Close()
+	watcherCollection := newDnsServerWatcherCollection(ns.dispatcher, ns.dnsClient)
 	ni := stackImpl{ns: ns, dnsWatchers: watcherCollection}
 	request, watcher, err := name.NewDnsServerWatcherWithCtxInterfaceRequest()
 	if err != nil {
 		t.Fatalf("failed to create watcher request: %s", err)
 	}
-	defer watcher.Close()
-	err = ni.GetDnsServerWatcher(context.Background(), request)
-	if err != nil {
+	defer func() {
+		_ = request.Close()
+		_ = watcher.Close()
+	}()
+	if err := ni.GetDnsServerWatcher(context.Background(), request); err != nil {
 		t.Fatalf("failed to get watcher: %s", err)
-	}
-	if watcherCollection.bindingSet.Size() != 1 {
-		t.Fatalf("failed to install DnsServerWatcher binding expected 1 binding in set, got %d", watcherCollection.bindingSet.Size())
 	}
 }
 
