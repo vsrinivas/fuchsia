@@ -18,7 +18,10 @@ go_library("host-target-testing") {
   ]
 }
 
-test_packages = [ "paver" ]
+test_packages = [
+  "paver",
+  "omaha",
+]
 foreach(testpkg, test_packages) {
   go_test("host-target-testing-${testpkg}-test") {
     gopackages = [ "fuchsia.googlesource.com/host_target_testing/${testpkg}" ]
