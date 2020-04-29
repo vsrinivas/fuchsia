@@ -41,25 +41,23 @@ RebootLogHandler::RebootLogHandler(async_dispatcher_t* dispatcher,
 
 namespace {
 
-void ExtractRebootReason(const std::string line, cobalt::RebootReason* reboot_reason) {
+void ExtractRebootReason(const std::string line, RebootReason* reboot_reason) {
   struct StrToReason {
     const char* str;
-    cobalt::RebootReason reason;
+    RebootReason reason;
   };
 
   constexpr std::array str_to_reason_map{
-      StrToReason{.str = "ZIRCON REBOOT REASON (NO CRASH)", .reason = cobalt::RebootReason::kClean},
+      StrToReason{.str = "ZIRCON REBOOT REASON (NO CRASH)", .reason = RebootReason::kClean},
       StrToReason{.str = "ZIRCON REBOOT REASON (KERNEL PANIC)",
-                  .reason = cobalt::RebootReason::kKernelPanic},
-      StrToReason{.str = "ZIRCON REBOOT REASON (OOM)", .reason = cobalt::RebootReason::kOOM},
+                  .reason = RebootReason::kKernelPanic},
+      StrToReason{.str = "ZIRCON REBOOT REASON (OOM)", .reason = RebootReason::kOOM},
       StrToReason{.str = "ZIRCON REBOOT REASON (SW WATCHDOG)",
-                  .reason = cobalt::RebootReason::kSoftwareWatchdog},
+                  .reason = RebootReason::kSoftwareWatchdogTimeout},
       StrToReason{.str = "ZIRCON REBOOT REASON (HW WATCHDOG)",
-                  .reason = cobalt::RebootReason::kHardwareWatchdog},
-      StrToReason{.str = "ZIRCON REBOOT REASON (BROWNOUT)",
-                  .reason = cobalt::RebootReason::kBrownout},
-      StrToReason{.str = "ZIRCON REBOOT REASON (UNKNOWN)",
-                  .reason = cobalt::RebootReason::kUnknown},
+                  .reason = RebootReason::kHardwareWatchdogTimeout},
+      StrToReason{.str = "ZIRCON REBOOT REASON (BROWNOUT)", .reason = RebootReason::kBrownout},
+      StrToReason{.str = "ZIRCON REBOOT REASON (UNKNOWN)", .reason = RebootReason::kSpontaneous},
   };
 
   for (const auto entry : str_to_reason_map) {
@@ -69,9 +67,8 @@ void ExtractRebootReason(const std::string line, cobalt::RebootReason* reboot_re
     }
   }
 
-  FX_LOGS(ERROR) << "Failed to extract a reboot reason from first line of reboot log - defaulting "
-                    "to kernel panic";
-  *reboot_reason = cobalt::RebootReason::kKernelPanic;
+  FX_LOGS(ERROR) << "Failed to extract a reboot reason from first line of reboot log";
+  *reboot_reason = RebootReason::kNotParseable;
 }
 
 void ExtractUptime(const std::string& third_line, const std::string& fourth_line,
@@ -125,43 +122,6 @@ bool ExtractRebootInfo(const std::string& reboot_log, RebootInfo* info) {
   return true;
 }
 
-std::string ProgramName(const cobalt::RebootReason reboot_reason) {
-  switch (reboot_reason) {
-    case cobalt::RebootReason::kKernelPanic:
-      return "kernel";
-    case cobalt::RebootReason::kBrownout:
-    case cobalt::RebootReason::kHardwareWatchdog:
-    case cobalt::RebootReason::kUnknown:
-      return "device";
-    case cobalt::RebootReason::kClean:
-    case cobalt::RebootReason::kCold:
-    case cobalt::RebootReason::kOOM:
-    case cobalt::RebootReason::kSoftwareWatchdog:
-      return "system";
-  }
-}
-
-std::string Signature(const cobalt::RebootReason reboot_reason) {
-  switch (reboot_reason) {
-    case cobalt::RebootReason::kKernelPanic:
-      return "fuchsia-kernel-panic";
-    case cobalt::RebootReason::kOOM:
-      return "fuchsia-oom";
-    case cobalt::RebootReason::kSoftwareWatchdog:
-      return "fuchsia-sw-watchdog";
-    case cobalt::RebootReason::kHardwareWatchdog:
-      return "fuchsia-hw-watchdog";
-    case cobalt::RebootReason::kBrownout:
-      return "fuchsia-brownout";
-    case cobalt::RebootReason::kUnknown:
-      return "fuchsia-reboot-unknown";
-    case cobalt::RebootReason::kClean:
-      return "fuchsia-clean-reboot";
-    case cobalt::RebootReason::kCold:
-      return "fuchsia-cold-boot";
-  }
-}
-
 }  // namespace
 
 ::fit::promise<void> RebootLogHandler::Handle(const std::string& filepath) {
@@ -192,10 +152,10 @@ std::string Signature(const cobalt::RebootReason reboot_reason) {
     return ::fit::make_result_promise<void>(::fit::error());
   }
 
-  cobalt_.LogOccurrence(info.reboot_reason);
+  cobalt_.LogOccurrence(ToCobaltRebootReason(info.reboot_reason));
 
   // We don't want to file a crash report on clean reboots.
-  if (info.reboot_reason == cobalt::RebootReason::kClean) {
+  if (info.reboot_reason == RebootReason::kClean) {
     return ::fit::make_ok_promise();
   }
 
@@ -222,11 +182,11 @@ std::string Signature(const cobalt::RebootReason reboot_reason) {
 
   // Build the crash report.
   fuchsia::feedback::GenericCrashReport generic_report;
-  generic_report.set_crash_signature(Signature(info.reboot_reason));
+  generic_report.set_crash_signature(ToCrashSignature(info.reboot_reason));
   fuchsia::feedback::SpecificCrashReport specific_report;
   specific_report.set_generic(std::move(generic_report));
   fuchsia::feedback::CrashReport report;
-  report.set_program_name(ProgramName(info.reboot_reason));
+  report.set_program_name(ToCrashProgramName(info.reboot_reason));
   if (info.uptime.has_value()) {
     report.set_program_uptime(info.uptime.value().get());
   }

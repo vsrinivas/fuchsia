@@ -47,6 +47,19 @@ executable("main") {
 ###############################################################################
 # SOURCES
 ###############################################################################
+source_set("reboot_reason") {
+  sources = [
+    "reboot_reason.cc",
+    "reboot_reason.h",
+  ]
+
+  public_deps = [ "//src/developer/feedback/utils/cobalt" ]
+
+  deps = [ "//src/lib/syslog/cpp" ]
+
+  visibility = [ "//src/developer/feedback/reboot_info/*" ]
+}
+
 source_set("src") {
   sources = [
     "reboot_log_handler.cc",
@@ -54,6 +67,7 @@ source_set("src") {
   ]
 
   public_deps = [
+    ":reboot_reason",
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/lib/sys/cpp",
     "//src/developer/feedback/utils/cobalt",

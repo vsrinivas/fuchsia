@@ -16,6 +16,7 @@
 #include <memory>
 #include <string>
 
+#include "src/developer/feedback/reboot_info/reboot_reason.h"
 #include "src/developer/feedback/utils/cobalt/logger.h"
 #include "src/lib/fsl/vmo/sized_vmo.h"
 #include "src/lib/fxl/functional/cancelable_callback.h"
@@ -35,7 +36,7 @@ namespace internal {
 
 // The information extracted from the reboot log.
 struct RebootInfo {
-  cobalt::RebootReason reboot_reason;
+  RebootReason reboot_reason;
   std::optional<zx::duration> uptime;
 };
 
