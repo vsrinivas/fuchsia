@@ -15,7 +15,6 @@ import (
 	"net"
 	"os"
 	"strings"
-	"sync"
 	"time"
 
 	"fuchsia.googlesource.com/host_target_testing/artifacts"
@@ -40,12 +39,7 @@ const (
 type Client struct {
 	Name           string
 	deviceHostname string
-	addr           net.Addr
-	sshConfig      *ssh.ClientConfig
-
-	// This mutex protects the following fields.
-	mu        sync.Mutex
-	sshClient *sshutil.Client
+	sshClient      *sshutil.Client
 }
 
 // NewClient creates a new Client.
@@ -67,8 +61,6 @@ func NewClient(ctx context.Context, deviceHostname string, name string, privateK
 	return &Client{
 		Name:           name,
 		deviceHostname: deviceHostname,
-		addr:           addr,
-		sshConfig:      sshConfig,
 		sshClient:      sshClient,
 	}, nil
 }
@@ -90,45 +82,23 @@ func newSSHConfig(privateKey ssh.Signer) (*ssh.ClientConfig, error) {
 
 // Close the Client connection
 func (c *Client) Close() {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
 	c.sshClient.Close()
 }
 
 func (c *Client) Reconnect(ctx context.Context) error {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	c.sshClient.Close()
-
-	sshClient, err := sshutil.NewClient(ctx, c.addr, c.sshConfig)
-	if err != nil {
-		return err
-	}
-	c.sshClient = sshClient
-
-	return nil
+	return c.sshClient.Reconnect(ctx)
 }
 
 // Run a command to completion on the remote device and write STDOUT and STDERR
 // to the passed in io.Writers.
 func (c *Client) Run(ctx context.Context, command []string, stdout io.Writer, stderr io.Writer) error {
-	c.mu.Lock()
-	sshClient := c.sshClient
-	c.mu.Unlock()
-
-	return sshClient.Run(ctx, command, stdout, stderr)
+	return c.sshClient.Run(ctx, command, stdout, stderr)
 }
 
 // RegisterDisconnectListener adds a waiter that gets notified when the ssh and
 // shell is disconnected.
 func (c *Client) RegisterDisconnectListener(ch chan struct{}) {
-	c.mu.Lock()
-	sshClient := c.sshClient
-	c.mu.Unlock()
-
-	sshClient.RegisterDisconnectListener(ch)
+	c.sshClient.RegisterDisconnectListener(ch)
 }
 
 func (c *Client) GetSSHConnection(ctx context.Context) (string, error) {
@@ -537,10 +507,6 @@ func (c *Client) StartRpcSession(ctx context.Context, repo *packages.Repository)
 	logger.Infof(ctx, "connecting to sl4f")
 	startTime := time.Now()
 
-	c.mu.Lock()
-	sshClient := c.sshClient
-	c.mu.Unlock()
-
 	// Ensure this client is running system_image or system_image_prime from repo.
 	currentSystemImageMerkle, err := c.GetSystemImageMerkle(ctx)
 	if err != nil {
@@ -558,7 +524,7 @@ func (c *Client) StartRpcSession(ctx context.Context, repo *packages.Repository)
 	}
 	defer repoServer.Shutdown(ctx)
 
-	rpcClient, err := sl4f.NewClient(ctx, sshClient, net.JoinHostPort(c.deviceHostname, "80"), repoName)
+	rpcClient, err := sl4f.NewClient(ctx, c.sshClient, net.JoinHostPort(c.deviceHostname, "80"), repoName)
 	if err != nil {
 		return nil, fmt.Errorf("error creating sl4f client: %s", err)
 	}
