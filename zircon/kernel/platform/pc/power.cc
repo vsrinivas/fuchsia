@@ -58,11 +58,20 @@ static void halt_other_cpus(void) {
   static ktl::atomic<int> halted(0);
 
   if (halted.exchange(1) == 0) {
+    // This function may have been called early in the boot process, before the
+    // mp subsystem has been initialized or secondary CPUs have been brought
+    // online.  To avoid calling into the mp subsystem before it has been
+    // initialized, check the online mask.  If this CPU is the only one online,
+    // then simply return.
+    cpu_mask_t targets = mp_get_online_mask() & ~cpu_num_to_mask(arch_curr_cpu_num());
+    if (targets == 0) {
+      return;
+    }
+
     // stop the other cpus
     printf("stopping other cpus\n");
     arch_mp_send_ipi(MP_IPI_TARGET_ALL_BUT_LOCAL, 0, MP_IPI_HALT);
 
-    cpu_mask_t targets = mp_get_online_mask() & ~cpu_num_to_mask(arch_curr_cpu_num());
     // spin for a while
     // TODO: find a better way to spin at this low level
     for (volatile int i = 0; i < 100000000; i++) {
