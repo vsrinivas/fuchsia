@@ -25,7 +25,6 @@ zx_library("inspector") {
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/pretty",
     "$zx/system/ulib/zircon",
-    "$zx/third_party/ulib/backtrace",
     "$zx/third_party/ulib/ngunwind",
   ]
   configs += [ "$zx_build/public/gn/config:static-libc++" ]

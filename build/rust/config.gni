@@ -77,7 +77,6 @@ std_deps = []
 if (is_fuchsia) {
   std_deps += [
     # These libraries are required by libstd.
-    "//zircon/public/lib/backtrace",
     "//zircon/public/lib/fdio",
   ]
 }

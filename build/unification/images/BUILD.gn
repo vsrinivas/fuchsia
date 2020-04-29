@@ -106,7 +106,6 @@ aggregate_manifest("legacy-aux") {
     "async-default",
 #------------------
 #------------------
-    "backtrace",
 #------------------
 #------------------
 #------------------
@@ -717,7 +716,6 @@ aggregate_manifest("migrated-aux") {
     "//src/devices/power/drivers/as370-power:as370-power-test-manifest",
     "//src/devices/lib/as370/test:audio-dsp-test-manifest",
     "//src/ui/backlight/tests:backlight-test-manifest",
-    "//zircon/third_party/ulib/backtrace/test:backtrace-test-manifest",
     "//zircon/system/utest/biotime:biotime-test-manifest",
     "//src/devices/block/drivers/core:core-unittest-manifest",
     "//zircon/system/core/bootsvc/test:bootsvc-unit-test-manifest",
@@ -974,7 +972,6 @@ aggregate_manifest("migrated-tests") {
     "//src/devices/power/drivers/as370-power:as370-power-test-manifest",
     "//src/devices/lib/as370/test:audio-dsp-test-manifest",
     "//src/ui/backlight/tests:backlight-test-manifest",
-    "//zircon/third_party/ulib/backtrace/test:backtrace-test-manifest",
     "//zircon/system/utest/biotime:biotime-test-manifest",
     "//src/devices/block/drivers/core:core-unittest-manifest",
     "//zircon/system/core/bootsvc/test:bootsvc-unit-test-manifest",
