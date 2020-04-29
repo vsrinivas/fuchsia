@@ -21,7 +21,9 @@ class InstanceResponderTest : public AgentTest, public Mdns::Publisher {
  protected:
   static const inet::IpPort kPort;
   static const std::string kServiceName;
+  static const std::string kOtherServiceName;
   static const std::string kInstanceName;
+  static constexpr size_t kMaxSenderAddresses = 64;
 
   static std::string service_full_name() { return MdnsNames::LocalServiceFullName(kServiceName); }
 
@@ -79,6 +81,7 @@ class InstanceResponderTest : public AgentTest, public Mdns::Publisher {
 
 const inet::IpPort InstanceResponderTest::kPort = inet::IpPort::From_uint16_t(2525);
 const std::string InstanceResponderTest::kServiceName = "_test._tcp.";
+const std::string InstanceResponderTest::kOtherServiceName = "_other._tcp.";
 const std::string InstanceResponderTest::kInstanceName = "testinstance";
 
 fit::function<void(std::unique_ptr<Mdns::Publication>)>
@@ -201,6 +204,110 @@ TEST_F(InstanceResponderTest, MulticastRateLimit) {
   ExpectPostTaskForTimeAndInvoke(zx::sec(1), zx::sec(1));
   ExpectGetPublicationCall(true, "",
                            {sender_address0.socket_address(), sender_address1.socket_address()})(
+      Mdns::Publication::Create(kPort));
+  ExpectPublication();
+  ExpectPostTaskForTimeAndInvoke(zx::sec(60), zx::sec(60));  // idle cleanup
+  ExpectNoOther();
+}
+
+// Tests that source addresses are limited to pertinent queries.
+TEST_F(InstanceResponderTest, SourceAddresses) {
+  InstanceResponder under_test(this, kServiceName, kInstanceName, this);
+  SetAgent(under_test);
+
+  // Normal startup.
+  under_test.Start(kHostFullName, addresses());
+  ExpectAnnouncements();
+
+  ReplyAddress sender_address0(
+      inet::SocketAddress(192, 168, 1, 1, inet::IpPort::From_uint16_t(5353)),
+      inet::IpAddress(192, 168, 1, 100));
+  ReplyAddress sender_address1(
+      inet::SocketAddress(192, 168, 1, 2, inet::IpPort::From_uint16_t(5353)),
+      inet::IpAddress(192, 168, 1, 100));
+
+  // Irrelevant question.
+  under_test.ReceiveQuestion(
+      DnsQuestion(MdnsNames::LocalServiceFullName(kOtherServiceName), DnsType::kPtr),
+      addresses().multicast_reply(), sender_address0);
+
+  // Pertient question.
+  under_test.ReceiveQuestion(DnsQuestion(service_full_name(), DnsType::kPtr),
+                             addresses().multicast_reply(), sender_address1);
+
+  // Expect only pertinent sender address.
+  ExpectGetPublicationCall(true, "",
+                           {sender_address1.socket_address()})(Mdns::Publication::Create(kPort));
+  ExpectPublication();
+  ExpectPostTaskForTime(zx::sec(60), zx::sec(60));  // idle cleanup
+  ExpectNoOther();
+}
+
+// Tests that at most 64 source addresses are sent.
+TEST_F(InstanceResponderTest, SourceAddressLimit) {
+  InstanceResponder under_test(this, kServiceName, kInstanceName, this);
+  SetAgent(under_test);
+
+  // Normal startup.
+  under_test.Start(kHostFullName, addresses());
+  ExpectAnnouncements();
+
+  ReplyAddress sender_address(
+      inet::SocketAddress(192, 168, 1, 1, inet::IpPort::From_uint16_t(5353)),
+      inet::IpAddress(192, 168, 1, 100));
+
+  // First question.
+  under_test.ReceiveQuestion(DnsQuestion(service_full_name(), DnsType::kPtr),
+                             addresses().multicast_reply(), sender_address);
+
+  // Expect one sender address.
+  ExpectGetPublicationCall(true, "",
+                           {sender_address.socket_address()})(Mdns::Publication::Create(kPort));
+  ExpectPublication();
+  ExpectPostTaskForTime(zx::sec(60), zx::sec(60));  // idle cleanup
+  ExpectNoOther();
+
+  // Second question asked 65 times.
+  for (size_t i = 0; i <= kMaxSenderAddresses; ++i) {
+    under_test.ReceiveQuestion(DnsQuestion(service_full_name(), DnsType::kPtr),
+                               addresses().multicast_reply(), sender_address);
+  }
+  ExpectPostTaskForTimeAndInvoke(zx::sec(1), zx::sec(1));
+
+  // Expect 64 sender addresses.
+  ExpectGetPublicationCall(true, "",
+                           {sender_address.socket_address(), sender_address.socket_address(),
+                            sender_address.socket_address(), sender_address.socket_address(),
+                            sender_address.socket_address(), sender_address.socket_address(),
+                            sender_address.socket_address(), sender_address.socket_address(),
+                            sender_address.socket_address(), sender_address.socket_address(),
+                            sender_address.socket_address(), sender_address.socket_address(),
+                            sender_address.socket_address(), sender_address.socket_address(),
+                            sender_address.socket_address(), sender_address.socket_address(),
+                            sender_address.socket_address(), sender_address.socket_address(),
+                            sender_address.socket_address(), sender_address.socket_address(),
+                            sender_address.socket_address(), sender_address.socket_address(),
+                            sender_address.socket_address(), sender_address.socket_address(),
+                            sender_address.socket_address(), sender_address.socket_address(),
+                            sender_address.socket_address(), sender_address.socket_address(),
+                            sender_address.socket_address(), sender_address.socket_address(),
+                            sender_address.socket_address(), sender_address.socket_address(),
+                            sender_address.socket_address(), sender_address.socket_address(),
+                            sender_address.socket_address(), sender_address.socket_address(),
+                            sender_address.socket_address(), sender_address.socket_address(),
+                            sender_address.socket_address(), sender_address.socket_address(),
+                            sender_address.socket_address(), sender_address.socket_address(),
+                            sender_address.socket_address(), sender_address.socket_address(),
+                            sender_address.socket_address(), sender_address.socket_address(),
+                            sender_address.socket_address(), sender_address.socket_address(),
+                            sender_address.socket_address(), sender_address.socket_address(),
+                            sender_address.socket_address(), sender_address.socket_address(),
+                            sender_address.socket_address(), sender_address.socket_address(),
+                            sender_address.socket_address(), sender_address.socket_address(),
+                            sender_address.socket_address(), sender_address.socket_address(),
+                            sender_address.socket_address(), sender_address.socket_address(),
+                            sender_address.socket_address(), sender_address.socket_address(),
+                            sender_address.socket_address(), sender_address.socket_address()})(
       Mdns::Publication::Create(kPort));
   ExpectPublication();
   ExpectPostTaskForTimeAndInvoke(zx::sec(60), zx::sec(60));  // idle cleanup

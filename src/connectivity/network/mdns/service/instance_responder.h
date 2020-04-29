@@ -54,6 +54,10 @@ class InstanceResponder : public MdnsAgent {
   static constexpr zx::duration kIdleCheckInterval = zx::sec(60);
   static constexpr zx::time kThrottleStateIdle = zx::time::infinite_past();
   static constexpr zx::time kThrottleStatePending = zx::time::infinite();
+  static constexpr size_t kMaxSenderAddresses = 64;
+
+  // Logs a sender address for a future |GetPublication| call.
+  void LogSenderAddress(const ReplyAddress& sender_address);
 
   // Sends an announcement and schedules the next announcement, as appropriate.
   void SendAnnouncement();

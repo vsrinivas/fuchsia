@@ -37,11 +37,10 @@ void InstanceResponder::ReceiveQuestion(const DnsQuestion& question,
   std::string name = question.name_.dotted_string_;
   std::string subtype;
 
-  sender_addresses_.push_back(sender_address.socket_address());
-
   switch (question.type_) {
     case DnsType::kPtr:
       if (MdnsNames::MatchServiceName(name, service_name_, &subtype)) {
+        LogSenderAddress(sender_address);
         MaybeGetAndSendPublication(subtype, reply_address);
       } else if (question.name_.dotted_string_ == MdnsNames::kAnyServiceFullName) {
         SendAnyServiceResponse(reply_address);
@@ -50,12 +49,14 @@ void InstanceResponder::ReceiveQuestion(const DnsQuestion& question,
     case DnsType::kSrv:
     case DnsType::kTxt:
       if (question.name_.dotted_string_ == instance_full_name_) {
+        LogSenderAddress(sender_address);
         MaybeGetAndSendPublication("", reply_address);
       }
       break;
     case DnsType::kAny:
       if (question.name_.dotted_string_ == instance_full_name_ ||
           MdnsNames::MatchServiceName(name, service_name_, &subtype)) {
+        LogSenderAddress(sender_address);
         MaybeGetAndSendPublication(subtype, reply_address);
       }
       break;
@@ -113,6 +114,17 @@ void InstanceResponder::Reannounce() {
   // were already announcing, the sequence restarts now.
   announcement_interval_ = kInitialAnnouncementInterval;
   SendAnnouncement();
+}
+
+void InstanceResponder::LogSenderAddress(const ReplyAddress& sender_address) {
+  if (sender_addresses_.size() == kMaxSenderAddresses) {
+    // We only record up to 64 addresses. This limit should rarely be hit, because sender addresses
+    // only accumulate when we're throttling over a one-second interval. Most of the time, we'll log
+    // only one sender address before calling |GetPublication| and clearing the list.
+    return;
+  }
+
+  sender_addresses_.push_back(sender_address.socket_address());
 }
 
 void InstanceResponder::SendAnnouncement() {
