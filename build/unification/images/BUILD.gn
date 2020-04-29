@@ -509,7 +509,6 @@ aggregate_manifest("migrated-image") {
       "//src/devices/usb/drivers/nelson-usb-phy:nelson-usb-phy-manifest",
       "//src/devices/usb/drivers/usb-bus:usb-device-manifest",
       "//src/devices/usb/drivers/usb-test/flash-programmer:flash-programmer-manifest",
-      "//src/graphics/display/bin/display-test:display-test-manifest",
       "//src/graphics/display/drivers/dsi-mt:dsi-mt-manifest",
       "//src/graphics/display/drivers/fake:fake-manifest",
       "//src/graphics/display/drivers/simple:simple-amd-kaveri-manifest",
@@ -1095,6 +1094,7 @@ aggregate_manifest("migrated-tests") {
     "//zircon/system/utest/vdso-variant:vdso-variant-manifest",
     "//zircon/system/ulib/zbi-bootfs/test:zbi-bootfs-test-manifest",
     "//zircon/system/ulib/libzbi/test:zbi-manifest",
+    "//src/graphics/display/bin/display-test:display-test-manifest",
   ]
 
   if (target_cpu == "arm64") {
