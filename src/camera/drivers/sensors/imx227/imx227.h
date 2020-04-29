@@ -128,9 +128,14 @@ class Imx227Device : public DeviceType,
 
  private:
   // I2C Helpers
-  uint16_t Read16(uint16_t addr) __TA_REQUIRES(lock_);
-  uint8_t Read8(uint16_t addr) __TA_REQUIRES(lock_);
-  void Write8(uint16_t addr, uint8_t val) __TA_REQUIRES(lock_);
+  // Returns ZX_OK and an uint16_t value if the read succeeds.
+  // Returns error if the I2C read fails.
+  fit::result<uint16_t, zx_status_t> Read16(uint16_t addr) __TA_REQUIRES(lock_);
+  // Returns ZX_OK and an uint8_t value if the read succeeds.
+  // Returns error if the I2C read fails.
+  fit::result<uint8_t, zx_status_t> Read8(uint16_t addr) __TA_REQUIRES(lock_);
+  // Returns ZX_OK if the write is successful otherwise returns an error.
+  zx_status_t Write8(uint16_t addr, uint8_t val) __TA_REQUIRES(lock_);
 
   // Other
   zx_status_t InitPdev();

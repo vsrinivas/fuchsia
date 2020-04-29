@@ -116,30 +116,36 @@ zx_status_t Imx227Device::InitPdev() {
   return ZX_OK;
 }
 
-uint16_t Imx227Device::Read16(uint16_t addr) {
-  const uint8_t kRegUpper = Read8(addr);
-  const uint8_t kRegLower = Read8(addr + 1);
-  if (kRegUpper < 0 | kRegLower < 0) {
-    return -1;
+fit::result<uint16_t, zx_status_t> Imx227Device::Read16(uint16_t addr) {
+  auto result = Read8(addr);
+  if (result.is_error()) {
+    return fit::error(result.error());
   }
-  return kRegUpper << kByteShift | kRegLower;
+  auto upper_byte = result.value();
+  result = Read8(addr + 1);
+  if (result.is_error()) {
+    return fit::error(result.error());
+  }
+  auto lower_byte = result.value();
+  uint16_t reg_value = upper_byte << kByteShift | lower_byte;
+  return fit::ok(reg_value);
 }
 
-uint8_t Imx227Device::Read8(uint16_t addr) {
+fit::result<uint8_t, zx_status_t> Imx227Device::Read8(uint16_t addr) {
   // Convert the address to Big Endian format.
   // The camera sensor expects in this format.
   uint16_t buf = htobe16(addr);
   uint8_t val = 0;
-  zx_status_t status =
+  auto status =
       i2c_.WriteReadSync(reinterpret_cast<uint8_t*>(&buf), sizeof(buf), &val, sizeof(val));
   if (status != ZX_OK) {
     zxlogf(ERROR, "Imx227Device: could not read reg addr: 0x%08x  status: %d", addr, status);
-    return -1;
+    return fit::error(status);
   }
-  return val;
+  return fit::ok(val);
 }
 
-void Imx227Device::Write8(uint16_t addr, uint8_t val) {
+zx_status_t Imx227Device::Write8(uint16_t addr, uint8_t val) {
   // Convert the address to Big Endian format.
   // The camera sensor expects in this format.
   // First two bytes are the address, third one is the value to be written.
@@ -148,13 +154,14 @@ void Imx227Device::Write8(uint16_t addr, uint8_t val) {
   buf[1] = static_cast<uint8_t>(addr & kByteMask);
   buf[2] = val;
 
-  zx_status_t status = i2c_.WriteSync(buf.data(), buf.size());
+  auto status = i2c_.WriteSync(buf.data(), buf.size());
   if (status != ZX_OK) {
     zxlogf(ERROR,
            "Imx227Device: could not write reg addr/val: 0x%08x/0x%08x status: "
            "%d\n",
            addr, val, status);
   }
+  return status;
 }
 
 bool Imx227Device::CameraSensorIsPoweredUp() {
@@ -163,12 +170,11 @@ bool Imx227Device::CameraSensorIsPoweredUp() {
 }
 
 bool Imx227Device::ValidateSensorID() {
-  uint16_t sensor_id = Read16(kSensorModelIdReg);
-  if (sensor_id != kSensorId) {
-    zxlogf(ERROR, "Imx227Device: Invalid sensor ID");
+  auto result = Read16(kSensorModelIdReg);
+  if (result.is_error()) {
     return false;
   }
-  return true;
+  return result.value() == kSensorId;
 }
 
 zx_status_t Imx227Device::InitSensor(uint8_t idx) {

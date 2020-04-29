@@ -44,7 +44,11 @@ fit::result<zx::vmo, zx_status_t> Imx227Device::OtpRead() {
     Write8(OTP_READ_ENABLE, 1);
 
     // Optional check
-    const auto kReadStatus = Read8(OTP_ACCESS_STATUS);
+    auto result = Read8(OTP_ACCESS_STATUS);
+    if (result.is_error()) {
+      return fit::error(result.error());
+    }
+    const auto kReadStatus = result.value();
     if (kReadStatus != 1) {
       status = ZX_ERR_IO;
       zxlogf(ERROR, "%s: read access could not be verified, access is %x", __func__, kReadStatus);
