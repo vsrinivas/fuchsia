@@ -26,6 +26,19 @@ foreach(testpkg, test_packages) {
   }
 }
 
+copy("copy_avbtool") {
+  testonly = true
+  sources = [ "//zircon/third_party/tools/android/avb/avbtool" ]
+  outputs = [ "$root_out_dir/test_data/system-tests/{{source_file_part}}" ]
+}
+
+go_test("host-target-testing-avb-test") {
+  gopackages = [ "fuchsia.googlesource.com/host_target_testing/avb" ]
+  deps = [ ":host-target-testing" ]
+  non_go_deps = [ ":copy_avbtool" ]
+}
+test_packages += [ "avb" ]
+
 group("tests") {
   testonly = true
 
