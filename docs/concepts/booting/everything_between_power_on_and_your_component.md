@@ -5,50 +5,17 @@ machine power on and a component (v1 or v2) running on the system.
 
 Outline:
 
-- [Bootloader](#bootloader)
 - [Kernel](#kernel)
 - [Initial processes](#initial-processes)
 - [Component manager](#component-manager)
 - [Initial v2 components](#v2-components)
 - [Initial v1 components](#v1-components)
 
-## Bootloader {#bootloader}
-
-Note: this section only applies to arm64. How the machine gets to a running
-kernel varies by architecture.
-
-When the machine first powers on, the hardware reads the
-[bootloader][bootloader] out of firmware and starts running it on the system.
-The job of the bootloader is to initialize the hardware to a suitable state for
-the operating system and then find, load, and start the operating system,
-Fuchsia.
-
-Many devices use ABR partitioning, which means that there are three potential
-locations that the [ZBI][ZBI] can live. The ZBI holds everything needed to
-bootstrap Fuchsia, including the kernel and an initial filesystem with things
-like drivers and filesystems.
-
-The A and B partitions each can hold a working copy of the ZBI. One of these two
-partitions will be marked as "active", and the other one will be marked as
-"inactive". The bootloader will choose whichever of the A or the B partition is
-marked as active, and look in there for zircon and the ZBI. If it finds them it
-will load both into memory, hand control over to zircon, and tell it where it
-put the ZBI.
-
-During an update the inactive partition is rewritten with a new version of the
-ZBI, and then marked as the active partition. This preserves the current working
-version of Fuchsia to fall back to, in case there’s an issue when the machine
-reboots into a newly installed image.
-
-If any of the above fails, the bootloader starts the operating system contained
-on the R partition, whose responsibility is to recover the system by repairing
-the A and B partitions. It does so by downloading a new copy of Fuchsia and
-reimaging the A or B partition with it.
-
-![A diagram showing the bootloader selecting the A partition, which contains a
-ZBI](images/bootloader-and-abr.png)
-
 ## Kernel {#kernel}
+
+The process for loading the Fuchsia kernel (zircon) onto the system varies by
+platform. At a high level the kernel is stored in the [ZBI][ZBI], which holds
+everything needed to bootstrap Fuchsia.
 
 [Once the kernel (zircon) is running on the system][bootloader-and-kernel] its
 main objective is to start [userspace][userspace], where processes can be run.
@@ -250,7 +217,6 @@ components on the system can be run.
 [blobfs]: /docs/concepts/filesystems/blobfs.md
 [bootfs]: /docs/glossary.md#bootfs
 [bootloader-and-kernel]: /docs/concepts/booting/userboot.md#boot_loader_and_kernel_startup
-[bootloader]: https://en.wikipedia.org/wiki/Booting#Modern_boot_loaders
 [bootsvc]: /docs/glossary.md#bootsvc
 [component-manager]: /docs/concepts/components/introduction.md#component-manager
 [component]: /docs/glossary.md#component
