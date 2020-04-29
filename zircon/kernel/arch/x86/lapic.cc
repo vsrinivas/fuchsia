@@ -206,6 +206,7 @@ static inline void apic_wait_for_ipi_send(void) {
 void apic_send_ipi(uint8_t vector, uint32_t dst_apic_id, enum apic_interrupt_delivery_mode dm) {
   // we only support 8 bit apic ids
   DEBUG_ASSERT(dst_apic_id < UINT8_MAX);
+
   uint32_t request = ICR_LEVEL_ASSERT | ICR_DELIVERY_MODE(dm) | ICR_VECTOR(vector);
   if (x86_hypervisor_has_pv_ipi()) {
     __UNUSED int ret = pv_ipi(1, 0, dst_apic_id, request);
@@ -213,15 +214,16 @@ void apic_send_ipi(uint8_t vector, uint32_t dst_apic_id, enum apic_interrupt_del
     return;
   }
 
-  spin_lock_saved_state_t state;
-  arch_interrupt_save(&state, 0);
   if (x2apic_enabled) {
     write_msr(LAPIC_X2APIC_MSR_ICR, X2_ICR_DST(dst_apic_id) | request);
-  } else {
-    lapic_reg_write(LAPIC_REG_IRQ_CMD_HIGH, ICR_DST(dst_apic_id));
-    lapic_reg_write(LAPIC_REG_IRQ_CMD_LOW, request);
-    apic_wait_for_ipi_send();
+    return;
   }
+
+  spin_lock_saved_state_t state;
+  arch_interrupt_save(&state, 0);
+  lapic_reg_write(LAPIC_REG_IRQ_CMD_HIGH, ICR_DST(dst_apic_id));
+  lapic_reg_write(LAPIC_REG_IRQ_CMD_LOW, request);
+  apic_wait_for_ipi_send();
   arch_interrupt_restore(state, 0);
 }
 
@@ -234,15 +236,16 @@ void apic_send_self_ipi(uint8_t vector, enum apic_interrupt_delivery_mode dm) {
   }
 
   request |= ICR_DST_SELF;
-  spin_lock_saved_state_t state;
-  arch_interrupt_save(&state, 0);
   if (x2apic_enabled) {
     // special register for triggering self ipis
     write_msr(LAPIC_X2APIC_MSR_SELF_IPI, vector);
-  } else {
-    lapic_reg_write(LAPIC_REG_IRQ_CMD_LOW, request);
-    apic_wait_for_ipi_send();
+    return;
   }
+
+  spin_lock_saved_state_t state;
+  arch_interrupt_save(&state, 0);
+  lapic_reg_write(LAPIC_REG_IRQ_CMD_LOW, request);
+  apic_wait_for_ipi_send();
   arch_interrupt_restore(state, 0);
 }
 
@@ -282,15 +285,16 @@ void apic_send_broadcast_self_ipi(uint8_t vector, enum apic_interrupt_delivery_m
   }
 
   request |= ICR_DST_ALL;
-  spin_lock_saved_state_t state;
-  arch_interrupt_save(&state, 0);
   if (x2apic_enabled) {
     write_msr(LAPIC_X2APIC_MSR_ICR, X2_ICR_BROADCAST | request);
-  } else {
-    lapic_reg_write(LAPIC_REG_IRQ_CMD_HIGH, ICR_DST_BROADCAST);
-    lapic_reg_write(LAPIC_REG_IRQ_CMD_LOW, request);
-    apic_wait_for_ipi_send();
+    return;
   }
+
+  spin_lock_saved_state_t state;
+  arch_interrupt_save(&state, 0);
+  lapic_reg_write(LAPIC_REG_IRQ_CMD_HIGH, ICR_DST_BROADCAST);
+  lapic_reg_write(LAPIC_REG_IRQ_CMD_LOW, request);
+  apic_wait_for_ipi_send();
   arch_interrupt_restore(state, 0);
 }
 
@@ -304,15 +308,16 @@ void apic_send_broadcast_ipi(uint8_t vector, enum apic_interrupt_delivery_mode d
   }
 
   request |= ICR_DST_ALL_MINUS_SELF;
-  spin_lock_saved_state_t state;
-  arch_interrupt_save(&state, 0);
   if (x2apic_enabled) {
     write_msr(LAPIC_X2APIC_MSR_ICR, X2_ICR_BROADCAST | request);
-  } else {
-    lapic_reg_write(LAPIC_REG_IRQ_CMD_HIGH, ICR_DST_BROADCAST);
-    lapic_reg_write(LAPIC_REG_IRQ_CMD_LOW, request);
-    apic_wait_for_ipi_send();
+    return;
   }
+
+  spin_lock_saved_state_t state;
+  arch_interrupt_save(&state, 0);
+  lapic_reg_write(LAPIC_REG_IRQ_CMD_HIGH, ICR_DST_BROADCAST);
+  lapic_reg_write(LAPIC_REG_IRQ_CMD_LOW, request);
+  apic_wait_for_ipi_send();
   arch_interrupt_restore(state, 0);
 }
 
