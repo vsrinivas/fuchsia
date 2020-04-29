@@ -150,8 +150,10 @@ pub async fn cache_package<'a>(
     url: &'a PkgUrl,
     cache: &'a PackageCache,
     blob_fetcher: &'a BlobFetcher,
+    cobalt_sender: CobaltSender,
 ) -> Result<BlobId, CacheError> {
-    let (merkle, size) = merkle_for_url(repo, url).await.map_err(CacheError::MerkleFor)?;
+    let (merkle, size) =
+        merkle_for_url(repo, url, cobalt_sender).await.map_err(CacheError::MerkleFor)?;
     // If a merkle pin was specified, use it, but only after having verified that the name and
     // variant exist in the TUF repo.  Note that this doesn't guarantee that the merkle pinned
     // package ever actually existed in the repo or that the merkle pin refers to the named
@@ -314,15 +316,41 @@ impl ToResolveStatus for FetchError {
     }
 }
 
+impl From<&MerkleForError> for metrics::MerkleForUrlMetricDimensionResult {
+    fn from(e: &MerkleForError) -> metrics::MerkleForUrlMetricDimensionResult {
+        match e {
+            MerkleForError::NotFound => metrics::MerkleForUrlMetricDimensionResult::NotFound,
+            MerkleForError::TufError(_) => metrics::MerkleForUrlMetricDimensionResult::TufError,
+            MerkleForError::InvalidTargetPath(_) => {
+                metrics::MerkleForUrlMetricDimensionResult::InvalidTargetPath
+            }
+            MerkleForError::NoCustomMetadata => {
+                metrics::MerkleForUrlMetricDimensionResult::NoCustomMetadata
+            }
+            MerkleForError::SerdeError(_) => metrics::MerkleForUrlMetricDimensionResult::SerdeError,
+        }
+    }
+}
+
 pub async fn merkle_for_url<'a>(
     repo: Arc<AsyncMutex<Repository>>,
     url: &'a PkgUrl,
+    mut cobalt_sender: CobaltSender,
 ) -> Result<(BlobId, u64), MerkleForError> {
     let target_path =
         TargetPath::new(format!("{}/{}", url.name().unwrap(), url.variant().unwrap_or("0")))
             .map_err(MerkleForError::InvalidTargetPath)?;
     let mut repo = repo.lock().await;
     let res = repo.get_merkle_at_path(&target_path).await;
+    cobalt_sender.log_event_count(
+        metrics::MERKLE_FOR_URL_METRIC_ID,
+        match &res {
+            Ok(_) => metrics::MerkleForUrlMetricDimensionResult::Success,
+            Err(res) => res.into(),
+        },
+        0,
+        1,
+    );
     res.map(|custom| (custom.merkle(), custom.size()))
 }
 

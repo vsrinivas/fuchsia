@@ -390,6 +390,18 @@ async fn pkg_resolver_fetch_blob_failure() {
     .await;
 }
 
+#[fasync::run_singlethreaded(test)]
+async fn merkle_for_url_success() {
+    verify_resolve_emits_cobalt_events_with_metric_id(
+        PackageBuilder::new("just_meta_far").build().await.expect("created pkg"),
+        Option::<handler::StaticResponseCode>::None,
+        Ok(()),
+        metrics::MERKLE_FOR_URL_METRIC_ID,
+        vec![metrics::MerkleForUrlMetricDimensionResult::Success],
+    )
+    .await;
+}
+
 // Resolving a package should trigger the creation of a TUF client.
 #[fasync::run_singlethreaded(test)]
 async fn create_tuf_client_success() {

@@ -250,9 +250,10 @@ impl RepositoryManager {
             Arc::clone(&self.inspect.repos_node),
         );
 
+        let cobalt_sender = self.cobalt_sender.clone();
         async move {
             let repo = fut.await?;
-            crate::cache::cache_package(repo, &config, url, cache, blob_fetcher)
+            crate::cache::cache_package(repo, &config, url, cache, blob_fetcher, cobalt_sender)
                 .await
                 .map_err(Into::into)
         }
@@ -280,9 +281,11 @@ impl RepositoryManager {
             Arc::clone(&self.inspect.repos_node),
         );
 
+        let cobalt_sender = self.cobalt_sender.clone();
+
         async move {
             let repo = repo.await?;
-            crate::cache::merkle_for_url(repo, url)
+            crate::cache::merkle_for_url(repo, url, cobalt_sender)
                 .await
                 .map(|(blob_id, _)| blob_id)
                 .map_err(Into::into)
