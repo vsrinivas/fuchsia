@@ -23,6 +23,7 @@
 #include <glm/mat3x3.hpp>
 
 #include "src/ui/scenic/lib/flatland/link_system.h"
+#include "src/ui/scenic/lib/flatland/renderer/renderer.h"
 #include "src/ui/scenic/lib/flatland/transform_graph.h"
 #include "src/ui/scenic/lib/flatland/transform_handle.h"
 #include "src/ui/scenic/lib/flatland/uber_struct_system.h"
@@ -36,12 +37,16 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
  public:
   using TransformId = uint64_t;
   using LinkId = uint64_t;
+  using BufferCollectionId = uint64_t;
+  using ImageId = uint64_t;
 
-  // Passing the same LinkSystem and TopologySystem to multiple Flatland instances will allow them
-  // to link to each other through operations that involve tokens and parent/child relationships
-  // (e.g., by calling LinkToParent() and CreateLink()).
-  explicit Flatland(const std::shared_ptr<LinkSystem>& link_system,
-                    const std::shared_ptr<UberStructSystem>& uber_struct_system);
+  // Passing the same LinkSystem and UberStructSystem to multiple Flatland instances will allow
+  // them to link to each other through operations that involve tokens and parent/child
+  // relationships (e.g., by calling LinkToParent() and CreateLink()).
+  explicit Flatland(const std::shared_ptr<Renderer>& renderer,
+                    const std::shared_ptr<LinkSystem>& link_system,
+                    const std::shared_ptr<UberStructSystem>& uber_struct_system,
+                    fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator);
   ~Flatland();
 
   // Because this object captures its "this" pointer in internal closures, it is unsafe to copy or
@@ -84,6 +89,13 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
       fuchsia::ui::scenic::internal::LinkProperties properties,
       fidl::InterfaceRequest<fuchsia::ui::scenic::internal::ContentLink> content_link) override;
   // |fuchsia::ui::scenic::internal::Flatland|
+  void RegisterBufferCollection(
+      BufferCollectionId collection_id,
+      fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) override;
+  // |fuchsia::ui::scenic::internal::Flatland|
+  void CreateImage(ImageId image_id, BufferCollectionId collection_id, uint32_t vmo_index,
+                   fuchsia::ui::scenic::internal::ImageProperties properties) override;
+  // |fuchsia::ui::scenic::internal::Flatland|
   void SetLinkOnTransform(LinkId link_id, TransformId transform_id) override;
   // |fuchsia::ui::scenic::internal::Flatland|
   void SetLinkProperties(LinkId id,
@@ -113,6 +125,10 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
 
   using TransformMap = std::map<TransformId, TransformHandle>;
 
+  // A Renderer shared between Flatland instances. Flatland registers buffer collections with the
+  // Renderer and references them by ID when submitting data in an UberStruct.
+  std::shared_ptr<Renderer> renderer_;
+
   // A link system shared between Flatland instances, so that links can be made between them.
   std::shared_ptr<LinkSystem> link_system_;
 
@@ -120,13 +136,16 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
   // UberStructSystem in order to have it seen by the global render loop.
   std::shared_ptr<UberStructSystem> uber_struct_system_;
 
+  // A Sysmem allocator to faciliate buffer allocation with the Renderer.
+  fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator_;
+
   // The set of operations that are pending a call to Present().
   std::vector<fit::function<bool()>> pending_operations_;
 
   // The number of pipelined Present() operations available to the client.
   uint32_t num_presents_remaining_ = kMaxPresents;
 
-  // A map from user-generated id to global handle. This map constitutes the set of transforms that
+  // A map from user-generated ID to global handle. This map constitutes the set of transforms that
   // can be referenced by the user through method calls. Keep in mind that additional transforms may
   // be kept alive through child references.
   TransformMap transforms_;
@@ -153,7 +172,7 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
   // designated for it.
   void UpdateLinkScale(const ChildLinkData& link_data);
 
-  // A mapping from user-generated id to ChildLinkData.
+  // A mapping from user-generated ID to ChildLinkData.
   std::unordered_map<LinkId, ChildLinkData> child_links_;
 
   // The link from this Flatland instance to our parent.
@@ -191,6 +210,26 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
   // A geometric transform for each TransformHandle. If not present, that TransformHandle has the
   // identity matrix for its transform.
   std::unordered_map<TransformHandle, MatrixData> matrices_;
+
+  // The Renderer-generated ID for a buffer collection and, if it has been successfully validated
+  // in a CreateImage() call, the metadata associated with that collection.
+  struct BufferCollectionData {
+    GlobalBufferCollectionId collection_id;
+    std::optional<BufferCollectionMetadata> metadata;
+  };
+
+  // A mapping from user-generated ID to BufferCollectionData.
+  std::unordered_map<BufferCollectionId, BufferCollectionData> buffer_collections_;
+
+  // The transform an image is associated with and the image metadata necessary to render that
+  // image.
+  struct ImageData {
+    TransformHandle handle;
+    ImageMetadata metadata;
+  };
+
+  // A mapping from user-generated ID to ImageData.
+  std::unordered_map<ImageId, ImageData> images_;
 };
 
 }  // namespace flatland

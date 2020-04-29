@@ -4,6 +4,8 @@
 
 #include "src/ui/scenic/lib/flatland/flatland.h"
 
+#include <lib/fdio/directory.h>
+
 #include <limits>
 
 #include <gtest/gtest.h>
@@ -14,15 +16,21 @@
 #include "src/lib/fxl/logging.h"
 #include "src/ui/scenic/lib/flatland/global_matrix_data.h"
 #include "src/ui/scenic/lib/flatland/global_topology_data.h"
+#include "src/ui/scenic/lib/flatland/tests/mock_renderer.h"
 
 #include <glm/gtc/epsilon.hpp>
 #include <glm/gtx/matrix_transform_2d.hpp>
+
+using ::testing::_;
+using ::testing::Return;
 
 using flatland::Flatland;
 using LinkId = flatland::Flatland::LinkId;
 using flatland::GlobalMatrixVector;
 using flatland::GlobalTopologyData;
 using flatland::LinkSystem;
+using flatland::MockRenderer;
+using flatland::Renderer;
 using flatland::TransformGraph;
 using flatland::TransformHandle;
 using flatland::UberStructSystem;
@@ -32,6 +40,7 @@ using fuchsia::ui::scenic::internal::ContentLinkToken;
 using fuchsia::ui::scenic::internal::Flatland_Present_Result;
 using fuchsia::ui::scenic::internal::GraphLink;
 using fuchsia::ui::scenic::internal::GraphLinkToken;
+using fuchsia::ui::scenic::internal::ImageProperties;
 using fuchsia::ui::scenic::internal::LayoutInfo;
 using fuchsia::ui::scenic::internal::LinkProperties;
 using fuchsia::ui::scenic::internal::Orientation;
@@ -120,9 +129,20 @@ class FlatlandTest : public gtest::TestLoopFixture {
       : uber_struct_system_(std::make_shared<UberStructSystem>()),
         link_system_(std::make_shared<LinkSystem>(uber_struct_system_->GetNextInstanceId())) {}
 
+  void SetUp() override {
+    mock_renderer_ = new MockRenderer();
+    renderer_ = std::shared_ptr<Renderer>(mock_renderer_);
+  }
+
   void TearDown() override { EXPECT_EQ(uber_struct_system_->GetSize(), 0u); }
 
-  Flatland CreateFlatland() { return Flatland(link_system_, uber_struct_system_); }
+  Flatland CreateFlatland() {
+    fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator;
+    zx_status_t status = fdio_service_connect(
+        "/svc/fuchsia.sysmem.Allocator", sysmem_allocator.NewRequest().TakeChannel().release());
+    FXL_DCHECK(status == ZX_OK);
+    return Flatland(renderer_, link_system_, uber_struct_system_, std::move(sysmem_allocator));
+  }
 
   void SetDisplayPixelScale(const glm::vec2& pixel_scale) { display_pixel_scale_ = pixel_scale; }
 
@@ -167,7 +187,11 @@ class FlatlandTest : public gtest::TestLoopFixture {
     return {.topology_data = std::move(data), .matrix_vector = std::move(matrices)};
   }
 
+ protected:
+  MockRenderer* mock_renderer_;
+
  private:
+  std::shared_ptr<Renderer> renderer_;
   const std::shared_ptr<UberStructSystem> uber_struct_system_;
   const std::shared_ptr<LinkSystem> link_system_;
   glm::vec2 display_pixel_scale_ = kDefaultPixelScale;
@@ -1980,6 +2004,178 @@ TEST_F(FlatlandTest, EmptyLogicalSizePreservesOldSize) {
 
   data = ProcessMainLoop(parent.GetRoot());
   EXPECT_MATRIX(data.topology_data, data.matrix_vector, child.GetRoot(), expected_scale_matrix);
+}
+
+TEST_F(FlatlandTest, RegisterBufferCollectionErrorCases) {
+  Flatland flatland = CreateFlatland();
+
+  // Zero is not a valid buffer collection ID.
+  {
+    fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token;
+    flatland.RegisterBufferCollection(0, std::move(token));
+    PRESENT(flatland, false);
+  }
+
+  // The Renderer registration call can fail.
+  {
+    // Mock the Renderer call to fail.
+    EXPECT_CALL(*mock_renderer_, RegisterBufferCollection(_, _))
+        .WillOnce(Return(Renderer::kInvalidId));
+
+    fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token;
+    flatland.RegisterBufferCollection(1, std::move(token));
+    PRESENT(flatland, false);
+  }
+
+  // Two buffer collections cannot use the same ID.
+  {
+    const uint64_t kId = 1;
+
+    EXPECT_CALL(*mock_renderer_, RegisterBufferCollection(_, _)).WillOnce(Return(1));
+
+    fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token;
+    flatland.RegisterBufferCollection(kId, std::move(token));
+    PRESENT(flatland, true);
+
+    fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token2;
+    flatland.RegisterBufferCollection(kId, std::move(token2));
+    PRESENT(flatland, false);
+  }
+}
+
+TEST_F(FlatlandTest, CreateImageErrorCases) {
+  Flatland flatland = CreateFlatland();
+
+  // Default image properties.
+  const uint32_t kDefaultVmoIndex = 1;
+  const uint32_t kDefaultWidth = 100;
+  const uint32_t kDefaultHeight = 1000;
+
+  // Setup a valid buffer collection.
+  const uint64_t kBufferCollectionId = 1;
+  const uint64_t kGlobalBufferCollectionId = 2;
+
+  EXPECT_CALL(*mock_renderer_, RegisterBufferCollection(_, _))
+      .WillOnce(Return(kGlobalBufferCollectionId));
+
+  fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token;
+  flatland.RegisterBufferCollection(kBufferCollectionId, std::move(token));
+  PRESENT(flatland, true);
+
+  // Zero is not a valid image ID.
+  {
+    ImageProperties properties;
+    flatland.CreateImage(0, kBufferCollectionId, kDefaultVmoIndex, std::move(properties));
+    PRESENT(flatland, false);
+  }
+
+  // The buffer collection ID must also be valid.
+  {
+    ImageProperties properties;
+    flatland.CreateImage(1, 0, kDefaultVmoIndex, std::move(properties));
+    PRESENT(flatland, false);
+  }
+
+  // The buffer collection can fail to validate.
+  {
+    EXPECT_CALL(*mock_renderer_, Validate(kGlobalBufferCollectionId))
+        .WillOnce(Return(std::nullopt));
+
+    ImageProperties properties;
+    flatland.CreateImage(1, kBufferCollectionId, kDefaultVmoIndex, std::move(properties));
+    PRESENT(flatland, false);
+  }
+
+  // The remaining error cases tested below occur after the BufferCollection is validated. Because
+  // the results of validation is cached, we set up valid ranges for all properties once here.
+  BufferCollectionMetadata metadata;
+  metadata.vmo_count = 2;
+  metadata.image_constraints.min_coded_width = 50;
+  metadata.image_constraints.max_coded_width = 150;
+  metadata.image_constraints.min_coded_height = 500;
+  metadata.image_constraints.max_coded_height = 1500;
+  EXPECT_CALL(*mock_renderer_, Validate(kGlobalBufferCollectionId)).WillOnce(Return(metadata));
+
+  // The vmo index must be less than the vmo count.
+  {
+    ImageProperties properties;
+    flatland.CreateImage(1, kBufferCollectionId, 3, std::move(properties));
+    PRESENT(flatland, false);
+  }
+
+  // The width must be set.
+  {
+    ImageProperties properties;
+    properties.set_height(kDefaultHeight);
+
+    flatland.CreateImage(1, kBufferCollectionId, kDefaultVmoIndex, std::move(properties));
+    PRESENT(flatland, false);
+  }
+
+  // The width must be within the valid range.
+  {
+    ImageProperties properties;
+    properties.set_width(10);
+    properties.set_height(kDefaultHeight);
+
+    flatland.CreateImage(1, kBufferCollectionId, kDefaultVmoIndex, std::move(properties));
+    PRESENT(flatland, false);
+  }
+  {
+    ImageProperties properties;
+    properties.set_width(1000);
+    properties.set_height(kDefaultHeight);
+
+    flatland.CreateImage(1, kBufferCollectionId, kDefaultVmoIndex, std::move(properties));
+    PRESENT(flatland, false);
+  }
+
+  // The height must be set.
+  {
+    ImageProperties properties;
+    properties.set_width(kDefaultWidth);
+
+    flatland.CreateImage(1, kBufferCollectionId, kDefaultVmoIndex, std::move(properties));
+    PRESENT(flatland, false);
+  }
+
+  // The height must be within the valid range.
+  {
+    ImageProperties properties;
+    properties.set_width(kDefaultWidth);
+    properties.set_height(100);
+
+    flatland.CreateImage(1, kBufferCollectionId, kDefaultVmoIndex, std::move(properties));
+    PRESENT(flatland, false);
+  }
+  {
+    ImageProperties properties;
+    properties.set_width(kDefaultWidth);
+    properties.set_height(10000);
+
+    flatland.CreateImage(1, kBufferCollectionId, kDefaultVmoIndex, std::move(properties));
+    PRESENT(flatland, false);
+  }
+
+  // Two images cannot have the same ID.
+  const uint64_t kId = 1;
+  {
+    ImageProperties properties;
+    properties.set_width(kDefaultWidth);
+    properties.set_height(kDefaultHeight);
+
+    flatland.CreateImage(kId, kBufferCollectionId, kDefaultVmoIndex, std::move(properties));
+    PRESENT(flatland, true);
+  }
+
+  {
+    ImageProperties properties;
+    properties.set_width(kDefaultWidth);
+    properties.set_height(kDefaultHeight);
+
+    flatland.CreateImage(kId, kBufferCollectionId, kDefaultVmoIndex, std::move(properties));
+    PRESENT(flatland, false);
+  }
 }
 
 #undef EXPECT_MATRIX

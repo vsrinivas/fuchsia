@@ -20,16 +20,21 @@ using fuchsia::ui::scenic::internal::ContentLinkToken;
 using fuchsia::ui::scenic::internal::Error;
 using fuchsia::ui::scenic::internal::GraphLink;
 using fuchsia::ui::scenic::internal::GraphLinkToken;
+using fuchsia::ui::scenic::internal::ImageProperties;
 using fuchsia::ui::scenic::internal::LinkProperties;
 using fuchsia::ui::scenic::internal::Orientation;
 using fuchsia::ui::scenic::internal::Vec2;
 
 namespace flatland {
 
-Flatland::Flatland(const std::shared_ptr<LinkSystem>& link_system,
-                   const std::shared_ptr<UberStructSystem>& uber_struct_system)
-    : link_system_(link_system),
+Flatland::Flatland(const std::shared_ptr<Renderer>& renderer,
+                   const std::shared_ptr<LinkSystem>& link_system,
+                   const std::shared_ptr<UberStructSystem>& uber_struct_system,
+                   fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator)
+    : renderer_(renderer),
+      link_system_(link_system),
       uber_struct_system_(uber_struct_system),
+      sysmem_allocator_(std::move(sysmem_allocator)),
       instance_id_(uber_struct_system_->GetNextInstanceId()),
       transform_graph_(instance_id_),
       local_root_(transform_graph_.CreateTransform()) {}
@@ -71,7 +76,7 @@ void Flatland::Present(PresentCallback callback) {
     auto uber_struct = std::make_unique<UberStruct>();
     uber_struct->local_topology = std::move(data.sorted_transforms);
 
-    for (const auto& [handle, child_link] : child_links_) {
+    for (const auto& [link_id, child_link] : child_links_) {
       LinkProperties initial_properties;
       fidl::Clone(child_link.properties, &initial_properties);
       uber_struct->link_properties[child_link.link.graph_handle] = std::move(initial_properties);
@@ -409,6 +414,120 @@ void Flatland::CreateLink(LinkId link_id, ContentLinkToken token, LinkProperties
 
         return true;
       });
+}
+
+void Flatland::RegisterBufferCollection(
+    BufferCollectionId collection_id,
+    fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) {
+  FXL_DCHECK(renderer_);
+
+  pending_operations_.push_back([=, token = std::move(token)]() mutable {
+    if (collection_id == 0) {
+      FXL_LOG(ERROR) << "RegisterBufferCollection called with collection_id 0";
+      return false;
+    }
+
+    if (buffer_collections_.count(collection_id)) {
+      FXL_LOG(ERROR) << "RegisterBufferCollection called with pre-existing collection_id "
+                     << collection_id;
+      return false;
+    }
+
+    auto renderer_collection_id =
+        renderer_->RegisterBufferCollection(sysmem_allocator_.get(), std::move(token));
+    if (renderer_collection_id == Renderer::kInvalidId) {
+      FXL_LOG(ERROR)
+          << "RegisterBufferCollection failed to register the sysmem token with the renderer.";
+      return false;
+    }
+
+    buffer_collections_[collection_id].collection_id = renderer_collection_id;
+
+    return true;
+  });
+}
+
+void Flatland::CreateImage(ImageId image_id, BufferCollectionId collection_id, uint32_t vmo_index,
+                           ImageProperties properties) {
+  FXL_DCHECK(renderer_);
+
+  pending_operations_.push_back([=, properties = std::move(properties)]() {
+    if (image_id == 0) {
+      FXL_LOG(ERROR) << "CreateImage called with image_id 0";
+      return false;
+    }
+
+    if (images_.count(image_id)) {
+      FXL_LOG(ERROR) << "CreateImage called with pre-existing image_id " << image_id;
+      return false;
+    }
+
+    auto buffer_kv = buffer_collections_.find(collection_id);
+
+    if (buffer_kv == buffer_collections_.end()) {
+      FXL_LOG(ERROR) << "CreateImage failed, collection_id " << collection_id << " not found.";
+      return false;
+    }
+
+    auto& buffer_data = buffer_kv->second;
+
+    // If the buffer hasn't been validated yet, try to validate it. If validation fails, it will be
+    // impossible to render this image.
+    if (!buffer_data.metadata.has_value()) {
+      auto metadata = renderer_->Validate(buffer_data.collection_id);
+      if (!metadata.has_value()) {
+        FXL_LOG(ERROR) << "CreateImage failed, collection_id " << collection_id
+                       << " has not been allocated yet.";
+        return false;
+      }
+
+      buffer_data.metadata = std::move(metadata.value());
+    }
+
+    if (vmo_index >= buffer_data.metadata->vmo_count) {
+      FXL_LOG(ERROR) << "CreateImage failed, vmo_index " << vmo_index
+                     << " must be less than vmo_count " << buffer_data.metadata->vmo_count;
+      return false;
+    }
+
+    const auto& image_constraints = buffer_data.metadata->image_constraints;
+
+    if (!properties.has_width()) {
+      FXL_LOG(ERROR) << "CreateImage failed, ImageProperties did not specify a width.";
+      return false;
+    }
+
+    const uint32_t width = properties.width();
+    if (width < image_constraints.min_coded_width || width > image_constraints.max_coded_width) {
+      FXL_LOG(ERROR) << "CreateImage failed, width " << width << " is not within valid range ["
+                     << image_constraints.min_coded_width << ","
+                     << image_constraints.max_coded_width << "]";
+      return false;
+    }
+
+    if (!properties.has_height()) {
+      FXL_LOG(ERROR) << "CreateImage failed, ImageProperties did not specify a height.";
+      return false;
+    }
+
+    const uint32_t height = properties.height();
+    if (height < image_constraints.min_coded_height ||
+        height > image_constraints.max_coded_height) {
+      FXL_LOG(ERROR) << "CreateImage failed, height " << height << " is not within valid range ["
+                     << image_constraints.min_coded_height << ","
+                     << image_constraints.max_coded_height << "]";
+      return false;
+    }
+
+    auto& image_data = images_[image_id];
+    image_data.handle = transform_graph_.CreateTransform();
+    image_data.metadata.collection_id = buffer_data.collection_id;
+    image_data.metadata.vmo_idx = vmo_index;
+    image_data.metadata.width = width;
+    image_data.metadata.height = height;
+
+    return true;
+  });
 }
 
 void Flatland::SetLinkOnTransform(LinkId link_id, TransformId transform_id) {

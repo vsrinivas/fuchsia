@@ -4,6 +4,8 @@
 
 library fuchsia.ui.scenic.internal;
 
+using fuchsia.sysmem;
+
 // The set of error codes returned by Flatland::Present().
 enum Error {
     BAD_OPERATION = 0;
@@ -107,12 +109,28 @@ table LinkProperties {
     1: Vec2 logical_size;
 };
 
+/// The properties of an Image as defined by the client. These properties determine how an Image
+/// uses the backing BufferCollection. See CreateImage() for more information.
+table ImageProperties {
+    /// The width of the Image in pixels.
+    1: uint32 width;
+    /// The height of the Image in pixels.
+    2: uint32 height;
+};
+
 /// A user-defined identifier for a particular transform. See CreateTransform() and
 /// ReleaseTransform() for more information.
 using TransformId = uint64;
 
 /// A user-defined identifier for a particular Link. See CreateLink() for more information.
 using LinkId = uint64;
+
+/// A user-defined identifier for a particular BufferCollection. See RegisterBufferCollection()
+/// for more information.
+using BufferCollectionId = uint64;
+
+/// A user-defined identifier for a particular Image. See CreateImage() for more information.
+using ImageId = uint64;
 
 /// Each Flatland instance contains a Graph, which consists of a set of objects, and the
 /// relationships between those objects. The client can specify a subset of those objects
@@ -275,8 +293,38 @@ protocol Flatland {
     /// subsequent changes to the logical_size will have no effect on the Content size.
     ///
     /// The logical_size must have positive X and Y components.
+    ///
+    /// Zero is not a valid link id. All other values are valid, assuming they are not already
+    /// in use (see ReleaseLink() for more details).
     CreateLink(LinkId link_id, ContentLinkToken token, LinkProperties properties,
                request<ContentLink> content_link);
+
+    /// A BufferCollection is a set of VMOs created by Sysmem and shared by a number of
+    /// participants, one of which is the Flatland Renderer. Some content, such as Images, use a
+    /// BufferCollection as their backing memory.
+    ///
+    /// Flatland participates in the allocation of buffers by setting constraints on the
+    /// BufferCollection referenced by the token. It will not block on buffers being allocated
+    /// until the client creates content using the BufferCollection.
+    ///
+    /// Zero is not a valid buffer collection id. All other values are valid, assuming they are not
+    /// already in use (see UnregisterBufferCollection() for more details).
+    RegisterBufferCollection(BufferCollectionId buffer_id,
+                             fuchsia.sysmem.BufferCollectionToken token);
+
+    /// An Image is a bitmap backed by a specific VMO in a BufferCollection.
+    ///
+    /// Image creation requires an allocated BufferCollection. This function will fail unless all
+    /// clients of the specified BufferCollection have set their constraints.
+    ///
+    /// The Image must reference a valid VMO index and must have ImageProperties that fall within
+    /// the constraints specified by the backing BufferCollection (i.e. width and height within a
+    /// valid range, accepted pixel format, etc.)
+    ///
+    /// Zero is not a valid image id. All other values are valid, assuming they are not already in
+    /// use (see ReleaseImage() for more details).
+    CreateImage(ImageId image_id, BufferCollectionId buffer_id, uint32 vmo_index,
+                ImageProperties properties);
 
     // Content management
 

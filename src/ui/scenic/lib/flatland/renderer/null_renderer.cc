@@ -8,7 +8,7 @@
 
 namespace flatland {
 
-BufferCollectionId NullRenderer::RegisterBufferCollection(
+GlobalBufferCollectionId NullRenderer::RegisterBufferCollection(
     fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
     fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) {
   auto result = BufferCollectionInfo::New(sysmem_allocator, std::move(token));
@@ -20,7 +20,7 @@ BufferCollectionId NullRenderer::RegisterBufferCollection(
 
   // Atomically increment the id generator and create a new identifier for the
   // current buffer collection.
-  BufferCollectionId identifier = id_generator_++;
+  GlobalBufferCollectionId identifier = id_generator_++;
 
   // Multiple threads may be attempting to read/write from |collection_map_| so we
   // lock this function here.
@@ -30,7 +30,8 @@ BufferCollectionId NullRenderer::RegisterBufferCollection(
   return identifier;
 }
 
-std::optional<BufferCollectionMetadata> NullRenderer::Validate(BufferCollectionId collection_id) {
+std::optional<BufferCollectionMetadata> NullRenderer::Validate(
+    GlobalBufferCollectionId collection_id) {
   // TODO(44335): Convert this to a lock-free structure. This is trickier than in the other two
   // cases for this class since we are mutating the buffer collection in this call. So we can
   // only convert this to a lock free structure if the elements in the map are changed to be values

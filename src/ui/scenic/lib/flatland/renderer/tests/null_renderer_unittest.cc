@@ -17,7 +17,7 @@ using NullRendererTest = RendererTest;
 
 // Make sure a valid token can be used to register a buffer collection. Make
 // sure also that multiple calls to register buffer collection return
-// different values for the BufferCollectionId.
+// different values for the GlobalBufferCollectionId.
 TEST_F(NullRendererTest, RegisterCollectionTest) {
   auto tokens = CreateSysmemTokens(sysmem_allocator_.get());
   auto tokens2 = CreateSysmemTokens(sysmem_allocator_.get());
@@ -179,7 +179,7 @@ TEST_F(NullRendererTest, MultithreadingTest) {
   // Validate the ids here one more time to make sure the renderer's internal
   // state hasn't been corrupted. The ids are generated incrementally so we
   // know that we should have id values in the range [1, kNumThreads].
-  for (BufferCollectionId i = 1; i <= kNumThreads; i++) {
+  for (GlobalBufferCollectionId i = 1; i <= kNumThreads; i++) {
     // The buffer collection *should* be valid here.
     auto result = renderer.Validate(i);
     EXPECT_NE(result, std::nullopt);
