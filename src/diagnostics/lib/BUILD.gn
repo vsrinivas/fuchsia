@@ -9,6 +9,7 @@ group("tests") {
     "libtriage:libtriage_test",
     "selectors:tests",
     "streams/cpp:tests",
+    "streams/dart:tests",
     "validating-log-listener:tests",
   ]
 }
