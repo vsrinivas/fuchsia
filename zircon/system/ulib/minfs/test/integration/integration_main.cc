@@ -19,11 +19,10 @@
 fs::Environment* fs::g_environment;
 
 int main(int argc, char** argv) {
-  const char kHelp[] = "Blobfs integration tests";
+  const char kHelp[] = "minfs integration tests";
   fs::Environment::TestConfig config = {};
   if (!config.GetOptions(argc, argv)) {
     printf("%s\n%s\n", kHelp, config.HelpMessage());
-    return -1;
   }
   if (config.show_help) {
     printf("%s\n%s\n", kHelp, config.HelpMessage());
