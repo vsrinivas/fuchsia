@@ -74,6 +74,13 @@ const FRAGMENT_BLOCK_SIZE: u8 = 8;
 /// IPv6 fragment extension header's fragment offset field are 13 bits wide.
 const MAX_FRAGMENT_BLOCKS: u16 = 8191;
 
+/// Maximum number of bytes of all currently cached fragments per IP protocol.
+///
+/// If the current cache size is less than this number, a new fragment can be cached
+/// (even if this will result in the total cache size exceeding this threshold). If
+/// the current cache size >= this number, the incoming fragment will be dropped.
+const MAX_FRAGMENT_CACHE_SIZE: usize = 4 * 1024 * 1024;
+
 /// The execution context for the fragment cache.
 pub(crate) trait FragmentContext<I: Ip>:
     TimerContext<FragmentCacheKey<I::Addr>> + StateContext<IpLayerFragmentCache<I>>
@@ -132,6 +139,9 @@ pub(crate) enum FragmentProcessingState<B: ByteSlice, I: Ip> {
     /// packet.
     NeedMoreFragments,
 
+    /// Cannot process the fragment because `MAX_FRAGMENT_CACHE_SIZE` is reached.
+    OutOfMemory,
+
     /// Successfully processed the provided fragment. We now have all the fragments
     /// we need to reassemble the packet. The caller must create a buffer with capacity
     /// for at least `packet_len` bytes and provide the buffer and `key` to
@@ -183,6 +193,8 @@ struct FragmentCacheData {
     //               For now, a `BTreeSet` is used since Rust provides one and it does the job of
     //               keeping the list of gaps in increasing order when searching, inserting and
     //               removing. How many fragments for a packet will we get in practice though?
+    // TODO(50830): O(n) complexity per fragment is a DDOS vulnerability: this should be
+    //              refactored to be O(log(n)).
     missing_blocks: BTreeSet<(u16, u16)>,
 
     /// Received fragment blocks.
@@ -240,11 +252,17 @@ type FragmentCache<A> = HashMap<FragmentCacheKey<A>, FragmentCacheData>;
 #[derive(Debug)]
 pub(crate) struct IpLayerFragmentCache<I: Ip> {
     cache: FragmentCache<I::Addr>,
+    cache_size: usize,
+    threshold: usize,
 }
 
 impl<I: Ip> IpLayerFragmentCache<I> {
     pub(crate) fn new() -> Self {
-        IpLayerFragmentCache { cache: FragmentCache::new() }
+        IpLayerFragmentCache {
+            cache: FragmentCache::new(),
+            cache_size: 0,
+            threshold: MAX_FRAGMENT_CACHE_SIZE,
+        }
     }
 
     /// Handle a reassembly timer.
@@ -253,7 +271,22 @@ impl<I: Ip> IpLayerFragmentCache<I> {
     /// `key`.
     fn handle_reassembly_timer(&mut self, key: FragmentCacheKey<I::Addr>) {
         // If a timer fired, the `key` must still exist in our fragment cache.
-        assert!(self.cache.remove(&key).is_some());
+        self.remove_data(&key);
+    }
+
+    fn above_cache_size_threshold(&self) -> bool {
+        self.cache_size >= self.threshold
+    }
+
+    fn increment_cache_size(&mut self, sz: usize) {
+        assert!(!self.above_cache_size_threshold());
+        self.cache_size += sz;
+    }
+
+    fn remove_data(&mut self, key: &FragmentCacheKey<I::Addr>) -> FragmentCacheData {
+        let data = self.cache.remove(key).unwrap();
+        self.cache_size -= data.total_size;
+        data
     }
 }
 
@@ -269,6 +302,10 @@ pub(crate) fn process_fragment<I: Ip, C: FragmentContext<I>, B: ByteSlice>(
 where
     <I as IpExtByteSlice<B>>::Packet: FragmentablePacket,
 {
+    if ctx.get_state_mut().above_cache_size_threshold() {
+        return FragmentProcessingState::OutOfMemory;
+    }
+
     // Get the fragment data.
     let (id, offset, m_flag) = packet.fragment_data();
 
@@ -362,7 +399,7 @@ where
             //               does not say we MUST, so we would not be violating
             //               the RFC if we don't check for this case and just
             //               drop the packet.
-            assert!(ctx.get_state_mut().cache.remove(&key).is_some());
+            ctx.get_state_mut().remove_data(&key);
             assert!(ctx.cancel_timer(key).is_some());
 
             return FragmentProcessingState::InvalidFragment;
@@ -436,29 +473,34 @@ where
         assert!(found_gap.1 == fragment_blocks_range.1 || !m_flag && found_gap.1 == core::u16::MAX);
     }
 
+    let mut added_bytes = 0;
     // Get header buffer from `packet` if its fragment offset equals to 0.
     if offset == 0 {
         assert!(fragment_data.header.is_none());
         let header = get_header::<B, I>(&packet);
-        fragment_data.total_size += header.len();
+        added_bytes = header.len();
         fragment_data.header = Some(header);
     }
 
     // Add our `packet`'s body to the store of body fragments.
     let mut body = Vec::with_capacity(packet.body().len());
     body.extend_from_slice(packet.body());
-    fragment_data.total_size += body.len();
+    added_bytes += body.len();
+    fragment_data.total_size += added_bytes;
     fragment_data.body_fragments.push(PacketBodyFragment::new(offset, body));
 
     // If we still have missing fragments, let the caller know that we are still
     // waiting on some fragments. Otherwise, we let them know we are ready to
     // reassemble and give them a key and the final packet length so they can
     // allocate a sufficient buffer and call `reassemble_packet`.
-    if fragment_data.missing_blocks.is_empty() {
+    let result = if fragment_data.missing_blocks.is_empty() {
         FragmentProcessingState::Ready { key, packet_len: fragment_data.total_size }
     } else {
         FragmentProcessingState::NeedMoreFragments
-    }
+    };
+
+    ctx.get_state_mut().increment_cache_size(added_bytes);
+    result
 }
 
 /// Attempts to reassemble a packet.
@@ -509,7 +551,7 @@ pub(crate) fn reassemble_packet<
 
     // Take the header and body fragments from the cache data and remove the
     // cache data associated with `key` since it will no longer be needed.
-    let data = ctx.get_state_mut().cache.remove(key).unwrap();
+    let data = ctx.get_state_mut().remove_data(key);
     let (header, body_fragments) = (data.header.unwrap(), data.body_fragments);
 
     // Attempt to actually reassemble the packet.
@@ -781,6 +823,16 @@ mod tests {
         }};
     }
 
+    macro_rules! assert_frag_proc_state_oom {
+        ($lhs:expr) => {{
+            let lhs_val = $lhs;
+            match lhs_val {
+                FragmentProcessingState::OutOfMemory => lhs_val,
+                _ => panic!("{:?} is not `OutOfMemory`", lhs_val),
+            }
+        }};
+    }
+
     macro_rules! assert_frag_proc_state_ready {
         ($lhs:expr, $src_ip:expr, $dst_ip:expr, $fragment_id:expr, $packet_len:expr) => {{
             let lhs_val = $lhs;
@@ -817,6 +869,9 @@ mod tests {
 
         /// The packet fragment is invalid.
         Invalid,
+
+        /// The Cache is full.
+        OutOfMemory,
     }
 
     /// Get an IPv4 packet builder.
@@ -837,6 +892,17 @@ mod tests {
             10,
             IpProto::Tcp,
         )
+    }
+
+    /// Validate that IpLayerFragmentCache has correct cache_size.
+    fn validate_cache_size<I: Ip>(cache: &IpLayerFragmentCache<I>) {
+        let mut sz: usize = 0;
+
+        for v in cache.cache.values() {
+            sz += v.total_size;
+        }
+
+        assert_eq!(sz, cache.cache_size);
     }
 
     /// Process an IP fragment depending on the `Ip` `process_ip_fragment` is
@@ -880,7 +946,9 @@ mod tests {
         let m_flag = fragment_offset < (fragment_count - 1);
         // Use fragment_id to offset the body data values so not all fragment
         // packets with the same `fragment_offset` will have the same data.
-        let body_offset = fragment_id as u8;
+        // Also limit body_offset to some arbitrary small number, as otherwise
+        // a runtime integer overflow can happen in body.extend() call below.
+        let body_offset = fragment_id as u8 % 43;
 
         let mut builder = get_ipv4_builder();
         builder.id(fragment_id);
@@ -922,6 +990,9 @@ mod tests {
             }
             ExpectedResult::Invalid => {
                 assert_frag_proc_state_invalid!(process_fragment::<Ipv4, _, &[u8]>(ctx, packet));
+            }
+            ExpectedResult::OutOfMemory => {
+                assert_frag_proc_state_oom!(process_fragment::<Ipv4, _, &[u8]>(ctx, packet));
             }
         }
     }
@@ -994,6 +1065,9 @@ mod tests {
             }
             ExpectedResult::Invalid => {
                 assert_frag_proc_state_invalid!(process_fragment::<Ipv6, _, &[u8]>(ctx, packet));
+            }
+            ExpectedResult::OutOfMemory => {
+                assert_frag_proc_state_oom!(process_fragment::<Ipv6, _, &[u8]>(ctx, packet));
             }
         }
     }
@@ -1090,6 +1164,7 @@ mod tests {
 
         // Make sure no timers in the dispatcher yet.
         assert_eq!(ctx.timers().len(), 0);
+        assert_eq!(ctx.get_state_mut().cache_size, 0);
 
         //
         // Test that we properly reset fragment cache on timer.
@@ -1099,22 +1174,26 @@ mod tests {
         process_ip_fragment::<I, _>(&mut ctx, fragment_id, 0, 3, ExpectedResult::NeedMore);
         // Make sure a timer got added.
         assert_eq!(ctx.timers().len(), 1);
+        validate_cache_size(ctx.get_state());
 
         // Process fragment #1
         process_ip_fragment::<I, _>(&mut ctx, fragment_id, 1, 3, ExpectedResult::NeedMore);
         // Make sure no new timers got added or fired.
         assert_eq!(ctx.timers().len(), 1);
+        validate_cache_size(ctx.get_state());
 
         // Process fragment #2
         process_ip_fragment::<I, _>(&mut ctx, fragment_id, 2, 3, ExpectedResult::Ready);
         // Make sure no new timers got added or fired.
         assert_eq!(ctx.timers().len(), 1);
+        validate_cache_size(ctx.get_state());
 
         // Trigger the timer (simulate a timer for the fragmented packet)
         assert!(ctx.trigger_next_timer());
 
         // Make sure no other times exist..
         assert_eq!(ctx.timers().len(), 0);
+        assert_eq!(ctx.get_state_mut().cache_size, 0);
 
         // Attempt to reassemble the packet but get an error since the fragment
         // data would have been reset/cleared.
@@ -1130,6 +1209,39 @@ mod tests {
             reassemble_packet::<I, _, &mut [u8], _>(&mut ctx, &key, &mut buffer).unwrap_err(),
             FragmentReassemblyError::InvalidKey,
         );
+    }
+
+    #[ip_test]
+    fn test_ip_fragment_cache_oom<I: Ip + TestIpExt>() {
+        let mut ctx = DummyContext::default();
+        let mut fragment_id = 0;
+        const THRESHOLD: usize = 8196usize;
+
+        assert_eq!(ctx.get_state_mut().cache_size, 0);
+        ctx.get_state_mut().threshold = THRESHOLD;
+
+        //
+        // Test that when cache size exceeds the threshold, process_fragment
+        // returns OOM.
+        //
+
+        while ctx.get_state_mut().cache_size < THRESHOLD {
+            process_ip_fragment::<I, _>(&mut ctx, fragment_id, 0, 3, ExpectedResult::NeedMore);
+            validate_cache_size(ctx.get_state());
+            fragment_id += 1;
+        }
+
+        // Now that the cache is at or above thre threshold, observe OOM.
+        process_ip_fragment::<I, _>(&mut ctx, fragment_id, 0, 3, ExpectedResult::OutOfMemory);
+        validate_cache_size(ctx.get_state());
+
+        // Trigger the timers, which will clear the cache.
+        ctx.trigger_timers_for(Duration::from_secs(REASSEMBLY_TIMEOUT_SECONDS + 1));
+        assert_eq!(ctx.get_state_mut().cache_size, 0);
+        validate_cache_size(ctx.get_state());
+
+        // Can process fragments again.
+        process_ip_fragment::<I, _>(&mut ctx, fragment_id, 0, 3, ExpectedResult::NeedMore);
     }
 
     #[ip_test]
@@ -1153,6 +1265,7 @@ mod tests {
         let mut ctx = DummyContext::default();
         let fragment_id = 0;
 
+        assert_eq!(ctx.get_state_mut().cache_size, 0);
         //
         // Test that fragment bodies must be a multiple of
         // `FRAGMENT_BLOCK_SIZE`, except for the last fragment.
@@ -1195,6 +1308,7 @@ mod tests {
             fragment_id,
             35
         );
+        validate_cache_size(ctx.get_state());
         let mut buffer: Vec<u8> = vec![0; packet_len];
         let mut buffer = &mut buffer[..];
         let packet =
@@ -1202,6 +1316,7 @@ mod tests {
         let mut expected_body: Vec<u8> = Vec::new();
         expected_body.extend(0..15);
         assert_eq!(packet.body(), &expected_body[..]);
+        assert_eq!(ctx.get_state_mut().cache_size, 0);
     }
 
     #[test]
@@ -1209,6 +1324,7 @@ mod tests {
         let mut ctx = DummyContext::default();
         let fragment_id = 0;
 
+        assert_eq!(ctx.get_state_mut().cache_size, 0);
         //
         // Test that fragment bodies must be a multiple of
         // `FRAGMENT_BLOCK_SIZE`, except for the last fragment.
@@ -1261,6 +1377,7 @@ mod tests {
             fragment_id,
             55
         );
+        validate_cache_size(ctx.get_state());
         let mut buffer: Vec<u8> = vec![0; packet_len];
         let mut buffer = &mut buffer[..];
         let packet =
@@ -1268,6 +1385,7 @@ mod tests {
         let mut expected_body: Vec<u8> = Vec::new();
         expected_body.extend(0..15);
         assert_eq!(packet.body(), &expected_body[..]);
+        assert_eq!(ctx.get_state_mut().cache_size, 0);
     }
 
     #[ip_test]

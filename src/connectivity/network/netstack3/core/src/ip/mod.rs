@@ -870,6 +870,9 @@ macro_rules! process_fragment {
             FragmentProcessingState::InvalidFragment => {
                 trace!("receive_ip_packet: fragmented, invalid")
             }
+            FragmentProcessingState::OutOfMemory => {
+                trace!("receive_ip_packet: fragmented, dropped because OOM")
+            }
         };
     }};
 }
