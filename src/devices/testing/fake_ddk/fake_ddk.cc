@@ -42,11 +42,19 @@ Bind::Bind() {
 
 bool Bind::Ok() {
   EXPECT_TRUE(add_called_);
+  EXPECT_EQ(has_init_hook_, init_reply_.has_value());
+  if (init_reply_.has_value()) {
+    EXPECT_OK(init_reply_.value());
+  }
   EXPECT_TRUE(remove_called_);
   EXPECT_FALSE(bad_parent_);
   EXPECT_FALSE(bad_device_);
   // TODO(ZX-4568): Remove and make void once all dependent tests migrate to zxtest.
   return !zxtest::Runner::GetInstance()->CurrentTestHasFailures();
+}
+
+zx_status_t Bind::WaitUntilInitComplete() {
+  return sync_completion_wait_deadline(&init_replied_sync_, zx::time::infinite().get());
 }
 
 zx_status_t Bind::WaitUntilRemove() {
@@ -82,6 +90,9 @@ zx_status_t Bind::DeviceAdd(zx_driver_t* drv, zx_device_t* parent, device_add_ar
   }
 
   if (args && args->ops) {
+    if (args->ops->init) {
+      has_init_hook_ = true;
+    }
     if (args->ops->message) {
       if ((status = fidl_.SetMessageOp(args->ctx, args->ops->message)) < 0) {
         return status;
@@ -95,7 +106,21 @@ zx_status_t Bind::DeviceAdd(zx_driver_t* drv, zx_device_t* parent, device_add_ar
 
   *out = kFakeDevice;
   add_called_ = true;
+  // This needs to come after setting |out|, as this sets the device's internal |zxdev_|,
+  // which needs to be present for the InitTxn.
+  if (has_init_hook_) {
+    args->ops->init(args->ctx);
+  }
   return ZX_OK;
+}
+
+void Bind::DeviceInitReply(zx_device_t* device, zx_status_t status,
+                           const device_init_reply_args_t* args) {
+  if (device != kFakeDevice) {
+    bad_device_ = true;
+  }
+  init_reply_ = status;
+  sync_completion_signal(&init_replied_sync_);
 }
 
 zx_status_t Bind::DeviceRemove(zx_device_t* device) {
@@ -261,6 +286,15 @@ void device_async_remove(zx_device_t* device) {
     return;
   }
   return fake_ddk::Bind::Instance()->DeviceAsyncRemove(device);
+}
+
+__EXPORT
+void device_init_reply(zx_device_t* device, zx_status_t status,
+                       const device_init_reply_args_t* args) {
+  if (!fake_ddk::Bind::Instance()) {
+    return;
+  }
+  return fake_ddk::Bind::Instance()->DeviceInitReply(device, status, args);
 }
 
 __EXPORT

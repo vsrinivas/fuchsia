@@ -60,6 +60,10 @@ class Bind {
   // with ZX_ERR_BAD_STATE.
   void ExpectMetadata(const void* data, size_t data_length);
 
+  // Blocking wait until InitTxn.Reply() is called. Use this if you expect the init
+  // reply to be called in a different thread.
+  zx_status_t WaitUntilInitComplete();
+
   // Blocking wait until DdkRemove is called. Use this if you expect unbind/remove to
   // be called in a different thread.
   zx_status_t WaitUntilRemove();
@@ -97,6 +101,8 @@ class Bind {
 
   virtual zx_status_t DeviceAdd(zx_driver_t* drv, zx_device_t* parent, device_add_args_t* args,
                                 zx_device_t** out);
+  virtual void DeviceInitReply(zx_device_t* device, zx_status_t status,
+                               const device_init_reply_args_t* args);
   virtual zx_status_t DeviceRemove(zx_device_t* device);
   virtual void DeviceAsyncRemove(zx_device_t* device);
   virtual zx_status_t DeviceAddMetadata(zx_device_t* dev, uint32_t type, const void* data,
@@ -126,6 +132,8 @@ class Bind {
 
   friend zx_status_t(::device_remove_deprecated)(zx_device_t* device);
   friend void(::device_async_remove)(zx_device_t* device);
+  friend void(::device_init_reply)(zx_device_t* device, zx_status_t status,
+                                   const device_init_reply_args_t* args);
   friend void(::device_unbind_reply)(zx_device_t* device);
   friend void(::device_suspend_reply)(zx_device_t* dev, zx_status_t status, uint8_t out_state);
 
@@ -175,6 +183,10 @@ class Bind {
 
   fbl::Array<ProtocolEntry> protocols_;
   FidlMessenger fidl_;
+
+  bool has_init_hook_ = false;
+  std::optional<zx_status_t> init_reply_;
+  sync_completion_t init_replied_sync_;
 
   UnbindOp* unbind_op_ = nullptr;
   void* op_ctx_ = nullptr;
