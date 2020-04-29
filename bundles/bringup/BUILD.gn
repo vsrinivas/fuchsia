@@ -12,7 +12,7 @@ group("tests") {
     "//src/devices/block/drivers/fvm/test/integration:fvm-driver-integration-package",
     "//src/devices/block/lib/scsi/test:scsilib-disk-test-package",
     "//src/devices/bus/drivers/pci/test:pci-unit-package",
-    "//src/devices/lib/dev-operation:operation-test",
+    "//src/devices/lib/dev-operation:operation-test-package",
     "//src/devices/misc/drivers/cpu-trace:perf-mon-tests-package",
     "//src/devices/nand/drivers/broker/test:nand-broker-package",
     "//src/devices/nand/drivers/broker/test:nandpart-broker-package",
