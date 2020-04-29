@@ -17,8 +17,9 @@ use std::fs::File;
 use std::io::Read;
 use std::ops::Deref;
 use std::path::PathBuf;
+use thiserror::Error;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Error, Clone, PartialEq)]
 pub enum CompilerError {
     FileError(errors::FileError),
     BindParserError(parser_common::BindParserError),

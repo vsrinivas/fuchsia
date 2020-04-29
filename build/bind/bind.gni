@@ -52,6 +52,7 @@ template("bind_rules") {
     depfile = "$target_gen_dir/$target_name.d"
 
     args = [
+      "compile",
       rebase_path(invoker.rules, root_build_dir),
       "--output",
       rebase_path("$target_gen_dir/$output_file", root_build_dir),

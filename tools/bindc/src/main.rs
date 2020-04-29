@@ -16,16 +16,7 @@ use structopt::StructOpt;
 const AUTOBIND_PROPERTY: u32 = 0x0002;
 
 #[derive(StructOpt, Debug)]
-struct Opt {
-    /// Output file. The compiler emits a C header file.
-    #[structopt(short = "o", long = "output", parse(from_os_str))]
-    output: Option<PathBuf>,
-
-    /// The bind program input file. This should be in the format described in
-    /// //tools/bindc/README.md.
-    #[structopt(parse(from_os_str))]
-    input: PathBuf,
-
+struct SharedOptions {
     /// The bind library input files. These may be included by the bind program. They should be in
     /// the format described in //tools/bindc/README.md.
     #[structopt(short = "i", long = "include", parse(from_os_str))]
@@ -37,25 +28,55 @@ struct Opt {
     #[structopt(short = "f", long = "include-file", parse(from_os_str))]
     include_file: Option<PathBuf>,
 
-    /// Specify a path for the compiler to generate a depfile. A depfile contain, in Makefile
-    /// format, the files that this invocation of the compiler depends on including all bind
-    /// libraries and the bind program input itself. An output file must be provided to generate a
-    /// depfile.
-    #[structopt(long = "depfile", parse(from_os_str))]
-    depfile: Option<PathBuf>,
+    /// The bind program input file. This should be in the format described in
+    /// //tools/bindc/README.md.
+    #[structopt(parse(from_os_str))]
+    input: PathBuf,
+}
 
-    /// A file containing the properties of a specific device, as a list of key-value pairs.
-    /// This will be used as the input to the bind program debugger.
-    /// In debug mode no compiler output is produced, so --output should not be specified.
-    #[structopt(short = "d", long = "debug", parse(from_os_str))]
-    device_file: Option<PathBuf>,
+#[derive(StructOpt, Debug)]
+enum Command {
+    #[structopt(name = "compile")]
+    Compile {
+        #[structopt(flatten)]
+        options: SharedOptions,
 
-    // TODO(43400): Eventually this option should be removed when we can define this configuration
-    // in the driver's component manifest.
-    /// Disable automatically binding the driver so that the driver must be bound on a user's
-    /// request.
-    #[structopt(short = "a", long = "disable-autobind")]
-    disable_autobind: bool,
+        /// Output file. The compiler emits a C header file.
+        #[structopt(short = "o", long = "output", parse(from_os_str))]
+        output: Option<PathBuf>,
+
+        /// Specify a path for the compiler to generate a depfile. A depfile contain, in Makefile
+        /// format, the files that this invocation of the compiler depends on including all bind
+        /// libraries and the bind program input itself. An output file must be provided to generate a
+        /// depfile.
+        #[structopt(short = "d", long = "depfile", parse(from_os_str))]
+        depfile: Option<PathBuf>,
+
+        // TODO(43400): Eventually this option should be removed when we can define this configuration
+        // in the driver's component manifest.
+        /// Disable automatically binding the driver so that the driver must be bound on a user's
+        /// request.
+        #[structopt(short = "a", long = "disable-autobind")]
+        disable_autobind: bool,
+    },
+    #[structopt(name = "debug")]
+    Debug {
+        #[structopt(flatten)]
+        options: SharedOptions,
+
+        /// A file containing the properties of a specific device, as a list of key-value pairs.
+        /// This will be used as the input to the bind program debugger.
+        #[structopt(short = "d", long = "debug", parse(from_os_str))]
+        device_file: PathBuf,
+    },
+}
+
+fn main() {
+    let command = Command::from_iter(std::env::args());
+    if let Err(err) = handle_command(command) {
+        eprintln!("{}", err);
+        std::process::exit(1);
+    }
 }
 
 fn write_depfile(output: &PathBuf, input: &PathBuf, includes: &[PathBuf]) -> Result<String, Error> {
@@ -76,7 +97,7 @@ fn write_depfile(output: &PathBuf, input: &PathBuf, includes: &[PathBuf]) -> Res
 fn write_bind_template(
     mut instructions: Vec<InstructionDebug>,
     disable_autobind: bool,
-) -> Option<String> {
+) -> Result<String, Error> {
     if disable_autobind {
         instructions.insert(
             0,
@@ -96,82 +117,66 @@ fn write_bind_template(
             bind_count = bind_count,
             binding = binding,
         ))
-        .ok()?;
-    Some(output)
+        .context("Failed to format output")?;
+    Ok(output)
 }
 
-fn main() {
-    let opt = Opt::from_iter(std::env::args());
-
-    if opt.output.is_some() && opt.device_file.is_some() {
-        eprintln!("Error: options --output and --debug are mutually exclusive.");
-        std::process::exit(1);
+fn handle_command(command: Command) -> Result<(), Error> {
+    match command {
+        Command::Debug { options, device_file } => {
+            let includes = handle_includes(options.include, options.include_file)?;
+            offline_debugger::debug(options.input, &includes, device_file)?;
+            Ok(())
+        }
+        Command::Compile { options, output, depfile, disable_autobind } => {
+            let includes = handle_includes(options.include, options.include_file)?;
+            handle_compile(options.input, includes, disable_autobind, output, depfile)
+        }
     }
+}
 
-    let mut includes = opt.include;
-
-    if let Some(include_file) = opt.include_file {
-        let file = File::open(include_file).unwrap();
+fn handle_includes(
+    mut includes: Vec<PathBuf>,
+    include_file: Option<PathBuf>,
+) -> Result<Vec<PathBuf>, Error> {
+    if let Some(include_file) = include_file {
+        let file = File::open(include_file).context("Failed to open include file")?;
         let reader = io::BufReader::new(file);
-        let filenames = reader.lines().map(|line| {
-            if line.is_err() {
-                eprintln!("Failed to read include file");
-                std::process::exit(1);
-            }
-            PathBuf::from(line.unwrap())
-        });
-        includes.extend(filenames);
+        let mut filenames = reader
+            .lines()
+            .map(|line| line.map(PathBuf::from))
+            .map(|line| line.context("Failed to read include file"))
+            .collect::<Result<Vec<_>, Error>>()?;
+        includes.append(&mut filenames);
     }
+    Ok(includes)
+}
 
-    if let Some(device_file) = opt.device_file {
-        if let Err(err) = offline_debugger::debug(opt.input, &includes, device_file) {
-            eprintln!("Debugger failed with error:");
-            eprintln!("{}", err);
-            std::process::exit(1);
-        }
-        return;
-    }
-
-    let mut output: Box<dyn io::Write> = if let Some(output) = opt.output {
+fn handle_compile(
+    input: PathBuf,
+    includes: Vec<PathBuf>,
+    disable_autobind: bool,
+    output: Option<PathBuf>,
+    depfile: Option<PathBuf>,
+) -> Result<(), Error> {
+    let mut output_writer: Box<dyn io::Write> = if let Some(output) = output {
         // If there's an output filename then we can generate a depfile too.
-        if let Some(filename) = opt.depfile {
-            let mut file = File::create(filename).unwrap();
-            let depfile_string = write_depfile(&output, &opt.input, &includes);
-            if depfile_string.is_err() {
-                eprintln!("Failed to create depfile");
-                std::process::exit(1);
-            }
-            let r = file.write(depfile_string.unwrap().as_bytes());
-            if r.is_err() {
-                eprintln!("Failed to write to depfile");
-                std::process::exit(1);
-            }
+        if let Some(filename) = depfile {
+            let mut file = File::create(filename).context("Failed to open depfile")?;
+            let depfile_string =
+                write_depfile(&output, &input, &includes).context("Failed to create depfile")?;
+            file.write(depfile_string.as_bytes()).context("Failed to write to depfile")?;
         }
-
-        Box::new(File::create(output).unwrap())
+        Box::new(File::create(output).context("Failed to create output file")?)
     } else {
         Box::new(io::stdout())
     };
 
-    match compiler::compile(opt.input, &includes) {
-        Ok(instructions) => match write_bind_template(instructions, opt.disable_autobind) {
-            Some(out_string) => {
-                let r = output.write(out_string.as_bytes());
-                if r.is_err() {
-                    eprintln!("Failed to write to output");
-                    std::process::exit(1);
-                }
-            }
-            None => {
-                eprintln!("Failed to format output");
-                std::process::exit(1);
-            }
-        },
-        Err(err) => {
-            eprintln!("{}", err);
-            std::process::exit(1);
-        }
-    }
+    let instructions = compiler::compile(input, &includes)?;
+    let output_string = write_bind_template(instructions, disable_autobind)?;
+
+    output_writer.write(output_string.as_bytes()).context("Failed to write to output")?;
+    Ok(())
 }
 
 #[cfg(test)]

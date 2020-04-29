@@ -12,8 +12,9 @@ use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::path::PathBuf;
 use std::str::FromStr;
+use thiserror::Error;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Error, Clone, PartialEq)]
 pub enum DebuggerError {
     FileError(errors::FileError),
     BindParserError(parser_common::BindParserError),

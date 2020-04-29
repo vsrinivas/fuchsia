@@ -41,6 +41,8 @@ rustc_library("lib") {
     "//third_party/rust_crates:num-derive",
     "//third_party/rust_crates:num-traits",
     "//third_party/rust_crates:regex",
+    "//third_party/rust_crates:regex",
+    "//third_party/rust_crates:thiserror",
     "//zircon/system/fidl/fuchsia-device-manager:fuchsia-device-manager-rustc",
   ]
 }
