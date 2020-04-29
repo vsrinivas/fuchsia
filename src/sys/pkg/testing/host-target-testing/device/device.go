@@ -20,6 +20,7 @@ import (
 	"fuchsia.googlesource.com/host_target_testing/artifacts"
 	"fuchsia.googlesource.com/host_target_testing/packages"
 	"fuchsia.googlesource.com/host_target_testing/sl4f"
+	"fuchsia.googlesource.com/host_target_testing/updater"
 	"go.fuchsia.dev/fuchsia/tools/net/sshutil"
 
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
@@ -177,7 +178,8 @@ func (c *Client) RebootToRecovery(ctx context.Context) error {
 func (c *Client) OTAToRecovery(ctx context.Context, repo *packages.Repository) error {
 	logger.Infof(ctx, "OTAing to recovery")
 
-	if err := c.DownloadOTA(ctx, repo, "fuchsia-pkg://fuchsia.com/update-to-zedboot/0"); err != nil {
+	u := updater.NewSystemUpdater(repo, "fuchsia-pkg://fuchsia.com/update-to-zedboot/0")
+	if err := u.Update(ctx, c); err != nil {
 		return fmt.Errorf("failed to download OTA: %w", err)
 	}
 
@@ -217,57 +219,6 @@ func (c *Client) ReadBasePackages(ctx context.Context) (map[string]string, error
 	}
 
 	return pkgs, nil
-}
-
-// TriggerSystemOTA gets the device to perform a system update, ensuring it
-// reboots as expected.
-func (c *Client) TriggerSystemOTA(ctx context.Context, repo *packages.Repository) error {
-	logger.Infof(ctx, "Triggering OTA")
-	startTime := time.Now()
-
-	basePackages, err := c.ReadBasePackages(ctx)
-	if err != nil {
-		return err
-	}
-
-	updateBinMerkle, ok := basePackages["update-bin/0"]
-	if !ok {
-		return fmt.Errorf("base packages doesn't include update-bin/0 package")
-	}
-
-	return c.ExpectReboot(ctx, func() error {
-		server, err := c.ServePackageRepository(ctx, repo, "trigger-ota", true)
-		if err != nil {
-			return fmt.Errorf("error setting up server: %s", err)
-		}
-		defer server.Shutdown(ctx)
-
-		// FIXME: running this out of /pkgfs/versions is unsound WRT using the correct loader service
-		// Adding this as a short-term hack to unblock http://fxb/47213
-		cmd := []string{
-			fmt.Sprintf("/pkgfs/versions/%s/bin/update", updateBinMerkle),
-			"check-now",
-			"--monitor",
-		}
-		if err := c.Run(ctx, cmd, os.Stdout, os.Stderr); err != nil {
-			// If the device rebooted before ssh was able to tell
-			// us the command ran, it will tell us the session
-			// exited without passing along an exit code. So,
-			// ignore that specific error.
-			if _, ok := err.(*ssh.ExitMissingError); !ok {
-				return fmt.Errorf("failed to trigger OTA: %s", err)
-			}
-		}
-
-		return nil
-	})
-	if err != nil {
-		return err
-	}
-
-	logger.Infof(ctx, "OTA completed in %s", time.Now().Sub(startTime))
-
-	return nil
 }
 
 func (c *Client) ExpectDisconnect(ctx context.Context, f func() error) error {
@@ -532,44 +483,6 @@ func (c *Client) StartRpcSession(ctx context.Context, repo *packages.Repository)
 	logger.Infof(ctx, "connected to sl4f in %s", time.Now().Sub(startTime))
 
 	return rpcClient, nil
-}
-
-func (c *Client) DownloadOTA(ctx context.Context, repo *packages.Repository, updatePackageUrl string) error {
-	logger.Infof(ctx, "Downloading OTA")
-	startTime := time.Now()
-
-	server, err := c.ServePackageRepository(ctx, repo, "download-ota", true)
-	if err != nil {
-		return fmt.Errorf("error setting up server: %s", err)
-	}
-	defer server.Shutdown(ctx)
-
-	// In order to manually trigger the system updater, we need the `run`
-	// package. Since builds can be configured to not automatically install
-	// packages, we need to explicitly resolve it.
-	cmd := []string{"pkgctl", "resolve", "fuchsia-pkg://fuchsia.com/run/0"}
-	if err := c.Run(ctx, cmd, os.Stdout, os.Stderr); err != nil {
-		return fmt.Errorf("error resolving the run package: %v", err)
-	}
-
-	logger.Infof(ctx, "Downloading system OTA")
-
-	cmd = []string{
-		"run",
-		"\"fuchsia-pkg://fuchsia.com/amber#meta/system_updater.cmx\"",
-		"--initiator", "manual",
-		// Go's boolean flag parsing requires that the argument name and value
-		// be separated by "=" instead of by whitespace.
-		"--reboot=false",
-		"--update", fmt.Sprintf("%q", updatePackageUrl),
-	}
-	if err := c.Run(ctx, cmd, os.Stdout, os.Stderr); err != nil {
-		return fmt.Errorf("failed to run system_updater.cmx: %s", err)
-	}
-
-	logger.Infof(ctx, "OTA successfully downloaded in %s", time.Now().Sub(startTime))
-
-	return nil
 }
 
 // Pave paves the device to the specified build. It assumes the device is

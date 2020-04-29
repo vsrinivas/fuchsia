@@ -17,6 +17,7 @@ import (
 	"fuchsia.googlesource.com/host_target_testing/device"
 	"fuchsia.googlesource.com/host_target_testing/packages"
 	"fuchsia.googlesource.com/host_target_testing/sl4f"
+	"fuchsia.googlesource.com/host_target_testing/updater"
 	"fuchsia.googlesource.com/host_target_testing/util"
 	"fuchsia.googlesource.com/system_tests/check"
 	"fuchsia.googlesource.com/system_tests/pave"
@@ -281,7 +282,8 @@ func systemOTA(
 	logger.Infof(ctx, "Rebooting device")
 	startTime := time.Now()
 
-	if err := device.TriggerSystemOTA(ctx, repo); err != nil {
+	u := updater.NewSystemUpdateChecker(repo)
+	if err := u.Update(ctx, device); err != nil {
 		return fmt.Errorf("OTA failed: %s", err)
 	}
 
@@ -368,7 +370,8 @@ func otaToPackage(
 		return fmt.Errorf("device already updated to the expected version %q", expectedSystemImageMerkle)
 	}
 
-	if err := device.DownloadOTA(ctx, repo, updatePackageUrl); err != nil {
+	u := updater.NewSystemUpdater(repo, updatePackageUrl)
+	if err := u.Update(ctx, device); err != nil {
 		return fmt.Errorf("failed to download OTA: %s", err)
 	}
 
