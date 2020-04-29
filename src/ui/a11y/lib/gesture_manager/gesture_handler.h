@@ -33,6 +33,8 @@ class GestureHandler {
     kOneFingerDrag,
     kUpSwipe,
     kDownSwipe,
+    kLeftSwipe,
+    kRightSwipe,
   };
 
   // Some gestures need additional information about what was touched and where it was touched on
@@ -70,6 +72,12 @@ class GestureHandler {
 
   // Binds the action defined in |callback| with the gesture |kDownSwipe|.
   bool BindDownSwipeAction(OnGestureCallback callback);
+
+  // Binds the action defined in |callback| with the gesture |kLeftSwipe|.
+  bool BindLeftSwipeAction(OnGestureCallback callback);
+
+  // Binds the action defined in |callback| with the gesture |kRightSwipe|.
+  bool BindRightSwipeAction(OnGestureCallback callback);
 
   // Binds a recognizer that consumes everything.
   void ConsumeAll();

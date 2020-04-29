@@ -152,6 +152,40 @@ bool GestureHandler::BindDownSwipeAction(OnGestureCallback callback) {
   return true;
 }
 
+bool GestureHandler::BindLeftSwipeAction(OnGestureCallback callback) {
+  if (gesture_recognizers_.find(kLeftSwipe) != gesture_recognizers_.end()) {
+    FX_LOGS(ERROR) << "Action already exists for Left Swipe gesture.";
+    return false;
+  }
+
+  gesture_handlers_[kLeftSwipe].on_complete = std::move(callback);
+  gesture_recognizers_[kLeftSwipe] =
+      std::make_unique<LeftSwipeGestureRecognizer>([this](GestureContext context) {
+        OnGesture(kLeftSwipe, GestureEvent::kComplete,
+                  {.viewref_koid = context.view_ref_koid, .coordinates = context.local_point});
+      });
+  add_recognizer_callback_(gesture_recognizers_[kLeftSwipe].get());
+
+  return true;
+}
+
+bool GestureHandler::BindRightSwipeAction(OnGestureCallback callback) {
+  if (gesture_recognizers_.find(kRightSwipe) != gesture_recognizers_.end()) {
+    FX_LOGS(ERROR) << "Action already exists for Right Swipe gesture.";
+    return false;
+  }
+
+  gesture_handlers_[kRightSwipe].on_complete = std::move(callback);
+  gesture_recognizers_[kRightSwipe] =
+      std::make_unique<RightSwipeGestureRecognizer>([this](GestureContext context) {
+        OnGesture(kRightSwipe, GestureEvent::kComplete,
+                  {.viewref_koid = context.view_ref_koid, .coordinates = context.local_point});
+      });
+  add_recognizer_callback_(gesture_recognizers_[kRightSwipe].get());
+
+  return true;
+}
+
 void GestureHandler::ConsumeAll() { add_recognizer_callback_(&consume_all); }
 
 }  // namespace a11y
