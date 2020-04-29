@@ -238,8 +238,8 @@ impl RepositoryManager {
         let config = if let Some(config) = self.get(url.repo()) {
             Arc::clone(config)
         } else {
-            fx_log_err!("repo config not found: {}", url.repo());
-            return futures::future::ready(Err(GetPackageError::RepoNotFound)).boxed_local();
+            return futures::future::ready(Err(GetPackageError::RepoNotFound(url.repo().clone())))
+                .boxed_local();
         };
 
         let fut = open_cached_or_new_repository(
@@ -266,7 +266,10 @@ impl RepositoryManager {
         let config = if let Some(config) = self.get(url.repo()) {
             Arc::clone(config)
         } else {
-            return futures::future::ready(Err(GetPackageHashError::RepoNotFound)).boxed_local();
+            return futures::future::ready(Err(GetPackageHashError::RepoNotFound(
+                url.repo().clone(),
+            )))
+            .boxed_local();
         };
 
         let repo = open_cached_or_new_repository(
@@ -709,8 +712,8 @@ impl ToResolveStatus for OpenRepoError {
 
 #[derive(Debug, Error)]
 pub enum GetPackageError {
-    #[error("repo not found")]
-    RepoNotFound,
+    #[error("repo not found: {0}")]
+    RepoNotFound(RepoUrl),
 
     #[error("while opening the repo")]
     OpenRepo(#[from] OpenRepoError),
@@ -721,8 +724,8 @@ pub enum GetPackageError {
 
 #[derive(Debug, Error)]
 pub enum GetPackageHashError {
-    #[error("repo not found")]
-    RepoNotFound,
+    #[error("repo not found: {0}")]
+    RepoNotFound(RepoUrl),
 
     #[error("while opening the repo")]
     OpenRepo(#[from] OpenRepoError),
@@ -734,7 +737,7 @@ pub enum GetPackageHashError {
 impl ToResolveStatus for GetPackageError {
     fn to_resolve_status(&self) -> Status {
         match self {
-            GetPackageError::RepoNotFound => Status::ADDRESS_UNREACHABLE,
+            GetPackageError::RepoNotFound(_) => Status::ADDRESS_UNREACHABLE,
             GetPackageError::OpenRepo(err) => err.to_resolve_status(),
             GetPackageError::Cache(err) => err.to_resolve_status(),
         }
@@ -744,7 +747,7 @@ impl ToResolveStatus for GetPackageError {
 impl ToResolveStatus for GetPackageHashError {
     fn to_resolve_status(&self) -> Status {
         match self {
-            GetPackageHashError::RepoNotFound => Status::ADDRESS_UNREACHABLE,
+            GetPackageHashError::RepoNotFound(_) => Status::ADDRESS_UNREACHABLE,
             GetPackageHashError::OpenRepo(err) => err.to_resolve_status(),
             GetPackageHashError::MerkleFor(err) => err.to_resolve_status(),
         }
