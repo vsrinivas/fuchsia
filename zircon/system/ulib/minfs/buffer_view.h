@@ -12,6 +12,8 @@
 #include <zircon/assert.h>
 #include <zircon/types.h>
 
+#include "block_utils.h"
+
 namespace minfs {
 
 // Wraps either a regular pointer or a BlockBuffer. This exists because the mapped address for a
@@ -77,6 +79,7 @@ class BaseBufferView {
   void* data() const { return static_cast<uint8_t*>(buffer_.get()) + offset_; }
   size_t length() const { return length_; }
   size_t offset() const { return offset_; }
+  ByteRange GetByteRange() const { return ByteRange(offset_, offset_ + length_); }
   bool dirty() const { return dirty_; }
   void set_dirty(bool v) {
     ZX_ASSERT(data() != nullptr);

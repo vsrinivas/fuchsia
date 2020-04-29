@@ -5,6 +5,7 @@
 #ifndef ZIRCON_SYSTEM_ULIB_MINFS_BLOCK_UTILS_H_
 #define ZIRCON_SYSTEM_ULIB_MINFS_BLOCK_UTILS_H_
 
+#include <lib/zx/status.h>
 #include <range/range.h>
 
 namespace minfs {
@@ -31,6 +32,9 @@ class DeviceBlock {
     ZX_ASSERT(block_ != kUnmapped);
     return block_;
   }
+
+  bool operator ==(const DeviceBlock& other) const { return block_ == other.block_; }
+  bool operator !=(const DeviceBlock& other) const { return block_ != other.block_; }
 
  private:
   static constexpr uint64_t kUnmapped = std::numeric_limits<uint64_t>::max();

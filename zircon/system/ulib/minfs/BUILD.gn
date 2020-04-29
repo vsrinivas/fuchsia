@@ -44,6 +44,7 @@ zx_library("minfs") {
     "directory.cc",
     "file.cc",
     "fsck.cc",
+    "lazy_buffer.cc",
     "lazy_reader.cc",
     "metrics.cc",
     "minfs.cc",
