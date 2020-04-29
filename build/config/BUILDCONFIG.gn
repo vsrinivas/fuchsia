@@ -162,7 +162,8 @@ if (is_fuchsia) {
 # (current_toolchain rather than host_toolchain).  To handle this, the
 # `executable()` template below will define its target in other variant
 # toolchains as a copy of the real executable.
-if (toolchain_variant.base == host_x64_toolchain || toolchain_variant.base == host_arm64_toolchain) {
+if (toolchain_variant.base == host_x64_toolchain ||
+    toolchain_variant.base == host_arm64_toolchain) {
   is_fuchsia_host = true
   is_host = true
   host_toolchain += toolchain_variant.suffix
@@ -719,6 +720,14 @@ declare_args() {
           host = true
         },
       ]
+    },
+
+    # TODO(30033): Eventually this will go away and just "asan" will cover it.
+    # This is just ignored so it can be passed through to the Zircon GN build.
+    # It has no effect on variant selection in the Fuchsia GN build.
+    {
+      name = "kasan"
+      select_variant = []
     },
   ]
 }

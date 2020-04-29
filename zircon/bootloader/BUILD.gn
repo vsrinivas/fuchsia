@@ -27,6 +27,8 @@ if (current_toolchain == default_toolchain) {
 
       tags = [ "standalone" ]
       exclude_variant_tags = [
+        "instrumentation-runtime",
+
         # There isn't a GCC toolchain that supports the Windows target
         # directly the way we use it.
         "gcc",

@@ -16,6 +16,7 @@ zx_library("instrumentation") {
       "$zx/kernel/lib/ktl",
       "$zx/kernel/object",
       "$zx/system/ulib/fbl",
+      "asan",
     ]
     public_deps += [
       # <lib/instrumentation/vmo.h> has #include <ktl/array.h>.

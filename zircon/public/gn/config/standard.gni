@@ -204,15 +204,20 @@ standard_sanitizer_variants = [
     variant = {
       name = "asan"
       configs = [
+        # ASan wants frame pointers because it captures stack traces
+        # on allocations and such, not just on errors.
         {
-          # ASan wants frame pointers because it captures stack traces
-          # on allocations and such, not just on errors.
-          remove = [ "$zx/public/gn/config:default_frame_pointers" ]
+          # First add and then remove both in case either is already there.
           add = [
             "$zx/public/gn/config:frame_pointers",
-            "$zx/public/gn/config/instrumentation:asan",
+            "$zx/public/gn/config:default_frame_pointers",
           ]
+          remove = add
         },
+
+        # Now add frame_pointers back, only one and no default_frame_pointers.
+        "$zx/public/gn/config:frame_pointers",
+        "$zx/public/gn/config/instrumentation:asan",
       ]
       implicit_deps = [
         {
@@ -232,6 +237,7 @@ standard_sanitizer_variants = [
         runtime_deps_cflags = [ "-fsanitize=address" ]
       }
       tags = [
+        "instrumentation-runtime",
         "instrumented",
         "useronly",
       ]
@@ -259,6 +265,7 @@ standard_sanitizer_variants = [
         runtime_deps_cflags = [ "-fsanitize=undefined" ]
       }
       tags = [
+        "instrumentation-runtime",
         "instrumented",
         "useronly",
       ]
@@ -283,6 +290,55 @@ standard_variants += standard_sanitizer_variants
 # These are additional standard variants that are not likely to
 # be interesting for special-purpose environments like fuzzers.
 standard_variants += [
+  {
+    # TODO(30033): This is identical to "asan" except for having "kernel"
+    # and not "useronly" in tags.  When kernel ASan is ready for prime
+    # time, this will be removed and the "useronly" tag dropped from "asan"
+    # so that a simple "asan" selector will enable it for kernel too.  For
+    # now, it's easier to let a simple "kasan" selector enable kernel ASan
+    # and not user ASan, and "asan" vice versa.
+    variant = {
+      name = "kasan"
+      configs = [
+        # ASan wants frame pointers because it captures stack traces
+        # on allocations and such, not just on errors.
+        {
+          # First add and then remove both in case either is already there.
+          add = [
+            "$zx/public/gn/config:frame_pointers",
+            "$zx/public/gn/config:default_frame_pointers",
+          ]
+          remove = add
+        },
+
+        # Now add frame_pointers back, only one and no default_frame_pointers.
+        "$zx/public/gn/config:frame_pointers",
+        "$zx/public/gn/config/instrumentation:asan",
+      ]
+      implicit_deps = [
+        {
+          types = [
+            "executable",
+            "host_tool",
+            "test",
+          ]
+          add = [ "$zx/public/gn/config/instrumentation:asan_default_options" ]
+        },
+      ]
+      toolchain_vars = {
+        # This is the key for toolchain_runtime_deps() to find the right
+        # shared library dependencies for the instrumentation.  Note that
+        # the asan runtime includes ubsan but not vice versa, so this set
+        # must be used in preference to ubsan when both are enabled.
+        runtime_deps_cflags = [ "-fsanitize=address" ]
+      }
+      tags = [
+        "instrumentation-runtime",
+        "instrumented",
+        "kernel",
+      ]
+    }
+  },
   {
     variant = {
       name = "lto"
@@ -321,6 +377,7 @@ standard_variants += [
 
       # The "sancov" tag is important: see $zx/system/ulib/c/sanitizers.
       tags = [
+        "instrumentation-runtime",
         "instrumented",
         "sancov",
       ]

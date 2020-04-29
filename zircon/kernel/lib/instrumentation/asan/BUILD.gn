@@ -1,0 +1,43 @@
+# Copyright 2020 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+_asan_config = [ "$zx/public/gn/config/instrumentation:asan" ]
+is_asan = toolchain.configs + _asan_config - _asan_config != toolchain.configs
+
+source_set("asan") {
+  if (is_asan) {
+    # The support code doesn't get compiled with instrumentation itself.
+    # Disabling it on the command-line not only saves adding NO_ASAN
+    # annotations to each function, but covers inline functions from shared
+    # header files that shouldn't all be annotated for their other callers.
+    # The former could be addressed via `#pragma clang attribute`, but the
+    # latter cannot be.
+    configs -= [ _asan_config ]
+    sources = []  # TODO(30333): setup code, diagnostic code, etc.
+    deps = [
+      ":stubs",
+      "..:headers",
+    ]
+  }
+}
+
+if (is_asan) {
+  source_set("stubs") {
+    # The actual instrumentation stubs called by compiler-generated calls all
+    # over also disable frame pointers to minimize their overhead.  All the
+    # hot paths from instrumented code should be here.  The cold paths taken
+    # from these calls when there is an actual error should be out of line in
+    # other files not in this source_set().
+    visibility = [ ":*" ]
+    configs -= [
+      _asan_config,
+      "$zx/public/gn/config:frame_pointers",
+    ]
+    configs += [ "$zx/public/gn/config:frame_pointers" ]
+    sources = [ "asan-stubs.cc" ]
+    deps = [ "..:headers" ]
+  }
+}

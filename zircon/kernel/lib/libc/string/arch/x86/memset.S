@@ -53,3 +53,7 @@ FUNCTION(memset)
     jmp memset_erms
     APPLY_CODE_PATCH_FUNC_WITH_DEFAULT(x86_memset_select, memset, 2)
 END_FUNCTION(memset)
+
+.globl __unsanitized_memset
+.hidden __unsanitized_memset
+__unsanitized_memset = memset

@@ -42,3 +42,7 @@ FUNCTION(memcpy)
     jmp memcpy_erms
     APPLY_CODE_PATCH_FUNC_WITH_DEFAULT(x86_memcpy_select, memcpy, 2)
 END_FUNCTION(memcpy)
+
+.globl __unsanitized_memcpy
+.hidden __unsanitized_memcpy
+__unsanitized_memcpy = memcpy
