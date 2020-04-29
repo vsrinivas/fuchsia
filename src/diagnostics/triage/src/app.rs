@@ -4,12 +4,14 @@
 
 use {
     crate::{
-        act::{self, ActionContext, ActionResults},
         config::{self, OutputFormat, ProgramStateHolder},
-        result_format::ActionResultFormatter,
         Options,
     },
     anyhow::{Context as _, Error},
+    libtriage::{
+        act::{self, ActionContext, ActionResults},
+        result_format::ActionResultFormatter,
+    },
 };
 
 /// The entry point for the CLI app.
@@ -78,7 +80,7 @@ mod tests {
     macro_rules! make_action_result {
         ($source:expr, $($action:expr => $r:literal),+) => {
             {
-                let mut result = crate::act::ActionResults::new($source);
+                let mut result = libtriage::act::ActionResults::new($source);
                 $(
                     result.set_result($action, $r);
                 )*

@@ -4,11 +4,11 @@
 
 use {
     anyhow::{bail, Error},
-    structopt::StructOpt,
-    triage_lib::{
+    libtriage::{
         config::{self, ParseResult},
         validate::validate,
     },
+    structopt::StructOpt,
 };
 
 #[derive(StructOpt, Debug)]

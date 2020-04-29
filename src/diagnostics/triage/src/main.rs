@@ -3,8 +3,9 @@
 // found in the LICENSE file.
 
 use {
+    libtriage::act,
     structopt::StructOpt,
-    triage_lib::{act, app::App, Options},
+    triage_lib::{app::App, Options},
 };
 
 fn main() {
