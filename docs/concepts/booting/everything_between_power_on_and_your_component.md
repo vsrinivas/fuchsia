@@ -73,7 +73,7 @@ executable and its libraries. With these it starts the next process, which is
 Userboot may exit at this point, unless the userboot.shutdown option was given
 on the [kernel command line][kernel-command-line].
 
-Bootsvc, the next process, is [dynamically linked][dymanic-linking] by userboot.
+Bootsvc, the next process, is [dynamically linked][dynamic-linking] by userboot.
 This makes it a better home than userboot for complex logic, as it can use
 libraries. Because of this bootsvc runs various FIDL services for its children,
 the most notable of which is bootfs, a [FIDL-based filesystem][fuchsia-io2]
