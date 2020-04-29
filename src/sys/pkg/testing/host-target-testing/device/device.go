@@ -12,7 +12,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"net"
 	"os"
 	"strings"
@@ -24,6 +23,7 @@ import (
 	"fuchsia.googlesource.com/host_target_testing/sl4f"
 	"go.fuchsia.dev/fuchsia/tools/net/sshutil"
 
+	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -154,7 +154,7 @@ func (c *Client) GetSystemImageMerkle(ctx context.Context) (string, error) {
 // Reboot asks the device to reboot. It waits until the device reconnects
 // before returning.
 func (c *Client) Reboot(ctx context.Context) error {
-	log.Printf("rebooting")
+	logger.Infof(ctx, "rebooting")
 
 	return c.ExpectReboot(ctx, func() error {
 		// Run the reboot in the background, which gives us a chance to
@@ -166,7 +166,7 @@ func (c *Client) Reboot(ctx context.Context) error {
 			// exited without passing along an exit code. So,
 			// ignore that specific error.
 			if _, ok := err.(*ssh.ExitMissingError); ok {
-				log.Printf("ssh disconnected before returning a status")
+				logger.Infof(ctx, "ssh disconnected before returning a status")
 			} else {
 				return fmt.Errorf("failed to reboot: %s", err)
 			}
@@ -179,7 +179,7 @@ func (c *Client) Reboot(ctx context.Context) error {
 // RebootToRecovery asks the device to reboot into the recovery partition. It
 // waits until the device disconnects before returning.
 func (c *Client) RebootToRecovery(ctx context.Context) error {
-	log.Printf("Rebooting to recovery")
+	logger.Infof(ctx, "Rebooting to recovery")
 
 	return c.ExpectDisconnect(ctx, func() error {
 		// Run the reboot in the background, which gives us a chance to
@@ -191,7 +191,7 @@ func (c *Client) RebootToRecovery(ctx context.Context) error {
 			// exited without passing along an exit code. So,
 			// ignore that specific error.
 			if _, ok := err.(*ssh.ExitMissingError); ok {
-				log.Printf("ssh disconnected before returning a status")
+				logger.Infof(ctx, "ssh disconnected before returning a status")
 			} else {
 				return fmt.Errorf("failed to reboot into recovery: %w", err)
 			}
@@ -205,7 +205,7 @@ func (c *Client) RebootToRecovery(ctx context.Context) error {
 // fuchsia-pkg://fuchsia.com/update-to-recovery package. It waits until the
 // device disconnects before returning.
 func (c *Client) OTAToRecovery(ctx context.Context, repo *packages.Repository) error {
-	log.Printf("OTAing to recovery")
+	logger.Infof(ctx, "OTAing to recovery")
 
 	if err := c.DownloadOTA(ctx, repo, "fuchsia-pkg://fuchsia.com/update-to-zedboot/0"); err != nil {
 		return fmt.Errorf("failed to download OTA: %w", err)
@@ -221,7 +221,7 @@ func (c *Client) OTAToRecovery(ctx context.Context, repo *packages.Repository) e
 			// exited without passing along an exit code. So,
 			// ignore that specific error.
 			if _, ok := err.(*ssh.ExitMissingError); ok {
-				log.Printf("ssh disconnected before returning a status")
+				logger.Infof(ctx, "ssh disconnected before returning a status")
 			} else {
 				return fmt.Errorf("failed to OTA into recovery: %w", err)
 			}
@@ -252,7 +252,7 @@ func (c *Client) ReadBasePackages(ctx context.Context) (map[string]string, error
 // TriggerSystemOTA gets the device to perform a system update, ensuring it
 // reboots as expected.
 func (c *Client) TriggerSystemOTA(ctx context.Context, repo *packages.Repository) error {
-	log.Printf("Triggering OTA")
+	logger.Infof(ctx, "Triggering OTA")
 	startTime := time.Now()
 
 	basePackages, err := c.ReadBasePackages(ctx)
@@ -295,7 +295,7 @@ func (c *Client) TriggerSystemOTA(ctx context.Context, repo *packages.Repository
 		return err
 	}
 
-	log.Printf("OTA completed in %s", time.Now().Sub(startTime))
+	logger.Infof(ctx, "OTA completed in %s", time.Now().Sub(startTime))
 
 	return nil
 }
@@ -317,7 +317,7 @@ func (c *Client) ExpectDisconnect(ctx context.Context, f func() error) error {
 		return fmt.Errorf("device did not disconnect: %s", ctx.Err())
 	}
 
-	log.Printf("device disconnected")
+	logger.Infof(ctx, "device disconnected")
 
 	return nil
 }
@@ -382,7 +382,7 @@ func (c *Client) ExpectReboot(ctx context.Context, f func() error) error {
 		return fmt.Errorf("device did not disconnect: %w", ctx.Err())
 	}
 
-	log.Printf("device disconnected, waiting for device to boot")
+	logger.Infof(ctx, "device disconnected, waiting for device to boot")
 
 	if err := c.Reconnect(ctx); err != nil {
 		return fmt.Errorf("failed to reconnect: %w", err)
@@ -416,14 +416,14 @@ func (c *Client) ExpectReboot(ctx context.Context, f func() error) error {
 		)
 	}
 
-	log.Printf("device rebooted")
+	logger.Infof(ctx, "device rebooted")
 
 	return nil
 }
 
 // ValidateStaticPackages checks that all static packages have no missing blobs.
 func (c *Client) ValidateStaticPackages(ctx context.Context) error {
-	log.Printf("validating static packages")
+	logger.Infof(ctx, "validating static packages")
 
 	path := "/pkgfs/ctl/validation/missing"
 	f, err := c.ReadRemotePath(ctx, path)
@@ -436,7 +436,7 @@ func (c *Client) ValidateStaticPackages(ctx context.Context) error {
 		return fmt.Errorf("static packages are missing the following blobs:\n%s", merkles)
 	}
 
-	log.Printf("all static package blobs are accounted for")
+	logger.Infof(ctx, "all static package blobs are accounted for")
 	return nil
 }
 
@@ -491,7 +491,7 @@ func (c *Client) RemoteFileExists(ctx context.Context, path string) (bool, error
 
 // RegisterPackageRepository adds the repository as a repository inside the device.
 func (c *Client) RegisterPackageRepository(ctx context.Context, repo *packages.Server, createRewriteRule bool) error {
-	log.Printf("registering package repository: %s", repo.Dir)
+	logger.Infof(ctx, "registering package repository: %s", repo.Dir)
 	var subcmd string
 	if createRewriteRule {
 		subcmd = "add_src"
@@ -534,7 +534,7 @@ func (c *Client) ServePackageRepository(
 }
 
 func (c *Client) StartRpcSession(ctx context.Context, repo *packages.Repository) (*sl4f.Client, error) {
-	log.Printf("connecting to sl4f")
+	logger.Infof(ctx, "connecting to sl4f")
 	startTime := time.Now()
 
 	c.mu.Lock()
@@ -563,13 +563,13 @@ func (c *Client) StartRpcSession(ctx context.Context, repo *packages.Repository)
 		return nil, fmt.Errorf("error creating sl4f client: %s", err)
 	}
 
-	log.Printf("connected to sl4f in %s", time.Now().Sub(startTime))
+	logger.Infof(ctx, "connected to sl4f in %s", time.Now().Sub(startTime))
 
 	return rpcClient, nil
 }
 
 func (c *Client) DownloadOTA(ctx context.Context, repo *packages.Repository, updatePackageUrl string) error {
-	log.Printf("Downloading OTA")
+	logger.Infof(ctx, "Downloading OTA")
 	startTime := time.Now()
 
 	server, err := c.ServePackageRepository(ctx, repo, "download-ota", true)
@@ -586,7 +586,7 @@ func (c *Client) DownloadOTA(ctx context.Context, repo *packages.Repository, upd
 		return fmt.Errorf("error resolving the run package: %v", err)
 	}
 
-	log.Printf("Downloading system OTA")
+	logger.Infof(ctx, "Downloading system OTA")
 
 	cmd = []string{
 		"run",
@@ -601,7 +601,7 @@ func (c *Client) DownloadOTA(ctx context.Context, repo *packages.Repository, upd
 		return fmt.Errorf("failed to run system_updater.cmx: %s", err)
 	}
 
-	log.Printf("OTA successfully downloaded in %s", time.Now().Sub(startTime))
+	logger.Infof(ctx, "OTA successfully downloaded in %s", time.Now().Sub(startTime))
 
 	return nil
 }

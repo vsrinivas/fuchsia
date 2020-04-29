@@ -10,7 +10,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net"
 	"net/http"
 	"os"
@@ -21,6 +20,7 @@ import (
 	tuf_data "github.com/flynn/go-tuf/data"
 
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/lib/repo"
+	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 )
 
 type Server struct {
@@ -38,7 +38,7 @@ func newServer(ctx context.Context, dir string, localHostname string, repoName s
 	}
 
 	port := listener.Addr().(*net.TCPAddr).Port
-	log.Printf("Serving %s on :%d", dir, port)
+	logger.Infof(ctx, "Serving %s on :%d", dir, port)
 
 	configURL, configHash, config, err := genConfig(dir, localHostname, repoName, port)
 	if err != nil {
@@ -58,14 +58,14 @@ func newServer(ctx context.Context, dir string, localHostname string, repoName s
 		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			lw := &loggingWriter{w, 0}
 			mux.ServeHTTP(lw, r)
-			log.Printf("%s [pm serve] %d %s\n",
+			logger.Infof(ctx, "%s [pm serve] %d %s\n",
 				time.Now().Format("2006-01-02 15:04:05"), lw.status, r.RequestURI)
 		}),
 	}
 
 	go func() {
 		if err := server.Serve(listener); err != http.ErrServerClosed {
-			log.Fatalf("failed to shutdown server: %s", err)
+			logger.Fatalf(ctx, "failed to shutdown server: %s", err)
 		}
 	}()
 

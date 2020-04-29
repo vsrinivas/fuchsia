@@ -19,6 +19,9 @@ import (
 	"fuchsia.googlesource.com/host_target_testing/util"
 	"fuchsia.googlesource.com/system_tests/check"
 	"fuchsia.googlesource.com/system_tests/pave"
+
+	"go.fuchsia.dev/fuchsia/tools/lib/color"
+	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 )
 
 var c *config
@@ -44,6 +47,14 @@ func TestMain(m *testing.M) {
 
 func TestOTA(t *testing.T) {
 	ctx := context.Background()
+	l := logger.NewLogger(
+		logger.TraceLevel,
+		color.NewColor(color.ColorAuto),
+		os.Stdout,
+		os.Stderr,
+		"tracking-test: ")
+	l.SetFlags(logger.Ldate | logger.Ltime | logger.LUTC | logger.Lshortfile)
+	ctx = logger.WithLogger(ctx, l)
 
 	device, err := c.deviceConfig.NewDeviceClient(ctx)
 	if err != nil {
@@ -94,7 +105,7 @@ func testTrackingOTAs(t *testing.T, ctx context.Context, device *device.Client, 
 	lastBuildID := ""
 	attempt := 1
 	for {
-		log.Printf("Look up latest build for builder %s", builder)
+		logger.Infof(ctx, "Look up latest build for builder %s", builder)
 
 		buildID, err := builder.GetLatestBuildID(ctx)
 		if err != nil {
@@ -102,11 +113,11 @@ func testTrackingOTAs(t *testing.T, ctx context.Context, device *device.Client, 
 		}
 
 		if buildID == lastBuildID {
-			log.Printf("already updated to %s, sleeping", buildID)
+			logger.Infof(ctx, "already updated to %s, sleeping", buildID)
 			time.Sleep(60 * time.Second)
 			continue
 		}
-		log.Printf("Tracking Test Attempt %d upgrading from build %s to build %s", attempt, lastBuildID, buildID)
+		logger.Infof(ctx, "Tracking Test Attempt %d upgrading from build %s to build %s", attempt, lastBuildID, buildID)
 
 		if err := util.RunWithTimeout(ctx, c.cycleTimeout, func() error {
 			return testTrackingOTAAttempt(ctx, device, rpcClient, buildID, checkABR)
@@ -114,8 +125,8 @@ func testTrackingOTAs(t *testing.T, ctx context.Context, device *device.Client, 
 			t.Fatalf("Tracking Test Attempt %d failed: %s", attempt, err)
 		}
 
-		log.Printf("Tracking Test Attempt %d successful", attempt)
-		log.Printf("------------------------------------------------------------------------------")
+		logger.Infof(ctx, "Tracking Test Attempt %d successful", attempt)
+		logger.Infof(ctx, "------------------------------------------------------------------------------")
 
 		checkABR = true
 		lastBuildID = buildID
@@ -156,12 +167,12 @@ func testTrackingOTAAttempt(
 		return fmt.Errorf("failed to check if device is up to date: %s", err)
 	}
 	if upToDate {
-		log.Printf("device already up to date")
+		logger.Infof(ctx, "device already up to date")
 		return nil
 	}
 
-	log.Printf("\n\n")
-	log.Printf("OTAing to %s", build)
+	logger.Infof(ctx, "\n\n")
+	logger.Infof(ctx, "OTAing to %s", build)
 
 	return systemOTA(ctx, device, rpcClient, repo, checkABR)
 }
@@ -183,7 +194,7 @@ func paveDevice(ctx context.Context, device *device.Client) (*sl4f.Client, error
 		return nil, fmt.Errorf("error getting downgrade repository: %w", err)
 	}
 
-	log.Printf("starting pave")
+	logger.Infof(ctx, "starting pave")
 
 	expectedSystemImageMerkle, err := downgradeRepo.LookupUpdateSystemImageMerkle()
 	if err != nil {
@@ -198,7 +209,7 @@ func paveDevice(ctx context.Context, device *device.Client) (*sl4f.Client, error
 	if err != nil {
 		// FIXME(40913): every downgrade builder should at least build
 		// sl4f as a universe package.
-		log.Printf("unable to connect to sl4f after pave: %s", err)
+		logger.Infof(ctx, "unable to connect to sl4f after pave: %s", err)
 		//t.Fatalf("unable to connect to sl4f after pave: %s", err)
 	}
 
@@ -216,7 +227,7 @@ func paveDevice(ctx context.Context, device *device.Client) (*sl4f.Client, error
 		return nil, err
 	}
 
-	log.Printf("paving successful")
+	logger.Infof(ctx, "paving successful")
 
 	return rpcClient, nil
 }
@@ -270,15 +281,15 @@ func otaToPackage(
 		*rpcClient = nil
 	}
 
-	log.Printf("Rebooting device")
+	logger.Infof(ctx, "Rebooting device")
 	startTime := time.Now()
 
 	if err = device.Reboot(ctx); err != nil {
 		return fmt.Errorf("device failed to reboot after OTA applied: %s", err)
 	}
 
-	log.Printf("Reboot complete in %s", time.Now().Sub(startTime))
-	log.Printf("Validating device")
+	logger.Infof(ctx, "Reboot complete in %s", time.Now().Sub(startTime))
+	logger.Infof(ctx, "Validating device")
 
 	*rpcClient, err = device.StartRpcSession(ctx, repo)
 	if err != nil {

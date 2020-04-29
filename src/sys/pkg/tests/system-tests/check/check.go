@@ -7,10 +7,11 @@ package check
 import (
 	"context"
 	"fmt"
-	"log"
 
 	"fuchsia.googlesource.com/host_target_testing/device"
 	"fuchsia.googlesource.com/host_target_testing/sl4f"
+
+	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 )
 
 // IsDeviceUpToDate checks if the device's /system/meta matches the expected
@@ -25,8 +26,8 @@ func IsDeviceUpToDate(
 		return false, fmt.Errorf("failed to get system image merkle while checking if device is up to date: %w", err)
 	}
 
-	log.Printf("current system image merkle:  %q", remoteSystemImageMerkle)
-	log.Printf("expected system image merkle: %q", expectedSystemImageMerkle)
+	logger.Infof(ctx, "current system image merkle:  %q", remoteSystemImageMerkle)
+	logger.Infof(ctx, "expected system image merkle: %q", expectedSystemImageMerkle)
 
 	return expectedSystemImageMerkle == remoteSystemImageMerkle, nil
 }
@@ -36,19 +37,19 @@ func DetermineActiveABRConfig(
 	rpcClient *sl4f.Client,
 ) (*sl4f.Configuration, error) {
 	if rpcClient == nil {
-		log.Printf("sl4f not running, cannot determine current active partition")
+		logger.Infof(ctx, "sl4f not running, cannot determine current active partition")
 		return nil, nil
 	}
 
 	activeConfig, err := rpcClient.PaverQueryActiveConfiguration(ctx)
 	if err == sl4f.ErrNotSupported {
-		log.Printf("device does not support querying the active configuration")
+		logger.Infof(ctx, "device does not support querying the active configuration")
 		return nil, nil
 	} else if err != nil {
 		return nil, err
 	}
 
-	log.Printf("device booted to slot %s", activeConfig)
+	logger.Infof(ctx, "device booted to slot %s", activeConfig)
 
 	return &activeConfig, nil
 }
@@ -81,12 +82,12 @@ func CheckABRConfig(
 	expectedConfig *sl4f.Configuration,
 ) error {
 	if expectedConfig == nil {
-		log.Printf("no configuration expected, so not checking ABR configuration")
+		logger.Infof(ctx, "no configuration expected, so not checking ABR configuration")
 		return nil
 	}
 
 	if rpcClient == nil {
-		log.Printf("not connected to sl4f, cannot check ABR configuration")
+		logger.Infof(ctx, "not connected to sl4f, cannot check ABR configuration")
 		return nil
 	}
 
@@ -141,7 +142,7 @@ func ValidateDevice(
 			// err out during that phase. This will be removed once
 			// ABR has rolled through GI.
 			if warnOnABR {
-				log.Printf("ignoring error during ABR rollout: %v", err)
+				logger.Infof(ctx, "ignoring error during ABR rollout: %v", err)
 			} else {
 				return fmt.Errorf("failed to validate device: %w", err)
 			}

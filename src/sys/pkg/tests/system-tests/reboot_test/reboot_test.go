@@ -19,6 +19,9 @@ import (
 	"fuchsia.googlesource.com/system_tests/check"
 	"fuchsia.googlesource.com/system_tests/pave"
 	"fuchsia.googlesource.com/system_tests/script"
+
+	"go.fuchsia.dev/fuchsia/tools/lib/color"
+	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 )
 
 var c *config
@@ -44,6 +47,14 @@ func TestMain(m *testing.M) {
 
 func TestReboot(t *testing.T) {
 	ctx := context.Background()
+	l := logger.NewLogger(
+		logger.TraceLevel,
+		color.NewColor(color.ColorAuto),
+		os.Stdout,
+		os.Stderr,
+		"reboot-test: ")
+	l.SetFlags(logger.Ldate | logger.Ltime | logger.LUTC | logger.Lshortfile)
+	ctx = logger.WithLogger(ctx, l)
 
 	outputDir, cleanup, err := c.archiveConfig.OutputDir()
 	if err != nil {
@@ -53,19 +64,19 @@ func TestReboot(t *testing.T) {
 
 	device, err := c.deviceConfig.NewDeviceClient(ctx)
 	if err != nil {
-		t.Fatalf("failed to create ota test client: %s", err)
+		logger.Fatalf(ctx, "faied to create ota test client: %s", err)
 	}
 	defer device.Close()
 
 	build, err := c.getBuild(ctx, outputDir)
 	if err != nil {
-		log.Fatalf("failed to get downgrade build: %v", err)
+		logger.Fatalf(ctx, "failed to get downgrade build: %v", err)
 	}
 
 	if err := util.RunWithTimeout(ctx, c.paveTimeout, func() error {
 		return initializeDevice(ctx, device, build)
 	}); err != nil {
-		log.Fatalf("initialization failed: %v", err)
+		logger.Fatalf(ctx, "initialization failed: %v", err)
 	}
 
 	testReboot(ctx, device, build)
@@ -73,7 +84,7 @@ func TestReboot(t *testing.T) {
 
 func testReboot(ctx context.Context, device *device.Client, build artifacts.Build) {
 	for i := 1; i <= c.cycleCount; i++ {
-		log.Printf("Reboot Attempt %d", i)
+		logger.Infof(ctx, "Reboot Attempt %d", i)
 
 		// Protect against the test stalling out by wrapping it in a closure,
 		// setting a timeout on the context, and running the actual test in a
@@ -81,7 +92,7 @@ func testReboot(ctx context.Context, device *device.Client, build artifacts.Buil
 		if err := util.RunWithTimeout(ctx, c.cycleTimeout, func() error {
 			return doTestReboot(ctx, device, build)
 		}); err != nil {
-			log.Fatalf("Reboot Cycle %d failed: %v", i, err)
+			logger.Fatalf(ctx, "Reboot Cycle %d failed: %v", i, err)
 		}
 	}
 }
@@ -160,7 +171,7 @@ func initializeDevice(
 	device *device.Client,
 	build artifacts.Build,
 ) error {
-	log.Printf("Initializing device")
+	logger.Infof(ctx, "Initializing device")
 
 	repo, err := build.GetPackageRepository(ctx)
 	if err != nil {
@@ -182,7 +193,7 @@ func initializeDevice(
 		return fmt.Errorf("failed to check if up to date during initialization: %w", err)
 	}
 	if upToDate {
-		log.Printf("device already up to date")
+		logger.Infof(ctx, "device already up to date")
 		return nil
 	}
 

@@ -21,6 +21,9 @@ import (
 	"fuchsia.googlesource.com/system_tests/check"
 	"fuchsia.googlesource.com/system_tests/pave"
 	"fuchsia.googlesource.com/system_tests/script"
+
+	"go.fuchsia.dev/fuchsia/tools/lib/color"
+	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 )
 
 var c *config
@@ -46,27 +49,35 @@ func TestMain(m *testing.M) {
 
 func TestOTA(t *testing.T) {
 	ctx := context.Background()
+	l := logger.NewLogger(
+		logger.TraceLevel,
+		color.NewColor(color.ColorAuto),
+		os.Stdout,
+		os.Stderr,
+		"upgrade-test: ")
+	l.SetFlags(logger.Ldate | logger.Ltime | logger.LUTC | logger.Lshortfile)
+	ctx = logger.WithLogger(ctx, l)
 
 	outputDir, cleanup, err := c.archiveConfig.OutputDir()
 	if err != nil {
-		log.Fatalf("failed to get output directory: %v", err)
+		logger.Fatalf(ctx, "failed to get output directory: %v", err)
 	}
 	defer cleanup()
 
 	device, err := c.deviceConfig.NewDeviceClient(ctx)
 	if err != nil {
-		log.Fatalf("failed to create ota test client: %s", err)
+		logger.Fatalf(ctx, "failed to create ota test client: %s", err)
 	}
 	defer device.Close()
 
 	downgradeBuild, err := c.getDowngradeBuild(ctx, outputDir)
 	if err != nil {
-		log.Fatalf("failed to get downgrade build: %v", err)
+		logger.Fatalf(ctx, "failed to get downgrade build: %v", err)
 	}
 
 	upgradeBuild, err := c.getUpgradeBuild(ctx, outputDir)
 	if err != nil {
-		log.Fatalf("failed to get upgrade build: %v", err)
+		logger.Fatalf(ctx, "failed to get upgrade build: %v", err)
 	}
 
 	ch := make(chan *sl4f.Client, 1)
@@ -95,12 +106,12 @@ func testOTAs(
 	rpcClient **sl4f.Client,
 ) {
 	for i := 1; i <= c.cycleCount; i++ {
-		log.Printf("OTA Attempt %d", i)
+		logger.Infof(ctx, "OTA Attempt %d", i)
 
 		if err := util.RunWithTimeout(ctx, c.cycleTimeout, func() error {
 			return doTestOTAs(ctx, device, build, rpcClient)
 		}); err != nil {
-			log.Fatalf("OTA Attempt %d failed: %s", i, err)
+			logger.Fatalf(ctx, "OTA Attempt %d failed: %s", i, err)
 		}
 	}
 }
@@ -111,7 +122,7 @@ func doTestOTAs(
 	build artifacts.Build,
 	rpcClient **sl4f.Client,
 ) error {
-	log.Printf("Starting OTA test cycle. Time out in %s", c.cycleTimeout)
+	logger.Infof(ctx, "Starting OTA test cycle. Time out in %s", c.cycleTimeout)
 
 	startTime := time.Now()
 
@@ -131,28 +142,28 @@ func doTestOTAs(
 		return fmt.Errorf("failed to check if device is up to date: %s", err)
 	}
 	if !upToDate {
-		log.Printf("starting OTA from N-1 -> N test")
+		logger.Infof(ctx, "starting OTA from N-1 -> N test")
 		otaTime := time.Now()
 		if err := systemOTA(ctx, device, rpcClient, repo, true); err != nil {
 			return fmt.Errorf("OTA from N-1 -> N failed: %s", err)
 		}
-		log.Printf("OTA from N-1 -> N successful in %s", time.Now().Sub(otaTime))
+		logger.Infof(ctx, "OTA from N-1 -> N successful in %s", time.Now().Sub(otaTime))
 	}
 
-	log.Printf("starting OTA N -> N' test")
+	logger.Infof(ctx, "starting OTA N -> N' test")
 	otaTime := time.Now()
 	if err := systemPrimeOTA(ctx, device, rpcClient, repo, false); err != nil {
 		return fmt.Errorf("OTA from N -> N' failed: %s", err)
 	}
-	log.Printf("OTA from N -> N' successful in %s", time.Now().Sub(otaTime))
+	logger.Infof(ctx, "OTA from N -> N' successful in %s", time.Now().Sub(otaTime))
 
-	log.Printf("starting OTA N' -> N test")
+	logger.Infof(ctx, "starting OTA N' -> N test")
 	otaTime = time.Now()
 	if err := systemOTA(ctx, device, rpcClient, repo, false); err != nil {
 		return fmt.Errorf("OTA from N' -> N failed: %s", err)
 	}
-	log.Printf("OTA from N' -> N successful in %s", time.Now().Sub(otaTime))
-	log.Printf("OTA cycle sucessful in %s", time.Now().Sub(startTime))
+	logger.Infof(ctx, "OTA from N' -> N successful in %s", time.Now().Sub(otaTime))
+	logger.Infof(ctx, "OTA cycle sucessful in %s", time.Now().Sub(startTime))
 
 	return nil
 }
@@ -162,7 +173,7 @@ func initializeDevice(
 	device *device.Client,
 	build artifacts.Build,
 ) (*sl4f.Client, error) {
-	log.Printf("Initializing device")
+	logger.Infof(ctx, "Initializing device")
 
 	startTime := time.Now()
 
@@ -222,7 +233,7 @@ func initializeDevice(
 		return nil, fmt.Errorf("failed to run after-init-script: %w", err)
 	}
 
-	log.Printf("initialization successful in %s", time.Now().Sub(startTime))
+	logger.Infof(ctx, "initialization successful in %s", time.Now().Sub(startTime))
 
 	return rpcClient, nil
 }
@@ -267,15 +278,15 @@ func systemOTA(
 		*rpcClient = nil
 	}
 
-	log.Printf("Rebooting device")
+	logger.Infof(ctx, "Rebooting device")
 	startTime := time.Now()
 
 	if err := device.TriggerSystemOTA(ctx, repo); err != nil {
 		return fmt.Errorf("OTA failed: %s", err)
 	}
 
-	log.Printf("OTA complete in %s", time.Now().Sub(startTime))
-	log.Printf("Validating device")
+	logger.Infof(ctx, "OTA complete in %s", time.Now().Sub(startTime))
+	logger.Infof(ctx, "Validating device")
 
 	*rpcClient, err = device.StartRpcSession(ctx, repo)
 	if err != nil {
@@ -367,15 +378,15 @@ func otaToPackage(
 		*rpcClient = nil
 	}
 
-	log.Printf("Rebooting device")
+	logger.Infof(ctx, "Rebooting device")
 	startTime := time.Now()
 
 	if err = device.Reboot(ctx); err != nil {
 		return fmt.Errorf("device failed to reboot after OTA applied: %s", err)
 	}
 
-	log.Printf("Reboot complete in %s", time.Now().Sub(startTime))
-	log.Printf("Validating device")
+	logger.Infof(ctx, "Reboot complete in %s", time.Now().Sub(startTime))
+	logger.Infof(ctx, "Validating device")
 
 	*rpcClient, err = device.StartRpcSession(ctx, repo)
 	if err != nil {

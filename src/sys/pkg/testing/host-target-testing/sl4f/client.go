@@ -9,13 +9,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"strings"
 	"sync/atomic"
 	"time"
 
+	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"go.fuchsia.dev/fuchsia/tools/net/sshutil"
 )
 
@@ -55,12 +55,12 @@ func (c *Client) Close() {
 }
 
 func (c *Client) connect(ctx context.Context) error {
-	log.Printf("connecting to sl4f")
+	logger.Infof(ctx, "connecting to sl4f")
 
 	// If an ssh connection re-establishes without a reboot, sl4f may already be running.
 	pingCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	if err := c.ping(pingCtx); err == nil {
-		log.Printf("already connected to sl4f")
+		logger.Infof(ctx, "already connected to sl4f")
 		cancel()
 		return nil
 	}
@@ -71,7 +71,7 @@ func (c *Client) connect(ctx context.Context) error {
 	// automatically cache packages, we need to explicitly resolve it.
 	cmd := []string{"pkgctl", "resolve", fmt.Sprintf("fuchsia-pkg://%s/run/0", c.repoName)}
 	if err := c.sshClient.Run(ctx, cmd, os.Stdout, os.Stderr); err != nil {
-		log.Printf("unable to resolve `run` package: %s", err)
+		logger.Infof(ctx, "unable to resolve `run` package: %s", err)
 		return err
 	}
 
@@ -80,7 +80,7 @@ func (c *Client) connect(ctx context.Context) error {
 	// packages.
 	cmd = []string{"pkgctl", "resolve", fmt.Sprintf("fuchsia-pkg://%s/sl4f/0", c.repoName)}
 	if err := c.sshClient.Run(ctx, cmd, os.Stdout, os.Stderr); err != nil {
-		log.Printf("unable to resolve `sl4f` package: %s", err)
+		logger.Infof(ctx, "unable to resolve `sl4f` package: %s", err)
 		return err
 	}
 
@@ -88,7 +88,7 @@ func (c *Client) connect(ctx context.Context) error {
 	cmd = []string{"run", fmt.Sprintf("fuchsia-pkg://%s/sl4f#meta/sl4f.cmx", c.repoName)}
 	server, err := c.sshClient.Start(ctx, cmd, os.Stdout, os.Stderr)
 	if err != nil {
-		log.Printf("unable to launch sl4f: %s", err)
+		logger.Infof(ctx, "unable to launch sl4f: %s", err)
 		return err
 	}
 
@@ -103,7 +103,7 @@ func (c *Client) connect(ctx context.Context) error {
 		time.Sleep(time.Second)
 	}
 
-	log.Printf("unable to ping sl4f: %s", pingCtx.Err())
+	logger.Infof(ctx, "unable to ping sl4f: %s", pingCtx.Err())
 	server.Close()
 	return pingCtx.Err()
 }

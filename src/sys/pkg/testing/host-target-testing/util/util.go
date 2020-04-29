@@ -13,18 +13,19 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 )
 
 // RunCommand executes a command on the host and returns the stdout and stderr
 // as byte strings.
 func RunCommand(ctx context.Context, name string, arg ...string) ([]byte, []byte, error) {
-	log.Printf("running: %s %q", name, arg)
+	logger.Infof(ctx, "running: %s %q", name, arg)
 	c := exec.CommandContext(ctx, name, arg...)
 	var o bytes.Buffer
 	var e bytes.Buffer
@@ -38,7 +39,7 @@ func RunCommand(ctx context.Context, name string, arg ...string) ([]byte, []byte
 
 // Untar untars a tar.gz file into a directory.
 func Untar(ctx context.Context, dst string, src string) error {
-	log.Printf("untarring %s into %s", src, dst)
+	logger.Infof(ctx, "untarring %s into %s", src, dst)
 
 	f, err := os.Open(src)
 	if err != nil {
