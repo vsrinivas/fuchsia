@@ -32,6 +32,18 @@ TEST(CPrintTest, Int64) {
   ASSERT_EQ(a, 0);
 }
 
+TEST(CPrintTest, Float) {
+  float a = 0.0;
+
+  ASSERT_EQ(a, 0.0);
+}
+
+TEST(CPrintTest, Double) {
+  double a = 0.0;
+
+  ASSERT_EQ(a, 0.0);
+}
+
 TEST(CPrintTest, Str) {
   const char* a = "MyStr";
 

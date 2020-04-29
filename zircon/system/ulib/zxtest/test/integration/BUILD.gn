@@ -37,6 +37,7 @@ test("zxtest-integration") {
     "main.cc",
     "print_test.c",
     "print_test.cc",
+    "printvalue_test.cc",
     "register_test.c",
     "register_test.cc",
   ]

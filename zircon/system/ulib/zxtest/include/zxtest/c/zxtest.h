@@ -73,6 +73,8 @@ size_t _zxtest_print_int64(int64_t val, char* buffer, size_t buffer_size);
 
 size_t _zxtest_print_uint64(uint64_t val, char* buffer, size_t buffer_size);
 
+size_t _zxtest_print_double(double val, char* buffer, size_t buffer_size);
+
 size_t _zxtest_print_bool(bool val, char* buffer, size_t buffer_size);
 
 size_t _zxtest_print_str(const char* val, char* buffer, size_t buffer_size);
@@ -131,6 +133,8 @@ __END_CDECLS
             uint32_t: _zxtest_print_uint32,                                                        \
             int64_t: _zxtest_print_int64,                                                          \
             uint64_t: _zxtest_print_uint64,                                                        \
+            float: _zxtest_print_double,                                                           \
+            double: _zxtest_print_double,                                                          \
             bool: _zxtest_print_bool,                                                              \
             const char*: _zxtest_print_str,                                                        \
             default: _zxtest_print_ptr)(var, buffer, size)

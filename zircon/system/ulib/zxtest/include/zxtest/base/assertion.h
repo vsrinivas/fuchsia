@@ -7,6 +7,11 @@
 
 #include <zircon/status.h>
 
+#include <array>
+#include <functional>
+#include <string>
+#include <tuple>
+
 #include <fbl/string.h>
 #include <fbl/string_printf.h>
 #include <zxtest/base/types.h>
@@ -75,12 +80,12 @@ class Assertion {
 
 // Helper functions used on assertion reporting contexts.
 namespace internal {
-// Returns a string with the Hex representation of the contents of the buffer pointed by
-// ptr. If |ptr| is nullptr, returns "<nullptr>". If |size| is 0 returns <empty>.
+// Returns a string with the Hex representation of the contents of the buffer pointed by ptr. If
+// |ptr| is nullptr, returns "<nullptr>". If |size| is 0 returns <empty>.
 fbl::String ToHex(const void* ptr, size_t size);
 
-// It's not necessarily safe to do pointer arithmetic on volatiles because of
-// alignment issues, so just print whether the pointer is nullptr/empty/normal.
+// It's not necessarily safe to do pointer arithmetic on volatiles because of alignment issues, so
+// just print whether the pointer is nullptr/empty/normal.
 fbl::String PrintVolatile(volatile const void* ptr, size_t size);
 }  // namespace internal
 
@@ -96,7 +101,16 @@ fbl::String PrintValue(volatile const T& value) {
   return internal::PrintVolatile(&value, sizeof(value));
 }
 
-// Template Specialization for integers and char pointers.
+// For pointers just print the address.
+template <typename T>
+fbl::String PrintValue(const T* value) {
+  if (value == nullptr) {
+    return "<nullptr>";
+  }
+  return fbl::StringPrintf("%p", static_cast<const void*>(value));
+}
+
+// Template Specialization for integers, floating point, char pointers, and strings.
 template <>
 fbl::String PrintValue(const int32_t& value);
 template <>
@@ -106,22 +120,55 @@ fbl::String PrintValue(const int64_t& value);
 template <>
 fbl::String PrintValue(const uint64_t& value);
 template <>
-fbl::String PrintValue(const fbl::String& value);
-
-// Print a string form of the status, can't be a specializiation of PrintValue
-// because zx_status_t is a uint32_t.
-fbl::String PrintStatus(zx_status_t status);
-
-// For pointers just print the address.
-template <typename T>
-fbl::String PrintValue(const T* value) {
-  if (value == nullptr) {
-    return "<nullptr>";
-  }
-  return fbl::StringPrintf("%p", static_cast<const void*>(value));
-}
+fbl::String PrintValue(const float& value);
+template <>
+fbl::String PrintValue(const double& value);
 template <>
 fbl::String PrintValue(const char* value);
+template <>
+fbl::String PrintValue(const std::string& value);
+template <>
+fbl::String PrintValue(const fbl::String& value);
+
+// Print a string form of the status, can't be a specialization of PrintValue because zx_status_t is
+// a uint32_t.
+fbl::String PrintStatus(zx_status_t status);
+
+// For tuples, recursively print the individual components.
+template <typename... Ts>
+fbl::String PrintValue(const std::tuple<Ts...>& value) {
+  const auto strings = std::apply(
+      [&](auto&&... elems) {
+        return std::array<fbl::String, sizeof...(Ts)>{
+            PrintValue(std::forward<decltype(elems)>(elems))...};
+      },
+      value);
+
+  // Total size of all string representations, plus:
+  // * 1 for the opening "{".
+  // * 1 for each " " between representations, plus a "," if it is not the last representation.
+  // * 2 for the closing " }".
+  size_t total_size = 0;
+  for (const auto& s : strings) {
+    total_size += s.size();
+  }
+  total_size += 1 + (2 * strings.size() - 1) + 2;
+
+  char buffer[total_size];
+  size_t current = 0;
+  buffer[current++] = '{';
+  for (size_t index = 0; index < strings.size(); ++index) {
+    buffer[current++] = ' ';
+    std::memcpy(buffer + current, strings[index].data(), strings[index].size());
+    current += strings[index].size();
+    if (index + 1 < strings.size()) {
+      buffer[current++] = ',';
+    }
+  }
+  buffer[current++] = ' ';
+  buffer[current++] = '}';
+  return fbl::String(buffer, current);
+}
 
 // Overloads for string compare.
 bool StrCmp(const char* actual, const char* expected);

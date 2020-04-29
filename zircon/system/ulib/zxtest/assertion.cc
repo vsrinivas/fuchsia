@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/fit/string_view.h>
 #include <stdint.h>
 #include <stdio.h>
 
 #include <cinttypes>
+#include <string_view>
 
 #include <fbl/string_buffer.h>
 #include <fbl/string_printf.h>
@@ -43,17 +43,24 @@ fbl::String ToHex(const void* ptr, size_t size) {
   }
 
   // 2 char for 2 4 bit pairs in each byte.
-  // 1 char for each space.
-  // 1 char for '\0'.
-  size_t expected_size = 3 * size + 1;
+  // 1 char for each space after a byte, except for the last byte.
+  const size_t expected_size = 3 * size - 1;
   char buffer[expected_size];
-  memset(buffer, '\0', static_cast<int32_t>(expected_size));
-
-  for (size_t curr = 0; curr < size; ++curr) {
-    snprintf(buffer + 3 * curr, expected_size - curr, "%02X%*s", *((uint8_t*)(ptr) + curr),
-             (curr < size - 1) ? 1 : 0, " ");
+  static constexpr char kHexTable[] = {'0', '1', '2', '3', '4', '5', '6', '7',
+                                       '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
+  const uint8_t* cur = static_cast<const uint8_t*>(ptr);
+  const uint8_t* end = static_cast<const uint8_t*>(ptr) + size;
+  size_t index = 0;
+  while (cur != end) {
+    buffer[index++] = kHexTable[*cur >> 4];
+    buffer[index++] = kHexTable[*cur & 0xF];
+    if (end - cur > 1) {
+      buffer[index++] = ' ';
+    }
+    ++cur;
   }
-  return buffer;
+
+  return fbl::String(buffer, index);
 }
 
 fbl::String PrintVolatile(volatile const void* ptr, size_t size) {
@@ -91,11 +98,26 @@ fbl::String PrintValue(const uint64_t& value) {
 }
 
 template <>
+fbl::String PrintValue(const float& value) {
+  return fbl::StringPrintf("%f", value);
+}
+
+template <>
+fbl::String PrintValue(const double& value) {
+  return fbl::StringPrintf("%f", value);
+}
+
+template <>
 fbl::String PrintValue(const char* value) {
   if (value == nullptr) {
     return "<nullptr>";
   }
   return fbl::StringPrintf("%s", value);
+}
+
+template <>
+fbl::String PrintValue(const std::string& value) {
+  return fbl::String(value.data(), value.size());
 }
 
 template <>
@@ -107,7 +129,7 @@ fbl::String PrintStatus(zx_status_t status) {
 #ifdef __Fuchsia__
   return fbl::StringPrintf("%s(%d)", zx_status_get_string(status), status);
 #else
-  return fbl::String("%d", status);
+  return fbl::StringPrintf("%d", status);
 #endif
 }
 
@@ -124,10 +146,10 @@ bool StrCmp(const char* actual, const fbl::String& expected) {
 bool StrCmp(const char* actual, const char* expected) { return strcmp(actual, expected) == 0; }
 
 bool StrContain(const fbl::String& str, const fbl::String& substr) {
-  const fit::string_view str_view = fit::string_view(str.data(), str.size());
-  const fit::string_view substr_view = fit::string_view(substr.data(), substr.size());
+  const auto str_view = std::string_view(str.data(), str.size());
+  const auto substr_view = std::string_view(substr.data(), substr.size());
 
-  return str_view.find(substr_view) != fit::string_view::npos;
+  return str_view.find(substr_view) != std::string_view::npos;
 }
 
 bool StrContain(const fbl::String& str, const char* substr) {

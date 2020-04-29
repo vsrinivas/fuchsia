@@ -86,6 +86,10 @@ size_t _zxtest_print_uint64(uint64_t val, char* buffer, size_t buffer_size) {
   return snprintf(buffer, buffer_size, "%" PRIu64, val);
 }
 
+size_t _zxtest_print_double(double val, char* buffer, size_t buffer_size) {
+  return snprintf(buffer, buffer_size, "%f", val);
+}
+
 size_t _zxtest_print_bool(bool val, char* buffer, size_t buffer_size) {
   return snprintf(buffer, buffer_size, "%s", (val) ? "true" : "false");
 }
