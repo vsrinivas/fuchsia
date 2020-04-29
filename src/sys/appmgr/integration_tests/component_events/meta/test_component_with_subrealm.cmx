@@ -1,9 +1,6 @@
 {
     "program": {
-        "args": [
-            "--test-threads=1"
-        ],
-        "binary": "test/component_events_integration_test"
+        "binary": "bin/test_component_with_subrealm"
     },
     "sandbox": {
         "services": [
