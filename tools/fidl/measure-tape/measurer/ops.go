@@ -5,7 +5,6 @@
 package measurer
 
 import (
-	"fmt"
 	"sort"
 
 	fidlcommon "fidl/compiler/backend/common"
@@ -57,7 +56,7 @@ const (
 type statement struct {
 	kind       statementKind
 	id         methodID
-	args       []string
+	args       []Expression
 	body       *block
 	targetType fidlcommon.Name
 	variants   map[string]*block
@@ -115,62 +114,40 @@ type block struct {
 	stmts []statement
 }
 
-// TODO(fxb/50011): Generalize values, which below are emitted as strings.
-//
-// Instead, we need expression E as follows:
-//
-// * N, i.e. a number
-//
-// * V, i.e. a variable. It is kinded and can be one of struct, union, table, or
-//   unknown which is required for array and vector traversals.
-//
-// * ACCESS(V, M), i.e. a access a member. This is done differently for a struct
-//   member, union member, or table member.
-//
-// * FIDL_ALIGN(E), i.e. FIDL aligning an expression.
-//
-// * LENGTH(E), i.e. v.length() or c.size() in C++ depending on std::string vs
-//   std::vector receiver. Only meaningul on array or vector expressions.
-//
-// * HAS_MEMBER(V, M), i.e. check if a member of a value is present. This is
-//   meaningful for a nullable struct member, or a table member.
-//
-// * MULT(V1, V1), i.e. multiplication of two values.
-
-func (b *block) emitAddNumBytes(format string, a ...interface{}) {
+func (b *block) emitAddNumBytes(expr Expression) {
 	b.stmts = append(b.stmts, statement{
 		kind: addNumBytes,
-		args: []string{fmt.Sprintf(format, a...)},
+		args: []Expression{expr},
 	})
 }
 
-func (b *block) emitAddNumHandles(format string, a ...interface{}) {
+func (b *block) emitAddNumHandles(expr Expression) {
 	b.stmts = append(b.stmts, statement{
 		kind: addNumHandles,
-		args: []string{fmt.Sprintf(format, a...)},
+		args: []Expression{expr},
 	})
 }
 
-func (b *block) emitInvoke(id methodID, format string, a ...interface{}) {
+func (b *block) emitInvoke(id methodID, expr Expression) {
 	b.stmts = append(b.stmts, statement{
 		kind: invoke,
 		id:   id,
-		args: []string{fmt.Sprintf(format, a...)},
+		args: []Expression{expr},
 	})
 }
 
-func (b *block) emitIterate(local, value string, body *block) {
+func (b *block) emitIterate(local Expression, value Expression, body *block) {
 	b.stmts = append(b.stmts, statement{
 		kind: iterate,
-		args: []string{local, value},
+		args: []Expression{local, value},
 		body: body,
 	})
 }
 
-func (b *block) emitGuard(cond string, body *block) {
+func (b *block) emitGuard(cond Expression, body *block) {
 	b.stmts = append(b.stmts, statement{
 		kind: guard,
-		args: []string{cond},
+		args: []Expression{cond},
 		body: body,
 	})
 }
@@ -183,25 +160,28 @@ func (b *block) emitMaxOut() {
 
 const unknownVariant = ""
 
-func (b *block) emitSelectVariant(value string, targetType fidlcommon.Name, variants map[string]*block) {
+func (b *block) emitSelectVariant(expr Expression, targetType fidlcommon.Name, variants map[string]*block) {
 	b.stmts = append(b.stmts, statement{
 		kind:       selectVariant,
-		args:       []string{value},
+		args:       []Expression{expr},
 		targetType: targetType,
 		variants:   variants,
 	})
 }
 
-func (b *block) emitDeclareMaxOrdinal() {
+func (b *block) emitDeclareMaxOrdinal() Expression {
+	local := exprLocal("max_ordinal", kPrimitive, false)
 	b.stmts = append(b.stmts, statement{
 		kind: declareMaxOrdinal,
+		args: []Expression{local},
 	})
+	return local
 }
 
-func (b *block) emitSetMaxOrdinal(ordinal int) {
+func (b *block) emitSetMaxOrdinal(local Expression, ordinal int) {
 	b.stmts = append(b.stmts, statement{
 		kind: setMaxOrdinal,
-		args: []string{fmt.Sprintf("%d", ordinal)},
+		args: []Expression{local, exprNum(ordinal)},
 	})
 }
 
@@ -216,12 +196,14 @@ func (b *block) forAllStatements(fn func(stmt *statement)) {
 
 type method struct {
 	id   methodID
+	arg  Expression
 	body *block
 }
 
-func newMethod(id methodID, body *block) *method {
+func newMethod(id methodID, expr Expression, body *block) *method {
 	return &method{
 		id:   id,
+		arg:  expr,
 		body: body,
 	}
 }

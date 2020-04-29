@@ -92,7 +92,7 @@ class MeasuringTape {
   }
 
   void Measure(const ::fuchsia::ui::gfx::Command& value) {
-    num_bytes_ += sizeof(fidl_xunion_t);
+    num_bytes_ += 24;
     MeasureOutOfLine(value);
   }
 
@@ -446,7 +446,7 @@ class MeasuringTape {
   }
 
   void Measure(const ::fuchsia::ui::gfx::RendererParam& value) {
-    num_bytes_ += sizeof(fidl_xunion_t);
+    num_bytes_ += 24;
     MeasureOutOfLine(value);
   }
 
@@ -468,7 +468,7 @@ class MeasuringTape {
   }
 
   void Measure(const ::fuchsia::ui::gfx::ResourceArgs& value) {
-    num_bytes_ += sizeof(fidl_xunion_t);
+    num_bytes_ += 24;
     MeasureOutOfLine(value);
   }
 
@@ -781,7 +781,7 @@ class MeasuringTape {
   }
 
   void Measure(const ::fuchsia::ui::gfx::Value& value) {
-    num_bytes_ += sizeof(fidl_xunion_t);
+    num_bytes_ += 24;
     MeasureOutOfLine(value);
   }
 
@@ -914,7 +914,7 @@ class MeasuringTape {
   }
 
   void Measure(const ::fuchsia::ui::input::Command& value) {
-    num_bytes_ += sizeof(fidl_xunion_t);
+    num_bytes_ += 24;
     MeasureOutOfLine(value);
   }
 
@@ -963,7 +963,7 @@ class MeasuringTape {
   }
 
   void Measure(const ::fuchsia::ui::scenic::Command& value) {
-    num_bytes_ += sizeof(fidl_xunion_t);
+    num_bytes_ += 24;
     MeasureOutOfLine(value);
   }
 
@@ -985,7 +985,7 @@ class MeasuringTape {
   }
 
   void Measure(const ::fuchsia::ui::views::Command& value) {
-    num_bytes_ += sizeof(fidl_xunion_t);
+    num_bytes_ += 24;
     MeasureOutOfLine(value);
   }
 

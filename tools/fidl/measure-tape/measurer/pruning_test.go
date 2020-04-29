@@ -18,13 +18,15 @@ func TestPruningCallerCallingEmptyCallee(t *testing.T) {
 		caller, callee *method
 	)
 	{
+		expr := exprLocal("value", kStruct, false)
 		var body block
-		body.emitAddNumBytes("1")
-		body.emitInvoke(calleeID, "value")
-		caller = newMethod(callerID, &body)
+		body.emitAddNumBytes(exprNum(1))
+		body.emitInvoke(calleeID, expr)
+		caller = newMethod(callerID, expr, &body)
 	}
 	{
-		callee = newMethod(calleeID, nil)
+		expr := exprLocal("value", kStruct, false)
+		callee = newMethod(calleeID, expr, nil)
 	}
 
 	allMethods := map[methodID]*method{
@@ -51,18 +53,20 @@ func TestPruningCallerCallingEmptyCalleeThroughSelectVariant(t *testing.T) {
 	)
 	{
 		var variantBlock block
-		variantBlock.emitInvoke(calleeID, "value")
+		variantBlock.emitInvoke(calleeID, exprLocal("value", kStruct, false))
 
+		expr := exprLocal("value", kStruct, false)
 		var body block
-		body.emitAddNumBytes("1")
-		body.emitSelectVariant("value", fidlcommon.MustReadName("fidl/TargetType"), map[string]*block{
+		body.emitAddNumBytes(exprNum(1))
+		body.emitSelectVariant(exprNum(42), fidlcommon.MustReadName("fidl/TargetType"), map[string]*block{
 			"member": &variantBlock,
 		})
 
-		caller = newMethod(callerID, &body)
+		caller = newMethod(callerID, expr, &body)
 	}
 	{
-		callee = newMethod(calleeID, nil)
+		expr := exprLocal("value", kStruct, false)
+		callee = newMethod(calleeID, expr, nil)
 	}
 
 	allMethods := map[methodID]*method{
@@ -90,17 +94,17 @@ func TestPruningOneCallingTwoCallingEmptyThree(t *testing.T) {
 	)
 	{
 		var body block
-		body.emitAddNumBytes("1")
-		body.emitInvoke(twoID, "value")
-		one = newMethod(oneID, &body)
+		body.emitAddNumBytes(exprNum(1))
+		body.emitInvoke(twoID, nil)
+		one = newMethod(oneID, nil, &body)
 	}
 	{
 		var body block
-		body.emitInvoke(threeID, "value")
-		two = newMethod(twoID, &body)
+		body.emitInvoke(threeID, nil)
+		two = newMethod(twoID, nil, &body)
 	}
 	{
-		three = newMethod(threeID, nil)
+		three = newMethod(threeID, nil, nil)
 	}
 
 	allMethods := map[methodID]*method{

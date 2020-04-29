@@ -21,29 +21,37 @@ import (
 
 func (b *block) print(p *Printer) {
 	b.forAllStatements(func(stmt *statement) {
+		var args []string
+		for _, arg := range stmt.args {
+			args = append(args, formatExpr{arg}.String())
+		}
 		switch stmt.kind {
 		case maxOut:
 			p.writef("MaxOut();\n")
 		case addNumBytes:
-			p.writef("num_bytes_ += %s;\n", stmt.args[0])
+			p.writef("num_bytes_ += %s;\n", args[0])
 		case addNumHandles:
-			p.writef("num_handles_ += %s;\n", stmt.args[0])
+			p.writef("num_handles_ += %s;\n", args[0])
 		case invoke:
-			p.writef("%s(%s);\n", fmtMethodKind(stmt.id.kind), stmt.args[0])
+			p.writef("%s(%s);\n", fmtMethodKind(stmt.id.kind), args[0])
 		case guard:
-			p.writef("if (%s) {\n", stmt.args[0])
+			p.writef("if (%s) {\n", args[0])
 			p.indent(func() {
 				stmt.body.print(p)
 			})
 			p.writef("}\n")
 		case iterate:
-			p.writef("for (const auto& %s : %s) {\n", stmt.args[0], stmt.args[1])
+			var deref string
+			if stmt.args[1].Nullable() {
+				deref = "*"
+			}
+			p.writef("for (const auto& %s : %s%s) {\n", args[0], deref, args[1])
 			p.indent(func() {
 				stmt.body.print(p)
 			})
 			p.writef("}\n")
 		case selectVariant:
-			p.writef("switch (%s.Which()) {\n", stmt.args[0])
+			p.writef("switch (%s.Which()) {\n", args[0])
 			p.indent(func() {
 				var variants []string
 				for variant := range stmt.variants {
@@ -64,17 +72,17 @@ func (b *block) print(p *Printer) {
 			})
 			p.writef("}\n")
 		case declareMaxOrdinal:
-			p.writef("int32_t max_ordinal = 0;\n")
+			p.writef("int32_t %s = 0;\n", args[0])
 		case setMaxOrdinal:
-			p.writef("max_ordinal = %s;\n", stmt.args[0])
+			p.writef("%s = %s;\n", args[0], args[1])
 		}
 	})
 }
 
-func (b *method) print(p *Printer) {
-	p.writef("void %s(const %s& value) {\n", fmtMethodKind(b.id.kind), p.fmtType(b.id.targetType))
+func (m *method) print(p *Printer) {
+	p.writef("void %s(const %s& %s) {\n", fmtMethodKind(m.id.kind), p.fmtType(m.id.targetType), formatExpr{m.arg})
 	p.indent(func() {
-		b.body.print(p)
+		m.body.print(p)
 	})
 	p.writef("}\n")
 }
@@ -103,4 +111,58 @@ func (p *Printer) fmtKnownVariant(name fidlcommon.Name, variant string) string {
 
 func (p *Printer) fmtUnknownVariant(name fidlcommon.Name) string {
 	return fmt.Sprintf("%s::Tag::Invalid", p.fmtType(name))
+}
+
+type formatExpr struct{ Expression }
+
+func (expr formatExpr) String() string {
+	return expr.Fmt(expr)
+}
+
+var _ ExpressionFormatter = formatExpr{}
+
+func (formatExpr) CaseNum(num int) string {
+	return fmt.Sprintf("%d", num)
+}
+
+func (formatExpr) CaseLocal(name string, _ tapeKind) string {
+	return name
+}
+
+func (formatExpr) CaseMemberOf(expr Expression, member string) string {
+	var accessor string
+	if kind := expr.AssertKind(kStruct, kUnion, kTable); kind != kStruct {
+		accessor = "()"
+	}
+	return fmt.Sprintf("%s%s%s%s", formatExpr{expr}, getDerefOp(expr), fidlcommon.ToSnakeCase(member), accessor)
+}
+
+func (formatExpr) CaseFidlAlign(expr Expression) string {
+	return fmt.Sprintf("FIDL_ALIGN(%s)", formatExpr{expr})
+}
+
+func (formatExpr) CaseLength(expr Expression) string {
+	var op string
+	switch expr.AssertKind(kString, kVector) {
+	case kString:
+		op = "length"
+	case kVector:
+		op = "size"
+	}
+	return fmt.Sprintf("%s%s%s()", formatExpr{expr}, getDerefOp(expr), op)
+}
+
+func (formatExpr) CaseHasMember(expr Expression, member string) string {
+	return fmt.Sprintf("%s%shas_%s()", formatExpr{expr}, getDerefOp(expr), fidlcommon.ToSnakeCase(member))
+}
+
+func (formatExpr) CaseMult(lhs, rhs Expression) string {
+	return fmt.Sprintf("%s * %s", formatExpr{lhs}, formatExpr{rhs})
+}
+
+func getDerefOp(expr Expression) string {
+	if expr.Nullable() {
+		return "->"
+	}
+	return "."
 }
