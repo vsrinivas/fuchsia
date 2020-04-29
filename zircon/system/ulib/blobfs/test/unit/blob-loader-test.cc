@@ -90,20 +90,6 @@ class FakeUserPager : public UserPager {
     return ZX_OK;
   }
 
-  zx_status_t AlignForVerification(uint64_t* offset, uint64_t* length,
-                                   UserPagerInfo* info) override {
-    uint64_t data_offset = *offset;
-    uint64_t data_length = fbl::min(*length, info->data_length_bytes - data_offset);
-    zx_status_t status;
-    if ((status = info->verifier->Align(&data_offset, &data_length)) != ZX_OK) {
-      AbortMainThread();
-      return status;
-    }
-    *offset = data_offset;
-    *length = data_length;
-    return ZX_OK;
-  }
-
   zx_status_t VerifyTransferVmo(uint64_t offset, uint64_t length, const zx::vmo& transfer_vmo,
                                 UserPagerInfo* info) override {
     if (offset + length > data_.size()) {

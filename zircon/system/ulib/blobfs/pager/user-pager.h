@@ -73,6 +73,28 @@ class UserPager {
   zx::pager pager_;
 
  private:
+  struct ReadRange {
+    uint64_t offset;
+    uint64_t length;
+  };
+  // Returns a range which covers [offset, offset+length), adjusted for read-ahead and alignment.
+  //
+  // The returned range will have the following guarantees:
+  //  - The range will contain [offset, offset+length).
+  //  - The returned offset will be block-aligned.
+  //  - The end of the returned range is *either* block-aligned or is the end of the file.
+  //  - The range will be adjusted for verification (see |BlobVerifier::Align|).
+  //
+  // The range needs to be extended before actually populating the transfer buffer with pages, as
+  // absent pages will cause page faults during verification on the userpager thread, causing it to
+  // block against itself indefinitely.
+  //
+  // For example:
+  //                  |...input_range...|
+  // |..data_block..|..data_block..|..data_block..|
+  //                |........output_range.........|
+  ReadRange ExtendReadRange(UserPagerInfo* info, uint64_t offset, uint64_t length);
+
   // Attaches the transfer buffer to the underlying block device, so that blocks can be read into it
   // from storage.
   virtual zx_status_t AttachTransferVmo(const zx::vmo& transfer_vmo) = 0;
@@ -87,20 +109,6 @@ class UserPager {
   // |info| provided.
   virtual zx_status_t VerifyTransferVmo(uint64_t offset, uint64_t length,
                                         const zx::vmo& transfer_vmo, UserPagerInfo* info) = 0;
-
-  // Aligns the requested read range to include the minimum number of complete data blocks, which
-  // are the smallest unit of data that can be verified via the merkle tree. The range needs to be
-  // determined before calling the user pager to populate the pages, as absent pages will cause page
-  // faults during verification on the userpager thread, causing it to block against itself
-  // indefinitely.
-  //
-  // Example:
-  //
-  //                  |...input_range...|
-  // |..data_block..|..data_block..|..data_block..|
-  //                |........output_range.........|
-  virtual zx_status_t AlignForVerification(uint64_t* offset, uint64_t* length,
-                                           UserPagerInfo* info) = 0;
 
   // Scratch buffer for pager transfers.
   // NOTE: Per the constraints imposed by |zx_pager_supply_pages|, this needs to be unmapped before

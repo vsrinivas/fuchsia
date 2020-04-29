@@ -84,32 +84,6 @@ void PageWatcher::HandlePageRequest(async_dispatcher_t* dispatcher, async::Paged
   }
 }
 
-// Called from the singleton userpager thread.
-void PageWatcher::GetPrefetchRangeInBytes(const uint64_t requested_offset,
-                                          const uint64_t requested_length,
-                                          uint64_t* prefetch_offset, uint64_t* prefetch_length) {
-  TRACE_DURATION("blobfs", "PageWatcher::GetPrefetchRangeInBytes", "requested_offset",
-                 requested_offset, "requested_length", requested_length);
-  // TODO(rashaeqbal): Make the cluster size dynamic once we have prefetched read efficiency
-  // metrics from the kernel - what percentage of prefetched pages are actually used.
-  //
-  // For now read read in at least 128KB (if the blob is larger than 128KB). 128KB is completely
-  // arbitrary. Tune this for optimal performance (until we can support dynamic prefetch sizing).
-  constexpr uint64_t kPrefetchClusterSize = (128 * (1 << 10));
-
-  uint64_t end_offset = requested_offset + fbl::max(kPrefetchClusterSize, requested_length);
-  uint64_t total_length;
-  vmo_->get_size(&total_length);
-  if (end_offset > total_length) {
-    end_offset = total_length;
-  }
-
-  // TODO(rashaeqbal): Consider extending the range backwards as well. Will need some way to track
-  // populated ranges.
-  *prefetch_offset = requested_offset;
-  *prefetch_length = end_offset - *prefetch_offset;
-}
-
 // TODO(rashaeqbal): fxb/40207
 // Propagate errors better. Right now we simply return after an FS_TRACE_ERROR.
 // Ideally we want to signal the waiting event associated with the corresponding page request, but
@@ -130,18 +104,7 @@ void PageWatcher::PopulateAndVerifyPagesInRange(uint64_t offset, uint64_t length
     return;
   }
 
-  uint64_t end;
-  if (add_overflow(offset, length, &end)) {
-    FS_TRACE_ERROR("blobfs pager: Invalid range, addition overflow.\n");
-    return;
-  }
-
-  // Extend the range being read in to also speculatively prefetch pages.
-  uint64_t prefetch_offset, prefetch_length;
-  GetPrefetchRangeInBytes(offset, length, &prefetch_offset, &prefetch_length);
-
-  zx_status_t status =
-      user_pager_->TransferPagesToVmo(prefetch_offset, prefetch_length, *vmo_, &userpager_info_);
+  zx_status_t status = user_pager_->TransferPagesToVmo(offset, length, *vmo_, &userpager_info_);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("blobfs pager: Failed to transfer pages to the blob, error: %s\n",
                    zx_status_get_string(status));

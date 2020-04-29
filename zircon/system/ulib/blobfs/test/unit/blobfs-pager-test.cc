@@ -27,6 +27,8 @@ namespace blobfs {
 namespace {
 
 constexpr uint64_t kPagedVmoSize = 10 * PAGE_SIZE;
+// kBlobSize is intentionally not page-aligned to exercise edge cases.
+constexpr uint64_t kBlobSize = kPagedVmoSize - 42;
 constexpr uint64_t kNumReadRequests = 100;
 constexpr uint64_t kNumThreads = 10;
 
@@ -34,21 +36,22 @@ constexpr uint64_t kNumThreads = 10;
 class MockBlob {
  public:
   MockBlob(char identifier, UserPager* pager, BlobfsMetrics* metrics) : identifier_(identifier) {
-    char data[kPagedVmoSize];
-    memset(data, identifier, kPagedVmoSize);
+    char data[kBlobSize];
+    memset(data, identifier, kBlobSize);
 
     size_t tree_len;
     Digest root;
     ASSERT_OK(
-        digest::MerkleTreeCreator::Create(data, kPagedVmoSize, &merkle_tree_, &tree_len, &root));
+        digest::MerkleTreeCreator::Create(data, kBlobSize, &merkle_tree_, &tree_len, &root));
 
     std::unique_ptr<BlobVerifier> verifier;
     ASSERT_OK(BlobVerifier::Create(std::move(root), metrics, merkle_tree_.get(), tree_len,
-                                   kPagedVmoSize, &verifier));
+                                   kBlobSize, &verifier));
 
     UserPagerInfo pager_info;
     pager_info.verifier = std::move(verifier);
     pager_info.identifier = identifier_;
+    pager_info.data_length_bytes = kBlobSize;
 
     page_watcher_ = std::make_unique<PageWatcher>(pager, std::move(pager_info));
 
@@ -113,11 +116,6 @@ class MockPager : public UserPager {
     return ZX_OK;
   }
 
-  zx_status_t AlignForVerification(uint64_t* offset, uint64_t* length,
-                                   UserPagerInfo* info) override {
-    return info->verifier->Align(offset, length);
-  }
-
   zx_status_t VerifyTransferVmo(uint64_t offset, uint64_t length, const zx::vmo& transfer_vmo,
                                 UserPagerInfo* info) override {
     fzl::VmoMapper mapping;
@@ -151,12 +149,12 @@ class BlobfsPagerTest : public zxtest::Test {
 
 void GetRandomOffsetAndLength(unsigned int* seed, uint64_t* offset, uint64_t* length) {
   *offset = rand_r(seed) % kPagedVmoSize;
-  *length = rand_r(seed) % (kPagedVmoSize - *offset + 1);
+  *length = 1 + (rand_r(seed) % (kPagedVmoSize - *offset));
 }
 
 struct ReadBlobFnArgs {
   MockBlob* blob;
-  unsigned int seed;
+  unsigned int seed = zxtest::Runner::GetInstance()->random_seed();
 };
 
 int ReadBlobFn(void* args) {
@@ -183,7 +181,7 @@ TEST_F(BlobfsPagerTest, ReadSequential) {
 TEST_F(BlobfsPagerTest, ReadRandom) {
   auto blob = CreateBlob();
   uint64_t offset, length;
-  unsigned int seed = 0;
+  unsigned int seed = zxtest::Runner::GetInstance()->random_seed();
   for (uint64_t i = 0; i < kNumReadRequests; i++) {
     GetRandomOffsetAndLength(&seed, &offset, &length);
     blob->Read(offset, length);
@@ -200,7 +198,7 @@ TEST_F(BlobfsPagerTest, ReadRandomMultipleBlobs) {
   std::unique_ptr<MockBlob> blobs[3] = {CreateBlob('x'), CreateBlob('y'), CreateBlob('z')};
 
   uint64_t offset, length;
-  unsigned int seed = 0;
+  unsigned int seed = zxtest::Runner::GetInstance()->random_seed();
   for (uint64_t i = 0; i < kNumReadRequests; i++) {
     uint64_t index = rand() % 3;
     GetRandomOffsetAndLength(&seed, &offset, &length);

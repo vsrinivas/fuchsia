@@ -881,25 +881,4 @@ zx_status_t Blobfs::VerifyTransferVmo(uint64_t offset, uint64_t length, const zx
   return status;
 }
 
-zx_status_t Blobfs::AlignForVerification(uint64_t* offset, uint64_t* length, UserPagerInfo* info) {
-  uint64_t data_offset = *offset;
-  uint64_t data_length = fbl::min(*length, info->data_length_bytes - data_offset);
-
-  zx_status_t status = info->verifier->Align(&data_offset, &data_length);
-  if (status != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: Could not align offsets for verification: %s\n",
-                   zx_status_get_string(status));
-    return status;
-  }
-
-  ZX_DEBUG_ASSERT(data_offset % kBlobfsBlockSize == 0);
-  ZX_DEBUG_ASSERT(data_length % kBlobfsBlockSize == 0 ||
-                  data_offset + data_length == info->data_length_bytes);
-
-  *offset = data_offset;
-  *length = data_length;
-
-  return ZX_OK;
-}
-
 }  // namespace blobfs

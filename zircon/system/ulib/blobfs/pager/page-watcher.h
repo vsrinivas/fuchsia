@@ -52,10 +52,6 @@ class PageWatcher {
   void HandlePageRequest(async_dispatcher_t* dispatcher, async::PagedVmoBase* paged_vmo,
                          zx_status_t status, const zx_packet_page_request_t* request);
 
-  // Extends the requested read range to also include pre-fetched pages.
-  void GetPrefetchRangeInBytes(const uint64_t requested_offset, const uint64_t requested_length,
-                               uint64_t* prefetch_offset, uint64_t* prefetch_length);
-
   // Fulfills page read requests for a certain range in the paged VMO. Also verifies the range after
   // it is read in from disk. Called by |HandlePageRequest| for a ZX_PAGER_VMO_READ packet. |offset|
   // and |length| are in bytes.

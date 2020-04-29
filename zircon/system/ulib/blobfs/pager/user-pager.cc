@@ -52,19 +52,51 @@ zx_status_t UserPager::InitPager() {
   return ZX_OK;
 }
 
-zx_status_t UserPager::TransferPagesToVmo(uint64_t offset, uint64_t length, const zx::vmo& vmo,
-                                          UserPagerInfo* info) {
+UserPager::ReadRange UserPager::ExtendReadRange(UserPagerInfo* info, uint64_t offset,
+                                                uint64_t length) {
+  // TODO(rashaeqbal): Make the cluster size dynamic once we have prefetched read efficiency
+  // metrics from the kernel - what percentage of prefetched pages are actually used.
+  //
+  // For now read read in at least 128KB (if the blob is larger than 128KB). 128KB is completely
+  // arbitrary. Tune this for optimal performance (until we can support dynamic prefetch sizing).
+  //
+  // TODO(rashaeqbal): Consider extending the range backwards as well. Will need some way to track
+  // populated ranges.
+  constexpr uint64_t kReadAheadClusterSize = (128 * (1 << 10));
+
+  size_t read_ahead_offset = offset;
+  size_t read_ahead_length = fbl::max(kReadAheadClusterSize, length);
+  read_ahead_length = fbl::min(read_ahead_length, info->data_length_bytes - read_ahead_offset);
+
+  // Align to the block size for verification. (In practice this means alignment to 8k).
+  zx_status_t status = info->verifier->Align(&read_ahead_offset, &read_ahead_length);
+  // This only happens if the info->verifier thinks that [offset,length) is out of range, which
+  // will only happen if |verifier| was initialized with a different length than the rest of |info|
+  // (which is a programming error).
+  ZX_DEBUG_ASSERT(status == ZX_OK);
+
+  ZX_DEBUG_ASSERT(read_ahead_offset % kBlobfsBlockSize == 0);
+  ZX_DEBUG_ASSERT(read_ahead_length % kBlobfsBlockSize == 0 ||
+                  read_ahead_offset + read_ahead_length == info->data_length_bytes);
+
+  return {.offset = read_ahead_offset, .length = read_ahead_length};
+}
+
+zx_status_t UserPager::TransferPagesToVmo(uint64_t requested_offset, uint64_t requested_length,
+                                          const zx::vmo& vmo, UserPagerInfo* info) {
+  ZX_DEBUG_ASSERT(info);
+
+  size_t end;
+  if (add_overflow(requested_offset, requested_length, &end)) {
+    FS_TRACE_ERROR("blobfs: Transfer range would overflow (off=%lu, len=%lu)\n",
+                   requested_offset, requested_length);
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+  const auto [offset, length] = ExtendReadRange(info, requested_offset, requested_length);
+
   TRACE_DURATION("blobfs", "UserPager::TransferPagesToVmo", "offset", offset, "length", length);
 
-  ZX_DEBUG_ASSERT(info);
-  // Align the range to include pages needed for verification.
-  zx_status_t status = AlignForVerification(&offset, &length, info);
-  if (status != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: Failed to align requested pages: %s\n", zx_status_get_string(status));
-    return status;
-  }
-
-  auto decommit = fbl::MakeAutoCall([this, length]() {
+  auto decommit = fbl::MakeAutoCall([this, length = length]() {
     // Decommit pages in the transfer buffer that might have been populated. All blobs share the
     // same transfer buffer - this prevents data leaks between different blobs.
     transfer_buffer_.op_range(ZX_VMO_OP_DECOMMIT, 0, fbl::round_up(length, kBlobfsBlockSize),
@@ -72,7 +104,7 @@ zx_status_t UserPager::TransferPagesToVmo(uint64_t offset, uint64_t length, cons
   });
 
   // Read from storage into the transfer buffer.
-  status = PopulateTransferVmo(offset, length, info);
+  zx_status_t status = PopulateTransferVmo(offset, length, info);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("blobfs: Failed to populate transfer vmo: %s\n", zx_status_get_string(status));
     return status;

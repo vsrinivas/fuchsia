@@ -215,7 +215,6 @@ class Blobfs : public TransactionManager, public UserPager, public BlockIterator
   zx_status_t PopulateTransferVmo(uint64_t offset, uint64_t length, UserPagerInfo* info) final;
   zx_status_t VerifyTransferVmo(uint64_t offset, uint64_t length, const zx::vmo& transfer_vmo,
                                 UserPagerInfo* info) final;
-  zx_status_t AlignForVerification(uint64_t* offset, uint64_t* length, UserPagerInfo* info) final;
 
   Blobfs(async_dispatcher_t* dispatcher, std::unique_ptr<BlockDevice> device,
          const Superblock* info, Writability writable,
