@@ -184,6 +184,7 @@ func attemptLoglistener(t *testing.T, i *qemu.Instance, shouldWork bool) {
 		// Should only get the "listening..." line, but no other output.
 		if len(strings.Split(string(out), "\n")) != 1 {
 			t.Errorf("%s incorrectly received log\n", name)
+			t.Errorf("got: %s", string(out))
 		} else {
 			t.Logf("%s failed as expected", name)
 		}
