@@ -49,10 +49,13 @@ constexpr char kDeviceInfoStorePath[] = "/config/data/device_info.json";
 constexpr char kDeviceInfoConfigKey_DeviceId[] = "device-id";
 constexpr char kDeviceInfoConfigKey_DeviceIdPath[] = "device-id-path";
 constexpr char kDeviceInfoConfigKey_FirmwareRevision[] = "firmware-revision";
+constexpr char kDeviceInfoConfigKey_MfrDeviceCertPath[] = "mfr-device-cert-path";
 constexpr char kDeviceInfoConfigKey_ProductId[] = "product-id";
 constexpr char kDeviceInfoConfigKey_VendorId[] = "vendor-id";
 // Maximum number of chars in hex for a uint64_t
 constexpr int kWeaveDeviceIdMaxLength = 16;
+// Maximum size of Weave certificate
+constexpr int kWeaveCertificateMaxLength = UINT16_MAX;
 }  // unnamed namespace
 
 /* Singleton instance of the ConfigurationManager implementation object for the Fuchsia. */
@@ -144,6 +147,34 @@ WEAVE_ERROR ConfigurationManagerImpl::GetAndStorePairingCode() {
 
   // return no error, will continue to use device pairing code
   return WEAVE_NO_ERROR;
+}
+
+WEAVE_ERROR ConfigurationManagerImpl::GetAndStoreMfrDeviceCert() {
+  char path[PATH_MAX] = {'\0'};
+  char mfr_cert[kWeaveCertificateMaxLength];
+  size_t out_size;
+  zx_status_t status;
+  WEAVE_ERROR err;
+
+  err = device_info_->ReadConfigValueStr(
+      kDeviceInfoConfigKey_MfrDeviceCertPath, path, sizeof(path), &out_size);
+
+  if (err != WEAVE_NO_ERROR) {
+    FX_LOGS(WARNING) << "No manufacturer device certificate was found";
+    return err;
+  }
+
+  status = ReadFactoryFile(path, mfr_cert, sizeof(mfr_cert), &out_size);
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR)
+        << "Failed getting manufacturer certificate from factory with status "
+        << zx_status_get_string(status)
+        << " for path: "
+        << path;
+    return WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND;
+  }
+
+  return StoreManufacturerDeviceCertificate(reinterpret_cast<uint8_t*>(mfr_cert), out_size);
 }
 
 WEAVE_ERROR ConfigurationManagerImpl::_GetVendorId(uint16_t& vendor_id) {
@@ -251,6 +282,22 @@ WEAVE_ERROR ConfigurationManagerImpl::_GetDeviceId(uint64_t& device_id) {
   }
 
   return StoreManufacturerDeviceId(device_id);
+}
+
+WEAVE_ERROR ConfigurationManagerImpl::_GetManufacturerDeviceCertificate(uint8_t* buf,
+                                                                        size_t buf_size,
+                                                                        size_t& out_len) {
+  WEAVE_ERROR err = ReadConfigValueBin(kConfigKey_MfrDeviceCert, buf, buf_size, out_len);
+  if (err == WEAVE_NO_ERROR) {
+    return err;
+  }
+
+  err = GetAndStoreMfrDeviceCert();
+  if (err != WEAVE_NO_ERROR) {
+    return err;
+  }
+
+  return ReadConfigValueBin(kConfigKey_MfrDeviceCert, buf, buf_size, out_len);
 }
 
 zx_status_t ConfigurationManagerImpl::GetDeviceIdFromFactory(const char* path,

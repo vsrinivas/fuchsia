@@ -50,11 +50,12 @@ class ConfigurationManagerImpl final
   // ===== Members that implement the ConfigurationManager public interface.
 
   WEAVE_ERROR _Init(void);
-  WEAVE_ERROR _GetVendorId(uint16_t& vendor_id);
-  WEAVE_ERROR _GetProductId(uint16_t& product_id);
-  WEAVE_ERROR _GetFirmwareRevision(char* buf, size_t buf_size, size_t& out_len);
-  WEAVE_ERROR _GetPrimaryWiFiMACAddress(uint8_t* buf);
   WEAVE_ERROR _GetDeviceId(uint64_t& device_id);
+  WEAVE_ERROR _GetFirmwareRevision(char* buf, size_t buf_size, size_t& out_len);
+  WEAVE_ERROR _GetManufacturerDeviceCertificate(uint8_t* buf, size_t buf_size, size_t& out_len);
+  WEAVE_ERROR _GetProductId(uint16_t& product_id);
+  WEAVE_ERROR _GetPrimaryWiFiMACAddress(uint8_t* buf);
+  WEAVE_ERROR _GetVendorId(uint16_t& vendor_id);
 
   ::nl::Weave::Profiles::Security::AppKeys::GroupKeyStoreBase* _GetGroupKeyStore(void);
   bool _CanFactoryReset(void);
@@ -85,6 +86,7 @@ class ConfigurationManagerImpl final
 
   WEAVE_ERROR GetAndStoreHWInfo();
   WEAVE_ERROR GetAndStorePairingCode();
+  WEAVE_ERROR GetAndStoreMfrDeviceCert();
 
  public:
   ConfigurationManagerImpl(std::unique_ptr<sys::ComponentContext> context);

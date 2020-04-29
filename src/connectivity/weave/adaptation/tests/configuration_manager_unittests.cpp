@@ -370,5 +370,32 @@ TEST_F(ConfigurationManagerTest, SetAndGetDeviceId) {
   EXPECT_EQ(stored_weave_device_id, strtoull(test_device_id_data.c_str(), NULL, 16));
 }
 
+TEST_F(ConfigurationManagerTest, GetMfrCert) {
+  constexpr char test_mfr_cert_file[] = "test_mfr_cert";
+  const std::string test_mfr_cert_data("====Fake Certificate Data====");
+  uint8_t mfr_cert_buf[UINT16_MAX] = {0};
+  size_t cert_len;
+
+  EXPECT_EQ(nl::Weave::DeviceLayer::Internal::EnvironmentConfig::FactoryResetConfig(), WEAVE_NO_ERROR);
+  auto fake_dir = std::make_unique<FakeDirectory>();
+  EXPECT_EQ(ZX_OK, fake_dir->AddResource(test_mfr_cert_file, test_mfr_cert_data));
+  GetFactoryProvider()->AttachDir(std::move(fake_dir));
+  EXPECT_EQ(cfg_mgr_->GetManufacturerDeviceCertificate(mfr_cert_buf, sizeof(mfr_cert_buf), cert_len),
+            WEAVE_NO_ERROR);
+  EXPECT_EQ(cert_len, test_mfr_cert_data.size());
+  EXPECT_TRUE(std::equal(mfr_cert_buf, mfr_cert_buf + std::min(cert_len, sizeof(mfr_cert_buf)),
+                         test_mfr_cert_data.begin(), test_mfr_cert_data.end()));
+
+  // Show that after being read in once, modifying the  data has no effect
+  std::memset(mfr_cert_buf, 0, sizeof(mfr_cert_buf));
+  auto fake_dir2 = std::make_unique<FakeDirectory>();
+  GetFactoryProvider()->AttachDir(std::move(fake_dir2));
+  EXPECT_EQ(cfg_mgr_->GetManufacturerDeviceCertificate(mfr_cert_buf, sizeof(mfr_cert_buf), cert_len),
+            WEAVE_NO_ERROR);
+  EXPECT_EQ(cert_len, test_mfr_cert_data.size());
+  EXPECT_TRUE(std::equal(mfr_cert_buf, mfr_cert_buf + std::min(cert_len, sizeof(mfr_cert_buf)),
+                         test_mfr_cert_data.begin(), test_mfr_cert_data.end()));
+}
+
 }  // namespace testing
 }  // namespace nl::Weave::DeviceLayer::Internal
