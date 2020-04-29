@@ -19,6 +19,7 @@
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
+#include <zircon/utc.h>
 
 static bool has_fd(int fd) {
   zx_handle_t handle = ZX_HANDLE_INVALID;
@@ -114,6 +115,20 @@ int do_spawn(int argc, char** argv) {
   return int(proc_info.return_code);
 }
 
+zx_koid_t koid_of_global_utc_clock() {
+  zx_handle_t clock_handle = zx_utc_reference_get();
+  if (clock_handle == ZX_HANDLE_INVALID) {
+    return ZX_KOID_INVALID;
+  }
+  zx_info_handle_basic_t info;
+  zx_status_t status =
+      zx_object_get_info(clock_handle, ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
+  if (status != ZX_OK) {
+    return ZX_KOID_INVALID;
+  }
+  return info.koid;
+}
+
 int main(int argc, char** argv) {
   if (argc == 0)
     return 42;
@@ -175,6 +190,8 @@ int main(int argc, char** argv) {
       return has_ns("/foo/bar/baz") && !has_ns("/baz/bar/foo") ? 74 : -4;
     if (!strcmp(action, "add-handle"))
       return has_arg(PA_USER0) && !has_arg(PA_USER1) ? 75 : -5;
+    if (!strcmp(action, "add-handle-clock-utc"))
+      return koid_of_global_utc_clock();
   }
   if (!strcmp(cmd, "--stat")) {
     if (argc != 3)

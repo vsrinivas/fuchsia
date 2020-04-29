@@ -13,6 +13,7 @@
 #include <lib/fdio/namespace.h>
 #include <lib/fdio/spawn.h>
 #include <lib/zx/channel.h>
+#include <lib/zx/clock.h>
 #include <lib/zx/job.h>
 #include <lib/zx/process.h>
 #include <lib/zx/socket.h>
@@ -22,6 +23,7 @@
 #include <zircon/limits.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls/policy.h>
+#include <zircon/utc.h>
 
 #include <gtest/gtest.h>
 
@@ -805,6 +807,121 @@ TEST(SpawnTest, SpawnVmo) {
     ASSERT_EQ(ZX_OK, status) << err_msg;
     join(process, &return_code);
     EXPECT_EQ(return_code, 43);
+  }
+}
+
+class SpawnUtcClockTest : public ::testing::Test {
+ protected:
+  void SetUp() override {
+    // Remove the current global clock. It will be restored at the end of this test.
+    ASSERT_EQ(ZX_OK, zx_utc_reference_swap(ZX_HANDLE_INVALID, &prev_clock_));
+  }
+
+  void TearDown() override {
+    zx_handle_t dummy;
+    ASSERT_EQ(ZX_OK, zx_utc_reference_swap(prev_clock_, &dummy));
+  }
+
+  zx_koid_t GetKoid(const zx::clock& clock) {
+    zx_info_handle_basic_t info;
+    zx_status_t status =
+        clock.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
+    if (status != ZX_OK) {
+      ADD_FAILURE() << "failed to get koid of handle";
+      return ZX_KOID_INVALID;
+    }
+    return info.koid;
+  }
+
+ private:
+  zx_handle_t prev_clock_ = ZX_HANDLE_INVALID;
+};
+
+TEST_F(SpawnUtcClockTest, NoGlobalUtcClock) {
+  zx_status_t status;
+  zx::process process;
+  int64_t return_code;
+  const char* bin_path = kSpawnChild;
+  char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
+
+  {
+    const char* argv[] = {bin_path, "--action", "add-handle-clock-utc", nullptr};
+    status = fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, bin_path, argv, nullptr, 0,
+                            nullptr, process.reset_and_get_address(), err_msg);
+    ASSERT_EQ(ZX_OK, status) << err_msg;
+    join(process, &return_code);
+    EXPECT_EQ(static_cast<zx_koid_t>(return_code), ZX_KOID_INVALID);
+  }
+}
+
+TEST_F(SpawnUtcClockTest, SendGlobalUtcClock) {
+  zx_status_t status;
+  zx::process process;
+  int64_t return_code;
+  const char* bin_path = kSpawnChild;
+  char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
+
+  // Set a global UTC clock.
+  zx::clock test_clock;
+  zx_handle_t prev_clock;
+  ASSERT_EQ(ZX_OK, zx::clock::create(0, nullptr, &test_clock));
+  ASSERT_EQ(ZX_OK, zx_utc_reference_swap(test_clock.get_handle(), &prev_clock));
+  {
+    const char* argv[] = {bin_path, "--action", "add-handle-clock-utc", nullptr};
+    status = fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, bin_path, argv, nullptr, 0,
+                            nullptr, process.reset_and_get_address(), err_msg);
+    ASSERT_EQ(ZX_OK, status) << err_msg;
+    join(process, &return_code);
+    EXPECT_EQ(static_cast<zx_koid_t>(return_code), GetKoid(test_clock));
+  }
+}
+
+TEST_F(SpawnUtcClockTest, SendExplicitUtcClock) {
+  zx_status_t status;
+  zx::process process;
+  int64_t return_code;
+  const char* bin_path = kSpawnChild;
+  char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
+
+  {
+    zx::clock test_clock;
+    ASSERT_EQ(ZX_OK, zx::clock::create(0, nullptr, &test_clock));
+    zx_koid_t expected_koid = GetKoid(test_clock);
+
+    fdio_spawn_action_t action;
+    action.action = FDIO_SPAWN_ACTION_ADD_HANDLE;
+    action.h.id = PA_CLOCK_UTC;
+    action.h.handle = test_clock.release();
+
+    const char* argv[] = {bin_path, "--action", "add-handle-clock-utc", nullptr};
+    status = fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL & ~FDIO_SPAWN_CLONE_UTC_CLOCK,
+                            bin_path, argv, nullptr, 1, &action, process.reset_and_get_address(),
+                            err_msg);
+    ASSERT_EQ(ZX_OK, status) << err_msg;
+    join(process, &return_code);
+    EXPECT_EQ(static_cast<zx_koid_t>(return_code), expected_koid);
+  }
+}
+
+TEST_F(SpawnUtcClockTest, CannotCloneGlobalAndSendExplicit) {
+  zx_status_t status;
+  zx::process process;
+  const char* bin_path = kSpawnChild;
+  char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
+
+  {
+    zx::clock test_clock;
+    ASSERT_EQ(ZX_OK, zx::clock::create(0, nullptr, &test_clock));
+
+    fdio_spawn_action_t action;
+    action.action = FDIO_SPAWN_ACTION_ADD_HANDLE;
+    action.h.id = PA_CLOCK_UTC;
+    action.h.handle = test_clock.release();
+
+    const char* argv[] = {bin_path, "--action", "add-handle-clock-utc", nullptr};
+    status = fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, bin_path, argv, nullptr, 1,
+                            &action, process.reset_and_get_address(), err_msg);
+    ASSERT_NE(ZX_OK, status);
   }
 }
 

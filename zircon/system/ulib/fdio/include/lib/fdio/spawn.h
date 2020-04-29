@@ -46,6 +46,9 @@ __BEGIN_CDECLS
 // Clones the environment into the spawned process.
 #define FDIO_SPAWN_CLONE_ENVIRON ((uint32_t)0x0010u)
 
+// Clones the process-global UTC clock into the spawned process.
+#define FDIO_SPAWN_CLONE_UTC_CLOCK ((uint32_t)0x0020u)
+
 // Clones all of the above into the spawned process.
 #define FDIO_SPAWN_CLONE_ALL ((uint32_t)0xFFFFu)
 

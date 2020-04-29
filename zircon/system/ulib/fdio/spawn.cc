@@ -27,6 +27,7 @@
 #include <zircon/processargs.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
+#include <zircon/utc.h>
 
 #include <bitset>
 #include <list>
@@ -365,8 +366,9 @@ static zx_status_t send_cstring_array(const zx::channel& launcher, uint64_t ordi
 }
 
 static zx_status_t send_handles(const zx::channel& launcher, size_t handle_capacity, uint32_t flags,
-                                zx_handle_t job, zx::channel ldsvc, size_t action_count,
-                                const fdio_spawn_action_t* actions, char* err_msg) {
+                                zx_handle_t job, zx::channel ldsvc, zx_handle_t utc_clock,
+                                size_t action_count, const fdio_spawn_action_t* actions,
+                                char* err_msg) {
   // TODO(abarth): In principle, we should chunk array into separate
   // messages if we exceed ZX_CHANNEL_MAX_MSG_HANDLES.
 
@@ -497,6 +499,19 @@ static zx_status_t send_handles(const zx::channel& launcher, size_t handle_capac
       handle_infos[h].handle = FIDL_HANDLE_PRESENT;
       handle_infos[h].id = PA_HND(PA_FD, fd);
       handles[h++] = fd_handle;
+    }
+  }
+
+  if ((flags & FDIO_SPAWN_CLONE_UTC_CLOCK) != 0) {
+    if (utc_clock != ZX_HANDLE_INVALID) {
+      handle_infos[h].handle = FIDL_HANDLE_PRESENT;
+      handle_infos[h].id = PA_CLOCK_UTC;
+      status = zx_handle_duplicate(
+          utc_clock, ZX_RIGHT_READ | ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER, &handles[h++]);
+      if (status != ZX_OK) {
+        report_error(err_msg, "failed to clone UTC clock: %d", status);
+        goto cleanup;
+      }
     }
   }
 
@@ -683,6 +698,7 @@ zx_status_t fdio_spawn_vmo(zx_handle_t job, uint32_t flags, zx_handle_t executab
   const char* process_name = NULL;
   size_t process_name_size = 0;
   std::list<std::string> extra_args;
+  zx_handle_t utc_clock = ZX_HANDLE_INVALID;
   zx::vmo executable(executable_vmo);
   executable_vmo = ZX_HANDLE_INVALID;
 
@@ -721,6 +737,14 @@ zx_status_t fdio_spawn_vmo(zx_handle_t job, uint32_t flags, zx_handle_t executab
         if (actions[i].h.handle == ZX_HANDLE_INVALID) {
           status = ZX_ERR_INVALID_ARGS;
           goto cleanup;
+        }
+        if (actions[i].h.id == PA_CLOCK_UTC) {
+          // A UTC Clock handle is explicitly passed in.
+          if ((flags & FDIO_SPAWN_CLONE_UTC_CLOCK) != 0) {
+            status = ZX_ERR_INVALID_ARGS;
+            report_error(err_msg, "cannot clone global UTC clock and send explicit clock");
+            goto cleanup;
+          }
         }
         ++handle_capacity;
         break;
@@ -773,6 +797,13 @@ zx_status_t fdio_spawn_vmo(zx_handle_t job, uint32_t flags, zx_handle_t executab
 
   if ((flags & FDIO_SPAWN_CLONE_STDIO) != 0)
     handle_capacity += 3;
+
+  if ((flags & FDIO_SPAWN_CLONE_UTC_CLOCK) != 0) {
+    utc_clock = zx_utc_reference_get();
+    if (utc_clock != ZX_HANDLE_INVALID) {
+      ++handle_capacity;
+    }
+  }
 
   if (!shared_dirs.empty() || (flags & FDIO_SPAWN_CLONE_NAMESPACE) != 0) {
     status = fdio_ns_export_root(&flat);
@@ -854,8 +885,8 @@ zx_status_t fdio_spawn_vmo(zx_handle_t job, uint32_t flags, zx_handle_t executab
   }
 
   if (handle_capacity) {
-    status = send_handles(launcher, handle_capacity, flags, job, std::move(ldsvc), action_count,
-                          actions, err_msg);
+    status = send_handles(launcher, handle_capacity, flags, job, std::move(ldsvc), utc_clock,
+                          action_count, actions, err_msg);
     if (status != ZX_OK) {
       // When |send_handles| fails, it consumes all the action handles
       // that it knows about, but it doesn't consume the handles used for

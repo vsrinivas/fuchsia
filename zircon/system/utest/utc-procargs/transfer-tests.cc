@@ -89,10 +89,12 @@ void TargetProcess::Run(zx::clock clock_to_send) {
       {.action = FDIO_SPAWN_ACTION_ADD_HANDLE,
        .h = {.id = PA_HND(PA_CLOCK_UTC, 0), .handle = clock_to_send.release()}}};
 
+  // Clone everything but the UTC clock, which is being passed explicitly.
+  const uint32_t spawn_flags = FDIO_SPAWN_CLONE_ALL & ~FDIO_SPAWN_CLONE_UTC_CLOCK;
   char err_msg_out[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
-  zx_status_t res = fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, program_name_, args,
-                                   nullptr, handles_to_send, startup_handles,
-                                   target_process_.reset_and_get_address(), err_msg_out);
+  zx_status_t res =
+      fdio_spawn_etc(ZX_HANDLE_INVALID, spawn_flags, program_name_, args, nullptr, handles_to_send,
+                     startup_handles, target_process_.reset_and_get_address(), err_msg_out);
   ASSERT_OK(res, "%s", err_msg_out);
 
   // Wait for the process we spawned to exit.  We wait a finite (but very long)
