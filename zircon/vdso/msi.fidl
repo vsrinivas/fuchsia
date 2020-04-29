@@ -1,0 +1,20 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library zx;
+
+[Transport = "Syscall"]
+protocol msi {
+    /// Allocate Message-Signaled Interrupts (MSIs).
+    /// Rights: handle must have resource kind ZX_RSRC_KIND_ROOT.
+    msi_allocate(handle<resource> handle, uint32 count)
+        -> (status status, handle out_allocation);
+
+    /// Create an Interrupt object from a Messaged-Signaled Interrupt (MSI) allocation.
+    /// Rights: handle must be of type ZX_OBJ_TYPE_MSI.
+    /// Rights: vmo must be of type ZX_OBJ_TYPE_VMO.
+    /// Rights: vmo must have ZX_RIGHT_MAP.
+    msi_create(handle handle, uint32 options, uint32 msi_id, handle<vmo> vmo, usize vmo_offset)
+        -> (status status, handle out_interrupt);
+};

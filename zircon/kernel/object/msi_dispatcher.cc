@@ -40,7 +40,7 @@ zx_status_t MsiDispatcher::Create(fbl::RefPtr<MsiAllocation> alloc, uint32_t msi
                                   KernelHandle<InterruptDispatcher>* out_interrupt,
                                   RegisterIntFn register_int_fn) {
   if (!out_rights || !out_interrupt || (vmo->is_paged() && !vmo->is_contiguous()) ||
-      cap_offset >= vmo->size() || options ||
+      cap_offset >= vmo->size() || options != 0 ||
       vmo->GetMappingCachePolicy() != ZX_CACHE_POLICY_UNCACHED_DEVICE) {
     LTRACEF(
         "out_rights = %p, out_interrupt = %p\nis_paged = %d, is_contiguous = %d\nsize = %lu, "

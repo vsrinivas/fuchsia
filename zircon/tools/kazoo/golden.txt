@@ -480,6 +480,14 @@ TEXT ·Sys_futex_wake_handle_close_thread_exit(SB),NOSPLIT,$0
 TEXT ·Sys_ticks_get_via_kernel(SB),NOSPLIT,$0
 	JMP runtime·vdsoCall_zx_ticks_get_via_kernel(SB)
 
+// func Sys_msi_allocate(handle Handle, count uint32, out_allocation *Handle) Status
+TEXT ·Sys_msi_allocate(SB),NOSPLIT,$0
+	JMP runtime·vdsoCall_zx_msi_allocate(SB)
+
+// func Sys_msi_create(handle Handle, options uint32, msi_id uint32, vmo Handle, vmo_offset uint, out_interrupt *Handle) Status
+TEXT ·Sys_msi_create(SB),NOSPLIT,$0
+	JMP runtime·vdsoCall_zx_msi_create(SB)
+
 // func Sys_mtrace_control(handle Handle, kind uint32, action uint32, options uint32, ptr unsafe.Pointer, ptr_size uint) Status
 TEXT ·Sys_mtrace_control(SB),NOSPLIT,$0
 	JMP runtime·vdsoCall_zx_mtrace_control(SB)
@@ -1208,6 +1216,14 @@ func Sys_ticks_get_via_kernel() int64
 
 //go:noescape
 //go:nosplit
+func Sys_msi_allocate(handle Handle, count uint32, out_allocation *Handle) Status
+
+//go:noescape
+//go:nosplit
+func Sys_msi_create(handle Handle, options uint32, msi_id uint32, vmo Handle, vmo_offset uint, out_interrupt *Handle) Status
+
+//go:noescape
+//go:nosplit
 func Sys_mtrace_control(handle Handle, kind uint32, action uint32, options uint32, ptr unsafe.Pointer, ptr_size uint) Status
 
 //go:noescape
@@ -1929,6 +1945,14 @@ TEXT ·Sys_futex_wake_handle_close_thread_exit(SB),NOSPLIT,$0
 // func Sys_ticks_get_via_kernel() int64
 TEXT ·Sys_ticks_get_via_kernel(SB),NOSPLIT,$0
 	JMP runtime·vdsoCall_zx_ticks_get_via_kernel(SB)
+
+// func Sys_msi_allocate(handle Handle, count uint32, out_allocation *Handle) Status
+TEXT ·Sys_msi_allocate(SB),NOSPLIT,$0
+	JMP runtime·vdsoCall_zx_msi_allocate(SB)
+
+// func Sys_msi_create(handle Handle, options uint32, msi_id uint32, vmo Handle, vmo_offset uint, out_interrupt *Handle) Status
+TEXT ·Sys_msi_create(SB),NOSPLIT,$0
+	JMP runtime·vdsoCall_zx_msi_create(SB)
 
 // func Sys_mtrace_control(handle Handle, kind uint32, action uint32, options uint32, ptr unsafe.Pointer, ptr_size uint) Status
 TEXT ·Sys_mtrace_control(SB),NOSPLIT,$0
@@ -3628,6 +3652,43 @@ TEXT runtime·vdsoCall_zx_ticks_get_via_kernel(SB),NOSPLIT,$0-8
 	MOVD R20, m_vdsoSP(R21)
 	BL vdso_zx_ticks_get_via_kernel(SB)
 	MOVD R0, ret+0(FP)
+	MOVD g_m(g), R21
+	MOVD $0, m_vdsoSP(R21)
+	RET
+
+// func vdsoCall_zx_msi_allocate(handle uint32, count uint32, out_allocation unsafe.Pointer) int32
+TEXT runtime·vdsoCall_zx_msi_allocate(SB),NOSPLIT,$0-20
+	GO_ARGS
+	NO_LOCAL_POINTERS
+	MOVD g_m(g), R21
+	MOVD LR, m_vdsoPC(R21)
+	MOVD RSP, R20
+	MOVD R20, m_vdsoSP(R21)
+	MOVW handle+0(FP), R0
+	MOVW count+4(FP), R1
+	MOVD out_allocation+8(FP), R2
+	BL vdso_zx_msi_allocate(SB)
+	MOVW R0, ret+16(FP)
+	MOVD g_m(g), R21
+	MOVD $0, m_vdsoSP(R21)
+	RET
+
+// func vdsoCall_zx_msi_create(handle uint32, options uint32, msi_id uint32, vmo uint32, vmo_offset uint, out_interrupt unsafe.Pointer) int32
+TEXT runtime·vdsoCall_zx_msi_create(SB),NOSPLIT,$0-36
+	GO_ARGS
+	NO_LOCAL_POINTERS
+	MOVD g_m(g), R21
+	MOVD LR, m_vdsoPC(R21)
+	MOVD RSP, R20
+	MOVD R20, m_vdsoSP(R21)
+	MOVW handle+0(FP), R0
+	MOVW options+4(FP), R1
+	MOVW msi_id+8(FP), R2
+	MOVW vmo+12(FP), R3
+	MOVD vmo_offset+16(FP), R4
+	MOVD out_interrupt+24(FP), R5
+	BL vdso_zx_msi_create(SB)
+	MOVW R0, ret+32(FP)
 	MOVD g_m(g), R21
 	MOVD $0, m_vdsoSP(R21)
 	RET
@@ -5579,6 +5640,8 @@ var vdsoSymbolKeys = []vdsoSymbolKey{
 	{"_zx_vmar_unmap_handle_close_thread_exit", 0x5a372afb, &vdso_zx_vmar_unmap_handle_close_thread_exit},
 	{"_zx_futex_wake_handle_close_thread_exit", 0x49731cb8, &vdso_zx_futex_wake_handle_close_thread_exit},
 	{"_zx_ticks_get_via_kernel", 0x821bc851, &vdso_zx_ticks_get_via_kernel},
+	{"_zx_msi_allocate", 0xf5370e42, &vdso_zx_msi_allocate},
+	{"_zx_msi_create", 0xbf7b04f1, &vdso_zx_msi_create},
 	{"_zx_mtrace_control", 0x8c5f3211, &vdso_zx_mtrace_control},
 	{"_zx_object_wait_one", 0xed850621, &vdso_zx_object_wait_one},
 	{"_zx_object_wait_many", 0x9e247bd4, &vdso_zx_object_wait_many},
@@ -5759,6 +5822,8 @@ var vdsoSymbolKeys = []vdsoSymbolKey{
 //go:cgo_import_dynamic vdso_zx_vmar_unmap_handle_close_thread_exit zx_vmar_unmap_handle_close_thread_exit
 //go:cgo_import_dynamic vdso_zx_futex_wake_handle_close_thread_exit zx_futex_wake_handle_close_thread_exit
 //go:cgo_import_dynamic vdso_zx_ticks_get_via_kernel zx_ticks_get_via_kernel
+//go:cgo_import_dynamic vdso_zx_msi_allocate zx_msi_allocate
+//go:cgo_import_dynamic vdso_zx_msi_create zx_msi_create
 //go:cgo_import_dynamic vdso_zx_mtrace_control zx_mtrace_control
 //go:cgo_import_dynamic vdso_zx_object_wait_one zx_object_wait_one
 //go:cgo_import_dynamic vdso_zx_object_wait_many zx_object_wait_many
@@ -5938,6 +6003,8 @@ var vdsoSymbolKeys = []vdsoSymbolKey{
 //go:linkname vdso_zx_vmar_unmap_handle_close_thread_exit vdso_zx_vmar_unmap_handle_close_thread_exit
 //go:linkname vdso_zx_futex_wake_handle_close_thread_exit vdso_zx_futex_wake_handle_close_thread_exit
 //go:linkname vdso_zx_ticks_get_via_kernel vdso_zx_ticks_get_via_kernel
+//go:linkname vdso_zx_msi_allocate vdso_zx_msi_allocate
+//go:linkname vdso_zx_msi_create vdso_zx_msi_create
 //go:linkname vdso_zx_mtrace_control vdso_zx_mtrace_control
 //go:linkname vdso_zx_object_wait_one vdso_zx_object_wait_one
 //go:linkname vdso_zx_object_wait_many vdso_zx_object_wait_many
@@ -6335,6 +6402,14 @@ func vdsoCall_zx_futex_wake_handle_close_thread_exit(value_ptr unsafe.Pointer, w
 //go:noescape
 //go:nosplit
 func vdsoCall_zx_ticks_get_via_kernel() int64
+
+//go:noescape
+//go:nosplit
+func vdsoCall_zx_msi_allocate(handle uint32, count uint32, out_allocation unsafe.Pointer) int32
+
+//go:noescape
+//go:nosplit
+func vdsoCall_zx_msi_create(handle uint32, options uint32, msi_id uint32, vmo uint32, vmo_offset uint, out_interrupt unsafe.Pointer) int32
 
 //go:noescape
 //go:nosplit
@@ -6830,6 +6905,8 @@ var (
 	vdso_zx_vmar_unmap_handle_close_thread_exit uintptr
 	vdso_zx_futex_wake_handle_close_thread_exit uintptr
 	vdso_zx_ticks_get_via_kernel uintptr
+	vdso_zx_msi_allocate uintptr
+	vdso_zx_msi_create uintptr
 	vdso_zx_mtrace_control uintptr
 	vdso_zx_object_wait_one uintptr
 	vdso_zx_object_wait_many uintptr
@@ -8605,6 +8682,53 @@ TEXT runtime·vdsoCall_zx_ticks_get_via_kernel(SB),NOSPLIT,$8-8
 	MOVQ vdso_zx_ticks_get_via_kernel(SB), AX
 	CALL AX
 	MOVQ AX, ret+0(FP)
+	POPQ R14
+	MOVQ $0, m_vdsoSP(R14)
+	RET
+
+// func vdsoCall_zx_msi_allocate(handle uint32, count uint32, out_allocation unsafe.Pointer) int32
+TEXT runtime·vdsoCall_zx_msi_allocate(SB),NOSPLIT,$8-20
+	GO_ARGS
+	NO_LOCAL_POINTERS
+	get_tls(CX)
+	MOVQ g(CX), AX
+	MOVQ g_m(AX), R14
+	PUSHQ R14
+	MOVQ 24(SP), DX
+	MOVQ DX, m_vdsoPC(R14)
+	LEAQ 24(SP), DX
+	MOVQ DX, m_vdsoSP(R14)
+	MOVL handle+0(FP), DI
+	MOVL count+4(FP), SI
+	MOVQ out_allocation+8(FP), DX
+	MOVQ vdso_zx_msi_allocate(SB), AX
+	CALL AX
+	MOVL AX, ret+16(FP)
+	POPQ R14
+	MOVQ $0, m_vdsoSP(R14)
+	RET
+
+// func vdsoCall_zx_msi_create(handle uint32, options uint32, msi_id uint32, vmo uint32, vmo_offset uint, out_interrupt unsafe.Pointer) int32
+TEXT runtime·vdsoCall_zx_msi_create(SB),NOSPLIT,$8-36
+	GO_ARGS
+	NO_LOCAL_POINTERS
+	get_tls(CX)
+	MOVQ g(CX), AX
+	MOVQ g_m(AX), R14
+	PUSHQ R14
+	MOVQ 24(SP), DX
+	MOVQ DX, m_vdsoPC(R14)
+	LEAQ 24(SP), DX
+	MOVQ DX, m_vdsoSP(R14)
+	MOVL handle+0(FP), DI
+	MOVL options+4(FP), SI
+	MOVL msi_id+8(FP), DX
+	MOVL vmo+12(FP), CX
+	MOVQ vmo_offset+16(FP), R8
+	MOVQ out_interrupt+24(FP), R9
+	MOVQ vdso_zx_msi_create(SB), AX
+	CALL AX
+	MOVL AX, ret+32(FP)
 	POPQ R14
 	MOVQ $0, m_vdsoSP(R14)
 	RET
@@ -13839,6 +13963,101 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "return_type": "zx_ticks_t"
     },
     {
+      "name": "msi_allocate",
+      "attributes": [
+        "*"
+      ],
+      "top_description": [
+        "Allocate", "Message", "-", "Signaled", "Interrupts", "(", "MSIs", ")", "."
+      ],
+      "requirements": [
+        "handle", "must", "have", "resource", "kind", "ZX_RSRC_KIND_ROOT", "."
+      ],
+      "arguments": [
+        {
+          "name": "handle",
+          "type": "zx_handle_t",
+          "is_array": false,
+          "attributes": [
+          ]
+        },
+        {
+          "name": "count",
+          "type": "uint32_t",
+          "is_array": false,
+          "attributes": [
+          ]
+        },
+        {
+          "name": "out_allocation",
+          "type": "zx_handle_t",
+          "is_array": true,
+          "attributes": [
+          ]
+        }
+      ],
+      "return_type": "zx_status_t"
+    },
+    {
+      "name": "msi_create",
+      "attributes": [
+        "*"
+      ],
+      "top_description": [
+        "Create", "an", "Interrupt", "object", "from", "a", "Messaged", "-", "Signaled", "Interrupt", "(", "MSI", ")", "allocation", "."
+      ],
+      "requirements": [
+        "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_MSI", ".",
+        "vmo", "must", "be", "of", "type", "ZX_OBJ_TYPE_VMO", ".",
+        "vmo", "must", "have", "ZX_RIGHT_MAP", "."
+      ],
+      "arguments": [
+        {
+          "name": "handle",
+          "type": "zx_handle_t",
+          "is_array": false,
+          "attributes": [
+          ]
+        },
+        {
+          "name": "options",
+          "type": "uint32_t",
+          "is_array": false,
+          "attributes": [
+          ]
+        },
+        {
+          "name": "msi_id",
+          "type": "uint32_t",
+          "is_array": false,
+          "attributes": [
+          ]
+        },
+        {
+          "name": "vmo",
+          "type": "zx_handle_t",
+          "is_array": false,
+          "attributes": [
+          ]
+        },
+        {
+          "name": "vmo_offset",
+          "type": "size_t",
+          "is_array": false,
+          "attributes": [
+          ]
+        },
+        {
+          "name": "out_interrupt",
+          "type": "zx_handle_t",
+          "is_array": true,
+          "attributes": [
+          ]
+        }
+      ],
+      "return_type": "zx_status_t"
+    },
+    {
       "name": "mtrace_control",
       "attributes": [
         "*"
@@ -14223,7 +14442,8 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "If", "topic", "is", "ZX_INFO_HANDLE_COUNT", ",", "handle", "must", "have", "ZX_RIGHT_INSPECT", ".",
         "If", "topic", "is", "ZX_INFO_BTI", ",", "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_BTI", "and", "have", "ZX_RIGHT_INSPECT", ".",
         "If", "topic", "is", "ZX_INFO_PROCESS_HANDLE_STATS", ",", "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_PROCESS", "and", "have", "ZX_RIGHT_INSPECT", ".",
-        "If", "topic", "is", "ZX_INFO_SOCKET", ",", "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_SOCKET", "and", "have", "ZX_RIGHT_INSPECT", "."
+        "If", "topic", "is", "ZX_INFO_SOCKET", ",", "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_SOCKET", "and", "have", "ZX_RIGHT_INSPECT", ".",
+        "If", "topic", "is", "ZX_INFO_MSI", ",", "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_MSI", "and", "have", "ZX_RIGHT_INSPECT", "."
       ],
       "arguments": [
         {
@@ -18527,6 +18747,21 @@ VDSO_SYSCALL(futex_wake_handle_close_thread_exit, void, __NO_RETURN, 4,
 INTERNAL_SYSCALL(ticks_get_via_kernel, zx_ticks_t, /* no attributes */, 0,
     (), (void))
 
+KERNEL_SYSCALL(msi_allocate, zx_status_t, /* no attributes */, 3,
+    (handle, count, out_allocation), (
+    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
+    uint32_t count,
+    _ZX_SYSCALL_ANNO(acquire_handle("Fuchsia")) user_out_handle* out_allocation))
+
+KERNEL_SYSCALL(msi_create, zx_status_t, /* no attributes */, 6,
+    (handle, options, msi_id, vmo, vmo_offset, out_interrupt), (
+    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
+    uint32_t options,
+    uint32_t msi_id,
+    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t vmo,
+    size_t vmo_offset,
+    _ZX_SYSCALL_ANNO(acquire_handle("Fuchsia")) user_out_handle* out_interrupt))
+
 KERNEL_SYSCALL(mtrace_control, zx_status_t, /* no attributes */, 6,
     (handle, kind, action, options, ptr, ptr_size), (
     _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
@@ -19717,6 +19952,30 @@ syscall_result wrapper_nanosleep(zx_time_t deadline, uint64_t pc) {
 syscall_result wrapper_ticks_get_via_kernel(uint64_t pc) {
     return do_syscall(ZX_SYS_ticks_get_via_kernel, pc, &VDso::ValidSyscallPC::ticks_get_via_kernel, [&](ProcessDispatcher* current_process) -> uint64_t {
         auto result = sys_ticks_get_via_kernel();
+        return result;
+    });
+}
+syscall_result wrapper_msi_allocate(zx_handle_t handle, uint32_t count, zx_handle_t* out_allocation, uint64_t pc) {
+    return do_syscall(ZX_SYS_msi_allocate, pc, &VDso::ValidSyscallPC::msi_allocate, [&](ProcessDispatcher* current_process) -> uint64_t {
+        user_out_handle out_handle_out_allocation;
+        auto result = sys_msi_allocate(handle, count, &out_handle_out_allocation);
+        if (result != ZX_OK)
+            return result;
+        if (out_handle_out_allocation.begin_copyout(current_process, make_user_out_ptr(out_allocation)))
+            return ZX_ERR_INVALID_ARGS;
+        out_handle_out_allocation.finish_copyout(current_process);
+        return result;
+    });
+}
+syscall_result wrapper_msi_create(zx_handle_t handle, uint32_t options, uint32_t msi_id, zx_handle_t vmo, size_t vmo_offset, zx_handle_t* out_interrupt, uint64_t pc) {
+    return do_syscall(ZX_SYS_msi_create, pc, &VDso::ValidSyscallPC::msi_create, [&](ProcessDispatcher* current_process) -> uint64_t {
+        user_out_handle out_handle_out_interrupt;
+        auto result = sys_msi_create(handle, options, msi_id, vmo, vmo_offset, &out_handle_out_interrupt);
+        if (result != ZX_OK)
+            return result;
+        if (out_handle_out_interrupt.begin_copyout(current_process, make_user_out_ptr(out_interrupt)))
+            return ZX_ERR_INVALID_ARGS;
+        out_handle_out_interrupt.finish_copyout(current_process);
         return result;
     });
 }
@@ -20959,6 +21218,21 @@ VDSO_SYSCALL(futex_wake_handle_close_thread_exit, void, __NO_RETURN, 4,
 INTERNAL_SYSCALL(ticks_get_via_kernel, zx_ticks_t, /* no attributes */, 0,
     (), (void))
 
+KERNEL_SYSCALL(msi_allocate, zx_status_t, /* no attributes */, 3,
+    (handle, count, out_allocation), (
+    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
+    uint32_t count,
+    _ZX_SYSCALL_ANNO(acquire_handle("Fuchsia")) zx_handle_t* out_allocation))
+
+KERNEL_SYSCALL(msi_create, zx_status_t, /* no attributes */, 6,
+    (handle, options, msi_id, vmo, vmo_offset, out_interrupt), (
+    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
+    uint32_t options,
+    uint32_t msi_id,
+    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t vmo,
+    size_t vmo_offset,
+    _ZX_SYSCALL_ANNO(acquire_handle("Fuchsia")) zx_handle_t* out_interrupt))
+
 KERNEL_SYSCALL(mtrace_control, zx_status_t, /* no attributes */, 6,
     (handle, kind, action, options, ptr, ptr_size), (
     _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
@@ -22094,6 +22368,21 @@ _ZX_SYSCALL_DECL(futex_wake_handle_close_thread_exit, void, __NO_RETURN, 4,
     int32_t new_value,
     _ZX_SYSCALL_ANNO(release_handle("Fuchsia")) zx_handle_t close_handle))
 
+_ZX_SYSCALL_DECL(msi_allocate, zx_status_t, /* no attributes */, 3,
+    (handle, count, out_allocation), (
+    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
+    uint32_t count,
+    _ZX_SYSCALL_ANNO(acquire_handle("Fuchsia")) zx_handle_t* out_allocation))
+
+_ZX_SYSCALL_DECL(msi_create, zx_status_t, /* no attributes */, 6,
+    (handle, options, msi_id, vmo, vmo_offset, out_interrupt), (
+    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
+    uint32_t options,
+    uint32_t msi_id,
+    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t vmo,
+    size_t vmo_offset,
+    _ZX_SYSCALL_ANNO(acquire_handle("Fuchsia")) zx_handle_t* out_interrupt))
+
 _ZX_SYSCALL_DECL(mtrace_control, zx_status_t, /* no attributes */, 6,
     (handle, kind, action, options, ptr, ptr_size), (
     _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
@@ -23157,6 +23446,21 @@ extern {
         close_handle: zx_handle_t
         );
 
+    pub fn zx_msi_allocate(
+        handle: zx_handle_t,
+        count: u32,
+        out_allocation: *mut zx_handle_t
+        ) -> zx_status_t;
+
+    pub fn zx_msi_create(
+        handle: zx_handle_t,
+        options: u32,
+        msi_id: u32,
+        vmo: zx_handle_t,
+        vmo_offset: usize,
+        out_interrupt: *mut zx_handle_t
+        ) -> zx_status_t;
+
     pub fn zx_mtrace_control(
         handle: zx_handle_t,
         kind: u32,
@@ -23918,107 +24222,109 @@ extern {
 #define ZX_SYS_ktrace_write 61
 #define ZX_SYS_nanosleep 62
 #define ZX_SYS_ticks_get_via_kernel 63
-#define ZX_SYS_mtrace_control 64
-#define ZX_SYS_object_wait_one 65
-#define ZX_SYS_object_wait_many 66
-#define ZX_SYS_object_wait_async 67
-#define ZX_SYS_object_signal 68
-#define ZX_SYS_object_signal_peer 69
-#define ZX_SYS_object_get_property 70
-#define ZX_SYS_object_set_property 71
-#define ZX_SYS_object_get_info 72
-#define ZX_SYS_object_get_child 73
-#define ZX_SYS_object_set_profile 74
-#define ZX_SYS_pager_create 75
-#define ZX_SYS_pager_create_vmo 76
-#define ZX_SYS_pager_detach_vmo 77
-#define ZX_SYS_pager_supply_pages 78
-#define ZX_SYS_pc_firmware_tables 79
-#define ZX_SYS_pci_get_nth_device 80
-#define ZX_SYS_pci_enable_bus_master 81
-#define ZX_SYS_pci_reset_device 82
-#define ZX_SYS_pci_config_read 83
-#define ZX_SYS_pci_config_write 84
-#define ZX_SYS_pci_cfg_pio_rw 85
-#define ZX_SYS_pci_get_bar 86
-#define ZX_SYS_pci_map_interrupt 87
-#define ZX_SYS_pci_query_irq_mode 88
-#define ZX_SYS_pci_set_irq_mode 89
-#define ZX_SYS_pci_init 90
-#define ZX_SYS_pci_add_subtract_io_range 91
-#define ZX_SYS_pmt_unpin 92
-#define ZX_SYS_port_create 93
-#define ZX_SYS_port_queue 94
-#define ZX_SYS_port_wait 95
-#define ZX_SYS_port_cancel 96
-#define ZX_SYS_process_exit 97
-#define ZX_SYS_process_create 98
-#define ZX_SYS_process_start 99
-#define ZX_SYS_process_read_memory 100
-#define ZX_SYS_process_write_memory 101
-#define ZX_SYS_profile_create 102
-#define ZX_SYS_resource_create 103
-#define ZX_SYS_smc_call 104
-#define ZX_SYS_socket_create 105
-#define ZX_SYS_socket_write 106
-#define ZX_SYS_socket_read 107
-#define ZX_SYS_socket_shutdown 108
-#define ZX_SYS_stream_create 109
-#define ZX_SYS_stream_writev 110
-#define ZX_SYS_stream_writev_at 111
-#define ZX_SYS_stream_readv 112
-#define ZX_SYS_stream_readv_at 113
-#define ZX_SYS_stream_seek 114
-#define ZX_SYS_syscall_test_0 115
-#define ZX_SYS_syscall_test_1 116
-#define ZX_SYS_syscall_test_2 117
-#define ZX_SYS_syscall_test_3 118
-#define ZX_SYS_syscall_test_4 119
-#define ZX_SYS_syscall_test_5 120
-#define ZX_SYS_syscall_test_6 121
-#define ZX_SYS_syscall_test_7 122
-#define ZX_SYS_syscall_test_8 123
-#define ZX_SYS_syscall_test_wrapper 124
-#define ZX_SYS_syscall_test_handle_create 125
-#define ZX_SYS_system_get_event 126
-#define ZX_SYS_system_mexec 127
-#define ZX_SYS_system_mexec_payload_get 128
-#define ZX_SYS_system_powerctl 129
-#define ZX_SYS_task_suspend 130
-#define ZX_SYS_task_suspend_token 131
-#define ZX_SYS_task_create_exception_channel 132
-#define ZX_SYS_task_kill 133
-#define ZX_SYS_thread_exit 134
-#define ZX_SYS_thread_create 135
-#define ZX_SYS_thread_start 136
-#define ZX_SYS_thread_read_state 137
-#define ZX_SYS_thread_write_state 138
-#define ZX_SYS_timer_create 139
-#define ZX_SYS_timer_set 140
-#define ZX_SYS_timer_cancel 141
-#define ZX_SYS_vcpu_create 142
-#define ZX_SYS_vcpu_resume 143
-#define ZX_SYS_vcpu_interrupt 144
-#define ZX_SYS_vcpu_read_state 145
-#define ZX_SYS_vcpu_write_state 146
-#define ZX_SYS_vmar_allocate 147
-#define ZX_SYS_vmar_destroy 148
-#define ZX_SYS_vmar_map 149
-#define ZX_SYS_vmar_unmap 150
-#define ZX_SYS_vmar_protect 151
-#define ZX_SYS_vmar_op_range 152
-#define ZX_SYS_vmo_create 153
-#define ZX_SYS_vmo_read 154
-#define ZX_SYS_vmo_write 155
-#define ZX_SYS_vmo_get_size 156
-#define ZX_SYS_vmo_set_size 157
-#define ZX_SYS_vmo_op_range 158
-#define ZX_SYS_vmo_create_child 159
-#define ZX_SYS_vmo_set_cache_policy 160
-#define ZX_SYS_vmo_replace_as_executable 161
-#define ZX_SYS_vmo_create_contiguous 162
-#define ZX_SYS_vmo_create_physical 163
-#define ZX_SYS_COUNT 164
+#define ZX_SYS_msi_allocate 64
+#define ZX_SYS_msi_create 65
+#define ZX_SYS_mtrace_control 66
+#define ZX_SYS_object_wait_one 67
+#define ZX_SYS_object_wait_many 68
+#define ZX_SYS_object_wait_async 69
+#define ZX_SYS_object_signal 70
+#define ZX_SYS_object_signal_peer 71
+#define ZX_SYS_object_get_property 72
+#define ZX_SYS_object_set_property 73
+#define ZX_SYS_object_get_info 74
+#define ZX_SYS_object_get_child 75
+#define ZX_SYS_object_set_profile 76
+#define ZX_SYS_pager_create 77
+#define ZX_SYS_pager_create_vmo 78
+#define ZX_SYS_pager_detach_vmo 79
+#define ZX_SYS_pager_supply_pages 80
+#define ZX_SYS_pc_firmware_tables 81
+#define ZX_SYS_pci_get_nth_device 82
+#define ZX_SYS_pci_enable_bus_master 83
+#define ZX_SYS_pci_reset_device 84
+#define ZX_SYS_pci_config_read 85
+#define ZX_SYS_pci_config_write 86
+#define ZX_SYS_pci_cfg_pio_rw 87
+#define ZX_SYS_pci_get_bar 88
+#define ZX_SYS_pci_map_interrupt 89
+#define ZX_SYS_pci_query_irq_mode 90
+#define ZX_SYS_pci_set_irq_mode 91
+#define ZX_SYS_pci_init 92
+#define ZX_SYS_pci_add_subtract_io_range 93
+#define ZX_SYS_pmt_unpin 94
+#define ZX_SYS_port_create 95
+#define ZX_SYS_port_queue 96
+#define ZX_SYS_port_wait 97
+#define ZX_SYS_port_cancel 98
+#define ZX_SYS_process_exit 99
+#define ZX_SYS_process_create 100
+#define ZX_SYS_process_start 101
+#define ZX_SYS_process_read_memory 102
+#define ZX_SYS_process_write_memory 103
+#define ZX_SYS_profile_create 104
+#define ZX_SYS_resource_create 105
+#define ZX_SYS_smc_call 106
+#define ZX_SYS_socket_create 107
+#define ZX_SYS_socket_write 108
+#define ZX_SYS_socket_read 109
+#define ZX_SYS_socket_shutdown 110
+#define ZX_SYS_stream_create 111
+#define ZX_SYS_stream_writev 112
+#define ZX_SYS_stream_writev_at 113
+#define ZX_SYS_stream_readv 114
+#define ZX_SYS_stream_readv_at 115
+#define ZX_SYS_stream_seek 116
+#define ZX_SYS_syscall_test_0 117
+#define ZX_SYS_syscall_test_1 118
+#define ZX_SYS_syscall_test_2 119
+#define ZX_SYS_syscall_test_3 120
+#define ZX_SYS_syscall_test_4 121
+#define ZX_SYS_syscall_test_5 122
+#define ZX_SYS_syscall_test_6 123
+#define ZX_SYS_syscall_test_7 124
+#define ZX_SYS_syscall_test_8 125
+#define ZX_SYS_syscall_test_wrapper 126
+#define ZX_SYS_syscall_test_handle_create 127
+#define ZX_SYS_system_get_event 128
+#define ZX_SYS_system_mexec 129
+#define ZX_SYS_system_mexec_payload_get 130
+#define ZX_SYS_system_powerctl 131
+#define ZX_SYS_task_suspend 132
+#define ZX_SYS_task_suspend_token 133
+#define ZX_SYS_task_create_exception_channel 134
+#define ZX_SYS_task_kill 135
+#define ZX_SYS_thread_exit 136
+#define ZX_SYS_thread_create 137
+#define ZX_SYS_thread_start 138
+#define ZX_SYS_thread_read_state 139
+#define ZX_SYS_thread_write_state 140
+#define ZX_SYS_timer_create 141
+#define ZX_SYS_timer_set 142
+#define ZX_SYS_timer_cancel 143
+#define ZX_SYS_vcpu_create 144
+#define ZX_SYS_vcpu_resume 145
+#define ZX_SYS_vcpu_interrupt 146
+#define ZX_SYS_vcpu_read_state 147
+#define ZX_SYS_vcpu_write_state 148
+#define ZX_SYS_vmar_allocate 149
+#define ZX_SYS_vmar_destroy 150
+#define ZX_SYS_vmar_map 151
+#define ZX_SYS_vmar_unmap 152
+#define ZX_SYS_vmar_protect 153
+#define ZX_SYS_vmar_op_range 154
+#define ZX_SYS_vmo_create 155
+#define ZX_SYS_vmo_read 156
+#define ZX_SYS_vmo_write 157
+#define ZX_SYS_vmo_get_size 158
+#define ZX_SYS_vmo_set_size 159
+#define ZX_SYS_vmo_op_range 160
+#define ZX_SYS_vmo_create_child 161
+#define ZX_SYS_vmo_set_cache_policy 162
+#define ZX_SYS_vmo_replace_as_executable 163
+#define ZX_SYS_vmo_create_contiguous 164
+#define ZX_SYS_vmo_create_physical 165
+#define ZX_SYS_COUNT 166
 ----- /tmp/kazoo-outputs/syscall-numbers.h END -----
 
 

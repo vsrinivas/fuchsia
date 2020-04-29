@@ -30,6 +30,7 @@ all_syscall_fidl_files = [
   "job.fidl",
   "ktrace.fidl",
   "misc.fidl",
+  "msi.fidl",
   "mtrace.fidl",
   "object.fidl",
   "pager.fidl",

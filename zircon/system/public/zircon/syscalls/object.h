@@ -587,12 +587,13 @@ typedef struct zx_info_resource {
 typedef struct zx_info_msi {
   // The target adress for write transactions.
   uint64_t target_addr;
-  // The data that the device ill write when triggering an IRQ.
+  // The data that the device will write when triggering an IRQ.
   uint32_t target_data;
   // The first IRQ in the allocated block.
   uint32_t base_irq_id;
   // The number of IRQs in the allocated block.
   uint32_t num_irq;
+  uint8_t padding1[4]; // align to 64 bit boundary for user_copy.
 } zx_info_msi_t;
 
 

@@ -58,6 +58,8 @@ toc:
   section:
   - title: "Interrupts"
     path: /docs/reference/kernel_objects/interrupts.md
+  - title: "Message Signaled Interrupt"
+    path: /docs/reference/kernel_objects/msi.md
   - title: "Resource"
     path: /docs/reference/kernel_objects/resource.md
   - title: "Log"

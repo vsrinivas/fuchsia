@@ -349,6 +349,33 @@ static bool interrupt_creation_mask_test() {
   END_TEST;
 }
 
+static bool out_of_order_ownership_test() {
+  BEGIN_TEST;
+  ResourceDispatcher::ResourceStorage rsrc_storage;
+  KernelHandle<InterruptDispatcher> interrupt1, interrupt2;
+  fbl::RefPtr<VmObject> vmo;
+  fbl::RefPtr<VmMapping> mapping;
+  volatile MsiCapability* cap;
+
+  ASSERT_EQ(ZX_OK, create_valid_msi_vmo(&vmo, &mapping, &cap));
+  {
+    zx_rights_t rights;
+    fbl::RefPtr<MsiAllocation> alloc;
+    ASSERT_EQ(ZX_OK, create_resource_storage_and_allocation(&rsrc_storage, &alloc,
+                                                            MsiAllocation::kMsiAllocationCountMax));
+    ASSERT_EQ(ZX_OK, MsiDispatcher::Create(alloc, /*msi_id=*/0, vmo, /*cap_offset=*/0,
+                                           /*options=*/0, &rights, &interrupt1, register_fn));
+    ASSERT_EQ(ZX_OK, MsiDispatcher::Create(alloc, /*msi_id=*/1, vmo, /*cap_offset=*/0,
+                                           /*options=*/0, &rights, &interrupt2, register_fn));
+  }
+
+  // This test verifies that although our allocation order was Alloc -> 1 -> 2,
+  // freeing in the same order behaves properly due to the reference ownership.
+  interrupt1.release();
+
+  END_TEST;
+}
+
 UNITTEST_START_TESTCASE(msi_object)
 UNITTEST("Test that Create() and get_info() operate properly", allocation_creation_and_info_test)
 UNITTEST("Test allocation limits", allocation_irq_count_test)
@@ -357,4 +384,6 @@ UNITTEST("Test for MSI platform support hooks", allocation_support_test)
 UNITTEST("Test that MsiDispatchers cannot overlap on an MSI id", interrupt_duplication_test)
 UNITTEST("Test that MsiDispatcher validates the VMO", interrupt_vmo_test)
 UNITTEST("Test that MsiDispatcher masks on creation", interrupt_creation_mask_test)
+UNITTEST("Test that MsiAllocation & MsiDispatcher ownership is correct",
+         out_of_order_ownership_test)
 UNITTEST_END_TESTCASE(msi_object, "msi", "Tests for MSI objects")

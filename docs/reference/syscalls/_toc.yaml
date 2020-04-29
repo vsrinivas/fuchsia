@@ -336,6 +336,10 @@ toc:
     path: /docs/reference/syscalls/interrupt_trigger.md
   - title: "zx_interrupt_wait"
     path: /docs/reference/syscalls/interrupt_wait.md
+  - title: "zx_msi_allocate"
+    path: /docs/reference/syscalls/msi_allocate.md
+  - title: "zx_msi_create"
+    path: /docs/reference/syscalls/msi_create.md
   - title: "zx_iommu_create"
     path: /docs/reference/syscalls/iommu_create.md
   - title: "zx_pmt_unpin"
