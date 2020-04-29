@@ -1,0 +1,63 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config.gni")
+
+# Adds config_data to a component that indiciates the current build type
+#
+# Generates _eng, _userdebug, and _user targets that need to be
+# included in the appropriate product configuration.
+#
+# Parameters
+#
+#   for_pkg (required)
+#     [string] The name of the package this is configuration for.
+#
+#   testonly (optional)
+#   visibility (optional)
+#     Usual GN meanings.
+template("build_type_config_data") {
+  original_target_name = target_name
+
+  template("config_data_for_build_type") {
+    build_type = target_name
+    config_data(original_target_name + "_" + build_type) {
+      forward_variables_from(invoker,
+                             [
+                               "for_pkg",
+                               "testonly",
+                               "visibility",
+                             ])
+      outputs = [ "build/type" ]
+      sources = [ "//build/type/" + build_type + ".txt" ]
+    }
+  }
+
+  config_data_for_build_type("eng") {
+    forward_variables_from(invoker,
+                           [
+                             "for_pkg",
+                             "testonly",
+                             "visibility",
+                           ])
+  }
+
+  config_data_for_build_type("userdebug") {
+    forward_variables_from(invoker,
+                           [
+                             "for_pkg",
+                             "testonly",
+                             "visibility",
+                           ])
+  }
+
+  config_data_for_build_type("user") {
+    forward_variables_from(invoker,
+                           [
+                             "for_pkg",
+                             "testonly",
+                             "visibility",
+                           ])
+  }
+}
