@@ -409,16 +409,16 @@ fn int_histogram_ops_trial() -> Trial {
         actions.push(insert_multiple!(id: 5, value: Number::IntT(value), count: 3));
     }
     let mut actions = vec![
-        create_linear_histogram!(parent: ROOT_ID, id: 4, name: "Lhist", floor: 5,
+        create_linear_histogram!(parent: ROOT_ID, id: 4, name: "Lhist", floor: -5,
                                  step_size: 3, buckets: 3, type: IntT),
-        create_exponential_histogram!(parent: ROOT_ID, id: 5, name: "Ehist", floor: 5,
+        create_exponential_histogram!(parent: ROOT_ID, id: 5, name: "Ehist", floor: -5,
                                  initial_step: 2, step_multiplier: 4,
                                  buckets: 3, type: IntT),
     ];
     for value in &[std::i64::MIN, std::i64::MAX, 0] {
         push_ops(&mut actions, *value);
     }
-    for value in -10_i64..100 {
+    for value in vec![-10_i64, -5_i64, 0_i64, 3_i64, 100_i64] {
         push_ops(&mut actions, value);
     }
     actions.push(delete_property!(id: 4));
@@ -443,7 +443,7 @@ fn uint_histogram_ops_trial() -> Trial {
     for value in &[std::u64::MAX, 0] {
         push_ops(&mut actions, *value);
     }
-    for value in 0_u64..100 {
+    for value in vec![0_u64, 5_u64, 8_u64, 20u64, 200_u64] {
         push_ops(&mut actions, value);
     }
     actions.push(delete_property!(id: 4));
@@ -470,8 +470,8 @@ fn double_histogram_ops_trial() -> Trial {
     for value in &[std::f64::MIN, std::f64::MAX, std::f64::MIN_POSITIVE, 0.0] {
         push_ops(&mut actions, *value);
     }
-    for value in -10_i64..100 {
-        push_ops(&mut actions, value as f64 / 10.0);
+    for value in vec![3.0, 3.15, 5.0, 10.0] {
+        push_ops(&mut actions, value as f64);
     }
     actions.push(delete_property!(id: 4));
     actions.push(delete_property!(id: 5));
