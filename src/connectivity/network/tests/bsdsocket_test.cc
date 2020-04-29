@@ -18,6 +18,7 @@
 #include <array>
 #include <cstdlib>
 #include <future>
+#include <latch>
 #include <thread>
 
 #include <fbl/auto_call.h>
@@ -2039,7 +2040,10 @@ TEST_P(SendSocketTest, CloseWhileSending) {
 
   // In the process of writing to the socket, close its peer socket with outstanding data to read,
   // ECONNRESET is expected; write to the socket after it's closed, EPIPE is expected.
+  std::latch fut_started(1);
   const auto fut = std::async(std::launch::async, [&]() {
+    fut_started.count_down();
+
     char buf[16];
     auto do_send = [&]() {
       switch (whichMethod) {
@@ -2118,6 +2122,7 @@ TEST_P(SendSocketTest, CloseWhileSending) {
       }
     }
   });
+  fut_started.wait();
   EXPECT_EQ(fut.wait_for(std::chrono::milliseconds(10)), std::future_status::timeout);
 
   switch (whichSocket) {

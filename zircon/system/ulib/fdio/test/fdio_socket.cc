@@ -18,6 +18,7 @@
 #include <chrono>
 #include <cstring>
 #include <future>
+#include <latch>
 #include <vector>
 
 #include <fbl/array.h>
@@ -368,7 +369,10 @@ auto timeout = [](int client_fd, zx::socket server_socket) {
   ASSERT_EQ(setsockopt(client_fd, SOL_SOCKET, optname, &tv, sizeof(tv)), 0, "%s", strerror(errno));
   // Wrap the read/write in a future to enable a timeout. We expect the future
   // to time out.
+  std::latch fut_started(1);
   auto fut = std::async(std::launch::async, [&]() -> std::pair<ssize_t, int> {
+    fut_started.count_down();
+
     switch (optname) {
       case SO_RCVTIMEO:
         return std::make_pair(read(client_fd, buf, sizeof(buf)), errno);
@@ -376,6 +380,7 @@ auto timeout = [](int client_fd, zx::socket server_socket) {
         return std::make_pair(write(client_fd, buf, sizeof(buf)), errno);
     }
   });
+  fut_started.wait();
   EXPECT_EQ(fut.wait_for(margin), std::future_status::timeout);
   // Resetting the remote end socket should cause the read/write to complete.
   server_socket.reset();
@@ -398,7 +403,7 @@ TEST_F(TcpSocketTest, RcvTimeout) {
   timeout<SO_RCVTIMEO>(client_fd.release(), std::move(server_socket));
 }
 
-TEST_F(TcpSocketTest, DISABLED_SndTimeout) {
+TEST_F(TcpSocketTest, SndTimeout) {
   server.FillPeerSocket();
   timeout<SO_SNDTIMEO>(client_fd.release(), std::move(server_socket));
 }
