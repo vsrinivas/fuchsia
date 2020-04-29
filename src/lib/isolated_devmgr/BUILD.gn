@@ -75,12 +75,12 @@ static_library("usb-virtual-bus") {
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/ddk",
-    "//zircon/public/lib/devmgr-launcher",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/fidl-async-cpp",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/devmgr-launcher",
   ]
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]

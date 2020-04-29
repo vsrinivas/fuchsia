@@ -45,7 +45,6 @@ test("ddk-lifecycle") {
     ":fuchsia.device.lifecycle.test_llcpp",
     "//sdk/fidl/fuchsia.hardware.serial:fuchsia.hardware.serial_llcpp",
     "//zircon/public/lib/ddk",
-    "//zircon/public/lib/devmgr-launcher",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/fit",
@@ -54,6 +53,7 @@ test("ddk-lifecycle") {
     "//zircon/system/fidl/fuchsia-device:llcpp",
     "//zircon/system/fidl/fuchsia-io:llcpp",
     "//zircon/system/ulib/devmgr-integration-test",
+    "//zircon/system/ulib/devmgr-launcher",
     "//zircon/system/ulib/driver-integration-test",
   ]
 }

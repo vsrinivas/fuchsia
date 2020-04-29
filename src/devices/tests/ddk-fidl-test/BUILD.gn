@@ -15,13 +15,13 @@ test("ddk-fidl-test") {
     "//src/devices/tests/fuchsia-hardware-test:fuchsia.hardware.test_c",
     "//src/devices/tests/fuchsia-hardware-test:fuchsia.hardware.test_llcpp",
     "//zircon/public/lib/ddk",
-    "//zircon/public/lib/devmgr-launcher",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/devmgr-integration-test",
+    "//zircon/system/ulib/devmgr-launcher",
     "//zircon/system/ulib/driver-integration-test",
   ]
 }
