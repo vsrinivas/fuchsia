@@ -20,13 +20,19 @@ class RecentsContainer extends StatelessWidget {
         alignment: Alignment.topLeft,
         child: AnimatedBuilder(
           animation: model.recentsVisibility,
-          builder: (context, _) => Container(
-            width: ErmineStyle.kRecentsBarWidth,
-            height: constraint.biggest.height,
-            child: Thumbnails(model: model.clustersModel),
-          ),
+          builder: (context, _) => model.recentsVisibility.value
+              ? Container(
+                  width: ErmineStyle.kRecentsBarWidth,
+                  height: constraint.biggest.height,
+                  child: buildThumbnails(model),
+                )
+              : Offstage(),
         ),
       ),
     );
   }
+
+  @visibleForTesting
+  Widget buildThumbnails(AppModel model) =>
+      Thumbnails(model: model.clustersModel);
 }

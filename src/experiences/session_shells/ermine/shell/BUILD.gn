@@ -74,7 +74,6 @@ flutter_app("ermine") {
     "src/widgets/story/tile_sizer.dart",
     "src/widgets/story/tile_tab.dart",
     "src/widgets/support/animation_driver.dart",
-    "src/widgets/support/get_bounds.dart",
     "src/widgets/support/home.dart",
     "src/widgets/support/home_container.dart",
     "src/widgets/support/keyboard_help.dart",
@@ -173,6 +172,9 @@ flutter_test("ermine_unittests") {
     "crash_test.dart",
     "ermine_story_test.dart",
     "ermine_test.dart",
+    "overview_widget_test.dart",
+    "recents_widget_test.dart",
+    "scrim_widget_test.dart",
     "status_model_test.dart",
     "topbar_model_test.dart",
   ]

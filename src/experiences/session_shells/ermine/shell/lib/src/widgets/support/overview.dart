@@ -48,7 +48,7 @@ class Overview extends StatelessWidget {
                 ),
               ),
               constraints: BoxConstraints.expand(),
-              child: Thumbnails(model: model.clustersModel, overview: true),
+              child: buildThumbnails(model),
             ),
           ),
           Expanded(
@@ -64,17 +64,13 @@ class Overview extends StatelessWidget {
                         bottom: BorderSide(width: 1, color: Colors.white),
                       ),
                     ),
-                    child: Ask(
-                      suggestionService: model.suggestions,
-                      onDismiss: () => model.overviewVisibility.value = false,
-                      unbounded: true,
-                    ),
+                    child: buildAsk(model),
                   ),
                 ),
                 Expanded(
                   child: Container(
                     padding: ErmineStyle.kOverviewElementPadding,
-                    child: Status(model: model.statusModel),
+                    child: buildStatus(model),
                   ),
                 ),
               ],
@@ -84,4 +80,18 @@ class Overview extends StatelessWidget {
       ),
     );
   }
+
+  @visibleForTesting
+  Widget buildThumbnails(AppModel model) =>
+      Thumbnails(model: model.clustersModel, overview: true);
+
+  @visibleForTesting
+  Widget buildAsk(AppModel model) => Ask(
+        suggestionService: model.suggestions,
+        onDismiss: () => model.overviewVisibility.value = false,
+        unbounded: true,
+      );
+
+  @visibleForTesting
+  Widget buildStatus(AppModel model) => Status(model: model.statusModel);
 }

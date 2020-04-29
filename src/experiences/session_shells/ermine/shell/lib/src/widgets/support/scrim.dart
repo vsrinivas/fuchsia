@@ -19,17 +19,19 @@ class Scrim extends StatelessWidget {
     return Listener(
       behavior: HitTestBehavior.translucent,
       onPointerDown: (_) => model.onCancel(),
-      // ignore: deprecated_member_use
-      onPointerHover: (event) {
-        if (model.isFullscreen) {
-          if (event.position.dy == 0) {
-            model.peekNotifier.value = true;
-          } else if (event.position.dy >
-              ErmineStyle.kTopBarHeight + ErmineStyle.kStoryTitleHeight) {
-            model.peekNotifier.value = false;
+      child: MouseRegion(
+        opaque: false,
+        onHover: (event) {
+          if (model.isFullscreen) {
+            if (event.position.dy == 0) {
+              model.peekNotifier.value = true;
+            } else if (event.position.dy >
+                ErmineStyle.kTopBarHeight + ErmineStyle.kStoryTitleHeight) {
+              model.peekNotifier.value = false;
+            }
           }
-        }
-      },
+        },
+      ),
     );
   }
 }
