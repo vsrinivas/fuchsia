@@ -30,7 +30,12 @@ class UserMemory {
  public:
   static ktl::unique_ptr<UserMemory> Create(size_t size);
   virtual ~UserMemory();
-  vaddr_t base() { return mapping_->base(); }
+
+  vaddr_t base() const { return mapping_->base(); }
+
+  const fbl::RefPtr<VmObject>& vmo() const { return vmo_; }
+
+  const fbl::RefPtr<VmAspace>& aspace() const { return mapping_->aspace(); }
 
   // TODO(30033): These direct accesses to non-kernel memory are funnelled
   // through these two functions, which can be annotated to suppress asan.

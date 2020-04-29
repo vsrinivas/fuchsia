@@ -8,6 +8,7 @@
 #include <assert.h>
 #include <err.h>
 #include <lib/unittest/unittest.h>
+#include <lib/unittest/user_memory.h>
 #include <zircon/types.h>
 
 #include <arch/kernel_aspace.h>
@@ -678,6 +679,10 @@ static bool pmm_get_arena_info_test() {
 }
 
 static uint32_t test_rand(uint32_t seed) { return (seed = seed * 1664525 + 1013904223); }
+
+// TODO(30033): These two functions do direct access to specially-mapped
+// memory that's outside the normal range of kernel pointers.  Hence any
+// memory access instrumentation needs to be disabled in these functions.
 
 // fill a region of memory with a pattern based on the address of the region
 static void fill_region(uintptr_t seed, void* _ptr, size_t len) {
@@ -1702,80 +1707,65 @@ static bool vmo_clone_removes_write_test() {
 static bool vmo_zero_scan_test() {
   BEGIN_TEST;
 
-  fbl::RefPtr<VmObject> vmo;
-  zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0u, PAGE_SIZE, &vmo);
-  EXPECT_EQ(ZX_OK, status);
+  auto mem = testing::UserMemory::Create(PAGE_SIZE);
+  ASSERT_NONNULL(mem);
+
+  const auto& user_aspace = mem->aspace();
+  ASSERT_NONNULL(user_aspace);
+  ASSERT_TRUE(user_aspace->is_user());
 
   // Initially uncommitted, which should not count as having zero pages.
-  EXPECT_EQ(0u, vmo->ScanForZeroPages(false));
-
-  // Create a user mapping that we can read/write from.
-  fbl::RefPtr<VmAspace> user_aspace =
-      fbl::RefPtr(vmm_aspace_to_obj(Thread::Current::Get()->aspace_));
-  fbl::RefPtr<VmAddressRegion> root_user_vmar = user_aspace->RootVmar();
-  fbl::RefPtr<VmMapping> mapping;
-  status = root_user_vmar->CreateVmMapping(
-      0, PAGE_SIZE, 0, VMAR_FLAG_CAN_MAP_READ | VMAR_FLAG_CAN_MAP_WRITE, vmo, 0,
-      ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE, "unittest", &mapping);
-  EXPECT_EQ(ZX_OK, status);
-  auto unmap_user = fbl::MakeAutoCall([&]() {
-    if (mapping) {
-      mapping->Unmap(mapping->base(), mapping->size());
-    }
-  });
-  volatile int32_t* addr = reinterpret_cast<volatile int32_t*>(mapping->base());
+  EXPECT_EQ(0u, mem->vmo()->ScanForZeroPages(false));
 
   // Validate that this mapping reads as zeros
-  EXPECT_EQ(ZX_OK, user_aspace->SoftFault(mapping->base(), 0u));
-  EXPECT_EQ(0, *addr);
+  EXPECT_EQ(ZX_OK, user_aspace->SoftFault(mem->base(), 0u));
+  EXPECT_EQ(0, mem->get<int32_t>());
 
   // Reading from the page should not have committed anything, zero or otherwise.
-  EXPECT_EQ(0u, vmo->ScanForZeroPages(false));
+  EXPECT_EQ(0u, mem->vmo()->ScanForZeroPages(false));
 
   // IF we write to the page, this should make it committed.
-  EXPECT_EQ(ZX_OK, user_aspace->SoftFault(mapping->base(), VMM_PF_FLAG_WRITE));
-  *addr = 0;
-  EXPECT_EQ(1u, vmo->ScanForZeroPages(false));
+  EXPECT_EQ(ZX_OK, user_aspace->SoftFault(mem->base(), VMM_PF_FLAG_WRITE));
+  mem->put<int32_t>(0);
+  EXPECT_EQ(1u, mem->vmo()->ScanForZeroPages(false));
 
   // Check that changing the contents effects the zero page count.
-  EXPECT_EQ(ZX_OK, user_aspace->SoftFault(mapping->base(), VMM_PF_FLAG_WRITE));
-  *addr = 42;
-  EXPECT_EQ(0u, vmo->ScanForZeroPages(false));
-  EXPECT_EQ(ZX_OK, user_aspace->SoftFault(mapping->base(), VMM_PF_FLAG_WRITE));
-  *addr = 0;
-  EXPECT_EQ(1u, vmo->ScanForZeroPages(false));
+  EXPECT_EQ(ZX_OK, user_aspace->SoftFault(mem->base(), VMM_PF_FLAG_WRITE));
+  mem->put<int32_t>(42);
+  EXPECT_EQ(0u, mem->vmo()->ScanForZeroPages(false));
+  EXPECT_EQ(ZX_OK, user_aspace->SoftFault(mem->base(), VMM_PF_FLAG_WRITE));
+  mem->put<int32_t>(0);
+  EXPECT_EQ(1u, mem->vmo()->ScanForZeroPages(false));
 
   // Scanning should drop permissions in the hardware page table from write to read-only.
   paddr_t paddr_readable;
   uint mmu_flags;
-  EXPECT_EQ(ZX_OK, user_aspace->SoftFault(mapping->base(), VMM_PF_FLAG_WRITE));
-  *addr = 0;
-  status = user_aspace->arch_aspace().Query(reinterpret_cast<vaddr_t>(addr), &paddr_readable,
-                                            &mmu_flags);
+  EXPECT_EQ(ZX_OK, user_aspace->SoftFault(mem->base(), VMM_PF_FLAG_WRITE));
+  mem->put<int32_t>(0);
+  zx_status_t status = user_aspace->arch_aspace().Query(mem->base(), &paddr_readable, &mmu_flags);
   EXPECT_EQ(ZX_OK, status);
   EXPECT_TRUE(mmu_flags & ARCH_MMU_FLAG_PERM_WRITE);
-  vmo->ScanForZeroPages(false);
-  status = user_aspace->arch_aspace().Query(reinterpret_cast<vaddr_t>(addr), &paddr_readable,
-                                            &mmu_flags);
+  mem->vmo()->ScanForZeroPages(false);
+  status = user_aspace->arch_aspace().Query(mem->base(), &paddr_readable, &mmu_flags);
   EXPECT_EQ(ZX_OK, status);
   EXPECT_FALSE(mmu_flags & ARCH_MMU_FLAG_PERM_WRITE);
 
   // Pinning the page should prevent it from being counted.
-  EXPECT_EQ(1u, vmo->ScanForZeroPages(false));
-  EXPECT_EQ(ZX_OK, vmo->Pin(0, PAGE_SIZE));
-  EXPECT_EQ(0u, vmo->ScanForZeroPages(false));
-  vmo->Unpin(0, PAGE_SIZE);
-  EXPECT_EQ(1u, vmo->ScanForZeroPages(false));
+  EXPECT_EQ(1u, mem->vmo()->ScanForZeroPages(false));
+  EXPECT_EQ(ZX_OK, mem->vmo()->Pin(0, PAGE_SIZE));
+  EXPECT_EQ(0u, mem->vmo()->ScanForZeroPages(false));
+  mem->vmo()->Unpin(0, PAGE_SIZE);
+  EXPECT_EQ(1u, mem->vmo()->ScanForZeroPages(false));
 
   // Creating a kernel mapping should prevent any counting from occurring.
   VmAspace* kernel_aspace = VmAspace::kernel_aspace();
   void* ptr;
-  status = kernel_aspace->MapObjectInternal(vmo, "test", 0, PAGE_SIZE, &ptr, 0,
+  status = kernel_aspace->MapObjectInternal(mem->vmo(), "test", 0, PAGE_SIZE, &ptr, 0,
                                             VmAspace::VMM_FLAG_COMMIT, kArchRwFlags);
   EXPECT_EQ(ZX_OK, status);
-  EXPECT_EQ(0u, vmo->ScanForZeroPages(false));
+  EXPECT_EQ(0u, mem->vmo()->ScanForZeroPages(false));
   kernel_aspace->FreeRegion(reinterpret_cast<vaddr_t>(ptr));
-  EXPECT_EQ(1u, vmo->ScanForZeroPages(false));
+  EXPECT_EQ(1u, mem->vmo()->ScanForZeroPages(false));
 
   END_TEST;
 }
