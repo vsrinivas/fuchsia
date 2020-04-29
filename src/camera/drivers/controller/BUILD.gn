@@ -5,6 +5,7 @@
 import("//build/cipd.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/driver_package.gni")
+import("//src/camera/debug.gni")
 
 # The following config files are currently gated behind internal
 # access to the CIPD repository.
@@ -37,6 +38,7 @@ driver_module("driver") {
 }
 
 source_set("source") {
+  defines = [ camera_debug_define ]
   visibility = [ "../*" ]
   sources = [
     "controller-device.cc",

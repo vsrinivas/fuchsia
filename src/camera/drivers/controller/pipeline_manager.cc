@@ -4,6 +4,7 @@
 
 #include "pipeline_manager.h"
 
+#include <lib/syslog/cpp/logger.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
@@ -11,7 +12,6 @@
 #include <fbl/auto_call.h>
 
 #include "graph_utils.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace camera {
 
@@ -178,7 +178,7 @@ zx_status_t PipelineManager::AppendToExistingGraph(
   auto output_node = output_node_result.value();
   auto stream_configured = info->stream_config->properties.stream_type();
   auto status = output_node->Attach(stream.TakeChannel(), [this, stream_configured]() {
-    FX_LOGS(INFO) << "Stream client disconnected";
+    FX_LOGS(DEBUG) << "Stream client disconnected";
     OnClientStreamDisconnect(stream_configured);
   });
   if (status != ZX_OK) {
