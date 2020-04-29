@@ -42,6 +42,7 @@ rustc_binary("bin") {
     "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.hardware.tee:fuchsia.hardware.tee-rustc",
     "//sdk/fidl/fuchsia.tee:fuchsia.tee-rustc",
+    "//sdk/fidl/fuchsia.tee.manager:fuchsia.tee.manager-rustc",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
@@ -52,7 +53,6 @@ rustc_binary("bin") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:thiserror",
-    "//zircon/system/fidl/fuchsia-tee-manager:fuchsia-tee-manager-rustc",
   ]
 }
 
