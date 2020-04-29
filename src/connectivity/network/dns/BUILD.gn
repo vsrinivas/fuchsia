@@ -11,12 +11,15 @@ rustc_library("lib") {
   with_unit_tests = true
   edition = "2018"
   deps = [
+    "//sdk/fidl/fuchsia.net.name:fuchsia.net.name-rustc",
+    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:trust-dns-proto",
     "//third_party/rust_crates:trust-dns-resolver",
+    "//zircon/system/fidl/fuchsia-net:fuchsia-net-rustc",
   ]
 }
 
@@ -39,7 +42,9 @@ rustc_binary("bin") {
   deps = [
     ":lib",
     "//garnet/lib/rust/fidl_fuchsia_net_ext",
+    "//garnet/lib/rust/never",
     "//sdk/fidl/fuchsia.net.name:fuchsia.net.name-rustc",
+    "//sdk/fidl/fuchsia.net.stack:fuchsia.net.stack-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
@@ -79,5 +84,13 @@ unittest_package("dns_resolver_tests") {
       name = "dns_resolver_bin_test"
       environments = [ qemu_env ]
     },
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":dns_resolver_tests",
+    ":dns_tests",
   ]
 }

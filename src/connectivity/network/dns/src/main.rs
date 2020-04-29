@@ -5,31 +5,38 @@
 use {
     anyhow::Error,
     async_trait::async_trait,
-    dns::async_resolver::{Handle, Resolver},
+    dns::{
+        async_resolver::{Handle, Resolver},
+        policy::{ServerConfigPolicy, ServerList},
+    },
     fidl_fuchsia_net::{self as fnet, NameLookupRequest, NameLookupRequestStream},
-    fidl_fuchsia_net_ext::IpAddress,
-    fidl_fuchsia_net_name::{LookupAdminRequest, LookupAdminRequestStream},
+    fidl_fuchsia_net_ext as net_ext,
+    fidl_fuchsia_net_name::{self as fname, LookupAdminRequest, LookupAdminRequestStream},
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_syslog::{self as fx_syslog, fx_log_err, fx_log_info},
     fuchsia_zircon as zx,
-    futures::{StreamExt, TryStreamExt},
+    futures::{
+        channel::mpsc,
+        task::{Context, Poll},
+        FutureExt, Sink, SinkExt, StreamExt, TryFutureExt, TryStreamExt,
+    },
     parking_lot::RwLock,
+    std::pin::Pin,
     std::{net::IpAddr, rc::Rc},
     trust_dns_proto::rr::{domain::IntoName, TryParseIp},
     trust_dns_resolver::{
-        config::{LookupIpStrategy, NameServerConfigGroup, ResolverConfig, ResolverOpts},
+        config::{
+            LookupIpStrategy, NameServerConfig, NameServerConfigGroup, Protocol, ResolverConfig,
+            ResolverOpts,
+        },
         error::ResolveError,
         lookup, lookup_ip,
     },
 };
 
-const DNS_PORT_NUM: u16 = 53;
-
 struct SharedResolver<T>(RwLock<Rc<T>>);
 
-// NOTE: The following cannot be async fn, as while holding a RwLock, awaiting on a future will
-// cause deadlocks.
 impl<T> SharedResolver<T> {
     fn new(resolver: T) -> Self {
         SharedResolver(RwLock::new(Rc::new(resolver)))
@@ -41,6 +48,95 @@ impl<T> SharedResolver<T> {
 
     fn write(&self, other: Rc<T>) {
         *self.0.write() = other;
+    }
+}
+
+/// `SharedResolverConfigSink` acts as a `Sink` that takes resolver
+/// configurations in the form of [`ServerList`]s and applies them to a
+/// [`SharedResolver`].
+struct SharedResolverConfigSink<'a, T> {
+    shared_resolver: &'a SharedResolver<T>,
+    staged_change: Option<ServerList>,
+    flush_state: Option<futures::future::LocalBoxFuture<'a, ()>>,
+}
+
+impl<'a, T: ResolverLookup> SharedResolverConfigSink<'a, T> {
+    fn new(shared_resolver: &'a SharedResolver<T>) -> Self {
+        Self { shared_resolver, staged_change: None, flush_state: None }
+    }
+
+    fn update_resolver(&self, servers: ServerList) -> impl 'a + futures::Future<Output = ()> {
+        let mut resolver_opts = ResolverOpts::default();
+        resolver_opts.ip_strategy = LookupIpStrategy::Ipv4AndIpv6;
+
+        // We're going to add each server twice, once with protocol UDP and
+        // then with protocol TCP.
+        let mut name_servers = NameServerConfigGroup::with_capacity(servers.len() * 2);
+
+        name_servers.extend(servers.into_iter().flat_map(|server| {
+            let net_ext::SocketAddress(socket_addr) = server.address.into();
+            // Every server config gets UDP and TCP versions with
+            // preference for UDP.
+            std::iter::once(NameServerConfig {
+                socket_addr,
+                protocol: Protocol::Udp,
+                tls_dns_name: None,
+            })
+            .chain(std::iter::once(NameServerConfig {
+                socket_addr,
+                protocol: Protocol::Tcp,
+                tls_dns_name: None,
+            }))
+        }));
+
+        let resolver_ref = self.shared_resolver;
+
+        T::new(ResolverConfig::from_parts(None, Vec::new(), name_servers), resolver_opts)
+            .map(move |r| resolver_ref.write(Rc::new(r)))
+    }
+
+    fn poll(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), never::Never>> {
+        // Finish the last update first.
+        if let Some(fut) = self.flush_state.as_mut() {
+            match fut.poll_unpin(cx) {
+                Poll::Ready(()) => {
+                    self.flush_state = None;
+                }
+                Poll::Pending => return Poll::Pending,
+            }
+        }
+
+        // Update to the latest state if any.
+        if let Some(pending) = self.staged_change.take() {
+            self.flush_state = Some(self.update_resolver(pending).boxed_local());
+            return self.poll(cx);
+        }
+        Poll::Ready(Ok(()))
+    }
+}
+
+impl<'a, T: ResolverLookup> Sink<ServerList> for SharedResolverConfigSink<'a, T> {
+    type Error = never::Never;
+
+    fn poll_ready(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
+        // We always allow overwriting the staged_change, configuration will
+        // always only be applied on flush. This allows a series of
+        // configuration events to be received but consolidation only happens
+        // on flush.
+        Poll::Ready(Ok(()))
+    }
+
+    fn start_send(self: Pin<&mut Self>, item: ServerList) -> Result<(), Self::Error> {
+        self.get_mut().staged_change = Some(item);
+        Ok(())
+    }
+
+    fn poll_flush(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
+        self.get_mut().poll(cx)
+    }
+
+    fn poll_close(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
+        Self::poll_flush(self, cx)
     }
 }
 
@@ -171,17 +267,15 @@ async fn handle_lookup_ip<T: ResolverLookup>(
             resolver
                 .lookup_ip(hostname)
                 .await
-                .map(|addrs| addrs.iter().map(|addr| IpAddress(addr).into()).collect())
+                .map(|addrs| addrs.iter().map(|addr| net_ext::IpAddress(addr).into()).collect())
         } else if options.contains(fnet::LookupIpOptions::V4Addrs) {
-            resolver
-                .ipv4_lookup(hostname)
-                .await
-                .map(|addrs| addrs.iter().map(|addr| IpAddress(IpAddr::V4(*addr)).into()).collect())
+            resolver.ipv4_lookup(hostname).await.map(|addrs| {
+                addrs.iter().map(|addr| net_ext::IpAddress(IpAddr::V4(*addr)).into()).collect()
+            })
         } else if options.contains(fnet::LookupIpOptions::V6Addrs) {
-            resolver
-                .ipv6_lookup(hostname)
-                .await
-                .map(|addrs| addrs.iter().map(|addr| IpAddress(IpAddr::V6(*addr)).into()).collect())
+            resolver.ipv6_lookup(hostname).await.map(|addrs| {
+                addrs.iter().map(|addr| net_ext::IpAddress(IpAddr::V6(*addr)).into()).collect()
+            })
         } else {
             return Err(fnet::LookupError::InvalidArgs);
         };
@@ -221,7 +315,7 @@ async fn handle_lookup_hostname<T: ResolverLookup>(
     resolver: &SharedResolver<T>,
     addr: fnet::IpAddress,
 ) -> Result<String, fnet::LookupError> {
-    let IpAddress(addr) = addr.into();
+    let net_ext::IpAddress(addr) = addr.into();
     let resolver = resolver.read();
 
     match resolver.reverse_lookup(addr).await {
@@ -255,45 +349,56 @@ async fn run_name_lookup<T: ResolverLookup>(
         .await
 }
 
-async fn handle_set_server_names<T: ResolverLookup>(
-    resolver: &SharedResolver<T>,
-    servers: Vec<fnet::IpAddress>,
-) -> Result<(), zx::Status> {
-    // TODO validate that servers contains only valid unicast addresses
-    let servers: Vec<IpAddr> = servers
-        .into_iter()
-        .map(|addr| {
-            let IpAddress(addr) = addr.into();
-            addr
-        })
-        .collect();
-    // TODO (chunyingw): Ideally the configuration of the existing resolver instance could be
-    // updated directly w/o initializing a new resolver.
-    let mut resolver_opts = ResolverOpts::default();
-    resolver_opts.ip_strategy = LookupIpStrategy::Ipv4AndIpv6;
-    let name_servers = NameServerConfigGroup::from_ips_clear(&servers, DNS_PORT_NUM);
-    let new_resolver = Rc::new(
-        T::new(ResolverConfig::from_parts(None, vec![], name_servers), resolver_opts).await,
-    );
-    resolver.write(new_resolver);
-    Ok(())
-}
-
-async fn run_lookup_admin<T: ResolverLookup>(
-    resolver: &SharedResolver<T>,
+/// Serves `stream` and forwards received configurations to `sink`.
+async fn run_lookup_admin(
+    sink: mpsc::Sender<dns::policy::ServerConfig>,
     stream: LookupAdminRequestStream,
-) -> Result<(), fidl::Error> {
+) -> Result<(), anyhow::Error> {
     stream
-        .try_for_each_concurrent(None, |request| async {
-            match request {
-                LookupAdminRequest::SetDefaultDnsServers { servers, responder } => responder.send(
-                    &mut handle_set_server_names(resolver, servers)
-                        .await
-                        .map_err(zx::Status::into_raw),
-                ),
+        .try_filter_map(|req| async {
+            match req {
+                LookupAdminRequest::SetDefaultDnsServers { servers, responder } => {
+                    let (mut response, ret) = if servers.iter().any(|s| {
+                        let net_ext::IpAddress(ip) = s.clone().into();
+                        ip.is_multicast() || ip.is_unspecified()
+                    }) {
+                        (Err(zx::Status::INVALID_ARGS.into_raw()), None)
+                    } else {
+                        (Ok(()), Some(dns::policy::ServerConfig::DefaultServers(servers)))
+                    };
+                    let () = responder.send(&mut response)?;
+                    Ok(ret)
+                }
             }
         })
+        .map_err(anyhow::Error::from)
+        .forward(sink.sink_map_err(anyhow::Error::from))
         .await
+}
+
+/// Creates a tuple of [`mpsc::Sender`] and [`Future`] handled by
+/// [`dns::policy::ServerConfiguration`].
+///
+/// The returned `sender` is used to publish configuration changes to a `Sink`
+/// composed of [`dns::policy::ServerConfigPolicy`] and
+/// [`SharedResolverConfigSink`], which will set the consolidated configuration
+/// on `resolver`.
+///
+/// Configuration changes are only when the returned `Future` is polled.
+fn create_policy_fut<T: ResolverLookup>(
+    resolver: &SharedResolver<T>,
+) -> (
+    mpsc::Sender<dns::policy::ServerConfig>,
+    impl futures::Future<Output = Result<(), anyhow::Error>> + '_,
+) {
+    // Create configuration channel pair. A small buffer in the channel allows
+    // for multiple configurations coming in rapidly to be flushed together.
+    let (servers_config_sink, servers_config_source) = mpsc::channel(10);
+    let policy_fut = servers_config_source
+        .map(Ok)
+        .forward(ServerConfigPolicy::new(SharedResolverConfigSink::new(&resolver)))
+        .map_err(never::Never::into_any);
+    (servers_config_sink, policy_fut)
 }
 
 #[fasync::run_singlethreaded]
@@ -314,23 +419,45 @@ async fn main() -> Result<(), Error> {
             .expect("failed to create resolver"),
     );
 
+    let (servers_config_sink, policy_fut) = create_policy_fut(&resolver);
+
+    let dns_watcher = {
+        let stack =
+            fuchsia_component::client::connect_to_service::<fidl_fuchsia_net_stack::StackMarker>()?;
+        let (proxy, req) = fidl::endpoints::create_proxy::<fname::DnsServerWatcherMarker>()?;
+        let () = stack.get_dns_server_watcher(req)?;
+        dns::util::new_dns_server_stream(proxy)
+    };
+
+    let dns_watcher_fut = dns_watcher
+        .map_ok(|servers| dns::policy::ServerConfig::DynamicServers(servers))
+        .map_err(anyhow::Error::from)
+        .forward(servers_config_sink.clone().sink_map_err(anyhow::Error::from));
+
     let mut fs = ServiceFs::new_local();
     fs.dir("svc")
         .add_fidl_service(IncomingRequest::NameLookup)
         .add_fidl_service(IncomingRequest::LookupAdmin);
     fs.take_and_serve_directory_handle()?;
 
-    fs.for_each_concurrent(None, |incoming_service| async {
-        match incoming_service {
-            IncomingRequest::LookupAdmin(stream) => run_lookup_admin(&resolver, stream)
-                .await
-                .unwrap_or_else(|e| fx_log_err!("run_lookup_admin finished with error: {:?}", e)),
-            IncomingRequest::NameLookup(stream) => run_name_lookup(&resolver, stream)
-                .await
-                .unwrap_or_else(|e| fx_log_err!("run_name_lookup finished with error: {:?}", e)),
-        }
-    })
-    .await;
+    let serve_fut = fs
+        .for_each_concurrent(None, |incoming_service| async {
+            match incoming_service {
+                IncomingRequest::LookupAdmin(stream) => {
+                    run_lookup_admin(servers_config_sink.clone(), stream).await.unwrap_or_else(
+                        |e| fx_log_err!("run_lookup_admin finished with error: {:?}", e),
+                    )
+                }
+                IncomingRequest::NameLookup(stream) => {
+                    run_name_lookup(&resolver, stream).await.unwrap_or_else(|e| {
+                        fx_log_err!("run_name_lookup finished with error: {:?}", e)
+                    })
+                }
+            }
+        })
+        .map(Ok);
+
+    let ((), (), ()) = futures::future::try_join3(policy_fut, serve_fut, dns_watcher_fut).await?;
     Ok(())
 }
 
@@ -338,8 +465,13 @@ async fn main() -> Result<(), Error> {
 mod tests {
     use super::*;
 
-    use fidl_fuchsia_net_name as net_name;
-    use std::{net::Ipv4Addr, net::Ipv6Addr, str::FromStr, sync::Arc};
+    use dns::DEFAULT_PORT;
+    use std::net::SocketAddr;
+    use std::{
+        net::{IpAddr, Ipv4Addr, Ipv6Addr},
+        str::FromStr,
+        sync::Arc,
+    };
     use trust_dns_proto::{
         op::Query,
         rr::{Name, RData, Record},
@@ -353,16 +485,13 @@ mod tests {
     const IPV6_LOOPBACK: [u8; 16] = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1];
     const LOCAL_HOST: &str = "localhost.";
 
-    // IPv4 address returned if the name server is IPV4_NAMESERVER.
-    const IPV4_HOST_W_SERVER: Ipv4Addr = Ipv4Addr::new(240, 0, 0, 1);
-    // IPv4 address returned if the name server is not IPV4_NAMESERVER.
-    const IPV4_HOST_WO_SERVER: Ipv4Addr = Ipv4Addr::new(240, 0, 0, 2);
-    // IPv6 address returned if the name servers is IPV6_NAMESERVER.
-    const IPV6_HOST_W_SERVER: Ipv6Addr = Ipv6Addr::new(0xABCD, 0, 0, 0, 0, 0, 0, 1);
-    // IPv6 address returned if the name server is not IPV6_NAMESERVER.
-    const IPV6_HOST_WO_SERVER: Ipv6Addr = Ipv6Addr::new(0xABCD, 0, 0, 0, 0, 0, 0, 2);
-    const IPV4_NAMESERVER: Ipv4Addr = Ipv4Addr::new(1, 8, 8, 1);
-    const IPV6_NAMESERVER: Ipv6Addr = Ipv6Addr::new(1, 4860, 4860, 0, 0, 0, 0, 1);
+    // IPv4 address returned by mock lookup.
+    const IPV4_HOST: Ipv4Addr = Ipv4Addr::new(240, 0, 0, 2);
+    // IPv6 address returned by mock lookup.
+    const IPV6_HOST: Ipv6Addr = Ipv6Addr::new(0xABCD, 0, 0, 0, 0, 0, 0, 2);
+
+    const IPV4_NAMESERVER: IpAddr = IpAddr::V4(Ipv4Addr::new(1, 8, 8, 1));
+    const IPV6_NAMESERVER: IpAddr = IpAddr::V6(Ipv6Addr::new(1, 4860, 4860, 0, 0, 0, 0, 1));
 
     // host which has IPv4 address only.
     const REMOTE_IPV4_HOST: &str = "www.foo.com";
@@ -414,23 +543,6 @@ mod tests {
     ) {
         let res = proxy.lookup_hostname(&mut addr).await.expect("failed to lookup hostname");
         assert_eq!(res, expected);
-    }
-
-    async fn check_set_name_servers(
-        name_lookup_proxy: &fnet::NameLookupProxy,
-        lookup_admin_proxy: &net_name::LookupAdminProxy,
-        mut name_servers: Vec<fnet::IpAddress>,
-        host: &str,
-        option: fnet::LookupIpOptions,
-        expected: Result<fnet::IpAddressInfo, fnet::LookupError>,
-    ) {
-        lookup_admin_proxy
-            .set_default_dns_servers(&mut name_servers.iter_mut())
-            .await
-            .expect("failed to complete set_default_dns_servers")
-            .expect("set_default_dns_servers failed");
-        // Test set_server_names by checking the result of lookup ip.
-        check_lookup_ip(&name_lookup_proxy, host, option, expected).await;
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -500,43 +612,16 @@ mod tests {
         .await;
     }
 
-    struct MockResolver(pub ResolverConfig);
+    struct MockResolver {
+        config: ResolverConfig,
+    }
 
     impl MockResolver {
-        fn name_servers_equality(&self, servers: &Vec<IpAddr>) -> bool {
-            let name_servers = NameServerConfigGroup::from_ips_clear(&servers, DNS_PORT_NUM);
-            if name_servers.len() != self.0.name_servers().len() {
-                return false;
-            }
-            name_servers.iter().zip(self.0.name_servers().iter()).all(|(a, b)| a == b)
-        }
-
         fn ip_lookup<N: IntoName + Send>(&self, host: N) -> Lookup {
             let rdatas = match host.into_name().unwrap().to_utf8().as_str() {
-                REMOTE_IPV4_HOST => {
-                    if self.name_servers_equality(&vec![IpAddr::V4(IPV4_NAMESERVER)]) {
-                        vec![RData::A(IPV4_HOST_W_SERVER)]
-                    } else {
-                        vec![RData::A(IPV4_HOST_WO_SERVER)]
-                    }
-                }
-                REMOTE_IPV6_HOST => {
-                    if self.name_servers_equality(&vec![IpAddr::V6(IPV6_NAMESERVER)]) {
-                        vec![RData::AAAA(IPV6_HOST_W_SERVER)]
-                    } else {
-                        vec![RData::AAAA(IPV6_HOST_WO_SERVER)]
-                    }
-                }
-                REMOTE_IPV4_IPV6_HOST => {
-                    if self.name_servers_equality(&vec![
-                        IpAddr::V4(IPV4_NAMESERVER),
-                        IpAddr::V6(IPV6_NAMESERVER),
-                    ]) {
-                        vec![RData::A(IPV4_HOST_W_SERVER), RData::AAAA(IPV6_HOST_W_SERVER)]
-                    } else {
-                        vec![RData::A(IPV4_HOST_WO_SERVER), RData::AAAA(IPV6_HOST_WO_SERVER)]
-                    }
-                }
+                REMOTE_IPV4_HOST => vec![RData::A(IPV4_HOST)],
+                REMOTE_IPV6_HOST => vec![RData::AAAA(IPV6_HOST)],
+                REMOTE_IPV4_IPV6_HOST => vec![RData::A(IPV4_HOST), RData::AAAA(IPV6_HOST)],
                 _ => vec![],
             };
 
@@ -560,7 +645,7 @@ mod tests {
     #[async_trait]
     impl ResolverLookup for MockResolver {
         async fn new(config: ResolverConfig, _options: ResolverOpts) -> Self {
-            MockResolver(config)
+            MockResolver { config }
         }
 
         async fn lookup_ip<N: IntoName + TryParseIp + Send>(
@@ -588,12 +673,12 @@ mod tests {
             &self,
             addr: IpAddr,
         ) -> Result<lookup::ReverseLookup, ResolveError> {
-            let lookup = if addr == IPV4_HOST_WO_SERVER {
+            let lookup = if addr == IPV4_HOST {
                 Lookup::from_rdata(
                     Query::default(),
                     RData::PTR(Name::from_str(REMOTE_IPV4_HOST).unwrap()),
                 )
-            } else if addr == IPV6_HOST_WO_SERVER {
+            } else if addr == IPV6_HOST {
                 Lookup::new_with_max_ttl(
                     Query::default(),
                     Arc::new(vec![
@@ -618,196 +703,247 @@ mod tests {
         }
     }
 
-    fn setup_services_with_mock_resolver() -> (fnet::NameLookupProxy, net_name::LookupAdminProxy) {
-        let (name_lookup_proxy, name_lookup_stream) =
-            fidl::endpoints::create_proxy_and_stream::<fnet::NameLookupMarker>()
-                .expect("failed to create NameLookupProxy");
-        let (lookup_admin_proxy, lookup_admin_stream) =
-            fidl::endpoints::create_proxy_and_stream::<net_name::LookupAdminMarker>()
-                .expect("failed to create AdminResolverProxy");
+    struct TestEnvironment {
+        shared_resolver: SharedResolver<MockResolver>,
+    }
 
-        let mock_resolver = SharedResolver::new(MockResolver(ResolverConfig::from_parts(
-            None,
-            vec![],
-            // Set name_servers as empty, so it's guaranteed to be different from IPV4_NAMESERVER
-            // and IPV6_NAMESERVER.
-            NameServerConfigGroup::with_capacity(0),
-        )));
+    impl TestEnvironment {
+        fn new() -> Self {
+            Self {
+                shared_resolver: SharedResolver::new(MockResolver {
+                    config: ResolverConfig::from_parts(
+                        None,
+                        vec![],
+                        // Set name_servers as empty, so it's guaranteed to be different from IPV4_NAMESERVER
+                        // and IPV6_NAMESERVER.
+                        NameServerConfigGroup::with_capacity(0),
+                    ),
+                }),
+            }
+        }
 
-        fasync::spawn_local(async move {
-            let name_lookup_fut = run_name_lookup(&mock_resolver, name_lookup_stream);
-            let lookup_admin_fut = run_lookup_admin(&mock_resolver, lookup_admin_stream);
-            let (lookup_admin, name_lookup) =
-                futures::future::join(lookup_admin_fut, name_lookup_fut).await;
-            name_lookup.expect("failed to run_name_lookup");
-            lookup_admin.expect("failed to run_adminresolver");
-        });
+        async fn run_lookup<F, Fut>(&self, f: F)
+        where
+            Fut: futures::Future<Output = ()>,
+            F: FnOnce(fnet::NameLookupProxy) -> Fut,
+        {
+            let (name_lookup_proxy, name_lookup_stream) =
+                fidl::endpoints::create_proxy_and_stream::<fnet::NameLookupMarker>()
+                    .expect("failed to create NameLookupProxy");
 
-        (name_lookup_proxy, lookup_admin_proxy)
+            let ((), ()) = futures::future::try_join(
+                run_name_lookup(&self.shared_resolver, name_lookup_stream),
+                f(name_lookup_proxy).map(Ok),
+            )
+            .await
+            .expect("Error running lookup future");
+        }
+
+        async fn run_admin<F, Fut>(&self, f: F)
+        where
+            Fut: futures::Future<Output = ()>,
+            F: FnOnce(fname::LookupAdminProxy) -> Fut,
+        {
+            let (lookup_admin_proxy, lookup_admin_stream) =
+                fidl::endpoints::create_proxy_and_stream::<fname::LookupAdminMarker>()
+                    .expect("failed to create AdminResolverProxy");
+
+            let (sink, policy_fut) = create_policy_fut(&self.shared_resolver);
+
+            let ((), (), ()) = futures::future::try_join3(
+                run_lookup_admin(sink, lookup_admin_stream),
+                policy_fut,
+                f(lookup_admin_proxy).map(Ok),
+            )
+            .await
+            .expect("Error running admin future");
+        }
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_lookupip_remotehost_ipv4() {
-        let (proxy, _) = setup_services_with_mock_resolver();
+        TestEnvironment::new()
+            .run_lookup(|proxy| async move {
+                // IP Lookup IPv4 and IPv6 for REMOTE_IPV4_HOST.
+                check_lookup_ip(
+                    &proxy,
+                    REMOTE_IPV4_HOST,
+                    fnet::LookupIpOptions::V4Addrs | fnet::LookupIpOptions::V6Addrs,
+                    Ok(fnet::IpAddressInfo {
+                        ipv4_addrs: vec![fnet::Ipv4Address { addr: IPV4_HOST.octets() }],
+                        ipv6_addrs: vec![],
+                        canonical_name: None,
+                    }),
+                )
+                .await;
 
-        // IP Lookup IPv4 and IPv6 for REMOTE_IPV4_HOST.
-        check_lookup_ip(
-            &proxy,
-            REMOTE_IPV4_HOST,
-            fnet::LookupIpOptions::V4Addrs | fnet::LookupIpOptions::V6Addrs,
-            Ok(fnet::IpAddressInfo {
-                ipv4_addrs: vec![fnet::Ipv4Address { addr: IPV4_HOST_WO_SERVER.octets() }],
-                ipv6_addrs: vec![],
-                canonical_name: None,
-            }),
-        )
-        .await;
+                // IP Lookup IPv4 for REMOTE_IPV4_HOST.
+                check_lookup_ip(
+                    &proxy,
+                    REMOTE_IPV4_HOST,
+                    fnet::LookupIpOptions::V4Addrs,
+                    Ok(fnet::IpAddressInfo {
+                        ipv4_addrs: vec![fnet::Ipv4Address { addr: IPV4_HOST.octets() }],
+                        ipv6_addrs: vec![],
+                        canonical_name: None,
+                    }),
+                )
+                .await;
 
-        // IP Lookup IPv4 for REMOTE_IPV4_HOST.
-        check_lookup_ip(
-            &proxy,
-            REMOTE_IPV4_HOST,
-            fnet::LookupIpOptions::V4Addrs,
-            Ok(fnet::IpAddressInfo {
-                ipv4_addrs: vec![fnet::Ipv4Address { addr: IPV4_HOST_WO_SERVER.octets() }],
-                ipv6_addrs: vec![],
-                canonical_name: None,
-            }),
-        )
-        .await;
-
-        // IP Lookup IPv6 for REMOTE_IPV4_HOST.
-        check_lookup_ip(
-            &proxy,
-            REMOTE_IPV4_HOST,
-            fnet::LookupIpOptions::V6Addrs,
-            Err(fnet::LookupError::NotFound),
-        )
-        .await;
+                // IP Lookup IPv6 for REMOTE_IPV4_HOST.
+                check_lookup_ip(
+                    &proxy,
+                    REMOTE_IPV4_HOST,
+                    fnet::LookupIpOptions::V6Addrs,
+                    Err(fnet::LookupError::NotFound),
+                )
+                .await;
+            })
+            .await;
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_lookupip_remotehost_ipv6() {
-        let (proxy, _) = setup_services_with_mock_resolver();
+        TestEnvironment::new()
+            .run_lookup(|proxy| async move {
+                // IP Lookup IPv4 and IPv6 for REMOTE_IPV6_HOST.
+                check_lookup_ip(
+                    &proxy,
+                    REMOTE_IPV6_HOST,
+                    fnet::LookupIpOptions::V4Addrs | fnet::LookupIpOptions::V6Addrs,
+                    Ok(fnet::IpAddressInfo {
+                        ipv4_addrs: vec![],
+                        ipv6_addrs: vec![fnet::Ipv6Address { addr: IPV6_HOST.octets() }],
+                        canonical_name: None,
+                    }),
+                )
+                .await;
 
-        // IP Lookup IPv4 and IPv6 for REMOTE_IPV6_HOST.
-        check_lookup_ip(
-            &proxy,
-            REMOTE_IPV6_HOST,
-            fnet::LookupIpOptions::V4Addrs | fnet::LookupIpOptions::V6Addrs,
-            Ok(fnet::IpAddressInfo {
-                ipv4_addrs: vec![],
-                ipv6_addrs: vec![fnet::Ipv6Address { addr: IPV6_HOST_WO_SERVER.octets() }],
-                canonical_name: None,
-            }),
-        )
-        .await;
+                // IP Lookup IPv4 for REMOTE_IPV6_HOST.
+                check_lookup_ip(
+                    &proxy,
+                    REMOTE_IPV6_HOST,
+                    fnet::LookupIpOptions::V4Addrs,
+                    Err(fnet::LookupError::NotFound),
+                )
+                .await;
 
-        // IP Lookup IPv4 for REMOTE_IPV6_HOST.
-        check_lookup_ip(
-            &proxy,
-            REMOTE_IPV6_HOST,
-            fnet::LookupIpOptions::V4Addrs,
-            Err(fnet::LookupError::NotFound),
-        )
-        .await;
-
-        // IP Lookup IPv6 for REMOTE_IPV4_HOST.
-        check_lookup_ip(
-            &proxy,
-            REMOTE_IPV6_HOST,
-            fnet::LookupIpOptions::V6Addrs,
-            Ok(fnet::IpAddressInfo {
-                ipv4_addrs: vec![],
-                ipv6_addrs: vec![fnet::Ipv6Address { addr: IPV6_HOST_WO_SERVER.octets() }],
-                canonical_name: None,
-            }),
-        )
-        .await;
+                // IP Lookup IPv6 for REMOTE_IPV4_HOST.
+                check_lookup_ip(
+                    &proxy,
+                    REMOTE_IPV6_HOST,
+                    fnet::LookupIpOptions::V6Addrs,
+                    Ok(fnet::IpAddressInfo {
+                        ipv4_addrs: vec![],
+                        ipv6_addrs: vec![fnet::Ipv6Address { addr: IPV6_HOST.octets() }],
+                        canonical_name: None,
+                    }),
+                )
+                .await;
+            })
+            .await;
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_lookup_hostname() {
-        let (proxy, _) = setup_services_with_mock_resolver();
-
-        check_lookup_hostname(
-            &proxy,
-            fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: IPV4_HOST_WO_SERVER.octets() }),
-            Ok(String::from(REMOTE_IPV4_HOST)),
-        )
-        .await;
+        TestEnvironment::new()
+            .run_lookup(|proxy| async move {
+                check_lookup_hostname(
+                    &proxy,
+                    fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: IPV4_HOST.octets() }),
+                    Ok(String::from(REMOTE_IPV4_HOST)),
+                )
+                .await;
+            })
+            .await;
     }
 
     // Multiple hostnames returned from trust-dns* APIs, and only the first one will be returned
     // by the FIDL.
     #[fasync::run_singlethreaded(test)]
     async fn test_lookup_hostname_multi() {
-        let (proxy, _) = setup_services_with_mock_resolver();
-
-        check_lookup_hostname(
-            &proxy,
-            fnet::IpAddress::Ipv6(fnet::Ipv6Address { addr: IPV6_HOST_WO_SERVER.octets() }),
-            Ok(String::from(REMOTE_IPV6_HOST)),
-        )
-        .await;
-    }
-
-    // dns::async_resolver::Resolver does not expose ResolverConfig info, so the MockResolver is
-    // used for testing.
-    #[fasync::run_singlethreaded(test)]
-    async fn test_set_server_names_ipv4() {
-        let (name_lookup_proxy, lookup_admin_proxy) = setup_services_with_mock_resolver();
-        check_set_name_servers(
-            &name_lookup_proxy,
-            &lookup_admin_proxy,
-            vec![fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: IPV4_NAMESERVER.octets() })],
-            REMOTE_IPV4_HOST,
-            fnet::LookupIpOptions::V4Addrs,
-            Ok(fnet::IpAddressInfo {
-                ipv4_addrs: vec![fnet::Ipv4Address { addr: IPV4_HOST_W_SERVER.octets() }],
-                ipv6_addrs: vec![],
-                canonical_name: None,
-            }),
-        )
-        .await;
+        TestEnvironment::new()
+            .run_lookup(|proxy| async move {
+                check_lookup_hostname(
+                    &proxy,
+                    fnet::IpAddress::Ipv6(fnet::Ipv6Address { addr: IPV6_HOST.octets() }),
+                    Ok(String::from(REMOTE_IPV6_HOST)),
+                )
+                .await;
+            })
+            .await;
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_set_server_names_ipv6() {
-        let (name_lookup_proxy, lookup_admin_proxy) = setup_services_with_mock_resolver();
-        check_set_name_servers(
-            &name_lookup_proxy,
-            &lookup_admin_proxy,
-            vec![fnet::IpAddress::Ipv6(fnet::Ipv6Address { addr: IPV6_NAMESERVER.octets() })],
-            REMOTE_IPV6_HOST,
-            fnet::LookupIpOptions::V6Addrs,
-            Ok(fnet::IpAddressInfo {
-                ipv4_addrs: vec![],
-                ipv6_addrs: vec![fnet::Ipv6Address { addr: IPV6_HOST_W_SERVER.octets() }],
-                canonical_name: None,
-            }),
-        )
+    async fn test_set_server_names() {
+        let env = TestEnvironment::new();
+        // Assert that mock config has no servers originally.
+
+        assert_eq!(env.shared_resolver.read().config.name_servers().to_vec(), vec![]);
+
+        env.run_admin(|proxy| async move {
+            let v4: fnet::IpAddress = net_ext::IpAddress(IPV4_NAMESERVER).into();
+            let v6: fnet::IpAddress = net_ext::IpAddress(IPV6_NAMESERVER).into();
+            let () = proxy
+                .set_default_dns_servers(&mut vec![v4, v6].iter_mut())
+                .await
+                .expect("Failed to call SetDefaultDnsServers")
+                .expect("SetDefaultDnsServers error");
+        })
         .await;
+
+        let to_server_configs = |addr: IpAddr| -> [NameServerConfig; 2] {
+            let socket_addr = SocketAddr::new(addr, DEFAULT_PORT);
+            [
+                NameServerConfig { socket_addr, protocol: Protocol::Udp, tls_dns_name: None },
+                NameServerConfig { socket_addr, protocol: Protocol::Tcp, tls_dns_name: None },
+            ]
+        };
+
+        assert_eq!(
+            env.shared_resolver.read().config.name_servers().to_vec(),
+            to_server_configs(IPV4_NAMESERVER)
+                .iter()
+                .chain(to_server_configs(IPV6_NAMESERVER).iter())
+                .cloned()
+                .collect::<Vec<_>>()
+        );
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_set_server_names_ipv4_ipv6() {
-        let (name_lookup_proxy, lookup_admin_proxy) = setup_services_with_mock_resolver();
-        check_set_name_servers(
-            &name_lookup_proxy,
-            &lookup_admin_proxy,
-            vec![
-                fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: IPV4_NAMESERVER.octets() }),
-                fnet::IpAddress::Ipv6(fnet::Ipv6Address { addr: IPV6_NAMESERVER.octets() }),
-            ],
-            REMOTE_IPV4_IPV6_HOST,
-            fnet::LookupIpOptions::V4Addrs | fnet::LookupIpOptions::V6Addrs,
-            Ok(fnet::IpAddressInfo {
-                ipv4_addrs: vec![fnet::Ipv4Address { addr: IPV4_HOST_W_SERVER.octets() }],
-                ipv6_addrs: vec![fnet::Ipv6Address { addr: IPV6_HOST_W_SERVER.octets() }],
-                canonical_name: None,
-            }),
-        )
+    async fn test_set_server_names_error() {
+        let env = TestEnvironment::new();
+        // Assert that mock config has no servers originally.
+        assert_eq!(env.shared_resolver.read().config.name_servers().to_vec(), vec![]);
+
+        env.run_admin(|proxy| async move {
+            // Attempt to set bad addresses.
+
+            // Multicast not allowed.
+            let status = proxy
+                .set_default_dns_servers(
+                    &mut vec![fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: [224, 0, 0, 1] })]
+                        .iter_mut(),
+                )
+                .await
+                .expect("Failed to call SetDefaultDnsServers")
+                .expect_err("SetDefaultDnsServers should fail for multicast address");
+            assert_eq!(zx::Status::from_raw(status), zx::Status::INVALID_ARGS);
+
+            // Unspecified not allowed.
+            let status = proxy
+                .set_default_dns_servers(
+                    &mut vec![fnet::IpAddress::Ipv6(fnet::Ipv6Address { addr: [0u8; 16] })]
+                        .iter_mut(),
+                )
+                .await
+                .expect("Failed to call SetDefaultDnsServers")
+                .expect_err("SetDefaultDnsServers should fail for unspecified address");
+            assert_eq!(zx::Status::from_raw(status), zx::Status::INVALID_ARGS);
+        })
         .await;
+
+        // Assert that config didn't change.
+        assert_eq!(env.shared_resolver.read().config.name_servers().to_vec(), vec![]);
     }
 }

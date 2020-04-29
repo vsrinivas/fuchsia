@@ -4,9 +4,12 @@
 
 mod macros;
 
+pub use macros::*;
+
 use anyhow;
 use fidl_fuchsia_net as fidl;
-pub use macros::*;
+
+use std::convert::TryInto;
 
 #[derive(PartialEq, Eq, Debug, Clone, Copy)]
 pub struct IpAddress(pub std::net::IpAddr);
@@ -190,6 +193,50 @@ impl std::str::FromStr for MacAddress {
     }
 }
 
+#[derive(PartialEq, Eq, Debug, Clone, Copy)]
+pub struct SocketAddress(pub std::net::SocketAddr);
+
+impl From<fidl::SocketAddress> for SocketAddress {
+    fn from(f: fidl::SocketAddress) -> Self {
+        Self(match f {
+            fidl::SocketAddress::Ipv4(fidl::Ipv4SocketAddress {
+                address: fidl::Ipv4Address { addr },
+                port,
+            }) => std::net::SocketAddr::V4(std::net::SocketAddrV4::new(addr.into(), port)),
+            fidl::SocketAddress::Ipv6(fidl::Ipv6SocketAddress {
+                address: fidl::Ipv6Address { addr },
+                port,
+                zone_index,
+            }) => std::net::SocketAddr::V6(std::net::SocketAddrV6::new(
+                addr.into(),
+                port,
+                0,
+                zone_index.try_into().unwrap_or(0),
+            )),
+        })
+    }
+}
+
+impl Into<fidl::SocketAddress> for SocketAddress {
+    fn into(self) -> fidl::SocketAddress {
+        match self.0 {
+            std::net::SocketAddr::V4(socket_addr) => {
+                fidl::SocketAddress::Ipv4(fidl::Ipv4SocketAddress {
+                    address: fidl::Ipv4Address { addr: socket_addr.ip().octets() },
+                    port: socket_addr.port(),
+                })
+            }
+            std::net::SocketAddr::V6(socket_addr) => {
+                fidl::SocketAddress::Ipv6(fidl::Ipv6SocketAddress {
+                    address: fidl::Ipv6Address { addr: socket_addr.ip().octets() },
+                    port: socket_addr.port(),
+                    zone_index: socket_addr.scope_id().into(),
+                })
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -324,5 +371,43 @@ mod tests {
         let result = serde_json::to_string(&mac_addr_map).unwrap();
 
         assert_eq!("{\"11:22:33:44:55:66\":\"aa:bb:cc:dd:ee:ff\"}", result);
+    }
+
+    #[test]
+    fn test_socket_addr() {
+        // V4.
+        let want_ext = SocketAddress(std::net::SocketAddr::V4(std::net::SocketAddrV4::new(
+            std::net::Ipv4Addr::new(1, 2, 3, 4),
+            5,
+        )));
+        let want_fidl = fidl::SocketAddress::Ipv4(fidl::Ipv4SocketAddress {
+            address: fidl::Ipv4Address { addr: [1, 2, 3, 4] },
+            port: 5,
+        });
+        let got_fidl: fidl::SocketAddress = want_ext.into();
+        let got_ext = SocketAddress::from(want_fidl);
+
+        assert_eq!(want_ext, got_ext);
+        assert_eq!(want_fidl, got_fidl);
+
+        // V6.
+        let want_ext = SocketAddress(std::net::SocketAddr::V6(std::net::SocketAddrV6::new(
+            std::net::Ipv6Addr::new(0x0102, 0x0304, 0x0506, 0x0708, 0x090A, 0x0B0C, 0x0D0E, 0x0F10),
+            17,
+            0,
+            18,
+        )));
+        let want_fidl = fidl::SocketAddress::Ipv6(fidl::Ipv6SocketAddress {
+            address: fidl::Ipv6Address {
+                addr: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
+            },
+            port: 17,
+            zone_index: 18,
+        });
+        let got_fidl: fidl::SocketAddress = want_ext.into();
+        let got_ext = SocketAddress::from(got_fidl);
+
+        assert_eq!(want_ext, got_ext);
+        assert_eq!(want_fidl, want_fidl);
     }
 }

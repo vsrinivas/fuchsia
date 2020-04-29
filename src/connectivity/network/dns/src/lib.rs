@@ -12,8 +12,16 @@ use {
 };
 
 pub mod async_resolver;
+pub mod policy;
 pub mod tcp;
 pub mod udp;
+pub mod util;
+
+#[cfg(test)]
+pub(crate) mod test_util;
+
+/// Default DNS server port.
+pub const DEFAULT_PORT: u16 = 53;
 
 /// A Fuchsia Executor which implements the `trust_dns_proto::Executor` trait.
 pub struct FuchsiaExec(fasync::Executor);
