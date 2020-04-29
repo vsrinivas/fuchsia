@@ -27,7 +27,15 @@ class LoaderImpl final : public fuchsia::vulkan::loader::Loader {
 
   // Adds a binding for fuchsia::vulkan::loader::Loader to |outgoing|
   void Add(const std::shared_ptr<sys::OutgoingDirectory>& outgoing) {
-    outgoing->AddPublicService(bindings_.GetHandler(this));
+    outgoing->AddPublicService(fidl::InterfaceRequestHandler<fuchsia::vulkan::loader::Loader>(
+        [this](fidl::InterfaceRequest<fuchsia::vulkan::loader::Loader> request) {
+          if (!logged_connection_) {
+            // TODO(fxb/50876): Remove logging once hang is debugged.
+            FXL_LOG(INFO) << "Vulkan loader received first connection";
+            logged_connection_ = true;
+          }
+          bindings_.AddBinding(this, std::move(request), nullptr);
+        }));
   }
 
  private:
@@ -61,6 +69,7 @@ class LoaderImpl final : public fuchsia::vulkan::loader::Loader {
 
   fidl::BindingSet<fuchsia::vulkan::loader::Loader> bindings_;
   bool logged_load_ = false;
+  bool logged_connection_ = false;
 };
 
 int main(int argc, const char* const* argv) {
@@ -72,6 +81,8 @@ int main(int argc, const char* const* argv) {
   LoaderImpl loader_impl;
   loader_impl.Add(context->outgoing());
 
+  // TODO(fxb/50876): Remove logging once hang is debugged.
+  FXL_LOG(INFO) << "Vulkan loader finished initializing";
   loop.Run();
   return 0;
 }
