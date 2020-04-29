@@ -250,7 +250,7 @@ mod tests {
     use crate::wire::ipv6::ext_hdrs::{
         ExtensionHeaderOptionAction, HopByHopOption, HopByHopOptionData, Ipv6ExtensionHeaderData,
     };
-    use crate::wire::ipv6::{Ipv6Packet, Ipv6PacketBuilder, Ipv6PacketBuilderWithHBHOptions};
+    use crate::wire::ipv6::{Ipv6Packet, Ipv6PacketBuilder, Ipv6PacketBuilderWithHbhOptions};
 
     fn serialize_to_bytes<
         B: ByteSlice + Debug,
@@ -261,7 +261,7 @@ mod tests {
         icmp: &IcmpPacket<Ipv6, B, M>,
     ) -> Vec<u8> {
         let ip = Ipv6PacketBuilder::new(src_ip, dst_ip, 1, IpProto::Icmpv6);
-        let with_options = Ipv6PacketBuilderWithHBHOptions::new(
+        let with_options = Ipv6PacketBuilderWithHbhOptions::new(
             ip,
             &[HopByHopOption {
                 action: ExtensionHeaderOptionAction::SkipAndContinue,
@@ -312,7 +312,7 @@ mod tests {
         max_resp_delay: M::MaxRespDelay,
     ) -> Vec<u8> {
         let ip = Ipv6PacketBuilder::new(src_ip, dst_ip, 1, IpProto::Icmpv6);
-        let with_options = Ipv6PacketBuilderWithHBHOptions::new(
+        let with_options = Ipv6PacketBuilderWithHbhOptions::new(
             ip,
             &[HopByHopOption {
                 action: ExtensionHeaderOptionAction::SkipAndContinue,

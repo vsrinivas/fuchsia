@@ -761,7 +761,7 @@ type OptionsSerializer<'a, I> =
 
 /// A builder for Ipv6 packets with HBH Options.
 #[derive(Debug)]
-pub(crate) struct Ipv6PacketBuilderWithHBHOptions<
+pub(crate) struct Ipv6PacketBuilderWithHbhOptions<
     'a,
     I: Clone + Iterator<Item = &'a HopByHopOption<'a>>,
 > {
@@ -770,12 +770,12 @@ pub(crate) struct Ipv6PacketBuilderWithHBHOptions<
 }
 
 impl<'a, I: Clone + Iterator<Item = &'a HopByHopOption<'a>>>
-    Ipv6PacketBuilderWithHBHOptions<'a, I>
+    Ipv6PacketBuilderWithHbhOptions<'a, I>
 {
     pub(crate) fn new<T: IntoIterator<Item = I::Item, IntoIter = I>>(
         prefix_builder: Ipv6PacketBuilder,
         options: T,
-    ) -> Option<Ipv6PacketBuilderWithHBHOptions<'a, I>> {
+    ) -> Option<Ipv6PacketBuilderWithHbhOptions<'a, I>> {
         let iter = options.into_iter();
         // https://tools.ietf.org/html/rfc2711#section-2.1 specifies that
         // an RouterAlert option can only appear once.
@@ -795,7 +795,7 @@ impl<'a, I: Clone + Iterator<Item = &'a HopByHopOption<'a>>>
         if next_multiple_of_eight(2 + hbh_options.records_bytes_len()) > IPV6_HBH_OPTIONS_MAX_LEN {
             return None;
         }
-        Some(Ipv6PacketBuilderWithHBHOptions { prefix_builder, hbh_options })
+        Some(Ipv6PacketBuilderWithHbhOptions { prefix_builder, hbh_options })
     }
 
     fn aligned_hbh_len(&self) -> usize {
@@ -853,7 +853,7 @@ impl PacketBuilder for Ipv6PacketBuilder {
 }
 
 impl<'a, I: Clone + Iterator<Item = &'a HopByHopOption<'a>>> PacketBuilder
-    for Ipv6PacketBuilderWithHBHOptions<'a, I>
+    for Ipv6PacketBuilderWithHbhOptions<'a, I>
 {
     fn constraints(&self) -> PacketConstraints {
         let header_len = IPV6_FIXED_HDR_LEN + self.aligned_hbh_len();

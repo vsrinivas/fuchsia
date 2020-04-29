@@ -38,7 +38,7 @@ use crate::wire::icmp::{mld::MldPacket, IcmpPacketBuilder, IcmpUnusedCode};
 use crate::wire::ipv6::ext_hdrs::{
     ExtensionHeaderOptionAction, HopByHopOption, HopByHopOptionData,
 };
-use crate::wire::ipv6::{Ipv6PacketBuilder, Ipv6PacketBuilderWithHBHOptions};
+use crate::wire::ipv6::{Ipv6PacketBuilder, Ipv6PacketBuilderWithHbhOptions};
 use crate::Instant;
 
 /// Metadata for sending an MLD packet in an IP packet.
@@ -433,7 +433,7 @@ fn send_mld_packet<D: LinkDevice, C: MldContext<D>, B: ByteSlice, M: IcmpMldv1Me
         .into_serializer()
         .encapsulate(IcmpPacketBuilder::new(src_ip, dst_ip.get(), IcmpUnusedCode, msg))
         .encapsulate(
-            Ipv6PacketBuilderWithHBHOptions::new(
+            Ipv6PacketBuilderWithHbhOptions::new(
                 Ipv6PacketBuilder::new(src_ip, dst_ip.get(), 1, IpProto::Icmpv6),
                 &[HopByHopOption {
                     action: ExtensionHeaderOptionAction::SkipAndContinue,
