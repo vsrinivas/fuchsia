@@ -251,20 +251,21 @@ zx_status_t Bridge::AllocateBridgeWindowsLocked() {
   // Configure the three windows
   status = configure_window(upstream_->pio_regions(), pio_regions_, io_base_, io_limit_, "io");
   if (status != ZX_OK) {
-    pci_tracef("%s bailing out after pio\n", cfg_->addr());
-    return status;
+    pci_tracef("%s Error configuring I/O window (%d), I/O bars downstream will be unavailable!\n",
+               cfg_->addr(), status);
   }
   status =
       configure_window(upstream_->mmio_regions(), mmio_regions_, mem_base_, mem_limit_, "mmio");
   if (status != ZX_OK) {
-    pci_tracef("%s bailing out after mmio\n", cfg_->addr());
-    return status;
+    pci_tracef("%s Error configuring MMIO window (%d), MMIO bars downstream will be unavailable!\n",
+               cfg_->addr(), status);
   }
   status = configure_window(upstream_->pf_mmio_regions(), pf_mmio_regions_, pf_mem_base_,
                             pf_mem_limit_, "pf_mmio");
   if (status != ZX_OK) {
-    pci_tracef("%s bailing out after pf-mmio\n", cfg_->addr());
-    return status;
+    pci_tracef(
+        "%s Error configuring PF-MMIO window (%d), PF-MMIO bars downstream will be unavailable!\n",
+        cfg_->addr(), status);
   }
 
   return ZX_OK;

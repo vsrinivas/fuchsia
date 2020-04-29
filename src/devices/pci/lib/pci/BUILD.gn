@@ -10,7 +10,10 @@ zx_library("pci") {
     "lib/pci/pio.h",
     "lib/pci/root.h",
   ]
-  sources = [ "pio.cc" ]
+  sources = [
+    "pio.cc",
+    "root_host.cc",
+  ]
   deps = [
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
@@ -18,4 +21,11 @@ zx_library("pci") {
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/zx",
   ]
+
+  public_deps = [
+    "//sdk/banjo/ddk.protocol.pciroot",
+    "//zircon/public/lib/region-alloc",
+  ]
+
+  configs += [ "$zx_build/public/gn/config:static-libc++" ]
 }

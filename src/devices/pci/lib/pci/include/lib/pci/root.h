@@ -1,39 +1,48 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 #ifndef SRC_DEVICES_PCI_LIB_PCI_INCLUDE_LIB_PCI_ROOT_H_
 #define SRC_DEVICES_PCI_LIB_PCI_INCLUDE_LIB_PCI_ROOT_H_
 #include <string.h>
+#include <zircon/compiler.h>
 
 #include <ddk/protocol/pciroot.h>
-#include <region-alloc/region-alloc.h>
 
 __BEGIN_CDECLS
-
 pciroot_protocol_ops_t* get_pciroot_ops(void);
-
 __END_CDECLS
 
 // Userspace ACPI/PCI support is entirely in C++, but the legacy kernel pci support
 // still has kpci.c. In lieu of needlessly porting that, it's simpler to ifdef the
 // DDKTL usage away from it until we can remove it entirely.
 #ifdef __cplusplus
-#include <lib/zx/bti.h>
+#include <lib/pci/root_host.h>
+#include <lib/zx/eventpair.h>
+#include <lib/zx/port.h>
+#include <lib/zx/thread.h>
+#include <stdint.h>
+#include <string.h>
+#include <zircon/errors.h>
 
 #include <memory>
+#include <thread>
+#include <unordered_map>
+#include <vector>
 
 #include <ddktl/device.h>
 #include <ddktl/protocol/pciroot.h>
-#include <fbl/alloc_checker.h>
 
-#include "pci.h"
+// Pciroot is the interface between a platform's PCI RootHost, and the PCI Bus Driver instances.
+// It is templated on |PlatformContextType| so that platform specific context can be provided to
+// each root as necessary. For instance, in ACPI systems this contains the ACPI object for the PCI
+// root to work with ACPICA.
 
-class Pciroot;
-using PcirootType = ddk::Device<Pciroot>;
-class Pciroot : public PcirootType, public ddk::PcirootProtocol<Pciroot, ddk::base_protocol> {
+template <class PlatformContextType>
+class Pciroot : public ddk::Device<Pciroot<PlatformContextType>>,
+                public ddk::PcirootProtocol<Pciroot<PlatformContextType>, ddk::base_protocol> {
  public:
-  static zx_status_t Create(std::unique_ptr<pciroot_ctx_t> ctx, zx_device_t* parent,
-                            zx_device_t* platform_bus, const char* name);
+  static zx_status_t Create(PciRootHost* root_host, std::unique_ptr<PlatformContextType> ctx,
+                            zx_device_t* parent, zx_device_t* platform_bus, const char* name);
   zx_status_t PcirootGetAuxdata(const char* args, void* out_data, size_t data_size,
                                 size_t* out_data_actual);
   zx_status_t PcirootGetBti(uint32_t bdf, uint32_t index, zx::bti* bti);
@@ -43,8 +52,10 @@ class Pciroot : public PcirootType, public ddk::PcirootProtocol<Pciroot, ddk::ba
 
   // If |true| is returned by the Pciroot implementation then the bus driver
   // will send all config space reads and writes over the Pciroot protocol
-  // rather than in the bus driver using MMIO/IO access.
-  bool PcirootDriverShouldProxyConfig(void);
+  // rather than in the bus driver using MMIO/IO access. This exists to work
+  // with non-standard PCI implementations that require controller configuration
+  // before accessing a given device.
+  bool PcirootDriverShouldProxyConfig();
 
   // Config space read/write accessors for PCI systems that require platform
   // bus to configure something before config space is accessible. For ACPI
@@ -73,22 +84,29 @@ class Pciroot : public PcirootType, public ddk::PcirootProtocol<Pciroot, ddk::ba
   zx_status_t PcirootFreeAddressSpace(uint64_t base, size_t len, pci_address_space_t type);
 
   // DDK mix-in impls
-  void DdkRelease(void) { delete this; }
+  void DdkRelease() { delete this; }
 
   // Accessors
   // TODO(cja): Remove this when we no longer share get_auxdata/get_bti with
   // the kernel pci bus driver's C interface.
-  void* c_context(void) { return static_cast<void*>(ctx_.get()); }
+  void* c_context() { return ctx_.get(); }
   char name_[8];
 
  private:
-  Pciroot(std::unique_ptr<pciroot_ctx_t> ctx, zx_device_t* parent, zx_device_t* platform_bus,
-          const char* name)
-      : PcirootType(parent), ctx_(std::move(ctx)), platform_bus_(platform_bus) {}
-  std::unique_ptr<pciroot_ctx_t> ctx_;
+  Pciroot(PciRootHost* host, std::unique_ptr<PlatformContextType> ctx, zx_device_t* parent,
+          zx_device_t* platform_bus, const char* name)
+      : ddk::Device<Pciroot<PlatformContextType>>(parent),
+        root_host_(host),
+        ctx_(std::move(ctx)),
+        platform_bus_(platform_bus) {}
+  // TODO(32978): presently, pciroot instances will always outlive the root host
+  // it references here because it exists within the same devhost process as a
+  // singleton. This will be updated when the pciroot implementation changes to
+  // move away from a standalone banjo protocol.
+  PciRootHost* root_host_;
+  std::unique_ptr<PlatformContextType> ctx_;
   zx_device_t* platform_bus_;
 };
 
-#endif
-
+#endif  // ifndef __cplusplus
 #endif  // SRC_DEVICES_PCI_LIB_PCI_INCLUDE_LIB_PCI_ROOT_H_

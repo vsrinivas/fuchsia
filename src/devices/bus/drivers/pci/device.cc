@@ -12,12 +12,15 @@
 #include <zircon/time.h>
 #include <zircon/types.h>
 
+#include <array>
+
 #include <ddk/binding.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/ref_ptr.h>
+#include <pretty/sizes.h>
 
 #include "bus.h"
 #include "common.h"
@@ -249,12 +252,6 @@ zx_status_t Device::ProbeBar(uint32_t bar_id) {
     return ZX_ERR_BAD_STATE;
   }
 
-  if (bar_info.is_64bit && !bar_info.is_prefetchable) {
-    pci_errorf("%s bar %u is misconfigured as 64bit but not prefetchable!\n", cfg_->addr(),
-               bar_info.bar_id);
-    return ZX_ERR_BAD_STATE;
-  }
-
   // Disable MMIO & PIO access while we perform the probe. We don't want the
   // addresses written during probing to conflict with anything else on the
   // bus. Note: No drivers should have access to this device's registers
@@ -316,6 +313,12 @@ zx_status_t Device::ProbeBar(uint32_t bar_id) {
       cfg_->Write(Config::kBar(bar_id + 1), static_cast<uint32_t>(bar_info.address >> 32));
     }
   }
+
+  std::array<char, 8> pretty_size = {};
+  pci_tracef("%s Region %u: probed %s (%s%sprefetchable) [size=%s]\n", cfg_->addr(), bar_id,
+             (bar_info.is_mmio) ? "Memory" : "I/O ports", (bar_info.is_64bit) ? "64-bit, " : "",
+             (bar_info.is_prefetchable) ? "" : "non-",
+             format_size(pretty_size.data(), pretty_size.max_size(), bar_info.size));
 
   // All done, re-enable IO/MMIO access that was disabled prior.
   AssignCmdLocked(cmd_backup);
