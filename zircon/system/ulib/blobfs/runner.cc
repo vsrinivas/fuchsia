@@ -45,11 +45,12 @@ void Runner::Shutdown(fs::Vfs::ShutdownCallback cb) {
       // should terminate all background workers.
       blobfs_ = nullptr;
 
-      // Tell the unmounting channel that we've completed teardown.
-      cb(status);
-
       // Tell the mounting thread that the filesystem has terminated.
       loop_->Quit();
+
+      // Tell the unmounting channel that we've completed teardown. This *must* be the last thing we
+      // do because after this, the caller can assume that it's safe to destroy the runner.
+      cb(status);
     });
   });
 }
