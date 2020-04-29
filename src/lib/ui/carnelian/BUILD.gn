@@ -52,6 +52,7 @@ rustc_library("carnelian") {
     "//third_party/rust_crates:itertools",
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:lipsum",
+    "//third_party/rust_crates:png",
     "//third_party/rust_crates:rand",
     "//third_party/rust_crates:rusttype",
     "//third_party/rust_crates:smallvec",
@@ -396,6 +397,64 @@ package("gamma-rs") {
   resources = vulkan_validation_layers.resources
 }
 
+rustc_binary("png") {
+  version = "0.1.0"
+  edition = "2018"
+  source_root = "examples/png.rs"
+  deps = [
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/trace/rust:trace",
+    "//src/lib/trace/rust:trace-provider",
+    "//src/lib/ui/carnelian",
+    "//src/lib/ui/fuchsia-scenic",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:argh",
+    "//third_party/rust_crates:euclid",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:png",
+    "//third_party/rust_crates:thiserror",
+  ]
+}
+
+package("png-rs") {
+  deps = [ ":png" ]
+
+  binaries = [
+    {
+      name = "app"
+      source = "png"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/example.cmx")
+      dest = "png-rs.cmx"
+    },
+  ]
+
+  public_deps = vulkan_validation_layers.public_deps
+  loadable_modules = vulkan_validation_layers.loadable_modules
+  resources = vulkan_validation_layers.resources
+
+  images = [
+    "lenna.png",
+    "baboon.png",
+  ]
+
+  foreach(image, images) {
+    resources += [
+      {
+        path = rebase_path("examples/images/${image}")
+        file_name = get_path_info(image, "file")
+        dest = "images/${file_name}"
+      },
+    ]
+  }
+}
+
 test_package("carnelian-render-tests") {
   deps = [ ":carnelian_test" ]
 
@@ -483,6 +542,7 @@ group("examples") {
     "//src/lib/ui/carnelian:gamma-rs",
     "//src/lib/ui/carnelian:infinite-scroll-rs",
     "//src/lib/ui/carnelian:ink-rs",
+    "//src/lib/ui/carnelian:png-rs",
     "//src/lib/ui/carnelian:shapes-rs",
     "//src/lib/ui/carnelian:spinning-square-rs",
   ]

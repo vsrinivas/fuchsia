@@ -525,7 +525,13 @@ impl SpinelContext {
             vk!(vk_ext.SetBufferCollectionConstraintsFUCHSIA(
                 device,
                 buffer_collection,
-                &image_create_info(size.width, size.height, format, ptr::null(),)
+                &image_create_info(
+                    size.width,
+                    size.height,
+                    format,
+                    vk::IMAGE_TILING_OPTIMAL,
+                    ptr::null(),
+                )
             ));
         }
 
@@ -714,6 +720,23 @@ impl Context<Spinel> for SpinelContext {
         ));
 
         image
+    }
+
+    fn new_image_from_png<R: Read>(
+        &mut self,
+        reader: &mut png::Reader<R>,
+    ) -> Result<SpinelImage, png::DecodingError> {
+        let vulkan = &self.vulkan;
+        let image = SpinelImage(self.images.len());
+        self.images.push(VulkanImage::from_png(
+            vulkan.device,
+            &vulkan.vk_i,
+            vulkan.format,
+            reader,
+            image,
+        )?);
+
+        Ok(image)
     }
 
     fn get_image(&mut self, image_index: u32) -> SpinelImage {

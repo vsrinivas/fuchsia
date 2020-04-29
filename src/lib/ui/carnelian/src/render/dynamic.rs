@@ -9,6 +9,7 @@ use crate::{
 use euclid::default::{Point2D, Rect, Size2D, Transform2D, Vector2D};
 use fuchsia_framebuffer::PixelFormat;
 use std::{
+    io::Read,
     iter, mem,
     ops::{Add, RangeBounds},
     u32,
@@ -119,6 +120,22 @@ impl Context {
                 Image { inner: ImageInner::Spinel(context.new_image(size)) }
             }
         }
+    }
+    /// Creates a new image from PNG `reader`.
+    pub fn new_image_from_png<R: Read>(
+        &mut self,
+        reader: &mut png::Reader<R>,
+    ) -> Result<Image, png::DecodingError> {
+        Ok(Image {
+            inner: match &mut self.inner {
+                ContextInner::Mold(ref mut context) => {
+                    ImageInner::Mold(context.new_image_from_png(reader)?)
+                }
+                ContextInner::Spinel(ref mut context) => {
+                    ImageInner::Spinel(context.new_image_from_png(reader)?)
+                }
+            },
+        })
     }
     /// Returns the image at `image_index`.
     pub fn get_image(&mut self, image_index: u32) -> Image {

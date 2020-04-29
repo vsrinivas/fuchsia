@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::{cell::RefCell, collections::HashMap, mem, ptr, u32};
+use std::{cell::RefCell, collections::HashMap, io::Read, mem, ptr, u32};
 
 use euclid::default::{Rect, Size2D, Vector2D};
 use fidl::endpoints::{ClientEnd, ServerEnd};
@@ -117,7 +117,7 @@ fn copy_region_to_image(
             let src_offset = src_y as usize * src_bytes_per_row + src_x * 4;
             let dst_offset = dst_y as usize * dst_bytes_per_row + dst_x * 4;
 
-            assert!((dst_offset + dst_bytes_per_row) <= dst_len);
+            assert!((dst_offset + (columns * 4)) <= dst_len);
             let src = (src_ptr as usize).checked_add(src_offset).unwrap() as *mut u8;
             let dst = (dst_ptr as usize).checked_add(dst_offset).unwrap() as *mut u8;
             unsafe {
@@ -271,6 +271,16 @@ impl Context<Mold> for MoldContext {
         self.images.push(RefCell::new(VmoImage::new(size.width, size.height)));
 
         image
+    }
+
+    fn new_image_from_png<R: Read>(
+        &mut self,
+        reader: &mut png::Reader<R>,
+    ) -> Result<MoldImage, png::DecodingError> {
+        let image = MoldImage(self.images.len());
+        self.images.push(RefCell::new(VmoImage::from_png(reader)?));
+
+        Ok(image)
     }
 
     fn get_image(&mut self, image_index: u32) -> MoldImage {

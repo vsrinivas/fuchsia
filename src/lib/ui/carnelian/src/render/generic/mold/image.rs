@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::{mem, slice, sync::Arc};
+use std::{io::Read, mem, slice, sync::Arc};
 
 use fidl_fuchsia_sysmem::{BufferCollectionSynchronousProxy, CoherencyDomain};
 use fuchsia_trace::duration;
@@ -43,6 +43,37 @@ impl VmoImage {
             old_layers: None,
             coherency_domain: CoherencyDomain::Cpu,
         }
+    }
+
+    pub fn from_png<R: Read>(reader: &mut png::Reader<R>) -> Result<Self, png::DecodingError> {
+        let info = reader.info();
+        assert!(info.color_type == png::ColorType::RGBA);
+        let (width, height) = info.size();
+        let stride = width as usize * mem::size_of::<u32>();
+        let len_bytes = stride * height as usize;
+        let (mut mapping, vmo) = mapped_vmo::Mapping::allocate(len_bytes as usize)
+            .expect("failed to allocated mapped VMO");
+        let (data, len) = mapping.as_ptr_len();
+        let slice = unsafe { slice::from_raw_parts_mut(data, len) };
+        for dst_row in slice.chunks_mut(stride) {
+            let src_row = reader.next_row()?.unwrap();
+            // Transfer row and convert to BGRA.
+            for (src, dst) in src_row.chunks(4).zip(dst_row.chunks_mut(4)) {
+                dst.copy_from_slice(&[src[2], src[1], src[0], src[3]]);
+            }
+        }
+
+        Ok(Self {
+            vmo,
+            width,
+            height,
+            len_bytes: len_bytes as u64,
+            mapping: Arc::new(mapping),
+            stride: width as usize,
+            composition: mold::Composition::new(),
+            old_layers: None,
+            coherency_domain: CoherencyDomain::Cpu,
+        })
     }
 
     pub fn from_buffer_collection(

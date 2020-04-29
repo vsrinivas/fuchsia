@@ -3,7 +3,8 @@
 // found in the LICENSE file.
 
 use std::{
-    cell::Cell, ffi::c_void, marker::PhantomPinned, ops::Deref, pin::Pin, ptr, time::Duration,
+    cell::Cell, ffi::c_void, io::Read, marker::PhantomPinned, ops::Deref, pin::Pin, ptr, slice,
+    time::Duration,
 };
 
 use spinel_rs_sys::*;
@@ -99,6 +100,7 @@ pub fn image_create_info(
     width: u32,
     height: u32,
     format: vk::Format,
+    tiling: vk::ImageTiling,
     p_next: *const c_void,
 ) -> vk::ImageCreateInfo {
     vk::ImageCreateInfo {
@@ -111,7 +113,7 @@ pub fn image_create_info(
         mipLevels: 1,
         arrayLayers: 1,
         samples: vk::SAMPLE_COUNT_1_BIT,
-        tiling: vk::IMAGE_TILING_OPTIMAL,
+        tiling,
         usage: vk::IMAGE_USAGE_COLOR_ATTACHMENT_BIT
             | vk::IMAGE_USAGE_STORAGE_BIT
             | vk::IMAGE_USAGE_TRANSFER_SRC_BIT
@@ -233,7 +235,8 @@ impl VulkanImage {
     ) -> Self {
         let vk = device_pointers(vk_i, device);
         let image = unsafe {
-            let info = image_create_info(width, height, format, ptr::null());
+            let info =
+                image_create_info(width, height, format, vk::IMAGE_TILING_OPTIMAL, ptr::null());
             init(|ptr| vk!(vk.CreateImage(device, &info, ptr::null(), ptr)))
         };
 
@@ -298,6 +301,115 @@ impl VulkanImage {
         }
     }
 
+    pub fn from_png<R: Read>(
+        device: vk::Device,
+        vk_i: &vk::InstancePointers,
+        format: vk::Format,
+        reader: &mut png::Reader<R>,
+        id: SpinelImage,
+    ) -> Result<Self, png::DecodingError> {
+        let info = reader.info();
+        assert!(info.color_type == png::ColorType::RGBA);
+        let (width, height) = info.size();
+        //let stride = width as usize * mem::size_of::<u32>();
+        let vk = device_pointers(vk_i, device);
+        let image = unsafe {
+            let info =
+                image_create_info(width, height, format, vk::IMAGE_TILING_LINEAR, ptr::null());
+            init(|ptr| vk!(vk.CreateImage(device, &info, ptr::null(), ptr)))
+        };
+
+        let mem_reqs = unsafe { init(|ptr| vk.GetImageMemoryRequirements(device, image, ptr)) };
+
+        let mem_type_bits = mem_reqs.memoryTypeBits;
+        assert_ne!(mem_type_bits, 0);
+        let mem_type_index = mem_type_bits.trailing_zeros();
+
+        let memory = unsafe {
+            init(|ptr| {
+                vk!(vk.AllocateMemory(
+                    device,
+                    &vk::MemoryAllocateInfo {
+                        sType: vk::STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+                        pNext: ptr::null(),
+                        allocationSize: mem_reqs.size as u64,
+                        memoryTypeIndex: mem_type_index,
+                    },
+                    ptr::null(),
+                    ptr,
+                ))
+            })
+        };
+
+        unsafe {
+            vk!(vk.BindImageMemory(device, image, memory, 0));
+        }
+
+        let subresource = vk::ImageSubresource {
+            aspectMask: vk::IMAGE_ASPECT_COLOR_BIT,
+            mipLevel: 0,
+            arrayLayer: 0,
+        };
+        let layout =
+            unsafe { init(|ptr| vk.GetImageSubresourceLayout(device, image, &subresource, ptr)) };
+        let size = layout.rowPitch as usize * height as usize;
+        let data = unsafe { init(|ptr| vk!(vk.MapMemory(device, memory, 0, size as u64, 0, ptr))) };
+        let slice = unsafe { slice::from_raw_parts_mut(data as *mut u8, size) };
+        for dst_row in slice.chunks_mut(layout.rowPitch as usize) {
+            let src_row = reader.next_row()?.unwrap();
+            match format {
+                vk::FORMAT_R8G8B8A8_UNORM | vk::FORMAT_R8G8B8A8_SRGB => {
+                    dst_row.copy_from_slice(src_row);
+                }
+                vk::FORMAT_B8G8R8A8_UNORM | vk::FORMAT_B8G8R8A8_SRGB => {
+                    // Transfer row and convert to BGRA.
+                    for (src, dst) in src_row.chunks(4).zip(dst_row.chunks_mut(4)) {
+                        dst.copy_from_slice(&[src[2], src[1], src[0], src[3]]);
+                    }
+                }
+                _ => panic!("Unsupported image format {}", format),
+            }
+        }
+
+        unsafe {
+            vk.UnmapMemory(device, memory);
+        }
+
+        let sampler = unsafe {
+            init(|ptr| vk!(vk.CreateSampler(device, &SAMPLER_CREATE_INFO, ptr::null(), ptr)))
+        };
+
+        let view = unsafe {
+            init(|ptr| {
+                vk!(vk.CreateImageView(
+                    device,
+                    &image_view_create_info(image, format),
+                    ptr::null(),
+                    ptr
+                ))
+            })
+        };
+
+        Ok(Self {
+            device,
+            image,
+            sampler,
+            view,
+            memory,
+            vk: PinnedVk::new(vk),
+            width,
+            height,
+            layout: Cell::new(vk::IMAGE_LAYOUT_UNDEFINED),
+            stage: Cell::new(vk::PIPELINE_STAGE_TOP_OF_PIPE_BIT),
+            access_mask: Cell::new(0),
+            pool: Cell::default(),
+            cb: Cell::default(),
+            queue: Cell::default(),
+            fence: Cell::default(),
+            id,
+        })
+    }
+
     pub fn from_buffer_collection(
         device: vk::Device,
         vk_i: &vk::InstancePointers,
@@ -310,29 +422,29 @@ impl VulkanImage {
         id: SpinelImage,
     ) -> Self {
         let vk = device_pointers(vk_i, device);
-        let image =
-            unsafe {
-                let p_next = BufferCollectionImageCreateInfoFUCHSIA {
-                    sType: STRUCTURE_TYPE_BUFFER_COLLECTION_IMAGE_CREATE_INFO_FUCHSIA,
-                    pNext: ptr::null(),
-                    collection,
-                    index,
-                };
-
-                init(|ptr| {
-                    vk!(vk.CreateImage(
-                        device,
-                        &image_create_info(
-                            width,
-                            height,
-                            format,
-                            &p_next as *const _ as *const c_void,
-                        ),
-                        ptr::null(),
-                        ptr
-                    ))
-                })
+        let image = unsafe {
+            let p_next = BufferCollectionImageCreateInfoFUCHSIA {
+                sType: STRUCTURE_TYPE_BUFFER_COLLECTION_IMAGE_CREATE_INFO_FUCHSIA,
+                pNext: ptr::null(),
+                collection,
+                index,
             };
+
+            init(|ptr| {
+                vk!(vk.CreateImage(
+                    device,
+                    &image_create_info(
+                        width,
+                        height,
+                        format,
+                        vk::IMAGE_TILING_OPTIMAL,
+                        &p_next as *const _ as *const c_void,
+                    ),
+                    ptr::null(),
+                    ptr
+                ))
+            })
+        };
 
         let mem_reqs = unsafe { init(|ptr| vk.GetImageMemoryRequirements(device, image, ptr)) };
 
