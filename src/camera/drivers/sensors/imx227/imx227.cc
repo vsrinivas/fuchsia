@@ -259,7 +259,6 @@ zx_status_t Imx227Device::CameraSensorInit() {
   ctx_.param.isp_exposure_channel_delay = 0;
 
   initialized_ = true;
-  zxlogf(TRACE, "%s IMX227 Camera Sensor Brought out of reset", __func__);
   return ZX_OK;
 }
 
