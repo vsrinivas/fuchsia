@@ -9,9 +9,8 @@
 
 #include <memory>
 
+#include <blobfs/compression-algorithm.h>
 #include <fbl/macros.h>
-
-#include "algorithm.h"
 
 namespace blobfs {
 

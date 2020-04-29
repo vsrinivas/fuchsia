@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_ULIB_BLOBFS_COMPRESSION_ALGORITHM_H_
-#define ZIRCON_SYSTEM_ULIB_BLOBFS_COMPRESSION_ALGORITHM_H_
+#ifndef BLOBFS_COMPRESSION_ALGORITHM_H_
+#define BLOBFS_COMPRESSION_ALGORITHM_H_
 
 #include <stdint.h>
 
@@ -29,4 +29,4 @@ uint16_t CompressionInodeHeaderFlags(const CompressionAlgorithm& algorithm);
 
 }  // namespace blobfs
 
-#endif  // ZIRCON_SYSTEM_ULIB_BLOBFS_COMPRESSION_ALGORITHM_H_
+#endif  // BLOBFS_COMPRESSION_ALGORITHM_H_

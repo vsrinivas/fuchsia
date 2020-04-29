@@ -12,9 +12,8 @@
 
 #include <stddef.h>
 
+#include <blobfs/compression-algorithm.h>
 #include <fbl/macros.h>
-
-#include "algorithm.h"
 
 namespace blobfs {
 

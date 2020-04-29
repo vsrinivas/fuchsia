@@ -23,7 +23,6 @@ source_set("private_headers") {
   sources = [
     "allocator/extent-reserver.h",
     "allocator/node-reserver.h",
-    "compression/algorithm.h",
     "compression/chunked.h",
     "compression/compressor.h",
     "compression/decompressor.h",
@@ -74,7 +73,7 @@ zx_library("blobfs") {
     "allocator/node-reserver.cc",
     "blobfs-checker.cc",
     "common.cc",
-    "compression/algorithm.cc",
+    "compression-algorithm.cc",
     "compression/chunked.cc",
     "compression/decompressor.cc",
     "compression/lz4.cc",

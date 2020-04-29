@@ -22,6 +22,7 @@
 
 #include <bitmap/raw-bitmap.h>
 #include <blobfs/common.h>
+#include <blobfs/compression-algorithm.h>
 #include <blobfs/format.h>
 #include <blobfs/mount.h>
 #include <block-client/cpp/block-device.h>
@@ -45,7 +46,6 @@
 #include "allocator/node-reserver.h"
 #include "blob-cache.h"
 #include "blob-loader.h"
-#include "compression/algorithm.h"
 #include "directory.h"
 #include "iterator/allocated-extent-iterator.h"
 #include "iterator/block-iterator-provider.h"

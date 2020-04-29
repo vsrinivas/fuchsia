@@ -21,6 +21,7 @@
 #include <memory>
 
 #include <blobfs/common.h>
+#include <blobfs/compression-algorithm.h>
 #include <blobfs/mkfs.h>
 #include <block-client/cpp/fake-device.h>
 #include <zxtest/base/test.h>
@@ -29,7 +30,6 @@
 #include "allocator/allocator.h"
 #include "blob.h"
 #include "blobfs.h"
-#include "compression/algorithm.h"
 #include "compression/zstd-seekable-blob-collection.h"
 #include "test/blob_utils.h"
 

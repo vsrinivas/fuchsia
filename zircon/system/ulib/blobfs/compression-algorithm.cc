@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "algorithm.h"
 
 #include <stdint.h>
 #include <zircon/assert.h>
 
+#include <blobfs/compression-algorithm.h>
 #include <blobfs/format.h>
 
 namespace blobfs {

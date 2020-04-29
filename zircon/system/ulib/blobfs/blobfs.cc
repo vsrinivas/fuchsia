@@ -24,6 +24,7 @@
 #include <memory>
 #include <utility>
 
+#include <blobfs/compression-algorithm.h>
 #include <blobfs/fsck.h>
 #include <block-client/cpp/remote-block-device.h>
 #include <cobalt-client/cpp/collector.h>
@@ -43,7 +44,6 @@
 #include "blob-loader.h"
 #include "blob.h"
 #include "blobfs-checker.h"
-#include "compression/algorithm.h"
 #include "compression/compressor.h"
 #include "iterator/block-iterator.h"
 

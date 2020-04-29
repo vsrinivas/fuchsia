@@ -21,6 +21,7 @@
 #include <vector>
 
 #include <blobfs/common.h>
+#include <blobfs/compression-algorithm.h>
 #include <digest/digest.h>
 #include <fbl/auto_call.h>
 #include <fbl/ref_ptr.h>
@@ -33,7 +34,6 @@
 
 #include "blob-verifier.h"
 #include "blobfs.h"
-#include "compression/algorithm.h"
 #include "compression/lz4.h"
 #include "compression/zstd-plain.h"
 #include "compression/zstd-seekable.h"

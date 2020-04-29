@@ -12,13 +12,13 @@
 #include <memory>
 
 #include <blobfs/common.h>
+#include <blobfs/compression-algorithm.h>
 #include <blobfs/format.h>
 #include <fbl/auto_call.h>
 #include <fbl/string_buffer.h>
 #include <storage/buffer/owned_vmoid.h>
 
 #include "blob-verifier.h"
-#include "compression/algorithm.h"
 #include "compression/decompressor.h"
 #include "iterator/block-iterator.h"
 
