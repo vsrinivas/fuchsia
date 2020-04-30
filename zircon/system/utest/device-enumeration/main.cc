@@ -5,6 +5,8 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <fuchsia/sysinfo/c/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/devmgr-integration-test/fixture.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
@@ -14,14 +16,57 @@
 #include <zircon/status.h>
 
 #include <fbl/algorithm.h>
+#include <fbl/span.h>
 #include <fbl/string.h>
 #include <fbl/unique_fd.h>
 #include <zxtest/base/log-sink.h>
 #include <zxtest/zxtest.h>
 
+#include "src/lib/fsl/io/device_watcher.h"
+
 namespace {
 
 using devmgr_integration_test::RecursiveWaitForFile;
+
+// Asyncronously wait for a path to appear, and call `callback` when the path exists.
+// The `watchers` array is needed because each directory in the path needs to allocate a
+// DeviceWatcher, and they need to be stored somewhere that can be freed later.
+void RecursiveWaitFor(std::string full_path, size_t slash_index, fit::function<void()>* callback,
+                      std::vector<std::unique_ptr<fsl::DeviceWatcher>>* watchers) {
+  if (slash_index == full_path.size()) {
+    fprintf(stderr, "Found %s \n", full_path.c_str());
+    (*callback)();
+    return;
+  }
+
+  std::string dir_path = full_path.substr(0, slash_index);
+  size_t next_slash = full_path.find_first_of("/", slash_index + 1);
+  if (next_slash == std::string::npos) {
+    next_slash = full_path.size();
+  }
+  std::string file_name = full_path.substr(slash_index + 1, next_slash - (slash_index + 1));
+
+  watchers->push_back(fsl::DeviceWatcher::Create(
+      dir_path,
+      [file_name, full_path, next_slash, callback, watchers](int dir_fd, const std::string& name) {
+        if (name.compare(file_name) == 0) {
+          RecursiveWaitFor(full_path, next_slash, callback, watchers);
+        }
+      }));
+}
+
+void WaitForOne(fbl::Span<const char*> device_paths) {
+  async::Loop loop = async::Loop(&kAsyncLoopConfigAttachToCurrentThread);
+
+  std::vector<std::unique_ptr<fsl::DeviceWatcher>> watchers;
+  auto callback = fit::function<void()>([&loop]() { loop.Shutdown(); });
+
+  for (const char* path : device_paths) {
+    RecursiveWaitFor(std::string("/dev/") + path, 4, &callback, &watchers);
+  }
+
+  loop.Run();
+}
 
 fbl::String GetTestFilter() {
   constexpr char kSysInfoPath[] = "/svc/fuchsia.sysinfo.SysInfo";
@@ -218,6 +263,13 @@ TEST_F(DeviceEnumerationTest, AstroTest) {
   };
 
   ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, fbl::count_of(kDevicePaths)));
+
+  static const char* kTouchscreenDevicePaths[] = {
+      "gt92xx-touch/gt92xx HidDevice/hid-device-000",
+      "ft3x27-touch/focaltouch HidDevice/hid-device-000",
+  };
+  ASSERT_NO_FATAL_FAILURES(
+      WaitForOne(fbl::Span(kTouchscreenDevicePaths, fbl::count_of(kTouchscreenDevicePaths))));
 }
 
 TEST_F(DeviceEnumerationTest, NelsonTest) {
