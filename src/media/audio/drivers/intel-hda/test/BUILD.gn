@@ -26,7 +26,7 @@ source_set("test_libs") {
     "//zircon/public/lib/zxio",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/audio-proto-utils",
-    "//zircon/system/ulib/audio-utils",
+    "//zircon/system/ulib/audio-utils-legacy",
     "//zircon/system/ulib/intel-hda",
   ]
 }
