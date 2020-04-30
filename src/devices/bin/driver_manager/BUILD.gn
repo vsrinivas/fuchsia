@@ -103,7 +103,7 @@ executable("driver_manager") {
 
   deps = [
     ":lib",
-    "//src/sys/lib/stdout-to-debuglog",
+    "//src/sys/lib/stdout-to-debuglog/cpp",
   ]
 
   defines = [ "_ALL_SOURCE=1" ]

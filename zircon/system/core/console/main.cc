@@ -12,7 +12,7 @@
 #include <zircon/syscalls.h>
 
 #include "console.h"
-#include "src/sys/lib/stdout-to-debuglog/stdout-to-debuglog.h"
+#include "src/sys/lib/stdout-to-debuglog/cpp/stdout-to-debuglog.h"
 
 namespace {
 

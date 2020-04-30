@@ -15,7 +15,7 @@
 #include <fs/vfs_types.h>
 #include <fs/vnode.h>
 
-#include "src/sys/lib/stdout-to-debuglog/stdout-to-debuglog.h"
+#include "src/sys/lib/stdout-to-debuglog/cpp/stdout-to-debuglog.h"
 #include "sysinfo.h"
 
 int main(int argc, const char** argv) {

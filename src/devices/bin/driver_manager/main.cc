@@ -45,7 +45,7 @@
 #include "driver_host_loader_service.h"
 #include "fdio.h"
 #include "src/devices/lib/log/log.h"
-#include "src/sys/lib/stdout-to-debuglog/stdout-to-debuglog.h"
+#include "src/sys/lib/stdout-to-debuglog/cpp/stdout-to-debuglog.h"
 #include "system_instance.h"
 
 namespace {

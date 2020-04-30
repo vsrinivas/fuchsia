@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_SYS_LIB_STDOUT_TO_DEBUGLOG_STDOUT_TO_DEBUGLOG_H_
-#define SRC_SYS_LIB_STDOUT_TO_DEBUGLOG_STDOUT_TO_DEBUGLOG_H_
+#ifndef SRC_SYS_LIB_STDOUT_TO_DEBUGLOG_CPP_STDOUT_TO_DEBUGLOG_H_
+#define SRC_SYS_LIB_STDOUT_TO_DEBUGLOG_CPP_STDOUT_TO_DEBUGLOG_H_
 
 #include <zircon/types.h>
 
@@ -18,4 +18,4 @@ zx_status_t Init();
 
 }  // namespace StdoutToDebuglog
 
-#endif  // SRC_SYS_LIB_STDOUT_TO_DEBUGLOG_STDOUT_TO_DEBUGLOG_H_
+#endif  // SRC_SYS_LIB_STDOUT_TO_DEBUGLOG_CPP_STDOUT_TO_DEBUGLOG_H_

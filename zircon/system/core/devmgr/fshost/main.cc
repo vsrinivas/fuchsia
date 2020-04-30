@@ -34,7 +34,7 @@
 #include "block-watcher.h"
 #include "fs-manager.h"
 #include "metrics.h"
-#include "src/sys/lib/stdout-to-debuglog/stdout-to-debuglog.h"
+#include "src/sys/lib/stdout-to-debuglog/cpp/stdout-to-debuglog.h"
 
 namespace devmgr {
 namespace {

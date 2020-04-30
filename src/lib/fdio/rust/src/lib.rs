@@ -23,7 +23,7 @@ use {
             raw,
             unix::{
                 ffi::OsStrExt,
-                io::{AsRawFd, FromRawFd, IntoRawFd},
+                io::{AsRawFd, FromRawFd, IntoRawFd, RawFd},
             },
         },
         path::Path,
@@ -186,6 +186,44 @@ pub fn create_fd(handle: zx::Handle) -> Result<File, zx::Status> {
         zx::Status::ok(status)?;
         Ok(File::from_raw_fd(raw_fd))
     }
+}
+
+/// Bind a handle to a specific file descriptor.
+///
+/// Afterward, the handle is owned by fdio, and will close when the file descriptor is closed.
+/// See `transfer_fd` for a way to get it back.
+pub fn bind_to_fd(handle: zx::Handle, fd: RawFd) -> Result<(), zx::Status> {
+    if fd < 0 {
+        // fdio_bind_to_fd supports finding the next available fd when provided with a negative
+        // number, but due to lack of use-cases for this in Rust this is currently unsupported by
+        // this function.
+        return Err(zx::Status::INVALID_ARGS);
+    }
+
+    let mut fdio_t_out_ptr: *mut fdio_sys::fdio_t = ptr::null_mut();
+    let status = unsafe {
+        // This call is safe because the fdio_create function will return an error code, instead of
+        // crashing, when an error is found. The handle is always consumed, and thus does not need
+        // to be manually freed on error.
+        fdio_sys::fdio_create(handle.into_raw(), &mut fdio_t_out_ptr as *mut *mut fdio_sys::fdio_t)
+    };
+    zx::Status::ok(status)?;
+    let out_fd = unsafe {
+        // This call is safe because the fdio_bind_to_fd function will return an invlid file
+        // descriptor, instead of crashing, when an error is found. On error the fdio_t* is _not_
+        // consumed, and must be freed manually.
+        fdio_sys::fdio_bind_to_fd(fdio_t_out_ptr, fd, 0)
+    };
+    if out_fd != fd {
+        unsafe {
+            // An error has occurred, and thus the fdio library did not take ownership of
+            // fdio_t_out_ptr. Manually free it. This is safe because if fdio_t_out_ptr was
+            // invalid, the function would not have progressed to this point.
+            fdio_sys::fdio_unsafe_release(fdio_t_out_ptr);
+        };
+        return Err(zx::Status::BAD_STATE);
+    }
+    Ok(())
 }
 
 /// Open a new connection to `file` by sending a request to open

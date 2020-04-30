@@ -18,7 +18,7 @@
 
 #include "pty-server-vnode.h"
 #include "pty-server.h"
-#include "src/sys/lib/stdout-to-debuglog/stdout-to-debuglog.h"
+#include "src/sys/lib/stdout-to-debuglog/cpp/stdout-to-debuglog.h"
 
 // Each Open() on this Vnode redirects to a new PtyServerVnode
 class PtyGeneratingVnode : public fs::Vnode {

@@ -16,7 +16,7 @@
 
 #include "src/lib/fxl/command_line.h"
 #include "src/sys/appmgr/appmgr.h"
-#include "src/sys/lib/stdout-to-debuglog/stdout-to-debuglog.h"
+#include "src/sys/lib/stdout-to-debuglog/cpp/stdout-to-debuglog.h"
 
 namespace {
 

@@ -143,7 +143,7 @@ executable("fshost") {
     ":metrics",
     "//sdk/fidl/fuchsia.fshost:fuchsia.fshost_c",
     "//sdk/fidl/fuchsia.fshost:fuchsia.fshost_llcpp",
-    "//src/sys/lib/stdout-to-debuglog",
+    "//src/sys/lib/stdout-to-debuglog/cpp",
     "//zircon/public/lib/cobalt-client",
     "//zircon/public/lib/fidl-async-cpp",
     "//zircon/public/lib/hermetic-decompressor",
