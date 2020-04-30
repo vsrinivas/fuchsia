@@ -64,7 +64,8 @@ impl Joined {
         sta: &mut BoundClient<'_>,
         timeout_bcn_count: u16,
     ) -> Result<akm::AkmAlgorithm<EventId>, ()> {
-        let mut algorithm = akm::AkmAlgorithm::open_supplicant(timeout_bcn_count);
+        let mut algorithm =
+            akm::AkmAlgorithm::open_supplicant(TimeUnit(sta.sta.beacon_period * timeout_bcn_count));
         match algorithm.initiate(sta) {
             Ok(akm::AkmState::Failed) | Err(_) => {
                 sta.send_authenticate_conf(
@@ -188,7 +189,7 @@ impl Authenticated {
 
         match sta.send_assoc_req_frame(cap_info, &req.rates[..], rsne, ht_cap, vht_cap) {
             Ok(()) => {
-                let duration_tus = TimeUnit::DEFAULT_BEACON_INTERVAL * ASSOC_TIMEOUT_BCN_PERIODS;
+                let duration_tus = TimeUnit(sta.sta.beacon_period) * ASSOC_TIMEOUT_BCN_PERIODS;
                 let deadline = sta.ctx.timer.now() + duration_tus.into();
                 let event = TimedEvent::Associating;
                 let event_id = sta.ctx.timer.schedule_event(deadline, event);
@@ -1327,7 +1328,9 @@ mod tests {
     }
 
     fn open_authenticating(sta: &mut BoundClient<'_>) -> Authenticating {
-        let mut auth = Authenticating { algorithm: AkmAlgorithm::open_supplicant(2) };
+        let mut auth = Authenticating {
+            algorithm: AkmAlgorithm::open_supplicant(TimeUnit(2 * sta.sta.beacon_period)),
+        };
         auth.algorithm.initiate(sta).expect("Failed to initiate open auth");
         auth
     }

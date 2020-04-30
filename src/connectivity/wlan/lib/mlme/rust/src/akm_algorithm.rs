@@ -47,7 +47,7 @@ pub trait AkmAction {
 #[derive(Debug)]
 pub enum AkmAlgorithm<T> {
     _OpenAp,
-    OpenSupplicant { timeout_bcn_count: u16, timeout: Option<T> },
+    OpenSupplicant { timeout_timeunit: TimeUnit, timeout: Option<T> },
     _Sae,
 }
 
@@ -62,8 +62,8 @@ impl<T> AkmAlgorithm<T> {
 }
 
 impl<T: Eq + Clone> AkmAlgorithm<T> {
-    pub fn open_supplicant(timeout_bcn_count: u16) -> Self {
-        AkmAlgorithm::OpenSupplicant { timeout_bcn_count, timeout: None }
+    pub fn open_supplicant(timeout_timeunit: TimeUnit) -> Self {
+        AkmAlgorithm::OpenSupplicant { timeout_timeunit, timeout: None }
     }
 
     pub fn initiate<A: AkmAction<EventId = T>>(
@@ -75,15 +75,14 @@ impl<T: Eq + Clone> AkmAlgorithm<T> {
                 error!("OpenAp AKM does not support initiating an auth exchange.");
                 Ok(AkmState::Failed)
             }
-            AkmAlgorithm::OpenSupplicant { timeout_bcn_count, timeout } => {
+            AkmAlgorithm::OpenSupplicant { timeout_timeunit, timeout } => {
                 actions.send_auth_frame(
                     mac::AuthAlgorithmNumber::OPEN,
                     1,
                     mac::StatusCode::SUCCESS,
                     &[],
                 )?;
-                let duration = TimeUnit::DEFAULT_BEACON_INTERVAL * timeout_bcn_count.clone();
-                timeout.replace(actions.schedule_auth_timeout(duration));
+                timeout.replace(actions.schedule_auth_timeout(*timeout_timeunit));
                 Ok(AkmState::InProgress)
             }
             AkmAlgorithm::_Sae => bail!("Sae akm not yet implemented"),
@@ -209,10 +208,14 @@ mod tests {
         }
     }
 
+    fn test_open_supplicant() -> AkmAlgorithm<u16> {
+        AkmAlgorithm::open_supplicant(TimeUnit::DEFAULT_BEACON_INTERVAL * 10u16)
+    }
+
     #[test]
     fn open_supplicant_success() {
         let mut actions = MockAkmAction::new();
-        let mut supplicant = AkmAlgorithm::open_supplicant(10);
+        let mut supplicant = test_open_supplicant();
 
         // Initiate sends
         assert_variant!(supplicant.initiate(&mut actions), Ok(AkmState::InProgress));
@@ -243,7 +246,7 @@ mod tests {
     #[test]
     fn open_supplicant_cancel() {
         let mut actions = MockAkmAction::new();
-        let mut supplicant = AkmAlgorithm::open_supplicant(10);
+        let mut supplicant = test_open_supplicant();
 
         // Initiate sends
         assert_variant!(supplicant.initiate(&mut actions), Ok(AkmState::InProgress));
@@ -260,7 +263,7 @@ mod tests {
     #[test]
     fn open_supplicant_timeout() {
         let mut actions = MockAkmAction::new();
-        let mut supplicant = AkmAlgorithm::open_supplicant(10);
+        let mut supplicant = test_open_supplicant();
 
         assert_variant!(supplicant.initiate(&mut actions), Ok(AkmState::InProgress));
         assert_eq!(actions.scheduled_timers.len(), 1);
@@ -273,7 +276,7 @@ mod tests {
     #[test]
     fn open_supplicant_ignored_timeout() {
         let mut actions = MockAkmAction::new();
-        let mut supplicant = AkmAlgorithm::open_supplicant(10);
+        let mut supplicant = test_open_supplicant();
 
         assert_variant!(supplicant.initiate(&mut actions), Ok(AkmState::InProgress));
         assert_eq!(actions.scheduled_timers.len(), 1);
@@ -286,7 +289,7 @@ mod tests {
     #[test]
     fn open_supplicant_reject() {
         let mut actions = MockAkmAction::new();
-        let mut supplicant = AkmAlgorithm::open_supplicant(10);
+        let mut supplicant = test_open_supplicant();
 
         // Initiate sends
         assert_variant!(supplicant.initiate(&mut actions), Ok(AkmState::InProgress));

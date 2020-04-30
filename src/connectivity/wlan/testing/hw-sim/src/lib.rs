@@ -100,7 +100,8 @@ pub fn send_beacon(
             ),
             mac::BeaconHdr: &mac::BeaconHdr {
                 timestamp: 0,
-                beacon_interval: TimeUnit::DEFAULT_BEACON_INTERVAL,
+                // Unrealistically long beacon period so that auth/assoc don't timeout on slow bots.
+                beacon_interval: TimeUnit::DEFAULT_BEACON_INTERVAL * 20u16,
                 capabilities: mac::CapabilityInfo(0).with_privacy(*protection != Protection::Open),
             },
         },
