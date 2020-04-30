@@ -122,13 +122,13 @@ void AudioDeviceManager::ActivateDevice(const std::shared_ptr<AudioDevice>& devi
   REPORT(ActivatingDevice(*device));
   device->SetActivated();
 
-  // Notify interested users of the new device. If it will become the new default, set 'is_default'
-  // properly in the notification ("default" device is currently defined simply as last-plugged).
+  // Notify interested users of the new device.
   fuchsia::media::AudioDeviceInfo info;
   device->GetDeviceInfo(&info);
 
-  auto last_plugged = FindLastPlugged(device->type());
-  info.is_default = (last_plugged && (last_plugged->token() == device->token()));
+  // We always report is_default as false in the OnDeviceAdded event. There will be a following
+  // DefaultDeviceChange event that will signal if this device is now the default.
+  info.is_default = false;
 
   for (auto& client : bindings_.bindings()) {
     client->events().OnDeviceAdded(info);
