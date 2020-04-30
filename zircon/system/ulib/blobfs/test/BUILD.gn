@@ -172,6 +172,7 @@ test("blobfs-integration") {
     "integration/mount_test.cc",
     "integration/query_service_test.cc",
     "integration/superblock-test.cc",
+    "integration/sync_test.cc",
   ]
   deps = [
     ":integration-fixtures",

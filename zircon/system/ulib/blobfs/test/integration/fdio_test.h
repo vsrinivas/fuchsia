@@ -27,6 +27,7 @@ class FdioTest : public zxtest::Test {
 
  protected:
   int root_fd() const { return root_fd_.get(); }
+  block_client::FakeBlockDevice* block_device() { return block_device_; }
 
   // The layout defaults to DataRootOnly. Call this from a derived class constructor to use a
   // different layout.
