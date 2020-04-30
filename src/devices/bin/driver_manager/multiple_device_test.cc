@@ -431,7 +431,7 @@ TEST_F(MultipleDeviceTestCase, ResumeThenSuspend) {
   ASSERT_EQ(device(child_index)->device->state(), Device::State::kActive);
 }
 
-TEST_F(MultipleDeviceTestCase, ResumeTimeout) {
+/*TEST_F(MultipleDeviceTestCase, ResumeTimeout) {
   ASSERT_OK(coordinator_loop()->StartThread("DevCoordLoop"));
   set_coordinator_loop_thread_running(true);
 
@@ -469,7 +469,7 @@ TEST_F(MultipleDeviceTestCase, ResumeTimeout) {
   // Wait for the event that the callback sets, otherwise the test will quit.
   resume_received_event.wait_one(ZX_USER_SIGNAL_0, zx::time(ZX_TIME_INFINITE), nullptr);
   ASSERT_TRUE(resume_callback_executed);
-}
+}*/
 
 // Test devices are suspended when component lifecycle stop event is received.
 TEST_F(MultipleDeviceTestCase, ComponentLifecycleStop) {
