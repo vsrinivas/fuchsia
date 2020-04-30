@@ -2146,7 +2146,7 @@ TEST_P(SendSocketTest, CloseWhileSending) {
     }
   }
 
-  EXPECT_EQ(fut.wait_for(std::chrono::milliseconds(50)), std::future_status::ready);
+  EXPECT_EQ(fut.wait_for(std::chrono::milliseconds(kTimeout)), std::future_status::ready);
 }
 
 INSTANTIATE_TEST_SUITE_P(
