@@ -18,22 +18,12 @@ static const struct {
   const char* path;
   DeviceType device_type;
 } AUDIO_DEVNODES[] = {
-    {.path = "/dev/class/audio-input", .device_type = DeviceType::Input},
-    {.path = "/dev/class/audio-output", .device_type = DeviceType::Output},
+    {.path = "/dev/class/audio-input-2", .device_type = DeviceType::Input},
+    {.path = "/dev/class/audio-output-2", .device_type = DeviceType::Output},
 };
 
 // static
 bool TestBase::test_admin_functions_ = false;
-
-uint32_t TestBase::unique_transaction_id_ = 0;
-
-zx_txid_t TestBase::NextTransactionId() {
-  uint32_t trans_id = ++unique_transaction_id_;
-  if (trans_id == AUDIO_INVALID_TRANSACTION_ID) {
-    trans_id = ++unique_transaction_id_;
-  }
-  return trans_id;
-}
 
 bool TestBase::no_devices_found_[2] = {false, false};
 
@@ -99,18 +89,13 @@ void TestBase::EnumerateDevices() {
     __UNREACHABLE;
   }
 
-  // Assert that we can communicate with the driver at all.
+  // Assert that we have a valid channel to communicate with the driver at all.
   ASSERT_FALSE(stream_channels_.empty());
-  zx_status_t status = stream_transceiver_.Init(
-      std::move(stream_channels_.back()), fit::bind_member(this, &TestBase::OnInboundStreamMessage),
-      ErrorHandler());
-  EXPECT_EQ(ZX_OK, status);
+  ASSERT_TRUE(stream_channels_.back()->is_valid());
   stream_channels_.pop_back();
-  ASSERT_TRUE(stream_transceiver_.channel().is_valid());
 }
 
 void TestBase::TearDown() {
-  stream_transceiver_.Close();
   watchers_.clear();
 
   TestFixture::TearDown();
@@ -152,106 +137,64 @@ void TestBase::AddDevice(int dir_fd, const std::string& name) {
     FAIL();
   }
 
-  stream_channels_.push_back(stream_config.TakeChannel());
+  auto channel = stream_config.TakeChannel();
+  stream_channels_.push_back(zx::unowned_channel(channel.get()));
   AUD_VLOG(TRACE) << "Successfully opened devnode '" << name << "' for audio "
                   << ((device_type_ == DeviceType::Input) ? "input" : "output");
+
+  stream_config_ =
+      fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig>(std::move(channel)).Bind();
+  if (!stream_config_.is_bound()) {
+    FX_LOGS(ERROR) << "Failed to get stream channel";
+    FAIL();
+  }
+  stream_config_.set_error_handler([](zx_status_t status) {
+    FX_PLOGS(ERROR, status) << "Test failed with error: " << status;
+    FAIL();
+  });
+
+  stream_config_ready_ = true;
 }
 
-// Stream channel requests
-//
 // Request that the driver return the format ranges that it supports.
 void TestBase::RequestFormats() {
-  if (error_occurred_) {
-    return;
-  }
+  stream_config_->GetSupportedFormats(
+      [this](std::vector<fuchsia::hardware::audio::SupportedFormats> supported_formats) {
+        EXPECT_GT(supported_formats.size(), 0u);
 
-  media::audio::test::MessageTransceiver::Message request_message;
-  auto& request = request_message.ResizeBytesAs<audio_stream_cmd_get_formats_req_t>();
-  get_formats_transaction_id_ = NextTransactionId();
-  request.hdr.transaction_id = get_formats_transaction_id_;
-  request.hdr.cmd = AUDIO_STREAM_CMD_GET_FORMATS;
+        for (size_t i = 0; i < supported_formats.size(); ++i) {
+          auto& format = supported_formats[i].pcm_supported_formats();
 
-  EXPECT_EQ(ZX_OK, stream_transceiver().SendMessage(request_message));
+          uint8_t largest_bytes_per_sample = 0;
+          EXPECT_NE(format.bytes_per_sample.size(), 0u);
+          for (size_t j = 0; j < format.bytes_per_sample.size(); ++j) {
+            EXPECT_NE(format.bytes_per_sample[j], 0u);
+            if (format.bytes_per_sample[j] > largest_bytes_per_sample) {
+              largest_bytes_per_sample = format.bytes_per_sample[j];
+            }
+          }
+          for (size_t j = 0; j < format.valid_bits_per_sample.size(); ++j) {
+            EXPECT_LE(format.valid_bits_per_sample[j], largest_bytes_per_sample * 8);
+          }
 
-  RunLoopUntil([this]() { return received_get_formats_ || error_occurred_; });
-}
+          EXPECT_NE(format.frame_rates.size(), 0u);
+          for (size_t j = 0; j < format.frame_rates.size(); ++j) {
+            EXPECT_GE(format.frame_rates[j], fuchsia::media::MIN_PCM_FRAMES_PER_SECOND);
+            EXPECT_LE(format.frame_rates[j], fuchsia::media::MAX_PCM_FRAMES_PER_SECOND);
+          }
 
-// Handle an incoming stream channel message (generally a response from a previous request)
-void TestBase::OnInboundStreamMessage(media::audio::test::MessageTransceiver::Message message) {
-  // This method is overloaded by AudioDriverAdminTest, to handle AUDIO_STREAM_CMD_SET_FORMAT
-  HandleInboundStreamMessage(message);
-}
+          EXPECT_NE(format.number_of_channels.size(), 0u);
+          for (size_t j = 0; j < format.number_of_channels.size(); ++j) {
+            EXPECT_GE(format.number_of_channels[j], fuchsia::media::MIN_PCM_CHANNEL_COUNT);
+            EXPECT_LE(format.number_of_channels[j], fuchsia::media::MAX_PCM_CHANNEL_COUNT);
+          }
 
-// Validate just the command portion of the response header.
-bool TestBase::ValidateResponseCommand(audio_cmd_hdr header, audio_cmd_t expected_command) {
-  EXPECT_EQ(header.cmd, expected_command) << "Unexpected command!";
+          pcm_formats_.push_back(format);
+        }
 
-  return (expected_command == header.cmd);
-}
-
-// Validate just the transaction ID portion of the response header.
-void TestBase::ValidateResponseTransaction(audio_cmd_hdr header,
-                                           zx_txid_t expected_transaction_id) {
-  EXPECT_EQ(header.transaction_id, expected_transaction_id) << "Unexpected transaction ID!";
-}
-
-// Validate the entire response header.
-bool TestBase::ValidateResponseHeader(audio_cmd_hdr header, zx_txid_t expected_transaction_id,
-                                      audio_cmd_t expected_command) {
-  ValidateResponseTransaction(header, expected_transaction_id);
-  return ValidateResponseCommand(header, expected_command);
-}
-
-// Handle a get_formats response on the stream channel. This response may be a multi-part.
-void TestBase::HandleGetFormatsResponse(const audio_stream_cmd_get_formats_resp_t& response) {
-  if (!ValidateResponseHeader(response.hdr, get_formats_transaction_id_,
-                              AUDIO_STREAM_CMD_GET_FORMATS)) {
-    return;
-  }
-
-  EXPECT_GT(response.format_range_count, 0u);
-  EXPECT_LT(response.first_format_range_ndx, response.format_range_count);
-  EXPECT_EQ(response.first_format_range_ndx, next_format_range_ndx_);
-  EXPECT_EQ(response.first_format_range_ndx % AUDIO_STREAM_CMD_GET_FORMATS_MAX_RANGES_PER_RESPONSE,
-            0u)
-      << "First format index of each get_formats response must be a multiple of "
-      << AUDIO_STREAM_CMD_GET_FORMATS_MAX_RANGES_PER_RESPONSE;
-
-  if (response.first_format_range_ndx == 0) {
-    get_formats_range_count_ = response.format_range_count;
-    format_ranges_.clear();
-  } else {
-    EXPECT_EQ(response.format_range_count, get_formats_range_count_)
-        << "Format range count cannot change over multiple get_formats responses";
-  }
-  auto num_ranges =
-      std::min<uint16_t>(response.format_range_count - response.first_format_range_ndx,
-                         AUDIO_STREAM_CMD_GET_FORMATS_MAX_RANGES_PER_RESPONSE);
-
-  for (auto i = 0; i < num_ranges; ++i) {
-    EXPECT_NE(response.format_ranges[i].sample_formats & ~AUDIO_SAMPLE_FORMAT_FLAG_MASK, 0u);
-
-    EXPECT_GE(response.format_ranges[i].min_frames_per_second,
-              fuchsia::media::MIN_PCM_FRAMES_PER_SECOND);
-    EXPECT_LE(response.format_ranges[i].max_frames_per_second,
-              fuchsia::media::MAX_PCM_FRAMES_PER_SECOND);
-    EXPECT_LE(response.format_ranges[i].min_frames_per_second,
-              response.format_ranges[i].max_frames_per_second);
-
-    EXPECT_GE(response.format_ranges[i].min_channels, fuchsia::media::MIN_PCM_CHANNEL_COUNT);
-    EXPECT_LE(response.format_ranges[i].max_channels, fuchsia::media::MAX_PCM_CHANNEL_COUNT);
-    EXPECT_LE(response.format_ranges[i].min_channels, response.format_ranges[i].max_channels);
-
-    EXPECT_NE(response.format_ranges[i].flags, 0u);
-
-    format_ranges_.push_back(response.format_ranges[i]);
-  }
-
-  next_format_range_ndx_ += num_ranges;
-  if (next_format_range_ndx_ == response.format_range_count) {
-    EXPECT_EQ(response.format_range_count, format_ranges_.size());
-    received_get_formats_ = true;
-  }
+        received_get_formats_ = true;
+      });
+  RunLoopUntil([this]() { return received_get_formats_; });
 }
 
 }  // namespace media::audio::drivers::test

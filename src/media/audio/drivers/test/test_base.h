@@ -5,6 +5,7 @@
 #ifndef SRC_MEDIA_AUDIO_DRIVERS_TEST_TEST_BASE_H_
 #define SRC_MEDIA_AUDIO_DRIVERS_TEST_TEST_BASE_H_
 
+#include <fuchsia/hardware/audio/cpp/fidl.h>
 #include <fuchsia/media/cpp/fidl.h>
 #include <zircon/device/audio.h>
 
@@ -34,25 +35,18 @@ class TestBase : public media::audio::test::TestFixture,
   DeviceType device_type() const { return device_type_; }
   bool no_devices_found() const { return no_devices_found_[device_type()]; }
 
-  static zx_txid_t NextTransactionId();
-  media::audio::test::MessageTransceiver& stream_transceiver() { return stream_transceiver_; }
-
-  void OnInboundStreamMessage(media::audio::test::MessageTransceiver::Message message);
-  virtual void HandleInboundStreamMessage(
-      media::audio::test::MessageTransceiver::Message message) = 0;
-
-  bool ValidateResponseCommand(audio_cmd_hdr header, audio_cmd_t expected_command);
-  void ValidateResponseTransaction(audio_cmd_hdr header, zx_txid_t expected_transaction_id);
-  bool ValidateResponseHeader(audio_cmd_hdr header, zx_txid_t expected_transaction_id,
-                              audio_cmd_t expected_command);
-
   // "Basic" (stream-config channel) tests and "Admin" (ring-buffer channel) tests both need to know
   // the supported formats, so this is implemented in the shared base class.
   void RequestFormats();
   void HandleGetFormatsResponse(const audio_stream_cmd_get_formats_resp_t& response);
 
   bool received_get_formats() const { return received_get_formats_; }
-  const std::vector<audio_stream_format_range_t>& format_ranges() const { return format_ranges_; }
+  const std::vector<fuchsia::hardware::audio::PcmSupportedFormats>& pcm_formats() const {
+    return pcm_formats_;
+  }
+  const fidl::InterfacePtr<fuchsia::hardware::audio::StreamConfig>& stream_config() {
+    return stream_config_;
+  }
 
  private:
   // for DeviceType::Input and DeviceType::Output
@@ -60,16 +54,12 @@ class TestBase : public media::audio::test::TestFixture,
   DeviceType device_type_;
   std::vector<std::unique_ptr<fsl::DeviceWatcher>> watchers_;
 
-  static uint32_t unique_transaction_id_;
-  std::vector<zx::channel> stream_channels_;
-  media::audio::test::MessageTransceiver stream_transceiver_{dispatcher()};
+  bool stream_config_ready_ = false;
+  fidl::InterfacePtr<fuchsia::hardware::audio::StreamConfig> stream_config_;
 
-  zx_txid_t get_formats_transaction_id_ = AUDIO_INVALID_TRANSACTION_ID;
+  std::vector<zx::unowned_channel> stream_channels_;
 
-  std::vector<audio_stream_format_range_t> format_ranges_;
-  uint16_t get_formats_range_count_ = 0;
-  uint16_t next_format_range_ndx_ = 0;
-
+  std::vector<fuchsia::hardware::audio::PcmSupportedFormats> pcm_formats_;
   bool received_get_formats_ = false;
 };
 

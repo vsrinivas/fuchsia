@@ -11,8 +11,8 @@
     },
     "sandbox": {
         "dev": [
-            "class/audio-input",
-            "class/audio-output"
+            "class/audio-input-2",
+            "class/audio-output-2"
         ],
         "services": [
             "fuchsia.logger.LogSink",
