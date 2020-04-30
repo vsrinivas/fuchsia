@@ -6,7 +6,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 static int uint32_t_cmp(const void* void_left, const void* void_right) {
   uint32_t left = *(const uint32_t*)void_left;
@@ -38,9 +38,7 @@ static uint32_t test_data[] = {
     0x56c2ae32, 0xdd9e52d3, 0x86f7cf57, 0x58c320ca, 0xdfc296d4, 0x6681d69e, 0x43a27d19, 0xd37988f5,
 };
 
-static bool qsort_test(void) {
-  BEGIN_TEST;
-
+TEST(QSort, QSort) {
   size_t length = sizeof(test_data) / sizeof(*test_data);
 
   qsort(test_data, length, sizeof(*test_data), uint32_t_cmp);
@@ -51,10 +49,4 @@ static bool qsort_test(void) {
     int c = uint32_t_cmp(left, right);
     EXPECT_LT(c, 0, "array not sorted!");
   }
-
-  END_TEST;
 }
-
-BEGIN_TEST_CASE(qsort_tests)
-RUN_TEST(qsort_test)
-END_TEST_CASE(qsort_tests)
