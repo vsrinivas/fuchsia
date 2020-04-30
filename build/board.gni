@@ -10,6 +10,9 @@ declare_args() {
   # board definition rather than the product definition.
   board_package_labels = []
 
+  # A list of bootfs manifest labels to include in the ZBI.
+  board_bootfs_labels = []
+
   # List of kernel command line this board to bake into the boot image that are
   # required by this board. See also kernel_cmdline_args in
   # //build/images/BUILD.gn

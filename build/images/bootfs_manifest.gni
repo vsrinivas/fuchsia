@@ -26,6 +26,23 @@ import("//src/sys/cmc/build/cml.gni")
 #       dest (optional)
 #         [path] Location the binary will be placed within `bin/`.
 #
+#   config (optional)
+#     [list of scopes] Defines config entries in the ZBI. A config entry is
+#     typically a source file and is always placed in the `config/` directory of
+#     the ZBI.
+#
+#     Entries in a scope in the config list:
+#
+#       path (required)
+#         [path] Location of entry in source or build directory. If the
+#         resource is checked in, this will typically be specified as a
+#         path relative to the BUILD.gn file containing the `bootfs_manifest()`
+#         target. If the resource is generated, this will typically be
+#         specified relative to `$target_gen_dir`.
+#
+#       dest (required)
+#         [path] Location the resource will be placed within `meta/`.
+#
 #   drivers (optional)
 #     [list of scopes] Defines drivers in the ZBI. A driver is typically
 #     produced by the build system and is always placed in the `driver/`
@@ -67,11 +84,15 @@ template("bootfs_manifest") {
   forward_variables_from(invoker,
                          [
                            "binaries",
+                           "config",
                            "drivers",
                            "meta",
                          ])
   if (!defined(binaries)) {
     binaries = []
+  }
+  if (!defined(config)) {
+    config = []
   }
   if (!defined(drivers)) {
     drivers = []
@@ -102,6 +123,15 @@ template("bootfs_manifest") {
     source = rebase_path(source, "", root_out_dir)
 
     manifest_args += [ "--entry=" + dest + "=" + source ]
+  }
+
+  foreach(c, config) {
+    assert(defined(c.path), "path is required")
+    assert(defined(c.dest), "dest is required")
+
+    dest = "config/" + c.dest
+
+    manifest_args += [ "--entry=" + dest + "=" + rebase_path(c.path) ]
   }
 
   foreach(driver, drivers) {

@@ -16,5 +16,7 @@ board_package_labels = [
   "//src/media/audio/bundles:virtual_audio_driver",
 ]
 
+board_bootfs_labels = [ "//garnet/bin/power_manager/node_config:base.manifest" ]
+
 max_fuchsia_zbi_size = "16777216"  # 16 MiB
 max_zedboot_zbi_size = "16777216"  # 16 MiB
