@@ -71,7 +71,7 @@ config("compiler") {
   rustflags = [
     "-L",
     sysroot + "/lib",
-    "-Clinker=" + clang_prefix_rebased + "/lld",
+    "-Clinker=" + rebase_path("$clang_prefix/lld", "", root_build_dir),
     "-Clink-arg=--sysroot=" + sysroot,
     "-Clink-arg=-L" + sysroot + "/lib",
     "-Clink-arg=-L" + clang_resource_dir + "/" + rust_target + "/lib",

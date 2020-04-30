@@ -33,3 +33,13 @@ if (is_fuchsia) {
 } else {
   assert(false, "OS not supported")
 }
+
+# TODO(phosek): this is inefficient, rather this should come from a JSON file.
+clang_resource_dir =
+    exec_script(rebase_path("$clang_prefix/clang", "", root_build_dir),
+                [
+                  "--target=$clang_target",
+                  "-print-resource-dir",
+                ],
+                "trim string",
+                [])
