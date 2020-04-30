@@ -4,21 +4,18 @@
 
 #include <fbl/algorithm.h>
 #include <perftest/results.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 // Add terminator to a string buffer registered with fmemopen().
-static bool FixUpFileBuffer(FILE* fp, char* buf, size_t buf_size) {
+static void FixUpFileBuffer(FILE* fp, char* buf, size_t buf_size) {
   ASSERT_FALSE(ferror(fp));
   size_t data_size = ftell(fp);
   ASSERT_LT(data_size, buf_size);
   buf[data_size] = '\0';
   ASSERT_EQ(fclose(fp), 0);
-  return true;
 }
 
-static bool TestJsonOutput() {
-  BEGIN_TEST;
-
+TEST(PerfTestResults, TestJsonOutput) {
   perftest::ResultsSet results;
   perftest::TestCaseResults* test_case =
       results.AddTestCase("results_test", "ExampleNullSyscall", "nanoseconds");
@@ -30,21 +27,17 @@ static bool TestJsonOutput() {
   // Write the JSON output to a buffer in memory.
   char buf[1000];
   FILE* fp = fmemopen(buf, sizeof(buf), "w+");
-  ASSERT_NONNULL(fp);
+  ASSERT_TRUE(fp);
   results.WriteJSON(fp);
-  ASSERT_TRUE(FixUpFileBuffer(fp, buf, sizeof(buf)));
+  ASSERT_NO_FATAL_FAILURES(FixUpFileBuffer(fp, buf, sizeof(buf)));
 
   // Test the JSON output.
   const char* expected =
       R"JSON([{"label":"ExampleNullSyscall","test_suite":"results_test","unit":"nanoseconds","values":[101.000000,102.000000,103.000000,104.000000,105.000000]}])JSON";
   EXPECT_STR_EQ(expected, buf, "");
-
-  END_TEST;
 }
 
-static bool TestSummaryStatistics() {
-  BEGIN_TEST;
-
+TEST(PerfTestResults, TestSummaryStatistics) {
   perftest::ResultsSet results;
   perftest::TestCaseResults* test_case =
       results.AddTestCase("results_test", "ExampleNullSyscall", "nanoseconds");
@@ -66,28 +59,16 @@ static bool TestSummaryStatistics() {
   stats = test_case->GetSummaryStatistics();
   // There is an odd number of values, so the median is not interpolated.
   EXPECT_EQ(stats.median, 110);
-
-  END_TEST;
 }
 
 // Test escaping special characters in strings in JSON output.
-static bool TestJsonStringEscaping() {
-  BEGIN_TEST;
-
+TEST(PerfTestResults, TestJsonStringEscaping) {
   char buf[1000];
   FILE* fp = fmemopen(buf, sizeof(buf), "w+");
-  ASSERT_NONNULL(fp);
+  ASSERT_TRUE(fp);
   perftest::WriteJSONString(fp, "foo \"bar\" \\ \n \xff");
-  ASSERT_TRUE(FixUpFileBuffer(fp, buf, sizeof(buf)));
+  ASSERT_NO_FATAL_FAILURES(FixUpFileBuffer(fp, buf, sizeof(buf)));
 
   const char* expected = "\"foo \\\"bar\\\" \\\\ \\u000a \\u00ff\"";
   EXPECT_STR_EQ(expected, buf, "");
-
-  END_TEST;
 }
-
-BEGIN_TEST_CASE(perf_results_output_tests)
-RUN_TEST(TestJsonOutput)
-RUN_TEST(TestSummaryStatistics)
-RUN_TEST(TestJsonStringEscaping)
-END_TEST_CASE(perf_results_output_tests)
