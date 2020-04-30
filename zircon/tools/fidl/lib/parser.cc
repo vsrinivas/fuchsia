@@ -755,15 +755,23 @@ std::unique_ptr<raw::ParameterList> Parser::ParseParameterList() {
   if (Peek().kind() != Token::Kind::kRightParen) {
     auto parameter = ParseParameter();
     parameter_list.emplace_back(std::move(parameter));
-    if (!Ok())
-      return Fail();
+    if (!Ok()) {
+      const auto result = RecoverToEndOfParam();
+      if (result == RecoverResult::Failure) {
+        return Fail();
+      }
+    }
     while (Peek().kind() == Token::Kind::kComma) {
       ConsumeToken(OfKind(Token::Kind::kComma));
       if (!Ok())
         return Fail();
       parameter_list.emplace_back(ParseParameter());
-      if (!Ok())
-        return Fail();
+      if (!Ok()) {
+        const auto result = RecoverToEndOfParam();
+        if (result == RecoverResult::Failure) {
+          return Fail();
+        }
+      }
     }
   }
 
@@ -1435,31 +1443,32 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
 }
 
 bool Parser::ConsumeTokensUntil(std::set<Token::Kind> exit_tokens) {
-  auto matches = [exit_tokens](Token::KindAndSubkind token) {
+  auto p = [&](Token::KindAndSubkind token) -> std::unique_ptr<BaseError> {
     for (const auto& exit_token : exit_tokens) {
       if (token.kind() == exit_token)
-        return true;
+        // signal to ReadToken to stop by returning an error
+        return ErrorReporter::MakeError(ErrUnexpectedToken);
     }
-    return false;
+    // nullptr return value indicates -> yes, consume to ReadToken
+    return nullptr;
   };
 
   // Consume tokens until we find a synchronization point
-  while (!matches(Peek())) {
-    auto token = last_token_;
-    last_token_ = Lex();
-    UpdateMarks(token);
+  while (ReadToken(p, OnNoMatch::kIgnore) != std::nullopt) {
     if (!Ok())
       return false;
   }
-
   return true;
 }
 
 Parser::RecoverResult Parser::RecoverToEndOfDecl() {
   recovered_errors_ = error_reporter_->errors().size();
 
-  if (!ConsumeTokensUntil({Token::Kind::kRightCurly,
-                           Token::Kind::kEndOfFile})) {
+  static const auto exit_tokens = std::set<Token::Kind>{
+    Token::Kind::kRightCurly,
+    Token::Kind::kEndOfFile,
+  };
+  if (!ConsumeTokensUntil(exit_tokens)) {
     return RecoverResult::Failure;
   }
 
@@ -1479,9 +1488,12 @@ Parser::RecoverResult Parser::RecoverToEndOfDecl() {
 Parser::RecoverResult Parser::RecoverToEndOfMember() {
   recovered_errors_ = error_reporter_->errors().size();
 
-  if (!ConsumeTokensUntil({Token::Kind::kSemicolon,
-                           Token::Kind::kRightCurly,
-                           Token::Kind::kEndOfFile})) {
+  static const auto exit_tokens = std::set<Token::Kind>{
+    Token::Kind::kSemicolon,
+    Token::Kind::kRightCurly,
+    Token::Kind::kEndOfFile,
+  };
+  if (!ConsumeTokensUntil(exit_tokens)) {
     return RecoverResult::Failure;
   }
 
@@ -1489,6 +1501,30 @@ Parser::RecoverResult Parser::RecoverToEndOfMember() {
     case CASE_TOKEN(Token::Kind::kSemicolon):
       return RecoverResult::Continue;
     case CASE_TOKEN(Token::Kind::kRightCurly):
+      return RecoverResult::EndOfScope;
+    default:
+      return RecoverResult::Failure;
+  }
+}
+
+Parser::RecoverResult Parser::RecoverToEndOfParam() {
+  recovered_errors_ = error_reporter_->errors().size();
+
+  static const auto exit_tokens = std::set<Token::Kind>{
+    Token::Kind::kComma,
+    Token::Kind::kRightParen,
+    Token::Kind::kSemicolon,
+    Token::Kind::kRightCurly,
+    Token::Kind::kEndOfFile,
+  };
+  if (!ConsumeTokensUntil(exit_tokens)) {
+    return RecoverResult::Failure;
+  }
+
+  switch (Peek().combined()) {
+    case CASE_TOKEN(Token::Kind::kComma):
+      return RecoverResult::Continue;
+    case CASE_TOKEN(Token::Kind::kRightParen):
       return RecoverResult::EndOfScope;
     default:
       return RecoverResult::Failure;

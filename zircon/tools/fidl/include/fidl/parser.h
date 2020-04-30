@@ -322,6 +322,7 @@ class Parser {
   //    A signal to `break` out of the current parsing loop.
   RecoverResult RecoverToEndOfDecl();
   RecoverResult RecoverToEndOfMember();
+  RecoverResult RecoverToEndOfParam();
 
   // Utility function used by RecoverTo* methods
   bool ConsumeTokensUntil(std::set<Token::Kind> tokens);

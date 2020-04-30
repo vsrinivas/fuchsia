@@ -203,14 +203,15 @@ protocol P {
 )FIDL");
   EXPECT_FALSE(library.Compile());
   const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 7);
+  ASSERT_EQ(errors.size(), 8);
   ASSERT_ERR(errors[0], fidl::ErrUnexpectedTokenOfKind);
   ASSERT_ERR(errors[1], fidl::ErrUnrecognizedProtocolMember);
   ASSERT_ERR(errors[2], fidl::ErrUnexpectedTokenOfKind);
   ASSERT_ERR(errors[3], fidl::ErrUnexpectedTokenOfKind);
-  ASSERT_ERR(errors[4], fidl::ErrUnrecognizedProtocolMember);
-  ASSERT_ERR(errors[5], fidl::ErrUnexpectedTokenOfKind);
+  ASSERT_ERR(errors[4], fidl::ErrUnexpectedToken);
+  ASSERT_ERR(errors[5], fidl::ErrUnrecognizedProtocolMember);
   ASSERT_ERR(errors[6], fidl::ErrUnexpectedTokenOfKind);
+  ASSERT_ERR(errors[7], fidl::ErrUnexpectedTokenOfKind);
 
   END_TEST;
 }
@@ -308,6 +309,35 @@ union Union {
   END_TEST;
 }
 
+bool recover_to_next_parameter_in_list() {
+  BEGIN_TEST;
+
+  TestLibrary library(R"FIDL(
+library example;
+
+protocol Protocol {
+    Method(uint8, uint16 n);
+    Method(, string s);
+    -> Event(Type, uint8 num, string compound.identifier);
+    Method(uint8 num, uint16 num) -> (uint16 value, string value_with space);
+    Method(Type param, request<<LocationLookup> frame) - (uint16 port);
+};
+)FIDL");
+  EXPECT_FALSE(library.Compile());
+  const auto& errors = library.errors();
+  ASSERT_EQ(errors.size(), 8);
+  ASSERT_ERR(errors[0], fidl::ErrUnexpectedTokenOfKind);
+  ASSERT_ERR(errors[1], fidl::ErrUnexpectedTokenOfKind);
+  ASSERT_ERR(errors[2], fidl::ErrUnexpectedTokenOfKind);
+  ASSERT_ERR(errors[3], fidl::ErrUnexpectedTokenOfKind);
+  ASSERT_ERR(errors[4], fidl::ErrUnexpectedTokenOfKind);
+  ASSERT_ERR(errors[5], fidl::ErrUnexpectedTokenOfKind);
+  ASSERT_ERR(errors[6], fidl::ErrUnexpectedTokenOfKind);
+  ASSERT_ERR(errors[7], fidl::ErrExpectedProtocolMember);
+
+  END_TEST;
+}
+
 }  // namespace
 
 BEGIN_TEST_CASE(recoverable_parsing_tests)
@@ -322,4 +352,5 @@ RUN_TEST(recover_to_next_service_member)
 RUN_TEST(recover_to_next_struct_member)
 RUN_TEST(recover_to_next_table_member)
 RUN_TEST(recover_to_next_union_member)
+RUN_TEST(recover_to_next_parameter_in_list)
 END_TEST_CASE(recoverable_parsing_tests)
