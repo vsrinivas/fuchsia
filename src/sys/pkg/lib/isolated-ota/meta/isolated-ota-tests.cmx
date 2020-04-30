@@ -1,10 +1,27 @@
 {
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.test.IsolatedDevmgr": "fuchsia-pkg://fuchsia.com/ramdisk-isolated-devmgr#meta/ramdisk-isolated-devmgr.cmx"
+            }
+        }
+    },
     "program": {
         "binary": "test/isolated-ota-tests"
     },
     "sandbox": {
+        "dev": [
+            "misc/ramctl"
+        ],
         "features": [
             "isolated-temp"
+        ],
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.process.Launcher",
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Launcher",
+            "fuchsia.test.IsolatedDevmgr"
         ]
     }
 }

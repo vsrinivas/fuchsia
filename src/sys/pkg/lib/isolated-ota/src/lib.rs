@@ -2,10 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {fidl::endpoints::ClientEnd, fidl_fuchsia_io::DirectoryMarker, thiserror::Error};
+mod pkgfs;
+use {
+    crate::pkgfs::Pkgfs, fidl::endpoints::ClientEnd, fidl_fuchsia_io::DirectoryMarker,
+    thiserror::Error,
+};
 
-#[derive(Clone, Debug, PartialEq, Eq, Error)]
-pub enum UpdateError {}
+#[derive(Debug, Error)]
+pub enum UpdateError {
+    #[error("error launching pkgfs")]
+    PkgfsLaunchError(#[source] anyhow::Error),
+}
 
 /// Installs all packages and writes the Fuchsia ZBI from the latest build on the given channel.
 ///
@@ -19,10 +26,11 @@ pub enum UpdateError {}
 /// * `repository_config_file` - A json-serialized fidl_fuchsia_pkg_ext::RepositoryConfigs file
 /// * `channel_name` - The channel to update from.
 pub async fn download_and_apply_update(
-    _blobfs: ClientEnd<DirectoryMarker>,
+    blobfs: ClientEnd<DirectoryMarker>,
     _paver_connector: ClientEnd<DirectoryMarker>,
     _repository_config_file: std::fs::File,
     _channel_name: &str,
 ) -> Result<(), UpdateError> {
+    let _pkgfs = Pkgfs::launch(blobfs).map_err(UpdateError::PkgfsLaunchError)?;
     unimplemented!();
 }
