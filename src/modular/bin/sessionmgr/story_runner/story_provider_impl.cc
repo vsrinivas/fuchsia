@@ -218,7 +218,7 @@ class StoryProviderImpl::StopStoryShellCall : public Operation<> {
   StoryProviderImpl* const story_provider_impl_;  // not owned
 };
 
-StoryProviderImpl::StoryProviderImpl(Environment* const session_environment, std::string device_id,
+StoryProviderImpl::StoryProviderImpl(Environment* const session_environment,
                                      SessionStorage* const session_storage,
                                      fuchsia::modular::AppConfig story_shell_config,
                                      fuchsia::modular::StoryShellFactoryPtr story_shell_factory,
@@ -230,7 +230,6 @@ StoryProviderImpl::StoryProviderImpl(Environment* const session_environment, std
                                      inspect::Node* root_node)
     : session_environment_(session_environment),
       session_storage_(session_storage),
-      device_id_(std::move(device_id)),
       story_shell_config_(std::move(story_shell_config)),
       story_shell_factory_(std::move(story_shell_factory)),
       enable_story_shell_preload_(enable_story_shell_preload),
@@ -588,10 +587,6 @@ void StoryProviderImpl::OnStoryStorageDeleted(fidl::StringPtr story_id) {
 // |fuchsia::modular::FocusWatcher|
 void StoryProviderImpl::OnFocusChange(fuchsia::modular::FocusInfoPtr info) {
   operation_queue_.Add(std::make_unique<SyncCall>([this, info = std::move(info)]() {
-    if (info->device_id != device_id_) {
-      return;
-    }
-
     if (!info->focused_story_id.has_value()) {
       return;
     }

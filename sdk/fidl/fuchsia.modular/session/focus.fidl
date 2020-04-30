@@ -60,9 +60,6 @@ protocol FocusWatcher {
 
 /// Specifies the focused story of a device.
 struct FocusInfo {
-    /// The id of the device.
-    string device_id;
-
     /// The id of the focused story.  If null, no stories are focused.
     string? focused_story_id;
 

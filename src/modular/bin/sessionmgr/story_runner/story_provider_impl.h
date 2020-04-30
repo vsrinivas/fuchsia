@@ -47,8 +47,8 @@ class StoryStorage;
 
 class StoryProviderImpl : fuchsia::modular::StoryProvider, fuchsia::modular::FocusWatcher {
  public:
-  StoryProviderImpl(Environment* session_environment, std::string device_id,
-                    SessionStorage* session_storage, fuchsia::modular::AppConfig story_shell_config,
+  StoryProviderImpl(Environment* session_environment, SessionStorage* session_storage,
+                    fuchsia::modular::AppConfig story_shell_config,
                     fuchsia::modular::StoryShellFactoryPtr story_shell_factory,
                     const ComponentContextInfo& component_context_info,
                     fuchsia::modular::FocusProviderPtr focus_provider,
@@ -73,9 +73,6 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider, fuchsia::modular::Foc
 
   // Called by StoryControllerImpl.
   Environment* session_environment() const { return session_environment_; }
-
-  // The device ID for this user/device.
-  const std::string device_id() const { return device_id_; }
 
   // Called by StoryControllerImpl.
   const ComponentContextInfo& component_context_info() { return component_context_info_; }
@@ -172,9 +169,6 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider, fuchsia::modular::Foc
   // The service from the session shell run by the sessionmgr. Owned here
   // because only used from here.
   fuchsia::modular::SessionShellPtr session_shell_;
-
-  // Unique ID generated for this user/device combination.
-  const std::string device_id_;
 
   // The bindings for this instance.
   fidl::BindingSet<fuchsia::modular::StoryProvider> bindings_;

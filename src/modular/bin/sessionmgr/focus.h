@@ -28,7 +28,7 @@ class FocusHandler : fuchsia::modular::FocusProvider,
                      fuchsia::modular::FocusController,
                      PageClient {
  public:
-  FocusHandler(fidl::StringPtr device_id, LedgerClient* ledger_client, LedgerPageId page_id);
+  FocusHandler(LedgerClient* ledger_client, LedgerPageId page_id);
   ~FocusHandler() override;
 
   void AddProviderBinding(fidl::InterfaceRequest<fuchsia::modular::FocusProvider> request);
@@ -46,8 +46,6 @@ class FocusHandler : fuchsia::modular::FocusProvider,
 
   // |PageClient|
   void OnPageChange(const std::string& key, const std::string& value) override;
-
-  const fidl::StringPtr device_id_;
 
   fidl::BindingSet<fuchsia::modular::FocusProvider> provider_bindings_;
   fidl::BindingSet<fuchsia::modular::FocusController> controller_bindings_;

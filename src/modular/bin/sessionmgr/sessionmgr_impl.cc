@@ -29,7 +29,6 @@
 #include "src/modular/bin/sessionmgr/story_runner/story_controller_impl.h"
 #include "src/modular/bin/sessionmgr/story_runner/story_provider_impl.h"
 #include "src/modular/lib/common/teardown.h"
-#include "src/modular/lib/device_info/device_info.h"
 #include "src/modular/lib/fidl/array_to_string.h"
 #include "src/modular/lib/fidl/json_xdr.h"
 #include "src/modular/lib/ledger_client/constants.h"
@@ -408,8 +407,8 @@ void SessionmgrImpl::InitializeModular(const fidl::StringPtr& session_shell_url,
   OnTerminate(Reset(&session_storage_));
 
   story_provider_impl_.reset(new StoryProviderImpl(
-      session_environment_.get(), LoadDeviceID(session_id_), session_storage_.get(),
-      std::move(story_shell_config), std::move(story_shell_factory_ptr), component_context_info,
+      session_environment_.get(), session_storage_.get(), std::move(story_shell_config),
+      std::move(story_shell_factory_ptr), component_context_info,
       std::move(focus_provider_story_provider), startup_agent_launcher_.get(),
       presentation_provider_impl_.get(), (config_.enable_story_shell_preload()),
       &inspect_root_node_));
@@ -445,8 +444,7 @@ void SessionmgrImpl::InitializeModular(const fidl::StringPtr& session_shell_url,
   OnTerminate(Reset(&puppet_master_impl_));
   OnTerminate(Reset(&session_ctl_));
 
-  focus_handler_ = std::make_unique<FocusHandler>(LoadDeviceID(session_id_), ledger_client_.get(),
-                                                  fuchsia::ledger::PageId());
+  focus_handler_ = std::make_unique<FocusHandler>(ledger_client_.get(), fuchsia::ledger::PageId());
   focus_handler_->AddProviderBinding(std::move(focus_provider_request_story_provider));
   focus_handler_->AddProviderBinding(std::move(focus_provider_request_puppet_master));
   OnTerminate(Reset(&focus_handler_));

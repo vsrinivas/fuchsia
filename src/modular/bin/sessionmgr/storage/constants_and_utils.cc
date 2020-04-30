@@ -18,11 +18,6 @@ std::string MakeDeviceKey(const fidl::StringPtr& device_name) {
   return kDeviceKeyPrefix + device_name.value_or("");
 }
 
-std::string MakeFocusKey(const fidl::StringPtr& device_name) {
-  // Not escaped, because only one component after the prefix.
-  return kFocusKeyPrefix + device_name.value_or("");
-}
-
 std::string EncodeModulePath(const std::vector<std::string>& module_path) {
   std::vector<std::string> segments;
   segments.reserve(module_path.size());

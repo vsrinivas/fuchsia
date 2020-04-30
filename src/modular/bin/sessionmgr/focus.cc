@@ -18,7 +18,6 @@ namespace {
 // Serialization and deserialization of fuchsia::modular::FocusInfo to and from
 // JSON.
 void XdrFocusInfo_v1(XdrContext* const xdr, fuchsia::modular::FocusInfo* const data) {
-  xdr->Field("device_id", &data->device_id);
   xdr->Field("focused_story_id", &data->focused_story_id);
   xdr->Field("last_focus_timestamp", &data->last_focus_change_timestamp);
 }
@@ -27,12 +26,20 @@ void XdrFocusInfo_v2(XdrContext* const xdr, fuchsia::modular::FocusInfo* const d
   if (!xdr->Version(2)) {
     return;
   }
-  xdr->Field("device_id", &data->device_id);
+  xdr->Field("focused_story_id", &data->focused_story_id);
+  xdr->Field("last_focus_timestamp", &data->last_focus_change_timestamp);
+}
+
+void XdrFocusInfo_v3(XdrContext* const xdr, fuchsia::modular::FocusInfo* const data) {
+  if (!xdr->Version(3)) {
+    return;
+  }
   xdr->Field("focused_story_id", &data->focused_story_id);
   xdr->Field("last_focus_timestamp", &data->last_focus_change_timestamp);
 }
 
 constexpr XdrFilterType<fuchsia::modular::FocusInfo> XdrFocusInfo[] = {
+    XdrFocusInfo_v3,
     XdrFocusInfo_v2,
     XdrFocusInfo_v1,
     nullptr,
@@ -40,10 +47,8 @@ constexpr XdrFilterType<fuchsia::modular::FocusInfo> XdrFocusInfo[] = {
 
 }  // namespace
 
-FocusHandler::FocusHandler(fidl::StringPtr device_id, LedgerClient* const ledger_client,
-                           LedgerPageId page_id)
-    : PageClient("FocusHandler", ledger_client, std::move(page_id), kFocusKeyPrefix),
-      device_id_(device_id) {}
+FocusHandler::FocusHandler(LedgerClient* const ledger_client, LedgerPageId page_id)
+    : PageClient("FocusHandler", ledger_client, std::move(page_id)) {}
 
 FocusHandler::~FocusHandler() = default;
 
@@ -83,12 +88,11 @@ void FocusHandler::Request(fidl::StringPtr story_id) {
 // |fuchsia::modular::FocusController|
 void FocusHandler::Set(fidl::StringPtr story_id) {
   fuchsia::modular::FocusInfoPtr data = fuchsia::modular::FocusInfo::New();
-  data->device_id = device_id_.value_or("");
   data->focused_story_id = story_id;
   data->last_focus_change_timestamp = time(nullptr);
 
   operation_queue_.Add(std::make_unique<WriteDataCall<fuchsia::modular::FocusInfo>>(
-      page(), MakeFocusKey(device_id_), XdrFocusInfo, std::move(data), [] {}));
+      page(), kFocusKeyPrefix, XdrFocusInfo, std::move(data), [] {}));
 }
 
 // |fuchsia::modular::FocusController|

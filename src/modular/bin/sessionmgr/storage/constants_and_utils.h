@@ -49,7 +49,6 @@ constexpr char kModuleKeyPrefix[] = "Module/";
 //    factory functions for the keys:
 //
 std::string MakeDeviceKey(const fidl::StringPtr& device_name);
-std::string MakeFocusKey(const fidl::StringPtr& device_name);
 std::string MakeTriggerKey(const std::string& agent_url, const std::string& task_id);
 std::string MakeLinkKey(const fuchsia::modular::LinkPathPtr& link_path);
 std::string MakeLinkKey(const fuchsia::modular::LinkPath& link_path);
