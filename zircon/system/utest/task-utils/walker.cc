@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <task-utils/walker.h>
-
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/object.h>
-#include <unittest/unittest.h>
+
+#include <task-utils/walker.h>
+#include <zxtest/zxtest.h>
 
 namespace {
 
@@ -95,17 +95,14 @@ class TestTaskEnumerator : public TaskEnumerator {
   int threads_seen_ = 0;
 };
 
-template <unsigned int Flags>
-bool basic_cpp_walk() {
-  BEGIN_TEST;
-  TestTaskEnumerator tte(Flags);
+void basic_cpp_walk(unsigned int flags) {
+  TestTaskEnumerator tte(flags);
   // TODO(dbort): Build a job tree just for the test and walk that instead;
   // same for other tests in this file. utest/core/object-info and
   // utest/policy (and maybe more) already do their own test job-tree
   // building; create a common helper lib.
   EXPECT_EQ(tte.WalkRootJobTree(), ZX_OK);
   tte.Validate();
-  END_TEST;
 }
 
 // A subclass of TestTaskEnumerator that will return a non-ZX_OK status
@@ -151,37 +148,43 @@ class FailingTaskEnumerator : public TestTaskEnumerator {
   bool poisoned_ = false;
 };
 
-template <unsigned int Flags, int PoisonDepth>
-bool cpp_walk_failure() {
-  BEGIN_TEST;
-  FailingTaskEnumerator fte(Flags, PoisonDepth);
+void cpp_walk_failure(unsigned int flags, int poison_depth) {
+  FailingTaskEnumerator fte(flags, poison_depth);
   EXPECT_EQ(fte.WalkRootJobTree(), FailingTaskEnumerator::FailingStatus);
-  END_TEST;
 }
 
 }  // namespace
 
 // NOTE: Since the C++ API is built on top of the C API, this provides decent
 // coverage for the C API without testing it directly.
-BEGIN_TEST_CASE(task_utils)
 
-RUN_TEST(basic_cpp_walk<0>)
-RUN_TEST(basic_cpp_walk<HAS_ON_JOB>)
-RUN_TEST(basic_cpp_walk<HAS_ON_JOB | HAS_ON_PROCESS>)
-RUN_TEST(basic_cpp_walk<HAS_ON_JOB | HAS_ON_THREAD>)
-RUN_TEST(basic_cpp_walk<HAS_ON_JOB | HAS_ON_PROCESS | HAS_ON_THREAD>)
-RUN_TEST(basic_cpp_walk<HAS_ON_PROCESS>)
-RUN_TEST(basic_cpp_walk<HAS_ON_PROCESS | HAS_ON_THREAD>)
-RUN_TEST(basic_cpp_walk<HAS_ON_THREAD>)
+TEST(TaskWalker, Nothing) { basic_cpp_walk(0); }
+
+TEST(TaskWalker, OnJob) { basic_cpp_walk(HAS_ON_JOB); }
+
+TEST(TaskWalker, OnJobAndProcess) { basic_cpp_walk(HAS_ON_JOB | HAS_ON_PROCESS); }
+
+TEST(TaskWalker, OnJobAndThread) { basic_cpp_walk(HAS_ON_JOB | HAS_ON_THREAD); }
+
+TEST(TaskWalker, OnJobAndProcessAndThread) {
+  basic_cpp_walk(HAS_ON_JOB | HAS_ON_PROCESS | HAS_ON_THREAD);
+}
+
+TEST(TaskWalker, OnProcess) { basic_cpp_walk(HAS_ON_PROCESS); }
+
+TEST(TaskWalker, OnProcessAndThread) { basic_cpp_walk(HAS_ON_PROCESS | HAS_ON_THREAD); }
+
+TEST(TaskWalker, OnThread) { basic_cpp_walk(HAS_ON_THREAD); }
 
 // The callback on the root job happens on a different code path than other job
 // depths, so test it explicitly.
-RUN_TEST((cpp_walk_failure<HAS_ON_JOB, /*PoisonDepth=*/0>))
+TEST(TaskWalkerFailure, OnJobDepth0) { cpp_walk_failure(HAS_ON_JOB, /*PoisonDepth=*/0); }
+
 // A minimal system doesn't have jobs deeper than depth 1.
 // TODO(dbort): Use depth 2 or more for all types once we have a test job
 // hierarchy instead of the root job.
-RUN_TEST((cpp_walk_failure<HAS_ON_JOB, /*PoisonDepth=*/1>))
-RUN_TEST((cpp_walk_failure<HAS_ON_PROCESS, /*PoisonDepth=*/2>))
-RUN_TEST((cpp_walk_failure<HAS_ON_THREAD, /*PoisonDepth=*/2>))
+TEST(TaskWalkerFailure, OnJobDepth1) { cpp_walk_failure(HAS_ON_JOB, /*PoisonDepth=*/1); }
 
-END_TEST_CASE(task_utils)
+TEST(TaskWalkerFailure, OnProcessDepth2) { cpp_walk_failure(HAS_ON_PROCESS, /*PoisonDepth=*/2); }
+
+TEST(TaskWalkerFailure, OnThreadDepth2) { cpp_walk_failure(HAS_ON_THREAD, /*PoisonDepth=*/2); }
