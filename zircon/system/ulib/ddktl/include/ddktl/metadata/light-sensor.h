@@ -8,9 +8,8 @@
 namespace metadata {
 
 struct LightSensorParams {
+  uint8_t gain;
   uint32_t integration_time_ms;
-  uint16_t lux_constant_coefficient;
-  float lux_linear_coefficient;
 };
 
 }  // namespace metadata

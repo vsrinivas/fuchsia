@@ -113,7 +113,7 @@ static const uint8_t ambient_light_report_desc[] = {
     HID_LOGICAL_MAX32(0xFFFF),
     HID_REPORT_SIZE(16),
     HID_REPORT_COUNT(1),
-    HID_USAGE_SENSOR_GENERIC_UNITS_LUX,
+    HID_USAGE_SENSOR_GENERIC_UNITS_NOT_SPECIFIED, // Explicitly not Lux
     HID_INPUT(HID_Data_Var_Abs),
 
     HID_USAGE_RED_LIGHT,
@@ -121,7 +121,7 @@ static const uint8_t ambient_light_report_desc[] = {
     HID_LOGICAL_MAX32(0xFFFF),
     HID_REPORT_SIZE(16),
     HID_REPORT_COUNT(1),
-    HID_USAGE_SENSOR_GENERIC_UNITS_LUX,
+    HID_USAGE_SENSOR_GENERIC_UNITS_NOT_SPECIFIED, // Explicitly not Lux
     HID_INPUT(HID_Data_Var_Abs),
 
     HID_USAGE_BLUE_LIGHT,
@@ -129,7 +129,7 @@ static const uint8_t ambient_light_report_desc[] = {
     HID_LOGICAL_MAX32(0xFFFF),
     HID_REPORT_SIZE(16),
     HID_REPORT_COUNT(1),
-    HID_USAGE_SENSOR_GENERIC_UNITS_LUX,
+    HID_USAGE_SENSOR_GENERIC_UNITS_NOT_SPECIFIED, // Explicitly not Lux
     HID_INPUT(HID_Data_Var_Abs),
 
     HID_USAGE_GREEN_LIGHT,
@@ -137,7 +137,7 @@ static const uint8_t ambient_light_report_desc[] = {
     HID_LOGICAL_MAX32(0xFFFF),
     HID_REPORT_SIZE(16),
     HID_REPORT_COUNT(1),
-    HID_USAGE_SENSOR_GENERIC_UNITS_LUX,
+    HID_USAGE_SENSOR_GENERIC_UNITS_NOT_SPECIFIED, // Explicitly not Lux
     HID_INPUT(HID_Data_Var_Abs),
 
 

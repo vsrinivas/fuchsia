@@ -5,6 +5,7 @@
 #ifndef SRC_DEVICES_LIGHT_SENSOR_DRIVERS_AMS_LIGHT_TCS3400_H_
 #define SRC_DEVICES_LIGHT_SENSOR_DRIVERS_AMS_LIGHT_TCS3400_H_
 
+#include <lib/device-protocol/i2c-channel.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/interrupt.h>
 
@@ -28,9 +29,14 @@ using DeviceType = ddk::Device<Tcs3400Device, ddk::UnbindableNew>;
 class Tcs3400Device : public DeviceType,
                       public ddk::HidbusProtocol<Tcs3400Device, ddk::base_protocol> {
  public:
-  Tcs3400Device(zx_device_t* device) : DeviceType(device) {}
+  static zx_status_t Create(void* ctx, zx_device_t* parent);
+
+  Tcs3400Device(zx_device_t* device, ddk::I2cChannel i2c, gpio_protocol_t gpio, zx::port port)
+      : DeviceType(device), i2c_(std::move(i2c)), gpio_(gpio), port_(std::move(port)) {}
+  virtual ~Tcs3400Device() = default;
 
   zx_status_t Bind();
+  zx_status_t InitMetadata();
 
   // Methods required by the ddk mixins
   zx_status_t HidbusStart(const hidbus_ifc_protocol_t* ifc) TA_EXCL(client_input_lock_);
@@ -50,24 +56,27 @@ class Tcs3400Device : public DeviceType,
   void DdkUnbindNew(ddk::UnbindTxn txn);
   void DdkRelease();
 
+ protected:
+  virtual void ShutDown() TA_EXCL(client_input_lock_);  // protected for unit test.
+
  private:
-  i2c_protocol_t i2c_ TA_GUARDED(i2c_lock_);
+  ddk::I2cChannel i2c_ TA_GUARDED(i2c_lock_);
   gpio_protocol_t gpio_ TA_GUARDED(i2c_lock_);
   zx::interrupt irq_;
-  thrd_t thread_;
-  zx_handle_t port_handle_;
+  thrd_t thread_ = {};
+  zx::port port_;
   fbl::Mutex client_input_lock_ TA_ACQ_BEFORE(i2c_lock_);
   fbl::Mutex feature_lock_;
   fbl::Mutex i2c_lock_;
   ddk::HidbusIfcProtocolClient client_ TA_GUARDED(client_input_lock_);
   ambient_light_input_rpt_t input_rpt_ TA_GUARDED(client_input_lock_);
   ambient_light_feature_rpt_t feature_rpt_ TA_GUARDED(feature_lock_);
-  uint16_t lux_constant_coefficient_;
-  float lux_linear_coefficient_;
+  uint8_t atime_ = 1;
+  uint8_t again_ = 1;
 
   zx_status_t FillInputRpt() TA_REQ(client_input_lock_);
+  zx_status_t InitGain(uint8_t gain);
   int Thread();
-  void ShutDown() TA_EXCL(client_input_lock_);
 };
 }  // namespace tcs
 

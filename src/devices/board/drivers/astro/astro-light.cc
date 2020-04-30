@@ -52,9 +52,8 @@ static const device_fragment_t fragments[] = {
 zx_status_t Astro::LightInit() {
   metadata::LightSensorParams params = {};
   // TODO(kpt): Insert the right parameters here.
-  params.lux_constant_coefficient = 0;
-  params.lux_linear_coefficient = .29f;
   params.integration_time_ms = 615;
+  params.gain = 16;
   device_metadata_t metadata[] = {
       {
           .type = DEVICE_METADATA_PRIVATE,

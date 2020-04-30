@@ -313,16 +313,16 @@ TEST_F(HidDevTest, SensorTest) {
   ASSERT_EQ(4, sensor_desc.values().count());
 
   ASSERT_EQ(sensor_desc.values()[0].type, fuchsia_input_report::SensorType::LIGHT_ILLUMINANCE);
-  ASSERT_EQ(sensor_desc.values()[0].axis.unit, fuchsia_input_report::Unit::LUX);
+  ASSERT_EQ(sensor_desc.values()[0].axis.unit, fuchsia_input_report::Unit::NONE);
 
   ASSERT_EQ(sensor_desc.values()[1].type, fuchsia_input_report::SensorType::LIGHT_RED);
-  ASSERT_EQ(sensor_desc.values()[1].axis.unit, fuchsia_input_report::Unit::LUX);
+  ASSERT_EQ(sensor_desc.values()[1].axis.unit, fuchsia_input_report::Unit::NONE);
 
   ASSERT_EQ(sensor_desc.values()[2].type, fuchsia_input_report::SensorType::LIGHT_BLUE);
-  ASSERT_EQ(sensor_desc.values()[2].axis.unit, fuchsia_input_report::Unit::LUX);
+  ASSERT_EQ(sensor_desc.values()[2].axis.unit, fuchsia_input_report::Unit::NONE);
 
   ASSERT_EQ(sensor_desc.values()[3].type, fuchsia_input_report::SensorType::LIGHT_GREEN);
-  ASSERT_EQ(sensor_desc.values()[3].axis.unit, fuchsia_input_report::Unit::LUX);
+  ASSERT_EQ(sensor_desc.values()[3].axis.unit, fuchsia_input_report::Unit::NONE);
 
   // Create the report.
   ambient_light_input_rpt_t report_data = {};
@@ -356,11 +356,10 @@ TEST_F(HidDevTest, SensorTest) {
 
   // Check the report.
   // These will always match the ordering in the descriptor.
-  constexpr uint32_t kLightUnitConversion = 100;
-  EXPECT_EQ(kIlluminanceTestVal * kLightUnitConversion, sensor_report.values()[0]);
-  EXPECT_EQ(kRedTestVal * kLightUnitConversion, sensor_report.values()[1]);
-  EXPECT_EQ(kBlueTestVal * kLightUnitConversion, sensor_report.values()[2]);
-  EXPECT_EQ(kGreenTestVal * kLightUnitConversion, sensor_report.values()[3]);
+  EXPECT_EQ(kIlluminanceTestVal, sensor_report.values()[0]);
+  EXPECT_EQ(kRedTestVal, sensor_report.values()[1]);
+  EXPECT_EQ(kBlueTestVal, sensor_report.values()[2]);
+  EXPECT_EQ(kGreenTestVal, sensor_report.values()[3]);
 
   // Close the instance device.
   dev_ops.ops->close(dev_ops.ctx, 0);

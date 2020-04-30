@@ -43,22 +43,22 @@ TEST(SensorTest, AmbientLight) {
   ASSERT_EQ(sensor_input_descriptor->values[0].type,
             ::llcpp::fuchsia::input::report::SensorType::LIGHT_ILLUMINANCE);
   ASSERT_EQ(sensor_input_descriptor->values[0].axis.unit,
-            ::llcpp::fuchsia::input::report::Unit::LUX);
+            ::llcpp::fuchsia::input::report::Unit::NONE);
 
   ASSERT_EQ(sensor_input_descriptor->values[1].type,
             ::llcpp::fuchsia::input::report::SensorType::LIGHT_RED);
   ASSERT_EQ(sensor_input_descriptor->values[1].axis.unit,
-            ::llcpp::fuchsia::input::report::Unit::LUX);
+            ::llcpp::fuchsia::input::report::Unit::NONE);
 
   ASSERT_EQ(sensor_input_descriptor->values[2].type,
             ::llcpp::fuchsia::input::report::SensorType::LIGHT_BLUE);
   ASSERT_EQ(sensor_input_descriptor->values[2].axis.unit,
-            ::llcpp::fuchsia::input::report::Unit::LUX);
+            ::llcpp::fuchsia::input::report::Unit::NONE);
 
   ASSERT_EQ(sensor_input_descriptor->values[3].type,
             ::llcpp::fuchsia::input::report::SensorType::LIGHT_GREEN);
   ASSERT_EQ(sensor_input_descriptor->values[3].axis.unit,
-            ::llcpp::fuchsia::input::report::Unit::LUX);
+            ::llcpp::fuchsia::input::report::Unit::NONE);
 
   // Create the report.
   ambient_light_input_rpt_t report_data = {};
@@ -86,11 +86,10 @@ TEST(SensorTest, AmbientLight) {
 
   // Check the report.
   // These will always match the ordering in the descriptor.
-  constexpr uint32_t kLightUnitConversion = 100;
-  EXPECT_EQ(kIlluminanceTestVal * kLightUnitConversion, sensor_report->values[0]);
-  EXPECT_EQ(kRedTestVal * kLightUnitConversion, sensor_report->values[1]);
-  EXPECT_EQ(kBlueTestVal * kLightUnitConversion, sensor_report->values[2]);
-  EXPECT_EQ(kGreenTestVal * kLightUnitConversion, sensor_report->values[3]);
+  EXPECT_EQ(kIlluminanceTestVal, sensor_report->values[0]);
+  EXPECT_EQ(kRedTestVal, sensor_report->values[1]);
+  EXPECT_EQ(kBlueTestVal, sensor_report->values[2]);
+  EXPECT_EQ(kGreenTestVal, sensor_report->values[3]);
 }
 
 TEST(SensorTest, DeviceType) {
