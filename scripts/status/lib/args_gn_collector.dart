@@ -5,8 +5,13 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'package:path/path.dart' as p;
 
 import 'package:status/status.dart';
+
+/// The path, relative to a Fuchsia checkout, where we expect to find the fx
+/// executable.
+const fxLocation = '.jiri_root/bin/fx';
 
 class GNStatusParser {
   final RegExp argsImportExtractor = RegExp('([^/]*)/([^/]*)\.gni');
@@ -98,9 +103,24 @@ class GNStatusParser {
 }
 
 class GNStatusChecker {
-  Future<ProcessResult> checkGn({String pathToArgs}) async {
-    pathToArgs ??= '${Platform.environment['FUCHSIA_BUILD_DIR']}/args.gn';
-    return Process.run('fx', ['gn', 'format', '--dump-tree=json', pathToArgs]);
+  Future<ProcessResult> checkGn() async {
+    EnvReader envReader = EnvReader.shared;
+
+    /// Absolute path to the root of the Fuchsia checkout. Read from the
+    /// environment variable.
+    String fuchsiaDir = envReader.getEnv('FUCHSIA_DIR');
+
+    /// Path to the fx executable
+    String pathToFx = p.join(fuchsiaDir, fxLocation);
+
+    /// Absolute path to the build directory. Read from the environment variable.
+    String buildDir = envReader.getEnv('FUCHSIA_BUILD_DIR');
+
+    /// Path to the args.gn
+    String pathToArgs = '$buildDir/args.gn';
+
+    return Process.run(
+        pathToFx, ['gn', 'format', '--dump-tree=json', pathToArgs]);
   }
 }
 

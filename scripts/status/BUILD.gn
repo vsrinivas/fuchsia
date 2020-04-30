@@ -25,6 +25,7 @@ dart_tool("status") {
     "//third_party/dart-pkg/pub/convert",
     "//third_party/dart-pkg/pub/io",
     "//third_party/dart-pkg/pub/meta",
+    "//third_party/dart-pkg/pub/path",
     "//third_party/dart-pkg/pub/pedantic",
   ]
 }

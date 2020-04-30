@@ -9,5 +9,6 @@ convert:../../third_party/dart-pkg/pub/convert/lib/
 io:../../third_party/dart-pkg/pub/io/lib/
 mockito:../../third_party/dart-pkg/pub/mockito/lib/
 meta:../../third_party/dart-pkg/pub/meta/lib/
+path:../../third_party/dart-pkg/pub/path/lib/
 pedantic:../../third_party/dart-pkg/pub/pedantic/lib/
 test:../../third_party/dart-pkg/pub/test/lib/
