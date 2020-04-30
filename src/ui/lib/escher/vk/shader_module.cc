@@ -13,16 +13,16 @@ ShaderModule::ShaderModule(vk::Device device, ShaderStage shader_stage)
     : device_(device), stage_(shader_stage) {}
 
 ShaderModule::~ShaderModule() {
-  FXL_DCHECK(listeners_.empty());
+  FX_DCHECK(listeners_.empty());
   if (module_) {
-    FXL_DCHECK(device_);
+    FX_DCHECK(device_);
     device_.destroyShaderModule(module_);
   }
 }
 
 void ShaderModule::AddShaderModuleListener(ShaderModuleListener* listener) {
-  FXL_DCHECK(listener);
-  FXL_DCHECK(std::find(listeners_.begin(), listeners_.end(), listener) == listeners_.end())
+  FX_DCHECK(listener);
+  FX_DCHECK(std::find(listeners_.begin(), listeners_.end(), listener) == listeners_.end())
       << "ShaderModule::AddShaderModuleListener(): listener already added.";
   listeners_.push_back(listener);
   if (is_valid()) {
@@ -32,13 +32,13 @@ void ShaderModule::AddShaderModuleListener(ShaderModuleListener* listener) {
 
 void ShaderModule::RemoveShaderModuleListener(ShaderModuleListener* listener) {
   auto it = std::find(listeners_.begin(), listeners_.end(), listener);
-  FXL_DCHECK(it != listeners_.end())
+  FX_DCHECK(it != listeners_.end())
       << "ShaderModule::RemoveShaderModuleListener(): listener not found.";
   listeners_.erase(it);
 }
 
 void ShaderModule::RecreateModuleFromSpirvAndNotifyListeners(std::vector<uint32_t> spirv) {
-  FXL_DCHECK(device_);
+  FX_DCHECK(device_);
   if (module_) {
     device_.destroyShaderModule(module_);
   }

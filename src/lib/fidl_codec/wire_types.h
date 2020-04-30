@@ -417,7 +417,7 @@ class ElementSequenceType : public Type {
  public:
   explicit ElementSequenceType(std::unique_ptr<Type> component_type)
       : component_type_(std::move(component_type)) {
-    FXL_DCHECK(component_type_.get() != nullptr);
+    FX_DCHECK(component_type_.get() != nullptr);
   }
 
   const Type* component_type() const { return component_type_.get(); }

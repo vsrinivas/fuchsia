@@ -14,9 +14,9 @@ ChainedSemaphoreGenerator::ChainedSemaphoreGenerator(vk::Device device)
     : device_(device), weak_factory_(this) {}
 
 SemaphorePtr ChainedSemaphoreGenerator::CreateNextSemaphore(bool exportable) {
-  FXL_DCHECK(!last_semaphore_);
+  FX_DCHECK(!last_semaphore_);
 #ifndef __Fuchsia__
-  FXL_DCHECK(!exportable) << "exportable semaphore is not supported on this platform";
+  FX_DCHECK(!exportable) << "exportable semaphore is not supported on this platform";
 #endif
   last_semaphore_ = exportable ? Semaphore::NewExportableSem(device_) : Semaphore::New(device_);
   return last_semaphore_;

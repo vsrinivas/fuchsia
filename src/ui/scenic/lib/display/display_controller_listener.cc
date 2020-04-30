@@ -56,7 +56,7 @@ DisplayControllerListener::~DisplayControllerListener() {
 void DisplayControllerListener::InitializeCallbacks(
     fit::closure on_invalid, OnDisplaysChangedCallback on_displays_changed_cb,
     OnClientOwnershipChangeCallback on_client_ownership_change_cb) {
-  FXL_CHECK(!initialized_callbacks_);
+  FX_CHECK(!initialized_callbacks_);
   initialized_callbacks_ = true;
 
   on_invalid_cb_ = std::move(on_invalid);
@@ -88,7 +88,7 @@ void DisplayControllerListener::OnPeerClosedAsync(async_dispatcher_t* dispatcher
                                                   async::WaitBase* self, zx_status_t status,
                                                   const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {
-    FXL_LOG(WARNING) << "scenic_impl::gfx::DisplayControllerImpl: Error while waiting on "
+    FX_LOGS(WARNING) << "scenic_impl::gfx::DisplayControllerImpl: Error while waiting on "
                         "ZX_CHANNEL_PEER_CLOSED: "
                      << status;
     return;
@@ -111,7 +111,7 @@ void DisplayControllerListener::OnPeerClosedAsync(async_dispatcher_t* dispatcher
     // Don't do anything else after callback() is invoked, since |this| could be destroyed.
     return;
   }
-  FXL_NOTREACHED();
+  FX_NOTREACHED();
 }
 
 void DisplayControllerListener::OnEventMsgAsync(async_dispatcher_t* dispatcher,
@@ -119,7 +119,7 @@ void DisplayControllerListener::OnEventMsgAsync(async_dispatcher_t* dispatcher,
                                                 const zx_packet_signal_t* signal) {
   // TODO(FIDL-183): Resolve this hack when synchronous interfaces support events.
   if (status != ZX_OK) {
-    FXL_LOG(WARNING)
+    FX_LOGS(WARNING)
         << "scenic_impl::gfx::DisplayControllerImpl: Error while waiting on ZX_CHANNEL_READABLE: "
         << status;
     return;
@@ -128,7 +128,7 @@ void DisplayControllerListener::OnEventMsgAsync(async_dispatcher_t* dispatcher,
     uint8_t byte_buffer[ZX_CHANNEL_MAX_MSG_BYTES];
     fidl::Message msg(fidl::BytePart(byte_buffer, ZX_CHANNEL_MAX_MSG_BYTES), fidl::HandlePart());
     if (msg.Read(controller_channel_handle_, 0) != ZX_OK) {
-      FXL_LOG(WARNING) << "Display controller callback read failed";
+      FX_LOGS(WARNING) << "Display controller callback read failed";
       return;
     }
     // Re-arm the wait.
@@ -138,7 +138,7 @@ void DisplayControllerListener::OnEventMsgAsync(async_dispatcher_t* dispatcher,
         ->Dispatch_(std::move(msg));
     return;
   }
-  FXL_NOTREACHED();
+  FX_NOTREACHED();
 }
 
 }  // namespace display

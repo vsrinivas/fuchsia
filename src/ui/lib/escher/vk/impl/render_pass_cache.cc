@@ -84,7 +84,7 @@ const impl::RenderPassPtr& RenderPassCache::ObtainRenderPass(const RenderPassInf
     if (!unexpected_lazy_creation_callback_ || !unexpected_lazy_creation_callback_(rpi)) {
       // We're returning "const Ptr&" not "Ptr", so we must return a reference to a value that won't
       // immediately go out of scope.
-      FXL_LOG(WARNING) << "lazy render-pass creation is not allowed for: " << rpi;
+      FX_LOGS(WARNING) << "lazy render-pass creation is not allowed for: " << rpi;
       const static impl::RenderPassPtr null_ptr;
       return null_ptr;
     }
@@ -94,7 +94,7 @@ const impl::RenderPassPtr& RenderPassCache::ObtainRenderPass(const RenderPassInf
 
   auto pair = render_passes_.insert(
       std::make_pair(hash, fxl::MakeRefCounted<impl::RenderPass>(recycler_, rpi)));
-  FXL_DCHECK(pair.second);
+  FX_DCHECK(pair.second);
   return pair.first->second;
 }
 

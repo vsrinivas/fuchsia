@@ -49,7 +49,7 @@ class LogMessage {
   FXL_DISALLOW_COPY_AND_ASSIGN(LogMessage);
 };
 
-// LogFirstNState is used by the macro FXL_LOG_FIRST_N below.
+// LogFirstNState is used by the macro FX_LOGS_FIRST_N below.
 class LogFirstNState {
  public:
   bool ShouldLog(uint32_t n);
@@ -58,7 +58,7 @@ class LogFirstNState {
   std::atomic<uint32_t> counter_{0};
 };
 
-// Gets the FXL_VLOG default verbosity level.
+// Gets the FX_VLOGS default verbosity level.
 int GetVlogVerbosity();
 
 // Returns true if |severity| is at or above the current minimum log level.
@@ -67,31 +67,30 @@ bool ShouldCreateLogMessage(LogSeverity severity);
 
 }  // namespace fxl
 
-#define FXL_LOG_STREAM(severity, tag) \
+#define FX_LOG_STREAM(severity, tag) \
   ::fxl::LogMessage(::fxl::LOG_##severity, __FILE__, __LINE__, nullptr, tag).stream()
 
-#define FXL_LOG_STREAM_STATUS(severity, status, tag) \
+#define FX_LOG_STREAM_STATUS(severity, status, tag) \
   ::fxl::LogMessage(::fxl::LOG_##severity, __FILE__, __LINE__, nullptr, tag, status).stream()
 
-#define FXL_LAZY_STREAM(stream, condition) \
+#define FX_LAZY_STREAM(stream, condition) \
   !(condition) ? (void)0 : ::fxl::LogMessageVoidify() & (stream)
 
-#define FXL_EAT_STREAM_PARAMETERS(ignored)         \
+#define FX_EAT_STREAM_PARAMETERS(ignored)          \
   true || (ignored) ? (void)0                      \
                     : ::fxl::LogMessageVoidify() & \
                           ::fxl::LogMessage(::fxl::LOG_FATAL, 0, 0, nullptr, nullptr).stream()
 
-#define FXL_LOG_IS_ON(severity) (::fxl::ShouldCreateLogMessage(::fxl::LOG_##severity))
+#define FX_LOG_IS_ON(severity) (::fxl::ShouldCreateLogMessage(::fxl::LOG_##severity))
 
-#define FXL_LOG(severity) FXL_LOGT(severity, nullptr)
+#define FX_LOGS(severity) FX_LOGST(severity, nullptr)
 
-#define FXL_LOGT(severity, tag) \
-  FXL_LAZY_STREAM(FXL_LOG_STREAM(severity, tag), FXL_LOG_IS_ON(severity))
+#define FX_LOGST(severity, tag) FX_LAZY_STREAM(FX_LOG_STREAM(severity, tag), FX_LOG_IS_ON(severity))
 
 #if defined(__Fuchsia__)
-#define FXL_PLOGT(severity, tag, status) \
-  FXL_LAZY_STREAM(FXL_LOG_STREAM_STATUS(severity, status, tag), FXL_LOG_IS_ON(severity))
-#define FXL_PLOG(severity, status) FXL_PLOGT(severity, nullptr, status)
+#define FX_PLOGST(severity, tag, status) \
+  FX_LAZY_STREAM(FX_LOG_STREAM_STATUS(severity, status, tag), FX_LOG_IS_ON(severity))
+#define FX_PLOGS(severity, status) FX_PLOGST(severity, nullptr, status)
 #endif
 
 // Writes a message to the global logger, the first |n| times that any callsite
@@ -108,45 +107,45 @@ bool ShouldCreateLogMessage(LogSeverity severity);
 //
 // C++ does not allow us to introduce two new variables into a single for loop
 // scope and we need |do_log| so that the inner for loop doesn't execute twice.
-#define FXL_FIRST_N(n, log_statement)                                                        \
+#define FX_FIRST_N(n, log_statement)                                                         \
   for (bool do_log = true; do_log; do_log = false)                                           \
     for (static ::fxl::LogFirstNState internal_state; do_log && internal_state.ShouldLog(n); \
          do_log = false)                                                                     \
   log_statement
-#define FXL_LOG_FIRST_N(severity, n) FXL_FIRST_N(n, FXL_LOG(severity))
-#define FXL_LOGT_FIRST_N(severity, n, tag) FXL_FIRST_N(n, FXL_LOGT(severity, tag))
+#define FX_LOGS_FIRST_N(severity, n) FX_FIRST_N(n, FX_LOGS(severity))
+#define FX_LOGST_FIRST_N(severity, n, tag) FX_FIRST_N(n, FX_LOGST(severity, tag))
 
-#define FXL_CHECK(condition) FXL_CHECKT(condition, nullptr)
+#define FX_CHECK(condition) FX_CHECKT(condition, nullptr)
 
-#define FXL_CHECKT(condition, tag)                                                       \
-  FXL_LAZY_STREAM(                                                                       \
+#define FX_CHECKT(condition, tag)                                                        \
+  FX_LAZY_STREAM(                                                                        \
       ::fxl::LogMessage(::fxl::LOG_FATAL, __FILE__, __LINE__, #condition, tag).stream(), \
       !(condition))
 
-#define FXL_VLOG_IS_ON(verbose_level) ((verbose_level) <= ::fxl::GetVlogVerbosity())
+#define FX_VLOG_IS_ON(verbose_level) ((verbose_level) <= ::fxl::GetVlogVerbosity())
 
 // The VLOG macros log with negative verbosities.
-#define FXL_VLOG_STREAM(verbose_level, tag) \
+#define FX_VLOG_STREAM(verbose_level, tag) \
   ::fxl::LogMessage(-verbose_level, __FILE__, __LINE__, nullptr, tag).stream()
 
-#define FXL_VLOG(verbose_level) \
-  FXL_LAZY_STREAM(FXL_VLOG_STREAM(verbose_level, nullptr), FXL_VLOG_IS_ON(verbose_level))
+#define FX_VLOGS(verbose_level) \
+  FX_LAZY_STREAM(FX_VLOG_STREAM(verbose_level, nullptr), FX_VLOG_IS_ON(verbose_level))
 
-#define FXL_VLOGT(verbose_level, tag) \
-  FXL_LAZY_STREAM(FXL_VLOG_STREAM(verbose_level, tag), FXL_VLOG_IS_ON(verbose_level))
+#define FX_VLOGST(verbose_level, tag) \
+  FX_LAZY_STREAM(FX_VLOG_STREAM(verbose_level, tag), FX_VLOG_IS_ON(verbose_level))
 
 #ifndef NDEBUG
-#define FXL_DLOG(severity) FXL_LOG(severity)
-#define FXL_DVLOG(verbose_level) FXL_VLOG(verbose_level)
-#define FXL_DCHECK(condition) FXL_CHECK(condition)
+#define FX_DLOGS(severity) FX_LOGS(severity)
+#define FX_DVLOGS(verbose_level) FX_VLOGS(verbose_level)
+#define FX_DCHECK(condition) FX_CHECK(condition)
 #else
-#define FXL_DLOG(severity) FXL_EAT_STREAM_PARAMETERS(true)
-#define FXL_DVLOG(verbose_level) FXL_EAT_STREAM_PARAMETERS(true)
-#define FXL_DCHECK(condition) FXL_EAT_STREAM_PARAMETERS(condition)
+#define FX_DLOGS(severity) FX_EAT_STREAM_PARAMETERS(true)
+#define FX_DVLOGS(verbose_level) FX_EAT_STREAM_PARAMETERS(true)
+#define FX_DCHECK(condition) FX_EAT_STREAM_PARAMETERS(condition)
 #endif
 
-#define FXL_NOTREACHED() FXL_DCHECK(false)
+#define FX_NOTREACHED() FX_DCHECK(false)
 
-#define FXL_NOTIMPLEMENTED() FXL_LOG(ERROR) << "Not implemented in: " << __PRETTY_FUNCTION__
+#define FX_NOTIMPLEMENTED() FX_LOGS(ERROR) << "Not implemented in: " << __PRETTY_FUNCTION__
 
 #endif  // SRC_LIB_FXL_LOGGING_H_

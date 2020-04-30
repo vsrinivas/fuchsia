@@ -13,12 +13,12 @@ namespace zxdb {
 Console* Console::singleton_ = nullptr;
 
 Console::Console(Session* session) : context_(session), weak_factory_(this) {
-  FXL_DCHECK(!singleton_);
+  FX_DCHECK(!singleton_);
   singleton_ = this;
 }
 
 Console::~Console() {
-  FXL_DCHECK(singleton_ == this);
+  FX_DCHECK(singleton_ == this);
   singleton_ = nullptr;
 
   // Clear backpointers bound with the callbacks for any pending async buffers.
@@ -54,7 +54,7 @@ void Console::Output(fxl::RefPtr<AsyncOutputBuffer> output) {
       Output(output_ptr->DestructiveFlatten());
 
       auto found = async_output_.find(output_ptr);
-      FXL_DCHECK(found != async_output_.end());
+      FX_DCHECK(found != async_output_.end());
 
       // Clear the completion callback out of paranoia.
       async_output_.erase(found);

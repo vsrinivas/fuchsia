@@ -39,7 +39,7 @@ bool TimerManager::isReady(const std::unique_ptr<TimerVal>& timer_val_ptr) {
   if (!timer_val_ptr) {
     return false;
   }
-  FXL_DCHECK(timer_val_ptr->start_timestamp > 0 && timer_val_ptr->end_timestamp > 0)
+  FX_DCHECK(timer_val_ptr->start_timestamp > 0 && timer_val_ptr->end_timestamp > 0)
       << "Incomplete timer was returned.";
   return true;
 }
@@ -47,15 +47,15 @@ bool TimerManager::isReady(const std::unique_ptr<TimerVal>& timer_val_ptr) {
 bool TimerManager::isValidTimerArguments(fidl::StringPtr timer_id, int64_t timestamp,
                                          uint32_t timeout_s) {
   if (!timer_id.has_value() || timer_id.value().empty()) {
-    FXL_DLOG(ERROR) << "Invalid timer_id.";
+    FX_DLOGS(ERROR) << "Invalid timer_id.";
     return false;
   }
   if (timestamp <= 0) {
-    FXL_DLOG(ERROR) << "Invalid timestamp.";
+    FX_DLOGS(ERROR) << "Invalid timestamp.";
     return false;
   }
   if (timeout_s <= 0 || timeout_s > kMaxTimerTimeout) {
-    FXL_DLOG(ERROR) << "Invalid timeout_s.";
+    FX_DLOGS(ERROR) << "Invalid timeout_s.";
     return false;
   }
   return true;
@@ -180,7 +180,7 @@ void TimerManager::MoveTimerToTimerVal(
     std::unique_ptr<TimerVal>* timer_val_ptr) {
   zx_status_t status = (*timer_val_iter)->second->expiry_task.Cancel();
   if (status != ZX_OK & status != ZX_ERR_BAD_STATE) {
-    FXL_DLOG(ERROR) << "Failed to cancel task: status = " << status;
+    FX_DLOGS(ERROR) << "Failed to cancel task: status = " << status;
   }
 
   *timer_val_ptr = std::move((*timer_val_iter)->second);
@@ -194,13 +194,13 @@ void TimerManager::ScheduleExpiryTask(const std::string& timer_id, uint32_t time
   (*timer_val_ptr)
       ->expiry_task.set_handler([this, timer_id, me = &((*timer_val_ptr)->expiry_task)] {
         auto timer_val_iter = timer_values_.find(timer_id);
-        FXL_DCHECK(&(timer_val_iter->second->expiry_task) == me);
+        FX_DCHECK(&(timer_val_iter->second->expiry_task) == me);
         timer_values_.erase(timer_val_iter);
       });
 
   zx_status_t status = (*timer_val_ptr)->expiry_task.PostDelayed(dispatcher_, zx::sec(timeout_s));
   if (status != ZX_OK & status != ZX_ERR_BAD_STATE) {
-    FXL_DLOG(ERROR) << "Failed to post task: status = " << status;
+    FX_DLOGS(ERROR) << "Failed to post task: status = " << status;
   }
 }
 }  // namespace cobalt

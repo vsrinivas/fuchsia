@@ -46,15 +46,15 @@ int main(int argc, const char** argv) {
     return 1;
   }
 
-  FXL_LOG(WARNING) << "BE ADVISED: The present_view tool takes the URL to an "
+  FX_LOGS(WARNING) << "BE ADVISED: The present_view tool takes the URL to an "
                       "app that provided the ViewProvider interface and makes "
                       "its view the root view.";
-  FXL_LOG(WARNING) << "This tool is intended for testing and debugging purposes "
+  FX_LOGS(WARNING) << "This tool is intended for testing and debugging purposes "
                       "only and may cause problems if invoked incorrectly.";
-  FXL_LOG(WARNING) << "Do not invoke present_view if a view tree already exists "
+  FX_LOGS(WARNING) << "Do not invoke present_view if a view tree already exists "
                       "(i.e. if any process that creates a view is already "
                       "running).";
-  FXL_LOG(WARNING) << "If scenic is already running on your system you "
+  FX_LOGS(WARNING) << "If scenic is already running on your system you "
                       "will probably want to kill it before invoking this tool.";
 
   present_view::ViewInfo view_info = ParseCommandLine(command_line);
@@ -63,7 +63,7 @@ int main(int argc, const char** argv) {
   int retval = 0;
   bool present_success =
       present_view.Present(std::move(view_info), [&loop, &retval](zx_status_t status) {
-        FXL_LOG(INFO) << "Launched component terminated; status: " << status;
+        FX_LOGS(INFO) << "Launched component terminated; status: " << status;
         retval = 1;
         loop.Quit();
       });

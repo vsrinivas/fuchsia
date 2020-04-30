@@ -19,7 +19,6 @@
 #include <string>
 
 #include "garnet/lib/debugger_utils/util.h"
-
 #include "src/lib/files/directory.h"
 #include "src/lib/files/path.h"
 #include "src/lib/fxl/logging.h"
@@ -46,8 +45,8 @@ static void UnmapFile(void* map, size_t size) { munmap(map, size); }
 std::unique_ptr<DecoderState> DecoderState::Create(const DecoderConfig& config) {
   auto decoder = std::unique_ptr<DecoderState>(new DecoderState());
 
-  FXL_DCHECK(config.pt_file_name != "" || config.pt_list_file_name != "");
-  FXL_DCHECK(config.ktrace_file_name != "");
+  FX_DCHECK(config.pt_file_name != "" || config.pt_list_file_name != "");
+  FX_DCHECK(config.ktrace_file_name != "");
 
   if (!decoder->AllocImage("ipt-dump"))
     return nullptr;
@@ -104,12 +103,12 @@ DecoderState::~DecoderState() {
 
 Process::Process(zx_koid_t p, uint64_t c, uint64_t start, uint64_t end)
     : pid(p), cr3(c), start_time(start), end_time(end) {
-  FXL_VLOG(2) << fxl::StringPrintf("pid %" PRIu64 " cr3 0x%" PRIx64 " start %" PRIu64, pid, cr3,
+  FX_VLOGS(2) << fxl::StringPrintf("pid %" PRIu64 " cr3 0x%" PRIx64 " start %" PRIu64, pid, cr3,
                                    start_time);
 }
 
 PtFile::PtFile(uint64_t i, const std::string& f) : id(i), file(f) {
-  FXL_VLOG(2) << fxl::StringPrintf("pt_file %" PRIu64 ", file %s", id, file.c_str());
+  FX_VLOGS(2) << fxl::StringPrintf("pt_file %" PRIu64 ", file %s", id, file.c_str());
 }
 
 const Process* DecoderState::LookupProcessByPid(zx_koid_t pid) {
@@ -159,7 +158,7 @@ int DecoderState::ReadMemCallback(uint8_t* buffer, size_t size, const struct pt_
 
   auto proc = decoder->LookupProcessByCr3(cr3);
   if (!proc) {
-    FXL_VLOG(1) << fxl::StringPrintf(
+    FX_VLOGS(1) << fxl::StringPrintf(
         "process lookup failed for cr3:"
         " 0x%" PRIx64,
         cr3);
@@ -169,7 +168,7 @@ int DecoderState::ReadMemCallback(uint8_t* buffer, size_t size, const struct pt_
 
   auto map = decoder->LookupMapEntry(proc->pid, addr);
   if (!map) {
-    FXL_VLOG(1) << fxl::StringPrintf(
+    FX_VLOGS(1) << fxl::StringPrintf(
         "map lookup failed for cr3/addr:"
         " 0x%" PRIx64 "/0x%" PRIx64,
         cr3, addr);
@@ -178,7 +177,7 @@ int DecoderState::ReadMemCallback(uint8_t* buffer, size_t size, const struct pt_
 
   auto bid = decoder->LookupBuildId(map->build_id);
   if (!bid) {
-    FXL_VLOG(1) << fxl::StringPrintf(
+    FX_VLOGS(1) << fxl::StringPrintf(
         "build_id not found: %s, for cr3/addr:"
         " 0x%" PRIx64 "/0x%" PRIx64,
         map->build_id.c_str(), cr3, addr);
@@ -187,7 +186,7 @@ int DecoderState::ReadMemCallback(uint8_t* buffer, size_t size, const struct pt_
 
   auto file = decoder->LookupFile(bid->file);
   if (!file.size()) {
-    FXL_VLOG(1) << fxl::StringPrintf(
+    FX_VLOGS(1) << fxl::StringPrintf(
         "file not found: %s, for build_id %s, cr3/addr:"
         " 0x%" PRIx64 "/0x%" PRIx64,
         bid->file.c_str(), map->build_id.c_str(), cr3, addr);
@@ -195,7 +194,7 @@ int DecoderState::ReadMemCallback(uint8_t* buffer, size_t size, const struct pt_
   }
 
   if (!decoder->ReadElf(file.c_str(), map->base_addr, cr3, 0, map->end_addr - map->load_addr)) {
-    FXL_VLOG(1) << "Reading ELF file failed: " << file;
+    FX_VLOGS(1) << "Reading ELF file failed: " << file;
     return -pte_nomap;
   }
 
@@ -203,10 +202,10 @@ int DecoderState::ReadMemCallback(uint8_t* buffer, size_t size, const struct pt_
 }
 
 bool DecoderState::AllocImage(const std::string& name) {
-  FXL_DCHECK(!image_);
+  FX_DCHECK(!image_);
 
   struct pt_image* image = pt_image_alloc(name.c_str());
-  FXL_DCHECK(image);
+  FX_DCHECK(image);
 
   pt_image_set_callback(image, ReadMemCallback, this);
 
@@ -216,14 +215,14 @@ bool DecoderState::AllocImage(const std::string& name) {
 }
 
 bool DecoderState::AddProcess(zx_koid_t pid, uint64_t cr3, uint64_t start_time) {
-  FXL_VLOG(2) << fxl::StringPrintf("New process: %" PRIu64 ", cr3 0x%" PRIx64 " @%" PRIu64, pid,
+  FX_VLOGS(2) << fxl::StringPrintf("New process: %" PRIu64 ", cr3 0x%" PRIx64 " @%" PRIu64, pid,
                                    cr3, start_time);
   processes_.push_back(Process(pid, cr3, start_time, 0));
   return true;
 }
 
 bool DecoderState::MarkProcessExited(zx_koid_t pid, uint64_t end_time) {
-  FXL_VLOG(2) << fxl::StringPrintf("Marking process exit: %" PRIu64 " @%" PRIu64, pid, end_time);
+  FX_VLOGS(2) << fxl::StringPrintf("Marking process exit: %" PRIu64 " @%" PRIu64, pid, end_time);
 
   // We don't remove the process as process start/exit records are read in
   // one pass over the ktrace file. Instead just mark when it exited.
@@ -256,7 +255,7 @@ void DecoderState::AddPtFile(const std::string& file_dir, uint64_t id, const std
 bool DecoderState::AllocDecoder(const std::string& pt_file_name) {
   unsigned zero = 0;
 
-  FXL_DCHECK(decoder_ == nullptr);
+  FX_DCHECK(decoder_ == nullptr);
 
   pt_cpu_errata(&config_.errata, &config_.cpu);
   // When no bit is set, set all, as libipt does not keep up with newer
@@ -286,7 +285,7 @@ bool DecoderState::AllocDecoder(const std::string& pt_file_name) {
 }
 
 void DecoderState::FreeDecoder() {
-  FXL_DCHECK(decoder_);
+  FX_DCHECK(decoder_);
   pt_insn_free_decoder(decoder_);
   decoder_ = nullptr;
 }

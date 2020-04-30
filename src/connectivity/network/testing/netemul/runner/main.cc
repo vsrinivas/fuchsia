@@ -53,13 +53,13 @@ int main(int argc, const char** argv) {
 
     int root = open("/", O_RDONLY);
     if (!args.ParseFromCmxFileAt(root, definition)) {
-      FXL_LOG(ERROR) << "Parsing test definition failed";
+      FX_LOGS(ERROR) << "Parsing test definition failed";
       return 1;
     }
 
     Sandbox sandbox(std::move(args));
     sandbox.SetTerminationCallback([](SandboxResult result) {
-      FXL_LOG(INFO) << "Sandbox terminated with status: " << result;
+      FX_LOGS(INFO) << "Sandbox terminated with status: " << result;
       int64_t exit = result.is_success() ? 0 : 1;
       zx_process_exit(exit);
     });

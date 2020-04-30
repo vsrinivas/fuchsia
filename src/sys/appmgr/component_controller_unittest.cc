@@ -357,7 +357,7 @@ TEST_F(ComponentControllerTest, DetachController) {
     auto component = CreateComponent(component_ptr);
     component_ptr.events().OnTerminated = [&](int64_t return_code,
                                               TerminationReason termination_reason) {
-      FXL_LOG(ERROR) << "OnTerminated called: " << return_code
+      FX_LOGS(ERROR) << "OnTerminated called: " << return_code
                      << ", : " << static_cast<uint32_t>(termination_reason);
       wait = true;
     };

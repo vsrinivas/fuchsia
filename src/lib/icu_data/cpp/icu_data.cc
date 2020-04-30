@@ -82,13 +82,13 @@ zx_status_t InitializeWithTzResourceDirAndValidate(const char tz_files_dir[],
   if (tz_revision_file_path) {
     std::ifstream in(tz_revision_file_path);
     if (in.fail()) {
-      FXL_LOG(WARNING) << "could not read: " << tz_revision_file_path;
+      FX_LOGS(WARNING) << "could not read: " << tz_revision_file_path;
       return ZX_ERR_IO;
     }
     expected_tz_revision_id =
         std::string(std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>());
     if (expected_tz_revision_id->length() != kRevisionIdLength) {
-      FXL_LOG(WARNING) << "corrupted time zone revision ID: " << expected_tz_revision_id.value();
+      FX_LOGS(WARNING) << "corrupted time zone revision ID: " << expected_tz_revision_id.value();
       return ZX_ERR_IO_DATA_INTEGRITY;
     }
   } else {
@@ -97,7 +97,7 @@ zx_status_t InitializeWithTzResourceDirAndValidate(const char tz_files_dir[],
 
   fsl::SizedVmo icu_data;
   if (!fsl::VmoFromFilename(kIcuDataPath, &icu_data)) {
-    FXL_LOG(ERROR) << "could not create VMO from filename: " << kIcuDataPath;
+    FX_LOGS(ERROR) << "could not create VMO from filename: " << kIcuDataPath;
     return ZX_ERR_IO;
   }
 
@@ -113,7 +113,7 @@ zx_status_t InitializeWithTzResourceDirAndValidate(const char tz_files_dir[],
     if (err != U_ZERO_ERROR) {
       icu::ErrorCode ec;
       ec.set(err);
-      FXL_LOG(WARNING) << "failed to set common data: " << ec.errorName();
+      FX_LOGS(WARNING) << "failed to set common data: " << ec.errorName();
       return ZX_ERR_INTERNAL;
     }
 
@@ -123,11 +123,11 @@ zx_status_t InitializeWithTzResourceDirAndValidate(const char tz_files_dir[],
       if (err != U_ZERO_ERROR) {
         icu::ErrorCode ec;
         ec.set(err);
-        FXL_LOG(WARNING) << "could not get tzdata version: " << ec.errorName();
+        FX_LOGS(WARNING) << "could not get tzdata version: " << ec.errorName();
         return ZX_ERR_INTERNAL;
       }
       if (expected_tz_revision_id != std::string(actual_tz_revision_id, kRevisionIdLength)) {
-        FXL_LOG(WARNING) << "mismatched revision id: " << actual_tz_revision_id
+        FX_LOGS(WARNING) << "mismatched revision id: " << actual_tz_revision_id
                          << ", expected: " << expected_tz_revision_id.value();
         return ZX_ERR_IO_DATA_INTEGRITY;
       }

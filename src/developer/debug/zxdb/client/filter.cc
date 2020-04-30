@@ -37,7 +37,7 @@ SettingValue Filter::Settings::GetStorageValue(const std::string& key) const {
 
 Err Filter::Settings::SetStorageValue(const std::string& key, SettingValue value) {
   // Schema should have been validated before here.
-  FXL_DCHECK(key == ClientSettings::Filter::kPattern);
+  FX_DCHECK(key == ClientSettings::Filter::kPattern);
   filter_->pattern_ = value.get_string();
   return Err();
 }

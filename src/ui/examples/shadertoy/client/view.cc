@@ -33,7 +33,7 @@ ViewImpl::ViewImpl(sys::ComponentContext* component_context, scenic::Session* se
           component_context_->svc()->Connect<fuchsia::examples::shadertoy::ShadertoyFactory>()),
       start_time_(zx_clock_get_monotonic()) {
   shadertoy_factory_.set_error_handler([this](zx_status_t status) {
-    FXL_LOG(INFO) << "Lost connection to ShadertoyFactory.";
+    FX_LOGS(INFO) << "Lost connection to ShadertoyFactory.";
     QuitLoop();
   });
 
@@ -43,7 +43,7 @@ ViewImpl::ViewImpl(sys::ComponentContext* component_context, scenic::Session* se
   auto image_pipe_request = image_pipe_handle.NewRequest();
   shadertoy_factory_->NewImagePipeShadertoy(shadertoy_.NewRequest(), std::move(image_pipe_handle));
   shadertoy_.set_error_handler([this](zx_status_t status) {
-    FXL_LOG(INFO) << "Lost connection to Shadertoy.";
+    FX_LOGS(INFO) << "Lost connection to Shadertoy.";
     QuitLoop();
   });
 
@@ -52,10 +52,10 @@ ViewImpl::ViewImpl(sys::ComponentContext* component_context, scenic::Session* se
   shadertoy_->SetResolution(kShapeWidth, kShapeHeight);
   shadertoy_->SetShaderCode(GetSeascapeSourceCode(), [this](bool success) {
     if (success) {
-      FXL_LOG(INFO) << "GLSL code was successfully compiled.";
+      FX_LOGS(INFO) << "GLSL code was successfully compiled.";
       shadertoy_->SetPaused(false);
     } else {
-      FXL_LOG(ERROR) << "GLSL code compilation failed";
+      FX_LOGS(ERROR) << "GLSL code compilation failed";
       QuitLoop();
     }
   });
@@ -138,7 +138,7 @@ bool ViewImpl::PointerDown() {
       break;
     default:
       // This will never happen, because we checked above that we're not in a transitional state.
-      FXL_NOTREACHED() << "already in transition.";
+      FX_NOTREACHED() << "already in transition.";
   }
   return true;
 }
@@ -223,7 +223,7 @@ void ShadertoyClientView::OnInputEvent(fuchsia::ui::input::InputEvent event) {
 }
 
 void ShadertoyClientView::OnScenicError(std::string error) {
-  FXL_LOG(ERROR) << "Received Scenic Session error: " << error;
+  FX_LOGS(ERROR) << "Received Scenic Session error: " << error;
 }
 
 }  // namespace shadertoy_client

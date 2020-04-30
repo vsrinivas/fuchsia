@@ -38,7 +38,7 @@ static void LoadShadersFromDisk(HackFilesystemPtr fs) {
       // Pose buffer latching compute shader, from pose_buffer_latching_shader.cc.
       "shaders/shaders_compute_pose_buffer_latching_comp14695981039346656037.spirv",
   };
-  FXL_CHECK(fs->InitializeWithRealFiles(paths));
+  FX_CHECK(fs->InitializeWithRealFiles(paths));
 }
 #endif
 
@@ -57,13 +57,13 @@ bool GlobalEscherUsesSwiftShader() {
 }
 
 void EscherEnvironment::RegisterGlobalTestEnvironment() {
-  FXL_CHECK(global_escher_environment_ == nullptr);
+  FX_CHECK(global_escher_environment_ == nullptr);
   global_escher_environment_ = static_cast<escher::test::EscherEnvironment*>(
       testing::AddGlobalTestEnvironment(new escher::test::EscherEnvironment));
 }
 
 EscherEnvironment* EscherEnvironment::GetGlobalTestEnvironment() {
-  FXL_CHECK(global_escher_environment_ != nullptr);
+  FX_CHECK(global_escher_environment_ != nullptr);
   return global_escher_environment_;
 }
 
@@ -98,7 +98,7 @@ void EscherEnvironment::SetUp() {
     LoadShadersFromDisk(hack_filesystem_);
 #endif
     escher_ = std::make_unique<Escher>(vulkan_device_, hack_filesystem_);
-    FXL_CHECK(escher_);
+    FX_CHECK(escher_);
 
 #if ESCHER_USE_RUNTIME_GLSL
     escher::GlslangInitializeProcess();

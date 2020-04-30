@@ -46,7 +46,7 @@ bool FuchsiaDataSource::InitializeWithRealFiles(const std::vector<HackFilePath>&
     success &= LoadFile(this, kRoot, path);
 
     auto segs = StrSplit(path, "/");
-    FXL_DCHECK(segs.size() > 0);
+    FX_DCHECK(segs.size() > 0);
     auto dir = root_dir_.get();
     for (size_t i = 0; i + 1 < segs.size(); ++i) {
       const auto& seg = segs[i];
@@ -55,7 +55,7 @@ bool FuchsiaDataSource::InitializeWithRealFiles(const std::vector<HackFilePath>&
         auto node = std::make_unique<vfs::PseudoDir>();
         subdir = node.get();
         auto status = dir->AddEntry(seg, std::move(node));
-        FXL_DCHECK(ZX_OK == status);
+        FX_DCHECK(ZX_OK == status);
         if (status != ZX_OK) {
           return false;  // don't hang the system
         }
@@ -71,7 +71,7 @@ bool FuchsiaDataSource::InitializeWithRealFiles(const std::vector<HackFilePath>&
               auto out = ReadFile(path);
               size_t len = out.length();
               if (len > max_file_size) {
-                FXL_LOG(WARNING) << "File(" << path << ") size more than: " << max_file_size
+                FX_LOGS(WARNING) << "File(" << path << ") size more than: " << max_file_size
                                  << ", truncating";
                 len = max_file_size;
               }
@@ -85,13 +85,13 @@ bool FuchsiaDataSource::InitializeWithRealFiles(const std::vector<HackFilePath>&
               // terminal would complain "truncate: Invalid argument".
               HackFileContents content(input.size(), 0);
               std::copy(input.begin(), input.begin() + input.size(), content.begin());
-              FXL_LOG(INFO) << "Updated file: " << path;
+              FX_LOGS(INFO) << "Updated file: " << path;
               WriteFile(path, std::move(content));
               return ZX_OK;
             }));
 
     if (status != ZX_OK && status != ZX_ERR_ALREADY_EXISTS) {
-      FXL_LOG(WARNING) << "Failed to AddEntry(): " << status;
+      FX_LOGS(WARNING) << "Failed to AddEntry(): " << status;
       success = false;
     }
   }

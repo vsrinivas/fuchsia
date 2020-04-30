@@ -63,7 +63,7 @@ class Worker {
 
   void SetProfile(const zx::unowned_profile& profile) {
     const auto status = zx::thread::self()->set_profile(*profile, 0);
-    FXL_CHECK(status == ZX_OK);
+    FX_CHECK(status == ZX_OK);
   }
 
   void Exit() { early_exit_ = true; }
@@ -83,7 +83,7 @@ class Worker {
 
     NullLock lock;
     ready_condition_.wait_for(lock, kTimeoutSeconds, [count] { return ready_count() == count; });
-    FXL_CHECK(ready_count() == count) << "ready_count=" << ready_count() << " count=" << count;
+    FX_CHECK(ready_count() == count) << "ready_count=" << ready_count() << " count=" << count;
   }
 
   static void StartAll() { sync_completion_signal(&start_completion_); }
@@ -93,7 +93,7 @@ class Worker {
 
     // Exit any indefinite port_wait syscalls.
     const auto status = PortObject::GetTerminateEvent()->signal(0, PortObject::kTerminateSignal);
-    FXL_CHECK(status == ZX_OK) << "Failed to send signal to terminate event: " << status;
+    FX_CHECK(status == ZX_OK) << "Failed to send signal to terminate event: " << status;
   }
 
   std::chrono::nanoseconds total_runtime() const {
@@ -117,16 +117,16 @@ class Worker {
     if (std::holds_alternative<int>(priority_)) {
       auto profile = GetProfile(std::get<int>(priority_));
       const auto status = zx::thread::self()->set_profile(*profile, 0);
-      FXL_CHECK(status == ZX_OK) << "Failed to set worker " << id_ << " to priority "
-                                 << std::get<int>(priority_) << "!";
+      FX_CHECK(status == ZX_OK) << "Failed to set worker " << id_ << " to priority "
+                                << std::get<int>(priority_) << "!";
     } else if (std::holds_alternative<WorkerConfig::DeadlineParams>(priority_)) {
       const auto params = std::get<WorkerConfig::DeadlineParams>(priority_);
       auto profile = GetProfile(params.capacity, params.deadline, params.period);
       const auto status = zx::thread::self()->set_profile(*profile, 0);
-      FXL_CHECK(status == ZX_OK) << "Failed to set worker " << id_
-                                 << " to {capacity=" << params.capacity.get()
-                                 << ", deadline=" << params.deadline.get()
-                                 << ", period=" << params.period.get() << "}!";
+      FX_CHECK(status == ZX_OK) << "Failed to set worker " << id_
+                                << " to {capacity=" << params.capacity.get()
+                                << ", deadline=" << params.deadline.get()
+                                << ", period=" << params.period.get() << "}!";
     }
 
     // Setup the actions on this worker.
@@ -140,7 +140,7 @@ class Worker {
       ready_condition_.notify_one();
 
       const auto status = sync_completion_wait(&start_completion_, ZX_TIME_INFINITE);
-      FXL_CHECK(status == ZX_OK) << "Failed to wait for start condition: status=" << status;
+      FX_CHECK(status == ZX_OK) << "Failed to wait for start condition: status=" << status;
     }
 
     zx_info_thread_stats_t thread_stats{};

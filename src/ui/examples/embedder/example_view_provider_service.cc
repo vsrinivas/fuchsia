@@ -13,7 +13,7 @@ namespace embedder {
 ExampleViewProviderService::ExampleViewProviderService(sys::ComponentContext* component_ctx,
                                                        ViewFactory factory)
     : component_ctx_(component_ctx), view_factory_fn_(std::move(factory)) {
-  FXL_DCHECK(component_ctx_);
+  FX_DCHECK(component_ctx_);
 
   component_ctx->outgoing()->AddPublicService<fuchsia::ui::app::ViewProvider>(
       [this](fidl::InterfaceRequest<fuchsia::ui::app::ViewProvider> request) {

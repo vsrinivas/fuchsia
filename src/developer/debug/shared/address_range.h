@@ -17,7 +17,7 @@ class AddressRange {
  public:
   constexpr AddressRange() = default;
   constexpr AddressRange(uint64_t begin, uint64_t end) : begin_(begin), end_(end) {
-    FXL_DCHECK(end_ >= begin_);
+    FX_DCHECK(end_ >= begin_);
   }
 
   constexpr uint64_t begin() const { return begin_; }

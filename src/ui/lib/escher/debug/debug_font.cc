@@ -21,7 +21,7 @@ std::unique_ptr<DebugFont> DebugFont::New(BatchGpuUploader* uploader, ImageFacto
   return std::unique_ptr<DebugFont>(new DebugFont(std::move(image)));
 }
 
-DebugFont::DebugFont(ImagePtr image) : image_(std::move(image)) { FXL_DCHECK(image_); }
+DebugFont::DebugFont(ImagePtr image) : image_(std::move(image)) { FX_DCHECK(image_); }
 
 void DebugFont::Blit(CommandBuffer* cb, const std::string& text, const ImagePtr& target,
                      vk::Offset2D offset, int32_t scale) {

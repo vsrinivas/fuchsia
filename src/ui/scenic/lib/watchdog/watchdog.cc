@@ -23,7 +23,7 @@ WatchdogImpl::WatchdogImpl(uint64_t warning_interval_ms, uint64_t timeout_ms,
       watched_thread_dispatcher_(watched_thread_dispatcher),
       run_update_fn_(std::move(run_update_fn)),
       check_update_fn_(std::move(check_update_fn)) {
-  FXL_DCHECK(timeout_ms >= warning_interval_ms);
+  FX_DCHECK(timeout_ms >= warning_interval_ms);
   for (size_t i = 0; i < kPollingNum; i++) {
     post_update_tasks_.push_back(std::make_unique<PostUpdateTaskClosureMethod>(this));
   }
@@ -32,19 +32,19 @@ WatchdogImpl::WatchdogImpl(uint64_t warning_interval_ms, uint64_t timeout_ms,
 
 WatchdogImpl::~WatchdogImpl() {
   std::lock_guard<std::mutex> lock(mutex_);
-  FXL_DCHECK(!initialized_ || finalized_);
+  FX_DCHECK(!initialized_ || finalized_);
 }
 
 void WatchdogImpl::Initialize() {
   std::lock_guard<std::mutex> lock(mutex_);
-  FXL_DCHECK(!initialized_ && !finalized_);
+  FX_DCHECK(!initialized_ && !finalized_);
   initialized_ = true;
   PostTasks();
 }
 
 void WatchdogImpl::Finalize() {
   std::lock_guard<std::mutex> lock(mutex_);
-  FXL_DCHECK(initialized_ && !finalized_);
+  FX_DCHECK(initialized_ && !finalized_);
   finalized_ = true;
   for (auto& post_update_task : post_update_tasks_) {
     post_update_task->Cancel();
@@ -69,15 +69,15 @@ void WatchdogImpl::HandleTimer() {
 
     backtrace_request();
 
-    FXL_LOG(WARNING) << "The watched thread is not responsive for " << warning_interval_.to_msecs()
+    FX_LOGS(WARNING) << "The watched thread is not responsive for " << warning_interval_.to_msecs()
                      << " ms. "
                      << "It has been " << duration_since_last_response.to_msecs()
                      << " ms since last response. "
                      << "Please see klog for backtrace of all threads.";
 
     if (duration_since_last_response >= timeout_) {
-      FXL_CHECK(false) << "Fatal: Scenic watchdog has detected timeout for more than "
-                       << timeout_.to_msecs() << " ms in Scenic main thread.";
+      FX_CHECK(false) << "Fatal: Scenic watchdog has detected timeout for more than "
+                      << timeout_.to_msecs() << " ms in Scenic main thread.";
     }
   }
 

@@ -59,7 +59,7 @@ Monitor::Monitor(std::unique_ptr<sys::ComponentContext> context,
       component_context_(std::move(context)) {
   auto s = Capture::GetCaptureState(&capture_state_);
   if (s != ZX_OK) {
-    FXL_LOG(ERROR) << "Error getting capture state: " << zx_status_get_string(s);
+    FX_LOGS(ERROR) << "Error getting capture state: " << zx_status_get_string(s);
     exit(EXIT_FAILURE);
   }
 
@@ -79,22 +79,22 @@ Monitor::Monitor(std::unique_ptr<sys::ComponentContext> context,
   if (command_line.GetOptionValue("delay", &delay_as_string)) {
     unsigned delay_as_int;
     if (!fxl::StringToNumberWithError<unsigned>(delay_as_string, &delay_as_int)) {
-      FXL_LOG(ERROR) << "Invalid value for delay: " << delay_as_string;
+      FX_LOGS(ERROR) << "Invalid value for delay: " << delay_as_string;
       exit(-1);
     }
     delay_ = zx::msec(delay_as_int);
   }
   std::string prealloc_as_string;
   if (command_line.GetOptionValue("prealloc", &prealloc_as_string)) {
-    FXL_LOG(INFO) << "prealloc_string: " << prealloc_as_string;
+    FX_LOGS(INFO) << "prealloc_string: " << prealloc_as_string;
     if (!fxl::StringToNumberWithError<uint64_t>(prealloc_as_string, &prealloc_size_)) {
-      FXL_LOG(ERROR) << "Invalid value for prealloc: " << prealloc_as_string;
+      FX_LOGS(ERROR) << "Invalid value for prealloc: " << prealloc_as_string;
       exit(-1);
     }
     prealloc_size_ *= (1024 * 1024);
     auto status = zx::vmo::create(prealloc_size_, 0, &prealloc_vmo_);
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "zx::vmo::create() returns " << zx_status_get_string(status);
+      FX_LOGS(ERROR) << "zx::vmo::create() returns " << zx_status_get_string(status);
       exit(-1);
     }
     prealloc_vmo_.get_size(&prealloc_size_);
@@ -102,13 +102,13 @@ Monitor::Monitor(std::unique_ptr<sys::ComponentContext> context,
     status = zx::vmar::root_self()->map(0, prealloc_vmo_, 0, prealloc_size_, ZX_VM_PERM_READ,
                                         &prealloc_addr);
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "zx::vmar::map() returns " << zx_status_get_string(status);
+      FX_LOGS(ERROR) << "zx::vmar::map() returns " << zx_status_get_string(status);
       exit(-1);
     }
 
     status = prealloc_vmo_.op_range(ZX_VMO_OP_COMMIT, 0, prealloc_size_, NULL, 0);
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "zx::vmo::op_range() returns " << zx_status_get_string(status);
+      FX_LOGS(ERROR) << "zx::vmo::op_range() returns " << zx_status_get_string(status);
       exit(-1);
     }
   }
@@ -118,11 +118,11 @@ Monitor::Monitor(std::unique_ptr<sys::ComponentContext> context,
     Capture capture;
     auto s = Capture::GetCapture(&capture, capture_state_, KMEM);
     if (s != ZX_OK) {
-      FXL_LOG(ERROR) << "Error getting capture: " << zx_status_get_string(s);
+      FX_LOGS(ERROR) << "Error getting capture: " << zx_status_get_string(s);
       exit(EXIT_FAILURE);
     }
     const auto& kmem = capture.kmem();
-    FXL_LOG(INFO) << "Total: " << kmem.total_bytes << " Wired: " << kmem.wired_bytes
+    FX_LOGS(INFO) << "Total: " << kmem.total_bytes << " Wired: " << kmem.wired_bytes
                   << " Total Heap: " << kmem.total_heap_bytes;
   }
 
@@ -133,7 +133,7 @@ Monitor::Monitor(std::unique_ptr<sys::ComponentContext> context,
 
     component_context_->svc()->Connect(factory.NewRequest());
     if (!factory) {
-      FXL_LOG(ERROR) << "Unable to get LoggerFactory.";
+      FX_LOGS(ERROR) << "Unable to get LoggerFactory.";
       return;
     }
 
@@ -141,7 +141,7 @@ Monitor::Monitor(std::unique_ptr<sys::ComponentContext> context,
     // Cobalt metrics registry.
     factory->CreateLoggerFromProjectId(cobalt_registry::kProjectId, logger_.NewRequest(), &status);
     if (status != fuchsia::cobalt::Status::OK) {
-      FXL_LOG(ERROR) << "Unable to get Logger from factory";
+      FX_LOGS(ERROR) << "Unable to get Logger from factory";
       return;
     }
     metrics_ = std::make_unique<Metrics>(
@@ -254,12 +254,12 @@ void Monitor::SampleAndPost() {
     Capture capture;
     auto s = Capture::GetCapture(&capture, capture_state_, KMEM);
     if (s != ZX_OK) {
-      FXL_LOG(ERROR) << "Error getting capture: " << zx_status_get_string(s);
+      FX_LOGS(ERROR) << "Error getting capture: " << zx_status_get_string(s);
       return;
     }
     const auto& kmem = capture.kmem();
     if (logging_) {
-      FXL_LOG(INFO) << "Free: " << kmem.free_bytes << " Free Heap: " << kmem.free_heap_bytes
+      FX_LOGS(INFO) << "Free: " << kmem.free_bytes << " Free Heap: " << kmem.free_heap_bytes
                     << " VMO: " << kmem.vmo_bytes << " MMU: " << kmem.mmu_overhead_bytes
                     << " IPC: " << kmem.ipc_bytes;
     }
@@ -278,12 +278,12 @@ void Monitor::SampleAndPost() {
 void Monitor::UpdateState() {
   if (trace_state() == TRACE_STARTED) {
     if (trace_is_category_enabled(kTraceName)) {
-      FXL_LOG(INFO) << "Tracing started";
+      FX_LOGS(INFO) << "Tracing started";
       if (!tracing_) {
         Capture capture;
         auto s = Capture::GetCapture(&capture, capture_state_, KMEM);
         if (s != ZX_OK) {
-          FXL_LOG(ERROR) << "Error getting capture: " << zx_status_get_string(s);
+          FX_LOGS(ERROR) << "Error getting capture: " << zx_status_get_string(s);
           return;
         }
         const auto& kmem = capture.kmem();
@@ -297,7 +297,7 @@ void Monitor::UpdateState() {
     }
   } else {
     if (tracing_) {
-      FXL_LOG(INFO) << "Tracing stopped";
+      FX_LOGS(INFO) << "Tracing stopped";
       tracing_ = false;
     }
   }

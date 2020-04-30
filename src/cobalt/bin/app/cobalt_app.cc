@@ -36,16 +36,16 @@ const size_t kClearcutMaxRetries = 5;
 std::unique_ptr<CobaltRegistry> ReadRegistry(const std::string& global_metrics_registry_path) {
   std::ifstream registry_file_stream;
   registry_file_stream.open(global_metrics_registry_path);
-  FXL_CHECK(registry_file_stream && registry_file_stream.good())
+  FX_CHECK(registry_file_stream && registry_file_stream.good())
       << "Could not open the Cobalt global metrics registry: " << global_metrics_registry_path;
   std::string global_metrics_registry_bytes;
   global_metrics_registry_bytes.assign((std::istreambuf_iterator<char>(registry_file_stream)),
                                        std::istreambuf_iterator<char>());
-  FXL_CHECK(!global_metrics_registry_bytes.empty())
+  FX_CHECK(!global_metrics_registry_bytes.empty())
       << "Could not read the Cobalt global metrics registry: " << global_metrics_registry_path;
 
   auto cobalt_registry = std::make_unique<CobaltRegistry>();
-  FXL_CHECK(cobalt_registry->ParseFromString(global_metrics_registry_bytes))
+  FX_CHECK(cobalt_registry->ParseFromString(global_metrics_registry_bytes))
       << "Unable to parse global metrics registry at: " << global_metrics_registry_path;
 
   return cobalt_registry;

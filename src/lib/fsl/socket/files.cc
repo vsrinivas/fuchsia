@@ -49,7 +49,7 @@ CopyToFileHandler::CopyToFileHandler(zx::socket source, fbl::unique_fd destinati
       callback_(std::move(callback)),
       wait_(this, source_.get(), ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED) {
   zx_status_t status = wait_.Begin(dispatcher);
-  FXL_CHECK(status == ZX_OK);
+  FX_CHECK(status == ZX_OK);
 }
 
 CopyToFileHandler::~CopyToFileHandler() = default;
@@ -129,7 +129,7 @@ CopyFromFileHandler::CopyFromFileHandler(fbl::unique_fd source, zx::socket desti
       callback_(std::move(callback)),
       buffer_(64 * 1024) {
   zx_status_t status = wait_.Begin(dispatcher);
-  FXL_CHECK(status == ZX_OK);
+  FX_CHECK(status == ZX_OK);
 }
 
 CopyFromFileHandler::~CopyFromFileHandler() = default;

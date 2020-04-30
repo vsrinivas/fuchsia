@@ -5,8 +5,8 @@
 #include <lib/zx/eventpair.h>
 
 #include "lib/ui/scenic/cpp/commands.h"
-#include "src/ui/scenic/lib/gfx/tests/session_test.h"
 #include "sdk/lib/ui/scenic/cpp/view_token_pair.h"
+#include "src/ui/scenic/lib/gfx/tests/session_test.h"
 
 namespace scenic_impl {
 namespace gfx {
@@ -24,7 +24,7 @@ class SizeChangeHintTest : public SessionTest {
   SessionContext CreateSessionContext() override {
     SessionContext session_context = SessionTest::CreateSessionContext();
 
-    FXL_DCHECK(!view_linker_);
+    FX_DCHECK(!view_linker_);
 
     view_linker_ = std::make_unique<ViewLinker>();
     session_context.view_linker = view_linker_.get();
@@ -47,10 +47,9 @@ TEST_F(SizeChangeHintTest, SendingSizeChangeEventWorks) {
   ASSERT_TRUE(Apply(scenic::NewCreateEntityNodeCmd(node_id)));
 
   auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
-  EXPECT_TRUE(Apply(scenic::NewCreateViewHolderCmd(
-      view_holder_id, std::move(view_holder_token), "MyViewHolder")));
-  EXPECT_TRUE(Apply(
-      scenic::NewCreateViewCmd(view_id, std::move(view_token), "MyView")));
+  EXPECT_TRUE(Apply(scenic::NewCreateViewHolderCmd(view_holder_id, std::move(view_holder_token),
+                                                   "MyViewHolder")));
+  EXPECT_TRUE(Apply(scenic::NewCreateViewCmd(view_id, std::move(view_token), "MyView")));
 
   // Run the message loop to flush out View-related events that we don't
   // care about.

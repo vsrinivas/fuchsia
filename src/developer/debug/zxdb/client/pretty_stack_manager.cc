@@ -141,7 +141,7 @@ size_t PrettyStackManager::StackGlobMatchesAt(const StackGlob& stack_glob, const
     const Frame* frame = stack[stack_index];
 
     if (frame_glob.is_wildcard()) {
-      FXL_DCHECK(!wildcard_skip);
+      FX_DCHECK(!wildcard_skip);
       wildcard_skip = frame_glob.max_matches() - frame_glob.min_matches();
       // The min_matches will be eaten at the bottom of the loop.
     } else if (frame_glob.Matches(frame)) {

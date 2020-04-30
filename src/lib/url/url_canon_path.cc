@@ -146,10 +146,10 @@ DotDisposition ClassifyAfterDot(const char* spec, size_t after_dot, size_t end,
 //
 // The output is guaranteed to end in a slash when this function completes.
 void BackUpToPreviousSlash(size_t path_begin_in_output, CanonOutput* output) {
-  FXL_DCHECK(output->length() > 0);
+  FX_DCHECK(output->length() > 0);
 
   size_t i = output->length() - 1;
-  FXL_DCHECK(output->at(i) == '/');
+  FX_DCHECK(output->at(i) == '/');
   if (i == path_begin_in_output)
     return;  // We're at the first slash, nothing to do.
 
@@ -208,7 +208,7 @@ bool CanonicalizePartialPath(const char* spec, const Component& path, size_t pat
           // special case slashes. Since slashes are much more common than
           // dots, this actually increases performance measurably (though
           // slightly).
-          FXL_DCHECK(output->length() > path_begin_in_output);
+          FX_DCHECK(output->length() > path_begin_in_output);
           if (output->length() > path_begin_in_output && output->at(output->length() - 1) == '/') {
             // Slash followed by a dot, check to see if this is means relative
             size_t consumed_len;

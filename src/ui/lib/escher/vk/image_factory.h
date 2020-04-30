@@ -39,7 +39,7 @@ class ImageFactoryAdapter final : public ImageFactory {
       : allocator_(allocator->GetWeakPtr()), manager_(manager) {}
 
   ImagePtr NewImage(const ImageInfo& info, GpuMemPtr* out_ptr = nullptr) final {
-    FXL_DCHECK(allocator_);
+    FX_DCHECK(allocator_);
     return allocator_->AllocateImage(manager_, info, out_ptr);
   }
 

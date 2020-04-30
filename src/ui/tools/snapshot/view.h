@@ -27,7 +27,7 @@ class View final : public scenic::BaseView, public fuchsia::scenic::snapshot::Lo
 
  private:
   // |scenic::SessionListener|
-  void OnScenicError(std::string error) override { FXL_LOG(ERROR) << "Scenic Error " << error; }
+  void OnScenicError(std::string error) override { FX_LOGS(ERROR) << "Scenic Error " << error; }
 
   fidl::BindingSet<fuchsia::scenic::snapshot::Loader> loader_bindings_;
 

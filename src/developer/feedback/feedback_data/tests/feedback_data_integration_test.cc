@@ -76,7 +76,7 @@ class LogListener : public fuchsia::logger::LogListenerSafe {
     has_logs_ = true;
     done();
   }
-  void Done() { FXL_NOTIMPLEMENTED(); }
+  void Done() { FX_NOTIMPLEMENTED(); }
 
   ::fidl::Binding<fuchsia::logger::LogListenerSafe> binding_;
   fuchsia::logger::LogListenerSafePtr log_listener_;
@@ -192,7 +192,7 @@ class FeedbackDataIntegrationTest : public sys::testing::TestWithEnvironment {
     bool is_inspect_test_app_terminated = false;
     inspect_test_app_controller_.events().OnTerminated =
         [&is_inspect_test_app_terminated](int64_t code, fuchsia::sys::TerminationReason reason) {
-          FXL_CHECK(reason == fuchsia::sys::TerminationReason::EXITED);
+          FX_CHECK(reason == fuchsia::sys::TerminationReason::EXITED);
           is_inspect_test_app_terminated = true;
         };
     RunLoopUntil([&is_inspect_test_app_terminated] { return is_inspect_test_app_terminated; });

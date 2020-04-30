@@ -22,7 +22,7 @@ GpuImage::GpuImage(Session* session, ResourceId id, escher::GpuMemPtr gpu_mem,
   image_ = escher::impl::NaiveImage::AdoptVkImage(
       session->resource_context().escher_resource_recycler, image_info, vk_image,
       std::move(gpu_mem), initial_layout);
-  FXL_CHECK(image_);
+  FX_CHECK(image_);
 }
 
 GpuImagePtr GpuImage::New(Session* session, ResourceId id, MemoryPtr memory,
@@ -143,7 +143,7 @@ GpuImagePtr GpuImage::New(Session* session, ResourceId id, MemoryPtr memory,
   vk_device.getImageMemoryRequirements(image_result.value, &memory_reqs);
 
   escher::GpuMemPtr gpu_mem = memory->GetGpuMem(error_reporter);
-  FXL_DCHECK(gpu_mem);
+  FX_DCHECK(gpu_mem);
 
   escher::ImageInfo image_info;
   image_info.format = create_info.format;
@@ -162,7 +162,7 @@ GpuImagePtr GpuImage::New(Session* session, ResourceId id, MemoryPtr memory,
 
 void GpuImage::UpdateEscherImage(escher::BatchGpuUploader* gpu_uploader,
                                  escher::ImageLayoutUpdater* layout_updater) {
-  FXL_DCHECK(layout_updater) << "Layout updater doesn't exist!";
+  FX_DCHECK(layout_updater) << "Layout updater doesn't exist!";
   if (!image_->is_layout_initialized()) {
     // TODO(36106): Currently we only convert the layout to |eShaderReadOnlyOptimal| -- this needs
     // to be synchronized with topaz/runtime/flutter_runner.

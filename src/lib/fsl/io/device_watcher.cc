@@ -8,8 +8,8 @@
 #include <fcntl.h>
 #include <fuchsia/io/c/fidl.h>
 #include <lib/async/default.h>
-#include <lib/fdio/io.h>
 #include <lib/fdio/cpp/caller.h>
+#include <lib/fdio/io.h>
 #include <sys/types.h>
 #include <zircon/device/vfs.h>
 
@@ -30,7 +30,7 @@ DeviceWatcher::DeviceWatcher(fbl::unique_fd dir_fd, zx::channel dir_watch,
       wait_(this, dir_watch_.get(), ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED),
       weak_ptr_factory_(this) {
   auto status = wait_.Begin(async_get_default_dispatcher());
-  FXL_DCHECK(status == ZX_OK);
+  FX_DCHECK(status == ZX_OK);
 }
 
 std::unique_ptr<DeviceWatcher> DeviceWatcher::Create(const std::string& directory_path,
@@ -43,7 +43,7 @@ std::unique_ptr<DeviceWatcher> DeviceWatcher::CreateWithIdleCallback(
   // Open the directory.
   int open_result = open(directory_path.c_str(), O_DIRECTORY | O_RDONLY);
   if (open_result < 0) {
-    FXL_LOG(ERROR) << "Failed to open " << directory_path << ", errno=" << errno;
+    FX_LOGS(ERROR) << "Failed to open " << directory_path << ", errno=" << errno;
     return nullptr;
   }
   fbl::unique_fd dir_fd(open_result);
@@ -58,7 +58,7 @@ std::unique_ptr<DeviceWatcher> DeviceWatcher::CreateWithIdleCallback(
   zx_status_t io_status =
       fuchsia_io_DirectoryWatch(caller.borrow_channel(), mask, 0, server.release(), &status);
   if (io_status != ZX_OK || status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to create device watcher for " << directory_path
+    FX_LOGS(ERROR) << "Failed to create device watcher for " << directory_path
                    << ", status=" << status;
     return nullptr;
   }
@@ -80,7 +80,7 @@ void DeviceWatcher::Handler(async_dispatcher_t* dispatcher, async::WaitBase* wai
     uint32_t size;
     uint8_t buf[fuchsia_io_MAX_BUF];
     zx_status_t status = dir_watch_.read(0, buf, nullptr, sizeof(buf), 0, &size, nullptr);
-    FXL_CHECK(status == ZX_OK) << "Failed to read from directory watch channel";
+    FX_CHECK(status == ZX_OK) << "Failed to read from directory watch channel";
 
     auto weak = weak_ptr_factory_.GetWeakPtr();
     uint8_t* msg = buf;
@@ -116,7 +116,7 @@ void DeviceWatcher::Handler(async_dispatcher_t* dispatcher, async::WaitBase* wai
     return;
   }
 
-  FXL_CHECK(false);
+  FX_CHECK(false);
 }
 
 }  // namespace fsl

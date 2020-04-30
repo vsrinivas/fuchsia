@@ -25,17 +25,17 @@ fit::suspended_task MessageLoopContext::suspend_task() {
 MessageLoop::MessageLoop() : context_(this) {}
 
 MessageLoop::~MessageLoop() {
-  FXL_DCHECK(Current() != this);  // Cleanup() should have been called.
+  FX_DCHECK(Current() != this);  // Cleanup() should have been called.
 }
 
 bool MessageLoop::Init(std::string* error_message) {
-  FXL_DCHECK(!current_message_loop);
+  FX_DCHECK(!current_message_loop);
   current_message_loop = this;
   return true;
 }
 
 void MessageLoop::Cleanup() {
-  FXL_DCHECK(current_message_loop == this);
+  FX_DCHECK(current_message_loop == this);
   current_message_loop = nullptr;
 }
 
@@ -68,7 +68,7 @@ void MessageLoop::PostTask(FileLineFunction file_line, fit::pending_task task) {
 }
 
 void MessageLoop::RunTask(FileLineFunction file_line, fit::pending_task pending_task) {
-  FXL_DCHECK(pending_task);
+  FX_DCHECK(pending_task);
 
   Task task(std::move(file_line), std::move(pending_task));
   RunOneTask(task);
@@ -97,9 +97,9 @@ fit::suspended_task::ticket MessageLoop::duplicate_ticket(fit::suspended_task::t
   std::lock_guard<std::mutex> guard(mutex_);
 
   auto found = tickets_.find(ticket);
-  FXL_DCHECK(found != tickets_.end());
+  FX_DCHECK(found != tickets_.end());
 
-  FXL_DCHECK(found->second.ref_count > 0);
+  FX_DCHECK(found->second.ref_count > 0);
   found->second.ref_count++;
   return ticket;
 }
@@ -132,10 +132,10 @@ void MessageLoop::resolve_ticket(fit::suspended_task::ticket ticket, bool resume
   {
     std::lock_guard<std::mutex> guard(mutex_);
 
-    FXL_DCHECK(ticket != current_task_ticket_) << "Trying to resolve a task from within itself.";
+    FX_DCHECK(ticket != current_task_ticket_) << "Trying to resolve a task from within itself.";
 
     auto found = tickets_.find(ticket);
-    FXL_DCHECK(found != tickets_.end()) << "Bad ticket.";
+    FX_DCHECK(found != tickets_.end()) << "Bad ticket.";
 
     found->second.ref_count--;
 
@@ -193,7 +193,7 @@ uint64_t MessageLoop::NextExpiryNS() const {
 fit::suspended_task MessageLoop::SuspendCurrentTask() {
   std::lock_guard<std::mutex> guard(mutex_);
 
-  FXL_DCHECK(current_task_is_promise_) << "Can only suspend when running a promise.";
+  FX_DCHECK(current_task_is_promise_) << "Can only suspend when running a promise.";
   if (!current_task_ticket_) {
     // The current task has no ticket, make a new one.
     current_task_ticket_ = next_ticket_;
@@ -234,7 +234,7 @@ void MessageLoop::RunOneTask(Task& task) {
     current_task_ticket_ = 0;
 
     bool finished = task.pending(context_);
-    FXL_DCHECK(!task.pending == finished) << "Finished state should be consistent.";
+    FX_DCHECK(!task.pending == finished) << "Finished state should be consistent.";
     (void)finished;
 
     if (current_task_ticket_) {
@@ -249,13 +249,13 @@ void MessageLoop::RunOneTask(Task& task) {
     current_task_ticket_ = old_current_ticket;
     current_task_is_promise_ = old_task_is_promise;
   } else {
-    FXL_NOTREACHED();
+    FX_NOTREACHED();
   }
 }
 
 void MessageLoop::SaveTaskToTicket(fit::suspended_task::ticket ticket, FileLineFunction file_line,
                                    fit::pending_task task) {
-  FXL_DCHECK(task) << "The task should not be finished if we're saving it.";
+  FX_DCHECK(task) << "The task should not be finished if we're saving it.";
 
   bool needs_awaken = false;
 
@@ -263,7 +263,7 @@ void MessageLoop::SaveTaskToTicket(fit::suspended_task::ticket ticket, FileLineF
 
   {
     auto found = tickets_.find(ticket);
-    FXL_DCHECK(found != tickets_.end()) << "Ticket was invalid.";
+    FX_DCHECK(found != tickets_.end()) << "Ticket was invalid.";
 
     if (found->second.was_resumed) {
       // The ticket was suspended and then resumed from within the same run of the promise. It is
@@ -338,7 +338,7 @@ MessageLoop::WatchHandle& MessageLoop::WatchHandle::operator=(WatchHandle&& othe
   // Should never get into a self-assignment situation since this is not
   // copyable and every ID should be unique. Do allow self-assignment of
   // null ones though.
-  FXL_DCHECK(!watching() || (msg_loop_ != other.msg_loop_ || id_ != other.id_));
+  FX_DCHECK(!watching() || (msg_loop_ != other.msg_loop_ || id_ != other.id_));
   if (watching())
     msg_loop_->StopWatching(id_);
   msg_loop_ = other.msg_loop_;

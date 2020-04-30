@@ -100,7 +100,7 @@ size_t StorageWatchdog::GetStorageUsage() {
   fbl::unique_fd fd;
   fd.reset(open(path_to_watch_.c_str(), O_RDONLY));
   if (!fd) {
-    FXL_LOG(WARNING) << "storage_watchdog: could not open target: " << path_to_watch_;
+    FX_LOGS(WARNING) << "storage_watchdog: could not open target: " << path_to_watch_;
     return 0;
   }
 
@@ -108,7 +108,7 @@ size_t StorageWatchdog::GetStorageUsage() {
   fdio_cpp::FdioCaller caller(std::move(fd));
   zx_status_t status = GetFilesystemInfo(caller.borrow_channel(), &info);
   if (status != ZX_OK) {
-    FXL_LOG(WARNING) << "storage_watchdog: cannot query filesystem: " << status;
+    FX_LOGS(WARNING) << "storage_watchdog: cannot query filesystem: " << status;
     return 0;
   }
   info.name[fuchsia_io_MAX_FS_NAME_BUFFER - 1] = '\0';
@@ -118,7 +118,7 @@ size_t StorageWatchdog::GetStorageUsage() {
   size_t free_plus_allocated = info.free_shared_pool_bytes + info.total_bytes;
 
   if (free_plus_allocated == 0) {
-    FXL_LOG(WARNING) << "storage_watchdog: unable to determine storage "
+    FX_LOGS(WARNING) << "storage_watchdog: unable to determine storage "
                      << "pressure";
     return 0;
   }
@@ -134,7 +134,7 @@ void StorageWatchdog::CheckStorage(async_dispatcher_t* dispatcher) {
   size_t use_percentage = this->GetStorageUsage();
 
   if (use_percentage >= 95) {
-    FXL_LOG(INFO) << "storage usage has reached " << use_percentage
+    FX_LOGS(INFO) << "storage usage has reached " << use_percentage
                   << "%% capacity, purging the cache now";
     this->PurgeCache();
   }
@@ -153,15 +153,15 @@ void StorageWatchdog::PurgeCache() {
   int dir_fd = open(path_to_clean_.c_str(), O_DIRECTORY);
   if (dir_fd == -1) {
     if (errno == ENOENT) {
-      FXL_LOG(INFO) << "nothing in cache to purge";
+      FX_LOGS(INFO) << "nothing in cache to purge";
     } else {
-      FXL_LOG(ERROR) << "error opening directory: " << errno;
+      FX_LOGS(ERROR) << "error opening directory: " << errno;
     }
     return;
   }
   PurgeCacheIn(dir_fd);
   size_t use_percentage = this->GetStorageUsage();
-  FXL_LOG(INFO) << "cache purge is complete, new storage usage is at " << use_percentage
+  FX_LOGS(INFO) << "cache purge is complete, new storage usage is at " << use_percentage
                 << "%% capacity";
 }
 

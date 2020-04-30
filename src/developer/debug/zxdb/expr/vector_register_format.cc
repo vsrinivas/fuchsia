@@ -52,7 +52,7 @@ const char* VectorRegisterFormatToString(VectorRegisterFormat fmt) {
     case VectorRegisterFormat::kDouble:
       return kVectorRegisterFormatStr_Double;
   }
-  FXL_NOTREACHED();
+  FX_NOTREACHED();
   return "";
 }
 

@@ -68,8 +68,8 @@ void JobContextImpl::OnAttachReplyThunk(fxl::WeakPtr<JobContextImpl> job_context
 
 void JobContextImpl::OnAttachReply(Callback callback, const Err& err, uint64_t koid,
                                    uint32_t status, const std::string& job_name) {
-  FXL_DCHECK(state_ == State::kAttaching);
-  FXL_DCHECK(!job_.get());  // Shouldn't have a job.
+  FX_DCHECK(state_ == State::kAttaching);
+  FX_DCHECK(!job_.get());  // Shouldn't have a job.
 
   Err issue_err;  // Error to send in callback.
   if (err.has_error()) {
@@ -181,7 +181,7 @@ void JobContextImpl::SendAndUpdateFilters(std::vector<std::string> filters, bool
       request, [filters, weak_job_context = impl_weak_factory_.GetWeakPtr()](
                    const Err& err, debug_ipc::JobFilterReply reply) {
         if (reply.status != 0) {
-          FXL_LOG(ERROR) << "Error adding filter: " << debug_ipc::ZxStatusToString(reply.status);
+          FX_LOGS(ERROR) << "Error adding filter: " << debug_ipc::ZxStatusToString(reply.status);
 
           // Agent failed, mark that we had trouble setting filters and return.
           if (weak_job_context)
@@ -202,7 +202,7 @@ void JobContextImpl::SendAndUpdateFilters(std::vector<std::string> filters, bool
 }
 
 void JobContextImpl::OnDetachReply(const Err& err, uint32_t status, Callback callback) {
-  FXL_DCHECK(job_.get());  // Should have a job.
+  FX_DCHECK(job_.get());  // Should have a job.
 
   Err issue_err;  // Error to send in callback.
   if (err.has_error()) {

@@ -52,7 +52,7 @@ bool ProcessBreakpoint::UnregisterBreakpoint(Breakpoint* breakpoint) {
 
   auto found = std::find(breakpoints_.begin(), breakpoints_.end(), breakpoint);
   if (found == breakpoints_.end()) {
-    FXL_NOTREACHED();  // Should always be found.
+    FX_NOTREACHED();  // Should always be found.
   } else {
     breakpoints_.erase(found);
   }

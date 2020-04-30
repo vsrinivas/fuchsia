@@ -276,7 +276,7 @@ void BreakpointStreamBackend::HandleNotifyModules(NotifyModules modules) {
 void BreakpointStreamBackend::HandleNotifyProcessExiting(NotifyProcessExiting process) {
   DEBUG_LOG(Test) << "Process " << process.process_koid
                   << " exiting with return code: " << process.return_code;
-  FXL_DCHECK(process.process_koid == process_koid_);
+  FX_DCHECK(process.process_koid == process_koid_);
   process_exited_ = true;
   return_code_ = process.return_code;
   ShouldQuitLoop();
@@ -316,7 +316,7 @@ void BreakpointStreamBackend::ShouldQuitLoop() {
       return;
     }
 
-    FXL_NOTREACHED() << "Didn't get thread start or modules.";
+    FX_NOTREACHED() << "Didn't get thread start or modules.";
   }
 
   if (test_stage_ == TestStage::kCreatingOtherThreads) {
@@ -330,23 +330,23 @@ void BreakpointStreamBackend::ShouldQuitLoop() {
       return;
     }
 
-    FXL_NOTREACHED() << "Didn't get all the thread startups.";
+    FX_NOTREACHED() << "Didn't get all the thread startups.";
   }
 
   if (test_stage_ == TestStage::kExpectingBreakpointAndTerminations) {
     // We should only get one breakpoint.
     if (thread_excp_.size() > 1u)
-      FXL_NOTREACHED() << "Got more than 1 exception.";
+      FX_NOTREACHED() << "Got more than 1 exception.";
 
     // All subthreads should exit but one.
     if (thread_exits_.size() < thread_count_ - 1)
       return;
 
     if (thread_excp_.size() != 1u)
-      FXL_NOTREACHED() << "Should've gotten one breakpoint exception.";
+      FX_NOTREACHED() << "Should've gotten one breakpoint exception.";
 
     if (thread_exits_.size() != thread_count_ - 1)
-      FXL_NOTREACHED() << "All subthreads but one should've exited.";
+      FX_NOTREACHED() << "All subthreads but one should've exited.";
 
     loop()->QuitNow();
     test_stage_ = TestStage::kWaitingForFinalExit;
@@ -366,7 +366,7 @@ void BreakpointStreamBackend::ShouldQuitLoop() {
       return;
     }
 
-    FXL_NOTREACHED() << "Unexpected thread exit.";
+    FX_NOTREACHED() << "Unexpected thread exit.";
   }
 
   if (test_stage_ == TestStage::kDone) {
@@ -377,10 +377,10 @@ void BreakpointStreamBackend::ShouldQuitLoop() {
       return;
     }
 
-    FXL_NOTREACHED() << "Should've only received process exit notification.";
+    FX_NOTREACHED() << "Should've only received process exit notification.";
   }
 
-  FXL_NOTREACHED() << "Invalid stage.";
+  FX_NOTREACHED() << "Invalid stage.";
 }
 
 }  // namespace debug_agent

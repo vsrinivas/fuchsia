@@ -28,7 +28,7 @@ ExportedDirChannels Util::BindDirectory(fuchsia::sys::LaunchInfo* launch_info) {
   zx::channel exported_dir_server, exported_dir_client;
   zx_status_t status = zx::channel::create(0u, &exported_dir_server, &exported_dir_client);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to create channel for service directory: status=" << status;
+    FX_LOGS(ERROR) << "Failed to create channel for service directory: status=" << status;
     return {zx::channel(), zx::channel()};
   }
 

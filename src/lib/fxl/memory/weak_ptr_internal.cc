@@ -13,12 +13,12 @@ WeakPtrFlag::WeakPtrFlag() : is_valid_(true) {}
 
 WeakPtrFlag::~WeakPtrFlag() {
   // Should be invalidated before destruction.
-  FXL_DCHECK(!is_valid_);
+  FX_DCHECK(!is_valid_);
 }
 
 void WeakPtrFlag::Invalidate() {
   // Invalidation should happen exactly once.
-  FXL_DCHECK(is_valid_);
+  FX_DCHECK(is_valid_);
   is_valid_ = false;
 }
 

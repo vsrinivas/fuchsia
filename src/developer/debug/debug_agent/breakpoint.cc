@@ -16,8 +16,8 @@ bool Breakpoint::DoesExceptionApply(debug_ipc::BreakpointType exception_type,
                                     debug_ipc::BreakpointType bp_type) {
   if (exception_type == debug_ipc::BreakpointType::kLast ||
       bp_type == debug_ipc::BreakpointType::kLast) {
-    FXL_NOTREACHED() << "Wrong exception (" << static_cast<uint32_t>(exception_type)
-                     << ") or bp_type (" << static_cast<uint32_t>(bp_type) << ").";
+    FX_NOTREACHED() << "Wrong exception (" << static_cast<uint32_t>(exception_type)
+                    << ") or bp_type (" << static_cast<uint32_t>(bp_type) << ").";
     return false;
   }
 
@@ -44,25 +44,25 @@ bool Breakpoint::DoesExceptionApply(debug_ipc::BreakpointType exception_type,
 
 zx_status_t Breakpoint::ProcessDelegate::RegisterBreakpoint(Breakpoint* bp, zx_koid_t process_koid,
                                                             uint64_t address) {
-  FXL_NOTREACHED() << "Should override.";
+  FX_NOTREACHED() << "Should override.";
   return ZX_ERR_NOT_SUPPORTED;
 }
 
 // Called When the breakpoint no longer applies to this location.
 void Breakpoint::ProcessDelegate::UnregisterBreakpoint(Breakpoint* bp, zx_koid_t process_koid,
                                                        uint64_t address) {
-  FXL_NOTREACHED() << "Should override.";
+  FX_NOTREACHED() << "Should override.";
 }
 
 zx_status_t Breakpoint::ProcessDelegate::RegisterWatchpoint(Breakpoint* bp, zx_koid_t process_koid,
                                                             const debug_ipc::AddressRange& range) {
-  FXL_NOTREACHED() << "Should override.";
+  FX_NOTREACHED() << "Should override.";
   return ZX_ERR_NOT_SUPPORTED;
 }
 
 void Breakpoint::ProcessDelegate::UnregisterWatchpoint(Breakpoint* bp, zx_koid_t process_koid,
                                                        const debug_ipc::AddressRange& range) {
-  FXL_NOTREACHED() << "Should override.";
+  FX_NOTREACHED() << "Should override.";
 }
 
 // Breakpoint --------------------------------------------------------------------------------------
@@ -119,7 +119,7 @@ Breakpoint::~Breakpoint() {
 }
 
 zx_status_t Breakpoint::SetSettings(const debug_ipc::BreakpointSettings& settings) {
-  FXL_DCHECK(settings.type != debug_ipc::BreakpointType::kLast);
+  FX_DCHECK(settings.type != debug_ipc::BreakpointType::kLast);
   settings_ = settings;
   LogSetSettings(FROM_HERE, this);
 
@@ -139,7 +139,7 @@ zx_status_t Breakpoint::SetSettings(const debug_ipc::BreakpointSettings& setting
       break;
   }
 
-  FXL_NOTREACHED() << "Invalid breakpoint type: " << static_cast<int>(settings_.type);
+  FX_NOTREACHED() << "Invalid breakpoint type: " << static_cast<int>(settings_.type);
   return ZX_ERR_INVALID_ARGS;
 }
 

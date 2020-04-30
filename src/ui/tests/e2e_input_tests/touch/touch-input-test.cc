@@ -80,47 +80,47 @@ class TouchInputTest : public sys::testing::TestWithEnvironment, public Response
         [this](fidl::InterfaceRequest<ResponseListener> request) {
           response_listener_.Bind(std::move(request));
         });
-    FXL_CHECK(is_ok == ZX_OK);
+    FX_CHECK(is_ok == ZX_OK);
 
     // Set up Scenic inside the test environment.
     {
       fuchsia::sys::LaunchInfo launch;
       launch.url = kScenic;
-      if (FXL_VLOG_IS_ON(1)) {
+      if (FX_VLOG_IS_ON(1)) {
         launch.arguments.emplace();
         launch.arguments->push_back("--verbose=2");
       }
       is_ok =
           services->AddServiceWithLaunchInfo(std::move(launch), fuchsia::ui::scenic::Scenic::Name_);
-      FXL_CHECK(is_ok == ZX_OK);
+      FX_CHECK(is_ok == ZX_OK);
     }
 
     // Set up Root Presenter inside the test environment.
     is_ok = services->AddServiceWithLaunchInfo({.url = kRootPresenter},
                                                fuchsia::ui::input::InputDeviceRegistry::Name_);
-    FXL_CHECK(is_ok == ZX_OK);
+    FX_CHECK(is_ok == ZX_OK);
 
     is_ok = services->AddServiceWithLaunchInfo({.url = kRootPresenter},
                                                fuchsia::ui::policy::Presenter::Name_);
-    FXL_CHECK(is_ok == ZX_OK);
+    FX_CHECK(is_ok == ZX_OK);
 
     // Tunnel through some system services; these are needed for Scenic.
     is_ok = services->AllowParentService(fuchsia::sysmem::Allocator::Name_);
-    FXL_CHECK(is_ok == ZX_OK);
+    FX_CHECK(is_ok == ZX_OK);
 
     is_ok = services->AllowParentService(fuchsia::vulkan::loader::Loader::Name_);
-    FXL_CHECK(is_ok == ZX_OK);
+    FX_CHECK(is_ok == ZX_OK);
 
     test_env_ = CreateNewEnclosingEnvironment("touch_input_test_env", std::move(services),
                                               {.inherit_parent_services = true});
 
     WaitForEnclosingEnvToStart(test_env_.get());
 
-    FXL_VLOG(1) << "Created test environment.";
+    FX_VLOGS(1) << "Created test environment.";
   }
 
   ~TouchInputTest() override {
-    FXL_CHECK(injection_count_ > 0) << "injection expected but didn't happen.";
+    FX_CHECK(injection_count_ > 0) << "injection expected but didn't happen.";
   }
 
   sys::testing::EnclosingEnvironment* test_env() { return test_env_.get(); }
@@ -133,7 +133,7 @@ class TouchInputTest : public sys::testing::TestWithEnvironment, public Response
 
   scenic::ViewHolder* view_holder() { return view_holder_.get(); }
   void MakeViewHolder(fuchsia::ui::views::ViewHolderToken token, const std::string& name) {
-    FXL_CHECK(session_);
+    FX_CHECK(session_);
     view_holder_ = std::make_unique<scenic::ViewHolder>(session_.get(), std::move(token), name);
   }
 
@@ -143,7 +143,7 @@ class TouchInputTest : public sys::testing::TestWithEnvironment, public Response
 
   // |fuchsia::test::ui::ResponseListener|
   void Respond(fuchsia::test::ui::PointerData pointer_data) override {
-    FXL_CHECK(respond_callback_) << "Expected callback to be set for Respond().";
+    FX_CHECK(respond_callback_) << "Expected callback to be set for Respond().";
     respond_callback_(std::move(pointer_data));
   }
 
@@ -162,7 +162,7 @@ class TouchInputTest : public sys::testing::TestWithEnvironment, public Response
     auto registry = test_env()->ConnectToService<fuchsia::ui::input::InputDeviceRegistry>();
     fuchsia::ui::input::InputDevicePtr connection;
     registry->RegisterDevice(std::move(device), connection.NewRequest());
-    FXL_LOG(INFO) << "Registered touchscreen with x touch range = (-1000, 1000) "
+    FX_LOGS(INFO) << "Registered touchscreen with x touch range = (-1000, 1000) "
                   << "and y touch range = (-1000, 1000).";
 
     // Inject one input report, then a conclusion (empty) report.
@@ -174,7 +174,7 @@ class TouchInputTest : public sys::testing::TestWithEnvironment, public Response
       // Use system clock, instead of dispatcher clock, for measurement purposes.
       InputReport report{.event_time = RealNow(), .touchscreen = std::move(touch)};
       connection->DispatchReport(std::move(report));
-      FXL_LOG(INFO) << "Dispatching touch report at (500, -500)";
+      FX_LOGS(INFO) << "Dispatching touch report at (500, -500)";
     }
 
     {
@@ -184,7 +184,7 @@ class TouchInputTest : public sys::testing::TestWithEnvironment, public Response
     }
 
     ++injection_count_;
-    FXL_LOG(INFO) << "*** Tap injected, count: " << injection_count_;
+    FX_LOGS(INFO) << "*** Tap injected, count: " << injection_count_;
   }
 
   int injection_count() { return injection_count_; }
@@ -229,7 +229,7 @@ TEST_F(TouchInputTest, FlutterTap) {
       [&display_width, &display_height](fuchsia::ui::gfx::DisplayInfo display_info) {
         display_width = display_info.width_in_px;
         display_height = display_info.height_in_px;
-        FXL_LOG(INFO) << "Got display_width = " << display_width
+        FX_LOGS(INFO) << "Got display_width = " << display_width
                       << " and display_height = " << display_height;
       });
   RunLoopUntil(
@@ -247,16 +247,16 @@ TEST_F(TouchInputTest, FlutterTap) {
         float expected_x = display_height / 4.f;
         float expected_y = display_width / 4.f;
 
-        FXL_LOG(INFO) << "Flutter received tap at (" << pointer_data.local_x() << ", "
+        FX_LOGS(INFO) << "Flutter received tap at (" << pointer_data.local_x() << ", "
                       << pointer_data.local_y() << ").";
-        FXL_LOG(INFO) << "Expected tap is at approximately (" << expected_x << ", " << expected_y
+        FX_LOGS(INFO) << "Expected tap is at approximately (" << expected_x << ", " << expected_y
                       << ").";
 
         // Allow for minor rounding differences in coordinates.
         EXPECT_NEAR(pointer_data.local_x(), expected_x, 1);
         EXPECT_NEAR(pointer_data.local_y(), expected_y, 1);
 
-        FXL_LOG(INFO) << "*** PASS ***";
+        FX_LOGS(INFO) << "*** PASS ***";
         QuitLoop();
       });
 
@@ -265,21 +265,21 @@ TEST_F(TouchInputTest, FlutterTap) {
     for (const auto& event : events) {
       if (IsViewPropertiesChangedEvent(event)) {
         auto properties = event.gfx().view_properties_changed().properties;
-        FXL_VLOG(1) << "Test received its view properties; transfer to child view: " << properties;
-        FXL_CHECK(view_holder()) << "Expect that view holder is already set up.";
+        FX_VLOGS(1) << "Test received its view properties; transfer to child view: " << properties;
+        FX_CHECK(view_holder()) << "Expect that view holder is already set up.";
         view_holder()->SetViewProperties(properties);
         session()->Present(zx_clock_get_monotonic(), [](auto info) {});
 
       } else if (IsViewStateChangedEvent(event)) {
         bool hittable = event.gfx().view_state_changed().state.is_rendering;
-        FXL_VLOG(1) << "Child's view content is hittable: " << std::boolalpha << hittable;
+        FX_VLOGS(1) << "Child's view content is hittable: " << std::boolalpha << hittable;
         if (hittable) {
           InjectInput();
         }
 
       } else if (IsViewDisconnectedEvent(event)) {
         // Save time, terminate the test immediately if we know that Flutter's view is borked.
-        FXL_CHECK(injection_count() > 0)
+        FX_CHECK(injection_count() > 0)
             << "Expected to have completed input injection, but Flutter view terminated early.";
       }
     }
@@ -303,7 +303,7 @@ TEST_F(TouchInputTest, FlutterTap) {
   view.AddChild(*view_holder());
   // Request to make test's view; this will trigger dispatch of view properties.
   session()->Present(zx_clock_get_monotonic(), [](auto info) {
-    FXL_LOG(INFO) << "test's view and view holder created by Scenic.";
+    FX_LOGS(INFO) << "test's view and view holder created by Scenic.";
   });
 
   // Start Flutter app inside the test environment.
@@ -325,7 +325,7 @@ TEST_F(TouchInputTest, FlutterTap) {
   // Post a "just in case" quit task, if the test hangs.
   async::PostDelayedTask(
       dispatcher(),
-      [] { FXL_LOG(FATAL) << "\n\n>> Test did not complete in time, terminating.  <<\n\n"; },
+      [] { FX_LOGS(FATAL) << "\n\n>> Test did not complete in time, terminating.  <<\n\n"; },
       kTimeout);
 
   RunLoop();  // Go!

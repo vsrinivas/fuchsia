@@ -40,7 +40,7 @@ zx::process DuplicateProcess(const zx::process& process) {
   zx::process ret;
   zx_status_t status = process.duplicate(ZX_RIGHT_SAME_RIGHTS, &ret);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to duplicate process handle: " << status;
+    FX_LOGS(ERROR) << "Failed to duplicate process handle: " << status;
   }
   return ret;
 }
@@ -138,7 +138,7 @@ ComponentControllerBase::ComponentControllerBase(
   cloned_exported_dir_.events().OnOpen = [this](zx_status_t status,
                                                 std::unique_ptr<fuchsia::io::NodeInfo> /*info*/) {
     if (status != ZX_OK) {
-      FXL_LOG(WARNING) << "could not bind out directory for component" << label_ << "): " << status;
+      FX_LOGS(WARNING) << "could not bind out directory for component" << label_ << "): " << status;
       return;
     }
     out_ready_ = true;
@@ -238,7 +238,7 @@ void ComponentControllerBase::SendOnTerminationEvent(
   if (on_terminated_event_sent_ || !binding_.is_bound()) {
     return;
   }
-  FXL_VLOG(1) << "Sending termination callback with return code: " << return_code;
+  FX_VLOGS(1) << "Sending termination callback with return code: " << return_code;
   binding_.events().OnTerminated(return_code, termination_reason);
   on_terminated_event_sent_ = true;
 }
@@ -268,7 +268,7 @@ ComponentControllerImpl::ComponentControllerImpl(
       wait_(this, process_.get(), ZX_TASK_TERMINATED),
       system_diagnostics_(DuplicateProcess(process_)) {
   zx_status_t status = wait_.Begin(async_get_default_dispatcher());
-  FXL_DCHECK(status == ZX_OK);
+  FX_DCHECK(status == ZX_OK);
 
   hub()->SetJobId(std::to_string(fsl::GetKoid(job_.get())));
   hub()->SetProcessId(koid_);
@@ -310,7 +310,7 @@ ComponentControllerImpl::~ComponentControllerImpl() {
 }
 
 void ComponentControllerImpl::Kill() {
-  FXL_VLOG(1) << "ComponentControllerImpl::Kill() called";
+  FX_VLOGS(1) << "ComponentControllerImpl::Kill() called";
   TRACE_DURATION("appmgr", "ComponentController::Kill");
   if (job_) {
     job_.kill();
@@ -323,7 +323,7 @@ bool ComponentControllerImpl::SendReturnCodeIfTerminated() {
   zx_info_process_t process_info;
   zx_status_t result =
       process_.get_info(ZX_INFO_PROCESS, &process_info, sizeof(process_info), NULL, NULL);
-  FXL_DCHECK(result == ZX_OK);
+  FX_DCHECK(result == ZX_OK);
 
   if (process_info.exited) {
     SendOnTerminationEvent(process_info.return_code, TerminationReason::EXITED);
@@ -344,11 +344,11 @@ zx_status_t ComponentControllerImpl::RemoveSubComponentHub(const component::HubI
 // Called when process terminates, regardless of if Kill() was invoked.
 void ComponentControllerImpl::Handler(async_dispatcher_t* dispatcher, async::WaitBase* wait,
                                       zx_status_t status, const zx_packet_signal* signal) {
-  FXL_DCHECK(status == ZX_OK);
-  FXL_DCHECK(signal->observed == ZX_TASK_TERMINATED);
-  FXL_VLOG(1) << "ComponentControllerImpl::Handler() called";
+  FX_DCHECK(status == ZX_OK);
+  FX_DCHECK(signal->observed == ZX_TASK_TERMINATED);
+  FX_VLOGS(1) << "ComponentControllerImpl::Handler() called";
   bool terminated = SendReturnCodeIfTerminated();
-  FXL_DCHECK(terminated);
+  FX_DCHECK(terminated);
 
   process_.reset();
 

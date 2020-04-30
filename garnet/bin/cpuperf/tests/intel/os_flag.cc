@@ -22,11 +22,11 @@ class OsFlagVerifier : public Verifier {
 
   bool VerifyTrace(const RecordCounts& counts) override {
     if (counts.value_records != 0) {
-      FXL_LOG(ERROR) << "Found unexpected value records";
+      FX_LOGS(ERROR) << "Found unexpected value records";
       return false;
     }
     if (counts.pc_records == 0) {
-      FXL_LOG(ERROR) << "Expected pc records, none present";
+      FX_LOGS(ERROR) << "Expected pc records, none present";
       return false;
     }
     return true;

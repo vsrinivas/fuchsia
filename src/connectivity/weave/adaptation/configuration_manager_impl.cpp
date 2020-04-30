@@ -74,13 +74,13 @@ WEAVE_ERROR ConfigurationManagerImpl::_Init() {
     context_ = sys::ComponentContext::CreateAndServeOutgoingDirectory();
   }
 
-  FXL_CHECK(context_->svc()->Connect(wlan_device_service_.NewRequest()) == ZX_OK)
+  FX_CHECK(context_->svc()->Connect(wlan_device_service_.NewRequest()) == ZX_OK)
       << "Failed to connect to wlan service.";
-  FXL_CHECK(context_->svc()->Connect(hwinfo_device_.NewRequest()) == ZX_OK)
+  FX_CHECK(context_->svc()->Connect(hwinfo_device_.NewRequest()) == ZX_OK)
       << "Failed to connect to hwinfo device service.";
-  FXL_CHECK(context_->svc()->Connect(weave_factory_data_manager_.NewRequest()) == ZX_OK)
+  FX_CHECK(context_->svc()->Connect(weave_factory_data_manager_.NewRequest()) == ZX_OK)
       << "Failed to connect to weave factory data manager service.";
-  FXL_CHECK(context_->svc()->Connect(factory_store_provider_.NewRequest()) == ZX_OK)
+  FX_CHECK(context_->svc()->Connect(factory_store_provider_.NewRequest()) == ZX_OK)
       << "Failed to connect to factory store";
 
   err = EnvironmentConfig::Init();
@@ -156,8 +156,8 @@ WEAVE_ERROR ConfigurationManagerImpl::GetAndStoreMfrDeviceCert() {
   zx_status_t status;
   WEAVE_ERROR err;
 
-  err = device_info_->ReadConfigValueStr(
-      kDeviceInfoConfigKey_MfrDeviceCertPath, path, sizeof(path), &out_size);
+  err = device_info_->ReadConfigValueStr(kDeviceInfoConfigKey_MfrDeviceCertPath, path, sizeof(path),
+                                         &out_size);
 
   if (err != WEAVE_NO_ERROR) {
     FX_LOGS(WARNING) << "No manufacturer device certificate was found";
@@ -166,11 +166,8 @@ WEAVE_ERROR ConfigurationManagerImpl::GetAndStoreMfrDeviceCert() {
 
   status = ReadFactoryFile(path, mfr_cert, sizeof(mfr_cert), &out_size);
   if (status != ZX_OK) {
-    FX_LOGS(ERROR)
-        << "Failed getting manufacturer certificate from factory with status "
-        << zx_status_get_string(status)
-        << " for path: "
-        << path;
+    FX_LOGS(ERROR) << "Failed getting manufacturer certificate from factory with status "
+                   << zx_status_get_string(status) << " for path: " << path;
     return WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND;
   }
 
@@ -271,7 +268,7 @@ WEAVE_ERROR ConfigurationManagerImpl::_GetDeviceId(uint64_t& device_id) {
                                          &out_size);
   if (err == WEAVE_NO_ERROR) {
     err = GetDeviceIdFromFactory(path, &device_id);
-    FXL_CHECK(err == WEAVE_NO_ERROR) << "Failed getting device id from factory at path: " << path;
+    FX_CHECK(err == WEAVE_NO_ERROR) << "Failed getting device id from factory at path: " << path;
     StoreManufacturerDeviceId(device_id);
     return err;
   }

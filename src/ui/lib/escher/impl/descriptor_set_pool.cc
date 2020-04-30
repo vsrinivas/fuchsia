@@ -22,7 +22,7 @@ DescriptorSetAllocation::DescriptorSetAllocation(DescriptorSetPool* pool,
 DescriptorSetAllocation::~DescriptorSetAllocation() {
   // We expect that any descriptor sets were recycled by our owner before our
   // destructor is called.
-  FXL_DCHECK(sets_.empty());
+  FX_DCHECK(sets_.empty());
 }
 
 DescriptorSetPool::DescriptorSetPool(EscherWeakPtr escher,
@@ -109,7 +109,7 @@ void DescriptorSetPool::InternalAllocate(uint32_t descriptor_set_count) {
 }
 
 void DescriptorSetPool::RecycleResource(std::unique_ptr<Resource> resource) {
-  FXL_DCHECK(resource->IsKindOf<DescriptorSetAllocation>());
+  FX_DCHECK(resource->IsKindOf<DescriptorSetAllocation>());
   auto& returned = static_cast<DescriptorSetAllocation*>(resource.get())->sets_;
   free_sets_.insert(free_sets_.end(), returned.begin(), returned.end());
   returned.clear();

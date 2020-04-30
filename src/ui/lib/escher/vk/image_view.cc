@@ -53,7 +53,7 @@ ImageView::ImageView(ResourceRecycler* resource_recycler, ImagePtr image,
 ImageView::~ImageView() { vk_device().destroyImageView(image_view_); }
 
 ImageViewPtr ImageView::New(ImagePtr image, vk::ImageAspectFlags aspect_mask) {
-  FXL_CHECK(image && image->escher());
+  FX_CHECK(image && image->escher());
   return fxl::MakeRefCounted<ImageView>(image->escher()->resource_recycler(), std::move(image),
                                         aspect_mask);
 }

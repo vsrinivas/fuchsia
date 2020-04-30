@@ -67,8 +67,8 @@ class AnnotationManagerTest : public ViewTreeSessionTest {
 
   SessionContext CreateSessionContext() override {
     SessionContext session_context = ViewTreeSessionTest::CreateSessionContext();
-    FXL_DCHECK(!view_linker_);
-    FXL_DCHECK(!scene_graph_);
+    FX_DCHECK(!view_linker_);
+    FX_DCHECK(!scene_graph_);
     view_linker_ = std::make_unique<ViewLinker>();
     scene_graph_ = std::make_unique<SceneGraph>(context_provider_.context());
     session_context.view_linker = view_linker_.get();

@@ -90,13 +90,13 @@ class PrettyPrinter {
   }
 
   PrettyPrinter& operator<<(int32_t data) {
-    FXL_DCHECK((os_.flags() & os_.basefield) == os_.dec);
+    FX_DCHECK((os_.flags() & os_.basefield) == os_.dec);
     *this << std::to_string(data);
     return *this;
   }
 
   PrettyPrinter& operator<<(int64_t data) {
-    FXL_DCHECK((os_.flags() & os_.basefield) == os_.dec);
+    FX_DCHECK((os_.flags() & os_.basefield) == os_.dec);
     *this << std::to_string(data);
     return *this;
   }
@@ -134,7 +134,7 @@ class PrettyPrinter {
 #ifdef __MACH__
   // On MacOs, the type of size_t is unsigned long.
   PrettyPrinter& operator<<(size_t data) {
-    FXL_DCHECK((os_.flags() & os_.basefield) == os_.dec);
+    FX_DCHECK((os_.flags() & os_.basefield) == os_.dec);
     *this << std::to_string(data);
     return *this;
   }

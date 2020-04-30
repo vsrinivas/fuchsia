@@ -237,7 +237,7 @@ TEST_F(ScenicPixelTest, GlobalCoordinates) {
   float fov[2] = {0, 2 * atan((display_height / 2.f) / gfx::TestSession::kDefaultCameraOffset)};
 
   for (int i = 0; i < 2; i++) {
-    FXL_LOG(INFO) << "Testing " << camera_type[i] << " camera";
+    FX_LOGS(INFO) << "Testing " << camera_type[i] << " camera";
     camera.SetProjection(fov[i]);
 
     Present(session);
@@ -400,7 +400,7 @@ TEST_F(ScenicPixelTest, PoseBuffer) {
   // If we can't make memory that is both host-visible and device-local, we
   // can't run this test.
   if (!memory) {
-    FXL_LOG(INFO) << "Could not find UMA compatible memory pool, aborting test.";
+    FX_LOGS(INFO) << "Could not find UMA compatible memory pool, aborting test.";
     return;
   }
 
@@ -409,7 +409,7 @@ TEST_F(ScenicPixelTest, PoseBuffer) {
 
   zx::vmo remote_vmo;
   status = pose_buffer_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &remote_vmo);
-  FXL_CHECK(status == ZX_OK);
+  FX_CHECK(status == ZX_OK);
 
   zx::time base_time = zx::clock::get_monotonic();
   // Normally the time interval is the period of time between each entry in the
@@ -465,8 +465,8 @@ TEST_F(ScenicPixelTest, PoseBuffer) {
     glm::vec3 translation = translations[i];
     glm::quat orientation = orientations[i];
 
-    FXL_LOG(ERROR) << "translation: " << glm::to_string(translation);
-    FXL_LOG(ERROR) << "orientation: " << glm::to_string(orientation);
+    FX_LOGS(ERROR) << "translation: " << glm::to_string(translation);
+    FX_LOGS(ERROR) << "orientation: " << glm::to_string(orientation);
 
     scenic::Material pane_material(session);
     pane_material.SetColor(color.r, color.g, color.b, color.a);
@@ -496,7 +496,7 @@ TEST_F(ScenicPixelTest, PoseBuffer) {
   uintptr_t ptr;
   status = zx::vmar::root_self()->map(0, pose_buffer_vmo, 0, kVmoSize,
                                       ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, &ptr);
-  FXL_CHECK(status == ZX_OK);
+  FX_CHECK(status == ZX_OK);
 
   auto pose_buffer_ptr = reinterpret_cast<escher::hmd::Pose*>(ptr);
 
@@ -511,7 +511,7 @@ TEST_F(ScenicPixelTest, PoseBuffer) {
 
     // Manually flush the buffer so this works on ARM
     status = pose_buffer_vmo.op_range(ZX_VMO_OP_CACHE_CLEAN, 0, kVmoSize, nullptr, 0);
-    FXL_CHECK(status == ZX_OK);
+    FX_CHECK(status == ZX_OK);
 
     Present(session);
 
@@ -660,7 +660,7 @@ TEST_F(ScenicPixelTest, ViewBoundClippingWithTransforms) {
   auto unique_session_2 = std::make_unique<scenic::Session>(scenic());
   auto session2 = unique_session_2.get();
   session2->set_error_handler([this](zx_status_t status) {
-    FXL_LOG(ERROR) << "Session terminated.";
+    FX_LOGS(ERROR) << "Session terminated.";
     QuitLoop();
   });
 
@@ -668,7 +668,7 @@ TEST_F(ScenicPixelTest, ViewBoundClippingWithTransforms) {
   auto unique_session_3 = std::make_unique<scenic::Session>(scenic());
   auto session3 = unique_session_3.get();
   session3->set_error_handler([this](zx_status_t status) {
-    FXL_LOG(ERROR) << "Session terminated.";
+    FX_LOGS(ERROR) << "Session terminated.";
     QuitLoop();
   });
 
@@ -773,7 +773,7 @@ TEST_F(ScenicPixelTest, ViewBoundWireframeRendering) {
   auto escher = escher::test::GetEscher()->GetWeakPtr();
   bool supports_wireframe = escher->supports_wireframe();
   if (!supports_wireframe) {
-    FXL_LOG(INFO) << "Vulkan device feature fillModeNonSolid is not supported on this device. "
+    FX_LOGS(INFO) << "Vulkan device feature fillModeNonSolid is not supported on this device. "
                      "Error messages are expected.";
   }
 
@@ -787,7 +787,7 @@ TEST_F(ScenicPixelTest, ViewBoundWireframeRendering) {
   auto unique_session2 = std::make_unique<scenic::Session>(scenic());
   auto session2 = unique_session2.get();
   session2->set_error_handler([this](zx_status_t status) {
-    FXL_LOG(ERROR) << "Session terminated.";
+    FX_LOGS(ERROR) << "Session terminated.";
     QuitLoop();
   });
 
@@ -795,7 +795,7 @@ TEST_F(ScenicPixelTest, ViewBoundWireframeRendering) {
   auto unique_session3 = std::make_unique<scenic::Session>(scenic());
   auto session3 = unique_session3.get();
   session3->set_error_handler([this](zx_status_t status) {
-    FXL_LOG(ERROR) << "Session terminated.";
+    FX_LOGS(ERROR) << "Session terminated.";
     QuitLoop();
   });
 
@@ -1543,15 +1543,15 @@ TEST_F(ScenicPixelTest, AnnotationTest) {
   auto session_annotation = unique_session_annotation.get();
 
   session_view1->set_error_handler([this](zx_status_t status) {
-    FXL_LOG(ERROR) << "Session terminated.";
+    FX_LOGS(ERROR) << "Session terminated.";
     QuitLoop();
   });
   session_view2->set_error_handler([this](zx_status_t status) {
-    FXL_LOG(ERROR) << "Session terminated.";
+    FX_LOGS(ERROR) << "Session terminated.";
     QuitLoop();
   });
   session_annotation->set_error_handler([this](zx_status_t status) {
-    FXL_LOG(ERROR) << "Annotation Session terminated.";
+    FX_LOGS(ERROR) << "Annotation Session terminated.";
     QuitLoop();
   });
 
@@ -1590,7 +1590,7 @@ TEST_F(ScenicPixelTest, AnnotationTest) {
   // its containing view is only in the top-right corner.
   int32_t pane_width = display_width;
   int32_t pane_height = display_height / 2;
-  FXL_LOG(ERROR) << pane_width << " " << pane_height;
+  FX_LOGS(ERROR) << pane_width << " " << pane_height;
   scenic::Rectangle pane_shape(session_view1, pane_width, pane_height);
   scenic::Rectangle pane_shape2(session_view2, pane_width / 2, pane_height);
   scenic::Rectangle pane_shape_annotation(session_annotation, pane_width / 2, pane_height);

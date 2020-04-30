@@ -38,7 +38,7 @@ Appmgr::Appmgr(async_dispatcher_t* dispatcher, AppmgrArgs args)
       std::move(args.root_realm_services), fuchsia::sys::EnvironmentOptions{},
       std::move(appmgr_config_dir));
   root_realm_ = Realm::Create(std::move(realm_args));
-  FXL_CHECK(root_realm_) << "Cannot create root realm ";
+  FX_CHECK(root_realm_) << "Cannot create root realm ";
 
   // 2. Publish outgoing directories.
   // Connect to the tracing service, and then publish the root realm's hub
@@ -47,18 +47,18 @@ Appmgr::Appmgr(async_dispatcher_t* dispatcher, AppmgrArgs args)
   zx::channel svc_client_chan, svc_server_chan;
   zx_status_t status = zx::channel::create(0, &svc_client_chan, &svc_server_chan);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "failed to create channel: " << status;
+    FX_LOGS(ERROR) << "failed to create channel: " << status;
     return;
   }
   status = root_realm_->BindFirstNestedRealmSvc(std::move(svc_server_chan));
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "failed to bind to root realm services: " << status;
+    FX_LOGS(ERROR) << "failed to bind to root realm services: " << status;
     return;
   }
   status = fdio_service_connect_at(svc_client_chan.get(), "fuchsia.tracing.provider.Registry",
                                    args.trace_server_channel.release());
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "failed to connect to tracing: " << status;
+    FX_LOGS(ERROR) << "failed to connect to tracing: " << status;
     // In test environments the tracing registry may not be available. If this
     // fails, let's still proceed.
   }
@@ -78,20 +78,20 @@ Appmgr::Appmgr(async_dispatcher_t* dispatcher, AppmgrArgs args)
     sysmgr_.events().OnTerminated = [this](zx_status_t status,
                                            TerminationReason termination_reason) {
       if (termination_reason != TerminationReason::EXITED) {
-        FXL_LOG(ERROR) << "sysmgr launch failed: "
+        FX_LOGS(ERROR) << "sysmgr launch failed: "
                        << sys::TerminationReasonToString(termination_reason);
         sysmgr_permanently_failed_ = true;
       } else if (status == ZX_ERR_INVALID_ARGS) {
-        FXL_LOG(ERROR) << "sysmgr reported invalid arguments";
+        FX_LOGS(ERROR) << "sysmgr reported invalid arguments";
         sysmgr_permanently_failed_ = true;
       } else {
-        FXL_LOG(ERROR) << "sysmgr exited with status " << status;
+        FX_LOGS(ERROR) << "sysmgr exited with status " << status;
       }
 
       if (!sysmgr_retry_crashes_) {
-        FXL_CHECK(ZX_OK == status)
-            << "sysmgr retries are disabled and it failed ("
-            << sys::TerminationReasonToString(termination_reason) << ", status " << status << ")";
+        FX_CHECK(ZX_OK == status) << "sysmgr retries are disabled and it failed ("
+                                  << sys::TerminationReasonToString(termination_reason)
+                                  << ", status " << status << ")";
       }
     };
     root_realm_->CreateComponent(std::move(launch_info), sysmgr_.NewRequest());
@@ -107,12 +107,12 @@ Appmgr::Appmgr(async_dispatcher_t* dispatcher, AppmgrArgs args)
 
     auto retry_handler = [this, dispatcher, run_sysmgr](zx_status_t error) {
       if (sysmgr_permanently_failed_) {
-        FXL_LOG(ERROR) << "sysmgr permanently failed. Check system configuration.";
+        FX_LOGS(ERROR) << "sysmgr permanently failed. Check system configuration.";
         return;
       }
 
       auto delay_duration = sysmgr_backoff_.GetNext();
-      FXL_LOG(ERROR) << fxl::StringPrintf("sysmgr failed, restarting in %.3fs",
+      FX_LOGS(ERROR) << fxl::StringPrintf("sysmgr failed, restarting in %.3fs",
                                           .001f * delay_duration.to_msecs());
       async::PostDelayedTask(dispatcher, run_sysmgr, delay_duration);
     };

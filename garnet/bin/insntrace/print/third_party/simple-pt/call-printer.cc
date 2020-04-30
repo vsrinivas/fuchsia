@@ -30,6 +30,7 @@
 #include "call-printer.h"
 
 #include <inttypes.h>
+#include <lib/fit/defer.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <string.h>
@@ -38,18 +39,13 @@
 #include <vector>
 
 #include "garnet/lib/intel_pt_decode/decoder.h"
-
-#include <lib/fit/defer.h>
-
+#include "printer-util.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_number_conversions.h"
 #include "src/lib/fxl/strings/string_printf.h"
-
 #include "third_party/processor-trace/libipt/include/intel-pt.h"
-
-#include "printer-util.h"
 
 #ifdef HAVE_UDIS86  // TODO(dje): Add disassembly support
 #include <udis86.h>
@@ -68,7 +64,7 @@ std::unique_ptr<CallPrinter> CallPrinter::Create(DecoderState* state, const Conf
   if (config.output_file_name != "") {
     f = fopen(config.output_file_name.c_str(), "w");
     if (!f) {
-      FXL_LOG(ERROR) << "Unable to open file for writing: " << config.output_file_name;
+      FX_LOGS(ERROR) << "Unable to open file for writing: " << config.output_file_name;
       return nullptr;
     }
   }
@@ -370,7 +366,7 @@ void CallPrinter::PrintHeader(uint64_t id) {
 
 uint64_t CallPrinter::PrintOneFile(const PtFile& pt_file) {
   if (!state_->AllocDecoder(pt_file.file)) {
-    FXL_LOG(ERROR) << "Unable to open pt file: " << pt_file.file;
+    FX_LOGS(ERROR) << "Unable to open pt file: " << pt_file.file;
     return 0;
   }
   auto free_decoder = fit::defer([&]() { state_->FreeDecoder(); });

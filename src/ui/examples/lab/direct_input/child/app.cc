@@ -24,16 +24,16 @@ App::App(async::Loop* loop)
       message_loop_(loop),
       focused_(false),
       view_provider_binding_(this) {
-  FXL_DCHECK(component_context_);
+  FX_DCHECK(component_context_);
 
   scenic_ = component_context_->svc()->Connect<fuchsia::ui::scenic::Scenic>();
   scenic_.set_error_handler([this](zx_status_t status) { OnScenicError(); });
-  FXL_LOG(INFO) << "Child - connect to Scenic.";
+  FX_LOGS(INFO) << "Child - connect to Scenic.";
 
   session_ = std::make_unique<scenic::Session>(scenic_.get());
   session_->set_error_handler([this](zx_status_t status) { this->OnSessionError(); });
   session_->set_event_handler(fit::bind_member(this, &App::OnSessionEvents));
-  FXL_LOG(INFO) << "Child - session setup.";
+  FX_LOGS(INFO) << "Child - session setup.";
 
   scenic_->GetDisplayInfo([this](fuchsia::ui::gfx::DisplayInfo display_info) {
     CreateScene(display_info.width_in_px, display_info.height_in_px);
@@ -54,7 +54,7 @@ App::App(async::Loop* loop)
     session_->Enqueue(std::move(input_cmd));
   }
 
-  FXL_LOG(INFO) << "Child - ViewProvider service set up.";
+  FX_LOGS(INFO) << "Child - ViewProvider service set up.";
 }
 
 App::~App() {
@@ -78,19 +78,19 @@ void App::ReleaseSessionResources() {
 }
 
 void App::OnScenicError() {
-  FXL_LOG(ERROR) << "Child - scenic connection error.";
+  FX_LOGS(ERROR) << "Child - scenic connection error.";
   ReleaseSessionResources();
   message_loop_->Quit();
 }
 
 void App::OnSessionError() {
-  FXL_LOG(ERROR) << "Child - session error.";
+  FX_LOGS(ERROR) << "Child - session error.";
   ReleaseSessionResources();
   message_loop_->Quit();
 }
 
 void App::OnSessionClose() {
-  FXL_LOG(INFO) << "Child - session close.";
+  FX_LOGS(INFO) << "Child - session close.";
   ReleaseSessionResources();
   message_loop_->Quit();
 }
@@ -113,10 +113,10 @@ void App::OnSessionEvents(std::vector<fuchsia::ui::scenic::Event> events) {
           OnFocusEvent(input_event.focus());
           continue;
         case InputType::Invalid:
-          FXL_LOG(FATAL) << "Unknown input event received.";
+          FX_LOGS(FATAL) << "Unknown input event received.";
       }
     } else if (event.is_gfx()) {
-      FXL_LOG(ERROR) << "Child - GFX command unimplemented.";
+      FX_LOGS(ERROR) << "Child - GFX command unimplemented.";
     }
   }
 }
@@ -183,7 +183,7 @@ void App::OnPointerEvent(const fuchsia::ui::input::PointerEvent& event) {
     if (focused_ && event.phase == Phase::DOWN) {
       // Nice to meet you. Add to known-fingers list.
       size_t idx = find_idx(pointer_id_, kNoFinger);
-      FXL_CHECK(idx != kNoFinger) << "Pointer index full: " << contents(pointer_id_);
+      FX_CHECK(idx != kNoFinger) << "Pointer index full: " << contents(pointer_id_);
       pointer_id_[idx] = event.pointer_id;
       view_->AddChild(*pointer_tracker_[idx]);
       pointer_tracker_[idx]->SetTranslation(event.x, event.y, -400.f);
@@ -209,13 +209,13 @@ void App::OnPointerEvent(const fuchsia::ui::input::PointerEvent& event) {
 void App::CreateView(zx::eventpair view_token,
                      fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> incoming_services,
                      fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> outgoing_services) {
-  FXL_LOG(INFO) << "Child - CreateView invoked.";
+  FX_LOGS(INFO) << "Child - CreateView invoked.";
   view_ = std::make_unique<scenic::View>(session_.get(), std::move(view_token), "child view");
   view_->SetLabel("child view");
 
   if (root_node_) {
     view_->AddChild(*root_node_);
-    FXL_LOG(INFO) << "Child - outbound view is set up.";
+    FX_LOGS(INFO) << "Child - outbound view is set up.";
   }
 }
 
@@ -226,7 +226,7 @@ void App::UpdateScene(uint64_t next_presentation_time) {
 }
 
 void App::CreateScene(float display_width, float display_height) {
-  FXL_LOG(INFO) << "Child - display size: " << display_width << ", " << display_height;
+  FX_LOGS(INFO) << "Child - display size: " << display_width << ", " << display_height;
 
   width_in_px_ = display_width;  // Store display size, not view size!
   height_in_px_ = display_height;
@@ -253,11 +253,11 @@ void App::CreateScene(float display_width, float display_height) {
 
     if (view_) {
       view_->AddChild(*root_node);
-      FXL_LOG(INFO) << "Child - outbound view is set up.";
+      FX_LOGS(INFO) << "Child - outbound view is set up.";
     }
 
     root_node_ = std::move(root_node);
-    FXL_LOG(INFO) << "Child - root node is set up.";
+    FX_LOGS(INFO) << "Child - root node is set up.";
   }
 
   // Create frame to trigger on focus.
@@ -300,7 +300,7 @@ void App::CreateScene(float display_width, float display_height) {
     frame->AddChild(right_bar);
 
     focus_frame_ = std::move(frame);
-    FXL_LOG(INFO) << "Child - focus frame prepared.";
+    FX_LOGS(INFO) << "Child - focus frame prepared.";
   }
 
   // Create a visual tracker for pointer movement.
@@ -322,7 +322,7 @@ void App::CreateScene(float display_width, float display_height) {
       pointer_tracker_[i]->SetMaterial(material);
     }
 
-    FXL_LOG(INFO) << "Child - pointer tracker prepared.";
+    FX_LOGS(INFO) << "Child - pointer tracker prepared.";
   }
 }
 

@@ -27,12 +27,12 @@ namespace {
 bool ParseNumber(const char* name, const fxl::StringView& arg, uint64_t* value) {
   if (arg.size() > 2 && arg[0] == '0' && (arg[1] == 'x' || arg[1] == 'X')) {
     if (!fxl::StringToNumberWithError<uint64_t>(arg.substr(2), value, fxl::Base::k16)) {
-      FXL_LOG(ERROR) << "Invalid value for " << name << ": " << arg;
+      FX_LOGS(ERROR) << "Invalid value for " << name << ": " << arg;
       return false;
     }
   } else {
     if (!fxl::StringToNumberWithError<uint64_t>(arg, value)) {
-      FXL_LOG(ERROR) << "Invalid value for " << name << ": " << arg;
+      FX_LOGS(ERROR) << "Invalid value for " << name << ": " << arg;
       return false;
     }
   }
@@ -64,14 +64,14 @@ App::App(const fxl::CommandLine& command_line)
     if (!ParseNumber("buffer-size", buffer_size_as_string, &buffer_size))
       exit(EXIT_FAILURE);
     if (buffer_size == 0) {
-      FXL_LOG(ERROR) << "Buffer size cannot be zero";
+      FX_LOGS(ERROR) << "Buffer size cannot be zero";
       exit(EXIT_FAILURE);
     }
     // The provided buffer size is in MB, the controller takes the buffer size
     // in pages.
     uint32_t buffer_size_in_pages;
     if (!GetBufferSizeInPages(buffer_size, &buffer_size_in_pages)) {
-      FXL_LOG(ERROR) << "Buffer size too large";
+      FX_LOGS(ERROR) << "Buffer size too large";
       exit(EXIT_FAILURE);
     }
     buffer_size_in_pages_ = buffer_size_in_pages;
@@ -80,7 +80,7 @@ App::App(const fxl::CommandLine& command_line)
   // The supported models and their names are determined by lib/perfmon.
   // These are defaults for now.
   model_event_manager_ = perfmon::ModelEventManager::Create(perfmon::GetDefaultModelName());
-  FXL_CHECK(model_event_manager_);
+  FX_CHECK(model_event_manager_);
 
   trace_observer_.Start(async_get_default_dispatcher(), [this] { UpdateState(); });
 }
@@ -97,7 +97,7 @@ void App::PrintHelp() {
 
 void App::UpdateState() {
   if (trace_state() == TRACE_STARTED) {
-    FXL_DCHECK(!IsTracing());
+    FX_DCHECK(!IsTracing());
     auto new_config = TraceConfig::Create(model_event_manager_.get(), trace_is_category_enabled);
     if (new_config != nullptr && new_config->is_enabled()) {
       StartTracing(std::move(new_config));
@@ -108,19 +108,19 @@ void App::UpdateState() {
 }
 
 void App::StartTracing(std::unique_ptr<TraceConfig> trace_config) {
-  FXL_DCHECK(trace_config->is_enabled());
-  FXL_DCHECK(!context_);
-  FXL_DCHECK(!controller_);
+  FX_DCHECK(trace_config->is_enabled());
+  FX_DCHECK(!context_);
+  FX_DCHECK(!controller_);
 
   perfmon::Config device_config;
   if (!trace_config->TranslateToDeviceConfig(&device_config)) {
-    FXL_LOG(ERROR) << "Error converting trace config to device config";
+    FX_LOGS(ERROR) << "Error converting trace config to device config";
     return;
   }
 
   std::unique_ptr<perfmon::Controller> controller;
   if (!perfmon::Controller::Create(buffer_size_in_pages_, device_config, &controller)) {
-    FXL_LOG(ERROR) << "Perfmon controller failed to initialize";
+    FX_LOGS(ERROR) << "Perfmon controller failed to initialize";
     return;
   }
 
@@ -130,13 +130,13 @@ void App::StartTracing(std::unique_ptr<TraceConfig> trace_config) {
     return;
   }
 
-  FXL_VLOG(1) << "Starting trace, config = " << trace_config->ToString();
+  FX_VLOGS(1) << "Starting trace, config = " << trace_config->ToString();
 
   start_time_ = zx_ticks_get();
   if (!controller->Start())
     goto Fail;
 
-  FXL_LOG(INFO) << "Started tracing";
+  FX_LOGS(INFO) << "Started tracing";
   trace_config_ = std::move(trace_config);
   controller_.reset(controller.release());
   return;
@@ -150,9 +150,9 @@ void App::StopTracing() {
   if (!IsTracing()) {
     return;
   }
-  FXL_DCHECK(trace_config_->is_enabled());
+  FX_DCHECK(trace_config_->is_enabled());
 
-  FXL_LOG(INFO) << "Stopping trace";
+  FX_LOGS(INFO) << "Stopping trace";
 
   controller_->Stop();
 
@@ -166,10 +166,10 @@ void App::StopTracing() {
     Importer importer(buffer_context, trace_config_.get(), start_time_, stop_time_);
     const perfmon::Config& config = controller_->config();
     if (!importer.Import(*reader, config)) {
-      FXL_LOG(ERROR) << "Errors encountered while importing perfmon data";
+      FX_LOGS(ERROR) << "Errors encountered while importing perfmon data";
     }
   } else {
-    FXL_LOG(ERROR) << "Unable to initialize reader";
+    FX_LOGS(ERROR) << "Unable to initialize reader";
   }
 
   trace_release_context(buffer_context);

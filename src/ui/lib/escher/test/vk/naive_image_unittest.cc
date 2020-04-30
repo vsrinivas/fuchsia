@@ -18,7 +18,7 @@ VK_TEST_F(NaiveImageTest, AdoptVkImageInsufficientMemory) {
   auto allocator = escher->gpu_allocator();
   auto recycler = escher->resource_recycler();
 
-  FXL_LOG(INFO) << "Testing creation of NaiveImage with insufficient memory. "
+  FX_LOGS(INFO) << "Testing creation of NaiveImage with insufficient memory. "
                    "Error messages are expected.";
 
   // First we create a VkImage requiring a large amount of memory.

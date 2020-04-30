@@ -170,7 +170,7 @@ zx::process CreateProcess(const zx::job& job, zx::vmo executable, const std::str
                           actions.size(), actions.data(), process.reset_and_get_address(), err_msg);
 
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Cannot run executable " << label << " due to error " << status << " ("
+    FX_LOGS(ERROR) << "Cannot run executable " << label << " due to error " << status << " ("
                    << zx_status_get_string(status) << "): " << err_msg;
   }
 
@@ -183,15 +183,15 @@ bool IsValidEnvironmentLabel(const std::string& label) {
   // The regex technically covers the empty check, but checking separately
   // allows us to print a more useful error message.
   if (label.empty()) {
-    FXL_LOG(ERROR) << "Environment label cannot be empty";
+    FX_LOGS(ERROR) << "Environment label cannot be empty";
     return false;
   }
   if (!std::regex_match(label, *kEnvironmentLabelRegex)) {
-    FXL_LOG(ERROR) << "Environment label '" << label << "' contains invalid characters";
+    FX_LOGS(ERROR) << "Environment label '" << label << "' contains invalid characters";
     return false;
   }
   if (label == "." || label == "..") {
-    FXL_LOG(ERROR) << "Environment label cannot be '.' or '..'";
+    FX_LOGS(ERROR) << "Environment label cannot be '.' or '..'";
     return false;
   }
   return true;
@@ -251,7 +251,7 @@ RealmArgs RealmArgs::MakeWithAdditionalServices(
 
 std::unique_ptr<Realm> Realm::Create(RealmArgs args) {
   if (args.label.empty()) {
-    FXL_LOG(ERROR) << "Cannot create realm with empty label";
+    FX_LOGS(ERROR) << "Cannot create realm with empty label";
     return nullptr;
   }
 
@@ -267,7 +267,7 @@ std::unique_ptr<Realm> Realm::Create(RealmArgs args) {
   zx::job job;
   auto status = zx::job::create(*parent_job, 0u, &job);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Job creation failed (" << zx_status_get_string(status)
+    FX_LOGS(ERROR) << "Job creation failed (" << zx_status_get_string(status)
                    << "). Cannot create realm '" << args.label << "'";
     return nullptr;
   }
@@ -293,7 +293,7 @@ Realm::Realm(RealmArgs args, zx::job job)
   if (parent_ == nullptr) {
     auto status =
         zx::channel::create(0, &first_nested_realm_svc_server_, &first_nested_realm_svc_client_);
-    FXL_CHECK(status == ZX_OK) << "Cannot create channel: " << zx_status_get_string(status);
+    FX_CHECK(status == ZX_OK) << "Cannot create channel: " << zx_status_get_string(status);
   }
 
   koid_ = std::to_string(fsl::GetKoid(job_.get()));
@@ -359,10 +359,10 @@ Realm::Realm(RealmArgs args, zx::job job)
 
   std::string error;
   if (!files::IsDirectoryAt(appmgr_config_dir_.get(), SchemeMap::kConfigDirPath)) {
-    FXL_LOG(FATAL) << "Could not find scheme map config dir: " << SchemeMap::kConfigDirPath;
+    FX_LOGS(FATAL) << "Could not find scheme map config dir: " << SchemeMap::kConfigDirPath;
   }
   if (!scheme_map_.ParseFromDirectoryAt(appmgr_config_dir_, SchemeMap::kConfigDirPath)) {
-    FXL_LOG(FATAL) << "Could not parse scheme map config dir: " << scheme_map_.error_str();
+    FX_LOGS(FATAL) << "Could not parse scheme map config dir: " << scheme_map_.error_str();
   }
 }
 
@@ -371,11 +371,11 @@ Realm::~Realm() {
 
   if (delete_storage_on_death_) {
     if (!files::DeletePath(data_path(), true)) {
-      FXL_LOG(ERROR) << "Failed to delete persistent storage for environment '" << label()
+      FX_LOGS(ERROR) << "Failed to delete persistent storage for environment '" << label()
                      << "' on death";
     }
     if (!files::DeletePath(cache_path(), true)) {
-      FXL_LOG(ERROR) << "Failed to delete cache storage for environment '" << label()
+      FX_LOGS(ERROR) << "Failed to delete cache storage for environment '" << label()
                      << "' on death";
     }
   }
@@ -417,7 +417,7 @@ void Realm::CreateNestedEnvironment(
   }
   for (const auto& child : children_) {
     if (label == child.first->label_) {
-      FXL_LOG(ERROR) << "Attempt to create nested environment '" << label << "' under '" << label_
+      FX_LOGS(ERROR) << "Attempt to create nested environment '" << label << "' under '" << label_
                      << "' but label matches existing environment";
       environment.Close(ZX_ERR_BAD_STATE);
       controller_request.Close(ZX_ERR_BAD_STATE);
@@ -426,7 +426,7 @@ void Realm::CreateNestedEnvironment(
   }
 
   if (additional_services && !additional_services->host_directory) {
-    FXL_LOG(ERROR) << label << ": |additional_services.provider| is not supported for "
+    FX_LOGS(ERROR) << label << ": |additional_services.provider| is not supported for "
                    << "CreateNestedEnvironment. Use "
                    << "|additional_services.host_directory| instead.";
     environment.Close(ZX_ERR_INVALID_ARGS);
@@ -488,7 +488,7 @@ void Realm::Resolve(fidl::StringPtr name, fuchsia::process::Resolver::ResolveCal
   fidl::InterfaceHandle<fuchsia::ldsvc::Loader> loader;
 
   if (name->empty()) {
-    FXL_LOG(ERROR) << "Cannot resolve loader because requested name is empty";
+    FX_LOGS(ERROR) << "Cannot resolve loader because requested name is empty";
     callback(ZX_ERR_NOT_FOUND, std::move(binary), std::move(loader));
     return;
   }
@@ -497,7 +497,7 @@ void Realm::Resolve(fidl::StringPtr name, fuchsia::process::Resolver::ResolveCal
   // them (e.g. \n)
   const std::string canon_url = CanonicalizeURL(name.value_or(""));
   if (canon_url.empty()) {
-    FXL_LOG(ERROR) << "Cannot resolve " << name << " because the url could not be canonicalized";
+    FX_LOGS(ERROR) << "Cannot resolve " << name << " because the url could not be canonicalized";
     callback(ZX_ERR_INVALID_ARGS, std::move(binary), std::move(loader));
     return;
   }
@@ -505,14 +505,14 @@ void Realm::Resolve(fidl::StringPtr name, fuchsia::process::Resolver::ResolveCal
 
   const std::string launcher_type = scheme_map_.LookUp(scheme);
   if (launcher_type != "package") {
-    FXL_LOG(ERROR) << "Cannot resolve non-packages";
+    FX_LOGS(ERROR) << "Cannot resolve non-packages";
     callback(ZX_ERR_NOT_FOUND, std::move(binary), std::move(loader));
     return;
   }
 
   FuchsiaPkgUrl pkg_url;
   if (!pkg_url.Parse(canon_url)) {
-    FXL_LOG(ERROR) << "Cannot load " << canon_url << " because the URL is not valid.";
+    FX_LOGS(ERROR) << "Cannot load " << canon_url << " because the URL is not valid.";
     callback(ZX_ERR_INVALID_ARGS, std::move(binary), std::move(loader));
     return;
   }
@@ -550,7 +550,7 @@ void Realm::Resolve(fidl::StringPtr name, fuchsia::process::Resolver::ResolveCal
     zx_status_t status = fdio_open_fd_at(dirfd.get(), pkg_url.resource_path().c_str(), flags,
                                          exec_fd.reset_and_get_address());
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "fdio_open_fd_at(" << dirfd.get() << ", " << pkg_url.resource_path().c_str()
+      FX_LOGS(ERROR) << "fdio_open_fd_at(" << dirfd.get() << ", " << pkg_url.resource_path().c_str()
                      << ", " << flags << ") failed: " << zx_status_get_string(status);
       callback(status, std::move(binary), std::move(loader));
       return;
@@ -559,7 +559,7 @@ void Realm::Resolve(fidl::StringPtr name, fuchsia::process::Resolver::ResolveCal
     // Get the executable VMO.
     status = fdio_get_vmo_exec(exec_fd.get(), binary.reset_and_get_address());
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "fdio_get_vmo_exec() failed: " << zx_status_get_string(status);
+      FX_LOGS(ERROR) << "fdio_get_vmo_exec() failed: " << zx_status_get_string(status);
       callback(status, std::move(binary), std::move(loader));
       return;
     }
@@ -582,7 +582,7 @@ void Realm::CreateComponent(fuchsia::sys::LaunchInfo launch_info,
   ComponentRequestWrapper component_request(std::move(controller));
 
   if (launch_info.url.empty()) {
-    FXL_LOG(ERROR) << "Cannot create application because launch_info contains"
+    FX_LOGS(ERROR) << "Cannot create application because launch_info contains"
                       " an empty url";
     component_request.SetReturnValues(kComponentCreationFailed, TerminationReason::URL_INVALID);
     return;
@@ -590,7 +590,7 @@ void Realm::CreateComponent(fuchsia::sys::LaunchInfo launch_info,
 
   std::string canon_url = CanonicalizeURL(launch_info.url);
   if (canon_url.empty()) {
-    FXL_LOG(ERROR) << "Cannot run " << launch_info.url
+    FX_LOGS(ERROR) << "Cannot run " << launch_info.url
                    << " because the url could not be canonicalized";
     component_request.SetReturnValues(kComponentCreationFailed, TerminationReason::URL_INVALID);
     return;
@@ -720,7 +720,7 @@ void Realm::CreateComponentWithRunnerForScheme(std::string runner_url,
 
   auto* runner = GetOrCreateRunner(runner_url);
   if (runner == nullptr) {
-    FXL_LOG(ERROR) << "Cannot create " << runner_url << " to run " << startup_info.launch_info.url;
+    FX_LOGS(ERROR) << "Cannot create " << runner_url << " to run " << startup_info.launch_info.url;
     component_request.SetReturnValues(kComponentCreationFailed, TerminationReason::RUNNER_FAILED);
     return;
   }
@@ -761,7 +761,7 @@ void Realm::CreateComponentFromPackage(fuchsia::sys::PackagePtr package,
       cmx_path = fp.GetDefaultComponentCmxPath();
     }
   } else {
-    FXL_LOG(ERROR) << "invalid component url: " << package->resolved_url;
+    FX_LOGS(ERROR) << "invalid component url: " << package->resolved_url;
     component_request.SetReturnValues(kComponentCreationFailed, TerminationReason::INTERNAL_ERROR);
     return;
   }
@@ -774,7 +774,7 @@ void Realm::CreateComponentFromPackage(fuchsia::sys::PackagePtr package,
       TRACE_DURATION("appmgr", "Realm::CreateComponentFromPackage:ParseFromFileAt", "cmx_path",
                      cmx_path);
       if (!cmx.ParseFromFileAt(fd.get(), cmx_path, &json_parser)) {
-        FXL_LOG(ERROR) << "cmx file failed to parse: " << json_parser.error_str();
+        FX_LOGS(ERROR) << "cmx file failed to parse: " << json_parser.error_str();
         component_request.SetReturnValues(kComponentCreationFailed,
                                           TerminationReason::INTERNAL_ERROR);
         return;
@@ -782,7 +782,7 @@ void Realm::CreateComponentFromPackage(fuchsia::sys::PackagePtr package,
     }
   } else {
     TRACE_DURATION_END("appmgr", "Realm::CreateComponentFromPackage:IsFileAt");
-    FXL_LOG(ERROR) << "Component " << package->resolved_url
+    FX_LOGS(ERROR) << "Component " << package->resolved_url
                    << " does not have a component manifest (a.k.a. cmx file)! "
                    << "Please add a cmx file to your component. "
                    << "https://fuchsia.dev/fuchsia-src/concepts/storage/"
@@ -792,7 +792,7 @@ void Realm::CreateComponentFromPackage(fuchsia::sys::PackagePtr package,
   }
 
   if (!is_fuchsia_pkg_url) {
-    FXL_LOG(ERROR) << "Component could not be launched from " << package->resolved_url
+    FX_LOGS(ERROR) << "Component could not be launched from " << package->resolved_url
                    << " because it is not a valid Fuchsia component URL!";
     component_request.SetReturnValues(kComponentCreationFailed, TerminationReason::INTERNAL_ERROR);
     return;
@@ -835,7 +835,7 @@ void Realm::CreateComponentFromPackage(fuchsia::sys::PackagePtr package,
     }
     TRACE_DURATION_END("appmgr", "Realm::CreateComponentFromPackage:VmoFromFilenameAt");
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed to open '" << package->resolved_url << "' program.binary path: '"
+      FX_LOGS(ERROR) << "Failed to open '" << package->resolved_url << "' program.binary path: '"
                      << bin_path << "', with status: " << status;
       component_request.SetReturnValues(kComponentCreationFailed,
                                         TerminationReason::INTERNAL_ERROR);
@@ -1020,7 +1020,7 @@ void Realm::CreateRunnerComponentFromPackage(
 
   auto* runner = GetOrCreateRunner(runtime.runner());
   if (runner == nullptr) {
-    FXL_LOG(ERROR) << "Cannot create " << runner << " to run " << startup_info.launch_info.url;
+    FX_LOGS(ERROR) << "Cannot create " << runner << " to run " << startup_info.launch_info.url;
     component_request.SetReturnValues(kComponentCreationFailed, TerminationReason::INTERNAL_ERROR);
     return;
   }
@@ -1049,7 +1049,7 @@ RunnerHolder* Realm::GetOrCreateRunner(const std::string& runner) {
 
   } else if (!result.first->second) {
     // There was a cycle in the runner graph.
-    FXL_LOG(ERROR) << "Detected a cycle in the runner graph for " << runner << ".";
+    FX_LOGS(ERROR) << "Detected a cycle in the runner graph for " << runner << ".";
     return nullptr;
   }
 
@@ -1080,7 +1080,7 @@ std::string Realm::IsolatedPathForPackage(std::string path_prefix, const Fuchsia
   // from combining the Component URL.
   std::string path = files::JoinPath(path_prefix, StableComponentID(fp));
   if (!files::IsDirectory(path) && !files::CreateDirectory(path)) {
-    FXL_LOG(ERROR) << "Failed to create data directory " << path;
+    FX_LOGS(ERROR) << "Failed to create data directory " << path;
     return "";
   }
   return path;

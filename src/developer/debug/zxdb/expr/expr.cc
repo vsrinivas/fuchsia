@@ -25,12 +25,12 @@ class MultiEvalTracking {
   }
 
   void SetResult(size_t index, ErrOrValue value) {
-    FXL_DCHECK(index < data_.size());
-    FXL_DCHECK(remaining_ > 0);
+    FX_DCHECK(index < data_.size());
+    FX_DCHECK(remaining_ > 0);
 
     // Nothing should be set on this slot yet.
-    FXL_DCHECK(!data_[index].has_error());
-    FXL_DCHECK(data_[index].value() == ExprValue());
+    FX_DCHECK(!data_[index].has_error());
+    FX_DCHECK(data_[index].value() == ExprValue());
 
     data_[index] = std::move(value);
 
@@ -80,7 +80,7 @@ void EvalExpression(const std::string& input, const fxl::RefPtr<EvalContext>& co
 void EvalExpressions(const std::vector<std::string>& inputs,
                      const fxl::RefPtr<EvalContext>& context, bool follow_references,
                      fit::callback<void(std::vector<ErrOrValue>)> cb) {
-  FXL_DCHECK(!inputs.empty());
+  FX_DCHECK(!inputs.empty());
 
   auto tracking = std::make_shared<MultiEvalTracking>(inputs.size(), std::move(cb));
   for (size_t i = 0; i < inputs.size(); i++) {

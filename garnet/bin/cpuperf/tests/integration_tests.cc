@@ -38,7 +38,7 @@ TEST(Cpuperf, LastBranchRecord) {
   ASSERT_TRUE(perfmon::Controller::GetProperties(&properties));
   if (!(properties.flags & perfmon::Properties::kFlagHasLastBranch)) {
     // Not supported on this h/w. Punt.
-    FXL_LOG(INFO) << "Last Branch Records not supported, skipping test";
+    FX_LOGS(INFO) << "Last Branch Records not supported, skipping test";
     return;
   }
 
@@ -61,7 +61,7 @@ int main(int argc, char** argv) {
   bool is_supported = false;
   is_supported = perfmon::Controller::IsSupported();
   if (!is_supported) {
-    FXL_LOG(INFO) << "Perfmon device not supported";
+    FX_LOGS(INFO) << "Perfmon device not supported";
     return EXIT_SUCCESS;
   }
 

@@ -62,7 +62,7 @@ class SandboxTest : public ::gtest::RealLoopFixture {
     });
 
     sandbox.SetTerminationCallback([&done, &o_result](SandboxResult result) {
-      FXL_LOG(INFO) << "Sandbox terminated with status: " << result;
+      FX_LOGS(INFO) << "Sandbox terminated with status: " << result;
       o_result = std::move(result);
       done = true;
     });
@@ -863,11 +863,11 @@ TEST_F(SandboxTest, SyslogWithNoKlog) {
   EnableEventCollection();
   EnableLogCapture([this](const fuchsia::logger::LogMessage& msg) {
     if (std::find(msg.tags.begin(), msg.tags.end(), "dummy-proc") != msg.tags.end()) {
-      FXL_LOG(INFO) << "Got log tagged with 'dummy-proc'! Sending event...";
+      FX_LOGS(INFO) << "Got log tagged with 'dummy-proc'! Sending event...";
       sync::Event evt;
       evt.set_code(100);
       bus()->Publish(std::move(evt));
-      FXL_LOG(INFO) << "Published event!";
+      FX_LOGS(INFO) << "Published event!";
     }
   });
   RunSandboxSuccess();

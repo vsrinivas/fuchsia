@@ -24,7 +24,7 @@ static bool WriteEvents(async::Loop& loop) {
   trace::TraceProviderWithFdio provider{loop.dispatcher(), kSharedProviderWriteEventsProviderName};
 
   if (!WaitForTracingToStart(loop, kStartTimeout)) {
-    FXL_LOG(ERROR) << "Timed out waiting for tracing to start";
+    FX_LOGS(ERROR) << "Timed out waiting for tracing to start";
     return false;
   }
 
@@ -52,7 +52,7 @@ int main(int argc, char** argv) {
   // shut down trace-engine.
   zx_status_t status = loop.RunUntilIdle();
   if (status != ZX_OK && status != ZX_ERR_CANCELED) {
-    FXL_LOG(ERROR) << "loop.Run() failed, status=" << status;
+    FX_LOGS(ERROR) << "loop.Run() failed, status=" << status;
     return EXIT_FAILURE;
   }
 

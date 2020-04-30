@@ -34,7 +34,7 @@ static bool WriteEvents(async::Loop& loop) {
     // contains the trace buffer (as a vmo) and other things. So wait for it.
     async::Loop wait_loop(&kAsyncLoopConfigNoAttachToCurrentThread);
     if (!tracing::test::WaitForTracingToStart(wait_loop, tracing::test::kStartTimeout)) {
-      FXL_LOG(ERROR) << "Provider " << kProviderDestructionProviderName
+      FX_LOGS(ERROR) << "Provider " << kProviderDestructionProviderName
                      << " failed waiting for tracing to start";
       return false;
     }

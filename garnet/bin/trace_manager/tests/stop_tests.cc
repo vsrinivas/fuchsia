@@ -22,7 +22,7 @@ TEST_F(TraceManagerTest, StopUninitialize) {
     QuitLoop();
   });
   RunLoopUntilIdle();
-  FXL_VLOG(2) << "Loop done";
+  FX_VLOGS(2) << "Loop done";
   EXPECT_TRUE(stop_completed);
 }
 
@@ -35,7 +35,7 @@ void TryExtraStop(TraceManagerTest* fixture, const T& interface_ptr) {
     fixture->QuitLoop();
   });
   fixture->RunLoopUntilIdle();
-  FXL_VLOG(2) << "Loop done, expecting session still stopped";
+  FX_VLOGS(2) << "Loop done, expecting session still stopped";
   EXPECT_TRUE(stop_completed);
   EXPECT_EQ(fixture->GetSessionState(), SessionState::kStopped);
 }
@@ -70,7 +70,7 @@ TEST_F(TraceManagerTest, StopWhileStopping) {
   controller()->StopTracing(std::move(stop1_options), []() {});
   RunLoopUntilIdle();
   // The loop will exit for the transition to kStopping.
-  FXL_VLOG(2) << "Loop done, expecting session stopping";
+  FX_VLOGS(2) << "Loop done, expecting session stopping";
   EXPECT_EQ(GetSessionState(), SessionState::kStopping);
 
   // Now try another Stop while we're still in |kStopping|.
@@ -83,7 +83,7 @@ TEST_F(TraceManagerTest, StopWhileStopping) {
     QuitLoop();
   });
   RunLoopUntilIdle();
-  FXL_VLOG(2) << "Stop loop done";
+  FX_VLOGS(2) << "Stop loop done";
   EXPECT_TRUE(stop_completed);
   EXPECT_TRUE(GetSessionState() == SessionState::kStopping);
 }
@@ -114,7 +114,7 @@ TEST_F(TraceManagerTest, StopWhileTerminating) {
     QuitLoop();
   });
   RunLoopUntilIdle();
-  FXL_VLOG(2) << "Stop loop done";
+  FX_VLOGS(2) << "Stop loop done";
   EXPECT_TRUE(stop_completed);
   EXPECT_TRUE(GetSessionState() == SessionState::kTerminating);
 }

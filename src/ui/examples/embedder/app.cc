@@ -26,7 +26,7 @@ static const char* AppTypeString(embedder::AppType type) {
   } else if (type == embedder::AppType::SUBVIEW) {
     return "[SUBVIEW] ";
   } else {
-    FXL_DCHECK(false);
+    FX_DCHECK(false);
   }
   return nullptr;
 }
@@ -42,7 +42,7 @@ App::App(async::Loop* loop, AppType type)
   // Connect the ExampleViewProviderService.
   if (type_ == AppType::CONTAINER) {
     // Launch the subview app.  Clone our stdout and stderr file descriptors
-    // into it so output (FXL_LOG, etc) from the subview app will show up as
+    // into it so output (FX_LOGS, etc) from the subview app will show up as
     // if it came from us.
     fuchsia::sys::LaunchInfo launch_info;
     launch_info.out = sys::CloneFileDescriptor(STDOUT_FILENO);
@@ -72,18 +72,18 @@ App::App(async::Loop* loop, AppType type)
   }
 
   // Connect to the global Scenic service and begin a session.
-  FXL_LOG(INFO) << AppTypeString(type_) << "Connecting to Scenic service.";
+  FX_LOGS(INFO) << AppTypeString(type_) << "Connecting to Scenic service.";
   scenic_ = component_context_->svc()->Connect<fuchsia::ui::scenic::Scenic>();
   scenic_.set_error_handler([this](zx_status_t status) {
-    FXL_LOG(INFO) << AppTypeString(type_) << "Scenic error.  Connection dropped.";
+    FX_LOGS(INFO) << AppTypeString(type_) << "Scenic error.  Connection dropped.";
     ReleaseSessionResources();
     loop_->Quit();
   });
-  FXL_LOG(INFO) << AppTypeString(type_) << "Creating new session.";
+  FX_LOGS(INFO) << AppTypeString(type_) << "Creating new session.";
   session_ = std::make_unique<scenic::Session>(scenic_.get());
   session_->SetDebugName("Embedder");
   session_->set_error_handler([this](zx_status_t status) {
-    FXL_LOG(INFO) << AppTypeString(type_) << "Session error.  Connection dropped.";
+    FX_LOGS(INFO) << AppTypeString(type_) << "Session error.  Connection dropped.";
     ReleaseSessionResources();
     loop_->Quit();
   });
@@ -92,7 +92,7 @@ App::App(async::Loop* loop, AppType type)
     auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
 
     // Create the subview and bind the ServiceProviders.
-    FXL_LOG(INFO) << AppTypeString(type_) << "Creating view.";
+    FX_LOGS(INFO) << AppTypeString(type_) << "Creating view.";
     fuchsia::sys::ServiceProviderPtr outgoing_services;
     outgoing_services.Bind(service_bindings_.AddBinding(this));
     view_provider_->CreateView(std::move(view_token.value), incoming_services_.NewRequest(),
@@ -108,7 +108,7 @@ App::App(async::Loop* loop, AppType type)
   async::PostDelayedTask(
       loop_->dispatcher(),
       [this] {
-        FXL_LOG(INFO) << AppTypeString(type_) << "Closing session.";
+        FX_LOGS(INFO) << AppTypeString(type_) << "Closing session.";
         ReleaseSessionResources();
         loop_->Quit();
       },

@@ -155,7 +155,7 @@ bool DoResolveRelativePath(const char* base_url, const Parsed& base_parsed, bool
 
   // We should always have something to do in this function, the caller checks
   // that some component is being replaced.
-  FXL_DCHECK(false) << "Not reached";
+  FX_DCHECK(false) << "Not reached";
   return success;
 }
 

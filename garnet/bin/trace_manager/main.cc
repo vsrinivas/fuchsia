@@ -29,11 +29,11 @@ int main(int argc, char** argv) {
 
   tracing::Config config;
   if (!config.ReadFrom(config_file)) {
-    FXL_LOG(ERROR) << "Failed to read configuration from " << config_file;
+    FX_LOGS(ERROR) << "Failed to read configuration from " << config_file;
     exit(EXIT_FAILURE);
   }
 
-  FXL_LOG(INFO) << "Trace Manager starting with config: " << config_file;
+  FX_LOGS(INFO) << "Trace Manager starting with config: " << config_file;
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   tracing::TraceManagerApp trace_manager_app{

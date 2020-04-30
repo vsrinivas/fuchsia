@@ -26,7 +26,7 @@ const char* ExprValueSource::TypeToString(Type t) {
 }
 
 uint128_t ExprValueSource::SetBits(uint128_t existing, uint128_t new_value) const {
-  FXL_DCHECK(is_bitfield());
+  FX_DCHECK(is_bitfield());
 
   uint128_t value = new_value << bit_shift();
 

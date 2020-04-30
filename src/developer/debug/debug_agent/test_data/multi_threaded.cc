@@ -187,7 +187,7 @@ int WaitOnThread(void* ctx) {
   ThreadContext* first_thread = reinterpret_cast<ThreadContext*>(ctx);
   int res = 1;
   thrd_join(first_thread->handle, &res);
-  FXL_DCHECK(res == 0);
+  FX_DCHECK(res == 0);
   return 0;
 }
 
@@ -195,7 +195,7 @@ zx_info_thread GetThreadState(zx_handle_t thread_handle) {
   zx_info_thread info;
   zx_status_t status =
       zx_object_get_info(thread_handle, ZX_INFO_THREAD, &info, sizeof(info), nullptr, nullptr);
-  FXL_DCHECK(status == ZX_OK) << "Got: " << zx_status_get_string(status);
+  FX_DCHECK(status == ZX_OK) << "Got: " << zx_status_get_string(status);
 
   return info;
 }
@@ -206,19 +206,19 @@ void WaitState() {
   while (!gEntered)
     zx_nanosleep(zx_deadline_after(ZX_MSEC(100)));
 
-  FXL_LOG(INFO) << "Thread entered infinite loop.";
+  FX_LOGS(INFO) << "Thread entered infinite loop.";
 
   auto second_thread = CreateThread("wait-on-first", WaitOnThread, first_thread.get());
   while (!gSecondStarted)
     zx_nanosleep(zx_deadline_after(ZX_MSEC(100)));
 
-  FXL_LOG(INFO) << "Created second thread.";
+  FX_LOGS(INFO) << "Created second thread.";
 
   // Print the state of the second thread.
 
   for (int i = 0; i < 10; i++) {
     auto info = GetThreadState(second_thread->zx_handle);
-    FXL_LOG(INFO) << "Got status: " << ThreadStateToString(info.state);
+    FX_LOGS(INFO) << "Got status: " << ThreadStateToString(info.state);
     if (info.state == ZX_THREAD_STATE_BLOCKED_FUTEX)
       break;
 
@@ -229,28 +229,28 @@ void WaitState() {
     // Suspend the thread.
     zx_handle_t suspend_token;
     zx_status_t status = zx_task_suspend(second_thread->zx_handle, &suspend_token);
-    FXL_DCHECK(status == ZX_OK) << "Got: " << zx_status_get_string(status);
+    FX_DCHECK(status == ZX_OK) << "Got: " << zx_status_get_string(status);
 
     // Wait for signal.
     zx_signals_t observed;
     status = zx_object_wait_one(second_thread->zx_handle, ZX_THREAD_SUSPENDED,
                                 zx_deadline_after(ZX_SEC(1)), &observed);
-    FXL_DCHECK(status == ZX_OK) << "Got: " << zx_status_get_string(status);
-    FXL_DCHECK((observed & ZX_THREAD_SUSPENDED) != 0);
+    FX_DCHECK(status == ZX_OK) << "Got: " << zx_status_get_string(status);
+    FX_DCHECK((observed & ZX_THREAD_SUSPENDED) != 0);
 
     auto info = GetThreadState(second_thread->zx_handle);
-    FXL_LOG(INFO) << "Got status: " << ThreadStateToString(info.state);
+    FX_LOGS(INFO) << "Got status: " << ThreadStateToString(info.state);
 
     zx_handle_close(suspend_token);
   }
 
-  FXL_LOG(INFO) << "Exiting.";
+  FX_LOGS(INFO) << "Exiting.";
   gExit = true;
   int res = 2000;
-  FXL_DCHECK(thrd_join(second_thread->handle, &res) == thrd_success);
-  FXL_DCHECK(res == 0) << "Res: " << res;
-  FXL_DCHECK(thrd_join(first_thread->handle, &res) == thrd_success);
-  FXL_DCHECK(res == 0) << "Res: " << res;
+  FX_DCHECK(thrd_join(second_thread->handle, &res) == thrd_success);
+  FX_DCHECK(res == 0) << "Res: " << res;
+  FX_DCHECK(thrd_join(first_thread->handle, &res) == thrd_success);
+  FX_DCHECK(res == 0) << "Res: " << res;
 }
 
 }  // namespace

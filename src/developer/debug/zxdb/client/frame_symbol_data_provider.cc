@@ -44,12 +44,12 @@ void FrameSymbolDataProvider::Disown() {
 }
 
 std::optional<containers::array_view<uint8_t>> FrameSymbolDataProvider::GetRegister(RegisterID id) {
-  FXL_DCHECK(id != RegisterID::kUnknown);
+  FX_DCHECK(id != RegisterID::kUnknown);
   if (!frame_)
     return containers::array_view<uint8_t>();  // Synchronously know we don't have the value.
 
   RegisterCategory category = debug_ipc::RegisterIDToCategory(id);
-  FXL_DCHECK(category != RegisterCategory::kNone);
+  FX_DCHECK(category != RegisterCategory::kNone);
 
   const std::vector<Register>* regs = frame_->GetRegisterCategorySync(category);
   if (!regs)
@@ -68,7 +68,7 @@ void FrameSymbolDataProvider::GetRegisterAsync(RegisterID id, GetRegisterCallbac
   }
 
   RegisterCategory category = debug_ipc::RegisterIDToCategory(id);
-  FXL_DCHECK(category != RegisterCategory::kNone);
+  FX_DCHECK(category != RegisterCategory::kNone);
 
   frame_->GetRegisterCategoryAsync(
       category, false,

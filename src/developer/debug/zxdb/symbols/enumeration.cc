@@ -20,7 +20,7 @@ Enumeration::Enumeration(const std::string& name, LazySymbol type, uint32_t byte
   else
     set_assigned_name(name);
 
-  FXL_DCHECK(byte_size > 0);
+  FX_DCHECK(byte_size > 0);
   set_byte_size(byte_size);
 }
 

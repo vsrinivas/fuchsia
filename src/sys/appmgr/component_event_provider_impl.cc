@@ -29,13 +29,13 @@ void ComponentEventProviderImpl::SetListener(
   const zx_status_t status =
       async::PostTask(executor_.dispatcher(), [self = weak_ptr_factory_.GetWeakPtr()] {
         if (!self) {
-          FXL_DLOG(WARNING) << "called posted task after exit, skipping callback";
+          FX_DLOGS(WARNING) << "called posted task after exit, skipping callback";
           return;
         }
         self->NotifyOfExistingComponents();
       });
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Could not synthesize events for existing components: "
+    FX_LOGS(ERROR) << "Could not synthesize events for existing components: "
                    << zx_status_get_string(status);
   }
 }
@@ -85,7 +85,7 @@ std::vector<std::string> ComponentEventProviderImpl::RelativeRealmPath(const Rea
   // Just a sanity check, this shouldn't occur given that this provider only calls this method with
   // realms under it.
   if (realm != realm_) {
-    FXL_LOG(ERROR) << "Unreachable: ComponentEventProvider attempted to get a relative realm path "
+    FX_LOGS(ERROR) << "Unreachable: ComponentEventProvider attempted to get a relative realm path "
                    << "from a realm not in its tree";
     return {};
   }

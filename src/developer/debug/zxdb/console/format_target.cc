@@ -110,7 +110,7 @@ const char* TargetStateToString(Target::State state) {
     case Target::State::kRunning:
       return "Running";
   }
-  FXL_NOTREACHED();
+  FX_NOTREACHED();
   return "";
 }
 

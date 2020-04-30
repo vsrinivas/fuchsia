@@ -50,12 +50,12 @@ class MeshBuilder : public fxl::RefCountedThreadSafe<MeshBuilder> {
 
   // Return pointer to start of data for the vertex at the specified index.
   uint8_t* GetVertex(size_t index) {
-    FXL_DCHECK(index < vertex_count_);
+    FX_DCHECK(index < vertex_count_);
     return vertex_staging_buffer_.data() + (index * vertex_stride_);
   }
   // Return pointer to the i-th index that was added.
   uint32_t* GetIndex(size_t i) {
-    FXL_DCHECK(i < index_count_);
+    FX_DCHECK(i < index_count_);
     return index_staging_buffer_.data() + i;
   }
 
@@ -80,16 +80,16 @@ typedef fxl::RefPtr<MeshBuilder> MeshBuilderPtr;
 // Inline function definitions.
 
 inline MeshBuilder& MeshBuilder::AddIndex(uint32_t index) {
-  FXL_DCHECK(index_count_ < max_index_count_);
-  FXL_DCHECK(index_count_ < index_staging_buffer_.size());
+  FX_DCHECK(index_count_ < max_index_count_);
+  FX_DCHECK(index_count_ < index_staging_buffer_.size());
   index_staging_buffer_[index_count_++] = index;
   return *this;
 }
 
 inline MeshBuilder& MeshBuilder::AddVertexData(const void* ptr, size_t size) {
-  FXL_DCHECK(vertex_count_ < max_vertex_count_);
-  FXL_DCHECK(size <= vertex_stride_);
-  FXL_DCHECK(vertex_count_ * vertex_stride_ < vertex_staging_buffer_.size());
+  FX_DCHECK(vertex_count_ < max_vertex_count_);
+  FX_DCHECK(size <= vertex_stride_);
+  FX_DCHECK(vertex_count_ * vertex_stride_ < vertex_staging_buffer_.size());
 
   const auto* src_ptr = static_cast<const uint8_t*>(ptr);
   size_t offset = vertex_stride_ * vertex_count_;

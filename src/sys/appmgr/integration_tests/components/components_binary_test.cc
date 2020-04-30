@@ -28,7 +28,7 @@ class ComponentsBinaryTest : public sys::testing::TestWithEnvironment {
   std::string ReadOutFile() {
     std::string out;
     if (!files::ReadFileToString(out_file_, &out)) {
-      FXL_LOG(ERROR) << "Could not read output file " << out_file_;
+      FX_LOGS(ERROR) << "Could not read output file " << out_file_;
       return "";
     }
     return out;

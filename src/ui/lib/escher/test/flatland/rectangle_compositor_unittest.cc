@@ -23,7 +23,7 @@ namespace escher {
 
 // Default 1x1 texture for Renderables with no texture.
 TexturePtr CreateWhiteTexture(EscherWeakPtr escher, BatchGpuUploader* gpu_uploader) {
-  FXL_DCHECK(escher);
+  FX_DCHECK(escher);
   uint8_t channels[4];
   channels[0] = channels[1] = channels[2] = channels[3] = 255;
   auto image = escher->NewRgbaImage(gpu_uploader, 1, 1, channels);
@@ -32,7 +32,7 @@ TexturePtr CreateWhiteTexture(EscherWeakPtr escher, BatchGpuUploader* gpu_upload
 
 // 2x2 texture with white, red, green and blue pixels.
 TexturePtr CreateFourColorTexture(EscherWeakPtr escher, BatchGpuUploader* gpu_uploader) {
-  FXL_DCHECK(escher);
+  FX_DCHECK(escher);
   uint8_t channels[16] = {255, 255, 255, 255, 255, 0, 0, 255, 0, 255, 0, 255, 0, 0, 255, 255};
   auto image = escher->NewRgbaImage(gpu_uploader, 2, 2, channels);
   return escher->NewTexture(std::move(image), vk::Filter::eNearest);

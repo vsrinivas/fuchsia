@@ -32,44 +32,44 @@ std::optional<SecurityPolicy> PolicyChecker::Check(const SandboxMetadata& sandbo
   }
   if (sandbox.HasFeature("deprecated-ambient-replace-as-executable")) {
     if (!CheckDeprecatedAmbientReplaceAsExecutable(pkg_url)) {
-      FXL_LOG(ERROR) << "Component " << pkg_url.ToString() << " is not allowed to use "
+      FX_LOGS(ERROR) << "Component " << pkg_url.ToString() << " is not allowed to use "
                      << "deprecated-ambient-replace-as-executable. go/fx-hermetic-sandboxes";
       return std::nullopt;
     }
     policy.enable_ambient_executable = true;
   }
   if (sandbox.HasFeature("deprecated-shell") && !CheckDeprecatedShell(pkg_url)) {
-    FXL_LOG(ERROR) << "Component " << pkg_url.ToString() << " is not allowed to use "
+    FX_LOGS(ERROR) << "Component " << pkg_url.ToString() << " is not allowed to use "
                    << "deprecated-shell. go/fx-hermetic-sandboxes";
     return std::nullopt;
   }
   if (sandbox.HasFeature("hub") && !CheckHub(pkg_url)) {
-    FXL_LOG(ERROR) << "Component " << pkg_url.ToString() << " is not allowed to use "
+    FX_LOGS(ERROR) << "Component " << pkg_url.ToString() << " is not allowed to use "
                    << "hub. go/no-hub";
     return std::nullopt;
   }
   if (sandbox.HasService("fuchsia.pkg.PackageResolver") && !CheckPackageResolver(pkg_url)) {
-    FXL_LOG(ERROR) << "Component " << pkg_url.ToString() << " is not allowed to use "
+    FX_LOGS(ERROR) << "Component " << pkg_url.ToString() << " is not allowed to use "
                    << "fuchsia.pkg.PackageResolver. go/no-package-resolver";
     return std::nullopt;
   }
   if (sandbox.HasService("fuchsia.pkg.PackageCache") && !CheckPackageCache(pkg_url)) {
-    FXL_LOG(ERROR) << "Component " << pkg_url.ToString() << " is not allowed to use "
+    FX_LOGS(ERROR) << "Component " << pkg_url.ToString() << " is not allowed to use "
                    << "fuchsia.pkg.PackageCache. go/no-package-cache";
     return std::nullopt;
   }
   if (sandbox.HasPkgFsPath("versions") && !CheckPkgFsVersions(pkg_url)) {
-    FXL_LOG(ERROR) << "Component " << pkg_url.ToString() << " is not allowed to use "
+    FX_LOGS(ERROR) << "Component " << pkg_url.ToString() << " is not allowed to use "
                    << "pkgfs/versions. go/no-pkgfs-versions";
     return std::nullopt;
   }
   if (sandbox.HasService("fuchsia.boot.RootJob") && !CheckRootJob(pkg_url)) {
-    FXL_LOG(ERROR) << "Component " << pkg_url.ToString() << " is not allowed to use "
+    FX_LOGS(ERROR) << "Component " << pkg_url.ToString() << " is not allowed to use "
                    << "fuchsia.boot.RootJob";
     return std::nullopt;
   }
   if (sandbox.HasService("fuchsia.boot.RootResource") && !CheckRootResource(pkg_url)) {
-    FXL_LOG(ERROR) << "Component " << pkg_url.ToString() << " is not allowed to use "
+    FX_LOGS(ERROR) << "Component " << pkg_url.ToString() << " is not allowed to use "
                    << "fuchsia.boot.RootResource";
     return std::nullopt;
   }

@@ -39,7 +39,7 @@ void CurlFDWatcher::OnFDReady(int fd, bool read, bool write, bool err) {
     action |= CURL_CSELECT_ERR;
 
   auto result = curl_multi_socket_action(Curl::multi_handle, fd, action, &_ignore);
-  FXL_DCHECK(result == CURLM_OK);
+  FX_DCHECK(result == CURLM_OK);
 
   if (cleanup_pending) {
     return;
@@ -59,13 +59,13 @@ void CurlFDWatcher::OnFDReady(int fd, bool read, bool write, bool err) {
 
       Curl* curl;
       auto result = curl_easy_getinfo(info->easy_handle, CURLINFO_PRIVATE, &curl);
-      FXL_DCHECK(result == CURLE_OK);
+      FX_DCHECK(result == CURLE_OK);
 
       auto cb = std::move(curl->multi_cb_);
       curl->multi_cb_ = nullptr;
       curl->FreeSList();
       auto rem_result = curl_multi_remove_handle(Curl::multi_handle, info->easy_handle);
-      FXL_DCHECK(rem_result == CURLM_OK);
+      FX_DCHECK(rem_result == CURLM_OK);
 
       auto ref = curl->self_ref_;
       curl->self_ref_ = nullptr;
@@ -94,7 +94,7 @@ int SocketCallback(CURL* easy, curl_socket_t s, int what, void*, void*) {
         mode = debug_ipc::MessageLoop::WatchMode::kReadWrite;
         break;
       default:
-        FXL_NOTREACHED();
+        FX_NOTREACHED();
         return -1;
     };
 
@@ -128,7 +128,7 @@ int TimerCallback(CURLM* multi, long timeout_ms, void*) {
 
         int _ignore;
         auto result = curl_multi_socket_action(multi, CURL_SOCKET_TIMEOUT, 0, &_ignore);
-        FXL_DCHECK(result == CURLM_OK);
+        FX_DCHECK(result == CURLM_OK);
       });
 
   return 0;
@@ -137,7 +137,7 @@ int TimerCallback(CURLM* multi, long timeout_ms, void*) {
 template <typename T>
 void curl_easy_setopt_CHECK(CURL* handle, CURLoption option, T t) {
   auto result = curl_easy_setopt(handle, option, t);
-  FXL_DCHECK(result == CURLE_OK);
+  FX_DCHECK(result == CURLE_OK);
 }
 
 }  // namespace
@@ -158,11 +158,11 @@ size_t DoDataCallback(char* data, size_t size, size_t nitems, void* curl) {
 Curl::Curl() {
   if (!global_init++) {
     auto res = curl_global_init(CURL_GLOBAL_SSL);
-    FXL_DCHECK(!res);
+    FX_DCHECK(!res);
   }
 
   curl_ = curl_easy_init();
-  FXL_DCHECK(curl_);
+  FX_DCHECK(curl_);
 
   // The curl handle has a private pointer which we can stash the address of our wrapper class in.
   // Then anywhere the curl handle appears in the API we can grab our wrapper.
@@ -170,7 +170,7 @@ Curl::Curl() {
 }
 
 Curl::~Curl() {
-  FXL_DCHECK(!multi_cb_);
+  FX_DCHECK(!multi_cb_);
 
   if (!curl_) {
     return;
@@ -181,7 +181,7 @@ Curl::~Curl() {
   if (!--global_init) {
     if (multi_handle) {
       auto result = curl_multi_cleanup(multi_handle);
-      FXL_DCHECK(result == CURLM_OK);
+      FX_DCHECK(result == CURLM_OK);
       multi_handle = nullptr;
     }
 
@@ -219,7 +219,7 @@ std::string Curl::Escape(const std::string& input) {
 }
 
 void Curl::PrepareToPerform() {
-  FXL_DCHECK(!multi_cb_);
+  FX_DCHECK(!multi_cb_);
 
   curl_easy_setopt_CHECK(curl_, CURLOPT_HEADERFUNCTION, DoHeaderCallback);
   curl_easy_setopt_CHECK(curl_, CURLOPT_HEADERDATA, this);
@@ -237,7 +237,7 @@ void Curl::PrepareToPerform() {
     curl_easy_setopt_CHECK(curl_, CURLOPT_POSTFIELDSIZE, post_data_.size());
   }
 
-  FXL_DCHECK(!slist_);
+  FX_DCHECK(!slist_);
   for (const auto& header : headers_) {
     slist_ = curl_slist_append(slist_, header.c_str());
   }
@@ -260,18 +260,18 @@ Curl::Error Curl::Perform() {
 
 void Curl::Perform(fit::callback<void(Curl*, Curl::Error)> cb) {
   self_ref_ = weak_self_ref_.lock();
-  FXL_DCHECK(self_ref_) << "To use async Curl::Perform you must construct with Curl::MakeShared";
+  FX_DCHECK(self_ref_) << "To use async Curl::Perform you must construct with Curl::MakeShared";
 
   PrepareToPerform();
   InitMulti();
   auto result = curl_multi_add_handle(multi_handle, curl_);
-  FXL_DCHECK(result == CURLM_OK);
+  FX_DCHECK(result == CURLM_OK);
 
   multi_cb_ = std::move(cb);
 
   int _ignore;
   result = curl_multi_socket_action(multi_handle, CURL_SOCKET_TIMEOUT, 0, &_ignore);
-  FXL_DCHECK(result == CURLM_OK);
+  FX_DCHECK(result == CURLM_OK);
 }
 
 void Curl::InitMulti() {
@@ -280,19 +280,19 @@ void Curl::InitMulti() {
   }
 
   multi_handle = curl_multi_init();
-  FXL_DCHECK(multi_handle);
+  FX_DCHECK(multi_handle);
 
   auto result = curl_multi_setopt(multi_handle, CURLMOPT_SOCKETFUNCTION, SocketCallback);
-  FXL_DCHECK(result == CURLM_OK);
+  FX_DCHECK(result == CURLM_OK);
   result = curl_multi_setopt(multi_handle, CURLMOPT_TIMERFUNCTION, TimerCallback);
-  FXL_DCHECK(result == CURLM_OK);
+  FX_DCHECK(result == CURLM_OK);
 }
 
 long Curl::ResponseCode() {
   long ret;
 
   auto result = curl_easy_getinfo(curl_, CURLINFO_RESPONSE_CODE, &ret);
-  FXL_DCHECK(result == CURLE_OK);
+  FX_DCHECK(result == CURLE_OK);
   return ret;
 }
 

@@ -53,7 +53,7 @@ const char* BreakpointSettings::TypeToString(BreakpointSettings::Type t) {
     case BreakpointSettings::Type::kLast:
       break;  // Not valid.
   }
-  FXL_NOTREACHED();
+  FX_NOTREACHED();
   return "<invalid>";
 }
 

@@ -93,12 +93,12 @@ class Workload {
 
   void Add(const std::string& name, std::unique_ptr<Object> object) {
     auto [iter, okay] = objects_.emplace(name, std::move(object));
-    FXL_CHECK(okay) << "Object with name \"" << name << "\" defined more than once!";
+    FX_CHECK(okay) << "Object with name \"" << name << "\" defined more than once!";
   }
 
   Object& Get(const std::string& name) {
     const auto search = objects_.find(name);
-    FXL_CHECK(search != objects_.end()) << "name=" << name;
+    FX_CHECK(search != objects_.end()) << "name=" << name;
 
     auto& [key, value] = *search;
     return *value;
@@ -107,10 +107,10 @@ class Workload {
   template <typename T>
   T& Get(const std::string& name) {
     const auto search = objects_.find(name);
-    FXL_CHECK(search != objects_.end()) << "name=" << name;
+    FX_CHECK(search != objects_.end()) << "name=" << name;
 
     auto& [key, value] = *search;
-    FXL_CHECK(value->type() == T::Type) << "actual=" << value->type() << " expected=" << T::Type;
+    FX_CHECK(value->type() == T::Type) << "actual=" << value->type() << " expected=" << T::Type;
 
     return static_cast<T&>(*value);
   }

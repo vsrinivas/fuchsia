@@ -68,8 +68,8 @@ class View : public fuchsia::ui::scenic::SessionListener {
     zx::vmo image_vmo;
     zx_status_t status = zx::vmo::create(image_vmo_bytes, 0, &image_vmo);
     if (status != ZX_OK) {
-      FXL_LOG(FATAL) << "::zx::vmo::create() failed";
-      FXL_NOTREACHED();
+      FX_LOGS(FATAL) << "::zx::vmo::create() failed";
+      FX_NOTREACHED();
     }
 
     uint8_t* vmo_base;
@@ -126,7 +126,7 @@ class View : public fuchsia::ui::scenic::SessionListener {
   }
 
   // |fuchsia::ui::scenic::SessionListener|
-  void OnScenicError(std::string error) override { FXL_LOG(INFO) << "ERROR: " << error; }
+  void OnScenicError(std::string error) override { FX_LOGS(INFO) << "ERROR: " << error; }
 
   static bool IsViewAttachedToSceneEvent(const fuchsia::ui::scenic::Event& event) {
     return event.Which() == fuchsia::ui::scenic::Event::Tag::kGfx &&
@@ -184,7 +184,7 @@ class View : public fuchsia::ui::scenic::SessionListener {
     view_height_ = (vp.bounding_box.max.y - vp.inset_from_max.y) -
                    (vp.bounding_box.min.y + vp.inset_from_min.y);
 
-    FXL_LOG(INFO) << "OnViewPropertiesChanged " << view_width_ << " " << view_height_;
+    FX_LOGS(INFO) << "OnViewPropertiesChanged " << view_width_ << " " << view_height_;
 
     if (view_width_ == 0 || view_height_ == 0)
       return;
@@ -356,7 +356,7 @@ class View : public fuchsia::ui::scenic::SessionListener {
           avg_times_[i] = 0.0f;
         }
         time = time / kSamples;
-        FXL_LOG(INFO) << "Tested " << state_names_[state_] << " " << level_
+        FX_LOGS(INFO) << "Tested " << state_names_[state_] << " " << level_
                       << ", avg time: " << time;
         saved_times_[state_] = time;
         saved_levels_[state_] = level_;
@@ -410,17 +410,17 @@ class View : public fuchsia::ui::scenic::SessionListener {
   }
 
   void PrintReport() {
-    FXL_LOG(INFO) << "----- REPORT -----";
+    FX_LOGS(INFO) << "----- REPORT -----";
     for (int i = 0; i < NUM_STATES; i++) {
       if (saved_levels_[i] == kFullScreenLayers - 1) {
-        FXL_LOG(INFO) << "State " << state_names_[i] << " completed with a running time of "
+        FX_LOGS(INFO) << "State " << state_names_[i] << " completed with a running time of "
                       << saved_times_[i];
       } else {
-        FXL_LOG(INFO) << "State " << state_names_[i] << " failed at level " << saved_levels_[i]
+        FX_LOGS(INFO) << "State " << state_names_[i] << " failed at level " << saved_levels_[i]
                       << " with a running time of " << saved_times_[i];
       }
     }
-    FXL_LOG(INFO) << "--- END REPORT ---";
+    FX_LOGS(INFO) << "--- END REPORT ---";
   }
 
   static const int kWarmUpPeriod = 10;

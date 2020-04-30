@@ -140,7 +140,7 @@ bool HandleFrameNoun(ConsoleContext* context, const Command& cmd, Err* err) {
   // Explicit index provided, this switches the current context. The thread should be already
   // resolved to a valid pointer if it was specified on the command line (otherwise the command
   // would have been rejected before here).
-  FXL_DCHECK(cmd.frame());
+  FX_DCHECK(cmd.frame());
   context->SetActiveFrameForThread(cmd.frame());
   // Setting the active frame also sets the active thread and target.
   context->SetActiveThreadForTarget(cmd.thread());
@@ -259,7 +259,7 @@ bool HandleFilterNoun(ConsoleContext* context, const Command& cmd, Err* err) {
     return true;
   }
 
-  FXL_DCHECK(cmd.filter());
+  FX_DCHECK(cmd.filter());
   context->SetActiveFilter(cmd.filter());
   Console::get()->Output(FormatFilter(context, cmd.filter()));
   return true;
@@ -373,7 +373,7 @@ bool HandleThreadNoun(ConsoleContext* context, const Command& cmd, Err* err) {
   // Explicit index provided, this switches the current context. The thread should be already
   // resolved to a valid pointer if it was specified on the command line (otherwise the command
   // would have been rejected before here).
-  FXL_DCHECK(cmd.thread());
+  FX_DCHECK(cmd.thread());
   context->SetActiveThreadForTarget(cmd.thread());
   // Setting the active thread also sets the active target.
   context->SetActiveTarget(cmd.target());
@@ -434,7 +434,7 @@ bool HandleJobNoun(ConsoleContext* context, const Command& cmd, Err* err) {
     return true;
   }
 
-  FXL_DCHECK(cmd.job_context());
+  FX_DCHECK(cmd.job_context());
   context->SetActiveJobContext(cmd.job_context());
   Console::get()->Output(FormatJobContext(context, cmd.job_context()));
   return true;
@@ -494,7 +494,7 @@ bool HandleProcessNoun(ConsoleContext* context, const Command& cmd, Err* err) {
   // Explicit index provided, this switches the current context. The target should be already
   // resolved to a valid pointer if it was specified on the command line (otherwise the command
   // would have been rejected before here).
-  FXL_DCHECK(cmd.target());
+  FX_DCHECK(cmd.target());
   context->SetActiveTarget(cmd.target());
   Console::get()->Output(FormatTarget(context, cmd.target()));
   return true;
@@ -687,7 +687,7 @@ bool HandleBreakpointNoun(ConsoleContext* context, const Command& cmd, Err* err)
   // Explicit index provided, this switches the current context. The breakpoint should be already
   // resolved to a valid pointer if it was specified on the command line (otherwise the command
   // would have been rejected before here).
-  FXL_DCHECK(cmd.breakpoint());
+  FX_DCHECK(cmd.breakpoint());
   context->SetActiveBreakpoint(cmd.breakpoint());
   Console::get()->Output(FormatBreakpoint(context, cmd.breakpoint(), true));
   return true;
@@ -801,7 +801,7 @@ bool HandleSymbolServerNoun(ConsoleContext* context, const Command& cmd, Err* er
   // Explicit index provided, this switches the current context. The symbol server should be already
   // resolved to a valid pointer if it was specified on the command line (otherwise the command
   // would have been rejected before here).
-  FXL_DCHECK(cmd.sym_server());
+  FX_DCHECK(cmd.sym_server());
   context->SetActiveSymbolServer(cmd.sym_server());
 
   OutputBuffer out;
@@ -838,7 +838,7 @@ const std::map<Noun, NounRecord>& GetNouns() {
     AppendNouns(&all_nouns);
 
     // Everything but Noun::kNone (= 0) should be in the map.
-    FXL_DCHECK(all_nouns.size() == static_cast<size_t>(Noun::kLast) - 1)
+    FX_DCHECK(all_nouns.size() == static_cast<size_t>(Noun::kLast) - 1)
         << "You need to update the noun lookup table for additions to Nouns.";
   }
   return all_nouns;

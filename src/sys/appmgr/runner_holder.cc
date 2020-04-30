@@ -38,7 +38,7 @@ RunnerHolder::RunnerHolder(std::shared_ptr<sys::ServiceDirectory> services,
   controller_.events().OnTerminated = [this, url](int64_t return_code,
                                                   TerminationReason termination_reason) {
     if (termination_reason != TerminationReason::EXITED) {
-      FXL_LOG(ERROR) << "Runner (" << url << ") terminating, reason: "
+      FX_LOGS(ERROR) << "Runner (" << url << ") terminating, reason: "
                      << sys::HumanReadableTerminationReason(termination_reason);
     }
     Cleanup();

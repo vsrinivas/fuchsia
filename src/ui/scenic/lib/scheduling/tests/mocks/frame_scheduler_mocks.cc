@@ -52,12 +52,12 @@ void MockFrameScheduler::SetOnFramePresentedCallbackForSession(
 
 RenderFrameResult MockFrameRenderer::RenderFrame(fxl::WeakPtr<FrameTimings> frame_timings,
                                                  zx::time presentation_time) {
-  FXL_CHECK(frame_timings);
+  FX_CHECK(frame_timings);
 
   const uint64_t frame_number = frame_timings->frame_number();
-  FXL_CHECK(frames_.find(frame_number) == frames_.end());
+  FX_CHECK(frames_.find(frame_number) == frames_.end());
   // Check that no frame numbers were skipped.
-  FXL_CHECK(frame_number == last_frame_number_ + 1);
+  FX_CHECK(frame_number == last_frame_number_ + 1);
   last_frame_number_ = frame_number;
 
   ++render_frame_call_count_;
@@ -78,11 +78,11 @@ void MockFrameRenderer::EndFrame(uint64_t frame_number, zx::time time_done) {
 
 void MockFrameRenderer::SignalFrameRendered(uint64_t frame_number, zx::time time_done) {
   auto find_it = frames_.find(frame_number);
-  FXL_CHECK(find_it != frames_.end()) << "Couldn't find frame_number " << frame_number;
+  FX_CHECK(find_it != frames_.end()) << "Couldn't find frame_number " << frame_number;
 
   auto& frame = find_it->second;
   // Frame can't be rendered twice.
-  FXL_CHECK(!frame.frame_rendered);
+  FX_CHECK(!frame.frame_rendered);
   frame.frame_rendered = true;
   frame.frame_timings->OnFrameRendered(frame.swapchain_index, time_done);
 
@@ -91,7 +91,7 @@ void MockFrameRenderer::SignalFrameRendered(uint64_t frame_number, zx::time time
 
 void MockFrameRenderer::SignalFrameCpuRendered(uint64_t frame_number, zx::time time_done) {
   auto find_it = frames_.find(frame_number);
-  FXL_CHECK(find_it != frames_.end());
+  FX_CHECK(find_it != frames_.end());
 
   auto& frame = find_it->second;
   frame.frame_cpu_rendered = true;
@@ -102,11 +102,11 @@ void MockFrameRenderer::SignalFrameCpuRendered(uint64_t frame_number, zx::time t
 
 void MockFrameRenderer::SignalFramePresented(uint64_t frame_number, zx::time time_done) {
   auto find_it = frames_.find(frame_number);
-  FXL_CHECK(find_it != frames_.end());
+  FX_CHECK(find_it != frames_.end());
 
   auto& frame = find_it->second;
   // Frame can't be dropped/presented twice.
-  FXL_CHECK(!frame.frame_presented);
+  FX_CHECK(!frame.frame_presented);
   frame.frame_presented = true;
   frame.frame_timings->OnFramePresented(frame.swapchain_index, time_done);
 
@@ -115,11 +115,11 @@ void MockFrameRenderer::SignalFramePresented(uint64_t frame_number, zx::time tim
 
 void MockFrameRenderer::SignalFrameDropped(uint64_t frame_number) {
   auto find_it = frames_.find(frame_number);
-  FXL_CHECK(find_it != frames_.end());
+  FX_CHECK(find_it != frames_.end());
 
   auto& frame = find_it->second;
   // Frame can't be dropped/presented twice.
-  FXL_CHECK(!frame.frame_presented);
+  FX_CHECK(!frame.frame_presented);
   frame.frame_presented = true;
   frame.frame_timings->OnFrameDropped(frame.swapchain_index);
 
@@ -128,7 +128,7 @@ void MockFrameRenderer::SignalFrameDropped(uint64_t frame_number) {
 
 void MockFrameRenderer::CleanUpFrame(uint64_t frame_number) {
   auto find_it = frames_.find(frame_number);
-  FXL_CHECK(find_it != frames_.end());
+  FX_CHECK(find_it != frames_.end());
 
   auto& frame = find_it->second;
   if (!frame.frame_rendered || !frame.frame_presented || !frame.frame_cpu_rendered) {

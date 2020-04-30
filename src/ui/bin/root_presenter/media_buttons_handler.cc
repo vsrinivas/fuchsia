@@ -18,7 +18,7 @@ bool MediaButtonsHandler::OnDeviceAdded(ui_input::InputDeviceImpl* input_device)
     return false;
   }
 
-  FXL_VLOG(1) << "MediaButtonsHandler::OnDeviceAdded: device_id=" << input_device->id();
+  FX_VLOGS(1) << "MediaButtonsHandler::OnDeviceAdded: device_id=" << input_device->id();
 
   ui_input::OnMediaButtonsEventCallback callback = [this](fuchsia::ui::input::InputReport report) {
     OnEvent(std::move(report));
@@ -37,7 +37,7 @@ bool MediaButtonsHandler::OnDeviceAdded(ui_input::InputDeviceImpl* input_device)
 bool MediaButtonsHandler::OnReport(uint32_t device_id,
                                    fuchsia::ui::input::InputReport input_report) {
   if (device_states_by_id_.count(device_id) == 0) {
-    FXL_VLOG(1) << "OnReport: Unknown device " << device_id;
+    FX_VLOGS(1) << "OnReport: Unknown device " << device_id;
     return false;
   }
 
@@ -50,9 +50,9 @@ bool MediaButtonsHandler::OnReport(uint32_t device_id,
 }
 
 bool MediaButtonsHandler::OnDeviceRemoved(uint32_t device_id) {
-  FXL_VLOG(1) << "MediaButtonsHandler::OnDeviceRemoved: device_id=" << device_id;
+  FX_VLOGS(1) << "MediaButtonsHandler::OnDeviceRemoved: device_id=" << device_id;
   if (device_states_by_id_.count(device_id) == 0) {
-    FXL_VLOG(1) << "OnReport: Unknown device " << device_id;
+    FX_VLOGS(1) << "OnReport: Unknown device " << device_id;
     return false;
   }
 
@@ -79,7 +79,7 @@ fuchsia::ui::input::MediaButtonsEvent CreateMediaButtonsEvent(
 }
 
 void MediaButtonsHandler::OnEvent(fuchsia::ui::input::InputReport report) {
-  FXL_CHECK(report.media_buttons);
+  FX_CHECK(report.media_buttons);
   activity_notifier_->ReceiveMediaButtonsEvent(CreateMediaButtonsEvent(report));
   for (auto& listener : media_buttons_listeners_) {
     listener->OnMediaButtonsEvent(CreateMediaButtonsEvent(report));

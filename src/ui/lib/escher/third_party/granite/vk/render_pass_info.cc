@@ -34,7 +34,7 @@ std::pair<vk::AttachmentLoadOp, vk::AttachmentStoreOp>
 RenderPassInfo::LoadStoreOpsForColorAttachment(uint32_t index) const {
   const bool should_clear_before_use = (clear_attachments & (1u << index)) != 0;
   const bool should_load_before_use = (load_attachments & (1u << index)) != 0;
-  FXL_DCHECK(!should_clear_before_use || !should_load_before_use);
+  FX_DCHECK(!should_clear_before_use || !should_load_before_use);
 
   auto load_op = vk::AttachmentLoadOp::eDontCare;
   if (should_clear_before_use) {
@@ -42,13 +42,13 @@ RenderPassInfo::LoadStoreOpsForColorAttachment(uint32_t index) const {
   } else if (should_load_before_use) {
     // It doesn't make sense to load a transient attachment; the whole point is
     // to not load/store (and when possible, not even allocate backing memory).
-    FXL_DCHECK(!color_attachment_infos[index].is_transient);
+    FX_DCHECK(!color_attachment_infos[index].is_transient);
     // It doesn't make sense to load a swapchain image, since the point is to
     // render a new one every frame.
     // NOTE: we might want to relax this someday, e.g. to support temporal AA.
     // If so, RenderPass::FillColorAttachmentDescription() would need to be
     // adjusted to choose an appropriate initial layout for the attachment.
-    FXL_DCHECK(!color_attachment_infos[index].is_swapchain_image());
+    FX_DCHECK(!color_attachment_infos[index].is_swapchain_image());
 
     load_op = vk::AttachmentLoadOp::eLoad;
   }
@@ -57,10 +57,10 @@ RenderPassInfo::LoadStoreOpsForColorAttachment(uint32_t index) const {
   if ((store_attachments & (1u << index)) != 0) {
     // It doesn't make sense to store a transient attachment; the whole point is
     // to not load/store (and when possible, not even allocate backing memory).
-    FXL_DCHECK(!color_attachment_infos[index].is_transient);
+    FX_DCHECK(!color_attachment_infos[index].is_transient);
     store_op = vk::AttachmentStoreOp::eStore;
   } else {
-    FXL_DCHECK(!color_attachment_infos[index].is_swapchain_image())
+    FX_DCHECK(!color_attachment_infos[index].is_swapchain_image())
         << "Swapchain attachment image " << index << " must be marked as eStore.";
   }
 
@@ -75,7 +75,7 @@ RenderPassInfo::LoadStoreOpsForDepthStencilAttachment() const {
       static_cast<bool>(op_flags & RenderPassInfo::kLoadDepthStencilOp);
   const bool should_store_after_use =
       static_cast<bool>(op_flags & RenderPassInfo::kStoreDepthStencilOp);
-  FXL_DCHECK(!should_clear_before_use || !should_load_before_use);
+  FX_DCHECK(!should_clear_before_use || !should_load_before_use);
 
   auto load_op = vk::AttachmentLoadOp::eDontCare;
   if (should_clear_before_use) {
@@ -83,7 +83,7 @@ RenderPassInfo::LoadStoreOpsForDepthStencilAttachment() const {
   } else if (should_load_before_use) {
     // It doesn't make sense to load a transient attachment; the whole point is
     // to not load/store (and when possible, not even allocate backing memory).
-    FXL_DCHECK(!depth_stencil_attachment->image()->is_transient());
+    FX_DCHECK(!depth_stencil_attachment->image()->is_transient());
     load_op = vk::AttachmentLoadOp::eLoad;
   }
 
@@ -91,7 +91,7 @@ RenderPassInfo::LoadStoreOpsForDepthStencilAttachment() const {
   if (should_store_after_use) {
     // It doesn't make sense to store a transient attachment; the whole point is
     // to not load/store (and when possible, not even allocate backing memory).
-    FXL_DCHECK(!depth_stencil_attachment->image()->is_transient());
+    FX_DCHECK(!depth_stencil_attachment->image()->is_transient());
     store_op = vk::AttachmentStoreOp::eStore;
   }
 
@@ -99,7 +99,7 @@ RenderPassInfo::LoadStoreOpsForDepthStencilAttachment() const {
 }
 
 void RenderPassInfo::AttachmentInfo::InitFromImage(const ImagePtr& image) {
-  FXL_DCHECK(image);
+  FX_DCHECK(image);
   format = image->format();
   swapchain_layout = image->swapchain_layout();
   sample_count = image->info().sample_count;
@@ -108,12 +108,12 @@ void RenderPassInfo::AttachmentInfo::InitFromImage(const ImagePtr& image) {
 
 void RenderPassInfo::InitRenderPassAttachmentInfosFromImages(RenderPassInfo* rpi) {
   for (size_t i = 0; i < rpi->num_color_attachments; ++i) {
-    FXL_DCHECK(rpi->color_attachments[i]);
+    FX_DCHECK(rpi->color_attachments[i]);
     rpi->color_attachment_infos[i].InitFromImage(rpi->color_attachments[i]->image());
   }
 
   for (size_t i = rpi->num_color_attachments; i < VulkanLimits::kNumColorAttachments; ++i) {
-    FXL_DCHECK(!rpi->color_attachments[i]);
+    FX_DCHECK(!rpi->color_attachments[i]);
     rpi->color_attachment_infos[i] = RenderPassInfo::AttachmentInfo{};
   }
 
@@ -138,7 +138,7 @@ bool RenderPassInfo::Validate() const {
   // There must be at least one attachment.
   if (num_color_attachments == 0 && !has_depth_stencil_attachment) {
     success = false;
-    FXL_LOG(ERROR) << "RenderPass has no attachments.";
+    FX_LOGS(ERROR) << "RenderPass has no attachments.";
   }
 
   // The attachment infos must match the info in the corresponding image, if any.
@@ -147,19 +147,19 @@ bool RenderPassInfo::Validate() const {
       auto& image = color_attachments[i]->image();
       if (color_attachment_infos[i].format != image->format()) {
         success = false;
-        FXL_LOG(ERROR) << "Color attachment info " << i << " format mismatch.";
+        FX_LOGS(ERROR) << "Color attachment info " << i << " format mismatch.";
       }
       if (color_attachment_infos[i].swapchain_layout != image->swapchain_layout()) {
         success = false;
-        FXL_LOG(ERROR) << "Color attachment info " << i << " swapchain_layout mismatch.";
+        FX_LOGS(ERROR) << "Color attachment info " << i << " swapchain_layout mismatch.";
       }
       if (color_attachment_infos[i].sample_count != image->info().sample_count) {
         success = false;
-        FXL_LOG(ERROR) << "Color attachment info " << i << " sample_count mismatch.";
+        FX_LOGS(ERROR) << "Color attachment info " << i << " sample_count mismatch.";
       }
       if (color_attachment_infos[i].is_transient != image->is_transient()) {
         success = false;
-        FXL_LOG(ERROR) << "Color attachment info " << i << " is_transient mismatch.";
+        FX_LOGS(ERROR) << "Color attachment info " << i << " is_transient mismatch.";
       }
     }
   }
@@ -168,19 +168,19 @@ bool RenderPassInfo::Validate() const {
 
     if (depth_stencil_attachment_info.format != image->format()) {
       success = false;
-      FXL_LOG(ERROR) << "Depth attachment info format mismatch.";
+      FX_LOGS(ERROR) << "Depth attachment info format mismatch.";
     }
     if (depth_stencil_attachment_info.swapchain_layout != image->swapchain_layout()) {
       success = false;
-      FXL_LOG(ERROR) << "Depth attachment info swapchain_layout mismatch.";
+      FX_LOGS(ERROR) << "Depth attachment info swapchain_layout mismatch.";
     }
     if (depth_stencil_attachment_info.sample_count != image->info().sample_count) {
       success = false;
-      FXL_LOG(ERROR) << "Depth attachment info sample_count mismatch.";
+      FX_LOGS(ERROR) << "Depth attachment info sample_count mismatch.";
     }
     if (depth_stencil_attachment_info.is_transient != image->is_transient()) {
       success = false;
-      FXL_LOG(ERROR) << "Depth attachment info is_transient mismatch.";
+      FX_LOGS(ERROR) << "Depth attachment info is_transient mismatch.";
     }
   }
 
@@ -188,7 +188,7 @@ bool RenderPassInfo::Validate() const {
   if (auto load_clear_conflicts = clear_attachments & load_attachments) {
     success = false;
     ForEachBitIndex(load_clear_conflicts, [](uint32_t i) {
-      FXL_LOG(ERROR) << "RenderPass color attachment " << i << " load/clear conflict.";
+      FX_LOGS(ERROR) << "RenderPass color attachment " << i << " load/clear conflict.";
     });
   }
 
@@ -196,7 +196,7 @@ bool RenderPassInfo::Validate() const {
   ForEachBitIndex(clear_attachments | load_attachments | store_attachments, [&](uint32_t i) {
     if (i >= num_color_attachments) {
       success = false;
-      FXL_LOG(ERROR) << "Color attachment bit " << i << " is > num_color_attachments ("
+      FX_LOGS(ERROR) << "Color attachment bit " << i << " is > num_color_attachments ("
                      << num_color_attachments << ").";
     }
   });
@@ -206,13 +206,13 @@ bool RenderPassInfo::Validate() const {
   for (uint32_t i = 0; i < num_color_attachments; ++i) {
     if (vk::Format::eUndefined == color_attachment_infos[i].format) {
       success = false;
-      FXL_LOG(ERROR) << "Color attachment " << i << " should have a defined format.";
+      FX_LOGS(ERROR) << "Color attachment " << i << " should have a defined format.";
     }
   }
   for (uint32_t i = num_color_attachments; i < VulkanLimits::kNumColorAttachments; ++i) {
     if (vk::Format::eUndefined != color_attachment_infos[i].format) {
       success = false;
-      FXL_LOG(ERROR) << "Color attachment " << i << " should not have a defined format.";
+      FX_LOGS(ERROR) << "Color attachment " << i << " should not have a defined format.";
     }
   }
 
@@ -221,18 +221,18 @@ bool RenderPassInfo::Validate() const {
     // Cannot load and clear the same attachment.
     if (kLoadAndClearDepthStencil == (op_flags & kLoadAndClearDepthStencil)) {
       success = false;
-      FXL_LOG(ERROR) << "RenderPass depth-stencil attachment load/clear conflict.";
+      FX_LOGS(ERROR) << "RenderPass depth-stencil attachment load/clear conflict.";
     }
 
     // Cannot load or store transient image attachments.
     if (depth_stencil_attachment_info.is_transient) {
       if (op_flags & kLoadDepthStencilOp) {
         success = false;
-        FXL_LOG(ERROR) << "Load flag specified for transient depth/stencil attachment.";
+        FX_LOGS(ERROR) << "Load flag specified for transient depth/stencil attachment.";
       }
       if (op_flags & kStoreDepthStencilOp) {
         success = false;
-        FXL_LOG(ERROR) << "Load flag specified for transient depth/stencil attachment.";
+        FX_LOGS(ERROR) << "Load flag specified for transient depth/stencil attachment.";
       }
     }
 
@@ -241,13 +241,13 @@ bool RenderPassInfo::Validate() const {
         kOptimalDepthStencilLayoutOp | kDepthStencilReadOnlyLayoutOp;
     if (kBothDepthStencilLayouts == (op_flags & kBothDepthStencilLayouts)) {
       success = false;
-      FXL_LOG(ERROR) << "Depth attachment is specified as both optimal "
+      FX_LOGS(ERROR) << "Depth attachment is specified as both optimal "
                         "read-only and read-write.";
     }
   } else if (op_flags & (kClearDepthStencilOp | kLoadDepthStencilOp | kStoreDepthStencilOp |
                          kOptimalDepthStencilLayoutOp | kDepthStencilReadOnlyLayoutOp)) {
     success = false;
-    FXL_LOG(ERROR) << "RenderPass has no depth-stencil attachment, but depth-stencil "
+    FX_LOGS(ERROR) << "RenderPass has no depth-stencil attachment, but depth-stencil "
                       "ops are specified.";
   }
 
@@ -263,10 +263,10 @@ static void InitRenderPassInfoHelper(RenderPassInfo* rp,
                                      const RenderPassInfo::AttachmentInfo& color_info,
                                      const RenderPassInfo::AttachmentInfo& depth_stencil_info,
                                      const RenderPassInfo::AttachmentInfo* msaa_info) {
-  FXL_DCHECK(color_info.sample_count == 1);
-  FXL_DCHECK((!msaa_info && depth_stencil_info.sample_count == 1) ||
-             (msaa_info && msaa_info->sample_count > 1 &&
-              msaa_info->sample_count == depth_stencil_info.sample_count));
+  FX_DCHECK(color_info.sample_count == 1);
+  FX_DCHECK((!msaa_info && depth_stencil_info.sample_count == 1) ||
+            (msaa_info && msaa_info->sample_count > 1 &&
+             msaa_info->sample_count == depth_stencil_info.sample_count));
 
   rp->color_attachment_infos[0] = color_info;
   rp->depth_stencil_attachment_info = depth_stencil_info;
@@ -283,7 +283,7 @@ static void InitRenderPassInfoHelper(RenderPassInfo* rp,
                    RenderPassInfo::kOptimalDepthStencilLayoutOp;
     // NOTE: the flags above assume that there is a depth/stencil attachment.  If not, the flags
     // will need to be modified (shouldn't be hard, but out of scope of current CL).
-    FXL_DCHECK(depth_stencil_info.format != vk::Format::eUndefined);
+    FX_DCHECK(depth_stencil_info.format != vk::Format::eUndefined);
 
     rp->clear_color[0].setFloat32({0.f, 0.f, 0.f, 0.f});
 
@@ -291,8 +291,8 @@ static void InitRenderPassInfoHelper(RenderPassInfo* rp,
     // to specify the resolve attachment.  Otherwise we allow a default sub-pass
     // to be created.
     if (msaa_info) {
-      FXL_DCHECK(depth_stencil_info.sample_count == msaa_info->sample_count);
-      FXL_DCHECK(rp->num_color_attachments == 1 && rp->clear_attachments == 1u);
+      FX_DCHECK(depth_stencil_info.sample_count == msaa_info->sample_count);
+      FX_DCHECK(rp->num_color_attachments == 1 && rp->clear_attachments == 1u);
       // Move the output image to attachment #1, so that attachment #0 is always
       // the attachment that we render into.
       rp->color_attachment_infos[kResolveTargetAttachmentIndex] = color_info;
@@ -326,7 +326,7 @@ void RenderPassInfo::InitRenderPassInfo(RenderPassInfo* rp, vk::Rect2D render_ar
                                         const TexturePtr& depth_texture,
                                         const TexturePtr& msaa_texture,
                                         ImageViewAllocator* allocator) {
-  FXL_DCHECK(output_image->info().sample_count == 1);
+  FX_DCHECK(output_image->info().sample_count == 1);
   rp->render_area = render_area;
 
   AttachmentInfo color_info;
@@ -364,7 +364,7 @@ void RenderPassInfo::InitRenderPassInfo(RenderPassInfo* rp,
                                         vk::Format depth_stencil_format, vk::Format msaa_format,
                                         uint32_t sample_count, bool use_transient_depth_and_msaa) {
   const bool has_msaa = sample_count != 1;
-  FXL_DCHECK(!has_msaa || (msaa_format != vk::Format::eUndefined));
+  FX_DCHECK(!has_msaa || (msaa_format != vk::Format::eUndefined));
 
   RenderPassInfo::AttachmentInfo depth_stencil_info;
   depth_stencil_info.format = depth_stencil_format;

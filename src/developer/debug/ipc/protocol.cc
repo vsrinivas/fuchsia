@@ -94,7 +94,7 @@ const char* MsgHeader::TypeToString(MsgHeader::Type type) {
       return "NumMessages";
   }
 
-  FXL_NOTREACHED();
+  FX_NOTREACHED();
   return "<invalid>";
 }
 
@@ -108,7 +108,7 @@ const char* InferiorTypeToString(InferiorType type) {
       return "kLast";
   }
 
-  FXL_NOTREACHED();
+  FX_NOTREACHED();
   return "<invalid>";
 }
 
@@ -126,7 +126,7 @@ const char* TaskTypeToString(TaskType type) {
       return "Last";
   }
 
-  FXL_NOTREACHED();
+  FX_NOTREACHED();
   return "<invalid>";
 }
 
@@ -140,7 +140,7 @@ const char* NotifyIO::TypeToString(Type type) {
       return "Last";
   }
 
-  FXL_NOTREACHED();
+  FX_NOTREACHED();
   return "<invalid>";
 }
 
@@ -156,7 +156,7 @@ const char* ResumeRequest::HowToString(How how) {
       return "Last";
   }
 
-  FXL_NOTREACHED();
+  FX_NOTREACHED();
   return "<unknown>";
 }
 
@@ -169,7 +169,7 @@ const char* NotifyProcessStarting::TypeToString(Type type) {
   }
   // clang-format on
 
-  FXL_NOTREACHED();
+  FX_NOTREACHED();
   return "<unknown>";
 }
 

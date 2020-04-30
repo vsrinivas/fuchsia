@@ -109,7 +109,7 @@ class DataGenerator {
       }
       // Add the character to the random string.
       fxl::WriteUnicodeCharacter(code_point, &random_string);
-      FXL_CHECK(random_string.size() <= count);
+      FX_CHECK(random_string.size() <= count);
     } while (random_string.size() < count);
     return random_string;
   }
@@ -560,7 +560,7 @@ std::string RandomUTF8(size_t count, std::default_random_engine& rand_engine) {
     }
     // Add the character to the random string.
     fxl::WriteUnicodeCharacter(code_point, &random_string);
-    FXL_CHECK(random_string.size() <= count);
+    FX_CHECK(random_string.size() <= count);
   } while (random_string.size() < count);
   return random_string;
 }
@@ -1829,7 +1829,7 @@ int main(int argc, char** argv) {
     servers.push_back(package_url);
   }
 
-  FXL_CHECK(!servers.empty()) << kUsage;
+  FX_CHECK(!servers.empty()) << kUsage;
 
   int r = RUN_ALL_TESTS();
   std::cout << std::endl;

@@ -64,7 +64,7 @@ zx_status_t WalkModules(const zx::process& process, uint64_t dl_debug_addr,
 }
 
 debug_ipc::ThreadRecord::BlockedReason ThreadStateBlockedReasonToEnum(uint32_t state) {
-  FXL_DCHECK(ZX_THREAD_STATE_BASIC(state) == ZX_THREAD_STATE_BLOCKED);
+  FX_DCHECK(ZX_THREAD_STATE_BASIC(state) == ZX_THREAD_STATE_BLOCKED);
 
   switch (state) {
     case ZX_THREAD_STATE_BLOCKED_EXCEPTION:
@@ -84,7 +84,7 @@ debug_ipc::ThreadRecord::BlockedReason ThreadStateBlockedReasonToEnum(uint32_t s
     case ZX_THREAD_STATE_BLOCKED_INTERRUPT:
       return debug_ipc::ThreadRecord::BlockedReason::kInterrupt;
     default:
-      FXL_NOTREACHED();
+      FX_NOTREACHED();
       return debug_ipc::ThreadRecord::BlockedReason::kNotBlocked;
   }
 }
@@ -281,7 +281,7 @@ debug_ipc::ThreadRecord::State ThreadStateToEnums(
       return mapping.enum_state;
     }
   }
-  FXL_NOTREACHED();
+  FX_NOTREACHED();
   return debug_ipc::ThreadRecord::State::kDead;
 }
 

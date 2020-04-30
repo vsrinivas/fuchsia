@@ -30,7 +30,7 @@ void PaperTimestampGraph::DrawOn(PaperRenderer* r, vk::Rect2D bounds) {
 }
 
 void PaperTimestampGraph::DrawGraphContentOn(PaperRenderer* r, vk::Rect2D bounds) {
-  FXL_DCHECK(r) << "no PaperRenderer";
+  FX_DCHECK(r) << "no PaperRenderer";
 
   const uint32_t width = bounds.extent.width;
   const uint32_t height = bounds.extent.height;
@@ -76,7 +76,7 @@ void PaperTimestampGraph::DrawGraphContentOn(PaperRenderer* r, vk::Rect2D bounds
 vk::Rect2D PaperTimestampGraph::DrawGraphAxesOn(PaperRenderer* r, vk::Rect2D bounds,
                                                 std::string x_label, std::string y_label,
                                                 DebugRects::Color line_color) {
-  FXL_DCHECK(r) << "no PaperRenderer";
+  FX_DCHECK(r) << "no PaperRenderer";
 
   const int32_t frame_width = bounds.extent.width;
   const int32_t frame_height = bounds.extent.height;

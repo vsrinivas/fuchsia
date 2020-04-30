@@ -13,7 +13,7 @@ namespace scenic_impl {
 namespace display {
 
 void DisplayManager::WaitForDefaultDisplayController(fit::closure display_available_cb) {
-  FXL_DCHECK(!default_display_);
+  FX_DCHECK(!default_display_);
 
   display_available_cb_ = std::move(display_available_cb);
 
@@ -38,7 +38,7 @@ void DisplayManager::BindDefaultDisplayController(zx::channel dc_device, zx::cha
 void DisplayManager::OnDisplaysChanged(std::vector<fuchsia::hardware::display::Info> added,
                                        std::vector<uint64_t> removed) {
   if (!default_display_) {
-    FXL_DCHECK(added.size());
+    FX_DCHECK(added.size());
 
     auto& display = added[0];
     auto& mode = display.modes[0];
@@ -54,7 +54,7 @@ void DisplayManager::OnDisplaysChanged(std::vector<fuchsia::hardware::display::I
     for (uint64_t id : removed) {
       if (default_display_->display_id() == id) {
         // TODO(SCN-244): handle this more robustly.
-        FXL_CHECK(false) << "Display disconnected";
+        FX_CHECK(false) << "Display disconnected";
         return;
       }
     }

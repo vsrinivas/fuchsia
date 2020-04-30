@@ -19,7 +19,7 @@ AnnotationRegistryHandler::AnnotationRegistryHandler(fidl::InterfaceRequest<Regi
 }
 
 void AnnotationRegistryHandler::RunPendingCreateCommands() {
-  FXL_DCHECK(initialized_);
+  FX_DCHECK(initialized_);
   for (auto &args : pending_create_args_) {
     annotation_manager_->RequestCreate(id_, std::move(args.main_view),
                                        std::move(args.view_holder_token), std::move(args.callback));
@@ -29,8 +29,8 @@ void AnnotationRegistryHandler::RunPendingCreateCommands() {
 
 void AnnotationRegistryHandler::InitializeWithGfxAnnotationManager(
     scenic_impl::gfx::AnnotationManager *annotation_manager) {
-  FXL_DCHECK(!initialized_);
-  FXL_DCHECK(annotation_manager);
+  FX_DCHECK(!initialized_);
+  FX_DCHECK(annotation_manager);
 
   annotation_manager_ = annotation_manager;
   annotation_manager_->RegisterHandler(

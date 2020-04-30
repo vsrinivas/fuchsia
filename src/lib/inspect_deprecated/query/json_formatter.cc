@@ -172,7 +172,7 @@ void WriteJsonForHealthNode(const std::string& node_name,
       message = property.Get<inspect_deprecated::hierarchy::StringProperty>().value();
   }
 
-  FXL_DCHECK(!status.empty());
+  FX_DCHECK(!status.empty());
 
   writer.String(node_name);
   writer.StartObject();

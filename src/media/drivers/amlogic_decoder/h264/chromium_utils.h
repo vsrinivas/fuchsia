@@ -18,23 +18,23 @@
 #define MEDIA_EXPORT
 #define MEDIA_GPU_EXPORT
 
-#define DCHECK FXL_DCHECK
-#define DCHECK_GE(a, b) FXL_DCHECK((a) >= (b))
-#define DCHECK_GT(a, b) FXL_DCHECK((a) > (b))
-#define DCHECK_LT(a, b) FXL_DCHECK((a) < (b))
-#define DCHECK_LE(a, b) FXL_DCHECK((a) <= (b))
-#define DCHECK_EQ(a, b) FXL_DCHECK((a) == (b))
-#define DCHECK_NE(a, b) FXL_DCHECK((a) != (b))
+#define DCHECK FX_DCHECK
+#define DCHECK_GE(a, b) FX_DCHECK((a) >= (b))
+#define DCHECK_GT(a, b) FX_DCHECK((a) > (b))
+#define DCHECK_LT(a, b) FX_DCHECK((a) < (b))
+#define DCHECK_LE(a, b) FX_DCHECK((a) <= (b))
+#define DCHECK_EQ(a, b) FX_DCHECK((a) == (b))
+#define DCHECK_NE(a, b) FX_DCHECK((a) != (b))
 
-#define CHECK FXL_CHECK
+#define CHECK FX_CHECK
 #ifndef DLOG
-#define DLOG FXL_DLOG
+#define DLOG FX_DLOGS
 #endif
-#define DVLOG FXL_DVLOG
-#define DVLOG_IF(verbose_level, condition)                 \
-  FXL_LAZY_STREAM(FXL_VLOG_STREAM(verbose_level, nullptr), \
-                  FXL_VLOG_IS_ON(verbose_level) && (condition))
-#define NOTREACHED FXL_NOTREACHED
+#define DVLOG FX_DVLOGS
+#define DVLOG_IF(verbose_level, condition)               \
+  FX_LAZY_STREAM(FX_VLOG_STREAM(verbose_level, nullptr), \
+                 FX_VLOG_IS_ON(verbose_level) && (condition))
+#define NOTREACHED FX_NOTREACHED
 
 #define WARN_UNUSED_RESULT __WARN_UNUSED_RESULT
 #define FALLTHROUGH __FALLTHROUGH

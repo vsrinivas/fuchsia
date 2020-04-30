@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/async/cpp/task.h>
-
 #include "src/speech/tts/tts_speaker.h"
+
+#include <lib/async/cpp/task.h>
 
 namespace tts {
 
@@ -39,13 +39,13 @@ zx_status_t TtsSpeaker::Init(const std::unique_ptr<sys::ComponentContext>& start
   zx_status_t res;
 
   if (wakeup_event_.is_valid()) {
-    FXL_LOG(ERROR) << "Attempted to initialize TtsSpeaker twice!";
+    FX_LOGS(ERROR) << "Attempted to initialize TtsSpeaker twice!";
     return ZX_ERR_BAD_STATE;
   }
 
   res = zx::event::create(0, &wakeup_event_);
   if (res != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to create wakeup event!  (res " << res << ")";
+    FX_LOGS(ERROR) << "Failed to create wakeup event!  (res " << res << ")";
     return res;
   }
 
@@ -54,11 +54,11 @@ zx_status_t TtsSpeaker::Init(const std::unique_ptr<sys::ComponentContext>& start
                                  &shared_vmo, ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER);
 
   if (res != ZX_OK) {
-    FXL_LOG(ERROR) << "VmoMapper:::CreateAndMap failed - " << res;
+    FX_LOGS(ERROR) << "VmoMapper:::CreateAndMap failed - " << res;
     return res;
   }
 
-  FXL_DCHECK(startup_context != nullptr);
+  FX_DCHECK(startup_context != nullptr);
   auto audio = startup_context->svc()->Connect<fuchsia::media::Audio>();
 
   audio->CreateAudioRenderer(audio_renderer_.NewRequest());
@@ -109,7 +109,7 @@ void TtsSpeaker::SendPendingAudio() {
   uint64_t bytes_till_low_water = eos ? 0 : bytes_to_send - kLowWaterBytes;
   uint64_t bytes_till_ring_wrap = shared_buf_.size() - tx_ptr_;
 
-  FXL_DCHECK(eos || bytes_to_send > kLowWaterBytes);
+  FX_DCHECK(eos || bytes_to_send > kLowWaterBytes);
 
   while (bytes_to_send) {
     uint64_t todo = bytes_to_send;
@@ -128,7 +128,7 @@ void TtsSpeaker::SendPendingAudio() {
 
     tx_ptr_ += todo;
     if (tx_ptr_ >= shared_buf_.size()) {
-      FXL_DCHECK(tx_ptr_ == shared_buf_.size());
+      FX_DCHECK(tx_ptr_ == shared_buf_.size());
       tx_ptr_ = 0;
     }
 
@@ -143,7 +143,7 @@ void TtsSpeaker::SendPendingAudio() {
       audio_renderer_->SendPacketNoReply(pkt);
     }
 
-    FXL_DCHECK(todo <= bytes_to_send);
+    FX_DCHECK(todo <= bytes_to_send);
     bytes_to_send -= todo;
     if (bytes_till_ring_wrap)
       bytes_till_ring_wrap -= todo;
@@ -170,13 +170,13 @@ int TtsSpeaker::ProduceAudioCbk(const cst_wave* wave, int start, int sz, int las
     return CST_AUDIO_STREAM_STOP;
   }
 
-  FXL_DCHECK(sz >= 0);
+  FX_DCHECK(sz >= 0);
 
   const void* payload;
   int16_t junk = 0;
 
   if (sz == 0) {
-    FXL_DCHECK(last);
+    FX_DCHECK(last);
     payload = &junk;
     sz = 1;
   } else {
@@ -202,7 +202,7 @@ int TtsSpeaker::ProduceAudioCbk(const cst_wave* wave, int start, int sz, int las
           payload = reinterpret_cast<const void*>(reinterpret_cast<uintptr_t>(payload) + todo);
 
           if (wr_ptr_ >= shared_buf_.size()) {
-            FXL_DCHECK(wr_ptr_ == shared_buf_.size());
+            FX_DCHECK(wr_ptr_ == shared_buf_.size());
             wr_ptr_ = 0;
           }
         }

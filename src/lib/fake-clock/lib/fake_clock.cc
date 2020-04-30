@@ -23,12 +23,12 @@ zx::unowned_channel GetService() {
     if (!fake_clock.is_valid()) {
       zx::channel req;
       if (zx::channel::create(0, &fake_clock, &req) != ZX_OK) {
-        FXL_LOG(ERROR) << "Failed to create channel to FakeClock service";
+        FX_LOGS(ERROR) << "Failed to create channel to FakeClock service";
         fake_clock.reset();
         return;
       }
       if (fdio_service_connect("/svc/fuchsia.testing.FakeClock", req.release()) != ZX_OK) {
-        FXL_LOG(ERROR) << "Failed to connect to fuchsia.testing.FakeClock service";
+        FX_LOGS(ERROR) << "Failed to connect to fuchsia.testing.FakeClock service";
         fake_clock.reset();
         return;
       }

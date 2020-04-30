@@ -52,10 +52,10 @@ TEST_F(LoggingFixture, Log) {
   SetLogSettings(new_settings);
 
   int error_line = __LINE__ + 1;
-  FXL_LOG(ERROR) << "something at error";
+  FX_LOGS(ERROR) << "something at error";
 
   int info_line = __LINE__ + 1;
-  FXL_LOG(INFO) << "and some other at info level";
+  FX_LOGS(INFO) << "and some other at info level";
 
   std::string log;
   ASSERT_TRUE(files::ReadFileToString(new_settings.log_file, &log));
@@ -89,7 +89,7 @@ TEST_F(LoggingFixture, LogFirstN) {
   SetLogSettings(new_settings);
 
   for (int i = 0; i < kCycles; ++i) {
-    FXL_LOG_FIRST_N(ERROR, kLimit) << kLogMessage;
+    FX_LOGS_FIRST_N(ERROR, kLimit) << kLogMessage;
   }
 
   std::string log;
@@ -112,10 +112,10 @@ TEST_F(LoggingFixture, LogT) {
   SetLogSettings(new_settings);
 
   int error_line = __LINE__ + 1;
-  FXL_LOGT(ERROR, "first") << "something at error";
+  FX_LOGST(ERROR, "first") << "something at error";
 
   int info_line = __LINE__ + 1;
-  FXL_LOGT(INFO, "second") << "and some other at info level";
+  FX_LOGST(INFO, "second") << "and some other at info level";
 
   std::string log;
   ASSERT_TRUE(files::ReadFileToString(new_settings.log_file, &log));
@@ -146,8 +146,8 @@ TEST_F(LoggingFixture, VLogT) {
   SetLogSettings(new_settings, {});
 
   int line = __LINE__ + 1;
-  FXL_VLOGT(1, "first") << "First message";
-  FXL_VLOGT(2, "second") << "ABCD";
+  FX_VLOGST(1, "first") << "First message";
+  FX_VLOGST(2, "second") << "ABCD";
 
   std::string log;
   ASSERT_TRUE(files::ReadFileToString(new_settings.log_file, &log));
@@ -171,7 +171,7 @@ TEST_F(LoggingFixture, DVLogNoMinLevel) {
   ASSERT_TRUE(temp_dir.NewTempFile(&new_settings.log_file));
   SetLogSettings(new_settings);
 
-  FXL_DVLOG(1) << "hello";
+  FX_DVLOGS(1) << "hello";
 
   std::string log;
   ASSERT_TRUE(files::ReadFileToString(new_settings.log_file, &log));
@@ -187,7 +187,7 @@ TEST_F(LoggingFixture, DVLogWithMinLevel) {
   ASSERT_TRUE(temp_dir.NewTempFile(&new_settings.log_file));
   SetLogSettings(new_settings);
 
-  FXL_DVLOG(1) << "hello";
+  FX_DVLOGS(1) << "hello";
 
   std::string log;
   ASSERT_TRUE(files::ReadFileToString(new_settings.log_file, &log));
@@ -199,7 +199,7 @@ TEST_F(LoggingFixture, DVLogWithMinLevel) {
 #endif
 }
 
-TEST_F(LoggingFixtureDeathTest, CheckFailed) { ASSERT_DEATH(FXL_CHECK(false), ""); }
+TEST_F(LoggingFixtureDeathTest, CheckFailed) { ASSERT_DEATH(FX_CHECK(false), ""); }
 
 #if defined(__Fuchsia__)
 TEST_F(LoggingFixture, Plog) {
@@ -209,8 +209,8 @@ TEST_F(LoggingFixture, Plog) {
   ASSERT_TRUE(temp_dir.NewTempFile(&new_settings.log_file));
   SetLogSettings(new_settings);
 
-  FXL_PLOG(ERROR, ZX_OK) << "should be ok";
-  FXL_PLOG(ERROR, ZX_ERR_ACCESS_DENIED) << "got access denied";
+  FX_PLOGS(ERROR, ZX_OK) << "should be ok";
+  FX_PLOGS(ERROR, ZX_ERR_ACCESS_DENIED) << "got access denied";
 
   std::string log;
   ASSERT_TRUE(files::ReadFileToString(new_settings.log_file, &log));
@@ -227,10 +227,10 @@ TEST_F(LoggingFixture, PlogT) {
   SetLogSettings(new_settings);
 
   int line1 = __LINE__ + 1;
-  FXL_PLOGT(ERROR, "abcd", ZX_OK) << "should be ok";
+  FX_PLOGST(ERROR, "abcd", ZX_OK) << "should be ok";
 
   int line2 = __LINE__ + 1;
-  FXL_PLOGT(ERROR, "qwerty", ZX_ERR_ACCESS_DENIED) << "got access denied";
+  FX_PLOGST(ERROR, "qwerty", ZX_ERR_ACCESS_DENIED) << "got access denied";
 
   std::string log;
   ASSERT_TRUE(files::ReadFileToString(new_settings.log_file, &log));

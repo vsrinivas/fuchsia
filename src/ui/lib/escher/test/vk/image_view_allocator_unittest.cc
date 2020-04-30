@@ -28,7 +28,7 @@ VK_TEST_F(ImageViewAllocatorTest, CacheReclamation) {
   auto depth_stencil_texture_format_result =
       escher->device()->caps().GetMatchingDepthStencilFormat();
   if (depth_stencil_texture_format_result.result != vk::Result::eSuccess) {
-    FXL_LOG(ERROR) << "No depth stencil format is supported on this device.";
+    FX_LOGS(ERROR) << "No depth stencil format is supported on this device.";
     return;
   }
 

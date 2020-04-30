@@ -16,7 +16,7 @@ EmbedderView::EmbedderView(ViewContext context, const std::string& debug_name)
       view_(&session_, std::move(context.view_token), debug_name),
       top_node_(&session_) {
   binding_.set_error_handler([](zx_status_t status) {
-    FXL_LOG(FATAL) << "Session listener binding: " << zx_status_get_string(status);
+    FX_LOGS(FATAL) << "Session listener binding: " << zx_status_get_string(status);
   });
   view_.AddChild(top_node_);
   // Call |Session::Present| in order to flush events having to do with
@@ -31,7 +31,7 @@ void EmbedderView::EmbedView(
     EmbeddedViewInfo info,
     std::function<void(fuchsia::ui::gfx::ViewState)> view_state_changed_callback) {
   // Only one EmbeddedView is currently supported.
-  FXL_CHECK(!embedded_view_);
+  FX_CHECK(!embedded_view_);
   embedded_view_ = std::make_unique<EmbeddedView>(std::move(info), &session_,
                                                   std::move(view_state_changed_callback));
 
@@ -58,7 +58,7 @@ void EmbedderView::OnScenicEvent(std::vector<fuchsia::ui::scenic::Event> events)
       if (embedded_view_ && evt.view_holder_id == embedded_view_->view_holder.id()) {
         // Clients of |EmbedderView| *must* set a view state changed
         // callback.  Failure to do so is a usage error.
-        FXL_CHECK(embedded_view_->view_state_changed_callback);
+        FX_CHECK(embedded_view_->view_state_changed_callback);
         embedded_view_->view_state_changed_callback(evt.state);
       }
     }
@@ -66,7 +66,7 @@ void EmbedderView::OnScenicEvent(std::vector<fuchsia::ui::scenic::Event> events)
 }
 
 void EmbedderView::OnScenicError(std::string error) {
-  FXL_LOG(FATAL) << "OnScenicError: " << error;
+  FX_LOGS(FATAL) << "OnScenicError: " << error;
 }
 
 EmbedderView::EmbeddedView::EmbeddedView(

@@ -84,7 +84,7 @@ void FakeSession::HandleGfxCreateResource(fuchsia::ui::gfx::CreateResourceCmd cm
   // Track the resource, ensuring another resource with the same
   // ID doesn't already exist.
   auto [_, inserted] = resources_.insert({id, std::move(cmd)});
-  FXL_CHECK(inserted) << "Resource ID " << id << " already used by another resource.";
+  FX_CHECK(inserted) << "Resource ID " << id << " already used by another resource.";
 
   // If the resource is a View, we need to send information to the user
   // about it.
@@ -95,13 +95,13 @@ void FakeSession::HandleGfxCreateResource(fuchsia::ui::gfx::CreateResourceCmd cm
 
 void FakeSession::HandleGfxReleaseResource(const fuchsia::ui::gfx::ReleaseResourceCmd& cmd) {
   auto it = resources_.find(cmd.id);
-  FXL_CHECK(it != resources_.end()) << "Attempting to release unknown resource ID " << cmd.id;
+  FX_CHECK(it != resources_.end()) << "Attempting to release unknown resource ID " << cmd.id;
   resources_.erase(it);
 }
 
 void FakeSession::HandleSetEventMask(const fuchsia::ui::gfx::SetEventMaskCmd& cmd) {
   // Ensure the request is asking about a resource the client has installed.
-  FXL_CHECK(resources_.find(cmd.id) != resources_.end()) << "Unknown resource ID " << cmd.id;
+  FX_CHECK(resources_.find(cmd.id) != resources_.end()) << "Unknown resource ID " << cmd.id;
 
   // Send scaling factors client should apply when generating textures.
   //
@@ -116,11 +116,11 @@ void FakeSession::HandleSetEventMask(const fuchsia::ui::gfx::SetEventMaskCmd& cm
 }
 
 void FakeSession::Enqueue(std::vector<fuchsia::ui::scenic::Command> cmds) {
-  FXL_CHECK(binding_.is_bound());
+  FX_CHECK(binding_.is_bound());
 
   for (auto& cmd : cmds) {
     if (kTraceCommands) {
-      FXL_LOG(INFO) << "Received command: " << cmd;
+      FX_LOGS(INFO) << "Received command: " << cmd;
     }
     if (cmd.is_gfx()) {
       HandleGfxCommand(std::move(cmd.gfx()));
@@ -156,18 +156,18 @@ std::vector<const fuchsia::ui::gfx::CreateResourceCmd*> FakeSession::FindResourc
 }
 
 zx_status_t FakeSession::CaptureScreenshot(Screenshot* output) {
-  FXL_CHECK(output != nullptr);
+  FX_CHECK(output != nullptr);
 
   // Fetch all memory objects. We assume that this corresponds to the
   // guest's framebuffer.
   std::vector<const fuchsia::ui::gfx::CreateResourceCmd*> resources =
       FindResourceByType(ResourceArgs::Tag::kMemory);
   if (resources.empty()) {
-    FXL_LOG(ERROR) << "No frame buffer found.";
+    FX_LOGS(ERROR) << "No frame buffer found.";
     return ZX_ERR_BAD_STATE;
   }
   if (resources.size() > 1) {
-    FXL_LOG(ERROR) << "Multiple possible frame buffers found, which is not "
+    FX_LOGS(ERROR) << "Multiple possible frame buffers found, which is not "
                       "supported by FakeScenic.";
     return ZX_ERR_BAD_STATE;
   }
@@ -228,7 +228,7 @@ void FakeScenic::CreateSession(fidl::InterfaceRequest<Session> session_request,
                                fidl::InterfaceHandle<SessionListener> listener) {
   // Ensure we don't already have a session open.
   if (session_.has_value()) {
-    FXL_LOG(WARNING) << "Attempt to create a second session on FakeScenic was rejected.";
+    FX_LOGS(WARNING) << "Attempt to create a second session on FakeScenic was rejected.";
     session_request.Close(ZX_ERR_NO_RESOURCES);
     return;
   }

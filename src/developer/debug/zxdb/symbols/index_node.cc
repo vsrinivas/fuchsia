@@ -27,7 +27,7 @@ void DumpMap(const IndexNode::Map& map, int indent, const char* heading,
 }  // namespace
 
 IndexNode* IndexNode::AddChild(Kind kind, const char* name) {
-  FXL_DCHECK(name);
+  FX_DCHECK(name);
 
   // TODO(brettw) Get some kind of transparent lookup here to avoid making an intermediate
   // std::string.
@@ -52,7 +52,7 @@ void IndexNode::AddDie(const DieRef& ref) {
   switch (kind_) {
     case Kind::kNone:
     case Kind::kRoot:
-      FXL_NOTREACHED() << "Should not try to add a none or root DIE.";
+      FX_NOTREACHED() << "Should not try to add a none or root DIE.";
       return;
     case Kind::kNamespace:
       // Don't bother saving namespaces.
@@ -77,14 +77,14 @@ void IndexNode::AddDie(const DieRef& ref) {
 }
 
 const IndexNode::Map& IndexNode::MapForKind(Kind kind) const {
-  FXL_DCHECK(static_cast<int>(kind) >= 0 &&
-             static_cast<int>(kind) < static_cast<int>(Kind::kEndPhysical));
+  FX_DCHECK(static_cast<int>(kind) >= 0 &&
+            static_cast<int>(kind) < static_cast<int>(Kind::kEndPhysical));
   return children_[static_cast<int>(kind)];
 }
 
 IndexNode::Map& IndexNode::MapForKind(Kind kind) {
-  FXL_DCHECK(static_cast<int>(kind) >= 0 &&
-             static_cast<int>(kind) < static_cast<int>(Kind::kEndPhysical));
+  FX_DCHECK(static_cast<int>(kind) >= 0 &&
+            static_cast<int>(kind) < static_cast<int>(Kind::kEndPhysical));
   return children_[static_cast<int>(kind)];
 }
 

@@ -47,7 +47,7 @@ float RK4SpringSimulation::GetValue() {
 }
 
 void RK4SpringSimulation::ElapseTime(float seconds) {
-  FXL_DCHECK(seconds >= 0);
+  FX_DCHECK(seconds >= 0);
   if (is_done_)
     return;
   float seconds_remaining = seconds;
@@ -66,7 +66,7 @@ void RK4SpringSimulation::ElapseTime(float seconds) {
 }
 
 bool RK4SpringSimulation::EvaluateRK(float step_size) {
-  FXL_DCHECK(step_size <= kMaxStepSize);
+  FX_DCHECK(step_size <= kMaxStepSize);
   float x = spring_value_ - 1.0;
   float v = velocity_;
 

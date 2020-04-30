@@ -184,7 +184,7 @@ ObserverListBase<ObserverType>::Iter<ContainerType>::Iter(ContainerType* list)
       max_index_(list->what_ == NotifyWhat::kAll ? std::numeric_limits<size_t>::max()
                                                  : list->observers_.size()) {
   EnsureValidIndex();
-  FXL_DCHECK(list_);
+  FX_DCHECK(list_);
   ++list_->notify_depth_;
 }
 
@@ -224,7 +224,7 @@ template <class ObserverType>
 template <class ContainerType>
 ObserverType* ObserverListBase<ObserverType>::Iter<ContainerType>::operator->() const {
   ObserverType* current = GetCurrent();
-  FXL_DCHECK(current);
+  FX_DCHECK(current);
   return current;
 }
 
@@ -232,7 +232,7 @@ template <class ObserverType>
 template <class ContainerType>
 ObserverType& ObserverListBase<ObserverType>::Iter<ContainerType>::operator*() const {
   ObserverType* current = GetCurrent();
-  FXL_DCHECK(current);
+  FX_DCHECK(current);
   return *current;
 }
 
@@ -257,9 +257,9 @@ void ObserverListBase<ObserverType>::Iter<ContainerType>::EnsureValidIndex() {
 
 template <class ObserverType>
 void ObserverListBase<ObserverType>::AddObserver(ObserverType* obs) {
-  FXL_DCHECK(obs);
+  FX_DCHECK(obs);
   if (std::find(observers_.begin(), observers_.end(), obs) != observers_.end()) {
-    FXL_NOTREACHED() << "Observers can only be added once!";
+    FX_NOTREACHED() << "Observers can only be added once!";
     return;
   }
   observers_.push_back(obs);
@@ -267,7 +267,7 @@ void ObserverListBase<ObserverType>::AddObserver(ObserverType* obs) {
 
 template <class ObserverType>
 void ObserverListBase<ObserverType>::RemoveObserver(ObserverType* obs) {
-  FXL_DCHECK(obs);
+  FX_DCHECK(obs);
   typename ListType::iterator it = std::find(observers_.begin(), observers_.end(), obs);
   if (it != observers_.end()) {
     if (notify_depth_) {
@@ -315,7 +315,7 @@ class ObserverList : public ObserverListBase<ObserverType> {
     // When check_empty is true, assert that the list is empty on destruction.
     if (check_empty) {
       ObserverListBase<ObserverType>::Compact();
-      FXL_DCHECK(!might_have_observers());
+      FX_DCHECK(!might_have_observers());
     }
   }
 

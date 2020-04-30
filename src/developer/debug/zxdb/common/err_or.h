@@ -19,7 +19,7 @@ class ErrOr {
 
  public:
   // The Err must be set when constructing this object in an error state.
-  ErrOr(Err e) : variant_(std::move(e)) { FXL_DCHECK(err().has_error()); }
+  ErrOr(Err e) : variant_(std::move(e)) { FX_DCHECK(err().has_error()); }
 
   // Constructs with a value.
   ErrOr(T v) : variant_(std::move(v)) {}
@@ -29,22 +29,22 @@ class ErrOr {
 
   // Requires that has_error be true or this function will crash. See also err_or_empty().
   const Err& err() const {
-    FXL_DCHECK(has_error());
-    FXL_DCHECK(std::get<Err>(variant_).has_error());  // Err should be set if present.
+    FX_DCHECK(has_error());
+    FX_DCHECK(std::get<Err>(variant_).has_error());  // Err should be set if present.
     return std::get<Err>(variant_);
   }
 
   // Requires that has_error be false or this function will crash. See also [take_]value_or_empty().
   const T& value() const {
-    FXL_DCHECK(!has_error());
+    FX_DCHECK(!has_error());
     return std::get<T>(variant_);
   }
   T& value() {
-    FXL_DCHECK(!has_error());
+    FX_DCHECK(!has_error());
     return std::get<T>(variant_);
   }
   T take_value() {  // Destructively moves the value out.
-    FXL_DCHECK(!has_error());
+    FX_DCHECK(!has_error());
     return std::move(std::get<T>(variant_));
   }
 

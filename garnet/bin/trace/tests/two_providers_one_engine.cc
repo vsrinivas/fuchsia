@@ -41,14 +41,14 @@ int main(int argc, char* argv[]) {
   bool already_started;
   if (!trace::TraceProviderWithFdio::CreateSynchronously(dispatcher, "provider1", &provider1,
                                                          &already_started)) {
-    FXL_LOG(ERROR) << "Failed to create provider1";
+    FX_LOGS(ERROR) << "Failed to create provider1";
     return EXIT_FAILURE;
   }
 
   std::unique_ptr<trace::TraceProviderWithFdio> provider2;
   if (!trace::TraceProviderWithFdio::CreateSynchronously(dispatcher, "provider2", &provider2,
                                                          &already_started)) {
-    FXL_LOG(ERROR) << "Failed to create provider2";
+    FX_LOGS(ERROR) << "Failed to create provider2";
     return EXIT_FAILURE;
   }
 
@@ -57,7 +57,7 @@ int main(int argc, char* argv[]) {
   zx::eventpair event{zx_take_startup_handle(PA_HND(PA_USER0, 0))};
   auto status = event.signal_peer(0u, ZX_EVENTPAIR_SIGNALED);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Signaling event pair failed: " << zx_status_get_string(status);
+    FX_LOGS(ERROR) << "Signaling event pair failed: " << zx_status_get_string(status);
     return EXIT_FAILURE;
   }
 

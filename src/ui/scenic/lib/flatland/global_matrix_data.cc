@@ -26,7 +26,7 @@ GlobalMatrixVector ComputeGlobalMatrixData(
   // The root entry's parent pointer points to itself, so special case it.
   const auto& root_handle = global_topology.front();
   const auto root_uber_struct_kv = uber_structs.find(root_handle.GetInstanceId());
-  FXL_DCHECK(root_uber_struct_kv != uber_structs.end());
+  FX_DCHECK(root_uber_struct_kv != uber_structs.end());
 
   const auto root_matrix_kv = root_uber_struct_kv->second->local_matrices.find(root_handle);
   if (root_matrix_kv == root_uber_struct_kv->second->local_matrices.end()) {
@@ -42,7 +42,7 @@ GlobalMatrixVector ComputeGlobalMatrixData(
 
     // Every entry in the global topology comes from an UberStruct.
     const auto uber_stuct_kv = uber_structs.find(handle.GetInstanceId());
-    FXL_DCHECK(uber_stuct_kv != uber_structs.end());
+    FX_DCHECK(uber_stuct_kv != uber_structs.end());
 
     const auto matrix_kv = uber_stuct_kv->second->local_matrices.find(handle);
     if (matrix_kv == uber_stuct_kv->second->local_matrices.end()) {

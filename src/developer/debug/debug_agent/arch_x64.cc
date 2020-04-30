@@ -263,7 +263,7 @@ std::pair<debug_ipc::AddressRange, int> ArchProvider::InstructionForWatchpointHi
     length = GetWatchpointLength(debug_regs.dr7, 3);
     slot = 3;
   } else {
-    FXL_NOTREACHED() << "x86: No known hw exception set in DR6";
+    FX_NOTREACHED() << "x86: No known hw exception set in DR6";
     return {{}, -1};
   }
 
@@ -290,7 +290,7 @@ zx_status_t ArchProvider::ReadRegisters(const debug_ipc::RegisterCategory& cat,
       return ReadDebugRegs(thread, out);
     case debug_ipc::RegisterCategory::kNone:
     case debug_ipc::RegisterCategory::kLast:
-      FXL_LOG(ERROR) << "Asking to get none/last category";
+      FX_LOGS(ERROR) << "Asking to get none/last category";
       return ZX_ERR_INVALID_ARGS;
   }
 }
@@ -354,7 +354,7 @@ zx_status_t ArchProvider::WriteRegisters(const debug_ipc::RegisterCategory& cate
     case debug_ipc::RegisterCategory::kLast:
       break;
   }
-  FXL_NOTREACHED();
+  FX_NOTREACHED();
   return ZX_ERR_INVALID_ARGS;
 }
 

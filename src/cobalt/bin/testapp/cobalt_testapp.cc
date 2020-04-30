@@ -80,7 +80,7 @@ bool CobaltTestApp::RunTests() {
 void CobaltTestApp::SetChannel(const std::string &current_channel) {
   fuchsia::cobalt::Status status = fuchsia::cobalt::Status::INTERNAL_ERROR;
   system_data_updater_->SetChannel(current_channel, &status);
-  FXL_CHECK(status == fuchsia::cobalt::Status::OK) << "Unable to set channel";
+  FX_CHECK(status == fuchsia::cobalt::Status::OK) << "Unable to set channel";
 }
 
 bool CobaltTestApp::DoLocalAggregationTests(const size_t backfill_days) {
@@ -173,12 +173,11 @@ void CobaltTestApp::Connect(uint32_t schedule_interval_seconds, uint32_t min_int
       (test_for_prober_ ? cobalt_prober_registry::kProjectId : cobalt_registry::kProjectId);
   FX_LOGS(INFO) << "Test app is logging for the " << project_id << " project";
   logger_factory->CreateLoggerFromProjectId(project_id, logger_.logger_.NewRequest(), &status);
-  FXL_CHECK(status == fuchsia::cobalt::Status::OK)
-      << "CreateLogger() => " << StatusToString(status);
+  FX_CHECK(status == fuchsia::cobalt::Status::OK) << "CreateLogger() => " << StatusToString(status);
 
   logger_factory->CreateLoggerSimpleFromProjectId(project_id, logger_.logger_simple_.NewRequest(),
                                                   &status);
-  FXL_CHECK(status == fuchsia::cobalt::Status::OK)
+  FX_CHECK(status == fuchsia::cobalt::Status::OK)
       << "CreateLoggerSimple() => " << StatusToString(status);
 
   services.Connect(system_data_updater_.NewRequest());

@@ -5,9 +5,9 @@
 #ifndef SRC_UI_LIB_ESCHER_RENDERER_UNIFORM_ALLOCATION_H_
 #define SRC_UI_LIB_ESCHER_RENDERER_UNIFORM_ALLOCATION_H_
 
-#include <vulkan/vulkan.hpp>
-
 #include "src/ui/lib/escher/forward_declarations.h"
+
+#include <vulkan/vulkan.hpp>
 
 namespace escher {
 
@@ -24,13 +24,13 @@ struct UniformAllocation {
   // Convenient way to refer to the host-accessible memory as a typed reference.
   template <typename T>
   T& as_ref() {
-    FXL_DCHECK(size >= sizeof(T));
+    FX_DCHECK(size >= sizeof(T));
     return *static_cast<T*>(host_ptr);
   }
   // Convenient way to refer to the host-accessible memory as a typed pointer.
   template <typename T>
   T* as_ptr() {
-    FXL_DCHECK(size >= sizeof(T));
+    FX_DCHECK(size >= sizeof(T));
     return static_cast<T*>(host_ptr);
   }
 };

@@ -260,7 +260,7 @@ void use_aac_decoder(async::Loop* main_loop, fuchsia::mediacodec::CodecFactoryPt
       unbind_done_condition.wait(lock);
     }
   }  // ~lock
-  FXL_DCHECK(unbind_done);
+  FX_DCHECK(unbind_done);
 
   // We use a separate thread to provide input data, separate thread for output
   // data, and a separate FIDL thread (started above).  This is to avoid the

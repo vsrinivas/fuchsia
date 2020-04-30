@@ -210,7 +210,7 @@ Err RunVerbRegs(ConsoleContext* context, const Command& cmd) {
   if (category_set.size() == 1 && *category_set.begin() == RegisterCategory::kGeneral) {
     // Any available general registers should be available synchronously.
     auto* regs = cmd.frame()->GetRegisterCategorySync(debug_ipc::RegisterCategory::kGeneral);
-    FXL_DCHECK(regs);
+    FX_DCHECK(regs);
     OnRegsComplete(Err(), *regs, options, top_stack_frame);
   } else {
     auto collector = std::make_shared<RegisterCollector>();
@@ -230,7 +230,7 @@ Err RunVerbRegs(ConsoleContext* context, const Command& cmd) {
             if (err.has_error())
               collector->err = err;
 
-            FXL_DCHECK(collector->remaining_callbacks > 0);
+            FX_DCHECK(collector->remaining_callbacks > 0);
             collector->remaining_callbacks--;
             if (collector->remaining_callbacks == 0) {
               OnRegsComplete(collector->err, collector->registers, collector->options,

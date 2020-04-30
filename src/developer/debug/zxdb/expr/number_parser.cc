@@ -359,7 +359,7 @@ FloatSuffix StripFloatSuffix(std::string_view* view) {
 }
 
 ErrOrValue ValueForFloatToken(ExprLanguage lang, const ExprToken& token) {
-  FXL_DCHECK(token.type() == ExprTokenType::kFloat);
+  FX_DCHECK(token.type() == ExprTokenType::kFloat);
 
   std::string_view value = token.value();
   FloatSuffix suffix = StripFloatSuffix(&value);

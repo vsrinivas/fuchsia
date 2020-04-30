@@ -37,7 +37,7 @@ class SingleBindingFidlServer : public TestBase {
 
   // |TestBase|
   void NotImplemented_(const std::string& name) override {
-    FXL_NOTIMPLEMENTED() << name << " is not implemented";
+    FX_NOTIMPLEMENTED() << name << " is not implemented";
   }
 
  protected:
@@ -63,7 +63,7 @@ class MultiBindingFidlServer : public TestBase {
 
   // |TestBase|
   void NotImplemented_(const std::string& name) override {
-    FXL_NOTIMPLEMENTED() << name << " is not implemented";
+    FX_NOTIMPLEMENTED() << name << " is not implemented";
   }
 
  protected:

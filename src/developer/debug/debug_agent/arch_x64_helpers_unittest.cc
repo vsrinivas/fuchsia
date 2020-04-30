@@ -41,7 +41,7 @@ void RemoveHWBreakpointTest(debug_ipc::FileLineFunction file_line,
 }
 
 uint64_t GetHWBreakpointDR7Mask(size_t index) {
-  FXL_DCHECK(index < 4);
+  FX_DCHECK(index < 4);
   // Mask is: L = 1, RW = 00, LEN = 0
   static uint64_t dr_masks[4] = {
       X86_FLAG_MASK(DR7L0),
@@ -55,7 +55,7 @@ uint64_t GetHWBreakpointDR7Mask(size_t index) {
 // Merges into |val| the flag values for active hw breakpoints within |indices|.
 uint64_t JoinDR7HWBreakpointMask(uint64_t val, std::initializer_list<size_t> indices = {}) {
   for (size_t index : indices) {
-    FXL_DCHECK(index < 4);
+    FX_DCHECK(index < 4);
     val |= GetHWBreakpointDR7Mask(index);
   }
 
@@ -384,7 +384,7 @@ TEST(x64Helpers, RemovingHWBreakpoint) {
 namespace {
 
 bool CheckAddresses(const zx_thread_state_debug_regs_t& regs, std::vector<uint64_t> addresses) {
-  FXL_DCHECK(addresses.size() == 4u);
+  FX_DCHECK(addresses.size() == 4u);
   bool has_errors = false;
   for (int i = 0; i < 4; i++) {
     if (regs.dr[i] != addresses[i]) {
@@ -398,7 +398,7 @@ bool CheckAddresses(const zx_thread_state_debug_regs_t& regs, std::vector<uint64
 }
 
 bool CheckLengths(const zx_thread_state_debug_regs_t& regs, std::vector<uint64_t> lengths) {
-  FXL_DCHECK(lengths.size() == 4u);
+  FX_DCHECK(lengths.size() == 4u);
   bool has_errors = false;
   for (int i = 0; i < 4; i++) {
     uint64_t length = GetWatchpointLength(regs.dr7, i);
@@ -412,7 +412,7 @@ bool CheckLengths(const zx_thread_state_debug_regs_t& regs, std::vector<uint64_t
 }
 
 bool CheckTypes(const zx_thread_state_debug_regs_t& regs, std::vector<uint32_t> rws) {
-  FXL_DCHECK(rws.size() == 4u);
+  FX_DCHECK(rws.size() == 4u);
   bool has_errors = false;
   for (int i = 0; i < 4; i++) {
     uint32_t rw = GetWatchpointRW(regs.dr7, i);

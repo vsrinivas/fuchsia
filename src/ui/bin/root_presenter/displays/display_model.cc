@@ -62,8 +62,8 @@ DisplayModel::DisplayModel() = default;
 DisplayModel::~DisplayModel() = default;
 
 DisplayMetrics DisplayModel::GetMetrics() const {
-  FXL_DCHECK(display_info_.width_in_px > 0u);
-  FXL_DCHECK(display_info_.height_in_px > 0u);
+  FX_DCHECK(display_info_.width_in_px > 0u);
+  FX_DCHECK(display_info_.height_in_px > 0u);
 
   // Compute the pixel density based on known information.
   // Assumes pixels are square for now.
@@ -72,13 +72,13 @@ DisplayMetrics DisplayModel::GetMetrics() const {
     float xppm = display_info_.width_in_px / display_info_.width_in_mm;
     float yppm = display_info_.height_in_px / display_info_.height_in_mm;
     if (!WithinOnePercent(xppm, yppm)) {
-      FXL_DLOG(WARNING) << "The display's pixels are not square: xppm=" << xppm
+      FX_DLOGS(WARNING) << "The display's pixels are not square: xppm=" << xppm
                         << ", yppm=" << yppm;
     }
     if (ppm <= 0.f) {
       ppm = xppm;
     } else if (!WithinOnePercent(xppm, ppm)) {
-      FXL_DLOG(WARNING) << "The display's physical dimensions are inconsistent "
+      FX_DLOGS(WARNING) << "The display's physical dimensions are inconsistent "
                            "with the density: xppm="
                         << xppm << ", ppm=" << ppm;
     }

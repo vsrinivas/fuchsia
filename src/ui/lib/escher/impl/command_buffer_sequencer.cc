@@ -11,8 +11,8 @@ namespace impl {
 
 CommandBufferSequencer::~CommandBufferSequencer() {
   // Ensure clean shutdown.
-  FXL_DCHECK(latest_sequence_number_ == last_finished_sequence_number_);
-  FXL_DCHECK(listeners_.size() == 0);
+  FX_DCHECK(latest_sequence_number_ == last_finished_sequence_number_);
+  FX_DCHECK(listeners_.size() == 0);
 }
 
 uint64_t CommandBufferSequencer::GenerateNextCommandBufferSequenceNumber() {
@@ -51,13 +51,13 @@ void CommandBufferSequencer::CommandBufferFinished(uint64_t sequence_number) {
 }
 
 void CommandBufferSequencer::AddListener(CommandBufferSequencerListener* listener) {
-  FXL_DCHECK(listener);
-  FXL_DCHECK(std::find(listeners_.begin(), listeners_.end(), listener) == listeners_.end());
+  FX_DCHECK(listener);
+  FX_DCHECK(std::find(listeners_.begin(), listeners_.end(), listener) == listeners_.end());
   listeners_.push_back(listener);
 }
 
 void CommandBufferSequencer::RemoveListener(CommandBufferSequencerListener* listener) {
-  FXL_DCHECK(listener);
+  FX_DCHECK(listener);
   listeners_.erase(std::remove(listeners_.begin(), listeners_.end(), listener), listeners_.end());
 }
 

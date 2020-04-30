@@ -58,9 +58,9 @@ class JsonVisitor : public Visitor {
   }
 
   void VisitVectorValue(const VectorValue* node, const Type* for_type) override {
-    FXL_DCHECK(for_type != nullptr);
+    FX_DCHECK(for_type != nullptr);
     const Type* component_type = for_type->GetComponentType();
-    FXL_DCHECK(component_type != nullptr);
+    FX_DCHECK(component_type != nullptr);
     result_->SetArray();
     for (const auto& value : node->values()) {
       rapidjson::Value element;

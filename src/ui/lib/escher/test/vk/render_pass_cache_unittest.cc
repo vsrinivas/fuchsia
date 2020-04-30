@@ -54,7 +54,7 @@ VK_TEST_F(RenderPassCacheTest, DefaultSubpass) {
   std::vector<vk::Format> supported_depth_stencil_formats = std::vector(
       supported_depth_stencil_formats_set.begin(), supported_depth_stencil_formats_set.end());
   if (supported_depth_stencil_formats.empty()) {
-    FXL_LOG(ERROR) << "No depth stencil format is supported on this device, test terminated.";
+    FX_LOGS(ERROR) << "No depth stencil format is supported on this device, test terminated.";
     EXPECT_TRUE(escher->Cleanup());
     return;
   }
@@ -87,7 +87,7 @@ VK_TEST_F(RenderPassCacheTest, DefaultSubpass) {
   // Using a different image format should result in a different RenderPass.
   // However we cannot test it if there is only one image format supported.
   if (supported_depth_stencil_formats.size() == 1) {
-    FXL_LOG(ERROR) << "Only one depth stencil format is supported on this device, test terminated.";
+    FX_LOGS(ERROR) << "Only one depth stencil format is supported on this device, test terminated.";
   } else {
     depth_tex1 = escher->NewAttachmentTexture(supported_depth_stencil_formats[1], width, height, 1,
                                               vk::Filter::eNearest);
@@ -110,9 +110,9 @@ static void InitRenderPassInfo(RenderPassInfo* rp, const TexturePtr& depth_tex,
   const uint32_t height = depth_tex->height();
   const uint32_t sample_count = depth_tex->image()->info().sample_count;
 
-  FXL_DCHECK(width == color_tex->width());
-  FXL_DCHECK(height == color_tex->height());
-  FXL_DCHECK(sample_count == color_tex->image()->info().sample_count);
+  FX_DCHECK(width == color_tex->width());
+  FX_DCHECK(height == color_tex->height());
+  FX_DCHECK(sample_count == color_tex->image()->info().sample_count);
 
   static constexpr uint32_t kRenderTargetAttachmentIndex = 0;
   static constexpr uint32_t kResolveTargetAttachmentIndex = 1;
@@ -130,7 +130,7 @@ static void InitRenderPassInfo(RenderPassInfo* rp, const TexturePtr& depth_tex,
   rp->clear_color[0].setFloat32({0.f, 0.f, 0.f, 0.f});
 
   if (sample_count == 1) {
-    FXL_DCHECK(!resolve_tex);
+    FX_DCHECK(!resolve_tex);
 
     rp->color_attachments[kRenderTargetAttachmentIndex] = color_tex;
     rp->subpasses.push_back(RenderPassInfo::Subpass{
@@ -142,10 +142,10 @@ static void InitRenderPassInfo(RenderPassInfo* rp, const TexturePtr& depth_tex,
         .num_resolve_attachments = 0,
     });
   } else {
-    FXL_DCHECK(resolve_tex);
-    FXL_DCHECK(resolve_tex->image()->info().sample_count == 1);
-    FXL_DCHECK(width == resolve_tex->width());
-    FXL_DCHECK(height == resolve_tex->height());
+    FX_DCHECK(resolve_tex);
+    FX_DCHECK(resolve_tex->image()->info().sample_count == 1);
+    FX_DCHECK(width == resolve_tex->width());
+    FX_DCHECK(height == resolve_tex->height());
 
     rp->color_attachments[kResolveTargetAttachmentIndex] = resolve_tex;
     rp->num_color_attachments++;
@@ -174,7 +174,7 @@ VK_TEST_F(RenderPassCacheTest, RespectsSampleCount) {
   auto depth_stencil_texture_format_result =
       escher->device()->caps().GetMatchingDepthStencilFormat();
   if (depth_stencil_texture_format_result.result != vk::Result::eSuccess) {
-    FXL_LOG(ERROR) << "No depth stencil format is supported on this device.";
+    FX_LOGS(ERROR) << "No depth stencil format is supported on this device.";
     return;
   }
 
@@ -279,7 +279,7 @@ VK_TEST_F(RenderPassCacheTest, UnexpectedLazyCreationCallback) {
                                        vk::Format::eUndefined, 1, false);
   }
 
-  FXL_LOG(INFO) << "============= NOTE: Escher warnings expected";
+  FX_LOGS(INFO) << "============= NOTE: Escher warnings expected";
 
   // No callback has been set and |allow_render_pass_creation| is false.  Default behavior is to
   // return nullptr.
@@ -311,7 +311,7 @@ VK_TEST_F(RenderPassCacheTest, UnexpectedLazyCreationCallback) {
   // The rest of the test will either allow lazy creation (whether via the argument to
   // ObtainRenderPass(), or via the closure), or the render-pass will already be cached.  Therefore,
   // we expect no warnings after this point.
-  FXL_LOG(INFO) << "============= NOTE: no additional Escher warnings are expected\n";
+  FX_LOGS(INFO) << "============= NOTE: no additional Escher warnings are expected\n";
 
   // Switch back to the first render-pass, rpi1.
   // This time the callback will answer true, so a render-pass will be created/obtained, even

@@ -20,7 +20,7 @@ ParsedIdentifier Parse(const std::string& s) {
   ParsedIdentifier result;
 
   Err err = ExprParser::ParseIdentifier(s, &result);
-  FXL_CHECK(!err.has_error()) << err.msg();
+  FX_CHECK(!err.has_error()) << err.msg();
 
   return result;
 }

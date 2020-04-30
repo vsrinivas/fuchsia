@@ -23,7 +23,7 @@ LogListenerImpl::LogListenerImpl(fidl::InterfaceRequest<fuchsia::logger::LogList
                                  std::string prefix, async_dispatcher_t* dispatcher)
     : binding_(this, std::move(request), dispatcher), prefix_(std::move(prefix)), dropped_logs_(0) {
   binding_.set_error_handler([](zx_status_t status) {
-    FXL_LOG(ERROR) << "LogListenerImpl error: " << zx_status_get_string(status) << std::endl;
+    FX_LOGS(ERROR) << "LogListenerImpl error: " << zx_status_get_string(status) << std::endl;
   });
 }
 
@@ -65,7 +65,7 @@ void LogListener::BindToLogService(fuchsia::netemul::environment::ManagedEnviron
   // within |env|.
   fuchsia::logger::LogPtr log_service;
   log_service.set_error_handler([](zx_status_t status) {
-    FXL_LOG(ERROR) << "LogListenerImpl error: " << zx_status_get_string(status) << std::endl;
+    FX_LOGS(ERROR) << "LogListenerImpl error: " << zx_status_get_string(status) << std::endl;
   });
 
   env->ConnectToService(fuchsia::logger::Log::Name_, log_service.NewRequest().TakeChannel());
@@ -100,7 +100,7 @@ std::unique_ptr<LogListener> LogListener::Create(
   }
 
   if (!impl) {
-    FXL_LOG(ERROR) << "Failed to create a LogListenerImpl";
+    FX_LOGS(ERROR) << "Failed to create a LogListenerImpl";
     return nullptr;
   }
 

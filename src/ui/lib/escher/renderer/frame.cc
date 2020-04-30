@@ -51,7 +51,7 @@ Frame::Frame(impl::FrameManager* manager, escher::CommandBuffer::Type requested_
                     ? fxl::MakeRefCounted<TimestampProfiler>(escher()->vk_device(),
                                                              escher()->timestamp_period())
                     : TimestampProfilerPtr()) {
-  FXL_DCHECK(queue_);
+  FX_DCHECK(queue_);
 }
 
 Frame::~Frame() {
@@ -61,25 +61,25 @@ Frame::~Frame() {
   // finished rendering, and because this closure both:
   // - refs the Frame, keeping it alive until the closure completes
   // - sets the state to kReadyToBegin.
-  FXL_DCHECK(state_ == State::kReadyToBegin)
+  FX_DCHECK(state_ == State::kReadyToBegin)
       << "EndFrame() was not called - state_: " << static_cast<int>(state_);
 }
 
 vk::CommandBuffer Frame::vk_command_buffer() const {
-  FXL_DCHECK(command_buffer_) << "Cannot access command buffer.";
+  FX_DCHECK(command_buffer_) << "Cannot access command buffer.";
   return command_buffer_->vk();
 }
 
 void Frame::BeginFrame() {
   TRACE_DURATION("gfx", "escher::Frame::BeginFrame", "frame_number", frame_number_,
                  "escher_frame_number", escher_frame_number_);
-  FXL_DCHECK(state_ == State::kReadyToBegin);
+  FX_DCHECK(state_ == State::kReadyToBegin);
   IssueCommandBuffer();
   AddTimestamp("start of frame");
 }
 
 void Frame::IssueCommandBuffer() {
-  FXL_DCHECK(!command_buffer_);
+  FX_DCHECK(!command_buffer_);
   state_ = State::kInProgress;
 
   command_buffer_ =
@@ -92,13 +92,13 @@ void Frame::IssueCommandBuffer() {
 }
 
 void Frame::SubmitPartialFrame(const SemaphorePtr& frame_done) {
-  FXL_DCHECK(command_buffer_);
+  FX_DCHECK(command_buffer_);
 
   ++submission_count_;
   TRACE_DURATION("gfx", "escher::Frame::SubmitPartialFrame", "frame_number", frame_number_,
                  "escher_frame_number", escher_frame_number_, "submission_index",
                  submission_count_);
-  FXL_DCHECK(state_ == State::kInProgress);
+  FX_DCHECK(state_ == State::kInProgress);
 
   command_buffer_->AddSignalSemaphore(frame_done);
   command_buffer_->Submit(queue_, nullptr);
@@ -112,13 +112,13 @@ void Frame::SubmitPartialFrame(const SemaphorePtr& frame_done) {
 }
 
 void Frame::EndFrame(const SemaphorePtr& frame_done, FrameRetiredCallback frame_retired_callback) {
-  FXL_DCHECK(command_buffer_);
+  FX_DCHECK(command_buffer_);
 
   ++submission_count_;
   TRACE_DURATION("gfx", "escher::Frame::EndFrame", "frame_number", frame_number_,
                  "escher_frame_number", escher_frame_number_, "submission_index",
                  submission_count_);
-  FXL_DCHECK(state_ == State::kInProgress);
+  FX_DCHECK(state_ == State::kInProgress);
   state_ = State::kFinishing;
 
   AddTimestamp("end of frame");
@@ -192,8 +192,8 @@ void Frame::KeepAlive(ResourcePtr resource) { keep_alive_.push_back(std::move(re
 CommandBufferPtr Frame::TakeCommandBuffer() { return std::move(command_buffer_); }
 
 void Frame::PutCommandBuffer(CommandBufferPtr command_buffer) {
-  FXL_DCHECK(!command_buffer_ && command_buffer);
-  FXL_DCHECK(command_buffer_sequence_number_ == command_buffer->sequence_number());
+  FX_DCHECK(!command_buffer_ && command_buffer);
+  FX_DCHECK(command_buffer_sequence_number_ == command_buffer->sequence_number());
 
   command_buffer_ = std::move(command_buffer);
 }

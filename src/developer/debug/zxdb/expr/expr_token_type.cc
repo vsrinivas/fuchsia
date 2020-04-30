@@ -103,7 +103,7 @@ const ExprTokenRecord& RecordForTokenType(ExprTokenType type) {
                 "kRecords needs updating to match ExprTokenType");
 
   // Checks that this record is in the right place.
-  FXL_DCHECK(kRecords[static_cast<size_t>(type)].type == type);
+  FX_DCHECK(kRecords[static_cast<size_t>(type)].type == type);
 
   return kRecords[static_cast<size_t>(type)];
 }

@@ -38,19 +38,19 @@ class EscherEnvironment : public ::testing::Environment {
   void TearDown() override;
 
   Escher* GetEscher() {
-    FXL_DCHECK(!VK_TESTS_SUPPRESSED());
+    FX_DCHECK(!VK_TESTS_SUPPRESSED());
     return escher_.get();
   }
   VulkanDeviceQueuesPtr GetVulkanDevice() {
-    FXL_DCHECK(!VK_TESTS_SUPPRESSED());
+    FX_DCHECK(!VK_TESTS_SUPPRESSED());
     return vulkan_device_;
   }
   VulkanInstancePtr GetVulkanInstance() {
-    FXL_DCHECK(!VK_TESTS_SUPPRESSED());
+    FX_DCHECK(!VK_TESTS_SUPPRESSED());
     return vulkan_instance_;
   }
   HackFilesystemPtr GetFilesystem() {
-    FXL_DCHECK(!VK_TESTS_SUPPRESSED());
+    FX_DCHECK(!VK_TESTS_SUPPRESSED());
     return hack_filesystem_;
   }
 
@@ -76,7 +76,7 @@ bool GlobalEscherUsesSwiftShader();
 #define SKIP_TEST_IF_ESCHER_USES_SWIFTSHADER()                                           \
   do {                                                                                   \
     if (escher::test::GlobalEscherUsesSwiftShader()) {                                   \
-      FXL_LOG(WARNING) << "This test doesn't work on SwiftShader device; Test skipped."; \
+      FX_LOGS(WARNING) << "This test doesn't work on SwiftShader device; Test skipped."; \
       GTEST_SKIP();                                                                      \
     }                                                                                    \
   } while (0)

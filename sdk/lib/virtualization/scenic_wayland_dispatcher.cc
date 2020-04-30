@@ -43,7 +43,7 @@ fuchsia::virtualization::WaylandDispatcher* ScenicWaylandDispatcher::GetOrStartB
 }
 
 void ScenicWaylandDispatcher::Reset(zx_status_t status) {
-  FXL_LOG(ERROR) << "Wayland bridge lost: " << status;
+  FX_LOGS(ERROR) << "Wayland bridge lost: " << status;
   if (bridge_) {
     bridge_.Unbind();
   }

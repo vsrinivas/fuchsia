@@ -118,7 +118,7 @@ uint32_t GetWatchpointWriteFlag(debug_ipc::BreakpointType type) {
   }
   // clang-format on
 
-  FXL_NOTREACHED() << "Invalid breakpoint type: " << static_cast<uint32_t>(type);
+  FX_NOTREACHED() << "Invalid breakpoint type: " << static_cast<uint32_t>(type);
   return 0;
 }
 
@@ -136,7 +136,7 @@ void SetWatchpointFlags(uint32_t* dbgwcr, debug_ipc::BreakpointType type, uint64
   } else if (range.size() == 8) {
     ARM64_DBGWCR_BAS_SET(dbgwcr, 0xff);
   } else {
-    FXL_NOTREACHED() << "Invalid range size: " << range.size();
+    FX_NOTREACHED() << "Invalid range size: " << range.size();
   }
 
   // Set type.
@@ -152,10 +152,10 @@ WatchpointInstallationResult SetupWatchpoint(zx_thread_state_debug_regs_t* regs,
                                              debug_ipc::BreakpointType type,
                                              const debug_ipc::AddressRange& range,
                                              uint32_t watchpoint_count) {
-  FXL_DCHECK(watchpoint_count <= 16);
+  FX_DCHECK(watchpoint_count <= 16);
   if (!IsWatchpointType(type)) {
-    FXL_NOTREACHED() << "Requires a watchpoint type, received "
-                     << debug_ipc::BreakpointTypeToString(type);
+    FX_NOTREACHED() << "Requires a watchpoint type, received "
+                    << debug_ipc::BreakpointTypeToString(type);
     return CreateResult(ZX_ERR_INVALID_ARGS);
   }
 
@@ -189,7 +189,7 @@ WatchpointInstallationResult SetupWatchpoint(zx_thread_state_debug_regs_t* regs,
 
 zx_status_t RemoveWatchpoint(zx_thread_state_debug_regs_t* regs,
                              const debug_ipc::AddressRange& range, uint32_t watchpoint_count) {
-  FXL_DCHECK(watchpoint_count <= 16);
+  FX_DCHECK(watchpoint_count <= 16);
 
   uint32_t base_address = ValidateRange(range);
   if (base_address == 0)
@@ -378,7 +378,7 @@ uint32_t GetWatchpointLength(uint32_t dbgwcr) {
 
     case 0b11111111: return 8;
     default:
-      FXL_NOTREACHED() << "Wrong bas value: 0x" << std::hex << bas;
+      FX_NOTREACHED() << "Wrong bas value: 0x" << std::hex << bas;
       return 0;
   }
   // clang-format on

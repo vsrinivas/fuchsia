@@ -4,12 +4,12 @@
 
 #include "http_service_impl.h"
 
-#include <utility>
-
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fdio/limits.h>
+
+#include <utility>
 
 #include "garnet/bin/http/http_service_impl.h"
 #include "garnet/bin/http/http_url_loader_impl.h"
@@ -44,7 +44,7 @@ class HttpServiceImpl::UrlLoaderContainer : public URLLoaderImpl::Coordinator {
         main_dispatcher_(main_dispatcher),
         io_loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
         weak_ptr_factory_(this) {
-    FXL_DCHECK(main_dispatcher_);
+    FX_DCHECK(main_dispatcher_);
     weak_ptr_ = weak_ptr_factory_.GetWeakPtr();
   }
 
@@ -155,7 +155,7 @@ class HttpServiceImpl::UrlLoaderContainer : public URLLoaderImpl::Coordinator {
 
 HttpServiceImpl::HttpServiceImpl(async_dispatcher_t* dispatcher)
     : dispatcher_(dispatcher), available_slots_(kMaxSlots) {
-  FXL_DCHECK(dispatcher_);
+  FX_DCHECK(dispatcher_);
 }
 
 HttpServiceImpl::~HttpServiceImpl() = default;
@@ -185,7 +185,7 @@ void HttpServiceImpl::RequestNetworkSlot(fit::function<void(fit::closure)> slot_
 }
 
 void HttpServiceImpl::OnSlotReturned() {
-  FXL_DCHECK(available_slots_ < kMaxSlots);
+  FX_DCHECK(available_slots_ < kMaxSlots);
 
   if (slot_requests_.empty()) {
     ++available_slots_;

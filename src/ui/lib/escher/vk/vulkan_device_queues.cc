@@ -77,7 +77,7 @@ namespace {
 template <typename FuncT>
 static FuncT GetDeviceProcAddr(vk::Device device, const char* func_name) {
   FuncT func = reinterpret_cast<FuncT>(device.getProcAddr(func_name));
-  FXL_CHECK(func) << "failed to find function address for: " << func_name;
+  FX_CHECK(func) << "failed to find function address for: " << func_name;
   return func;
 }
 
@@ -145,10 +145,10 @@ SuitablePhysicalDeviceAndQueueFamilies FindSuitablePhysicalDeviceAndQueueFamilie
           // meets all of our needs.
           auto get_surface_support_result =
               physical_device.getSurfaceSupportKHR(i, params.surface, instance->proc_addrs());
-          FXL_CHECK(get_surface_support_result.result == vk::Result::eSuccess);
+          FX_CHECK(get_surface_support_result.result == vk::Result::eSuccess);
           VkBool32 supports_present = get_surface_support_result.value;
           if (supports_present != VK_TRUE) {
-            FXL_LOG(INFO) << "Queue supports graphics/compute, but not presentation";
+            FX_LOGS(INFO) << "Queue supports graphics/compute, but not presentation";
             continue;
           }
         }
@@ -191,7 +191,7 @@ bool ValidateExtension(vk::PhysicalDevice device, const std::string name,
   for (auto& layer_name : required_layer_names) {
     auto layer_extensions =
         ESCHER_CHECKED_VK_RESULT(device.enumerateDeviceExtensionProperties(layer_name));
-    FXL_LOG(INFO) << "Looking for Vulkan device extension: " << name << " in layer: " << layer_name;
+    FX_LOGS(INFO) << "Looking for Vulkan device extension: " << name << " in layer: " << layer_name;
 
     auto found = std::find_if(layer_extensions.begin(), layer_extensions.end(),
                               [&name](vk::ExtensionProperties& extension) {
@@ -230,7 +230,7 @@ fxl::RefPtr<VulkanDeviceQueues> VulkanDeviceQueues::New(VulkanInstancePtr instan
   {
     SuitablePhysicalDeviceAndQueueFamilies result =
         FindSuitablePhysicalDeviceAndQueueFamilies(instance, params);
-    FXL_CHECK(result.physical_device) << "Unable to find a suitable physical device.";
+    FX_CHECK(result.physical_device) << "Unable to find a suitable physical device.";
     physical_device = result.physical_device;
     main_queue_family = result.main_queue_family;
     transfer_queue_family = result.transfer_queue_family;
@@ -253,7 +253,7 @@ fxl::RefPtr<VulkanDeviceQueues> VulkanDeviceQueues::New(VulkanInstancePtr instan
 
   // Protected memory is only supported with Vulkan API version 1.1.
   if (!physical_device_memory_features.protectedMemory || max_api_version < VK_API_VERSION_1_1) {
-    FXL_LOG(INFO) << "Protected memory is not supported.";
+    FX_LOGS(INFO) << "Protected memory is not supported.";
     caps.allow_protected_memory = false;
   } else {
     caps.allow_protected_memory = params.flags & VulkanDeviceQueues::Params::kAllowProtectedMemory;
@@ -311,13 +311,13 @@ fxl::RefPtr<VulkanDeviceQueues> VulkanDeviceQueues::New(VulkanInstancePtr instan
   if (supported_device_features.X) {                                        \
     caps.enabled_features.X = true;                                         \
   } else {                                                                  \
-    FXL_LOG(INFO) << "Desired Vulkan Device feature not supported: " << #X; \
+    FX_LOGS(INFO) << "Desired Vulkan Device feature not supported: " << #X; \
   }
 
 #define ADD_REQUIRED_FEATURE(X)                                               \
   caps.enabled_features.X = true;                                             \
   if (!supported_device_features.X) {                                         \
-    FXL_LOG(ERROR) << "Required Vulkan Device feature not supported: " << #X; \
+    FX_LOGS(ERROR) << "Required Vulkan Device feature not supported: " << #X; \
     device_has_all_required_features = false;                                 \
   }
 
@@ -371,7 +371,7 @@ fxl::RefPtr<VulkanDeviceQueues> VulkanDeviceQueues::New(VulkanInstancePtr instan
   // Create the device.
   auto result = physical_device.createDevice(device_info);
   if (result.result != vk::Result::eSuccess) {
-    FXL_LOG(WARNING) << "Could not create Vulkan Device: " << vk::to_string(result.result) << ".";
+    FX_LOGS(WARNING) << "Could not create Vulkan Device: " << vk::to_string(result.result) << ".";
     return fxl::RefPtr<VulkanDeviceQueues>();
   }
   vk::Device device = result.value;
@@ -426,7 +426,7 @@ bool VulkanDeviceQueues::ValidateExtensions(vk::PhysicalDevice device,
 
   for (auto& name : required_extension_names) {
     if (!ValidateExtension(device, name, extensions, required_layer_names)) {
-      FXL_LOG(WARNING) << "Vulkan has no device extension named: " << name;
+      FX_LOGS(WARNING) << "Vulkan has no device extension named: " << name;
       return false;
     }
   }

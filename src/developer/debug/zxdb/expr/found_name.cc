@@ -15,7 +15,7 @@ FoundName::FoundName() = default;
 
 FoundName::FoundName(Kind kind, ParsedIdentifier name) : kind_(kind), name_(std::move(name)) {
   // These are the only kinds that don't require other information.
-  FXL_DCHECK(kind == kNone || kind == kNamespace || kind == kTemplate);
+  FX_DCHECK(kind == kNone || kind == kNamespace || kind == kTemplate);
 }
 
 FoundName::FoundName(const Variable* variable) : kind_(kVariable), variable_(RefPtrTo(variable)) {}

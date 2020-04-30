@@ -14,7 +14,7 @@ GlobalBufferCollectionId NullRenderer::RegisterBufferCollection(
   auto result = BufferCollectionInfo::New(sysmem_allocator, std::move(token));
 
   if (result.is_error()) {
-    FXL_LOG(ERROR) << "Unable to register collection.";
+    FX_LOGS(ERROR) << "Unable to register collection.";
     return kInvalidId;
   }
 
@@ -65,19 +65,19 @@ std::optional<BufferCollectionMetadata> NullRenderer::Validate(
 void NullRenderer::Render(const std::vector<ImageMetadata>& images) {
   for (const auto& image : images) {
     auto collection_id = image.collection_id;
-    FXL_DCHECK(collection_id != kInvalidId);
+    FX_DCHECK(collection_id != kInvalidId);
 
     // TODO(44335): Convert this to a lock-free structure.
     std::unique_lock<std::mutex> lock(lock_);
     auto metadata_itr = collection_metadata_map_.find(collection_id);
-    FXL_DCHECK(metadata_itr != collection_metadata_map_.end());
+    FX_DCHECK(metadata_itr != collection_metadata_map_.end());
     auto metadata = metadata_itr->second;
     lock.release();
 
     // Make sure the image conforms to the constraints of the collection.
-    FXL_DCHECK(image.vmo_idx < metadata.vmo_count);
-    FXL_DCHECK(image.width <= metadata.image_constraints.max_coded_width);
-    FXL_DCHECK(image.height <= metadata.image_constraints.max_coded_height);
+    FX_DCHECK(image.vmo_idx < metadata.vmo_count);
+    FX_DCHECK(image.width <= metadata.image_constraints.max_coded_width);
+    FX_DCHECK(image.height <= metadata.image_constraints.max_coded_height);
   }
 }
 

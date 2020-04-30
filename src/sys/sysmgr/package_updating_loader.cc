@@ -49,7 +49,7 @@ void PackageUpdatingLoader::LoadUrl(std::string url, LoadUrlCallback callback) {
   // The updating loader can only update fuchsia-pkg URLs.
   component::FuchsiaPkgUrl fuchsia_url;
   if (!fuchsia_url.Parse(url)) {
-    FXL_LOG(ERROR) << "Invalid package URL " << url;
+    FX_LOGS(ERROR) << "Invalid package URL " << url;
     callback(nullptr);
     return;
   }
@@ -70,7 +70,7 @@ void PackageUpdatingLoader::LoadUrl(std::string url, LoadUrlCallback callback) {
                   callback = std::move(callback)](zx_status_t status) mutable {
     if (status != ZX_OK) {
       // TODO: only fail soft on NOT_FOUND?
-      FXL_VLOG(1) << "Package update failed with " << zx_status_get_string(status)
+      FX_VLOGS(1) << "Package update failed with " << zx_status_get_string(status)
                   << ". Loading package without update: " << url;
       PackageLoader::LoadUrl(url, std::move(callback));
       return;
@@ -82,7 +82,7 @@ void PackageUpdatingLoader::LoadUrl(std::string url, LoadUrlCallback callback) {
 
     if (!fuchsia_url.resource_path().empty()) {
       if (!component::LoadPackageResource(fuchsia_url.resource_path(), package)) {
-        FXL_LOG(ERROR) << "Could not load package resource " << fuchsia_url.resource_path()
+        FX_LOGS(ERROR) << "Could not load package resource " << fuchsia_url.resource_path()
                        << " from " << fuchsia_url.ToString();
         callback(nullptr);
         return;
@@ -113,7 +113,7 @@ void PackageUpdatingLoader::EnsureConnectedToResolver() {
     // the error handler is consumed when an error is encountered, so if we
     // need to reconnect then it means we need to reinstall the handler too
     resolver_.set_error_handler([this](zx_status_t status) {
-      FXL_LOG(ERROR) << "Package resolver error handler triggered, marking as "
+      FX_LOGS(ERROR) << "Package resolver error handler triggered, marking as "
                         "needing reconnect. status="
                      << status;
       needs_reconnect_ = true;

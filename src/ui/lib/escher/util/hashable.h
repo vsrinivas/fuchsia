@@ -22,7 +22,7 @@ class Hashable {
   Hash hash() const {
     if (!hash_.IsValid()) {
       hash_ = GenerateHash();
-      FXL_DCHECK(hash_.IsValid()) << "GenerateHash() must return a valid Hash.";
+      FX_DCHECK(hash_.IsValid()) << "GenerateHash() must return a valid Hash.";
     }
     return hash_;
   }

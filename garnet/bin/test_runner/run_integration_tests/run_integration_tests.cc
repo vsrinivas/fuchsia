@@ -25,16 +25,16 @@ class TestRunObserverImpl : public test_runner::TestRunObserver {
  public:
   TestRunObserverImpl(async::Loop* loop, const std::string& test_id)
       : loop_(loop), test_id_(test_id) {
-    FXL_CHECK(loop);
+    FX_CHECK(loop);
   }
 
   void SendMessage(const std::string& test_id, const std::string& operation,
                    const std::string& msg) override {
-    FXL_CHECK(test_id == test_id_);
+    FX_CHECK(test_id == test_id_);
   }
 
   void Teardown(const std::string& test_id, bool success) override {
-    FXL_CHECK(test_id == test_id_);
+    FX_CHECK(test_id == test_id_);
     success_ = success;
     loop_->Quit();
   }
@@ -49,7 +49,7 @@ class TestRunObserverImpl : public test_runner::TestRunObserver {
 
 bool RunTest(async::Loop* loop, std::shared_ptr<sys::ComponentContext> app_context,
              const std::string& url, const std::vector<std::string>& args) {
-  FXL_CHECK(loop);
+  FX_CHECK(loop);
   uint64_t random_number;
   zx_cprng_draw(&random_number, sizeof random_number);
   std::string test_id = fxl::StringPrintf("test_%lX", random_number);

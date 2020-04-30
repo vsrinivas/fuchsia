@@ -13,16 +13,13 @@
 #include <vector>
 
 #include "garnet/lib/intel_pt_decode/decoder.h"
-
-#include "third_party/simple-pt/printer-util.h"
-
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_number_conversions.h"
 #include "src/lib/fxl/strings/string_printf.h"
-
 #include "third_party/processor-trace/libipt/include/intel-pt.h"
+#include "third_party/simple-pt/printer-util.h"
 
 namespace intel_processor_trace {
 
@@ -31,7 +28,7 @@ std::unique_ptr<RawPrinter> RawPrinter::Create(DecoderState* state, const Config
   if (config.output_file_name != "") {
     out_file = fopen(config.output_file_name.c_str(), "w");
     if (!out_file) {
-      FXL_LOG(ERROR) << "Unable to open file for writing: " << config.output_file_name;
+      FX_LOGS(ERROR) << "Unable to open file for writing: " << config.output_file_name;
       return nullptr;
     }
   }
@@ -164,7 +161,7 @@ int RawPrinter::ProcessNextInsn(struct pt_insn_decoder* pt_decoder, PrintState* 
 
 uint64_t RawPrinter::PrintOneFile(const PtFile& pt_file) {
   if (!state_->AllocDecoder(pt_file.file)) {
-    FXL_LOG(ERROR) << "Unable to open pt file: " << pt_file.file;
+    FX_LOGS(ERROR) << "Unable to open pt file: " << pt_file.file;
     return 0;
   }
 
@@ -184,9 +181,9 @@ uint64_t RawPrinter::PrintOneFile(const PtFile& pt_file) {
       std::string message = fxl::StringPrintf("0x%" PRIx64 ": sync forward: %s\n", ps.current_pos,
                                               pt_errstr(pt_errcode(err)));
       if (err == -pte_eos) {
-        FXL_LOG(INFO) << message;
+        FX_LOGS(INFO) << message;
       } else {
-        FXL_LOG(ERROR) << message;
+        FX_LOGS(ERROR) << message;
       }
       break;
     }
@@ -202,7 +199,7 @@ uint64_t RawPrinter::PrintOneFile(const PtFile& pt_file) {
       continue;
     }
 
-    FXL_LOG(ERROR) << fxl::StringPrintf(
+    FX_LOGS(ERROR) << fxl::StringPrintf(
         "[%8" PRIu64 "] @0x%" PRIx64 ": %" PRIx64 ":%" PRIx64 ": error %s", ps.total_insncnt,
         ps.current_pos, ps.current_cr3, ps.current_pc, pt_errstr(pt_errcode(err)));
   }

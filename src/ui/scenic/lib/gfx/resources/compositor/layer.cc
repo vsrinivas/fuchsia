@@ -22,14 +22,14 @@ namespace {
 
 std::optional<ViewHit> CreateViewHit(const NodeHit& hit,
                                      const escher::mat4& screen_to_world_transform) {
-  FXL_DCHECK(hit.node);
+  FX_DCHECK(hit.node);
   ViewPtr view = hit.node->FindOwningView();
 
   if (!view) {
     return std::nullopt;
   }
 
-  FXL_DCHECK(view->GetViewNode());
+  FX_DCHECK(view->GetViewNode());
 
   const escher::mat4 world_to_model = glm::inverse(view->GetViewNode()->GetGlobalTransform());
   const escher::mat4 screen_to_model = world_to_model * screen_to_world_transform;
@@ -76,7 +76,7 @@ bool Layer::SetColor(const escher::vec4& color) {
 bool Layer::Detach(ErrorReporter* reporter) {
   if (layer_stack_) {
     layer_stack_->RemoveLayer(this);
-    FXL_DCHECK(!layer_stack_);  // removed by RemoveLayer().
+    FX_DCHECK(!layer_stack_);  // removed by RemoveLayer().
   }
   return true;
 }

@@ -18,7 +18,7 @@ ConstValue::ConstValue(int64_t v) {
 ConstValue::ConstValue(std::vector<uint8_t> buffer) : data_(std::move(buffer)) {}
 
 std::vector<uint8_t> ConstValue::GetConstValue(size_t byte_count) const {
-  FXL_DCHECK(has_value());
+  FX_DCHECK(has_value());
 
   std::vector<uint8_t> result;
   if (byte_count && data_.size()) {

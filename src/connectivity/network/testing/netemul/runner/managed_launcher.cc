@@ -89,7 +89,7 @@ void ManagedLauncher::CreateComponent(
   // Before launching, we'll check the component's sandbox
   // so we can inject virtual devices
   if (!package) {
-    FXL_LOG(ERROR) << "Can't load package \"" << launch_info.url << "\"";
+    FX_LOGS(ERROR) << "Can't load package \"" << launch_info.url << "\"";
     EmitComponentFailure(std::move(controller), fuchsia::sys::TerminationReason::PACKAGE_NOT_FOUND);
     return;
   }
@@ -106,7 +106,7 @@ bool ManagedLauncher::MakeServiceLaunchInfo(fuchsia::sys::LaunchInfo* launch_inf
   fuchsia::sys::PackagePtr package;
   auto status = loader_sync_->LoadUrl(launch_info->url, &package);
   if (status != ZX_OK || !package) {
-    FXL_LOG(ERROR) << "Failed to load service package contents for " << launch_info->url;
+    FX_LOGS(ERROR) << "Failed to load service package contents for " << launch_info->url;
     return false;
   }
 
@@ -116,14 +116,14 @@ bool ManagedLauncher::MakeServiceLaunchInfo(fuchsia::sys::LaunchInfo* launch_inf
 bool ManagedLauncher::UpdateLaunchInfo(fuchsia::sys::PackagePtr package,
                                        fuchsia::sys::LaunchInfo* launch_info) {
   if (!package->directory.is_valid()) {
-    FXL_LOG(ERROR) << "Package directory not provided";
+    FX_LOGS(ERROR) << "Package directory not provided";
     return false;
   }
 
   // let's open and parse the cmx
   component::FuchsiaPkgUrl fp;
   if (!fp.Parse(package->resolved_url)) {
-    FXL_LOG(ERROR) << "Can't parse package url " << package->resolved_url;
+    FX_LOGS(ERROR) << "Can't parse package url " << package->resolved_url;
     return false;
   }
 
@@ -132,7 +132,7 @@ bool ManagedLauncher::UpdateLaunchInfo(fuchsia::sys::PackagePtr package,
 
   json::JSONParser json_parser;
   if (!cmx.ParseFromFileAt(fd.get(), fp.resource_path(), &json_parser)) {
-    FXL_LOG(ERROR) << "cmx file failed to parse: " << json_parser.error_str();
+    FX_LOGS(ERROR) << "cmx file failed to parse: " << json_parser.error_str();
     return false;
   }
 

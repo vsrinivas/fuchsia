@@ -113,6 +113,6 @@ zx_status_t InStreamHttp::ReadBytesInternal(uint32_t max_bytes_to_read, uint32_t
   } else {
     Exit("socket_ wait returned success but neither signal set?");
   }
-  FXL_NOTREACHED();
+  FX_NOTREACHED();
   return ZX_ERR_INTERNAL;
 }

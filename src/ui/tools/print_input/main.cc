@@ -25,7 +25,7 @@ class App : public fuchsia::ui::input::InputDeviceRegistry,
   ~App() {}
 
   void OnDeviceDisconnected(ui_input::InputDeviceImpl* input_device) {
-    FXL_VLOG(1) << "UnregisterDevice " << input_device->id();
+    FX_VLOGS(1) << "UnregisterDevice " << input_device->id();
 
     if (devices_.count(input_device->id()) != 0) {
       devices_[input_device->id()].second->OnUnregistered();
@@ -34,9 +34,9 @@ class App : public fuchsia::ui::input::InputDeviceRegistry,
   }
 
   void OnReport(ui_input::InputDeviceImpl* input_device, fuchsia::ui::input::InputReport report) {
-    FXL_VLOG(2) << "DispatchReport " << input_device->id() << " " << report;
+    FX_VLOGS(2) << "DispatchReport " << input_device->id() << " " << report;
     if (devices_.count(input_device->id()) == 0) {
-      FXL_VLOG(1) << "DispatchReport: Unknown device " << input_device->id();
+      FX_VLOGS(1) << "DispatchReport: Unknown device " << input_device->id();
       return;
     }
 
@@ -46,7 +46,7 @@ class App : public fuchsia::ui::input::InputDeviceRegistry,
 
     ui_input::DeviceState* state = devices_[input_device->id()].second.get();
 
-    FXL_CHECK(state);
+    FX_CHECK(state);
     state->Update(std::move(report), size);
   }
 
@@ -56,9 +56,9 @@ class App : public fuchsia::ui::input::InputDeviceRegistry,
       fidl::InterfaceRequest<fuchsia::ui::input::InputDevice> input_device_request) {
     uint32_t device_id = next_device_token_++;
 
-    FXL_VLOG(1) << "RegisterDevice " << descriptor << " -> " << device_id;
+    FX_VLOGS(1) << "RegisterDevice " << descriptor << " -> " << device_id;
 
-    FXL_CHECK(devices_.count(device_id) == 0);
+    FX_CHECK(devices_.count(device_id) == 0);
 
     std::unique_ptr<ui_input::InputDeviceImpl> input_device =
         std::make_unique<ui_input::InputDeviceImpl>(device_id, std::move(descriptor),
@@ -74,7 +74,7 @@ class App : public fuchsia::ui::input::InputDeviceRegistry,
     state_ptr->OnRegistered();
   }
 
-  void OnEvent(fuchsia::ui::input::InputEvent event) { FXL_LOG(INFO) << event; }
+  void OnEvent(fuchsia::ui::input::InputEvent event) { FX_LOGS(INFO) << event; }
 
   uint32_t next_device_token_ = 0;
   ui_input::InputReader reader_;

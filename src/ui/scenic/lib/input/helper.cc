@@ -44,7 +44,7 @@ escher::vec2 TransformPointerCoords(const escher::vec2& pointer, const glm::mat4
   const escher::vec4 transformed_pointer = transform * homogenous_pointer;
   const escher::vec2 homogenized_transformed_pointer{escher::homogenize(transformed_pointer)};
 
-  FXL_VLOG(2) << "Coordinate transform (device->view): (" << pointer.x << ", " << pointer.y
+  FX_VLOGS(2) << "Coordinate transform (device->view): (" << pointer.x << ", " << pointer.y
               << ")->(" << homogenized_transformed_pointer.x << ", "
               << homogenized_transformed_pointer.y << ")";
 
@@ -63,7 +63,7 @@ escher::vec2 NormalizePointerCoords(const escher::vec2& pointer,
   // we'd need to partition the input space. So, for now to simplify things we'll treat the layer
   // size as display dimensions, and if we ever find more than one layer in a stack, we should
   // worry.
-  FXL_DCHECK(layer_stack->layers().size() == 1)
+  FX_DCHECK(layer_stack->layers().size() == 1)
       << "Multiple GFX layers; multi-layer input dispatch not implemented.";
   const gfx::Layer& layer = **layer_stack->layers().begin();
 
@@ -137,7 +137,7 @@ std::vector<PointerEvent> PointerFlowEventToGfxPointerEvent(
       break;
     }
     default:
-      FXL_CHECK(false) << "unknown phase";
+      FX_CHECK(false) << "unknown phase";
       break;
   }
 

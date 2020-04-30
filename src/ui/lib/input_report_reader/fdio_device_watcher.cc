@@ -18,20 +18,20 @@ FdioDeviceWatcher::FdioDeviceWatcher(std::string directory_path)
 FdioDeviceWatcher::~FdioDeviceWatcher() = default;
 
 void FdioDeviceWatcher::Watch(ExistsCallback callback) {
-  FXL_DCHECK(!watch_);
+  FX_DCHECK(!watch_);
   watch_ = fsl::DeviceWatcher::Create(
       std::move(directory_path_),
       [callback = std::move(callback)](int dir_fd, std::string filename) {
         int fd = 0;
         zx_status_t status = fdio_open_fd_at(dir_fd, filename.c_str(), O_RDONLY, &fd);
         if (status != ZX_OK) {
-          FXL_LOG(ERROR) << "Failed to open device " << filename;
+          FX_LOGS(ERROR) << "Failed to open device " << filename;
           return;
         }
         zx::channel chan;
         status = fdio_get_service_handle(fd, chan.reset_and_get_address());
         if (status != ZX_OK) {
-          FXL_LOG(ERROR) << "Failed to get service handle " << filename;
+          FX_LOGS(ERROR) << "Failed to get service handle " << filename;
           return;
         }
         callback(std::move(chan));

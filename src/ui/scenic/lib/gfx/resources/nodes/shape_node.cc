@@ -21,7 +21,7 @@ void ShapeNode::SetShape(ShapePtr shape) { shape_ = std::move(shape); }
 
 Node::IntersectionInfo ShapeNode::GetIntersection(
     const escher::ray4& ray, const IntersectionInfo& parent_intersection) const {
-  FXL_DCHECK(parent_intersection.continue_with_children);
+  FX_DCHECK(parent_intersection.continue_with_children);
   IntersectionInfo result;
   bool hit = shape_ && shape_->GetIntersection(ray, &result.distance);
   result.did_hit = hit && parent_intersection.interval.Contains(result.distance);

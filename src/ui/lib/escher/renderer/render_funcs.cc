@@ -66,7 +66,7 @@ static RenderFuncs::VertexAttributeBinding* FillVertexAttributeBindings(
 RenderFuncs::VertexAttributeBinding* RenderFuncs::NewVertexAttributeBindings(
     const MeshAttributeBindingLocations& attribute_binding_locations, BlockAllocator* allocator,
     const MeshSpec& mesh_spec, uint32_t total_attribute_count) {
-  FXL_DCHECK(total_attribute_count == mesh_spec.total_attribute_count());
+  FX_DCHECK(total_attribute_count == mesh_spec.total_attribute_count());
 
   auto bindings = allocator->AllocateMany<VertexAttributeBinding>(total_attribute_count);
   {
@@ -79,7 +79,7 @@ RenderFuncs::VertexAttributeBinding* RenderFuncs::NewVertexAttributeBindings(
     }
 
     // Sanity check that we filled in the correct number of attributes.
-    FXL_DCHECK(current == (bindings + total_attribute_count));
+    FX_DCHECK(current == (bindings + total_attribute_count));
   }
   return bindings;
 }
@@ -89,7 +89,7 @@ void RenderFuncs::ObtainDepthAndMsaaTextures(Escher* escher, const FramePtr& fra
                                              vk::Format depth_stencil_format,
                                              TexturePtr& depth_texture, TexturePtr& msaa_texture) {
   // Support for other sample_counts should fairly easy to add, if necessary.
-  FXL_DCHECK(info.sample_count == 1);
+  FX_DCHECK(info.sample_count == 1);
 
   const bool realloc_textures =
       !depth_texture ||
@@ -137,7 +137,7 @@ void RenderFuncs::ObtainDepthTexture(Escher* escher, const bool use_protected_me
                                      const ImageInfo& info, vk::Format depth_stencil_format,
                                      TexturePtr& depth_texture) {
   // Support for other sample_counts should fairly easy to add, if necessary.
-  FXL_DCHECK(info.sample_count == 1);
+  FX_DCHECK(info.sample_count == 1);
 
   const bool realloc_textures =
       !depth_texture || (depth_texture->image()->use_protected_memory() != use_protected_memory) ||

@@ -47,7 +47,7 @@ bool IsNumericBaseType(int base_type) {
 // Returns true if the given type (assumed to be a pointer) is a pointer to a function (but NOT a
 // member function).
 bool IsPointerToFunction(const ModifiedType* pointer) {
-  FXL_DCHECK(pointer->tag() == DwarfTag::kPointerType);
+  FX_DCHECK(pointer->tag() == DwarfTag::kPointerType);
   return !!pointer->modified().Get()->AsFunctionType();
 }
 
@@ -446,7 +446,7 @@ void FormatCharPointer(FormatNode* node, const Type* char_type, const FormatOpti
 bool TryFormatArrayOrString(FormatNode* node, const Type* type, const FormatOptions& options,
                             const fxl::RefPtr<EvalContext>& eval_context,
                             fit::deferred_callback& cb) {
-  FXL_DCHECK(type == type->StripCVT());
+  FX_DCHECK(type == type->StripCVT());
 
   if (type->tag() == DwarfTag::kPointerType) {
     // Any pointer type (we only char about char*).
@@ -508,7 +508,7 @@ void FormatUnspecified(FormatNode* node) {
 void FillFormatNodeDescriptionFromValue(FormatNode* node, const FormatOptions& options,
                                         const fxl::RefPtr<EvalContext>& context,
                                         fit::deferred_callback cb) {
-  FXL_DCHECK(node->state() != FormatNode::kUnevaluated);
+  FX_DCHECK(node->state() != FormatNode::kUnevaluated);
   if (node->state() == FormatNode::kEmpty || node->err().has_error()) {
     node->set_state(FormatNode::kDescribed);
     return;
@@ -623,7 +623,7 @@ void FillFormatNodeValue(FormatNode* node, const fxl::RefPtr<EvalContext>& conte
     case FormatNode::kDescription:
       return;
   }
-  FXL_NOTREACHED();
+  FX_NOTREACHED();
 }
 
 void FillFormatNodeDescription(FormatNode* node, const FormatOptions& options,

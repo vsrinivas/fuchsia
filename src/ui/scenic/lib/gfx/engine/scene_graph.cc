@@ -36,7 +36,7 @@ CompositorWeakPtr SceneGraph::GetCompositor(GlobalId compositor_id) const {
 
 SceneGraph::SceneGraph(sys::ComponentContext* app_context)
     : focus_chain_listener_registry_(this), weak_factory_(this) {
-  FXL_DCHECK(app_context);
+  FX_DCHECK(app_context);
   if (app_context) {
     app_context->outgoing()->AddPublicService<FocusChainListenerRegistry>(
         [this](fidl::InterfaceRequest<FocusChainListenerRegistry> request) {
@@ -44,21 +44,21 @@ SceneGraph::SceneGraph(sys::ComponentContext* app_context)
         });
 
   } else {
-    FXL_LOG(ERROR) << "SceneGraph failed to register fuchsia.ui.focus.FocusChainListenerRegistry.";
+    FX_LOGS(ERROR) << "SceneGraph failed to register fuchsia.ui.focus.FocusChainListenerRegistry.";
   }
 }
 
 void SceneGraph::AddCompositor(const CompositorWeakPtr& compositor) {
-  FXL_DCHECK(compositor);
+  FX_DCHECK(compositor);
   compositors_.push_back(compositor);
 }
 
 void SceneGraph::RemoveCompositor(const CompositorWeakPtr& compositor) {
-  FXL_DCHECK(compositor);
+  FX_DCHECK(compositor);
   auto it =
       std::find_if(compositors_.begin(), compositors_.end(),
                    [compositor](const auto& c) -> bool { return c.get() == compositor.get(); });
-  FXL_DCHECK(it != compositors_.end());
+  FX_DCHECK(it != compositors_.end());
   compositors_.erase(it);
 }
 
@@ -87,8 +87,8 @@ void SceneGraph::ProcessViewTreeUpdates() {
     } else if (const auto ptr = std::get_if<ViewTreeDisconnectFromParent>(&update)) {
       view_tree_.DisconnectFromParent(ptr->koid);
     } else {
-      FXL_NOTREACHED() << "Encountered unknown type of view tree update; variant index is: "
-                       << update.index();
+      FX_NOTREACHED() << "Encountered unknown type of view tree update; variant index is: "
+                      << update.index();
     }
   }
   view_tree_updates_.clear();
@@ -112,8 +112,8 @@ void SceneGraph::Register(fidl::InterfaceHandle<FocusChainListener> focus_chain_
 
 void SceneGraph::RegisterViewFocuser(SessionId session_id,
                                      fidl::InterfaceRequest<ViewFocuser> view_focuser) {
-  FXL_DCHECK(session_id != 0u) << "precondition";
-  FXL_DCHECK(view_focuser_endpoints_.count(session_id) == 0u) << "precondition";
+  FX_DCHECK(session_id != 0u) << "precondition";
+  FX_DCHECK(view_focuser_endpoints_.count(session_id) == 0u) << "precondition";
 
   fit::function<void(ViewRef, ViewFocuser::RequestFocusCallback)> request_focus_handler =
       [this, session_id](ViewRef view_ref, ViewFocuser::RequestFocusCallback response) {
@@ -159,12 +159,12 @@ void SceneGraph::MaybeDispatchFidlFocusChainAndFocusEvents(
   const std::vector<zx_koid_t>& new_focus_chain = view_tree_.focus_chain();
 
   if (old_focus_chain == new_focus_chain) {
-    FXL_VLOG(1) << "Scenic, view focus changed: false" << std::endl
+    FX_VLOGS(1) << "Scenic, view focus changed: false" << std::endl
                 << "\t Old focus chain: " << FocusChainToString(old_focus_chain);
     return;
   }
 
-  FXL_VLOG(1) << "Scenic, view focus changed: true" << std::endl
+  FX_VLOGS(1) << "Scenic, view focus changed: true" << std::endl
               << "\t Old focus chain: " << FocusChainToString(old_focus_chain) << std::endl
               << "\t New focus chain: " << FocusChainToString(new_focus_chain);
 
@@ -185,7 +185,7 @@ void SceneGraph::MaybeDispatchFidlFocusChainAndFocusEvents(
       input.set_focus(std::move(focus));
       view_tree_.EventReporterOf(old_focus_chain.back())->EnqueueEvent(std::move(input));
     } else {
-      FXL_VLOG(1) << "Old focus event; could not enqueue. No reporter. Event was: " << focus;
+      FX_VLOGS(1) << "Old focus event; could not enqueue. No reporter. Event was: " << focus;
     }
   }
 
@@ -199,7 +199,7 @@ void SceneGraph::MaybeDispatchFidlFocusChainAndFocusEvents(
       input.set_focus(std::move(focus));
       view_tree_.EventReporterOf(new_focus_chain.back())->EnqueueEvent(std::move(input));
     } else {
-      FXL_VLOG(1) << "New focus event; could not enqueue. No reporter. Event was: " << focus;
+      FX_VLOGS(1) << "New focus event; could not enqueue. No reporter. Event was: " << focus;
     }
   }
 }
@@ -209,13 +209,13 @@ SceneGraph::ViewFocuserEndpoint::ViewFocuserEndpoint(
     fit::function<void(ViewRef, RequestFocusCallback)> request_focus_handler)
     : request_focus_handler_(std::move(request_focus_handler)),
       endpoint_(this, std::move(view_focuser)) {
-  FXL_DCHECK(request_focus_handler_) << "invariant";
+  FX_DCHECK(request_focus_handler_) << "invariant";
 }
 
 SceneGraph::ViewFocuserEndpoint::ViewFocuserEndpoint(ViewFocuserEndpoint&& original)
     : request_focus_handler_(std::move(original.request_focus_handler_)),
       endpoint_(this, original.endpoint_.Unbind()) {
-  FXL_DCHECK(request_focus_handler_) << "invariant";
+  FX_DCHECK(request_focus_handler_) << "invariant";
 }
 
 void SceneGraph::ViewFocuserEndpoint::RequestFocus(ViewRef view_ref,

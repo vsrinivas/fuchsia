@@ -58,7 +58,7 @@ TEST(CpuperfProvider, IntegrationTest) {
 
   bool got_error = false;
   auto error_handler = [&got_error](fbl::String error) {
-    FXL_LOG(ERROR) << "While reading records got error: " << error.c_str();
+    FX_LOGS(ERROR) << "While reading records got error: " << error.c_str();
     got_error = true;
   };
 
@@ -68,7 +68,7 @@ TEST(CpuperfProvider, IntegrationTest) {
   reader->ReadFile();
   ASSERT_FALSE(got_error);
 
-  FXL_LOG(INFO) << "Got " << record_count << " records, " << instructions_retired_count
+  FX_LOGS(INFO) << "Got " << record_count << " records, " << instructions_retired_count
                 << " instructions";
 
   ASSERT_GT(instructions_retired_count, 0u);
@@ -81,7 +81,7 @@ int main(int argc, char** argv) {
     return EXIT_FAILURE;
 
   if (!perfmon::Controller::IsSupported()) {
-    FXL_LOG(INFO) << "Exiting, perfmon device not supported";
+    FX_LOGS(INFO) << "Exiting, perfmon device not supported";
     return 0;
   }
 

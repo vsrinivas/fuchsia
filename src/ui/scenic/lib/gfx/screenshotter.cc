@@ -33,7 +33,7 @@ fuchsia::ui::scenic::ScreenshotData EmptyScreenshot() {
   fuchsia::ui::scenic::ScreenshotData screenshot;
   // TODO(SCN-1253): If we can't create an empty VMO, bail because otherwise the
   // caller will hang indefinitely.
-  FXL_CHECK(zx::vmo::create(0, 0u, &screenshot.data.vmo) == ZX_OK);
+  FX_CHECK(zx::vmo::create(0, 0u, &screenshot.data.vmo) == ZX_OK);
   return screenshot;
 }
 
@@ -55,7 +55,7 @@ std::vector<uint8_t> rotate_img_vec(const std::vector<uint8_t>& imgvec, uint32_t
 
   // Rotation should always be a multiple of 90 degrees, and not 0.
   rotation = rotation % 360;
-  FXL_CHECK(rotation % 90 == 0 && rotation != 0);
+  FX_CHECK(rotation % 90 == 0 && rotation != 0);
 
   // Rotation determines which of the width and height
   // are the inner and outer loop.
@@ -122,9 +122,9 @@ void Screenshotter::OnCommandBufferDone(
   imgvec.resize(kBytesPerPixel * width * height);
 
   const uint8_t* row = buffer->host_ptr();
-  FXL_CHECK(row != nullptr);
+  FX_CHECK(row != nullptr);
   uint32_t num_bytes = width * height * kBytesPerPixel;
-  FXL_DCHECK(num_bytes <= kImgVecElementSize * imgvec.size());
+  FX_DCHECK(num_bytes <= kImgVecElementSize * imgvec.size());
   memcpy(imgvec.data(), row, num_bytes);
 
   // Apply rotation of 90, 180 or 270 degrees counterclockwise.
@@ -152,7 +152,7 @@ void Screenshotter::TakeScreenshot(
   const CompositorWeakPtr& compositor = engine->scene_graph()->first_compositor();
 
   if (!compositor || compositor->GetNumDrawableLayers() == 0) {
-    FXL_LOG(WARNING) << "TakeScreenshot: No drawable layers; returning empty screenshot.";
+    FX_LOGS(WARNING) << "TakeScreenshot: No drawable layers; returning empty screenshot.";
     done_callback(EmptyScreenshot(), false);
     return;
   }

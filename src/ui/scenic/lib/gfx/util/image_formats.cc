@@ -171,7 +171,7 @@ escher::image_utils::ImageConversionFunction GetFunctionToConvertToBgra8(
         };
       } else {
         // no conversion needed.
-        FXL_DCHECK(bits_per_pixel % 8 == 0);
+        FX_DCHECK(bits_per_pixel % 8 == 0);
         size_t bytes_per_pixel = bits_per_pixel / 8;
         return [bytes_per_pixel](void* out, const void* in, uint32_t width, uint32_t height) {
           memcpy(out, in, width * height * bytes_per_pixel);
@@ -186,7 +186,7 @@ escher::image_utils::ImageConversionFunction GetFunctionToConvertToBgra8(
                                      reinterpret_cast<const uint8_t*>(in), width, height);
         };
       } else {
-        FXL_DCHECK(bits_per_pixel % 8 == 0);
+        FX_DCHECK(bits_per_pixel % 8 == 0);
         size_t bytes_per_pixel = bits_per_pixel / 8;
         return [bytes_per_pixel](void* out, const void* in, uint32_t width, uint32_t height) {
           ConvertYuy2ToBgra(reinterpret_cast<uint8_t*>(out), reinterpret_cast<const uint8_t*>(in),
@@ -195,7 +195,7 @@ escher::image_utils::ImageConversionFunction GetFunctionToConvertToBgra8(
       }
       break;
     case fuchsia::images::PixelFormat::NV12:
-      FXL_DCHECK(image_info.transform == fuchsia::images::Transform::NORMAL)
+      FX_DCHECK(image_info.transform == fuchsia::images::Transform::NORMAL)
           << "NV12 transforms not yet implemented";
       // At least for now, capture stride from the image_info. Assert that width
       // and height could also be captured this way, but don't actually use
@@ -203,14 +203,14 @@ escher::image_utils::ImageConversionFunction GetFunctionToConvertToBgra8(
       return [captured_in_stride = image_info.stride, captured_width = image_info.width,
               captured_height = image_info.height](void* out, const void* in, uint32_t width,
                                                    uint32_t height) {
-        FXL_DCHECK(captured_width == width);
-        FXL_DCHECK(captured_height == height);
+        FX_DCHECK(captured_width == width);
+        FX_DCHECK(captured_height == height);
         ConvertNv12ToBgra(reinterpret_cast<uint8_t*>(out), reinterpret_cast<const uint8_t*>(in),
                           width, height, captured_in_stride);
       };
       break;
     case fuchsia::images::PixelFormat::YV12:
-      FXL_DCHECK(image_info.transform == fuchsia::images::Transform::NORMAL)
+      FX_DCHECK(image_info.transform == fuchsia::images::Transform::NORMAL)
           << "YV12 transforms not yet implemented";
       // At least for now, capture stride from the image_info. Assert that width
       // and height could also be captured this way, but don't actually use
@@ -218,8 +218,8 @@ escher::image_utils::ImageConversionFunction GetFunctionToConvertToBgra8(
       return [captured_in_stride = image_info.stride, captured_width = image_info.width,
               captured_height = image_info.height](void* out, const void* in, uint32_t width,
                                                    uint32_t height) {
-        FXL_DCHECK(captured_width == width);
-        FXL_DCHECK(captured_height == height);
+        FX_DCHECK(captured_width == width);
+        FX_DCHECK(captured_height == height);
         ConvertYv12ToBgra(reinterpret_cast<uint8_t*>(out), reinterpret_cast<const uint8_t*>(in),
                           width, height, captured_in_stride);
       };

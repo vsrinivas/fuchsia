@@ -166,7 +166,7 @@ const std::map<Verb, VerbRecord>& GetVerbs() {
     all_verbs[Verb::kWatch] = GetWatchVerbRecord();
 
     // Everything but Noun::kNone (= 0) should be in the map.
-    FXL_DCHECK(all_verbs.size() == static_cast<size_t>(Verb::kLast) - 1)
+    FX_DCHECK(all_verbs.size() == static_cast<size_t>(Verb::kLast) - 1)
         << "You need to update the verb lookup table for additions to Verbs.";
   }
   return all_verbs;

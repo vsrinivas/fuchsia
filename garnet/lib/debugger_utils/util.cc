@@ -36,7 +36,7 @@ bool HexCharToByte(char hex_char, uint8_t* out_byte) {
 }
 
 char HalfByteToHexChar(uint8_t byte) {
-  FXL_DCHECK(byte < 0x10);
+  FX_DCHECK(byte < 0x10);
 
   if (byte < 10)
     return '0' + byte;
@@ -47,7 +47,7 @@ char HalfByteToHexChar(uint8_t byte) {
 }  // namespace
 
 bool DecodeByteString(const char hex[2], uint8_t* out_byte) {
-  FXL_DCHECK(out_byte);
+  FX_DCHECK(out_byte);
 
   uint8_t msb, lsb;
   if (!HexCharToByte(hex[0], &msb) || !HexCharToByte(hex[1], &lsb))
@@ -58,7 +58,7 @@ bool DecodeByteString(const char hex[2], uint8_t* out_byte) {
 }
 
 void EncodeByteString(const uint8_t byte, char out_hex[2]) {
-  FXL_DCHECK(out_hex);
+  FX_DCHECK(out_hex);
 
   out_hex[0] = HalfByteToHexChar(byte >> 4);
   out_hex[1] = HalfByteToHexChar(byte & 0x0f);
@@ -87,7 +87,7 @@ std::string EncodeString(const fxl::StringView& string) {
 std::vector<uint8_t> DecodeByteArrayString(const fxl::StringView& string) {
   std::vector<uint8_t> result;
   if (string.size() % 2) {
-    FXL_LOG(ERROR) << "Byte array string must have an even number of characters";
+    FX_LOGS(ERROR) << "Byte array string must have an even number of characters";
     return result;
   }
 
@@ -131,16 +131,16 @@ std::string ErrnoString(int err) { return fxl::StringPrintf("%s(%d)", strerror(e
 
 size_t JoinStrings(const std::deque<std::string>& strings, const char delimiter, char* buffer,
                    size_t buffer_size) {
-  FXL_DCHECK(buffer);
+  FX_DCHECK(buffer);
 
   size_t index = 0, count = 0;
   for (const auto& str : strings) {
-    FXL_DCHECK(index + str.length() <= buffer_size);
+    FX_DCHECK(index + str.length() <= buffer_size);
     memcpy(buffer + index, str.data(), str.length());
     index += str.length();
     if (++count == strings.size())
       break;
-    FXL_DCHECK(index < buffer_size);
+    FX_DCHECK(index < buffer_size);
     buffer[index++] = delimiter;
   }
 

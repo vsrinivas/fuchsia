@@ -14,7 +14,7 @@
 namespace fsl {
 
 bool VmoFromFd(fbl::unique_fd fd, SizedVmo* handle_ptr) {
-  FXL_CHECK(handle_ptr);
+  FX_CHECK(handle_ptr);
 
   struct stat stat_struct;
   if (fstat(fd.get(), &stat_struct) == -1)

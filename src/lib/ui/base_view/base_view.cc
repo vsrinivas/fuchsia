@@ -33,10 +33,10 @@ BaseView::BaseView(ViewContext context, const std::string& debug_name)
     ime_manager_ = component_context_->svc()->Connect<fuchsia::ui::input::ImeService>();
 
     ime_.set_error_handler([](zx_status_t status) {
-      FXL_LOG(ERROR) << "Interface error on: Input Method Editor " << zx_status_get_string(status);
+      FX_LOGS(ERROR) << "Interface error on: Input Method Editor " << zx_status_get_string(status);
     });
     ime_manager_.set_error_handler([](zx_status_t status) {
-      FXL_LOG(ERROR) << "Interface error on: Text Sync Service " << zx_status_get_string(status);
+      FX_LOGS(ERROR) << "Interface error on: Text Sync Service " << zx_status_get_string(status);
     });
   }
 
@@ -81,7 +81,7 @@ void BaseView::OnScenicEvent(std::vector<fuchsia::ui::scenic::Event> events) {
         switch (event.gfx().Which()) {
           case ::fuchsia::ui::gfx::Event::Tag::kViewPropertiesChanged: {
             auto& evt = event.gfx().view_properties_changed();
-            FXL_DCHECK(view_.id() == evt.view_id);
+            FX_DCHECK(view_.id() == evt.view_id);
             auto old_props = view_properties_;
             view_properties_ = evt.properties;
 
@@ -154,7 +154,7 @@ void BaseView::PresentScene(zx_time_t presentation_time) {
         TRACE_DURATION("view", "BaseView::PresentationCallback");
         TRACE_FLOW_END("gfx", "present_callback", info.presentation_time);
 
-        FXL_DCHECK(present_pending_);
+        FX_DCHECK(present_pending_);
 
         zx_time_t next_presentation_time = info.presentation_time + info.presentation_interval;
 

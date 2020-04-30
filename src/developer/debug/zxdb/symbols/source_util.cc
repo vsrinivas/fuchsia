@@ -12,7 +12,7 @@ namespace zxdb {
 
 std::vector<std::string> ExtractSourceLines(const std::string& contents, int first_line,
                                             int last_line) {
-  FXL_DCHECK(first_line > 0);
+  FX_DCHECK(first_line > 0);
 
   std::vector<std::string> result;
 

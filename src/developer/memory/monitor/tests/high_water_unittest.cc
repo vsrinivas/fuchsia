@@ -62,10 +62,10 @@ class ScopedMemfs {
     fdio_ns_t* ns;
     sync_completion_t completion;
     memfs_free_filesystem(fs_, &completion);
-    FXL_CHECK(sync_completion_wait(&completion, ZX_TIME_INFINITE) == ZX_OK)
+    FX_CHECK(sync_completion_wait(&completion, ZX_TIME_INFINITE) == ZX_OK)
         << "Failed to unmount memfs";
-    FXL_CHECK(fdio_ns_get_installed(&ns) == ZX_OK) << "Failed to read namespaces";
-    FXL_CHECK(fdio_ns_unbind(ns, path_) == ZX_OK) << "Failed to unbind memfs filesystem";
+    FX_CHECK(fdio_ns_get_installed(&ns) == ZX_OK) << "Failed to read namespaces";
+    FX_CHECK(fdio_ns_unbind(ns, path_) == ZX_OK) << "Failed to unbind memfs filesystem";
   }
 
  private:
@@ -82,7 +82,7 @@ class HighWaterUnitTest : public gtest::RealLoopFixture {
     RealLoopFixture::SetUp();
     // Install memfs on a different async loop thread to resolve some deadlock
     // when doing blocking file operations on our test loop.
-    FXL_CHECK(ScopedMemfs::InstallAt(kMemfsDir, memfs_loop_.dispatcher(), &data_) == ZX_OK);
+    FX_CHECK(ScopedMemfs::InstallAt(kMemfsDir, memfs_loop_.dispatcher(), &data_) == ZX_OK);
     memfs_loop_.StartThread();
     memfs_dir_ = open(kMemfsDir, O_RDONLY | O_DIRECTORY);
     ASSERT_LT(0, memfs_dir_);

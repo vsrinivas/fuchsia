@@ -9,11 +9,11 @@
 namespace {
 
 escher::GpuMemPtr CreateGPUMem(const vk::Device& device, vk::MemoryAllocateInfo* alloc_info) {
-  FXL_DCHECK(device);
+  FX_DCHECK(device);
   vk::DeviceMemory memory = nullptr;
   vk::Result err = device.allocateMemory(alloc_info, nullptr, &memory);
   if (err != vk::Result::eSuccess) {
-    FXL_LOG(ERROR) << "Could not successfully allocate memory.";
+    FX_LOGS(ERROR) << "Could not successfully allocate memory.";
     return nullptr;
   }
   return escher::GpuMem::AdoptVkMemory(device, vk::DeviceMemory(memory), alloc_info->allocationSize,
@@ -55,31 +55,31 @@ GpuImageInfo GpuImageInfo::New(const vk::Device& device, const vk::DispatchLoade
                                const fuchsia::sysmem::BufferCollectionInfo_2& info,
                                const vk::BufferCollectionFUCHSIA& vk_buffer_collection,
                                uint32_t index) {
-  FXL_DCHECK(device);
-  FXL_DCHECK(vk_loader.vkGetBufferCollectionPropertiesFUCHSIA);
+  FX_DCHECK(device);
+  FX_DCHECK(vk_loader.vkGetBufferCollectionPropertiesFUCHSIA);
 
   // Check the provided index against actually allocated number of buffers.
   if (info.buffer_count <= index) {
-    FXL_LOG(ERROR) << "Specified vmo index is out of bounds: " << index;
+    FX_LOGS(ERROR) << "Specified vmo index is out of bounds: " << index;
     return GpuImageInfo();
   }
 
   // Currently only support a single format.
-  FXL_DCHECK(info.settings.image_format_constraints.pixel_format.type ==
-             fuchsia::sysmem::PixelFormatType::BGRA32);
+  FX_DCHECK(info.settings.image_format_constraints.pixel_format.type ==
+            fuchsia::sysmem::PixelFormatType::BGRA32);
 
   // Get a handle to the vmo and extract the size of its buffer.
   zx::vmo vmo;
   zx_status_t status = info.buffers[index].vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo);
-  FXL_DCHECK(status == ZX_OK);
+  FX_DCHECK(status == ZX_OK);
   uint64_t vmo_size;
   status = vmo.get_size(&vmo_size);
-  FXL_DCHECK(status == ZX_OK);
+  FX_DCHECK(status == ZX_OK);
 
   auto collection_properties =
       device.getBufferCollectionPropertiesFUCHSIA(vk_buffer_collection, vk_loader);
   if (collection_properties.result != vk::Result::eSuccess) {
-    FXL_LOG(ERROR) << "Could not get collection properties for vk_buffer_collection.h";
+    FX_LOGS(ERROR) << "Could not get collection properties for vk_buffer_collection.h";
     return GpuImageInfo();
   }
 

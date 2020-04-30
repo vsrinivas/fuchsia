@@ -53,7 +53,7 @@ const char kTestSuite[] = "test-suite";
 const char kTrigger[] = "trigger";
 
 zx_status_t Spawn(const std::vector<std::string>& args, zx::process* subprocess) {
-  FXL_DCHECK(args.size() > 0);
+  FX_DCHECK(args.size() > 0);
 
   std::vector<const char*> raw_args;
   for (const auto& item : args) {
@@ -67,7 +67,7 @@ zx_status_t Spawn(const std::vector<std::string>& args, zx::process* subprocess)
 
 void CheckCommandLineOverride(const char* name, bool present_in_spec) {
   if (present_in_spec) {
-    FXL_LOG(WARNING) << "The " << name << " passed on the command line"
+    FX_LOGS(WARNING) << "The " << name << " passed on the command line"
                      << "override value(s) from the tspec file.";
   }
 }
@@ -93,7 +93,7 @@ bool RecordCommand::Options::Setup(const fxl::CommandLine& command_line) {
 
   for (auto& option : command_line.options()) {
     if (known_options.count(option.name) == 0) {
-      FXL_LOG(ERROR) << "Unknown option: " << option.name;
+      FX_LOGS(ERROR) << "Unknown option: " << option.name;
       return false;
     }
   }
@@ -106,18 +106,18 @@ bool RecordCommand::Options::Setup(const fxl::CommandLine& command_line) {
   if (command_line.HasOption(kSpecFile, &index)) {
     std::string spec_file_path = command_line.options()[index].value;
     if (!files::IsFile(spec_file_path)) {
-      FXL_LOG(ERROR) << spec_file_path << " is not a file";
+      FX_LOGS(ERROR) << spec_file_path << " is not a file";
       return false;
     }
 
     std::string content;
     if (!files::ReadFileToString(spec_file_path, &content)) {
-      FXL_LOG(ERROR) << "Can't read " << spec_file_path;
+      FX_LOGS(ERROR) << "Can't read " << spec_file_path;
       return false;
     }
 
     if (!DecodeSpec(content, &spec)) {
-      FXL_LOG(ERROR) << "Can't decode " << spec_file_path;
+      FX_LOGS(ERROR) << "Can't decode " << spec_file_path;
       return false;
     }
 
@@ -136,7 +136,7 @@ bool RecordCommand::Options::Setup(const fxl::CommandLine& command_line) {
     if (spec.buffering_mode) {
       const BufferingModeSpec* mode_spec = LookupBufferingMode(*spec.buffering_mode);
       if (mode_spec == nullptr) {
-        FXL_LOG(ERROR) << "Unknown spec parameter buffering-mode: " << spec.buffering_mode;
+        FX_LOGS(ERROR) << "Unknown spec parameter buffering-mode: " << spec.buffering_mode;
         return false;
       }
       buffering_mode = TranslateBufferingMode(mode_spec->mode);
@@ -200,7 +200,7 @@ bool RecordCommand::Options::Setup(const fxl::CommandLine& command_line) {
   if (command_line.HasOption(kDuration, &index)) {
     uint64_t seconds;
     if (!fxl::StringToNumberWithError(command_line.options()[index].value, &seconds)) {
-      FXL_LOG(ERROR) << "Failed to parse command-line option " << kDuration << ": "
+      FX_LOGS(ERROR) << "Failed to parse command-line option " << kDuration << ": "
                      << command_line.options()[index].value;
       return false;
     }
@@ -370,7 +370,7 @@ RecordCommand::RecordCommand(sys::ComponentContext* context)
 
 void RecordCommand::Start(const fxl::CommandLine& command_line) {
   if (!options_.Setup(command_line)) {
-    FXL_LOG(ERROR) << "Error parsing options from command line - aborting";
+    FX_LOGS(ERROR) << "Error parsing options from command line - aborting";
     Done(EXIT_FAILURE);
     return;
   }
@@ -378,7 +378,7 @@ void RecordCommand::Start(const fxl::CommandLine& command_line) {
   std::unique_ptr<std::ostream> out_stream =
       OpenOutputStream(options_.output_file_name, options_.compress);
   if (!out_stream) {
-    FXL_LOG(ERROR) << "Failed to open " << options_.output_file_name << " for writing";
+    FX_LOGS(ERROR) << "Failed to open " << options_.output_file_name << " for writing";
     Done(EXIT_FAILURE);
     return;
   }
@@ -405,7 +405,7 @@ void RecordCommand::Start(const fxl::CommandLine& command_line) {
         events_.push_back(std::move(record));
       }
     };
-    error_handler = [](fbl::String error) { FXL_LOG(ERROR) << error.c_str(); };
+    error_handler = [](fbl::String error) { FX_LOGS(ERROR) << error.c_str(); };
   }
 
   tracer_.reset(new Tracer(controller().get()));
@@ -442,7 +442,7 @@ void RecordCommand::Start(const fxl::CommandLine& command_line) {
 
   tracer_->Start([this](controller::Controller_StartTracing_Result result) {
     if (result.is_err()) {
-      FXL_LOG(ERROR) << "Unable to start trace: " << StartErrorCodeToString(result.err());
+      FX_LOGS(ERROR) << "Unable to start trace: " << StartErrorCodeToString(result.err());
       tracing_ = false;
       Done(EXIT_FAILURE);
       return;
@@ -467,7 +467,7 @@ void RecordCommand::TerminateTrace(int32_t return_code) {
 }
 
 void RecordCommand::ProcessMeasurements() {
-  FXL_DCHECK(!tracing_);
+  FX_DCHECK(!tracing_);
 
   if (!events_.empty()) {
     std::sort(std::begin(events_), std::end(events_),
@@ -501,7 +501,7 @@ void RecordCommand::ProcessMeasurements() {
   }
 
   uint64_t ticks_per_second = zx_ticks_per_second();
-  FXL_DCHECK(ticks_per_second);
+  FX_DCHECK(ticks_per_second);
   std::vector<measure::Result> results =
       measure::ComputeResults(options_.measurements, ticks, ticks_per_second);
 
@@ -510,13 +510,13 @@ void RecordCommand::ProcessMeasurements() {
   bool errored = false;
   for (auto& result : results) {
     if (result.values.empty()) {
-      FXL_LOG(ERROR) << "No results for measurement \"" << result.label << "\".";
+      FX_LOGS(ERROR) << "No results for measurement \"" << result.label << "\".";
       errored = true;
     }
   }
   OutputResults(out(), results);
   if (errored) {
-    FXL_LOG(ERROR) << "One or more measurements had empty results. Quitting.";
+    FX_LOGS(ERROR) << "One or more measurements had empty results. Quitting.";
     Done(EXIT_FAILURE);
     return;
   }
@@ -526,7 +526,7 @@ void RecordCommand::ProcessMeasurements() {
       result.test_suite = options_.test_suite;
     }
     if (!ExportResults(options_.benchmark_results_file, results)) {
-      FXL_LOG(ERROR) << "Failed to write benchmark results to " << options_.benchmark_results_file;
+      FX_LOGS(ERROR) << "Failed to write benchmark results to " << options_.benchmark_results_file;
       Done(EXIT_FAILURE);
       return;
     }
@@ -537,7 +537,7 @@ void RecordCommand::ProcessMeasurements() {
 }
 
 void RecordCommand::DoneTrace() {
-  FXL_DCHECK(!tracing_);
+  FX_DCHECK(!tracing_);
 
   tracer_.reset();
   exporter_.reset();
@@ -582,7 +582,7 @@ void RecordCommand::LaunchComponentApp() {
 
   // Include the arguments here for when invoked by traceutil: It's useful to
   // see how the passed command+args ended up after shell processing.
-  FXL_LOG(INFO) << "Launching: " << launch_info.url << " " << JoinArgsForLogging(options_.args);
+  FX_LOGS(INFO) << "Launching: " << launch_info.url << " " << JoinArgsForLogging(options_.args);
 
   fuchsia::sys::LauncherPtr launcher;
   if (options_.environment_name.has_value()) {
@@ -636,13 +636,13 @@ void RecordCommand::LaunchSpawnedApp() {
 
   // Include the arguments here for when invoked by traceutil: It's useful to
   // see how the passed command+args ended up after shell processing.
-  FXL_LOG(INFO) << "Spawning: " << JoinArgsForLogging(all_args);
+  FX_LOGS(INFO) << "Spawning: " << JoinArgsForLogging(all_args);
 
   zx::process subprocess;
   zx_status_t status = Spawn(all_args, &subprocess);
   if (status != ZX_OK) {
     TerminateTrace(EXIT_FAILURE);
-    FXL_LOG(ERROR) << "Subprocess launch failed: \"" << status
+    FX_LOGS(ERROR) << "Subprocess launch failed: \"" << status
                    << "\" Did you provide the full path to the tool?";
     return;
   }
@@ -651,13 +651,13 @@ void RecordCommand::LaunchSpawnedApp() {
 
   wait_spawned_app_.set_object(spawned_app_.get());
   status = wait_spawned_app_.Begin(dispatcher_);
-  FXL_CHECK(status == ZX_OK) << "Failed to add handler: status=" << status;
+  FX_CHECK(status == ZX_OK) << "Failed to add handler: status=" << status;
 }
 
 void RecordCommand::OnSpawnedAppExit(async_dispatcher_t* dispatcher, async::WaitBase* wait,
                                      zx_status_t status, const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to wait for spawned app: status=" << status;
+    FX_LOGS(ERROR) << "Failed to wait for spawned app: status=" << status;
     TerminateTrace(EXIT_FAILURE);
     return;
   }
@@ -666,7 +666,7 @@ void RecordCommand::OnSpawnedAppExit(async_dispatcher_t* dispatcher, async::Wait
     zx_info_process_t proc_info;
     [[maybe_unused]] zx_status_t info_status =
         spawned_app_.get_info(ZX_INFO_PROCESS, &proc_info, sizeof(proc_info), nullptr, nullptr);
-    FXL_DCHECK(info_status == ZX_OK);
+    FX_DCHECK(info_status == ZX_OK);
 
     out() << "Application exited with return code " << proc_info.return_code << std::endl;
     if (!options_.decouple) {
@@ -677,16 +677,16 @@ void RecordCommand::OnSpawnedAppExit(async_dispatcher_t* dispatcher, async::Wait
       }
     }
   } else {
-    FXL_NOTREACHED();
+    FX_NOTREACHED();
   }
 }
 
 void RecordCommand::KillSpawnedApp() {
-  FXL_DCHECK(spawned_app_);
+  FX_DCHECK(spawned_app_);
 
   // If already dead this is a no-op.
   [[maybe_unused]] zx_status_t status = spawned_app_.kill();
-  FXL_DCHECK(status == ZX_OK);
+  FX_DCHECK(status == ZX_OK);
 
   wait_spawned_app_.Cancel();
   wait_spawned_app_.set_object(ZX_HANDLE_INVALID);

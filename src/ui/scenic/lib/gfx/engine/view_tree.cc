@@ -25,7 +25,7 @@ std::optional<zx_koid_t> wrap(zx_koid_t koid) {
 }  // namespace
 
 fuchsia::ui::focus::FocusChain ViewTree::CloneFocusChain() const {
-  FXL_DCHECK(IsStateValid()) << "invariant";
+  FX_DCHECK(IsStateValid()) << "invariant";
 
   fuchsia::ui::focus::FocusChain full_copy{};
   for (zx_koid_t koid : focus_chain_) {
@@ -37,7 +37,7 @@ fuchsia::ui::focus::FocusChain ViewTree::CloneFocusChain() const {
 const std::vector<zx_koid_t>& ViewTree::focus_chain() const { return focus_chain_; }
 
 std::optional<zx_koid_t> ViewTree::ParentOf(zx_koid_t child) const {
-  FXL_DCHECK(IsTracked(child)) << "invariant";
+  FX_DCHECK(IsTracked(child)) << "invariant";
 
   if (const auto ptr = std::get_if<AttachNode>(&nodes_.at(child))) {
     return wrap(ptr->parent);
@@ -45,7 +45,7 @@ std::optional<zx_koid_t> ViewTree::ParentOf(zx_koid_t child) const {
     return wrap(ptr->parent);
   }
 
-  FXL_NOTREACHED() << "impossible";
+  FX_NOTREACHED() << "impossible";
   return std::nullopt;
 }
 
@@ -60,7 +60,7 @@ scheduling::SessionId ViewTree::SessionIdOf(zx_koid_t koid) const {
     return ptr->session_id;
   }
 
-  FXL_NOTREACHED() << "impossible";
+  FX_NOTREACHED() << "impossible";
   return 0u;
 }
 
@@ -73,7 +73,7 @@ EventReporterWeakPtr ViewTree::EventReporterOf(zx_koid_t koid) const {
     return ptr->event_reporter;
   }
 
-  FXL_NOTREACHED() << "impossible";
+  FX_NOTREACHED() << "impossible";
   return EventReporterWeakPtr(/*nullptr*/);
 }
 
@@ -91,8 +91,8 @@ std::optional<zx_koid_t> ViewTree::ConnectedViewRefKoidOf(SessionId session_id) 
 bool ViewTree::IsTracked(zx_koid_t koid) const { return IsValid(koid) && nodes_.count(koid) > 0; }
 
 bool ViewTree::IsDescendant(zx_koid_t descendant_koid, zx_koid_t ancestor_koid) const {
-  FXL_DCHECK(IsTracked(descendant_koid)) << "precondition";
-  FXL_DCHECK(IsTracked(ancestor_koid)) << "precondition";
+  FX_DCHECK(IsTracked(descendant_koid)) << "precondition";
+  FX_DCHECK(IsTracked(ancestor_koid)) << "precondition";
 
   zx_koid_t parent_koid = ZX_KOID_INVALID;
   if (const auto ptr = std::get_if<AttachNode>(&nodes_.at(descendant_koid))) {
@@ -100,7 +100,7 @@ bool ViewTree::IsDescendant(zx_koid_t descendant_koid, zx_koid_t ancestor_koid) 
   } else if (const auto ptr = std::get_if<RefNode>(&nodes_.at(descendant_koid))) {
     parent_koid = ptr->parent;
   } else {
-    FXL_NOTREACHED() << "invariant: child/parent types are known";
+    FX_NOTREACHED() << "invariant: child/parent types are known";
     return false;  // Impossible.
   }
 
@@ -114,7 +114,7 @@ bool ViewTree::IsDescendant(zx_koid_t descendant_koid, zx_koid_t ancestor_koid) 
 }
 
 bool ViewTree::IsConnectedToScene(zx_koid_t koid) const {
-  FXL_DCHECK(IsTracked(koid)) << "precondition";
+  FX_DCHECK(IsTracked(koid)) << "precondition";
 
   if (!IsValid(root_))
     return false;  // No connectivity, base case.
@@ -126,17 +126,17 @@ bool ViewTree::IsConnectedToScene(zx_koid_t koid) const {
 }
 
 bool ViewTree::IsRefNode(zx_koid_t koid) const {
-  FXL_DCHECK(IsTracked(koid)) << "precondition";
+  FX_DCHECK(IsTracked(koid)) << "precondition";
   return std::holds_alternative<RefNode>(nodes_.at(koid));
 }
 
 bool ViewTree::MayReceiveFocus(zx_koid_t koid) const {
-  FXL_DCHECK(IsTracked(koid) && IsRefNode(koid)) << "precondition";
+  FX_DCHECK(IsTracked(koid) && IsRefNode(koid)) << "precondition";
   return std::get_if<RefNode>(&nodes_.at(koid))->may_receive_focus();
 }
 
 bool ViewTree::IsInputSuppressed(zx_koid_t koid) const {
-  FXL_DCHECK(IsTracked(koid) && IsRefNode(koid)) << "precondition";
+  FX_DCHECK(IsTracked(koid) && IsRefNode(koid)) << "precondition";
   return std::get_if<RefNode>(&nodes_.at(koid))->is_input_suppressed();
 }
 
@@ -166,28 +166,28 @@ bool ViewTree::IsStateValid() const {
   // Map state
   for (const auto& item : nodes_) {
     if (!IsValid(item.first)) {
-      FXL_LOG(ERROR) << "Map key is invalid koid.";
+      FX_LOGS(ERROR) << "Map key is invalid koid.";
       return false;
     }
     if (const auto ptr = std::get_if<AttachNode>(&item.second)) {
       if (IsValid(ptr->parent)) {
         if (!IsTracked(ptr->parent)) {
-          FXL_LOG(ERROR) << "Map item's parent is valid but isn't tracked: " << ptr->parent;
+          FX_LOGS(ERROR) << "Map item's parent is valid but isn't tracked: " << ptr->parent;
           return false;
         }
         if (!std::holds_alternative<RefNode>(nodes_.at(ptr->parent))) {
-          FXL_LOG(ERROR) << "Map item's parent should be a RefNode: " << ptr->parent;
+          FX_LOGS(ERROR) << "Map item's parent should be a RefNode: " << ptr->parent;
           return false;
         }
       }
     } else if (const auto ptr = std::get_if<RefNode>(&item.second)) {
       if (IsValid(ptr->parent)) {
         if (!IsTracked(ptr->parent)) {
-          FXL_LOG(ERROR) << "Map item's parent is valid but isn't tracked: " << ptr->parent;
+          FX_LOGS(ERROR) << "Map item's parent is valid but isn't tracked: " << ptr->parent;
           return false;
         }
         if (!std::holds_alternative<AttachNode>(nodes_.at(ptr->parent))) {
-          FXL_LOG(ERROR) << "Map item's parent should be an AttachNode: " << ptr->parent;
+          FX_LOGS(ERROR) << "Map item's parent should be an AttachNode: " << ptr->parent;
           return false;
         }
         // Only one entity must have ptr->parent as a parent.
@@ -200,18 +200,18 @@ bool ViewTree::IsStateValid() const {
             if (j_ptr->parent == ptr->parent)
               ++parent_count;
           } else {
-            FXL_NOTREACHED() << "unknown type";
+            FX_NOTREACHED() << "unknown type";
             return false;
           }
         }
         if (parent_count != 1) {
-          FXL_LOG(ERROR) << "Map item's parent should have just one child: " << ptr->parent
+          FX_LOGS(ERROR) << "Map item's parent should have just one child: " << ptr->parent
                          << ", count: " << parent_count;
           return false;
         }
       }
     } else {
-      FXL_NOTREACHED() << "unknown type";
+      FX_NOTREACHED() << "unknown type";
       return false;
     }
   }
@@ -221,20 +221,20 @@ bool ViewTree::IsStateValid() const {
     const SessionId session_id = item.first;
     const zx_koid_t koid = item.second;
     if (session_id == 0u) {
-      FXL_LOG(ERROR) << "Map key is invalid SessionId.";
+      FX_LOGS(ERROR) << "Map key is invalid SessionId.";
       return false;
     }
     if (!IsValid(koid) || !IsTracked(koid)) {
-      FXL_LOG(ERROR) << "Map value isn't a valid and tracked koid.";
+      FX_LOGS(ERROR) << "Map value isn't a valid and tracked koid.";
       return false;
     }
     const auto ptr = std::get_if<RefNode>(&nodes_.at(koid));
     if (ptr == nullptr) {
-      FXL_LOG(ERROR) << "Map item should refer to a RefNode: " << koid;
+      FX_LOGS(ERROR) << "Map item should refer to a RefNode: " << koid;
       return false;
     }
     if (ptr->session_id != session_id) {
-      FXL_LOG(ERROR) << "Declared SessionId doesn't match: " << ptr->session_id << ", "
+      FX_LOGS(ERROR) << "Declared SessionId doesn't match: " << ptr->session_id << ", "
                      << session_id;
       return false;
     }
@@ -247,7 +247,7 @@ bool ViewTree::IsStateValid() const {
       }
     }
     if (connected_koid > 1) {
-      FXL_LOG(ERROR) << "Count of scene-connected ViewRefs for session " << session_id
+      FX_LOGS(ERROR) << "Count of scene-connected ViewRefs for session " << session_id
                      << " exceeds 1. Reference SCN-1249.";
       // TODO(SCN-1249): Enable invariant check when one-view-per-session is enforced.
       // return false;
@@ -257,11 +257,11 @@ bool ViewTree::IsStateValid() const {
   // Scene state
   if (IsValid(root_)) {
     if (!IsTracked(root_)) {
-      FXL_LOG(ERROR) << "Scene is valid but isn't tracked: " << root_;
+      FX_LOGS(ERROR) << "Scene is valid but isn't tracked: " << root_;
       return false;
     }
     if (!std::holds_alternative<RefNode>(nodes_.at(root_))) {
-      FXL_LOG(ERROR) << "Scene should be a RefNode but isn't: " << root_;
+      FX_LOGS(ERROR) << "Scene should be a RefNode but isn't: " << root_;
       return false;
     }
   }
@@ -269,17 +269,17 @@ bool ViewTree::IsStateValid() const {
   // Focus chain state: relationship with root_.
   if (IsValid(root_)) {
     if (focus_chain_.size() == 0) {
-      FXL_LOG(ERROR) << "Focus chain should be not empty but is.";
+      FX_LOGS(ERROR) << "Focus chain should be not empty but is.";
       return false;
     }
     if (focus_chain_[0] != root_) {
-      FXL_LOG(ERROR) << "Focus chain's zeroth element should be root but isn't: " << root_ << ", "
+      FX_LOGS(ERROR) << "Focus chain's zeroth element should be root but isn't: " << root_ << ", "
                      << focus_chain_[0];
       return false;
     }
   } else {
     if (focus_chain_.size() > 0) {
-      FXL_LOG(ERROR) << "Focus chain should be empty but isn't.";
+      FX_LOGS(ERROR) << "Focus chain should be empty but isn't.";
       return false;
     }
   }
@@ -288,24 +288,24 @@ bool ViewTree::IsStateValid() const {
   for (size_t idx = 1; idx < focus_chain_.size(); ++idx) {
     const zx_koid_t koid = focus_chain_[idx];
     if (!IsValid(koid) || !IsTracked(koid) || !IsRefNode(koid)) {
-      FXL_LOG(ERROR) << "Focus chain element isn't a valid and tracked RefNode: " << koid
+      FX_LOGS(ERROR) << "Focus chain element isn't a valid and tracked RefNode: " << koid
                      << ", at index: " << idx;
       return false;
     }
     const zx_koid_t parent = std::get_if<RefNode>(&nodes_.at(koid))->parent;
     if (!IsValid(parent) || !IsTracked(parent) || IsRefNode(parent)) {
-      FXL_LOG(ERROR) << "Focus chain element's parent isn't a valid and tracked AttachNode: "
+      FX_LOGS(ERROR) << "Focus chain element's parent isn't a valid and tracked AttachNode: "
                      << koid << ", at index: " << idx;
       return false;
     }
     const zx_koid_t grandparent = std::get_if<AttachNode>(&nodes_.at(parent))->parent;
     if (!IsValid(grandparent) || !IsTracked(grandparent) || !IsRefNode(grandparent)) {
-      FXL_LOG(ERROR) << "Focus chain element's grandparent isn't a valid and tracked RefNode: "
+      FX_LOGS(ERROR) << "Focus chain element's grandparent isn't a valid and tracked RefNode: "
                      << koid << ", at index: " << idx;
       return false;
     }
     if (grandparent != focus_chain_[idx - 1]) {
-      FXL_LOG(ERROR)
+      FX_LOGS(ERROR)
           << "Focus chain element's grandparent doesn't match previous focus chain element: "
           << koid << ", at index: " << idx;
       return false;
@@ -315,12 +315,12 @@ bool ViewTree::IsStateValid() const {
   // Focus chain state: root node may receive focus, terminal node may receive focus.
   if (focus_chain_.size() > 0) {
     if (!MayReceiveFocus(root_)) {
-      FXL_LOG(ERROR) << "Focus chain's root element must be able to receive focus: koid=" << root_;
+      FX_LOGS(ERROR) << "Focus chain's root element must be able to receive focus: koid=" << root_;
       return false;
     }
 
     if (!MayReceiveFocus(focus_chain_.back())) {
-      FXL_LOG(ERROR) << "Focus chain's terminal element must be able to receive focus: koid="
+      FX_LOGS(ERROR) << "Focus chain's terminal element must be able to receive focus: koid="
                      << focus_chain_.back();
       return false;
     }
@@ -367,7 +367,7 @@ ViewTree::FocusChangeStatus ViewTree::RequestFocusChange(const zx_koid_t request
       } else if (const auto ptr = std::get_if<AttachNode>(&nodes_.at(curr))) {
         curr = ptr->parent;
       } else {
-        FXL_NOTREACHED() << "impossible";
+        FX_NOTREACHED() << "impossible";
         return ViewTree::FocusChangeStatus::kErrorUnhandledCase;
       }
     }
@@ -393,7 +393,7 @@ ViewTree::FocusChangeStatus ViewTree::RequestFocusChange(const zx_koid_t request
       } else if (const auto ptr = std::get_if<AttachNode>(&nodes_.at(curr))) {
         curr = ptr->parent;
       } else {
-        FXL_NOTREACHED() << "impossible";
+        FX_NOTREACHED() << "impossible";
         return ViewTree::FocusChangeStatus::kErrorUnhandledCase;
       }
     }
@@ -405,19 +405,19 @@ ViewTree::FocusChangeStatus ViewTree::RequestFocusChange(const zx_koid_t request
     }
   }
 
-  FXL_DCHECK(IsStateValid()) << "postcondition";
+  FX_DCHECK(IsStateValid()) << "postcondition";
   return ViewTree::FocusChangeStatus::kAccept;
 }
 
 void ViewTree::NewRefNode(ViewTreeNewRefNode new_node) {
   const zx_koid_t koid = utils::ExtractKoid(new_node.view_ref);
-  FXL_DCHECK(IsValid(koid)) << "precondition";
-  FXL_DCHECK(!IsTracked(koid)) << "precondition";
-  FXL_DCHECK(new_node.may_receive_focus) << "precondition";           // Callback exists.
-  FXL_DCHECK(new_node.is_input_suppressed) << "precondition";         // Callback exists.
-  FXL_DCHECK(new_node.global_transform) << "precondition";            // Callback exists.
-  FXL_DCHECK(new_node.add_annotation_view_holder) << "precondition";  // Callback exists.
-  FXL_DCHECK(new_node.session_id != scheduling::kInvalidSessionId) << "precondition";
+  FX_DCHECK(IsValid(koid)) << "precondition";
+  FX_DCHECK(!IsTracked(koid)) << "precondition";
+  FX_DCHECK(new_node.may_receive_focus) << "precondition";           // Callback exists.
+  FX_DCHECK(new_node.is_input_suppressed) << "precondition";         // Callback exists.
+  FX_DCHECK(new_node.global_transform) << "precondition";            // Callback exists.
+  FX_DCHECK(new_node.add_annotation_view_holder) << "precondition";  // Callback exists.
+  FX_DCHECK(new_node.session_id != scheduling::kInvalidSessionId) << "precondition";
 
   if (!IsValid(koid) || IsTracked(koid))
     return;  // Bail.
@@ -433,23 +433,23 @@ void ViewTree::NewRefNode(ViewTreeNewRefNode new_node) {
 
   ref_node_koids_.insert({new_node.session_id, koid});
 
-  FXL_DCHECK(IsStateValid()) << "postcondition";
+  FX_DCHECK(IsStateValid()) << "postcondition";
 }
 
 void ViewTree::NewAttachNode(zx_koid_t koid) {
-  FXL_DCHECK(IsValid(koid)) << "precondition";
-  FXL_DCHECK(!IsTracked(koid)) << "precondition";
+  FX_DCHECK(IsValid(koid)) << "precondition";
+  FX_DCHECK(!IsTracked(koid)) << "precondition";
 
   if (!IsValid(koid) || IsTracked(koid))
     return;  // Bail.
 
   nodes_[koid] = AttachNode{};
 
-  FXL_DCHECK(IsStateValid()) << "postcondition";
+  FX_DCHECK(IsStateValid()) << "postcondition";
 }
 
 void ViewTree::DeleteNode(const zx_koid_t koid) {
-  FXL_DCHECK(IsTracked(koid)) << "precondition";
+  FX_DCHECK(IsTracked(koid)) << "precondition";
 
   // Remove from view ref koid mapping, if applicable.
   if (IsRefNode(koid)) {
@@ -475,7 +475,7 @@ void ViewTree::DeleteNode(const zx_koid_t koid) {
         ptr->parent = ZX_KOID_INVALID;
       }
     } else {
-      FXL_NOTREACHED() << "unknown type";
+      FX_NOTREACHED() << "unknown type";
     }
   }
 
@@ -487,42 +487,42 @@ void ViewTree::DeleteNode(const zx_koid_t koid) {
   // Remove |koid| if it is in the focus chain.
   RepairFocus();
 
-  FXL_DCHECK(IsStateValid()) << "postcondition";
+  FX_DCHECK(IsStateValid()) << "postcondition";
 }
 
 void ViewTree::MakeGlobalRoot(zx_koid_t koid) {
-  FXL_DCHECK(!IsValid(koid) || (IsTracked(koid) && IsRefNode(koid) && MayReceiveFocus(koid)))
+  FX_DCHECK(!IsValid(koid) || (IsTracked(koid) && IsRefNode(koid) && MayReceiveFocus(koid)))
       << "precondition";
 
   root_ = koid;
 
   RepairFocus();
 
-  FXL_DCHECK(IsStateValid()) << "postcondition";
+  FX_DCHECK(IsStateValid()) << "postcondition";
 }
 
 void ViewTree::ConnectToParent(zx_koid_t child, zx_koid_t parent) {
-  FXL_DCHECK(IsTracked(child)) << "precondition";
-  FXL_DCHECK(IsTracked(parent)) << "precondition";
+  FX_DCHECK(IsTracked(child)) << "precondition";
+  FX_DCHECK(IsTracked(parent)) << "precondition";
 
   if (auto ptr = std::get_if<AttachNode>(&nodes_[child])) {
     if (std::holds_alternative<RefNode>(nodes_[parent])) {
       ptr->parent = parent;
-      FXL_DCHECK(IsStateValid()) << "postcondition";
+      FX_DCHECK(IsStateValid()) << "postcondition";
       return;
     }
   } else if (auto ptr = std::get_if<RefNode>(&nodes_[child])) {
     if (std::holds_alternative<AttachNode>(nodes_[parent])) {
       ptr->parent = parent;
-      FXL_DCHECK(IsStateValid()) << "postcondition";
+      FX_DCHECK(IsStateValid()) << "postcondition";
       return;
     }
   }
-  FXL_NOTREACHED() << "invariant: child/parent types must be known and must be different";
+  FX_NOTREACHED() << "invariant: child/parent types must be known and must be different";
 }
 
 void ViewTree::DisconnectFromParent(zx_koid_t child) {
-  FXL_DCHECK(IsTracked(child)) << "precondition";
+  FX_DCHECK(IsTracked(child)) << "precondition";
 
   if (auto ptr = std::get_if<AttachNode>(&nodes_[child])) {
     if (!IsTracked(ptr->parent))
@@ -531,7 +531,7 @@ void ViewTree::DisconnectFromParent(zx_koid_t child) {
     if (auto parent_ptr = std::get_if<RefNode>(&nodes_[ptr->parent])) {
       ptr->parent = ZX_KOID_INVALID;
       RepairFocus();
-      FXL_DCHECK(IsStateValid()) << "postcondition";
+      FX_DCHECK(IsStateValid()) << "postcondition";
       return;
     }
   } else if (auto ptr = std::get_if<RefNode>(&nodes_[child])) {
@@ -541,11 +541,11 @@ void ViewTree::DisconnectFromParent(zx_koid_t child) {
     if (auto parent_ptr = std::get_if<AttachNode>(&nodes_[ptr->parent])) {
       ptr->parent = ZX_KOID_INVALID;
       RepairFocus();
-      FXL_DCHECK(IsStateValid()) << "postcondition";
+      FX_DCHECK(IsStateValid()) << "postcondition";
       return;
     }
   }
-  FXL_NOTREACHED() << "invariant: child/parent types are known and correct";
+  FX_NOTREACHED() << "invariant: child/parent types are known and correct";
 }
 
 std::string ViewTree::ToString() const {
@@ -563,7 +563,7 @@ std::string ViewTree::ToString() const {
              << ", may-receive-focus: " << std::boolalpha << ptr->may_receive_focus()
              << ", session-id: " << ptr->session_id << std::endl;
     } else {
-      FXL_NOTREACHED() << "impossible";
+      FX_NOTREACHED() << "impossible";
     }
   }
   output << "  ref-node-koids:" << std::endl;
@@ -580,8 +580,8 @@ std::string ViewTree::ToString() const {
 }
 
 fuchsia::ui::views::ViewRef ViewTree::CloneViewRefOf(zx_koid_t koid) const {
-  FXL_DCHECK(IsTracked(koid)) << "precondition";
-  FXL_DCHECK(IsRefNode(koid)) << "precondition";
+  FX_DCHECK(IsTracked(koid)) << "precondition";
+  FX_DCHECK(IsRefNode(koid)) << "precondition";
   fuchsia::ui::views::ViewRef clone;
   if (const auto ptr = std::get_if<RefNode>(&nodes_.at(koid))) {
     fidl::Clone(ptr->view_ref, &clone);
@@ -592,7 +592,7 @@ fuchsia::ui::views::ViewRef ViewTree::CloneViewRefOf(zx_koid_t koid) const {
 void ViewTree::RepairFocus() {
   // root_ was destroyed, set focus_chain_ to empty.
   if (!IsTracked(root_)) {
-    FXL_DCHECK(!IsValid(root_)) << "invariant";
+    FX_DCHECK(!IsValid(root_)) << "invariant";
     focus_chain_.clear();
     return;
   }
@@ -623,12 +623,12 @@ void ViewTree::RepairFocus() {
     }
 
     // Trim out invalid entries.
-    FXL_DCHECK(curr >= 1 && curr <= focus_chain_.size()) << "invariant";
+    FX_DCHECK(curr >= 1 && curr <= focus_chain_.size()) << "invariant";
     focus_chain_.erase(focus_chain_.begin() + curr, focus_chain_.end());
   }
 
   // Trim upward until we find a node that may receive focus.
-  FXL_DCHECK(focus_chain_.size() > 0) << "invariant";
+  FX_DCHECK(focus_chain_.size() > 0) << "invariant";
   while (focus_chain_.size() > 0 && !MayReceiveFocus(focus_chain_.back())) {
     focus_chain_.pop_back();
   }

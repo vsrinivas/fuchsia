@@ -112,7 +112,7 @@ void LaunchComponent(const Command& cmd) {
       Console::get()->Output(err);
       return;
     }
-    FXL_DCHECK(reply.inferior_type == debug_ipc::InferiorType::kComponent)
+    FX_DCHECK(reply.inferior_type == debug_ipc::InferiorType::kComponent)
         << "Expected Component, Got: " << debug_ipc::InferiorTypeToString(reply.inferior_type);
 
     if (reply.status != debug_ipc::kZxOk) {
@@ -122,11 +122,11 @@ void LaunchComponent(const Command& cmd) {
       return;
     }
 
-    FXL_DCHECK(target);
+    FX_DCHECK(target);
 
     // We tell the session we will be expecting this component.
-    FXL_DCHECK(reply.process_id == 0);
-    FXL_DCHECK(reply.component_id != 0);
+    FX_DCHECK(reply.process_id == 0);
+    FX_DCHECK(reply.component_id != 0);
     target->session()->ExpectComponent(reply.component_id);
   };
 

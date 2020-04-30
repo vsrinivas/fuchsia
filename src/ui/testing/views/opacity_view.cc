@@ -21,7 +21,7 @@ OpacityView::OpacityView(ViewContext context, const std::string& debug_name)
       foreground_node_(&session_),
       foreground_material_(&session_) {
   binding_.set_error_handler([](zx_status_t status) {
-    FXL_LOG(FATAL) << "Session listener binding: " << zx_status_get_string(status);
+    FX_LOGS(FATAL) << "Session listener binding: " << zx_status_get_string(status);
   });
 
   background_node_.SetMaterial(background_material_);
@@ -35,7 +35,7 @@ OpacityView::OpacityView(ViewContext context, const std::string& debug_name)
 }
 
 void OpacityView::set_present_callback(Session::PresentCallback present_callback) {
-  FXL_CHECK(present_callback && !present_callback_);
+  FX_CHECK(present_callback && !present_callback_);
   present_callback_ = std::move(present_callback);
 }
 
@@ -63,7 +63,7 @@ void OpacityView::Present() {
 }
 
 void OpacityView::OnScenicEvent(std::vector<fuchsia::ui::scenic::Event> events) {
-  FXL_LOG(INFO) << "OnScenicEvent";
+  FX_LOGS(INFO) << "OnScenicEvent";
   for (const auto& event : events) {
     if (event.Which() == fuchsia::ui::scenic::Event::Tag::kGfx &&
         event.gfx().Which() == fuchsia::ui::gfx::Event::Tag::kViewPropertiesChanged) {
@@ -76,10 +76,10 @@ void OpacityView::OnScenicEvent(std::vector<fuchsia::ui::scenic::Event> events) 
   }
 }
 
-void OpacityView::OnScenicError(std::string error) { FXL_LOG(FATAL) << "OnScenicError: " << error; }
+void OpacityView::OnScenicError(std::string error) { FX_LOGS(FATAL) << "OnScenicError: " << error; }
 
 void OpacityView::OnViewPropertiesChanged(const fuchsia::ui::gfx::vec3& sz) {
-  FXL_LOG(INFO) << "Metrics: " << sz.x << "x" << sz.y << "x" << sz.z;
+  FX_LOGS(INFO) << "Metrics: " << sz.x << "x" << sz.y << "x" << sz.z;
   if (!sz.x || !sz.y || !sz.z)
     return;
 

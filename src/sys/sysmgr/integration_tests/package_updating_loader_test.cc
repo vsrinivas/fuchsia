@@ -79,19 +79,19 @@ class ServiceProviderMock : fuchsia::sys::ServiceProvider {
 
   void ConnectToService(::std::string service_name, ::zx::channel channel) override {
     if (service_name != fuchsia::pkg::PackageResolver::Name_) {
-      FXL_LOG(FATAL) << "ServiceProviderMock asked to connect to '" << service_name
+      FX_LOGS(FATAL) << "ServiceProviderMock asked to connect to '" << service_name
                      << "' but we can only connect to the package resolver.";
       return;
     }
 
-    FXL_DLOG(INFO) << "Adding a binding for the package resolver";
+    FX_DLOGS(INFO) << "Adding a binding for the package resolver";
     resolver_service_->AddBinding(
         fidl::InterfaceRequest<fuchsia::pkg::PackageResolver>(std::move(channel)));
     num_connections_made_++;
   }
 
   void DisconnectAll() {
-    FXL_DLOG(INFO) << "Disconnecting package resolver mock clients.";
+    FX_DLOGS(INFO) << "Disconnecting package resolver mock clients.";
     resolver_service_->Unbind();
   }
 
@@ -226,18 +226,18 @@ TEST_F(PackageUpdatingLoaderTest, HandleResolverDisconnectCorrectly) {
   {
     zx::channel h1, h2;
     ASSERT_EQ(ZX_OK, zx::channel::create(0, &h1, &h2));
-    FXL_LOG(INFO) << "serviceprovider disconnected, new echo channels created";
+    FX_LOGS(INFO) << "serviceprovider disconnected, new echo channels created";
     auto launch_info = CreateLaunchInfo(launch_url, std::move(h2));
     auto controller = env_->CreateComponent(std::move(launch_info));
 
-    FXL_LOG(INFO) << "connecting to echo service the second.";
+    FX_LOGS(INFO) << "connecting to echo service the second.";
     fidl::examples::echo::EchoPtr echo;
     ConnectToServiceAt(std::move(h1), echo.NewRequest());
 
     const std::string message = "component launched";
     std::string ret_msg = "";
 
-    FXL_LOG(INFO) << "sending echo message.";
+    FX_LOGS(INFO) << "sending echo message.";
     echo->EchoString(message, [&](fidl::StringPtr retval) { ret_msg = retval.value_or(""); });
     RunLoopUntil([&] { return ret_msg == message; });
   }
@@ -251,18 +251,18 @@ TEST_F(PackageUpdatingLoaderTest, HandleResolverDisconnectCorrectly) {
   {
     zx::channel h1, h2;
     ASSERT_EQ(ZX_OK, zx::channel::create(0, &h1, &h2));
-    FXL_LOG(INFO) << "serviceprovider disconnected, new echo channels created";
+    FX_LOGS(INFO) << "serviceprovider disconnected, new echo channels created";
     auto launch_info = CreateLaunchInfo(launch_url, std::move(h2));
     auto controller = env_->CreateComponent(std::move(launch_info));
 
-    FXL_LOG(INFO) << "connecting to echo service the second.";
+    FX_LOGS(INFO) << "connecting to echo service the second.";
     fidl::examples::echo::EchoPtr echo;
     ConnectToServiceAt(std::move(h1), echo.NewRequest());
 
     const std::string message = "component launched";
     std::string ret_msg = "";
 
-    FXL_LOG(INFO) << "sending echo message.";
+    FX_LOGS(INFO) << "sending echo message.";
     echo->EchoString(message, [&](fidl::StringPtr retval) { ret_msg = retval.value_or(""); });
     RunLoopUntil([&] { return ret_msg == message; });
   }

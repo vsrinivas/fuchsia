@@ -132,8 +132,8 @@ DebuggedThread::DebuggedThread(DebugAgent* debug_agent, CreateInfo&& create_info
       arch_provider_(std::move(create_info.arch_provider)),
       object_provider_(std::move(create_info.object_provider)),
       weak_factory_(this) {
-  FXL_DCHECK(object_provider_);
-  FXL_DCHECK(arch_provider_);
+  FX_DCHECK(object_provider_);
+  FX_DCHECK(arch_provider_);
 
   switch (create_info.creation_option) {
     case ThreadCreationOption::kRunningKeepRunning:
@@ -164,7 +164,7 @@ void DebuggedThread::OnException(zx::exception exception_handle,
   if (status != ZX_OK) {
     // This can happen, for example, if the thread was killed during the time the exception message
     // was waiting to be delivered to us.
-    FXL_LOG(WARNING) << "Could not read registers from thread: " << zx_status_get_string(status);
+    FX_LOGS(WARNING) << "Could not read registers from thread: " << zx_status_get_string(status);
     return;
   }
 
@@ -191,8 +191,8 @@ void DebuggedThread::OnException(zx::exception exception_handle,
       return HandleGeneralException(&exception, &regs);
   }
 
-  FXL_NOTREACHED() << "Invalid exception notification type: "
-                   << debug_ipc::ExceptionTypeToString(exception.type);
+  FX_NOTREACHED() << "Invalid exception notification type: "
+                  << debug_ipc::ExceptionTypeToString(exception.type);
 
   // The exception was unhandled, so we close it so that the system can run its
   // course. The destructor would've done it anyway, but being explicit helps
@@ -274,7 +274,7 @@ void DebuggedThread::HandleSoftwareBreakpoint(debug_ipc::NotifyException* except
     }
   }
 
-  FXL_NOTREACHED() << "Invalid OnStop.";
+  FX_NOTREACHED() << "Invalid OnStop.";
 }
 
 void DebuggedThread::HandleHardwareBreakpoint(debug_ipc::NotifyException* exception,
@@ -447,7 +447,7 @@ void DebuggedThread::FillThreadRecord(debug_ipc::ThreadRecord::StackAmount stack
   if (arch_provider_->GetInfo(handle_, ZX_INFO_THREAD, &info, sizeof(info)) == ZX_OK) {
     record->state = ThreadStateToEnums(info.state, &record->blocked_reason);
   } else {
-    FXL_NOTREACHED();
+    FX_NOTREACHED();
     record->state = debug_ipc::ThreadRecord::State::kDead;
   }
 
@@ -509,7 +509,7 @@ zx_status_t DebuggedThread::WriteRegisters(const std::vector<debug_ipc::Register
   for (const debug_ipc::Register& reg : regs) {
     auto cat_type = debug_ipc::RegisterIDToCategory(reg.id);
     if (cat_type == debug_ipc::RegisterCategory::kNone) {
-      FXL_LOG(WARNING) << "Attempting to change register without category: "
+      FX_LOGS(WARNING) << "Attempting to change register without category: "
                        << RegisterIDToString(reg.id);
       continue;
     }
@@ -522,17 +522,17 @@ zx_status_t DebuggedThread::WriteRegisters(const std::vector<debug_ipc::Register
   }
 
   for (const auto& [cat_type, cat_regs] : categories) {
-    FXL_DCHECK(cat_type != debug_ipc::RegisterCategory::kNone);
+    FX_DCHECK(cat_type != debug_ipc::RegisterCategory::kNone);
     zx_status_t res = arch_provider_->WriteRegisters(cat_type, cat_regs, &handle_);
     if (res != ZX_OK) {
-      FXL_LOG(WARNING) << "Could not write category "
+      FX_LOGS(WARNING) << "Could not write category "
                        << debug_ipc::RegisterCategoryToString(cat_type) << ": "
                        << debug_ipc::ZxStatusToString(res);
     }
 
     res = arch_provider_->ReadRegisters(cat_type, handle_, written);
     if (res != ZX_OK) {
-      FXL_LOG(WARNING) << "Could not read category "
+      FX_LOGS(WARNING) << "Could not read category "
                        << debug_ipc::RegisterCategoryToString(cat_type) << ": "
                        << debug_ipc::ZxStatusToString(res);
     }
@@ -708,7 +708,7 @@ const char* DebuggedThread::ClientStateToString(ClientState client_state) {
       return "Paused";
   }
 
-  FXL_NOTREACHED();
+  FX_NOTREACHED();
   return "<unknown>";
 }
 
@@ -728,7 +728,7 @@ void DebuggedThread::IncreaseSuspend() {
 
 void DebuggedThread::DecreaseSuspend() {
   suspend_count_--;
-  FXL_DCHECK(suspend_count_ >= 0);
+  FX_DCHECK(suspend_count_ >= 0);
   if (suspend_count_ > 0)
     return;
   ref_counted_suspend_token_.reset();

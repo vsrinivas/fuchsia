@@ -32,7 +32,7 @@ namespace {
 //     warning_message << "are at equal distance and overlapping. See "
 //                        "https://fuchsia.dev/fuchsia-src/the-book/ui/view_bounds#collisions";
 
-//     FXL_LOG(WARNING) << warning_message.str();
+//     FX_LOGS(WARNING) << warning_message.str();
 //   }
 // }
 
@@ -60,8 +60,8 @@ struct HitTestNode {
 }  // namespace
 
 void HitTest(Node* root, const escher::ray4& ray, HitAccumulator<NodeHit>* accumulator) {
-  FXL_DCHECK(root);
-  FXL_DCHECK(accumulator);
+  FX_DCHECK(root);
+  FX_DCHECK(accumulator);
 
   CollisionAccumulator collision_reporter;
 
@@ -83,7 +83,7 @@ void HitTest(Node* root, const escher::ray4& ray, HitAccumulator<NodeHit>* accum
         HitTestSingleNode(current_node.node, local_ray, current_node.parent_intersection);
 
     if (local_intersection.did_hit) {
-      FXL_VLOG(2) << "\tHit: " << current_node.node->global_id();
+      FX_VLOGS(2) << "\tHit: " << current_node.node->global_id();
       NodeHit hit{.node = current_node.node, .distance = local_intersection.distance};
       collision_reporter.Add(hit);
       accumulator->Add(hit);

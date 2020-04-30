@@ -56,7 +56,7 @@ OptionStatus ParseBooleanOption(const fxl::CommandLine& command_line, const char
   } else if (arg == "false") {
     *out_value = false;
   } else {
-    FXL_LOG(ERROR) << "Bad value for --" << name << " option, pass true or false";
+    FX_LOGS(ERROR) << "Bad value for --" << name << " option, pass true or false";
     return OptionStatus::ERROR;
   }
 
@@ -75,12 +75,12 @@ static bool TcpAddrFromString(fxl::StringView address, fxl::StringView port, add
   int errcode =
       getaddrinfo(address.ToString().c_str(), port.ToString().c_str(), &hints, &addrinfos);
   if (errcode != 0) {
-    FXL_LOG(ERROR) << "Failed to getaddrinfo for address " << address << ":" << port << ": "
+    FX_LOGS(ERROR) << "Failed to getaddrinfo for address " << address << ":" << port << ": "
                    << gai_strerror(errcode);
     return false;
   }
   if (addrinfos == nullptr) {
-    FXL_LOG(ERROR) << "No matching addresses found for " << address << ":" << port;
+    FX_LOGS(ERROR) << "No matching addresses found for " << address << ":" << port;
     return false;
   }
 
@@ -90,11 +90,11 @@ static bool TcpAddrFromString(fxl::StringView address, fxl::StringView port, add
 }
 
 static std::unique_ptr<std::ostream> ConnectToTraceSaver(const fxl::StringView& address) {
-  FXL_LOG(INFO) << "Connecting to " << address;
+  FX_LOGS(INFO) << "Connecting to " << address;
 
   size_t colon = address.rfind(':');
   if (colon == address.npos) {
-    FXL_LOG(ERROR) << "TCP address is missing port: " << address;
+    FX_LOGS(ERROR) << "TCP address is missing port: " << address;
     return nullptr;
   }
 
@@ -111,18 +111,18 @@ static std::unique_ptr<std::ostream> ConnectToTraceSaver(const fxl::StringView& 
 
   fbl::unique_fd fd(socket(AF_INET6, SOCK_STREAM, IPPROTO_TCP));
   if (!fd.is_valid()) {
-    FXL_LOG(ERROR) << "Failed to create socket: " << strerror(errno);
+    FX_LOGS(ERROR) << "Failed to create socket: " << strerror(errno);
     return nullptr;
   }
 
   if (connect(fd.get(), tcp_addr.ai_addr, tcp_addr.ai_addrlen) < 0) {
-    FXL_LOG(ERROR) << "Failed to connect: " << strerror(errno);
+    FX_LOGS(ERROR) << "Failed to connect: " << strerror(errno);
     return nullptr;
   }
 
   auto ofstream = std::make_unique<std::ofstream>();
   ofstream->__open(fd.release(), std::ios_base::out);
-  FXL_DCHECK(ofstream->is_open());
+  FX_DCHECK(ofstream->is_open());
   return ofstream;
 }
 

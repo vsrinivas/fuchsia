@@ -125,7 +125,7 @@ static zx_status_t create_test_device(TestDevice* test_device,
                                       fuchsia::virtualization::BlockDevice* block_device) {
   fbl::unique_fd fd(mkstemp(test_device->file_path.data()));
   if (!fd) {
-    FXL_LOG(ERROR) << "Failed to create temporary file";
+    FX_LOGS(ERROR) << "Failed to create temporary file";
     return ZX_ERR_IO;
   }
 
@@ -276,7 +276,7 @@ TYPED_TEST_SUITE(VirtioBlockGuestTest, GuestTypes);
 
 TYPED_TEST(VirtioBlockGuestTest, CheckSize) {
   for (const auto& device : this->TestDevices()) {
-    FXL_LOG(INFO) << "Device: " << device.id;
+    FX_LOGS(INFO) << "Device: " << device.id;
     size_t expected_size = 0;
     switch (device.format) {
       case fuchsia::virtualization::BlockFormat::RAW:
@@ -310,7 +310,7 @@ TYPED_TEST(VirtioBlockGuestTest, ReadRaw) {
     if (device.format != fuchsia::virtualization::BlockFormat::RAW) {
       continue;
     }
-    FXL_LOG(INFO) << "Device: " << device.id;
+    FX_LOGS(INFO) << "Device: " << device.id;
 
     fbl::unique_fd fd(open(device.file_path.c_str(), O_RDWR));
     ASSERT_TRUE(fd);
@@ -342,7 +342,7 @@ TYPED_TEST(VirtioBlockGuestTest, WriteRaw) {
     if (device.format != fuchsia::virtualization::BlockFormat::RAW) {
       continue;
     }
-    FXL_LOG(INFO) << "Device: " << device.id;
+    FX_LOGS(INFO) << "Device: " << device.id;
 
     fbl::unique_fd fd(open(device.file_path.c_str(), O_RDWR));
     ASSERT_TRUE(fd);
@@ -422,7 +422,7 @@ TYPED_TEST(VirtioBlockGuestTest, ReadMappedCluster) {
     if (device.format != fuchsia::virtualization::BlockFormat::QCOW) {
       continue;
     }
-    FXL_LOG(INFO) << "Device: " << device.id;
+    FX_LOGS(INFO) << "Device: " << device.id;
 
     for (off_t offset : kQcowBlockTestOffsets) {
       std::string result;
@@ -447,7 +447,7 @@ TYPED_TEST(VirtioBlockGuestTest, ReadUnmappedCluster) {
     if (device.format != fuchsia::virtualization::BlockFormat::QCOW) {
       continue;
     }
-    FXL_LOG(INFO) << "Device: " << device.id;
+    FX_LOGS(INFO) << "Device: " << device.id;
 
     std::string result;
     EXPECT_EQ(
@@ -471,7 +471,7 @@ TYPED_TEST(VirtioBlockGuestTest, WriteQcow) {
     if (device.format != fuchsia::virtualization::BlockFormat::QCOW) {
       continue;
     }
-    FXL_LOG(INFO) << "Device: " << device.id;
+    FX_LOGS(INFO) << "Device: " << device.id;
 
     for (off_t offset : kQcowBlockTestOffsets) {
       std::string result;

@@ -47,7 +47,7 @@ static inline zx_status_t translate_rpc_status(OperationStatus status) {
     case OperationStatus::SERVER_EXEC_FORK_FAILURE:
       return ZX_ERR_INTERNAL;
     default:
-      FXL_LOG(ERROR) << "Unknown gRPC transfer status: " << status;
+      FX_LOGS(ERROR) << "Unknown gRPC transfer status: " << status;
       return ZX_ERR_BAD_STATE;
   }
 }

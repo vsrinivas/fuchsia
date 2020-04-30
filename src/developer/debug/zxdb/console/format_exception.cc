@@ -251,7 +251,7 @@ std::string ExceptionRecordToString(debug_ipc::Arch arch,
     case debug_ipc::Arch::kArm64:
       return Arm64ExceptionRecordToString(record);
   }
-  FXL_NOTREACHED();
+  FX_NOTREACHED();
   return std::string();
 }
 

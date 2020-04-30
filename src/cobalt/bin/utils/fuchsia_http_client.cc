@@ -31,7 +31,7 @@ fuchsia::net::http::Request MakeRequest(const lib::clearcut::HTTPRequest& reques
 
   fsl::SizedVmo data;
   auto result = fsl::VmoFromString(request.body, &data);
-  FXL_CHECK(result);
+  FX_CHECK(result);
 
   fx_request.mutable_body()->set_buffer(std::move(data).ToTransport());
 

@@ -81,7 +81,7 @@ static SessionColumns BuildSessionColumns(const cpuperf::SessionSpec& spec,
                           name = "Unknown";
                         }
                         size_t len = strlen(name);
-                        FXL_DCHECK(len <= std::numeric_limits<int>::max());
+                        FX_DCHECK(len <= std::numeric_limits<int>::max());
                         int int_len = static_cast<int>(len);
                         int width = std::max(int_len, kMinColumnWidth);
 
@@ -100,7 +100,7 @@ static void PrintColumnTitles(FILE* f, const cpuperf::SessionSpec& spec,
   IterateOverEventIds(spec, model_event_manager,
                       [&](perfmon::EventId id, const perfmon::EventDetails* details) {
                         auto iter = columns.find(id);
-                        FXL_DCHECK(iter != columns.end());
+                        FX_DCHECK(iter != columns.end());
                         const EventColumn& column = iter->second;
                         fprintf(f, "|%*s", column.width, column.name);
                       });
@@ -120,7 +120,7 @@ static void PrintTrace(FILE* f, const cpuperf::SessionSpec& spec,
   IterateOverEventIds(spec, model_event_manager,
                       [&](perfmon::EventId id, const perfmon::EventDetails* details) {
                         auto column_iter = columns.find(id);
-                        FXL_DCHECK(column_iter != columns.end());
+                        FX_DCHECK(column_iter != columns.end());
                         const EventColumn& column = column_iter->second;
                         auto result_iter = results.find(id);
                         if (result_iter != results.end()) {
@@ -176,7 +176,7 @@ void PrintTallyResults(FILE* f, const cpuperf::SessionSpec& spec,
     perfmon::EventId id = record.header->event;
     const perfmon::EventDetails* details;
     if (!model_event_manager->EventIdToEventDetails(id, &details)) {
-      FXL_LOG(WARNING) << "Unknown event: 0x" << std::hex << record.header->event;
+      FX_LOGS(WARNING) << "Unknown event: 0x" << std::hex << record.header->event;
       continue;
     }
 

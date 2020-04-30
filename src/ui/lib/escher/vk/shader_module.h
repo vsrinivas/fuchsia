@@ -5,11 +5,11 @@
 #ifndef SRC_UI_LIB_ESCHER_VK_SHADER_MODULE_H_
 #define SRC_UI_LIB_ESCHER_VK_SHADER_MODULE_H_
 
-#include <vulkan/vulkan.hpp>
-
 #include "src/lib/fxl/memory/ref_counted.h"
 #include "src/ui/lib/escher/third_party/granite/vk/shader_module_resource_layout.h"
 #include "src/ui/lib/escher/vk/shader_stage.h"
+
+#include <vulkan/vulkan.hpp>
 
 namespace escher {
 
@@ -46,7 +46,7 @@ class ShaderModule : public fxl::RefCountedThreadSafe<ShaderModule> {
   // Return the most up-to-date vk::ShaderModule. Clients must ensure that the
   // module is_valid() before calling.
   const vk::ShaderModule& vk() const {
-    FXL_DCHECK(is_valid());
+    FX_DCHECK(is_valid());
     return module_;
   }
 
@@ -61,7 +61,7 @@ class ShaderModule : public fxl::RefCountedThreadSafe<ShaderModule> {
   // Return the module's resource layout. Escher clients never need to call
   // this; it is used internally by ShaderProgram.
   const impl::ShaderModuleResourceLayout& shader_module_resource_layout() const {
-    FXL_DCHECK(is_valid());
+    FX_DCHECK(is_valid());
     return layout_;
   }
 

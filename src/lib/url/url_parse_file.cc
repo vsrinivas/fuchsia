@@ -96,7 +96,7 @@ void DoParseLocalFile(const char* spec, size_t path_begin, size_t spec_len, Pars
 // character following the "file:" at the beginning of the spec. If so,
 // this is usually a slash, but needn't be; we allow paths like "file:c:\foo".
 void ParseFileURL(const char* spec, size_t spec_len, Parsed* parsed) {
-  FXL_DCHECK(spec_len >= 0);
+  FX_DCHECK(spec_len >= 0);
 
   // Get the parts we never use for file URLs out of the way.
   parsed->username.reset();

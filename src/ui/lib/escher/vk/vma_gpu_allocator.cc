@@ -77,8 +77,8 @@ namespace escher {
 
 VmaGpuAllocator::VmaGpuAllocator(const VulkanContext& context)
     : physical_device_(context.physical_device) {
-  FXL_DCHECK(context.device);
-  FXL_DCHECK(context.physical_device);
+  FX_DCHECK(context.device);
+  FX_DCHECK(context.physical_device);
   VmaAllocatorCreateInfo allocatorInfo = {};
   allocatorInfo.physicalDevice = context.physical_device;
   allocatorInfo.device = context.device;
@@ -110,7 +110,7 @@ GpuMemPtr VmaGpuAllocator::AllocateMemory(vk::MemoryRequirements reqs,
   VmaAllocationInfo allocation_info;
   auto status = vmaAllocateMemory(allocator_, &c_reqs, &create_info, &allocation, &allocation_info);
 
-  FXL_DCHECK(status == VK_SUCCESS) << "vmaAllocateMemory failed with status code " << status;
+  FX_DCHECK(status == VK_SUCCESS) << "vmaAllocateMemory failed with status code " << status;
   if (status != VK_SUCCESS)
     return nullptr;
 
@@ -148,18 +148,17 @@ BufferPtr VmaGpuAllocator::AllocateBuffer(ResourceManager* manager, vk::DeviceSi
   auto status = vmaCreateBuffer(allocator_, &c_buffer_info, &create_info, &buffer, &allocation,
                                 &allocation_info);
 
-  FXL_DCHECK(status == VK_SUCCESS) << "vmaAllocateMemory failed with status code " << status;
+  FX_DCHECK(status == VK_SUCCESS) << "vmaAllocateMemory failed with status code " << status;
   if (status != VK_SUCCESS)
     return nullptr;
 
-  FXL_DCHECK(info.size >= size)
-      << "Size of allocated memory should not be less than requested size";
+  FX_DCHECK(info.size >= size) << "Size of allocated memory should not be less than requested size";
 
   auto retval =
       fxl::AdoptRef(new VmaBuffer(manager, allocator_, allocation, allocation_info, size, buffer));
 
   if (out_ptr) {
-    FXL_DCHECK(allocation_info.offset == 0);
+    FX_DCHECK(allocation_info.offset == 0);
     *out_ptr = fxl::AdoptRef(new VmaMappedGpuMem(allocation_info, retval));
   }
 
@@ -175,7 +174,7 @@ ImagePtr VmaGpuAllocator::AllocateImage(ResourceManager* manager, const ImageInf
 
   // Check if the image create info above is valid.
   if (!impl::CheckImageCreateInfoValidity(physical_device_, c_image_info)) {
-    FXL_LOG(ERROR) << "VmaGpuAllocator::AllocateImage(): ImageCreateInfo invalid. Create failed.";
+    FX_LOGS(ERROR) << "VmaGpuAllocator::AllocateImage(): ImageCreateInfo invalid. Create failed.";
     return ImagePtr();
   }
 
@@ -205,7 +204,7 @@ ImagePtr VmaGpuAllocator::AllocateImage(ResourceManager* manager, const ImageInf
       new VmaImage(manager, info, image, allocator_, allocation, allocation_info, kInitialLayout));
 
   if (out_ptr) {
-    FXL_DCHECK(allocation_info.offset == 0);
+    FX_DCHECK(allocation_info.offset == 0);
     *out_ptr = fxl::AdoptRef(new VmaMappedGpuMem(allocation_info, retval));
   }
 
@@ -230,7 +229,7 @@ bool VmaGpuAllocator::CreateImage(const VkImageCreateInfo& image_create_info,
                                   VmaAllocationInfo* vma_allocation_info) {
   auto status = vmaCreateImage(allocator_, &image_create_info, &allocation_create_info, image,
                                vma_allocation, vma_allocation_info);
-  FXL_DCHECK(status == VK_SUCCESS) << "vmaAllocateMemory failed with status code " << status;
+  FX_DCHECK(status == VK_SUCCESS) << "vmaAllocateMemory failed with status code " << status;
   return status == VK_SUCCESS;
 }
 

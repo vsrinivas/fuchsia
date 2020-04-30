@@ -142,7 +142,7 @@ static int ParseArgv(int argc, char** argv, DecoderConfig* decoder_config,
       } else if (strcmp(value, "chrome") == 0) {
         printer_config->output_format = OutputFormat::kChrome;
       } else {
-        FXL_LOG(ERROR) << "Bad value for --output-format: " << value;
+        FX_LOGS(ERROR) << "Bad value for --output-format: " << value;
         return -1;
       }
       continue;
@@ -159,7 +159,7 @@ static int ParseArgv(int argc, char** argv, DecoderConfig* decoder_config,
       } else if (strcmp(value, "rel") == 0) {
         printer_config->abstime = false;
       } else {
-        FXL_LOG(ERROR) << "Bad value for --time: " << value;
+        FX_LOGS(ERROR) << "Bad value for --time: " << value;
         return -1;
       }
       continue;
@@ -167,7 +167,7 @@ static int ParseArgv(int argc, char** argv, DecoderConfig* decoder_config,
 
     if (option == "elf") {
       if (strlen(value) == 0) {
-        FXL_LOG(ERROR) << "Empty ELF file name";
+        FX_LOGS(ERROR) << "Empty ELF file name";
         return -1;
       }
       decoder_config->elf_file_names.push_back(value);
@@ -176,11 +176,11 @@ static int ParseArgv(int argc, char** argv, DecoderConfig* decoder_config,
 
     if (option == "pt") {
       if (strlen(value) == 0) {
-        FXL_LOG(ERROR) << "Empty PT file name";
+        FX_LOGS(ERROR) << "Empty PT file name";
         return -1;
       }
       if (decoder_config->pt_file_name != "" || decoder_config->pt_list_file_name != "") {
-        FXL_LOG(ERROR) << "Only one of --pt/--pt-list supported";
+        FX_LOGS(ERROR) << "Only one of --pt/--pt-list supported";
         return -1;
       }
       decoder_config->pt_file_name = value;
@@ -189,11 +189,11 @@ static int ParseArgv(int argc, char** argv, DecoderConfig* decoder_config,
 
     if (option == "pt-list") {
       if (strlen(value) == 0) {
-        FXL_LOG(ERROR) << "Empty PT-list file name";
+        FX_LOGS(ERROR) << "Empty PT-list file name";
         return -1;
       }
       if (decoder_config->pt_file_name != "" || decoder_config->pt_list_file_name != "") {
-        FXL_LOG(ERROR) << "Only one of --pt/--pt-list supported";
+        FX_LOGS(ERROR) << "Only one of --pt/--pt-list supported";
         return -1;
       }
       decoder_config->pt_list_file_name = value;
@@ -218,7 +218,7 @@ static int ParseArgv(int argc, char** argv, DecoderConfig* decoder_config,
     if (option == "id") {
       if (!fxl::StringToNumberWithError<uint32_t>(fxl::StringView(value), &printer_config->id,
                                                   fxl::Base::k16)) {
-        FXL_LOG(ERROR) << "Not a hex number: " << value;
+        FX_LOGS(ERROR) << "Not a hex number: " << value;
         return -1;
       }
       continue;
@@ -230,7 +230,7 @@ static int ParseArgv(int argc, char** argv, DecoderConfig* decoder_config,
       } else if (strcmp(value, "process") == 0) {
         printer_config->view = OutputView::kProcess;
       } else {
-        FXL_LOG(ERROR) << "Bad value for --view: " << value;
+        FX_LOGS(ERROR) << "Bad value for --view: " << value;
         return -1;
       }
       continue;
@@ -238,7 +238,7 @@ static int ParseArgv(int argc, char** argv, DecoderConfig* decoder_config,
 
     if (option == "kernel") {
       if (strlen(value) == 0) {
-        FXL_LOG(ERROR) << "Empty kernel file name";
+        FX_LOGS(ERROR) << "Empty kernel file name";
         return -1;
       }
       decoder_config->kernel_file_name = value;
@@ -248,7 +248,7 @@ static int ParseArgv(int argc, char** argv, DecoderConfig* decoder_config,
     if (option == "kernel-cr3") {
       if (!fxl::StringToNumberWithError<uint64_t>(fxl::StringView(value),
                                                   &decoder_config->kernel_cr3, fxl::Base::k16)) {
-        FXL_LOG(ERROR) << "Not a valid cr3 number: " << value;
+        FX_LOGS(ERROR) << "Not a valid cr3 number: " << value;
         return -1;
       }
       continue;
@@ -256,7 +256,7 @@ static int ParseArgv(int argc, char** argv, DecoderConfig* decoder_config,
 
     if (option == "ids") {
       if (strlen(value) == 0) {
-        FXL_LOG(ERROR) << "Empty ids file name";
+        FX_LOGS(ERROR) << "Empty ids file name";
         return -1;
       }
       decoder_config->ids_file_names.push_back(value);
@@ -265,7 +265,7 @@ static int ParseArgv(int argc, char** argv, DecoderConfig* decoder_config,
 
     if (option == "ktrace") {
       if (strlen(value) == 0) {
-        FXL_LOG(ERROR) << "Empty ktrace file name";
+        FX_LOGS(ERROR) << "Empty ktrace file name";
         return -1;
       }
       decoder_config->ktrace_file_name = value;
@@ -274,7 +274,7 @@ static int ParseArgv(int argc, char** argv, DecoderConfig* decoder_config,
 
     if (option == "map") {
       if (strlen(value) == 0) {
-        FXL_LOG(ERROR) << "Empty map file name";
+        FX_LOGS(ERROR) << "Empty map file name";
         return -1;
       }
       decoder_config->map_file_names.push_back(value);
@@ -286,7 +286,7 @@ static int ParseArgv(int argc, char** argv, DecoderConfig* decoder_config,
       continue;
     }
 
-    FXL_LOG(ERROR) << "Unrecognized option: " << option;
+    FX_LOGS(ERROR) << "Unrecognized option: " << option;
     return -1;
   }
 
@@ -295,17 +295,17 @@ static int ParseArgv(int argc, char** argv, DecoderConfig* decoder_config,
   }
 
   if (decoder_config->pt_file_name == "" && decoder_config->pt_list_file_name == "") {
-    FXL_LOG(ERROR) << "One of --pt=FILE, --pt-list=FILE must be specified";
+    FX_LOGS(ERROR) << "One of --pt=FILE, --pt-list=FILE must be specified";
     return -1;
   }
   if (decoder_config->ktrace_file_name == "") {
-    FXL_LOG(WARNING) << "missing --ktrace=FILE, output may be limited";
+    FX_LOGS(WARNING) << "missing --ktrace=FILE, output may be limited";
   }
   if (decoder_config->ids_file_names.size() == 0) {
-    FXL_LOG(WARNING) << "missing --ids=FILE, output will be limited";
+    FX_LOGS(WARNING) << "missing --ids=FILE, output will be limited";
   }
   if (decoder_config->map_file_names.size() == 0) {
-    FXL_LOG(WARNING) << "missing --map=FILE, output will be limited";
+    FX_LOGS(WARNING) << "missing --map=FILE, output will be limited";
   }
 
   return n;
@@ -328,7 +328,7 @@ int main(int argc, char** argv) {
     return EXIT_FAILURE;
 
   if (n != argc) {
-    FXL_LOG(ERROR) << "No positional parameters";
+    FX_LOGS(ERROR) << "No positional parameters";
     return EXIT_FAILURE;
   }
 
@@ -336,7 +336,7 @@ int main(int argc, char** argv) {
 
   auto decoder = DecoderState::Create(decoder_config);
   if (!decoder) {
-    FXL_LOG(ERROR) << "Error creating decoder";
+    FX_LOGS(ERROR) << "Error creating decoder";
     return EXIT_FAILURE;
   }
 
@@ -344,26 +344,26 @@ int main(int argc, char** argv) {
   if (printer_config.output_format == OutputFormat::kRaw) {
     auto printer = RawPrinter::Create(decoder.get(), printer_config.ToRawPrinterConfig());
     if (!printer) {
-      FXL_LOG(ERROR) << "Error creating printer";
+      FX_LOGS(ERROR) << "Error creating printer";
       return EXIT_FAILURE;
     }
     total_insns = printer->PrintFiles();
   } else if (printer_config.output_format == OutputFormat::kCalls) {
     auto printer = CallPrinter::Create(decoder.get(), printer_config.ToCallPrinterConfig());
     if (!printer) {
-      FXL_LOG(ERROR) << "Error creating printer";
+      FX_LOGS(ERROR) << "Error creating printer";
       return EXIT_FAILURE;
     }
     total_insns = printer->PrintFiles();
   } else {
-    FXL_LOG(ERROR) << "Invalid output format\n";
+    FX_LOGS(ERROR) << "Invalid output format\n";
     return EXIT_FAILURE;
   }
 
   const auto& delta = (std::chrono::steady_clock::now() - start_time);
   int64_t seconds = std::chrono::duration_cast<std::chrono::seconds>(delta).count();
   int milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(delta).count() % 1000;
-  FXL_LOG(INFO) << fxl::StringPrintf("%" PRIu64 " instructions processed in %" PRId64
+  FX_LOGS(INFO) << fxl::StringPrintf("%" PRIu64 " instructions processed in %" PRId64
                                      ".%03d seconds\n",
                                      total_insns, seconds, milliseconds);
 

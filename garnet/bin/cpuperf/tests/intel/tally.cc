@@ -16,7 +16,7 @@ class TallyVerifier : public Verifier {
     const perfmon::EventDetails* details;
 
     bool rc __UNUSED = LookupEventByName("fixed", "instructions_retired", &details);
-    FXL_DCHECK(rc);
+    FX_DCHECK(rc);
     instructions_retired_id_ = details->id;
   }
 
@@ -33,7 +33,7 @@ class TallyVerifier : public Verifier {
     // In tally mode there is only one set of records emitted, at the end.
     // Therefore we should have one record per trace (IOW per #cpus).
     if (instructions_retired_count_ != session_result_spec_->num_traces) {
-      FXL_LOG(ERROR) << "Wrong number of instructions_retired events: "
+      FX_LOGS(ERROR) << "Wrong number of instructions_retired events: "
                      << instructions_retired_count_;
       pass = false;
     }

@@ -188,7 +188,7 @@ void Struct::DecodeResponseTypes() {
 
 void Struct::DecodeTypes(std::string_view container_name, const char* size_name,
                          const char* member_name, const char* v1_name) {
-  FXL_DCHECK(json_definition_ != nullptr);
+  FX_DCHECK(json_definition_ != nullptr);
   const rapidjson::Value* json_definition = json_definition_;
   // Reset json_definition_ member to allow recursive declarations.
   json_definition_ = nullptr;
@@ -531,7 +531,7 @@ uint64_t Library::ExtractFieldOffset(const rapidjson::Value* json_definition,
 void Library::FieldNotFound(std::string_view container_type, std::string_view container_name,
                             const char* field_name) {
   has_errors_ = true;
-  FXL_LOG(ERROR) << "File " << name() << " field '" << field_name << "' missing for "
+  FX_LOGS(ERROR) << "File " << name() << " field '" << field_name << "' missing for "
                  << container_type << ' ' << container_name;
 }
 
@@ -575,7 +575,7 @@ void LibraryLoader::Add(std::unique_ptr<std::istream>* library_stream, LibraryRe
   }
   Add(ir, err);
   if (err->value != LibraryReadError::kOk) {
-    FXL_LOG(ERROR) << "JSON parse error: " << rapidjson::GetParseError_En(err->parse_result.Code())
+    FX_LOGS(ERROR) << "JSON parse error: " << rapidjson::GetParseError_En(err->parse_result.Code())
                    << " at offset " << err->parse_result.Offset();
     return;
   }

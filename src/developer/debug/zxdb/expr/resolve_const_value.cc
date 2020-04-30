@@ -11,7 +11,7 @@ namespace zxdb {
 // TESTING NOTE: This code is tested by the collection and value resolution tests (the places
 // where const values are converted to ExprValues).
 ErrOrValue ResolveConstValue(const fxl::RefPtr<EvalContext>& context, const Value* value) {
-  FXL_DCHECK(value->const_value().has_value());
+  FX_DCHECK(value->const_value().has_value());
 
   const Type* type = value->type().Get()->AsType();
   if (!type)

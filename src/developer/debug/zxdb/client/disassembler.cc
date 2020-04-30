@@ -171,7 +171,7 @@ size_t Disassembler::DisassembleMany(const uint8_t* data, size_t data_len, uint6
     out->emplace_back();
     size_t bytes_read = DisassembleOne(&data[byte_offset], data_len - byte_offset,
                                        start_address + byte_offset, options, &out->back());
-    FXL_DCHECK(bytes_read > 0);
+    FX_DCHECK(bytes_read > 0);
     byte_offset += bytes_read;
   }
 

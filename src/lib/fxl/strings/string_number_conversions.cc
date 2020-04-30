@@ -16,7 +16,7 @@ namespace {
 
 template <typename NumberType>
 bool GetDigitValue(const char s, Base base, NumberType* out_digit) {
-  FXL_DCHECK(out_digit);
+  FX_DCHECK(out_digit);
 
   if (s < '0')
     return false;
@@ -49,9 +49,9 @@ bool StringToPositiveNumberWithError(const char* s, size_t length, Base base, Nu
   const NumberType kBase = static_cast<NumberType>(base == Base::k10 ? 10 : 16);
   constexpr NumberType kMaxAllowed = std::numeric_limits<NumberType>::max();
 
-  FXL_DCHECK(s);
-  FXL_DCHECK(length > 0u);
-  FXL_DCHECK(number);
+  FX_DCHECK(s);
+  FX_DCHECK(length > 0u);
+  FX_DCHECK(number);
 
   *number = 0;
   for (size_t i = 0; i < length; i++) {
@@ -76,9 +76,9 @@ bool StringToNegativeNumberWithError(const char* s, size_t length, Base base, Nu
   const NumberType kBase = static_cast<NumberType>(base == Base::k10 ? 10 : 16);
   constexpr NumberType kMinAllowed = std::numeric_limits<NumberType>::min();
 
-  FXL_DCHECK(s);
-  FXL_DCHECK(length > 0u);
-  FXL_DCHECK(number);
+  FX_DCHECK(s);
+  FX_DCHECK(length > 0u);
+  FX_DCHECK(number);
 
   *number = 0;
   for (size_t i = 0; i < length; i++) {
@@ -135,7 +135,7 @@ std::string NumberToString(NumberType number, Base base) {
 
 template <typename NumberType>
 bool StringToNumberWithError(fxl::StringView string, NumberType* number, Base base) {
-  FXL_DCHECK(number);
+  FX_DCHECK(number);
 
   if (string.empty())
     return false;

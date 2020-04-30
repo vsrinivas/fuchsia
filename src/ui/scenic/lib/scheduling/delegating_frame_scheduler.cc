@@ -41,7 +41,7 @@ PresentId DelegatingFrameScheduler::RegisterPresent(
     std::vector<zx::event> release_fences, PresentId present_id) {
   // Assuming we never have several levels of delegating frame schedulers |present_id| should never
   // be set.
-  FXL_CHECK(present_id == kInvalidPresentId);
+  FX_CHECK(present_id == kInvalidPresentId);
   present_id = scheduling::GetNextPresentId();
   CallWhenFrameSchedulerAvailable([session_id, present_information = std::move(present_information),
                                    release_fences = std::move(release_fences),
@@ -69,7 +69,7 @@ void DelegatingFrameScheduler::ScheduleUpdateForSession(zx::time presentation_ti
 
 void DelegatingFrameScheduler::GetFuturePresentationInfos(
     zx::duration requested_prediction_span, GetFuturePresentationInfosCallback callback) {
-  FXL_DCHECK(callback);
+  FX_DCHECK(callback);
   CallWhenFrameSchedulerAvailable([requested_prediction_span, callback = std::move(callback)](
                                       FrameScheduler* frame_scheduler) mutable {
     frame_scheduler->GetFuturePresentationInfos(requested_prediction_span, std::move(callback));
@@ -104,11 +104,11 @@ void DelegatingFrameScheduler::CallWhenFrameSchedulerAvailable(
 void DelegatingFrameScheduler::SetFrameScheduler(
     const std::shared_ptr<FrameScheduler>& frame_scheduler) {
   if (frame_scheduler_) {
-    FXL_LOG(ERROR) << "DelegatingFrameScheduler can only be set once.";
+    FX_LOGS(ERROR) << "DelegatingFrameScheduler can only be set once.";
     return;
   }
   if (!frame_scheduler) {
-    FXL_LOG(ERROR) << "DelegatingFrameScheduler cannot be set to a null value.";
+    FX_LOGS(ERROR) << "DelegatingFrameScheduler cannot be set to a null value.";
     return;
   }
   frame_scheduler_ = frame_scheduler;

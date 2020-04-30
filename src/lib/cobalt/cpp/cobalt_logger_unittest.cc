@@ -235,7 +235,7 @@ class FakeLoggerImpl : public fuchsia::cobalt::Logger {
     }
   }
   const std::vector<std::unique_ptr<BaseEvent>>& GetEvents(EventType type) const {
-    FXL_CHECK(calls_.find(type) != calls_.end());
+    FX_CHECK(calls_.find(type) != calls_.end());
     return calls_.at(type);
   }
 

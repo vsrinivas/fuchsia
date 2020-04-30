@@ -5,11 +5,11 @@
 #ifndef SRC_UI_LIB_ESCHER_VK_IMPL_FRAMEBUFFER_H_
 #define SRC_UI_LIB_ESCHER_VK_IMPL_FRAMEBUFFER_H_
 
-#include <vulkan/vulkan.hpp>
-
 #include "src/ui/lib/escher/forward_declarations.h"
 #include "src/ui/lib/escher/third_party/granite/vk/render_pass.h"
 #include "src/ui/lib/escher/vk/render_pass_info.h"
+
+#include <vulkan/vulkan.hpp>
 
 namespace escher {
 namespace impl {
@@ -39,8 +39,8 @@ class Framebuffer : public Resource {
   // and the index of the depth-stencil attachment (if any) is one greater than
   // the highest color attachment index.
   const ImageViewPtr& GetAttachment(uint32_t index) {
-    FXL_DCHECK(index < render_pass_info_.num_color_attachments +
-                           (render_pass_info_.depth_stencil_attachment ? 1 : 0));
+    FX_DCHECK(index < render_pass_info_.num_color_attachments +
+                          (render_pass_info_.depth_stencil_attachment ? 1 : 0));
     return index < render_pass_info_.num_color_attachments
                ? render_pass_info_.color_attachments[index]
                : render_pass_info_.depth_stencil_attachment;

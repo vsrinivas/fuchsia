@@ -38,7 +38,7 @@ ViewHolderPtr NewAnnotationViewHolder(
   ViewLinker::ExportLink link = view_linker->CreateExport(
       annotation_view_holder.get(), std::move(annotation_view_holder_token.value),
       session->error_reporter());
-  FXL_CHECK(link.valid()) << "Cannot setup link with annotation View!";
+  FX_CHECK(link.valid()) << "Cannot setup link with annotation View!";
   annotation_view_holder->Connect(std::move(link));
   return annotation_view_holder;
 }
@@ -65,7 +65,7 @@ class ViewTest : public SessionTest {
   SessionContext CreateSessionContext() override {
     SessionContext session_context = SessionTest::CreateSessionContext();
 
-    FXL_DCHECK(!view_linker_);
+    FX_DCHECK(!view_linker_);
 
     view_linker_ = std::make_unique<ViewLinker>();
     session_context.view_linker = view_linker_.get();

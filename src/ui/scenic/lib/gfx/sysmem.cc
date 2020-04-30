@@ -16,7 +16,7 @@ Sysmem::Sysmem() {
                                             sysmem_allocator_.NewRequest().TakeChannel().release());
   if (status != ZX_OK) {
     sysmem_allocator_.Unbind();
-    FXL_LOG(ERROR) << "Unable to connect to sysmem: " << status;
+    FX_LOGS(ERROR) << "Unable to connect to sysmem: " << status;
   }
 }
 
@@ -24,7 +24,7 @@ fuchsia::sysmem::BufferCollectionTokenSyncPtr Sysmem::CreateBufferCollection() {
   fuchsia::sysmem::BufferCollectionTokenSyncPtr local_token;
   zx_status_t status = sysmem_allocator_->AllocateSharedCollection(local_token.NewRequest());
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "CreateBufferCollection failed " << status;
+    FX_LOGS(ERROR) << "CreateBufferCollection failed " << status;
     return nullptr;
   }
   return local_token;
@@ -36,7 +36,7 @@ fuchsia::sysmem::BufferCollectionSyncPtr Sysmem::GetCollectionFromToken(
   zx_status_t status =
       sysmem_allocator_->BindSharedCollection(std::move(token), collection.NewRequest());
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "BindSharedCollection failed " << status;
+    FX_LOGS(ERROR) << "BindSharedCollection failed " << status;
     return nullptr;
   }
   return collection;

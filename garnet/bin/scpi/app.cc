@@ -87,13 +87,13 @@ zx_status_t App::Start() {
 
   fbl::unique_fd fd(open("/dev/class/thermal/000", O_RDWR));
   if (!fd.is_valid()) {
-    FXL_LOG(ERROR) << "Failed to open sensor " << errno;
+    FX_LOGS(ERROR) << "Failed to open sensor " << errno;
     return ZX_ERR_UNAVAILABLE;
   }
 
   status = fdio_get_service_handle(fd.release(), thermal_handle_.reset_and_get_address());
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to get handle for sensor " << errno;
+    FX_LOGS(ERROR) << "Failed to get handle for sensor " << errno;
     return ZX_ERR_UNAVAILABLE;
   }
 

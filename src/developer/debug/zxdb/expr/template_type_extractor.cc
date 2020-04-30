@@ -47,7 +47,7 @@ bool IsNamelikeToken(const ExprToken& token) {
 // previous token. The first_index is the index of the first token being considered for type
 // extraction (so we don't consider the boundary before this).
 bool NeedsSpaceBefore(const std::vector<ExprToken>& tokens, size_t first_index, size_t index) {
-  FXL_DCHECK(first_index <= index);
+  FX_DCHECK(first_index <= index);
   if (first_index == index)
     return false;  // Also catches index == 0.
 

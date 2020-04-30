@@ -52,7 +52,7 @@ PaperRenderer::PaperRenderer(EscherWeakPtr weak_escher, const PaperRendererConfi
       shadow_volume_geometry_program_(escher()->GetProgram(kShadowVolumeGeometryProgramData)),
       shadow_volume_geometry_debug_program_(
           escher()->GetProgram(kShadowVolumeGeometryDebugProgramData)) {
-  FXL_DCHECK(config.num_depth_buffers > 0);
+  FX_DCHECK(config.num_depth_buffers > 0);
   depth_buffers_.resize(config.num_depth_buffers);
   msaa_buffers_.resize(config.num_depth_buffers);
 }
@@ -130,16 +130,16 @@ PaperRenderer::FrameData::FrameData(const FramePtr& frame_in,
 PaperRenderer::FrameData::~FrameData() = default;
 
 void PaperRenderer::SetConfig(const PaperRendererConfig& config) {
-  FXL_DCHECK(!frame_data_) << "Illegal call to SetConfig() during a frame.";
-  FXL_DCHECK(SupportsShadowType(config.shadow_type))
+  FX_DCHECK(!frame_data_) << "Illegal call to SetConfig() during a frame.";
+  FX_DCHECK(SupportsShadowType(config.shadow_type))
       << "Unsupported shadow type: " << config.shadow_type;
-  FXL_DCHECK(config.num_depth_buffers > 0);
-  FXL_DCHECK(config.msaa_sample_count == 1 || config.msaa_sample_count == 2 ||
-             config.msaa_sample_count == 4);
+  FX_DCHECK(config.num_depth_buffers > 0);
+  FX_DCHECK(config.msaa_sample_count == 1 || config.msaa_sample_count == 2 ||
+            config.msaa_sample_count == 4);
 
   const auto& supported_sample_counts = escher()->device()->caps().msaa_sample_counts;
   if (supported_sample_counts.find(config.msaa_sample_count) == supported_sample_counts.end()) {
-    FXL_LOG(ERROR) << "PaperRenderer: MSAA sample count ("
+    FX_LOGS(ERROR) << "PaperRenderer: MSAA sample count ("
                    << static_cast<uint32_t>(config.msaa_sample_count)
                    << ") is not supported on this device. SetConfig failed.";
     return;
@@ -149,28 +149,28 @@ void PaperRenderer::SetConfig(const PaperRendererConfig& config) {
           ->caps()
           .GetMatchingDepthStencilFormat({config.depth_stencil_format})
           .result != vk::Result::eSuccess) {
-    FXL_LOG(ERROR) << "PaperRenderer: Depth stencil format ("
+    FX_LOGS(ERROR) << "PaperRenderer: Depth stencil format ("
                    << vk::to_string(config.depth_stencil_format)
                    << ") is not supported on this device. SetConfig failed.";
     return;
   }
 
   if (config.msaa_sample_count != config_.msaa_sample_count) {
-    FXL_VLOG(1) << "PaperRenderer: MSAA sample count set to: " << config.msaa_sample_count
+    FX_VLOGS(1) << "PaperRenderer: MSAA sample count set to: " << config.msaa_sample_count
                 << " (was: " << config_.msaa_sample_count << ")";
     depth_buffers_.clear();
     msaa_buffers_.clear();
   }
 
   if (config.depth_stencil_format != config_.depth_stencil_format) {
-    FXL_VLOG(1) << "PaperRenderer: depth_stencil_format set to: "
+    FX_VLOGS(1) << "PaperRenderer: depth_stencil_format set to: "
                 << vk::to_string(config.depth_stencil_format)
                 << " (was: " << vk::to_string(config_.depth_stencil_format) << ")";
     depth_buffers_.clear();
   }
 
   if (config.num_depth_buffers != config_.num_depth_buffers) {
-    FXL_VLOG(1) << "PaperRenderer: num_depth_buffers set to: " << config.num_depth_buffers
+    FX_VLOGS(1) << "PaperRenderer: num_depth_buffers set to: " << config.num_depth_buffers
                 << " (was: " << config_.num_depth_buffers << ")";
   }
   // This is done here (instead of the if-statement above) because there may
@@ -193,8 +193,8 @@ void PaperRenderer::BeginFrame(const FramePtr& frame, std::shared_ptr<BatchGpuUp
                                const PaperScenePtr& scene, const std::vector<Camera>& cameras,
                                const ImagePtr& output_image) {
   TRACE_DURATION("gfx", "PaperRenderer::BeginFrame");
-  FXL_DCHECK(!frame_data_) << "already in a frame.";
-  FXL_DCHECK(frame && uploader && scene && !cameras.empty() && output_image);
+  FX_DCHECK(!frame_data_) << "already in a frame.";
+  FX_DCHECK(frame && uploader && scene && !cameras.empty() && output_image);
 
   auto index = frame->frame_number() % depth_buffers_.size();
   TexturePtr& depth_texture = depth_buffers_[index];
@@ -236,8 +236,8 @@ void PaperRenderer::BeginFrame(const FramePtr& frame, std::shared_ptr<BatchGpuUp
 
 void PaperRenderer::FinalizeFrame() {
   TRACE_DURATION("gfx", "PaperRenderer::FinalizeFrame");
-  FXL_DCHECK(frame_data_);
-  FXL_DCHECK(!frame_data_->scene_finalized && frame_data_->gpu_uploader);
+  FX_DCHECK(frame_data_);
+  FX_DCHECK(!frame_data_->scene_finalized && frame_data_->gpu_uploader);
 
   // We may need to lazily instantiate |debug_font|, or delete it. If the former, this needs to be
   // done before we submit the GPU uploader's tasks.
@@ -271,8 +271,8 @@ void PaperRenderer::FinalizeFrame() {
 
 void PaperRenderer::EndFrame(const std::vector<SemaphorePtr>& upload_wait_semaphores) {
   TRACE_DURATION("gfx", "PaperRenderer::EndFrame");
-  FXL_DCHECK(frame_data_);
-  FXL_DCHECK(frame_data_->scene_finalized && !frame_data_->gpu_uploader);
+  FX_DCHECK(frame_data_);
+  FX_DCHECK(frame_data_->scene_finalized && !frame_data_->gpu_uploader);
 
   for (const SemaphorePtr& upload_wait_semaphore : upload_wait_semaphores) {
     frame_data_->frame->cmds()->AddWaitSemaphore(
@@ -294,7 +294,7 @@ void PaperRenderer::EndFrame(const std::vector<SemaphorePtr>& upload_wait_semaph
           GenerateCommandsForShadowVolumes(camera_index);
           break;
         default:
-          FXL_DCHECK(false) << "Unsupported shadow type: " << config_.shadow_type;
+          FX_DCHECK(false) << "Unsupported shadow type: " << config_.shadow_type;
           GenerateCommandsForNoShadows(camera_index);
       }
     }
@@ -310,8 +310,8 @@ void PaperRenderer::EndFrame(const std::vector<SemaphorePtr>& upload_wait_semaph
 }
 
 void PaperRenderer::DrawDebugText(std::string text, vk::Offset2D offset, int32_t scale) {
-  FXL_DCHECK(frame_data_);
-  FXL_DCHECK(!frame_data_->scene_finalized);
+  FX_DCHECK(frame_data_);
+  FX_DCHECK(!frame_data_->scene_finalized);
 
   // TODO(ES-245): Add error checking to make sure math will not cause negative
   // values or the bars to go off screen.
@@ -320,8 +320,8 @@ void PaperRenderer::DrawDebugText(std::string text, vk::Offset2D offset, int32_t
 
 void PaperRenderer::DrawVLine(escher::DebugRects::Color kColor, uint32_t x_coord, int32_t y_start,
                               uint32_t y_end, uint32_t thickness) {
-  FXL_DCHECK(frame_data_);
-  FXL_DCHECK(!frame_data_->scene_finalized);
+  FX_DCHECK(frame_data_);
+  FX_DCHECK(!frame_data_->scene_finalized);
 
   vk::Rect2D rect;
   vk::Offset2D offset = {static_cast<int32_t>(x_coord), y_start};
@@ -329,8 +329,8 @@ void PaperRenderer::DrawVLine(escher::DebugRects::Color kColor, uint32_t x_coord
 
   // Adds error checking to make sure math will not cause negative
   // values or the bars to go off screen.
-  FXL_DCHECK(extent.width >= 0 && extent.width < frame_data_->output_image->width());
-  FXL_DCHECK(extent.height >= 0 && extent.height < frame_data_->output_image->height());
+  FX_DCHECK(extent.width >= 0 && extent.width < frame_data_->output_image->width());
+  FX_DCHECK(extent.height >= 0 && extent.height < frame_data_->output_image->height());
 
   rect.offset = offset;
   rect.extent = extent;
@@ -340,8 +340,8 @@ void PaperRenderer::DrawVLine(escher::DebugRects::Color kColor, uint32_t x_coord
 
 void PaperRenderer::DrawHLine(escher::DebugRects::Color kColor, int32_t y_coord, int32_t x_start,
                               uint32_t x_end, int32_t thickness) {
-  FXL_DCHECK(frame_data_);
-  FXL_DCHECK(!frame_data_->scene_finalized);
+  FX_DCHECK(frame_data_);
+  FX_DCHECK(!frame_data_->scene_finalized);
 
   vk::Rect2D rect;
   vk::Offset2D offset = {x_start, static_cast<int32_t>(y_coord)};
@@ -349,8 +349,8 @@ void PaperRenderer::DrawHLine(escher::DebugRects::Color kColor, int32_t y_coord,
 
   // Adds error checking to make sure math will not cause negative
   // values or the bars to go off screen.
-  FXL_DCHECK(extent.width >= 0 && extent.width < frame_data_->output_image->width());
-  FXL_DCHECK(extent.height >= 0 && extent.height < frame_data_->output_image->height());
+  FX_DCHECK(extent.width >= 0 && extent.width < frame_data_->output_image->width());
+  FX_DCHECK(extent.height >= 0 && extent.height < frame_data_->output_image->height());
 
   rect.offset = offset;
   rect.extent = extent;
@@ -371,7 +371,7 @@ bool PaperRenderer::SupportsMaterial(const PaperMaterialPtr& material) {
     return false;
   }
   if (material->type() == Material::Type::kWireframe && !escher()->supports_wireframe()) {
-    FXL_LOG(ERROR) << "Device doesn't support feature fillModeNonSolid. "
+    FX_LOGS(ERROR) << "Device doesn't support feature fillModeNonSolid. "
                       "Draw Calls will not be enqueued.";
     return false;
   }
@@ -380,8 +380,8 @@ bool PaperRenderer::SupportsMaterial(const PaperMaterialPtr& material) {
 
 void PaperRenderer::Draw(PaperDrawable* drawable, PaperDrawableFlags flags) {
   TRACE_DURATION("gfx", "PaperRenderer::Draw");
-  FXL_DCHECK(frame_data_);
-  FXL_DCHECK(!frame_data_->scene_finalized);
+  FX_DCHECK(frame_data_);
+  FX_DCHECK(!frame_data_->scene_finalized);
 
   // For restoring state afterward.
   size_t transform_stack_size = transform_stack_.size();
@@ -394,10 +394,10 @@ void PaperRenderer::Draw(PaperDrawable* drawable, PaperDrawableFlags flags) {
 void PaperRenderer::DrawCircle(float radius, const PaperMaterialPtr& material,
                                PaperDrawableFlags flags) {
   TRACE_DURATION("gfx", "PaperRenderer::DrawCircle");
-  FXL_DCHECK(frame_data_);
-  FXL_DCHECK(!frame_data_->scene_finalized);
+  FX_DCHECK(frame_data_);
+  FX_DCHECK(!frame_data_->scene_finalized);
 
-  FXL_DCHECK(material);
+  FX_DCHECK(material);
   if (!SupportsMaterial(material)) {
     return;
   }
@@ -407,10 +407,10 @@ void PaperRenderer::DrawCircle(float radius, const PaperMaterialPtr& material,
 void PaperRenderer::DrawRect(vec2 min, vec2 max, const PaperMaterialPtr& material,
                              PaperDrawableFlags flags) {
   TRACE_DURATION("gfx", "PaperRenderer::DrawRect");
-  FXL_DCHECK(frame_data_);
-  FXL_DCHECK(!frame_data_->scene_finalized);
+  FX_DCHECK(frame_data_);
+  FX_DCHECK(!frame_data_->scene_finalized);
 
-  FXL_DCHECK(material);
+  FX_DCHECK(material);
   if (!SupportsMaterial(material)) {
     return;
   }
@@ -427,10 +427,10 @@ void PaperRenderer::DrawRect(float width, float height, const PaperMaterialPtr& 
 void PaperRenderer::DrawRoundedRect(const RoundedRectSpec& spec, const PaperMaterialPtr& material,
                                     PaperDrawableFlags flags) {
   TRACE_DURATION("gfx", "PaperRenderer::DrawRoundedRect");
-  FXL_DCHECK(frame_data_);
-  FXL_DCHECK(!frame_data_->scene_finalized);
+  FX_DCHECK(frame_data_);
+  FX_DCHECK(!frame_data_->scene_finalized);
 
-  FXL_DCHECK(material);
+  FX_DCHECK(material);
   if (!SupportsMaterial(material)) {
     return;
   }
@@ -440,15 +440,15 @@ void PaperRenderer::DrawRoundedRect(const RoundedRectSpec& spec, const PaperMate
 void PaperRenderer::DrawBoundingBox(const BoundingBox& box, const PaperMaterialPtr& material,
                                     PaperDrawableFlags flags) {
   TRACE_DURATION("gfx", "PaperRenderer::DrawBoundingBox");
-  FXL_DCHECK(frame_data_);
-  FXL_DCHECK(!frame_data_->scene_finalized);
+  FX_DCHECK(frame_data_);
+  FX_DCHECK(!frame_data_->scene_finalized);
 
-  FXL_DCHECK(material);
+  FX_DCHECK(material);
   if (!SupportsMaterial(material)) {
     return;
   }
   if (material->texture()) {
-    FXL_LOG(ERROR) << "TODO(ES-218): Box meshes do not currently support textures.";
+    FX_LOGS(ERROR) << "TODO(ES-218): Box meshes do not currently support textures.";
     return;
   }
 
@@ -461,10 +461,10 @@ void PaperRenderer::DrawBoundingBox(const BoundingBox& box, const PaperMaterialP
 void PaperRenderer::DrawMesh(const MeshPtr& mesh, const PaperMaterialPtr& material,
                              PaperDrawableFlags flags) {
   TRACE_DURATION("gfx", "PaperRenderer::DrawMesh");
-  FXL_DCHECK(frame_data_);
-  FXL_DCHECK(!frame_data_->scene_finalized);
+  FX_DCHECK(frame_data_);
+  FX_DCHECK(!frame_data_->scene_finalized);
 
-  FXL_DCHECK(material);
+  FX_DCHECK(material);
   if (!SupportsMaterial(material)) {
     return;
   }
@@ -483,7 +483,7 @@ void PaperRenderer::GenerateCommandsForNoShadows(uint32_t camera_index) {
   CommandBuffer* cmd_buf = frame->cmds();
 
   RenderPassInfo render_pass_info;
-  FXL_DCHECK(camera_index < frame_data_->cameras.size());
+  FX_DCHECK(camera_index < frame_data_->cameras.size());
   auto render_area = frame_data_->cameras[camera_index].rect;
   RenderPassInfo::InitRenderPassInfo(&render_pass_info, render_area, frame_data_->output_image,
                                      frame_data_->depth_texture, frame_data_->msaa_texture,
@@ -534,7 +534,7 @@ void PaperRenderer::GenerateCommandsForShadowVolumes(uint32_t camera_index) {
   CommandBuffer* cmd_buf = frame->cmds();
 
   RenderPassInfo render_pass_info;
-  FXL_DCHECK(camera_index < frame_data_->cameras.size());
+  FX_DCHECK(camera_index < frame_data_->cameras.size());
   auto render_area = frame_data_->cameras[camera_index].rect;
   RenderPassInfo::InitRenderPassInfo(&render_pass_info, render_area, frame_data_->output_image,
                                      frame_data_->depth_texture, frame_data_->msaa_texture,
@@ -658,7 +658,7 @@ void PaperRenderer::GenerateCommandsForShadowVolumes(uint32_t camera_index) {
 
     if (config_.debug) {
       if (!escher_->supports_wireframe()) {
-        FXL_LOG(WARNING) << "Wireframe not supported; cannot visualize shadow volume geometry.";
+        FX_LOGS(WARNING) << "Wireframe not supported; cannot visualize shadow volume geometry.";
       } else {
         context.set_draw_mode(PaperRendererDrawMode::kShadowVolumeGeometry);
         context.set_shader_program(shadow_volume_geometry_debug_program_);
@@ -699,7 +699,7 @@ void PaperRenderer::GenerateDebugCommands(CommandBuffer* cmd_buf) {
   auto target_layout = output_image->swapchain_layout();
 
   if (target_layout == vk::ImageLayout::eUndefined) {
-    FXL_LOG(WARNING) << "PaperRenderer::GenerateDebugCommands(): "
+    FX_LOGS(WARNING) << "PaperRenderer::GenerateDebugCommands(): "
                         "exiting due to undefined swapchain layout.";
     return;
   }
@@ -807,7 +807,7 @@ void PaperRenderer::WarmPipelineAndRenderPassCaches(
   impl::RenderPassPtr render_pass = WarmRenderPassCache(escher->render_pass_cache(), config,
                                                         output_format, output_swapchain_layout);
 
-  FXL_DCHECK(render_pass);
+  FX_DCHECK(render_pass);
   cbps.set_render_pass(render_pass.get());
 
   // Set up vertex buffer bindings, as well as bindings to attributes within those buffers.  Of
@@ -822,10 +822,10 @@ void PaperRenderer::WarmPipelineAndRenderPassCaches(
   // are required for the specified shader.
   // TODO(44898): once kShadowVolumeMeshSpec and kStandardMeshSpec are constexpr, we should be able
   // to use static_assert() here.
-  FXL_DCHECK(PaperShapeCache::kShadowVolumeMeshSpec().attributes[0] ==
-             PaperShapeCache::kStandardMeshSpec().attributes[0]);
-  FXL_DCHECK(PaperShapeCache::kShadowVolumeMeshSpec().attributes[1] ==
-             PaperShapeCache::kStandardMeshSpec().attributes[1]);
+  FX_DCHECK(PaperShapeCache::kShadowVolumeMeshSpec().attributes[0] ==
+            PaperShapeCache::kStandardMeshSpec().attributes[0]);
+  FX_DCHECK(PaperShapeCache::kShadowVolumeMeshSpec().attributes[1] ==
+            PaperShapeCache::kStandardMeshSpec().attributes[1]);
 
   switch (config.shadow_type) {
     case PaperRendererShadowType::kNone: {
@@ -919,7 +919,7 @@ void PaperRenderer::WarmPipelineAndRenderPassCaches(
     } break;
     case PaperRendererShadowType::kEnumCount:
     default:
-      FXL_CHECK(false) << "unhandled shadow type";
+      FX_CHECK(false) << "unhandled shadow type";
   }
 }
 

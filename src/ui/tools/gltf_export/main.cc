@@ -87,7 +87,7 @@ class SnapshotTaker {
     // Connect to the Scenic service.
     scenic_ = context_->svc()->Connect<fuchsia::ui::scenic::Scenic>();
     scenic_.set_error_handler([this](zx_status_t status) {
-      FXL_LOG(ERROR) << "Lost connection to Scenic service.";
+      FX_LOGS(ERROR) << "Lost connection to Scenic service.";
       encountered_error_ = true;
       loop_->Quit();
     });
@@ -95,7 +95,7 @@ class SnapshotTaker {
     // Connect to the internal snapshot service.
     snapshotter_ = context_->svc()->Connect<fuchsia::ui::scenic::internal::Snapshot>();
     snapshotter_.set_error_handler([this](zx_status_t status) {
-      FXL_LOG(ERROR) << "Lost connection to Snapshot service.";
+      FX_LOGS(ERROR) << "Lost connection to Snapshot service.";
       encountered_error_ = true;
       loop_->Quit();
     });
@@ -113,20 +113,20 @@ class SnapshotTaker {
       snapshotter_->TakeSnapshot(
           [this](std::vector<fuchsia::ui::scenic::internal::SnapshotResult> results) {
             if (results.size() == 0) {
-              FXL_LOG(INFO) << "No compositors found.";
+              FX_LOGS(INFO) << "No compositors found.";
               loop_->Quit();
             }
 
             // Although multiple results can be returned, one for each compositor, the glTF exporter
             // currently only makes use of the first compositor that is found.
             if (results.size() > 1) {
-              FXL_LOG(WARNING) << "Multiple snapshot buffers were returned, but glTF exporter is "
+              FX_LOGS(WARNING) << "Multiple snapshot buffers were returned, but glTF exporter is "
                                   "only using the first one.";
             }
 
             const auto &result = results[0];
             if (!result.success) {
-              FXL_LOG(ERROR) << "Snapshot was not successful.";
+              FX_LOGS(ERROR) << "Snapshot was not successful.";
               encountered_error_ = true;
               loop_->Quit();
             }
@@ -134,7 +134,7 @@ class SnapshotTaker {
             const auto &buffer = result.buffer;
             std::vector<uint8_t> data;
             if (!fsl::VectorFromVmo(buffer, &data)) {
-              FXL_LOG(ERROR) << "TakeSnapshot failed";
+              FX_LOGS(ERROR) << "TakeSnapshot failed";
               encountered_error_ = true;
               loop_->Quit();
               return;
@@ -144,7 +144,7 @@ class SnapshotTaker {
             auto snapshot = (const SnapshotData *)data.data();
             if (snapshot->type != SnapshotData::SnapshotType::kFlatBuffer ||
                 snapshot->version != SnapshotData::SnapshotVersion::v1_0) {
-              FXL_LOG(ERROR) << "Invalid snapshot format encountered. Aborting.";
+              FX_LOGS(ERROR) << "Invalid snapshot format encountered. Aborting.";
               encountered_error_ = true;
               loop_->Quit();
               return;
@@ -386,7 +386,7 @@ class SnapshotTaker {
       const uint8_t *bytes = image->data()->Data();
       std::vector<uint8_t> out;
       if (!RawToPNG(image->width(), image->height(), bytes, out)) {
-        FXL_LOG(FATAL) << "Unable to convert to PNG";
+        FX_LOGS(FATAL) << "Unable to convert to PNG";
         return -1;
       }
       // Encode to base64.
@@ -447,7 +447,7 @@ int main(int argc, const char **argv) {
 
   const auto &positional_args = command_line.positional_args();
   if (positional_args.size() != 0) {
-    FXL_LOG(ERROR) << "Usage: gltf_export\n"
+    FX_LOGS(ERROR) << "Usage: gltf_export\n"
                    << "Takes a snapshot in glTF format and writes it to stdout.\n"
                    << "To write to a file, redirect stdout, e.g.: "
                    << "gltf_export > \"${DST}\"";
@@ -475,7 +475,7 @@ bool RawToPNG(size_t width, size_t height, const uint8_t *data, std::vector<uint
 
   if (setjmp(png_jmpbuf(png_ptr))) {
     png_destroy_write_struct(&png_ptr, NULL);
-    FXL_LOG(ERROR) << "Unable to create write struct";
+    FX_LOGS(ERROR) << "Unable to create write struct";
     return false;
   }
 
@@ -501,7 +501,7 @@ bool RawToPNG(size_t width, size_t height, const uint8_t *data, std::vector<uint
 
   if (setjmp(png_jmpbuf(png_ptr))) {
     png_destroy_write_struct(&png_ptr, NULL);
-    FXL_LOG(ERROR) << "Unable to create write png";
+    FX_LOGS(ERROR) << "Unable to create write png";
     return false;
   }
 

@@ -39,7 +39,7 @@ namespace impl {
 
 void GenerateShaderModuleResourceLayoutFromSpirv(std::vector<uint32_t> spirv, ShaderStage stage,
                                                  ShaderModuleResourceLayout* layout) {
-  FXL_DCHECK(layout);
+  FX_DCHECK(layout);
 
   // Clear layout before populating it.
   *layout = {};
@@ -118,7 +118,7 @@ void GenerateShaderModuleResourceLayoutFromSpirv(std::vector<uint32_t> spirv, Sh
     // that we write will have multiple blocks per module, we assume that there is
     // at most one to simplify the following implementation. It is possible that in
     // the future we may wish to change this.
-    FXL_DCHECK(resources.push_constant_buffers.size() == 1);
+    FX_DCHECK(resources.push_constant_buffers.size() == 1);
 
     // Need to declare the entire block.
     // Get the type for the current push constant range (e.g. vertex, fragment, etc).

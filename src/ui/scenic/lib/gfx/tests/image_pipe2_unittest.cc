@@ -83,7 +83,7 @@ void SetConstraints(fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
         image_constraints.color_space[0].type = fuchsia::sysmem::ColorSpaceType::REC709;
         break;
       default:
-        FXL_NOTREACHED();
+        FX_NOTREACHED();
     }
   }
 
@@ -179,7 +179,7 @@ class ImagePipe2ThatCreatesFakeImages : public ImagePipe2 {
     }
     escher::ImagePtr escher_image = escher::Image::WrapVkImage(
         fake_resource_manager_, escher_info, vk::Image(), vk::ImageLayout::eUndefined);
-    FXL_CHECK(escher_image);
+    FX_CHECK(escher_image);
     auto image = fxl::AdoptRef(new FakeImage(session, image_id, escher_image));
     fake_images_.push_back(image);
     return image;

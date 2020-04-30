@@ -30,7 +30,7 @@ void PaperRendererTest::SetUp() {
   auto depth_stencil_format = escher()->device()->caps().GetMatchingDepthStencilFormat();
   if (depth_stencil_format.result == vk::Result::eSuccess) {
     config.depth_stencil_format = depth_stencil_format.value;
-    FXL_LOG(INFO) << "Depth stencil format set to " << vk::to_string(config.depth_stencil_format);
+    FX_LOGS(INFO) << "Depth stencil format set to " << vk::to_string(config.depth_stencil_format);
   } else {
     GTEST_SKIP() << "Cannot find a valid depth stencil format, test skipped";
   }

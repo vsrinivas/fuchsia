@@ -89,7 +89,7 @@ void ServiceProviderDirImpl::AddBinding(
 
 void ServiceProviderDirImpl::ConnectToService(std::string service_name, zx::channel channel) {
   if (!IsServiceWhitelisted(service_name)) {
-    FXL_LOG(WARNING) << ServiceNotInSandbox(component_url_, service_name);
+    FX_LOGS(WARNING) << ServiceNotInSandbox(component_url_, service_name);
     return;
   }
   fbl::RefPtr<fs::Vnode> child;
@@ -97,10 +97,10 @@ void ServiceProviderDirImpl::ConnectToService(std::string service_name, zx::chan
   if (status == ZX_OK) {
     status = vfs_.Serve(child, std::move(channel), fs::VnodeConnectionOptions());
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << ErrorServingService(component_url_, service_name, status);
+      FX_LOGS(ERROR) << ErrorServingService(component_url_, service_name, status);
     }
   } else {
-    FXL_LOG(ERROR) << ErrorServingService(component_url_, service_name, status);
+    FX_LOGS(ERROR) << ErrorServingService(component_url_, service_name, status);
   }
 }
 
@@ -127,7 +127,7 @@ fs::VnodeProtocolSet ServiceProviderDirImpl::GetProtocols() const {
 zx_status_t ServiceProviderDirImpl::Lookup(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name) {
   const std::string sname(name.data(), name.length());
   if (!IsServiceWhitelisted(sname)) {
-    FXL_LOG(WARNING) << ServiceNotInSandbox(component_url_, sname);
+    FX_LOGS(WARNING) << ServiceNotInSandbox(component_url_, sname);
   }
   return root_->Lookup(out, name);
 }

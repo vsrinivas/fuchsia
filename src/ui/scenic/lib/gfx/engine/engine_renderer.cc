@@ -38,7 +38,7 @@ static_assert(std::is_same<zx_time_t, int64_t>::value,
 namespace {
 // Format used for intermediate layers when we're rendering more than one layer.
 constexpr vk::Format kIntermediateLayerFormat = vk::Format::eB8G8R8A8Srgb;
-}
+}  // namespace
 
 namespace scenic_impl {
 namespace gfx {
@@ -64,7 +64,7 @@ void EngineRenderer::RenderLayers(const escher::FramePtr& frame, zx::time target
   TRACE_DURATION("gfx", "EngineRenderer::RenderLayers");
 
   // Check that we are working with a protected framebuffer.
-  FXL_DCHECK(render_target.output_image->use_protected_memory() == frame->use_protected_memory());
+  FX_DCHECK(render_target.output_image->use_protected_memory() == frame->use_protected_memory());
 
   // Render each layer, except the bottom one. Create an escher::Object for
   // each layer, which will be composited as part of rendering the final
@@ -111,7 +111,7 @@ void EngineRenderer::RenderLayers(const escher::FramePtr& frame, zx::time target
 
   // TODO(SCN-1270): add support for multiple layers.
   if (layers.size() > 1) {
-    FXL_LOG(ERROR) << "EngineRenderer::RenderLayers(): only a single Layer is supported.";
+    FX_LOGS(ERROR) << "EngineRenderer::RenderLayers(): only a single Layer is supported.";
     overlay_objects.clear();
   }
 
@@ -143,14 +143,14 @@ static escher::PaperRendererShadowType GetPaperRendererShadowType(
 void EngineRenderer::DrawLayer(const escher::FramePtr& frame, zx::time target_presentation_time,
                                Layer* layer, const RenderTarget& render_target,
                                const escher::Model& overlay_model) {
-  FXL_DCHECK(layer->IsDrawable());
+  FX_DCHECK(layer->IsDrawable());
   float stage_width = static_cast<float>(render_target.output_image->width());
   float stage_height = static_cast<float>(render_target.output_image->height());
 
   if (layer->size().x != stage_width || layer->size().y != stage_height) {
     // TODO(SCN-248): Should be able to render into a viewport of the
     // output image, but we're not that fancy yet.
-    FXL_LOG(ERROR) << "TODO(SCN-248): scenic::gfx::EngineRenderer::DrawLayer(): layer size of "
+    FX_LOGS(ERROR) << "TODO(SCN-248): scenic::gfx::EngineRenderer::DrawLayer(): layer size of "
                    << layer->size().x << "x" << layer->size().y
                    << " does not match output image size of " << stage_width << "x" << stage_height
                    << "... not drawing.";
@@ -166,7 +166,7 @@ void EngineRenderer::DrawLayer(const escher::FramePtr& frame, zx::time target_pr
     case escher::PaperRendererShadowType::kShadowVolume:
       break;
     default:
-      FXL_LOG(WARNING) << "EngineRenderer does not support "
+      FX_LOGS(WARNING) << "EngineRenderer does not support "
                        << layer->renderer()->shadow_technique() << "; using UNSHADOWED.";
       shadow_type = escher::PaperRendererShadowType::kNone;
   }
@@ -237,7 +237,7 @@ void EngineRenderer::DrawLayerWithPaperRenderer(const escher::FramePtr& frame,
 
   // Set up ambient light.
   if (scene->ambient_lights().empty()) {
-    FXL_LOG(WARNING) << "scenic_impl::gfx::EngineRenderer: scene has no ambient light.";
+    FX_LOGS(WARNING) << "scenic_impl::gfx::EngineRenderer: scene has no ambient light.";
     paper_scene->ambient_light.color = escher::vec3(0, 0, 0);
   } else {
     paper_scene->ambient_light.color = scene->ambient_lights()[0]->color();
@@ -275,7 +275,7 @@ void EngineRenderer::DrawLayerWithPaperRenderer(const escher::FramePtr& frame,
   visitor.Visit(camera->scene().get());
 
   // TODO(SCN-1270): support for multiple layers.
-  FXL_DCHECK(overlay_model.objects().empty());
+  FX_DCHECK(overlay_model.objects().empty());
 
   paper_renderer_->FinalizeFrame();
 
@@ -340,7 +340,7 @@ escher::ImagePtr EngineRenderer::GetLayerFramebufferImage(uint32_t width, uint32
 
 escher::MaterialPtr EngineRenderer::GetReplacementMaterial(escher::BatchGpuUploader* gpu_uploader) {
   if (!replacement_material_) {
-    FXL_DCHECK(escher_);
+    FX_DCHECK(escher_);
     // Fuchsia color.
     uint8_t channels[4];
     channels[0] = channels[2] = channels[3] = 255;

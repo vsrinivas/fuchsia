@@ -16,7 +16,7 @@ namespace internal {
 
 void EventRegistry::RegisterEvents(const char* model_name, const char* group_name,
                                    const EventDetails* events, size_t count) {
-  FXL_VLOG(1) << "Registering " << model_name << " " << group_name << " events";
+  FX_VLOGS(1) << "Registering " << model_name << " " << group_name << " events";
 
   ModelEvents& model_events = (*this)[model_name];
   ModelEventManager::EventTable* table = nullptr;
@@ -30,7 +30,7 @@ void EventRegistry::RegisterEvents(const char* model_name, const char* group_nam
   } else if (strcmp(group_name, kMiscGroupName) == 0) {
     table = &model_events.misc_events;
   }
-  FXL_CHECK(table != nullptr);
+  FX_CHECK(table != nullptr);
 
   table->reserve(table->size() + count);
 

@@ -50,7 +50,7 @@ uint64_t GetRegisterValue(const std::vector<debug_ipc::Register>& general_regist
 void MemoryDumpToVector(const zxdb::MemoryDump& dump, std::vector<uint8_t>* output_vector) {
   output_vector->reserve(dump.size());
   for (const debug_ipc::MemoryBlock& block : dump.blocks()) {
-    FXL_DCHECK(block.valid);
+    FX_DCHECK(block.valid);
     for (size_t offset = 0; offset < block.size; ++offset) {
       output_vector->push_back(block.data[offset]);
     }
@@ -62,7 +62,7 @@ void SyscallUse::SyscallInputsDecoded(SyscallDecoder* decoder) {}
 void SyscallUse::SyscallOutputsDecoded(SyscallDecoder* decoder) {}
 
 void SyscallUse::SyscallDecodingError(const DecoderError& error, SyscallDecoder* decoder) {
-  FXL_LOG(ERROR) << error.message();
+  FX_LOGS(ERROR) << error.message();
   decoder->Destroy();
 }
 
@@ -152,7 +152,7 @@ void SyscallDecoder::DoDecode() {
   }
   const std::vector<debug_ipc::Register>* general_registers =
       thread->GetStack()[0]->GetRegisterCategorySync(debug_ipc::RegisterCategory::kGeneral);
-  FXL_DCHECK(general_registers);  // General registers should always be available synchronously.
+  FX_DCHECK(general_registers);  // General registers should always be available synchronously.
 
   // The order of parameters in the System V AMD64 ABI we use, according to
   // Wikipedia:
@@ -315,17 +315,17 @@ void SyscallDecoder::DecodeInputs() {
     for (const auto& input : syscall_->inputs()) {
       if (input->InlineValue()) {
         if (input->ConditionsAreTrue(this, Stage::kEntry)) {
-          FXL_DCHECK(inline_member != syscall_->input_inline_members().end());
+          FX_DCHECK(inline_member != syscall_->input_inline_members().end());
           std::unique_ptr<fidl_codec::Value> value = input->GenerateValue(this, Stage::kEntry);
-          FXL_DCHECK(value != nullptr);
+          FX_DCHECK(value != nullptr);
           invoked_event_->AddInlineField(inline_member->get(), std::move(value));
         }
         ++inline_member;
       } else {
         if (input->ConditionsAreTrue(this, Stage::kEntry)) {
-          FXL_DCHECK(outline_member != syscall_->input_outline_members().end());
+          FX_DCHECK(outline_member != syscall_->input_outline_members().end());
           std::unique_ptr<fidl_codec::Value> value = input->GenerateValue(this, Stage::kEntry);
-          FXL_DCHECK(value != nullptr);
+          FX_DCHECK(value != nullptr);
           invoked_event_->AddOutlineField(outline_member->get(), std::move(value));
         }
         ++outline_member;
@@ -366,7 +366,7 @@ void SyscallDecoder::LoadSyscallReturnValue() {
   }
   const std::vector<debug_ipc::Register>* general_registers =
       thread->GetStack()[0]->GetRegisterCategorySync(debug_ipc::RegisterCategory::kGeneral);
-  FXL_DCHECK(general_registers);  // General registers should always be available synchronously.
+  FX_DCHECK(general_registers);  // General registers should always be available synchronously.
 
   debug_ipc::RegisterID result_register = (arch_ == debug_ipc::Arch::kX64)
                                               ? debug_ipc::RegisterID::kX64_rax
@@ -432,18 +432,18 @@ void SyscallDecoder::DecodeOutputs() {
       if (output->InlineValue()) {
         if ((output->error_code() == static_cast<zx_status_t>(syscall_return_value_)) &&
             (output->ConditionsAreTrue(this, Stage::kExit))) {
-          FXL_DCHECK(inline_member != syscall_->output_inline_members().end());
+          FX_DCHECK(inline_member != syscall_->output_inline_members().end());
           std::unique_ptr<fidl_codec::Value> value = output->GenerateValue(this, Stage::kExit);
-          FXL_DCHECK(value != nullptr);
+          FX_DCHECK(value != nullptr);
           output_event_->AddInlineField(inline_member->get(), std::move(value));
         }
         ++inline_member;
       } else {
         if ((output->error_code() == static_cast<zx_status_t>(syscall_return_value_)) &&
             (output->ConditionsAreTrue(this, Stage::kExit))) {
-          FXL_DCHECK(outline_member != syscall_->output_outline_members().end());
+          FX_DCHECK(outline_member != syscall_->output_outline_members().end());
           std::unique_ptr<fidl_codec::Value> value = output->GenerateValue(this, Stage::kExit);
-          FXL_DCHECK(value != nullptr);
+          FX_DCHECK(value != nullptr);
           output_event_->AddOutlineField(outline_member->get(), std::move(value));
         }
         ++outline_member;

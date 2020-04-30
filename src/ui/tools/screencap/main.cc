@@ -25,7 +25,7 @@ class ScreenshotTaker {
     auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
     scenic_ = context->svc()->Connect<fuchsia::ui::scenic::Scenic>();
     scenic_.set_error_handler([this](zx_status_t status) {
-      FXL_LOG(ERROR) << "Lost connection to Scenic service.";
+      FX_LOGS(ERROR) << "Lost connection to Scenic service.";
       encountered_error_ = true;
       loop_->Quit();
     });
@@ -34,7 +34,7 @@ class ScreenshotTaker {
   bool encountered_error() const { return encountered_error_; }
 
   void TakeScreenshot() {
-    FXL_LOG(INFO) << "start TakeScreenshot";
+    FX_LOGS(INFO) << "start TakeScreenshot";
     // If we wait for a call back from GetDisplayInfo, we are guaranteed that
     // the GFX system is initialized, which is a prerequisite for taking a
     // screenshot. TODO(SCN-678): Remove call to GetDisplayInfo once bug done.
@@ -44,12 +44,12 @@ class ScreenshotTaker {
 
  private:
   void TakeScreenshotInternal() {
-    FXL_LOG(INFO) << "start TakeScreenshotInternal";
+    FX_LOGS(INFO) << "start TakeScreenshotInternal";
     scenic_->TakeScreenshot([this](fuchsia::ui::scenic::ScreenshotData screenshot, bool status) {
-      FXL_LOG(INFO) << "start pixel capture";
+      FX_LOGS(INFO) << "start pixel capture";
       std::vector<uint8_t> imgdata;
       if (!status || !fsl::VectorFromVmo(screenshot.data, &imgdata)) {
-        FXL_LOG(ERROR) << "TakeScreenshot failed";
+        FX_LOGS(ERROR) << "TakeScreenshot failed";
         encountered_error_ = true;
         loop_->Quit();
         return;
@@ -60,7 +60,7 @@ class ScreenshotTaker {
       std::cout << screenshot.info.height << "\n";
       std::cout << 255 << "\n";
 
-      FXL_LOG(INFO) << "capturing pixels";
+      FX_LOGS(INFO) << "capturing pixels";
       const uint8_t* pchannel = &imgdata[0];
       for (uint32_t pixel = 0; pixel < screenshot.info.width * screenshot.info.height; pixel++) {
         uint8_t rgb[] = {pchannel[2], pchannel[1], pchannel[0]};
@@ -76,13 +76,13 @@ class ScreenshotTaker {
 };
 
 int main(int argc, const char** argv) {
-  FXL_LOG(INFO) << "starting screen capture";
+  FX_LOGS(INFO) << "starting screen capture";
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   if (!fxl::SetLogSettingsFromCommandLine(command_line))
     return 1;
 
   if (!command_line.positional_args().empty()) {
-    FXL_LOG(ERROR) << "Usage: screencap\n"
+    FX_LOGS(ERROR) << "Usage: screencap\n"
                    << "Takes a screenshot in PPM format and writes it "
                    << "to stdout.\n"
                    << "To write to a file, redirect stdout, e.g.: "

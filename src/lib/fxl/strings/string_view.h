@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_FXL_STRINGS_STRING_VIEW_H_
-#define LIB_FXL_STRINGS_STRING_VIEW_H_
+#ifndef SRC_LIB_FXL_STRINGS_STRING_VIEW_H_
+#define SRC_LIB_FXL_STRINGS_STRING_VIEW_H_
 
 #include <iosfwd>
 #include <string>
@@ -79,12 +79,12 @@ class StringView {
     size_ = 0;
   }
   CONSTEXPR_IN_CPP14 void remove_prefix(size_t n) {
-    FXL_DCHECK(n <= size_);
+    FX_DCHECK(n <= size_);
     data_ += n;
     size_ -= n;
   }
   CONSTEXPR_IN_CPP14 void remove_suffix(size_t n) {
-    FXL_DCHECK(n <= size_);
+    FX_DCHECK(n <= size_);
     size_ -= n;
   }
   CONSTEXPR_IN_CPP14 void swap(StringView& other) {
@@ -148,4 +148,4 @@ std::ostream& operator<<(std::ostream& o, StringView string_view);
 
 }  // namespace fxl
 
-#endif  // LIB_FXL_STRINGS_STRING_VIEW_H_
+#endif  // SRC_LIB_FXL_STRINGS_STRING_VIEW_H_

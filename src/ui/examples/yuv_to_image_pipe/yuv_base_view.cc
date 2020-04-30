@@ -34,7 +34,7 @@ fuchsia::sysmem::ColorSpaceType DefaultColorSpaceForPixelFormat(
     case fuchsia::sysmem::PixelFormatType::R8G8B8A8:
       return fuchsia::sysmem::ColorSpaceType::SRGB;
     default:
-      FXL_NOTREACHED() << "Pixel format not supported.";
+      FX_NOTREACHED() << "Pixel format not supported.";
   }
   return fuchsia::sysmem::ColorSpaceType::INVALID;
 }
@@ -48,7 +48,7 @@ uint32_t StrideBytesPerWidthPixel(fuchsia::sysmem::PixelFormatType pixel_format)
     case fuchsia::sysmem::PixelFormatType::R8G8B8A8:
       return 4u;
     default:
-      FXL_NOTREACHED() << "Pixel format not supported.";
+      FX_NOTREACHED() << "Pixel format not supported.";
   }
   return 0;
 }
@@ -60,7 +60,7 @@ YuvBaseView::YuvBaseView(scenic::ViewContext context, fuchsia::sysmem::PixelForm
       node_(session()),
       pixel_format_(pixel_format),
       stride_(static_cast<uint32_t>(kShapeWidth * StrideBytesPerWidthPixel(pixel_format_))) {
-  FXL_VLOG(4) << "Creating View";
+  FX_VLOGS(4) << "Creating View";
 
   // Create an ImagePipe and use it.
   uint32_t image_pipe_id = session()->AllocResourceId();
@@ -85,7 +85,7 @@ YuvBaseView::YuvBaseView(scenic::ViewContext context, fuchsia::sysmem::PixelForm
   InvalidateScene();
 
   zx_status_t status = component_context()->svc()->Connect(sysmem_allocator_.NewRequest());
-  FXL_CHECK(status == ZX_OK);
+  FX_CHECK(status == ZX_OK);
 }
 
 uint32_t YuvBaseView::AddImage() {
@@ -93,12 +93,12 @@ uint32_t YuvBaseView::AddImage() {
 
   fuchsia::sysmem::BufferCollectionTokenSyncPtr local_token;
   zx_status_t status = sysmem_allocator_->AllocateSharedCollection(local_token.NewRequest());
-  FXL_CHECK(status == ZX_OK);
+  FX_CHECK(status == ZX_OK);
   fuchsia::sysmem::BufferCollectionTokenSyncPtr scenic_token;
   status = local_token->Duplicate(std::numeric_limits<uint32_t>::max(), scenic_token.NewRequest());
-  FXL_CHECK(status == ZX_OK);
+  FX_CHECK(status == ZX_OK);
   status = local_token->Sync();
-  FXL_CHECK(status == ZX_OK);
+  FX_CHECK(status == ZX_OK);
 
   // Use |next_image_id_| as buffer_id.
   image_pipe_->AddBufferCollection(next_image_id_, std::move(scenic_token));
@@ -106,7 +106,7 @@ uint32_t YuvBaseView::AddImage() {
   fuchsia::sysmem::BufferCollectionSyncPtr buffer_collection;
   status = sysmem_allocator_->BindSharedCollection(std::move(local_token),
                                                    buffer_collection.NewRequest());
-  FXL_CHECK(status == ZX_OK);
+  FX_CHECK(status == ZX_OK);
 
   fuchsia::sysmem::BufferCollectionConstraints constraints;
   constraints.min_buffer_count = 1;
@@ -129,16 +129,16 @@ uint32_t YuvBaseView::AddImage() {
   image_constraints.color_spaces_count = 1;
   image_constraints.color_space[0].type = DefaultColorSpaceForPixelFormat(pixel_format_);
   status = buffer_collection->SetConstraints(true, constraints);
-  FXL_CHECK(status == ZX_OK);
+  FX_CHECK(status == ZX_OK);
 
   zx_status_t allocation_status = ZX_OK;
   fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info = {};
   status = buffer_collection->WaitForBuffersAllocated(&allocation_status, &buffer_collection_info);
-  FXL_CHECK(status == ZX_OK);
-  FXL_CHECK(allocation_status == ZX_OK);
-  FXL_CHECK(buffer_collection_info.buffers[0].vmo != ZX_HANDLE_INVALID);
-  FXL_CHECK(buffer_collection_info.settings.image_format_constraints.pixel_format.type ==
-            image_constraints.pixel_format.type);
+  FX_CHECK(status == ZX_OK);
+  FX_CHECK(allocation_status == ZX_OK);
+  FX_CHECK(buffer_collection_info.buffers[0].vmo != ZX_HANDLE_INVALID);
+  FX_CHECK(buffer_collection_info.settings.image_format_constraints.pixel_format.type ==
+           image_constraints.pixel_format.type);
   const bool needs_flush = buffer_collection_info.settings.buffer_settings.coherency_domain ==
                            fuchsia::sysmem::CoherencyDomain::RAM;
 
@@ -146,12 +146,12 @@ uint32_t YuvBaseView::AddImage() {
   image_format.coded_width = kShapeWidth;
   image_format.coded_height = kShapeHeight;
   image_pipe_->AddImage(next_image_id_, next_image_id_, 0, image_format);
-  FXL_CHECK(allocation_status == ZX_OK);
+  FX_CHECK(allocation_status == ZX_OK);
 
   uint8_t* vmo_base;
   const zx::vmo& image_vmo = buffer_collection_info.buffers[0].vmo;
   auto image_vmo_bytes = buffer_collection_info.settings.buffer_settings.size_bytes;
-  FXL_CHECK(image_vmo_bytes > 0);
+  FX_CHECK(image_vmo_bytes > 0);
   status = zx::vmar::root_self()->map(0, image_vmo, 0, image_vmo_bytes,
                                       ZX_VM_PERM_WRITE | ZX_VM_PERM_READ,
                                       reinterpret_cast<uintptr_t*>(&vmo_base));
@@ -165,7 +165,7 @@ uint32_t YuvBaseView::AddImage() {
 }
 
 void YuvBaseView::PaintImage(uint32_t image_id, uint8_t pixel_multiplier) {
-  FXL_CHECK(image_vmos_.count(image_id));
+  FX_CHECK(image_vmos_.count(image_id));
 
   const ImageVmo& image_vmo = image_vmos_.find(image_id)->second;
   SetVmoPixels(image_vmo.vmo_ptr, pixel_multiplier);
@@ -176,7 +176,7 @@ void YuvBaseView::PaintImage(uint32_t image_id, uint8_t pixel_multiplier) {
 }
 
 void YuvBaseView::PresentImage(uint32_t image_id) {
-  FXL_CHECK(image_vmos_.count(image_id));
+  FX_CHECK(image_vmos_.count(image_id));
   TRACE_DURATION("gfx", "YuvBaseView::PresentImage");
 
   std::vector<zx::event> acquire_fences;
@@ -204,7 +204,7 @@ void YuvBaseView::SetVmoPixels(uint8_t* vmo_base, uint8_t pixel_multiplier) {
       SetNv12Pixels(vmo_base, pixel_multiplier);
       break;
     default:
-      FXL_NOTREACHED() << "Pixel format not supported.";
+      FX_NOTREACHED() << "Pixel format not supported.";
   }
 }
 

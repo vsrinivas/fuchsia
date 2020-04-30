@@ -4,10 +4,11 @@
 
 #include "src/virtualization/lib/vsh/util.h"
 
-#include <google/protobuf/message_lite.h>
 #include <zircon/status.h>
 
 #include <iostream>
+
+#include <google/protobuf/message_lite.h>
 
 #include "src/lib/fxl/logging.h"
 
@@ -22,13 +23,13 @@ bool SendAllBytes(const zx::socket& socket, const uint8_t* buf, uint32_t buf_siz
 
   status = socket.write(0, reinterpret_cast<char*>(&msg_size), sizeof(msg_size), &actual);
   if (status != ZX_OK || actual != sizeof(msg_size)) {
-    FXL_LOG(ERROR) << "Failed to write message size to socket";
+    FX_LOGS(ERROR) << "Failed to write message size to socket";
     return false;
   }
 
   status = socket.write(0, buf, buf_size, &actual);
   if (status != ZX_OK || actual != buf_size) {
-    FXL_LOG(ERROR) << "Failed to write full message to socket";
+    FX_LOGS(ERROR) << "Failed to write full message to socket";
     return false;
   }
 
@@ -38,14 +39,14 @@ bool SendAllBytes(const zx::socket& socket, const uint8_t* buf, uint32_t buf_siz
 bool SendMessage(const zx::socket& socket, const MessageLite& message) {
   size_t msg_size = message.ByteSizeLong();
   if (msg_size > kMaxMessageSize) {
-    FXL_LOG(ERROR) << "Serialized message too large: " << msg_size;
+    FX_LOGS(ERROR) << "Serialized message too large: " << msg_size;
     return false;
   }
 
   uint8_t buf[kMaxMessageSize];
 
   if (!message.SerializeToArray(buf, sizeof(buf))) {
-    FXL_LOG(ERROR) << "Failed to serialize message";
+    FX_LOGS(ERROR) << "Failed to serialize message";
     return false;
   }
 
@@ -62,7 +63,7 @@ ssize_t RecvSockBlocking(const zx::socket& socket, uint8_t* buf, uint32_t buf_si
     status =
         socket.wait_one(ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED, zx::time::infinite(), nullptr);
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Something happened to the socket while waiting: "
+      FX_LOGS(ERROR) << "Something happened to the socket while waiting: "
                      << zx_status_get_string(status);
       return -1;
     }
@@ -71,7 +72,7 @@ ssize_t RecvSockBlocking(const zx::socket& socket, uint8_t* buf, uint32_t buf_si
     if (status != ZX_OK) {
       // Only non-failure cases are ZX_OK and ZX_ERR_SHOULD_WAIT.
       // Clearly we did wait, so there must be another issue.
-      FXL_LOG(ERROR) << "Failed to read from socket (" << zx_status_get_string(status) << ") with "
+      FX_LOGS(ERROR) << "Failed to read from socket (" << zx_status_get_string(status) << ") with "
                      << bytes_left << " bytes left.";
       return -1;
     }
@@ -95,7 +96,7 @@ ssize_t RecvAllBytes(const zx::socket& socket, uint8_t* buf, uint32_t buf_size) 
   msg_size = le32toh(msg_size);
 
   if (buf_size < msg_size) {
-    FXL_LOG(ERROR) << "Message size of " << msg_size << " exceeds buffer size of " << buf_size;
+    FX_LOGS(ERROR) << "Message size of " << msg_size << " exceeds buffer size of " << buf_size;
     return -1;
   }
 
@@ -113,7 +114,7 @@ bool RecvMessage(const zx::socket& socket, MessageLite* message) {
   }
 
   if (!message->ParseFromArray(buf, count)) {
-    FXL_LOG(ERROR) << "Failed to parse message:";
+    FX_LOGS(ERROR) << "Failed to parse message:";
     return false;
   }
 

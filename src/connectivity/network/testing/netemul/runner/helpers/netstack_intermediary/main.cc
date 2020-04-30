@@ -32,7 +32,7 @@ int main(int argc, char** argv) {
   for (const auto& interface_config : command_line.GetOptionValues("interface")) {
     // Verify that the "<MAC addr>=<network name>" will fit inside of the sscanf buffer.
     if (interface_config.size() > (kMacAddrStringLength + kMacNetworkNameLength + 1)) {
-      FXL_LOG(ERROR) << "interface argument is too long: " << interface_config;
+      FX_LOGS(ERROR) << "interface argument is too long: " << interface_config;
       return ZX_ERR_INVALID_ARGS;
     }
 
@@ -44,12 +44,12 @@ int main(int argc, char** argv) {
         &scan_mac[1], &scan_mac[2], &scan_mac[3], &scan_mac[4], &scan_mac[5], ethertap_network);
 
     if (args_parsed != (scan_mac.size() + 1)) {
-      FXL_LOG(ERROR) << "failed to parse interface config: " << interface_config;
+      FX_LOGS(ERROR) << "failed to parse interface config: " << interface_config;
       usage();
       return ZX_ERR_INVALID_ARGS;
     }
     if ((scan_mac[0] & 0x03) != 0x02) {
-      FXL_LOG(ERROR) << "guest MAC cannot be multicast: " << interface_config;
+      FX_LOGS(ERROR) << "guest MAC cannot be multicast: " << interface_config;
       usage();
       return ZX_ERR_INVALID_ARGS;
     }

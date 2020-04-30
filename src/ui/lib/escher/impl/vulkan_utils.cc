@@ -13,13 +13,13 @@ bool CheckImageCreateInfoValidity(vk::PhysicalDevice device, const vk::ImageCrea
       info.format, info.imageType, info.tiling, info.usage, info.flags, &image_format_properties);
 
   if (get_format_properties_result != vk::Result::eSuccess) {
-    FXL_LOG(ERROR) << "CheckImageCreateInfoValidity(): Image format / type / tiling / usage / "
+    FX_LOGS(ERROR) << "CheckImageCreateInfoValidity(): Image format / type / tiling / usage / "
                       "flags is not supported.";
     return false;
   }
 
   if (image_format_properties.maxMipLevels < info.mipLevels) {
-    FXL_LOG(ERROR) << "CheckImageCreateInfoValidity(): mipLevels exceeds the maximum limit = "
+    FX_LOGS(ERROR) << "CheckImageCreateInfoValidity(): mipLevels exceeds the maximum limit = "
                    << image_format_properties.maxMipLevels;
     return false;
   }
@@ -27,7 +27,7 @@ bool CheckImageCreateInfoValidity(vk::PhysicalDevice device, const vk::ImageCrea
   if (image_format_properties.maxExtent.width < info.extent.width ||
       image_format_properties.maxExtent.height < info.extent.height ||
       image_format_properties.maxExtent.depth < info.extent.depth) {
-    FXL_LOG(ERROR) << "CheckImageCreateInfoValidity(): extent "
+    FX_LOGS(ERROR) << "CheckImageCreateInfoValidity(): extent "
                    << "(" << info.extent.width << ", " << info.extent.height << ", "
                    << info.extent.depth << ")"
                    << " exceeds the maximum limit"
@@ -38,13 +38,13 @@ bool CheckImageCreateInfoValidity(vk::PhysicalDevice device, const vk::ImageCrea
   }
 
   if (image_format_properties.maxArrayLayers < info.arrayLayers) {
-    FXL_LOG(ERROR) << "CheckImageCreateInfoValidity(): arrayLayers exceeds the maximum limit = "
+    FX_LOGS(ERROR) << "CheckImageCreateInfoValidity(): arrayLayers exceeds the maximum limit = "
                    << image_format_properties.maxArrayLayers;
     return false;
   }
 
   if (!(image_format_properties.sampleCounts & info.samples)) {
-    FXL_LOG(ERROR) << "CheckImageCreateInfoValidity(): samples is not supported. "
+    FX_LOGS(ERROR) << "CheckImageCreateInfoValidity(): samples is not supported. "
                    << "Requested sample counts: " << vk::to_string(info.samples) << "; "
                    << "Supported sample counts: "
                    << vk::to_string(image_format_properties.sampleCounts);
@@ -148,7 +148,7 @@ vk::SampleCountFlagBits SampleCountFlagBitsFromInt(uint32_t sample_count) {
     case 64:
       return vk::SampleCountFlagBits::e64;
     default:
-      FXL_CHECK(false);
+      FX_CHECK(false);
       return vk::SampleCountFlagBits::e1;
   }
 }
@@ -162,7 +162,7 @@ void ClipToRect(vk::Rect2D* clippee, const vk::Rect2D& clipper) {
                            (clipper.offset.y + clipper.extent.height));
 
   // Detect overflow.
-  FXL_DCHECK(max_x >= min_x && max_y >= min_y);
+  FX_DCHECK(max_x >= min_x && max_y >= min_y);
 
   clippee->offset.x = min_x;
   clippee->offset.y = min_y;

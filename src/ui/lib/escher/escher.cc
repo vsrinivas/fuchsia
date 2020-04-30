@@ -91,10 +91,10 @@ Escher::Escher(VulkanDeviceQueuesPtr device, HackFilesystemPtr filesystem)
 #endif
       pipeline_builder_(std::make_unique<PipelineBuilder>(device_->vk_device())),
       weak_factory_(this) {
-  FXL_DCHECK(vulkan_context_.instance);
-  FXL_DCHECK(vulkan_context_.physical_device);
-  FXL_DCHECK(vulkan_context_.device);
-  FXL_DCHECK(vulkan_context_.queue);
+  FX_DCHECK(vulkan_context_.instance);
+  FX_DCHECK(vulkan_context_.physical_device);
+  FX_DCHECK(vulkan_context_.device);
+  FX_DCHECK(vulkan_context_.queue);
   // TODO: additional validation, e.g. ensure that queue supports both graphics
   // and compute.
 

@@ -28,7 +28,7 @@ controller::Controller_StartTracing_Result TryStart(TraceManagerTest* fixture,
                                 fixture->QuitLoop();
                               });
   fixture->RunLoopUntilIdle();
-  FXL_VLOG(2) << "Start loop done";
+  FX_VLOGS(2) << "Start loop done";
   EXPECT_TRUE(start_completed);
   return start_result;
 }
@@ -75,7 +75,7 @@ TEST_F(TraceManagerTest, StartWhileStopping) {
   controller()->StopTracing(std::move(stop_options), []() {});
   RunLoopUntilIdle();
   // The loop will exit for the transition to kStopping.
-  FXL_VLOG(2) << "Loop done, expecting session stopping";
+  FX_VLOGS(2) << "Loop done, expecting session stopping";
   ASSERT_EQ(GetSessionState(), SessionState::kStopping);
 
   // Now try a Start while we're still in |kStopping|.
@@ -92,7 +92,7 @@ TEST_F(TraceManagerTest, StartWhileStopping) {
         QuitLoop();
       });
   RunLoopUntilIdle();
-  FXL_VLOG(2) << "Start loop done";
+  FX_VLOGS(2) << "Start loop done";
   EXPECT_TRUE(GetSessionState() == SessionState::kStopping);
   ASSERT_TRUE(start_completed);
   ASSERT_TRUE(result.is_err());
@@ -129,7 +129,7 @@ TEST_F(TraceManagerTest, StartWhileTerminating) {
         QuitLoop();
       });
   RunLoopUntilIdle();
-  FXL_VLOG(2) << "Start loop done";
+  FX_VLOGS(2) << "Start loop done";
   EXPECT_TRUE(GetSessionState() == SessionState::kTerminating);
   ASSERT_TRUE(start_completed);
   ASSERT_TRUE(result.is_err());

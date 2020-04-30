@@ -27,7 +27,7 @@ class Binding {
   BindingType type() const { return type_; }
 
   const T& constant_value() const {
-    FXL_DCHECK(type_ == BindingType::kConstant);
+    FX_DCHECK(type_ == BindingType::kConstant);
     return constant_value_;
   }
 

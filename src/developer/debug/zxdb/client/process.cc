@@ -21,7 +21,7 @@ const char* Process::StartTypeToString(Process::StartType start_type) {
     case StartType::kLaunch:
       return "Launch";
   }
-  FXL_NOTREACHED();
+  FX_NOTREACHED();
   return "";
 }
 

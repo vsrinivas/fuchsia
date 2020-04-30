@@ -63,7 +63,7 @@ class ErrorReporter {
   Report FATAL() { return Report(this, fxl::LOG_FATAL); }
 
   // Return a default ErrorReporter that is always available, which simply logs
-  // the error using FXL_LOG(severity).
+  // the error using FX_LOGS(severity).
   static const std::shared_ptr<ErrorReporter>& Default();
 
  private:

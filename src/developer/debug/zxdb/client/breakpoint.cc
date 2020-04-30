@@ -122,7 +122,7 @@ SettingValue Breakpoint::Settings::GetStorageValue(const std::string& key) const
   } else if (key == ClientSettings::Breakpoint::kSize) {
     return SettingValue(static_cast<int>(settings.byte_size));
   }
-  FXL_NOTREACHED();
+  FX_NOTREACHED();
   return SettingValue();
 }
 
@@ -136,7 +136,7 @@ Err Breakpoint::Settings::SetStorageValue(const std::string& key, SettingValue v
   } else if (key == ClientSettings::Breakpoint::kStopMode) {
     std::optional<BreakpointSettings::StopMode> stop_mode =
         BreakpointSettings::StringToStopMode(value.get_string());
-    FXL_DCHECK(stop_mode);  // Schema should have validated the input.
+    FX_DCHECK(stop_mode);  // Schema should have validated the input.
     settings.stop_mode = *stop_mode;
   } else if (key == ClientSettings::Breakpoint::kEnabled) {
     settings.enabled = value.get_bool();
@@ -145,7 +145,7 @@ Err Breakpoint::Settings::SetStorageValue(const std::string& key, SettingValue v
   } else if (key == ClientSettings::Breakpoint::kType) {
     std::optional<BreakpointSettings::Type> type =
         BreakpointSettings::StringToType(value.get_string());
-    FXL_DCHECK(type);  // Schema should have validated the input.
+    FX_DCHECK(type);  // Schema should have validated the input.
     settings.type = *type;
   } else if (key == ClientSettings::Breakpoint::kSize) {
     // Validate the size. Providing the error here and failing to set is more clear to the user than
@@ -157,7 +157,7 @@ Err Breakpoint::Settings::SetStorageValue(const std::string& key, SettingValue v
 
     settings.byte_size = value.get_int();
   } else {
-    FXL_NOTREACHED();
+    FX_NOTREACHED();
   }
 
   bp_->SetSettings(settings);

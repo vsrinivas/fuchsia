@@ -40,7 +40,7 @@ const MeshShaderBinding& ModelData::GetMeshShaderBinding(MeshSpec spec) {
   if (ptr) {
     return *ptr;
   }
-  FXL_DCHECK(spec.IsValidOneBufferMesh());
+  FX_DCHECK(spec.IsValidOneBufferMesh());
 
   std::vector<vk::VertexInputAttributeDescription> attributes;
 

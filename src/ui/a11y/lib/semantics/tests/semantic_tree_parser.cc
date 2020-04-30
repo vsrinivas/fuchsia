@@ -10,12 +10,12 @@ namespace accessibility_test {
 bool SemanticTreeParser::ParseSemanticTree(
     const std::string &file_path,
     std::vector<fuchsia::accessibility::semantics::Node> *semantic_tree) {
-  FXL_CHECK(semantic_tree);
+  FX_CHECK(semantic_tree);
 
   // Read the file.
   rapidjson::Document document = json_parser_.ParseFromFile(file_path);
   if (json_parser_.HasError()) {
-    FXL_LOG(ERROR) << "Error parsing file:" << file_path;
+    FX_LOGS(ERROR) << "Error parsing file:" << file_path;
     return false;
   }
   for (auto &node_object : document.GetArray()) {

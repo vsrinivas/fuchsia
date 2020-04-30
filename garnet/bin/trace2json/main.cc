@@ -32,7 +32,7 @@ bool ParseBooleanOption(const fxl::CommandLine& command_line, const char* arg_na
     } else if (arg_value == "false") {
       *out_value = false;
     } else {
-      FXL_LOG(ERROR) << "Bad value for --" << arg_name << ", pass true or false";
+      FX_LOGS(ERROR) << "Bad value for --" << arg_name << ", pass true or false";
       return false;
     }
   }
@@ -86,13 +86,13 @@ int main(int argc, char** argv) {
   bool invalid_options = false;
   for (const auto& option : command_line.options()) {
     if (kKnownOptions.count(option.name) == 0) {
-      FXL_LOG(ERROR) << "Unknown option: " << option.name;
+      FX_LOGS(ERROR) << "Unknown option: " << option.name;
       invalid_options = true;
     }
   }
 
   if (command_line.positional_args().size() > 0) {
-    FXL_LOG(ERROR) << "Unexpected positional arg";
+    FX_LOGS(ERROR) << "Unexpected positional arg";
     invalid_options = true;
   }
 

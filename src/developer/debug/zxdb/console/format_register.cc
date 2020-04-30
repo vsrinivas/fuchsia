@@ -124,7 +124,7 @@ void FormatGeneralVectorRegisters(const FormatRegisterOptions& options,
     bool completed = false;
     FillFormatNodeDescription(node.get(), format_options, eval_context,
                               fit::defer_callback([&completed]() { completed = true; }));
-    FXL_DCHECK(completed);
+    FX_DCHECK(completed);
 
     max_children = std::max(max_children, node->children().size());
     formatted.push_back(std::move(node));
@@ -146,7 +146,7 @@ void FormatGeneralVectorRegisters(const FormatRegisterOptions& options,
       bool completed = false;
       FillFormatNodeDescription(node->children()[i].get(), format_options, eval_context,
                                 fit::defer_callback([&completed]() { completed = true; }));
-      FXL_DCHECK(completed);
+      FX_DCHECK(completed);
 
       // The table is filled with the low index on the right.
       row[row.size() - i - 1] = OutputBuffer(node->children()[i]->description(), color);

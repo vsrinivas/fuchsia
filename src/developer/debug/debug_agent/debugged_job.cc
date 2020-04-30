@@ -26,7 +26,7 @@ DebuggedJob::~DebuggedJob() = default;
 
 zx_status_t DebuggedJob::Init() {
   debug_ipc::MessageLoopTarget* loop = debug_ipc::MessageLoopTarget::Current();
-  FXL_DCHECK(loop);  // Loop must be created on this thread first.
+  FX_DCHECK(loop);  // Loop must be created on this thread first.
 
   // Register for debug exceptions.
   debug_ipc::MessageLoopTarget::WatchJobConfig config;
@@ -119,7 +119,7 @@ std::set<zx_koid_t> DebuggedJob::SetFilters(std::vector<std::string> filters) {
 
     debug_ipc::Regex regex;
     if (!regex.Init(filter))
-      FXL_LOG(WARNING) << "Could not initialize regex for filter " << filter;
+      FX_LOGS(WARNING) << "Could not initialize regex for filter " << filter;
 
     DEBUG_LOG(Job) << "Debug job " << koid_ << ": Adding filter " << filter;
 
@@ -142,7 +142,7 @@ void DebuggedJob::AppendFilter(std::string filter) {
 
   debug_ipc::Regex regex;
   if (!regex.Init(filter)) {
-    FXL_LOG(WARNING) << "Could not initialize regex for filter " << filter;
+    FX_LOGS(WARNING) << "Could not initialize regex for filter " << filter;
   }
 
   DEBUG_LOG(Job) << "Debugged job " << koid_ << ": Appending filter " << filter;

@@ -88,26 +88,26 @@ class IpAddress {
 
   // Returns this address as an |in_addr|. Only defined for V4 addresses.
   const in_addr& as_in_addr() const {
-    FXL_DCHECK(is_v4());
+    FX_DCHECK(is_v4());
     return v4_;
   }
 
   // Returns this address as an |in_addr_t|. Only defined for V4 addresses.
   in_addr_t as_in_addr_t() const {
-    FXL_DCHECK(is_v4());
+    FX_DCHECK(is_v4());
     return v4_.s_addr;
   }
 
   // Returns this address as an |in6_addr|. Only defined for V6 addresses.
   const in6_addr& as_in6_addr() const {
-    FXL_DCHECK(is_v6());
+    FX_DCHECK(is_v6());
     return v6_;
   }
 
   // Returns a pointer to the bytes that make up this address. |byte_count|
   // indicates the byte count. Not defined for invalid addresses.
   const uint8_t* as_bytes() const {
-    FXL_DCHECK(is_valid());
+    FX_DCHECK(is_valid());
     return v6_.s6_addr;
   }
 
@@ -115,21 +115,21 @@ class IpAddress {
   // address. |word_count| indicates the byte count. Not defined for invalid
   // addresses.
   const uint16_t* as_words() const {
-    FXL_DCHECK(is_valid());
+    FX_DCHECK(is_valid());
     return v6_.s6_addr16;
   }
 
   // Returns the number of bytes that make up this address. A V4 address is
   // 4 bytes, and a V6 address is 16 bytes. Not defined for invalid addresses.
   size_t byte_count() const {
-    FXL_DCHECK(is_valid());
+    FX_DCHECK(is_valid());
     return is_v4() ? sizeof(in_addr) : sizeof(in6_addr);
   }
 
   // Returns the number of words that make up this address. A V4 address is
   // 2 words, and a V6 address is 8 words. Not defined for invalid addresses.
   size_t word_count() const {
-    FXL_DCHECK(is_valid());
+    FX_DCHECK(is_valid());
     return byte_count() / sizeof(uint16_t);
   }
 

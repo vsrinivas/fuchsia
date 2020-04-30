@@ -24,7 +24,7 @@ static bool g_touching = false;
 
 // Helper for DemoHarness::InitWindowSystem().
 static void DemoGlfwErrorCallback(int err_code, const char* err_desc) {
-  FXL_LOG(WARNING) << "GLFW ERROR: " << err_code << " " << err_desc << std::endl;
+  FX_LOGS(WARNING) << "GLFW ERROR: " << err_code << " " << err_desc << std::endl;
 }
 
 static void DemoGlfwKeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
@@ -113,11 +113,11 @@ static void DemoGlfwMouseButtonCallback(GLFWwindow* window, int button, int acti
 
   if (auto demo = g_harness->GetRunningDemo()) {
     if (action == GLFW_PRESS) {
-      FXL_CHECK(!g_touching);
+      FX_CHECK(!g_touching);
       g_touching = true;
       demo->BeginTouch(0, g_x_pos, g_y_pos);
     } else {
-      FXL_CHECK(g_touching);
+      FX_CHECK(g_touching);
       g_touching = false;
       demo->EndTouch(0, g_x_pos, g_y_pos);
     }
@@ -139,26 +139,26 @@ DemoHarnessLinux::DemoHarnessLinux(WindowParams window_params) : DemoHarness(win
 std::string DemoHarnessLinux::GetCacheDirectoryPath() { return kCacheDirectoryPath; }
 
 void DemoHarnessLinux::InitWindowSystem() {
-  FXL_CHECK(!g_harness);
+  FX_CHECK(!g_harness);
   g_harness = this;
 
   glfwSetErrorCallback(DemoGlfwErrorCallback);
-  FXL_CHECK(glfwInit());
+  FX_CHECK(glfwInit());
 }
 
 vk::SurfaceKHR DemoHarnessLinux::CreateWindowAndSurface(const WindowParams& params) {
-  FXL_CHECK(!g_window);
+  FX_CHECK(!g_window);
 
   glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 
   GLFWmonitor* monitor = params.use_fullscreen ? glfwGetPrimaryMonitor() : nullptr;
   g_window =
       glfwCreateWindow(params.width, params.height, params.window_name.c_str(), monitor, NULL);
-  FXL_CHECK(g_window);
+  FX_CHECK(g_window);
 
   VkSurfaceKHR surface;
   VkResult err = glfwCreateWindowSurface(instance(), g_window, NULL, &surface);
-  FXL_CHECK(!err);
+  FX_CHECK(!err);
 
   glfwSetKeyCallback(g_window, DemoGlfwKeyCallback);
   glfwSetCursorPosCallback(g_window, DemoGlfwCursorPosCallback);
@@ -179,7 +179,7 @@ void DemoHarnessLinux::AppendPlatformSpecificInstanceExtensionNames(InstancePara
 void DemoHarnessLinux::AppendPlatformSpecificDeviceExtensionNames(std::set<std::string>* names) {}
 
 void DemoHarnessLinux::ShutdownWindowSystem() {
-  FXL_CHECK(g_harness);
+  FX_CHECK(g_harness);
   g_harness = nullptr;
   g_window = nullptr;
   glfwTerminate();

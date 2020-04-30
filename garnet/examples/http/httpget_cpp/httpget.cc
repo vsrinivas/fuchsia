@@ -75,7 +75,7 @@ class WGetApp {
   WGetApp(async::Loop* loop)
       : loop_(loop), context_(sys::ComponentContext::CreateAndServeOutgoingDirectory()) {
     http_service_ = context_->svc()->Connect<http::HttpService>();
-    FXL_DCHECK(http_service_);
+    FX_DCHECK(http_service_);
   }
 
   bool Start(const std::vector<std::string>& args) {

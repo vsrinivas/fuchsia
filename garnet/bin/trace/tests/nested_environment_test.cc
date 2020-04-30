@@ -53,8 +53,8 @@ class Walker final : public TaskEnumerator {
     }
 
     char task_name[ZX_MAX_NAME_LEN];
-    FXL_CHECK(zx::unowned<zx::job>(task)->get_property(ZX_PROP_NAME, task_name, ZX_MAX_NAME_LEN) ==
-              ZX_OK);
+    FX_CHECK(zx::unowned<zx::job>(task)->get_property(ZX_PROP_NAME, task_name, ZX_MAX_NAME_LEN) ==
+             ZX_OK);
     std::string name(task_name);
     if (name == kEnvironmentName) {
       // The test finished successfully: the current task was the expected koid
@@ -64,7 +64,7 @@ class Walker final : public TaskEnumerator {
     }
     // The koid was found, but doesn't correspond to the trace environment. Quit
     // with an error.
-    FXL_LOG(ERROR) << "Expected to find " << kEnvironmentName
+    FX_LOGS(ERROR) << "Expected to find " << kEnvironmentName
                    << " as the parent process. Instead found: " << name;
     return ZX_ERR_BAD_STATE;
   }
@@ -84,7 +84,7 @@ int main(int argc, char* argv[]) {
   zx_status_t status =
       zx::job::default_job()->get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to get default job's information.";
+    FX_LOGS(ERROR) << "Failed to get default job's information.";
     return EXIT_FAILURE;
   }
 
@@ -96,13 +96,13 @@ int main(int argc, char* argv[]) {
 
   status = walker.WalkRootJobTree();
   if (status == ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to find parent job with koid " << trace_env_koid;
+    FX_LOGS(ERROR) << "Failed to find parent job with koid " << trace_env_koid;
     return EXIT_FAILURE;
   }
 
   if (status == ZX_ERR_BAD_STATE) {
     return EXIT_FAILURE;
   }
-  FXL_CHECK(status == ZX_ERR_STOP) << status;
+  FX_CHECK(status == ZX_ERR_STOP) << status;
   return EXIT_SUCCESS;
 }

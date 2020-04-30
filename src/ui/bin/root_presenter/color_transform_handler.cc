@@ -27,11 +27,11 @@ ColorTransformHandler::ColorTransformHandler(sys::ComponentContext* component_co
       compositor_id_(compositor_id),
       color_transform_handler_bindings_(this),
       color_transform_state_(state) {
-  FXL_DCHECK(component_context_);
-  FXL_DCHECK(session_);
+  FX_DCHECK(component_context_);
+  FX_DCHECK(session_);
   component_context->svc()->Connect(color_transform_manager_.NewRequest());
   color_transform_manager_.set_error_handler([](zx_status_t status) {
-    FXL_LOG(ERROR) << "Unable to connect to ColorTransformManager" << zx_status_get_string(status);
+    FX_LOGS(ERROR) << "Unable to connect to ColorTransformManager" << zx_status_get_string(status);
   });
   fidl::InterfaceHandle<fuchsia::accessibility::ColorTransformHandler> handle;
   color_transform_handler_bindings_.Bind(handle.NewRequest());
@@ -48,7 +48,7 @@ void ColorTransformHandler::SetColorTransformConfiguration(
     fuchsia::accessibility::ColorTransformConfiguration configuration,
     SetColorTransformConfigurationCallback callback) {
   if (!configuration.has_color_adjustment_matrix()) {
-    FXL_LOG(ERROR) << "ColorTransformConfiguration missing color adjustment matrix.";
+    FX_LOGS(ERROR) << "ColorTransformConfiguration missing color adjustment matrix.";
     return;
   }
   SetScenicColorConversion(configuration.color_adjustment_matrix());
@@ -58,12 +58,12 @@ void ColorTransformHandler::SetColorTransformConfiguration(
 void ColorTransformHandler::SetColorAdjustment(
     fuchsia::ui::brightness::ColorAdjustmentTable color_adjustment_table) {
   if (color_transform_state_.IsActive()) {
-    FXL_LOG(INFO) << "Ignoring SetColorAdjustment because color correction is currently active.";
+    FX_LOGS(INFO) << "Ignoring SetColorAdjustment because color correction is currently active.";
     return;
   }
 
   if (!color_adjustment_table.has_matrix()) {
-    FXL_LOG(INFO) << "Ignoring SetColorAdjustment because matrix is empty";
+    FX_LOGS(INFO) << "Ignoring SetColorAdjustment because matrix is empty";
     return;
   }
 

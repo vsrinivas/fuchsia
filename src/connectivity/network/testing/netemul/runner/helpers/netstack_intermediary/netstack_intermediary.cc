@@ -75,7 +75,7 @@ void NetstackIntermediary::AddEthernetDevice(
           }
           buffer[kMacAddrStringLength] = '\0';
 
-          FXL_LOG(ERROR) << "No network specified for " << buffer;
+          FX_LOGS(ERROR) << "No network specified for " << buffer;
           completer.complete_error();
         });
         return bridge.consumer.promise();
@@ -95,7 +95,7 @@ void NetstackIntermediary::AddEthernetDevice(
               eth_client->Send(data.data(), data.size());
             };
             fake_ep.set_error_handler([](zx_status_t status) {
-              FXL_LOG(INFO) << "FakeEndpoint encountered error: " << zx_status_get_string(status);
+              FX_LOGS(INFO) << "FakeEndpoint encountered error: " << zx_status_get_string(status);
             });
 
             // EthernetClient's DataCallback fires when the guest is trying to
@@ -107,11 +107,11 @@ void NetstackIntermediary::AddEthernetDevice(
               fake_ep->Write(std::move(input_data));
             });
             eth_client->SetPeerClosedCallback(
-                [] { FXL_LOG(INFO) << "EthernetClient peer closed."; });
+                [] { FX_LOGS(INFO) << "EthernetClient peer closed."; });
 
             callback(1);
           })
-          .or_else([]() mutable { FXL_CHECK(false) << "Failed to add ethernet device."; })
+          .or_else([]() mutable { FX_CHECK(false) << "Failed to add ethernet device."; })
           .wrap_with(scope_));
 }
 
@@ -131,7 +131,7 @@ NetstackIntermediary::GetNetwork(std::string network_name) {
         if (net.is_valid()) {
           completer.complete_ok(std::move(net));
         } else {
-          FXL_LOG(ERROR) << "No such network: \"" << network_name << "\"";
+          FX_LOGS(ERROR) << "No such network: \"" << network_name << "\"";
           completer.complete_error();
         }
       });
@@ -147,7 +147,7 @@ fit::promise<> NetstackIntermediary::SetupEthClient(
                       if (status == ZX_OK) {
                         completer.complete_ok();
                       } else {
-                        FXL_LOG(ERROR) << "EthernetClient setup failed with " << status;
+                        FX_LOGS(ERROR) << "EthernetClient setup failed with " << status;
                         completer.complete_error();
                       }
                     });

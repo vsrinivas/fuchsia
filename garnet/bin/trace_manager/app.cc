@@ -16,13 +16,13 @@ TraceManagerApp::TraceManagerApp(std::unique_ptr<sys::ComponentContext> context,
 
   status = context_->outgoing()->AddPublicService(
       provider_registry_bindings_.GetHandler(&trace_manager_));
-  FXL_DCHECK(status == ZX_OK);
+  FX_DCHECK(status == ZX_OK);
 
   status = context_->outgoing()->AddPublicService(controller_bindings_.GetHandler(&trace_manager_));
-  FXL_DCHECK(status == ZX_OK);
+  FX_DCHECK(status == ZX_OK);
   controller_bindings_.set_empty_set_handler([this]() { trace_manager_.OnEmptyControllerSet(); });
 
-  FXL_VLOG(2) << "TraceManager services registered";
+  FX_VLOGS(2) << "TraceManager services registered";
 }
 
 TraceManagerApp::~TraceManagerApp() = default;

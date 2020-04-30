@@ -90,7 +90,7 @@ void PrettyPrinter::NeedHeader() {
 }
 
 void PrettyPrinter::PrintHeader(char first_character) {
-  FXL_DCHECK(need_to_print_header_);
+  FX_DCHECK(need_to_print_header_);
   need_to_print_header_ = false;
   if (line_header_size_ > 0) {
     os_ << line_header_;

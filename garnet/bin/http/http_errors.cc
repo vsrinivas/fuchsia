@@ -23,7 +23,7 @@ std::string ErrorToShortString(int error) {
 #include "garnet/bin/http/http_error_list.h"
 #undef HTTP_ERROR
     default:
-      FXL_NOTREACHED();
+      FX_NOTREACHED();
       error_string = "<unknown>";
   }
   return std::string("HTTP_ERR_") + error_string;

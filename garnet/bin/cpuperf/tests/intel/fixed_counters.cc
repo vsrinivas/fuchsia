@@ -16,15 +16,15 @@ class FixedCounterVerifier : public Verifier {
     const perfmon::EventDetails* details;
 
     bool rc __UNUSED = LookupEventByName("fixed", "instructions_retired", &details);
-    FXL_DCHECK(rc);
+    FX_DCHECK(rc);
     instructions_retired_id_ = details->id;
 
     rc = LookupEventByName("fixed", "unhalted_core_cycles", &details);
-    FXL_DCHECK(rc);
+    FX_DCHECK(rc);
     unhalted_core_cycles_id_ = details->id;
 
     rc = LookupEventByName("fixed", "unhalted_reference_cycles", &details);
-    FXL_DCHECK(rc);
+    FX_DCHECK(rc);
     unhalted_reference_cycles_id_ = details->id;
   }
 
@@ -43,15 +43,15 @@ class FixedCounterVerifier : public Verifier {
   bool VerifyTrace(const RecordCounts& counts) override {
     bool pass = true;
     if (instructions_retired_count_ == 0) {
-      FXL_LOG(ERROR) << "Missing instructions_retired events";
+      FX_LOGS(ERROR) << "Missing instructions_retired events";
       pass = false;
     }
     if (unhalted_core_cycles_count_ == 0) {
-      FXL_LOG(ERROR) << "Missing unhalted_core_cycles events";
+      FX_LOGS(ERROR) << "Missing unhalted_core_cycles events";
       pass = false;
     }
     if (unhalted_reference_cycles_count_ == 0) {
-      FXL_LOG(ERROR) << "Missing unhalted_reference_cycles events";
+      FX_LOGS(ERROR) << "Missing unhalted_reference_cycles events";
       pass = false;
     }
     return pass;

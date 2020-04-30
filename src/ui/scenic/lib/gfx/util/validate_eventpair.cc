@@ -50,18 +50,18 @@ bool validate_viewref(const fuchsia::ui::views::ViewRefControl& control_ref,
   bool tight =
       validate_eventpair(control_ref.reference, tight_rights, view_ref.reference, ZX_RIGHTS_BASIC);
   if (tight) {
-    FXL_LOG(INFO) << "ViewRefControl is TIGHT.";
+    FX_LOGS(INFO) << "ViewRefControl is TIGHT.";
     return true;
   }
 
   bool loose = validate_eventpair(control_ref.reference, ZX_DEFAULT_EVENTPAIR_RIGHTS,
                                   view_ref.reference, ZX_RIGHTS_BASIC);
   if (loose) {
-    FXL_LOG(INFO) << "ViewRefControl is LOOSE.";
+    FX_LOGS(INFO) << "ViewRefControl is LOOSE.";
     return true;
   }
 
-  FXL_LOG(INFO) << "ViewRefControl is invalid.";
+  FX_LOGS(INFO) << "ViewRefControl is invalid.";
   return false;
 }
 

@@ -59,7 +59,7 @@ void WriteJson(FILE* fp, rapidjson::Document* doc) {
   // Check that all the output was serialized successfully as JSON.  This
   // can fail if the output contained NaN or infinite floating point
   // values.
-  FXL_CHECK(writer.IsComplete());
+  FX_CHECK(writer.IsComplete());
 }
 
 // rapidjson's API is rather verbose to use.  This class provides some
@@ -212,21 +212,21 @@ const char* TypeToString(rapidjson::Type type) {
     case rapidjson::kNumberType:
       return "number";
   }
-  FXL_NOTREACHED() << "Unexpected rapidjson type " << static_cast<int>(type);
+  FX_NOTREACHED() << "Unexpected rapidjson type " << static_cast<int>(type);
   return "";
 }
 
 // Fills |output_length| bytes of |output| with random data.
 void RandBytes(void* output, size_t output_length) {
-  FXL_DCHECK(output);
+  FX_DCHECK(output);
 
 #if defined(OS_FUCHSIA)
   zx_cprng_draw(output, output_length);
 #else
   fbl::unique_fd fd(open("/dev/urandom", O_RDONLY | O_CLOEXEC));
-  FXL_CHECK(fd.is_valid());
+  FX_CHECK(fd.is_valid());
   const ssize_t len = fxl::ReadFileDescriptor(fd.get(), static_cast<char*>(output), output_length);
-  FXL_CHECK(len >= 0 && static_cast<size_t>(len) == output_length);
+  FX_CHECK(len >= 0 && static_cast<size_t>(len) == output_length);
 #endif
 }
 

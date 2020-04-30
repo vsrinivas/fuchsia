@@ -42,7 +42,7 @@ zx::handle ManagedLogger::CreateHandle() {
 void ManagedLogger::OnRx(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
                          const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Managed Logger wait failed: " << zx_status_get_string(status);
+    FX_LOGS(ERROR) << "Managed Logger wait failed: " << zx_status_get_string(status);
     closed_callback_(this);
     return;
   }
@@ -57,7 +57,7 @@ void ManagedLogger::OnRx(async_dispatcher_t* dispatcher, async::WaitBase* wait, 
     size_t actual;
     status = out_.read(0, buffer_.get() + buffer_pos_, BufferSize - 1 - buffer_pos_, &actual);
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Managed Logger read failed: " << zx_status_get_string(status);
+      FX_LOGS(ERROR) << "Managed Logger read failed: " << zx_status_get_string(status);
       closed_callback_(this);
       return;
     }

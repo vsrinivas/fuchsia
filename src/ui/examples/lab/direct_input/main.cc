@@ -17,7 +17,7 @@ int main(int argc, const char** argv) {
   if (!fxl::SetLogSettingsFromCommandLine(command_line))
     return 1;
 
-  FXL_LOG(INFO) << "direct_input started.";
+  FX_LOGS(INFO) << "direct_input started.";
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   direct_input::App app(&loop);

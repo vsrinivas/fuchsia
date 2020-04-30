@@ -28,19 +28,19 @@ void LogImporter::Start() {
   zx::channel local, remote;
   zx_status_t status = zx::channel::create(0, &local, &remote);
   if (status != ZX_OK) {
-    FXL_PLOG(ERROR, status) << "Failed to create channel";
+    FX_PLOGS(ERROR, status) << "Failed to create channel";
     return;
   }
   constexpr char kReadOnlyLogPath[] = "/svc/" fuchsia_boot_ReadOnlyLog_Name;
   status = fdio_service_connect(kReadOnlyLogPath, remote.release());
   if (status != ZX_OK) {
-    FXL_PLOG(ERROR, status) << "Failed to connect to ReadOnlyLog";
+    FX_PLOGS(ERROR, status) << "Failed to connect to ReadOnlyLog";
     return;
   }
 
   status = fuchsia_boot_ReadOnlyLogGet(local.get(), log_.reset_and_get_address());
   if (status != ZX_OK) {
-    FXL_PLOG(ERROR, status) << "ReadOnlyLogGet failed";
+    FX_PLOGS(ERROR, status) << "ReadOnlyLogGet failed";
     return;
   }
 
@@ -50,7 +50,7 @@ void LogImporter::Start() {
   wait_.set_object(log_.get());
   wait_.set_trigger(ZX_LOG_READABLE);
   status = wait_.Begin(async_get_default_dispatcher());
-  FXL_CHECK(status == ZX_OK) << "status=" << status;
+  FX_CHECK(status == ZX_OK) << "status=" << status;
 }
 
 void LogImporter::Stop() {
@@ -58,7 +58,7 @@ void LogImporter::Stop() {
     return;
 
   zx_status_t status = wait_.Cancel();
-  FXL_CHECK(status == ZX_OK) << "status=" << status;
+  FX_CHECK(status == ZX_OK) << "status=" << status;
 
   log_.reset();
 }
@@ -76,7 +76,7 @@ void LogImporter::Handle(async_dispatcher_t* dispatcher, async::WaitBase* wait, 
                                    /*buffer_size=*/ZX_LOG_RECORD_MAX);
     if (status == ZX_ERR_SHOULD_WAIT)
       break;
-    FXL_CHECK(status >= ZX_OK) << "status=" << status;
+    FX_CHECK(status >= ZX_OK) << "status=" << status;
 
     if (log_record->timestamp < start_time_)
       continue;

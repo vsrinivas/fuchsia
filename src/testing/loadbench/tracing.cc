@@ -134,7 +134,7 @@ std::optional<const uint64_t> KTraceRecord::GetAssociatedThread() const {
 void Tracing::ReadKernelBuffer(zx_handle_t handle, void* data_buf, uint32_t offset, size_t len,
                                size_t* bytes_read) {
   const auto status = zx_ktrace_read(handle, data_buf, offset, len, bytes_read);
-  FXL_CHECK(status == ZX_OK) << "zx_ktrace_read failed.";
+  FX_CHECK(status == ZX_OK) << "zx_ktrace_read failed.";
 }
 
 // Fetches record from kernel buffer if available. Returns false if errors were encountered.
@@ -143,7 +143,7 @@ void Tracing::ReadKernelBuffer(zx_handle_t handle, void* data_buf, uint32_t offs
 std::tuple<bool, bool> Tracing::FetchRecord(zx_handle_t handle, uint8_t* data_buf, uint32_t* offset,
                                             size_t* bytes_read, size_t buf_len) {
   if (buf_len < KTRACE_HDRSIZE) {
-    FXL_LOG(ERROR) << "Data buffer too small.";
+    FX_LOGS(ERROR) << "Data buffer too small.";
     return {false, false};
   }
 
@@ -172,7 +172,7 @@ std::tuple<bool, bool> Tracing::FetchRecord(zx_handle_t handle, uint8_t* data_bu
 
   // Reading less bytes than defined by ktrace_header_t can lead to reading uninitialized memory.
   if (*bytes_read < KTRACE_HDRSIZE) {
-    FXL_LOG(ERROR) << "Error reading traces, trace read stopped.";
+    FX_LOGS(ERROR) << "Error reading traces, trace read stopped.";
     return {false, false};
   }
 
@@ -180,13 +180,13 @@ std::tuple<bool, bool> Tracing::FetchRecord(zx_handle_t handle, uint8_t* data_bu
 
   // Make sure there's enough space in buffer.
   if (buf_len < KTRACE_LEN(record->tag)) {
-    FXL_LOG(ERROR) << "Data buffer too small for payload.";
+    FX_LOGS(ERROR) << "Data buffer too small for payload.";
     return {false, false};
   }
 
   // If the record has zero length, something is wrong and the rest of the data will be junk.
   if (KTRACE_LEN(record->tag) == 0) {
-    FXL_LOG(ERROR) << "Error reading traces, trace read stopped.";
+    FX_LOGS(ERROR) << "Error reading traces, trace read stopped.";
     return {false, false};
   }
 
@@ -210,13 +210,13 @@ std::tuple<bool, bool> Tracing::FetchRecord(zx_handle_t handle, uint8_t* data_bu
 // Rewinds kernel trace buffer.
 void Tracing::Rewind() {
   const auto status = zx_ktrace_control(root_resource_, KTRACE_ACTION_REWIND, 0, nullptr);
-  FXL_CHECK(status == ZX_OK) << "Failed to rewind kernel trace buffer.";
+  FX_CHECK(status == ZX_OK) << "Failed to rewind kernel trace buffer.";
 }
 
 // Starts kernel tracing.
 void Tracing::Start(uint32_t group_mask) {
   const auto status = zx_ktrace_control(root_resource_, KTRACE_ACTION_START, group_mask, nullptr);
-  FXL_CHECK(status == ZX_OK) << "Failed to start tracing.";
+  FX_CHECK(status == ZX_OK) << "Failed to start tracing.";
 
   running_ = true;
 }
@@ -224,7 +224,7 @@ void Tracing::Start(uint32_t group_mask) {
 // Stops kernel tracing.
 void Tracing::Stop() {
   const auto status = zx_ktrace_control(root_resource_, KTRACE_ACTION_STOP, 0, nullptr);
-  FXL_CHECK(status == ZX_OK) << "Failed to stop tracing.";
+  FX_CHECK(status == ZX_OK) << "Failed to stop tracing.";
 
   running_ = false;
 }
@@ -405,7 +405,7 @@ void Tracing::WriteFlowRecord(const KTraceRecord record, const EventState event_
 // <filepath>. Will overwrite any existing files with same name.
 bool Tracing::WriteHumanReadable(std::ostream& human_readable_file) {
   if (running_) {
-    FXL_LOG(WARNING) << "Tracing was running when human readable translation was started. Tracing "
+    FX_LOGS(WARNING) << "Tracing was running when human readable translation was started. Tracing "
                         "stopped.";
     Stop();
   }
@@ -417,7 +417,7 @@ bool Tracing::WriteHumanReadable(std::ostream& human_readable_file) {
   uint32_t offset = 0;
 
   if (!human_readable_file) {
-    FXL_LOG(ERROR) << "Failed to open file.";
+    FX_LOGS(ERROR) << "Failed to open file.";
     return false;
   }
 
@@ -501,7 +501,7 @@ bool Tracing::PopulateDurationStats(std::string string_ref,
                                     std::vector<DurationStats>* duration_stats,
                                     std::map<uint64_t, QueuingStats>* queuing_stats) {
   if (running_) {
-    FXL_LOG(WARNING) << "Tracing was running when duration stats were started. Tracing stopped.";
+    FX_LOGS(WARNING) << "Tracing was running when duration stats were started. Tracing stopped.";
     Stop();
   }
 
@@ -518,7 +518,7 @@ bool Tracing::PopulateDurationStats(std::string string_ref,
         FetchRecord(root_resource_, data_buf, &offset, &bytes_read_per_fetch, buf_len);
 
     if (!read_success) {
-      FXL_LOG(WARNING) << "Error reading traces, trace read stopped.";
+      FX_LOGS(WARNING) << "Error reading traces, trace read stopped.";
       return false;
     } else if (buffer_end) {
       done = true;
@@ -528,7 +528,7 @@ bool Tracing::PopulateDurationStats(std::string string_ref,
     const auto record_opt = KTraceRecord::ParseRecord(data_buf, buf_len);
 
     if (!record_opt) {
-      FXL_LOG(WARNING) << "Error reading traces, trace read stopped.";
+      FX_LOGS(WARNING) << "Error reading traces, trace read stopped.";
       return false;
     }
 
@@ -547,7 +547,7 @@ bool Tracing::PopulateDurationStats(std::string string_ref,
       // Match duration records for given string ref.
       ktrace_header_t* rec;
       if (!record.Get16BRecord(&rec)) {
-        FXL_LOG(WARNING) << "Record error.";
+        FX_LOGS(WARNING) << "Record error.";
         return false;
       }
 
@@ -563,7 +563,7 @@ bool Tracing::PopulateDurationStats(std::string string_ref,
         }
       } else if (record.IsFlow()) {
         if (!record.GetFlowID() || !record.GetAssociatedThread()) {
-          FXL_LOG(WARNING) << "Record error.";
+          FX_LOGS(WARNING) << "Record error.";
           return false;
         }
 

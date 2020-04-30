@@ -39,7 +39,7 @@ static bool VerifySimpleTest(const tracing::Spec& spec, const std::string& test_
   }
 
   if (num_events != kNumSimpleTestEvents) {
-    FXL_LOG(ERROR) << "Incorrect number of events present, got " << num_events << ", expected "
+    FX_LOGS(ERROR) << "Incorrect number of events present, got " << num_events << ", expected "
                    << kNumSimpleTestEvents;
     return false;
   }

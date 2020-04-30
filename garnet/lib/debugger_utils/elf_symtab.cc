@@ -17,17 +17,17 @@ ElfSymbolTable::~ElfSymbolTable() {
 }
 
 bool ElfSymbolTable::Populate(ElfReader* elf, unsigned symtab_type) {
-  FXL_DCHECK(symtab_type == SHT_SYMTAB || symtab_type == SHT_DYNSYM);
+  FX_DCHECK(symtab_type == SHT_SYMTAB || symtab_type == SHT_DYNSYM);
 
   // TODO(dje): Add support for loading both SHT_SYMTAB and SHT_DYNSYM.
   if (symbols_) {
-    FXL_LOG(ERROR) << "Already populated";
+    FX_LOGS(ERROR) << "Already populated";
     return false;
   }
 
   ElfError rc = elf->ReadSectionHeaders();
   if (rc != ElfError::OK) {
-    FXL_LOG(ERROR) << "Error reading ELF section headers: " << ElfErrorName(rc);
+    FX_LOGS(ERROR) << "Error reading ELF section headers: " << ElfErrorName(rc);
     return false;
   }
 
@@ -38,7 +38,7 @@ bool ElfSymbolTable::Populate(ElfReader* elf, unsigned symtab_type) {
   size_t num_sections = elf->GetNumSections();
   size_t string_section = shdr->sh_link;
   if (string_section >= num_sections) {
-    FXL_LOG(ERROR) << "Bad string section: " << string_section;
+    FX_LOGS(ERROR) << "Bad string section: " << string_section;
     return false;
   }
   const ElfSectionHeader& str_shdr = elf->GetSectionHeader(string_section);
@@ -46,13 +46,13 @@ bool ElfSymbolTable::Populate(ElfReader* elf, unsigned symtab_type) {
   std::unique_ptr<ElfSectionContents> contents;
   rc = elf->GetSectionContents(*shdr, &contents);
   if (rc != ElfError::OK) {
-    FXL_LOG(ERROR) << "Error reading ELF section: " << ElfErrorName(rc);
+    FX_LOGS(ERROR) << "Error reading ELF section: " << ElfErrorName(rc);
     return false;
   }
 
   rc = elf->GetSectionContents(str_shdr, &string_section_);
   if (rc != ElfError::OK) {
-    FXL_LOG(ERROR) << "Error reading ELF string section: " << ElfErrorName(rc);
+    FX_LOGS(ERROR) << "Error reading ELF string section: " << ElfErrorName(rc);
     return false;
   }
 
@@ -66,7 +66,7 @@ bool ElfSymbolTable::Populate(ElfReader* elf, unsigned symtab_type) {
   for (size_t i = 0; i < num_raw_symbols; ++i) {
     const ElfRawSymbol& sym = contents->GetSymbolEntry(i);
     if (sym.st_name >= max_string_offset) {
-      FXL_LOG(ERROR) << "Bad symbol string name offset: " << sym.st_name;
+      FX_LOGS(ERROR) << "Bad symbol string name offset: " << sym.st_name;
       continue;
     }
     ElfSymbol* s = &symbols_[num_symbols++];

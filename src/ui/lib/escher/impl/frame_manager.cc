@@ -48,7 +48,7 @@ FramePtr FrameManager::NewFrame(const char* trace_literal, uint64_t frame_number
 }
 
 void FrameManager::OnReceiveOwnable(std::unique_ptr<Resource> resource) {
-  FXL_DCHECK(resource->IsKindOf<Frame>());
+  FX_DCHECK(resource->IsKindOf<Frame>());
   auto frame = static_cast<Frame*>(resource.get());
   block_allocators_.push(std::make_unique<BlockAllocator>(frame->TakeBlockAllocator()));
 }

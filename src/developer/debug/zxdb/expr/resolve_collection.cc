@@ -46,7 +46,7 @@ ErrOr<FoundMember> FindMemberWithErr(const fxl::RefPtr<EvalContext>& context,
   std::vector<FoundName> found;
   FindMember(context->GetFindNameContext(), options, base, identifier, nullptr, &found);
   if (!found.empty()) {
-    FXL_DCHECK(found[0].kind() == FoundName::kMemberVariable);
+    FX_DCHECK(found[0].kind() == FoundName::kMemberVariable);
     return found[0].member();
   }
 
@@ -210,7 +210,7 @@ ErrOrValue DoResolveNonstaticMember(const fxl::RefPtr<EvalContext>& context, con
 // static data members that may require a memory fetch.
 void DoResolveMember(const fxl::RefPtr<EvalContext>& context, const ExprValue& base,
                      const FoundMember& member, EvalCallback cb) {
-  FXL_DCHECK(member.data_member());
+  FX_DCHECK(member.data_member());
   if (member.data_member()->is_external()) {
     // A forward-declared static member. In C++ static members can't be bitfields so we don't handle
     // them.
@@ -355,12 +355,12 @@ void ResolveInheritedPtr(const fxl::RefPtr<EvalContext>& context, TargetPointer 
 
   // Since an inheritance path includes both the base and derived class, there should be more than
   // one entry for there to be any inheritance.
-  FXL_DCHECK(path.path().size() > 1);
+  FX_DCHECK(path.path().size() > 1);
   InheritancePath remaining = path.SubPath(1);  // Path left over after computing the first offset.
 
   // The first step of the inheritance chain is index 1's "from".
   const InheritedFrom* first_from = path.path()[1].from.get();
-  FXL_DCHECK(first_from);
+  FX_DCHECK(first_from);
   switch (first_from->kind()) {
     case InheritedFrom::kConstant: {
       ResolveInheritedPtr(context, derived + first_from->offset(), remaining, std::move(cb));
@@ -394,7 +394,7 @@ void ResolveInheritedPtr(const fxl::RefPtr<EvalContext>& context, TargetPointer 
     }
   }
 
-  FXL_NOTREACHED();
+  FX_NOTREACHED();
   cb(Err("Internal error"));
 }
 

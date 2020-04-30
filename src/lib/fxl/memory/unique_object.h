@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_FXL_MEMORY_UNIQUE_OBJECT_H_
-#define LIB_FXL_MEMORY_UNIQUE_OBJECT_H_
+#ifndef SRC_LIB_FXL_MEMORY_UNIQUE_OBJECT_H_
+#define SRC_LIB_FXL_MEMORY_UNIQUE_OBJECT_H_
 
 #include <utility>
 
@@ -59,7 +59,7 @@ class UniqueObject {
   }
 
   void reset(const T& value = Traits::InvalidValue()) {
-    FXL_CHECK(data_.generic == Traits::InvalidValue() || data_.generic != value);
+    FX_CHECK(data_.generic == Traits::InvalidValue() || data_.generic != value);
     FreeIfNecessary();
     data_.generic = value;
   }
@@ -132,4 +132,4 @@ bool operator!=(const T& value, const UniqueObject<T, Traits>& object) {
 
 }  // namespace fxl
 
-#endif  // LIB_FXL_MEMORY_UNIQUE_OBJECT_H_
+#endif  // SRC_LIB_FXL_MEMORY_UNIQUE_OBJECT_H_

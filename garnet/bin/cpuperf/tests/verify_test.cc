@@ -70,16 +70,16 @@ bool Verifier::VerifyIteration(uint32_t iter) {
         break;
       default:
         // The reader shouldn't be returning records of unknown types.
-        // But rather than FXL_DCHECK which will terminate the test, just
+        // But rather than FX_DCHECK which will terminate the test, just
         // flag an error.
-        FXL_LOG(ERROR) << "Unknown record type: " << record.type() << ", trace " << current_trace
+        FX_LOGS(ERROR) << "Unknown record type: " << record.type() << ", trace " << current_trace
                        << ", offset " << reader->GetLastRecordOffset();
         // Don't keep reading, we don't know what size the record is.
         return false;
     }
 
     if (!VerifyRecord(record)) {
-      FXL_LOG(ERROR) << "Record verification failed: trace " << current_trace << ", offset "
+      FX_LOGS(ERROR) << "Record verification failed: trace " << current_trace << ", offset "
                      << reader->GetLastRecordOffset();
       // If one record is wrong there could a lot of them, reducing the
       // S/N ratio of the output. So just bail.
@@ -87,14 +87,14 @@ bool Verifier::VerifyIteration(uint32_t iter) {
     }
   }
 
-  FXL_LOG(INFO) << fxl::StringPrintf("Counts: %zu time, %zu tick", counts.time_records,
+  FX_LOGS(INFO) << fxl::StringPrintf("Counts: %zu time, %zu tick", counts.time_records,
                                      counts.tick_records);
-  FXL_LOG(INFO) << fxl::StringPrintf("Counts: %zu count, %zu value", counts.count_records,
+  FX_LOGS(INFO) << fxl::StringPrintf("Counts: %zu count, %zu value", counts.count_records,
                                      counts.value_records);
-  FXL_LOG(INFO) << fxl::StringPrintf("Counts: %zu pc", counts.pc_records);
+  FX_LOGS(INFO) << fxl::StringPrintf("Counts: %zu pc", counts.pc_records);
 
   if (status != perfmon::ReaderStatus::kNoMoreRecords) {
-    FXL_LOG(ERROR) << "Error occurred in record reader: " << perfmon::ReaderStatusToString(status);
+    FX_LOGS(ERROR) << "Error occurred in record reader: " << perfmon::ReaderStatusToString(status);
     return false;
   }
 
@@ -103,7 +103,7 @@ bool Verifier::VerifyIteration(uint32_t iter) {
 
 void Verifier::Verify() {
   for (size_t iter = 0; iter < session_result_spec_->num_iterations; ++iter) {
-    FXL_LOG(INFO) << "Verifying iteration " << iter;
+    FX_LOGS(INFO) << "Verifying iteration " << iter;
     EXPECT_TRUE(VerifyIteration(iter));
   }
 }
@@ -132,7 +132,7 @@ static std::unique_ptr<Verifier> LookupVerifier(const cpuperf::SessionResultSpec
 }
 
 void VerifySpec(const std::string& spec_file_path) {
-  FXL_VLOG(1) << "Verifying " << spec_file_path;
+  FX_VLOGS(1) << "Verifying " << spec_file_path;
 
   std::string content;
   ASSERT_TRUE(files::ReadFileToString(spec_file_path, &content));

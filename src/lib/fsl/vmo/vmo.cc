@@ -16,20 +16,20 @@ namespace {
 
 template <typename Container>
 bool VmoFromContainer(const Container& container, SizedVmo* sized_vmo_ptr) {
-  FXL_CHECK(sized_vmo_ptr);
+  FX_CHECK(sized_vmo_ptr);
 
   uint64_t num_bytes = container.size();
   zx::vmo vmo;
   zx_status_t status = zx::vmo::create(num_bytes, 0u, &vmo);
   if (status < 0) {
-    FXL_PLOG(WARNING, status) << "zx::vmo::create failed";
+    FX_PLOGS(WARNING, status) << "zx::vmo::create failed";
     return false;
   }
 
   if (num_bytes > 0) {
     status = vmo.write(container.data(), 0, num_bytes);
     if (status < 0) {
-      FXL_PLOG(WARNING, status) << "zx::vmo::write failed";
+      FX_PLOGS(WARNING, status) << "zx::vmo::write failed";
       return false;
     }
   }
@@ -41,7 +41,7 @@ bool VmoFromContainer(const Container& container, SizedVmo* sized_vmo_ptr) {
 
 template <typename Container>
 bool ContainerFromVmo(const zx::vmo& buffer, uint64_t num_bytes, Container* container_ptr) {
-  FXL_CHECK(container_ptr);
+  FX_CHECK(container_ptr);
 
   container_ptr->resize(num_bytes);
 
@@ -51,7 +51,7 @@ bool ContainerFromVmo(const zx::vmo& buffer, uint64_t num_bytes, Container* cont
 
   zx_status_t status = buffer.read(&(*container_ptr)[0], 0, num_bytes);
   if (status < 0) {
-    FXL_PLOG(WARNING, status) << "zx::vmo::read failed";
+    FX_PLOGS(WARNING, status) << "zx::vmo::read failed";
     return false;
   }
 

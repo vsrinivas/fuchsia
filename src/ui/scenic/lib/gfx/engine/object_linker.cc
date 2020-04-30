@@ -72,7 +72,7 @@ zx_koid_t ObjectLinkerBase::CreateEndpoint(zx::handle token, ErrorReporter* erro
   new_endpoint.peer_death_waiter = WaitForPeerDeath(token.get(), endpoint_id, is_import);
   new_endpoint.token = std::move(token);
   auto emplaced_endpoint = endpoints.emplace(endpoint_id, std::move(new_endpoint));
-  FXL_DCHECK(emplaced_endpoint.second);
+  FX_DCHECK(emplaced_endpoint.second);
 
   return endpoint_id;
 }
@@ -83,7 +83,7 @@ void ObjectLinkerBase::DestroyEndpoint(zx_koid_t endpoint_id, bool is_import, bo
 
   auto endpoint_iter = endpoints.find(endpoint_id);
   if (endpoint_iter == endpoints.end()) {
-    FXL_LOG(ERROR) << "Attempted to remove an unknown endpoint " << endpoint_id
+    FX_LOGS(ERROR) << "Attempted to remove an unknown endpoint " << endpoint_id
                    << " from ObjectLinker";
     return;
   }
@@ -105,7 +105,7 @@ void ObjectLinkerBase::DestroyEndpoint(zx_koid_t endpoint_id, bool is_import, bo
       // This handles the case where the peer exists but Initialize() has not been
       // called on it yet (so no callbacks exist).
       peer_endpoint.peer_endpoint_id = ZX_KOID_INVALID;
-      FXL_DCHECK(peer_endpoint.link);
+      FX_DCHECK(peer_endpoint.link);
       peer_endpoint.link->Invalidate(/*on_destruction=*/false, /*invalidate_peer=*/true);
     }
   }
@@ -116,13 +116,13 @@ void ObjectLinkerBase::DestroyEndpoint(zx_koid_t endpoint_id, bool is_import, bo
 
 void ObjectLinkerBase::InitializeEndpoint(ObjectLinkerBase::Link* link, zx_koid_t endpoint_id,
                                           bool is_import) {
-  FXL_DCHECK(link);
+  FX_DCHECK(link);
 
   auto& endpoints = is_import ? imports_ : exports_;
 
   // Update the endpoint with the connection information.
   auto endpoint_iter = endpoints.find(endpoint_id);
-  FXL_DCHECK(endpoint_iter != endpoints.end());
+  FX_DCHECK(endpoint_iter != endpoints.end());
   Endpoint& endpoint = endpoint_iter->second;
 
   // If the endpoint is no longer valid (i.e. its peer no longer exists), then
@@ -153,7 +153,7 @@ void ObjectLinkerBase::AttemptLinking(zx_koid_t endpoint_id, zx_koid_t peer_endp
   auto& peer_endpoints = is_import ? exports_ : imports_;
 
   auto endpoint_iter = endpoints.find(endpoint_id);
-  FXL_DCHECK(endpoint_iter != endpoints.end());
+  FX_DCHECK(endpoint_iter != endpoints.end());
 
   auto peer_endpoint_iter = peer_endpoints.find(peer_endpoint_id);
   if (peer_endpoint_iter == peer_endpoints.end()) {
@@ -200,7 +200,7 @@ std::unique_ptr<async::Wait> ObjectLinkerBase::WaitForPeerDeath(zx_handle_t endp
       endpoint_handle, __ZX_OBJECT_PEER_CLOSED, 0, std::bind([this, endpoint_id, is_import]() {
         auto& endpoints = is_import ? imports_ : exports_;
         auto endpoint_iter = endpoints.find(endpoint_id);
-        FXL_DCHECK(endpoint_iter != endpoints.end());
+        FX_DCHECK(endpoint_iter != endpoints.end());
         Endpoint& endpoint = endpoint_iter->second;
 
         // Invalidate the endpoint.  If Initialize() has
@@ -216,7 +216,7 @@ std::unique_ptr<async::Wait> ObjectLinkerBase::WaitForPeerDeath(zx_handle_t endp
       }));
 
   zx_status_t status = waiter->Begin(async_get_default_dispatcher());
-  FXL_DCHECK(status == ZX_OK);
+  FX_DCHECK(status == ZX_OK);
 
   return waiter;
 }
@@ -228,7 +228,7 @@ zx::handle ObjectLinkerBase::ReleaseToken(zx_koid_t endpoint_id, bool is_import)
   // If the endpoint was resolved, it will still be invalidated, but the peer endpoint must be
   // unresolved first if it exists.
   auto endpoint_iter = endpoints.find(endpoint_id);
-  FXL_DCHECK(endpoint_iter != endpoints.end());
+  FX_DCHECK(endpoint_iter != endpoints.end());
 
   zx_koid_t peer_endpoint_id = endpoint_iter->second.peer_endpoint_id;
 

@@ -18,7 +18,7 @@ BackgroundView::BackgroundView(ViewContext context, const std::string& debug_nam
       background_node_(&session_),
       background_material_(&session_) {
   binding_.set_error_handler([](zx_status_t status) {
-    FXL_LOG(FATAL) << "Session listener binding: " << zx_status_get_string(status);
+    FX_LOGS(FATAL) << "Session listener binding: " << zx_status_get_string(status);
   });
 
   session_.Present(0, [](auto) {});
@@ -54,7 +54,7 @@ void BackgroundView::Present() {
 }
 
 void BackgroundView::OnScenicEvent(std::vector<fuchsia::ui::scenic::Event> events) {
-  FXL_LOG(INFO) << "OnScenicEvent";
+  FX_LOGS(INFO) << "OnScenicEvent";
   for (const auto& event : events) {
     if (event.Which() == fuchsia::ui::scenic::Event::Tag::kGfx &&
         event.gfx().Which() == fuchsia::ui::gfx::Event::Tag::kViewPropertiesChanged) {
@@ -68,11 +68,11 @@ void BackgroundView::OnScenicEvent(std::vector<fuchsia::ui::scenic::Event> event
 }
 
 void BackgroundView::OnScenicError(std::string error) {
-  FXL_LOG(FATAL) << "OnScenicError: " << error;
+  FX_LOGS(FATAL) << "OnScenicError: " << error;
 }
 
 void BackgroundView::OnViewPropertiesChanged(const fuchsia::ui::gfx::vec3& sz) {
-  FXL_LOG(INFO) << "Metrics: " << sz.x << "x" << sz.y << "x" << sz.z;
+  FX_LOGS(INFO) << "Metrics: " << sz.x << "x" << sz.y << "x" << sz.z;
   if (!sz.x || !sz.y || !sz.z)
     return;
 

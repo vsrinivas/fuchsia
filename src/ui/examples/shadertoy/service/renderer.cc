@@ -83,7 +83,7 @@ static vk::RenderPass CreateRenderPass(vk::Device device, vk::Format framebuffer
 
   auto result = device.createRenderPass(info);
   if (result.result != vk::Result::eSuccess) {
-    FXL_LOG(ERROR) << "Failed to create Vulkan RenderPass.";
+    FX_LOGS(ERROR) << "Failed to create Vulkan RenderPass.";
   }
   return result.value;
 }

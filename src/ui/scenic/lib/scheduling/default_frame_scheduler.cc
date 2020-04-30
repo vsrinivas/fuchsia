@@ -40,8 +40,8 @@ DefaultFrameScheduler::DefaultFrameScheduler(std::shared_ptr<const VsyncTiming> 
       inspect_node_(std::move(inspect_node)),
       stats_(inspect_node_.CreateChild("Frame Stats"), std::move(cobalt_logger)),
       weak_factory_(this) {
-  FXL_DCHECK(vsync_timing_);
-  FXL_DCHECK(frame_predictor_);
+  FX_DCHECK(vsync_timing_);
+  FX_DCHECK(frame_predictor_);
 
   outstanding_frames_.reserve(kMaxOutstandingFrames);
 
@@ -55,12 +55,12 @@ DefaultFrameScheduler::DefaultFrameScheduler(std::shared_ptr<const VsyncTiming> 
 DefaultFrameScheduler::~DefaultFrameScheduler() {}
 
 void DefaultFrameScheduler::SetFrameRenderer(fxl::WeakPtr<FrameRenderer> frame_renderer) {
-  FXL_DCHECK(!frame_renderer_ && frame_renderer);
+  FX_DCHECK(!frame_renderer_ && frame_renderer);
   frame_renderer_ = frame_renderer;
 }
 
 void DefaultFrameScheduler::AddSessionUpdater(fxl::WeakPtr<SessionUpdater> session_updater) {
-  FXL_DCHECK(session_updater);
+  FX_DCHECK(session_updater);
   new_session_updaters_.push_back(std::move(session_updater));
 }
 
@@ -79,7 +79,7 @@ void DefaultFrameScheduler::OnFrameRendered(const FrameTimings& timings) {
 
   zx::duration duration =
       current_timestamps.render_done_time - current_timestamps.render_start_time;
-  FXL_DCHECK(duration.get() > 0);
+  FX_DCHECK(duration.get() > 0);
 
   frame_predictor_->ReportRenderDuration(zx::duration(duration));
 }
@@ -101,11 +101,11 @@ PresentId DefaultFrameScheduler::RegisterPresent(
     present1_callbacks_.emplace(id_pair, std::move(*present1_callback));
   } else {
     auto present2_info = std::get_if<Present2Info>(&present_information);
-    FXL_DCHECK(present2_info);
+    FX_DCHECK(present2_info);
     present2_infos_.emplace(id_pair, std::move(*present2_info));
   }
 
-  FXL_DCHECK(release_fences_.find(id_pair) == release_fences_.end());
+  FX_DCHECK(release_fences_.find(id_pair) == release_fences_.end());
   release_fences_.emplace(id_pair, std::move(release_fences));
 
   return present_id;
@@ -127,12 +127,12 @@ std::pair<zx::time, zx::time> DefaultFrameScheduler::ComputePresentationAndWakeu
 }
 
 void DefaultFrameScheduler::RequestFrame(zx::time requested_presentation_time) {
-  FXL_DCHECK(HaveUpdatableSessions() || render_continuously_ || render_pending_);
+  FX_DCHECK(HaveUpdatableSessions() || render_continuously_ || render_pending_);
 
   // Output requested presentation time in milliseconds.
   // Logging the first few frames to find common startup bugs.
   if (frame_number_ < 3) {
-    FXL_VLOG(1) << "RequestFrame";
+    FX_VLOGS(1) << "RequestFrame";
   }
 
   auto next_times = ComputePresentationAndWakeupTimesForTargetTime(requested_presentation_time);
@@ -176,7 +176,7 @@ void DefaultFrameScheduler::HandleNextFrameRequest() {
 }
 
 void DefaultFrameScheduler::MaybeRenderFrame(async_dispatcher_t*, async::TaskBase*, zx_status_t) {
-  FXL_DCHECK(frame_renderer_);
+  FX_DCHECK(frame_renderer_);
 
   const uint64_t frame_number = frame_number_;
 
@@ -195,7 +195,7 @@ void DefaultFrameScheduler::MaybeRenderFrame(async_dispatcher_t*, async::TaskBas
 
   // Logging the first few frames to find common startup bugs.
   if (frame_number < 3) {
-    FXL_VLOG(1) << "MaybeRenderFrame target_presentation_time=" << target_presentation_time.get()
+    FX_VLOGS(1) << "MaybeRenderFrame target_presentation_time=" << target_presentation_time.get()
                 << " wakeup_time=" << wakeup_time_.get() << " frame_number=" << frame_number;
   }
 
@@ -226,11 +226,11 @@ void DefaultFrameScheduler::MaybeRenderFrame(async_dispatcher_t*, async::TaskBas
     return;
   }
 
-  FXL_DCHECK(outstanding_frames_.size() < kMaxOutstandingFrames);
+  FX_DCHECK(outstanding_frames_.size() < kMaxOutstandingFrames);
 
   // Logging the first few frames to find common startup bugs.
   if (frame_number < 3) {
-    FXL_LOG(INFO) << "Calling RenderFrame target_presentation_time="
+    FX_LOGS(INFO) << "Calling RenderFrame target_presentation_time="
                   << target_presentation_time.get() << " frame_number=" << frame_number;
   }
 
@@ -244,7 +244,7 @@ void DefaultFrameScheduler::MaybeRenderFrame(async_dispatcher_t*, async::TaskBas
     if (weak) {
       weak->OnFrameRendered(timings);
     } else {
-      FXL_LOG(ERROR) << "Error, cannot record render time: FrameScheduler does not exist";
+      FX_LOGS(ERROR) << "Error, cannot record render time: FrameScheduler does not exist";
     }
   };
 
@@ -257,7 +257,7 @@ void DefaultFrameScheduler::MaybeRenderFrame(async_dispatcher_t*, async::TaskBas
     if (weak) {
       weak->OnFramePresented(timings);
     } else {
-      FXL_LOG(ERROR) << "Error, cannot record presentation time: FrameScheduler does not exist";
+      FX_LOGS(ERROR) << "Error, cannot record presentation time: FrameScheduler does not exist";
     }
   };
   auto frame_timings = std::make_unique<FrameTimings>(
@@ -287,13 +287,13 @@ void DefaultFrameScheduler::MaybeRenderFrame(async_dispatcher_t*, async::TaskBas
       break;
     case kRenderFailed:
       // TODO(SCN-1344): Handle failed rendering somehow.
-      FXL_LOG(WARNING) << "RenderFrame failed. "
+      FX_LOGS(WARNING) << "RenderFrame failed. "
                        << "There may not be any calls to OnFrameRendered or OnFramePresented, and "
                           "no callbacks may be invoked.";
       break;
     case kNoContentToRender:
       // Immediately invoke presentation callbacks.
-      FXL_DCHECK(!frame_timings->finalized());
+      FX_DCHECK(!frame_timings->finalized());
       outstanding_frames_.push_back(std::move(frame_timings));
       outstanding_frames_.back()->OnFrameSkipped();
       break;
@@ -312,7 +312,7 @@ void DefaultFrameScheduler::ScheduleUpdateForSession(zx::time requested_presenta
 
   // Logging the first few frames to find common startup bugs.
   if (frame_number_ < 3) {
-    FXL_VLOG(1) << "ScheduleUpdateForSession session_id: " << id_pair.session_id
+    FX_VLOGS(1) << "ScheduleUpdateForSession session_id: " << id_pair.session_id
                 << " requested_presentation_time: " << requested_presentation_time.get();
   }
 
@@ -378,18 +378,18 @@ void DefaultFrameScheduler::OnFramePresented(const FrameTimings& timings) {
   const uint64_t frame_number = timings.frame_number();
 
   if (frame_number_ < 3) {
-    FXL_LOG(INFO) << "DefaultFrameScheduler::OnFramePresented"
+    FX_LOGS(INFO) << "DefaultFrameScheduler::OnFramePresented"
                   << " frame_number=" << frame_number;
   }
 
-  FXL_DCHECK(!outstanding_frames_.empty());
+  FX_DCHECK(!outstanding_frames_.empty());
 
   // TODO(SCN-400): how should we handle this case?  It is theoretically possible, but if it
   // happens then it means that the EventTimestamper is receiving signals out-of-order and is
   // therefore generating bogus data.
-  FXL_DCHECK(outstanding_frames_[0].get() == &timings) << "out-of-order.";
+  FX_DCHECK(outstanding_frames_[0].get() == &timings) << "out-of-order.";
 
-  FXL_DCHECK(timings.finalized());
+  FX_DCHECK(timings.finalized());
   const FrameTimings::Timestamps timestamps = timings.GetTimestamps();
   stats_.RecordFrame(timestamps, vsync_timing_->vsync_interval());
 
@@ -411,7 +411,7 @@ void DefaultFrameScheduler::OnFramePresented(const FrameTimings& timings) {
 
       zx::time now = zx::time(async_now(dispatcher_));
       zx::duration elapsed_since_presentation = now - timestamps.actual_presentation_time;
-      FXL_DCHECK(elapsed_since_presentation.get() >= 0);
+      FX_DCHECK(elapsed_since_presentation.get() >= 0);
 
       TRACE_INSTANT("gfx", "FramePresented", TRACE_SCOPE_PROCESS, "frame_number", frame_number,
                     "presentation time", timestamps.actual_presentation_time.get(),
@@ -535,7 +535,7 @@ void DefaultFrameScheduler::MoveReleaseFencesToSignaller(SchedulingIdPair id_pai
                                                          uint64_t frame_number) {
   const auto begin_it = release_fences_.lower_bound({id_pair.session_id, 0});
   const auto end_it = release_fences_.lower_bound(id_pair);
-  FXL_DCHECK(std::distance(begin_it, end_it) >= 0);
+  FX_DCHECK(std::distance(begin_it, end_it) >= 0);
   std::for_each(
       begin_it, end_it,
       [this,
@@ -547,11 +547,11 @@ void DefaultFrameScheduler::MoveReleaseFencesToSignaller(SchedulingIdPair id_pai
 
 bool DefaultFrameScheduler::ApplyUpdates(zx::time target_presentation_time, zx::time latched_time,
                                          uint64_t frame_number) {
-  FXL_DCHECK(latched_time <= target_presentation_time);
+  FX_DCHECK(latched_time <= target_presentation_time);
 
   // Logging the first few frames to find common startup bugs.
   if (frame_number < 3) {
-    FXL_VLOG(1) << "ApplyScheduledSessionUpdates target_presentation_time="
+    FX_VLOGS(1) << "ApplyScheduledSessionUpdates target_presentation_time="
                 << target_presentation_time.get() << " frame_number=" << frame_number;
   }
 
@@ -587,7 +587,7 @@ void DefaultFrameScheduler::RemoveFailedSessions(
   std::vector<OnSessionUpdateFailedCallback> failure_callbacks;
   for (auto failed_session_id : sessions_with_failed_updates) {
     auto it = update_failed_callback_map_.find(failed_session_id);
-    FXL_DCHECK(it != update_failed_callback_map_.end());
+    FX_DCHECK(it != update_failed_callback_map_.end());
     failure_callbacks.emplace_back(std::move(it->second));
     // Remove the callback from the global map so they are not called after this failure callback is
     // triggered.
@@ -605,7 +605,7 @@ void DefaultFrameScheduler::SignalPresent1CallbacksUpTo(
     SchedulingIdPair id_pair, fuchsia::images::PresentationInfo presentation_info) {
   auto begin_it = present1_callbacks_.lower_bound({id_pair.session_id, 0});
   auto end_it = present1_callbacks_.upper_bound(id_pair);
-  FXL_DCHECK(std::distance(begin_it, end_it) >= 0);
+  FX_DCHECK(std::distance(begin_it, end_it) >= 0);
   if (begin_it != end_it) {
     std::for_each(
         begin_it, end_it,
@@ -624,7 +624,7 @@ void DefaultFrameScheduler::SignalPresent2CallbackForInfosUpTo(SchedulingIdPair 
   // Coalesces all Present2 updates and calls the callback once.
   auto begin_it = present2_infos_.lower_bound({id_pair.session_id, 0});
   auto end_it = present2_infos_.upper_bound(id_pair);
-  FXL_DCHECK(std::distance(begin_it, end_it) >= 0);
+  FX_DCHECK(std::distance(begin_it, end_it) >= 0);
   if (begin_it != end_it) {
     std::vector<Present2Info> present2_infos_for_session;
     std::for_each(
@@ -638,7 +638,7 @@ void DefaultFrameScheduler::SignalPresent2CallbackForInfosUpTo(SchedulingIdPair 
     TRACE_FLOW_BEGIN("gfx", "present_callback", presented_time.get());
     fuchsia::scenic::scheduling::FramePresentedInfo frame_presented_info =
         Present2Info::CoalescePresent2Infos(std::move(present2_infos_for_session), presented_time);
-    FXL_DCHECK(present2_callback_map_.find(id_pair.session_id) != present2_callback_map_.end());
+    FX_DCHECK(present2_callback_map_.find(id_pair.session_id) != present2_callback_map_.end());
     // Invoke the Session's OnFramePresented event.
     present2_callback_map_[id_pair.session_id](std::move(frame_presented_info));
   }
@@ -664,13 +664,13 @@ void DefaultFrameScheduler::SignalPresentCallbacksUpTo(
 
 void DefaultFrameScheduler::SetOnUpdateFailedCallbackForSession(
     SessionId session_id, FrameScheduler::OnSessionUpdateFailedCallback update_failed_callback) {
-  FXL_DCHECK(update_failed_callback_map_.find(session_id) == update_failed_callback_map_.end());
+  FX_DCHECK(update_failed_callback_map_.find(session_id) == update_failed_callback_map_.end());
   update_failed_callback_map_[session_id] = std::move(update_failed_callback);
 }
 
 void DefaultFrameScheduler::SetOnFramePresentedCallbackForSession(
     SessionId session_id, OnFramePresentedCallback frame_presented_callback) {
-  FXL_DCHECK(present2_callback_map_.find(session_id) == present2_callback_map_.end());
+  FX_DCHECK(present2_callback_map_.find(session_id) == present2_callback_map_.end());
   present2_callback_map_[session_id] = std::move(frame_presented_callback);
 }
 

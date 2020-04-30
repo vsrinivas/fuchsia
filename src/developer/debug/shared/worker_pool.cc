@@ -20,12 +20,12 @@ class UnlockGuard {
   using LockType = std::unique_lock<std::mutex>;
 
   UnlockGuard(LockType& lock) : lock_(&lock) {
-    FXL_DCHECK(lock_->owns_lock());
+    FX_DCHECK(lock_->owns_lock());
     lock_->unlock();
   }
 
   ~UnlockGuard() {
-    FXL_DCHECK(!lock_->owns_lock());
+    FX_DCHECK(!lock_->owns_lock());
     lock_->lock();
   }
 
@@ -42,8 +42,8 @@ class WorkerPool::Worker {
   Worker(WorkerPool* pool) : owning_pool_(pool) {}
 
   void Run() {
-    FXL_DCHECK(owning_pool_);
-    FXL_DCHECK(!thread_.joinable());  // Unstarted threads are not joinable.
+    FX_DCHECK(owning_pool_);
+    FX_DCHECK(!thread_.joinable());  // Unstarted threads are not joinable.
     thread_ = std::thread(&WorkerPool::ThreadLoop, owning_pool_);
   }
 
@@ -118,8 +118,8 @@ bool WorkerPool::ShouldCreateWorker() {
 
 void WorkerPool::CreateWorker(std::unique_lock<std::mutex>* lock) {
   // NOTE: |lock| is held.
-  FXL_DCHECK(lock);
-  FXL_DCHECK(!creating_worker_);
+  FX_DCHECK(lock);
+  FX_DCHECK(!creating_worker_);
   creating_worker_ = true;
   DEBUG_LOG(WorkerPool) << Preamble() << " Creating a worker.";
 
@@ -142,7 +142,7 @@ void WorkerPool::ThreadLoop() {
   std::unique_lock<std::mutex> lock(mutex_);
 
   // Only one thread must be created at the same time.
-  FXL_DCHECK(creating_worker_) << " on thread " << std::this_thread::get_id();
+  FX_DCHECK(creating_worker_) << " on thread " << std::this_thread::get_id();
   creating_worker_ = false;
 
   // Only the shutdown thread should be waiting on this CV.
@@ -175,7 +175,7 @@ void WorkerPool::ThreadLoop() {
     tasks_.pop_front();
 
     // See if we need another worker.
-    FXL_DCHECK(lock.owns_lock());
+    FX_DCHECK(lock.owns_lock());
     if (ShouldCreateWorker())
       CreateWorker(&lock);
 
@@ -218,7 +218,7 @@ void WorkerPool::JoinAllWorkers() {
     // If there is a thread being created, we need it to be safely created
     // before we can join them.
     std::unique_lock<std::mutex> lock(mutex_);
-    FXL_DCHECK(shutting_down_);
+    FX_DCHECK(shutting_down_);
 
     // We signal any sleeping workers.
     SignalAllWorkers();

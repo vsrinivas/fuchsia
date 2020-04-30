@@ -21,8 +21,8 @@ BufferCache::BufferCache(EscherWeakPtr escher)
       cache_size_(0),
       gpu_allocator_(escher->gpu_allocator()->GetWeakPtr()),
       weak_factory_(this) {
-  FXL_DCHECK(free_buffer_cache_.empty());
-  FXL_DCHECK(free_buffers_.empty());
+  FX_DCHECK(free_buffer_cache_.empty());
+  FX_DCHECK(free_buffers_.empty());
 }
 
 BufferCache::~BufferCache() {
@@ -60,7 +60,7 @@ BufferPtr BufferCache::NewHostBuffer(vk::DeviceSize vk_size) {
     // Remove the buffer from the cache.
     cache_size_ -= buffer->size();
     auto info_itr = free_buffers_by_id_.find(buffer->uid());
-    FXL_DCHECK(info_itr != free_buffers_by_id_.end());
+    FX_DCHECK(info_itr != free_buffers_by_id_.end());
     auto time_key = info_itr->second.allocation_time;
     free_buffer_cache_.erase(free_buffer_cache_.find(time_key));
     free_buffers_by_id_.erase(info_itr);
@@ -73,7 +73,7 @@ BufferPtr BufferCache::NewHostBuffer(vk::DeviceSize vk_size) {
 }
 
 void BufferCache::RecycleResource(std::unique_ptr<Resource> resource) {
-  FXL_DCHECK(resource->IsKindOf<Buffer>());
+  FX_DCHECK(resource->IsKindOf<Buffer>());
 
   std::unique_ptr<Buffer> buffer(static_cast<Buffer*>(resource.release()));
   CacheInfo cache_info;
@@ -85,7 +85,7 @@ void BufferCache::RecycleResource(std::unique_ptr<Resource> resource) {
   // hold the requested buffer, it doesn't work.
   cache_info.size = buffer->size();
   // Ensure this buffer is not already tracked.
-  FXL_DCHECK(free_buffers_by_id_.find(cache_info.id) == free_buffers_by_id_.end())
+  FX_DCHECK(free_buffers_by_id_.find(cache_info.id) == free_buffers_by_id_.end())
       << "uid: " << buffer->uid();
 
   // Add to the map.
@@ -100,7 +100,7 @@ void BufferCache::RecycleResource(std::unique_ptr<Resource> resource) {
   while (cache_size_ > kMaxMemoryCached && !free_buffer_cache_.empty()) {
     // Find the oldest buffer in the cache.
     auto cache_itr = free_buffer_cache_.lower_bound(std::chrono::steady_clock::time_point::min());
-    FXL_DCHECK(cache_itr != free_buffer_cache_.end());
+    FX_DCHECK(cache_itr != free_buffer_cache_.end());
     uint64_t id_to_free = cache_itr->second.id;
     vk::DeviceSize size_freed = cache_itr->second.size;
 
@@ -108,18 +108,18 @@ void BufferCache::RecycleResource(std::unique_ptr<Resource> resource) {
     free_buffer_cache_.erase(cache_itr);
     free_buffers_by_id_.erase(free_buffers_by_id_.find(id_to_free));
     cache_size_ -= size_freed;
-    FXL_DCHECK(cache_size_ >= 0);
+    FX_DCHECK(cache_size_ >= 0);
 
     // Remove the buffer from the free map, releasing the buffer.
     auto find_map_for_size_itr = free_buffers_.find(size_freed);
-    FXL_DCHECK(find_map_for_size_itr != free_buffers_.end());
+    FX_DCHECK(find_map_for_size_itr != free_buffers_.end());
 
     auto& buffer_list_at_size = find_map_for_size_itr->second;
     auto find_buf_itr = std::find_if(buffer_list_at_size.begin(), buffer_list_at_size.end(),
                                      [id_to_free](const std::unique_ptr<Buffer>& buffer) {
                                        return buffer->uid() == id_to_free;
                                      });
-    FXL_DCHECK(find_buf_itr != buffer_list_at_size.end());
+    FX_DCHECK(find_buf_itr != buffer_list_at_size.end());
     // Release the buffer.
     buffer_list_at_size.erase(find_buf_itr);
     // If there's no other buffers of this size, release size map from the

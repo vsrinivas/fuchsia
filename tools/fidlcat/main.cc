@@ -36,7 +36,7 @@ static void OnExit(int /*signum*/, siginfo_t* /*info*/, void* /*ptr*/) {
 #endif
   } else {
     // Maybe detach cleanly here, if we can.
-    FXL_LOG(INFO) << "Shutting down...";
+    FX_LOGS(INFO) << "Shutting down...";
     called_onexit_once_ = true;
     workflow_.load()->Shutdown();
   }
@@ -83,7 +83,7 @@ void EnqueueStartup(InterceptionWorkflow* workflow, const CommandLineOptions& op
       fprintf(stderr, "Unable to connect: %s", err.msg().c_str());
       exit(2);
     }
-    FXL_LOG(INFO) << "Connected!";
+    FX_LOGS(INFO) << "Connected!";
     if (!process_koids.empty()) {
       workflow->Attach(process_koids);
     }
@@ -102,7 +102,7 @@ void EnqueueStartup(InterceptionWorkflow* workflow, const CommandLineOptions& op
   };
 
   auto connect = [workflow, attach = std::move(attach), host, port]() {
-    FXL_LOG(INFO) << "Connecting to port " << port << " on " << host << "...";
+    FX_LOGS(INFO) << "Connecting to port " << port << " on " << host << "...";
     workflow->Connect(host, port, attach);
   };
   debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, connect);
@@ -135,14 +135,14 @@ int ConsoleMain(int argc, const char* argv[]) {
       }
       error.append("]");
     }
-    FXL_LOG(INFO) << error;
+    FX_LOGS(INFO) << error;
   }
 
   fidl_codec::LibraryReadError loader_err;
   fidl_codec::LibraryLoader loader(&paths, &loader_err);
   loader.ParseBuiltinSemantic();
   if (loader_err.value != fidl_codec::LibraryReadError::kOk) {
-    FXL_LOG(ERROR) << "Failed to read libraries";
+    FX_LOGS(ERROR) << "Failed to read libraries";
     return 1;
   }
 
@@ -179,14 +179,14 @@ int ConsoleMain(int argc, const char* argv[]) {
         server->Authenticate(key,
                              [&workflow, &remaining_servers, &server_error](const zxdb::Err& err) {
                                if (err.has_error()) {
-                                 FXL_LOG(ERROR) << "Server authentication failed: " << err.msg();
+                                 FX_LOGS(ERROR) << "Server authentication failed: " << err.msg();
                                  server_error = true;
                                }
                                if (--remaining_servers == 0) {
                                  if (server_error) {
                                    workflow.Shutdown();
                                  } else {
-                                   FXL_LOG(INFO) << "Authentication successful";
+                                   FX_LOGS(INFO) << "Authentication successful";
                                  }
                                }
                              });
@@ -198,7 +198,7 @@ int ConsoleMain(int argc, const char* argv[]) {
                                          zxdb::SymbolServer::State state) {
             if (state == zxdb::SymbolServer::State::kUnreachable) {
               server->set_state_change_callback(nullptr);
-              FXL_LOG(ERROR) << "Can't connect to symbol server";
+              FX_LOGS(ERROR) << "Can't connect to symbol server";
             } else if (state == zxdb::SymbolServer::State::kReady) {
               server->set_state_change_callback(nullptr);
               bool ready = true;
@@ -209,7 +209,7 @@ int ConsoleMain(int argc, const char* argv[]) {
               }
               if (ready) {
                 // Now all the symbol servers are ready. We can start fidlcat work.
-                FXL_LOG(INFO) << "Connected to symbol server";
+                FX_LOGS(INFO) << "Connected to symbol server";
                 EnqueueStartup(&workflow, options, params);
               }
             }

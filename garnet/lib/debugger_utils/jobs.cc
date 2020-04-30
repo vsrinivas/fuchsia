@@ -5,17 +5,15 @@
 #include "garnet/lib/debugger_utils/jobs.h"
 
 #include <inttypes.h>
-#include <stdlib.h>
-
-#include <list>
-
 #include <lib/zx/job.h>
 #include <lib/zx/process.h>
 #include <lib/zx/thread.h>
+#include <stdlib.h>
 #include <zircon/syscalls.h>
 
-#include "garnet/lib/debugger_utils/util.h"
+#include <list>
 
+#include "garnet/lib/debugger_utils/util.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/strings/string_printf.h"
@@ -50,7 +48,7 @@ class KoidTable {
   size_t CapacityInBytes() const { return capacity() * sizeof(zx_koid_t); }
 
   zx_koid_t Get(size_t index) const {
-    FXL_DCHECK(index < size_);
+    FX_DCHECK(index < size_);
     return koids_[index];
   }
 
@@ -67,7 +65,7 @@ class KoidTable {
   }
 
   void SetSize(size_t size) {
-    FXL_DCHECK(size <= capacity_);
+    FX_DCHECK(size <= capacity_);
     size_ = size;
   }
 
@@ -113,7 +111,7 @@ class JobKoidTableStackEntry {
   bool empty() const { return current_subjob_index_ == subjob_koids_->size(); }
 
   zx_koid_t PopNext() {
-    FXL_DCHECK(!empty());
+    FX_DCHECK(!empty());
     auto koid = subjob_koids_->Get(current_subjob_index_);
     ++current_subjob_index_;
     return koid;
@@ -142,11 +140,11 @@ static zx_status_t GetChild(zx_handle_t parent_h, zx_koid_t parent_koid, zx_koid
   if (status != ZX_OK) {
     // The task could have terminated in the interim.
     if (status == ZX_ERR_NOT_FOUND) {
-      FXL_VLOG(1) << fxl::StringPrintf("zx_object_get_child(%" PRIu64 ", %" PRIu64
+      FX_VLOGS(1) << fxl::StringPrintf("zx_object_get_child(%" PRIu64 ", %" PRIu64
                                        ", ...) failed: %s\n",
                                        parent_koid, koid, ZxErrorString(status).c_str());
     } else {
-      FXL_LOG(ERROR) << fxl::StringPrintf("zx_object_get_child(%" PRIu64 ", %" PRIu64
+      FX_LOGS(ERROR) << fxl::StringPrintf("zx_object_get_child(%" PRIu64 ", %" PRIu64
                                           ", ...) failed: %s\n",
                                           parent_koid, koid, ZxErrorString(status).c_str());
     }
@@ -169,7 +167,7 @@ static zx_status_t FetchChildren(zx_handle_t parent_h, zx_koid_t parent_koid, in
     status = zx_object_get_info(parent_h, children_kind, out_koids->data(),
                                 out_koids->CapacityInBytes(), &actual, &avail);
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << fxl::StringPrintf("zx_object_get_info(%" PRIu64 ", %s, ...) failed: %s\n",
+      FX_LOGS(ERROR) << fxl::StringPrintf("zx_object_get_info(%" PRIu64 ", %s, ...) failed: %s\n",
                                           parent_koid, kind_name, ZxErrorString(status).c_str());
       return status;
     }
@@ -180,7 +178,7 @@ static zx_status_t FetchChildren(zx_handle_t parent_h, zx_koid_t parent_koid, in
 
   // If we're still too small at least warn the user.
   if (actual < avail) {
-    FXL_LOG(WARNING) << fxl::StringPrintf("zx_object_get_info(%" PRIu64
+    FX_LOGS(WARNING) << fxl::StringPrintf("zx_object_get_info(%" PRIu64
                                           ", %s, ...)"
                                           " truncated results, got %zu/%zu\n",
                                           parent_koid, kind_name, actual, avail);
@@ -192,7 +190,7 @@ static zx_status_t FetchChildren(zx_handle_t parent_h, zx_koid_t parent_koid, in
 
 static zx_status_t DoThreads(const WalkContext* ctx, zx_handle_t process_h, zx_koid_t pid,
                              int depth) {
-  FXL_DCHECK(ctx->thread_callback);
+  FX_DCHECK(ctx->thread_callback);
 
   KoidTable koids;
   auto status =
@@ -282,7 +280,7 @@ static zx_status_t DoJob(JobKoidTableStack* stack, const WalkContext* ctx, zx::j
   if (job) {
     // Things are a bit tricky here as |job_callback| could take ownership of
     // the job, but we still need to call DoProcesses().
-    FXL_DCHECK(job->get() == job_h);
+    FX_DCHECK(job->get() == job_h);
     if (ctx->job_callback) {
       status = (*ctx->job_callback)(job, jid, parent_jid, depth);
       if (status != ZX_OK) {
@@ -350,12 +348,12 @@ static zx_status_t WalkJobTreeInternal(JobKoidTableStack* stack, const WalkConte
 zx_status_t WalkJobTree(const zx::job& job, JobTreeJobCallback* job_callback,
                         JobTreeProcessCallback* process_callback,
                         JobTreeThreadCallback* thread_callback) {
-  FXL_DCHECK(job.is_valid());
+  FX_DCHECK(job.is_valid());
   zx_info_handle_basic_t info;
   auto status =
       zx_object_get_info(job.get(), ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << fxl::StringPrintf(
+    FX_LOGS(ERROR) << fxl::StringPrintf(
         "zx_object_get_info(search_job, ZX_INFO_HANDLE_BASIC, ...) failed: "
         "%s\n",
         ZxErrorString(status).c_str());
@@ -406,13 +404,13 @@ zx::process FindProcess(zx_handle_t job_h, zx_koid_t pid) {
 zx::job GetDefaultJob() {
   auto job = zx_job_default();
   if (job == ZX_HANDLE_INVALID) {
-    FXL_VLOG(1) << "no default job";
+    FX_VLOGS(1) << "no default job";
     return zx::job();
   }
   zx_handle_t dupe_h;
   auto status = zx_handle_duplicate(job, ZX_RIGHT_SAME_RIGHTS, &dupe_h);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "unable to create dupe of default job: " << ZxErrorString(status);
+    FX_LOGS(ERROR) << "unable to create dupe of default job: " << ZxErrorString(status);
     return zx::job();
   }
 

@@ -39,7 +39,7 @@ class EchoServerApp : public Echo {
       app.echo().set_error_handler([this, &forward_to_server, &failed](zx_status_t status) {
         failed = true;
         loop_->Quit();
-        FXL_LOG(ERROR) << "error communicating with " << forward_to_server << ": " << status;
+        FX_LOGS(ERROR) << "error communicating with " << forward_to_server << ": " << status;
       });
       app.Start(forward_to_server);
       bool called_back = false;
@@ -66,7 +66,7 @@ class EchoServerApp : public Echo {
       app.echo().set_error_handler([this, &forward_to_server, &failed](zx_status_t status) {
         failed = true;
         loop_->Quit();
-        FXL_LOG(ERROR) << "error communicating with " << forward_to_server << ": " << status;
+        FX_LOGS(ERROR) << "error communicating with " << forward_to_server << ": " << status;
       });
       app.Start(forward_to_server);
       bool called_back = false;
@@ -97,7 +97,7 @@ class EchoServerApp : public Echo {
       std::unique_ptr<EchoClientApp> app(new EchoClientApp);
       app->echo().set_error_handler([this, &forward_to_server](zx_status_t status) {
         loop_->Quit();
-        FXL_LOG(ERROR) << "error communicating with " << forward_to_server << ": " << status;
+        FX_LOGS(ERROR) << "error communicating with " << forward_to_server << ": " << status;
       });
       app->Start(forward_to_server);
       app->echo().events().EchoEvent = [this](Struct resp) {
@@ -122,7 +122,7 @@ class EchoServerApp : public Echo {
       app.echo().set_error_handler([this, &forward_to_server, &failed](zx_status_t status) {
         failed = true;
         loop_->Quit();
-        FXL_LOG(ERROR) << "error communicating with " << forward_to_server << ": " << status;
+        FX_LOGS(ERROR) << "error communicating with " << forward_to_server << ": " << status;
       });
       app.Start(forward_to_server);
       bool called_back = false;
@@ -150,7 +150,7 @@ class EchoServerApp : public Echo {
       app.echo().set_error_handler([this, &forward_to_server, &failed](zx_status_t status) {
         failed = true;
         loop_->Quit();
-        FXL_LOG(ERROR) << "error communicating with " << forward_to_server << ": " << status;
+        FX_LOGS(ERROR) << "error communicating with " << forward_to_server << ": " << status;
       });
       app.Start(forward_to_server);
       bool called_back = false;
@@ -184,7 +184,7 @@ class EchoServerApp : public Echo {
       app.echo().set_error_handler([this, &forward_to_server, &failed](zx_status_t status) {
         failed = true;
         loop_->Quit();
-        FXL_LOG(ERROR) << "error communicating with " << forward_to_server << ": " << status;
+        FX_LOGS(ERROR) << "error communicating with " << forward_to_server << ": " << status;
       });
       app.Start(forward_to_server);
       bool called_back = false;
@@ -212,7 +212,7 @@ class EchoServerApp : public Echo {
       app.echo().set_error_handler([this, &forward_to_server, &failed](zx_status_t status) {
         failed = true;
         loop_->Quit();
-        FXL_LOG(ERROR) << "error communicating with " << forward_to_server << ": " << status;
+        FX_LOGS(ERROR) << "error communicating with " << forward_to_server << ": " << status;
       });
       app.Start(forward_to_server);
       bool called_back = false;
@@ -246,7 +246,7 @@ class EchoServerApp : public Echo {
       app.echo().set_error_handler([this, &forward_to_server, &failed](zx_status_t status) {
         failed = true;
         loop_->Quit();
-        FXL_LOG(ERROR) << "error communicating with " << forward_to_server << ": " << status;
+        FX_LOGS(ERROR) << "error communicating with " << forward_to_server << ": " << status;
       });
       app.Start(forward_to_server);
       bool called_back = false;
@@ -274,7 +274,7 @@ class EchoServerApp : public Echo {
       app.echo().set_error_handler([this, &forward_to_server, &failed](zx_status_t status) {
         failed = true;
         loop_->Quit();
-        FXL_LOG(ERROR) << "error communicating with " << forward_to_server << ": " << status;
+        FX_LOGS(ERROR) << "error communicating with " << forward_to_server << ": " << status;
       });
       app.Start(forward_to_server);
       bool called_back = false;
@@ -308,7 +308,7 @@ class EchoServerApp : public Echo {
       app.echo().set_error_handler([this, &forward_to_server, &failed](zx_status_t status) {
         failed = true;
         loop_->Quit();
-        FXL_LOG(ERROR) << "error communicating with " << forward_to_server << ": " << status;
+        FX_LOGS(ERROR) << "error communicating with " << forward_to_server << ": " << status;
       });
       app.Start(forward_to_server);
       bool called_back = false;
@@ -336,7 +336,7 @@ class EchoServerApp : public Echo {
       app.echo().set_error_handler([this, &forward_to_server, &failed](zx_status_t status) {
         failed = true;
         loop_->Quit();
-        FXL_LOG(ERROR) << "error communicating with " << forward_to_server << ": " << status;
+        FX_LOGS(ERROR) << "error communicating with " << forward_to_server << ": " << status;
       });
       app.Start(forward_to_server);
       bool called_back = false;

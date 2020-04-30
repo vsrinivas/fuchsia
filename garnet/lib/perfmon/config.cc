@@ -94,7 +94,7 @@ namespace internal {
 
 void PerfmonToFidlConfig(const Config& config, FidlPerfmonConfig* out_config) {
   *out_config = {};
-  FXL_DCHECK(config.GetEventCount() <= kMaxNumEvents);
+  FX_DCHECK(config.GetEventCount() <= kMaxNumEvents);
 
   size_t i = 0;
   config.IterateOverEvents([&](const Config::EventConfig& event) {

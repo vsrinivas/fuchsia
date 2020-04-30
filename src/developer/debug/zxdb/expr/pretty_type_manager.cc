@@ -27,8 +27,8 @@ using GetterList = std::initializer_list<std::pair<std::string, std::string>>;
 IdentifierGlob InternalGlob(const char* glob) {
   IdentifierGlob result;
   Err err = result.Init(glob);
-  FXL_CHECK(!err.has_error()) << "Internal pretty-printer parse failure for\" " << glob
-                              << "\": " << err.msg();
+  FX_CHECK(!err.has_error()) << "Internal pretty-printer parse failure for\" " << glob
+                             << "\": " << err.msg();
   return result;
 }
 

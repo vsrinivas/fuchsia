@@ -4,10 +4,11 @@
 
 #include "src/ui/lib/escher/scene/directional_light.h"
 
-#include <glm/gtc/epsilon.hpp>
 #include <utility>
 
 #include "src/lib/fxl/logging.h"
+
+#include <glm/gtc/epsilon.hpp>
 
 namespace escher {
 
@@ -23,7 +24,7 @@ DirectionalLight::DirectionalLight(vec3 direction, float dispersion, vec3 color)
   } else if (polar_direction_.x > 2 * M_PI) {
     polar_direction_.x -= 2 * M_PI;
   }
-  FXL_DCHECK(glm::epsilonEqual(1.f, glm::length(direction), 0.0001f));
+  FX_DCHECK(glm::epsilonEqual(1.f, glm::length(direction), 0.0001f));
 }
 
 DirectionalLight::DirectionalLight(vec2 polar_direction, float dispersion, vec3 color)

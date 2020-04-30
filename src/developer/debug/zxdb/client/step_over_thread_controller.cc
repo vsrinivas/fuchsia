@@ -19,7 +19,7 @@ namespace zxdb {
 
 StepOverThreadController::StepOverThreadController(StepMode mode)
     : step_mode_(mode), step_into_(std::make_unique<StepThreadController>(mode)) {
-  FXL_DCHECK(mode != StepMode::kAddressRange);
+  FX_DCHECK(mode != StepMode::kAddressRange);
 }
 
 StepOverThreadController::StepOverThreadController(AddressRanges ranges)
@@ -95,7 +95,7 @@ ThreadController::StopOp StepOverThreadController::OnThreadStop(
     } else if (step_mode_ == StepMode::kAddressRange) {
       step_into_ = std::make_unique<StepThreadController>(address_ranges_);
     } else {
-      FXL_NOTREACHED();
+      FX_NOTREACHED();
     }
 
     step_into_->InitWithThread(thread(), [](const Err&) {});

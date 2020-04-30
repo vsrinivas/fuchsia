@@ -21,13 +21,13 @@ void* BlockAllocator::Allocate(size_t size, size_t alignment) {
   if (size > fixed_size_block_size_ / 4) {
     auto it = InsertLargeBlock(size, alignment);
     void* result = AllocateFromBlock(it, size, alignment);
-    FXL_DCHECK(result);
+    FX_DCHECK(result);
     return result;
   } else if (void* result = AllocateFromBlock(current_fixed_size_block_, size, alignment)) {
     return result;
   } else {
     result = AllocateFromBlock(ObtainNextFixedSizeBlock(), size, alignment);
-    FXL_DCHECK(result);
+    FX_DCHECK(result);
     return result;
   }
 }
@@ -51,7 +51,7 @@ BlockAllocator::BlockList::iterator BlockAllocator::InsertLargeBlock(size_t size
 }
 
 BlockAllocator::BlockList::iterator BlockAllocator::ObtainNextFixedSizeBlock() {
-  FXL_DCHECK(current_fixed_size_block_ != fixed_size_blocks_.end());
+  FX_DCHECK(current_fixed_size_block_ != fixed_size_blocks_.end());
   if (++current_fixed_size_block_ == fixed_size_blocks_.end()) {
     // No next block was available, so allocate another one.
     current_fixed_size_block_ =

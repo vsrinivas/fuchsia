@@ -42,7 +42,7 @@ void RemoteAPITest::InjectModule(Process* process, fxl::RefPtr<ModuleSymbols> mo
 
   // Need to convert to an actual ProcessImpl.
   ProcessImpl* process_impl = session().system_impl().ProcessImplFromKoid(process->GetKoid());
-  FXL_CHECK(process_impl);
+  FX_CHECK(process_impl);
   process_impl->OnModules(modules, std::vector<uint64_t>());
 }
 
@@ -104,7 +104,7 @@ void RemoteAPITest::InjectExceptionWithStack(const debug_ipc::NotifyException& e
                                              bool has_all_frames) {
   ThreadImpl* thread =
       session_->ThreadImplFromKoid(exception.thread.process_koid, exception.thread.thread_koid);
-  FXL_CHECK(thread);  // Tests should always pass valid KOIDs.
+  FX_CHECK(thread);  // Tests should always pass valid KOIDs.
 
   // Create an exception record with a thread frame so it's valid. There must be one frame even
   // though the stack will be immediately overwritten.

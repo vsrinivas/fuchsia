@@ -147,13 +147,13 @@ std::optional<size_t> Stack::IndexForFrame(const Frame* frame) const {
 }
 
 size_t Stack::InlineDepthForIndex(size_t index) const {
-  FXL_DCHECK(index < frames_.size());
+  FX_DCHECK(index < frames_.size());
   for (size_t depth = 0; index + depth < frames_.size(); depth++) {
     if (!frames_[index + depth]->IsInline())
       return depth;
   }
 
-  FXL_NOTREACHED();  // Should have found a physical frame that generated it.
+  FX_NOTREACHED();  // Should have found a physical frame that generated it.
   return 0;
 }
 
@@ -162,7 +162,7 @@ FrameFingerprint Stack::GetFrameFingerprint(size_t virtual_frame_index) const {
 
   // Should reference a valid index in the array.
   if (frame_index >= frames_.size()) {
-    FXL_NOTREACHED();
+    FX_NOTREACHED();
     return FrameFingerprint();
   }
 
@@ -183,12 +183,12 @@ size_t Stack::GetAmbiguousInlineFrameCount() const {
   }
 
   // Should always have a non-inline frame if there are any.
-  FXL_DCHECK(frames_.empty());
+  FX_DCHECK(frames_.empty());
   return 0;
 }
 
 void Stack::SetHideAmbiguousInlineFrameCount(size_t hide_count) {
-  FXL_DCHECK(hide_count <= GetAmbiguousInlineFrameCount());
+  FX_DCHECK(hide_count <= GetAmbiguousInlineFrameCount());
   hide_ambiguous_inline_frame_count_ = hide_count;
 }
 

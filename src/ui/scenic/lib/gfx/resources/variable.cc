@@ -34,7 +34,7 @@ void TypedVariable<VT, T>::SetValue(T value) {
 template <::fuchsia::ui::gfx::Value::Tag VT, typename T>
 bool TypedVariable<VT, T>::SetValue(const ::fuchsia::ui::gfx::Value& value) {
   bool success = Unwrap(value, &value_);
-  FXL_DCHECK(success);
+  FX_DCHECK(success);
   for (auto listener : listeners_)
     listener->OnVariableValueChanged(this);
   return success;

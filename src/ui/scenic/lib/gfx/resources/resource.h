@@ -78,7 +78,7 @@ class Resource : public fxl::RefCountedThreadSafe<Resource> {
   // TODO: Move this to a separate class we inherit from.
   template <typename T>
   fxl::RefPtr<T> As() {
-    FXL_DCHECK(this->IsKindOf<T>());
+    FX_DCHECK(this->IsKindOf<T>());
     return fxl::RefPtr<T>(static_cast<T*>(this));
   }
 

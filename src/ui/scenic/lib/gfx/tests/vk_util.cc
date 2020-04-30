@@ -72,7 +72,7 @@ MemoryAllocationResult AllocateExportableMemoryDedicatedToImageIfRequired(
                                    vk::ExternalMemoryHandleTypeFlagBits::eTempZirconVmoFUCHSIA),
                                vk::MemoryDedicatedAllocateInfoKHR(dedicated_image, vk::Buffer())};
     auto result = device.allocateMemory(allocate_info_chain.get<vk::MemoryAllocateInfo>());
-    FXL_DCHECK(result.result == vk::Result::eSuccess);
+    FX_DCHECK(result.result == vk::Result::eSuccess);
     return MemoryAllocationResult{result.value, size, true};
   } else {
     // Allocate non-dedicated memory.
@@ -92,7 +92,7 @@ zx::vmo ExportMemoryAsVmo(vk::Device device, vk::DispatchLoaderDynamic dispatch_
       memory, vk::ExternalMemoryHandleTypeFlagBits::eTempZirconVmoFUCHSIA);
   auto result = device.getMemoryZirconHandleFUCHSIA(export_memory_info, dispatch_loader);
   if (result.result != vk::Result::eSuccess) {
-    FXL_LOG(ERROR) << "Failed to export vk::DeviceMemory as zx::vmo";
+    FX_LOGS(ERROR) << "Failed to export vk::DeviceMemory as zx::vmo";
     return zx::vmo();
   }
   return zx::vmo(result.value);

@@ -29,8 +29,8 @@ struct VertexAttributePointers {
 // will be null.
 VertexAttributePointers GetVertexAttributePointers(uint8_t* vertex, size_t vertex_size,
                                                    const MeshSpec& spec, MeshBuilderPtr builder) {
-  FXL_CHECK(builder->vertex_stride() <= vertex_size);
-  FXL_DCHECK(spec.IsValidOneBufferMesh());
+  FX_CHECK(builder->vertex_stride() <= vertex_size);
+  FX_DCHECK(spec.IsValidOneBufferMesh());
 
   VertexAttributePointers attribute_pointers{};
 
@@ -61,7 +61,7 @@ VertexAttributePointers GetVertexAttributePointers(uint8_t* vertex, size_t verte
 IndexedTriangleMesh2d<vec2> NewCircleIndexedTriangleMesh(const MeshSpec& spec,
                                                          uint32_t subdivisions, vec2 center,
                                                          float radius) {
-  FXL_DCHECK((spec == MeshSpec{.attributes = {MeshAttribute::kPosition2D, MeshAttribute::kUV}}));
+  FX_DCHECK((spec == MeshSpec{.attributes = {MeshAttribute::kPosition2D, MeshAttribute::kUV}}));
   IndexedTriangleMesh2d<vec2> mesh;
 
   // Compute the number of vertices in the tessellated circle.
@@ -153,7 +153,7 @@ IndexedTriangleMesh2d<vec2> NewFlatRectangleMesh(vec2 origin, vec2 extent, vec2 
 
 // Constructs an axis-aligned unit cube mesh.
 IndexedTriangleMesh3d<vec2> NewCubeIndexedTriangleMesh(const MeshSpec& spec) {
-  FXL_DCHECK((spec == MeshSpec{.attributes = {MeshAttribute::kPosition3D, MeshAttribute::kUV}}));
+  FX_DCHECK((spec == MeshSpec{.attributes = {MeshAttribute::kPosition3D, MeshAttribute::kUV}}));
   IndexedTriangleMesh3d<vec2> mesh;
 
   const size_t vertex_count = 8;  // Four in front, four in back.
@@ -227,8 +227,8 @@ MeshPtr NewCircleMesh(MeshBuilderFactory* factory, BatchGpuUploader* gpu_uploade
                       const MeshSpec& spec, int subdivisions, vec2 center, float radius,
                       float offset_magnitude) {
   // Compute the number of vertices in the tessellated circle.
-  FXL_DCHECK(subdivisions >= 0);
-  FXL_DCHECK(spec.IsValidOneBufferMesh());
+  FX_DCHECK(subdivisions >= 0);
+  FX_DCHECK(spec.IsValidOneBufferMesh());
   size_t outer_vertex_count = 4;
   while (subdivisions-- > 0) {
     outer_vertex_count *= 2;
@@ -245,7 +245,7 @@ MeshPtr NewCircleMesh(MeshBuilderFactory* factory, BatchGpuUploader* gpu_uploade
   auto vertex_p = GetVertexAttributePointers(vertex, kMaxVertexSize, spec, builder);
 
   // Build center vertex.
-  FXL_CHECK(vertex_p.pos2);
+  FX_CHECK(vertex_p.pos2);
   (*vertex_p.pos2) = center;
   if (vertex_p.uv)
     (*vertex_p.uv) = vec2(0.5f, 0.5f);
@@ -288,9 +288,9 @@ MeshPtr NewCircleMesh(MeshBuilderFactory* factory, BatchGpuUploader* gpu_uploade
   builder->AddIndex(outer_vertex_count);
 
   auto mesh = builder->Build();
-  FXL_DCHECK(mesh->num_indices() == index_count);
-  FXL_DCHECK(mesh->bounding_box() == BoundingBox(vec3(center.x - radius, center.y - radius, 0),
-                                                 vec3(center.x + radius, center.y + radius, 0)));
+  FX_DCHECK(mesh->num_indices() == index_count);
+  FX_DCHECK(mesh->bounding_box() == BoundingBox(vec3(center.x - radius, center.y - radius, 0),
+                                                vec3(center.x + radius, center.y + radius, 0)));
   return mesh;
 }
 
@@ -299,8 +299,8 @@ MeshPtr NewRingMesh(MeshBuilderFactory* factory, BatchGpuUploader* gpu_uploader,
                     float inner_radius, float outer_offset_magnitude,
                     float inner_offset_magnitude) {
   // Compute the number of vertices in the tessellated circle.
-  FXL_DCHECK(subdivisions >= 0);
-  FXL_DCHECK(spec.IsValidOneBufferMesh());
+  FX_DCHECK(subdivisions >= 0);
+  FX_DCHECK(spec.IsValidOneBufferMesh());
   size_t outer_vertex_count = 4;
   while (subdivisions-- > 0) {
     outer_vertex_count *= 2;
@@ -315,7 +315,7 @@ MeshPtr NewRingMesh(MeshBuilderFactory* factory, BatchGpuUploader* gpu_uploader,
   constexpr size_t kMaxVertexSize = 100;
   uint8_t vertex[kMaxVertexSize];
   auto vertex_p = GetVertexAttributePointers(vertex, kMaxVertexSize, spec, builder);
-  FXL_CHECK(vertex_p.pos2);
+  FX_CHECK(vertex_p.pos2);
 
   const float outer_vertex_count_reciprocal = 1.f / outer_vertex_count;
   const float radian_step = 2 * M_PI / outer_vertex_count;
@@ -370,10 +370,10 @@ MeshPtr NewRingMesh(MeshBuilderFactory* factory, BatchGpuUploader* gpu_uploader,
   builder->AddIndex(1);
 
   auto mesh = builder->Build();
-  FXL_DCHECK(mesh->num_indices() == index_count);
-  FXL_DCHECK(mesh->bounding_box() ==
-             BoundingBox(vec3(center.x - outer_radius, center.y - outer_radius, 0),
-                         vec3(center.x + outer_radius, center.y + outer_radius, 0)));
+  FX_DCHECK(mesh->num_indices() == index_count);
+  FX_DCHECK(mesh->bounding_box() ==
+            BoundingBox(vec3(center.x - outer_radius, center.y - outer_radius, 0),
+                        vec3(center.x + outer_radius, center.y + outer_radius, 0)));
   return mesh;
 }
 
@@ -381,7 +381,7 @@ MeshPtr NewRectangleMesh(MeshBuilderFactory* factory, BatchGpuUploader* gpu_uplo
                          const MeshSpec& spec, int subdivisions, vec2 extent, vec2 top_left,
                          float top_offset_magnitude, float bottom_offset_magnitude) {
   // Compute the number of vertices in the tessellated circle.
-  FXL_DCHECK(subdivisions >= 0);
+  FX_DCHECK(subdivisions >= 0);
   size_t vertices_per_side = 2;
   while (subdivisions-- > 0) {
     vertices_per_side *= 2;
@@ -396,7 +396,7 @@ MeshPtr NewRectangleMesh(MeshBuilderFactory* factory, BatchGpuUploader* gpu_uplo
   constexpr size_t kMaxVertexSize = 100;
   uint8_t vertex[kMaxVertexSize];
   auto vertex_p = GetVertexAttributePointers(vertex, kMaxVertexSize, spec, builder);
-  FXL_CHECK(vertex_p.pos2);
+  FX_CHECK(vertex_p.pos2);
 
   const float vertices_per_side_reciprocal = 1.f / (vertices_per_side - 1);
   for (size_t i = 0; i < vertices_per_side; ++i) {
@@ -432,7 +432,7 @@ MeshPtr NewRectangleMesh(MeshBuilderFactory* factory, BatchGpuUploader* gpu_uplo
   }
 
   auto mesh = builder->Build();
-  FXL_DCHECK(mesh->num_indices() == index_count);
+  FX_DCHECK(mesh->num_indices() == index_count);
   return mesh;
 }
 
@@ -457,8 +457,8 @@ MeshPtr NewFullScreenMesh(MeshBuilderFactory* factory, BatchGpuUploader* gpu_upl
 
 MeshPtr NewSphereMesh(MeshBuilderFactory* factory, BatchGpuUploader* gpu_uploader,
                       const MeshSpec& spec, int subdivisions, vec3 center, float radius) {
-  FXL_DCHECK(subdivisions >= 0);
-  FXL_DCHECK(spec.IsValidOneBufferMesh());
+  FX_DCHECK(subdivisions >= 0);
+  FX_DCHECK(spec.IsValidOneBufferMesh());
   size_t vertex_count = 9;
   size_t triangle_count = 8;
   for (int i = 0; i < subdivisions; ++i) {
@@ -473,7 +473,7 @@ MeshPtr NewSphereMesh(MeshBuilderFactory* factory, BatchGpuUploader* gpu_uploade
   constexpr size_t kMaxVertexSize = 100;
   uint8_t vertex[kMaxVertexSize];
   auto vertex_p = GetVertexAttributePointers(vertex, kMaxVertexSize, spec, builder);
-  FXL_CHECK(vertex_p.pos3);
+  FX_CHECK(vertex_p.pos3);
 
   // Positions and UV-coordinates for the initial octahedron.  The vertex with
   // position (-radius, 0, 0) is replicated 4 times, with different UV-coords
@@ -506,7 +506,7 @@ MeshPtr NewSphereMesh(MeshBuilderFactory* factory, BatchGpuUploader* gpu_uploade
   // TODO(ES-32): this is a hack to ease implementation.  We don't currently
   // need any tessellated spheres; this is just a way to verify that 3D meshes
   // are working properly.
-  FXL_DCHECK(spec.attributes[0] == (MeshAttribute::kPosition3D | MeshAttribute::kUV))
+  FX_DCHECK(spec.attributes[0] == (MeshAttribute::kPosition3D | MeshAttribute::kUV))
       << "Tessellated sphere must have UV-coordinates.";
   size_t position_offset = reinterpret_cast<uint8_t*>(vertex_p.pos3) - vertex;
   size_t uv_offset = reinterpret_cast<uint8_t*>(vertex_p.uv) - vertex;
@@ -516,7 +516,7 @@ MeshPtr NewSphereMesh(MeshBuilderFactory* factory, BatchGpuUploader* gpu_uploade
     // TODO(ES-32): see comment in header file... this approach is broken, but
     // sufficient for our current purpose.
     const size_t subdiv_triangle_count = builder->index_count() / 3;
-    FXL_DCHECK(subdiv_triangle_count * 3 == builder->index_count());
+    FX_DCHECK(subdiv_triangle_count * 3 == builder->index_count());
 
     for (size_t tri_ind = 0; tri_ind < subdiv_triangle_count; ++tri_ind) {
       // Obtain indices for the current triangle, and the position/UV coords for

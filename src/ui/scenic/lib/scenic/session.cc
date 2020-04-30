@@ -21,7 +21,7 @@ Session::Session(SessionId id, fidl::InterfaceRequest<fuchsia::ui::scenic::Sessi
       binding_(this, std::move(session_request)),
       destroy_session_func_(std::move(destroy_session_function)),
       weak_factory_(this) {
-  FXL_DCHECK(!binding_.channel() || binding_.is_bound());
+  FX_DCHECK(!binding_.channel() || binding_.is_bound());
 }
 
 Session::~Session() { reporter_->Reset(); }
@@ -32,7 +32,7 @@ void Session::set_binding_error_handler(fit::function<void(zx_status_t)> error_h
 
 void Session::SetFrameScheduler(
     const std::shared_ptr<scheduling::FrameScheduler>& frame_scheduler) {
-  FXL_DCHECK(frame_scheduler_.expired()) << "Error: FrameScheduler already set";
+  FX_DCHECK(frame_scheduler_.expired()) << "Error: FrameScheduler already set";
   frame_scheduler_ = frame_scheduler;
 
   // Initialize FrameScheduler callbacks.
@@ -58,8 +58,8 @@ void Session::SetFrameScheduler(
           // Update and set num_presents_allowed before ultimately calling into the client provided
           // callback.
           weak->num_presents_allowed_ += (info.presentation_infos.size());
-          FXL_DCHECK(weak->num_presents_allowed_ <=
-                     scheduling::FrameScheduler::kMaxPresentsInFlight);
+          FX_DCHECK(weak->num_presents_allowed_ <=
+                    scheduling::FrameScheduler::kMaxPresentsInFlight);
           info.num_presents_allowed = weak->num_presents_allowed_;
           weak->binding_.events().OnFramePresented(std::move(info));
         });
@@ -115,7 +115,7 @@ void Session::Present(uint64_t presentation_time, std::vector<zx::event> acquire
     if (!weak)
       return;
     ++(weak->num_presents_allowed_);
-    FXL_DCHECK(weak->num_presents_allowed_ <= scheduling::FrameScheduler::kMaxPresentsInFlight);
+    FX_DCHECK(weak->num_presents_allowed_ <= scheduling::FrameScheduler::kMaxPresentsInFlight);
     callback(info);
   };
 
@@ -172,8 +172,8 @@ void Session::ProcessQueuedPresents() {
     // The queue is either already being processed or there is nothing in the queue to process.
 
     // If the queue is empty then trace id's should now be matching.
-    FXL_DCHECK(!presents_to_schedule_.empty() ||
-               queue_processing_trace_id_begin_ == queue_processing_trace_id_end_);
+    FX_DCHECK(!presents_to_schedule_.empty() ||
+              queue_processing_trace_id_begin_ == queue_processing_trace_id_end_);
     return;
   }
 
@@ -182,7 +182,7 @@ void Session::ProcessQueuedPresents() {
       std::move(presents_to_schedule_.front().acquire_fences));
   presents_to_schedule_.front().acquire_fences.clear();
   fence_listener_->WaitReadyAsync([weak = weak_factory_.GetWeakPtr()] {
-    FXL_CHECK(weak);
+    FX_CHECK(weak);
     weak->ScheduleNextPresent();
 
     // Lambda won't fire if the object is destroyed, but the session can be killed inside of
@@ -232,15 +232,15 @@ void Session::SchedulePresentRequest(
     TRACE_FLOW_BEGIN("gfx", "wait_for_fences", SESSION_TRACE_ID(id_, present_id));
     ProcessQueuedPresents();
   } else {
-    FXL_LOG(WARNING) << "FrameScheduler is missing.";
+    FX_LOGS(WARNING) << "FrameScheduler is missing.";
   }
 }
 
 void Session::ScheduleNextPresent() {
-  FXL_DCHECK(!presents_to_schedule_.empty());
+  FX_DCHECK(!presents_to_schedule_.empty());
 
   auto& present_request = presents_to_schedule_.front();
-  FXL_DCHECK(present_request.acquire_fences.empty());
+  FX_DCHECK(present_request.acquire_fences.empty());
   TRACE_DURATION("gfx", "scenic_impl::Session::ScheduleNextPresent", "session_id", id_,
                  "requested_presentation_time",
                  present_request.requested_presentation_time.get() / 1'000'000);
@@ -249,7 +249,7 @@ void Session::ScheduleNextPresent() {
   for (auto& cmd : present_request.commands) {
     System::TypeId type_id = SystemTypeForCmd(cmd);
     auto dispatcher = type_id != System::TypeId::kInvalid ? dispatchers_[type_id].get() : nullptr;
-    FXL_DCHECK(dispatcher);
+    FX_DCHECK(dispatcher);
     dispatcher->DispatchCommand(std::move(cmd), present_request.present_id);
   }
 
@@ -299,13 +299,13 @@ void Session::SetDebugName(std::string debug_name) {
 
 Session::EventAndErrorReporter::EventAndErrorReporter(Session* session)
     : session_(session), weak_factory_(this) {
-  FXL_DCHECK(session_);
+  FX_DCHECK(session_);
 }
 
 void Session::EventAndErrorReporter::Reset() { session_ = nullptr; }
 
 void Session::EventAndErrorReporter::PostFlushTask() {
-  FXL_DCHECK(session_);
+  FX_DCHECK(session_);
   TRACE_DURATION("gfx", "scenic_impl::Session::EventAndErrorReporter::PostFlushTask");
 
   // If this is the first EnqueueEvent() since the last FlushEvent(), post a
@@ -436,7 +436,7 @@ void Session::EventAndErrorReporter::ReportError(fxl::LogSeverity severity,
   // TODO(SCN-1265): Come up with a better solution to avoid children
   // calling into us during destruction.
   if (!session_) {
-    FXL_LOG(ERROR) << "Reporting Scenic Session error after session destroyed: " << error_string;
+    FX_LOGS(ERROR) << "Reporting Scenic Session error after session destroyed: " << error_string;
     return;
   }
 
@@ -444,13 +444,13 @@ void Session::EventAndErrorReporter::ReportError(fxl::LogSeverity severity,
 
   switch (severity) {
     case fxl::LOG_INFO:
-      FXL_LOG(INFO) << error_string;
+      FX_LOGS(INFO) << error_string;
       return;
     case fxl::LOG_WARNING:
-      FXL_LOG(WARNING) << error_string;
+      FX_LOGS(WARNING) << error_string;
       return;
     case fxl::LOG_ERROR:
-      FXL_LOG(ERROR) << "Scenic session error (session_id: " << session_->id()
+      FX_LOGS(ERROR) << "Scenic session error (session_id: " << session_->id()
                      << "): " << error_string;
 
       if (error_callback_) {
@@ -462,11 +462,11 @@ void Session::EventAndErrorReporter::ReportError(fxl::LogSeverity severity,
       }
       return;
     case fxl::LOG_FATAL:
-      FXL_LOG(FATAL) << error_string;
+      FX_LOGS(FATAL) << error_string;
       return;
     default:
       // Invalid severity.
-      FXL_DCHECK(false);
+      FX_DCHECK(false);
   }
 }
 

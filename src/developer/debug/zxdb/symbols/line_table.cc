@@ -21,7 +21,7 @@ size_t LineTable::GetNumSequences() const {
 containers::array_view<LineTable::Row> LineTable::GetSequenceAt(size_t index) const {
   // Callers will have to call GetNumSequences() above before querying for a specific one, so we
   // don't have to call EnsureSequence().
-  FXL_DCHECK(index < sequences_.size());
+  FX_DCHECK(index < sequences_.size());
 
   containers::array_view<Row> rows = GetRows();
   size_t row_begin = sequences_[index].row_begin;
@@ -55,7 +55,7 @@ LineTable::FoundRow LineTable::GetRowForAddress(const SymbolContext& address_con
 
   // The address should not be before the beginning of this sequence (the only end() case for
   // LargestLessOrEqual()). Otherwise GetRowSequenceForAddress() shouldn't have returned it.
-  FXL_DCHECK(found != seq.end());
+  FX_DCHECK(found != seq.end());
 
   // Skip duplicates if there are any. LargestLessOrEqual() may have returned the last one of a
   // series of duplicates preceeding the address in question. We want the first entry for this

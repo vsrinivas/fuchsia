@@ -11,7 +11,7 @@ SystemContext::SystemContext(sys::ComponentContext* app_context, inspect::Node i
     : app_context_(app_context),
       quit_callback_(std::move(quit_callback)),
       inspect_node_(std::move(inspect_node)) {
-  FXL_DCHECK(app_context_);
+  FX_DCHECK(app_context_);
 }
 
 SystemContext::SystemContext(SystemContext&& context)

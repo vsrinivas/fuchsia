@@ -45,7 +45,7 @@ PrettyFrameGlob PrettyFrameGlob::FuncFile(IdentifierGlob func_glob, std::string 
 PrettyFrameGlob PrettyFrameGlob::Func(const std::string& func_glob) {
   IdentifierGlob glob;
   Err err = glob.Init(func_glob);
-  FXL_DCHECK(err.ok());
+  FX_DCHECK(err.ok());
 
   return Func(std::move(glob));
 }
@@ -54,7 +54,7 @@ PrettyFrameGlob PrettyFrameGlob::Func(const std::string& func_glob) {
 PrettyFrameGlob PrettyFrameGlob::FuncFile(const std::string& func_glob, std::string file) {
   IdentifierGlob glob;
   Err err = glob.Init(func_glob);
-  FXL_DCHECK(err.ok());
+  FX_DCHECK(err.ok());
 
   return FuncFile(std::move(glob), std::move(file));
 }

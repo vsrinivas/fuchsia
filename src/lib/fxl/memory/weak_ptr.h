@@ -75,12 +75,12 @@ class WeakPtr {
   T* get() const { return *this ? ptr_ : nullptr; }
 
   T& operator*() const {
-    FXL_DCHECK(*this);
+    FX_DCHECK(*this);
     return *get();
   }
 
   T* operator->() const {
-    FXL_DCHECK(*this);
+    FX_DCHECK(*this);
     return get();
   }
 
@@ -143,16 +143,16 @@ class WeakPtr {
 template <typename T>
 class WeakPtrFactory {
  public:
-  explicit WeakPtrFactory(T* ptr) : ptr_(ptr) { FXL_DCHECK(ptr_); }
+  explicit WeakPtrFactory(T* ptr) : ptr_(ptr) { FX_DCHECK(ptr_); }
   ~WeakPtrFactory() {
     InvalidateWeakPtrs();
-    FXL_DCHECK(*reinterpret_cast<uintptr_t volatile*>(const_cast<T**>(&ptr_)) = kPoisonedPointer);
+    FX_DCHECK(*reinterpret_cast<uintptr_t volatile*>(const_cast<T**>(&ptr_)) = kPoisonedPointer);
   }
 
   // Gets a new weak pointer, which will be valid until either
   // |InvalidateWeakPtrs()| is called or this object is destroyed.
   WeakPtr<T> GetWeakPtr() {
-    FXL_DCHECK(reinterpret_cast<uintptr_t>(ptr_) != kPoisonedPointer);
+    FX_DCHECK(reinterpret_cast<uintptr_t>(ptr_) != kPoisonedPointer);
     if (!flag_)
       flag_ = MakeRefCounted<internal::WeakPtrFlag>();
     return WeakPtr<T>(ptr_, flag_.Clone());

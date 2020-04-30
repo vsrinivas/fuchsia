@@ -19,7 +19,7 @@ std::vector<std::pair<std::string, std::string>> ShaderVariantArgs::Canonicalize
   result.erase(std::unique(result.begin(), result.end(),
                            [](const Def& lhs, const Def& rhs) { return lhs.first == rhs.first; }),
                result.end());
-  FXL_DCHECK(result.size() == defs.size()) << "shader args have duplicate definitions";
+  FX_DCHECK(result.size() == defs.size()) << "shader args have duplicate definitions";
   return result;
 }
 

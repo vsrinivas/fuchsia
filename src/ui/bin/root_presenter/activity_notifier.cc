@@ -28,7 +28,7 @@ ActivityNotifierImpl::ActivityNotifierImpl(async_dispatcher_t* dispatcher, zx::d
     : dispatcher_(dispatcher), interval_(interval) {
   activity_tracker_service_ = context.svc()->Connect<fuchsia::ui::activity::Tracker>();
   activity_tracker_service_.set_error_handler([this](zx_status_t error) {
-    FXL_LOG(ERROR) << "Activity service died (" << zx_status_get_string(error) << "), no longer "
+    FX_LOGS(ERROR) << "Activity service died (" << zx_status_get_string(error) << "), no longer "
                    << "sending activity events.";
     activity_tracker_service_ = nullptr;
   });
@@ -61,8 +61,8 @@ void ActivityNotifierImpl::NotifyForPendingActivity() {
     auto now = async::Now(dispatcher_);
     activity_tracker_service_->ReportDiscreteActivity(
         std::move(*pending_activity_), now.get(), [this]() {
-            notify_task_.PostDelayed(dispatcher_, interval_);
-            pending_activity_ = std::nullopt;
+          notify_task_.PostDelayed(dispatcher_, interval_);
+          pending_activity_ = std::nullopt;
         });
   } else {
     // |notify_task_| is intentionally not re-scheduled if no input was received recently. It

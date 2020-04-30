@@ -28,7 +28,7 @@ namespace {
 // Default 1x1 texture for Materials that have no texture.  See header file
 // |white_texture_| comment.
 TexturePtr CreateWhiteTexture(Escher* escher, BatchGpuUploader* gpu_uploader) {
-  FXL_DCHECK(escher);
+  FX_DCHECK(escher);
   uint8_t channels[4];
   channels[0] = channels[1] = channels[2] = channels[3] = 255;
   auto image = escher->NewRgbaImage(gpu_uploader, 1, 1, channels);
@@ -67,11 +67,11 @@ PaperRenderQueueFlagBits GetRenderQueueFlagBits(const Material& mat) {
 PaperDrawCallFactory::PaperDrawCallFactory(EscherWeakPtr weak_escher,
                                            const PaperRendererConfig& config) {}
 
-PaperDrawCallFactory::~PaperDrawCallFactory() { FXL_DCHECK(!frame_); }
+PaperDrawCallFactory::~PaperDrawCallFactory() { FX_DCHECK(!frame_); }
 
 void PaperDrawCallFactory::DrawCircle(float radius, const PaperMaterial& material,
                                       PaperDrawableFlags flags) {
-  FXL_DCHECK(frame_);
+  FX_DCHECK(frame_);
 
   // We aim to improve cache hit rate by using a circle of radius 1.  This
   // requires us to push a new transform.
@@ -90,7 +90,7 @@ void PaperDrawCallFactory::DrawCircle(float radius, const PaperMaterial& materia
 
 void PaperDrawCallFactory::DrawRect(vec2 min, vec2 max, const PaperMaterial& material,
                                     PaperDrawableFlags flags) {
-  FXL_DCHECK(frame_);
+  FX_DCHECK(frame_);
 
   const auto& transform = transform_stack_->Top();
   const auto& entry = shape_cache_->GetRectMesh(min, max, transform.clip_planes.data(),
@@ -101,7 +101,7 @@ void PaperDrawCallFactory::DrawRect(vec2 min, vec2 max, const PaperMaterial& mat
 void PaperDrawCallFactory::DrawRoundedRect(const RoundedRectSpec& spec,
                                            const PaperMaterial& material,
                                            PaperDrawableFlags flags) {
-  FXL_DCHECK(frame_);
+  FX_DCHECK(frame_);
 
   const auto& transform = transform_stack_->Top();
   const auto& entry = shape_cache_->GetRoundedRectMesh(spec, transform.clip_planes.data(),
@@ -111,7 +111,7 @@ void PaperDrawCallFactory::DrawRoundedRect(const RoundedRectSpec& spec,
 
 void PaperDrawCallFactory::DrawBoundingBox(const PaperMaterial& material,
                                            PaperDrawableFlags flags) {
-  FXL_DCHECK(frame_);
+  FX_DCHECK(frame_);
   const auto& transform = transform_stack_->Top();
   const auto& entry =
       shape_cache_->GetBoxMesh(transform.clip_planes.data(), transform.clip_planes.size());
@@ -120,7 +120,7 @@ void PaperDrawCallFactory::DrawBoundingBox(const PaperMaterial& material,
 
 void PaperDrawCallFactory::DrawMesh(const MeshPtr& mesh, const PaperMaterial& material,
                                     PaperDrawableFlags flags) {
-  FXL_DCHECK(frame_);
+  FX_DCHECK(frame_);
   PaperShapeCacheEntry entry = {shape_cache_->frame_number(), mesh, mesh->num_indices(), 0};
   EnqueueDrawCalls(entry, material, flags);
 }
@@ -128,7 +128,7 @@ void PaperDrawCallFactory::DrawMesh(const MeshPtr& mesh, const PaperMaterial& ma
 void PaperDrawCallFactory::EnqueueDrawCalls(const PaperShapeCacheEntry& cache_entry,
                                             const PaperMaterial& material,
                                             PaperDrawableFlags drawable_flags) {
-  FXL_DCHECK(frame_);
+  FX_DCHECK(frame_);
   if (!cache_entry) {
     return;
   }
@@ -222,7 +222,7 @@ void PaperDrawCallFactory::BeginFrame(const FramePtr& frame, BatchGpuUploader* g
                                       PaperScene* scene, PaperTransformStack* transform_stack,
                                       PaperRenderQueue* render_queue, PaperShapeCache* shape_cache,
                                       vec3 camera_pos, vec3 camera_dir) {
-  FXL_DCHECK(!frame_ && frame && gpu_uploader && transform_stack && render_queue && shape_cache);
+  FX_DCHECK(!frame_ && frame && gpu_uploader && transform_stack && render_queue && shape_cache);
   frame_ = frame;
   transform_stack_ = transform_stack;
   render_queue_ = render_queue;
@@ -237,7 +237,7 @@ void PaperDrawCallFactory::BeginFrame(const FramePtr& frame, BatchGpuUploader* g
 }
 
 void PaperDrawCallFactory::EndFrame() {
-  FXL_DCHECK(frame_);
+  FX_DCHECK(frame_);
   frame_ = nullptr;
   transform_stack_ = nullptr;
   render_queue_ = nullptr;

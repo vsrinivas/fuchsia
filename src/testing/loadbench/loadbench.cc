@@ -114,7 +114,7 @@ int main(int argc, char** argv) {
   if (workload.priority().has_value()) {
     auto profile = GetProfile(workload.priority().value());
     const auto status = zx::thread::self()->set_profile(*profile, 0);
-    FXL_CHECK(status == ZX_OK) << "Failed to set the priority of the main thread!";
+    FX_CHECK(status == ZX_OK) << "Failed to set the priority of the main thread!";
   }
 
   std::vector<std::thread> threads;
@@ -255,9 +255,9 @@ int main(int argc, char** argv) {
         std::cout << "Traces being saved in " << tracing_filepath << "..." << std::endl;
 
         if (!tracing.WriteHumanReadable(human_readable_file))
-          FXL_LOG(ERROR) << "Writing human readable file failed.";
+          FX_LOGS(ERROR) << "Writing human readable file failed.";
       } else {
-        FXL_LOG(ERROR) << "Failed to open " << tracing_filepath << ".";
+        FX_LOGS(ERROR) << "Failed to open " << tracing_filepath << ".";
       }
     }
 
@@ -267,7 +267,7 @@ int main(int argc, char** argv) {
 
       if (!tracing.PopulateDurationStats(config.trace_string_ref.value(), &duration_stats,
                                          &queuing_stats)) {
-        FXL_LOG(ERROR) << "Provided string ref not found.";
+        FX_LOGS(ERROR) << "Provided string ref not found.";
       } else if (duration_stats.size() != 0 && queuing_stats.size() != 0) {
         uint64_t total_wall_duration_ns{0};
         uint64_t total_queuing_time_ns{0};
@@ -288,7 +288,7 @@ int main(int argc, char** argv) {
                   << double_nanoseconds{total_queuing_time_ns}.count() / queuing_stats.size()
                   << " ns." << std::endl;
       } else {
-        FXL_LOG(WARNING) << "No events found that match provided string ref.";
+        FX_LOGS(WARNING) << "No events found that match provided string ref.";
       }
     }
   }

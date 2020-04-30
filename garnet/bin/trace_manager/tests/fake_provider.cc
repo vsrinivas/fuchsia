@@ -21,11 +21,11 @@ std::string FakeProvider::PrettyName() const {
 
 // fidl
 void FakeProvider::Initialize(provider::ProviderConfig config) {
-  FXL_VLOG(2) << PrettyName() << ": Received Initialize message";
+  FX_VLOGS(2) << PrettyName() << ": Received Initialize message";
   ++initialize_count_;
 
   if (state_ != State::kReady) {
-    FXL_VLOG(2) << "Can't initialize, state is " << state_;
+    FX_VLOGS(2) << "Can't initialize, state is " << state_;
     return;
   }
 
@@ -52,23 +52,23 @@ void FakeProvider::Initialize(provider::ProviderConfig config) {
 
 // fidl
 void FakeProvider::Start(provider::StartOptions options) {
-  FXL_VLOG(2) << PrettyName() << ": Received Start message";
+  FX_VLOGS(2) << PrettyName() << ": Received Start message";
   ++start_count_;
 
   if (state_ == State::kInitialized || state_ == State::kStopped) {
     AdvanceToState(State::kStarting);
   } else {
-    FXL_VLOG(2) << "Can't start, state is " << state_;
+    FX_VLOGS(2) << "Can't start, state is " << state_;
     return;
   }
 
   if (options.buffer_disposition == provider::BufferDisposition::RETAIN) {
     // Don't reset the buffer pointer.
-    FXL_VLOG(2) << "Retaining buffer contents";
+    FX_VLOGS(2) << "Retaining buffer contents";
   } else {
     // Our fake provider doesn't use the durable buffer, and only one of the
     // rolling buffers.
-    FXL_VLOG(2) << "Clearing buffer contents";
+    FX_VLOGS(2) << "Clearing buffer contents";
     ResetBufferPointers();
     WriteInitRecord();
   }
@@ -78,7 +78,7 @@ void FakeProvider::Start(provider::StartOptions options) {
 
 // fidl
 void FakeProvider::Stop() {
-  FXL_VLOG(2) << PrettyName() << ": Received Stop message";
+  FX_VLOGS(2) << PrettyName() << ": Received Stop message";
   ++stop_count_;
 
   switch (state_) {
@@ -88,14 +88,14 @@ void FakeProvider::Stop() {
       AdvanceToState(State::kStopping);
       break;
     default:
-      FXL_VLOG(2) << "Can't stop, state is " << state_;
+      FX_VLOGS(2) << "Can't stop, state is " << state_;
       break;
   }
 }
 
 // fidl
 void FakeProvider::Terminate() {
-  FXL_VLOG(2) << PrettyName() << ": Received Terminate message";
+  FX_VLOGS(2) << PrettyName() << ": Received Terminate message";
   ++terminate_count_;
 
   switch (state_) {
@@ -103,7 +103,7 @@ void FakeProvider::Terminate() {
     case State::kTerminating:
     case State::kTerminated:
       // Nothing to do.
-      FXL_VLOG(2) << "Won't advance state, state is " << state_;
+      FX_VLOGS(2) << "Won't advance state, state is " << state_;
       break;
     default:
       AdvanceToState(State::kTerminating);
@@ -112,27 +112,27 @@ void FakeProvider::Terminate() {
 }
 
 void FakeProvider::MarkStarted() {
-  FXL_DCHECK(state_ == State::kStarting) << state_;
+  FX_DCHECK(state_ == State::kStarting) << state_;
   AdvanceToState(State::kStarted);
 }
 
 void FakeProvider::MarkStopped() {
-  FXL_DCHECK(state_ == State::kStopping) << state_;
+  FX_DCHECK(state_ == State::kStopping) << state_;
   AdvanceToState(State::kStopped);
 }
 
 void FakeProvider::MarkTerminated() {
-  FXL_DCHECK(state_ == State::kTerminating) << state_;
+  FX_DCHECK(state_ == State::kTerminating) << state_;
   AdvanceToState(State::kTerminated);
 }
 
 void FakeProvider::AdvanceToState(State state) {
-  FXL_VLOG(2) << PrettyName() << ": Advancing to state " << state;
+  FX_VLOGS(2) << PrettyName() << ": Advancing to state " << state;
 
   switch (state) {
     case State::kReady:
       // We start out in the ready state, tests should never transition us back.
-      FXL_NOTREACHED();
+      FX_NOTREACHED();
       break;
     case State::kInitialized:
     case State::kStarting:
@@ -208,7 +208,7 @@ void FakeProvider::InitializeBuffer() {
 
 void FakeProvider::ComputeBufferSizes() {
   zx_status_t status = buffer_vmo_.get_size(&total_buffer_size_);
-  FXL_DCHECK(status == ZX_OK) << "status=" << status;
+  FX_DCHECK(status == ZX_OK) << "status=" << status;
 
   size_t header_size = kHeaderSize;
 
@@ -226,22 +226,22 @@ void FakeProvider::ComputeBufferSizes() {
       durable_buffer_size_ += off_by;
       rolling_buffer_size_ = (avail - durable_buffer_size_) / 2;
       // Ensure entire buffer is used.
-      FXL_DCHECK(durable_buffer_size_ + 2 * rolling_buffer_size_ == avail);
+      FX_DCHECK(durable_buffer_size_ + 2 * rolling_buffer_size_ == avail);
       break;
     }
     default:
-      FXL_NOTREACHED();
+      FX_NOTREACHED();
       break;
   }
 }
 
 void FakeProvider::ResetBufferPointers() {
-  FXL_VLOG(2) << PrettyName() << ": Resetting buffer pointers";
+  FX_VLOGS(2) << PrettyName() << ": Resetting buffer pointers";
   buffer_next_ = 0;
 }
 
 void FakeProvider::InitBufferHeader() {
-  FXL_VLOG(2) << PrettyName() << ": Initializing buffer header";
+  FX_VLOGS(2) << PrettyName() << ": Initializing buffer header";
 
   // See trace-engine/context.cpp.
   trace::internal::trace_buffer_header header{};
@@ -266,21 +266,21 @@ void FakeProvider::InitBufferHeader() {
   header.rolling_buffer_size = rolling_buffer_size_;
 
   zx_status_t status = buffer_vmo_.write(&header, 0, sizeof(header));
-  FXL_DCHECK(status == ZX_OK) << "status=" << status;
+  FX_DCHECK(status == ZX_OK) << "status=" << status;
 }
 
 void FakeProvider::UpdateBufferHeaderAfterStopped() {
-  FXL_VLOG(2) << PrettyName() << ": Updating buffer header, buffer pointer=" << buffer_next_;
+  FX_VLOGS(2) << PrettyName() << ": Updating buffer header, buffer pointer=" << buffer_next_;
   size_t offset = offsetof(trace::internal::trace_buffer_header, rolling_data_end[0]);
   zx_status_t status =
       buffer_vmo_.write(reinterpret_cast<uint8_t*>(&buffer_next_), offset, sizeof(uint64_t));
-  FXL_DCHECK(status == ZX_OK) << "status=" << status;
+  FX_DCHECK(status == ZX_OK) << "status=" << status;
 }
 
 void FakeProvider::WriteInitRecord() {
   // This record is expected to be the first record.
   // See |trace_context_write_initialization_record()|.
-  FXL_VLOG(2) << PrettyName() << ": Writing init record";
+  FX_VLOGS(2) << PrettyName() << ": Writing init record";
   size_t num_words = 2u;
   std::vector<uint64_t> record(num_words);
   record[0] =
@@ -291,7 +291,7 @@ void FakeProvider::WriteInitRecord() {
 }
 
 void FakeProvider::WriteBlobRecord() {
-  FXL_VLOG(2) << PrettyName() << ": Writing blob record";
+  FX_VLOGS(2) << PrettyName() << ": Writing blob record";
   size_t num_words = 1u;
   std::vector<uint64_t> record(num_words);
   record[0] =
@@ -303,7 +303,7 @@ void FakeProvider::WriteBlobRecord() {
 }
 
 void FakeProvider::WriteRecordToBuffer(const uint8_t* data, size_t size) {
-  FXL_VLOG(2) << PrettyName() << ": Writing " << size << " bytes at nondurable buffer offset "
+  FX_VLOGS(2) << PrettyName() << ": Writing " << size << " bytes at nondurable buffer offset "
               << buffer_next_;
   size_t offset;
   switch (buffering_mode_) {
@@ -326,9 +326,9 @@ void FakeProvider::WriteZeroLengthRecord(size_t offset) {
 }
 
 void FakeProvider::WriteBytes(const uint8_t* data, size_t offset, size_t size) {
-  FXL_VLOG(2) << PrettyName() << ": Writing " << size << " bytes at vmo offset " << offset;
+  FX_VLOGS(2) << PrettyName() << ": Writing " << size << " bytes at vmo offset " << offset;
   zx_status_t status = buffer_vmo_.write(data, offset, size);
-  FXL_DCHECK(status == ZX_OK) << "status=" << status;
+  FX_DCHECK(status == ZX_OK) << "status=" << status;
 }
 
 std::ostream& operator<<(std::ostream& out, FakeProvider::State state) {

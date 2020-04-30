@@ -19,7 +19,7 @@ struct LogSettings {
   //
   // The log level defaults to 0 (LOG_INFO).
   //
-  // Log messages for FXL_VLOG(x) (from lib/fxl/logging.h) are logged
+  // Log messages for FX_VLOGS(x) (from lib/fxl/logging.h) are logged
   // at level -x, so setting the min log level to negative values enables
   // verbose logging.
   LogSeverity min_log_level = LOG_INFO;

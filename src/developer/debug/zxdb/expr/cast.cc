@@ -192,7 +192,7 @@ ErrOrValue CastNumberToBool(const ExprValue& source, const Type* concrete_from,
     }
   } else {
     // Floating-point-like sources which can't do a byte-by-byte comparison.
-    FXL_DCHECK(IsFloatingPointBaseType(concrete_from));
+    FX_DCHECK(IsFloatingPointBaseType(concrete_from));
     double double_value;
     if (Err err = source.PromoteToDouble(&double_value); err.has_error())
       return err;

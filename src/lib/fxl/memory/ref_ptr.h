@@ -4,11 +4,10 @@
 
 // Provides a smart pointer class for intrusively reference-counted objects.
 
-#ifndef LIB_FXL_MEMORY_REF_PTR_H_
-#define LIB_FXL_MEMORY_REF_PTR_H_
+#ifndef SRC_LIB_FXL_MEMORY_REF_PTR_H_
+#define SRC_LIB_FXL_MEMORY_REF_PTR_H_
 
 #include <cstddef>
-
 #include <functional>
 #include <utility>
 
@@ -110,12 +109,12 @@ class RefPtr final {
   T* get() const { return ptr_; }
 
   T& operator*() const {
-    FXL_DCHECK(ptr_);
+    FX_DCHECK(ptr_);
     return *ptr_;
   }
 
   T* operator->() const {
-    FXL_DCHECK(ptr_);
+    FX_DCHECK(ptr_);
     return ptr_;
   }
 
@@ -208,7 +207,7 @@ class RefPtr final {
   friend RefPtr<T> AdoptRef<T>(T*);
 
   enum AdoptTag { ADOPT };
-  RefPtr(T* ptr, AdoptTag) : ptr_(ptr) { FXL_DCHECK(ptr_); }
+  RefPtr(T* ptr, AdoptTag) : ptr_(ptr) { FX_DCHECK(ptr_); }
 
   T* ptr_;
 };
@@ -263,4 +262,4 @@ struct hash<fxl::RefPtr<T>> {
 };
 }  // namespace std
 
-#endif  // LIB_FXL_MEMORY_REF_PTR_H_
+#endif  // SRC_LIB_FXL_MEMORY_REF_PTR_H_

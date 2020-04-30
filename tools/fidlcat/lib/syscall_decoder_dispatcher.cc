@@ -236,7 +236,7 @@ void SyscallDecoderDispatcher::DecodeSyscall(InterceptingThreadObserver* thread_
   uint64_t thread_id = thread->GetKoid();
   auto current = syscall_decoders_.find(thread_id);
   if (current != syscall_decoders_.end()) {
-    FXL_LOG(ERROR) << thread->GetProcess()->GetName() << ' ' << thread->GetProcess()->GetKoid()
+    FX_LOGS(ERROR) << thread->GetProcess()->GetName() << ' ' << thread->GetProcess()->GetKoid()
                    << ':' << thread_id << ": Internal error: already decoding the thread";
     return;
   }
@@ -251,7 +251,7 @@ void SyscallDecoderDispatcher::DecodeException(InterceptionWorkflow* workflow,
   uint64_t thread_id = thread->GetKoid();
   auto current = exception_decoders_.find(thread_id);
   if (current != exception_decoders_.end()) {
-    FXL_LOG(ERROR) << thread->GetProcess()->GetName() << ' ' << thread->GetProcess()->GetKoid()
+    FX_LOGS(ERROR) << thread->GetProcess()->GetName() << ' ' << thread->GetProcess()->GetKoid()
                    << ':' << thread_id
                    << ": Internal error: already decoding an exception for the thread";
     return;

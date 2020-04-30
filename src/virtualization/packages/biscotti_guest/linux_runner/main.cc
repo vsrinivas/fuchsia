@@ -19,7 +19,7 @@ int main(int argc, const char** argv) {
   linux_runner::LinuxRunner runner;
   zx_status_t status = runner.Init();
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to start guest: " << status;
+    FX_LOGS(ERROR) << "Failed to start guest: " << status;
     return -1;
   }
   loop.Run();

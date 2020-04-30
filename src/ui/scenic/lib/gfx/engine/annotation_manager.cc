@@ -23,9 +23,9 @@ AnnotationManager::AnnotationManager(SceneGraphWeakPtr scene_graph, ViewLinker* 
       view_linker_(view_linker),
       session_(std::move(session)),
       weak_factory_(this) {
-  FXL_DCHECK(scene_graph_);
-  FXL_DCHECK(view_linker_);
-  FXL_DCHECK(session_);
+  FX_DCHECK(scene_graph_);
+  FX_DCHECK(view_linker_);
+  FX_DCHECK(session_);
 }
 
 ViewHolderPtr AnnotationManager::NewAnnotationViewHolder(ViewHolderToken view_holder_token) {
@@ -42,7 +42,7 @@ ViewHolderPtr AnnotationManager::NewAnnotationViewHolder(ViewHolderToken view_ho
   // Set up link with annotation View.
   ViewLinker::ExportLink link = view_linker_->CreateExport(
       annotation_view_holder.get(), std::move(view_holder_token.value), session_->error_reporter());
-  FXL_CHECK(link.valid()) << "Cannot setup link with annotation View!";
+  FX_CHECK(link.valid()) << "Cannot setup link with annotation View!";
   annotation_view_holder->Connect(std::move(link));
   return annotation_view_holder;
 }
@@ -74,7 +74,7 @@ bool AnnotationManager::RemoveHandlerWithEpitaph(AnnotationHandlerId handler_id,
 void AnnotationManager::RequestCreate(AnnotationHandlerId handler_id, ViewRef main_view,
                                       ViewHolderToken view_holder_token,
                                       OnAnnotationViewHolderCreatedCallback callback) {
-  FXL_CHECK(HasHandler(handler_id)) << "Handler ID " << handler_id << " invalid!";
+  FX_CHECK(HasHandler(handler_id)) << "Handler ID " << handler_id << " invalid!";
   handlers_state_[handler_id].requests.push_back(CreationRequest{
       .fulfilled = false,
       .main_view = std::move(main_view),
@@ -88,8 +88,8 @@ void AnnotationManager::CleanupInvalidHandlerState(
   // Clean up invalid handlers.
   for (const auto [handler_id, epitaph] : invalid_handlers_info) {
     auto result = RemoveHandlerWithEpitaph(handler_id, epitaph);
-    FXL_DCHECK(result) << "Remove annotation handler #" << handler_id
-                       << " failed: Handler doesn't exist.";
+    FX_DCHECK(result) << "Remove annotation handler #" << handler_id
+                      << " failed: Handler doesn't exist.";
   }
 }
 

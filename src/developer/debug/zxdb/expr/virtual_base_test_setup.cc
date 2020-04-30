@@ -40,7 +40,7 @@ VirtualBaseTestSetup::VirtualBaseTestSetup(MockSymbolDataProvider* data_provider
   base_class =
       MakeCollectionType(DwarfTag::kStructureType, kBaseClassName,
                          {{"_vptr$BaseClass", vtbl_ptr_type_ptr}, {kBaseIName, int32_type}});
-  FXL_DCHECK(base_class->byte_size() == 12);  // point = 8 bytes, int32 = 4.
+  FX_DCHECK(base_class->byte_size() == 12);  // point = 8 bytes, int32 = 4.
   // The artificial flag must be set on the vtable pointer.
   const_cast<DataMember*>(base_class->data_members()[0].Get()->AsDataMember())
       ->set_artificial(true);
@@ -59,7 +59,7 @@ VirtualBaseTestSetup::VirtualBaseTestSetup(MockSymbolDataProvider* data_provider
   derived_class = MakeCollectionTypeWithOffset(DwarfTag::kStructureType, kDerivedClassName,
                                                kBaseOffset + base_class->byte_size(),
                                                {{kDerivedIName, int32_type}});
-  FXL_DCHECK(derived_class->byte_size() == kBaseOffset + base_class->byte_size() + 4);
+  FX_DCHECK(derived_class->byte_size() == kBaseOffset + base_class->byte_size() + 4);
 
   auto inherited_from = fxl::MakeRefCounted<InheritedFrom>(base_class, kBaseOffset);
   derived_class->set_inherited_from({LazySymbol(inherited_from)});
@@ -87,7 +87,7 @@ VirtualBaseTestSetup::VirtualBaseTestSetup(MockSymbolDataProvider* data_provider
   // Write the absolute vtable address from the constant. Assumes little-endian.
   memcpy(&derived_data[4], &kVtableAbsoluteAddress, sizeof(uint64_t));
 
-  FXL_DCHECK(derived_class->byte_size() == derived_data.size());
+  FX_DCHECK(derived_class->byte_size() == derived_data.size());
   data_provider->AddMemory(kDerivedAddress, derived_data);
 
   base_vtable = fxl::MakeRefCounted<ElfSymbol>(

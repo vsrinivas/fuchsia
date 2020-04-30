@@ -14,7 +14,7 @@ namespace escher {
 template <typename FuncT>
 static FuncT GetInstanceProcAddr(vk::Instance inst, const char *func_name) {
   FuncT func = reinterpret_cast<FuncT>(inst.getProcAddr(func_name));
-  FXL_CHECK(func) << "Could not find Vulkan Instance ProcAddr: " << func_name;
+  FX_CHECK(func) << "Could not find Vulkan Instance ProcAddr: " << func_name;
   return func;
 }
 
@@ -37,8 +37,8 @@ fxl::RefPtr<VulkanInstance> VulkanInstance::New(Params params) {
   // driver itself.
   params.extension_names.insert(VK_KHR_EXTERNAL_SEMAPHORE_CAPABILITIES_EXTENSION_NAME);
 #endif
-  FXL_DCHECK(ValidateLayers(params.layer_names));
-  FXL_DCHECK(ValidateExtensions(params.extension_names, params.layer_names));
+  FX_DCHECK(ValidateLayers(params.layer_names));
+  FX_DCHECK(ValidateExtensions(params.extension_names, params.layer_names));
 
   // Gather names of layers/extensions to populate InstanceCreateInfo.
   std::vector<const char *> layer_names;
@@ -67,7 +67,7 @@ fxl::RefPtr<VulkanInstance> VulkanInstance::New(Params params) {
 
   auto result = vk::createInstance(info);
   if (result.result != vk::Result::eSuccess) {
-    FXL_LOG(WARNING) << "Could not create Vulkan Instance: " << vk::to_string(result.result) << ".";
+    FX_LOGS(WARNING) << "Could not create Vulkan Instance: " << vk::to_string(result.result) << ".";
     return fxl::RefPtr<VulkanInstance>();
   }
 
@@ -89,7 +89,7 @@ VulkanInstance::VulkanInstance(vk::Instance instance, Params params, uint32_t ap
                                                      this);
     auto create_callback_result =
         vk_instance().createDebugReportCallbackEXT(create_info, nullptr, proc_addrs());
-    FXL_CHECK(create_callback_result.result == vk::Result::eSuccess);
+    FX_CHECK(create_callback_result.result == vk::Result::eSuccess);
     vk_callback_entrance_handle_ = create_callback_result.value;
   }
 }
@@ -123,7 +123,7 @@ bool VulkanInstance::ValidateLayers(const std::set<std::string> &required_layer_
           return !strncmp(layer.layerName, name.c_str(), VK_MAX_EXTENSION_NAME_SIZE);
         });
     if (found == properties.end()) {
-      FXL_LOG(WARNING) << "Vulkan has no instance layer named: " << name;
+      FX_LOGS(WARNING) << "Vulkan has no instance layer named: " << name;
       return false;
     }
   }
@@ -147,7 +147,7 @@ static bool ValidateExtension(const std::string name,
   for (auto &layer_name : required_layer_names) {
     auto layer_extensions =
         ESCHER_CHECKED_VK_RESULT(vk::enumerateInstanceExtensionProperties(layer_name));
-    FXL_LOG(INFO) << "Looking for Vulkan instance extension: " << name
+    FX_LOGS(INFO) << "Looking for Vulkan instance extension: " << name
                   << " in layer: " << layer_name;
 
     auto found = std::find_if(layer_extensions.begin(), layer_extensions.end(),
@@ -168,7 +168,7 @@ bool VulkanInstance::ValidateExtensions(const std::set<std::string> &required_ex
 
   for (auto &name : required_extension_names) {
     if (!ValidateExtension(name, extensions, required_layer_names)) {
-      FXL_LOG(WARNING) << "Vulkan has no instance extension named: " << name;
+      FX_LOGS(WARNING) << "Vulkan has no instance extension named: " << name;
       return false;
     }
   }

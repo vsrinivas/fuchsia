@@ -33,12 +33,12 @@ class Logger : public LoggerBase {
   // |fuchsia:logger::Log|
   void Listen(::fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
               std::unique_ptr<fuchsia::logger::LogFilterOptions> options) override {
-    FXL_NOTREACHED();
+    FX_NOTREACHED();
   }
 
   void DumpLogs(::fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
                 std::unique_ptr<fuchsia::logger::LogFilterOptions> options) override {
-    FXL_NOTREACHED();
+    FX_NOTREACHED();
   }
 
   void ListenSafe(::fidl::InterfaceHandle<fuchsia::logger::LogListenerSafe> log_listener,

@@ -17,7 +17,7 @@ CommandDispatcher::CommandHandlerData::CommandHandlerData(const std::string& des
 
 bool CommandDispatcher::ExecuteCommand(const std::vector<std::string>& argv,
                                        fit::closure complete_cb, bool* out_cmd_found) {
-  FXL_DCHECK(out_cmd_found);
+  FX_DCHECK(out_cmd_found);
 
   *out_cmd_found = false;
 
@@ -44,9 +44,9 @@ void CommandDispatcher::DescribeAllCommands() const {
 
 void CommandDispatcher::RegisterHandler(const std::string& name, const std::string& description,
                                         CommandHandler handler) {
-  FXL_DCHECK(!name.empty());
-  FXL_DCHECK(!description.empty());
-  FXL_DCHECK(handler_map_.find(name) == handler_map_.end());
+  FX_DCHECK(!name.empty());
+  FX_DCHECK(!description.empty());
+  FX_DCHECK(handler_map_.find(name) == handler_map_.end());
 
   handler_map_[name] = CommandHandlerData(description, std::move(handler));
 }

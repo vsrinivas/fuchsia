@@ -26,7 +26,7 @@ struct InputReader::DeviceInfo {
 
 InputReader::InputReader(fuchsia::ui::input::InputDeviceRegistry* registry, bool ignore_console)
     : registry_(registry), ignore_console_(ignore_console) {
-  FXL_CHECK(registry_);
+  FX_CHECK(registry_);
 }
 
 InputReader::~InputReader() = default;
@@ -56,25 +56,25 @@ void InputReader::SetOwnershipEvent(zx::event event) {
   display_ownership_waiter_.set_object(display_ownership_event_.get());
   display_ownership_waiter_.set_trigger(signals);
   zx_status_t status = display_ownership_waiter_.Begin(async_get_default_dispatcher());
-  FXL_DCHECK(status == ZX_OK) << "Status is: " << status;
+  FX_DCHECK(status == ZX_OK) << "Status is: " << status;
 }
 
 void InputReader::DeviceRemoved(zx_handle_t handle) {
-  FXL_VLOG(1) << "Input device " << devices_.at(handle)->interpreter->name() << " removed";
+  FX_VLOGS(1) << "Input device " << devices_.at(handle)->interpreter->name() << " removed";
   devices_.erase(handle);
 }
 
 void InputReader::DeviceAdded(std::unique_ptr<InputInterpreter> interpreter) {
-  FXL_DCHECK(interpreter);
+  FX_DCHECK(interpreter);
 
-  FXL_VLOG(1) << "Input device " << interpreter->name() << " added ";
+  FX_VLOGS(1) << "Input device " << interpreter->name() << " added ";
   zx_handle_t handle = interpreter->handle();
 
   auto wait = std::make_unique<async::WaitMethod<InputReader, &InputReader::OnDeviceHandleReady>>(
       this, handle, ZX_USER_SIGNAL_0);
 
   zx_status_t status = wait->Begin(async_get_default_dispatcher());
-  FXL_CHECK(status == ZX_OK);
+  FX_CHECK(status == ZX_OK);
 
   devices_.emplace(handle, new DeviceInfo{std::move(interpreter), std::move(wait)});
 }
@@ -82,12 +82,12 @@ void InputReader::DeviceAdded(std::unique_ptr<InputInterpreter> interpreter) {
 void InputReader::OnDeviceHandleReady(async_dispatcher_t* dispatcher, async::WaitBase* wait,
                                       zx_status_t status, const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "InputReader::OnDeviceHandleReady received an error status code: " << status;
+    FX_LOGS(ERROR) << "InputReader::OnDeviceHandleReady received an error status code: " << status;
     return;
   }
 
   zx_signals_t pending = signal->observed;
-  FXL_DCHECK(pending & ZX_USER_SIGNAL_0);
+  FX_DCHECK(pending & ZX_USER_SIGNAL_0);
 
   bool discard = !(display_owned_ || ignore_console_);
   bool ret = devices_[wait->object()]->interpreter->Read(discard);
@@ -99,14 +99,14 @@ void InputReader::OnDeviceHandleReady(async_dispatcher_t* dispatcher, async::Wai
 
   status = wait->Begin(dispatcher);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "InputReader::OnDeviceHandleReady wait failed: " << status;
+    FX_LOGS(ERROR) << "InputReader::OnDeviceHandleReady wait failed: " << status;
   }
 }
 
 void InputReader::OnDisplayHandleReady(async_dispatcher_t* dispatcher, async::WaitBase* wait,
                                        zx_status_t status, const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "InputReader::OnDisplayHandleReady received an error status code: " << status;
+    FX_LOGS(ERROR) << "InputReader::OnDisplayHandleReady received an error status code: " << status;
     return;
   }
 
@@ -115,12 +115,12 @@ void InputReader::OnDisplayHandleReady(async_dispatcher_t* dispatcher, async::Wa
     display_owned_ = false;
     display_ownership_waiter_.set_trigger(fuchsia::ui::scenic::displayOwnedSignal);
     auto waiter_status = display_ownership_waiter_.Begin(dispatcher);
-    FXL_CHECK(waiter_status == ZX_OK);
+    FX_CHECK(waiter_status == ZX_OK);
   } else if (pending & fuchsia::ui::scenic::displayOwnedSignal) {
     display_owned_ = true;
     display_ownership_waiter_.set_trigger(fuchsia::ui::scenic::displayNotOwnedSignal);
     auto waiter_status = display_ownership_waiter_.Begin(dispatcher);
-    FXL_CHECK(waiter_status == ZX_OK);
+    FX_CHECK(waiter_status == ZX_OK);
   }
 }
 

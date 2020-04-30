@@ -144,7 +144,7 @@ class DataForSyscallTest {
     block.valid = true;
     std::copy(reinterpret_cast<uint8_t*>(address), reinterpret_cast<uint8_t*>(address + size),
               std::back_inserter(block.data));
-    FXL_DCHECK(size == block.data.size())
+    FX_DCHECK(size == block.data.size())
         << "expected size: " << size << " and actual size: " << block.data.size();
   }
 
@@ -522,17 +522,17 @@ class SyscallCheck : public SyscallUse {
   void SyscallOutputsDecoded(SyscallDecoder* decoder) override {
     if (decoder->syscall()->name() == "zx_channel_write") {
       DataForSyscallTest& data = controller_->remote_api()->data();
-      FXL_DCHECK(decoder->ArgumentValue(0) == kHandle);  // handle
-      FXL_DCHECK(decoder->ArgumentValue(1) == 0);        // options
-      FXL_DCHECK(decoder->ArgumentLoaded(Stage::kEntry, 2, data.num_bytes()));
+      FX_DCHECK(decoder->ArgumentValue(0) == kHandle);  // handle
+      FX_DCHECK(decoder->ArgumentValue(1) == 0);        // options
+      FX_DCHECK(decoder->ArgumentLoaded(Stage::kEntry, 2, data.num_bytes()));
       uint8_t* bytes = decoder->ArgumentContent(Stage::kEntry, 2);
       if (memcmp(bytes, data.bytes(), data.num_bytes()) != 0) {
         std::string result = "bytes not equivalent\n";
         AppendElements(result, bytes, data.bytes(), data.num_bytes());
         FAIL() << result;
       }
-      FXL_DCHECK(decoder->ArgumentValue(3) == data.num_bytes());  // num_bytes
-      FXL_DCHECK(
+      FX_DCHECK(decoder->ArgumentValue(3) == data.num_bytes());  // num_bytes
+      FX_DCHECK(
           decoder->ArgumentLoaded(Stage::kEntry, 4, data.num_handles() * sizeof(zx_handle_t)));
       zx_handle_t* handles =
           reinterpret_cast<zx_handle_t*>(decoder->ArgumentContent(Stage::kEntry, 4));
@@ -541,13 +541,13 @@ class SyscallCheck : public SyscallUse {
         AppendElements(result, handles, data.handles(), data.num_handles());
         FAIL() << result;
       }
-      FXL_DCHECK(decoder->ArgumentValue(5) == data.num_handles());  // num_handles
+      FX_DCHECK(decoder->ArgumentValue(5) == data.num_handles());  // num_handles
     } else if (decoder->syscall()->name() == "zx_channel_call") {
       DataForSyscallTest& data = controller_->remote_api()->data();
-      FXL_DCHECK(decoder->ArgumentValue(0) == kHandle);           // handle
-      FXL_DCHECK(decoder->ArgumentValue(1) == 0);                 // options
-      FXL_DCHECK(decoder->ArgumentValue(2) == ZX_TIME_INFINITE);  // deadline
-      FXL_DCHECK(decoder->ArgumentLoaded(Stage::kEntry, 3, sizeof(zx_channel_call_args_t)));
+      FX_DCHECK(decoder->ArgumentValue(0) == kHandle);           // handle
+      FX_DCHECK(decoder->ArgumentValue(1) == 0);                 // options
+      FX_DCHECK(decoder->ArgumentValue(2) == ZX_TIME_INFINITE);  // deadline
+      FX_DCHECK(decoder->ArgumentLoaded(Stage::kEntry, 3, sizeof(zx_channel_call_args_t)));
       const zx_channel_call_args_t* args = reinterpret_cast<const zx_channel_call_args_t*>(
           decoder->ArgumentContent(Stage::kEntry, 3));
       uint8_t* ref_bytes;
@@ -559,8 +559,8 @@ class SyscallCheck : public SyscallUse {
         ref_bytes = data.bytes();
         ref_num_bytes = data.num_bytes();
       }
-      FXL_DCHECK(args->wr_num_bytes == ref_num_bytes);
-      FXL_DCHECK(decoder->BufferLoaded(Stage::kExit, uint64_t(args->wr_bytes), args->wr_num_bytes));
+      FX_DCHECK(args->wr_num_bytes == ref_num_bytes);
+      FX_DCHECK(decoder->BufferLoaded(Stage::kExit, uint64_t(args->wr_bytes), args->wr_num_bytes));
       uint8_t* bytes = decoder->BufferContent(Stage::kExit, uint64_t(args->wr_bytes));
       if (memcmp(bytes, ref_bytes, ref_num_bytes) != 0) {
         std::string result = "bytes not equivalent\n";

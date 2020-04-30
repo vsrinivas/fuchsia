@@ -53,7 +53,7 @@ zx_status_t LimboProvider::Init() {
 
   // |this| owns the connection, so it's guaranteed to outlive it.
   connection_.set_error_handler([this](zx_status_t status) {
-    FXL_LOG(ERROR) << "Got error on limbo: " << zx_status_get_string(status);
+    FX_LOGS(ERROR) << "Got error on limbo: " << zx_status_get_string(status);
     Reset();
   });
 
@@ -120,7 +120,7 @@ void LimboProvider::WatchLimbo() {
       // |this| owns the connection, so it's guaranteed to outlive it.
       [this](ProcessLimbo_WatchProcessesWaitingOnException_Result result) {
         if (result.is_err()) {
-          FXL_LOG(ERROR) << "Got error waiting on limbo: " << zx_status_get_string(result.err());
+          FX_LOGS(ERROR) << "Got error waiting on limbo: " << zx_status_get_string(result.err());
         } else {
           // We need to figure out which exceptions remain.
 

@@ -106,13 +106,13 @@ void MemoryAnalysis::Schedule(const AnalyzeMemoryOptions& opts) {
 }
 
 void MemoryAnalysis::SetAspace(std::vector<debug_ipc::AddressRegion> aspace) {
-  FXL_DCHECK(!have_aspace_);
+  FX_DCHECK(!have_aspace_);
   have_aspace_ = true;
   aspace_ = std::move(aspace);
 }
 
 void MemoryAnalysis::SetStack(const Stack& stack) {
-  FXL_DCHECK(!have_frames_);
+  FX_DCHECK(!have_frames_);
   have_frames_ = true;
 
   for (size_t i = 0; i < stack.size(); i++) {
@@ -125,7 +125,7 @@ void MemoryAnalysis::SetStack(const Stack& stack) {
 
     const std::vector<debug_ipc::Register>* regs =
         stack[i]->GetRegisterCategorySync(debug_ipc::RegisterCategory::kGeneral);
-    FXL_DCHECK(regs);  // Always expect general registers to be available.
+    FX_DCHECK(regs);  // Always expect general registers to be available.
     AddRegisters(i, *regs);
 
     // TODO(brettw) make this work when the frame base is asynchronous.
@@ -135,7 +135,7 @@ void MemoryAnalysis::SetStack(const Stack& stack) {
 }
 
 void MemoryAnalysis::SetMemory(MemoryDump dump) {
-  FXL_DCHECK(!have_memory_);
+  FX_DCHECK(!have_memory_);
   have_memory_ = true;
   memory_ = std::move(dump);
 }
@@ -316,7 +316,7 @@ OutputBuffer MemoryAnalysis::GetPointedToAnnotation(uint64_t data) const {
   if (!process_)
     return OutputBuffer();
   auto locations = process_->GetSymbols()->ResolveInputLocation(InputLocation(data));
-  FXL_DCHECK(locations.size() == 1);
+  FX_DCHECK(locations.size() == 1);
 
   if (!locations[0].symbol()) {
     // Check if this points into any relevant aspace entries. Want the deepest

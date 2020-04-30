@@ -16,8 +16,8 @@ namespace zxdb {
 FinishPhysicalFrameThreadController::FinishPhysicalFrameThreadController(Stack& stack,
                                                                          size_t frame_to_finish)
     : frame_to_finish_(frame_to_finish), weak_factory_(this) {
-  FXL_DCHECK(frame_to_finish < stack.size());
-  FXL_DCHECK(!stack[frame_to_finish]->IsInline());
+  FX_DCHECK(frame_to_finish < stack.size());
+  FX_DCHECK(!stack[frame_to_finish]->IsInline());
 
 #ifndef NDEBUG
   // Stash for validation later.
@@ -66,8 +66,8 @@ void FinishPhysicalFrameThreadController::InitWithThread(Thread* thread,
   // that need to happen during this time, just registration with the thread. Otherwise the frame
   // fingerprint computation needs to be scheduled in the constructor which complicates the async
   // states of this function (though it's possible in the future if necessary).
-  FXL_DCHECK(stack.size() > frame_to_finish_);
-  FXL_DCHECK(stack[frame_to_finish_]->GetAddress() == frame_ip_);
+  FX_DCHECK(stack.size() > frame_to_finish_);
+  FX_DCHECK(stack[frame_to_finish_]->GetAddress() == frame_ip_);
 #endif
 
   if (enable_debug_logging()) {

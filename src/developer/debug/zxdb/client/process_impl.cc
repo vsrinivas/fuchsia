@@ -123,7 +123,7 @@ void ProcessImpl::Pause(fit::callback<void()> on_paused) {
           // Save any new thread metadata (will be empty for errors so don't need to check
           // explicitly for errors).
           for (const auto& record : reply.threads) {
-            FXL_DCHECK(record.process_koid == weak_process->koid_);
+            FX_DCHECK(record.process_koid == weak_process->koid_);
             if (ThreadImpl* thread = weak_process->GetThreadImplFromKoid(record.thread_koid))
               thread->SetMetadata(record);
           }

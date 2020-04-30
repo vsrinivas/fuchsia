@@ -19,12 +19,12 @@ App::App(std::unique_ptr<HeartModel> heart_model)
     : context_(sys::ComponentContext::CreateAndServeOutgoingDirectory()),
       service_(std::move(heart_model)) {
   gatt_server_ = context_->svc()->Connect<fuchsia::bluetooth::gatt::Server>();
-  FXL_DCHECK(gatt_server_);
+  FX_DCHECK(gatt_server_);
 
   service_.PublishService(&gatt_server_);
 
   peripheral_ = context_->svc()->Connect<ble::Peripheral>();
-  FXL_DCHECK(peripheral_);
+  FX_DCHECK(peripheral_);
   peripheral_.events().OnPeerConnected = fit::bind_member(this, &App::OnPeerConnected);
 
   adv_handle_.set_error_handler([](zx_status_t s) {

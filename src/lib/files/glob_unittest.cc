@@ -33,10 +33,10 @@ class TestGlob : public testing::Test {
 
     std::vector<std::string> names = {"a", "b", "c", "d", "z", "e", "aa"};
     for (const auto& name : names) {
-      FXL_CHECK(WriteFile(fxl::Substitute("$0/$1", dir_.path(), name), "a", 1));
+      FX_CHECK(WriteFile(fxl::Substitute("$0/$1", dir_.path(), name), "a", 1));
     }
-    FXL_CHECK(CreateDirectory(fxl::Substitute("$0/subdir", dir_.path())));
-    FXL_CHECK(WriteFile(fxl::Substitute("$0/subdir/abcd", dir_.path()), "a", 1));
+    FX_CHECK(CreateDirectory(fxl::Substitute("$0/subdir", dir_.path())));
+    FX_CHECK(WriteFile(fxl::Substitute("$0/subdir/abcd", dir_.path()), "a", 1));
   }
 
   std::vector<std::string> PrependPath(const std::vector<std::string>& files) {

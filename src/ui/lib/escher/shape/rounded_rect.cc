@@ -76,7 +76,7 @@ void GenerateRoundedRectIndices(const RoundedRectSpec& spec, const MeshSpec& mes
                                 void* indices_out, uint32_t max_bytes) {
   TRACE_DURATION("gfx", "escher::GenerateRoundedRectIndices");
 
-  FXL_DCHECK(max_bytes >= kIndexCount * sizeof(MeshSpec::IndexType));
+  FX_DCHECK(max_bytes >= kIndexCount * sizeof(MeshSpec::IndexType));
   uint32_t* indices = static_cast<uint32_t*>(indices_out);
 
   // Central square triangles.
@@ -159,7 +159,7 @@ void GenerateRoundedRectIndices(const RoundedRectSpec& spec, const MeshSpec& mes
     indices[out++] = corner_tris[corner * 3 + 1];
   }
 
-  FXL_DCHECK(out == kIndexCount);
+  FX_DCHECK(out == kIndexCount);
 }
 
 namespace {
@@ -254,16 +254,16 @@ void GenerateRoundedRectVertices(const RoundedRectSpec& spec, const MeshSpec& me
 
   const float width = spec.width;
   const float height = spec.height;
-  FXL_DCHECK(width >= spec.top_left_radius + spec.top_right_radius);
-  FXL_DCHECK(width >= spec.bottom_left_radius + spec.bottom_right_radius);
-  FXL_DCHECK(height >= spec.top_left_radius + spec.bottom_left_radius);
-  FXL_DCHECK(height >= spec.top_right_radius + spec.bottom_right_radius);
-  FXL_DCHECK(mesh_spec.total_attribute_count() == 2);
-  FXL_DCHECK(mesh_spec.attributes[0] == (MeshAttribute::kPosition2D | MeshAttribute::kUV));
-  FXL_DCHECK(max_bytes >= kVertexCount * mesh_spec.stride(0));
-  FXL_DCHECK(sizeof(PosUvVertex) == mesh_spec.stride(0));
-  FXL_DCHECK(0U == mesh_spec.attribute_offset(0, MeshAttribute::kPosition2D));
-  FXL_DCHECK(sizeof(vec2) == mesh_spec.attribute_offset(0, MeshAttribute::kUV));
+  FX_DCHECK(width >= spec.top_left_radius + spec.top_right_radius);
+  FX_DCHECK(width >= spec.bottom_left_radius + spec.bottom_right_radius);
+  FX_DCHECK(height >= spec.top_left_radius + spec.bottom_left_radius);
+  FX_DCHECK(height >= spec.top_right_radius + spec.bottom_right_radius);
+  FX_DCHECK(mesh_spec.total_attribute_count() == 2);
+  FX_DCHECK(mesh_spec.attributes[0] == (MeshAttribute::kPosition2D | MeshAttribute::kUV));
+  FX_DCHECK(max_bytes >= kVertexCount * mesh_spec.stride(0));
+  FX_DCHECK(sizeof(PosUvVertex) == mesh_spec.stride(0));
+  FX_DCHECK(0U == mesh_spec.attribute_offset(0, MeshAttribute::kPosition2D));
+  FX_DCHECK(sizeof(vec2) == mesh_spec.attribute_offset(0, MeshAttribute::kUV));
 
   // We first generate the UV-coordinates for each vertex, then make a second
   // pass where we use these UV-coords to generate the vertex positions.
@@ -280,17 +280,17 @@ void GenerateRoundedRectVertices(const RoundedRectSpec& spec, const MeshSpec& me
 
   const float width = spec.width;
   const float height = spec.height;
-  FXL_DCHECK(width >= spec.top_left_radius + spec.top_right_radius);
-  FXL_DCHECK(width >= spec.bottom_left_radius + spec.bottom_right_radius);
-  FXL_DCHECK(height >= spec.top_left_radius + spec.bottom_left_radius);
-  FXL_DCHECK(height >= spec.top_right_radius + spec.bottom_right_radius);
-  FXL_DCHECK(mesh_spec.total_attribute_count() == 2);
-  FXL_DCHECK(mesh_spec.attributes[0] == MeshAttribute::kPosition2D);
-  FXL_DCHECK(mesh_spec.attributes[1] == MeshAttribute::kUV);
-  FXL_DCHECK(max_primary_attribute_bytes == kVertexCount * (mesh_spec.stride(0)));
-  FXL_DCHECK(max_secondary_attribute_bytes == kVertexCount * (mesh_spec.stride(1)));
-  FXL_DCHECK(sizeof(PosVertex) == mesh_spec.stride(0));
-  FXL_DCHECK(sizeof(UvVertex) == mesh_spec.stride(1));
+  FX_DCHECK(width >= spec.top_left_radius + spec.top_right_radius);
+  FX_DCHECK(width >= spec.bottom_left_radius + spec.bottom_right_radius);
+  FX_DCHECK(height >= spec.top_left_radius + spec.bottom_left_radius);
+  FX_DCHECK(height >= spec.top_right_radius + spec.bottom_right_radius);
+  FX_DCHECK(mesh_spec.total_attribute_count() == 2);
+  FX_DCHECK(mesh_spec.attributes[0] == MeshAttribute::kPosition2D);
+  FX_DCHECK(mesh_spec.attributes[1] == MeshAttribute::kUV);
+  FX_DCHECK(max_primary_attribute_bytes == kVertexCount * (mesh_spec.stride(0)));
+  FX_DCHECK(max_secondary_attribute_bytes == kVertexCount * (mesh_spec.stride(1)));
+  FX_DCHECK(sizeof(PosVertex) == mesh_spec.stride(0));
+  FX_DCHECK(sizeof(UvVertex) == mesh_spec.stride(1));
 
   // We first generate the UV-coordinates for each vertex, then make a second
   // pass where we use these UV-coords to generate the vertex positions.

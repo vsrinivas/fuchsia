@@ -21,7 +21,7 @@
 #include "src/ui/lib/escher/vk/pipeline_builder.h"
 #include "src/ui/lib/escher/vk/vulkan_instance.h"
 
-#define VK_CHECK_RESULT(XXX) FXL_CHECK(XXX.result == vk::Result::eSuccess)
+#define VK_CHECK_RESULT(XXX) FX_CHECK(XXX.result == vk::Result::eSuccess)
 
 static constexpr uint64_t kLogGpuTimestampsEveryNFrames = 200;
 
@@ -29,10 +29,10 @@ DemoHarness::DemoHarness(WindowParams window_params) : window_params_(window_par
   // Init() is called by DemoHarness::New().
 }
 
-DemoHarness::~DemoHarness() { FXL_DCHECK(shutdown_complete_); }
+DemoHarness::~DemoHarness() { FX_DCHECK(shutdown_complete_); }
 
 void DemoHarness::Init(InstanceParams instance_params) {
-  FXL_LOG(INFO) << "Initializing " << window_params_.window_name
+  FX_LOGS(INFO) << "Initializing " << window_params_.window_name
                 << (window_params_.use_fullscreen ? " (fullscreen " : " (windowed ")
                 << window_params_.width << "x" << window_params_.height << ")";
   InitWindowSystem();
@@ -52,7 +52,7 @@ void DemoHarness::Init(InstanceParams instance_params) {
 }
 
 void DemoHarness::Shutdown() {
-  FXL_DCHECK(!shutdown_complete_);
+  FX_DCHECK(!shutdown_complete_);
   shutdown_complete_ = true;
 
   escher()->vk_device().waitIdle();
@@ -82,7 +82,7 @@ void DemoHarness::CreateInstance(InstanceParams params) {
   params.extension_names.insert("VK_EXT_debug_report");
 
   instance_ = escher::VulkanInstance::New(std::move(params));
-  FXL_CHECK(instance_);
+  FX_CHECK(instance_);
 
   instance_->RegisterDebugReportCallback(RedirectDebugReport, this);
 }
@@ -95,8 +95,8 @@ void DemoHarness::CreateDeviceAndQueue(escher::VulkanDeviceQueues::Params params
 void DemoHarness::CreateSwapchain() {
   TRACE_DURATION("gfx", "DemoHarness::CreateSwapchain");
 
-  FXL_CHECK(!swapchain_.swapchain);
-  FXL_CHECK(swapchain_.images.empty());
+  FX_CHECK(!swapchain_.swapchain);
+  FX_CHECK(swapchain_.images.empty());
 
   vk::SurfaceCapabilitiesKHR surface_caps;
   {
@@ -127,8 +127,8 @@ void DemoHarness::CreateSwapchain() {
     window_params_.width = swapchain_extent.width;
     window_params_.height = swapchain_extent.height;
   }
-  FXL_CHECK(swapchain_extent.width == window_params_.width);
-  FXL_CHECK(swapchain_extent.height == window_params_.height);
+  FX_CHECK(swapchain_extent.width == window_params_.width);
+  FX_CHECK(swapchain_extent.height == window_params_.height);
 
   // FIFO mode is always available, but we will try to find a more efficient
   // mode.
@@ -187,7 +187,7 @@ void DemoHarness::CreateSwapchain() {
       }
     }
   }
-  FXL_CHECK(format != vk::Format::eUndefined);
+  FX_CHECK(format != vk::Format::eUndefined);
 
   // TODO: old_swapchain will come into play (I think) when we support
   // resizing the window.
@@ -247,7 +247,7 @@ void DemoHarness::CreateSwapchain() {
 
       auto escher_image = escher::Image::WrapVkImage(escher()->resource_recycler(), image_info, im,
                                                      vk::ImageLayout::eUndefined);
-      FXL_CHECK(escher_image);
+      FX_CHECK(escher_image);
       escher_images.push_back(escher_image);
     }
     swapchain_ = escher::VulkanSwapchain(swapchain, escher_images, swapchain_extent.width,
@@ -262,7 +262,7 @@ void DemoHarness::CreateSwapchain() {
 void DemoHarness::CreateEscher() {
   TRACE_DURATION("gfx", "DemoHarness::CreateEscher");
 
-  FXL_CHECK(!escher_);
+  FX_CHECK(!escher_);
   escher_ = std::make_unique<escher::Escher>(device_queues_, filesystem_);
 
   // Replace Escher's default pipeline builder.
@@ -275,7 +275,7 @@ void DemoHarness::CreateEscher() {
         device(), initial_bytes.empty() ? nullptr : initial_bytes.data(), initial_bytes.size(),
         [path = std::move(vk_pipeline_cache_path)](std::vector<uint8_t> bytes) {
           if (!files::WriteFile(path, reinterpret_cast<char*>(bytes.data()), bytes.size())) {
-            FXL_LOG(WARNING) << "Failed to write " << bytes.size()
+            FX_LOGS(WARNING) << "Failed to write " << bytes.size()
                              << " bytes to VkPipelineCache data file: " << path;
           }
         });
@@ -288,9 +288,9 @@ void DemoHarness::CreateEscher() {
         [](const vk::GraphicsPipelineCreateInfo* graphics_info,
            const vk::ComputePipelineCreateInfo* compute_info) {
           if (graphics_info) {
-            FXL_CHECK(false) << "attempted to lazily generate a Vulkan graphics pipeline.";
+            FX_CHECK(false) << "attempted to lazily generate a Vulkan graphics pipeline.";
           } else {
-            FXL_CHECK(false) << "attempted to lazily generate a Vulkan compute pipeline.";
+            FX_CHECK(false) << "attempted to lazily generate a Vulkan compute pipeline.";
           }
         });
 
@@ -299,7 +299,7 @@ void DemoHarness::CreateEscher() {
     // Ensure that the cache directory exists.
     if (!files::IsDirectory(GetCacheDirectoryPath())) {
       if (!files::CreateDirectory(GetCacheDirectoryPath())) {
-        FXL_LOG(WARNING) << "Failed to create cache directory: " << GetCacheDirectoryPath();
+        FX_LOGS(WARNING) << "Failed to create cache directory: " << GetCacheDirectoryPath();
       }
     }
   }
@@ -312,7 +312,7 @@ void DemoHarness::DestroySwapchain() {
 
   swapchain_.images.clear();
 
-  FXL_CHECK(swapchain_.swapchain);
+  FX_CHECK(swapchain_.swapchain);
   device().destroySwapchainKHR(swapchain_.swapchain);
   swapchain_.swapchain = nullptr;
 }
@@ -338,7 +338,7 @@ VkBool32 DemoHarness::HandleDebugReport(VkDebugReportFlagsEXT flags_in,
 
 // Macro to facilitate matching messages.  Example usage:
 //  if (MATCH_REPORT(DescriptorSet, 0, "VUID-VkWriteDescriptorSet-descriptorType-01403")) {
-//    FXL_LOG(INFO) << "ignoring descriptor set problem: " << pMessage << "\n\n";
+//    FX_LOGS(INFO) << "ignoring descriptor set problem: " << pMessage << "\n\n";
 //    return false;
 //  }
 #define MATCH_REPORT(OTYPE, CODE, X)                                                    \
@@ -347,7 +347,7 @@ VkBool32 DemoHarness::HandleDebugReport(VkDebugReportFlagsEXT flags_in,
 
   if (flags == vk::DebugReportFlagBitsEXT::eInformation) {
     // Paranoid check that there aren't multiple flags.
-    FXL_DCHECK(flags == vk::DebugReportFlagBitsEXT::eInformation);
+    FX_DCHECK(flags == vk::DebugReportFlagBitsEXT::eInformation);
 
     std::cerr << "## Vulkan Information: ";
   } else if (flags == vk::DebugReportFlagBitsEXT::eWarning) {
@@ -372,7 +372,7 @@ VkBool32 DemoHarness::HandleDebugReport(VkDebugReportFlagsEXT flags_in,
             << "  location: " << location << ")" << std::endl;
 
   // Crash immediately on fatal errors.
-  FXL_CHECK(!fatal);
+  FX_CHECK(!fatal);
 
   return false;
 }
@@ -392,7 +392,7 @@ bool DemoHarness::MaybeDrawFrame() {
 
     // Guarantee that there are no frames in flight.
     escher()->vk_device().waitIdle();
-    FXL_CHECK(escher()->Cleanup());
+    FX_CHECK(escher()->Cleanup());
     outstanding_frames_ = 0;
   }
 
@@ -436,8 +436,8 @@ bool DemoHarness::MaybeDrawFrame() {
     enable_gpu_logging_ = true;
 
     // Print out FPS and memory stats.
-    FXL_LOG(INFO) << "---- Average frame rate: " << ComputeFps();
-    FXL_LOG(INFO) << "---- Total GPU memory: " << (escher()->GetNumGpuBytesAllocated() / 1024)
+    FX_LOGS(INFO) << "---- Average frame rate: " << ComputeFps();
+    FX_LOGS(INFO) << "---- Total GPU memory: " << (escher()->GetNumGpuBytesAllocated() / 1024)
                   << "kB";
   } else {
     enable_gpu_logging_ = false;
@@ -459,19 +459,19 @@ bool DemoHarness::HandleKeyPress(std::string key) {
 }
 
 bool DemoHarness::IsAtMaxOutstandingFrames() {
-  FXL_DCHECK(outstanding_frames_ <= Demo::kMaxOutstandingFrames);
+  FX_DCHECK(outstanding_frames_ <= Demo::kMaxOutstandingFrames);
   return outstanding_frames_ >= Demo::kMaxOutstandingFrames;
 }
 
 void DemoHarness::OnFrameCreated() {
-  FXL_DCHECK(!IsAtMaxOutstandingFrames());
+  FX_DCHECK(!IsAtMaxOutstandingFrames());
   ++outstanding_frames_;
 }
 
 void DemoHarness::OnFrameDestroyed() {
-  FXL_DCHECK(outstanding_frames_ > 0);
+  FX_DCHECK(outstanding_frames_ > 0);
   --outstanding_frames_;
-  FXL_DCHECK(!IsAtMaxOutstandingFrames());
+  FX_DCHECK(!IsAtMaxOutstandingFrames());
 }
 
 void DemoHarness::Run(Demo* demo) {
@@ -481,8 +481,8 @@ void DemoHarness::Run(Demo* demo) {
 }
 
 void DemoHarness::BeginRun(Demo* demo) {
-  FXL_CHECK(demo);
-  FXL_CHECK(!demo_);
+  FX_CHECK(demo);
+  FX_CHECK(!demo_);
   demo_ = demo;
   frame_count_ = 0;
   first_frame_microseconds_ = 0;
@@ -490,11 +490,11 @@ void DemoHarness::BeginRun(Demo* demo) {
 }
 
 void DemoHarness::EndRun() {
-  FXL_CHECK(demo_);
+  FX_CHECK(demo_);
   demo_ = nullptr;
 
-  FXL_LOG(INFO) << "Average frame rate: " << ComputeFps();
-  FXL_LOG(INFO) << "First frame took: " << first_frame_microseconds_ / 1000.0 << " milliseconds";
+  FX_LOGS(INFO) << "Average frame rate: " << ComputeFps();
+  FX_LOGS(INFO) << "First frame took: " << first_frame_microseconds_ / 1000.0 << " milliseconds";
   escher()->Cleanup();
 }
 

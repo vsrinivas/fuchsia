@@ -25,8 +25,8 @@ namespace examples {
 
 AudioPlayer::AudioPlayer(const AudioPlayerParams& params, fit::closure quit_callback)
     : quit_callback_(std::move(quit_callback)), quit_when_done_(!params.stay()) {
-  FXL_DCHECK(params.is_valid());
-  FXL_DCHECK(quit_callback_);
+  FX_DCHECK(params.is_valid());
+  FX_DCHECK(quit_callback_);
 
   auto startup_context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
@@ -52,16 +52,16 @@ void AudioPlayer::HandleStatusChanged(const fuchsia::media::playback::PlayerStat
   // Process status received from the player.
   if (status.end_of_stream && quit_when_done_) {
     quit_callback_();
-    FXL_LOG(INFO) << "Reached end-of-stream. Quitting.";
+    FX_LOGS(INFO) << "Reached end-of-stream. Quitting.";
   }
 
   if (status.problem) {
     if (!problem_shown_) {
-      FXL_DLOG(INFO) << "PROBLEM: " << status.problem->type << ", " << status.problem->details;
+      FX_DLOGS(INFO) << "PROBLEM: " << status.problem->type << ", " << status.problem->details;
       problem_shown_ = true;
       if (quit_when_done_) {
         quit_callback_();
-        FXL_LOG(INFO) << "Problem detected. Quitting.";
+        FX_LOGS(INFO) << "Problem detected. Quitting.";
       }
     }
   } else {
@@ -69,7 +69,7 @@ void AudioPlayer::HandleStatusChanged(const fuchsia::media::playback::PlayerStat
   }
 
   if (status.metadata && !metadata_shown_) {
-    FXL_LOG(INFO) << "duration   " << std::fixed << std::setprecision(1)
+    FX_LOGS(INFO) << "duration   " << std::fixed << std::setprecision(1)
                   << double(status.duration) / 1000000000.0 << " seconds";
     MaybeLogMetadataProperty(*status.metadata, fuchsia::media::METADATA_LABEL_TITLE, "title      ");
     MaybeLogMetadataProperty(*status.metadata, fuchsia::media::METADATA_LABEL_ARTIST,
@@ -120,7 +120,7 @@ void AudioPlayer::MaybeLogMetadataProperty(const fuchsia::media::Metadata& metad
                                            const std::string& prefix) {
   for (auto& property : metadata.properties) {
     if (property.label == property_label) {
-      FXL_LOG(INFO) << prefix << property.value;
+      FX_LOGS(INFO) << prefix << property.value;
       return;
     }
   }

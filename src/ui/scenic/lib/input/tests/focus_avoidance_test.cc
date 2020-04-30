@@ -167,7 +167,7 @@ TEST_F(FocusAvoidanceTest, ViewHierarchyByScenic) {
 
 #if 0
     for (const auto& event : events)
-      FXL_LOG(INFO) << "Client got: " << event;  // Handy debugging.
+      FX_LOGS(INFO) << "Client got: " << event;  // Handy debugging.
 #endif
   }
 }

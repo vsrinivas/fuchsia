@@ -15,7 +15,7 @@ namespace fidlcat {
 void ExceptionUse::ExceptionDecoded(ExceptionDecoder* decoder) { decoder->Destroy(); }
 
 void ExceptionUse::DecodingError(const DecoderError& error, ExceptionDecoder* decoder) {
-  FXL_LOG(ERROR) << error.message();
+  FX_LOGS(ERROR) << error.message();
   decoder->Destroy();
 }
 

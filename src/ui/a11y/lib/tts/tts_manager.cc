@@ -9,7 +9,7 @@
 namespace a11y {
 
 TtsManager::TtsManager(sys::ComponentContext* startup_context) : engine_binding_(this) {
-  FXL_CHECK(startup_context);
+  FX_CHECK(startup_context);
 
   startup_context->outgoing()->AddPublicService(manager_bindings_.GetHandler(this));
   startup_context->outgoing()->AddPublicService(registry_bindings_.GetHandler(this));

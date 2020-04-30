@@ -47,41 +47,41 @@ zx_status_t Pressure::InitMemPressureEvents() {
   zx::channel local, remote;
   zx_status_t status = zx::channel::create(0, &local, &remote);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "zx::channel::create returned " << zx_status_get_string(status);
+    FX_LOGS(ERROR) << "zx::channel::create returned " << zx_status_get_string(status);
     return status;
   }
   const char* root_job_svc = "/svc/fuchsia.boot.RootJobForInspect";
   status = fdio_service_connect(root_job_svc, remote.release());
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "fdio_service_connect returned " << zx_status_get_string(status);
+    FX_LOGS(ERROR) << "fdio_service_connect returned " << zx_status_get_string(status);
     return status;
   }
 
   zx::job root_job;
   status = fuchsia_boot_RootJobForInspectGet(local.get(), root_job.reset_and_get_address());
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "fuchsia_boot_RootJobForInspectGet returned " << zx_status_get_string(status);
+    FX_LOGS(ERROR) << "fuchsia_boot_RootJobForInspectGet returned " << zx_status_get_string(status);
     return status;
   }
 
   status = zx_system_get_event(root_job.get(), ZX_SYSTEM_EVENT_MEMORY_PRESSURE_CRITICAL,
                                events_[Level::kCritical].reset_and_get_address());
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "zx_system_get_event [CRITICAL] returned " << zx_status_get_string(status);
+    FX_LOGS(ERROR) << "zx_system_get_event [CRITICAL] returned " << zx_status_get_string(status);
     return status;
   }
 
   status = zx_system_get_event(root_job.get(), ZX_SYSTEM_EVENT_MEMORY_PRESSURE_WARNING,
                                events_[Level::kWarning].reset_and_get_address());
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "zx_system_get_event [WARNING] returned " << zx_status_get_string(status);
+    FX_LOGS(ERROR) << "zx_system_get_event [WARNING] returned " << zx_status_get_string(status);
     return status;
   }
 
   status = zx_system_get_event(root_job.get(), ZX_SYSTEM_EVENT_MEMORY_PRESSURE_NORMAL,
                                events_[Level::kNormal].reset_and_get_address());
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "zx_system_get_event [NORMAL] returned " << zx_status_get_string(status);
+    FX_LOGS(ERROR) << "zx_system_get_event [NORMAL] returned " << zx_status_get_string(status);
     return status;
   }
 
@@ -108,7 +108,7 @@ void Pressure::WaitOnLevelChange() {
 
   zx_status_t status = zx_object_wait_many(wait_items_.data(), num_wait_items, ZX_TIME_INFINITE);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "zx_object_wait_many returned " << zx_status_get_string(status);
+    FX_LOGS(ERROR) << "zx_object_wait_many returned " << zx_status_get_string(status);
     return;
   }
 
@@ -135,7 +135,7 @@ void Pressure::OnLevelChanged(zx_handle_t handle) {
     }
   }
 
-  FXL_LOG(INFO) << "Memory pressure level changed from " << kLevelNames[old_level] << " to "
+  FX_LOGS(INFO) << "Memory pressure level changed from " << kLevelNames[old_level] << " to "
                 << kLevelNames[level_];
   if (provider_dispatcher_) {
     post_task_.Post(provider_dispatcher_);

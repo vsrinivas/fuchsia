@@ -16,19 +16,19 @@ class ValueRecordsVerifier : public Verifier {
     const perfmon::EventDetails* details;
 
     bool rc __UNUSED = LookupEventByName("misc", "edram_temperature", &details);
-    FXL_DCHECK(rc);
+    FX_DCHECK(rc);
     edram_temperature_id_ = details->id;
 
     rc = LookupEventByName("misc", "package_temperature", &details);
-    FXL_DCHECK(rc);
+    FX_DCHECK(rc);
     package_temperature_id_ = details->id;
 
     rc = LookupEventByName("misc", "ia_temperature", &details);
-    FXL_DCHECK(rc);
+    FX_DCHECK(rc);
     ia_temperature_id_ = details->id;
 
     rc = LookupEventByName("misc", "gt_temperature", &details);
-    FXL_DCHECK(rc);
+    FX_DCHECK(rc);
     gt_temperature_id_ = details->id;
   }
 
@@ -49,19 +49,19 @@ class ValueRecordsVerifier : public Verifier {
   bool VerifyTrace(const RecordCounts& counts) override {
     bool pass = true;
     if (edram_temperature_count_ == 0) {
-      FXL_LOG(ERROR) << "Missing edram_temperature events";
+      FX_LOGS(ERROR) << "Missing edram_temperature events";
       pass = false;
     }
     if (package_temperature_count_ == 0) {
-      FXL_LOG(ERROR) << "Missing package_temperature events";
+      FX_LOGS(ERROR) << "Missing package_temperature events";
       pass = false;
     }
     if (ia_temperature_count_ == 0) {
-      FXL_LOG(ERROR) << "Missing ia_temperature events";
+      FX_LOGS(ERROR) << "Missing ia_temperature events";
       pass = false;
     }
     if (gt_temperature_count_ == 0) {
-      FXL_LOG(ERROR) << "Missing gt_temperature events";
+      FX_LOGS(ERROR) << "Missing gt_temperature events";
       pass = false;
     }
     return pass;

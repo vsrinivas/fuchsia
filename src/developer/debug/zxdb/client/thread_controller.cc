@@ -18,7 +18,7 @@ ThreadController::ThreadController() = default;
 ThreadController::~ThreadController() = default;
 
 void ThreadController::Log(const char* format, ...) const {
-  FXL_DCHECK(thread_);  // If uninitialized, the log setting hasn't been read yet.
+  FX_DCHECK(thread_);  // If uninitialized, the log setting hasn't been read yet.
   if (!enable_debug_logging_)
     return;
 

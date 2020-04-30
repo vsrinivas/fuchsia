@@ -57,7 +57,7 @@ void MockThread::IncreaseSuspend() {
 }
 
 void MockThread::DecreaseSuspend() {
-  FXL_DCHECK(suspend_count_ > 0);
+  FX_DCHECK(suspend_count_ > 0);
   suspend_count_--;
   DEBUG_LOG(Test) << "Thread " << koid() << ": Decreased suspend count to " << suspend_count_;
 }

@@ -49,7 +49,7 @@ std::unique_ptr<LocalRoughtimeServer> LocalRoughtimeServer::MakeInstance(
   uint16_t actual_port = 0;
   roughtime::UdpProcessor::MakeSocket(preferred_port_number, &fd, &actual_port);
   EXPECT_NE(actual_port, 0);
-  FXL_LOG(INFO) << "Starting LocalRoughtimeServer on port " << actual_port;
+  FX_LOGS(INFO) << "Starting LocalRoughtimeServer on port " << actual_port;
 
   std::unique_ptr<SimpleServer> simple_server =
       std::make_unique<SimpleServer>(std::move(identity), std::move(time_source), fd);

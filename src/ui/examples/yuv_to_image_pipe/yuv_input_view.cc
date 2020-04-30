@@ -75,7 +75,7 @@ void YuvInputView::OnInputEvent(fuchsia::ui::input::InputEvent event) {
       break;
     }
     case InputEvent::Tag::Invalid: {
-      FXL_NOTREACHED();
+      FX_NOTREACHED();
       break;
     }
   }

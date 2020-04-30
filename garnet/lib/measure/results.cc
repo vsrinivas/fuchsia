@@ -4,9 +4,9 @@
 
 #include "garnet/lib/measure/results.h"
 
-#include "src/lib/fxl/logging.h"
-
 #include <sstream>
+
+#include "src/lib/fxl/logging.h"
 
 namespace tracing {
 namespace measure {
@@ -52,7 +52,7 @@ Result ComputeSingle(Spec spec, const std::vector<T>& recorded_values) {
 
   if ((spec.common.expected_sample_count > 0) &&
       (spec.common.expected_sample_count != recorded_values.size())) {
-    FXL_LOG(ERROR) << "Number of recorded samples for an event " << result.label
+    FX_LOGS(ERROR) << "Number of recorded samples for an event " << result.label
                    << " does not match the expected number (expected "
                    << spec.common.expected_sample_count << ", got " << recorded_values.size()
                    << ").";

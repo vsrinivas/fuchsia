@@ -74,14 +74,14 @@ class ModalOptionState {
 }  // namespace
 
 void ModalLineInput::Init(AcceptCallback accept_cb, const std::string& prompt) {
-  FXL_DCHECK(!normal_input_) << "Calling Init() twice.";
+  FX_DCHECK(!normal_input_) << "Calling Init() twice.";
 
   normal_input_ = MakeAndSetupLineInput(std::move(accept_cb), prompt);
   current_input_ = normal_input_.get();
 }
 
 void ModalLineInput::SetAutocompleteCallback(AutocompleteCallback cb) {
-  FXL_DCHECK(normal_input_) << "Need to call Init() first.";
+  FX_DCHECK(normal_input_) << "Need to call Init() first.";
   // Autocomplete only works for the non-modal input.
   normal_input_->SetAutocompleteCallback(std::move(cb));
 }
@@ -100,7 +100,7 @@ void ModalLineInput::SetCancelCallback(CancelCallback cb) {
 void ModalLineInput::SetEofCallback(EofCallback cb) { eof_callback_ = std::move(cb); }
 
 void ModalLineInput::SetMaxCols(size_t max) {
-  FXL_DCHECK(normal_input_) << "Need to call Init() first.";
+  FX_DCHECK(normal_input_) << "Need to call Init() first.";
 
   max_cols_ = max;
   normal_input_->SetMaxCols(max);
@@ -112,7 +112,7 @@ const std::string& ModalLineInput::GetLine() const { return current_input_->GetL
 
 const std::deque<std::string>& ModalLineInput::GetHistory() const {
   // History always comes from the regular one. The modal input has no history.
-  FXL_DCHECK(normal_input_) << "Need to call Init() first.";
+  FX_DCHECK(normal_input_) << "Need to call Init() first.";
   return normal_input_->GetHistory();
 }
 
@@ -173,8 +173,8 @@ void ModalLineInput::BeginModal(const std::string& prompt, ModalCompletionCallba
 }
 
 void ModalLineInput::EndModal() {
-  FXL_DCHECK(modal_input_) << "Not in a modal input.";
-  FXL_DCHECK(!modal_callbacks_.empty());
+  FX_DCHECK(modal_input_) << "Not in a modal input.";
+  FX_DCHECK(!modal_callbacks_.empty());
 
   modal_callbacks_.pop_front();
 
@@ -182,7 +182,7 @@ void ModalLineInput::EndModal() {
     modal_input_->Hide();
 
   // Schedule the modal input to be deleted in next OnInput() call to prevent reentrancy.
-  FXL_DCHECK(!to_delete_);
+  FX_DCHECK(!to_delete_);
   to_delete_ = std::move(modal_input_);
 
   current_input_ = normal_input_.get();
@@ -197,8 +197,8 @@ void ModalLineInput::EndModal() {
 }
 
 void ModalLineInput::ShowNextModal() {
-  FXL_DCHECK(!modal_callbacks_.empty());
-  FXL_DCHECK(!modal_input_);
+  FX_DCHECK(!modal_callbacks_.empty());
+  FX_DCHECK(!modal_input_);
 
   auto& record = modal_callbacks_.front();
 

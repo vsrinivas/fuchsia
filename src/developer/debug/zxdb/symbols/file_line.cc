@@ -18,7 +18,7 @@ FileLine::FileLine(std::string file, std::string comp_dir, int line)
   // correspond to no code. Having a compilation directory or file name set in these cases will
   // confuse FileLine comparison operations since ideally "no code" should always compare as equal
   // to "no code".
-  FXL_DCHECK(line_ > 0 || (file_.empty() && comp_dir_.empty()));
+  FX_DCHECK(line_ > 0 || (file_.empty() && comp_dir_.empty()));
 }
 FileLine::~FileLine() = default;
 

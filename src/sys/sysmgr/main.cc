@@ -25,7 +25,7 @@ int main(int argc, const char** argv) {
   sysmgr::Config config;
   config.ParseFromDirectory(kConfigDataDir);
   if (config.HasError()) {
-    FXL_LOG(ERROR) << "Parsing config failed:\n" << config.error_str();
+    FX_LOGS(ERROR) << "Parsing config failed:\n" << config.error_str();
     return ZX_ERR_INVALID_ARGS;
   }
 

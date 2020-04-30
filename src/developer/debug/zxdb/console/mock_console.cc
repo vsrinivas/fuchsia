@@ -32,7 +32,7 @@ void MockConsole::Clear() {
 }
 
 MockConsole::OutputEvent MockConsole::GetOutputEvent() {
-  FXL_DCHECK(!waiting_for_output_);
+  FX_DCHECK(!waiting_for_output_);
 
   if (output_queue_.empty() && debug_ipc::MessageLoop::Current()) {
     waiting_for_output_ = true;
@@ -67,7 +67,7 @@ void MockConsole::ModalGetOption(const line_input::ModalPromptOptions& options,
                                  line_input::ModalLineInput::ModalCompletionCallback cb) {
   // Only one modal prompt is supported at a time by this mock. Otherwise things will get confused
   // when sending the mock reply.
-  FXL_DCHECK(!last_modal_cb_);
+  FX_DCHECK(!last_modal_cb_);
   last_modal_cb_ = std::move(cb);
 
   // Add the message to the output queue so tests can see what as printed for this prompt.
@@ -75,7 +75,7 @@ void MockConsole::ModalGetOption(const line_input::ModalPromptOptions& options,
 }
 
 void MockConsole::ProcessInputLine(const std::string& line, CommandCallback callback) {
-  FXL_DCHECK(!line.empty());
+  FX_DCHECK(!line.empty());
 
   Command cmd;
   auto err = ParseCommand(line, &cmd);

@@ -1524,7 +1524,7 @@ class SyscallDecoderDispatcher {
 
   Process* CreateProcess(std::string_view name, zx_koid_t koid,
                          fxl::WeakPtr<zxdb::Process> zxdb_process) {
-    FXL_DCHECK(processes_.find(koid) == processes_.end());
+    FX_DCHECK(processes_.find(koid) == processes_.end());
     auto process = std::make_unique<Process>(name, koid, zxdb_process);
     auto returned_value = process.get();
     processes_.emplace(std::make_pair(koid, std::move(process)));
@@ -1540,7 +1540,7 @@ class SyscallDecoderDispatcher {
   }
 
   const Thread* CreateThread(zx_koid_t koid, Process* process) {
-    FXL_DCHECK(threads_.find(koid) == threads_.end());
+    FX_DCHECK(threads_.find(koid) == threads_.end());
     auto thread = std::make_unique<Thread>(process, koid);
     auto returned_value = thread.get();
     threads_.emplace(std::make_pair(koid, std::move(thread)));

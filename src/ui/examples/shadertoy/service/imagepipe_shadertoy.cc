@@ -62,7 +62,7 @@ void ShadertoyStateForImagePipe::OnSetResolution() {
     auto acquire_semaphore_pair = escher::NewSemaphoreEventPair(escher());
     auto release_semaphore_pair = escher::NewSemaphoreEventPair(escher());
     if (!acquire_semaphore_pair.first || !release_semaphore_pair.first) {
-      FXL_LOG(ERROR) << "OnSetResolution() failed.";
+      FX_LOGS(ERROR) << "OnSetResolution() failed.";
       ClearFramebuffers();
       Close();
       return;
@@ -76,12 +76,12 @@ void ShadertoyStateForImagePipe::OnSetResolution() {
     auto image = factory.NewImage(escher_image_info, &memory);
     // This code exports a VMO, so the VMO should only contain enough space for
     // the require image, and not be part of some larger allocation.
-    FXL_DCHECK(memory->offset() == 0);
-    FXL_DCHECK(memory->size() == image->size());
+    FX_DCHECK(memory->offset() == 0);
+    FX_DCHECK(memory->size() == image->size());
 
     zx::vmo vmo = escher::ExportMemoryAsVmo(escher(), memory);
     if (!vmo) {
-      FXL_LOG(ERROR) << "OnSetResolution() failed.";
+      FX_LOGS(ERROR) << "OnSetResolution() failed.";
       ClearFramebuffers();
       Close();
       return;
@@ -111,7 +111,7 @@ static zx::event DuplicateEvent(const zx::event& evt) {
   zx::event dup;
   auto result = evt.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup);
   if (result != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to duplicate event (status: " << result << ").";
+    FX_LOGS(ERROR) << "Failed to duplicate event (status: " << result << ").";
   }
   return dup;
 }

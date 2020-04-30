@@ -57,7 +57,7 @@ SessionHandler::GetFuturePresentationInfos(zx::duration requested_prediction_spa
 }
 
 void SessionHandler::DispatchCommand(fuchsia::ui::scenic::Command command) {
-  FXL_DCHECK(command.Which() == fuchsia::ui::scenic::Command::Tag::kGfx);
+  FX_DCHECK(command.Which() == fuchsia::ui::scenic::Command::Tag::kGfx);
   buffered_commands_.emplace_back(std::move(command.gfx()));
 }
 

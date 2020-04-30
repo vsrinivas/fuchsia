@@ -9,12 +9,12 @@
 namespace scheduling {
 
 void Present2Info::SetPresentReceivedTime(zx::time present_received_time) {
-  FXL_DCHECK(!present_received_info_.has_present_received_time());
+  FX_DCHECK(!present_received_info_.has_present_received_time());
   present_received_info_.set_present_received_time(present_received_time.get());
 }
 
 void Present2Info::SetLatchedTime(zx::time latched_time) {
-  FXL_DCHECK(!present_received_info_.has_latched_time());
+  FX_DCHECK(!present_received_info_.has_latched_time());
   present_received_info_.set_latched_time(latched_time.get());
 }
 
@@ -29,11 +29,11 @@ fuchsia::scenic::scheduling::FramePresentedInfo Present2Info::CoalescePresent2In
   fuchsia::scenic::scheduling::FramePresentedInfo frame_presented_info = {};
 
   for (auto& info : present2_infos) {
-    FXL_DCHECK(info.session_id() == session_id);
+    FX_DCHECK(info.session_id() == session_id);
 
     auto present_received_info = info.TakePresentReceivedInfo();
-    FXL_DCHECK(present_received_info.has_present_received_time());
-    FXL_DCHECK(present_received_info.has_latched_time());
+    FX_DCHECK(present_received_info.has_present_received_time());
+    FX_DCHECK(present_received_info.has_latched_time());
 
     frame_presented_info.presentation_infos.push_back(std::move(present_received_info));
   }

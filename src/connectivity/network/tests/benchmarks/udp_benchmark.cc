@@ -16,22 +16,22 @@
 // localhost socket from a single thread using sendto() and recvfrom().
 void UDPSendRecv() {
   fbl::unique_fd recvfd;
-  FXL_CHECK(recvfd = fbl::unique_fd(socket(AF_INET, SOCK_DGRAM, 0))) << strerror(errno);
+  FX_CHECK(recvfd = fbl::unique_fd(socket(AF_INET, SOCK_DGRAM, 0))) << strerror(errno);
 
   struct sockaddr_in addr = {};
   addr.sin_family = AF_INET;
   addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
 
-  FXL_CHECK(bind(recvfd.get(), reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)) == 0)
+  FX_CHECK(bind(recvfd.get(), reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)) == 0)
       << strerror(errno);
 
   socklen_t addrlen = sizeof(addr);
-  FXL_CHECK(getsockname(recvfd.get(), reinterpret_cast<struct sockaddr*>(&addr), &addrlen) == 0)
+  FX_CHECK(getsockname(recvfd.get(), reinterpret_cast<struct sockaddr*>(&addr), &addrlen) == 0)
       << strerror(errno);
-  FXL_CHECK(addrlen == sizeof(addr));
+  FX_CHECK(addrlen == sizeof(addr));
   struct timeval tv = {};
   tv.tv_sec = 1u;
-  FXL_CHECK(setsockopt(recvfd.get(), SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) == 0)
+  FX_CHECK(setsockopt(recvfd.get(), SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) == 0)
       << strerror(errno);
 
   struct SizeAndTraceEventNames {
@@ -50,7 +50,7 @@ void UDPSendRecv() {
   }};
 
   fbl::unique_fd sendfd;
-  FXL_CHECK(sendfd = fbl::unique_fd(socket(AF_INET, SOCK_DGRAM, 0))) << strerror(errno);
+  FX_CHECK(sendfd = fbl::unique_fd(socket(AF_INET, SOCK_DGRAM, 0))) << strerror(errno);
 
   constexpr uint32_t kIterationCount = 1000;
   for (const auto& [size, send_event_name, recv_event_name] : kSizeAndTraceEventNames) {

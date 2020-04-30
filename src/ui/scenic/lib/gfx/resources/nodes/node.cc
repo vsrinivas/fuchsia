@@ -34,12 +34,12 @@ const ResourceTypeInfo Node::kTypeInfo = {ResourceType::kNode, "Node"};
 Node::Node(Session* session, SessionId session_id, ResourceId node_id,
            const ResourceTypeInfo& type_info)
     : Resource(session, session_id, node_id, type_info) {
-  FXL_DCHECK(type_info.IsKindOf(Node::kTypeInfo));
+  FX_DCHECK(type_info.IsKindOf(Node::kTypeInfo));
 }
 
 Node::~Node() {
   ForEachChildFrontToBack(*this, [](Node* node) {
-    FXL_DCHECK(node->parent_relation_ != ParentRelation::kNone);
+    FX_DCHECK(node->parent_relation_ != ParentRelation::kNone);
     // Detach without affecting parent Node (because thats us) or firing the
     // on_detached_cb_ (because that shouldn't be up to us).
     node->DetachInternal();
@@ -84,9 +84,9 @@ bool Node::AddChild(NodePtr child_node, ErrorReporter* error_reporter) {
 }
 
 void Node::SetParent(Node* parent, ParentRelation relation) {
-  FXL_DCHECK(parent_ == nullptr);
+  FX_DCHECK(parent_ == nullptr);
   // A Scene node should always be a root node, and never a child.
-  FXL_DCHECK(!(type_flags() & ResourceType::kScene)) << "A Scene node cannot have a parent";
+  FX_DCHECK(!(type_flags() & ResourceType::kScene)) << "A Scene node cannot have a parent";
 
   parent_ = parent;
   parent_relation_ = relation;
@@ -100,7 +100,7 @@ bool Node::Detach(ErrorReporter* error_reporter) {
         parent_->EraseChild(this);
         break;
       case ParentRelation::kNone:
-        FXL_NOTREACHED();
+        FX_NOTREACHED();
         break;
     }
     DetachInternal();
@@ -286,10 +286,9 @@ bool Node::SendSizeChangeHint(float width_change_factor, float height_change_fac
     event_reporter()->EnqueueEvent(std::move(event));
   }
 
-  ForEachChildFrontToBack(
-      *this, [width_change_factor, height_change_factor](Node* node) {
-        node->SendSizeChangeHint(width_change_factor, height_change_factor);
-      });
+  ForEachChildFrontToBack(*this, [width_change_factor, height_change_factor](Node* node) {
+    node->SendSizeChangeHint(width_change_factor, height_change_factor);
+  });
   return true;
 }
 
@@ -305,7 +304,7 @@ bool Node::ClipsRay(const escher::ray4& ray) const {
 Node::IntersectionInfo Node::GetIntersection(const escher::ray4& ray,
                                              const IntersectionInfo& parent_intersection) const {
   // This method shouldn't have been called if the parent didn't want to traverse into children.
-  FXL_DCHECK(parent_intersection.continue_with_children);
+  FX_DCHECK(parent_intersection.continue_with_children);
   IntersectionInfo result;
   result.interval = parent_intersection.interval;
   result.continue_with_children = true;
@@ -315,8 +314,7 @@ Node::IntersectionInfo Node::GetIntersection(const escher::ray4& ray,
 void Node::InvalidateGlobalTransform() {
   if (!global_transform_dirty_) {
     global_transform_dirty_ = true;
-    ForEachChildFrontToBack(*this,
-                                       [](Node* node) { node->InvalidateGlobalTransform(); });
+    ForEachChildFrontToBack(*this, [](Node* node) { node->InvalidateGlobalTransform(); });
   }
 }
 
@@ -331,7 +329,7 @@ void Node::ComputeGlobalTransform() const {
 void Node::EraseChild(Node* child) {
   auto it = std::find_if(children_.begin(), children_.end(),
                          [child](const NodePtr& ptr) { return child == ptr.get(); });
-  FXL_DCHECK(it != children_.end());
+  FX_DCHECK(it != children_.end());
   children_.erase(it);
 }
 

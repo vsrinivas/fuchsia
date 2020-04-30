@@ -68,7 +68,7 @@ class AddModCall : public Operation<fuchsia::modular::ExecuteResult, fuchsia::mo
 
     std::vector<FuturePtr<fuchsia::modular::CreateModuleParameterMapEntry>> did_get_entries;
     if (add_mod_params_.intent.parameters.has_value()) {
-      FXL_LOG(WARNING) << "Intent parameters are ignored.";
+      FX_LOGS(WARNING) << "Intent parameters are ignored.";
     }
 
     Wait("AddModCommandRunner::AddModCall::Wait", did_get_entries)

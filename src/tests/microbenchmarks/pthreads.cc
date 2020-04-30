@@ -17,8 +17,8 @@ void* ExitImmediately(void* arg) { return nullptr; }
 // nothing.
 bool PThreadCreateAndJoinTest() {
   pthread_t thread;
-  FXL_CHECK(pthread_create(&thread, nullptr, ExitImmediately, nullptr) == 0);
-  FXL_CHECK(pthread_join(thread, nullptr) == 0);
+  FX_CHECK(pthread_create(&thread, nullptr, ExitImmediately, nullptr) == 0);
+  FX_CHECK(pthread_join(thread, nullptr) == 0);
   return true;
 }
 

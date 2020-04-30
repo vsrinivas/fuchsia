@@ -11,6 +11,7 @@
 #include "x86_cpuid.h"
 
 #include <cpuid.h>
+
 #include <atomic>
 #include <cstdint>
 #include <cstring>
@@ -144,7 +145,7 @@ const x86_cpuid_leaf* x86_get_cpuid_leaf(enum x86_cpuid_leaf_num leaf) {
 }
 
 bool x86_feature_test(struct x86_cpuid_bit bit) {
-  FXL_DCHECK(bit.word <= 3 && bit.bit <= 31);
+  FX_DCHECK(bit.word <= 3 && bit.bit <= 31);
 
   if (bit.word > 3 || bit.bit > 31)
     return false;

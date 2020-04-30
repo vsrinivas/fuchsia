@@ -18,7 +18,7 @@ DisplayCompositor::DisplayCompositor(Session* session, SessionId session_id, Res
                                      std::unique_ptr<DisplaySwapchain> display_swapchain)
     : Compositor(session, session_id, id, DisplayCompositor::kTypeInfo, std::move(scene_graph),
                  std::move(display_swapchain)) {
-  FXL_CHECK(display);
+  FX_CHECK(display);
   static_cast<DisplaySwapchain*>(this->swapchain())
       ->RegisterVsyncListener([display](zx::time timestamp) { display->OnVsync(timestamp); });
 }

@@ -16,7 +16,7 @@ LimboClient::LimboClient(std::shared_ptr<sys::ServiceDirectory> services)
     : services_(std::move(services)) {}
 
 zx_status_t LimboClient::Init() {
-  FXL_DCHECK(services_);
+  FX_DCHECK(services_);
   if (zx_status_t status = services_->Connect(connection_.NewRequest()); status != ZX_OK)
     return status;
 

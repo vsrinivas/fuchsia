@@ -77,7 +77,7 @@ class MediaButtonsListenerTest : public gtest::RealLoopFixture {
   }
 
   ~MediaButtonsListenerTest() override {
-    FXL_CHECK(injection_count_ == 1) << "Oops, didn't actually do anything.";
+    FX_CHECK(injection_count_ == 1) << "Oops, didn't actually do anything.";
   }
 
   void InjectInput(std::vector<const char*> args) {
@@ -89,18 +89,18 @@ class MediaButtonsListenerTest : public gtest::RealLoopFixture {
     zx_handle_t proc;
     zx_status_t status =
         fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, "/bin/input", args.data(), &proc);
-    FXL_CHECK(status == ZX_OK) << "fdio_spawn: " << zx_status_get_string(status);
+    FX_CHECK(status == ZX_OK) << "fdio_spawn: " << zx_status_get_string(status);
 
     // Wait for termination.
     status = zx_object_wait_one(proc, ZX_PROCESS_TERMINATED,
                                 (zx::clock::get_monotonic() + kTimeout).get(), nullptr);
-    FXL_CHECK(status == ZX_OK) << "zx_object_wait_one: " << zx_status_get_string(status);
+    FX_CHECK(status == ZX_OK) << "zx_object_wait_one: " << zx_status_get_string(status);
 
     // Check termination status.
     zx_info_process_t info;
     status = zx_object_get_info(proc, ZX_INFO_PROCESS, &info, sizeof(info), nullptr, nullptr);
-    FXL_CHECK(status == ZX_OK) << "zx_object_get_info: " << zx_status_get_string(status);
-    FXL_CHECK(info.return_code == 0) << "info.return_code: " << info.return_code;
+    FX_CHECK(status == ZX_OK) << "zx_object_get_info: " << zx_status_get_string(status);
+    FX_CHECK(info.return_code == 0) << "info.return_code: " << info.return_code;
   }
 
   std::unique_ptr<ButtonsListenerImpl> button_listener_impl_;
@@ -146,14 +146,14 @@ TEST_F(MediaButtonsListenerTest, MediaButtons) {
 
   root_presenter_ = g_context->svc()->Connect<fuchsia::ui::policy::DeviceListenerRegistry>();
   root_presenter_.set_error_handler([](zx_status_t status) {
-    FXL_LOG(FATAL) << "Lost connection to RootPresenter: " << zx_status_get_string(status);
+    FX_LOGS(FATAL) << "Lost connection to RootPresenter: " << zx_status_get_string(status);
   });
   root_presenter_->RegisterMediaButtonsListener(std::move(listener_handle));
 
   // Post a "just in case" quit task, if the test hangs.
   async::PostDelayedTask(
       dispatcher(),
-      [] { FXL_LOG(FATAL) << "\n\n>> Test did not complete in time, terminating. <<\n\n"; },
+      [] { FX_LOGS(FATAL) << "\n\n>> Test did not complete in time, terminating. <<\n\n"; },
       kTimeout);
 
   RunLoop();  // Go!

@@ -18,7 +18,7 @@ class LastBranchVerifier : public Verifier {
     const perfmon::EventDetails* details;
 
     bool rc __UNUSED = LookupEventByName("arch", "instructions_retired", &details);
-    FXL_DCHECK(rc);
+    FX_DCHECK(rc);
     instructions_retired_id_ = details->id;
   }
 
@@ -30,7 +30,7 @@ class LastBranchVerifier : public Verifier {
     if (record.type() == perfmon::kRecordTypeLastBranch) {
       ++last_branch_record_count_;
       if (record.header->event != instructions_retired_id_) {
-        FXL_LOG(ERROR) << "Last branch record has wrong event id: " << record.header->event;
+        FX_LOGS(ERROR) << "Last branch record has wrong event id: " << record.header->event;
         return false;
       }
       const perfmon::LastBranchRecord* lbr = record.last_branch;
@@ -38,21 +38,21 @@ class LastBranchVerifier : public Verifier {
           (perfmon::kLastBranchInfoCyclesMask | perfmon::kLastBranchInfoMispredMask);
       for (size_t i = 0; i < lbr->num_branches; ++i) {
         if (lbr->aspace == 0) {
-          FXL_LOG(ERROR) << "Last branch record has zero aspace";
+          FX_LOGS(ERROR) << "Last branch record has zero aspace";
           return false;
         }
         if (lbr->num_branches > perfmon::LastBranchRecord::kMaxNumLastBranch) {
-          FXL_LOG(ERROR) << "Last branch record has too many branches";
+          FX_LOGS(ERROR) << "Last branch record has too many branches";
           return false;
         }
         // Maybe branch to zero could end up here, so we don't verify from,to
         // are non-zero, but they both can't be.
         if (lbr->branches[i].from == 0 && lbr->branches[i].to == 0) {
-          FXL_LOG(ERROR) << "Last branch record with zero from,to";
+          FX_LOGS(ERROR) << "Last branch record with zero from,to";
           return false;
         }
         if (lbr->branches[i].info & !valid_info_mask) {
-          FXL_LOG(ERROR) << "Last branch record has invalid info bits";
+          FX_LOGS(ERROR) << "Last branch record has invalid info bits";
           return false;
         }
       }
@@ -63,11 +63,11 @@ class LastBranchVerifier : public Verifier {
   bool VerifyTrace(const RecordCounts& counts) override {
     bool pass = true;
     if (instructions_retired_count_ == 0) {
-      FXL_LOG(ERROR) << "Missing instructions_retired events";
+      FX_LOGS(ERROR) << "Missing instructions_retired events";
       pass = false;
     }
     if (last_branch_record_count_ == 0) {
-      FXL_LOG(ERROR) << "Missing last-branch records events";
+      FX_LOGS(ERROR) << "Missing last-branch records events";
       pass = false;
     }
     return pass;

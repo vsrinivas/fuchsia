@@ -18,7 +18,7 @@ ShadertoyEmbedderView::ShadertoyEmbedderView(scenic::ViewContext context, async:
       message_loop_(message_loop),
       background_(session()),
       focused_(false) {
-  FXL_CHECK(message_loop_);
+  FX_CHECK(message_loop_);
 
   root_node().AddChild(background_);
 
@@ -35,7 +35,7 @@ ShadertoyEmbedderView::ShadertoyEmbedderView(scenic::ViewContext context, async:
 }
 
 void ShadertoyEmbedderView::LaunchShadertoyClient() {
-  FXL_DCHECK(!view_holder_);
+  FX_DCHECK(!view_holder_);
 
   fuchsia::sys::LauncherPtr launcher;
   component_context()->svc()->Connect(launcher.NewRequest());
@@ -113,7 +113,7 @@ void ShadertoyEmbedderView::OnInputEvent(fuchsia::ui::input::InputEvent event) {
       break;
     }
     case InputEvent::Tag::Invalid: {
-      FXL_NOTREACHED();
+      FX_NOTREACHED();
       break;
     }
   }

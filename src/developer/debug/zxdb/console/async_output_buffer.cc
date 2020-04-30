@@ -10,20 +10,20 @@
 namespace zxdb {
 
 void AsyncOutputBuffer::SetCompletionCallback(CompletionCallback cb) {
-  FXL_DCHECK(!is_complete());
+  FX_DCHECK(!is_complete());
 
   // Don't clobber with a different callback, but let it be cleared.
-  FXL_DCHECK(!cb || !completion_callback_);
+  FX_DCHECK(!cb || !completion_callback_);
   completion_callback_ = std::move(cb);
 }
 
 void AsyncOutputBuffer::Append(std::string str, TextForegroundColor fg, TextBackgroundColor bg) {
-  FXL_DCHECK(!marked_complete_);
+  FX_DCHECK(!marked_complete_);
   nodes_.emplace_back(Span(std::move(str), fg, bg));
 }
 
 void AsyncOutputBuffer::Append(fxl::RefPtr<AsyncOutputBuffer> buf) {
-  FXL_DCHECK(!marked_complete_);
+  FX_DCHECK(!marked_complete_);
 
   if (!buf->is_complete()) {
     pending_resolution_++;
@@ -31,7 +31,7 @@ void AsyncOutputBuffer::Append(fxl::RefPtr<AsyncOutputBuffer> buf) {
     // We're keeping a reference to the appended buffer so we know it's safe to capture |this|. We
     // don't want to use a RefPtr here or it will create a reference cycle.
     buf->SetCompletionCallback([this]() {
-      FXL_DCHECK(pending_resolution_ > 0);
+      FX_DCHECK(pending_resolution_ > 0);
       pending_resolution_--;
       CheckComplete();
     });
@@ -41,23 +41,23 @@ void AsyncOutputBuffer::Append(fxl::RefPtr<AsyncOutputBuffer> buf) {
 }
 
 void AsyncOutputBuffer::Append(Syntax syntax, std::string str) {
-  FXL_DCHECK(!marked_complete_);
+  FX_DCHECK(!marked_complete_);
   nodes_.emplace_back(Span(syntax, std::move(str)));
 }
 
 void AsyncOutputBuffer::Append(OutputBuffer buf) {
-  FXL_DCHECK(!marked_complete_);
+  FX_DCHECK(!marked_complete_);
   for (Span& span : buf.spans())
     nodes_.emplace_back(std::move(span));
 }
 
 void AsyncOutputBuffer::Append(const Err& err) {
-  FXL_DCHECK(!marked_complete_);
+  FX_DCHECK(!marked_complete_);
   nodes_.emplace_back(Span(Syntax::kNormal, err.msg()));
 }
 
 void AsyncOutputBuffer::Complete() {
-  FXL_DCHECK(!marked_complete_);
+  FX_DCHECK(!marked_complete_);
   marked_complete_ = true;
   CheckComplete();
 }
@@ -88,7 +88,7 @@ void AsyncOutputBuffer::Complete(const Err& err) {
 }
 
 OutputBuffer AsyncOutputBuffer::DestructiveFlatten() {
-  FXL_DCHECK(is_complete());
+  FX_DCHECK(is_complete());
 
   OutputBuffer out;
   DestructiveCollectNodes(&out);
@@ -104,7 +104,7 @@ void AsyncOutputBuffer::CheckComplete() {
 }
 
 void AsyncOutputBuffer::DestructiveCollectNodes(OutputBuffer* out) {
-  FXL_DCHECK(is_complete());
+  FX_DCHECK(is_complete());
   for (auto& node : nodes_) {
     if (std::holds_alternative<Span>(node))
       out->Append(std::move(std::get<Span>(node)));

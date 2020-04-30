@@ -17,7 +17,7 @@ DescriptorSetAllocator::DescriptorSetAllocator(vk::Device device, DescriptorSetL
 DescriptorSetAllocator::PoolPolicy::PoolPolicy(vk::Device device, DescriptorSetLayout layout,
                                                const SamplerPtr& immutable_sampler)
     : vk_device_(device), layout_(layout), immutable_sampler_(immutable_sampler) {
-  FXL_DCHECK(layout.IsValid());
+  FX_DCHECK(layout.IsValid());
 
   std::array<vk::DescriptorSetLayoutBinding, VulkanLimits::kNumBindings> bindings;
   size_t num_bindings = 0;
@@ -75,7 +75,7 @@ DescriptorSetAllocator::PoolPolicy::PoolPolicy(vk::Device device, DescriptorSetL
   if (immutable_sampler && has_sampled_image) {
     // TODO(ES-199): Leaving this log in for now, so we can detect when systems
     // are OOMing due to ES-199. For most use cases, this log will trigger once.
-    FXL_LOG(INFO) << "Allocating immutable descriptor set layout, sampler = "
+    FX_LOGS(INFO) << "Allocating immutable descriptor set layout, sampler = "
                   << immutable_sampler->vk();
   }
 
@@ -89,7 +89,7 @@ DescriptorSetAllocator::PoolPolicy::PoolPolicy(vk::Device device, DescriptorSetL
 }
 
 DescriptorSetAllocator::PoolPolicy::~PoolPolicy() {
-  FXL_DCHECK(pools_.empty());
+  FX_DCHECK(pools_.empty());
   vk_device_.destroyDescriptorSetLayout(vk_layout_);
 }
 
@@ -102,7 +102,7 @@ void DescriptorSetAllocator::PoolPolicy::InitializePoolObjectBlock(CacheItem* ob
 
 vk::DescriptorPool DescriptorSetAllocator::PoolPolicy::CreatePool(size_t block_index,
                                                                   size_t num_objects) {
-  FXL_DCHECK(!pools_[block_index]);
+  FX_DCHECK(!pools_[block_index]);
   for (auto& sz : pool_sizes_) {
     sz.descriptorCount = num_objects;
   }
@@ -136,7 +136,7 @@ void DescriptorSetAllocator::PoolPolicy::AllocateDescriptorSetBlock(vk::Descript
     alloc_info.descriptorSetCount = std::min(remaining, kSetsPerAllocation);
 
     vk::Result result = vk_device_.allocateDescriptorSets(&alloc_info, allocated_sets.data());
-    FXL_CHECK(result == vk::Result::eSuccess) << "DescriptorSetAllocator failed to allocate block.";
+    FX_CHECK(result == vk::Result::eSuccess) << "DescriptorSetAllocator failed to allocate block.";
 
     for (size_t i = 0; i < alloc_info.descriptorSetCount; ++i) {
       new (objects + i) CacheItem();
@@ -153,12 +153,12 @@ void DescriptorSetAllocator::PoolPolicy::DestroyPoolObjectBlock(CacheItem* objec
                                                                 size_t num_objects) {
   auto it = pools_.find(block_index);
   if (it == pools_.end()) {
-    FXL_DCHECK(false) << "DescriptorSetAllocator could not find pool to destroy.";
+    FX_DCHECK(false) << "DescriptorSetAllocator could not find pool to destroy.";
     return;
   }
   vk::DescriptorPool pool = it->second;
   pools_.erase(it);
-  FXL_DCHECK(pool);
+  FX_DCHECK(pool);
   vk_device_.resetDescriptorPool(pool);
   vk_device_.destroyDescriptorPool(pool);
 

@@ -29,7 +29,7 @@ std::unique_ptr<DemoHarness> CreateHarnessForDemo(std::string demo_name, uint32_
 }
 
 int main(int argc, char** argv) {
-  FXL_LOG(INFO) << "Running rainfall...";
+  FX_LOGS(INFO) << "Running rainfall...";
   auto harness = CreateHarnessForDemo("Flatland Rainfall Demo", RainfallDemo::kDemoWidth,
                                       RainfallDemo::kDemoHeight, argc, argv);
   {

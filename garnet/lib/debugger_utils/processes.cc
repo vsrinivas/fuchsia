@@ -23,7 +23,7 @@ static zx_status_t TryGetProcessThreadKoids(zx_handle_t process, size_t try_coun
                                             size_t initial_num_threads, size_t max_num_new_threads,
                                             std::vector<zx_koid_t>* out_threads,
                                             size_t* out_num_available_threads) {
-  FXL_DCHECK(process != ZX_HANDLE_INVALID);
+  FX_DCHECK(process != ZX_HANDLE_INVALID);
 
   size_t num_available_threads = initial_num_threads;
 
@@ -42,17 +42,17 @@ static zx_status_t TryGetProcessThreadKoids(zx_handle_t process, size_t try_coun
                                             out_threads->size() * sizeof((*out_threads)[0]),
                                             &records_read, &num_available_threads);
     if (status != ZX_OK) {
-      FXL_VLOG(2) << "Failed to get process thread info: " << debugger_utils::ZxErrorString(status);
+      FX_VLOGS(2) << "Failed to get process thread info: " << debugger_utils::ZxErrorString(status);
       return status;
     }
 
     // If our buffer was large enough to hold all threads we're done.
     if (num_available_threads <= num_threads) {
-      FXL_DCHECK(records_read == num_available_threads);
+      FX_DCHECK(records_read == num_available_threads);
       out_threads->resize(num_available_threads);
       break;
     }
-    FXL_DCHECK(records_read == num_threads);
+    FX_DCHECK(records_read == num_threads);
   }
 
   *out_num_available_threads = num_available_threads;
@@ -72,7 +72,7 @@ zx_status_t TryGetProcessThreadKoidsForTesting(const zx::process& process, size_
 zx_status_t GetProcessThreadKoids(const zx_handle_t process, size_t try_count,
                                   size_t max_num_new_threads, std::vector<zx_koid_t>* out_threads,
                                   size_t* out_num_available_threads) {
-  FXL_DCHECK(process != ZX_HANDLE_INVALID);
+  FX_DCHECK(process != ZX_HANDLE_INVALID);
 
   // First get the thread count so that we can allocate an appropriately sized
   // buffer. This is racy but unless the caller stops all threads we need to
@@ -81,7 +81,7 @@ zx_status_t GetProcessThreadKoids(const zx_handle_t process, size_t try_count,
   zx_status_t status = zx_object_get_info(process, ZX_INFO_PROCESS_THREADS, nullptr, 0, nullptr,
                                           &num_available_threads);
   if (status != ZX_OK) {
-    FXL_VLOG(2) << "Failed to get process thread info (#threads): "
+    FX_VLOGS(2) << "Failed to get process thread info (#threads): "
                 << debugger_utils::ZxErrorString(status);
     return status;
   }
@@ -107,12 +107,12 @@ zx_status_t CreateProcessBuilder(const zx::job& job, const std::string& path,
                                  const debugger_utils::Argv& argv,
                                  std::shared_ptr<sys::ServiceDirectory> services,
                                  std::unique_ptr<process::ProcessBuilder>* out_builder) {
-  FXL_DCHECK(argv.size() > 0);
+  FX_DCHECK(argv.size() > 0);
   zx::job builder_job;
   zx_status_t status =
       zx_handle_duplicate(job.get(), ZX_RIGHT_SAME_RIGHTS, builder_job.reset_and_get_address());
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Unable to duplicate job handle: " << debugger_utils::ZxErrorString(status);
+    FX_LOGS(ERROR) << "Unable to duplicate job handle: " << debugger_utils::ZxErrorString(status);
     return status;
   }
 
@@ -121,16 +121,16 @@ zx_status_t CreateProcessBuilder(const zx::job& job, const std::string& path,
 
   status = builder->LoadPath(path);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to load binary: " << path << ": "
+    FX_LOGS(ERROR) << "Failed to load binary: " << path << ": "
                    << debugger_utils::ZxErrorString(status);
     return status;
   }
-  FXL_VLOG(2) << "Binary loaded";
+  FX_VLOGS(2) << "Binary loaded";
 
   builder->AddArgs(argv);
 
-  FXL_VLOG(2) << "path: " << path;
-  FXL_VLOG(2) << "argv: " << debugger_utils::ArgvToString(argv);
+  FX_VLOGS(2) << "path: " << path;
+  FX_VLOGS(2) << "argv: " << debugger_utils::ArgvToString(argv);
 
   *out_builder = std::move(builder);
   return ZX_OK;
@@ -140,10 +140,10 @@ zx_status_t GetProcessReturnCode(zx_handle_t process, int* out_return_code) {
   zx_info_process_t info;
   auto status = zx_object_get_info(process, ZX_INFO_PROCESS, &info, sizeof(info), nullptr, nullptr);
   if (status == ZX_OK) {
-    FXL_VLOG(2) << "Process exited with code " << info.return_code;
+    FX_VLOGS(2) << "Process exited with code " << info.return_code;
     *out_return_code = info.return_code;
   } else {
-    FXL_VLOG(2) << "Error getting process return code: " << debugger_utils::ZxErrorString(status);
+    FX_VLOGS(2) << "Error getting process return code: " << debugger_utils::ZxErrorString(status);
   }
   return status;
 }

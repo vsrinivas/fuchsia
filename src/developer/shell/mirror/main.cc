@@ -17,7 +17,7 @@ int ConsoleMain(int argc, const char** argv) {
   std::vector<std::string> params;
   cmdline::Status status = ParseCommandLine(argc, argv, &options, &params);
   if (status.has_error()) {
-    FXL_LOG(ERROR) << status.error_message();
+    FX_LOGS(ERROR) << status.error_message();
     return 1;
   }
 

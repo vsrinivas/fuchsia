@@ -39,9 +39,9 @@ ViewHolder::~ViewHolder() {
 }
 
 void ViewHolder::Connect(ViewLinker::ExportLink link) {
-  FXL_DCHECK(!link_);
-  FXL_DCHECK(link.valid());
-  FXL_DCHECK(!link.initialized());
+  FX_DCHECK(!link_);
+  FX_DCHECK(link.valid());
+  FX_DCHECK(!link.initialized());
 
   link_ = std::move(link);
   view_holder_koid_ = link_->endpoint_id();
@@ -55,7 +55,7 @@ void ViewHolder::Connect(ViewLinker::ExportLink link) {
 void ViewHolder::LinkResolved(View* view) {
   // The view will also receive a LinkResolved call, and it will take care of
   // linking up the Nodes.
-  FXL_DCHECK(!view_ && view);
+  FX_DCHECK(!view_ && view);
   view_ = view;
 
   if (!suppress_events_) {
@@ -112,7 +112,7 @@ escher::BoundingBox ViewHolder::GetLocalBoundingBox() const {
       Unwrap(view_properties_.bounding_box.min) + Unwrap(view_properties_.inset_from_min);
   escher::vec3 max =
       Unwrap(view_properties_.bounding_box.max) - Unwrap(view_properties_.inset_from_max);
-  FXL_DCHECK(glm::all(glm::lessThan(min, max)));
+  FX_DCHECK(glm::all(glm::lessThan(min, max)));
   return escher::BoundingBox(min, max);
 }
 

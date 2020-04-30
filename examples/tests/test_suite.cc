@@ -64,11 +64,11 @@ void TestSuite::Run(std::vector<fuchsia::test::Invocation> tests,
     std::string msg2 = "log2 for " + test_name + "\n";
     std::string msg3 = "log3 for " + test_name + "\n";
     zx_status_t status;
-    FXL_CHECK(ZX_OK == (status = test_case_log.write(0, msg1.data(), msg1.length(), nullptr)))
+    FX_CHECK(ZX_OK == (status = test_case_log.write(0, msg1.data(), msg1.length(), nullptr)))
         << status;
-    FXL_CHECK(ZX_OK == (status = test_case_log.write(0, msg2.data(), msg2.length(), nullptr)))
+    FX_CHECK(ZX_OK == (status = test_case_log.write(0, msg2.data(), msg2.length(), nullptr)))
         << status;
-    FXL_CHECK(ZX_OK == (status = test_case_log.write(0, msg3.data(), msg3.length(), nullptr)))
+    FX_CHECK(ZX_OK == (status = test_case_log.write(0, msg3.data(), msg3.length(), nullptr)))
         << status;
     Result result;
 

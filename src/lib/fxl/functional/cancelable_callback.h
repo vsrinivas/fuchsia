@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_FXL_FUNCTIONAL_CANCELABLE_CALLBACK_H_
-#define LIB_FXL_FUNCTIONAL_CANCELABLE_CALLBACK_H_
-
-#include <functional>
+#ifndef SRC_LIB_FXL_FUNCTIONAL_CANCELABLE_CALLBACK_H_
+#define SRC_LIB_FXL_FUNCTIONAL_CANCELABLE_CALLBACK_H_
 
 #include <lib/fit/function.h>
+
+#include <functional>
 
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/macros.h"
@@ -29,7 +29,7 @@ namespace fxl {
 // EXAMPLE USAGE:
 //
 // void MyTimeoutCallback(std::string message) {
-//   FXL_LOG(INFO) << "Timeout has expired: " << message
+//   FX_LOGS(INFO) << "Timeout has expired: " << message
 // }
 //
 // CancelableClosure cancelable(
@@ -50,7 +50,7 @@ class CancelableCallback<void(Args...)> {
 
   explicit CancelableCallback(fit::function<void(Args...)> callback)
       : callback_(std::move(callback)), weak_ptr_factory_(this) {
-    FXL_DCHECK(callback_);
+    FX_DCHECK(callback_);
     BindWrapper();
   }
 
@@ -72,7 +72,7 @@ class CancelableCallback<void(Args...)> {
   // Sets |callback| as the closure that may be canceled. |callback| may not be
   // null. Outstanding and any previously wrapped callbacks are canceled.
   void Reset(fit::function<void(Args...)> callback) {
-    FXL_DCHECK(callback);
+    FX_DCHECK(callback);
     Cancel();
 
     callback_ = std::move(callback);
@@ -85,7 +85,7 @@ class CancelableCallback<void(Args...)> {
     wrapper_ = [self](Args... args) {
       if (!self)
         return;
-      FXL_DCHECK(self->callback_);
+      FX_DCHECK(self->callback_);
       self->callback_(std::forward<Args>(args)...);
     };
   }
@@ -107,4 +107,4 @@ using CancelableClosure = CancelableCallback<void(void)>;
 
 }  // namespace fxl
 
-#endif  // LIB_FXL_FUNCTIONAL_CANCELABLE_CALLBACK_H_
+#endif  // SRC_LIB_FXL_FUNCTIONAL_CANCELABLE_CALLBACK_H_

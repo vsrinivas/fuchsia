@@ -21,7 +21,7 @@ int main(int argc, const char** argv) {
   async::PostDelayedTask(
       loop.dispatcher(),
       [&loop] {
-        FXL_LOG(INFO) << "Quitting.";
+        FX_LOGS(INFO) << "Quitting.";
         loop.Quit();
       },
       zx::sec(50));

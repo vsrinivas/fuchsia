@@ -275,9 +275,9 @@ template <bool is_import>
 void ObjectLinker<Export, Import>::Link<is_import>::Initialize(
     fit::function<void(PeerObj peer_object)> link_resolved,
     fit::function<void(bool on_destruction)> link_invalidated) {
-  FXL_DCHECK(valid());
-  FXL_DCHECK(!initialized());
-  FXL_DCHECK(link_resolved);
+  FX_DCHECK(valid());
+  FX_DCHECK(!initialized());
+  FX_DCHECK(link_resolved);
 
   link_resolved_ = std::move(link_resolved);
   link_invalidated_ = std::move(link_invalidated);
@@ -316,7 +316,7 @@ void ObjectLinker<Export, Import>::Link<is_import>::LinkResolved(
     ObjectLinkerBase::Link* peer_link) {
   if (link_resolved_) {
     auto* typed_peer_link = static_cast<Link<!is_import>*>(peer_link);
-    FXL_DCHECK(typed_peer_link->object_.has_value());
+    FX_DCHECK(typed_peer_link->object_.has_value());
     link_resolved_(std::move(typed_peer_link->object_.value()));
   }
 }

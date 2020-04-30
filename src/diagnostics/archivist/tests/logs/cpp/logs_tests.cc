@@ -127,7 +127,7 @@ TEST_F(LoggerIntegrationTest, ListenFiltered) {
   fxl::SetLogSettings(settings, {tag});
 
   for (auto severity : severities_in_use) {
-    FXL_LOG(LEVEL(severity)) << message;
+    FX_LOGS(LEVEL(severity)) << message;
   }
 
   // Start the log listener and the logger, and wait for the log message to arrive.

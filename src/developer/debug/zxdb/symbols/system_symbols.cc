@@ -65,7 +65,7 @@ Err SystemSymbols::GetModule(const std::string& build_id, fxl::RefPtr<ModuleSymb
 
 void SystemSymbols::SaveModule(const std::string& build_id, ModuleSymbols* module) {
   // Can't save a module that already exists.
-  FXL_DCHECK(modules_.find(build_id) == modules_.end());
+  FX_DCHECK(modules_.find(build_id) == modules_.end());
 
   module->set_deletion_cb(
       [weak_system = weak_factory_.GetWeakPtr(), build_id](ModuleSymbols* module) {
@@ -75,11 +75,11 @@ void SystemSymbols::SaveModule(const std::string& build_id, ModuleSymbols* modul
 
         auto found = system->modules_.find(build_id);
         if (found == system->modules_.end()) {
-          FXL_NOTREACHED();  // Should be found if we registered.
+          FX_NOTREACHED();  // Should be found if we registered.
           return;
         }
 
-        FXL_DCHECK(module == found->second);  // Mapping should match.
+        FX_DCHECK(module == found->second);  // Mapping should match.
         system->modules_.erase(found);
       });
   modules_[build_id] = module;

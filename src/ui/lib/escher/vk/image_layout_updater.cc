@@ -51,9 +51,9 @@ std::pair<vk::PipelineStageFlags, vk::AccessFlags> GetDstMask(vk::ImageLayout ne
       break;
     case vk::ImageLayout::eUndefined:
     default:
-      FXL_LOG(ERROR) << "CommandBuffer does not know how to transition to layout: "
+      FX_LOGS(ERROR) << "CommandBuffer does not know how to transition to layout: "
                      << vk::to_string(new_layout);
-      FXL_DCHECK(false);
+      FX_DCHECK(false);
   }
   return std::make_pair(dst_stage_mask, dst_access_mask);
 }
@@ -62,26 +62,26 @@ std::pair<vk::PipelineStageFlags, vk::AccessFlags> GetDstMask(vk::ImageLayout ne
 
 ImageLayoutUpdater::ImageLayoutUpdater(EscherWeakPtr const escher) : escher_(escher) {
   if (!escher_) {
-    FXL_LOG(ERROR) << "Fatal: No valid escher, ImageLayoutUpdater will fail.";
+    FX_LOGS(ERROR) << "Fatal: No valid escher, ImageLayoutUpdater will fail.";
   }
 }
 
 ImageLayoutUpdater::~ImageLayoutUpdater() {
   // Check that there is no pending tasks / pending semaphores.
-  FXL_DCHECK(images_to_set_.empty() && pending_image_layout_to_set_.empty() &&
-             wait_semaphores_.empty() && signal_semaphores_.empty());
+  FX_DCHECK(images_to_set_.empty() && pending_image_layout_to_set_.empty() &&
+            wait_semaphores_.empty() && signal_semaphores_.empty());
 }
 
 void ImageLayoutUpdater::ScheduleSetImageInitialLayout(const escher::ImagePtr& image,
                                                        vk::ImageLayout new_layout) {
-  FXL_DCHECK(image->layout() == vk::ImageLayout::eUndefined ||
-             image->layout() == vk::ImageLayout::ePreinitialized);
+  FX_DCHECK(image->layout() == vk::ImageLayout::eUndefined ||
+            image->layout() == vk::ImageLayout::ePreinitialized);
   if (images_to_set_.find(image) != images_to_set_.end()) {
     // Check to see if we're trying to set the same layout to the
     // same image that is already scheduled to be updated.
     for (const auto& pending : pending_image_layout_to_set_) {
       if (pending.first == image && pending.second == new_layout) {
-        FXL_CHECK(pending.second == new_layout)
+        FX_CHECK(pending.second == new_layout)
             << "Attempting to set two different initial layouts.";
         return;
       }
@@ -97,9 +97,9 @@ void ImageLayoutUpdater::GenerateCommands(CommandBuffer* cmds) {
   }
 
   // Check existence of the command buffer |cmds|.
-  FXL_DCHECK(cmds);
+  FX_DCHECK(cmds);
   for (const auto& [image, new_layout] : pending_image_layout_to_set_) {
-    FXL_DCHECK(!image->is_layout_initialized())
+    FX_DCHECK(!image->is_layout_initialized())
         << "Error: layout of VkImage " << image->vk() << " is already initialized.";
     auto src_stage_mask = vk::PipelineStageFlagBits::eTopOfPipe;
     auto src_access_mask = vk::AccessFlags();
@@ -148,8 +148,8 @@ void ImageLayoutUpdater::Submit(fit::function<void()> callback, CommandBuffer::T
   // After this function is called, the |pending_image_layout_to_set_|,
   // |images_to_set_| and all semaphores will be clear so that the image layout
   // updater will be reused again.
-  FXL_DCHECK(images_to_set_.empty() && pending_image_layout_to_set_.empty() &&
-             wait_semaphores_.empty() && signal_semaphores_.empty());
+  FX_DCHECK(images_to_set_.empty() && pending_image_layout_to_set_.empty() &&
+            wait_semaphores_.empty() && signal_semaphores_.empty());
 }
 
 }  // namespace escher

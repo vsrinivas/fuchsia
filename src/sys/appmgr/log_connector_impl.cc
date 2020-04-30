@@ -24,7 +24,7 @@ void SetUpSyslogOnce(const fuchsia::sys::internal::LogConnectionListenerPtr& lis
   fuchsia::logger::LogSinkPtr log_sink;
   fidl::InterfaceRequest<fuchsia::logger::LogSink> request = log_sink.NewRequest();
   if (!request) {
-    FXL_LOG(WARNING) << "Failed to create a LogSink channel. Appmgr can't use syslog.";
+    FX_LOGS(WARNING) << "Failed to create a LogSink channel. Appmgr can't use syslog.";
     return;
   }
 
@@ -41,7 +41,7 @@ void SetUpSyslogOnce(const fuchsia::sys::internal::LogConnectionListenerPtr& lis
 
   zx::socket local, remote;
   if (zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote) != ZX_OK) {
-    FXL_LOG(WARNING) << "Failed to create a socket. Appmgr can't use syslog.";
+    FX_LOGS(WARNING) << "Failed to create a socket. Appmgr can't use syslog.";
     return;
   }
   log_sink->Connect(std::move(remote));
@@ -53,11 +53,11 @@ void SetUpSyslogOnce(const fuchsia::sys::internal::LogConnectionListenerPtr& lis
                                .tags = &tag,
                                .num_tags = 1};
   if (fx_log_reconfigure(&config) != ZX_OK) {
-    FXL_LOG(WARNING) << "Failed to reconfigure syslog";
+    FX_LOGS(WARNING) << "Failed to reconfigure syslog";
     return;
   }
 
-  FXL_LOG(INFO) << "Successfully set up syslog";
+  FX_LOGS(INFO) << "Successfully set up syslog";
 }
 }  // namespace
 
@@ -76,7 +76,7 @@ fbl::RefPtr<LogConnectorImpl> LogConnectorImpl::NewChild(std::string child_realm
 }
 
 void LogConnectorImpl::TakeLogConnectionListener(TakeLogConnectionListenerCallback callback) {
-  FXL_LOG(INFO) << "taking log connector for " << realm_label_;
+  FX_LOGS(INFO) << "taking log connector for " << realm_label_;
   callback(std::move(consumer_request_));
   SetUpSyslogOnce(consumer_);
 }

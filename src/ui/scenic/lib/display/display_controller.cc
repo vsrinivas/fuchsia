@@ -38,7 +38,7 @@ bool DisplayController::RemoveDisplay(uint64_t display_id) {
     return display.display_id() == display_id;
   });
   bool found = it != displays_.end();
-  FXL_DCHECK(found) << "display_id " << display_id << " not found";
+  FX_DCHECK(found) << "display_id " << display_id << " not found";
   if (found) {
     displays_.erase(it);
   }

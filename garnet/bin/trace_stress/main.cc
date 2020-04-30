@@ -46,7 +46,7 @@ static void PrintHelp(FILE* f) {
 
 static void RunStressTestIteration(int count) {
   // Simulate some kind of workload.
-  FXL_LOG(INFO) << "Doing work!";
+  FX_LOGS(INFO) << "Doing work!";
 
   static const char kSomethingCategory[] = "stress:something";
   static const char kWithZeroArgs[] = "with-zero-args";
@@ -101,7 +101,7 @@ static bool WaitForTracingStarted(zx::duration timeout) {
   }
 
   async::TaskClosure timeout_task([&loop] {
-    FXL_LOG(ERROR) << "Timed out waiting for tracing to start";
+    FX_LOGS(ERROR) << "Timed out waiting for tracing to start";
     loop.Quit();
   });
   timeout_task.PostDelayed(loop.dispatcher(), timeout);
@@ -128,21 +128,21 @@ int main(int argc, char** argv) {
 
   if (cl.GetOptionValue("count", &arg)) {
     if (!fxl::StringToNumberWithError<int>(arg, &count) || count < 0) {
-      FXL_LOG(ERROR) << "Invalid count: " << arg;
+      FX_LOGS(ERROR) << "Invalid count: " << arg;
       return EXIT_FAILURE;
     }
   }
 
   if (cl.GetOptionValue("delay", &arg)) {
     if (!fxl::StringToNumberWithError<int>(arg, &delay) || delay < 0) {
-      FXL_LOG(ERROR) << "Invalid delay: " << arg;
+      FX_LOGS(ERROR) << "Invalid delay: " << arg;
       return EXIT_FAILURE;
     }
   }
 
   if (cl.GetOptionValue("duration", &arg)) {
     if (!fxl::StringToNumberWithError<int>(arg, &duration) || duration < 0) {
-      FXL_LOG(ERROR) << "Invalid duration: " << arg;
+      FX_LOGS(ERROR) << "Invalid duration: " << arg;
       return EXIT_FAILURE;
     }
   }
@@ -155,20 +155,20 @@ int main(int argc, char** argv) {
   bool already_started;
   if (!trace::TraceProviderWithFdio::CreateSynchronously(provider_loop.dispatcher(), "trace_stress",
                                                          &provider, &already_started)) {
-    FXL_LOG(ERROR) << "Trace provider registration failed";
+    FX_LOGS(ERROR) << "Trace provider registration failed";
     return EXIT_FAILURE;
   }
   if (already_started) {
-    FXL_LOG(INFO) << "Tracing already started, waiting for our Start request";
+    FX_LOGS(INFO) << "Tracing already started, waiting for our Start request";
     if (WaitForTracingStarted(zx::sec(kWaitStartTimeoutSeconds))) {
-      FXL_LOG(INFO) << "Start request received";
+      FX_LOGS(INFO) << "Start request received";
     } else {
-      FXL_LOG(WARNING) << "Error waiting for tracing to start, timed out";
+      FX_LOGS(WARNING) << "Error waiting for tracing to start, timed out";
     }
   }
 
   if (delay > 0) {
-    FXL_LOG(INFO) << "Trace stressor delaying " << delay << " seconds ...";
+    FX_LOGS(INFO) << "Trace stressor delaying " << delay << " seconds ...";
     zx::nanosleep(zx::deadline_after(zx::sec(delay)));
   }
 
@@ -176,7 +176,7 @@ int main(int argc, char** argv) {
   zx::time start_time = async::Now(loop.dispatcher());
   zx::time quit_time = start_time + zx::sec(duration);
 
-  FXL_LOG(INFO) << "Trace stressor doing work for " << duration << " seconds ...";
+  FX_LOGS(INFO) << "Trace stressor doing work for " << duration << " seconds ...";
 
   int iteration = 0;
   async::TaskClosure task([&loop, &task, &iteration, count, quit_time] {
@@ -200,7 +200,7 @@ int main(int argc, char** argv) {
 
   loop.Run();
 
-  FXL_LOG(INFO) << "Trace stressor finished";
+  FX_LOGS(INFO) << "Trace stressor finished";
 
   // Cleanly shutdown the provider thread.
   provider_loop.Quit();

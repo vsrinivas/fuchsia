@@ -40,7 +40,7 @@ class PrivacySettings : public fuchsia::settings::testing::Privacy_TestBase {
 
   // |fuchsia::settings::testing::Privacy_TestBase|
   void NotImplemented_(const std::string& name) override {
-    FXL_NOTIMPLEMENTED() << name << " is not implemented";
+    FX_NOTIMPLEMENTED() << name << " is not implemented";
   }
 
  protected:

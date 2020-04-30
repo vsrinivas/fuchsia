@@ -39,7 +39,7 @@ size_t GetNextSize(uint64_t size) {
     case 8: return 0;
   }
 
-  FXL_NOTREACHED();
+  FX_NOTREACHED();
   return 0;
 }
 
@@ -51,7 +51,7 @@ uint64_t GetMask(uint64_t size) {
     case 8: return 0b111;
   }
 
-  FXL_NOTREACHED();
+  FX_NOTREACHED();
   return 0;
 }
 // clang-format on

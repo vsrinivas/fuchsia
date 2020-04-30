@@ -134,7 +134,7 @@ class PaperRenderer final : public fxl::RefCountedThreadSafe<PaperRenderer> {
   // Return the transform stack, which affects the transform and clipping that
   // is applied to subsequently-drawn |PaperDrawables|.
   PaperTransformStack* transform_stack() {
-    FXL_DCHECK(frame_data_) << "transform_stack only accessible during frame.";
+    FX_DCHECK(frame_data_) << "transform_stack only accessible during frame.";
     return &transform_stack_;
   }
 

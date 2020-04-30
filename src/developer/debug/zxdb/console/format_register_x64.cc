@@ -146,7 +146,7 @@ void FormatFPRegisters(const std::vector<Register>& registers, OutputBuffer* out
     } else if (value_set.find(reg.id) != value_set.end()) {
       value_registers.push_back(&reg);
     } else {
-      FXL_NOTREACHED() << "UNCATEGORIZED FP REGISTER: " << RegisterIDToString(reg.id);
+      FX_NOTREACHED() << "UNCATEGORIZED FP REGISTER: " << RegisterIDToString(reg.id);
     }
   }
 

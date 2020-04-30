@@ -52,7 +52,7 @@ class TracingLambda {
         callback_(std::move(other.callback_)),
         did_run_or_moved_out_(other.did_run_or_moved_out_),
         trace_enabled_(other.trace_enabled_) {
-    FXL_DCHECK(!other.did_run_or_moved_out_);
+    FX_DCHECK(!other.did_run_or_moved_out_);
     other.did_run_or_moved_out_ = true;
   }
 
@@ -64,7 +64,7 @@ class TracingLambda {
 
   template <typename... ArgType>
   auto operator()(ArgType&&... args) const {
-    FXL_DCHECK(!did_run_or_moved_out_);
+    FX_DCHECK(!did_run_or_moved_out_);
     did_run_or_moved_out_ = true;
     if (trace_enabled_) {
       TRACE_ASYNC_END(category_, name_, id_);

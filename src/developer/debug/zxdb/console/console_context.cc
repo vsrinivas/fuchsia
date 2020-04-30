@@ -88,7 +88,7 @@ ConsoleContext::~ConsoleContext() {
 int ConsoleContext::IdForTarget(const Target* target) const {
   const auto& found = target_to_id_.find(target);
   if (found == target_to_id_.end()) {
-    FXL_NOTREACHED();
+    FX_NOTREACHED();
     return 0;
   }
   return found->second;
@@ -97,7 +97,7 @@ int ConsoleContext::IdForTarget(const Target* target) const {
 int ConsoleContext::IdForJobContext(const JobContext* job_context) const {
   const auto& found = job_context_to_id_.find(job_context);
   if (found == job_context_to_id_.end()) {
-    FXL_NOTREACHED();
+    FX_NOTREACHED();
     return 0;
   }
   return found->second;
@@ -111,7 +111,7 @@ int ConsoleContext::IdForThread(const Thread* thread) const {
 
   auto found = record->thread_to_id.find(thread);
   if (found == record->thread_to_id.end()) {
-    FXL_NOTREACHED();
+    FX_NOTREACHED();
     return 0;
   }
   return found->second;
@@ -127,27 +127,27 @@ int ConsoleContext::IdForFrame(const Frame* frame) const {
     if (stack[i] == frame)
       return static_cast<int>(i);
   }
-  FXL_NOTREACHED();  // Should have found the frame.
+  FX_NOTREACHED();  // Should have found the frame.
   return 0;
 }
 
 int ConsoleContext::IdForSymbolServer(const SymbolServer* symbol_server) const {
   const auto& found = symbol_server_to_id_.find(symbol_server);
   if (found == symbol_server_to_id_.end()) {
-    FXL_NOTREACHED();
+    FX_NOTREACHED();
     return 0;
   }
   return found->second;
 }
 
 int ConsoleContext::IdForBreakpoint(const Breakpoint* breakpoint) const {
-  FXL_DCHECK(!breakpoint->IsInternal())
+  FX_DCHECK(!breakpoint->IsInternal())
       << "Should not be trying to get the ID of internal breakpoints. The "
          "client layer should filter these out.";
 
   auto found = breakpoint_to_id_.find(breakpoint);
   if (found == breakpoint_to_id_.end()) {
-    FXL_NOTREACHED();
+    FX_NOTREACHED();
     return 0;
   }
   return found->second;
@@ -156,7 +156,7 @@ int ConsoleContext::IdForBreakpoint(const Breakpoint* breakpoint) const {
 int ConsoleContext::IdForFilter(const Filter* filter) const {
   auto found = filter_to_id_.find(filter);
   if (found == filter_to_id_.end()) {
-    FXL_NOTREACHED();
+    FX_NOTREACHED();
     return 0;
   }
   return found->second;
@@ -165,7 +165,7 @@ int ConsoleContext::IdForFilter(const Filter* filter) const {
 void ConsoleContext::SetActiveJobContext(const JobContext* job_context) {
   auto found = job_context_to_id_.find(job_context);
   if (found == job_context_to_id_.end()) {
-    FXL_NOTREACHED();
+    FX_NOTREACHED();
     return;
   }
   active_job_context_id_ = found->second;
@@ -183,7 +183,7 @@ JobContext* ConsoleContext::GetActiveJobContext() const {
 void ConsoleContext::SetActiveTarget(const Target* target) {
   auto found = target_to_id_.find(target);
   if (found == target_to_id_.end()) {
-    FXL_NOTREACHED();
+    FX_NOTREACHED();
     return;
   }
   active_target_id_ = found->second;
@@ -201,7 +201,7 @@ Target* ConsoleContext::GetActiveTarget() const {
 void ConsoleContext::SetActiveSymbolServer(const SymbolServer* symbol_server) {
   auto found = symbol_server_to_id_.find(symbol_server);
   if (found == symbol_server_to_id_.end()) {
-    FXL_NOTREACHED();
+    FX_NOTREACHED();
     return;
   }
   active_symbol_server_id_ = found->second;
@@ -223,7 +223,7 @@ void ConsoleContext::SetActiveThreadForTarget(const Thread* thread) {
 
   auto found = record->thread_to_id.find(thread);
   if (found == record->thread_to_id.end()) {
-    FXL_NOTREACHED();
+    FX_NOTREACHED();
     return;
   }
   record->active_thread_id = found->second;
@@ -232,7 +232,7 @@ void ConsoleContext::SetActiveThreadForTarget(const Thread* thread) {
 int ConsoleContext::GetActiveThreadIdForTarget(const Target* target) {
   const TargetRecord* record = GetTargetRecord(target);
   if (!record) {
-    FXL_NOTREACHED();
+    FX_NOTREACHED();
     return 0;
   }
   return record->active_thread_id;
@@ -241,7 +241,7 @@ int ConsoleContext::GetActiveThreadIdForTarget(const Target* target) {
 Thread* ConsoleContext::GetActiveThreadForTarget(const Target* target) {
   const TargetRecord* record = GetTargetRecord(target);
   if (!record) {
-    FXL_NOTREACHED();
+    FX_NOTREACHED();
     return nullptr;
   }
 
@@ -254,7 +254,7 @@ Thread* ConsoleContext::GetActiveThreadForTarget(const Target* target) {
 void ConsoleContext::SetActiveFrameForThread(const Frame* frame) {
   ThreadRecord* record = GetThreadRecord(frame->GetThread());
   if (!record) {
-    FXL_NOTREACHED();
+    FX_NOTREACHED();
     return;
   }
   record->active_frame_id = IdForFrame(frame);
@@ -263,7 +263,7 @@ void ConsoleContext::SetActiveFrameForThread(const Frame* frame) {
 void ConsoleContext::SetActiveFrameIdForThread(const Thread* thread, int id) {
   ThreadRecord* record = GetThreadRecord(thread);
   if (!record) {
-    FXL_NOTREACHED();
+    FX_NOTREACHED();
     return;
   }
   record->active_frame_id = id;
@@ -272,14 +272,14 @@ void ConsoleContext::SetActiveFrameIdForThread(const Thread* thread, int id) {
 int ConsoleContext::GetActiveFrameIdForThread(const Thread* thread) const {
   const ThreadRecord* record = GetThreadRecord(thread);
   if (!record) {
-    FXL_NOTREACHED();
+    FX_NOTREACHED();
     return 0;
   }
 
   // Should be a valid frame index in the thread (or no frames and == 0).
-  FXL_DCHECK((thread->GetStack().empty() && record->active_frame_id == 0) ||
-             (record->active_frame_id >= 0 &&
-              record->active_frame_id < static_cast<int>(thread->GetStack().size())));
+  FX_DCHECK((thread->GetStack().empty() && record->active_frame_id == 0) ||
+            (record->active_frame_id >= 0 &&
+             record->active_frame_id < static_cast<int>(thread->GetStack().size())));
   return record->active_frame_id;
 }
 
@@ -296,7 +296,7 @@ Breakpoint* ConsoleContext::GetActiveBreakpoint() const {
     return nullptr;
   auto found = id_to_breakpoint_.find(active_breakpoint_id_);
   if (found == id_to_breakpoint_.end()) {
-    FXL_NOTREACHED();
+    FX_NOTREACHED();
     return nullptr;
   }
   return found->second;
@@ -315,7 +315,7 @@ Filter* ConsoleContext::GetActiveFilter() const {
     return nullptr;
   auto found = id_to_filter_.find(active_filter_id_);
   if (found == id_to_filter_.end()) {
-    FXL_NOTREACHED();
+    FX_NOTREACHED();
     return nullptr;
   }
   return found->second;
@@ -535,7 +535,7 @@ void ConsoleContext::DidCreateFilter(Filter* filter) {
 void ConsoleContext::WillDestroyFilter(Filter* filter) {
   auto found = filter_to_id_.find(filter);
   if (found == filter_to_id_.end()) {
-    FXL_NOTREACHED();
+    FX_NOTREACHED();
     return;
   }
 
@@ -549,7 +549,7 @@ void ConsoleContext::WillDestroyFilter(Filter* filter) {
 void ConsoleContext::WillDestroyBreakpoint(Breakpoint* breakpoint) {
   auto found_breakpoint = breakpoint_to_id_.find(breakpoint);
   if (found_breakpoint == breakpoint_to_id_.end()) {
-    FXL_NOTREACHED();
+    FX_NOTREACHED();
     return;
   }
   int id = found_breakpoint->second;
@@ -598,7 +598,7 @@ void ConsoleContext::DidCreateTarget(Target* target) {
 void ConsoleContext::WillDestroyTarget(Target* target) {
   TargetRecord* record = GetTargetRecord(target);
   if (!record) {
-    FXL_NOTREACHED();
+    FX_NOTREACHED();
     return;
   }
 
@@ -616,8 +616,8 @@ void ConsoleContext::WillDestroyTarget(Target* target) {
   }
 
   // There should be no threads by the time we erase the target mapping.
-  FXL_DCHECK(record->id_to_thread.empty());
-  FXL_DCHECK(record->thread_to_id.empty());
+  FX_DCHECK(record->id_to_thread.empty());
+  FX_DCHECK(record->thread_to_id.empty());
 
   target_to_id_.erase(target);
   id_to_target_.erase(record->target_id);
@@ -627,7 +627,7 @@ void ConsoleContext::WillDestroyTarget(Target* target) {
 void ConsoleContext::DidCreateProcess(Process* process, bool autoattached_to_new_process) {
   TargetRecord* record = GetTargetRecord(process->GetTarget());
   if (!record) {
-    FXL_NOTREACHED();
+    FX_NOTREACHED();
     return;
   }
 
@@ -661,7 +661,7 @@ void ConsoleContext::DidCreateProcess(Process* process, bool autoattached_to_new
 void ConsoleContext::WillDestroyProcess(Process* process, DestroyReason reason, int exit_code) {
   TargetRecord* record = GetTargetRecord(process->GetTarget());
   if (!record) {
-    FXL_NOTREACHED();
+    FX_NOTREACHED();
     return;
   }
 
@@ -687,7 +687,7 @@ void ConsoleContext::WillDestroyProcess(Process* process, DestroyReason reason, 
 void ConsoleContext::DidCreateThread(Thread* thread) {
   TargetRecord* record = GetTargetRecord(thread->GetProcess()->GetTarget());
   if (!record) {
-    FXL_NOTREACHED();
+    FX_NOTREACHED();
     return;
   }
 
@@ -707,13 +707,13 @@ void ConsoleContext::DidCreateThread(Thread* thread) {
 void ConsoleContext::WillDestroyThread(Thread* thread) {
   TargetRecord* record = GetTargetRecord(thread->GetProcess()->GetTarget());
   if (!record) {
-    FXL_NOTREACHED();
+    FX_NOTREACHED();
     return;
   }
 
   auto found_thread_to_id = record->thread_to_id.find(thread);
   if (found_thread_to_id == record->thread_to_id.end()) {
-    FXL_NOTREACHED();
+    FX_NOTREACHED();
     return;
   }
   int thread_id = found_thread_to_id->second;
@@ -773,7 +773,7 @@ void ConsoleContext::OnThreadStopped(Thread* thread, const StopInfo& info) {
 void ConsoleContext::OnThreadFramesInvalidated(Thread* thread) {
   ThreadRecord* record = GetThreadRecord(thread);
   if (!record) {
-    FXL_NOTREACHED();
+    FX_NOTREACHED();
     return;
   }
 
@@ -826,7 +826,7 @@ ConsoleContext::TargetRecord* ConsoleContext::GetTargetRecord(int target_id) {
 const ConsoleContext::TargetRecord* ConsoleContext::GetTargetRecord(int target_id) const {
   auto found_to_record = id_to_target_.find(target_id);
   if (found_to_record == id_to_target_.end()) {
-    FXL_NOTREACHED();
+    FX_NOTREACHED();
     return nullptr;
   }
   return &found_to_record->second;
@@ -840,7 +840,7 @@ ConsoleContext::TargetRecord* ConsoleContext::GetTargetRecord(const Target* targ
 const ConsoleContext::TargetRecord* ConsoleContext::GetTargetRecord(const Target* target) const {
   auto found_to_id = target_to_id_.find(target);
   if (found_to_id == target_to_id_.end()) {
-    FXL_NOTREACHED();
+    FX_NOTREACHED();
     return nullptr;
   }
   return GetTargetRecord(found_to_id->second);
@@ -855,20 +855,20 @@ ConsoleContext::ThreadRecord* ConsoleContext::GetThreadRecord(const Thread* thre
 const ConsoleContext::ThreadRecord* ConsoleContext::GetThreadRecord(const Thread* thread) const {
   const TargetRecord* target_record = GetTargetRecord(thread->GetProcess()->GetTarget());
   if (!target_record) {
-    FXL_NOTREACHED();
+    FX_NOTREACHED();
     return nullptr;
   }
 
   auto found_thread_to_id = target_record->thread_to_id.find(thread);
   if (found_thread_to_id == target_record->thread_to_id.end()) {
-    FXL_NOTREACHED();
+    FX_NOTREACHED();
     return nullptr;
   }
   int thread_id = found_thread_to_id->second;
 
   auto found_id_to_thread = target_record->id_to_thread.find(thread_id);
   if (found_thread_to_id == target_record->thread_to_id.end()) {
-    FXL_NOTREACHED();
+    FX_NOTREACHED();
     return nullptr;
   }
   return &found_id_to_thread->second;
@@ -882,7 +882,7 @@ Err ConsoleContext::FillOutJobContext(Command* cmd) const {
     auto found_job_context = id_to_job_context_.find(job_context_id);
     if (found_job_context == id_to_job_context_.end()) {
       // When there are no job contexts, the active ID should be 0.
-      FXL_DCHECK(job_context_id == 0);
+      FX_DCHECK(job_context_id == 0);
     } else {
       cmd->set_job_context(found_job_context->second.job_context);
     }
@@ -904,10 +904,10 @@ Err ConsoleContext::FillOutTarget(Command* cmd, TargetRecord const** out_target_
     // No index: use the active one (which should always exist).
     target_id = active_target_id_;
     auto found_target = id_to_target_.find(target_id);
-    FXL_DCHECK(found_target != id_to_target_.end());
+    FX_DCHECK(found_target != id_to_target_.end());
     cmd->set_target(found_target->second.target);
 
-    FXL_DCHECK(cmd->target());  // Default target should always exist.
+    FX_DCHECK(cmd->target());  // Default target should always exist.
     *out_target_record = GetTargetRecord(target_id);
     return Err();
   }
@@ -933,7 +933,7 @@ Err ConsoleContext::FillOutThread(Command* cmd, const TargetRecord* target_recor
     if (found_thread == target_record->id_to_thread.end()) {
       // When there are no threads, the active thread ID will be 0 and that's
       // fine. But if it's nonzero, the thread should always be valid.
-      FXL_DCHECK(thread_id == 0);
+      FX_DCHECK(thread_id == 0);
     } else {
       thread_record = &found_thread->second;
       cmd->set_thread(thread_record->thread);

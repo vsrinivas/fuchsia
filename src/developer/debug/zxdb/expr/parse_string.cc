@@ -68,7 +68,7 @@ std::optional<StringLiteralBegin> DoesBeginRawRustStringLiteral(std::string_view
 // returns the index of the character immediately following the string (which might point to
 // one-past-the-end of the input). Otherwise returns 0.
 size_t EndsStringLiteral(std::string_view input, const StringLiteralBegin& info, size_t cur) {
-  FXL_DCHECK(cur < input.size());
+  FX_DCHECK(cur < input.size());
 
   if (!info.is_raw) {
     if (input[cur] == '"')
@@ -253,13 +253,13 @@ std::optional<StringLiteralBegin> DoesBeginStringLiteral(ExprLanguage lang, std:
       return DoesBeginRawRustStringLiteral(input, cur);
   }
 
-  FXL_NOTREACHED();
+  FX_NOTREACHED();
   return std::nullopt;
 }
 
 ErrOr<std::string> ParseStringLiteral(std::string_view input, const StringLiteralBegin& info,
                                       size_t* in_out_cur, size_t* error_location) {
-  FXL_DCHECK(info.contents_begin <= input.size());
+  FX_DCHECK(info.contents_begin <= input.size());
 
   std::string result;
   size_t cur = info.contents_begin;

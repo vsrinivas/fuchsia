@@ -140,7 +140,7 @@ class FlatlandTest : public gtest::TestLoopFixture {
     fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator;
     zx_status_t status = fdio_service_connect(
         "/svc/fuchsia.sysmem.Allocator", sysmem_allocator.NewRequest().TakeChannel().release());
-    FXL_DCHECK(status == ZX_OK);
+    FX_DCHECK(status == ZX_OK);
     return Flatland(renderer_, link_system_, uber_struct_system_, std::move(sysmem_allocator));
   }
 

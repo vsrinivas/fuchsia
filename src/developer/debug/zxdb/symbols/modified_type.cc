@@ -22,7 +22,7 @@ bool IsTransparentTag(DwarfTag tag) {
 }  // namespace
 
 ModifiedType::ModifiedType(DwarfTag kind, LazySymbol modified) : Type(kind), modified_(modified) {
-  FXL_DCHECK(DwarfTagIsTypeModifier(kind));
+  FX_DCHECK(DwarfTagIsTypeModifier(kind));
   if (IsTransparentTag(kind)) {
     const Type* mod_type = modified_.Get()->AsType();
     if (mod_type)

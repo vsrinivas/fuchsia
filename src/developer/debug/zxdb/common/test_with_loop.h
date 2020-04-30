@@ -28,7 +28,7 @@ class TestWithLoop : public testing::Test {
   TestWithLoop() {
     std::string error_message;
     bool success = loop_.Init(&error_message);
-    FXL_CHECK(success) << error_message;
+    FX_CHECK(success) << error_message;
   }
   ~TestWithLoop() { loop_.Cleanup(); }
 

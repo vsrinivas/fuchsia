@@ -23,7 +23,7 @@ void DrawSingle(CommandBuffer* cmd_buf, const RectangleRenderable& renderable, c
 
   // Checks to make sure all the renderable data is valid, including textures,
   // uv coordinates, etc.
-  FXL_DCHECK(RectangleRenderable::IsValid(renderable));
+  FX_DCHECK(RectangleRenderable::IsValid(renderable));
 
   // Bind texture to use in the fragment shader.
   cmd_buf->BindTexture(/*set*/ 0, /*binding*/ 0, renderable.texture);
@@ -120,7 +120,7 @@ void RectangleCompositor::DrawBatch(CommandBuffer* cmd_buf,
   // this function or try to embed clear-data into the existing api. For example, one could
   // check to see if the back rectangle is fullscreen and solid-color, in which case we can
   // treat it as a clear instead of rendering it as a renderable.
-  FXL_DCHECK(cmd_buf && output_image && depth_buffer);
+  FX_DCHECK(cmd_buf && output_image && depth_buffer);
 
   // Initialize the render pass.
   RenderPassInfo render_pass;

@@ -14,7 +14,7 @@ RenderPass::RenderPass(ResourceManager* manager, vk::RenderPass render_pass)
       render_pass_(render_pass),
       color_attachment_count_(0),
       depth_attachment_count_(0) {
-  FXL_DCHECK(render_pass);
+  FX_DCHECK(render_pass);
   create_info_.attachmentCount = 0;
   create_info_.pAttachments = nullptr;
   create_info_.subpassCount = 0;
@@ -29,7 +29,7 @@ RenderPass::RenderPass(ResourceManager* manager, uint32_t color_attachment_count
     : Resource(manager),
       color_attachment_count_(color_attachment_count),
       depth_attachment_count_(depth_attachment_count) {
-  FXL_DCHECK(subpass_count > 0);
+  FX_DCHECK(subpass_count > 0);
   attachments_.resize(color_attachment_count + depth_attachment_count);
   attachment_references_.resize(attachment_reference_count);
   subpass_descriptions_.resize(subpass_count);
@@ -50,13 +50,13 @@ RenderPass::~RenderPass() {
 }
 
 void RenderPass::CreateRenderPass() {
-  FXL_DCHECK(!render_pass_);
+  FX_DCHECK(!render_pass_);
 
   auto result = vk_device().createRenderPass(create_info_);
   if (result.result == vk::Result::eSuccess) {
     render_pass_ = result.value;
   } else {
-    FXL_LOG(ERROR) << "Failed to create Vulkan RenderPass.";
+    FX_LOGS(ERROR) << "Failed to create Vulkan RenderPass.";
   }
 }
 

@@ -49,7 +49,7 @@ Engine::Engine(sys::ComponentContext* app_context,
       scene_graph_(app_context),
       inspect_node_(std::move(inspect_node)),
       weak_factory_(this) {
-  FXL_DCHECK(escher_);
+  FX_DCHECK(escher_);
 
   InitializeInspectObjects();
   InitializeAnnotationManager();
@@ -160,7 +160,7 @@ scheduling::RenderFrameResult Engine::RenderFrame(fxl::WeakPtr<scheduling::Frame
   // TODO(SCN-1089): the FrameTimings are passed to the Compositor's swapchain
   // to notify when the frame is finished rendering, presented, dropped, etc.
   // This doesn't make any sense if there are multiple compositors.
-  FXL_DCHECK(scene_graph_.compositors().size() <= 1);
+  FX_DCHECK(scene_graph_.compositors().size() <= 1);
 
   std::vector<HardwareLayerAssignment> hlas;
   for (auto& compositor : scene_graph_.compositors()) {
@@ -168,11 +168,11 @@ scheduling::RenderFrameResult Engine::RenderFrame(fxl::WeakPtr<scheduling::Frame
       hlas.push_back(std::move(hla.value()));
 
       // Verbose logging of the entire Compositor resource tree.
-      if (FXL_VLOG_IS_ON(3)) {
+      if (FX_VLOG_IS_ON(3)) {
         std::ostringstream output;
         DumpVisitor visitor(DumpVisitor::VisitorContext(output, nullptr));
         compositor->Accept(&visitor);
-        FXL_VLOG(3) << "Compositor dump\n" << output.str();
+        FX_VLOGS(3) << "Compositor dump\n" << output.str();
       }
     } else {
       // Nothing to be drawn; either the Compositor has no layers to draw or
@@ -264,7 +264,7 @@ scheduling::RenderFrameResult Engine::RenderFrame(fxl::WeakPtr<scheduling::Frame
     // TODO(SCN-1089): what is the proper behavior when some swapchains
     // are displayed and others aren't?  This isn't currently an issue because
     // there is only one Compositor; see above.
-    FXL_DCHECK(hlas.size() == 1);
+    FX_DCHECK(hlas.size() == 1);
     return scheduling::RenderFrameResult::kRenderFailed;
   }
 
@@ -399,7 +399,7 @@ void Engine::CleanupEscher() {
 
 void Engine::DumpScenes(std::ostream& output,
                         std::unordered_set<GlobalId, GlobalId::Hash>* visited_resources) const {
-  FXL_DCHECK(visited_resources);
+  FX_DCHECK(visited_resources);
 
   // Dump all Compositors and all transitively-reachable Resources.
   // Remember the set of visited resources; the next step will be to dump the

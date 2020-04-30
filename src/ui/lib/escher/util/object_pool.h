@@ -100,7 +100,7 @@ class ObjectPool {
   // Release all pool resources.  Illegal to call while there are still unfreed
   // objects.  ObjectPool only releases memory when Clear() is called.
   void Clear() {
-    FXL_DCHECK(UnfreedObjectCount() == 0);
+    FX_DCHECK(UnfreedObjectCount() == 0);
 
     const size_t num_blocks = blocks_.size();
     for (size_t i = 0; i < num_blocks; ++i) {

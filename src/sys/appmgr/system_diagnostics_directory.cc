@@ -82,7 +82,7 @@ zx_status_t GetProcessHandleStats(const zx::process* process,
   zx_status_t status = process->get_info(ZX_INFO_PROCESS_HANDLE_STATS, process_handle_stats,
                                          sizeof(zx_info_process_handle_stats), nullptr, nullptr);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "zx_object_get_info failed, status: " << status;
+    FX_LOGS(ERROR) << "zx_object_get_info failed, status: " << status;
     return status;
   }
 
@@ -93,7 +93,7 @@ zx_status_t GetTaskStats(const zx::process* process, zx_info_task_stats_t* task_
   zx_status_t status = process->get_info(ZX_INFO_TASK_STATS, task_stats,
                                          sizeof(zx_info_task_stats_t), nullptr, nullptr);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "zx_object_get_info failed, status: " << status;
+    FX_LOGS(ERROR) << "zx_object_get_info failed, status: " << status;
     return status;
   }
 
@@ -104,7 +104,7 @@ zx_status_t GetThreadStats(zx_handle_t thread, zx_info_thread_stats_t* thread_st
   zx_status_t status = zx_object_get_info(thread, ZX_INFO_THREAD_STATS, thread_stats,
                                           sizeof(zx_info_thread_stats_t), nullptr, nullptr);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "zx_object_get_info failed, status: " << status << " thread: " << thread;
+    FX_LOGS(ERROR) << "zx_object_get_info failed, status: " << status << " thread: " << thread;
     return status;
   }
 

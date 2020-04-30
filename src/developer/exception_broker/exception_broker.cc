@@ -48,7 +48,7 @@ std::unique_ptr<ExceptionBroker> ExceptionBroker::Create(
 
 ExceptionBroker::ExceptionBroker(std::shared_ptr<sys::ServiceDirectory> services)
     : services_(std::move(services)), weak_factory_(this) {
-  FXL_DCHECK(services_);
+  FX_DCHECK(services_);
 }
 
 fxl::WeakPtr<ExceptionBroker> ExceptionBroker::GetWeakPtr() { return weak_factory_.GetWeakPtr(); }

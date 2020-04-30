@@ -198,7 +198,7 @@ class SystemTimeUpdaterTest : public TestWithEnvironment {
         fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE,
         fake_dev_io_dir.NewRequest().TakeChannel(), dispatcher());
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Couldn't Serve() fake dev dir";
+      FX_LOGS(ERROR) << "Couldn't Serve() fake dev dir";
     }
 
     // Note that the indices of `paths` and `directories` have to line up.

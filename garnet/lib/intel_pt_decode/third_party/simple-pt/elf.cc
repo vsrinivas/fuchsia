@@ -36,12 +36,10 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "garnet/lib/debugger_utils/elf_reader.h"
 #include "garnet/lib/debugger_utils/byte_block_file.h"
+#include "garnet/lib/debugger_utils/elf_reader.h"
 #include "garnet/lib/debugger_utils/util.h"
-
 #include "src/lib/fxl/logging.h"
-
 #include "third_party/processor-trace/libipt/include/intel-pt.h"
 
 namespace simple_pt {
@@ -59,7 +57,7 @@ static bool ReadSymtabs(debugger_utils::ElfReader* elf, uint64_t cr3, uint64_t b
 
   debugger_utils::ElfError rc = elf->ReadSectionHeaders();
   if (rc != debugger_utils::ElfError::OK) {
-    FXL_LOG(ERROR) << "Error reading ELF section headers: " << ElfErrorName(rc);
+    FX_LOGS(ERROR) << "Error reading ELF section headers: " << ElfErrorName(rc);
     return false;
   }
 
@@ -105,7 +103,7 @@ static bool ReadSymtabs(debugger_utils::ElfReader* elf, uint64_t cr3, uint64_t b
   }
 
   if (!symtab && !dynsym)
-    FXL_LOG(WARNING) << elf->file_name() << " has no symbols";
+    FX_LOGS(WARNING) << elf->file_name() << " has no symbols";
   *out_symtab = std::move(symtab);
   *out_dynsym = std::move(dynsym);
 
@@ -197,7 +195,7 @@ static void AddProgbits(debugger_utils::ElfReader* elf, struct pt_image* image,
 static bool ElfOpen(const char* file_name, std::unique_ptr<debugger_utils::ElfReader>* out_elf) {
   int fd = open(file_name, O_RDONLY);
   if (fd < 0) {
-    FXL_LOG(ERROR) << file_name << ", " << debugger_utils::ErrnoString(errno);
+    FX_LOGS(ERROR) << file_name << ", " << debugger_utils::ErrnoString(errno);
     return false;
   }
 
@@ -206,13 +204,13 @@ static bool ElfOpen(const char* file_name, std::unique_ptr<debugger_utils::ElfRe
   std::unique_ptr<debugger_utils::ElfReader> elf;
   debugger_utils::ElfError rc = debugger_utils::ElfReader::Create(file_name, bb, 0, 0, &elf);
   if (rc != debugger_utils::ElfError::OK) {
-    FXL_LOG(ERROR) << "Error creating ELF reader: " << debugger_utils::ElfErrorName(rc);
+    FX_LOGS(ERROR) << "Error creating ELF reader: " << debugger_utils::ElfErrorName(rc);
     return false;
   }
 
   rc = elf->ReadSegmentHeaders();
   if (rc != debugger_utils::ElfError::OK) {
-    FXL_LOG(ERROR) << "Error reading ELF segment headers: " << ElfErrorName(rc);
+    FX_LOGS(ERROR) << "Error reading ELF segment headers: " << ElfErrorName(rc);
     return false;
   }
 
@@ -231,7 +229,7 @@ bool ReadElf(const char* file_name, struct pt_image* image, uint64_t base, uint6
   const debugger_utils::ElfHeader& hdr = elf->header();
   pic = hdr.e_type == ET_DYN;
   if (pic && base == 0) {
-    FXL_LOG(ERROR) << "PIC/PIE ELF with base 0 is not supported";
+    FX_LOGS(ERROR) << "PIC/PIE ELF with base 0 is not supported";
     return false;
   }
 

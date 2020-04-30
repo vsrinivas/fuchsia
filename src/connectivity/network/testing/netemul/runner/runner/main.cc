@@ -21,7 +21,7 @@ int main(int argc, const char** argv) {
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
-  FXL_LOG(INFO) << "Starting netemul runner";
+  FX_LOGS(INFO) << "Starting netemul runner";
 
   Runner r(loop.dispatcher());
   loop.Run();

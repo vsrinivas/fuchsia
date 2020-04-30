@@ -143,7 +143,7 @@ void DwarfDieDecoder::AddFile(llvm::dwarf::Attribute attribute,
 }
 
 void DwarfDieDecoder::AddAbstractParent(llvm::DWARFDie* output) {
-  FXL_DCHECK(!abstract_parent_);
+  FX_DCHECK(!abstract_parent_);
   abstract_parent_ = output;
 }
 
@@ -182,7 +182,7 @@ bool DwarfDieDecoder::DecodeInternal(const llvm::DWARFDie& die,
   // pointer above is derived from this) but we need to move offset past it.
   uint32_t abbr_code = extractor.getULEB128(&offset);
   if (!abbr_code) {
-    FXL_NOTREACHED();  // Should have gotten a null abbrev for this above.
+    FX_NOTREACHED();  // Should have gotten a null abbrev for this above.
     return false;
   }
 

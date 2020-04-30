@@ -164,7 +164,7 @@ int main(int argc, const char* argv[]) {
     auto message_loop = std::make_unique<PlatformMessageLoop>();
     std::string init_error_message;
     if (!message_loop->Init(&init_error_message)) {
-      FXL_LOG(ERROR) << init_error_message;
+      FX_LOGS(ERROR) << init_error_message;
       return 1;
     }
 

@@ -21,7 +21,7 @@ bool written_perf_line = false;
 bool InitPerfLog(const std::string& log_file) {
   if (perf_log_file) {
     // Trying to initialize twice.
-    FXL_NOTREACHED();
+    FX_NOTREACHED();
     return false;
   }
 
@@ -35,7 +35,7 @@ bool InitPerfLog(const std::string& log_file) {
 void FinalizePerfLog() {
   if (!perf_log_file) {
     // Trying to cleanup without initializing.
-    FXL_NOTREACHED();
+    FX_NOTREACHED();
     return;
   }
   fprintf(perf_log_file, "\n}\n");
@@ -46,7 +46,7 @@ void FinalizePerfLog() {
 void LogPerfResult(const char* test_suite_name, const char* test_name, double value,
                    const char* units) {
   if (!perf_log_file) {
-    FXL_NOTREACHED();
+    FX_NOTREACHED();
     return;
   }
 

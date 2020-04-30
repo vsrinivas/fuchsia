@@ -21,7 +21,7 @@ class MockProcessStartHandler : public ProcessStartHandler {
 bool IsProcessMatched(const MockObjectProvider& provider, const std::set<zx_koid_t>& matches,
                       const std::string& process_name) {
   auto process = provider.ProcessByName(process_name);
-  FXL_DCHECK(process) << "Could not find mock process " << process_name;
+  FX_DCHECK(process) << "Could not find mock process " << process_name;
   return matches.find(process->koid) != matches.end();
 }
 

@@ -58,7 +58,7 @@ TestRunnerImpl::TestRunnerImpl(fidl::InterfaceRequest<TestRunner> request,
     : binding_(this, std::move(request)), test_run_context_(test_run_context) {
   binding_.set_error_handler([this](zx_status_t status) {
     if (termination_task_.is_pending()) {
-      FXL_LOG(INFO) << "Test " << program_name_ << " terminated as expected.";
+      FX_LOGS(INFO) << "Test " << program_name_ << " terminated as expected.";
       // Client terminated but that was expected.
       termination_task_.Cancel();
       if (teardown_after_termination_) {
@@ -108,7 +108,7 @@ void TestRunnerImpl::WillTerminate(const double withinSeconds) {
   }
   termination_task_.set_handler(
       [this, withinSeconds](async_dispatcher_t*, async::Task*, zx_status_t status) {
-        FXL_LOG(ERROR) << program_name_ << " termination timed out after " << withinSeconds << "s.";
+        FX_LOGS(ERROR) << program_name_ << " termination timed out after " << withinSeconds << "s.";
         binding_.set_error_handler(nullptr);
         Fail("Termination timed out.");
         if (teardown_after_termination_) {
@@ -121,17 +121,17 @@ void TestRunnerImpl::WillTerminate(const double withinSeconds) {
 
 void TestRunnerImpl::SetTestPointCount(int64_t count) {
   // Check that the count hasn't been set yet.
-  FXL_CHECK(remaining_test_points_ == -1);
+  FX_CHECK(remaining_test_points_ == -1);
 
   // Check that the count makes sense.
-  FXL_CHECK(count >= 0);
+  FX_CHECK(count >= 0);
 
   remaining_test_points_ = count;
 }
 
 void TestRunnerImpl::PassTestPoint() {
   // Check that the test point count has been set.
-  FXL_CHECK(remaining_test_points_ >= 0);
+  FX_CHECK(remaining_test_points_ >= 0);
 
   if (remaining_test_points_ == 0) {
     Fail(program_name_ + " passed more test points than expected.");
@@ -157,8 +157,7 @@ TestRunContext::TestRunContext(std::shared_ptr<sys::ComponentContext> app_contex
   // 1.2 Make a child environment to run the command.
   fuchsia::sys::EnvironmentPtr environment;
   app_context->svc()->Connect(environment.NewRequest());
-  child_env_scope_ =
-      std::make_unique<Scope>(environment, "test_runner_env", std::move(services));
+  child_env_scope_ = std::make_unique<Scope>(environment, "test_runner_env", std::move(services));
 
   // 2. Launch the test command.
   fuchsia::sys::LauncherPtr launcher;
@@ -171,7 +170,7 @@ TestRunContext::TestRunContext(std::shared_ptr<sys::ComponentContext> app_contex
 
   // If the child app closes, the test is reported as a failure.
   child_controller_.set_error_handler([this](zx_status_t status) {
-    FXL_LOG(WARNING) << "Child app connection closed unexpectedly. Remaining "
+    FX_LOGS(WARNING) << "Child app connection closed unexpectedly. Remaining "
                         "TestRunner clients = "
                      << test_runner_clients_.size();
     test_runner_connection_->Teardown(test_id_, false);
@@ -207,7 +206,7 @@ void TestRunContext::Fail(const fidl::StringPtr& log_msg) {
 
 void TestRunContext::StopTrackingClient(TestRunnerImpl* client, bool crashed) {
   if (crashed) {
-    FXL_LOG(WARNING) << client->program_name()
+    FX_LOGS(WARNING) << client->program_name()
                      << " finished without calling"
                         " test_runner::reporting::Done().";
     test_runner_connection_->Teardown(test_id_, false);
@@ -215,7 +214,7 @@ void TestRunContext::StopTrackingClient(TestRunnerImpl* client, bool crashed) {
   }
 
   if (client->TestPointsRemaining()) {
-    FXL_LOG(WARNING) << client->program_name() << " finished without passing all test points.";
+    FX_LOGS(WARNING) << client->program_name() << " finished without passing all test points.";
     test_runner_connection_->Teardown(test_id_, false);
     return;
   }
@@ -225,7 +224,7 @@ void TestRunContext::StopTrackingClient(TestRunnerImpl* client, bool crashed) {
                                 return client_it.get() == client;
                               });
 
-  FXL_DCHECK(find_it != test_runner_clients_.end());
+  FX_DCHECK(find_it != test_runner_clients_.end());
   test_runner_clients_.erase(find_it);
 }
 
@@ -237,12 +236,12 @@ void TestRunContext::Teardown(TestRunnerImpl* teardown_client) {
     }
     if (client->waiting_for_termination()) {
       client->TeardownAfterTermination();
-      FXL_LOG(INFO) << "Teardown blocked by test waiting for termination: "
+      FX_LOGS(INFO) << "Teardown blocked by test waiting for termination: "
                     << client->program_name();
       waiting_for_termination = true;
       continue;
     }
-    FXL_LOG(ERROR) << "Test " << client->program_name() << " not done before Teardown().";
+    FX_LOGS(ERROR) << "Test " << client->program_name() << " not done before Teardown().";
     success_ = false;
   }
   if (waiting_for_termination) {

@@ -16,7 +16,7 @@ Tracer* g_tracer = nullptr;
 }  // anonymous namespace
 
 Tracer::Tracer() {
-  FXL_DCHECK(!g_tracer);
+  FX_DCHECK(!g_tracer);
   g_tracer = this;
   events_.reserve(10000000);
 }
@@ -28,7 +28,7 @@ inline void WriteEvent(std::ostream& str, const Tracer::Event& event) {
 }
 
 Tracer::~Tracer() {
-  FXL_DCHECK(g_tracer == this);
+  FX_DCHECK(g_tracer == this);
   g_tracer = nullptr;
 
   std::ostringstream str;
@@ -46,7 +46,7 @@ Tracer::~Tracer() {
       << "\n}\n";
 
   files::WriteFile("escher.trace", str.str().data(), str.str().length());
-  FXL_LOG(INFO) << "Wrote trace file: escher.trace";
+  FX_LOGS(INFO) << "Wrote trace file: escher.trace";
 }
 
 void Tracer::AddTraceEvent(char phase, const char* category, const char* name) {

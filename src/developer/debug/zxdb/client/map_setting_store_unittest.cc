@@ -24,11 +24,11 @@ fxl::RefPtr<SettingSchema> GetSchema() {
   schema->AddInt("int", "int_option", kDefaultInt);
   schema->AddString("string", "string_option", kDefaultString);
   if (!schema->AddList("list", "list_option", DefaultList())) {
-    FXL_NOTREACHED() << "Schema should be valid!";
+    FX_NOTREACHED() << "Schema should be valid!";
     return nullptr;
   }
   if (!schema->AddList("list_with_options", "list_with_options", {}, DefaultList())) {
-    FXL_NOTREACHED() << "Schema should be valid!";
+    FX_NOTREACHED() << "Schema should be valid!";
     return nullptr;
   }
   return schema;

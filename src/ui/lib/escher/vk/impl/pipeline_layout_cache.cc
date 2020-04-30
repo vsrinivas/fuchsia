@@ -17,10 +17,10 @@ const PipelineLayoutPtr& PipelineLayoutCache::ObtainPipelineLayout(const Pipelin
   auto pair = layouts_.Obtain(spec.hash());
 
   if (!pair.second) {
-    FXL_DCHECK(!pair.first->layout);
+    FX_DCHECK(!pair.first->layout);
     pair.first->layout = fxl::MakeRefCounted<PipelineLayout>(recycler_, spec);
   }
-  FXL_DCHECK(pair.first->layout);
+  FX_DCHECK(pair.first->layout);
   return pair.first->layout;
 }
 

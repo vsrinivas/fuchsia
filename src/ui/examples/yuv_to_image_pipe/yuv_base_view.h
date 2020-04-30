@@ -35,7 +35,7 @@ class YuvBaseView : public scenic::BaseView {
 
  private:
   // |scenic::SessionListener|
-  void OnScenicError(std::string error) override { FXL_LOG(ERROR) << "Scenic Error " << error; }
+  void OnScenicError(std::string error) override { FX_LOGS(ERROR) << "Scenic Error " << error; }
 
   void SetVmoPixels(uint8_t* vmo_base, uint8_t pixel_multiplier);
   void SetBgra32Pixels(uint8_t* vmo_base, uint8_t pixel_multiplier);

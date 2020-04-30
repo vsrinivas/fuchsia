@@ -229,7 +229,7 @@ void WatchpointStreamBackend::HandleNotifyThreadStarting(NotifyThread thread) {
 void WatchpointStreamBackend::HandleNotifyProcessExiting(NotifyProcessExiting process) {
   DEBUG_LOG(Test) << "Process " << process.process_koid
                   << " exiting with return code: " << process.return_code;
-  FXL_DCHECK(process.process_koid == process_koid_);
+  FX_DCHECK(process.process_koid == process_koid_);
   return_code_ = process.return_code;
   ShouldQuitLoop();
 }
@@ -267,7 +267,7 @@ void WatchpointStreamBackend::ShouldQuitLoop() {
     }
   }
 
-  FXL_NOTREACHED() << "Invalid test state.";
+  FX_NOTREACHED() << "Invalid test state.";
 }
 
 }  // namespace

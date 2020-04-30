@@ -29,12 +29,12 @@ bool PlanesAreValid(const std::array<vec4, kNumPlanes>& planes) {
 
 BoundingBox::BoundingBox(vec3 min, vec3 max) : min_(min), max_(max) {
 #ifndef NDEBUG
-  FXL_DCHECK(min.x <= max.x) << min << " " << max;
-  FXL_DCHECK(min.y <= max.y) << min << " " << max;
-  FXL_DCHECK(min.z <= max.z) << min << " " << max;
+  FX_DCHECK(min.x <= max.x) << min << " " << max;
+  FX_DCHECK(min.y <= max.y) << min << " " << max;
+  FX_DCHECK(min.z <= max.z) << min << " " << max;
   int dimensions = (min.x != max.x ? 1 : 0) + (min.y != max.y ? 1 : 0) + (min.z != max.z ? 1 : 0);
   // Should use empty bounding-box if box is 1D or 0D.
-  FXL_DCHECK(dimensions >= 2);
+  FX_DCHECK(dimensions >= 2);
 #endif
 }
 
@@ -83,7 +83,7 @@ BoundingBox& BoundingBox::Intersect(const BoundingBox& box) {
 }
 
 BoundingBox operator*(const mat4& matrix, const BoundingBox& box) {
-  FXL_DCHECK(matrix[3][3] == 1.f);  // No perspective allowed.
+  FX_DCHECK(matrix[3][3] == 1.f);  // No perspective allowed.
 
   if (box.is_empty()) {
     return box;
@@ -117,7 +117,7 @@ std::vector<plane3> BoundingBox::CreatePlanes() const {
   planes[4] = glm::vec4(0, -1, 0, -max_.y);
   planes[5] = glm::vec4(0, 0, -1, -max_.z);
 
-  FXL_DCHECK(PlanesAreValid(planes));
+  FX_DCHECK(PlanesAreValid(planes));
 
   for (size_t i = 0; i < kNumPlanes; i++) {
     glm::vec4 plane = planes[i];

@@ -305,7 +305,7 @@ std::shared_ptr<Curl> CloudStorageSymbolServerImpl::PrepareCurl(const std::strin
   url += path_ + ToDebugFileName(build_id, file_type);
 
   auto curl = Curl::MakeShared();
-  FXL_DCHECK(curl);
+  FX_DCHECK(curl);
 
   curl->SetURL(url);
   curl->headers().push_back(std::string("Authorization: Bearer ") + access_token_);

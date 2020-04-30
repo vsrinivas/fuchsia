@@ -60,11 +60,11 @@ class Bitmap {
  private:
   // Get the 32 bits that contains the bit at |offset|.
   uint32_t* GetBits(uint32_t offset) {
-    FXL_DCHECK(offset / 32 <= bits_size_);
+    FX_DCHECK(offset / 32 <= bits_size_);
     return bits_ + offset / 32;
   }
   uint32_t* GetBits(uint32_t offset) const {
-    FXL_DCHECK(offset / 32 <= bits_size_);
+    FX_DCHECK(offset / 32 <= bits_size_);
     return bits_ + offset / 32;
   }
 

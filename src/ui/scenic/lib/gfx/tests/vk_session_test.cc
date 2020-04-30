@@ -70,8 +70,8 @@ VkSessionTest::VkSessionTest()
 SessionContext VkSessionTest::CreateSessionContext() {
   auto session_context = SessionTest::CreateSessionContext();
 
-  FXL_DCHECK(!release_fence_signaller_);
-  FXL_DCHECK(!image_factory_);
+  FX_DCHECK(!release_fence_signaller_);
+  FX_DCHECK(!image_factory_);
 
   release_fence_signaller_ =
       std::make_unique<ReleaseFenceSignaller>(escher()->command_buffer_sequencer());

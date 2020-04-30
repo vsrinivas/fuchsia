@@ -56,7 +56,7 @@ Err ArchInfo::Init(debug_ipc::Arch arch) {
       processor_name_ = "generic";
       break;
     default:
-      FXL_NOTREACHED();
+      FX_NOTREACHED();
       break;
   }
 

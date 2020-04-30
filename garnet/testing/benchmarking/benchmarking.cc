@@ -4,9 +4,6 @@
 
 #include "garnet/testing/benchmarking/benchmarking.h"
 
-#include <algorithm>
-#include <fstream>
-
 #include <lib/fdio/spawn.h>
 #include <lib/zx/handle.h>
 #include <lib/zx/job.h>
@@ -15,12 +12,15 @@
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/object.h>
 
+#include <algorithm>
+#include <fstream>
+
+#include "src/lib/files/file.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/join_strings.h"
 #include "src/lib/fxl/strings/split_string.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/fxl/strings/substitute.h"
-#include "src/lib/files/file.h"
 
 namespace benchmarking {
 
@@ -30,14 +30,14 @@ namespace {
 //   $ rm -rf $file
 void RemoveRecursive(const std::string& file) {
   int status = Spawn({"/bin/rm", "-rf", file});
-  FXL_CHECK(status == 0);
+  FX_CHECK(status == 0);
 }
 
 // Equivalent to shell expression:
 //   $ touch $file
 void Touch(const std::string& file) {
   int status = Spawn({"/bin/touch", file});
-  FXL_CHECK(status == 0);
+  FX_CHECK(status == 0);
 }
 
 int CatapultConvert(const std::string& input, const std::string& output,
@@ -55,7 +55,7 @@ int CatapultConvert(const std::string& input, const std::string& output,
 //   "foo/bar/baz" -> "baz"
 std::string Basename(const std::string& path) {
   auto split = fxl::SplitStringCopy(path, "/", fxl::kKeepWhitespace, fxl::kSplitWantAll);
-  FXL_CHECK(!split.empty());
+  FX_CHECK(!split.empty());
   return split.back();
 }
 
@@ -69,15 +69,15 @@ std::string JoinPaths(const std::vector<std::string>& paths) {
 // static
 std::optional<BenchmarksRunner> BenchmarksRunner::Create(int argc, const char** argv) {
   auto PrintUsage = [=] {
-    FXL_LOG(ERROR) << "Usage: " << argv[0] << " <output-dir> [--catapult-converter-args <args>]";
+    FX_LOGS(ERROR) << "Usage: " << argv[0] << " <output-dir> [--catapult-converter-args <args>]";
   };
   if (argc < 2) {
-    FXL_LOG(ERROR) << "Error: Missing output directory argument";
+    FX_LOGS(ERROR) << "Error: Missing output directory argument";
     PrintUsage();
     return {};
   }
   if (argc >= 3 && std::string(argv[2]) != "--catapult-converter-args") {
-    FXL_LOG(ERROR) << "Error: Unexpected argument '" << argv[2]
+    FX_LOGS(ERROR) << "Error: Unexpected argument '" << argv[2]
                    << "' instead of '--catapult-converter-args'";
     PrintUsage();
     return {};
@@ -89,7 +89,7 @@ std::optional<BenchmarksRunner> BenchmarksRunner::Create(int argc, const char** 
     benchmarks_runner.catapult_converter_args_.push_back(argv[i]);
     // TODO(PT-73): Consider using an arguments parsing library here instead.
     if (std::string(argv[i]) == "--bots") {
-      FXL_CHECK(i + 1 < argc);
+      FX_CHECK(i + 1 < argc);
       benchmarks_runner.benchmarks_bot_name_ = argv[i + 1];
     }
   }
@@ -124,14 +124,14 @@ void BenchmarksRunner::AddCustomBenchmark(const std::string& name,
     RemoveRecursive(results_file);
     Touch(results_file);
     auto command_as_string = fxl::JoinStrings(command, " ");
-    FXL_LOG(INFO) << "Running \"" << command_as_string << '"';
+    FX_LOGS(INFO) << "Running \"" << command_as_string << '"';
 
     int command_status = Spawn(command);
-    FXL_CHECK(command_status == 0) << "Non-zero exit status " << command_status
-                                   << " from running \"" << command_as_string << '"';
+    FX_CHECK(command_status == 0) << "Non-zero exit status " << command_status << " from running \""
+                                  << command_as_string << '"';
 
     if (!files::IsFile(results_file)) {
-      FXL_LOG(ERROR) << "Expected file " << results_file << " to exist, and it did not.";
+      FX_LOGS(ERROR) << "Expected file " << results_file << " to exist, and it did not.";
       got_errors_ = true;
       WriteSummaryEntry(name, results_file, SummaryEntryResult::kFail);
       return;
@@ -144,7 +144,7 @@ void BenchmarksRunner::AddCustomBenchmark(const std::string& name,
       int catapult_convert_status =
           CatapultConvert(results_file, catapult_file, catapult_converter_args_);
       if (catapult_convert_status != 0) {
-        FXL_LOG(ERROR) << "Failed to run catapult_converter";
+        FX_LOGS(ERROR) << "Failed to run catapult_converter";
         WriteSummaryEntry(name, results_file, SummaryEntryResult::kFail);
         return;
       }
@@ -171,12 +171,12 @@ void BenchmarksRunner::Finish() {
 }
 )",
                                           benchmark_summaries_);
-    FXL_LOG(INFO) << "writing summary.json to " << summary_filepath;
+    FX_LOGS(INFO) << "writing summary.json to " << summary_filepath;
     std::ofstream ofs(summary_filepath);
-    FXL_CHECK(ofs.good()) << "Failed to open " << summary_filepath << " for writing";
+    FX_CHECK(ofs.good()) << "Failed to open " << summary_filepath << " for writing";
     ofs << summary;
     ofs.flush();
-    FXL_CHECK(ofs.good()) << "Failed to write to " << summary_filepath;
+    FX_CHECK(ofs.good()) << "Failed to write to " << summary_filepath;
   }
 
   if (got_errors_) {
@@ -200,7 +200,7 @@ void BenchmarksRunner::WriteSummaryEntry(const std::string& name, const std::str
     } else if (result == SummaryEntryResult::kFail) {
       return "FAIL";
     } else {
-      FXL_CHECK(false);
+      FX_CHECK(false);
       return "FAIL";
     }
   }();
@@ -228,15 +228,15 @@ int Spawn(const std::vector<std::string>& command) {
   zx::handle subprocess;
   zx_status_t status = fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, raw_command[0],
                                   raw_command.data(), subprocess.reset_and_get_address());
-  FXL_CHECK(status == ZX_OK) << "Error spawning " << raw_command[0] << ": "
-                             << zx_status_get_string(status);
+  FX_CHECK(status == ZX_OK) << "Error spawning " << raw_command[0] << ": "
+                            << zx_status_get_string(status);
 
   zx_signals_t signals_observed = 0;
   status = subprocess.wait_one(ZX_TASK_TERMINATED, zx::time(ZX_TIME_INFINITE), &signals_observed);
-  FXL_CHECK(status == ZX_OK);
+  FX_CHECK(status == ZX_OK);
   zx_info_process_t proc_info;
   status = subprocess.get_info(ZX_INFO_PROCESS, &proc_info, sizeof(proc_info), nullptr, nullptr);
-  FXL_CHECK(status == ZX_OK);
+  FX_CHECK(status == ZX_OK);
   return proc_info.return_code;
 }
 

@@ -76,41 +76,40 @@ zx_thread_state_debug_regs_t GetDebugRegs() {
 #endif
 
 int main() {
-  FXL_LOG(INFO) << "****** Creating thread.";
+  FX_LOGS(INFO) << "****** Creating thread.";
 
   thrd_t thread;
   thrd_create(&thread, ThreadFunction, nullptr);
   zx_handle_t thread_handle = 0;
   thread_handle = thrd_get_zx_handle(thread);
 
-  FXL_LOG(INFO) << "****** Suspending thread.";
+  FX_LOGS(INFO) << "****** Suspending thread.";
 
   zx_status_t status;
   zx_handle_t suspend_token;
   status = zx_task_suspend(thread_handle, &suspend_token);
-  FXL_DCHECK(status == ZX_OK) << "Could not suspend thread: "
-                              << debug_ipc::ZxStatusToString(status);
+  FX_DCHECK(status == ZX_OK) << "Could not suspend thread: " << debug_ipc::ZxStatusToString(status);
 
   zx_signals_t observed;
   status = zx_object_wait_one(thread_handle, ZX_THREAD_SUSPENDED, zx_deadline_after(ZX_MSEC(500)),
                               &observed);
-  FXL_DCHECK(status == ZX_OK) << "Could not get suspended signal: "
-                              << debug_ipc::ZxStatusToString(status);
+  FX_DCHECK(status == ZX_OK) << "Could not get suspended signal: "
+                             << debug_ipc::ZxStatusToString(status);
 
-  FXL_LOG(INFO) << "****** Writing watchpoint.";
+  FX_LOGS(INFO) << "****** Writing watchpoint.";
 
   auto debug_regs = GetDebugRegs();
   status = zx_thread_write_state(thread_handle, ZX_THREAD_STATE_DEBUG_REGS, &debug_regs,
                                  sizeof(debug_regs));
-  FXL_DCHECK(status == ZX_OK) << "Could not write debug regs: "
-                              << debug_ipc::ZxStatusToString(status);
+  FX_DCHECK(status == ZX_OK) << "Could not write debug regs: "
+                             << debug_ipc::ZxStatusToString(status);
 
-  FXL_LOG(INFO) << "****** Resuming thread.";
+  FX_LOGS(INFO) << "****** Resuming thread.";
 
   status = zx_handle_close(suspend_token);
-  FXL_DCHECK(status == ZX_OK) << "Could not resume thread: " << debug_ipc::ZxStatusToString(status);
+  FX_DCHECK(status == ZX_OK) << "Could not resume thread: " << debug_ipc::ZxStatusToString(status);
 
-  FXL_LOG(INFO) << "****** Waiting for a bit to hit the watchpoint.";
+  FX_LOGS(INFO) << "****** Waiting for a bit to hit the watchpoint.";
 
   // The other thread won't ever stop, so there is no use waiting for a
   // terminated signal. Instead we wait for a generous amount of time for the
@@ -118,6 +117,6 @@ int main() {
   // If it doesn't happen, it's an error.
   zx_nanosleep(zx_deadline_after(ZX_SEC(10)));
 
-  FXL_LOG(ERROR) << " THIS IS AN ERROR. THIS BINARY SHOULD'VE CRASHED!";
+  FX_LOGS(ERROR) << " THIS IS AN ERROR. THIS BINARY SHOULD'VE CRASHED!";
   return 1;
 }

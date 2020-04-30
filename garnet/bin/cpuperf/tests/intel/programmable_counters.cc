@@ -16,19 +16,19 @@ class ProgrammableCounterVerifier : public Verifier {
     const perfmon::EventDetails* details;
 
     bool rc __UNUSED = LookupEventByName("arch", "llc_references", &details);
-    FXL_DCHECK(rc);
+    FX_DCHECK(rc);
     llc_references_id_ = details->id;
 
     rc = LookupEventByName("arch", "llc_misses", &details);
-    FXL_DCHECK(rc);
+    FX_DCHECK(rc);
     llc_misses_id_ = details->id;
 
     rc = LookupEventByName("arch", "branch_instructions_retired", &details);
-    FXL_DCHECK(rc);
+    FX_DCHECK(rc);
     branch_instructions_retired_id_ = details->id;
 
     rc = LookupEventByName("arch", "branch_misses_retired", &details);
-    FXL_DCHECK(rc);
+    FX_DCHECK(rc);
     branch_misses_retired_id_ = details->id;
   }
 
@@ -49,19 +49,19 @@ class ProgrammableCounterVerifier : public Verifier {
   bool VerifyTrace(const RecordCounts& counts) override {
     bool pass = true;
     if (llc_references_count_ == 0) {
-      FXL_LOG(ERROR) << "Missing llc_references events";
+      FX_LOGS(ERROR) << "Missing llc_references events";
       pass = false;
     }
     if (llc_misses_count_ == 0) {
-      FXL_LOG(ERROR) << "Missing llc_misses events";
+      FX_LOGS(ERROR) << "Missing llc_misses events";
       pass = false;
     }
     if (branch_instructions_retired_count_ == 0) {
-      FXL_LOG(ERROR) << "Missing branch_instructions_retired events";
+      FX_LOGS(ERROR) << "Missing branch_instructions_retired events";
       pass = false;
     }
     if (branch_misses_retired_count_ == 0) {
-      FXL_LOG(ERROR) << "Missing branch_misses_retired events";
+      FX_LOGS(ERROR) << "Missing branch_misses_retired events";
       pass = false;
     }
     return pass;

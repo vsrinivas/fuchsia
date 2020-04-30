@@ -111,7 +111,7 @@ bool HasOnlySupportedSpecialIdentifierTypes(const Identifier& ident) {
       case SpecialIdentifier::kAnon:
         break;  // Normal boring component.
       case SpecialIdentifier::kEscaped:
-        FXL_NOTREACHED();  // "Escaped" annotations shouldn't appear in identifiers.
+        FX_NOTREACHED();  // "Escaped" annotations shouldn't appear in identifiers.
         break;
       case SpecialIdentifier::kMain:
         // "$main" is supported only when it's the only component ("foo::$main" is invalid).
@@ -119,7 +119,7 @@ bool HasOnlySupportedSpecialIdentifierTypes(const Identifier& ident) {
       case SpecialIdentifier::kRegister:
         return false;  // Can't look up registers in the symbols.
       case SpecialIdentifier::kLast:
-        FXL_NOTREACHED();  // Not supposed to be a valid value.
+        FX_NOTREACHED();  // Not supposed to be a valid value.
         return false;
     }
   }
@@ -170,7 +170,7 @@ std::vector<Location> ModuleSymbolsImpl::ResolveInputLocation(const SymbolContex
                                                               const InputLocation& input_location,
                                                               const ResolveOptions& options) const {
   // Thie skip_function_prologue option requires that symbolize be set.
-  FXL_DCHECK(!options.skip_function_prologue || options.symbolize);
+  FX_DCHECK(!options.skip_function_prologue || options.symbolize);
 
   switch (input_location.type) {
     case InputLocation::Type::kNone:
@@ -309,7 +309,7 @@ std::vector<Location> ModuleSymbolsImpl::ResolveLineInputLocation(
 std::vector<Location> ModuleSymbolsImpl::ResolveSymbolInputLocation(
     const SymbolContext& symbol_context, const InputLocation& input_location,
     const ResolveOptions& options) const {
-  FXL_DCHECK(input_location.type == InputLocation::Type::kName);
+  FX_DCHECK(input_location.type == InputLocation::Type::kName);
   if (!HasOnlySupportedSpecialIdentifierTypes(input_location.name))
     return {};  // Unsupported symbol type.
 
@@ -650,8 +650,8 @@ Location ModuleSymbolsImpl::MakeElfSymbolLocation(const SymbolContext& symbol_co
 }
 
 void ModuleSymbolsImpl::FillElfSymbols() {
-  FXL_DCHECK(mangled_elf_symbols_.empty());
-  FXL_DCHECK(elf_addresses_.empty());
+  FX_DCHECK(mangled_elf_symbols_.empty());
+  FX_DCHECK(elf_addresses_.empty());
 
   const std::map<std::string, llvm::ELF::Elf64_Sym>& elf_syms = binary_->GetELFSymbols();
   const std::map<std::string, uint64_t>& plt_syms = binary_->GetPLTSymbols();

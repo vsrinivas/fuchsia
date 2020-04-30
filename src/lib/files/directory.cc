@@ -21,7 +21,7 @@ namespace files {
 
 std::string GetCurrentDirectory() {
   char buffer[PATH_MAX];
-  FXL_CHECK(getcwd(buffer, sizeof(buffer)));
+  FX_CHECK(getcwd(buffer, sizeof(buffer)));
   return std::string(buffer);
 }
 

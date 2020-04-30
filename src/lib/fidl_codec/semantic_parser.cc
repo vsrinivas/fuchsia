@@ -215,7 +215,7 @@ std::string SemanticParser::ConsumeString() {
       return result;
     }
     // We already checked that backslashes are followed by another character.
-    FXL_DCHECK(backslash < result.size() - 1);
+    FX_DCHECK(backslash < result.size() - 1);
     result.erase(backslash);
     pos = backslash + 1;
   }

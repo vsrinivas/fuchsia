@@ -10,7 +10,7 @@ namespace scheduling {
 
 DurationPredictor::DurationPredictor(size_t window_size, zx::duration initial_prediction)
     : kWindowSize(window_size), window_(kWindowSize, initial_prediction) {
-  FXL_DCHECK(kWindowSize > 0);
+  FX_DCHECK(kWindowSize > 0);
   current_maximum_duration_index_ = kWindowSize - 1;
 }
 

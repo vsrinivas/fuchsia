@@ -138,7 +138,7 @@ std::vector<zx::thread> ObjectProvider::GetChildThreads(zx_handle_t process) con
 zx::process ObjectProvider::GetProcessFromException(zx_handle_t exception) const {
   zx_handle_t process_handle = ZX_HANDLE_INVALID;
   zx_status_t status = zx_exception_get_process(exception, &process_handle);
-  FXL_DCHECK(status == ZX_OK) << "Got: " << debug_ipc::ZxStatusToString(status);
+  FX_DCHECK(status == ZX_OK) << "Got: " << debug_ipc::ZxStatusToString(status);
 
   return zx::process(process_handle);
 }
@@ -146,7 +146,7 @@ zx::process ObjectProvider::GetProcessFromException(zx_handle_t exception) const
 zx::thread ObjectProvider::GetThreadFromException(zx_handle_t exception) const {
   zx_handle_t thread_handle = ZX_HANDLE_INVALID;
   zx_status_t status = zx_exception_get_thread(exception, &thread_handle);
-  FXL_DCHECK(status == ZX_OK) << "Got: " << debug_ipc::ZxStatusToString(status);
+  FX_DCHECK(status == ZX_OK) << "Got: " << debug_ipc::ZxStatusToString(status);
 
   return zx::thread(thread_handle);
 }
@@ -176,14 +176,14 @@ zx_koid_t ObjectProvider::GetComponentJobKoid() const {
   std::string koid_str;
   bool file_read = files::ReadFileToString("/hub/job-id", &koid_str);
   if (!file_read) {
-    FXL_LOG(ERROR) << "Not able to read job-id: " << strerror(errno);
+    FX_LOGS(ERROR) << "Not able to read job-id: " << strerror(errno);
     return 0;
   }
 
   char* end = NULL;
   uint64_t koid = strtoul(koid_str.c_str(), &end, 10);
   if (*end) {
-    FXL_LOG(ERROR) << "Invalid job-id: " << koid_str.c_str();
+    FX_LOGS(ERROR) << "Invalid job-id: " << koid_str.c_str();
     return 0;
   }
 
@@ -196,21 +196,21 @@ zx_koid_t ObjectProvider::GetComponentJobKoid() const {
 zx::job ObjectProvider::GetRootJob() const {
   int fd = open("/svc/fuchsia.boot.RootJob", O_RDWR);
   if (fd < 0) {
-    FXL_NOTREACHED();
+    FX_NOTREACHED();
     return zx::job();
   }
 
   zx::channel channel;
   zx_status_t status = fdio_get_service_handle(fd, channel.reset_and_get_address());
   if (status != ZX_OK) {
-    FXL_NOTREACHED();
+    FX_NOTREACHED();
     return zx::job();
   }
 
   zx_handle_t root_job;
   zx_status_t fidl_status = fuchsia_boot_RootJobGet(channel.get(), &root_job);
   if (fidl_status != ZX_OK) {
-    FXL_NOTREACHED();
+    FX_NOTREACHED();
     return zx::job();
   }
   return zx::job(root_job);

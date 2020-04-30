@@ -21,7 +21,7 @@ void VirtualDevices::AddEntry(std::string path, fidl::InterfacePtr<DevProxy> dev
   auto components = fxl::SplitString(path, "/", fxl::WhiteSpaceHandling::kKeepWhitespace,
                                      fxl::SplitResult::kSplitWantNonEmpty);
   if (components.empty()) {
-    FXL_LOG(ERROR) << "Invalid device mount path '" << path << "'";
+    FX_LOGS(ERROR) << "Invalid device mount path '" << path << "'";
     return;
   }
 
@@ -35,7 +35,7 @@ void VirtualDevices::AddEntry(std::string path, fidl::InterfacePtr<DevProxy> dev
       auto ndir = fbl::AdoptRef(new fs::PseudoDir());
       auto status = dir->AddEntry(*i, ndir);
       if (status != ZX_OK) {
-        FXL_LOG(ERROR) << "Error creating mount path: " << path << ": "
+        FX_LOGS(ERROR) << "Error creating mount path: " << path << ": "
                        << zx_status_get_string(status);
       }
       dir = ndir;
@@ -63,7 +63,7 @@ void VirtualDevices::AddEntry(std::string path, fidl::InterfacePtr<DevProxy> dev
         return ZX_OK;
       })));
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Can't add device entry " << path << ": " << zx_status_get_string(status);
+    FX_LOGS(ERROR) << "Can't add device entry " << path << ": " << zx_status_get_string(status);
   }
 }
 
@@ -71,7 +71,7 @@ void VirtualDevices::RemoveEntry(std::string path) {
   auto components = fxl::SplitString(path, "/", fxl::WhiteSpaceHandling::kKeepWhitespace,
                                      fxl::SplitResult::kSplitWantNonEmpty);
   if (components.empty()) {
-    FXL_LOG(ERROR) << "Invalid device mount path '" << path << "'";
+    FX_LOGS(ERROR) << "Invalid device mount path '" << path << "'";
     return;
   }
 
@@ -82,14 +82,14 @@ void VirtualDevices::RemoveEntry(std::string path) {
     if (dir->Lookup(&node, *i) == ZX_OK) {
       dir.reset(reinterpret_cast<fs::PseudoDir*>(node.get()));
     } else {
-      FXL_LOG(INFO) << "Can't find device path " << path;
+      FX_LOGS(INFO) << "Can't find device path " << path;
       return;
     }
   }
 
   auto status = dir->RemoveEntry(*last);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Can't remove device entry " << path << ": " << zx_status_get_string(status);
+    FX_LOGS(ERROR) << "Can't remove device entry " << path << ": " << zx_status_get_string(status);
   }
 }
 

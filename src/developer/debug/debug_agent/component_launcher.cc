@@ -40,7 +40,7 @@ zx::socket AddStdio(int fd, fuchsia::sys::LaunchInfo* launch_info) {
   } else if (fd == STDERR_FILENO) {
     launch_info->err = std::move(io);
   } else {
-    FXL_NOTREACHED() << "Invalid file descriptor: " << fd;
+    FX_NOTREACHED() << "Invalid file descriptor: " << fd;
     return zx::socket();
   }
 
@@ -55,13 +55,13 @@ ComponentLauncher::ComponentLauncher(std::shared_ptr<sys::ServiceDirectory> serv
 zx_status_t ComponentLauncher::Prepare(std::vector<std::string> argv,
                                        ComponentDescription* description,
                                        ComponentHandles* handles) {
-  FXL_DCHECK(services_);
-  FXL_DCHECK(!argv.empty());
+  FX_DCHECK(services_);
+  FX_DCHECK(!argv.empty());
 
   auto pkg_url = argv.front();
   debug_ipc::ComponentDescription url_desc;
   if (!debug_ipc::ExtractComponentFromPackageUrl(pkg_url, &url_desc)) {
-    FXL_LOG(WARNING) << "Invalid package url: " << pkg_url;
+    FX_LOGS(WARNING) << "Invalid package url: " << pkg_url;
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -85,7 +85,7 @@ zx_status_t ComponentLauncher::Prepare(std::vector<std::string> argv,
 };
 
 fuchsia::sys::ComponentControllerPtr ComponentLauncher::Launch() {
-  FXL_DCHECK(services_);
+  FX_DCHECK(services_);
 
   fuchsia::sys::LauncherSyncPtr launcher;
   services_->Connect(launcher.NewRequest());

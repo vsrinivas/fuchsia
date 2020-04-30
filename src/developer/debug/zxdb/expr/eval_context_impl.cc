@@ -206,7 +206,7 @@ void EvalContextImpl::GetVariableValue(fxl::RefPtr<Value> input_val, EvalCallbac
   } else {
     // Everything else should be a variable.
     var = RefPtrTo(input_val->AsVariable());
-    FXL_DCHECK(var);
+    FX_DCHECK(var);
   }
 
   SymbolContext symbol_context = var->GetSymbolContext(process_symbols_.get());
@@ -274,13 +274,13 @@ Location EvalContextImpl::GetLocationForAddress(uint64_t address) const {
   auto locations = process_symbols_->ResolveInputLocation(InputLocation(address));
 
   // Given an exact address, ResolveInputLocation() should only return one result.
-  FXL_DCHECK(locations.size() == 1u);
+  FX_DCHECK(locations.size() == 1u);
   return locations[0];
 }
 
 Err EvalContextImpl::ResolveExternValue(const fxl::RefPtr<Value>& input_value,
                                         fxl::RefPtr<Variable>* resolved) const {
-  FXL_DCHECK(input_value->is_external());
+  FX_DCHECK(input_value->is_external());
 
   FindNameOptions options(FindNameOptions::kNoKinds);
   options.find_vars = true;
@@ -307,7 +307,7 @@ void EvalContextImpl::DoResolve(FoundName found, EvalCallback cb) const {
   }
 
   // Everything below here is an object variable resolution.
-  FXL_DCHECK(found.kind() == FoundName::kMemberVariable);
+  FX_DCHECK(found.kind() == FoundName::kMemberVariable);
 
   // Static ("external") data members don't require a "this" pointer.
   if (found.member().data_member()->is_external())

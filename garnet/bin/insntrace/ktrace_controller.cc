@@ -26,7 +26,7 @@ bool OpenKtraceChannel(fuchsia::tracing::kernel::ControllerSyncPtr* out_controll
   zx_status_t status = fdio_service_connect(
       kKtraceDevicePath, out_controller_ptr->NewRequest().TakeChannel().release());
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Error connecting to " << kKtraceDevicePath << ": " << status;
+    FX_LOGS(ERROR) << "Error connecting to " << kKtraceDevicePath << ": " << status;
     return false;
   }
   return true;
@@ -55,7 +55,7 @@ void RequestKtraceRewind(const fuchsia::tracing::kernel::ControllerSyncPtr& ktra
 void DumpKtraceBuffer(const char* output_path_prefix, const char* output_path_suffix) {
   int fd = open(kKtraceDevicePath, O_RDONLY);
   if (fd < 0) {
-    FXL_LOG(ERROR) << "open ktrace"
+    FX_LOGS(ERROR) << "open ktrace"
                    << ", " << debugger_utils::ErrnoString(errno);
     return;
   }
@@ -71,12 +71,12 @@ void DumpKtraceBuffer(const char* output_path_prefix, const char* output_path_su
     char buf[1024];
     while ((count = read(ktrace_fd.get(), buf, sizeof(buf))) != 0) {
       if (write(dest_fd.get(), buf, count) != count) {
-        FXL_LOG(ERROR) << "error writing " << ktrace_c_path;
+        FX_LOGS(ERROR) << "error writing " << ktrace_c_path;
         break;
       }
     }
   } else {
-    FXL_LOG(ERROR) << fxl::StringPrintf("unable to create %s", ktrace_c_path)
+    FX_LOGS(ERROR) << fxl::StringPrintf("unable to create %s", ktrace_c_path)
                    << ", errno=" << debugger_utils::ErrnoString(errno);
   }
 }

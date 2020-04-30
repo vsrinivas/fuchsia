@@ -30,14 +30,14 @@ Scene::Scene(Session* session, SessionId session_id, ResourceId node_id,
     // Safe and valid eventpair, by construction.
     zx_status_t status = zx::eventpair::create(
         /*flags*/ 0u, &control_ref_.reference, &view_ref_.reference);
-    FXL_DCHECK(status == ZX_OK);
+    FX_DCHECK(status == ZX_OK);
     // Remove signaling.
     status = view_ref_.reference.replace(ZX_RIGHTS_BASIC, &view_ref_.reference);
-    FXL_DCHECK(status == ZX_OK);
-    FXL_DCHECK(validate_viewref(control_ref_, view_ref_));
+    FX_DCHECK(status == ZX_OK);
+    FX_DCHECK(validate_viewref(control_ref_, view_ref_));
 
     view_ref_koid_ = fsl::GetKoid(view_ref_.reference.get());
-    FXL_DCHECK(view_ref_koid_ != ZX_KOID_INVALID);
+    FX_DCHECK(view_ref_koid_ != ZX_KOID_INVALID);
   }
 
   {
@@ -55,10 +55,10 @@ Scene::Scene(Session* session, SessionId session_id, ResourceId node_id,
       return weak_ptr ? std::optional<glm::mat4>{weak_ptr->GetGlobalTransform()} : std::nullopt;
     };
     fit::function<void(ViewHolderPtr)> add_annotation_view_holder = [](auto) {
-      FXL_NOTREACHED() << "Cannot create Annotation ViewHolder for Scene.";
+      FX_NOTREACHED() << "Cannot create Annotation ViewHolder for Scene.";
     };
 
-    FXL_DCHECK(session_id != 0u) << "GFX-side invariant for ViewTree";
+    FX_DCHECK(session_id != 0u) << "GFX-side invariant for ViewTree";
     if (view_tree_updater_) {
       view_tree_updater_->AddUpdate(
           ViewTreeNewRefNode{.view_ref = std::move(clone),
@@ -82,7 +82,7 @@ Scene::~Scene() {
 }
 
 void Scene::OnSceneChanged() {
-  FXL_CHECK(scene_ && scene_->global_id() == global_id())
+  FX_CHECK(scene_ && scene_->global_id() == global_id())
       << "Error: "
       << "Scene cannot be changed to a different Scene.";
 }

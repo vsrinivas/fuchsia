@@ -19,11 +19,11 @@ int main(int argc, const char** argv) {
     return 1;
 
   if (!perfmon::Controller::IsSupported()) {
-    FXL_LOG(INFO) << "Exiting, perfmon device not supported";
+    FX_LOGS(INFO) << "Exiting, perfmon device not supported";
     return 0;
   }
 
-  FXL_VLOG(2) << argv[0] << ": starting";
+  FX_VLOGS(2) << argv[0] << ": starting";
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher(), "cpuperf_provider");
@@ -31,7 +31,7 @@ int main(int argc, const char** argv) {
   cpuperf_provider::App app(command_line);
   loop.Run();
 
-  FXL_VLOG(2) << argv[0] << ": exiting";
+  FX_VLOGS(2) << argv[0] << ": exiting";
 
   return 0;
 }

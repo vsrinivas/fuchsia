@@ -34,7 +34,7 @@ LinkSystem::LinkSystem(TransformHandle::InstanceId instance_id)
 LinkSystem::ChildLink LinkSystem::CreateChildLink(
     ContentLinkToken token, fuchsia::ui::scenic::internal::LinkProperties initial_properties,
     fidl::InterfaceRequest<ContentLink> content_link, TransformHandle graph_handle) {
-  FXL_DCHECK(token.value.is_valid());
+  FX_DCHECK(token.value.is_valid());
 
   auto impl = std::make_shared<GraphLinkImpl>();
   const TransformHandle link_handle = link_graph_.CreateTransform();
@@ -93,7 +93,7 @@ LinkSystem::ChildLink LinkSystem::CreateChildLink(
 LinkSystem::ParentLink LinkSystem::CreateParentLink(GraphLinkToken token,
                                                     fidl::InterfaceRequest<GraphLink> graph_link,
                                                     TransformHandle link_origin) {
-  FXL_DCHECK(token.value.is_valid());
+  FX_DCHECK(token.value.is_valid());
 
   auto impl = std::make_shared<ContentLinkImpl>();
 

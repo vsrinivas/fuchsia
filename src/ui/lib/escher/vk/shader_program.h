@@ -91,7 +91,7 @@ class ShaderProgram : public Resource, private ShaderModuleListener {
 
 // Inline function definitions.
 inline const ShaderModulePtr& ShaderProgram::GetModuleForStage(ShaderStage stage) const {
-  FXL_DCHECK(stage != ShaderStage::kEnumCount);
+  FX_DCHECK(stage != ShaderStage::kEnumCount);
   return shader_modules_[EnumCast(stage)];
 }
 
@@ -101,7 +101,7 @@ inline vk::Pipeline ShaderProgram::FindPipeline(Hash hash) const {
 }
 
 inline void ShaderProgram::StashPipeline(Hash hash, vk::Pipeline pipeline) {
-  FXL_DCHECK(!FindPipeline(hash));
+  FX_DCHECK(!FindPipeline(hash));
   graphics_pipelines_[hash] = pipeline;
 }
 

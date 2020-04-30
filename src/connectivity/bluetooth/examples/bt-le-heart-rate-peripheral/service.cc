@@ -105,7 +105,7 @@ Service::Service(std::unique_ptr<HeartModel> heart_model)
       binding_(this),
       notify_scheduled_(false),
       weak_factory_(this) {
-  FXL_DCHECK(heart_model_);
+  FX_DCHECK(heart_model_);
 }
 
 void Service::PublishService(gatt::ServerPtr* gatt_server) {

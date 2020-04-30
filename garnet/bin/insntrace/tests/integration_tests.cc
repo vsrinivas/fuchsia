@@ -75,7 +75,7 @@ ControllerSyncPtr OpenDevice() {
   zx_status_t status = fdio_service_connect(kInsntraceDevicePath,
                                             controller_ptr.NewRequest().TakeChannel().release());
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Error connecting to " << kInsntraceDevicePath << ": " << status;
+    FX_LOGS(ERROR) << "Error connecting to " << kInsntraceDevicePath << ": " << status;
     return ControllerSyncPtr();
   }
   return controller_ptr;
@@ -90,15 +90,15 @@ bool IsSupported() {
   ::fuchsia::hardware::cpu::insntrace::Controller_Terminate_Result result;
   zx_status_t status = ipt->Terminate(&result);
   if (status != ZX_OK) {
-    FXL_VLOG(1) << "Is-supported proxy(terminate) failed: " << status;
+    FX_VLOGS(1) << "Is-supported proxy(terminate) failed: " << status;
     return false;
   }
-  FXL_DCHECK(result.is_err());
+  FX_DCHECK(result.is_err());
   if (result.is_err()) {
-    FXL_VLOG(1) << "Is-supported proxy(terminate) received: " << result.err();
+    FX_VLOGS(1) << "Is-supported proxy(terminate) received: " << result.err();
     return result.err() == ZX_ERR_BAD_STATE;
   }
-  FXL_VLOG(1) << "Is-supported proxy(terminate) failed";
+  FX_VLOGS(1) << "Is-supported proxy(terminate) failed";
   return false;
 }
 
@@ -113,7 +113,7 @@ int main(int argc, char** argv) {
 
   // Early exit if there is no insntrace device.
   if (!IsSupported()) {
-    FXL_LOG(INFO) << "Insntrace device not supported";
+    FX_LOGS(INFO) << "Insntrace device not supported";
     return EXIT_SUCCESS;
   }
 

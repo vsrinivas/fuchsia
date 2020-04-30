@@ -43,7 +43,7 @@ class SessionWrapper {
   }
   void SetViewKoid(zx_koid_t koid) { view_koid_ = koid; }
   zx_koid_t ViewKoid() const {
-    FXL_CHECK(view_koid_) << "No view koid set.";
+    FX_CHECK(view_koid_) << "No view koid set.";
     return view_koid_;
   }
 

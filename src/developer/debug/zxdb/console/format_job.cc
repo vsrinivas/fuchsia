@@ -103,7 +103,7 @@ const char* JobContextStateToString(JobContext::State state) {
     case JobContext::State::kAttached:
       return "Attached";
   }
-  FXL_NOTREACHED();
+  FX_NOTREACHED();
   return "";
 }
 

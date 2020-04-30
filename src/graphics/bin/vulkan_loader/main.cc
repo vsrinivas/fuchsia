@@ -31,7 +31,7 @@ class LoaderImpl final : public fuchsia::vulkan::loader::Loader {
         [this](fidl::InterfaceRequest<fuchsia::vulkan::loader::Loader> request) {
           if (!logged_connection_) {
             // TODO(fxb/50876): Remove logging once hang is debugged.
-            FXL_LOG(INFO) << "Vulkan loader received first connection";
+            FX_LOGS(INFO) << "Vulkan loader received first connection";
             logged_connection_ = true;
           }
           bindings_.AddBinding(this, std::move(request), nullptr);
@@ -43,7 +43,7 @@ class LoaderImpl final : public fuchsia::vulkan::loader::Loader {
   void Get(std::string name, GetCallback callback) {
     // TODO(fxb/50876): Remove logging once hang is debugged.
     if (!logged_load_)
-      FXL_LOG(INFO) << "Vulkan loader starting load of " << name;
+      FX_LOGS(INFO) << "Vulkan loader starting load of " << name;
     // TODO(MA-470): Load this from a package's data directory, not /system/lib
     std::string load_path = "/system/lib/" + name;
     int fd;
@@ -51,7 +51,7 @@ class LoaderImpl final : public fuchsia::vulkan::loader::Loader {
         fdio_open_fd(load_path.c_str(),
                      fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_EXECUTABLE, &fd);
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Could not open path " << load_path << ":" << status;
+      FX_LOGS(ERROR) << "Could not open path " << load_path << ":" << status;
       callback({});
       return;
     }
@@ -59,10 +59,10 @@ class LoaderImpl final : public fuchsia::vulkan::loader::Loader {
     status = fdio_get_vmo_exec(fd, vmo.reset_and_get_address());
     close(fd);
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Could not clone vmo exec: " << status;
+      FX_LOGS(ERROR) << "Could not clone vmo exec: " << status;
     }
     if (!logged_load_)
-      FXL_LOG(INFO) << "Vulkan loader finished load of " << name;
+      FX_LOGS(INFO) << "Vulkan loader finished load of " << name;
     logged_load_ = true;
     callback(std::move(vmo));
   }
@@ -82,7 +82,7 @@ int main(int argc, const char* const* argv) {
   loader_impl.Add(context->outgoing());
 
   // TODO(fxb/50876): Remove logging once hang is debugged.
-  FXL_LOG(INFO) << "Vulkan loader finished initializing";
+  FX_LOGS(INFO) << "Vulkan loader finished initializing";
   loop.Run();
   return 0;
 }

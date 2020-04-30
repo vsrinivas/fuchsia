@@ -113,7 +113,7 @@ Err ParseListLocation(const TargetSymbols* target_symbols, const ProcessSymbols*
   std::vector<InputLocation> input_locations;
   if (Err err = ParseLocalInputLocation(frame, arg, &input_locations); err.has_error())
     return err;
-  FXL_DCHECK(!input_locations.empty());
+  FX_DCHECK(!input_locations.empty());
 
   // When a file/line is given, we don't actually want to look up the symbol information, just match
   // file names. Then we can find the requested line in the file regardless of whether there's a
@@ -161,7 +161,7 @@ Err ParseListLocation(const TargetSymbols* target_symbols, const ProcessSymbols*
       case InputLocation::Type::kNone:
       default:
         // Addresses will always be found.
-        FXL_NOTREACHED();
+        FX_NOTREACHED();
         return Err("Internal error.");
     }
   }

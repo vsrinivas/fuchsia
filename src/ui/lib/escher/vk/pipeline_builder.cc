@@ -22,7 +22,7 @@ static Hash GenerateHash(const void* bytes, size_t num_bytes) {
 }
 
 PipelineBuilder::PipelineBuilder(vk::Device device) : device_(device), weak_factory_(this) {
-  FXL_DCHECK(device);
+  FX_DCHECK(device);
 
   // There is no StorePipelineCacheDataCallback, so hash will never be computed again.
   hash_.val = 0;
@@ -32,9 +32,9 @@ PipelineBuilder::PipelineBuilder(vk::Device device, const void* initial_cache_da
                                  size_t initial_cache_data_size,
                                  StorePipelineCacheDataCallback store_data_callback)
     : device_(device), store_data_callback_(std::move(store_data_callback)), weak_factory_(this) {
-  FXL_DCHECK(device);
-  FXL_DCHECK(store_data_callback_);
-  FXL_DCHECK(initial_cache_data || initial_cache_data_size == 0);
+  FX_DCHECK(device);
+  FX_DCHECK(store_data_callback_);
+  FX_DCHECK(initial_cache_data || initial_cache_data_size == 0);
   TRACE_DURATION("gfx", "PipelineBuilder[constructor]");
 
   // Use the initial data to populate a VkPipelineCache.

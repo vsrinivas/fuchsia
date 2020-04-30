@@ -20,17 +20,17 @@ class NullVisitor : public TypeVisitor {
 
  private:
   void VisitType(const Type* type) override {
-    FXL_LOG(FATAL) << "Type " << type->Name() << " can't be null.";
+    FX_LOGS(FATAL) << "Type " << type->Name() << " can't be null.";
   }
 
   void VisitStringType(const StringType* type) override {
-    FXL_DCHECK(type->Nullable());
+    FX_DCHECK(type->Nullable());
     encoder_->WriteValue<uint64_t>(0);
     encoder_->WriteValue<uint64_t>(0);
   }
 
   void VisitUnionType(const UnionType* type) override {
-    FXL_DCHECK(type->Nullable());
+    FX_DCHECK(type->Nullable());
     encoder_->WriteValue<uint64_t>(0);
     encoder_->WriteValue<uint32_t>(0);
     encoder_->WriteValue<uint32_t>(0);
@@ -38,12 +38,12 @@ class NullVisitor : public TypeVisitor {
   }
 
   void VisitStructType(const StructType* type) override {
-    FXL_DCHECK(type->Nullable());
+    FX_DCHECK(type->Nullable());
     encoder_->WriteValue<uint64_t>(0);
   }
 
   void VisitVectorType(const VectorType* type) override {
-    FXL_DCHECK(type->Nullable());
+    FX_DCHECK(type->Nullable());
     encoder_->WriteValue<uint64_t>(0);
     encoder_->WriteValue<uint64_t>(0);
   }
@@ -63,7 +63,7 @@ Encoder::Result Encoder::EncodeMessage(uint32_t tx_id, uint64_t ordinal, const u
   encoder.WriteValue(flags[2]);
   encoder.WriteValue(magic);
   encoder.WriteValue(ordinal);
-  FXL_DCHECK(sizeof(fidl_message_header_t) == encoder.current_offset_);
+  FX_DCHECK(sizeof(fidl_message_header_t) == encoder.current_offset_);
 
   // The primary object offsets include the header size, so the offset of the object is zero.
   encoder.VisitStructValueBody(0, &object);
@@ -78,7 +78,7 @@ size_t Encoder::AllocateObject(size_t size) {
 }
 
 void Encoder::WriteData(const uint8_t* data, size_t size) {
-  FXL_DCHECK(current_offset_ + size <= bytes_.size())
+  FX_DCHECK(current_offset_ + size <= bytes_.size())
       << "needs " << size << " bytes at offset " << current_offset_ << " buffer size is "
       << bytes_.size();
   std::copy(data, data + size, bytes_.data() + current_offset_);
@@ -102,18 +102,18 @@ void Encoder::EncodeEnvelope(const Value* value, const Type* for_type) {
 void Encoder::VisitStructValueBody(size_t offset, const StructValue* node) {
   for (const auto& member : node->struct_definition().members()) {
     auto it = node->fields().find(member.get());
-    FXL_DCHECK(it != node->fields().end());
+    FX_DCHECK(it != node->fields().end());
     current_offset_ = offset + member->offset();
     it->second->Visit(this, member->type());
   }
 }
 
 void Encoder::VisitInvalidValue(const InvalidValue* node, const Type* for_type) {
-  FXL_LOG(FATAL) << "Can't encode invalid data.";
+  FX_LOGS(FATAL) << "Can't encode invalid data.";
 }
 
 void Encoder::VisitNullValue(const NullValue* node, const Type* for_type) {
-  FXL_DCHECK(for_type != nullptr);
+  FX_DCHECK(for_type != nullptr);
   NullVisitor null_visitor(this);
   for_type->Visit(&null_visitor);
 }
@@ -125,7 +125,7 @@ void Encoder::VisitBoolValue(const BoolValue* node, const Type* for_type) {
 }
 
 void Encoder::VisitIntegerValue(const IntegerValue* node, const Type* for_type) {
-  FXL_DCHECK(for_type != nullptr);
+  FX_DCHECK(for_type != nullptr);
   size_t size = for_type->InlineSize();
   uint64_t value = node->absolute_value();
   if (node->negative()) {
@@ -135,7 +135,7 @@ void Encoder::VisitIntegerValue(const IntegerValue* node, const Type* for_type) 
 }
 
 void Encoder::VisitDoubleValue(const DoubleValue* node, const Type* for_type) {
-  FXL_DCHECK(for_type != nullptr);
+  FX_DCHECK(for_type != nullptr);
   size_t size = for_type->InlineSize();
   if (size == sizeof(float)) {
     float value = node->value();
@@ -163,13 +163,13 @@ void Encoder::VisitHandleValue(const HandleValue* node, const Type* for_type) {
 }
 
 void Encoder::VisitUnionValue(const UnionValue* node, const Type* for_type) {
-  FXL_DCHECK(for_type != nullptr);
+  FX_DCHECK(for_type != nullptr);
   WriteValue<uint64_t>(node->member().ordinal());
   EncodeEnvelope(node->value().get(), node->member().type());
 }
 
 void Encoder::VisitStructValue(const StructValue* node, const Type* for_type) {
-  FXL_DCHECK(for_type != nullptr);
+  FX_DCHECK(for_type != nullptr);
   if (for_type->Nullable()) {
     WriteValue<uint64_t>(UINTPTR_MAX);
     size_t object_size = node->struct_definition().size();
@@ -180,9 +180,9 @@ void Encoder::VisitStructValue(const StructValue* node, const Type* for_type) {
 }
 
 void Encoder::VisitVectorValue(const VectorValue* node, const Type* for_type) {
-  FXL_DCHECK(for_type != nullptr);
+  FX_DCHECK(for_type != nullptr);
   const Type* component_type = for_type->GetComponentType();
-  FXL_DCHECK(component_type != nullptr);
+  FX_DCHECK(component_type != nullptr);
   size_t component_size = component_type->InlineSize();
   size_t offset;
   if (for_type->IsArray()) {

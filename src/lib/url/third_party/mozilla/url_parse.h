@@ -47,7 +47,7 @@ struct Component {
   size_t begin;  // Byte offset in the string of this component.
 
   size_t len() const {
-    FXL_DCHECK(is_valid_);
+    FX_DCHECK(is_valid_);
     return len_;
   }
 

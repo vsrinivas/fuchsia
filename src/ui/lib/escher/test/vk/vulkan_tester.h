@@ -46,8 +46,8 @@ class VulkanTester {
   // but don't test/clear dirty state, bind the pipeline, etc.
   template <typename CommandBufferT>  // CommandBuffer* or CommandBufferPtr
   static vk::Pipeline ObtainGraphicsPipeline(CommandBufferT cb) {
-    FXL_DCHECK(cb->current_pipeline_layout_);
-    FXL_DCHECK(cb->current_program_);
+    FX_DCHECK(cb->current_pipeline_layout_);
+    FX_DCHECK(cb->current_program_);
     return cb->pipeline_state_.FlushGraphicsPipeline(
         cb->current_pipeline_layout_.get(), cb->current_program_, /*log_pipeline_creation=*/false);
   }

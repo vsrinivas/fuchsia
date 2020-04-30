@@ -35,7 +35,7 @@ class Object {
   static zx::unowned<T> CreateHandle(Args&&... args) {
     T result;
     const auto status = T::create(std::forward<Args>(args)..., &result);
-    FXL_CHECK(status == ZX_OK);
+    FX_CHECK(status == ZX_OK);
 
     const auto handle = result.release();
     handles_.emplace_back(handle);
@@ -48,7 +48,7 @@ class Object {
   static std::pair<zx::unowned<T>, zx::unowned<T>> CreateHandlePair(Args&&... args) {
     std::pair<T, T> result;
     const auto status = T::create(std::forward<Args>(args)..., &result.first, &result.second);
-    FXL_CHECK(status == ZX_OK);
+    FX_CHECK(status == ZX_OK);
 
     const auto handle_first = result.first.release();
     handles_.emplace_back(handle_first);
@@ -103,7 +103,7 @@ class PairObjectBase : public Object {
 
   zx_obj_type_t type() const override { return Type; }
 
-  auto* operator-> () { return &objects_; }
+  auto* operator->() { return &objects_; }
 
   auto bind() { return std::tie(objects_.first, objects_.second); }
 

@@ -81,8 +81,8 @@ bool InitializeMemoryAllocateInfo(const scenic_impl::gfx::ResourceContext& resou
                                   scenic_impl::ErrorReporter* reporter,
                                   vk::MemoryAllocateInfo* alloc_info,
                                   vk::ImportMemoryZirconHandleInfoFUCHSIA* memory_import_info) {
-  FXL_DCHECK(alloc_info);
-  FXL_DCHECK(memory_import_info);
+  FX_DCHECK(alloc_info);
+  FX_DCHECK(memory_import_info);
 
   // We first check the rights of vmo to ensure that it has read, write and
   // duplicate rights.
@@ -137,7 +137,7 @@ bool InitializeMemoryAllocateInfo(const scenic_impl::gfx::ResourceContext& resou
       // not result in a closed session channel, as this flow should only happen
       // when Scenic is attempting to optimize image importation. See SCN-1012
       // for other issues this this flow.
-      FXL_LOG(INFO) << "Host memory VMO could not be imported to any valid Vulkan memory types.";
+      FX_LOGS(INFO) << "Host memory VMO could not be imported to any valid Vulkan memory types.";
     }
     return false;
   }
@@ -159,7 +159,7 @@ bool InitializeMemoryAllocateInfo(const scenic_impl::gfx::ResourceContext& resou
 #if __x86_64__
   memory_type_bits &= GetBufferMemoryBits(vk_device);
   memory_type_bits &= GetImageMemoryBits(vk_device);
-  FXL_CHECK(memory_type_bits != 0)
+  FX_CHECK(memory_type_bits != 0)
       << "This platform does not have a single memory pool that is valid for "
          "both images and buffers. Please fix SCN-1368.";
 #endif  // __x86_64__
@@ -177,7 +177,7 @@ bool InitializeMemoryAllocateInfo(const scenic_impl::gfx::ResourceContext& resou
                            "valid memory type for importation.";
     } else {
       // TODO(SCN-1012): Error message is UMA specific.
-      FXL_LOG(INFO) << "Host memory VMO could not find a UMA-style memory type.";
+      FX_LOGS(INFO) << "Host memory VMO could not find a UMA-style memory type.";
     }
     return false;
   }

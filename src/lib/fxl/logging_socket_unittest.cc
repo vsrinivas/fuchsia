@@ -75,7 +75,7 @@ class LoggingSocketTest : public ::testing::Test {
 
 TEST_F(LoggingSocketTest, LogSimple) {
   const char* msg = "test message";
-  FXL_LOG(INFO) << msg;
+  FX_LOGS(INFO) << msg;
   ReadPacketAndCompare(FX_LOG_INFO, msg);
   CheckSocketEmpty();
 }
@@ -83,13 +83,13 @@ TEST_F(LoggingSocketTest, LogSimple) {
 TEST_F(LoggingSocketTest, LogWithTag) {
   const char* kMsg = "just some string";
   const char* kTag = "tag";
-  FXL_LOGT(INFO, kTag) << "just some string";
+  FX_LOGST(INFO, kTag) << "just some string";
   ReadPacketAndCompare(FX_LOG_INFO, kMsg, {kTag});
   CheckSocketEmpty();
 }
 
 TEST_F(LoggingSocketTest, Check) {
-  FXL_CHECK(1 > 0) << "error msg";
+  FX_CHECK(1 > 0) << "error msg";
   CheckSocketEmpty();
 }
 
@@ -99,18 +99,18 @@ TEST_F(LoggingSocketTest, VLog) {
   const char* kMsg3 = "yet another message";
   const char* kMsg4 = "last message";
 
-  FXL_VLOG(1) << kMsg1;
+  FX_VLOGS(1) << kMsg1;
   CheckSocketEmpty();
 
   fxl::SetLogSettings({.min_log_level = -1, .log_file = ""}, {});
-  FXL_VLOG(1) << kMsg2;
+  FX_VLOGS(1) << kMsg2;
   ReadPacketAndCompare(-1, kMsg2);
   CheckSocketEmpty();
 
-  FXL_VLOG(2) << kMsg3;
+  FX_VLOGS(2) << kMsg3;
   CheckSocketEmpty();
 
-  FXL_LOG(WARNING) << kMsg4;
+  FX_LOGS(WARNING) << kMsg4;
   ReadPacketAndCompare(FX_LOG_WARNING, kMsg4);
   CheckSocketEmpty();
 }
@@ -121,27 +121,27 @@ TEST_F(LoggingSocketTest, VLogWithTag) {
   const char* kTag1 = "TAG";
   const char* kTag2 = "TAAAG";
 
-  FXL_VLOGT(1, kTag1) << kMsg1;
+  FX_VLOGST(1, kTag1) << kMsg1;
   CheckSocketEmpty();
 
   fxl::SetLogSettings({.min_log_level = -1}, {});
-  FXL_VLOGT(1, kTag2) << kMsg2;
+  FX_VLOGST(1, kTag2) << kMsg2;
   ReadPacketAndCompare(-1, kMsg2, {kTag2});
   CheckSocketEmpty();
 }
 
 TEST_F(LoggingSocketTest, PLog) {
-  FXL_PLOG(ERROR, ZX_OK) << "should be ok";
+  FX_PLOGS(ERROR, ZX_OK) << "should be ok";
   ReadPacketAndCompare(FX_LOG_ERROR, "should be ok: 0 (ZX_OK)");
   CheckSocketEmpty();
 
-  FXL_PLOG(INFO, ZX_ERR_ACCESS_DENIED) << "something that failed";
+  FX_PLOGS(INFO, ZX_ERR_ACCESS_DENIED) << "something that failed";
   ReadPacketAndCompare(FX_LOG_INFO, "something that failed: -30 (ZX_ERR_ACCESS_DENIED)");
   CheckSocketEmpty();
 }
 
 TEST_F(LoggingSocketTest, PLogWithTag) {
-  FXL_PLOGT(WARNING, "test", ZX_ERR_IO_NOT_PRESENT) << "something bad happened";
+  FX_PLOGST(WARNING, "test", ZX_ERR_IO_NOT_PRESENT) << "something bad happened";
   ReadPacketAndCompare(FX_LOG_WARNING, "something bad happened: -44 (ZX_ERR_IO_NOT_PRESENT)",
                        {"test"});
   CheckSocketEmpty();
@@ -154,7 +154,7 @@ TEST_F(LoggingSocketTest, LogFirstN) {
   static_assert(kCycles > kLimit);
 
   for (int i = 0; i < kCycles; ++i) {
-    FXL_LOG_FIRST_N(ERROR, kLimit) << kLogMessage;
+    FX_LOGS_FIRST_N(ERROR, kLimit) << kLogMessage;
   }
   for (int i = 0; i < kLimit; ++i) {
     ReadPacketAndCompare(FX_LOG_ERROR, kLogMessage);
@@ -163,7 +163,7 @@ TEST_F(LoggingSocketTest, LogFirstN) {
 }
 
 TEST_F(LoggingSocketTest, DontWriteSeverity) {
-  FXL_LOG(ERROR) << "Hi";
+  FX_LOGS(ERROR) << "Hi";
   LogPacket packet = ReadPacket();
   ASSERT_THAT(packet.message, testing::Not(testing::HasSubstr("ERROR")));
   CheckSocketEmpty();
@@ -177,11 +177,11 @@ TEST_F(LoggingSocketTest, SetSettingsAndTags) {
 
   SetLogSettings(LogSettings(), {kGlobalTag});
 
-  FXL_LOG(ERROR) << kLogMessage1;
+  FX_LOGS(ERROR) << kLogMessage1;
   ReadPacketAndCompare(FX_LOG_ERROR, kLogMessage1, {kGlobalTag});
   CheckSocketEmpty();
 
-  FXL_LOGT(WARNING, kTag) << kLogMessage2;
+  FX_LOGST(WARNING, kTag) << kLogMessage2;
   ReadPacketAndCompare(FX_LOG_WARNING, kLogMessage2, {kGlobalTag, kTag});
   CheckSocketEmpty();
 }
@@ -193,7 +193,7 @@ TEST_F(LoggingSocketTest, SetSettingsAndTagsFromCommandLine) {
   CommandLine command_line = CommandLineFromInitializerList({"argv0", "--quiet"});
   SetLogSettingsFromCommandLine(command_line, {kTag});
 
-  FXL_LOG(ERROR) << kLogMessage;
+  FX_LOGS(ERROR) << kLogMessage;
   ReadPacketAndCompare(FX_LOG_ERROR, kLogMessage, {kTag});
   CheckSocketEmpty();
 }

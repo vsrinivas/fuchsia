@@ -14,7 +14,7 @@ MessageLoopWrapper::MessageLoopWrapper() {
 
   std::string error_message;
   bool success = loop_->Init(&error_message);
-  FXL_CHECK(success) << error_message;
+  FX_CHECK(success) << error_message;
 }
 
 MessageLoopWrapper::~MessageLoopWrapper() { loop_->Cleanup(); }

@@ -40,10 +40,10 @@ fit::promise<std::unique_ptr<GrpcVsockServer>, zx_status_t> GrpcVsockServerBuild
             -> fit::result<std::unique_ptr<grpc::Server>, zx_status_t> {
         // join_promise_vector should never fail, but instead return a vector
         // of results.
-        FXL_CHECK(result.is_ok()) << "fit::join_promise_vector returns fit::error";
+        FX_CHECK(result.is_ok()) << "fit::join_promise_vector returns fit::error";
         for (const auto& result : result.value()) {
           if (result.is_error()) {
-            FXL_CHECK(false) << "Failed to listen on vsock port: " << result.error();
+            FX_CHECK(false) << "Failed to listen on vsock port: " << result.error();
             return fit::error(result.error());
           }
         }
@@ -62,11 +62,11 @@ fit::promise<std::unique_ptr<GrpcVsockServer>, zx_status_t> GrpcVsockServerBuild
 // connection and register one end with gRPC.
 void GrpcVsockServer::Accept(uint32_t src_cid, uint32_t src_port, uint32_t port,
                              AcceptCallback callback) {
-  FXL_CHECK(server_);
+  FX_CHECK(server_);
   zx::socket h1, h2;
   zx_status_t status = zx::socket::create(ZX_SOCKET_STREAM, &h1, &h2);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to create socket " << status;
+    FX_LOGS(ERROR) << "Failed to create socket " << status;
     callback(ZX_ERR_CONNECTION_REFUSED, zx::handle());
     return;
   }
@@ -75,7 +75,7 @@ void GrpcVsockServer::Accept(uint32_t src_cid, uint32_t src_port, uint32_t port,
   // with a compatible file descriptor instead.
   int fd = ConvertSocketToNonBlockingFd(std::move(h1));
   if (fd < 0) {
-    FXL_LOG(ERROR) << "Failed get file descriptor for socket";
+    FX_LOGS(ERROR) << "Failed get file descriptor for socket";
     callback(ZX_ERR_INTERNAL, zx::socket());
     return;
   }

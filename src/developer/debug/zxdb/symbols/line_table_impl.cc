@@ -33,7 +33,7 @@ std::optional<std::string> LineTableImpl::GetFileNameByIndex(uint64_t file_id) c
   if (!line_table_) {
     // In the null case GetNumFileNames() will return 0 and the caller should have checked the
     // index was in range.
-    FXL_NOTREACHED();
+    FX_NOTREACHED();
     return std::nullopt;
   }
   if (file_id == 0)

@@ -36,7 +36,7 @@ class AllowListTest : public ::testing::Test {
 
   static bool IsAllowed(const AllowList& al, const std::string& url_str) {
     FuchsiaPkgUrl url;
-    FXL_CHECK(url.Parse(url_str)) << "Invalid URL in test: " << url_str;
+    FX_CHECK(url.Parse(url_str)) << "Invalid URL in test: " << url_str;
     return al.IsAllowed(url);
   }
 

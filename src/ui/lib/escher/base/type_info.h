@@ -90,7 +90,7 @@ struct TypeInfo {
     auto this_flag = static_cast<uint64_t>(type_flag);
     auto other_flags = FlattenTypeFlags(std::forward<Args>(rest)...);
     // Bits in flags must not overlap.
-    FXL_DCHECK((this_flag & other_flags) == 0);
+    FX_DCHECK((this_flag & other_flags) == 0);
     return this_flag | other_flags;
   }
   // Helper function for the TypeInfo constructor.  No type arg is specified,

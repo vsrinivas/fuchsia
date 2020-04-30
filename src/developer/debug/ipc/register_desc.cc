@@ -450,7 +450,7 @@ const RegisterInfo* InfoForRegister(RegisterID id) {
 
   if (info_map.empty()) {
     for (const auto& info : kRegisterInfo) {
-      FXL_DCHECK(info_map.find(info.id) == info_map.end());
+      FX_DCHECK(info_map.find(info.id) == info_map.end());
       info_map[info.id] = &info;
     }
   }
@@ -467,7 +467,7 @@ const RegisterInfo* InfoForRegister(Arch arch, const std::string& name) {
 
   if (info_map.empty()) {
     for (const auto& info : kRegisterInfo) {
-      FXL_DCHECK(info_map.find(std::make_pair(info.arch, info.name)) == info_map.end());
+      FX_DCHECK(info_map.find(std::make_pair(info.arch, info.name)) == info_map.end());
       info_map[std::make_pair(info.arch, std::string(info.name))] = &info;
     }
   }
@@ -511,7 +511,7 @@ RegisterID GetSpecialRegisterID(Arch arch, SpecialRegisterType type) {
       break;
   }
 
-  FXL_NOTREACHED();
+  FX_NOTREACHED();
   return RegisterID::kUnknown;
 }
 
@@ -519,7 +519,7 @@ const char* RegisterIDToString(RegisterID id) {
   auto info = InfoForRegister(id);
 
   if (!info) {
-    FXL_NOTREACHED() << "Unknown register requested: " << static_cast<uint32_t>(id);
+    FX_NOTREACHED() << "Unknown register requested: " << static_cast<uint32_t>(id);
     return "";
   }
 
@@ -550,7 +550,7 @@ Arch GetArchForRegisterID(RegisterID id) {
   auto info = InfoForRegister(id);
 
   if (!info) {
-    FXL_NOTREACHED() << "Arch for unknown register requested: " << static_cast<uint32_t>(id);
+    FX_NOTREACHED() << "Arch for unknown register requested: " << static_cast<uint32_t>(id);
     return Arch::kUnknown;
   }
 
@@ -579,7 +579,7 @@ const RegisterInfo* DWARFToRegisterInfo(Arch arch, uint32_t dwarf_reg_id) {
   if (info_map.empty()) {
     for (const auto& info : kRegisterInfo) {
       if (info.dwarf_id != RegisterInfo::kNoDwarfId) {
-        FXL_DCHECK(info_map.find(std::make_pair(info.arch, info.dwarf_id)) == info_map.end());
+        FX_DCHECK(info_map.find(std::make_pair(info.arch, info.dwarf_id)) == info_map.end());
         info_map[std::make_pair(info.arch, info.dwarf_id)] = &info;
       }
     }
@@ -613,7 +613,7 @@ const char* RegisterCategoryToString(RegisterCategory cat) {
     case RegisterCategory::kLast:
       break;
   }
-  FXL_NOTREACHED();
+  FX_NOTREACHED();
   return nullptr;
 }
 
@@ -666,9 +666,9 @@ containers::array_view<uint8_t> GetRegisterData(const std::vector<Register>& reg
 
   // Expect everything to be a multiple of 8. Currently all of our processors' pseudoregisters have
   // this property.
-  FXL_DCHECK(info->bits > 0);
-  FXL_DCHECK(info->bits % 8 == 0);
-  FXL_DCHECK(info->shift % 8 == 0);
+  FX_DCHECK(info->bits > 0);
+  FX_DCHECK(info->bits % 8 == 0);
+  FX_DCHECK(info->shift % 8 == 0);
 
   containers::array_view<uint8_t> result = found_canonical->data;
 

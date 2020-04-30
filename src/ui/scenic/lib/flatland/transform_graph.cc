@@ -14,16 +14,16 @@ TransformGraph::TransformGraph(TransformHandle::InstanceId instance_id)
     : instance_id_(instance_id) {}
 
 TransformHandle TransformGraph::CreateTransform() {
-  FXL_DCHECK(is_valid_);
+  FX_DCHECK(is_valid_);
   TransformHandle retval(instance_id_, next_transform_id_++);
-  FXL_DCHECK(!working_set_.count(retval));
+  FX_DCHECK(!working_set_.count(retval));
   working_set_.insert(retval);
   live_set_.insert(retval);
   return retval;
 }
 
 bool TransformGraph::ReleaseTransform(TransformHandle handle) {
-  FXL_DCHECK(is_valid_);
+  FX_DCHECK(is_valid_);
   auto iter = working_set_.find(handle);
   if (iter == working_set_.end()) {
     return false;
@@ -34,8 +34,8 @@ bool TransformGraph::ReleaseTransform(TransformHandle handle) {
 }
 
 bool TransformGraph::AddChild(TransformHandle parent, TransformHandle child) {
-  FXL_DCHECK(is_valid_);
-  FXL_DCHECK(working_set_.count(parent));
+  FX_DCHECK(is_valid_);
+  FX_DCHECK(working_set_.count(parent));
 
   auto [iter, end_iter] = children_.equal_range({parent, NORMAL});
   for (; iter != end_iter; ++iter) {
@@ -49,8 +49,8 @@ bool TransformGraph::AddChild(TransformHandle parent, TransformHandle child) {
 }
 
 bool TransformGraph::RemoveChild(TransformHandle parent, TransformHandle child) {
-  FXL_DCHECK(is_valid_);
-  FXL_DCHECK(working_set_.count(parent));
+  FX_DCHECK(is_valid_);
+  FX_DCHECK(working_set_.count(parent));
 
   auto [iter, end_iter] = children_.equal_range({parent, NORMAL});
   for (; iter != end_iter; ++iter) {
@@ -64,28 +64,28 @@ bool TransformGraph::RemoveChild(TransformHandle parent, TransformHandle child) 
 }
 
 void TransformGraph::ClearChildren(TransformHandle parent) {
-  FXL_DCHECK(is_valid_);
-  FXL_DCHECK(working_set_.count(parent));
+  FX_DCHECK(is_valid_);
+  FX_DCHECK(working_set_.count(parent));
   children_.erase({parent, NORMAL});
 }
 
 void TransformGraph::SetPriorityChild(TransformHandle parent, TransformHandle child) {
-  FXL_DCHECK(is_valid_);
-  FXL_DCHECK(working_set_.count(parent));
+  FX_DCHECK(is_valid_);
+  FX_DCHECK(working_set_.count(parent));
 
   children_.erase({parent, PRIORITY});
   children_.insert({{parent, PRIORITY}, child});
 }
 
 void TransformGraph::ClearPriorityChild(TransformHandle parent) {
-  FXL_DCHECK(is_valid_);
-  FXL_DCHECK(working_set_.count(parent));
+  FX_DCHECK(is_valid_);
+  FX_DCHECK(working_set_.count(parent));
 
   children_.erase({parent, PRIORITY});
 }
 
 void TransformGraph::ResetGraph(TransformHandle exception) {
-  FXL_DCHECK(working_set_.count(exception));
+  FX_DCHECK(working_set_.count(exception));
   working_set_.clear();
   working_set_.insert(exception);
   live_set_.clear();
@@ -95,8 +95,8 @@ void TransformGraph::ResetGraph(TransformHandle exception) {
 
 TransformGraph::TopologyData TransformGraph::ComputeAndCleanup(TransformHandle start,
                                                                uint64_t max_iterations) {
-  FXL_DCHECK(is_valid_);
-  FXL_DCHECK(working_set_.count(start));
+  FX_DCHECK(is_valid_);
+  FX_DCHECK(working_set_.count(start));
 
   TopologyData data;
 
@@ -154,7 +154,7 @@ TransformGraph::IteratorPair TransformGraph::EqualRangeAllPriorities(const Prior
                                                                      TransformHandle handle) {
   auto start = map.lower_bound({handle, PRIORITY});
   auto end = map.upper_bound({handle, NORMAL});
-  FXL_DCHECK(std::distance(start, end) >= 0);
+  FX_DCHECK(std::distance(start, end) >= 0);
   return {start, end};
 }
 
@@ -197,8 +197,8 @@ TransformGraph::TopologyVector TransformGraph::Traverse(TransformHandle start,
 
     // Search from the bottom of the stack (since it's more likely), looking for a cycle.
     if (std::find(ancestors.crbegin(), ancestors.crend(), child) != ancestors.crend()) {
-      FXL_DCHECK(cycles);
-      FXL_DCHECK(!parent_indices.empty());
+      FX_DCHECK(cycles);
+      FX_DCHECK(!parent_indices.empty());
       cycles->insert({retval[parent_indices.back()].handle, child});
     } else {
       // If the child is not part of a cycle, add it to the sorted list and update our state.

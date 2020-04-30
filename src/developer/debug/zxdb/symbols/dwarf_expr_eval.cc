@@ -26,14 +26,14 @@ DwarfExprEval::~DwarfExprEval() {
   // This assertion verifies that this class was not accidentally deleted from
   // within the completion callback. This class is not set up to handle this
   // case.
-  FXL_CHECK(!in_completion_callback_);
+  FX_CHECK(!in_completion_callback_);
 }
 
 void DwarfExprEval::Push(StackEntry value) { stack_.push_back(value); }
 
 DwarfExprEval::ResultType DwarfExprEval::GetResultType() const {
-  FXL_DCHECK(is_complete_);
-  FXL_DCHECK(is_success_);
+  FX_DCHECK(is_complete_);
+  FX_DCHECK(is_success_);
 
   if (!result_data_.empty())
     return ResultType::kData;
@@ -41,8 +41,8 @@ DwarfExprEval::ResultType DwarfExprEval::GetResultType() const {
 }
 
 DwarfExprEval::StackEntry DwarfExprEval::GetResult() const {
-  FXL_DCHECK(is_complete_);
-  FXL_DCHECK(is_success_);
+  FX_DCHECK(is_complete_);
+  FX_DCHECK(is_success_);
   return stack_.back();
 }
 
@@ -112,8 +112,8 @@ bool DwarfExprEval::ContinueEval() {
 }
 
 DwarfExprEval::Completion DwarfExprEval::EvalOneOp() {
-  FXL_DCHECK(!is_complete_);
-  FXL_DCHECK(expr_index_ < expr_.size());
+  FX_DCHECK(!is_complete_);
+  FX_DCHECK(expr_index_ < expr_.size());
 
   // Clear any current register information. See current_register_id_ declaration for more.
   current_register_id_ = debug_ipc::RegisterID::kUnknown;
@@ -675,7 +675,7 @@ DwarfExprEval::Completion DwarfExprEval::OpDeref(uint32_t byte_size) {
   ReadMemory(addr, byte_size, [](DwarfExprEval* eval, std::vector<uint8_t> data) {
     // Success. This assumes little-endian and copies starting from the low bytes. The data will
     // have already been validated to be the correct size so we know it will fit in a StackEntry.
-    FXL_DCHECK(data.size() <= sizeof(StackEntry));
+    FX_DCHECK(data.size() <= sizeof(StackEntry));
     StackEntry to_push = 0;
     memcpy(&to_push, &data[0], data.size());
     eval->Push(to_push);

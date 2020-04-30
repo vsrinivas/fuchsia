@@ -35,7 +35,7 @@ static bool RunTwoProvidersTwoEnginesTest(const tracing::Spec& spec) {
 
   thrd_t provider2_thread;
   if (!StartSelfContainedProvider(&provider2_thread)) {
-    FXL_LOG(ERROR) << "Failed to create provider2";
+    FX_LOGS(ERROR) << "Failed to create provider2";
     return EXIT_FAILURE;
   }
 
@@ -56,7 +56,7 @@ static bool VerifyTwoProvidersTwoEnginesTest(const tracing::Spec& spec,
   // Both providers copy the "simple" test.
   size_t num_expected_events = 2 * kNumSimpleTestEvents;
   if (num_events != num_expected_events) {
-    FXL_LOG(ERROR) << "Incorrect number of events present, got " << num_events << ", expected "
+    FX_LOGS(ERROR) << "Incorrect number of events present, got " << num_events << ", expected "
                    << num_expected_events;
     return false;
   }

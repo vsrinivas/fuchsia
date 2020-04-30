@@ -5,19 +5,18 @@
 // TODO(dje): wip wip wip
 
 #include <fcntl.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
+#include <lib/fdio/directory.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/sys/cpp/component_context.h>
 #include <link.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 
 #include <iostream>
-
-#include <lib/async-loop/cpp/loop.h>
-#include <lib/async-loop/default.h>
-#include <lib/fdio/fd.h>
-#include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
-#include <lib/sys/cpp/component_context.h>
 
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings.h"
@@ -161,7 +160,7 @@ static bool ParseFlag(const char* name, const fxl::StringView& arg, bool* value)
   else if (arg == "off")
     *value = false;
   else {
-    FXL_LOG(ERROR) << "Invalid value for " << name << ": " << arg;
+    FX_LOGS(ERROR) << "Invalid value for " << name << ": " << arg;
     return false;
   }
   return true;
@@ -172,12 +171,12 @@ static bool ParseFlag(const char* name, const fxl::StringView& arg, bool* value)
 static bool ParseNumber(const char* name, const fxl::StringView& arg, uint64_t* value) {
   if (arg.size() > 2 && arg[0] == '0' && (arg[1] == 'x' || arg[1] == 'X')) {
     if (!fxl::StringToNumberWithError<uint64_t>(arg.substr(2), value, fxl::Base::k16)) {
-      FXL_LOG(ERROR) << "Invalid value for " << name << ": " << arg;
+      FX_LOGS(ERROR) << "Invalid value for " << name << ": " << arg;
       return false;
     }
   } else {
     if (!fxl::StringToNumberWithError<uint64_t>(arg, value)) {
-      FXL_LOG(ERROR) << "Invalid value for " << name << ": " << arg;
+      FX_LOGS(ERROR) << "Invalid value for " << name << ": " << arg;
       return false;
     }
   }
@@ -193,7 +192,7 @@ static bool ParseCr3Match(const char* name, const fxl::StringView& arg, uint64_t
   if (!ParseNumber(name, arg, value))
     return false;
   if ((*value & kCr3MatchReservedMask) != 0) {
-    FXL_LOG(ERROR) << "Invalid value (reserved bits set) for " << name << ": " << arg;
+    FX_LOGS(ERROR) << "Invalid value (reserved bits set) for " << name << ": " << arg;
     return false;
   }
   return true;
@@ -208,7 +207,7 @@ static bool ParseAddrConfig(const char* name, const fxl::StringView& arg,
   else if (arg == "stop")
     *value = insntrace::IptConfig::AddrFilter::kStop;
   else {
-    FXL_LOG(ERROR) << "Invalid value for " << name << ": " << arg;
+    FX_LOGS(ERROR) << "Invalid value for " << name << ": " << arg;
     return false;
   }
   return true;
@@ -219,7 +218,7 @@ static bool ParseAddrRange(const char* name, const fxl::StringView& arg,
   std::vector<fxl::StringView> range_strings =
       fxl::SplitString(fxl::StringView(arg), ",", fxl::kTrimWhitespace, fxl::kSplitWantNonEmpty);
   if (range_strings.size() != 2 && range_strings.size() != 3) {
-    FXL_LOG(ERROR) << "Invalid value for " << name << ": " << arg;
+    FX_LOGS(ERROR) << "Invalid value for " << name << ": " << arg;
     return false;
   }
   unsigned i = 0;
@@ -236,7 +235,7 @@ static bool ParseAddrRange(const char* name, const fxl::StringView& arg,
 
 static bool ParseFreqValue(const char* name, const fxl::StringView& arg, uint32_t* value) {
   if (!fxl::StringToNumberWithError<uint32_t>(arg, value)) {
-    FXL_LOG(ERROR) << "Invalid value for " << name << ": " << arg;
+    FX_LOGS(ERROR) << "Invalid value for " << name << ": " << arg;
     return false;
   }
   return true;
@@ -310,7 +309,7 @@ static bool ParseConfigOption(insntrace::IptConfig* config, const std::string& o
       if (!ParseFlag("user", arg, &config->user))
         return false;
     } else {
-      FXL_LOG(ERROR) << "Invalid value for --config: " << o;
+      FX_LOGS(ERROR) << "Invalid value for --config: " << o;
       return false;
     }
   }
@@ -325,7 +324,7 @@ static insntrace::IptConfig GetIptConfig(const fxl::CommandLine& cl) {
   if (cl.GetOptionValue("chunk-order", &arg)) {
     size_t chunk_order;
     if (!fxl::StringToNumberWithError<size_t>(fxl::StringView(arg), &chunk_order)) {
-      FXL_LOG(ERROR) << "Not a valid buffer order: " << arg;
+      FX_LOGS(ERROR) << "Not a valid buffer order: " << arg;
       exit(EXIT_FAILURE);
     }
     config.chunk_order = chunk_order;
@@ -342,7 +341,7 @@ static insntrace::IptConfig GetIptConfig(const fxl::CommandLine& cl) {
     } else if (arg == "thread") {
       mode = insntrace::Mode::THREAD;
     } else {
-      FXL_LOG(ERROR) << "Not a valid mode value: " << arg;
+      FX_LOGS(ERROR) << "Not a valid mode value: " << arg;
       exit(EXIT_FAILURE);
     }
     config.mode = mode;
@@ -351,7 +350,7 @@ static insntrace::IptConfig GetIptConfig(const fxl::CommandLine& cl) {
   if (cl.GetOptionValue("num-chunks", &arg)) {
     size_t num_chunks;
     if (!fxl::StringToNumberWithError<size_t>(fxl::StringView(arg), &num_chunks)) {
-      FXL_LOG(ERROR) << "Not a valid buffer size: " << arg;
+      FX_LOGS(ERROR) << "Not a valid buffer size: " << arg;
       exit(EXIT_FAILURE);
     }
     config.num_chunks = num_chunks;
@@ -379,7 +378,7 @@ static bool ControlIpt(const insntrace::IptConfig& config, const fxl::CommandLin
   // This isn't a full test as we only actually set the mode for "init".
   // But it catches obvious mistakes like passing --mode=thread.
   if (config.mode != insntrace::Mode::CPU) {
-    FXL_LOG(ERROR) << "--control requires cpu mode";
+    FX_LOGS(ERROR) << "--control requires cpu mode";
     return false;
   }
 
@@ -393,7 +392,7 @@ static bool ControlIpt(const insntrace::IptConfig& config, const fxl::CommandLin
         return false;
     } else if (action == "start") {
       if (!insntrace::StartTrace(config)) {
-        FXL_LOG(WARNING) << "Start failed, but buffers not removed";
+        FX_LOGS(WARNING) << "Start failed, but buffers not removed";
         return false;
       }
     } else if (action == "stop") {
@@ -406,7 +405,7 @@ static bool ControlIpt(const insntrace::IptConfig& config, const fxl::CommandLin
       insntrace::ResetTrace(config);
       insntrace::FreeTrace(config);
     } else {
-      FXL_LOG(ERROR) << "Unrecognized action: " << action;
+      FX_LOGS(ERROR) << "Unrecognized action: " << action;
       return false;
     }
   }
@@ -431,35 +430,35 @@ int main(int argc, char* argv[]) {
   }
 
   if (!debugger_utils::X86HaveProcessorTrace()) {
-    FXL_LOG(ERROR) << "PT not supported";
+    FX_LOGS(ERROR) << "PT not supported";
     return EXIT_FAILURE;
   }
 
   insntrace::IptConfig config = GetIptConfig(cl);
 
-  FXL_LOG(INFO) << "insntrace control program starting";
+  FX_LOGS(INFO) << "insntrace control program starting";
 
   bool success;
   if (cl.HasOption("control", nullptr)) {
     success = ControlIpt(config, cl);
   } else {
-    FXL_LOG(ERROR) << "--control is a required option";
+    FX_LOGS(ERROR) << "--control is a required option";
     return EXIT_FAILURE;
   }
 
   if (!success) {
-    FXL_LOG(INFO) << "insntrace exited with error";
+    FX_LOGS(INFO) << "insntrace exited with error";
     return EXIT_FAILURE;
   }
 
-  FXL_LOG(INFO) << "insntrace control program exiting";
+  FX_LOGS(INFO) << "insntrace control program exiting";
   return EXIT_SUCCESS;
 }
 
 #else  // !__x86_64
 
 int main(int argc, char* argv[]) {
-  FXL_LOG(ERROR) << "insntrace is currently for x86_64 only";
+  FX_LOGS(ERROR) << "insntrace is currently for x86_64 only";
   return EXIT_FAILURE;
 }
 

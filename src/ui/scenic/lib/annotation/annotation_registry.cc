@@ -25,7 +25,7 @@ AnnotationRegistry::AnnotationRegistry(sys::ComponentContext* component_context,
                                                                    annotation_manager_);
         AddHandler(handler_id, std::move(handler));
         handlers_[handler_id]->SetErrorHandler([this, handler_id](zx_status_t status) {
-          FXL_LOG(ERROR) << "AnnotationRegistryHandler disconnected. EPITAPH = "
+          FX_LOGS(ERROR) << "AnnotationRegistryHandler disconnected. EPITAPH = "
                          << zx_status_get_string(status);
           RemoveHandler(handler_id);
         });
@@ -33,13 +33,13 @@ AnnotationRegistry::AnnotationRegistry(sys::ComponentContext* component_context,
 
   auto status = component_context->outgoing()->AddPublicService(
       std::move(request_handler), fuchsia::ui::annotation::Registry::Name_);
-  FXL_DCHECK(status == ZX_OK);
+  FX_DCHECK(status == ZX_OK);
 }
 
 void AnnotationRegistry::InitializeWithGfxAnnotationManager(
     gfx::AnnotationManager* annotation_manager) {
-  FXL_DCHECK(!initialized_) << "AnnotationRegistry is already initialized";
-  FXL_DCHECK(annotation_manager);
+  FX_DCHECK(!initialized_) << "AnnotationRegistry is already initialized";
+  FX_DCHECK(annotation_manager);
 
   annotation_manager_ = annotation_manager;
   initialized_ = true;
@@ -50,12 +50,12 @@ void AnnotationRegistry::InitializeWithGfxAnnotationManager(
 
 void AnnotationRegistry::AddHandler(AnnotationHandlerId id,
                                     std::unique_ptr<AnnotationRegistryHandler> handler) {
-  FXL_DCHECK(handlers_.find(id) == handlers_.end()) << "Handler with ID = " << id << " exists!";
+  FX_DCHECK(handlers_.find(id) == handlers_.end()) << "Handler with ID = " << id << " exists!";
   handlers_[id] = std::move(handler);
 }
 
 void AnnotationRegistry::RemoveHandler(AnnotationHandlerId id) {
-  FXL_DCHECK(handlers_.find(id) != handlers_.end())
+  FX_DCHECK(handlers_.find(id) != handlers_.end())
       << "Handler with ID = " << id << " doesn't exist!";
   handlers_.erase(id);
 }

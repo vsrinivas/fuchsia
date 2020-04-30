@@ -97,7 +97,7 @@ HardwareBreakpoint::HardwareBreakpoint(Breakpoint* breakpoint, DebuggedProcess* 
                                        uint64_t address,
                                        std::shared_ptr<arch::ArchProvider> arch_provider)
     : ProcessBreakpoint(breakpoint, process, address), arch_provider_(std::move(arch_provider)) {
-  FXL_DCHECK(arch_provider_);
+  FX_DCHECK(arch_provider_);
 }
 
 HardwareBreakpoint::~HardwareBreakpoint() { Uninstall(); }
@@ -109,8 +109,8 @@ bool HardwareBreakpoint::Installed(zx_koid_t thread_koid) const {
 // ProcessBreakpoint Implementation ----------------------------------------------------------------
 
 void HardwareBreakpoint::ExecuteStepOver(DebuggedThread* thread) {
-  FXL_DCHECK(current_stepping_over_threads_.count(thread->koid()) == 0);
-  FXL_DCHECK(!thread->stepping_over_breakpoint());
+  FX_DCHECK(current_stepping_over_threads_.count(thread->koid()) == 0);
+  FX_DCHECK(!thread->stepping_over_breakpoint());
 
   DEBUG_LOG(Breakpoint) << LogPreamble(this) << "Thread " << thread->koid() << " is stepping over.";
   thread->set_stepping_over_breakpoint(true);
@@ -124,8 +124,8 @@ void HardwareBreakpoint::ExecuteStepOver(DebuggedThread* thread) {
 }
 
 void HardwareBreakpoint::EndStepOver(DebuggedThread* thread) {
-  FXL_DCHECK(thread->stepping_over_breakpoint());
-  FXL_DCHECK(current_stepping_over_threads_.count(thread->koid()) > 0);
+  FX_DCHECK(thread->stepping_over_breakpoint());
+  FX_DCHECK(current_stepping_over_threads_.count(thread->koid()) > 0);
 
   DEBUG_LOG(Breakpoint) << LogPreamble(this) << "Thread " << thread->koid() << " ending step over.";
 

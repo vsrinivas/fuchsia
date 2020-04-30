@@ -18,7 +18,7 @@ int main(int argc, const char** argv) {
   if (!fxl::SetLogSettingsFromCommandLine(command_line, {"memory_monitor"}))
     return 1;
 
-  FXL_VLOG(2) << argv[0] << ": starting";
+  FX_VLOGS(2) << argv[0] << ": starting";
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher(), monitor::Monitor::kTraceName);
@@ -33,16 +33,16 @@ int main(int argc, const char** argv) {
   zx::profile profile;
   auto status = profile_provider->GetProfile(8 /* LOW_PRIORITY */, "memory_monitor.cmx",
                                              &fidl_status, &profile);
-  FXL_CHECK(status == ZX_OK);
-  FXL_CHECK(fidl_status == ZX_OK);
+  FX_CHECK(status == ZX_OK);
+  FX_CHECK(fidl_status == ZX_OK);
   auto set_status = zx_object_set_profile(zx_thread_self(), profile.get(), 0);
-  FXL_CHECK(set_status == ZX_OK);
+  FX_CHECK(set_status == ZX_OK);
 
   monitor::Monitor app(std::move(startup_context), command_line, loop.dispatcher(),
                        true /* send_metrics */, true /* watch_memory_pressure */);
   loop.Run();
 
-  FXL_VLOG(2) << argv[0] << ": exiting";
+  FX_VLOGS(2) << argv[0] << ": exiting";
 
   return 0;
 }

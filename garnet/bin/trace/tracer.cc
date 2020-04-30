@@ -20,7 +20,7 @@ namespace tracing {
 
 Tracer::Tracer(controller::Controller* controller)
     : controller_(controller), dispatcher_(nullptr), wait_(this) {
-  FXL_DCHECK(controller_);
+  FX_DCHECK(controller_);
   wait_.set_trigger(ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED);
 }
 
@@ -30,12 +30,12 @@ void Tracer::Initialize(controller::TraceConfig config, bool binary, BytesConsum
                         RecordConsumer record_consumer, ErrorHandler error_handler,
                         FailCallback fail_callback, DoneCallback done_callback,
                         AlertCallback alert_callback) {
-  FXL_DCHECK(state_ == State::kReady);
+  FX_DCHECK(state_ == State::kReady);
 
   zx::socket outgoing_socket;
   zx_status_t status = zx::socket::create(0u, &socket_, &outgoing_socket);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to create socket: status=" << status;
+    FX_LOGS(ERROR) << "Failed to create socket: status=" << status;
     Fail();
     return;
   }
@@ -54,13 +54,13 @@ void Tracer::Initialize(controller::TraceConfig config, bool binary, BytesConsum
   dispatcher_ = async_get_default_dispatcher();
   wait_.set_object(socket_.get());
   status = wait_.Begin(dispatcher_);
-  FXL_CHECK(status == ZX_OK) << "Failed to add handler: status=" << status;
+  FX_CHECK(status == ZX_OK) << "Failed to add handler: status=" << status;
 
   state_ = State::kInitialized;
 }
 
 void Tracer::Start(StartCallback start_callback) {
-  FXL_DCHECK(state_ == State::kInitialized);
+  FX_DCHECK(state_ == State::kInitialized);
 
   start_callback_ = std::move(start_callback);
 
@@ -79,7 +79,7 @@ void Tracer::Start(StartCallback start_callback) {
 
 void Tracer::Terminate() {
   // Note: The controller will close the consumer socket when finished.
-  FXL_DCHECK(state_ != State::kReady);
+  FX_DCHECK(state_ != State::kReady);
   state_ = State::kTerminating;
   controller::TerminateOptions terminate_options{};
   terminate_options.set_write_results(true);
@@ -91,7 +91,7 @@ void Tracer::Terminate() {
 
 void Tracer::OnHandleReady(async_dispatcher_t* dispatcher, async::WaitBase* wait,
                            zx_status_t status, const zx_packet_signal_t* signal) {
-  FXL_DCHECK(state_ == State::kStarted || state_ == State::kTerminating);
+  FX_DCHECK(state_ == State::kStarted || state_ == State::kTerminating);
 
   if (status != ZX_OK) {
     OnHandleError(status);
@@ -103,7 +103,7 @@ void Tracer::OnHandleReady(async_dispatcher_t* dispatcher, async::WaitBase* wait
   } else if (signal->observed & ZX_SOCKET_PEER_CLOSED) {
     Done();
   } else {
-    FXL_CHECK(false);
+    FX_CHECK(false);
   }
 }
 
@@ -124,7 +124,7 @@ void Tracer::DrainSocket(async_dispatcher_t* dispatcher) {
       if (status == ZX_ERR_PEER_CLOSED) {
         Done();
       } else {
-        FXL_LOG(ERROR) << "Failed to read data from socket: status=" << status;
+        FX_LOGS(ERROR) << "Failed to read data from socket: status=" << status;
         Fail();
       }
       return;
@@ -132,7 +132,7 @@ void Tracer::DrainSocket(async_dispatcher_t* dispatcher) {
 
     buffer_end_ += actual;
     size_t bytes_available = buffer_end_;
-    FXL_DCHECK(bytes_available > 0);
+    FX_DCHECK(bytes_available > 0);
 
     size_t bytes_consumed;
     if (binary_) {
@@ -142,7 +142,7 @@ void Tracer::DrainSocket(async_dispatcher_t* dispatcher) {
       trace::Chunk chunk(reinterpret_cast<const uint64_t*>(buffer_.data()),
                          trace::BytesToWords(bytes_available));
       if (!reader_->ReadRecords(chunk)) {
-        FXL_LOG(ERROR) << "Trace stream is corrupted";
+        FX_LOGS(ERROR) << "Trace stream is corrupted";
         Fail();
         return;
       }
@@ -156,7 +156,7 @@ void Tracer::DrainSocket(async_dispatcher_t* dispatcher) {
 }
 
 void Tracer::OnHandleError(zx_status_t status) {
-  FXL_LOG(ERROR) << "Failed to wait on socket: status=" << status;
+  FX_LOGS(ERROR) << "Failed to wait on socket: status=" << status;
   Fail();
 }
 
@@ -172,7 +172,7 @@ void Tracer::CloseSocket() {
 void Tracer::Fail() { fail_callback_(); }
 
 void Tracer::Done() {
-  FXL_DCHECK(state_ == State::kStarted || state_ == State::kTerminating);
+  FX_DCHECK(state_ == State::kStarted || state_ == State::kTerminating);
 
   state_ = State::kTerminated;
   reader_.reset();

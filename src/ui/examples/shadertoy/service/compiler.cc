@@ -114,7 +114,7 @@ std::vector<uint32_t> CompileToSpirv(shaderc::Compiler* compiler, std::string co
       compiler->CompileGlslToSpv(code.data(), code.size(), kind, name.c_str(), "main", options);
   auto status = result.GetCompilationStatus();
   if (status != shaderc_compilation_status_success) {
-    FXL_LOG(ERROR) << "Shader compilation failed with status: " << status << ". "
+    FX_LOGS(ERROR) << "Shader compilation failed with status: " << status << ". "
                    << " Error message: " << result.GetErrorMessage();
     return std::vector<uint32_t>();
   }
@@ -132,8 +132,8 @@ Compiler::Compiler(async::Loop* loop, escher::EscherWeakPtr weak_escher, vk::Ren
       model_data_(fxl::MakeRefCounted<escher::impl::ModelData>(escher_)),
       render_pass_(render_pass),
       descriptor_set_layout_(descriptor_set_layout) {
-  FXL_DCHECK(render_pass_);
-  FXL_DCHECK(descriptor_set_layout);
+  FX_DCHECK(render_pass_);
+  FX_DCHECK(descriptor_set_layout);
 }
 
 Compiler::~Compiler() {
@@ -146,7 +146,7 @@ Compiler::~Compiler() {
     // TODO: This isn't a big deal, because it only happens when the process
     // is shutting down, but it would be tidier to wait for the thread to
     // finish.
-    FXL_LOG(WARNING) << "Destroying while compile thread is still active.";
+    FX_LOGS(WARNING) << "Destroying while compile thread is still active.";
   }
 }
 
@@ -222,7 +222,7 @@ PipelinePtr Compiler::CompileGlslToPipeline(const std::string& glsl_code) {
   auto vk_device = escher_->vulkan_context().device;
 
   auto compiler = shaderc_compiler();
-  FXL_DCHECK(compiler);
+  FX_DCHECK(compiler);
 
   auto vertex_spirv =
       CompileToSpirv(compiler, kVertexShaderSrc, shaderc_glsl_vertex_shader, "VertexShader");
@@ -237,7 +237,7 @@ PipelinePtr Compiler::CompileGlslToPipeline(const std::string& glsl_code) {
     module_info.pCode = spirv.data();
     auto result = vk_device.createShaderModule(module_info);
     if (result.result != vk::Result::eSuccess) {
-      FXL_LOG(WARNING) << "Failed to compile vertex shader.";
+      FX_LOGS(WARNING) << "Failed to compile vertex shader.";
       return PipelinePtr();
     }
     vertex_module = result.value;
@@ -251,7 +251,7 @@ PipelinePtr Compiler::CompileGlslToPipeline(const std::string& glsl_code) {
     module_info.pCode = spirv.data();
     auto result = vk_device.createShaderModule(module_info);
     if (result.result != vk::Result::eSuccess) {
-      FXL_LOG(WARNING) << "Failed to compile fragment shader.";
+      FX_LOGS(WARNING) << "Failed to compile fragment shader.";
       vk_device.destroyShaderModule(vertex_module);
       return PipelinePtr();
     }
@@ -372,7 +372,7 @@ PipelinePtr Compiler::ConstructPipeline(vk::ShaderModule vertex_module,
   vk::PipelineLayout pipeline_layout;
   {
     auto result = device.createPipelineLayout(pipeline_layout_info, nullptr);
-    FXL_DCHECK(result.result == vk::Result::eSuccess);
+    FX_DCHECK(result.result == vk::Result::eSuccess);
     pipeline_layout = result.value;
   }
 
@@ -399,7 +399,7 @@ PipelinePtr Compiler::ConstructPipeline(vk::ShaderModule vertex_module,
   vk::Pipeline pipeline;
   {
     auto result = device.createGraphicsPipeline(nullptr, pipeline_info);
-    FXL_DCHECK(result.result == vk::Result::eSuccess);
+    FX_DCHECK(result.result == vk::Result::eSuccess);
     pipeline = result.value;
   }
 

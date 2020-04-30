@@ -121,7 +121,7 @@ TEST_F(LogSettingsFixture, SetValidLogFile) {
   ASSERT_TRUE(temp_dir.NewTempFile(&new_settings.log_file));
   SetLogSettings(new_settings);
 
-  FXL_LOG(INFO) << kTestMessage;
+  FX_LOGS(INFO) << kTestMessage;
 
   ASSERT_EQ(0, access(new_settings.log_file.c_str(), R_OK));
   std::string log;

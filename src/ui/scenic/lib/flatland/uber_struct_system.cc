@@ -12,7 +12,7 @@ TransformHandle::InstanceId UberStructSystem::GetNextInstanceId() { return next_
 
 void UberStructSystem::SetUberStruct(TransformHandle::InstanceId id,
                                      std::unique_ptr<UberStruct> uber_struct) {
-  FXL_DCHECK(uber_struct);
+  FX_DCHECK(uber_struct);
 
   // Acquire the lock and update.
   {

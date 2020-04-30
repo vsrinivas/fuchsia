@@ -42,7 +42,7 @@ class ViewClippingTest : public VkSessionTest {
   SessionContext CreateSessionContext() override {
     auto session_context = VkSessionTest::CreateSessionContext();
 
-    FXL_DCHECK(!view_linker_);
+    FX_DCHECK(!view_linker_);
 
     view_linker_ = std::make_unique<ViewLinker>();
     session_context.view_linker = view_linker_.get();

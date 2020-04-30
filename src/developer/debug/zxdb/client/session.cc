@@ -116,7 +116,7 @@ class Session::PendingConnection : public fxl::RefCountedThreadSafe<PendingConne
 
 void Session::PendingConnection::Initiate(fxl::WeakPtr<Session> session,
                                           fit::callback<void(const Err&)> callback) {
-  FXL_DCHECK(!thread_.get());  // Duplicate Initiate() call.
+  FX_DCHECK(!thread_.get());  // Duplicate Initiate() call.
 
   main_loop_ = debug_ipc::MessageLoop::Current();
   session_ = std::move(session);
@@ -150,7 +150,7 @@ void Session::PendingConnection::ConnectCompleteMainThread(fxl::RefPtr<PendingCo
     return;
   }
 
-  FXL_DCHECK(socket_.is_valid());
+  FX_DCHECK(socket_.is_valid());
   buffer_ = std::make_unique<debug_ipc::BufferedFD>();
   buffer_->Init(std::move(socket_));
 
@@ -242,7 +242,7 @@ Session::Session(std::unique_ptr<RemoteAPI> remote_api, debug_ipc::Arch arch)
   Err err = arch_info_->Init(arch);
 
   // Should not fail for synthetically set-up architectures.
-  FXL_DCHECK(!err.has_error());
+  FX_DCHECK(!err.has_error());
 
   ListenForSystemSettings();
 }
@@ -271,7 +271,7 @@ void Session::OnStreamReadable() {
     if (!reader.ReadHeader(&header)) {
       // Since we already validated there is enough data for the header, the header read should not
       // fail (it's just a memcpy).
-      FXL_NOTREACHED();
+      FX_NOTREACHED();
       return;
     }
 
@@ -617,7 +617,7 @@ void Session::DispatchProcessStarting(const debug_ipc::NotifyProcessStarting& no
 
   // We should be expecting this component.
   auto it = expected_components_.find(notify.component_id);
-  FXL_DCHECK(it != expected_components_.end());
+  FX_DCHECK(it != expected_components_.end());
   found_target->ProcessCreatedAsComponent(notify.koid, notify.name);
 
   // Now that the target is created, we can resume the process and make the first thread to execute.
@@ -633,7 +633,7 @@ void Session::DispatchNotifyIO(const debug_ipc::NotifyIO& notify) {
     return;
   }
 
-  FXL_DCHECK(notify.type != debug_ipc::NotifyIO::Type::kLast);
+  FX_DCHECK(notify.type != debug_ipc::NotifyIO::Type::kLast);
 
   switch (notify.type) {
     case debug_ipc::NotifyIO::Type::kStdout:
@@ -644,7 +644,7 @@ void Session::DispatchNotifyIO(const debug_ipc::NotifyIO& notify) {
       break;
     }
     case debug_ipc::NotifyIO::Type::kLast:
-      FXL_NOTREACHED() << "Invalid notification type";
+      FX_NOTREACHED() << "Invalid notification type";
   }
 }
 
@@ -700,7 +700,7 @@ void Session::DispatchNotification(const debug_ipc::MsgHeader& header, std::vect
       break;
     }
     default:
-      FXL_NOTREACHED();  // Unexpected notification.
+      FX_NOTREACHED();  // Unexpected notification.
   }
 }
 
@@ -852,7 +852,7 @@ SessionObserver::NotificationType Session::HandleProcessIO(ProcessImpl* process,
 }
 
 void Session::ExpectComponent(uint32_t component_id) {
-  FXL_DCHECK(expected_components_.count(component_id) == 0);
+  FX_DCHECK(expected_components_.count(component_id) == 0);
   expected_components_.insert(component_id);
 }
 
@@ -878,7 +878,7 @@ void Session::QuitAgent(fit::callback<void(const Err&)> cb) {
                                        const Err& err, debug_ipc::QuitAgentReply) mutable {
     // If we received a response, there is a connection to receive it, so the session should be
     // around.
-    FXL_DCHECK(session && session->stream_);
+    FX_DCHECK(session && session->stream_);
     session->Disconnect(nullptr);
     if (cb)
       cb(err);
@@ -910,7 +910,7 @@ void Session::SendAgentConfiguration() {
   request.actions = std::move(actions);
   remote_api()->ConfigAgent(request, [request, session = GetWeakPtr()](
                                          const Err& err, debug_ipc::ConfigAgentReply reply) {
-    FXL_DCHECK(reply.results.size() == request.actions.size());
+    FX_DCHECK(reply.results.size() == request.actions.size());
 
     if (!session)
       return;

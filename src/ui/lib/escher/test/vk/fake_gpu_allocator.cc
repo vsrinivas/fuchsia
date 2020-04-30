@@ -65,7 +65,7 @@ BufferPtr FakeGpuAllocator::AllocateBuffer(ResourceManager* manager, vk::DeviceS
                                            vk::MemoryPropertyFlags memory_property_flags,
                                            GpuMemPtr* out_ptr) {
   auto memory = fxl::AdoptRef(new FakeGpuMem(size, this));
-  FXL_DCHECK(memory->size() >= size)
+  FX_DCHECK(memory->size() >= size)
       << "Size of allocated memory should not be less than requested size";
 
   if (out_ptr)

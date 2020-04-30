@@ -64,7 +64,7 @@ void DoEnsureResolveReference(const fxl::RefPtr<EvalContext>& eval_context, Expr
 
   // The symbol provider should have created the right object type.
   const ModifiedType* reference = concrete->AsModifiedType();
-  FXL_DCHECK(reference);
+  FX_DCHECK(reference);
   const Type* underlying_type = reference->modified().Get()->AsType();
 
   TargetPointer pointer_value = 0;

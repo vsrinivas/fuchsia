@@ -17,7 +17,7 @@ static std::pair<float, float> ComputeNearAndFarPlanes(const ViewingVolume& volu
   float height = volume.height();
   float bottom = volume.bottom();
   float top = volume.top();
-  FXL_DCHECK(bottom > top);
+  FX_DCHECK(bottom > top);
 
   vec3 corners[] = {{0, 0, bottom},   {width, 0, bottom},  {0, 0, top},
                     {width, 0, top},  {0, height, bottom}, {width, height, bottom},
@@ -54,7 +54,7 @@ static std::pair<float, float> ComputeNearAndFarPlanes(const ViewingVolume& volu
     vec3 pos(camera_transform * vec4(0, 0, 0, 1));
     vec3 dir(camera_transform * vec4(0, 0, -1, 0));
 
-    FXL_LOG(FATAL) << "ViewingVolume must be entirely in front of the "
+    FX_LOGS(FATAL) << "ViewingVolume must be entirely in front of the "
                       "camera\nCamera Position: "
                    << pos << "\nCamera Direction: " << dir << "\n"
                    << volume;

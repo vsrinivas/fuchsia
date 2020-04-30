@@ -167,7 +167,7 @@ int use_video_decoder_test(std::string input_file_path, int expected_frame_count
       // Writes the terminating 0 each time, returns 2 each time.
       actual_sha256_ptr += snprintf(actual_sha256_ptr, 3, "%02x", byte);
     }
-    FXL_CHECK(actual_sha256_ptr == actual_sha256 + SHA256_DIGEST_LENGTH * 2);
+    FX_CHECK(actual_sha256_ptr == actual_sha256 + SHA256_DIGEST_LENGTH * 2);
     printf("Done decoding - computed sha256 is: %s\n", actual_sha256);
     if (strcmp(actual_sha256, golden_sha256.c_str())) {
       printf("The sha256 doesn't match - expected: %s actual: %s\n", golden_sha256.c_str(),
@@ -199,11 +199,11 @@ bool decode_video_stream_test(async::Loop* fidl_loop, thrd_t fidl_thread,
                               const UseVideoDecoderTestParams* test_params) {
   fuchsia::mediacodec::CodecFactoryPtr codec_factory;
   codec_factory.set_error_handler(
-      [](zx_status_t status) { FXL_PLOG(FATAL, status) << "codec_factory failed - unexpected"; });
+      [](zx_status_t status) { FX_PLOGS(FATAL, status) << "codec_factory failed - unexpected"; });
   component_context->svc()->Connect<fuchsia::mediacodec::CodecFactory>(codec_factory.NewRequest());
   fuchsia::sysmem::AllocatorPtr sysmem;
   sysmem.set_error_handler(
-      [](zx_status_t status) { FXL_PLOG(FATAL, status) << "sysmem failed - unexpected"; });
+      [](zx_status_t status) { FX_PLOGS(FATAL, status) << "sysmem failed - unexpected"; });
   component_context->svc()->Connect<fuchsia::sysmem::Allocator>(sysmem.NewRequest());
 
   std::unique_ptr<InputCopier> input_copier;

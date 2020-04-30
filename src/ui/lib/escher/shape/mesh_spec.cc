@@ -31,25 +31,25 @@ uint32_t GetMeshAttributeSize(MeshAttribute attr) {
     case MeshAttribute::kBlendWeight1:
       return sizeof(float);
     case MeshAttribute::kStride:
-      FXL_CHECK(false);
+      FX_CHECK(false);
       return 0;
   }
 }
 
 uint32_t MeshSpec::attribute_count(uint32_t vertex_buffer_index) const {
-  FXL_DCHECK(vertex_buffer_index < VulkanLimits::kNumVertexBuffers);
+  FX_DCHECK(vertex_buffer_index < VulkanLimits::kNumVertexBuffers);
   return CountOnes(uint32_t(attributes[vertex_buffer_index]));
 }
 
 uint32_t MeshSpec::total_attribute_count() const { return CountOnes(uint32_t(all_attributes())); }
 
 uint32_t MeshSpec::attribute_offset(uint32_t vertex_buffer_index, MeshAttribute flag) const {
-  FXL_DCHECK(vertex_buffer_index < VulkanLimits::kNumVertexBuffers);
+  FX_DCHECK(vertex_buffer_index < VulkanLimits::kNumVertexBuffers);
   return GetMeshAttributeOffset(attributes[vertex_buffer_index], flag);
 }
 
 uint32_t GetMeshAttributeOffset(const MeshAttributes& attrs, MeshAttribute attr) {
-  FXL_DCHECK(attrs & attr || attr == MeshAttribute::kStride);
+  FX_DCHECK(attrs & attr || attr == MeshAttribute::kStride);
   uint32_t offset = 0;
 
   if (attr == MeshAttribute::kPosition2D) {
@@ -88,24 +88,24 @@ uint32_t GetMeshAttributeOffset(const MeshAttributes& attrs, MeshAttribute attr)
     offset += sizeof(float);
   }
 
-  FXL_DCHECK(attr == MeshAttribute::kStride);
+  FX_DCHECK(attr == MeshAttribute::kStride);
   return offset;
 }
 
 bool MeshSpec::has_attribute(uint32_t vertex_buffer_index, MeshAttribute attr) const {
-  FXL_DCHECK(vertex_buffer_index < VulkanLimits::kNumVertexBuffers);
+  FX_DCHECK(vertex_buffer_index < VulkanLimits::kNumVertexBuffers);
   return bool(attributes[vertex_buffer_index] & attr);
 }
 
 bool MeshSpec::has_attributes(uint32_t vertex_buffer_index, MeshAttributes attrs) const {
-  FXL_DCHECK(vertex_buffer_index < VulkanLimits::kNumVertexBuffers);
+  FX_DCHECK(vertex_buffer_index < VulkanLimits::kNumVertexBuffers);
   return (attributes[vertex_buffer_index] & attrs) == attrs;
 }
 
 MeshAttributes MeshSpec::all_attributes() const {
   MeshAttributes all(attributes[0]);
   for (uint32_t i = 1; i < VulkanLimits::kNumVertexBuffers; ++i) {
-    FXL_DCHECK((all & attributes[i]) == MeshAttributes());
+    FX_DCHECK((all & attributes[i]) == MeshAttributes());
     all |= attributes[i];
   }
   return all;

@@ -78,7 +78,7 @@ int main(int argc, const char** argv) {
   if (command_line.positional_args().empty()) {
     std::ostringstream msg("Missing view argument.");
     DumpSupportedViews(&msg);
-    FXL_LOG(ERROR) << msg.str();
+    FX_LOGS(ERROR) << msg.str();
     return 1;
   }
 
@@ -88,7 +88,7 @@ int main(int argc, const char** argv) {
     std::ostringstream msg;
     msg << "Unsupported view " << view_name << ".";
     DumpSupportedViews(&msg);
-    FXL_LOG(ERROR) << msg.str();
+    FX_LOGS(ERROR) << msg.str();
     return 1;
   }
 

@@ -167,7 +167,7 @@ void HostImage::UpdateEscherImage(escher::BatchGpuUploader* gpu_uploader,
       if (layout_updater) {
         layout_updater->ScheduleSetImageInitialLayout(image_, vk::ImageLayout::eGeneral);
       } else {
-        FXL_LOG(WARNING) << "No ImageLayoutUpdater, cannot set up image layout.";
+        FX_LOGS(WARNING) << "No ImageLayoutUpdater, cannot set up image layout.";
       }
     }
   } else {
@@ -181,12 +181,12 @@ void HostImage::UpdateEscherImage(escher::BatchGpuUploader* gpu_uploader,
 bool HostImage::UpdatePixels(escher::BatchGpuUploader* gpu_uploader) {
   if (is_directly_mapped_) {
     // Directly-mapped images are never dirty.
-    FXL_CHECK(!is_directly_mapped_) << "Directly-mapped host images should never be dirty.";
+    FX_CHECK(!is_directly_mapped_) << "Directly-mapped host images should never be dirty.";
     return false;
   }
 
   if (!gpu_uploader) {
-    FXL_LOG(WARNING) << "No BatchGpuUploader, cannot UpdatePixels.";
+    FX_LOGS(WARNING) << "No BatchGpuUploader, cannot UpdatePixels.";
     return true;
   }
 

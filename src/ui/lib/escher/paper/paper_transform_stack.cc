@@ -68,7 +68,7 @@ const PaperTransformStack::Item& PaperTransformStack::PushIdentity() {
 
 const PaperTransformStack::Item& PaperTransformStack::AddClipPlanes(const plane3* clip_planes,
                                                                     size_t num_clip_planes) {
-  FXL_DCHECK(clip_planes || num_clip_planes == 0);
+  FX_DCHECK(clip_planes || num_clip_planes == 0);
   if (!clip_planes) {
     return Top();
   } else if (stack_.empty()) {
@@ -92,15 +92,15 @@ PaperTransformStack& PaperTransformStack::Pop() {
 PaperTransformStack& PaperTransformStack::Clear(
     std::pair<size_t, size_t> stack_size_and_num_clip_planes) {
   auto [target_stack_size, target_num_clip_planes] = stack_size_and_num_clip_planes;
-  FXL_DCHECK(stack_.size() >= target_stack_size);
+  FX_DCHECK(stack_.size() >= target_stack_size);
   while (stack_.size() > target_stack_size) {
     stack_.pop();
   }
   if (stack_.empty()) {
-    FXL_DCHECK(target_num_clip_planes == 0);
+    FX_DCHECK(target_num_clip_planes == 0);
   } else {
     auto& clip_planes = stack_.top().clip_planes;
-    FXL_DCHECK(target_num_clip_planes <= clip_planes.size())
+    FX_DCHECK(target_num_clip_planes <= clip_planes.size())
         << "stack currently has " << clip_planes.size()
         << " clip-planes, which is fewer than the target: " << target_num_clip_planes << ".";
     clip_planes.resize(target_num_clip_planes);

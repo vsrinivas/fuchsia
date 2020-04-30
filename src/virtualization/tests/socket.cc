@@ -53,7 +53,7 @@ zx_status_t ZxSocket::Send(zx::time deadline, const std::string& message) {
 }
 
 zx_status_t ZxSocket::Receive(zx::time deadline, std::string* result) {
-  FXL_CHECK(result != nullptr);
+  FX_CHECK(result != nullptr);
   while (true) {
     zx_status_t status;
 

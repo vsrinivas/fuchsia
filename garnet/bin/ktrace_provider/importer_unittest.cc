@@ -79,7 +79,7 @@ class TestImporter : public ::testing::Test {
 
     // We should have found the kernel process record.
     if (skipping) {
-      FXL_VLOG(1) << "Kernel process record not found";
+      FX_VLOGS(1) << "Kernel process record not found";
       return false;
     }
 

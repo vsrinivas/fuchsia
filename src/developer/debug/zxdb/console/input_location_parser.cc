@@ -285,7 +285,7 @@ Err ResolveUniqueInputLocation(const ProcessSymbols* process_symbols,
   if (err.has_error())
     return err;
 
-  FXL_DCHECK(!locations.empty());  // Non-empty on success should be guaranteed.
+  FX_DCHECK(!locations.empty());  // Non-empty on success should be guaranteed.
 
   if (locations.size() == 1u) {
     // Success, got a unique location.
@@ -422,7 +422,7 @@ void CompleteInputLocation(const Command& command, const std::string& prefix,
   found_names.clear();
   FindName(*find_context, options, prefix_identifier, &found_names);
   for (const FoundName& found : found_names) {
-    FXL_DCHECK(found.kind() == zxdb::FoundName::kType);
+    FX_DCHECK(found.kind() == zxdb::FoundName::kType);
     if (const Collection* collection = found.type()->AsCollection())
       completions->push_back(found.GetName().GetFullName() + "::");
   }

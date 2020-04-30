@@ -14,13 +14,13 @@ std::pair<escher::SemaphorePtr, zx::event> NewSemaphoreEventPair(escher::Escher*
   zx::event event;
   zx_status_t status = zx::event::create(0u, &event);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to create event to import as VkSemaphore.";
+    FX_LOGS(ERROR) << "Failed to create event to import as VkSemaphore.";
     return std::make_pair(escher::SemaphorePtr(), zx::event());
   }
 
   zx::event event_copy;
   if (event.duplicate(ZX_RIGHT_SAME_RIGHTS, &event_copy) != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to duplicate event.";
+    FX_LOGS(ERROR) << "Failed to duplicate event.";
     return std::make_pair(escher::SemaphorePtr(), zx::event());
   }
 
@@ -34,7 +34,7 @@ std::pair<escher::SemaphorePtr, zx::event> NewSemaphoreEventPair(escher::Escher*
 
   if (vk::Result::eSuccess != device->vk_device().importSemaphoreZirconHandleFUCHSIA(
                                   info, escher->device()->dispatch_loader())) {
-    FXL_LOG(ERROR) << "Failed to import event as VkSemaphore.";
+    FX_LOGS(ERROR) << "Failed to import event as VkSemaphore.";
     // Don't leak handle.
     zx_handle_close(info.handle);
     return std::make_pair(escher::SemaphorePtr(), zx::event());
@@ -51,7 +51,7 @@ zx::event GetEventForSemaphore(VulkanDeviceQueues* device, const escher::Semapho
       device->vk_device().getSemaphoreZirconHandleFUCHSIA(info, device->dispatch_loader());
 
   if (result.result != vk::Result::eSuccess) {
-    FXL_LOG(WARNING) << "unable to export semaphore";
+    FX_LOGS(WARNING) << "unable to export semaphore";
     return zx::event();
   }
   return zx::event(result.value);
@@ -63,7 +63,7 @@ zx::vmo ExportMemoryAsVmo(escher::Escher* escher, const escher::GpuMemPtr& mem) 
   auto result = escher->vk_device().getMemoryZirconHandleFUCHSIA(
       export_memory_info, escher->device()->dispatch_loader());
   if (result.result != vk::Result::eSuccess) {
-    FXL_LOG(ERROR) << "Failed to export escher::GpuMem as zx::vmo";
+    FX_LOGS(ERROR) << "Failed to export escher::GpuMem as zx::vmo";
     return zx::vmo();
   }
   return zx::vmo(result.value);
@@ -72,9 +72,9 @@ zx::vmo ExportMemoryAsVmo(escher::Escher* escher, const escher::GpuMemPtr& mem) 
 std::pair<escher::GpuMemPtr, escher::ImagePtr> GenerateExportableMemImage(
     vk::Device device, escher::ResourceManager* resource_manager,
     const escher::ImageInfo& image_info) {
-  FXL_DCHECK(device);
-  FXL_DCHECK(resource_manager);
-  FXL_DCHECK(image_info.is_external);
+  FX_DCHECK(device);
+  FX_DCHECK(resource_manager);
+  FX_DCHECK(image_info.is_external);
 
   // Create vk::Image
   constexpr auto kInitialLayout = vk::ImageLayout::ePreinitialized;

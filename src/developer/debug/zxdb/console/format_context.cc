@@ -120,7 +120,7 @@ OutputBuffer DescribeAsmCallDest(Process* process, uint64_t call_dest) {
     options.ambiguous_inline = ResolveOptions::kOuter;
 
     resolved = process->GetSymbols()->ResolveInputLocation(InputLocation(call_dest), options);
-    FXL_DCHECK(resolved.size() == 1);  // Addresses should always match one location.
+    FX_DCHECK(resolved.size() == 1);  // Addresses should always match one location.
   } else {
     // Can't symbolize, use the address.
     resolved.emplace_back(Location(Location::State::kAddress, call_dest));
@@ -237,8 +237,8 @@ Err FormatSourceFileContext(const FileLine& file_line, const SourceFileProvider&
 
 Err FormatSourceContext(const std::string& file_name_for_display, const std::string& file_contents,
                         const FormatSourceOpts& opts, OutputBuffer* out) {
-  FXL_DCHECK(opts.active_line == 0 || !opts.require_active_line ||
-             (opts.active_line >= opts.first_line && opts.active_line <= opts.last_line));
+  FX_DCHECK(opts.active_line == 0 || !opts.require_active_line ||
+            (opts.active_line >= opts.first_line && opts.active_line <= opts.last_line));
 
   // Allow the beginning to be out-of-range. This mirrors the end handling
   // (clamped to end-of-file) so callers can blindly create offsets from

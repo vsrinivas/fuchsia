@@ -52,7 +52,7 @@ bool PerspectiveDemoMode::OnEvent(const fuchsia::ui::input::InputEvent& event,
             target_camera_zoom_ += change;
             target_camera_zoom_ = glm::clamp(target_camera_zoom_, 0.0f, 1.0f);
             float fov = 360.f * ComputeHalfFov(presenter, target_camera_zoom_) / kPi;
-            FXL_LOG(INFO) << "Current perspective fov is " << fov << "degrees";
+            FX_LOGS(INFO) << "Current perspective fov is " << fov << "degrees";
           }
         }
       }
@@ -225,7 +225,7 @@ bool PerspectiveDemoMode::UpdateAnimation(Presentation* presenter, uint64_t pres
       zoom_param = 1.f;
       break;
     default:
-      FXL_DCHECK(false);
+      FX_DCHECK(false);
       return false;
   }
 

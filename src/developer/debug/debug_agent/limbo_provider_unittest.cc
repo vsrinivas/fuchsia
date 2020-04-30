@@ -28,7 +28,7 @@ namespace {
 
 class StubProcessLimbo : public fuchsia::exception::ProcessLimbo {
  public:
-  void SetActive(bool active, SetActiveCallback cb) { FXL_NOTREACHED() << "Not needed for tests."; }
+  void SetActive(bool active, SetActiveCallback cb) { FX_NOTREACHED() << "Not needed for tests."; }
 
   void WatchActive(WatchActiveCallback callback) override {
     if (!reply_active_)
@@ -154,9 +154,9 @@ std::pair<const MockProcessObject*, const MockThreadObject*> GetProcessThread(
     const MockObjectProvider& object_provider, const std::string& process_name,
     const std::string& thread_name) {
   const MockProcessObject* process = object_provider.ProcessByName(process_name);
-  FXL_DCHECK(process);
+  FX_DCHECK(process);
   const MockThreadObject* thread = process->GetThread(thread_name);
-  FXL_DCHECK(thread);
+  FX_DCHECK(thread);
 
   return {process, thread};
 }

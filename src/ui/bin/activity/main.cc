@@ -38,7 +38,7 @@ int main(void) {
         app.AddProviderBinding(std::move(request));
       });
 
-  FXL_LOG(INFO) << "activity-service: Starting service";
+  FX_LOGS(INFO) << "activity-service: Starting service";
   loop.Run();
   async_set_default_dispatcher(nullptr);
   return 0;

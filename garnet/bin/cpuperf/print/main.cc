@@ -54,12 +54,12 @@ static bool ParseArgv(const fxl::CommandLine& cl, std::string* session_result_sp
   std::string arg;
 
   if (!cl.GetOptionValue("session", session_result_spec_path)) {
-    FXL_LOG(ERROR) << "Missing --session argument";
+    FX_LOGS(ERROR) << "Missing --session argument";
     return false;
   }
   std::string content;
   if (!files::ReadFileToString(*session_result_spec_path, &content)) {
-    FXL_LOG(ERROR) << "Can't read " << *session_result_spec_path;
+    FX_LOGS(ERROR) << "Can't read " << *session_result_spec_path;
     return false;
   }
   if (!DecodeSessionResultSpec(content, out_session_result_spec)) {
@@ -70,7 +70,7 @@ static bool ParseArgv(const fxl::CommandLine& cl, std::string* session_result_sp
     if (arg == "raw") {
       out_printer_config->output_format = cpuperf::OutputFormat::kRaw;
     } else {
-      FXL_LOG(ERROR) << "Bad value for --output-format: " << arg;
+      FX_LOGS(ERROR) << "Bad value for --output-format: " << arg;
       return false;
     }
   }
@@ -81,7 +81,7 @@ static bool ParseArgv(const fxl::CommandLine& cl, std::string* session_result_sp
 
   const std::vector<std::string>& positional_args = cl.positional_args();
   if (positional_args.size() > 0) {
-    FXL_LOG(ERROR) << "No positional parameters";
+    FX_LOGS(ERROR) << "No positional parameters";
     return false;
   }
 
@@ -118,13 +118,13 @@ int main(int argc, char** argv) {
   const auto start_time = std::chrono::steady_clock::now();
 
   if (!session_result_spec.config_name.empty()) {
-    FXL_LOG(INFO) << "Config: " << session_result_spec.config_name;
+    FX_LOGS(INFO) << "Config: " << session_result_spec.config_name;
   } else {
-    FXL_LOG(INFO) << "Config: unnamed";
+    FX_LOGS(INFO) << "Config: unnamed";
   }
-  FXL_LOG(INFO) << session_result_spec.num_iterations << " iteration(s), "
+  FX_LOGS(INFO) << session_result_spec.num_iterations << " iteration(s), "
                 << session_result_spec.num_traces << " trace(s)";
-  FXL_LOG(INFO) << "Output path prefix: " << session_result_spec.output_path_prefix;
+  FX_LOGS(INFO) << "Output path prefix: " << session_result_spec.output_path_prefix;
 
   uint64_t total_records;
   if (printer_config.output_format == cpuperf::OutputFormat::kRaw) {
@@ -135,14 +135,14 @@ int main(int argc, char** argv) {
     }
     total_records = printer->PrintFiles();
   } else {
-    FXL_LOG(ERROR) << "Invalid output format\n";
+    FX_LOGS(ERROR) << "Invalid output format\n";
     return EXIT_FAILURE;
   }
 
   const auto& delta = (std::chrono::steady_clock::now() - start_time);
   int64_t seconds = std::chrono::duration_cast<std::chrono::seconds>(delta).count();
   int milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(delta).count() % 1000;
-  FXL_LOG(INFO) << fxl::StringPrintf("%" PRIu64 " records processed in %" PRId64 ".%03d seconds\n",
+  FX_LOGS(INFO) << fxl::StringPrintf("%" PRIu64 " records processed in %" PRId64 ".%03d seconds\n",
                                      total_records, seconds, milliseconds);
 
   return EXIT_SUCCESS;

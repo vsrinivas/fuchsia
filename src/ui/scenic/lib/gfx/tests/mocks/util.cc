@@ -21,7 +21,7 @@ bool IsEventSignalled(const zx::event& fence, zx_signals_t signal) {
 zx::event CopyEvent(const zx::event& event) {
   zx::event event_copy;
   if (event.duplicate(ZX_RIGHT_SAME_RIGHTS, &event_copy) != ZX_OK)
-    FXL_LOG(ERROR) << "Copying zx::event failed.";
+    FX_LOGS(ERROR) << "Copying zx::event failed.";
   return event_copy;
 }
 
@@ -34,14 +34,14 @@ std::vector<zx::event> CopyEventIntoFidlArray(const zx::event& event) {
 zx::eventpair CopyEventPair(const zx::eventpair& eventpair) {
   zx::eventpair eventpair_copy;
   if (eventpair.duplicate(ZX_RIGHT_SAME_RIGHTS, &eventpair_copy) != ZX_OK)
-    FXL_LOG(ERROR) << "Copying zx::eventpair failed.";
+    FX_LOGS(ERROR) << "Copying zx::eventpair failed.";
   return eventpair_copy;
 }
 
 uint64_t GetVmoSize(const zx::vmo& vmo) {
   uint64_t size;
   if (vmo.get_size(&size) != ZX_OK) {
-    FXL_LOG(ERROR) << "Getting zx::vmo size failed";
+    FX_LOGS(ERROR) << "Getting zx::vmo size failed";
     return 0u;
   }
   return size;
@@ -50,13 +50,13 @@ uint64_t GetVmoSize(const zx::vmo& vmo) {
 zx::vmo CopyVmo(const zx::vmo& vmo) {
   zx::vmo vmo_copy;
   if (vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_copy) != ZX_OK)
-    FXL_LOG(ERROR) << "Copying zx::vmo failed.";
+    FX_LOGS(ERROR) << "Copying zx::vmo failed.";
   return vmo_copy;
 }
 
 zx::event CreateEvent() {
   zx::event event;
-  FXL_CHECK(zx::event::create(0, &event) == ZX_OK);
+  FX_CHECK(zx::event::create(0, &event) == ZX_OK);
   return event;
 }
 
@@ -72,7 +72,7 @@ fxl::RefPtr<fsl::SharedVmo> CreateSharedVmo(size_t size) {
   zx::vmo vmo;
   zx_status_t status = zx::vmo::create(size, 0u, &vmo);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to create vmo: status=" << status << ", size=" << size;
+    FX_LOGS(ERROR) << "Failed to create vmo: status=" << status << ", size=" << size;
     return nullptr;
   }
 
@@ -80,7 +80,7 @@ fxl::RefPtr<fsl::SharedVmo> CreateSharedVmo(size_t size) {
   // allocate physical memory for it eagerly.
   status = vmo.op_range(ZX_VMO_OP_COMMIT, 0u, size, nullptr, 0u);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to commit all pages of vmo: status=" << status << ", size=" << size;
+    FX_LOGS(ERROR) << "Failed to commit all pages of vmo: status=" << status << ", size=" << size;
     return nullptr;
   }
 
@@ -89,7 +89,7 @@ fxl::RefPtr<fsl::SharedVmo> CreateSharedVmo(size_t size) {
 }
 
 SessionWrapper::SessionWrapper(scenic_impl::Scenic* scenic) {
-  FXL_CHECK(scenic);
+  FX_CHECK(scenic);
 
   fuchsia::ui::scenic::SessionPtr session_ptr;
 
@@ -111,7 +111,7 @@ SessionWrapper::SessionWrapper(scenic_impl::Scenic* scenic) {
 SessionWrapper::SessionWrapper(
     scenic_impl::Scenic* scenic,
     fidl::InterfaceRequest<fuchsia::ui::views::Focuser> view_focuser_request) {
-  FXL_CHECK(scenic);
+  FX_CHECK(scenic);
 
   fuchsia::ui::scenic::SessionPtr session_ptr;
 

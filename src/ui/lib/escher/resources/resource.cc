@@ -26,7 +26,7 @@ Resource::Resource(ResourceManager* owner)
 }
 
 const VulkanContext& Resource::vulkan_context() const {
-  FXL_DCHECK(owner());
+  FX_DCHECK(owner());
   return owner()->vulkan_context();
 }
 

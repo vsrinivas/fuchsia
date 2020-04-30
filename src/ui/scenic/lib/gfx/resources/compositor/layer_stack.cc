@@ -19,7 +19,7 @@ LayerStack::LayerStack(Session* session, SessionId session_id, ResourceId id)
 LayerStack::~LayerStack() = default;
 
 void LayerStack::HitTest(const escher::ray4& ray, HitAccumulator<ViewHit>* hit_accumulator) const {
-  FXL_CHECK(hit_accumulator);
+  FX_CHECK(hit_accumulator);
 
   for (auto& layer : layers_) {
     layer->HitTest(ray, hit_accumulator);
@@ -60,7 +60,7 @@ bool LayerStack::RemoveAllLayers() {
 void LayerStack::RemoveLayer(Layer* layer) {
   auto it = std::find_if(layers_.begin(), layers_.end(),
                          [layer](const LayerPtr& layer_ptr) { return layer == layer_ptr.get(); });
-  FXL_DCHECK(it != layers_.end());
+  FX_DCHECK(it != layers_.end());
   layers_.erase(it);
   (*it)->layer_stack_ = nullptr;
 }

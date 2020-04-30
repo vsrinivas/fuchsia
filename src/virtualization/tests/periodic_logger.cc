@@ -17,7 +17,7 @@ PeriodicLogger::PeriodicLogger(std::string operation, zx::duration logging_inter
 PeriodicLogger::~PeriodicLogger() {
   // Only print a final message if we already printed a progress message.
   if (message_printed_) {
-    FXL_LOG(INFO) << operation_ << ": Finished after "
+    FX_LOGS(INFO) << operation_ << ": Finished after "
                   << (zx::clock::get_monotonic() - start_time_).to_secs() << "s.";
   }
 }
@@ -27,7 +27,7 @@ PeriodicLogger::~PeriodicLogger() {
 void PeriodicLogger::LogIfRequired() {
   const zx::time now = zx::clock::get_monotonic();
   if (now - last_log_time_ >= logging_interval_) {
-    FXL_LOG(INFO) << operation_ << ": Still waiting... (" << (now - start_time_).to_secs()
+    FX_LOGS(INFO) << operation_ << ": Still waiting... (" << (now - start_time_).to_secs()
                   << "s passed)";
     last_log_time_ = now;
     message_printed_ = true;

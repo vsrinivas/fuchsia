@@ -17,7 +17,7 @@ View::View(scenic::ViewContext view_context) : BaseView(std::move(view_context),
 void View::Load(::fuchsia::mem::Buffer payload) {
   std::vector<uint8_t> data;
   if (!fsl::VectorFromVmo(payload, &data)) {
-    FXL_LOG(ERROR) << "VectorFromVmo failed";
+    FX_LOGS(ERROR) << "VectorFromVmo failed";
     return;
   }
 
@@ -25,7 +25,7 @@ void View::Load(::fuchsia::mem::Buffer payload) {
   auto snapshot = (const SnapshotData*)data.data();
   if (snapshot->type != SnapshotData::SnapshotType::kFlatBuffer ||
       snapshot->version != SnapshotData::SnapshotVersion::v1_0) {
-    FXL_LOG(ERROR) << "Invalid snapshot format encountered. Aborting.";
+    FX_LOGS(ERROR) << "Invalid snapshot format encountered. Aborting.";
     return;
   }
 
@@ -104,7 +104,7 @@ void View::LoadShape(scenic::EntityNode& parent_node, const snapshot::Node* flat
 
     default:
       // TODO(SCN-978): Return an error to the caller for invalid data.
-      FXL_DCHECK(false) << "Unknown node type encountered. Corrupt flatbuffer?";
+      FX_DCHECK(false) << "Unknown node type encountered. Corrupt flatbuffer?";
       return;
   }
 

@@ -162,7 +162,7 @@ ThreadController::StopOp StepThreadController::OnThreadStop(
       //
       // This condition prevents the loop if such a case were to occur. If this assertion hits,
       // GetContinueOp() needs to agree with this function on what to do in the synthetic case.
-      FXL_NOTREACHED();
+      FX_NOTREACHED();
       return kStopDone;
     }
     // In the ExceptionType::kNone case, it's normal we didn't do anything if there are no inline
@@ -357,7 +357,7 @@ ThreadController::StopOp StepThreadController::OnThreadStopOnUnsymbolizedCode() 
     // Called a new stack frame that has no symbols. We need to "finish" to step over the
     // unsymbolized code to automatically step over the unsymbolized code.
     Log("Called unsymbolized function, stepping out.");
-    FXL_DCHECK(original_frame_fingerprint_.is_valid());
+    FX_DCHECK(original_frame_fingerprint_.is_valid());
     finish_unsymolized_function_ =
         std::make_unique<FinishThreadController>(thread()->GetStack(), 0);
     finish_unsymolized_function_->InitWithThread(thread(), [](const Err&) {});

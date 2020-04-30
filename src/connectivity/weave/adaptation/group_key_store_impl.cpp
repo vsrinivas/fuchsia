@@ -111,7 +111,7 @@ WEAVE_ERROR GroupKeyStoreImpl::StoreGroupKey(const WeaveGroupKey& key) {
   if (error != WEAVE_NO_ERROR) {
     // If writing the key material fails, attempt to remove the key, but forward
     // the original error. The destructor will resolve the inconsistent state.
-    FXL_DLOG(ERROR) << "Failed to write key: " << ErrorStr(error);
+    FX_DLOGS(ERROR) << "Failed to write key: " << ErrorStr(error);
     RemoveKeyFromIndex(key.KeyId);
     StoreKeyIndex();
     return error;

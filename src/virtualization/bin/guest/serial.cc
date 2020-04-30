@@ -42,7 +42,7 @@ class InputReader {
       wait_.Begin(async_get_default_dispatcher());  // ignore errors
       return;
     } else if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Error " << status << " writing to socket";
+      FX_LOGS(ERROR) << "Error " << status << " writing to socket";
       return;
     }
     WaitForKeystroke();
@@ -134,7 +134,7 @@ void handle_serial(uint32_t env_id, uint32_t cid, async::Loop* loop,
   zx::socket socket;
   guest->GetSerial(&socket);
   if (!socket) {
-    FXL_LOG(ERROR) << "Failed to open serial port";
+    FX_LOGS(ERROR) << "Failed to open serial port";
     return;
   }
   SerialConsole console(loop);

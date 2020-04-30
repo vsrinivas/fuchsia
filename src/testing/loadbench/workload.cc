@@ -127,7 +127,7 @@ struct SetTimerAction : ActionBase<SetTimerAction> {
     const zx_status_t status =
         timer->set(zx::deadline_after(zx::duration{relative_deadline_ns.count()}),
                    zx::duration{timer_slack_ns.count()});
-    FXL_CHECK(status == ZX_OK);
+    FX_CHECK(status == ZX_OK);
   }
 
   TimerObject timer;
@@ -144,7 +144,7 @@ struct ChannelWriteAction : ActionBase<ChannelWriteAction> {
 
   void Perform(Worker*) override {
     const auto status = endpoint->write(0, buffer.data(), buffer.size(), nullptr, 0);
-    FXL_CHECK(status == ZX_OK);
+    FX_CHECK(status == ZX_OK);
   }
 
   ChannelObject channel;
@@ -164,7 +164,7 @@ struct ChannelReadAction : ActionBase<ChannelReadAction> {
     uint32_t actual_handles;
     const auto status =
         endpoint->read(0, buffer.data(), nullptr, buffer.size(), 0, &actual_bytes, &actual_handles);
-    FXL_CHECK(status == ZX_OK) << "Failed to read channel: " << status;
+    FX_CHECK(status == ZX_OK) << "Failed to read channel: " << status;
   }
 
   ChannelObject channel;
@@ -182,7 +182,7 @@ struct WaitOneAction : ActionBase<WaitOneAction> {
         relative_deadline_ns ? zx::deadline_after(zx::duration{relative_deadline_ns->count()})
                              : zx::time::infinite();
     const auto status = handle->wait_one(signals, absolute_deadline, nullptr);
-    FXL_CHECK(status == ZX_OK) << "Failed to signal object: " << status;
+    FX_CHECK(status == ZX_OK) << "Failed to signal object: " << status;
   }
 
   zx::unowned_handle handle;
@@ -196,7 +196,7 @@ struct WaitAsyncAction : ActionBase<WaitAsyncAction> {
 
   void Perform(Worker*) override {
     const auto status = handle->wait_async(*port, 0, signals, 0);
-    FXL_CHECK(status == ZX_OK) << "Faild to wait async: " << status;
+    FX_CHECK(status == ZX_OK) << "Faild to wait async: " << status;
   }
 
   zx::unowned_port port;
@@ -214,7 +214,7 @@ struct PortWaitAction : ActionBase<PortWaitAction, ActionDefaultCopyable::False>
   void RegisterTerminateEvent() {
     const auto status = PortObject::GetTerminateEvent()->wait_async(
         *port.object(), 0, PortObject::kTerminateSignal, 0);
-    FXL_CHECK(status == ZX_OK) << "Failed to wait async on terminate event: " << status;
+    FX_CHECK(status == ZX_OK) << "Failed to wait async on terminate event: " << status;
   }
 
   void Perform(Worker*) override {
@@ -225,7 +225,7 @@ struct PortWaitAction : ActionBase<PortWaitAction, ActionDefaultCopyable::False>
     const auto status = port->wait(absolute_deadline, &packet);
 
     // TODO(eieio): Add option to fail or not on timeout.
-    FXL_CHECK(status == ZX_OK || status == ZX_ERR_TIMED_OUT) << "Failed to port wait: " << status;
+    FX_CHECK(status == ZX_OK || status == ZX_ERR_TIMED_OUT) << "Failed to port wait: " << status;
   }
 
   std::unique_ptr<Action> Copy() const override {
@@ -245,7 +245,7 @@ struct ObjectSignalAction : ActionBase<ObjectSignalAction> {
 
   void Perform(Worker*) {
     const auto status = handle->signal(clear_mask, set_mask);
-    FXL_CHECK(status == ZX_OK) << "Failed to signal object: " << status;
+    FX_CHECK(status == ZX_OK) << "Failed to signal object: " << status;
   }
 
   zx::unowned_handle handle;
@@ -282,10 +282,10 @@ struct IterateValues {
 
 template <typename... Context>
 const auto& GetMember(const char* name, const rapidjson::Value& object, Context&&... context) {
-  FXL_CHECK(object.IsObject())
+  FX_CHECK(object.IsObject())
       << (std::ostringstream{} << ... << std::forward<Context>(context)).rdbuf()
       << " must be a JSON object!";
-  FXL_CHECK(object.HasMember(name))
+  FX_CHECK(object.HasMember(name))
       << (std::ostringstream{} << ... << std::forward<Context>(context)).rdbuf()
       << " must have a \"" << name << "\" member!";
   return object[name];
@@ -294,7 +294,7 @@ const auto& GetMember(const char* name, const rapidjson::Value& object, Context&
 template <typename... Context>
 auto GetInt(const char* name, const rapidjson::Value& object, Context&&... context) {
   const auto& member = GetMember(name, object, std::forward<Context>(context)...);
-  FXL_CHECK(member.IsInt())
+  FX_CHECK(member.IsInt())
       << (std::ostringstream{} << ... << std::forward<Context>(context)).rdbuf() << " member \""
       << name << "\" must be an integer!";
   return member.GetInt();
@@ -303,7 +303,7 @@ auto GetInt(const char* name, const rapidjson::Value& object, Context&&... conte
 template <typename... Context>
 const auto* GetString(const char* name, const rapidjson::Value& object, Context&&... context) {
   const auto& member = GetMember(name, object, std::forward<Context>(context)...);
-  FXL_CHECK(member.IsString())
+  FX_CHECK(member.IsString())
       << (std::ostringstream{} << ... << std::forward<Context>(context)).rdbuf() << " member \""
       << name << "\" must be a string!";
   return member.GetString();
@@ -312,7 +312,7 @@ const auto* GetString(const char* name, const rapidjson::Value& object, Context&
 template <typename... Context>
 const auto& GetArray(const char* name, const rapidjson::Value& object, Context&&... context) {
   const auto& member = GetMember(name, object, std::forward<Context>(context)...);
-  FXL_CHECK(member.IsArray())
+  FX_CHECK(member.IsArray())
       << (std::ostringstream{} << ... << std::forward<Context>(context)).rdbuf() << " member \""
       << name << "\" must be an array!";
   return member;
@@ -321,7 +321,7 @@ const auto& GetArray(const char* name, const rapidjson::Value& object, Context&&
 template <typename... Context>
 const auto& GetObject(const char* name, const rapidjson::Value& object, Context&&... context) {
   const auto& member = GetMember(name, object, std::forward<Context>(context)...);
-  FXL_CHECK(member.IsObject())
+  FX_CHECK(member.IsObject())
       << (std::ostringstream{} << ... << std::forward<Context>(context)).rdbuf() << " member \""
       << name << "\" must be a JSON object!";
   return member;
@@ -330,7 +330,7 @@ const auto& GetObject(const char* name, const rapidjson::Value& object, Context&
 template <typename... Context>
 auto GetUint(const char* name, const rapidjson::Value& object, Context&&... context) {
   const auto& member = GetMember(name, object, std::forward<Context>(context)...);
-  FXL_CHECK(member.IsUint())
+  FX_CHECK(member.IsUint())
       << (std::ostringstream{} << ... << std::forward<Context>(context)).rdbuf() << " member \""
       << name << "\" must be an unsigned integer!";
   return member.GetUint();
@@ -347,7 +347,7 @@ void Workload::ParseObject(const std::string& name, const rapidjson::Value& obje
   } else if (type_string == "event") {
     Add(name, EventObject::Create());
   } else {
-    FXL_CHECK(false) << "Object \"" << name << "\" has unknown type \"" << type_string << "\"!";
+    FX_CHECK(false) << "Object \"" << name << "\" has unknown type \"" << type_string << "\"!";
   }
 }
 
@@ -357,7 +357,7 @@ Workload::Duration Workload::ParseDuration(const rapidjson::Value& object) {
   } else if (object.IsString()) {
     return {ParseDurationString(object.GetString())};
   } else {
-    FXL_CHECK(false) << "Duration must be an integer or string!";
+    FX_CHECK(false) << "Duration must be an integer or string!";
     __builtin_unreachable();
   }
 }
@@ -371,16 +371,16 @@ Workload::Uniform Workload::ParseUniform(const rapidjson::Value& object) {
 
 std::variant<Workload::Duration, Workload::Uniform> Workload::ParseInterval(
     const rapidjson::Value& object, AcceptNamedIntervalFlag accept_named_interval) {
-  FXL_CHECK(object.IsObject()) << "Interval must be a JSON object!";
+  FX_CHECK(object.IsObject()) << "Interval must be a JSON object!";
 
   const bool has_duration = object.HasMember("duration");
   const bool has_uniform = object.HasMember("uniform");
   const bool has_interval = object.HasMember("interval");
 
-  FXL_CHECK(accept_named_interval || !has_interval)
+  FX_CHECK(accept_named_interval || !has_interval)
       << "Timespec \"interval\" is not supported in this context!";
 
-  FXL_CHECK((has_duration + has_uniform + has_interval) == 1)
+  FX_CHECK((has_duration + has_uniform + has_interval) == 1)
       << "Interval must have exactly one timespec: either \"uniform\" or "
          "\"duration\""
       << (accept_named_interval ? " or \"interval\"" : "") << "!";
@@ -392,7 +392,7 @@ std::variant<Workload::Duration, Workload::Uniform> Workload::ParseInterval(
   } else if (has_interval) {
     const auto* interval_name_string = GetString("interval", object, "Interval");
     auto search = intervals_.find(interval_name_string);
-    FXL_CHECK(search != intervals_.end())
+    FX_CHECK(search != intervals_.end())
         << "Undefined named interval \"" << interval_name_string << "\"!";
     return search->second;
   } else {
@@ -401,11 +401,11 @@ std::variant<Workload::Duration, Workload::Uniform> Workload::ParseInterval(
 }
 
 void Workload::ParseNamedInterval(const std::string& name, const rapidjson::Value& object) {
-  FXL_CHECK(object.IsObject()) << "Named interval must be a JSON object!";
+  FX_CHECK(object.IsObject()) << "Named interval must be a JSON object!";
 
   const auto result = ParseInterval(object, RejectNamedInterval);
   auto [iter, okay] = intervals_.emplace(name, result);
-  FXL_CHECK(okay) << "Named interval \"" << name << "\" defined more than once!";
+  FX_CHECK(okay) << "Named interval \"" << name << "\" defined more than once!";
 }
 
 zx::unowned_handle Workload::ParseTargetObjectAndGetHandle(const std::string& name,
@@ -417,7 +417,7 @@ zx::unowned_handle Workload::ParseTargetObjectAndGetHandle(const std::string& na
       return zx::unowned_handle{static_cast<TimerObject&>(target)->get()};
     case ChannelObject::Type: {
       const size_t side = GetInt("side", object, context);
-      FXL_CHECK(side == 0 || side == 1)
+      FX_CHECK(side == 0 || side == 1)
           << "Wait async action member \"side\" must be an integer value 0 or 1!";
       auto [first, second] = static_cast<ChannelObject&>(target).bind();
       return zx::unowned_handle{side == 0 ? first->get() : second->get()};
@@ -427,7 +427,7 @@ zx::unowned_handle Workload::ParseTargetObjectAndGetHandle(const std::string& na
     case PortObject::Type:
       return zx::unowned_handle{static_cast<PortObject&>(target)->get()};
     default:
-      FXL_CHECK(false) << "Unknown object type: " << target.type();
+      FX_CHECK(false) << "Unknown object type: " << target.type();
       __builtin_unreachable();
   }
 }
@@ -466,7 +466,7 @@ std::unique_ptr<Action> Workload::ParseAction(const rapidjson::Value& action) {
   } else if (action_string == "behavior") {
     const auto* behavior_name = GetString("name", action, "Behavior action");
     auto search = behaviors_.find(behavior_name);
-    FXL_CHECK(search != behaviors_.end()) << "Unknown named behavior \"" << behavior_name << "\"!";
+    FX_CHECK(search != behaviors_.end()) << "Unknown named behavior \"" << behavior_name << "\"!";
     return search->second->Copy();
   } else if (action_string == "wait_async") {
     const auto* context = "Wait async action";
@@ -522,7 +522,7 @@ std::unique_ptr<Action> Workload::ParseAction(const rapidjson::Value& action) {
   } else if (action_string == "exit") {
     return ExitAction::Create();
   } else {
-    FXL_CHECK(false) << "Unknown action \"" << action_string << "\"!";
+    FX_CHECK(false) << "Unknown action \"" << action_string << "\"!";
     __builtin_unreachable();
   }
 }
@@ -530,7 +530,7 @@ std::unique_ptr<Action> Workload::ParseAction(const rapidjson::Value& action) {
 void Workload::ParseNamedBehavior(const std::string& name, const rapidjson::Value& behavior) {
   if (behavior.IsObject()) {
     auto [iter, okay] = behaviors_.emplace(name, ParseAction(behavior));
-    FXL_CHECK(okay) << "Behavior \"" << name << "\" defined more than once!";
+    FX_CHECK(okay) << "Behavior \"" << name << "\" defined more than once!";
   } else if (behavior.IsArray()) {
     std::vector<std::unique_ptr<Action>> actions;
     for (const auto& action : IterateValues(behavior)) {
@@ -538,14 +538,14 @@ void Workload::ParseNamedBehavior(const std::string& name, const rapidjson::Valu
     }
 
     auto [iter, okay] = behaviors_.emplace(name, SequenceAction::Create(std::move(actions)));
-    FXL_CHECK(okay) << "Behavior \"" << name << "\" defined more than once!";
+    FX_CHECK(okay) << "Behavior \"" << name << "\" defined more than once!";
   } else {
-    FXL_CHECK(false) << "Behavior \"" << name << "\" must be a JSON object or array!";
+    FX_CHECK(false) << "Behavior \"" << name << "\" must be a JSON object or array!";
   }
 }
 
 void Workload::ParseWorker(const rapidjson::Value& worker) {
-  FXL_CHECK(worker.IsObject()) << "Worker must be a JSON object!";
+  FX_CHECK(worker.IsObject()) << "Worker must be a JSON object!";
 
   WorkerConfig config;
 
@@ -561,7 +561,7 @@ void Workload::ParseWorker(const rapidjson::Value& worker) {
     const auto& priority_member = worker["priority"];
     const bool is_int = priority_member.IsInt();
     const bool is_object = priority_member.IsObject();
-    FXL_CHECK(is_int || is_object)
+    FX_CHECK(is_int || is_object)
         << "Worker member \"priority\" must either be an integer or a JSON object!";
 
     if (is_int) {
@@ -570,7 +570,7 @@ void Workload::ParseWorker(const rapidjson::Value& worker) {
       const bool has_capacity = priority_member.HasMember("capacity");
       const bool has_deadline = priority_member.HasMember("deadline");
       const bool has_period = priority_member.HasMember("period");
-      FXL_CHECK(has_capacity && has_deadline && has_period)
+      FX_CHECK(has_capacity && has_deadline && has_period)
           << "Worker member \"priority\" must have members \"capacity\", \"deadline\", and "
              "\"period\"!";
 
@@ -586,7 +586,7 @@ void Workload::ParseWorker(const rapidjson::Value& worker) {
     const auto& actions_member = worker["actions"];
     const bool is_array = actions_member.IsArray();
     const bool is_string = actions_member.IsString();
-    FXL_CHECK(is_array || is_string)
+    FX_CHECK(is_array || is_string)
         << "Worker member \"actions\" must either be a string or a JSON object!";
 
     if (is_array) {
@@ -597,8 +597,7 @@ void Workload::ParseWorker(const rapidjson::Value& worker) {
     } else if (is_string) {
       const auto* behavior_name = GetString("actions", worker, "Worker");
       auto search = behaviors_.find(behavior_name);
-      FXL_CHECK(search != behaviors_.end())
-          << "Unknown named behavior \"" << behavior_name << "\"!";
+      FX_CHECK(search != behaviors_.end()) << "Unknown named behavior \"" << behavior_name << "\"!";
       config.actions.emplace_back(search->second->Copy());
     }
   }
@@ -609,7 +608,7 @@ void Workload::ParseWorker(const rapidjson::Value& worker) {
     const bool is_integer = instances_member.IsInt();
     const bool is_string = instances_member.IsString();
     const bool is_object = instances_member.IsObject();
-    FXL_CHECK(is_integer || is_string || is_object)
+    FX_CHECK(is_integer || is_string || is_object)
         << "Worker member \"instances\" must either be an integer, string or a JSON object!";
 
     if (is_integer) {
@@ -617,12 +616,12 @@ void Workload::ParseWorker(const rapidjson::Value& worker) {
     } else if (is_string) {
       instances = ParseInstancesString(GetString("instances", worker, "Worker"));
     } else if (is_object) {
-      FXL_CHECK(false) << "Worker member \"instances\" expressions are not yet implemented!";
+      FX_CHECK(false) << "Worker member \"instances\" expressions are not yet implemented!";
     }
   }
 
   if (instances <= 0) {
-    FXL_LOG(WARNING) << "Worker configured with instances=" << instances << "!";
+    FX_LOGS(WARNING) << "Worker configured with instances=" << instances << "!";
   }
 
   for (int i = 0; i < instances; i++) {
@@ -631,7 +630,7 @@ void Workload::ParseWorker(const rapidjson::Value& worker) {
 }
 
 void Workload::ParseTracing(const rapidjson::Value& tracing) {
-  FXL_CHECK(tracing.IsObject()) << "Tracing configuration must be a JSON object!";
+  FX_CHECK(tracing.IsObject()) << "Tracing configuration must be a JSON object!";
 
   TracingConfig config;
 
@@ -664,15 +663,15 @@ void Workload::ParseTracing(const rapidjson::Value& tracing) {
       } else if (group_mask_str == "KTRACE_GRP_SYSCALL") {
         config.group_mask = KTRACE_GRP_SYSCALL;
       } else {
-        FXL_LOG(WARNING) << "Tracing enabled with unknown group mask, mask set to all groups.";
+        FX_LOGS(WARNING) << "Tracing enabled with unknown group mask, mask set to all groups.";
         config.group_mask = KTRACE_GRP_ALL;
       }
     } else {
-      FXL_CHECK(false) << "Tracing group mask must be an unsigned integer or string!";
+      FX_CHECK(false) << "Tracing group mask must be an unsigned integer or string!";
       __builtin_unreachable();
     }
   } else /*Set default tracing group mask*/ {
-    FXL_LOG(WARNING) << "Tracing enabled with no group mask specified, mask set to all groups.";
+    FX_LOGS(WARNING) << "Tracing enabled with no group mask specified, mask set to all groups.";
     config.group_mask = KTRACE_GRP_ALL;
   }
 
@@ -719,7 +718,7 @@ std::string GetErrorMessage(const rapidjson::Document& document, const std::stri
 
 Workload Workload::Load(const std::string& path) {
   std::string file_data;
-  FXL_CHECK(files::ReadFileToString(path, &file_data))
+  FX_CHECK(files::ReadFileToString(path, &file_data))
       << "Failed to read workload config file \"" << path << "\"!";
 
   rapidjson::Document document;
@@ -727,9 +726,9 @@ Workload Workload::Load(const std::string& path) {
   const auto kFlags = rapidjson::kParseCommentsFlag | rapidjson::kParseTrailingCommasFlag;
   document.Parse<kFlags>(file_data);
 
-  FXL_CHECK(!document.HasParseError()) << "Error parsing workload config file \"" << path << "\" "
-                                       << GetErrorMessage(document, file_data) << "!";
-  FXL_CHECK(document.IsObject()) << "Document must be a JSON object!";
+  FX_CHECK(!document.HasParseError()) << "Error parsing workload config file \"" << path << "\" "
+                                      << GetErrorMessage(document, file_data) << "!";
+  FX_CHECK(document.IsObject()) << "Document must be a JSON object!";
 
   Workload workload;
 

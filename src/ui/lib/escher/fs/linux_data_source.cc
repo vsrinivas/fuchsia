@@ -15,9 +15,9 @@ namespace escher {
 bool LinuxDataSource::InitializeWithRealFiles(const std::vector<HackFilePath>& paths,
                                               const char* root) {
   if (root == nullptr) {
-    FXL_LOG(ERROR) << "root not provided";
+    FX_LOGS(ERROR) << "root not provided";
   } else if (root[0] != '.') {
-    FXL_LOG(ERROR) << "root must be a relative path: " << root;
+    FX_LOGS(ERROR) << "root must be a relative path: " << root;
   }
   char test_path[PATH_MAX];
   const char exe_link[] = "/proc/self/exe";

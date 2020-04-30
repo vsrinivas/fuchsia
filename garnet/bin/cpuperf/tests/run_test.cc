@@ -63,7 +63,7 @@ static zx_status_t SpawnProgram(const zx::job& job, const std::vector<std::strin
   std::vector<const char*> c_argv;
   StringArgvToCArgv(argv, &c_argv);
 
-  FXL_VLOG(1) << "Running " << fxl::JoinStrings(argv, " ");
+  FX_VLOGS(1) << "Running " << fxl::JoinStrings(argv, " ");
 
   size_t action_count = 0;
   fdio_spawn_action_t* spawn_actions = nullptr;
@@ -73,7 +73,7 @@ static zx_status_t SpawnProgram(const zx::job& job, const std::vector<std::strin
       fdio_spawn_etc(job.get(), FDIO_SPAWN_CLONE_ALL, c_argv[0], c_argv.data(), nullptr,
                      action_count, spawn_actions, out_process->reset_and_get_address(), err_msg);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Spawning " << c_argv[0] << " failed: " << status << ", " << err_msg;
+    FX_LOGS(ERROR) << "Spawning " << c_argv[0] << " failed: " << status << ", " << err_msg;
     return status;
   }
 
@@ -85,7 +85,7 @@ static zx_status_t WaitAndGetExitCode(const std::string& program_name, const zx:
   auto status = process.wait_one(ZX_PROCESS_TERMINATED,
                                  zx::deadline_after(zx::duration(kTestTimeout)), nullptr);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed waiting for program " << program_name
+    FX_LOGS(ERROR) << "Failed waiting for program " << program_name
                    << " to exit: " << zx_status_get_string(status);
     return status;
   }
@@ -94,20 +94,20 @@ static zx_status_t WaitAndGetExitCode(const std::string& program_name, const zx:
   status = zx_object_get_info(process.get(), ZX_INFO_PROCESS, &proc_info, sizeof(proc_info),
                               nullptr, nullptr);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Error getting return code for program " << program_name << ": "
+    FX_LOGS(ERROR) << "Error getting return code for program " << program_name << ": "
                    << zx_status_get_string(status);
     return status;
   }
 
   if (proc_info.return_code != 0) {
-    FXL_LOG(ERROR) << program_name << " exited with exit code " << proc_info.return_code;
+    FX_LOGS(ERROR) << program_name << " exited with exit code " << proc_info.return_code;
   }
   *out_exit_code = proc_info.return_code;
   return ZX_OK;
 }
 
 bool RunSpec(const std::string& spec_path, const fxl::LogSettings& log_settings) {
-  FXL_LOG(INFO) << "Running spec " << spec_path;
+  FX_LOGS(INFO) << "Running spec " << spec_path;
   zx::job job{};  // -> default job
   zx::process subprocess;
 
@@ -125,10 +125,10 @@ bool RunSpec(const std::string& spec_path, const fxl::LogSettings& log_settings)
     return false;
   }
   if (exit_code != 0) {
-    FXL_LOG(ERROR) << "Running spec terminated: exit code " << exit_code;
+    FX_LOGS(ERROR) << "Running spec terminated: exit code " << exit_code;
     return false;
   }
 
-  FXL_VLOG(1) << "Running spec completed OK";
+  FX_VLOGS(1) << "Running spec completed OK";
   return true;
 }

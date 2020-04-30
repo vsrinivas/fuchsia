@@ -54,7 +54,7 @@ class Escher final : public MeshBuilderFactory, public ShaderProgramFactory {
   // Return a new Frame, which is passed to Renderers to obtain and submit
   // command buffers, to add timestamps for GPU profiling, etc.  If
   // |enable_gpu_logging| is true, GPU profiling timestamps will be logged via
-  // FXL_LOG().
+  // FX_LOGS().
   FramePtr NewFrame(
       const char* trace_literal, uint64_t frame_number, bool enable_gpu_logging = false,
       escher::CommandBuffer::Type requested_type = escher::CommandBuffer::Type::kGraphics,

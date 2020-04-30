@@ -152,27 +152,27 @@ vk::Pipeline CommandBufferPipelineState::FlushGraphicsPipeline(
   // This is very handy code to enable when trying to figure out why your app hasn't pre-generated
   // all of the pipelines needed by your renderer.
 #if 0
-  FXL_LOG(INFO) << "Generating hash for FlushGraphicsPipeline() pipeline lookup";
-  FXL_LOG(INFO) << "      layout spec hash " << pipeline_layout->spec().hash().val;
+  FX_LOGS(INFO) << "Generating hash for FlushGraphicsPipeline() pipeline lookup";
+  FX_LOGS(INFO) << "      layout spec hash " << pipeline_layout->spec().hash().val;
   ForEachBitIndex(attribute_mask, [&](uint32_t bit) {
-    FXL_LOG(INFO) << "      attribute mask bit " << bit;
-    FXL_LOG(INFO) << "      attribute mask bit binding "
+    FX_LOGS(INFO) << "      attribute mask bit " << bit;
+    FX_LOGS(INFO) << "      attribute mask bit binding "
                   << vertex_attributes_[bit].binding;
-    FXL_LOG(INFO) << "      attribute mask bit format "
+    FX_LOGS(INFO) << "      attribute mask bit format "
                   << vk::to_string(vertex_attributes_[bit].format);
-    FXL_LOG(INFO) << "      attribute mask bit offset " << vertex_attributes_[bit].offset;
+    FX_LOGS(INFO) << "      attribute mask bit offset " << vertex_attributes_[bit].offset;
   });
-  FXL_LOG(INFO) << "      attribute active_vertex_bindings_ " << active_vertex_bindings_;
+  FX_LOGS(INFO) << "      attribute active_vertex_bindings_ " << active_vertex_bindings_;
   ForEachBitIndex(active_vertex_bindings_, [&](uint32_t bit) {
-    FXL_LOG(INFO) << "      vertex binding rate "
+    FX_LOGS(INFO) << "      vertex binding rate "
                   << vk::to_string(vertex_bindings_.input_rates[bit]);
-    FXL_LOG(INFO) << "      vertex binding stride " << vertex_bindings_.strides[bit];
+    FX_LOGS(INFO) << "      vertex binding stride " << vertex_bindings_.strides[bit];
   });
-  FXL_LOG(INFO) << "      render_pass uid " << render_pass_->uid();
-  FXL_LOG(INFO) << "      current subpass " << current_subpass_;
-  FXL_LOG(INFO) << "      hash before static state " << hash_before_static_state.val;
-  FXL_LOG(INFO) << "      hash after static state " << hash_after_static_state.val;
-  FXL_LOG(INFO) << "      hash after blend constants " << h.value().val;
+  FX_LOGS(INFO) << "      render_pass uid " << render_pass_->uid();
+  FX_LOGS(INFO) << "      current subpass " << current_subpass_;
+  FX_LOGS(INFO) << "      hash before static state " << hash_before_static_state.val;
+  FX_LOGS(INFO) << "      hash after static state " << hash_after_static_state.val;
+  FX_LOGS(INFO) << "      hash after blend constants " << h.value().val;
 #endif
 
   // Try to find a previously-stashed pipeline that matches the current command
@@ -182,7 +182,7 @@ vk::Pipeline CommandBufferPipelineState::FlushGraphicsPipeline(
   if (!pipeline) {
     pipeline = BuildGraphicsPipeline(pipeline_layout, program, log_pipeline_creation);
     program->StashPipeline(hash, pipeline);
-    FXL_CHECK(pipeline);
+    FX_CHECK(pipeline);
   }
 
   // If blending is disabled, reset the blend ops/factors to their original value before returning
@@ -341,8 +341,8 @@ vk::GraphicsPipelineCreateInfo* CommandBufferPipelineState::InitGraphicsPipeline
       dynamic_states[state_count++] = vk::DynamicState::eStencilReference;
       dynamic_states[state_count++] = vk::DynamicState::eStencilWriteMask;
     }
-    FXL_DCHECK(dynamic_info->dynamicStateCount > 0);
-    FXL_DCHECK(dynamic_info->dynamicStateCount <= kMaxNumDynamicStates);
+    FX_DCHECK(dynamic_info->dynamicStateCount > 0);
+    FX_DCHECK(dynamic_info->dynamicStateCount <= kMaxNumDynamicStates);
   }
 
   // Blend state
@@ -449,7 +449,7 @@ vk::Pipeline CommandBufferPipelineState::BuildComputePipeline(const PipelineLayo
                                                               bool log_pipeline_creation) {
   TRACE_DURATION("gfx", "escher::CommandBuffer::BuildComputePipeline");
   auto& module = program->GetModuleForStage(ShaderStage::kCompute);
-  FXL_DCHECK(module && module->is_valid());
+  FX_DCHECK(module && module->is_valid());
 
   vk::PipelineShaderStageCreateInfo shader_stage_info;
   shader_stage_info.stage = vk::ShaderStageFlagBits::eCompute;
@@ -460,14 +460,14 @@ vk::Pipeline CommandBufferPipelineState::BuildComputePipeline(const PipelineLayo
   pipeline_info.stage = shader_stage_info;
   pipeline_info.layout = pipeline_layout->vk();
 
-  FXL_DCHECK(pipeline_builder_);
+  FX_DCHECK(pipeline_builder_);
   return pipeline_builder_->BuildComputePipeline(pipeline_info, log_pipeline_creation);
 }
 
 void CommandBufferPipelineState::SetVertexAttributes(uint32_t binding, uint32_t attrib,
                                                      vk::Format format, vk::DeviceSize offset) {
-  FXL_DCHECK(binding < VulkanLimits::kNumVertexBuffers);
-  FXL_DCHECK(attrib < VulkanLimits::kNumVertexAttributes);
+  FX_DCHECK(binding < VulkanLimits::kNumVertexBuffers);
+  FX_DCHECK(attrib < VulkanLimits::kNumVertexAttributes);
 
   auto& attr = vertex_attributes_[attrib];
   if (attr.binding != binding || attr.format != format || attr.offset != offset) {
@@ -480,7 +480,7 @@ void CommandBufferPipelineState::SetVertexAttributes(uint32_t binding, uint32_t 
 bool CommandBufferPipelineState::BindVertices(uint32_t binding, vk::Buffer buffer,
                                               vk::DeviceSize offset, vk::DeviceSize stride,
                                               vk::VertexInputRate step_rate) {
-  FXL_DCHECK(binding < VulkanLimits::kNumVertexBuffers);
+  FX_DCHECK(binding < VulkanLimits::kNumVertexBuffers);
 
   if (vertex_bindings_.buffers[binding] != buffer || vertex_bindings_.offsets[binding] != offset) {
     dirty_vertex_bindings_ |= 1u << binding;
@@ -503,7 +503,7 @@ void CommandBufferPipelineState::FlushVertexBuffers(vk::CommandBuffer cb) {
   ForEachBitRange(update_vbo_mask, [&](uint32_t binding, uint32_t binding_count) {
 #ifndef NDEBUG
     for (unsigned i = binding; i < binding + binding_count; i++) {
-      FXL_DCHECK(vertex_bindings_.buffers[i]);
+      FX_DCHECK(vertex_bindings_.buffers[i]);
     }
 #endif
     cb.bindVertexBuffers(binding, binding_count, vertex_bindings_.buffers + binding,

@@ -44,7 +44,7 @@ fuchsia::ui::gfx::ShadowTechnique GetShadowTechniqueFromCommandLine(
     } else if (shadow_type == "STENCIL_SHADOW_VOLUME") {
       return ShadowTechnique::STENCIL_SHADOW_VOLUME;
     } else {
-      FXL_LOG(INFO) << "Unknown shadow type: " << shadow_type
+      FX_LOGS(INFO) << "Unknown shadow type: " << shadow_type
                     << ".  Valid choices are: UNSHADOWED, SCREEN_SPACE, "
                        "SHADOW_MAP, MOMENT_SHADOW_MAP, STENCIL_SHADOW_VOLUME.";
     }
@@ -58,7 +58,7 @@ App::App(async::Loop* loop, const fxl::CommandLine& command_line)
       shadow_technique_(GetShadowTechniqueFromCommandLine(command_line)) {
   scenic_ = component_context_->svc()->Connect<fuchsia::ui::scenic::Scenic>();
   scenic_.set_error_handler([this](zx_status_t status) {
-    FXL_LOG(INFO) << "Lost connection to Scenic service.";
+    FX_LOGS(INFO) << "Lost connection to Scenic service.";
     loop_->Quit();
   });
   scenic_->GetDisplayInfo(
@@ -224,13 +224,13 @@ void App::CreateExampleScene(float display_width, float display_height) {
 }
 
 void App::Init(fuchsia::ui::gfx::DisplayInfo display_info) {
-  FXL_LOG(INFO) << "Creating new Session";
+  FX_LOGS(INFO) << "Creating new Session";
 
   // TODO: set up SessionListener.
   session_ = std::make_unique<Session>(scenic_.get());
   session_->SetDebugName("Scenic Standalone");
   session_->set_error_handler([this](zx_status_t status) {
-    FXL_LOG(INFO) << "Session terminated.";
+    FX_LOGS(INFO) << "Session terminated.";
     loop_->Quit();
   });
 
@@ -302,7 +302,7 @@ void App::Update(uint64_t next_presentation_time) {
 }
 
 void App::ReleaseSessionResources() {
-  FXL_LOG(INFO) << "Closing session.";
+  FX_LOGS(INFO) << "Closing session.";
 
   compositor_.reset();
   camera_.reset();

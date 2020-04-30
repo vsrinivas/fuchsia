@@ -47,7 +47,7 @@ float PerceivedLevel::LevelToGain(float level) {
 
 // static
 int PerceivedLevel::GainToLevel(float gain_db, int max_level) {
-  FXL_DCHECK(max_level > 0);
+  FX_DCHECK(max_level > 0);
 
   if (gain_db <= kMinLevelGainDb) {
     return 0;
@@ -62,7 +62,7 @@ int PerceivedLevel::GainToLevel(float gain_db, int max_level) {
 
 // static
 float PerceivedLevel::LevelToGain(int level, int max_level) {
-  FXL_DCHECK(max_level > 0);
+  FX_DCHECK(max_level > 0);
 
   if (level <= 0) {
     return fuchsia::media::audio::MUTED_GAIN_DB;

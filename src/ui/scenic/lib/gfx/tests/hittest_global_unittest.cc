@@ -149,11 +149,11 @@ class HitTestTest : public gtest::TestLoopFixture {
   // Direct scene access for more focused hit tester unit testing.
   Scene* scene() {
     const auto& layers = layer_stack()->layers();
-    FXL_CHECK(layers.size() == 1);
+    FX_CHECK(layers.size() == 1);
     const Layer* layer = layers.begin()->get();
-    FXL_CHECK(layer->renderer());
-    FXL_CHECK(layer->renderer()->camera());
-    FXL_CHECK(layer->renderer()->camera()->scene());
+    FX_CHECK(layer->renderer());
+    FX_CHECK(layer->renderer()->camera());
+    FX_CHECK(layer->renderer()->camera()->scene());
     return layer->renderer()->camera()->scene().get();
   }
 
@@ -161,9 +161,9 @@ class HitTestTest : public gtest::TestLoopFixture {
   // For simplicity, we use the first (and only) compositor and layer stack.
   LayerStackPtr layer_stack() {
     const CompositorWeakPtr& compositor = engine_->scene_graph()->first_compositor();
-    FXL_CHECK(compositor);
+    FX_CHECK(compositor);
     LayerStackPtr layer_stack = compositor->layer_stack();
-    FXL_CHECK(layer_stack);
+    FX_CHECK(layer_stack);
 
     return layer_stack;
   }

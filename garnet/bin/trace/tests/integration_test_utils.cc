@@ -50,13 +50,13 @@ static zx::channel GetProviderChannel() {
   zx::channel local_endpoint, remote_endpoint;
   zx_status_t status = zx::channel::create(0, &local_endpoint, &remote_endpoint);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to create channels " << status;
+    FX_LOGS(ERROR) << "Failed to create channels " << status;
     return zx::channel();
   }
   status =
       fdio_service_connect("/svc/fuchsia.tracing.provider.Registry", remote_endpoint.release());
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to connect to provider " << status;
+    FX_LOGS(ERROR) << "Failed to connect to provider " << status;
     return zx::channel();
   }
   return local_endpoint;
@@ -75,7 +75,7 @@ bool CreateProviderSynchronously(async::Loop& loop, const char* name,
   bool already_started;
   if (!trace::TraceProvider::CreateSynchronously(std::move(provider_channel), dispatcher, name,
                                                  &provider, &already_started)) {
-    FXL_LOG(ERROR) << "Failed to create provider " << name;
+    FX_LOGS(ERROR) << "Failed to create provider " << name;
     return false;
   }
 
@@ -96,7 +96,7 @@ bool CreateProviderSynchronouslyAndWait(async::Loop& loop, const char* name,
   bool already_started;
   if (!trace::TraceProvider::CreateSynchronously(std::move(provider_channel), dispatcher, name,
                                                  &provider, &already_started)) {
-    FXL_LOG(ERROR) << "Failed to create provider " << name;
+    FX_LOGS(ERROR) << "Failed to create provider " << name;
     return false;
   }
 
@@ -106,7 +106,7 @@ bool CreateProviderSynchronouslyAndWait(async::Loop& loop, const char* name,
     // has started. But we haven't received the Start() request yet, which
     // contains the trace buffer (as a vmo) and other things. So wait for it.
     if (!WaitForTracingToStart(loop, kStartTimeout)) {
-      FXL_LOG(ERROR) << "Provider " << name << " timed out waiting for tracing to start";
+      FX_LOGS(ERROR) << "Provider " << name << " timed out waiting for tracing to start";
       return false;
     }
   }
@@ -124,7 +124,7 @@ bool CreateProviderSynchronously(async::Loop& loop, const char* name,
   bool already_started;
   if (!trace::TraceProviderWithFdio::CreateSynchronously(dispatcher, name, &provider,
                                                          &already_started)) {
-    FXL_LOG(ERROR) << "Failed to create provider " << name;
+    FX_LOGS(ERROR) << "Failed to create provider " << name;
     return false;
   }
 
@@ -141,7 +141,7 @@ bool CreateProviderSynchronouslyAndWait(async::Loop& loop, const char* name,
   bool already_started;
   if (!trace::TraceProviderWithFdio::CreateSynchronously(dispatcher, name, &provider,
                                                          &already_started)) {
-    FXL_LOG(ERROR) << "Failed to create provider " << name;
+    FX_LOGS(ERROR) << "Failed to create provider " << name;
     return false;
   }
 
@@ -151,7 +151,7 @@ bool CreateProviderSynchronouslyAndWait(async::Loop& loop, const char* name,
     // has started. But we haven't received the Start() request yet, which
     // contains the trace buffer (as a vmo) and other things. So wait for it.
     if (!WaitForTracingToStart(loop, kStartTimeout)) {
-      FXL_LOG(ERROR) << "Provider " << name << " timed out waiting for tracing to start";
+      FX_LOGS(ERROR) << "Provider " << name << " timed out waiting for tracing to start";
       return false;
     }
   }
@@ -188,9 +188,9 @@ bool VerifyTestEventsFromJson(const std::string& test_output_file, size_t* out_n
   rapidjson::Document document;
 
   if (!document.ParseStream(isw).IsObject()) {
-    FXL_LOG(ERROR) << "Failed to parse JSON object from: " << test_output_file;
+    FX_LOGS(ERROR) << "Failed to parse JSON object from: " << test_output_file;
     if (document.HasParseError()) {
-      FXL_LOG(ERROR) << "Parse error " << GetParseError_En(document.GetParseError()) << " ("
+      FX_LOGS(ERROR) << "Parse error " << GetParseError_En(document.GetParseError()) << " ("
                      << document.GetErrorOffset() << ")";
     }
     return false;
@@ -198,56 +198,56 @@ bool VerifyTestEventsFromJson(const std::string& test_output_file, size_t* out_n
 
   auto events_it = document.FindMember(kTraceEventsMemberName);
   if (events_it == document.MemberEnd()) {
-    FXL_LOG(ERROR) << "Member not found: " << kTraceEventsMemberName;
+    FX_LOGS(ERROR) << "Member not found: " << kTraceEventsMemberName;
     return false;
   }
   const auto& value = events_it->value;
   if (!value.IsArray()) {
-    FXL_LOG(ERROR) << kTraceEventsMemberName << " is not an array";
+    FX_LOGS(ERROR) << kTraceEventsMemberName << " is not an array";
     return false;
   }
 
   const auto& array = value.GetArray();
   for (size_t i = 0; i < array.Size(); ++i) {
     if (!array[i].IsObject()) {
-      FXL_LOG(ERROR) << "Event " << i << " is not an object";
+      FX_LOGS(ERROR) << "Event " << i << " is not an object";
       return false;
     }
 
     const auto& event = array[i];
     auto cat_it = event.FindMember(kCategoryMemberName);
     if (cat_it == event.MemberEnd()) {
-      FXL_LOG(ERROR) << "Category not present in event";
+      FX_LOGS(ERROR) << "Category not present in event";
       return false;
     }
     const auto& category_name = cat_it->value;
     if (!category_name.IsString()) {
-      FXL_LOG(ERROR) << "Category name is not a string";
+      FX_LOGS(ERROR) << "Category name is not a string";
       return false;
     }
     if (strcmp(category_name.GetString(), kWriteTestEventsCategoryName) != 0) {
-      FXL_LOG(ERROR) << "Expected category not present in event, got: "
+      FX_LOGS(ERROR) << "Expected category not present in event, got: "
                      << category_name.GetString();
       return false;
     }
 
     auto name_it = event.FindMember(kEventNameMemberName);
     if (name_it == event.MemberEnd()) {
-      FXL_LOG(ERROR) << "Event name not present in event";
+      FX_LOGS(ERROR) << "Event name not present in event";
       return false;
     }
     const auto& event_name = name_it->value;
     if (!event_name.IsString()) {
-      FXL_LOG(ERROR) << "Event name is not a string";
+      FX_LOGS(ERROR) << "Event name is not a string";
       return false;
     }
     if (strcmp(event_name.GetString(), kWriteTestEventsInstantEventName) != 0) {
-      FXL_LOG(ERROR) << "Expected event not present in event, got: " << event_name.GetString();
+      FX_LOGS(ERROR) << "Expected event not present in event, got: " << event_name.GetString();
       return false;
     }
   }
 
-  FXL_VLOG(1) << array.Size() << " trace events present";
+  FX_VLOGS(1) << array.Size() << " trace events present";
   *out_num_events = array.Size();
   return true;
 }
@@ -258,17 +258,17 @@ bool VerifyTestEventsFromFxt(const std::string& test_output_file,
   auto error_handler = [&num_errors](fbl::String error) {
     ++num_errors;
     if (num_errors <= kMaxErrorCount) {
-      FXL_LOG(ERROR) << "While reading records got error: " << error.c_str();
+      FX_LOGS(ERROR) << "While reading records got error: " << error.c_str();
     }
     if (num_errors == kMaxErrorCount) {
-      FXL_LOG(ERROR) << "Remaining errors will not be printed";
+      FX_LOGS(ERROR) << "Remaining errors will not be printed";
     }
   };
 
   std::unique_ptr<trace::FileReader> reader;
   if (!trace::FileReader::Create(test_output_file.c_str(), std::move(record_consumer),
                                  std::move(error_handler), &reader)) {
-    FXL_LOG(ERROR) << "Error creating trace::FileReader";
+    FX_LOGS(ERROR) << "Error creating trace::FileReader";
     return false;
   }
 
@@ -277,7 +277,7 @@ bool VerifyTestEventsFromFxt(const std::string& test_output_file,
 }
 
 void FillBuffer(size_t num_times, size_t buffer_size_in_mb) {
-  FXL_DCHECK(num_times && buffer_size_in_mb);
+  FX_DCHECK(num_times && buffer_size_in_mb);
   size_t buffer_size = buffer_size_in_mb * 1024 * 1024;
   size_t num_iterations = buffer_size / kRecordSize;
 
@@ -323,7 +323,7 @@ static size_t GetMinimumNumberOfEvents(tracing::BufferingMode buffering_mode,
       percentage_buffer_filled = 0.5;
       break;
     default:
-      FXL_NOTREACHED();
+      FX_NOTREACHED();
   }
 
   return (buffer_size / kRecordSize) * percentage_buffer_filled;
@@ -338,7 +338,7 @@ bool VerifyFullBuffer(const std::string& test_output_file, tracing::BufferingMod
 
   size_t min_num_events = GetMinimumNumberOfEvents(buffering_mode, buffer_size_in_mb);
   if (num_events < min_num_events) {
-    FXL_LOG(ERROR) << "Insufficient number of events present, got " << num_events
+    FX_LOGS(ERROR) << "Insufficient number of events present, got " << num_events
                    << ", expected at least " << min_num_events;
     return false;
   }
@@ -364,12 +364,12 @@ bool WaitForTracingToStart(async::Loop& loop, zx::duration timeout) {
   timeout_task.PostDelayed(loop.dispatcher(), timeout);
   zx_status_t status = loop.Run();
   if (status != ZX_OK && status != ZX_ERR_CANCELED) {
-    FXL_LOG(ERROR) << "loop.Run() failed, status=" << status;
+    FX_LOGS(ERROR) << "loop.Run() failed, status=" << status;
     return false;
   }
 
   status = loop.ResetQuit();
-  FXL_CHECK(status == ZX_OK);
+  FX_CHECK(status == ZX_OK);
 
   return trace_state() == TRACE_STARTED;
 }

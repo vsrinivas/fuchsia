@@ -31,13 +31,13 @@ class SandboxBinding : public fuchsia::netemul::sandbox::Sandbox {
     binding_.set_error_handler([this](zx_status_t err) { BindingClosed(); });
 
     parent_env_ctlr_.set_error_handler([this](zx_status_t err) {
-      FXL_LOG(ERROR) << "Lost connection to parent environment controller: "
+      FX_LOGS(ERROR) << "Lost connection to parent environment controller: "
                      << zx_status_get_string(err);
       BindingClosed();
     });
 
     parent_env_.set_error_handler([this](zx_status_t err) {
-      FXL_LOG(ERROR) << "Lost connection to parent environment: " << zx_status_get_string(err);
+      FX_LOGS(ERROR) << "Lost connection to parent environment: " << zx_status_get_string(err);
       BindingClosed();
     });
 
@@ -46,7 +46,7 @@ class SandboxBinding : public fuchsia::netemul::sandbox::Sandbox {
     };
 
     if (loop_->StartThread("sandbox-thread") != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed to start thread for sandbox";
+      FX_LOGS(ERROR) << "Failed to start thread for sandbox";
       parent_->BindingClosed(this);
       return;
     }

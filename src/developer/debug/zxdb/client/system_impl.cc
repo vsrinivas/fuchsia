@@ -86,7 +86,7 @@ void Download::Finish() {
 }
 
 void Download::AddServer(std::shared_ptr<Download> self, SymbolServer* server) {
-  FXL_DCHECK(self.get() == this);
+  FX_DCHECK(self.get() == this);
 
   if (!result_cb_)
     return;
@@ -102,7 +102,7 @@ void Download::AddServer(std::shared_ptr<Download> self, SymbolServer* server) {
 
 void Download::Found(std::shared_ptr<Download> self,
                      fit::callback<void(SymbolServer::FetchCallback)> cb) {
-  FXL_DCHECK(self.get() == this);
+  FX_DCHECK(self.get() == this);
 
   if (!result_cb_)
     return;
@@ -116,7 +116,7 @@ void Download::Found(std::shared_ptr<Download> self,
 }
 
 void Download::Error(std::shared_ptr<Download> self, const Err& err) {
-  FXL_DCHECK(self.get() == this);
+  FX_DCHECK(self.get() == this);
 
   if (!result_cb_)
     return;
@@ -135,7 +135,7 @@ void Download::Error(std::shared_ptr<Download> self, const Err& err) {
 
 void Download::RunCB(std::shared_ptr<Download> self,
                      fit::callback<void(SymbolServer::FetchCallback)>& cb) {
-  FXL_DCHECK(!trying_);
+  FX_DCHECK(!trying_);
   trying_ = true;
 
   cb([self](const Err& err, const std::string& path) {
@@ -422,7 +422,7 @@ void SystemImpl::DeleteJobContext(JobContext* job_context) {
   auto found = std::find_if(job_contexts_.begin(), job_contexts_.end(),
                             [impl](auto& cur) { return impl == cur.get(); });
   if (found == job_contexts_.end()) {
-    FXL_NOTREACHED();  // Should always be found.
+    FX_NOTREACHED();  // Should always be found.
     return;
   }
 
@@ -470,7 +470,7 @@ void SystemImpl::DeleteBreakpoint(Breakpoint* breakpoint) {
   auto found = breakpoints_.find(impl->backend_id());
   if (found == breakpoints_.end()) {
     // Should always have found the breakpoint.
-    FXL_NOTREACHED();
+    FX_NOTREACHED();
     return;
   }
 
@@ -502,7 +502,7 @@ void SystemImpl::DeleteFilter(Filter* filter) {
 
   if (found == filters_.end()) {
     // Should always have found the filter.
-    FXL_NOTREACHED();
+    FX_NOTREACHED();
     return;
   }
 
@@ -667,7 +667,7 @@ void SystemImpl::OnSettingChanged(const SettingStore& store, const std::string& 
   } else if (setting_name == ClientSettings::System::kDebugMode) {
     debug_ipc::SetDebugMode(store.GetBool(setting_name));
   } else {
-    FXL_LOG(WARNING) << "Unhandled setting change: " << setting_name;
+    FX_LOGS(WARNING) << "Unhandled setting change: " << setting_name;
   }
 }
 
@@ -694,7 +694,7 @@ void SystemImpl::OnFilterMatches(JobContext* job, const std::vector<uint64_t>& m
 
     AttachToProcess(matched_pid, [matched_pid](fxl::WeakPtr<Target> target, const Err& err) {
       if (err.has_error()) {
-        FXL_LOG(ERROR) << "Could not attach to process " << matched_pid;
+        FX_LOGS(ERROR) << "Could not attach to process " << matched_pid;
         return;
       }
     });
@@ -721,7 +721,7 @@ void SystemImpl::AttachToProcess(uint64_t pid, Target::Callback callback) {
 void SystemImpl::ServerStartedInitializing() { servers_initializing_++; }
 
 void SystemImpl::ServerFinishedInitializing() {
-  FXL_DCHECK(servers_initializing_ > 0);
+  FX_DCHECK(servers_initializing_ > 0);
 
   if (!--servers_initializing_) {
     suspended_downloads_.clear();

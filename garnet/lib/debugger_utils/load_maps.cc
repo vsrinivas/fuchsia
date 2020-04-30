@@ -4,29 +4,28 @@
 
 #include "load_maps.h"
 
+#include <lib/fit/defer.h>
+
 #include <cinttypes>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <map>
 
-#include <lib/fit/defer.h>
-
 #include "src/lib/files/directory.h"
 #include "src/lib/files/path.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
-
 #include "util.h"
 
 namespace debugger_utils {
 
 bool LoadMapTable::ReadLogListenerOutput(const std::string& file) {
-  FXL_LOG(INFO) << "Loading load maps from " << file;
+  FX_LOGS(INFO) << "Loading load maps from " << file;
 
   FILE* f = fopen(file.c_str(), "r");
   if (!f) {
-    FXL_LOG(ERROR) << "error opening file, " << ErrnoString(errno);
+    FX_LOGS(ERROR) << "error opening file, " << ErrnoString(errno);
     return false;
   }
   auto close_file = fit::defer([&]() { fclose(f); });
@@ -56,7 +55,7 @@ bool LoadMapTable::ReadLogListenerOutput(const std::string& file) {
   });
 
   if (!prefix || !build_id || !name || !so_name) {
-    FXL_LOG(ERROR) << "Out of memory";
+    FX_LOGS(ERROR) << "Out of memory";
     return false;
   }
 
@@ -64,15 +63,15 @@ bool LoadMapTable::ReadLogListenerOutput(const std::string& file) {
     // For paranoia's sake, watch for embedded NULs.
     size_t n = strlen(line);
     if (static_cast<ssize_t>(n) != line_len) {
-      FXL_LOG(WARNING) << "Line contains embedded NULs: " << std::string(line, line_len);
+      FX_LOGS(WARNING) << "Line contains embedded NULs: " << std::string(line, line_len);
       continue;
     }
     if (n > 0 && line[n - 1] == '\n')
       line[n - 1] = '\0';
-    FXL_VLOG(2) << fxl::StringPrintf("%d: %s", lineno, line);
+    FX_VLOGS(2) << fxl::StringPrintf("%d: %s", lineno, line);
 
     if (n > kMaxLineLen) {
-      FXL_VLOG(2) << fxl::StringPrintf("%d: too long, ignoring", lineno);
+      FX_VLOGS(2) << fxl::StringPrintf("%d: too long, ignoring", lineno);
     }
 
     if (!strcmp(line, "\n"))
@@ -82,7 +81,7 @@ bool LoadMapTable::ReadLogListenerOutput(const std::string& file) {
 
     // If this is a new boot, start over.
     if (strstr(line, "welcome to Zircon")) {
-      FXL_VLOG(1) << "Restarting reading of load maps, machine rebooted";
+      FX_VLOGS(1) << "Restarting reading of load maps, machine rebooted";
       map_data.clear();
       Clear();
       continue;
@@ -108,7 +107,7 @@ bool LoadMapTable::ReadLogListenerOutput(const std::string& file) {
                prefix, &pid, &seqno, &base_addr, &load_addr, &end_addr) == 6) {
       uint64_t id = GET_ENTRY_ID(pid, seqno);
       if (map_data.find(id) != map_data.end()) {
-        FXL_LOG(ERROR) << "Already have map entry for: " << line;
+        FX_LOGS(ERROR) << "Already have map entry for: " << line;
         continue;
       }
       struct LoadMap entry;
@@ -124,7 +123,7 @@ bool LoadMapTable::ReadLogListenerOutput(const std::string& file) {
       uint64_t id = GET_ENTRY_ID(pid, seqno);
       auto entry_iter = map_data.find(id);
       if (entry_iter == map_data.end()) {
-        FXL_LOG(ERROR) << "Missing entry (A record) for: " << line;
+        FX_LOGS(ERROR) << "Missing entry (A record) for: " << line;
         continue;
       }
       (*entry_iter).second.build_id = build_id;
@@ -135,7 +134,7 @@ bool LoadMapTable::ReadLogListenerOutput(const std::string& file) {
       uint64_t id = GET_ENTRY_ID(pid, seqno);
       auto entry_iter = map_data.find(id);
       if (entry_iter == map_data.end()) {
-        FXL_LOG(ERROR) << "Missing entry (A record) for: " << line;
+        FX_LOGS(ERROR) << "Missing entry (A record) for: " << line;
         continue;
       }
       LoadMap& entry = (*entry_iter).second;
@@ -144,12 +143,12 @@ bool LoadMapTable::ReadLogListenerOutput(const std::string& file) {
       // We should now have the full record.
       AddLoadMap(entry);
     } else {
-      FXL_VLOG(2) << fxl::StringPrintf("%d: ignoring", lineno);
+      FX_VLOGS(2) << fxl::StringPrintf("%d: ignoring", lineno);
     }
   }
 
   if (!feof(f)) {
-    FXL_LOG(ERROR) << "Error reading file";
+    FX_LOGS(ERROR) << "Error reading file";
     return false;
   }
 
@@ -157,7 +156,7 @@ bool LoadMapTable::ReadLogListenerOutput(const std::string& file) {
 }
 
 void LoadMapTable::AddLoadMap(const LoadMap& map) {
-  FXL_VLOG(2) << fxl::StringPrintf("Adding map entry, pid %" PRIu64 " %s 0x%" PRIx64 "-0x%" PRIx64,
+  FX_VLOGS(2) << fxl::StringPrintf("Adding map entry, pid %" PRIu64 " %s 0x%" PRIx64 "-0x%" PRIx64,
                                    map.pid, map.name.c_str(), map.load_addr, map.end_addr);
   maps_.push_back(map);
 }

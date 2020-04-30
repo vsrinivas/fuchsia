@@ -47,8 +47,8 @@ std::vector<const ModuleSymbols*> TargetSymbols::GetModuleSymbols() const {
 
 std::vector<Location> TargetSymbols::ResolveInputLocation(const InputLocation& input_location,
                                                           const ResolveOptions& options) const {
-  FXL_DCHECK(input_location.type != InputLocation::Type::kNone);
-  FXL_DCHECK(input_location.type != InputLocation::Type::kAddress);
+  FX_DCHECK(input_location.type != InputLocation::Type::kNone);
+  FX_DCHECK(input_location.type != InputLocation::Type::kAddress);
 
   // This uses a null symbol context since this function doesn't depend on
   // any actual locations of libraries in memory.

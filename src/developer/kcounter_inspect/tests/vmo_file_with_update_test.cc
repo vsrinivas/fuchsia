@@ -53,7 +53,7 @@ class VmoFileWithUpdateTest : public gtest::RealLoopFixture {
     service_directory_provider_.reset(
         new ::sys::testing::ServiceDirectoryProvider(loop_.dispatcher()));
     stub_kcounter_.reset(new StubKcounter);
-    FXL_CHECK(service_directory_provider_->AddService(stub_kcounter_->GetHandler()) == ZX_OK);
+    FX_CHECK(service_directory_provider_->AddService(stub_kcounter_->GetHandler()) == ZX_OK);
   }
 
   void TearDown() override {

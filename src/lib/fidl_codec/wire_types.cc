@@ -299,7 +299,7 @@ void Uint8Type::PrettyPrint(const Value* value, PrettyPrinter& printer) const {
   if (!value->GetIntegerValue(&absolute, &negative)) {
     printer << Red << "invalid" << ResetColor;
   } else {
-    FXL_DCHECK(!negative);
+    FX_DCHECK(!negative);
     switch (kind_) {
       case Kind::kDecimal:
         printer << Blue << absolute << ResetColor;
@@ -321,7 +321,7 @@ void Uint16Type::PrettyPrint(const Value* value, PrettyPrinter& printer) const {
   if (!value->GetIntegerValue(&absolute, &negative)) {
     printer << Red << "invalid" << ResetColor;
   } else {
-    FXL_DCHECK(!negative);
+    FX_DCHECK(!negative);
     switch (kind_) {
       case Kind::kDecimal:
         printer << Blue << absolute << ResetColor;
@@ -343,7 +343,7 @@ void Uint32Type::PrettyPrint(const Value* value, PrettyPrinter& printer) const {
   if (!value->GetIntegerValue(&absolute, &negative)) {
     printer << Red << "invalid" << ResetColor;
   } else {
-    FXL_DCHECK(!negative);
+    FX_DCHECK(!negative);
     switch (kind_) {
       case Kind::kDecimal:
         printer << Blue << absolute << ResetColor;
@@ -371,7 +371,7 @@ void Uint64Type::PrettyPrint(const Value* value, PrettyPrinter& printer) const {
   if (!value->GetIntegerValue(&absolute, &negative)) {
     printer << Red << "invalid" << ResetColor;
   } else {
-    FXL_DCHECK(!negative);
+    FX_DCHECK(!negative);
     switch (kind_) {
       case Kind::kDecimal:
         printer << Blue << absolute << ResetColor;
@@ -686,7 +686,7 @@ std::unique_ptr<Type> Type::ScalarTypeFromName(const std::string& type_name) {
 
 std::unique_ptr<Type> Type::TypeFromPrimitive(const rapidjson::Value& type) {
   if (!type.HasMember("subtype")) {
-    FXL_LOG(ERROR) << "Invalid type";
+    FX_LOGS(ERROR) << "Invalid type";
     return std::make_unique<InvalidType>();
   }
 
@@ -697,7 +697,7 @@ std::unique_ptr<Type> Type::TypeFromPrimitive(const rapidjson::Value& type) {
 std::unique_ptr<Type> Type::TypeFromIdentifier(LibraryLoader* loader,
                                                const rapidjson::Value& type) {
   if (!type.HasMember("identifier")) {
-    FXL_LOG(ERROR) << "Invalid type";
+    FX_LOGS(ERROR) << "Invalid type";
     return std::make_unique<InvalidType>();
   }
   std::string id = type["identifier"].GetString();
@@ -705,7 +705,7 @@ std::unique_ptr<Type> Type::TypeFromIdentifier(LibraryLoader* loader,
   std::string library_name = id.substr(0, split_index);
   Library* library = loader->GetLibraryFromName(library_name);
   if (library == nullptr) {
-    FXL_LOG(ERROR) << "Unknown type for identifier: " << library_name;
+    FX_LOGS(ERROR) << "Unknown type for identifier: " << library_name;
     return std::make_unique<InvalidType>();
   }
 
@@ -718,7 +718,7 @@ std::unique_ptr<Type> Type::TypeFromIdentifier(LibraryLoader* loader,
 
 std::unique_ptr<Type> Type::GetType(LibraryLoader* loader, const rapidjson::Value& type) {
   if (!type.HasMember("kind")) {
-    FXL_LOG(ERROR) << "Invalid type";
+    FX_LOGS(ERROR) << "Invalid type";
     return std::make_unique<InvalidType>();
   }
   std::string kind = type["kind"].GetString();
@@ -746,7 +746,7 @@ std::unique_ptr<Type> Type::GetType(LibraryLoader* loader, const rapidjson::Valu
   if (kind == "identifier") {
     return Type::TypeFromIdentifier(loader, type);
   }
-  FXL_LOG(ERROR) << "Invalid type " << kind;
+  FX_LOGS(ERROR) << "Invalid type " << kind;
   return std::make_unique<InvalidType>();
 }
 

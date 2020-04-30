@@ -38,8 +38,8 @@ int main() {
 
   fuchsia::exception::ProcessLimbo_WatchProcessesWaitingOnException_Result result;
   zx_status_t status = process_limbo->WatchProcessesWaitingOnException(&result);
-  FXL_DCHECK(status == ZX_OK) << zx_status_get_string(status);
-  FXL_DCHECK(result.is_response()) << zx_status_get_string(result.err());
+  FX_DCHECK(status == ZX_OK) << zx_status_get_string(status);
+  FX_DCHECK(result.is_response()) << zx_status_get_string(result.err());
 
   auto& exceptions = result.response().exception_list;
   printf("Got %zu exceptions.\n", exceptions.size());

@@ -15,7 +15,7 @@ FenceListener::FenceListener(zx::event fence)
       waiter_(fence_.get(),     // handle
               kFenceSignalled)  // trigger
 {
-  FXL_DCHECK(fence_);
+  FX_DCHECK(fence_);
 }
 
 bool FenceListener::WaitReady(zx::duration timeout) {
@@ -30,7 +30,7 @@ bool FenceListener::WaitReady(zx::duration timeout) {
   zx_signals_t pending = 0u;
   while (!ready_) {
     zx_status_t status = fence_.wait_one(kFenceSignalled, zx_deadline, &pending);
-    FXL_DCHECK(status == ZX_OK || status == ZX_ERR_TIMED_OUT);
+    FX_DCHECK(status == ZX_OK || status == ZX_ERR_TIMED_OUT);
     ready_ = pending & kFenceSignalled;
     if (zx_deadline != zx::time::infinite())
       break;
@@ -43,20 +43,20 @@ void FenceListener::WaitReadyAsync(fit::closure ready_callback) {
     return;
 
   // Make sure callback was not set before.
-  FXL_DCHECK(!ready_callback_);
+  FX_DCHECK(!ready_callback_);
 
   waiter_.set_handler(std::bind(&FenceListener::OnFenceSignalled, this, std::placeholders::_3,
                                 std::placeholders::_4));
   zx_status_t status = waiter_.Begin(async_get_default_dispatcher());
-  FXL_CHECK(status == ZX_OK);
+  FX_CHECK(status == ZX_OK);
   ready_callback_ = std::move(ready_callback);
 }
 
 void FenceListener::OnFenceSignalled(zx_status_t status, const zx_packet_signal* signal) {
   if (status == ZX_OK) {
     zx_signals_t pending = signal->observed;
-    FXL_DCHECK(pending & kFenceSignalled);
-    FXL_DCHECK(ready_callback_);
+    FX_DCHECK(pending & kFenceSignalled);
+    FX_DCHECK(ready_callback_);
 
     ready_ = true;
     fit::closure callback = std::move(ready_callback_);
@@ -64,7 +64,7 @@ void FenceListener::OnFenceSignalled(zx_status_t status, const zx_packet_signal*
 
     callback();
   } else {
-    FXL_LOG(ERROR) << "FenceListener::OnFenceSignalled received an "
+    FX_LOGS(ERROR) << "FenceListener::OnFenceSignalled received an "
                       "error status code: "
                    << status;
 

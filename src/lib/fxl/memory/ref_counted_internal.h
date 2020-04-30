@@ -4,8 +4,8 @@
 
 // Internal implementation details for ref_counted.h.
 
-#ifndef LIB_FXL_MEMORY_REF_COUNTED_INTERNAL_H_
-#define LIB_FXL_MEMORY_REF_COUNTED_INTERNAL_H_
+#ifndef SRC_LIB_FXL_MEMORY_REF_COUNTED_INTERNAL_H_
+#define SRC_LIB_FXL_MEMORY_REF_COUNTED_INTERNAL_H_
 
 #include <atomic>
 
@@ -20,15 +20,15 @@ class RefCountedThreadSafeBase {
  public:
   void AddRef() const {
 #ifndef NDEBUG
-    FXL_DCHECK(!adoption_required_);
-    FXL_DCHECK(!destruction_started_);
+    FX_DCHECK(!adoption_required_);
+    FX_DCHECK(!destruction_started_);
 #endif
     ref_count_.fetch_add(1u, std::memory_order_relaxed);
   }
 
   bool HasOneRef() const { return ref_count_.load(std::memory_order_acquire) == 1u; }
 
-  void AssertHasOneRef() const { FXL_DCHECK(HasOneRef()); }
+  void AssertHasOneRef() const { FX_DCHECK(HasOneRef()); }
 
  protected:
   RefCountedThreadSafeBase();
@@ -37,10 +37,10 @@ class RefCountedThreadSafeBase {
   // Returns true if the object should self-delete.
   bool Release() const {
 #ifndef NDEBUG
-    FXL_DCHECK(!adoption_required_);
-    FXL_DCHECK(!destruction_started_);
+    FX_DCHECK(!adoption_required_);
+    FX_DCHECK(!destruction_started_);
 #endif
-    FXL_DCHECK(ref_count_.load(std::memory_order_acquire) != 0u);
+    FX_DCHECK(ref_count_.load(std::memory_order_acquire) != 0u);
     // TODO(vtl): We could add the following:
     //     if (ref_count_.load(std::memory_order_relaxed) == 1u) {
     // #ifndef NDEBUG
@@ -65,7 +65,7 @@ class RefCountedThreadSafeBase {
 
 #ifndef NDEBUG
   void Adopt() {
-    FXL_DCHECK(adoption_required_);
+    FX_DCHECK(adoption_required_);
     adoption_required_ = false;
   }
 #endif
@@ -93,13 +93,13 @@ inline RefCountedThreadSafeBase::RefCountedThreadSafeBase()
 
 inline RefCountedThreadSafeBase::~RefCountedThreadSafeBase() {
 #ifndef NDEBUG
-  FXL_DCHECK(!adoption_required_);
+  FX_DCHECK(!adoption_required_);
   // Should only be destroyed as a result of |Release()|.
-  FXL_DCHECK(destruction_started_);
+  FX_DCHECK(destruction_started_);
 #endif
 }
 
 }  // namespace internal
 }  // namespace fxl
 
-#endif  // LIB_FXL_MEMORY_REF_COUNTED_INTERNAL_H_
+#endif  // SRC_LIB_FXL_MEMORY_REF_COUNTED_INTERNAL_H_

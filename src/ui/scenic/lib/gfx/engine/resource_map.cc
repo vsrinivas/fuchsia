@@ -15,7 +15,7 @@ ResourceMap::~ResourceMap() {}
 void ResourceMap::Clear() { resources_.clear(); }
 
 bool ResourceMap::AddResource(ResourceId id, ResourcePtr resource) {
-  FXL_DCHECK(resource);
+  FX_DCHECK(resource);
 
   auto result = resources_.insert(std::make_pair(id, std::move(resource)));
   if (!result.second) {

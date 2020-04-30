@@ -69,7 +69,7 @@ std::string CleanString(fbl::String str) {
     if (!fxl::ReadUnicodeCharacter(data, len, &char_index, &code_point)) {
       static bool logged_once = false;
       if (!logged_once) {
-        FXL_LOG(WARNING) << "Invalid unicode present in trace";
+        FX_LOGS(WARNING) << "Invalid unicode present in trace";
         logged_once = true;
       }
       code_point = kUnicodeReplacementCharacter;
@@ -193,7 +193,7 @@ void ChromiumExporter::ExportRecord(const trace::Record& record) {
         last_branch_records_.push_back(*lbr);
       } else {
         // Drop the record.
-        FXL_LOG(INFO) << "Dropping blob record: "
+        FX_LOGS(INFO) << "Dropping blob record: "
                       << "name " << blob.name.c_str() << " of size " << blob.blob_size;
       }
       break;
@@ -428,7 +428,7 @@ void ChromiumExporter::ExportMetadata(const trace::Record::Metadata& metadata) {
       const auto& id = event.id;
       if (event.event == trace::ProviderEventType::kBufferOverflow) {
         // TODO(dje): Need to get provider name.
-        FXL_LOG(WARNING) << "#" << id << " buffer overflowed,"
+        FX_LOGS(WARNING) << "#" << id << " buffer overflowed,"
                          << " records were likely dropped";
       }
       break;
@@ -473,13 +473,13 @@ void ChromiumExporter::ExportBlob(const trace::LargeRecordData::Blob& data) {
     const auto& blob = get<trace::LargeRecordData::BlobEvent>(data);
 
     // Drop blob event record.
-    FXL_LOG(INFO) << "Dropping large blob event record: "
+    FX_LOGS(INFO) << "Dropping large blob event record: "
                   << "name " << blob.name.c_str() << " of size " << blob.blob_size;
   } else if (fit::holds_alternative<trace::LargeRecordData::BlobAttachment>(data)) {
     const auto& blob = get<trace::LargeRecordData::BlobAttachment>(data);
 
     // Drop blob attachment record.
-    FXL_LOG(INFO) << "Dropping large blob attachment record: "
+    FX_LOGS(INFO) << "Dropping large blob attachment record: "
                   << "name " << blob.name.c_str() << " of size " << blob.blob_size;
   }
 }

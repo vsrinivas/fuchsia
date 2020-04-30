@@ -31,7 +31,7 @@ class DebugAgentMessageLoop : public debug_ipc::PlatformMessageLoop {
   DebugAgentMessageLoop() {
     std::string error_message;
     bool success = Init(&error_message);
-    FXL_CHECK(success) << error_message;
+    FX_CHECK(success) << error_message;
   }
   ~DebugAgentMessageLoop() { Cleanup(); }
 
@@ -137,7 +137,7 @@ class MockLimboProvider : public LimboProvider {
   }
 
   void CallOnEnterLimbo() {
-    FXL_DCHECK(on_enter_limbo_);
+    FX_DCHECK(on_enter_limbo_);
 
     std::vector<ProcessExceptionMetadata> processes;
     processes.reserve(limbo_.size());
@@ -199,9 +199,9 @@ std::pair<const MockProcessObject*, const MockThreadObject*> GetProcessThread(
     const MockObjectProvider& object_provider, const std::string& process_name,
     const std::string& thread_name) {
   const MockProcessObject* process = object_provider.ProcessByName(process_name);
-  FXL_DCHECK(process);
+  FX_DCHECK(process);
   const MockThreadObject* thread = process->GetThread(thread_name);
-  FXL_DCHECK(thread);
+  FX_DCHECK(thread);
 
   return {process, thread};
 }

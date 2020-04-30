@@ -20,7 +20,7 @@ fxl::RefPtr<ShadertoyState> ShadertoyState::NewForImagePipe(
 
 fxl::RefPtr<ShadertoyState> ShadertoyState::NewForView(App* app, zx::eventpair view_token,
                                                        bool handle_input_events) {
-  FXL_CHECK(false) << "unimplemented.";
+  FX_CHECK(false) << "unimplemented.";
   return fxl::RefPtr<ShadertoyState>();
 #if 0
   return fxl::AdoptRef(new ShadertoyStateForView(
@@ -75,11 +75,11 @@ void ShadertoyState::SetResolution(uint32_t width, uint32_t height) {
     return;
   }
   if (width > kMaxWidth) {
-    FXL_LOG(ERROR) << "Resolution max width exceeded, " << width << " > " << kMaxWidth;
+    FX_LOGS(ERROR) << "Resolution max width exceeded, " << width << " > " << kMaxWidth;
     return;
   }
   if (height > kMaxHeight) {
-    FXL_LOG(ERROR) << "Resolution max height exceeded, " << height << " > " << kMaxHeight;
+    FX_LOGS(ERROR) << "Resolution max height exceeded, " << height << " > " << kMaxHeight;
     return;
   }
 
@@ -98,7 +98,7 @@ void ShadertoyState::SetMouse(glm::vec4 i_mouse) {
 
 void ShadertoyState::SetImage(uint32_t channel,
                               fidl::InterfaceRequest<fuchsia::images::ImagePipe> request) {
-  FXL_CHECK(false) << "unimplemented";
+  FX_CHECK(false) << "unimplemented";
 }
 
 void ShadertoyState::RequestFrame(uint64_t presentation_time) {
@@ -115,7 +115,7 @@ void ShadertoyState::RequestFrame(uint64_t presentation_time) {
 }
 
 void ShadertoyState::OnFramePresented(fuchsia::images::PresentationInfo info) {
-  FXL_DCHECK(is_drawing_);
+  FX_DCHECK(is_drawing_);
   is_drawing_ = false;
   RequestFrame(info.presentation_time + info.presentation_interval);
 }

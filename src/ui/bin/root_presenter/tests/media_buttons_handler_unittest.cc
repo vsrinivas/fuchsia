@@ -46,7 +46,7 @@ class MockListener : public fuchsia::ui::policy::MediaButtonsListener {
 class MockActivityNotifier : public ActivityNotifier {
  public:
   void ReceiveInputEvent(const fuchsia::ui::input::InputEvent& event) override {
-    FXL_CHECK(false) << "unimplemented.";
+    FX_CHECK(false) << "unimplemented.";
   }
   void ReceiveMediaButtonsEvent(const fuchsia::ui::input::MediaButtonsEvent& event) override {
     if (!last_event_) {

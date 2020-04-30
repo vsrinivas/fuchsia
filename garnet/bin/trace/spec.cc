@@ -226,17 +226,17 @@ const char kArgumentNameKey[] = "argument_name";
 const char kArgumentUnitKey[] = "argument_unit";
 
 bool DecodeEnvironmentSpecs(const rapidjson::Value& specs, Spec* result) {
-  FXL_DCHECK(result);
-  FXL_DCHECK(specs.HasMember(kNameKey));
+  FX_DCHECK(result);
+  FX_DCHECK(specs.HasMember(kNameKey));
   result->environment_name = std::make_unique<std::string>(specs[kNameKey].GetString());
   return true;
 }
 
 bool DecodeProviderSpecs(const rapidjson::Value& specs, Spec* result) {
-  FXL_DCHECK(specs.IsArray());
+  FX_DCHECK(specs.IsArray());
   result->provider_specs = std::make_unique<std::vector<ProviderSpec>>();
   for (const auto& spec : specs.GetArray()) {
-    FXL_DCHECK(spec.HasMember(kNameKey));
+    FX_DCHECK(spec.HasMember(kNameKey));
     const auto& name = spec[kNameKey].GetString();
     if (spec.HasMember(kBufferSizeInMbKey)) {
       size_t size_in_mb = spec[kBufferSizeInMbKey].GetUint();
@@ -266,7 +266,7 @@ bool DecodeAnchor(std::string anchor_str, const char* key, measure::Anchor* resu
   } else if (anchor_str == kAnchorEnd) {
     *result = measure::Anchor::End;
   } else {
-    FXL_LOG(ERROR) << "Incorrect value of " << key;
+    FX_LOGS(ERROR) << "Incorrect value of " << key;
     return false;
   }
 
@@ -311,7 +311,7 @@ bool DecodeSpec(const std::string& json, Spec* spec) {
   if (document.HasParseError()) {
     auto offset = document.GetErrorOffset();
     auto code = document.GetParseError();
-    FXL_LOG(ERROR) << "Couldn't parse the tracing spec file: offset " << offset << ", "
+    FX_LOGS(ERROR) << "Couldn't parse the tracing spec file: offset " << offset << ", "
                    << GetParseError_En(code);
     return false;
   }
@@ -431,7 +431,7 @@ bool DecodeSpec(const std::string& json, Spec* spec) {
       }
       result.measurements->argument_value.push_back(std::move(spec));
     } else {
-      FXL_LOG(ERROR) << "Unrecognized measurement type: " << type;
+      FX_LOGS(ERROR) << "Unrecognized measurement type: " << type;
       return false;
     }
 

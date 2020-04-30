@@ -850,9 +850,9 @@ static void use_video_decoder(Format format, UseVideoDecoderParams params) {
     });
     // The just-posted wait will set frames_done using the main_loop_'s thread,
     // which is not this thread.
-    FXL_LOG(INFO) << "waiting for all frames to be returned from Scenic...";
+    FX_LOGS(INFO) << "waiting for all frames to be returned from Scenic...";
     frames_done_event.Wait(zx::deadline_after(zx::sec(30)));
-    FXL_LOG(INFO) << "all frames have been returned from Scenic";
+    FX_LOGS(INFO) << "all frames have been returned from Scenic";
     // Now we know that there are zero frames in frame_sink, including zero
     // frame cleanup(s) in-flight (in the sense of a pending/running cleanup
     // that's touching codec_client to post any new work.  Work already posted

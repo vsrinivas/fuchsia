@@ -28,15 +28,15 @@ int main(int argc, const char** argv) {
   const bool kUseRootPresenter = command_line.HasOption("use_root_presenter");
   const bool kUseExamplePresenter = command_line.HasOption("use_example_presenter");
   if (kUseRootPresenter && kUseExamplePresenter) {
-    FXL_LOG(ERROR) << "Cannot set both --use_root_presenter and --use_example_presenter";
+    FX_LOGS(ERROR) << "Cannot set both --use_root_presenter and --use_example_presenter";
     return 1;
   }
 
   // If the user asked us to use a Presenter, then do so.  Otherwise, just
   // provide our view as a service.
   if (kUseRootPresenter) {
-    FXL_LOG(INFO) << "Using root presenter.";
-    FXL_LOG(INFO) << "To quit: Tap the background and hit the ESC key.";
+    FX_LOGS(INFO) << "Using root presenter.";
+    FX_LOGS(INFO) << "To quit: Tap the background and hit the ESC key.";
 
     // We need to attach ourselves to a Presenter. To do this, we create a
     // pair of tokens, and use one to create a View locally (which we attach
@@ -55,7 +55,7 @@ int main(int argc, const char** argv) {
     fuchsia::ui::scenic::ScenicPtr scenic =
         component_context->svc()->Connect<fuchsia::ui::scenic::Scenic>();
     scenic.set_error_handler([&loop](zx_status_t status) {
-      FXL_LOG(ERROR) << "Lost connection to Scenic with error " << zx_status_get_string(status)
+      FX_LOGS(ERROR) << "Lost connection to Scenic with error " << zx_status_get_string(status)
                      << ".";
       loop.Quit();
     });
@@ -79,7 +79,7 @@ int main(int argc, const char** argv) {
 
     loop.Run();
   } else if (kUseExamplePresenter) {
-    FXL_LOG(INFO) << "Using example presenter.";
+    FX_LOGS(INFO) << "Using example presenter.";
 
     // We need to attach ourselves to a Presenter. To do this, we create a
     // pair of tokens, and use one to create a View locally (which we attach
@@ -104,7 +104,7 @@ int main(int argc, const char** argv) {
     fuchsia::ui::scenic::ScenicPtr scenic =
         component_context->svc()->Connect<fuchsia::ui::scenic::Scenic>();
     scenic.set_error_handler([&loop](zx_status_t status) {
-      FXL_LOG(INFO) << "Lost connection to Scenic with error code " << status << ".";
+      FX_LOGS(INFO) << "Lost connection to Scenic with error code " << status << ".";
       loop.Quit();
     });
 
@@ -130,7 +130,7 @@ int main(int argc, const char** argv) {
   } else {
     // Instead of creating a View directly, provide a component that will do so
     // when asked via FIDL.
-    FXL_LOG(INFO) << "Launching view provider service.";
+    FX_LOGS(INFO) << "Launching view provider service.";
     scenic::ViewProviderComponent component(
         [&loop](scenic::ViewContext context) {
           // Create a View which will launch shadertoy and attach shadertoy's

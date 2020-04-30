@@ -33,7 +33,7 @@ namespace debug_agent {
 namespace {
 
 std::vector<char> ReadSocketInput(debug_ipc::BufferedZxSocket* socket) {
-  FXL_DCHECK(socket->valid());
+  FX_DCHECK(socket->valid());
 
   constexpr size_t kReadSize = 1024;  // Read in 1K chunks.
 
@@ -169,7 +169,7 @@ void DebuggedProcess::DetachFromProcess() {
 
 zx_status_t DebuggedProcess::Init() {
   debug_ipc::MessageLoopTarget* loop = debug_ipc::MessageLoopTarget::Current();
-  FXL_DCHECK(loop);  // Loop must be created on this thread first.
+  FX_DCHECK(loop);  // Loop must be created on this thread first.
 
   // Register for debug exceptions.
   debug_ipc::MessageLoopTarget::WatchProcessConfig config;
@@ -190,7 +190,7 @@ zx_status_t DebuggedProcess::Init() {
     stdout_.set_error_callback([this]() { OnStdout(true); });
     status = stdout_.Start();
     if (status != ZX_OK) {
-      FXL_LOG(WARNING) << "Could not listen on stdout for process " << name_ << ": "
+      FX_LOGS(WARNING) << "Could not listen on stdout for process " << name_ << ": "
                        << debug_ipc::ZxStatusToString(status);
       stdout_.Reset();
     }
@@ -201,7 +201,7 @@ zx_status_t DebuggedProcess::Init() {
     stderr_.set_error_callback([this]() { OnStderr(true); });
     status = stderr_.Start();
     if (status != ZX_OK) {
-      FXL_LOG(WARNING) << "Could not listen on stderr for process " << name_ << ": "
+      FX_LOGS(WARNING) << "Could not listen on stderr for process " << name_ << ": "
                        << debug_ipc::ZxStatusToString(status);
       stderr_.Reset();
     }
@@ -237,7 +237,7 @@ void DebuggedProcess::OnPause(const debug_ipc::PauseRequest& request,
     // Change the state of those threads.
     for (zx_koid_t thread_koid : suspended_koids) {
       DebuggedThread* thread = GetThread(thread_koid);
-      FXL_DCHECK(thread);
+      FX_DCHECK(thread);
       thread->set_client_state(DebuggedThread::ClientState::kPaused);
     }
 
@@ -447,15 +447,15 @@ zx_status_t DebuggedProcess::RegisterBreakpoint(Breakpoint* bp, uint64_t address
       return RegisterHardwareBreakpoint(bp, address);
     case debug_ipc::BreakpointType::kReadWrite:
     case debug_ipc::BreakpointType::kWrite:
-      FXL_NOTREACHED() << "Watchpoints are registered through RegisterWatchpoint.";
+      FX_NOTREACHED() << "Watchpoints are registered through RegisterWatchpoint.";
       // TODO(donosoc): Reactivate once the transition is complete.
       return ZX_ERR_INVALID_ARGS;
     case debug_ipc::BreakpointType::kLast:
-      FXL_NOTREACHED();
+      FX_NOTREACHED();
       return ZX_ERR_INVALID_ARGS;
   }
 
-  FXL_NOTREACHED();
+  FX_NOTREACHED();
 }
 
 void DebuggedProcess::UnregisterBreakpoint(Breakpoint* bp, uint64_t address) {
@@ -469,19 +469,19 @@ void DebuggedProcess::UnregisterBreakpoint(Breakpoint* bp, uint64_t address) {
       return UnregisterHardwareBreakpoint(bp, address);
     case debug_ipc::BreakpointType::kReadWrite:
     case debug_ipc::BreakpointType::kWrite:
-      FXL_NOTREACHED() << "Watchpoints are unregistered through UnregisterWatchpoint.";
+      FX_NOTREACHED() << "Watchpoints are unregistered through UnregisterWatchpoint.";
       return;
     case debug_ipc::BreakpointType::kLast:
-      FXL_NOTREACHED();
+      FX_NOTREACHED();
       return;
   }
 
-  FXL_NOTREACHED();
+  FX_NOTREACHED();
 }
 
 zx_status_t DebuggedProcess::RegisterWatchpoint(Breakpoint* bp,
                                                 const debug_ipc::AddressRange& range) {
-  FXL_DCHECK(debug_ipc::IsWatchpointType(bp->settings().type))
+  FX_DCHECK(debug_ipc::IsWatchpointType(bp->settings().type))
       << "Breakpoint type must be kWatchpoint, got: "
       << debug_ipc::BreakpointTypeToString(bp->settings().type);
 
@@ -509,7 +509,7 @@ zx_status_t DebuggedProcess::RegisterWatchpoint(Breakpoint* bp,
 }
 
 void DebuggedProcess::UnregisterWatchpoint(Breakpoint* bp, const debug_ipc::AddressRange& range) {
-  FXL_DCHECK(debug_ipc::IsWatchpointType(bp->settings().type))
+  FX_DCHECK(debug_ipc::IsWatchpointType(bp->settings().type))
       << "Breakpoint type must be kWatchpoint, got: "
       << debug_ipc::BreakpointTypeToString(bp->settings().type);
 
@@ -597,8 +597,8 @@ void DebuggedProcess::OnProcessTerminated(zx_koid_t process_koid) {
 
 void DebuggedProcess::OnThreadStarting(zx::exception exception,
                                        zx_exception_info_t exception_info) {
-  FXL_DCHECK(exception_info.pid == koid());
-  FXL_DCHECK(threads_.find(exception_info.tid) == threads_.end());
+  FX_DCHECK(exception_info.pid == koid());
+  FX_DCHECK(threads_.find(exception_info.tid) == threads_.end());
 
   zx::thread handle = object_provider_->GetThreadFromException(exception.get());
 
@@ -619,12 +619,12 @@ void DebuggedProcess::OnThreadStarting(zx::exception exception,
 }
 
 void DebuggedProcess::OnThreadExiting(zx::exception exception, zx_exception_info_t exception_info) {
-  FXL_DCHECK(exception_info.pid == koid());
+  FX_DCHECK(exception_info.pid == koid());
 
   // Clean up our DebuggedThread object.
   auto found_thread = threads_.find(exception_info.tid);
   if (found_thread == threads_.end()) {
-    FXL_NOTREACHED();
+    FX_NOTREACHED();
     return;
   }
 
@@ -648,11 +648,11 @@ void DebuggedProcess::OnThreadExiting(zx::exception exception, zx_exception_info
 
 void DebuggedProcess::OnException(zx::exception exception_token,
                                   zx_exception_info_t exception_info) {
-  FXL_DCHECK(exception_info.pid == koid());
+  FX_DCHECK(exception_info.pid == koid());
 
   DebuggedThread* thread = GetThread(exception_info.tid);
   if (!thread) {
-    FXL_LOG(ERROR) << "Exception on thread " << exception_info.tid << " which we don't know about.";
+    FX_LOGS(ERROR) << "Exception on thread " << exception_info.tid << " which we don't know about.";
     return;
   }
 
@@ -743,7 +743,7 @@ void DebuggedProcess::SuspendAll(bool synchronous, std::vector<uint64_t>* suspen
 }
 
 void DebuggedProcess::OnStdout(bool close) {
-  FXL_DCHECK(stdout_.valid());
+  FX_DCHECK(stdout_.valid());
   if (close) {
     DEBUG_LOG(Process) << LogPreamble(this) << "stdout closed.";
     stdout_.Reset();
@@ -751,14 +751,14 @@ void DebuggedProcess::OnStdout(bool close) {
   }
 
   auto data = ReadSocketInput(&stdout_);
-  FXL_DCHECK(!data.empty());
+  FX_DCHECK(!data.empty());
   DEBUG_LOG(Process) << LogPreamble(this)
                      << "Got stdout: " << std::string(data.data(), data.size());
   SendIO(debug_ipc::NotifyIO::Type::kStdout, std::move(data));
 }
 
 void DebuggedProcess::OnStderr(bool close) {
-  FXL_DCHECK(stderr_.valid());
+  FX_DCHECK(stderr_.valid());
   if (close) {
     DEBUG_LOG(Process) << LogPreamble(this) << "stderr closed.";
     stderr_.Reset();
@@ -766,7 +766,7 @@ void DebuggedProcess::OnStderr(bool close) {
   }
 
   auto data = ReadSocketInput(&stderr_);
-  FXL_DCHECK(!data.empty());
+  FX_DCHECK(!data.empty());
   DEBUG_LOG(Process) << LogPreamble(this) << "Got stderr: " << data.data();
   SendIO(debug_ipc::NotifyIO::Type::kStderr, std::move(data));
 }

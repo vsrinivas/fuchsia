@@ -14,7 +14,7 @@ namespace archive {
 bool CopyPathToFile(const char* src_path, int dst_fd, uint64_t length) {
   fbl::unique_fd src_fd(open(src_path, O_RDONLY));
   if (!src_fd.is_valid()) {
-    FXL_LOG(INFO) << "Failed to open " << src_path;
+    FX_LOGS(INFO) << "Failed to open " << src_path;
     return false;
   }
   return CopyFileToFile(src_fd.get(), dst_fd, length);

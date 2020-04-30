@@ -52,9 +52,9 @@ class HashCacheObjectPoolPolicy : public BasePolicyT {
 
   inline void DestroyPoolObject(T* ptr) {
 #ifndef NDEBUG
-    FXL_DCHECK(ptr->prev == nullptr);
-    FXL_DCHECK(ptr->next == nullptr);
-    FXL_DCHECK(ptr->list == nullptr);
+    FX_DCHECK(ptr->prev == nullptr);
+    FX_DCHECK(ptr->next == nullptr);
+    FX_DCHECK(ptr->list == nullptr);
 #endif
     ptr->set_hash({0});
     ptr->set_ring_index(std::numeric_limits<size_t>::max());
@@ -107,7 +107,7 @@ class HashCache {
       ++cache_hits_;
 
       T* item = it->second;
-      FXL_DCHECK(item->hash() == hash);
+      FX_DCHECK(item->hash() == hash);
 
       // Move item to the current frame's ring, to prevent it from being flushed
       // from the cache.
@@ -142,13 +142,13 @@ class HashCache {
 
  private:
   void ClearRing(size_t ring_index) {
-    FXL_DCHECK(ring_index <= FramesUntilEviction);
+    FX_DCHECK(ring_index <= FramesUntilEviction);
     auto& ring = rings_[ring_index];
     while (auto item = ring.PopFront()) {
       hash_map_.erase(item->hash());
       object_pool_.Free(item);
     }
-    FXL_DCHECK(ring.IsEmpty());
+    FX_DCHECK(ring.IsEmpty());
   }
 
   IntrusiveList<T> rings_[FramesUntilEviction + 1];

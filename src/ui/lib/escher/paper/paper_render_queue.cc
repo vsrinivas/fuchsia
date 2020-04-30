@@ -29,7 +29,7 @@ void PaperRenderQueue::Sort() {
 void PaperRenderQueue::GenerateCommands(CommandBuffer* cmd_buf,
                                         const PaperRenderQueueContext* context,
                                         PaperRenderQueueFlags flags) const {
-  FXL_DCHECK(context);
+  FX_DCHECK(context);
   if (flags & PaperRenderQueueFlagBits::kOpaque) {
     TRACE_DURATION("gfx", "PaperRenderQueue::GenerateCommands[opaque]");
     opaque_.GenerateCommands(cmd_buf, nullptr, context);
@@ -59,7 +59,7 @@ void PaperRenderQueue::PushDrawCall(const PaperDrawCall& draw_call) {
   // probably also a good solution here.  In that case, maybe we don't even
   // need RenderQueueFlags... PushDrawCalls() and GenerateCommands() could both
   // have an explicit queue-id arg.
-  FXL_DCHECK(kOpaqueAndTranslucent != (flags & kOpaqueAndTranslucent))
+  FX_DCHECK(kOpaqueAndTranslucent != (flags & kOpaqueAndTranslucent))
       << "cannot push to both opaque and translucent queue.";
 #endif
 

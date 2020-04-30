@@ -52,7 +52,7 @@ MeasureDuration::PendingBeginKey MeasureDuration::MakeKey(const trace::Record::E
       key.id = event.data.GetFlowEnd().id;
       break;
     default:
-      FXL_NOTREACHED();
+      FX_NOTREACHED();
   }
   return key;
 }
@@ -60,7 +60,7 @@ MeasureDuration::PendingBeginKey MeasureDuration::MakeKey(const trace::Record::E
 bool MeasureDuration::ProcessAsyncOrFlowBegin(const trace::Record::Event& event) {
   const PendingBeginKey key = MakeKey(event);
   if (pending_begins_.count(key)) {
-    FXL_LOG(WARNING) << "Ignoring a trace event: duplicate async or flow begin event";
+    FX_LOGS(WARNING) << "Ignoring a trace event: duplicate async or flow begin event";
     return false;
   }
   pending_begins_[key] = event.timestamp;
@@ -70,7 +70,7 @@ bool MeasureDuration::ProcessAsyncOrFlowBegin(const trace::Record::Event& event)
 bool MeasureDuration::ProcessAsyncOrFlowEnd(const trace::Record::Event& event) {
   const PendingBeginKey key = MakeKey(event);
   if (pending_begins_.count(key) == 0) {
-    FXL_LOG(WARNING) << "Ignoring a trace event: async or flow end not preceded by begin.";
+    FX_LOGS(WARNING) << "Ignoring a trace event: async or flow end not preceded by begin.";
     return false;
   }
 
@@ -87,16 +87,16 @@ bool MeasureDuration::ProcessAsyncOrFlowEnd(const trace::Record::Event& event) {
 }
 
 bool MeasureDuration::ProcessDurationBegin(const trace::Record::Event& event) {
-  FXL_DCHECK(event.type() == trace::EventType::kDurationBegin);
+  FX_DCHECK(event.type() == trace::EventType::kDurationBegin);
   duration_stacks_[event.process_thread].push(event.timestamp);
   return true;
 }
 
 bool MeasureDuration::ProcessDurationEnd(const trace::Record::Event& event) {
-  FXL_DCHECK(event.type() == trace::EventType::kDurationEnd);
+  FX_DCHECK(event.type() == trace::EventType::kDurationEnd);
   const auto key = event.process_thread;
   if (duration_stacks_.count(key) == 0 || duration_stacks_[key].empty()) {
-    FXL_LOG(WARNING) << "Ignoring trace event " << event.category.c_str() << ":"
+    FX_LOGS(WARNING) << "Ignoring trace event " << event.category.c_str() << ":"
                      << event.name.c_str() << " @" << event.timestamp
                      << ": duration end not matched by a previous duration begin.";
     return false;
@@ -118,7 +118,7 @@ bool MeasureDuration::ProcessDurationEnd(const trace::Record::Event& event) {
 }
 
 bool MeasureDuration::ProcessDurationComplete(const trace::Record::Event& event) {
-  FXL_DCHECK(event.type() == trace::EventType::kDurationComplete);
+  FX_DCHECK(event.type() == trace::EventType::kDurationComplete);
   for (const DurationSpec& spec : specs_) {
     if (!EventMatchesSpec(event, spec.event)) {
       continue;

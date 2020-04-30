@@ -83,7 +83,7 @@ TEST_F(InputInjectionTest, RegisterAttemptWithCorrectArguments_ShouldSucceed) {
   bool error_callback_fired = false;
   injector.set_error_handler([&error_callback_fired](zx_status_t status) {
     error_callback_fired = true;
-    FXL_LOG(INFO) << "Error: " << status;
+    FX_LOGS(INFO) << "Error: " << status;
   });
   {
     fuchsia::ui::pointerflow::InjectorConfig config;

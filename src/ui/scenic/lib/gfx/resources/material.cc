@@ -58,11 +58,11 @@ void Material::UpdateEscherMaterial(escher::BatchGpuUploader* gpu_uploader,
         // pipelines is worse (both for FPS and OOMing).
         sampler = resource_context().escher_sampler_cache->ObtainYuvSampler(escher_image->format(),
                                                                             vk::Filter::eLinear);
-        FXL_DCHECK(sampler->is_immutable());
+        FX_DCHECK(sampler->is_immutable());
 
       } else {
         sampler = resource_context().escher_sampler_cache->ObtainSampler(vk::Filter::eLinear);
-        FXL_DCHECK(!sampler->is_immutable());  // Just checking our expectation.
+        FX_DCHECK(!sampler->is_immutable());  // Just checking our expectation.
       }
 
       new_escher_texture = fxl::MakeRefCounted<escher::Texture>(

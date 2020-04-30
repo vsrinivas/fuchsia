@@ -16,7 +16,7 @@ template <class T>
 class GuestTest : public ::testing::Test {
  public:
   static void SetUpTestCase() {
-    FXL_LOG(INFO) << "Guest: " << fbl::TypeInfo<T>::Name();
+    FX_LOGS(INFO) << "Guest: " << fbl::TypeInfo<T>::Name();
     enclosed_guest_ = new T();
     ASSERT_EQ(enclosed_guest_->Start(), ZX_OK);
   }

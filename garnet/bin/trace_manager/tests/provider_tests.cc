@@ -23,7 +23,8 @@ TEST_F(TraceManagerTest, RegisterProviderWithFdio) {
   zx::channel h1, h2;
   ASSERT_EQ(zx::channel::create(0, &h1, &h2), ZX_OK);
   ASSERT_EQ(fdio_service_connect_at(context_provider().outgoing_directory_ptr().channel().get(),
-                                    kProviderRegistryPath, h2.release()), ZX_OK);
+                                    kProviderRegistryPath, h2.release()),
+            ZX_OK);
   fidl::InterfaceHandle<provider::Registry> registry{std::move(h1)};
   fidl::InterfacePtr<provider::Registry> registry_ptr = registry.Bind();
 
@@ -44,12 +45,11 @@ TEST_F(TraceManagerTest, RegisterProviderWithFdio) {
   // to fetch a list of them.
   RunLoopUntilIdle();
 
-  FXL_VLOG(2) << "Providers registered";
+  FX_VLOGS(2) << "Providers registered";
 
   ConnectToControllerService();
   std::vector<controller::ProviderInfo> providers;
-  controller()->GetProviders(
-      [&providers](std::vector<controller::ProviderInfo> in_providers) {
+  controller()->GetProviders([&providers](std::vector<controller::ProviderInfo> in_providers) {
     providers = std::move(in_providers);
   });
   RunLoopUntilIdle();
@@ -61,15 +61,15 @@ TEST_F(TraceManagerTest, RegisterProviderWithFdio) {
     EXPECT_TRUE(p.has_name());
     if (p.has_pid()) {
       switch (p.pid()) {
-      case kProvider1Pid:
-        EXPECT_STREQ(p.name().c_str(), kProvider1Name);
-        break;
-      case kProvider2Pid:
-        EXPECT_STREQ(p.name().c_str(), kProvider2Name);
-        break;
-      default:
-        EXPECT_TRUE(false) << "Unexpected provider id";
-        break;
+        case kProvider1Pid:
+          EXPECT_STREQ(p.name().c_str(), kProvider1Name);
+          break;
+        case kProvider2Pid:
+          EXPECT_STREQ(p.name().c_str(), kProvider2Name);
+          break;
+        default:
+          EXPECT_TRUE(false) << "Unexpected provider id";
+          break;
       }
     }
   }
@@ -91,11 +91,10 @@ TEST_F(TraceManagerTest, AddFakeProviders) {
   // to fetch a list of them.
   RunLoopUntilIdle();
 
-  FXL_VLOG(2) << "Providers registered";
+  FX_VLOGS(2) << "Providers registered";
 
   std::vector<controller::ProviderInfo> providers;
-  controller()->GetProviders(
-      [&providers](std::vector<controller::ProviderInfo> in_providers) {
+  controller()->GetProviders([&providers](std::vector<controller::ProviderInfo> in_providers) {
     providers = std::move(in_providers);
   });
   RunLoopUntilIdle();
@@ -107,15 +106,15 @@ TEST_F(TraceManagerTest, AddFakeProviders) {
     EXPECT_TRUE(p.has_name());
     if (p.has_pid()) {
       switch (p.pid()) {
-      case kProvider1Pid:
-        EXPECT_STREQ(p.name().c_str(), kProvider1Name);
-        break;
-      case kProvider2Pid:
-        EXPECT_STREQ(p.name().c_str(), kProvider2Name);
-        break;
-      default:
-        EXPECT_TRUE(false) << "Unexpected provider id";
-        break;
+        case kProvider1Pid:
+          EXPECT_STREQ(p.name().c_str(), kProvider1Name);
+          break;
+        case kProvider2Pid:
+          EXPECT_STREQ(p.name().c_str(), kProvider2Name);
+          break;
+        default:
+          EXPECT_TRUE(false) << "Unexpected provider id";
+          break;
       }
     }
   }

@@ -15,8 +15,8 @@ namespace impl {
 ImagePtr NaiveImage::AdoptVkImage(ResourceManager* image_owner, ImageInfo info, vk::Image vk_image,
                                   GpuMemPtr mem, vk::ImageLayout initial_layout) {
   TRACE_DURATION("gfx", "escher::NaiveImage::AdoptImage (from VkImage)");
-  FXL_CHECK(vk_image);
-  FXL_CHECK(mem);
+  FX_CHECK(vk_image);
+  FX_CHECK(mem);
 
   // Check image memory requirements before binding the image to memory.
   auto mem_requirements = image_owner->vk_device()
@@ -29,14 +29,14 @@ ImagePtr NaiveImage::AdoptVkImage(ResourceManager* image_owner, ImageInfo info, 
       mem_requirements.get<vk::MemoryRequirements2KHR>().memoryRequirements.alignment;
 
   if (mem->size() < size_required) {
-    FXL_LOG(ERROR) << "AdoptVkImage failed: Image requires " << size_required
+    FX_LOGS(ERROR) << "AdoptVkImage failed: Image requires " << size_required
                    << " bytes of memory, while the provided mem size is " << mem->size()
                    << " bytes.";
     return nullptr;
   }
 
   if (mem->offset() % alignment_required != 0) {
-    FXL_LOG(ERROR) << "Memory requirements check failed: Buffer requires alignment of "
+    FX_LOGS(ERROR) << "Memory requirements check failed: Buffer requires alignment of "
                    << alignment_required << " bytes, while the provided mem offset is "
                    << mem->offset();
     return nullptr;
@@ -44,7 +44,7 @@ ImagePtr NaiveImage::AdoptVkImage(ResourceManager* image_owner, ImageInfo info, 
 
   auto bind_result = image_owner->vk_device().bindImageMemory(vk_image, mem->base(), mem->offset());
   if (bind_result != vk::Result::eSuccess) {
-    FXL_DLOG(ERROR) << "vkBindImageMemory failed: " << vk::to_string(bind_result);
+    FX_DLOGS(ERROR) << "vkBindImageMemory failed: " << vk::to_string(bind_result);
     return nullptr;
   }
 

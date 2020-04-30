@@ -124,7 +124,7 @@ fxl::RefPtr<BaseType> GetBuiltinType(ExprLanguage lang, std::string_view name) {
       map = GetRustBuiltinTypeMap();
       break;
     default:
-      FXL_NOTREACHED();
+      FX_NOTREACHED();
       return nullptr;
   }
 
@@ -143,7 +143,7 @@ fxl::RefPtr<BaseType> GetBuiltinFloatType(ExprLanguage lang) {
     case ExprLanguage::kRust:
       return fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeFloat, 4, "f32");
   }
-  FXL_NOTREACHED();
+  FX_NOTREACHED();
   return fxl::RefPtr<BaseType>();
 }
 
@@ -154,7 +154,7 @@ fxl::RefPtr<BaseType> GetBuiltinDoubleType(ExprLanguage lang) {
     case ExprLanguage::kRust:
       return fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeFloat, 8, "f64");
   }
-  FXL_NOTREACHED();
+  FX_NOTREACHED();
   return fxl::RefPtr<BaseType>();
 }
 
@@ -166,7 +166,7 @@ fxl::RefPtr<BaseType> GetBuiltinLongDoubleType(ExprLanguage lang) {
       // Rust doesn't have a "long double" type, just return a 64-bit double.
       return fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeFloat, 8, "f64");
   }
-  FXL_NOTREACHED();
+  FX_NOTREACHED();
   return fxl::RefPtr<BaseType>();
 }
 

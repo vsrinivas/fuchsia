@@ -26,11 +26,11 @@ MeshManager::MeshManager(CommandBufferPool* command_buffer_pool, GpuAllocator* a
       queue_(command_buffer_pool->queue()),
       builder_count_(0) {}
 
-MeshManager::~MeshManager() { FXL_DCHECK(builder_count_ == 0); }
+MeshManager::~MeshManager() { FX_DCHECK(builder_count_ == 0); }
 
 MeshBuilderPtr MeshManager::NewMeshBuilder(BatchGpuUploader* gpu_uploader, const MeshSpec& spec,
                                            size_t max_vertex_count, size_t max_index_count) {
-  FXL_DCHECK(spec.IsValidOneBufferMesh());
+  FX_DCHECK(spec.IsValidOneBufferMesh());
   size_t stride = spec.stride(0);
 
   return AdoptRef(new MeshManager::MeshBuilder(this, spec, max_vertex_count, max_index_count,
@@ -45,13 +45,13 @@ MeshManager::MeshBuilder::MeshBuilder(MeshManager* manager, const MeshSpec& spec
       spec_(spec),
       is_built_(false),
       gpu_uploader_(gpu_uploader) {
-  FXL_DCHECK(spec.IsValidOneBufferMesh());
+  FX_DCHECK(spec.IsValidOneBufferMesh());
 }
 
 MeshManager::MeshBuilder::~MeshBuilder() {}
 
 BoundingBox MeshManager::MeshBuilder::ComputeBoundingBox2D() const {
-  FXL_DCHECK(spec_.attribute_offset(0, MeshAttribute::kPosition2D) == 0);
+  FX_DCHECK(spec_.attribute_offset(0, MeshAttribute::kPosition2D) == 0);
   const uint8_t* vertex_ptr = vertex_staging_buffer_.data();
 
   const vec2* pos = reinterpret_cast<const vec2*>(vertex_ptr);
@@ -69,7 +69,7 @@ BoundingBox MeshManager::MeshBuilder::ComputeBoundingBox2D() const {
 }
 
 BoundingBox MeshManager::MeshBuilder::ComputeBoundingBox3D() const {
-  FXL_DCHECK(spec_.attribute_offset(0, MeshAttribute::kPosition3D) == 0);
+  FX_DCHECK(spec_.attribute_offset(0, MeshAttribute::kPosition3D) == 0);
   const uint8_t* vertex_ptr = vertex_staging_buffer_.data();
 
   const vec3* pos = reinterpret_cast<const vec3*>(vertex_ptr);
@@ -87,14 +87,14 @@ BoundingBox MeshManager::MeshBuilder::ComputeBoundingBox3D() const {
 }
 
 BoundingBox MeshManager::MeshBuilder::ComputeBoundingBox() const {
-  FXL_DCHECK(vertex_count_ > 0);
-  FXL_DCHECK(spec_.IsValidOneBufferMesh());
+  FX_DCHECK(vertex_count_ > 0);
+  FX_DCHECK(spec_.IsValidOneBufferMesh());
   return spec_.has_attribute(0, MeshAttribute::kPosition2D) ? ComputeBoundingBox2D()
                                                             : ComputeBoundingBox3D();
 }
 
 MeshPtr MeshManager::MeshBuilder::Build() {
-  FXL_DCHECK(!is_built_);
+  FX_DCHECK(!is_built_);
   if (is_built_) {
     return MeshPtr();
   }

@@ -79,7 +79,7 @@ bool DecodeSessionResultSpec(const std::string& json, SessionResultSpec* out_spe
   if (document.HasParseError()) {
     auto offset = document.GetErrorOffset();
     auto code = document.GetParseError();
-    FXL_LOG(ERROR) << "Couldn't parse the session result spec file: offset " << offset << ", "
+    FX_LOGS(ERROR) << "Couldn't parse the session result spec file: offset " << offset << ", "
                    << GetParseError_En(code);
     return false;
   }
@@ -140,7 +140,7 @@ bool WriteSessionResultSpec(const std::string& output_file_path, const SessionRe
 
   std::string encoded = string_buffer.GetString();
   if (!files::WriteFile(output_file_path, encoded.data(), encoded.size())) {
-    FXL_LOG(ERROR) << "Error writing to: " << output_file_path;
+    FX_LOGS(ERROR) << "Error writing to: " << output_file_path;
     return false;
   }
   return true;

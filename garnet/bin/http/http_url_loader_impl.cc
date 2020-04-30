@@ -38,14 +38,14 @@ void URLLoaderImpl::Start(oldhttp::URLRequest request, Callback callback) {
 }
 
 void URLLoaderImpl::FollowRedirect(Callback callback) {
-  FXL_NOTIMPLEMENTED();
+  FX_NOTIMPLEMENTED();
   callback_ = std::move(callback);
   SendError(HTTP_ERR_NOT_IMPLEMENTED);
 }
 
 void URLLoaderImpl::QueryStatus(QueryStatusCallback callback) {
   oldhttp::URLLoaderStatus status;
-  FXL_NOTIMPLEMENTED();
+  FX_NOTIMPLEMENTED();
   status.error = MakeHttpError(HTTP_ERR_NOT_IMPLEMENTED);
   callback(std::move(status));
 }
@@ -85,7 +85,7 @@ void URLLoaderImpl::StartInternal(oldhttp::URLRequest request) {
       request_body_reader =
           std::make_unique<http::SocketUploadElementReader>(std::move(request.body->stream()));
     } else {
-      FXL_DCHECK(request.body->is_buffer());
+      FX_DCHECK(request.body->is_buffer());
       request_body_reader = std::make_unique<http::VmoUploadElementReader>(
           std::move(request.body->buffer().vmo), request.body->buffer().size);
     }
@@ -134,7 +134,7 @@ void URLLoaderImpl::StartInternal(oldhttp::URLRequest request) {
         continue;
       }
 #else
-      FXL_LOG(WARNING) << "https is not built-in. "
+      FX_LOGS(WARNING) << "https is not built-in. "
                           "please build with NETWORK_SERVICE_USE_HTTPS";
       SendError(HTTP_ERR_INVALID_ARGUMENT);
       return;

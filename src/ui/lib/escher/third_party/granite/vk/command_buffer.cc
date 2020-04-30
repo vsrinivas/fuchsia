@@ -56,10 +56,10 @@ CommandBufferPtr CommandBuffer::NewForType(Escher* escher, Type type, bool use_p
     case Type::kCompute:
       return NewForCompute(escher, use_protected_memory);
     case Type::kTransfer:
-      FXL_DCHECK(!use_protected_memory);
+      FX_DCHECK(!use_protected_memory);
       return NewForTransfer(escher);
     default:
-      FXL_LOG(ERROR) << "Unrecognized CommandBuffer type requested. Cannot "
+      FX_LOGS(ERROR) << "Unrecognized CommandBuffer type requested. Cannot "
                      << "create CommandBuffer.";
       return nullptr;
   }
@@ -107,7 +107,7 @@ bool CommandBuffer::Submit(CommandBufferFinishedCallback callback) {
       queue = escher_->device()->vk_transfer_queue();
       break;
     default:
-      FXL_DCHECK(false);
+      FX_DCHECK(false);
       return false;
   }
   return Submit(queue, std::move(callback));
@@ -142,12 +142,12 @@ void CommandBuffer::BeginGraphicsOrComputeContext() {
 }
 
 void CommandBuffer::BeginRenderPass(const RenderPassInfo& info) {
-  FXL_DCHECK(!IsInRenderPass());
+  FX_DCHECK(!IsInRenderPass());
 
   framebuffer_ = escher_->framebuffer_allocator()->ObtainFramebuffer(
       info, allow_renderpass_and_pipeline_creation_);
-  FXL_CHECK(framebuffer_) << "lazy render-pass creation allowed: "
-                          << allow_renderpass_and_pipeline_creation_;
+  FX_CHECK(framebuffer_) << "lazy render-pass creation allowed: "
+                         << allow_renderpass_and_pipeline_creation_;
   auto& render_pass = framebuffer_->render_pass();
   pipeline_state_.set_render_pass(render_pass.get());
   impl_->KeepAlive(framebuffer_.get());
@@ -164,7 +164,7 @@ void CommandBuffer::BeginRenderPass(const RenderPassInfo& info) {
   // Gather clear values for each color attachment that is flagged as needing
   // clearing.
   for (uint32_t i = 0; i < info.num_color_attachments; ++i) {
-    FXL_DCHECK(info.color_attachments[i]);
+    FX_DCHECK(info.color_attachments[i]);
     if (info.clear_attachments & (1u << i)) {
       clear_values[i].color = info.clear_color[i];
       num_clear_values = i + 1;
@@ -182,7 +182,7 @@ void CommandBuffer::BeginRenderPass(const RenderPassInfo& info) {
   // Set the |layout_| of all color and depth stencil attachments to
   // corresponding |finalLayout| values previously stored in render pass.
   for (uint32_t i = 0; i < info.num_color_attachments; ++i) {
-    FXL_DCHECK(info.color_attachments[i]);
+    FX_DCHECK(info.color_attachments[i]);
     info.color_attachments[i]->image()->set_layout(render_pass->GetColorAttachmentFinalLayout(i));
   }
   if (info.depth_stencil_attachment) {
@@ -211,7 +211,7 @@ void CommandBuffer::BeginRenderPass(const RenderPassInfo& info) {
 
 void CommandBuffer::EndRenderPass() {
   TRACE_DURATION("gfx", "CommandBuffer::EndRenderPass");
-  FXL_DCHECK(IsInRenderPass());
+  FX_DCHECK(IsInRenderPass());
 
   vk().endRenderPass();
 
@@ -222,7 +222,7 @@ void CommandBuffer::EndRenderPass() {
 }
 
 bool CommandBuffer::IsInRenderPass() {
-  FXL_DCHECK(!framebuffer_ == !pipeline_state_.render_pass());
+  FX_DCHECK(!framebuffer_ == !pipeline_state_.render_pass());
   return static_cast<bool>(pipeline_state_.render_pass());
 }
 
@@ -251,11 +251,11 @@ void CommandBuffer::ImageBarrier(const ImagePtr& image, vk::ImageLayout old_layo
   // through all of the corner cases with respect to our per-image layout
   // tracking.  Therefore, since we don't currently need image barriers during
   // render passes, we disallow them.
-  FXL_DCHECK(!IsInRenderPass());
+  FX_DCHECK(!IsInRenderPass());
 
-  FXL_DCHECK(!image->is_transient());
-  FXL_DCHECK(image->layout() == old_layout || old_layout == vk::ImageLayout::eUndefined ||
-             old_layout == vk::ImageLayout::ePreinitialized);
+  FX_DCHECK(!image->is_transient());
+  FX_DCHECK(image->layout() == old_layout || old_layout == vk::ImageLayout::eUndefined ||
+            old_layout == vk::ImageLayout::ePreinitialized);
 
   impl_->KeepAlive(image.get());
 
@@ -278,7 +278,7 @@ void CommandBuffer::ImageBarrier(const ImagePtr& image, vk::ImageLayout old_layo
 }
 
 void CommandBuffer::PushConstants(const void* data, vk::DeviceSize offset, vk::DeviceSize range) {
-  FXL_DCHECK(offset + range <= VulkanLimits::kPushConstantSize);
+  FX_DCHECK(offset + range <= VulkanLimits::kPushConstantSize);
   memcpy(bindings_.push_constant_data + offset, data, range);
   SetDirty(kDirtyPushConstantsBit);
 }
@@ -314,7 +314,7 @@ void CommandBuffer::BindTexture(unsigned set_index, unsigned binding, Texture* t
   auto b = GetDescriptorBindingInfo(set, binding);
 
   auto& image = texture->image();
-  FXL_DCHECK(image->info().usage & vk::ImageUsageFlagBits::eSampled);
+  FX_DCHECK(image->info().usage & vk::ImageUsageFlagBits::eSampled);
 
   impl_->KeepAlive(texture);
 
@@ -343,7 +343,7 @@ void CommandBuffer::BindTexture(unsigned set_index, unsigned binding, Texture* t
 
 void CommandBuffer::BindVertices(uint32_t binding, vk::Buffer buffer, vk::DeviceSize offset,
                                  vk::DeviceSize stride, vk::VertexInputRate step_rate) {
-  FXL_DCHECK(IsInRenderPass());
+  FX_DCHECK(IsInRenderPass());
 
   if (pipeline_state_.BindVertices(binding, buffer, offset, stride, step_rate)) {
     // Pipeline change is required.
@@ -383,9 +383,9 @@ void CommandBuffer::BindIndices(const BufferPtr& buffer, vk::DeviceSize offset,
 void CommandBuffer::DrawIndexed(uint32_t index_count, uint32_t instance_count, uint32_t first_index,
                                 int32_t vertex_offset, uint32_t first_instance) {
   TRACE_DURATION("gfx", "escher::CommandBuffer::DrawIndexed");
-  FXL_DCHECK(current_program_);
-  FXL_DCHECK(!is_compute_);
-  FXL_DCHECK(index_binding_.buffer);
+  FX_DCHECK(current_program_);
+  FX_DCHECK(!is_compute_);
+  FX_DCHECK(index_binding_.buffer);
 
   FlushRenderState();
 
@@ -397,8 +397,8 @@ void CommandBuffer::DrawIndexed(uint32_t index_count, uint32_t instance_count, u
 void CommandBuffer::Draw(uint32_t vertex_count, uint32_t instance_count, uint32_t first_vertex,
                          uint32_t first_instance) {
   TRACE_DURATION("gfx", "escher::CommandBuffer::Draw");
-  FXL_DCHECK(current_program_);
-  FXL_DCHECK(!is_compute_);
+  FX_DCHECK(current_program_);
+  FX_DCHECK(!is_compute_);
 
   FlushRenderState();
 
@@ -408,9 +408,9 @@ void CommandBuffer::Draw(uint32_t vertex_count, uint32_t instance_count, uint32_
 
 void CommandBuffer::Dispatch(uint32_t groupXCount, uint32_t groupYCount, uint32_t groupZCount) {
   TRACE_DURATION("gfx", "escher::CommandBuffer::Dispatch");
-  FXL_DCHECK(current_program_);
-  FXL_DCHECK(is_compute_);
-  FXL_DCHECK(!IsInRenderPass());
+  FX_DCHECK(current_program_);
+  FX_DCHECK(is_compute_);
+  FX_DCHECK(!IsInRenderPass());
 
   FlushComputeState();
 
@@ -421,8 +421,8 @@ void CommandBuffer::Dispatch(uint32_t groupXCount, uint32_t groupYCount, uint32_
 void CommandBuffer::FlushComputeState() {
   TRACE_DURATION("gfx", "escher::CommandBuffer::ComputeStateState");
 
-  FXL_DCHECK(current_pipeline_layout_);
-  FXL_DCHECK(current_program_);
+  FX_DCHECK(current_pipeline_layout_);
+  FX_DCHECK(current_program_);
 
   // We've invalidated pipeline state, update the VkPipeline.
   if (GetAndClearDirty(kDirtyStaticStateBit | kDirtyPipelineBit)) {
@@ -460,8 +460,8 @@ void CommandBuffer::FlushComputeState() {
 void CommandBuffer::FlushRenderState() {
   TRACE_DURATION("gfx", "escher::CommandBuffer::FlushRenderState");
 
-  FXL_DCHECK(current_pipeline_layout_);
-  FXL_DCHECK(current_program_);
+  FX_DCHECK(current_pipeline_layout_);
+  FX_DCHECK(current_program_);
 
   // We've invalidated pipeline state, update the VkPipeline.
   if (GetAndClearDirty(kDirtyStaticStateBit | kDirtyPipelineBit | kDirtyStaticVertexBit)) {
@@ -559,8 +559,8 @@ void CommandBuffer::FlushDescriptorSet(uint32_t set_index) {
   // UBOs
   ForEachBitIndex(set_layout.uniform_buffer_mask, [&](uint32_t binding) {
     const auto b = GetDescriptorBindingInfo(set_bindings, binding);
-    FXL_DCHECK(b->buffer.buffer) << "No buffer for uniform binding " << set_index << "," << binding;
-    FXL_DCHECK(set_bindings->uids[binding]);
+    FX_DCHECK(b->buffer.buffer) << "No buffer for uniform binding " << set_index << "," << binding;
+    FX_DCHECK(set_bindings->uids[binding]);
 
     h.u64(set_bindings->uids[binding]);
     h.u32(b->buffer.range);
@@ -570,8 +570,8 @@ void CommandBuffer::FlushDescriptorSet(uint32_t set_index) {
   // SSBOs
   ForEachBitIndex(set_layout.storage_buffer_mask, [&](uint32_t binding) {
     const auto b = GetDescriptorBindingInfo(set_bindings, binding);
-    FXL_DCHECK(b->buffer.buffer);
-    FXL_DCHECK(set_bindings->uids[binding]);
+    FX_DCHECK(b->buffer.buffer);
+    FX_DCHECK(set_bindings->uids[binding]);
 
     h.u64(set_bindings->uids[binding]);
     h.u32(b->buffer.offset);
@@ -581,8 +581,8 @@ void CommandBuffer::FlushDescriptorSet(uint32_t set_index) {
   // Sampled buffers
   ForEachBitIndex(set_layout.sampled_buffer_mask, [&](uint32_t binding) {
     const auto b = GetDescriptorBindingInfo(set_bindings, binding);
-    FXL_DCHECK(b->buffer_view);
-    FXL_DCHECK(set_bindings->uids[binding]);
+    FX_DCHECK(b->buffer_view);
+    FX_DCHECK(set_bindings->uids[binding]);
 
     h.u64(set_bindings->uids[binding]);
   });
@@ -590,9 +590,9 @@ void CommandBuffer::FlushDescriptorSet(uint32_t set_index) {
   // Sampled images
   ForEachBitIndex(set_layout.sampled_image_mask, [&](uint32_t binding) {
     const auto b = GetDescriptorBindingInfo(set_bindings, binding);
-    FXL_DCHECK(b->image.fp.imageView);
-    FXL_DCHECK(b->image.fp.sampler);
-    FXL_DCHECK(set_bindings->uids[binding]);
+    FX_DCHECK(b->image.fp.imageView);
+    FX_DCHECK(b->image.fp.sampler);
+    FX_DCHECK(set_bindings->uids[binding]);
 
     h.u64(set_bindings->uids[binding]);
     h.u64(set_bindings->secondary_uids[binding]);
@@ -602,8 +602,8 @@ void CommandBuffer::FlushDescriptorSet(uint32_t set_index) {
   // Storage images
   ForEachBitIndex(set_layout.storage_image_mask, [&](uint32_t binding) {
     const auto b = GetDescriptorBindingInfo(set_bindings, binding);
-    FXL_DCHECK(b->image.fp.imageView);
-    FXL_DCHECK(set_bindings->uids[binding]);
+    FX_DCHECK(b->image.fp.imageView);
+    FX_DCHECK(set_bindings->uids[binding]);
 
     h.u64(set_bindings->uids[binding]);
     h.u32(EnumCast(b->image.fp.imageLayout));
@@ -612,8 +612,8 @@ void CommandBuffer::FlushDescriptorSet(uint32_t set_index) {
   // Input attachments
   ForEachBitIndex(set_layout.input_attachment_mask, [&](uint32_t binding) {
     const auto b = GetDescriptorBindingInfo(set_bindings, binding);
-    FXL_DCHECK(b->image.fp.imageView);
-    FXL_DCHECK(set_bindings->uids[binding]);
+    FX_DCHECK(b->image.fp.imageView);
+    FX_DCHECK(set_bindings->uids[binding]);
 
     h.u64(set_bindings->uids[binding]);
     h.u32(EnumCast(b->image.fp.imageLayout));
@@ -798,7 +798,7 @@ void CommandBuffer::RestoreState(const CommandBuffer::SavedState& state) {
 
 void CommandBuffer::ClearAttachmentRect(uint32_t attachment, const vk::ClearRect& rect,
                                         const vk::ClearValue& value, vk::ImageAspectFlags aspect) {
-  FXL_DCHECK(IsInRenderPass());
+  FX_DCHECK(IsInRenderPass());
   vk::ClearAttachment att = {};
   att.clearValue = value;
   att.colorAttachment = attachment;
@@ -858,7 +858,7 @@ void CommandBuffer::SetShaderProgram(ShaderProgram* program, const SamplerPtr& i
 
   // If we're in a render pass, the program must have a vertex stage.  If we're
   // not, the program must have a compute stage.
-  FXL_DCHECK(
+  FX_DCHECK(
       pipeline_state_.render_pass() && current_program_->GetModuleForStage(ShaderStage::kVertex) ||
       !pipeline_state_.render_pass() && current_program_->GetModuleForStage(ShaderStage::kCompute));
 

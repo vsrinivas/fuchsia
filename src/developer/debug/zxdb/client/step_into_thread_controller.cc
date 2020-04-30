@@ -80,7 +80,7 @@ ThreadController::StopOp StepIntoThreadController::OnThreadStop(
     return kStopDone;  // Not in a newer frame, no prologue to skip.
 
   if (stack.empty()) {
-    FXL_NOTREACHED();  // Should always have a current frame on stop.
+    FX_NOTREACHED();  // Should always have a current frame on stop.
     return kUnexpected;
   }
   uint64_t current_ip = stack[0]->GetAddress();
@@ -93,7 +93,7 @@ ThreadController::StopOp StepIntoThreadController::OnThreadStop(
   std::vector<Location> symbolized_locs =
       thread()->GetProcess()->GetSymbols()->ResolveInputLocation(InputLocation(current_ip),
                                                                  resolve_options);
-  FXL_DCHECK(symbolized_locs.size() == 1);  // Should always return one match.
+  FX_DCHECK(symbolized_locs.size() == 1);  // Should always return one match.
 
   const Location& after_prologue = symbolized_locs[0];
   if (current_ip == after_prologue.address()) {

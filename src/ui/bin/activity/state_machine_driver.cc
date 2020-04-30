@@ -102,7 +102,7 @@ void StateMachineDriver::SetOverrideState(std::optional<fuchsia::ui::activity::S
                        (override_state_ && (state != override_state_));
   override_state_ = state;
   if (should_notify) {
-    FXL_LOG(INFO) << "activity-service: entering state '" << GetState() << "'";
+    FX_LOGS(INFO) << "activity-service: entering state '" << GetState() << "'";
     NotifyObservers(GetState(), async::Now(dispatcher_));
   }
 }
@@ -115,7 +115,7 @@ void StateMachineDriver::ProcessEvent(const Event& event, zx::time time) {
   if (state != new_state) {
     last_transition_time_ = time;
     if (!override_state_) {
-      FXL_LOG(INFO) << "activity-service: '" << state << "' -> '" << new_state << "' due to '"
+      FX_LOGS(INFO) << "activity-service: '" << state << "' -> '" << new_state << "' due to '"
                     << event << "'";
       NotifyObservers(new_state, time);
     }
@@ -130,7 +130,7 @@ void StateMachineDriver::ProcessEvent(const Event& event, zx::time time) {
 
 void StateMachineDriver::ProcessActivityStart(OngoingActivityId id) {
   if (ongoing_activities_.find(id) != ongoing_activities_.end()) {
-    FXL_LOG(WARNING) << "Activity '" << id << "' already started, ignoring";
+    FX_LOGS(WARNING) << "Activity '" << id << "' already started, ignoring";
     return;
   }
   ongoing_activities_.insert(id);
@@ -142,7 +142,7 @@ void StateMachineDriver::ProcessActivityStart(OngoingActivityId id) {
 void StateMachineDriver::ProcessActivityEnd(OngoingActivityId id) {
   auto iter = ongoing_activities_.find(id);
   if (iter == ongoing_activities_.end()) {
-    FXL_LOG(WARNING) << "Activity '" << id << "' spuriously ended, ignoring";
+    FX_LOGS(WARNING) << "Activity '" << id << "' spuriously ended, ignoring";
     return;
   }
   ongoing_activities_.erase(iter);
@@ -170,7 +170,7 @@ void StateMachineDriver::HandleTimeout() {
     }
   });
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "activity-service: Failed to queue timeout event: "
+    FX_LOGS(ERROR) << "activity-service: Failed to queue timeout event: "
                    << zx_status_get_string(status);
   }
 }

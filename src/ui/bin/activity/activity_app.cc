@@ -48,7 +48,7 @@ void ActivityApp::AddControlBinding(
     if (entry != control_bindings_.end()) {
       control_bindings_.erase(entry);
     } else {
-      FXL_LOG(ERROR) << "Failed to remove binding during cleanup";
+      FX_LOGS(ERROR) << "Failed to remove binding during cleanup";
     }
   });
   control_bindings_.emplace(std::move(unowned), std::move(conn));
@@ -65,7 +65,7 @@ void ActivityApp::AddTrackerBinding(
     if (entry != tracker_bindings_.end()) {
       tracker_bindings_.erase(entry);
     } else {
-      FXL_LOG(ERROR) << "Failed to remove binding during cleanup";
+      FX_LOGS(ERROR) << "Failed to remove binding during cleanup";
     }
   });
   tracker_bindings_.emplace(std::move(unowned), std::move(conn));
@@ -79,13 +79,13 @@ void ActivityApp::AddProviderBinding(
                                                            zx::clock::get_monotonic().get());
   conn->set_error_handler([this, unowned, cp = conn.get()](zx_status_t status) {
     if ((status = cp->Stop()) != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed to clean up state on connection close";
+      FX_LOGS(ERROR) << "Failed to clean up state on connection close";
     }
     auto entry = provider_bindings_.find(unowned);
     if (entry != provider_bindings_.end()) {
       provider_bindings_.erase(entry);
     } else {
-      FXL_LOG(ERROR) << "Failed to remove binding during cleanup";
+      FX_LOGS(ERROR) << "Failed to remove binding during cleanup";
     }
   });
   provider_bindings_.emplace(std::move(unowned), std::move(conn));

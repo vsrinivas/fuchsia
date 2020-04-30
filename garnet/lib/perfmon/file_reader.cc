@@ -36,7 +36,7 @@ bool FileReader::MapBuffer(const std::string& name, uint32_t trace_num) {
   std::string file_name = file_name_producer_(trace_num);
   int raw_fd = open(file_name.c_str(), O_RDONLY);
   if (raw_fd < 0) {
-    FXL_LOG(ERROR) << name << ": Unable to open buffer file: " << file_name << ": "
+    FX_LOGS(ERROR) << name << ": Unable to open buffer file: " << file_name << ": "
                    << strerror(errno);
     return false;
   }
@@ -49,17 +49,17 @@ bool FileReader::MapBuffer(const std::string& name, uint32_t trace_num) {
 #else
   void* mapped_buffer = mmap(nullptr, file_size_, PROT_READ, MAP_PRIVATE, raw_fd, 0);
   if (mapped_buffer == reinterpret_cast<void*>(-1)) {
-    FXL_VLOG(2) << name << ": Unable to map buffer file: " << file_name << ": " << strerror(errno);
+    FX_VLOGS(2) << name << ": Unable to map buffer file: " << file_name << ": " << strerror(errno);
   }
 #endif
   if (mapped_buffer == reinterpret_cast<void*>(-1)) {
     std::vector<uint8_t> data;
     if (!files::ReadFileDescriptorToVector(raw_fd, &data)) {
-      FXL_LOG(ERROR) << "Error reading: " << file_name;
+      FX_LOGS(ERROR) << "Error reading: " << file_name;
       return false;
     }
     if (data.size() != file_size_) {
-      FXL_LOG(ERROR) << "Error reading: " << file_name << ": got " << data.size()
+      FX_LOGS(ERROR) << "Error reading: " << file_name << ": got " << data.size()
                      << " bytes instead of expected " << file_size_;
       return false;
     }
@@ -82,7 +82,7 @@ bool FileReader::UnmapBuffer() {
       auto buffer = const_cast<void*>(buffer_ptr_);
       int error = munmap(buffer, file_size_);
       if (error != 0) {
-        FXL_LOG(ERROR) << "Unable to unmap buffer: " << strerror(errno);
+        FX_LOGS(ERROR) << "Unable to unmap buffer: " << strerror(errno);
         return false;
       }
     }

@@ -37,7 +37,7 @@ bool RetrieveExceptionContext(ExceptionContext* pe) {
   // Create a process that crashes and obtain the relevant handles and exception.
   // By the time |SpawnCrasher| has returned, the process has already thrown an exception.
   if (!SpawnCrasher(pe)) {
-    FXL_LOG(ERROR) << "Could not spawn crasher process.";
+    FX_LOGS(ERROR) << "Could not spawn crasher process.";
     return false;
   }
 
@@ -45,7 +45,7 @@ bool RetrieveExceptionContext(ExceptionContext* pe) {
   // handler, which will resume it before we get the control back. If we don't mark it as handled,
   // the exception will bubble out of our environment.
   if (!MarkExceptionAsHandled(pe)) {
-    FXL_LOG(ERROR) << "Could not mark exception as handled.";
+    FX_LOGS(ERROR) << "Could not mark exception as handled.";
     return false;
   }
 

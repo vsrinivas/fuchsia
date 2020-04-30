@@ -28,14 +28,14 @@ TEST(DescriptorSetLayout, Validate) {
   // Having the same bit appear in two of the masks results in a validation
   // failure (because this corresponds to 2 descriptors in the set with the
   // same binding index).
-  FXL_LOG(INFO) << "==== NOTE: validation warnings are expected";
+  FX_LOGS(INFO) << "==== NOTE: validation warnings are expected";
   for (size_t type_index = 0; type_index <= 5U; ++type_index) {
     layout = original_layout;
     EXPECT_TRUE(layout.IsValid());
     integers[type_index] |= 1 << ((type_index + 1) % 5U);
     EXPECT_FALSE(layout.IsValid());
   }
-  FXL_LOG(INFO) << "==== NOTE: no additional validation warnings are expected";
+  FX_LOGS(INFO) << "==== NOTE: no additional validation warnings are expected";
 
   // No problem to add an additional binding anywhere else, of any type.
   for (size_t bit_index = 6U; bit_index < VulkanLimits::kNumBindings; ++bit_index) {

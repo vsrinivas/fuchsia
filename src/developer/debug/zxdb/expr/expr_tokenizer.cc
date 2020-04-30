@@ -121,7 +121,7 @@ bool ExprTokenizer::Tokenize() {
 std::string ExprTokenizer::GetErrorContext(const std::string& input, size_t byte_offset) {
   // Index should be in range of the input string. Also allow indicating one
   // character past the end.
-  FXL_DCHECK(byte_offset <= input.size());
+  FX_DCHECK(byte_offset <= input.size());
 
   // Future enhancements:
   // - If we allow multiline expressions in the input, the returned context should not cross
@@ -147,7 +147,7 @@ void ExprTokenizer::AdvanceToNextToken() {
 void ExprTokenizer::AdvanceToEndOfToken(const ExprTokenRecord& record) {
   if (!record.static_value.empty()) {
     // Known sizes. Because the token matched we should always have enough characters.
-    FXL_DCHECK(input_.size() >= cur_ + record.static_value.size());
+    FX_DCHECK(input_.size() >= cur_ + record.static_value.size());
     cur_ += record.static_value.size();
     return;
   }
@@ -167,7 +167,7 @@ void ExprTokenizer::AdvanceToEndOfToken(const ExprTokenRecord& record) {
       break;
 
     default:
-      FXL_NOTREACHED();
+      FX_NOTREACHED();
       err_ = Err("Internal parser error.");
       error_location_ = cur_;
       break;
@@ -176,7 +176,7 @@ void ExprTokenizer::AdvanceToEndOfToken(const ExprTokenRecord& record) {
 
 bool ExprTokenizer::CurrentMatchesTokenRecord(const ExprTokenRecord& record) const {
   // Non-statically-known tokens shouldn't use this code path.
-  FXL_DCHECK(!record.static_value.empty());
+  FX_DCHECK(!record.static_value.empty());
 
   const size_t size = record.static_value.size();
   if (!can_advance(size))
@@ -197,13 +197,13 @@ bool ExprTokenizer::CurrentMatchesTokenRecord(const ExprTokenRecord& record) con
 }
 
 bool ExprTokenizer::IsCurrentWhitespace() const {
-  FXL_DCHECK(!at_end());
+  FX_DCHECK(!at_end());
   char c = input_[cur_];
   return c == 0x0A || c == 0x0D || c == 0x20;
 }
 
 const ExprTokenRecord& ExprTokenizer::ClassifyCurrent() {
-  FXL_DCHECK(!at_end());
+  FX_DCHECK(!at_end());
   char cur = cur_char();
 
   const ExprTokenRecord* longest = nullptr;

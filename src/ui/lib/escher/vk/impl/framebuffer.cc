@@ -25,7 +25,7 @@ Framebuffer::Framebuffer(ResourceRecycler* recycler, RenderPassPtr pass,
   vk::ImageView views[VulkanLimits::kNumColorAttachments + 1];
   uint32_t num_views = 0;
 
-  FXL_DCHECK(pass_info.num_color_attachments || pass_info.depth_stencil_attachment);
+  FX_DCHECK(pass_info.num_color_attachments || pass_info.depth_stencil_attachment);
 
   // TODO(ES-79): handle LOD (whatever that means, precisely).  Perhaps LOD
   // should be added explicitly so that e.g. if Scenic wants to render a
@@ -34,7 +34,7 @@ Framebuffer::Framebuffer(ResourceRecycler* recycler, RenderPassPtr pass,
   // perhaps the better approach would be to populate the RenderPassInfo with
   // attachment ImageViews that reflect the desired LOD.
   for (uint32_t i = 0; i < pass_info.num_color_attachments; i++) {
-    FXL_DCHECK(pass_info.color_attachments[i]);
+    FX_DCHECK(pass_info.color_attachments[i]);
     width_ = std::min(width_, pass_info.color_attachments[i]->width());
     height_ = std::min(height_, pass_info.color_attachments[i]->height());
     views[num_views++] = pass_info.color_attachments[i]->vk();

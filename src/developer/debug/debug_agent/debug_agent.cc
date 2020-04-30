@@ -46,7 +46,7 @@ SystemProviders SystemProviders::CreateDefaults(std::shared_ptr<sys::ServiceDire
 
   zx_status_t status = system_providers.limbo_provider->Init();
   if (status != ZX_OK)
-    FXL_LOG(WARNING) << "Could not initialize limbo provider: " << zx_status_get_string(status);
+    FX_LOGS(WARNING) << "Could not initialize limbo provider: " << zx_status_get_string(status);
 
   return system_providers;
 }
@@ -87,9 +87,9 @@ DebugAgent::DebugAgent(std::shared_ptr<sys::ServiceDirectory> services, SystemPr
       limbo_provider_(std::move(providers.limbo_provider)),
       object_provider_(std::move(providers.object_provider)),
       weak_factory_(this) {
-  FXL_DCHECK(arch_provider_);
-  FXL_DCHECK(limbo_provider_);
-  FXL_DCHECK(object_provider_);
+  FX_DCHECK(arch_provider_);
+  FX_DCHECK(limbo_provider_);
+  FX_DCHECK(object_provider_);
 
   // Get some resources.
   uint32_t val = 0;
@@ -98,7 +98,7 @@ DebugAgent::DebugAgent(std::shared_ptr<sys::ServiceDirectory> services, SystemPr
     DEBUG_LOG(Agent) << "Got HW breakpoint count: " << val;
     arch_provider_->set_hw_breakpoint_count(val);
   } else {
-    FXL_LOG(WARNING) << "Could not get HW breakpoint count: " << zx_status_get_string(status);
+    FX_LOGS(WARNING) << "Could not get HW breakpoint count: " << zx_status_get_string(status);
   }
 
   if (zx_status_t status = zx_system_get_features(ZX_FEATURE_KIND_HW_WATCHPOINT_COUNT, &val);
@@ -106,7 +106,7 @@ DebugAgent::DebugAgent(std::shared_ptr<sys::ServiceDirectory> services, SystemPr
     DEBUG_LOG(Agent) << "Got watchpoint count: " << val;
     arch_provider_->set_watchpoint_count(val);
   } else {
-    FXL_LOG(WARNING) << "Could not get Watchpoint count: " << zx_status_get_string(status);
+    FX_LOGS(WARNING) << "Could not get Watchpoint count: " << zx_status_get_string(status);
   }
 
   // Set a callback to the limbo_provider to let us know when new processes enter the limbo.
@@ -123,24 +123,24 @@ DebugAgent::~DebugAgent() = default;
 fxl::WeakPtr<DebugAgent> DebugAgent::GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
 
 void DebugAgent::Connect(debug_ipc::StreamBuffer* stream) {
-  FXL_DCHECK(!stream_) << "A debug agent should not be connected twice!";
+  FX_DCHECK(!stream_) << "A debug agent should not be connected twice!";
   stream_ = stream;
 }
 
 void DebugAgent::Disconnect() {
-  FXL_DCHECK(stream_);
+  FX_DCHECK(stream_);
   stream_ = nullptr;
 }
 
 debug_ipc::StreamBuffer* DebugAgent::stream() {
-  FXL_DCHECK(stream_);
+  FX_DCHECK(stream_);
   return stream_;
 }
 
 void DebugAgent::RemoveDebuggedProcess(zx_koid_t process_koid) {
   auto found = procs_.find(process_koid);
   if (found == procs_.end())
-    FXL_NOTREACHED();
+    FX_NOTREACHED();
   else
     procs_.erase(found);
 }
@@ -148,7 +148,7 @@ void DebugAgent::RemoveDebuggedProcess(zx_koid_t process_koid) {
 void DebugAgent::RemoveDebuggedJob(zx_koid_t job_koid) {
   auto found = jobs_.find(job_koid);
   if (found == jobs_.end())
-    FXL_NOTREACHED();
+    FX_NOTREACHED();
   else
     jobs_.erase(found);
 }
@@ -316,7 +316,7 @@ void DebugAgent::OnResume(const debug_ipc::ResumeRequest& request, debug_ipc::Re
     if (proc) {
       proc->OnResume(request);
     } else {
-      FXL_LOG(WARNING) << "Could not find process by koid: " << request.process_koid;
+      FX_LOGS(WARNING) << "Could not find process by koid: " << request.process_koid;
     }
   } else {
     // All debugged processes.
@@ -359,7 +359,7 @@ void DebugAgent::OnReadRegisters(const debug_ipc::ReadRegistersRequest& request,
   if (thread) {
     thread->ReadRegisters(request.categories, &reply->registers);
   } else {
-    FXL_LOG(ERROR) << "Cannot find thread with koid: " << request.thread_koid;
+    FX_LOGS(ERROR) << "Cannot find thread with koid: " << request.thread_koid;
   }
 }
 
@@ -370,7 +370,7 @@ void DebugAgent::OnWriteRegisters(const debug_ipc::WriteRegistersRequest& reques
     reply->status = thread->WriteRegisters(request.registers, &reply->registers);
   } else {
     reply->status = ZX_ERR_NOT_FOUND;
-    FXL_LOG(ERROR) << "Cannot find thread with koid: " << request.thread_koid;
+    FX_LOGS(ERROR) << "Cannot find thread with koid: " << request.thread_koid;
   }
 }
 
@@ -386,7 +386,7 @@ void DebugAgent::OnAddOrChangeBreakpoint(const debug_ipc::AddOrChangeBreakpointR
       break;
   }
 
-  FXL_NOTREACHED() << "Invalid Breakpoint Type: " << static_cast<int>(request.breakpoint.type);
+  FX_NOTREACHED() << "Invalid Breakpoint Type: " << static_cast<int>(request.breakpoint.type);
 }
 
 void DebugAgent::OnRemoveBreakpoint(const debug_ipc::RemoveBreakpointRequest& request,
@@ -607,7 +607,7 @@ void DebugAgent::OnAttach(std::vector<char> serialized) {
   debug_ipc::AttachRequest request;
   uint32_t transaction_id = 0;
   if (!debug_ipc::ReadRequest(&reader, &request, &transaction_id)) {
-    FXL_LOG(WARNING) << "Got bad debugger attach request, ignoring.";
+    FX_LOGS(WARNING) << "Got bad debugger attach request, ignoring.";
     return;
   }
 
@@ -631,7 +631,7 @@ void DebugAgent::OnAttach(uint32_t transaction_id, const debug_ipc::AttachReques
     job_koid = object_provider_->GetRootJobKoid();
     attached_root_job_koid_ = job_koid;
   } else {
-    FXL_LOG(WARNING) << "Got bad debugger attach request type, ignoring.";
+    FX_LOGS(WARNING) << "Got bad debugger attach request type, ignoring.";
     return;
   }
 
@@ -686,12 +686,12 @@ void DebugAgent::AttachToProcess(zx_koid_t process_koid, uint32_t transaction_id
 }
 
 zx_status_t DebugAgent::AttachToLimboProcess(zx_koid_t process_koid, uint32_t transaction_id) {
-  FXL_DCHECK(limbo_provider_->Valid());
+  FX_DCHECK(limbo_provider_->Valid());
 
   // Go over processes.
   const fuchsia::exception::ProcessExceptionMetadata* process_metadata = nullptr;
   for (const auto& [process_koid, exception] : limbo_provider_->Limbo()) {
-    FXL_DCHECK(exception.has_info());
+    FX_DCHECK(exception.has_info());
     DEBUG_LOG(Agent) << "Found process in limbo: " << exception.info().process_koid;
     if (exception.info().process_koid == process_koid) {
       process_metadata = &exception;
@@ -739,7 +739,7 @@ zx_status_t DebugAgent::AttachToLimboProcess(zx_koid_t process_koid, uint32_t tr
     }
   }
 
-  FXL_DCHECK(exception_thread);
+  FX_DCHECK(exception_thread);
   exception_thread->set_exception_handle(std::move(*exception.mutable_exception()));
 
   return ZX_OK;
@@ -774,7 +774,7 @@ zx_status_t DebugAgent::AttachToExistingProcess(zx_koid_t process_koid, uint32_t
 
 void DebugAgent::LaunchProcess(const debug_ipc::LaunchRequest& request,
                                debug_ipc::LaunchReply* reply) {
-  FXL_DCHECK(!request.argv.empty());
+  FX_DCHECK(!request.argv.empty());
   reply->inferior_type = debug_ipc::InferiorType::kBinary;
   DEBUG_LOG(Process) << "Launching binary " << request.argv.front();
 
@@ -828,7 +828,7 @@ void DebugAgent::LaunchComponent(const debug_ipc::LaunchRequest& request,
     reply->status = status;
     return;
   }
-  FXL_DCHECK(expected_components_.count(description.filter) == 0);
+  FX_DCHECK(expected_components_.count(description.filter) == 0);
 
   // Create the filter.
   //
@@ -838,7 +838,7 @@ void DebugAgent::LaunchComponent(const debug_ipc::LaunchRequest& request,
   // client may have already attached to.
   DebuggedJob* job = GetDebuggedJob(attached_root_job_koid_);
   if (!job) {
-    FXL_LOG(WARNING) << "Could not obtain component root job. Are you running "
+    FX_LOGS(WARNING) << "Could not obtain component root job. Are you running "
                         "attached to another debugger?";
     reply->status = ZX_ERR_BAD_STATE;
     return;
@@ -868,7 +868,7 @@ void DebugAgent::LaunchComponent(const debug_ipc::LaunchRequest& request,
   // Launch the component.
   auto controller = component_launcher.Launch();
   if (!controller) {
-    FXL_LOG(WARNING) << "Could not launch component " << description.url;
+    FX_LOGS(WARNING) << "Could not launch component " << description.url;
     reply->status = ZX_ERR_BAD_STATE;
     return;
   }
@@ -955,7 +955,7 @@ void DebugAgent::OnComponentTerminated(int64_t return_code, const ComponentDescr
 
   // TODO(donosoc): This need to be communicated over to the client.
   if (reason != fuchsia::sys::TerminationReason::EXITED) {
-    FXL_LOG(WARNING) << "Component " << description.url << " exited with "
+    FX_LOGS(WARNING) << "Component " << description.url << " exited with "
                      << sys::HumanReadableTerminationReason(reason);
   }
 

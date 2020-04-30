@@ -96,7 +96,7 @@ size_t DwarfBinaryImpl::GetUnitCount() const {
 }
 
 fxl::RefPtr<DwarfUnit> DwarfBinaryImpl::GetUnitAtIndex(size_t i) {
-  FXL_DCHECK(i < GetUnitCount());
+  FX_DCHECK(i < GetUnitCount());
   return FromLLVMUnit(context_->getUnitAtIndex(i));
 }
 

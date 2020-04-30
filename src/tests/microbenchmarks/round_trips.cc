@@ -67,7 +67,7 @@ bool ChannelRead(const zx::channel& channel, std::vector<uint8_t>* msg) {
 
   uint32_t bytes_read;
   ASSERT_OK(channel.read(0, msg->data(), nullptr, msg->size(), 0, &bytes_read, nullptr));
-  FXL_CHECK(bytes_read == msg->size());
+  FX_CHECK(bytes_read == msg->size());
   return true;
 }
 
@@ -132,7 +132,7 @@ class ThreadOrProcess {
       if (fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, executable_path, args, nullptr,
                          action_count, actions, subprocess_.reset_and_get_address(),
                          err_msg) != ZX_OK) {
-        FXL_LOG(FATAL) << "Subprocess launch failed: " << err_msg;
+        FX_LOGS(FATAL) << "Subprocess launch failed: " << err_msg;
       }
     } else {
       thread_ = std::thread(GetThreadFunc(func_name), std::move(handles));
@@ -169,7 +169,7 @@ class BasicChannelTest {
   }
 
   static void ThreadFunc(std::vector<zx::handle>&& handles) {
-    FXL_CHECK(handles.size() == 1);
+    FX_CHECK(handles.size() == 1);
     zx::channel channel(std::move(handles[0]));
     Args args;
     GetArgs(channel, &args);
@@ -180,7 +180,7 @@ class BasicChannelTest {
     for (unsigned i = 0; i < args_.msg_count; ++i) {
       ASSERT_OK(client_.write(0, msg_.data(), msg_.size(), nullptr, 0));
     }
-    FXL_CHECK(ChannelReadMultiple(client_, args_.msg_count, &msg_));
+    FX_CHECK(ChannelReadMultiple(client_, args_.msg_count, &msg_));
   }
 
  private:
@@ -193,7 +193,7 @@ class BasicChannelTest {
   // Reads test arguments from |channel| and stores them in |args|.
   static void GetArgs(const zx::channel& channel, Args* args) {
     std::vector<uint8_t> msg(sizeof(*args));
-    FXL_CHECK(ChannelRead(channel, &msg));
+    FX_CHECK(ChannelRead(channel, &msg));
     *args = *reinterpret_cast<Args*>(msg.data());
   }
 
@@ -226,12 +226,12 @@ class ChannelPortTest {
 
     uint32_t bytes_read;
     ASSERT_OK(channel.read(0, msg, nullptr, sizeof(*msg), 0, &bytes_read, nullptr));
-    FXL_CHECK(bytes_read == sizeof(*msg));
+    FX_CHECK(bytes_read == sizeof(*msg));
     return true;
   }
 
   static void ThreadFunc(std::vector<zx::handle>&& handles) {
-    FXL_CHECK(handles.size() == 1);
+    FX_CHECK(handles.size() == 1);
     zx::channel channel(std::move(handles[0]));
 
     zx::port port;
@@ -248,7 +248,7 @@ class ChannelPortTest {
   void Run() {
     uint32_t msg = 123;
     ASSERT_OK(client_.write(0, &msg, sizeof(msg), nullptr, 0));
-    FXL_CHECK(ChannelPortRead(client_, client_port_, &msg));
+    FX_CHECK(ChannelPortRead(client_, client_port_, &msg));
   }
 
  private:
@@ -280,7 +280,7 @@ class ChannelCallTest {
   }
 
   static void ThreadFunc(std::vector<zx::handle>&& handles) {
-    FXL_CHECK(handles.size() == 1);
+    FX_CHECK(handles.size() == 1);
     zx::channel channel(std::move(handles[0]));
     ChannelServe(channel, /* count= */ 1, /* size= */ 4);
   }
@@ -326,7 +326,7 @@ class PortTest {
   }
 
   static void ThreadFunc(std::vector<zx::handle>&& ports) {
-    FXL_CHECK(ports.size() == 2);
+    FX_CHECK(ports.size() == 2);
     for (;;) {
       zx_port_packet_t packet;
       ASSERT_OK(zx_port_wait(ports[0].get(), ZX_TIME_INFINITE, &packet));
@@ -397,7 +397,7 @@ class EventPortTest {
   }
 
   static void ThreadFunc(std::vector<zx::handle>&& handles) {
-    FXL_CHECK(handles.size() == 1);
+    FX_CHECK(handles.size() == 1);
 
     EventPortSignaler signaler;
     signaler.set_event(zx::eventpair(handles[0].get()));
@@ -408,7 +408,7 @@ class EventPortTest {
 
   void Run() {
     signaler_.Signal();
-    FXL_CHECK(signaler_.Wait());
+    FX_CHECK(signaler_.Wait());
   }
 
  private:
@@ -437,7 +437,7 @@ class SocketPortSignaler {
     uint8_t message;
     size_t bytes_read = 0;
     ASSERT_OK(socket_.read(0, &message, 1, &bytes_read));
-    FXL_CHECK(bytes_read == 1);
+    FX_CHECK(bytes_read == 1);
     return true;
   }
 
@@ -446,7 +446,7 @@ class SocketPortSignaler {
     uint8_t message = 0;
     size_t bytes_written = 0;
     ASSERT_OK(socket_.write(0, &message, 1, &bytes_written));
-    FXL_CHECK(bytes_written == 1);
+    FX_CHECK(bytes_written == 1);
   }
 
  private:
@@ -471,7 +471,7 @@ class SocketPortTest {
   }
 
   static void ThreadFunc(std::vector<zx::handle>&& handles) {
-    FXL_CHECK(handles.size() == 1);
+    FX_CHECK(handles.size() == 1);
 
     SocketPortSignaler signaler;
     signaler.set_socket(zx::socket(handles[0].get()));
@@ -482,7 +482,7 @@ class SocketPortTest {
 
   void Run() {
     signaler_.Signal();
-    FXL_CHECK(signaler_.Wait());
+    FX_CHECK(signaler_.Wait());
   }
 
  private:
@@ -494,7 +494,7 @@ class SocketPortTest {
 class RoundTripServiceImpl : public fuchsia::zircon::benchmarks::RoundTripService {
  public:
   void RoundTripTest(uint32_t arg, RoundTripTestCallback callback) override {
-    FXL_CHECK(arg == 123);
+    FX_CHECK(arg == 123);
     callback(456);
   }
 };
@@ -509,7 +509,7 @@ class FidlTest {
   }
 
   static void ThreadFunc(std::vector<zx::handle>&& handles) {
-    FXL_CHECK(handles.size() == 1);
+    FX_CHECK(handles.size() == 1);
     zx::channel channel(std::move(handles[0]));
 
     async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
@@ -523,7 +523,7 @@ class FidlTest {
   void Run() {
     uint32_t result;
     ASSERT_OK(service_ptr_->RoundTripTest(123, &result));
-    FXL_CHECK(result == 456);
+    FX_CHECK(result == 456);
   }
 
  private:
@@ -548,7 +548,7 @@ class FutexTest {
 
   void Run() {
     Wake(&futex1_, 1);
-    FXL_CHECK(!Wait(&futex2_));
+    FX_CHECK(!Wait(&futex2_));
   }
 
  private:
@@ -576,7 +576,7 @@ class FutexTest {
       }
       zx_status_t status =
           zx_futex_wait(const_cast<int*>(ptr), val, ZX_HANDLE_INVALID, ZX_TIME_INFINITE);
-      FXL_CHECK(status == ZX_OK || status == ZX_ERR_BAD_STATE);
+      FX_CHECK(status == ZX_OK || status == ZX_ERR_BAD_STATE);
     }
   }
 
@@ -592,50 +592,50 @@ class FutexTest {
 class PthreadCondvarTest {
  public:
   PthreadCondvarTest() {
-    FXL_CHECK(pthread_mutex_init(&mutex_, nullptr) == 0);
-    FXL_CHECK(pthread_cond_init(&condvar1_, nullptr) == 0);
-    FXL_CHECK(pthread_cond_init(&condvar2_, nullptr) == 0);
+    FX_CHECK(pthread_mutex_init(&mutex_, nullptr) == 0);
+    FX_CHECK(pthread_cond_init(&condvar1_, nullptr) == 0);
+    FX_CHECK(pthread_cond_init(&condvar2_, nullptr) == 0);
     thread_ = std::thread([this]() { ThreadFunc(); });
   }
 
   ~PthreadCondvarTest() {
     // Tell the thread to shut down.
-    FXL_CHECK(pthread_mutex_lock(&mutex_) == 0);
+    FX_CHECK(pthread_mutex_lock(&mutex_) == 0);
     state_ = EXIT;
-    FXL_CHECK(pthread_cond_signal(&condvar1_) == 0);
-    FXL_CHECK(pthread_mutex_unlock(&mutex_) == 0);
+    FX_CHECK(pthread_cond_signal(&condvar1_) == 0);
+    FX_CHECK(pthread_mutex_unlock(&mutex_) == 0);
 
     thread_.join();
 
-    FXL_CHECK(pthread_cond_destroy(&condvar1_) == 0);
-    FXL_CHECK(pthread_cond_destroy(&condvar2_) == 0);
-    FXL_CHECK(pthread_mutex_destroy(&mutex_) == 0);
+    FX_CHECK(pthread_cond_destroy(&condvar1_) == 0);
+    FX_CHECK(pthread_cond_destroy(&condvar2_) == 0);
+    FX_CHECK(pthread_mutex_destroy(&mutex_) == 0);
   }
 
   void Run() {
-    FXL_CHECK(pthread_mutex_lock(&mutex_) == 0);
+    FX_CHECK(pthread_mutex_lock(&mutex_) == 0);
     // Wake the child.
     state_ = WAKE_CHILD;
-    FXL_CHECK(pthread_cond_signal(&condvar1_) == 0);
+    FX_CHECK(pthread_cond_signal(&condvar1_) == 0);
     // Wait for the reply.
     while (state_ != REPLY_TO_PARENT)
-      FXL_CHECK(pthread_cond_wait(&condvar2_, &mutex_) == 0);
-    FXL_CHECK(pthread_mutex_unlock(&mutex_) == 0);
+      FX_CHECK(pthread_cond_wait(&condvar2_, &mutex_) == 0);
+    FX_CHECK(pthread_mutex_unlock(&mutex_) == 0);
   }
 
  private:
   void ThreadFunc() {
-    FXL_CHECK(pthread_mutex_lock(&mutex_) == 0);
+    FX_CHECK(pthread_mutex_lock(&mutex_) == 0);
     for (;;) {
       if (state_ == EXIT)
         break;
       if (state_ == WAKE_CHILD) {
         state_ = REPLY_TO_PARENT;
-        FXL_CHECK(pthread_cond_signal(&condvar2_) == 0);
+        FX_CHECK(pthread_cond_signal(&condvar2_) == 0);
       }
-      FXL_CHECK(pthread_cond_wait(&condvar1_, &mutex_) == 0);
+      FX_CHECK(pthread_cond_wait(&condvar1_, &mutex_) == 0);
     }
-    FXL_CHECK(pthread_mutex_unlock(&mutex_) == 0);
+    FX_CHECK(pthread_mutex_unlock(&mutex_) == 0);
   }
 
   std::thread thread_;
@@ -669,7 +669,7 @@ ThreadFunc GetThreadFunc(const char* name) {
     if (!strcmp(name, thread_funcs[i].name))
       return thread_funcs[i].func;
   }
-  FXL_LOG(FATAL) << "Thread function not found: " << name;
+  FX_LOGS(FATAL) << "Thread function not found: " << name;
   return nullptr;
 }
 

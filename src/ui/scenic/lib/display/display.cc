@@ -26,12 +26,12 @@ Display::Display(uint64_t id, uint32_t width_in_px, uint32_t height_in_px)
     : Display(id, width_in_px, height_in_px, {ZX_PIXEL_FORMAT_ARGB_8888}) {}
 
 void Display::Claim() {
-  FXL_DCHECK(!claimed_);
+  FX_DCHECK(!claimed_);
   claimed_ = true;
 }
 
 void Display::Unclaim() {
-  FXL_DCHECK(claimed_);
+  FX_DCHECK(claimed_);
   claimed_ = false;
 }
 
@@ -42,7 +42,7 @@ void Display::OnVsync(zx::time timestamp) {
     // Estimate current vsync interval. Need to include a maximum to mitigate any
     // potential issues during long breaks.
     if (time_since_last_vsync >= kMaximumVsyncInterval) {
-      FXL_LOG(WARNING) << "More than " << kMaximumVsyncInterval.to_msecs()
+      FX_LOGS(WARNING) << "More than " << kMaximumVsyncInterval.to_msecs()
                        << "ms observed between vsyncs.";
     }
     vsync_timing_->set_vsync_interval(time_since_last_vsync < kMaximumVsyncInterval

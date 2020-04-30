@@ -70,7 +70,7 @@ const char* ExceptionTypeToString(ExceptionType type) {
     case ExceptionType::kLast:
       return "kLast";
   }
-  FXL_NOTREACHED();
+  FX_NOTREACHED();
   return nullptr;
 }
 
@@ -94,7 +94,7 @@ const char* ThreadRecord::StateToString(ThreadRecord::State state) {
       break;
   }
 
-  FXL_NOTREACHED();
+  FX_NOTREACHED();
   return "";
 }
 
@@ -122,7 +122,7 @@ const char* ThreadRecord::BlockedReasonToString(BlockedReason reason) {
       break;
   }
 
-  FXL_NOTREACHED();
+  FX_NOTREACHED();
   return "";
 }
 
@@ -140,7 +140,7 @@ const char* BreakpointTypeToString(BreakpointType type) {
       return "Last";
   }
 
-  FXL_NOTREACHED();
+  FX_NOTREACHED();
   return nullptr;
 }
 
@@ -159,7 +159,7 @@ const char* ConfigAction::TypeToString(Type type) {
       return "Last";
   }
 
-  FXL_NOTREACHED();
+  FX_NOTREACHED();
   return nullptr;
 }
 

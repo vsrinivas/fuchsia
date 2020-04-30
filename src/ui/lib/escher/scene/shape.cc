@@ -8,9 +8,9 @@
 
 namespace escher {
 
-Shape::Shape(Type type) : type_(type) { FXL_DCHECK(type != Type::kMesh); }
+Shape::Shape(Type type) : type_(type) { FX_DCHECK(type != Type::kMesh); }
 
-Shape::Shape(MeshPtr mesh) : type_(Type::kMesh), mesh_(mesh) { FXL_DCHECK(mesh); }
+Shape::Shape(MeshPtr mesh) : type_(Type::kMesh), mesh_(mesh) { FX_DCHECK(mesh); }
 
 Shape::~Shape() {}
 
@@ -28,7 +28,7 @@ BoundingBox Shape::bounding_box() const {
 }
 
 void Shape::set_mesh(MeshPtr mesh) {
-  FXL_DCHECK(type_ == Type::kMesh);
+  FX_DCHECK(type_ == Type::kMesh);
   mesh_ = std::move(mesh);
 }
 

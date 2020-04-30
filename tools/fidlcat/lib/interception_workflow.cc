@@ -23,10 +23,10 @@
 namespace fidlcat {
 
 void InterceptingThreadObserver::OnThreadStopped(zxdb::Thread* thread, const zxdb::StopInfo& info) {
-  FXL_CHECK(thread) << "Internal error: Stopped in a breakpoint without a thread?";
+  FX_CHECK(thread) << "Internal error: Stopped in a breakpoint without a thread?";
 
   if (info.exception_type != debug_ipc::ExceptionType::kSoftware) {
-    FXL_CHECK(info.hit_breakpoints.empty());
+    FX_CHECK(info.hit_breakpoints.empty());
     if (threads_in_error_.find(thread->GetKoid()) == threads_in_error_.end()) {
       threads_in_error_.emplace(thread->GetKoid());
       workflow_->syscall_decoder_dispatcher()->DecodeException(workflow_, thread);
@@ -42,7 +42,7 @@ void InterceptingThreadObserver::OnThreadStopped(zxdb::Thread* thread, const zxd
 
   // TODO(bug 47497) Uncomment this and fix the test bugs that create more than one breakpoint
   // at the same address.
-  // FXL_CHECK(info.hit_breakpoints.size() == 1)
+  // FX_CHECK(info.hit_breakpoints.size() == 1)
   //     << "Internal error: more than one simultaneous breakpoint for thread " <<
   //     thread->GetKoid();
 
@@ -83,7 +83,7 @@ void InterceptingThreadObserver::OnThreadStopped(zxdb::Thread* thread, const zxd
           return;
         }
       }
-      FXL_LOG(ERROR) << thread->GetProcess()->GetName() << ' ' << thread->GetProcess()->GetKoid()
+      FX_LOGS(ERROR) << thread->GetProcess()->GetName() << ' ' << thread->GetProcess()->GetKoid()
                      << ':' << thread->GetKoid() << ": Internal error: breakpoint "
                      << settings.locations[0].name.components()[0].name() << " not managed";
       thread->Continue();
@@ -124,7 +124,7 @@ void InterceptingThreadObserver::AddExitBreakpoint(zxdb::Thread* thread,
     settings.scope = zxdb::ExecutionScope(thread->GetProcess()->GetTarget());
   }
 
-  FXL_VLOG(2) << "Thread " << thread->GetKoid() << ": creating return value breakpoint for "
+  FX_VLOGS(2) << "Thread " << thread->GetKoid() << ": creating return value breakpoint for "
               << syscall_name << " at address " << std::hex << address << std::dec;
   CreateNewBreakpoint(thread, settings);
 }
@@ -229,7 +229,7 @@ void InterceptionWorkflow::Initialize(
   if (debug_ipc::MessageLoop::Current() == nullptr) {
     std::string error_message;
     bool success = loop_->Init(&error_message);
-    FXL_CHECK(success) << error_message;
+    FX_CHECK(success) << error_message;
   }
 
   // 4) Initialize the symbol servers.
@@ -278,7 +278,7 @@ void InterceptionWorkflow::Attach(const std::vector<zx_koid_t>& process_koids) {
     zxdb::Target* target = GetTarget(process_koid);
     // If we are already attached, then we are done.
     if (target->GetProcess()) {
-      FXL_CHECK(target->GetProcess()->GetKoid() == process_koid)
+      FX_CHECK(target->GetProcess()->GetKoid() == process_koid)
           << "Internal error: target attached to wrong process";
       continue;
     }
@@ -337,7 +337,7 @@ void InterceptionWorkflow::Filter(const std::vector<std::string>& filter) {
 }
 
 void InterceptionWorkflow::Launch(zxdb::Target* target, const std::vector<std::string>& command) {
-  FXL_CHECK(!command.empty()) << "No arguments passed to launcher";
+  FX_CHECK(!command.empty()) << "No arguments passed to launcher";
 
   auto on_err = [this, command](const zxdb::Err& err) {
     std::string cmd;
@@ -424,7 +424,7 @@ void InterceptionWorkflow::SetBreakpoints(zxdb::Process* process) {
 
       zxdb::Identifier identifier;
       zxdb::Err err = zxdb::ExprParser::ParseIdentifier(syscall->breakpoint_name(), &identifier);
-      FXL_CHECK(err.ok());
+      FX_CHECK(err.ok());
       settings.locations.emplace_back(std::move(identifier));
 
       zxdb::Breakpoint* breakpoint = session_->system().CreateNewBreakpoint();

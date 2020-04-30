@@ -25,7 +25,7 @@ HackFilesystemPtr HackFilesystem::New() { return fxl::MakeRefCounted<LinuxDataSo
 
 namespace escher {
 
-HackFilesystem::~HackFilesystem() { FXL_DCHECK(watchers_.size() == 0); }
+HackFilesystem::~HackFilesystem() { FX_DCHECK(watchers_.size() == 0); }
 
 HackFileContents HackFilesystem::ReadFile(const HackFilePath& path) const {
   auto it = files_.find(path);
@@ -74,7 +74,7 @@ HackFilesystemWatcher::HackFilesystemWatcher(HackFilesystem* filesystem,
 
 HackFilesystemWatcher::~HackFilesystemWatcher() {
   size_t erased = filesystem_->watchers_.erase(this);
-  FXL_DCHECK(erased == 1);
+  FX_DCHECK(erased == 1);
 }
 
 bool HackFilesystem::LoadFile(HackFilesystem* fs, const HackFilePath& root,
@@ -85,7 +85,7 @@ bool HackFilesystem::LoadFile(HackFilesystem* fs, const HackFilePath& root,
     fs->WriteFile(path, contents);
     return true;
   }
-  FXL_LOG(WARNING) << "Failed to read file: " << fullpath;
+  FX_LOGS(WARNING) << "Failed to read file: " << fullpath;
   return false;
 }
 

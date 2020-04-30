@@ -71,7 +71,7 @@ class Importer {
     bool IsValue(unsigned cpu, perfmon::EventId id) const {
       Key key = GenKey(cpu, id);
       EventData::const_iterator iter = data_.find(key);
-      FXL_DCHECK(iter != data_.end());
+      FX_DCHECK(iter != data_.end());
       return iter->second.is_value;
     }
 
@@ -98,7 +98,7 @@ class Importer {
     using EventData = std::unordered_map<Key, Data>;
 
     Key GenKey(unsigned cpu, perfmon::EventId id) const {
-      FXL_DCHECK(cpu < kMaxNumCpus);
+      FX_DCHECK(cpu < kMaxNumCpus);
       static_assert(sizeof(id) == 2, "");
       return (cpu << 16) | id;
     }

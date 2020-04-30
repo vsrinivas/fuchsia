@@ -11,7 +11,7 @@ namespace impl {
 
 void VkDebugReportCallbackRegistry::RegisterDebugReportCallbacks() {
   if (!VK_TESTS_SUPPRESSED()) {
-    FXL_CHECK(instance_ && optional_callback_handles_.size() == 0 && !main_callback_handle_);
+    FX_CHECK(instance_ && optional_callback_handles_.size() == 0 && !main_callback_handle_);
     if (main_callback_) {
       main_callback_handle_ = instance_->RegisterDebugReportCallback(
           std::move(main_callback_->function), main_callback_->user_data);
@@ -25,7 +25,7 @@ void VkDebugReportCallbackRegistry::RegisterDebugReportCallbacks() {
 
 void VkDebugReportCallbackRegistry::DeregisterDebugReportCallbacks() {
   if (!VK_TESTS_SUPPRESSED()) {
-    FXL_CHECK(instance_ && optional_callback_handles_.size() == optional_callbacks_.size());
+    FX_CHECK(instance_ && optional_callback_handles_.size() == optional_callbacks_.size());
     if (main_callback_handle_) {
       instance_->DeregisterDebugReportCallback(*main_callback_handle_);
       main_callback_handle_ = std::nullopt;

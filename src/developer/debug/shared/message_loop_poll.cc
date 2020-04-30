@@ -104,7 +104,7 @@ void MessageLoopPoll::Cleanup() {
 MessageLoop::WatchHandle MessageLoopPoll::WatchFD(WatchMode mode, int fd, FDWatcher* watcher) {
   // The dispatch code for watch callbacks requires this be called on the
   // same thread as the message loop is.
-  FXL_DCHECK(Current() == static_cast<MessageLoop*>(this));
+  FX_DCHECK(Current() == static_cast<MessageLoop*>(this));
 
   WatchInfo info;
   info.fd = fd;
@@ -125,7 +125,7 @@ uint64_t MessageLoopPoll::GetMonotonicNowNS() const {
   struct timespec ts;
 
   int ret = clock_gettime(CLOCK_MONOTONIC, &ts);
-  FXL_DCHECK(!ret);
+  FX_DCHECK(!ret);
 
   return static_cast<uint64_t>(ts.tv_sec) * 1000000000 + ts.tv_nsec;
 }
@@ -137,8 +137,8 @@ void MessageLoopPoll::RunImpl() {
   while (!should_quit()) {
     // This could be optimized to avoid recomputing every time.
     ConstructFDMapping(&poll_vect, &map_indices);
-    FXL_DCHECK(!poll_vect.empty());
-    FXL_DCHECK(poll_vect.size() == map_indices.size());
+    FX_DCHECK(!poll_vect.empty());
+    FX_DCHECK(poll_vect.size() == map_indices.size());
 
     int poll_timeout;
     uint64_t delay = DelayNS();
@@ -151,7 +151,7 @@ void MessageLoopPoll::RunImpl() {
     }
 
     int res = poll(&poll_vect[0], static_cast<nfds_t>(poll_vect.size()), poll_timeout);
-    FXL_DCHECK(res >= 0 || errno == EINTR) << "poll() failed: " << strerror(errno);
+    FX_DCHECK(res >= 0 || errno == EINTR) << "poll() failed: " << strerror(errno);
 
     for (size_t i = 0; i < poll_vect.size(); i++) {
       if (poll_vect[i].revents)
@@ -169,13 +169,13 @@ void MessageLoopPoll::RunImpl() {
 void MessageLoopPoll::StopWatching(int id) {
   // The dispatch code for watch callbacks requires this be called on the
   // same thread as the message loop is.
-  FXL_DCHECK(Current() == this);
+  FX_DCHECK(Current() == this);
 
   std::lock_guard<std::mutex> guard(mutex_);
 
   auto found = watches_.find(id);
   if (found == watches_.end()) {
-    FXL_NOTREACHED();
+    FX_NOTREACHED();
     return;
   }
   watches_.erase(found);
@@ -186,12 +186,12 @@ void MessageLoopPoll::OnFDReady(int fd, bool readable, bool, bool) {
     return;
   }
 
-  FXL_DCHECK(fd == wakeup_pipe_out_.get());
+  FX_DCHECK(fd == wakeup_pipe_out_.get());
 
   // Remove and discard the wakeup byte.
   char buf;
   int nread = HANDLE_EINTR(read(wakeup_pipe_out_.get(), &buf, 1));
-  FXL_DCHECK(nread == 1);
+  FX_DCHECK(nread == 1);
 
   // This is just here to wake us up and run the loop again. We don't need to
   // actually respond to the data.
@@ -201,13 +201,13 @@ void MessageLoopPoll::SetHasTasks() {
   // Wake up the poll() by writing to the pipe.
   char buf = 0;
   int written = HANDLE_EINTR(write(wakeup_pipe_in_.get(), &buf, 1));
-  FXL_DCHECK(written == 1 || errno == EAGAIN);
+  FX_DCHECK(written == 1 || errno == EAGAIN);
 }
 
 void MessageLoopPoll::ConstructFDMapping(std::vector<pollfd>* poll_vect,
                                          std::vector<size_t>* map_indices) const {
   // The watches_ vector is not threadsafe.
-  FXL_DCHECK(Current() == this);
+  FX_DCHECK(Current() == this);
 
   poll_vect->resize(watches_.size());
   map_indices->resize(watches_.size());
@@ -240,7 +240,7 @@ bool MessageLoopPoll::HasWatch(int watch_id) {
 
 void MessageLoopPoll::OnHandleSignaled(int fd, short events, int watch_id) {
   // The watches_ vector is not threadsafe.
-  FXL_DCHECK(Current() == this);
+  FX_DCHECK(Current() == this);
 
   // Handle could have been just closed. Since all signaled handles are
   // notified for one call to poll(), a previous callback could have removed
@@ -251,7 +251,7 @@ void MessageLoopPoll::OnHandleSignaled(int fd, short events, int watch_id) {
   // We obtain the watch info and see what kind of signal we received.
   auto it = watches_.find(watch_id);
   const auto& watch_info = it->second;
-  FXL_DCHECK(fd == watch_info.fd);
+  FX_DCHECK(fd == watch_info.fd);
 
   bool error = (events & POLLERR) || (events & POLLHUP) || (events & POLLNVAL);
 #if defined(POLLRDHUP)  // Mac doesn't have this.

@@ -16,7 +16,7 @@ ResourceRecycler::ResourceRecycler(EscherWeakPtr escher)
 }
 
 ResourceRecycler::~ResourceRecycler() {
-  FXL_DCHECK(unused_resources_.empty());
+  FX_DCHECK(unused_resources_.empty());
   // Unregister ourselves. Unregister() is defined in our superclass
   // CommandBufferSequenceListener.
   escher()->command_buffer_sequencer()->RemoveListener(this);
@@ -33,7 +33,7 @@ void ResourceRecycler::OnReceiveOwnable(std::unique_ptr<Resource> resource) {
 }
 
 void ResourceRecycler::OnCommandBufferFinished(uint64_t sequence_number) {
-  FXL_DCHECK(sequence_number > last_finished_sequence_number_);
+  FX_DCHECK(sequence_number > last_finished_sequence_number_);
   last_finished_sequence_number_ = sequence_number;
 
   // The sequence number allows us to find all unused resources that are no

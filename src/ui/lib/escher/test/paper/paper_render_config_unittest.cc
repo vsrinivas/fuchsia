@@ -28,10 +28,10 @@ VK_TEST_F(PaperRendererConfigTest, TestInvalidSampleCount) {
                            return msaa_sample_counts.find(sample_count) == msaa_sample_counts.end();
                          });
   if (it == kSampleCountCandidates.end()) {
-    FXL_LOG(INFO) << "Cannot find a sample count not supported by the device. Test terminated.";
+    FX_LOGS(INFO) << "Cannot find a sample count not supported by the device. Test terminated.";
   } else {
     new_config.msaa_sample_count = *it;
-    FXL_LOG(INFO) << "Setting the sample count to a value not upported by the device. "
+    FX_LOGS(INFO) << "Setting the sample count to a value not upported by the device. "
                      "Error messages are expected.";
     renderer->SetConfig(new_config);
 
@@ -48,7 +48,7 @@ VK_TEST_F(PaperRendererConfigTest, TestInvalidDepthStencilFormat) {
   auto new_config = renderer->config();
 
   new_config.depth_stencil_format = vk::Format::eUndefined;
-  FXL_LOG(INFO) << "Setting the depth stencil format to a format not supported by the device. "
+  FX_LOGS(INFO) << "Setting the depth stencil format to a format not supported by the device. "
                    "Error messages are expected.";
   renderer->SetConfig(new_config);
 

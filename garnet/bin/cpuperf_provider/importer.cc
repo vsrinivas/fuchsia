@@ -66,7 +66,7 @@ bool Importer::Import(perfmon::Reader& reader, const perfmon::Config& perfmon_co
 
   uint32_t record_count = ImportRecords(reader, perfmon_config);
 
-  FXL_LOG(INFO) << "Import of " << record_count << " cpu perf records took "
+  FX_LOGS(INFO) << "Import of " << record_count << " cpu perf records took "
                 << (zx::clock::get_monotonic() - start).to_usecs() << " us";
 
   return true;
@@ -90,14 +90,14 @@ uint64_t Importer::ImportRecords(perfmon::Reader& reader, const perfmon::Config&
   trace_ticks_t current_time = reader.time();
 
   while (reader.ReadNextRecord(&cpu, &record) == perfmon::ReaderStatus::kOk) {
-    FXL_DCHECK(cpu < kMaxNumCpus);
+    FX_DCHECK(cpu < kMaxNumCpus);
     perfmon::EventId event_id = record.event();
     uint64_t ticks_per_second = reader.ticks_per_second();
 
     // There can be millions of records. This log message is useful for small
     // test runs, but otherwise is too painful. The verbosity level is chosen
     // to recognize that.
-    FXL_VLOG(10) << fxl::StringPrintf("Import: cpu=%u, event=0x%x, time=%" PRIu64, cpu, event_id,
+    FX_VLOGS(10) << fxl::StringPrintf("Import: cpu=%u, event=0x%x, time=%" PRIu64, cpu, event_id,
                                       current_time);
 
     if (record.type() == perfmon::kRecordTypeTime) {
@@ -114,26 +114,26 @@ uint64_t Importer::ImportRecords(perfmon::Reader& reader, const perfmon::Config&
 
     if (current_time < prev_time) {
       if (printed_old_time_warning_count == 0) {
-        FXL_LOG(WARNING) << "cpu " << cpu << ": record time " << current_time << " < previous time "
+        FX_LOGS(WARNING) << "cpu " << cpu << ": record time " << current_time << " < previous time "
                          << prev_time << " (further such warnings are omitted)";
       }
       ++printed_old_time_warning_count;
     } else if (current_time == prev_time) {
       if (printed_zero_period_warning_count == 0) {
-        FXL_LOG(WARNING) << "cpu " << cpu << ": empty interval at time " << current_time
+        FX_LOGS(WARNING) << "cpu " << cpu << ": empty interval at time " << current_time
                          << " (further such warnings are omitted)";
       }
       ++printed_zero_period_warning_count;
     } else if (current_time > stop_time_) {
       if (printed_late_record_warning_count == 0) {
-        FXL_LOG(WARNING) << "Record has time > stop_time: " << current_time
+        FX_LOGS(WARNING) << "Record has time > stop_time: " << current_time
                          << " (further such warnings are omitted)";
       }
       ++printed_late_record_warning_count;
     } else {
       switch (record.type()) {
         case perfmon::kRecordTypeTime:
-          FXL_DCHECK(event_id != perfmon::kEventIdNone);
+          FX_DCHECK(event_id != perfmon::kEventIdNone);
           // fall through
         case perfmon::kRecordTypeTick:
           if (is_tally_mode) {
@@ -170,7 +170,7 @@ uint64_t Importer::ImportRecords(perfmon::Reader& reader, const perfmon::Config&
           break;
         default:
           // The reader shouldn't be returning unknown records.
-          FXL_NOTREACHED();
+          FX_NOTREACHED();
           break;
       }
     }
@@ -184,15 +184,15 @@ uint64_t Importer::ImportRecords(perfmon::Reader& reader, const perfmon::Config&
   }
 
   if (printed_old_time_warning_count > 0) {
-    FXL_LOG(WARNING) << printed_old_time_warning_count
+    FX_LOGS(WARNING) << printed_old_time_warning_count
                      << " total occurrences of records going back in time";
   }
   if (printed_zero_period_warning_count > 0) {
-    FXL_LOG(WARNING) << printed_zero_period_warning_count
+    FX_LOGS(WARNING) << printed_zero_period_warning_count
                      << " total occurrences of records with an empty interval";
   }
   if (printed_late_record_warning_count > 0) {
-    FXL_LOG(WARNING) << printed_late_record_warning_count
+    FX_LOGS(WARNING) << printed_late_record_warning_count
                      << " total occurrences of records with late times";
   }
 
@@ -210,14 +210,14 @@ void Importer::ImportSampleRecord(trace_cpu_number_t cpu, const perfmon::SampleR
     EmitSampleRecord(cpu, details, record, previous_time, current_time, ticks_per_second,
                      event_value);
   } else {
-    FXL_LOG(ERROR) << "Invalid event id: " << event_id;
+    FX_LOGS(ERROR) << "Invalid event id: " << event_id;
   }
 }
 
 void Importer::EmitSampleRecord(trace_cpu_number_t cpu, const perfmon::EventDetails* details,
                                 const perfmon::SampleRecord& record, trace_ticks_t start_time,
                                 trace_ticks_t end_time, uint64_t ticks_per_second, uint64_t value) {
-  FXL_DCHECK(start_time < end_time);
+  FX_DCHECK(start_time < end_time);
   trace_thread_ref_t thread_ref{GetCpuThreadRef(cpu, details->id)};
   trace_string_ref_t name_ref{
       trace_context_make_registered_string_literal(context_, details->name)};
@@ -233,7 +233,7 @@ void Importer::EmitSampleRecord(trace_cpu_number_t cpu, const perfmon::EventDeta
   // While the count of events is cumulative, it's more useful to report some
   // measure that's useful within each time period. E.g., a rate.
   uint64_t interval_ticks = end_time - start_time;
-  FXL_DCHECK(interval_ticks > 0);
+  FX_DCHECK(interval_ticks > 0);
   double rate_per_second = 0;
   // rate_per_second = value / (interval_ticks / ticks_per_second)
   // ticks_per_second could be zero if there's bad data in the buffer.
@@ -271,7 +271,7 @@ void Importer::EmitSampleRecord(trace_cpu_number_t cpu, const perfmon::EventDeta
       n_args = 3;
       break;
     default:
-      FXL_NOTREACHED();
+      FX_NOTREACHED();
       return;
   }
 
@@ -364,17 +364,17 @@ void Importer::EmitTallyRecord(trace_cpu_number_t cpu, perfmon::EventId event_id
     trace_context_write_counter_event_record(context_, time, &thread_ref, &cpuperf_category_ref_,
                                              &name_ref, event_id, &args[0], countof(args));
   } else {
-    FXL_LOG(WARNING) << "Invalid event id: " << event_id;
+    FX_LOGS(WARNING) << "Invalid event id: " << event_id;
   }
 }
 
 trace_string_ref_t Importer::GetCpuNameRef(trace_cpu_number_t cpu) {
-  FXL_DCHECK(cpu < countof(cpu_name_refs_));
+  FX_DCHECK(cpu < countof(cpu_name_refs_));
   return cpu_name_refs_[cpu + 1];
 }
 
 trace_thread_ref_t Importer::GetCpuThreadRef(trace_cpu_number_t cpu, perfmon::EventId id) {
-  FXL_DCHECK(cpu < countof(cpu_thread_refs_));
+  FX_DCHECK(cpu < countof(cpu_thread_refs_));
   // TODO(dje): Misc events are currently all system-wide, not attached
   // to any specific cpu. That won't always be the case.
   if (perfmon::GetEventIdGroup(id) == perfmon::kGroupMisc)

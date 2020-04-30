@@ -36,7 +36,7 @@ void PackageLoader::LoadUrl(std::string url, LoadUrlCallback callback) {
 
   // If the url isn't valid after our attempt at fix-up, bail.
   if (!fuchsia_url.Parse(url)) {
-    FXL_LOG(ERROR) << "Cannot load " << url << " because the URL is not valid.";
+    FX_LOGS(ERROR) << "Cannot load " << url << " because the URL is not valid.";
     callback(nullptr);
     return;
   }
@@ -45,7 +45,7 @@ void PackageLoader::LoadUrl(std::string url, LoadUrlCallback callback) {
 
   fbl::unique_fd package_dir(open(fuchsia_url.pkgfs_dir_path().c_str(), O_DIRECTORY | O_RDONLY));
   if (!package_dir.is_valid()) {
-    FXL_VLOG(1) << "Could not open directory " << fuchsia_url.pkgfs_dir_path() << " "
+    FX_VLOGS(1) << "Could not open directory " << fuchsia_url.pkgfs_dir_path() << " "
                 << strerror(errno);
     callback(nullptr);
     return;
@@ -54,7 +54,7 @@ void PackageLoader::LoadUrl(std::string url, LoadUrlCallback callback) {
   zx_status_t status;
   if ((status = fdio_fd_transfer(package_dir.release(),
                                  package.directory.reset_and_get_address())) != ZX_OK) {
-    FXL_LOG(ERROR) << "Could not release directory channel " << fuchsia_url.pkgfs_dir_path()
+    FX_LOGS(ERROR) << "Could not release directory channel " << fuchsia_url.pkgfs_dir_path()
                    << " status=" << zx_status_get_string(status);
     callback(nullptr);
     return;
@@ -62,7 +62,7 @@ void PackageLoader::LoadUrl(std::string url, LoadUrlCallback callback) {
 
   if (!fuchsia_url.resource_path().empty()) {
     if (!LoadPackageResource(fuchsia_url.resource_path(), package)) {
-      FXL_LOG(ERROR) << "Could not load package resource " << fuchsia_url.resource_path()
+      FX_LOGS(ERROR) << "Could not load package resource " << fuchsia_url.resource_path()
                      << " from " << url;
       callback(nullptr);
       return;

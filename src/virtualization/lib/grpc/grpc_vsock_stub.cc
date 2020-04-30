@@ -16,7 +16,7 @@ fit::promise<zx::socket, zx_status_t> ConnectToGrpcVsockService(
   zx::socket h1, h2;
   zx_status_t status = zx::socket::create(ZX_SOCKET_STREAM, &h1, &h2);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to create socket";
+    FX_LOGS(ERROR) << "Failed to create socket";
     return fit::make_result_promise<zx::socket, zx_status_t>(fit::error(status));
   }
 
@@ -26,7 +26,7 @@ fit::promise<zx::socket, zx_status_t> ConnectToGrpcVsockService(
       cid, port, std::move(h1),
       [completer = std::move(bridge.completer), h2 = std::move(h2)](zx_status_t status) mutable {
         if (status != ZX_OK) {
-          FXL_LOG(ERROR) << "Failed to connect: " << status;
+          FX_LOGS(ERROR) << "Failed to connect: " << status;
           completer.complete_error(status);
         } else {
           completer.complete_ok(std::move(h2));

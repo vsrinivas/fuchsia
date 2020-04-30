@@ -4,9 +4,9 @@
 
 #include "lib/svc/cpp/services.h"
 
+#include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
 
 #include "src/lib/fxl/logging.h"
 
@@ -30,7 +30,7 @@ Services& Services::operator=(Services&& other) {
 
 zx::channel Services::NewRequest() {
   zx::channel request;
-  FXL_CHECK(zx::channel::create(0, &request, &directory_) == ZX_OK);
+  FX_CHECK(zx::channel::create(0, &request, &directory_) == ZX_OK);
   return request;
 }
 

@@ -16,7 +16,7 @@ class TallyVerifier : public Verifier {
     const perfmon::EventDetails* details;
 
     bool rc __UNUSED = LookupEventByName("arch", "inst_retired", &details);
-    FXL_DCHECK(rc);
+    FX_DCHECK(rc);
     instructions_retired_id_ = details->id;
   }
 
@@ -31,7 +31,7 @@ class TallyVerifier : public Verifier {
   bool VerifyTrace(const RecordCounts& counts) override {
     bool pass = true;
     if (instructions_retired_count_ == 0) {
-      FXL_LOG(ERROR) << "Missing inst_retired events";
+      FX_LOGS(ERROR) << "Missing inst_retired events";
       pass = false;
     }
     return pass;

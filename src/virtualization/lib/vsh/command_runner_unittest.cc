@@ -29,7 +29,7 @@ struct FakeVshd {
   }
 
   zx::socket TakeConnection() {
-    FXL_CHECK(!connections.empty());
+    FX_CHECK(!connections.empty());
     auto conn = std::move(connections[0]);
     connections.erase(connections.begin());
     return conn;
@@ -112,8 +112,8 @@ class VshCommandRunnerTest : public gtest::TestLoopFixture {
   // It is an error to call this method multiple times before a corresponding
   // call to |CloseConnectionsAndWaitForThreadJoin|.
   zx::socket StartBlockingCommandOnThread(BlockingCommandRunnerParams* params) {
-    FXL_CHECK(!thread_running_);
-    FXL_CHECK(thrd_create(&thread_, RunBlockingCommand, params) == thrd_success);
+    FX_CHECK(!thread_running_);
+    FX_CHECK(thrd_create(&thread_, RunBlockingCommand, params) == thrd_success);
     thread_running_ = true;
 
     // Ensure the command runner is connected before continuing.
@@ -122,7 +122,7 @@ class VshCommandRunnerTest : public gtest::TestLoopFixture {
       usleep(1000);
       RunLoopUntilIdle();
     }
-    FXL_CHECK(!vshd_.connections.empty());
+    FX_CHECK(!vshd_.connections.empty());
     return vshd_.TakeConnection();
   }
 

@@ -23,8 +23,8 @@ ShutdownManager::ShutdownManager(async_dispatcher_t* dispatcher, QuitCallback qu
 std::shared_ptr<ShutdownManager> ShutdownManager::New(async_dispatcher_t* dispatcher,
                                                       QuitCallback quit_callback,
                                                       TimeoutCallback timeout_callback) {
-  return std::shared_ptr<ShutdownManager>(new ShutdownManager(dispatcher, std::move(quit_callback),
-                                           std::move(timeout_callback)));
+  return std::shared_ptr<ShutdownManager>(
+      new ShutdownManager(dispatcher, std::move(quit_callback), std::move(timeout_callback)));
 }
 
 ShutdownManager::~ShutdownManager() {
@@ -37,26 +37,26 @@ ShutdownManager::~ShutdownManager() {
   }
 
   if (state_ == State::kInit) {
-    FXL_LOG(WARNING) << "ShutdownManager destroyed without Shutdown() being called; quit callback "
+    FX_LOGS(WARNING) << "ShutdownManager destroyed without Shutdown() being called; quit callback "
                         "was not invoked.";
   } else {
-    FXL_DCHECK(state_ == State::kShuttingDown);
-    FXL_LOG(WARNING) << "ShutdownManager destroyed before shutdown was completed; quit callback "
+    FX_DCHECK(state_ == State::kShuttingDown);
+    FX_LOGS(WARNING) << "ShutdownManager destroyed before shutdown was completed; quit callback "
                         "was not invoked.";
   }
 }
 
 void ShutdownManager::RegisterClient(ClientCallback client) {
-  FXL_DCHECK(state_ == State::kInit);
+  FX_DCHECK(state_ == State::kInit);
   if (state_ != State::kInit) {
-    FXL_LOG(WARNING) << "ShutdownManager::RegisterClient(): already shutting down; ignoring.";
+    FX_LOGS(WARNING) << "ShutdownManager::RegisterClient(): already shutting down; ignoring.";
     return;
   }
   clients_.push_back(std::move(client));
 }
 
 void ShutdownManager::Shutdown(zx::duration timeout) {
-  FXL_DCHECK(state_ == State::kInit);
+  FX_DCHECK(state_ == State::kInit);
   if (state_ != State::kInit) {
     return;
   }
@@ -65,7 +65,7 @@ void ShutdownManager::Shutdown(zx::duration timeout) {
   if (clients_.empty()) {
     state_ = State::kFinishedShuttingDown;
     bool was_set = shared_bool_->exchange(true);
-    FXL_DCHECK(!was_set);
+    FX_DCHECK(!was_set);
     quit_callback_();
     timeout_callback_(false);
     return;
@@ -82,7 +82,7 @@ void ShutdownManager::Shutdown(zx::duration timeout) {
                             .and_then([this](std::vector<fit::result<>>& results) {
                               bool was_set = shared_bool_->exchange(true);
                               if (!was_set) {
-                                FXL_DCHECK(state_ == State::kShuttingDown);
+                                FX_DCHECK(state_ == State::kShuttingDown);
                                 state_ = State::kFinishedShuttingDown;
                                 quit_callback_();
                               }
@@ -117,7 +117,7 @@ void ShutdownManager::Shutdown(zx::duration timeout) {
 };
 
 void ShutdownManager::set_clock_callback(fit::function<zx::time()> cb) {
-  FXL_DCHECK(state_ == State::kInit);
+  FX_DCHECK(state_ == State::kInit);
   clock_callback_ = std::move(cb);
 }
 

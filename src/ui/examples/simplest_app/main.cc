@@ -33,8 +33,8 @@ int main(int argc, const char** argv) {
     return 1;
   }
 
-  FXL_LOG(INFO) << "Using root presenter.";
-  FXL_LOG(INFO) << "To quit: Tap the background and hit the ESC key.";
+  FX_LOGS(INFO) << "Using root presenter.";
+  FX_LOGS(INFO) << "To quit: Tap the background and hit the ESC key.";
 
   // We need to attach ourselves to a Presenter. To do this, we create a
   // pair of tokens, and use one to create a View locally (which we attach
@@ -53,7 +53,7 @@ int main(int argc, const char** argv) {
   fuchsia::ui::scenic::ScenicPtr scenic =
       component_context->svc()->Connect<fuchsia::ui::scenic::Scenic>();
   scenic.set_error_handler([&loop](zx_status_t status) {
-    FXL_LOG(ERROR) << "Lost connection to Scenic with error " << zx_status_get_string(status)
+    FX_LOGS(ERROR) << "Lost connection to Scenic with error " << zx_status_get_string(status)
                    << ".";
     loop.Quit();
   });

@@ -20,7 +20,7 @@ TransferStatus WriteBufferToSocket(const zx::socket& socket, const void* buffer,
         status = socket.wait_one(ZX_SOCKET_WRITABLE | ZX_SOCKET_PEER_CLOSED, zx::time::infinite(),
                                  &pending);
         if (status < 0) {
-          FXL_LOG(ERROR) << "Wait on socket failed: " << status;
+          FX_LOGS(ERROR) << "Wait on socket failed: " << status;
           return TransferStatus::kWriteError;
         }
 
@@ -28,7 +28,7 @@ TransferStatus WriteBufferToSocket(const zx::socket& socket, const void* buffer,
           continue;
 
         if (pending & ZX_SOCKET_PEER_CLOSED) {
-          FXL_LOG(ERROR) << "Peer closed while writing to socket";
+          FX_LOGS(ERROR) << "Peer closed while writing to socket";
           return TransferStatus::kReceiverDead;
         }
       }

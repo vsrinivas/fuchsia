@@ -134,7 +134,7 @@ VK_TEST(BufferCache, RecycleMany) {
     // crash the BufferCache (as the invariant that buffer IDs are unique)
     // must be held. When this case is hit, error out early of the test.
     // Remove this early return when SCN-526 is resolved.
-    FXL_LOG(ERROR) << "Error allocating memory, aborting test!";
+    FX_LOGS(ERROR) << "Error allocating memory, aborting test!";
     return;
   }
 

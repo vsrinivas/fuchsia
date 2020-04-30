@@ -84,7 +84,7 @@ class DispatchStoryCommandExecutor::ExecuteStoryCommandsCall
       const auto& tag_string = tag_string_it->second;
 
       auto it = executor_->command_runners_.find(command.Which());
-      FXL_DCHECK(it != executor_->command_runners_.end())
+      FX_DCHECK(it != executor_->command_runners_.end())
           << "Could not find a fuchsia::modular::StoryCommand runner for tag "
           << static_cast<int>(command.Which()) << ": " << tag_string;
 

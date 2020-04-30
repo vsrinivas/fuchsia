@@ -18,19 +18,19 @@ void TestErrorReporter::ReportError(fxl::LogSeverity severity, std::string error
   // However, it is useful to print these errors while writing the tests.
 #ifndef NDEBUG
   // Allow force printing of errors via --verbose=3 as a parameter.
-  if (FXL_VLOG_IS_ON(3)) {
+  if (FX_VLOG_IS_ON(3)) {
     switch (severity) {
       case ::fxl::LOG_INFO:
-        FXL_LOG(INFO) << error_string;
+        FX_LOGS(INFO) << error_string;
         break;
       case ::fxl::LOG_WARNING:
-        FXL_LOG(WARNING) << error_string;
+        FX_LOGS(WARNING) << error_string;
         break;
       case ::fxl::LOG_ERROR:
-        FXL_LOG(ERROR) << error_string;
+        FX_LOGS(ERROR) << error_string;
         break;
       case ::fxl::LOG_FATAL:
-        FXL_LOG(FATAL) << error_string;
+        FX_LOGS(FATAL) << error_string;
         break;
     }
   }
@@ -60,8 +60,8 @@ void TestEventReporter::EnqueueEvent(fuchsia::ui::scenic::Command unhandled) {
 ErrorReportingTest::ErrorReportingTest() = default;
 
 ErrorReportingTest::~ErrorReportingTest() {
-  FXL_CHECK(setup_called_) << kSetUpTearDownErrorMsg;
-  FXL_CHECK(teardown_called_) << kSetUpTearDownErrorMsg;
+  FX_CHECK(setup_called_) << kSetUpTearDownErrorMsg;
+  FX_CHECK(teardown_called_) << kSetUpTearDownErrorMsg;
 }
 
 ErrorReporter* ErrorReportingTest::error_reporter() const { return shared_error_reporter().get(); }
@@ -69,17 +69,17 @@ ErrorReporter* ErrorReportingTest::error_reporter() const { return shared_error_
 EventReporter* ErrorReportingTest::event_reporter() const { return shared_event_reporter().get(); }
 
 std::shared_ptr<ErrorReporter> ErrorReportingTest::shared_error_reporter() const {
-  FXL_CHECK(setup_called_) << kSetUpTearDownErrorMsg;
+  FX_CHECK(setup_called_) << kSetUpTearDownErrorMsg;
   return error_reporter_;
 }
 
 std::shared_ptr<EventReporter> ErrorReportingTest::shared_event_reporter() const {
-  FXL_CHECK(setup_called_) << kSetUpTearDownErrorMsg;
+  FX_CHECK(setup_called_) << kSetUpTearDownErrorMsg;
   return event_reporter_;
 }
 
 const std::vector<fuchsia::ui::scenic::Event>& ErrorReportingTest::events() const {
-  FXL_CHECK(setup_called_) << kSetUpTearDownErrorMsg;
+  FX_CHECK(setup_called_) << kSetUpTearDownErrorMsg;
   return event_reporter_->events();
 }
 

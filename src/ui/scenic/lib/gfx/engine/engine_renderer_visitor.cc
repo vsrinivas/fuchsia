@@ -38,15 +38,15 @@ EngineRendererVisitor::EngineRendererVisitor(escher::PaperRenderer* renderer,
       hide_protected_memory_(hide_protected_memory),
       replacement_material_(replacement_material) {}
 
-void EngineRendererVisitor::Visit(Memory* r) { FXL_CHECK(false); }
+void EngineRendererVisitor::Visit(Memory* r) { FX_CHECK(false); }
 
-void EngineRendererVisitor::Visit(Image* r) { FXL_CHECK(false); }
+void EngineRendererVisitor::Visit(Image* r) { FX_CHECK(false); }
 
-void EngineRendererVisitor::Visit(ImagePipeBase* r) { FXL_CHECK(false); }
+void EngineRendererVisitor::Visit(ImagePipeBase* r) { FX_CHECK(false); }
 
-void EngineRendererVisitor::Visit(Buffer* r) { FXL_CHECK(false); }
+void EngineRendererVisitor::Visit(Buffer* r) { FX_CHECK(false); }
 
-void EngineRendererVisitor::Visit(View* r) { FXL_CHECK(false); }
+void EngineRendererVisitor::Visit(View* r) { FX_CHECK(false); }
 
 void EngineRendererVisitor::Visit(ViewNode* r) {
   const size_t previous_count = draw_call_count_;
@@ -121,17 +121,17 @@ void EngineRendererVisitor::VisitNode(Node* r) {
 
 void EngineRendererVisitor::Visit(Scene* r) { VisitNode(r); }
 
-void EngineRendererVisitor::Visit(Compositor* r) { FXL_DCHECK(false); }
+void EngineRendererVisitor::Visit(Compositor* r) { FX_DCHECK(false); }
 
-void EngineRendererVisitor::Visit(DisplayCompositor* r) { FXL_DCHECK(false); }
+void EngineRendererVisitor::Visit(DisplayCompositor* r) { FX_DCHECK(false); }
 
-void EngineRendererVisitor::Visit(LayerStack* r) { FXL_DCHECK(false); }
+void EngineRendererVisitor::Visit(LayerStack* r) { FX_DCHECK(false); }
 
-void EngineRendererVisitor::Visit(Layer* r) { FXL_DCHECK(false); }
+void EngineRendererVisitor::Visit(Layer* r) { FX_DCHECK(false); }
 
 void EngineRendererVisitor::Visit(ShapeNode* r) {
   // We don't need to call |VisitNode| because shape nodes don't have children.
-  FXL_DCHECK(r->children().empty());
+  FX_DCHECK(r->children().empty());
 
   auto& shape = r->shape();
   auto& material = r->material();
@@ -141,11 +141,11 @@ void EngineRendererVisitor::Visit(ShapeNode* r) {
   material->Accept(this);
 
   escher::MaterialPtr escher_material = material->escher_material();
-  FXL_DCHECK(escher_material);
+  FX_DCHECK(escher_material);
 
   if (hide_protected_memory_ && material->texture_image() &&
       material->texture_image()->use_protected_memory()) {
-    FXL_DCHECK(replacement_material_);
+    FX_DCHECK(replacement_material_);
     escher_material = replacement_material_;
   }
 
@@ -180,36 +180,36 @@ void EngineRendererVisitor::Visit(ShapeNode* r) {
     auto mesh_shape = static_cast<MeshShape*>(shape.get());
     renderer_->DrawMesh(mesh_shape->escher_mesh(), escher_material, flags);
   } else {
-    FXL_LOG(ERROR) << "Unsupported shape type encountered.";
+    FX_LOGS(ERROR) << "Unsupported shape type encountered.";
   }
   transform_stack->Pop();
 
   ++draw_call_count_;
 }
 
-void EngineRendererVisitor::Visit(CircleShape* r) { FXL_CHECK(false); }
+void EngineRendererVisitor::Visit(CircleShape* r) { FX_CHECK(false); }
 
-void EngineRendererVisitor::Visit(RectangleShape* r) { FXL_CHECK(false); }
+void EngineRendererVisitor::Visit(RectangleShape* r) { FX_CHECK(false); }
 
-void EngineRendererVisitor::Visit(RoundedRectangleShape* r) { FXL_CHECK(false); }
+void EngineRendererVisitor::Visit(RoundedRectangleShape* r) { FX_CHECK(false); }
 
-void EngineRendererVisitor::Visit(MeshShape* r) { FXL_CHECK(false); }
+void EngineRendererVisitor::Visit(MeshShape* r) { FX_CHECK(false); }
 
 void EngineRendererVisitor::Visit(Material* r) {
   r->UpdateEscherMaterial(gpu_uploader_, layout_updater_);
 }
 
-void EngineRendererVisitor::Visit(Camera* r) { FXL_CHECK(false); }
+void EngineRendererVisitor::Visit(Camera* r) { FX_CHECK(false); }
 
-void EngineRendererVisitor::Visit(Renderer* r) { FXL_CHECK(false); }
+void EngineRendererVisitor::Visit(Renderer* r) { FX_CHECK(false); }
 
-void EngineRendererVisitor::Visit(Light* r) { FXL_CHECK(false); }
+void EngineRendererVisitor::Visit(Light* r) { FX_CHECK(false); }
 
-void EngineRendererVisitor::Visit(AmbientLight* r) { FXL_CHECK(false); }
+void EngineRendererVisitor::Visit(AmbientLight* r) { FX_CHECK(false); }
 
-void EngineRendererVisitor::Visit(DirectionalLight* r) { FXL_CHECK(false); }
+void EngineRendererVisitor::Visit(DirectionalLight* r) { FX_CHECK(false); }
 
-void EngineRendererVisitor::Visit(PointLight* r) { FXL_CHECK(false); }
+void EngineRendererVisitor::Visit(PointLight* r) { FX_CHECK(false); }
 
 }  // namespace gfx
 }  // namespace scenic_impl

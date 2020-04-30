@@ -36,7 +36,7 @@ static bool RunFillBufferTest(const tracing::Spec& spec) {
     // contains the trace buffer (as a vmo) and other things. So wait for it.
     async::Loop wait_loop(&kAsyncLoopConfigNoAttachToCurrentThread);
     if (!WaitForTracingToStart(wait_loop, kStartTimeout)) {
-      FXL_LOG(ERROR) << "Provider " << kFillBufferProviderName
+      FX_LOGS(ERROR) << "Provider " << kFillBufferProviderName
                      << " failed waiting for tracing to start";
       return false;
     }
@@ -60,7 +60,7 @@ static bool RunFillBufferTest(const tracing::Spec& spec) {
 static bool VerifyFillBufferTest(const tracing::Spec& spec, const std::string& test_output_file) {
   const tracing::BufferingModeSpec* mode_spec = tracing::LookupBufferingMode(*spec.buffering_mode);
   if (mode_spec == nullptr) {
-    FXL_LOG(ERROR) << "Bad buffering mode: " << *spec.buffering_mode;
+    FX_LOGS(ERROR) << "Bad buffering mode: " << *spec.buffering_mode;
     return false;
   }
   return VerifyFullBuffer(test_output_file, mode_spec->mode, *spec.buffer_size_in_mb);

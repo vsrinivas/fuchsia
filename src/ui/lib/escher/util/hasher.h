@@ -24,7 +24,7 @@ class Hasher {
   Hash value() const {
     // Elsewhere in the code, it will be useful to use a hash-val of zero to
     // mean "lazily compute and return a hash value".
-    FXL_DCHECK(value_ != 0);
+    FX_DCHECK(value_ != 0);
     return {value_};
   }
 

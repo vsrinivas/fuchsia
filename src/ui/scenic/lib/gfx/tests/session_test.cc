@@ -31,7 +31,7 @@ void SessionTest::TearDown() {
 }
 
 SessionContext SessionTest::CreateSessionContext() {
-  FXL_DCHECK(frame_scheduler_);
+  FX_DCHECK(frame_scheduler_);
 
   SessionContext session_context{.vk_device = vk::Device(),
                                  .escher = nullptr,

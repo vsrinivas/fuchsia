@@ -16,14 +16,14 @@ ViewProviderService::ViewProviderService(sys::ComponentContext* component_contex
                                          fuchsia::ui::scenic::Scenic* scenic,
                                          ViewFactory view_factory)
     : ViewProviderService(component_context, scenic) {
-  FXL_DCHECK(view_factory);
+  FX_DCHECK(view_factory);
   view_factory_ = std::move(view_factory);
 }
 
 ViewProviderService::ViewProviderService(sys::ComponentContext* component_context,
                                          fuchsia::ui::scenic::Scenic* scenic)
     : component_context_(component_context), scenic_(scenic) {
-  FXL_DCHECK(component_context_);
+  FX_DCHECK(component_context_);
 
   component_context_->outgoing()->AddPublicService<fuchsia::ui::app::ViewProvider>(
       bindings_.GetHandler(this));
@@ -50,14 +50,14 @@ void ViewProviderService::CreateView(
                                [base_view](const std::unique_ptr<BaseView>& other) {
                                  return other.get() == base_view;
                                });
-        FXL_DCHECK(it != views_.end());
+        FX_DCHECK(it != views_.end());
         views_.erase(it);
       });
       views_.push_back(std::move(base_view));
     }
   } else {
     // Should never happen; this was already checked in the constructors.
-    FXL_DCHECK(false) << "No ViewFactory found";
+    FX_DCHECK(false) << "No ViewFactory found";
   }
 }
 

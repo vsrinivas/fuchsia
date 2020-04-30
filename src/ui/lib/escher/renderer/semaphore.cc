@@ -20,7 +20,7 @@ Semaphore::Semaphore(vk::Device device, bool exportable) : device_(device) {
     info.pNext = &export_info;
   }
 #else
-  FXL_DCHECK(!exportable) << "semaphore export not supported on this platform";
+  FX_DCHECK(!exportable) << "semaphore export not supported on this platform";
 #endif
   value_ = ESCHER_CHECKED_VK_RESULT(device_.createSemaphore(info));
 }

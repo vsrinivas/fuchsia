@@ -20,7 +20,7 @@ zx_status_t BufferedZxSocket::Init(zx::socket socket) {
   if (!socket.is_valid())
     return ZX_ERR_INVALID_ARGS;
 
-  FXL_DCHECK(!socket_.is_valid());  // Can't be initialized more than once.
+  FX_DCHECK(!socket_.is_valid());  // Can't be initialized more than once.
   socket_ = std::move(socket);
   stream_.set_writer(this);
 

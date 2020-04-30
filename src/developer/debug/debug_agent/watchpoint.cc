@@ -98,7 +98,7 @@ Watchpoint::Watchpoint(debug_ipc::BreakpointType type, Breakpoint* breakpoint,
       type_(type),
       range_(range),
       arch_provider_(std::move(arch_provider)) {
-  FXL_DCHECK(IsWatchpointType(type))
+  FX_DCHECK(IsWatchpointType(type))
       << "Wrong breakpoint type: " << debug_ipc::BreakpointTypeToString(type);
 }
 
@@ -126,8 +126,8 @@ bool Watchpoint::MatchesException(zx_koid_t thread_koid, uint64_t watchpoint_add
 // ProcessBreakpoint Implementation ----------------------------------------------------------------
 
 void Watchpoint::ExecuteStepOver(DebuggedThread* thread) {
-  FXL_DCHECK(current_stepping_over_threads_.count(thread->koid()) == 0);
-  FXL_DCHECK(!thread->stepping_over_breakpoint());
+  FX_DCHECK(current_stepping_over_threads_.count(thread->koid()) == 0);
+  FX_DCHECK(!thread->stepping_over_breakpoint());
 
   DEBUG_LOG(Watchpoint) << LogPreamble(this) << "Thread " << thread->koid() << " is stepping over.";
   thread->set_stepping_over_breakpoint(true);
@@ -141,8 +141,8 @@ void Watchpoint::ExecuteStepOver(DebuggedThread* thread) {
 }
 
 void Watchpoint::EndStepOver(DebuggedThread* thread) {
-  FXL_DCHECK(thread->stepping_over_breakpoint());
-  FXL_DCHECK(current_stepping_over_threads_.count(thread->koid()) > 0);
+  FX_DCHECK(thread->stepping_over_breakpoint());
+  FX_DCHECK(current_stepping_over_threads_.count(thread->koid()) > 0);
 
   DEBUG_LOG(Watchpoint) << LogPreamble(this) << "Thread " << thread->koid() << " ending step over.";
 

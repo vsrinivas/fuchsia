@@ -31,7 +31,7 @@ std::unique_ptr<BatchGpuDownloader> BatchGpuDownloader::New(EscherWeakPtr weak_e
                                                             uint64_t frame_trace_number) {
   if (!weak_escher) {
     // This class is not functional without a valid escher.
-    FXL_LOG(WARNING) << "Error, creating a BatchGpuDownloader without an escher.";
+    FX_LOGS(WARNING) << "Error, creating a BatchGpuDownloader without an escher.";
     return nullptr;
   }
   return std::make_unique<BatchGpuDownloader>(std::move(weak_escher), command_buffer_type,
@@ -45,13 +45,13 @@ BatchGpuDownloader::BatchGpuDownloader(EscherWeakPtr weak_escher,
       command_buffer_type_(command_buffer_type),
       frame_trace_number_(frame_trace_number),
       buffer_cache_(escher_->buffer_cache()->GetWeakPtr()) {
-  FXL_DCHECK(escher_);
-  FXL_DCHECK(buffer_cache_);
+  FX_DCHECK(escher_);
+  FX_DCHECK(buffer_cache_);
 }
 
 BatchGpuDownloader::~BatchGpuDownloader() {
-  FXL_CHECK(resources_.empty() && copy_info_records_.empty() && wait_semaphores_.empty() &&
-            signal_semaphores_.empty() && current_offset_ == 0U);
+  FX_CHECK(resources_.empty() && copy_info_records_.empty() && wait_semaphores_.empty() &&
+           signal_semaphores_.empty() && current_offset_ == 0U);
 }
 
 void BatchGpuDownloader::ScheduleReadBuffer(const BufferPtr& source,
@@ -79,11 +79,11 @@ void BatchGpuDownloader::ScheduleReadImage(const ImagePtr& source,
   if (region == vk::BufferImageCopy()) {
     region = impl::GetDefaultBufferImageCopy(source->width(), source->height());
   }
-  FXL_DCHECK(region.bufferOffset == 0U);
+  FX_DCHECK(region.bufferOffset == 0U);
 
   // For now we expect that we only accept full image to be downloadable.
-  FXL_DCHECK(region.imageOffset == vk::Offset3D(0, 0, 0) &&
-             region.imageExtent == vk::Extent3D(source->width(), source->height(), 1U));
+  FX_DCHECK(region.imageOffset == vk::Offset3D(0, 0, 0) &&
+            region.imageExtent == vk::Extent3D(source->width(), source->height(), 1U));
 
   TRACE_DURATION("gfx", "escher::BatchGpuDownloader::ScheduleReadImage");
   vk::DeviceSize dst_offset = AlignedToNext(current_offset_, kByteAlignment);
@@ -108,7 +108,7 @@ CommandBufferFinishedCallback BatchGpuDownloader::GenerateCommands(CommandBuffer
 
   TRACE_DURATION("gfx", "BatchGpuDownloader::GenerateCommands");
   // Check existence of command buffer and buffer cache.
-  FXL_DCHECK(cmds);
+  FX_DCHECK(cmds);
 
   // We only create the target_buffer if we need to download something.
   // If we only need to create an empty command buffer (to signal / wait on
@@ -118,7 +118,7 @@ CommandBufferFinishedCallback BatchGpuDownloader::GenerateCommands(CommandBuffer
     // Create a large buffer to store all images / buffers to be downloaded.
     vk::DeviceSize buffer_size = copy_info_records_.back().offset + copy_info_records_.back().size;
     target_buffer = buffer_cache_->NewHostBuffer(buffer_size);
-    FXL_DCHECK(target_buffer) << "Error allocating buffer";
+    FX_DCHECK(target_buffer) << "Error allocating buffer";
     cmds->KeepAlive(target_buffer);
   }
 
@@ -133,7 +133,7 @@ CommandBufferFinishedCallback BatchGpuDownloader::GenerateCommands(CommandBuffer
     switch (copy_info_record.type) {
       case CopyType::COPY_IMAGE: {
         const auto* image_copy_info = std::get_if<ImageCopyInfo>(&copy_info_record.copy_info);
-        FXL_DCHECK(image_copy_info);
+        FX_DCHECK(image_copy_info);
 
         ImagePtr source = image_copy_info->source;
         auto target_layout = source->is_layout_initialized()
@@ -151,7 +151,7 @@ CommandBufferFinishedCallback BatchGpuDownloader::GenerateCommands(CommandBuffer
       }
       case CopyType::COPY_BUFFER: {
         const auto* buffer_copy_info = std::get_if<BufferCopyInfo>(&copy_info_record.copy_info);
-        FXL_DCHECK(buffer_copy_info);
+        FX_DCHECK(buffer_copy_info);
 
         cmds->BufferBarrier(buffer_copy_info->source, kPipelineFlag, kAccessFlagOutside,
                             kPipelineFlag, kAccessFlagInside);
@@ -225,8 +225,8 @@ void BatchGpuDownloader::Submit(CommandBufferFinishedCallback client_callback) {
 
   // Verify that everything is reset so that the downloader can be reused as
   // though new.
-  FXL_CHECK(resources_.empty() && copy_info_records_.empty() && wait_semaphores_.empty() &&
-            signal_semaphores_.empty() && current_offset_ == 0U);
+  FX_CHECK(resources_.empty() && copy_info_records_.empty() && wait_semaphores_.empty() &&
+           signal_semaphores_.empty() && current_offset_ == 0U);
 }
 
 }  // namespace escher

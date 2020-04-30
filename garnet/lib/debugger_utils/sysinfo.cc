@@ -5,14 +5,13 @@
 #include "garnet/lib/debugger_utils/sysinfo.h"
 
 #include <fcntl.h>
+#include <fuchsia/boot/c/fidl.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/job.h>
 #include <unistd.h>
-
-#include <fuchsia/boot/c/fidl.h>
 #include <zircon/syscalls.h>
 
 #include "src/lib/files/unique_fd.h"
@@ -30,20 +29,20 @@ zx::job GetRootJob() {
   zx::channel local, remote;
   zx_status_t status = zx::channel::create(0, &local, &remote);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "unable to create channel";
+    FX_LOGS(ERROR) << "unable to create channel";
     return zx::job();
   }
 
   status = fdio_service_connect(kRootJobSvc, remote.release());
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "unable to open fuchsia.boot.RootJob channel";
+    FX_LOGS(ERROR) << "unable to open fuchsia.boot.RootJob channel";
     return zx::job();
   }
 
   zx_handle_t root_job;
   zx_status_t fidl_status = fuchsia_boot_RootJobGet(local.get(), &root_job);
   if (fidl_status != ZX_OK) {
-    FXL_LOG(ERROR) << "unable to get root job " << fidl_status;
+    FX_LOGS(ERROR) << "unable to get root job " << fidl_status;
     return zx::job();
   }
 

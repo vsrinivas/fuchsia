@@ -4,22 +4,21 @@
 
 #include "system_load_heart_model.h"
 
-#include <algorithm>
-#include <cstdio>
-#include <iostream>
-#include <limits>
-
 #include <fcntl.h>
-#include <sys/types.h>
-#include <unistd.h>
-
 #include <fuchsia/boot/c/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/zx/clock.h>
+#include <sys/types.h>
+#include <unistd.h>
 #include <zircon/status.h>
 #include <zircon/syscalls/object.h>
+
+#include <algorithm>
+#include <cstdio>
+#include <iostream>
+#include <limits>
 
 namespace bt_le_heart_rate {
 namespace {
@@ -60,8 +59,8 @@ SystemLoadHeartModel::SystemLoadHeartModel()
       cpu_stats_(ReadCpuCount(root_resource_)),
       last_cpu_stats_(cpu_stats_.size()),
       last_read_time_(zx::clock::get_monotonic()) {
-  FXL_DCHECK(root_resource_);
-  FXL_DCHECK(!cpu_stats_.empty());
+  FX_DCHECK(root_resource_);
+  FX_DCHECK(!cpu_stats_.empty());
 
   ReadCpuStats();
   last_cpu_stats_.swap(cpu_stats_);

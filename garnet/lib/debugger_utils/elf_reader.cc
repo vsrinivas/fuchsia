@@ -12,7 +12,6 @@
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_number_conversions.h"
 #include "src/lib/fxl/strings/string_printf.h"
-
 #include "util.h"
 
 namespace debugger_utils {
@@ -34,8 +33,8 @@ const char* ElfErrorName(ElfError err) {
 
 ElfError ElfReader::Create(const std::string& file_name, std::shared_ptr<ByteBlock> byte_block,
                            uint32_t options, uint64_t base, std::unique_ptr<ElfReader>* out) {
-  FXL_DCHECK(options == 0);
-  FXL_VLOG(1) << "Creating ELF reader for: " << file_name << ": base 0x" << std::hex << base;
+  FX_DCHECK(options == 0);
+  FX_VLOGS(1) << "Creating ELF reader for: " << file_name << ": base 0x" << std::hex << base;
   ElfReader* er = new ElfReader(file_name, byte_block, base);
   if (!ReadHeader(*byte_block, base, &er->header_)) {
     delete er;
@@ -66,22 +65,22 @@ bool ElfReader::ReadHeader(const ByteBlock& m, uint64_t base, ElfHeader* hdr) {
 // static
 bool ElfReader::VerifyHeader(const ElfHeader* hdr) {
   if (memcmp(hdr->e_ident, ELFMAG, SELFMAG)) {
-    FXL_VLOG(2) << fxl::StringPrintf("Bad ELF magic: %02x %02x %02x %02x", hdr->e_ident[0],
+    FX_VLOGS(2) << fxl::StringPrintf("Bad ELF magic: %02x %02x %02x %02x", hdr->e_ident[0],
                                      hdr->e_ident[1], hdr->e_ident[2], hdr->e_ident[3]);
     return false;
   }
   // TODO(dje): Support larger entries.
   if (hdr->e_ehsize != sizeof(ElfHeader)) {
-    FXL_VLOG(2) << "Bad ELF header size";
+    FX_VLOGS(2) << "Bad ELF header size";
     return false;
   }
   // It's possible the entry size is zero if there are no entries.
   if (hdr->e_phnum > 0 && hdr->e_phentsize != sizeof(ElfSegmentHeader)) {
-    FXL_VLOG(2) << "Bad ELF segment size";
+    FX_VLOGS(2) << "Bad ELF segment size";
     return false;
   }
   if (hdr->e_shnum > 0 && hdr->e_shentsize != sizeof(ElfSectionHeader)) {
-    FXL_VLOG(2) << "Bad ELF section size";
+    FX_VLOGS(2) << "Bad ELF section size";
     return false;
   }
 
@@ -110,8 +109,8 @@ void ElfReader::FreeSegmentHeaders() {
 }
 
 const ElfSegmentHeader& ElfReader::GetSegmentHeader(size_t segment_number) {
-  FXL_DCHECK(segment_headers_);
-  FXL_DCHECK(segment_number < GetNumSegments());
+  FX_DCHECK(segment_headers_);
+  FX_DCHECK(segment_number < GetNumSegments());
   return segment_headers_[segment_number];
 }
 
@@ -136,8 +135,8 @@ void ElfReader::FreeSectionHeaders() {
 }
 
 const ElfSectionHeader& ElfReader::GetSectionHeader(size_t section_number) {
-  FXL_DCHECK(section_headers_);
-  FXL_DCHECK(section_number < GetNumSections());
+  FX_DCHECK(section_headers_);
+  FX_DCHECK(section_number < GetNumSections());
   return section_headers_[section_number];
 }
 
@@ -155,12 +154,12 @@ ElfError ElfReader::GetSectionContents(const ElfSectionHeader& sh,
                                        std::unique_ptr<ElfSectionContents>* out_contents) {
   void* buffer = malloc(sh.sh_size);
   if (!buffer) {
-    FXL_LOG(ERROR) << "OOM getting space for section contents";
+    FX_LOGS(ERROR) << "OOM getting space for section contents";
     return ElfError::NOMEM;
   }
 
   if (!byte_block_->Read(base_ + sh.sh_offset, buffer, sh.sh_size)) {
-    FXL_LOG(ERROR) << "Error reading section contents";
+    FX_LOGS(ERROR) << "Error reading section contents";
     return ElfError::IO;
   }
 
@@ -173,7 +172,7 @@ ElfError ElfReader::GetSectionContents(const ElfSectionHeader& sh,
 ElfError ElfReader::ReadBuildId(char* buf, size_t buf_size) {
   uint64_t vaddr = base_;
 
-  FXL_DCHECK(buf_size >= kMaxBuildIdSize * 2 + 1);
+  FX_DCHECK(buf_size >= kMaxBuildIdSize * 2 + 1);
 
   ElfError rc = ReadSegmentHeaders();
   if (rc != ElfError::OK)
@@ -227,7 +226,7 @@ ElfError ElfReader::ReadBuildId(char* buf, size_t buf_size) {
 
 ElfSectionContents::ElfSectionContents(const ElfSectionHeader& header, void* contents)
     : header_(header), contents_(contents) {
-  FXL_DCHECK(contents);
+  FX_DCHECK(contents);
 }
 
 ElfSectionContents::~ElfSectionContents() { free(contents_); }
@@ -241,13 +240,13 @@ size_t ElfSectionContents::GetNumEntries() const {
       return 0;
   }
 
-  FXL_DCHECK(header_.sh_entsize != 0);
+  FX_DCHECK(header_.sh_entsize != 0);
   return header_.sh_size / header_.sh_entsize;
 }
 
 const ElfRawSymbol& ElfSectionContents::GetSymbolEntry(size_t entry_number) {
-  FXL_DCHECK(header_.sh_type == SHT_SYMTAB || header_.sh_type == SHT_DYNSYM);
-  FXL_DCHECK(entry_number < GetNumEntries());
+  FX_DCHECK(header_.sh_type == SHT_SYMTAB || header_.sh_type == SHT_DYNSYM);
+  FX_DCHECK(entry_number < GetNumEntries());
   auto buf = reinterpret_cast<const char*>(contents_);
   auto sym = buf + entry_number * header_.sh_entsize;
   return *reinterpret_cast<const ElfRawSymbol*>(sym);

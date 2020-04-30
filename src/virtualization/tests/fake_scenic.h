@@ -36,7 +36,7 @@
 //    that framebuffer.
 //
 // Caveat emptor: because this is strictly for tests, the fakes will
-// FXL_CHECK-fail if clients send it unexpected data. We also require that, for
+// FX_CHECK-fail if clients send it unexpected data. We also require that, for
 // screenshots to be taken, there be a single memory resource containing the
 // relevant data.
 

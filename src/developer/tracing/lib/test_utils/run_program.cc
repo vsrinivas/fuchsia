@@ -67,14 +67,14 @@ zx_status_t RunProgram(const zx::job& job, const std::vector<std::string>& argv,
   std::vector<const char*> c_argv;
   StringArgvToCArgv(argv, &c_argv);
 
-  FXL_LOG(INFO) << "Running " << fxl::JoinStrings(argv, " ");
+  FX_LOGS(INFO) << "Running " << fxl::JoinStrings(argv, " ");
 
   char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
   zx_status_t status =
       fdio_spawn_etc(job.get(), FDIO_SPAWN_CLONE_ALL, c_argv[0], c_argv.data(), nullptr,
                      num_actions, actions, out_process->reset_and_get_address(), err_msg);
   if (status != ZX_OK) {
-    FXL_PLOG(ERROR, status) << "Spawning " << c_argv[0] << " failed: " << err_msg;
+    FX_PLOGS(ERROR, status) << "Spawning " << c_argv[0] << " failed: " << err_msg;
     return status;
   }
 
@@ -87,7 +87,7 @@ bool WaitAndGetReturnCode(const std::string& program_name, const zx::process& pr
   // its bug.
   auto status = process.wait_one(ZX_PROCESS_TERMINATED, zx::time::infinite(), nullptr);
   if (status != ZX_OK) {
-    FXL_PLOG(ERROR, status) << "Failed waiting for program " << program_name << " to exit";
+    FX_PLOGS(ERROR, status) << "Failed waiting for program " << program_name << " to exit";
     return false;
   }
 
@@ -95,12 +95,12 @@ bool WaitAndGetReturnCode(const std::string& program_name, const zx::process& pr
   status = zx_object_get_info(process.get(), ZX_INFO_PROCESS, &proc_info, sizeof(proc_info),
                               nullptr, nullptr);
   if (status != ZX_OK) {
-    FXL_PLOG(ERROR, status) << "Error getting return code for program " << program_name;
+    FX_PLOGS(ERROR, status) << "Error getting return code for program " << program_name;
     return false;
   }
 
   if (proc_info.return_code != 0) {
-    FXL_LOG(INFO) << program_name << " exited with return code " << proc_info.return_code;
+    FX_LOGS(INFO) << program_name << " exited with return code " << proc_info.return_code;
   }
   *out_return_code = proc_info.return_code;
   return true;
@@ -120,7 +120,7 @@ bool RunProgramAndWait(const zx::job& job, const std::vector<std::string>& argv,
     return false;
   }
   if (return_code != 0) {
-    FXL_LOG(ERROR) << argv[0] << " exited with return code " << return_code;
+    FX_LOGS(ERROR) << argv[0] << " exited with return code " << return_code;
     return false;
   }
 
@@ -136,12 +136,12 @@ bool RunComponent(sys::ComponentContext* context, const std::string& app,
   launch_info.arguments = fidl::To<fidl::VectorPtr<std::string>>(args);
   launch_info.flat_namespace = std::move(flat_namespace);
 
-  FXL_LOG(INFO) << "Launching: " << launch_info.url << " " << fxl::JoinStrings(args, " ");
+  FX_LOGS(INFO) << "Launching: " << launch_info.url << " " << fxl::JoinStrings(args, " ");
 
   fuchsia::sys::LauncherPtr launcher;
   zx_status_t status = context->svc()->Connect(launcher.NewRequest());
   if (status != ZX_OK) {
-    FXL_PLOG(ERROR, status) << "context->svc()->Connect() failed for " << app;
+    FX_PLOGS(ERROR, status) << "context->svc()->Connect() failed for " << app;
     return false;
   }
 
@@ -159,14 +159,14 @@ bool WaitAndGetReturnCode(const std::string& program_name, async::Loop* loop,
 
   component_controller->set_error_handler(
       [&loop, &program_name, &termination_reason](zx_status_t error) {
-        FXL_PLOG(ERROR, error) << "Unexpected error waiting for " << program_name << " to exit";
+        FX_PLOGS(ERROR, error) << "Unexpected error waiting for " << program_name << " to exit";
         termination_reason = fuchsia::sys::TerminationReason::UNKNOWN;
         loop->Quit();
       });
   component_controller->events().OnTerminated =
       [&loop, &program_name, &component_controller, &termination_reason, &return_code](
           int64_t rc, fuchsia::sys::TerminationReason reason) {
-        FXL_LOG(INFO) << "Component " << program_name << " exited with return reason/code "
+        FX_LOGS(INFO) << "Component " << program_name << " exited with return reason/code "
                       << static_cast<int>(termination_reason) << "/" << rc;
         // Disable the error handler. It can get called after we're done, e.g., during the
         // destructor.
@@ -182,11 +182,11 @@ bool WaitAndGetReturnCode(const std::string& program_name, async::Loop* loop,
   loop->Run();
 
   if (termination_reason == fuchsia::sys::TerminationReason::EXITED) {
-    FXL_LOG(INFO) << program_name << ": return code " << return_code;
+    FX_LOGS(INFO) << program_name << ": return code " << return_code;
     *out_return_code = return_code;
     return true;
   } else {
-    FXL_LOG(ERROR) << program_name << ": termination reason "
+    FX_LOGS(ERROR) << program_name << ": termination reason "
                    << static_cast<int>(termination_reason);
     return false;
   }

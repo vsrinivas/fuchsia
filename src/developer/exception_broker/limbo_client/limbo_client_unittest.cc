@@ -59,11 +59,11 @@ class StubProcessLimbo : public ProcessLimbo {
       metadata.set_info(std::move(info));
 
       zx::process process;
-      FXL_CHECK(zx::process::self()->duplicate(ZX_RIGHT_SAME_RIGHTS, &process) == ZX_OK);
+      FX_CHECK(zx::process::self()->duplicate(ZX_RIGHT_SAME_RIGHTS, &process) == ZX_OK);
       metadata.set_process(std::move(process));
 
       zx::thread thread;
-      FXL_CHECK(zx::thread::self()->duplicate(ZX_RIGHT_SAME_RIGHTS, &thread) == ZX_OK);
+      FX_CHECK(zx::thread::self()->duplicate(ZX_RIGHT_SAME_RIGHTS, &thread) == ZX_OK);
       metadata.set_thread(std::move(thread));
 
       exceptions.push_back(std::move(metadata));
@@ -74,7 +74,7 @@ class StubProcessLimbo : public ProcessLimbo {
 
   void RetrieveException(zx_koid_t process_koid,
                          ProcessLimbo::RetrieveExceptionCallback callback) override {
-    FXL_NOTREACHED() << "Not needed for tests.";
+    FX_NOTREACHED() << "Not needed for tests.";
   }
 
   void ReleaseProcess(zx_koid_t process_koid, ProcessLimbo::ReleaseProcessCallback cb) override {
@@ -104,7 +104,7 @@ class StubProcessLimbo : public ProcessLimbo {
   }
 
   void RemoveFilters(std::vector<std::string> filters, RemoveFiltersCallback) override {
-    FXL_NOTREACHED() << "Not needed for tests.";
+    FX_NOTREACHED() << "Not needed for tests.";
   }
 
   // Service Directory handling

@@ -65,8 +65,8 @@ void AssignRegisterWithExistingValue(const fxl::RefPtr<EvalContext>& context,
     // Easy case of everything being byte-aligned. This can handle all vector registers.
 
     // We expect all non-canonical registers to be byte-aligned inside their canonical one.
-    FXL_DCHECK(info.bits % 8 == 0);
-    FXL_DCHECK(info.shift % 8 == 0);
+    FX_DCHECK(info.bits % 8 == 0);
+    FX_DCHECK(info.shift % 8 == 0);
 
     // In little-endian, the byte shift (from the low bit) just measures from the [0] byte.
     //
@@ -356,7 +356,7 @@ ErrOrValue DoIntBinaryOp(const OpValue& left, const OpValue& right, bool check_f
   ResultT result_val = op(left_val, right_val);
 
   // Never expect to generate larger output than our internal result.
-  FXL_DCHECK(result_type->byte_size() <= sizeof(ResultT));
+  FX_DCHECK(result_type->byte_size() <= sizeof(ResultT));
 
   // Convert to a base type of the correct size.
   std::vector<uint8_t> result_data;
@@ -624,7 +624,7 @@ void EvalBinaryOperator(const fxl::RefPtr<EvalContext>& context, const ExprValue
       result = Err("Operator '%s' not defined for floating point.", op.value().c_str()); \
       break;                                                                             \
     case MathRealm::kPointer:                                                            \
-      FXL_NOTREACHED();                                                                  \
+      FX_NOTREACHED();                                                                   \
       break;                                                                             \
   }
 
@@ -648,7 +648,7 @@ void EvalBinaryOperator(const fxl::RefPtr<EvalContext>& context, const ExprValue
           [](double left, double right) { return left c_op right; }, larger_type);     \
       break;                                                                           \
     case MathRealm::kPointer:                                                          \
-      FXL_NOTREACHED();                                                                \
+      FX_NOTREACHED();                                                                 \
       break;                                                                           \
   }
 
@@ -671,7 +671,7 @@ void EvalBinaryOperator(const fxl::RefPtr<EvalContext>& context, const ExprValue
           [](double left, double right) { return left c_op right; }, nullptr);            \
       break;                                                                              \
     case MathRealm::kPointer:                                                             \
-      FXL_NOTREACHED();                                                                   \
+      FX_NOTREACHED();                                                                    \
       break;                                                                              \
   }
 

@@ -36,7 +36,7 @@ zx_status_t TestWithHelper::RunHelperProgram(const zx::job& job, const char* con
   zx::channel our_channel, their_channel;
   zx_status_t status = zx::channel::create(0, &our_channel, &their_channel);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "zx::channel::create failed: " << ZxErrorString(status);
+    FX_LOGS(ERROR) << "zx::channel::create failed: " << ZxErrorString(status);
     return status;
   }
   fdio_spawn_action actions[1];
@@ -50,7 +50,7 @@ zx_status_t TestWithHelper::RunHelperProgram(const zx::job& job, const char* con
   status = fdio_spawn_etc(job.get(), flags, kTestHelperPath, argv, nullptr, arraysize(actions),
                           actions, process.reset_and_get_address(), err_msg);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "fdio_spawn_etc failed: " << ZxErrorString(status) << ", " << err_msg;
+    FX_LOGS(ERROR) << "fdio_spawn_etc failed: " << ZxErrorString(status) << ", " << err_msg;
     return status;
   }
 
@@ -63,7 +63,7 @@ zx_status_t TestWithHelper::GetHelperThread(zx::thread* out_thread) {
   zx_signals_t pending;
   zx_status_t status = channel_.wait_one(ZX_CHANNEL_READABLE, zx::time::infinite(), &pending);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "channel->wait_one failed: " << ZxErrorString(status);
+    FX_LOGS(ERROR) << "channel->wait_one failed: " << ZxErrorString(status);
     return status;
   }
 
@@ -71,7 +71,7 @@ zx_status_t TestWithHelper::GetHelperThread(zx::thread* out_thread) {
   status = channel_.read(0u, nullptr, out_thread->reset_and_get_address(), 0u, 1u, &actual_bytes,
                          &actual_handles);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "channel->read failed: " << ZxErrorString(status);
+    FX_LOGS(ERROR) << "channel->read failed: " << ZxErrorString(status);
     return status;
   }
   EXPECT_EQ(actual_bytes, 0u);

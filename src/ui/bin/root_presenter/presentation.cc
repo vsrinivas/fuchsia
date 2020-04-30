@@ -74,8 +74,8 @@ Presentation::Presentation(
       a11y_binding_(this),
       media_buttons_handler_(media_buttons_handler),
       weak_factory_(this) {
-  FXL_DCHECK(compositor_id != 0);
-  FXL_DCHECK(media_buttons_handler_);
+  FX_DCHECK(compositor_id != 0);
+  FX_DCHECK(media_buttons_handler_);
   renderer_.SetCamera(camera_);
   layer_.SetRenderer(renderer_);
   scene_.AddChild(root_node_);
@@ -143,7 +143,7 @@ void Presentation::RegisterWithMagnifier(fuchsia::accessibility::Magnifier* magn
 }
 
 void Presentation::InitializeDisplayModel(fuchsia::ui::gfx::DisplayInfo display_info) {
-  FXL_DCHECK(!display_model_initialized_);
+  FX_DCHECK(!display_model_initialized_);
 
   // Initialize display model.
   display_configuration::InitializeModelForDisplay(display_info.width_in_px,
@@ -190,7 +190,7 @@ bool Presentation::ApplyDisplayModelChangesHelper(bool print_log) {
 
     view_holder_.SetViewProperties(0.f, 0.f, -kDefaultRootViewDepth, metrics_width, metrics_height,
                                    0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f);
-    FXL_VLOG(2) << "DisplayModel layout: " << metrics_width << ", " << metrics_height;
+    FX_VLOGS(2) << "DisplayModel layout: " << metrics_width << ", " << metrics_height;
   }
 
   // Device pixel scale.
@@ -204,7 +204,7 @@ bool Presentation::ApplyDisplayModelChangesHelper(bool print_log) {
     }
 
     scene_.SetScale(metrics_scale_x, metrics_scale_y, 1.f);
-    FXL_VLOG(2) << "DisplayModel pixel scale: " << metrics_scale_x << ", " << metrics_scale_y;
+    FX_VLOGS(2) << "DisplayModel pixel scale: " << metrics_scale_x << ", " << metrics_scale_y;
   }
 
   // Anchor
@@ -218,7 +218,7 @@ bool Presentation::ApplyDisplayModelChangesHelper(bool print_log) {
     }
 
     view_holder_node_.SetAnchor(anchor_x, anchor_y, 0);
-    FXL_VLOG(2) << "DisplayModel anchor: " << anchor_x << ", " << anchor_y;
+    FX_VLOGS(2) << "DisplayModel anchor: " << anchor_x << ", " << anchor_y;
   }
 
   // Rotate
@@ -250,7 +250,7 @@ bool Presentation::ApplyDisplayModelChangesHelper(bool print_log) {
     float top_offset = (info_h - metrics_h) / density_h / 2;
 
     view_holder_node_.SetTranslation(left_offset, top_offset, 0.f);
-    FXL_VLOG(2) << "DisplayModel translation: " << left_offset << ", " << top_offset;
+    FX_VLOGS(2) << "DisplayModel translation: " << left_offset << ", " << top_offset;
   }
 
   // Today, a layer needs the display's physical dimensions to render correctly.
@@ -284,7 +284,7 @@ glm::vec2 Presentation::RotatePointerCoordinates(float x, float y) {
     rotated_coords = glm::translate(glm::vec3(-adjust_origin, adjust_origin, 0)) * rotated_coords;
   }
 
-  FXL_VLOG(2) << "Pointer coordinates rotated [" << startup_rotation << "]: (" << pointer_coords.x
+  FX_VLOGS(2) << "Pointer coordinates rotated [" << startup_rotation << "]: (" << pointer_coords.x
               << ", " << pointer_coords.y << ")->(" << rotated_coords.x << ", " << rotated_coords.y
               << ").";
 
@@ -292,9 +292,9 @@ glm::vec2 Presentation::RotatePointerCoordinates(float x, float y) {
 }
 
 void Presentation::OnDeviceAdded(ui_input::InputDeviceImpl* input_device) {
-  FXL_VLOG(1) << "OnDeviceAdded: device_id=" << input_device->id();
+  FX_VLOGS(1) << "OnDeviceAdded: device_id=" << input_device->id();
 
-  FXL_DCHECK(device_states_by_id_.count(input_device->id()) == 0);
+  FX_DCHECK(device_states_by_id_.count(input_device->id()) == 0);
 
   std::unique_ptr<ui_input::DeviceState> state;
 
@@ -320,7 +320,7 @@ void Presentation::OnDeviceAdded(ui_input::InputDeviceImpl* input_device) {
 }
 
 void Presentation::OnDeviceRemoved(uint32_t device_id) {
-  FXL_VLOG(1) << "OnDeviceRemoved: device_id=" << device_id;
+  FX_VLOGS(1) << "OnDeviceRemoved: device_id=" << device_id;
 
   if (device_states_by_id_.count(device_id) != 0) {
     device_states_by_id_[device_id].second->OnUnregistered();
@@ -336,15 +336,15 @@ void Presentation::OnDeviceRemoved(uint32_t device_id) {
 
 void Presentation::OnReport(uint32_t device_id, fuchsia::ui::input::InputReport input_report) {
   // Media buttons should be processed by MediaButtonsHandler.
-  FXL_DCHECK(!input_report.media_buttons);
+  FX_DCHECK(!input_report.media_buttons);
   TRACE_DURATION("input", "presentation_on_report", "id", input_report.trace_id);
   TRACE_FLOW_END("input", "report_to_presentation", input_report.trace_id);
 
-  FXL_VLOG(2) << "OnReport device=" << device_id
+  FX_VLOGS(2) << "OnReport device=" << device_id
               << ", count=" << device_states_by_id_.count(device_id) << ", report=" << input_report;
 
   if (device_states_by_id_.count(device_id) == 0) {
-    FXL_VLOG(1) << "OnReport: Unknown device " << device_id;
+    FX_VLOGS(1) << "OnReport: Unknown device " << device_id;
     return;
   }
 
@@ -397,7 +397,7 @@ void Presentation::OnEvent(fuchsia::ui::input::InputEvent event) {
   TRACE_DURATION("input", "presentation_on_event");
   trace_flow_id_t trace_id = 0;
 
-  FXL_VLOG(1) << "OnEvent " << event;
+  FX_VLOGS(1) << "OnEvent " << event;
 
   activity_notifier_->ReceiveInputEvent(event);
 
@@ -469,7 +469,7 @@ void Presentation::OnEvent(fuchsia::ui::input::InputEvent event) {
         capture_point.x *= display_metrics_.x_scale_in_pp_per_px();
         capture_point.y *= display_metrics_.y_scale_in_pp_per_px();
 
-        FXL_VLOG(2) << "Sending PointerCaptureHack event: " << capture_point.x << " "
+        FX_VLOGS(2) << "Sending PointerCaptureHack event: " << capture_point.x << " "
                     << capture_point.y;
 
         for (auto& listener : captured_pointerbindings_.ptrs()) {
@@ -507,12 +507,12 @@ void Presentation::OnEvent(fuchsia::ui::input::InputEvent event) {
 }
 
 void Presentation::OnSensorEvent(uint32_t device_id, fuchsia::ui::input::InputReport event) {
-  FXL_VLOG(2) << "OnSensorEvent(device_id=" << device_id << "): " << event;
+  FX_VLOGS(2) << "OnSensorEvent(device_id=" << device_id << "): " << event;
 
-  FXL_DCHECK(device_states_by_id_.count(device_id) > 0);
-  FXL_DCHECK(device_states_by_id_[device_id].first);
-  FXL_DCHECK(device_states_by_id_[device_id].first->descriptor());
-  FXL_DCHECK(device_states_by_id_[device_id].first->descriptor()->sensor.get());
+  FX_DCHECK(device_states_by_id_.count(device_id) > 0);
+  FX_DCHECK(device_states_by_id_[device_id].first);
+  FX_DCHECK(device_states_by_id_[device_id].first->descriptor());
+  FX_DCHECK(device_states_by_id_[device_id].first->descriptor()->sensor.get());
 
   // No clients of sensor events at the moment.
 }

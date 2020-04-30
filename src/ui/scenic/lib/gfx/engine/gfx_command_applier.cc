@@ -71,7 +71,7 @@ namespace gfx {
 bool GfxCommandApplier::AssertValueIsOfType(const fuchsia::ui::gfx::Value& value,
                                             const fuchsia::ui::gfx::Value::Tag* tags,
                                             size_t tag_count, Session* session) {
-  FXL_DCHECK(tag_count > 0);
+  FX_DCHECK(tag_count > 0);
   for (size_t i = 0; i < tag_count; ++i) {
     if (value.Which() == tags[i]) {
       return true;
@@ -218,7 +218,7 @@ bool GfxCommandApplier::ApplyCommand(Session* session, CommandContext* command_c
                                            std::move(command.set_view_holder_bounds_color()));
     case fuchsia::ui::gfx::Command::Tag::Invalid:
       // FIDL validation should make this impossible.
-      FXL_CHECK(false);
+      FX_CHECK(false);
       return false;
   }
 }
@@ -302,7 +302,7 @@ bool GfxCommandApplier::ApplyCreateResourceCmd(Session* session, CommandContext*
       return ApplyCreateVariable(session, id, std::move(command.resource.variable()));
     case fuchsia::ui::gfx::ResourceArgs::Tag::Invalid:
       // FIDL validation should make this impossible.
-      FXL_CHECK(false);
+      FX_CHECK(false);
       return false;
   }
 }
@@ -354,7 +354,7 @@ bool GfxCommandApplier::ApplyAddChildCmd(Session* session, fuchsia::ui::gfx::Add
 
 bool GfxCommandApplier::ApplyAddPartCmd(Session* session, fuchsia::ui::gfx::AddPartCmd command) {
   // This is now a no-op.
-  FXL_LOG(INFO) << "AddPart is illegal now.";
+  FX_LOGS(INFO) << "AddPart is illegal now.";
   session->error_reporter()->ERROR() << "AddPartCmd is now a no-op. Do not use.";
   return false;
 }
@@ -1183,11 +1183,11 @@ bool GfxCommandApplier::ApplyCreateView(Session* session, ResourceId id,
                                         fuchsia::ui::gfx::ViewArgs args) {
   // Sanity check.  We also rely on FIDL to enforce this for us, although it
   // does not at the moment.
-  FXL_DCHECK(args.token.value)
+  FX_DCHECK(args.token.value)
       << "scenic_impl::gfx::GfxCommandApplier::ApplyCreateView(): no token provided.";
   if (auto view = CreateView(session, id, std::move(args))) {
     if (!(session->SetRootView(view->As<View>()->GetWeakPtr()))) {
-      FXL_LOG(ERROR) << "Error: cannot set more than one root view in a session. This will soon "
+      FX_LOGS(ERROR) << "Error: cannot set more than one root view in a session. This will soon "
                         "become a session-terminating error. For more info, see [SCN-1249].";
       // TODO(SCN-1249) Return false and report the error in this case, and
       // shut down any sessions that violate the one-view-per-session contract.
@@ -1203,11 +1203,11 @@ bool GfxCommandApplier::ApplyCreateView(Session* session, ResourceId id,
                                         fuchsia::ui::gfx::ViewArgs3 args) {
   // Sanity check.  We also rely on FIDL to enforce this for us, although it
   // does not at the moment.
-  FXL_DCHECK(args.token.value)
+  FX_DCHECK(args.token.value)
       << "scenic_impl::gfx::GfxCommandApplier::ApplyCreateView(): no token provided.";
   if (auto view = CreateView(session, id, std::move(args))) {
     if (!(session->SetRootView(view->As<View>()->GetWeakPtr()))) {
-      FXL_LOG(ERROR) << "Error: cannot set more than one root view in a session. This will soon "
+      FX_LOGS(ERROR) << "Error: cannot set more than one root view in a session. This will soon "
                         "become a session-terminating error. For more info, see [SCN-1249].";
       // TODO(SCN-1249) Return false and report the error in this case, and
       // shut down any sessions that violate the one-view-per-session contract.
@@ -1223,7 +1223,7 @@ bool GfxCommandApplier::ApplyCreateViewHolder(Session* session, ResourceId id,
                                               fuchsia::ui::gfx::ViewHolderArgs args) {
   // Sanity check.  We also rely on FIDL to enforce this for us, although it
   // does not at the moment
-  FXL_DCHECK(args.token.value)
+  FX_DCHECK(args.token.value)
       << "scenic_impl::gfx::GfxCommandApplier::ApplyCreateViewHolder(): no token provided.";
 
   if (auto view_holder = CreateViewHolder(session, id, std::move(args))) {
@@ -1458,7 +1458,7 @@ ResourcePtr GfxCommandApplier::CreateCompositor(Session* session, ResourceId id,
 ResourcePtr GfxCommandApplier::CreateDisplayCompositor(
     Session* session, CommandContext* command_context, ResourceId id,
     fuchsia::ui::gfx::DisplayCompositorArgs args) {
-  FXL_DCHECK(command_context->display_manager);
+  FX_DCHECK(command_context->display_manager);
   display::Display* display = command_context->display_manager->default_display();
   if (!display) {
     session->error_reporter()->ERROR() << "There is no default display available.";

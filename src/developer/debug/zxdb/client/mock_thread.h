@@ -43,11 +43,11 @@ class MockThread : public Thread, public Stack::Delegate {
  private:
   // Stack::Delegate implementation.
   void SyncFramesForStack(fit::callback<void(const Err&)> callback) override {
-    FXL_NOTREACHED();  // All frames are available.
+    FX_NOTREACHED();  // All frames are available.
   }
   std::unique_ptr<Frame> MakeFrameForStack(const debug_ipc::StackFrame& input,
                                            Location location) override {
-    FXL_NOTREACHED();  // Should not get called since we provide stack frames.
+    FX_NOTREACHED();  // Should not get called since we provide stack frames.
     return std::unique_ptr<Frame>();
   }
   Location GetSymbolizedLocationForStackFrame(const debug_ipc::StackFrame& input) override {

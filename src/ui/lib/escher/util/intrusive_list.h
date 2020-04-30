@@ -34,7 +34,7 @@ class IntrusiveList {
     IntrusiveListItem<T>* current = head_;
     while (current) {
 #ifndef NDEBUG
-      FXL_DCHECK(current->list == this);
+      FX_DCHECK(current->list == this);
       current->list = nullptr;
 #endif
       IntrusiveListItem<T>* next = current->next;
@@ -98,8 +98,8 @@ class IntrusiveList {
   // Return the list item that follows the erased item.
   T* Erase(T* item) {
 #ifndef NDEBUG
-    FXL_DCHECK(item);
-    FXL_DCHECK(item->list == this);
+    FX_DCHECK(item);
+    FX_DCHECK(item->list == this);
     item->list = nullptr;
 #endif
 
@@ -143,7 +143,7 @@ class IntrusiveList {
     head_ = item;
 
 #ifndef NDEBUG
-    FXL_DCHECK(item->list == nullptr);
+    FX_DCHECK(item->list == nullptr);
     item->list = this;
 #endif
   }

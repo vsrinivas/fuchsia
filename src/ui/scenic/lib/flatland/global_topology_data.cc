@@ -21,7 +21,7 @@ GlobalTopologyData GlobalTopologyData::ComputeGlobalTopologyData(
     const UberStruct::InstanceMap& uber_structs, const LinkTopologyMap& links,
     TransformHandle::InstanceId link_instance_id, TransformHandle root) {
   // There should never be an UberStruct for the |link_instance_id|.
-  FXL_DCHECK(uber_structs.find(link_instance_id) == uber_structs.end());
+  FX_DCHECK(uber_structs.find(link_instance_id) == uber_structs.end());
 
   // This is a stack of vector "iterators". We store the raw index, instead of an iterator, so that
   // we can do index comparisons.
@@ -63,7 +63,7 @@ GlobalTopologyData GlobalTopologyData::ComputeGlobalTopologyData(
     if (current_entry.handle.GetInstanceId() == link_instance_id) {
       // Decrement the parent's child count until the link is successfully resolved. An unresolved
       // link effectively means the parent had one fewer child.
-      FXL_DCHECK(!parent_counts.empty());
+      FX_DCHECK(!parent_counts.empty());
       auto& parent_child_count = child_counts[parent_counts.back().first];
       --parent_child_count;
 
@@ -83,7 +83,7 @@ GlobalTopologyData GlobalTopologyData::ComputeGlobalTopologyData(
       // the new topology. This can occur if a new UberStruct has not been registered for the
       // corresponding instance ID but the link to it has resolved.
       const auto& new_vector = uber_struct_kv->second->local_topology;
-      FXL_DCHECK(!new_vector.empty());
+      FX_DCHECK(!new_vector.empty());
       const auto new_entry = new_vector[0];
 
       if (new_entry.handle != link_kv->second) {
@@ -92,11 +92,10 @@ GlobalTopologyData GlobalTopologyData::ComputeGlobalTopologyData(
 
       // Thanks to one-view-per-session semantics, we should never cycle through the
       // topological vectors, so we don't need to handle cycles. We DCHECK here just to be sure.
-      FXL_DCHECK(
-          std::find_if(vector_stack.cbegin(), vector_stack.cend(),
-                       [&](std::pair<const TransformGraph::TopologyVector&, uint64_t> entry) {
-                         return entry.first == new_vector;
-                       }) == vector_stack.cend());
+      FX_DCHECK(std::find_if(vector_stack.cbegin(), vector_stack.cend(),
+                             [&](std::pair<const TransformGraph::TopologyVector&, uint64_t> entry) {
+                               return entry.first == new_vector;
+                             }) == vector_stack.cend());
 
       // At this point, the link is resolved. This means the link did actually result in the parent
       // having an additional child, but that child needs to be processed, so the stack of remaining
@@ -129,8 +128,8 @@ GlobalTopologyData GlobalTopologyData::ComputeGlobalTopologyData(
   // Validates that every child of every parent was processed. If the last handle processed was an
   // unresolved link handle, its parent will be the only thing left on the stack with 0 children to
   // avoid extra unnecessary cleanup logic.
-  FXL_DCHECK(parent_counts.empty() ||
-             (parent_counts.size() == 1 && parent_counts.back().second == 0));
+  FX_DCHECK(parent_counts.empty() ||
+            (parent_counts.size() == 1 && parent_counts.back().second == 0));
 
   return {.topology_vector = std::move(topology_vector),
           .child_counts = std::move(child_counts),

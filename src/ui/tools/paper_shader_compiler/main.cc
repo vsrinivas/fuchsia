@@ -33,25 +33,25 @@ bool CompileAndWriteShader(HackFilesystemPtr filesystem, ShaderProgramData progr
       continue;
     }
 
-    FXL_LOG(INFO) << "Processing shader " << iter.second;
+    FX_LOGS(INFO) << "Processing shader " << iter.second;
 
     auto shader = fxl::MakeRefCounted<ShaderModuleTemplate>(vk::Device(), compiler.get(),
                                                             iter.first, iter.second, filesystem);
 
     std::vector<uint32_t> spirv;
     if (!shader->CompileVariantToSpirv(program_data.args, &spirv)) {
-      FXL_LOG(ERROR) << "could not compile shader " << iter.second;
+      FX_LOGS(ERROR) << "could not compile shader " << iter.second;
       return false;
     }
 
     // As per above, only write out the spirv if there has been a change.
     if (shader_util::SpirvExistsOnDisk(program_data.args, abs_root, iter.second, spirv)) {
       if (!shader_util::WriteSpirvToDisk(spirv, program_data.args, abs_root, iter.second)) {
-        FXL_LOG(ERROR) << "could not write shader " << iter.second << " to disk.";
+        FX_LOGS(ERROR) << "could not write shader " << iter.second << " to disk.";
         return false;
       }
     } else {
-      FXL_LOG(INFO) << "Shader already exists on disk.";
+      FX_LOGS(INFO) << "Shader already exists on disk.";
     }
   }
   return true;
@@ -71,8 +71,8 @@ int main(int argc, const char** argv) {
   paths.insert(paths.end(), escher::hmd::kPoseBufferLatchingPaths.begin(),
                escher::hmd::kPoseBufferLatchingPaths.end());
   bool success = filesystem->InitializeWithRealFiles(paths, "./../../../../src/ui/lib/escher/");
-  FXL_CHECK(success);
-  FXL_CHECK(filesystem->base_path());
+  FX_CHECK(success);
+  FX_CHECK(filesystem->base_path());
 
   // Ambient light program.
   if (!CompileAndWriteShader(filesystem, escher::kAmbientLightProgramData)) {

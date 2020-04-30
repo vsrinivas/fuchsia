@@ -30,7 +30,7 @@ Compositor::Compositor(Session* session, SessionId session_id, ResourceId id,
       scene_graph_(scene_graph),
       swapchain_(std::move(swapchain)),
       weak_factory_(this) {
-  FXL_DCHECK(scene_graph_);
+  FX_DCHECK(scene_graph_);
   scene_graph_->AddCompositor(GetWeakPtr());
 }
 
@@ -55,7 +55,7 @@ bool Compositor::SetLayerStack(LayerStackPtr layer_stack) {
 
 std::pair<uint32_t, uint32_t> Compositor::GetBottomLayerSize() const {
   std::vector<Layer*> drawable_layers = GetDrawableLayers();
-  FXL_CHECK(!drawable_layers.empty()) << "No drawable layers";
+  FX_CHECK(!drawable_layers.empty()) << "No drawable layers";
   return {drawable_layers[0]->width(), drawable_layers[0]->height()};
 }
 

@@ -30,7 +30,7 @@ ThreadController::ContinueOp StepIntoSpecificThreadController::GetContinueOp() {
   if (step_into_)
     return step_into_->GetContinueOp();
 
-  FXL_NOTREACHED();  // Should not be continuing from this state.
+  FX_NOTREACHED();  // Should not be continuing from this state.
   return ContinueOp::Continue();
 }
 
@@ -60,7 +60,7 @@ ThreadController::StopOp StepIntoSpecificThreadController::OnThreadStop(
   if (step_into_)
     return step_into_->OnThreadStop(stop_type, hit_breakpoints);
 
-  FXL_NOTREACHED();  // Should have reported "done" if we skipped the step into.
+  FX_NOTREACHED();  // Should have reported "done" if we skipped the step into.
   return kStopDone;
 }
 

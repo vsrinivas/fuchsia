@@ -22,7 +22,7 @@ IndexNode::Kind KindForSymbol(const fxl::RefPtr<Symbol>& sym) {
   if (sym->AsVariable())
     return IndexNode::Kind::kVar;
 
-  FXL_NOTREACHED();
+  FX_NOTREACHED();
   return IndexNode::Kind::kVar;
 }
 

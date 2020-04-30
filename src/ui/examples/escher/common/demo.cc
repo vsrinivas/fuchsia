@@ -30,8 +30,8 @@ bool Demo::HandleKeyPress(std::string key) {
       return false;
     }
     // Illegal value.
-    FXL_LOG(ERROR) << "Cannot handle key value: " << key;
-    FXL_CHECK(false);
+    FX_LOGS(ERROR) << "Cannot handle key value: " << key;
+    FX_CHECK(false);
     return false;
   } else {
     char key_char = key[0];
@@ -49,13 +49,13 @@ void Demo::ToggleTracing() {
 #ifdef __linux__
   if (tracer_) {
     tracer_.reset();
-    FXL_LOG(INFO) << "Tracing disabled.";
+    FX_LOGS(INFO) << "Tracing disabled.";
   } else {
     tracer_ = std::make_unique<escher::Tracer>();
-    FXL_LOG(INFO) << "Tracing enabled.";
+    FX_LOGS(INFO) << "Tracing enabled.";
   }
 #else
-  FXL_LOG(INFO) << "ToggleTracing() only supported for Escher-Linux.";
+  FX_LOGS(INFO) << "ToggleTracing() only supported for Escher-Linux.";
 #endif
 }
 
@@ -115,7 +115,7 @@ void Demo::RunOffscreenBenchmark(Demo* demo, uint32_t framebuffer_width,
 
   uint32_t frames_in_flight = 0;
   for (size_t current_frame = 0; current_frame < frame_count; ++current_frame) {
-    FXL_DCHECK(frames_in_flight <= kMaxOutstandingFrames);
+    FX_DCHECK(frames_in_flight <= kMaxOutstandingFrames);
     while (frames_in_flight == kMaxOutstandingFrames) {
       std::this_thread::sleep_for(std::chrono::milliseconds(1));
       escher->Cleanup();
@@ -136,13 +136,13 @@ void Demo::RunOffscreenBenchmark(Demo* demo, uint32_t framebuffer_width,
   // Wait for the last frame to finish.
   escher->vk_device().waitIdle();
   stopwatch.Stop();
-  FXL_CHECK(escher->Cleanup());
+  FX_CHECK(escher->Cleanup());
 
-  FXL_LOG(INFO) << "------------------------------------------------------";
-  FXL_LOG(INFO) << "Offscreen benchmark";
-  FXL_LOG(INFO) << "Rendered " << frame_count << " " << framebuffer_width << "x"
+  FX_LOGS(INFO) << "------------------------------------------------------";
+  FX_LOGS(INFO) << "Offscreen benchmark";
+  FX_LOGS(INFO) << "Rendered " << frame_count << " " << framebuffer_width << "x"
                 << framebuffer_height << " frames in " << stopwatch.GetElapsedSeconds()
                 << " seconds";
-  FXL_LOG(INFO) << (frame_count / stopwatch.GetElapsedSeconds()) << " FPS";
-  FXL_LOG(INFO) << "------------------------------------------------------";
+  FX_LOGS(INFO) << (frame_count / stopwatch.GetElapsedSeconds()) << " FPS";
+  FX_LOGS(INFO) << "------------------------------------------------------";
 }

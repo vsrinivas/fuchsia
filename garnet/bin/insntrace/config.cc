@@ -4,6 +4,8 @@
 
 #include "garnet/bin/insntrace/config.h"
 
+#include <zircon/syscalls.h>
+
 #include <array>
 #include <cinttypes>
 #include <cstdio>
@@ -12,17 +14,13 @@
 #include <string>
 #include <vector>
 
-#include <zircon/syscalls.h>
-
-#include "src/lib/fxl/arraysize.h"
-#include "src/lib/fxl/logging.h"
-#include "src/lib/fxl/strings/string_printf.h"
-
+#include "garnet/bin/insntrace/control.h"
 #include "garnet/lib/debugger_utils/jobs.h"
 #include "garnet/lib/debugger_utils/sysinfo.h"
 #include "garnet/lib/debugger_utils/util.h"
-
-#include "garnet/bin/insntrace/control.h"
+#include "src/lib/fxl/arraysize.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 namespace insntrace {
 
@@ -84,12 +82,12 @@ uint64_t IptConfig::CtlMsr() const {
 }
 
 uint64_t IptConfig::AddrBegin(unsigned i) const {
-  FXL_DCHECK(i < arraysize(addr_range));
+  FX_DCHECK(i < arraysize(addr_range));
   return addr_range[i].begin;
 }
 
 uint64_t IptConfig::AddrEnd(unsigned i) const {
-  FXL_DCHECK(i < arraysize(addr_range));
+  FX_DCHECK(i < arraysize(addr_range));
   return addr_range[i].end;
 }
 

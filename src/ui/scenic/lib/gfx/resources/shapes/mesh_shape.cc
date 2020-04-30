@@ -17,7 +17,7 @@ MeshShape::MeshShape(Session* session, SessionId session_id, ResourceId id)
     : Shape(session, session_id, id, MeshShape::kTypeInfo) {}
 
 bool MeshShape::GetIntersection(const escher::ray4& ray, float* out_distance) const {
-  FXL_DCHECK(out_distance);
+  FX_DCHECK(out_distance);
   // TODO(SCN-274): implement mesh-ray intersection.
   escher::Interval interval;
   bool hit = IntersectRayBox(ray, bounding_box_, &interval);

@@ -28,7 +28,7 @@ class RenderPass : public Resource {
 
   // Return the underlying Vulkan render pass object.
   vk::RenderPass vk() {
-    FXL_DCHECK(render_pass_);
+    FX_DCHECK(render_pass_);
     return render_pass_;
   }
 
@@ -47,47 +47,47 @@ class RenderPass : public Resource {
   void CreateRenderPass();
 
   vk::AttachmentDescription* color_attachment(uint32_t index) {
-    FXL_DCHECK(index < color_attachment_count_);
+    FX_DCHECK(index < color_attachment_count_);
     return &attachments_[index];
   }
 
   vk::AttachmentDescription* depth_attachment(uint32_t index) {
-    FXL_DCHECK(index < depth_attachment_count_);
+    FX_DCHECK(index < depth_attachment_count_);
     return &attachments_[color_attachment_count_ + index];
   }
 
   vk::AttachmentDescription* attachment(uint32_t index) {
-    FXL_DCHECK(index < attachments_.size());
+    FX_DCHECK(index < attachments_.size());
     return &attachments_[index];
   }
 
   const vk::AttachmentDescription* attachment(uint32_t index) const {
-    FXL_DCHECK(index < attachments_.size());
+    FX_DCHECK(index < attachments_.size());
     return &attachments_[index];
   }
 
   uint32_t color_attachment_index(uint32_t index) {
-    FXL_DCHECK(index < color_attachment_count_);
+    FX_DCHECK(index < color_attachment_count_);
     return index;
   }
 
   uint32_t depth_attachment_index(uint32_t index) {
-    FXL_DCHECK(index < depth_attachment_count_);
+    FX_DCHECK(index < depth_attachment_count_);
     return color_attachment_count_ + index;
   }
 
   vk::AttachmentReference* attachment_reference(uint32_t index) {
-    FXL_DCHECK(index < attachment_references_.size());
+    FX_DCHECK(index < attachment_references_.size());
     return &attachment_references_[index];
   }
 
   vk::SubpassDescription* subpass_description(uint32_t index) {
-    FXL_DCHECK(index < subpass_descriptions_.size());
+    FX_DCHECK(index < subpass_descriptions_.size());
     return &subpass_descriptions_[index];
   }
 
   vk::SubpassDependency* subpass_dependency(uint32_t index) {
-    FXL_DCHECK(index < subpass_dependencies_.size());
+    FX_DCHECK(index < subpass_dependencies_.size());
     return &subpass_dependencies_[index];
   }
 

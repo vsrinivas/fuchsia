@@ -196,7 +196,7 @@ VK_TEST_F(FramebufferAllocatorTest, DepthOnly) {
       escher->device()->caps().GetAllMatchingDepthStencilFormats(
           {vk::Format::eD24UnormS8Uint, vk::Format::eD32SfloatS8Uint});
   if (supported_depth_formats.empty()) {
-    FXL_LOG(WARNING) << "No depth formats supported, skipping test.";
+    FX_LOGS(WARNING) << "No depth formats supported, skipping test.";
     return;
   }
   vk::Format supported_depth_format = *(supported_depth_formats.begin());
@@ -226,7 +226,7 @@ VK_TEST_F(FramebufferAllocatorTest, CacheReclamation) {
   auto depth_format_result = escher->device()->caps().GetMatchingDepthFormat();
   vk::Format depth_format = depth_format_result.value;
   if (depth_format_result.result != vk::Result::eSuccess) {
-    FXL_LOG(ERROR) << "No depth stencil format is supported on this device.";
+    FX_LOGS(ERROR) << "No depth stencil format is supported on this device.";
     depth_format = vk::Format::eUndefined;
   }
 
@@ -276,7 +276,7 @@ VK_TEST_F(FramebufferAllocatorTest, LazyRenderPassCreation) {
   auto depth_format_result = escher->device()->caps().GetMatchingDepthFormat();
   vk::Format depth_format = depth_format_result.value;
   if (depth_format_result.result != vk::Result::eSuccess) {
-    FXL_LOG(ERROR) << "No depth stencil format is supported on this device.";
+    FX_LOGS(ERROR) << "No depth stencil format is supported on this device.";
     depth_format = vk::Format::eUndefined;
   }
 
@@ -293,12 +293,12 @@ VK_TEST_F(FramebufferAllocatorTest, LazyRenderPassCreation) {
   RenderPassInfo rpi_rgba0 = MakeRenderPassInfo(textures_rgba[0]);
 
   // No framebuffer obtained, because there is no render-pass yet.
-  FXL_LOG(INFO) << "============= NOTE: Escher warnings expected";
+  FX_LOGS(INFO) << "============= NOTE: Escher warnings expected";
   auto fb_bgra0 = allocator.ObtainFramebuffer(rpi_bgra0, false);
   EXPECT_FALSE(fb_bgra0);
   EXPECT_EQ(0U, allocator.size());
   EXPECT_EQ(0U, rp_cache.size());
-  FXL_LOG(INFO) << "============= NOTE: no additional Escher warnings are expected\n";
+  FX_LOGS(INFO) << "============= NOTE: no additional Escher warnings are expected\n";
 
   // This time, we allow lazy render-pass creation.
   fb_bgra0 = allocator.ObtainFramebuffer(rpi_bgra0, true);
@@ -322,12 +322,12 @@ VK_TEST_F(FramebufferAllocatorTest, LazyRenderPassCreation) {
 
   // Using an incompatible RenderPassInfo, disabling lazy render-pass creation means that we can't
   // obtain a framebuffer.
-  FXL_LOG(INFO) << "============= NOTE: Escher warnings expected";
+  FX_LOGS(INFO) << "============= NOTE: Escher warnings expected";
   auto fb_rgba0 = allocator.ObtainFramebuffer(rpi_rgba0, false);
   EXPECT_FALSE(fb_rgba0);
   EXPECT_EQ(2U, allocator.size());
   EXPECT_EQ(1U, rp_cache.size());
-  FXL_LOG(INFO) << "============= NOTE: no additional Escher warnings are expected\n";
+  FX_LOGS(INFO) << "============= NOTE: no additional Escher warnings are expected\n";
 
   // And of course, enabling lazy render-pass creation will allow us to obtain a framebuffer.
   fb_rgba0 = allocator.ObtainFramebuffer(rpi_rgba0, true);

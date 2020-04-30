@@ -50,11 +50,11 @@ fit::result<vsh::BlockingCommandRunner::CommandResult, zx_status_t> BlockingComm
             return_code = message.status_message().code();
           } break;
           case vm_tools::vsh::ConnectionStatus::FAILED: {
-            FXL_LOG(ERROR) << "Fatal error: " << message.status_message().description();
+            FX_LOGS(ERROR) << "Fatal error: " << message.status_message().description();
             return fit::error(ZX_ERR_CONNECTION_RESET);
           } break;
           default: {
-            FXL_LOG(ERROR) << "Invalid state change to " << new_status;
+            FX_LOGS(ERROR) << "Invalid state change to " << new_status;
             return fit::error(ZX_ERR_INVALID_ARGS);
           } break;
         }
@@ -69,13 +69,13 @@ fit::result<vsh::BlockingCommandRunner::CommandResult, zx_status_t> BlockingComm
             err.append(data.data());
           } break;
           default: {
-            FXL_LOG(ERROR) << "Unsupported STDIO stream " << data.stream();
+            FX_LOGS(ERROR) << "Unsupported STDIO stream " << data.stream();
             return fit::error(ZX_ERR_NOT_SUPPORTED);
           } break;
         }
       } break;
       default: {
-        FXL_LOG(ERROR) << "Unsupported message type " << message.msg_case();
+        FX_LOGS(ERROR) << "Unsupported message type " << message.msg_case();
         return fit::error(ZX_ERR_NOT_SUPPORTED);
       } break;
     }

@@ -46,7 +46,7 @@ zx::job CreateJob() {
   zx_handle_t job;
   zx_status_t status = zx_job_create(default_job, 0u, &job);
   if (status != ZX_OK)
-    FXL_NOTREACHED() << "Failed to create job: " << ZxStatusToString(status);
+    FX_NOTREACHED() << "Failed to create job: " << ZxStatusToString(status);
   return zx::job(job);
 }
 
@@ -68,7 +68,7 @@ zx::process LaunchProcess(const zx::job& job, const std::string name,
                                       nullptr,  // Environ
                                       actions.size(), actions.data(), &process_handle, err_msg);
   if (status != ZX_OK) {
-    FXL_NOTREACHED() << "Failed to spawn command (" << ZxStatusToString(status) << "): " << err_msg;
+    FX_NOTREACHED() << "Failed to spawn command (" << ZxStatusToString(status) << "): " << err_msg;
   }
   return zx::process(process_handle);
 }
@@ -88,7 +88,7 @@ class JobStreamBackend : public LocalStreamBackend {
   // Notification Handling -----------------------------------------------------
 
   void HandleAttach(debug_ipc::AttachReply attach) override {
-    FXL_DCHECK(!attach_reply_.has_value());
+    FX_DCHECK(!attach_reply_.has_value());
     attach_reply_ = std::move(attach);
   }
 
@@ -191,7 +191,7 @@ void VerifyAllProcessesExited(const JobStreamBackend& backend,
     }
 
     if (!found)
-      FXL_NOTREACHED() << "Process " << name << " did not exit.";
+      FX_NOTREACHED() << "Process " << name << " did not exit.";
     ASSERT_EQ(found->return_code, return_code) << " Process " << name << " expected return code "
                                                << return_code << ", got " << found->return_code;
   }
@@ -203,7 +203,7 @@ uint64_t FindModuleBaseAddress(const NotifyModules& modules, const std::string& 
       return module.base;
   }
 
-  FXL_NOTREACHED() << "Could not find module " << module_name;
+  FX_NOTREACHED() << "Could not find module " << module_name;
   return 0;
 }
 
@@ -222,7 +222,7 @@ TEST(DebuggedJobIntegrationTest, DISABLED_RepresentativeScenario) {
   agent.Connect(&backend.stream());
   backend.set_remote_api(remote_api);
 
-  FXL_VLOG(1) << "Attaching to root component.";
+  FX_VLOGS(1) << "Attaching to root component.";
 
   // Attach to the component root.
   AttachRequest attach_request;
@@ -236,7 +236,7 @@ TEST(DebuggedJobIntegrationTest, DISABLED_RepresentativeScenario) {
       << "Expected ZX_OK, Got: " << ZxStatusToString(attach_reply->status);
   ASSERT_NE(attach_reply->koid, 0u);
 
-  FXL_VLOG(1) << "Setting job filters.";
+  FX_VLOGS(1) << "Setting job filters.";
 
   // Sent the Job filter.
   JobFilterRequest filter_request;
@@ -247,7 +247,7 @@ TEST(DebuggedJobIntegrationTest, DISABLED_RepresentativeScenario) {
   ASSERT_EQ(filter_reply.status, ZX_OK)
       << "Expected ZX_OK, Got: " << ZxStatusToString(filter_reply.status);
 
-  FXL_VLOG(1) << "Launching jobs.";
+  FX_VLOGS(1) << "Launching jobs.";
 
   // We launch a some processes.
   zx::job job = CreateJob();
@@ -263,7 +263,7 @@ TEST(DebuggedJobIntegrationTest, DISABLED_RepresentativeScenario) {
   // We resume the processes, which are in the initial waiting state.
   VerifyAllProcessesStarted(backend, {"true", "false"});
 
-  FXL_VLOG(1) << "Starting threads.";
+  FX_VLOGS(1) << "Starting threads.";
 
   // All threads should start
   for (size_t i = 0; i < processes.size(); i++) {
@@ -274,7 +274,7 @@ TEST(DebuggedJobIntegrationTest, DISABLED_RepresentativeScenario) {
   // Now that all threads started, we resume them all.
   ResumeAllProcesses(remote_api, backend);
 
-  FXL_VLOG(1) << "Receiving modules.";
+  FX_VLOGS(1) << "Receiving modules.";
 
   // We should receive all the modules notifications.
   for (size_t i = 0; i < processes.size(); i++) {
@@ -282,7 +282,7 @@ TEST(DebuggedJobIntegrationTest, DISABLED_RepresentativeScenario) {
     ASSERT_EQ(backend.module_events().size(), i + 1);
   }
 
-  FXL_VLOG(1) << "Resuming proceses.";
+  FX_VLOGS(1) << "Resuming proceses.";
 
   // We need to resume the thread again after getting the modules.
   ResumeAllProcesses(remote_api, backend);
@@ -308,7 +308,7 @@ TEST(DebuggedJobIntegrationTest, DISABLED_RepresentativeScenario) {
   processes.clear();
   backend.Reset();
 
-  FXL_VLOG(1) << "Changing filters.";
+  FX_VLOGS(1) << "Changing filters.";
 
   // We change the filters. A partial match should work.
   filter_request.filters = {"breakpoint"};
@@ -316,7 +316,7 @@ TEST(DebuggedJobIntegrationTest, DISABLED_RepresentativeScenario) {
   ASSERT_EQ(filter_reply.status, ZX_OK)
       << "Expected ZX_OK, Got: " << ZxStatusToString(filter_reply.status);
 
-  FXL_VLOG(1) << "Launching new processes.";
+  FX_VLOGS(1) << "Launching new processes.";
 
   // We launch two processes.
   processes.push_back(LaunchProcess(job, "breakpoint_test_exe", {"/pkg/bin/breakpoint_test_exe"}));
@@ -336,7 +336,7 @@ TEST(DebuggedJobIntegrationTest, DISABLED_RepresentativeScenario) {
 
   ASSERT_EQ(backend.module_events().size(), 1u);
 
-  FXL_VLOG(1) << "Setting up breakpoint.";
+  FX_VLOGS(1) << "Setting up breakpoint.";
 
   // The test .so we load in order to search the offset of the exported symbol
   // within it.
@@ -376,7 +376,7 @@ TEST(DebuggedJobIntegrationTest, DISABLED_RepresentativeScenario) {
 
   message_loop->Run();
 
-  FXL_VLOG(1) << "Hit breakpoint.";
+  FX_VLOGS(1) << "Hit breakpoint.";
 
   // We should've received a breakpoint event.
   ASSERT_EQ(backend.exceptions().size(), 1u);
@@ -389,7 +389,7 @@ TEST(DebuggedJobIntegrationTest, DISABLED_RepresentativeScenario) {
   EXPECT_EQ(breakpoint_stat.hit_count, 1u);
   EXPECT_EQ(breakpoint_stat.should_delete, false);  // Non one-shot breakpoint.
 
-  FXL_VLOG(1) << "Resuming process.";
+  FX_VLOGS(1) << "Resuming process.";
 
   // We resume the thread.
   ResumeAllProcesses(remote_api, backend);

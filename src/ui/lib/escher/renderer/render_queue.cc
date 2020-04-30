@@ -26,7 +26,7 @@ void RenderQueue::GenerateCommands(CommandBuffer* cmd_buf, const CommandBuffer::
                                    const RenderQueueContext* context, size_t start_index,
                                    size_t count) const {
   size_t end_index = start_index + count;
-  FXL_DCHECK(end_index <= items_.size());
+  FX_DCHECK(end_index <= items_.size());
 
   while (start_index < end_index) {
     if (state) {
@@ -47,7 +47,7 @@ void RenderQueue::GenerateCommands(CommandBuffer* cmd_buf, const CommandBuffer::
          ++i) {
       ++instance_count;
     }
-    FXL_DCHECK(instance_count > 0);  // we guarantee this to clients.
+    FX_DCHECK(instance_count > 0);  // we guarantee this to clients.
     render_func(cmd_buf, context, &item, instance_count);
     start_index += instance_count;
   }

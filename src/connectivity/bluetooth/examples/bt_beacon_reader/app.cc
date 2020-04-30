@@ -25,10 +25,10 @@ App::App(async::Loop* loop, bool just_tilts)
       context_(sys::ComponentContext::CreateAndServeOutgoingDirectory()),
       central_delegate_(this),
       just_tilts_(just_tilts) {
-  FXL_DCHECK(context_);
+  FX_DCHECK(context_);
 
   central_ = context_->svc()->Connect<ble::Central>();
-  FXL_DCHECK(central_);
+  FX_DCHECK(central_);
 
   central_.set_error_handler([this](zx_status_t status) {
     printf("Central disconnected\n");

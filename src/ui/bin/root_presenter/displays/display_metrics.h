@@ -24,11 +24,11 @@ class DisplayMetrics {
         x_scale_in_px_per_pp_(x_scale_in_px_per_pp),
         y_scale_in_px_per_pp_(y_scale_in_px_per_pp),
         density_in_pp_per_mm_(density_in_pp_per_mm) {
-    FXL_DCHECK(width_in_px_ > 0u);
-    FXL_DCHECK(height_in_px_ > 0u);
-    FXL_DCHECK(x_scale_in_px_per_pp_ > 0.f);
-    FXL_DCHECK(y_scale_in_px_per_pp_ > 0.f);
-    FXL_DCHECK(density_in_pp_per_mm_ >= 0.f);
+    FX_DCHECK(width_in_px_ > 0u);
+    FX_DCHECK(height_in_px_ > 0u);
+    FX_DCHECK(x_scale_in_px_per_pp_ > 0.f);
+    FX_DCHECK(y_scale_in_px_per_pp_ > 0.f);
+    FX_DCHECK(density_in_pp_per_mm_ >= 0.f);
   }
 
   bool operator==(const DisplayMetrics& other) const {

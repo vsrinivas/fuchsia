@@ -28,21 +28,21 @@ const impl::FramebufferPtr& FramebufferAllocator::ObtainFramebuffer(
   // going forward (we should always evict items from this cache at least as frequently as from the
   // render-pass cache).
   auto& render_pass = render_pass_cache_->ObtainRenderPass(info, allow_render_pass_creation);
-  FXL_DCHECK(render_pass || !allow_render_pass_creation);
+  FX_DCHECK(render_pass || !allow_render_pass_creation);
   if (!render_pass) {
     // We're returning "const Ptr&" not "Ptr", so we must return a reference to a value that won't
     // immediately go out of scope.
-    FXL_LOG(WARNING) << "FramebufferAllocator::ObtainFramebuffer(): no render-pass was found";
+    FX_LOGS(WARNING) << "FramebufferAllocator::ObtainFramebuffer(): no render-pass was found";
     const static impl::FramebufferPtr null_ptr;
     return null_ptr;
   }
-  FXL_DCHECK(render_pass);
+  FX_DCHECK(render_pass);
 
   Hasher h;
   h.u64(render_pass->uid());
 
   for (uint32_t i = 0; i < info.num_color_attachments; i++) {
-    FXL_DCHECK(info.color_attachments[i]);
+    FX_DCHECK(info.color_attachments[i]);
     h.u64(info.color_attachments[i]->uid());
   }
 
@@ -61,10 +61,10 @@ const impl::FramebufferPtr& FramebufferAllocator::ObtainFramebuffer(
     // RefPtrs and then fill them in here.  Maybe ObjectPool can be rejiggered
     // to make this more elegant?
     TRACE_DURATION("gfx", "escher::FramebufferAllocator::ObtainFramebuffer (creation)");
-    FXL_DCHECK(!pair.first->framebuffer);
+    FX_DCHECK(!pair.first->framebuffer);
     pair.first->framebuffer = fxl::MakeRefCounted<impl::Framebuffer>(recycler_, render_pass, info);
   }
-  FXL_DCHECK(pair.first->framebuffer);
+  FX_DCHECK(pair.first->framebuffer);
   return pair.first->framebuffer;
 }
 

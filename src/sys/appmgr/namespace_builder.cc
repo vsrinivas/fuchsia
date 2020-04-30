@@ -56,7 +56,7 @@ void NamespaceBuilder::AddConfigData(const SandboxMetadata& sandbox, const std::
 
 void NamespaceBuilder::AddDirectoryIfNotPresent(const std::string& path, zx::channel directory) {
   if (std::find(paths_.begin(), paths_.end(), path) != paths_.end()) {
-    FXL_LOG(INFO) << "Namespace conflict for " << ns_id << ": " << path;
+    FX_LOGS(INFO) << "Namespace conflict for " << ns_id << ": " << path;
     return;
   }
   PushDirectoryFromChannel(path, std::move(directory));
@@ -77,11 +77,11 @@ void NamespaceBuilder::AddSandbox(const SandboxMetadata& sandbox,
   AddSandbox(
       sandbox, hub_directory_factory,
       [] {
-        FXL_NOTREACHED() << "IsolatedDataPathFactory unexpectedly used";
+        FX_NOTREACHED() << "IsolatedDataPathFactory unexpectedly used";
         return "";
       },
       [] {
-        FXL_NOTREACHED() << "IsolatedCachePathFactory unexpectedly used";
+        FX_NOTREACHED() << "IsolatedCachePathFactory unexpectedly used";
         return "";
       },
       [] { return "/tmp"; });
@@ -94,7 +94,7 @@ void NamespaceBuilder::AddSandbox(const SandboxMetadata& sandbox,
                                   const IsolatedTempPathFactory& isolated_temp_path_factory) {
   for (const auto& path : sandbox.dev()) {
     if (path == "class") {
-      FXL_LOG(WARNING) << "Ignoring request for all device classes";
+      FX_LOGS(WARNING) << "Ignoring request for all device classes";
       continue;
     }
     PushDirectoryFromPath("/dev/" + path);
@@ -105,11 +105,11 @@ void NamespaceBuilder::AddSandbox(const SandboxMetadata& sandbox,
     // to request a directory inside /system/data 'deprecated-data/some/path' is supplied
     if (path == kDeprecatedDataName ||
         path.find(fxl::Concatenate({kDeprecatedDataName, "/"})) == 0) {
-      FXL_LOG(ERROR) << "Request for 'deprecated-data' by " << ns_id
+      FX_LOGS(ERROR) << "Request for 'deprecated-data' by " << ns_id
                      << " ignored, this feature is no longer available";
     } else if (path == kBlockedDataName ||
                path.find(fxl::Concatenate({kBlockedDataName, "/"})) == 0) {
-      FXL_LOG(ERROR) << "Request for 'data' in namespace '" << ns_id
+      FX_LOGS(ERROR) << "Request for 'data' in namespace '" << ns_id
                      << "' ignored, this feature is no longer available";
     } else {
       PushDirectoryFromPath("/system/" + path);
@@ -163,7 +163,7 @@ void NamespaceBuilder::AddSandbox(const SandboxMetadata& sandbox,
       AllowList build_info_allowlist(appmgr_config_dir_, kBuildInfoAllowList);
       FuchsiaPkgUrl pkg_url;
       if (pkg_url.Parse(ns_id) && !build_info_allowlist.IsAllowed(pkg_url)) {
-        FXL_LOG(WARNING) << "Component " << ns_id
+        FX_LOGS(WARNING) << "Component " << ns_id
                          << " is not allowlisted to use build-info. See fxb/50308.";
       }
       PushDirectoryFromPathAs("/pkgfs/packages/build-info/0/data", "/config/build-info");
@@ -180,7 +180,7 @@ void NamespaceBuilder::AddSandbox(const SandboxMetadata& sandbox,
                                                    fio::OPEN_RIGHT_READABLE |
                                                    fio::OPEN_RIGHT_ADMIN);
       } else {
-        FXL_LOG(WARNING) << "Component " << ns_id
+        FX_LOGS(WARNING) << "Component " << ns_id
                          << " is not allowed to use global-data. Blocked by allowlist.";
       }
     } else if (feature == "deprecated-misc-storage") {
@@ -191,10 +191,10 @@ void NamespaceBuilder::AddSandbox(const SandboxMetadata& sandbox,
         if (files::CreateDirectory(data_dir)) {
           PushDirectoryFromPathAs(data_dir, "/misc");
         } else {
-          FXL_LOG(ERROR) << "Failed to create deprecated-misc-storage directory";
+          FX_LOGS(ERROR) << "Failed to create deprecated-misc-storage directory";
         }
       } else {
-        FXL_LOG(ERROR) << "Component " << ns_id
+        FX_LOGS(ERROR) << "Component " << ns_id
                        << " is not allowed to use deprecated-misc-storage. Blocked by allowlist.";
       }
     }
@@ -227,14 +227,14 @@ void NamespaceBuilder::PushDirectoryFromPathAsWithPermissions(std::string src_pa
   }
   zx::channel handle = fsl::CloneChannelFromFileDescriptor(dir.get());
   if (!handle) {
-    FXL_DLOG(WARNING) << "Failed to clone channel for " << src_path;
+    FX_DLOGS(WARNING) << "Failed to clone channel for " << src_path;
     return;
   }
   PushDirectoryFromChannel(std::move(dst_path), std::move(handle));
 }
 
 void NamespaceBuilder::PushDirectoryFromChannel(std::string path, zx::channel channel) {
-  FXL_DCHECK(std::find(paths_.begin(), paths_.end(), path) == paths_.end());
+  FX_DCHECK(std::find(paths_.begin(), paths_.end(), path) == paths_.end());
   types_.push_back(PA_HND(PA_NS_DIR, types_.size()));
   handles_.push_back(channel.get());
   paths_.push_back(std::move(path));

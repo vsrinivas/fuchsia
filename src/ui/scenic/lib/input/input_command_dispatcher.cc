@@ -39,14 +39,14 @@ InputCommandDispatcher::InputCommandDispatcher(scheduling::SessionId session_id,
       event_reporter_(std::move(event_reporter)),
       scene_graph_(scene_graph),
       input_system_(input_system) {
-  FXL_CHECK(scene_graph_);
-  FXL_CHECK(input_system_);
+  FX_CHECK(scene_graph_);
+  FX_CHECK(input_system_);
 }
 
 void InputCommandDispatcher::DispatchCommand(ScenicCommand command,
                                              scheduling::PresentId present_id) {
   TRACE_DURATION("input", "dispatch_command", "command", "ScenicCmd");
-  FXL_DCHECK(command.Which() == ScenicCommand::Tag::kInput);
+  FX_DCHECK(command.Which() == ScenicCommand::Tag::kInput);
   if (!scene_graph_)
     return;  // Scene graph does not exist. Can not dispatch input.
 
@@ -85,7 +85,7 @@ void InputCommandDispatcher::DispatchCommand(
 void InputCommandDispatcher::DispatchCommand(
     const fuchsia::ui::input::SetHardKeyboardDeliveryCmd& command) {
   // Can't easily retrieve owning view's ViewRef KOID from just the Session or SessionId.
-  FXL_VLOG(2) << "Hard keyboard events, session_id=" << session_id_
+  FX_VLOGS(2) << "Hard keyboard events, session_id=" << session_id_
               << ", delivery_request=" << (command.delivery_request ? "on" : "off");
 
   if (command.delivery_request) {
@@ -102,7 +102,7 @@ void InputCommandDispatcher::DispatchCommand(
     }
 
     // This code assumes one event reporter per session id.
-    FXL_DCHECK(input_system_->hard_keyboard_requested().count(session_id_) == 0);
+    FX_DCHECK(input_system_->hard_keyboard_requested().count(session_id_) == 0);
     if (event_reporter_)
       input_system_->hard_keyboard_requested().insert({session_id_, event_reporter_->GetWeakPtr()});
   } else {
@@ -113,14 +113,14 @@ void InputCommandDispatcher::DispatchCommand(
 void InputCommandDispatcher::DispatchCommand(
     const fuchsia::ui::input::SetParallelDispatchCmd& command) {
   TRACE_DURATION("input", "dispatch_command", "command", "SetParallelDispatchCmd");
-  FXL_LOG(INFO) << "Scenic: Parallel dispatch is turned "
+  FX_LOGS(INFO) << "Scenic: Parallel dispatch is turned "
                 << (command.parallel_dispatch ? "ON" : "OFF");
   parallel_dispatch_ = command.parallel_dispatch;
 }
 
 void InputCommandDispatcher::ReportKeyboardEvent(EventReporter* reporter,
                                                  fuchsia::ui::input::KeyboardEvent keyboard) {
-  FXL_DCHECK(reporter) << "precondition";
+  FX_DCHECK(reporter) << "precondition";
 
   InputEvent event;
   event.set_keyboard(std::move(keyboard));

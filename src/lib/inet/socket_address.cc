@@ -34,7 +34,7 @@ SocketAddress::SocketAddress(in_addr_t addr, IpPort port) {
 }
 
 SocketAddress::SocketAddress(const sockaddr_in& addr) {
-  FXL_DCHECK(addr.sin_family == AF_INET);
+  FX_DCHECK(addr.sin_family == AF_INET);
   v4_ = addr;
 }
 
@@ -71,7 +71,7 @@ SocketAddress::SocketAddress(const in6_addr& addr, IpPort port) {
 }
 
 SocketAddress::SocketAddress(const sockaddr_in6& addr) {
-  FXL_DCHECK(addr.sin6_family == AF_INET6);
+  FX_DCHECK(addr.sin6_family == AF_INET6);
   v6_ = addr;
 }
 
@@ -100,7 +100,7 @@ SocketAddress::SocketAddress(const IpAddress& addr, IpPort port, uint32_t scope_
 }
 
 SocketAddress::SocketAddress(const sockaddr_storage& addr) {
-  FXL_DCHECK(addr.ss_family == AF_INET || addr.ss_family == AF_INET6);
+  FX_DCHECK(addr.ss_family == AF_INET || addr.ss_family == AF_INET6);
   if (addr.ss_family == AF_INET) {
     v4_ = *reinterpret_cast<const sockaddr_in*>(&addr);
   } else {
@@ -110,11 +110,11 @@ SocketAddress::SocketAddress(const sockaddr_storage& addr) {
 
 SocketAddress::SocketAddress(const fuchsia::netstack::SocketAddress* addr)
     : SocketAddress(IpAddress(&addr->addr), IpPort::From_uint16_t(addr->port)) {
-  FXL_DCHECK(addr != nullptr);
+  FX_DCHECK(addr != nullptr);
 }
 
 SocketAddress::SocketAddress(const fuchsia::net::SocketAddress* addr) : SocketAddress() {
-  FXL_DCHECK(addr != nullptr);
+  FX_DCHECK(addr != nullptr);
   switch (addr->Which()) {
     case fuchsia::net::SocketAddress::kIpv4:
       Build(IpAddress(&addr->ipv4().address), IpPort::From_uint16_t(addr->ipv4().port), 0);
@@ -130,11 +130,11 @@ SocketAddress::SocketAddress(const fuchsia::net::SocketAddress* addr) : SocketAd
 
 SocketAddress::SocketAddress(const fuchsia::net::Ipv4SocketAddress* addr)
     : SocketAddress(IpAddress(&addr->address), IpPort::From_uint16_t(addr->port)) {
-  FXL_DCHECK(addr != nullptr);
+  FX_DCHECK(addr != nullptr);
 }
 
 SocketAddress::SocketAddress(const fuchsia::net::Ipv6SocketAddress* addr) {
-  FXL_DCHECK(addr != nullptr);
+  FX_DCHECK(addr != nullptr);
   Build(IpAddress(&addr->address), IpPort::From_uint16_t(addr->port),
         static_cast<uint32_t>(addr->zone_index));
 }

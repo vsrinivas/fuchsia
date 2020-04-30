@@ -20,7 +20,7 @@ std::unique_ptr<DebugRects> DebugRects::New(BatchGpuUploader* uploader, ImageFac
   return std::unique_ptr<DebugRects>(new DebugRects(std::move(image)));
 }
 
-DebugRects::DebugRects(ImagePtr image) : palette_(std::move(image)) { FXL_DCHECK(palette_); }
+DebugRects::DebugRects(ImagePtr image) : palette_(std::move(image)) { FX_DCHECK(palette_); }
 
 void DebugRects::Blit(CommandBuffer* cb, Color color, const ImagePtr& target, vk::Rect2D rect) {
   cb->KeepAlive(target);

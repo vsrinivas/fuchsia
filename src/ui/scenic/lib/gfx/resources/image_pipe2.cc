@@ -68,8 +68,8 @@ ImagePipe2::ImagePipe2(Session* session, ResourceId id,
       image_pipe_updater_(std::move(image_pipe_updater)),
       error_reporter_(std::move(error_reporter)),
       weak_ptr_factory_(this) {
-  FXL_CHECK(image_pipe_updater_);
-  FXL_CHECK(error_reporter_);
+  FX_CHECK(image_pipe_updater_);
+  FX_CHECK(error_reporter_);
 
   // TODO(35547): Use a common SysmemAllocator instance for all ImagePipes.
   // Connect to Sysmem in preparation for the future AddBufferCollection() calls.
@@ -215,7 +215,7 @@ void ImagePipe2::AddImage(uint32_t image_id, uint32_t buffer_collection_id,
       CloseConnectionAndCleanUp();
       return;
     }
-    FXL_DCHECK(info.buffer_collection_info.buffer_count > 0);
+    FX_DCHECK(info.buffer_collection_info.buffer_count > 0);
     for (uint32_t i = 0; i < info.buffer_collection_info.buffer_count; ++i) {
       const char* kVmoName = "ImagePipe2Surface";
       info.buffer_collection_info.buffers[i].vmo.set_property(ZX_PROP_NAME, kVmoName,
@@ -237,7 +237,7 @@ void ImagePipe2::AddImage(uint32_t image_id, uint32_t buffer_collection_id,
     return;
   }
 
-  FXL_DCHECK(info.images.find(image_id) == info.images.end());
+  FX_DCHECK(info.images.find(image_id) == info.images.end());
   if (image->use_protected_memory()) {
     num_protected_images_++;
   }
@@ -275,7 +275,7 @@ void ImagePipe2::RemoveImage(uint32_t image_id) {
   }
 
   if (image_it->second->use_protected_memory()) {
-    FXL_DCHECK(num_protected_images_ >= 1);
+    FX_DCHECK(num_protected_images_ >= 1);
     num_protected_images_--;
   }
 
@@ -342,7 +342,7 @@ ImagePipeUpdateResults ImagePipe2::Update(scheduling::PresentId present_id) {
     }
 
     next_image = frames_.front().image;
-    FXL_DCHECK(next_image);
+    FX_DCHECK(next_image);
     next_image_id = next_image->id();
 
     frames_.pop();
@@ -398,7 +398,7 @@ bool ImagePipe2::SetBufferCollectionConstraints(
     vk::BufferCollectionFUCHSIA* out_buffer_collection_fuchsia) {
   // Set VkImage constraints using |create_info| on |token|
   auto vk_device = session->resource_context().vk_device;
-  FXL_DCHECK(vk_device);
+  FX_DCHECK(vk_device);
   auto vk_loader = session->resource_context().vk_loader;
 
   vk::BufferCollectionCreateInfoFUCHSIA buffer_collection_create_info;
@@ -426,7 +426,7 @@ bool ImagePipe2::SetBufferCollectionConstraints(
 void ImagePipe2::DestroyBufferCollection(Session* session,
                                          const vk::BufferCollectionFUCHSIA& vk_buffer_collection) {
   auto vk_device = session->resource_context().vk_device;
-  FXL_DCHECK(vk_device);
+  FX_DCHECK(vk_device);
   auto vk_loader = session->resource_context().vk_loader;
   vk_device.destroyBufferCollectionFUCHSIA(vk_buffer_collection, nullptr, vk_loader);
 }
@@ -445,7 +445,7 @@ ImagePtr ImagePipe2::CreateImage(Session* session, ResourceId image_id,
   }
 
   auto vk_device = session->resource_context().vk_device;
-  FXL_DCHECK(vk_device);
+  FX_DCHECK(vk_device);
   auto vk_loader = session->resource_context().vk_loader;
   auto collection_properties =
       vk_device.getBufferCollectionPropertiesFUCHSIA(info.vk_buffer_collection, vk_loader);

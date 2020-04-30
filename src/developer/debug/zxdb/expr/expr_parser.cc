@@ -346,7 +346,7 @@ ExprParser::ParseNameResult ExprParser::ParseName(bool expand_types) {
             case FoundName::kTemplate:
               // The lookup shouldn't tell us a template name or namespace for something that has
               // template parameters.
-              FXL_NOTREACHED();
+              FX_NOTREACHED();
               // Fall through to "other" case for fallback.
             case FoundName::kVariable:
             case FoundName::kMemberVariable:
@@ -429,7 +429,7 @@ ExprParser::ParseNameResult ExprParser::ParseName(bool expand_types) {
     case kType:
       return result;  // Success cases.
     case kBegin:
-      FXL_NOTREACHED();
+      FX_NOTREACHED();
       SetError(ExprToken(), "Unexpected end of input.");
       return ParseNameResult();
     case kColonColon:
@@ -443,14 +443,14 @@ ExprParser::ParseNameResult ExprParser::ParseName(bool expand_types) {
       return ParseNameResult();
   }
 
-  FXL_NOTREACHED();
+  FX_NOTREACHED();
   SetError(ExprToken(), "Internal error.");
   return ParseNameResult();
 }
 
 ParsedIdentifierComponent ExprParser::GetIdentifierComponent() {
   const ExprToken& token = cur_token();
-  FXL_DCHECK(!token.value().empty());  // Should not have an empty name token.
+  FX_DCHECK(!token.value().empty());  // Should not have an empty name token.
 
   if (token.value()[0] == '$') {
     // Special identifier, need to parse it.
@@ -505,7 +505,7 @@ fxl::RefPtr<Type> ExprParser::ParseType(fxl::RefPtr<Type> optional_base) {
   std::vector<DwarfTag> type_qual;
   size_t pointer_levels = 0;
   if (optional_base) {
-    FXL_DCHECK(language_ != ExprLanguage::kRust);
+    FX_DCHECK(language_ != ExprLanguage::kRust);
     // Type name already known, start parsing after it.
     type = std::move(optional_base);
   } else {
@@ -660,7 +660,7 @@ fxl::RefPtr<Type> ExprParser::ParseType(fxl::RefPtr<Type> optional_base) {
 }
 
 fxl::RefPtr<Type> ExprParser::ParseRustArrayType() {
-  FXL_DCHECK(!at_end() && cur_token().type() == ExprTokenType::kLeftSquare);
+  FX_DCHECK(!at_end() && cur_token().type() == ExprTokenType::kLeftSquare);
   Consume();
 
   auto element = ParseType(nullptr);
@@ -937,7 +937,7 @@ fxl::RefPtr<ExprNode> ExprParser::NamePrefix(const ExprToken& token) {
 
   // Back up so the current token is the first component of the name so we can hand-off to the
   // specialized name parser.
-  FXL_DCHECK(cur_ > 0);
+  FX_DCHECK(cur_ > 0);
   cur_--;
 
   if (token.type() == ExprTokenType::kConst || token.type() == ExprTokenType::kVolatile ||
@@ -1038,7 +1038,7 @@ const ExprToken& ExprParser::Consume() {
 
 const ExprToken& ExprParser::Consume(ExprTokenType type, const char* error_msg,
                                      const ExprToken& error_token) {
-  FXL_DCHECK(!has_error());  // Should have error-checked before calling.
+  FX_DCHECK(!has_error());  // Should have error-checked before calling.
   if (at_end()) {
     SetError(error_token, std::string(error_msg) + " Hit the end of input instead.");
     return kInvalidToken;
@@ -1131,7 +1131,7 @@ int ExprParser::CurPrecedenceWithShiftTokenConversion() const {
 // static
 const ExprParser::DispatchInfo& ExprParser::DispatchForToken(const ExprToken& token) {
   size_t index = static_cast<size_t>(token.type());
-  FXL_DCHECK(index < arraysize(kDispatchInfo));
+  FX_DCHECK(index < arraysize(kDispatchInfo));
   return kDispatchInfo[index];
 }
 

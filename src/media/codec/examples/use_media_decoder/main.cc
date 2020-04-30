@@ -87,10 +87,10 @@ int main(int argc, char* argv[]) {
   codec_factory.set_error_handler([](zx_status_t status) {
     // TODO(dustingreen): get and print CodecFactory channel epitaph once that's
     // possible.
-    FXL_PLOG(ERROR, status) << "codec_factory failed - unexpected";
+    FX_PLOGS(ERROR, status) << "codec_factory failed - unexpected";
   });
   sysmem.set_error_handler(
-      [](zx_status_t status) { FXL_PLOG(FATAL, status) << "sysmem failed - unexpected"; });
+      [](zx_status_t status) { FX_PLOGS(FATAL, status) << "sysmem failed - unexpected"; });
   to_run_on_fidl_thread.emplace_back(
       [&component_context, fidl_dispatcher, &codec_factory, &sysmem]() mutable {
         component_context->svc()->Connect<fuchsia::mediacodec::CodecFactory>(

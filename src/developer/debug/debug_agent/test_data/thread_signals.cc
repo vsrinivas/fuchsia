@@ -34,38 +34,38 @@ int ThreadFunction(void*) {
 }  // namespace
 
 int main() {
-  FXL_LOG(INFO) << "****** Creating thread.";
+  FX_LOGS(INFO) << "****** Creating thread.";
 
   thrd_t thread;
   thrd_create(&thread, ThreadFunction, nullptr);
   zx_handle_t thread_handle = 0;
   thread_handle = thrd_get_zx_handle(thread);
 
-  FXL_LOG(INFO) << "****** Suspending thread.";
+  FX_LOGS(INFO) << "****** Suspending thread.";
 
   zx_status_t status;
   zx_handle_t suspend_token;
   status = zx_task_suspend(thread_handle, &suspend_token);
-  FXL_DCHECK(status == ZX_OK) << "Could not suspend thread: " << status;
+  FX_DCHECK(status == ZX_OK) << "Could not suspend thread: " << status;
 
   {
     zx_signals_t observed;
     status = zx_object_wait_one(thread_handle, ZX_THREAD_SUSPENDED, zx_deadline_after(ZX_SEC(1)),
                                 &observed);
-    FXL_DCHECK(status == ZX_OK) << "Could not get suspended signal: " << status;
-    FXL_DCHECK((observed & ZX_THREAD_SUSPENDED) != 0);
+    FX_DCHECK(status == ZX_OK) << "Could not get suspended signal: " << status;
+    FX_DCHECK((observed & ZX_THREAD_SUSPENDED) != 0);
   }
 
   // Resuming the thread should get a signal.
-  FXL_LOG(INFO) << "****** Resuming thread.";
+  FX_LOGS(INFO) << "****** Resuming thread.";
   zx_handle_close(suspend_token);
   {
     zx_signals_t observed;
     status = zx_object_wait_one(thread_handle, ZX_THREAD_RUNNING, zx_deadline_after(ZX_SEC(1)),
                                 &observed);
-    FXL_DCHECK(status == ZX_OK) << "Could not get running signal: " << status;
-    FXL_DCHECK((observed & ZX_THREAD_RUNNING) != 0);
+    FX_DCHECK(status == ZX_OK) << "Could not get running signal: " << status;
+    FX_DCHECK((observed & ZX_THREAD_RUNNING) != 0);
   }
 
-  FXL_LOG(INFO) << "****** Success.";
+  FX_LOGS(INFO) << "****** Success.";
 }

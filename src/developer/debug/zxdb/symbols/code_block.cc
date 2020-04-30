@@ -11,8 +11,8 @@
 namespace zxdb {
 
 CodeBlock::CodeBlock(DwarfTag tag) : Symbol(tag) {
-  FXL_DCHECK(tag == DwarfTag::kSubprogram || tag == DwarfTag::kInlinedSubroutine ||
-             tag == DwarfTag::kLexicalBlock);
+  FX_DCHECK(tag == DwarfTag::kSubprogram || tag == DwarfTag::kInlinedSubroutine ||
+            tag == DwarfTag::kLexicalBlock);
 }
 
 CodeBlock::~CodeBlock() = default;

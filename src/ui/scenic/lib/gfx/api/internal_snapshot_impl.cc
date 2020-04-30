@@ -9,8 +9,8 @@ void InternalSnapshotImpl::PendingSnapshot::AddSnapshot(
     fuchsia::ui::scenic::internal::SnapshotResult snapshot) {
   result.push_back(std::move(snapshot));
   if (result.size() >= num_compositors) {
-    FXL_DCHECK(result.size() > 0);
-    FXL_DCHECK(num_compositors > 0);
+    FX_DCHECK(result.size() > 0);
+    FX_DCHECK(num_compositors > 0);
     InvokeCallback();
   }
 }

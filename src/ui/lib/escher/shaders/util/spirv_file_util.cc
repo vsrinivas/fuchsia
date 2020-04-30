@@ -31,7 +31,7 @@ bool WriteSpirvToDisk(const std::vector<uint32_t>& spirv, const ShaderVariantArg
     fclose(fp);
     return true;
   } else {
-    FXL_LOG(ERROR) << "Could not write file: " << full_path;
+    FX_LOGS(ERROR) << "Could not write file: " << full_path;
   }
 
   return false;
@@ -39,7 +39,7 @@ bool WriteSpirvToDisk(const std::vector<uint32_t>& spirv, const ShaderVariantArg
 
 bool ReadSpirvFromDisk(const ShaderVariantArgs& args, const std::string& base_path,
                        const std::string& shader_name, std::vector<uint32_t>* out_spirv) {
-  FXL_DCHECK(out_spirv);
+  FX_DCHECK(out_spirv);
   auto hash_name = GenerateHashedSpirvName(shader_name, args);
   auto full_path = base_path + hash_name;
   FILE* fp = fopen(full_path.c_str(), "rb");

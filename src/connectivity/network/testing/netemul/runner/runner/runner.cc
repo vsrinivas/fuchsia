@@ -37,7 +37,7 @@ struct RunnerArgs {
 
 void Runner::StartComponent(fuchsia::sys::Package package, fuchsia::sys::StartupInfo startup_info,
                             fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller) {
-  FXL_LOG(INFO) << "resolved URL: " << package.resolved_url;
+  FX_LOGS(INFO) << "resolved URL: " << package.resolved_url;
 
   // args needs to be shared ptr 'cause Loader fidl
   // uses std::function and not fit::function (i.e. legacy callbacks)
@@ -55,18 +55,18 @@ void Runner::StartComponent(fuchsia::sys::Package package, fuchsia::sys::Startup
 void Runner::RunComponent(fuchsia::sys::PackagePtr package, fuchsia::sys::StartupInfo startup_info,
                           fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller) {
   if (!package) {
-    FXL_LOG(ERROR) << "Can't load package";
+    FX_LOGS(ERROR) << "Can't load package";
     return;
   }
   // extract and parse cmx:
   component::FuchsiaPkgUrl fp;
   if (!fp.Parse(package->resolved_url)) {
-    FXL_LOG(ERROR) << "can't parse fuchsia URL " << package->resolved_url;
+    FX_LOGS(ERROR) << "can't parse fuchsia URL " << package->resolved_url;
     return;
   }
 
   if (!package->directory.is_valid()) {
-    FXL_LOG(ERROR) << "Package directory not provided";
+    FX_LOGS(ERROR) << "Package directory not provided";
     return;
   }
 

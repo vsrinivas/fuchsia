@@ -42,12 +42,12 @@ fuchsia::scheduler::ProfileProvider_SyncProxy& GetProfileProvider() {
   zx_status_t status;
 
   status = zx::channel::create(0u, &channel0, &channel1);
-  FXL_CHECK(status == ZX_OK);
+  FX_CHECK(status == ZX_OK);
 
   status = fdio_service_connect(
       (std::string("/svc/") + fuchsia::scheduler::ProfileProvider::Name_).c_str(),
       channel0.release());
-  FXL_CHECK(status == ZX_OK);
+  FX_CHECK(status == ZX_OK);
 
   provider.emplace(std::move(channel1));
   return *provider;
@@ -93,9 +93,9 @@ std::chrono::nanoseconds ParseDurationString(const std::string& duration) {
 
   std::smatch match;
   std::regex_search(duration, match, kReDuration);
-  FXL_CHECK(!match.empty()) << "String \"" << duration << "\" is not a valid duration!";
+  FX_CHECK(!match.empty()) << "String \"" << duration << "\" is not a valid duration!";
 
-  FXL_CHECK(match.size() == 2) << "Unexpected match size " << match.size();
+  FX_CHECK(match.size() == 2) << "Unexpected match size " << match.size();
   const uint64_t scalar = std::stoull(match[0]);
   const std::string units = match[1];
 
@@ -112,8 +112,8 @@ std::chrono::nanoseconds ParseDurationString(const std::string& duration) {
   } else if (units == "ns") {
     return std::chrono::nanoseconds{scalar};
   } else {
-    FXL_CHECK(false) << "String duration \"" << duration << "\" has unrecognized units \"" << units
-                     << "\"!";
+    FX_CHECK(false) << "String duration \"" << duration << "\" has unrecognized units \"" << units
+                    << "\"!";
     __builtin_unreachable();
   }
 }
@@ -130,12 +130,11 @@ size_t ParseInstancesString(const std::string& instances) {
   // Match[4]: <argument>
   std::smatch match;
 
-  FXL_CHECK(std::regex_search(instances, match, kReInstances)) <<
-    "The expression string must be in the format cpu_num<+|-|*><positive integer>.";
-  FXL_CHECK(match[1] == "cpu_num") <<
-    "The expression string must be in the format cpu_num<+|-|*><positive integer>.";
-  FXL_CHECK(match.size() == 5) <<
-    "Unexpected match size " << match.size();
+  FX_CHECK(std::regex_search(instances, match, kReInstances))
+      << "The expression string must be in the format cpu_num<+|-|*><positive integer>.";
+  FX_CHECK(match[1] == "cpu_num")
+      << "The expression string must be in the format cpu_num<+|-|*><positive integer>.";
+  FX_CHECK(match.size() == 5) << "Unexpected match size " << match.size();
 
   const std::string operation = match[3];
 
@@ -148,8 +147,8 @@ size_t ParseInstancesString(const std::string& instances) {
       return ReadCpuCount() + argument;
     } else if (operation == "-") {
       if (argument > ReadCpuCount()) {
-        FXL_LOG(WARNING) << "Expression " << instances <<
-          " yields negative number. Instances set to 0";
+        FX_LOGS(WARNING) << "Expression " << instances
+                         << " yields negative number. Instances set to 0";
         return 0;
       } else {
         return ReadCpuCount() - argument;
@@ -157,7 +156,7 @@ size_t ParseInstancesString(const std::string& instances) {
     } else if (operation == "*") {
       return ReadCpuCount() * argument;
     } else {
-        __builtin_unreachable();
+      __builtin_unreachable();
     }
   }
 }
@@ -186,12 +185,12 @@ zx::unowned_profile GetProfile(int priority, std::optional<zx_cpu_set_t> affinit
   zx_status_t fidl_status;
   zx::profile profile;
   const auto status = provider.GetProfile(priority, "garnet/bin/loadbench", &fidl_status, &profile);
-  FXL_CHECK(status == ZX_OK);
-  FXL_CHECK(fidl_status == ZX_OK);
+  FX_CHECK(status == ZX_OK);
+  FX_CHECK(fidl_status == ZX_OK);
 
   // Add the new profile to the map for later retrieval.
   auto [iter, okay] = profiles.emplace(key, std::move(profile));
-  FXL_CHECK(okay);
+  FX_CHECK(okay);
 
   return zx::unowned_profile{iter->second.get()};
 }
@@ -222,12 +221,12 @@ zx::unowned_profile GetProfile(zx::duration capacity, zx::duration deadline, zx:
   zx::profile profile;
   const auto status = provider.GetDeadlineProfile(capacity.get(), deadline.get(), period.get(),
                                                   "garnet/bin/loadbench", &fidl_status, &profile);
-  FXL_CHECK(status == ZX_OK);
-  FXL_CHECK(fidl_status == ZX_OK);
+  FX_CHECK(status == ZX_OK);
+  FX_CHECK(fidl_status == ZX_OK);
 
   // Add the new profile to the map for later retrieval.
   auto [iter, okay] = profiles.emplace(key, std::move(profile));
-  FXL_CHECK(okay);
+  FX_CHECK(okay);
 
   return zx::unowned_profile{iter->second.get()};
 }
@@ -247,15 +246,15 @@ zx::unowned_resource GetRootResource() {
   zx_status_t status;
 
   status = zx::channel::create(0u, &channel0, &channel1);
-  FXL_CHECK(status == ZX_OK);
+  FX_CHECK(status == ZX_OK);
 
   status = fdio_service_connect((std::string("/svc/") + fuchsia::boot::RootResource::Name_).c_str(),
                                 channel0.release());
-  FXL_CHECK(status == ZX_OK);
+  FX_CHECK(status == ZX_OK);
 
   fuchsia::boot::RootResource_SyncProxy proxy(std::move(channel1));
   status = proxy.Get(&root_resource);
-  FXL_CHECK(status == ZX_OK);
+  FX_CHECK(status == ZX_OK);
 
   return zx::unowned_resource{root_resource.get()};
 }
@@ -264,7 +263,7 @@ size_t ReadCpuCount() {
   size_t actual, available;
   const auto status =
       GetRootResource()->get_info(ZX_INFO_CPU_STATS, nullptr, 0, &actual, &available);
-  FXL_CHECK(status == ZX_OK);
+  FX_CHECK(status == ZX_OK);
   return available;
 }
 
@@ -273,5 +272,5 @@ void ReadCpuStats(zx_info_cpu_stats_t* stats_buffer, size_t record_count) {
   const auto buffer_size = sizeof(zx_info_cpu_stats_t) * record_count;
   const auto status = GetRootResource()->get_info(ZX_INFO_CPU_STATS, stats_buffer, buffer_size,
                                                   &actual, &available);
-  FXL_CHECK(status == ZX_OK);
+  FX_CHECK(status == ZX_OK);
 }

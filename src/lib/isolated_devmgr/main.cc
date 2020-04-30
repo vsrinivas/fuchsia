@@ -145,12 +145,12 @@ int main(int argc, const char** argv) {
     zx::channel client, server;
     zx_status_t status = zx::channel::create(0, &client, &server);
     if (status != ZX_OK) {
-      FXL_PLOG(ERROR, status) << "Failed to create channel";
+      FX_PLOGS(ERROR, status) << "Failed to create channel";
       return ISO_DEV_MGR_RET_ERR;
     }
     status = fdio_open(ns.c_str(), ZX_FS_RIGHT_READABLE, server.release());
     if (status != ZX_OK) {
-      FXL_PLOG(ERROR, status) << "Failed to open namespace " << ns;
+      FX_PLOGS(ERROR, status) << "Failed to open namespace " << ns;
       return ISO_DEV_MGR_RET_ERR;
     }
     args.flat_namespace.push_back({ns.c_str(), std::move(client)});
@@ -163,13 +163,13 @@ int main(int argc, const char** argv) {
   }
 
   devmgr->SetExceptionCallback([]() {
-    FXL_LOG(ERROR) << "Isolated Devmgr crashed";
+    FX_LOGS(ERROR) << "Isolated Devmgr crashed";
     zx_process_exit(ISO_DEV_MGR_RET_ERR);
   });
 
   for (const auto& path : wait) {
     if (devmgr->WaitForFile(path.c_str()) != ZX_OK) {
-      FXL_LOG(ERROR) << "Isolated Devmgr failed while waiting for path " << path;
+      FX_LOGS(ERROR) << "Isolated Devmgr failed while waiting for path " << path;
       return ISO_DEV_MGR_RET_ERR;
     }
   }

@@ -23,7 +23,7 @@ namespace {
 
 template <typename T>
 bool ReadFileDescriptor(int fd, T* result) {
-  FXL_DCHECK(result);
+  FX_DCHECK(result);
   result->clear();
 
   if (fd < 0)

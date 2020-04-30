@@ -16,11 +16,11 @@ ImagePipeUpdater::ImagePipeUpdater(
     : scheduling_id_(scheduling::GetNextSessionId()),
       frame_scheduler_(frame_scheduler),
       weak_factory_(this) {
-  FXL_DCHECK(frame_scheduler);
+  FX_DCHECK(frame_scheduler);
   frame_scheduler->AddSessionUpdater(weak_factory_.GetWeakPtr());
   frame_scheduler->SetOnUpdateFailedCallbackForSession(scheduling_id_, [] {
     // ImagePipe updates currently can not fail.
-    FXL_CHECK(false);
+    FX_CHECK(false);
   });
 }
 
@@ -52,7 +52,7 @@ scheduling::PresentId ImagePipeUpdater::ScheduleImagePipeUpdate(
     scheduling::SchedulingIdPair id_pair{scheduling_id_, present_id};
 
     auto [it, success] = fence_listeners_.emplace(id_pair, std::move(acquire_fences));
-    FXL_DCHECK(success);
+    FX_DCHECK(success);
 
     const auto trace_id = SESSION_TRACE_ID(scheduling_id_, present_id);
     TRACE_FLOW_BEGIN("gfx", "wait_for_fences", trace_id);
@@ -94,12 +94,12 @@ ImagePipeUpdater::UpdateResults ImagePipeUpdater::UpdateSessions(
   {
     auto begin_it = fence_listeners_.lower_bound({session_id, 0});
     auto end_it = fence_listeners_.upper_bound({session_id, present_id});
-    FXL_DCHECK(std::distance(begin_it, end_it) >= 0);
+    FX_DCHECK(std::distance(begin_it, end_it) >= 0);
     fence_listeners_.erase(begin_it, end_it);
   }
 
   // Apply update for |present_id|.
-  FXL_DCHECK(image_pipes_.find(session_id) != image_pipes_.end());
+  FX_DCHECK(image_pipes_.find(session_id) != image_pipes_.end());
   if (auto image_pipe = image_pipes_[session_id]) {
     auto image_pipe_update_results = image_pipe->Update(present_id);
   }

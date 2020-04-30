@@ -99,7 +99,7 @@ auto IndexedTriangleMeshClip(MeshT input_mesh, const PlaneT* planes, size_t num_
     -> std::pair<MeshT, std::vector<PlaneT>> {
   TRACE_DURATION("gfx", "escher::IndexedTriangleMeshClip", "triangles", input_mesh.triangle_count(),
                  "vertices", input_mesh.vertex_count(), "num_planes", num_planes);
-  FXL_DCHECK(input_mesh.IsValid());
+  FX_DCHECK(input_mesh.IsValid());
   using Edge = typename MeshT::EdgeType;
   using Index = typename MeshT::IndexType;
   using Position = typename MeshT::PositionType;
@@ -190,7 +190,7 @@ auto IndexedTriangleMeshClip(MeshT input_mesh, const PlaneT* planes, size_t num_
       // - copy/append the vertex data to the output mesh
       // - map the input index to the corresponding index of the output mesh
       Index new_index = output_mesh.positions.size();
-      FXL_DCHECK(original_index < input_mesh.vertex_count());
+      FX_DCHECK(original_index < input_mesh.vertex_count());
       IndexedTriangleMeshPushCopiedAttributes(&output_mesh, &input_mesh, original_index);
       reordered_indices.insert(it, {original_index, new_index});
       return new_index;
@@ -251,7 +251,7 @@ auto IndexedTriangleMeshClip(MeshT input_mesh, const PlaneT* planes, size_t num_
     // - one vertex is clipped by the plane, resulting in a quadrilateral
     // - two vertices are clipped by the plane, resulting in a triangle
     const size_t input_index_count = input_mesh.index_count();
-    FXL_DCHECK(input_index_count % 3 == 0);
+    FX_DCHECK(input_index_count % 3 == 0);
 
     for (size_t i = 0; i + 2 < input_index_count; i += 3) {
       Index* tri = input_mesh.indices.data() + i;
@@ -343,7 +343,7 @@ auto IndexedTriangleMeshClip(MeshT input_mesh, const PlaneT* planes, size_t num_
         default:
           // This triangle is completely clipped; move on to the next
           // triangle.
-          FXL_DCHECK(clipped_count == 3);
+          FX_DCHECK(clipped_count == 3);
       }
       // Proceed to next triangle.
     }
@@ -354,7 +354,7 @@ auto IndexedTriangleMeshClip(MeshT input_mesh, const PlaneT* planes, size_t num_
   if (!plane_clipped_vertices) {
     result.first = std::move(input_mesh);
   }
-  FXL_DCHECK(result.first.index_count() % 3 == 0);
+  FX_DCHECK(result.first.index_count() % 3 == 0);
   return result;
 }
 

@@ -42,7 +42,7 @@ FormatNode::FormatNode(const std::string& name, GetProgramaticValue get_value)
       name_(name),
       get_programatic_value_(std::move(get_value)),
       weak_factory_(this) {
-  FXL_DCHECK(get_programatic_value_);  // Caller must specify nonempty func.
+  FX_DCHECK(get_programatic_value_);  // Caller must specify nonempty func.
 }
 
 FormatNode::FormatNode(GroupTag)
@@ -57,8 +57,8 @@ fxl::WeakPtr<FormatNode> FormatNode::GetWeakPtr() { return weak_factory_.GetWeak
 
 void FormatNode::FillProgramaticValue(const fxl::RefPtr<EvalContext>& context,
                                       fit::deferred_callback cb) {
-  FXL_DCHECK(source() == kProgramatic);
-  FXL_DCHECK(get_programatic_value_);
+  FX_DCHECK(source() == kProgramatic);
+  FX_DCHECK(get_programatic_value_);
   get_programatic_value_(std::move(context), [weak_node = GetWeakPtr(), cb = std::move(cb)](
                                                  const Err& err, ExprValue value) {
     if (weak_node) {

@@ -125,7 +125,7 @@ bool ExtractRebootInfo(const std::string& reboot_log, RebootInfo* info) {
 }  // namespace
 
 ::fit::promise<void> RebootLogHandler::Handle(const std::string& filepath) {
-  FXL_CHECK(!has_called_handle_) << "Handle() is not intended to be called twice";
+  FX_CHECK(!has_called_handle_) << "Handle() is not intended to be called twice";
   has_called_handle_ = true;
 
   // We first check for the existence of the reboot log and attempt to parse it.

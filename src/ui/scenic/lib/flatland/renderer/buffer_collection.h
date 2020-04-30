@@ -50,7 +50,7 @@ class BufferCollectionInfo {
   // status of the buffer collection with BuffersAreAllocated().
   const fuchsia::sysmem::BufferCollectionInfo_2& GetSysmemInfo() const {
     // DCHECK if the struct is uninitialized.
-    FXL_DCHECK(buffer_collection_info_.buffer_count >= 1);
+    FX_DCHECK(buffer_collection_info_.buffer_count >= 1);
     return buffer_collection_info_;
   }
 

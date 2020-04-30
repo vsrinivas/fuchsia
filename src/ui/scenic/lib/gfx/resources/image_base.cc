@@ -11,7 +11,7 @@ const ResourceTypeInfo ImageBase::kTypeInfo = {ResourceType::kImageBase, "ImageB
 
 ImageBase::ImageBase(Session* session, ResourceId id, const ResourceTypeInfo& type_info)
     : Resource(session, session->id(), id, type_info) {
-  FXL_DCHECK(type_info.IsKindOf(ImageBase::kTypeInfo));
+  FX_DCHECK(type_info.IsKindOf(ImageBase::kTypeInfo));
 }
 
 }  // namespace gfx

@@ -35,7 +35,7 @@ void IsolatedDevmgr::Connect(zx::channel req) {
 }
 
 void IsolatedDevmgr::HandleException() {
-  FXL_LOG(INFO) << "Handling devmgr exception";
+  FX_LOGS(INFO) << "Handling devmgr exception";
   zx_exception_info_t info;
   zx::exception exception;
   zx_status_t status = devmgr_exception_channel_.read(0, &info, exception.reset_and_get_address(),
@@ -184,7 +184,7 @@ std::unique_ptr<IsolatedDevmgr> IsolatedDevmgr::Create(
   if (status == ZX_OK) {
     return std::make_unique<IsolatedDevmgr>(dispatcher, std::move(devmgr));
   } else {
-    FXL_LOG(ERROR) << "Failed to create devmgr: " << zx_status_get_string(status);
+    FX_LOGS(ERROR) << "Failed to create devmgr: " << zx_status_get_string(status);
     return nullptr;
   }
 }

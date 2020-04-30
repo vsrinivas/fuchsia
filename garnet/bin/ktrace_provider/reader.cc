@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/zircon-internal/ktrace.h>
-
 #include "garnet/bin/ktrace_provider/reader.h"
+
+#include <lib/zircon-internal/ktrace.h>
 
 namespace ktrace_provider {
 
@@ -17,7 +17,7 @@ const ktrace_header_t* Reader::ReadNextRecord() {
   }
 
   if (AvailableBytes() < sizeof(ktrace_header_t)) {
-    FXL_VLOG(10) << "No more records";
+    FX_VLOGS(10) << "No more records";
     return nullptr;
   }
 
@@ -28,7 +28,7 @@ const ktrace_header_t* Reader::ReadNextRecord() {
   }
 
   if (AvailableBytes() < KTRACE_LEN(record->tag)) {
-    FXL_VLOG(10) << "No more records, incomplete last record";
+    FX_VLOGS(10) << "No more records, incomplete last record";
     return nullptr;
   }
 
@@ -38,7 +38,7 @@ const ktrace_header_t* Reader::ReadNextRecord() {
   number_bytes_read_ += KTRACE_LEN(record->tag);
   number_records_read_ += 1;
 
-  FXL_VLOG(10) << "Importing ktrace event 0x" << std::hex << KTRACE_EVENT(record->tag) << ", size "
+  FX_VLOGS(10) << "Importing ktrace event 0x" << std::hex << KTRACE_EVENT(record->tag) << ", size "
                << std::dec << KTRACE_LEN(record->tag);
 
   return record;

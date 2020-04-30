@@ -74,7 +74,7 @@ void ManagedEnvironment::Create(const fuchsia::sys::EnvironmentPtr& parent,
   services->SetServiceTerminatedCallback([this, name = options.name()](
                                              const std::string& service, int64_t exit_code,
                                              fuchsia::sys::TerminationReason reason) {
-    FXL_LOG(WARNING) << "Service " << service << " exited on environment " << name << " with ("
+    FX_LOGS(WARNING) << "Service " << service << " exited on environment " << name << " with ("
                      << exit_code << ") reason: " << sys::HumanReadableTerminationReason(reason);
     if (sandbox_env_->events().service_terminated) {
       sandbox_env_->events().service_terminated(service, exit_code, reason);
@@ -168,7 +168,7 @@ void ManagedEnvironment::Create(const fuchsia::sys::EnvironmentPtr& parent,
             // caused by fuchsia::sys::Loader errors that will happen again once we return the
             // launch info. That failure, in turn, will be caught by the service termination
             // callback installed in the services instance.
-            FXL_LOG(ERROR) << "Make service launch info failed";
+            FX_LOGS(ERROR) << "Make service launch info failed";
           }
           return linfo;
         },
@@ -209,7 +209,7 @@ void ManagedEnvironment::Create(const fuchsia::sys::EnvironmentPtr& parent,
         running_callback_();
       }
     } else {
-      FXL_LOG(ERROR) << "Underlying enclosed Environment stopped running";
+      FX_LOGS(ERROR) << "Underlying enclosed Environment stopped running";
       running_callback_ = nullptr;
       children_.clear();
       pending_requests_.clear();

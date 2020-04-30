@@ -71,7 +71,7 @@ class OneShotPtr {
   Interface* operator->() {
     // We use FXL_ and not FX_ so the messages goes to stderr and can be intercepted by
     // ASSERT_DEATH.
-    FXL_CHECK(!oneshot_used_) << fxl::StringPrintf(
+    FX_CHECK(!oneshot_used_) << fxl::StringPrintf(
         "You've only got one shot to use ->  on a OneShotPtr<%s>", Interface::Name_);
     oneshot_used_ = true;
 

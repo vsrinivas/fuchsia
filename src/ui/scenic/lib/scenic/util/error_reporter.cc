@@ -8,27 +8,27 @@ namespace scenic_impl {
 
 namespace {
 
-#define LOG_HELPER(severity) FXL_LOG(severity) << error_string;
+#define LOG_HELPER(severity) FX_LOGS(severity) << error_string;
 
 class DefaultErrorReporter : public ErrorReporter {
  public:
   void ReportError(fxl::LogSeverity severity, std::string error_string) override {
     switch (severity) {
       case fxl::LOG_INFO:
-        FXL_LOG(INFO) << error_string;
+        FX_LOGS(INFO) << error_string;
         break;
       case fxl::LOG_WARNING:
-        FXL_LOG(WARNING) << error_string;
+        FX_LOGS(WARNING) << error_string;
         break;
       case fxl::LOG_ERROR:
-        FXL_LOG(ERROR) << error_string;
+        FX_LOGS(ERROR) << error_string;
         break;
       case fxl::LOG_FATAL:
-        FXL_LOG(FATAL) << error_string;
+        FX_LOGS(FATAL) << error_string;
         break;
       default:
         // Invalid severity.
-        FXL_DCHECK(false);
+        FX_DCHECK(false);
     }
   }
 };

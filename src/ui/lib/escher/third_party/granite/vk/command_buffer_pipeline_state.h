@@ -129,7 +129,7 @@ class CommandBufferPipelineState {
   impl::RenderPass* render_pass() { return render_pass_; }
   void set_render_pass(impl::RenderPass* render_pass) {
     // Can only set to non-null if currently null, and vice-versa.
-    FXL_DCHECK(!render_pass_ == !!render_pass);
+    FX_DCHECK(!render_pass_ == !!render_pass);
     render_pass_ = render_pass;
   }
 
@@ -352,7 +352,7 @@ ESCHER_DEBUG_PRINTABLE(CommandBufferPipelineState::StaticState);
 // Macro to avoid typing boilerplate UnpackEnum() implementations.
 #define UNPACK_ENUM_IMPL(TYPE)                                           \
   inline unsigned CommandBufferPipelineState::UnpackEnum(vk::TYPE val) { \
-    FXL_DCHECK(0 == (EnumCast(val) >> StaticState::kNum##TYPE##Bits))    \
+    FX_DCHECK(0 == (EnumCast(val) >> StaticState::kNum##TYPE##Bits))     \
         << "enum does not fit: " << vk::to_string(val);                  \
     return EnumCast(val);                                                \
   }
@@ -361,7 +361,7 @@ ESCHER_DEBUG_PRINTABLE(CommandBufferPipelineState::StaticState);
 #define UNPACK_FLAGS_ENUM_IMPL(TYPE)                                            \
   inline unsigned CommandBufferPipelineState::UnpackEnum(vk::TYPE##Flags val) { \
     unsigned result = static_cast<Vk##CullMode##Flags>(val);                    \
-    FXL_DCHECK(0 == (result >> StaticState::kNum##TYPE##Bits))                  \
+    FX_DCHECK(0 == (result >> StaticState::kNum##TYPE##Bits))                   \
         << "enum does not fit: " << vk::to_string(val);                         \
     return result;                                                              \
   }

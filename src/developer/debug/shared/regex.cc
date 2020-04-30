@@ -44,7 +44,7 @@ bool Regex::Init(const std::string& regexp, Regex::CompareType compare_type) {
 }
 
 bool Regex::Match(const std::string& candidate) const {
-  FXL_DCHECK(valid());
+  FX_DCHECK(valid());
 
   int status = regexec(&handle_.value(), candidate.c_str(), 0, nullptr, 0);
   return status == 0;

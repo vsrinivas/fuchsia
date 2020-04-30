@@ -72,7 +72,7 @@ ThreadController::StopOp UntilThreadController::OnThreadStop(
   // the code in this function depends on.
   if (!breakpoint_) {
     // Our internal breakpoint shouldn't be deleted out from under ourselves.
-    FXL_NOTREACHED();
+    FX_NOTREACHED();
     return kUnexpected;
   }
 
@@ -99,7 +99,7 @@ ThreadController::StopOp UntilThreadController::OnThreadStop(
 
   const Stack& stack = thread()->GetStack();
   if (stack.empty()) {
-    FXL_NOTREACHED();  // Should always have a current frame on stop.
+    FX_NOTREACHED();  // Should always have a current frame on stop.
     return kUnexpected;
   }
 

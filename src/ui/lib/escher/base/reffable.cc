@@ -7,12 +7,12 @@
 
 namespace escher {
 
-Reffable::~Reffable() { FXL_DCHECK(ref_count_ == 0); }
+Reffable::~Reffable() { FX_DCHECK(ref_count_ == 0); }
 
 #ifndef NDEBUG
 void Reffable::Adopt() {
-  FXL_DCHECK(adoption_required_);
-  FXL_DCHECK(ref_count_ == 1);
+  FX_DCHECK(adoption_required_);
+  FX_DCHECK(ref_count_ == 1);
   adoption_required_ = false;
 }
 #endif

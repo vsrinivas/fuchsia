@@ -73,7 +73,7 @@ void UpdateSha256(SHA256_CTX* ctx, T field) {
       Exit("UpdateSha256 unexpected field size");
   }
   if (!SHA256_Update(ctx, &field_le, sizeof(field_le))) {
-    FXL_CHECK(false) << "SHA256_Update() failed in UpdateSha256()";
+    FX_CHECK(false) << "SHA256_Update() failed in UpdateSha256()";
   }
 }
 

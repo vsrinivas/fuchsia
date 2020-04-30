@@ -28,7 +28,7 @@ bool RawPrinter::Create(const SessionResultSpec* session_result_spec, const Conf
   if (output_file_name != "") {
     out_file = fopen(output_file_name.c_str(), "w");
     if (!out_file) {
-      FXL_LOG(ERROR) << "Unable to open file for writing: " << output_file_name;
+      FX_LOGS(ERROR) << "Unable to open file for writing: " << output_file_name;
       return false;
     }
   }
@@ -144,7 +144,7 @@ uint64_t RawPrinter::PrintOneTrace(uint32_t iter_num) {
         break;
       default:
         // The reader shouldn't be returning unknown records.
-        FXL_NOTREACHED();
+        FX_NOTREACHED();
         break;
     }
   }

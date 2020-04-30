@@ -30,7 +30,7 @@ std::unique_ptr<TraceConfig> TraceConfig::Create(perfmon::ModelEventManager* mod
 TraceConfig::TraceConfig(perfmon::ModelEventManager* model_event_manager,
                          IsCategoryEnabledFunc is_category_enabled)
     : model_event_manager_(model_event_manager), is_category_enabled_(is_category_enabled) {
-  FXL_DCHECK(model_event_manager);
+  FX_DCHECK(model_event_manager);
 }
 
 bool TraceConfig::ProcessCategories(const CategorySpec categories[], size_t num_categories,
@@ -38,7 +38,7 @@ bool TraceConfig::ProcessCategories(const CategorySpec categories[], size_t num_
   for (size_t i = 0; i < num_categories; ++i) {
     const CategorySpec& cat = categories[i];
     if (is_category_enabled_(cat.name)) {
-      FXL_VLOG(1) << "Category " << cat.name << " enabled";
+      FX_VLOGS(1) << "Category " << cat.name << " enabled";
       switch (cat.group) {
         case CategoryGroup::kOption:
           switch (static_cast<TraceOption>(cat.value)) {
@@ -58,7 +58,7 @@ bool TraceConfig::ProcessCategories(const CategorySpec categories[], size_t num_
           break;
         case CategoryGroup::kSample:
           if (data->have_sample_rate) {
-            FXL_LOG(ERROR) << "Only one sampling mode at a time is currently supported";
+            FX_LOGS(ERROR) << "Only one sampling mode at a time is currently supported";
             return false;
           }
           data->have_sample_rate = true;
@@ -73,7 +73,7 @@ bool TraceConfig::ProcessCategories(const CategorySpec categories[], size_t num_
         case CategoryGroup::kProgrammableModel:
           if (data->have_programmable_category) {
             // TODO(dje): Temporary limitation.
-            FXL_LOG(ERROR) << "Only one programmable category at a time is "
+            FX_LOGS(ERROR) << "Only one programmable category at a time is "
                               "currently supported";
             return false;
           }
@@ -134,13 +134,13 @@ bool TraceConfig::ProcessTimebase() {
   for (size_t i = 0; i < kNumTimebaseCategories; ++i) {
     const TimebaseSpec& cat = kTimebaseCategories[i];
     if (is_category_enabled_(cat.name)) {
-      FXL_VLOG(1) << "Category " << cat.name << " enabled";
+      FX_VLOGS(1) << "Category " << cat.name << " enabled";
       if (timebase_event_ != perfmon::kEventIdNone) {
-        FXL_LOG(ERROR) << "Timebase already specified";
+        FX_LOGS(ERROR) << "Timebase already specified";
         return false;
       }
       if (sample_rate_ == 0) {
-        FXL_LOG(ERROR) << "Timebase cannot be used in tally mode";
+        FX_LOGS(ERROR) << "Timebase cannot be used in tally mode";
         return false;
       }
       timebase_event_ = cat.event;
@@ -195,8 +195,8 @@ bool TraceConfig::TranslateToDeviceConfig(perfmon::Config* out_config) const {
 
   if (timebase_event_ != perfmon::kEventIdNone) {
     const perfmon::EventDetails* details;
-    FXL_CHECK(model_event_manager_->EventIdToEventDetails(timebase_event_, &details));
-    FXL_VLOG(2) << fxl::StringPrintf("Using timebase %s", details->name);
+    FX_CHECK(model_event_manager_->EventIdToEventDetails(timebase_event_, &details));
+    FX_VLOGS(2) << fxl::StringPrintf("Using timebase %s", details->name);
     cfg->AddEvent(timebase_event_, sample_rate_, flags | pc_flags | perfmon::Config::kFlagTimebase);
     rate = 0;
   } else {
@@ -220,17 +220,17 @@ bool TraceConfig::TranslateToDeviceConfig(perfmon::Config* out_config) const {
         group_name = "programmable-model";
         break;
       default:
-        FXL_NOTREACHED();
+        FX_NOTREACHED();
     }
     for (size_t i = 0; i < cat->count; ++i) {
       perfmon::EventId id = cat->events[i];
       perfmon::Config::Status status = cfg->AddEvent(id, rate, flags);
       if (status != perfmon::Config::Status::OK) {
-        FXL_LOG(ERROR) << "Error processing event configuration: "
+        FX_LOGS(ERROR) << "Error processing event configuration: "
                        << perfmon::Config::StatusToString(status);
         return false;
       }
-      FXL_VLOG(2) << fxl::StringPrintf("Adding %s event id %u to trace", group_name, id);
+      FX_VLOGS(2) << fxl::StringPrintf("Adding %s event id %u to trace", group_name, id);
     }
   }
 
@@ -245,7 +245,7 @@ std::string TraceConfig::ToString() const {
 
   if (timebase_event_ != perfmon::kEventIdNone) {
     const perfmon::EventDetails* details;
-    FXL_CHECK(model_event_manager_->EventIdToEventDetails(timebase_event_, &details));
+    FX_CHECK(model_event_manager_->EventIdToEventDetails(timebase_event_, &details));
     result += fxl::StringPrintf("Timebase 0x%x(%s)", timebase_event_, details->name);
   }
 

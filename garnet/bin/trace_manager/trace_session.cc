@@ -41,7 +41,7 @@ TraceSession::~TraceSession() {
 
 void TraceSession::AddProvider(TraceProviderBundle* bundle) {
   if (state_ == State::kTerminating) {
-    FXL_VLOG(1) << "Ignoring new provider " << *bundle << ", terminating";
+    FX_VLOGS(1) << "Ignoring new provider " << *bundle << ", terminating";
     return;
   }
 
@@ -53,7 +53,7 @@ void TraceSession::AddProvider(TraceProviderBundle* bundle) {
   }
   uint64_t buffer_size = buffer_size_megabytes * 1024 * 1024;
 
-  FXL_VLOG(1) << "Adding provider " << *bundle << ", buffer size " << buffer_size_megabytes << "MB";
+  FX_VLOGS(1) << "Adding provider " << *bundle << ", buffer size " << buffer_size_megabytes << "MB";
 
   tracees_.emplace_back(std::make_unique<Tracee>(this, bundle));
   fidl::VectorPtr<std::string> categories_clone;
@@ -100,7 +100,7 @@ void TraceSession::AddProvider(TraceProviderBundle* bundle) {
         tracee->Stop(/*write_results=*/false);
         break;
       default:
-        FXL_NOTREACHED();
+        FX_NOTREACHED();
         break;
     }
   }
@@ -110,7 +110,7 @@ void TraceSession::MarkInitialized() { TransitionToState(State::kInitialized); }
 
 void TraceSession::Terminate(fit::closure callback) {
   if (state_ == State::kTerminating) {
-    FXL_VLOG(1) << "Ignoring terminate request, already terminating";
+    FX_VLOGS(1) << "Ignoring terminate request, already terminating";
     return;
   }
 
@@ -128,7 +128,7 @@ void TraceSession::Terminate(fit::closure callback) {
 void TraceSession::Start(controller::BufferDisposition buffer_disposition,
                          const std::vector<std::string>& additional_categories,
                          controller::Controller::StartTracingCallback callback) {
-  FXL_DCHECK(state_ == State::kInitialized || state_ == State::kStopped);
+  FX_DCHECK(state_ == State::kInitialized || state_ == State::kStopped);
 
   if (force_clear_buffer_contents_) {
     // "force-clear" -> Clear the entire buffer because it was saved.
@@ -155,8 +155,8 @@ void TraceSession::Start(controller::BufferDisposition buffer_disposition,
 }
 
 void TraceSession::Stop(bool write_results, fit::closure callback) {
-  FXL_DCHECK(state_ == State::kInitialized || state_ == State::kStarting ||
-             state_ == State::kStarted);
+  FX_DCHECK(state_ == State::kInitialized || state_ == State::kStarting ||
+            state_ == State::kStarted);
 
   TransitionToState(State::kStopping);
   stop_callback_ = std::move(callback);
@@ -193,7 +193,7 @@ void TraceSession::OnProviderStarted(TraceProviderBundle* bundle) {
 
     if (it != tracees_.end()) {
       if (state_ == State::kReady || state_ == State::kInitialized) {
-        FXL_LOG(WARNING) << "Provider " << *bundle << " sent a \"started\""
+        FX_LOGS(WARNING) << "Provider " << *bundle << " sent a \"started\""
                          << " notification but tracing hasn't started";
         // Misbehaving provider, but it may just be slow.
         (*it)->Stop(/*write_results=*/false);
@@ -210,7 +210,7 @@ void TraceSession::OnProviderStarted(TraceProviderBundle* bundle) {
 // This includes "failed" as well as "started".
 
 void TraceSession::CheckAllProvidersStarted() {
-  FXL_DCHECK(state_ == State::kStarting);
+  FX_DCHECK(state_ == State::kStarting);
 
   bool all_started =
       std::accumulate(tracees_.begin(), tracees_.end(), true, [](bool value, const auto& tracee) {
@@ -219,12 +219,12 @@ void TraceSession::CheckAllProvidersStarted() {
                       // TODO(PT-10): We should still record what providers failed to start
                       // (but is that done in timeout handling?).
                       tracee->state() == Tracee::State::kStopped);
-        FXL_VLOG(5) << "tracee " << *tracee->bundle() << (ready ? "" : " not") << " ready";
+        FX_VLOGS(5) << "tracee " << *tracee->bundle() << (ready ? "" : " not") << " ready";
         return value && ready;
       });
 
   if (all_started) {
-    FXL_VLOG(2) << "All providers reporting started";
+    FX_VLOGS(2) << "All providers reporting started";
     NotifyStarted();
   }
 }
@@ -232,7 +232,7 @@ void TraceSession::CheckAllProvidersStarted() {
 void TraceSession::NotifyStarted() {
   TransitionToState(State::kStarted);
   if (start_callback_) {
-    FXL_VLOG(1) << "Marking session as having started";
+    FX_VLOGS(1) << "Marking session as having started";
     session_start_timeout_.Cancel();
     auto callback = std::move(start_callback_);
     controller::Controller_StartTracing_Result result;
@@ -275,17 +275,17 @@ void TraceSession::OnProviderStopped(TraceProviderBundle* bundle, bool write_res
 }
 
 void TraceSession::CheckAllProvidersStopped() {
-  FXL_DCHECK(state_ == State::kStopping);
+  FX_DCHECK(state_ == State::kStopping);
 
   bool all_stopped =
       std::accumulate(tracees_.begin(), tracees_.end(), true, [](bool value, const auto& tracee) {
         bool stopped = tracee->state() == Tracee::State::kStopped;
-        FXL_VLOG(5) << "tracee " << *tracee->bundle() << (stopped ? "" : " not") << " stopped";
+        FX_VLOGS(5) << "tracee " << *tracee->bundle() << (stopped ? "" : " not") << " stopped";
         return value && stopped;
       });
 
   if (all_stopped) {
-    FXL_VLOG(2) << "All providers reporting stopped";
+    FX_VLOGS(2) << "All providers reporting stopped";
     TransitionToState(State::kStopped);
     NotifyStopped();
   }
@@ -293,21 +293,21 @@ void TraceSession::CheckAllProvidersStopped() {
 
 void TraceSession::NotifyStopped() {
   if (stop_callback_) {
-    FXL_VLOG(1) << "Marking session as having stopped";
+    FX_VLOGS(1) << "Marking session as having stopped";
     session_stop_timeout_.Cancel();
     auto callback = std::move(stop_callback_);
-    FXL_DCHECK(callback);
+    FX_DCHECK(callback);
     callback();
   }
 }
 
 void TraceSession::FinishStoppingDueToTimeout() {
   if (state_ == State::kStopping) {
-    FXL_VLOG(1) << "Marking session as stopped, timed out waiting for tracee(s)";
+    FX_VLOGS(1) << "Marking session as stopped, timed out waiting for tracee(s)";
     TransitionToState(State::kStopped);
     for (auto& tracee : tracees_) {
       if (tracee->state() != Tracee::State::kStopped)
-        FXL_LOG(WARNING) << "Timed out waiting for trace provider " << *tracee->bundle()
+        FX_LOGS(WARNING) << "Timed out waiting for trace provider " << *tracee->bundle()
                          << " to stop";
     }
     NotifyStopped();
@@ -349,11 +349,11 @@ void TraceSession::OnProviderTerminated(TraceProviderBundle* bundle) {
 
 void TraceSession::TerminateSessionIfEmpty() {
   if (state_ == State::kTerminating && tracees_.empty()) {
-    FXL_VLOG(1) << "Marking session as terminated, no more tracees";
+    FX_VLOGS(1) << "Marking session as terminated, no more tracees";
 
     session_terminate_timeout_.Cancel();
     auto callback = std::move(terminate_callback_);
-    FXL_DCHECK(callback);
+    FX_DCHECK(callback);
     callback();
   }
 }
@@ -362,34 +362,34 @@ void TraceSession::FinishTerminatingDueToTimeout() {
   // We do not consider pending_start_tracees_ here as we only
   // terminate them as a best effort.
   if (state_ == State::kTerminating && !tracees_.empty()) {
-    FXL_VLOG(1) << "Marking session as terminated, timed out waiting for tracee(s)";
+    FX_VLOGS(1) << "Marking session as terminated, timed out waiting for tracee(s)";
 
     for (auto& tracee : tracees_) {
       if (tracee->state() != Tracee::State::kTerminated)
-        FXL_LOG(WARNING) << "Timed out waiting for trace provider " << *tracee->bundle()
+        FX_LOGS(WARNING) << "Timed out waiting for trace provider " << *tracee->bundle()
                          << " to terminate";
     }
     auto callback = std::move(terminate_callback_);
-    FXL_DCHECK(callback);
+    FX_DCHECK(callback);
     callback();
   }
 }
 
 void TraceSession::SessionStartTimeout(async_dispatcher_t* dispatcher, async::TaskBase* task,
                                        zx_status_t status) {
-  FXL_LOG(WARNING) << "Waiting for start timed out.";
+  FX_LOGS(WARNING) << "Waiting for start timed out.";
   FinishStartingDueToTimeout();
 }
 
 void TraceSession::SessionStopTimeout(async_dispatcher_t* dispatcher, async::TaskBase* task,
                                       zx_status_t status) {
-  FXL_LOG(WARNING) << "Waiting for stop timed out.";
+  FX_LOGS(WARNING) << "Waiting for stop timed out.";
   FinishStoppingDueToTimeout();
 }
 
 void TraceSession::SessionTerminateTimeout(async_dispatcher_t* dispatcher, async::TaskBase* task,
                                            zx_status_t status) {
-  FXL_LOG(WARNING) << "Waiting for termination timed out.";
+  FX_LOGS(WARNING) << "Waiting for termination timed out.";
   FinishTerminatingDueToTimeout();
 }
 
@@ -402,19 +402,19 @@ void TraceSession::RemoveDeadProvider(TraceProviderBundle* bundle) {
 }
 
 bool TraceSession::WriteProviderData(Tracee* tracee) {
-  FXL_DCHECK(!tracee->results_written());
+  FX_DCHECK(!tracee->results_written());
 
   switch (tracee->TransferRecords(destination_)) {
     case TransferStatus::kComplete:
       break;
     case TransferStatus::kProviderError:
-      FXL_LOG(ERROR) << "Problem reading provider socket output, skipping";
+      FX_LOGS(ERROR) << "Problem reading provider socket output, skipping";
       break;
     case TransferStatus::kWriteError:
-      FXL_LOG(ERROR) << "Encountered unrecoverable error writing socket";
+      FX_LOGS(ERROR) << "Encountered unrecoverable error writing socket";
       return false;
     case TransferStatus::kReceiverDead:
-      FXL_LOG(ERROR) << "Consumer socket peer is closed";
+      FX_LOGS(ERROR) << "Consumer socket peer is closed";
       return false;
     default:
       __UNREACHABLE;
@@ -425,7 +425,7 @@ bool TraceSession::WriteProviderData(Tracee* tracee) {
 }
 
 void TraceSession::Abort() {
-  FXL_VLOG(1) << "Fatal error occurred, aborting session";
+  FX_VLOGS(1) << "Fatal error occurred, aborting session";
 
   tracees_.clear();
   abort_handler_();
@@ -434,7 +434,7 @@ void TraceSession::Abort() {
 void TraceSession::WriteTraceInfo() {
   auto status = WriteMagicNumberRecord();
   if (status != TransferStatus::kComplete) {
-    FXL_LOG(ERROR) << "Failed to write magic number record: " << status;
+    FX_LOGS(ERROR) << "Failed to write magic number record: " << status;
   }
 }
 
@@ -456,7 +456,7 @@ TransferStatus TraceSession::WriteMagicNumberRecord() {
 }
 
 void TraceSession::TransitionToState(State new_state) {
-  FXL_VLOG(2) << "Transitioning from " << state_ << " to " << new_state;
+  FX_VLOGS(2) << "Transitioning from " << state_ << " to " << new_state;
   state_ = new_state;
 }
 

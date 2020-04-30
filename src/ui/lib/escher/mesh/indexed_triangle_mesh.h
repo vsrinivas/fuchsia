@@ -50,7 +50,7 @@ struct IndexedTriangleMesh {
   uint32_t triangle_count() const { return index_count() / 3; }
 
   void resize_indices(uint32_t num_indices) {
-    FXL_DCHECK(num_indices % 3 == 0);
+    FX_DCHECK(num_indices % 3 == 0);
     indices.resize(num_indices);
   }
 
@@ -100,42 +100,42 @@ struct IndexedTriangleMesh {
   // Return true if the mesh passes basic sanity checks, and false otherwise.
   bool IsValid() const {
     if (index_count() % 3 != 0) {
-      FXL_LOG(ERROR) << "index-count must be a multiple of 3: " << index_count();
+      FX_LOGS(ERROR) << "index-count must be a multiple of 3: " << index_count();
       return false;
     }
     for (auto i : indices) {
       if (i >= vertex_count()) {
-        FXL_LOG(ERROR) << "index exceeds vertex-count: " << i << ", " << vertex_count();
+        FX_LOGS(ERROR) << "index exceeds vertex-count: " << i << ", " << vertex_count();
         return false;
       }
     }
     if (std::is_same<AttrT1, nullptr_t>::value) {
       if (attributes1.size() != 0) {
-        FXL_LOG(ERROR) << "count of null attribute1 must be zero: " << attributes1.size();
+        FX_LOGS(ERROR) << "count of null attribute1 must be zero: " << attributes1.size();
         return false;
       }
     } else if (attributes1.size() != vertex_count()) {
-      FXL_LOG(ERROR) << "count of attribute1 must match vertex-count: " << attributes1.size()
+      FX_LOGS(ERROR) << "count of attribute1 must match vertex-count: " << attributes1.size()
                      << ", " << vertex_count();
       return false;
     }
     if (std::is_same<AttrT2, nullptr_t>::value) {
       if (attributes2.size() != 0) {
-        FXL_LOG(ERROR) << "count of null attribute2 must be zero: " << attributes2.size();
+        FX_LOGS(ERROR) << "count of null attribute2 must be zero: " << attributes2.size();
         return false;
       }
     } else if (attributes2.size() != vertex_count()) {
-      FXL_LOG(ERROR) << "count of attribute2 must match vertex-count: " << attributes2.size()
+      FX_LOGS(ERROR) << "count of attribute2 must match vertex-count: " << attributes2.size()
                      << ", " << vertex_count();
       return false;
     }
     if (std::is_same<AttrT3, nullptr_t>::value) {
       if (attributes3.size() != 0) {
-        FXL_LOG(ERROR) << "count of null attribute3 must be zero: " << attributes3.size();
+        FX_LOGS(ERROR) << "count of null attribute3 must be zero: " << attributes3.size();
         return false;
       }
     } else if (attributes3.size() != vertex_count()) {
-      FXL_LOG(ERROR) << "count of attribute3 must match vertex-count: " << attributes3.size()
+      FX_LOGS(ERROR) << "count of attribute3 must match vertex-count: " << attributes3.size()
                      << ", " << vertex_count();
       return false;
     }

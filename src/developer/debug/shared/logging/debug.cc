@@ -292,7 +292,7 @@ const char* LogCategoryToString(LogCategory category) {
       return "<none>";
   }
 
-  FXL_NOTREACHED();
+  FX_NOTREACHED();
   return "<unknown>";
 }
 

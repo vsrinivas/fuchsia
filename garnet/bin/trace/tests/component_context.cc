@@ -21,7 +21,7 @@ void InitComponentContext() {
   {
     async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
     g_context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
-    FXL_CHECK(g_context);
+    FX_CHECK(g_context);
   }
 }
 

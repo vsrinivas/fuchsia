@@ -28,7 +28,7 @@ PresentView::PresentView(std::unique_ptr<sys::ComponentContext> context)
 
 bool PresentView::Present(ViewInfo view_info, fit::function<void(zx_status_t)> on_view_error) {
   if (view_info.url.empty()) {
-    FXL_LOG(ERROR) << "present_view requires the url of a view provider application "
+    FX_LOGS(ERROR) << "present_view requires the url of a view provider application "
                       "to present_view.";
     return false;
   }
@@ -47,7 +47,7 @@ bool PresentView::Present(ViewInfo view_info, fit::function<void(zx_status_t)> o
     // If we wanted present_view to serve |fuchsia.intl.ProfileProvider|, then start the
     // |intl_property_provider| and make it available to the component under test.
     //
-    FXL_CHECK(ZX_OK == zx::channel::create(0, &server_side, &client_side));
+    FX_CHECK(ZX_OK == zx::channel::create(0, &server_side, &client_side));
     RunIntlService(view_info.locale, std::move(server_side), &launcher);
 
     fuchsia::sys::ServiceListPtr injected_services(new fuchsia::sys::ServiceList);
@@ -82,7 +82,7 @@ bool PresentView::Present(ViewInfo view_info, fit::function<void(zx_status_t)> o
 
 void PresentView::RunIntlService(const std::string& locale, zx::channel server_side,
                                  fuchsia::sys::LauncherPtr* launcher) {
-  FXL_LOG(INFO) << "Starting intl property provider with locale: " << locale;
+  FX_LOGS(INFO) << "Starting intl property provider with locale: " << locale;
   fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = kIntlPropertyProviderManifest;
   launch_info.arguments.emplace();

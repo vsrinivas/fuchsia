@@ -16,13 +16,13 @@ Scenic::Scenic(sys::ComponentContext* app_context, inspect::Node inspect_node,
     : app_context_(app_context),
       quit_callback_(std::move(quit_callback)),
       inspect_node_(std::move(inspect_node)) {
-  FXL_DCHECK(app_context_);
+  FX_DCHECK(app_context_);
 
   app_context->outgoing()->AddPublicService(scenic_bindings_.GetHandler(this));
 
   // Scenic relies on having a valid default dispatcher. A hard check here means
   // we don't have to be defensive everywhere else.
-  FXL_CHECK(async_get_default_dispatcher());
+  FX_CHECK(async_get_default_dispatcher());
 }
 
 Scenic::~Scenic() = default;
@@ -38,8 +38,8 @@ void Scenic::SetInitialized(fxl::WeakPtr<gfx::ViewFocuserRegistry> view_focuser_
 }
 
 void Scenic::SetFrameScheduler(const std::shared_ptr<scheduling::FrameScheduler>& frame_scheduler) {
-  FXL_DCHECK(!frame_scheduler_) << "Error: FrameScheduler already set";
-  FXL_DCHECK(frame_scheduler) << "Error: No FrameScheduler provided";
+  FX_DCHECK(!frame_scheduler_) << "Error: FrameScheduler already set";
+  FX_DCHECK(frame_scheduler) << "Error: No FrameScheduler provided";
   frame_scheduler_ = frame_scheduler;
 }
 
@@ -91,7 +91,7 @@ void Scenic::CreateSessionImmediately(
 
   auto session = std::make_unique<scenic_impl::Session>(
       session_id, std::move(session_request), std::move(listener), destroy_session_function);
-  FXL_DCHECK(session_id == session->id());
+  FX_DCHECK(session_id == session->id());
 
   session->SetFrameScheduler(frame_scheduler_);
 
@@ -108,15 +108,15 @@ void Scenic::CreateSessionImmediately(
   }
   session->SetCommandDispatchers(std::move(dispatchers));
 
-  FXL_CHECK(sessions_.find(session_id) == sessions_.end());
+  FX_CHECK(sessions_.find(session_id) == sessions_.end());
   sessions_[session_id] = std::move(session);
 
   if (view_focuser && view_focuser_registry_) {
     view_focuser_registry_->RegisterViewFocuser(session_id, std::move(view_focuser));
   } else if (!view_focuser) {
-    FXL_VLOG(2) << "Invalid fuchsia.ui.views.Focuser request.";
+    FX_VLOGS(2) << "Invalid fuchsia.ui.views.Focuser request.";
   } else if (!view_focuser_registry_) {
-    FXL_LOG(ERROR) << "Failed to register fuchsia.ui.views.Focuser request.";
+    FX_LOGS(ERROR) << "Failed to register fuchsia.ui.views.Focuser request.";
   }
 }
 
@@ -127,7 +127,7 @@ void Scenic::GetDisplayInfo(fuchsia::ui::scenic::Scenic::GetDisplayInfoCallback 
     // delegate class completely. If the delegate becomes a permanent fixture of the system,
     // switch to SCN-1506, as we need a more formal mechanism for delayed execution and
     // initialization order logic.
-    FXL_DCHECK(display_delegate_);
+    FX_DCHECK(display_delegate_);
     display_delegate_->GetDisplayInfo(std::move(callback));
   });
 }
@@ -139,7 +139,7 @@ void Scenic::TakeScreenshot(fuchsia::ui::scenic::Scenic::TakeScreenshotCallback 
     // delegate class completely. If the delegate becomes a permanent fixture of the system,
     // switch to SCN-1506, as we need a more formal mechanism for delayed execution and
     // initialization order logic.
-    FXL_DCHECK(screenshot_delegate_);
+    FX_DCHECK(screenshot_delegate_);
     screenshot_delegate_->TakeScreenshot(std::move(callback));
   });
 }
@@ -152,7 +152,7 @@ void Scenic::GetDisplayOwnershipEvent(
     // delegate class completely. If the delegate becomes a permanent fixture of the system,
     // switch to SCN-1506, as we need a more formal mechanism for delayed execution and
     // initialization order logic.
-    FXL_DCHECK(display_delegate_);
+    FX_DCHECK(display_delegate_);
     display_delegate_->GetDisplayOwnershipEvent(std::move(callback));
   });
 }

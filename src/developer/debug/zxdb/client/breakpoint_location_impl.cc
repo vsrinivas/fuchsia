@@ -23,7 +23,7 @@ Location BreakpointLocationImpl::GetLocation() const {
   // loads and unloads for the cache.
   auto vect = process_->GetSymbols()->ResolveInputLocation(InputLocation(address_));
   // Resolving an address should always produce one result.
-  FXL_DCHECK(vect.size() == 1u);
+  FX_DCHECK(vect.size() == 1u);
   return std::move(vect[0]);
 }
 

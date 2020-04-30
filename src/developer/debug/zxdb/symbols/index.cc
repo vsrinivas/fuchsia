@@ -290,7 +290,7 @@ void UnitIndexer::Scan(std::vector<IndexNode::DieRef>* main_functions) {
       continue;
     }
 
-    FXL_DCHECK(scanner_.die_index() < indexable_.size());
+    FX_DCHECK(scanner_.die_index() < indexable_.size());
     indexable_[scanner_.die_index()] =
         NamedDieRef(is_declaration && *is_declaration, die->getOffset(), kind,
                     name ? *name : nullptr, decl_offset, has_abstract_origin);

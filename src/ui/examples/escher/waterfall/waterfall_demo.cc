@@ -65,7 +65,7 @@ WaterfallDemo::WaterfallDemo(escher::EscherWeakPtr escher_in, vk::Format swapcha
         // TODO(44326): 8x MSAA causes a segfault on NVIDIA/Linux.
         // device_caps.GetAllMatchingSampleCounts({1U, 2U, 4U, 8});
         device_caps.GetAllMatchingSampleCounts({1U, 2U, 4U});
-    FXL_CHECK(!filtered.empty());
+    FX_CHECK(!filtered.empty());
     allowed_sample_counts_.reserve(filtered.size());
     for (auto sample_count : filtered) {
       // PaperRendererConfig expects uint8_t, not size_t.
@@ -138,7 +138,7 @@ void WaterfallDemo::WarmPipelineCache(vk::Format swapchain_format) const {
 }
 
 void WaterfallDemo::SetWindowSize(vk::Extent2D window_size) {
-  FXL_CHECK(paper_scene_);
+  FX_CHECK(paper_scene_);
   if (window_size_ == window_size)
     return;
 
@@ -150,7 +150,7 @@ void WaterfallDemo::SetWindowSize(vk::Extent2D window_size) {
 }
 
 void WaterfallDemo::InitializeYcbcrTexture() {
-  FXL_CHECK(escher()->device()->caps().allow_ycbcr);
+  FX_CHECK(escher()->device()->caps().allow_ycbcr);
 
   const char* kYuvFramePath = "/assets/bbb_frame.yuv";
   constexpr uint32_t kYuvFrameWidth = 320;
@@ -158,10 +158,10 @@ void WaterfallDemo::InitializeYcbcrTexture() {
   constexpr vk::Format kYuvFrameFormat = kYuvTextureFormat;
 
   auto base = escher()->shader_program_factory()->filesystem()->base_path();
-  FXL_CHECK(base);
+  FX_CHECK(base);
   std::string path = *base + kYuvFramePath;
   std::vector<uint8_t> data;
-  FXL_CHECK(files::ReadFileToVector(path, &data)) << "failed to read: " << path;
+  FX_CHECK(files::ReadFileToVector(path, &data)) << "failed to read: " << path;
 
   auto image = escher()->gpu_allocator()->AllocateImage(
       escher()->resource_recycler(),
@@ -206,7 +206,7 @@ void WaterfallDemo::ProcessCommandLineArgs(int argc, char** argv) {
 void WaterfallDemo::CycleNumLights() {
   uint32_t num_point_lights = (paper_scene_->num_point_lights() + 1) % (kMaxNumPointLights + 1);
   paper_scene_->point_lights.resize(num_point_lights);
-  FXL_LOG(INFO) << "WaterfallDemo number of point lights: " << num_point_lights;
+  FX_LOGS(INFO) << "WaterfallDemo number of point lights: " << num_point_lights;
 }
 
 void WaterfallDemo::CycleAnimationState() {
@@ -225,7 +225,7 @@ void WaterfallDemo::CycleAnimationState() {
       lighting_stopwatch_.Stop();
       break;
     default:
-      FXL_CHECK(false) << "animation_state_ must be 0-2, is: " << animation_state_;
+      FX_CHECK(false) << "animation_state_ must be 0-2, is: " << animation_state_;
   }
 }
 
@@ -246,14 +246,14 @@ bool WaterfallDemo::HandleKeyPress(std::string key) {
             "orthographic", "perspective", "tilted perspective", "tilted perspective from corner",
             "stereo",
         };
-        FXL_LOG(INFO) << "Camera projection mode: " << kCameraModeStrings[camera_projection_mode_];
+        FX_LOGS(INFO) << "Camera projection mode: " << kCameraModeStrings[camera_projection_mode_];
         return true;
       }
       // Toggle display of debug information.
       case 'D': {
         show_debug_info_ = !show_debug_info_;
         renderer_config_.debug = show_debug_info_;
-        FXL_LOG(INFO) << "WaterfallDemo " << (show_debug_info_ ? "enabled" : "disabled")
+        FX_LOGS(INFO) << "WaterfallDemo " << (show_debug_info_ ? "enabled" : "disabled")
                       << " debugging.";
         renderer_->SetConfig(renderer_config_);
         return true;
@@ -267,7 +267,7 @@ bool WaterfallDemo::HandleKeyPress(std::string key) {
         current_sample_count_index_ =
             (current_sample_count_index_ + 1) % allowed_sample_counts_.size();
         renderer_config_.msaa_sample_count = allowed_sample_counts_[current_sample_count_index_];
-        FXL_LOG(INFO) << "MSAA sample count: " << unsigned{renderer_config_.msaa_sample_count};
+        FX_LOGS(INFO) << "MSAA sample count: " << unsigned{renderer_config_.msaa_sample_count};
         renderer_->SetConfig(renderer_config_);
         return true;
       }
@@ -276,11 +276,11 @@ bool WaterfallDemo::HandleKeyPress(std::string key) {
         auto& shadow_type = renderer_config_.shadow_type;
         shadow_type = EnumCycle(shadow_type);
         while (!renderer_->SupportsShadowType(shadow_type)) {
-          FXL_LOG(INFO) << "WaterfallDemo skipping unsupported shadow type: " << shadow_type;
+          FX_LOGS(INFO) << "WaterfallDemo skipping unsupported shadow type: " << shadow_type;
           shadow_type = EnumCycle(shadow_type);
         }
         renderer_->SetConfig(renderer_config_);
-        FXL_LOG(INFO) << "WaterfallDemo changed shadow type: " << renderer_config_;
+        FX_LOGS(INFO) << "WaterfallDemo changed shadow type: " << renderer_config_;
         return true;
       }
       case '1':
@@ -294,7 +294,7 @@ bool WaterfallDemo::HandleKeyPress(std::string key) {
       case '9':
       case '0':
         current_scene_ = (demo_scenes_.size() + (key_char - '0') - 1) % demo_scenes_.size();
-        FXL_LOG(INFO) << "Current scene index: " << current_scene_;
+        FX_LOGS(INFO) << "Current scene index: " << current_scene_;
         return true;
       default:
         return Demo::HandleKeyPress(key);
@@ -375,7 +375,7 @@ static std::vector<escher::Camera> GenerateCameras(int camera_projection_mode,
     } break;
     default:
       // Should not happen.
-      FXL_DCHECK(false);
+      FX_DCHECK(false);
       return {escher::Camera::NewOrtho(volume)};
   }
 }
@@ -411,7 +411,7 @@ static void UpdateLighting(PaperScene* paper_scene, const escher::Stopwatch& sto
     paper_scene->point_lights[0].position = vec3(
         width * .3f, height * .3f, -(800.f + 200.f * sin(stopwatch.GetElapsedSeconds() * 1.2f)));
   } else {
-    FXL_DCHECK(num_point_lights == 2);
+    FX_DCHECK(num_point_lights == 2);
 
     paper_scene->point_lights[0].position = vec3(
         width * .3f, height * .3f, -(800.f + 300.f * sin(stopwatch.GetElapsedSeconds() * 1.2f)));

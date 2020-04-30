@@ -219,7 +219,7 @@ class CommandBuffer : public Reffable {
   // at |binding| (see BindVertices() above) when the next draw call is made.
   void SetVertexAttributes(uint32_t binding, uint32_t attrib, vk::Format format,
                            vk::DeviceSize offset) {
-    FXL_DCHECK(IsInRenderPass());
+    FX_DCHECK(IsInRenderPass());
     pipeline_state_.SetVertexAttributes(binding, attrib, format, offset);
     SetDirty(kDirtyStaticVertexBit);
   }
@@ -510,21 +510,21 @@ class CommandBuffer : public Reffable {
 
   // Used internally by the various Bind*() methods.
   CommandBuffer::DescriptorSetBindings* GetDescriptorSetBindings(uint32_t set_index) {
-    FXL_DCHECK(set_index < VulkanLimits::kNumDescriptorSets);
+    FX_DCHECK(set_index < VulkanLimits::kNumDescriptorSets);
     return &(bindings_.descriptor_sets[set_index]);
   }
 
   // Used internally by the various Bind*() methods.
   CommandBuffer::DescriptorBindingInfo* GetDescriptorBindingInfo(uint32_t set_index,
                                                                  uint32_t binding_index) {
-    FXL_DCHECK(binding_index < VulkanLimits::kNumBindings);
+    FX_DCHECK(binding_index < VulkanLimits::kNumBindings);
     return &(GetDescriptorSetBindings(set_index)->infos[binding_index]);
   }
 
   // Used internally by the various Bind*() methods.
   CommandBuffer::DescriptorBindingInfo* GetDescriptorBindingInfo(
       CommandBuffer::DescriptorSetBindings* set_bindings, uint32_t binding_index) {
-    FXL_DCHECK(binding_index < VulkanLimits::kNumBindings);
+    FX_DCHECK(binding_index < VulkanLimits::kNumBindings);
     return &(set_bindings->infos[binding_index]);
   }
 
@@ -607,7 +607,7 @@ inline void CommandBuffer::SetViewport(const vk::Viewport& viewport) {
   // Must be called in render pass, because BeginRenderPass() sets the scissor
   // region, and confusion might result if a client didn't realize this and
   // tried to set it outside of a render pass.
-  FXL_DCHECK(IsInRenderPass());
+  FX_DCHECK(IsInRenderPass());
   viewport_ = viewport;
   SetDirty(kDirtyViewportBit);
 }
@@ -616,9 +616,9 @@ inline void CommandBuffer::SetScissor(const vk::Rect2D& rect) {
   // Must be called in render pass, because BeginRenderPass() sets the viewport,
   // and confusion might result if a client didn't realize this and tried to
   // set it outside of a render pass.
-  FXL_DCHECK(IsInRenderPass());
-  FXL_DCHECK(rect.offset.x >= 0);
-  FXL_DCHECK(rect.offset.y >= 0);
+  FX_DCHECK(IsInRenderPass());
+  FX_DCHECK(rect.offset.x >= 0);
+  FX_DCHECK(rect.offset.y >= 0);
   scissor_ = rect;
   SetDirty(kDirtyScissorBit);
 }

@@ -9,7 +9,7 @@
 
 #define INSUFF_LEN(a, b)                                                 \
   if ((a) < (b)) {                                                       \
-    FXL_LOG(ERROR) << "Insufficient length " << (a) << ", need " << (b); \
+    FX_LOGS(ERROR) << "Insufficient length " << (a) << ", need " << (b); \
     return false;                                                        \
   }
 
@@ -30,7 +30,7 @@ bool NetDumpParser::Parse(const uint8_t* data, size_t len) {
   // expect the first block to be a section block
   if (shb.magic != kSectionHeaderByteOrderMagic || shb.blk_tot_len != sizeof(shb) ||
       shb.blk_tot_len2 != sizeof(shb) || shb.type != kSectionHeaderBlockType) {
-    FXL_LOG(ERROR) << "Invalid section header block";
+    FX_LOGS(ERROR) << "Invalid section header block";
     return false;
   }
   // now read all the rest of the blocks:
@@ -52,7 +52,7 @@ bool NetDumpParser::Parse(const uint8_t* data, size_t len) {
     memcpy(&len2, data + block_header.len - sizeof(len2), sizeof(len2));
     // end-of-block length doesn't match:
     if (len2 != block_header.len) {
-      FXL_LOG(ERROR) << "Block header and footer don't match lengths";
+      FX_LOGS(ERROR) << "Block header and footer don't match lengths";
       return false;
     }
 
@@ -64,7 +64,7 @@ bool NetDumpParser::Parse(const uint8_t* data, size_t len) {
       memcpy(&idb, data, sizeof(idb));
       // only link type we know:
       if (idb.linktype != kLinkTypeEthernet) {
-        FXL_LOG(ERROR) << "Unrecognized link type: " << idb.linktype;
+        FX_LOGS(ERROR) << "Unrecognized link type: " << idb.linktype;
         return false;
       }
 
@@ -87,7 +87,7 @@ bool NetDumpParser::Parse(const uint8_t* data, size_t len) {
                                    options + sizeof(option_tlv_t) + option_tlv.len);
         } else {
           // we don't recognize any other types of options.
-          FXL_LOG(ERROR) << "Unrecognized interface definition option: " << option_tlv.type;
+          FX_LOGS(ERROR) << "Unrecognized interface definition option: " << option_tlv.type;
           return false;
         }
 
@@ -110,12 +110,12 @@ bool NetDumpParser::Parse(const uint8_t* data, size_t len) {
           || PAD(pkt.captured_len) + sizeof(enhanced_pkt_t) + sizeof(uint32_t) != block_header.len
           // check that the interface is actually specified in interfaces:
           || pkt.interface_id >= interfaces_.size()) {
-        FXL_LOG(ERROR) << "Invalid enhanced packet block";
+        FX_LOGS(ERROR) << "Invalid enhanced packet block";
         return false;
       }
       packets_.push_back(ParsedPacket{data + sizeof(pkt), pkt.captured_len, pkt.interface_id});
     } else {
-      FXL_LOG(ERROR) << "Unrecognized block type: " << block_header.type;
+      FX_LOGS(ERROR) << "Unrecognized block type: " << block_header.type;
       return false;
     }
     data += len2;

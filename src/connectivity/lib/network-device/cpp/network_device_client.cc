@@ -36,7 +36,7 @@ NetworkDeviceClient::NetworkDeviceClient(fidl::InterfaceHandle<netdev::Device> h
   ZX_ASSERT(dispatcher_);
   device_.Bind(std::move(handle), dispatcher_);
   device_.set_error_handler([this](zx_status_t status) {
-    FXL_LOG(ERROR) << "device handler error " << zx_status_get_string(status);
+    FX_LOGS(ERROR) << "device handler error " << zx_status_get_string(status);
     ErrorTeardown(status);
   });
   executor_ = std::make_unique<async::Executor>(dispatcher_);
@@ -106,7 +106,7 @@ void NetworkDeviceClient::OpenSession(const std::string& name,
                     tx_fifo_ = std::move(result.response().fifos.tx);
                     session_.Bind(std::move(result.response().session), dispatcher_);
                     session_.set_error_handler([this](zx_status_t status) {
-                      FXL_LOG(ERROR) << "Session closed with " << zx_status_get_string(status);
+                      FX_LOGS(ERROR) << "Session closed with " << zx_status_get_string(status);
                       ErrorTeardown(status);
                     });
                     res.complete_ok();
@@ -138,25 +138,25 @@ zx_status_t NetworkDeviceClient::PrepareSession() {
 
   if (session_config_.descriptor_length < sizeof(buffer_descriptor_t) ||
       (session_config_.descriptor_length % sizeof(uint64_t)) != 0) {
-    FXL_LOG(ERROR) << "Invalid descriptor length " << session_config_.descriptor_length;
+    FX_LOGS(ERROR) << "Invalid descriptor length " << session_config_.descriptor_length;
     return ZX_ERR_INVALID_ARGS;
   }
 
   if (session_config_.rx_descriptor_count > kMaxDepth ||
       session_config_.tx_descriptor_count > kMaxDepth) {
-    FXL_LOG(ERROR) << "Invalid descriptor count  " << session_config_.rx_descriptor_count << "/"
+    FX_LOGS(ERROR) << "Invalid descriptor count  " << session_config_.rx_descriptor_count << "/"
                    << session_config_.tx_descriptor_count
                    << ", this client supports a maximum depth of " << kMaxDepth << " descriptors";
     return ZX_ERR_INVALID_ARGS;
   }
 
   if (session_config_.buffer_stride < session_config_.buffer_length) {
-    FXL_LOG(ERROR) << "Stride in VMO can't be smaller than buffer length";
+    FX_LOGS(ERROR) << "Stride in VMO can't be smaller than buffer length";
     return ZX_ERR_INVALID_ARGS;
   }
 
   if (session_config_.buffer_stride % device_info_.buffer_alignment != 0) {
-    FXL_LOG(ERROR) << "Buffer stride " << session_config_.buffer_stride
+    FX_LOGS(ERROR) << "Buffer stride " << session_config_.buffer_stride
                    << "does not meet buffer alignment requirement: "
                    << device_info_.buffer_alignment;
     return ZX_ERR_INVALID_ARGS;
@@ -164,27 +164,27 @@ zx_status_t NetworkDeviceClient::PrepareSession() {
 
   descriptor_count_ = session_config_.rx_descriptor_count + session_config_.tx_descriptor_count;
   if (descriptor_count_ >= (1u << 16u)) {
-    FXL_LOG(ERROR) << "Invalid descriptor count, maximum total descriptors must be less than 2^16";
+    FX_LOGS(ERROR) << "Invalid descriptor count, maximum total descriptors must be less than 2^16";
     return ZX_ERR_INVALID_ARGS;
   }
 
   uint64_t data_vmo_size = descriptor_count_ * session_config_.buffer_stride;
   if ((status = data_.CreateAndMap(data_vmo_size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr,
                                    &data_vmo_)) != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to create data VMO: " << zx_status_get_string(status);
+    FX_LOGS(ERROR) << "Failed to create data VMO: " << zx_status_get_string(status);
     return status;
   }
 
   uint64_t descriptors_vmo_size = descriptor_count_ * session_config_.descriptor_length;
   if ((status = descriptors_.CreateAndMap(descriptors_vmo_size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
                                           nullptr, &descriptors_vmo_)) != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to create descriptors VMO: " << zx_status_get_string(status);
+    FX_LOGS(ERROR) << "Failed to create descriptors VMO: " << zx_status_get_string(status);
     return status;
   }
 
   if (session_config_.buffer_length <
       device_info_.min_tx_buffer_tail + device_info_.min_tx_buffer_head) {
-    FXL_LOG(ERROR) << "Invalid buffer length, too small for requested Tx tail ("
+    FX_LOGS(ERROR) << "Invalid buffer length, too small for requested Tx tail ("
                    << device_info_.min_tx_buffer_tail << ") + head: ("
                    << device_info_.min_tx_buffer_head << ")";
     return ZX_ERR_INVALID_ARGS;
@@ -224,12 +224,12 @@ class NetworkDeviceClient::StatusWatchHandle NetworkDeviceClient::WatchStatus(
 zx_status_t NetworkDeviceClient::MakeSessionInfo(netdev::SessionInfo* session_info) {
   zx_status_t status;
   if ((status = data_vmo_.duplicate(ZX_RIGHT_SAME_RIGHTS, &session_info->data)) != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to duplicate data VMO: " << zx_status_get_string(status);
+    FX_LOGS(ERROR) << "Failed to duplicate data VMO: " << zx_status_get_string(status);
     return status;
   }
   if ((status = descriptors_vmo_.duplicate(ZX_RIGHT_SAME_RIGHTS, &session_info->descriptors)) !=
       ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to duplicate descriptors VMO: " << zx_status_get_string(status);
+    FX_LOGS(ERROR) << "Failed to duplicate descriptors VMO: " << zx_status_get_string(status);
     return status;
   }
   session_info->options = session_config_.options;
@@ -367,11 +367,11 @@ void NetworkDeviceClient::ErrorTeardown(zx_status_t err) {
 void NetworkDeviceClient::TxSignal(async_dispatcher_t* dispatcher, async::WaitBase* wait,
                                    zx_status_t status, const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "tx wait failed: " << zx_status_get_string(status);
+    FX_LOGS(ERROR) << "tx wait failed: " << zx_status_get_string(status);
     return;
   }
   if (signal->observed & wait->trigger() & ZX_FIFO_PEER_CLOSED) {
-    FXL_LOG(ERROR) << "tx fifo was closed";
+    FX_LOGS(ERROR) << "tx fifo was closed";
     ErrorTeardown(ZX_ERR_PEER_CLOSED);
     return;
   }
@@ -390,12 +390,12 @@ void NetworkDeviceClient::TxSignal(async_dispatcher_t* dispatcher, async::WaitBa
 void NetworkDeviceClient::RxSignal(async_dispatcher_t* dispatcher, async::WaitBase* wait,
                                    zx_status_t status, const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "rx wait failed: " << zx_status_get_string(status);
+    FX_LOGS(ERROR) << "rx wait failed: " << zx_status_get_string(status);
     return;
   }
 
   if (signal->observed & wait->trigger() & ZX_FIFO_PEER_CLOSED) {
-    FXL_LOG(ERROR) << "rx fifo was closed";
+    FX_LOGS(ERROR) << "rx fifo was closed";
     ErrorTeardown(ZX_ERR_PEER_CLOSED);
     return;
   }
@@ -418,7 +418,7 @@ void NetworkDeviceClient::FetchRx() {
   size_t read;
   zx_status_t status;
   if ((status = rx_fifo_.read(sizeof(uint16_t), buff, kMaxDepth, &read)) != ZX_OK) {
-    FXL_LOG(ERROR) << "Error reading from rx queue: " << zx_status_get_string(status);
+    FX_LOGS(ERROR) << "Error reading from rx queue: " << zx_status_get_string(status);
     return;
   }
   uint16_t* desc_idx = buff;
@@ -489,7 +489,7 @@ void NetworkDeviceClient::FetchTx() {
   size_t read;
   zx_status_t status;
   if ((status = tx_fifo_.read(sizeof(uint16_t), buff, kMaxDepth, &read)) != ZX_OK) {
-    FXL_LOG(ERROR) << "Error reading from tx queue: " << zx_status_get_string(status);
+    FX_LOGS(ERROR) << "Error reading from tx queue: " << zx_status_get_string(status);
     return;
   }
   uint16_t* desc_idx = buff;

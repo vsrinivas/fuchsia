@@ -37,7 +37,7 @@ Err SocketConnection::Accept(debug_ipc::MessageLoop* main_thread_loop, int serve
       FROM_HERE, [this, client = std::move(client),
                   server_loop = debug_ipc::MessageLoop::Current()]() mutable {
         if (!buffer_.Init(std::move(client))) {
-          FXL_LOG(ERROR) << "Error waiting for data.";
+          FX_LOGS(ERROR) << "Error waiting for data.";
           debug_ipc::MessageLoop::Current()->QuitNow();
           return;
         }
@@ -58,7 +58,7 @@ Err SocketConnection::Accept(debug_ipc::MessageLoop* main_thread_loop, int serve
                 Update update(&stream, &path);
                 update.SendUpdates();
               } else {
-                FXL_LOG(ERROR) << "Unrecognized command from socket";
+                FX_LOGS(ERROR) << "Unrecognized command from socket";
               }
 
               connection->UnregisterAndDestroy();
@@ -195,12 +195,12 @@ void SocketServer::OnFDReady(int fd, bool readable, bool writeable, bool err) {
   // insert() returns a pair <iterator, bool>
   auto p = this->connections_.insert(std::make_unique<SocketConnection>(this));
   if (!p.second) {
-    FXL_LOG(ERROR) << "Internal error";
+    FX_LOGS(ERROR) << "Internal error";
     return;
   }
   Err error = p.first->get()->Accept(config_.message_loop, fd);
   if (!error.ok()) {
-    FXL_LOG(INFO) << error.msg;
+    FX_LOGS(INFO) << error.msg;
     return;
   }
   PRINT_FLUSH("Connection established.\n");

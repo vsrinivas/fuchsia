@@ -44,7 +44,7 @@ TimezoneImpl::~TimezoneImpl() = default;
 bool TimezoneImpl::Init() {
   fsl::SizedVmo icu_data;
   if (!fsl::VmoFromFilename(icu_data_path_, &icu_data)) {
-    FXL_LOG(ERROR) << "Unable to load ICU data. Timezone data unavailable.";
+    FX_LOGS(ERROR) << "Unable to load ICU data. Timezone data unavailable.";
     inspector_.Health().Unhealthy("Unable to load ICU data.");
     return false;
   }
@@ -53,7 +53,7 @@ bool TimezoneImpl::Init() {
   uintptr_t icu_data_ptr = 0;
   if (zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ, 0, icu_data.vmo().get(), 0, icu_data.size(),
                   &icu_data_ptr) != ZX_OK) {
-    FXL_LOG(ERROR) << "Unable to map ICU data into process.";
+    FX_LOGS(ERROR) << "Unable to map ICU data into process.";
     inspector_.Health().Unhealthy("Unable to map ICU data into process.");
     return false;
   }
@@ -62,7 +62,7 @@ bool TimezoneImpl::Init() {
   UErrorCode icu_set_data_status = U_ZERO_ERROR;
   udata_setCommonData(reinterpret_cast<void*>(icu_data_ptr), &icu_set_data_status);
   if (icu_set_data_status != U_ZERO_ERROR) {
-    FXL_LOG(ERROR) << "Unable to set common ICU data. "
+    FX_LOGS(ERROR) << "Unable to set common ICU data. "
                    << "Timezone data unavailable.";
     inspector_.Health().Unhealthy("Timezone data unavailable");
     return false;
@@ -79,7 +79,7 @@ void TimezoneImpl::GetTimezoneOffsetMinutes(int64_t milliseconds_since_epoch,
   }
 
   // If valid_ is true, then cached_state_ must be valid.
-  FXL_CHECK(cached_state_.has_value());
+  FX_CHECK(cached_state_.has_value());
   auto& timezone = cached_state_->timezone;
 
   int32_t local_offset = 0, dst_offset = 0;
@@ -91,7 +91,7 @@ void TimezoneImpl::GetTimezoneOffsetMinutes(int64_t milliseconds_since_epoch,
   if (error != U_ZERO_ERROR) {
     icu::ErrorCode icuError;
     icuError.set(error);
-    FXL_LOG(ERROR) << "Unable to get correct offset: error code " << error << " "
+    FX_LOGS(ERROR) << "Unable to get correct offset: error code " << error << " "
                    << icuError.errorName();
     callback(0, 0);
     return;
@@ -118,14 +118,14 @@ std::pair<bool, std::unique_ptr<icu::TimeZone>> TimezoneImpl::ValidateTimezoneId
 
 void TimezoneImpl::SetTimezone(std::string timezone_id, SetTimezoneCallback callback) {
   if (!valid_) {
-    FXL_LOG(ERROR) << "Time service is not valid.";
+    FX_LOGS(ERROR) << "Time service is not valid.";
     callback(false);
     return;
   }
 
   auto [is_valid, timezone] = ValidateTimezoneId(timezone_id);
   if (!is_valid) {
-    FXL_LOG(ERROR) << "Timezone '" << timezone_id << "' is not valid.";
+    FX_LOGS(ERROR) << "Timezone '" << timezone_id << "' is not valid.";
     callback(false);
     return;
   }
@@ -135,7 +135,7 @@ void TimezoneImpl::SetTimezone(std::string timezone_id, SetTimezoneCallback call
 
   std::ofstream out_fstream(tz_id_path_, std::ofstream::trunc);
   if (!out_fstream.is_open()) {
-    FXL_LOG(ERROR) << "Unable to open file for write '" << tz_id_path_ << "'";
+    FX_LOGS(ERROR) << "Unable to open file for write '" << tz_id_path_ << "'";
     callback(false);
     return;
   }
@@ -161,14 +161,14 @@ void TimezoneImpl::LoadTimezone() {
   }
 
   if (timezone_id.empty()) {
-    FXL_LOG(ERROR) << "TZ file empty at '" << tz_id_path_ << "'";
+    FX_LOGS(ERROR) << "TZ file empty at '" << tz_id_path_ << "'";
     inspector_.Health().Unhealthy("TZ file is empty");
     timezone_id = kDefaultTimezone;
   }
 
   auto [is_valid, timezone] = ValidateTimezoneId(timezone_id);
   if (!is_valid) {
-    FXL_LOG(ERROR) << "Saved TZ ID invalid: '" << timezone_id << "'";
+    FX_LOGS(ERROR) << "Saved TZ ID invalid: '" << timezone_id << "'";
     inspector_.Health().Unhealthy("Saved TZ id is invalid");
     timezone_id = kDefaultTimezone;
     timezone = ValidateTimezoneId(kDefaultTimezone).second;

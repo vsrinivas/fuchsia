@@ -12,10 +12,10 @@ namespace flatland {
 fitx::result<fitx::failed, BufferCollectionInfo> BufferCollectionInfo::New(
     fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
     BufferCollectionHandle buffer_collection_token) {
-  FXL_DCHECK(sysmem_allocator);
+  FX_DCHECK(sysmem_allocator);
 
   if (!buffer_collection_token.is_valid()) {
-    FXL_LOG(ERROR) << "Buffer collection token is not valid.";
+    FX_LOGS(ERROR) << "Buffer collection token is not valid.";
     return fitx::failed();
   }
 
@@ -30,7 +30,7 @@ fitx::result<fitx::failed, BufferCollectionInfo> BufferCollectionInfo::New(
   sysmem_allocator->BindSharedCollection(std::move(local_token), buffer_collection.NewRequest());
   zx_status_t status = buffer_collection->Sync();
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Could not bind buffer collection.";
+    FX_LOGS(ERROR) << "Could not bind buffer collection.";
     return fitx::failed();
   }
 
@@ -46,7 +46,7 @@ fitx::result<fitx::failed, BufferCollectionInfo> BufferCollectionInfo::New(
   // From this point on, if we fail, we DCHECK, because we should have already caught errors
   // pertaining to both invalid tokens and wrong/malicious tokens/channels above, meaning that if a
   // failure occurs now, then that is some underlying issue unrelated to user input.
-  FXL_DCHECK(status == ZX_OK) << "Could not set constraints on buffer collection.";
+  FX_DCHECK(status == ZX_OK) << "Could not set constraints on buffer collection.";
 
   return fitx::ok(BufferCollectionInfo(std::move(buffer_collection)));
 }
@@ -59,7 +59,7 @@ bool BufferCollectionInfo::BuffersAreAllocated() {
     zx_status_t allocation_status = ZX_OK;
     zx_status_t status = buffer_collection_ptr_->CheckBuffersAllocated(&allocation_status);
     if (status != ZX_OK || allocation_status != ZX_OK) {
-      FXL_LOG(ERROR) << "Collection was not allocated.";
+      FX_LOGS(ERROR) << "Collection was not allocated.";
       return false;
     }
 
@@ -69,12 +69,12 @@ bool BufferCollectionInfo::BuffersAreAllocated() {
     status = buffer_collection_ptr_->WaitForBuffersAllocated(&allocation_status,
                                                              &buffer_collection_info_);
     // Failures here would be an issue with sysmem, and so we DCHECK.
-    FXL_DCHECK(allocation_status == ZX_OK);
-    FXL_DCHECK(status == ZX_OK);
+    FX_DCHECK(allocation_status == ZX_OK);
+    FX_DCHECK(status == ZX_OK);
 
     // Perform a DCHECK here as well to insure the collection has at least one vmo, because
     // it shouldn't have been able to be allocated with less than that.
-    FXL_DCHECK(buffer_collection_info_.buffer_count > 0);
+    FX_DCHECK(buffer_collection_info_.buffer_count > 0);
 
     // Tag the vmos as being a part of flatland.
     for (uint32_t i = 0; i < buffer_collection_info_.buffer_count; ++i) {

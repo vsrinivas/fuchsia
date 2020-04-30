@@ -17,7 +17,7 @@ int main(int argc, const char** argv) {
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   examples::TileParams tile_params;
   if (!tile_params.Parse(command_line)) {
-    FXL_LOG(ERROR) << "Missing or invalid URL parameters.  See README.";
+    FX_LOGS(ERROR) << "Missing or invalid URL parameters.  See README.";
     return 1;
   }
 

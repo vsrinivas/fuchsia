@@ -4,8 +4,6 @@
 
 #include "src/lib/files/scoped_temp_dir.h"
 
-#include "src/lib/fxl/build_config.h"
-
 #include <fcntl.h>
 #include <stdlib.h>
 #include <sys/stat.h>
@@ -16,6 +14,7 @@
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
 #include "src/lib/files/unique_fd.h"
+#include "src/lib/fxl/build_config.h"
 #include "src/lib/fxl/logging.h"
 
 namespace files {
@@ -29,7 +28,7 @@ fxl::StringView GetGlobalTmpDir() {
 // Fills the first 6 bytes of |tp| with random characters suitable for the file
 // system. The implementation is taken from __randname.c in //zircon
 void GenerateRandName(char* tp) {
-  FXL_DCHECK(strlen(tp) >= 6);
+  FX_DCHECK(strlen(tp) >= 6);
 
   struct timespec ts;
   unsigned long r;
@@ -44,9 +43,9 @@ void GenerateRandName(char* tp) {
 
 // Creates a unique temporary file under |root_fd| from template |tp|.
 fbl::unique_fd MksTempAt(int root_fd, char* tp, size_t tp_length) {
-  FXL_DCHECK(strlen(tp) == tp_length);
-  FXL_DCHECK(tp_length >= 6);
-  FXL_DCHECK(memcmp(tp + tp_length - 6, "XXXXXX", 6) == 0);
+  FX_DCHECK(strlen(tp) == tp_length);
+  FX_DCHECK(tp_length >= 6);
+  FX_DCHECK(memcmp(tp + tp_length - 6, "XXXXXX", 6) == 0);
   int retries = 100;
   do {
     GenerateRandName(tp + tp_length - 6);
@@ -62,9 +61,9 @@ fbl::unique_fd MksTempAt(int root_fd, char* tp, size_t tp_length) {
 
 // Creates a unique temporary directory under |root_fd| from template |tp|.
 char* MkdTempAt(int root_fd, char* tp, size_t tp_length) {
-  FXL_DCHECK(strlen(tp) == tp_length);
-  FXL_DCHECK(tp_length >= 6);
-  FXL_DCHECK(memcmp(tp + tp_length - 6, "XXXXXX", 6) == 0);
+  FX_DCHECK(strlen(tp) == tp_length);
+  FX_DCHECK(tp_length >= 6);
+  FX_DCHECK(memcmp(tp + tp_length - 6, "XXXXXX", 6) == 0);
   int retries = 100;
   do {
     GenerateRandName(tp + tp_length - 6);
@@ -93,7 +92,7 @@ ScopedTempDirAt::ScopedTempDirAt(int root_fd, fxl::StringView parent_path) : roo
 ScopedTempDirAt::~ScopedTempDirAt() {
   if (directory_path_.size()) {
     if (!DeletePathAt(root_fd_, directory_path_, true)) {
-      FXL_LOG(WARNING) << "Unable to delete: " << directory_path_;
+      FX_LOGS(WARNING) << "Unable to delete: " << directory_path_;
     }
   }
 }

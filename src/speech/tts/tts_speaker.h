@@ -5,9 +5,6 @@
 #ifndef SRC_SPEECH_TTS_TTS_SPEAKER_H_
 #define SRC_SPEECH_TTS_TTS_SPEAKER_H_
 
-#include <mutex>
-#include <thread>
-
 #include <fuchsia/media/cpp/fidl.h>
 #include <fuchsia/tts/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -16,10 +13,13 @@
 #include <lib/fzl/vmo-mapper.h>
 #include <zircon/types.h>
 
+#include <mutex>
+#include <thread>
+
 #include "lib/fidl/cpp/string.h"
+#include "lib/sys/cpp/component_context.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/synchronization/thread_annotations.h"
-#include "lib/sys/cpp/component_context.h"
 #include "third_party/flite/include/flite_fuchsia.h"
 
 namespace tts {
@@ -49,11 +49,11 @@ class TtsSpeaker : public std::enable_shared_from_this<TtsSpeaker> {
     uint64_t ret;
 
     auto sb_size = shared_buf_.size();
-    FXL_DCHECK(front < sb_size);
-    FXL_DCHECK(back < sb_size);
+    FX_DCHECK(front < sb_size);
+    FX_DCHECK(back < sb_size);
     ret = (front >= back) ? (front - back) : (sb_size + front - back);
 
-    FXL_DCHECK(ret < sb_size);
+    FX_DCHECK(ret < sb_size);
     return ret;
   }
 

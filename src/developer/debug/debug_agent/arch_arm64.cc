@@ -153,7 +153,7 @@ zx_status_t ReadDebugRegs(const zx::thread& thread, std::vector<debug_ipc::Regis
     return status;
 
   if (debug_regs.hw_bps_count >= AARCH64_MAX_HW_BREAKPOINTS) {
-    FXL_LOG(ERROR) << "Received too many HW breakpoints: " << debug_regs.hw_bps_count
+    FX_LOGS(ERROR) << "Received too many HW breakpoints: " << debug_regs.hw_bps_count
                    << " (max: " << AARCH64_MAX_HW_BREAKPOINTS << ").";
     return ZX_ERR_INVALID_ARGS;
   }
@@ -247,7 +247,7 @@ uint64_t ArchProvider::NextInstructionForSoftwareExceptionAddress(uint64_t excep
 }
 
 uint64_t ArchProvider::NextInstructionForWatchpointHit(uint64_t) {
-  FXL_NOTREACHED() << "Not implemented.";
+  FX_NOTREACHED() << "Not implemented.";
   return 0;
 }
 
@@ -289,8 +289,8 @@ std::pair<debug_ipc::AddressRange, int> ArchProvider::InstructionForWatchpointHi
     } else if (debug_regs.far >= wp_range.end()) {
       distance = debug_regs.far - wp_range.end();
     } else {
-      FXL_NOTREACHED() << "Invalid far/range combo. FAR: 0x" << std::hex << debug_regs.far
-                       << ", range: " << wp_range.begin() << ", " << wp_range.end();
+      FX_NOTREACHED() << "Invalid far/range combo. FAR: 0x" << std::hex << debug_regs.far
+                      << ", range: " << wp_range.begin() << ", " << wp_range.end();
     }
 
     if (distance < min_distance) {
@@ -350,7 +350,7 @@ zx_status_t ArchProvider::ReadRegisters(const debug_ipc::RegisterCategory& cat,
     case debug_ipc::RegisterCategory::kDebug:
       return ReadDebugRegs(thread, out);
     default:
-      FXL_LOG(ERROR) << "Invalid category: " << static_cast<uint32_t>(cat);
+      FX_LOGS(ERROR) << "Invalid category: " << static_cast<uint32_t>(cat);
       return ZX_ERR_INVALID_ARGS;
   }
 }
@@ -404,7 +404,7 @@ zx_status_t ArchProvider::WriteRegisters(const debug_ipc::RegisterCategory& cate
     case debug_ipc::RegisterCategory::kLast:
       break;
   }
-  FXL_NOTREACHED();
+  FX_NOTREACHED();
   return ZX_ERR_INVALID_ARGS;
 }
 

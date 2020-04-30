@@ -223,7 +223,7 @@ std::string ThreadStateToString(debug_ipc::ThreadRecord::State state,
   if (state != debug_ipc::ThreadRecord::State::kBlocked)
     return debug_ipc::ThreadRecord::StateToString(state);
 
-  FXL_DCHECK(blocked_reason != debug_ipc::ThreadRecord::BlockedReason::kNotBlocked)
+  FX_DCHECK(blocked_reason != debug_ipc::ThreadRecord::BlockedReason::kNotBlocked)
       << "A blocked thread has to have a valid reason.";
   return fxl::StringPrintf("Blocked (%s)",
                            debug_ipc::ThreadRecord::BlockedReasonToString(blocked_reason));
@@ -244,7 +244,7 @@ std::string ExecutionScopeToString(const ConsoleContext* context, const Executio
       }
       return "<Deleted thread>";
   }
-  FXL_NOTREACHED();
+  FX_NOTREACHED();
   return std::string();
 }
 
@@ -469,7 +469,7 @@ OutputBuffer FormatInputLocation(const InputLocation& location) {
       return OutputBuffer(to_hex_string(location.address));
     }
   }
-  FXL_NOTREACHED();
+  FX_NOTREACHED();
   return OutputBuffer();
 }
 
@@ -502,7 +502,7 @@ fxl::RefPtr<EvalContext> GetEvalContextForCommand(const Command& cmd) {
   } else if (language_setting == ClientSettings::System::kLanguage_Cpp) {
     language = ExprLanguage::kC;
   } else {
-    FXL_DCHECK(language_setting == ClientSettings::System::kLanguage_Auto);
+    FX_DCHECK(language_setting == ClientSettings::System::kLanguage_Auto);
   }
 
   // Target context only (it may or may not have a process).

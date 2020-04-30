@@ -348,7 +348,7 @@ void DumpVisitor::Visit(Renderer* r) {
   EndItem();
 }
 
-void DumpVisitor::Visit(Light* r) { FXL_CHECK(false) << "implement Visit() in Light subclasses"; }
+void DumpVisitor::Visit(Light* r) { FX_CHECK(false) << "implement Visit() in Light subclasses"; }
 
 void DumpVisitor::Visit(AmbientLight* r) {
   BeginItem("AmbientLight", r);

@@ -90,7 +90,7 @@ void ProcessSymbols::SetModules(const std::vector<debug_ipc::Module>& modules) {
 void ProcessSymbols::InjectModuleForTesting(const std::string& name, const std::string& build_id,
                                             std::unique_ptr<LoadedModuleSymbols> mod_sym) {
   LoadedModuleSymbols* loaded_ptr = mod_sym.get();  // Save for after being moved out below.
-  FXL_DCHECK(loaded_ptr);
+  FX_DCHECK(loaded_ptr);
 
   ModuleInfo info;
   info.name = name;
@@ -159,7 +159,7 @@ LoadedModuleSymbols* ProcessSymbols::GetModuleForAddress(uint64_t address) {
 
 std::vector<Location> ProcessSymbols::ResolveInputLocation(const InputLocation& input_location,
                                                            const ResolveOptions& options) const {
-  FXL_DCHECK(input_location.type != InputLocation::Type::kNone);
+  FX_DCHECK(input_location.type != InputLocation::Type::kNone);
 
   // Address resolution.
   if (input_location.type == InputLocation::Type::kAddress) {

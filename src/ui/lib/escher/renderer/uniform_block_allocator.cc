@@ -19,7 +19,7 @@ UniformAllocation UniformBlockAllocator::Allocate(size_t size, size_t alignment)
   write_index_ = AlignedToNext(write_index_, alignment);
   if (write_index_ + size > buffer_size_) {
     buffers_.push_back(pool_->Allocate());
-    FXL_DCHECK(buffers_.back()->host_ptr());
+    FX_DCHECK(buffers_.back()->host_ptr());
     write_index_ = 0;
   }
   auto& buf = buffers_.back();

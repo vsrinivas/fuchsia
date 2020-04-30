@@ -32,27 +32,27 @@ zx_status_t Device::Create(fuchsia::hardware::ethernet::DeviceSyncPtr eth_device
   zx_status_t status;
   eth_device->GetFifos(&status, &fifos);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to get fifos: " << status;
+    FX_LOGS(ERROR) << "Failed to get fifos: " << status;
     return status;
   }
 
   zx::vmo vmo;
   status = zx::vmo::create(kVmoSize, 0, &vmo);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to create vmo: " << status;
+    FX_LOGS(ERROR) << "Failed to create vmo: " << status;
     return status;
   }
 
   zx::vmo vmo_dup;
   status = vmo.duplicate(ZX_RIGHTS_IO | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER, &vmo_dup);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to duplicate vmo: " << status;
+    FX_LOGS(ERROR) << "Failed to duplicate vmo: " << status;
     return status;
   }
 
   eth_device->SetIOBuffer(std::move(vmo_dup), &status);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to set IO buffer: " << status;
+    FX_LOGS(ERROR) << "Failed to set IO buffer: " << status;
     return status;
   }
 
@@ -61,7 +61,7 @@ zx_status_t Device::Create(fuchsia::hardware::ethernet::DeviceSyncPtr eth_device
       0, vmo, 0, kVmoSize, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_REQUIRE_NON_RESIZABLE,
       &io_addr);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to map vmo: " << status;
+    FX_LOGS(ERROR) << "Failed to map vmo: " << status;
     return status;
   }
 
@@ -72,13 +72,13 @@ zx_status_t Device::Create(fuchsia::hardware::ethernet::DeviceSyncPtr eth_device
   entry.cookie = 0;
   status = fifos->rx.write(sizeof(eth_fifo_entry_t), &entry, 1, nullptr);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to write to rx fifo: " << status;
+    FX_LOGS(ERROR) << "Failed to write to rx fifo: " << status;
     return status;
   }
 
   eth_device->Start(&status);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to start ethernet device: " << status;
+    FX_LOGS(ERROR) << "Failed to start ethernet device: " << status;
     return status;
   }
 
@@ -100,7 +100,7 @@ void Device::OnReceive(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx
   if (status == ZX_ERR_CANCELED) {
     return;
   } else if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Device receive waiter failed " << status;
+    FX_LOGS(ERROR) << "Device receive waiter failed " << status;
     return;
   }
 
@@ -135,7 +135,7 @@ void Device::OnReceive(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx
 
   status = wait->Begin(dispatcher);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to wait for device rx fifo " << status;
+    FX_LOGS(ERROR) << "Failed to wait for device rx fifo " << status;
   }
 }
 
@@ -144,7 +144,7 @@ void Device::OnTransmit(async_dispatcher_t* dispatcher, async::WaitBase* wait, z
   if (status == ZX_ERR_CANCELED) {
     return;
   } else if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Device receive waiter failed " << status;
+    FX_LOGS(ERROR) << "Device receive waiter failed " << status;
     return;
   }
 
@@ -179,7 +179,7 @@ void Device::OnTransmit(async_dispatcher_t* dispatcher, async::WaitBase* wait, z
 
   status = wait->Begin(dispatcher);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to wait for device tx fifo " << status;
+    FX_LOGS(ERROR) << "Failed to wait for device tx fifo " << status;
   }
 }
 
@@ -217,7 +217,7 @@ fit::promise<std::vector<uint8_t>, zx_status_t> Device::ReadPacket() {
         new_entry.cookie = 0;
         zx_status_t status = rx_.write(sizeof(eth_fifo_entry_t), &new_entry, 1, nullptr);
         if (status != ZX_OK) {
-          FXL_LOG(ERROR) << "Failed to write to rx fifo: " << status;
+          FX_LOGS(ERROR) << "Failed to write to rx fifo: " << status;
           return fit::error(status);
         }
 
@@ -265,27 +265,27 @@ void FakeNetstack::AddEthernetDevice(
   fuchsia::hardware::ethernet::Info device_info;
   zx_status_t status = device_sync_ptr->GetInfo(&device_info);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to get device info: " << status;
+    FX_LOGS(ERROR) << "Failed to get device info: " << status;
     return;
   }
 
   std::unique_ptr<Device> device;
   status = Device::Create(std::move(device_sync_ptr), &device);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to create device " << status;
+    FX_LOGS(ERROR) << "Failed to create device " << status;
     return;
   }
 
   status = device->Start(loop_.dispatcher());
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to start device " << status;
+    FX_LOGS(ERROR) << "Failed to start device " << status;
     return;
   }
 
   std::lock_guard<std::mutex> lock(mutex_);
   auto [itr, success] = devices_.insert(std::make_pair(device_info.mac, std::move(device)));
   if (!success) {
-    FXL_LOG(ERROR) << "Device already exists";
+    FX_LOGS(ERROR) << "Device already exists";
     return;
   }
 

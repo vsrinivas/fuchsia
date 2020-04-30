@@ -37,7 +37,7 @@ TEST_F(SemanticTreeParserTest, SuccessfullyParseFile) {
 
 TEST_F(SemanticTreeParserTest, ParsingFailed) {
   std::vector<Node> nodes;
-  FXL_LOG(INFO) << "Following error message 'Error parsing "
+  FX_LOGS(INFO) << "Following error message 'Error parsing "
                    "file:/pkg/data/semantic_tree_not_parseable.json' is expected.";
   ASSERT_FALSE(semantic_tree_parser_.ParseSemanticTree(kFileNotParseablePath, &nodes));
   ASSERT_TRUE(nodes.size() == 0);

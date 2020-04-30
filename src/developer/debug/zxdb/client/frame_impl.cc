@@ -54,10 +54,10 @@ const Location& FrameImpl::GetLocation() const {
 uint64_t FrameImpl::GetAddress() const { return location_.address(); }
 
 const std::vector<Register>* FrameImpl::GetRegisterCategorySync(RegisterCategory category) const {
-  FXL_DCHECK(category <= RegisterCategory::kLast);
+  FX_DCHECK(category <= RegisterCategory::kLast);
 
   size_t category_index = static_cast<size_t>(category);
-  FXL_DCHECK(category_index < static_cast<size_t>(RegisterCategory::kLast));
+  FX_DCHECK(category_index < static_cast<size_t>(RegisterCategory::kLast));
 
   if (registers_[category_index])
     return &*registers_[category_index];
@@ -67,10 +67,10 @@ const std::vector<Register>* FrameImpl::GetRegisterCategorySync(RegisterCategory
 void FrameImpl::GetRegisterCategoryAsync(
     RegisterCategory category, bool always_request,
     fit::function<void(const Err&, const std::vector<Register>&)> cb) {
-  FXL_DCHECK(category < RegisterCategory::kLast && category != RegisterCategory::kNone);
+  FX_DCHECK(category < RegisterCategory::kLast && category != RegisterCategory::kNone);
 
   size_t category_index = static_cast<size_t>(category);
-  FXL_DCHECK(category_index < static_cast<size_t>(debug_ipc::RegisterCategory::kLast));
+  FX_DCHECK(category_index < static_cast<size_t>(debug_ipc::RegisterCategory::kLast));
 
   if (!always_request && registers_[category_index]) {
     // Registers known already, asynchronously return the result.
@@ -112,8 +112,8 @@ void FrameImpl::GetRegisterCategoryAsync(
 void FrameImpl::WriteRegister(debug_ipc::RegisterID id, std::vector<uint8_t> data,
                               fit::callback<void(const Err&)> cb) {
   const debug_ipc::RegisterInfo* info = InfoForRegister(id);
-  FXL_DCHECK(info);                      // Should always be a valid register.
-  FXL_DCHECK(info->canonical_id == id);  // Should only write full canonical registers.
+  FX_DCHECK(info);                      // Should always be a valid register.
+  FX_DCHECK(info->canonical_id == id);  // Should only write full canonical registers.
 
   if (!IsInTopmostPhysicalFrame()) {
     debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [id, cb = std::move(cb)]() mutable {
@@ -149,7 +149,7 @@ std::optional<uint64_t> FrameImpl::GetBasePointer() const {
   // This function is logically const even though EnsureBasePointer does some potentially mutating
   // things underneath (calling callbacks and such).
   if (const_cast<FrameImpl*>(this)->EnsureBasePointer()) {
-    FXL_DCHECK(computed_base_pointer_);
+    FX_DCHECK(computed_base_pointer_);
     return computed_base_pointer_;
   }
   return std::nullopt;
@@ -158,12 +158,12 @@ std::optional<uint64_t> FrameImpl::GetBasePointer() const {
 void FrameImpl::GetBasePointerAsync(fit::callback<void(uint64_t bp)> cb) {
   if (EnsureBasePointer()) {
     // BP available synchronously but we don't want to reenter the caller.
-    FXL_DCHECK(computed_base_pointer_);
+    FX_DCHECK(computed_base_pointer_);
     debug_ipc::MessageLoop::Current()->PostTask(
         FROM_HERE, [bp = *computed_base_pointer_, cb = std::move(cb)]() mutable { cb(bp); });
   } else {
     // Add pending request for when evaluation is complete.
-    FXL_DCHECK(base_pointer_eval_ && !base_pointer_eval_->is_complete());
+    FX_DCHECK(base_pointer_eval_ && !base_pointer_eval_->is_complete());
     base_pointer_requests_.push_back(std::move(cb));
   }
 }
@@ -194,7 +194,7 @@ void FrameImpl::EnsureSymbolized() const {
   auto vect =
       thread_->GetProcess()->GetSymbols()->ResolveInputLocation(InputLocation(location_.address()));
   // Should always return 1 result for symbolizing addresses.
-  FXL_DCHECK(vect.size() == 1);
+  FX_DCHECK(vect.size() == 1);
   location_ = std::move(vect[0]);
 }
 
@@ -216,7 +216,7 @@ fxl::RefPtr<EvalContext> FrameImpl::GetEvalContext() const {
   } else if (language_setting == ClientSettings::System::kLanguage_Cpp) {
     language = ExprLanguage::kC;
   } else {
-    FXL_DCHECK(language_setting == ClientSettings::System::kLanguage_Auto);
+    FX_DCHECK(language_setting == ClientSettings::System::kLanguage_Auto);
   }
 
   if (!symbol_eval_context_)
@@ -235,7 +235,7 @@ bool FrameImpl::EnsureBasePointer() {
 
   if (base_pointer_eval_) {
     // Already happening asynchronously.
-    FXL_DCHECK(!base_pointer_eval_->is_complete());
+    FX_DCHECK(!base_pointer_eval_->is_complete());
     return false;
   }
 
@@ -291,7 +291,7 @@ void FrameImpl::SaveRegisterUpdates(std::vector<Register> regs) {
   std::map<RegisterCategory, std::vector<Register>> categorized;
   for (auto& reg : regs) {
     RegisterCategory cat = RegisterIDToCategory(reg.id);
-    FXL_DCHECK(cat != RegisterCategory::kNone);
+    FX_DCHECK(cat != RegisterCategory::kNone);
     categorized[cat].push_back(std::move(reg));
   }
 

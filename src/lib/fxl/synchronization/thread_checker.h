@@ -5,13 +5,12 @@
 // A class for checking that the current thread is/isn't the same as an initial
 // thread.
 
-#ifndef LIB_FXL_SYNCHRONIZATION_THREAD_CHECKER_H_
-#define LIB_FXL_SYNCHRONIZATION_THREAD_CHECKER_H_
-
-#include "src/lib/fxl/build_config.h"
+#ifndef SRC_LIB_FXL_SYNCHRONIZATION_THREAD_CHECKER_H_
+#define SRC_LIB_FXL_SYNCHRONIZATION_THREAD_CHECKER_H_
 
 #include <pthread.h>
 
+#include "src/lib/fxl/build_config.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/synchronization/thread_annotations.h"
@@ -55,7 +54,7 @@ class FXL_CAPABILITY("mutex") ThreadChecker final {
   // on and false otherwise.
   bool IsCreationThreadCurrent() const { return !!pthread_equal(pthread_self(), self_); }
 
-  void lock() FXL_ACQUIRE() { FXL_DCHECK(IsCreationThreadCurrent()); }
+  void lock() FXL_ACQUIRE() { FX_DCHECK(IsCreationThreadCurrent()); }
 
   void unlock() FXL_RELEASE() {}
 
@@ -67,7 +66,7 @@ class FXL_CAPABILITY("mutex") ThreadChecker final {
 
 #ifndef NDEBUG
 #define FXL_DECLARE_THREAD_CHECKER(c) fxl::ThreadChecker c
-#define FXL_DCHECK_CREATION_THREAD_IS_CURRENT(c) FXL_DCHECK((c).IsCreationThreadCurrent())
+#define FXL_DCHECK_CREATION_THREAD_IS_CURRENT(c) FX_DCHECK((c).IsCreationThreadCurrent())
 #else
 #define FXL_DECLARE_THREAD_CHECKER(c)
 #define FXL_DCHECK_CREATION_THREAD_IS_CURRENT(c) ((void)0)
@@ -75,4 +74,4 @@ class FXL_CAPABILITY("mutex") ThreadChecker final {
 
 }  // namespace fxl
 
-#endif  // LIB_FXL_SYNCHRONIZATION_THREAD_CHECKER_H_
+#endif  // SRC_LIB_FXL_SYNCHRONIZATION_THREAD_CHECKER_H_

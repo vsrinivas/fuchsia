@@ -63,7 +63,7 @@ zx_status_t SoftwareBreakpoint::Update() {
 }
 
 zx_status_t SoftwareBreakpoint::Install() {
-  FXL_DCHECK(!installed_);
+  FX_DCHECK(!installed_);
 
   // Read previous instruction contents.
   size_t actual = 0;
@@ -102,7 +102,7 @@ zx_status_t SoftwareBreakpoint::Uninstall() {
     return ZX_OK;  // Probably unmapped, safe to ignore.
 
   if (current_contents != arch::kBreakInstruction) {
-    FXL_LOG(WARNING) << "Debug break instruction unexpectedly replaced at 0x" << std::hex
+    FX_LOGS(WARNING) << "Debug break instruction unexpectedly replaced at 0x" << std::hex
                      << address();
     return ZX_OK;  // Replaced with something else, ignore.
   }
@@ -110,7 +110,7 @@ zx_status_t SoftwareBreakpoint::Uninstall() {
   status = memory_accessor_->WriteProcessMemory(address(), &previous_data_,
                                                 sizeof(arch::BreakInstructionType), &actual);
   if (status != ZX_OK || actual != sizeof(arch::BreakInstructionType)) {
-    FXL_LOG(WARNING) << "Unable to remove breakpoint at 0x" << std::hex << address() << ": "
+    FX_LOGS(WARNING) << "Unable to remove breakpoint at 0x" << std::hex << address() << ": "
                      << zx_status_get_string(status);
   }
 
@@ -121,7 +121,7 @@ zx_status_t SoftwareBreakpoint::Uninstall() {
 void SoftwareBreakpoint::FixupMemoryBlock(debug_ipc::MemoryBlock* block) {
   if (block->data.empty())
     return;  // Nothing to do.
-  FXL_DCHECK(static_cast<size_t>(block->size) == block->data.size());
+  FX_DCHECK(static_cast<size_t>(block->size) == block->data.size());
 
   size_t src_size = sizeof(arch::BreakInstructionType);
   const uint8_t* src = reinterpret_cast<uint8_t*>(&previous_data_);
@@ -149,9 +149,9 @@ void SoftwareBreakpoint::ExecuteStepOver(DebuggedThread* thread) {
 }
 
 void SoftwareBreakpoint::EndStepOver(DebuggedThread* thread) {
-  FXL_DCHECK(thread->stepping_over_breakpoint());
-  FXL_DCHECK(currently_stepping_over_thread_);
-  FXL_DCHECK(currently_stepping_over_thread_->koid() == thread->koid())
+  FX_DCHECK(thread->stepping_over_breakpoint());
+  FX_DCHECK(currently_stepping_over_thread_);
+  FX_DCHECK(currently_stepping_over_thread_->koid() == thread->koid())
       << " Expected " << currently_stepping_over_thread_->koid() << ", Got " << thread->koid();
 
   DEBUG_LOG(Breakpoint) << LogPreamble(this) << "Thread " << thread->koid() << " ending step over.";
@@ -214,8 +214,8 @@ void SoftwareBreakpoint::SuspendAllOtherThreads(zx_koid_t stepping_over_koid) {
 
     // Only one thread should be stepping over at a time.
     if (thread->stepping_over_breakpoint() && thread->koid() != stepping_over_koid) {
-      FXL_NOTREACHED() << "Thread " << thread->koid() << " is stepping over. Only thread "
-                       << stepping_over_koid << " should be stepping over.";
+      FX_NOTREACHED() << "Thread " << thread->koid() << " is stepping over. Only thread "
+                      << stepping_over_koid << " should be stepping over.";
     }
 
     // We keep every other thread suspended.
@@ -227,7 +227,7 @@ void SoftwareBreakpoint::SuspendAllOtherThreads(zx_koid_t stepping_over_koid) {
   // We wait on all the suspend signals to trigger.
   for (DebuggedThread* thread : suspended_threads) {
     bool suspended = thread->WaitForSuspension();
-    FXL_DCHECK(suspended) << "Thread " << thread->koid();
+    FX_DCHECK(suspended) << "Thread " << thread->koid();
   }
 }
 

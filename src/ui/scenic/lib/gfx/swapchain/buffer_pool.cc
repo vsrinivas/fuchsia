@@ -18,13 +18,13 @@
 #include "src/ui/lib/escher/util/image_utils.h"
 #include "src/ui/lib/escher/vk/gpu_mem.h"
 
-#define VK_CHECK_RESULT(XXX) FXL_CHECK(XXX.result == vk::Result::eSuccess)
+#define VK_CHECK_RESULT(XXX) FX_CHECK(XXX.result == vk::Result::eSuccess)
 
 namespace scenic_impl {
 namespace gfx {
 
 BufferPool::BufferPool(size_t count, Environment* environment, bool use_protected_memory) {
-  FXL_CHECK(CreateBuffers(count, environment, use_protected_memory));
+  FX_CHECK(CreateBuffers(count, environment, use_protected_memory));
 }
 
 BufferPool& BufferPool::operator=(BufferPool&& rhs) {
@@ -34,7 +34,7 @@ BufferPool& BufferPool::operator=(BufferPool&& rhs) {
   return *this;
 }
 
-BufferPool::~BufferPool() { FXL_CHECK(buffers_.empty()); }
+BufferPool::~BufferPool() { FX_CHECK(buffers_.empty()); }
 
 BufferPool::Framebuffer* BufferPool::GetUnused() {
   for (size_t i = 0; i < buffers_.size(); ++i) {
@@ -53,14 +53,14 @@ void BufferPool::Put(BufferPool::Framebuffer* f) {
       return;
     }
   }
-  FXL_CHECK(false) << "Tried to release a buffer not owned by this pool";
+  FX_CHECK(false) << "Tried to release a buffer not owned by this pool";
 }
 
 void BufferPool::Clear(
     std::shared_ptr<fuchsia::hardware::display::ControllerSyncPtr> display_controller) {
   for (size_t i = 0; i < buffers_.size(); ++i) {
     if ((*display_controller)->ReleaseImage(buffers_[i].id) != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed to release image id=" << buffers_[i].id;
+      FX_LOGS(ERROR) << "Failed to release image id=" << buffers_[i].id;
     }
   }
   buffers_.clear();
@@ -77,7 +77,7 @@ static uint64_t ImportBufferCollection(
   if ((*display_controller)
               ->ImportBufferCollection(buffer_collection_id, std::move(token), &status) != ZX_OK ||
       status != ZX_OK) {
-    FXL_LOG(ERROR) << "ImportBufferCollection failed - status: " << status;
+    FX_LOGS(ERROR) << "ImportBufferCollection failed - status: " << status;
     return 0;
   }
 
@@ -85,10 +85,10 @@ static uint64_t ImportBufferCollection(
               ->SetBufferCollectionConstraints(buffer_collection_id, image_config, &status) !=
           ZX_OK ||
       status != ZX_OK) {
-    FXL_LOG(ERROR) << "SetBufferCollectionConstraints failed.";
+    FX_LOGS(ERROR) << "SetBufferCollectionConstraints failed.";
 
     if ((*display_controller)->ReleaseBufferCollection(buffer_collection_id) != ZX_OK) {
-      FXL_LOG(ERROR) << "ReleaseBufferCollection failed.";
+      FX_LOGS(ERROR) << "ReleaseBufferCollection failed.";
     }
     return 0;
   }
@@ -116,14 +116,14 @@ static std::vector<fuchsia::sysmem::BufferCollectionTokenSyncPtr> DuplicateToken
     zx_status_t status =
         input->Duplicate(std::numeric_limits<uint32_t>::max(), new_token.NewRequest());
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Unable to duplicate sysmem token:" << status;
+      FX_LOGS(ERROR) << "Unable to duplicate sysmem token:" << status;
       return std::vector<fuchsia::sysmem::BufferCollectionTokenSyncPtr>();
     }
     output.push_back(std::move(new_token));
   }
   zx_status_t status = input->Sync();
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Unable to sync sysmem token:" << status;
+    FX_LOGS(ERROR) << "Unable to sync sysmem token:" << status;
     return std::vector<fuchsia::sysmem::BufferCollectionTokenSyncPtr>();
   }
   return output;
@@ -135,8 +135,8 @@ bool BufferPool::CreateBuffers(size_t count, BufferPool::Environment* environmen
     return true;
   }
 
-  FXL_CHECK(environment->escher);
-  FXL_CHECK(buffers_.empty());
+  FX_CHECK(environment->escher);
+  FX_CHECK(buffers_.empty());
   buffers_.resize(count);
   used_.resize(count);
   vk::ImageUsageFlags image_usage = GetFramebufferImageUsage();
@@ -153,7 +153,7 @@ bool BufferPool::CreateBuffers(size_t count, BufferPool::Environment* environmen
   }
 
   if (pixel_format == ZX_PIXEL_FORMAT_NONE) {
-    FXL_LOG(ERROR) << "Unable to find usable pixel format.";
+    FX_LOGS(ERROR) << "Unable to find usable pixel format.";
     return false;
   }
 
@@ -167,14 +167,14 @@ bool BufferPool::CreateBuffers(size_t count, BufferPool::Environment* environmen
 #elif defined(__aarch64__)
   image_config_.type = 0;
 #else
-  FXL_DCHECK(false) << "Display swapchain only supported on intel and ARM";
+  FX_DCHECK(false) << "Display swapchain only supported on intel and ARM";
 #endif
 
   // Create all the tokens.
   fuchsia::sysmem::BufferCollectionTokenSyncPtr local_token =
       environment->sysmem->CreateBufferCollection();
   if (!local_token) {
-    FXL_LOG(ERROR) << "Sysmem tokens couldn't be allocated";
+    FX_LOGS(ERROR) << "Sysmem tokens couldn't be allocated";
     return false;
   }
   zx_status_t status;
@@ -182,7 +182,7 @@ bool BufferPool::CreateBuffers(size_t count, BufferPool::Environment* environmen
   auto tokens = DuplicateToken(local_token, 2);
 
   if (tokens.empty()) {
-    FXL_LOG(ERROR) << "Sysmem tokens failed to be duped.";
+    FX_LOGS(ERROR) << "Sysmem tokens failed to be duped.";
     return false;
   }
 
@@ -190,14 +190,14 @@ bool BufferPool::CreateBuffers(size_t count, BufferPool::Environment* environmen
   uint64_t display_collection_id =
       ImportBufferCollection(environment->display_controller, std::move(tokens[1]), image_config_);
   if (!display_collection_id) {
-    FXL_LOG(ERROR) << "Setting buffer collection constraints failed.";
+    FX_LOGS(ERROR) << "Setting buffer collection constraints failed.";
     return false;
   }
 
   auto collection_closer = fbl::MakeAutoCall([environment, display_collection_id]() {
     if ((*environment->display_controller)->ReleaseBufferCollection(display_collection_id) !=
         ZX_OK) {
-      FXL_LOG(ERROR) << "ReleaseBufferCollection failed.";
+      FX_LOGS(ERROR) << "ReleaseBufferCollection failed.";
     }
   });
 
@@ -221,7 +221,7 @@ bool BufferPool::CreateBuffers(size_t count, BufferPool::Environment* environmen
   auto import_result = environment->vk_device.createBufferCollectionFUCHSIA(
       import_collection, nullptr, environment->escher->device()->dispatch_loader());
   if (import_result.result != vk::Result::eSuccess) {
-    FXL_LOG(ERROR) << "VkImportBufferCollectionFUCHSIA failed: "
+    FX_LOGS(ERROR) << "VkImportBufferCollectionFUCHSIA failed: "
                    << vk::to_string(import_result.result);
     return false;
   }
@@ -234,7 +234,7 @@ bool BufferPool::CreateBuffers(size_t count, BufferPool::Environment* environmen
   auto constraints_result = environment->vk_device.setBufferCollectionConstraintsFUCHSIA(
       import_result.value, create_info, environment->escher->device()->dispatch_loader());
   if (constraints_result != vk::Result::eSuccess) {
-    FXL_LOG(ERROR) << "VkSetBufferCollectionConstraints failed: "
+    FX_LOGS(ERROR) << "VkSetBufferCollectionConstraints failed: "
                    << vk::to_string(constraints_result);
     return false;
   }
@@ -252,7 +252,7 @@ bool BufferPool::CreateBuffers(size_t count, BufferPool::Environment* environmen
   constraints.usage.vulkan = fuchsia::sysmem::noneUsage;
   status = sysmem_collection->SetConstraints(true, constraints);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Unable to set constraints:" << status;
+    FX_LOGS(ERROR) << "Unable to set constraints:" << status;
     return false;
   }
 
@@ -261,13 +261,13 @@ bool BufferPool::CreateBuffers(size_t count, BufferPool::Environment* environmen
   // Wait for the buffers to be allocated.
   status = sysmem_collection->WaitForBuffersAllocated(&allocation_status, &info);
   if (status != ZX_OK || allocation_status != ZX_OK) {
-    FXL_LOG(ERROR) << "Waiting for buffers failed:" << status << " " << allocation_status;
+    FX_LOGS(ERROR) << "Waiting for buffers failed:" << status << " " << allocation_status;
     return false;
   }
 
   // Import the collection into a vulkan image.
   if (info.buffer_count < count) {
-    FXL_LOG(ERROR) << "Incorrect buffer collection count: " << info.buffer_count;
+    FX_LOGS(ERROR) << "Incorrect buffer collection count: " << info.buffer_count;
     return false;
   }
 
@@ -279,7 +279,7 @@ bool BufferPool::CreateBuffers(size_t count, BufferPool::Environment* environmen
 
     auto image_result = environment->vk_device.createImage(create_info);
     if (image_result.result != vk::Result::eSuccess) {
-      FXL_LOG(ERROR) << "VkCreateImage failed: " << vk::to_string(image_result.result);
+      FX_LOGS(ERROR) << "VkCreateImage failed: " << vk::to_string(image_result.result);
       return false;
     }
 
@@ -288,7 +288,7 @@ bool BufferPool::CreateBuffers(size_t count, BufferPool::Environment* environmen
     auto collection_properties = environment->vk_device.getBufferCollectionPropertiesFUCHSIA(
         import_result.value, environment->escher->device()->dispatch_loader());
     if (collection_properties.result != vk::Result::eSuccess) {
-      FXL_LOG(ERROR) << "VkGetBufferCollectionProperties failed: "
+      FX_LOGS(ERROR) << "VkGetBufferCollectionProperties failed: "
                      << vk::to_string(collection_properties.result);
       return false;
     }
@@ -306,7 +306,7 @@ bool BufferPool::CreateBuffers(size_t count, BufferPool::Environment* environmen
     auto mem_result = environment->vk_device.allocateMemory(alloc_info);
 
     if (mem_result.result != vk::Result::eSuccess) {
-      FXL_LOG(ERROR) << "vkAllocMemory failed: " << vk::to_string(mem_result.result);
+      FX_LOGS(ERROR) << "vkAllocMemory failed: " << vk::to_string(mem_result.result);
       return false;
     }
 
@@ -314,7 +314,7 @@ bool BufferPool::CreateBuffers(size_t count, BufferPool::Environment* environmen
     buffer.device_memory =
         escher::GpuMem::AdoptVkMemory(environment->vk_device, mem_result.value,
                                       memory_requirements.size, false /* needs_mapped_ptr */);
-    FXL_CHECK(buffer.device_memory);
+    FX_CHECK(buffer.device_memory);
 
     // Wrap the image and device memory in a escher::Image.
     escher::ImageInfo image_info;
@@ -331,7 +331,7 @@ bool BufferPool::CreateBuffers(size_t count, BufferPool::Environment* environmen
         create_info.initialLayout);
 
     if (!buffer.escher_image) {
-      FXL_LOG(ERROR) << "Creating escher::EscherImage failed.";
+      FX_LOGS(ERROR) << "Creating escher::EscherImage failed.";
       environment->vk_device.destroyImage(image_result.value);
       return false;
     } else {
@@ -343,7 +343,7 @@ bool BufferPool::CreateBuffers(size_t count, BufferPool::Environment* environmen
                                                      &import_image_status, &buffer.id);
     if (transport_status != ZX_OK || import_image_status != ZX_OK) {
       buffer.id = fuchsia::hardware::display::INVALID_DISP_ID;
-      FXL_LOG(ERROR) << "Importing image failed.";
+      FX_LOGS(ERROR) << "Importing image failed.";
       return false;
     }
 

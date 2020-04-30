@@ -299,23 +299,23 @@ bool PointerMatches(const PointerEvent& event, uint32_t pointer_id, PointerEvent
 
   bool result = true;
   if (event.pointer_id != pointer_id) {
-    FXL_LOG(ERROR) << "  Actual id: " << event.pointer_id;
-    FXL_LOG(ERROR) << "Expected id: " << pointer_id;
+    FX_LOGS(ERROR) << "  Actual id: " << event.pointer_id;
+    FX_LOGS(ERROR) << "Expected id: " << pointer_id;
     result = false;
   }
   if (event.phase != phase) {
-    FXL_LOG(ERROR) << "  Actual phase: " << event.phase;
-    FXL_LOG(ERROR) << "Expected phase: " << phase;
+    FX_LOGS(ERROR) << "  Actual phase: " << event.phase;
+    FX_LOGS(ERROR) << "Expected phase: " << phase;
     result = false;
   }
   if (fabs(event.x - x) > kEpsilon) {
-    FXL_LOG(ERROR) << "  Actual x: " << event.x;
-    FXL_LOG(ERROR) << "Expected x: " << x;
+    FX_LOGS(ERROR) << "  Actual x: " << event.x;
+    FX_LOGS(ERROR) << "Expected x: " << x;
     result = false;
   }
   if (fabs(event.y - y) > kEpsilon) {
-    FXL_LOG(ERROR) << "  Actual y: " << event.y;
-    FXL_LOG(ERROR) << "Expected y: " << y;
+    FX_LOGS(ERROR) << "  Actual y: " << event.y;
+    FX_LOGS(ERROR) << "Expected y: " << y;
     result = false;
   }
   return result;

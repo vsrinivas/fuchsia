@@ -36,7 +36,7 @@ WeaveConfigManager::WeaveConfigManager(const std::string& path) : config_store_p
   } else {
     config_.SetObject();
   }
-  FXL_CHECK(!json_parser_.HasError())
+  FX_CHECK(!json_parser_.HasError())
       << "Failed to load configuration: " << json_parser_.error_str();
 }
 

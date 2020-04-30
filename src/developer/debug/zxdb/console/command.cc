@@ -29,7 +29,7 @@ int Command::GetNounIndex(Noun noun) const {
 }
 
 void Command::SetNoun(Noun noun, int index) {
-  FXL_DCHECK(nouns_.find(noun) == nouns_.end());
+  FX_DCHECK(nouns_.find(noun) == nouns_.end());
   nouns_[noun] = index;
 }
 

@@ -18,7 +18,7 @@ const char* ProcessObserver::DestroyReasonToString(DestroyReason reason) {
     case DestroyReason::kKill:
       return "Kill";
   }
-  FXL_NOTREACHED();
+  FX_NOTREACHED();
   return nullptr;
 }
 

@@ -85,7 +85,7 @@ int IntegerValue::DisplaySize(const Type* for_type, int /*remaining_size*/) cons
 }
 
 void IntegerValue::PrettyPrint(const Type* for_type, PrettyPrinter& printer) const {
-  FXL_DCHECK(for_type != nullptr);
+  FX_DCHECK(for_type != nullptr);
   for_type->PrettyPrint(this, printer);
 }
 
@@ -98,7 +98,7 @@ int DoubleValue::DisplaySize(const Type* for_type, int /*remaining_size*/) const
 }
 
 void DoubleValue::PrettyPrint(const Type* for_type, PrettyPrinter& printer) const {
-  FXL_DCHECK(for_type != nullptr);
+  FX_DCHECK(for_type != nullptr);
   for_type->PrettyPrint(this, printer);
 }
 
@@ -278,7 +278,7 @@ bool VectorValue::NeedsToLoadHandleInfo(zx_koid_t pid,
 }
 
 int VectorValue::DisplaySize(const Type* for_type, int remaining_size) const {
-  FXL_DCHECK(for_type != nullptr);
+  FX_DCHECK(for_type != nullptr);
   if (values_.empty()) {
     return 2;  // The two brackets.
   }
@@ -286,7 +286,7 @@ int VectorValue::DisplaySize(const Type* for_type, int remaining_size) const {
     return static_cast<int>(values_.size() + 2);  // The string and the two quotes.
   }
   const Type* component_type = for_type->GetComponentType();
-  FXL_DCHECK(component_type != nullptr);
+  FX_DCHECK(component_type != nullptr);
   int size = 0;
   for (const auto& value : values_) {
     // Two characters for the separator ("[ " or ", ").
@@ -301,7 +301,7 @@ int VectorValue::DisplaySize(const Type* for_type, int remaining_size) const {
 }
 
 void VectorValue::PrettyPrint(const Type* for_type, PrettyPrinter& printer) const {
-  FXL_DCHECK(for_type != nullptr);
+  FX_DCHECK(for_type != nullptr);
   if (values_.empty()) {
     printer << "[]";
   } else if (is_string_) {
@@ -324,7 +324,7 @@ void VectorValue::PrettyPrint(const Type* for_type, PrettyPrinter& printer) cons
     }
   } else if (DisplaySize(for_type, printer.remaining_size()) <= printer.remaining_size()) {
     const Type* component_type = for_type->GetComponentType();
-    FXL_DCHECK(component_type != nullptr);
+    FX_DCHECK(component_type != nullptr);
     const char* separator = "[ ";
     for (const auto& value : values_) {
       printer << separator;
@@ -334,7 +334,7 @@ void VectorValue::PrettyPrint(const Type* for_type, PrettyPrinter& printer) cons
     printer << " ]";
   } else {
     const Type* component_type = for_type->GetComponentType();
-    FXL_DCHECK(component_type != nullptr);
+    FX_DCHECK(component_type != nullptr);
     printer << "[\n";
     {
       Indent indent(printer);

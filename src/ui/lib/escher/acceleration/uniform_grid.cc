@@ -52,7 +52,7 @@ void UniformGrid::Construct(const std::vector<glm::vec3>& positions,
   // construction by various researchers:
   // https://pharr.org/matt/blog/images/pbr-2001.pdf
   resolution_ = static_cast<uint32_t>(glm::max(cbrtf(static_cast<float>(num_triangles)), 1.f));
-  FXL_DCHECK(resolution_ > 0);
+  FX_DCHECK(resolution_ > 0);
 
   // Save the vertex and bounding box information..
   vertices_ = std::vector<glm::vec3>(positions);
@@ -60,7 +60,7 @@ void UniformGrid::Construct(const std::vector<glm::vec3>& positions,
 
   // Calculate the extent for cells.
   glm::vec3 cell_extent = bounds_.extent() / static_cast<float>(resolution_) + glm::vec3(kEpsilon);
-  FXL_DCHECK(glm::all(glm::greaterThan(cell_extent, glm::vec3(kEpsilon))));
+  FX_DCHECK(glm::all(glm::greaterThan(cell_extent, glm::vec3(kEpsilon))));
 
   // Assign all of the triangles to cells that they overlap.
   for (uint32_t i = 0; i < num_indices; i += 3) {
@@ -73,7 +73,7 @@ void UniformGrid::Construct(const std::vector<glm::vec3>& positions,
     glm::vec3 v3 = vertices_[index_3];
 
     BoundingBox triangle_bbox = GetTriangleBoundingBox(v1, v2, v3);
-    FXL_DCHECK(!triangle_bbox.is_empty());
+    FX_DCHECK(!triangle_bbox.is_empty());
 
     glm::ivec3 cell_min = glm::floor(triangle_bbox.min() - bounds_.min()) / cell_extent;
     glm::ivec3 cell_max = glm::floor(triangle_bbox.max() - bounds_.min()) / cell_extent;
@@ -96,7 +96,7 @@ void UniformGrid::Construct(const std::vector<glm::vec3>& positions,
 }
 
 bool UniformGrid::Intersect(const ray4& ray, float* out_distance) const {
-  FXL_DCHECK(out_distance);
+  FX_DCHECK(out_distance);
 
   // Get ray properties.
   const glm::vec4 O = ray.origin;
@@ -113,7 +113,7 @@ bool UniformGrid::Intersect(const ray4& ray, float* out_distance) const {
   // Compute the coordinates of the current cell
   glm::vec3 min = bounds_.min();
   glm::ivec3 cell_coordinates = (vec3(hit) - min) / cell_extent;
-  FXL_DCHECK(glm::all(glm::greaterThanEqual(cell_coordinates, glm::ivec3(0))));
+  FX_DCHECK(glm::all(glm::greaterThanEqual(cell_coordinates, glm::ivec3(0))));
 
   int px = glm::sign(D.x);
   int py = glm::sign(D.y);
@@ -131,9 +131,9 @@ bool UniformGrid::Intersect(const ray4& ray, float* out_distance) const {
       DistanceToPlane(D.y, hit.y, min.y + (cell_coordinates.y + y_offset) * cell_extent.y);
   float next_z =
       DistanceToPlane(D.z, hit.z, min.z + (cell_coordinates.z + z_offset) * cell_extent.z);
-  FXL_DCHECK(next_x >= 0.f) << next_x;
-  FXL_DCHECK(next_y >= 0.f) << next_y;
-  FXL_DCHECK(next_z >= 0.f) << next_z;
+  FX_DCHECK(next_x >= 0.f) << next_x;
+  FX_DCHECK(next_y >= 0.f) << next_y;
+  FX_DCHECK(next_z >= 0.f) << next_z;
 
   // If we go beyond the extent of the uniform grid without finding a hit,
   // then stop looping.
@@ -162,9 +162,9 @@ bool UniformGrid::Intersect(const ray4& ray, float* out_distance) const {
       next_z += delta.z;
     }
 
-    FXL_DCHECK(!std::isnan(next_x) && !std::isinf(next_x));
-    FXL_DCHECK(!std::isnan(next_y) && !std::isinf(next_y));
-    FXL_DCHECK(!std::isnan(next_z) && !std::isinf(next_z));
+    FX_DCHECK(!std::isnan(next_x) && !std::isinf(next_x));
+    FX_DCHECK(!std::isnan(next_y) && !std::isinf(next_y));
+    FX_DCHECK(!std::isnan(next_z) && !std::isinf(next_z));
   }
 
   // No hit.
@@ -178,10 +178,10 @@ bool UniformGrid::Intersect(const ray4& ray, float* out_distance) const {
 // the closest triangle.
 bool UniformGrid::Cell::Intersect(const ray4& ray, const vec3* vertices,
                                   float* out_distance) const {
-  FXL_DCHECK(vertices);
-  FXL_DCHECK(out_distance);
-  FXL_DCHECK(indices_.size() % 3 == 0);
-  FXL_DCHECK(!bounds_.is_empty());
+  FX_DCHECK(vertices);
+  FX_DCHECK(out_distance);
+  FX_DCHECK(indices_.size() % 3 == 0);
+  FX_DCHECK(!bounds_.is_empty());
 
   *out_distance = FLT_MAX;
   for (uint32_t i = 0; i < indices_.size(); i += 3) {

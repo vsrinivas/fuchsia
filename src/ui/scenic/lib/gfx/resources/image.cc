@@ -18,7 +18,7 @@ const ResourceTypeInfo Image::kTypeInfo = {ResourceType::kImage | ResourceType::
 
 Image::Image(Session* session, ResourceId id, const ResourceTypeInfo& type_info)
     : ImageBase(session, id, type_info) {
-  FXL_DCHECK(type_info.IsKindOf(Image::kTypeInfo));
+  FX_DCHECK(type_info.IsKindOf(Image::kTypeInfo));
 }
 
 ImagePtr Image::New(Session* session, ResourceId id, MemoryPtr memory,

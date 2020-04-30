@@ -59,7 +59,7 @@ Identifier ToIdentifier(const ParsedIdentifier& parsed) {
     if (c.special() == SpecialIdentifier::kNone) {
       ret.AppendComponent(IdentifierComponent(c.GetName(false)));
     } else {
-      FXL_DCHECK(!c.has_template());
+      FX_DCHECK(!c.has_template());
       ret.AppendComponent(IdentifierComponent(c.special(), c.name()));
     }
   }

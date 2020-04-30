@@ -111,21 +111,21 @@ const char kSessionResultSpecPathKey[] = "session_result_spec_path";
 template <typename T>
 bool DecodeEvents(T events, const perfmon::ModelEventManager* model_event_manager,
                   SessionSpec* out_spec) {
-  FXL_VLOG(1) << "Processing " << events.Size() << " events";
+  FX_VLOGS(1) << "Processing " << events.Size() << " events";
 
   for (const auto& event : events) {
     perfmon::EventId id = perfmon::kEventIdNone;
     perfmon::EventRate rate = 0;
     uint32_t flags = 0;
     if (!event.HasMember(kGroupNameKey) || !event.HasMember(kEventNameKey)) {
-      FXL_LOG(ERROR) << "Event is missing group_name,event_name fields";
+      FX_LOGS(ERROR) << "Event is missing group_name,event_name fields";
       return false;
     }
     const std::string& group_name = event[kGroupNameKey].GetString();
     const std::string& event_name = event[kEventNameKey].GetString();
     const perfmon::EventDetails* details;
     if (!model_event_manager->LookupEventByName(group_name.c_str(), event_name.c_str(), &details)) {
-      FXL_LOG(ERROR) << "Unknown event: " << group_name << ":" << event_name;
+      FX_LOGS(ERROR) << "Unknown event: " << group_name << ":" << event_name;
       return false;
     }
     id = details->id;
@@ -135,7 +135,7 @@ bool DecodeEvents(T events, const perfmon::ModelEventManager* model_event_manage
     if (event.HasMember(kFlagsKey)) {
       for (const auto& flag : event[kFlagsKey].GetArray()) {
         if (!flag.IsString()) {
-          FXL_LOG(ERROR) << "Flag for event " << group_name << ":" << event_name
+          FX_LOGS(ERROR) << "Flag for event " << group_name << ":" << event_name
                          << " is not a string";
           return false;
         }
@@ -151,19 +151,19 @@ bool DecodeEvents(T events, const perfmon::ModelEventManager* model_event_manage
         } else if (flag_name == "last_branch") {
           flags |= perfmon::Config::kFlagLastBranch;
         } else {
-          FXL_LOG(ERROR) << "Unknown flag for event " << group_name << ":" << event_name << ": "
+          FX_LOGS(ERROR) << "Unknown flag for event " << group_name << ":" << event_name << ": "
                          << flag_name;
           return false;
         }
       }
     }
 
-    FXL_VLOG(2) << "Found event: " << group_name << ":" << event_name << ", id 0x" << std::hex << id
+    FX_VLOGS(2) << "Found event: " << group_name << ":" << event_name << ", id 0x" << std::hex << id
                 << ", rate " << std::dec << rate << ", flags 0x" << std::hex << flags;
 
     perfmon::Config::Status status = out_spec->perfmon_config.AddEvent(id, rate, flags);
     if (status != perfmon::Config::Status::OK) {
-      FXL_LOG(ERROR) << "Error processing event configuration: "
+      FX_LOGS(ERROR) << "Error processing event configuration: "
                      << perfmon::Config::StatusToString(status);
       return false;
     }
@@ -187,7 +187,7 @@ bool DecodeSessionSpec(const std::string& json, SessionSpec* out_spec) {
   if (document.HasParseError()) {
     auto offset = document.GetErrorOffset();
     auto code = document.GetParseError();
-    FXL_LOG(ERROR) << "Couldn't parse the session config file: offset " << offset << ", "
+    FX_LOGS(ERROR) << "Couldn't parse the session config file: offset " << offset << ", "
                    << GetParseError_En(code);
     return false;
   }
@@ -209,14 +209,14 @@ bool DecodeSessionSpec(const std::string& json, SessionSpec* out_spec) {
   std::unique_ptr<perfmon::ModelEventManager> model_event_manager =
       perfmon::ModelEventManager::Create(result.model_name);
   if (!model_event_manager) {
-    FXL_LOG(ERROR) << "Unsupported model: " << result.model_name;
+    FX_LOGS(ERROR) << "Unsupported model: " << result.model_name;
     return false;
   }
 
   if (document.HasMember(kEventsKey)) {
     const auto& events = document[kEventsKey].GetArray();
     if (events.Size() == 0) {
-      FXL_LOG(ERROR) << "Need at least one event";
+      FX_LOGS(ERROR) << "Need at least one event";
       return false;
     }
     if (!DecodeEvents(events, model_event_manager.get(), &result)) {

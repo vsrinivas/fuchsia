@@ -65,7 +65,7 @@ bool FillColorAttachmentDescription(const RenderPassInfo& rpi,
                                     uint32_t index) {
 #ifndef NDEBUG
   auto pair = image_utils::IsDepthStencilFormat(rpi.color_attachment_infos[index].format);
-  FXL_DCHECK(!pair.first && !pair.second) << "Color attachment cannot use depth/stencil format.";
+  FX_DCHECK(!pair.first && !pair.second) << "Color attachment cannot use depth/stencil format.";
 #endif
 
   auto& desc = attachment_descriptions[index];
@@ -73,7 +73,7 @@ bool FillColorAttachmentDescription(const RenderPassInfo& rpi,
   const bool is_swapchain_image = color_info.swapchain_layout != vk::ImageLayout::eUndefined;
 
   // TODO(ES-73): support for transient images.  What's missing?
-  FXL_DCHECK(!color_info.is_transient || !is_swapchain_image)
+  FX_DCHECK(!color_info.is_transient || !is_swapchain_image)
       << "transient+swapchain images not yet handled.";
 
   const auto load_store_ops_pair = rpi.LoadStoreOpsForColorAttachment(index);
@@ -90,7 +90,7 @@ bool FillColorAttachmentDescription(const RenderPassInfo& rpi,
   desc.stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
 
   if (color_info.is_transient) {
-    FXL_DCHECK(load_op == vk::AttachmentLoadOp::eDontCare);
+    FX_DCHECK(load_op == vk::AttachmentLoadOp::eDontCare);
     desc.initialLayout = vk::ImageLayout::eUndefined;
     // This will be filled in later with the layout of the last subpass that
     // uses this attachment, in order to avoid an unnecessary transition at
@@ -143,7 +143,7 @@ bool FillDepthStencilAttachmentDescription(const RenderPassInfo& rpi,
   }
 
   if (rpi.depth_stencil_attachment_info.is_transient) {
-    FXL_DCHECK(load_op != vk::AttachmentLoadOp::eLoad);
+    FX_DCHECK(load_op != vk::AttachmentLoadOp::eLoad);
 
     desc->initialLayout = vk::ImageLayout::eUndefined;
 
@@ -243,7 +243,7 @@ vk::AttachmentReference* FindDepthStencilAttachmentRef(vk::SubpassDescription* s
 
 RenderPass::RenderPass(ResourceRecycler* recycler, const RenderPassInfo& info)
     : Resource(recycler) {
-  FXL_DCHECK(info.Validate());
+  FX_DCHECK(info.Validate());
   num_color_attachments_ = info.num_color_attachments;
 
   // If the RenderPassInfo doesn't have any subpasses, set up a single default
@@ -253,7 +253,7 @@ RenderPass::RenderPass(ResourceRecycler* recycler, const RenderPassInfo& info)
   RenderPassInfo::Subpass default_subpass;
   const RenderPassInfo::Subpass* info_subpasses = GetPointerToFirstSubpass(info, &default_subpass);
   const uint32_t num_info_subpasses = info.subpasses.empty() ? 1 : info.subpasses.size();
-  FXL_DCHECK(num_info_subpasses <= 32);
+  FX_DCHECK(num_info_subpasses <= 32);
 
   vk::AttachmentDescription attachments[VulkanLimits::kNumColorAttachments + 1];
   const bool has_depth_stencil_attachment =
@@ -280,8 +280,8 @@ RenderPass::RenderPass(ResourceRecycler* recycler, const RenderPassInfo& info)
       implicit_transitions |= 1u << info.num_color_attachments;
     }
     depth_stencil_format_ = attachment_description->format;
-    FXL_DCHECK(image_utils::IsDepthFormat(depth_stencil_format_) ||
-               image_utils::IsStencilFormat(depth_stencil_format_));
+    FX_DCHECK(image_utils::IsDepthFormat(depth_stencil_format_) ||
+              image_utils::IsStencilFormat(depth_stencil_format_));
   }
 
   std::vector<vk::SubpassDescription> vk_subpass_descriptions(num_info_subpasses);
@@ -317,14 +317,14 @@ RenderPass::RenderPass(ResourceRecycler* recycler, const RenderPassInfo& info)
       // would it be beneficial to resolve some subset of the attachments?  How
       // much less convenient would the API become?  e.g. what changes would
       // need to be made to the RenderPassInfo struct?
-      FXL_DCHECK(info_subpasses[i].num_color_attachments ==
-                 info_subpasses[i].num_resolve_attachments);
+      FX_DCHECK(info_subpasses[i].num_color_attachments ==
+                info_subpasses[i].num_resolve_attachments);
       subpass.pResolveAttachments = resolve_att_refs;
     }
 
     for (uint32_t j = 0; j < subpass.colorAttachmentCount; j++) {
       auto att = info_subpasses[i].color_attachments[j];
-      FXL_DCHECK(att == VK_ATTACHMENT_UNUSED || (att < num_attachments));
+      FX_DCHECK(att == VK_ATTACHMENT_UNUSED || (att < num_attachments));
       color_att_refs[j].attachment = att;
       // Will be filled in below, with the value of |current_layout|.
       color_att_refs[j].layout = vk::ImageLayout::eUndefined;
@@ -332,7 +332,7 @@ RenderPass::RenderPass(ResourceRecycler* recycler, const RenderPassInfo& info)
 
     for (uint32_t j = 0; j < subpass.inputAttachmentCount; j++) {
       auto att = info_subpasses[i].input_attachments[j];
-      FXL_DCHECK(att == VK_ATTACHMENT_UNUSED || (att < num_attachments));
+      FX_DCHECK(att == VK_ATTACHMENT_UNUSED || (att < num_attachments));
       input_att_refs[j].attachment = att;
       // Will be filled in below, with the value of |current_layout|.
       input_att_refs[j].layout = vk::ImageLayout::eUndefined;
@@ -341,7 +341,7 @@ RenderPass::RenderPass(ResourceRecycler* recycler, const RenderPassInfo& info)
     if (subpass.pResolveAttachments) {
       for (uint32_t j = 0; j < subpass.colorAttachmentCount; j++) {
         auto att = info_subpasses[i].resolve_attachments[j];
-        FXL_DCHECK(att == VK_ATTACHMENT_UNUSED || (att < num_attachments));
+        FX_DCHECK(att == VK_ATTACHMENT_UNUSED || (att < num_attachments));
         resolve_att_refs[j].attachment = att;
         // Will be filled in below, with the value of |current_layout|.
         resolve_att_refs[j].layout = vk::ImageLayout::eUndefined;
@@ -405,8 +405,8 @@ RenderPass::RenderPass(ResourceRecycler* recycler, const RenderPassInfo& info)
 
       // Sanity check.
       if (color || resolve) {
-        FXL_DCHECK(!depth);
-        FXL_DCHECK(!color || !resolve);
+        FX_DCHECK(!depth);
+        FX_DCHECK(!color || !resolve);
       }
 
       // If the attachment was not used in this subpass, but it was used in a
@@ -462,8 +462,8 @@ RenderPass::RenderPass(ResourceRecycler* recycler, const RenderPassInfo& info)
         color_attachment_read_write |= 1u << subpass;
       } else if (depth && input) {
         // Layout depends on the depth mode.
-        FXL_DCHECK(info_subpasses[subpass].depth_stencil_mode !=
-                   RenderPassInfo::DepthStencil::kNone);
+        FX_DCHECK(info_subpasses[subpass].depth_stencil_mode !=
+                  RenderPassInfo::DepthStencil::kNone);
         if (info_subpasses[subpass].depth_stencil_mode ==
             RenderPassInfo::DepthStencil::kReadWrite) {
           // If used as both input attachment and writable depth attachment in
@@ -509,15 +509,15 @@ RenderPass::RenderPass(ResourceRecycler* recycler, const RenderPassInfo& info)
 
         input->layout = current_layout;
       } else {
-        FXL_DCHECK(false) << "Unhandled attachment usage.";
+        FX_DCHECK(false) << "Unhandled attachment usage.";
       }
     }
-    FXL_DCHECK(used) << "attachment[" << attachment << "] was not used in any subpass.";
+    FX_DCHECK(used) << "attachment[" << attachment << "] was not used in any subpass.";
 
     // If we don't have a specific layout we need to end up in, use the last one
     // to avoid unnecessary layout transitions.
     if (attachments[attachment].finalLayout == vk::ImageLayout::eUndefined) {
-      FXL_DCHECK(current_layout != vk::ImageLayout::eUndefined);
+      FX_DCHECK(current_layout != vk::ImageLayout::eUndefined);
       attachments[attachment].finalLayout = current_layout;
     }
   }
@@ -686,7 +686,7 @@ RenderPass::RenderPass(ResourceRecycler* recycler, const RenderPassInfo& info)
       uint32_t samp = SampleCountFlagBitsToInt(
           attachments[subpass_info.color_attachments[i].attachment].samples);
       if (samples && (samp != samples)) {
-        FXL_DCHECK(samp == samples);
+        FX_DCHECK(samp == samples);
       }
       samples = samp;
     }
@@ -695,12 +695,12 @@ RenderPass::RenderPass(ResourceRecycler* recycler, const RenderPassInfo& info)
       uint32_t samp = SampleCountFlagBitsToInt(
           attachments[subpass_info.depth_stencil_attachment.attachment].samples);
       if (samples && (samp != samples)) {
-        FXL_DCHECK(samp == samples);
+        FX_DCHECK(samp == samples);
       }
       samples = samp;
     }
 
-    FXL_DCHECK(samples > 0);
+    FX_DCHECK(samples > 0);
     subpass_info.samples = impl::SampleCountFlagBitsFromInt(samples);
     subpasses_.push_back(subpass_info);
   }
@@ -708,13 +708,12 @@ RenderPass::RenderPass(ResourceRecycler* recycler, const RenderPassInfo& info)
   // Set |color_final_layouts_| and |depth_stencil_final_layout_| for later
   // update of image attachment layouts in CommandQueue::BeginRenderPass.
   for (uint32_t attachment = 0; attachment < info.num_color_attachments; ++attachment) {
-    FXL_DCHECK(attachments[attachment].finalLayout != vk::ImageLayout::eUndefined);
+    FX_DCHECK(attachments[attachment].finalLayout != vk::ImageLayout::eUndefined);
     color_final_layouts_[attachment] = attachments[attachment].finalLayout;
   }
   if (has_depth_stencil_attachment) {
     auto idx_depth_stencil_attachment = info.num_color_attachments;
-    FXL_DCHECK(attachments[idx_depth_stencil_attachment].finalLayout !=
-               vk::ImageLayout::eUndefined);
+    FX_DCHECK(attachments[idx_depth_stencil_attachment].finalLayout != vk::ImageLayout::eUndefined);
     depth_stencil_final_layout_ = attachments[idx_depth_stencil_attachment].finalLayout;
   }
 
@@ -731,13 +730,13 @@ RenderPass::RenderPass(ResourceRecycler* recycler, const RenderPassInfo& info)
 }
 
 bool RenderPass::SubpassHasDepth(uint32_t subpass) const {
-  FXL_DCHECK(subpass < subpasses_.size());
+  FX_DCHECK(subpass < subpasses_.size());
   return subpasses_[subpass].depth_stencil_attachment.attachment != VK_ATTACHMENT_UNUSED &&
          image_utils::IsDepthFormat(depth_stencil_format_);
 }
 
 bool RenderPass::SubpassHasStencil(uint32_t subpass) const {
-  FXL_DCHECK(subpass < subpasses_.size());
+  FX_DCHECK(subpass < subpasses_.size());
   return subpasses_[subpass].depth_stencil_attachment.attachment != VK_ATTACHMENT_UNUSED &&
          image_utils::IsStencilFormat(depth_stencil_format_);
 }

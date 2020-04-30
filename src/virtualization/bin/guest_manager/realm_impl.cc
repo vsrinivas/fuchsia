@@ -23,7 +23,7 @@ RealmImpl::RealmImpl(uint32_t id, const std::string& label, sys::ComponentContex
                                        {.inherit_parent_services = true});
   env_->GetLauncher(launcher_.NewRequest());
   zx::channel h1, h2;
-  FXL_CHECK(zx::channel::create(0, &h1, &h2) == ZX_OK);
+  FX_CHECK(zx::channel::create(0, &h1, &h2) == ZX_OK);
   environment->GetDirectory(std::move(h1));
 
   AddBinding(std::move(request));
@@ -67,7 +67,7 @@ void RealmImpl::LaunchInstance(fuchsia::virtualization::LaunchInfo launch_info,
   bool inserted;
   std::tie(std::ignore, inserted) = guests_.insert({cid, std::move(component)});
   if (!inserted) {
-    FXL_LOG(ERROR) << "Failed to allocate guest endpoint on CID " << cid;
+    FX_LOGS(ERROR) << "Failed to allocate guest endpoint on CID " << cid;
     callback(0);
     return;
   }

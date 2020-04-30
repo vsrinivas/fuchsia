@@ -22,7 +22,7 @@ namespace {
 
 // Default 1x1 texture for Renderables with no texture.
 TexturePtr CreateWhiteTexture(EscherWeakPtr escher, BatchGpuUploader* gpu_uploader) {
-  FXL_DCHECK(escher);
+  FX_DCHECK(escher);
   uint8_t channels[4];
   channels[0] = channels[1] = channels[2] = channels[3] = 255;
   auto image = escher->NewRgbaImage(gpu_uploader, 1, 1, channels);
@@ -74,7 +74,7 @@ bool RainfallDemo::HandleKeyPress(std::string key) {
     case '9':
     case '0':
       current_scene_ = (demo_scenes_.size() + (key_char - '0') - 1) % demo_scenes_.size();
-      FXL_LOG(INFO) << "Current scene index: " << current_scene_;
+      FX_LOGS(INFO) << "Current scene index: " << current_scene_;
       return true;
     default:
       return Demo::HandleKeyPress(key);
@@ -102,7 +102,7 @@ void RainfallDemo::InitializeDemoScenes() {
 void RainfallDemo::DrawFrame(const escher::FramePtr& frame, const escher::ImagePtr& output_image,
                              const escher::SemaphorePtr& framebuffer_acquired) {
   TRACE_DURATION("gfx", "RainfallDemo::DrawFrame");
-  FXL_DCHECK(frame && output_image && renderer_);
+  FX_DCHECK(frame && output_image && renderer_);
 
   if (!default_texture_) {
     auto gpu_uploader =
@@ -123,7 +123,7 @@ void RainfallDemo::DrawFrame(const escher::FramePtr& frame, const escher::ImageP
                                   vk::PipelineStageFlagBits::eColorAttachmentOutput);
   {
     TRACE_DURATION("gfx", "RainfallDemo::DrawFrame[scene]");
-    FXL_DCHECK(demo_scenes_[current_scene_]);
+    FX_DCHECK(demo_scenes_[current_scene_]);
     demo_scenes_[current_scene_]->Update(stopwatch_);
     const auto& batch = demo_scenes_[current_scene_]->renderables();
     renderer_->DrawBatch(frame->cmds(), batch, output_image, depth_buffer_);

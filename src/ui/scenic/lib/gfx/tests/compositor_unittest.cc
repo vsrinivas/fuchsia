@@ -29,7 +29,7 @@ struct ChannelPair {
 
 ChannelPair CreateChannelPair() {
   ChannelPair c;
-  FXL_CHECK(ZX_OK == zx::channel::create(0, &c.server, &c.client));
+  FX_CHECK(ZX_OK == zx::channel::create(0, &c.server, &c.client));
   return c;
 }
 class CompositorTest : public SessionTest {
@@ -58,7 +58,7 @@ class CompositorTest : public SessionTest {
   SessionContext CreateSessionContext() override {
     SessionContext session_context = SessionTest::CreateSessionContext();
 
-    FXL_DCHECK(!scene_graph_);
+    FX_DCHECK(!scene_graph_);
 
     // Generate scene graph.
     scene_graph_ = std::make_unique<SceneGraph>(context_provider_.context());

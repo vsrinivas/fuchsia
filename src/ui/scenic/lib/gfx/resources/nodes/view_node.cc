@@ -22,7 +22,7 @@ ViewPtr ViewNode::FindOwningView() const { return ViewPtr(view_.get()); }
 // stored in the properties of the view holder.
 Node::IntersectionInfo ViewNode::GetIntersection(
     const escher::ray4& ray, const IntersectionInfo& parent_intersection) const {
-  FXL_DCHECK(parent_intersection.continue_with_children);
+  FX_DCHECK(parent_intersection.continue_with_children);
 
   // Should never register a hit. Views have geometry but are invisible.
   // Ignoring distance, since no hit means no sensible distance value.

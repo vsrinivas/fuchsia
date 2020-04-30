@@ -36,7 +36,7 @@ class AnnotationRegistryHandler : fuchsia::ui::annotation::Registry {
   // Set up error handler. The callback function will be called when the channel
   // is disconnected, and the epitaph will be returned as an argument.
   void SetErrorHandler(fit::function<void(zx_status_t)> error_handler) {
-    FXL_DCHECK(!error_handler_);
+    FX_DCHECK(!error_handler_);
     error_handler_ = std::move(error_handler);
   }
 

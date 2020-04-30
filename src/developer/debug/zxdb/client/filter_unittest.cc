@@ -78,7 +78,7 @@ void PrintVectorDifference(const std::vector<std::string>& a, const std::vector<
     ss << " - " << s << std::endl;
   }
 
-  FXL_LOG(ERROR) << ss.str();
+  FX_LOGS(ERROR) << ss.str();
 }
 
 bool EqualVectors(const std::vector<std::string>& a, const std::vector<std::string>& b) {

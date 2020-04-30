@@ -38,16 +38,16 @@ namespace sshd_host {
 zx_status_t make_child_job(const zx::job& parent, std::string name, zx::job* job) {
   zx_status_t s;
   if ((s = zx::job::create(parent, 0, job)) != ZX_OK) {
-    FXL_PLOG(ERROR, s) << "Failed to create child job; parent = " << parent.get();
+    FX_PLOGS(ERROR, s) << "Failed to create child job; parent = " << parent.get();
     return s;
   }
 
   if ((s = job->set_property(ZX_PROP_NAME, name.data(), name.size())) != ZX_OK) {
-    FXL_PLOG(ERROR, s) << "Failed to set name of child job; job = " << job->get();
+    FX_PLOGS(ERROR, s) << "Failed to set name of child job; job = " << job->get();
     return s;
   }
   if ((s = job->replace(kChildJobRights, job)) != ZX_OK) {
-    FXL_PLOG(ERROR, s) << "Failed to set rights on child job; job = " << job->get();
+    FX_PLOGS(ERROR, s) << "Failed to set rights on child job; job = " << job->get();
     return s;
   }
 
@@ -57,7 +57,7 @@ zx_status_t make_child_job(const zx::job& parent, std::string name, zx::job* job
 Service::Service(int port) : port_(port) {
   sock_ = socket(AF_INET6, SOCK_STREAM, IPPROTO_TCP);
   if (sock_ < 0) {
-    FXL_LOG(ERROR) << "Failed to create socket: " << strerror(errno);
+    FX_LOGS(ERROR) << "Failed to create socket: " << strerror(errno);
     exit(1);
   }
 
@@ -65,12 +65,12 @@ Service::Service(int port) : port_(port) {
     .sin6_family = AF_INET6, .sin6_port = htons(port_), .sin6_addr = in6addr_any,
   };
   if (bind(sock_, reinterpret_cast<const sockaddr*>(&addr), sizeof addr) < 0) {
-    FXL_LOG(ERROR) << "Failed to bind to " << port_ << ": " << strerror(errno);
+    FX_LOGS(ERROR) << "Failed to bind to " << port_ << ": " << strerror(errno);
     exit(1);
   }
 
   if (listen(sock_, 10) < 0) {
-    FXL_LOG(ERROR) << "Failed to listen: " << strerror(errno);
+    FX_LOGS(ERROR) << "Failed to listen: " << strerror(errno);
     exit(1);
   }
 
@@ -86,10 +86,10 @@ Service::~Service() {
   for (auto& waiter : process_waiters_) {
     zx_status_t s;
     if ((s = zx_task_kill(waiter->object())) != ZX_OK) {
-      FXL_PLOG(ERROR, s) << "Failed kill child task";
+      FX_PLOGS(ERROR, s) << "Failed kill child task";
     }
     if ((s = zx_handle_close(waiter->object())) != ZX_OK) {
-      FXL_PLOG(ERROR, s) << "Failed close child handle";
+      FX_PLOGS(ERROR, s) << "Failed close child handle";
     }
   }
 }
@@ -102,10 +102,10 @@ void Service::Wait() {
         int conn = accept(sock_, reinterpret_cast<struct sockaddr*>(&peer_addr), &peer_addr_len);
         if (conn < 0) {
           if (errno == EPIPE) {
-            FXL_LOG(ERROR) << "The netstack died. Terminating.";
+            FX_LOGS(ERROR) << "The netstack died. Terminating.";
             exit(1);
           } else {
-            FXL_LOG(ERROR) << "Failed to accept: " << strerror(errno);
+            FX_LOGS(ERROR) << "Failed to accept: " << strerror(errno);
             // Wait for another connection.
             Wait();
           }
@@ -131,7 +131,7 @@ void Service::Launch(int conn, const std::string& peer_name) {
   if (make_child_job(job_, peer_name, &child_job) != ZX_OK) {
     shutdown(conn, SHUT_RDWR);
     close(conn);
-    FXL_LOG(ERROR) << "Child job creation failed, connection closed";
+    FX_LOGS(ERROR) << "Child job creation failed, connection closed";
     return;
   }
 
@@ -153,7 +153,7 @@ void Service::Launch(int conn, const std::string& peer_name) {
   if (status < 0) {
     shutdown(conn, SHUT_RDWR);
     close(conn);
-    FXL_LOG(ERROR) << "Error from chrealm: " << error;
+    FX_LOGS(ERROR) << "Error from chrealm: " << error;
     return;
   }
 
@@ -173,10 +173,10 @@ void Service::ProcessTerminated(zx::process process, zx::job job) {
 
   // Kill the process and the job.
   if ((s = process.kill()) != ZX_OK) {
-    FXL_PLOG(ERROR, s) << "Failed to kill child process";
+    FX_PLOGS(ERROR, s) << "Failed to kill child process";
   }
   if ((s = job.kill()) != ZX_OK) {
-    FXL_PLOG(ERROR, s) << "Failed to kill child job";
+    FX_PLOGS(ERROR, s) << "Failed to kill child job";
   }
 
   // Find the waiter.

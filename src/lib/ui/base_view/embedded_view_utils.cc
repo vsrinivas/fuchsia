@@ -13,7 +13,7 @@ namespace scenic {
 EmbeddedViewInfo LaunchComponentAndCreateView(const fuchsia::sys::LauncherPtr& launcher,
                                               const std::string& component_url,
                                               const std::vector<std::string>& component_args) {
-  FXL_DCHECK(launcher);
+  FX_DCHECK(launcher);
 
   auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
 

@@ -95,11 +95,11 @@ int run_fuzzer_test_instance(std::string input_file_path, UseVideoDecoderFunctio
 
   fuchsia::mediacodec::CodecFactoryPtr codec_factory;
   codec_factory.set_error_handler(
-      [](zx_status_t status) { FXL_PLOG(FATAL, status) << "codec_factory failed - unexpected"; });
+      [](zx_status_t status) { FX_PLOGS(FATAL, status) << "codec_factory failed - unexpected"; });
   component_context->svc()->Connect<fuchsia::mediacodec::CodecFactory>(codec_factory.NewRequest());
   fuchsia::sysmem::AllocatorPtr sysmem;
   sysmem.set_error_handler(
-      [](zx_status_t status) { FXL_PLOG(FATAL, status) << "sysmem failed - unexpected"; });
+      [](zx_status_t status) { FX_PLOGS(FATAL, status) << "sysmem failed - unexpected"; });
   component_context->svc()->Connect<fuchsia::sysmem::Allocator>(sysmem.NewRequest());
 
   auto input_copier = std::make_unique<MutatingInputCopier>(instance, loc, random_value);

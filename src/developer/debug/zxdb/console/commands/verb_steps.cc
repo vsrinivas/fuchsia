@@ -72,7 +72,7 @@ Err CompleteSteps(Thread* thread, TargetPointer ip, const std::vector<AddressRan
   if (sscanf(one_based_index_str.c_str(), "%zu", &chosen_index) != 1 || chosen_index == 0 ||
       chosen_index > ranges.size()) {
     // The prompt should have validated the input but we double-check.
-    FXL_NOTREACHED();
+    FX_NOTREACHED();
     return Err("Bad selected index.");
   }
 
@@ -145,7 +145,7 @@ void RunVerbStepsWithSubstatements(Thread* thread, std::vector<SubstatementCall>
     ranges.emplace_back(ip, calls[i].call_addr);
 
     auto locs = symbols->ResolveInputLocation(InputLocation(calls[i].call_dest));
-    FXL_DCHECK(locs.size() == 1);  // Should always get one result for an address lookup.
+    FX_DCHECK(locs.size() == 1);  // Should always get one result for an address lookup.
 
     std::string index_str = fxl::StringPrintf("%zu", ranges.size());
     prompt_opts.options.push_back(index_str);  // Tell the prompt this is a valid option.

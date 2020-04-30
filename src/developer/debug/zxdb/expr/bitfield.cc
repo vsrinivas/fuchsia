@@ -38,7 +38,7 @@ bool NeedsSignExtension(const fxl::RefPtr<EvalContext>& context, const Type* typ
 ErrOrValue ResolveBitfieldMember(const fxl::RefPtr<EvalContext>& context, const ExprValue& base,
                                  const FoundMember& found_member) {
   const DataMember* data_member = found_member.data_member();
-  FXL_DCHECK(data_member->is_bitfield());
+  FX_DCHECK(data_member->is_bitfield());
 
   if (data_member->data_bit_offset()) {
     // All of our compilers currently use bit_offset instead.
@@ -114,7 +114,7 @@ ErrOrValue ResolveBitfieldMember(const fxl::RefPtr<EvalContext>& context, const 
 
 void WriteBitfieldToMemory(const fxl::RefPtr<EvalContext>& context, const ExprValueSource& dest,
                            std::vector<uint8_t> data, fit::callback<void(const Err&)> cb) {
-  FXL_DCHECK(dest.is_bitfield());
+  FX_DCHECK(dest.is_bitfield());
 
   // Expect bitfields to fit in our biggest int.
   if (data.size() > sizeof(uint128_t))

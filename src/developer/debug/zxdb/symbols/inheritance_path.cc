@@ -28,9 +28,9 @@ std::optional<uint32_t> InheritancePath::BaseOffsetInDerived() const {
 }
 
 InheritancePath InheritancePath::SubPath(size_t begin_index, size_t len) const {
-  FXL_DCHECK(len != 0);
-  FXL_DCHECK(begin_index >= 0 && begin_index < path_.size());
-  FXL_DCHECK(len == kToEnd || begin_index + len <= path_.size());
+  FX_DCHECK(len != 0);
+  FX_DCHECK(begin_index >= 0 && begin_index < path_.size());
+  FX_DCHECK(len == kToEnd || begin_index + len <= path_.size());
 
   InheritancePath result;
   result.path_.insert(result.path_.begin(), path_.begin() + begin_index,

@@ -23,8 +23,8 @@ constexpr uint64_t kPortKey = 0x11232141234;
 
 ThreadSetup::~ThreadSetup() {
   int res = -1;
-  /* FXL_DCHECK(thrd_join(c_thread, &res) == thrd_success); */
-  /* FXL_DCHECK(res == 0) << res; */
+  /* FX_DCHECK(thrd_join(c_thread, &res) == thrd_success); */
+  /* FX_DCHECK(res == 0) << res; */
   thrd_join(c_thread, &res);
 }
 
@@ -80,9 +80,9 @@ std::optional<zx_port_packet_t> WaitOnPort(const zx::port& port, zx_signals_t si
     return std::nullopt;
   CHECK_OK(status);
 
-  FXL_DCHECK(packet.key == kPortKey);
-  FXL_DCHECK(packet.type == ZX_PKT_TYPE_SIGNAL_ONE);
-  FXL_DCHECK((packet.signal.observed & signals) != 0);
+  FX_DCHECK(packet.key == kPortKey);
+  FX_DCHECK(packet.type == ZX_PKT_TYPE_SIGNAL_ONE);
+  FX_DCHECK((packet.signal.observed & signals) != 0);
 
   return packet;
 }
@@ -289,7 +289,7 @@ zx_thread_state_debug_regs_t WatchpointRegs(uint64_t address, uint32_t length,
       align_mask = static_cast<uint64_t>(~0b111);
       break;
     default:
-      FXL_NOTREACHED() << "Invalid length: " << length;
+      FX_NOTREACHED() << "Invalid length: " << length;
       break;
   }
 
@@ -326,14 +326,14 @@ zx_thread_state_debug_regs_t WatchpointRegs(uint64_t address, uint32_t length,
         SET_REG(1, &regs.dr7, BYTES_2, address + 2, type_val);
         break;
       default:
-        FXL_NOTREACHED() << "Invalid diff: " << diff;
+        FX_NOTREACHED() << "Invalid diff: " << diff;
         break;
     }
   } else if (length == 8) {
     uint64_t aligned_address = address & static_cast<uint64_t>(~0b111);
     uint64_t diff = address - aligned_address;
 
-    /* FXL_LOG(INFO) << "Diff: " << diff; */
+    /* FX_LOGS(INFO) << "Diff: " << diff; */
 
     switch (diff) {
       case 0:
@@ -365,12 +365,12 @@ zx_thread_state_debug_regs_t WatchpointRegs(uint64_t address, uint32_t length,
         SET_REG(1, &regs.dr7, BYTES_4, address + 4, type_val);
         break;
       default:
-        FXL_NOTREACHED() << "Invalid diff: " << diff;
+        FX_NOTREACHED() << "Invalid diff: " << diff;
         break;
     }
 
   } else {
-    FXL_NOTREACHED() << "Invalid length: " << length;
+    FX_NOTREACHED() << "Invalid length: " << length;
   }
 
   return regs;
@@ -415,7 +415,7 @@ zx_thread_state_debug_regs_t WatchpointRegs(uint64_t address, uint32_t length,
   // The instruction has to be 4 byte aligned.
   uint64_t aligned_address = address & static_cast<uint64_t>(~0b111);
   uint64_t diff = address - aligned_address;
-  FXL_DCHECK(diff <= 7);
+  FX_DCHECK(diff <= 7);
 
   // Set the BAS value.
   uint8_t bas = 0;
@@ -547,10 +547,10 @@ std::optional<Exception> SingleStep(const zx::thread& thread, const zx::port& po
   exception = WaitForException(port, exception_channel,
                                zx::deadline_after(zx::msec(kExceptionWaitTimeout)));
 
-  FXL_DCHECK(exception.has_value()) << "No exception!";
-  FXL_DCHECK(exception->info.type == ZX_EXCP_HW_BREAKPOINT)
+  FX_DCHECK(exception.has_value()) << "No exception!";
+  FX_DCHECK(exception->info.type == ZX_EXCP_HW_BREAKPOINT)
       << "Got: " << zx_exception_get_string(exception->info.type);
-  FXL_DCHECK(DecodeHWException(thread, exception.value()) == HWExceptionType::kSingleStep);
+  FX_DCHECK(DecodeHWException(thread, exception.value()) == HWExceptionType::kSingleStep);
 
   {
     zx_thread_state_single_step_t value = 0;

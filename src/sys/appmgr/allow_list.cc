@@ -14,7 +14,7 @@ namespace component {
 AllowList::AllowList(const fxl::UniqueFD& dir, const std::string& path) : allow_all_(false) {
   std::string result;
   if (!files::ReadFileToStringAt(dir.get(), path, &result)) {
-    FXL_LOG(ERROR) << "Failed to read allowlist at " << path << ", will deny all usage attempts";
+    FX_LOGS(ERROR) << "Failed to read allowlist at " << path << ", will deny all usage attempts";
     return;
   }
 

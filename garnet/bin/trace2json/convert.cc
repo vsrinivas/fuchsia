@@ -38,7 +38,7 @@ bool CompareMagic(const char* magic1, const char* magic2) {
 bool ConvertTrace(ConvertSettings settings) {
   const uint64_t host_magic = kMagicRecord;
   if (!CompareMagic(reinterpret_cast<const char*>(&host_magic), kLittleEndianMagicRecord)) {
-    FXL_LOG(ERROR) << "Detected big endian host. Aborting.";
+    FX_LOGS(ERROR) << "Detected big endian host. Aborting.";
     return false;
   }
 
@@ -55,7 +55,7 @@ bool ConvertTrace(ConvertSettings settings) {
       input_gz_file_stream = std::make_unique<gzifstream>(
           settings.input_file_name.c_str(), std::ios_base::in | std::ios_base::binary);
       if (!input_gz_file_stream->is_open()) {
-        FXL_LOG(ERROR) << "Error opening input file.";
+        FX_LOGS(ERROR) << "Error opening input file.";
         return false;
       }
       in_stream = static_cast<std::istream*>(input_gz_file_stream.get());
@@ -63,7 +63,7 @@ bool ConvertTrace(ConvertSettings settings) {
       input_file_stream = std::make_unique<std::ifstream>(
           settings.input_file_name.c_str(), std::ios_base::in | std::ios_base::binary);
       if (!input_file_stream->is_open()) {
-        FXL_LOG(ERROR) << "Error opening input file.";
+        FX_LOGS(ERROR) << "Error opening input file.";
         return false;
       }
       in_stream = static_cast<std::istream*>(input_file_stream.get());
@@ -82,11 +82,11 @@ bool ConvertTrace(ConvertSettings settings) {
   // before opening (and thus truncating) the output file if we don't find it.
   char initial_bytes[kMagicSize];
   if (in_stream->read(initial_bytes, kMagicSize).gcount() != kMagicSize) {
-    FXL_LOG(ERROR) << "Failed to read magic number.";
+    FX_LOGS(ERROR) << "Failed to read magic number.";
     return false;
   }
   if (!CompareMagic(initial_bytes, kLittleEndianMagicRecord)) {
-    FXL_LOG(ERROR) << "Input file does not start with Fuchsia Trace magic "
+    FX_LOGS(ERROR) << "Input file does not start with Fuchsia Trace magic "
                       "number. Aborting.";
     return false;
   }
@@ -96,7 +96,7 @@ bool ConvertTrace(ConvertSettings settings) {
       output_gz_file_stream = std::make_unique<gzofstream>(
           settings.output_file_name.c_str(), std::ios_base::out | std::ios_base::trunc);
       if (!output_gz_file_stream->is_open()) {
-        FXL_LOG(ERROR) << "Error opening output file.";
+        FX_LOGS(ERROR) << "Error opening output file.";
         return false;
       }
       out_stream = static_cast<std::ostream*>(output_gz_file_stream.get());
@@ -105,7 +105,7 @@ bool ConvertTrace(ConvertSettings settings) {
           settings.output_file_name.c_str(),
           std::ios_base::out | std::ios_base::binary | std::ios_base::trunc);
       if (!output_file_stream->is_open()) {
-        FXL_LOG(ERROR) << "Error opening output file.";
+        FX_LOGS(ERROR) << "Error opening output file.";
         return false;
       }
       out_stream = static_cast<std::ostream*>(output_file_stream.get());
@@ -116,7 +116,7 @@ bool ConvertTrace(ConvertSettings settings) {
       // stdout properly. In trying to use STDOUT_FILENO similar to the usage of STDIN_FILENO above,
       // it seemed that the output would either be truncated to a multiple of 0x1000 bytes, or not
       // be written at all.
-      FXL_LOG(ERROR) << "Compressed output on stdout is not supported. Please "
+      FX_LOGS(ERROR) << "Compressed output on stdout is not supported. Please "
                         "specify --output-file";
       return false;
     } else {

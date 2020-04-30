@@ -15,7 +15,7 @@ Reader::~Reader() {}
 
 ReaderStatus Reader::SetTrace(uint32_t trace_num) {
   if (trace_num >= num_traces_) {
-    FXL_LOG(ERROR) << "Bad trace number: " << trace_num;
+    FX_LOGS(ERROR) << "Bad trace number: " << trace_num;
     return ReaderStatus::kInvalidArgs;
   }
 

@@ -32,7 +32,7 @@ shaderc_shader_kind ShaderStageToKind(ShaderStage stage) {
     case ShaderStage::kCompute:
       return shaderc_compute_shader;
     case ShaderStage::kEnumCount:
-      FXL_CHECK(false) << "Invalid ShaderStage: kEnumCount.";
+      FX_CHECK(false) << "Invalid ShaderStage: kEnumCount.";
       return shaderc_glsl_infer_from_source;
   }
 }
@@ -43,7 +43,7 @@ class Includer : public shaderc::CompileOptions::IncluderInterface {
       : filesystem_watcher_(filesystem_watcher) {}
 
   ~Includer() override {
-    FXL_DCHECK(result_map_.empty())
+    FX_DCHECK(result_map_.empty())
         << "Included destroyed before all ResultRecords have been released.";
   }
 
@@ -112,7 +112,7 @@ ShaderModuleTemplate::ShaderModuleTemplate(vk::Device device, ShaderStage shader
       filesystem_(std::move(filesystem)) {}
 #endif  // ESCHER_USE_RUNTIME_GLSL
 
-ShaderModuleTemplate::~ShaderModuleTemplate() { FXL_DCHECK(variants_.empty()); }
+ShaderModuleTemplate::~ShaderModuleTemplate() { FX_DCHECK(variants_.empty()); }
 
 ShaderModulePtr ShaderModuleTemplate::GetShaderModuleVariant(const ShaderVariantArgs& args) {
   if (Variant* variant = variants_[args]) {
@@ -128,14 +128,14 @@ ShaderModulePtr ShaderModuleTemplate::GetShaderModuleVariant(const ShaderVariant
 }
 
 void ShaderModuleTemplate::RegisterVariant(Variant* variant) {
-  FXL_DCHECK(variants_.find(variant->args()) != variants_.end()) << "Variant already registered.";
+  FX_DCHECK(variants_.find(variant->args()) != variants_.end()) << "Variant already registered.";
   variants_[variant->args()] = variant;
 }
 
 void ShaderModuleTemplate::UnregisterVariant(Variant* variant) {
   auto it = variants_.find(variant->args());
-  FXL_DCHECK(it != variants_.end());
-  FXL_DCHECK(it->second == variant);
+  FX_DCHECK(it != variants_.end());
+  FX_DCHECK(it->second == variant);
   variants_.erase(it);
 }
 
@@ -152,7 +152,7 @@ void ShaderModuleTemplate::ScheduleVariantCompilation(fxl::WeakPtr<Variant> vari
 #if ESCHER_USE_RUNTIME_GLSL
 bool ShaderModuleTemplate::CompileVariantToSpirv(const ShaderVariantArgs& args,
                                                  std::vector<uint32_t>* output) {
-  FXL_CHECK(output);
+  FX_CHECK(output);
   Variant* variant = nullptr;
   if (variants_[args]) {
     variant = variants_[args];
@@ -196,7 +196,7 @@ void ShaderModuleTemplate::Variant::ScheduleCompilation() {
 bool ShaderModuleTemplate::Variant::GenerateSpirV(std::vector<uint32_t>* output) {
   TRACE_DURATION("gfx", "ShaderModuleTemplate::GenerateSpirV");
 
-  FXL_DCHECK(output);
+  FX_DCHECK(output);
 
   // Clear watcher paths; we'll gather new ones during compilation.
   filesystem_watcher_->ClearPaths();
@@ -221,7 +221,7 @@ bool ShaderModuleTemplate::Variant::GenerateSpirV(std::vector<uint32_t>* output)
 
   auto status = result.GetCompilationStatus();
   if (status != shaderc_compilation_status_success) {
-    FXL_LOG(ERROR) << "Shader compilation failed with status: " << status << ". "
+    FX_LOGS(ERROR) << "Shader compilation failed with status: " << status << ". "
                    << " Error message: " << result.GetErrorMessage();
     return false;
   }
@@ -234,7 +234,7 @@ bool ShaderModuleTemplate::Variant::GenerateSpirV(std::vector<uint32_t>* output)
 void ShaderModuleTemplate::Variant::UpdateModule() {
   std::vector<uint32_t> spirv;
   bool result = GenerateSpirV(&spirv);
-  FXL_CHECK(result) << "Shader compilation failed!";
+  FX_CHECK(result) << "Shader compilation failed!";
   RecreateModuleFromSpirvAndNotifyListeners(spirv);
 }
 #else
@@ -249,15 +249,15 @@ void ShaderModuleTemplate::Variant::UpdateModule() {
     std::replace(path.begin(), path.end(), '/', '_');
     path = "/data/shaders/" + path + ".spirv";
     auto contents = template_->filesystem_->ReadFile(path);
-    FXL_CHECK(!contents.empty()) << "module " << path << " is empty or non-existent.\n"
-                                 << "Update //src/ui/lib/escher/{BUILD.gn,test/gtest_escher.cc}";
+    FX_CHECK(!contents.empty()) << "module " << path << " is empty or non-existent.\n"
+                                << "Update //src/ui/lib/escher/{BUILD.gn,test/gtest_escher.cc}";
     const size_t num = (contents.size() + 3) / sizeof(uint32_t);
     spirv.resize(num);
     memcpy(spirv.data(), contents.data(), num * sizeof(uint32_t));
   } else {
     bool result =
         shader_util::ReadSpirvFromDisk(args_, *base_path + "/shaders/", template_->path_, &spirv);
-    FXL_CHECK(result) << "Read SPIR-V file failed!";
+    FX_CHECK(result) << "Read SPIR-V file failed!";
   }
   RecreateModuleFromSpirvAndNotifyListeners(spirv);
 }

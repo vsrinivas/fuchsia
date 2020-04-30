@@ -27,21 +27,21 @@ class StoryControllerMock : public fuchsia::modular::StoryController {
   }
 
   // |fuchsia::modular::StoryController|
-  void RequestStart() override { FXL_NOTIMPLEMENTED(); }
+  void RequestStart() override { FX_NOTIMPLEMENTED(); }
 
   // |fuchsia::modular::StoryController|
-  void Stop(StopCallback done) override { FXL_NOTIMPLEMENTED(); }
+  void Stop(StopCallback done) override { FX_NOTIMPLEMENTED(); }
 
   // |fuchsia::modular::StoryController|
   void Watch(fidl::InterfaceHandle<fuchsia::modular::StoryWatcher> watcher) override {
-    FXL_NOTIMPLEMENTED();
+    FX_NOTIMPLEMENTED();
   }
 
   // |fuchsia::modular::StoryController|
   void GetModuleController(
       std::vector<std::string> module_path,
       fidl::InterfaceRequest<fuchsia::modular::ModuleController> request) override {
-    FXL_NOTIMPLEMENTED();
+    FX_NOTIMPLEMENTED();
   }
 
   FXL_DISALLOW_COPY_AND_ASSIGN(StoryControllerMock);

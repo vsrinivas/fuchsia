@@ -22,8 +22,8 @@ CobaltEventBuilder &CobaltEventBuilder::with_event_code(const uint32_t event_cod
 
 CobaltEventBuilder &CobaltEventBuilder::with_event_code_at(const uint32_t index,
                                                            const uint32_t event_code) {
-  FXL_CHECK(index < 5) << "Invalid index passed to CobaltEventBuilder::with_event_code. Cobalt "
-                          "events cannot support more than 5 event_codes.";
+  FX_CHECK(index < 5) << "Invalid index passed to CobaltEventBuilder::with_event_code. Cobalt "
+                         "events cannot support more than 5 event_codes.";
   while (event_.event_codes.size() <= index) {
     event_.event_codes.push_back(0);
   }

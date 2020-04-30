@@ -24,7 +24,7 @@ const char* SessionObserver::NotificationTypeToString(NotificationType type) {
       return "None";
   }
 
-  FXL_NOTREACHED();
+  FX_NOTREACHED();
   return "<unknown>";
 }
 

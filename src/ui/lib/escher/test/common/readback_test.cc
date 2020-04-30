@@ -22,7 +22,7 @@ void ReadbackTest::SetUp() {
           vk::ImageUsageFlagBits::eTransferDst);
 
   auto depth_attachment_format_result = escher_->device()->caps().GetMatchingDepthStencilFormat();
-  FXL_CHECK(depth_attachment_format_result.result == vk::Result::eSuccess)
+  FX_CHECK(depth_attachment_format_result.result == vk::Result::eSuccess)
       << "No depth stencil format is supported on this device.";
   depth_attachment_ =
       image_utils::NewDepthImage(&image_factory, depth_attachment_format_result.value,

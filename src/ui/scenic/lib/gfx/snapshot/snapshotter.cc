@@ -48,30 +48,30 @@ namespace {
 // Helper function to create a |SizedVmo| from bytes of certain size.
 bool VmoFromBytes(const uint8_t* bytes, size_t num_bytes, uint32_t type, uint32_t version,
                   fsl::SizedVmo* sized_vmo_ptr) {
-  FXL_CHECK(sized_vmo_ptr);
+  FX_CHECK(sized_vmo_ptr);
 
   zx::vmo vmo;
   size_t total_size = num_bytes + sizeof(type) + sizeof(version);
   zx_status_t status = zx::vmo::create(total_size, 0u, &vmo);
   if (status < 0) {
-    FXL_PLOG(WARNING, status) << "zx::vmo::create failed";
+    FX_PLOGS(WARNING, status) << "zx::vmo::create failed";
     return false;
   }
 
   if (num_bytes > 0) {
     status = vmo.write(&type, 0, sizeof(uint32_t));
     if (status < 0) {
-      FXL_PLOG(WARNING, status) << "zx::vmo::write snapshot type failed";
+      FX_PLOGS(WARNING, status) << "zx::vmo::write snapshot type failed";
       return false;
     }
     status = vmo.write(&version, sizeof(uint32_t), sizeof(uint32_t));
     if (status < 0) {
-      FXL_PLOG(WARNING, status) << "zx::vmo::write snapshot version failed";
+      FX_PLOGS(WARNING, status) << "zx::vmo::write snapshot version failed";
       return false;
     }
     status = vmo.write(bytes, 2 * sizeof(uint32_t), num_bytes);
     if (status < 0) {
-      FXL_PLOG(WARNING, status) << "zx::vmo::write bytes failed";
+      FX_PLOGS(WARNING, status) << "zx::vmo::write bytes failed";
       return false;
     }
   }
@@ -104,7 +104,7 @@ Snapshotter::Snapshotter(escher::EscherWeakPtr escher)
       escher_(escher) {}
 
 void Snapshotter::TakeSnapshot(Resource* resource, TakeSnapshotCallback snapshot_callback) {
-  FXL_DCHECK(resource) << "Cannot snapshot null resource.";
+  FX_DCHECK(resource) << "Cannot snapshot null resource.";
   // Visit the scene graph starting with |resource| and collecting images
   // and buffers to read from the GPU.
   resource->Accept(this);
@@ -131,7 +131,7 @@ void Snapshotter::TakeSnapshot(Resource* resource, TakeSnapshotCallback snapshot
   // TODO(before-41029): would be more efficient to just serialize fake data directly, but
   // that would require significant changes to snapshotter.
   if (gpu_uploader_for_replacements_) {
-    FXL_DCHECK(gpu_uploader_for_replacements_->HasContentToUpload());
+    FX_DCHECK(gpu_uploader_for_replacements_->HasContentToUpload());
     auto replacement_semaphore = escher::Semaphore::New(escher_->vk_device());
     gpu_uploader_for_replacements_->AddSignalSemaphore(replacement_semaphore);
     gpu_uploader_for_replacements_->Submit();
@@ -170,7 +170,7 @@ void Snapshotter::Visit(Scene* r) {
 }
 
 void Snapshotter::Visit(CircleShape* r) {
-  FXL_DCHECK(current_node_serializer_);
+  FX_DCHECK(current_node_serializer_);
   auto shape = std::make_shared<CircleSerializer>();
   shape->radius = r->radius();
 
@@ -178,7 +178,7 @@ void Snapshotter::Visit(CircleShape* r) {
 }
 
 void Snapshotter::Visit(RectangleShape* r) {
-  FXL_DCHECK(current_node_serializer_);
+  FX_DCHECK(current_node_serializer_);
 
   auto shape = std::make_shared<RectangleSerializer>();
   shape->width = r->width();
@@ -188,7 +188,7 @@ void Snapshotter::Visit(RectangleShape* r) {
 }
 
 void Snapshotter::Visit(RoundedRectangleShape* r) {
-  FXL_DCHECK(current_node_serializer_);
+  FX_DCHECK(current_node_serializer_);
 
   auto shape = std::make_shared<RoundedRectangleSerializer>();
   shape->width = r->width();
@@ -205,7 +205,7 @@ void Snapshotter::Visit(RoundedRectangleShape* r) {
 }
 
 void Snapshotter::Visit(MeshShape* r) {
-  FXL_DCHECK(current_node_serializer_);
+  FX_DCHECK(current_node_serializer_);
 
   current_node_serializer_->shape = std::make_shared<MeshSerializer>();
 
@@ -324,7 +324,7 @@ void Snapshotter::VisitImage(escher::ImagePtr image) {
 }
 
 void Snapshotter::VisitMesh(escher::MeshPtr mesh) {
-  FXL_DCHECK(current_node_serializer_);
+  FX_DCHECK(current_node_serializer_);
 
   auto geometry = std::make_shared<GeometrySerializer>();
   geometry->bbox_min = snapshot::Vec3(mesh->bounding_box().min().x, mesh->bounding_box().min().y,
@@ -365,7 +365,7 @@ void Snapshotter::VisitMesh(escher::MeshPtr mesh) {
 // |RoundedRectData| struct which is stored in an array, to be cleared after
 // serialization is complete.
 void Snapshotter::VisitRoundedRectSpec(const escher::RoundedRectSpec& spec) {
-  FXL_DCHECK(current_node_serializer_);
+  FX_DCHECK(current_node_serializer_);
   auto geometry = std::make_shared<GeometrySerializer>();
 
   // Create the mesh spec and make sure that the attribute offsets match those
@@ -373,13 +373,13 @@ void Snapshotter::VisitRoundedRectSpec(const escher::RoundedRectSpec& spec) {
   // to the size of PosUvVertex. Index type sizes must also match.
   const escher::MeshSpec mesh_spec{
       {escher::MeshAttribute::kPosition2D | escher::MeshAttribute::kUV}};
-  FXL_DCHECK(mesh_spec.attribute_offset(0, escher::MeshAttribute::kPosition2D) ==
-             offsetof(PosUvVertex, pos))
+  FX_DCHECK(mesh_spec.attribute_offset(0, escher::MeshAttribute::kPosition2D) ==
+            offsetof(PosUvVertex, pos))
       << "Position offsets do not match.";
-  FXL_DCHECK(mesh_spec.attribute_offset(0, escher::MeshAttribute::kUV) == offsetof(PosUvVertex, uv))
+  FX_DCHECK(mesh_spec.attribute_offset(0, escher::MeshAttribute::kUV) == offsetof(PosUvVertex, uv))
       << "UV offsets do not match.";
-  FXL_DCHECK(mesh_spec.stride(0) == sizeof(PosUvVertex)) << "Vertex strides do not match.";
-  FXL_DCHECK(sizeof(escher::MeshSpec::IndexType) == sizeof(uint32_t))
+  FX_DCHECK(mesh_spec.stride(0) == sizeof(PosUvVertex)) << "Vertex strides do not match.";
+  FX_DCHECK(sizeof(escher::MeshSpec::IndexType) == sizeof(uint32_t))
       << "Index type sizes do not match.";
 
   // Grab the counts for indices.

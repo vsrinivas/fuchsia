@@ -127,8 +127,8 @@ class Element final : public inspect_deprecated::ChildrenManager {
   };
 
   bool IsDiscardable() const {
-    FXL_DCHECK(0 <= user_serving_retention_);
-    FXL_DCHECK(0 <= inspect_retention_);
+    FX_DCHECK(0 <= user_serving_retention_);
+    FX_DCHECK(0 <= inspect_retention_);
     return user_serving_retention_ == 0 && inspect_retention_ == 0 && children_.empty();
   }
 

@@ -26,14 +26,14 @@ ReleaseFenceSignaller::~ReleaseFenceSignaller() {
 
 void ReleaseFenceSignaller::AddVulkanReleaseFence(zx::event fence) {
   // TODO: Submit a command buffer with the vulkan fence as a semaphore
-  FXL_LOG(ERROR) << "Vulkan Release Fences not yet supported.";
-  FXL_DCHECK(false);
+  FX_LOGS(ERROR) << "Vulkan Release Fences not yet supported.";
+  FX_DCHECK(false);
 }
 
 void ReleaseFenceSignaller::AddVulkanReleaseFences(fidl::VectorPtr<zx::event> fences) {
   // TODO: Submit a command buffer with the vulkan fence as a semaphore
-  FXL_LOG(ERROR) << "Vulkan Release Fences not yet supported.";
-  FXL_DCHECK(false);
+  FX_LOGS(ERROR) << "Vulkan Release Fences not yet supported.";
+  FX_DCHECK(false);
 }
 
 void ReleaseFenceSignaller::AddCPUReleaseFence(zx::event fence) {
@@ -46,8 +46,8 @@ void ReleaseFenceSignaller::AddCPUReleaseFence(zx::event fence) {
     // marked finished.
     fence.signal(0u, kFenceSignalled);
   } else {
-    FXL_CHECK(false) << "ReleaseFenceSignaller::AddCPUReleaseFence: sequence "
-                        "numbers are in an invalid state";
+    FX_CHECK(false) << "ReleaseFenceSignaller::AddCPUReleaseFence: sequence "
+                       "numbers are in an invalid state";
   }
 }
 

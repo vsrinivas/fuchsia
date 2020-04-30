@@ -28,11 +28,9 @@ void SyncFillAndDescribeFormatNode(const fxl::RefPtr<EvalContext>& eval_context,
                                    const FormatOptions& opts) {
   // Populate the value.
   bool called = false;
-  FillFormatNodeValue(node, eval_context, fit::defer_callback([&called]() {
-                        called = true;
-                      }));
+  FillFormatNodeValue(node, eval_context, fit::defer_callback([&called]() { called = true; }));
   debug_ipc::MessageLoop::Current()->RunUntilNoTasks();
-  FXL_DCHECK(called);
+  FX_DCHECK(called);
 
   called = false;
   FillFormatNodeDescription(node, opts, eval_context, fit::defer_callback([&called]() {
@@ -40,7 +38,7 @@ void SyncFillAndDescribeFormatNode(const fxl::RefPtr<EvalContext>& eval_context,
                               called = true;
                             }));
   debug_ipc::MessageLoop::Current()->RunUntilNoTasks();
-  FXL_DCHECK(called);
+  FX_DCHECK(called);
 }
 
 void SyncFillAndDescribeFormatTree(const fxl::RefPtr<EvalContext>& eval_context, FormatNode* node,

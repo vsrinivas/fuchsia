@@ -64,7 +64,7 @@ class ExtraProvider : public ::testing::Test {
     zx::eventpair their_event;
     auto status = zx::eventpair::create(0u, &our_event_, &their_event);
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Error creating event pair: " << zx_status_get_string(status);
+      FX_LOGS(ERROR) << "Error creating event pair: " << zx_status_get_string(status);
       return;
     }
     status = SpawnProgram(job, argv_, their_event.release(), &provider_process_);
@@ -89,11 +89,11 @@ class ExtraProvider : public ::testing::Test {
     // its bug.
     status = our_event_.wait_many(&wait_items[0], 2, zx::time::infinite());
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed waiting for provider process to start: "
+      FX_LOGS(ERROR) << "Failed waiting for provider process to start: "
                      << zx_status_get_string(status);
       TearDown();
     }
-    FXL_LOG(INFO) << GetProgramPath() << " started";
+    FX_LOGS(INFO) << GetProgramPath() << " started";
   }
 
   void TearDown() override {
@@ -106,7 +106,7 @@ class ExtraProvider : public ::testing::Test {
         EXPECT_EQ(return_code, 0);
       }
       provider_process_.reset();
-      FXL_LOG(INFO) << GetProgramPath() << " terminated";
+      FX_LOGS(INFO) << GetProgramPath() << " terminated";
     }
   }
 

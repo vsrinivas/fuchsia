@@ -29,7 +29,7 @@ void App::Start(const fxl::CommandLine& command_line) {
   const auto& positional_args = command_line.positional_args();
 
   if (positional_args.empty()) {
-    FXL_LOG(ERROR) << "Command missing - aborting";
+    FX_LOGS(ERROR) << "Command missing - aborting";
     PrintHelp();
     Done(EXIT_FAILURE);
     return;
@@ -37,7 +37,7 @@ void App::Start(const fxl::CommandLine& command_line) {
 
   auto it = known_commands_.find(positional_args.front());
   if (it == known_commands_.end()) {
-    FXL_LOG(ERROR) << "Unknown command '" << positional_args.front() << "' - aborting";
+    FX_LOGS(ERROR) << "Unknown command '" << positional_args.front() << "' - aborting";
     PrintHelp();
     Done(EXIT_FAILURE);
     return;

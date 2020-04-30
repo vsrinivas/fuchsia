@@ -49,7 +49,7 @@ ExceptionType DecodeHardwareRegister(uint64_t dr7, int slot) {
     case 2: is_watchpoint = X86_DBG_CONTROL_RW2_GET(dr7) != 0; break;
     case 3: is_watchpoint = X86_DBG_CONTROL_RW3_GET(dr7) != 0; break;
     default:
-      FXL_NOTREACHED();
+      FX_NOTREACHED();
       return ExceptionType::kUnknown;
   }
   // clang-format on
@@ -92,7 +92,7 @@ ExceptionType DecodeException(uint32_t code, X64ExceptionInfo* info) {
   } else if (X86_DBG_STATUS_B3_GET(regs->dr6)) {
     return DecodeHardwareRegister(regs->dr7, 3);
   } else {
-    FXL_NOTREACHED() << "x86: No known hw exception set in DR6";
+    FX_NOTREACHED() << "x86: No known hw exception set in DR6";
     return ExceptionType::kUnknown;
   }
 }
@@ -150,8 +150,8 @@ ExceptionType DecodeException(uint32_t code, Arm64ExceptionInfo* info) {
 
   auto decoded_type = DecodeESR(esr);
   if (decoded_type == ExceptionType::kUnknown) {
-    FXL_NOTREACHED() << "Received invalid ESR value: 0x" << std::hex << esr << " (EC: 0x"
-                     << (esr >> 26) << ").";
+    FX_NOTREACHED() << "Received invalid ESR value: 0x" << std::hex << esr << " (EC: 0x"
+                    << (esr >> 26) << ").";
     return debug_ipc::ExceptionType::kUnknown;
   }
 

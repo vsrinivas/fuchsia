@@ -32,7 +32,7 @@ TEST(DetachTest, DISABLED_SpawnedAppNotDetached) {
                                 kChildDurationArg};
   ASSERT_TRUE(RunTraceAndWait(job, args));
 
-  FXL_LOG(INFO) << "Trace exited, checking for helper presence";
+  FX_LOGS(INFO) << "Trace exited, checking for helper presence";
 
   // The test helper should have been killed.
   zx_koid_t test_helper_pid;
@@ -53,7 +53,7 @@ TEST(DetachTest, DISABLED_SpawnedAppDetached) {
                                 kTraceDurationArg, kChildPath, kChildDurationArg};
   ASSERT_TRUE(RunTraceAndWait(job, args));
 
-  FXL_LOG(INFO) << "Trace exited, checking for helper presence";
+  FX_LOGS(INFO) << "Trace exited, checking for helper presence";
 
   // The test helper should still be running.
   zx_koid_t test_helper_pid;
@@ -64,7 +64,7 @@ TEST(DetachTest, DISABLED_SpawnedAppDetached) {
   ASSERT_EQ(actual_count, 1u);
   ASSERT_EQ(avail_count, 1u);
 
-  FXL_LOG(INFO) << "Process " << test_helper_pid << " present";
+  FX_LOGS(INFO) << "Process " << test_helper_pid << " present";
 
   // Don't need the test helper anymore.
   zx::process test_helper;

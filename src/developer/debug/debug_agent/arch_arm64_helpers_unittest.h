@@ -109,7 +109,7 @@ inline uint32_t CountBASBits(uint32_t bas) {
     case 0b11111111:
       return 8;
     default:
-      FXL_NOTREACHED() << "Invalid bas: 0x" << std::hex << bas;
+      FX_NOTREACHED() << "Invalid bas: 0x" << std::hex << bas;
       return 0;
   }
 }

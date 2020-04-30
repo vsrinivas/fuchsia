@@ -42,7 +42,7 @@ int main(int argc, const char** argv) {
 
   if (command_line.HasOption("input_path", nullptr)) {
     // Ease users off this flag.
-    FXL_LOG(ERROR) << "The --input_path= flag is DEPRECATED. Flag will be removed.";
+    FX_LOGS(ERROR) << "The --input_path= flag is DEPRECATED. Flag will be removed.";
   }
 
   auto component_context = sys::ComponentContext::CreateAndServeOutgoingDirectory();

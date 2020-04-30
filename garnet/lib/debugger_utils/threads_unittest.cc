@@ -46,7 +46,7 @@ void ShutdownThreads(const std::vector<thrd_t>& threads, std::atomic_bool* keep_
   *keep_running = false;
   for (auto& thread : threads) {
     int result = thrd_join(thread, NULL);
-    FXL_DCHECK(result == thrd_success);
+    FX_DCHECK(result == thrd_success);
   }
 }
 

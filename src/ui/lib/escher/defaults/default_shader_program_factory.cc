@@ -27,9 +27,9 @@ ShaderProgramPtr DefaultShaderProgramFactory::GetProgramImpl(
   if (record.ptr) {
 #ifndef NDEBUG
     // Verify there is no hash collision.
-    FXL_DCHECK(record.args == args);
+    FX_DCHECK(record.args == args);
     for (size_t i = 0; i < EnumCount<ShaderStage>(); ++i) {
-      FXL_DCHECK(record.paths[i] == shader_paths[i]);
+      FX_DCHECK(record.paths[i] == shader_paths[i]);
     }
 #endif
     return record.ptr;
@@ -54,7 +54,7 @@ ShaderProgramPtr DefaultShaderProgramFactory::GetProgramImpl(
 
   // Compute programs can only have a single stage.  Every graphics program must
   // have a vertex stage, but not necessarily the others.
-  FXL_DCHECK((has_compute_stage && modules.size() == 1) || has_vertex_stage);
+  FX_DCHECK((has_compute_stage && modules.size() == 1) || has_vertex_stage);
 
   // Create the shader program.
   ShaderProgramPtr program =

@@ -47,7 +47,7 @@ FactoryResetManager::FactoryResetManager(sys::ComponentContext& context) {
       });
 
   context.svc()->Connect(factory_reset_.NewRequest());
-  FXL_DCHECK(factory_reset_);
+  FX_DCHECK(factory_reset_);
 }
 
 bool FactoryResetManager::OnMediaButtonReport(
@@ -66,13 +66,13 @@ bool FactoryResetManager::OnMediaButtonReport(
 }
 
 void FactoryResetManager::TriggerFactoryReset() {
-  FXL_LOG(WARNING) << "Triggering factory reset";
+  FX_LOGS(WARNING) << "Triggering factory reset";
   countdown_started_ = false;
 
-  FXL_DCHECK(factory_reset_);
+  FX_DCHECK(factory_reset_);
   factory_reset_->Reset([](zx_status_t status) {
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Factory service failed with status: " << zx_status_get_string(status);
+      FX_LOGS(ERROR) << "Factory service failed with status: " << zx_status_get_string(status);
     }
   });
 }
@@ -98,7 +98,7 @@ void FactoryResetManager::StartFactoryResetCountdown() {
     return;
   }
 
-  FXL_LOG(WARNING) << "Starting factory reset countdown";
+  FX_LOGS(WARNING) << "Starting factory reset countdown";
   countdown_started_ = true;
   deadline_ = async_now(async_get_default_dispatcher()) + kCountdownDuration.get();
   NotifyStateChange();
@@ -109,7 +109,7 @@ void FactoryResetManager::StartFactoryResetCountdown() {
 }
 
 void FactoryResetManager::CancelFactoryResetCountdown() {
-  FXL_LOG(WARNING) << "Factory reset canceled";
+  FX_LOGS(WARNING) << "Factory reset canceled";
   reset_after_timeout_.Cancel();
   countdown_started_ = false;
   deadline_ = ZX_TIME_INFINITE_PAST;

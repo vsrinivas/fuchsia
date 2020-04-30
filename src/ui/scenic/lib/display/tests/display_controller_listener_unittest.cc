@@ -27,7 +27,7 @@ struct ChannelPair {
 
 ChannelPair CreateChannelPair() {
   ChannelPair c;
-  FXL_CHECK(ZX_OK == zx::channel::create(0, &c.server, &c.client));
+  FX_CHECK(ZX_OK == zx::channel::create(0, &c.server, &c.client));
   return c;
 }
 

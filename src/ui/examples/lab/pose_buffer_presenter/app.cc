@@ -72,7 +72,7 @@ App::App(async::Loop* loop)
   // Connect to the Scenic service.
   scenic_ = component_context_->svc()->Connect<fuchsia::ui::scenic::Scenic>();
   scenic_.set_error_handler([this](zx_status_t status) {
-    FXL_LOG(INFO) << "Lost connection to Scenic service. Status: " << status;
+    FX_LOGS(INFO) << "Lost connection to Scenic service. Status: " << status;
     loop_->Quit();
   });
   scenic_->GetDisplayInfo(
@@ -213,7 +213,7 @@ void App::CreateExampleScene(float display_width, float display_height) {
 }
 
 void App::StartPoseBufferProvider() {
-  FXL_LOG(INFO) << "Launching PoseBufferProvider";
+  FX_LOGS(INFO) << "Launching PoseBufferProvider";
 
   fuchsia::sys::LaunchInfo launch_info;
   launch_info.url =
@@ -224,12 +224,12 @@ void App::StartPoseBufferProvider() {
   component_context_->svc()->Connect(launcher.NewRequest());
   launcher->CreateComponent(std::move(launch_info), controller_.NewRequest());
   controller_.set_error_handler([](zx_status_t status) {
-    FXL_LOG(ERROR) << "Lost connection to controller_. Status: " << status;
+    FX_LOGS(ERROR) << "Lost connection to controller_. Status: " << status;
   });
 
   services->Connect(provider_.NewRequest());
   provider_.set_error_handler([](zx_status_t status) {
-    FXL_LOG(ERROR) << "Lost connection to PoseBufferProvider service. Status: " << status;
+    FX_LOGS(ERROR) << "Lost connection to PoseBufferProvider service. Status: " << status;
   });
 }
 
@@ -240,9 +240,9 @@ void App::ConfigurePoseBuffer() {
   zx::vmo vmo;
   zx_status_t status;
   status = zx::vmo::create(vmo_size, 0u, &pose_buffer_vmo_);
-  FXL_DCHECK(status == ZX_OK);
+  FX_DCHECK(status == ZX_OK);
   status = pose_buffer_vmo_.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo);
-  FXL_DCHECK(status == ZX_OK);
+  FX_DCHECK(status == ZX_OK);
 
   zx_time_t base_time = zx::clock::get_monotonic().get();
   // Normally the time interval is the period of time between each entry in the
@@ -257,19 +257,19 @@ void App::ConfigurePoseBuffer() {
   camera_->SetPoseBuffer(pose_buffer, num_entries, base_time, time_interval);
 
   status = pose_buffer_vmo_.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo);
-  FXL_DCHECK(status == ZX_OK);
+  FX_DCHECK(status == ZX_OK);
 
   provider_->SetPoseBuffer(std::move(vmo), num_entries, base_time, time_interval);
 }
 
 void App::Init(fuchsia::ui::gfx::DisplayInfo display_info) {
   StartPoseBufferProvider();
-  FXL_LOG(INFO) << "Creating new Session";
+  FX_LOGS(INFO) << "Creating new Session";
 
   // TODO: set up SessionListener.
   session_ = std::make_unique<Session>(scenic_.get());
   session_->set_error_handler([this](zx_status_t status) {
-    FXL_LOG(INFO) << "Session terminated. Status: " << status;
+    FX_LOGS(INFO) << "Session terminated. Status: " << status;
     loop_->Quit();
   });
 
@@ -297,7 +297,7 @@ void App::Update(uint64_t next_presentation_time) {
 }
 
 void App::ReleaseSessionResources() {
-  FXL_LOG(INFO) << "Closing session.";
+  FX_LOGS(INFO) << "Closing session.";
 
   compositor_.reset();
   camera_.reset();

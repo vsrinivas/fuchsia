@@ -60,7 +60,7 @@ std::array<float, 9> GetColorAdjustmentMatrix(
 }
 
 ColorTransformManager::ColorTransformManager(sys::ComponentContext* startup_context) {
-  FXL_CHECK(startup_context);
+  FX_CHECK(startup_context);
   startup_context->outgoing()->AddPublicService(bindings_.GetHandler(this));
 }
 

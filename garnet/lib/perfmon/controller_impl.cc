@@ -26,7 +26,7 @@ ControllerImpl::~ControllerImpl() { Reset(); }
 
 bool ControllerImpl::Start() {
   if (started_) {
-    FXL_LOG(ERROR) << "already started";
+    FX_LOGS(ERROR) << "already started";
     return false;
   }
 
@@ -37,11 +37,11 @@ bool ControllerImpl::Start() {
   ::fuchsia::perfmon::cpu::Controller_Start_Result result;
   zx_status_t status = controller_ptr_->Start(&result);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Starting trace failed: status=" << status;
+    FX_LOGS(ERROR) << "Starting trace failed: status=" << status;
     return false;
   }
   if (result.is_err()) {
-    FXL_LOG(ERROR) << "Starting trace failed: error=" << result.err();
+    FX_LOGS(ERROR) << "Starting trace failed: error=" << result.err();
     return false;
   }
 
@@ -52,14 +52,14 @@ bool ControllerImpl::Start() {
 void ControllerImpl::Stop() {
   zx_status_t status = controller_ptr_->Stop();
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Stopping trace failed: status=" << status;
+    FX_LOGS(ERROR) << "Stopping trace failed: status=" << status;
   } else {
     started_ = false;
   }
 }
 
 bool ControllerImpl::Stage() {
-  FXL_DCHECK(!started_);
+  FX_DCHECK(!started_);
 
   FidlPerfmonConfig fidl_config;
   internal::PerfmonToFidlConfig(config_, &fidl_config);
@@ -67,11 +67,11 @@ bool ControllerImpl::Stage() {
   ::fuchsia::perfmon::cpu::Controller_StageConfig_Result result;
   zx_status_t status = controller_ptr_->StageConfig(fidl_config, &result);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Staging config failed: status=" << status;
+    FX_LOGS(ERROR) << "Staging config failed: status=" << status;
     return false;
   }
   if (result.is_err()) {
-    FXL_LOG(ERROR) << "Staging config failed: error=" << result.err();
+    FX_LOGS(ERROR) << "Staging config failed: error=" << result.err();
     return false;
   }
 
@@ -81,7 +81,7 @@ bool ControllerImpl::Stage() {
 void ControllerImpl::Terminate() {
   zx_status_t status = controller_ptr_->Terminate();
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Terminating trace failed: status=" << status;
+    FX_LOGS(ERROR) << "Terminating trace failed: status=" << status;
   } else {
     started_ = false;
   }
@@ -97,11 +97,11 @@ bool ControllerImpl::GetBufferHandle(const std::string& name, uint32_t trace_num
   uint32_t descriptor = trace_num;
   zx_status_t status = controller_ptr_->GetBufferHandle(descriptor, out_vmo);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Getting buffer handle failed: status=" << status;
+    FX_LOGS(ERROR) << "Getting buffer handle failed: status=" << status;
     return false;
   }
   if (!*out_vmo) {
-    FXL_LOG(ERROR) << "Getting buffer handle failed: no handle returned";
+    FX_LOGS(ERROR) << "Getting buffer handle failed: no handle returned";
     return false;
   }
   return true;

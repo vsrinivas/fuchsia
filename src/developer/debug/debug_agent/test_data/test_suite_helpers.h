@@ -162,10 +162,10 @@ zx_status_t WaitForServer(const zx::eventpair& event, zx::time deadline = zx::ti
 
 #define DEFER_PRINT(...) auto __defer = fit::defer([=]() { PRINT(__VA_ARGS__); });
 
-#define CHECK_OK(stmt)                                         \
-  {                                                            \
-    zx_status_t __res = (stmt);                                \
-    FXL_DCHECK(__res == ZX_OK) << zx_status_get_string(__res); \
+#define CHECK_OK(stmt)                                        \
+  {                                                           \
+    zx_status_t __res = (stmt);                               \
+    FX_DCHECK(__res == ZX_OK) << zx_status_get_string(__res); \
   }
 
 #define ARRAY_SIZE(a) (sizeof((a)) / sizeof((a))[0])

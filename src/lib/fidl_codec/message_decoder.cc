@@ -252,7 +252,7 @@ bool MessageDecoder::DecodeNullableHeader(uint64_t offset, uint64_t size, bool* 
 }
 
 std::unique_ptr<Value> MessageDecoder::DecodeEnvelope(uint64_t offset, const Type* type) {
-  FXL_DCHECK(type != nullptr);
+  FX_DCHECK(type != nullptr);
   uint32_t envelope_bytes;
   GetValueAt(offset, &envelope_bytes);
   offset += sizeof(envelope_bytes);

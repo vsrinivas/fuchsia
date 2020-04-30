@@ -20,7 +20,7 @@ const char* InputLocation::TypeToString(Type type) {
       return "<no location type>";
   }
 
-  FXL_NOTREACHED();
+  FX_NOTREACHED();
 }
 
 bool InputLocation::operator==(const InputLocation& other) const {
@@ -38,7 +38,7 @@ bool InputLocation::operator==(const InputLocation& other) const {
       return true;
   }
 
-  FXL_NOTREACHED();
+  FX_NOTREACHED();
 }
 
 }  // namespace zxdb

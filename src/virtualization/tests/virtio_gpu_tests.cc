@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <gmock/gmock.h>
-#include <gtest/gtest.h>
-
 #include <fstream>
 #include <iostream>
 #include <string>
 #include <unordered_set>
+
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
 
 #include "lib/zx/clock.h"
 #include "lib/zx/time.h"
@@ -68,7 +68,7 @@ bool PollCondition(C condition, zx::duration timeout, std::optional<PeriodicLogg
 void SaveScreenshot(const std::string& prefix, const Screenshot& screenshot) {
   if (kSaveScreenshot) {
     std::string filename = fxl::StringPrintf(kScreenshotSaveLocation, prefix.c_str());
-    FXL_LOG(INFO) << fxl::StringPrintf(
+    FX_LOGS(INFO) << fxl::StringPrintf(
         "Saving screenshot to '%s'. Copy from the device using:\n"
         "#  fx scp \"[$(fx get-device-addr)]\":%s data.raw\n"
         "Display it using ImageMagick using one of the following commands.\n"
@@ -90,7 +90,7 @@ void SaveScreenshot(const std::string& prefix, const Screenshot& screenshot) {
 // We assume the data format is RGBA or RGBO, where each pixel is four bytes:
 // [red] [green] [blue] [alpha/opacity]
 bool HasNonBlackPixel(const Screenshot& screenshot) {
-  FXL_CHECK(screenshot.data.size() % 4 == 0);
+  FX_CHECK(screenshot.data.size() % 4 == 0);
   for (size_t i = 0; i < screenshot.data.size(); i += 4) {
     std::byte r = screenshot.data[i + 0];
     std::byte g = screenshot.data[i + 1];
@@ -107,7 +107,7 @@ bool HasNonBlackPixel(const Screenshot& screenshot) {
 // For this test, we treat data as having different alpha values as different
 // colours.
 int NumberOfUniqueColors(const Screenshot& screenshot) {
-  FXL_CHECK(screenshot.data.size() % 4 == 0);
+  FX_CHECK(screenshot.data.size() % 4 == 0);
   std::unordered_set<uint32_t> seen_colors;
   int unique_colors = 0;
   for (size_t i = 0; i < screenshot.data.size(); i += 4) {

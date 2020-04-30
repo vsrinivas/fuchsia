@@ -22,7 +22,7 @@ namespace cobalt {
 
 BaseCobaltLoggerImpl::BaseCobaltLoggerImpl(async_dispatcher_t* dispatcher, uint32_t project_id)
     : dispatcher_(dispatcher), project_id_(project_id) {
-  FXL_CHECK(project_id_ > 0) << "Must define a project_id greater than 0.";
+  FX_CHECK(project_id_ > 0) << "Must define a project_id greater than 0.";
 }
 
 BaseCobaltLoggerImpl::~BaseCobaltLoggerImpl() {
@@ -168,7 +168,7 @@ void BaseCobaltLoggerImpl::LogEventOnMainThread(std::unique_ptr<BaseEvent> event
 }
 
 void BaseCobaltLoggerImpl::SendEvents() {
-  FXL_DCHECK(events_in_transit_.empty());
+  FX_DCHECK(events_in_transit_.empty());
 
   if (events_to_send_.empty()) {
     return;

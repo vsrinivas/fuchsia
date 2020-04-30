@@ -50,7 +50,7 @@ VK_TEST_F(PoseBufferTest, Validation) {
   // If we can't make memory that is both host-visible and device-local, we
   // can't run this test.
   if (!memory) {
-    FXL_LOG(INFO) << "Could not find UMA compatible memory pool, aborting test.";
+    FX_LOGS(INFO) << "Could not find UMA compatible memory pool, aborting test.";
     return;
   }
 

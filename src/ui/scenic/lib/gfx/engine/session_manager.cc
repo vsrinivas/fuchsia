@@ -35,7 +35,7 @@ CommandDispatcherUniquePtr SessionManager::CreateCommandDispatcher(
 }
 
 void SessionManager::InsertSession(SessionId session_id, Session* session) {
-  FXL_DCHECK(session_map_.find(session_id) == session_map_.end());
+  FX_DCHECK(session_map_.find(session_id) == session_map_.end());
   session_map_.insert({session_id, session});
 }
 

@@ -83,7 +83,7 @@ TEST_F(WatchdogUnittest, MultipleTimeoutsAllowed) {
   std::shared_ptr<int> counter_check = std::make_shared<int>(0);
   auto watchdog_loop = test_loop().StartNewLoop();
   auto watched_thread_loop = test_loop().StartNewLoop();
-  FXL_LOG(INFO) << "Scenic errors are expected in this test case.";
+  FX_LOGS(INFO) << "Scenic errors are expected in this test case.";
   TestWatchdog watchdog(
       kWatchdogWarningInterval, kWatchdogTimeoutMs, watchdog_loop.get(), watched_thread_loop.get(),
       []() {},

@@ -17,8 +17,8 @@ Injector::Injector(InjectorId id, InjectorSettings settings,
       id_(id),
       settings_(std::move(settings)),
       is_descendant_and_connected_(std::move(is_descendant_and_connected)) {
-  FXL_DCHECK(is_descendant_and_connected_);
-  FXL_LOG(INFO) << "Injector : Registered new injector with internal id: " << id_
+  FX_DCHECK(is_descendant_and_connected_);
+  FX_LOGS(INFO) << "Injector : Registered new injector with internal id: " << id_
                 << " Device Id: " << settings_.device_id
                 << " Device Type: " << static_cast<uint32_t>(settings_.device_type)
                 << " Dispatch Policy: " << static_cast<uint32_t>(settings_.dispatch_policy)
@@ -31,7 +31,7 @@ void Injector::Inject(::std::vector<fuchsia::ui::pointerflow::Event> events,
   // TODO(50348): Find a way to make to listen for scene graph events instead of checking
   // connectivity per injected event.
   if (!is_descendant_and_connected_(settings_.target_koid, settings_.context_koid)) {
-    FXL_LOG(ERROR) << "Inject() called with Context and Target making an invalid hierarchy.";
+    FX_LOGS(ERROR) << "Inject() called with Context and Target making an invalid hierarchy.";
     // TODO(50347): Inject CANCEL event for ongoing stream before closing channel.
     binding_.Close(ZX_ERR_BAD_STATE);
     return;

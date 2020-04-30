@@ -14,7 +14,7 @@ OpacityNode::OpacityNode(Session* session, SessionId session_id, ResourceId node
     : Node(session, session_id, node_id, OpacityNode::kTypeInfo) {}
 
 void OpacityNode::SetOpacity(float opacity) {
-  FXL_DCHECK(0 <= opacity && opacity <= 1);
+  FX_DCHECK(0 <= opacity && opacity <= 1);
   opacity_ = opacity;
 }
 

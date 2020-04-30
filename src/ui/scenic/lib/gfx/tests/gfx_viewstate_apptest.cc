@@ -92,7 +92,7 @@ TEST_F(ViewEmbedderTest, DeadBindingShouldKillSession) {
   auto unique_session2 = std::make_unique<scenic::Session>(scenic());
   auto session2 = unique_session2.get();
   session2->set_error_handler([this](zx_status_t status) {
-    FXL_LOG(INFO) << "Session2 terminated.";
+    FX_LOGS(INFO) << "Session2 terminated.";
     QuitLoop();
   });
 

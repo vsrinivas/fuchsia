@@ -41,7 +41,7 @@ void TileView::PresentView(fuchsia::ui::views::ViewHolderToken view_holder_token
 void TileView::PresentOrReplaceView(
     fuchsia::ui::views::ViewHolderToken view_holder_token,
     fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request) {
-  FXL_CHECK(false) << "tile_view: clobbering presentation not supported.";
+  FX_CHECK(false) << "tile_view: clobbering presentation not supported.";
 }
 
 void TileView::ConnectViews() {
@@ -56,7 +56,7 @@ void TileView::ConnectViews() {
     // Pass arguments to children, if there are any.
     std::vector<std::string> split_url =
         fxl::SplitStringCopy(url, " ", fxl::kTrimWhitespace, fxl::kSplitWantNonEmpty);
-    FXL_CHECK(split_url.size() >= 1);
+    FX_CHECK(split_url.size() >= 1);
     launch_info.url = split_url[0];
 
     if (split_url.size() > 1) {
@@ -112,11 +112,11 @@ void TileView::CreateNestedEnvironment() {
 
 void TileView::OnChildAttached(uint32_t view_holder_id) {
   auto it = views_.find(view_holder_id);
-  FXL_DCHECK(it != views_.end());
+  FX_DCHECK(it != views_.end());
 }
 
 void TileView::OnChildUnavailable(uint32_t view_holder_id) {
-  FXL_LOG(ERROR) << "View died unexpectedly: view_holder_id=" << view_holder_id;
+  FX_LOGS(ERROR) << "View died unexpectedly: view_holder_id=" << view_holder_id;
   RemoveChildView(view_holder_id);
 }
 
@@ -161,7 +161,7 @@ void TileView::AddChildView(std::string label,
 
 void TileView::RemoveChildView(uint32_t view_holder_id) {
   auto it = views_.find(view_holder_id);
-  FXL_DCHECK(it != views_.end());
+  FX_DCHECK(it != views_.end());
 
   it->second->host_node.Detach();
   views_.erase(it);

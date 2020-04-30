@@ -19,7 +19,7 @@ void FenceSetListener::WaitReadyAsync(fit::closure ready_callback) {
     return;
 
   // Make sure callback was not set before.
-  FXL_DCHECK(!ready_callback_);
+  FX_DCHECK(!ready_callback_);
 
   if (ready()) {
     // We store the task object so that, if we are deleted, the task is cancelled.
@@ -32,7 +32,7 @@ void FenceSetListener::WaitReadyAsync(fit::closure ready_callback) {
     return;
   }
 
-  FXL_DCHECK(waiters_.empty());
+  FX_DCHECK(waiters_.empty());
   waiters_.reserve(fences_.size());
   int waiter_index = 0;
 
@@ -44,7 +44,7 @@ void FenceSetListener::WaitReadyAsync(fit::closure ready_callback) {
     wait->set_handler(std::bind(&FenceSetListener::OnFenceSignalled, this, waiter_index,
                                 std::placeholders::_3, std::placeholders::_4));
     zx_status_t status = wait->Begin(async_get_default_dispatcher());
-    FXL_CHECK(status == ZX_OK);
+    FX_CHECK(status == ZX_OK);
 
     waiters_.push_back(std::move(wait));
     waiter_index++;
@@ -57,12 +57,12 @@ void FenceSetListener::OnFenceSignalled(size_t waiter_index, zx_status_t status,
                                         const zx_packet_signal* signal) {
   if (status == ZX_OK) {
     zx_signals_t pending = signal->observed;
-    FXL_DCHECK(pending & kFenceSignalled);
-    FXL_DCHECK(ready_callback_);
+    FX_DCHECK(pending & kFenceSignalled);
+    FX_DCHECK(ready_callback_);
 
     num_signalled_fences_++;
 
-    FXL_DCHECK(waiters_[waiter_index]);
+    FX_DCHECK(waiters_[waiter_index]);
     waiters_[waiter_index].reset();
 
     if (ready()) {
@@ -72,7 +72,7 @@ void FenceSetListener::OnFenceSignalled(size_t waiter_index, zx_status_t status,
       callback();
     }
   } else {
-    FXL_LOG(ERROR) << "FenceSetListener::OnFenceSignalled received an "
+    FX_LOGS(ERROR) << "FenceSetListener::OnFenceSignalled received an "
                       "error status code: "
                    << status;
 

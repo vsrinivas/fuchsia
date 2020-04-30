@@ -76,7 +76,7 @@ OutputBuffer FormatSettingStore(ConsoleContext* context, const SettingStore& sto
   std::vector<std::vector<OutputBuffer>> rows;
   for (auto [key, _] : store.schema()->settings()) {
     auto value = store.GetValue(key);
-    FXL_DCHECK(!value.is_null());
+    FX_DCHECK(!value.is_null());
     AddSettingToTable(context, key, value, &rows, true);
   }
 
@@ -117,7 +117,7 @@ OutputBuffer FormatSetting(ConsoleContext* context, const std::string& name,
 
 OutputBuffer FormatSettingShort(ConsoleContext* context, const std::string& name,
                                 const SettingValue& value, int list_indent) {
-  FXL_DCHECK(!value.is_null());
+  FX_DCHECK(!value.is_null());
 
   int pad_left = value.is_list() ? list_indent : 0;
 

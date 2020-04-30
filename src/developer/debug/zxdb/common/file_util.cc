@@ -27,7 +27,7 @@ bool PathContainsFromRight(std::string_view path, std::string_view right_query) 
 
 std::string CatPathComponents(const std::string& first, const std::string& second) {
   // Second component shouldn't begin with a slash.
-  FXL_DCHECK(second.empty() || second[0] != '/');
+  FX_DCHECK(second.empty() || second[0] != '/');
 
   std::string result;
   result.reserve(first.size() + second.size() + 1);

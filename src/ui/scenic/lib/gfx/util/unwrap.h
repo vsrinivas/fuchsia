@@ -101,38 +101,38 @@ inline bool IsVariable(const ValueT& val) {
 
 // Caller must verify that the value is a Matrix4x4 before calling this.
 inline escher::mat4 UnwrapMatrix4x4(const ::fuchsia::ui::gfx::Value& val) {
-  FXL_DCHECK(IsMatrix4x4(val));
+  FX_DCHECK(IsMatrix4x4(val));
   return Unwrap(val.matrix4x4());
 }
 
 // Caller must verify that the value is a Transform before calling this.
 inline escher::Transform UnwrapTransform(const ::fuchsia::ui::gfx::Value& val) {
-  FXL_DCHECK(IsTransform(val));
+  FX_DCHECK(IsTransform(val));
   return Unwrap(val.transform());
 }
 
 inline float UnwrapFloat(const ::fuchsia::ui::gfx::FloatValue& val) {
-  FXL_DCHECK(!IsVariable(val)) << "variable values not yet implemented";
+  FX_DCHECK(!IsVariable(val)) << "variable values not yet implemented";
   return val.value;
 }
 
 inline escher::vec2 UnwrapVector2(const ::fuchsia::ui::gfx::Vector2Value& val) {
-  FXL_DCHECK(!IsVariable(val)) << "variable values not yet implemented";
+  FX_DCHECK(!IsVariable(val)) << "variable values not yet implemented";
   return Unwrap(val.value);
 }
 
 inline escher::vec3 UnwrapVector3(const ::fuchsia::ui::gfx::Vector3Value& val) {
-  FXL_DCHECK(!IsVariable(val)) << "variable values not yet implemented";
+  FX_DCHECK(!IsVariable(val)) << "variable values not yet implemented";
   return Unwrap(val.value);
 }
 
 inline escher::vec4 UnwrapVector4(const ::fuchsia::ui::gfx::Vector4Value& val) {
-  FXL_DCHECK(!IsVariable(val)) << "variable values not yet implemented";
+  FX_DCHECK(!IsVariable(val)) << "variable values not yet implemented";
   return Unwrap(val.value);
 }
 
 inline escher::quat UnwrapQuaternion(const ::fuchsia::ui::gfx::QuaternionValue& val) {
-  FXL_DCHECK(!IsVariable(val)) << "variable values not yet implemented";
+  FX_DCHECK(!IsVariable(val)) << "variable values not yet implemented";
   return Unwrap(val.value);
 }
 

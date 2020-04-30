@@ -29,25 +29,25 @@ App::App(async::Loop* loop)
       input_reader_(this),
       next_device_token_(0),
       focused_(false) {
-  FXL_DCHECK(component_context_);
+  FX_DCHECK(component_context_);
 
   scenic_ = component_context_->svc()->Connect<fuchsia::ui::scenic::Scenic>();
   scenic_.set_error_handler([this](zx_status_t status) { OnScenicError(); });
-  FXL_LOG(INFO) << "DirectInput - scenic connection";
+  FX_LOGS(INFO) << "DirectInput - scenic connection";
 
   session_ = std::make_unique<scenic::Session>(scenic_.get());
   session_->SetDebugName("Direct Input");
   session_->set_error_handler([this](zx_status_t status) { this->OnSessionError(); });
   session_->set_event_handler(fit::bind_member(this, &App::OnSessionEvents));
-  FXL_LOG(INFO) << "DirectInput - session set up";
+  FX_LOGS(INFO) << "DirectInput - session set up";
 
   compositor_ = std::make_unique<scenic::DisplayCompositor>(session_.get());
-  FXL_LOG(INFO) << "DirectInput - compositor set up";
+  FX_LOGS(INFO) << "DirectInput - compositor set up";
 
   input_reader_.Start();
   component_context_->outgoing()->AddPublicService(
       input_device_registry_bindings_.GetHandler(this));
-  FXL_LOG(INFO) << "DirectInput - input set up (Press ESC to quit).";
+  FX_LOGS(INFO) << "DirectInput - input set up (Press ESC to quit).";
 
   scenic_->GetDisplayInfo([this](fuchsia::ui::gfx::DisplayInfo display_info) {
     CreateScene(display_info.width_in_px, display_info.height_in_px);
@@ -76,7 +76,7 @@ App::App(async::Loop* loop)
     session_->Enqueue(std::move(input_cmd));
   }
 
-  FXL_LOG(INFO) << "DirectInput - child set up";
+  FX_LOGS(INFO) << "DirectInput - child set up";
 }
 
 App::~App() { ReleaseSessionResources(); }
@@ -104,7 +104,7 @@ void App::CheckQuit(const fuchsia::ui::input::InputEvent& event) {
     fuchsia::ui::input::KeyboardEvent key_event = event.keyboard();
     if (key_event.hid_usage == /* Esc key */ 0x29 &&
         key_event.phase == fuchsia::ui::input::KeyboardEventPhase::RELEASED) {
-      FXL_LOG(INFO) << "DirectInput - shutting down.";
+      FX_LOGS(INFO) << "DirectInput - shutting down.";
       child_controller_->Kill();
       async::PostTask(message_loop_->dispatcher(), [this]() { OnSessionClose(); });
     }
@@ -112,19 +112,19 @@ void App::CheckQuit(const fuchsia::ui::input::InputEvent& event) {
 }
 
 void App::OnScenicError() {
-  FXL_LOG(ERROR) << "DirectInput - scenic connection error.";
+  FX_LOGS(ERROR) << "DirectInput - scenic connection error.";
   ReleaseSessionResources();
   message_loop_->Quit();
 }
 
 void App::OnSessionError() {
-  FXL_LOG(ERROR) << "DirectInput - session error.";
+  FX_LOGS(ERROR) << "DirectInput - session error.";
   ReleaseSessionResources();
   message_loop_->Quit();
 }
 
 void App::OnSessionClose() {
-  FXL_LOG(INFO) << "DirectInput - session close.";
+  FX_LOGS(INFO) << "DirectInput - session close.";
   ReleaseSessionResources();
   message_loop_->Quit();
 }
@@ -147,10 +147,10 @@ void App::OnSessionEvents(std::vector<fuchsia::ui::scenic::Event> events) {
           OnFocusEvent(input_event.focus());
           continue;
         case InputType::Invalid:
-          FXL_LOG(FATAL) << "Unknown input event received.";
+          FX_LOGS(FATAL) << "Unknown input event received.";
       }
     } else if (event.is_gfx()) {
-      FXL_LOG(ERROR) << "DirectInput - GFX command unimplemented.";
+      FX_LOGS(ERROR) << "DirectInput - GFX command unimplemented.";
     }
   }
 }
@@ -217,7 +217,7 @@ void App::OnPointerEvent(const fuchsia::ui::input::PointerEvent& event) {
     if (focused_ && event.phase == Phase::DOWN) {
       // Nice to meet you. Add to known-fingers list.
       size_t idx = find_idx(pointer_id_, kNoFinger);
-      FXL_CHECK(idx != kNoFinger) << "Pointer index full: " << contents(pointer_id_);
+      FX_CHECK(idx != kNoFinger) << "Pointer index full: " << contents(pointer_id_);
       pointer_id_[idx] = event.pointer_id;
       view_->AddChild(*pointer_tracker_[idx]);
       pointer_tracker_[idx]->SetTranslation(event.x, event.y, -400.f);
@@ -247,7 +247,7 @@ void App::UpdateScene(uint64_t next_presentation_time) {
 }
 
 void App::CreateScene(float display_width, float display_height) {
-  FXL_LOG(INFO) << "DirectInput - display size: " << display_width << ", " << display_height;
+  FX_LOGS(INFO) << "DirectInput - display size: " << display_width << ", " << display_height;
 
   const float kMargin = 100.f;
   const float kRootWidth = display_width - 2.f * kMargin;
@@ -282,7 +282,7 @@ void App::CreateScene(float display_width, float display_height) {
     directional_light.SetDirection(1.f, 1.f, -2.f);
     scene.AddLight(directional_light);
 
-    FXL_LOG(INFO) << "DirectInput - scene is set up.";
+    FX_LOGS(INFO) << "DirectInput - scene is set up.";
   }
 
   // Set up root node, its dimensions, add green background.
@@ -303,7 +303,7 @@ void App::CreateScene(float display_width, float display_height) {
     root_node.AddChild(background);
 
     scene.AddChild(root_node);
-    FXL_LOG(INFO) << "DirectInput - root node is set up.";
+    FX_LOGS(INFO) << "DirectInput - root node is set up.";
   }
 
   // Create View/ViewHolder. Attach ViewHolder to root node.
@@ -317,7 +317,7 @@ void App::CreateScene(float display_width, float display_height) {
     view_->SetLabel("main view");
 
     root_node.Attach(*view_holder_);
-    FXL_LOG(INFO) << "DirectInput - View/ViewHolder pair created.";
+    FX_LOGS(INFO) << "DirectInput - View/ViewHolder pair created.";
   }
 
   const float kMainWidth = display_width - 4.f * kMargin;
@@ -336,7 +336,7 @@ void App::CreateScene(float display_width, float display_height) {
     node.SetMaterial(material);
     node.SetTranslation(0.f, 0.f, -kElevation);
     view_->AddChild(node);
-    FXL_LOG(INFO) << "DirectInput - main node added to view.";
+    FX_LOGS(INFO) << "DirectInput - main node added to view.";
   }
 
   // Create frame to trigger on focus to main node.
@@ -379,7 +379,7 @@ void App::CreateScene(float display_width, float display_height) {
     frame->AddChild(right_bar);
 
     focus_frame_ = std::move(frame);
-    FXL_LOG(INFO) << "DirectInput - focus frame prepared.";
+    FX_LOGS(INFO) << "DirectInput - focus frame prepared.";
   }
 
   // Create a visual tracker for pointer movement.
@@ -401,7 +401,7 @@ void App::CreateScene(float display_width, float display_height) {
       pointer_tracker_[i]->SetMaterial(material);
     }
 
-    FXL_LOG(INFO) << "DirectInput - pointer tracker prepared.";
+    FX_LOGS(INFO) << "DirectInput - pointer tracker prepared.";
   }
 
   // Connect to child view, put it in a ViewHolder.
@@ -409,7 +409,7 @@ void App::CreateScene(float display_width, float display_height) {
     zx::eventpair view_holder;
     zx::eventpair view;
     zx_status_t status = zx::eventpair::create(0u, &view_holder, &view);
-    FXL_CHECK(status == ZX_OK);
+    FX_CHECK(status == ZX_OK);
     child_view_provider_->CreateView(std::move(view), nullptr, nullptr);
 
     child_view_holder_ =
@@ -417,16 +417,16 @@ void App::CreateScene(float display_width, float display_height) {
     child_view_holder_->SetLabel("child_view_holder");
 
     root_node.Attach(*child_view_holder_);
-    FXL_LOG(INFO) << "DirectInput - child view requested, view holder set up.";
+    FX_LOGS(INFO) << "DirectInput - child view requested, view holder set up.";
   }
 }
 
 void App::OnDeviceSensorEvent(uint32_t device_id, fuchsia::ui::input::InputReport event) {
-  FXL_VLOG(3) << "DirectInput - OnDeviceSensorEvent(device_id=" << device_id << "): " << event;
+  FX_VLOGS(3) << "DirectInput - OnDeviceSensorEvent(device_id=" << device_id << "): " << event;
 }
 
 void App::OnDeviceInputEvent(uint32_t compositor_id, fuchsia::ui::input::InputEvent event) {
-  FXL_VLOG(1) << "DirectInput - OnDeviceInputEvent: " << event;
+  FX_VLOGS(1) << "DirectInput - OnDeviceInputEvent: " << event;
 
   CheckQuit(event);
 
@@ -452,7 +452,7 @@ void App::RegisterDevice(
     fidl::InterfaceRequest<fuchsia::ui::input::InputDevice> input_device_request) {
   uint32_t device_id = ++next_device_token_;
 
-  FXL_VLOG(2) << "DirectInput - RegisterDevice: " << device_id << " " << descriptor;
+  FX_VLOGS(2) << "DirectInput - RegisterDevice: " << device_id << " " << descriptor;
   std::unique_ptr<ui_input::InputDeviceImpl> input_device =
       std::make_unique<ui_input::InputDeviceImpl>(device_id, std::move(descriptor),
                                                   std::move(input_device_request), this);
@@ -486,7 +486,7 @@ void App::OnDeviceDisconnected(ui_input::InputDeviceImpl* input_device) {
   if (device_by_id_.count(device_id) == 0)
     return;
 
-  FXL_VLOG(2) << "DirectInput - UnregisterDevice: " << device_id;
+  FX_VLOGS(2) << "DirectInput - UnregisterDevice: " << device_id;
 
   device_state_by_id_[device_id]->OnUnregistered();
   device_state_by_id_.erase(device_id);
@@ -500,7 +500,7 @@ void App::OnReport(ui_input::InputDeviceImpl* input_device,
   if (device_by_id_.count(device_id) == 0)
     return;
 
-  FXL_VLOG(3) << "DirectInput - OnReport: " << device_id << " " << report;
+  FX_VLOGS(3) << "DirectInput - OnReport: " << device_id << " " << report;
 
   ui_input::DeviceState* state = device_state_by_id_[device_id].get();
   fuchsia::math::Size size;

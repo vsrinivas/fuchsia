@@ -227,7 +227,7 @@ void BreakpointImpl::WillDestroyThread(Thread* thread) {
     settings_.enabled = false;
 
     // Don't need more thread notifications.
-    FXL_DCHECK(registered_as_thread_observer_);
+    FX_DCHECK(registered_as_thread_observer_);
     session()->thread_observers().RemoveObserver(this);
     registered_as_thread_observer_ = false;
   }

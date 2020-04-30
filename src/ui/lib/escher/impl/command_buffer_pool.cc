@@ -17,8 +17,8 @@ CommandBufferPool::CommandBufferPool(vk::Device device, vk::Queue queue,
       queue_(queue),
       sequencer_(sequencer),
       use_protected_memory_(use_protected_memory) {
-  FXL_DCHECK(device);
-  FXL_DCHECK(queue);
+  FX_DCHECK(device);
+  FX_DCHECK(queue);
   vk::CommandPoolCreateInfo info;
   info.flags = vk::CommandPoolCreateFlagBits::eTransient |
                vk::CommandPoolCreateFlagBits::eResetCommandBuffer;
@@ -60,7 +60,7 @@ CommandBufferPool::~CommandBufferPool() {
     device_.waitIdle();
     Cleanup();
   }
-  FXL_DCHECK(pending_buffers_.empty());
+  FX_DCHECK(pending_buffers_.empty());
   if (free_buffers_.size() > 0) {
     std::vector<vk::CommandBuffer> buffers_to_free;
     buffers_to_free.reserve(free_buffers_.size());

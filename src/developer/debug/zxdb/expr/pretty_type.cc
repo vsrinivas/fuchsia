@@ -135,7 +135,7 @@ void PrettyArray::Format(FormatNode* node, const FormatOptions& options,
   EvalExpressions({ptr_expr_, size_expr_}, pretty_context, true,
                   [cb = std::move(cb), weak_node = node->GetWeakPtr(), options,
                    context](std::vector<ErrOrValue> results) mutable {
-                    FXL_DCHECK(results.size() == 2u);
+                    FX_DCHECK(results.size() == 2u);
                     if (!weak_node)
                       return;
 
@@ -170,7 +170,7 @@ void PrettyHeapString::Format(FormatNode* node, const FormatOptions& options,
   EvalExpressions({ptr_expr_, size_expr_}, pretty_context, true,
                   [cb = std::move(cb), weak_node = node->GetWeakPtr(), options,
                    context](std::vector<ErrOrValue> results) mutable {
-                    FXL_DCHECK(results.size() == 2u);
+                    FX_DCHECK(results.size() == 2u);
                     if (!weak_node)
                       return;
 

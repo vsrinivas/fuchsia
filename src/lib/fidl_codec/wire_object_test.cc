@@ -80,9 +80,9 @@ class TableValueWithNullFields : public TableValue {
  private:
   const Table& GetTableDefinition(LibraryLoader* loader) {
     Library* library = loader->GetLibraryFromName("test.fidlcodec.examples");
-    FXL_DCHECK(library != nullptr);
+    FX_DCHECK(library != nullptr);
     const Table* table = library->GetTable("test.fidlcodec.examples/ValueTable");
-    FXL_DCHECK(table != nullptr);
+    FX_DCHECK(table != nullptr);
     return *table;
   }
 };

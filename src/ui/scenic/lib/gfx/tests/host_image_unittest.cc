@@ -57,7 +57,7 @@ class HostImageTest : public VkSessionTest {
   SessionContext CreateSessionContext() override {
     auto context = VkSessionTest::CreateSessionContext();
 
-    FXL_DCHECK(!listener);
+    FX_DCHECK(!listener);
 
     listener = std::make_unique<ImageFactoryListener>(context.escher_image_factory);
     context.escher_image_factory = listener.get();
@@ -197,7 +197,7 @@ VK_TEST_F(HostImageTest, YuvImportOnUmaPlatform) {
   auto physical_device = vulkan_queues->vk_physical_device();
 
   if (!Memory::HasSharedMemoryPools(device, physical_device)) {
-    FXL_LOG(INFO) << "Could not find UMA compatible memory pool, aborting test.";
+    FX_LOGS(INFO) << "Could not find UMA compatible memory pool, aborting test.";
     return;
   }
 

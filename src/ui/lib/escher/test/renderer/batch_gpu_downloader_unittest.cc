@@ -292,7 +292,7 @@ VK_TEST_F(BatchGpuDownloaderTest, ReadBufferTest) {
   // HostCoherent memory property (required for a host buffer which is
   // able to be modified by the host), we will terminate the test.
   if (!vertex_buffer) {
-    FXL_LOG(ERROR) << "Memory property not supported, test terminated.";
+    FX_LOGS(ERROR) << "Memory property not supported, test terminated.";
     EXPECT_TRUE(escher->Cleanup());
     return;
   }

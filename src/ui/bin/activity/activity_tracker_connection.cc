@@ -40,7 +40,7 @@ void ActivityTrackerConnection::ReportDiscreteActivity(
     fuchsia::ui::activity::DiscreteActivity activity, zx_time_t time,
     ReportDiscreteActivityCallback callback) {
   if (time < last_activity_time_.get()) {
-    FXL_LOG(ERROR) << "activity-service: Received out-of-order events from client.";
+    FX_LOGS(ERROR) << "activity-service: Received out-of-order events from client.";
     binding_.Close(ZX_ERR_OUT_OF_RANGE);
     return;
   }
@@ -49,10 +49,10 @@ void ActivityTrackerConnection::ReportDiscreteActivity(
       state_machine_driver_->ReceiveDiscreteActivity(activity, zx::time(time), std::move(callback));
   if (status != ZX_OK) {
     if (status == ZX_ERR_OUT_OF_RANGE) {
-      FXL_LOG(WARNING) << "activity-service: Ignoring activity due to stale timestamp (" << time
+      FX_LOGS(WARNING) << "activity-service: Ignoring activity due to stale timestamp (" << time
                        << ")";
     } else {
-      FXL_LOG(ERROR) << "activity-service: Failed to receive activity: "
+      FX_LOGS(ERROR) << "activity-service: Failed to receive activity: "
                      << zx_status_get_string(status);
       binding_.Close(status);
     }
@@ -63,12 +63,12 @@ void ActivityTrackerConnection::StartOngoingActivity(
     OngoingActivityId id, fuchsia::ui::activity::OngoingActivity activity, zx_time_t time,
     StartOngoingActivityCallback callback) {
   if (ongoing_activities_.find(id) != ongoing_activities_.end()) {
-    FXL_LOG(ERROR) << "activity-service: activity already started: " << id;
+    FX_LOGS(ERROR) << "activity-service: activity already started: " << id;
     binding_.Close(ZX_ERR_ALREADY_EXISTS);
     return;
   }
   if (time < last_activity_time_.get()) {
-    FXL_LOG(ERROR) << "activity-service: Received out-of-order events from client.";
+    FX_LOGS(ERROR) << "activity-service: Received out-of-order events from client.";
     binding_.Close(ZX_ERR_OUT_OF_RANGE);
     return;
   }
@@ -79,11 +79,11 @@ void ActivityTrackerConnection::StartOngoingActivity(
     ongoing_activities_.insert(id);
   } else {
     if (status == ZX_ERR_OUT_OF_RANGE) {
-      FXL_LOG(WARNING) << "activity-service: Ignoring activity due to stale timestamp (" << time
+      FX_LOGS(WARNING) << "activity-service: Ignoring activity due to stale timestamp (" << time
                        << ")";
       // Ignore the activity (don't close the binding or send an error to the client)
     } else {
-      FXL_LOG(ERROR) << "activity-service: Failed to start activity: "
+      FX_LOGS(ERROR) << "activity-service: Failed to start activity: "
                      << zx_status_get_string(status);
       binding_.Close(status);
     }
@@ -93,14 +93,14 @@ void ActivityTrackerConnection::StartOngoingActivity(
 void ActivityTrackerConnection::EndOngoingActivity(OngoingActivityId id, zx_time_t time,
                                                    EndOngoingActivityCallback callback) {
   if (time < last_activity_time_.get()) {
-    FXL_LOG(ERROR) << "activity-service: Received out-of-order events from client.";
+    FX_LOGS(ERROR) << "activity-service: Received out-of-order events from client.";
     binding_.Close(ZX_ERR_OUT_OF_RANGE);
     return;
   }
   last_activity_time_ = zx::time(time);
   auto iter = ongoing_activities_.find(id);
   if (iter == ongoing_activities_.end()) {
-    FXL_LOG(ERROR) << "activity-service: Invalid activity ID: " << id;
+    FX_LOGS(ERROR) << "activity-service: Invalid activity ID: " << id;
     binding_.Close(ZX_ERR_NOT_FOUND);
     return;
   }
@@ -110,11 +110,11 @@ void ActivityTrackerConnection::EndOngoingActivity(OngoingActivityId id, zx_time
     ongoing_activities_.erase(iter);
   } else {
     if (status == ZX_ERR_OUT_OF_RANGE) {
-      FXL_LOG(WARNING) << "activity-service: Ignoring activity due to stale timestamp (" << time
+      FX_LOGS(WARNING) << "activity-service: Ignoring activity due to stale timestamp (" << time
                        << ")";
       // Ignore the activity (don't close the binding or send an error to the client)
     } else {
-      FXL_LOG(ERROR) << "activity-service: Failed to end activity: "
+      FX_LOGS(ERROR) << "activity-service: Failed to end activity: "
                      << zx_status_get_string(status);
       binding_.Close(status);
     }

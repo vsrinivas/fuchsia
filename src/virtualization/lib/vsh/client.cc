@@ -20,16 +20,16 @@ fit::result<BlockingClient, zx_status_t> BlockingClient::Connect(
   zx::socket socket, remote_socket;
   zx_status_t status = zx::socket::create(ZX_SOCKET_STREAM, &socket, &remote_socket);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to create socket: " << zx_status_get_string(status);
+    FX_LOGS(ERROR) << "Failed to create socket: " << zx_status_get_string(status);
     return fit::error(status);
   }
   zx_status_t fidl_status = socket_endpoint->Connect(cid, port, std::move(remote_socket), &status);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to connect to vshd: " << zx_status_get_string(status);
+    FX_LOGS(ERROR) << "Failed to connect to vshd: " << zx_status_get_string(status);
     return fit::error(status);
   }
   if (fidl_status != ZX_OK) {
-    FXL_LOG(ERROR) << "FIDL error connecting to vshd: " << zx_status_get_string(fidl_status);
+    FX_LOGS(ERROR) << "FIDL error connecting to vshd: " << zx_status_get_string(fidl_status);
     return fit::error(fidl_status);
   }
   return fit::ok(BlockingClient(std::move(socket)));
@@ -41,17 +41,17 @@ zx_status_t BlockingClient::Setup(vm_tools::vsh::SetupConnectionRequest conn_req
   vm_tools::vsh::SetupConnectionResponse conn_resp;
 
   if (!SendMessage(vsock_, conn_req)) {
-    FXL_LOG(ERROR) << "Failed to send connection request";
+    FX_LOGS(ERROR) << "Failed to send connection request";
     return ZX_ERR_INTERNAL;
   }
 
   if (!RecvMessage(vsock_, &conn_resp)) {
-    FXL_LOG(ERROR) << "Failed to receive response from vshd, giving up after one try";
+    FX_LOGS(ERROR) << "Failed to receive response from vshd, giving up after one try";
     return ZX_ERR_INTERNAL;
   }
 
   if (conn_resp.status() != vm_tools::vsh::READY) {
-    FXL_LOG(ERROR) << "Server was unable to set up connection properly: "
+    FX_LOGS(ERROR) << "Server was unable to set up connection properly: "
                    << conn_resp.description();
     return ZX_ERR_INTERNAL;
   }
@@ -61,11 +61,11 @@ zx_status_t BlockingClient::Setup(vm_tools::vsh::SetupConnectionRequest conn_req
 }
 
 fit::result<vm_tools::vsh::HostMessage, zx_status_t> BlockingClient::NextMessage() {
-  FXL_CHECK(status_ == vm_tools::vsh::ConnectionStatus::READY);
+  FX_CHECK(status_ == vm_tools::vsh::ConnectionStatus::READY);
   vm_tools::vsh::HostMessage msg;
 
   if (!RecvMessage(vsock_, &msg)) {
-    FXL_LOG(ERROR) << "Failed to receive response from vshd, giving up after one try";
+    FX_LOGS(ERROR) << "Failed to receive response from vshd, giving up after one try";
     return fit::error(ZX_ERR_INTERNAL);
   }
   if (msg.msg_case() == vm_tools::vsh::HostMessage::MsgCase::kStatusMessage) {

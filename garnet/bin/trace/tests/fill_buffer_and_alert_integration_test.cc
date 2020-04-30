@@ -40,7 +40,7 @@ static bool RunFillBufferAndAlertTest(const tracing::Spec& spec) {
     // contains the trace buffer (as a vmo) and other things. So wait for it.
     async::Loop wait_loop(&kAsyncLoopConfigNoAttachToCurrentThread);
     if (!WaitForTracingToStart(wait_loop, kStartTimeout)) {
-      FXL_LOG(ERROR) << "Provider " << kFillBufferAndAlerProviderName
+      FX_LOGS(ERROR) << "Provider " << kFillBufferAndAlerProviderName
                      << " failed waiting for tracing to start";
       return false;
     }
@@ -76,7 +76,7 @@ static bool VerifyFillBufferAndAlertTest(const tracing::Spec& spec,
                                          const std::string& test_output_file) {
   const tracing::BufferingModeSpec* mode_spec = tracing::LookupBufferingMode(*spec.buffering_mode);
   if (mode_spec == nullptr) {
-    FXL_LOG(ERROR) << "Bad buffering mode: " << *spec.buffering_mode;
+    FX_LOGS(ERROR) << "Bad buffering mode: " << *spec.buffering_mode;
     return false;
   }
   return VerifyFullBuffer(test_output_file, mode_spec->mode, *spec.buffer_size_in_mb);

@@ -25,14 +25,14 @@ bool CheckBufferMemoryRequirements(ResourceManager* manager, vk::Buffer vk_buffe
       mem_requirements.get<vk::MemoryRequirements2KHR>().memoryRequirements.alignment;
 
   if (mem->size() < size_required) {
-    FXL_LOG(ERROR) << "Memory requirements check failed: Buffer requires " << size_required
+    FX_LOGS(ERROR) << "Memory requirements check failed: Buffer requires " << size_required
                    << " bytes of memory, while the provided mem size is " << mem->size()
                    << " bytes.";
     return false;
   }
 
   if (mem->offset() % alignment_required != 0) {
-    FXL_LOG(ERROR) << "Memory requirements check failed: Buffer requires alignment of "
+    FX_LOGS(ERROR) << "Memory requirements check failed: Buffer requires alignment of "
                    << alignment_required << " bytes, while the provided mem offset is "
                    << mem->offset();
     return false;
@@ -58,7 +58,7 @@ BufferPtr NaiveBuffer::New(ResourceManager* manager, GpuMemPtr mem,
 
   // Check buffer memory requirements before binding the buffer to memory.
   if (!CheckBufferMemoryRequirements(manager, vk_buffer, mem)) {
-    FXL_LOG(ERROR) << "NaiveBuffer::New() Failed: cannot satisfy memory requirements.";
+    FX_LOGS(ERROR) << "NaiveBuffer::New() Failed: cannot satisfy memory requirements.";
     return nullptr;
   }
 
@@ -71,7 +71,7 @@ BufferPtr NaiveBuffer::AdoptVkBuffer(ResourceManager* manager, GpuMemPtr mem,
 
   // Check buffer memory requirements before binding the buffer to memory.
   if (!CheckBufferMemoryRequirements(manager, vk_buffer, mem)) {
-    FXL_LOG(ERROR) << "NaiveBuffer::AdoptVkBuffer() Failed: cannot satisfy memory requirements.";
+    FX_LOGS(ERROR) << "NaiveBuffer::AdoptVkBuffer() Failed: cannot satisfy memory requirements.";
     return nullptr;
   }
 
@@ -81,11 +81,11 @@ BufferPtr NaiveBuffer::AdoptVkBuffer(ResourceManager* manager, GpuMemPtr mem,
 NaiveBuffer::NaiveBuffer(ResourceManager* manager, GpuMemPtr mem, vk::DeviceSize vk_buffer_size,
                          vk::Buffer buffer)
     : Buffer(manager, buffer, vk_buffer_size, mem->mapped_ptr()), mem_(std::move(mem)) {
-  FXL_CHECK(vk());
-  FXL_CHECK(mem_);
+  FX_CHECK(vk());
+  FX_CHECK(mem_);
 
   auto status = vulkan_context().device.bindBufferMemory(vk(), mem_->base(), mem_->offset());
-  FXL_CHECK(status == vk::Result::eSuccess)
+  FX_CHECK(status == vk::Result::eSuccess)
       << "bindBufferMemory failed with status " << (VkResult)status;
 }
 

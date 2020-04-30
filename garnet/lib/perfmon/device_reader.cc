@@ -23,7 +23,7 @@ bool DeviceReader::Create(fxl::WeakPtr<Controller> controller, uint32_t buffer_s
   size_t buffer_size = buffer_size_in_pages * Controller::kPageSize;
   auto status = zx::vmar::root_self()->allocate(0u, buffer_size, ZX_VM_CAN_MAP_READ, &vmar, &addr);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Unable to obtain vmar for reading trace data: " << status;
+    FX_LOGS(ERROR) << "Unable to obtain vmar for reading trace data: " << status;
     return false;
   }
 
@@ -36,14 +36,14 @@ DeviceReader::DeviceReader(fxl::WeakPtr<Controller> controller, uint32_t buffer_
       controller_(std::move(controller)),
       buffer_size_(buffer_size),
       vmar_(std::move(vmar)) {
-  FXL_DCHECK(controller_);
+  FX_DCHECK(controller_);
 }
 
 DeviceReader::~DeviceReader() { UnmapBuffer(); }
 
 bool DeviceReader::MapBuffer(const std::string& name, uint32_t trace_num) {
   if (!controller_) {
-    FXL_LOG(ERROR) << name << ": unable to map buffer, controller is gone";
+    FX_LOGS(ERROR) << name << ": unable to map buffer, controller is gone";
     return false;
   }
 
@@ -59,7 +59,7 @@ bool DeviceReader::MapBuffer(const std::string& name, uint32_t trace_num) {
   uintptr_t addr;
   zx_status_t status = vmar_.map(0, vmo, 0, buffer_size_, ZX_VM_PERM_READ, &addr);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << name << ": Unable to map buffer vmo: " << status;
+    FX_LOGS(ERROR) << name << ": Unable to map buffer vmo: " << status;
     return false;
   }
   buffer_contents_ = reinterpret_cast<const void*>(addr);
@@ -81,7 +81,7 @@ bool DeviceReader::UnmapBuffer() {
     uintptr_t addr = reinterpret_cast<uintptr_t>(buffer_contents_);
     auto status = vmar_.unmap(addr, buffer_size_);
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Unable to unmap buffer vmo: " << status;
+      FX_LOGS(ERROR) << "Unable to unmap buffer vmo: " << status;
       return false;
     }
     buffer_contents_ = nullptr;

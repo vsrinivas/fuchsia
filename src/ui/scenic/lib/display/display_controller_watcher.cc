@@ -6,8 +6,8 @@
 
 #include <fcntl.h>
 #include <fuchsia/hardware/display/c/fidl.h>
-#include <lib/fidl/cpp/message.h>
 #include <lib/fdio/cpp/caller.h>
+#include <lib/fidl/cpp/message.h>
 #include <zircon/status.h>
 
 #include "src/lib/files/unique_fd.h"
@@ -23,7 +23,7 @@ DisplayControllerWatcher::DisplayControllerWatcher() = default;
 DisplayControllerWatcher::~DisplayControllerWatcher() = default;
 
 void DisplayControllerWatcher::WaitForDisplayController(DisplayControllerReadyCallback callback) {
-  FXL_DCHECK(!device_watcher_);
+  FX_DCHECK(!device_watcher_);
   device_watcher_ = fsl::DeviceWatcher::Create(
       kDisplayDir,
       [this, callback = std::move(callback)](int dir_fd, std::string filename) mutable {
@@ -38,10 +38,10 @@ void DisplayControllerWatcher::HandleDevice(DisplayControllerReadyCallback callb
   // Get display info.
   std::string path = kDisplayDir + "/" + filename;
 
-  FXL_LOG(INFO) << "Scenic: Acquired display controller " << path << ".";
+  FX_LOGS(INFO) << "Scenic: Acquired display controller " << path << ".";
   fxl::UniqueFD fd(open(path.c_str(), O_RDWR));
   if (!fd.is_valid()) {
-    FXL_DLOG(ERROR) << "Failed to open " << path << ": errno=" << errno;
+    FX_DLOGS(ERROR) << "Failed to open " << path << ": errno=" << errno;
     callback(zx::channel(), zx::channel());
     return;
   }
@@ -49,7 +49,7 @@ void DisplayControllerWatcher::HandleDevice(DisplayControllerReadyCallback callb
   zx::channel device_server, device_client;
   zx_status_t status = zx::channel::create(0, &device_server, &device_client);
   if (status != ZX_OK) {
-    FXL_DLOG(ERROR) << "Failed to create device channel: " << zx_status_get_string(status);
+    FX_DLOGS(ERROR) << "Failed to create device channel: " << zx_status_get_string(status);
     callback(zx::channel(), zx::channel());
     return;
   }
@@ -57,7 +57,7 @@ void DisplayControllerWatcher::HandleDevice(DisplayControllerReadyCallback callb
   zx::channel dc_server, dc_client;
   status = zx::channel::create(0, &dc_server, &dc_client);
   if (status != ZX_OK) {
-    FXL_DLOG(ERROR) << "Failed to create display controller channel: "
+    FX_DLOGS(ERROR) << "Failed to create display controller channel: "
                     << zx_status_get_string(status);
     callback(zx::channel(), zx::channel());
     return;
@@ -67,12 +67,12 @@ void DisplayControllerWatcher::HandleDevice(DisplayControllerReadyCallback callb
   zx_status_t fidl_status = fuchsia_hardware_display_ProviderOpenController(
       caller.borrow_channel(), device_server.release(), dc_server.release(), &status);
   if (fidl_status != ZX_OK) {
-    FXL_DLOG(ERROR) << "Failed to call service handle: " << zx_status_get_string(fidl_status);
+    FX_DLOGS(ERROR) << "Failed to call service handle: " << zx_status_get_string(fidl_status);
     callback(zx::channel(), zx::channel());
     return;
   }
   if (status != ZX_OK) {
-    FXL_DLOG(ERROR) << "Failed to open display controller : " << zx_status_get_string(status);
+    FX_DLOGS(ERROR) << "Failed to open display controller : " << zx_status_get_string(status);
     callback(zx::channel(), zx::channel());
     return;
   }

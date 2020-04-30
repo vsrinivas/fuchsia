@@ -29,7 +29,7 @@ static void WaitPeerClosed(const zx::channel& channel) {
   zx_signals_t pending;
   zx_status_t status = channel.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), &pending);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Test helper: wait peer closed failed: "
+    FX_LOGS(ERROR) << "Test helper: wait peer closed failed: "
                    << debugger_utils::ZxErrorString(status);
     exit(EXIT_FAILURE);
   }
@@ -37,7 +37,7 @@ static void WaitPeerClosed(const zx::channel& channel) {
 
 static void WriteUint64Packet(const zx::channel& channel, uint64_t value) {
   uint64_t packet = value;
-  FXL_CHECK(channel.write(0, &packet, sizeof(packet), nullptr, 0) == ZX_OK);
+  FX_CHECK(channel.write(0, &packet, sizeof(packet), nullptr, 0) == ZX_OK);
 }
 
 static void StartNThreadsThreadFunc(zx_handle_t eventpair, int num_threads) {
@@ -45,15 +45,15 @@ static void StartNThreadsThreadFunc(zx_handle_t eventpair, int num_threads) {
 
   // When all threads are running notify the main loop.
   if (g_num_threads_running.fetch_add(1) == num_threads - 1) {
-    FXL_LOG(INFO) << "All threads started";
+    FX_LOGS(INFO) << "All threads started";
     status = zx_object_signal_peer(eventpair, 0, ZX_USER_SIGNAL_0);
-    FXL_CHECK(status == ZX_OK);
+    FX_CHECK(status == ZX_OK);
   }
 
   // The main thread will close its side of |eventpair| when it's done.
   zx_signals_t pending;
   status = zx_object_wait_one(eventpair, ZX_EVENTPAIR_PEER_CLOSED, ZX_TIME_INFINITE, &pending);
-  FXL_CHECK(status == ZX_OK);
+  FX_CHECK(status == ZX_OK);
 }
 
 static int StartNThreads(zx::channel channel, int num_threads) {
@@ -61,7 +61,7 @@ static int StartNThreads(zx::channel channel, int num_threads) {
 
   // When our side of the event pair is closed the threads will exit.
   zx::eventpair our_event, their_event;
-  FXL_CHECK(zx::eventpair::create(0, &our_event, &their_event) == ZX_OK);
+  FX_CHECK(zx::eventpair::create(0, &our_event, &their_event) == ZX_OK);
 
   for (int i = 0; i < num_threads; ++i) {
     threads.emplace_back(std::thread{StartNThreadsThreadFunc, their_event.get(), num_threads});
@@ -70,7 +70,7 @@ static int StartNThreads(zx::channel channel, int num_threads) {
   // Wait for all threads to start.
   zx_signals_t pending;
   zx_status_t status = our_event.wait_one(ZX_USER_SIGNAL_0, zx::time::infinite(), &pending);
-  FXL_CHECK(status == ZX_OK);
+  FX_CHECK(status == ZX_OK);
 
   // Notify test all threads are running.
   WriteUint64Packet(channel, debugger_utils::kUint64MagicPacketValue);
@@ -90,7 +90,7 @@ static int PerformWaitPeerClosed(zx::channel channel) {
   zx_handle_t thread = zx_thread_self();
   zx_status_t status = channel.write(0, nullptr, 0, &thread, 1);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Test helper: channel write failed: "
+    FX_LOGS(ERROR) << "Test helper: channel write failed: "
                    << debugger_utils::ZxErrorString(status);
     return EXIT_FAILURE;
   }
@@ -109,39 +109,39 @@ int main(int argc, char* argv[]) {
   const std::vector<std::string>& args = cl.positional_args();
 
   if (args.empty()) {
-    FXL_LOG(ERROR) << "Missing command";
+    FX_LOGS(ERROR) << "Missing command";
     return EXIT_FAILURE;
   }
 
   const std::string& cmd = args[0];
-  FXL_LOG(INFO) << argv[0] << ": Command " << cmd;
+  FX_LOGS(INFO) << argv[0] << ": Command " << cmd;
 
   if (cmd == "hello") {
-    FXL_LOG(INFO) << "Hello.";
+    FX_LOGS(INFO) << "Hello.";
     return EXIT_SUCCESS;
   }
 
   zx::channel channel{zx_take_startup_handle(PA_HND(PA_USER0, 0))};
   // If no channel was passed we're running standalone.
   if (!channel.is_valid()) {
-    FXL_LOG(WARNING) << "Test helper: channel not received";
+    FX_LOGS(WARNING) << "Test helper: channel not received";
   }
 
   if (cmd == "wait-peer-closed") {
     return PerformWaitPeerClosed(std::move(channel));
   } else if (cmd == "start-n-threads") {
     if (args.size() < 2) {
-      FXL_LOG(ERROR) << "Missing iteration count";
+      FX_LOGS(ERROR) << "Missing iteration count";
       return EXIT_FAILURE;
     }
     int num_threads = 0;
     if (!fxl::StringToNumberWithError(args[1], &num_threads) || num_threads < 1) {
-      FXL_LOG(ERROR) << "Error parsing number of threads";
+      FX_LOGS(ERROR) << "Error parsing number of threads";
       return EXIT_FAILURE;
     }
     return StartNThreads(std::move(channel), num_threads);
   }
 
-  FXL_LOG(ERROR) << "Unknown helper command";
+  FX_LOGS(ERROR) << "Unknown helper command";
   return EXIT_FAILURE;
 }

@@ -16,7 +16,7 @@ fxl::LogSettings g_log_settings;
 int main(int argc, char** argv) {
   auto cl = fxl::CommandLineFromArgcArgv(argc, argv);
   if (!fxl::SetTestSettings(cl)) {
-    FXL_LOG(ERROR) << "Failed to parse log settings from command-line";
+    FX_LOGS(ERROR) << "Failed to parse log settings from command-line";
     return EXIT_FAILURE;
   }
   fxl::ParseLogSettings(cl, &g_log_settings);

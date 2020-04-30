@@ -36,7 +36,7 @@ class Parser {
 
   // Matches a single decimal digit.
   bool MatchDecDigit(uint8_t* out) {
-    FXL_DCHECK(out);
+    FX_DCHECK(out);
 
     if (pos_ == str_.length() || !std::isdigit(static_cast<unsigned char>(str_[pos_]))) {
       return false;
@@ -50,7 +50,7 @@ class Parser {
 
   // Matches a single lowercase hexadecimal digit.
   bool MatchLowerHexDigit(uint8_t* out) {
-    FXL_DCHECK(out);
+    FX_DCHECK(out);
 
     if (pos_ == str_.length() || !std::isxdigit(static_cast<unsigned char>(str_[pos_]))) {
       return false;
@@ -74,7 +74,7 @@ class Parser {
   // if the decimal byte is followed immediately by a digit. If matching three
   // digits would produce a value greater than 255, only two digits are matched.
   bool MatchMax3DigitDecByte(uint8_t* byte_out) {
-    FXL_DCHECK(byte_out);
+    FX_DCHECK(byte_out);
 
     uint8_t digit = 0;
     if (!MatchDecDigit(&digit)) {
@@ -94,7 +94,7 @@ class Parser {
       }
     }
 
-    FXL_DCHECK(accum <= 255);
+    FX_DCHECK(accum <= 255);
     *byte_out = static_cast<uint8_t>(accum);
     return true;
   }
@@ -103,7 +103,7 @@ class Parser {
   // succeed even if the hexadecimal word is followed immediately by a
   // hexadecimal digit.
   bool MatchMax4DigitLowerHexWord(uint16_t* word_out) {
-    FXL_DCHECK(word_out);
+    FX_DCHECK(word_out);
 
     uint8_t digit = 0;
     if (!MatchLowerHexDigit(&digit)) {
@@ -127,7 +127,7 @@ class Parser {
 
   // Matches an IPV4 address.
   bool MatchIpV4Address(IpAddress* address_out) {
-    FXL_DCHECK(address_out);
+    FX_DCHECK(address_out);
 
     size_t old_pos = pos_;
     uint8_t b0, b1, b2, b3;
@@ -143,7 +143,7 @@ class Parser {
 
   // Matches an IPV6 address.
   bool MatchIpV6Address(IpAddress* address_out) {
-    FXL_DCHECK(address_out);
+    FX_DCHECK(address_out);
 
     size_t old_pos = pos_;
     uint16_t words[8];
@@ -228,7 +228,7 @@ const IpAddress IpAddress::kV6Loopback(0, 0, 0, 0, 0, 0, 0, 1);
 
 // static
 IpAddress IpAddress::FromString(const std::string address_string, sa_family_t family) {
-  FXL_DCHECK(family == AF_UNSPEC || family == AF_INET || family == AF_INET6);
+  FX_DCHECK(family == AF_UNSPEC || family == AF_INET || family == AF_INET6);
 
   Parser parser(address_string);
   IpAddress address;
@@ -292,7 +292,7 @@ IpAddress::IpAddress(const in6_addr& addr) {
 }
 
 IpAddress::IpAddress(const sockaddr* addr) {
-  FXL_DCHECK(addr != nullptr);
+  FX_DCHECK(addr != nullptr);
   switch (addr->sa_family) {
     case AF_INET:
       family_ = AF_INET;
@@ -329,19 +329,19 @@ IpAddress::IpAddress(const sockaddr_storage& addr) {
 }
 
 IpAddress::IpAddress(const fuchsia::net::Ipv4Address* addr) {
-  FXL_DCHECK(addr != nullptr);
+  FX_DCHECK(addr != nullptr);
   family_ = AF_INET;
   memcpy(&v4_, addr->addr.data(), 4);
 }
 
 IpAddress::IpAddress(const fuchsia::net::Ipv6Address* addr) {
-  FXL_DCHECK(addr != nullptr);
+  FX_DCHECK(addr != nullptr);
   family_ = AF_INET6;
   memcpy(&v6_, addr->addr.data(), 16);
 }
 
 IpAddress::IpAddress(const fuchsia::net::IpAddress* addr) {
-  FXL_DCHECK(addr != nullptr);
+  FX_DCHECK(addr != nullptr);
   switch (addr->Which()) {
     case fuchsia::net::IpAddress::Tag::kIpv4:
       family_ = AF_INET;
@@ -352,7 +352,7 @@ IpAddress::IpAddress(const fuchsia::net::IpAddress* addr) {
       memcpy(&v6_, addr->ipv6().addr.data(), 16);
       break;
     default:
-      FXL_DCHECK(false);
+      FX_DCHECK(false);
       break;
   }
 }
@@ -365,13 +365,13 @@ bool IpAddress::is_mapped_from_v4() const {
 }
 
 IpAddress IpAddress::mapped_v4_address() const {
-  FXL_DCHECK(is_mapped_from_v4());
+  FX_DCHECK(is_mapped_from_v4());
   auto bytes = as_bytes();
   return IpAddress(bytes[12], bytes[13], bytes[14], bytes[15]);
 }
 
 IpAddress IpAddress::mapped_as_v6() const {
-  FXL_DCHECK(is_v4());
+  FX_DCHECK(is_v4());
   auto bytes = as_bytes();
   // The words passed in to this constructor are stored in big-endian order.
   return IpAddress(0, 0, 0, 0, 0, 0xffff, static_cast<uint16_t>(bytes[0]) << 8 | bytes[1],

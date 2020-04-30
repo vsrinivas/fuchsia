@@ -41,7 +41,7 @@ Status ChunkedDecompressor::DecompressBytes(const void* input, size_t len,
   SeekTable table;
   HeaderReader reader;
   if ((status = reader.Parse(input, len, len, &table)) != kStatusOk) {
-    FXL_LOG(ERROR) << "Failed to parse table";
+    FX_LOGS(ERROR) << "Failed to parse table";
     return status;
   }
   ChunkedDecompressor decompressor;
@@ -99,7 +99,7 @@ Status ChunkedDecompressor::DecompressFrame(const SeekTable& table, unsigned tab
   size_t decompressed_size = ZSTD_decompressDCtx(context_->inner_, dst, entry.decompressed_size,
                                                  compressed_buffer, entry.compressed_size);
   if (ZSTD_isError(decompressed_size)) {
-    FXL_LOG(ERROR) << "Decompression failed: " << ZSTD_getErrorName(decompressed_size);
+    FX_LOGS(ERROR) << "Decompression failed: " << ZSTD_getErrorName(decompressed_size);
     if (LikelyCorrupton(ZSTD_getErrorCode(decompressed_size))) {
       return kStatusErrIoDataIntegrity;
     }
@@ -107,7 +107,7 @@ Status ChunkedDecompressor::DecompressFrame(const SeekTable& table, unsigned tab
   }
 
   if (decompressed_size != entry.decompressed_size) {
-    FXL_LOG(ERROR) << "Decompressed " << decompressed_size << " bytes, expected "
+    FX_LOGS(ERROR) << "Decompressed " << decompressed_size << " bytes, expected "
                    << entry.decompressed_size;
     return kStatusErrIoDataIntegrity;
   }

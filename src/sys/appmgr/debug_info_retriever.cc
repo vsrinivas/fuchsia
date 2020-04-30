@@ -48,7 +48,7 @@ fbl::String DebugInfoRetriever::GetInfo(const zx::process* process, zx_koid_t* t
     auto prev = it++;
     // All threads will resume when their suspend token goes out of scope.
     if ((status = prev->thread.suspend(&prev->suspend_token)) != ZX_OK) {
-      FXL_LOG(INFO) << "Failed to suspend thread: " << status;
+      FX_LOGS(INFO) << "Failed to suspend thread: " << status;
       threads.erase(prev);
     }
   }
@@ -62,7 +62,7 @@ fbl::String DebugInfoRetriever::GetInfo(const zx::process* process, zx_koid_t* t
     if ((status = prev->thread.wait_one(ZX_THREAD_SUSPENDED | ZX_THREAD_TERMINATED,
                                         zx::deadline_after(zx::msec(100)), &signals)) != ZX_OK ||
         (signals & ZX_THREAD_TERMINATED)) {
-      FXL_LOG(INFO) << "Thread failed to suspend in time. Status: " << status
+      FX_LOGS(INFO) << "Thread failed to suspend in time. Status: " << status
                     << ", signals: " << signals;
       threads.erase(prev);
     }
@@ -77,7 +77,7 @@ fbl::String DebugInfoRetriever::GetInfo(const zx::process* process, zx_koid_t* t
   DsoListWrapper dso(*process);
   FILE* output = tmpfile();
   if (output == nullptr) {
-    FXL_LOG(ERROR) << "Failed to open tmpfile for output.";
+    FX_LOGS(ERROR) << "Failed to open tmpfile for output.";
     return "";
   }
 

@@ -56,7 +56,7 @@ class DisplaySwapchain : public Swapchain {
   // Register a callback to be called on each vsync.
   // Only allows a single listener at a time.
   void RegisterVsyncListener(OnVsyncCallback on_vsync) {
-    FXL_CHECK(!on_vsync_);
+    FX_CHECK(!on_vsync_);
     on_vsync_ = std::move(on_vsync);
   }
 

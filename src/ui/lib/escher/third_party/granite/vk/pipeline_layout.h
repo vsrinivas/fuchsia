@@ -61,7 +61,7 @@ struct PipelineLayoutSpec : public Hashable {
         descriptor_set_layouts_(layouts),
         num_push_constant_ranges_(num_ranges),
         push_constant_ranges_(ranges) {
-    FXL_DCHECK(num_ranges < kMaxPushConstantRanges);
+    FX_DCHECK(num_ranges < kMaxPushConstantRanges);
     for (uint32_t i = 0; i < VulkanLimits::kNumDescriptorSets; ++i) {
       if (descriptor_set_layouts_[i].stages) {
         descriptor_set_mask_ |= 1u << i;
@@ -141,7 +141,7 @@ class PipelineLayout : public Resource {
   const impl::PipelineLayoutSpec& spec() const { return spec_; }
 
   impl::DescriptorSetAllocator* GetDescriptorSetAllocator(unsigned set_index) const {
-    FXL_DCHECK(set_index < VulkanLimits::kNumDescriptorSets);
+    FX_DCHECK(set_index < VulkanLimits::kNumDescriptorSets);
     return descriptor_set_allocators_[set_index].get();
   }
 

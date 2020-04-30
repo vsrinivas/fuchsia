@@ -14,7 +14,7 @@ namespace tts {
 
 TtsServiceImpl::TtsServiceImpl(std::unique_ptr<sys::ComponentContext> startup_context)
     : startup_context_(std::move(startup_context)) {
-  FXL_DCHECK(startup_context_);
+  FX_DCHECK(startup_context_);
 
   startup_context_->outgoing()->AddPublicService<fuchsia::tts::TtsService>(
       [this](fidl::InterfaceRequest<fuchsia::tts::TtsService> request) {
@@ -23,15 +23,15 @@ TtsServiceImpl::TtsServiceImpl(std::unique_ptr<sys::ComponentContext> startup_co
 
   // Stash a pointer to our async_t.
   dispatcher_ = async_get_default_dispatcher();
-  FXL_DCHECK(dispatcher_);
+  FX_DCHECK(dispatcher_);
 }
 
-TtsServiceImpl::~TtsServiceImpl() { FXL_DCHECK(clients_.size() == 0); }
+TtsServiceImpl::~TtsServiceImpl() { FX_DCHECK(clients_.size() == 0); }
 
 zx_status_t TtsServiceImpl::Init() {
   int res = flite_init();
   if (res < 0) {
-    FXL_LOG(ERROR) << "Failed to initialize flite (res " << res << ")";
+    FX_LOGS(ERROR) << "Failed to initialize flite (res " << res << ")";
     return ZX_ERR_INTERNAL;
   }
 
@@ -44,8 +44,8 @@ TtsServiceImpl::Client::Client(TtsServiceImpl* owner, fidl::InterfaceRequest<Tts
 }
 
 TtsServiceImpl::Client::~Client() {
-  FXL_DCHECK(active_speakers_.size() == 0);
-  FXL_DCHECK(binding_.is_bound() == false);
+  FX_DCHECK(active_speakers_.size() == 0);
+  FX_DCHECK(binding_.is_bound() == false);
 }
 
 void TtsServiceImpl::Client::Shutdown() {
@@ -74,7 +74,7 @@ void TtsServiceImpl::Client::Say(std::string words, uint64_t token, SayCallback 
   if (res == ZX_OK) {
     active_speakers_.insert(std::move(speaker));
   } else {
-    FXL_LOG(ERROR) << "Failed to start to speak (res " << res << ")";
+    FX_LOGS(ERROR) << "Failed to start to speak (res " << res << ")";
     return;
   }
 

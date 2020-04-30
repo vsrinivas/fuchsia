@@ -81,12 +81,12 @@ class SocketAddress {
   uint32_t scope_id() const { return as_sockaddr_in6().sin6_scope_id; }
 
   const sockaddr_in& as_sockaddr_in() const {
-    FXL_DCHECK(is_v4());
+    FX_DCHECK(is_v4());
     return v4_;
   }
 
   const sockaddr_in6& as_sockaddr_in6() const {
-    FXL_DCHECK(is_v6());
+    FX_DCHECK(is_v6());
     return v6_;
   }
 

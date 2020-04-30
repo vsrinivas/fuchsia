@@ -240,7 +240,7 @@ class NetworkDeviceImpl : public EndpointImpl, public fuchsia::hardware::network
     frame.set_data(std::vector<uint8_t>(p, p + len));
     tun_device_->WriteFrame(std::move(frame), [](fit::result<void, zx_status_t> status) {
       if (status.is_error()) {
-        FXL_LOG(WARNING) << "Failed to send data to network device: "
+        FX_LOGS(WARNING) << "Failed to send data to network device: "
                          << zx_status_get_string(status.error());
       }
     });
@@ -276,7 +276,7 @@ class NetworkDeviceImpl : public EndpointImpl, public fuchsia::hardware::network
         auto& data = result.response().frame.data();
         ForwardData(&data[0], data.size());
       } else {
-        FXL_LOG(ERROR) << "ReadFrame from Tun Device failed " << zx_status_get_string(result.err());
+        FX_LOGS(ERROR) << "ReadFrame from Tun Device failed " << zx_status_get_string(result.err());
       }
 
       // Listen again for the next frame.

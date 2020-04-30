@@ -38,7 +38,7 @@ double StdDev(const std::vector<double>& samples, double average) {
 }
 
 void OutputSamples(std::ostream& out, const std::vector<double>& values, const std::string& unit) {
-  FXL_DCHECK(!values.empty());
+  FX_DCHECK(!values.empty());
   if (values.size() == 1) {
     out << values.front() << unit;
     return;

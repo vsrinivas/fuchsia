@@ -18,7 +18,7 @@
 #include "src/ui/lib/escher/util/image_utils.h"
 #include "src/ui/lib/escher/vk/gpu_mem.h"
 
-#define VK_CHECK_RESULT(XXX) FXL_CHECK(XXX.result == vk::Result::eSuccess)
+#define VK_CHECK_RESULT(XXX) FX_CHECK(XXX.result == vk::Result::eSuccess)
 
 namespace scenic_impl {
 namespace gfx {
@@ -67,8 +67,8 @@ DisplaySwapchain::DisplaySwapchain(
       swapchain_buffers_(/*count=*/0, /*environment=*/nullptr, /*use_protected_memory=*/false),
       protected_swapchain_buffers_(/*count=*/0, /*environment=*/nullptr,
                                    /*use_protected_memory=*/true) {
-  FXL_DCHECK(display);
-  FXL_DCHECK(sysmem);
+  FX_DCHECK(display);
+  FX_DCHECK(sysmem);
 
   if (escher_) {
     device_ = escher_->vk_device();
@@ -77,17 +77,17 @@ DisplaySwapchain::DisplaySwapchain(
     frames_.resize(kSwapchainImageCount);
 
     if (!InitializeDisplayLayer()) {
-      FXL_LOG(FATAL) << "Initializing display layer failed";
+      FX_LOGS(FATAL) << "Initializing display layer failed";
     }
     if (!InitializeFramebuffers(escher_->resource_recycler(), /*use_protected_memory=*/false)) {
-      FXL_LOG(FATAL) << "Initializing buffers for display swapchain failed - check "
+      FX_LOGS(FATAL) << "Initializing buffers for display swapchain failed - check "
                         "whether fuchsia.sysmem.Allocator is available in this sandbox";
     }
 
     display_controller_listener_->SetOnVsyncCallback(
         fit::bind_member(this, &DisplaySwapchain::OnVsync));
     if ((*display_controller_)->EnableVsync(true) != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed to enable vsync";
+      FX_LOGS(ERROR) << "Failed to enable vsync";
     }
 
   } else {
@@ -96,13 +96,13 @@ DisplaySwapchain::DisplaySwapchain(
 
     display_->Claim();
 
-    FXL_VLOG(2) << "Using a NULL escher in DisplaySwapchain; likely in a test.";
+    FX_VLOGS(2) << "Using a NULL escher in DisplaySwapchain; likely in a test.";
   }
 }
 
 bool DisplaySwapchain::InitializeFramebuffers(escher::ResourceRecycler* resource_recycler,
                                               bool use_protected_memory) {
-  FXL_CHECK(escher_);
+  FX_CHECK(escher_);
   BufferPool::Environment environment = {
       .display_controller = display_controller_,
       .display = display_,
@@ -114,7 +114,7 @@ bool DisplaySwapchain::InitializeFramebuffers(escher::ResourceRecycler* resource
   BufferPool pool(kSwapchainImageCount, &environment, use_protected_memory);
   if ((*display_controller_)->SetLayerPrimaryConfig(primary_layer_id_, pool.image_config()) !=
       ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to set layer primary config";
+    FX_LOGS(ERROR) << "Failed to set layer primary config";
   }
   if (use_protected_memory) {
     protected_swapchain_buffers_ = std::move(pool);
@@ -132,7 +132,7 @@ DisplaySwapchain::~DisplaySwapchain() {
 
   // Turn off operations.
   if ((*display_controller_)->EnableVsync(false) != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to disable vsync";
+    FX_LOGS(ERROR) << "Failed to disable vsync";
   }
 
   display_controller_listener_->SetOnVsyncCallback(nullptr);
@@ -158,10 +158,10 @@ DisplaySwapchain::~DisplaySwapchain() {
   display_->Unclaim();
 
   if ((*display_controller_)->SetDisplayLayers(display_->display_id(), {}) != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to configure display layers";
+    FX_LOGS(ERROR) << "Failed to configure display layers";
   } else {
     if ((*display_controller_)->DestroyLayer(primary_layer_id_) != ZX_OK) {
-      FXL_DLOG(ERROR) << "Failed to destroy layer";
+      FX_DLOGS(ERROR) << "Failed to destroy layer";
     }
   }
 
@@ -171,8 +171,8 @@ DisplaySwapchain::~DisplaySwapchain() {
 
 std::unique_ptr<DisplaySwapchain::FrameRecord> DisplaySwapchain::NewFrameRecord(
     fxl::WeakPtr<scheduling::FrameTimings> frame_timings, size_t swapchain_index) {
-  FXL_DCHECK(frame_timings);
-  FXL_CHECK(escher_);
+  FX_DCHECK(frame_timings);
+  FX_CHECK(escher_);
   auto render_finished_escher_semaphore = escher::Semaphore::NewExportableSem(device_);
 
   zx::event render_finished_event =
@@ -181,20 +181,20 @@ std::unique_ptr<DisplaySwapchain::FrameRecord> DisplaySwapchain::NewFrameRecord(
 
   if (!render_finished_escher_semaphore ||
       render_finished_event_id == fuchsia::hardware::display::INVALID_DISP_ID) {
-    FXL_LOG(ERROR) << "DisplaySwapchain::NewFrameRecord() failed to create semaphores";
+    FX_LOGS(ERROR) << "DisplaySwapchain::NewFrameRecord() failed to create semaphores";
     return std::unique_ptr<FrameRecord>();
   }
 
   zx::event retired_event;
   zx_status_t status = zx::event::create(0, &retired_event);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "DisplaySwapchain::NewFrameRecord() failed to create retired event";
+    FX_LOGS(ERROR) << "DisplaySwapchain::NewFrameRecord() failed to create retired event";
     return std::unique_ptr<FrameRecord>();
   }
 
   uint64_t retired_event_id = ImportEvent(retired_event);
   if (retired_event_id == fuchsia::hardware::display::INVALID_DISP_ID) {
-    FXL_LOG(ERROR) << "DisplaySwapchain::NewFrameRecord() failed to import retired event";
+    FX_LOGS(ERROR) << "DisplaySwapchain::NewFrameRecord() failed to import retired event";
     return std::unique_ptr<FrameRecord>();
   }
 
@@ -224,8 +224,8 @@ bool DisplaySwapchain::DrawAndPresentFrame(fxl::WeakPtr<scheduling::FrameTimings
                                            size_t swapchain_index,
                                            const HardwareLayerAssignment& hla,
                                            DrawCallback draw_callback) {
-  FXL_DCHECK(hla.swapchain == this);
-  FXL_DCHECK(frame_timings);
+  FX_DCHECK(hla.swapchain == this);
+  FX_DCHECK(frame_timings);
 
   // Create a record that can be used to notify |frame_timings| (and hence
   // ultimately the FrameScheduler) that the frame has been presented.
@@ -236,10 +236,10 @@ bool DisplaySwapchain::DrawAndPresentFrame(fxl::WeakPtr<scheduling::FrameTimings
   auto& old_frame = frames_[next_frame_index_];
   if (old_frame) {
     if (auto timings = old_frame->frame_timings) {
-      FXL_CHECK(timings->finalized());
+      FX_CHECK(timings->finalized());
     }
     if (old_frame->retired_event.wait_one(ZX_EVENT_SIGNALED, zx::time(), nullptr) != ZX_OK) {
-      FXL_LOG(WARNING) << "DisplaySwapchain::DrawAndPresentFrame rendering "
+      FX_LOGS(WARNING) << "DisplaySwapchain::DrawAndPresentFrame rendering "
                           "into in-use backbuffer";
     }
     if (old_frame->buffer) {
@@ -257,7 +257,7 @@ bool DisplaySwapchain::DrawAndPresentFrame(fxl::WeakPtr<scheduling::FrameTimings
   frame_record->buffer = use_protected_memory_ ? protected_swapchain_buffers_.GetUnused()
                                                : swapchain_buffers_.GetUnused();
   frame_record->use_protected_memory = use_protected_memory_;
-  FXL_CHECK(frame_record->buffer != nullptr);
+  FX_CHECK(frame_record->buffer != nullptr);
 
   next_frame_index_ = (next_frame_index_ + 1) % kSwapchainImageCount;
   outstanding_frame_count_++;
@@ -265,13 +265,13 @@ bool DisplaySwapchain::DrawAndPresentFrame(fxl::WeakPtr<scheduling::FrameTimings
   // Render the scene.
   size_t num_hardware_layers = hla.items.size();
   // TODO(SCN-1088): handle more hardware layers.
-  FXL_DCHECK(num_hardware_layers == 1);
+  FX_DCHECK(num_hardware_layers == 1);
 
   // TODO(SCN-1098): we'd like to validate that the layer ID is supported
   // by the display/display-controller, but the DisplayManager API doesn't
   // currently expose it, and rather than hack in an accessor for |layer_id_|
   // we should fix this "properly", whatever that means.
-  // FXL_DCHECK(hla.items[0].hardware_layer_id is supported by display);
+  // FX_DCHECK(hla.items[0].hardware_layer_id is supported by display);
   for (size_t i = 0; i < num_hardware_layers; ++i) {
     TRACE_DURATION("gfx", "DisplaySwapchain::DrawAndPresent() draw");
 
@@ -294,10 +294,10 @@ bool DisplaySwapchain::DrawAndPresentFrame(fxl::WeakPtr<scheduling::FrameTimings
        frame_record->retired_event_id);
 
   if ((*display_controller_)->ReleaseEvent(frame_record->render_finished_event_id) != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to release display controller event.";
+    FX_LOGS(ERROR) << "Failed to release display controller event.";
   }
   if ((*display_controller_)->ReleaseEvent(frame_record->retired_event_id) != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to release display controller event.";
+    FX_LOGS(ERROR) << "Failed to release display controller event.";
   }
   return true;
 }
@@ -309,7 +309,7 @@ void DisplaySwapchain::SetDisplayColorConversion(
   zx_status_t status = display_controller->SetDisplayColorConversion(
       display_id, transform.preoffsets, transform.matrix, transform.postoffsets);
   if (status != ZX_OK) {
-    FXL_LOG(WARNING)
+    FX_LOGS(WARNING)
         << "DisplaySwapchain:SetDisplayColorConversion failed, controller returned status: "
         << status;
     return;
@@ -340,7 +340,7 @@ void DisplaySwapchain::SetDisplayColorConversion(
 }
 
 void DisplaySwapchain::SetDisplayColorConversion(const ColorTransform& transform) {
-  FXL_CHECK(display_);
+  FX_CHECK(display_);
   uint64_t display_id = display_->display_id();
   SetDisplayColorConversion(display_id, *display_controller_, transform);
 }
@@ -363,21 +363,21 @@ bool DisplaySwapchain::InitializeDisplayLayer() {
   zx_status_t transport_status =
       (*display_controller_)->CreateLayer(&create_layer_status, &primary_layer_id_);
   if (create_layer_status != ZX_OK || transport_status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to create layer, " << create_layer_status;
+    FX_LOGS(ERROR) << "Failed to create layer, " << create_layer_status;
     return false;
   }
 
   zx_status_t status =
       (*display_controller_)->SetDisplayLayers(display_->display_id(), {primary_layer_id_});
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to configure display layers";
+    FX_LOGS(ERROR) << "Failed to configure display layers";
     return false;
   }
   return true;
 }
 
 void DisplaySwapchain::OnFrameRendered(size_t frame_index, zx::time render_finished_time) {
-  FXL_DCHECK(frame_index < kSwapchainImageCount);
+  FX_DCHECK(frame_index < kSwapchainImageCount);
   auto& record = frames_[frame_index];
 
   uint64_t frame_number = record->frame_timings ? record->frame_timings->frame_number() : 0u;
@@ -389,7 +389,7 @@ void DisplaySwapchain::OnFrameRendered(size_t frame_index, zx::time render_finis
   // It is effectively 1-indexed in the display.
   TRACE_FLOW_BEGIN("gfx", "present_image", frame_index + 1);
 
-  FXL_DCHECK(record);
+  FX_DCHECK(record);
   if (record->frame_timings) {
     record->frame_timings->OnFrameRendered(record->swapchain_index, render_finished_time);
     // See ::OnVsync for comment about finalization.
@@ -407,7 +407,7 @@ void DisplaySwapchain::OnVsync(uint64_t display_id, uint64_t timestamp,
   }
 
   // Currently, only a single layer is ever used
-  FXL_CHECK(image_ids.size() == 1);
+  FX_CHECK(image_ids.size() == 1);
   uint64_t image_id = image_ids[0];
 
   bool match = false;
@@ -443,21 +443,21 @@ void DisplaySwapchain::OnVsync(uint64_t display_id, uint64_t timestamp,
       outstanding_frame_count_--;
     }
   }
-  FXL_DCHECK(match) << "Unhandled vsync image_id=" << image_id;
+  FX_DCHECK(match) << "Unhandled vsync image_id=" << image_id;
 }
 
 uint64_t DisplaySwapchain::ImportEvent(const zx::event& event) {
   zx::event dup;
   uint64_t event_id = next_event_id_++;
   if (event.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup) != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to duplicate display controller event.";
+    FX_LOGS(ERROR) << "Failed to duplicate display controller event.";
     return fuchsia::hardware::display::INVALID_DISP_ID;
   }
 
   auto before = zx::clock::get_monotonic();
   if ((*display_controller_)->ImportEvent(std::move(dup), event_id) != ZX_OK) {
     auto after = zx::clock::get_monotonic();
-    FXL_LOG(ERROR) << "Failed to import display controller event. Waited "
+    FX_LOGS(ERROR) << "Failed to import display controller event. Waited "
                    << (after - before).to_msecs() << "msecs";
     return fuchsia::hardware::display::INVALID_DISP_ID;
   }
@@ -470,13 +470,13 @@ void DisplaySwapchain::Flip(uint64_t layer_id, uint64_t buffer, uint64_t render_
       (*display_controller_)
           ->SetLayerImage(layer_id, buffer, render_finished_event_id, signal_event_id);
   // TODO(SCN-244): handle this more robustly.
-  FXL_CHECK(status == ZX_OK) << "DisplaySwapchain::Flip failed";
+  FX_CHECK(status == ZX_OK) << "DisplaySwapchain::Flip failed";
 
   auto before = zx::clock::get_monotonic();
   status = (*display_controller_)->ApplyConfig();
   // TODO(SCN-244): handle this more robustly.
-  FXL_CHECK(status == ZX_OK) << "DisplaySwapchain::Flip failed. Waited "
-                             << (zx::clock::get_monotonic() - before).to_msecs() << "msecs";
+  FX_CHECK(status == ZX_OK) << "DisplaySwapchain::Flip failed. Waited "
+                            << (zx::clock::get_monotonic() - before).to_msecs() << "msecs";
 }
 
 }  // namespace gfx

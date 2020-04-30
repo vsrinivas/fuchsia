@@ -50,14 +50,14 @@ TraceManager::~TraceManager() = default;
 void TraceManager::OnEmptyControllerSet() {
   // While one controller could go away and another remain causing a trace
   // to not be terminated, at least handle the common case.
-  FXL_VLOG(5) << "Controller is gone";
+  FX_VLOGS(5) << "Controller is gone";
   if (session_) {
     // Check the state first because the log messages are useful, but not if
     // tracing has ended.
     if (session_->state() != TraceSession::State::kTerminating) {
-      FXL_LOG(INFO) << "Controller is gone, terminating trace";
+      FX_LOGS(INFO) << "Controller is gone, terminating trace";
       session_->Terminate([this]() {
-        FXL_LOG(INFO) << "Trace terminated";
+        FX_LOGS(INFO) << "Trace terminated";
         session_ = nullptr;
       });
     }
@@ -73,10 +73,10 @@ void TraceManager::OnEmptyControllerSet() {
 
 // fidl
 void TraceManager::InitializeTracing(controller::TraceConfig config, zx::socket output) {
-  FXL_VLOG(2) << "InitializeTracing";
+  FX_VLOGS(2) << "InitializeTracing";
 
   if (session_) {
-    FXL_LOG(ERROR) << "Ignoring initialize request, trace already initialized";
+    FX_LOGS(ERROR) << "Ignoring initialize request, trace already initialized";
     return;
   }
 
@@ -113,16 +113,16 @@ void TraceManager::InitializeTracing(controller::TraceConfig config, zx::socket 
       mode_name = "streaming";
       break;
     default:
-      FXL_LOG(ERROR) << "Invalid buffering mode: " << static_cast<unsigned>(tracing_buffering_mode);
+      FX_LOGS(ERROR) << "Invalid buffering mode: " << static_cast<unsigned>(tracing_buffering_mode);
       return;
   }
 
-  FXL_LOG(INFO) << "Initializing trace with " << default_buffer_size_megabytes
+  FX_LOGS(INFO) << "Initializing trace with " << default_buffer_size_megabytes
                 << " MB buffers, buffering mode=" << mode_name;
   if (provider_specs.size() > 0) {
-    FXL_LOG(INFO) << "Provider overrides:";
+    FX_LOGS(INFO) << "Provider overrides:";
     for (const auto& it : provider_specs) {
-      FXL_LOG(INFO) << it.first << ": buffer size " << it.second.buffer_size_megabytes << " MB";
+      FX_LOGS(INFO) << it.first << ": buffer size " << it.second.buffer_size_megabytes << " MB";
     }
   }
 
@@ -158,7 +158,7 @@ void TraceManager::InitializeTracing(controller::TraceConfig config, zx::socket 
 void TraceManager::TerminateTracing(controller::TerminateOptions options,
                                     TerminateTracingCallback terminate_callback) {
   if (!session_) {
-    FXL_VLOG(1) << "Ignoring terminate request, tracing not initialized";
+    FX_VLOGS(1) << "Ignoring terminate request, tracing not initialized";
     controller::TerminateResult result;
     terminate_callback(std::move(result));
     return;
@@ -168,9 +168,9 @@ void TraceManager::TerminateTracing(controller::TerminateOptions options,
     session_->set_write_results_on_terminate(options.write_results());
   }
 
-  FXL_LOG(INFO) << "Terminating trace";
+  FX_LOGS(INFO) << "Terminating trace";
   session_->Terminate([this, terminate_callback = std::move(terminate_callback)]() {
-    FXL_LOG(INFO) << "Terminated trace";
+    FX_LOGS(INFO) << "Terminated trace";
     controller::TerminateResult result;
     // TODO(dje): Report stats back to user.
     terminate_callback(std::move(result));
@@ -181,12 +181,12 @@ void TraceManager::TerminateTracing(controller::TerminateOptions options,
 // fidl
 void TraceManager::StartTracing(controller::StartOptions options,
                                 StartTracingCallback start_callback) {
-  FXL_VLOG(2) << "StartTracing";
+  FX_VLOGS(2) << "StartTracing";
 
   controller::Controller_StartTracing_Result result;
 
   if (!session_) {
-    FXL_LOG(ERROR) << "Ignoring start request, trace must be initialized first";
+    FX_LOGS(ERROR) << "Ignoring start request, trace must be initialized first";
     result.set_err(controller::StartErrorCode::NOT_INITIALIZED);
     start_callback(std::move(result));
     return;
@@ -195,17 +195,17 @@ void TraceManager::StartTracing(controller::StartOptions options,
   switch (session_->state()) {
     case TraceSession::State::kStarting:
     case TraceSession::State::kStarted:
-      FXL_LOG(ERROR) << "Ignoring start request, trace already started";
+      FX_LOGS(ERROR) << "Ignoring start request, trace already started";
       result.set_err(controller::StartErrorCode::ALREADY_STARTED);
       start_callback(std::move(result));
       return;
     case TraceSession::State::kStopping:
-      FXL_LOG(ERROR) << "Ignoring start request, trace stopping";
+      FX_LOGS(ERROR) << "Ignoring start request, trace stopping";
       result.set_err(controller::StartErrorCode::STOPPING);
       start_callback(std::move(result));
       return;
     case TraceSession::State::kTerminating:
-      FXL_LOG(ERROR) << "Ignoring start request, trace terminating";
+      FX_LOGS(ERROR) << "Ignoring start request, trace terminating";
       result.set_err(controller::StartErrorCode::TERMINATING);
       start_callback(std::move(result));
       return;
@@ -213,7 +213,7 @@ void TraceManager::StartTracing(controller::StartOptions options,
     case TraceSession::State::kStopped:
       break;
     default:
-      FXL_NOTREACHED();
+      FX_NOTREACHED();
       return;
   }
 
@@ -232,7 +232,7 @@ void TraceManager::StartTracing(controller::StartOptions options,
       case controller::BufferDisposition::RETAIN:
         break;
       default:
-        FXL_LOG(ERROR) << "Bad value for buffer disposition: " << buffer_disposition
+        FX_LOGS(ERROR) << "Bad value for buffer disposition: " << buffer_disposition
                        << ", dropping connection";
         // TODO(dje): IWBN to drop the connection. How?
         result.set_err(controller::StartErrorCode::TERMINATING);
@@ -241,7 +241,7 @@ void TraceManager::StartTracing(controller::StartOptions options,
     }
   }
 
-  FXL_LOG(INFO) << "Starting trace, buffer disposition: " << buffer_disposition;
+  FX_LOGS(INFO) << "Starting trace, buffer disposition: " << buffer_disposition;
 
   session_->Start(buffer_disposition, additional_categories, std::move(start_callback));
 }
@@ -249,7 +249,7 @@ void TraceManager::StartTracing(controller::StartOptions options,
 // fidl
 void TraceManager::StopTracing(controller::StopOptions options, StopTracingCallback stop_callback) {
   if (!session_) {
-    FXL_VLOG(1) << "Ignoring stop request, tracing not started";
+    FX_VLOGS(1) << "Ignoring stop request, tracing not started";
     stop_callback();
     return;
   }
@@ -257,7 +257,7 @@ void TraceManager::StopTracing(controller::StopOptions options, StopTracingCallb
   if (session_->state() != TraceSession::State::kInitialized &&
       session_->state() != TraceSession::State::kStarting &&
       session_->state() != TraceSession::State::kStarted) {
-    FXL_VLOG(1) << "Ignoring stop request, state != Initialized,Starting,Started";
+    FX_VLOGS(1) << "Ignoring stop request, state != Initialized,Starting,Started";
     stop_callback();
     return;
   }
@@ -267,16 +267,16 @@ void TraceManager::StopTracing(controller::StopOptions options, StopTracingCallb
     write_results = options.write_results();
   }
 
-  FXL_LOG(INFO) << "Stopping trace" << (write_results ? ", and writing results" : "");
+  FX_LOGS(INFO) << "Stopping trace" << (write_results ? ", and writing results" : "");
   session_->Stop(write_results, [stop_callback = std::move(stop_callback)]() {
-    FXL_LOG(INFO) << "Stopped trace";
+    FX_LOGS(INFO) << "Stopped trace";
     stop_callback();
   });
 }
 
 // fidl
 void TraceManager::GetProviders(GetProvidersCallback callback) {
-  FXL_VLOG(2) << "GetProviders";
+  FX_VLOGS(2) << "GetProviders";
   std::vector<controller::ProviderInfo> provider_info;
   for (const auto& provider : providers_) {
     controller::ProviderInfo info;
@@ -290,7 +290,7 @@ void TraceManager::GetProviders(GetProvidersCallback callback) {
 
 // fidl
 void TraceManager::GetKnownCategories(GetKnownCategoriesCallback callback) {
-  FXL_VLOG(2) << "GetKnownCategories";
+  FX_VLOGS(2) << "GetKnownCategories";
   std::vector<controller::KnownCategory> known_categories;
   for (const auto& it : config_.known_categories()) {
     known_categories.push_back(controller::KnownCategory{it.first, it.second});
@@ -299,7 +299,7 @@ void TraceManager::GetKnownCategories(GetKnownCategoriesCallback callback) {
 }
 
 void TraceManager::WatchAlert(WatchAlertCallback cb) {
-  FXL_VLOG(2) << "WatchAlert";
+  FX_VLOGS(2) << "WatchAlert";
   if (alerts_.empty()) {
     watch_alert_callbacks_.push(std::move(cb));
   } else {
@@ -310,7 +310,7 @@ void TraceManager::WatchAlert(WatchAlertCallback cb) {
 
 void TraceManager::RegisterProviderWorker(fidl::InterfaceHandle<provider::Provider> provider,
                                           uint64_t pid, fidl::StringPtr name) {
-  FXL_VLOG(2) << "Registering provider {" << pid << ":" << name.value_or("") << "}";
+  FX_VLOGS(2) << "Registering provider {" << pid << ":" << name.value_or("") << "}";
   auto it = providers_.emplace(providers_.end(), provider.Bind(), next_provider_id_++, pid,
                                name.value_or(""));
 
@@ -377,9 +377,9 @@ void TraceManager::LaunchConfiguredProviders() {
     // TODO(jeffbrown): Only do this if the provider isn't already running.
     // Also keep track of the provider so we can kill it when the trace
     // manager exits or restart it if needed.
-    FXL_VLOG(1) << "Starting configured provider: " << pair.first;
-    FXL_VLOG(2) << "URL: " << pair.second->url;
-    if (FXL_VLOG_IS_ON(2)) {
+    FX_VLOGS(1) << "Starting configured provider: " << pair.first;
+    FX_VLOGS(2) << "URL: " << pair.second->url;
+    if (FX_VLOG_IS_ON(2)) {
       std::string args;
       if (pair.second->arguments.has_value()) {
         for (const auto& arg : *pair.second->arguments) {
@@ -387,7 +387,7 @@ void TraceManager::LaunchConfiguredProviders() {
           args += arg;
         }
       }
-      FXL_VLOG(2) << "Args:" << args;
+      FX_VLOGS(2) << "Args:" << args;
     }
     fuchsia::sys::LaunchInfo launch_info;
     launch_info.url = pair.second->url;

@@ -54,7 +54,7 @@ static bool GetSessionSpecFromArgv(const fxl::CommandLine& cl, cpuperf::SessionS
   if (cl.GetOptionValue("spec-file", &arg)) {
     std::string content;
     if (!files::ReadFileToString(arg, &content)) {
-      FXL_LOG(ERROR) << "Can't read spec file \"" << arg << "\"";
+      FX_LOGS(ERROR) << "Can't read spec file \"" << arg << "\"";
       return false;
     }
     if (!cpuperf::DecodeSessionSpec(content, out_spec)) {
@@ -82,13 +82,13 @@ static void DescribeEvent(FILE* f, perfmon::ModelEventManager* model_event_manag
   std::vector<std::string> parts =
       fxl::SplitStringCopy(full_name, ":", fxl::kTrimWhitespace, fxl::kSplitWantAll);
   if (parts.size() != 2) {
-    FXL_LOG(ERROR) << "Usage: cpuperf --describe-event=group:name";
+    FX_LOGS(ERROR) << "Usage: cpuperf --describe-event=group:name";
     exit(EXIT_FAILURE);
   }
 
   const perfmon::EventDetails* details;
   if (!model_event_manager->LookupEventByName(parts[0].c_str(), parts[1].c_str(), &details)) {
-    FXL_LOG(ERROR) << "Unknown event: " << full_name;
+    FX_LOGS(ERROR) << "Unknown event: " << full_name;
     exit(EXIT_FAILURE);
   }
 
@@ -117,7 +117,7 @@ static void SaveTrace(const cpuperf::SessionResultSpec& result_spec,
     return;
   }
 
-  FXL_VLOG(1) << "Saving results of iteration " << iter;
+  FX_VLOGS(1) << "Saving results of iteration " << iter;
 
   for (size_t trace = 0; trace < result_spec.num_traces; ++trace) {
     if (reader->SetTrace(trace) != perfmon::ReaderStatus::kOk) {
@@ -126,12 +126,12 @@ static void SaveTrace(const cpuperf::SessionResultSpec& result_spec,
     }
 
     auto buffer = reinterpret_cast<const char*>(reader->GetCurrentTraceBuffer());
-    FXL_DCHECK(buffer);
+    FX_DCHECK(buffer);
     size_t size = reader->GetCurrentTraceSize();
-    FXL_DCHECK(size > 0);
+    FX_DCHECK(size > 0);
     std::string output_file_path = result_spec.GetTraceFilePath(iter, trace);
     if (!files::WriteFile(output_file_path, buffer, size)) {
-      FXL_LOG(ERROR) << "Error saving trace data to: " << output_file_path;
+      FX_LOGS(ERROR) << "Error saving trace data to: " << output_file_path;
       // If writing this one fails, it's unlikely we can continue.
       return;
     }
@@ -139,15 +139,15 @@ static void SaveTrace(const cpuperf::SessionResultSpec& result_spec,
 
   // Print a summary of this run.
   // In tally mode this is noise, but if verbosity is on sure.
-  if (controller->config().GetMode() != perfmon::CollectionMode::kTally || FXL_VLOG_IS_ON(1)) {
-    FXL_VLOG(1) << "Iteration " << iter << " summary";
+  if (controller->config().GetMode() != perfmon::CollectionMode::kTally || FX_VLOG_IS_ON(1)) {
+    FX_VLOGS(1) << "Iteration " << iter << " summary";
     for (size_t trace = 0; trace < result_spec.num_traces; ++trace) {
       std::string path = result_spec.GetTraceFilePath(iter, trace);
       uint64_t size;
       if (files::GetFileSize(path, &size)) {
-        FXL_VLOG(1) << path << ": " << size << " bytes";
+        FX_VLOGS(1) << path << ": " << size << " bytes";
       } else {
-        FXL_VLOG(1) << path << ": unknown size";
+        FX_VLOGS(1) << path << ": unknown size";
       }
     }
   }
@@ -212,7 +212,7 @@ int main(int argc, char* argv[]) {
     // for now.
     std::unique_ptr<perfmon::ModelEventManager> model_event_manager =
         perfmon::ModelEventManager::Create(perfmon::GetDefaultModelName());
-    FXL_CHECK(model_event_manager);
+    FX_CHECK(model_event_manager);
 
     if (cl.HasOption("list-events", nullptr)) {
       PrintEventList(stdout, model_event_manager.get());
@@ -235,7 +235,7 @@ int main(int argc, char* argv[]) {
   }
 
   if (spec.perfmon_config.GetEventCount() == 0) {
-    FXL_LOG(ERROR) << "No events specified";
+    FX_LOGS(ERROR) << "No events specified";
     return EXIT_FAILURE;
   }
 
@@ -243,7 +243,7 @@ int main(int argc, char* argv[]) {
   // in pages.
   uint32_t buffer_size_in_pages;
   if (!GetBufferSizeInPages(spec.buffer_size_in_mb, &buffer_size_in_pages)) {
-    FXL_LOG(ERROR) << "Buffer size too large";
+    FX_LOGS(ERROR) << "Buffer size too large";
     exit(EXIT_FAILURE);
   }
 
@@ -252,17 +252,17 @@ int main(int argc, char* argv[]) {
     return EXIT_FAILURE;
   }
 
-  FXL_LOG(INFO) << "cpuperf control program starting";
-  FXL_LOG(INFO) << spec.num_iterations << " iteration(s), " << spec.duration.to_secs()
+  FX_LOGS(INFO) << "cpuperf control program starting";
+  FX_LOGS(INFO) << spec.num_iterations << " iteration(s), " << spec.duration.to_secs()
                 << " second(s) per iteration";
 
   bool success = RunSession(spec, spec.model_event_manager.get(), controller.get());
 
   if (!success) {
-    FXL_LOG(INFO) << "cpuperf exiting with error";
+    FX_LOGS(INFO) << "cpuperf exiting with error";
     return EXIT_FAILURE;
   }
 
-  FXL_LOG(INFO) << "cpuperf control program exiting";
+  FX_LOGS(INFO) << "cpuperf control program exiting";
   return EXIT_SUCCESS;
 }

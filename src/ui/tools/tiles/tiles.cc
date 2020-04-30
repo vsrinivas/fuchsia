@@ -40,7 +40,7 @@ Tiles::Tiles(scenic::ViewContext view_context, std::vector<std::string> urls, in
 
 void Tiles::AddTileFromURL(std::string url, bool allow_focus, fidl::VectorPtr<std::string> args,
                            AddTileFromURLCallback callback) {
-  FXL_VLOG(2) << "AddTile " << url;
+  FX_VLOGS(2) << "AddTile " << url;
   fuchsia::sys::ComponentControllerPtr controller;
   fuchsia::sys::LaunchInfo launch_info;
   std::shared_ptr<sys::ServiceDirectory> services =
@@ -65,7 +65,7 @@ void Tiles::AddTileFromURL(std::string url, bool allow_focus, fidl::VectorPtr<st
 void Tiles::AddTileFromViewProvider(std::string url,
                                     fidl::InterfaceHandle<fuchsia::ui::app::ViewProvider> provider,
                                     AddTileFromViewProviderCallback callback) {
-  FXL_VLOG(2) << "AddTile " << url;
+  FX_VLOGS(2) << "AddTile " << url;
 
   // Create a View from the ViewProvider.
   auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
@@ -111,7 +111,7 @@ void Tiles::ListTiles(ListTilesCallback callback) {
 
 void Tiles::Quit() { exit(0); }
 
-void Tiles::OnScenicError(std::string error) { FXL_LOG(ERROR) << "Scenic Error " << error; }
+void Tiles::OnScenicError(std::string error) { FX_LOGS(ERROR) << "Scenic Error " << error; }
 
 void Tiles::OnPropertiesChanged(fuchsia::ui::gfx::ViewProperties /*old_properties*/) {
   scenic::Rectangle background_shape(session(), logical_size().x, logical_size().y);
@@ -128,8 +128,8 @@ void Tiles::OnScenicEvent(fuchsia::ui::scenic::Event event) {
         case fuchsia::ui::gfx::Event::Tag::kViewDisconnected: {
           uint32_t view_holder_id = event.gfx().view_disconnected().view_holder_id;
           auto it = view_id_to_keys_.find(view_holder_id);
-          FXL_DCHECK(it != view_id_to_keys_.end());
-          FXL_LOG(ERROR) << "Tiles::OnScenicEvent: View died unexpectedly, id=" << view_holder_id;
+          FX_DCHECK(it != view_id_to_keys_.end());
+          FX_LOGS(ERROR) << "Tiles::OnScenicEvent: View died unexpectedly, id=" << view_holder_id;
 
           RemoveTile(it->second);
           break;
@@ -139,8 +139,8 @@ void Tiles::OnScenicEvent(fuchsia::ui::scenic::Event event) {
       }
       break;
     default:
-      FXL_DCHECK(false) << "Tiles::OnScenicEvent: Got an unhandled Scenic "
-                           "event.";
+      FX_DCHECK(false) << "Tiles::OnScenicEvent: Got an unhandled Scenic "
+                          "event.";
       break;
   }
 }

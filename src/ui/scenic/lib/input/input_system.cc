@@ -36,7 +36,7 @@ namespace {
 void PerformGlobalHitTest(const gfx::LayerStackPtr& layer_stack, const glm::vec2& pointer,
                           gfx::HitAccumulator<gfx::ViewHit>* accumulator) {
   escher::ray4 ray = CreateScreenPerpendicularRay(pointer.x, pointer.y);
-  FXL_VLOG(1) << "HitTest: device point (" << ray.origin.x << ", " << ray.origin.y << ")";
+  FX_VLOGS(1) << "HitTest: device point (" << ray.origin.x << ", " << ray.origin.y << ")";
 
   layer_stack->HitTest(ray, accumulator);
 }
@@ -76,13 +76,13 @@ const char* InputSystem::kName = "InputSystem";
 
 InputSystem::InputSystem(SystemContext context, fxl::WeakPtr<gfx::SceneGraph> scene_graph)
     : System(std::move(context)), scene_graph_(scene_graph) {
-  FXL_CHECK(scene_graph);
+  FX_CHECK(scene_graph);
 
   pointer_event_registry_ = std::make_unique<A11yPointerEventRegistry>(
       this->context(),
       /*on_register=*/
       [this] {
-        FXL_CHECK(!pointer_event_buffer_)
+        FX_CHECK(!pointer_event_buffer_)
             << "on_disconnect must be called before registering a new listener";
         // In case a11y is turned on mid execution make sure to send active pointer event streams to
         // their final location and do not send them to the a11y listener.
@@ -114,7 +114,7 @@ InputSystem::InputSystem(SystemContext context, fxl::WeakPtr<gfx::SceneGraph> sc
       },
       /*on_disconnect=*/
       [this] {
-        FXL_CHECK(pointer_event_buffer_) << "can not disconnect before registering";
+        FX_CHECK(pointer_event_buffer_) << "can not disconnect before registering";
         // The listener disconnected. Release held events, delete the buffer.
         accessibility_pointer_event_listener().events().OnStreamHandled = nullptr;
         pointer_event_buffer_.reset();
@@ -122,14 +122,14 @@ InputSystem::InputSystem(SystemContext context, fxl::WeakPtr<gfx::SceneGraph> sc
 
   ime_service_ = this->context()->app_context()->svc()->Connect<fuchsia::ui::input::ImeService>();
   ime_service_.set_error_handler(
-      [](zx_status_t status) { FXL_LOG(ERROR) << "Scenic lost connection to TextSync"; });
+      [](zx_status_t status) { FX_LOGS(ERROR) << "Scenic lost connection to TextSync"; });
 
   this->context()->app_context()->outgoing()->AddPublicService(injector_registry_.GetHandler(this));
 
   this->context()->app_context()->outgoing()->AddPublicService(
       pointer_capture_registry_.GetHandler(this));
 
-  FXL_LOG(INFO) << "Scenic input system initialized.";
+  FX_LOGS(INFO) << "Scenic input system initialized.";
 }
 
 CommandDispatcherUniquePtr InputSystem::CreateCommandDispatcher(
@@ -145,8 +145,8 @@ A11yPointerEventRegistry::A11yPointerEventRegistry(SystemContext* context,
                                                    fit::function<void()> on_register,
                                                    fit::function<void()> on_disconnect)
     : on_register_(std::move(on_register)), on_disconnect_(std::move(on_disconnect)) {
-  FXL_DCHECK(on_register_);
-  FXL_DCHECK(on_disconnect_);
+  FX_DCHECK(on_register_);
+  FX_DCHECK(on_disconnect_);
   context->app_context()->outgoing()->AddPublicService(
       accessibility_pointer_event_registry_.GetHandler(this));
 }
@@ -172,27 +172,27 @@ void InputSystem::Register(fuchsia::ui::pointerflow::InjectorConfig config,
                            RegisterCallback callback) {
   if (!config.has_device_config() || !config.has_context() || !config.has_target() ||
       !config.has_dispatch_policy()) {
-    FXL_LOG(ERROR) << "InjectorRegistry::Register : Argument |config| is incomplete.";
+    FX_LOGS(ERROR) << "InjectorRegistry::Register : Argument |config| is incomplete.";
     return;
   }
 
   if (config.dispatch_policy() != fuchsia::ui::pointerflow::DispatchPolicy::EXCLUSIVE) {
-    FXL_LOG(ERROR) << "InjectorRegistry::Register : Only EXCLUSIVE DispatchPolicy is supported.";
+    FX_LOGS(ERROR) << "InjectorRegistry::Register : Only EXCLUSIVE DispatchPolicy is supported.";
     return;
   }
 
   if (!config.device_config().has_device_id() || !config.device_config().has_device_type()) {
-    FXL_LOG(ERROR) << "InjectorRegistry::Register : Argument |config.DeviceConfig| is incomplete.";
+    FX_LOGS(ERROR) << "InjectorRegistry::Register : Argument |config.DeviceConfig| is incomplete.";
     return;
   }
 
   if (config.device_config().device_type() != fuchsia::ui::input3::PointerDeviceType::TOUCH) {
-    FXL_LOG(ERROR) << "InjectorRegistry::Register : Only TOUCH device type is supported.";
+    FX_LOGS(ERROR) << "InjectorRegistry::Register : Only TOUCH device type is supported.";
     return;
   }
 
   if (!config.context().is_view() || !config.target().is_view()) {
-    FXL_LOG(ERROR) << "InjectorRegistry::Register : Argument |config.context| or |config.target| "
+    FX_LOGS(ERROR) << "InjectorRegistry::Register : Argument |config.context| or |config.target| "
                       "is incomplete.";
     return;
   }
@@ -200,12 +200,12 @@ void InputSystem::Register(fuchsia::ui::pointerflow::InjectorConfig config,
   const zx_koid_t context_koid = utils::ExtractKoid(config.context().view());
   const zx_koid_t target_koid = utils::ExtractKoid(config.target().view());
   if (context_koid == ZX_KOID_INVALID || target_koid == ZX_KOID_INVALID) {
-    FXL_LOG(ERROR) << "InjectorRegistry::Register : Argument |config.context| or |config.target| "
+    FX_LOGS(ERROR) << "InjectorRegistry::Register : Argument |config.context| or |config.target| "
                       "was invalid.";
     return;
   }
   if (!IsDescendantAndConnected(scene_graph_->view_tree(), target_koid, context_koid)) {
-    FXL_LOG(ERROR) << "InjectorRegistry::Register : Argument |config.context| must be connected to "
+    FX_LOGS(ERROR) << "InjectorRegistry::Register : Argument |config.context| must be connected to "
                       "the Scene, and |config.target| must be a descendant of |config.context|";
     return;
   }
@@ -224,7 +224,7 @@ void InputSystem::Register(fuchsia::ui::pointerflow::InjectorConfig config,
       [this](zx_koid_t descendant, zx_koid_t ancestor) {
         return IsDescendantAndConnected(scene_graph_->view_tree(), descendant, ancestor);
       });
-  FXL_CHECK(success) << "Injector already exists.";
+  FX_CHECK(success) << "Injector already exists.";
 
   // Remove the injector if the channel has an error.
   injectors_.at(id).set_error_handler([this, id](zx_status_t status) { injectors_.erase(id); });
@@ -246,7 +246,7 @@ void InputSystem::RegisterListener(
 
   // Remove listener if the interface closes.
   new_listener.set_error_handler([this](zx_status_t status) {
-    FXL_LOG(ERROR) << "Pointer capture listener interface closed with error: "
+    FX_LOGS(ERROR) << "Pointer capture listener interface closed with error: "
                    << zx_status_get_string(status);
     pointer_capture_listener_ = std::nullopt;
   });
@@ -293,9 +293,9 @@ void InputSystem::DispatchPointerCommand(const fuchsia::ui::input::SendPointerIn
                                                   world_space_pointer_event.radius_minor);
       TRACE_FLOW_END("input", "dispatch_event_to_scenic", trace_id);
 
-      FXL_DCHECK(world_space_pointer_event.type == PointerEventType::TOUCH);
+      FX_DCHECK(world_space_pointer_event.type == PointerEventType::TOUCH);
       if (world_space_pointer_event.phase == Phase::HOVER) {
-        FXL_LOG(WARNING) << "Oops, touch device had unexpected HOVER event.";
+        FX_LOGS(WARNING) << "Oops, touch device had unexpected HOVER event.";
         return;
       }
       InjectTouchEvent(world_space_pointer_event, screen_space_coords, layer_stack,
@@ -307,7 +307,7 @@ void InputSystem::DispatchPointerCommand(const fuchsia::ui::input::SendPointerIn
       if (command.pointer_event.phase == Phase::ADD ||
           command.pointer_event.phase == Phase::REMOVE ||
           command.pointer_event.phase == Phase::HOVER) {
-        FXL_LOG(WARNING) << "Oops, mouse device (id=" << command.pointer_event.device_id
+        FX_LOGS(WARNING) << "Oops, mouse device (id=" << command.pointer_event.device_id
                          << ") had an unexpected event: " << command.pointer_event.phase;
         return;
       }
@@ -318,7 +318,7 @@ void InputSystem::DispatchPointerCommand(const fuchsia::ui::input::SendPointerIn
       // TODO(SCN-940), TODO(SCN-164): Stylus support needs to account for HOVER
       // events, which need to trigger an additional hit test on the DOWN event
       // and send CANCEL events to disassociated clients.
-      FXL_LOG(INFO) << "Add stylus support.";
+      FX_LOGS(INFO) << "Add stylus support.";
       break;
   }
 }
@@ -334,7 +334,7 @@ void InputSystem::InjectTouchEvent(
     const fuchsia::ui::input::PointerEvent& world_space_pointer_event,
     const glm::vec2 screen_space_coords, const gfx::LayerStackPtr& layer_stack,
     bool parallel_dispatch, bool a11y_enabled) {
-  FXL_DCHECK(world_space_pointer_event.type == PointerEventType::TOUCH);
+  FX_DCHECK(world_space_pointer_event.type == PointerEventType::TOUCH);
   const uint32_t pointer_id = world_space_pointer_event.pointer_id;
   const Phase pointer_phase = world_space_pointer_event.phase;
 
@@ -354,9 +354,9 @@ void InputSystem::InjectTouchEvent(
       }
     }
 
-    FXL_VLOG(1) << "View hits: ";
+    FX_VLOGS(1) << "View hits: ";
     for (auto view_ref_koid : hit_views) {
-      FXL_VLOG(1) << "[ViewRefKoid=" << view_ref_koid << "]";
+      FX_VLOGS(1) << "[ViewRefKoid=" << view_ref_koid << "]";
     }
 
     // Save targets for consistent delivery of touch events.
@@ -396,7 +396,7 @@ void InputSystem::InjectTouchEvent(
     }
   }
 
-  FXL_DCHECK(a11y_enabled || deferred_event_receivers.empty())
+  FX_DCHECK(a11y_enabled || deferred_event_receivers.empty())
       << "When a11y pointer forwarding is off, never defer events.";
 
   if (a11y_enabled) {
@@ -473,7 +473,7 @@ void InputSystem::InjectTouchEvent(
 void InputSystem::InjectMouseEvent(
     const fuchsia::ui::input::PointerEvent& world_space_pointer_event,
     glm::vec2 screen_space_coords, const gfx::LayerStackPtr& layer_stack) {
-  FXL_DCHECK(world_space_pointer_event.type == PointerEventType::MOUSE);
+  FX_DCHECK(world_space_pointer_event.type == PointerEventType::MOUSE);
   const uint32_t device_id = world_space_pointer_event.device_id;
   const Phase pointer_phase = world_space_pointer_event.phase;
   const glm::vec2 pointer = PointerCoords(world_space_pointer_event);
@@ -490,9 +490,9 @@ void InputSystem::InjectMouseEvent(
       hit_views.push_back(top_hit.hit()->view->view_ref_koid());
     }
 
-    FXL_VLOG(1) << "View hits: ";
+    FX_VLOGS(1) << "View hits: ";
     for (auto view_ref_koid : hit_views) {
-      FXL_VLOG(1) << "[ViewRefKoid=" << view_ref_koid << "]";
+      FX_VLOGS(1) << "[ViewRefKoid=" << view_ref_koid << "]";
     }
 
     if (!hit_views.empty()) {
@@ -542,7 +542,7 @@ void InputSystem::DispatchDeferredPointerEvent(
     if (!views_and_event.parallel_event_receivers.empty()) {
       // Request that focus be transferred to the top view.
       const zx_koid_t view_koid = views_and_event.parallel_event_receivers.front();
-      FXL_DCHECK(view_koid != ZX_KOID_INVALID) << "invariant";
+      FX_DCHECK(view_koid != ZX_KOID_INVALID) << "invariant";
       RequestFocusChange(view_koid);
     } else if (focus_chain_root() != ZX_KOID_INVALID) {
       // The touch event stream has no designated receiver.
@@ -570,7 +570,7 @@ zx_koid_t InputSystem::focus() const {
     return ZX_KOID_INVALID;  // Scene not present, or scene not connected to compositor.
 
   const zx_koid_t focused_view = chain.back();
-  FXL_DCHECK(focused_view != ZX_KOID_INVALID) << "invariant";
+  FX_DCHECK(focused_view != ZX_KOID_INVALID) << "invariant";
   return focused_view;
 }
 
@@ -583,12 +583,12 @@ zx_koid_t InputSystem::focus_chain_root() const {
     return ZX_KOID_INVALID;  // Scene not present, or scene not connected to compositor.
 
   const zx_koid_t root_view = chain.front();
-  FXL_DCHECK(root_view != ZX_KOID_INVALID) << "invariant";
+  FX_DCHECK(root_view != ZX_KOID_INVALID) << "invariant";
   return root_view;
 }
 
 void InputSystem::RequestFocusChange(zx_koid_t view) {
-  FXL_DCHECK(view != ZX_KOID_INVALID) << "precondition";
+  FX_DCHECK(view != ZX_KOID_INVALID) << "precondition";
 
   if (!scene_graph_)
     return;  // No scene graph, no view tree, no focus chain.
@@ -600,11 +600,11 @@ void InputSystem::RequestFocusChange(zx_koid_t view) {
   const zx_koid_t requestor = scene_graph_->view_tree().focus_chain().front();
 
   auto status = scene_graph_->RequestFocusChange(requestor, view);
-  FXL_VLOG(1) << "Scenic RequestFocusChange. Authority: " << requestor << ", request: " << view
+  FX_VLOGS(1) << "Scenic RequestFocusChange. Authority: " << requestor << ", request: " << view
               << ", status: " << static_cast<int>(status);
 
-  FXL_DCHECK(status == FocusChangeStatus::kAccept ||
-             status == FocusChangeStatus::kErrorRequestCannotReceiveFocus)
+  FX_DCHECK(status == FocusChangeStatus::kAccept ||
+            status == FocusChangeStatus::kErrorRequestCannotReceiveFocus)
       << "User has authority to request focus change, but the only valid rejection is when the "
          "requested view may not receive focus. Error code: "
       << static_cast<int>(status);

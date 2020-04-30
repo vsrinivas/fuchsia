@@ -25,29 +25,28 @@ void FrameTimings::RegisterSwapchains(size_t count) {
   // All swapchains that we are timing must be added before any of them finish.
   // The purpose of this is to verify that we cannot notify the FrameScheduler
   // that the frame has finished before all swapchains have been added.
-  FXL_DCHECK(frame_rendered_count_ == 0);
-  FXL_DCHECK(frame_presented_count_ == 0);
-  FXL_DCHECK(actual_presentation_time_ == kTimeUninitialized);
+  FX_DCHECK(frame_rendered_count_ == 0);
+  FX_DCHECK(frame_presented_count_ == 0);
+  FX_DCHECK(actual_presentation_time_ == kTimeUninitialized);
   swapchain_records_.resize(count);
 }
 
 void FrameTimings::OnFrameUpdated(zx::time time) {
-  FXL_DCHECK(!finalized()) << "Frame was finalized, cannot record update time";
-  FXL_DCHECK(updates_finished_time_ == kTimeUninitialized)
-      << "Error, update time already recorded.";
+  FX_DCHECK(!finalized()) << "Frame was finalized, cannot record update time";
+  FX_DCHECK(updates_finished_time_ == kTimeUninitialized) << "Error, update time already recorded.";
   updates_finished_time_ = time;
 
-  FXL_DCHECK(updates_finished_time_ >= latch_point_time_)
+  FX_DCHECK(updates_finished_time_ >= latch_point_time_)
       << "Error, updates took negative time: latch_point_time_ = " << latch_point_time_.get()
       << ", updates_finished_time_ = " << updates_finished_time_.get();
 }
 
 void FrameTimings::OnFrameRendered(size_t swapchain_index, zx::time time) {
-  FXL_DCHECK(swapchain_index < swapchain_records_.size());
-  FXL_DCHECK(time.get() > 0);
+  FX_DCHECK(swapchain_index < swapchain_records_.size());
+  FX_DCHECK(time.get() > 0);
 
   auto& record = swapchain_records_[swapchain_index];
-  FXL_DCHECK(record.frame_rendered_time == kTimeUninitialized)
+  FX_DCHECK(record.frame_rendered_time == kTimeUninitialized)
       << "Frame render time already recorded for swapchain. Render time: "
       << record.frame_rendered_time.get();
 
@@ -68,7 +67,7 @@ void FrameTimings::OnFrameRendered(size_t swapchain_index, zx::time time) {
       rendering_finished_time_ = rec.frame_rendered_time;
     }
   }
-  FXL_DCHECK(rendering_finished_time_ >= rendering_started_time_)
+  FX_DCHECK(rendering_finished_time_ >= rendering_started_time_)
       << "Error, rendering took negative time";
 
   // Note: Because there is a delay between when rendering is actually completed
@@ -86,12 +85,12 @@ void FrameTimings::OnFrameRendered(size_t swapchain_index, zx::time time) {
 }
 
 void FrameTimings::OnFramePresented(size_t swapchain_index, zx::time time) {
-  FXL_DCHECK(swapchain_index < swapchain_records_.size());
-  FXL_DCHECK(frame_presented_count_ < swapchain_records_.size());
-  FXL_DCHECK(time.get() > 0);
+  FX_DCHECK(swapchain_index < swapchain_records_.size());
+  FX_DCHECK(frame_presented_count_ < swapchain_records_.size());
+  FX_DCHECK(time.get() > 0);
 
   auto& record = swapchain_records_[swapchain_index];
-  FXL_DCHECK(record.frame_presented_time == kTimeUninitialized)
+  FX_DCHECK(record.frame_presented_time == kTimeUninitialized)
       << "Frame present time already recorded for swapchain. Present time: "
       << record.frame_presented_time.get();
 
@@ -135,7 +134,7 @@ void FrameTimings::OnFrameDropped(size_t swapchain_index) {
 }
 
 void FrameTimings::OnFrameSkipped() {
-  FXL_CHECK(swapchain_records_.empty());
+  FX_CHECK(swapchain_records_.empty());
 
   // Indicates that frame was skipped.
   rendering_finished_time_ = zx::time(async_now(async_get_default_dispatcher()));
@@ -172,8 +171,8 @@ FrameTimings::Timestamps FrameTimings::GetTimestamps() const {
 }
 
 void FrameTimings::ValidateRenderTime() {
-  FXL_DCHECK(rendering_finished_time_ != kTimeUninitialized);
-  FXL_DCHECK(actual_presentation_time_ != kTimeUninitialized);
+  FX_DCHECK(rendering_finished_time_ != kTimeUninitialized);
+  FX_DCHECK(actual_presentation_time_ != kTimeUninitialized);
   // NOTE: Because there is a delay between when rendering is actually
   // completed and when EventTimestamper generates the timestamp, it's
   // possible that the rendering timestamp is later than the present
@@ -184,8 +183,8 @@ void FrameTimings::ValidateRenderTime() {
     // all less than or equal to the corresponding present time.
     rendering_finished_time_ = kTimeUninitialized;
     for (auto& record : swapchain_records_) {
-      FXL_DCHECK(record.frame_rendered_time != kTimeUninitialized);
-      FXL_DCHECK(record.frame_presented_time != kTimeUninitialized);
+      FX_DCHECK(record.frame_rendered_time != kTimeUninitialized);
+      FX_DCHECK(record.frame_presented_time != kTimeUninitialized);
       if (record.frame_rendered_time > record.frame_presented_time) {
         record.frame_rendered_time = record.frame_presented_time;
       }
@@ -198,7 +197,7 @@ void FrameTimings::ValidateRenderTime() {
 }
 
 void FrameTimings::Finalize() {
-  FXL_DCHECK(!finalized());
+  FX_DCHECK(!finalized());
   finalized_ = true;
 
   ValidateRenderTime();

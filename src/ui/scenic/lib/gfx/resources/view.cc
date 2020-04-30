@@ -51,8 +51,8 @@ View::View(Session* session, ResourceId id, ViewRefControl control_ref, ViewRef 
       view_tree_updater_(view_tree_updater),
       debug_name_(debug_name),
       weak_factory_(this) {
-  FXL_DCHECK(error_reporter_);
-  FXL_DCHECK(view_ref_koid_ != ZX_KOID_INVALID);
+  FX_DCHECK(error_reporter_);
+  FX_DCHECK(view_ref_koid_ != ZX_KOID_INVALID);
 
   node_ = fxl::AdoptRef<ViewNode>(new ViewNode(session, session->id(), weak_factory_.GetWeakPtr()));
 
@@ -88,8 +88,8 @@ View::View(Session* session, ResourceId id, ViewRefControl control_ref, ViewRef 
 
     fit::function<void(ViewHolderPtr)> create_callback =
         [weak_ptr = GetWeakPtr()](ViewHolderPtr annotation_view_holder) {
-          FXL_CHECK(weak_ptr);
-          FXL_DCHECK(annotation_view_holder);
+          FX_CHECK(weak_ptr);
+          FX_DCHECK(annotation_view_holder);
           weak_ptr->AddAnnotationViewHolder(annotation_view_holder);
 
           // If View has valid properties, initialize ViewProperties for the
@@ -106,7 +106,7 @@ View::View(Session* session, ResourceId id, ViewRefControl control_ref, ViewRef 
           }
         };
 
-    FXL_DCHECK(session->id() != 0u) << "GFX-side invariant for ViewTree";
+    FX_DCHECK(session->id() != 0u) << "GFX-side invariant for ViewTree";
     if (view_tree_updater_) {
       view_tree_updater_->AddUpdate(
           ViewTreeNewRefNode{.view_ref = std::move(clone),
@@ -119,7 +119,7 @@ View::View(Session* session, ResourceId id, ViewRefControl control_ref, ViewRef 
     }
   }
 
-  FXL_DCHECK(validate_viewref(control_ref_, view_ref_));
+  FX_DCHECK(validate_viewref(control_ref_, view_ref_));
 }
 
 View::~View() {
@@ -132,9 +132,9 @@ View::~View() {
 }
 
 void View::Connect(ViewLinker::ImportLink link) {
-  FXL_DCHECK(!link_);
-  FXL_DCHECK(link.valid());
-  FXL_DCHECK(!link.initialized());
+  FX_DCHECK(!link_);
+  FX_DCHECK(link.valid());
+  FX_DCHECK(!link.initialized());
 
   link_ = std::move(link);
   link_->Initialize(fit::bind_member(this, &View::LinkResolved),
@@ -158,12 +158,12 @@ void View::SignalRender() {
 zx_koid_t View::view_ref_koid() const { return view_ref_koid_; }
 
 void View::LinkResolved(ViewHolder* view_holder) {
-  FXL_DCHECK(!view_holder_);
-  FXL_DCHECK(view_holder);
+  FX_DCHECK(!view_holder_);
+  FX_DCHECK(view_holder);
   view_holder_ = view_holder;
 
   // Attaching our node to the holder should never fail.
-  FXL_CHECK(view_holder_->AddChild(node_, ErrorReporter::Default().get()))
+  FX_CHECK(view_holder_->AddChild(node_, ErrorReporter::Default().get()))
       << "View::LinkResolved(): error while adding ViewNode as child of ViewHolder";
 
   SendViewHolderConnectedEvent();

@@ -94,7 +94,7 @@ inline static std::pair<CharType, size_t> GetCharInfo(StringView str, size_t pos
 
 std::string SubstituteWithArray(StringView format, StringView* args, size_t nargs) {
   static constexpr size_t kMaxArgs = 10;
-  FXL_CHECK(nargs <= kMaxArgs) << "More than " << kMaxArgs << "args: " << nargs;
+  FX_CHECK(nargs <= kMaxArgs) << "More than " << kMaxArgs << "args: " << nargs;
 
   int out_size = 0;
   size_t pos = 0;
@@ -106,7 +106,7 @@ std::string SubstituteWithArray(StringView format, StringView* args, size_t narg
       case CharType::kPositionalId:
         if (positional_id >= nargs) {
           // Error: missing argument.
-          FXL_LOG(DFATAL) << "fxl::Substitute missing argument for $" << positional_id << ": \""
+          FX_LOGS(DFATAL) << "fxl::Substitute missing argument for $" << positional_id << ": \""
                           << format << "\"";
           return "";
         }
@@ -114,7 +114,7 @@ std::string SubstituteWithArray(StringView format, StringView* args, size_t narg
         pos += 2;
         break;
       case CharType::kMissingId:
-        FXL_LOG(DFATAL) << "fxl::Substitute encountered trailing '$': \"" << format << "\"";
+        FX_LOGS(DFATAL) << "fxl::Substitute encountered trailing '$': \"" << format << "\"";
         return "";
       case CharType::kRegularChar:
         ++out_size;

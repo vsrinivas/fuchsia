@@ -57,7 +57,7 @@ class TypedVariable : public Variable {
 
   void RemoveListener(OnVariableValueChangedListener<VT, T>* listener) {
     auto it = listeners_.find(listener);
-    FXL_DCHECK(it != listeners_.end());
+    FX_DCHECK(it != listeners_.end());
     listeners_.erase(it);
   }
 

@@ -118,7 +118,7 @@ vk::SurfaceKHR DemoHarnessFuchsia::CreateWindowAndSurface(const WindowParams& pa
   };
   VkSurfaceKHR surface;
   VkResult err = vkCreateImagePipeSurfaceFUCHSIA(instance(), &create_info, nullptr, &surface);
-  FXL_CHECK(!err);
+  FX_CHECK(!err);
   return surface;
 }
 

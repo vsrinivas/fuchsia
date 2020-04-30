@@ -12,7 +12,7 @@
 namespace fsl {
 
 bool BlockingCopyToString(zx::socket source, std::string* result) {
-  FXL_CHECK(result);
+  FX_CHECK(result);
   result->clear();
   return BlockingDrainFrom(std::move(source), [result](const void* buffer, uint32_t num_bytes) {
     result->append(static_cast<const char*>(buffer), num_bytes);
@@ -48,7 +48,7 @@ bool BlockingCopyFromString(fxl::StringView source, const zx::socket& destinatio
 zx::socket WriteStringToSocket(fxl::StringView source) {
   // TODO(qsr): Check that source.size() <= socket max capacity when the
   // information is retrievable. Until then use the know socket capacity.
-  FXL_DCHECK(source.size() < 256 * 1024);
+  FX_DCHECK(source.size() < 256 * 1024);
   zx::socket socket1, socket2;
   zx::socket::create(0u, &socket1, &socket2);
   BlockingCopyFromString(source, std::move(socket1));

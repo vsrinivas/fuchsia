@@ -59,7 +59,7 @@ class ProtectedMemoryVisitorTest : public SessionTest {
   SessionContext CreateSessionContext() override {
     SessionContext session_context = SessionTest::CreateSessionContext();
 
-    FXL_DCHECK(!view_linker_);
+    FX_DCHECK(!view_linker_);
 
     view_linker_ = std::make_unique<ViewLinker>();
     session_context.view_linker = view_linker_.get();

@@ -13,11 +13,10 @@ DisplayControllerObjects CreateMockDisplayController() {
 
   zx::channel device_channel_server;
   zx::channel device_channel_client;
-  FXL_CHECK(ZX_OK == zx::channel::create(0, &device_channel_server, &device_channel_client));
+  FX_CHECK(ZX_OK == zx::channel::create(0, &device_channel_server, &device_channel_client));
   zx::channel controller_channel_server;
   zx::channel controller_channel_client;
-  FXL_CHECK(ZX_OK ==
-            zx::channel::create(0, &controller_channel_server, &controller_channel_client));
+  FX_CHECK(ZX_OK == zx::channel::create(0, &controller_channel_server, &controller_channel_client));
 
   controller_objs.mock = std::make_unique<MockDisplayController>();
   controller_objs.mock->Bind(std::move(device_channel_server),

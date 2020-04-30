@@ -300,7 +300,7 @@ Err DoGet(ConsoleContext* console_context, const Command& cmd) {
     } else {
       const SettingSchema::Record* record =
           setting_context.store->schema()->GetSetting(setting_context.name);
-      FXL_DCHECK(record);  // Should always succeed if GetSettingContext did.
+      FX_DCHECK(record);  // Should always succeed if GetSettingContext did.
       out = FormatSetting(console_context, setting_context.name, record->description,
                           setting_context.value);
     }
@@ -455,7 +455,7 @@ Err SetList(const SettingContext& setting_context, const std::vector<std::string
     return store->SetList(setting_context.name, list);
   }
 
-  FXL_NOTREACHED();
+  FX_NOTREACHED();
   return Err();
 }
 
@@ -562,7 +562,7 @@ OutputBuffer FormatSetFeedback(ConsoleContext* console_context,
       break;
     }
     default:
-      FXL_NOTREACHED() << "Should not receive a default setting.";
+      FX_NOTREACHED() << "Should not receive a default setting.";
   }
 
   out.Append(FormatSettingShort(console_context, setting_name, value));

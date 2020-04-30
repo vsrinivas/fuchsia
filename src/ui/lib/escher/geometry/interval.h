@@ -40,7 +40,7 @@ class Interval {
   Interval Intersect(const Interval& interval) const;
 
   float length() const {
-    FXL_DCHECK(!is_empty());
+    FX_DCHECK(!is_empty());
     return max_ - min_;
   }
 

@@ -41,7 +41,7 @@ class SessionHandlerTest : public ErrorReportingTest, public scheduling::Session
   virtual escher::EscherWeakPtr GetEscherWeakPtr();
 
   Session* session() {
-    FXL_DCHECK(command_dispatcher_);
+    FX_DCHECK(command_dispatcher_);
     return static_cast<Session*>(command_dispatcher_.get());
   }
 

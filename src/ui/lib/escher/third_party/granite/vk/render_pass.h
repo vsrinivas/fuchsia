@@ -81,7 +81,7 @@ class RenderPass : public Resource {
   vk::RenderPass vk() const { return render_pass_; }
 
   vk::ImageLayout GetColorAttachmentFinalLayout(size_t index) const {
-    FXL_DCHECK(index < num_color_attachments_);
+    FX_DCHECK(index < num_color_attachments_);
     return color_final_layouts_[index];
   }
 
@@ -119,31 +119,31 @@ class RenderPass : public Resource {
 // Inline method definitions.
 
 inline vk::SampleCountFlagBits RenderPass::SubpassSamples(uint32_t subpass) const {
-  FXL_DCHECK(subpass < subpasses_.size()) << subpass << " vs. " << subpasses_.size();
+  FX_DCHECK(subpass < subpasses_.size()) << subpass << " vs. " << subpasses_.size();
   return subpasses_[subpass].samples;
 }
 
 inline uint32_t RenderPass::GetColorAttachmentCountForSubpass(uint32_t subpass) const {
-  FXL_DCHECK(subpass < subpasses_.size()) << subpass << " vs. " << subpasses_.size();
+  FX_DCHECK(subpass < subpasses_.size()) << subpass << " vs. " << subpasses_.size();
   return subpasses_[subpass].num_color_attachments;
 }
 
 inline uint32_t RenderPass::GetInputAttachmentCountForSubpass(uint32_t subpass) const {
-  FXL_DCHECK(subpass < subpasses_.size()) << subpass << " vs. " << subpasses_.size();
+  FX_DCHECK(subpass < subpasses_.size()) << subpass << " vs. " << subpasses_.size();
   return subpasses_[subpass].num_input_attachments;
 }
 
 inline const vk::AttachmentReference& RenderPass::GetColorAttachmentForSubpass(
     uint32_t subpass, uint32_t index) const {
-  FXL_DCHECK(subpass < subpasses_.size()) << subpass << " vs. " << subpasses_.size();
-  FXL_DCHECK(index < subpasses_[subpass].num_color_attachments);
+  FX_DCHECK(subpass < subpasses_.size()) << subpass << " vs. " << subpasses_.size();
+  FX_DCHECK(index < subpasses_[subpass].num_color_attachments);
   return subpasses_[subpass].color_attachments[index];
 }
 
 inline const vk::AttachmentReference& RenderPass::GetInputAttachmentForSubpass(
     uint32_t subpass, uint32_t index) const {
-  FXL_DCHECK(subpass < subpasses_.size());
-  FXL_DCHECK(index < subpasses_[subpass].num_input_attachments);
+  FX_DCHECK(subpass < subpasses_.size());
+  FX_DCHECK(index < subpasses_[subpass].num_input_attachments);
   return subpasses_[subpass].input_attachments[index];
 }
 

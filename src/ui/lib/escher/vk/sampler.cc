@@ -21,7 +21,7 @@ Sampler::Sampler(ResourceRecycler* resource_recycler, vk::Format format, vk::Fil
   // TODO(SCN-1403): eG8B8R82Plane420Unorm/eG8B8G8R8422Unorm is not enough to assume NV12, but
   // they're currently the only formats we support at the sampler level.
   if (image_utils::IsYuvFormat(format)) {
-    FXL_DCHECK(resource_recycler->caps().allow_ycbcr);
+    FX_DCHECK(resource_recycler->caps().allow_ycbcr);
 
     vk::SamplerYcbcrConversionCreateInfo ycbcr_create_info;
     ycbcr_create_info.pNext = nullptr;

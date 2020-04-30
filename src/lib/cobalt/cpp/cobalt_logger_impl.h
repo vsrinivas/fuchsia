@@ -196,7 +196,7 @@ class IntHistogramEvent : public Event {
   void Log(fuchsia::cobalt::LoggerPtr* logger,
            fit::function<void(fuchsia::cobalt::Status)> callback) {
     std::vector<fuchsia::cobalt::HistogramBucket> histogram;
-    FXL_CHECK(fidl::Clone(histogram_, &histogram) == ZX_OK);
+    FX_CHECK(fidl::Clone(histogram_, &histogram) == ZX_OK);
     (*logger)->LogIntHistogram(metric_id(), event_code_, component_, std::move(histogram),
                                std::move(callback));
   }
@@ -217,7 +217,7 @@ class CustomEvent : public Event {
   void Log(fuchsia::cobalt::LoggerPtr* logger,
            fit::function<void(fuchsia::cobalt::Status)> callback) {
     std::vector<fuchsia::cobalt::CustomEventValue> event_values;
-    FXL_CHECK(fidl::Clone(event_values_, &event_values) == ZX_OK);
+    FX_CHECK(fidl::Clone(event_values_, &event_values) == ZX_OK);
     (*logger)->LogCustomEvent(metric_id(), std::move(event_values), std::move(callback));
   }
   const std::vector<fuchsia::cobalt::CustomEventValue>& event_values() const {
@@ -235,7 +235,7 @@ class CobaltEvent : public Event {
   void Log(fuchsia::cobalt::LoggerPtr* logger,
            fit::function<void(fuchsia::cobalt::Status)> callback) {
     fuchsia::cobalt::CobaltEvent event;
-    FXL_CHECK(fidl::Clone(event_, &event) == ZX_OK);
+    FX_CHECK(fidl::Clone(event_, &event) == ZX_OK);
     (*logger)->LogCobaltEvent(std::move(event), std::move(callback));
   }
 
@@ -250,7 +250,7 @@ class CobaltEvents : public BaseEvent {
   void Log(fuchsia::cobalt::LoggerPtr* logger,
            fit::function<void(fuchsia::cobalt::Status)> callback) {
     std::vector<fuchsia::cobalt::CobaltEvent> events;
-    FXL_CHECK(fidl::Clone(events_, &events) == ZX_OK);
+    FX_CHECK(fidl::Clone(events_, &events) == ZX_OK);
     (*logger)->LogCobaltEvents(std::move(events), std::move(callback));
   }
 

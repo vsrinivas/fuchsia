@@ -41,8 +41,8 @@ std::unique_ptr<TargetImpl> TargetImpl::Clone(SystemImpl* system) {
 }
 
 void TargetImpl::ProcessCreatedInJob(uint64_t koid, const std::string& process_name) {
-  FXL_DCHECK(state_ == State::kNone);
-  FXL_DCHECK(!process_.get());  // Shouldn't have a process.
+  FX_DCHECK(state_ == State::kNone);
+  FX_DCHECK(!process_.get());  // Shouldn't have a process.
 
   state_ = State::kRunning;
   process_ = CreateProcessImpl(koid, process_name, Process::StartType::kAttach);
@@ -52,8 +52,8 @@ void TargetImpl::ProcessCreatedInJob(uint64_t koid, const std::string& process_n
 }
 
 void TargetImpl::ProcessCreatedAsComponent(uint64_t koid, const std::string& process_name) {
-  FXL_DCHECK(state_ == State::kNone);
-  FXL_DCHECK(!process_.get());
+  FX_DCHECK(state_ == State::kNone);
+  FX_DCHECK(!process_.get());
 
   state_ = State::kRunning;
   process_ = CreateProcessImpl(koid, process_name, Process::StartType::kComponent);
@@ -63,7 +63,7 @@ void TargetImpl::ProcessCreatedAsComponent(uint64_t koid, const std::string& pro
 }
 
 void TargetImpl::CreateProcessForTesting(uint64_t koid, const std::string& process_name) {
-  FXL_DCHECK(state_ == State::kNone);
+  FX_DCHECK(state_ == State::kNone);
   state_ = State::kStarting;
   OnLaunchOrAttachReply(Callback(), Err(), koid, 0, process_name);
 }
@@ -188,7 +188,7 @@ void TargetImpl::Detach(Callback callback) {
 }
 
 void TargetImpl::OnProcessExiting(int return_code) {
-  FXL_DCHECK(state_ == State::kRunning);
+  FX_DCHECK(state_ == State::kRunning);
   state_ = State::kNone;
 
   for (auto& observer : session()->process_observers())
@@ -221,8 +221,8 @@ void TargetImpl::OnLaunchOrAttachReplyThunk(fxl::WeakPtr<TargetImpl> target, Cal
 void TargetImpl::OnLaunchOrAttachReply(Callback callback, const Err& err, uint64_t koid,
                                        debug_ipc::zx_status_t status,
                                        const std::string& process_name) {
-  FXL_DCHECK(state_ == State::kAttaching || state_ == State::kStarting);
-  FXL_DCHECK(!process_.get());  // Shouldn't have a process.
+  FX_DCHECK(state_ == State::kAttaching || state_ == State::kStarting);
+  FX_DCHECK(!process_.get());  // Shouldn't have a process.
 
   Err issue_err;  // Error to send in callback.
   if (err.has_error()) {
@@ -291,7 +291,7 @@ void TargetImpl::HandleAttachStatus(Callback callback, uint64_t koid, debug_ipc:
 
 void TargetImpl::OnKillOrDetachReply(ProcessObserver::DestroyReason reason, const Err& err,
                                      int32_t status, Callback callback) {
-  FXL_DCHECK(process_.get());  // Should have a process.
+  FX_DCHECK(process_.get());  // Should have a process.
 
   Err issue_err;  // Error to send in callback.
   if (err.has_error()) {

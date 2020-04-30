@@ -95,7 +95,7 @@ fxl::RefPtr<BaseType> GetSizeTType() {
 // Returns true if this std::string uses the inline representation. It's assumed the data has
 // al;ready been validated as being the correct length.
 bool IsInlineString(const std::vector<uint8_t>& mem) {
-  FXL_DCHECK(mem.size() == kStdStringSize);
+  FX_DCHECK(mem.size() == kStdStringSize);
   return !(mem[kShortSizeOffset] & kShortMask);
 }
 

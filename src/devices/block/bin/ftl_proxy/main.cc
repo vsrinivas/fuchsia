@@ -23,17 +23,17 @@ int main(int argc, const char** argv) {
 
   std::string topo_path = ftl_proxy::GetFtlTopologicalPath("/dev/class/block");
   if (topo_path.empty()) {
-    FXL_LOG(ERROR) << "Unable to find FTL in device path." << std::endl;
+    FX_LOGS(ERROR) << "Unable to find FTL in device path." << std::endl;
     return -1;
   }
   auto inspect_vmo = ftl_proxy::GetFtlInspectVmo(topo_path);
   if (!inspect_vmo.is_valid()) {
-    FXL_LOG(ERROR) << "No vmo found in FTL or FTL was not reached." << std::endl;
+    FX_LOGS(ERROR) << "No vmo found in FTL or FTL was not reached." << std::endl;
     return -1;
   }
   auto wear_count_optional = ftl_proxy::GetDeviceWearCount(inspect_vmo);
   if (!wear_count_optional.has_value()) {
-    FXL_LOG(ERROR) << "No wear count provided in inspect vmo." << std::endl;
+    FX_LOGS(ERROR) << "No wear count provided in inspect vmo." << std::endl;
     return -1;
   }
 
@@ -43,33 +43,33 @@ int main(int argc, const char** argv) {
   zx::channel factory_client, factory_server;
   zx_status_t status = zx::channel::create(0, &factory_client, &factory_server);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to create factory channel. Status: " << status << std::endl;
+    FX_LOGS(ERROR) << "Failed to create factory channel. Status: " << status << std::endl;
   }
 
   if ((status = fdio_service_connect(service_path.c_str(), factory_server.release())) != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to obtain handle for Cobalt Service. Status: " << status << std::endl;
+    FX_LOGS(ERROR) << "Failed to obtain handle for Cobalt Service. Status: " << status << std::endl;
     return -1;
   }
 
   zx::channel logger, logger_server;
   if (zx::channel::create(0, &logger, &logger_server) != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed create logger channel endpoints for Cobalt Service." << std::endl;
+    FX_LOGS(ERROR) << "Failed create logger channel endpoints for Cobalt Service." << std::endl;
     return -1;
   }
 
   auto result = llcpp::fuchsia::cobalt::LoggerFactory::Call::CreateLoggerFromProjectId(
       factory_client.borrow(), cobalt_registry::kProjectId, std::move(logger_server));
   if (!result.ok()) {
-    FXL_LOG(ERROR) << "Failed to Log Events. Call status " << result.status();
+    FX_LOGS(ERROR) << "Failed to Log Events. Call status " << result.status();
     if (result.error() != nullptr) {
-      FXL_LOG(ERROR) << " Error: " << result.error();
+      FX_LOGS(ERROR) << " Error: " << result.error();
     }
-    FXL_LOG(ERROR) << std::endl;
+    FX_LOGS(ERROR) << std::endl;
     return -1;
   }
 
   if (result->status != llcpp::fuchsia::cobalt::Status::OK) {
-    FXL_LOG(ERROR) << "Failed to create Logger. Cobalt Return Status: "
+    FX_LOGS(ERROR) << "Failed to create Logger. Cobalt Return Status: "
                    << static_cast<int64_t>(result->status) << std::endl;
     return 0;
   }
@@ -90,20 +90,20 @@ int main(int argc, const char** argv) {
   auto logger_result =
       llcpp::fuchsia::cobalt::Logger::Call::LogCobaltEvent(logger.borrow(), std::move(event));
   if (!logger_result.ok()) {
-    FXL_LOG(ERROR) << "Failed to Log Events. Call status " << logger_result.status();
+    FX_LOGS(ERROR) << "Failed to Log Events. Call status " << logger_result.status();
     if (logger_result.error() != nullptr) {
-      FXL_LOG(ERROR) << " Error: " << logger_result.error();
+      FX_LOGS(ERROR) << " Error: " << logger_result.error();
     }
-    FXL_LOG(ERROR) << std::endl;
+    FX_LOGS(ERROR) << std::endl;
     return 0;
   }
 
   if (logger_result->status != llcpp::fuchsia::cobalt::Status::OK) {
-    FXL_LOG(ERROR) << "Failed to Log Events. Cobalt Return Status: "
+    FX_LOGS(ERROR) << "Failed to Log Events. Cobalt Return Status: "
                    << static_cast<int64_t>(logger_result->status) << std::endl;
     return 0;
   }
-  FXL_LOG(INFO) << "FTL Wear Count of " << wear_count_optional.value()
+  FX_LOGS(INFO) << "FTL Wear Count of " << wear_count_optional.value()
                 << " successfully logged to cobalt." << std::endl;
   return 0;
 }

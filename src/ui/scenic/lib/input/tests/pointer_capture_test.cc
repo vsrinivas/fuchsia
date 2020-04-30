@@ -55,7 +55,7 @@ class PointerCaptureTest : public InputSystemTest {
     void Register(scenic_impl::input::InputSystem* pointer_capture_registry, ViewRef view_ref,
                   fit::function<void()> run_loop_until_idle) {
       listener_.binding_.set_error_handler([](zx_status_t err) {
-        FXL_LOG(ERROR) << "Binding Error: " << zx_status_get_string(err);
+        FX_LOGS(ERROR) << "Binding Error: " << zx_status_get_string(err);
       });
 
       bool register_returned = false;

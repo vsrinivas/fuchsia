@@ -24,7 +24,7 @@ TexturePtr Texture::New(ResourceRecycler* resource_recycler, ImagePtr image, vk:
                                                     use_unnormalized_coordinates);
 
   if (sampler->is_immutable()) {
-    FXL_LOG(WARNING) << "An immutable sampler was created using Texture::New. If "
+    FX_LOGS(WARNING) << "An immutable sampler was created using Texture::New. If "
                         "this happens over and over again, the system will likely OOM. "
                         "Build a separate immutable Sampler object and share it across "
                         "multiple Texture objects.";

@@ -17,7 +17,7 @@ std::unique_ptr<LinuxComponent> LinuxComponent::Create(
     fuchsia::sys::StartupInfo startup_info,
     fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller,
     fuchsia::ui::app::ViewProviderPtr remote_view_provider) {
-  FXL_DCHECK(remote_view_provider) << "Missing remote_view_provider";
+  FX_DCHECK(remote_view_provider) << "Missing remote_view_provider";
   return std::unique_ptr<LinuxComponent>(new LinuxComponent(
       std::move(termination_callback), std::move(package), std::move(startup_info),
       std::move(controller), std::move(remote_view_provider)));

@@ -60,7 +60,7 @@ void KeyboardState::Update(fuchsia::ui::input::InputReport input_report) {
   TRACE_DURATION("input", "device_state_update", "device_type", "keyboard");
   TRACE_FLOW_END("input", "report_to_device_state", input_report.trace_id);
 
-  FXL_DCHECK(input_report.keyboard);
+  FX_DCHECK(input_report.keyboard);
 
   uint64_t now = input_report.event_time;
   std::vector<uint32_t> old_keys = keys_;
@@ -212,7 +212,7 @@ void MouseState::Update(fuchsia::ui::input::InputReport input_report,
   TRACE_DURATION("input", "device_state_update", "device_type", "mouse");
   TRACE_FLOW_END("input", "report_to_device_state", input_report.trace_id);
 
-  FXL_DCHECK(input_report.mouse);
+  FX_DCHECK(input_report.mouse);
   uint64_t now = input_report.event_time;
   uint8_t pressed =
       (input_report.mouse->pressed_buttons ^ buttons_) & input_report.mouse->pressed_buttons;
@@ -265,10 +265,10 @@ void StylusState::Update(fuchsia::ui::input::InputReport input_report,
   TRACE_DURATION("input", "device_state_update", "device_type", "stylus");
   TRACE_FLOW_END("input", "report_to_device_state", input_report.trace_id);
 
-  FXL_DCHECK(input_report.stylus);
+  FX_DCHECK(input_report.stylus);
 
   fuchsia::ui::input::StylusDescriptor* descriptor = device_state_->stylus_descriptor();
-  FXL_DCHECK(descriptor);
+  FX_DCHECK(descriptor);
 
   const bool previous_stylus_down = stylus_down_;
   const bool previous_stylus_in_range = stylus_in_range_;
@@ -338,9 +338,9 @@ void TouchscreenState::Update(fuchsia::ui::input::InputReport input_report,
   TRACE_DURATION("input", "device_state_update", "device_type", "touchscreen");
   TRACE_FLOW_END("input", "report_to_device_state", input_report.trace_id);
 
-  FXL_DCHECK(input_report.touchscreen);
+  FX_DCHECK(input_report.touchscreen);
   fuchsia::ui::input::TouchscreenDescriptor* descriptor = device_state_->touchscreen_descriptor();
-  FXL_DCHECK(descriptor);
+  FX_DCHECK(descriptor);
 
   std::vector<fuchsia::ui::input::PointerEvent> old_pointers = pointers_;
   pointers_.clear();
@@ -353,7 +353,7 @@ void TouchscreenState::Update(fuchsia::ui::input::InputReport input_report,
     pt.device_id = device_state_->device_id();
     pt.phase = fuchsia::ui::input::PointerEventPhase::DOWN;
     for (auto it = old_pointers.begin(); it != old_pointers.end(); ++it) {
-      FXL_DCHECK(touch.finger_id >= 0);
+      FX_DCHECK(touch.finger_id >= 0);
       if (it->pointer_id == static_cast<uint32_t>(touch.finger_id)) {
         pt.phase = fuchsia::ui::input::PointerEventPhase::MOVE;
         old_pointers.erase(it);
@@ -451,15 +451,15 @@ void SensorState::Update(fuchsia::ui::input::InputReport input_report) {
   TRACE_DURATION("input", "device_state_update", "device_type", "sensor");
   TRACE_FLOW_END("input", "report_to_device_state", input_report.trace_id);
 
-  FXL_DCHECK(input_report.sensor);
-  FXL_DCHECK(device_state_->sensor_descriptor());
+  FX_DCHECK(input_report.sensor);
+  FX_DCHECK(device_state_->sensor_descriptor());
   // Every sensor report gets routed via unique device_id.
   device_state_->sensor_callback()(device_state_->device_id(), std::move(input_report));
 }
 
 void MediaButtonState::Update(fuchsia::ui::input::InputReport report) {
-  FXL_DCHECK(report.media_buttons);
-  FXL_DCHECK(device_state_->media_buttons_descriptor());
+  FX_DCHECK(report.media_buttons);
+  FX_DCHECK(device_state_->media_buttons_descriptor());
   device_state_->media_buttons_callback()(std::move(report));
 }
 

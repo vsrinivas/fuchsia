@@ -61,7 +61,7 @@ Examples
 )";
 
 Err RunVerbStdio(Verb io_type, const Command& cmd, ConsoleContext* context) {
-  FXL_DCHECK(io_type == Verb::kStdout || io_type == Verb::kStderr);
+  FX_DCHECK(io_type == Verb::kStdout || io_type == Verb::kStderr);
 
   // Only a process can be specified.
   if (Err err = cmd.ValidateNouns({Noun::kProcess}); err.has_error())

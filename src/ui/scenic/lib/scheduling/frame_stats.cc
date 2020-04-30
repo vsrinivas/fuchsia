@@ -144,7 +144,7 @@ zx::duration FrameStats::CalculateMeanDuration(
     const std::deque<const FrameTimings::Timestamps>& timestamps,
     std::function<zx::duration(const FrameTimings::Timestamps&)> duration_func,
     uint32_t percentile) {
-  FXL_DCHECK(percentile <= 100);
+  FX_DCHECK(percentile <= 100);
 
   const size_t num_frames = timestamps.size();
   std::list<const zx::duration> durations;
@@ -157,7 +157,7 @@ zx::duration FrameStats::CalculateMeanDuration(
   double trim_index =
       static_cast<double>(num_frames) * static_cast<double>((100 - percentile)) / 100.;
   size_t trim = ceil(trim_index);
-  FXL_DCHECK(trim <= num_frames);
+  FX_DCHECK(trim <= num_frames);
   for (size_t i = 0; i < trim; i++) {
     durations.pop_back();
   }
@@ -176,12 +176,12 @@ zx::duration FrameStats::CalculateMeanDuration(
 }
 
 void FrameStats::ReportStats(inspect::Inspector* insp) const {
-  FXL_DCHECK(insp);
+  FX_DCHECK(insp);
 
-  FXL_DCHECK(dropped_frame_count_ <= frame_count_);
-  FXL_DCHECK(delayed_frame_count_ <= frame_count_);
+  FX_DCHECK(dropped_frame_count_ <= frame_count_);
+  FX_DCHECK(delayed_frame_count_ <= frame_count_);
   double dropped_percentage = frame_count_ > 0 ? dropped_frame_count_ * 100.0 / frame_count_ : 0.0;
-  FXL_DCHECK(delayed_frame_count_ <= frame_count_);
+  FX_DCHECK(delayed_frame_count_ <= frame_count_);
   double delayed_percentage = frame_count_ > 0 ? delayed_frame_count_ * 100.0 / frame_count_ : 0.0;
 
   // Stats for the entire history.
@@ -245,11 +245,12 @@ void FrameStats::ReportStats(inspect::Inspector* insp) const {
 
     node.CreateDouble(
         "Mean Total Frame Time (95 percentile)",
-        kUSecsToMSecs * CalculateMeanDuration(delayed_frames_, total_frame_time, 95).to_usecs(), insp);
+        kUSecsToMSecs * CalculateMeanDuration(delayed_frames_, total_frame_time, 95).to_usecs(),
+        insp);
 
-    node.CreateDouble("Mean Total Frame Latency (95 percentile)",
-                      kUSecsToMSecs * CalculateMeanDuration(delayed_frames_, latency, 95).to_usecs(),
-                      insp);
+    node.CreateDouble(
+        "Mean Total Frame Latency (95 percentile)",
+        kUSecsToMSecs * CalculateMeanDuration(delayed_frames_, latency, 95).to_usecs(), insp);
 
     insp->emplace(std::move(node));
   }

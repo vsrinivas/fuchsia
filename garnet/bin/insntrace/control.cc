@@ -5,36 +5,32 @@
 #include "garnet/bin/insntrace/control.h"
 
 #include <fcntl.h>
+#include <fuchsia/hardware/cpu/insntrace/cpp/fidl.h>
+#include <lib/fdio/directory.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/zircon-internal/device/cpu-trace/intel-pt.h>
+#include <lib/zircon-internal/ktrace.h>
+#include <lib/zx/handle.h>
+#include <lib/zx/vmo.h>
 #include <link.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <cinttypes>
-
-#include <iostream>
-
-#include <fuchsia/hardware/cpu/insntrace/cpp/fidl.h>
-#include <lib/zircon-internal/device/cpu-trace/intel-pt.h>
 #include <zircon/syscalls.h>
 
-#include <lib/fdio/fd.h>
-#include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
-#include <lib/zircon-internal/ktrace.h>
-#include <lib/zx/handle.h>
-#include <lib/zx/vmo.h>
-
-#include "src/lib/files/unique_fd.h"
-#include "src/lib/fxl/logging.h"
-#include "src/lib/fxl/strings/string_printf.h"
-
-#include "garnet/lib/debugger_utils/util.h"
-#include "garnet/lib/debugger_utils/x86_cpuid.h"
-#include "garnet/lib/debugger_utils/x86_pt.h"
+#include <cinttypes>
+#include <iostream>
 
 #include "garnet/bin/insntrace/config.h"
 #include "garnet/bin/insntrace/ktrace_controller.h"
 #include "garnet/bin/insntrace/utils.h"
+#include "garnet/lib/debugger_utils/util.h"
+#include "garnet/lib/debugger_utils/x86_cpuid.h"
+#include "garnet/lib/debugger_utils/x86_pt.h"
+#include "src/lib/files/unique_fd.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 namespace insntrace {
 
@@ -60,14 +56,14 @@ static ControllerSyncPtr OpenDevice() {
   zx_status_t status =
       fdio_service_connect(ipt_device_path, controller_ptr.NewRequest().TakeChannel().release());
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Error connecting to " << ipt_device_path << ": " << status;
+    FX_LOGS(ERROR) << "Error connecting to " << ipt_device_path << ": " << status;
     return ControllerSyncPtr();
   }
   return controller_ptr;
 }
 
 bool AllocTrace(const IptConfig& config) {
-  FXL_LOG(INFO) << "AllocTrace called";
+  FX_LOGS(INFO) << "AllocTrace called";
 
   ControllerSyncPtr ipt{OpenDevice()};
   if (!ipt) {
@@ -77,7 +73,7 @@ bool AllocTrace(const IptConfig& config) {
   Allocation allocation;
   allocation.mode = config.mode;
   allocation.num_traces = (config.mode == Mode::CPU ? config.num_cpus : config.max_threads);
-  FXL_VLOG(2) << fxl::StringPrintf("mode=%u, num_traces=0x%x",
+  FX_VLOGS(2) << fxl::StringPrintf("mode=%u, num_traces=0x%x",
                                    static_cast<unsigned>(allocation.mode), allocation.num_traces);
 
   ::fuchsia::hardware::cpu::insntrace::Controller_Initialize_Result result;
@@ -104,8 +100,8 @@ static void InitIptBufferConfig(BufferConfig* ipt_config, const IptConfig& confi
 }
 
 bool InitTrace(const IptConfig& config) {
-  FXL_LOG(INFO) << "InitTrace called";
-  FXL_DCHECK(config.mode == Mode::CPU);
+  FX_LOGS(INFO) << "InitTrace called";
+  FX_DCHECK(config.mode == Mode::CPU);
 
   ControllerSyncPtr ipt{OpenDevice()};
   if (!ipt) {
@@ -133,7 +129,7 @@ bool InitTrace(const IptConfig& config) {
 // process start record for it.
 
 bool InitProcessTrace(const IptConfig& config) {
-  FXL_LOG(INFO) << "InitProcessTrace called";
+  FX_LOGS(INFO) << "InitProcessTrace called";
 
   fuchsia::tracing::kernel::ControllerSyncPtr ktrace;
   if (!OpenKtraceChannel(&ktrace)) {
@@ -175,8 +171,8 @@ bool InitProcessTrace(const IptConfig& config) {
 }
 
 bool StartTrace(const IptConfig& config) {
-  FXL_LOG(INFO) << "StartTrace called";
-  FXL_DCHECK(config.mode == Mode::CPU);
+  FX_LOGS(INFO) << "StartTrace called";
+  FX_DCHECK(config.mode == Mode::CPU);
 
   ControllerSyncPtr ipt{OpenDevice()};
   if (!ipt) {
@@ -193,8 +189,8 @@ bool StartTrace(const IptConfig& config) {
 }
 
 void StopTrace(const IptConfig& config) {
-  FXL_LOG(INFO) << "StopTrace called";
-  FXL_DCHECK(config.mode == Mode::CPU);
+  FX_LOGS(INFO) << "StopTrace called";
+  FX_DCHECK(config.mode == Mode::CPU);
 
   ControllerSyncPtr ipt{OpenDevice()};
   if (!ipt) {
@@ -202,11 +198,11 @@ void StopTrace(const IptConfig& config) {
   }
 
   [[maybe_unused]] zx_status_t status = ipt->Stop();
-  FXL_DCHECK(status == ZX_OK);
+  FX_DCHECK(status == ZX_OK);
 }
 
 void StopSidebandDataCollection(const IptConfig& config) {
-  FXL_LOG(INFO) << "StopSidebandDataCollection called";
+  FX_LOGS(INFO) << "StopSidebandDataCollection called";
 
   fuchsia::tracing::kernel::ControllerSyncPtr ktrace;
   if (!OpenKtraceChannel(&ktrace)) {
@@ -252,7 +248,7 @@ static zx_status_t WriteBufferData(const IptConfig& config, const ControllerSync
     return status;
   }
   if (!buffer_config) {
-    FXL_LOG(ERROR) << "Failed getting buffer config";
+    FX_LOGS(ERROR) << "Failed getting buffer config";
     return ZX_ERR_INTERNAL;
   }
 
@@ -263,13 +259,13 @@ static zx_status_t WriteBufferData(const IptConfig& config, const ControllerSync
     return status;
   }
   if (!buffer_state) {
-    FXL_LOG(ERROR) << "Failed getting buffer state";
+    FX_LOGS(ERROR) << "Failed getting buffer state";
     return ZX_ERR_INTERNAL;
   }
 
   fxl::UniqueFD fd(open(c_path, O_CREAT | O_TRUNC | O_RDWR, S_IRUSR | S_IWUSR));
   if (!fd.is_valid()) {
-    FXL_LOG(ERROR) << fxl::StringPrintf("Failed writing file: %s", c_path) << ", "
+    FX_LOGS(ERROR) << fxl::StringPrintf("Failed writing file: %s", c_path) << ", "
                    << debugger_utils::ErrnoString(errno);
     return ZX_ERR_BAD_PATH;
   }
@@ -287,7 +283,7 @@ static zx_status_t WriteBufferData(const IptConfig& config, const ControllerSync
   else
     bytes_left = buffer_state->capture_end;
 
-  FXL_LOG(INFO) << fxl::StringPrintf("Writing %zu bytes to %s", bytes_left, c_path);
+  FX_LOGS(INFO) << fxl::StringPrintf("Writing %zu bytes to %s", bytes_left, c_path);
 
   char buf[4096];
 
@@ -296,7 +292,7 @@ static zx_status_t WriteBufferData(const IptConfig& config, const ControllerSync
     status = ipt->GetChunkHandle(descriptor, i, &vmo);
     if (status != ZX_OK) {
       LogFidlFailure("GetChunkHandle", status);
-      FXL_LOG(ERROR) << "Buffer " << descriptor << ", chunk " << i;
+      FX_LOGS(ERROR) << "Buffer " << descriptor << ", chunk " << i;
       goto Fail;
     }
 
@@ -312,13 +308,13 @@ static zx_status_t WriteBufferData(const IptConfig& config, const ControllerSync
       // left for another day.
       status = vmo.read(buf, offset, to_write);
       if (status != ZX_OK) {
-        FXL_LOG(ERROR) << fxl::StringPrintf("zx_vmo_read: buffer %u, buffer %u, offset %zu: ",
+        FX_LOGS(ERROR) << fxl::StringPrintf("zx_vmo_read: buffer %u, buffer %u, offset %zu: ",
                                             descriptor, i, offset)
                        << debugger_utils::ZxErrorString(status);
         goto Fail;
       }
       if (write(fd.get(), buf, to_write) != (ssize_t)to_write) {
-        FXL_LOG(ERROR) << fxl::StringPrintf("Short write, file: %s\n", c_path);
+        FX_LOGS(ERROR) << fxl::StringPrintf("Short write, file: %s\n", c_path);
         status = ZX_ERR_IO;
         goto Fail;
       }
@@ -342,8 +338,8 @@ Fail:
 // This assumes tracing has already been stopped.
 
 void DumpTrace(const IptConfig& config) {
-  FXL_LOG(INFO) << "DumpTrace called";
-  FXL_DCHECK(config.mode == Mode::CPU);
+  FX_LOGS(INFO) << "DumpTrace called";
+  FX_DCHECK(config.mode == Mode::CPU);
 
   ControllerSyncPtr ipt{OpenDevice()};
   if (!ipt) {
@@ -354,7 +350,7 @@ void DumpTrace(const IptConfig& config) {
     // Buffer descriptors for cpus is the cpu number.
     auto status = WriteBufferData(config, ipt, cpu, cpu);
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << fxl::StringPrintf("Dump perf of cpu %u: ", cpu)
+      FX_LOGS(ERROR) << fxl::StringPrintf("Dump perf of cpu %u: ", cpu)
                      << debugger_utils::ZxErrorString(status);
       // Keep trying to dump other cpu's data.
     }
@@ -362,7 +358,7 @@ void DumpTrace(const IptConfig& config) {
 }
 
 void DumpSidebandData(const IptConfig& config) {
-  FXL_LOG(INFO) << "DumpSidebandData called";
+  FX_LOGS(INFO) << "DumpSidebandData called";
 
   DumpKtraceBuffer(config.output_path_prefix.c_str(), ktrace_output_path_suffix);
 
@@ -384,7 +380,7 @@ void DumpSidebandData(const IptConfig& config) {
       // TODO(dje): verify writes succeed
       fclose(f);
     } else {
-      FXL_LOG(ERROR) << "unable to write PT config to " << cpuid_c_path;
+      FX_LOGS(ERROR) << "unable to write PT config to " << cpuid_c_path;
     }
   }
 
@@ -404,14 +400,14 @@ void DumpSidebandData(const IptConfig& config) {
       // TODO(dje): verify writes succeed
       fclose(f);
     } else {
-      FXL_LOG(ERROR) << "unable to write PT list to " << pt_list_c_path;
+      FX_LOGS(ERROR) << "unable to write PT list to " << pt_list_c_path;
     }
   }
 }
 
 void ResetTrace(const IptConfig& config) {
-  FXL_LOG(INFO) << "ResetTrace called";
-  FXL_DCHECK(config.mode == Mode::CPU);
+  FX_LOGS(INFO) << "ResetTrace called";
+  FX_DCHECK(config.mode == Mode::CPU);
 
   // TODO(dje): Nothing to do currently. There use to be. So keep this
   // function around for a bit.
@@ -422,7 +418,7 @@ void ResetTrace(const IptConfig& config) {
 // This assumes tracing has already been stopped.
 
 void FreeTrace(const IptConfig& config) {
-  FXL_LOG(INFO) << "FreeTrace called";
+  FX_LOGS(INFO) << "FreeTrace called";
 
   ControllerSyncPtr ipt{OpenDevice()};
   if (!ipt) {

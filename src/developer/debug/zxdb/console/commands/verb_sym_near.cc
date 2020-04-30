@@ -58,7 +58,7 @@ Err RunVerbSymNear(ConsoleContext* context, const Command& cmd) {
         }
 
         auto locations = weak_process->GetSymbols()->ResolveInputLocation(InputLocation(address));
-        FXL_DCHECK(locations.size() == 1u);
+        FX_DCHECK(locations.size() == 1u);
 
         FormatLocationOptions opts(weak_process->GetTarget());
         opts.always_show_addresses = true;

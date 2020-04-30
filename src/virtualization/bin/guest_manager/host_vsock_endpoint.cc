@@ -74,7 +74,7 @@ void HostVsockEndpoint::Connect(
     uint32_t cid, uint32_t port, zx::handle handle,
     fuchsia::virtualization::HostVsockEndpoint::ConnectCallback callback) {
   if (cid == fuchsia::virtualization::HOST_CID) {
-    FXL_LOG(ERROR) << "Attempt to connect to host service from host";
+    FX_LOGS(ERROR) << "Attempt to connect to host service from host";
     callback(ZX_ERR_CONNECTION_REFUSED);
     return;
   }
@@ -125,5 +125,5 @@ zx_status_t HostVsockEndpoint::AllocEphemeralPort(uint32_t* port) {
 
 void HostVsockEndpoint::FreeEphemeralPort(uint32_t port) {
   __UNUSED zx_status_t status = port_bitmap_.ClearOne(port);
-  FXL_DCHECK(status == ZX_OK);
+  FX_DCHECK(status == ZX_OK);
 }

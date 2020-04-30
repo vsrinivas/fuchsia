@@ -36,7 +36,7 @@ PaperShapeCacheEntry ProcessTriangleMesh2d(IndexedTriangleMesh2d<vec2> mesh,
                                            PaperRendererShadowType shadow_type, Escher* escher,
                                            BatchGpuUploader* uploader) {
   TRACE_DURATION("gfx", "PaperShapeCache::ProcessTriangleMesh2d");
-  FXL_DCHECK(mesh_spec == PaperShapeCache::kStandardMeshSpec());
+  FX_DCHECK(mesh_spec == PaperShapeCache::kStandardMeshSpec());
 
   // Convert 3d clip planes to 2d before clipping.
   std::vector<plane2> clip_planes_vec;
@@ -147,8 +147,8 @@ PaperShapeCacheEntry ProcessTriangleMesh2d(IndexedTriangleMesh2d<vec2> mesh,
         }
       }
 
-      FXL_DCHECK(out_mesh.IsValid());
-      FXL_DCHECK(mesh_spec == PaperShapeCache::kStandardMeshSpec());
+      FX_DCHECK(out_mesh.IsValid());
+      FX_DCHECK(mesh_spec == PaperShapeCache::kStandardMeshSpec());
 
       const uint32_t shadow_volume_index_count = out_mesh.index_count();
       return PaperShapeCacheEntry{
@@ -176,7 +176,7 @@ PaperShapeCacheEntry ProcessTriangleMesh3d(IndexedTriangleMesh3d<vec2> mesh,
                                            PaperRendererShadowType shadow_type, Escher* escher,
                                            BatchGpuUploader* uploader) {
   TRACE_DURATION("gfx", "PaperShapeCache::ProcessTriangleMesh3d");
-  FXL_DCHECK((mesh_spec == MeshSpec{{MeshAttribute::kPosition3D, MeshAttribute::kUV}}));
+  FX_DCHECK((mesh_spec == MeshSpec{{MeshAttribute::kPosition3D, MeshAttribute::kUV}}));
 
   IndexedTriangleMesh3d<vec2> tri_mesh;
   std::tie(tri_mesh, std::ignore) =
@@ -195,22 +195,22 @@ PaperShapeCacheEntry ProcessTriangleMesh3d(IndexedTriangleMesh3d<vec2> mesh,
 PaperShapeCache::PaperShapeCache(EscherWeakPtr escher, const PaperRendererConfig& config)
     : escher_(std::move(escher)), shadow_type_(config.shadow_type) {}
 
-PaperShapeCache::~PaperShapeCache() { FXL_DCHECK(!uploader_); }
+PaperShapeCache::~PaperShapeCache() { FX_DCHECK(!uploader_); }
 
 void PaperShapeCache::BeginFrame(BatchGpuUploader* uploader, uint64_t frame_number) {
-  FXL_DCHECK(uploader && !uploader_);
+  FX_DCHECK(uploader && !uploader_);
   uploader_ = uploader;
 
   // Workaround because Scenic Screenshotter always uses frame #0.
   if (frame_number > 0) {
-    FXL_DCHECK(frame_number >= frame_number_)
+    FX_DCHECK(frame_number >= frame_number_)
         << "old/new frame#: " << frame_number_ << "/" << frame_number;
     frame_number_ = frame_number;
   }
 }
 
 void PaperShapeCache::EndFrame() {
-  FXL_DCHECK(uploader_);
+  FX_DCHECK(uploader_);
   uploader_ = nullptr;
 
   TRACE_DURATION("gfx", "PaperShapeCache::EndFrame", "cache_hits",
@@ -225,7 +225,7 @@ void PaperShapeCache::EndFrame() {
 }
 
 void PaperShapeCache::SetConfig(const PaperRendererConfig& config) {
-  FXL_DCHECK(!uploader_) << "Cannot change config in the middle of a frame.";
+  FX_DCHECK(!uploader_) << "Cannot change config in the middle of a frame.";
   if (shadow_type_ == config.shadow_type)
     return;
 
@@ -382,7 +382,7 @@ const PaperShapeCacheEntry& PaperShapeCache::GetShapeMesh(const Hash& shape_hash
                                                           size_t num_clip_planes,
                                                           CacheMissMeshGenerator mesh_generator) {
   TRACE_DURATION("gfx", "PaperShapeCache::GetShapeMesh");
-  FXL_DCHECK(clip_planes || num_clip_planes == 0);
+  FX_DCHECK(clip_planes || num_clip_planes == 0);
 
   // We will first look up the mesh via |lookup_hash|, but may later use
   // |shape_hash| as an optimization.
@@ -434,7 +434,7 @@ const PaperShapeCacheEntry& PaperShapeCache::GetShapeMesh(const Hash& shape_hash
     // When we cache the new mesh, we will only create one entry for it.
     lookup_hash2 = lookup_hash;
   } else {
-    FXL_DCHECK(num_unculled_clip_planes < num_clip_planes) << "insane.";
+    FX_DCHECK(num_unculled_clip_planes < num_clip_planes) << "insane.";
 
     // The following is an optimization for the common case where at least one
     // clip plane is culled.  This avoids each frame failing the |lookup_hash|
@@ -460,7 +460,7 @@ const PaperShapeCacheEntry& PaperShapeCache::GetShapeMesh(const Hash& shape_hash
     lookup_hash2 = h.value();
 
     if (auto* entry = FindEntry(lookup_hash2)) {
-      // NOTE: FXL_DCHECK(entry->mesh) might seem reasonable here, but there
+      // NOTE: FX_DCHECK(entry->mesh) might seem reasonable here, but there
       // still is a possibility that the generated mesh will be completely
       // clipped.
 
@@ -531,10 +531,10 @@ PaperShapeCacheEntry* PaperShapeCache::FindEntry(const Hash& hash) {
 void PaperShapeCache::AddEntry(const Hash& hash, PaperShapeCacheEntry entry) {
   auto it = cache_.find(hash);
   if (it != cache_.end()) {
-    FXL_DCHECK(false) << "CacheEntry already exists.";
+    FX_DCHECK(false) << "CacheEntry already exists.";
     return;
   }
-  FXL_DCHECK(entry.last_touched_frame <= frame_number_);
+  FX_DCHECK(entry.last_touched_frame <= frame_number_);
   entry.last_touched_frame = frame_number_;
   cache_.insert({hash, std::move(entry)});
 }

@@ -15,7 +15,7 @@ void GfxSystemTest::TearDown() {
   ScenicTest::TearDown();
   engine_.reset();
   frame_scheduler_.reset();
-  FXL_DCHECK(!gfx_system_);
+  FX_DCHECK(!gfx_system_);
 }
 
 void GfxSystemTest::InitializeScenic(Scenic* scenic) {

@@ -77,7 +77,7 @@ const std::string& LineInputEditor::GetLine() const { return history_[history_in
 const std::deque<std::string>& LineInputEditor::GetHistory() const { return history_; }
 
 void LineInputEditor::OnInput(char c) {
-  FXL_DCHECK(visible_);  // Don't call while hidden.
+  FX_DCHECK(visible_);  // Don't call while hidden.
 
   // Reverse history mode does its own input handling.
   if (reverse_history_mode_) {
@@ -441,7 +441,7 @@ void LineInputEditor::HandleReverseHistory(char c) {
 };
 
 void LineInputEditor::StartReverseHistoryMode() {
-  FXL_DCHECK(!reverse_history_mode_);
+  FX_DCHECK(!reverse_history_mode_);
   reverse_history_mode_ = true;
   reverse_history_index_ = 0;
   reverse_history_input_.clear();
@@ -450,7 +450,7 @@ void LineInputEditor::StartReverseHistoryMode() {
 }
 
 void LineInputEditor::EndReverseHistoryMode(bool accept_suggestion) {
-  FXL_DCHECK(reverse_history_mode_);
+  FX_DCHECK(reverse_history_mode_);
   reverse_history_mode_ = false;
 
   if (accept_suggestion) {

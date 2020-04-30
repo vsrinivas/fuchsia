@@ -60,20 +60,20 @@ zx_status_t ClearTvpSession::Init() {
   zx_status_t status = fdio_service_connect("/dev/class/securemem/000",
                                             securemem_.NewRequest().TakeChannel().release());
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Connecting to securemem failed";
+    FX_LOGS(ERROR) << "Connecting to securemem failed";
     return status;
   }
   context_ = std::make_unique<TEEC_Context>();
   TEEC_Result result = TEEC_InitializeContext(NULL, context_.get());
   if (result != TEEC_SUCCESS) {
     context_.reset();
-    FXL_LOG(ERROR) << "TEEC_InitializeContext failed " << std::hex << result;
+    FX_LOGS(ERROR) << "TEEC_InitializeContext failed " << std::hex << result;
     return ZX_ERR_INVALID_ARGS;
   }
 
   status = OpenSession();
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "OpenSession() failed with status " << status;
+    FX_LOGS(ERROR) << "OpenSession() failed with status " << status;
     return status;
   }
 
@@ -86,12 +86,12 @@ zx_status_t ClearTvpSession::OpenSession() {
   for (uint32_t i = 0; i < 20; ++i) {
     session_ = std::make_unique<TEEC_Session>();
     uint32_t return_origin;
-    TEEC_Result result = TEEC_OpenSession(context_.get(), session_.get(), &kClearTvpUuid, TEEC_LOGIN_PUBLIC, NULL,
-                              NULL, &return_origin);
+    TEEC_Result result = TEEC_OpenSession(context_.get(), session_.get(), &kClearTvpUuid,
+                                          TEEC_LOGIN_PUBLIC, NULL, NULL, &return_origin);
     if (result != TEEC_SUCCESS) {
       session_.reset();
-      FXL_LOG(ERROR) << "TEEC_OpenSession failed with result " << std::hex << result << " origin "
-                    << return_origin << ". Maybe the bootloader version is incorrect.";
+      FX_LOGS(ERROR) << "TEEC_OpenSession failed with result " << std::hex << result << " origin "
+                     << return_origin << ". Maybe the bootloader version is incorrect.";
       status = ZX_ERR_INTERNAL;
       continue;
     }
@@ -108,7 +108,7 @@ int ClearTvpSession::DecryptVideo(void* data, uint32_t data_len, const zx::vmo& 
     if (!session_) {
       status = OpenSession();
       if (status != ZX_OK) {
-        FXL_LOG(ERROR) << "OpenSession() failed - status: " << status;
+        FX_LOGS(ERROR) << "OpenSession() failed - status: " << status;
         return status;
       }
     }
@@ -116,15 +116,16 @@ int ClearTvpSession::DecryptVideo(void* data, uint32_t data_len, const zx::vmo& 
     zx::vmo dup_vmo;
     status = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup_vmo);
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "vmo.duplicate() failed - status: " << status;
+      FX_LOGS(ERROR) << "vmo.duplicate() failed - status: " << status;
       return status;
     }
     zx_status_t status2 = ZX_OK;
     zx_paddr_t output_paddr;
 
-    status = securemem_->GetSecureMemoryPhysicalAddress(std::move(dup_vmo), &status2, &output_paddr);
+    status =
+        securemem_->GetSecureMemoryPhysicalAddress(std::move(dup_vmo), &status2, &output_paddr);
     if (status != ZX_OK || status2 != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed to get physical address: " << status << " " << status2;
+      FX_LOGS(ERROR) << "Failed to get physical address: " << status << " " << status2;
       if (status == ZX_OK) {
         status = status2;
       }
@@ -146,11 +147,11 @@ int ClearTvpSession::DecryptVideo(void* data, uint32_t data_len, const zx::vmo& 
     // output_handle
     operation.params[2].value.b = output_paddr;
     uint32_t return_origin = -1;
-    TEEC_Result res =
-        TEEC_InvokeCommand(session_.get(), kClearTvpCommandDecryptVideo, &operation, &return_origin);
+    TEEC_Result res = TEEC_InvokeCommand(session_.get(), kClearTvpCommandDecryptVideo, &operation,
+                                         &return_origin);
     if (res != TEEC_SUCCESS) {
-      FXL_LOG(ERROR) << "Failed to invoke command: 0x" << std::hex << res <<
-          " return_origin: " << return_origin;
+      FX_LOGS(ERROR) << "Failed to invoke command: 0x" << std::hex << res
+                     << " return_origin: " << return_origin;
       EnsureSessionClosed();
       status = ZX_ERR_INTERNAL;
       continue;

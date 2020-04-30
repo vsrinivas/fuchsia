@@ -10,7 +10,7 @@ namespace escher {
 namespace impl {
 
 void TraceEndOnScopeClose::Initialize(const char* category, const char* name) {
-  FXL_DCHECK(category && name);
+  FX_DCHECK(category && name);
   category_ = category;
   name_ = name;
 }

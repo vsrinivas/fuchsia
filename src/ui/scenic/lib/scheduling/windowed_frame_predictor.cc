@@ -20,12 +20,12 @@ WindowedFramePredictor::WindowedFramePredictor(zx::duration min_predicted_frame_
 WindowedFramePredictor::~WindowedFramePredictor() {}
 
 void WindowedFramePredictor::ReportRenderDuration(zx::duration time_to_render) {
-  FXL_DCHECK(time_to_render >= zx::duration(0));
+  FX_DCHECK(time_to_render >= zx::duration(0));
   render_duration_predictor_.InsertNewMeasurement(time_to_render);
 }
 
 void WindowedFramePredictor::ReportUpdateDuration(zx::duration time_to_update) {
-  FXL_DCHECK(time_to_update >= zx::duration(0));
+  FX_DCHECK(time_to_update >= zx::duration(0));
   update_duration_predictor_.InsertNewMeasurement(time_to_update);
 }
 

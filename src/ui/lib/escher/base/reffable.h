@@ -58,7 +58,7 @@ class Reffable {
   // Called by fxl::RefPtr.
   void AddRef() const {
 #ifndef NDEBUG
-    FXL_DCHECK(!adoption_required_);
+    FX_DCHECK(!adoption_required_);
 #endif
     ++ref_count_;
   }

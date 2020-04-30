@@ -14,37 +14,37 @@ SettingStore::SettingStore(fxl::RefPtr<SettingSchema> schema) : schema_(std::mov
 
 bool SettingStore::GetBool(const std::string& key) const {
   auto value = GetValue(key);
-  FXL_DCHECK(value.is_bool());
+  FX_DCHECK(value.is_bool());
   return value.get_bool();
 }
 
 int SettingStore::GetInt(const std::string& key) const {
   auto value = GetValue(key);
-  FXL_DCHECK(value.is_int());
+  FX_DCHECK(value.is_int());
   return value.get_int();
 }
 
 std::string SettingStore::GetString(const std::string& key) const {
   auto value = GetValue(key);
-  FXL_DCHECK(value.is_string());
+  FX_DCHECK(value.is_string());
   return value.get_string();
 }
 
 const ExecutionScope& SettingStore::GetExecutionScope(const std::string& key) const {
   auto value = GetValue(key);
-  FXL_DCHECK(value.is_execution_scope());
+  FX_DCHECK(value.is_execution_scope());
   return value.get_execution_scope();
 }
 
 const std::vector<InputLocation>& SettingStore::GetInputLocations(const std::string& key) const {
   auto value = GetValue(key);
-  FXL_DCHECK(value.is_input_locations());
+  FX_DCHECK(value.is_input_locations());
   return value.get_input_locations();
 }
 
 std::vector<std::string> SettingStore::GetList(const std::string& key) const {
   auto value = GetValue(key);
-  FXL_DCHECK(value.is_list());
+  FX_DCHECK(value.is_list());
   return value.get_list();
 }
 

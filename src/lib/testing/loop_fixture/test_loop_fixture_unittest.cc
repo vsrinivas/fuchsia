@@ -102,7 +102,7 @@ class RandomSeedTest : public TestLoopFixture {
  public:
   static void SetUpTestSuite() {
     random_seed_ = getenv("TEST_LOOP_RANDOM_SEED");
-    FXL_CHECK(fxl::SetTestSettings(
+    FX_CHECK(fxl::SetTestSettings(
         fxl::CommandLineFromInitializerList({"argv0", "--test_loop_seed=1234"})));
   }
 

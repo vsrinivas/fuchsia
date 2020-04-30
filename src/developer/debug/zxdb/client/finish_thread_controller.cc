@@ -21,7 +21,7 @@ namespace zxdb {
 
 FinishThreadController::FinishThreadController(Stack& stack, size_t frame_to_finish)
     : frame_to_finish_(frame_to_finish), weak_factory_(this) {
-  FXL_DCHECK(frame_to_finish < stack.size());
+  FX_DCHECK(frame_to_finish < stack.size());
 
   if (!stack[frame_to_finish]->IsInline()) {
     // Finishing a physical frame, don't need to do anything except forward to the physical version.
@@ -52,8 +52,8 @@ void FinishThreadController::InitWithThread(Thread* thread, fit::callback<void(c
 
 #ifndef NDEBUG
   // The stack must not have changed from construction to this call.
-  FXL_DCHECK(stack.size() > frame_to_finish_);
-  FXL_DCHECK(stack[frame_to_finish_]->GetAddress() == frame_ip_);
+  FX_DCHECK(stack.size() > frame_to_finish_);
+  FX_DCHECK(stack[frame_to_finish_]->GetAddress() == frame_ip_);
 #endif
 
   if (enable_debug_logging()) {

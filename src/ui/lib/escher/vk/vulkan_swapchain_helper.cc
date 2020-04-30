@@ -36,14 +36,14 @@ void VulkanSwapchainHelper::DrawFrame(DrawFrameCallback draw_callback) {
                                               image_available_semaphore->vk_semaphore(), nullptr);
 
     if (result.result == vk::Result::eSuboptimalKHR) {
-      FXL_DLOG(WARNING) << "suboptimal swapchain configuration";
+      FX_DLOGS(WARNING) << "suboptimal swapchain configuration";
     } else if (result.result == vk::Result::eTimeout) {
       int retry_count = 0;
       int timeout = 2;
       while (result.result == vk::Result::eTimeout) {
         TRACE_DURATION("gfx", "escher::VulkanSwapchain::Acquire[retry]");
         if (retry_count++ > 10) {
-          FXL_LOG(WARNING) << "failed to acquire next swapchain image"
+          FX_LOGS(WARNING) << "failed to acquire next swapchain image"
                            << " : Timeout (giving up after 10 tries)";
           return;
         }
@@ -59,7 +59,7 @@ void VulkanSwapchainHelper::DrawFrame(DrawFrameCallback draw_callback) {
       }
 
     } else if (result.result != vk::Result::eSuccess) {
-      FXL_LOG(WARNING) << "failed to acquire next swapchain image"
+      FX_LOGS(WARNING) << "failed to acquire next swapchain image"
                        << " : " << to_string(result.result);
       return;
     }

@@ -23,7 +23,7 @@
     vk::Result error = ERR;                                     \
     const char* message = MSG;                                  \
     if (error != vk::Result::eSuccess) {                        \
-      FXL_LOG(WARNING) << message << " : " << to_string(error); \
+      FX_LOGS(WARNING) << message << " : " << to_string(error); \
     }                                                           \
   }
 
@@ -32,7 +32,7 @@ namespace escher {
 // Panic if operation was unsuccessful.
 template <typename T>
 auto ESCHER_CHECKED_VK_RESULT(typename vk::ResultValue<T> result) -> T {
-  FXL_CHECK(result.result == vk::Result::eSuccess);
+  FX_CHECK(result.result == vk::Result::eSuccess);
   return result.value;
 }
 

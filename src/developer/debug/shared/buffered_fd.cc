@@ -14,7 +14,7 @@ BufferedFD::BufferedFD() = default;
 BufferedFD::~BufferedFD() = default;
 
 bool BufferedFD::Init(fbl::unique_fd fd) {
-  FXL_DCHECK(!fd_.is_valid());  // Can't be initialized more than once.
+  FX_DCHECK(!fd_.is_valid());  // Can't be initialized more than once.
   fd_ = std::move(fd);
   stream_.set_writer(this);
 
@@ -22,7 +22,7 @@ bool BufferedFD::Init(fbl::unique_fd fd) {
   // a writable state already (this will be re-evaluated when we actually try
   // to write) so only need to watch for readable.
   MessageLoop* loop = MessageLoop::Current();
-  FXL_DCHECK(loop);
+  FX_DCHECK(loop);
   watch_handle_ = loop->WatchFD(MessageLoop::WatchMode::kRead, fd_.get(), this);
   return watch_handle_.watching();
 }

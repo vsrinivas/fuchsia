@@ -24,7 +24,7 @@ UniformBufferPool::UniformBufferPool(EscherWeakPtr escher, size_t ring_size,
       buffer_size_(kBufferSize),
       ring_size_(ring_size),
       weak_factory_(this) {
-  FXL_DCHECK(ring_size >= 1 && ring_size <= kMaxRingSize);
+  FX_DCHECK(ring_size >= 1 && ring_size <= kMaxRingSize);
 }
 
 UniformBufferPool::~UniformBufferPool() {}
@@ -53,8 +53,8 @@ void UniformBufferPool::InternalAllocate() {
   // Determine the memory requirements for a single buffer.
   vk::MemoryRequirements reqs = vk_device().getBufferMemoryRequirements(new_buffers[0]);
   // If necessary, we can write the logic to deal with the conditions below.
-  FXL_CHECK(buffer_size_ == reqs.size);
-  FXL_CHECK(buffer_size_ % reqs.alignment == 0);
+  FX_CHECK(buffer_size_ == reqs.size);
+  FX_CHECK(buffer_size_ % reqs.alignment == 0);
 
   // Allocate enough memory for all of the buffers.
   reqs.size *= kBufferBatchSize;
@@ -85,7 +85,7 @@ void UniformBufferPool::InternalAllocate() {
 }
 
 void UniformBufferPool::OnReceiveOwnable(std::unique_ptr<Resource> resource) {
-  FXL_DCHECK(resource->IsKindOf<Buffer>());
+  FX_DCHECK(resource->IsKindOf<Buffer>());
   size_t ring_index = is_allocating_ ? 0 : ring_size_ - 1;
   ring_[ring_index].emplace_back(static_cast<Buffer*>(resource.release()));
 }

@@ -179,7 +179,7 @@ void CommandChannel::HandleChannelReady(const zx::channel& channel, async_dispat
     return;
   }
 
-  FXL_DCHECK(signal->observed & ZX_CHANNEL_READABLE);
+  FX_DCHECK(signal->observed & ZX_CHANNEL_READABLE);
   for (size_t count = 0; count < signal->count; count++) {
     uint32_t read_size;
     // Allocate a buffer for the event. Since we don't know the size

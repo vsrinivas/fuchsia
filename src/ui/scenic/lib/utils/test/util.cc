@@ -18,7 +18,7 @@ bool IsEventSignalled(const zx::event& fence, zx_signals_t signal) {
 zx::event CopyEvent(const zx::event& event) {
   zx::event event_copy;
   if (event.duplicate(ZX_RIGHT_SAME_RIGHTS, &event_copy) != ZX_OK)
-    FXL_LOG(ERROR) << "Copying zx::event failed.";
+    FX_LOGS(ERROR) << "Copying zx::event failed.";
   return event_copy;
 }
 

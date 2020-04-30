@@ -20,7 +20,7 @@ VirtualInheritanceTestSetup::VirtualInheritanceTestSetup() {
   // IntermediateBase.
   intermediate_base = MakeCollectionType(DwarfTag::kClassType, "IntermediateBase",
                                          {{"intermediate_base_i", int32_type}});
-  FXL_CHECK(intermediate_base->byte_size() == kBaseAddress - kIntermediateBaseAddress);
+  FX_CHECK(intermediate_base->byte_size() == kBaseAddress - kIntermediateBaseAddress);
   // Make room for "Base" which follows the intermediate_base_i data.
   base_inherited = fxl::MakeRefCounted<InheritedFrom>(base, intermediate_base->byte_size());
   intermediate_base->set_byte_size(intermediate_base->byte_size() + base->byte_size());
@@ -34,8 +34,8 @@ VirtualInheritanceTestSetup::VirtualInheritanceTestSetup() {
   intermediate_derived = MakeCollectionType(
       DwarfTag::kClassType, "IntermediateDerived",
       {{"_vptr.IntermediateDerived", uint64_type}, {"intermediate_derived_i", int32_type}});
-  FXL_CHECK(intermediate_derived->byte_size() ==
-            kIntermediateBaseAddress - kIntermediateDerivedAddress);
+  FX_CHECK(intermediate_derived->byte_size() ==
+           kIntermediateBaseAddress - kIntermediateDerivedAddress);
   // Make room for the base classes.
   intermediate_derived->set_byte_size(intermediate_derived->byte_size() +
                                       intermediate_base->byte_size());
@@ -55,7 +55,7 @@ VirtualInheritanceTestSetup::VirtualInheritanceTestSetup() {
 
   // Derived.
   derived = MakeCollectionType(DwarfTag::kClassType, "Derived", {{"derived_i", int32_type}});
-  FXL_CHECK(derived->byte_size() == kIntermediateDerivedAddress - kDerivedAddress);
+  FX_CHECK(derived->byte_size() == kIntermediateDerivedAddress - kDerivedAddress);
   intermediate_derived_inherited =
       fxl::MakeRefCounted<InheritedFrom>(intermediate_derived, derived->byte_size());
   derived->set_byte_size(derived->byte_size() + intermediate_derived->byte_size());
@@ -69,7 +69,7 @@ VirtualInheritanceTestSetup::VirtualInheritanceTestSetup() {
       0x03, 0x00, 0x00, 0x00,                          // intermediate_base_i = 3.
       0x04, 0x00, 0x00, 0x00,                          // base_i = 4.
   };
-  FXL_CHECK(derived_data.size() == derived->byte_size());
+  FX_CHECK(derived_data.size() == derived->byte_size());
   derived_value = ExprValue(derived, derived_data, ExprValueSource(kDerivedAddress));
 
   // Vtable data.

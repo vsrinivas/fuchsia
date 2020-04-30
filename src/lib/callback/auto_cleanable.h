@@ -82,7 +82,7 @@ class AutoCleanableSet {
   template <class... Args>
   V& emplace(Args&&... args) {
     auto pair = set_.emplace(std::forward<Args>(args)...);
-    FXL_DCHECK(pair.second);
+    FX_DCHECK(pair.second);
     // Set iterators are const because modifying the element would change the
     // hash. In this particular case, this is safe because this set uses
     // reference equality.

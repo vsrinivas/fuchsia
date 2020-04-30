@@ -48,7 +48,7 @@ class TileView : public scenic::BaseView, public fuchsia::ui::policy::Presenter 
   };
 
   // |scenic::SessionListener|
-  void OnScenicError(std::string error) override { FXL_LOG(ERROR) << "Scenic Error " << error; }
+  void OnScenicError(std::string error) override { FX_LOGS(ERROR) << "Scenic Error " << error; }
 
   void OnChildAttached(uint32_t view_holder_id);
 

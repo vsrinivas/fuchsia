@@ -15,7 +15,7 @@ ScreenReaderContext::ScreenReaderContext(std::unique_ptr<A11yFocusManager> a11y_
       a11y_focus_manager_(std::move(a11y_focus_manager)) {}
 
 A11yFocusManager* ScreenReaderContext::GetA11yFocusManager() {
-  FXL_DCHECK(a11y_focus_manager_.get());
+  FX_DCHECK(a11y_focus_manager_.get());
   return a11y_focus_manager_.get();
 }
 

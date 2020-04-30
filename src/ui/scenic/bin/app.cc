@@ -58,8 +58,8 @@ zx::duration GetMinimumPredictedFrameDuration() {
                               &frame_scheduler_min_predicted_frame_duration)) {
     frame_scheduler_min_predicted_frame_duration_in_us =
         atoi(frame_scheduler_min_predicted_frame_duration.c_str());
-    FXL_DCHECK(frame_scheduler_min_predicted_frame_duration_in_us >= 0);
-    FXL_LOG(INFO) << "min_predicted_frame_duration(us): "
+    FX_DCHECK(frame_scheduler_min_predicted_frame_duration_in_us >= 0);
+    FX_LOGS(INFO) << "min_predicted_frame_duration(us): "
                   << frame_scheduler_min_predicted_frame_duration_in_us;
   }
   return frame_scheduler_min_predicted_frame_duration_in_us > 0
@@ -73,7 +73,7 @@ namespace scenic_impl {
 
 DisplayInfoDelegate::DisplayInfoDelegate(std::shared_ptr<display::Display> display_)
     : display_(display_) {
-  FXL_CHECK(display_);
+  FX_CHECK(display_);
 }
 
 void DisplayInfoDelegate::GetDisplayInfo(
@@ -94,7 +94,7 @@ void DisplayInfoDelegate::GetDisplayOwnershipEvent(
 
   zx::event dup;
   if (display_->ownership_event().duplicate(ZX_RIGHTS_BASIC, &dup) != ZX_OK) {
-    FXL_LOG(ERROR) << "Display ownership event duplication error.";
+    FX_LOGS(ERROR) << "Display ownership event duplication error.";
     callback(zx::event());
   } else {
     callback(std::move(dup));
@@ -118,7 +118,7 @@ App::App(std::unique_ptr<sys::ComponentContext> app_context, inspect::Node inspe
       annotation_registry_(app_context_.get()),
       lifecycle_controller_impl_(app_context_.get(),
                                  std::weak_ptr<ShutdownManager>(shutdown_manager_)) {
-  FXL_DCHECK(!device_watcher_);
+  FX_DCHECK(!device_watcher_);
 
   fit::bridge<escher::EscherUniquePtr> escher_bridge;
   fit::bridge<std::shared_ptr<scenic_impl::display::Display>> display_bridge;
@@ -164,13 +164,13 @@ void App::InitializeServices(escher::EscherUniquePtr escher,
   TRACE_DURATION("gfx", "App::InitializeServices");
 
   if (!display) {
-    FXL_LOG(ERROR) << "No default display, Graphics system exiting";
+    FX_LOGS(ERROR) << "No default display, Graphics system exiting";
     shutdown_manager_->Shutdown(LifecycleControllerImpl::kShutdownTimeout);
     return;
   }
 
   if (!escher || !escher->device()) {
-    FXL_LOG(ERROR) << "No Vulkan on device, Graphics system exiting.";
+    FX_LOGS(ERROR) << "No Vulkan on device, Graphics system exiting.";
     shutdown_manager_->Shutdown(LifecycleControllerImpl::kShutdownTimeout);
     return;
   }
@@ -194,14 +194,14 @@ void App::InitializeServices(escher::EscherUniquePtr escher,
                         const vk::ComputePipelineCreateInfo* compute_info) {
           // TODO(49972): pre-warm compute pipelines in addition to graphics pipelines.
           if (compute_info) {
-            FXL_LOG(WARNING) << "Unexpected lazy creation of Vulkan compute pipeline.";
+            FX_LOGS(WARNING) << "Unexpected lazy creation of Vulkan compute pipeline.";
             return;
           }
 
 #if !defined(NDEBUG)
-          FXL_CHECK(false)  // debug builds should crash for early detection
+          FX_CHECK(false)  // debug builds should crash for early detection
 #else
-          FXL_LOG(WARNING)  // release builds should log to Cobalt, see below.
+          FX_LOGS(WARNING)  // release builds should log to Cobalt, see below.
 #endif
               << "Unexpected lazy creation of Vulkan pipeline.";
 
@@ -234,7 +234,7 @@ void App::InitializeServices(escher::EscherUniquePtr escher,
 
 #ifdef SCENIC_ENABLE_GFX_SUBSYSTEM
   auto gfx = scenic_.RegisterSystem<gfx::GfxSystem>(&engine_.value(), &sysmem_, &display_manager_);
-  FXL_DCHECK(gfx);
+  FX_DCHECK(gfx);
 
   frame_scheduler_->AddSessionUpdater(gfx->GetWeakPtr());
   scenic_.SetScreenshotDelegate(gfx);
@@ -244,7 +244,7 @@ void App::InitializeServices(escher::EscherUniquePtr escher,
 
 #ifdef SCENIC_ENABLE_INPUT_SUBSYSTEM
   auto input = scenic_.RegisterSystem<input::InputSystem>(engine_.value().scene_graph());
-  FXL_DCHECK(input);
+  FX_DCHECK(input);
 #endif
 
   // Create the snapshotter and pass it to scenic.

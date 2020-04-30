@@ -363,7 +363,7 @@ TEST_F(IntlPropertyProviderImplTest, Multilocale) {
 // This test has its own main because we want the logger to be turned on.
 int main(int argc, char** argv) {
   if (!fxl::SetTestSettings(argc, argv)) {
-    FXL_LOG(ERROR) << "Failed to parse log settings from command-line";
+    FX_LOGS(ERROR) << "Failed to parse log settings from command-line";
     return EXIT_FAILURE;
   }
 

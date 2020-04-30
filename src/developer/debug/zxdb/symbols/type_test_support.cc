@@ -170,7 +170,7 @@ fxl::RefPtr<Collection> MakeRustEnum(const std::string& name, fxl::RefPtr<DataMe
     // Pick the size based on the largest variant
     if (!var->data_members().empty()) {
       const DataMember* last_member = var->data_members().back().Get()->AsDataMember();
-      FXL_DCHECK(last_member);  // ASsume test code has set up properly.
+      FX_DCHECK(last_member);  // ASsume test code has set up properly.
       uint32_t var_byte_size =
           last_member->member_location() + last_member->type().Get()->AsType()->byte_size();
       if (var_byte_size > byte_size)

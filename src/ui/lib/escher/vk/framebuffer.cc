@@ -36,8 +36,8 @@ Framebuffer::Framebuffer(Escher* escher, uint32_t width, uint32_t height,
   // For each image, construct a corresponding view.
   image_views_.reserve(images_.size());
   for (auto& im : images_) {
-    FXL_DCHECK(width == im->width());
-    FXL_DCHECK(height == im->height());
+    FX_DCHECK(width == im->width());
+    FX_DCHECK(height == im->height());
 
     vk::ImageViewCreateInfo info;
     info.viewType = vk::ImageViewType::e2D;

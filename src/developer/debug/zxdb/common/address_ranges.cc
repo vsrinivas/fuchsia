@@ -12,7 +12,7 @@ namespace zxdb {
 
 AddressRanges::AddressRanges(Format format, RangeVector ranges) : ranges_(std::move(ranges)) {
   if (format == kCanonical) {
-    FXL_DCHECK(IsCanonical(ranges_));
+    FX_DCHECK(IsCanonical(ranges_));
   } else {
     // Non-canonical input. We still expect the common case to be canonical so
     // do a verification step before trying to sort.

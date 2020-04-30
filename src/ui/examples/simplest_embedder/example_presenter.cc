@@ -20,7 +20,7 @@ ExamplePresenter::ExamplePresenter(fuchsia::ui::scenic::Scenic* scenic)
 }
 
 void ExamplePresenter::Init(float width, float height) {
-  FXL_CHECK(!compositor_);
+  FX_CHECK(!compositor_);
   width_ = width;
   height_ = height;
   compositor_ = std::make_unique<scenic::DisplayCompositor>(&session_);
@@ -33,9 +33,9 @@ void ExamplePresenter::Init(float width, float height) {
 void ExamplePresenter::PresentView(
     fuchsia::ui::views::ViewHolderToken view_holder_token,
     fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> /*presentation_request*/) {
-  FXL_CHECK(!presentation_) << "simplest_embedder: only a single Presentation is supported.";
+  FX_CHECK(!presentation_) << "simplest_embedder: only a single Presentation is supported.";
 
-  FXL_LOG(INFO) << "Presenting View.";
+  FX_LOGS(INFO) << "Presenting View.";
 
   presentation_ = std::make_unique<Presentation>(&session_, std::move(view_holder_token));
   layers_.AddLayer(presentation_->layer());
@@ -47,7 +47,7 @@ void ExamplePresenter::PresentView(
 void ExamplePresenter::PresentOrReplaceView(
     fuchsia::ui::views::ViewHolderToken view_holder_token,
     fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request) {
-  FXL_CHECK(!presentation_) << "simplest_embedder: clobbering presentation is not supported";
+  FX_CHECK(!presentation_) << "simplest_embedder: clobbering presentation is not supported";
   PresentView(std::move(view_holder_token), std::move(presentation_request));
 };
 

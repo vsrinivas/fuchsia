@@ -23,7 +23,7 @@ namespace {
 // |val_loop| is to determine a loop that will fill the register with a
 // particular pattern (010203....).
 std::vector<uint8_t> CreateData(size_t length, size_t val_loop) {
-  FXL_DCHECK(length >= val_loop);
+  FX_DCHECK(length >= val_loop);
 
   std::vector<uint8_t> data(length);
   // So that we get the number backwards (0x0102...).

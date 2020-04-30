@@ -137,7 +137,7 @@ class DisplaySwapchainTest : public Fixture {
 
   std::unique_ptr<FrameTimings> MakeTimings(uint64_t frame_number, zx::time present_time,
                                             zx::time latch_time, zx::time started_time) {
-    FXL_CHECK(frame_scheduler_);
+    FX_CHECK(frame_scheduler_);
     return std::make_unique<FrameTimings>(
         frame_number, present_time, latch_time, started_time,
         [this](const FrameTimings& timings) { ++frame_presented_call_count_; },

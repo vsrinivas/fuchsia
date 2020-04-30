@@ -52,13 +52,13 @@ constexpr char kLogCategory[] = "log";
 zx::channel OpenKTrace() {
   int fd = open(kKTraceDev, O_WRONLY);
   if (fd < 0) {
-    FXL_LOG(ERROR) << "Failed to open " << kKTraceDev << ": errno=" << errno;
+    FX_LOGS(ERROR) << "Failed to open " << kKTraceDev << ": errno=" << errno;
     return zx::channel();
   }
   zx::channel channel;
   zx_status_t status = fdio_get_service_handle(fd, channel.reset_and_get_address());
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to get " << kKTraceDev
+    FX_LOGS(ERROR) << "Failed to get " << kKTraceDev
                    << " channel: " << zx_status_get_string(status);
     return zx::channel();
   }
@@ -67,9 +67,9 @@ zx::channel OpenKTrace() {
 
 void LogFidlFailure(const char* rqst_name, zx_status_t fidl_status, zx_status_t rqst_status) {
   if (fidl_status != ZX_OK) {
-    FXL_LOG(ERROR) << "Ktrace FIDL " << rqst_name << " failed: status=" << fidl_status;
+    FX_LOGS(ERROR) << "Ktrace FIDL " << rqst_name << " failed: status=" << fidl_status;
   } else if (rqst_status != ZX_OK) {
-    FXL_LOG(ERROR) << "Ktrace " << rqst_name << " failed: status=" << rqst_status;
+    FX_LOGS(ERROR) << "Ktrace " << rqst_name << " failed: status=" << rqst_status;
   }
 }
 
@@ -139,12 +139,12 @@ void App::UpdateState() {
 }
 
 void App::StartKTrace(uint32_t group_mask, bool retain_current_data) {
-  FXL_DCHECK(!context_);
+  FX_DCHECK(!context_);
   if (!group_mask) {
     return;  // nothing to trace
   }
 
-  FXL_LOG(INFO) << "Starting ktrace";
+  FX_LOGS(INFO) << "Starting ktrace";
 
   zx::channel channel = OpenKTrace();
   if (!channel) {
@@ -164,16 +164,16 @@ void App::StartKTrace(uint32_t group_mask, bool retain_current_data) {
   }
   RequestKtraceStart(channel, group_mask);
 
-  FXL_VLOG(1) << "Ktrace started";
+  FX_VLOGS(1) << "Ktrace started";
 }
 
 void App::StopKTrace() {
   if (!context_) {
     return;  // not currently tracing
   }
-  FXL_DCHECK(current_group_mask_);
+  FX_DCHECK(current_group_mask_);
 
-  FXL_LOG(INFO) << "Stopping ktrace";
+  FX_LOGS(INFO) << "Stopping ktrace";
 
   {
     zx::channel channel = OpenKTrace();
@@ -188,7 +188,7 @@ void App::StopKTrace() {
   DeviceReader reader;
   Importer importer(buffer_context);
   if (!importer.Import(reader)) {
-    FXL_LOG(ERROR) << "Errors encountered while importing ktrace data";
+    FX_LOGS(ERROR) << "Errors encountered while importing ktrace data";
   }
 
   trace_release_context(buffer_context);
@@ -196,7 +196,7 @@ void App::StopKTrace() {
   context_ = nullptr;
   current_group_mask_ = 0u;
 
-  FXL_VLOG(1) << "Ktrace stopped";
+  FX_VLOGS(1) << "Ktrace stopped";
 }
 
 }  // namespace ktrace_provider

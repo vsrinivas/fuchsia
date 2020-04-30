@@ -60,7 +60,7 @@ std::string md5_string_non_destructive(MD5_CTX* md5_ctx) {
     // Writes the terminating 0 each time, returns 2 each time.
     actual_md5_ptr += snprintf(actual_md5_ptr, 3, "%02x", byte);
   }
-  FXL_CHECK(actual_md5_ptr == actual_md5_chars + kMd5CharCount);
+  FX_CHECK(actual_md5_ptr == actual_md5_chars + kMd5CharCount);
 
   return std::string(actual_md5_chars, kMd5CharCount);
 }
@@ -162,7 +162,7 @@ int main(int argc, char* argv[]) {
                                 /*min_output_buffer_count=*/0,
                                 /*is_secure_output=*/false, /*is_secure_input=*/false,
                                 std::move(emit_frame))) {
-    FXL_LOG(FATAL) << "decode_video_stream_test() failed";
+    FX_LOGS(FATAL) << "decode_video_stream_test() failed";
   }
 
   std::string actual_md5 = md5_string_non_destructive(&md5_ctx);

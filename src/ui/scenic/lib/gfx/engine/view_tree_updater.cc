@@ -18,20 +18,20 @@ void ViewTreeUpdater::AddUpdate(ViewTreeUpdate update) {
 }
 
 void ViewTreeUpdater::TrackViewHolder(fxl::WeakPtr<ViewHolder> view_holder) {
-  FXL_DCHECK(view_holder) << "precondition";  // Called in ViewHolder constructor.
+  FX_DCHECK(view_holder) << "precondition";  // Called in ViewHolder constructor.
 
   const zx_koid_t koid = view_holder->view_holder_koid();
   view_tree_updates_.push_back(ViewTreeNewAttachNode{.koid = koid});
   auto [iter, inserted] =
       tracked_view_holders_.insert({koid, ViewHolderStatus{.view_holder = std::move(view_holder)}});
-  FXL_DCHECK(inserted);
+  FX_DCHECK(inserted);
 }
 
 void ViewTreeUpdater::UntrackViewHolder(zx_koid_t koid) {
   // Disconnection in view tree handled by DeleteNode operation.
   view_tree_updates_.push_back(ViewTreeDeleteNode{.koid = koid});
   auto erased_count = tracked_view_holders_.erase(koid);
-  FXL_DCHECK(erased_count == 1);
+  FX_DCHECK(erased_count == 1);
 }
 
 void ViewTreeUpdater::UpdateViewHolderConnections() {
@@ -45,7 +45,7 @@ void ViewTreeUpdater::UpdateViewHolderConnections() {
     zx_koid_t root = ZX_KOID_INVALID;
     // Determine whether each ViewHolder is connected to some root.
     bool now_connected = false;
-    FXL_DCHECK(status.view_holder) << "invariant";
+    FX_DCHECK(status.view_holder) << "invariant";
     Node* curr = status.view_holder ? status.view_holder->parent() : nullptr;
     while (curr) {
       if (curr->session_id() != session_id_) {
@@ -53,16 +53,16 @@ void ViewTreeUpdater::UpdateViewHolderConnections() {
       }
       if (curr->IsKindOf<ViewNode>() && curr->As<ViewNode>()->GetView()) {
         root = curr->As<ViewNode>()->GetView()->view_ref_koid();
-        FXL_DCHECK(root != ZX_KOID_INVALID) << "invariant";
+        FX_DCHECK(root != ZX_KOID_INVALID) << "invariant";
         // TODO(SCN-1249): Enable following check when one-view-per-session is enforced.
-        // FXL_DCHECK(root_view_ && root_view_->view_ref_koid() == root)
+        // FX_DCHECK(root_view_ && root_view_->view_ref_koid() == root)
         //    << "invariant: session's root-view-discovered and root-view-purported must match.";
         now_connected = true;
         break;
       }
       if (curr->IsKindOf<Scene>()) {
         root = curr->As<Scene>()->view_ref_koid();
-        FXL_DCHECK(root != ZX_KOID_INVALID) << "invariant";
+        FX_DCHECK(root != ZX_KOID_INVALID) << "invariant";
         now_connected = true;
         break;
       }

@@ -33,7 +33,7 @@ const SwitchRecord* FindLongSwitch(const std::string& str,
                                    const std::vector<SwitchRecord>& switches,
                                    size_t* equals_index) {
   // Should have two leading dashes.
-  FXL_DCHECK(str.size() >= 2 && str.substr(0, 2) == "--");
+  FX_DCHECK(str.size() >= 2 && str.substr(0, 2) == "--");
 
   // Extract the switch value (varying depend on presence of '='), not counting
   // the two leading dashes.
@@ -97,7 +97,7 @@ class Parser {
   }
 
   const Err& Complete(std::vector<std::string>* results) {
-    FXL_DCHECK(results->empty());
+    FX_DCHECK(results->empty());
 
     if (!Tokenize(input_)) {
       return err_;
@@ -212,7 +212,7 @@ class Parser {
   static const State kArgState;
 
   bool Tokenize(const std::string& input) {
-    FXL_DCHECK(!err_.has_error() && pos_ == 0 && tokens_.size() == 0);
+    FX_DCHECK(!err_.has_error() && pos_ == 0 && tokens_.size() == 0);
     err_ = TokenizeCommand(input, &tokens_);
     return !err_.has_error();
   }
@@ -433,7 +433,7 @@ bool Parser::DoVerbState() {
   // Find the verb record.
   const auto& verbs = GetVerbs();
   auto found_verb = verbs.find(command_->verb());
-  FXL_DCHECK(found_verb != verbs.end());  // Valid verb should always be found.
+  FX_DCHECK(found_verb != verbs.end());  // Valid verb should always be found.
   verb_record_ = &found_verb->second;
 
   return Consume(Parser::kSwitchesState);
@@ -567,7 +567,7 @@ Err ParseCommand(const std::string& input, Command* output) {
   Parser parser(input, output, FillCommandContextCallback());
   parser.Parse();
 
-  FXL_DCHECK(parser.err().has_error() || parser.at_end());
+  FX_DCHECK(parser.err().has_error() || parser.at_end());
 
   return parser.err();
 }

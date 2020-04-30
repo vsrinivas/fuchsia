@@ -35,62 +35,62 @@ size_t LocalStreamBackend::ConsumeStreamBufferData(const char* data, size_t len)
     case debug_ipc::MsgHeader::Type::kAttach: {
       debug_ipc::AttachReply attach;
       if (!debug_ipc::ReadReply(&reader, &attach, &transaction))
-        FXL_NOTREACHED();
+        FX_NOTREACHED();
       HandleAttach(std::move(attach));
       break;
     }
     case debug_ipc::MsgHeader::Type::kNotifyException: {
       debug_ipc::NotifyException exception;
       if (!debug_ipc::ReadNotifyException(&reader, &exception))
-        FXL_NOTREACHED();
+        FX_NOTREACHED();
       HandleNotifyException(std::move(exception));
       break;
     }
     case debug_ipc::MsgHeader::Type::kNotifyIO: {
       debug_ipc::NotifyIO io;
       if (!debug_ipc::ReadNotifyIO(&reader, &io))
-        FXL_NOTREACHED();
+        FX_NOTREACHED();
       HandleNotifyIO(std::move(io));
       break;
     }
     case debug_ipc::MsgHeader::Type::kNotifyModules: {
       debug_ipc::NotifyModules modules;
       if (!debug_ipc::ReadNotifyModules(&reader, &modules))
-        FXL_NOTREACHED();
+        FX_NOTREACHED();
       HandleNotifyModules(std::move(modules));
       break;
     }
     case debug_ipc::MsgHeader::Type::kNotifyProcessExiting: {
       debug_ipc::NotifyProcessExiting process;
       if (!debug_ipc::ReadNotifyProcessExiting(&reader, &process))
-        FXL_NOTREACHED();
+        FX_NOTREACHED();
       HandleNotifyProcessExiting(std::move(process));
       break;
     }
     case debug_ipc::MsgHeader::Type::kNotifyProcessStarting: {
       debug_ipc::NotifyProcessStarting process;
       if (!debug_ipc::ReadNotifyProcessStarting(&reader, &process))
-        FXL_NOTREACHED();
+        FX_NOTREACHED();
       HandleNotifyProcessStarting(std::move(process));
       break;
     }
     case debug_ipc::MsgHeader::Type::kNotifyThreadExiting: {
       debug_ipc::NotifyThread thread;
       if (!debug_ipc::ReadNotifyThread(&reader, &thread))
-        FXL_NOTREACHED();
+        FX_NOTREACHED();
       HandleNotifyThreadExiting(std::move(thread));
       break;
     }
     case debug_ipc::MsgHeader::Type::kNotifyThreadStarting: {
       debug_ipc::NotifyThread thread;
       if (!debug_ipc::ReadNotifyThread(&reader, &thread))
-        FXL_NOTREACHED();
+        FX_NOTREACHED();
       HandleNotifyThreadStarting(std::move(thread));
       break;
     }
     default:
-      FXL_NOTREACHED() << "Unhandled notification: "
-                       << debug_ipc::MsgHeader::TypeToString(header->type);
+      FX_NOTREACHED() << "Unhandled notification: "
+                      << debug_ipc::MsgHeader::TypeToString(header->type);
       break;
   }
 

@@ -34,9 +34,9 @@ ShaderProgram::ShaderProgram(ResourceRecycler* resource_recycler,
                              std::vector<ShaderModulePtr> shader_modules)
     : Resource(resource_recycler) {
   for (auto& mod : shader_modules) {
-    FXL_DCHECK(mod && mod->shader_stage() != ShaderStage::kEnumCount);
+    FX_DCHECK(mod && mod->shader_stage() != ShaderStage::kEnumCount);
     auto index = EnumCast(mod->shader_stage());
-    FXL_DCHECK(!shader_modules_[index]) << "multiply-defined stage.";
+    FX_DCHECK(!shader_modules_[index]) << "multiply-defined stage.";
     mod->AddShaderModuleListener(this);
     shader_modules_[index] = std::move(mod);
   }
@@ -44,7 +44,7 @@ ShaderProgram::ShaderProgram(ResourceRecycler* resource_recycler,
 
 ShaderProgram::ShaderProgram(ResourceRecycler* resource_recycler, ShaderModulePtr shader_module)
     : Resource(resource_recycler) {
-  FXL_DCHECK(shader_module && shader_module->shader_stage() == ShaderStage::kCompute);
+  FX_DCHECK(shader_module && shader_module->shader_stage() == ShaderStage::kCompute);
   shader_module->AddShaderModuleListener(this);
   shader_modules_[EnumCast(ShaderStage::kCompute)] = std::move(shader_module);
 }

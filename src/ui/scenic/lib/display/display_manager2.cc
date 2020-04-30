@@ -20,11 +20,11 @@ static fuchsia::ui::display::DisplayRef NewDisplayRef() {
   fuchsia::ui::display::DisplayRef display_ref;
   // Safe and valid event, by construction.
   zx_status_t status = zx::event::create(/*flags*/ 0u, &display_ref.reference);
-  FXL_DCHECK(status == ZX_OK);
+  FX_DCHECK(status == ZX_OK);
   // Reduce rights to only what's necessary.
   status = display_ref.reference.replace(ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER | ZX_RIGHT_INSPECT,
                                          &display_ref.reference);
-  FXL_DCHECK(status == ZX_OK);
+  FX_DCHECK(status == ZX_OK);
   return display_ref;
 }
 
@@ -34,7 +34,7 @@ static fuchsia::ui::display::DisplayRef DuplicateDisplayRef(
   // Safe and valid event, by construction. Don't allow further duplication.
   zx_status_t status = original_ref.reference.duplicate(ZX_RIGHT_TRANSFER | ZX_RIGHT_INSPECT,
                                                         &display_ref.reference);
-  FXL_DCHECK(status == ZX_OK);
+  FX_DCHECK(status == ZX_OK);
   return display_ref;
 }
 
@@ -180,9 +180,9 @@ DisplayControllerUniquePtr DisplayManager2::ClaimDisplay(zx_koid_t display_ref_k
                                                         std::vector<uint64_t> images,
                                                         uint64_t cookie) {
     if (!dc_private->claimed_dc) {
-      FXL_LOG(WARNING)
+      FX_LOGS(WARNING)
           << "DisplayManager: Couldn't find display controller matching to vsync callback.";
-      FXL_DCHECK(false);
+      FX_DCHECK(false);
       return;
     }
     // Since the number of displays will be very low (and often only == 1), performance is
@@ -193,8 +193,8 @@ DisplayControllerUniquePtr DisplayManager2::ClaimDisplay(zx_koid_t display_ref_k
         return;
       }
     }
-    FXL_LOG(WARNING) << "DisplayManager: Couldn't find display matching to vsync callback.";
-    FXL_DCHECK(false);
+    FX_LOGS(WARNING) << "DisplayManager: Couldn't find display matching to vsync callback.";
+    FX_DCHECK(false);
   });
   return display_controller;
 }
@@ -257,7 +257,7 @@ void DisplayManager2::OnDisplaysChanged(
     if (HasDisplayWithId(dc_private->displays, display_info.id)) {
       last_error_ = "DisplayManager: Display added, but a display already exists with same id=" +
                     std::to_string(display_info.id);
-      FXL_LOG(WARNING) << last_error_;
+      FX_LOGS(WARNING) << last_error_;
       continue;
     }
     if (dc_private->claimed_dc) {
@@ -278,7 +278,7 @@ void DisplayManager2::OnDisplaysChanged(
     if (!display_info_private) {
       last_error_ = "DisplayManager: Got a display removed event for invalid display=" +
                     std::to_string(display_id);
-      FXL_LOG(WARNING) << last_error_;
+      FX_LOGS(WARNING) << last_error_;
       continue;
     }
 
@@ -287,7 +287,7 @@ void DisplayManager2::OnDisplaysChanged(
       if (!deleted) {
         last_error_ = "DisplayManager: Unable to remove display for display controller, id=" +
                       std::to_string(display_id);
-        FXL_LOG(WARNING) << last_error_;
+        FX_LOGS(WARNING) << last_error_;
         continue;
       }
     }
@@ -315,7 +315,7 @@ void DisplayManager2::OnDisplayOwnershipChanged(DisplayControllerPrivate* dc, bo
 void DisplayManager2::RemoveOnInvalid(DisplayControllerPrivate* dc) {
   auto it = std::find_if(display_controllers_private_.begin(), display_controllers_private_.end(),
                          [dc](DisplayControllerPrivateUniquePtr& p) { return p.get() == dc; });
-  FXL_DCHECK(it != display_controllers_private_.end());
+  FX_DCHECK(it != display_controllers_private_.end());
   auto display_controller = std::move(*it);
   display_controllers_private_.erase(it);
   for (auto& display : display_controller->displays) {

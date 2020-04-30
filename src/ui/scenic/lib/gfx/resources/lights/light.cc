@@ -14,7 +14,7 @@ const ResourceTypeInfo Light::kTypeInfo = {ResourceType::kLight, "Light"};
 Light::Light(Session* session, SessionId session_id, ResourceId node_id,
              const ResourceTypeInfo& type_info)
     : Resource(session, session_id, node_id, type_info) {
-  FXL_DCHECK(type_info.IsKindOf(Light::kTypeInfo));
+  FX_DCHECK(type_info.IsKindOf(Light::kTypeInfo));
 }
 
 bool Light::SetColor(const glm::vec3& color) {

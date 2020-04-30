@@ -11,7 +11,7 @@
 namespace zxdb {
 
 Function::Function(DwarfTag tag) : CodeBlock(tag) {
-  FXL_DCHECK(tag == DwarfTag::kSubprogram || tag == DwarfTag::kInlinedSubroutine);
+  FX_DCHECK(tag == DwarfTag::kSubprogram || tag == DwarfTag::kInlinedSubroutine);
 }
 
 Function::~Function() = default;

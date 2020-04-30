@@ -5,11 +5,10 @@
 #include "commands.h"
 
 #include <endian.h>
+#include <lib/zx/time.h>
 
 #include <cstring>
 #include <iostream>
-
-#include <lib/zx/time.h>
 
 #include "src/connectivity/bluetooth/core/bt-host/common/advertising_data.h"
 #include "src/connectivity/bluetooth/core/bt-host/common/manufacturer_names.h"
@@ -157,7 +156,7 @@ void DisplayAdvertisingReport(const ::bt::hci::LEAdvertisingReportData& data, in
 
   // Apply the address type filter.
   if (!addr_type_filter.empty()) {
-    FXL_DCHECK(addr_type_filter == "public" || addr_type_filter == "random");
+    FX_DCHECK(addr_type_filter == "public" || addr_type_filter == "random");
     if (addr_type_filter == "public" && data.address_type != ::bt::hci::LEAddressType::kPublic &&
         data.address_type != ::bt::hci::LEAddressType::kPublicIdentity)
       return;
@@ -581,9 +580,9 @@ bool HandleLEScan(const CommandData* cmd_data, const fxl::CommandLine& cmd_line,
 
   // Event handler to log when we receive advertising reports
   auto le_adv_report_cb = [name_filter, addr_type_filter](const ::bt::hci::EventPacket& event) {
-    FXL_DCHECK(event.event_code() == ::bt::hci::kLEMetaEventCode);
-    FXL_DCHECK(event.params<::bt::hci::LEMetaEventParams>().subevent_code ==
-               ::bt::hci::kLEAdvertisingReportSubeventCode);
+    FX_DCHECK(event.event_code() == ::bt::hci::kLEMetaEventCode);
+    FX_DCHECK(event.params<::bt::hci::LEMetaEventParams>().subevent_code ==
+              ::bt::hci::kLEAdvertisingReportSubeventCode);
 
     ::bt::hci::AdvertisingReportParser parser(event);
     const ::bt::hci::LEAdvertisingReportData* data;
@@ -720,7 +719,7 @@ bool HandleBRScan(const CommandData* cmd_data, const fxl::CommandLine& cmd_line,
 
   // Event handler to log when we receive advertising reports
   auto inquiry_result_cb = [filter](const ::bt::hci::EventPacket& event) {
-    FXL_DCHECK(event.event_code() == ::bt::hci::kInquiryResultEventCode);
+    FX_DCHECK(event.event_code() == ::bt::hci::kInquiryResultEventCode);
 
     const auto& result = event.params<::bt::hci::InquiryResultEventParams>();
 
@@ -1061,7 +1060,7 @@ bool HandleReadScanEnable(const CommandData* cmd_data, const fxl::CommandLine& c
 
 void RegisterCommands(const CommandData* cmd_data,
                       ::bluetooth_tools::CommandDispatcher* dispatcher) {
-  FXL_DCHECK(dispatcher);
+  FX_DCHECK(dispatcher);
 
 #define BIND(handler) std::bind(&handler, cmd_data, std::placeholders::_1, std::placeholders::_2)
 

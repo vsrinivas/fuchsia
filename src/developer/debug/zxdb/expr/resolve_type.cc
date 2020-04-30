@@ -64,7 +64,7 @@ fxl::RefPtr<Type> FindTypeDefinition(const FindNameContext& context, ParsedIdent
   use_context.block = nullptr;
 
   if (FoundName result = FindName(use_context, opts, looking_for)) {
-    FXL_DCHECK(result.type());
+    FX_DCHECK(result.type());
     return result.type();
   }
   return nullptr;

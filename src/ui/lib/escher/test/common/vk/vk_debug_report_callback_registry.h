@@ -34,11 +34,11 @@ class VkDebugReportCallbackRegistry {
   VulkanInstancePtr instance() const { return instance_; }
 
   void SetMainDebugReportCallback(VulkanInstance::DebugReportCallback callback) {
-    FXL_CHECK(!main_callback_handle_);
+    FX_CHECK(!main_callback_handle_);
     main_callback_ = std::make_optional(std::move(callback));
   }
   void SetOptionalDebugReportCallbacks(std::vector<VulkanInstance::DebugReportCallback> callbacks) {
-    FXL_CHECK(optional_callback_handles_.empty());
+    FX_CHECK(optional_callback_handles_.empty());
     optional_callbacks_ = std::move(callbacks);
   }
 

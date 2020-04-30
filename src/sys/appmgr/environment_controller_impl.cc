@@ -28,14 +28,14 @@ EnvironmentControllerImpl::EnvironmentControllerImpl(
     });
   }
   zx_status_t status = wait_.Begin(async_get_default_dispatcher());
-  FXL_DCHECK(status == ZX_OK);
+  FX_DCHECK(status == ZX_OK);
 }
 
 // Called when job terminates, regardless of if Kill() was invoked.
 void EnvironmentControllerImpl::Handler(async_dispatcher_t* dispatcher, async::WaitBase* wait,
                                         zx_status_t status, const zx_packet_signal* signal) {
-  FXL_DCHECK(status == ZX_OK);
-  FXL_DCHECK((signal->observed & ZX_TASK_TERMINATED) == ZX_TASK_TERMINATED) << signal->observed;
+  FX_DCHECK(status == ZX_OK);
+  FX_DCHECK((signal->observed & ZX_TASK_TERMINATED) == ZX_TASK_TERMINATED) << signal->observed;
 
   ExtractEnvironmentController();
 

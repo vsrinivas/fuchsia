@@ -25,7 +25,7 @@ ActivityProviderConnection::~ActivityProviderConnection() { Stop(); }
 
 zx_status_t ActivityProviderConnection::Stop() {
   if (observer_id_) {
-    FXL_LOG(INFO) << "activity-service: Listener " << *observer_id_ << " stopping";
+    FX_LOGS(INFO) << "activity-service: Listener " << *observer_id_ << " stopping";
     state_machine_driver_->UnregisterObserver(*observer_id_);
   }
   if (publish_state_task_.is_pending()) {
@@ -36,11 +36,11 @@ zx_status_t ActivityProviderConnection::Stop() {
 
 void ActivityProviderConnection::WatchState(
     fidl::InterfaceHandle<fuchsia::ui::activity::Listener> listener) {
-  FXL_LOG(INFO) << "activity-service: Registering listener";
+  FX_LOGS(INFO) << "activity-service: Registering listener";
 
   // WatchState should only be called once per connection.
   if (listener_.is_bound()) {
-    FXL_LOG(WARNING) << "activity-service: WatchState called twice on same connection; "
+    FX_LOGS(WARNING) << "activity-service: WatchState called twice on same connection; "
                      << "ignoring";
     return;
   }
@@ -50,12 +50,12 @@ void ActivityProviderConnection::WatchState(
                                             std::placeholders::_1, std::placeholders::_2);
   auto status = state_machine_driver_->RegisterObserver(id, std::move(callback));
   if (status != ZX_OK) {
-    FXL_LOG(WARNING) << "activity-service: failed to register state observer: "
+    FX_LOGS(WARNING) << "activity-service: failed to register state observer: "
                      << zx_status_get_string(status);
     return;
   }
   observer_id_ = id;
-  FXL_LOG(INFO) << "activity-service: Obtained observer ID " << id;
+  FX_LOGS(INFO) << "activity-service: Obtained observer ID " << id;
 
   listener_ = listener.Bind();
   listener_.set_error_handler([this](zx_status_t status) { Stop(); });
@@ -75,7 +75,7 @@ void ActivityProviderConnection::OnStateChanged(fuchsia::ui::activity::State sta
   if (listener_ready_ && !publish_state_task_.is_pending()) {
     auto status = publish_state_task_.Post(dispatcher_);
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "activity-service: Failed to post state change task: "
+      FX_LOGS(ERROR) << "activity-service: Failed to post state change task: "
                      << zx_status_get_string(status);
     }
   }

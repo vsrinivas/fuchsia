@@ -19,7 +19,7 @@ SamplerPtr SamplerCache::ObtainSampler(vk::Filter filter, bool use_unnormalized_
 
 SamplerPtr SamplerCache::ObtainYuvSampler(vk::Format format, vk::Filter filter,
                                           bool use_unnormalized_coordinates) {
-  FXL_DCHECK(image_utils::IsYuvFormat(format));
+  FX_DCHECK(image_utils::IsYuvFormat(format));
   Key key{format, filter, use_unnormalized_coordinates};
   return ObtainSampler(key);
 }

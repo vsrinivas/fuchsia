@@ -4,11 +4,11 @@
 
 #include "garnet/bin/ktrace_provider/importer.h"
 
+#include <lib/zx/clock.h>
 #include <zircon/syscalls.h>
 
 #include <fbl/algorithm.h>
 #include <fbl/string_printf.h>
-#include <lib/zx/clock.h>
 
 #include "garnet/bin/ktrace_provider/reader.h"
 #include "src/lib/fxl/logging.h"
@@ -52,7 +52,7 @@ constexpr trace_thread_state_t ToTraceThreadState(int value) {
     case 7:  // THREAD_DEATH
       return ZX_THREAD_STATE_DEAD;
     default:  // ???
-      FXL_LOG(WARNING) << "Imported unknown thread state from ktrace: " << value;
+      FX_LOGS(WARNING) << "Imported unknown thread state from ktrace: " << value;
       return INT32_MAX;
   }
 }
@@ -131,7 +131,7 @@ bool Importer::Import(Reader& reader) {
   while (true) {
     if (auto record = reader.ReadNextRecord()) {
       if (!ImportRecord(record, KTRACE_LEN(record->tag))) {
-        FXL_VLOG(5) << "Skipped ktrace record, tag=0x" << std::hex << record->tag;
+        FX_VLOGS(5) << "Skipped ktrace record, tag=0x" << std::hex << record->tag;
       }
     } else {
       break;
@@ -142,7 +142,7 @@ bool Importer::Import(Reader& reader) {
   size_t nr_records_read = reader.number_records_read();
 
   // This is an INFO and not VLOG() as we currently always want to see this.
-  FXL_LOG(INFO) << "Import of " << nr_records_read << " ktrace records"
+  FX_LOGS(INFO) << "Import of " << nr_records_read << " ktrace records"
                 << "(" << nr_bytes_read
                 << " bytes) took: " << (zx::clock::get_monotonic() - start).to_usecs() << "us";
 
@@ -188,7 +188,7 @@ bool Importer::ImportRecord(const ktrace_header_t* record, size_t record_size) {
 }
 
 bool Importer::ImportBasicRecord(const ktrace_header_t* record, const TagInfo& tag_info) {
-  FXL_VLOG(5) << "BASIC: tag=0x" << std::hex << record->tag << " (" << tag_info.name
+  FX_VLOGS(5) << "BASIC: tag=0x" << std::hex << record->tag << " (" << tag_info.name
               << "), tid=" << std::dec << record->tid << ", timestamp=" << record->ts;
 
   switch (KTRACE_EVENT(record->tag)) {
@@ -206,7 +206,7 @@ bool Importer::ImportBasicRecord(const ktrace_header_t* record, const TagInfo& t
 }
 
 bool Importer::ImportQuadRecord(const ktrace_rec_32b_t* record, const TagInfo& tag_info) {
-  FXL_VLOG(5) << "QUAD: tag=0x" << std::hex << record->tag << " (" << tag_info.name
+  FX_VLOGS(5) << "QUAD: tag=0x" << std::hex << record->tag << " (" << tag_info.name
               << "), tid=" << std::dec << record->tid << ", timestamp=" << record->ts << ", a=0x"
               << std::hex << record->a << ", b=0x" << record->b << ", c=0x" << record->c << ", d=0x"
               << record->d;
@@ -220,7 +220,7 @@ bool Importer::ImportQuadRecord(const ktrace_rec_32b_t* record, const TagInfo& t
       trace_ticks_t kernel_ticks_per_second = ToUInt64(record->a, record->b) * 1000u;
       trace_ticks_t user_ticks_per_second = zx_ticks_per_second();
       if (kernel_ticks_per_second != user_ticks_per_second) {
-        FXL_LOG(WARNING) << "Kernel and userspace are using different tracing "
+        FX_LOGS(WARNING) << "Kernel and userspace are using different tracing "
                             "timebases, "
                             "tracks may be misaligned: "
                          << "kernel_ticks_per_second=" << kernel_ticks_per_second
@@ -352,7 +352,7 @@ bool Importer::ImportQuadRecord(const ktrace_rec_32b_t* record, const TagInfo& t
 
 bool Importer::ImportNameRecord(const ktrace_rec_name_t* record, const TagInfo& tag_info) {
   fbl::StringPiece name(record->name, strnlen(record->name, ZX_MAX_NAME_LEN - 1));
-  FXL_VLOG(5) << "NAME: tag=0x" << std::hex << record->tag << " (" << tag_info.name << "), id=0x"
+  FX_VLOGS(5) << "NAME: tag=0x" << std::hex << record->tag << " (" << tag_info.name << "), id=0x"
               << record->id << ", arg=0x" << record->arg << ", name='" << fbl::String(name).c_str()
               << "'";
 
@@ -389,20 +389,20 @@ bool Importer::ImportProbeRecord(const ktrace_header_t* record, size_t record_si
   if (record_size == 24) {
     const auto arg0 = reinterpret_cast<const uint32_t*>(record + 1)[0];
     const auto arg1 = reinterpret_cast<const uint32_t*>(record + 1)[1];
-    FXL_VLOG(5) << "PROBE: tag=0x" << std::hex << record->tag << ", event_name_id=0x"
+    FX_VLOGS(5) << "PROBE: tag=0x" << std::hex << record->tag << ", event_name_id=0x"
                 << event_name_id << ", tid=" << std::dec << record->tid << ", ts=" << record->ts
                 << ", arg0=0x" << std::hex << arg0 << ", arg1=0x" << arg1;
     return HandleProbe(record->ts, record->tid, event_name_id, cpu_trace, arg0, arg1);
   } else if (record_size == 32) {
     const auto arg0 = reinterpret_cast<const uint64_t*>(record + 1)[0];
     const auto arg1 = reinterpret_cast<const uint64_t*>(record + 1)[1];
-    FXL_VLOG(5) << "PROBE: tag=0x" << std::hex << record->tag << ", event_name_id=0x"
+    FX_VLOGS(5) << "PROBE: tag=0x" << std::hex << record->tag << ", event_name_id=0x"
                 << event_name_id << ", tid=" << std::dec << record->tid << ", ts=" << record->ts
                 << ", arg0=0x" << std::hex << arg0 << ", arg1=0x" << arg1;
     return HandleProbe(record->ts, record->tid, event_name_id, cpu_trace, arg0, arg1);
   }
 
-  FXL_VLOG(5) << "PROBE: tag=0x" << std::hex << record->tag << ", event_name_id=0x" << event_name_id
+  FX_VLOGS(5) << "PROBE: tag=0x" << std::hex << record->tag << ", event_name_id=0x" << event_name_id
               << ", tid=" << std::dec << record->tid << ", ts=" << record->ts;
   return HandleProbe(record->ts, record->tid, event_name_id, cpu_trace);
 }
@@ -440,7 +440,7 @@ bool Importer::ImportDurationRecord(const ktrace_header_t* record, size_t record
 }
 
 bool Importer::ImportFlowRecord(const ktrace_header_t* record, size_t record_size) {
-  FXL_DCHECK(KTRACE_FLAGS(record->tag) & KTRACE_FLAGS_FLOW);
+  FX_DCHECK(KTRACE_FLAGS(record->tag) & KTRACE_FLAGS_FLOW);
 
   if (!(KTRACE_EVENT(record->tag) & KTRACE_NAMED_EVENT_BIT)) {
     return ImportUnknownRecord(record, record_size);
@@ -467,7 +467,7 @@ bool Importer::ImportFlowRecord(const ktrace_header_t* record, size_t record_siz
 }
 
 bool Importer::ImportUnknownRecord(const ktrace_header_t* record, size_t record_size) {
-  FXL_VLOG(5) << "UNKNOWN: tag=0x" << std::hex << record->tag << ", size=" << std::dec
+  FX_VLOGS(5) << "UNKNOWN: tag=0x" << std::hex << record->tag << ", size=" << std::dec
               << record_size;
   return false;
 }
@@ -553,7 +553,7 @@ bool Importer::HandleSyscallEnter(trace_ticks_t event_time, trace_cpu_number_t c
   if (thread != ZX_KOID_INVALID) {
     auto& duration = syscall_durations_[thread];
     if (duration.valid) {
-      FXL_LOG(WARNING) << "Syscall duration for thread " << thread << " already exists";
+      FX_LOGS(WARNING) << "Syscall duration for thread " << thread << " already exists";
     }
     duration = SyscallDuration{.begin = event_time, .syscall = syscall, .valid = true};
   }
@@ -571,7 +571,7 @@ bool Importer::HandleSyscallExit(trace_ticks_t event_time, trace_cpu_number_t cp
       return false;
     }
     if (duration.syscall != syscall) {
-      FXL_LOG(WARNING) << "Syscall end type on thread " << thread
+      FX_LOGS(WARNING) << "Syscall end type on thread " << thread
                        << " does not match the begin type";
       return false;
     }
@@ -830,7 +830,7 @@ bool Importer::HandleProcessExit(trace_ticks_t event_time, zx_koid_t thread,
 bool Importer::HandleChannelCreate(trace_ticks_t event_time, zx_koid_t thread, zx_koid_t channel0,
                                    zx_koid_t channel1, uint32_t flags) {
   if (channels_.ids_.count(channel0) != 0 || channels_.ids_.count(channel1) != 0) {
-    FXL_LOG(WARNING) << "Channel creation for an already known channel was requested, "
+    FX_LOGS(WARNING) << "Channel creation for an already known channel was requested, "
                      << "ignoring the request.";
     return false;
   }
@@ -939,7 +939,7 @@ bool Importer::HandleProbe(trace_ticks_t event_time, zx_koid_t thread, uint32_t 
 bool Importer::HandleVcpuEnter(trace_ticks_t event_time, zx_koid_t thread) {
   auto& duration = vcpu_durations_[thread];
   if (duration.valid) {
-    FXL_LOG(WARNING) << "VCPU duration for thread " << thread << " already exists";
+    FX_LOGS(WARNING) << "VCPU duration for thread " << thread << " already exists";
     return false;
   }
   duration = VcpuDuration{.begin = event_time, .valid = true};
@@ -953,7 +953,7 @@ bool Importer::HandleVcpuExit(trace_ticks_t event_time, zx_koid_t thread, uint32
       trace_make_arg(exit_address_name_ref_, trace_make_pointer_arg_value(exit_addr)),
   };
   if (!duration.valid) {
-    FXL_LOG(WARNING) << "VCPU duration for thread " << thread << " does not have a beginning";
+    FX_LOGS(WARNING) << "VCPU duration for thread " << thread << " does not have a beginning";
     return false;
   }
 

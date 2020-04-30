@@ -55,7 +55,7 @@ int BreakOnFunctionThreadFunction(void* user) {
   while (thread_setup->test_running) {
     auto* function_to_call =
         reinterpret_cast<HWBreakpointTestCaseFunctionToBeCalled>(thread_setup->user);
-    FXL_DCHECK(function_to_call);
+    FX_DCHECK(function_to_call);
 
     // We use write to avoid deadlocking with the outside libc calls.
     write(1, kBeacon, sizeof(kBeacon));
@@ -106,10 +106,10 @@ void BreakOnFunctionTestCase() {
 
     // We wait until we receive an exception.
     auto opt_excp = WaitForException(port, exception_channel);
-    FXL_DCHECK(opt_excp.has_value());
+    FX_DCHECK(opt_excp.has_value());
     exception = std::move(*opt_excp);
 
-    FXL_DCHECK(exception.info.type == ZX_EXCP_HW_BREAKPOINT);
+    FX_DCHECK(exception.info.type == ZX_EXCP_HW_BREAKPOINT);
     PRINT("Hit HW breakpoint %zu on 0x%zx", i, exception.pc);
 
     // Remove the breakpoint.
@@ -140,7 +140,7 @@ int WatchpointThreadFunction(void* user) {
     CHECK_OK(thread_setup->event.wait_one(kHarnessToThread, zx::time::infinite(), nullptr));
 
     uint8_t* byte = reinterpret_cast<uint8_t*>(thread_setup->user);
-    FXL_DCHECK(byte);
+    FX_DCHECK(byte);
 
     *byte += 1;
 
@@ -177,7 +177,7 @@ bool TestWatchpointRun(const zx::port& port, const zx::channel& exception_channe
 
   Exception exception = std::move(*opt_excp);
 
-  FXL_DCHECK(exception.info.type == ZX_EXCP_HW_BREAKPOINT);
+  FX_DCHECK(exception.info.type == ZX_EXCP_HW_BREAKPOINT);
   PRINT_CLEAN("Writing into 0x%zx. Hit!", (uint64_t)address_to_write);
 
   WaitAsyncOnExceptionChannel(port, exception_channel);
@@ -216,9 +216,9 @@ void WatchpointTestCase() {
         // We should only hit if it is the expected byte.
         bool in_range = (j - i) < size;
         if (hit) {
-          FXL_DCHECK(in_range) << "i: " << i << ", j: " << j << ". Got unexpected hit.";
+          FX_DCHECK(in_range) << "i: " << i << ", j: " << j << ". Got unexpected hit.";
         } else {
-          FXL_DCHECK(!in_range) << "i: " << i << ", j: " << j << ". Didn't get expected hit.";
+          FX_DCHECK(!in_range) << "i: " << i << ", j: " << j << ". Didn't get expected hit.";
         }
       }
     }
@@ -289,7 +289,7 @@ void WatchpointStepOver(uint64_t wp_address, const zx::thread& thread, const zx:
   RemoveWatchpoint(thread);
 
   exception = SingleStep(thread, port, exception_channel, std::move(exception));
-  FXL_DCHECK(exception);
+  FX_DCHECK(exception);
 
   // Now that we have single stepped, we can reinstall the watchpoint.
   InstallWatchpoint(thread, wp_address, 4, WatchpointType::kReadWrite);
@@ -328,36 +328,36 @@ void AlignedWatchpointTestCase() {
     PRINT("ITERATION %d ---------------------------------------------------------", i);
     // Wait until the exception is hit.
     auto exception = WaitForException(port, exception_channel, GET_DEADLINE(kExceptionWaitTimeout));
-    FXL_DCHECK(exception.has_value());
-    FXL_DCHECK(exception->pc > pc);
-    FXL_DCHECK(DecodeHWException(thread, exception.value()) == HWExceptionType::kWatchpoint);
+    FX_DCHECK(exception.has_value());
+    FX_DCHECK(exception->pc > pc);
+    FX_DCHECK(DecodeHWException(thread, exception.value()) == HWExceptionType::kWatchpoint);
     pc = exception->pc;
     PRINT("Exception on 0x%p: Hit first printf read!", (void*)exception->pc);
 
     WatchpointStepOver(wp_address, thread, port, exception_channel, std::move(exception));
 
     exception = WaitForException(port, exception_channel, GET_DEADLINE(kExceptionWaitTimeout));
-    FXL_DCHECK(exception.has_value());
-    FXL_DCHECK(exception->pc > pc);
-    FXL_DCHECK(DecodeHWException(thread, exception.value()) == HWExceptionType::kWatchpoint);
+    FX_DCHECK(exception.has_value());
+    FX_DCHECK(exception->pc > pc);
+    FX_DCHECK(DecodeHWException(thread, exception.value()) == HWExceptionType::kWatchpoint);
     pc = exception->pc;
     PRINT("Exception on 0x%p: Hit ++ read!", (void*)exception->pc);
 
     WatchpointStepOver(wp_address, thread, port, exception_channel, std::move(exception));
 
     exception = WaitForException(port, exception_channel, GET_DEADLINE(kExceptionWaitTimeout));
-    FXL_DCHECK(exception.has_value());
-    FXL_DCHECK(exception->pc > pc);
-    FXL_DCHECK(DecodeHWException(thread, exception.value()) == HWExceptionType::kWatchpoint);
+    FX_DCHECK(exception.has_value());
+    FX_DCHECK(exception->pc > pc);
+    FX_DCHECK(DecodeHWException(thread, exception.value()) == HWExceptionType::kWatchpoint);
     pc = exception->pc;
     PRINT("Exception on 0x%p: Hit ++ write!", (void*)exception->pc);
 
     WatchpointStepOver(wp_address, thread, port, exception_channel, std::move(exception));
 
     exception = WaitForException(port, exception_channel, GET_DEADLINE(kExceptionWaitTimeout));
-    FXL_DCHECK(exception.has_value());
-    FXL_DCHECK(exception->pc > pc);
-    FXL_DCHECK(DecodeHWException(thread, exception.value()) == HWExceptionType::kWatchpoint);
+    FX_DCHECK(exception.has_value());
+    FX_DCHECK(exception->pc > pc);
+    FX_DCHECK(DecodeHWException(thread, exception.value()) == HWExceptionType::kWatchpoint);
     pc = exception->pc;
     PRINT("Exception on 0x%p: Hit second printf read!", (void*)exception->pc);
 
@@ -470,13 +470,13 @@ uint64_t CheckWatchpointException(const std::optional<Exception>& exception,
                                   uint32_t expected_instruction, uint64_t base_address, uint64_t pc,
                                   const char* msg) {
   // Wait until the exception is hit.
-  FXL_DCHECK(exception.has_value());
-  FXL_DCHECK(exception->pc > pc);
-  FXL_DCHECK(DecodeHWException(thread, exception.value()) == HWExceptionType::kWatchpoint);
+  FX_DCHECK(exception.has_value());
+  FX_DCHECK(exception->pc > pc);
+  FX_DCHECK(DecodeHWException(thread, exception.value()) == HWExceptionType::kWatchpoint);
   pc = exception->pc;
-  FXL_DCHECK(pc < base_address + kInstructionBufferSize * sizeof(uint64_t));
+  FX_DCHECK(pc < base_address + kInstructionBufferSize * sizeof(uint64_t));
   uint32_t instruction = instructions[(pc - base_address) >> 2];
-  FXL_DCHECK(instruction == expected_instruction);
+  FX_DCHECK(instruction == expected_instruction);
   PRINT("SERVER: Exception on %p (0x%x): %s.", reinterpret_cast<void*>(pc), instruction, msg);
 
   return pc;
@@ -534,7 +534,7 @@ void WatchpointServer() {
   uint64_t kBaseAddress = 0;
   CHECK_OK(process.comm_channel.read(0, &kBaseAddress, nullptr, sizeof(kBaseAddress), 0, nullptr,
                                      nullptr));
-  FXL_DCHECK(kBaseAddress > 0);
+  FX_DCHECK(kBaseAddress > 0);
   PRINT("SERVER: Got Base address %p.", reinterpret_cast<void*>(kBaseAddress));
 
   // Ping the client we got it and wait for it to spawn up a thread and send the handle over.
@@ -595,7 +595,7 @@ void WatchpointClient() {
   zx::eventpair event;
   CHECK_OK(
       channel.read(0, &kTimes, event.reset_and_get_address(), sizeof(kTimes), 1, nullptr, nullptr));
-  FXL_DCHECK(kTimes > 0);
+  FX_DCHECK(kTimes > 0);
 
   PRINT("CLIENT: Read event. Times: %u.", kTimes);
   CHECK_OK(SignalServer(event));

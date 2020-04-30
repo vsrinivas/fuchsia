@@ -15,12 +15,12 @@ namespace escher {
 
 NaiveGpuAllocator::NaiveGpuAllocator(const VulkanContext& context)
     : physical_device_(context.physical_device), device_(context.device) {
-  FXL_DCHECK(device_);
+  FX_DCHECK(device_);
 }
 
 NaiveGpuAllocator::~NaiveGpuAllocator() {
-  FXL_CHECK(total_slab_bytes_ == 0);
-  FXL_CHECK(slab_count_ == 0);
+  FX_CHECK(total_slab_bytes_ == 0);
+  FX_CHECK(slab_count_ == 0);
 }
 
 GpuMemPtr NaiveGpuAllocator::AllocateMemory(vk::MemoryRequirements reqs,
@@ -63,7 +63,7 @@ BufferPtr NaiveGpuAllocator::AllocateBuffer(ResourceManager* manager, vk::Device
                                             GpuMemPtr* out_ptr) {
   TRACE_DURATION("gfx", "escher::NaiveGpuAllocator::AllocateBuffer");
   // NaiveBuffer requires a real manager pointer to properly function.
-  FXL_DCHECK(manager);
+  FX_DCHECK(manager);
 
   // Create buffer.
   vk::BufferCreateInfo buffer_create_info;
@@ -76,7 +76,7 @@ BufferPtr NaiveGpuAllocator::AllocateBuffer(ResourceManager* manager, vk::Device
 
   // Allocate memory for the buffer.
   GpuMemPtr mem = AllocateMemory(memory_requirements, memory_property_flags);
-  FXL_DCHECK(mem->size() >= size)
+  FX_DCHECK(mem->size() >= size)
       << "Size of allocated memory should not be less than requested size";
 
   if (out_ptr) {
@@ -92,7 +92,7 @@ ImagePtr NaiveGpuAllocator::AllocateImage(ResourceManager* manager, const ImageI
   // Check if the image create info above is valid.
   if (!impl::CheckImageCreateInfoValidity(
           physical_device_, image_utils::CreateVkImageCreateInfo(info, kInitialLayout))) {
-    FXL_LOG(ERROR) << "NaiveGpuAllocator::AllocateImage(): ImageCreateInfo invalid. Create failed.";
+    FX_LOGS(ERROR) << "NaiveGpuAllocator::AllocateImage(): ImageCreateInfo invalid. Create failed.";
     return ImagePtr();
   }
 
@@ -107,7 +107,7 @@ ImagePtr NaiveGpuAllocator::AllocateImage(ResourceManager* manager, const ImageI
   }
   ImagePtr escher_image =
       impl::NaiveImage::AdoptVkImage(manager, info, image, std::move(mem), kInitialLayout);
-  FXL_CHECK(escher_image);
+  FX_CHECK(escher_image);
   return escher_image;
 }
 

@@ -31,7 +31,7 @@ App::App(const fxl::CommandLine& command_line, async::Loop* loop)
                          *component_context_.get()),
       focuser_binding_(this),
       media_buttons_handler_(&activity_notifier_) {
-  FXL_DCHECK(component_context_);
+  FX_DCHECK(component_context_);
 
   input_reader_.Start();
 
@@ -73,7 +73,7 @@ void App::PresentView(
     std::string rotation_value;
     if (files::ReadFileToString("/config/data/display_rotation", &rotation_value)) {
       display_startup_rotation_adjustment = atoi(rotation_value.c_str());
-      FXL_LOG(INFO) << "Display rotation adjustment applied: "
+      FX_LOGS(INFO) << "Display rotation adjustment applied: "
                     << display_startup_rotation_adjustment << " degrees.";
     }
   }
@@ -105,7 +105,7 @@ void App::AddPresentation(std::unique_ptr<Presentation> presentation) {
   // TODO(41929): Once we're confident no one is using multiple presentations, assert this never
   // happens.
   if (!presentations_.empty()) {
-    FXL_LOG(WARNING)
+    FX_LOGS(WARNING)
         << "Using multiple presentations is deprecated. Call PresentOrReplaceView() to "
            "force replacement of current presentation.";
     zx::nanosleep(zx::deadline_after(zx::sec(1)));
@@ -120,7 +120,7 @@ void App::AddPresentation(std::unique_ptr<Presentation> presentation) {
 }
 
 void App::ReplacePresentationWith(std::unique_ptr<Presentation> presentation) {
-  FXL_DCHECK(presentations_.size() == 1)
+  FX_DCHECK(presentations_.size() == 1)
       << "Can only replace presentation when there is a single instance.";
   ShutdownPresentation(/*presentation_idx=*/0);
   AddPresentation(std::move(presentation));
@@ -148,7 +148,7 @@ void App::ShutdownPresentation(size_t presentation_idx) {
 }
 
 void App::SwitchToPresentation(const size_t presentation_idx) {
-  FXL_DCHECK(presentation_idx < presentations_.size());
+  FX_DCHECK(presentation_idx < presentations_.size());
   if (presentation_idx == active_presentation_idx_) {
     return;
   }
@@ -177,7 +177,7 @@ void App::RegisterDevice(
     fidl::InterfaceRequest<fuchsia::ui::input::InputDevice> input_device_request) {
   uint32_t device_id = ++next_device_token_;
 
-  FXL_VLOG(1) << "RegisterDevice " << device_id << " " << descriptor;
+  FX_VLOGS(1) << "RegisterDevice " << device_id << " " << descriptor;
   std::unique_ptr<ui_input::InputDeviceImpl> input_device =
       std::make_unique<ui_input::InputDeviceImpl>(device_id, std::move(descriptor),
                                                   std::move(input_device_request), this);
@@ -198,7 +198,7 @@ void App::OnDeviceDisconnected(ui_input::InputDeviceImpl* input_device) {
   if (devices_by_id_.count(input_device->id()) == 0)
     return;
 
-  FXL_VLOG(1) << "UnregisterDevice " << input_device->id();
+  FX_VLOGS(1) << "UnregisterDevice " << input_device->id();
 
   if (!media_buttons_handler_.OnDeviceRemoved(input_device->id())) {
     for (auto& presentation : presentations_) {
@@ -214,7 +214,7 @@ void App::OnReport(ui_input::InputDeviceImpl* input_device,
   TRACE_DURATION("input", "root_presenter_on_report", "id", report.trace_id);
   TRACE_FLOW_END("input", "report_to_presenter", report.trace_id);
 
-  FXL_VLOG(3) << "OnReport from " << input_device->id() << " " << report;
+  FX_VLOGS(3) << "OnReport from " << input_device->id() << " " << report;
 
   if (devices_by_id_.count(input_device->id()) == 0) {
     return;
@@ -234,8 +234,8 @@ void App::OnReport(ui_input::InputDeviceImpl* input_device,
     return;
   }
 
-  FXL_DCHECK(active_presentation_idx_ < presentations_.size());
-  FXL_VLOG(3) << "OnReport to " << active_presentation_idx_;
+  FX_DCHECK(active_presentation_idx_ < presentations_.size());
+  FX_VLOGS(3) << "OnReport to " << active_presentation_idx_;
 
   // Input events are only reported to the active presentation.
   TRACE_FLOW_BEGIN("input", "report_to_presentation", report.trace_id);
@@ -246,13 +246,13 @@ void App::InitializeServices() {
   if (!scenic_) {
     component_context_->svc()->Connect(scenic_.NewRequest());
     scenic_.set_error_handler([this](zx_status_t error) {
-      FXL_LOG(ERROR) << "Scenic died, destroying all presentations.";
+      FX_LOGS(ERROR) << "Scenic died, destroying all presentations.";
       Reset();
     });
 
     session_ = std::make_unique<scenic::Session>(scenic_.get(), view_focuser_.NewRequest());
     session_->set_error_handler([this](zx_status_t error) {
-      FXL_LOG(ERROR) << "Session died, destroying all presentations.";
+      FX_LOGS(ERROR) << "Session died, destroying all presentations.";
       Reset();
     });
     session_->set_event_handler([this](std::vector<fuchsia::ui::scenic::Event> events) {
@@ -311,7 +311,7 @@ void App::HandleScenicEvent(const fuchsia::ui::scenic::Event& event) {
         case fuchsia::ui::gfx::Event::Tag::kViewDisconnected: {
           auto& evt = event.gfx().view_disconnected();
 
-          FXL_LOG(INFO) << "ViewHolder " << evt.view_holder_id << " disconnected, "
+          FX_LOGS(INFO) << "ViewHolder " << evt.view_holder_id << " disconnected, "
                         << presentations_.size() << " presentations currently active.";
 
           // When ReplacePresentationWith() is called, there is a race between the release of the
@@ -324,7 +324,7 @@ void App::HandleScenicEvent(const fuchsia::ui::scenic::Event& event) {
           // safe race condition occurred.
           for (size_t idx = 0; idx < presentations_.size(); ++idx) {
             if (evt.view_holder_id == presentations_[idx]->view_holder().id()) {
-              FXL_LOG(INFO)
+              FX_LOGS(INFO)
                   << "Root presenter: Content view terminated, shutting down presentation " << idx;
               ShutdownPresentation(idx);
               break;
@@ -348,7 +348,7 @@ void App::Register(fidl::InterfaceHandle<fuchsia::ui::input::accessibility::Poin
   if (!pointer_event_registry_) {
     component_context_->svc()->Connect(pointer_event_registry_.NewRequest());
   }
-  FXL_LOG(INFO) << "Connecting to pointer event registry.";
+  FX_LOGS(INFO) << "Connecting to pointer event registry.";
   // Forward the listener to the registry we're connected to.
   auto callback = [](bool) {};
   pointer_event_registry_->Register(std::move(pointer_event_listener), std::move(callback));
@@ -364,7 +364,7 @@ void App::RegisterFocuser(fidl::InterfaceRequest<fuchsia::ui::views::Focuser> vi
     return;
   }
   if (focuser_binding_.is_bound()) {
-    FXL_LOG(INFO) << "Registering a new Focuser for a11y. Dropping the old one.";
+    FX_LOGS(INFO) << "Registering a new Focuser for a11y. Dropping the old one.";
   }
   focuser_binding_.Bind(std::move(view_focuser));
 }

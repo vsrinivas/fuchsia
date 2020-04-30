@@ -4,19 +4,18 @@
 
 // TODO: Taken from crashlogger. Revisit.
 
+#include "dso_list.h"
+
 #include <fcntl.h>
 #include <link.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
-
-#include "dso_list.h"
 #include "util.h"
 
 namespace debugger_utils {
@@ -29,7 +28,7 @@ static dsoinfo_t* dsolist_add(dsoinfo_t** list, const char* name, uintptr_t base
   size_t alloc_bytes = sizeof(dsoinfo_t) + len + 1;
   auto dso = reinterpret_cast<dsoinfo_t*>(calloc(1, alloc_bytes));
   if (dso == nullptr) {
-    FXL_LOG(FATAL) << "OOM allocating " << alloc_bytes << " bytes";
+    FX_LOGS(FATAL) << "OOM allocating " << alloc_bytes << " bytes";
     exit(1);
   }
   memcpy(dso->name, name, len + 1);
@@ -73,14 +72,14 @@ dsoinfo_t* dso_fetch_list(std::shared_ptr<ByteBlock> bb, zx_vaddr_t lmap_addr, c
     std::unique_ptr<ElfReader> elf_reader;
     ElfError rc = ElfReader::Create(file_name, bb, 0, dso->base, &elf_reader);
     if (rc != ElfError::OK) {
-      FXL_LOG(ERROR) << "Unable to read ELF file: " << file_name << ": " << ElfErrorName(rc);
+      FX_LOGS(ERROR) << "Unable to read ELF file: " << file_name << ": " << ElfErrorName(rc);
       break;
     }
 
     auto hdr = elf_reader->header();
     rc = elf_reader->ReadSegmentHeaders();
     if (rc != ElfError::OK) {
-      FXL_LOG(ERROR) << "Error reading ELF segment headers: " << ElfErrorName(rc);
+      FX_LOGS(ERROR) << "Error reading ELF segment headers: " << ElfErrorName(rc);
     } else {
       size_t num_segments = elf_reader->GetNumSegments();
       uint32_t num_loadable_phdrs = 0;
@@ -104,18 +103,18 @@ dsoinfo_t* dso_fetch_list(std::shared_ptr<ByteBlock> bb, zx_vaddr_t lmap_addr, c
           if (phdr.p_type == PT_LOAD)
             loadable_phdrs[j++] = phdr;
         }
-        FXL_DCHECK(j == num_loadable_phdrs);
+        FX_DCHECK(j == num_loadable_phdrs);
         dso->num_loadable_phdrs = num_loadable_phdrs;
         dso->loadable_phdrs = loadable_phdrs;
       } else {
-        FXL_LOG(ERROR) << "OOM reading phdrs";
+        FX_LOGS(ERROR) << "OOM reading phdrs";
       }
     }
 
     rc = elf_reader->ReadBuildId(dso->buildid, sizeof(dso->buildid));
     if (rc != ElfError::OK) {
       // This isn't fatal so don't flag as an error.
-      FXL_VLOG(1) << "Unable to read build id: " << ElfErrorName(rc);
+      FX_VLOGS(1) << "Unable to read build id: " << ElfErrorName(rc);
     }
 
     dso->is_main_exec = is_main_exec;
@@ -167,7 +166,7 @@ void dso_print_list(FILE* out, const dsoinfo_t* dso_list) {
 
 void dso_vlog_list(const dsoinfo_t* dso_list) {
   for (auto dso = dso_list; dso != nullptr; dso = dso->next) {
-    FXL_VLOG(2) << fxl::StringPrintf("dso: id=%s base=%p name=%s", dso->buildid, (void*)dso->base,
+    FX_VLOGS(2) << fxl::StringPrintf("dso: id=%s base=%p name=%s", dso->buildid, (void*)dso->base,
                                      dso->name);
   }
 }
@@ -180,11 +179,11 @@ zx_status_t dso_find_debug_file(dsoinfo_t* dso, const char** out_debug_file) {
   if (dso->debug_file_tried) {
     switch (dso->debug_file_status) {
       case ZX_OK:
-        FXL_DCHECK(dso->debug_file != nullptr);
+        FX_DCHECK(dso->debug_file != nullptr);
         *out_debug_file = dso->debug_file;
       // fall through
       default:
-        FXL_VLOG(2) << "returning " << dso->debug_file_status
+        FX_VLOGS(2) << "returning " << dso->debug_file_status
                     << ", already tried to find debug file for " << dso->name;
         return dso->debug_file_status;
     }
@@ -194,20 +193,20 @@ zx_status_t dso_find_debug_file(dsoinfo_t* dso, const char** out_debug_file) {
 
   char* path;
   if (asprintf(&path, "%s/%s%s", kDebugDirectory, dso->buildid, kDebugSuffix) < 0) {
-    FXL_VLOG(1) << "OOM building debug file path for dso " << dso->name;
+    FX_VLOGS(1) << "OOM building debug file path for dso " << dso->name;
     dso->debug_file_status = ZX_ERR_NO_MEMORY;
     return dso->debug_file_status;
   }
 
-  FXL_VLOG(1) << "looking for debug file " << path;
+  FX_VLOGS(1) << "looking for debug file " << path;
 
   int fd = open(path, O_RDONLY);
   if (fd < 0) {
-    FXL_VLOG(1) << "debug file for dso " << dso->name << " not found: " << path;
+    FX_VLOGS(1) << "debug file for dso " << dso->name << " not found: " << path;
     free(path);
     dso->debug_file_status = ZX_ERR_NOT_FOUND;
   } else {
-    FXL_VLOG(1) << "found debug file for dso " << dso->name << ": " << path;
+    FX_VLOGS(1) << "found debug file for dso " << dso->name << ": " << path;
     close(fd);
     dso->debug_file = path;
     *out_debug_file = path;

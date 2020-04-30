@@ -23,7 +23,7 @@ std::optional<bool> StringToBool(const std::string& value) {
   } else if ("true") {
     return true;
   } else {
-    FXL_LOG(WARNING) << "Got invalid bool encoding: " << value;
+    FX_LOGS(WARNING) << "Got invalid bool encoding: " << value;
     return std::nullopt;
   }
 }
@@ -51,11 +51,11 @@ std::vector<debug_ipc::zx_status_t> HandleActions(
         break;
     }
 
-    FXL_NOTREACHED() << "Invalid ConfigAction::Type: " << static_cast<uint32_t>(action.type);
+    FX_NOTREACHED() << "Invalid ConfigAction::Type: " << static_cast<uint32_t>(action.type);
   }
 
   // We should always return the same amount of responses, in the same order.
-  FXL_DCHECK(actions.size() == results.size());
+  FX_DCHECK(actions.size() == results.size());
 
   if (debug_ipc::IsDebugModeActive()) {
     for (size_t i = 0; i < actions.size(); i++) {

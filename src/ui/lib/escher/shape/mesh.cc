@@ -26,8 +26,8 @@ Mesh::Mesh(ResourceRecycler* resource_recycler, MeshSpec spec, BoundingBox bound
       vk_index_buffer_(index_buffer->vk()),
       index_buffer_(std::move(index_buffer)),
       index_buffer_offset_(index_buffer_offset) {
-  FXL_DCHECK(spec_.IsValid());
-  FXL_DCHECK(num_indices_ * sizeof(uint32_t) + index_buffer_offset_ <= index_buffer_->size());
+  FX_DCHECK(spec_.IsValid());
+  FX_DCHECK(num_indices_ * sizeof(uint32_t) + index_buffer_offset_ <= index_buffer_->size());
 }
 
 // Helper for public constructors.
@@ -39,7 +39,7 @@ static Mesh::AttributeBufferArray GenerateAttributeBufferArray(
 
   for (size_t i = 0; i < VulkanLimits::kNumVertexBuffers; ++i) {
     if (buffers[i]) {
-      FXL_DCHECK(spec.attribute_count(i) > 0) << "Buffer has no attributes.";
+      FX_DCHECK(spec.attribute_count(i) > 0) << "Buffer has no attributes.";
 
       auto& ab = result[i];
       ab.buffer = std::move(buffers[i]);
@@ -47,9 +47,9 @@ static Mesh::AttributeBufferArray GenerateAttributeBufferArray(
       ab.offset = offsets[i];
       ab.stride = spec.stride(i);
 
-      FXL_DCHECK(num_vertices * ab.stride + ab.offset <= ab.buffer->size());
+      FX_DCHECK(num_vertices * ab.stride + ab.offset <= ab.buffer->size());
     } else {
-      FXL_DCHECK(spec.attribute_count(i) == 0) << "Missing attribute buffer.";
+      FX_DCHECK(spec.attribute_count(i) == 0) << "Missing attribute buffer.";
     }
   }
 

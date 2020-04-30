@@ -24,7 +24,7 @@ ImagePipe::ImagePipe(Session* session, ResourceId id,
       image_pipe_updater_(std::move(image_pipe_updater)),
       error_reporter_(std::move(error_reporter)),
       weak_ptr_factory_(this) {
-  FXL_CHECK(error_reporter_);
+  FX_CHECK(error_reporter_);
 }
 
 ImagePipe::ImagePipe(Session* session, ResourceId id,
@@ -36,7 +36,7 @@ ImagePipe::ImagePipe(Session* session, ResourceId id,
       image_pipe_updater_(std::move(image_pipe_updater)),
       error_reporter_(std::move(error_reporter)),
       weak_ptr_factory_(this) {
-  FXL_CHECK(error_reporter_);
+  FX_CHECK(error_reporter_);
 }
 
 void ImagePipe::AddImage(uint32_t image_id, fuchsia::images::ImageInfo image_info, zx::vmo vmo,
@@ -84,7 +84,7 @@ void ImagePipe::CloseConnectionAndCleanUp() {
   images_.clear();
 
   // Schedule a new frame.
-  FXL_DCHECK(image_pipe_updater_);
+  FX_DCHECK(image_pipe_updater_);
   image_pipe_updater_->ScheduleImagePipeUpdate(zx::time(0), fxl::WeakPtr<ImagePipeBase>(),
                                                /*acquire_fences*/ {}, /*release_fences*/ {},
                                                /*callback*/ [](auto...) {});
@@ -159,7 +159,7 @@ ImagePipeUpdateResults ImagePipe::Update(scheduling::PresentId present_id) {
     }
 
     next_image = frames_.front().image;
-    FXL_DCHECK(next_image);
+    FX_DCHECK(next_image);
     next_image_id = next_image->id();
 
     frames_.pop();

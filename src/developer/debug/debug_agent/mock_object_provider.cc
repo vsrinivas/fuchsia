@@ -25,11 +25,11 @@ std::vector<zx::job> MockObjectProvider::GetChildJobs(zx_handle_t job_handle) co
   zx_koid_t job_koid = static_cast<zx_koid_t>(job_handle);
 
   auto it = object_map_.find(job_koid);
-  FXL_DCHECK(it != object_map_.end());
+  FX_DCHECK(it != object_map_.end());
   MockJobObject* job = reinterpret_cast<MockJobObject*>(it->second);
 
-  FXL_DCHECK(job) << "On koid: " << job_koid;
-  FXL_DCHECK(job->type == MockObject::Type::kJob);
+  FX_DCHECK(job) << "On koid: " << job_koid;
+  FX_DCHECK(job->type == MockObject::Type::kJob);
 
   std::vector<zx::job> child_jobs;
   for (auto& child_job : job->child_jobs) {
@@ -43,11 +43,11 @@ std::vector<zx::process> MockObjectProvider::GetChildProcesses(zx_handle_t job_h
   zx_koid_t job_koid = static_cast<zx_koid_t>(job_handle);
 
   auto it = object_map_.find(job_koid);
-  FXL_DCHECK(it != object_map_.end());
+  FX_DCHECK(it != object_map_.end());
 
   MockJobObject* job = reinterpret_cast<MockJobObject*>(it->second);
-  FXL_DCHECK(job) << "On koid: " << job_koid;
-  FXL_DCHECK(job->type == MockObject::Type::kJob);
+  FX_DCHECK(job) << "On koid: " << job_koid;
+  FX_DCHECK(job->type == MockObject::Type::kJob);
 
   std::vector<zx::process> child_processes;
   for (auto& child_process : job->child_processes) {
@@ -66,7 +66,7 @@ std::vector<zx_koid_t> MockObjectProvider::GetChildKoids(zx_handle_t parent,
   std::vector<zx_koid_t> koids;
   if (child_kind == ZX_INFO_PROCESS_THREADS) {
     MockProcessObject* process = object->AsProcess();
-    FXL_DCHECK(process);
+    FX_DCHECK(process);
 
     koids.reserve(process->child_threads.size());
     for (auto& thread : process->child_threads) {
@@ -81,13 +81,13 @@ std::vector<zx_koid_t> MockObjectProvider::GetChildKoids(zx_handle_t parent,
 zx_status_t MockObjectProvider::GetChild(zx_handle_t parent, zx_koid_t koid, uint32_t rights,
                                          zx_handle_t* child) const {
   MockObject* object = ObjectByKoid(parent);
-  FXL_DCHECK(object);
+  FX_DCHECK(object);
 
   // Add as needed by tests.
   MockObject* child_object = nullptr;
   if (object->type == MockObject::Type::kProcess) {
     MockProcessObject* process = object->AsProcess();
-    FXL_DCHECK(process);
+    FX_DCHECK(process);
     child_object = SearchForKoid(process->child_threads, koid);
   }
 
@@ -102,7 +102,7 @@ std::string MockObjectProvider::NameForObject(zx_handle_t object_handle) const {
   zx_koid_t koid = static_cast<zx_koid_t>(object_handle);
   DEBUG_LOG(Test) << "Getting name for: " << object_handle;
   auto it = object_map_.find(koid);
-  FXL_DCHECK(it != object_map_.end());
+  FX_DCHECK(it != object_map_.end());
 
   DEBUG_LOG(Test) << "Getting name for " << object_handle << ", got " << it->second->name;
 
@@ -112,7 +112,7 @@ std::string MockObjectProvider::NameForObject(zx_handle_t object_handle) const {
 zx_koid_t MockObjectProvider::KoidForObject(zx_handle_t object_handle) const {
   zx_koid_t koid = static_cast<zx_koid_t>(object_handle);
   auto it = object_map_.find(koid);
-  FXL_DCHECK(it != object_map_.end());
+  FX_DCHECK(it != object_map_.end());
 
   DEBUG_LOG(Test) << "Getting koid for " << object_handle << ", got " << it->second->koid;
 

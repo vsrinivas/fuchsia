@@ -57,8 +57,8 @@ Session::Session(SessionId id, SessionContext session_context,
       view_tree_updater_(id),
       inspect_node_(std::move(inspect_node)),
       weak_factory_(this) {
-  FXL_DCHECK(error_reporter_);
-  FXL_DCHECK(event_reporter_);
+  FX_DCHECK(error_reporter_);
+  FX_DCHECK(event_reporter_);
 
   inspect_resource_count_ = inspect_node_.CreateUint("resource_count", 0);
 }
@@ -66,14 +66,14 @@ Session::Session(SessionId id, SessionContext session_context,
 Session::~Session() {
   resources_.Clear();
   scheduled_updates_ = {};
-  FXL_CHECK(resource_count_ == 0) << "Session::~Session(): " << resource_count_
-                                  << " resources have not yet been destroyed.";
+  FX_CHECK(resource_count_ == 0) << "Session::~Session(): " << resource_count_
+                                 << " resources have not yet been destroyed.";
 }
 
 void Session::DispatchCommand(fuchsia::ui::scenic::Command command,
                               scheduling::PresentId present_id) {
-  FXL_DCHECK(command.Which() == fuchsia::ui::scenic::Command::Tag::kGfx);
-  FXL_DCHECK(scheduled_updates_.empty() || scheduled_updates_.front().present_id <= present_id);
+  FX_DCHECK(command.Which() == fuchsia::ui::scenic::Command::Tag::kGfx);
+  FX_DCHECK(scheduled_updates_.empty() || scheduled_updates_.front().present_id <= present_id);
   scheduled_updates_.emplace(present_id, std::move(command.gfx()));
 }
 
@@ -97,7 +97,7 @@ bool Session::ApplyScheduledUpdates(CommandContext* command_context,
 
   if (!ApplyUpdate(command_context, std::move(commands))) {
     // An error was encountered while applying the update.
-    FXL_LOG(WARNING) << "scenic_impl::gfx::Session::ApplyScheduledUpdates(): "
+    FX_LOGS(WARNING) << "scenic_impl::gfx::Session::ApplyScheduledUpdates(): "
                         "An error was encountered while applying the update. "
                         "Initiating teardown.";
     // Update failed. Do not handle any additional updates and clear any pending updates.

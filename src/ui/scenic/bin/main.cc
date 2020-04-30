@@ -45,13 +45,13 @@ int main(int argc, const char** argv) {
     if (profile) {
       const auto status = zx::thread::self()->set_profile(profile, 0);
       if (status != ZX_OK) {
-        FXL_LOG(ERROR) << "Failed to apply profile to main thread: " << status;
+        FX_LOGS(ERROR) << "Failed to apply profile to main thread: " << status;
       }
     }
   }
 
   loop.Run();
-  FXL_LOG(INFO) << "Quit main Scenic loop.";
+  FX_LOGS(INFO) << "Quit main Scenic loop.";
 
   return 0;
 }

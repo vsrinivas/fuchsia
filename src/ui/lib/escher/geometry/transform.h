@@ -29,7 +29,7 @@ struct Transform {
   Transform(vec3 translation, vec3 scale, float rotation_radians, vec3 rotation_axis,
             vec3 anchor = vec3(0, 0, 0))
       : Transform(translation, scale, glm::angleAxis(rotation_radians, rotation_axis), anchor) {
-    FXL_DCHECK(std::abs(1.f - glm::dot(rotation_axis, rotation_axis)) < kEpsilon);
+    FX_DCHECK(std::abs(1.f - glm::dot(rotation_axis, rotation_axis)) < kEpsilon);
   }
 
   Transform() : scale(vec3(1, 1, 1)) {}

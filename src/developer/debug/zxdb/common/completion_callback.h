@@ -78,7 +78,7 @@ class CompletionCallback {
   CompletionCallback(CompletionCallback&& other) : callback_(std::move(other.callback_)) {}
 
   ~CompletionCallback() {
-    FXL_CHECK(!callback_) << "Completion callback not run before destruction.";
+    FX_CHECK(!callback_) << "Completion callback not run before destruction.";
   }
 
   // Assignment from a callable function. See fit::callback.
@@ -89,7 +89,7 @@ class CompletionCallback {
             typename = std::enable_if_t<std::is_convertible<
                 decltype(std::declval<Callable&>()(Err(), std::declval<Args>()...)), void>::value>>
   CompletionCallback& operator=(Callable target) {
-    FXL_CHECK(!callback_) << "Overwriting a completion callback without calling it.";
+    FX_CHECK(!callback_) << "Overwriting a completion callback without calling it.";
     callback_ = std::move(target);
     return *this;
   }
@@ -99,7 +99,7 @@ class CompletionCallback {
     if (&other == this)
       return *this;
 
-    FXL_CHECK(!callback_) << "Overwriting a completion callback without calling it.";
+    FX_CHECK(!callback_) << "Overwriting a completion callback without calling it.";
     callback_ = std::move(other.callback_);
     return *this;
   }
@@ -125,7 +125,7 @@ class CompletionCallback {
   // code needs to specify one of them manually in the error case, use the
   // version above that takes all parameters.
   void operator()(const Err& err) {
-    FXL_CHECK(err.has_error()) << "Expected error to be set.";
+    FX_CHECK(err.has_error()) << "Expected error to be set.";
     callback_(err, Args()...);
     callback_ = nullptr;
   }

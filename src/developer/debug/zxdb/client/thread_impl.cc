@@ -67,7 +67,7 @@ void ThreadImpl::Pause(fit::callback<void()> on_paused) {
             // If the client thread still exists, the agent's record of that thread should have
             // existed at the time the message was sent so there should be no reason the update
             // doesn't match.
-            FXL_NOTREACHED();
+            FX_NOTREACHED();
           }
         }
         on_paused();
@@ -192,7 +192,7 @@ void ThreadImpl::NotifyControllerDone(ThreadController* controller) {
       return;
     }
   }
-  FXL_NOTREACHED();  // Notification for unknown controller.
+  FX_NOTREACHED();  // Notification for unknown controller.
 }
 
 void ThreadImpl::StepInstruction() {
@@ -208,7 +208,7 @@ const Stack& ThreadImpl::GetStack() const { return stack_; }
 Stack& ThreadImpl::GetStack() { return stack_; }
 
 void ThreadImpl::SetMetadata(const debug_ipc::ThreadRecord& record) {
-  FXL_DCHECK(koid_ == record.thread_koid);
+  FX_DCHECK(koid_ == record.thread_koid);
 
   name_ = record.name;
   state_ = record.state;
@@ -344,7 +344,7 @@ Location ThreadImpl::GetSymbolizedLocationForStackFrame(const debug_ipc::StackFr
   auto vect = GetProcess()->GetSymbols()->ResolveInputLocation(InputLocation(input.ip));
 
   // Symbolizing an address should always give exactly one result.
-  FXL_DCHECK(vect.size() == 1u);
+  FX_DCHECK(vect.size() == 1u);
   return vect[0];
 }
 

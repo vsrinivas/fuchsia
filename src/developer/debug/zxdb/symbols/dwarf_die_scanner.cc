@@ -48,7 +48,7 @@ const llvm::DWARFDebugInfoEntry* DwarfDieScanner2::Prepare() {
     case DwarfTag::kVariable:
       // Inherits from previous. For a block and a variable there should always be the parent,
       // since at least there's the unit root DIE.
-      FXL_DCHECK(tree_stack_.size() >= 2);
+      FX_DCHECK(tree_stack_.size() >= 2);
       tree_stack_.back().inside_function = tree_stack_[tree_stack_.size() - 2].inside_function;
       break;
     case DwarfTag::kSubprogram:
@@ -68,7 +68,7 @@ const llvm::DWARFDebugInfoEntry* DwarfDieScanner2::Prepare() {
 }
 
 void DwarfDieScanner2::Advance() {
-  FXL_DCHECK(!done());
+  FX_DCHECK(!done());
 
   die_index_++;
 }

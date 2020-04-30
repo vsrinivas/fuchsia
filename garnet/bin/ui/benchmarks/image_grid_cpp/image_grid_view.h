@@ -28,7 +28,7 @@ class ImageGridView : public scenic::BaseView {
   void OnSceneInvalidated(fuchsia::images::PresentationInfo presentation_info) override;
 
   // |scenic::SessionListener|
-  void OnScenicError(std::string error) override { FXL_LOG(ERROR) << "Scenic Error " << error; }
+  void OnScenicError(std::string error) override { FX_LOGS(ERROR) << "Scenic Error " << error; }
 
   void CreateScene();
   void UpdateScene(uint64_t presentation_time);

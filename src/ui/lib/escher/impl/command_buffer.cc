@@ -26,17 +26,17 @@ CommandBuffer::CommandBuffer(vk::Device device, vk::CommandBuffer command_buffer
       use_protected_memory_(use_protected_memory) {}
 
 CommandBuffer::~CommandBuffer() {
-  FXL_DCHECK(!is_active_ && !is_submitted_);
+  FX_DCHECK(!is_active_ && !is_submitted_);
   // Owner is responsible for destroying command buffer and fence.
 }
 
 void CommandBuffer::Begin(uint64_t sequence_number) {
-  FXL_DCHECK(!is_active_ && !is_submitted_);
-  FXL_DCHECK(sequence_number > sequence_number_);
+  FX_DCHECK(!is_active_ && !is_submitted_);
+  FX_DCHECK(sequence_number > sequence_number_);
   is_active_ = true;
   sequence_number_ = sequence_number;
   auto result = command_buffer_.begin(vk::CommandBufferBeginInfo());
-  FXL_DCHECK(result == vk::Result::eSuccess);
+  FX_DCHECK(result == vk::Result::eSuccess);
 }
 
 bool CommandBuffer::Submit(vk::Queue queue, CommandBufferFinishedCallback callback) {
@@ -44,12 +44,12 @@ bool CommandBuffer::Submit(vk::Queue queue, CommandBufferFinishedCallback callba
   // without also updating the "process_gfx_trace.go" script.
   TRACE_DURATION("gfx", "escher::CommandBuffer::Submit");
 
-  FXL_DCHECK(is_active_ && !is_submitted_);
+  FX_DCHECK(is_active_ && !is_submitted_);
   is_submitted_ = true;
   callback_ = std::move(callback);
 
   auto end_command_buffer_result = command_buffer_.end();
-  FXL_DCHECK(end_command_buffer_result == vk::Result::eSuccess);
+  FX_DCHECK(end_command_buffer_result == vk::Result::eSuccess);
 
   auto protected_submit_info = vk::ProtectedSubmitInfo().setProtectedSubmit(true);
   vk::SubmitInfo submit_info;
@@ -64,7 +64,7 @@ bool CommandBuffer::Submit(vk::Queue queue, CommandBufferFinishedCallback callba
 
   auto submit_result = queue.submit(1, &submit_info, fence_);
   if (submit_result != vk::Result::eSuccess) {
-    FXL_LOG(WARNING) << "failed queue submission: " << to_string(submit_result);
+    FX_LOGS(WARNING) << "failed queue submission: " << to_string(submit_result);
     // Clearing these flags allows Retire() to make progress.
     is_active_ = is_submitted_ = false;
     return false;
@@ -77,12 +77,12 @@ vk::Result CommandBuffer::Wait(uint64_t nanoseconds) {
     // The command buffer is already finished.
     return vk::Result::eSuccess;
   }
-  FXL_DCHECK(is_submitted_);
+  FX_DCHECK(is_submitted_);
   return device_.waitForFences(1, &fence_, true, nanoseconds);
 }
 
 void CommandBuffer::AddWaitSemaphore(SemaphorePtr semaphore, vk::PipelineStageFlags stage) {
-  FXL_DCHECK(is_active_);
+  FX_DCHECK(is_active_);
   if (semaphore) {
     // Build up list that will be used when frame is submitted.
     wait_semaphores_for_submit_.push_back(semaphore->vk_semaphore());
@@ -93,7 +93,7 @@ void CommandBuffer::AddWaitSemaphore(SemaphorePtr semaphore, vk::PipelineStageFl
 }
 
 void CommandBuffer::AddSignalSemaphore(SemaphorePtr semaphore) {
-  FXL_DCHECK(is_active_);
+  FX_DCHECK(is_active_);
   if (semaphore) {
     // Build up list that will be used when frame is submitted.
     signal_semaphores_for_submit_.push_back(semaphore->vk_semaphore());
@@ -108,7 +108,7 @@ bool CommandBuffer::ContainsSignalSemaphore(const SemaphorePtr& semaphore) const
 }
 
 void CommandBuffer::KeepAlive(Resource* resource) {
-  FXL_DCHECK(is_active_);
+  FX_DCHECK(is_active_);
   if (sequence_number_ == resource->sequence_number()) {
     // The resource is already being kept alive by this CommandBuffer.
     return;
@@ -122,7 +122,7 @@ void CommandBuffer::CopyImage(const ImagePtr& src_image, const ImagePtr& dst_ima
                               vk::ImageCopy* region) {
   // If commandBuffer is a protected command buffer, then dstImage must not be an unprotected image.
   // https://www.khronos.org/registry/vulkan/specs/1.1-extensions/man/html/vkCmdCopyImage.html
-  FXL_CHECK(!use_protected_memory() || dst_image->use_protected_memory());
+  FX_CHECK(!use_protected_memory() || dst_image->use_protected_memory());
 
   command_buffer_.copyImage(src_image->vk(), src_layout, dst_image->vk(), dst_layout, 1, region);
   KeepAlive(src_image);
@@ -134,7 +134,7 @@ void CommandBuffer::CopyBuffer(const BufferPtr& src, const BufferPtr& dst, vk::B
   // buffer.
   // https://www.khronos.org/registry/vulkan/specs/1.1-extensions/man/html/vkCmdCopyBuffer.html
   // We do not use protected buffers.
-  FXL_CHECK(!use_protected_memory());
+  FX_CHECK(!use_protected_memory());
 
   command_buffer_.copyBuffer(src->vk(), dst->vk(), 1 /* region_count */, &region);
   KeepAlive(src);
@@ -237,9 +237,9 @@ void CommandBuffer::TransitionImageLayout(const ImagePtr& image, vk::ImageLayout
       src_stage_mask = vk::PipelineStageFlagBits::eTopOfPipe;
       break;
     default:
-      FXL_LOG(ERROR) << "CommandBuffer does not know how to transition from layout: "
+      FX_LOGS(ERROR) << "CommandBuffer does not know how to transition from layout: "
                      << vk::to_string(old_layout);
-      FXL_DCHECK(false);
+      FX_DCHECK(false);
   }
 
   switch (new_layout) {
@@ -279,9 +279,9 @@ void CommandBuffer::TransitionImageLayout(const ImagePtr& image, vk::ImageLayout
       break;
     case vk::ImageLayout::eUndefined:
     default:
-      FXL_LOG(ERROR) << "CommandBuffer does not know how to transition to layout: "
+      FX_LOGS(ERROR) << "CommandBuffer does not know how to transition to layout: "
                      << vk::to_string(new_layout);
-      FXL_DCHECK(false);
+      FX_DCHECK(false);
   }
 
   src_stage_mask = src_stage_mask & pipeline_stage_mask_;
@@ -313,7 +313,7 @@ void CommandBuffer::BeginRenderPass(vk::RenderPass render_pass,
                                     const escher::FramebufferPtr& framebuffer,
                                     const vk::ClearValue* clear_values, size_t clear_value_count,
                                     vk::Rect2D viewport) {
-  FXL_DCHECK(is_active_);
+  FX_DCHECK(is_active_);
   KeepAlive(framebuffer);
 
   vk::RenderPassBeginInfo info;
@@ -348,11 +348,11 @@ void CommandBuffer::EndRenderPass() { command_buffer_.endRenderPass(); }
 bool CommandBuffer::Retire() {
   if (!is_active_) {
     // Submission failed, so proceed with cleanup.
-    FXL_DLOG(INFO) << "CommandBuffer submission failed, proceeding with retirement";
+    FX_DLOGS(INFO) << "CommandBuffer submission failed, proceeding with retirement";
   } else if (!is_submitted_) {
     return false;
   } else {
-    FXL_DCHECK(is_active_);
+    FX_DCHECK(is_active_);
     // Check if fence has been reached.
     auto fence_status = device_.getFenceStatus(fence_);
     if (fence_status == vk::Result::eNotReady) {
@@ -377,7 +377,7 @@ bool CommandBuffer::Retire() {
   signal_semaphores_for_submit_.clear();
 
   auto result = command_buffer_.reset(vk::CommandBufferResetFlags());
-  FXL_DCHECK(result == vk::Result::eSuccess);
+  FX_DCHECK(result == vk::Result::eSuccess);
 
   return true;
 }

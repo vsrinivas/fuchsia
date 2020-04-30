@@ -38,7 +38,7 @@ bool TestAtomicCmpxchg(perftest::RepeatState* state) {
   Type x = 0;
 
   while (state->KeepRunning()) {
-    FXL_CHECK(atomic_val.compare_exchange_strong(x, x + 1));
+    FX_CHECK(atomic_val.compare_exchange_strong(x, x + 1));
     ++x;
     perftest::DoNotOptimize(&atomic_val);
   }

@@ -61,11 +61,11 @@ int main() {
   zx_handle_t default_job = zx_job_default();
   zx_handle_t child_job;
   if (zx_status_t status = zx_job_create(default_job, 0u, &child_job); status != ZX_OK) {
-    FXL_LOG(ERROR) << "Could not create a child job.";
+    FX_LOGS(ERROR) << "Could not create a child job.";
     exit(1);
   }
 
-  FXL_LOG(INFO) << "Parent job: " << GetKoidForHandle(default_job)
+  FX_LOGS(INFO) << "Parent job: " << GetKoidForHandle(default_job)
                 << ", Created job: " << GetKoidForHandle(child_job);
 
   // We're going to keep a list of the created processes.
@@ -75,7 +75,7 @@ int main() {
   };
   std::vector<Process> processes;
 
-  FXL_LOG(INFO) << "Waiting for output.";
+  FX_LOGS(INFO) << "Waiting for output.";
   std::vector<char> current_line;
   while (true) {
     char c = getc(stdin);
@@ -93,29 +93,29 @@ int main() {
     // If the user wrote exit somewhere, we exit.
     std::string cmd(current_line.data());
     if (cmd.find("exit") != std::string::npos) {
-      FXL_LOG(INFO) << "Found \"exit\" in the input. Exiting.";
+      FX_LOGS(INFO) << "Found \"exit\" in the input. Exiting.";
       exit(0);
     }
 
     // Spawn a process the fdio way.
     int pipe_fds[2];
     if (pipe(pipe_fds) != 0) {
-      FXL_LOG(ERROR) << "Could not create pipes!";
+      FX_LOGS(ERROR) << "Could not create pipes!";
       exit(1);
     }
 
-    FXL_LOG(INFO) << "Creating process.";
+    FX_LOGS(INFO) << "Creating process.";
     Process process;
     process.name = fxl::StringPrintf("process-%lu", processes.size());
     zx_status_t status = LaunchProcess(child_job, {kBinaryPath}, process.name.data(), pipe_fds[0],
                                        &process.proc_handle);
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Could not create process " << process.name << ": "
+      FX_LOGS(ERROR) << "Could not create process " << process.name << ": "
                      << zx_status_get_string(status);
       exit(1);
     }
 
-    FXL_LOG(INFO) << "Created process " << process.name
+    FX_LOGS(INFO) << "Created process " << process.name
                   << " with KOID: " << GetKoidForHandle(process.proc_handle);
     processes.push_back(std::move(process));
     current_line.clear();

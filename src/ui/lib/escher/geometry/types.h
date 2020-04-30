@@ -52,7 +52,7 @@ struct ray4 {
 constexpr float kEpsilon = 0.000001f;
 
 inline ray4 operator*(const glm::mat4& matrix, const ray4& ray) {
-  FXL_DCHECK(ray.direction.w == 0) << "Ray direction should not be subject to translation.";
+  FX_DCHECK(ray.direction.w == 0) << "Ray direction should not be subject to translation.";
   return ray4{matrix * ray.origin, matrix * ray.direction};
 }
 
@@ -67,12 +67,12 @@ struct planeN {
 
   // |direction| must be normalized.
   planeN(VecT direction, float distance) : dir_(direction), dist_(distance) {
-    FXL_DCHECK(std::abs(glm::dot(direction, direction) - 1.f) < kEpsilon) << direction;
+    FX_DCHECK(std::abs(glm::dot(direction, direction) - 1.f) < kEpsilon) << direction;
   }
 
   planeN(VecT point_on_plane, VecT direction)
       : dir_(direction), dist_(glm::dot(point_on_plane, direction)) {
-    FXL_DCHECK(std::abs(glm::dot(direction, direction) - 1.f) < kEpsilon);
+    FX_DCHECK(std::abs(glm::dot(direction, direction) - 1.f) < kEpsilon);
   }
 
   planeN(const planeN& other) : dir_(other.dir_), dist_(other.dist_) {}
@@ -129,7 +129,7 @@ struct planeN {
 //
 // One last thing to note is that this only works if the incoming 3D plane
 // is NOT parallel to the Z = 0 plane. This means we need to check if the
-// direction of the incoming plane is (0,0,1) or (0,0,-1) using FXL_DCHECK
+// direction of the incoming plane is (0,0,1) or (0,0,-1) using FX_DCHECK
 //  to make sure this is not the case. We use a small epsilon value to
 // check within the vicinity of z=1 to account for any floating point wackiness.
 struct plane2 : public planeN<vec2> {
@@ -142,7 +142,7 @@ struct plane2 : public planeN<vec2> {
 
     // We only want to construct plane2 instead of plane3 when we know that
     // the incoming plane will intersect the Z = 0 plane.
-    FXL_DCHECK(1.f - fabs(direction.z) > kEpsilon);
+    FX_DCHECK(1.f - fabs(direction.z) > kEpsilon);
 
     vec2 projected_direction = vec2(direction);
 

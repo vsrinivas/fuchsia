@@ -19,7 +19,7 @@ InputDeviceImpl::InputDeviceImpl(
       input_device_binding_(this, std::move(input_device_request)),
       listener_(listener) {
   input_device_binding_.set_error_handler([this](zx_status_t status) {
-    FXL_LOG(INFO) << "Device disconnected";
+    FX_LOGS(INFO) << "Device disconnected";
     listener_->OnDeviceDisconnected(this);
   });
 }

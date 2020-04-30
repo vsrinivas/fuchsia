@@ -14,15 +14,15 @@ namespace impl {
 
 ImageCache::ImageCache(EscherWeakPtr escher, GpuAllocator* allocator)
     : ResourceManager(escher), allocator_(allocator) {
-  FXL_DCHECK(allocator_);
+  FX_DCHECK(allocator_);
 }
 
 ImageCache::~ImageCache() {}
 
 ImagePtr ImageCache::NewImage(const ImageInfo& info, GpuMemPtr* out_ptr) {
   if (out_ptr) {
-    FXL_DCHECK(false) << "ImageCache does not support dedicated allocations, "
-                         "creating a non-cached image";
+    FX_DCHECK(false) << "ImageCache does not support dedicated allocations, "
+                        "creating a non-cached image";
     return allocator_->AllocateImage(escher()->resource_recycler(), info, out_ptr);
   }
 
@@ -45,7 +45,7 @@ ImagePtr ImageCache::FindImage(const ImageInfo& info) {
 }
 
 void ImageCache::OnReceiveOwnable(std::unique_ptr<Resource> resource) {
-  FXL_DCHECK(resource->IsKindOf<Image>());
+  FX_DCHECK(resource->IsKindOf<Image>());
   std::unique_ptr<Image> image(static_cast<Image*>(resource.release()));
   auto& queue = unused_images_[image->info()];
   queue.push(std::move(image));

@@ -15,7 +15,7 @@ ShaderProgramPtr ShaderProgramFactory::GetComputeProgram(std::string compute_sha
   // Array indices match the corresponding values of enum ShaderStage.  In this
   // case, only the path to the compute shader code is provided; all others are
   // empty.
-  FXL_DCHECK(!compute_shader_path.empty());
+  FX_DCHECK(!compute_shader_path.empty());
   std::string paths[EnumCount<ShaderStage>()] = {"", "", "",
                                                  "", "", std::move(compute_shader_path)};
   return GetProgramImpl(paths, std::move(args));
@@ -27,7 +27,7 @@ ShaderProgramPtr ShaderProgramFactory::GetGraphicsProgram(std::string vertex_sha
   // Array indices match the corresponding values of enum ShaderStage.  In this
   // case, only the paths to the vertex and fragment shader code are provided;
   // all others are empty.
-  FXL_DCHECK(!vertex_shader_path.empty());
+  FX_DCHECK(!vertex_shader_path.empty());
   std::string paths[EnumCount<ShaderStage>()] = {std::move(vertex_shader_path),   "", "", "",
                                                  std::move(fragment_shader_path), ""};
   return GetProgramImpl(paths, std::move(args));
@@ -48,7 +48,7 @@ ShaderProgramPtr ShaderProgramFactory::GetGraphicsProgram(
     std::string fragment_shader_path, ShaderVariantArgs args) {
   // Array indices match the corresponding values of enum ShaderStage.  In this
   // case, paths are provided for all shader stages except the compute shader.
-  FXL_DCHECK(!vertex_shader_path.empty());
+  FX_DCHECK(!vertex_shader_path.empty());
   static const std::string kEmpty("");
   std::string paths[EnumCount<ShaderStage>()] = {std::move(vertex_shader_path),
                                                  std::move(tessellation_control_shader_path),

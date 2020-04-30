@@ -25,7 +25,7 @@ class Shape {
   void set_mesh(MeshPtr mesh);
 
   const MeshPtr& mesh() const {
-    FXL_DCHECK(type_ == Type::kMesh);
+    FX_DCHECK(type_ == Type::kMesh);
     return mesh_;
   }
 

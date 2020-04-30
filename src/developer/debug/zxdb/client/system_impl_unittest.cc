@@ -33,7 +33,7 @@ class APISink : public MockRemoteAPI {
               fit::callback<void(const Err&, debug_ipc::AttachReply)> cb) override {
     attach_requests_.push_back(request);
 
-    FXL_DCHECK(info_count_ < next_infos_.size());
+    FX_DCHECK(info_count_ < next_infos_.size());
     auto info = next_infos_[info_count_++];
 
     debug_ipc::AttachReply reply;

@@ -61,7 +61,7 @@ int main(int argc, char* argv[]) {
   // This is very useful when debugging failures in CQ: If there was a
   // problem launching us outside of our control there's nothing in the logs
   // to show we got at least this far.
-  FXL_LOG(INFO) << argv[0] << " started";
+  FX_LOGS(INFO) << argv[0] << " started";
 
   if (cl.HasOption("help", nullptr)) {
     PrintUsageString();
@@ -80,45 +80,45 @@ int main(int argc, char* argv[]) {
 
   if (command == "run") {
     if (args.size() != 2) {
-      FXL_LOG(ERROR) << "Wrong number of arguments to run invocation";
+      FX_LOGS(ERROR) << "Wrong number of arguments to run invocation";
       return EXIT_FAILURE;
     }
   } else if (command == "verify") {
     if (args.size() != 3) {
-      FXL_LOG(ERROR) << "Wrong number of arguments to verify invocation";
+      FX_LOGS(ERROR) << "Wrong number of arguments to verify invocation";
       return EXIT_FAILURE;
     }
   } else {
-    FXL_LOG(ERROR) << "Unknown command: " << command;
+    FX_LOGS(ERROR) << "Unknown command: " << command;
     return EXIT_FAILURE;
   }
 
   std::string spec_file_contents;
   if (!files::ReadFileToString(spec_file_path, &spec_file_contents)) {
-    FXL_LOG(ERROR) << "Can't read test spec: " << spec_file_path;
+    FX_LOGS(ERROR) << "Can't read test spec: " << spec_file_path;
     return EXIT_FAILURE;
   }
 
   tracing::Spec spec;
   if (!tracing::DecodeSpec(spec_file_contents, &spec)) {
-    FXL_LOG(ERROR) << "Error decoding test spec: " << spec_file_path;
+    FX_LOGS(ERROR) << "Error decoding test spec: " << spec_file_path;
     return EXIT_FAILURE;
   }
 
-  FXL_DCHECK(spec.test_name);
+  FX_DCHECK(spec.test_name);
   auto test_name = *spec.test_name;
 
   auto test = tracing::test::LookupTest(test_name);
   if (test == nullptr) {
-    FXL_LOG(ERROR) << "Unknown test name: " << test_name;
+    FX_LOGS(ERROR) << "Unknown test name: " << test_name;
     return EXIT_FAILURE;
   }
 
   if (command == "run") {
-    FXL_LOG(INFO) << "Running subprogram for test " << spec_file_path << ":\"" << test_name << "\"";
+    FX_LOGS(INFO) << "Running subprogram for test " << spec_file_path << ":\"" << test_name << "\"";
     return RunTest(spec, test->run);
   } else {
-    FXL_LOG(INFO) << "Verifying test " << spec_file_path << ":\"" << test_name << "\"";
+    FX_LOGS(INFO) << "Verifying test " << spec_file_path << ":\"" << test_name << "\"";
     const std::string& trace_output_file = args[2];
     return VerifyTest(spec, test->verify, trace_output_file);
   }

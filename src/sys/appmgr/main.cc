@@ -26,7 +26,7 @@ std::vector<std::string> RootRealmServices() {
   std::vector<std::string> res;
   bool success = files::ReadDirContents("/svc_for_sys", &res);
   if (!success) {
-    FXL_LOG(WARNING) << "failed to read /svc_for_sys (" << errno
+    FX_LOGS(WARNING) << "failed to read /svc_for_sys (" << errno
                      << "), not forwarding services to sys realm";
     return std::vector<std::string>();
   }
@@ -54,14 +54,14 @@ int main(int argc, char** argv) {
   zx::channel svc_for_sys_server, svc_for_sys_client;
   status = zx::channel::create(0, &svc_for_sys_server, &svc_for_sys_client);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "failed to create channel: " << errno;
+    FX_LOGS(ERROR) << "failed to create channel: " << errno;
     return status;
   }
   status =
       fdio_open("/svc_for_sys", ZX_FS_RIGHT_READABLE | ZX_FS_FLAG_DIRECTORY | ZX_FS_RIGHT_WRITABLE,
                 svc_for_sys_server.release());
   if (status != ZX_OK) {
-    FXL_LOG(WARNING) << "failed to open /svc_for_sys (" << errno
+    FX_LOGS(WARNING) << "failed to open /svc_for_sys (" << errno
                      << "), not forwarding services to sys realm";
     return status;
   }
@@ -79,7 +79,7 @@ int main(int argc, char** argv) {
   zx::channel trace_client, trace_server;
   status = zx::channel::create(0, &trace_client, &trace_server);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "failed to create tracing channel: " << status;
+    FX_LOGS(ERROR) << "failed to create tracing channel: " << status;
     return status;
   }
 

@@ -114,7 +114,7 @@ void Process::LoadHandleInfo(Inference* inference) {
       [this, inference](zxdb::ErrOr<std::vector<debug_ipc::InfoHandleExtended>> handles) {
         loading_handle_info_ = false;
         if (!handles.ok()) {
-          FXL_LOG(ERROR) << "msg: " << handles.err().msg();
+          FX_LOGS(ERROR) << "msg: " << handles.err().msg();
         } else {
           for (const auto& handle : handles.value()) {
             fidl_codec::semantic::HandleDescription* description =

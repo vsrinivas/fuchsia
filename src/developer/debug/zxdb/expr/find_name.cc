@@ -48,7 +48,7 @@ FindNameSupported GetSupported(const ParsedIdentifier& identifier) {
         break;  // Normal boring component.
       case SpecialIdentifier::kEscaped:
       case SpecialIdentifier::kLast:
-        FXL_NOTREACHED();  // These annotations shouldn't appear in identifiers.
+        FX_NOTREACHED();  // These annotations shouldn't appear in identifiers.
         break;
       case SpecialIdentifier::kMain:
       case SpecialIdentifier::kPlt:
@@ -114,7 +114,7 @@ FoundName FoundNameFromDieRef(const ModuleSymbols* module_symbols, const FindNam
   }
 
   if (const DataMember* dm = symbol->AsDataMember()) {
-    FXL_DCHECK(dm->is_external());  // Only static ("external") members should be in the index.
+    FX_DCHECK(dm->is_external());  // Only static ("external") members should be in the index.
     if (options.find_vars)
       return FoundName(nullptr, FoundMember(nullptr, dm));
     return FoundName();
@@ -529,7 +529,7 @@ VisitResult VisitLocalVariables(const CodeBlock* block,
 
 void FindLocalVariable(const FindNameOptions& options, const CodeBlock* block,
                        const ParsedIdentifier& looking_for, std::vector<FoundName>* results) {
-  FXL_DCHECK(options.search_mode == FindNameOptions::kLexical);
+  FX_DCHECK(options.search_mode == FindNameOptions::kLexical);
 
   // TODO(DX-1214) lookup type names defined locally in this function.
 
@@ -551,7 +551,7 @@ void FindLocalVariable(const FindNameOptions& options, const CodeBlock* block,
 void FindMember(const FindNameContext& context, const FindNameOptions& options,
                 const Collection* object, const ParsedIdentifier& looking_for,
                 const Variable* optional_object_ptr, std::vector<FoundName>* result) {
-  FXL_DCHECK(options.search_mode == FindNameOptions::kLexical);
+  FX_DCHECK(options.search_mode == FindNameOptions::kLexical);
 
   VisitClassHierarchy(object, [&context, &options, &looking_for, optional_object_ptr,
                                result](const InheritancePath& path) {
@@ -562,7 +562,7 @@ void FindMember(const FindNameContext& context, const FindNameOptions& options,
 
 void FindMemberOnThis(const FindNameContext& context, const FindNameOptions& options,
                       const ParsedIdentifier& looking_for, std::vector<FoundName>* result) {
-  FXL_DCHECK(options.search_mode == FindNameOptions::kLexical);
+  FX_DCHECK(options.search_mode == FindNameOptions::kLexical);
 
   if (!context.block)
     return;  // No current code.

@@ -52,7 +52,7 @@ PlaneT TranslatePlane(const typename PlaneT::VectorType& model_to_world_vec, con
 // multiplication.
 template <typename PlaneT>
 PlaneT ScalePlane(float model_to_world_scale, const PlaneT& plane) {
-  FXL_DCHECK(model_to_world_scale > kEpsilon) << model_to_world_scale;
+  FX_DCHECK(model_to_world_scale > kEpsilon) << model_to_world_scale;
   return PlaneT(plane.dir(), plane.dist() / model_to_world_scale);
 }
 
@@ -81,7 +81,7 @@ inline float PlaneDistanceToPoint(const planeN<vec2>& plane, const vec3& point) 
 // means less aggressive clipping, with a minimum allowed value of 0.f.
 template <typename PlaneT, typename VecT>
 bool PlaneClipsPoint(const PlaneT& plane, const VecT& point, const float_t& epsilon = 0.f) {
-  FXL_CHECK(epsilon >= 0.f);
+  FX_CHECK(epsilon >= 0.f);
   return PlaneDistanceToPoint(plane, point) < -epsilon;
 }
 

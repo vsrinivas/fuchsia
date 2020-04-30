@@ -113,7 +113,7 @@ class ShutdownManagerTest : public gtest::TestLoopFixture {
 
  private:
   void UpdateTimeoutClock() {
-    FXL_CHECK(clock_time_);
+    FX_CHECK(clock_time_);
     clock_time_->store(Now());
   }
 

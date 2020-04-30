@@ -23,7 +23,7 @@ class UniformGrid {
     // Force the client to make sure the mesh is valid and non-empty.
     if (!mesh.IsValid() || mesh.indices.size() == 0 || mesh.positions.size() == 0 ||
         mesh.bounding_box.is_empty()) {
-      FXL_CHECK(false);
+      FX_CHECK(false);
       return nullptr;
     }
 

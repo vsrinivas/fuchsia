@@ -33,8 +33,8 @@ void PaperRenderFuncs::MeshData::Bind(CommandBuffer* cb) const {
 void PaperRenderFuncs::RenderMesh(CommandBuffer* cb, const RenderQueueContext* context_in,
                                   const RenderQueueItem* items, uint32_t instance_count) {
   TRACE_DURATION("gfx", "PaperRenderFuncs::RenderMesh");
-  FXL_DCHECK(cb && items && instance_count > 0);
-  FXL_DCHECK(context_in);
+  FX_DCHECK(cb && items && instance_count > 0);
+  FX_DCHECK(context_in);
   auto* context = static_cast<const PaperRenderQueueContext*>(context_in);
   auto* mesh_data = static_cast<const MeshData*>(items[0].object_data);
   const PaperRendererDrawMode draw_mode = context->draw_mode();
@@ -45,7 +45,7 @@ void PaperRenderFuncs::RenderMesh(CommandBuffer* cb, const RenderQueueContext* c
   if (num_indices == 0) {
     // The only way this should happen is when rendering shadow-volume geometry
     // for a non-shadow-caster.
-    FXL_DCHECK(draw_mode == PaperRendererDrawMode::kShadowVolumeGeometry);
+    FX_DCHECK(draw_mode == PaperRendererDrawMode::kShadowVolumeGeometry);
     return;
   }
 
@@ -60,7 +60,7 @@ void PaperRenderFuncs::RenderMesh(CommandBuffer* cb, const RenderQueueContext* c
 
   // For each instance, set up per-instance state and draw.
   for (uint32_t i = 0; i < instance_count; ++i) {
-    FXL_DCHECK(items[i].object_data == mesh_data);
+    FX_DCHECK(items[i].object_data == mesh_data);
 
     const MeshDrawData* instance_data = static_cast<const MeshDrawData*>(items[i].instance_data);
 
@@ -81,8 +81,8 @@ PaperRenderFuncs::MeshData* PaperRenderFuncs::NewMeshData(const FramePtr& frame,
                                                           uint32_t num_indices,
                                                           uint32_t num_shadow_volume_indices) {
   TRACE_DURATION("gfx", "PaperRenderFuncs::NewMeshData");
-  FXL_DCHECK(mesh);
-  FXL_DCHECK(texture);
+  FX_DCHECK(mesh);
+  FX_DCHECK(texture);
   auto& mesh_spec = mesh->spec();
 
   // TODO(ES-103): avoid reaching in to impl::CommandBuffer for keep-alive.
@@ -116,7 +116,7 @@ PaperRenderFuncs::MeshData* PaperRenderFuncs::NewMeshData(const FramePtr& frame,
                           .stride = attribute_buffer.stride};
       }
     }
-    FXL_DCHECK(binding_count == obj->vertex_binding_count);
+    FX_DCHECK(binding_count == obj->vertex_binding_count);
   }
 
   // Set up vertex attribute bindings.

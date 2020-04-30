@@ -36,7 +36,7 @@ ViewProviderComponent::ViewProviderComponent(ViewFactory factory, async::Loop* l
   }
 
   scenic_.set_error_handler([loop](zx_status_t status) {
-    FXL_LOG(INFO) << "Lost connection to Scenic.";
+    FX_LOGS(INFO) << "Lost connection to Scenic.";
     loop->Quit();
   });
 }
@@ -53,7 +53,7 @@ ViewProviderComponent::ViewImpl::ViewImpl(ViewFactory factory,
 void ViewProviderComponent::ViewImpl::Present(fuchsia::ui::views::ViewToken view_token) {
   if (view_) {
     // This should only be called once.
-    FXL_LOG(ERROR) << "Present() can only be called once";
+    FX_LOGS(ERROR) << "Present() can only be called once";
     OnError();
     return;
   }

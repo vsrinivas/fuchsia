@@ -29,7 +29,7 @@ namespace {
     break;
 
 uint64_t HWDebugResourceEnabled(uint64_t dr7, size_t index) {
-  FXL_DCHECK(index < 4);
+  FX_DCHECK(index < 4);
 
   // clang-format off
   static uint64_t masks[4] = { X86_FLAG_MASK(DR7L0),
@@ -54,7 +54,7 @@ bool IsWatchpoint(uint64_t dr7, size_t index) {
   }
   // clang-format on
 
-  FXL_NOTREACHED();
+  FX_NOTREACHED();
   return false;
 }
 
@@ -203,7 +203,7 @@ void SetHWBreakpointFlags(uint64_t* dr7, int slot, bool active) {
     }
   }
 
-  FXL_NOTREACHED() << "Invalid slot: " << slot;
+  FX_NOTREACHED() << "Invalid slot: " << slot;
 }
 
 }  // namespace
@@ -274,7 +274,7 @@ inline uint64_t x86LenToLength(uint64_t len) {
   }
   // clang-format on
 
-  FXL_NOTREACHED() << "Invalid len: " << len;
+  FX_NOTREACHED() << "Invalid len: " << len;
   return 0;
 }
 
@@ -288,7 +288,7 @@ inline uint64_t LengthTox86Length(uint64_t len) {
   }
   // clang-format on
 
-  FXL_NOTREACHED() << "Invalid len: " << len;
+  FX_NOTREACHED() << "Invalid len: " << len;
   return 0;
 }
 
@@ -330,7 +330,7 @@ void SetWatchpointFlags(uint64_t* dr7, int slot, bool active, uint64_t size,
   }
   // clang-format on
 
-  FXL_NOTREACHED() << "Invalid slot: " << slot;
+  FX_NOTREACHED() << "Invalid slot: " << slot;
 }
 
 }  // namespace
@@ -345,7 +345,7 @@ uint64_t GetWatchpointLength(uint64_t dr7, int slot) {
   }
   // clang-format on
 
-  FXL_NOTREACHED() << "Invalid slot: " << slot;
+  FX_NOTREACHED() << "Invalid slot: " << slot;
   return -1;
 }
 
@@ -359,7 +359,7 @@ uint32_t GetWatchpointRW(uint64_t dr7, int slot) {
   }
   // clang-format on
 
-  FXL_NOTREACHED() << "Invalid slot: " << slot;
+  FX_NOTREACHED() << "Invalid slot: " << slot;
   return -1;
 }
 

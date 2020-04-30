@@ -68,15 +68,15 @@ void PointerEventBuffer::UpdateStream(uint32_t pointer_id,
   if (pointer_id_buffer.empty()) {
     SetActiveStreamInfo(pointer_id, status);
   }
-  FXL_DCHECK(pointer_id_buffer.empty() ||
-             active_stream_info_[pointer_id] == PointerIdStreamStatus::WAITING_RESPONSE)
+  FX_DCHECK(pointer_id_buffer.empty() ||
+            active_stream_info_[pointer_id] == PointerIdStreamStatus::WAITING_RESPONSE)
       << "invariant: streams are waiting, so status is waiting";
 }
 
 void PointerEventBuffer::AddEvent(uint32_t pointer_id, DeferredPointerEvent views_and_event,
                                   AccessibilityPointerEvent accessibility_pointer_event) {
   auto it = active_stream_info_.find(pointer_id);
-  FXL_DCHECK(it != active_stream_info_.end()) << "Received an invalid pointer id.";
+  FX_DCHECK(it != active_stream_info_.end()) << "Received an invalid pointer id.";
   const auto status = it->second;
   if (status == PointerIdStreamStatus::WAITING_RESPONSE) {
     PointerIdStream& stream = buffer_[pointer_id].back();

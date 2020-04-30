@@ -61,8 +61,8 @@ class MWGetApp {
   MWGetApp(async::Loop* loop)
       : context_(sys::ComponentContext::CreateAndServeOutgoingDirectory()), loop_(loop) {
     http_service_ = context_->svc()->Connect<http::HttpService>();
-    FXL_DCHECK(loop);
-    FXL_DCHECK(http_service_);
+    FX_DCHECK(loop);
+    FX_DCHECK(http_service_);
   }
 
   bool Start(const std::vector<std::string>& args) {

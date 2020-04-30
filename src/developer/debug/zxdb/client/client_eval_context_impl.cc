@@ -53,7 +53,7 @@ VectorRegisterFormat ClientEvalContextImpl::GetVectorRegisterFormat() const {
     return *found;
 
   // The settings schema should have validated the setting is one of the known ones.
-  FXL_NOTREACHED();
+  FX_NOTREACHED();
   return VectorRegisterFormat::kDouble;
 }
 

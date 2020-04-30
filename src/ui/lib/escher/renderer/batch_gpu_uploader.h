@@ -102,7 +102,7 @@ class BatchGpuUploader {
         [host_data = std::move(host_data), real_copy_size](uint8_t* host_buffer_ptr,
                                                            size_t copy_size) mutable {
           size_t requested_size = real_copy_size;
-          FXL_DCHECK(copy_size >= requested_size);
+          FX_DCHECK(copy_size >= requested_size);
           memcpy(static_cast<void*>(host_buffer_ptr), host_data.data(),
                  std::min(copy_size, requested_size));
         },
@@ -153,7 +153,7 @@ class BatchGpuUploader {
         target,
         [host_data = std::move(host_data)](uint8_t* host_buffer_ptr, size_t copy_size) mutable {
           size_t requested_size = host_data.size() * sizeof(T);
-          FXL_DCHECK(copy_size >= requested_size);
+          FX_DCHECK(copy_size >= requested_size);
           memcpy(static_cast<void*>(host_buffer_ptr), host_data.data(),
                  std::min(copy_size, requested_size));
         },

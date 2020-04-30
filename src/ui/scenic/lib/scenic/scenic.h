@@ -54,12 +54,12 @@ class Scenic : public fuchsia::ui::scenic::Scenic {
   // Register a delegate class for implementing top-level Scenic operations (e.g., GetDisplayInfo).
   // This delegate must outlive the Scenic instance.
   void SetDisplayInfoDelegate(GetDisplayInfoDelegateDeprecated* delegate) {
-    FXL_DCHECK(!display_delegate_);
+    FX_DCHECK(!display_delegate_);
     display_delegate_ = delegate;
   }
 
   void SetScreenshotDelegate(TakeScreenshotDelegateDeprecated* delegate) {
-    FXL_DCHECK(!screenshot_delegate_);
+    FX_DCHECK(!screenshot_delegate_);
     screenshot_delegate_ = delegate;
   }
 
@@ -137,7 +137,7 @@ class Scenic : public fuchsia::ui::scenic::Scenic {
 
 template <typename SystemT, typename... Args>
 SystemT* Scenic::RegisterSystem(Args&&... args) {
-  FXL_DCHECK(systems_[SystemT::kTypeId] == nullptr)
+  FX_DCHECK(systems_[SystemT::kTypeId] == nullptr)
       << "System of type: " << SystemT::kTypeId << "was already registered.";
 
   SystemT* system =

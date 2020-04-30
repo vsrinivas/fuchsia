@@ -17,7 +17,7 @@ Location MakeLocation(TargetPointer ip, const std::string& func_name, FileLine f
   // The function name currently can't handle "::". Because we pass the string to set_assigned_name,
   // they will be treated as literals and not scope separators. If support for those is needed,
   // we need to make the hierarchy of namespaces, etc. to put the function in.
-  FXL_DCHECK(func_name.find("::") == std::string::npos);
+  FX_DCHECK(func_name.find("::") == std::string::npos);
 
   auto function = fxl::MakeRefCounted<Function>(DwarfTag::kSubprogram);
   function->set_assigned_name(func_name);

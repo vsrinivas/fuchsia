@@ -71,8 +71,8 @@ void ProcessSymbolDataProvider::GetMemoryAsync(uint64_t address, uint32_t size,
           return;
         }
 
-        FXL_DCHECK(size == 0 || dump.address() == address);
-        FXL_DCHECK(dump.size() == size);
+        FX_DCHECK(size == 0 || dump.address() == address);
+        FX_DCHECK(dump.size() == size);
         if (dump.blocks().size() == 1 || (dump.blocks().size() > 1 && !dump.blocks()[1].valid)) {
           // Common case: came back as one block OR it read until an invalid memory boundary and the
           // second block is invalid.

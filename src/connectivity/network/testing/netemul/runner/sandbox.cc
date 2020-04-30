@@ -69,7 +69,7 @@ Sandbox::Sandbox(SandboxArgs args) : env_config_(std::move(args.config)) {
   services->Connect(parent_env_.NewRequest());
   services->Connect(loader_.NewRequest());
   parent_env_.set_error_handler(
-      [](zx_status_t err) { FXL_LOG(ERROR) << "Lost connection to parent environment"; });
+      [](zx_status_t err) { FX_LOGS(ERROR) << "Lost connection to parent environment"; });
 }
 
 Sandbox::~Sandbox() {
@@ -288,7 +288,7 @@ bool Sandbox::ConfigureNetworks() {
     if (net_manager->CreateNetwork(net_cfg.name(), network::NetworkConfig(), &status, &network_h) !=
             ZX_OK ||
         status != ZX_OK) {
-      FXL_LOG(ERROR) << "Create network failed";
+      FX_LOGS(ERROR) << "Create network failed";
       return false;
     }
 
@@ -317,7 +317,7 @@ bool Sandbox::ConfigureNetworks() {
       if (endp_manager->CreateEndpoint(endp_cfg.name(), std::move(fidl_config), &status, &endp_h) !=
               ZX_OK ||
           status != ZX_OK) {
-        FXL_LOG(ERROR) << "Create endpoint failed";
+        FX_LOGS(ERROR) << "Create endpoint failed";
         return false;
       }
 
@@ -325,14 +325,14 @@ bool Sandbox::ConfigureNetworks() {
 
       if (endp_cfg.up()) {
         if (endp->SetLinkUp(true) != ZX_OK) {
-          FXL_LOG(ERROR) << "Set endpoint up failed";
+          FX_LOGS(ERROR) << "Set endpoint up failed";
           return false;
         }
       }
 
       // add endpoint to network:
       if (network->AttachEndpoint(endp_cfg.name(), &status) != ZX_OK || status != ZX_OK) {
-        FXL_LOG(ERROR) << "Attaching endpoint " << endp_cfg.name() << " to network "
+        FX_LOGS(ERROR) << "Attaching endpoint " << endp_cfg.name() << " to network "
                        << net_cfg.name() << " failed";
         return false;
       }
@@ -368,18 +368,18 @@ bool Sandbox::CreateEnvironmentOptions(const config::Environment& config,
       fidl::InterfaceHandle<network::Endpoint> endp_h;
       auto status = epm->GetEndpoint(device, &endp_h);
       if (status != ZX_OK || !endp_h.is_valid()) {
-        FXL_LOG(ERROR) << "Can't find endpoint " << device << " on endpoint manager";
+        FX_LOGS(ERROR) << "Can't find endpoint " << device << " on endpoint manager";
         return false;
       }
 
       auto endp = endp_h.BindSync();
       if (endp->GetProxy(nd.device.NewRequest()) != ZX_OK) {
-        FXL_LOG(ERROR) << "Can't get proxy on endpoint " << device;
+        FX_LOGS(ERROR) << "Can't get proxy on endpoint " << device;
         return false;
       }
       network::EndpointConfig ep_config;
       if (endp->GetConfig(&ep_config) != ZX_OK) {
-        FXL_LOG(ERROR) << "Can't get endpoint configuration " << device;
+        FX_LOGS(ERROR) << "Can't get endpoint configuration " << device;
       }
       fxl::StringView base_path(ep_config.backing == network::EndpointBacking::ETHERTAP
                                     ? kEthertapEndpointMountPath
@@ -785,7 +785,7 @@ bool Sandbox::LaunchProcess(fuchsia::sys::LauncherSyncPtr* launcher, const std::
   // we observe test processes return code
   proc.events().OnTerminated = [url, this, is_test, ticket](int64_t code,
                                                             TerminationReason reason) {
-    FXL_LOG(INFO) << T::msg << " " << url << " terminated with (" << code
+    FX_LOGS(INFO) << T::msg << " " << url << " terminated with (" << code
                   << ") reason: " << sys::HumanReadableTerminationReason(reason);
     // remove the error handler:
     procs_[ticket].set_error_handler(nullptr);
@@ -808,7 +808,7 @@ bool Sandbox::LaunchProcess(fuchsia::sys::LauncherSyncPtr* launcher, const std::
   };
 
   if ((*launcher)->CreateComponent(std::move(linfo), proc.NewRequest()) != ZX_OK) {
-    FXL_LOG(ERROR) << "couldn't launch " << T::msg << ": " << url;
+    FX_LOGS(ERROR) << "couldn't launch " << T::msg << ": " << url;
     return false;
   }
 
@@ -844,7 +844,7 @@ Sandbox::Promise Sandbox::LaunchSetup(fuchsia::sys::LauncherSyncPtr* launcher,
     // we observe test processes return code
     proc.events().OnTerminated = [url, this, ticket, completer = std::move(bridge.completer)](
                                      int64_t code, TerminationReason reason) mutable {
-      FXL_LOG(INFO) << "Setup " << url << " terminated with (" << code
+      FX_LOGS(INFO) << "Setup " << url << " terminated with (" << code
                     << ") reason: " << sys::HumanReadableTerminationReason(reason);
       // remove the error handler:
       procs_[ticket].set_error_handler(nullptr);
@@ -867,7 +867,7 @@ void Sandbox::EnableTestObservation() {
   // if we're not observing any tests,
   // consider it a failure.
   if (!test_spawned_) {
-    FXL_LOG(ERROR) << "No tests were specified";
+    FX_LOGS(ERROR) << "No tests were specified";
     PostTerminate(SandboxResult::EMPTY_TEST_SET);
     return;
   }
@@ -883,7 +883,7 @@ void Sandbox::EnableTestObservation() {
     async::PostDelayedTask(
         helper_loop_->dispatcher(),
         [this]() {
-          FXL_LOG(ERROR) << "Test timed out.";
+          FX_LOGS(ERROR) << "Test timed out.";
           PostTerminate(SandboxResult::TIMEOUT);
         },
         env_config_.timeout());
@@ -908,7 +908,7 @@ void Sandbox::UnregisterTest(size_t ticket) {
 
 bool SandboxArgs::ParseFromJSON(const rapidjson::Value& facet, json::JSONParser* json_parser) {
   if (!config.ParseFromJSON(facet, json_parser)) {
-    FXL_LOG(ERROR) << "netemul facet failed to parse: " << json_parser->error_str();
+    FX_LOGS(ERROR) << "netemul facet failed to parse: " << json_parser->error_str();
     return false;
   }
   return true;
@@ -918,7 +918,7 @@ bool SandboxArgs::ParseFromString(const std::string& config) {
   json::JSONParser json_parser;
   auto facet = json_parser.ParseFromString(config, "fuchsia.netemul facet");
   if (json_parser.HasError()) {
-    FXL_LOG(ERROR) << "netemul facet failed to parse: " << json_parser.error_str();
+    FX_LOGS(ERROR) << "netemul facet failed to parse: " << json_parser.error_str();
     return false;
   }
 
@@ -929,7 +929,7 @@ bool SandboxArgs::ParseFromCmxFileAt(int dir, const std::string& path) {
   component::CmxMetadata cmx;
   json::JSONParser json_parser;
   if (!cmx.ParseFromFileAt(dir, path, &json_parser)) {
-    FXL_LOG(ERROR) << "cmx file failed to parse: " << json_parser.error_str();
+    FX_LOGS(ERROR) << "cmx file failed to parse: " << json_parser.error_str();
     return false;
   }
 

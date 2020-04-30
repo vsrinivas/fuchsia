@@ -30,9 +30,9 @@ bool Config::ReadFrom(const std::string& config_file) {
   rapidjson::Document document;
 
   if (!document.ParseStream<rapidjson::kParseCommentsFlag>(isw).IsObject()) {
-    FXL_LOG(ERROR) << "Failed to parse JSON object from: " << config_file;
+    FX_LOGS(ERROR) << "Failed to parse JSON object from: " << config_file;
     if (document.HasParseError()) {
-      FXL_LOG(ERROR) << "Parse error " << GetParseError_En(document.GetParseError()) << " ("
+      FX_LOGS(ERROR) << "Parse error " << GetParseError_En(document.GetParseError()) << " ("
                      << document.GetErrorOffset() << ")";
     }
     return false;
@@ -42,12 +42,12 @@ bool Config::ReadFrom(const std::string& config_file) {
   if (categories_it != document.MemberEnd()) {
     const auto& value = categories_it->value;
     if (!value.IsObject()) {
-      FXL_LOG(ERROR) << "Expecting " << kCategories << " to be an object";
+      FX_LOGS(ERROR) << "Expecting " << kCategories << " to be an object";
       return false;
     }
     for (auto it = value.MemberBegin(); it != value.MemberEnd(); ++it) {
       if (!(it->name.IsString() && it->value.IsString())) {
-        FXL_LOG(ERROR) << "Expecting both name and value to be strings";
+        FX_LOGS(ERROR) << "Expecting both name and value to be strings";
         return false;
       }
       known_categories_[it->name.GetString()] = it->value.GetString();

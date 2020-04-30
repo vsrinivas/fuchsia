@@ -338,7 +338,7 @@ TEST_F(CobaltAppTest, LogString) {
 }
 
 TEST_F(CobaltAppTest, LogMetricEvents) {
-  FXL_LOG(INFO) << "A logging statement";
+  FX_LOGS(INFO) << "A logging statement";
   fuchsia::cobalt::MetricEventLoggerPtr logger = GetMetricEventLogger();
   logger::testing::FakeLogger* fake_logger = fake_service_->last_logger_created();
   ASSERT_NE(fake_logger, nullptr);
@@ -373,7 +373,7 @@ TEST_F(CobaltAppTest, LogMetricEvents) {
 }
 
 TEST_F(CobaltAppTest, LogCustomEvent) {
-  FXL_LOG(INFO) << "A logging statement";
+  FX_LOGS(INFO) << "A logging statement";
   fuchsia::cobalt::MetricEventLoggerPtr logger = GetMetricEventLogger();
   logger::testing::FakeLogger* fake_logger = fake_service_->last_logger_created();
   ASSERT_NE(fake_logger, nullptr);

@@ -35,7 +35,7 @@ constexpr bool kAutoUpdatePackages = false;
 App::App(Config config, async::Loop* loop)
     : component_context_(sys::ComponentContext::CreateAndServeOutgoingDirectory()),
       auto_updates_enabled_(kAutoUpdatePackages) {
-  FXL_DCHECK(component_context_);
+  FX_DCHECK(component_context_);
 
   // The set of excluded services below are services that are the transitive
   // closure of dependencies required for auto-updates that must not be resolved
@@ -52,7 +52,7 @@ App::App(Config config, async::Loop* loop)
         sys::ServiceDirectory::CreateWithRequest(&launch_diagnostics.directory_request);
     services_.emplace(launch_diagnostics.url, std::move(diagnostics_services));
   } else {
-    FXL_LOG(WARNING) << "Creating sys realm without a diagnostics service.";
+    FX_LOGS(WARNING) << "Creating sys realm without a diagnostics service.";
   }
 
   // Register services.
@@ -81,13 +81,13 @@ App::App(Config config, async::Loop* loop)
     bool missing_services = false;
     for (auto& dep : update_dependencies) {
       if (std::find(svc_names_.begin(), svc_names_.end(), dep) == svc_names_.end()) {
-        FXL_LOG(WARNING) << "missing service required for auto updates: " << dep;
+        FX_LOGS(WARNING) << "missing service required for auto updates: " << dep;
         missing_services = true;
       }
     }
 
     if (resolver_missing || missing_services) {
-      FXL_LOG(WARNING) << "auto_update_packages = true but some update "
+      FX_LOGS(WARNING) << "auto_update_packages = true but some update "
                           "dependencies are missing in the sys environment. "
                           "Disabling auto-updates.";
       auto_updates_enabled_ = false;
@@ -135,7 +135,7 @@ App::App(Config config, async::Loop* loop)
 
   // Connect to startup services
   for (auto& startup_service : config.TakeStartupServices()) {
-    FXL_VLOG(1) << "Connecting to startup service " << startup_service;
+    FX_VLOGS(1) << "Connecting to startup service " << startup_service;
     zx::channel h1, h2;
     zx::channel::create(0, &h1, &h2);
     ConnectToService(startup_service, std::move(h1));
@@ -163,7 +163,7 @@ void App::ConnectToService(const std::string& service_name, zx::channel channel)
     status = child->Serve(fuchsia::io::OPEN_RIGHT_READABLE, std::move(channel));
   }
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Could not serve " << service_name << ": " << status;
+    FX_LOGS(ERROR) << "Could not serve " << service_name << ": " << status;
   }
 }
 
@@ -174,10 +174,10 @@ void App::RegisterSingleton(std::string service_name, fuchsia::sys::LaunchInfoPt
                                                controller = fuchsia::sys::ComponentControllerPtr()](
                                                   zx::channel client_handle,
                                                   async_dispatcher_t* dispatcher) mutable {
-    FXL_VLOG(2) << "Servicing singleton service request for " << service_name;
+    FX_VLOGS(2) << "Servicing singleton service request for " << service_name;
     auto it = services_.find(launch_info->url);
     if (it == services_.end()) {
-      FXL_VLOG(1) << "Starting singleton " << launch_info->url << " for service " << service_name;
+      FX_VLOGS(1) << "Starting singleton " << launch_info->url << " for service " << service_name;
       fuchsia::sys::LaunchInfo dup_launch_info;
       dup_launch_info.url = launch_info->url;
       fidl::Clone(launch_info->arguments, &dup_launch_info.arguments);
@@ -186,13 +186,13 @@ void App::RegisterSingleton(std::string service_name, fuchsia::sys::LaunchInfoPt
                                              int64_t return_code,
                                              fuchsia::sys::TerminationReason reason) {
         if (!optional && reason == fuchsia::sys::TerminationReason::PACKAGE_NOT_FOUND) {
-          FXL_LOG(ERROR) << "Could not load package for service " << service_name << " at " << url;
+          FX_LOGS(ERROR) << "Could not load package for service " << service_name << " at " << url;
         }
       };
       controller.set_error_handler(
           [this, optional, url = launch_info->url, &controller](zx_status_t error) {
             if (!optional) {
-              FXL_LOG(ERROR) << "Singleton " << url << " died";
+              FX_LOGS(ERROR) << "Singleton " << url << " died";
             }
             controller.Unbind();  // kills the singleton application
             services_.erase(url);
@@ -209,12 +209,12 @@ void App::RegisterSingleton(std::string service_name, fuchsia::sys::LaunchInfoPt
 }
 
 void App::LaunchApplication(fuchsia::sys::LaunchInfo launch_info) {
-  FXL_VLOG(1) << "Launching application " << launch_info.url;
+  FX_VLOGS(1) << "Launching application " << launch_info.url;
   env_launcher_->CreateComponent(std::move(launch_info), nullptr);
 }
 
 void App::StartDiagnostics(fuchsia::sys::LaunchInfo launch_diagnostics, async::Loop* loop) {
-  FXL_VLOG(1) << "Launching diagnostics from " << launch_diagnostics.url;
+  FX_VLOGS(1) << "Launching diagnostics from " << launch_diagnostics.url;
   bool diagnostics_ready = false;
   env_launcher_->CreateComponent(std::move(launch_diagnostics),
                                  diagnostics_controller_.NewRequest());
@@ -223,17 +223,17 @@ void App::StartDiagnostics(fuchsia::sys::LaunchInfo launch_diagnostics, async::L
   };
   diagnostics_controller_.set_error_handler(
       [this, url = launch_diagnostics.url](zx_status_t error) {
-        FXL_LOG(ERROR) << "Singleton " << url << " died (diagnostics)";
+        FX_LOGS(ERROR) << "Singleton " << url << " died (diagnostics)";
         diagnostics_controller_.Unbind();
         services_.erase(url);
       });
 
-  FXL_LOG(INFO) << "Waiting for diagnostics service dir";
+  FX_LOGS(INFO) << "Waiting for diagnostics service dir";
   while (!diagnostics_ready) {
     // we're willing to wait an infinite time for a *single* turn of the loop, which we'll repeat
     loop->Run(zx::time::infinite(), true /*once*/);
   }
-  FXL_LOG(INFO) << "Diagnostics initialized.";
+  FX_LOGS(INFO) << "Diagnostics initialized.";
 }
 
 }  // namespace sysmgr

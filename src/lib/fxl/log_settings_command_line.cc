@@ -19,7 +19,7 @@ bool ParseLogSettings(const fxl::CommandLine& command_line, LogSettings* out_set
   if (command_line.GetOptionValue("verbose", &verbosity)) {
     int level = 1;
     if (!verbosity.empty() && (!fxl::StringToNumberWithError(verbosity, &level) || level < 0)) {
-      FXL_LOG(ERROR) << "Error parsing --verbose option.";
+      FX_LOGS(ERROR) << "Error parsing --verbose option.";
       return false;
     }
     settings.min_log_level = -level;
@@ -30,7 +30,7 @@ bool ParseLogSettings(const fxl::CommandLine& command_line, LogSettings* out_set
   if (command_line.GetOptionValue("quiet", &quietness)) {
     int level = 1;
     if (!quietness.empty() && (!fxl::StringToNumberWithError(quietness, &level) || level < 0)) {
-      FXL_LOG(ERROR) << "Error parsing --quiet option.";
+      FX_LOGS(ERROR) << "Error parsing --quiet option.";
       return false;
     }
     settings.min_log_level = level;

@@ -67,8 +67,8 @@ class DwarfDieScanner2 {
   // When scanning is complete (done() returns true) this object can vend in constant time the
   // parent indices of a DIE (avoiding LLVM's linear scan). Will return kNoParent for the root.
   uint32_t GetParentIndex(uint32_t index) const {
-    FXL_DCHECK(index < parent_indices_.size());
-    FXL_DCHECK(done());  // Can only get parents when done iterating.
+    FX_DCHECK(index < parent_indices_.size());
+    FX_DCHECK(done());  // Can only get parents when done iterating.
     return parent_indices_[index];
   }
 

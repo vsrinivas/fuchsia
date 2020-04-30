@@ -35,7 +35,7 @@ GfxSystem::GfxSystem(SystemContext context, Engine* engine, Sysmem* sysmem,
       engine_(engine),
       session_manager_(this->context()->inspect_node()->CreateChild("SessionManager")),
       weak_factory_(this) {
-  FXL_DCHECK(engine_);
+  FX_DCHECK(engine_);
 
   // Create a pseudo-file that dumps alls the Scenic scenes.
   this->context()->app_context()->outgoing()->debug_dir()->AddEntry(
@@ -133,7 +133,7 @@ escher::EscherUniquePtr GfxSystem::CreateEscher(sys::ComponentContext* app_conte
                  escher::hmd::kPoseBufferLatchingSpirvPaths.end());
     bool success = shader_fs->InitializeWithRealFiles(paths);
 #endif
-    FXL_DCHECK(success) << "Failed to init shader files.";
+    FX_DCHECK(success) << "Failed to init shader files.";
   }
 
   // Initialize Escher.
@@ -155,7 +155,7 @@ escher::EscherUniquePtr GfxSystem::CreateEscher(sys::ComponentContext* app_conte
 
 void GfxSystem::DumpSessionMapResources(
     std::ostream& output, std::unordered_set<GlobalId, GlobalId::Hash>* visited_resources) {
-  FXL_DCHECK(visited_resources);
+  FX_DCHECK(visited_resources);
 
   // Iterate through all sessions to find Nodes that weren't reachable from any
   // compositor.  When such a Node is found, we walk up the tree to find the
@@ -169,7 +169,7 @@ void GfxSystem::DumpSessionMapResources(
     for (auto& [resource_id, resource_ptr] : resources) {
       auto visited_resource_iter = visited_resources->find(GlobalId(session_id, resource_id));
       if (visited_resource_iter == visited_resources->end()) {
-        FXL_DCHECK(resource_ptr);  // Should always be valid.
+        FX_DCHECK(resource_ptr);  // Should always be valid.
 
         if (resource_ptr->IsKindOf<Node>()) {
           // Attempt to find the root of this detached tree of Nodes.
@@ -178,7 +178,7 @@ void GfxSystem::DumpSessionMapResources(
           while (Node* new_root = root_node->parent()) {
             auto visited_node_iter = visited_resources->find(GlobalId(session_id, new_root->id()));
             if (visited_node_iter != visited_resources->end()) {
-              FXL_NOTREACHED() << "Unvisited child should not have a visited parent!";
+              FX_NOTREACHED() << "Unvisited child should not have a visited parent!";
             }
 
             root_node = new_root;
@@ -205,7 +205,7 @@ void GfxSystem::DumpSessionMapResources(
     for (auto& [resource_id, resource_ptr] : resources) {
       auto visited_resource_iter = visited_resources->find(GlobalId(session_id, resource_id));
       if (visited_resource_iter == visited_resources->end()) {
-        FXL_DCHECK(resource_ptr);  // Should always be valid.
+        FX_DCHECK(resource_ptr);  // Should always be valid.
 
         DumpVisitor visitor(DumpVisitor::VisitorContext(output, visited_resources));
         resource_ptr->Accept(&visitor);
@@ -256,7 +256,7 @@ scheduling::SessionUpdater::UpdateResults GfxSystem::UpdateSessions(
       updates.push_back(ViewTreeMakeGlobalRoot{.koid = ZX_KOID_INVALID});
     } else {
       if (scenes.size() > 1) {
-        FXL_LOG(ERROR) << "Bug 36295 - multiple scenes active, but Scenic's ViewTree is limited to "
+        FX_LOGS(ERROR) << "Bug 36295 - multiple scenes active, but Scenic's ViewTree is limited to "
                           "one active focus chain.";
       }
       for (const auto scene : scenes) {
@@ -286,7 +286,7 @@ VkBool32 GfxSystem::HandleDebugReport(VkDebugReportFlagsEXT flags_in,
 
 // Macro to facilitate matching messages.  Example usage:
 //  if (VK_MATCH_REPORT(DescriptorSet, 0, "VUID-VkWriteDescriptorSet-descriptorType-01403")) {
-//    FXL_LOG(INFO) << "ignoring descriptor set problem: " << pMessage << "\n\n";
+//    FX_LOGS(INFO) << "ignoring descriptor set problem: " << pMessage << "\n\n";
 //    return false;
 //  }
 #define VK_MATCH_REPORT(OTYPE, CODE, X)                                                 \
@@ -300,22 +300,22 @@ VkBool32 GfxSystem::HandleDebugReport(VkDebugReportFlagsEXT flags_in,
 
   bool fatal = false;
   if (flags == vk::DebugReportFlagBitsEXT::eInformation) {
-    FXL_LOG(INFO) << "## Vulkan Information: " << VK_DEBUG_REPORT_MESSAGE;
+    FX_LOGS(INFO) << "## Vulkan Information: " << VK_DEBUG_REPORT_MESSAGE;
   } else if (flags == vk::DebugReportFlagBitsEXT::eWarning) {
-    FXL_LOG(WARNING) << "## Vulkan Warning: " << VK_DEBUG_REPORT_MESSAGE;
+    FX_LOGS(WARNING) << "## Vulkan Warning: " << VK_DEBUG_REPORT_MESSAGE;
   } else if (flags == vk::DebugReportFlagBitsEXT::ePerformanceWarning) {
-    FXL_LOG(WARNING) << "## Vulkan Performance Warning: " << VK_DEBUG_REPORT_MESSAGE;
+    FX_LOGS(WARNING) << "## Vulkan Performance Warning: " << VK_DEBUG_REPORT_MESSAGE;
   } else if (flags == vk::DebugReportFlagBitsEXT::eError) {
     // Treat all errors as fatal.
     fatal = true;
-    FXL_LOG(ERROR) << "## Vulkan Error: " << VK_DEBUG_REPORT_MESSAGE;
+    FX_LOGS(ERROR) << "## Vulkan Error: " << VK_DEBUG_REPORT_MESSAGE;
   } else if (flags == vk::DebugReportFlagBitsEXT::eDebug) {
-    FXL_LOG(INFO) << "## Vulkan Debug: " << VK_DEBUG_REPORT_MESSAGE;
+    FX_LOGS(INFO) << "## Vulkan Debug: " << VK_DEBUG_REPORT_MESSAGE;
   } else {
     // This should never happen, unless a new value has been added to
     // vk::DebugReportFlagBitsEXT.  In that case, add a new if-clause above.
     fatal = true;
-    FXL_LOG(ERROR) << "## Vulkan Unknown Message Type (flags: " << vk::to_string(flags) << "): ";
+    FX_LOGS(ERROR) << "## Vulkan Unknown Message Type (flags: " << vk::to_string(flags) << "): ";
   }
 
   // Crash immediately on fatal errors.

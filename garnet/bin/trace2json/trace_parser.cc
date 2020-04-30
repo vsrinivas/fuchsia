@@ -11,7 +11,7 @@ namespace tracing {
 FuchsiaTraceParser::FuchsiaTraceParser(std::ostream* out)
     : exporter_(*out),
       reader_([this](trace::Record record) { exporter_.ExportRecord(record); },
-              [](fbl::String error) { FXL_LOG(ERROR) << error.c_str(); }) {}
+              [](fbl::String error) { FX_LOGS(ERROR) << error.c_str(); }) {}
 
 FuchsiaTraceParser::~FuchsiaTraceParser() = default;
 
@@ -20,7 +20,7 @@ bool FuchsiaTraceParser::ParseComplete(std::istream* in) {
     size_t bytes_read =
         in->read(buffer_.data() + buffer_end_, buffer_.size() - buffer_end_).gcount();
     if (bytes_read == 0) {
-      FXL_LOG(ERROR) << "Read returned 0 bytes";
+      FX_LOGS(ERROR) << "Read returned 0 bytes";
       return false;
     }
     buffer_end_ += bytes_read;
@@ -29,7 +29,7 @@ bool FuchsiaTraceParser::ParseComplete(std::istream* in) {
     trace::Chunk chunk(reinterpret_cast<const uint64_t*>(buffer_.data()), words);
 
     if (!reader_.ReadRecords(chunk)) {
-      FXL_LOG(ERROR) << "Error parsing trace";
+      FX_LOGS(ERROR) << "Error parsing trace";
       return false;
     }
 
@@ -39,7 +39,7 @@ bool FuchsiaTraceParser::ParseComplete(std::istream* in) {
   }
 
   if (buffer_end_ > 0) {
-    FXL_LOG(ERROR) << "Trace file did not end at a record boundary.";
+    FX_LOGS(ERROR) << "Trace file did not end at a record boundary.";
     return false;
   }
 

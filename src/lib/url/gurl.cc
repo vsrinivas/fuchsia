@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/lib/url/gurl.h"
+
 #include <pthread.h>
 
 #include <algorithm>
 #include <ostream>
-
-#include "src/lib/url/gurl.h"
 
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/ascii.h"
@@ -82,17 +82,17 @@ void GURL::InitializeFromCanonicalSpec() {
     // removed from a "foo:hello #ref" URL (see http://crbug.com/291747).
     GURL test_url(spec_, RETAIN_TRAILING_PATH_WHITEPACE);
 
-    FXL_DCHECK(test_url.is_valid_ == is_valid_);
-    FXL_DCHECK(test_url.spec_ == spec_);
+    FX_DCHECK(test_url.is_valid_ == is_valid_);
+    FX_DCHECK(test_url.spec_ == spec_);
 
-    FXL_DCHECK(test_url.parsed_.scheme == parsed_.scheme);
-    FXL_DCHECK(test_url.parsed_.username == parsed_.username);
-    FXL_DCHECK(test_url.parsed_.password == parsed_.password);
-    FXL_DCHECK(test_url.parsed_.host == parsed_.host);
-    FXL_DCHECK(test_url.parsed_.port == parsed_.port);
-    FXL_DCHECK(test_url.parsed_.path == parsed_.path);
-    FXL_DCHECK(test_url.parsed_.query == parsed_.query);
-    FXL_DCHECK(test_url.parsed_.ref == parsed_.ref);
+    FX_DCHECK(test_url.parsed_.scheme == parsed_.scheme);
+    FX_DCHECK(test_url.parsed_.username == parsed_.username);
+    FX_DCHECK(test_url.parsed_.password == parsed_.password);
+    FX_DCHECK(test_url.parsed_.host == parsed_.host);
+    FX_DCHECK(test_url.parsed_.port == parsed_.port);
+    FX_DCHECK(test_url.parsed_.path == parsed_.path);
+    FX_DCHECK(test_url.parsed_.query == parsed_.query);
+    FX_DCHECK(test_url.parsed_.ref == parsed_.ref);
   }
 #endif
 }
@@ -108,7 +108,7 @@ const std::string& GURL::spec() const {
   if (is_valid_ || spec_.empty())
     return spec_;
 
-  FXL_DCHECK(false) << "Trying to get the spec of an invalid URL!";
+  FX_DCHECK(false) << "Trying to get the spec of an invalid URL!";
   return EmptyStringForGURL();
 }
 
@@ -204,7 +204,7 @@ std::string GURL::ExtractFileName() const {
 }
 
 std::string GURL::PathForRequest() const {
-  FXL_DCHECK(parsed_.path.is_nonempty()) << "Canonical path for requests should be non-empty";
+  FX_DCHECK(parsed_.path.is_nonempty()) << "Canonical path for requests should be non-empty";
   if (parsed_.ref.is_valid()) {
     // Clip off the reference when it exists. The reference starts after the
     // #-sign, so we have to subtract one to also remove it.

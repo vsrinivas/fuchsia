@@ -24,7 +24,7 @@ uint32_t BytesPerSample(fuchsia::media::AudioSampleFormat sample_format) {
 fuchsia::media::AudioStreamType CreateAudioStreamType(
     fuchsia::media::AudioSampleFormat sample_format, uint32_t channel_count,
     uint32_t frames_per_second) {
-  FXL_DCHECK(channel_count != 0);
+  FX_DCHECK(channel_count != 0);
 
   fuchsia::media::AudioStreamType audio_stream_type;
   audio_stream_type.sample_format = sample_format;

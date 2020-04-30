@@ -42,12 +42,12 @@ const char kTraceProgramPath[] = "/bin/trace";
 static bool ReadTspec(const std::string& tspec_path, tracing::Spec* spec) {
   std::string tspec_contents;
   if (!files::ReadFileToString(tspec_path, &tspec_contents)) {
-    FXL_LOG(ERROR) << "Can't read test spec: " << tspec_path;
+    FX_LOGS(ERROR) << "Can't read test spec: " << tspec_path;
     return false;
   }
 
   if (!tracing::DecodeSpec(tspec_contents, spec)) {
-    FXL_LOG(ERROR) << "Error decoding test spec: " << tspec_path;
+    FX_LOGS(ERROR) << "Error decoding test spec: " << tspec_path;
     return false;
   }
   return true;
@@ -100,13 +100,13 @@ static zx_status_t AddAuxDirToSpawnAction(const char* local_path, const char* re
 
   zx_status_t status = zx::channel::create(0, &dir, &server);
   if (status != ZX_OK) {
-    FXL_PLOG(ERROR, status) << "Could not create channel aux directory";
+    FX_PLOGS(ERROR, status) << "Could not create channel aux directory";
     return false;
   }
 
   status = fdio_open(local_path, ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE, server.release());
   if (status != ZX_OK) {
-    FXL_PLOG(ERROR, status) << "Could not open " << local_path;
+    FX_PLOGS(ERROR, status) << "Could not open " << local_path;
     return false;
   }
 
@@ -137,7 +137,7 @@ bool RunTrace(const zx::job& job, const std::vector<std::string>& args, zx::proc
     return false;
   }
 
-  FXL_CHECK(num_actions <= arraysize(spawn_actions));
+  FX_CHECK(num_actions <= arraysize(spawn_actions));
 
   return RunProgram(job, argv, num_actions, spawn_actions, out_child) == ZX_OK;
 }
@@ -153,7 +153,7 @@ bool RunTraceAndWait(const zx::job& job, const std::vector<std::string>& args) {
     return false;
   }
   if (return_code != 0) {
-    FXL_LOG(ERROR) << "trace exited with return code " << return_code;
+    FX_LOGS(ERROR) << "trace exited with return code " << return_code;
     return false;
   }
 
@@ -166,13 +166,13 @@ static bool AddAuxDirToLaunchInfo(const char* local_path, const char* remote_pat
 
   zx_status_t status = zx::channel::create(0, &dir, &server);
   if (status != ZX_OK) {
-    FXL_PLOG(ERROR, status) << "Could not create channel aux directory";
+    FX_PLOGS(ERROR, status) << "Could not create channel aux directory";
     return false;
   }
 
   status = fdio_open(local_path, ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE, server.release());
   if (status != ZX_OK) {
-    FXL_PLOG(ERROR, status) << "Could not open " << local_path;
+    FX_PLOGS(ERROR, status) << "Could not open " << local_path;
     return false;
   }
 
@@ -204,7 +204,7 @@ bool RunTspec(const std::string& relative_tspec_path, const std::string& relativ
     return false;
   }
 
-  FXL_LOG(INFO) << "Running tspec " << relative_tspec_path << ", output file "
+  FX_LOGS(INFO) << "Running tspec " << relative_tspec_path << ", output file "
                 << relative_output_file_path;
 
   return RunTraceComponentAndWait(kTraceProgramUrl, args);
@@ -218,7 +218,7 @@ bool VerifyTspec(const std::string& relative_tspec_path,
     return false;
   }
 
-  FXL_DCHECK(spec.app);
+  FX_DCHECK(spec.app);
   const std::string& program_path = *spec.app;
 
   std::vector<std::string> args;
@@ -227,7 +227,7 @@ bool VerifyTspec(const std::string& relative_tspec_path,
        relative_tspec_path),
       std::string(kSpawnedTestTmpPath) + "/" + relative_output_file_path, &args, log_settings);
 
-  FXL_LOG(INFO) << "Verifying tspec " << relative_tspec_path << ", output file "
+  FX_LOGS(INFO) << "Verifying tspec " << relative_tspec_path << ", output file "
                 << relative_output_file_path;
 
   // For consistency we do the exact same thing that the trace program does.

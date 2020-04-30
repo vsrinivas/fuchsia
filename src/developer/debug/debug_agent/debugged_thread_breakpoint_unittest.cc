@@ -194,9 +194,9 @@ std::pair<const MockProcessObject*, const MockThreadObject*> GetProcessThread(
     const MockObjectProvider& object_provider, const std::string& process_name,
     const std::string& thread_name) {
   auto* process = object_provider.ProcessByName(process_name);
-  FXL_DCHECK(process);
+  FX_DCHECK(process);
   auto* thread = process->GetThread(thread_name);
-  FXL_DCHECK(thread);
+  FX_DCHECK(thread);
 
   return {process, thread};
 }

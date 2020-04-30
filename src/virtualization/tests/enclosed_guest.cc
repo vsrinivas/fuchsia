@@ -78,7 +78,7 @@ zx_status_t EnclosedGuest::Execute(const std::vector<std::string>& argv,
                                    const std::unordered_map<std::string, std::string>& env,
                                    std::string* result, int32_t* return_code) {
   if (env.size() > 0) {
-    FXL_LOG(ERROR) << "Only TerminaEnclosedGuest::Execute accepts environment variables.";
+    FX_LOGS(ERROR) << "Only TerminaEnclosedGuest::Execute accepts environment variables.";
     return ZX_ERR_NOT_SUPPORTED;
   }
   auto command = JoinArgVector(argv);
@@ -96,25 +96,25 @@ zx_status_t EnclosedGuest::Start() {
   zx_status_t status = services->AddServiceWithLaunchInfo(std::move(launch_info),
                                                           fuchsia::virtualization::Manager::Name_);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failure launching virtualization manager: " << zx_status_get_string(status);
+    FX_LOGS(ERROR) << "Failure launching virtualization manager: " << zx_status_get_string(status);
     return status;
   }
 
   status = services->AddService(fake_netstack_.GetHandler(), fuchsia::netstack::Netstack::Name_);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failure launching mock netstack: " << zx_status_get_string(status);
+    FX_LOGS(ERROR) << "Failure launching mock netstack: " << zx_status_get_string(status);
     return status;
   }
 
   status = services->AddService(fake_scenic_.GetHandler(), fuchsia::ui::scenic::Scenic::Name_);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failure launching fake scenic service: " << zx_status_get_string(status);
+    FX_LOGS(ERROR) << "Failure launching fake scenic service: " << zx_status_get_string(status);
     return status;
   }
 
   status = services->AllowParentService(fuchsia::sysinfo::SysInfo::Name_);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failure adding sysinfo service: " << zx_status_get_string(status);
+    FX_LOGS(ERROR) << "Failure adding sysinfo service: " << zx_status_get_string(status);
     return status;
   }
 
@@ -124,14 +124,14 @@ zx_status_t EnclosedGuest::Start() {
       &loop_, [this] { return enclosing_environment_->is_running(); },
       PeriodicLogger("Creating guest sandbox", zx::sec(10)));
   if (!environment_running) {
-    FXL_LOG(ERROR) << "Timed out waiting for guest sandbox environment to become ready.";
+    FX_LOGS(ERROR) << "Timed out waiting for guest sandbox environment to become ready.";
     return ZX_ERR_TIMED_OUT;
   }
 
   fuchsia::virtualization::LaunchInfo guest_launch_info;
   status = LaunchInfo(&guest_launch_info);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failure launching guest image: " << zx_status_get_string(status);
+    FX_LOGS(ERROR) << "Failure launching guest image: " << zx_status_get_string(status);
     return status;
   }
 
@@ -165,19 +165,19 @@ zx_status_t EnclosedGuest::Start() {
       &loop_, [&serial_socket] { return serial_socket.is_valid(); },
       PeriodicLogger("Connecting to guest serial", zx::sec(10)));
   if (!socket_valid) {
-    FXL_LOG(ERROR) << "Timed out waiting to connect to guest's serial.";
+    FX_LOGS(ERROR) << "Timed out waiting to connect to guest's serial.";
     return ZX_ERR_TIMED_OUT;
   }
   console_ = std::make_unique<GuestConsole>(std::make_unique<ZxSocket>(std::move(serial_socket)));
   status = console_->Start();
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Error connecting to guest's console: " << zx_status_get_string(status);
+    FX_LOGS(ERROR) << "Error connecting to guest's console: " << zx_status_get_string(status);
     return status;
   }
 
   status = WaitForSystemReady();
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failure while waiting for guest system to become ready: "
+    FX_LOGS(ERROR) << "Failure while waiting for guest system to become ready: "
                    << zx_status_get_string(status);
     return status;
   }
@@ -213,7 +213,7 @@ zx_status_t ZirconEnclosedGuest::WaitForSystemReady() {
     }
     return ZX_OK;
   }
-  FXL_LOG(ERROR) << "Failed to wait for appmgr";
+  FX_LOGS(ERROR) << "Failed to wait for appmgr";
   return ZX_ERR_TIMED_OUT;
 }
 
@@ -246,7 +246,7 @@ zx_status_t DebianEnclosedGuest::WaitForSystemReady() {
     }
     return ZX_OK;
   }
-  FXL_LOG(ERROR) << "Failed to wait for shell";
+  FX_LOGS(ERROR) << "Failed to wait for shell";
   return ZX_ERR_TIMED_OUT;
 }
 
@@ -327,7 +327,7 @@ grpc::Status TerminaEnclosedGuest::VmReady(grpc::ServerContext* context,
   if (result.is_ok()) {
     maitred_ = std::move(result.value());
   } else {
-    FXL_PLOG(ERROR, result.error()) << "Failed to connect to maitred";
+    FX_PLOGS(ERROR, result.error()) << "Failed to connect to maitred";
   }
   return grpc::Status::OK;
 }
@@ -340,7 +340,7 @@ zx_status_t TerminaEnclosedGuest::WaitForSystemReady() {
           PeriodicLogger("Wait for maitred", zx::sec(1)))) {
     return ZX_ERR_TIMED_OUT;
   }
-  FXL_CHECK(maitred_) << "No maitred connection";
+  FX_CHECK(maitred_) << "No maitred connection";
 
   // Connect to vshd.
   fuchsia::virtualization::HostVsockEndpointPtr endpoint;
@@ -357,7 +357,7 @@ zx_status_t TerminaEnclosedGuest::WaitForSystemReady() {
           {},
       });
       if (!command_result.is_ok()) {
-        FXL_LOG(ERROR) << "Command fails with error "
+        FX_LOGS(ERROR) << "Command fails with error "
                        << zx_status_get_string(command_result.error());
         return command_result.error();
       }
@@ -377,11 +377,11 @@ zx_status_t TerminaEnclosedGuest::WaitForSystemReady() {
 
     auto grpc_status = maitred_->Mount(&context, request, &response);
     if (!grpc_status.ok()) {
-      FXL_LOG(ERROR) << "Failed to mount test_utils filesystem: " << grpc_status.error_message();
+      FX_LOGS(ERROR) << "Failed to mount test_utils filesystem: " << grpc_status.error_message();
       return ZX_ERR_IO;
     }
     if (response.error() != 0) {
-      FXL_LOG(ERROR) << "test_utils mount failed: " << response.error();
+      FX_LOGS(ERROR) << "test_utils mount failed: " << response.error();
       return ZX_ERR_IO;
     }
   }
@@ -399,11 +399,11 @@ zx_status_t TerminaEnclosedGuest::WaitForSystemReady() {
 
     auto grpc_status = maitred_->Mount(&context, request, &response);
     if (!grpc_status.ok()) {
-      FXL_LOG(ERROR) << "Failed to mount extras filesystem: " << grpc_status.error_message();
+      FX_LOGS(ERROR) << "Failed to mount extras filesystem: " << grpc_status.error_message();
       return ZX_ERR_IO;
     }
     if (response.error() != 0) {
-      FXL_LOG(ERROR) << "extras mount failed: " << response.error();
+      FX_LOGS(ERROR) << "extras mount failed: " << response.error();
       return ZX_ERR_IO;
     }
   }

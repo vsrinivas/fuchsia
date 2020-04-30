@@ -47,7 +47,7 @@ int main(int argc, char *argv[]) {
   auto args = cl.positional_args();
 
   if (args.size() != 1) {
-    FXL_LOG(ERROR) << "Missing tspec file";
+    FX_LOGS(ERROR) << "Missing tspec file";
     return EXIT_FAILURE;
   }
   auto relative_tspec_path = args[0];

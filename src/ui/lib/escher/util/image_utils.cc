@@ -49,7 +49,7 @@ size_t BytesPerPixel(vk::Format format) {
     case vk::Format::eR8Unorm:
       return 1;
     default:
-      FXL_CHECK(false);
+      FX_CHECK(false);
       return 0;
   }
 }
@@ -127,8 +127,8 @@ vk::ImageAspectFlags FormatToColorOrDepthStencilAspectFlags(vk::Format format) {
 
 vk::ImageCreateInfo CreateVkImageCreateInfo(ImageInfo info, vk::ImageLayout initial_layout) {
   // Per Vulkan spec, for new images the layout should be only ePreinitialized or eUndefined.
-  FXL_CHECK(initial_layout == vk::ImageLayout::ePreinitialized ||
-            initial_layout == vk::ImageLayout::eUndefined);
+  FX_CHECK(initial_layout == vk::ImageLayout::ePreinitialized ||
+           initial_layout == vk::ImageLayout::eUndefined);
 
   vk::ImageCreateInfo create_info;
   create_info.pNext = info.is_external ? &kExternalImageCreateInfo : nullptr;
@@ -158,7 +158,7 @@ vk::Image CreateVkImage(const vk::Device& device, ImageInfo info, vk::ImageLayou
 
 ImagePtr NewDepthImage(ImageFactory* image_factory, vk::Format format, uint32_t width,
                        uint32_t height, vk::ImageUsageFlags additional_flags) {
-  FXL_DCHECK(image_factory);
+  FX_DCHECK(image_factory);
   ImageInfo info;
   info.format = format;
   info.width = width;
@@ -171,7 +171,7 @@ ImagePtr NewDepthImage(ImageFactory* image_factory, vk::Format format, uint32_t 
 
 ImagePtr NewColorAttachmentImage(ImageFactory* image_factory, uint32_t width, uint32_t height,
                                  vk::ImageUsageFlags additional_flags) {
-  FXL_DCHECK(image_factory);
+  FX_DCHECK(image_factory);
   ImageInfo info;
   info.format = vk::Format::eB8G8R8A8Unorm;
   info.width = width;
@@ -184,8 +184,8 @@ ImagePtr NewColorAttachmentImage(ImageFactory* image_factory, uint32_t width, ui
 
 ImagePtr NewImage(const vk::Device& device, const vk::ImageCreateInfo& create_info,
                   escher::GpuMemPtr gpu_mem, escher::ResourceRecycler* resource_recycler) {
-  FXL_DCHECK(resource_recycler);
-  FXL_DCHECK(gpu_mem);
+  FX_DCHECK(resource_recycler);
+  FX_DCHECK(gpu_mem);
 
   // Vulkan.hpp DCHECKs if this is false, so don't do any extra checking at this point here.
   auto image_result = device.createImage(create_info);
@@ -194,7 +194,7 @@ ImagePtr NewImage(const vk::Device& device, const vk::ImageCreateInfo& create_in
   vk::MemoryRequirements memory_reqs;
   device.getImageMemoryRequirements(image_result.value, &memory_reqs);
   if (memory_reqs.size > gpu_mem->size()) {
-    FXL_LOG(ERROR) << "Memory requirements for image exceed available memory: " << memory_reqs.size
+    FX_LOGS(ERROR) << "Memory requirements for image exceed available memory: " << memory_reqs.size
                    << " " << gpu_mem->size();
     return nullptr;
   }
@@ -216,7 +216,7 @@ ImagePtr NewImage(const vk::Device& device, const vk::ImageCreateInfo& create_in
 
 ImagePtr NewImage(ImageFactory* image_factory, vk::Format format, uint32_t width, uint32_t height,
                   vk::ImageUsageFlags additional_flags, vk::MemoryPropertyFlags memory_flags) {
-  FXL_DCHECK(image_factory);
+  FX_DCHECK(image_factory);
 
   ImageInfo info;
   info.format = format;
@@ -236,9 +236,9 @@ ImagePtr NewImage(ImageFactory* image_factory, vk::Format format, uint32_t width
 void WritePixelsToImage(BatchGpuUploader* batch_gpu_uploader, const uint8_t* pixels,
                         const ImagePtr& image, vk::ImageLayout final_layout,
                         const ImageConversionFunction& conversion_func) {
-  FXL_DCHECK(batch_gpu_uploader);
-  FXL_DCHECK(image);
-  FXL_DCHECK(pixels);
+  FX_DCHECK(batch_gpu_uploader);
+  FX_DCHECK(image);
+  FX_DCHECK(pixels);
 
   size_t bytes_per_pixel = BytesPerPixel(image->info().format);
   size_t width = image->info().width;
@@ -266,8 +266,8 @@ void WritePixelsToImage(BatchGpuUploader* batch_gpu_uploader, const uint8_t* pix
 
 ImagePtr NewRgbaImage(ImageFactory* image_factory, BatchGpuUploader* gpu_uploader, uint32_t width,
                       uint32_t height, const uint8_t* pixels, vk::ImageLayout final_layout) {
-  FXL_DCHECK(image_factory);
-  FXL_DCHECK(gpu_uploader);
+  FX_DCHECK(image_factory);
+  FX_DCHECK(gpu_uploader);
 
   auto image =
       NewImage(image_factory, vk::Format::eR8G8B8A8Unorm, width, height, vk::ImageUsageFlags());
@@ -278,8 +278,8 @@ ImagePtr NewRgbaImage(ImageFactory* image_factory, BatchGpuUploader* gpu_uploade
 
 ImagePtr NewCheckerboardImage(ImageFactory* image_factory, BatchGpuUploader* gpu_uploader,
                               uint32_t width, uint32_t height) {
-  FXL_DCHECK(image_factory);
-  FXL_DCHECK(gpu_uploader);
+  FX_DCHECK(image_factory);
+  FX_DCHECK(gpu_uploader);
 
   auto image = NewImage(image_factory, vk::Format::eR8G8B8A8Unorm, width, height);
 
@@ -290,8 +290,8 @@ ImagePtr NewCheckerboardImage(ImageFactory* image_factory, BatchGpuUploader* gpu
 
 ImagePtr NewGradientImage(ImageFactory* image_factory, BatchGpuUploader* gpu_uploader,
                           uint32_t width, uint32_t height) {
-  FXL_DCHECK(image_factory);
-  FXL_DCHECK(gpu_uploader);
+  FX_DCHECK(image_factory);
+  FX_DCHECK(gpu_uploader);
 
   auto pixels = NewGradientPixels(width, height);
   // TODO(SCN-839): are SRGB formats slow on Mali?
@@ -303,8 +303,8 @@ ImagePtr NewGradientImage(ImageFactory* image_factory, BatchGpuUploader* gpu_upl
 
 ImagePtr NewNoiseImage(ImageFactory* image_factory, BatchGpuUploader* gpu_uploader, uint32_t width,
                        uint32_t height, vk::ImageUsageFlags additional_flags) {
-  FXL_DCHECK(image_factory);
-  FXL_DCHECK(gpu_uploader);
+  FX_DCHECK(image_factory);
+  FX_DCHECK(gpu_uploader);
 
   auto pixels = NewNoisePixels(width, height);
   auto image = NewImage(image_factory, vk::Format::eR8Unorm, width, height, additional_flags);
@@ -315,8 +315,8 @@ ImagePtr NewNoiseImage(ImageFactory* image_factory, BatchGpuUploader* gpu_upload
 
 std::unique_ptr<uint8_t[]> NewCheckerboardPixels(uint32_t width, uint32_t height,
                                                  size_t* out_size) {
-  FXL_DCHECK(width % 2 == 0);
-  FXL_DCHECK(height % 2 == 0);
+  FX_DCHECK(width % 2 == 0);
+  FX_DCHECK(height % 2 == 0);
 
   size_t size_in_bytes = width * height * sizeof(RGBA);
   auto ptr = std::make_unique<uint8_t[]>(size_in_bytes);
@@ -338,8 +338,8 @@ std::unique_ptr<uint8_t[]> NewCheckerboardPixels(uint32_t width, uint32_t height
 }
 
 std::unique_ptr<uint8_t[]> NewGradientPixels(uint32_t width, uint32_t height, size_t* out_size) {
-  FXL_DCHECK(width % 2 == 0);
-  FXL_DCHECK(height % 2 == 0);
+  FX_DCHECK(width % 2 == 0);
+  FX_DCHECK(height % 2 == 0);
 
   size_t size_in_bytes = width * height * sizeof(RGBA);
   auto ptr = std::make_unique<uint8_t[]>(size_in_bytes);

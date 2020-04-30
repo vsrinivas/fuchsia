@@ -20,15 +20,15 @@ class DefaultEventReporter : public EventReporter {
   DefaultEventReporter() : weak_factory_(this) {}
 
   void EnqueueEvent(fuchsia::ui::gfx::Event event) override {
-    FXL_LOG(WARNING) << "EventReporter not set up, dropped event: " << event;
+    FX_LOGS(WARNING) << "EventReporter not set up, dropped event: " << event;
   }
 
   void EnqueueEvent(fuchsia::ui::input::InputEvent event) override {
-    FXL_LOG(WARNING) << "EventReporter not set up, dropped event: " << event;
+    FX_LOGS(WARNING) << "EventReporter not set up, dropped event: " << event;
   }
 
   void EnqueueEvent(fuchsia::ui::scenic::Command unhandled) override {
-    FXL_LOG(WARNING) << "EventReporter not set up, dropped event: " << unhandled;
+    FX_LOGS(WARNING) << "EventReporter not set up, dropped event: " << unhandled;
   }
 
   EventReporterWeakPtr GetWeakPtr() override { return weak_factory_.GetWeakPtr(); }
@@ -49,7 +49,7 @@ void EventReporter::EnqueueEvent(fuchsia::ui::scenic::Event event) {
     case fuchsia::ui::scenic::Event::Tag::kUnhandled:
       EnqueueEvent(std::move(event.unhandled()));
     default:
-      FXL_LOG(ERROR) << "Unknown Scenic event.";
+      FX_LOGS(ERROR) << "Unknown Scenic event.";
   }
 }
 

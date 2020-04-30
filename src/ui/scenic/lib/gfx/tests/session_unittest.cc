@@ -122,7 +122,7 @@ VK_TEST_F(BufferSessionTest, BufferAliasing) {
   // can't run this test.
   if (!memory) {
     device.freeMemory(memory);
-    FXL_LOG(INFO) << "Could not find UMA compatible memory pool, aborting test.";
+    FX_LOGS(INFO) << "Could not find UMA compatible memory pool, aborting test.";
     return;
   }
 

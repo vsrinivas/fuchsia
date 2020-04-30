@@ -12,17 +12,16 @@
 #include "src/lib/files/path.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
-
 #include "util.h"
 
 namespace debugger_utils {
 
 bool BuildIdTable::ReadIdsFile(const std::string& file) {
-  FXL_LOG(INFO) << "Loading ids data from " << file;
+  FX_LOGS(INFO) << "Loading ids data from " << file;
 
   FILE* f = fopen(file.c_str(), "r");
   if (!f) {
-    FXL_LOG(ERROR) << "error opening ids file, " << ErrnoString(errno);
+    FX_LOGS(ERROR) << "error opening ids file, " << ErrnoString(errno);
     return false;
   }
 
@@ -34,11 +33,11 @@ bool BuildIdTable::ReadIdsFile(const std::string& file) {
     size_t n = strlen(line);
     if (n > 0 && line[n - 1] == '\n')
       line[n - 1] = '\0';
-    FXL_VLOG(2) << fxl::StringPrintf("read %d: %s", lineno, line);
+    FX_VLOGS(2) << fxl::StringPrintf("read %d: %s", lineno, line);
 
 #define MAX_LINE_LEN 1024
     if (linelen > MAX_LINE_LEN) {
-      FXL_VLOG(2) << fxl::StringPrintf("%d: ignoring: %s", lineno, line);
+      FX_VLOGS(2) << fxl::StringPrintf("%d: ignoring: %s", lineno, line);
       continue;
     }
 
@@ -52,7 +51,7 @@ bool BuildIdTable::ReadIdsFile(const std::string& file) {
     if (sscanf(line, "%s %s", build_id, path) == 2) {
       AddBuildId(files::GetDirectoryName(file), build_id, path);
     } else {
-      FXL_VLOG(2) << fxl::StringPrintf("%d: ignoring: %s", lineno, line);
+      FX_VLOGS(2) << fxl::StringPrintf("%d: ignoring: %s", lineno, line);
     }
   }
 
@@ -73,7 +72,7 @@ void BuildIdTable::AddBuildId(const std::string& file_dir, const std::string& bu
   } else {
     abs_path = path;
   }
-  FXL_VLOG(2) << fxl::StringPrintf("build_id %s, file %s", build_id.c_str(), abs_path.c_str());
+  FX_VLOGS(2) << fxl::StringPrintf("build_id %s, file %s", build_id.c_str(), abs_path.c_str());
   BuildId build_id_object;
   build_id_object.build_id = build_id;
   build_id_object.file = abs_path;

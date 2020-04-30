@@ -330,7 +330,7 @@ void LiteralExprNode::Eval(const fxl::RefPtr<EvalContext>& context, EvalCallback
       break;
     }
     default:
-      FXL_NOTREACHED();
+      FX_NOTREACHED();
   }
 }
 

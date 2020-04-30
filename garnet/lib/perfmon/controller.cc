@@ -26,7 +26,7 @@ const char kPerfMonDev[] = "/dev/sys/cpu-trace/perfmon";
 
 static uint32_t RoundUpToPages(uint32_t value) {
   uint32_t size = fbl::round_up(value, Controller::kPageSize);
-  FXL_DCHECK(size & ~(Controller::kPageSize - 1));
+  FX_DCHECK(size & ~(Controller::kPageSize - 1));
   return size >> Controller::kLog2PageSize;
 }
 
@@ -59,14 +59,14 @@ bool Controller::GetProperties(Properties* props) {
   zx_status_t status =
       fdio_service_connect(kPerfMonDev, controller_ptr.NewRequest().TakeChannel().release());
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Error connecting to " << kPerfMonDev << ": " << status;
+    FX_LOGS(ERROR) << "Error connecting to " << kPerfMonDev << ": " << status;
     return false;
   }
 
   FidlPerfmonProperties properties;
   status = controller_ptr->GetProperties(&properties);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to get properties: " << status;
+    FX_LOGS(ERROR) << "Failed to get properties: " << status;
     return false;
   }
 
@@ -79,46 +79,46 @@ static bool Initialize(::fuchsia::perfmon::cpu::ControllerSyncPtr* controller_pt
   FidlPerfmonAllocation allocation;
   allocation.num_buffers = num_traces;
   allocation.buffer_size_in_pages = buffer_size_in_pages;
-  FXL_VLOG(2) << fxl::StringPrintf("num_buffers=%u, buffer_size_in_pages=0x%x", num_traces,
+  FX_VLOGS(2) << fxl::StringPrintf("num_buffers=%u, buffer_size_in_pages=0x%x", num_traces,
                                    buffer_size_in_pages);
 
   ::fuchsia::perfmon::cpu::Controller_Initialize_Result result;
   zx_status_t status = (*controller_ptr)->Initialize(allocation, &result);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Initialize failed: status=" << status;
+    FX_LOGS(ERROR) << "Initialize failed: status=" << status;
     return false;
   }
   if (result.is_err() && result.err() != ZX_ERR_BAD_STATE) {
-    FXL_LOG(ERROR) << "Initialize failed: error=" << result.err();
+    FX_LOGS(ERROR) << "Initialize failed: error=" << result.err();
     return false;
   }
 
   // TODO(dje): If we get BAD_STATE, a previous run may have crashed without
   // resetting the device. The device doesn't reset itself on close yet.
   if (result.is_err()) {
-    FXL_DCHECK(result.err() == ZX_ERR_BAD_STATE);
-    FXL_VLOG(2) << "Got BAD_STATE trying to initialize a trace,"
+    FX_DCHECK(result.err() == ZX_ERR_BAD_STATE);
+    FX_VLOGS(2) << "Got BAD_STATE trying to initialize a trace,"
                 << " resetting device and trying again";
     status = (*controller_ptr)->Stop();
     if (status != ZX_OK) {
-      FXL_VLOG(2) << "Stopping device failed: status=" << status;
+      FX_VLOGS(2) << "Stopping device failed: status=" << status;
       return false;
     }
     status = (*controller_ptr)->Terminate();
     if (status != ZX_OK) {
-      FXL_VLOG(2) << "Terminating previous trace failed: status=" << status;
+      FX_VLOGS(2) << "Terminating previous trace failed: status=" << status;
       return false;
     }
     status = (*controller_ptr)->Initialize(allocation, &result);
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Initialize try #2 failed: status=" << status;
+      FX_LOGS(ERROR) << "Initialize try #2 failed: status=" << status;
       return false;
     }
     if (result.is_err()) {
-      FXL_LOG(ERROR) << "Initialize try #2 failed: error=" << result.err();
+      FX_LOGS(ERROR) << "Initialize try #2 failed: error=" << result.err();
       return false;
     }
-    FXL_VLOG(2) << "Second Initialize attempt succeeded";
+    FX_VLOGS(2) << "Second Initialize attempt succeeded";
   }
 
   return true;
@@ -127,7 +127,7 @@ static bool Initialize(::fuchsia::perfmon::cpu::ControllerSyncPtr* controller_pt
 bool Controller::Create(uint32_t buffer_size_in_pages, const Config config,
                         std::unique_ptr<Controller>* out_controller) {
   if (buffer_size_in_pages > kMaxBufferSizeInPages) {
-    FXL_LOG(ERROR) << "Buffer size is too large, max " << kMaxBufferSizeInPages << " pages";
+    FX_LOGS(ERROR) << "Buffer size is too large, max " << kMaxBufferSizeInPages << " pages";
     return false;
   }
 
@@ -135,7 +135,7 @@ bool Controller::Create(uint32_t buffer_size_in_pages, const Config config,
   zx_status_t status =
       fdio_service_connect(kPerfMonDev, controller_ptr.NewRequest().TakeChannel().release());
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Error connecting to " << kPerfMonDev << ": " << status;
+    FX_LOGS(ERROR) << "Error connecting to " << kPerfMonDev << ": " << status;
     return false;
   }
 

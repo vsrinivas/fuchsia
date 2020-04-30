@@ -16,7 +16,7 @@ namespace tracing {
 bool ParseBufferingMode(const std::string& value, BufferingMode* out_mode) {
   const BufferingModeSpec* spec = LookupBufferingMode(value);
   if (spec == nullptr) {
-    FXL_LOG(ERROR) << "Failed to parse buffering mode: " << value;
+    FX_LOGS(ERROR) << "Failed to parse buffering mode: " << value;
     return false;
   }
   *out_mode = spec->mode;
@@ -25,7 +25,7 @@ bool ParseBufferingMode(const std::string& value, BufferingMode* out_mode) {
 
 static bool CheckBufferSize(uint32_t megabytes) {
   if (megabytes < kMinBufferSizeMegabytes || megabytes > kMaxBufferSizeMegabytes) {
-    FXL_LOG(ERROR) << "Buffer size not between " << kMinBufferSizeMegabytes << ","
+    FX_LOGS(ERROR) << "Buffer size not between " << kMinBufferSizeMegabytes << ","
                    << kMaxBufferSizeMegabytes << ": " << megabytes;
     return false;
   }
@@ -35,7 +35,7 @@ static bool CheckBufferSize(uint32_t megabytes) {
 bool ParseBufferSize(const std::string& value, uint32_t* out_buffer_size) {
   uint32_t megabytes;
   if (!fxl::StringToNumberWithError(value, &megabytes)) {
-    FXL_LOG(ERROR) << "Failed to parse buffer size: " << value;
+    FX_LOGS(ERROR) << "Failed to parse buffer size: " << value;
     return false;
   }
   if (!CheckBufferSize(megabytes)) {
@@ -50,13 +50,13 @@ bool ParseProviderBufferSize(const std::vector<fxl::StringView>& values,
   for (const auto& value : values) {
     size_t colon = value.rfind(':');
     if (colon == value.npos) {
-      FXL_LOG(ERROR) << "Syntax error in provider buffer size"
+      FX_LOGS(ERROR) << "Syntax error in provider buffer size"
                      << ": should be provider-name:buffer_size_in_mb";
       return false;
     }
     uint32_t megabytes;
     if (!fxl::StringToNumberWithError(value.substr(colon + 1), &megabytes)) {
-      FXL_LOG(ERROR) << "Failed to parse buffer size: " << value;
+      FX_LOGS(ERROR) << "Failed to parse buffer size: " << value;
       return false;
     }
     if (!CheckBufferSize(megabytes)) {
@@ -71,23 +71,23 @@ bool ParseProviderBufferSize(const std::vector<fxl::StringView>& values,
 
 bool ParseTriggers(const std::vector<fxl::StringView>& values,
                    std::unordered_map<std::string, Action>* out_specs) {
-  FXL_DCHECK(out_specs);
+  FX_DCHECK(out_specs);
 
   for (const auto& value : values) {
     size_t colon = value.rfind(':');
     if (colon == value.npos || colon < 1 || colon > value.size() - 2) {
-      FXL_LOG(ERROR) << "Syntax error in trigger specification: "
+      FX_LOGS(ERROR) << "Syntax error in trigger specification: "
                      << "should be alert-name:action, got " << value;
       return false;
     }
     std::string name = value.substr(0, colon).ToString();
     if (out_specs->find(name) != out_specs->end()) {
-      FXL_LOG(ERROR) << "Multiple trigger options for alert: " << name;
+      FX_LOGS(ERROR) << "Multiple trigger options for alert: " << name;
       return false;
     }
     Action action;
     if (!ParseAction(value.substr(colon + 1), &action)) {
-      FXL_LOG(ERROR) << "Unrecognized action: " << value.substr(colon + 1);
+      FX_LOGS(ERROR) << "Unrecognized action: " << value.substr(colon + 1);
       return false;
     }
     out_specs->emplace(name, action);
@@ -96,7 +96,7 @@ bool ParseTriggers(const std::vector<fxl::StringView>& values,
 }
 
 bool ParseAction(fxl::StringView value, Action* out_action) {
-  FXL_DCHECK(out_action);
+  FX_DCHECK(out_action);
 
   if (value == kActionStop) {
     *out_action = Action::kStop;
@@ -114,7 +114,7 @@ controller::BufferingMode TranslateBufferingMode(BufferingMode mode) {
     case BufferingMode::kStreaming:
       return controller::BufferingMode::STREAMING;
     default:
-      FXL_NOTREACHED();
+      FX_NOTREACHED();
       return controller::BufferingMode::ONESHOT;
   }
 }

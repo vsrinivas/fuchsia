@@ -9,7 +9,7 @@
 namespace {
 
 void AddPerfTests(benchmarking::BenchmarksRunner* benchmarks_runner, bool perfcompare_mode) {
-  FXL_DCHECK(benchmarks_runner);
+  FX_DCHECK(benchmarks_runner);
 
   // Benchmark example, here for demonstration.
   benchmarks_runner->AddTspecBenchmark("benchmark_example",

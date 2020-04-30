@@ -44,7 +44,7 @@ SimplestAppView::SimplestAppView(scenic::ViewContext context, async::Loop* messa
       message_loop_(message_loop),
       background_(session()),
       focused_(false) {
-  FXL_CHECK(message_loop_);
+  FX_CHECK(message_loop_);
 
   root_node().AddChild(background_);
 
@@ -100,7 +100,7 @@ void SimplestAppView::OnInputEvent(fuchsia::ui::input::InputEvent event) {
       break;
     }
     case InputEvent::Tag::Invalid: {
-      FXL_NOTREACHED();
+      FX_NOTREACHED();
       break;
     }
   }

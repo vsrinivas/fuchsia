@@ -161,7 +161,7 @@ VK_TEST_F(ShaderProgramTest, TimingTest) {
   auto program7 = escher->GetProgram(kFlatlandStandardProgram);
   auto stop = std::chrono::high_resolution_clock::now();
   auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
-  FXL_LOG(INFO) << "Time taken to load shaders: " << duration.count() << " microseconds.";
+  FX_LOGS(INFO) << "Time taken to load shaders: " << duration.count() << " microseconds.";
 }
 
 // Go through all of the shader programs in |paper_renderer_static_config.h| and make

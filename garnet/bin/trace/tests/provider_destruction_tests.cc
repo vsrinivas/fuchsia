@@ -43,7 +43,7 @@ TEST(ProviderDestruction, StressTest) {
     size_t num_events;
     ASSERT_TRUE(VerifyTestEventsFromJson(std::string(kTestTmpPath) + "/" + kRelativeOutputFilePath,
                                          &num_events));
-    FXL_VLOG(1) << "Got " << num_events << " events";
+    FX_VLOGS(1) << "Got " << num_events << " events";
   }
 }
 

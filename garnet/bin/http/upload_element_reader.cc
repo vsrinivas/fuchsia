@@ -37,7 +37,7 @@ bool SocketUploadElementReader::ReadAvailable(std::ostream* os) {
         err_ = ZX_OK;
         return false;
       }
-      FXL_VLOG(1) << "SocketUploadElementReader: result=" << err_;
+      FX_VLOGS(1) << "SocketUploadElementReader: result=" << err_;
       return false;
     }
 
@@ -45,7 +45,7 @@ bool SocketUploadElementReader::ReadAvailable(std::ostream* os) {
     if (!*os) {
       // TODO(toshik): better result code?
       err_ = ZX_ERR_BUFFER_TOO_SMALL;
-      FXL_VLOG(1) << "SocketUploadElementReader: result=" << err_;
+      FX_VLOGS(1) << "SocketUploadElementReader: result=" << err_;
       return false;
     } else {
       return true;
@@ -70,14 +70,14 @@ bool VmoUploadElementReader::ReadAvailable(std::ostream* os) {
 
   err_ = vmo_.read(buf_.data(), offset_, bytes_to_process);
   if (err_ != ZX_OK) {
-    FXL_VLOG(1) << "VmoUploadElementReader: result=" << err_;
+    FX_VLOGS(1) << "VmoUploadElementReader: result=" << err_;
     return false;
   }
 
   if (bytes_to_process > 0) {
     os->write(buf_.data(), bytes_to_process);
     if (!*os) {
-      FXL_VLOG(1) << "VmoUploadElementReader: Unable to write to stream.";
+      FX_VLOGS(1) << "VmoUploadElementReader: Unable to write to stream.";
       // TODO(toshik): better result code?
       err_ = ZX_ERR_BUFFER_TOO_SMALL;
       return false;

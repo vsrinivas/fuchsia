@@ -22,7 +22,7 @@ namespace debug_agent {
 bool SocketServer::Init(uint16_t port) {
   server_socket_.reset(socket(AF_INET6, SOCK_STREAM, IPPROTO_TCP));
   if (!server_socket_.is_valid()) {
-    FXL_LOG(ERROR) << "Could not create socket.";
+    FX_LOGS(ERROR) << "Could not create socket.";
     return false;
   }
 
@@ -33,7 +33,7 @@ bool SocketServer::Init(uint16_t port) {
   addr.sin6_addr = in6addr_any;
   addr.sin6_port = htons(port);
   if (bind(server_socket_.get(), reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) < 0) {
-    FXL_LOG(ERROR) << "Could not bind socket.";
+    FX_LOGS(ERROR) << "Could not bind socket.";
     return false;
   }
 
@@ -62,7 +62,7 @@ SocketConnection::SocketConnection(debug_agent::DebugAgent* agent) : debug_agent
 SocketConnection::~SocketConnection() {
   if (!connected_)
     return;
-  FXL_DCHECK(debug_agent_) << "A debug agent should be set when resetting the connection.";
+  FX_DCHECK(debug_agent_) << "A debug agent should be set when resetting the connection.";
   debug_agent_->Disconnect();
 }
 
@@ -73,12 +73,12 @@ bool SocketConnection::Accept(debug_ipc::MessageLoop* main_thread_loop, int serv
   socklen_t addrlen = sizeof(addr);
   fbl::unique_fd client(accept(server_fd, reinterpret_cast<sockaddr*>(&addr), &addrlen));
   if (!client.is_valid()) {
-    FXL_LOG(ERROR) << "Couldn't accept connection.";
+    FX_LOGS(ERROR) << "Couldn't accept connection.";
     return false;
   }
 
   if (fcntl(client.get(), F_SETFL, O_NONBLOCK) < 0) {
-    FXL_LOG(ERROR) << "Couldn't make port nonblocking.";
+    FX_LOGS(ERROR) << "Couldn't make port nonblocking.";
     return false;
   }
 
@@ -86,7 +86,7 @@ bool SocketConnection::Accept(debug_ipc::MessageLoop* main_thread_loop, int serv
   main_thread_loop->PostTask(
       FROM_HERE, [this, debug_agent = debug_agent_, client = std::move(client)]() mutable {
         if (!buffer_.Init(std::move(client))) {
-          FXL_LOG(ERROR) << "Error waiting for data.";
+          FX_LOGS(ERROR) << "Error waiting for data.";
           debug_ipc::MessageLoop::Current()->QuitNow();
           return;
         }
