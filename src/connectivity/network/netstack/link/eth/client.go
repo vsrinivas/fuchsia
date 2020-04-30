@@ -459,12 +459,11 @@ func (c *Client) Attach(dispatcher stack.NetworkDispatcher) {
 					return nil
 				}
 
-				if _, err := zxwait.Wait(c.fifos.Tx, zx.SignalFIFOReadable|zx.SignalFIFOPeerClosed, zx.TimensecInfinite); err != nil {
-					return err
-				}
-
-				switch status, count := FifoRead(c.fifos.Tx, scratch); status {
-				case zx.ErrOk:
+				if err := zxwait.WithRetry(func() error {
+					status, count := FifoRead(c.fifos.Tx, scratch)
+					if status != zx.ErrOk {
+						return &zx.Error{Status: status, Text: "FifoRead(TX)"}
+					}
 					c.Stats.Tx.Reads(count).Increment()
 					c.tx.mu.Lock()
 					n := c.tx.mu.entries.addReadied(scratch[:count])
@@ -475,8 +474,9 @@ func (c *Client) Attach(dispatcher stack.NetworkDispatcher) {
 					if n := uint32(n); count != n {
 						return fmt.Errorf("fifoRead(TX): tx_depth invariant violation; observed=%d expected=%d", c.fifos.TxDepth-n+count, c.fifos.TxDepth)
 					}
-				default:
-					return &zx.Error{Status: status, Text: "FifoRead(TX)"}
+					return nil
+				}, c.fifos.Tx, zx.SignalFIFOReadable, zx.SignalFIFOPeerClosed); err != nil {
+					return err
 				}
 			}
 		}(); err != nil {
