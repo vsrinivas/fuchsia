@@ -5,32 +5,42 @@
 package testparser
 
 import (
+	"fmt"
 	"regexp"
 )
 
 var (
 	rustTestPreamblePattern = regexp.MustCompile(`running \d* tests?`)
-	rustTestPassCasePattern = regexp.MustCompile(`test (.*?) ... ok`)
-	rustTestFailCasePattern = regexp.MustCompile(`test (.*?) ... FAILED`)
-	rustTestSkipCasePattern = regexp.MustCompile(`test (.*?) ... ignored`)
+	rustTestCasePattern     = regexp.MustCompile(`test (.*?)::(.*?) \.\.\. (\w*)`)
 )
 
 func parseRustTest(lines [][]byte) []TestCaseResult {
 	var res []TestCaseResult
 	for _, line := range lines {
-		var m [][]byte
-		if m = rustTestPassCasePattern.FindSubmatch(line); m != nil {
-			res = append(res, makeTestCaseResult(m[1], Pass, nil, "Rust"))
+		line := string(line)
+		m := rustTestCasePattern.FindStringSubmatch(line)
+		if m == nil {
 			continue
 		}
-		if m = rustTestFailCasePattern.FindSubmatch(line); m != nil {
-			res = append(res, makeTestCaseResult(m[1], Fail, nil, "Rust"))
-			continue
+		suiteName := m[1]
+		caseName := m[2]
+		displayName := fmt.Sprintf("%s::%s", suiteName, caseName)
+		var status TestCaseStatus
+		switch m[3] {
+		case "ok":
+			status = Pass
+		case "FAILED":
+			status = Fail
+		case "ignored":
+			status = Skip
 		}
-		if m = rustTestSkipCasePattern.FindSubmatch(line); m != nil {
-			res = append(res, makeTestCaseResult(m[1], Skip, nil, "Rust"))
-			continue
-		}
+		res = append(res, TestCaseResult{
+			DisplayName: displayName,
+			SuiteName:   suiteName,
+			CaseName:    caseName,
+			Status:      status,
+			Format:      "Rust",
+		})
 	}
 	return res
 }

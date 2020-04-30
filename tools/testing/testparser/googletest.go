@@ -5,32 +5,47 @@
 package testparser
 
 import (
+	"fmt"
 	"regexp"
+	"strings"
+	"time"
 )
 
 var (
 	googleTestPreamblePattern = regexp.MustCompile(`\[==========\] Running \d* tests? from \d* test (?:(?:suites?)|(?:cases?))\.`)
-	googleTestPassCasePattern = regexp.MustCompile(`\[       OK \] (\S*) \(([^\)]*)\)`)
-	googleTestFailCasePattern = regexp.MustCompile(`\[  FAILED  \] (\S*) \(([^\)]*)\)`)
-	googleTestSkipCasePattern = regexp.MustCompile(`\[  SKIPPED \] (\S*) \(([^\)]*)\)`)
+	googleTestCasePattern     = regexp.MustCompile(`\[\s*(\w*)\s*\] (.*?)\.(.*?) \((.*?)\)`)
 )
 
 func parseGoogleTest(lines [][]byte) []TestCaseResult {
 	var res []TestCaseResult
 	for _, line := range lines {
-		var m [][]byte
-		if m = googleTestPassCasePattern.FindSubmatch(line); m != nil {
-			res = append(res, makeTestCaseResult(m[1], Pass, m[2], "GoogleTest"))
+		line := string(line)
+		m := googleTestCasePattern.FindStringSubmatch(line)
+		if m == nil {
 			continue
 		}
-		if m = googleTestFailCasePattern.FindSubmatch(line); m != nil {
-			res = append(res, makeTestCaseResult(m[1], Fail, m[2], "GoogleTest"))
-			continue
+		var status TestCaseStatus
+		switch m[1] {
+		case "OK":
+			status = Pass
+		case "FAILED":
+			status = Fail
+		case "SKIPPED":
+			status = Skip
 		}
-		if m = googleTestSkipCasePattern.FindSubmatch(line); m != nil {
-			res = append(res, makeTestCaseResult(m[1], Skip, m[2], "GoogleTest"))
-			continue
-		}
+		suiteName := m[2]
+		caseName := m[3]
+		displayName := fmt.Sprintf("%s.%s", suiteName, caseName)
+		// Convert e.g. "4 ms" to "4ms" which parses to Duration successfully
+		duration, _ := time.ParseDuration(strings.ReplaceAll(m[4], " ", ""))
+		res = append(res, TestCaseResult{
+			DisplayName: displayName,
+			SuiteName:   suiteName,
+			CaseName:    caseName,
+			Status:      status,
+			Duration:    duration,
+			Format:      "GoogleTest",
+		})
 	}
 	return res
 }

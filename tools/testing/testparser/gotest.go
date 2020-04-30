@@ -5,32 +5,50 @@
 package testparser
 
 import (
+	"fmt"
 	"regexp"
+	"time"
 )
 
 var (
-	goTestPreamblePattern = regexp.MustCompile(`==================== Test output for \S*:`)
-	goTestPassCasePattern = regexp.MustCompile(`--- PASS: (\S*) \(([^\)]*)\)`)
-	goTestFailCasePattern = regexp.MustCompile(`--- FAIL: (\S*) \(([^\)]*)\)`)
-	goTestSkipCasePattern = regexp.MustCompile(`--- SKIP: (\S*) \(([^\)]*)\)`)
+	goTestPreamblePattern = regexp.MustCompile(`==================== Test output for (.*?):`)
+	goTestCasePattern     = regexp.MustCompile(`--- (\w*?): (.*?) \((.*?)\)`)
 )
 
 func parseGoTest(lines [][]byte) []TestCaseResult {
 	var res []TestCaseResult
+	var suiteName string
 	for _, line := range lines {
-		var m [][]byte
-		if m = goTestPassCasePattern.FindSubmatch(line); m != nil {
-			res = append(res, makeTestCaseResult(m[1], Pass, m[2], "Go"))
+		line := string(line)
+		m := goTestPreamblePattern.FindStringSubmatch(line)
+		if m != nil {
+			suiteName = m[1]
 			continue
 		}
-		if m = goTestFailCasePattern.FindSubmatch(line); m != nil {
-			res = append(res, makeTestCaseResult(m[1], Fail, m[2], "Go"))
+		m = goTestCasePattern.FindStringSubmatch(line)
+		if m == nil {
 			continue
 		}
-		if m = goTestSkipCasePattern.FindSubmatch(line); m != nil {
-			res = append(res, makeTestCaseResult(m[1], Skip, m[2], "Go"))
-			continue
+		var status TestCaseStatus
+		switch m[1] {
+		case "PASS":
+			status = Pass
+		case "FAIL":
+			status = Fail
+		case "SKIP":
+			status = Skip
 		}
+		caseName := m[2]
+		displayName := fmt.Sprintf("%s.%s", suiteName, caseName)
+		duration, _ := time.ParseDuration(m[3])
+		res = append(res, TestCaseResult{
+			DisplayName: displayName,
+			SuiteName:   suiteName,
+			CaseName:    caseName,
+			Status:      status,
+			Duration:    duration,
+			Format:      "Go",
+		})
 	}
 	return res
 }

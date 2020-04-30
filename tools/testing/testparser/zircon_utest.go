@@ -5,31 +5,63 @@
 package testparser
 
 import (
+	"fmt"
 	"regexp"
+	"strings"
+	"time"
 )
 
 var (
-	zirconUtestPreamblePattern = regexp.MustCompile(`CASE .{50} \[STARTED\]`)
-	zirconUtestPassCasePattern = regexp.MustCompile(`    (.*?)\s+\[RUNNING\] \[PASSED\] \((.*?)\)`)
-	zirconUtestFailCasePattern = regexp.MustCompile(`    (.*?)\s+\[RUNNING\] \[FAILED\] \((.*?)\)`)
-	zirconUtestSkipCasePattern = regexp.MustCompile(`    (.*?)\s+\[IGNORED\]`)
+	zirconUtestPreamblePattern = regexp.MustCompile(`CASE\s*(.*?)\s*\[STARTED\]`)
+	zirconUtestPassCasePattern = regexp.MustCompile(`\s*(.*?)\s+\[RUNNING\] \[PASSED\] \((.*?)\)`)
+	zirconUtestFailCasePattern = regexp.MustCompile(`\s*(.*?)\s+\[RUNNING\] \[FAILED\] \((.*?)\)`)
+	zirconUtestSkipCasePattern = regexp.MustCompile(`\s*(.*?)\s+\[IGNORED\]`)
 )
 
 func parseZirconUtest(lines [][]byte) []TestCaseResult {
 	var res []TestCaseResult
+	var suiteName string
 	for _, line := range lines {
-		var m [][]byte
-		if m = zirconUtestPassCasePattern.FindSubmatch(line); m != nil {
-			res = append(res, makeTestCaseResult(m[1], Pass, m[2], "Zircon utest"))
-			continue
-		}
-		if m = zirconUtestFailCasePattern.FindSubmatch(line); m != nil {
-			res = append(res, makeTestCaseResult(m[1], Fail, m[2], "Zircon utest"))
-			continue
-		}
-		if m = zirconUtestSkipCasePattern.FindSubmatch(line); m != nil {
-			res = append(res, makeTestCaseResult(m[1], Skip, nil, "Zircon utest"))
-			continue
+		line := string(line)
+		var m []string
+		if m = zirconUtestPreamblePattern.FindStringSubmatch(line); m != nil {
+			suiteName = m[1]
+		} else if m = zirconUtestPassCasePattern.FindStringSubmatch(line); m != nil {
+			caseName := m[1]
+			displayName := fmt.Sprintf("%s.%s", suiteName, caseName)
+			// Convert e.g. "4 ms" to "4ms" which parses to Duration successfully
+			duration, _ := time.ParseDuration(strings.ReplaceAll(m[2], " ", ""))
+			res = append(res, TestCaseResult{
+				DisplayName: displayName,
+				SuiteName:   suiteName,
+				CaseName:    caseName,
+				Status:      Pass,
+				Duration:    duration,
+				Format:      "Zircon utest",
+			})
+		} else if m = zirconUtestFailCasePattern.FindStringSubmatch(line); m != nil {
+			caseName := m[1]
+			displayName := fmt.Sprintf("%s.%s", suiteName, caseName)
+			// Convert e.g. "4 ms" to "4ms" which parses to Duration successfully
+			duration, _ := time.ParseDuration(strings.ReplaceAll(m[2], " ", ""))
+			res = append(res, TestCaseResult{
+				DisplayName: displayName,
+				SuiteName:   suiteName,
+				CaseName:    caseName,
+				Status:      Fail,
+				Duration:    duration,
+				Format:      "Zircon utest",
+			})
+		} else if m = zirconUtestSkipCasePattern.FindStringSubmatch(line); m != nil {
+			caseName := m[1]
+			displayName := fmt.Sprintf("%s.%s", suiteName, caseName)
+			res = append(res, TestCaseResult{
+				DisplayName: displayName,
+				SuiteName:   suiteName,
+				CaseName:    caseName,
+				Status:      Skip,
+				Format:      "Zircon utest",
+			})
 		}
 	}
 	return res

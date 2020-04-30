@@ -80,55 +80,73 @@ Their prints get interleaved with the results.
 	want := `
 [
 	{
-        	"name": "SynonymDictTest.IsInitializedEmpty",
-        	"status": "Pass",
-        	"duration_nanos": 4000000,
-		"format": "GoogleTest"
-       	},
-       	{
-       		"name": "SynonymDictTest.ReadingEmptyFileReturnsFalse",
-       		"status": "Pass",
-       		"duration_nanos": 3000000,
-		"format": "GoogleTest"
-       	},
-       	{
-       		"name": "SynonymDictTest.ReadingNonexistentFileReturnsFalse",
-       		"status": "Pass",
-		"duration_nanos": 4000000,
-		"format": "GoogleTest"
-	},
-	{
-		"name": "SynonymDictTest.LoadDictionary",
+		"display_name": "SynonymDictTest.IsInitializedEmpty",
+		"suite_name": "SynonymDictTest",
+		"case_name": "IsInitializedEmpty",
 		"status": "Pass",
 		"duration_nanos": 4000000,
 		"format": "GoogleTest"
 	},
 	{
-		"name": "SynonymDictTest.GetSynonymsReturnsListOfWords",
+		"display_name": "SynonymDictTest.ReadingEmptyFileReturnsFalse",
+		"suite_name": "SynonymDictTest",
+		"case_name": "ReadingEmptyFileReturnsFalse",
+		"status": "Pass",
+		"duration_nanos": 3000000,
+		"format": "GoogleTest"
+	},
+	{
+		"display_name": "SynonymDictTest.ReadingNonexistentFileReturnsFalse",
+		"suite_name": "SynonymDictTest",
+		"case_name": "ReadingNonexistentFileReturnsFalse",
 		"status": "Pass",
 		"duration_nanos": 4000000,
 		"format": "GoogleTest"
 	},
 	{
-		"name": "SynonymDictTest.GetSynonymsWhenNoSynonymsAreAvailable",
+		"display_name": "SynonymDictTest.LoadDictionary",
+		"suite_name": "SynonymDictTest",
+		"case_name": "LoadDictionary",
 		"status": "Pass",
 		"duration_nanos": 4000000,
 		"format": "GoogleTest"
 	},
 	{
-		"name": "SynonymDictTest.AllWordsAreSynonymsOfEachOther",
+		"display_name": "SynonymDictTest.GetSynonymsReturnsListOfWords",
+		"suite_name": "SynonymDictTest",
+		"case_name": "GetSynonymsReturnsListOfWords",
 		"status": "Pass",
 		"duration_nanos": 4000000,
 		"format": "GoogleTest"
 	},
 	{
-		"name": "SynonymDictTest.GetSynonymsReturnsListOfWordsWithStubs",
+		"display_name": "SynonymDictTest.GetSynonymsWhenNoSynonymsAreAvailable",
+		"suite_name": "SynonymDictTest",
+		"case_name": "GetSynonymsWhenNoSynonymsAreAvailable",
+		"status": "Pass",
+		"duration_nanos": 4000000,
+		"format": "GoogleTest"
+	},
+	{
+		"display_name": "SynonymDictTest.AllWordsAreSynonymsOfEachOther",
+		"suite_name": "SynonymDictTest",
+		"case_name": "AllWordsAreSynonymsOfEachOther",
+		"status": "Pass",
+		"duration_nanos": 4000000,
+		"format": "GoogleTest"
+	},
+	{
+		"display_name": "SynonymDictTest.GetSynonymsReturnsListOfWordsWithStubs",
+		"suite_name": "SynonymDictTest",
+		"case_name": "GetSynonymsReturnsListOfWordsWithStubs",
 		"status": "Fail",
 		"duration_nanos": 4000000,
 		"format": "GoogleTest"
 	},
 	{
-		"name": "SynonymDictTest.CompoundWordBug",
+		"display_name": "SynonymDictTest.CompoundWordBug",
+		"suite_name": "SynonymDictTest",
+		"case_name": "CompoundWordBug",
 		"status": "Skip",
 		"duration_nanos": 4000000,
 		"format": "GoogleTest"
@@ -159,31 +177,41 @@ FAIL
 	want := `
 [
 	{
-		"name": "TestParseEmpty",
+		"display_name": "//experimental/users/shayba/testparser.TestParseEmpty",
+		"suite_name": "//experimental/users/shayba/testparser",
+		"case_name": "TestParseEmpty",
 		"status": "Pass",
 		"duration_nanos": 10000000,
 		"format": "Go"
 	},
 	{
-		"name": "TestParseInvalid",
+		"display_name": "//experimental/users/shayba/testparser.TestParseInvalid",
+		"suite_name": "//experimental/users/shayba/testparser",
+		"case_name": "TestParseInvalid",
 		"status": "Pass",
 		"duration_nanos": 20000000,
 		"format": "Go"
 	},
 	{
-		"name": "TestParseGoogleTest",
+		"display_name": "//experimental/users/shayba/testparser.TestParseGoogleTest",
+		"suite_name": "//experimental/users/shayba/testparser",
+		"case_name": "TestParseGoogleTest",
 		"status": "Fail",
 		"duration_nanos": 3000000000,
 		"format": "Go"
 	},
 	{
-		"name": "TestFail",
+		"display_name": "//experimental/users/shayba/testparser.TestFail",
+		"suite_name": "//experimental/users/shayba/testparser",
+		"case_name": "TestFail",
 		"status": "Fail",
 		"duration_nanos": 0,
 		"format": "Go"
 	},
 	{
-		"name": "TestSkip",
+		"display_name": "//experimental/users/shayba/testparser.TestSkip",
+		"suite_name": "//experimental/users/shayba/testparser",
+		"case_name": "TestSkip",
 		"status": "Skip",
 		"duration_nanos": 0,
 		"format": "Go"
@@ -216,24 +244,30 @@ test result: FAILED. 1 passed; 1 failed; 1 ignored; 0 measured; 0 filtered out
 `
 	want := `
 [
-        {
-                "name": "tests::ignored_test",
-                "status": "Skip",
-                "duration_nanos": 0,
+	{
+		"display_name": "tests::ignored_test",
+		"suite_name": "tests",
+		"case_name": "ignored_test",
+		"status": "Skip",
+		"duration_nanos": 0,
 		"format": "Rust"
-        },
-        {
-                "name": "tests::test_add_hundred",
-                "status": "Pass",
-                "duration_nanos": 0,
+	},
+	{
+		"display_name": "tests::test_add_hundred",
+		"suite_name": "tests",
+		"case_name": "test_add_hundred",
+		"status": "Pass",
+		"duration_nanos": 0,
 		"format": "Rust"
-        },
-        {
-                "name": "tests::test_add",
-                "status": "Fail",
-                "duration_nanos": 0,
+	},
+	{
+		"display_name": "tests::test_add",
+		"suite_name": "tests",
+		"case_name": "test_add",
+		"status": "Fail",
+		"duration_nanos": 0,
 		"format": "Rust"
-        }
+	}
 ]
 `
 	testCase(t, stdout, want)
@@ -287,121 +321,161 @@ Results for test binary "host_x64-asan/fs-host":
 	want := `
 [
 	{
-		"name": "TestTruncateSmall",
+		"display_name": "minfs_truncate_tests.TestTruncateSmall",
+		"suite_name": "minfs_truncate_tests",
+		"case_name": "TestTruncateSmall",
 		"status": "Pass",
 		"duration_nanos": 1000000,
 		"format": "Zircon utest"
 	},
 	{
-		"name": "(TestTruncateLarge\u003c1 \u003c\u003c 10, 1000\u003e)",
+		"display_name": "minfs_truncate_tests.(TestTruncateLarge\u003c1 \u003c\u003c 10, 1000\u003e)",
+		"suite_name": "minfs_truncate_tests",
+		"case_name": "(TestTruncateLarge\u003c1 \u003c\u003c 10, 1000\u003e)",
 		"status": "Pass",
 		"duration_nanos": 20414000000,
 		"format": "Zircon utest"
 	},
 	{
-		"name": "(TestTruncateLarge\u003c1 \u003c\u003c 15, 500\u003e)",
+		"display_name": "minfs_truncate_tests.(TestTruncateLarge\u003c1 \u003c\u003c 15, 500\u003e)",
+		"suite_name": "minfs_truncate_tests",
+		"case_name": "(TestTruncateLarge\u003c1 \u003c\u003c 15, 500\u003e)",
 		"status": "Pass",
 		"duration_nanos": 10012000000,
 		"format": "Zircon utest"
 	},
 	{
-		"name": "(TestTruncateLarge\u003c1 \u003c\u003c 20, 500\u003e)",
+		"display_name": "minfs_truncate_tests.(TestTruncateLarge\u003c1 \u003c\u003c 20, 500\u003e)",
+		"suite_name": "minfs_truncate_tests",
+		"case_name": "(TestTruncateLarge\u003c1 \u003c\u003c 20, 500\u003e)",
 		"status": "Pass",
 		"duration_nanos": 10973000000,
 		"format": "Zircon utest"
 	},
 	{
-		"name": "(TestTruncateLarge\u003c1 \u003c\u003c 25, 500\u003e)",
+		"display_name": "minfs_truncate_tests.(TestTruncateLarge\u003c1 \u003c\u003c 25, 500\u003e)",
+		"suite_name": "minfs_truncate_tests",
+		"case_name": "(TestTruncateLarge\u003c1 \u003c\u003c 25, 500\u003e)",
 		"status": "Skip",
 		"duration_nanos": 0,
 		"format": "Zircon utest"
 	},
 	{
-		"name": "(test_sparse\u003c0, 0, kBlockSize\u003e)",
+		"display_name": "minfs_sparse_tests.(test_sparse\u003c0, 0, kBlockSize\u003e)",
+		"suite_name": "minfs_sparse_tests",
+		"case_name": "(test_sparse\u003c0, 0, kBlockSize\u003e)",
 		"status": "Pass",
 		"duration_nanos": 19000000,
 		"format": "Zircon utest"
 	},
 	{
-		"name": "(test_sparse\u003ckBlockSize / 2, 0, kBlockSize\u003e)",
+		"display_name": "minfs_sparse_tests.(test_sparse\u003ckBlockSize / 2, 0, kBlockSize\u003e)",
+		"suite_name": "minfs_sparse_tests",
+		"case_name": "(test_sparse\u003ckBlockSize / 2, 0, kBlockSize\u003e)",
 		"status": "Pass",
 		"duration_nanos": 20000000,
 		"format": "Zircon utest"
 	},
 	{
-		"name": "(test_sparse\u003ckBlockSize / 2, kBlockSize, kBlockSize\u003e)",
+		"display_name": "minfs_sparse_tests.(test_sparse\u003ckBlockSize / 2, kBlockSize, kBlockSize\u003e)",
+		"suite_name": "minfs_sparse_tests",
+		"case_name": "(test_sparse\u003ckBlockSize / 2, kBlockSize, kBlockSize\u003e)",
 		"status": "Pass",
 		"duration_nanos": 19000000,
 		"format": "Zircon utest"
 	},
 	{
-		"name": "(test_sparse\u003ckBlockSize, 0, kBlockSize\u003e)",
+		"display_name": "minfs_sparse_tests.(test_sparse\u003ckBlockSize, 0, kBlockSize\u003e)",
+		"suite_name": "minfs_sparse_tests",
+		"case_name": "(test_sparse\u003ckBlockSize, 0, kBlockSize\u003e)",
 		"status": "Pass",
 		"duration_nanos": 19000000,
 		"format": "Zircon utest"
 	},
 	{
-		"name": "(test_sparse\u003ckBlockSize, kBlockSize / 2, kBlockSize\u003e)",
+		"display_name": "minfs_sparse_tests.(test_sparse\u003ckBlockSize, kBlockSize / 2, kBlockSize\u003e)",
+		"suite_name": "minfs_sparse_tests",
+		"case_name": "(test_sparse\u003ckBlockSize, kBlockSize / 2, kBlockSize\u003e)",
 		"status": "Pass",
 		"duration_nanos": 19000000,
 		"format": "Zircon utest"
 	},
 	{
-		"name": "(test_sparse\u003ckBlockSize * kDirectBlocks, kBlockSize * kDirectBlocks - kBlockSize, kBlockSize * 2\u003e)",
+		"display_name": "minfs_sparse_tests.(test_sparse\u003ckBlockSize * kDirectBlocks, kBlockSize * kDirectBlocks - kBlockSize, kBlockSize * 2\u003e)",
+		"suite_name": "minfs_sparse_tests",
+		"case_name": "(test_sparse\u003ckBlockSize * kDirectBlocks, kBlockSize * kDirectBlocks - kBlockSize, kBlockSize * 2\u003e)",
 		"status": "Pass",
 		"duration_nanos": 20000000,
 		"format": "Zircon utest"
 	},
 	{
-		"name": "(test_sparse\u003ckBlockSize * kDirectBlocks, kBlockSize * kDirectBlocks - kBlockSize, kBlockSize * 32\u003e)",
+		"display_name": "minfs_sparse_tests.(test_sparse\u003ckBlockSize * kDirectBlocks, kBlockSize * kDirectBlocks - kBlockSize, kBlockSize * 32\u003e)",
+		"suite_name": "minfs_sparse_tests",
+		"case_name": "(test_sparse\u003ckBlockSize * kDirectBlocks, kBlockSize * kDirectBlocks - kBlockSize, kBlockSize * 32\u003e)",
 		"status": "Pass",
 		"duration_nanos": 24000000,
 		"format": "Zircon utest"
 	},
 	{
-		"name": "(test_sparse\u003ckBlockSize * kDirectBlocks + kBlockSize, kBlockSize * kDirectBlocks - kBlockSize, kBlockSize * 32\u003e)",
+		"display_name": "minfs_sparse_tests.(test_sparse\u003ckBlockSize * kDirectBlocks + kBlockSize, kBlockSize * kDirectBlocks - kBlockSize, kBlockSize * 32\u003e)",
+		"suite_name": "minfs_sparse_tests",
+		"case_name": "(test_sparse\u003ckBlockSize * kDirectBlocks + kBlockSize, kBlockSize * kDirectBlocks - kBlockSize, kBlockSize * 32\u003e)",
 		"status": "Pass",
 		"duration_nanos": 24000000,
 		"format": "Zircon utest"
 	},
 	{
-		"name": "(test_sparse\u003ckBlockSize * kDirectBlocks + kBlockSize, kBlockSize * kDirectBlocks + 2 * kBlockSize, kBlockSize * 32\u003e)",
+		"display_name": "minfs_sparse_tests.(test_sparse\u003ckBlockSize * kDirectBlocks + kBlockSize, kBlockSize * kDirectBlocks + 2 * kBlockSize, kBlockSize * 32\u003e)",
+		"suite_name": "minfs_sparse_tests",
+		"case_name": "(test_sparse\u003ckBlockSize * kDirectBlocks + kBlockSize, kBlockSize * kDirectBlocks + 2 * kBlockSize, kBlockSize * 32\u003e)",
 		"status": "Pass",
 		"duration_nanos": 25000000,
 		"format": "Zircon utest"
 	},
 	{
-		"name": "TestWorkSingleThread",
+		"display_name": "minfs_rw_workers_test.TestWorkSingleThread",
+		"suite_name": "minfs_rw_workers_test",
+		"case_name": "TestWorkSingleThread",
 		"status": "Pass",
 		"duration_nanos": 40920000000,
 		"format": "Zircon utest"
 	},
 	{
-		"name": "test_maxfile",
+		"display_name": "minfs_maxfile_tests.test_maxfile",
+		"suite_name": "minfs_maxfile_tests",
+		"case_name": "test_maxfile",
 		"status": "Pass",
 		"duration_nanos": 62243000000,
 		"format": "Zircon utest"
 	},
 	{
-		"name": "TestDirectoryLarge",
+		"display_name": "minfs_directory_tests.TestDirectoryLarge",
+		"suite_name": "minfs_directory_tests",
+		"case_name": "TestDirectoryLarge",
 		"status": "Pass",
 		"duration_nanos": 3251000000,
 		"format": "Zircon utest"
 	},
 	{
-		"name": "TestDirectoryReaddir",
+		"display_name": "minfs_directory_tests.TestDirectoryReaddir",
+		"suite_name": "minfs_directory_tests",
+		"case_name": "TestDirectoryReaddir",
 		"status": "Pass",
 		"duration_nanos": 69000000,
 		"format": "Zircon utest"
 	},
 	{
-		"name": "TestDirectoryReaddirLarge",
+		"display_name": "minfs_directory_tests.TestDirectoryReaddirLarge",
+		"suite_name": "minfs_directory_tests",
+		"case_name": "TestDirectoryReaddirLarge",
 		"status": "Pass",
 		"duration_nanos": 6414000000,
 		"format": "Zircon utest"
 	},
 	{
-		"name": "test_basic",
+		"display_name": "minfs_basic_tests.test_basic",
+		"suite_name": "minfs_basic_tests",
+		"case_name": "test_basic",
 		"status": "Pass",
 		"duration_nanos": 21000000,
 		"format": "Zircon utest"

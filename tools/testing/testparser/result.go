@@ -5,7 +5,6 @@
 package testparser
 
 import (
-	"strings"
 	"time"
 )
 
@@ -18,17 +17,10 @@ const (
 )
 
 type TestCaseResult struct {
-	// Fully qualified test case name
-	Name     string         `json:"name"`
-	Status   TestCaseStatus `json:"status"`
-	Duration time.Duration  `json:"duration_nanos"`
-	// Identified result format, e.g. "GoogleTest"
-	Format   string         `json:"format"`
-}
-
-func makeTestCaseResult(name []byte, status TestCaseStatus, duration []byte, format string) TestCaseResult {
-	// Normalize e.g. "4 ms" to "4ms" before calling ParseDuration
-	durationString := strings.ReplaceAll(string(duration), " ", "")
-	parsedDuration, _ := time.ParseDuration(durationString)
-	return TestCaseResult{string(name), status, parsedDuration, format}
+	DisplayName string         `json:"display_name"`
+	SuiteName   string         `json:"suite_name"`
+	CaseName    string         `json:"case_name"`
+	Status      TestCaseStatus `json:"status"`
+	Duration    time.Duration  `json:"duration_nanos"`
+	Format      string         `json:"format"`
 }
