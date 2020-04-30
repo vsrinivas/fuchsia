@@ -42,7 +42,7 @@ lazy_static::lazy_static! {
 }
 
 fn is_cache_item_expired(item: &CacheItem<'static>, now: Instant) -> bool {
-    now.duration_since(item.created) > CONFIG_CACHE_TIMEOUT
+    now.checked_duration_since(item.created).map_or(false, |t| t > CONFIG_CACHE_TIMEOUT)
 }
 
 async fn read_cache(
@@ -209,5 +209,24 @@ mod test {
             load_and_test(timeout, 1, 1, &build_dirs[0], &cache).await;
             load_and_test(after_timeout, 1, 1, &build_dirs[0], &cache).await;
         });
+    }
+
+    #[test]
+    fn test_expiration_check_does_not_panic() -> Result<(), Error> {
+        let tests = 1;
+        let (now, build_dirs, _cache) = setup(tests);
+        let later = now.checked_add(Duration::from_millis(1)).expect("timeout should not overflow");
+        let item = CacheItem {
+            created: later,
+            config: Arc::new(RwLock::new(Config::new(
+                &Environment::try_load(find_env_file().ok()),
+                &build_dirs[0],
+                &ENV_VARS,
+                &HEURISTICS,
+                try_to_get_cli(),
+            )?)),
+        };
+        assert!(!is_cache_item_expired(&item, now));
+        Ok(())
     }
 }
