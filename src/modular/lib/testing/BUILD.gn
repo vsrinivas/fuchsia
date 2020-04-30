@@ -7,6 +7,7 @@ group("testing") {
   deps = [
     ":component_base",
     ":component_main",
+    ":ledger_repository_for_testing",
     ":mock_base",
     ":session_shell_base",
     ":session_shell_impl",
@@ -14,6 +15,7 @@ group("testing") {
     ":story_provider_mock",
     ":test_driver",
     ":test_story_command_executor",
+    ":test_with_ledger",
     ":test_with_session_storage",
     ":wait_until_idle",
   ]
@@ -118,6 +120,24 @@ source_set("test_story_command_executor") {
   public_deps = [ "//src/modular/bin/sessionmgr/storage" ]
 }
 
+source_set("test_with_ledger") {
+  testonly = true
+
+  sources = [
+    "test_with_ledger.cc",
+    "test_with_ledger.h",
+  ]
+
+  public_deps = [
+    ":ledger_repository_for_testing",
+    "//garnet/public/lib/gtest",
+    "//sdk/lib/sys/cpp",
+    "//src/lib/fsl",
+    "//src/modular/lib/ledger_client:page_client",
+    "//third_party/googletest:gtest",
+  ]
+}
+
 source_set("test_with_session_storage") {
   testonly = true
 
@@ -127,12 +147,34 @@ source_set("test_with_session_storage") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/gtest",
+    ":test_with_ledger",
     "//sdk/fidl/fuchsia.modular",
     "//src/modular/bin/sessionmgr/storage",
-    "//third_party/googletest:gtest",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
+  ]
+}
+
+source_set("ledger_repository_for_testing") {
+  testonly = true
+
+  sources = [
+    "ledger_repository_for_testing.cc",
+    "ledger_repository_for_testing.h",
+  ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.sys",
+    "//sdk/lib/sys/cpp",
+    "//src/ledger/fidl/fuchsia.ledger",
+    "//src/ledger/fidl/fuchsia.ledger.internal",
+    "//src/lib/fsl",
+    "//src/modular/lib/common:teardown",
+    "//src/modular/lib/fidl:app_client",
+    "//src/modular/lib/ledger_client:constants",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.modular",
+    "//src/modular/lib/scoped_tmpfs",
   ]
 }
 

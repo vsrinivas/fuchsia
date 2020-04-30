@@ -21,7 +21,6 @@ executable_package("sessionmgr") {
     "//sdk/fidl/fuchsia.modular.internal",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/inspect/cpp",
-    "//src/lib/syslog/cpp",
     "//src/modular/bin/basemgr/cobalt",
     "//src/modular/lib/app_driver/cpp:app_driver",
     "//src/modular/lib/modular_config",
@@ -51,6 +50,7 @@ source_set("sessionmgr_lib") {
     "//sdk/fidl/fuchsia.ui.policy",
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/fidl/fuchsia.ui.views",
+    "//src/ledger/fidl/fuchsia.ledger",
     "//src/modular/bin/sessionmgr/agent_runner",
     "//src/modular/lib/deprecated_service_provider",
     "//src/modular/lib/scoped_tmpfs",
@@ -66,6 +66,7 @@ source_set("sessionmgr_lib") {
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/inspect/cpp",
     "//sdk/lib/ui/scenic/cpp",
+    "//src/ledger/fidl/fuchsia.ledger.internal",
     "//src/lib/fsl",
     "//src/modular/bin/basemgr/cobalt",
     "//src/modular/bin/sessionmgr/puppet_master:make_production_impl",
@@ -85,6 +86,9 @@ source_set("sessionmgr_lib") {
     "//src/modular/lib/fidl:environment",
     "//src/modular/lib/fidl:json_xdr",
     "//src/modular/lib/fidl:view_host",
+    "//src/modular/lib/ledger_client:constants",
+    "//src/modular/lib/ledger_client:operations",
+    "//src/modular/lib/ledger_client:types",
     "//src/modular/lib/modular_config:modular_config",
   ]
 }
@@ -137,12 +141,17 @@ source_set("component_context") {
   deps = [
     "//sdk/fidl/fuchsia.modular",
     "//sdk/lib/sys/inspect/cpp",
+    "//src/ledger/fidl/fuchsia.ledger",
+    "//src/ledger/fidl/fuchsia.ledger.internal",
     "//src/lib/fsl",
     "//src/modular/bin/sessionmgr/agent_runner:public",
     "//src/modular/bin/sessionmgr/storage:constants_and_utils",
     "//src/modular/lib/async/cpp:operation",
     "//src/modular/lib/fidl:array_to_string",
     "//src/modular/lib/fidl:json_xdr",
+    "//src/modular/lib/ledger_client:operations",
+    "//src/modular/lib/ledger_client:page_client",
+    "//src/modular/lib/ledger_client:types",
   ]
 }
 
@@ -157,12 +166,16 @@ source_set("focus") {
     "//sdk/fidl/fuchsia.modular.internal",
     "//sdk/fidl/fuchsia.modular.session",
     "//sdk/lib/fidl/cpp",
+    "//src/ledger/fidl/fuchsia.ledger",
     "//src/lib/fsl",
     "//src/modular/bin/sessionmgr/storage:constants_and_utils",
     "//src/modular/lib/async/cpp:operation",
     "//src/modular/lib/fidl:array_to_string",
     "//src/modular/lib/fidl:clone",
     "//src/modular/lib/fidl:json_xdr",
+    "//src/modular/lib/ledger_client:operations",
+    "//src/modular/lib/ledger_client:page_client",
+    "//src/modular/lib/ledger_client:types",
   ]
 }
 

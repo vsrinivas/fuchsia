@@ -5,6 +5,7 @@
 #ifndef SRC_MODULAR_BIN_SESSIONMGR_STORY_RUNNER_STORY_PROVIDER_IMPL_H_
 #define SRC_MODULAR_BIN_SESSIONMGR_STORY_RUNNER_STORY_PROVIDER_IMPL_H_
 
+#include <fuchsia/ledger/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/modular/internal/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
@@ -32,6 +33,9 @@
 #include "src/modular/lib/fidl/app_client.h"
 #include "src/modular/lib/fidl/environment.h"
 #include "src/modular/lib/fidl/proxy.h"
+#include "src/modular/lib/ledger_client/ledger_client.h"
+#include "src/modular/lib/ledger_client/page_client.h"
+#include "src/modular/lib/ledger_client/types.h"
 
 namespace modular {
 
@@ -221,7 +225,7 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider, fuchsia::modular::Foc
     std::unique_ptr<StoryObserver> model_observer;
 
     std::unique_ptr<StoryControllerImpl> controller_impl;
-    std::shared_ptr<StoryStorage> storage;
+    std::unique_ptr<StoryStorage> storage;
     fuchsia::modular::internal::StoryDataPtr current_data;
 
     std::unique_ptr<inspect::Node> story_node;

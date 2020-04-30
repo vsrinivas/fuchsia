@@ -7,22 +7,22 @@
 
 #include <fuchsia/modular/cpp/fidl.h>
 
-#include <lib/gtest/real_loop_fixture.h>
-
 #include "src/modular/bin/sessionmgr/storage/session_storage.h"
 #include "src/modular/bin/sessionmgr/storage/story_storage.h"
+#include "src/modular/lib/ledger_client/page_id.h"
+#include "src/modular/lib/testing/test_with_ledger.h"
 
 namespace modular_testing {
 
-class TestWithSessionStorage : public gtest::RealLoopFixture {
+class TestWithSessionStorage : public TestWithLedger {
  public:
   TestWithSessionStorage();
   ~TestWithSessionStorage() override;
 
  protected:
-  std::unique_ptr<modular::SessionStorage> MakeSessionStorage();
+  std::unique_ptr<modular::SessionStorage> MakeSessionStorage(std::string ledger_page);
 
-  std::shared_ptr<modular::StoryStorage> GetStoryStorage(modular::SessionStorage* storage,
+  std::unique_ptr<modular::StoryStorage> GetStoryStorage(modular::SessionStorage* storage,
                                                          std::string story_id);
 
   // Create a new story with a specific story_id (name)

@@ -16,7 +16,7 @@ class NoOpCommandRunnerTest : public modular_testing::TestWithSessionStorage {
  public:
   void SetUp() override {
     modular_testing::TestWithSessionStorage::SetUp();
-    session_storage_ = MakeSessionStorage();
+    session_storage_ = MakeSessionStorage("page");
     runner_ = MakeRunner();
     story_id_ = CreateStory(session_storage_.get()).value_or("");
     story_storage_ = GetStoryStorage(session_storage_.get(), story_id_);
@@ -38,7 +38,7 @@ class NoOpCommandRunnerTest : public modular_testing::TestWithSessionStorage {
   }
 
   std::unique_ptr<SessionStorage> session_storage_;
-  std::shared_ptr<StoryStorage> story_storage_;
+  std::unique_ptr<StoryStorage> story_storage_;
   std::unique_ptr<NoOpCommandRunner> runner_;
   std::string story_id_;
 };

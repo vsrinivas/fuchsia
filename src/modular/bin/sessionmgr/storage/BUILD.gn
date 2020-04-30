@@ -60,9 +60,11 @@ source_set("session_storage") {
   ]
 
   deps = [
+    ":session_storage_xdr",
     "//src/lib/uuid",
     "//src/modular/bin/sessionmgr/storage:constants_and_utils",
     "//src/modular/lib/fidl:clone",
+    "//src/modular/lib/ledger_client:operations",
   ]
 
   public_deps = [
@@ -71,6 +73,24 @@ source_set("session_storage") {
     "//sdk/fidl/fuchsia.modular.internal",
     "//src/modular/bin/sessionmgr:annotations",
     "//src/modular/lib/async/cpp:future",
+    "//src/modular/lib/ledger_client:page_client",
+  ]
+}
+
+source_set("session_storage_xdr") {
+  sources = [
+    "session_storage_xdr.cc",
+    "session_storage_xdr.h",
+  ]
+
+  deps = [
+    ":annotation_xdr",
+    "//sdk/fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.modular.internal",
+    "//src/ledger/fidl/fuchsia.ledger",
+    "//src/lib/fsl",
+    "//src/modular/lib/base64url",
+    "//src/modular/lib/fidl:json_xdr",
   ]
 }
 
@@ -81,15 +101,13 @@ executable("session_storage_unittest") {
 
   deps = [
     ":session_storage",
+    "//src/ledger/fidl/fuchsia.ledger",
     "//src/lib/fxl/test:gtest_main",
-    "//src/lib/testing/loop_fixture",
     "//src/modular/bin/sessionmgr/testing:annotations_matchers",
     "//src/modular/lib/async/cpp:future",
     "//src/modular/lib/fidl:array_to_string",
+    "//src/modular/lib/testing:test_with_ledger",
     "//third_party/googletest:gmock",
-    "//third_party/googletest:gtest",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
     "//zircon/system/public",
   ]
 }
@@ -101,13 +119,33 @@ source_set("story_storage") {
   ]
 
   deps = [
+    ":story_storage_xdr",
     "//sdk/fidl/fuchsia.modular",
-    "//src/lib/fsl",
+    "//src/ledger/fidl/fuchsia.ledger",
     "//src/modular/bin/sessionmgr/storage:constants_and_utils",
     "//src/modular/lib/async/cpp:future",
     "//src/modular/lib/fidl:clone",
+    "//src/modular/lib/ledger_client:operations",
   ]
-  public_deps = [ "//sdk/fidl/fuchsia.modular.internal" ]
+  public_deps = [
+    "//sdk/fidl/fuchsia.modular.internal",
+    "//src/modular/lib/ledger_client:page_client",
+  ]
+}
+
+source_set("story_storage_xdr") {
+  sources = [
+    "story_storage_xdr.cc",
+    "story_storage_xdr.h",
+  ]
+
+  deps = [
+    ":annotation_xdr",
+    "//sdk/fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.modular.internal",
+    "//src/lib/fsl",
+    "//src/modular/lib/fidl:json_xdr",
+  ]
 }
 
 executable("story_storage_unittest") {
@@ -117,13 +155,23 @@ executable("story_storage_unittest") {
 
   deps = [
     ":story_storage",
-    "//src/lib/fsl",
+    "//src/ledger/fidl/fuchsia.ledger",
     "//src/lib/fxl/test:gtest_main",
-    "//src/lib/testing/loop_fixture",
     "//src/modular/lib/async/cpp:future",
-    "//third_party/googletest:gtest",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
-    "//zircon/system/public",
+    "//src/modular/lib/testing:test_with_ledger",
+  ]
+}
+
+source_set("annotation_xdr") {
+  sources = [
+    "annotation_xdr.cc",
+    "annotation_xdr.h",
+  ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.modular",
+    "//src/lib/fsl",
+    "//src/modular/lib/base64url",
+    "//src/modular/lib/fidl:json_xdr",
   ]
 }

@@ -9,15 +9,17 @@ namespace modular_testing {
 TestWithSessionStorage::TestWithSessionStorage() = default;
 TestWithSessionStorage::~TestWithSessionStorage() = default;
 
-std::unique_ptr<modular::SessionStorage> TestWithSessionStorage::MakeSessionStorage() {
-  return std::make_unique<modular::SessionStorage>();
+std::unique_ptr<modular::SessionStorage> TestWithSessionStorage::MakeSessionStorage(
+    std::string ledger_page) {
+  auto page_id = modular::MakePageId(ledger_page);
+  return std::make_unique<modular::SessionStorage>(ledger_client(), page_id);
 }
 
-std::shared_ptr<modular::StoryStorage> TestWithSessionStorage::GetStoryStorage(
+std::unique_ptr<modular::StoryStorage> TestWithSessionStorage::GetStoryStorage(
     modular::SessionStorage* const storage, std::string story_id) {
-  std::shared_ptr<modular::StoryStorage> story_storage;
+  std::unique_ptr<modular::StoryStorage> story_storage;
   bool done{};
-  storage->GetStoryStorage(story_id)->Then([&](std::shared_ptr<modular::StoryStorage> result) {
+  storage->GetStoryStorage(story_id)->Then([&](std::unique_ptr<modular::StoryStorage> result) {
     FX_DCHECK(!!result);
     story_storage = std::move(result);
     done = true;
@@ -31,7 +33,7 @@ fidl::StringPtr TestWithSessionStorage::CreateStoryImpl(fidl::StringPtr story_id
                                                         modular::SessionStorage* const storage) {
   auto future_story = storage->CreateStory(story_id, /*annotations=*/{});
   bool done{};
-  future_story->Then([&](fidl::StringPtr id) {
+  future_story->Then([&](fidl::StringPtr id, fuchsia::ledger::PageId) {
     done = true;
     story_id = std::move(id);
   });

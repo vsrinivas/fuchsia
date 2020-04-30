@@ -7,11 +7,12 @@
 #include <memory>
 
 #include <gtest/gtest.h>
-#include <lib/gtest/real_loop_fixture.h>
 
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/syslog/cpp/logger.h"
 #include "src/modular/lib/async/cpp/future.h"
+#include "src/modular/lib/ledger_client/page_id.h"
+#include "src/modular/lib/testing/test_with_ledger.h"
 
 using fuchsia::modular::ModuleData;
 using fuchsia::modular::ModuleDataPtr;
@@ -19,10 +20,10 @@ using fuchsia::modular::ModuleDataPtr;
 namespace modular {
 namespace {
 
-class StoryStorageTest : public gtest::RealLoopFixture {
+class StoryStorageTest : public modular_testing::TestWithLedger {
  protected:
-  std::unique_ptr<StoryStorage> CreateStorage() {
-    return std::make_unique<StoryStorage>();
+  std::unique_ptr<StoryStorage> CreateStorage(std::string page_id) {
+    return std::make_unique<StoryStorage>(ledger_client(), modular::MakePageId(page_id));
   }
 };
 
@@ -33,7 +34,7 @@ ModuleData Clone(const ModuleData& data) {
 }
 
 TEST_F(StoryStorageTest, ReadModuleData_NonexistentModule) {
-  auto storage = CreateStorage();
+  auto storage = CreateStorage("page");
 
   bool read_done{};
   std::vector<std::string> path;
@@ -47,7 +48,7 @@ TEST_F(StoryStorageTest, ReadModuleData_NonexistentModule) {
 }
 
 TEST_F(StoryStorageTest, ReadAllModuleData_Empty) {
-  auto storage = CreateStorage();
+  auto storage = CreateStorage("page");
 
   bool read_done{};
   fidl::VectorPtr<ModuleData> all_module_data;
@@ -64,22 +65,10 @@ TEST_F(StoryStorageTest, ReadAllModuleData_Empty) {
 TEST_F(StoryStorageTest, WriteReadModuleData) {
   // Write and then read some ModuleData entries. We expect to get the same data
   // back.
-  auto storage = CreateStorage();
+  auto storage = CreateStorage("page");
 
-  int notification_count_all_changes{0};
-  int notification_count_one_change{0};
-  storage->SubscribeModuleDataUpdated([&](ModuleData) {
-    notification_count_all_changes++;
-    // Continue receiving notifications
-    return StoryStorage::NotificationInterest::CONTINUE;
-  });
-
-  storage->SubscribeModuleDataUpdated([&](ModuleData) {
-    notification_count_one_change++;
-    EXPECT_EQ(1, notification_count_one_change);
-    // Stop receiving notifications
-    return StoryStorage::NotificationInterest::STOP;
-  });
+  int notification_count{0};
+  storage->set_on_module_data_updated([&](ModuleData) { notification_count++; });
 
   ModuleData module_data1;
   module_data1.set_module_url("url1");
@@ -123,24 +112,22 @@ TEST_F(StoryStorageTest, WriteReadModuleData) {
   EXPECT_TRUE(fidl::Equals(module_data1, all_module_data->at(0)));
   EXPECT_TRUE(fidl::Equals(module_data2, all_module_data->at(1)));
 
-  // We should get a notification every time module data is updated for the
-  // first subscription.
-  EXPECT_EQ(2, notification_count_all_changes);
-  // The second subscription should terminate after the first time it receives a
-  // callback, and should only see one change.
-  EXPECT_EQ(1, notification_count_one_change);
+  // We should get a notification every time module data is updated.
+  EXPECT_EQ(2, notification_count);
 }
 
 TEST_F(StoryStorageTest, UpdateModuleData) {
   // Call UpdateModuleData() on a record that doesn't exist yet.
-  auto storage = CreateStorage();
+  auto storage = CreateStorage("page");
 
+  // We're going to observe changes on another storage instance, which
+  // simulates another device.
+  auto other_storage = CreateStorage("page");
   bool got_notification{};
   ModuleData notified_module_data;
-  storage->SubscribeModuleDataUpdated([&](ModuleData data) {
+  other_storage->set_on_module_data_updated([&](ModuleData data) {
     got_notification = true;
     notified_module_data = std::move(data);
-    return StoryStorage::NotificationInterest::CONTINUE;
   });
 
   std::vector<std::string> path;
@@ -230,7 +217,7 @@ LinkPath MakeLinkPath(const std::string& name) {
 }  // namespace
 
 TEST_F(StoryStorageTest, GetLink_Null) {
-  auto storage = CreateStorage();
+  auto storage = CreateStorage("page");
 
   // Default for an un-set Link is to get a "null" back.
   bool get_done{};
@@ -246,7 +233,7 @@ TEST_F(StoryStorageTest, GetLink_Null) {
 }
 
 TEST_F(StoryStorageTest, UpdateLinkValue) {
-  auto storage = CreateStorage();
+  auto storage = CreateStorage("page");
 
   // Let's set a value.
   int mutate_count{0};

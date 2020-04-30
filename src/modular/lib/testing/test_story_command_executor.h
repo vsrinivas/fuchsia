@@ -18,7 +18,7 @@ class TestStoryCommandExecutor : public modular::StoryCommandExecutor {
  public:
   // Optional. If a |StoryStorage| is set, certain executed commands perform limited (as-needed to
   // support existing test cases) updates to the |StoryStorage|. See ExecuteCommandsInternal().
-  void SetStoryStorage(std::shared_ptr<modular::StoryStorage> story_storage);
+  void SetStoryStorage(std::unique_ptr<modular::StoryStorage> story_storage);
 
   // Change the default return status and optional error message to be returned from
   // |StoryController|->Execute()
@@ -44,7 +44,7 @@ class TestStoryCommandExecutor : public modular::StoryCommandExecutor {
   fidl::StringPtr last_story_id_;
   std::vector<fuchsia::modular::StoryCommand> last_commands_;
   fuchsia::modular::ExecuteResult result_;
-  std::shared_ptr<modular::StoryStorage> story_storage_;
+  std::unique_ptr<modular::StoryStorage> story_storage_;
 };
 
 }  // namespace modular_testing

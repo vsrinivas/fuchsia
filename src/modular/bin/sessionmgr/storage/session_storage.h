@@ -9,20 +9,33 @@
 #include <fuchsia/modular/internal/cpp/fidl.h>
 
 #include <optional>
-#include <map>
 
 #include "src/modular/bin/sessionmgr/storage/story_storage.h"
 #include "src/modular/lib/async/cpp/future.h"
+#include "src/modular/lib/ledger_client/ledger_client.h"
+#include "src/modular/lib/ledger_client/page_client.h"
+#include "src/modular/lib/ledger_client/page_id.h"
 
 namespace modular {
 
 // This class has the following responsibilities:
 //
-// * Manage in-memory metadata about what stories are part of a single session.
-class SessionStorage {
+// * Manage the persistence of metadata about what stories are part of a single
+//   session.
+// * Observe the metadata and call clients back when changes initiated by other
+//   Ledger clients appear.
+// * Manage the lifecycle of Ledger pages for storing individual story
+//   metadata. The contents of these pages are governed by StoryStoage.
+//
+// All calls operate directly on the Ledger itself: no local caching is
+// performed.
+class SessionStorage : public PageClient {
  public:
-  // Constructs a new SessionStorage with internal storage.
-  SessionStorage();
+  // Constructs a new SessionStorage with storage on |page_id| in the ledger
+  // given by |ledger_client|.
+  //
+  // |ledger_client| must outlive *this.
+  SessionStorage(LedgerClient* ledger_client, LedgerPageId page_id);
 
   // |callback| is notified whenever a story has been deleted. This
   // notification is either the result of:
@@ -45,7 +58,8 @@ class SessionStorage {
     on_story_updated_ = std::move(callback);
   }
 
-  // Creates a new story and returns a story id on completion. |story_name| may be null.
+  // Creates a new story and returns a tuple of (story id, story ledger page
+  // id) on completion. |story_name| may be null.
   //
   // If |story_name| is not provided, a UUID will be generated as the name.
   //
@@ -55,11 +69,12 @@ class SessionStorage {
   // is unclear if internal story IDs should be an implementation detail of
   // SessionStorage, or if they should be exposed to the story runtime
   // architecture.
-  FuturePtr<fidl::StringPtr> CreateStory(
+  FuturePtr<fidl::StringPtr, fuchsia::ledger::PageId> CreateStory(
       fidl::StringPtr story_name, std::vector<fuchsia::modular::Annotation> annotations);
 
   // Same as above, but defaults |story_name| to nullptr.
-  FuturePtr<fidl::StringPtr> CreateStory(std::vector<fuchsia::modular::Annotation> annotations);
+  FuturePtr<fidl::StringPtr, fuchsia::ledger::PageId> CreateStory(
+      std::vector<fuchsia::modular::Annotation> annotations);
 
   // Deletes the |story_id| from the list of known stories and completes the
   // returned Future when done.
@@ -99,20 +114,21 @@ class SessionStorage {
 
   // Gets the StoryStorage for the story with the given |story_id| to perform
   // operations on the story such as adding modules, updating links, etc.
-  FuturePtr<std::shared_ptr<StoryStorage>> GetStoryStorage(fidl::StringPtr story_id);
+  FuturePtr<std::unique_ptr<StoryStorage>> GetStoryStorage(fidl::StringPtr story_id);
 
  private:
+  // |PageClient|
+  void OnPageChange(const std::string& key, const std::string& value) override;
+
+  // |PageClient|
+  void OnPageDelete(const std::string& key) override;
+
+  LedgerClient* const ledger_client_;
+  OperationQueue operation_queue_;
+
   fit::function<void(fidl::StringPtr story_id)> on_story_deleted_;
   fit::function<void(fidl::StringPtr story_id, fuchsia::modular::internal::StoryData story_data)>
       on_story_updated_;
-
-  // In-memory map from story_id to the corresponding StoryData.  This was
-  // previously stored in the ledger.
-  std::map<fidl::StringPtr, fuchsia::modular::internal::StoryData> story_data_backing_store_;
-
-  // In-memory map from story_id to the corresponding StoryData.  This was
-  // previously stored in the ledger.
-  std::map<fidl::StringPtr, std::shared_ptr<StoryStorage>> story_storage_backing_store_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(SessionStorage);
 };

@@ -59,7 +59,7 @@ class PuppetMasterTest : public modular_testing::TestWithSessionStorage {
  public:
   void SetUp() override {
     TestWithSessionStorage::SetUp();
-    session_storage_ = MakeSessionStorage();
+    session_storage_ = MakeSessionStorage("page");
     impl_ = std::make_unique<PuppetMasterImpl>(session_storage_.get(), &executor_);
     impl_->Connect(ptr_.NewRequest());
   }
@@ -325,7 +325,7 @@ TEST_F(PuppetMasterTest, SetStoryInfoExtraAfterDeleteStory) {
   // Create the story.
   bool done{};
   session_storage_->CreateStory(story_name, /*annotations=*/{})
-      ->Then([&](fidl::StringPtr id) { done = true; });
+      ->Then([&](fidl::StringPtr id, fuchsia::ledger::PageId page_id) { done = true; });
   RunLoopUntil([&] { return done; });
 
   const std::vector<fuchsia::modular::StoryInfoExtraEntry> kStoryExtraInfo{
@@ -368,7 +368,7 @@ TEST_F(PuppetMasterTest, DeleteStory) {
   // Create a story.
   session_storage_->CreateStory("foo", /*annotations=*/{})
       ->Then(
-          [&](fidl::StringPtr id) { story_id = id.value_or(""); });
+          [&](fidl::StringPtr id, fuchsia::ledger::PageId page_id) { story_id = id.value_or(""); });
 
   // Delete it
   bool done{};

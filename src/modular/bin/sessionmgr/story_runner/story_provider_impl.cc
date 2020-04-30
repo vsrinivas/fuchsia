@@ -124,7 +124,7 @@ class StoryProviderImpl::LoadStoryRuntimeCall : public Operation<StoryRuntimeCon
   void Cont(fuchsia::modular::internal::StoryDataPtr story_data, FlowToken flow) {
     session_storage_->GetStoryStorage(story_id_)->WeakThen(
         GetWeakPtr(), [this, story_data = std::move(story_data),
-                       flow](std::shared_ptr<StoryStorage> story_storage) mutable {
+                       flow](std::unique_ptr<StoryStorage> story_storage) mutable {
           struct StoryRuntimeContainer container {
             .executor = std::make_unique<async::Executor>(async_get_default_dispatcher()),
             .storage = std::move(story_storage), .current_data = std::move(story_data),

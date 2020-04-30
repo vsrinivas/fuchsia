@@ -19,7 +19,7 @@ namespace {
 class SessionCtlAppTest : public modular_testing::TestWithSessionStorage {
  public:
   SessionCtlAppTest() {
-    session_storage_ = MakeSessionStorage();
+    session_storage_ = MakeSessionStorage("page");
     puppet_master_impl_ =
         std::make_unique<PuppetMasterImpl>(session_storage_.get(), &test_executor_);
     puppet_master_impl_->Connect(puppet_master_.NewRequest());

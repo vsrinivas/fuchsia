@@ -9,7 +9,6 @@
 
 #include "src/modular/bin/sessionmgr/puppet_master/command_runners/command_runner.h"
 #include "src/modular/bin/sessionmgr/puppet_master/story_command_executor.h"
-#include "src/modular/lib/async/cpp/operation.h"
 
 namespace modular {
 

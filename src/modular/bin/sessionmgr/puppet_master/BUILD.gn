@@ -120,10 +120,7 @@ executable("dispatch_story_command_executor_unittest") {
     ":dispatch_story_command_executor",
     "//sdk/fidl/fuchsia.modular",
     "//src/lib/fxl/test:gtest_main",
-    "//src/lib/testing/loop_fixture",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
-    "//zircon/system/public",
+    "//src/modular/lib/testing:test_with_ledger",
   ]
 }
 

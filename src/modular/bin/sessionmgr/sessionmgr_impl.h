@@ -5,6 +5,9 @@
 #ifndef SRC_MODULAR_BIN_SESSIONMGR_SESSIONMGR_IMPL_H_
 #define SRC_MODULAR_BIN_SESSIONMGR_SESSIONMGR_IMPL_H_
 
+#include <fuchsia/ledger/cloud/cpp/fidl.h>
+#include <fuchsia/ledger/cpp/fidl.h>
+#include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <fuchsia/modular/auth/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/modular/internal/cpp/fidl.h>
@@ -81,6 +84,10 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   // may be executed to terminate the currently running session shell.
   void TerminateSessionShell(fit::function<void()> done);
 
+  // Returns the file descriptor that backs the ledger repository directory for
+  // the user.
+  zx::channel GetLedgerRepositoryDirectory();
+
   // |fuchsia::modular::SessionShellContext|
   void GetComponentContext(
       fidl::InterfaceRequest<fuchsia::modular::ComponentContext> request) override;
@@ -126,6 +133,10 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   // The context in which the Sessionmgr was launched
   sys::ComponentContext* const sessionmgr_context_;
 
+  // The launcher from the context in which the Sessionmgr was launched. The Sessionmgr will use
+  // this launcher to launch other dependent services such as ledger, cloud provider, etc.
+  fuchsia::sys::LauncherPtr sessionmgr_context_launcher_;
+
   // The Sessionmgr creates a new environment as a child of its component context's environment.
   // Story shells and mods are launched within the |session_environment_|. Other services are
   // launched outside of the |session_environment_| (and in the sessionmgr_context_ environment).
@@ -140,6 +151,8 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
 
   inspect::Node inspect_root_node_;
 
+  std::unique_ptr<scoped_tmpfs::ScopedTmpFS> memfs_for_ledger_;
+
   fidl::BindingSet<fuchsia::modular::internal::Sessionmgr> bindings_;
   component::ServiceProviderImpl session_shell_services_;
 
@@ -147,6 +160,13 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   fidl::BindingSet<fuchsia::modular::SessionRestartController> session_restart_controller_bindings_;
 
   fuchsia::modular::internal::SessionContextPtr session_context_;
+  std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>> cloud_provider_app_;
+  std::unique_ptr<AppClient<fuchsia::ledger::internal::LedgerController>> ledger_app_;
+  fuchsia::ledger::internal::LedgerRepositoryFactoryPtr ledger_repository_factory_;
+  fuchsia::ledger::internal::LedgerRepositoryPtr ledger_repository_;
+  std::unique_ptr<LedgerClient> ledger_client_;
+  // Provides services to the Ledger
+  component::ServiceProviderImpl ledger_service_provider_;
 
   std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>> session_shell_app_;
   std::unique_ptr<ViewHost> session_shell_view_host_;

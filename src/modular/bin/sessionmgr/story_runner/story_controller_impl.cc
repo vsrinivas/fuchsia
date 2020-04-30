@@ -5,6 +5,7 @@
 #include "src/modular/bin/sessionmgr/story_runner/story_controller_impl.h"
 
 #include <fuchsia/intl/cpp/fidl.h>
+#include <fuchsia/ledger/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/modular/internal/cpp/fidl.h>
 #include <fuchsia/modular/storymodel/cpp/fidl.h>
@@ -44,6 +45,7 @@
 #include "src/modular/lib/common/teardown.h"
 #include "src/modular/lib/fidl/array_to_string.h"
 #include "src/modular/lib/fidl/clone.h"
+#include "src/modular/lib/ledger_client/operations.h"
 #include "src/modular/lib/string_escape/string_escape.h"
 
 namespace modular {
@@ -598,10 +600,16 @@ class StoryControllerImpl::StopCall : public Operation<> {
 
           return did_teardown;
         })
-        ->Then([this] {
+        ->AsyncMap([this] {
           story_controller_impl_->story_shell_holder_.reset();
           story_controller_impl_->story_shell_.Unbind();
+
+          // Ensure every story storage operation has completed.
+          return story_controller_impl_->story_storage_->Sync();
+        })
+        ->Then([this] {
           story_controller_impl_->SetRuntimeState(fuchsia::modular::StoryState::STOPPED);
+
           Done();
         });
   }
@@ -912,8 +920,7 @@ StoryControllerImpl::StoryControllerImpl(SessionStorage* const session_storage,
       story_observer_(std::move(story_observer)),
       story_shell_context_impl_{story_id_, story_provider_impl},
       weak_factory_(this) {
-
-  story_storage_->SubscribeModuleDataUpdated([this](fuchsia::modular::ModuleData module_data) {
+  story_storage_->set_on_module_data_updated([this](fuchsia::modular::ModuleData module_data) {
     auto* const running_mod_info = FindRunningModInfo(module_data.module_path());
     if (running_mod_info) {
       if (module_data.has_annotations()) {
@@ -923,7 +930,6 @@ StoryControllerImpl::StoryControllerImpl(SessionStorage* const session_storage,
       running_mod_info->ResetInspect();
     }
     OnModuleDataUpdated(std::move(module_data));
-    return StoryStorage::NotificationInterest::CONTINUE;
   });
 
   story_observer_->RegisterListener([this](const fuchsia::modular::storymodel::StoryModel& model) {

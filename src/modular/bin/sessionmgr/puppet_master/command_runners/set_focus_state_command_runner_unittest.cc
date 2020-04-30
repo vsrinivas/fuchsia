@@ -4,7 +4,6 @@
 
 #include "src/modular/bin/sessionmgr/puppet_master/command_runners/set_focus_state_command_runner.h"
 
-#include <lib/fidl/cpp/binding_set.h>
 #include <lib/gtest/test_loop_fixture.h>
 
 #include <gtest/gtest.h>
