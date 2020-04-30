@@ -33,7 +33,7 @@ import (
 type Expression interface {
 	// AssertKind asserts that value is one of the `kinds` given. On success,
 	// returns the kind of this value.
-	AssertKind(kinds ...tapeKind) tapeKind
+	AssertKind(kinds ...TapeKind) TapeKind
 
 	// Nullable returns wether this value is nullable.
 	Nullable() bool
@@ -45,7 +45,7 @@ type Expression interface {
 // ExpressionFormatter formats an expression.
 type ExpressionFormatter interface {
 	CaseNum(num int) string
-	CaseLocal(name string, kind tapeKind) string
+	CaseLocal(name string, kind TapeKind) string
 	CaseMemberOf(expr Expression, member string) string
 	CaseFidlAlign(expr Expression) string
 	CaseLength(expr Expression) string
@@ -66,7 +66,7 @@ type exprImpl struct {
 	expr     Expression
 	name     string
 	member   string
-	kind     tapeKind
+	kind     TapeKind
 	nullable bool
 	lhs, rhs Expression
 }
@@ -85,14 +85,14 @@ const (
 	mult
 )
 
-func (expr *exprImpl) AssertKind(kinds ...tapeKind) tapeKind {
+func (expr *exprImpl) AssertKind(kinds ...TapeKind) TapeKind {
 	for _, kind := range kinds {
 		if expr.kind == kind {
 			return kind
 		}
 	}
 	log.Panicf("expected %v, was %v", kinds, expr.kind)
-	return tapeKind(0)
+	return TapeKind(0)
 }
 
 func (expr *exprImpl) Nullable() bool {
@@ -127,7 +127,7 @@ func exprNum(n int) Expression {
 	}
 }
 
-func exprLocal(name string, kind tapeKind, nullable bool) Expression {
+func exprLocal(name string, kind TapeKind, nullable bool) Expression {
 	return &exprImpl{
 		discriminator: local,
 		name:          name,
@@ -136,8 +136,8 @@ func exprLocal(name string, kind tapeKind, nullable bool) Expression {
 	}
 }
 
-func valMemberOf(expr Expression, member string, kind tapeKind, nullable bool) Expression {
-	expr.AssertKind(kStruct, kUnion, kTable)
+func exprMemberOf(expr Expression, member string, kind TapeKind, nullable bool) Expression {
+	expr.AssertKind(Struct, Union, Table)
 	return &exprImpl{
 		discriminator: memberOf,
 		expr:          expr,
@@ -147,7 +147,7 @@ func valMemberOf(expr Expression, member string, kind tapeKind, nullable bool) E
 	}
 }
 
-func valFidlAlign(expr Expression) Expression {
+func exprFidlAlign(expr Expression) Expression {
 	return &exprImpl{
 		discriminator: fidlAlign,
 		expr:          expr,
@@ -155,14 +155,14 @@ func valFidlAlign(expr Expression) Expression {
 }
 
 func exprLength(expr Expression) Expression {
-	expr.AssertKind(kVector, kArray, kString)
+	expr.AssertKind(Vector, Array, String)
 	return &exprImpl{
 		discriminator: length,
 		expr:          expr,
 	}
 }
 
-func valHasMember(expr Expression, member string) Expression {
+func exprHasMember(expr Expression, member string) Expression {
 	return &exprImpl{
 		discriminator: hasMember,
 		expr:          expr,

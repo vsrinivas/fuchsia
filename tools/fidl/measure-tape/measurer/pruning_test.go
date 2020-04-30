@@ -13,23 +13,23 @@ import (
 func TestPruningCallerCallingEmptyCallee(t *testing.T) {
 	// caller -> callee (empty)
 	var (
-		callerID       = methodID{targetType: fidlcommon.MustReadName("fidl/Caller")}
-		calleeID       = methodID{targetType: fidlcommon.MustReadName("fidl/Callee")}
-		caller, callee *method
+		callerID       = MethodID{TargetType: fidlcommon.MustReadName("fidl/Caller")}
+		calleeID       = MethodID{TargetType: fidlcommon.MustReadName("fidl/Callee")}
+		caller, callee *Method
 	)
 	{
-		expr := exprLocal("value", kStruct, false)
-		var body block
+		expr := exprLocal("value", Struct, false)
+		var body Block
 		body.emitAddNumBytes(exprNum(1))
 		body.emitInvoke(calleeID, expr)
 		caller = newMethod(callerID, expr, &body)
 	}
 	{
-		expr := exprLocal("value", kStruct, false)
+		expr := exprLocal("value", Struct, false)
 		callee = newMethod(calleeID, expr, nil)
 	}
 
-	allMethods := map[methodID]*method{
+	allMethods := map[MethodID]*Method{
 		callerID: caller,
 		calleeID: callee,
 	}
@@ -47,29 +47,37 @@ func TestPruningCallerCallingEmptyCallee(t *testing.T) {
 func TestPruningCallerCallingEmptyCalleeThroughSelectVariant(t *testing.T) {
 	// caller -> callee (empty)
 	var (
-		callerID       = methodID{targetType: fidlcommon.MustReadName("fidl/Caller")}
-		calleeID       = methodID{targetType: fidlcommon.MustReadName("fidl/Callee")}
-		caller, callee *method
+		callerID       = MethodID{TargetType: fidlcommon.MustReadName("fidl/Caller")}
+		calleeID       = MethodID{TargetType: fidlcommon.MustReadName("fidl/Callee")}
+		caller, callee *Method
 	)
 	{
-		var variantBlock block
-		variantBlock.emitInvoke(calleeID, exprLocal("value", kStruct, false))
+		var variantBlock Block
+		variantBlock.emitInvoke(calleeID, exprLocal("value", Struct, false))
 
-		expr := exprLocal("value", kStruct, false)
-		var body block
+		expr := exprLocal("value", Struct, false)
+		var body Block
 		body.emitAddNumBytes(exprNum(1))
-		body.emitSelectVariant(exprNum(42), fidlcommon.MustReadName("fidl/TargetType"), map[string]*block{
+		body.emitSelectVariant(nil, fidlcommon.MustReadName("fidl/TargetType"), map[string]*Block{
 			"member": &variantBlock,
 		})
 
 		caller = newMethod(callerID, expr, &body)
 	}
 	{
-		expr := exprLocal("value", kStruct, false)
+		expr := exprLocal("value", Struct, false)
+		callee = newMethod(calleeID, expr, nil)
+		var body Block
+		body.emitAddNumBytes(exprNum(1))
+		body.emitInvoke(calleeID, nil)
+		caller = newMethod(callerID, expr, &body)
+	}
+	{
+		expr := exprLocal("value", Struct, false)
 		callee = newMethod(calleeID, expr, nil)
 	}
 
-	allMethods := map[methodID]*method{
+	allMethods := map[MethodID]*Method{
 		callerID: caller,
 		calleeID: callee,
 	}
@@ -87,19 +95,19 @@ func TestPruningCallerCallingEmptyCalleeThroughSelectVariant(t *testing.T) {
 func TestPruningOneCallingTwoCallingEmptyThree(t *testing.T) {
 	// one -> two -> three (empty)
 	var (
-		oneID           = methodID{targetType: fidlcommon.MustReadName("fidl/One")}
-		twoID           = methodID{targetType: fidlcommon.MustReadName("fidl/Two")}
-		threeID         = methodID{targetType: fidlcommon.MustReadName("fidl/Three")}
-		one, two, three *method
+		oneID           = MethodID{TargetType: fidlcommon.MustReadName("fidl/One")}
+		twoID           = MethodID{TargetType: fidlcommon.MustReadName("fidl/Two")}
+		threeID         = MethodID{TargetType: fidlcommon.MustReadName("fidl/Three")}
+		one, two, three *Method
 	)
 	{
-		var body block
+		var body Block
 		body.emitAddNumBytes(exprNum(1))
 		body.emitInvoke(twoID, nil)
 		one = newMethod(oneID, nil, &body)
 	}
 	{
-		var body block
+		var body Block
 		body.emitInvoke(threeID, nil)
 		two = newMethod(twoID, nil, &body)
 	}
@@ -107,7 +115,7 @@ func TestPruningOneCallingTwoCallingEmptyThree(t *testing.T) {
 		three = newMethod(threeID, nil, nil)
 	}
 
-	allMethods := map[methodID]*method{
+	allMethods := map[MethodID]*Method{
 		oneID:   one,
 		twoID:   two,
 		threeID: three,

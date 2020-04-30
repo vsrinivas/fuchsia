@@ -16,6 +16,7 @@ import (
 
 	fidlir "fidl/compiler/backend/types"
 
+	"measure-tape/hlcpp"
 	"measure-tape/measurer"
 )
 
@@ -80,20 +81,19 @@ func main() {
 	}
 
 	m := measurer.NewMeasurer(roots)
-	mt, err := m.MeasuringTapeFor(*targetType)
+	targetMt, err := m.MeasuringTapeFor(*targetType)
 	if err != nil {
 		log.Panic(err.Error())
 	}
 
-	var bufH, bufCc bytes.Buffer
-	{
-		printer := measurer.NewPrinter(m, mt, *hIncludePath, &bufH)
-		printer.WriteH()
-	}
-	{
-		printer := measurer.NewPrinter(m, mt, *hIncludePath, &bufCc)
-		printer.WriteCc()
-	}
+	allMethods := measurer.NewCodeGenerator(targetMt).Generate()
+
+	var (
+		printer     = hlcpp.NewPrinter(m, *hIncludePath)
+		bufH, bufCc bytes.Buffer
+	)
+	printer.WriteH(&bufH, targetMt)
+	printer.WriteCc(&bufCc, targetMt, allMethods)
 
 	if len(*onlyCheckToFile) == 0 {
 		writeFile(*outH, bufH.Bytes())

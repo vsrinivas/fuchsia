@@ -5,6 +5,7 @@
 package measurer
 
 import (
+	"log"
 	"sort"
 
 	fidlcommon "fidl/compiler/backend/common"
@@ -53,115 +54,152 @@ const (
 // * DeclareMaxOrdinal: declare a local meant to hold the max ordinal value.
 //
 // * SetMaxOrdinal(E): update the max ordinal local to E.
-type statement struct {
+type Statement struct {
 	kind       statementKind
-	id         methodID
+	id         MethodID
 	args       []Expression
-	body       *block
+	body       *Block
 	targetType fidlcommon.Name
-	variants   map[string]*block
+	variants   map[string]*Block
 
 	deleted bool
 }
 
-type methodKind int
-
-const (
-	_ methodKind = iota
-
-	measure
-	measureOutOfLine
-	measureHandles
-)
-
-type methodID struct {
-	kind       methodKind
-	targetType fidlcommon.Name
+type StatementFormatter interface {
+	CaseMaxOut()
+	CaseAddNumBytes(expr Expression)
+	CaseAddNumHandles(expr Expression)
+	CaseInvoke(id MethodID, expr Expression)
+	CaseGuard(cond Expression, body *Block)
+	CaseIterate(local, expr Expression, body *Block)
+	CaseSelectVariant(expr Expression, targetType fidlcommon.Name, variants map[string]*Block)
+	CaseDeclareMaxOrdinal(local Expression)
+	CaseSetMaxOrdinal(local, ordinal Expression)
 }
 
-type byTargetTypeThenKind []methodID
+func (stmt *Statement) Visit(formatter StatementFormatter) {
+	switch stmt.kind {
+	case addNumBytes:
+		formatter.CaseAddNumBytes(stmt.args[0])
+	case addNumHandles:
+		formatter.CaseAddNumHandles(stmt.args[0])
+	case iterate:
+		formatter.CaseIterate(stmt.args[0], stmt.args[1], stmt.body)
+	case invoke:
+		formatter.CaseInvoke(stmt.id, stmt.args[0])
+	case guard:
+		formatter.CaseGuard(stmt.args[0], stmt.body)
+	case selectVariant:
+		formatter.CaseSelectVariant(stmt.args[0], stmt.targetType, stmt.variants)
+	case maxOut:
+		formatter.CaseMaxOut()
+	case declareMaxOrdinal:
+		formatter.CaseDeclareMaxOrdinal(stmt.args[0])
+	case setMaxOrdinal:
+		formatter.CaseSetMaxOrdinal(stmt.args[0], stmt.args[1])
+	default:
+		log.Panicf("unexpected statementKind %v", stmt.kind)
+	}
+}
 
-var _ sort.Interface = byTargetTypeThenKind(nil)
+type MethodKind int
 
-func (s byTargetTypeThenKind) Less(i, j int) bool {
+const (
+	_ MethodKind = iota
+
+	Measure
+	MeasureOutOfLine
+	MeasureHandles
+)
+
+type MethodID struct {
+	Kind       MethodKind
+	TargetType fidlcommon.Name
+}
+
+type ByTargetTypeThenKind []MethodID
+
+var _ sort.Interface = ByTargetTypeThenKind(nil)
+
+func (s ByTargetTypeThenKind) Less(i, j int) bool {
 	lhs, rhs := s[i], s[j]
-	if lhs.targetType.FullyQualifiedName() < rhs.targetType.FullyQualifiedName() {
+	if lhs.TargetType.FullyQualifiedName() < rhs.TargetType.FullyQualifiedName() {
 		return true
-	} else if lhs.targetType == rhs.targetType {
-		return lhs.kind < rhs.kind
+	} else if lhs.TargetType == rhs.TargetType {
+		return lhs.Kind < rhs.Kind
 	}
 	return false
 }
 
-func (s byTargetTypeThenKind) Len() int {
+func (s ByTargetTypeThenKind) Len() int {
 	return len(s)
 }
 
-func (s byTargetTypeThenKind) Swap(i, j int) {
+func (s ByTargetTypeThenKind) Swap(i, j int) {
 	s[j], s[i] = s[i], s[j]
 }
 
-func (mt *MeasuringTape) methodIDOf(kind methodKind) methodID {
+func (mt *MeasuringTape) methodIDOf(kind MethodKind) MethodID {
 	mt.assertOnlyStructUnionTable()
 
-	return methodID{
-		kind:       kind,
-		targetType: mt.name,
+	return MethodID{
+		Kind:       kind,
+		TargetType: mt.name,
 	}
 }
 
-type block struct {
-	stmts []statement
+type Block struct {
+	stmts []Statement
 }
 
-func (b *block) emitAddNumBytes(expr Expression) {
-	b.stmts = append(b.stmts, statement{
+func (b *Block) emitAddNumBytes(expr Expression) {
+	b.stmts = append(b.stmts, Statement{
 		kind: addNumBytes,
 		args: []Expression{expr},
 	})
 }
 
-func (b *block) emitAddNumHandles(expr Expression) {
-	b.stmts = append(b.stmts, statement{
+func (b *Block) emitAddNumHandles(expr Expression) {
+	b.stmts = append(b.stmts, Statement{
 		kind: addNumHandles,
 		args: []Expression{expr},
 	})
 }
 
-func (b *block) emitInvoke(id methodID, expr Expression) {
-	b.stmts = append(b.stmts, statement{
+func (b *Block) emitInvoke(id MethodID, expr Expression) {
+	b.stmts = append(b.stmts, Statement{
 		kind: invoke,
 		id:   id,
 		args: []Expression{expr},
 	})
 }
 
-func (b *block) emitIterate(local Expression, value Expression, body *block) {
-	b.stmts = append(b.stmts, statement{
+func (b *Block) emitIterate(local Expression, value Expression, body *Block) {
+	b.stmts = append(b.stmts, Statement{
 		kind: iterate,
 		args: []Expression{local, value},
 		body: body,
 	})
 }
 
-func (b *block) emitGuard(cond Expression, body *block) {
-	b.stmts = append(b.stmts, statement{
+func (b *Block) emitGuard(cond Expression, body *Block) {
+	b.stmts = append(b.stmts, Statement{
 		kind: guard,
 		args: []Expression{cond},
 		body: body,
 	})
 }
 
-func (b *block) emitMaxOut() {
-	b.stmts = append(b.stmts, statement{
+func (b *Block) emitMaxOut() {
+	b.stmts = append(b.stmts, Statement{
 		kind: maxOut,
 	})
 }
 
 const unknownVariant = ""
 
-func (b *block) emitSelectVariant(expr Expression, targetType fidlcommon.Name, variants map[string]*block) {
-	b.stmts = append(b.stmts, statement{
+func (b *Block) emitSelectVariant(expr Expression, targetType fidlcommon.Name, variants map[string]*Block) {
+	b.stmts = append(b.stmts, Statement{
 		kind:       selectVariant,
 		args:       []Expression{expr},
 		targetType: targetType,
@@ -169,23 +207,23 @@ func (b *block) emitSelectVariant(expr Expression, targetType fidlcommon.Name, v
 	})
 }
 
-func (b *block) emitDeclareMaxOrdinal() Expression {
-	local := exprLocal("max_ordinal", kPrimitive, false)
-	b.stmts = append(b.stmts, statement{
+func (b *Block) emitDeclareMaxOrdinal() Expression {
+	local := exprLocal("max_ordinal", Primitive, false)
+	b.stmts = append(b.stmts, Statement{
 		kind: declareMaxOrdinal,
 		args: []Expression{local},
 	})
 	return local
 }
 
-func (b *block) emitSetMaxOrdinal(local Expression, ordinal int) {
-	b.stmts = append(b.stmts, statement{
+func (b *Block) emitSetMaxOrdinal(local Expression, ordinal int) {
+	b.stmts = append(b.stmts, Statement{
 		kind: setMaxOrdinal,
 		args: []Expression{local, exprNum(ordinal)},
 	})
 }
 
-func (b *block) forAllStatements(fn func(stmt *statement)) {
+func (b *Block) ForAllStatements(fn func(stmt *Statement)) {
 	for i := 0; i < len(b.stmts); i++ {
 		if b.stmts[i].deleted {
 			continue
@@ -194,33 +232,33 @@ func (b *block) forAllStatements(fn func(stmt *statement)) {
 	}
 }
 
-type method struct {
-	id   methodID
-	arg  Expression
-	body *block
+type Method struct {
+	ID   MethodID
+	Arg  Expression
+	Body *Block
 }
 
-func newMethod(id methodID, expr Expression, body *block) *method {
-	return &method{
-		id:   id,
-		arg:  expr,
-		body: body,
+func newMethod(id MethodID, expr Expression, body *Block) *Method {
+	return &Method{
+		ID:   id,
+		Arg:  expr,
+		Body: body,
 	}
 }
 
-// forAllStatements traverses all statements of a method but makes no guarantees
+// ForAllStatements traverses all statements of a method but makes no guarantees
 // as to the order in which the traversal is perfomed.
-func (m *method) forAllStatements(fn func(stmt *statement)) {
+func (m *Method) ForAllStatements(fn func(stmt *Statement)) {
 	var (
-		b             *block
-		blocksToVisit = []*block{m.body}
+		b             *Block
+		blocksToVisit = []*Block{m.Body}
 	)
 	for len(blocksToVisit) != 0 {
 		b, blocksToVisit = blocksToVisit[0], blocksToVisit[1:]
 		if b == nil {
 			continue
 		}
-		b.forAllStatements(func(stmt *statement) {
+		b.ForAllStatements(func(stmt *Statement) {
 			if stmt.body != nil {
 				blocksToVisit = append(blocksToVisit, stmt.body)
 			}

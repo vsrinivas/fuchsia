@@ -4,9 +4,9 @@
 
 package measurer
 
-func removeInvokeAndCountRemainingStatements(m *method, id methodID) int {
+func removeInvokeAndCountRemainingStatements(m *Method, id MethodID) int {
 	var count int
-	m.forAllStatements(func(stmt *statement) {
+	m.ForAllStatements(func(stmt *Statement) {
 		if stmt.kind == invoke && stmt.id == id {
 			stmt.deleted = true
 		} else {
@@ -27,20 +27,20 @@ func removeInvokeAndCountRemainingStatements(m *method, id methodID) int {
 // be pure (no side effect), it would be safer to increase the precisiohn of
 // method pruning at the same time as introducing a predicate ensuring this
 // is the case.
-func pruneEmptyMethods(allMethods map[methodID]*method) {
+func pruneEmptyMethods(allMethods map[MethodID]*Method) {
 	// boostrap
 	// - creating a map of callee to all its callers
 	// - recording all initially empty methods
 	var (
-		calledBy     = make(map[methodID][]methodID)
-		emptyMethods []methodID
+		calledBy     = make(map[MethodID][]MethodID)
+		emptyMethods []MethodID
 	)
 	for _, m := range allMethods {
 		var (
-			caller  = m.id
+			caller  = m.ID
 			isEmpty = true
 		)
-		m.forAllStatements(func(stmt *statement) {
+		m.ForAllStatements(func(stmt *Statement) {
 			if stmt.kind == invoke {
 				callee := stmt.id
 				calledBy[callee] = append(calledBy[callee], caller)
@@ -70,16 +70,16 @@ func pruneEmptyMethods(allMethods map[methodID]*method) {
 }
 
 type pruner struct {
-	allMethods map[methodID]*method
-	calledBy   map[methodID][]methodID
+	allMethods map[MethodID]*Method
+	calledBy   map[MethodID][]MethodID
 }
 
-func (p pruner) prune(methodID methodID) {
+func (p pruner) prune(methodID MethodID) {
 	delete(p.allMethods, methodID)
 	for _, callerID := range p.calledBy[methodID] {
 		if caller, ok := p.allMethods[callerID]; ok {
 			if removeInvokeAndCountRemainingStatements(caller, methodID) == 0 {
-				p.prune(caller.id)
+				p.prune(caller.ID)
 			}
 		}
 	}
