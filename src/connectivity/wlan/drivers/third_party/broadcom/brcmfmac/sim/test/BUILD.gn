@@ -264,7 +264,7 @@ executable("beacon_lost_test") {
 }
 
 unittest_package("brcmfmac_sim_test") {
-  package_name = "brcmfmac_sim_test"
+  package_name = "brcmfmac-sim-test"
   deps = [
     ":active_scan_test",
     ":assoc_test",

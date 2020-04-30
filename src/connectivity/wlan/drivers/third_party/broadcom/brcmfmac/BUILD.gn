@@ -411,7 +411,7 @@ driver_package("brcmfmac") {
 }
 
 # Driver package for the test version of the brcmfmac driver.
-driver_package("brcmfmac_test_driver") {
+driver_package("brcmfmac-test-driver") {
   deps = [
     # The copy step has to be in the shared-library toolchain to use the
     # expected output directory, since we treat firmware blobs as if they
