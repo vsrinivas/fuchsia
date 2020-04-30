@@ -148,10 +148,6 @@ void AmlPdmDevice::InitRegs() {
                     PDM_CHAN_CTRL1);
 }
 
-/*
-    Relies heavily on magic values from Amlogic.  @hollande following up to get
-    more information on operation as datasheet seems inconsistent with configuration.
-*/
 void AmlPdmDevice::ConfigFilters(uint32_t frames_per_second) {
   ZX_ASSERT(frames_per_second == 96000 || frames_per_second == 48000);
 
@@ -161,20 +157,24 @@ void AmlPdmDevice::ConfigFilters(uint32_t frames_per_second) {
                         (0x08 << 4) |   // hcic downsample rate=8
                         (0x07 << 0),    // hcic stage number (must be between 3-9)
                     PDM_HCIC_CTRL1);
+
+  // Note: The round mode field for the lowpass control registers is shown in AmLogic
+  // documentation to be occupying bits [16:15] fo the register.  This was confirmed
+  // by amlogic to be an error in the datasheet and the correct position is [17:16]
   pdm_mmio_.Write32((0x01 << 31) |          // Enable filter
-                        (0x01 << 16) |      // Round mode (this doesn't jibe w/ datasheet)
+                        (0x01 << 16) |      // Round mode
                         (0x02 << 12) |      // Filter 1 downsample rate
                         (kLpf1m1Len << 0),  // Number of taps in filter
                     PDM_F1_CTRL);
   pdm_mmio_.Write32((0x01 << 31) |             // Enable filter
-                        (0x00 << 16) |         // Round mode (this doesn't jibe w/ datasheet)
+                        (0x00 << 16) |         // Round mode
                         (0x02 << 12) |         // Filter 2 downsample rate
                         (kLpf2osr64Len << 0),  // Number of taps in filter
                     PDM_F2_CTRL);
 
   uint32_t last_filter_downsample_rate = (frames_per_second == 96000) ? 1 : 2;
   pdm_mmio_.Write32((0x01 << 31) |      // Enable filter
-                        (0x01 << 16) |  // Round mode (this doesn't jibe w/ datasheet)
+                        (0x01 << 16) |  // Round mode
                         (last_filter_downsample_rate << 12) |  // Filter 3 downsample rate
                         (kLpf3m1Len << 0),                     // Number of taps in filter
                     PDM_F3_CTRL);
