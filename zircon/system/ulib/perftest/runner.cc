@@ -23,7 +23,6 @@
 #include <trace-engine/instrumentation.h>
 #include <trace-provider/provider.h>
 #include <trace/event.h>
-#include <unittest/unittest.h>
 
 namespace perftest {
 namespace {
@@ -513,13 +512,10 @@ int PerfTestMain(int argc, char** argv, const char* test_suite) {
         "\"Unit test mode\" runs perf tests as unit tests.  "
         "This means it only checks that the perf tests pass.  "
         "It only does a small number of runs of each test, and it "
-        "does not report their performance.  Additionally, it runs "
-        "all of the unit tests in the executable (i.e. those that "
-        "use the unittest library).\n"
+        "does not report their performance.\n"
         "\n"
         "\"Perf test mode\" runs many iterations of each perf test, "
-        "and reports the performance results.  It does not run any "
-        "unittest test cases.\n"
+        "and reports the performance results.\n"
         "\n"
         "Options:\n"
         "  --out FILENAME\n"
@@ -570,20 +566,11 @@ int PerfTestMain(int argc, char** argv, const char* test_suite) {
     }
   } else {
     printf("Running perf tests in unit test mode...\n");
-    {
-      // Run each test a small number of times to ensure that doing
-      // multiple runs works OK.
-      const int kRunCount = 3;
-      ResultsSet unused_results;
-      if (!RunTests(test_suite, g_tests, kRunCount, "", stdout, &unused_results)) {
-        success = false;
-      }
-    }
-
-    // In unit test mode, we pass all command line arguments on to the
-    // unittest library.
-    printf("Running unit tests...\n");
-    if (!unittest_run_all_tests(argc, argv)) {
+    // Run each test a small number of times to ensure that doing multiple
+    // runs works OK.
+    const int kRunCount = 3;
+    ResultsSet unused_results;
+    if (!RunTests(test_suite, g_tests, kRunCount, "", stdout, &unused_results)) {
       success = false;
     }
   }
