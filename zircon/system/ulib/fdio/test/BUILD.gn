@@ -82,6 +82,7 @@ zx_executable("accept-child") {
   ]
 }
 
+# Used by tests in fdio_startup.cc.
 zx_executable("hello-world") {
   visibility = [ ":*" ]
   testonly = true

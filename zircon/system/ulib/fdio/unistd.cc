@@ -150,6 +150,11 @@ int fdio_bind_to_fd(fdio_t* io, int fd, int starting_fd) {
       return -1;
     }
     io_to_close = fdio_fdtab[fd];
+    if (io_to_close == io) {
+      // No change, but we must remember to drop the additional reference.
+      fdio_release(io_to_close);
+      return fd;
+    }
     if (io_to_close) {
       fdio_dupcount_release(io_to_close);
       if (fdio_get_dupcount(io_to_close) > 0) {

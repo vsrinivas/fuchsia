@@ -187,3 +187,19 @@ TEST(FileDescriptorTest, TransferAfterDup) {
   ASSERT_EQ(0, close(fd));
   ASSERT_EQ(0, close(fd2));
 }
+
+TEST(FileDescriptorTest, DupToSameFdSucceeds) {
+  zx::socket h1, h2;
+  ASSERT_OK(zx::socket::create(0, &h1, &h2));
+
+  int fd = -1;
+  ASSERT_OK(fdio_fd_create(h1.release(), &fd));
+  ASSERT_LE(0, fd);
+
+  ASSERT_EQ(fd, dup2(fd, fd));
+
+  const char* message = "hello, my old friend.";
+  ssize_t length = strlen(message);
+  ASSERT_EQ(length, write(fd, message, length));
+  close(fd);
+}
