@@ -22,7 +22,7 @@ struct UnitField {
     type_path: syn::TypePath,
 
     /// Field attribute arguments, e.g. `skip`
-    _attr_args: FieldAttrArgs,
+    attr_args: FieldAttrArgs,
 }
 
 impl UnitField {
@@ -36,13 +36,16 @@ impl UnitField {
             Ok(None)
         } else {
             let type_path = to_type_path(&f.ty)?;
-            Ok(Some(UnitField { name, type_path, _attr_args: attr_args }))
+            Ok(Some(UnitField { name, type_path, attr_args }))
         }
     }
 
     /// Get a string literal containing the name of the field.
     fn literal(&self) -> syn::LitStr {
-        syn::LitStr::new(self.name.to_string().as_ref(), self.name.span())
+        self.attr_args
+            .rename
+            .clone()
+            .unwrap_or_else(|| syn::LitStr::new(self.name.to_string().as_ref(), self.name.span()))
     }
 
     /// Convenience method to get the fully qualified path to the Unit trait.
@@ -81,7 +84,7 @@ struct InspectField {
     /// Name of the original and the inspect data field.
     name: syn::Ident,
 
-    /// Field attriute arguments, e.g. `skip`
+    /// Field attribute arguments, e.g. `skip`
     attr_args: FieldAttrArgs,
 }
 
@@ -91,7 +94,7 @@ impl InspectField {
     fn try_from_field(f: &syn::Field) -> Result<Option<Self>, Error> {
         let name = f.ident.as_ref().expect("internal error: expected named field").clone();
         let attr_args = get_field_attrs(f)?;
-        attr_args.validate_skip()?;
+        attr_args.validate_for_inspect()?;
         if attr_args.skip {
             Ok(None)
         } else {
@@ -101,7 +104,10 @@ impl InspectField {
 
     /// Get a string literal containing the name of the field.
     fn literal(&self) -> syn::LitStr {
-        syn::LitStr::new(self.name.to_string().as_ref(), self.name.span())
+        self.attr_args
+            .rename
+            .clone()
+            .unwrap_or_else(|| syn::LitStr::new(self.name.to_string().as_ref(), self.name.span()))
     }
 
     /// Creates an iattach assignment.
@@ -156,12 +162,16 @@ struct FieldAttrArgs {
     /// unused. Useful for wrapper types.
     /// Example: [inspect(forward)]
     forward: bool,
+
+    /// Renames the inspect field to a different name.
+    /// Example: [inspect(rename = "foo")]
+    rename: Option<syn::LitStr>,
 }
 
 impl FieldAttrArgs {
     /// Create from a span used for error messages. All fields assume their default values.
     fn new(span: Span) -> Self {
-        Self { span, skip: false, forward: false }
+        Self { span, skip: false, forward: false, rename: None }
     }
 
     /// Validate that attributes are valid for `Unit`
@@ -174,9 +184,25 @@ impl FieldAttrArgs {
         }
     }
 
+    /// Validate that attributes are valid for `Inspect`
+    fn validate_for_inspect(&self) -> Result<(), Error> {
+        self.validate_skip()?;
+        if self.forward && self.rename.is_some() {
+            Err(Error::new(
+                self.span,
+                concat!(
+                    "inspect(rename) cannot be used with inspect(forward) ",
+                    "since forward ignores any name provided"
+                ),
+            ))
+        } else {
+            Ok(())
+        }
+    }
+
     /// Validate that if `skip` is provided, no other attributes are.
     fn validate_skip(&self) -> Result<(), Error> {
-        if self.skip && self.forward {
+        if self.skip && (self.forward || self.rename.is_some()) {
             Err(Error::new(
                 self.span,
                 "inspect(skip) cannot be specified together with other attributes",
@@ -202,6 +228,23 @@ fn parse_field_attr_args(attr: &syn::Attribute, args: &mut FieldAttrArgs) -> Res
                         } else {
                             return Err(Error::new_spanned(
                                 path,
+                                "unrecognized attribute argument",
+                            ));
+                        }
+                    }
+                    syn::NestedMeta::Meta(syn::Meta::NameValue(ref name_value)) => {
+                        if name_value.path.is_ident("rename") {
+                            if let syn::Lit::Str(ref lit_str) = name_value.lit {
+                                args.rename = Some(lit_str.clone());
+                            } else {
+                                return Err(Error::new_spanned(
+                                    &name_value.lit,
+                                    "rename value must be string literal",
+                                ));
+                            }
+                        } else {
+                            return Err(Error::new_spanned(
+                                name_value,
                                 "unrecognized attribute argument",
                             ));
                         }
@@ -328,6 +371,8 @@ fn derive_unit_inner(ast: DeriveInput) -> Result<TokenStream, Error> {
 ///
 /// Supported field-level attributes:
 /// - `inspect(skip)`: Ignore this field in inspect entirely.
+/// - `inspect(rename = "foo")`: Use a different name for the inspect node or
+///   property of this field. By default, the field identifier is used.
 /// - `inspect(forward)`: Forward attachments directly to a child field. Only
 ///   a single field can be forwarded, and `inspect_node` must be absent. As
 ///   a result the name of the field will be unused. Useful for wrapper types.

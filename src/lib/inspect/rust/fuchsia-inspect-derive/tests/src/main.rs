@@ -32,6 +32,7 @@ struct Yak {
 struct Yakling {
     #[serde(rename = "Name")] // Unrelated field attributes allowed
     name: String,
+    #[inspect(rename = "years_old")]
     age: u8,
 }
 
@@ -101,7 +102,7 @@ impl Inspect for &mut PowerYak {
         self.name.iattach(&inspect_node, "name")?;
         self.age.iattach(&inspect_node, "age")?;
         self.size.iattach(&inspect_node, "size")?;
-        self.ty.iattach(&inspect_node, "type")?;
+        self.ty.iattach(&inspect_node, "ty")?;
         self.counter.iattach(&inspect_node, "counter")?;
         self.last_words.iattach(&inspect_node, "last_words")?;
         self.inspect_node = inspect_node;
@@ -122,6 +123,7 @@ struct AutoYak {
     name: IValue<String>,
     #[inspect(skip)]
     _credit_card_no: String,
+    #[inspect(rename = "horse_type")]
     ty: IDebug<Horse>,
     child: sync::Arc<lock::Mutex<inner::AutoYakling>>,
     inspect_node: Node,
@@ -221,13 +223,13 @@ fn unit_flat() {
     let mut yakling = Yakling { name: "Lil Sebastian".to_string(), age: 5 };
     let mut yakling_data = yakling.inspect_create(&root, "yak");
     assert_inspect_tree!(inspector, root: {
-        yak: { name: "Lil Sebastian", age: 5u64 }
+        yak: { name: "Lil Sebastian", years_old: 5u64 }
     });
     yakling.name = "Sebastian".to_string();
     yakling.age = 10;
     yakling.inspect_update(&mut yakling_data);
     assert_inspect_tree!(inspector, root: {
-        yak: { name: "Sebastian", age: 10u64 }
+        yak: { name: "Sebastian", years_old: 10u64 }
     });
     std::mem::drop(yakling_data);
     assert_inspect_tree!(inspector, root: {});
@@ -250,7 +252,7 @@ fn unit_nested() {
             age: 25i64,
             yakling: {
                 name: "Lil Sebastian",
-                age: 2u64,
+                years_old: 2u64,
             },
         }
     });
@@ -264,7 +266,7 @@ fn unit_nested() {
             age: 25i64,
             yakling: {
                 name: "Lil Sebastian",
-                age: 3u64,
+                years_old: 3u64,
             },
         }
     });
@@ -383,7 +385,7 @@ fn ivalue_nested() {
             age: 25i64,
             yakling: {
                 name: "Lil Sebastian",
-                age: 2u64,
+                years_old: 2u64,
             },
         }
     });
@@ -397,7 +399,7 @@ fn ivalue_nested() {
             age: 25i64,
             yakling: {
                 name: "Lil Sebastian",
-                age: 3u64,
+                years_old: 3u64,
             },
         }
     });
@@ -495,7 +497,7 @@ async fn iowned_composite() -> Result<(), AttachError> {
         name: "",
         age: "0",
         size: "",
-        type: "Arabian",
+        ty: "Arabian",
         counter: 0u64,
         last_words: "",
     }});
@@ -510,7 +512,7 @@ async fn iowned_composite() -> Result<(), AttachError> {
         name: "Lil Sebastian",
         age: "24",
         size: "small",
-        type: "Icelandic",
+        ty: "Icelandic",
         counter: 1337u64,
         last_words: "good bye, friends",
     }});
@@ -529,7 +531,7 @@ async fn derive_inspect_nested_interior_mut() -> Result<(), AttachError> {
     let yak = &yak_mut;
     assert_inspect_tree!(inspector, root: { my_yak: {
         name: "Sebastian",
-        ty: "Icelandic",
+        horse_type: "Icelandic",
         child: {
             age: 0u64,
         },
@@ -537,7 +539,7 @@ async fn derive_inspect_nested_interior_mut() -> Result<(), AttachError> {
     yak.host_bday().await;
     assert_inspect_tree!(inspector, root: { my_yak: {
         name: "Sebastian",
-        ty: "Icelandic",
+        horse_type: "Icelandic",
         child: {
             age: 1u64,
         },
@@ -555,7 +557,7 @@ async fn derive_inspect_forward() -> Result<(), AttachError> {
     assert_inspect_tree!(inspector, root: {
         my_yak: {
             name: "Sebastian",
-            ty: "Icelandic",
+            horse_type: "Icelandic",
             child: {
                 age: 0u64,
             },
