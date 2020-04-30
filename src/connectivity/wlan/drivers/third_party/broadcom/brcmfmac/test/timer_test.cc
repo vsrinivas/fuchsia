@@ -38,7 +38,7 @@ struct TestTimerCfg {
   bool call_timerset = false;
   bool call_timerstop = false;
   TestTimerCfg(async_dispatcher_t* dispatcher, WorkQueue* queue, uint32_t delay, uint32_t exp_count,
-               bool periodic);
+               bool periodic, bool call_timerset, bool call_timerstop);
   ~TestTimerCfg();
 };
 
@@ -93,12 +93,15 @@ static void test_timeout_worker(WorkItem* work) {
 }
 
 TestTimerCfg::TestTimerCfg(async_dispatcher_t* dispatcher, WorkQueue* q, uint32_t delay,
-                           uint32_t exp_count, bool periodic)
+                           uint32_t exp_count, bool periodic, bool call_timerset,
+                           bool call_timerstop)
     : timer(Timer(dispatcher, std::bind(test_timer_handler, this), periodic)),
       timeout_work(WorkItem(test_timeout_worker)),
       queue(q),
       delay(delay),
-      target_cnt(exp_count) {
+      target_cnt(exp_count),
+      call_timerset(call_timerset),
+      call_timerstop(call_timerstop) {
   timer.Start(delay);
 }
 
@@ -106,7 +109,7 @@ TestTimerCfg::~TestTimerCfg() { timer.Stop(); }
 
 // This test creates a one-shot timer and checks if the handler fired
 TEST_F(TimerTest, one_shot) {
-  TestTimerCfg timer(GetDispatcher(), GetQueue(), ZX_MSEC(10), 1, false);
+  TestTimerCfg timer(GetDispatcher(), GetQueue(), ZX_MSEC(10), 1, false, false, false);
   zx_status_t status = sync_completion_wait(&timer.wait_for_timer, ZX_TIME_INFINITE);
   timer.timer.Stop();
   // Check to make sure the timer fired
@@ -115,10 +118,10 @@ TEST_F(TimerTest, one_shot) {
 }
 
 TEST_F(TimerTest, periodic) {
-  TestTimerCfg timer(GetDispatcher(), GetQueue(), ZX_MSEC(25), 4, true);
+  TestTimerCfg timer(GetDispatcher(), GetQueue(), ZX_MSEC(25), 4, true, false, false);
 
   // Setup a second timer and ensure it runs ok too
-  TestTimerCfg timer2(GetDispatcher(), GetQueue(), ZX_MSEC(50), 2, true);
+  TestTimerCfg timer2(GetDispatcher(), GetQueue(), ZX_MSEC(50), 2, true, false, false);
 
   // Wait for the first timer to complete
   zx_status_t status = sync_completion_wait(&timer.wait_for_timer, ZX_TIME_INFINITE);
@@ -139,11 +142,11 @@ TEST_F(TimerTest, periodic) {
 // from within the handler itself and a second timer is created to ensure
 // calling timer_set() from within the handler does not have any side-effects
 TEST_F(TimerTest, timerset_in_handler) {
-  TestTimerCfg timer(GetDispatcher(), GetQueue(), ZX_MSEC(10), 2, false);
-  timer.call_timerset = true;
+  // A timerset will be called inside callback
+  TestTimerCfg timer(GetDispatcher(), GetQueue(), ZX_MSEC(10), 2, false, true, false);
 
   // Setup a second timer and ensure it runs ok too
-  TestTimerCfg timer2(GetDispatcher(), GetQueue(), ZX_MSEC(25), 1, false);
+  TestTimerCfg timer2(GetDispatcher(), GetQueue(), ZX_MSEC(25), 1, false, false, false);
 
   zx_status_t status = sync_completion_wait(&timer2.wait_for_timer, ZX_TIME_INFINITE);
   EXPECT_EQ(status, ZX_OK);
@@ -162,13 +165,11 @@ TEST_F(TimerTest, timerset_in_handler) {
 // from within the handler itself and a second timer is created to ensure
 // calling timer_stop() from within the handler does not have any side-effects
 TEST_F(TimerTest, timerstop_in_handler) {
-  // Setup a periodic timer meant to fire twice
-  TestTimerCfg timer(GetDispatcher(), GetQueue(), ZX_MSEC(10), 5, true);
-  // but stop the timer after it fires once
-  timer.call_timerstop = true;
+  // Setup a periodic timer meant to fire twice but a timerstop will be called inside callback
+  TestTimerCfg timer(GetDispatcher(), GetQueue(), ZX_MSEC(10), 5, true, false, true);
 
   // Setup a second timer and ensure it runs ok too
-  TestTimerCfg timer2(GetDispatcher(), GetQueue(), ZX_MSEC(10), 2, true);
+  TestTimerCfg timer2(GetDispatcher(), GetQueue(), ZX_MSEC(10), 2, true, false, false);
   // wait until timer2 is done (sometime after 20 msecs)
   zx_status_t status = sync_completion_wait(&timer2.wait_for_timer, ZX_TIME_INFINITE);
   EXPECT_EQ(status, ZX_OK);
