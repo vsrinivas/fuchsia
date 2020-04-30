@@ -37,9 +37,9 @@ zx_library("block-client") {
     "//zircon/public/lib/range",
 
     # <block-client/cpp/fake-device.h> has #include <storage-metrics/block-metrics.h>.
-    "//zircon/public/lib/storage-metrics",
     "//zircon/public/lib/buffer",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/storage-metrics",
 
     # <block-client/cpp/block-device.h> has #include <.../fidl.h>
     "//zircon/system/fidl/fuchsia-device:c",
@@ -75,20 +75,20 @@ zx_library("fake-device") {
   sources = [ "fake-device.cc" ]
   public_deps = [
     ":block-client",
+    "//zircon/public/lib/buffer",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/range",
-    "//zircon/public/lib/storage-metrics",
-    "//zircon/public/lib/buffer",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/storage-metrics",
   ]
   deps = [
-    "//zircon/public/lib/range",
-    "//zircon/public/lib/storage-metrics",
     "//zircon/public/lib/buffer",
+    "//zircon/public/lib/range",
     "//zircon/public/lib/zxtest",
     "//zircon/system/fidl/fuchsia-device:c",
     "//zircon/system/fidl/fuchsia-hardware-block:c",
     "//zircon/system/fidl/fuchsia-hardware-block-volume:c",
     "//zircon/system/ulib/fvm",
+    "//zircon/system/ulib/storage-metrics",
   ]
 }

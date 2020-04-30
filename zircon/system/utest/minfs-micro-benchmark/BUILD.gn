@@ -42,7 +42,6 @@ test("minfs-micro-benchmark") {
     "//zircon/public/lib/gpt",
     "//zircon/public/lib/memfs",
     "//zircon/public/lib/memfs-cpp",
-    "//zircon/public/lib/storage-metrics",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/trace",
     "//zircon/public/lib/trace-engine",
@@ -58,6 +57,7 @@ test("minfs-micro-benchmark") {
     "//zircon/system/ulib/fvm",
     "//zircon/system/ulib/minfs",
     "//zircon/system/ulib/perftest",
+    "//zircon/system/ulib/storage-metrics",
   ]
 }
 

@@ -96,12 +96,12 @@ zx_library("minfs") {
   if (is_fuchsia) {
     public_deps += [
       "//zircon/public/lib/fzl",
-      "//zircon/public/lib/storage-metrics",
       "//zircon/public/lib/zx",
       "//zircon/system/fidl/fuchsia-hardware-block:c",
       "//zircon/system/fidl/fuchsia-hardware-block-volume:c",
       "//zircon/system/fidl/fuchsia-minfs:llcpp",
       "//zircon/system/ulib/block-client",
+      "//zircon/system/ulib/storage-metrics",
     ]
     deps += [
       "//zircon/public/lib/async",
@@ -114,7 +114,6 @@ zx_library("minfs") {
       "//zircon/public/lib/fidl",
       "//zircon/public/lib/fzl",
       "//zircon/public/lib/operation",
-      "//zircon/public/lib/storage-metrics",
       "//zircon/public/lib/sync",
       "//zircon/public/lib/trace",
       "//zircon/public/lib/trace-engine",
@@ -127,6 +126,7 @@ zx_library("minfs") {
       "//zircon/system/ulib/fidl-utils",
       "//zircon/system/ulib/fs/journal",
       "//zircon/system/ulib/fvm",
+      "//zircon/system/ulib/storage-metrics",
     ]
     sources += [
       "allocator/allocator.cc",

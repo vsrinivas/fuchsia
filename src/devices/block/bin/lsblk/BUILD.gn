@@ -15,12 +15,12 @@ executable("lsblk") {
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/gpt",
     "//zircon/public/lib/pretty",
-    "//zircon/public/lib/storage-metrics",
     "//zircon/public/lib/zx",
     "//zircon/system/fidl/fuchsia-device:llcpp",
     "//zircon/system/fidl/fuchsia-hardware-block:llcpp",
     "//zircon/system/fidl/fuchsia-hardware-block-partition:llcpp",
     "//zircon/system/ulib/fdio-caller",
+    "//zircon/system/ulib/storage-metrics",
   ]
 }
 
