@@ -665,6 +665,21 @@ RUN_ZXTEST(WavlTreeTest, UPDDTE,  LowerBound)
 RUN_ZXTEST(WavlTreeTest, UPCDTE,  LowerBound)
 RUN_ZXTEST(WavlTreeTest, RPTE, LowerBound)
 
+
+// TODO(50594) : Remove this when we can.
+//
+// Negative compilation tests which make sure that we don't accidentally
+// mismatch pointer types between the node and the container.
+TEST(WavlTreeTest, MismatchedPointerType) {
+  struct Obj {
+    fbl::WAVLTreeNodeState<Obj*> wavl_node_state_;
+    uintptr_t GetKey() const { return reinterpret_cast<uintptr_t>(this); }
+  };
+#if TEST_WILL_NOT_COMPILE || 0
+  [[maybe_unused]] fbl::WAVLTree<uintptr_t, std::unique_ptr<Obj>> tree;
+#endif
+}
+
 TEST(WavlTreeTest, BalanceAndInvariants) {
   WAVLBalanceTestObserver::OpCounts op_counts;
 

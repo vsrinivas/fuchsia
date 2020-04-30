@@ -250,6 +250,19 @@ RUN_ZXTEST(SinglyLinkedListTest, UPCDTE,  ReplaceIfMove)
 RUN_ZXTEST(SinglyLinkedListTest, RPTE,    ReplaceIfMove)
 // clang-format on
 
+// TODO(50594) : Remove this when we can.
+//
+// Negative compilation tests which make sure that we don't accidentally
+// mismatch pointer types between the node and the container.
+TEST(SinglyLinkedListTest, MismatchedPointerType) {
+  struct Obj {
+    fbl::SinglyLinkedListNodeState<Obj*> sll_node_state_;
+  };
+#if TEST_WILL_NOT_COMPILE || 0
+  [[maybe_unused]] fbl::SinglyLinkedList<std::unique_ptr<Obj>> list;
+#endif
+}
+
 }  // namespace intrusive_containers
 }  // namespace tests
 }  // namespace fbl

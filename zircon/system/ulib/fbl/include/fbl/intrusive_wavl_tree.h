@@ -72,14 +72,15 @@ class WAVLBalanceTestObserver;
 }  // namespace intrusive_containers
 }  // namespace tests
 
-template <typename PtrType, NodeOptions Options, typename RankType>
+template <typename T, NodeOptions Options, typename RankType>
 struct WAVLTreeNodeStateBase
-    : public internal::CommonNodeStateBase<WAVLTreeNodeStateBase<PtrType, Options, RankType>> {
+    : public internal::CommonNodeStateBase<WAVLTreeNodeStateBase<T, Options, RankType>> {
  private:
-  using Base = internal::CommonNodeStateBase<WAVLTreeNodeStateBase<PtrType, Options, RankType>>;
+  using Base = internal::CommonNodeStateBase<WAVLTreeNodeStateBase<T, Options, RankType>>;
 
  public:
-  using PtrTraits = internal::ContainerPtrTraits<PtrType>;
+  using PtrType = T;  // TODO(50594) : Remove this when we can.
+  using PtrTraits = internal::ContainerPtrTraits<T>;
   static constexpr NodeOptions kNodeOptions = Options;
 
   WAVLTreeNodeStateBase() = default;
@@ -113,9 +114,9 @@ struct WAVLTreeNodeStateBase
   RankType rank_{};
 };
 
-template <typename PtrType, NodeOptions Options>
-struct WAVLTreeNodeState<PtrType, Options, DefaultWAVLTreeRankType>
-    : public WAVLTreeNodeStateBase<PtrType, Options, DefaultWAVLTreeRankType> {
+template <typename T, NodeOptions Options>
+struct WAVLTreeNodeState<T, Options, DefaultWAVLTreeRankType>
+    : public WAVLTreeNodeStateBase<T, Options, DefaultWAVLTreeRankType> {
   WAVLTreeNodeState() = default;
 
   // Defer to WAVLTreeNodeStateBase for enforcement of the various copy/move rules.
@@ -234,6 +235,17 @@ class __POINTER(KeyType_) WAVLTree {
   }
 
   ~WAVLTree() {
+    // TODO(50594) : Remove this when we can.
+    //
+    // For now, put this static assert into a function which we know must be
+    // expanded at some point in time.  In a perfect world, we would put this in
+    // the body of the class itself, but right now the compiler seems unable to
+    // deduce the type of NodeTraits::NodeState until the class has been
+    // completely declared because of some complexity that AddGenericNodeState
+    // introduces.
+    static_assert(std::is_same_v<PtrType, typename NodeTraits::NodeState::PtrType>,
+                  "WAVLTree's pointer type must match its Node's pointerType");
+
     // It is considered an error to allow a tree of unmanaged pointers to
     // destruct of there are still elements in it.  Managed pointer trees
     // will automatically release their references to their elements.

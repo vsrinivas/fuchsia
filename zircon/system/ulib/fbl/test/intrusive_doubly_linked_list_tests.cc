@@ -242,6 +242,19 @@ RUN_ZXTEST(DoublyLinkedListTest, UPCDTE,  ReplaceMove)
 RUN_ZXTEST(DoublyLinkedListTest, RPTE,    ReplaceMove)
 // clang-format on
 
+// TODO(50594) : Remove this when we can.
+//
+// Negative compilation tests which make sure that we don't accidentally
+// mismatch pointer types between the node and the container.
+TEST(DoublyLinkedListTest, MismatchedPointerType) {
+  struct Obj {
+    fbl::DoublyLinkedListNodeState<Obj*> dll_node_state_;
+  };
+#if TEST_WILL_NOT_COMPILE || 0
+  [[maybe_unused]] fbl::DoublyLinkedList<std::unique_ptr<Obj>> list;
+#endif
+}
+
 }  // namespace intrusive_containers
 }  // namespace tests
 }  // namespace fbl

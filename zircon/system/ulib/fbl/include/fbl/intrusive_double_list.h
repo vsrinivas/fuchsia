@@ -54,6 +54,7 @@ struct DoublyLinkedListNodeState
   using Base = internal::CommonNodeStateBase<DoublyLinkedListNodeState<T, Options>>;
 
  public:
+  using PtrType = T;  // TODO(50594) : Remove this when we can.
   using PtrTraits = internal::ContainerPtrTraits<T>;
   static constexpr NodeOptions kNodeOptions = Options;
 
@@ -189,6 +190,17 @@ class __POINTER(T) DoublyLinkedList : private internal::SizeTracker<ListSizeOrde
   }
 
   ~DoublyLinkedList() {
+    // TODO(50594) : Remove this when we can.
+    //
+    // For now, put this static assert into a function which we know must be
+    // expanded at some point in time.  In a perfect world, we would put this in
+    // the body of the class itself, but right now the compiler seems unable to
+    // deduce the type of NodeTraits::NodeState until the class has been
+    // completely declared because of some complexity that AddGenericNodeState
+    // introduces.
+    static_assert(std::is_same_v<T, typename NodeTraits::NodeState::PtrType>,
+                  "DoublyLinkedList's pointer type must match its Node's pointerType");
+
     // It is considered an error to allow a list of unmanaged pointers to
     // destruct if there are still elements in it.  Managed pointer lists
     // will automatically release their references to their elements.
