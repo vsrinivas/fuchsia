@@ -145,9 +145,13 @@ A driver is required to publish a `zx_device_t` in `bind()` by calling
 track of the
 device lifecycle. If the driver is not able to publish a functional device in
 `bind()`, for example if it is initializing the full device in a thread, it
-should publish an invisible device, and make this device visible when
-initialization is completed. See `DEVICE_ADD_INVISIBLE` and
-`device_make_visible()` in
+should publish an invisible device by implementing the device `init()` hook,
+and call `device_init_reply()` once initialization is complete.
+`device_init_reply()` does not necessarily need to be called from the `init()`
+hook. For example, it may be called from another worker thread. The device is
+also guaranteed not to be removed until the reply is received. See `init()` in
+[zircon/ddk/device.h](/zircon/system/ulib/ddk/include/ddk/device.h)
+and `device_init_reply()` in
 [zircon/ddk/driver.h](/zircon/system/ulib/ddk/include/ddk/driver.h).
 
 There are generally four outcomes from `bind()`:
@@ -161,9 +165,11 @@ cannot be supported (maybe due to checking hw version bits or whatnot) and
 returns an error.
 
 3. The driver needs to do further initialization before the device is ready or
-it's sure it can support it, so it publishes an invisible device and kicks off
-a thread to keep working, while returning `ZX_OK`. That thread will eventually
-make the device visible or, if it cannot successfully initialize it, remove it.
+it's sure it can support it, so it publishes a device that implements the
+`init()` hook and kicks off a thread to keep working, while returning
+`ZX_OK` to `bind()`. That thread will eventually call `device_init_reply()`
+with a status indicating whether it was able to successfully initialize the
+device and should be made visible, or that the device should be removed.
 
 4. The driver represents a bus or controller with 0..n children which may
 dynamically appear or disappear. In this case it should publish a device

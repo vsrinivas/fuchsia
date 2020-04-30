@@ -181,20 +181,25 @@ in to the `bind()` method of a device driver, or another device which has been
 created by the same device driver.
 
 A side-effect of `device_add()` is that the newly created device will be added
-to the global Device Filesystem maintained by the Device Coordinator.  If the
-device is created with the **DEVICE_ADD_INVISIBLE** flag, it will not be accessible
-via opening its node in devfs until `device_make_visible()` is invoked.  This
-is useful for drivers that have to do extended initialization or probing and
-do not want to visibly publish their device(s) until that succeeds (and quietly
-remove them if that fails).
+to the global Device Filesystem maintained by the Device Coordinator. If the
+device has not implemented an `init()` hook, the device will be immediately
+accessible through opening its node in devfs.
+
+The `init()` hook is invoked following `device_add()`. This is useful for
+drivers that have to do extended initialization or probing and do not want
+to visibly publish their device(s) until that succeeds (and quietly remove
+them if that fails). The driver should call `device_init_reply()` once they
+have completed initialization. This reply does not necessarily need to be
+called from the `init()` hook. The device will remain invisible and is
+guaranteed not to be removed until this point.
 
 Devices are reference counted. A reference is acquired when a driver creates
 the device with `device_add()` and when the device is opened by a remote process
 via the Device Filesystem.
 
-From the moment that `device_add()` is called without the **DEVICE_ADD_INVISIBLE**
-flag, or `device_make_visible()` is called on an invisible device, other device
-ops may be called by the Device Host.
+From the moment that `device_init_reply()` is called, or `device_add()` is called
+without an implemented `init()` hook, other device ops may be called by the
+Device Host.
 
 When `device_async_remove()` is called on a device, this schedules the removal
 of the device and its descendents.

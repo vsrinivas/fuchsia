@@ -26,13 +26,16 @@ But your device might need to perform a lengthy initialization operation, such a
 
 and so on, which might take a long time to do.
 
-You can publish your device as "invisible" using the `DEVICE_ADD_INVISIBLE` flag.
-This meets the requirements for the binding function, but nobody is able to use
-your device (because nobody knows about it yet, because it's not visible).
-Now your device can perform the long operations via a background thread.
+You can publish your device as "invisible" by implementing the device `init()` hook.
+The `init()` hook is run after the device is added through **device_add()**, and may be
+used to safely access the device state and to spawn a worker thread. The device will
+remain invisible and is guaranteed not to be removed until **device_init_reply()** is called,
+which may be done from any thread. This meets the requirements for the binding function,
+but nobody is able to use your device (because nobody knows about it yet, because it's
+not visible). Now your device can perform the long operations via a background thread.
 
 When your device is ready to service client requests, call
-**device_make_visible()**
+**device_init_reply()**
 which will cause it to appear in the pathname space.
 
 ### Power savings
@@ -79,7 +82,6 @@ The following functions are used to administer the device:
 Function                    | Purpose
 ----------------------------|-------------------------------------------
 **device_add()**                 | Adds a device to a parent
-**device_make_visible()**        | Makes a device visible
 **device_async_remove()**        | Schedules the removal of a device and all its children
 
 ### Signalling
