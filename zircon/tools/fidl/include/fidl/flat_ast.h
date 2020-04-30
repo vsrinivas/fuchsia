@@ -682,7 +682,17 @@ class Dependencies {
   std::set<Library*> dependencies_aggregate_;
 };
 
+class StepBase;
+class ConsumeStep;
+class CompileStep;
+class VerifyAttributesStep;
+
 class Library {
+  friend StepBase;
+  friend ConsumeStep;
+  friend CompileStep;
+  friend VerifyAttributesStep;
+
  public:
   Library(const Libraries* all_libraries, ErrorReporter* error_reporter, Typespace* typespace)
       : all_libraries_(all_libraries), error_reporter_(error_reporter), typespace_(typespace) {}
@@ -727,25 +737,29 @@ class Library {
   std::optional<Name> CompileCompoundIdentifier(const raw::CompoundIdentifier* compound_identifier);
   bool RegisterDecl(std::unique_ptr<Decl> decl);
 
+  ConsumeStep StartConsumeStep();
+  CompileStep StartCompileStep();
+  VerifyAttributesStep StartVerifyAttributesStep();
+
   bool ConsumeConstant(std::unique_ptr<raw::Constant> raw_constant,
                        std::unique_ptr<Constant>* out_constant);
   bool ConsumeTypeConstructor(std::unique_ptr<raw::TypeConstructor> raw_type_ctor, SourceSpan span,
                               std::unique_ptr<TypeConstructor>* out_type);
 
-  bool ConsumeUsing(std::unique_ptr<raw::Using> using_directive);
+  void ConsumeUsing(std::unique_ptr<raw::Using> using_directive);
   bool ConsumeTypeAlias(std::unique_ptr<raw::Using> using_directive);
-  bool ConsumeBitsDeclaration(std::unique_ptr<raw::BitsDeclaration> bits_declaration);
-  bool ConsumeConstDeclaration(std::unique_ptr<raw::ConstDeclaration> const_declaration);
-  bool ConsumeEnumDeclaration(std::unique_ptr<raw::EnumDeclaration> enum_declaration);
-  bool ConsumeProtocolDeclaration(std::unique_ptr<raw::ProtocolDeclaration> protocol_declaration);
+  void ConsumeBitsDeclaration(std::unique_ptr<raw::BitsDeclaration> bits_declaration);
+  void ConsumeConstDeclaration(std::unique_ptr<raw::ConstDeclaration> const_declaration);
+  void ConsumeEnumDeclaration(std::unique_ptr<raw::EnumDeclaration> enum_declaration);
+  void ConsumeProtocolDeclaration(std::unique_ptr<raw::ProtocolDeclaration> protocol_declaration);
   bool ConsumeParameterList(Name name, std::unique_ptr<raw::ParameterList> parameter_list,
                             bool anonymous, Struct** out_struct_decl);
   bool CreateMethodResult(const Name& protocol_name, SourceSpan response_span,
                           raw::ProtocolMethod* method, Struct* in_response, Struct** out_response);
-  bool ConsumeServiceDeclaration(std::unique_ptr<raw::ServiceDeclaration> service_decl);
-  bool ConsumeStructDeclaration(std::unique_ptr<raw::StructDeclaration> struct_declaration);
-  bool ConsumeTableDeclaration(std::unique_ptr<raw::TableDeclaration> table_declaration);
-  bool ConsumeUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> union_declaration);
+  void ConsumeServiceDeclaration(std::unique_ptr<raw::ServiceDeclaration> service_decl);
+  void ConsumeStructDeclaration(std::unique_ptr<raw::StructDeclaration> struct_declaration);
+  void ConsumeTableDeclaration(std::unique_ptr<raw::TableDeclaration> table_declaration);
+  void ConsumeUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> union_declaration);
 
   bool TypeCanBeConst(const Type* type);
   const Type* TypeResolve(const Type* type);
@@ -793,7 +807,7 @@ class Library {
   template <typename MemberType>
   bool ValidateEnumMembers(Enum* enum_decl);
 
-  bool VerifyDeclAttributes(Decl* decl);
+  void VerifyDeclAttributes(Decl* decl);
 
  public:
   bool CompileDecl(Decl* decl);
@@ -849,6 +863,82 @@ class Library {
   uint32_t anon_counter_ = 0;
 
   VirtualSourceFile generated_source_file_{"generated"};
+};
+
+class StepBase {
+ public:
+  StepBase(Library* library)
+    : library_(library), checkpoint_(library->error_reporter_->Checkpoint()), done_(false) {}
+
+  ~StepBase() {
+    assert(done_ && "Step must be completed before destructor is called");
+  }
+
+  bool Done() {
+    done_ = true;
+    return checkpoint_.NoNewErrors();
+  }
+
+ protected:
+  Library* library_; // link to library for which this step was created
+
+ private:
+  ErrorReporter::Counts checkpoint_;
+  bool done_;
+};
+
+class ConsumeStep : public StepBase {
+ public:
+  ConsumeStep(Library* library)
+    : StepBase(library) {}
+
+  void ForUsing(std::unique_ptr<raw::Using> using_directive) {
+    library_->ConsumeUsing(std::move(using_directive));
+  }
+  void ForBitsDeclaration(std::unique_ptr<raw::BitsDeclaration> bits_declaration) {
+    library_->ConsumeBitsDeclaration(std::move(bits_declaration));
+  }
+  void ForConstDeclaration(std::unique_ptr<raw::ConstDeclaration> bits_declaration) {
+    library_->ConsumeConstDeclaration(std::move(bits_declaration));
+  }
+  void ForEnumDeclaration(std::unique_ptr<raw::EnumDeclaration> enum_declaration) {
+    library_->ConsumeEnumDeclaration(std::move(enum_declaration));
+  }
+  void ForProtocolDeclaration(std::unique_ptr<raw::ProtocolDeclaration> protocol_declaration) {
+    library_->ConsumeProtocolDeclaration(std::move(protocol_declaration));
+  }
+  void ForServiceDeclaration(std::unique_ptr<raw::ServiceDeclaration> service_decl) {
+    library_->ConsumeServiceDeclaration(std::move(service_decl));
+  }
+  void ForStructDeclaration(std::unique_ptr<raw::StructDeclaration> struct_declaration) {
+    library_->ConsumeStructDeclaration(std::move(struct_declaration));
+  }
+  void ForTableDeclaration(std::unique_ptr<raw::TableDeclaration> table_declaration) {
+    library_->ConsumeTableDeclaration(std::move(table_declaration));
+  }
+  void ForUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> union_declaration) {
+    library_->ConsumeUnionDeclaration(std::move(union_declaration));
+  }
+};
+
+class CompileStep : public StepBase {
+ public:
+  CompileStep(Library* library)
+    : StepBase(library) {}
+
+  void ForDecl(Decl* decl) {
+    library_->CompileDecl(decl);
+  }
+};
+
+class VerifyAttributesStep : public StepBase {
+ public:
+  VerifyAttributesStep(Library* library)
+    : StepBase(library) {}
+
+  void ForDecl(Decl* decl) {
+    library_->VerifyDeclAttributes(decl);
+  }
 };
 
 // See the comment on Object::Visitor<T> for more details.

@@ -10,10 +10,6 @@
 
 namespace {
 
-using fidl::BaseError;
-using fidl::ErrorDef;
-using fidl::ErrorReporter;
-
 bool recover_at_end_of_file() {
   BEGIN_TEST;
 

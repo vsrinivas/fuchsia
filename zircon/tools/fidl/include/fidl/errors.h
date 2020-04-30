@@ -100,7 +100,7 @@ constexpr ErrorDef ErrDefaultsOnTablesNotSupported(
 constexpr ErrorDef ErrNullableTableMember(
     "Table members cannot be nullable");
 constexpr ErrorDef ErrNullableUnionMember(
-    "union members cannot be nullable");
+    "Union members cannot be nullable");
 
 // ---------------------------------------------------------------------------
 // Library::Compile: SortDeclarations

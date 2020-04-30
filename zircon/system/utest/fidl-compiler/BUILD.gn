@@ -168,6 +168,7 @@ if (current_toolchain == default_toolchain) {
       "ordinals_tests.cc",
       "parsing_tests.cc",
       "protocol_tests.cc",
+      "recoverable_compilation_tests.cc",
       "recoverable_parsing_tests.cc",
       "recursion_detector_tests.cc",
       "report_error_tests.cc",

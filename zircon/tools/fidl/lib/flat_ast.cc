@@ -1333,6 +1333,10 @@ bool Library::RegisterDecl(std::unique_ptr<Decl> decl) {
   return true;
 }
 
+ConsumeStep Library::StartConsumeStep() { return ConsumeStep(this); }
+CompileStep Library::StartCompileStep() { return CompileStep(this); }
+VerifyAttributesStep Library::StartVerifyAttributesStep() { return VerifyAttributesStep(this); }
+
 bool Library::ConsumeConstant(std::unique_ptr<raw::Constant> raw_constant,
                               std::unique_ptr<Constant>* out_constant) {
   switch (raw_constant->kind) {
@@ -1406,13 +1410,16 @@ bool Library::ConsumeTypeConstructor(std::unique_ptr<raw::TypeConstructor> raw_t
   return true;
 }
 
-bool Library::ConsumeUsing(std::unique_ptr<raw::Using> using_directive) {
-  if (using_directive->maybe_type_ctor)
-    return ConsumeTypeAlias(std::move(using_directive));
+void Library::ConsumeUsing(std::unique_ptr<raw::Using> using_directive) {
+  if (using_directive->maybe_type_ctor) {
+    ConsumeTypeAlias(std::move(using_directive));
+    return;
+  }
 
   if (using_directive->attributes && using_directive->attributes->attributes.size() != 0) {
-    return Fail(ErrAttributesNotAllowedOnLibraryImport, using_directive->span(),
-                *(using_directive->attributes));
+    Fail(ErrAttributesNotAllowedOnLibraryImport, using_directive->span(),
+         *(using_directive->attributes));
+    return;
   }
 
   std::vector<std::string_view> library_name;
@@ -1422,20 +1429,20 @@ bool Library::ConsumeUsing(std::unique_ptr<raw::Using> using_directive) {
 
   Library* dep_library = nullptr;
   if (!all_libraries_->Lookup(library_name, &dep_library)) {
-    return Fail(ErrUnknownLibrary, using_directive->using_path->components[0]->span(),
-                library_name);
+    Fail(ErrUnknownLibrary, using_directive->using_path->components[0]->span(), library_name);
+    return;
   }
 
   auto filename = using_directive->span().source_file().filename();
   if (!dependencies_.Register(using_directive->span(), filename, dep_library,
                               using_directive->maybe_alias)) {
-    return Fail(ErrDuplicateLibraryImport, library_name);
+    Fail(ErrDuplicateLibraryImport, library_name);
+    return;
   }
 
   // Import declarations, and type aliases of dependent library.
   const auto& declarations = dep_library->declarations_;
   declarations_.insert(declarations.begin(), declarations.end());
-  return true;
 }
 
 bool Library::ConsumeTypeAlias(std::unique_ptr<raw::Using> using_directive) {
@@ -1452,13 +1459,13 @@ bool Library::ConsumeTypeAlias(std::unique_ptr<raw::Using> using_directive) {
                                                   std::move(partial_type_ctor_)));
 }
 
-bool Library::ConsumeBitsDeclaration(std::unique_ptr<raw::BitsDeclaration> bits_declaration) {
+void Library::ConsumeBitsDeclaration(std::unique_ptr<raw::BitsDeclaration> bits_declaration) {
   std::vector<Bits::Member> members;
   for (auto& member : bits_declaration->members) {
     auto span = member->identifier->span();
     std::unique_ptr<Constant> value;
     if (!ConsumeConstant(std::move(member->value), &value))
-      return false;
+      return;
     members.emplace_back(span, std::move(value), std::move(member->attributes));
     // TODO(pascallouis): right now, members are not registered. Look into
     // registering them, potentially under the bits name qualifier such as
@@ -1469,40 +1476,40 @@ bool Library::ConsumeBitsDeclaration(std::unique_ptr<raw::BitsDeclaration> bits_
   if (bits_declaration->maybe_type_ctor) {
     if (!ConsumeTypeConstructor(std::move(bits_declaration->maybe_type_ctor),
                                 bits_declaration->span(), &type_ctor))
-      return false;
+      return;
   } else {
     type_ctor = TypeConstructor::CreateSizeType();
   }
 
-  return RegisterDecl(std::make_unique<Bits>(
+  RegisterDecl(std::make_unique<Bits>(
       std::move(bits_declaration->attributes),
       Name::CreateSourced(this, bits_declaration->identifier->span()), std::move(type_ctor),
       std::move(members), bits_declaration->strictness));
 }
 
-bool Library::ConsumeConstDeclaration(std::unique_ptr<raw::ConstDeclaration> const_declaration) {
+void Library::ConsumeConstDeclaration(std::unique_ptr<raw::ConstDeclaration> const_declaration) {
   auto attributes = std::move(const_declaration->attributes);
   auto span = const_declaration->identifier->span();
   auto name = Name::CreateSourced(this, span);
   std::unique_ptr<TypeConstructor> type_ctor;
   if (!ConsumeTypeConstructor(std::move(const_declaration->type_ctor), span, &type_ctor))
-    return false;
+    return;
 
   std::unique_ptr<Constant> constant;
   if (!ConsumeConstant(std::move(const_declaration->constant), &constant))
-    return false;
+    return;
 
-  return RegisterDecl(std::make_unique<Const>(std::move(attributes), std::move(name),
-                                              std::move(type_ctor), std::move(constant)));
+  RegisterDecl(std::make_unique<Const>(std::move(attributes), std::move(name),
+                                       std::move(type_ctor), std::move(constant)));
 }
 
-bool Library::ConsumeEnumDeclaration(std::unique_ptr<raw::EnumDeclaration> enum_declaration) {
+void Library::ConsumeEnumDeclaration(std::unique_ptr<raw::EnumDeclaration> enum_declaration) {
   std::vector<Enum::Member> members;
   for (auto& member : enum_declaration->members) {
     auto span = member->identifier->span();
     std::unique_ptr<Constant> value;
     if (!ConsumeConstant(std::move(member->value), &value))
-      return false;
+      return;
     members.emplace_back(span, std::move(value), std::move(member->attributes));
     // TODO(pascallouis): right now, members are not registered. Look into
     // registering them, potentially under the enum name qualifier such as
@@ -1513,12 +1520,12 @@ bool Library::ConsumeEnumDeclaration(std::unique_ptr<raw::EnumDeclaration> enum_
   if (enum_declaration->maybe_type_ctor) {
     if (!ConsumeTypeConstructor(std::move(enum_declaration->maybe_type_ctor),
                                 enum_declaration->span(), &type_ctor))
-      return false;
+      return;
   } else {
     type_ctor = TypeConstructor::CreateSizeType();
   }
 
-  return RegisterDecl(std::make_unique<Enum>(
+  RegisterDecl(std::make_unique<Enum>(
       std::move(enum_declaration->attributes),
       Name::CreateSourced(this, enum_declaration->identifier->span()), std::move(type_ctor),
       std::move(members), enum_declaration->strictness));
@@ -1580,7 +1587,7 @@ bool Library::CreateMethodResult(const Name& protocol_name, SourceSpan response_
   return true;
 }
 
-bool Library::ConsumeProtocolDeclaration(
+void Library::ConsumeProtocolDeclaration(
     std::unique_ptr<raw::ProtocolDeclaration> protocol_declaration) {
   auto attributes = std::move(protocol_declaration->attributes);
   auto name = Name::CreateSourced(this, protocol_declaration->identifier->span());
@@ -1590,9 +1597,11 @@ bool Library::ConsumeProtocolDeclaration(
     auto& protocol_name = composed_protocol->protocol_name;
     auto composed_protocol_name = CompileCompoundIdentifier(protocol_name.get());
     if (!composed_protocol_name)
-      return false;
-    if (!composed_protocols.insert(std::move(composed_protocol_name.value())).second)
-      return Fail(ErrProtocolComposedMultipleTimes, composed_protocol_name->span());
+      return;
+    if (!composed_protocols.insert(std::move(composed_protocol_name.value())).second) {
+      Fail(ErrProtocolComposedMultipleTimes, composed_protocol_name->span());
+      return;
+    }
   }
 
   std::vector<Protocol::Method> methods;
@@ -1610,7 +1619,7 @@ bool Library::ConsumeProtocolDeclaration(
       auto request_name = Name::CreateDerived(this, request_span, NextAnonymousName());
       if (!ConsumeParameterList(std::move(request_name), std::move(method->maybe_request), true,
                                 &maybe_request))
-        return false;
+        return;
     }
 
     Struct* maybe_response = nullptr;
@@ -1624,11 +1633,11 @@ bool Library::ConsumeProtocolDeclaration(
                     : NextAnonymousName());
       if (!ConsumeParameterList(std::move(response_name), std::move(method->maybe_response),
                                 !has_error, &maybe_response))
-        return false;
+        return;
 
       if (has_error) {
         if (!CreateMethodResult(name, response_span, method.get(), maybe_response, &maybe_response))
-          return false;
+          return;
       }
     }
 
@@ -1638,8 +1647,8 @@ bool Library::ConsumeProtocolDeclaration(
                          std::move(maybe_request), std::move(maybe_response));
   }
 
-  return RegisterDecl(std::make_unique<Protocol>(
-      std::move(attributes), std::move(name), std::move(composed_protocols), std::move(methods)));
+  RegisterDecl(std::make_unique<Protocol>(std::move(attributes), std::move(name),
+                                          std::move(composed_protocols), std::move(methods)));
 }
 
 std::unique_ptr<TypeConstructor> Library::IdentifierTypeForDecl(const Decl* decl,
@@ -1670,7 +1679,7 @@ bool Library::ConsumeParameterList(Name name, std::unique_ptr<raw::ParameterList
   return true;
 }
 
-bool Library::ConsumeServiceDeclaration(std::unique_ptr<raw::ServiceDeclaration> service_decl) {
+void Library::ConsumeServiceDeclaration(std::unique_ptr<raw::ServiceDeclaration> service_decl) {
   auto attributes = std::move(service_decl->attributes);
   auto name = Name::CreateSourced(this, service_decl->identifier->span());
 
@@ -1679,16 +1688,16 @@ bool Library::ConsumeServiceDeclaration(std::unique_ptr<raw::ServiceDeclaration>
     std::unique_ptr<TypeConstructor> type_ctor;
     auto span = member->identifier->span();
     if (!ConsumeTypeConstructor(std::move(member->type_ctor), span, &type_ctor))
-      return false;
+      return;
     members.emplace_back(std::move(type_ctor), member->identifier->span(),
                          std::move(member->attributes));
   }
 
-  return RegisterDecl(
-      std::make_unique<Service>(std::move(attributes), std::move(name), std::move(members)));
+  RegisterDecl(std::make_unique<Service>(std::move(attributes), std::move(name),
+                                         std::move(members)));
 }
 
-bool Library::ConsumeStructDeclaration(std::unique_ptr<raw::StructDeclaration> struct_declaration) {
+void Library::ConsumeStructDeclaration(std::unique_ptr<raw::StructDeclaration> struct_declaration) {
   auto attributes = std::move(struct_declaration->attributes);
   auto name = Name::CreateSourced(this, struct_declaration->identifier->span());
 
@@ -1697,22 +1706,22 @@ bool Library::ConsumeStructDeclaration(std::unique_ptr<raw::StructDeclaration> s
     std::unique_ptr<TypeConstructor> type_ctor;
     auto span = member->identifier->span();
     if (!ConsumeTypeConstructor(std::move(member->type_ctor), span, &type_ctor))
-      return false;
+      return;
     std::unique_ptr<Constant> maybe_default_value;
     if (member->maybe_default_value != nullptr) {
       if (!ConsumeConstant(std::move(member->maybe_default_value), &maybe_default_value))
-        return false;
+        return;
     }
     auto attributes = std::move(member->attributes);
     members.emplace_back(std::move(type_ctor), member->identifier->span(),
                          std::move(maybe_default_value), std::move(attributes));
   }
 
-  return RegisterDecl(
-      std::make_unique<Struct>(std::move(attributes), std::move(name), std::move(members)));
+  RegisterDecl(std::make_unique<Struct>(std::move(attributes), std::move(name),
+                                        std::move(members)));
 }
 
-bool Library::ConsumeTableDeclaration(std::unique_ptr<raw::TableDeclaration> table_declaration) {
+void Library::ConsumeTableDeclaration(std::unique_ptr<raw::TableDeclaration> table_declaration) {
   auto attributes = std::move(table_declaration->attributes);
   auto name = Name::CreateSourced(this, table_declaration->identifier->span());
 
@@ -1724,7 +1733,7 @@ bool Library::ConsumeTableDeclaration(std::unique_ptr<raw::TableDeclaration> tab
       std::unique_ptr<TypeConstructor> type_ctor;
       if (!ConsumeTypeConstructor(std::move(member->maybe_used->type_ctor), member->span(),
                                   &type_ctor))
-        return false;
+        return;
       std::unique_ptr<Constant> maybe_default_value;
       if (member->maybe_used->maybe_default_value) {
         // TODO(FIDL-609): Support defaults on tables.
@@ -1732,7 +1741,8 @@ bool Library::ConsumeTableDeclaration(std::unique_ptr<raw::TableDeclaration> tab
         error_reporter_->ReportError(ErrDefaultsOnTablesNotSupported, default_value->span());
       }
       if (type_ctor->nullability != types::Nullability::kNonnullable) {
-        return Fail(ErrNullableTableMember, member->span());
+        Fail(ErrNullableTableMember, member->span());
+        return;
       }
       auto attributes = std::move(member->maybe_used->attributes);
       members.emplace_back(std::move(ordinal_literal), std::move(type_ctor),
@@ -1743,11 +1753,11 @@ bool Library::ConsumeTableDeclaration(std::unique_ptr<raw::TableDeclaration> tab
     }
   }
 
-  return RegisterDecl(std::make_unique<Table>(std::move(attributes), std::move(name),
-                                              std::move(members), table_declaration->strictness));
+  RegisterDecl(std::make_unique<Table>(std::move(attributes), std::move(name),
+                                       std::move(members), table_declaration->strictness));
 }
 
-bool Library::ConsumeUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> union_declaration) {
+void Library::ConsumeUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> union_declaration) {
   auto name = Name::CreateSourced(this, union_declaration->identifier->span());
 
   assert(!union_declaration->members.empty() && "unions must have at least one member");
@@ -1761,10 +1771,11 @@ bool Library::ConsumeUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> uni
       auto span = member->maybe_used->identifier->span();
       std::unique_ptr<TypeConstructor> type_ctor;
       if (!ConsumeTypeConstructor(std::move(member->maybe_used->type_ctor), span, &type_ctor))
-        return false;
+        return;
 
       if (type_ctor->nullability != types::Nullability::kNonnullable) {
-        return Fail(ErrNullableUnionMember, member->span());
+        Fail(ErrNullableUnionMember, member->span());
+        return;
       }
 
       members.emplace_back(std::move(explicit_ordinal), std::move(type_ctor), span,
@@ -1774,9 +1785,9 @@ bool Library::ConsumeUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> uni
     }
   }
 
-  return RegisterDecl(std::make_unique<Union>(std::move(union_declaration->attributes),
-                                              std::move(name), std::move(members),
-                                              union_declaration->strictness));
+  RegisterDecl(std::make_unique<Union>(std::move(union_declaration->attributes),
+                                       std::move(name), std::move(members),
+                                       union_declaration->strictness));
 }
 
 bool Library::ConsumeFile(std::unique_ptr<raw::File> file) {
@@ -1809,70 +1820,54 @@ bool Library::ConsumeFile(std::unique_ptr<raw::File> file) {
     library_name_ = new_name;
   }
 
+  auto step = StartConsumeStep();
+
   auto using_list = std::move(file->using_list);
   for (auto& using_directive : using_list) {
-    if (!ConsumeUsing(std::move(using_directive))) {
-      return false;
-    }
+    step.ForUsing(std::move(using_directive));
   }
 
   auto bits_declaration_list = std::move(file->bits_declaration_list);
   for (auto& bits_declaration : bits_declaration_list) {
-    if (!ConsumeBitsDeclaration(std::move(bits_declaration))) {
-      return false;
-    }
+    step.ForBitsDeclaration(std::move(bits_declaration));
   }
 
   auto const_declaration_list = std::move(file->const_declaration_list);
   for (auto& const_declaration : const_declaration_list) {
-    if (!ConsumeConstDeclaration(std::move(const_declaration))) {
-      return false;
-    }
+    step.ForConstDeclaration(std::move(const_declaration));
   }
 
   auto enum_declaration_list = std::move(file->enum_declaration_list);
   for (auto& enum_declaration : enum_declaration_list) {
-    if (!ConsumeEnumDeclaration(std::move(enum_declaration))) {
-      return false;
-    }
+    step.ForEnumDeclaration(std::move(enum_declaration));
   }
 
   auto protocol_declaration_list = std::move(file->protocol_declaration_list);
   for (auto& protocol_declaration : protocol_declaration_list) {
-    if (!ConsumeProtocolDeclaration(std::move(protocol_declaration))) {
-      return false;
-    }
+    step.ForProtocolDeclaration(std::move(protocol_declaration));
   }
 
   auto service_declaration_list = std::move(file->service_declaration_list);
   for (auto& service_declaration : service_declaration_list) {
-    if (!ConsumeServiceDeclaration(std::move(service_declaration))) {
-      return false;
-    }
+    step.ForServiceDeclaration(std::move(service_declaration));
   }
 
   auto struct_declaration_list = std::move(file->struct_declaration_list);
   for (auto& struct_declaration : struct_declaration_list) {
-    if (!ConsumeStructDeclaration(std::move(struct_declaration))) {
-      return false;
-    }
+    step.ForStructDeclaration(std::move(struct_declaration));
   }
 
   auto table_declaration_list = std::move(file->table_declaration_list);
   for (auto& table_declaration : table_declaration_list) {
-    if (!ConsumeTableDeclaration(std::move(table_declaration))) {
-      return false;
-    }
+    step.ForTableDeclaration(std::move(table_declaration));
   }
 
   auto union_declaration_list = std::move(file->union_declaration_list);
   for (auto& union_declaration : union_declaration_list) {
-    if (!ConsumeUnionDeclaration(std::move(union_declaration))) {
-      return false;
-    }
+    step.ForUnionDeclaration(std::move(union_declaration));
   }
 
-  return true;
+  return step.Done();
 }
 
 bool Library::ResolveOrOperatorConstant(Constant* constant, const Type* type,
@@ -2648,7 +2643,7 @@ bool Library::CompileDecl(Decl* decl) {
   return true;
 }
 
-bool Library::VerifyDeclAttributes(Decl* decl) {
+void Library::VerifyDeclAttributes(Decl* decl) {
   assert(decl->compiled && "verification must happen after compilation of decls");
   auto placement_ok = error_reporter_->Checkpoint();
   switch (decl->kind) {
@@ -2793,7 +2788,6 @@ bool Library::VerifyDeclAttributes(Decl* decl) {
       break;
     }
   }  // switch
-  return true;
 }
 
 bool Library::CompileBits(Bits* bits_declaration) {
@@ -3148,15 +3142,19 @@ bool Library::Compile() {
   // We process declarations in topologically sorted order. For
   // example, we process a struct member's type before the entire
   // struct.
+  auto compile_step = StartCompileStep();
   for (Decl* decl : declaration_order_) {
-    if (!CompileDecl(decl))
-      return false;
+    compile_step.ForDecl(decl);
   }
+  if (!compile_step.Done())
+    return false;
 
+  auto verify_attributes_step = StartVerifyAttributesStep();
   for (Decl* decl : declaration_order_) {
-    if (!VerifyDeclAttributes(decl))
-      return false;
+    verify_attributes_step.ForDecl(decl);
   }
+  if (!verify_attributes_step.Done())
+    return false;
 
   if (!dependencies_.VerifyAllDependenciesWereUsed(*this, error_reporter_))
     return false;
