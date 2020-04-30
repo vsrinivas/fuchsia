@@ -14,6 +14,8 @@
 #include <lib/sys/cpp/component_context.h>
 #include <lib/sys/cpp/testing/enclosing_environment.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
+#include <lib/trace-provider/provider.h>
+#include <lib/trace/event.h>
 #include <lib/ui/scenic/cpp/resources.h>
 #include <lib/ui/scenic/cpp/session.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
@@ -71,6 +73,12 @@ constexpr char kScenic[] = "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx";
 class TouchInputTest : public sys::testing::TestWithEnvironment, public ResponseListener {
  protected:
   TouchInputTest() : response_listener_(this) {
+    bool trace_provider_already_started = false;
+    if (!trace::TraceProviderWithFdio::CreateSynchronously(
+            dispatcher(), "touch-input-test", &trace_provider_, &trace_provider_already_started)) {
+      FX_LOGS(ERROR) << "Trace provider registration failed.";
+    }
+
     auto services = sys::testing::EnvironmentServices::Create(real_env());
     zx_status_t is_ok;
 
@@ -149,7 +157,8 @@ class TouchInputTest : public sys::testing::TestWithEnvironment, public Response
 
   // Inject directly into Root Presenter, using fuchsia.ui.input FIDLs.
   // TODO(48007): Switch to driver-based injection.
-  void InjectInput() {
+  // Returns the timestamp on the first injected InputReport.
+  zx_time_t InjectInput() {
     using fuchsia::ui::input::InputReport;
     // Device parameters
     auto parameters = fuchsia::ui::input::TouchscreenDescriptor::New();
@@ -165,14 +174,17 @@ class TouchInputTest : public sys::testing::TestWithEnvironment, public Response
     FX_LOGS(INFO) << "Registered touchscreen with x touch range = (-1000, 1000) "
                   << "and y touch range = (-1000, 1000).";
 
-    // Inject one input report, then a conclusion (empty) report.
+    zx_time_t injection_time = 0;
+
     {
+      // Inject one input report, then a conclusion (empty) report.
       // RotateTouchEvent() depends on this sending a touch event at the same location.
       auto touch = fuchsia::ui::input::TouchscreenReport::New();
       *touch = {
           .touches = {{.finger_id = 1, .x = 500, .y = -500}}};  // center of top right quadrant
       // Use system clock, instead of dispatcher clock, for measurement purposes.
       InputReport report{.event_time = RealNow(), .touchscreen = std::move(touch)};
+      injection_time = report.event_time;
       connection->DispatchReport(std::move(report));
       FX_LOGS(INFO) << "Dispatching touch report at (500, -500)";
     }
@@ -185,6 +197,8 @@ class TouchInputTest : public sys::testing::TestWithEnvironment, public Response
 
     ++injection_count_;
     FX_LOGS(INFO) << "*** Tap injected, count: " << injection_count_;
+
+    return injection_time;
   }
 
   int injection_count() { return injection_count_; }
@@ -208,6 +222,7 @@ class TouchInputTest : public sys::testing::TestWithEnvironment, public Response
   uint64_t RealNow() { return static_cast<uint64_t>(zx_clock_get_monotonic()); }
 
   fidl::Binding<fuchsia::test::ui::ResponseListener> response_listener_;
+  std::unique_ptr<trace::TraceProviderWithFdio> trace_provider_;
   std::unique_ptr<sys::testing::EnclosingEnvironment> test_env_;
   std::unique_ptr<scenic::Session> session_;
   int injection_count_ = 0;
@@ -219,6 +234,7 @@ class TouchInputTest : public sys::testing::TestWithEnvironment, public Response
 };
 
 TEST_F(TouchInputTest, FlutterTap) {
+  TRACE_DURATION("touch-input-test", "TouchInputTest::FlutterTap");
   const std::string kOneFlutter = "fuchsia-pkg://fuchsia.com/one-flutter#meta/one-flutter.cmx";
   uint32_t display_width = 0;
   uint32_t display_height = 0;
@@ -235,33 +251,46 @@ TEST_F(TouchInputTest, FlutterTap) {
   RunLoopUntil(
       [&display_width, &display_height] { return display_width != 0 && display_height != 0; });
 
+  zx_time_t input_injection_time = 0;
+
   // Define test expectations for when Flutter calls back with "Respond()".
-  SetRespondCallback(
-      [this, display_width, display_height](fuchsia::test::ui::PointerData pointer_data) {
-        // The /config/data/display_rotation (90) specifies how many degrees to rotate the
-        // presentation child view, counter-clockwise, in a right-handed coordinate system. Thus,
-        // the user observes the child view to rotate *clockwise* by that amount (90).
-        //
-        // Hence, a tap in the center of the display's top-right quadrant is observed by the child
-        // view as a tap in the center of its top-left quadrant.
-        float expected_x = display_height / 4.f;
-        float expected_y = display_width / 4.f;
+  SetRespondCallback([this, display_width, display_height,
+                      &input_injection_time](fuchsia::test::ui::PointerData pointer_data) {
+    // The /config/data/display_rotation (90) specifies how many degrees to rotate the
+    // presentation child view, counter-clockwise, in a right-handed coordinate system. Thus,
+    // the user observes the child view to rotate *clockwise* by that amount (90).
+    //
+    // Hence, a tap in the center of the display's top-right quadrant is observed by the child
+    // view as a tap in the center of its top-left quadrant.
+    float expected_x = display_height / 4.f;
+    float expected_y = display_width / 4.f;
 
-        FX_LOGS(INFO) << "Flutter received tap at (" << pointer_data.local_x() << ", "
-                      << pointer_data.local_y() << ").";
-        FX_LOGS(INFO) << "Expected tap is at approximately (" << expected_x << ", " << expected_y
-                      << ").";
+    FX_LOGS(INFO) << "Flutter received tap at (" << pointer_data.local_x() << ", "
+                  << pointer_data.local_y() << ").";
+    FX_LOGS(INFO) << "Expected tap is at approximately (" << expected_x << ", " << expected_y
+                  << ").";
 
-        // Allow for minor rounding differences in coordinates.
-        EXPECT_NEAR(pointer_data.local_x(), expected_x, 1);
-        EXPECT_NEAR(pointer_data.local_y(), expected_y, 1);
+    zx_duration_t elapsed_time =
+        zx_time_sub_time(pointer_data.time_received(), input_injection_time);
+    EXPECT_TRUE(elapsed_time > 0 && elapsed_time != ZX_TIME_INFINITE);
+    FX_LOGS(INFO) << "Input Injection Time (ns): " << input_injection_time;
+    FX_LOGS(INFO) << "Flutter Received Time (ns): " << pointer_data.time_received();
+    FX_LOGS(INFO) << "Elapsed Time (ns): " << elapsed_time;
+    TRACE_INSTANT("touch-input-test", "Input Latency", TRACE_SCOPE_PROCESS,
+                  "Input Injection Time (ns)", input_injection_time, "Flutter Received Time (ns)",
+                  pointer_data.time_received(), "Elapsed Time (ns)", elapsed_time);
 
-        FX_LOGS(INFO) << "*** PASS ***";
-        QuitLoop();
-      });
+    // Allow for minor rounding differences in coordinates.
+    EXPECT_NEAR(pointer_data.local_x(), expected_x, 1);
+    EXPECT_NEAR(pointer_data.local_y(), expected_y, 1);
+
+    FX_LOGS(INFO) << "*** PASS ***";
+    QuitLoop();
+  });
 
   // Define when to set size for Flutter's view, and when to inject input against Flutter's view.
-  scenic::Session::EventHandler handler = [this](std::vector<fuchsia::ui::scenic::Event> events) {
+  scenic::Session::EventHandler handler = [this, &input_injection_time](
+                                              std::vector<fuchsia::ui::scenic::Event> events) {
     for (const auto& event : events) {
       if (IsViewPropertiesChangedEvent(event)) {
         auto properties = event.gfx().view_properties_changed().properties;
@@ -274,7 +303,7 @@ TEST_F(TouchInputTest, FlutterTap) {
         bool hittable = event.gfx().view_state_changed().state.is_rendering;
         FX_VLOGS(1) << "Child's view content is hittable: " << std::boolalpha << hittable;
         if (hittable) {
-          InjectInput();
+          input_injection_time = InjectInput();
         }
 
       } else if (IsViewDisconnectedEvent(event)) {

@@ -7,6 +7,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:fidl_fuchsia_test_ui/fidl_async.dart' as fidl_test_ui;
 import 'package:fuchsia_services/services.dart';
+import 'package:zircon/zircon.dart';
 
 void main() {
   return runApp(MyApp());
@@ -53,6 +54,11 @@ class _MyHomePageState extends State<MyHomePage> {
     // We inspect the lower-level data packets, instead of using the higher-level gesture library.
     WidgetsBinding.instance.window.onPointerDataPacket =
         (ui.PointerDataPacket packet) {
+      // Record the time when the pointer event was received.
+      const int _zxClockMonotonic = 0;
+      // This uses zx_clock_get() under the hood.
+      int nowNanos = System.clockGet(_zxClockMonotonic);
+
       for (ui.PointerData data in packet.data) {
         print('Flutter received a pointer: ${data.toStringFull()}');
         if (data.change == ui.PointerChange.down) {
@@ -60,8 +66,10 @@ class _MyHomePageState extends State<MyHomePage> {
             _touchCounter++; // Trigger color change on DOWN event.
           });
           _respond(fidl_test_ui.PointerData(
+              // Notify test that input was seen.
               localX: data.physicalX,
-              localY: data.physicalY)); // Notify test that input was seen.
+              localY: data.physicalY,
+              timeReceived: nowNanos));
         }
       }
     };

@@ -1,6 +1,9 @@
 {
     "facets": {
         "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.tracing.provider.Registry": "fuchsia-pkg://fuchsia.com/trace_manager#meta/trace_manager.cmx"
+            },
             "system-services": [
                 "fuchsia.sysmem.Allocator",
                 "fuchsia.vulkan.loader.Loader"
@@ -19,6 +22,7 @@
             "fuchsia.sys.Launcher",
             "fuchsia.sys.Loader",
             "fuchsia.sysmem.Allocator",
+            "fuchsia.tracing.provider.Registry",
             "fuchsia.vulkan.loader.Loader"
         ]
     }
