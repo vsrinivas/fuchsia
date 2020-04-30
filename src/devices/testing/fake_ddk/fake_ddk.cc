@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/fake_ddk/fake_ddk.h>
+#include <lib/syslog/logger.h>
 #include <stdarg.h>
 #include <stdlib.h>
 #include <zircon/assert.h>
@@ -435,11 +436,13 @@ zx_status_t device_rebind(zx_device_t* device) {
 __EXPORT
 zx_handle_t get_root_resource() { return ZX_HANDLE_INVALID; }
 
-extern "C" bool driver_log_severity_enabled_internal(const zx_driver_t* drv, uint32_t flag) {
+extern "C" bool driver_log_severity_enabled_internal(const zx_driver_t* drv,
+                                                     fx_log_severity_t flag) {
   return true;
 }
 
-extern "C" void driver_logf_internal(const zx_driver_t* drv, uint32_t flag, const char* msg, ...) {
+extern "C" void driver_logf_internal(const zx_driver_t* drv, fx_log_severity_t flag,
+                                     const char* msg, ...) {
   va_list args;
   va_start(args, msg);
   vfprintf(stderr, msg, args);

@@ -56,9 +56,6 @@ usb_protocol_ops_t kFuzzedUsbProtocolOps = {
 };
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* Data, size_t Size) {
-  // Turn off noises.
-  driver_set_log_flags(0);
-
   FuzzInput input = {.data = Data, .size = Size};
   usb_protocol_t proto = {.ops = &kFuzzedUsbProtocolOps, .ctx = &input};
   usb_endpoint_descriptor_t* int_ep = nullptr;

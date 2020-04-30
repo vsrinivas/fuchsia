@@ -376,24 +376,9 @@ __EXPORT zx_status_t device_schedule_work(zx_device_t* dev, void (*callback)(voi
   return internal::ContextForApi()->ScheduleWork(dev_ref, callback, cookie);
 }
 
-static fx_log_severity_t flag_to_severity(uint32_t flag) {
-  switch (flag) {
-    case DDK_LOG_INFO:
-      return FX_LOG_INFO;
-    case DDK_LOG_WARN:
-      return FX_LOG_WARNING;
-    case DDK_LOG_ERROR:
-      return FX_LOG_ERROR;
-    case DDK_LOG_TRACE:
-      return -1;
-    default:
-      return -2;
-  }
-}
-
-__EXPORT bool driver_log_severity_enabled_internal(const zx_driver_t* drv, uint32_t flag) {
+__EXPORT bool driver_log_severity_enabled_internal(const zx_driver_t* drv, fx_log_severity_t flag) {
   if (drv != nullptr) {
-    return fx_logger_get_min_severity(drv->logger()) <= flag_to_severity(flag);
+    return fx_logger_get_min_severity(drv->logger()) <= flag;
   } else {
     // If we have been invoked outside of the context of a driver, return true.
     // Typically, this is due to being run within a test.
@@ -401,11 +386,12 @@ __EXPORT bool driver_log_severity_enabled_internal(const zx_driver_t* drv, uint3
   }
 }
 
-__EXPORT void driver_logf_internal(const zx_driver_t* drv, uint32_t flag, const char* msg, ...) {
+__EXPORT void driver_logf_internal(const zx_driver_t* drv, fx_log_severity_t flag, const char* msg,
+                                   ...) {
   va_list args;
   va_start(args, msg);
   if (drv != nullptr && flag != DDK_LOG_SERIAL) {
-    fx_logger_logvf(drv->logger(), flag_to_severity(flag), drv->name(), msg, args);
+    fx_logger_logvf(drv->logger(), flag, drv->name(), msg, args);
   } else {
     // If we have been invoked outside of the context of a driver, or if |flag|
     // is DDK_LOG_SERIAL, use vfprintf.

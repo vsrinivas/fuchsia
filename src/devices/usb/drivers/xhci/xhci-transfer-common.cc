@@ -102,7 +102,7 @@ zx_status_t xhci_queue_data_trbs(xhci_transfer_ring_t* ring, xhci_transfer_state
     } else {
       trb_set_control(trb, TRB_TRANSFER_NORMAL, control_bits);
     }
-    if (driver_get_log_flags() & DDK_LOG_SPEW)
+    if (zxlog_level_enabled(SPEW))
       xhci_print_trb(ring, trb);
     xhci_increment_ring(ring);
     free_trbs--;
@@ -134,7 +134,7 @@ zx_status_t xhci_queue_data_trbs(xhci_transfer_ring_t* ring, xhci_transfer_state
     XHCI_SET_BITS32(&trb->status, XFER_TRB_INTR_TARGET_START, XFER_TRB_INTR_TARGET_BITS,
                     interrupter_target);
     trb_set_control(trb, TRB_TRANSFER_EVENT_DATA, XFER_TRB_IOC);
-    if (driver_get_log_flags() & DDK_LOG_SPEW)
+    if (zxlog_level_enabled(SPEW))
       xhci_print_trb(ring, trb);
     xhci_increment_ring(ring);
     free_trbs--;

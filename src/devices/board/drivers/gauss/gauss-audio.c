@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <limits.h>
+#include <stdio.h>
 #include <zircon/assert.h>
 
 #include <ddk/binding.h>

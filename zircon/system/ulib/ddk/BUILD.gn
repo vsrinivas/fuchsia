@@ -48,6 +48,7 @@ zx_library("ddk") {
     # <ddk/usb-peripheral-config.h> has #include <fuchsia/hardware/usb/peripheral/c/fidl.h>.
     "$zx/system/fidl/fuchsia-device:c.headers",
     "$zx/system/fidl/fuchsia-hardware-usb-peripheral:c.headers",
+    "$zx/system/ulib/syslog:headers",
 
     # TODO(BLD-353): Exporting this dependency causes problems in the legacy
     # build.  Instead, users of the ddk library that actually use this header
@@ -60,4 +61,11 @@ zx_library("ddk") {
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zircon-internal",
   ]
+}
+
+zx_library("ddk-device-headers") {
+  sdk = "source"
+  sdk_publishable = false
+  sdk_headers = [ "ddk/device.h" ]
+  sources = []
 }

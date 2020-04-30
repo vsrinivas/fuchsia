@@ -160,9 +160,13 @@ TEST(TestCase, TestSignalOnBatteryDisconnect) {
 // required stubs for faking ddk
 zx_driver_rec_t __zircon_driver_rec__ = {};
 
-bool driver_log_severity_enabled_internal(const zx_driver_t* drv, uint32_t flag) { return false; }
+extern "C" bool driver_log_severity_enabled_internal(const zx_driver_t* drv,
+                                                     fx_log_severity_t flag) {
+  return false;
+}
 
-void driver_logf_internal(const zx_driver_t* drv, uint32_t flag, const char* msg, ...) {}
+extern "C" void driver_logf_internal(const zx_driver_t* drv, fx_log_severity_t flag,
+                                     const char* msg, ...) {}
 
 const char* device_get_name(zx_device_t* device) { return "fake-acpi-battery"; }
 

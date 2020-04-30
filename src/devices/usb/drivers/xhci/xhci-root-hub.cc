@@ -439,8 +439,8 @@ static zx_status_t xhci_rh_control(xhci_t* xhci, xhci_root_hub_t* rh, usb_setup_
   uint16_t index = le16toh(setup->wIndex);
   xhci_usb_request_internal_t* req_int = USB_REQ_TO_XHCI_INTERNAL(req);
 
-  zxlogf(SPEW, "xhci_rh_control type: 0x%02X req: %d value: %d index: %d length: %d",
-         request_type, request, value, index, le16toh(setup->wLength));
+  zxlogf(SPEW, "xhci_rh_control type: 0x%02X req: %d value: %d index: %d length: %d", request_type,
+         request, value, index, le16toh(setup->wLength));
 
   if ((request_type & USB_DIR_MASK) == USB_DIR_IN && request == USB_REQ_GET_DESCRIPTOR) {
     return xhci_rh_get_descriptor(xhci, request_type, rh, value, index, le16toh(setup->wLength),
@@ -574,7 +574,7 @@ void xhci_handle_root_hub_change(xhci_t* xhci) {
         (portsc & XHCI_MASK(PORTSC_SPEED_START, PORTSC_SPEED_BITS)) >> PORTSC_SPEED_START;
     uint32_t status_bits = portsc & PORTSC_STATUS_BITS;
 
-    if (driver_get_log_flags() & DDK_LOG_SPEW) {
+    if (zxlog_level_enabled(SPEW)) {
       print_portsc(i, portsc);
     }
 

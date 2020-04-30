@@ -114,7 +114,6 @@ TEST(Ipc, ConstructDestruct) {
 }
 
 TEST(Ipc, SimpleSend) {
-  driver_set_log_flags(ZX_LOG_LEVEL_MASK);
   adsp_registers_t regs = {};
   std::unique_ptr<DspChannel> dsp =
       CreateHardwareDspChannel("UnitTests", &regs, std::nullopt, zx::duration::infinite());

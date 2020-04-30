@@ -4,25 +4,11 @@
 
 import("//build/unification/zx_library.gni")
 
-declare_args() {
-  # Enable printing of in driver logs in unittests.
-  enable_driver_unittest_logs = true
-
-  # Log levels to be printed when logs are enabled. Default is ERROR, WARNING, & INFO.
-  # Refer to zircon/system/public/zircon/syscalls/log.h for levels.
-  driver_unittest_log_flags = "0x7"
-}
-
 zx_library("fake_ddk") {
   sdk = "source"
   sdk_headers = [ "lib/fake_ddk/fake_ddk.h" ]
   testonly = true
   sources = [ "fake_ddk.cc" ]
-  if (enable_driver_unittest_logs) {
-    defines = [ "LOG_FLAGS=${driver_unittest_log_flags}" ]
-  } else {
-    defines = [ "LOG_FLAGS=0" ]
-  }
   deps = [
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-cpp",

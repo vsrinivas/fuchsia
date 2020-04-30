@@ -7,6 +7,7 @@
 #include <inttypes.h>
 #include <lib/zircon-internal/align.h>
 #include <limits.h>
+#include <stdio.h>
 #include <zircon/process.h>
 
 #include <ddk/debug.h>

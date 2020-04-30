@@ -4,6 +4,7 @@
 
 #include <assert.h>
 #include <limits.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <zircon/assert.h>
@@ -191,8 +192,8 @@ static zx_status_t pci_op_get_next_capability(void* ctx, uint8_t type, uint8_t i
       return ZX_ERR_BAD_STATE;
     }
     if ((st = pci_op_config_read(ctx, cap_offset + 1, sizeof(uint8_t), &cap_offset)) != ZX_OK) {
-      zxlogf(ERROR, "%s: error reading next cap from cap offset %#x: %d", __func__,
-             cap_offset + 1, st);
+      zxlogf(ERROR, "%s: error reading next cap from cap offset %#x: %d", __func__, cap_offset + 1,
+             st);
       return ZX_ERR_BAD_STATE;
     }
   }

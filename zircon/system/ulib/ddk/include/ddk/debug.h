@@ -5,10 +5,9 @@
 #ifndef DDK_DEBUG_H_
 #define DDK_DEBUG_H_
 
+#include <lib/syslog/logger.h>
 #include <stdint.h>
-#include <stdio.h>
 #include <zircon/compiler.h>
-#include <zircon/syscalls/log.h>
 
 #include <ddk/driver.h>
 
@@ -21,38 +20,38 @@ __BEGIN_CDECLS
 // should avoid flooding the log (if an error is likely to happen
 // repeatedly, rapidly, it should throttle its dprintf()s).
 // Error messages are always displayed by default.
-#define DDK_LOG_ERROR ZX_LOG_ERROR
+#define DDK_LOG_ERROR FX_LOG_ERROR
 
 // Warning messages are for situations that are not errors but
 // may be indicative of an impending problem.  As with errors they
 // should not be issued repeatedly and rapidly.
 // Warning messages are always displayed by default.
-#define DDK_LOG_WARN ZX_LOG_WARN
+#define DDK_LOG_WARN FX_LOG_WARNING
 
 // Info messages should provide terse information messages
 // around driver startup, shutdown or state change.  They
 // should be concise, infrequent, and one-line whenever possible.
 // Info messages are always displayed by default.
-#define DDK_LOG_INFO ZX_LOG_INFO
+#define DDK_LOG_INFO FX_LOG_INFO
 
 // Trace messages are intended to provide detailed information
 // about what a driver is doing (start/end of transaction, etc)
 // They should aim for terseness, but provide visibility into
 // driver operation.  They are not displayed by default.
-#define DDK_LOG_TRACE ZX_LOG_TRACE
+#define DDK_LOG_TRACE (-1)
 
 // Spew messages are extremely verbose driver state tracing
 // (possibly including register dumps / full state dumps).
 // They are not displayed by default.
-#define DDK_LOG_SPEW ZX_LOG_SPEW
+#define DDK_LOG_SPEW (-2)
 
 // Serial messages are intended for low-level debugging, and
 // should always be written to debuglog. They are not displayed
 // by default.
-#define DDK_LOG_SERIAL ZX_LOG_LOCAL
+#define DDK_LOG_SERIAL INT32_MIN
 
 // Do not use this function directly, use zxlog_level_enabled() instead.
-bool driver_log_severity_enabled_internal(const zx_driver_t* drv, uint32_t flag);
+bool driver_log_severity_enabled_internal(const zx_driver_t* drv, fx_log_severity_t flag);
 
 // Do not use this macro directly, use zxlog_level_enabled() instead.
 #define zxlog_level_enabled_etc(flag) \
@@ -75,7 +74,7 @@ bool driver_log_severity_enabled_internal(const zx_driver_t* drv, uint32_t flag)
 #define zxlog_level_enabled(flag) zxlog_level_enabled_etc(DDK_LOG_##flag)
 
 // Do not use this function directly, use zxlogf() instead.
-void driver_logf_internal(const zx_driver_t* drv, uint32_t flag, const char* msg, ...)
+void driver_logf_internal(const zx_driver_t* drv, fx_log_severity_t flag, const char* msg, ...)
     __PRINTFLIKE(3, 4);
 
 // Do not use this macro directly, use zxlogf() instead.
@@ -102,10 +101,6 @@ void driver_logf_internal(const zx_driver_t* drv, uint32_t flag, const char* msg
 // Example driver.floppydisk.log=-info,+trace,+0x10
 //
 #define zxlogf(flag, msg...) zxlogf_etc(DDK_LOG_##flag, msg)
-
-static inline void driver_set_log_flags(uint32_t flags) { __zircon_driver_rec__.log_flags = flags; }
-
-static inline uint32_t driver_get_log_flags(void) { return __zircon_driver_rec__.log_flags; }
 
 __END_CDECLS
 

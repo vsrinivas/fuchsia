@@ -97,7 +97,6 @@ static perfmon::PmuHwProperties GetFakeHwProperties() {
 class Perfmon : public zxtest::Test {
  public:
   void SetUp() override {
-    driver_set_log_flags(driver_get_log_flags() | DDK_LOG_ERROR | DDK_LOG_INFO | DDK_LOG_TRACE);
     zx::bti bti;
     ASSERT_OK(fake_bti_create(bti.reset_and_get_address()));
     perfmon::PmuHwProperties props{GetFakeHwProperties()};

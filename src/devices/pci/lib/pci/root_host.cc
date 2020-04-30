@@ -157,7 +157,7 @@ zx_status_t PciRootHost::AllocateWindow(AllocationType type, zx_paddr_t base, si
   if (st != ZX_OK) {
     zxlogf(TRACE, "%s failed to allocate %s %#lx-%#lx: %d.\n", kMainTag, allocator_name, base,
            base + size, st);
-    if (driver_get_log_flags() & DDK_LOG_TRACE) {
+    if (zxlog_level_enabled(TRACE)) {
       zxlogf(TRACE, "%s Regions available:\n", kMainTag);
       allocator->WalkAvailableRegions([](const ralloc_region_t* r) -> bool {
         zxlogf(TRACE, "    %#lx - %#lx\n", r->base, r->base + r->size);

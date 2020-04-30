@@ -6,6 +6,7 @@
 
 #include <assert.h>
 #include <fuchsia/usb/debug/c/fidl.h>
+#include <stdio.h>
 #include <string.h>
 #include <threads.h>
 #include <unistd.h>
@@ -364,8 +365,8 @@ static void xdc_notify_stream_state(xdc_t* xdc, uint32_t stream_id, bool online)
     ZX_DEBUG_ASSERT(actual == sizeof(xdc_msg_t));
   } else {
     // xdc_write should always queue ctrl msgs, unless some fatal error occurs e.g. OOM.
-    zxlogf(ERROR, "xdc_write_internal returned err: %d, dropping ctrl msg for stream id %u",
-           status, stream_id);
+    zxlogf(ERROR, "xdc_write_internal returned err: %d, dropping ctrl msg for stream id %u", status,
+           stream_id);
   }
 }
 

@@ -275,7 +275,7 @@ zx_status_t HidDevice::Recv(uint8_t* buffer, uint32_t capacity) {
     }
 
     fbl::AutoLock lock(&lock_);
-    if (unlikely(driver_get_log_flags() & DDK_LOG_TRACE)) {
+    if (unlikely(zxlog_level_enabled(TRACE))) {
       zxlogf(TRACE, "hidctl: received %zu bytes", actual);
       hexdump8_ex(buffer, actual, 0);
     }

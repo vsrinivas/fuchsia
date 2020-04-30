@@ -226,7 +226,7 @@ static zx_status_t xhci_start_transfer_locked(xhci_t* xhci, xhci_slot_t* slot, u
                      : (state->direction == USB_DIR_IN ? XFER_TRB_TRT_IN : XFER_TRB_TRT_OUT));
     control_bits |= XFER_TRB_IDT;  // immediate data flag
     trb_set_control(trb, TRB_TRANSFER_SETUP, control_bits);
-    if (driver_get_log_flags() & DDK_LOG_SPEW)
+    if (zxlog_level_enabled(SPEW))
       xhci_print_trb(ring, trb);
     xhci_increment_ring(ring);
   }
@@ -306,7 +306,7 @@ static zx_status_t xhci_continue_transfer_locked(xhci_t* xhci, xhci_slot_t* slot
     // before completing control transfer requests
     control_bits |= XFER_TRB_IOC;
     trb_set_control(trb, TRB_TRANSFER_STATUS, control_bits);
-    if (driver_get_log_flags() & DDK_LOG_SPEW)
+    if (zxlog_level_enabled(SPEW))
       xhci_print_trb(ring, trb);
     xhci_increment_ring(ring);
     free_trbs--;

@@ -201,7 +201,7 @@ void Port::Reset() {
 
   // wait for device detect
   status = bus_->WaitForSet(reg_base_ + kPortSataStatus, AHCI_PORT_SSTS_DET_PRESENT, zx::sec(1));
-  if ((driver_get_log_flags() & DDK_LOG_SPEW) && (status < 0)) {
+  if (status < 0) {
     zxlogf(SPEW, "ahci.%u: no device detected", num_);
   }
 
@@ -482,7 +482,7 @@ zx_status_t Port::TxnBeginLocked(uint32_t slot, sata_txn_t* txn) {
   zxlogf(SPEW,
          "ahci.%u: do_txn txn %p (%c) offset 0x%" PRIx64 " length 0x%" PRIx64 " slot %d prdtl %u\n",
          num_, txn, cl->w ? 'w' : 'r', lba, count, slot, cl->prdtl);
-  if (driver_get_log_flags() & DDK_LOG_SPEW) {
+  if (zxlog_level_enabled(SPEW)) {
     for (uint32_t i = 0; i < cl->prdtl; i++) {
       ahci_prd_t* prd = &mem_->tab[slot].prd[i];
       zxlogf(SPEW, "%04u: dbau=0x%08x dba=0x%08x dbc=0x%x", i, prd->dbau, prd->dba, prd->dbc);

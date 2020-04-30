@@ -55,7 +55,7 @@ zx_status_t DecodeCsd(const uint8_t* raw_csd) {
 
   zxlogf(SPEW, "mmc: CSD version %u spec version %u", (raw_csd[MMC_CSD_SPEC_VERSION] >> 6) & 0x3,
          spec_vrsn);
-  if (driver_get_log_flags() & DDK_LOG_SPEW) {
+  if (zxlog_level_enabled(SPEW)) {
     zxlogf(SPEW, "CSD:");
     hexdump8_ex(raw_csd, 16, 0);
   }
@@ -127,8 +127,7 @@ zx_status_t SdmmcBlockDevice::MmcSetBusWidth(sdmmc_bus_width_t bus_width,
   if (bus_width != bus_width_) {
     // Switch the host to the new bus width
     if ((st = sdmmc_.host().SetBusWidth(bus_width)) != ZX_OK) {
-      zxlogf(ERROR, "mmc: failed to switch the host bus width to %d, retcode = %d", bus_width,
-             st);
+      zxlogf(ERROR, "mmc: failed to switch the host bus width to %d, retcode = %d", bus_width, st);
       return ZX_ERR_INTERNAL;
     }
   }

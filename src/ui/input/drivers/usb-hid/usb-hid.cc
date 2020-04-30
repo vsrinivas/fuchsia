@@ -40,7 +40,7 @@ void UsbHidbus::UsbInterruptCallback(usb_request_t* req) {
     return;
   }
   zxlogf(SPEW, "usb-hid: callback request status %d", req->response.status);
-  if (driver_get_log_flags() & DDK_LOG_SPEW) {
+  if (zxlog_level_enabled(SPEW)) {
     hexdump(buffer, req->response.actual);
   }
 

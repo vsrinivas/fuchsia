@@ -169,7 +169,7 @@ zx_status_t AmlRam::Create(void* context, zx_device_t* parent) {
 
 AmlRam::AmlRam(zx_device_t* parent, ddk::MmioBuffer mmio)
     : DeviceType(parent), mmio_(std::move(mmio)) {
-  if (driver_get_log_flags() & ZX_LOG_TRACE) {
+  if (zxlog_level_enabled(TRACE)) {
     auto status = zx::event::create(0u, &shutdown_);
     ZX_ASSERT(status == ZX_OK);
     thread_ = std::thread([this] { ReadLoop(); });

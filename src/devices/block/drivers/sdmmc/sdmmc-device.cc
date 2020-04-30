@@ -443,7 +443,7 @@ zx_status_t SdmmcDevice::MmcSendExtCsd(uint8_t ext_csd[512]) {
   req.virt_size = 512;
   req.cmd_flags = MMC_SEND_EXT_CSD_FLAGS;
   zx_status_t st = host_.Request(&req);
-  if ((st == ZX_OK) && (driver_get_log_flags() & DDK_LOG_SPEW)) {
+  if (st == ZX_OK && zxlog_level_enabled(SPEW)) {
     zxlogf(SPEW, "EXT_CSD:");
     hexdump8_ex(ext_csd, 512, 0);
   }

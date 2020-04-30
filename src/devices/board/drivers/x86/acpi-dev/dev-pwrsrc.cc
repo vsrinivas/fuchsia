@@ -121,9 +121,6 @@ static zx_protocol_device_t acpi_pwrsrc_device_proto = []() {
 }  // namespace acpi_pwrsrc
 
 zx_status_t pwrsrc_init(zx_device_t* parent, ACPI_HANDLE acpi_handle) {
-  // driver trace logging can be enabled for debug as needed
-  // driver_set_log_flags(driver_get_log_flags() | DDK_LOG_TRACE);
-
   acpi_pwrsrc::acpi_pwrsrc_device_t* dev = static_cast<acpi_pwrsrc::acpi_pwrsrc_device_t*>(
       calloc(1, sizeof(acpi_pwrsrc::acpi_pwrsrc_device_t)));
   if (!dev) {

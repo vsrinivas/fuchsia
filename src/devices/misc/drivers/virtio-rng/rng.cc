@@ -14,6 +14,8 @@
 #include <ddk/debug.h>
 #include <fbl/auto_lock.h>
 
+#define LOCAL_TRACE 0
+
 namespace virtio {
 
 RngDevice::RngDevice(zx_device_t* bus_device, zx::bti bti, std::unique_ptr<Backend> backend)
@@ -98,9 +100,7 @@ void RngDevice::IrqRingUpdate() {
   vring_.IrqRingUpdate(free_chain);
 }
 
-void RngDevice::IrqConfigChange() {
-  zxlogf(TRACE, "%s: Got irq config change (ignoring)", tag());
-}
+void RngDevice::IrqConfigChange() { zxlogf(TRACE, "%s: Got irq config change (ignoring)", tag()); }
 
 int RngDevice::SeedThreadEntry(void* arg) {
   RngDevice* d = static_cast<RngDevice*>(arg);
@@ -125,9 +125,7 @@ zx_status_t RngDevice::Request() {
   desc->len = kBufferSize;
   desc->flags = VRING_DESC_F_WRITE;
   zxlogf(SPEW, "%s: allocated descriptor chain desc %p, i %u", tag(), desc, i);
-  if (driver_get_log_flags() & DDK_LOG_SPEW) {
-    virtio_dump_desc(desc);
-  }
+  LTRACE_DO(virtio_dump_desc(desc));
 
   vring_.SubmitChain(i);
   vring_.Kick();

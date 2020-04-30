@@ -4,6 +4,7 @@
 
 #include <lib/device-protocol/platform-device.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <threads.h>

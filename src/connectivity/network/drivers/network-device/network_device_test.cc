@@ -25,11 +25,6 @@ class NetDeviceDriverTest : public zxtest::Test, public fake_ddk::Bind {
  protected:
   typedef void(ReleaseOp)(void* ctx);
 
-  void SetUp() override {
-    // turn on trace logging to make debugging a bit easier
-    __zircon_driver_rec__.log_flags = 0x00FF;
-  }
-
   void TearDown() override {
     if (device_created_) {
       RemoveDeviceSync();

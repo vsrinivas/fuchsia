@@ -323,7 +323,7 @@ int Sdhci::IrqThread() {
       interrupt_cb_.Callback();
     }
     if (irq.ErrorInterrupt()) {
-      if (driver_get_log_flags() & DDK_LOG_TRACE) {
+      if (zxlog_level_enabled(TRACE)) {
         if (irq.adma_error()) {
           zxlogf(TRACE, "sdhci: ADMA error 0x%x ADMAADDR0 0x%x ADMAADDR1 0x%x",
                  AdmaErrorStatus::Get().ReadFrom(&regs_mmio_buffer_).reg_value(),
@@ -457,7 +457,7 @@ zx_status_t Sdhci::BuildDmaDescriptor(sdmmc_req_t* req, DescriptorType* descs) {
     paddr = next_paddr;
   }
 
-  if (driver_get_log_flags() & DDK_LOG_SPEW) {
+  if (zxlog_level_enabled(SPEW)) {
     DescriptorType* desc = descs;
     do {
       if constexpr (sizeof(desc->address) == sizeof(uint32_t)) {

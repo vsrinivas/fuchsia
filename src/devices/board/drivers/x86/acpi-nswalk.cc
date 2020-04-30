@@ -99,7 +99,7 @@ zx_status_t AcpiDevice::ReportCurrentResources() {
 
   zxlogf(TRACE, "acpi-bus[%s]: found %zd port resources %zd memory resources %zx irqs",
          device_get_name(zxdev_), pio_resources_.size(), mmio_resources_.size(), irqs_.size());
-  if (driver_get_log_flags() & DDK_LOG_SPEW) {
+  if (zxlog_level_enabled(SPEW)) {
     zxlogf(SPEW, "port resources:");
     for (size_t i = 0; i < pio_resources_.size(); i++) {
       zxlogf(SPEW, "  %02zd: addr=0x%x length=0x%x align=0x%x", i, pio_resources_[i].base_address,
@@ -341,7 +341,7 @@ device_add_args_t get_device_add_args(const char* name, ACPI_DEVICE_INFO* info,
     props[propcount++].value = htobe32(value);
   }
 
-  if (driver_get_log_flags() & DDK_LOG_SPEW) {
+  if (zxlog_level_enabled(SPEW)) {
     // ACPI names are always 4 characters in a uint32
     zxlogf(SPEW, "acpi: got device %s", acpi_name);
     if (info->Valid & ACPI_VALID_HID) {

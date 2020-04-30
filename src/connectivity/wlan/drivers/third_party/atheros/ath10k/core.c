@@ -19,6 +19,7 @@
 
 #include <inttypes.h>
 #include <lib/zircon-internal/align.h>
+#include <stdio.h>
 #include <string.h>
 #include <zircon/assert.h>
 #include <zircon/process.h>
@@ -971,7 +972,8 @@ static zx_status_t ath10k_core_parse_bd_ie_board(struct ath10k* ar, const void* 
     buf += sizeof(*hdr);
 
     if (buf_len < ZX_ALIGN(board_ie_len, 4)) {
-      ath10k_err("invalid ATH10K_BD_IE_BOARD length: %zu < %zu\n", buf_len, ZX_ALIGN(board_ie_len, 4));
+      ath10k_err("invalid ATH10K_BD_IE_BOARD length: %zu < %zu\n", buf_len,
+                 ZX_ALIGN(board_ie_len, 4));
       ret = ZX_ERR_INVALID_ARGS;
       goto out;
     }

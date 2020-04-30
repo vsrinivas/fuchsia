@@ -328,9 +328,6 @@ static zx_protocol_device_t acpi_battery_device_proto = [] {
 }  // namespace acpi_battery
 
 zx_status_t battery_init(zx_device_t* parent, ACPI_HANDLE acpi_handle) {
-  // driver trace logging can be enabled for debug as needed
-  // driver_set_log_flags(driver_get_log_flags() | DDK_LOG_TRACE);
-
   zxlogf(TRACE, "acpi-battery: init with ACPI_HANDLE %p", acpi_handle);
 
   ACPI_BUFFER name_buffer;
