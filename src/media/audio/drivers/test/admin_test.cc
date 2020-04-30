@@ -269,13 +269,13 @@ void AdminTest::ExpectNoPositionNotifications() {
 // Test cases that target each of the various admin commands
 //
 // Verify SET_FORMAT response (low-bit-rate) and that valid ring buffer channel is received.
-TEST_P(AdminTest, DISABLED_SetFormatMin) {
+TEST_P(AdminTest, SetFormatMin) {
   RequestFormats();
   UseMinFormat();
 }
 
 // Verify SET_FORMAT response (high-bit-rate) and that valid ring buffer channel is received.
-TEST_P(AdminTest, DISABLED_SetFormatMax) {
+TEST_P(AdminTest, SetFormatMax) {
   RequestFormats();
   UseMaxFormat();
 }
@@ -283,21 +283,21 @@ TEST_P(AdminTest, DISABLED_SetFormatMax) {
 // Ring Buffer channel commands
 //
 // Verify a valid ring buffer properties response is successfully received.
-TEST_P(AdminTest, DISABLED_GetRingBufferProperties) {
+TEST_P(AdminTest, GetRingBufferProperties) {
   RequestFormats();
   UseMaxFormat();
   RequestRingBufferProperties();
 }
 
 // Verify a get buffer esponse and ring buffer VMO is successfully received.
-TEST_P(AdminTest, DISABLED_GetBuffer) {
+TEST_P(AdminTest, GetBuffer) {
   RequestFormats();
   UseMinFormat();
   RequestBuffer(100u, 1u);
 }
 
 // Verify that a valid start response is successfully received.
-TEST_P(AdminTest, DISABLED_Start) {
+TEST_P(AdminTest, Start) {
   RequestFormats();
   UseMinFormat();
   RequestBuffer(32000, 0);
@@ -305,7 +305,7 @@ TEST_P(AdminTest, DISABLED_Start) {
 }
 
 // Verify that a valid stop command is successfully issued.
-TEST_P(AdminTest, DISABLED_Stop) {
+TEST_P(AdminTest, Stop) {
   RequestFormats();
   UseMinFormat();
   RequestBuffer(100, 0);
@@ -314,7 +314,7 @@ TEST_P(AdminTest, DISABLED_Stop) {
 }
 
 // Verify position notifications at fast rate (~180/sec) over approx 100 ms.
-TEST_P(AdminTest, DISABLED_PositionNotifyFast) {
+TEST_P(AdminTest, PositionNotifyFast) {
   RequestFormats();
   UseMaxFormat();
   RequestBuffer(8000, 32);
@@ -323,7 +323,7 @@ TEST_P(AdminTest, DISABLED_PositionNotifyFast) {
 }
 
 // Verify position notifications at slow rate (2/sec) over approx 1 second.
-TEST_P(AdminTest, DISABLED_PositionNotifySlow) {
+TEST_P(AdminTest, PositionNotifySlow) {
   RequestFormats();
   UseMinFormat();
   RequestBuffer(48000, 2);
@@ -332,7 +332,7 @@ TEST_P(AdminTest, DISABLED_PositionNotifySlow) {
 }
 
 // Verify that no position notifications arrive if notifications_per_ring is 0.
-TEST_P(AdminTest, DISABLED_PositionNotifyNone) {
+TEST_P(AdminTest, PositionNotifyNone) {
   RequestFormats();
   UseMaxFormat();
   RequestBuffer(8000, 0);
@@ -341,7 +341,7 @@ TEST_P(AdminTest, DISABLED_PositionNotifyNone) {
 }
 
 // Verify that no position notificatons arrive after stop.
-TEST_P(AdminTest, DISABLED_NoPositionNotifyAfterStop) {
+TEST_P(AdminTest, NoPositionNotifyAfterStop) {
   RequestFormats();
   UseMaxFormat();
   RequestBuffer(8000, 32);

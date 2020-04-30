@@ -6,7 +6,6 @@
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/mock-i2c/mock-i2c.h>
 
-#include <audio-utils/audio-output.h>
 #include <mock-mmio-reg/mock-mmio-reg.h>
 #include <mock/ddktl/protocol/gpio.h>
 #include <zxtest/zxtest.h>
@@ -16,7 +15,24 @@
 namespace audio {
 namespace sherlock {
 
+static constexpr uint32_t kTestFrameRate1 = 48000;
+static constexpr uint32_t kTestFrameRate2 = 96000;
+static constexpr uint8_t kTestNumberOfChannels = 2;
+static constexpr uint32_t kTestFifoDepth = 16;
+
 using ::llcpp::fuchsia::hardware::audio::Device;
+namespace audio_fidl = ::llcpp::fuchsia::hardware::audio;
+
+audio_fidl::PcmFormat GetDefaultPcmFormat() {
+  audio_fidl::PcmFormat format;
+  format.number_of_channels = 2;
+  format.channels_to_use_bitmask = 0x03;
+  format.sample_format = audio_fidl::SampleFormat::PCM_SIGNED;
+  format.frame_rate = kTestFrameRate1;
+  format.bytes_per_sample = 2;
+  format.valid_bits_per_sample = 16;
+  return format;
+}
 
 // TODO(46617): This test is valid for Astro and Nelson once AMLogic audio drivers are unified.
 struct Tas5720GoodInitTest : Tas5720 {
@@ -248,10 +264,6 @@ TEST(SherlockAudioStreamOutTest, LibraryShutdwonOnInitWithError) {
 }
 
 TEST(SherlockAudioStreamOutTest, ChangeRate96K) {
-  static constexpr uint32_t kTestFrameRate1 = 48000;
-  static constexpr uint32_t kTestFrameRate2 = 96000;
-  static constexpr uint8_t kTestNumberOfChannels = 2;
-  static constexpr uint32_t kTestFifoDepth = 16;
   struct CodecRate96KTest : Tas5720 {
     CodecRate96KTest(ddk::I2cChannel i2c) : Tas5720(std::move(i2c)) {}
     zx_status_t Init(std::optional<uint8_t> slot, uint32_t rate) override {
@@ -316,16 +328,26 @@ TEST(SherlockAudioStreamOutTest, ChangeRate96K) {
       fake_ddk::kFakeParent, std::move(codecs), audio_enable_gpio.GetProto());
   ASSERT_NOT_NULL(server);
 
-  Device::SyncClient client(std::move(tester.FidlClient()));
-  Device::ResultOf::GetChannel channel_wrap = client.GetChannel();
+  Device::SyncClient client_wrap(std::move(tester.FidlClient()));
+  Device::ResultOf::GetChannel channel_wrap = client_wrap.GetChannel();
   ASSERT_EQ(channel_wrap.status(), ZX_OK);
 
-  // After we get the channel we use audio::utils serialization until we convert to FIDL.
-  auto channel_client = audio::utils::AudioOutput::Create(1);
-  channel_client->SetStreamChannel(std::move(channel_wrap->channel));
+  audio_fidl::StreamConfig::SyncClient client(std::move(channel_wrap->channel));
 
-  audio_sample_format_t format = AUDIO_SAMPLE_FORMAT_16BIT;
-  ASSERT_OK(channel_client->SetFormat(kTestFrameRate2, kTestNumberOfChannels, format));
+  zx::channel local, remote;
+  ASSERT_OK(zx::channel::create(0, &local, &remote));
+  audio_fidl::PcmFormat pcm_format = GetDefaultPcmFormat();
+  pcm_format.frame_rate = kTestFrameRate2;  // Change it from the default at 48kHz.
+  fidl::aligned<audio_fidl::PcmFormat> aligned_pcm_format = std::move(pcm_format);
+  auto builder = audio_fidl::Format::UnownedBuilder();
+  builder.set_pcm_format(fidl::unowned_ptr(&aligned_pcm_format));
+  client.CreateRingBuffer(builder.build(), std::move(remote));
+
+  // To make sure we have initialized in the server make a sync call
+  // (we know the server is single threaded, initialization is completed if received a reply).
+  auto props = audio_fidl::RingBuffer::Call::GetProperties(zx::unowned_channel(local));
+  ASSERT_OK(props.status());
+
   ASSERT_EQ(raw_codecs[0]->last_rate_requested_, kTestFrameRate2);
   ASSERT_EQ(raw_codecs[1]->last_rate_requested_, kTestFrameRate2);
   ASSERT_EQ(raw_codecs[2]->last_rate_requested_, kTestFrameRate2);

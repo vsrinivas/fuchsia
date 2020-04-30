@@ -144,7 +144,7 @@ DDK_PROTOCOL_DEF(ZXCRYPT,                 120, "zxcrypt", 0)
 DDK_PROTOCOL_DEF(SPI,                     121, "spi", 0)
 DDK_PROTOCOL_DEF(SPI_IMPL,                122, "spi-impl", 0)
 DDK_PROTOCOL_DEF(SECURE_MEM,              123, "securemem", 0)
-DDK_PROTOCOL_DEF(DEVHOST_TEST,            124,  "tdh", 0)
+DDK_PROTOCOL_DEF(DEVHOST_TEST,            124, "tdh", 0)
 DDK_PROTOCOL_DEF(SERIAL_IMPL_ASYNC,       125, "serial-impl-async", 0)
 DDK_PROTOCOL_DEF(AT_TRANSPORT,            126, "at-transport", 0)
 DDK_PROTOCOL_DEF(PWM,                     127, "pwm", 0)
@@ -160,6 +160,8 @@ DDK_PROTOCOL_DEF(ACPI_DEVICE,             136, "acpi-device", 0)
 DDK_PROTOCOL_DEF(VIRTUALBUS_TEST,         137, "virtual-bus-test", 0)
 DDK_PROTOCOL_DEF(TEST_ASIX_FUNCTION,      138, "test-asix-function", 0)
 DDK_PROTOCOL_DEF(RPMB,                    139, "rpmb", 0)
+DDK_PROTOCOL_DEF(AUDIO_INPUT_2,           140, "audio-input-2", 0)
+DDK_PROTOCOL_DEF(AUDIO_OUTPUT_2,          141, "audio-output-2", 0)
 
 #undef DDK_PROTOCOL_DEF
 #endif

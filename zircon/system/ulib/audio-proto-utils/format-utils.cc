@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <string.h>
+
 #include <audio-proto-utils/format-utils.h>
 #include <fbl/algorithm.h>
-#include <string.h>
 
 namespace audio {
 namespace utils {
@@ -55,6 +56,44 @@ uint32_t ComputeFrameSize(uint16_t channels, audio_sample_format_t sample_format
     default:
       return 0;
   }
+}
+
+SampleSize GetSampleSizes(audio_sample_format_t sample_format) {
+  uint32_t fmt_noflags = sample_format & ~AUDIO_SAMPLE_FORMAT_FLAG_MASK;
+  switch (fmt_noflags) {
+    // clang-format off
+    case AUDIO_SAMPLE_FORMAT_8BIT:         return {8,  1 };
+    case AUDIO_SAMPLE_FORMAT_16BIT:        return {16, 2};
+    case AUDIO_SAMPLE_FORMAT_24BIT_PACKED: return {24, 3};
+    case AUDIO_SAMPLE_FORMAT_20BIT_IN32:   return {20, 4};
+    case AUDIO_SAMPLE_FORMAT_24BIT_IN32:   return {24, 4};
+    case AUDIO_SAMPLE_FORMAT_32BIT:        return {32, 4};
+    case AUDIO_SAMPLE_FORMAT_32BIT_FLOAT:  return {32, 4};
+    default:                               return {0,  0 };
+      // clang-format on
+  }
+}
+
+audio_sample_format_t GetSampleFormat(uint8_t bits_per_sample, uint8_t bits_per_channel) {
+  audio_sample_format_t sample_format = 0;
+  if (bits_per_sample == bits_per_channel) {
+    switch (bits_per_sample) {
+      // clang-format off
+      case 8:  sample_format = AUDIO_SAMPLE_FORMAT_8BIT;         break;
+      case 16: sample_format = AUDIO_SAMPLE_FORMAT_16BIT;        break;
+      case 24: sample_format = AUDIO_SAMPLE_FORMAT_24BIT_PACKED; break;
+      case 32: sample_format = AUDIO_SAMPLE_FORMAT_32BIT;        break;
+      // clang-format on
+      default:
+        return 0;
+    }
+  }
+  if (bits_per_sample == 20 && bits_per_channel == 32) {
+    sample_format = AUDIO_SAMPLE_FORMAT_20BIT_IN32;
+  } else if (bits_per_sample == 24 && bits_per_channel == 32) {
+    sample_format = AUDIO_SAMPLE_FORMAT_24BIT_IN32;
+  }
+  return sample_format;
 }
 
 bool FormatIsCompatible(uint32_t frame_rate, uint16_t channels, audio_sample_format_t sample_format,

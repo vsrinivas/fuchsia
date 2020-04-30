@@ -2,15 +2,23 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef AUDIO_PROTO_UTILS_FORMAT_UTILS_H_
+#define AUDIO_PROTO_UTILS_FORMAT_UTILS_H_
 
+#include <string.h>
 #include <zircon/assert.h>
 #include <zircon/device/audio.h>
 #include <zircon/types.h>
-#include <string.h>
+
+#include <utility>
 
 namespace audio {
 namespace utils {
+
+struct SampleSize {
+  uint8_t valid_bits_per_sample;
+  uint8_t bytes_per_sample;
+};
 
 // Check to see if the specified frame rate is in either the 48 KHz or 44.1 KHz
 // family.
@@ -20,6 +28,14 @@ bool FrameRateIn441kFamily(uint32_t rate);
 // Figure out the size of an audio frame based on the sample format.  Returns 0
 // in the case of an error (bad channel count, bad sample format)
 uint32_t ComputeFrameSize(uint16_t channels, audio_sample_format_t sample_format);
+
+// Figure out the size of an audio sample and channel based on the sample format.  Returns {0, 0}
+// in the case of an error (bad sample format)
+SampleSize GetSampleSizes(audio_sample_format_t sample_format);
+
+// Figure out the sample format based on the audio sample and channel sizes.  Returns 0
+// in the case of an error (bad sample and channel sizes)
+audio_sample_format_t GetSampleFormat(uint8_t bits_per_sample, uint8_t bits_per_channel);
 
 // Check to see if the specified format (rate, chan, sample_format) is
 // compatible with the given format range.  Returns true if it is, or
@@ -81,3 +97,5 @@ class FrameRateEnumerator {
 
 }  // namespace utils
 }  // namespace audio
+
+#endif  // AUDIO_PROTO_UTILS_FORMAT_UTILS_H_

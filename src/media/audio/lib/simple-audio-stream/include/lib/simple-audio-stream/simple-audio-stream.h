@@ -15,6 +15,7 @@
 #include <zircon/types.h>
 
 #include <atomic>
+#include <limits>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -31,6 +32,8 @@
 
 namespace audio {
 
+namespace audio_fidl = ::llcpp::fuchsia::hardware::audio;
+
 // Thread safety token.
 //
 // This token acts like a "no-op mutex", allowing compiler thread safety annotations
@@ -46,20 +49,24 @@ class __TA_SCOPED_CAPABILITY ScopedToken {
 
 struct SimpleAudioStreamProtocol : public ddk::internal::base_protocol {
   explicit SimpleAudioStreamProtocol(bool is_input) {
-    ddk_proto_id_ = is_input ? ZX_PROTOCOL_AUDIO_INPUT : ZX_PROTOCOL_AUDIO_OUTPUT;
+    ddk_proto_id_ = is_input ? ZX_PROTOCOL_AUDIO_INPUT_2 : ZX_PROTOCOL_AUDIO_OUTPUT_2;
   }
 
-  bool is_input() const { return ddk_proto_id_ == ZX_PROTOCOL_AUDIO_INPUT; }
+  bool is_input() const { return ddk_proto_id_ == ZX_PROTOCOL_AUDIO_INPUT_2; }
 };
 
 class SimpleAudioStream;
 using SimpleAudioStreamBase = ddk::Device<SimpleAudioStream, ddk::Messageable, ddk::SuspendableNew,
                                           ddk::UnbindableDeprecated>;
 
+// The SimpleAudioStream server (thread compatible) implements Device::Interface and
+// RingBuffer::Interface.
+// All this is serialized in the single threaded SimpleAudioStream's dispatcher().
 class SimpleAudioStream : public SimpleAudioStreamBase,
                           public SimpleAudioStreamProtocol,
                           public fbl::RefCounted<SimpleAudioStream>,
-                          public ::llcpp::fuchsia::hardware::audio::Device::Interface {
+                          public audio_fidl::Device::Interface,
+                          public audio_fidl::RingBuffer::Interface {
  public:
   // Create
   //
@@ -109,7 +116,7 @@ class SimpleAudioStream : public SimpleAudioStreamBase,
 
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
     DdkTransaction transaction(txn);
-    llcpp::fuchsia::hardware::audio::Device::Dispatch(this, msg, &transaction);
+    audio_fidl::Device::Dispatch(this, msg, &transaction);
     return transaction.Status();
   }
 
@@ -131,7 +138,9 @@ class SimpleAudioStream : public SimpleAudioStreamBase,
   //
   // During Init, devices *must*
   // 1) Populate the supported_formats_ vector with at least one valid format
-  //    range.
+  //    range. The flag ASF_RANGE_FLAG_FPS_CONTINUOUS is not supported (unless
+  //    min_frames_per_second and max_frames_per_second are equal since in that
+  //    case the flag is irrelevant).
   // 2) Report the stream's gain control capabilities and current gain control
   //    state in the cur_gain_state_ member.
   // 3) Supply a valid, null-terminated, device node name in the device_name_
@@ -164,15 +173,8 @@ class SimpleAudioStream : public SimpleAudioStreamBase,
   // completely shutting down all hardware and prepare for destruction.
   virtual void ShutdownHook() __TA_REQUIRES(domain_token()) {}
 
-  // EnableAsyncNotification - general hook
-  //
-  // Called whenever a client enables or disables notification of plug events.
-  // Subclass can override this, to remain aware of these requests.
-  virtual void EnableAsyncNotification(bool enable) __TA_REQUIRES(domain_token()) {}
-
   // Stream interface methods
   //
-
   // ChangeFormat - Stream interface method
   //
   // All drivers must implement ChangeFormat.  When called, the following
@@ -314,56 +316,76 @@ class SimpleAudioStream : public SimpleAudioStreamBase,
       return ptr;
     }
 
-    void SetHandler(async::Wait::Handler handler) { wait_.set_handler(std::move(handler)); }
-    zx_status_t BeginWait(async_dispatcher_t* dispatcher) { return wait_.Begin(dispatcher); }
-    zx_status_t Write(const void* buffer, uint32_t length) {
-      return channel_.write(0, buffer, length, nullptr, 0);
-    }
-    zx_status_t Write(const void* buffer, uint32_t length, zx::handle&& handle) {
-      zx_handle_t h = handle.release();
-      return channel_.write(0, buffer, length, &h, 1);
-    }
-    zx_status_t Read(void* buffer, uint32_t length, uint32_t* out_length) {
-      return channel_.read(0, buffer, nullptr, length, 0, out_length, nullptr);
-    }
-
-   protected:
-    explicit Channel(zx::channel channel) : channel_(std::move(channel)) {
-      wait_.set_object(channel_.get());
-      wait_.set_trigger(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED);
-    }
-    ~Channel() = default;  // Deactivates (automatically cancels the wait from its RAII semantics).
-
    private:
     friend class fbl::RefPtr<Channel>;
-
-    zx::channel channel_;
-    async::Wait wait_;
   };
 
-  class StreamChannel : public Channel {
+  // StreamChannel (thread compatible) implements StreamConfig::Interface so the server for a
+  // StreamConfig channel is a StreamChannel instead of a SimpleAudioStream (as is the case for
+  // Device and RingBuffer channels), this way we can track which StreamConfig channel for plug
+  // detect and gain changes notifications.
+  // In some methods, we pass "this" (StreamChannel*) to SimpleAudioStream that
+  // gets managed in SimpleAudioStream.
+  // All this is serialized in the single threaded SimpleAudioStream's dispatcher().
+  // All the StreamConfig::Interface methods are forwarded to SimpleAudioStream.
+  class StreamChannel : public Channel, public audio_fidl::StreamConfig::Interface {
    public:
     using NodeState = fbl::DoublyLinkedListNodeState<fbl::RefPtr<StreamChannel>>;
     struct StreamChannelTrait {
       static NodeState& node_state(StreamChannel& c) { return c.stream_channel_state_; }
     };
-    struct PlugNotifyTrait {
-      static NodeState& node_state(StreamChannel& c) { return c.plug_notify_state_; }
-    };
     friend struct StreamChannelTrait;
-    friend struct PlugNotifyTrait;
 
-    explicit StreamChannel(zx::channel channel) : Channel(std::move(channel)) {}
+    // Does not take ownership of stream, which must refer to a valid SimpleAudioStream that
+    // outlives this object.
+    explicit StreamChannel(SimpleAudioStream* stream) : stream_(*stream) {
+      last_reported_gain_state_.cur_gain = kInvalidGain;
+    }
     ~StreamChannel() = default;
 
     bool in_stream_channel_list() const { return stream_channel_state_.InContainer(); }
-    bool in_plug_notify_list() const { return plug_notify_state_.InContainer(); }
+
+    // fuchsia hardware audio Stream Interface.
+    virtual void GetProperties(GetPropertiesCompleter::Sync completer) override {
+      stream_.GetProperties(std::move(completer));
+    }
+    virtual void GetSupportedFormats(GetSupportedFormatsCompleter::Sync completer) override {
+      stream_.GetSupportedFormats(std::move(completer));
+    }
+    virtual void WatchGainState(WatchGainStateCompleter::Sync completer) override {
+      stream_.WatchGainState(this, std::move(completer));
+    }
+    virtual void WatchPlugState(WatchPlugStateCompleter::Sync completer) override {
+      stream_.WatchPlugState(this, std::move(completer));
+    }
+    virtual void SetGain(audio_fidl::GainState target_state,
+                         SetGainCompleter::Sync completer) override {
+      stream_.SetGain(std::move(target_state), std::move(completer));
+    }
+    virtual void CreateRingBuffer(audio_fidl::Format format, zx::channel ring_buffer,
+                                  CreateRingBufferCompleter::Sync completer) override {
+      stream_.CreateRingBuffer(this, std::move(format), std::move(ring_buffer),
+                               std::move(completer));
+    }
 
    private:
-    NodeState stream_channel_state_;
-    NodeState plug_notify_state_;
-  };
+    friend class SimpleAudioStream;
 
+    enum class Plugged : uint32_t {
+      kNotReported = 1,
+      kPlugged = 2,
+      kUnplugged = 3,
+    };
+
+    static constexpr float kInvalidGain = std::numeric_limits<float>::max();
+
+    SimpleAudioStream& stream_;
+    NodeState stream_channel_state_;
+    std::optional<StreamChannel::WatchPlugStateCompleter::Async> plug_completer_;
+    std::optional<StreamChannel::WatchGainStateCompleter::Async> gain_completer_;
+    Plugged last_reported_plugged_state_ = Plugged::kNotReported;
+    audio_proto::GetGainResp last_reported_gain_state_ = {};
+  };
   // Internal method; called by the general Create template method.
   zx_status_t CreateInternal();
 
@@ -372,67 +394,34 @@ class SimpleAudioStream : public SimpleAudioStreamBase,
   zx_status_t PublishInternal();
 
   // fuchsia hardware audio Device Interface
-  void GetChannel(GetChannelCompleter::Sync completer);
+  void GetChannel(GetChannelCompleter::Sync completer) override;
 
-  // Stream interface
-  zx_status_t ProcessStreamChannel(StreamChannel* channel, bool privileged)
-      __TA_REQUIRES(domain_token());
+  // fuchsia hardware audio RingBuffer Interface
+  virtual void GetProperties(GetPropertiesCompleter::Sync completer) override;
+  virtual void GetVmo(uint32_t min_frames, uint32_t notifications_per_ring,
+                      audio_fidl::RingBuffer::Interface::GetVmoCompleter::Sync completer) override;
+  virtual void Start(StartCompleter::Sync completer) override;
+  virtual void Stop(StopCompleter::Sync completer) override;
+  virtual void WatchClockRecoveryPositionInfo(
+      WatchClockRecoveryPositionInfoCompleter::Sync completer) override;
+
+  // fuchsia hardware audio Stream Interface (forwarded from StreamChannel)
+  void GetProperties(StreamChannel::GetPropertiesCompleter::Sync completer);
+  void GetSupportedFormats(StreamChannel::GetSupportedFormatsCompleter::Sync completer);
+  void CreateRingBuffer(StreamChannel* channel, audio_fidl::Format format, zx::channel ring_buffer,
+                        StreamChannel::CreateRingBufferCompleter::Sync completer);
+  void WatchGainState(StreamChannel* channel,
+                      StreamChannel::WatchGainStateCompleter::Sync completer);
+  void WatchPlugState(StreamChannel* channel,
+                      StreamChannel::WatchPlugStateCompleter::Sync completer);
+  void SetGain(audio_fidl::GainState target_state, StreamChannel::SetGainCompleter::Sync completer);
 
   void DeactivateStreamChannel(StreamChannel* channel) __TA_REQUIRES(domain_token(), channel_lock_);
 
-  zx_status_t OnGetStreamFormats(StreamChannel* channel,
-                                 const audio_proto::StreamGetFmtsReq& req) const
-      __TA_REQUIRES(domain_token());
-
-  zx_status_t OnSetStreamFormat(StreamChannel* channel, const audio_proto::StreamSetFmtReq& req,
-                                bool privileged) __TA_REQUIRES(domain_token());
-
-  zx_status_t OnGetGain(StreamChannel* channel, const audio_proto::GetGainReq& req) const
-      __TA_REQUIRES(domain_token());
-
-  zx_status_t OnSetGain(StreamChannel* channel, const audio_proto::SetGainReq& req)
-      __TA_REQUIRES(domain_token());
-
-  zx_status_t OnPlugDetect(StreamChannel* channel, const audio_proto::PlugDetectReq& req)
-      __TA_REQUIRES(domain_token());
-
-  zx_status_t OnGetUniqueId(StreamChannel* channel, const audio_proto::GetUniqueIdReq& req) const
-      __TA_REQUIRES(domain_token());
-
-  zx_status_t OnGetString(StreamChannel* channel, const audio_proto::GetStringReq& req) const
-      __TA_REQUIRES(domain_token());
-
-  zx_status_t OnGetClockDomain(StreamChannel* channel,
-                               const audio_proto::GetClockDomainReq& req) const
-      __TA_REQUIRES(domain_token());
-
   zx_status_t NotifyPlugDetect() __TA_REQUIRES(domain_token());
-
-  // Ring buffer interface
-  zx_status_t ProcessRingBufferChannel(Channel* channel) __TA_REQUIRES(domain_token());
 
   void DeactivateRingBufferChannel(const Channel* channel)
       __TA_REQUIRES(domain_token(), channel_lock_);
-
-  zx_status_t OnGetFifoDepth(Channel* channel, const audio_proto::RingBufGetFifoDepthReq& req)
-      __TA_REQUIRES(domain_token());
-
-  zx_status_t OnGetBuffer(Channel* channel, const audio_proto::RingBufGetBufferReq& req)
-      __TA_REQUIRES(domain_token());
-
-  zx_status_t OnStart(Channel* channel, const audio_proto::RingBufStartReq& req)
-      __TA_REQUIRES(domain_token());
-
-  zx_status_t OnStop(Channel* channel, const audio_proto::RingBufStopReq& req)
-      __TA_REQUIRES(domain_token());
-
-  void StreamChannelSignalled(async_dispatcher_t* dispatcher, async::WaitBase* wait,
-                              zx_status_t status, const zx_packet_signal_t* signal,
-                              StreamChannel* channel, bool privileged)
-      __TA_REQUIRES(domain_token());
-  void RingBufferSignalled(async_dispatcher_t* dispatcher, async::WaitBase* wait,
-                           zx_status_t status, const zx_packet_signal_t* signal, Channel* channel)
-      __TA_REQUIRES(domain_token());
 
   // Stream and ring buffer channel state.
   fbl::Mutex channel_lock_ __TA_ACQUIRED_AFTER(domain_token());
@@ -441,8 +430,6 @@ class SimpleAudioStream : public SimpleAudioStreamBase,
 
   fbl::DoublyLinkedList<fbl::RefPtr<StreamChannel>, StreamChannel::StreamChannelTrait>
       stream_channels_ __TA_GUARDED(channel_lock_);
-  fbl::DoublyLinkedList<fbl::RefPtr<StreamChannel>, StreamChannel::PlugNotifyTrait>
-      plug_notify_channels_ __TA_GUARDED(domain_token());
 
   // Plug capabilities default to hardwired, if not changed by a child class.
   zx_time_t plug_time_ __TA_GUARDED(domain_token()) = 0;
@@ -451,7 +438,15 @@ class SimpleAudioStream : public SimpleAudioStreamBase,
   bool rb_started_ __TA_GUARDED(domain_token()) = false;
   bool rb_fetched_ __TA_GUARDED(domain_token()) = false;
   bool is_shutdown_ = false;
+
+  // The server implementation is single threaded, however NotifyPosition() can be called from any
+  // thread. Hence to use expected_notifications_per_ring_ and position_completer_ within
+  // NotifyPosition() we make expected_notifications_per_ring_ atomic and protect
+  // position_completer_ with position_lock_.
   std::atomic<uint32_t> expected_notifications_per_ring_{0};
+  fbl::Mutex position_lock_;
+  std::optional<WatchClockRecoveryPositionInfoCompleter::Async> position_completer_
+      __TA_GUARDED(position_lock_);
   async::Loop loop_;
   Token domain_token_;
 };

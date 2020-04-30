@@ -5,7 +5,7 @@ driver protocols suitable for use in simple audio drivers where the codec and
 DAI functionality are contained in the same driver.
 
 It handles most of the boilerplate of publishing and shutting down devices,
-handling client connections, and serialization/de-serialization/validation of
+handling client connections, and FIDL-serialization/de-serialization/validation of
 protocol messages as well as enforcing some of the protocol state requirements.
 
 Generally speaking, users of the library should only need to subclass the

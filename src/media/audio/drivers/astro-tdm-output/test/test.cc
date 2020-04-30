@@ -7,7 +7,6 @@
 #include <lib/mock-i2c/mock-i2c.h>
 
 #include <audio-proto/audio-proto.h>
-#include <audio-utils/audio-output.h>
 #include <mock-mmio-reg/mock-mmio-reg.h>
 #include <mock/ddktl/protocol/gpio.h>
 #include <zxtest/zxtest.h>
@@ -17,11 +16,26 @@
 namespace audio {
 namespace astro {
 
+static constexpr uint32_t kTestFrameRate1 = 48000;
+static constexpr uint32_t kTestFrameRate2 = 96000;
+static constexpr uint8_t kTestNumberOfChannels = 2;
+static constexpr uint32_t kTestFifoDepth = 16;
+
 using ::llcpp::fuchsia::hardware::audio::Device;
 
+audio_fidl::PcmFormat GetDefaultPcmFormat() {
+  audio_fidl::PcmFormat format;
+  format.number_of_channels = 2;
+  format.channels_to_use_bitmask = 0x03;
+  format.sample_format = audio_fidl::SampleFormat::PCM_SIGNED;
+  format.frame_rate = kTestFrameRate1;
+  format.bytes_per_sample = 2;
+  format.valid_bits_per_sample = 16;
+  return format;
+}
+
 struct Tas27xxInitTest : Tas27xx {
-  Tas27xxInitTest(ddk::I2cChannel i2c, ddk::GpioProtocolClient ena,
-                      ddk::GpioProtocolClient fault)
+  Tas27xxInitTest(ddk::I2cChannel i2c, ddk::GpioProtocolClient ena, ddk::GpioProtocolClient fault)
       : Tas27xx(std::move(i2c), std::move(ena), std::move(fault), true, true) {}
 };
 
@@ -35,9 +49,7 @@ struct AstroAudioStreamOutCodecInitTest : public AstroAudioStreamOut {
     return codec_->Init(
         48000);  // Only init the Codec, not the rest of the audio stream initialization.
   }
-  void ShutdownHook() override {
-    codec_->HardwareShutdown();
-  }
+  void ShutdownHook() override { codec_->HardwareShutdown(); }
 };
 
 struct AmlTdmDeviceTest : public AmlTdmDevice {
@@ -65,30 +77,30 @@ TEST(AstroAudioStreamOutTest, CodecInitGood) {
 
   mock_i2c::MockI2c mock_i2c;
   mock_i2c
-    .ExpectWriteStop({0x01, 0x01}) //sw reset
-    .ExpectWriteStop({0x3c, 0x10}) //CLOCK_CFG
-    .ExpectWriteStop({0x0a, 0x07}) //SetRate
-    .ExpectWriteStop({0x0c, 0x12}) //TDM_CFG2
-    .ExpectWriteStop({0x0e, 0x02}) //TDM_CFG4
-    .ExpectWriteStop({0x0f, 0x44}) //TDM_CFG5
-    .ExpectWriteStop({0x10, 0x40}) //TDM_CFG6
-    .ExpectWrite({0x24}).ExpectReadStop({0x00}) //INT_LTCH0
-    .ExpectWrite({0x25}).ExpectReadStop({0x00}) //INT_LTCH1
-    .ExpectWrite({0x26}).ExpectReadStop({0x00}) //INT_LTCH2
-    .ExpectWriteStop({0x20, 0xf8})
-    .ExpectWriteStop({0x21, 0xff})
-    .ExpectWriteStop({0x30, 0x01})
-    .ExpectWriteStop({0x02, 0x00}) //Start()
-    .ExpectWrite({0x05}).ExpectReadStop({0x00}); //GetGain
+      .ExpectWriteStop({0x01, 0x01})  // sw reset
+      .ExpectWriteStop({0x3c, 0x10})  // CLOCK_CFG
+      .ExpectWriteStop({0x0a, 0x07})  // SetRate
+      .ExpectWriteStop({0x0c, 0x12})  // TDM_CFG2
+      .ExpectWriteStop({0x0e, 0x02})  // TDM_CFG4
+      .ExpectWriteStop({0x0f, 0x44})  // TDM_CFG5
+      .ExpectWriteStop({0x10, 0x40})  // TDM_CFG6
+      .ExpectWrite({0x24})
+      .ExpectReadStop({0x00})  // INT_LTCH0
+      .ExpectWrite({0x25})
+      .ExpectReadStop({0x00})  // INT_LTCH1
+      .ExpectWrite({0x26})
+      .ExpectReadStop({0x00})  // INT_LTCH2
+      .ExpectWriteStop({0x20, 0xf8})
+      .ExpectWriteStop({0x21, 0xff})
+      .ExpectWriteStop({0x30, 0x01})
+      .ExpectWriteStop({0x02, 0x00})  // Start()
+      .ExpectWrite({0x05})
+      .ExpectReadStop({0x00});  // GetGain
 
   ddk::MockGpio mock_ena;
   ddk::MockGpio mock_fault;
-  mock_ena
-    .ExpectWrite(ZX_OK, 0)
-    .ExpectWrite(ZX_OK, 1)
-    .ExpectWrite(ZX_OK, 0);
-  mock_fault
-    .ExpectGetInterrupt(ZX_OK, ZX_INTERRUPT_MODE_EDGE_LOW, std::move(irq));
+  mock_ena.ExpectWrite(ZX_OK, 0).ExpectWrite(ZX_OK, 1).ExpectWrite(ZX_OK, 0);
+  mock_fault.ExpectGetInterrupt(ZX_OK, ZX_INTERRUPT_MODE_EDGE_LOW, std::move(irq));
 
   auto codec = std::make_unique<Tas27xxInitTest>(mock_i2c.GetProto(), mock_ena.GetProto(),
                                                  mock_fault.GetProto());
@@ -111,15 +123,11 @@ TEST(AstroAudioStreamOutTest, CodecInitBad) {
   zx::interrupt::create(zx::resource(), 0, ZX_INTERRUPT_VIRTUAL, &irq);
 
   mock_i2c::MockI2c mock_i2c;
-  mock_i2c
-    .ExpectWriteStop({0x01, 0x01}, ZX_ERR_TIMED_OUT); //sw reset
+  mock_i2c.ExpectWriteStop({0x01, 0x01}, ZX_ERR_TIMED_OUT);  // sw reset
 
   ddk::MockGpio mock_ena;
   ddk::MockGpio mock_fault;
-  mock_ena
-    .ExpectWrite(ZX_OK, 0)
-    .ExpectWrite(ZX_OK, 1)
-    .ExpectWrite(ZX_OK, 0);
+  mock_ena.ExpectWrite(ZX_OK, 0).ExpectWrite(ZX_OK, 1).ExpectWrite(ZX_OK, 0);
 
   auto codec = std::make_unique<Tas27xxInitTest>(mock_i2c.GetProto(), mock_ena.GetProto(),
                                                  mock_fault.GetProto());
@@ -134,10 +142,6 @@ TEST(AstroAudioStreamOutTest, CodecInitBad) {
 }
 
 TEST(AstroAudioStreamOutTest, ChangeRate96K) {
-  static constexpr uint32_t kTestFrameRate1 = 48000;
-  static constexpr uint32_t kTestFrameRate2 = 96000;
-  static constexpr uint8_t kTestNumberOfChannels = 2;
-  static constexpr uint32_t kTestFifoDepth = 16;
   struct CodecRate96KTest : Tas27xx {
     CodecRate96KTest(ddk::I2cChannel i2c, ddk::GpioProtocolClient ena,
                      ddk::GpioProtocolClient fault)
@@ -180,8 +184,7 @@ TEST(AstroAudioStreamOutTest, ChangeRate96K) {
   fake_ddk::Bind tester;
   mock_i2c::MockI2c mock_i2c;
 
-  mock_i2c
-    .ExpectWriteStop({0x02, 0x0c}); //Start
+  mock_i2c.ExpectWriteStop({0x02, 0x0c});  // Start
 
   ddk::MockGpio enable_gpio;
   ddk::MockGpio fault_gpio;
@@ -194,16 +197,25 @@ TEST(AstroAudioStreamOutTest, ChangeRate96K) {
       audio::SimpleAudioStream::Create<Rate96KTest>(fake_ddk::kFakeParent, std::move(codec));
   ASSERT_NOT_NULL(server);
 
-  Device::SyncClient client(std::move(tester.FidlClient()));
-  Device::ResultOf::GetChannel channel_wrap = client.GetChannel();
+  Device::SyncClient client_wrap(std::move(tester.FidlClient()));
+  Device::ResultOf::GetChannel channel_wrap = client_wrap.GetChannel();
   ASSERT_EQ(channel_wrap.status(), ZX_OK);
 
-  // After we get the channel we use audio::utils serialization until we convert to FIDL.
-  auto channel_client = audio::utils::AudioOutput::Create(1);
-  channel_client->SetStreamChannel(std::move(channel_wrap->channel));
+  audio_fidl::StreamConfig::SyncClient client(std::move(channel_wrap->channel));
 
-  audio_sample_format_t format = AUDIO_SAMPLE_FORMAT_16BIT;
-  ASSERT_OK(channel_client->SetFormat(kTestFrameRate2, kTestNumberOfChannels, format));
+  zx::channel local, remote;
+  ASSERT_OK(zx::channel::create(0, &local, &remote));
+  audio_fidl::PcmFormat pcm_format = GetDefaultPcmFormat();
+  pcm_format.frame_rate = kTestFrameRate2;  // Change it from the default at 48kHz.
+  fidl::aligned<audio_fidl::PcmFormat> aligned_pcm_format = std::move(pcm_format);
+  auto builder = audio_fidl::Format::UnownedBuilder();
+  builder.set_pcm_format(fidl::unowned_ptr(&aligned_pcm_format));
+  client.CreateRingBuffer(builder.build(), std::move(remote));
+
+  // To make sure we have initialized in the server make a sync call
+  // (we know the server is single threaded, initialization is completed if received a reply).
+  auto props = audio_fidl::RingBuffer::Call::GetProperties(zx::unowned_channel(local));
+  ASSERT_OK(props.status());
 
   server->DdkUnbindDeprecated();
   EXPECT_TRUE(tester.Ok());

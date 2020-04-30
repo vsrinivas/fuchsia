@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/async/dispatcher.h>
+#include <lib/fidl-async/cpp/async_bind.h>
 #include <lib/simple-audio-stream/simple-audio-stream.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/process.h>
@@ -27,7 +29,6 @@ void SimpleAudioStream::Shutdown() {
       fbl::AutoLock channel_lock(&channel_lock_);
       DeactivateRingBufferChannel(rb_channel_.get());
 
-      plug_notify_channels_.clear();
       stream_channels_.clear();
       stream_channel_ = nullptr;
     }
@@ -57,6 +58,7 @@ zx_status_t SimpleAudioStream::CreateInternal() {
   }
 
   // TODO(37372): Add profile configuration.
+  // This single threaded dispatcher serializes the FIDL server implementation by this class.
   loop_.StartThread("simple-audio-stream-loop");
 
   res = PublishInternal();
@@ -122,17 +124,17 @@ zx_status_t SimpleAudioStream::SetPlugState(bool plugged) {
 
 // Asynchronously notify of plug state changes.
 zx_status_t SimpleAudioStream::NotifyPlugDetect() {
-  audio_proto::PlugDetectNotify notif;
+  auto builder = audio_fidl::PlugState::UnownedBuilder();
+  fidl::aligned<bool> plugged = pd_flags_ & AUDIO_PDNF_PLUGGED;
+  builder.set_plugged(fidl::unowned_ptr(&plugged));
+  builder.set_plug_state_time(fidl::unowned_ptr(&plug_time_));
 
-  notif.hdr.transaction_id = AUDIO_INVALID_TRANSACTION_ID;
-  notif.hdr.cmd = AUDIO_STREAM_PLUG_DETECT_NOTIFY;
-
-  notif.flags = pd_flags_;
-  notif.plug_state_time = plug_time_;
-
-  for (auto& channel : plug_notify_channels_) {
-    // Any error also triggers ChannelClosedHandler; no need to handle it here.
-    (void)channel.Write(&notif, sizeof(notif));
+  fbl::AutoLock channel_lock(&channel_lock_);
+  for (auto& channel : stream_channels_) {
+    if (channel.plug_completer_) {
+      channel.plug_completer_->Reply(builder.build());
+      channel.plug_completer_.reset();
+    }
   }
   return ZX_OK;
 }
@@ -142,8 +144,16 @@ zx_status_t SimpleAudioStream::NotifyPosition(const audio_proto::RingBufPosition
   if (!expected_notifications_per_ring_.load() || (rb_channel_ == nullptr)) {
     return ZX_ERR_BAD_STATE;
   }
+  audio_fidl::RingBufferPositionInfo position_info = {};
+  position_info.position = notif.ring_buffer_pos;
+  position_info.timestamp = notif.monotonic_time;
 
-  return rb_channel_->Write(&notif, sizeof(notif));
+  fbl::AutoLock position_lock(&position_lock_);
+  if (position_completer_) {
+    position_completer_->Reply(position_info);
+    position_completer_.reset();
+  }
+  return ZX_OK;
 }
 
 void SimpleAudioStream::DdkUnbindDeprecated() {
@@ -184,24 +194,20 @@ void SimpleAudioStream::GetChannel(GetChannelCompleter::Sync completer) {
     return;
   }
 
-  auto stream_channel = StreamChannel::Create<StreamChannel>(std::move(stream_channel_local));
+  auto stream_channel = StreamChannel::Create<StreamChannel>(this);
   // We keep alive all channels in stream_channels_ (protected by channel_lock_).
   stream_channels_.push_back(stream_channel);
-  // We only use the channels outside channel_lock_ when passing it into the channel handler
-  // below, this handler processing is protected by the domain.
-  stream_channel->SetHandler([stream = fbl::RefPtr(this), channel = stream_channel.get(),
-                              privileged](async_dispatcher_t* dispatcher, async::WaitBase* wait,
-                                          zx_status_t status, const zx_packet_signal_t* signal) {
-    ScopedToken t(stream->domain_token());
-    stream->StreamChannelSignalled(dispatcher, wait, status, signal, channel, privileged);
-  });
-  status = stream_channel->BeginWait(loop_.dispatcher());
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "Could not begin wait in %s", __PRETTY_FUNCTION__);
-    completer.Close(ZX_ERR_NO_MEMORY);
-    // We let stream_channel_remote go out of scope to trigger channel deactivation via peer close.
-    return;
-  }
+  fidl::OnUnboundFn<audio_fidl::StreamConfig::Interface> on_unbound =
+      [this, stream_channel](audio_fidl::StreamConfig::Interface* server,
+                             fidl::UnboundReason reason, zx_status_t status, zx::channel channel) {
+        ScopedToken t(domain_token());
+        fbl::AutoLock channel_lock(&channel_lock_);
+        this->DeactivateStreamChannel(stream_channel.get());
+      };
+
+  fidl::AsyncBind<audio_fidl::StreamConfig::Interface>(
+      dispatcher(), std::move(stream_channel_local), stream_channel.get(), std::move(on_unbound));
+
   if (privileged) {
     ZX_DEBUG_ASSERT(stream_channel_ == nullptr);
     stream_channel_ = stream_channel;
@@ -209,136 +215,23 @@ void SimpleAudioStream::GetChannel(GetChannelCompleter::Sync completer) {
   completer.Reply(std::move(stream_channel_remote));
 }
 
-void SimpleAudioStream::StreamChannelSignalled(async_dispatcher_t* dispatcher,
-                                               async::WaitBase* wait, zx_status_t status,
-                                               const zx_packet_signal_t* signal,
-                                               StreamChannel* channel, bool privileged) {
-  if (status != ZX_OK) {
-    if (status != ZX_ERR_CANCELED) {  // Cancel is expected.
-      zxlogf(ERROR, "%s handler error %d", __PRETTY_FUNCTION__, status);
-    }
-    return;
-  }
-  bool readable_asserted = signal->observed & ZX_CHANNEL_READABLE;
-  bool peer_closed_asserted = signal->observed & ZX_CHANNEL_PEER_CLOSED;
-  if (readable_asserted) {
-    zx_status_t status = ProcessStreamChannel(channel, privileged);
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "%s processing stream channel error %d", __PRETTY_FUNCTION__, status);
-      return;
-    }
-    if (!peer_closed_asserted) {
-      wait->Begin(dispatcher);
-    }
-  }
-  if (peer_closed_asserted) {
-    fbl::AutoLock channel_lock(&this->channel_lock_);
-    DeactivateStreamChannel(channel);
-  }
-}
-
-#define HREQ(_cmd, _payload, _handler, _allow_noack, ...)                    \
-  case _cmd:                                                                 \
-    if (req_size != sizeof(req._payload)) {                                  \
-      zxlogf(ERROR, "Bad " #_cmd " response length (%u != %zu)", req_size, \
-             sizeof(req._payload));                                          \
-      return ZX_ERR_INVALID_ARGS;                                            \
-    }                                                                        \
-    if (!_allow_noack && (req.hdr.cmd & AUDIO_FLAG_NO_ACK)) {                \
-      zxlogf(ERROR, "NO_ACK flag not allowed for " #_cmd "");              \
-      return ZX_ERR_INVALID_ARGS;                                            \
-    }                                                                        \
-    return _handler(std::move(channel), req._payload, ##__VA_ARGS__);
-
-zx_status_t SimpleAudioStream::ProcessStreamChannel(StreamChannel* channel, bool privileged) {
-  union {
-    audio_proto::CmdHdr hdr;
-    audio_proto::StreamGetFmtsReq get_formats;
-    audio_proto::StreamSetFmtReq set_format;
-    audio_proto::GetClockDomainReq get_clock_domain;
-    audio_proto::GetGainReq get_gain;
-    audio_proto::SetGainReq set_gain;
-    audio_proto::PlugDetectReq plug_detect;
-    audio_proto::GetUniqueIdReq get_unique_id;
-    audio_proto::GetStringReq get_string;
-  } req;
-
-  static_assert(sizeof(req) <= 256,
-                "Request buffer is getting to be too large to hold on the stack!");
-
-  uint32_t req_size;
-  zx_status_t res = channel->Read(&req, sizeof(req), &req_size);
-  if (res != ZX_OK)
-    return res;
-
-  if ((req_size < sizeof(req.hdr) || (req.hdr.transaction_id == AUDIO_INVALID_TRANSACTION_ID))) {
-    zxlogf(ERROR, "Bad request in %s", __PRETTY_FUNCTION__);
-    return ZX_ERR_INVALID_ARGS;
-  }
-
-  // Strip the NO_ACK flag from the request before selecting the dispatch target.
-  auto cmd = static_cast<audio_proto::Cmd>(req.hdr.cmd & ~AUDIO_FLAG_NO_ACK);
-  switch (cmd) {
-    HREQ(AUDIO_STREAM_CMD_GET_FORMATS, get_formats, OnGetStreamFormats, false);
-    HREQ(AUDIO_STREAM_CMD_SET_FORMAT, set_format, OnSetStreamFormat, false, privileged);
-    HREQ(AUDIO_STREAM_CMD_GET_CLOCK_DOMAIN, get_clock_domain, OnGetClockDomain, false);
-    HREQ(AUDIO_STREAM_CMD_GET_GAIN, get_gain, OnGetGain, false);
-    HREQ(AUDIO_STREAM_CMD_SET_GAIN, set_gain, OnSetGain, true);
-    HREQ(AUDIO_STREAM_CMD_PLUG_DETECT, plug_detect, OnPlugDetect, true);
-    HREQ(AUDIO_STREAM_CMD_GET_UNIQUE_ID, get_unique_id, OnGetUniqueId, false);
-    HREQ(AUDIO_STREAM_CMD_GET_STRING, get_string, OnGetString, false);
-    default:
-      zxlogf(ERROR, "Unrecognized stream command 0x%04x", req.hdr.cmd);
-      return ZX_ERR_NOT_SUPPORTED;
-  }
-}
-
-zx_status_t SimpleAudioStream::ProcessRingBufferChannel(Channel* channel) {
-  ZX_DEBUG_ASSERT(channel != nullptr);
-
-  union {
-    audio_proto::CmdHdr hdr;
-    audio_proto::RingBufGetFifoDepthReq get_fifo_depth;
-    audio_proto::RingBufGetBufferReq get_buffer;
-    audio_proto::RingBufStartReq rb_start;
-    audio_proto::RingBufStopReq rb_stop;
-  } req;
-
-  static_assert(sizeof(req) <= 256,
-                "Request buffer is getting to be too large to hold on the stack!");
-
-  uint32_t req_size;
-  zx_status_t res = channel->Read(&req, sizeof(req), &req_size);
-  if (res != ZX_OK)
-    return res;
-
-  if ((req_size < sizeof(req.hdr) || (req.hdr.transaction_id == AUDIO_INVALID_TRANSACTION_ID))) {
-    zxlogf(ERROR, "Bad request in %s", __PRETTY_FUNCTION__);
-    return ZX_ERR_INVALID_ARGS;
-  }
-
-  // Strip the NO_ACK flag from the request before selecting the dispatch target.
-  auto cmd = static_cast<audio_proto::Cmd>(req.hdr.cmd & ~AUDIO_FLAG_NO_ACK);
-  switch (cmd) {
-    HREQ(AUDIO_RB_CMD_GET_FIFO_DEPTH, get_fifo_depth, OnGetFifoDepth, false);
-    HREQ(AUDIO_RB_CMD_GET_BUFFER, get_buffer, OnGetBuffer, false);
-    HREQ(AUDIO_RB_CMD_START, rb_start, OnStart, false);
-    HREQ(AUDIO_RB_CMD_STOP, rb_stop, OnStop, false);
-    default:
-      zxlogf(ERROR, "Unrecognized ring buffer command 0x%04x", req.hdr.cmd);
-      return ZX_ERR_NOT_SUPPORTED;
-  }
-}
-#undef HREQ
-
 void SimpleAudioStream::DeactivateStreamChannel(StreamChannel* channel) {
   if (stream_channel_.get() == channel) {
     stream_channel_ = nullptr;
   }
 
-  if (channel->in_plug_notify_list()) {
-    plug_notify_channels_.erase(*channel);
+  // Any pending LLCPP completer must be either replied to or closed before we destroy it.
+  if (channel->plug_completer_.has_value()) {
+    channel->plug_completer_->Close(ZX_ERR_INTERNAL);
   }
+  channel->plug_completer_.reset();
+
+  // Any pending LLCPP completer must be either replied to or closed before we destroy it.
+  if (channel->gain_completer_.has_value()) {
+    channel->gain_completer_->Close(ZX_ERR_INTERNAL);
+  }
+  channel->gain_completer_.reset();
+
   stream_channels_.erase(*channel);  // Must be last since we may destruct *channel.
 }
 
@@ -350,70 +243,73 @@ void SimpleAudioStream::DeactivateRingBufferChannel(const Channel* channel) {
     }
     rb_fetched_ = false;
     expected_notifications_per_ring_.store(0);
+    {
+      fbl::AutoLock position_lock(&position_lock_);
+      // Any pending LLCPP completer must be either replied to or closed before we destroy it.
+      if (position_completer_.has_value()) {
+        position_completer_->Close(ZX_ERR_INTERNAL);
+      }
+      position_completer_.reset();
+    }
     rb_channel_ = nullptr;
   }
 }
 
-zx_status_t SimpleAudioStream::OnGetStreamFormats(StreamChannel* channel,
-                                                  const audio_proto::StreamGetFmtsReq& req) const {
-  ZX_DEBUG_ASSERT(channel != nullptr);
-  uint16_t formats_sent = 0;
-  audio_proto::StreamGetFmtsResp resp = {};
-
-  if (supported_formats_.size() > std::numeric_limits<uint16_t>::max()) {
-    zxlogf(ERROR, "Too many formats (%zu) to send during AUDIO_STREAM_CMD_GET_FORMATS request!",
-           supported_formats_.size());
-    return ZX_ERR_INTERNAL;
-  }
-
-  resp.hdr = req.hdr;
-  resp.format_range_count = static_cast<uint16_t>(supported_formats_.size());
-
-  do {
-    uint16_t todo, payload_sz;
-    zx_status_t res;
-
-    todo = fbl::min<uint16_t>(static_cast<uint16_t>(supported_formats_.size() - formats_sent),
-                              AUDIO_STREAM_CMD_GET_FORMATS_MAX_RANGES_PER_RESPONSE);
-    payload_sz = static_cast<uint16_t>(sizeof(resp.format_ranges[0]) * todo);
-
-    resp.first_format_range_ndx = formats_sent;
-    ::memcpy(resp.format_ranges, supported_formats_.data() + formats_sent, payload_sz);
-
-    res = channel->Write(&resp, sizeof(resp));
-    if (res != ZX_OK) {
-      zxlogf(ERROR, "Failed to send get stream formats response (res %d)", res);
-      return res;
-    }
-
-    formats_sent = (uint16_t)(formats_sent + todo);
-  } while (formats_sent < supported_formats_.size());
-
-  return ZX_OK;
-}
-
-zx_status_t SimpleAudioStream::OnSetStreamFormat(StreamChannel* channel,
-                                                 const audio_proto::StreamSetFmtReq& req,
-                                                 bool privileged) {
-  ZX_DEBUG_ASSERT(channel != nullptr);
+void SimpleAudioStream::CreateRingBuffer(
+    StreamChannel* channel, audio_fidl::Format format, zx::channel ring_buffer,
+    audio_fidl::StreamConfig::Interface::CreateRingBufferCompleter::Sync completer) {
+  ScopedToken t(domain_token());
   zx::channel rb_channel_local;
   zx::channel rb_channel_remote;
-
-  audio_proto::StreamSetFmtResp resp = {};
   bool found_one = false;
-  resp.hdr = req.hdr;
+
+  // On errors we call Close() and ring_buffer goes out of scope closing the channel.
 
   // Only the privileged stream channel is allowed to change the format.
-  if (!privileged) {
-    zxlogf(ERROR, "Unprivileged channel cannot SetStreamFormat");
-    resp.result = ZX_ERR_ACCESS_DENIED;
-    goto finished;
+  {
+    fbl::AutoLock channel_lock(&channel_lock_);
+    if (channel != stream_channel_.get()) {
+      zxlogf(ERROR, "Unprivileged channel cannot set the format");
+      completer.Close(ZX_ERR_INVALID_ARGS);
+      return;
+    }
+  }
+
+  auto format_v1 = format.pcm_format();
+  audio_sample_format_t sample_format = audio::utils::GetSampleFormat(
+      format_v1.valid_bits_per_sample, 8 * format_v1.bytes_per_sample);
+
+  if (sample_format == 0) {
+    zxlogf(ERROR, "Unsupported format: Invalid bits per sample (%u/%u)\n",
+           format_v1.valid_bits_per_sample, 8 * format_v1.bytes_per_sample);
+    completer.Close(ZX_ERR_INVALID_ARGS);
+    return;
+  }
+
+  if (format_v1.sample_format == audio_fidl::SampleFormat::PCM_FLOAT) {
+    sample_format = AUDIO_SAMPLE_FORMAT_32BIT_FLOAT;
+    if (format_v1.valid_bits_per_sample != 32 || format_v1.bytes_per_sample != 4) {
+      zxlogf(ERROR, "Unsupported format: Not 32 per sample/channel for float\n");
+      completer.Close(ZX_ERR_INVALID_ARGS);
+      return;
+    }
+  }
+
+  if (format_v1.sample_format == audio_fidl::SampleFormat::PCM_UNSIGNED) {
+    sample_format |= AUDIO_SAMPLE_FORMAT_FLAG_UNSIGNED;
+  }
+
+  if (format_v1.channels_to_use_bitmask != ((1 << format_v1.number_of_channels) - 1)) {
+    zxlogf(ERROR, "Unsupported format: Not all channels enabled");
+    completer.Close(ZX_ERR_INVALID_ARGS);
+    return;
   }
 
   // Check the format for compatibility
   for (const auto& fmt : supported_formats_) {
-    if (audio::utils::FormatIsCompatible(req.frames_per_second, req.channels, req.sample_format,
-                                         fmt)) {
+    if (audio::utils::FormatIsCompatible(format_v1.frame_rate,
+                                         static_cast<uint16_t>(format_v1.number_of_channels),
+                                         sample_format, fmt)) {
       found_one = true;
       break;
     }
@@ -421,17 +317,18 @@ zx_status_t SimpleAudioStream::OnSetStreamFormat(StreamChannel* channel,
 
   if (!found_one) {
     zxlogf(ERROR, "Could not find a suitable format in %s", __PRETTY_FUNCTION__);
-    resp.result = ZX_ERR_INVALID_ARGS;
-    goto finished;
+    completer.Close(ZX_ERR_INVALID_ARGS);
+    return;
   }
 
   // Determine the frame size.
-  frame_size_ = audio::utils::ComputeFrameSize(req.channels, req.sample_format);
+  frame_size_ = audio::utils::ComputeFrameSize(static_cast<uint16_t>(format_v1.number_of_channels),
+                                               sample_format);
   if (!frame_size_) {
-    zxlogf(ERROR, "Failed to compute frame size (ch %hu fmt 0x%08x)", req.channels,
-           req.sample_format);
-    resp.result = ZX_ERR_INTERNAL;
-    goto finished;
+    zxlogf(ERROR, "Failed to compute frame size (ch %hu fmt 0x%08x)", format_v1.number_of_channels,
+           sample_format);
+    completer.Close(ZX_ERR_INVALID_ARGS);
+    return;
   }
 
   // Looks like we are going ahead with this format change.  Tear down any
@@ -444,274 +341,355 @@ zx_status_t SimpleAudioStream::OnSetStreamFormat(StreamChannel* channel,
     }
   }
 
+  audio_stream_cmd_set_format_req_t req = {};
+  req.frames_per_second = format_v1.frame_rate;
+  req.sample_format = sample_format;
+  req.channels = static_cast<uint16_t>(format_v1.number_of_channels);
+
   // Actually attempt to change the format.
-  resp.result = ChangeFormat(req);
-  if (resp.result != ZX_OK) {
+  auto result = ChangeFormat(req);
+  if (result != ZX_OK) {
     zxlogf(ERROR, "Could not ChangeFormat in %s", __PRETTY_FUNCTION__);
-    goto finished;
-  }
-
-  // Create a new ring buffer channel which can be used to move bulk data and
-  // bind it to us.
-  resp.result = zx::channel::create(0, &rb_channel_local, &rb_channel_remote);
-  if (resp.result != ZX_OK) {
-    zxlogf(ERROR, "Could not create channel in %s", __PRETTY_FUNCTION__);
-    goto finished;
-  }
-  {
-    fbl::AutoLock channel_lock(&channel_lock_);
-    rb_channel_ = Channel::Create<Channel>(std::move(rb_channel_local));
-    // We only use the rb_channel outside channel_lock_ when passing it into the channel handler
-    // below, this handler processing is protected by the domain.
-    rb_channel_->SetHandler([stream = fbl::RefPtr(this), channel = rb_channel_.get()](
-                                async_dispatcher_t* dispatcher, async::WaitBase* wait,
-                                zx_status_t status, const zx_packet_signal_t* signal) {
-      ScopedToken t(stream->domain_token());
-      stream->RingBufferSignalled(dispatcher, wait, status, signal, channel);
-    });
-    resp.result = rb_channel_->BeginWait(loop_.dispatcher());
-    if (resp.result != ZX_OK) {
-      zxlogf(ERROR, "Could not begin wait %s", __PRETTY_FUNCTION__);
-      // We let rb_channel_remote go out of scope to trigger channel deactivation via closing.
-    }
-  }
-finished:
-  if (resp.result == ZX_OK) {
-    resp.external_delay_nsec = external_delay_nsec_;
-    return channel->Write(&resp, sizeof(resp), std::move(rb_channel_remote));
-  } else {
-    return channel->Write(&resp, sizeof(resp));
-  }
-}
-
-void SimpleAudioStream::RingBufferSignalled(async_dispatcher_t* dispatcher, async::WaitBase* wait,
-                                            zx_status_t status, const zx_packet_signal_t* signal,
-                                            Channel* channel) {
-  if (status != ZX_OK) {
-    if (status != ZX_ERR_CANCELED) {  // Cancel is expected.
-      zxlogf(ERROR, "%s handler error %d", __PRETTY_FUNCTION__, status);
-    }
+    completer.Close(ZX_ERR_INVALID_ARGS);
     return;
   }
-  bool readable_asserted = signal->observed & ZX_CHANNEL_READABLE;
-  bool peer_closed_asserted = signal->observed & ZX_CHANNEL_PEER_CLOSED;
-  if (readable_asserted) {
-    {
-      zx_status_t status = ProcessRingBufferChannel(channel);
-      if (status != ZX_OK) {
-        zxlogf(ERROR, "%s processing ring buffer channel error %d", __PRETTY_FUNCTION__, status);
-        return;
-      }
-    }
-    if (!peer_closed_asserted) {
-      wait->Begin(dispatcher);
-    }
-  }
-  if (peer_closed_asserted) {
-    fbl::AutoLock channel_lock(&channel_lock_);
-    DeactivateRingBufferChannel(rb_channel_.get());
-    ZX_DEBUG_ASSERT(rb_channel_ == nullptr);
-  }
-}
-
-zx_status_t SimpleAudioStream::OnGetGain(StreamChannel* channel,
-                                         const audio_proto::GetGainReq& req) const {
-  audio_proto::GetGainResp resp = cur_gain_state_;
-  resp.hdr = req.hdr;
-  return channel->Write(&resp, sizeof(resp));
-}
-
-zx_status_t SimpleAudioStream::OnSetGain(StreamChannel* channel,
-                                         const audio_proto::SetGainReq& req) {
-  audio_proto::SetGainResp resp;
-  resp.hdr = req.hdr;
-
-  // Sanity check the request before passing it along
-  if ((req.flags & AUDIO_SGF_MUTE_VALID) && (req.flags & AUDIO_SGF_MUTE) &&
-      !cur_gain_state_.can_mute) {
-    resp.result = ZX_ERR_NOT_SUPPORTED;
-    goto finished;
-  }
-
-  if ((req.flags & AUDIO_SGF_AGC_VALID) && (req.flags & AUDIO_SGF_AGC) &&
-      !cur_gain_state_.can_agc) {
-    resp.result = ZX_ERR_NOT_SUPPORTED;
-    goto finished;
-  }
-
-  if ((req.flags & AUDIO_SGF_GAIN_VALID) &&
-      ((req.gain < cur_gain_state_.min_gain) || (req.gain > cur_gain_state_.max_gain))) {
-    resp.result = ZX_ERR_INVALID_ARGS;
-    goto finished;
-  }
-
-  resp.result = SetGain(req);
-
-finished:
-  resp.cur_mute = cur_gain_state_.cur_mute;
-  resp.cur_agc = cur_gain_state_.cur_agc;
-  resp.cur_gain = cur_gain_state_.cur_gain;
-  return (req.hdr.cmd & AUDIO_FLAG_NO_ACK) ? ZX_OK : channel->Write(&resp, sizeof(resp));
-}
-
-// Called when receiving a AUDIO_STREAM_CMD_PLUG_DETECT message from a client.
-zx_status_t SimpleAudioStream::OnPlugDetect(StreamChannel* channel,
-                                            const audio_proto::PlugDetectReq& req) {
-  // It should never be the case that both bits are set -- but if so, DISABLE notifications.
-  bool disable = ((req.flags & AUDIO_PDF_DISABLE_NOTIFICATIONS) != 0);
-  bool enable = ((req.flags & AUDIO_PDF_ENABLE_NOTIFICATIONS) != 0) && !disable;
 
   {
     fbl::AutoLock channel_lock(&channel_lock_);
-    if (enable) {
-      if (plug_notify_channels_.is_empty()) {
-        EnableAsyncNotification(true);
-      }
-      if (!channel->in_plug_notify_list()) {
-        plug_notify_channels_.push_back(fbl::RefPtr(channel));
-      }
-    } else if (disable) {
-      if (channel->in_plug_notify_list()) {
-        plug_notify_channels_.erase(*channel);
-      }
-      if (plug_notify_channels_.is_empty()) {
-        EnableAsyncNotification(false);
-      }
+    rb_channel_ = Channel::Create<Channel>();
+
+    fidl::OnUnboundFn<audio_fidl::RingBuffer::Interface> on_unbound =
+        [this](audio_fidl::RingBuffer::Interface* server, fidl::UnboundReason reason,
+               zx_status_t status, zx::channel channel) {
+          ScopedToken t(domain_token());
+          fbl::AutoLock channel_lock(&channel_lock_);
+          this->DeactivateRingBufferChannel(rb_channel_.get());
+        };
+
+    fidl::AsyncBind<audio_fidl::RingBuffer::Interface>(dispatcher(), std::move(ring_buffer), this,
+                                                       std::move(on_unbound));
+  }
+}
+
+void SimpleAudioStream::WatchGainState(StreamChannel* channel,
+                                       StreamChannel::WatchGainStateCompleter::Sync completer) {
+  ZX_ASSERT(!channel->gain_completer_);
+  channel->gain_completer_ = completer.ToAsync();
+
+  ScopedToken t(domain_token());
+  // Reply is delayed if there is no change since the last reported gain state.
+  // TODO(andresoportus): Create a type with default <=> in C++20, or just defined ==.
+  if (channel->last_reported_gain_state_.cur_gain != cur_gain_state_.cur_gain ||
+      channel->last_reported_gain_state_.cur_mute != cur_gain_state_.cur_mute ||
+      channel->last_reported_gain_state_.cur_agc != cur_gain_state_.cur_agc ||
+      channel->last_reported_gain_state_.can_mute != cur_gain_state_.can_mute ||
+      channel->last_reported_gain_state_.can_agc != cur_gain_state_.can_agc ||
+      channel->last_reported_gain_state_.min_gain != cur_gain_state_.min_gain ||
+      channel->last_reported_gain_state_.max_gain != cur_gain_state_.max_gain ||
+      channel->last_reported_gain_state_.gain_step != cur_gain_state_.gain_step) {
+    auto builder = audio_fidl::GainState::UnownedBuilder();
+    fidl::aligned<bool> mute = cur_gain_state_.cur_mute;
+    fidl::aligned<bool> agc = cur_gain_state_.cur_agc;
+    fidl::aligned<float> gain = cur_gain_state_.cur_gain;
+    if (cur_gain_state_.can_mute) {
+      builder.set_muted(fidl::unowned_ptr(&mute));
+    }
+    if (cur_gain_state_.can_agc) {
+      builder.set_agc_enabled(fidl::unowned_ptr(&agc));
+    }
+    builder.set_gain_db(fidl::unowned_ptr(&gain));
+    channel->last_reported_gain_state_ = cur_gain_state_;
+    channel->gain_completer_->Reply(builder.build());
+    channel->gain_completer_.reset();
+  }
+}
+
+void SimpleAudioStream::WatchPlugState(StreamChannel* channel,
+                                       StreamChannel::WatchPlugStateCompleter::Sync completer) {
+  ZX_ASSERT(!channel->plug_completer_);
+  channel->plug_completer_ = completer.ToAsync();
+
+  ScopedToken t(domain_token());
+  fidl::aligned<bool> plugged = pd_flags_ & AUDIO_PDNF_PLUGGED;
+  // Reply is delayed if there is no change since the last reported plugged state.
+  if (channel->last_reported_plugged_state_ == StreamChannel::Plugged::kNotReported ||
+      (channel->last_reported_plugged_state_ == StreamChannel::Plugged::kPlugged) != plugged) {
+    auto builder = audio_fidl::PlugState::UnownedBuilder();
+    builder.set_plugged(fidl::unowned_ptr(&plugged));
+    fidl::aligned<zx_time_t> plug_time = plug_time_;
+    builder.set_plug_state_time(fidl::unowned_ptr(&plug_time));
+    channel->last_reported_plugged_state_ =
+        plugged ? StreamChannel::Plugged::kPlugged : StreamChannel::Plugged::kUnplugged;
+    channel->plug_completer_->Reply(builder.build());
+    channel->plug_completer_.reset();
+  }
+}
+
+void SimpleAudioStream::WatchClockRecoveryPositionInfo(
+    WatchClockRecoveryPositionInfoCompleter::Sync completer) {
+  fbl::AutoLock position_lock(&position_lock_);
+  position_completer_ = completer.ToAsync();
+}
+
+void SimpleAudioStream::SetGain(audio_fidl::GainState target_state,
+                                StreamChannel::SetGainCompleter::Sync completer) {
+  ScopedToken t(domain_token());
+  audio_stream_cmd_set_gain_req_t req = {};
+
+  // Sanity check the request before passing it along
+  if (target_state.has_muted() && target_state.muted() && !cur_gain_state_.can_mute) {
+    zxlogf(ERROR, "Can't mute\n");
+    return;
+  }
+
+  if (target_state.has_agc_enabled() && target_state.agc_enabled() && !cur_gain_state_.can_agc) {
+    zxlogf(ERROR, "Can't enable AGC\n");
+    return;
+  }
+
+  if (target_state.has_gain_db() && ((target_state.gain_db() < cur_gain_state_.min_gain) ||
+                                     (target_state.gain_db() > cur_gain_state_.max_gain))) {
+    zxlogf(ERROR, "Can't set gain outside valid range\n");
+    return;
+  }
+
+  if (target_state.has_muted()) {
+    req.flags |= AUDIO_SGF_MUTE_VALID;
+    if (target_state.muted()) {
+      req.flags |= AUDIO_SGF_MUTE;
     }
   }
-
-  if (req.hdr.cmd & AUDIO_FLAG_NO_ACK) {
-    return ZX_OK;
+  if (target_state.has_agc_enabled()) {
+    req.flags |= AUDIO_SGF_AGC_VALID;
+    if (target_state.agc_enabled()) {
+      req.flags |= AUDIO_SGF_AGC;
+    }
+  }
+  if (target_state.has_gain_db()) {
+    req.flags |= AUDIO_SGF_GAIN_VALID;
+    req.gain = target_state.gain_db();
+  }
+  auto status = SetGain(req);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Could not set gain state %d\n", status);
+    return;
   }
 
-  audio_proto::PlugDetectResp resp = {};
-  resp.hdr = req.hdr;
-  resp.flags = pd_flags_;
-  resp.plug_state_time = plug_time_;
-
-  return channel->Write(&resp, sizeof(resp));
+  fbl::AutoLock channel_lock(&channel_lock_);
+  for (auto& channel : stream_channels_) {
+    if (channel.gain_completer_) {
+      channel.gain_completer_->Reply(std::move(target_state));
+      channel.gain_completer_.reset();
+    }
+  }
 }
 
-zx_status_t SimpleAudioStream::OnGetUniqueId(StreamChannel* channel,
-                                             const audio_proto::GetUniqueIdReq& req) const {
-  audio_proto::GetUniqueIdResp resp;
-
-  resp.hdr = req.hdr;
-  resp.unique_id = unique_id_;
-
-  return channel->Write(&resp, sizeof(resp));
+void SimpleAudioStream::GetProperties(
+    audio_fidl::StreamConfig::Interface::GetPropertiesCompleter::Sync completer) {
+  ScopedToken t(domain_token());
+  auto builder = audio_fidl::StreamProperties::UnownedBuilder();
+  fidl::Array<uint8_t, audio_fidl::UNIQUE_ID_SIZE> unique_id = {};
+  for (size_t i = 0; i < audio_fidl::UNIQUE_ID_SIZE; ++i) {
+    unique_id.data_[i] = unique_id_.data[i];
+  }
+  fidl::aligned<fidl::Array<uint8_t, audio_fidl::UNIQUE_ID_SIZE>> aligned_unique_id = unique_id;
+  builder.set_unique_id(fidl::unowned_ptr(&aligned_unique_id));
+  fidl::aligned<bool> input = is_input();
+  builder.set_is_input(fidl::unowned_ptr(&input));
+  fidl::aligned<bool> mute = cur_gain_state_.can_mute;
+  builder.set_can_mute(fidl::unowned_ptr(&mute));
+  fidl::aligned<bool> agc = cur_gain_state_.can_agc;
+  builder.set_can_agc(fidl::unowned_ptr(&agc));
+  fidl::aligned<float> min_gain = cur_gain_state_.min_gain;
+  builder.set_min_gain_db(fidl::unowned_ptr(&min_gain));
+  fidl::aligned<float> max_gain = cur_gain_state_.max_gain;
+  builder.set_max_gain_db(fidl::unowned_ptr(&max_gain));
+  fidl::aligned<float> gain_step = cur_gain_state_.gain_step;
+  builder.set_gain_step_db(fidl::unowned_ptr(&gain_step));
+  fidl::StringView product(prod_name_, strlen(prod_name_));
+  builder.set_product(fidl::unowned_ptr(&product));
+  fidl::StringView manufacturer(mfr_name_, strlen(mfr_name_));
+  builder.set_manufacturer(fidl::unowned_ptr(&manufacturer));
+  fidl::aligned<uint32_t> domain = clock_domain_;
+  builder.set_clock_domain(fidl::unowned_ptr(&domain));
+  fidl::aligned<audio_fidl::PlugDetectCapabilities> cap;
+  if (pd_flags_ & AUDIO_PDNF_CAN_NOTIFY) {
+    cap = audio_fidl::PlugDetectCapabilities::CAN_ASYNC_NOTIFY;
+    builder.set_plug_detect_capabilities(fidl::unowned_ptr(&cap));
+  } else if (pd_flags_ & AUDIO_PDNF_HARDWIRED) {
+    cap = audio_fidl::PlugDetectCapabilities::HARDWIRED;
+    builder.set_plug_detect_capabilities(fidl::unowned_ptr(&cap));
+  }
+  completer.Reply(builder.build());
 }
 
-zx_status_t SimpleAudioStream::OnGetString(StreamChannel* channel,
-                                           const audio_proto::GetStringReq& req) const {
-  audio_proto::GetStringResp resp;
+void SimpleAudioStream::GetSupportedFormats(
+    audio_fidl::StreamConfig::Interface::GetSupportedFormatsCompleter::Sync completer) {
+  ScopedToken t(domain_token());
 
-  resp.hdr = req.hdr;
-  resp.id = req.id;
+  // Build formats compatible with FIDL from a vector of audio_stream_format_range_t.
+  // Needs to be alive until the reply is sent.
+  struct FidlCompatibleFormats {
+    fbl::Vector<uint8_t> number_of_channels;
+    fbl::Vector<audio_fidl::SampleFormat> sample_formats;
+    fbl::Vector<uint32_t> frame_rates;
+    fbl::Vector<uint8_t> valid_bits_per_sample;
+    fbl::Vector<uint8_t> bytes_per_sample;
+  };
+  fbl::Vector<FidlCompatibleFormats> fidl_compatible_formats;
+  for (auto& i : supported_formats_) {
+    audio_fidl::SampleFormat sample_format = audio_fidl::SampleFormat::PCM_SIGNED;
+    ZX_ASSERT(!(i.sample_formats & AUDIO_SAMPLE_FORMAT_BITSTREAM));
+    ZX_ASSERT(!(i.sample_formats & AUDIO_SAMPLE_FORMAT_FLAG_INVERT_ENDIAN));
 
-  const char* str;
-  switch (req.id) {
-    case AUDIO_STREAM_STR_ID_MANUFACTURER:
-      str = mfr_name_;
-      break;
-    case AUDIO_STREAM_STR_ID_PRODUCT:
-      str = prod_name_;
-      break;
-    default:
-      str = nullptr;
-      break;
+    if (i.sample_formats & AUDIO_SAMPLE_FORMAT_FLAG_UNSIGNED) {
+      sample_format = audio_fidl::SampleFormat::PCM_UNSIGNED;
+    }
+
+    auto noflag_format =
+        static_cast<audio_sample_format_t>(i.sample_formats & ~AUDIO_SAMPLE_FORMAT_FLAG_MASK);
+
+    auto sizes = audio::utils::GetSampleSizes(noflag_format);
+
+    ZX_ASSERT(sizes.valid_bits_per_sample != 0);
+    ZX_ASSERT(sizes.bytes_per_sample != 0);
+
+    if (noflag_format == AUDIO_SAMPLE_FORMAT_32BIT_FLOAT) {
+      sample_format = audio_fidl::SampleFormat::PCM_FLOAT;
+    }
+
+    fbl::Vector<uint32_t> rates;
+    if (i.min_frames_per_second == i.max_frames_per_second) {
+      rates.push_back(i.min_frames_per_second);
+    } else {
+      ZX_ASSERT(!(i.flags & ASF_RANGE_FLAG_FPS_CONTINUOUS));
+      audio::utils::FrameRateEnumerator enumerator(i);
+      for (uint32_t rate : enumerator) {
+        rates.push_back(rate);
+      }
+    }
+
+    fbl::Vector<uint8_t> number_of_channels;
+    for (uint8_t j = i.min_channels; j <= i.max_channels; ++j) {
+      number_of_channels.push_back(j);
+    }
+
+    fidl_compatible_formats.push_back({
+        std::move(number_of_channels),
+        {sample_format},
+        std::move(rates),
+        {sizes.valid_bits_per_sample},
+        {sizes.bytes_per_sample},
+    });
   }
 
-  if (str == nullptr) {
-    resp.result = ZX_ERR_NOT_FOUND;
-    resp.strlen = 0;
-  } else {
-    int res = snprintf(reinterpret_cast<char*>(resp.str), sizeof(resp.str), "%s", str);
-    ZX_DEBUG_ASSERT(res >= 0);
-    resp.result = ZX_OK;
-    resp.strlen = fbl::min<uint32_t>(res, sizeof(resp.str) - 1);
+  // Get FIDL PcmSupportedFormats from FIDL compatible vectors.
+  // Needs to be alive until the reply is sent.
+  fbl::Vector<audio_fidl::PcmSupportedFormats> fidl_pcm_formats;
+  for (auto& i : fidl_compatible_formats) {
+    audio_fidl::PcmSupportedFormats formats;
+    formats.number_of_channels = ::fidl::VectorView<uint8_t>(
+        fidl::unowned_ptr(i.number_of_channels.data()), i.number_of_channels.size());
+    formats.sample_formats = ::fidl::VectorView<audio_fidl::SampleFormat>(
+        fidl::unowned_ptr(i.sample_formats.data()), i.sample_formats.size());
+    formats.frame_rates =
+        ::fidl::VectorView<uint32_t>(fidl::unowned_ptr(i.frame_rates.data()), i.frame_rates.size());
+    formats.bytes_per_sample = ::fidl::VectorView<uint8_t>(
+        fidl::unowned_ptr(i.bytes_per_sample.data()), i.bytes_per_sample.size());
+    formats.valid_bits_per_sample = ::fidl::VectorView<uint8_t>(
+        fidl::unowned_ptr(i.valid_bits_per_sample.data()), i.valid_bits_per_sample.size());
+    fidl_pcm_formats.push_back(std::move(formats));
   }
 
-  return channel->Write(&resp, sizeof(resp));
+  // Get builders from PcmSupportedFormats tables.
+  // Needs to be alive until the reply is sent.
+  fbl::Vector<audio_fidl::SupportedFormats::UnownedBuilder> fidl_builders;
+  for (auto& i : fidl_pcm_formats) {
+    auto builder = audio_fidl::SupportedFormats::UnownedBuilder();
+    builder.set_pcm_supported_formats(fidl::unowned_ptr(&i));
+    fidl_builders.push_back(std::move(builder));
+  }
+
+  // Build FIDL SupportedFormats from PcmSupportedFormats's builders.
+  // Needs to be alive until the reply is sent.
+  fbl::Vector<audio_fidl::SupportedFormats> fidl_formats;
+  for (auto& i : fidl_builders) {
+    fidl_formats.push_back(i.build());
+  }
+
+  completer.Reply(::fidl::VectorView<audio_fidl::SupportedFormats>(
+      fidl::unowned_ptr(fidl_formats.data()), fidl_formats.size()));
 }
 
-zx_status_t SimpleAudioStream::OnGetClockDomain(StreamChannel* channel,
-                                                const audio_proto::GetClockDomainReq& req) const {
-  audio_proto::GetClockDomainResp resp = {};
-
-  resp.hdr = req.hdr;
-  resp.clock_domain = clock_domain_;
-
-  return channel->Write(&resp, sizeof(resp));
+// Ring Buffer GetProperties.
+void SimpleAudioStream::GetProperties(GetPropertiesCompleter::Sync completer) {
+  ScopedToken t(domain_token());
+  auto builder = audio_fidl::RingBufferProperties::UnownedBuilder();
+  fidl::aligned<uint32_t> fifo_depth = fifo_depth_;
+  builder.set_fifo_depth(fidl::unowned_ptr(&fifo_depth));
+  fidl::aligned<int64_t> delay = static_cast<int64_t>(external_delay_nsec_);
+  builder.set_external_delay(fidl::unowned_ptr(&delay));
+  fidl::aligned<bool> flush = true;
+  builder.set_needs_cache_flush_or_invalidate(fidl::unowned_ptr(&flush));
+  completer.Reply(builder.build());
 }
 
-zx_status_t SimpleAudioStream::OnGetFifoDepth(Channel* channel,
-                                              const audio_proto::RingBufGetFifoDepthReq& req) {
-  audio_proto::RingBufGetFifoDepthResp resp = {};
-
-  resp.hdr = req.hdr;
-  resp.result = ZX_OK;
-  resp.fifo_depth = fifo_depth_;
-
-  return channel->Write(&resp, sizeof(resp));
-}
-
-zx_status_t SimpleAudioStream::OnGetBuffer(Channel* channel,
-                                           const audio_proto::RingBufGetBufferReq& req) {
-  audio_proto::RingBufGetBufferResp resp = {};
-  resp.hdr = req.hdr;
+void SimpleAudioStream::GetVmo(uint32_t min_frames, uint32_t notifications_per_ring,
+                               GetVmoCompleter::Sync completer) {
+  ScopedToken t(domain_token());
 
   if (rb_started_) {
-    resp.result = ZX_ERR_BAD_STATE;
-  } else {
-    zx::vmo buffer;
-    resp.result = GetBuffer(req, &resp.num_ring_buffer_frames, &buffer);
-    if (resp.result == ZX_OK) {
-      zx_status_t res = channel->Write(&resp, sizeof(resp), std::move(buffer));
-      if (res == ZX_OK) {
-        expected_notifications_per_ring_.store(req.notifications_per_ring);
-        rb_fetched_ = true;
-      }
-      return res;
-    } else {
-      expected_notifications_per_ring_.store(0);
-    }
+    completer.ReplyError(audio_fidl::GetVmoError::INTERNAL_ERROR);
+    return;
   }
 
-  ZX_DEBUG_ASSERT(resp.result != ZX_OK);
-  return channel->Write(&resp, sizeof(resp));
+  uint32_t num_ring_buffer_frames = 0;
+  audio_proto::RingBufGetBufferReq req = {};
+  req.min_ring_buffer_frames = min_frames;
+  req.notifications_per_ring = notifications_per_ring;
+  zx::vmo buffer;
+  auto status = GetBuffer(req, &num_ring_buffer_frames, &buffer);
+  if (status != ZX_OK) {
+    expected_notifications_per_ring_.store(0);
+    completer.ReplyError(audio_fidl::GetVmoError::INTERNAL_ERROR);
+    return;
+  }
+
+  expected_notifications_per_ring_.store(req.notifications_per_ring);
+  rb_fetched_ = true;
+  completer.ReplySuccess(num_ring_buffer_frames, std::move(buffer));
 }
 
-zx_status_t SimpleAudioStream::OnStart(Channel* channel, const audio_proto::RingBufStartReq& req) {
-  audio_proto::RingBufStartResp resp = {};
-  resp.hdr = req.hdr;
+void SimpleAudioStream::Start(StartCompleter::Sync completer) {
+  ScopedToken t(domain_token());
 
+  uint64_t start_time = 0;
   if (rb_started_ || !rb_fetched_) {
-    resp.result = ZX_ERR_BAD_STATE;
-  } else {
-    resp.result = Start(&resp.start_time);
-    if (resp.result == ZX_OK) {
-      rb_started_ = true;
-    }
+    zxlogf(ERROR, "Could not start %s\n", __PRETTY_FUNCTION__);
+    completer.Reply(start_time);
+    return;
   }
 
-  return channel->Write(&resp, sizeof(resp));
+  auto result = Start(&start_time);
+  if (result == ZX_OK) {
+    rb_started_ = true;
+  }
+  completer.Reply(start_time);
 }
 
-zx_status_t SimpleAudioStream::OnStop(Channel* channel, const audio_proto::RingBufStopReq& req) {
-  audio_proto::RingBufStopResp resp = {};
-  resp.hdr = req.hdr;
-
+void SimpleAudioStream::Stop(StopCompleter::Sync completer) {
+  ScopedToken t(domain_token());
   if (!rb_started_) {
-    resp.result = ZX_ERR_BAD_STATE;
-  } else {
-    resp.result = Stop();
-    if (resp.result == ZX_OK) {
-      rb_started_ = false;
-    }
+    zxlogf(ERROR, "Could not stop %s\n", __PRETTY_FUNCTION__);
+    completer.Reply();
+    return;
   }
 
-  return channel->Write(&resp, sizeof(resp));
+  auto result = Stop();
+  if (result == ZX_OK) {
+    rb_started_ = false;
+  }
+  completer.Reply();
 }
 
 }  // namespace audio

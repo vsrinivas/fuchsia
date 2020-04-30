@@ -169,30 +169,30 @@ void BasicTest::RequestPlugDetect() {
 // Test cases that target each of the various Stream channel commands
 //
 // Verify a valid unique_id, manufacturer, product and gain capabilites is successfully received.
-TEST_P(BasicTest, DISABLED_StreamProperties) { RequestStreamProperties(); }
+TEST_P(BasicTest, StreamProperties) { RequestStreamProperties(); }
 
 // Verify a valid get gain response is successfully received.
-TEST_P(BasicTest, DISABLED_GetGain) {
+TEST_P(BasicTest, GetGain) {
   RequestStreamProperties();
   RequestGain();
 }
 
 // Verify a valid set gain response is successfully received. GetGain is required first: it returns
 // not only current gain but also gain capabilities (gain min/max/step, can_mute, can_agc).
-TEST_P(BasicTest, DISABLED_SetGain) {
+TEST_P(BasicTest, SetGain) {
   RequestStreamProperties();
   RequestGain();
   RequestSetGain();
 }
 
 // Verify a valid get formats response is successfully received.
-TEST_P(BasicTest, DISABLED_GetFormats) {
+TEST_P(BasicTest, GetFormats) {
   RequestStreamProperties();
   RequestFormats();
 }
 
 // Verify a valid plug detect response is successfully received.
-TEST_P(BasicTest, DISABLED_PlugDetect) {
+TEST_P(BasicTest, PlugDetect) {
   RequestStreamProperties();
   RequestPlugDetect();
 }
