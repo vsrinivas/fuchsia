@@ -48,6 +48,7 @@ class BreakpointImpl : public Breakpoint,
   bool IsInternal() const override;
   std::vector<const BreakpointLocation*> GetLocations() const override;
   std::vector<BreakpointLocation*> GetLocations() override;
+  debug_ipc::BreakpointStats GetStats() override;
 
   // Called whenever new stats are available from the debug agent.
   void UpdateStats(const debug_ipc::BreakpointStats& stats);

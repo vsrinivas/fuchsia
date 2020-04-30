@@ -27,6 +27,7 @@ class MockBreakpoint : public Breakpoint {
   bool IsInternal() const override { return is_internal_; }
   std::vector<const BreakpointLocation*> GetLocations() const override;
   std::vector<BreakpointLocation*> GetLocations() override;
+  debug_ipc::BreakpointStats GetStats() override { return {}; }
 
  public:
   BreakpointSettings settings_;

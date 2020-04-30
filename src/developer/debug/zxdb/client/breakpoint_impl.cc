@@ -146,6 +146,8 @@ std::vector<BreakpointLocation*> BreakpointImpl::GetLocations() {
   return result;
 }
 
+debug_ipc::BreakpointStats BreakpointImpl::GetStats() { return stats_; }
+
 void BreakpointImpl::UpdateStats(const debug_ipc::BreakpointStats& stats) { stats_ = stats; }
 
 void BreakpointImpl::BackendBreakpointRemoved() { backend_installed_ = false; }

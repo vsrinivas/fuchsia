@@ -54,6 +54,9 @@ class Breakpoint : public ClientObject {
   virtual std::vector<const BreakpointLocation*> GetLocations() const = 0;
   virtual std::vector<BreakpointLocation*> GetLocations() = 0;
 
+  // Returns the stats for the breakpoint, e.g. hit_count.
+  virtual debug_ipc::BreakpointStats GetStats() = 0;
+
   SettingStore& settings() { return settings_; }
   static fxl::RefPtr<SettingSchema> GetSchema();
 

@@ -623,10 +623,15 @@ void ListBreakpoints(ConsoleContext* context, bool include_locations) {
         row.emplace_back(Syntax::kComment, "n/a");
     }
 
-    if (matched_locs.empty())
+    if (matched_locs.empty()) {
       row.emplace_back(Syntax::kWarning, "pending");
-    else
+      // It's confusing to show a hit_count for pending breakpoints, which happens
+      // when a process is killed and locations are cleared.
+      row.emplace_back();
+    } else {
       row.emplace_back(std::to_string(matched_locs.size()));
+      row.emplace_back(std::to_string(pair.second->GetStats().hit_count));
+    }
 
     row.push_back(FormatInputLocations(settings.locations));
 
@@ -657,6 +662,7 @@ void ListBreakpoints(ConsoleContext* context, bool include_locations) {
   if (include_size)
     col_specs.emplace_back(Align::kRight, 0, ClientSettings::Breakpoint::kSize);
   col_specs.emplace_back(Align::kRight, 0, "#addrs");
+  col_specs.emplace_back(Align::kRight, 0, "hit-count");
   col_specs.emplace_back(Align::kLeft, 0, ClientSettings::Breakpoint::kLocation);
 
   OutputBuffer out;

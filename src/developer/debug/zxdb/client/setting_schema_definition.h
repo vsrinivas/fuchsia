@@ -97,6 +97,9 @@ struct ClientSettings {
     static const char* kStopMode_Thread;
     static const char* kStopMode_Process;
     static const char* kStopMode_All;
+
+    static const char* kHitCount;
+    static const char* kHitCountDescription;
   };
 
   struct Filter {

@@ -33,8 +33,8 @@ TEST_F(NounsTest, BreakpointList) {
 
   // Create a breakpoint with no settings.
   const char kExpectedNoSettings[] =
-      " # scope  stop enabled type      #addrs location\n"
-      " 1 global all  true    software pending <no location>\n";
+      " # scope  stop enabled type      #addrs hit-count location\n"
+      " 1 global all  true    software pending           <no location>\n";
   Breakpoint* bp = session().system().CreateNewBreakpoint();
   console.ProcessInputLine(kListBreakpointsLine);
   event = console.GetOutputEvent();
@@ -58,8 +58,8 @@ TEST_F(NounsTest, BreakpointList) {
   event = console.GetOutputEvent();
   ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
   ASSERT_EQ(
-      " # scope  stop enabled type      #addrs location\n"
-      " 1 global all  false   software pending Foo\n",
+      " # scope  stop enabled type      #addrs hit-count location\n"
+      " 1 global all  false   software pending           Foo\n",
       event.output.AsString());
 
   // Add a non-software breakpoint to see the size.
@@ -74,9 +74,9 @@ TEST_F(NounsTest, BreakpointList) {
   event = console.GetOutputEvent();
   ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
   ASSERT_EQ(
-      " # scope  stop enabled type     size  #addrs location\n"
-      " 1 global all  false   software  n/a pending Foo\n"
-      " 2 global all  true    write       4 pending 0x12345678\n",
+      " # scope  stop enabled type     size  #addrs hit-count location\n"
+      " 1 global all  false   software  n/a pending           Foo\n"
+      " 2 global all  true    write       4 pending           0x12345678\n",
       event.output.AsString());
 
   // Currently we don't test printing breakpoint locations since that requires

@@ -8,6 +8,7 @@
 #include "src/developer/debug/zxdb/client/setting_schema.h"
 #include "src/developer/debug/zxdb/client/setting_schema_definition.h"
 #include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
 
@@ -75,6 +76,10 @@ const char* ClientSettings::Breakpoint::kStopMode_Thread = "thread";
 const char* ClientSettings::Breakpoint::kStopMode_Process = "process";
 const char* ClientSettings::Breakpoint::kStopMode_All = "all";
 
+const char* ClientSettings::Breakpoint::kHitCount = "hit-count";
+const char* ClientSettings::Breakpoint::kHitCountDescription =
+    R"(  Number of times the breakpoint gets triggered.)";
+
 namespace {
 
 fxl::RefPtr<SettingSchema> CreateSchema() {
@@ -98,6 +103,8 @@ fxl::RefPtr<SettingSchema> CreateSchema() {
       ClientSettings::Breakpoint::kStopMode_All,
       {ClientSettings::Breakpoint::kStopMode_None, ClientSettings::Breakpoint::kStopMode_Thread,
        ClientSettings::Breakpoint::kStopMode_Process, ClientSettings::Breakpoint::kStopMode_All});
+  schema->AddInt(ClientSettings::Breakpoint::kHitCount,
+                 ClientSettings::Breakpoint::kHitCountDescription);
   return schema;
 }
 
@@ -121,6 +128,8 @@ SettingValue Breakpoint::Settings::GetStorageValue(const std::string& key) const
     return SettingValue(BreakpointSettings::TypeToString(settings.type));
   } else if (key == ClientSettings::Breakpoint::kSize) {
     return SettingValue(static_cast<int>(settings.byte_size));
+  } else if (key == ClientSettings::Breakpoint::kHitCount) {
+    return SettingValue(static_cast<int>(bp_->GetStats().hit_count));
   }
   FX_NOTREACHED();
   return SettingValue();
@@ -157,7 +166,7 @@ Err Breakpoint::Settings::SetStorageValue(const std::string& key, SettingValue v
 
     settings.byte_size = value.get_int();
   } else {
-    FX_NOTREACHED();
+    return Err(fxl::StringPrintf("Setting \"%s\" is currently not supported.", key.c_str()));
   }
 
   bp_->SetSettings(settings);
