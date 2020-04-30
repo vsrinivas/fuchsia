@@ -2,21 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fdio/spawn.h>
+#include <lib/zx/process.h>
+
+#include <utility>
+
 #include <fbl/auto_call.h>
 #include <fbl/vector.h>
 #include <ramdevice-client/ramdisk.h>
-#include <lib/fdio/spawn.h>
-#include <lib/zx/process.h>
-#include <unittest/unittest.h>
-
-#include <utility>
+#include <zxtest/zxtest.h>
 
 namespace {
 
 // This is a simple test of biotime (a block device IO performance
 // measurement tool).  It runs biotime on a ramdisk and just checks that it
 // returns a success status.
-bool run_biotime(fbl::Vector<const char*>&& args) {
+void run_biotime(fbl::Vector<const char*>&& args) {
   ramdisk_client_t* ramdisk;
   ASSERT_EQ(ramdisk_create(1024, 100, &ramdisk), ZX_OK);
   auto ac = fbl::MakeAutoCall([&] { EXPECT_EQ(ramdisk_destroy(ramdisk), 0); });
@@ -36,40 +37,21 @@ bool run_biotime(fbl::Vector<const char*>&& args) {
   ASSERT_EQ(process.get_info(ZX_INFO_PROCESS, &proc_info, sizeof(proc_info), nullptr, nullptr),
             ZX_OK);
   ASSERT_EQ(proc_info.return_code, 0);
-  return true;
 }
 
-bool TestBiotimeLinearAccess() {
-  BEGIN_TEST;
-
+TEST(Biotime, LinearAccess) {
   fbl::Vector<const char*> args = {"-linear"};
-  EXPECT_TRUE(run_biotime(std::move(args)));
-
-  END_TEST;
+  run_biotime(std::move(args));
 }
 
-bool TestBiotimeRandomAccess() {
-  BEGIN_TEST;
-
+TEST(Biotime, RandomAccess) {
   fbl::Vector<const char*> args = {"-random"};
-  EXPECT_TRUE(run_biotime(std::move(args)));
-
-  END_TEST;
+  run_biotime(std::move(args));
 }
 
-bool TestBiotimeWrite() {
-  BEGIN_TEST;
-
+TEST(Biotime, Write) {
   fbl::Vector<const char*> args = {"-write", "-live-dangerously"};
-  EXPECT_TRUE(run_biotime(std::move(args)));
-
-  END_TEST;
+  run_biotime(std::move(args));
 }
-
-BEGIN_TEST_CASE(biotime_tests)
-RUN_TEST(TestBiotimeLinearAccess)
-RUN_TEST(TestBiotimeRandomAccess)
-RUN_TEST(TestBiotimeWrite)
-END_TEST_CASE(biotime_tests)
 
 }  // namespace
