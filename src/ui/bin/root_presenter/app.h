@@ -48,7 +48,7 @@ class App : public fuchsia::ui::policy::Presenter,
             public fuchsia::ui::views::Focuser,
             public ui_input::InputDeviceImpl::Listener {
  public:
-  App(const fxl::CommandLine& command_line, async_dispatcher_t* dispatcher);
+  App(const fxl::CommandLine& command_line, async::Loop* loop);
   ~App() = default;
 
   // |InputDeviceImpl::Listener|
@@ -63,6 +63,7 @@ class App : public fuchsia::ui::policy::Presenter,
   // |fuchsia.ui.views.accessibility.FocuserRegistry|
   void RegisterFocuser(fidl::InterfaceRequest<fuchsia::ui::views::Focuser> view_focuser) override;
 
+ private:
   // |Presenter|
   void PresentView(
       fuchsia::ui::views::ViewHolderToken view_holder_token,
@@ -73,7 +74,11 @@ class App : public fuchsia::ui::policy::Presenter,
       fuchsia::ui::views::ViewHolderToken view_holder_token,
       fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request) override;
 
- private:
+  // |Presenter|
+  void PresentView(fuchsia::ui::views::ViewHolderToken view_holder_token,
+                   fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request,
+                   bool clobber_previous_presentation = false);
+
   // |DeviceListenerRegistry|
   void RegisterMediaButtonsListener(
       fidl::InterfaceHandle<fuchsia::ui::policy::MediaButtonsListener> listener) override;
@@ -90,8 +95,13 @@ class App : public fuchsia::ui::policy::Presenter,
   // shut down; can handle other Scenic events in the future.
   void HandleScenicEvent(const fuchsia::ui::scenic::Event& event);
 
-  void SetPresentation(std::unique_ptr<Presentation> presentation);
-  void ShutdownPresentation();
+  void SetPresentation(std::unique_ptr<Presentation> presentation, bool clobber_presentation);
+  void AddPresentation(std::unique_ptr<Presentation> presentation);
+  void ReplacePresentationWith(std::unique_ptr<Presentation> presentation);
+  void ShutdownPresentation(size_t presentation_idx);
+  void SwitchToPresentation(size_t presentation_idx);
+  void SwitchToNextPresentation();
+  void SwitchToPreviousPresentation();
 
   // |fuchsia.ui.views.Focuser|
   void RequestFocus(fuchsia::ui::views::ViewRef view_ref, RequestFocusCallback callback) override;
@@ -142,7 +152,9 @@ class App : public fuchsia::ui::policy::Presenter,
   std::unique_ptr<scenic::DisplayCompositor> compositor_;
   std::unique_ptr<scenic::LayerStack> layer_stack_;
 
-  std::unique_ptr<Presentation> presentation_;
+  std::vector<std::unique_ptr<Presentation>> presentations_;
+  // A valid index into presentations_, otherwise size_t::max().
+  size_t active_presentation_idx_ = std::numeric_limits<size_t>::max();
 
   uint32_t next_device_token_ = 0;
   std::unordered_map<uint32_t, std::unique_ptr<ui_input::InputDeviceImpl>> devices_by_id_;
