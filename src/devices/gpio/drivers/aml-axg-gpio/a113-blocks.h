@@ -270,8 +270,7 @@ static AmlGpioBlock a113_gpio_blocks[] = {
 static AmlGpioInterrupt a113_interrupt_block = {
     .interrupt_lock = MTX_INIT,
 
-    .pin_0_3_select_offset = A113_GPIO_0_3_PIN_SELECT,
-    .pin_4_7_select_offset = A113_GPIO_4_7_PIN_SELECT,
+    .pin_select_offset = A113_GPIO_0_3_PIN_SELECT,
     .edge_polarity_offset = A113_GPIO_INT_EDGE_POLARITY,
     .filter_select_offset = A113_GPIO_FILTER_SELECT,
 };

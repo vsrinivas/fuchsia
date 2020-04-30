@@ -376,22 +376,6 @@ zx_status_t AmlGxlGpio::GpioImplGetInterrupt(uint32_t pin, uint32_t flags, zx::i
     flags_ = ZX_INTERRUPT_MODE_LEVEL_HIGH;
   }
 
-  // Create Interrupt Object
-  if ((status = pdev_get_interrupt(&pdev_, index, flags_, out_irq->reset_and_get_address())) !=
-      ZX_OK) {
-    zxlogf(ERROR, "AmlGxlGpio::GpioImplGetInterrupt: pdev_get_interrupt failed %d", status);
-    return status;
-  }
-
-  // Configure GPIO interrupt
-  uint32_t pin_select_offset =
-      (index > 3) ? gpio_interrupt_->pin_4_7_select_offset : gpio_interrupt_->pin_0_3_select_offset;
-
-  // Select GPIO IRQ(index) and program it to
-  // the requested GPIO PIN
-  mmio_interrupt_.ModifyBits((pin % kPinsPerBlock) + block->pin_start,
-                             index * kBitsPerGpioInterrupt, kBitsPerGpioInterrupt,
-                             pin_select_offset << 2);
   // Configure GPIO Interrupt EDGE and Polarity
   uint32_t mode_reg_val = Read32GpioInterruptReg(gpio_interrupt_->edge_polarity_offset);
 
@@ -421,6 +405,22 @@ zx_status_t AmlGxlGpio::GpioImplGetInterrupt(uint32_t pin, uint32_t flags, zx::i
   uint32_t regval = Read32GpioInterruptReg(gpio_interrupt_->filter_select_offset);
   Write32GpioInterruptReg(gpio_interrupt_->filter_select_offset,
                           regval | (0x7 << (index * kBitsPerFilterSelect)));
+
+  // Configure GPIO interrupt
+  const uint32_t pin_select_bit = index * kBitsPerGpioInterrupt;
+  const uint32_t pin_select_offset = gpio_interrupt_->pin_select_offset + (pin_select_bit / 32);
+  const uint32_t pin_select_index = pin_select_bit % 32;
+  // Select GPIO IRQ(index) and program it to the requested GPIO PIN
+  mmio_interrupt_.ModifyBits((pin % kPinsPerBlock) + block->pin_start, pin_select_index,
+                             kBitsPerGpioInterrupt, pin_select_offset * sizeof(uint32_t));
+
+  // Create Interrupt Object
+  if ((status = pdev_get_interrupt(&pdev_, index, flags_, out_irq->reset_and_get_address())) !=
+      ZX_OK) {
+    zxlogf(ERROR, "AmlGxlGpio::GpioImplGetInterrupt: pdev_get_interrupt failed %d", status);
+    return status;
+  }
+
   irq_status_ |= static_cast<uint8_t>(1 << index);
   irq_info_[index] = static_cast<uint16_t>(pin);
 

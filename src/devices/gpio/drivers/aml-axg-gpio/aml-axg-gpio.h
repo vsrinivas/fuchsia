@@ -43,8 +43,7 @@ struct AmlGpioInterrupt {
   fbl::Mutex interrupt_lock;  // Protects content in fields below
                               // and info_, irq_info_, irq_status_
 
-  uint32_t pin_0_3_select_offset;
-  uint32_t pin_4_7_select_offset;
+  uint32_t pin_select_offset;
   uint32_t edge_polarity_offset;
   uint32_t filter_select_offset;
 };

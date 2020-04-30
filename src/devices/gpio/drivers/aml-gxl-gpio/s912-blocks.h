@@ -122,8 +122,7 @@ constexpr AmlGpioBlock s912_gpio_blocks[] = {
 #define AO_REG_2 S912_AO_RTI_PIN_MUX_REG2
 
 constexpr AmlGpioInterrupt s912_interrupt_block = {
-    .pin_0_3_select_offset = S912_GPIO_0_3_PIN_SELECT,
-    .pin_4_7_select_offset = S912_GPIO_4_7_PIN_SELECT,
+    .pin_select_offset = S912_GPIO_0_3_PIN_SELECT,
     .edge_polarity_offset = S912_GPIO_INT_EDGE_POLARITY,
     .filter_select_offset = S912_GPIO_FILTER_SELECT,
     .status_offset = S912_GPIO_INT_STATUS,

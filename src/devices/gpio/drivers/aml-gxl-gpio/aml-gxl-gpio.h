@@ -50,8 +50,7 @@ struct AmlPinMuxBlock {
 };
 
 struct AmlGpioInterrupt {
-  uint32_t pin_0_3_select_offset;
-  uint32_t pin_4_7_select_offset;
+  uint32_t pin_select_offset;
   uint32_t edge_polarity_offset;
   uint32_t filter_select_offset;
   uint32_t status_offset;

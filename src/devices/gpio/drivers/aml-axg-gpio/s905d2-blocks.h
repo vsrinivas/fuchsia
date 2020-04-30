@@ -282,8 +282,7 @@ static AmlGpioBlock s905d2_gpio_blocks[] = {
 static AmlGpioInterrupt s905d2_interrupt_block = {
     .interrupt_lock = MTX_INIT,
 
-    .pin_0_3_select_offset = S905D2_GPIO_0_3_PIN_SELECT,
-    .pin_4_7_select_offset = S905D2_GPIO_4_7_PIN_SELECT,
+    .pin_select_offset = S905D2_GPIO_0_3_PIN_SELECT,
     .edge_polarity_offset = S905D2_GPIO_INT_EDGE_POLARITY,
     .filter_select_offset = S905D2_GPIO_FILTER_SELECT,
 };

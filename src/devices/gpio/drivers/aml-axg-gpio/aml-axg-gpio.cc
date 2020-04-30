@@ -231,8 +231,7 @@ zx_status_t AmlAxgGpio::GpioImplConfigOut(uint32_t index, uint8_t initial_value)
 zx_status_t AmlAxgGpio::GpioImplSetAltFunction(const uint32_t pin, const uint64_t fn) {
   if (fn > kAltFnMax) {
     zxlogf(ERROR,
-           "AmlAxgGpio::GpioImplSetAltFunction: pin mux alt config out of range"
-           " %lu\n",
+           "AmlAxgGpio::GpioImplSetAltFunction: pin mux alt config out of range %lu",
            fn);
     return ZX_ERR_OUT_OF_RANGE;
   }
@@ -317,7 +316,6 @@ zx_status_t AmlAxgGpio::GpioImplWrite(uint32_t index, uint8_t value) {
 
 zx_status_t AmlAxgGpio::GpioImplGetInterrupt(uint32_t pin, uint32_t flags, zx::interrupt* out_irq) {
   zx_status_t status = ZX_OK;
-  AmlGpioInterrupt* interrupt = gpio_interrupt_;
 
   if (pin > kMaxGpioIndex) {
     return ZX_ERR_INVALID_ARGS;
@@ -351,22 +349,9 @@ zx_status_t AmlAxgGpio::GpioImplGetInterrupt(uint32_t pin, uint32_t flags, zx::i
     flags_ = ZX_INTERRUPT_MODE_LEVEL_HIGH;
   }
 
-  // Create Interrupt Object
-  if ((status = pdev_.GetInterrupt(index, flags_, out_irq)) != ZX_OK) {
-    zxlogf(ERROR, "AmlAxgGpio::GpioImplGetInterrupt: pdev_get_interrupt failed %d", status);
-    return status;
-  }
-
-  // Configure GPIO interrupt
-  uint32_t pin_select_offset =
-      ((index > 3) ? interrupt->pin_4_7_select_offset : interrupt->pin_0_3_select_offset);
-  // Select GPIO IRQ(index) and program it to the requested GPIO PIN
-  mmio_interrupt_.ModifyBits32((pin - block->pin_block) + block->pin_start,
-                               index * kBitsPerGpioInterrupt, kBitsPerGpioInterrupt,
-                               static_cast<zx_off_t>(pin_select_offset * sizeof(uint32_t)));
   // Configure GPIO Interrupt EDGE and Polarity
   uint32_t mode_reg_val =
-      mmio_interrupt_.Read32(interrupt->edge_polarity_offset * sizeof(uint32_t));
+      mmio_interrupt_.Read32(gpio_interrupt_->edge_polarity_offset * sizeof(uint32_t));
 
   switch (flags & ZX_INTERRUPT_MODE_MASK) {
     case ZX_INTERRUPT_MODE_EDGE_LOW:
@@ -388,11 +373,26 @@ zx_status_t AmlAxgGpio::GpioImplGetInterrupt(uint32_t pin, uint32_t flags, zx::i
     default:
       return ZX_ERR_INVALID_ARGS;
   }
-  mmio_interrupt_.Write32(mode_reg_val, interrupt->edge_polarity_offset * sizeof(uint32_t));
+  mmio_interrupt_.Write32(mode_reg_val, gpio_interrupt_->edge_polarity_offset * sizeof(uint32_t));
 
   // Configure Interrupt Select Filter
   mmio_interrupt_.SetBits32(0x7 << (index * kBitsPerFilterSelect),
-                            interrupt->filter_select_offset * sizeof(uint32_t));
+                            gpio_interrupt_->filter_select_offset * sizeof(uint32_t));
+
+  // Configure GPIO interrupt
+  const uint32_t pin_select_bit = index * kBitsPerGpioInterrupt;
+  const uint32_t pin_select_offset = gpio_interrupt_->pin_select_offset + (pin_select_bit / 32);
+  const uint32_t pin_select_index = pin_select_bit % 32;
+  // Select GPIO IRQ(index) and program it to the requested GPIO PIN
+  mmio_interrupt_.ModifyBits32((pin - block->pin_block) + block->pin_start, pin_select_index,
+                               kBitsPerGpioInterrupt, pin_select_offset * sizeof(uint32_t));
+
+  // Create Interrupt Object
+  if ((status = pdev_.GetInterrupt(index, flags_, out_irq)) != ZX_OK) {
+    zxlogf(ERROR, "AmlAxgGpio::GpioImplGetInterrupt: pdev_get_interrupt failed %d", status);
+    return status;
+  }
+
   irq_status_ |= static_cast<uint8_t>(1 << index);
   irq_info_[index] = static_cast<uint16_t>(pin);
 
