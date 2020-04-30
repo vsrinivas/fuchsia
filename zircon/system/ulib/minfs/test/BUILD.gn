@@ -65,19 +65,19 @@ test("minfs-unit") {
     "unit/vnode_test.cc",
   ]
   deps = [
-    "//zircon/public/lib/block-client",
     "//zircon/public/lib/cksum",
-    "//zircon/public/lib/fake-device",
-    "//zircon/public/lib/fvm",
     "//zircon/public/lib/safemath",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zxc",
     "//zircon/public/lib/zxtest",
     "//zircon/system/fidl/fuchsia-minfs:c",
+    "//zircon/system/ulib/block-client",
+    "//zircon/system/ulib/block-client:fake-device",
     "//zircon/system/ulib/disk_inspector",
     "//zircon/system/ulib/fs-management",
     "//zircon/system/ulib/fs/test_support",
+    "//zircon/system/ulib/fvm",
     "//zircon/system/ulib/minfs",
   ]
   include_dirs = [ "//zircon/system/ulib/minfs" ]
@@ -96,10 +96,10 @@ source_set("integration-fixtures") {
   ]
   deps = [
     "//zircon/public/lib/fdio",
-    "//zircon/public/lib/fvm",
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/fs/test_support",
+    "//zircon/system/ulib/fvm",
     "//zircon/system/ulib/minfs",
   ]
 }

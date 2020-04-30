@@ -27,8 +27,8 @@ zx_library("transaction") {
   ]
 
   public_deps = [
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/buffer",
+    "//zircon/public/lib/fbl",
     "//zircon/public/lib/operation",
   ]
 
@@ -42,8 +42,8 @@ zx_library("transaction") {
     ]
 
     public_deps += [
-      "//zircon/public/lib/block-client",
       "//zircon/public/lib/fit",
+      "//zircon/system/ulib/block-client",
     ]
 
     deps = [

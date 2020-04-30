@@ -40,7 +40,7 @@ test("fs-transaction") {
       "device_transaction_handler_test.cc",
       "writeback_test.cc",
     ]
-    deps += [ "//zircon/public/lib/fake-device" ]
+    deps += [ "//zircon/system/ulib/block-client:fake-device" ]
   }
 }
 

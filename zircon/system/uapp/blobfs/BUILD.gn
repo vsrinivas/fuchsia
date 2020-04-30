@@ -24,7 +24,6 @@ executable("blobfs") {
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/bitmap",
-    "//zircon/public/lib/block-client",
     "//zircon/public/lib/boringssl",
     "//zircon/public/lib/buffer",
     "//zircon/public/lib/digest",
@@ -36,6 +35,7 @@ executable("blobfs") {
     "//zircon/public/lib/zx",
     "//zircon/system/fidl/fuchsia-hardware-block:c",
     "//zircon/system/ulib/blobfs",
+    "//zircon/system/ulib/block-client",
   ]
 }
 

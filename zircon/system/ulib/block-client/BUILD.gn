@@ -2,6 +2,18 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36548.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/unification/zx_library.gni")
+
 zx_library("block-client") {
   sdk = "source"
   sdk_headers = [
@@ -22,31 +34,30 @@ zx_library("block-client") {
   public_deps = [
     # <block-client/cpp/fake-device.h> has #include <range/range.h>.
     # <block-client/cpp/client.h> has #include <lib/zx/fifo.h>.
-    "$zx/system/ulib/range:headers",
+    "//zircon/public/lib/range",
 
     # <block-client/cpp/fake-device.h> has #include <storage-metrics/block-metrics.h>.
-    "$zx/system/ulib/storage-metrics:headers",
-    "$zx/system/ulib/storage/buffer:headers",
-    "$zx/system/ulib/zx:headers",
+    "//zircon/public/lib/storage-metrics",
+    "//zircon/public/lib/buffer",
+    "//zircon/public/lib/zx",
 
     # <block-client/cpp/block-device.h> has #include <.../fidl.h>
-    "$zx/system/fidl/fuchsia-device:c.headers",
-    "$zx/system/fidl/fuchsia-device:llcpp.headers",
-    "$zx/system/fidl/fuchsia-hardware-block:c.headers",
-    "$zx/system/fidl/fuchsia-hardware-block-volume:c.headers",
+    "//zircon/system/fidl/fuchsia-device:c",
+    "//zircon/system/fidl/fuchsia-device:llcpp",
+    "//zircon/system/fidl/fuchsia-hardware-block:c",
+    "//zircon/system/fidl/fuchsia-hardware-block-volume:c",
   ]
   deps = [
-    "$zx/system/fidl/fuchsia-device:llcpp",
-    "$zx/system/fidl/fuchsia-hardware-block:c",
-    "$zx/system/fidl/fuchsia-hardware-block-volume:c",
-    "$zx/system/fidl/fuchsia-io:c",
-    "$zx/system/ulib/ddk:headers",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/fs",
-    "$zx/system/ulib/sync",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zx",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/fs",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/zx",
+    "//zircon/system/fidl/fuchsia-device:llcpp",
+    "//zircon/system/fidl/fuchsia-hardware-block:c",
+    "//zircon/system/fidl/fuchsia-hardware-block-volume:c",
+    "//zircon/system/fidl/fuchsia-io:c",
   ]
 }
 
@@ -64,20 +75,20 @@ zx_library("fake-device") {
   sources = [ "fake-device.cc" ]
   public_deps = [
     ":block-client",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/range",
-    "$zx/system/ulib/storage-metrics",
-    "$zx/system/ulib/storage/buffer",
-    "$zx/system/ulib/zx",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/range",
+    "//zircon/public/lib/storage-metrics",
+    "//zircon/public/lib/buffer",
+    "//zircon/public/lib/zx",
   ]
   deps = [
-    "$zx/system/fidl/fuchsia-device:c.headers",
-    "$zx/system/fidl/fuchsia-hardware-block:c.headers",
-    "$zx/system/fidl/fuchsia-hardware-block-volume:c.headers",
-    "$zx/system/ulib/fvm",
-    "$zx/system/ulib/range",
-    "$zx/system/ulib/storage-metrics",
-    "$zx/system/ulib/storage/buffer",
-    "$zx/system/ulib/zxtest",
+    "//zircon/public/lib/range",
+    "//zircon/public/lib/storage-metrics",
+    "//zircon/public/lib/buffer",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/fidl/fuchsia-device:c",
+    "//zircon/system/fidl/fuchsia-hardware-block:c",
+    "//zircon/system/fidl/fuchsia-hardware-block-volume:c",
+    "//zircon/system/ulib/fvm",
   ]
 }

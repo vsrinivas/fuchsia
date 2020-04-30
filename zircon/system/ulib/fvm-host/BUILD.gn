@@ -48,7 +48,7 @@ zx_library("fvm-host") {
     "//zircon/system/ulib/minfs",
 
     # <fvm-host/container.h> has #include <fvm/sparse-reader.h>.
-    "//zircon/public/lib/fvm",
+    "//zircon/system/ulib/fvm",
   ]
   deps = [
     "//third_party/boringssl",
@@ -57,11 +57,11 @@ zx_library("fvm-host") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/fs",
-    "//zircon/public/lib/fvm",
     "//zircon/public/lib/lz4",
     "//zircon/public/lib/safemath",
     "//zircon/system/ulib/blobfs",
     "//zircon/system/ulib/fs/transaction",
+    "//zircon/system/ulib/fvm",
     "//zircon/system/ulib/minfs",
   ]
 }

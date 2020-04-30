@@ -37,15 +37,15 @@ test("fvm-unit") {
     "slice-entry-test.cc",
   ]
   deps = [
-    "//zircon/public/lib/fvm",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/fvm",
   ]
   if (is_fuchsia) {
     sources += [ "client-test.cc" ]
     deps += [
-      "//zircon/public/lib/block-client",
       "//zircon/public/lib/fdio",
       "//zircon/public/lib/zx",
+      "//zircon/system/ulib/block-client",
       "//zircon/system/ulib/fdio-caller",
     ]
   }

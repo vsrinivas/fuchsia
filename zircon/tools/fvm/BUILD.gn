@@ -17,8 +17,8 @@ sdk_executable("fvm") {
   deps = [
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
-    "//zircon/public/lib/fvm",
     "//zircon/public/lib/safemath",
+    "//zircon/system/ulib/fvm",
     "//zircon/system/ulib/fvm-host",
   ]
 

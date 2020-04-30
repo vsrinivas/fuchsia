@@ -2,6 +2,18 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36548.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/unification/zx_library.gni")
+
 zx_library("fvm") {
   sdk = "source"
   sdk_headers = [
@@ -19,36 +31,35 @@ zx_library("fvm") {
     "sparse-reader.cc",
   ]
   deps = [
-    "$zx/system/ulib/digest",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fit",
-    "$zx/third_party/ulib/lz4",
-    "$zx/third_party/ulib/boringssl",
+    "//third_party/boringssl",
+    "//zircon/public/lib/digest",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/lz4",
   ]
   public_deps = [
     # <fvm/fvm.h> has #include <digest/digest.h>.
-    "$zx/system/ulib/digest:headers",
+    "//zircon/public/lib/digest",
 
     # <fvm/fvm.h> has #include <gpt/gpt.h>.
-    "$zx/system/ulib/gpt:headers",
+    "//zircon/public/lib/gpt",
 
     # <fvm/sparse-reader.h> has #include <lz4/lz4frame.h>.
-    "$zx/third_party/ulib/lz4:headers",
+    "//zircon/public/lib/lz4",
   ]
   if (is_fuchsia) {
     sources += [ "client.cc" ]
 
     deps += [
-      "$zx/system/fidl/fuchsia-hardware-block-volume:c",
-      "$zx/system/ulib/block-client",
-      "$zx/system/ulib/fzl",
-      "$zx/system/ulib/gpt",
-      "$zx/system/ulib/sync",
-      "$zx/system/ulib/zircon",
-      "$zx/system/ulib/zx",
+      "//zircon/public/lib/fzl",
+      "//zircon/public/lib/gpt",
+      "//zircon/public/lib/sync",
+      "//zircon/public/lib/zx",
+      "//zircon/system/fidl/fuchsia-hardware-block-volume:c",
+      "//zircon/system/ulib/block-client",
     ]
   } else {
     # fvm-check.cpp has #include <zircon/status.h> even when built for host.
-    deps += [ "$zx/system/ulib/zircon:headers" ]
+    public_deps += [ "//zircon/public/lib/zircon-headers" ]
   }
 }
