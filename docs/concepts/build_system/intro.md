@@ -38,7 +38,7 @@ tools that corresponds to a separation of running the build into two steps:
    `BUILD.gn` file (or some other relevant files) has changed, so for most
    changes after the first time you've built, `ninja` does it all.
 
-Ninja is very stupid compared to something like GNU `make`.  It just compares
+Ninja is very simple compared to something like GNU `make`.  It just compares
 times and runs commands and its input files are written by machines, not
 humans.  However, it builds in some useful things that we bend over backward
 to accomplish in `make`:
