@@ -81,11 +81,11 @@ class EthertapClientTest : public TestWithEnvironment {
   std::vector<std::unique_ptr<EthernetClient>> eths_;
 };
 
-TEST_F(EthertapClientTest, CreateEthertapClient) { PushInterface(); }
+TEST_F(EthertapClientTest, CreateEthertapClient) { ASSERT_NO_FATAL_FAILURE(PushInterface()); }
 
 TEST_F(EthertapClientTest, EthertapReceive) {
   // create single interface and bring it up
-  PushInterface();
+  ASSERT_NO_FATAL_FAILURE(PushInterface());
   tap()->SetLinkUp(true);
   WAIT_FOR_ETH_ONLINE(0);
   tap()->SetPeerClosedCallback([]() { FAIL() << "ethertap should not close"; });
@@ -121,7 +121,7 @@ TEST_F(EthertapClientTest, EthertapReceive) {
 
 TEST_F(EthertapClientTest, EthertapSend) {
   // create single interface and bring it up
-  PushInterface();
+  ASSERT_NO_FATAL_FAILURE(PushInterface());
   tap()->SetLinkUp(true);
   WAIT_FOR_ETH_ONLINE(0);
   tap()->SetPeerClosedCallback([]() { FAIL() << "ethertap should not close"; });
@@ -149,8 +149,8 @@ TEST_F(EthertapClientTest, EthertapSend) {
 
 TEST_F(EthertapClientTest, EthertapLink) {
   // create two ethertap interfaces:
-  PushInterface();
-  PushInterface();
+  ASSERT_NO_FATAL_FAILURE(PushInterface());
+  ASSERT_NO_FATAL_FAILURE(PushInterface());
   // bring both up:
   tap(0)->SetLinkUp(true);
   tap(1)->SetLinkUp(true);
@@ -195,7 +195,7 @@ TEST_F(EthertapClientTest, EthertapLink) {
 }
 
 TEST_F(EthertapClientTest, EthertapClose) {
-  PushInterface();
+  ASSERT_NO_FATAL_FAILURE(PushInterface());
   bool ok = false;
   eth()->device()->GetStatus([&ok](uint32_t status) { ok = true; });
   ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&ok]() { return ok; }, zx::sec(2)));
@@ -206,7 +206,7 @@ TEST_F(EthertapClientTest, EthertapClose) {
 }
 
 TEST_F(EthertapClientTest, EthertapDies) {
-  PushInterface();
+  ASSERT_NO_FATAL_FAILURE(PushInterface());
   tap()->SetLinkUp(true);
   WAIT_FOR_ETH_ONLINE(0);
   bool ok = false;
