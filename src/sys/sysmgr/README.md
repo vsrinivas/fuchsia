@@ -1,9 +1,13 @@
 # sysmgr
 
-Reviewed on: 2019-07-22
+Reviewed on: 2020-03-19
 
-This directory contains sysmgr, an application which is responsible for
-setting up an environment which provides access to global system services.
+sysmgr is one of the two major pieces of the v1 Component Runtime (appmgr being
+the other). It is responsible for hosting the 'sys' realm/environment that
+contains 'global' system services. Most components on Fuchsia today still run
+under the 'sys' realm (until they are migrated to the newer v2 Component
+Runtime) though there are many components run in child realms under 'sys', such
+as components launched and managed by the Modular framework.
 
 This application runs quite early in the Fuchsia boot process. See the [boot
 sequence](/docs/concepts/framework/boot_sequence.md)
@@ -13,11 +17,9 @@ sysmgr is designed to be fairly robust. If any of the services dies, they
 will be restarted automatically the next time an application attempts to
 connect to that service.
 
-By default, sysmgr reads all configuration files from `/config/data/sysmgr/`,
-which have one of the formats detailed [here](sysmgr-configuration.md).
-
-Additional configurations can be contributed to `sysmgr` using the
-`config_data()` template defined in `//build/config.gni`.
+By default, sysmgr reads all configuration files from `/config/data/`. The
+configuration format as well as instructions for adding to the sysmgr
+configuration are [documented here](sysmgr-configuration.md).
 
 ## Building
 
@@ -34,13 +36,13 @@ Sysmgr will be running on any system with [appmgr](../appmgr/README.md).
 Config unit tests are available in the `sysmgr_tests` package.
 
 ```
-$ fx run-test sysmgr_tests
+$ fx test sysmgr_tests
 ```
 
 Integration tests are available in the `sysmgr_integration_tests` package.
 
 ```
-$ fx run-test sysmgr_integration_tests
+$ fx test sysmgr_integration_tests
 ```
 
 ## Source layout
