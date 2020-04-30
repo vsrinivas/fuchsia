@@ -36,13 +36,13 @@ bool BenchmarkBuilder{{ .Name }}(perftest::RepeatState* state) {
 
 {{ range .EncodeBenchmarks }}
 bool BenchmarkEncode{{ .Name }}(perftest::RepeatState* state) {
-  return hlcpp_benchmarks::EncodeBenchmark(state, Build{{ .Name }}());
+  return hlcpp_benchmarks::EncodeBenchmark(state, Build{{ .Name }});
 }
 {{ end }}
 
 {{ range .DecodeBenchmarks }}
 bool BenchmarkDecode{{ .Name }}(perftest::RepeatState* state) {
-  return hlcpp_benchmarks::DecodeBenchmark(state, Build{{ .Name }}());
+  return hlcpp_benchmarks::DecodeBenchmark(state, Build{{ .Name }});
 }
 {{ end }}
 
@@ -52,11 +52,11 @@ void RegisterTests() {
   {{ end }}
 
   {{ range .EncodeBenchmarks }}
-  perftest::RegisterTest("HLCPP/Encode/{{ .Path }}/WallTime", BenchmarkEncode{{ .Name }});
+  perftest::RegisterTest("HLCPP/Encode/{{ .Path }}/Steps", BenchmarkEncode{{ .Name }});
   {{ end }}
 
   {{ range .DecodeBenchmarks }}
-  perftest::RegisterTest("HLCPP/Decode/{{ .Path }}/WallTime", BenchmarkDecode{{ .Name }});
+  perftest::RegisterTest("HLCPP/Decode/{{ .Path }}/Steps", BenchmarkDecode{{ .Name }});
   {{ end }}
 }
 PERFTEST_CTOR(RegisterTests)

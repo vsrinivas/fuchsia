@@ -9,15 +9,29 @@
 
 namespace hlcpp_benchmarks {
 
-template <typename FidlType>
-bool EncodeBenchmark(perftest::RepeatState* state, FidlType obj) {
+template <typename BuilderFunc>
+bool EncodeBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
+  using FidlType = std::invoke_result_t<BuilderFunc>;
+
+  state->DeclareStep("Setup/WallTime");
+  state->DeclareStep("Encode/WallTime");
+  state->DeclareStep("Teardown/WallTime");
+
   constexpr uint32_t ordinal = 0xfefefefe;
   while (state->KeepRunning()) {
-    fidl::Encoder enc(ordinal);
-    auto offset = enc.Alloc(fidl::EncodingInlineSize<FidlType, fidl::Encoder>(&enc));
-    obj.Encode(&enc, offset);
-    fidl::Message msg = enc.GetMessage();
-    ZX_ASSERT(ZX_OK == msg.Validate(&FidlTypeWithHeader<FidlType>, nullptr));
+    FidlType obj = builder();
+
+    state->NextStep();  // End: Setup. Begin: Encode.
+
+    {
+      fidl::Encoder enc(ordinal);
+      auto offset = enc.Alloc(fidl::EncodingInlineSize<FidlType, fidl::Encoder>(&enc));
+      obj.Encode(&enc, offset);
+      fidl::Message msg = enc.GetMessage();
+      ZX_ASSERT(ZX_OK == msg.Validate(&FidlTypeWithHeader<FidlType>, nullptr));
+    }
+
+    state->NextStep();  // End: Encode. Begin: Teardown.
   }
   return true;
 }
