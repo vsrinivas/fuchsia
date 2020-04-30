@@ -31,15 +31,14 @@ class PreChecker implements Checklist {
     );
   }
 
+  bool hasDeviceTests(List<TestBundle> testBundles) {
+    return testBundles.any((e) =>
+        !hostTestTypes.contains(e.testDefinition.executionHandle.testType));
+  }
+
   @override
   Future<bool> isDeviceReady(List<TestBundle> testBundles) async {
-    bool hasDeviceTests = testBundles
-        .any((e) => e.testDefinition.executionHandle.testType != TestType.host);
-
-    if (!hasDeviceTests) {
-      // device state doesn't matter for host-only tests
-      return true;
-    }
+    if (!hasDeviceTests(testBundles)) return true;
 
     // check for a running update server
     bool isPackageServerRunning = await fxCommandRunWithIO(
