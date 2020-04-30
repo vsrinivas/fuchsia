@@ -840,6 +840,36 @@ TEST(FutexOwnershipTestCase, Requeue) {
   ASSERT_EQ(res, ZX_ERR_BAD_STATE);
   ASSERT_NO_FATAL_FAILURES(VerifyState(woken_thread_koid, test_thread_koid));
 
+  // Small helper lambdas we will use during the success tests to count the
+  // number of threads which wake up in response to our actions.
+  auto CountJustWoken = [&WAITERS]() -> uint32_t {
+    uint32_t just_woken = 0;
+    for (auto& waiter : WAITERS) {
+      if (!waiter.woken && (waiter.thread.state() == Thread::State::WAITING_TO_STOP)) {
+        ++just_woken;
+        waiter.woken = true;
+      }
+    }
+    return just_woken;
+  };
+
+  auto WaitForJustWoken = [&CountJustWoken](uint32_t expected) -> uint32_t {
+    uint32_t just_woken = CountJustWoken();
+
+    WaitFor(ZX_SEC(20), [&]() -> bool {
+      just_woken += CountJustWoken();
+      return just_woken >= expected;
+    });
+
+    // Wait just a bit longer to see if anyone else wakes up who shouldn't.
+    //
+    // Note: See TODO above about possibly eliminating the need to perform this
+    // arbitrary wait.
+    zx_nanosleep(zx_deadline_after(ZX_MSEC(100)));
+    just_woken += CountJustWoken();
+    return just_woken;
+  };
+
   // Time for success tests.
   //
   // During setup, we woke exactly one thread from the wake futex, and
@@ -850,32 +880,11 @@ TEST(FutexOwnershipTestCase, Requeue) {
   // Verify that exactly one thread was waiting in the requeue futex by waking
   // everyone on the requeue_futex and waiting a little bit to see who becomes
   // blocked on the exit event.
-  //
-  // Note: See TODO above about possibly eliminating the need to perform this
-  // arbitrary wait.
-  auto CountJustWoken = [&WAITERS](bool* timed_out) -> uint32_t {
-    uint32_t just_woken = 0;
-    *timed_out = !WaitFor(ZX_MSEC(100), [&]() -> bool {
-      for (auto& waiter : WAITERS) {
-        if (!waiter.woken) {
-          if (waiter.thread.state() == Thread::State::WAITING_TO_STOP) {
-            ++just_woken;
-            waiter.woken = true;
-          }
-        }
-      }
-      return false;
-    });
-    return just_woken;
-  };
-
   res = zx_futex_wake(&requeue_futex, std::numeric_limits<uint32_t>::max());
   ASSERT_OK(res);
 
-  bool timed_out;
   uint32_t just_woken;
-  just_woken = CountJustWoken(&timed_out);
-  ASSERT_TRUE(timed_out);
+  just_woken = WaitForJustWoken(1u);
   ASSERT_EQ(just_woken, 1u);
   ASSERT_NO_FATAL_FAILURES(VerifyState(woken_thread_koid, ZX_KOID_INVALID));
 
@@ -889,9 +898,8 @@ TEST(FutexOwnershipTestCase, Requeue) {
   res = zx_futex_wake(&requeue_futex, std::numeric_limits<uint32_t>::max());
   ASSERT_OK(res);
 
-  just_woken = CountJustWoken(&timed_out);
-  ASSERT_TRUE(timed_out);
-  ASSERT_EQ(just_woken, 2u);
+  just_woken = WaitForJustWoken(2u);
+  ASSERT_EQ(2u, just_woken);
   ASSERT_NO_FATAL_FAILURES(VerifyState(ZX_KOID_INVALID, ZX_KOID_INVALID));
 
   // Finally, requeue the rest of the threads, setting ownership of the
