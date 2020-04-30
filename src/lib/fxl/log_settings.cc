@@ -18,6 +18,6 @@ void SetLogTags(const std::initializer_list<std::string>& tags) {
   SetLogSettings({.min_log_level = GetMinLogLevel()}, tags);
 }
 
-int GetMinLogLevel() { return fxl_logging_backend::GetMinLogLevel(); }
+LogSeverity GetMinLogLevel() { return fxl_logging_backend::GetMinLogLevel(); }
 
 }  // namespace fxl
