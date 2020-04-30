@@ -135,8 +135,10 @@ void DeviceImpl::PostBind(fidl::InterfaceRequest<fuchsia::camera3::Device> reque
       return;
     }
     auto client = std::make_unique<Client>(*this, client_id_next_, std::move(request));
-    client->PostConfigurationUpdated(0);
     clients_.emplace(client_id_next_++, std::move(client));
+    if (exclusive) {
+      SetConfiguration(0);
+    }
   };
   ZX_ASSERT(async::PostTask(loop_.dispatcher(), std::move(task)) == ZX_OK);
 }

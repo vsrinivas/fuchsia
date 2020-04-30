@@ -523,6 +523,13 @@ TEST_F(DeviceTest, OrphanStream) {
   // Disconnect from the device.
   device = nullptr;
 
+  // Reset the error handler to expect peer-closed.
+  bool stream_error_received = false;
+  stream.set_error_handler([&](zx_status_t status) {
+    EXPECT_EQ(status, ZX_ERR_PEER_CLOSED);
+    stream_error_received = true;
+  });
+
   // Connect to the device as a new client. There is no way for a client to know when an existing
   // exclusive client disconnects, so it must retry periodically.
   fuchsia::camera3::DevicePtr device2;
@@ -545,28 +552,14 @@ TEST_F(DeviceTest, OrphanStream) {
   }
   SetFailOnError(device2, "Device2");
 
-  // Make sure the stream is still active.
-  Sync(stream);
+  // Make sure the first stream is closed when the new device connects.
+  RunLoopUntilFailureOr(stream_error_received);
 
-  // Attempting to connect to the stream should fail because it's still active via the first client.
+  // The second client should be able to connect to the stream now.
   fuchsia::camera3::StreamPtr stream2;
-  bool error_received = false;
-  stream2.set_error_handler([&](zx_status_t status) {
-    EXPECT_EQ(status, ZX_ERR_ALREADY_BOUND);
-    error_received = true;
-  });
-  device2->ConnectToStream(0, stream2.NewRequest());
-  RunLoopUntilFailureOr(error_received);
-
-  // Setting the configuration should disconnect the orphaned stream and allow the new client to
-  // connect.
   SetFailOnError(stream, "Stream2");
-  error_received = false;
-  stream.set_error_handler([&](zx_status_t status) { error_received = true; });
-  device2->SetCurrentConfiguration(0);
   device2->ConnectToStream(0, stream2.NewRequest());
   Sync(stream2);
-  RunLoopUntilFailureOr(error_received);
 }
 
 }  // namespace camera
