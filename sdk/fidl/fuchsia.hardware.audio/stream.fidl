@@ -146,7 +146,8 @@ table StreamProperties {
     6: float32 max_gain_db;
 
     /// Gain step in decibels, this value must not be negative, but may be zero to convey an
-    /// effectively continuous range of values. Must be included.
+    /// effectively continuous range of values. Must not exceed `max_gain_db` - `min_gain_db`.
+    /// Must be included.
     7: float32 gain_step_db;
 
     /// Plug Detect Capabilities. Must be included.
