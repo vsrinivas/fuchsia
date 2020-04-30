@@ -221,6 +221,10 @@ group("libc") {
   deps = [ ":libc-v0_2_66" ]
 }
 
+group("libm") {
+  deps = [ ":libm-v0_2_1" ]
+}
+
 if (is_fuchsia) {
   group("lipsum") {
     deps = [ ":lipsum-v0_6_0" ]
@@ -3730,6 +3734,27 @@ rust_library("libc-v0_2_66") {
     "--cfg=libc_align",
     "--cfg=libc_core_cvoid",
     "--cfg=libc_packedN",
+  ]
+}
+
+rust_library("libm-v0_2_1") {
+  crate_name = "libm"
+  crate_root = "//third_party/rust_crates/tiny_mirrors/libm/src/lib.rs"
+  output_name = "libm-9acc3111b7a9209b"
+  configs -= [
+    "//build/config:rust_edition_2018",
+    "//build/config:rust_2018_idioms",
+  ]
+
+  deps = []
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2015",
+    "-Cmetadata=9acc3111b7a9209b",
+    "-Cextra-filename=9acc3111b7a9209b",
   ]
 }
 

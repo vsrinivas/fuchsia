@@ -51,6 +51,7 @@ json5 = "0.2.4"
 json5format = "0.1.0"
 lazy_static = "1.4"
 libc = "0.2"
+libm = "0.2.1"
 log = { version = "0.4.4", features = ["std"] }
 maplit = "1.0"
 matches = "0.1.8"
@@ -200,6 +201,7 @@ tokio = "0.1.22"
 backtrace-sys = { path = "tiny_mirrors/backtrace-sys" }
 cmake = { path = "tiny_mirrors/cmake"}
 fuchsia-cprng = { path = "../../garnet/public/rust/fuchsia-cprng" }
+libm = { path = "tiny_mirrors/libm" }
 memchr = { path = "tiny_mirrors/memchr" }
 nom_locate = { path = "tiny_mirrors/nom_locate" }
 pkg-config = { path = "tiny_mirrors/pkg-config" }

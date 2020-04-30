@@ -736,6 +736,7 @@ dependencies = [
  "json5format 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "libc 0.2.66 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libm 0.2.1",
  "lipsum 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "maplit 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1280,6 +1281,10 @@ dependencies = [
 name = "libc"
 version = "0.2.66"
 source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "libm"
+version = "0.2.1"
 
 [[package]]
 name = "linked-hash-map"
