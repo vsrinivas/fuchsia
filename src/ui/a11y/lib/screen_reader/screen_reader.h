@@ -11,6 +11,7 @@
 
 #include "src/ui/a11y/lib/gesture_manager/gesture_handler.h"
 #include "src/ui/a11y/lib/screen_reader/explore_action.h"
+#include "src/ui/a11y/lib/screen_reader/i18n/messages.h"
 #include "src/ui/a11y/lib/screen_reader/screen_reader_context.h"
 #include "src/ui/a11y/lib/tts/tts_manager.h"
 
