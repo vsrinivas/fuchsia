@@ -528,23 +528,26 @@ TEST_F(DatabaseTest, Check_InspectTree_ReportUploaded) {
                   cobalt::Event(cobalt::UploadAttemptState::kUploadAttempt, 1u),
                   cobalt::Event(cobalt::UploadAttemptState::kUploaded, 1u),
               }));
-  EXPECT_THAT(InspectTree(),
-              ChildrenMatch(Contains(AllOf(
-                  NodeMatches(NameMatches("reports")),
+  EXPECT_THAT(
+      InspectTree(),
+      ChildrenMatch(Contains(AllOf(
+          NodeMatches(NameMatches("crash_reporter")),
+          ChildrenMatch(Contains(AllOf(
+              NodeMatches(NameMatches("reports")),
+              ChildrenMatch(ElementsAre(AllOf(
+                  NodeMatches(NameMatches("program")),
                   ChildrenMatch(ElementsAre(AllOf(
-                      NodeMatches(NameMatches("program")),
-                      ChildrenMatch(ElementsAre(AllOf(
-                          NodeMatches(AllOf(NameMatches(local_report_id.ToString()),
-                                            PropertyList(UnorderedElementsAreArray({
-                                                StringIs("creation_time", kTimeStr),
-                                                StringIs("final_state", "uploaded"),
-                                                UintIs("upload_attempts", 1u),
-                                            })))),
-                          ChildrenMatch(ElementsAre(NodeMatches(AllOf(
-                              NameMatches("crash_server"), PropertyList(UnorderedElementsAreArray({
-                                                               StringIs("creation_time", kTimeStr),
-                                                               StringIs("id", "server_report_id"),
-                                                           }))))))))))))))));
+                      NodeMatches(AllOf(NameMatches(local_report_id.ToString()),
+                                        PropertyList(UnorderedElementsAreArray({
+                                            StringIs("creation_time", kTimeStr),
+                                            StringIs("final_state", "uploaded"),
+                                            UintIs("upload_attempts", 1u),
+                                        })))),
+                      ChildrenMatch(ElementsAre(NodeMatches(AllOf(
+                          NameMatches("crash_server"), PropertyList(UnorderedElementsAreArray({
+                                                           StringIs("creation_time", kTimeStr),
+                                                           StringIs("id", "server_report_id"),
+                                                       })))))))))))))))))));
 }
 
 TEST_F(DatabaseTest, Check_InspectTree_ReportArchived) {
@@ -566,14 +569,16 @@ TEST_F(DatabaseTest, Check_InspectTree_ReportArchived) {
   EXPECT_THAT(
       InspectTree(),
       ChildrenMatch(Contains(AllOf(
-          NodeMatches(NameMatches("reports")),
-          ChildrenMatch(ElementsAre(AllOf(
-              NodeMatches(NameMatches("program")),
-              ChildrenMatch(ElementsAre(AllOf(NodeMatches(AllOf(
-                  NameMatches(local_report_id.ToString()), PropertyList(UnorderedElementsAreArray({
-                                                               StringIs("creation_time", kTimeStr),
-                                                               StringIs("final_state", "archived"),
-                                                           }))))))))))))));
+          NodeMatches(NameMatches("crash_reporter")),
+          ChildrenMatch(Contains(AllOf(
+              NodeMatches(NameMatches("reports")),
+              ChildrenMatch(ElementsAre(AllOf(NodeMatches(NameMatches("program")),
+                                              ChildrenMatch(ElementsAre(AllOf(NodeMatches(
+                                                  AllOf(NameMatches(local_report_id.ToString()),
+                                                        PropertyList(UnorderedElementsAreArray({
+                                                            StringIs("creation_time", kTimeStr),
+                                                            StringIs("final_state", "archived"),
+                                                        })))))))))))))))));
 }
 
 TEST_F(DatabaseTest, Check_InspectTree_ReportGarbageCollected) {
@@ -596,26 +601,28 @@ TEST_F(DatabaseTest, Check_InspectTree_ReportGarbageCollected) {
   EXPECT_THAT(ReceivedCobaltEvents(), UnorderedElementsAreArray({
                                           cobalt::Event(cobalt::CrashState::kGarbageCollected),
                                       }));
-  EXPECT_THAT(InspectTree(),
-              ChildrenMatch(IsSupersetOf({
-                  AllOf(NodeMatches(NameMatches("reports")),
-                        ChildrenMatch(
-                            ElementsAre(AllOf(NodeMatches(NameMatches("program")),
-                                              ChildrenMatch(ElementsAre(AllOf(NodeMatches(AllOf(
-                                                  NameMatches(local_report_id.ToString()),
-                                                  PropertyList(UnorderedElementsAreArray({
-                                                      StringIs("creation_time", kTimeStr),
-                                                      StringIs("final_state", "garbage_collected"),
-                                                  }))))))))))),
-                  AllOf(NodeMatches(AllOf(NameMatches("database"),
-                                          PropertyList(UnorderedElementsAreArray({
-                                              UintIs("max_crashpad_database_size_in_kb", 0u),
-                                              UintIs("num_reports_cleaned", 0u),
-                                              UintIs("num_reports_pruned", 1u),
-                                          })))),
-                        ChildrenMatch(IsEmpty())),
-
-              })));
+  EXPECT_THAT(
+      InspectTree(),
+      ChildrenMatch(IsSupersetOf({
+          AllOf(NodeMatches(NameMatches("crash_reporter")),
+                ChildrenMatch(IsSupersetOf(
+                    {AllOf(NodeMatches(AllOf(NameMatches("database"),
+                                             PropertyList(UnorderedElementsAreArray({
+                                                 UintIs("max_crashpad_database_size_in_kb", 0u),
+                                                 UintIs("num_reports_cleaned", 0u),
+                                                 UintIs("num_reports_pruned", 1u),
+                                             })))),
+                           ChildrenMatch(IsEmpty())),
+                     AllOf(NodeMatches(NameMatches("reports")),
+                           ChildrenMatch(ElementsAre(
+                               AllOf(NodeMatches(NameMatches("program")),
+                                     ChildrenMatch(ElementsAre(AllOf(NodeMatches(
+                                         AllOf(NameMatches(local_report_id.ToString()),
+                                               PropertyList(UnorderedElementsAreArray({
+                                                   StringIs("creation_time", kTimeStr),
+                                                   StringIs("final_state", "garbage_collected"),
+                                               })))))))))))}))),
+      })));
 }
 
 TEST_F(DatabaseTest, Check_CobaltLogsInitializeFailure) {

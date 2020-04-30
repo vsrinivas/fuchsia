@@ -77,19 +77,25 @@ TEST_F(MainServiceTest, Check_InitialInspectTree) {
                                        ToString(CrashServerConfig::UploadPolicy::ENABLED)),
                               StringIs(kCrashServerUrlKey, kCrashServerUrl),
                           }))))))),
-          NodeMatches(AllOf(NameMatches("database"),
-                            PropertyList(ElementsAre(UintIs("max_crashpad_database_size_in_kb",
-                                                            kCrashpadDatabaseMaxSizeInKb))))),
+          AllOf(
+              NodeMatches(NameMatches("crash_reporter")),
+              ChildrenMatch(UnorderedElementsAreArray({
+                  NodeMatches(AllOf(NameMatches("database"), PropertyList(ElementsAre(UintIs(
+                                                                 "max_crashpad_database_size_in_kb",
+                                                                 kCrashpadDatabaseMaxSizeInKb))))),
+                  NodeMatches(
+                      AllOf(NameMatches("settings"),
+                            PropertyList(ElementsAre(StringIs(
+                                "upload_policy", ToString(Settings::UploadPolicy::ENABLED)))))),
+                  NodeMatches(NameMatches("reports")),
+                  NodeMatches(NameMatches("queue")),
+              }))),
           AllOf(NodeMatches(NameMatches("fidl")), ChildrenMatch(ElementsAre(NodeMatches(AllOf(
                                                       NameMatches("fuchsia.feedback.CrashReporter"),
                                                       PropertyList(UnorderedElementsAreArray({
                                                           UintIs("current_num_connections", 0u),
                                                           UintIs("total_num_connections", 0u),
-                                                      }))))))),
-          NodeMatches(AllOf(NameMatches("settings"),
-                            PropertyList(ElementsAre(StringIs(
-                                "upload_policy", ToString(Settings::UploadPolicy::ENABLED)))))),
-          NodeMatches(NameMatches("reports")), NodeMatches(NameMatches("queue")))));
+                                                      }))))))))));
 }
 
 TEST_F(MainServiceTest, CrashReporter_CheckInspect) {

@@ -37,7 +37,7 @@ std::string CurrentTime(const timekeeper::Clock& clock) {
 
 InspectManager::Report::Report(const std::string& program_name,
                                const std::string& local_report_id) {
-  path_ = JoinPath("/reports",
+  path_ = JoinPath("/crash_reporter/reports",
                    JoinPath(InspectNodeManager::SanitizeString(program_name), local_report_id));
 }
 
@@ -46,10 +46,10 @@ InspectManager::InspectManager(inspect::Node* root_node, const timekeeper::Clock
       clock_(clock),
       crash_reporter_stats_(&node_manager_, "/fidl/fuchsia.feedback.CrashReporter") {
   node_manager_.Get("/config/crash_server");
-  node_manager_.Get("/database");
-  node_manager_.Get("/queue");
-  node_manager_.Get("/reports");
-  node_manager_.Get("/settings");
+  node_manager_.Get("/crash_reporter/database");
+  node_manager_.Get("/crash_reporter/queue");
+  node_manager_.Get("/crash_reporter/reports");
+  node_manager_.Get("/crash_reporter/settings");
 }
 
 bool InspectManager::AddReport(const std::string& program_name,
@@ -150,7 +150,7 @@ void InspectManager::ExposeSettings(feedback::Settings* settings) {
 }
 
 void InspectManager::SetQueueSize(const uint64_t size) {
-  inspect::Node& queue = node_manager_.Get("/queue");
+  inspect::Node& queue = node_manager_.Get("/crash_reporter/queue");
   if (!queue_.size) {
     queue_.size = queue.CreateUint("size", size);
   } else {
@@ -170,8 +170,8 @@ void InspectManager::OnUploadPolicyChange(const feedback::Settings::UploadPolicy
   // |settings_.upload_policy| will change so we only create a StringProperty the first time it is
   // needed.
   if (!settings_.upload_policy) {
-    settings_.upload_policy =
-        node_manager_.Get("/settings").CreateString("upload_policy", ToString(upload_policy));
+    settings_.upload_policy = node_manager_.Get("/crash_reporter/settings")
+                                  .CreateString("upload_policy", ToString(upload_policy));
   } else {
     settings_.upload_policy.Set(ToString(upload_policy));
   }
@@ -179,8 +179,8 @@ void InspectManager::OnUploadPolicyChange(const feedback::Settings::UploadPolicy
 
 void InspectManager::IncreaseReportsCleanedBy(const uint64_t num_cleaned) {
   if (!database_.num_cleaned) {
-    database_.num_cleaned =
-        node_manager_.Get("/database").CreateUint("num_reports_cleaned", num_cleaned);
+    database_.num_cleaned = node_manager_.Get("/crash_reporter/database")
+                                .CreateUint("num_reports_cleaned", num_cleaned);
   } else {
     database_.num_cleaned.Add(num_cleaned);
   }
@@ -189,7 +189,7 @@ void InspectManager::IncreaseReportsCleanedBy(const uint64_t num_cleaned) {
 void InspectManager::IncreaseReportsPrunedBy(const uint64_t num_pruned) {
   if (!database_.num_pruned) {
     database_.num_pruned =
-        node_manager_.Get("/database").CreateUint("num_reports_pruned", num_pruned);
+        node_manager_.Get("/crash_reporter/database").CreateUint("num_reports_pruned", num_pruned);
   } else {
     database_.num_pruned.Add(num_pruned);
   }
@@ -197,7 +197,7 @@ void InspectManager::IncreaseReportsPrunedBy(const uint64_t num_pruned) {
 
 void InspectManager::ExposeDatabase(uint64_t max_crashpad_database_size_in_kb) {
   database_.max_crashpad_database_size_in_kb =
-      node_manager_.Get("/database")
+      node_manager_.Get("/crash_reporter/database")
           .CreateUint("max_crashpad_database_size_in_kb", max_crashpad_database_size_in_kb);
 }
 
