@@ -124,12 +124,14 @@ class FakeUserPager : public UserPager {
 
 class BlobLoaderTest : public zxtest::Test {
  public:
-  void Init(MountOptions options) {
+  void Init(CompressionAlgorithm algorithm) {
     auto device = std::make_unique<FakeBlockDevice>(kNumBlocks, kBlockSize);
     ASSERT_TRUE(device);
     ASSERT_OK(FormatFilesystem(device.get()));
     loop_.StartThread();
 
+    MountOptions options;
+    options.write_compression_algorithm = algorithm;
     ASSERT_OK(
         Blobfs::Create(loop_.dispatcher(), std::move(device), &options, zx::resource(), &fs_));
 
@@ -194,22 +196,18 @@ class BlobLoaderTest : public zxtest::Test {
   async::Loop loop_{&kAsyncLoopConfigNoAttachToCurrentThread};
 };
 
-class UncompressedBlobLoaderTest : public BlobLoaderTest {
+template <CompressionAlgorithm A>
+class BlobLoaderTestVariant : public BlobLoaderTest {
  public:
-  void SetUp() final {
-    MountOptions options;
-    options.write_compression_algorithm = CompressionAlgorithm::UNCOMPRESSED;
-    Init(options);
-  }
+  void SetUp() final { Init(A); }
 };
 
-// TODO(jfsulliv): Split to each compression algorithm supported.
-class CompressedBlobLoaderTest : public BlobLoaderTest {
- public:
-  void SetUp() final {
-    MountOptions options;
-    Init(options);
-  }
+class UncompressedBlobLoaderTest
+    : public BlobLoaderTestVariant<CompressionAlgorithm::UNCOMPRESSED> {};
+class ZstdCompressedBlobLoaderTest : public BlobLoaderTestVariant<CompressionAlgorithm::ZSTD> {};
+class ZstdSeekableCompressedBlobLoaderTest
+    : public BlobLoaderTestVariant<CompressionAlgorithm::ZSTD_SEEKABLE> {};
+class ChunkCompressedBlobLoaderTest : public BlobLoaderTestVariant<CompressionAlgorithm::CHUNKED> {
 };
 
 void DoTest_NullBlob(BlobLoaderTest* test) {
@@ -231,7 +229,9 @@ void DoTest_NullBlob(BlobLoaderTest* test) {
   EXPECT_EQ(info->size_merkle, 0);
 }
 
-TEST_F(CompressedBlobLoaderTest, Test_NullBlob) { DoTest_NullBlob(this); }
+TEST_F(ZstdCompressedBlobLoaderTest, Test_NullBlob) { DoTest_NullBlob(this); }
+TEST_F(ZstdSeekableCompressedBlobLoaderTest, Test_NullBlob) { DoTest_NullBlob(this); }
+TEST_F(ChunkCompressedBlobLoaderTest, Test_NullBlob) { DoTest_NullBlob(this); }
 TEST_F(UncompressedBlobLoaderTest, Test_NullBlob) { DoTest_NullBlob(this); }
 
 void DoTest_SmallBlob(BlobLoaderTest* test) {
@@ -253,7 +253,9 @@ void DoTest_SmallBlob(BlobLoaderTest* test) {
   EXPECT_EQ(info->size_merkle, 0);
 }
 
-TEST_F(CompressedBlobLoaderTest, SmallBlob) { DoTest_SmallBlob(this); }
+TEST_F(ZstdCompressedBlobLoaderTest, SmallBlob) { DoTest_SmallBlob(this); }
+TEST_F(ZstdSeekableCompressedBlobLoaderTest, SmallBlob) { DoTest_SmallBlob(this); }
+TEST_F(ChunkCompressedBlobLoaderTest, SmallBlob) { DoTest_SmallBlob(this); }
 TEST_F(UncompressedBlobLoaderTest, SmallBlob) { DoTest_SmallBlob(this); }
 
 void DoTest_Paged_SmallBlob(BlobLoaderTest* test) {
@@ -284,7 +286,8 @@ void DoTest_Paged_SmallBlob(BlobLoaderTest* test) {
 }
 
 // TODO(44820): Enable when compressed, pageable blobs are supported.
-// TEST_F(CompressedBlobLoaderTest, Paged_SmallBlob) { DoTest_Paged_SmallBlob(this); }
+// TEST_F(ZstdSeekableCompressedBlobLoaderTest, Paged_SmallBlob) { DoTest_Paged_SmallBlob(this); }
+// TEST_F(ChunkCompressedBlobLoaderTest, Paged_SmallBlob) { DoTest_Paged_SmallBlob(this); }
 TEST_F(UncompressedBlobLoaderTest, Paged_SmallBlob) { DoTest_Paged_SmallBlob(this); }
 
 void DoTest_LargeBlob(BlobLoaderTest* test) {
@@ -307,7 +310,9 @@ void DoTest_LargeBlob(BlobLoaderTest* test) {
   EXPECT_BYTES_EQ(merkle.start(), info->merkle.get(), info->size_merkle);
 }
 
-TEST_F(CompressedBlobLoaderTest, LargeBlob) { DoTest_LargeBlob(this); }
+TEST_F(ZstdCompressedBlobLoaderTest, LargeBlob) { DoTest_LargeBlob(this); }
+TEST_F(ZstdSeekableCompressedBlobLoaderTest, LargeBlob) { DoTest_LargeBlob(this); }
+TEST_F(ChunkCompressedBlobLoaderTest, LargeBlob) { DoTest_LargeBlob(this); }
 TEST_F(UncompressedBlobLoaderTest, LargeBlob) { DoTest_LargeBlob(this); }
 
 void DoTest_LargeBlob_NonAlignedLength(BlobLoaderTest* test) {
@@ -330,7 +335,13 @@ void DoTest_LargeBlob_NonAlignedLength(BlobLoaderTest* test) {
   EXPECT_BYTES_EQ(merkle.start(), info->merkle.get(), info->size_merkle);
 }
 
-TEST_F(CompressedBlobLoaderTest, LargeBlob_NonAlignedLength) {
+TEST_F(ZstdCompressedBlobLoaderTest, LargeBlob_NonAlignedLength) {
+  DoTest_LargeBlob_NonAlignedLength(this);
+}
+TEST_F(ZstdSeekableCompressedBlobLoaderTest, LargeBlob_NonAlignedLength) {
+  DoTest_LargeBlob_NonAlignedLength(this);
+}
+TEST_F(ChunkCompressedBlobLoaderTest, LargeBlob_NonAlignedLength) {
   DoTest_LargeBlob_NonAlignedLength(this);
 }
 TEST_F(UncompressedBlobLoaderTest, LargeBlob_NonAlignedLength) {
@@ -366,7 +377,8 @@ void DoTest_Paged_LargeBlob(BlobLoaderTest* test) {
 }
 
 // TODO(44820): Enable when compressed, pageable blobs are supported.
-// TEST_F(CompressedBlobLoaderTest, Paged_LargeBlob) { DoTest_Paged_LargeBlob(this); }
+// TEST_F(ZstdSeekableCompressedBlobLoaderTest, Paged_LargeBlob) { DoTest_Paged_LargeBlob(this); }
+// TEST_F(ChunkCompressedBlobLoaderTest, Paged_LargeBlob) { DoTest_Paged_LargeBlob(this); }
 TEST_F(UncompressedBlobLoaderTest, Paged_LargeBlob) { DoTest_Paged_LargeBlob(this); }
 
 void DoTest_Paged_LargeBlob_NonAlignedLength(BlobLoaderTest* test) {
@@ -398,7 +410,10 @@ void DoTest_Paged_LargeBlob_NonAlignedLength(BlobLoaderTest* test) {
 }
 
 // TODO(44820): Enable when compressed, pageable blobs are supported.
-// TEST_F(CompressedBlobLoaderTest, Paged_LargeBlob_NonAlignedLength) {
+// TEST_F(ZstdSeekableCompressedBlobLoaderTest, Paged_LargeBlob_NonAlignedLength) {
+//   DoTest_Paged_LargeBlob_NonAlignedLength(this);
+// }
+// TEST_F(ChunkCompressedBlobLoaderTest, Paged_LargeBlob_NonAlignedLength) {
 //   DoTest_Paged_LargeBlob_NonAlignedLength(this);
 // }
 TEST_F(UncompressedBlobLoaderTest, Paged_LargeBlob_NonAlignedLength) {
