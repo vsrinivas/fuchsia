@@ -11,11 +11,11 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <zircon/compiler.h>
+#include <zircon/syscalls.h>
 
 #include <fbl/unique_fd.h>
 #include <unittest/unittest.h>
-#include <zircon/compiler.h>
-#include <zircon/syscalls.h>
 
 #include "filesystems.h"
 
@@ -521,28 +521,39 @@ bool mmap_crash(int prot, int flags, RW rw) {
   ASSERT_NE(addr, MAP_FAILED);
   ASSERT_EQ(close(fd.release()), 0);
 
-  if (rw == RW::Read || rw == RW::ReadAfterUnmap) {
-    // Read
-    if (rw == RW::ReadAfterUnmap) {
+  switch (rw) {
+    case RW::Read:
+      ASSERT_DEATH([](void* addr) -> void { (void)*static_cast<volatile int*>(addr); }, addr, "");
       ASSERT_EQ(munmap(addr, PAGE_SIZE), 0);
-    }
-
-    ASSERT_DEATH([](void* addr) -> void { (void)*static_cast<volatile int*>(addr); }, addr, "");
-
-    if (rw == RW::Read) {
+      break;
+    case RW::Write:
+      ASSERT_DEATH([](void* addr) { *static_cast<int*>(addr) = 5; }, addr, "");
       ASSERT_EQ(munmap(addr, PAGE_SIZE), 0);
-    }
-  } else {
-    // Write
-    if (rw == RW::WriteAfterUnmap) {
-      ASSERT_EQ(munmap(addr, PAGE_SIZE), 0);
-    }
-
-    ASSERT_DEATH([](void* addr) { *static_cast<int*>(addr) = 5; }, addr, "");
-
-    if (rw == RW::Write) {
-      ASSERT_EQ(munmap(addr, PAGE_SIZE), 0);
-    }
+      break;
+    case RW::ReadAfterUnmap:
+      ASSERT_DEATH(
+          [](void* addr) -> void {
+            // Perform the munmap here as ASSERT_DEATH creates a thread and performs allocations,
+            // which could then reuse the slot we just unmapped. As there are no other active
+            // threads performing allocations in these tests, unmapping here should prevent any
+            // races between the unmap and the access.
+            munmap(addr, PAGE_SIZE);
+            (void)*static_cast<volatile int*>(addr);
+          },
+          addr, "");
+      break;
+    case RW::WriteAfterUnmap:
+      ASSERT_DEATH(
+          [](void* addr) {
+            // Perform the munmap here as ASSERT_DEATH creates a thread and performs allocations,
+            // which could then reuse the slot we just unmapped. As there are no other active
+            // threads performing allocations in these tests, unmapping here should prevent any
+            // races between the unmap and the access.
+            munmap(addr, PAGE_SIZE);
+            *static_cast<int*>(addr) = 5;
+          },
+          addr, "");
+      break;
   }
   END_HELPER;
 }
