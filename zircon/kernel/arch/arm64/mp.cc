@@ -87,8 +87,7 @@ void arch_mp_send_ipi(mp_ipi_target_t target, cpu_mask_t mask, mp_ipi_t ipi) {
       mask = (1ul << SMP_MAX_CPUS) - 1;
       break;
     case MP_IPI_TARGET_ALL_BUT_LOCAL:
-      mask = (1ul << SMP_MAX_CPUS) - 1;
-      mask &= ~cpu_num_to_mask(arch_curr_cpu_num());
+      mask = mask_all_but_one(arch_curr_cpu_num());
       break;
     case MP_IPI_TARGET_MASK:;
   }
