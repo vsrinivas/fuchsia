@@ -113,13 +113,10 @@ impl<'a> Config<'a> {
         build_dir: &Option<String>,
     ) -> Result<FileBacked, Error> {
         match build_dir {
-            Some(b) => FileBacked::load(
-                &env.defaults,
-                &env.global,
-                &env.build.as_ref().and_then(|c| c.get(b)),
-                &env.user,
-            ),
-            None => FileBacked::load(&env.defaults, &env.global, &None, &env.user),
+            Some(b) => {
+                FileBacked::load(&env.global, &env.build.as_ref().and_then(|c| c.get(b)), &env.user)
+            }
+            None => FileBacked::load(&env.global, &None, &env.user),
         }
     }
 }

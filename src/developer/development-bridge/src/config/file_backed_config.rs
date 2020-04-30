@@ -63,13 +63,11 @@ impl FileBacked {
     }
 
     pub(crate) fn load(
-        defaults: &Option<String>,
         global: &Option<String>,
         build: &Option<&String>,
         user: &Option<String>,
     ) -> Result<Self, Error> {
         let data = Persistent::load(
-            FileBacked::reader(defaults)?,
             FileBacked::reader(global)?,
             FileBacked::reader_from_ref(build)?,
             FileBacked::reader(user)?,

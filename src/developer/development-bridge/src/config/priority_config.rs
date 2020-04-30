@@ -5,11 +5,12 @@
 use {
     crate::config::api::{ConfigLevel, ReadConfig, WriteConfig},
     anyhow::{anyhow, Error},
+    config_macros::include_default,
     serde_json::Value,
 };
 
 pub(crate) struct Priority {
-    pub(crate) defaults: Option<Value>,
+    defaults: Option<Value>,
     pub(crate) build: Option<Value>,
     pub(crate) global: Option<Value>,
     pub(crate) user: Option<Value>,
@@ -49,6 +50,10 @@ impl<'a> Iterator for PriorityIterator<'a> {
 }
 
 impl Priority {
+    pub(crate) fn new(user: Option<Value>, build: Option<Value>, global: Option<Value>) -> Self {
+        Self { user, build, global, defaults: include_default!() }
+    }
+
     fn iter(&self) -> PriorityIterator<'_> {
         PriorityIterator { curr: None, config: self }
     }
@@ -327,5 +332,12 @@ mod test {
         let none_value = test.get("name");
         assert!(none_value.is_none());
         Ok(())
+    }
+
+    #[test]
+    fn test_defaults() {
+        let test = Priority::new(None, None, None);
+        let default_value = test.get("log-enabled");
+        assert_eq!(default_value.unwrap(), Value::Bool(false));
     }
 }

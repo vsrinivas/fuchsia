@@ -19,7 +19,6 @@ pub struct Environment {
     pub user: Option<String>,
     pub build: Option<HashMap<String, String>>,
     pub global: Option<String>,
-    pub defaults: Option<String>,
 }
 
 impl Environment {
@@ -42,18 +41,18 @@ impl Environment {
             Some(f) => {
                 let reader = Environment::reader(&f);
                 if reader.is_err() {
-                    Self { user: None, build: None, global: None, defaults: None }
+                    Self { user: None, build: None, global: None }
                 } else {
                     match Environment::load_from_reader(reader.expect("environment file reader")) {
                         Ok(env) => env,
                         Err(e) => {
                             log::error!("Error loading environment: {}", e);
-                            Self { user: None, build: None, global: None, defaults: None }
+                            Self { user: None, build: None, global: None }
                         }
                     }
                 }
             }
-            None => Self { user: None, build: None, global: None, defaults: None },
+            None => Self { user: None, build: None, global: None },
         }
     }
 
@@ -113,27 +112,19 @@ impl Environment {
         }
     }
 
-    fn display_defaults(&self) -> String {
-        match self.defaults.as_ref() {
-            Some(d) => format!(" Defaults: {}\n", d),
-            None => format!(" Defaults: none\n"),
-        }
-    }
-
     pub fn display(&self, level: &Option<ConfigLevel>) -> String {
         match level {
             Some(l) => match l {
                 ConfigLevel::User => self.display_user(),
                 ConfigLevel::Build => self.display_build(),
                 ConfigLevel::Global => self.display_global(),
-                ConfigLevel::Defaults => self.display_defaults(),
+                ConfigLevel::Defaults => "".to_string(),
             },
             None => {
                 let mut res = format!("\nEnvironment:\n");
                 res.push_str(&self.display_user());
                 res.push_str(&self.display_build());
                 res.push_str(&self.display_global());
-                res.push_str(&self.display_defaults());
                 res
             }
         }
@@ -159,8 +150,7 @@ mod test {
             "build": {
                 "/tmp/build/1": "/tmp/build/1/build.json"
             },
-            "global": "/tmp/global.json",
-            "defaults": "/tmp/defaults.json"
+            "global": "/tmp/global.json"
         }"#;
 
     #[test]

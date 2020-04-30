@@ -45,18 +45,16 @@ impl Persistent {
     }
 
     pub(crate) fn load<R: Read>(
-        defaults: Option<R>,
         global: Option<R>,
         build: Option<R>,
         user: Option<R>,
     ) -> Result<Self, Error> {
         Ok(Self {
-            data: Priority {
-                user: Persistent::open(user)?,
-                build: Persistent::open(build)?,
-                global: Persistent::open(global)?,
-                defaults: Persistent::open(defaults)?,
-            },
+            data: Priority::new(
+                Persistent::open(user)?,
+                Persistent::open(build)?,
+                Persistent::open(global)?,
+            ),
         })
     }
 
@@ -69,7 +67,6 @@ impl Persistent {
         Persistent::save_config(user, &self.data.user)?;
         Persistent::save_config(build, &self.data.build)?;
         Persistent::save_config(global, &self.data.global)?;
-        // Don't overwrite defaults file.
         Ok(())
     }
 }
@@ -119,20 +116,13 @@ mod test {
             "name": "Global"
         }"#;
 
-    const DEFAULTS: &'static str = r#"
-        {
-            "name": "Defaults"
-        }"#;
-
     #[test]
     fn test_persistent_build() -> Result<(), Error> {
         let mut user_file = String::from(USER);
         let mut build_file = String::from(BUILD);
         let mut global_file = String::from(GLOBAL);
-        let defaults_file = String::from(DEFAULTS);
 
         let persistent_config = Persistent::load(
-            Some(BufReader::new(defaults_file.as_bytes())),
             Some(BufReader::new(global_file.as_bytes())),
             Some(BufReader::new(build_file.as_bytes())),
             Some(BufReader::new(user_file.as_bytes())),
