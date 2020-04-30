@@ -29,7 +29,6 @@ recovery_packages = [
   "//garnet/packages/prod:sysmem_connector",
   "//garnet/packages/prod:broadcom",
   "//src/connectivity/management:network_config_default",
-  "//src/connectivity/network/netstack",
   "//src/connectivity/network:config",
   "//src/connectivity/wlan/config:default",
   "//src/connectivity/wlan/wlancfg",
