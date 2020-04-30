@@ -95,7 +95,7 @@ void main(List<String> args) {
         'id': body['id'],
         'result': [
           {
-            'contents': {
+            'payload': {
               'root': {'some_prop': 1}
             }
           }

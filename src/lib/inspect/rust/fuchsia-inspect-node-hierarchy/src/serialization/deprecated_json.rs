@@ -21,7 +21,7 @@ use {
 pub struct DeprecatedJsonFormatter {}
 
 impl DeprecatedHierarchyFormatter for DeprecatedJsonFormatter {
-    fn format(hierarchy: HierarchyData) -> Result<String, Error> {
+    fn format(hierarchy: DeprecatedHierarchyData) -> Result<String, Error> {
         let mut bytes = Vec::new();
         let mut serializer =
             JsonSerializer::with_formatter(&mut bytes, PrettyFormatter::with_indent(b"    "));
@@ -30,7 +30,7 @@ impl DeprecatedHierarchyFormatter for DeprecatedJsonFormatter {
         Ok(from_utf8(&bytes)?.to_string())
     }
 
-    fn format_multiple(hierarchies: Vec<HierarchyData>) -> Result<String, Error> {
+    fn format_multiple(hierarchies: Vec<DeprecatedHierarchyData>) -> Result<String, Error> {
         let values = hierarchies
             .into_iter()
             .map(|hierarchy_data| SerializableHierarchyData { hierarchy_data })
@@ -44,7 +44,7 @@ impl DeprecatedHierarchyFormatter for DeprecatedJsonFormatter {
 }
 
 pub struct SerializableHierarchyData {
-    hierarchy_data: HierarchyData,
+    hierarchy_data: DeprecatedHierarchyData,
 }
 
 struct WrappedSerializableNodeHierarchy<'a> {
@@ -83,7 +83,7 @@ mod tests {
     fn format_json() {
         let hierarchy =
             NodeHierarchy::new("root", vec![Property::Double("double".to_string(), 2.5)], vec![]);
-        let data = HierarchyData {
+        let data = DeprecatedHierarchyData {
             hierarchy,
             file_path: "/some/path/out/diagnostics/root.inspect".to_string(),
             fields: vec![],
@@ -104,12 +104,12 @@ mod tests {
     fn format_json_multiple() -> Result<(), Error> {
         let (a, b) = get_hierarchies();
         let datas = vec![
-            HierarchyData {
+            DeprecatedHierarchyData {
                 hierarchy: a,
                 file_path: "/some/path/out/diagnostics/root.inspect".to_string(),
                 fields: vec![],
             },
-            HierarchyData {
+            DeprecatedHierarchyData {
                 hierarchy: b,
                 file_path: "/other/path/out/diagnostics".to_string(),
                 fields: vec!["root".to_string(), "x".to_string(), "y".to_string()],

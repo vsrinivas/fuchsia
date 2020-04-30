@@ -23,6 +23,7 @@ lazy_static! {
     static ref RETRY_DELAY_MS: i64 = 150;
     static ref DEFAULT_TIMEOUT_SECS: i64 = 5;
     static ref MAX_RETRIES: usize = std::usize::MAX;
+    static ref PAYLOAD_KEY: &'static str = "payload";
 }
 
 /// An inspect tree selector for a component.
@@ -129,7 +130,8 @@ impl InspectDataFetcher {
             serde_json::Value::Array(values) => values
                 .into_iter()
                 .map(|mut value| {
-                    let tree_json = value.get_mut("contents").context("contents are there")?.take();
+                    let tree_json =
+                        value.get_mut(*PAYLOAD_KEY).context("contents are there")?.take();
                     RawJsonNodeHierarchySerializer::deserialize(tree_json)
                 })
                 .collect::<Result<Vec<_>, _>>(),
@@ -291,7 +293,7 @@ mod tests {
         let hierarchies = response.as_array_mut().expect("as array ok");
         assert_eq!(hierarchies.len(), 1);
         let hierarchy =
-            RawJsonNodeHierarchySerializer::deserialize(hierarchies[0]["contents"].take())
+            RawJsonNodeHierarchySerializer::deserialize(hierarchies[0][*PAYLOAD_KEY].take())
                 .expect("deserialize ok");
 
         assert_inspect_tree!(hierarchy, root: {

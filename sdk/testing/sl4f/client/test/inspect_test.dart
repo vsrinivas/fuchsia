@@ -29,20 +29,33 @@ void main(List<String> args) {
     final selectors = ['test.cmx:root', 'other.cmx:root/node:prop'];
     final expectedHierarchies = [
       {
-        'contents': {
+        'moniker': 'test.cmx',
+        'version': 1,
+        'data_source': 'Inspect',
+        'payload': {
           'root': {'a': 1}
         },
-        'path': 'test.cmx'
+        'metadata': {
+          'timestamp': 123456,
+          'errors': null,
+          'filename': 'test_file_plz_ignore.inspect'
+        }
       },
       {
-        'contents': {
-          'root': {
-            'node': {'prop': 2}
-          }
+        'moniker': 'other.cmx',
+        'version': 1,
+        'data_source': 'Inspect',
+        'payload': {
+          'root': {'prop': 2}
         },
-        'path': 'other.cmx'
+        'metadata': {
+          'timestamp': 123456,
+          'errors': null,
+          'filename': 'test_file_plz_ignore.inspect'
+        }
       }
     ];
+
     void handler(HttpRequest req) async {
       expect(req.contentLength, greaterThan(0));
       final body = jsonDecode(await utf8.decoder.bind(req).join());
@@ -65,18 +78,30 @@ void main(List<String> args) {
   test('snapshot inspect all', () async {
     final expectedHierarchies = [
       {
-        'contents': {
+        'moniker': 'test.cmx',
+        'version': 1,
+        'data_source': 'Inspect',
+        'payload': {
           'root': {'a': 1}
         },
-        'path': 'test.cmx'
+        'metadata': {
+          'timestamp': 123456,
+          'errors': null,
+          'filename': 'test_file_plz_ignore.inspect'
+        }
       },
       {
-        'contents': {
-          'root': {
-            'node': {'prop': 2}
-          }
+        'moniker': 'other.cmx',
+        'version': 1,
+        'data_source': 'Inspect',
+        'payload': {
+          'root': {'prop': 2}
         },
-        'path': 'other.cmx'
+        'metadata': {
+          'timestamp': 123456,
+          'errors': null,
+          'filename': 'test_file_plz_ignore.inspect'
+        }
       }
     ];
 
@@ -102,20 +127,33 @@ void main(List<String> args) {
   test('snapshot inspect root', () async {
     final resultHierarchies = [
       {
-        'contents': {
+        'moniker': 'test.cmx',
+        'version': 1,
+        'data_source': 'Inspect',
+        'payload': {
           'root': {'a': 1}
         },
-        'path': 'test.cmx'
+        'metadata': {
+          'timestamp': 123456,
+          'errors': null,
+          'filename': 'test_file_plz_ignore.inspect'
+        }
       },
       {
-        'contents': {
-          'root': {
-            'node': {'prop': 2}
-          }
+        'moniker': 'other.cmx',
+        'version': 1,
+        'data_source': 'Inspect',
+        'payload': {
+          'root': {'prop': 2}
         },
-        'path': 'other.cmx'
+        'metadata': {
+          'timestamp': 123456,
+          'errors': null,
+          'filename': 'test_file_plz_ignore.inspect'
+        }
       }
     ];
+
     void handler(HttpRequest req) async {
       expect(req.contentLength, greaterThan(0));
       final body = jsonDecode(await utf8.decoder.bind(req).join());

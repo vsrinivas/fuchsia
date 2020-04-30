@@ -141,7 +141,7 @@ async fn data_stats() -> Result<(), Error> {
                 // have a deserializer, perform an `assert_inspect_tree` that checks the other
                 // values in the response as well, not only data stats.
                 if let Some(data_stats) = output
-                    .get("contents")
+                    .get("payload")
                     .and_then(|contents| contents.get("root"))
                     .and_then(|root| root.get("data_stats"))
                 {

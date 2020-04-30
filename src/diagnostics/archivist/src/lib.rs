@@ -9,5 +9,6 @@ pub mod configs;
 pub mod data_stats;
 pub mod diagnostics;
 pub mod events;
+pub mod formatter;
 pub mod inspect;
 pub mod logs;

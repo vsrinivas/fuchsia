@@ -54,11 +54,12 @@ pub trait HierarchyDeserializer {
     fn deserialize(data_format: Self::Object) -> Result<NodeHierarchy, Error>;
 }
 
+/// DEPRECATED:
 /// Node hierarchies to be formatted including information about the path.
 /// Example:
 ///
 /// ```
-/// HierarchyData {
+/// DeprecatedHierarchyData {
 ///     hierarchy: SOME_HIERARCHY,
 ///     file_path: "/some/path",
 ///     fields: vec!["root", "node1", "node2"],
@@ -69,7 +70,7 @@ pub trait HierarchyDeserializer {
 /// `node2` that is child of the node `node1` under `root` in an inspect file
 /// located at `/some/path`.
 ///
-pub struct HierarchyData {
+pub struct DeprecatedHierarchyData {
     /// The node hierarchy to be formatted.
     pub hierarchy: NodeHierarchy,
 
@@ -83,6 +84,6 @@ pub struct HierarchyData {
 /// Implementers of this trait will provide different ways of formatting an
 /// inspect hierarchy.
 pub trait DeprecatedHierarchyFormatter {
-    fn format(hierarchy: HierarchyData) -> Result<String, Error>;
-    fn format_multiple(hierarchies: Vec<HierarchyData>) -> Result<String, Error>;
+    fn format(hierarchy: DeprecatedHierarchyData) -> Result<String, Error>;
+    fn format_multiple(hierarchies: Vec<DeprecatedHierarchyData>) -> Result<String, Error>;
 }

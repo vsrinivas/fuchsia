@@ -3,7 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    crate::events::types::{ComponentIdentifier, InspectData},
+    crate::{
+        events::types::{ComponentIdentifier, InspectData},
+        formatter::{self, JsonInspectSchema},
+    },
     anyhow::{format_err, Error},
     fidl::endpoints::DiscoverableService,
     fidl::endpoints::{RequestStream, ServerEnd},
@@ -18,7 +21,6 @@ use {
         PartialNodeHierarchy,
     },
     fuchsia_inspect_node_hierarchy::{
-        serialization::{DeprecatedHierarchyFormatter, DeprecatedJsonFormatter, HierarchyData},
         trie::{self, TrieIterableNode},
         InspectHierarchyMatcher, NodeHierarchy,
     },
@@ -60,7 +62,11 @@ enum ReadSnapshot {
     Finished(NodeHierarchy),
 }
 
+/// Mapping from a diagnostics filename to the underlying encoding of that
+/// diagnostics data.
 type DataMap = HashMap<String, InspectData>;
+
+type Moniker = String;
 
 pub trait DataCollector {
     // Processes all previously collected data from the configured sources,
@@ -118,13 +124,10 @@ impl InspectDataCollector {
             inspect_proxy,
             Some(INSPECT_ASYNC_TIMEOUT_SECONDS.seconds()),
         )
-        .filter_map(|result| async move {
-            match result {
-                Ok(dir_entry) => Some(dir_entry),
-                Err(_) => {
-                    // TODO(fxb/49157): decide how to show directories that we failed to read.
-                    None
-                }
+        .filter_map(|result| {
+            async move {
+                // TODO(fxb/49157): decide how to show directories that we failed to read.
+                result.ok()
             }
         });
         pin_mut!(entries);
@@ -261,6 +264,83 @@ impl DataCollector for InspectDataCollector {
     }
 }
 
+/// Packet containing a node hierarchy and all the metadata needed to
+/// populate a diagnostics schema for that node hierarchy.
+pub struct NodeHierarchyData {
+    // Name of the file that created this snapshot.
+    filename: String,
+    // Timestamp at which this snapshot resolved or failed.
+    timestamp: zx::Time,
+    // Errors encountered when processing this snapshot.
+    errors: Vec<formatter::Error>,
+    // Optional NodeHierarchy of the inspect hierarchy, in case reading fails
+    // and we have errors to share with client.
+    hierarchy: Option<NodeHierarchy>,
+}
+
+impl Into<NodeHierarchyData> for SnapshotData {
+    fn into(self: SnapshotData) -> NodeHierarchyData {
+        match self.snapshot {
+            Some(snapshot) => match convert_snapshot_to_node_hierarchy(snapshot) {
+                Ok(node_hierarchy) => NodeHierarchyData {
+                    filename: self.filename,
+                    timestamp: self.timestamp,
+                    errors: self.errors,
+                    hierarchy: Some(node_hierarchy),
+                },
+                Err(e) => NodeHierarchyData {
+                    filename: self.filename,
+                    timestamp: self.timestamp,
+                    errors: vec![formatter::Error { message: format!("{:?}", e) }],
+                    hierarchy: None,
+                },
+            },
+            None => NodeHierarchyData {
+                filename: self.filename,
+                timestamp: self.timestamp,
+                errors: self.errors,
+                hierarchy: None,
+            },
+        }
+    }
+}
+
+/// Packet containing a snapshot and all the metadata needed to
+/// populate a diagnostics schema for that snapshot.
+pub struct SnapshotData {
+    // Name of the file that created this snapshot.
+    filename: String,
+    // Timestamp at which this snapshot resolved or failed.
+    timestamp: zx::Time,
+    // Errors encountered when processing this snapshot.
+    errors: Vec<formatter::Error>,
+    // Optional snapshot of the inspect hierarchy, in case reading fails
+    // and we have errors to share with client.
+    snapshot: Option<ReadSnapshot>,
+}
+
+impl SnapshotData {
+    // Constructs packet that timestamps and packages inspect snapshot for exfiltration.
+    fn successful(snapshot: ReadSnapshot, filename: String) -> SnapshotData {
+        SnapshotData {
+            filename,
+            timestamp: fasync::Time::now().into_zx(),
+            errors: Vec::new(),
+            snapshot: Some(snapshot),
+        }
+    }
+
+    // Constructs packet that timestamps and packages inspect snapshot failure for exfiltration.
+    fn failed(error: formatter::Error, filename: String) -> SnapshotData {
+        SnapshotData {
+            filename,
+            timestamp: fasync::Time::now().into_zx(),
+            errors: vec![error],
+            snapshot: None,
+        }
+    }
+}
+
 /// PopulatedInspectDataContainer is the container that
 /// holds the actual Inspect data for a given component,
 /// along with all information needed to transform that data
@@ -271,8 +351,9 @@ pub struct PopulatedInspectDataContainer {
     relative_moniker: Vec<String>,
     /// Vector of all the snapshots of inspect hierarchies under
     /// the diagnostics directory of the component identified by
-    /// relative_moniker.
-    snapshots: Vec<ReadSnapshot>,
+    /// relative_moniker, along with the metadata needed to populate
+    /// this snapshot's diagnostics schema.
+    snapshots: Vec<SnapshotData>,
     /// Optional hierarchy matcher. If unset, the reader is running
     /// in all-access mode, meaning no matching or filtering is required.
     inspect_matcher: Option<InspectHierarchyMatcher>,
@@ -283,16 +364,21 @@ impl PopulatedInspectDataContainer {
         unpopulated: UnpopulatedInspectDataContainer,
     ) -> Result<PopulatedInspectDataContainer, Error> {
         let mut collector = InspectDataCollector::new();
+
         match collector.populate_data_map(&unpopulated.component_diagnostics_proxy).await {
             Ok(_) => {
-                let mut snapshots = None;
+                let mut snapshots_data_opt = None;
                 if let Some(data_map) = Box::new(collector).take_data() {
-                    let mut acc = vec![];
-                    for (_, data) in data_map {
+                    let mut acc: Vec<SnapshotData> = vec![];
+                    for (filename, data) in data_map {
                         match data {
                             InspectData::Tree(tree, _) => match SnapshotTree::try_from(&tree).await {
-                                Ok(snapshot_tree) => acc.push(ReadSnapshot::Tree(snapshot_tree)),
-                                Err(_) => {}
+                                Ok(snapshot_tree) => {
+                                    acc.push(SnapshotData::successful(ReadSnapshot::Tree(snapshot_tree), filename));
+                                }
+                                Err(e) => {
+                                    acc.push(SnapshotData::failed(formatter::Error{message: format!("{:?}", e)}, filename));
+                                }
                             },
                             InspectData::DeprecatedFidl(inspect_proxy) => {
                                 match deprecated_inspect::load_hierarchy(inspect_proxy)
@@ -306,24 +392,36 @@ impl PopulatedInspectDataContainer {
                                     )
                                     .await
                                 {
-                                    Ok(hierarchy) => acc.push(ReadSnapshot::Finished(hierarchy)),
-                                    _ => {}
+                                    Ok(hierarchy) => {
+                                        acc.push(SnapshotData::successful(ReadSnapshot::Finished(hierarchy), filename));
+                                    }
+                                    Err(e) => {
+                                       acc.push(SnapshotData::failed(formatter::Error{message: format!("{:?}", e)}, filename));
+                                   }
                                 }
                             }
                             InspectData::Vmo(vmo) => match Snapshot::try_from(&vmo) {
-                                Ok(snapshot) => acc.push(ReadSnapshot::Single(snapshot)),
-                                _ => {}
+                                Ok(snapshot) => {
+                                    acc.push(SnapshotData::successful(ReadSnapshot::Single(snapshot), filename));
+                                }
+                                Err(e) => {
+                                    acc.push(SnapshotData::failed(formatter::Error{message: format!("{:?}", e)}, filename));
+                                }
                             },
                             InspectData::File(contents) => match Snapshot::try_from(contents) {
-                                Ok(snapshot) => acc.push(ReadSnapshot::Single(snapshot)),
-                                _ => {}
+                                Ok(snapshot) => {
+                                    acc.push(SnapshotData::successful(ReadSnapshot::Single(snapshot), filename));
+                                }
+                                Err(e) => {
+                                    acc.push(SnapshotData::failed(formatter::Error{message: format!("{:?}", e)}, filename));
+                                }
                             },
                             InspectData::Empty => {}
                         }
                     }
-                    snapshots = Some(acc);
+                    snapshots_data_opt = Some(acc);
                 }
-                match snapshots {
+                match snapshots_data_opt {
                     Some(snapshots) => Ok(PopulatedInspectDataContainer {
                         relative_moniker: unpopulated.relative_moniker,
                         snapshots: snapshots,
@@ -509,95 +607,111 @@ impl ReaderServer {
 
     fn filter_single_components_snapshots(
         sanitized_moniker: String,
-        snapshots: Vec<ReadSnapshot>,
+        snapshots: Vec<SnapshotData>,
         static_matcher: Option<InspectHierarchyMatcher>,
         client_matcher_container: &HashMap<String, Option<InspectHierarchyMatcher>>,
-    ) -> Vec<HierarchyData> {
-        let statically_filtered_hierarchies: Vec<NodeHierarchy> = match static_matcher {
+    ) -> Vec<NodeHierarchyData> {
+        let statically_filtered_hierarchies: Vec<NodeHierarchyData> = match static_matcher {
             Some(static_matcher) => snapshots
                 .into_iter()
-                .filter_map(|snapshot| match convert_snapshot_to_node_hierarchy(snapshot) {
-                    Ok(node_hierarchy) => {
-                        match fuchsia_inspect_node_hierarchy::filter_node_hierarchy(
-                            node_hierarchy,
-                            &static_matcher,
-                        ) {
-                            Ok(filtered_hierarchy_opt) => filtered_hierarchy_opt,
-                            Err(e) => {
-                                error!("Archivist failed to filter a node hierarchy: {:?}", e);
-                                None
+                .map(|snapshot_data| {
+                    let node_hierarchy_data: NodeHierarchyData = snapshot_data.into();
+
+                    match node_hierarchy_data.hierarchy {
+                        Some(node_hierarchy) => {
+                            match fuchsia_inspect_node_hierarchy::filter_node_hierarchy(
+                                node_hierarchy,
+                                &static_matcher,
+                            ) {
+                                Ok(filtered_hierarchy_opt) => NodeHierarchyData {
+                                    filename: node_hierarchy_data.filename,
+                                    timestamp: node_hierarchy_data.timestamp,
+                                    errors: node_hierarchy_data.errors,
+                                    hierarchy: filtered_hierarchy_opt,
+                                },
+                                Err(e) => {
+                                    error!("Archivist failed to filter a node hierarchy: {:?}", e);
+                                    NodeHierarchyData {
+                                        filename: node_hierarchy_data.filename,
+                                        timestamp: node_hierarchy_data.timestamp,
+                                        errors: vec![formatter::Error {
+                                            message: format!("{:?}", e),
+                                        }],
+                                        hierarchy: None,
+                                    }
+                                }
                             }
                         }
-                    }
-                    Err(e) => {
-                        error!(
-                            "Archivist failed to convert snapshot from component: {:?} to \
-                             hierarchy: {:?}",
-                            sanitized_moniker, e
-                        );
-                        None
+                        None => NodeHierarchyData {
+                            filename: node_hierarchy_data.filename,
+                            timestamp: node_hierarchy_data.timestamp,
+                            errors: node_hierarchy_data.errors,
+                            hierarchy: None,
+                        },
                     }
                 })
                 .collect(),
+
             // The only way we have a None value for the PopulatedDataContainer is
             // if there were no provided static selectors, which is only valid in
             // the AllAccess pipeline. For all other pipelines, if no static selectors
             // matched, the data wouldn't have ended up in the repository to begin
             // with.
-            None => snapshots
-                .into_iter()
-                .filter_map(|snapshot| {
-                    match snapshot {
-                        ReadSnapshot::Single(snapshot) => {
-                            PartialNodeHierarchy::try_from(snapshot).map(|partial| partial.into())
-                        }
-                        ReadSnapshot::Tree(snapshot_tree) => snapshot_tree.try_into(),
-                        ReadSnapshot::Finished(hierarchy) => Ok(hierarchy),
-                    }
-                    .ok()
-                })
-                .collect(),
+            None => snapshots.into_iter().map(|snapshot_data| snapshot_data.into()).collect(),
         };
 
-        let dynamically_filtered_hierarchies: Vec<NodeHierarchy> =
-            match client_matcher_container.get(&sanitized_moniker) {
-                // If the moniker key was present, and there was an InspectHierarchyMatcher,
-                // then this means the client provided their own selectors, and a subset of
-                // them matched this component. So we need to filter each of the snapshots from
-                // this component with the dynamically provided components.
-                Some(Some(dynamic_matcher)) => statically_filtered_hierarchies
-                    .into_iter()
-                    .filter_map(|hierarchy| {
-                        fuchsia_inspect_node_hierarchy::filter_node_hierarchy(
-                            hierarchy,
+        match client_matcher_container.get(&sanitized_moniker) {
+            // If the moniker key was present, and there was an InspectHierarchyMatcher,
+            // then this means the client provided their own selectors, and a subset of
+            // them matched this component. So we need to filter each of the snapshots from
+            // this component with the dynamically provided components.
+            Some(Some(dynamic_matcher)) => statically_filtered_hierarchies
+                .into_iter()
+                .map(|node_hierarchy_data| match node_hierarchy_data.hierarchy {
+                    Some(node_hierarchy) => {
+                        match fuchsia_inspect_node_hierarchy::filter_node_hierarchy(
+                            node_hierarchy,
                             &dynamic_matcher,
-                        )
-                        .unwrap_or(None)
-                    })
-                    .collect(),
-                // If the moniker key was present, but the InspectHierarchyMatcher option was
-                // None, this means that the client provided their own selectors, and none of
-                // them matched this particular component, so no values are to be returned.
-                Some(None) => Vec::new(),
-                // If the moniker key was absent, then the entire client_matcher_container should
-                // be empty since the implication is that the client provided none of their own
-                // selectors. Either every moniker is present or none are. And, if no dynamically
-                // provided selectors exist, then the statically filtered snapshots are all that
-                // we need.
-                None => {
-                    assert!(client_matcher_container.is_empty());
-                    statically_filtered_hierarchies
-                }
-            };
-
-        dynamically_filtered_hierarchies
-            .into_iter()
-            .map(|filtered_hierarchy| HierarchyData {
-                hierarchy: filtered_hierarchy,
-                file_path: sanitized_moniker.clone(),
-                fields: vec![],
-            })
-            .collect()
+                        ) {
+                            Ok(filtered_hierarchy_opt) => NodeHierarchyData {
+                                filename: node_hierarchy_data.filename,
+                                timestamp: node_hierarchy_data.timestamp,
+                                errors: node_hierarchy_data.errors,
+                                hierarchy: filtered_hierarchy_opt,
+                            },
+                            Err(e) => {
+                                eprintln!("Archivist failed to filter a node hierarchy: {:?}", e);
+                                NodeHierarchyData {
+                                    filename: node_hierarchy_data.filename,
+                                    timestamp: node_hierarchy_data.timestamp,
+                                    errors: vec![formatter::Error { message: format!("{:?}", e) }],
+                                    hierarchy: None,
+                                }
+                            }
+                        }
+                    }
+                    None => NodeHierarchyData {
+                        filename: node_hierarchy_data.filename,
+                        timestamp: node_hierarchy_data.timestamp,
+                        errors: node_hierarchy_data.errors,
+                        hierarchy: None,
+                    },
+                })
+                .collect(),
+            // If the moniker key was present, but the InspectHierarchyMatcher option was
+            // None, this means that the client provided their own selectors, and none of
+            // them matched this particular component, so no values are to be returned.
+            Some(None) => Vec::new(),
+            // If the moniker key was absent, then the entire client_matcher_container should
+            // be empty since the implication is that the client provided none of their own
+            // selectors. Either every moniker is present or none are. And, if no dynamically
+            // provided selectors exist, then the statically filtered snapshots are all that
+            // we need.
+            None => {
+                assert!(client_matcher_container.is_empty());
+                statically_filtered_hierarchies
+            }
+        }
     }
 
     /// Takes a batch of unpopulated inspect data containers, traverses their diagnostics
@@ -627,7 +741,7 @@ impl ReaderServer {
     pub fn filter_snapshots(
         configured_selectors: &Option<Vec<Arc<Selector>>>,
         pumped_inspect_data_results: Vec<Result<PopulatedInspectDataContainer, Error>>,
-    ) -> Vec<HierarchyData> {
+    ) -> Vec<(Moniker, NodeHierarchyData)> {
         // In case we encounter multiple PopulatedDataContainers with the same moniker we don't
         // want to do the component selector filtering again, so store the results in a map.
         let mut client_selector_matches: HashMap<String, Option<InspectHierarchyMatcher>> =
@@ -671,11 +785,15 @@ impl ReaderServer {
                                         Vec::new()
                                     });
 
-                                match (&matching_selectors).try_into() {
-                                    Ok(hierarchy_matcher) => Some(hierarchy_matcher),
-                                    Err(e) => {
-                                        error!("Failed to create hierarchy matcher: {:?}", e);
-                                        None
+                                if matching_selectors.is_empty() {
+                                    None
+                                } else {
+                                    match (&matching_selectors).try_into() {
+                                        Ok(hierarchy_matcher) => Some(hierarchy_matcher),
+                                        Err(e) => {
+                                            error!("Failed to create hierarchy matcher: {:?}", e);
+                                            None
+                                        }
                                     }
                                 }
                             });
@@ -688,15 +806,20 @@ impl ReaderServer {
                         }
                     };
 
-                    let mut fully_filtered_hierarchy_data =
+                    let mut filtered_hierarchy_data_with_moniker: Vec<(String, NodeHierarchyData)> =
                         ReaderServer::filter_single_components_snapshots(
                             sanitized_moniker.clone(),
                             snapshots,
                             inspect_matcher,
                             &client_selector_matches,
-                        );
+                        )
+                        .into_iter()
+                        .map(|filtered_hierarchy_data| {
+                            (sanitized_moniker.clone(), filtered_hierarchy_data)
+                        })
+                        .collect();
 
-                    acc.append(&mut fully_filtered_hierarchy_data);
+                    acc.append(&mut filtered_hierarchy_data_with_moniker);
                     acc
                 }
                 // TODO(36761): What does it mean for IO to fail on a
@@ -716,14 +839,22 @@ impl ReaderServer {
     /// a node hierarchy fails to format, its vmo is an empty string.
     fn format_hierarchies(
         format: &fidl_fuchsia_diagnostics::Format,
-        hierarchies: Vec<HierarchyData>,
+        hierarchies_with_monikers: Vec<(Moniker, NodeHierarchyData)>,
     ) -> Vec<Result<fidl_fuchsia_diagnostics::FormattedContent, Error>> {
-        hierarchies
+        hierarchies_with_monikers
             .into_iter()
-            .map(|hierarchy_data| {
+            .map(|(moniker, hierarchy_data)| {
                 let formatted_string_result = match format {
                     fidl_fuchsia_diagnostics::Format::Json => {
-                        DeprecatedJsonFormatter::format(hierarchy_data)
+                        let inspect_schema = JsonInspectSchema::new(
+                            moniker,
+                            hierarchy_data.hierarchy,
+                            hierarchy_data.timestamp,
+                            hierarchy_data.filename,
+                            hierarchy_data.errors,
+                        );
+
+                        Ok(serde_json::to_string_pretty(&inspect_schema)?)
                     }
                     fidl_fuchsia_diagnostics::Format::Text => {
                         Err(format_err!("Text formatting not supported for inspect."))
@@ -825,7 +956,7 @@ impl ReaderServer {
                     let pumped_inspect_data_results =
                         ReaderServer::pump_inspect_data(snapshot_batch).await;
 
-                    // Apply selector filtering to all snapshot inspect hierarchies in the batch.
+                    // Apply selector filtering to all snapshot inspect hierarchies in the batch
                     let batch_hierarchy_data = ReaderServer::filter_snapshots(
                         &self.configured_selectors,
                         pumped_inspect_data_results,
@@ -837,7 +968,6 @@ impl ReaderServer {
 
                     let filtered_results: Vec<fidl_fuchsia_diagnostics::FormattedContent> =
                         formatted_content.into_iter().filter_map(Result::ok).collect();
-
                     responder.send(&mut Ok(filtered_results))?;
                 }
             }
@@ -905,6 +1035,7 @@ mod tests {
         fuchsia_zircon as zx,
         fuchsia_zircon::Peered,
         futures::StreamExt,
+        serde_json::json,
     };
 
     fn get_vmo(text: &[u8]) -> zx::Vmo {
@@ -1209,32 +1340,39 @@ mod tests {
 
         let reader_server = ReaderServer::new(inspect_repo.clone(), None);
 
-        let result_string = read_snapshot(reader_server.clone()).await;
+        let result_json = read_snapshot(reader_server.clone()).await;
 
-        let expected_result = r#"{
-    "contents": {
-        "root": {
-            "child_1": {
-                "child_1_1": {
-                    "some-int": 3
+        let result_array = result_json.as_array().expect("unit test json should be array.");
+        assert_eq!(result_array.len(), 1, "Expect only one schema to be returned.");
+
+        let result_map =
+            result_array[0].as_object().expect("entries in the schema array are json objects.");
+
+        let result_payload =
+            result_map.get("payload").expect("diagnostics schema requires payload entry.");
+
+        let expected_payload = json!({
+            "root": {
+                "child_1": {
+                    "child_1_1": {
+                        "some-int": 3
+                    }
+                },
+                "child_2": {
+                    "some-int": 2
                 }
-            },
-            "child_2": {
-                "some-int": 2
             }
-        }
-    },
-    "path": "test_component.cmx"
-}"#;
-        assert_eq!(result_string, expected_result);
+        });
+        assert_eq!(*result_payload, expected_payload);
 
         inspect_repo.write().remove(&component_id);
-        let result_string = read_snapshot(reader_server.clone()).await;
+        let result_json = read_snapshot(reader_server.clone()).await;
 
-        assert_eq!(result_string, "".to_string());
+        let result_array = result_json.as_array().expect("unit test json should be array.");
+        assert_eq!(result_array.len(), 0, "Expect no schemas to be returned.");
     }
 
-    async fn read_snapshot(reader_server: ReaderServer) -> String {
+    async fn read_snapshot(reader_server: ReaderServer) -> serde_json::Value {
         let (consumer, batch_iterator): (
             _,
             ServerEnd<fidl_fuchsia_diagnostics::BatchIteratorMarker>,
@@ -1250,7 +1388,7 @@ mod tests {
                 .unwrap();
         });
 
-        let mut result_string = "".to_string();
+        let mut result_vec: Vec<String> = Vec::new();
         loop {
             let next_batch: Vec<fidl_fuchsia_diagnostics::FormattedContent> =
                 consumer.get_next().await.unwrap().unwrap();
@@ -1263,14 +1401,14 @@ mod tests {
                         let mut buf = vec![0; data.size as usize];
                         data.vmo.read(&mut buf, 0).expect("reading vmo");
                         let hierarchy_string = std::str::from_utf8(&buf).unwrap();
-                        // TODO(4601): one we create a json formatter per hierarchy,
-                        // this will break, and we'll need to do client processing.
-                        result_string.push_str(hierarchy_string);
+                        result_vec.push(hierarchy_string.to_string());
                     }
                     _ => panic!("test only produces json formatted data"),
                 }
             }
         }
-        result_string
+        let result_string = format!("[{}]", result_vec.join(","));
+        serde_json::from_str(&result_string)
+            .expect(&format!("unit tests shouldn't be creating malformed json: {}", result_string))
     }
 }

@@ -193,8 +193,8 @@ void main() {
     // boot process.
     final diagnostics = await inspect.snapshotAll();
     for (final inspectResult in diagnostics) {
-      final label = inspectResult['path'];
-      final rootNode = inspectResult['contents']['root'];
+      final label = inspectResult['moniker'];
+      final rootNode = inspectResult['payload']['root'];
       if (rootNode == null) {
         continue;
       }

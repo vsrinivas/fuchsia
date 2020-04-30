@@ -14,20 +14,20 @@ using inspect::contrib::DiagnosticsData;
 TEST(DiagnosticsDataTest, ComponentNameExtraction) {
   {
     rapidjson::Document doc;
-    doc.Parse(R"({"path": "root/hub/my_component.cmx"})");
+    doc.Parse(R"({"moniker": "root/hub/my_component.cmx"})");
     DiagnosticsData data(std::move(doc));
     EXPECT_EQ("my_component.cmx", data.component_name());
   }
   {
     rapidjson::Document doc;
-    doc.Parse(R"({"path": "abcd"})");
+    doc.Parse(R"({"moniker": "abcd"})");
     DiagnosticsData data(std::move(doc));
     EXPECT_EQ("abcd", data.component_name());
   }
   {
     // Can't find path, empty return.
     rapidjson::Document doc;
-    doc.Parse(R"({"not_path": "abcd"})");
+    doc.Parse(R"({"not_moniker": "abcd"})");
     DiagnosticsData data(std::move(doc));
     EXPECT_EQ("", data.component_name());
   }
@@ -36,7 +36,7 @@ TEST(DiagnosticsDataTest, ComponentNameExtraction) {
 TEST(DiagnosticsDataTest, ContentExtraction) {
   {
     rapidjson::Document doc;
-    doc.Parse(R"({"contents": {"value": "hello", "count": 10}})");
+    doc.Parse(R"({"payload": {"value": "hello", "count": 10}})");
     DiagnosticsData data(std::move(doc));
     EXPECT_EQ(rapidjson::Value("hello"), data.GetByPath({"value"}));
     EXPECT_EQ(rapidjson::Value(10), data.GetByPath({"count"}));
@@ -44,14 +44,14 @@ TEST(DiagnosticsDataTest, ContentExtraction) {
   }
   {
     rapidjson::Document doc;
-    doc.Parse(R"({"contents": {"name/with/slashes": "hello"}})");
+    doc.Parse(R"({"payload": {"name/with/slashes": "hello"}})");
     DiagnosticsData data(std::move(doc));
     EXPECT_EQ(rapidjson::Value("hello"), data.GetByPath({"name/with/slashes"}));
   }
   {
     // Content is missing, return nullptr.
     rapidjson::Document doc;
-    doc.Parse(R"({"path": "root/hub/my_component.cmx"})");
+    doc.Parse(R"({"moniker": "root/hub/my_component.cmx"})");
     DiagnosticsData data(std::move(doc));
     EXPECT_EQ(rapidjson::Value(), data.GetByPath({"value"}));
   }

@@ -10,7 +10,7 @@ use {
     },
     anyhow::{format_err, Error},
     fuchsia_inspect_node_hierarchy::serialization::{
-        DeprecatedHierarchyFormatter, DeprecatedJsonFormatter, HierarchyData,
+        DeprecatedHierarchyData, DeprecatedHierarchyFormatter, DeprecatedJsonFormatter,
     },
     serde::ser::Serialize,
     serde_json::{
@@ -44,7 +44,7 @@ impl Formatter for JsonFormatter {
                         result.location.to_string()
                     ));
                 }
-                Ok(HierarchyData {
+                Ok(DeprecatedHierarchyData {
                     hierarchy: result.hierarchy.unwrap(),
                     file_path: match self.path_format {
                         PathFormat::Absolute => result.location.absolute_path_to_string()?,
@@ -55,7 +55,7 @@ impl Formatter for JsonFormatter {
                     fields: result.location.parts,
                 })
             })
-            .collect::<Result<Vec<HierarchyData>, Error>>()?;
+            .collect::<Result<Vec<DeprecatedHierarchyData>, Error>>()?;
         DeprecatedJsonFormatter::format_multiple(hierachies)
     }
 

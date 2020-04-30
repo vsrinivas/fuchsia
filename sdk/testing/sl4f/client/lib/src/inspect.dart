@@ -62,7 +62,7 @@ class Inspect {
     if (hierarchies.isEmpty) {
       return null;
     }
-    return hierarchies[0]['contents']['root'];
+    return hierarchies[0]['payload']['root'];
   }
 
   /// Obtains the root inspect object for a component whose path includes

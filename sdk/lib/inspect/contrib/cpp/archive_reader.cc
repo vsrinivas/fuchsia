@@ -1,13 +1,13 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-
 #include <lib/async/cpp/task.h>
 #include <lib/fit/bridge.h>
 #include <lib/fit/optional.h>
 #include <lib/inspect/contrib/cpp/archive_reader.h>
 #include <unistd.h>
 
+#include <iostream>
 #include <set>
 #include <string>
 #include <thread>
@@ -18,8 +18,8 @@
 namespace inspect {
 namespace contrib {
 
-constexpr char kPathName[] = "path";
-constexpr char kContentsName[] = "contents";
+constexpr char kPathName[] = "moniker";
+constexpr char kContentsName[] = "payload";
 
 // Time to delay between snapshots to find components.
 // 250ms so that tests are not overly delayed. Missing the component at
@@ -55,7 +55,6 @@ void InnerReadBatches(fuchsia::diagnostics::BatchIteratorPtr ptr,
             done.completer.complete_error("Failed to read returned VMO");
             return;
           }
-
           rapidjson::Document document;
           document.Parse(json);
 

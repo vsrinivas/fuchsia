@@ -32,7 +32,10 @@ const SINGLE_VALUE_CLIENT_SELECTOR_JSON: &[u8] =
 // Number of seconds to wait before timing out polling the reader for pumped results.
 static READ_TIMEOUT_SECONDS: i64 = 10;
 
-static MONIKER_KEY: &str = "path";
+static MONIKER_KEY: &str = "moniker";
+static METADATA_KEY: &str = "metadata";
+static TIMESTAMP_KEY: &str = "timestamp";
+
 static TEST_ARCHIVIST: &str = "unified_reader_test_archivist.cmx";
 
 lazy_static! {
@@ -78,7 +81,7 @@ async fn setup_environment() -> Result<(App, App), Error> {
     match component_stream
         .next()
         .await
-        .expect("component event stream ended before termination event")?
+        .expect("component event stream has ended before termination event")?
     {
         ComponentControllerEvent::OnDirectoryReady {} => {}
         ComponentControllerEvent::OnTerminated { return_code, termination_reason } => {
@@ -172,25 +175,34 @@ async fn retrieve_and_validate_results(
         let mut string_result_array = result_json
             .as_array()
             .expect("result json is an array of objs.")
-            .iter()
+            .into_iter()
             .filter_map(|val| {
-                // Filter out the results coming from the archivist so that we don't
-                // get timestamped results that we cant golden test.
-                // TODO(4601): Do this filtering via selectors when subtree selection
-                // is functional.
-                val.as_object().map_or(None, |obj| match obj.get(MONIKER_KEY) {
-                    Some(serde_json::Value::String(moniker_str)) => {
-                        if moniker_str != TEST_ARCHIVIST {
-                            Some(
-                                serde_json::to_string(&val)
-                                    .expect("All entries in the array are valid."),
-                            )
-                        } else {
-                            None
+                let mut val = val.clone();
+
+                // Filter out the results coming from the archivist, and zero out timestamps
+                // that we cant golden test.
+                val.as_object_mut().map_or(
+                    None,
+                    |obj: &mut serde_json::Map<String, serde_json::Value>| match obj
+                        .get(MONIKER_KEY)
+                    {
+                        Some(serde_json::Value::String(moniker_str)) => {
+                            if moniker_str != TEST_ARCHIVIST {
+                                let metadata_obj =
+                                    obj.get_mut(METADATA_KEY).unwrap().as_object_mut().unwrap();
+                                metadata_obj
+                                    .insert(TIMESTAMP_KEY.to_string(), serde_json::json!(0));
+                                Some(
+                                    serde_json::to_string(&serde_json::to_value(obj).unwrap())
+                                        .expect("All entries in the array are valid."),
+                                )
+                            } else {
+                                None
+                            }
                         }
-                    }
-                    _ => None,
-                })
+                        _ => None,
+                    },
+                )
             })
             .collect::<Vec<String>>();
 

@@ -145,7 +145,7 @@ TEST_F(CodelabTest, StartWithFizzBuzz) {
   EXPECT_EQ(rapidjson::Value("OK"),
             // [START hint_get_value]
             rapidjson::GetValueByPointerWithDefault(
-                document, "/contents/root/fuchsia.inspect.Health/status", "")
+                document, "/payload/root/fuchsia.inspect.Health/status", "")
             // [END hint_get_value]
   );
 }
@@ -172,5 +172,5 @@ TEST_F(CodelabTest, StartWithoutFizzBuzz) {
 
   EXPECT_EQ(rapidjson::Value("UNHEALTHY"),
             rapidjson::GetValueByPointerWithDefault(
-                document, "/contents/root/fuchsia.inspect.Health/status", ""));
+                document, "/payload/root/fuchsia.inspect.Health/status", ""));
 }

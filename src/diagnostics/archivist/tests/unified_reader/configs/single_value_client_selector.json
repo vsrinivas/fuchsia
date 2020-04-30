@@ -1,22 +1,47 @@
 [
-  {
-    "contents": {
-      "root": {
-        "lazy-double": 3.14
-      }
-    },
-    "path": "iquery_example_component.cmx"
-  },
-  {
-    "contents": {
-      "root": {}
-    },
-    "path": "iquery_example_component.cmx"
-  },
-  {
-    "contents": {
-      "root": {}
-    },
-    "path": "iquery_example_component.cmx"
-  }
+   {
+      "data_source":"Inspect",
+      "metadata":{
+         "errors":null,
+         "filename":"fuchsia.inspect.Tree",
+         "timestamp":0
+      },
+      "moniker":"iquery_example_component.cmx",
+      "payload":{
+         "root":{
+            "lazy-double":3.14
+         }
+      },
+     "version":1
+   },
+   {
+      "data_source":"Inspect",
+      "metadata":{
+         "errors":null,
+         "filename":"fuchsia.inspect.deprecated.Inspect",
+         "timestamp":0
+      },
+      "moniker":"iquery_example_component.cmx",
+      "payload":{
+         "root":{
+
+         }
+      },
+     "version":1
+   },
+   {
+      "data_source":"Inspect",
+      "metadata":{
+         "errors":null,
+         "filename":"root.inspect",
+         "timestamp":0
+      },
+      "moniker":"iquery_example_component.cmx",
+      "payload":{
+         "root":{
+
+         }
+      },
+     "version":1
+   }
 ]

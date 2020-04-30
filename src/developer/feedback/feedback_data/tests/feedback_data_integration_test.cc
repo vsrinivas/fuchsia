@@ -234,18 +234,18 @@ constexpr char kInspectJsonSchema[] = R"({
   "items": {
     "type": "object",
     "properties": {
-      "path": {
+      "moniker": {
         "type": "string"
       },
-      "contents": {
+      "payload": {
         "type": "object"
       }
     },
     "required": [
-      "path",
-      "contents"
+      "moniker",
+      "payload"
     ],
-    "additionalProperties": false
+    "additionalProperties": true
   },
   "uniqueItems": true
 })";
@@ -330,10 +330,10 @@ TEST_F(FeedbackDataIntegrationTest, DataProvider_GetData_CheckKeys) {
   // We then check that we get the expected Inspect data for the injected test app.
   bool has_entry_for_test_app = false;
   for (const auto& obj : json.GetArray()) {
-    const std::string path = obj["path"].GetString();
+    const std::string path = obj["moniker"].GetString();
     if (path.find("inspect_test_app.cmx") != std::string::npos) {
       has_entry_for_test_app = true;
-      const auto contents = obj["contents"].GetObject();
+      const auto contents = obj["payload"].GetObject();
       ASSERT_TRUE(contents.HasMember("root"));
       const auto root = contents["root"].GetObject();
       ASSERT_TRUE(root.HasMember("obj1"));
