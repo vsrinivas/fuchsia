@@ -50,7 +50,6 @@ bool validate_viewref(const fuchsia::ui::views::ViewRefControl& control_ref,
   bool tight =
       validate_eventpair(control_ref.reference, tight_rights, view_ref.reference, ZX_RIGHTS_BASIC);
   if (tight) {
-    FX_LOGS(INFO) << "ViewRefControl is TIGHT.";
     return true;
   }
 
