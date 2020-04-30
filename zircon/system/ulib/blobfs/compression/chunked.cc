@@ -19,7 +19,7 @@ namespace blobfs {
 
 namespace {
 
-constexpr int kDefaultLevel = 3;
+constexpr int kDefaultLevel = 14;
 
 using chunked_compression::Status;
 using chunked_compression::ToZxStatus;
