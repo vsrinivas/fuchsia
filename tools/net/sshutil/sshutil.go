@@ -41,10 +41,10 @@ const (
 
 	// A conventionally used global request name for checking the status of a client
 	// connection to an OpenSSH server.
-	keepAliveOpenSSH = "keepalive@openssh.com"
+	keepaliveOpenSSH = "keepalive@openssh.com"
 
-	// Interval between keep-alive pings.
-	keepAliveInterval = 5 * time.Second
+	// Interval between keepalive pings.
+	keepaliveInterval = 5 * time.Second
 )
 
 var (
@@ -70,7 +70,7 @@ func GeneratePrivateKey() ([]byte, error) {
 // CheckConnection returns nil if a connection is verified as still alive; else
 // it returns an error that unwraps as a ConnectionError.
 func CheckConnection(client *ssh.Client) error {
-	if _, _, err := client.Conn.SendRequest(keepAliveOpenSSH, true, nil); err != nil {
+	if _, _, err := client.Conn.SendRequest(keepaliveOpenSSH, true, nil); err != nil {
 		return fmt.Errorf("%w: %v", ConnectionError, err)
 	}
 	return nil
@@ -136,7 +136,7 @@ func dialWithTimeout(ctx context.Context, network, addr string, config *ssh.Clie
 		return nil, err
 	}
 	client := ssh.NewClient(c, chans, reqs)
-	go keepAlive(ctx, conn, client)
+	go keepalive(ctx, conn, client)
 	return client, nil
 }
 
@@ -197,26 +197,26 @@ func network(address net.Addr) (string, error) {
 	return "", fmt.Errorf("cannot infer network for IP address %s", ip.String())
 }
 
-// keepAlive runs for the duration of the client's lifetime, sending periodic
-// pings (with reponse timeouts) to ensure that the client is still connected.
+// keepalive runs for the duration of the client's lifetime, sending periodic
+// pings (with response timeouts) to ensure that the client is still connected.
 // If a ping fails, it will close the client and exit.
-func keepAlive(ctx context.Context, conn net.Conn, client *ssh.Client) {
-	ticker := time.NewTicker(keepAliveInterval)
+func keepalive(ctx context.Context, conn net.Conn, client *ssh.Client) {
+	ticker := time.NewTicker(keepaliveInterval)
 	defer ticker.Stop()
 	for range ticker.C {
-		if err := emitKeepAlive(conn, client); err != nil {
-			// Try to close the client. It's possible the keep-alive failed
+		if err := emitKeepalive(conn, client); err != nil {
+			// Try to close the client. It's possible the keepalive failed
 			// because the client has already been closed, which is fine – this
 			// close will just silently fail.
-			logger.Errorf(ctx, "ssh keep-alive failed, closing client")
+			logger.Errorf(ctx, "ssh keepalive failed, closing client")
 			client.Close()
 			return
 		}
 	}
 }
 
-func emitKeepAlive(conn net.Conn, client *ssh.Client) error {
-	responseTimeout := keepAliveInterval + 15*time.Second
+func emitKeepalive(conn net.Conn, client *ssh.Client) error {
+	responseTimeout := keepaliveInterval + 15*time.Second
 	conn.SetDeadline(time.Now().Add(responseTimeout))
 	return CheckConnection(client)
 }

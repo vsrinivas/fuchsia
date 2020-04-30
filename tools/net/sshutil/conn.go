@@ -22,10 +22,10 @@ import (
 const (
 	connectInterval = 5 * time.Second
 
-	// Interval between keep-alive pings.
+	// Interval between keepalive pings.
 	defaultKeepaliveInterval = 1 * time.Second
 
-	// Cancel the connection if a we don't receive a response to a keep-alive
+	// Cancel the connection if a we don't receive a response to a keepalive
 	// ping within this amount of time.
 	defaultKeepaliveTimeout = defaultKeepaliveInterval + 15*time.Second
 )
@@ -46,7 +46,7 @@ type Conn struct {
 }
 
 // NewConn creates a new ssh client to the address and launches a goroutine to
-// send keep-alive pings as long as the client is connected.
+// send keepalive pings as long as the client is connected.
 func NewConn(ctx context.Context, addr net.Addr, config *ssh.ClientConfig) (*Conn, error) {
 	conn, err := connect(ctx, addr, config)
 	if err != nil {
@@ -63,7 +63,7 @@ func NewConn(ctx context.Context, addr net.Addr, config *ssh.ClientConfig) (*Con
 	return conn, nil
 }
 
-// connect continously attempts to connect to a remote server, and returns an
+// connect continuously attempts to connect to a remote server, and returns an
 // ssh client if successful, or errs out if the context is canceled.
 func connect(ctx context.Context, addr net.Addr, config *ssh.ClientConfig) (*Conn, error) {
 	var client *ssh.Client
@@ -110,7 +110,7 @@ func connectToSSH(ctx context.Context, addr net.Addr, config *ssh.ClientConfig) 
 
 func (c *Conn) makeSession(ctx context.Context, stdout io.Writer, stderr io.Writer) (*Session, error) {
 	// Temporarily grab the lock and make a copy of the client. This
-	// prevents a long running `Run` command from blocking the keep-alive
+	// prevents a long running `Run` command from blocking the keepalive
 	// goroutine.
 	c.mu.Lock()
 	client := c.Client
@@ -223,12 +223,12 @@ func (c *Conn) disconnect() {
 	c.disconnectionListeners = []chan struct{}{}
 }
 
-// Send periodic keep-alives. If we don't do this, then we might not observe
+// Send periodic keepalives. If we don't do this, then we might not observe
 // the server side disconnecting from us.
-// A keep-alive ping is sent whenever we receive something on the `ticks`
+// A keepalive ping is sent whenever we receive something on the `ticks`
 // channel.
 // After sending a ping, we call the `timeout` function and wait until either we
-// recieve a response or we receive something on the channel returned by
+// receive a response or we receive something on the channel returned by
 // `timeout`.
 func (c *Conn) keepalive(ctx context.Context, ticks <-chan time.Time, timeout func() <-chan time.Time) {
 	if timeout == nil {
@@ -247,7 +247,7 @@ func (c *Conn) keepalive(ctx context.Context, ticks <-chan time.Time, timeout fu
 		}
 
 		// SendRequest can actually hang if the server stops responding
-		// in between receving a keepalive and sending a response (see
+		// in between receiving a keepalive and sending a response (see
 		// fxb/47698). To protect against this, we'll emit events in a
 		// separate goroutine so if we don't get one in the expected
 		// time we'll disconnect.
