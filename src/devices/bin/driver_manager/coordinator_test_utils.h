@@ -36,6 +36,7 @@
 constexpr char kSystemDriverPath[] = "/boot/driver/platform-bus.so";
 
 class DummyFsProvider : public FsProvider {
+ public:
   ~DummyFsProvider() {}
   zx::channel CloneFs(const char* path) override { return zx::channel(); }
 };

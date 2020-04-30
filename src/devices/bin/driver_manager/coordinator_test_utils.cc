@@ -13,7 +13,12 @@ CoordinatorConfig DefaultConfig(async_dispatcher_t* dispatcher,
                                 async_dispatcher_t* bootargs_dispatcher,
                                 mock_boot_arguments::Server* boot_args,
                                 llcpp::fuchsia::boot::Arguments::SyncClient* client) {
+  // The DummyFsProvider is stateless.  Create a single static one here so that we don't need to
+  // manage pointer lifetime for it below.
+  static DummyFsProvider dummy_fs_provider;
+
   CoordinatorConfig config{};
+
   if (boot_args != nullptr && client != nullptr) {
     *boot_args = mock_boot_arguments::Server{{{"key1", "new-value"}, {"key2", "value2"}}};
     boot_args->CreateClient(bootargs_dispatcher, client);
@@ -22,7 +27,7 @@ CoordinatorConfig DefaultConfig(async_dispatcher_t* dispatcher,
   config.require_system = false;
   config.asan_drivers = false;
   config.boot_args = client;
-  config.fs_provider = new DummyFsProvider();
+  config.fs_provider = &dummy_fs_provider;
   config.suspend_fallback = true;
   config.suspend_timeout = zx::sec(2);
   config.resume_timeout = zx::sec(2);
