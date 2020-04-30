@@ -33,10 +33,8 @@
 #include "src/ui/bin/root_presenter/activity_notifier.h"
 #include "src/ui/bin/root_presenter/displays/display_metrics.h"
 #include "src/ui/bin/root_presenter/displays/display_model.h"
-#include "src/ui/bin/root_presenter/media_buttons_handler.h"
 #include "src/ui/bin/root_presenter/perspective_demo_mode.h"
 #include "src/ui/bin/root_presenter/presentation.h"
-#include "src/ui/bin/root_presenter/presentation_switcher.h"
 
 namespace root_presenter {
 
@@ -57,15 +55,11 @@ namespace root_presenter {
 class Presentation : fuchsia::ui::policy::Presentation,
                      fuchsia::accessibility::MagnificationHandler {
  public:
-  // Callback when the presentation yields to the next/previous one.
-  using YieldCallback = fit::function<void(bool yield_to_next)>;
-
   Presentation(fuchsia::ui::scenic::Scenic* scenic, scenic::Session* session,
                scenic::ResourceId compositor_id,
                fuchsia::ui::views::ViewHolderToken view_holder_token,
                fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request,
-               ActivityNotifier* activity_notifier, int32_t display_startup_rotation_adjustment,
-               YieldCallback yield_callback, MediaButtonsHandler* media_buttons_handler);
+               ActivityNotifier* activity_notifier, int32_t display_startup_rotation_adjustment);
   ~Presentation() override;
 
   void RegisterWithMagnifier(fuchsia::accessibility::Magnifier* magnifier);
@@ -80,7 +74,6 @@ class Presentation : fuchsia::ui::policy::Presentation,
  private:
   enum SessionPresentState { kNoPresentPending, kPresentPending, kPresentPendingAndSceneDirty };
   friend class PerspectiveDemoMode;
-  friend class PresentationSwitcher;
 
   // |fuchsia::ui::policy::Presentation|
   void CapturePointerEventsHACK(
@@ -164,17 +157,12 @@ class Presentation : fuchsia::ui::policy::Presentation,
     float scale = 1;
   } clip_space_transform_;
 
-  YieldCallback yield_callback_;
-
   fuchsia::math::PointF mouse_coordinates_;
 
   fidl::Binding<fuchsia::ui::policy::Presentation> presentation_binding_;
   fidl::Binding<fuchsia::accessibility::MagnificationHandler> a11y_binding_;
 
   PerspectiveDemoMode perspective_demo_mode_;
-
-  // Toggles through different presentations.
-  PresentationSwitcher presentation_switcher_;
 
   struct CursorState {
     bool created;
@@ -189,8 +177,6 @@ class Presentation : fuchsia::ui::policy::Presentation,
 
   // A registry of listeners who want to be notified when pointer event happens.
   fidl::InterfacePtrSet<fuchsia::ui::policy::PointerCaptureListenerHACK> captured_pointerbindings_;
-
-  MediaButtonsHandler* media_buttons_handler_ = nullptr;
 
   fxl::WeakPtrFactory<Presentation> weak_factory_;
 
