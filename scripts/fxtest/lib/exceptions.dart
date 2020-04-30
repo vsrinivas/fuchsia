@@ -1,11 +1,11 @@
 import 'package:fxtest/fxtest.dart';
 
-class BuildException implements Exception {
-  final String buildHandle;
+class FxRunException implements Exception {
+  final String fxCmd;
   final int exitCode;
-  BuildException(this.buildHandle, [this.exitCode = failureExitCode]);
+  FxRunException(this.fxCmd, [this.exitCode = failureExitCode]);
   @override
-  String toString() => 'BuildException: Failed to run `$buildHandle` :: '
+  String toString() => 'FxRunException: Failed to run `$fxCmd` :: '
       'Exit Code: $exitCode';
 }
 

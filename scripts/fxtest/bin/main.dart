@@ -76,8 +76,8 @@ Future<void> main(List<String> args) async {
       // Finally, run the command
       await cmdCli.run();
     }
-  } on BuildException catch (err) {
-    stderr.writeln('${wrapWith("Error:", [red])} ${err.toString()}');
+  } on FxRunException catch (err) {
+    stderr.write('${wrapWith("Error:", [red])} ${err.toString()}');
     exitCode = err.exitCode;
   } on Exception catch (err) {
     if (err is OutputClosedException) {

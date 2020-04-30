@@ -53,12 +53,18 @@ class FuchsiaTestCommand {
   /// instances.
   final TestRunner Function(TestsConfig) testRunnerBuilder;
 
+  /// Helper which verifies that we actually want to run tests (not a dry run,
+  /// for example) and are set up to even be successful (device and package
+  /// server are available, for example).
+  final Checklist checklist;
+
   int _numberOfTests;
 
   FuchsiaTestCommand({
     @required this.analyticsReporter,
     @required this.fuchsiaLocator,
     @required this.outputFormatter,
+    @required this.checklist,
     @required this.testsConfig,
     @required this.testRunnerBuilder,
   }) : _numberOfTests = 0 {
@@ -75,15 +81,20 @@ class FuchsiaTestCommand {
     OutputFormatter outputFormatter,
   }) {
     fuchsiaLocator = fuchsiaLocator ?? FuchsiaLocator.shared;
+    var _outputFormatter =
+        outputFormatter ?? OutputFormatter.fromConfig(testsConfig);
     return FuchsiaTestCommand(
       analyticsReporter: testsConfig.flags.dryRun
           ? AnalyticsReporter.noop()
           : AnalyticsReporter(
               fuchsiaLocator: fuchsiaLocator,
             ),
+      checklist: PreChecker.fromConfig(
+        testsConfig,
+        eventSink: _outputFormatter.update,
+      ),
       fuchsiaLocator: fuchsiaLocator,
-      outputFormatter:
-          outputFormatter ?? OutputFormatter.fromConfig(testsConfig),
+      outputFormatter: _outputFormatter,
       testRunnerBuilder: testRunnerBuilder,
       testsConfig: testsConfig,
     );
@@ -117,7 +128,7 @@ class FuchsiaTestCommand {
       await runTests(parsedManifest.testBundles);
     } on FailFastException catch (_) {
       // Non-zero exit code indicates generic but fatal failure
-      exitCode = 2;
+      exitCode = failureExitCode;
     }
     emitEvent(AllTestsCompleted());
   }
@@ -152,12 +163,19 @@ class FuchsiaTestCommand {
       );
 
   Future<void> runTests(List<TestBundle> testBundles) async {
+    if (!await checklist.isDeviceReady(testBundles)) {
+      emitEvent(FatalError('Device is not ready for running device tests'));
+      return;
+    }
+
     var count = 0;
     for (TestBundle testBundle in testBundles) {
       await testBundle.run().forEach((TestEvent event) {
         emitEvent(event);
-        if (event is TestResult && !event.isSuccess) {
-          exitCode = 2;
+        if (event is FatalError) {
+          exitCode = failureExitCode;
+        } else if (event is TestResult && !event.isSuccess) {
+          exitCode = event.exitCode ?? failureExitCode;
         }
       });
 

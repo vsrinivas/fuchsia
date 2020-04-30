@@ -4,7 +4,12 @@
 
 import 'package:args/args.dart';
 import 'package:fxtest/fxtest.dart';
+import 'package:io/ansi.dart' as ansi;
 import 'package:meta/meta.dart';
+
+// ignore: prefer_generic_function_type_aliases
+typedef String Stylizer(String value, Iterable<ansi.AnsiCode> codes,
+    {bool forScript});
 
 /// Simple class to hold shared parameters.
 class Flags {
@@ -29,6 +34,7 @@ class Flags {
   final bool shouldPrintSkipped;
   final bool shouldRandomizeTestOrder;
   final bool shouldSilenceUnsupported;
+  final bool shouldUpdateIfInBase;
   final int slowThreshold;
   Flags({
     this.dryRun = false,
@@ -46,6 +52,7 @@ class Flags {
     this.shouldRandomizeTestOrder = false,
     this.shouldRebuild = true,
     this.shouldSilenceUnsupported = false,
+    this.shouldUpdateIfInBase = true,
     this.slowThreshold = 0,
   });
 
@@ -69,6 +76,7 @@ class Flags {
           (argResults['build'] == null || argResults['build']),
       shouldRandomizeTestOrder: argResults['random'],
       shouldSilenceUnsupported: argResults['silenceunsupported'],
+      shouldUpdateIfInBase: argResults['updateifinbase'],
       slowThreshold: int.parse(argResults['slow'] ?? '0'),
     );
   }
@@ -89,6 +97,7 @@ class Flags {
   shouldPrintSkipped: $shouldPrintSkipped
   shouldRandomizeTestOrder: $shouldRandomizeTestOrder
   shouldSilenceUnsupported: $shouldSilenceUnsupported
+  shouldUpdateIfInBase: $shouldUpdateIfInBase
   slowThreshold: $slowThreshold
 >''';
 }
@@ -170,6 +179,13 @@ class TestsConfig {
       );
     }
   }
+
+  /// Wrapper around io.ansi.wrapWith which first honors config flags.
+  String wrapWith(String value, Iterable<ansi.AnsiCode> codes,
+          {bool forScript = false}) =>
+      flags.simpleOutput
+          ? value
+          : ansi.wrapWith(value, codes, forScript: forScript);
 }
 
 /// An expanded set of flags passed to `fx test` against which all available

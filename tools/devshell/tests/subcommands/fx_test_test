@@ -14,9 +14,18 @@ BT_LINKED_DEPS=(
 BT_FILE_DEPS=(
   "scripts/fx"
   "tools/devshell/tests/subcommands/data/fx_test_test/tests_multiple_in_package.json"
+  "tools/devshell/tests/subcommands/data/fx_test_test/tests_package_server_integration.json"
   "tools/devshell/lib/vars.sh"
   "tools/devshell/lib/prebuilt.sh"
   "tools/devshell/test"
+)
+
+BT_MOCKED_TOOLS=(
+  "tools/devshell/build"
+  "tools/devshell/is-package-server-running"
+  "tools/devshell/update-if-in-base"
+  "tools/devshell/shell"
+  "tools/devshell/symbolize"
 )
 
 declare fx DATA_DIR
@@ -24,16 +33,50 @@ declare fx DATA_DIR
 BT_SET_UP() {
   source "${BT_TEMP_DIR}/tools/devshell/tests/lib/fuchsia-mock.sh"
   fx="$(btf::setup_fx)"
-  DATA_DIR="${BT_TEMP_DIR}/tools/devshell/tests/subcommands/data/fx_test_test/"
+  DATA_DIR="${BT_TEMP_DIR}/tools/devshell/tests/subcommands/data/fx_test_test"
 }
 
 # Test that the "fx test --info" outputs in the format expected by other
 # commands, eg `fx run-test`
 TEST_fxtest_info() {
   cp "${DATA_DIR}/tests_multiple_in_package.json" "${BT_TEMP_DIR}/out/default/tests.json"
-  local test_specs="$(${fx} test --info --exact)"
-  local urls="$(sed -n 's/^package_url: \(.*\)/\1/p' <<< "${test_specs}" | wc -l)"
-  BT_EXPECT_EQ "${urls}" "7"
+  local out="${BT_TEMP_DIR}/_fx_test_output"
+  BT_EXPECT ${fx} test --info --exact > "${out}"
+  BT_EXPECT_EQ "$(sed -n 's/^package_url: \(.*\)/\1/p' "${out}" | wc -l)" 7
+}
+
+# Test that `fx test` calls `fx update-if-in-base` and `fx is-package-server-running` properly
+TEST_fxtest_package_server_integration() {
+  cp "${DATA_DIR}/tests_package_server_integration.json" "${BT_TEMP_DIR}/out/default/tests.json"
+  local out="${BT_TEMP_DIR}/_fx_test_output"
+  local testname="overflow_fuzzer_test"
+  BT_EXPECT ${fx} test ${testname} > ${out}
+  # ensure that is-package-server-running was called
+  BT_ASSERT_FILE_EXISTS "${BT_TEMP_DIR}/tools/devshell/is-package-server-running.mock_state"
+  # ensure that update-if-in-base was called with the proper testname
+  btf::expect-mock-args "${BT_TEMP_DIR}/tools/devshell/update-if-in-base" "${testname}"
+}
+
+# Ensure that `fx build` is called by default
+TEST_fxtest_build() {
+  cp "${DATA_DIR}/tests_package_server_integration.json" "${BT_TEMP_DIR}/out/default/tests.json"
+  local out="${BT_TEMP_DIR}/_fx_test_output"
+  local testname="overflow_fuzzer_test"
+  BT_EXPECT ${fx} test ${testname} > ${out}
+  # ensure that fx build was called
+  # TODO: once fx test calls fx build with a specific target, check it here as well
+  BT_ASSERT_FILE_EXISTS "${BT_TEMP_DIR}/tools/devshell/build.mock_state"
+}
+
+# Ensure that `fx build` is not called when "--no-build" option is given
+TEST_fxtest_nobuild() {
+  cp "${DATA_DIR}/tests_package_server_integration.json" "${BT_TEMP_DIR}/out/default/tests.json"
+  local out="${BT_TEMP_DIR}/_fx_test_output"
+  local testname="overflow_fuzzer_test"
+  BT_EXPECT ${fx} test --no-build ${testname} > ${out}
+  # ensure that fx build was called
+  # TODO: once fx test calls fx build with a specific target, check it here as well
+  BT_ASSERT_FILE_DOES_NOT_EXIST "${BT_TEMP_DIR}/tools/devshell/build.mock_state"
 }
 
 BT_RUN_TESTS "$@"

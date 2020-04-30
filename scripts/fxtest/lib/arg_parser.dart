@@ -49,6 +49,11 @@ and component.''',
       defaultsTo: true,
       negatable: true,
       help: 'If true, invokes `fx build` before running the test suite')
+  ..addFlag('updateifinbase',
+      defaultsTo: true,
+      negatable: true,
+      help:
+          'If true, invokes `fx update-if-in-base` before running device tests')
   ..addFlag('info',
       defaultsTo: false,
       negatable: false,

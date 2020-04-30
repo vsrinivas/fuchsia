@@ -1,6 +1,7 @@
 export 'analytics_reporter.dart';
 export 'arg_parser.dart';
 export 'checkers.dart';
+export 'checklist.dart';
 export 'cmd.dart';
 export 'cmd_cli.dart';
 export 'command_tokens.dart';

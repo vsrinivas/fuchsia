@@ -47,7 +47,6 @@ function symbolize {
   if [[ "${is_remote}" -eq 1 ]]; then
     trap '_code=$?; set +x; exit-with-warning ${_code}' ERR
   fi
-  set -x
   "$symbolize" -llvm-symbolizer "$llvm_symbolizer" \
     -ids-rel "${extra_args[@]}" \
     -build-id-dir "$prebuilt_build_ids_dir" -build-id-dir "$toolchain_dir" \

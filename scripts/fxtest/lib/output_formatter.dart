@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'dart:io';
 import 'package:fxtest/fxtest.dart';
 import 'package:io/ansi.dart';
 import 'package:meta/meta.dart';
@@ -147,6 +148,9 @@ abstract class OutputFormatter {
       _handleTimeElapsedEvent(event);
     } else if (event is TestInfo) {
       _handleTestInfo(event);
+    } else if (event is FatalError) {
+      stderr.writeln(event.message);
+      _finalizeOutput();
     } else if (event is AllTestsCompleted) {
       _finalizeOutput();
     }

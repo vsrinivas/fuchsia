@@ -62,13 +62,13 @@ class FuchsiaTestCommandCli {
   }
 
   Future<void> run() async {
-    _cmd = buildCommand(_testsConfig);
+    _cmd = createCommand(_testsConfig);
 
     if (_testsConfig.flags.shouldRebuild) {
       _cmd.outputFormatter.update(
         TestInfo(wrapWith('> fx build', [green, styleBold])),
       );
-      await rebuildFuchsia(FuchsiaLocator.shared.fx);
+      await fxCommandRun(FuchsiaLocator.shared.fx, 'build');
     }
 
     // Without waiting, start the command.
@@ -95,7 +95,7 @@ class FuchsiaTestCommandCli {
     });
   }
 
-  FuchsiaTestCommand buildCommand(TestsConfig testsConfig) =>
+  FuchsiaTestCommand createCommand(TestsConfig testsConfig) =>
       FuchsiaTestCommand.fromConfig(
         testsConfig,
         testRunnerBuilder: (TestsConfig testsConfig) => SymbolizingTestRunner(

@@ -98,3 +98,8 @@ class FakeTestRunner extends TestRunner {
     return Future.value(ProcessResult(1, exitCode, _stdout, _stderr));
   }
 }
+
+class AlwaysAllowChecklist implements Checklist {
+  @override
+  Future<bool> isDeviceReady(List<TestBundle> bundles) => Future.value(true);
+}

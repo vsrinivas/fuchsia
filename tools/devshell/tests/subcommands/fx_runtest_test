@@ -15,12 +15,13 @@ BT_FILE_DEPS=(
 BT_MOCKED_TOOLS=(
   "tools/devshell/lib/updates.sh"
   "tools/devshell/build"
-  "tools/devshell/update"
   "tools/devshell/wait"
   "tools/devshell/push-package"
   "tools/devshell/test"
   "tools/devshell/shell"
   "tools/devshell/symbolize"
+  "tools/devshell/update-if-in-base"
+  "tools/devshell/is-package-server-running"
 )
 
 declare fx DATA_DIR
@@ -36,13 +37,24 @@ function check-for-amber-server {
 EOF
 }
 
-# Test if "fx run-test" runs fx update when the package is in base
+# Test if "fx run-test" runs fx update-if-in-base when the package is in base
 TEST_in_base() {
   local test_name="example_component"
+  local component1_url="fuchsia-pkg://fuchsia.com/example_package#meta/example_component_1.cmx",
+  cat > "${BT_TEMP_DIR}/tools/devshell/test.mock_stdout" <<EOF
+command: fx shell run-test-component ${component1_url}
+cpu: arm64
+label: //src/connectivity/telephony/example:example_package(//build/toolchain/fuchsia:arm64)
+name: ${test_name}
+os: fuchsia
+package_url: ${component1_url}
+path: /pkgfs/packages/${test_name}/0/test/${test_name}
+EOF
   echo "${test_name}" > "${BT_TEMP_DIR}/out/default/base_packages.list"
-  ${fx} run-test ${test_name} >/dev/null 2>&1
-  # check that "fx update" was called (because the test name is in base) with no arguments
-  btf::expect-mock-args "${BT_TEMP_DIR}/tools/devshell/update"
+  local out="${BT_TEMP_DIR}/output.log"
+  ${fx} run-test ${test_name} >${out} 2>&1
+  # check that "fx update-if-in-base" was called
+  btf::expect-mock-args "${BT_TEMP_DIR}/tools/devshell/update-if-in-base" "${test_name}"
 }
 
 # Test if "fx run-test" executes "fx shell runtests" properly when
@@ -67,8 +79,8 @@ os: fuchsia
 package_url: ${component2_url}
 path: /pkgfs/packages/example_package_test/0/test/example_package_test
 EOF
-
-  ${fx} run-test example_package >/dev/null 2>&1
+  local out="${BT_TEMP_DIR}/output.log"
+  ${fx} run-test example_package >${out} 2>&1
   # check if "fx shell" was executed properly for runtests syntax
   btf::expect-mock-args "${BT_TEMP_DIR}/tools/devshell/shell" \
     "runtests" "-t" "${component1_url},${component2_url}"

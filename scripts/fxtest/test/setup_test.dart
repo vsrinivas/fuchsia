@@ -14,7 +14,7 @@ class FuchsiaTestCommandCliFake extends FuchsiaTestCommandCli {
         );
 
   @override
-  FuchsiaTestCommand buildCommand(TestsConfig testsConfig) {
+  FuchsiaTestCommand createCommand(TestsConfig testsConfig) {
     return FuchsiaTestCommandFake(
       testsConfig: testsConfig,
       outputFormatter: StdOutClosingFormatter(),
@@ -28,6 +28,7 @@ class FuchsiaTestCommandFake extends FuchsiaTestCommand {
     TestsConfig testsConfig,
   }) : super(
           analyticsReporter: AnalyticsFaker(),
+          checklist: AlwaysAllowChecklist(),
           fuchsiaLocator: FuchsiaLocator.shared,
           outputFormatter: outputFormatter,
           testsConfig: testsConfig,
@@ -167,6 +168,7 @@ void main() {
     test('functions on real test runs', () async {
       var cmd = FuchsiaTestCommand(
         analyticsReporter: AnalyticsFaker(),
+        checklist: AlwaysAllowChecklist(),
         fuchsiaLocator: fuchsiaLocator,
         outputFormatter: OutputFormatter.fromConfig(
           testsConfig,
@@ -199,6 +201,7 @@ void main() {
     test('is silent on dry runs', () async {
       var cmd = FuchsiaTestCommand(
         analyticsReporter: AnalyticsFaker(),
+        checklist: AlwaysAllowChecklist(),
         fuchsiaLocator: fuchsiaLocator,
         outputFormatter: OutputFormatter.fromConfig(
           testsConfig,
