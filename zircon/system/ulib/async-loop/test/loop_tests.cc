@@ -30,7 +30,7 @@
 #include <fbl/auto_lock.h>
 #include <fbl/function.h>
 #include <fbl/mutex.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 namespace {
 
@@ -312,12 +312,10 @@ class TestPagedVmo : public async_paged_vmo_t {
 // The C++ loop wrapper is one-to-one with the underlying C API so for the
 // most part we will test through that interface but here we make sure that
 // the C API actually exists but we don't comprehensively test what it does.
-bool c_api_basic_test() {
-  BEGIN_TEST;
-
+TEST(Loop, CApiBasic) {
   async_loop_t* loop;
   ASSERT_EQ(ZX_OK, async_loop_create(&kAsyncLoopConfigNoAttachToCurrentThread, &loop), "create");
-  ASSERT_NONNULL(loop, "loop");
+  ASSERT_NE(loop, nullptr, "loop");
 
   EXPECT_EQ(ASYNC_LOOP_RUNNABLE, async_loop_get_state(loop), "runnable");
 
@@ -336,20 +334,14 @@ bool c_api_basic_test() {
   EXPECT_EQ(ASYNC_LOOP_SHUTDOWN, async_loop_get_state(loop), "shutdown");
 
   async_loop_destroy(loop);
-
-  END_TEST;
 }
 
-bool make_default_false_test() {
-  BEGIN_TEST;
-
+TEST(Loop, MakeDefaultFalse) {
   {
     async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
     EXPECT_NULL(async_get_default_dispatcher(), "not default");
   }
   EXPECT_NULL(async_get_default_dispatcher(), "still not default");
-
-  END_TEST;
 }
 
 // Static data and methods for use in make_default_true_test()
@@ -361,9 +353,7 @@ void set_test_default_dispatcher(async_dispatcher_t* dispatcher) {
 
 async_dispatcher_t* get_test_default_dispatcher() { return test_default_dispatcher; }
 
-bool make_default_true_test() {
-  BEGIN_TEST;
-
+TEST(Loop, MakeDefaultTrue) {
   async_loop_config_t config{};
 
   config.make_default_for_current_thread = true;
@@ -375,62 +365,52 @@ bool make_default_true_test() {
     EXPECT_EQ(loop.dispatcher(), get_test_default_dispatcher(), "became default");
   }
   EXPECT_NULL(get_test_default_dispatcher(), "no longer default");
-
-  END_TEST;
 }
 
-bool create_default_test() {
-  BEGIN_TEST;
-
+TEST(Loop, CreateDefault) {
   {
     async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
     EXPECT_EQ(loop.dispatcher(), async_get_default_dispatcher(), "became default");
   }
   EXPECT_NULL(async_get_default_dispatcher(), "no longer default");
-
-  END_TEST;
 }
 
-bool quit_test() {
-  BEGIN_TEST;
+TEST(Loop, Quit) {
+  for (int i = 0; i < 3; i++) {
+    async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+    EXPECT_EQ(ASYNC_LOOP_RUNNABLE, loop.GetState(), "initially not quitting");
 
-  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  EXPECT_EQ(ASYNC_LOOP_RUNNABLE, loop.GetState(), "initially not quitting");
+    loop.Quit();
+    EXPECT_EQ(ASYNC_LOOP_QUIT, loop.GetState(), "quitting when quit");
+    EXPECT_EQ(ZX_ERR_CANCELED, loop.Run(), "run returns immediately");
+    EXPECT_EQ(ASYNC_LOOP_QUIT, loop.GetState(), "still quitting");
 
-  loop.Quit();
-  EXPECT_EQ(ASYNC_LOOP_QUIT, loop.GetState(), "quitting when quit");
-  EXPECT_EQ(ZX_ERR_CANCELED, loop.Run(), "run returns immediately");
-  EXPECT_EQ(ASYNC_LOOP_QUIT, loop.GetState(), "still quitting");
+    ResetQuitTask reset_quit_task;
+    EXPECT_EQ(ZX_OK, reset_quit_task.Post(loop.dispatcher()), "can post tasks even after quit");
+    QuitTask quit_task;
+    EXPECT_EQ(ZX_OK, quit_task.Post(loop.dispatcher()), "can post tasks even after quit");
 
-  ResetQuitTask reset_quit_task;
-  EXPECT_EQ(ZX_OK, reset_quit_task.Post(loop.dispatcher()), "can post tasks even after quit");
-  QuitTask quit_task;
-  EXPECT_EQ(ZX_OK, quit_task.Post(loop.dispatcher()), "can post tasks even after quit");
+    EXPECT_EQ(ZX_OK, loop.ResetQuit());
+    EXPECT_EQ(ASYNC_LOOP_RUNNABLE, loop.GetState(), "not quitting after reset");
 
-  EXPECT_EQ(ZX_OK, loop.ResetQuit());
-  EXPECT_EQ(ASYNC_LOOP_RUNNABLE, loop.GetState(), "not quitting after reset");
+    EXPECT_EQ(ZX_OK, loop.Run(zx::time::infinite(), true /*once*/), "run tasks");
 
-  EXPECT_EQ(ZX_OK, loop.Run(zx::time::infinite(), true /*once*/), "run tasks");
+    EXPECT_EQ(1u, reset_quit_task.run_count, "reset quit task ran");
+    EXPECT_EQ(ZX_ERR_BAD_STATE, reset_quit_task.result, "can't reset quit while loop is running");
 
-  EXPECT_EQ(1u, reset_quit_task.run_count, "reset quit task ran");
-  EXPECT_EQ(ZX_ERR_BAD_STATE, reset_quit_task.result, "can't reset quit while loop is running");
+    EXPECT_EQ(1u, quit_task.run_count, "quit task ran");
+    EXPECT_EQ(ASYNC_LOOP_QUIT, loop.GetState(), "quitted");
 
-  EXPECT_EQ(1u, quit_task.run_count, "quit task ran");
-  EXPECT_EQ(ASYNC_LOOP_QUIT, loop.GetState(), "quitted");
+    EXPECT_EQ(ZX_ERR_CANCELED, loop.Run(), "runs returns immediately when quitted");
 
-  EXPECT_EQ(ZX_ERR_CANCELED, loop.Run(), "runs returns immediately when quitted");
-
-  loop.Shutdown();
-  EXPECT_EQ(ASYNC_LOOP_SHUTDOWN, loop.GetState(), "shut down");
-  EXPECT_EQ(ZX_ERR_BAD_STATE, loop.Run(), "run returns immediately when shut down");
-  EXPECT_EQ(ZX_ERR_BAD_STATE, loop.ResetQuit());
-
-  END_TEST;
+    loop.Shutdown();
+    EXPECT_EQ(ASYNC_LOOP_SHUTDOWN, loop.GetState(), "shut down");
+    EXPECT_EQ(ZX_ERR_BAD_STATE, loop.Run(), "run returns immediately when shut down");
+    EXPECT_EQ(ZX_ERR_BAD_STATE, loop.ResetQuit());
+  }
 }
 
-bool time_test() {
-  BEGIN_TEST;
-
+TEST(Loop, Time) {
   // Verify that the dispatcher's time-telling is strictly monotonic,
   // which is constent with ZX_CLOCK_MONOTONIC.
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
@@ -442,13 +422,9 @@ bool time_test() {
   EXPECT_LE(t0.get(), t1.get());
   EXPECT_LE(t1.get(), t2.get());
   EXPECT_LE(t2.get(), t3.get());
-
-  END_TEST;
 }
 
-bool wait_test() {
-  BEGIN_TEST;
-
+TEST(Loop, Wait) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   zx::event event;
   EXPECT_EQ(ZX_OK, zx::event::create(0u, &event), "create event");
@@ -472,13 +448,13 @@ bool wait_test() {
   EXPECT_EQ(ZX_OK, loop.RunUntilIdle(), "run loop");
   EXPECT_EQ(1u, wait1.run_count, "run count 1");
   EXPECT_EQ(ZX_OK, wait1.last_status, "status 1");
-  EXPECT_NONNULL(wait1.last_signal);
+  EXPECT_NE(wait1.last_signal, nullptr);
   EXPECT_EQ(ZX_USER_SIGNAL_1, wait1.last_signal->trigger & ZX_USER_SIGNAL_ALL, "trigger 1");
   EXPECT_EQ(ZX_USER_SIGNAL_1, wait1.last_signal->observed & ZX_USER_SIGNAL_ALL, "observed 1");
   EXPECT_EQ(1u, wait1.last_signal->count, "count 1");
   EXPECT_EQ(1u, wait2.run_count, "run count 2");
   EXPECT_EQ(ZX_OK, wait2.last_status, "status 2");
-  EXPECT_NONNULL(wait2.last_signal);
+  EXPECT_NE(wait2.last_signal, nullptr);
   EXPECT_EQ(ZX_USER_SIGNAL_2, wait2.last_signal->trigger & ZX_USER_SIGNAL_ALL, "trigger 2");
   EXPECT_EQ(ZX_USER_SIGNAL_1 | ZX_USER_SIGNAL_2, wait2.last_signal->observed & ZX_USER_SIGNAL_ALL,
             "observed 2");
@@ -498,7 +474,7 @@ bool wait_test() {
   EXPECT_EQ(1u, wait1.run_count, "run count 1");
   EXPECT_EQ(2u, wait2.run_count, "run count 2");
   EXPECT_EQ(ZX_OK, wait2.last_status, "status 2");
-  EXPECT_NONNULL(wait2.last_signal);
+  EXPECT_NE(wait2.last_signal, nullptr);
   EXPECT_EQ(ZX_USER_SIGNAL_2, wait2.last_signal->trigger & ZX_USER_SIGNAL_ALL, "trigger 2");
   EXPECT_EQ(ZX_USER_SIGNAL_1 | ZX_USER_SIGNAL_2, wait2.last_signal->observed & ZX_USER_SIGNAL_ALL,
             "observed 2");
@@ -514,7 +490,7 @@ bool wait_test() {
     EXPECT_EQ(2u, wait2.run_count, "run count 2");
     EXPECT_EQ(i + 1u, wait3.run_count, "run count 3");
     EXPECT_EQ(ZX_OK, wait3.last_status, "status 3");
-    EXPECT_NONNULL(wait3.last_signal);
+    EXPECT_NE(wait3.last_signal, nullptr);
     EXPECT_EQ(ZX_USER_SIGNAL_3, wait3.last_signal->trigger & ZX_USER_SIGNAL_ALL, "trigger 3");
     EXPECT_EQ(ZX_USER_SIGNAL_3, wait3.last_signal->observed & ZX_USER_SIGNAL_ALL, "observed 3");
     EXPECT_EQ(1u, wait3.last_signal->count, "count 3");
@@ -536,12 +512,9 @@ bool wait_test() {
   EXPECT_EQ(3u, wait3.run_count, "run count 3");
 
   loop.Shutdown();
-
-  END_TEST;
 }
 
-bool irq_test() {
-  BEGIN_TEST;
+TEST(Loop, Irq) {
   async_loop_config_t config = kAsyncLoopConfigNoAttachToCurrentThread;
   config.irq_support = true;
   // Ensure that we get the IRQ
@@ -607,12 +580,9 @@ bool irq_test() {
     EXPECT_EQ(ZX_ERR_CANCELED, wait.last_status);
     EXPECT_EQ(ZX_OK, irq.ack());
   }
-  END_TEST;
 }
 
-bool wait_timestamp_test() {
-  BEGIN_TEST;
-
+TEST(Loop, WaitTimestamp) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
 
   // Verify that the timestamp is zero when ZX_WAIT_ASYNC_TIMESTAMP isn't used.
@@ -647,13 +617,9 @@ bool wait_timestamp_test() {
     EXPECT_TRUE(before <= zx::time(wait2.last_signal->timestamp));
     EXPECT_TRUE(after >= zx::time(wait2.last_signal->timestamp));
   }
-
-  END_TEST;
 }
 
-bool wait_timestamp_integration_test() {
-  BEGIN_TEST;
-
+TEST(Loop, WaitTimestampIntegration) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
 
   // Verify that the timestamp is zero when ZX_WAIT_ASYNC_TIMESTAMP isn't used.
@@ -694,13 +660,9 @@ bool wait_timestamp_integration_test() {
     EXPECT_TRUE(before <= zx::time(last_signal.timestamp));
     EXPECT_TRUE(after >= zx::time(last_signal.timestamp));
   }
-
-  END_TEST;
 }
 
-bool wait_unwaitable_handle_test() {
-  BEGIN_TEST;
-
+TEST(Loop, WaitUnwaitableHandle) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   zx::event event;
   EXPECT_EQ(ZX_OK, zx::event::create(0u, &event), "create event");
@@ -711,13 +673,9 @@ bool wait_unwaitable_handle_test() {
   EXPECT_EQ(ZX_ERR_NOT_FOUND, wait.Cancel(loop.dispatcher()), "cancel");
   EXPECT_EQ(ZX_OK, loop.RunUntilIdle(), "run loop");
   EXPECT_EQ(0u, wait.run_count, "run count");
-
-  END_TEST;
 }
 
-bool wait_shutdown_test() {
-  BEGIN_TEST;
-
+TEST(Loop, WaitShutdown) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   zx::event event;
   EXPECT_EQ(ZX_OK, zx::event::create(0u, &event), "create event");
@@ -747,13 +705,13 @@ bool wait_shutdown_test() {
   EXPECT_EQ(ZX_OK, loop.RunUntilIdle(), "run loop");
   EXPECT_EQ(1u, wait1.run_count, "run count 1");
   EXPECT_EQ(ZX_OK, wait1.last_status, "status 1");
-  EXPECT_NONNULL(wait1.last_signal);
+  EXPECT_NE(wait1.last_signal, nullptr);
   EXPECT_EQ(ZX_USER_SIGNAL_0, wait1.last_signal->trigger & ZX_USER_SIGNAL_ALL, "trigger 1");
   EXPECT_EQ(ZX_USER_SIGNAL_0, wait1.last_signal->observed & ZX_USER_SIGNAL_ALL, "observed 1");
   EXPECT_EQ(1u, wait1.last_signal->count, "count 1");
   EXPECT_EQ(1u, wait2.run_count, "run count 2");
   EXPECT_EQ(ZX_OK, wait2.last_status, "status 2");
-  EXPECT_NONNULL(wait2.last_signal);
+  EXPECT_NE(wait2.last_signal, nullptr);
   EXPECT_EQ(ZX_USER_SIGNAL_0, wait2.last_signal->trigger & ZX_USER_SIGNAL_ALL, "trigger 2");
   EXPECT_EQ(ZX_USER_SIGNAL_0, wait2.last_signal->observed & ZX_USER_SIGNAL_ALL, "observed 2");
   EXPECT_EQ(1u, wait2.last_signal->count, "count 2");
@@ -789,13 +747,9 @@ bool wait_shutdown_test() {
   EXPECT_EQ(ZX_ERR_BAD_STATE, wait6.Begin(loop.dispatcher()), "begin after shutdown");
   EXPECT_EQ(ZX_ERR_NOT_FOUND, wait6.Cancel(loop.dispatcher()), "cancel after shutdown");
   EXPECT_EQ(0u, wait6.run_count, "run count 6");
-
-  END_TEST;
 }
 
-bool task_test() {
-  BEGIN_TEST;
-
+TEST(Loop, Task) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
 
   zx::time start_time = async::Now(loop.dispatcher());
@@ -845,13 +799,9 @@ bool task_test() {
   EXPECT_EQ(0u, task7.run_count, "run count 7");
 
   loop.Shutdown();
-
-  END_TEST;
 }
 
-bool task_shutdown_test() {
-  BEGIN_TEST;
-
+TEST(Loop, TaskShutdown) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
 
   zx::time start_time = async::Now(loop.dispatcher());
@@ -916,17 +866,13 @@ bool task_shutdown_test() {
             "post after shutdown");
   EXPECT_EQ(ZX_ERR_NOT_FOUND, task8.Cancel(loop.dispatcher()), "cancel after shutdown");
   EXPECT_EQ(0u, task8.run_count, "run count 8");
-
-  END_TEST;
 }
 
-bool receiver_test() {
+TEST(Loop, Receiver) {
   const zx_packet_user_t data1{.u64 = {11, 12, 13, 14}};
   const zx_packet_user_t data2{.u64 = {21, 22, 23, 24}};
   const zx_packet_user_t data3{.u64 = {31, 32, 33, 34}};
   const zx_packet_user_t data_default{};
-
-  BEGIN_TEST;
 
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
 
@@ -942,23 +888,19 @@ bool receiver_test() {
   EXPECT_EQ(ZX_OK, loop.RunUntilIdle(), "run loop");
   EXPECT_EQ(2u, receiver1.run_count, "run count 1");
   EXPECT_EQ(ZX_OK, receiver1.last_status, "status 1");
-  EXPECT_NONNULL(receiver1.last_data);
+  EXPECT_NE(receiver1.last_data, nullptr);
   EXPECT_EQ(0, memcmp(&data3, receiver1.last_data, sizeof(zx_packet_user_t)), "data 1");
   EXPECT_EQ(1u, receiver2.run_count, "run count 2");
   EXPECT_EQ(ZX_OK, receiver2.last_status, "status 2");
-  EXPECT_NONNULL(receiver2.last_data);
+  EXPECT_NE(receiver2.last_data, nullptr);
   EXPECT_EQ(0, memcmp(&data2, receiver2.last_data, sizeof(zx_packet_user_t)), "data 2");
   EXPECT_EQ(1u, receiver3.run_count, "run count 3");
   EXPECT_EQ(ZX_OK, receiver3.last_status, "status 3");
-  EXPECT_NONNULL(receiver3.last_data);
+  EXPECT_NE(receiver3.last_data, nullptr);
   EXPECT_EQ(0, memcmp(&data_default, receiver3.last_data, sizeof(zx_packet_user_t)), "data 3");
-
-  END_TEST;
 }
 
-bool receiver_shutdown_test() {
-  BEGIN_TEST;
-
+TEST(Loop, ReceiverShutdown) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   loop.Shutdown();
 
@@ -967,13 +909,9 @@ bool receiver_shutdown_test() {
   EXPECT_EQ(ZX_ERR_BAD_STATE, receiver.QueuePacket(loop.dispatcher(), nullptr),
             "queue after shutdown");
   EXPECT_EQ(0u, receiver.run_count, "run count 1");
-
-  END_TEST;
 }
 
-bool paged_vmo_shutdown_test() {
-  BEGIN_TEST;
-
+TEST(Loop, PageVmoShutdown) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   EXPECT_EQ(ASYNC_LOOP_RUNNABLE, loop.GetState(), "loop runnable");
 
@@ -997,8 +935,6 @@ bool paged_vmo_shutdown_test() {
   // serves as a proxy for this, since we detach before the ZX_ERR_CANCELED status is sent to the
   // handler.
   EXPECT_TRUE(paged_vmo.IsCanceled(), "paged vmo cancel after shutdown");
-
-  END_TEST;
 }
 
 class GetDefaultDispatcherTask : public QuitTask {
@@ -1097,9 +1033,7 @@ class ThreadAssertReceiver : public TestReceiver {
   }
 };
 
-bool threads_have_default_dispatcher() {
-  BEGIN_TEST;
-
+TEST(Loop, ThreadsHaveDefaultDispatcher) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   EXPECT_EQ(ZX_OK, loop.StartThread(), "start thread");
 
@@ -1110,13 +1044,9 @@ bool threads_have_default_dispatcher() {
   EXPECT_EQ(1u, task.run_count, "run count");
   EXPECT_EQ(ZX_OK, task.last_status, "status");
   EXPECT_EQ(loop.dispatcher(), task.last_default_dispatcher, "default dispatcher");
-
-  END_TEST;
 }
 
-bool threads_dont_have_default_dispatcher() {
-  BEGIN_TEST;
-
+TEST(Loop, ThreadsDontHaveDefaultDispatcher) {
   async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
   EXPECT_EQ(ZX_OK, loop.StartThread(), "start thread");
 
@@ -1127,15 +1057,11 @@ bool threads_dont_have_default_dispatcher() {
   EXPECT_EQ(1u, task.run_count, "run count");
   EXPECT_EQ(ZX_OK, task.last_status, "status");
   EXPECT_NULL(task.last_default_dispatcher, "default dispatcher");
-
-  END_TEST;
 }
 
 // The goal here is to ensure that threads stop when Quit() is called.
-bool threads_quit() {
+TEST(Loop, ThreadsQuit) {
   const size_t num_threads = 4;
-
-  BEGIN_TEST;
 
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   for (size_t i = 0; i < num_threads; i++) {
@@ -1144,178 +1070,139 @@ bool threads_quit() {
   loop.Quit();
   loop.JoinThreads();
   EXPECT_EQ(ASYNC_LOOP_QUIT, loop.GetState());
-
-  END_TEST;
 }
 
 // The goal here is to ensure that threads stop when Shutdown() is called.
-bool threads_shutdown() {
-  const size_t num_threads = 4;
+TEST(Loop, ThroadsShutdown) {
+  for (int i = 0; i < 3; i++) {
+    const size_t num_threads = 4;
 
-  BEGIN_TEST;
+    async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+    for (size_t i = 0; i < num_threads; i++) {
+      EXPECT_EQ(ZX_OK, loop.StartThread());
+    }
+    loop.Shutdown();
+    EXPECT_EQ(ASYNC_LOOP_SHUTDOWN, loop.GetState());
 
-  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  for (size_t i = 0; i < num_threads; i++) {
-    EXPECT_EQ(ZX_OK, loop.StartThread());
+    loop.JoinThreads();  // should be a no-op
+
+    EXPECT_EQ(ZX_ERR_BAD_STATE, loop.StartThread(), "can't start threads after shutdown");
   }
-  loop.Shutdown();
-  EXPECT_EQ(ASYNC_LOOP_SHUTDOWN, loop.GetState());
-
-  loop.JoinThreads();  // should be a no-op
-
-  EXPECT_EQ(ZX_ERR_BAD_STATE, loop.StartThread(), "can't start threads after shutdown");
-
-  END_TEST;
 }
 
 // The goal here is to schedule a lot of work and see whether it runs
 // on as many threads as we expected it to.
-bool threads_waits_run_concurrently_test() {
-  const size_t num_threads = 4;
-  const size_t num_items = 100;
+TEST(Loop, ThroadsWitsRunConcurrently) {
+  for (int i = 0; i < 3; i++) {
+    const size_t num_threads = 4;
+    const size_t num_items = 100;
 
-  BEGIN_TEST;
+    async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+    for (size_t i = 0; i < num_threads; i++) {
+      EXPECT_EQ(ZX_OK, loop.StartThread(), "start thread");
+    }
 
-  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  for (size_t i = 0; i < num_threads; i++) {
-    EXPECT_EQ(ZX_OK, loop.StartThread(), "start thread");
+    ConcurrencyMeasure measure(num_items);
+    zx::event event;
+    EXPECT_EQ(ZX_OK, zx::event::create(0u, &event), "create event");
+    EXPECT_EQ(ZX_OK, event.signal(0u, ZX_USER_SIGNAL_0), "signal");
+
+    // Post a number of work items to run all at once.
+    ThreadAssertWait* items[num_items];
+    for (size_t i = 0; i < num_items; i++) {
+      items[i] = new ThreadAssertWait(event.get(), ZX_USER_SIGNAL_0, &measure);
+      EXPECT_EQ(ZX_OK, items[i]->Begin(loop.dispatcher()), "begin wait");
+    }
+
+    // Wait until quitted.
+    loop.JoinThreads();
+
+    // Ensure all work items completed.
+    EXPECT_EQ(num_items, measure.count(), "item count");
+    for (size_t i = 0; i < num_items; i++) {
+      EXPECT_EQ(1u, items[i]->run_count, "run count");
+      EXPECT_EQ(ZX_OK, items[i]->last_status, "status");
+      EXPECT_NE(items[i]->last_signal, nullptr, "signal");
+      EXPECT_EQ(ZX_USER_SIGNAL_0, items[i]->last_signal->observed & ZX_USER_SIGNAL_ALL, "observed");
+      delete items[i];
+    }
+
+    // Ensure that we actually ran many waits concurrently on different threads.
+    EXPECT_NE(1u, measure.max_threads(), "waits handled concurrently");
   }
-
-  ConcurrencyMeasure measure(num_items);
-  zx::event event;
-  EXPECT_EQ(ZX_OK, zx::event::create(0u, &event), "create event");
-  EXPECT_EQ(ZX_OK, event.signal(0u, ZX_USER_SIGNAL_0), "signal");
-
-  // Post a number of work items to run all at once.
-  ThreadAssertWait* items[num_items];
-  for (size_t i = 0; i < num_items; i++) {
-    items[i] = new ThreadAssertWait(event.get(), ZX_USER_SIGNAL_0, &measure);
-    EXPECT_EQ(ZX_OK, items[i]->Begin(loop.dispatcher()), "begin wait");
-  }
-
-  // Wait until quitted.
-  loop.JoinThreads();
-
-  // Ensure all work items completed.
-  EXPECT_EQ(num_items, measure.count(), "item count");
-  for (size_t i = 0; i < num_items; i++) {
-    EXPECT_EQ(1u, items[i]->run_count, "run count");
-    EXPECT_EQ(ZX_OK, items[i]->last_status, "status");
-    EXPECT_NONNULL(items[i]->last_signal, "signal");
-    EXPECT_EQ(ZX_USER_SIGNAL_0, items[i]->last_signal->observed & ZX_USER_SIGNAL_ALL, "observed");
-    delete items[i];
-  }
-
-  // Ensure that we actually ran many waits concurrently on different threads.
-  EXPECT_NE(1u, measure.max_threads(), "waits handled concurrently");
-
-  END_TEST;
 }
 
 // The goal here is to schedule a lot of work and see whether it runs
 // on as many threads as we expected it to.
-bool threads_tasks_run_sequentially_test() {
-  const size_t num_threads = 4;
-  const size_t num_items = 100;
+TEST(Loop, ThreadsTasksRunSequentially) {
+  for (int i = 0; i < 3; i++) {
+    const size_t num_threads = 4;
+    const size_t num_items = 100;
 
-  BEGIN_TEST;
+    async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+    for (size_t i = 0; i < num_threads; i++) {
+      EXPECT_EQ(ZX_OK, loop.StartThread(), "start thread");
+    }
 
-  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  for (size_t i = 0; i < num_threads; i++) {
-    EXPECT_EQ(ZX_OK, loop.StartThread(), "start thread");
+    ConcurrencyMeasure measure(num_items);
+
+    // Post a number of work items to run all at once.
+    ThreadAssertTask* items[num_items];
+    zx::time start_time = async::Now(loop.dispatcher());
+    for (size_t i = 0; i < num_items; i++) {
+      items[i] = new ThreadAssertTask(&measure);
+      EXPECT_EQ(ZX_OK, items[i]->PostForTime(loop.dispatcher(), start_time + zx::msec(i)),
+                "post task");
+    }
+
+    // Wait until quitted.
+    loop.JoinThreads();
+
+    // Ensure all work items completed.
+    EXPECT_EQ(num_items, measure.count(), "item count");
+    for (size_t i = 0; i < num_items; i++) {
+      EXPECT_EQ(1u, items[i]->run_count, "run count");
+      EXPECT_EQ(ZX_OK, items[i]->last_status, "status");
+      delete items[i];
+    }
+
+    // Ensure that we actually ran tasks sequentially despite having many
+    // threads available.
+    EXPECT_EQ(1u, measure.max_threads(), "tasks handled sequentially");
   }
-
-  ConcurrencyMeasure measure(num_items);
-
-  // Post a number of work items to run all at once.
-  ThreadAssertTask* items[num_items];
-  zx::time start_time = async::Now(loop.dispatcher());
-  for (size_t i = 0; i < num_items; i++) {
-    items[i] = new ThreadAssertTask(&measure);
-    EXPECT_EQ(ZX_OK, items[i]->PostForTime(loop.dispatcher(), start_time + zx::msec(i)),
-              "post task");
-  }
-
-  // Wait until quitted.
-  loop.JoinThreads();
-
-  // Ensure all work items completed.
-  EXPECT_EQ(num_items, measure.count(), "item count");
-  for (size_t i = 0; i < num_items; i++) {
-    EXPECT_EQ(1u, items[i]->run_count, "run count");
-    EXPECT_EQ(ZX_OK, items[i]->last_status, "status");
-    delete items[i];
-  }
-
-  // Ensure that we actually ran tasks sequentially despite having many
-  // threads available.
-  EXPECT_EQ(1u, measure.max_threads(), "tasks handled sequentially");
-
-  END_TEST;
 }
 
 // The goal here is to schedule a lot of work and see whether it runs
 // on as many threads as we expected it to.
-bool threads_receivers_run_concurrently_test() {
-  const size_t num_threads = 4;
-  const size_t num_items = 100;
+TEST(Loop, ThreadsReceiversRunConcurrently) {
+  for (int i = 0; i < 3; i++) {
+    const size_t num_threads = 4;
+    const size_t num_items = 100;
 
-  BEGIN_TEST;
+    async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+    for (size_t i = 0; i < num_threads; i++) {
+      EXPECT_EQ(ZX_OK, loop.StartThread(), "start thread");
+    }
 
-  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  for (size_t i = 0; i < num_threads; i++) {
-    EXPECT_EQ(ZX_OK, loop.StartThread(), "start thread");
+    ConcurrencyMeasure measure(num_items);
+
+    // Post a number of packets all at once.
+    ThreadAssertReceiver receiver(&measure);
+    for (size_t i = 0; i < num_items; i++) {
+      EXPECT_EQ(ZX_OK, receiver.QueuePacket(loop.dispatcher(), nullptr), "queue packet");
+    }
+
+    // Wait until quitted.
+    loop.JoinThreads();
+
+    // Ensure all work items completed.
+    EXPECT_EQ(num_items, measure.count(), "item count");
+    EXPECT_EQ(num_items, receiver.run_count, "run count");
+    EXPECT_EQ(ZX_OK, receiver.last_status, "status");
+
+    // Ensure that we actually processed many packets concurrently on different threads.
+    EXPECT_NE(1u, measure.max_threads(), "packets handled concurrently");
   }
-
-  ConcurrencyMeasure measure(num_items);
-
-  // Post a number of packets all at once.
-  ThreadAssertReceiver receiver(&measure);
-  for (size_t i = 0; i < num_items; i++) {
-    EXPECT_EQ(ZX_OK, receiver.QueuePacket(loop.dispatcher(), nullptr), "queue packet");
-  }
-
-  // Wait until quitted.
-  loop.JoinThreads();
-
-  // Ensure all work items completed.
-  EXPECT_EQ(num_items, measure.count(), "item count");
-  EXPECT_EQ(num_items, receiver.run_count, "run count");
-  EXPECT_EQ(ZX_OK, receiver.last_status, "status");
-
-  // Ensure that we actually processed many packets concurrently on different threads.
-  EXPECT_NE(1u, measure.max_threads(), "packets handled concurrently");
-
-  END_TEST;
 }
 
 }  // namespace
-
-BEGIN_TEST_CASE(loop_tests)
-RUN_TEST(c_api_basic_test)
-RUN_TEST(make_default_false_test)
-RUN_TEST(make_default_true_test)
-RUN_TEST(quit_test)
-RUN_TEST(time_test)
-RUN_TEST(wait_test)
-RUN_TEST(irq_test)
-RUN_TEST(wait_timestamp_test)
-RUN_TEST(wait_timestamp_integration_test)
-RUN_TEST(wait_unwaitable_handle_test)
-RUN_TEST(wait_shutdown_test)
-RUN_TEST(task_test)
-RUN_TEST(task_shutdown_test)
-RUN_TEST(receiver_test)
-RUN_TEST(receiver_shutdown_test)
-RUN_TEST(threads_dont_have_default_dispatcher)
-RUN_TEST(threads_have_default_dispatcher)
-for (int i = 0; i < 3; i++) {
-  RUN_TEST(threads_quit)
-  RUN_TEST(threads_shutdown)
-  RUN_TEST(threads_waits_run_concurrently_test)
-  RUN_TEST(threads_tasks_run_sequentially_test)
-  RUN_TEST(threads_receivers_run_concurrently_test)
-}
-RUN_TEST(create_default_test)
-RUN_TEST(paged_vmo_shutdown_test)
-END_TEST_CASE(loop_tests)
