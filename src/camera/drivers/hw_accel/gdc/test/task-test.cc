@@ -80,9 +80,9 @@ class TaskTest : public zxtest::Test {
   }
 
   void WaitForRemoveTaskAndReset() {
-    fbl::AutoLock al(&remove_lock_);
+    fbl::AutoLock al(&lock_);
     while (frame_removed_ == false) {
-      remove_task_event_.Wait(&remove_lock_);
+      remove_task_event_.Wait(&lock_);
     }
     frame_removed_ = false;
   }
@@ -245,9 +245,8 @@ class TaskTest : public zxtest::Test {
   bool frame_ready_;
   bool frame_removed_;
   fbl::Mutex lock_;
-  fbl::Mutex remove_lock_;
   fbl::ConditionVariable event_;
-  fbl::ConditionVariable remove_task_event_;
+  fbl::ConditionVariable remove_task_event_ __TA_GUARDED(lock_);
 };
 
 TEST_F(TaskTest, BasicCreationTest) {
