@@ -12,6 +12,7 @@
 
 #include <string>
 
+#include "src/developer/feedback/reboot_info/reboot_log.h"
 #include "src/developer/feedback/reboot_info/reboot_log_handler.h"
 #include "src/lib/syslog/cpp/logger.h"
 
@@ -22,12 +23,14 @@ int main(int argc, char** argv) {
   async::Executor executor(loop.dispatcher());
   auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
-  const char reboot_log[] = "/boot/log/last-panic.txt";
+  const std::string path = "/boot/log/last-panic.txt";
+
+  const feedback::RebootLog reboot_log = feedback::RebootLog::ParseRebootLog(path);
   auto promise = feedback::HandleRebootLog(reboot_log, loop.dispatcher(), context->svc())
-                     .then([&reboot_log, &loop](const ::fit::result<void>& result) {
+                     .then([&path, &loop](const ::fit::result<void>& result) {
                        if (result.is_error()) {
                          FX_LOGS(ERROR)
-                             << "Failed to handle reboot log at " << reboot_log << ". Won't retry.";
+                             << "Failed to handle reboot log at " << path << ". Won't retry.";
                        }
                        // The delay is used to guarantee that we are not exiting the process before
                        // Cobalt had time to receive and send its events.

@@ -21,9 +21,19 @@ test_package("reboot-info-tests") {
     {
       name = "reboot_log_handler_unittest"
     },
+    {
+      name = "reboot_log_unittest"
+    },
+    {
+      name = "reboot_reason_unittest"
+    },
   ]
 
-  deps = [ ":reboot_log_handler_unittest" ]
+  deps = [
+    ":reboot_log_handler_unittest",
+    ":reboot_log_unittest",
+    ":reboot_reason_unittest",
+  ]
 }
 
 ###############################################################################
@@ -35,7 +45,7 @@ executable("reboot_log_handler_unittest") {
   sources = [ "reboot_log_handler_unittest.cc" ]
 
   deps = [
-    "//src/developer/feedback/reboot_info:src",
+    "//src/developer/feedback/reboot_info:reboot_log_handler",
     "//src/developer/feedback/testing:cobalt_test_fixture",
     "//src/developer/feedback/testing:gpretty_printers",
     "//src/developer/feedback/testing:gtest_with_syslog_main",
@@ -48,5 +58,37 @@ executable("reboot_log_handler_unittest") {
     "//third_party/googletest:gtest",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/zx",
+  ]
+}
+
+executable("reboot_log_unittest") {
+  testonly = true
+
+  sources = [ "reboot_log_unittest.cc" ]
+
+  deps = [
+    "//src/developer/feedback/reboot_info:reboot_log",
+    "//src/developer/feedback/testing:gpretty_printers",
+    "//src/developer/feedback/testing:gtest_with_syslog_main",
+    "//src/lib/files",
+    "//src/lib/fxl",
+    "//src/lib/syslog/cpp",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/zx",
+  ]
+}
+
+executable("reboot_reason_unittest") {
+  testonly = true
+
+  sources = [ "reboot_reason_unittest.cc" ]
+
+  deps = [
+    "//src/developer/feedback/reboot_info:reboot_reason",
+    "//src/developer/feedback/utils/cobalt",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
   ]
 }

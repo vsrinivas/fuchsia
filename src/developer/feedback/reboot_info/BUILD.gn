@@ -34,7 +34,8 @@ executable("main") {
   sources = [ "main.cc" ]
 
   deps = [
-    ":src",
+    ":reboot_log",
+    ":reboot_log_handler",
     "//sdk/lib/sys/cpp",
     "//src/lib/syslog/cpp",
     "//zircon/public/lib/async-cpp",
@@ -47,26 +48,28 @@ executable("main") {
 ###############################################################################
 # SOURCES
 ###############################################################################
-source_set("reboot_reason") {
+source_set("reboot_log") {
   sources = [
-    "reboot_reason.cc",
-    "reboot_reason.h",
+    "reboot_log.cc",
+    "reboot_log.h",
   ]
 
-  public_deps = [ "//src/developer/feedback/utils/cobalt" ]
+  public_deps = [ ":reboot_reason" ]
 
-  deps = [ "//src/lib/syslog/cpp" ]
-
-  visibility = [ "//src/developer/feedback/reboot_info/*" ]
+  deps = [
+    "//src/lib/files",
+    "//src/lib/syslog/cpp",
+  ]
 }
 
-source_set("src") {
+source_set("reboot_log_handler") {
   sources = [
     "reboot_log_handler.cc",
     "reboot_log_handler.h",
   ]
 
   public_deps = [
+    ":reboot_log",
     ":reboot_reason",
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/lib/sys/cpp",
@@ -84,4 +87,17 @@ source_set("src") {
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/zx",
   ]
+}
+
+source_set("reboot_reason") {
+  sources = [
+    "reboot_reason.cc",
+    "reboot_reason.h",
+  ]
+
+  public_deps = [ "//src/developer/feedback/utils/cobalt" ]
+
+  deps = [ "//src/lib/syslog/cpp" ]
+
+  visibility = [ "//src/developer/feedback/reboot_info/*" ]
 }

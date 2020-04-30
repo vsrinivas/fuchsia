@@ -16,29 +16,20 @@
 #include <memory>
 #include <string>
 
+#include "src/developer/feedback/reboot_info/reboot_log.h"
 #include "src/developer/feedback/reboot_info/reboot_reason.h"
 #include "src/developer/feedback/utils/cobalt/logger.h"
-#include "src/lib/fsl/vmo/sized_vmo.h"
 #include "src/lib/fxl/functional/cancelable_callback.h"
 
 namespace feedback {
 
-// Checks the presence of a reboot log at |filepath|. If present, wait for the network to be
-// reachable and hands it off to the crash analyzer as today we only stow something in the reboot
-// log in case of OOM or kernel panic.
+// Logs the reboot reason with Cobalt and if the reboot was non-graceful, files a crash report.
 //
-// fuchsia.net.Connectivity, fuchsia.feedback.CrashReporter and fuchsia.cobalt.LoggerFactory are
-// expected to be in |services|.
-::fit::promise<void> HandleRebootLog(const std::string& filepath, async_dispatcher_t* dispatcher,
+// fuchsia.feedback.CrashReporter and fuchsia.cobalt.LoggerFactory are expected to be in |services|.
+::fit::promise<void> HandleRebootLog(const RebootLog& reboot_log, async_dispatcher_t* dispatcher,
                                      std::shared_ptr<sys::ServiceDirectory> services);
 
 namespace internal {
-
-// The information extracted from the reboot log.
-struct RebootInfo {
-  RebootReason reboot_reason;
-  std::optional<zx::duration> uptime;
-};
 
 // Wraps around fuchsia.feedback.CrashReporter, fuchsia.cobalt.Logger and
 // fuchsia.cobalt.LoggerFactory to handle establishing the connection, losing the connection,
@@ -49,17 +40,15 @@ class RebootLogHandler {
  public:
   RebootLogHandler(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services);
 
-  ::fit::promise<void> Handle(const std::string& filepath);
+  ::fit::promise<void> Handle(const RebootLog& reboot_log);
 
  private:
-  ::fit::promise<void> FileCrashReport(RebootInfo info);
+  ::fit::promise<void> FileCrashReport(const RebootLog& reboot_log);
 
   async_dispatcher_t* dispatcher_;
   const std::shared_ptr<sys::ServiceDirectory> services_;
   // Enforces the one-shot nature of Handle().
   bool has_called_handle_ = false;
-
-  fsl::SizedVmo reboot_log_;
 
   fuchsia::feedback::CrashReporterPtr crash_reporter_;
   ::fit::bridge<void> crash_reporting_done_;
