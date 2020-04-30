@@ -1028,7 +1028,7 @@ zx_status_t Minfs::VnodeGet(fbl::RefPtr<VnodeMinfs>* out, ino_t ino) {
 }
 
 // Allocate a new data block from the block bitmap.
-void Minfs::BlockNew(Transaction* transaction, blk_t* out_bno) {
+void Minfs::BlockNew(PendingWork* transaction, blk_t* out_bno) {
   size_t allocated_bno = transaction->AllocateBlock();
   *out_bno = static_cast<blk_t>(allocated_bno);
   ValidateBno(*out_bno);
@@ -1061,11 +1061,6 @@ void Minfs::BlockSwap(Transaction* transaction, blk_t in_bno, blk_t* out_bno) {
   ValidateBno(*out_bno);
 }
 #endif
-
-void Minfs::BlockFree(Transaction* transaction, blk_t bno) {
-  ValidateBno(bno);
-  block_allocator_->Free(&transaction->block_reservation(), bno);
-}
 
 void InitializeDirectory(void* bdata, ino_t ino_self, ino_t ino_parent) {
 #define DE0_SIZE DirentSize(1)

@@ -69,6 +69,10 @@ class Transaction final : public PendingWork {
     return block_reservation_.Allocate();
   }
 
+  void DeallocateBlock(size_t block) final {
+    return block_reservation_.Deallocate(block);
+  }
+
   ////////////////
   // Other methods.
   size_t AllocateInode() {

@@ -32,6 +32,10 @@ size_t AllocatorReservation::Allocate() {
   return allocator_.Allocate({}, this);
 }
 
+void AllocatorReservation::Deallocate(size_t element) {
+  allocator_.Free(this, element);
+}
+
 #ifdef __Fuchsia__
 size_t AllocatorReservation::Swap(size_t old_index) {
   if (old_index > 0) {

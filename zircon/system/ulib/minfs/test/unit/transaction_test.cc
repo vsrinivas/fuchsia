@@ -339,7 +339,7 @@ class MockVnodeMinfs : public VnodeMinfs, public fbl::Recyclable<MockVnodeMinfs>
   void SetSize(uint32_t new_size) final {}
   void AcquireWritableBlock(Transaction* transaction, blk_t local_bno, blk_t old_bno,
                             blk_t* out_bno) final {}
-  void DeleteBlock(Transaction* transaction, blk_t local_bno, blk_t old_bno) final {}
+  void DeleteBlock(PendingWork* transaction, blk_t local_bno, blk_t old_bno, bool indirect) final {}
   void IssueWriteback(Transaction* transaction, blk_t vmo_offset, blk_t dev_offset,
                       blk_t count) final {}
   bool HasPendingAllocation(blk_t vmo_offset) final { return false; }

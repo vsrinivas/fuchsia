@@ -49,6 +49,9 @@ class AllocatorReservation {
   // Allocate a new item in allocator_. Return the index of the newly allocated item.
   size_t Allocate();
 
+  // Deallocate a new item from allocate_.
+  void Deallocate(size_t element);
+
   // Unreserve all currently reserved items.
   void Cancel();
 

@@ -58,6 +58,7 @@ class StubTransaction : public PendingWork {
   void EnqueueMetadata(storage::Operation operation, storage::BlockBuffer* buffer) override {}
   void EnqueueData(storage::Operation operation, storage::BlockBuffer* buffer) override {}
   size_t AllocateBlock() override { return 0; }
+  void DeallocateBlock(size_t) override {}
 };
 
 TEST(LazyReaderTest, ReadSucceeds) {

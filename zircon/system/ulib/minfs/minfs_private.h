@@ -223,7 +223,7 @@ class Minfs :
   void VnodeRelease(VnodeMinfs* vn) FS_TA_EXCLUDES(hash_lock_);
 
   // Allocate a new data block.
-  void BlockNew(Transaction* transaction, blk_t* out_bno);
+  void BlockNew(PendingWork* transaction, blk_t* out_bno);
 
   // Set/Unset the flags.
   void UpdateFlags(PendingWork* transaction, uint32_t flags, bool set);
@@ -231,9 +231,6 @@ class Minfs :
   // Mark |in_bno| for de-allocation (if it is > 0), and return a new block |*out_bno|.
   // The swap will not be persisted until the transaction is commited.
   void BlockSwap(Transaction* transaction, blk_t in_bno, blk_t* out_bno);
-
-  // Free a data block.
-  void BlockFree(Transaction* transaction, blk_t bno);
 
   // Free ino in inode bitmap, release all blocks held by inode.
   zx_status_t InoFree(Transaction* transaction, VnodeMinfs* vn);

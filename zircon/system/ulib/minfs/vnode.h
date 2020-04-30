@@ -145,9 +145,10 @@ class VnodeMinfs : public fs::Vnode,
   virtual void AcquireWritableBlock(Transaction* transaction, blk_t vmo_offset, blk_t dev_offset,
                                     blk_t* out_dev_offset) = 0;
 
-  // Deletes the block at |vmo_offset| within the file, corresponding to on-disk
-  // block |dev_offset| (zero if unallocated).
-  virtual void DeleteBlock(Transaction* transaction, blk_t vmo_offset, blk_t dev_offset) = 0;
+  // Deletes the block at |vmo_offset| within the file, corresponding to on-disk block |dev_offset|
+  // (zero if unallocated). |indirect| specifies whether the block is a direct or indirect block.
+  virtual void DeleteBlock(PendingWork* transaction, blk_t vmo_offset, blk_t dev_offset,
+                           bool indirect) = 0;
 
 #ifdef __Fuchsia__
   // Instructs the Vnode to write out |count| blocks of the vnode, starting at local
@@ -205,6 +206,9 @@ class VnodeMinfs : public fs::Vnode,
 #ifdef __Fuchsia__
   VmoIndirect& vmo_indirect() { return vmo_indirect_; }
 #endif
+
+  // Allocates an indirect block.
+  void AllocateIndirect(PendingWork* transaction, blk_t* block);
 
   // TODO(smklein): These operations and members are protected as a historical artifact
   // of "File + Directory + Vnode" being a single class. They should be transitioned to

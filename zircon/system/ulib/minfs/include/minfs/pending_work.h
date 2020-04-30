@@ -36,6 +36,9 @@ class PendingWork {
 
   // Allocates a block in the data section and returns the block allocated.
   virtual size_t AllocateBlock() = 0;
+
+  // Deallocates a block in the data section and returns the block allocated.
+  virtual void DeallocateBlock(size_t block) = 0;
 };
 }  // namespace minfs
 

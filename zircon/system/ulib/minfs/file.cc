@@ -189,16 +189,18 @@ void File::AcquireWritableBlock(Transaction* transaction, blk_t local_bno, blk_t
 #endif
 }
 
-void File::DeleteBlock(Transaction* transaction, blk_t local_bno, blk_t old_bno) {
+void File::DeleteBlock(PendingWork* transaction, blk_t local_bno, blk_t old_bno, bool indirect) {
   // If we found a block that was previously allocated, delete it.
   if (old_bno != 0) {
-    fs_->BlockFree(transaction, old_bno);
+    transaction->DeallocateBlock(old_bno);
     inode_.block_count--;
   }
 #ifdef __Fuchsia__
-  // Remove this block from the pending allocation map in case it's set so we do not
-  // proceed to allocate a new block.
-  allocation_state_.ClearPending(local_bno, old_bno != 0);
+  if (!indirect) {
+    // Remove this block from the pending allocation map in case it's set so we do not
+    // proceed to allocate a new block.
+    allocation_state_.ClearPending(local_bno, old_bno != 0);
+  }
 #endif
 }
 

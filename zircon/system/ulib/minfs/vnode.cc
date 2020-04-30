@@ -91,7 +91,7 @@ zx_status_t VnodeMinfs::BlocksShrink(Transaction* transaction, blk_t start) {
   ZX_DEBUG_ASSERT(transaction != nullptr);
 
   auto block_callback = [this, transaction](blk_t local_bno, blk_t old_bno, blk_t* out_bno) {
-    DeleteBlock(transaction, local_bno, old_bno);
+    DeleteBlock(transaction, local_bno, old_bno, /*indirect=*/false);
     *out_bno = 0;
   };
 
@@ -294,6 +294,12 @@ void VnodeMinfs::AllocateIndirect(Transaction* transaction, blk_t index, Indirec
   inode_.block_count++;
 }
 
+void VnodeMinfs::AllocateIndirect(PendingWork* transaction, blk_t* block) {
+  ZX_DEBUG_ASSERT(transaction != nullptr);
+  fs_->BlockNew(transaction, block);
+  inode_.block_count++;
+}
+
 zx_status_t VnodeMinfs::BlockOpDirect(BlockOpArgs* op_args, DirectArgs* params) {
   for (unsigned i = 0; i < params->GetCount(); i++) {
     blk_t bno = params->GetBno(i);
@@ -350,7 +356,7 @@ zx_status_t VnodeMinfs::BlockOpIndirect(BlockOpArgs* op_args, IndirectArgs* para
     if (params->GetOp() == BlockOp::kDelete &&
         direct_params.GetCount() == kMinfsDirectPerIndirect) {
       // release the indirect block itself
-      fs_->BlockFree(op_args->transaction, params->GetBno(i));
+      op_args->transaction->DeallocateBlock(params->GetBno(i));
       params->SetBno(i, 0);
       inode_.block_count--;
     } else if (allocated || direct_params.IsDirty()) {
@@ -424,7 +430,7 @@ zx_status_t VnodeMinfs::BlockOpDindirect(BlockOpArgs* op_args, DindirectArgs* pa
     if (params->GetOp() == BlockOp::kDelete &&
         indirect_params.GetCount() == kMinfsDirectPerDindirect) {
       // release the doubly indirect block itself
-      fs_->BlockFree(op_args->transaction, params->GetBno(i));
+      op_args->transaction->DeallocateBlock(params->GetBno(i));
       params->SetBno(i, 0);
       inode_.block_count--;
     } else if (allocated || indirect_params.IsDirty()) {
