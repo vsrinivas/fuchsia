@@ -559,6 +559,7 @@ void SimpleAudioStream::GetSupportedFormats(
     }
 
     fbl::Vector<uint32_t> rates;
+    // Ignore flags if min and max are equal.
     if (i.min_frames_per_second == i.max_frames_per_second) {
       rates.push_back(i.min_frames_per_second);
     } else {
