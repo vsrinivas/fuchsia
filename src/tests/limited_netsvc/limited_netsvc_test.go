@@ -166,7 +166,7 @@ func attemptLoglistener(t *testing.T, i *qemu.Instance, shouldWork bool) {
 	defer cancel()
 
 	name := toolPath(t, "loglistener")
-	cmd := exec.CommandContext(ctx, name)
+	cmd := exec.CommandContext(ctx, name, defaultNodename)
 
 	out, err := cmd.Output()
 	if err != nil && err.Error() != "signal: killed" {
