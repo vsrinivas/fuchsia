@@ -46,20 +46,8 @@ class FrameStatsTest : public gtest::RealLoopFixture {
  public:
   static constexpr char kObjectsName[] = "diagnostics";
 
-  FrameStatsTest()
-      : inspector_(),
-        executor_(dispatcher()),
-        server_loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
-    handler_ = inspect::MakeTreeHandler(&inspector_, server_loop_.dispatcher());
-    server_thread_ = std::thread([this]() mutable {
-      async_set_default_dispatcher(server_loop_.dispatcher());
-      server_loop_.Run();
-    });
-  }
-
-  ~FrameStatsTest() override {
-    server_loop_.Quit();
-    server_thread_.join();
+  FrameStatsTest() : inspector_(), executor_(dispatcher()) {
+    handler_ = inspect::MakeTreeHandler(&inspector_, dispatcher());
   }
 
   void SchedulePromise(fit::pending_task promise) { executor_.schedule_task(std::move(promise)); }
@@ -82,8 +70,6 @@ class FrameStatsTest : public gtest::RealLoopFixture {
 
  private:
   async::Executor executor_;
-  std::thread server_thread_;
-  async::Loop server_loop_;
   fidl::InterfaceRequestHandler<fuchsia::inspect::Tree> handler_;
 };
 
