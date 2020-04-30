@@ -47,9 +47,9 @@ DefaultFrameScheduler::DefaultFrameScheduler(std::shared_ptr<const VsyncTiming> 
 
   inspect_frame_number_ = inspect_node_.CreateUint("most_recent_frame_number", frame_number_);
   inspect_last_successful_update_start_time_ =
-      inspect_node_.CreateUint("inspect_last_successful_update_start_time_", 0);
+      inspect_node_.CreateUint("last_successful_update_start_time", 0);
   inspect_last_successful_render_start_time_ =
-      inspect_node_.CreateUint("inspect_last_successful_render_start_time_", 0);
+      inspect_node_.CreateUint("last_successful_render_start_time", 0);
 }
 
 DefaultFrameScheduler::~DefaultFrameScheduler() {}

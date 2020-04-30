@@ -39,7 +39,7 @@ class FrameStats {
   static void FrameTimingsOutputToCsv(const std::deque<const FrameTimings::Timestamps>& timestamps,
                                       std::ostream* output);
 
-  static zx::duration CalculateAverageDuration(
+  static zx::duration CalculateMeanDuration(
       const std::deque<const FrameTimings::Timestamps>& timestamps,
       std::function<zx::duration(const FrameTimings::Timestamps&)> duration_func,
       uint32_t percentile);
@@ -47,7 +47,7 @@ class FrameStats {
   void RecordDroppedFrame(const FrameTimings::Timestamps timestamps);
   void RecordDelayedFrame(const FrameTimings::Timestamps timestamps);
 
-  void ReportStats(std::ostream* output) const;
+  void ReportStats(inspect::Inspector* insp) const;
 
   // Note that both scenic_render_time and scenic_latch_to_actual_presentation
   // metrics in Cobalt has the same histogram settings. Therefore we create only

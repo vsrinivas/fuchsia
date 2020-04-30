@@ -33,10 +33,7 @@ FrameStats::FrameStats(inspect::Node inspect_node,
     : inspect_node_(std::move(inspect_node)), cobalt_logger_(std::move(cobalt_logger)) {
   inspect_frame_stats_dump_ = inspect_node_.CreateLazyValues("Aggregate Stats", [this] {
     inspect::Inspector insp;
-    std::ostringstream output;
-    output << std::endl;
-    ReportStats(&output);
-    insp.GetRoot().CreateString("Aggregate Stats", output.str(), &insp);
+    ReportStats(&insp);
     return fit::make_ok_promise(std::move(insp));
   });
   InitializeFrameTimeBucketConfig();
@@ -143,7 +140,7 @@ std::vector<fuchsia::cobalt::HistogramBucket> FrameStats::CreateCobaltBucketsFro
 }
 
 /* static */
-zx::duration FrameStats::CalculateAverageDuration(
+zx::duration FrameStats::CalculateMeanDuration(
     const std::deque<const FrameTimings::Timestamps>& timestamps,
     std::function<zx::duration(const FrameTimings::Timestamps&)> duration_func,
     uint32_t percentile) {
@@ -178,20 +175,25 @@ zx::duration FrameStats::CalculateAverageDuration(
   return total_duration / num_durations;
 }
 
-void FrameStats::ReportStats(std::ostream* output) const {
-  FXL_DCHECK(output);
+void FrameStats::ReportStats(inspect::Inspector* insp) const {
+  FXL_DCHECK(insp);
 
   FXL_DCHECK(dropped_frame_count_ <= frame_count_);
   FXL_DCHECK(delayed_frame_count_ <= frame_count_);
-  uint64_t dropped_percentage = frame_count_ > 0 ? dropped_frame_count_ * 100 / frame_count_ : 0;
+  double dropped_percentage = frame_count_ > 0 ? dropped_frame_count_ * 100.0 / frame_count_ : 0.0;
   FXL_DCHECK(delayed_frame_count_ <= frame_count_);
-  uint64_t delayed_percentage = frame_count_ > 0 ? delayed_frame_count_ * 100 / frame_count_ : 0;
+  double delayed_percentage = frame_count_ > 0 ? delayed_frame_count_ * 100.0 / frame_count_ : 0.0;
 
-  *output << "Total Frames: " << frame_count_ << "\n";
-  *output << "Number of Dropped Frames: " << dropped_frame_count_ << " (" << dropped_percentage
-          << "%)\n";
-  *output << "Number of Delayed Frames (missed VSYNC): " << delayed_frame_count_ << " ("
-          << delayed_percentage << "%)\n";
+  // Stats for the entire history.
+  {
+    inspect::Node node = insp->GetRoot().CreateChild("0 - Entire History");
+    node.CreateUint("Total Frame Count", frame_count_, insp);
+    node.CreateUint("Dropped Frame Count", dropped_frame_count_, insp);
+    node.CreateDouble("Dropped Frame Percentage", dropped_percentage, insp);
+    node.CreateUint("Delayed Frame Count (missed VSYNC)", delayed_frame_count_, insp);
+    node.CreateDouble("Delayed Frame Percentage", delayed_percentage, insp);
+    insp->emplace(std::move(node));
+  }
 
   auto prediction_accuracy = [](const FrameTimings::Timestamps& times) -> zx::duration {
     return times.actual_presentation_time - times.target_presentation_time;
@@ -203,33 +205,54 @@ void FrameStats::ReportStats(std::ostream* output) const {
     return times.actual_presentation_time - times.render_done_time;
   };
 
-  auto pretty_print_ms = [](zx::duration duration) -> float {
-    zx::duration dur(duration);
-    uint64_t usec_duration = dur.to_usecs();
-    float msec = static_cast<float>(usec_duration) / 1000.f;
-    return msec;
-  };
+  // Stats for the last kNumFramesToReport frames.
+  {
+    inspect::Node node = insp->GetRoot().CreateChild("1 - Recent Frame Stats (times in ms)");
 
-  *output << "\nAverage times of the last " << kNumFramesToReport << " frames (times in ms): \n";
-  *output << "Average Predication Accuracy (95 percentile): "
-          << pretty_print_ms(CalculateAverageDuration(frame_times_, prediction_accuracy, 95))
-          << "\n";
-  *output << "Average Total Frame Time (95 percentile): "
-          << pretty_print_ms(CalculateAverageDuration(frame_times_, total_frame_time, 95)) << "\n";
-  *output << "Average Frame Latency (95 percentile): "
-          << pretty_print_ms(CalculateAverageDuration(frame_times_, latency, 95)) << "\n";
+    constexpr double kUSecsToMSecs = 0.001;
 
-  *output << "\nAverage times of the last " << kNumDelayedFramesToReport
-          << " delayed frames (times in ms): \n";
-  *output << "Average Predication Accuracy of Delayed Frames (95 percentile): "
-          << pretty_print_ms(CalculateAverageDuration(delayed_frames_, prediction_accuracy, 95))
-          << "\n";
-  *output << "Average Total Frame Time of Delayed Frames (95 percentile): "
-          << pretty_print_ms(CalculateAverageDuration(delayed_frames_, total_frame_time, 95))
-          << "\n";
-  *output << "Average Latency of Delayed Frames (95 percentile): "
-          << pretty_print_ms(CalculateAverageDuration(delayed_frames_, prediction_accuracy, 95))
-          << "\n";
+    node.CreateUint("Count", frame_times_.size(), insp);
+
+    node.CreateDouble(
+        "Mean Prediction Accuracy (95 percentile)",
+        kUSecsToMSecs * CalculateMeanDuration(frame_times_, prediction_accuracy, 95).to_usecs(),
+        insp);
+
+    node.CreateDouble(
+        "Mean Total Frame Time (95 percentile)",
+        kUSecsToMSecs * CalculateMeanDuration(frame_times_, total_frame_time, 95).to_usecs(), insp);
+
+    node.CreateDouble("Mean Total Frame Latency (95 percentile)",
+                      kUSecsToMSecs * CalculateMeanDuration(frame_times_, latency, 95).to_usecs(),
+                      insp);
+
+    insp->emplace(std::move(node));
+  }
+
+  // Stats for the last kNumFramesToReport frames.
+  {
+    inspect::Node node =
+        insp->GetRoot().CreateChild("2 - Recent Delayed Frame Stats (times in ms)");
+
+    node.CreateUint("Count", delayed_frames_.size(), insp);
+
+    constexpr double kUSecsToMSecs = 0.001;
+
+    node.CreateDouble(
+        "Mean Prediction Accuracy (95 percentile)",
+        kUSecsToMSecs * CalculateMeanDuration(delayed_frames_, prediction_accuracy, 95).to_usecs(),
+        insp);
+
+    node.CreateDouble(
+        "Mean Total Frame Time (95 percentile)",
+        kUSecsToMSecs * CalculateMeanDuration(delayed_frames_, total_frame_time, 95).to_usecs(), insp);
+
+    node.CreateDouble("Mean Total Frame Latency (95 percentile)",
+                      kUSecsToMSecs * CalculateMeanDuration(delayed_frames_, latency, 95).to_usecs(),
+                      insp);
+
+    insp->emplace(std::move(node));
+  }
 }
 
 /* static */

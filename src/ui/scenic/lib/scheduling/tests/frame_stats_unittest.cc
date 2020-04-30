@@ -87,15 +87,68 @@ class FrameStatsTest : public gtest::RealLoopFixture {
   fidl::InterfaceRequestHandler<fuchsia::inspect::Tree> handler_;
 };
 
+namespace {
+
+// Struct which contains pointers to nodes/properties read from the inspect::Hierarchy
+// reported by FrameStats.
+struct FrameStatsHierarchyPointers {
+  bool AllPointersPopulated() {
+    return entire_history && recent_frames && recent_delayed_frames &&
+           entire_history_props.total_frame_count && entire_history_props.delayed_frame_count &&
+           entire_history_props.dropped_frame_count;
+  }
+
+  const inspect::Hierarchy* entire_history = nullptr;
+  const inspect::Hierarchy* recent_frames = nullptr;
+  const inspect::Hierarchy* recent_delayed_frames = nullptr;
+
+  struct {
+    const inspect::UintPropertyValue* total_frame_count = nullptr;
+    const inspect::UintPropertyValue* delayed_frame_count = nullptr;
+    const inspect::UintPropertyValue* dropped_frame_count = nullptr;
+  } entire_history_props;
+};
+
+// Returns a newly-populated FrameStatsHierarchyPointers struct.
+FrameStatsHierarchyPointers GetFrameStatsHierarchyPointers(inspect::Hierarchy* root) {
+  const std::string kEntireHistoryName = "0 - Entire History";
+  const std::string kRecentFramesName = "1 - Recent Frame Stats (times in ms)";
+  const std::string kRecentDelayedFramesName = "2 - Recent Delayed Frame Stats (times in ms)";
+  const std::string kTotalFrameCount = "Total Frame Count";
+  const std::string kDelayedFrameCount = "Delayed Frame Count (missed VSYNC)";
+  const std::string kDroppedFrameCount = "Dropped Frame Count";
+
+  FrameStatsHierarchyPointers ret;
+  ret.entire_history = root->GetByPath({kFrameStatsNodeName, kEntireHistoryName});
+  ret.recent_frames = root->GetByPath({kFrameStatsNodeName, kRecentFramesName});
+  ret.recent_delayed_frames = root->GetByPath({kFrameStatsNodeName, kRecentDelayedFramesName});
+
+  if (ret.entire_history) {
+    ret.entire_history_props.total_frame_count =
+        ret.entire_history->node().get_property<inspect::UintPropertyValue>(kTotalFrameCount);
+
+    ret.entire_history_props.delayed_frame_count =
+        ret.entire_history->node().get_property<inspect::UintPropertyValue>(kDelayedFrameCount);
+
+    ret.entire_history_props.dropped_frame_count =
+        ret.entire_history->node().get_property<inspect::UintPropertyValue>(kDroppedFrameCount);
+  }
+
+  return ret;
+}
+
+}  // anonymous namespace
+
 TEST_F(FrameStatsTest, SmokeTest_TriggerLazyStringProperties) {
   FrameStats stats(inspector_.GetRoot().CreateChild(kFrameStatsNodeName), nullptr);
 
-  auto result = ReadInspectVmo();
+  auto root = ReadInspectVmo().take_value();
 
-  EXPECT_THAT(result.take_value(),
-              AllOf(NodeMatches(AllOf(NameMatches("root"))),
-                    ChildrenMatch(UnorderedElementsAre(NodeMatches(
-                        AllOf(NameMatches(kFrameStatsNodeName), PropertyList(SizeIs(1))))))));
+  auto pointers = GetFrameStatsHierarchyPointers(&root);
+  ASSERT_TRUE(pointers.AllPointersPopulated());
+  EXPECT_EQ(pointers.entire_history->node().properties().size(), 5U);
+  EXPECT_EQ(pointers.recent_frames->node().properties().size(), 4U);
+  EXPECT_EQ(pointers.recent_delayed_frames->node().properties().size(), 4U);
 }
 
 TEST_F(FrameStatsTest, SmokeTest_DummyFrameTimings) {
@@ -127,7 +180,7 @@ TEST_F(FrameStatsTest, SmokeTest_DummyFrameTimings) {
                                             .render_done_time = zx::time(0) + zx::msec(12),
                                             .target_presentation_time = zx::time(0) + zx::msec(16),
                                             .actual_presentation_time = FrameTimings::kTimeDropped};
-  for (int i = 0; i < 15; i++) {
+  for (int i = 0; i < 30; i++) {
     stats.RecordFrame(dropped_times, vsync_interval);
 
     dropped_times.latch_point_time += zx::msec(16);
@@ -143,7 +196,7 @@ TEST_F(FrameStatsTest, SmokeTest_DummyFrameTimings) {
                                             .render_done_time = zx::time(0) + zx::msec(22),
                                             .target_presentation_time = zx::time(0) + zx::msec(16),
                                             .actual_presentation_time = zx::time(0) + zx::msec(32)};
-  for (int i = 0; i < 15; i++) {
+  for (int i = 0; i < 20; i++) {
     stats.RecordFrame(delayed_times, vsync_interval);
 
     delayed_times.latch_point_time = delayed_times.actual_presentation_time + zx::msec(1);
@@ -154,11 +207,12 @@ TEST_F(FrameStatsTest, SmokeTest_DummyFrameTimings) {
     delayed_times.actual_presentation_time += zx::msec(32);
   }
 
-  auto result = ReadInspectVmo();
-
-  EXPECT_THAT(result.take_value(),
-              ChildrenMatch(UnorderedElementsAre(
-                  NodeMatches(AllOf(NameMatches(kFrameStatsNodeName), PropertyList(SizeIs(1)))))));
+  auto root = ReadInspectVmo().take_value();
+  auto pointers = GetFrameStatsHierarchyPointers(&root);
+  ASSERT_TRUE(pointers.AllPointersPopulated());
+  EXPECT_EQ(250U, pointers.entire_history_props.total_frame_count->value());
+  EXPECT_EQ(30U, pointers.entire_history_props.dropped_frame_count->value());
+  EXPECT_EQ(20U, pointers.entire_history_props.delayed_frame_count->value());
 }
 
 class FrameStatsCobaltTest : public gtest::TestLoopFixture {};
