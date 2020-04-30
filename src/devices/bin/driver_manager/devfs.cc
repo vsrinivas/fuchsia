@@ -34,20 +34,46 @@
 
 namespace {
 
-// `OnOpen` event from fuchsia-io.  See zircon/system/fidl/fuchsia-io/io.fidl.
+// This is a hand-rolled struct to mirror the FIDL `OnOpen` event from
+// fuchsia-io: see zircon/system/fidl/fuchsia-io/io.fidl. We are hand-rolling
+// this because the OnOpen event contains a `NodeInfo?`, i.e. a nullable
+// NodeInfo union, which is not supported by the C FIDL bindings, and migrating
+// this code to LLCPP is out-of-scope for now.
 struct OnOpenMsg {
-  fuchsia_io_NodeOnOpenEvent primary;
-  fuchsia_io_NodeInfo extra;
+  FIDL_ALIGNDECL
+
+  // This is the inline, or primary, part of the FIDL message.
+  struct {
+    fidl_message_header_t hdr;
+    int32_t s;
+    fidl_xunion_t node_info;
+  } primary;
+
+  // This is the out-of-line, or secondary, part of the FIDL message, which may
+  // or may not be present, depending on the value of .node_info's tag.
+  //
+  // Note that `directory` is the _only_ NodeInfo union member used in this
+  // file, whereas the actual definition of NodeInfo in io.fidl has many more
+  // members. Including the other members here would extend the size of the
+  // union beyond sizeof(fuchsia_io_DirectoryObject), which means that the
+  // outgoing FIDL message would contain extraneous zero bytes.
+  //
+  // For extra context: Remember that the old-wireformat static unions' payload
+  // size is the maximum of its union members' size, whereas the v1-wireformat
+  // extensible unions' payload size depends on the specific union member that's
+  // present. We are writing the v1 wire format, and this code only ever sets
+  // NodeInfo's union member to be a Directory, so `directory` is only NodeInfo
+  // union member needed in this definition.
+  fuchsia_io_DirectoryObject directory;
 };
 
 zx_status_t SendOnOpenEvent(zx_handle_t ch, OnOpenMsg msg, zx_handle_t* handles,
                             uint32_t num_handles) {
-  msg.primary.hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
-  auto contains_nodeinfo = bool(msg.primary.info);
+  const bool contains_nodeinfo = msg.primary.node_info.tag != fidl_xunion_tag_t(0);
   uint32_t msg_size = contains_nodeinfo ? sizeof(msg) : sizeof(msg.primary);
   fidl::Message fidl_msg(fidl::BytePart(reinterpret_cast<uint8_t*>(&msg), msg_size, msg_size),
                          fidl::HandlePart(handles, num_handles, num_handles));
-  return fidl_msg.WriteTransformV1(ch, 0, &fuchsia_io_NodeOnOpenEventTable);
+  return fidl_msg.Write(ch, 0);
 }
 
 uint64_t next_ino = 2;
@@ -470,10 +496,29 @@ void devfs_open(Devnode* dirdn, async_dispatcher_t* dispatcher, zx_handle_t h, c
       OnOpenMsg msg;
       memset(&msg, 0, sizeof(msg));
       fidl_init_txn_header(&msg.primary.hdr, 0, fuchsia_io_NodeOnOpenOrdinal);
+
       msg.primary.hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
       msg.primary.s = ZX_OK;
-      msg.primary.info = (fuchsia_io_NodeInfo*)FIDL_ALLOC_PRESENT;
-      msg.extra.tag = fuchsia_io_NodeInfoTag_directory;
+
+      // kNodeInfoTagDirectory below is intentionally hard-coded to the ordinal
+      // for NodeInfo.directory. We could also look this up in the coding
+      // tables, but doing that is arguably less performant and less safe, since
+      // we need to search the NodeInfo coding table's fields for the directory
+      // union member, and there's questions around what to do if the field
+      // isn't found. Given that a union member ordinal is part of its ABI, it's
+      // extremely unlikely to ever change, so it's safe enough to hard-code it
+      // here. See
+      // <https://fuchsia-review.googlesource.com/c/fuchsia/+/383902/2/src/devices/bin/driver_manager/devfs.cc#495>
+      // for more context.
+      constexpr fidl_xunion_tag_t kNodeInfoTagDirectory = 3ul;
+      msg.primary.node_info.tag = kNodeInfoTagDirectory;
+
+      msg.primary.node_info.envelope.num_bytes = FIDL_ALIGN(sizeof(fuchsia_io_DirectoryObject));
+      msg.primary.node_info.envelope.presence = FIDL_ALLOC_PRESENT;
+
+      // We don't need to set the union member (i.e. the directory)'s data here,
+      // because Directory is an empty struct and has no data. The empty struct
+      // is zeroed out by the memset() earlier in this function.
 
       // Writing to unowned_ipc is safe because this is executing on the same
       // thread as the DcAsyncLoop(), so the handle can't be closed underneath us.
