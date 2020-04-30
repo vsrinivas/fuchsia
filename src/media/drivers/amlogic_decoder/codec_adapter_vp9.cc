@@ -783,16 +783,6 @@ CodecAdapterVp9::CoreCodecBuildNewOutputConstraints(
   constraints->set_single_buffer_mode_allowed(false);
 
   constraints->set_is_physically_contiguous_required(true);
-  ::zx::bti very_temp_kludge_bti;
-  zx_status_t dup_status = ::zx::unowned<::zx::bti>(video_->bti())
-                               ->duplicate(ZX_RIGHT_SAME_RIGHTS, &very_temp_kludge_bti);
-  if (dup_status != ZX_OK) {
-    events_->onCoreCodecFailCodec("BTI duplicate failed - status: %d", dup_status);
-    return nullptr;
-  }
-  // This is very temporary.  The BufferAllocator should handle this directly,
-  // not the client.
-  constraints->set_very_temp_kludge_bti_handle(std::move(very_temp_kludge_bti));
 
   return config;
 }

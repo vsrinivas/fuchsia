@@ -14,52 +14,6 @@ CodecBuffer::CodecBuffer(uint32_t buffer_index, size_t size_bytes)
 
 uint32_t CodecBuffer::buffer_index() const { return buffer_index_; }
 
-void CodecBuffer::SetPhysicallyContiguousRequired(const ::zx::handle& very_temp_kludge_bti_handle) {
-  is_physically_contiguous_required_ = true;
-  zx_status_t status = ::zx::unowned_bti(very_temp_kludge_bti_handle.get())
-                           ->duplicate(ZX_RIGHT_SAME_RIGHTS, &very_temp_kludge_bti_handle_);
-  FX_CHECK(status == ZX_OK);
-}
-
-bool CodecBuffer::AllocateInternal() {
-  zx::vmo local_vmo;
-  zx_status_t res;
-
-  // Create the VMO.
-  if (is_physically_contiguous_required_) {
-    res = zx_vmo_create_contiguous(very_temp_kludge_bti_handle_.get(), size_bytes_, 0,
-                                   local_vmo.reset_and_get_address());
-    if (res != ZX_OK) {
-      printf(
-          "Failed to create _physically contiguous_ %zu byte buffer vmo (res "
-          "%d)\n",
-          size_bytes_, res);
-      return false;
-    }
-  } else {
-    res = zx::vmo::create(size_bytes_, 0, &local_vmo);
-    if (res != ZX_OK) {
-      printf("Failed to create %zu byte buffer vmo (res %d)\n", size_bytes_, res);
-      return false;
-    }
-  }
-
-  // Map the VMO in the local address space.
-  uintptr_t tmp;
-  res = zx::vmar::root_self()->map(0, local_vmo, 0, size_bytes_, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
-                                   &tmp);
-  if (res != ZX_OK) {
-    printf("Failed to map %zu byte buffer vmo (res %d)\n", size_bytes_, res);
-    return false;
-  }
-  base_ = reinterpret_cast<uint8_t*>(tmp);
-
-  // If we don't make it to here, then local_vmo takes care of freeing the
-  // zx::vmo as needed.
-  vmo_ = std::move(local_vmo);
-  return true;
-}
-
 CodecBuffer::~CodecBuffer() {
   if (base_) {
     zx_status_t res = zx::vmar::root_self()->unmap(reinterpret_cast<uintptr_t>(base_), size_bytes_);
@@ -81,24 +35,6 @@ bool CodecBuffer::GetDupVmo(bool is_for_write, zx::vmo* out_vmo) {
     return false;
   }
   return true;
-}
-
-// A real client would want to enforce a max allocation size before size_bytes
-// gets here.
-std::unique_ptr<CodecBuffer> CodecBuffer::Allocate(
-    uint32_t buffer_index, const fuchsia::media::StreamBufferConstraints& constraints) {
-  ZX_ASSERT(constraints.has_per_packet_buffer_bytes_recommended());
-  std::unique_ptr<CodecBuffer> result(
-      new CodecBuffer(buffer_index, constraints.per_packet_buffer_bytes_recommended()));
-  if (constraints.has_is_physically_contiguous_required() &&
-      constraints.is_physically_contiguous_required()) {
-    ZX_ASSERT(constraints.has_very_temp_kludge_bti_handle());
-    result->SetPhysicallyContiguousRequired((constraints.very_temp_kludge_bti_handle()));
-  }
-  if (!result->AllocateInternal()) {
-    return nullptr;
-  }
-  return result;
 }
 
 bool CodecBuffer::CreateFromVmoInternal(zx::vmo vmo, uint32_t vmo_usable_start,

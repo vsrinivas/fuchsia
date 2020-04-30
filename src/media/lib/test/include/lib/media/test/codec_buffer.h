@@ -17,14 +17,6 @@ class CodecBuffer {
  public:
   virtual ~CodecBuffer();
 
-  // For now, this always allocates a VMO and pre-maps it into this process's
-  // address space.
-  //
-  // In this example, we're using one buffer per packet mode, so each buffer has
-  // a corresponding packet.
-  static std::unique_ptr<CodecBuffer> Allocate(
-      uint32_t buffer_index, const fuchsia::media::StreamBufferConstraints& constraints);
-
   static std::unique_ptr<CodecBuffer> CreateFromVmo(uint32_t buffer_index, zx::vmo vmo,
                                                     uint32_t vmo_usable_start,
                                                     uint32_t vmo_usable_size, bool need_write,
@@ -48,18 +40,11 @@ class CodecBuffer {
 
  private:
   explicit CodecBuffer(uint32_t buffer_index, size_t size_bytes);
-  void SetPhysicallyContiguousRequired(const ::zx::handle& very_temp_kludge_bti_handle);
-  bool AllocateInternal();
   bool CreateFromVmoInternal(zx::vmo vmo, uint32_t vmo_usable_start, uint32_t vmo_usable_size,
                              bool need_write, bool is_physically_contiguous);
 
   uint32_t buffer_index_ = 0;
   size_t size_bytes_ = 0;
-
-  bool is_physically_contiguous_required_ = false;
-
-  // TODO(dustingreen): Remove this:
-  ::zx::bti very_temp_kludge_bti_handle_;
 
   zx::vmo vmo_;
   uint8_t* base_ = nullptr;

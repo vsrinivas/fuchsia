@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use fidl_table_validation::*;
-use fuchsia_zircon as zx;
 
 use fidl_fuchsia_media::{
     Packet, PacketHeader, StreamBufferConstraints, StreamBufferSettings, StreamOutputConstraints,
@@ -40,8 +39,6 @@ pub struct ValidStreamBufferConstraints {
     pub single_buffer_mode_allowed: bool,
     #[fidl_field_type(default = false)]
     pub is_physically_contiguous_required: bool,
-    #[fidl_field_type(optional)]
-    pub very_temp_kludge_bti_handle: Option<zx::Handle>,
 }
 
 pub struct StreamBufferConstraintsValidator;
@@ -133,7 +130,6 @@ mod test {
             packet_count_for_client_max: Some(2),
             single_buffer_mode_allowed: Some(false),
             is_physically_contiguous_required: Some(false),
-            very_temp_kludge_bti_handle: None,
         };
 
         let err = ValidStreamBufferConstraints::try_from(invalid_version_ordinal);
@@ -162,7 +158,6 @@ mod test {
             packet_count_for_client_max: Some(2),
             single_buffer_mode_allowed: Some(false),
             is_physically_contiguous_required: Some(false),
-            very_temp_kludge_bti_handle: None,
         };
 
         let err = ValidStreamBufferConstraints::try_from(invalid_single_buffer);
@@ -183,7 +178,6 @@ mod test {
             packet_count_for_client_max: Some(2),
             single_buffer_mode_allowed: Some(false),
             is_physically_contiguous_required: Some(true),
-            very_temp_kludge_bti_handle: None,
         };
 
         let err = ValidStreamBufferConstraints::try_from(invalid_continuous);
