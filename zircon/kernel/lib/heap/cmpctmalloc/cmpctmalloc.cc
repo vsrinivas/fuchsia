@@ -977,7 +977,7 @@ void cmpct_init(void) {
   LTRACE_ENTRY;
   LockGuard guard(TheHeapLock::Get());
 
-  // Initialize the free list.
+  // Initialize the free lists.
   for (int i = 0; i < NUMBER_OF_BUCKETS; i++) {
     theheap.free_lists[i] = NULL;
   }
@@ -985,10 +985,11 @@ void cmpct_init(void) {
     theheap.free_list_bits[i] = 0;
   }
 
-  size_t initial_alloc = HEAP_GROW_SIZE - 2 * sizeof(header_t);
-
+  theheap.size = 0;
   theheap.remaining = 0;
+  theheap.cached_os_alloc = NULL;
 
+  size_t initial_alloc = HEAP_GROW_SIZE - 2 * sizeof(header_t);
   heap_grow(initial_alloc);
 }
 
