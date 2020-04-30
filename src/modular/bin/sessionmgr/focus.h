@@ -5,7 +5,6 @@
 #ifndef SRC_MODULAR_BIN_SESSIONMGR_FOCUS_H_
 #define SRC_MODULAR_BIN_SESSIONMGR_FOCUS_H_
 
-#include <fuchsia/ledger/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/binding_set.h>
@@ -16,19 +15,15 @@
 #include <vector>
 
 #include "src/modular/lib/async/cpp/operation.h"
-#include "src/modular/lib/ledger_client/ledger_client.h"
-#include "src/modular/lib/ledger_client/page_client.h"
-#include "src/modular/lib/ledger_client/types.h"
 
 // See services/user/focus.fidl for details.
 
 namespace modular {
 
 class FocusHandler : fuchsia::modular::FocusProvider,
-                     fuchsia::modular::FocusController,
-                     PageClient {
+                     fuchsia::modular::FocusController {
  public:
-  FocusHandler(fidl::StringPtr device_id, LedgerClient* ledger_client, LedgerPageId page_id);
+  FocusHandler(fidl::StringPtr device_id);
   ~FocusHandler() override;
 
   void AddProviderBinding(fidl::InterfaceRequest<fuchsia::modular::FocusProvider> request);
@@ -44,21 +39,22 @@ class FocusHandler : fuchsia::modular::FocusProvider,
   void Set(fidl::StringPtr story_id) override;
   void WatchRequest(fidl::InterfaceHandle<fuchsia::modular::FocusRequestWatcher> watcher) override;
 
-  // |PageClient|
-  void OnPageChange(const std::string& key, const std::string& value) override;
+  // Convenience method to return a populated copy of the current focus data
+  fuchsia::modular::FocusInfoPtr CurrentData();
 
   const fidl::StringPtr device_id_;
+
+  // Canonical record of the focused story and the last time that changed.
+  // This was previously stored in the ledger, but now is just stored in-memory
+  // locally.
+  fidl::StringPtr focused_story_id_;
+  uint64_t last_focus_change_timestamp_;
 
   fidl::BindingSet<fuchsia::modular::FocusProvider> provider_bindings_;
   fidl::BindingSet<fuchsia::modular::FocusController> controller_bindings_;
 
   std::vector<fuchsia::modular::FocusWatcherPtr> change_watchers_;
   std::vector<fuchsia::modular::FocusRequestWatcherPtr> request_watchers_;
-
-  // Operations on an instance of this clas are sequenced in this operation
-  // queue. TODO(mesch): They currently do not need to be, but it's easier to
-  // reason this way.
-  OperationQueue operation_queue_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(FocusHandler);
 };

@@ -8,6 +8,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/fidl/cpp/string.h>
+#include <lib/gtest/real_loop_fixture.h>
 
 #include <map>
 #include <memory>
@@ -15,7 +16,6 @@
 #include <gtest/gtest.h>
 
 #include "src/modular/lib/async/cpp/operation.h"
-#include "src/modular/lib/testing/test_with_ledger.h"
 
 namespace modular {
 namespace {
@@ -51,11 +51,11 @@ class TestCommandRunner : public CommandRunner {
   bool delay_done_;
 };
 
-class DispatchStoryCommandExecutorTest : public modular_testing::TestWithLedger {
+class DispatchStoryCommandExecutorTest : public gtest::RealLoopFixture {
  protected:
   void SetUp() override {
-    TestWithLedger::SetUp();
-    session_storage_ = std::make_unique<SessionStorage>(ledger_client(), LedgerPageId());
+    gtest::RealLoopFixture::SetUp();
+    session_storage_ = std::make_unique<SessionStorage>();
   }
 
   void Reset() {
@@ -67,7 +67,7 @@ class DispatchStoryCommandExecutorTest : public modular_testing::TestWithLedger 
     bool done{};
     fidl::StringPtr ret;
     session_storage_->CreateStory({} /* extra_info */, {})
-        ->Then([&](fidl::StringPtr story_id, fuchsia::ledger::PageId) {
+        ->Then([&](fidl::StringPtr story_id) {
           ret = story_id;
           done = true;
         });

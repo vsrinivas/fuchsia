@@ -55,7 +55,7 @@ class DispatchStoryCommandExecutor::ExecuteStoryCommandsCall
  private:
   void Run() override {
     executor_->session_storage_->GetStoryStorage(story_id_)->WeakThen(
-        GetWeakPtr(), [this](std::unique_ptr<StoryStorage> story_storage) {
+        GetWeakPtr(), [this](std::shared_ptr<StoryStorage> story_storage) {
           if (!story_storage) {
             fuchsia::modular::ExecuteResult result;
             result.status = fuchsia::modular::ExecuteStatus::INVALID_STORY_ID;
@@ -124,7 +124,7 @@ class DispatchStoryCommandExecutor::ExecuteStoryCommandsCall
   const fidl::StringPtr story_id_;
   std::vector<fuchsia::modular::StoryCommand> commands_;
 
-  std::unique_ptr<StoryStorage> story_storage_;
+  std::shared_ptr<StoryStorage> story_storage_;
 
   // All commands must be run in order so we use a queue.
   OperationQueue queue_;

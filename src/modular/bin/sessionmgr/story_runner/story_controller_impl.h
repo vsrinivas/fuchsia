@@ -38,9 +38,6 @@
 #include "src/modular/lib/async/cpp/operation.h"
 #include "src/modular/lib/fidl/app_client.h"
 #include "src/modular/lib/fidl/environment.h"
-#include "src/modular/lib/ledger_client/ledger_client.h"
-#include "src/modular/lib/ledger_client/page_client.h"
-#include "src/modular/lib/ledger_client/types.h"
 #include "src/modular/lib/modular_config/modular_config_constants.h"
 
 namespace modular {

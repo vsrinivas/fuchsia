@@ -34,7 +34,7 @@ class RemoveModCommandRunnerTest : public modular_testing::TestWithSessionStorag
 };
 
 TEST_F(RemoveModCommandRunnerTest, Execute) {
-  auto storage = MakeSessionStorage("page");
+  auto storage = MakeSessionStorage();
   auto runner = MakeRunner();
   auto story_id = CreateStory(storage.get());
   auto story_storage = GetStoryStorage(storage.get(), story_id.value_or(""));
@@ -65,7 +65,7 @@ TEST_F(RemoveModCommandRunnerTest, Execute) {
 }
 
 TEST_F(RemoveModCommandRunnerTest, ExecuteNoModuleData) {
-  auto storage = MakeSessionStorage("page");
+  auto storage = MakeSessionStorage();
   auto runner = MakeRunner();
   auto story_id = CreateStory(storage.get());
   auto story_storage = GetStoryStorage(storage.get(), story_id.value_or(""));
@@ -88,7 +88,7 @@ TEST_F(RemoveModCommandRunnerTest, ExecuteNoModuleData) {
 }
 
 TEST_F(RemoveModCommandRunnerTest, ExecuteModNameTransitional) {
-  auto storage = MakeSessionStorage("page");
+  auto storage = MakeSessionStorage();
   auto runner = MakeRunner();
   auto story_id = CreateStory(storage.get());
   auto story_storage = GetStoryStorage(storage.get(), story_id.value_or(""));

@@ -32,9 +32,6 @@
 #include "src/modular/lib/device_info/device_info.h"
 #include "src/modular/lib/fidl/array_to_string.h"
 #include "src/modular/lib/fidl/json_xdr.h"
-#include "src/modular/lib/ledger_client/constants.h"
-#include "src/modular/lib/ledger_client/ledger_client.h"
-#include "src/modular/lib/ledger_client/page_id.h"
 
 namespace modular {
 
@@ -42,13 +39,9 @@ using cobalt_registry::ModularLifetimeEventsMetricDimensionEventType;
 
 namespace {
 
-constexpr char kAppId[] = "modular_sessionmgr";
-
 constexpr char kSessionEnvironmentLabelPrefix[] = "session-";
 
 constexpr char kSessionShellComponentNamespace[] = "user-shell-namespace";
-
-constexpr char kLedgerRepositoryDirectory[] = "/data/LEDGER";
 
 // The name in the outgoing debug directory (hub) for developer session control
 // services.
@@ -90,19 +83,6 @@ fit::function<void(fit::function<void()>)> Teardown(const zx::duration timeout,
   };
 }
 
-fit::function<void(fit::function<void()>)> ResetLedgerRepository(
-    fuchsia::ledger::internal::LedgerRepositoryPtr* const ledger_repository) {
-  return [ledger_repository](fit::function<void()> cont) {
-    ledger_repository->set_error_handler([cont = std::move(cont)](zx_status_t status) {
-      if (status != ZX_OK) {
-        FX_LOGS(ERROR) << "LedgerRepository disconnected with epitaph: "
-                       << zx_status_get_string(status) << std::endl;
-      }
-      cont();
-    });
-    (*ledger_repository)->Close();
-  };
-}
 }  // namespace
 
 class SessionmgrImpl::PresentationProviderImpl : public PresentationProvider {
@@ -170,8 +150,6 @@ void SessionmgrImpl::Initialize(
   InitializeSessionShell(std::move(session_shell_config), std::move(view_token));
   InitializeIntlPropertyProvider();
 
-  InitializeLedger();
-
   InitializeModular(session_shell_config.url, std::move(story_shell_config),
                     use_session_shell_for_story_shell_factory);
   ConnectSessionShellToStoryProvider();
@@ -198,10 +176,6 @@ void SessionmgrImpl::ConnectSessionShellToStoryProvider() {
 void SessionmgrImpl::InitializeSessionEnvironment(std::string session_id) {
   session_id_ = session_id;
 
-  // Use this launcher to launch components in sessionmgr's component context's environment
-  // (such as the Ledger).
-  sessionmgr_context_launcher_ = sessionmgr_context_->svc()->Connect<fuchsia::sys::Launcher>();
-
   // Create the session's environment (in which we run stories, modules, agents, and so on) as a
   // child of sessionmgr's environment. Add session-provided additional services, |kEnvServices|.
   static const auto* const kEnvServices =
@@ -225,82 +199,6 @@ void SessionmgrImpl::InitializeSessionEnvironment(std::string session_id) {
       std::make_unique<ArgvInjectingLauncher>(std::move(session_environment_launcher), argv_map));
 
   OnTerminate(Reset(&session_environment_));
-}
-
-zx::channel SessionmgrImpl::GetLedgerRepositoryDirectory() {
-  if ((config_.use_memfs_for_ledger())) {
-    FX_DCHECK(!memfs_for_ledger_)
-        << "An existing memfs for the Ledger has already been initialized.";
-    FX_LOGS(INFO) << "Using memfs-backed storage for the ledger.";
-    memfs_for_ledger_ = std::make_unique<scoped_tmpfs::ScopedTmpFS>();
-    OnTerminate(Reset(&memfs_for_ledger_));
-
-    return fsl::CloneChannelFromFileDescriptor(memfs_for_ledger_->root_fd());
-  }
-  if (!files::CreateDirectory(kLedgerRepositoryDirectory)) {
-    FX_LOGS(ERROR) << "Unable to create directory at " << kLedgerRepositoryDirectory;
-    return zx::channel();
-  }
-  fbl::unique_fd dir(open(kLedgerRepositoryDirectory, O_RDONLY));
-  if (!dir.is_valid()) {
-    FX_LOGS(ERROR) << "Unable to open directory at " << kLedgerRepositoryDirectory
-                   << ". errno: " << errno;
-    return zx::channel();
-  }
-
-  return fsl::CloneChannelFromFileDescriptor(dir.get());
-}
-
-void SessionmgrImpl::InitializeLedger() {
-  // Initialize the Ledger Repository directory before launching the ledger process,
-  // ensuring that, in the case the directory is hosted in-memory by us, it is
-  // destroyed after the ledger process has terminated.
-  auto ledger_repository_dir = GetLedgerRepositoryDirectory();
-
-  fuchsia::modular::AppConfig ledger_config;
-  ledger_config.url = kLedgerAppUrl;
-
-  ledger_app_ = std::make_unique<AppClient<fuchsia::ledger::internal::LedgerController>>(
-      sessionmgr_context_launcher_.get(), std::move(ledger_config), "", nullptr);
-  ledger_app_->SetAppErrorHandler([this] {
-    FX_LOGS(ERROR) << "Ledger seems to have crashed unexpectedly." << std::endl
-                   << "CALLING Logout() DUE TO UNRECOVERABLE LEDGER ERROR.";
-    Shutdown();
-  });
-  OnTerminate(Teardown(kBasicTimeout, "Ledger", ledger_app_.get()));
-
-  auto repository_request = ledger_repository_.NewRequest();
-  ledger_client_ =
-      std::make_unique<LedgerClient>(ledger_repository_.get(), kAppId, [this](zx_status_t status) {
-        FX_LOGS(ERROR) << "CALLING Logout() DUE TO UNRECOVERABLE LEDGER ERROR.";
-        Shutdown();
-      });
-
-  ledger_repository_factory_.set_error_handler([this](zx_status_t status) {
-    FX_LOGS(ERROR) << "LedgerRepositoryFactory.GetRepository() failed: "
-                   << zx_status_get_string(status) << std::endl
-                   << "CALLING Shutdown() DUE TO UNRECOVERABLE LEDGER ERROR.";
-    Shutdown();
-  });
-  ledger_app_->services().ConnectToService(ledger_repository_factory_.NewRequest());
-  OnTerminate(Reset(&ledger_repository_factory_));
-
-  // The directory "/data" is the data root "/data/LEDGER" that the ledger app
-  // client is configured to.
-  ledger_repository_factory_->GetRepository(std::move(ledger_repository_dir), nullptr, "",
-                                            std::move(repository_request));
-
-  // If ledger state is erased from underneath us (happens when the cloud store
-  // is cleared), ledger will close the connection to |ledger_repository_|.
-  ledger_repository_.set_error_handler([this](zx_status_t status) {
-    FX_LOGS(ERROR) << "LedgerRepository disconnected with epitaph: " << zx_status_get_string(status)
-                   << std::endl
-                   << "CALLING Shutdown() DUE TO UNRECOVERABLE LEDGER ERROR.";
-    Shutdown();
-  });
-  OnTerminate(ResetLedgerRepository(&ledger_repository_));
-
-  OnTerminate(Reset(&ledger_client_));
 }
 
 void SessionmgrImpl::InitializeIntlPropertyProvider() {
@@ -403,8 +301,7 @@ void SessionmgrImpl::InitializeModular(const fidl::StringPtr& session_shell_url,
   // outlive the stories which contain modules that are connected to those
   // agents.
 
-  session_storage_ =
-      std::make_unique<SessionStorage>(ledger_client_.get(), fuchsia::ledger::PageId());
+  session_storage_ = std::make_unique<SessionStorage>();
   OnTerminate(Reset(&session_storage_));
 
   story_provider_impl_.reset(new StoryProviderImpl(
@@ -445,8 +342,7 @@ void SessionmgrImpl::InitializeModular(const fidl::StringPtr& session_shell_url,
   OnTerminate(Reset(&puppet_master_impl_));
   OnTerminate(Reset(&session_ctl_));
 
-  focus_handler_ = std::make_unique<FocusHandler>(LoadDeviceID(session_id_), ledger_client_.get(),
-                                                  fuchsia::ledger::PageId());
+  focus_handler_ = std::make_unique<FocusHandler>(LoadDeviceID(session_id_));
   focus_handler_->AddProviderBinding(std::move(focus_provider_request_story_provider));
   focus_handler_->AddProviderBinding(std::move(focus_provider_request_puppet_master));
   OnTerminate(Reset(&focus_handler_));
