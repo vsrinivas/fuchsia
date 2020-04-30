@@ -49,3 +49,21 @@ TEST(CPrintTest, Str) {
 
   ASSERT_STR_EQ(a, "MyStr");
 }
+
+TEST(CPrintTest, Char) {
+  char c = 'a';
+
+  ASSERT_EQ(c, 'a');
+}
+
+TEST(CPrintTest, UnsignedChar) {
+  unsigned char c = 'a';
+
+  ASSERT_EQ(c, 'a');
+}
+
+TEST(CPrintTest, SignedChar) {
+  signed char c = 'a';
+
+  ASSERT_EQ(c, 'a');
+}

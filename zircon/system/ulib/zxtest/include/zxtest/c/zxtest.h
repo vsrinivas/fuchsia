@@ -137,6 +137,7 @@ __END_CDECLS
             double: _zxtest_print_double,                                                          \
             bool: _zxtest_print_bool,                                                              \
             const char*: _zxtest_print_str,                                                        \
+            char: _zxtest_print_int32,                                                             \
             default: _zxtest_print_ptr)(var, buffer, size)
 // clang-format on
 
