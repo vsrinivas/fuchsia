@@ -19,24 +19,22 @@
 #include <zircon/threads.h>
 
 #include <test-utils/test-utils.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
-static bool get_rights(zx_handle_t handle, zx_rights_t* rights) {
+static void get_rights(zx_handle_t handle, zx_rights_t* rights) {
   zx_info_handle_basic_t info;
   ASSERT_EQ(zx_object_get_info(handle, ZX_INFO_HANDLE_BASIC, &info, sizeof(info), NULL, NULL),
             ZX_OK, "");
   *rights = info.rights;
-  return true;
 }
 
-static bool get_new_rights(zx_handle_t handle, zx_rights_t new_rights, zx_handle_t* new_handle) {
+static void get_new_rights(zx_handle_t handle, zx_rights_t new_rights, zx_handle_t* new_handle) {
   ASSERT_EQ(zx_handle_duplicate(handle, new_rights, new_handle), ZX_OK, "");
-  return true;
 }
 
 // |object| must have ZX_RIGHT_{GET,SET}_PROPERTY.
 
-static bool test_name_property(zx_handle_t object) {
+static void test_name_property(zx_handle_t object) {
   char set_name[ZX_MAX_NAME_LEN];
   char get_name[ZX_MAX_NAME_LEN];
 
@@ -69,62 +67,39 @@ static bool test_name_property(zx_handle_t object) {
   EXPECT_EQ(zx_object_set_property(object, ZX_PROP_NAME, set_name, sizeof(set_name)), ZX_OK, "");
 
   zx_rights_t current_rights;
-  if (get_rights(object, &current_rights)) {
-    zx_rights_t cant_set_rights = current_rights &= ~ZX_RIGHT_SET_PROPERTY;
-    zx_handle_t cant_set;
-    if (get_new_rights(object, cant_set_rights, &cant_set)) {
-      EXPECT_EQ(zx_object_set_property(cant_set, ZX_PROP_NAME, "", 0), ZX_ERR_ACCESS_DENIED, "");
-      zx_handle_close(cant_set);
-    }
-  }
-
-  return true;
+  get_rights(object, &current_rights);
+  zx_rights_t cant_set_rights = current_rights &= ~ZX_RIGHT_SET_PROPERTY;
+  zx_handle_t cant_set;
+  get_new_rights(object, cant_set_rights, &cant_set);
+  EXPECT_EQ(zx_object_set_property(cant_set, ZX_PROP_NAME, "", 0), ZX_ERR_ACCESS_DENIED, "");
+  zx_handle_close(cant_set);
 }
 
-static bool job_name_test(void) {
-  BEGIN_TEST;
-
+TEST(Property, JobName) {
   zx_handle_t testjob;
   zx_status_t s = zx_job_create(zx_job_default(), 0, &testjob);
   EXPECT_EQ(s, ZX_OK, "");
 
-  bool success = test_name_property(testjob);
-  if (!success)
-    return false;
+  test_name_property(testjob);
 
   zx_handle_close(testjob);
-  END_TEST;
 }
 
-static bool process_name_test(void) {
-  BEGIN_TEST;
-
+TEST(Property, ProcessName) {
   zx_handle_t self = zx_process_self();
-  bool success = test_name_property(self);
-  if (!success)
-    return false;
-
-  END_TEST;
+  test_name_property(self);
 }
 
-static bool thread_name_test(void) {
-  BEGIN_TEST;
-
+TEST(Property, ThreadName) {
   zx_handle_t main_thread = thrd_get_zx_handle(thrd_current());
-  unittest_printf("thread handle %d\n", main_thread);
-  bool success = test_name_property(main_thread);
-  if (!success)
-    return false;
-
-  END_TEST;
+  printf("thread handle %d\n", main_thread);
+  test_name_property(main_thread);
 }
 
-static bool vmo_name_test(void) {
-  BEGIN_TEST;
-
+TEST(Property, VmoName) {
   zx_handle_t vmo;
   ASSERT_EQ(zx_vmo_create(16, 0u, &vmo), ZX_OK, "");
-  unittest_printf("VMO handle %d\n", vmo);
+  printf("VMO handle %d\n", vmo);
 
   char name[ZX_MAX_NAME_LEN];
   memset(name, 'A', sizeof(name));
@@ -136,16 +111,10 @@ static bool vmo_name_test(void) {
   }
 
   // Check the rest.
-  bool success = test_name_property(vmo);
-  if (!success)
-    return false;
-
-  END_TEST;
+  test_name_property(vmo);
 }
 
-static bool socket_buffer_test(void) {
-  BEGIN_TEST;
-
+TEST(Property, SocketBuffer) {
   zx_handle_t sockets[2];
   ASSERT_EQ(zx_socket_create(0, &sockets[0], &sockets[1]), ZX_OK, "");
 
@@ -231,8 +200,6 @@ static bool socket_buffer_test(void) {
   EXPECT_EQ(info.tx_buf_size, 0u, "");
 
   zx_handle_close_many(sockets, 2);
-
-  END_TEST;
 }
 
 #if defined(__x86_64__)
@@ -249,9 +216,7 @@ static int do_nothing(void* unused) {
   return 0;
 }
 
-static bool fs_invalid_test(void) {
-  BEGIN_TEST;
-
+TEST(Property, FsInvalid) {
   // The success case of fs is hard to explicitly test, but is
   // exercised all the time (ie userspace would explode instantly if
   // it was broken). Since we will be soon adding a corresponding
@@ -292,13 +257,9 @@ static bool fs_invalid_test(void) {
   status = zx_object_set_property(zx_thread_self(), ZX_PROP_REGISTER_FS, &nonuserspace_fs_location,
                                   sizeof(nonuserspace_fs_location));
   ASSERT_EQ(status, ZX_ERR_INVALID_ARGS, "");
-
-  END_TEST;
 }
 
-static bool gs_test(void) {
-  BEGIN_TEST;
-
+TEST(Property, Gs) {
   // First test the success case.
   const uintptr_t expected = 0xfeedfacefeedface;
 
@@ -342,20 +303,6 @@ static bool gs_test(void) {
   status = zx_object_set_property(zx_thread_self(), ZX_PROP_REGISTER_GS, &nonuserspace_gs_location,
                                   sizeof(nonuserspace_gs_location));
   ASSERT_EQ(status, ZX_ERR_INVALID_ARGS, "");
-
-  END_TEST;
 }
 
 #endif  // defined(__x86_64__)
-
-BEGIN_TEST_CASE(property_tests)
-RUN_TEST(process_name_test);
-RUN_TEST(thread_name_test);
-RUN_TEST(job_name_test);
-RUN_TEST(vmo_name_test);
-RUN_TEST(socket_buffer_test);
-#if defined(__x86_64__)
-RUN_TEST(fs_invalid_test)
-RUN_TEST(gs_test)
-#endif
-END_TEST_CASE(property_tests)
