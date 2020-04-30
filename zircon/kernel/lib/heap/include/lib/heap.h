@@ -54,8 +54,9 @@ void* heap_page_alloc(size_t pages);
 void heap_page_free(void* ptr, size_t pages);
 
 // Gets stats about the heap.
-// |size_bytes| is the total size of the heap, |free_bytes| is the free portion.
-void heap_get_info(size_t* size_bytes, size_t* free_bytes);
+// |total_bytes| is the total size of the heap (the sum of all pages allocated
+// from the PMM), |free_bytes| is the free portion.
+void heap_get_info(size_t* total_bytes, size_t* free_bytes);
 
 // called once at kernel initialization
 void heap_init(void);

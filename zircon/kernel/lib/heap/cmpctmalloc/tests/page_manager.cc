@@ -9,7 +9,7 @@
 void* PageManager::AllocatePages(size_t num_pages) {
   Block block(num_pages);
   ZX_ASSERT(
-      Block::RangeIsCleanFilled(block.contents.get(), block.contents.get() + block.capacity_bytes));
+      Block::RangeIsCleanFilled(block.contents.get(), block.contents.get() + block.used_bytes));
   char* ptr = block.contents.get();
   blocks_.insert({ptr, std::move(block)});
   return ptr;

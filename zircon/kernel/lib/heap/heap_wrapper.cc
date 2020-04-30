@@ -260,8 +260,13 @@ void free(void* ptr) {
 
 static void heap_dump(bool panic_time) { cmpct_dump(panic_time); }
 
-void heap_get_info(size_t* size_bytes, size_t* free_bytes) {
-  cmpct_get_info(size_bytes, free_bytes);
+void heap_get_info(size_t* total_bytes, size_t* free_bytes) {
+  size_t used_bytes;
+  size_t cached_bytes;
+  cmpct_get_info(&used_bytes, free_bytes, &cached_bytes);
+  if (total_bytes) {
+    *total_bytes = used_bytes + cached_bytes;
+  }
 }
 
 static void heap_test() { cmpct_test(); }

@@ -1003,10 +1003,20 @@ void cmpct_dump(bool panic_time) {
   }
 }
 
-void cmpct_get_info(size_t* size_bytes, size_t* free_bytes) {
+void cmpct_get_info(size_t* used_bytes, size_t* free_bytes, size_t* cached_bytes) {
   LockGuard guard(TheHeapLock::Get());
-  *size_bytes = theheap.size;
-  *free_bytes = theheap.remaining;
+  if (used_bytes) {
+    *used_bytes = theheap.size;
+  }
+  if (free_bytes) {
+    *free_bytes = theheap.remaining;
+  }
+  if (cached_bytes) {
+    *cached_bytes = 0;
+    if (theheap.cached_os_alloc) {
+      *cached_bytes = theheap.cached_os_alloc->size;
+    }
+  }
 }
 
 #ifdef HEAP_ENABLE_TESTS

@@ -37,7 +37,7 @@ void* cmpct_memalign(size_t size, size_t alignment) TA_EXCL(TheHeapLock::Get());
 
 void cmpct_init(void) TA_EXCL(TheHeapLock::Get());
 void cmpct_dump(bool panic_time) TA_EXCL(TheHeapLock::Get());
-void cmpct_get_info(size_t* size_bytes, size_t* free_bytes) TA_EXCL(TheHeapLock::Get());
+void cmpct_get_info(size_t* used_bytes, size_t* free_bytes, size_t* cached_bytes) TA_EXCL(TheHeapLock::Get());
 void cmpct_test(void) TA_EXCL(TheHeapLock::Get());
 void cmpct_trim(void) TA_EXCL(TheHeapLock::Get());
 

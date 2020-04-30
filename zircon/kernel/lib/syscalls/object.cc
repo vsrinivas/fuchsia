@@ -542,9 +542,8 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
         state_count[i] = vm_page_t::get_count(vm_page_state(i));
       }
 
-      uint64_t unused_size = 0;
       uint64_t free_heap_bytes = 0;
-      heap_get_info(&unused_size, &free_heap_bytes);
+      heap_get_info(nullptr, &free_heap_bytes);
 
       // Note that this intentionally uses uint64_t instead of
       // size_t in case we ever have a 32-bit userspace but more
