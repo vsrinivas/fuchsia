@@ -4,13 +4,11 @@
 
 #include <stdio.h>
 
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 #if ENABLE_ENTROPY_COLLECTOR_TEST
 
-bool entropy_file_exists() {
-  BEGIN_TEST;
-
+TEST(Entropy, FileExists) {
   FILE* file = fopen("/boot/kernel/debug/entropy.bin", "rb");
   ASSERT_NONNULL(file, "entropy file doesn't exist");
 
@@ -18,12 +16,6 @@ bool entropy_file_exists() {
   size_t read = fread(buf, 1, sizeof(buf), file);
 
   EXPECT_LT(0, read, "entropy file contains no data or not readable");
-
-  END_TEST;
 }
-
-BEGIN_TEST_CASE(entropy_tests)
-RUN_TEST(entropy_file_exists);
-END_TEST_CASE(entropy_tests)
 
 #endif
