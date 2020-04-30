@@ -12,13 +12,35 @@
 #include "src/media/drivers/amlogic_encoder/macros.h"
 
 // TODO(afoxley) adjust to higher value when we get real data flowing
-constexpr uint32_t kOutputBufferMinSizeBytes = 4096;
-constexpr uint32_t kOutputBufferMaxSizeBytes = 4096;
-constexpr uint32_t kOutputMinBufferCountForCamping = 1;
+constexpr uint32_t kOutputBufferMinSizeBytes = 4 * 4096;
+constexpr uint32_t kOutputBufferMaxSizeBytes = 4 * 4096;
+constexpr uint32_t kOutputMinBufferCountForCamping = 2;
 // constexpr uint32_t kOutputMinBufferCountForDedicatedSlack = 1;
 constexpr uint32_t kOutputMaxBufferCount = 0;  // unbounded
-constexpr uint32_t kInputMinBufferCountForCamping = 1;
+constexpr uint32_t kInputMinBufferCountForCamping = 2;
 constexpr uint32_t kInputMaxBufferCount = 0;  // unbounded
+
+constexpr uint64_t kInputBufferConstraintsVersionOrdinal = 1;
+constexpr uint64_t kInputDefaultBufferConstraintsVersionOrdinal =
+    kInputBufferConstraintsVersionOrdinal;
+
+constexpr uint32_t kInputPacketCountForServerMin = 2;
+constexpr uint32_t kInputPacketCountForServerRecommended = 3;
+constexpr uint32_t kInputPacketCountForServerRecommendedMax = 3;
+constexpr uint32_t kInputPacketCountForServerMax = 3;
+constexpr uint32_t kInputDefaultPacketCountForServer = kInputPacketCountForServerRecommended;
+
+constexpr uint32_t kInputPacketCountForClientMin = 2;
+constexpr uint32_t kInputPacketCountForClientMax = std::numeric_limits<uint32_t>::max();
+constexpr uint32_t kInputDefaultPacketCountForClient = 3;
+
+constexpr uint32_t kInputPerPacketBufferBytesMin = 8 * 1024;
+constexpr uint32_t kInputPerPacketBufferBytesRecommended = 1920 * 1080 * 3 / 2;
+constexpr uint32_t kInputPerPacketBufferBytesMax = 1920 * 1080 * 3 / 2;
+constexpr uint32_t kInputDefaultPerPacketBufferBytes = kInputPerPacketBufferBytesRecommended;
+
+constexpr bool kInputSingleBufferModeAllowed = false;
+constexpr bool kInputDefaultSingleBufferMode = false;
 
 CodecAdapterH264::CodecAdapterH264(std::mutex& lock, CodecAdapterEvents* codec_adapter_events,
                                    DeviceCtx* device)
@@ -62,6 +84,19 @@ void CodecAdapterH264::CoreCodecInit(
 
   initial_input_format_details_ = fidl::Clone(initial_input_format_details);
   latest_input_format_details_ = fidl::Clone(initial_input_format_details);
+
+  if (!latest_input_format_details_.has_domain() ||
+      !latest_input_format_details_.domain().is_video() ||
+      !latest_input_format_details_.domain().video().is_uncompressed()) {
+    events_->onCoreCodecFailCodec(
+        "In CodecAdapterH264::CoreCodecInit(), StartThread() failed (input)");
+    return;
+  }
+
+  width_ = latest_input_format_details_.domain().video().uncompressed().image_format.display_width;
+  height_ =
+      latest_input_format_details_.domain().video().uncompressed().image_format.display_height;
+  min_stride_ = width_;
 
   output_sink_.emplace(/*sender=*/
                        [this](CodecPacket* output_packet) {
@@ -190,6 +225,35 @@ void CodecAdapterH264::CoreCodecEnsureBuffersNotConfigured(CodecPort port) {
   }
 }
 
+std::unique_ptr<const fuchsia::media::StreamBufferConstraints>
+CodecAdapterH264::CoreCodecBuildNewInputConstraints() {
+  auto constraints = std::make_unique<fuchsia::media::StreamBufferConstraints>();
+
+  constraints->set_buffer_constraints_version_ordinal(kInputBufferConstraintsVersionOrdinal);
+
+  constraints->mutable_default_settings()
+      ->set_buffer_lifetime_ordinal(0)
+      .set_buffer_constraints_version_ordinal(kInputDefaultBufferConstraintsVersionOrdinal)
+      .set_packet_count_for_server(kInputDefaultPacketCountForServer)
+      .set_packet_count_for_client(kInputDefaultPacketCountForClient)
+      .set_per_packet_buffer_bytes(kInputDefaultPerPacketBufferBytes)
+      .set_single_buffer_mode(kInputDefaultSingleBufferMode);
+
+  constraints->set_per_packet_buffer_bytes_min(kInputPerPacketBufferBytesMin)
+      .set_per_packet_buffer_bytes_recommended(kInputPerPacketBufferBytesRecommended)
+      .set_per_packet_buffer_bytes_max(kInputPerPacketBufferBytesMax)
+      .set_packet_count_for_server_min(kInputPacketCountForServerMin)
+      .set_packet_count_for_server_recommended(kInputPacketCountForServerRecommended)
+      .set_packet_count_for_server_recommended_max(kInputPacketCountForServerRecommendedMax)
+      .set_packet_count_for_server_max(kInputPacketCountForServerMax)
+      .set_packet_count_for_client_min(kInputPacketCountForClientMin)
+      .set_packet_count_for_client_max(kInputPacketCountForClientMax)
+      .set_single_buffer_mode_allowed(kInputSingleBufferModeAllowed)
+      .set_is_physically_contiguous_required(true);
+
+  return constraints;
+}
+
 std::unique_ptr<const fuchsia::media::StreamOutputConstraints>
 CodecAdapterH264::CoreCodecBuildNewOutputConstraints(
     uint64_t stream_lifetime_ordinal, uint64_t new_output_buffer_constraints_version_ordinal,
@@ -241,16 +305,6 @@ CodecAdapterH264::CoreCodecBuildNewOutputConstraints(
   constraints->set_single_buffer_mode_allowed(false);
 
   constraints->set_is_physically_contiguous_required(true);
-  ::zx::bti very_temp_kludge_bti;
-  zx_status_t dup_status =
-      ::zx::unowned_bti(device_->bti())->duplicate(ZX_RIGHT_SAME_RIGHTS, &very_temp_kludge_bti);
-  if (dup_status != ZX_OK) {
-    events_->onCoreCodecFailCodec("BTI duplicate failed - status: %d", dup_status);
-    return nullptr;
-  }
-  // This is very temporary.  The BufferAllocator should handle this directly,
-  // not the client.
-  constraints->set_very_temp_kludge_bti_handle(std::move(very_temp_kludge_bti));
 
   return config;
 }

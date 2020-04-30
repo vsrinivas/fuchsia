@@ -2,9 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+mod h264;
 mod test_suite;
 mod video_frame;
 
+use crate::h264::*;
 use crate::test_suite::*;
 use fidl_fuchsia_media::*;
 use fidl_fuchsia_sysmem as sysmem;
@@ -21,11 +23,11 @@ fn h264_stream_output_generated() -> Result<()> {
                 has_format_modifier: false,
                 format_modifier: sysmem::FormatModifier { value: 0 },
             },
-            coded_width: 32,
-            coded_height: 32,
-            bytes_per_row: 32,
-            display_width: 32,
-            display_height: 32,
+            coded_width: 320,
+            coded_height: 240,
+            bytes_per_row: 320,
+            display_width: 320,
+            display_height: 240,
             layers: 0,
             color_space: sysmem::ColorSpace { type_: sysmem::ColorSpaceType::Rec709 },
             has_pixel_aspect_ratio: false,
@@ -36,6 +38,11 @@ fn h264_stream_output_generated() -> Result<()> {
         settings: Rc::new(move || -> EncoderSettings {
             EncoderSettings::H264(H264EncoderSettings {})
         }),
+        expected_nals: Some(vec![
+            H264NalKind::NotPicture,
+            H264NalKind::NotPicture,
+            H264NalKind::Picture,
+        ]),
     };
 
     fasync::Executor::new().unwrap().run_singlethreaded(test_case.run())

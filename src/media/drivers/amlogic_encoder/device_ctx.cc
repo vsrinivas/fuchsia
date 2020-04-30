@@ -53,6 +53,26 @@ enum {
 // clock_level = 5 or 6 will cause encoder reset, reference bug 120995073
 constexpr uint32_t kClockLevel = 4;
 
+static uint32_t kV3MvSad[] = {
+    // step 0
+    0x00000010, 0x00010020, 0x00020030, 0x00030040, 0x00040050, 0x00050060, 0x00060070, 0x00070080,
+    0x00080090, 0x000900a0, 0x000a00b0, 0x000b00c0, 0x000c00d0, 0x000d00e0, 0x000e00f0, 0x000f0100,
+    // step1
+    0x00100008, 0x00110010, 0x00120018, 0x00130020, 0x00140028, 0x00150030, 0x00160038, 0x00170040,
+    0x00180048, 0x00190050, 0x001a0058, 0x001b0060, 0x001c0068, 0x001d0070, 0x001e0078, 0x001f0080,
+    // step2
+    0x00200008, 0x00210018, 0x00220018, 0x00230030, 0x00240030, 0x00250030, 0x00260030, 0x00270048,
+    0x00280048, 0x00290048, 0x002a0048, 0x002b0048, 0x002c0048, 0x002d0048, 0x002e0048, 0x002f0060,
+    // for step2 4x4-8x8
+    0x00300001, 0x00310002, 0x00320003, 0x00330004, 0x00340005, 0x00350006, 0x00360007, 0x00370008,
+    0x00380009, 0x0039000a, 0x003a000b, 0x003b000c, 0x003c000d, 0x003d000e, 0x003e000f, 0x003f0010};
+
+constexpr uint32_t kPPicQpCDefault = 39;
+constexpr uint32_t kIPicQpCDefault = 39;
+static uint8_t kPicQpC[] = {0,  1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14, 15, 16,
+                            17, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 29, 30, 31, 32, 33,
+                            34, 34, 35, 35, 36, 36, 37, 37, 37, 38, 38, 38, 39, 39, 39};
+
 const fuchsia_hardware_mediacodec_Device_ops_t kFidlOps = {
     .GetCodecFactory =
         [](void* ctx, zx_handle_t handle) {
@@ -670,6 +690,250 @@ zx_status_t DeviceCtx::CanvasInit() {
   return ZX_OK;
 }
 
+void DeviceCtx::SetInputFormat() {
+  uint32_t picsize_x = fbl::round_up(encoder_width_, kPictureMinAlignment);
+  uint32_t picsize_y = fbl::round_up(encoder_height_, kPictureMinAlignment);
+  uint8_t r2y_en = 0;
+  uint32_t ifmt_extra = 0;
+  uint8_t downsample_enable = 0;
+  uint8_t interpolation_enable = 0;
+  uint8_t y_size = 0;
+  uint8_t rgb2yuv_en = 0;
+  uint8_t r2y_mode = (rgb2yuv_en == 1) ? 1 : 0;
+  uint8_t canv_idx0_bppx = 1;
+  uint8_t canv_idx1_bppx = 1;
+  uint8_t canv_idx0_bppy = 1;
+  uint8_t canv_idx1_bppy = 0;
+  uint8_t linear_bytes4p = 0;
+  uint8_t linear_bytesperline = picsize_x * linear_bytes4p;
+  bool linear_enable = false;
+  uint32_t oformat = 0;
+
+  uint8_t nr_enable = (noise_reduction_ != NoiseReductionMode::kDisabled) ? 1 : 0;
+  uint8_t cfg_y_snr_en = ((noise_reduction_ == NoiseReductionMode::kSNROnly) ||
+                          (noise_reduction_ == NoiseReductionMode::k3DNR))
+                             ? 1
+                             : 0;
+  uint8_t cfg_y_tnr_en = ((noise_reduction_ == NoiseReductionMode::kTNROnly) ||
+                          (noise_reduction_ == NoiseReductionMode::k3DNR))
+                             ? 1
+                             : 0;
+  uint8_t cfg_c_snr_en = cfg_y_snr_en;
+  uint8_t cfg_c_tnr_en = 0;
+
+  // Noise Reduction For Y
+  HcodecMfdInReg0D::Get()
+      .FromValue(0)
+      .set_cfg_y_snr_en(cfg_y_snr_en)
+      .set_y_snr_err_norm(1)
+      .set_y_snr_gau_bld_core(4)
+      .set_y_snr_gau_bld_ofst(-4 & 0x3c)
+      .set_y_snr_gau_bld_rate(30)
+      .set_y_snr_gau_alp0_min(0)
+      .set_y_snr_gau_alp0_max(63)
+      .WriteTo(&dosbus_);
+
+  HcodecMfdInReg0E::Get()
+      .FromValue(0)
+      .set_cfg_y_tnr_en(cfg_y_tnr_en)
+      .set_y_tnr_mc_en(1)
+      .set_y_tnr_txt_mode(0)
+      .set_y_tnr_mot_sad_margin(1)
+      .set_y_tnr_alpha_min(8)
+      .set_y_tnr_alpha_max(63)
+      .set_y_tnr_deghost_os(3)
+      .WriteTo(&dosbus_);
+
+  HcodecMfdInReg0F::Get()
+      .FromValue(0)
+      .set_y_tnr_mot_cortxt_rate(4)
+      .set_y_tnr_mot_distxt_ofst(5)
+      .set_y_tnr_mot_distxt_rate(4)
+      .set_y_tnr_mot_dismot_ofst(4)
+      .set_y_tnr_mot_frcsad_lock(8)
+      .WriteTo(&dosbus_);
+
+  HcodecMfdInReg10::Get()
+      .FromValue(0)
+      .set_y_tnr_mot2alp_frc_gain(10)
+      .set_y_tnr_mot2alp_nrm_gain(216)
+      .set_y_tnr_mot2alp_dis_gain(144)
+      .set_y_tnr_mot2alp_dis_ofst(32)
+      .WriteTo(&dosbus_);
+
+  HcodecMfdInReg11::Get()
+      .FromValue(0)
+      .set_y_bld_beta2alp_rate(24)
+      .set_y_bld_beta_min(0)
+      .set_y_bld_beta_max(63)
+      .WriteTo(&dosbus_);
+
+  // Noise Reduction For C
+  HcodecMfdInReg12::Get()
+      .FromValue(0)
+      .set_cfg_c_snr_en(cfg_c_snr_en)
+      .set_c_snr_err_norm(0)
+      .set_c_snr_gau_bld_core(4)
+      .set_c_snr_gau_bld_ofst(-4 & 0x3c)
+      .set_c_snr_gau_bld_rate(30)
+      .set_c_snr_gau_alp0_min(0)
+      .set_c_snr_gau_alp0_max(63)
+      .WriteTo(&dosbus_);
+
+  HcodecMfdInReg13::Get()
+      .FromValue(0)
+      .set_cfg_c_tnr_en(cfg_c_tnr_en)
+      .set_c_tnr_mc_en(1)
+      .set_c_tnr_txt_mode(0)
+      .set_c_tnr_mot_sad_margin(1)
+      .set_c_tnr_alpha_min(8)
+      .set_c_tnr_alpha_max(63)
+      .set_c_tnr_deghost_os(3)
+      .WriteTo(&dosbus_);
+
+  HcodecMfdInReg14::Get()
+      .FromValue(0)
+      .set_c_tnr_mot_cortxt_rate(4)
+      .set_c_tnr_mot_distxt_ofst(5)
+      .set_c_tnr_mot_distxt_rate(4)
+      .set_c_tnr_mot_dismot_ofst(4)
+      .set_c_tnr_mot_frcsad_lock(8)
+      .WriteTo(&dosbus_);
+
+  HcodecMfdInReg15::Get()
+      .FromValue(0)
+      .set_c_tnr_mot2alp_frc_gain(10)
+      .set_c_tnr_mot2alp_nrm_gain(216)
+      .set_c_tnr_mot2alp_dis_gain(144)
+      .set_c_tnr_mot2alp_dis_ofst(32)
+      .WriteTo(&dosbus_);
+
+  HcodecMfdInReg16::Get()
+      .FromValue(0)
+      .set_c_bld_beta2alp_rate(24)
+      .set_c_bld_beta_min(0)
+      .set_c_bld_beta_max(63)
+      .WriteTo(&dosbus_);
+
+  HcodecMfdInReg1Ctrl::Get()
+      .FromValue(0)
+      .set_iformat(input_format_)
+      .set_oformat(oformat)
+      .set_dsample_en(downsample_enable)
+      .set_y_size(y_size)
+      .set_interp_en(interpolation_enable)
+      .set_r2y_en(r2y_en)
+      .set_r2y_mode(r2y_mode)
+      .set_ifmt_extra(ifmt_extra)
+      .set_nr_enable(nr_enable)
+      .WriteTo(&dosbus_);
+
+  HcodecMfdInReg8Dmbl::Get().FromValue(0).set_picsize_x(picsize_x).set_picsize_y(picsize_y).WriteTo(
+      &dosbus_);
+
+  if (!linear_enable) {
+    HcodecMfdInReg3Canv::Get()
+        .FromValue(0)
+        .set_input(input_canvas_ids_)
+        .set_canv_idx1_bppy(canv_idx1_bppy)
+        .set_canv_idx0_bppy(canv_idx0_bppy)
+        .set_canv_idx1_bppx(canv_idx1_bppx)
+        .set_canv_idx0_bppx(canv_idx0_bppx)
+        .WriteTo(&dosbus_);
+    HcodecMfdInReg4Lnr0::Get()
+        .FromValue(0)
+        .set_linear_bytes4p(0)
+        .set_linear_bytesperline(0)
+        .WriteTo(&dosbus_);
+    HcodecMfdInReg5Lnr1::Get().FromValue(0).WriteTo(&dosbus_);
+  } else {
+    HcodecMfdInReg3Canv::Get()
+        .FromValue(0)
+        .set_canv_idx1_bppy(canv_idx1_bppy)
+        .set_canv_idx0_bppy(canv_idx0_bppy)
+        .set_canv_idx1_bppx(canv_idx1_bppx)
+        .set_canv_idx0_bppx(canv_idx0_bppx)
+        .WriteTo(&dosbus_);
+    HcodecMfdInReg4Lnr0::Get()
+        .FromValue(0)
+        .set_linear_bytes4p(linear_bytes4p)
+        .set_linear_bytesperline(linear_bytesperline)
+        .WriteTo(&dosbus_);
+    HcodecMfdInReg5Lnr1::Get().FromValue(input_canvas_ids_).WriteTo(&dosbus_);
+  }
+
+  HcodecMfdInReg9Endn::Get()
+      .FromValue(0)
+      .set_field0(7)
+      .set_field3(6)
+      .set_field6(5)
+      .set_field9(4)
+      .set_field12(3)
+      .set_field15(2)
+      .set_field18(1)
+      .set_field21(0)
+      .WriteTo(&dosbus_);
+}
+
+void DeviceCtx::ReferenceBuffersInit() {
+  HcodecRecCanvasAddr::Get().FromValue(dblk_buf_canvas_).WriteTo(&dosbus_);
+  HcodecDbkRCanvasAddr::Get().FromValue(dblk_buf_canvas_).WriteTo(&dosbus_);
+  HcodecDbkWCanvasAddr::Get().FromValue(dblk_buf_canvas_).WriteTo(&dosbus_);
+
+  HcodecAnc0BufferId::Get().FromValue(ref_buf_canvas_).WriteTo(&dosbus_);
+  HcodecVlcHcmdConfig::Get().FromValue(0).WriteTo(&dosbus_);
+
+  HcodecMemOffsetReg::Get().FromValue(assit_->phys_base()).WriteTo(&dosbus_);
+}
+
+void DeviceCtx::IeMeParameterInit(HcodecIeMeMbType::MbType mb_type) {
+  // currently disable half and sub pixel
+  HcodecIeMeMode::Get().FromValue(0).set_ie_pippeline_block(12).WriteTo(&dosbus_);
+  HcodecIeRefSel::Get().FromValue(0).WriteTo(&dosbus_);
+
+  HcodecIeMeMbType::Get().FromValue(mb_type).WriteTo(&dosbus_);
+
+  if (rows_per_slice_ != picture_to_mb(encoder_height_)) {
+    uint32_t mb_per_slice = picture_to_mb(encoder_height_) * rows_per_slice_;
+    HcodecFixedSliceCfg::Get().FromValue(mb_per_slice).WriteTo(&dosbus_);
+
+  } else {
+    HcodecFixedSliceCfg::Get().FromValue(0).WriteTo(&dosbus_);
+  }
+}
+
+void DeviceCtx::QuantTableInit() {
+  HcodecQQuantControl::Get()
+      .FromValue(0)
+      .set_quant_table_addr(0)
+      .set_quant_table_addr_update(1)
+      .WriteTo(&dosbus_);
+
+  for (unsigned int q : quant_table_i4_) {
+    HcodecQuantTableData::Get().FromValue(q).WriteTo(&dosbus_);
+  }
+
+  HcodecQQuantControl::Get()
+      .FromValue(0)
+      .set_quant_table_addr(0x8)
+      .set_quant_table_addr_update(1)
+      .WriteTo(&dosbus_);
+
+  for (unsigned int q : quant_table_i16_) {
+    HcodecQuantTableData::Get().FromValue(q).WriteTo(&dosbus_);
+  }
+
+  HcodecQQuantControl::Get()
+      .FromValue(0)
+      .set_quant_table_addr(0x10)
+      .set_quant_table_addr_update(1)
+      .WriteTo(&dosbus_);
+
+  for (unsigned int q : quant_table_me_) {
+    HcodecQuantTableData::Get().FromValue(q).WriteTo(&dosbus_);
+  }
+}
+
 void DeviceCtx::Reset() {
   for (int i = 0; i < 3; i++) {
     // delay
@@ -695,7 +959,15 @@ void DeviceCtx::Reset() {
   }
 }
 
-void DeviceCtx::Config() {
+void DeviceCtx::Config(bool idr) {
+  constexpr uint32_t kInitQpPicture = 26;
+  constexpr uint32_t kLog2MaxFrameNum = 4;
+  constexpr uint32_t kLog2MaxPicOrderCntLsb = 4;
+  constexpr uint32_t kAnc0BufferId = 0;
+  constexpr uint32_t kCbrTableSize = 0x800;
+
+  uint32_t pic_width_in_mb = picture_to_mb(encoder_width_);
+
   HcodecVlcTotalBytes::Get().FromValue(0).WriteTo(&dosbus_);
   HcodecVlcConfig::Get().FromValue(0x7).WriteTo(&dosbus_);
   HcodecVlcIntControl::Get().FromValue(0).WriteTo(&dosbus_);
@@ -708,15 +980,431 @@ void DeviceCtx::Config() {
   HcodecFrameNumber::Get().FromValue(frame_number_).WriteTo(&dosbus_);
   HcodecPicOrderCntLsb::Get().FromValue(pic_order_cnt_lsb_).WriteTo(&dosbus_);
 
-  const uint32_t kInitQpPicture = 26;
-  const uint32_t kLog2MaxFrameNum = 4;
-  const uint32_t kLog2MaxPicOrderCntLsb = 4;
-  const uint32_t kAnc0BufferId = 0;
-
   HcodecLog2MaxPicOrderCntLsb::Get().FromValue(kLog2MaxPicOrderCntLsb).WriteTo(&dosbus_);
   HcodecLog2MaxFrameNum::Get().FromValue(kLog2MaxFrameNum).WriteTo(&dosbus_);
   HcodecAnc0BufferId::Get().FromValue(kAnc0BufferId).WriteTo(&dosbus_);
   HcodecQpPicture::Get().FromValue(kInitQpPicture).WriteTo(&dosbus_);
+
+  HcodecHdecMcOmemAuto::Get()
+      .FromValue(0)
+      .set_use_omem_mb_xy(1)
+      .set_omem_max_mb_x(pic_width_in_mb)
+      .WriteTo(&dosbus_);
+
+  HcodecVlcAdvConfig::Get()
+      .FromValue(0)
+      .set_early_mix_mc_hcmd(0)
+      .set_update_top_left_mix(1)
+      .set_p_top_left_mix(1)
+      .set_mv_cal_mixed_type(0)
+      .set_mc_hcmd_mixed_type(0)
+      .set_use_separate_int_control(1)
+      .set_hcmd_intra_use_q_info(1)
+      .set_hcmd_left_use_prev_info(1)
+      .set_hcmd_use_q_info(1)
+      .set_use_q_delta_quant(1)
+      .set_detect_I16_from_I4(0)
+      .WriteTo(&dosbus_);
+
+  HcodecQdctAdvConfig::Get()
+      .FromValue(0)
+      .set_mb_info_latch_no_I16_pred_mode(1)
+      .set_ie_dma_mbxy_use_i_pred(1)
+      .set_ie_dma_read_write_use_ip_idx(1)
+      .set_ie_start_use_top_dma_count(1)
+      .set_i_pred_top_dma_rd_mbbot(1)
+      .set_i_pred_top_dma_wr_disable(1)
+      .set_i_pred_mix(0)  // will enable in P Picture
+      .set_me_ab_rd_when_intra_in_p(1)
+      .set_force_mb_skip_run_when_intra(1)
+      .set_mc_out_mixed_type(0)  // will enable in P Picture
+      .set_ie_start_when_quant_not_full(1)
+      .set_mb_info_state_mix(1)
+      .set_mb_type_use_mix_result(0)  // will enable in P Picture
+      .set_me_cb_ie_read_enable(0)    // will enable in P Picture
+      .set_ie_cur_data_from_me(0)     // will enable in P Picture
+      .set_rem_per_use_table(1)
+      .set_q_latch_int_enable(0)
+      .set_q_use_table(1)
+      .set_q_start_wait(0)
+      .set_LUMA_16_LEFT_use_cur(1)
+      .set_DC_16_LEFT_SUM_use_cur(1)
+      .set_c_ref_ie_sel_cur(1)
+      .set_c_ipred_perfect_mode(0)
+      .set_ref_ie_ul_sel(1)
+      .set_mb_type_use_ie_result(1)
+      .set_detect_I16_from_I4(1)
+      .set_ie_not_wait_ref_busy(1)
+      .set_ie_I16_enable(1)
+      .set_ie_done_sel(0x3)
+      .WriteTo(&dosbus_);
+
+  HcodecIeWeight::Get()
+      .FromValue(0)
+      .set_i4_weight(i4_weight_)
+      .set_i16_weight(i16_weight_)
+      .WriteTo(&dosbus_);
+  HcodecMeWeight::Get().FromValue(me_weight_).WriteTo(&dosbus_);
+  HcodecSadControl0::Get()
+      .FromValue(0)
+      .set_ie_sad_offset_I16(i16_weight_)
+      .set_ie_sad_offset_I4(i4_weight_)
+      .WriteTo(&dosbus_);
+
+  HcodecSadControl1::Get()
+      .FromValue(0)
+      .set_ie_sad_shift_I16(3)
+      .set_ie_sad_shift_I4(3)
+      .set_me_sad_shift_INTER(2)
+      .set_me_sad_offset_INTER(me_weight_)
+      .WriteTo(&dosbus_);
+
+  HcodecAdvMvCtl0::Get()
+      .FromValue(0)
+      .set_adv_mv_large_16x8(1)
+      .set_adv_mv_large_8x16(1)
+      .set_adv_mv_8x8_weight(0x300)
+      .set_adv_mv_4x4x4_weight(0x400)
+      .WriteTo(&dosbus_);
+
+  HcodecAdvMvCtl1::Get()
+      .FromValue(0)
+      .set_adv_mv_16x16_weight(0x080)
+      .set_adv_mv_large_16x16(1)
+      .set_adv_mv_16x8_weight(0x100)
+      .WriteTo(&dosbus_);
+
+  QuantTableInit();
+
+  uint32_t i_pic_qp = (quant_table_i4_[0] & 0xff) + (quant_table_i16_[0] & 0xff);
+  uint32_t p_pic_qp = 0;
+
+  if (idr) {
+    i_pic_qp /= 2;
+  } else {
+    i_pic_qp += quant_table_me_[0] & 0xff;
+    i_pic_qp /= 3;
+  }
+  p_pic_qp = i_pic_qp;
+
+  HcodecEncCbrTableAddr::Get().FromValue(cbr_info_->phys_base());
+  HcodecEncCbrMbSizeAddr::Get().FromValue(cbr_info_->phys_base() + kCbrTableSize);
+
+  HcodecEncCbrCtl::Get()
+      .FromValue(0)
+      .set_init_qp_table_idx(HcodecEncCbrCtl::kStartTableId)
+      .set_short_term_adjust_shift(HcodecEncCbrCtl::kShortShift)
+      .set_long_term_mb_number(HcodecEncCbrCtl::kLongMbNum)
+      .set_long_term_adjust_threshold(HcodecEncCbrCtl::kLongThreshold)
+      .WriteTo(&dosbus_);
+
+  HcodecEncCbrRegionSize::Get()
+      .FromValue(0)
+      .set_block_w(HcodecEncCbrRegionSize::kBlockWidth)
+      .set_block_h(HcodecEncCbrRegionSize::kBlockHeight)
+      .WriteTo(&dosbus_);
+
+  HcodecQdctVlcQuantCtl0::Get()
+      .FromValue(0)
+      .set_vlc_delta_quant_1(0)
+      .set_vlc_quant_1(i_pic_qp)
+      .set_vlc_delta_quant_0(0)
+      .set_vlc_quant_0(i_pic_qp)
+      .WriteTo(&dosbus_);
+
+  HcodecQdctVlcQuantCtl1::Get()
+      .FromValue(0)
+      .set_vlc_max_delta_q_neg(14)
+      .set_vlc_max_delta_q_pos(13)
+      .WriteTo(&dosbus_);
+
+  HcodecVlcPicSize::Get()
+      .FromValue(0)
+      .set_pic_height(encoder_height_)
+      .set_pic_width(encoder_width_)
+      .WriteTo(&dosbus_);
+
+  HcodecVlcPicPosition::Get().FromValue(0).set_pic_mb_nr(0).set_pic_mby(0).set_pic_mbx(0).WriteTo(
+      &dosbus_);
+
+  uint32_t i_pic_qp_c = kIPicQpCDefault;
+  uint32_t p_pic_qp_c = kPPicQpCDefault;
+
+  if (i_pic_qp < sizeof(kPicQpC)) {
+    i_pic_qp_c = kPicQpC[i_pic_qp];
+  }
+
+  if (p_pic_qp < sizeof(kPicQpC)) {
+    p_pic_qp_c = kPicQpC[p_pic_qp];
+  }
+
+  HcodecQdctQQuantI::Get()
+      .FromValue(0)
+      .set_i_pic_qp_c(i_pic_qp_c)
+      .set_i_pic_qp_c_mod6(i_pic_qp_c % 6)
+      .set_i_pic_qp_c_div6(i_pic_qp_c / 6)
+      .set_i_pic_qp(i_pic_qp)
+      .set_i_pic_qp_mod6(i_pic_qp % 6)
+      .set_i_pic_qp_div6(i_pic_qp / 6)
+      .WriteTo(&dosbus_);
+
+  HcodecQdctQQuantP::Get()
+      .FromValue(0)
+      .set_p_pic_qp_c(p_pic_qp_c)
+      .set_p_pic_qp_c_mod6(p_pic_qp_c % 6)
+      .set_p_pic_qp_c_div6(p_pic_qp_c / 6)
+      .set_p_pic_qp(p_pic_qp)
+      .set_p_pic_qp_mod6(p_pic_qp % 6)
+      .set_p_pic_qp_div6(p_pic_qp / 6)
+      .WriteTo(&dosbus_);
+
+  HcodecIgnoreConfig::Get()
+      .FromValue(0)
+      .set_ignore_lac_coeff_en(1)
+      .set_ignore_lac_coeff_2(1)
+      .set_ignore_lac_coeff_1(2)
+      .set_ignore_cac_coeff_en(1)
+      .set_ignore_cac_coeff_else(1)
+      .set_ignore_cac_coeff_2(1)
+      .set_ignore_cac_coeff_1(2)
+      .WriteTo(&dosbus_);
+
+  HcodecIgnoreConfig2::Get()
+      .FromValue(0)
+      .set_ignore_t_lac_coeff_en(1)
+      .set_ignore_t_lac_coeff_else(1)
+      .set_ignore_t_lac_coeff_2(2)
+      .set_ignore_t_lac_coeff_1(6)
+      .set_ignore_cdc_coeff_en(1)
+      .set_ignore_t_lac_coeff_else_le_3(0)
+      .set_ignore_t_lac_coeff_else_le_4(1)
+      .set_ignore_cdc_only_when_empty_cac_inter(1)
+      .set_ignore_cdc_only_when_one_empty_inter(1)
+      .set_ignore_cdc_range_max_inter(2)
+      .set_ignore_cdc_abs_max_inter(0)
+      .set_ignore_cdc_only_when_empty_cac_intra(1)
+      .set_ignore_cdc_only_when_one_empty_intra(1)
+      .set_ignore_cdc_range_max_intra(1)
+      .set_ignore_cdc_abs_max_intra(0)
+      .WriteTo(&dosbus_);
+
+  HcodecQdctMbControl::Get().FromValue(0).set_mb_info_soft_reset(1).set_soft_reset(1).WriteTo(
+      &dosbus_);
+
+  HcodecQdctMbControl::Get()
+      .FromValue(0)
+      .set_ignore_t_p8x8(0)
+      .set_zero_mc_out_null_non_skipped_mb(0)
+      .set_no_mc_out_null_non_skipped_mb(0)
+      .set_mc_out_even_skipped_mb(0)
+      .set_mc_out_wait_cbp_ready(0)
+      .set_mc_out_wait_mb_type_ready(0)
+      .set_ie_start_int_enable(1)
+      .set_i_pred_enable(1)
+      .set_ie_sub_enable(1)
+      .set_iq_enable(1)
+      .set_idct_enable(1)
+      .set_mb_pause_enable(1)
+      .set_q_enable(1)
+      .set_dct_enable(1)
+      .set_mb_info_en(1)
+      .set_endian(0)
+      .set_mb_read_en(0)
+      .set_soft_reset(0)
+      .WriteTo(&dosbus_);
+
+  HcodecSadControl::Get()
+      .FromValue(0)
+      .set_ie_result_buff_enable(0)
+      .set_ie_result_buff_soft_reset(1)
+      .set_sad_enable(0)
+      .set_sad_soft_reset(1)
+      .WriteTo(&dosbus_);
+
+  HcodecIeResultBuffer::Get().FromValue(0).WriteTo(&dosbus_);
+
+  HcodecSadControl::Get()
+      .FromValue(0)
+      .set_ie_result_buff_enable(1)
+      .set_ie_result_buff_soft_reset(0)
+      .set_sad_enable(1)
+      .set_sad_soft_reset(0)
+      .WriteTo(&dosbus_);
+
+  HcodecIeControl::Get()
+      .FromValue(0)
+      .set_active_ul_block(1)
+      .set_ie_enable(0)
+      .set_ie_soft_reset(1)
+      .WriteTo(&dosbus_);
+
+  HcodecIeControl::Get()
+      .FromValue(0)
+      .set_active_ul_block(1)
+      .set_ie_enable(0)
+      .set_ie_soft_reset(0)
+      .WriteTo(&dosbus_);
+
+  HcodecMeSkipLine::Get()
+      .FromValue(0)
+      .set_step_3_skip_line(8)
+      .set_step_2_skip_line(8)
+      .set_step_1_skip_line(2)
+      .set_step_0_skip_line(0)
+      .WriteTo(&dosbus_);
+
+  HcodecMeStep0CloseMv::Get()
+      .FromValue(0)
+      .set_me_step0_big_sad(0x100)
+      .set_me_step0_close_mv_y(2)
+      .set_me_step0_close_mv_x(2)
+      .WriteTo(&dosbus_);
+
+  HcodecMeStep0CloseMv::Get()
+      .FromValue(0)
+      .set_me_step0_big_sad(0x100)
+      .set_me_step0_close_mv_y(2)
+      .set_me_step0_close_mv_x(2)
+      .WriteTo(&dosbus_);
+
+  HcodecMeSadEnough01::Get().FromValue(0).set_me_sad_enough_1(0x8).set_me_sad_enough_0(0x8).WriteTo(
+      &dosbus_);
+
+  HcodecMeSadEnough23::Get()
+      .FromValue(0)
+      .set_adv_mv_8x8_enough(0x81)
+      .set_me_sad_enough_2(0x11)
+      .WriteTo(&dosbus_);
+
+  HcodecMeFSkipSad::Get()
+      .FromValue(0)
+      .set_force_skip_sad_3(0)
+      .set_force_skip_sad_2(0)
+      .set_force_skip_sad_1(0)
+      .set_force_skip_sad_0(0)
+      .WriteTo(&dosbus_);
+
+  HcodecMeFSkipWeight::Get()
+      .FromValue(0)
+      .set_force_skip_weight_3(0)
+      .set_force_skip_weight_2(0)
+      .set_force_skip_weight_1(0)
+      .set_force_skip_weight_0(0)
+      .WriteTo(&dosbus_);
+
+  HcodecMeMvWeight01::Get()
+      .FromValue(0)
+      .set_me_mv_step_weight_1(0)
+      .set_me_mv_pre_weight_1(0)
+      .set_me_mv_step_weight_0(0)
+      .set_me_mv_pre_weight_0(0)
+      .WriteTo(&dosbus_);
+
+  HcodecMeMvWeight23::Get()
+      .FromValue(0)
+      .set_me_mv_step_weight_3(0)
+      .set_me_mv_pre_weight_3(0)
+      .set_me_mv_step_weight_2(0)
+      .set_me_mv_pre_weight_2(0)
+      .WriteTo(&dosbus_);
+
+  HcodecMeSadRangeInc::Get()
+      .FromValue(0)
+      .set_me_sad_range_3(0)
+      .set_me_sad_range_2(0)
+      .set_me_sad_range_1(0)
+      .set_me_sad_range_0(0)
+      .WriteTo(&dosbus_);
+
+  HcodecV4ForceSkipCfg::Get()
+      .FromValue(0)
+      .set_v4_force_q_r_intra(40)
+      .set_v4_force_q_r_inter(40)
+      .set_v4_force_q_y_enable(0)
+      .set_v4_force_qr_y(5)
+      .set_v4_force_qp_y(6)
+      .set_v4_force_skip_sad(0)
+      .WriteTo(&dosbus_);
+
+  HcodecV3SkipControl::Get()
+      .FromValue(0)
+      .set_v3_skip_enable(1)
+      .set_v3_step_1_weight_enable(1)
+      .set_v3_mv_sad_weight_enable(1)
+      .set_v3_ipred_type_enable(1)
+      .set_v3_force_skip_sad_1(0x60)
+      .set_v3_force_skip_sad_0(0x10)
+      .WriteTo(&dosbus_);
+
+  HcodecV3SkipWeight::Get()
+      .FromValue(0)
+      .set_v3_skip_weight_1(0x100)
+      .set_v3_skip_weight_0(0x20)
+      .WriteTo(&dosbus_);
+
+  HcodecV3L1SkipMaxSad::Get()
+      .FromValue(0)
+      .set_v3_level_1_f_skip_max_sad(0x20)
+      .set_v3_level_1_skip_max_sad(0x60)
+      .WriteTo(&dosbus_);
+
+  HcodecV3L2SkipWeight::Get()
+      .FromValue(0)
+      .set_v3_force_skip_sad_2(0)
+      .set_v3_skip_weight_2(0x40)
+      .WriteTo(&dosbus_);
+
+  HcodecV3FZeroCtl0::Get()
+      .FromValue(0)
+      .set_v3_ie_f_zero_sad_I16(0x3c0)
+      .set_v3_ie_f_zero_sad_I4(0x7d5)
+      .WriteTo(&dosbus_);
+
+  HcodecV3FZeroCtl1::Get()
+      .FromValue(0)
+      .set_v3_no_ver_when_top_zero_en(0)
+      .set_v3_no_hor_when_left_zero_en(1)
+      .set_type_hor_break(3)
+      .set_v3_me_f_zero_sad(0x360)
+      .WriteTo(&dosbus_);
+
+  // MV SAD Table
+  for (unsigned int i : kV3MvSad) {
+    HcodecV3MvSadTable::Get().FromValue(i).WriteTo(&dosbus_);
+  }
+
+  // IE PRED SAD Table
+  HcodecV3IpredTypeWeight0::Get()
+      .FromValue(0)
+      .set_C_ipred_weight_H(0x8)
+      .set_C_ipred_weight_V(0x4)
+      .set_I4_ipred_weight_else(0x28)
+      .set_I4_ipred_weight_most(0x18)
+      .WriteTo(&dosbus_);
+  HcodecV3IpredTypeWeight1::Get()
+      .FromValue(0)
+      .set_I16_ipred_weight_DC(0xc)
+      .set_I16_ipred_weight_H(0x8)
+      .set_I16_ipred_weight_V(0x4)
+      .set_C_ipred_weight_DC(0xc)
+      .WriteTo(&dosbus_);
+
+  HcodecV3LeftSmallMaxSad::Get()
+      .FromValue(0)
+      .set_v3_left_small_max_me_sad(0x40)
+      .set_v3_left_small_max_ie_sad(0x00)
+      .WriteTo(&dosbus_);
+
+  HcodecIeDataFeedBuffInfo::Get().FromValue(0).WriteTo(&dosbus_);
+
+  HcodecCurrCanvasCtrl::Get().FromValue(0).WriteTo(&dosbus_);
+
+  HcodecVlcConfig::Get().ReadFrom(&dosbus_).set_pop_coeff_even_all_zero(1).WriteTo(&dosbus_);
+
+  HcodecInfoDumpStartAddr::Get().FromValue(dump_info_->phys_base()).WriteTo(&dosbus_);
+
+  HcodecIrqMboxClear::Get().FromValue(1).WriteTo(&dosbus_);
+  HcodecIrqMboxMask::Get().FromValue(1).WriteTo(&dosbus_);
 }
 
 // encoder control
@@ -763,22 +1451,156 @@ zx_status_t DeviceCtx::EnsureHwInited() {
 
   Reset();
 
-  Config();
+  Config(/*idr*/ false);
+
+  ReferenceBuffersInit();
+
+  IeMeParameterInit(HcodecIeMeMbType::MbType::kDefault);
+
+  HcodecEncoderStatus::Get().FromValue(EncoderStatus::kIdle).WriteTo(&dosbus_);
+
+  for (int i = 0; i < 3; i++) {
+    // delay
+    DosSwReset1::Get().ReadFrom(&dosbus_);
+  }
+
+  DosSwReset1::Get().FromValue(0).set_hcodec_ccpu(1).set_hcodec_mcpu(1).WriteTo(&dosbus_);
+  DosSwReset1::Get().FromValue(0).WriteTo(&dosbus_);
+
+  for (int i = 0; i < 3; i++) {
+    // delay
+    DosSwReset1::Get().ReadFrom(&dosbus_);
+  }
+
+  HcodecMpsr::Get().FromValue(0x0001).WriteTo(&dosbus_);
 
   return ZX_OK;
 }
 
-zx_status_t DeviceCtx::StopEncoder() { return ZX_OK; }
+zx_status_t DeviceCtx::StopEncoder() {
+  HcodecMpsr::Get().FromValue(0).WriteTo(&dosbus_);
+  HcodecCpsr::Get().FromValue(0).WriteTo(&dosbus_);
+
+  if (!WaitForRegister(std::chrono::seconds(1), [this] {
+        return HcodecImemDmaCtrl::Get().ReadFrom(&dosbus_).ready() == 0;
+      })) {
+    ENCODE_ERROR("Failed to stop dma.");
+    return ZX_ERR_TIMED_OUT;
+  }
+
+  for (int i = 0; i < 3; i++) {
+    // delay
+    DosSwReset1::Get().ReadFrom(&dosbus_);
+  }
+
+  DosSwReset1::Get()
+      .FromValue(0)
+      .set_hcodec_ccpu(1)
+      .set_hcodec_mcpu(1)
+      .set_hcodec_assist(1)
+      .set_hcodec_iqidct(1)
+      .set_hcodec_mc(1)
+      .set_hcodec_dblk(1)
+      .set_hcodec_afifo(1)
+      .set_hcodec_vlc(1)
+      .set_hcodec_qdct(1)
+      .WriteTo(&dosbus_);
+
+  DosSwReset1::Get().FromValue(DosSwReset1::kNone).WriteTo(&dosbus_);
+
+  for (int i = 0; i < 3; i++) {
+    // delay
+    DosSwReset1::Get().ReadFrom(&dosbus_);
+  }
+
+  return ZX_OK;
+}
+
+zx_status_t DeviceCtx::EncodeCmd(EncoderStatus cmd, uint32_t* output_len) {
+  constexpr zx::duration kCmdTimeout = zx::msec(1000);
+
+  ZX_DEBUG_ASSERT(output_len);
+
+  sync_completion_reset(&interrupt_sync_);
+
+  hw_status_ = cmd;
+  HcodecEncoderStatus::Get().FromValue(hw_status_).WriteTo(&dosbus_);
+
+  zx_status_t status = sync_completion_wait(&interrupt_sync_, kCmdTimeout.get());
+
+  hw_status_ =
+      static_cast<EncoderStatus>(HcodecEncoderStatus::Get().ReadFrom(&dosbus_).reg_value());
+  if (status == ZX_ERR_TIMED_OUT) {
+    ENCODE_ERROR("no interrupt, status %d", hw_status_);
+    ENCODE_INFO("mb info: 0x%x, encode status: 0x%x, dct status: 0x%x",
+                HcodecVlcMbInfo::Get().ReadFrom(&dosbus_).reg_value(),
+                HcodecEncoderStatus::Get().ReadFrom(&dosbus_).reg_value(),
+                HcodecQdctStatusCtrl::Get().ReadFrom(&dosbus_).reg_value());
+    ENCODE_INFO("vlc status: 0x%x, me status: 0x%x, risc pc:0x%x, debug:0x%x",
+                HcodecVlcStatusCtrl::Get().ReadFrom(&dosbus_).reg_value(),
+                HcodecMeStatus::Get().ReadFrom(&dosbus_).reg_value(),
+                HcodecMpcE::Get().ReadFrom(&dosbus_).reg_value(),
+                HcodecDebugReg::Get().ReadFrom(&dosbus_).reg_value());
+    return status;
+  }
+
+  if (hw_status_ == EncoderStatus::kIdrDone || hw_status_ == EncoderStatus::kNonIdrDone ||
+      hw_status_ == EncoderStatus::kPictureDone || hw_status_ == EncoderStatus::kSequenceDone) {
+    *output_len = HcodecVlcTotalBytes::Get().ReadFrom(&dosbus_).reg_value();
+
+    // TODO(afoxley) invalidate output buffer
+  } else {
+    ENCODE_ERROR("status %d", hw_status_);
+    return ZX_ERR_TIMED_OUT;
+  }
+
+  return ZX_OK;
+}
 
 zx_status_t DeviceCtx::EncodeFrame(uint32_t* output_len) {
-  // TODO(afoxley)
-  // -config hw for encoding and start
-  //  -if buffer is in CPU domain, flush cache on it
-  //  -invalidate output buffer as well
-  // -wait for interrupt
-  // -check status and read output bytes
-  //  -cache invalidate output buffer
-  *output_len = 0;
+  EncoderStatus cmd = EncoderStatus::kIdr;
+  HcodecIeMeMbType::MbType mb_type = HcodecIeMeMbType::MbType::kDefault;
+
+  ZX_DEBUG_ASSERT(output_len);
+
+  auto status = EnsureHwInited();
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  if (cmd == EncoderStatus::kIdr || cmd == EncoderStatus::kNonIdr) {
+    ReferenceBuffersInit();
+    SetInputFormat();
+    if (cmd == EncoderStatus::kIdr) {
+      mb_type = HcodecIeMeMbType::MbType::kI4MB;
+    } else {
+      mb_type = HcodecIeMeMbType::MbType::kAuto;
+    }
+  }
+
+  IeMeParameterInit(mb_type);
+
+  if (cmd == EncoderStatus::kIdr) {
+    // TODO(afoxley) only need to include SPS/PPS if format changes or we haven't got them yet
+    status = EncodeCmd(EncoderStatus::kSequence, output_len);
+    if (status != ZX_OK) {
+      return status;
+    }
+
+    status = EncodeCmd(EncoderStatus::kPicture, output_len);
+    if (status != ZX_OK) {
+      return status;
+    }
+  }
+
+  status = EncodeCmd(cmd, output_len);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  // commit and swap to next canvas buffer
+  std::swap(ref_buf_canvas_, dblk_buf_canvas_);
+
   return ZX_OK;
 }
 

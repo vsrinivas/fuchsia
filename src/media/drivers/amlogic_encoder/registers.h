@@ -265,6 +265,8 @@ DEFINE_REGISTER(HcodecIrqMboxMask, DosRegisterIo, 0x107a)
 DEFINE_REGISTER(HcodecMpsr, DosRegisterIo, 0x1301)
 DEFINE_REGISTER(HcodecCpsr, DosRegisterIo, 0x1321)
 
+DEFINE_REGISTER(HcodecMpcE, DosRegisterIo, 0x1308)
+
 REGISTER_BEGIN(HcodecImemDmaCtrl, DosRegisterIo, 0x1340)
 enum { kCtrl = 0x7 };
 DEF_FIELD(18, 16, ctrl);
@@ -307,6 +309,7 @@ enum EncoderStatus {
 // in scratch registers
 DEFINE_REGISTER(HcodecEncoderStatus, DosRegisterIo, 0x1ac0)
 DEFINE_REGISTER(HcodecMemOffsetReg, DosRegisterIo, 0x1ac1)
+DEFINE_REGISTER(HcodecDebugReg, DosRegisterIo, 0x1ac2)
 DEFINE_REGISTER(HcodecIdrPicId, DosRegisterIo, 0x1ac5)
 DEFINE_REGISTER(HcodecFrameNumber, DosRegisterIo, 0x1ac6)
 DEFINE_REGISTER(HcodecPicOrderCntLsb, DosRegisterIo, 0x1ac7)
@@ -364,6 +367,8 @@ REGISTER_END
 
 DEFINE_REGISTER(HcodecIeDataFeedBuffInfo, DosRegisterIo, 0x1ad8)
 
+DEFINE_REGISTER(HcodecVlcStatusCtrl, DosRegisterIo, 0x1d00)
+
 REGISTER_BEGIN(HcodecVlcConfig, DosRegisterIo, 0x1d01)
 DEF_BIT(0, pop_coeff_even_all_zero);
 REGISTER_END
@@ -400,6 +405,8 @@ DEF_FIELD(15, 8, pic_mby);
 DEF_FIELD(7, 0, pic_mbx);
 REGISTER_END
 
+DEFINE_REGISTER(HcodecVlcMbInfo, DosRegisterIo, 0x1d35)
+
 DEFINE_REGISTER(HcodecVlcHcmdConfig, DosRegisterIo, 0x1d54)
 
 REGISTER_BEGIN(HcodecVlcAdvConfig, DosRegisterIo, 0x1d25)
@@ -415,6 +422,8 @@ DEF_BIT(2, hcmd_use_q_info);
 DEF_BIT(1, use_q_delta_quant);
 DEF_BIT(0, detect_I16_from_I4);
 REGISTER_END
+
+DEFINE_REGISTER(HcodecQdctStatusCtrl, DosRegisterIo, 0x1f00)
 
 REGISTER_BEGIN(HcodecIgnoreConfig, DosRegisterIo, 0x1f02)
 DEF_BIT(31, ignore_lac_coeff_en);
@@ -574,6 +583,8 @@ DEF_BIT(0, sad_soft_reset);
 REGISTER_END
 
 DEFINE_REGISTER(HcodecIeResultBuffer, DosRegisterIo, 0x1f44)
+
+DEFINE_REGISTER(HcodecMeStatus, DosRegisterIo, 0x1f4b)
 
 REGISTER_BEGIN(HcodecMeSkipLine, DosRegisterIo, 0x1f4d)
 DEF_FIELD(27, 24, step_3_skip_line);

@@ -19,8 +19,8 @@ impl VideoFrame {
     pub fn create(format: sysmem::ImageFormat2) -> Self {
         // For 4:2:0 YUV, the UV data is 1/2 the size of the Y data,
         // so the size of the frame is 3/2 the size of the Y plane.
-        let frame_size = (format.bytes_per_row * format.coded_height * 3 / 2) as usize;
-        Self { format, data: vec![0; frame_size] }
+        let frame_size = format.bytes_per_row * format.coded_height * 3 / 2;
+        Self { format, data: vec![0; frame_size as usize] }
     }
 }
 

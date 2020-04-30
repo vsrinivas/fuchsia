@@ -66,17 +66,6 @@ impl Validate<ValidStreamBufferConstraints> for StreamBufferConstraintsValidator
             return Err(StreamBufferConstraintsError::SingleBufferMode);
         }
 
-        if candidate.is_physically_contiguous_required
-            && candidate
-                .very_temp_kludge_bti_handle
-                .as_ref()
-                .map(|h| h.is_invalid())
-                .unwrap_or(true)
-        {
-            // The bti handle must be provided if the buffers need to be physically contiguous.
-            return Err(StreamBufferConstraintsError::ConstraintsNoBtiHandleForPhysicalBuffers);
-        }
-
         Ok(())
     }
 }

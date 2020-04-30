@@ -38,8 +38,10 @@
 #include "src/media/drivers/amlogic_encoder/registers.h"
 #include "src/media/drivers/amlogic_encoder/scoped_canvas.h"
 
+constexpr uint32_t kInitialQuant = 26;
 constexpr uint32_t kCanvasMinWidthAlignment = 32;
 constexpr uint32_t kCanvasMinHeightAlignment = 16;
+constexpr uint32_t kPictureMinAlignment = 16;
 
 enum InputFormat {
   kNv12 = 3,
@@ -138,14 +140,19 @@ class DeviceCtx : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_MEDIA
   // populates firmware_ptr_ and firmware_size_
   zx_status_t ParseFirmwarePackage();
   zx_status_t LoadFirmware();
+  zx_status_t ParseFirmwarePackage(uintptr_t* firmware);
   void Reset();
-  // configures hcodec block with frame and pic count info.
-  void Config();
+  void Config(bool idr);
+  void ReferenceBuffersInit();
   zx_status_t CanvasConfig(zx_handle_t vmo, uint32_t height, uint32_t bytes_per_row,
                            uint32_t offset, ScopedCanvasId* canvas_id_out, uint32_t alloc_flag);
+  void SetInputFormat();
+  void IeMeParameterInit(HcodecIeMeMbType::MbType mb_type);
+  void QuantTableInit();
 
   zx_status_t CanvasInitReference(InternalBuffer* buf, ScopedCanvasId* y_canvas,
                                   ScopedCanvasId* uv_canvas, uint32_t* packed_canvas_ids);
+  zx_status_t EncodeCmd(EncoderStatus cmd, uint32_t* output_len);
 
   ddk::PDevProtocolClient pdev_;
   ddk::AmlogicCanvasProtocolClient canvas_;
@@ -200,6 +207,12 @@ class DeviceCtx : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_MEDIA
   uint32_t pic_order_cnt_lsb_ = 0;
   NoiseReductionMode noise_reduction_;
   InputFormat input_format_;
+  uint32_t me_weight_ = HcodecMeWeight::kMeWeightOffset;
+  uint32_t i4_weight_ = HcodecIeWeight::kI4MbWeightOffset;
+  uint32_t i16_weight_ = HcodecIeWeight::kI16MbWeightOffset;
+  uint32_t quant_table_i4_[8] = {};
+  uint32_t quant_table_i16_[8] = {};
+  uint32_t quant_table_me_[8] = {};
 
   ScopedCanvasId input_y_canvas_;
   ScopedCanvasId input_uv_canvas_;
