@@ -198,7 +198,7 @@ func (idx *DynamicIndex) Fulfill(need string) {
 					log.Printf("unexpected error adding package after fulfillment: %s", err)
 				}
 			} else {
-				log.Printf("package activated %s/%s (%s)", p.Name, p.Version, pkgRoot)
+				log.Printf("cached %s/%s (%s)", p.Name, p.Version, pkgRoot)
 			}
 		}
 	}
