@@ -8,9 +8,6 @@ import 'package:test/test.dart';
 
 import 'helpers.dart';
 
-// TODO(23043): Pass this into [Performance.processTrace] once the full sl4f
-// migration is complete.
-// ignore: unused_element
 const String _catapultConverterPath = 'runtime_deps/catapult_converter';
 
 Future<void> _killProcesses(PerfTestHelper helper) async {
@@ -22,28 +19,7 @@ Future<void> _killProcesses(PerfTestHelper helper) async {
   await helper.sl4fDriver.ssh.run('killall "simplest_app*"');
 }
 
-void _addDeprecatedTests() {
-  void addTest(String label, String componentUrl) {
-    test(label, () async {
-      final helper = await PerfTestHelper.make();
-      const resultsFile = '/tmp/perf_results.json';
-      final result = await helper.sl4fDriver.ssh
-          .run('/bin/run $componentUrl --out_file $resultsFile'
-              ' --benchmark_label $label');
-      expect(result.exitCode, equals(0));
-      await helper.processResults(resultsFile);
-    }, timeout: Timeout.none);
-  }
-
-  const baseUrl = 'fuchsia-pkg://fuchsia.com/garnet_input_latency_benchmarks';
-
-  addTest('fuchsia.input_latency.simplest_app',
-      '$baseUrl#meta/run_simplest_app_benchmark.cmx');
-  addTest('fuchsia.input_latency.yuv_to_image_pipe',
-      '$baseUrl#meta/run_yuv_to_image_pipe_benchmark.cmx');
-}
-
-void _addReplacementTest(String testName, String runAppCommand) {
+void _addTest(String testName, String runAppCommand) {
   test(testName, () async {
     final helper = await PerfTestHelper.make();
 
@@ -79,11 +55,9 @@ void _addReplacementTest(String testName, String runAppCommand) {
       ],
     );
 
-    // TODO(23043): Pass [_converterPath] in here once the full sl4f migration
-    // is complete.
     expect(
-        await helper.performance
-            .processTrace(metricsSpecSet, traceFile, converterPath: null),
+        await helper.performance.processTrace(metricsSpecSet, traceFile,
+            converterPath: _catapultConverterPath),
         isNotNull);
 
     // Clean up by killing the processes.  The reason for this is that we want
@@ -95,20 +69,14 @@ void _addReplacementTest(String testName, String runAppCommand) {
   });
 }
 
-// TODO(23043): These don't upload results to Catapult yet.
-void _addReplacementTests() {
-  _addReplacementTest('fuchsia.input_latency.simplest_app.DISABLED',
-      '/bin/run -d fuchsia-pkg://fuchsia.com/simplest_app#meta/simplest_app.cmx');
-  _addReplacementTest(
-      'fuchsia.input_latency.yuv_to_image_pipe.DISABLED',
-      '/bin/present_view '
-          'fuchsia-pkg://fuchsia.com/yuv_to_image_pipe#meta/yuv_to_image_pipe.cmx '
-          '--NV12 --input_driven');
-}
-
 void main() {
   enableLoggingOutput();
 
-  _addDeprecatedTests();
-  _addReplacementTests();
+  _addTest('fuchsia.input_latency.simplest_app',
+      '/bin/run -d fuchsia-pkg://fuchsia.com/simplest_app#meta/simplest_app.cmx');
+  _addTest(
+      'fuchsia.input_latency.yuv_to_image_pipe',
+      '/bin/present_view '
+          'fuchsia-pkg://fuchsia.com/yuv_to_image_pipe#meta/yuv_to_image_pipe.cmx '
+          '--NV12 --input_driven');
 }
