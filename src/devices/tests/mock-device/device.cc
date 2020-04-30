@@ -52,8 +52,8 @@ class MockDevice : public MockDeviceType {
   zx_status_t DdkWrite(const void* buf, size_t count, zx_off_t off, size_t* actual);
   zx_off_t DdkGetSize();
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
-  void DdkSuspendNew(ddk::SuspendTxn txn);
-  void DdkResumeNew(ddk::ResumeTxn txn);
+  void DdkSuspend(ddk::SuspendTxn txn);
+  void DdkResume(ddk::ResumeTxn txn);
   zx_status_t DdkRxrpc(zx_handle_t channel);
 
   // Generate an invocation record for a hook RPC
@@ -302,7 +302,7 @@ zx_status_t MockDevice::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
   return ctx.hook_status;
 }
 
-void MockDevice::DdkSuspendNew(ddk::SuspendTxn txn) {
+void MockDevice::DdkSuspend(ddk::SuspendTxn txn) {
   auto result = controller_.Suspend(ConstructHookInvocation(), txn.requested_state(),
                                     txn.enable_wake(), txn.suspend_reason());
   ZX_ASSERT(result.ok());
@@ -312,7 +312,7 @@ void MockDevice::DdkSuspendNew(ddk::SuspendTxn txn) {
   ZX_ASSERT(status == ZX_OK);
 }
 
-void MockDevice::DdkResumeNew(ddk::ResumeTxn txn) {
+void MockDevice::DdkResume(ddk::ResumeTxn txn) {
   auto result = controller_.Resume(ConstructHookInvocation(), txn.requested_state());
   ZX_ASSERT(result.ok());
   ProcessActionsContext ctx(controller_.channel(), true, this, zxdev());

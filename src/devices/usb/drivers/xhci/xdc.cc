@@ -945,7 +945,7 @@ out:
 static zx_protocol_device_t xdc_device_ops = []() {
   zx_protocol_device_t device = {};
   device.version = DEVICE_OPS_VERSION;
-  device.open = xdc_open, device.suspend_new = xdc_suspend, device.unbind = xdc_unbind,
+  device.open = xdc_open, device.suspend = xdc_suspend, device.unbind = xdc_unbind,
   device.release = xdc_release;
   return device;
 }();

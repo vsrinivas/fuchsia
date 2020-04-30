@@ -203,13 +203,13 @@ class AmlogicSecureMemTest : public zxtest::Test {
   }
 
   void TearDown() override {
-    // For now, we use DdkSuspendNew(mexec) partly to cover DdkSuspendNew(mexec) handling, and
+    // For now, we use DdkSuspend(mexec) partly to cover DdkSuspend(mexec) handling, and
     // partly because it's the only way of cleaning up safely that we've implemented so far, as
     // aml-securemem doesn't yet implement DdkUnbind() - and arguably it doesn't really need to
     // given what aml-securemem is.
 
     ddk::SuspendTxn txn(dev()->zxdev(), DEV_POWER_STATE_DCOLD, false, DEVICE_SUSPEND_REASON_MEXEC);
-    dev()->DdkSuspendNew(std::move(txn));
+    dev()->DdkSuspend(std::move(txn));
   }
 
   zx_device_t* parent() { return reinterpret_cast<zx_device_t*>(&ctx_); }

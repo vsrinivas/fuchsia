@@ -37,7 +37,7 @@ zx_protocol_device_t IntelHDACodecDriverBase::CODEC_DEVICE_THUNKS = []() {
   zx_protocol_device_t ops = {};
   ops.version = DEVICE_OPS_VERSION;
   ops.release = [](void* ctx) { DEV(ctx)->DeviceRelease(); };
-  ops.suspend_new = [](void* ctx, uint8_t requested_state, bool enable_wake,
+  ops.suspend = [](void* ctx, uint8_t requested_state, bool enable_wake,
                        uint8_t suspend_reason) {
     uint8_t out_state;
     zx_status_t status =

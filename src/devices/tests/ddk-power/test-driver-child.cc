@@ -26,7 +26,7 @@ using llcpp::fuchsia::device::power::test::TestDevice;
 
 class TestPowerDriverChild;
 using DeviceType = ddk::Device<TestPowerDriverChild, ddk::UnbindableNew, ddk::Messageable,
-                               ddk::SuspendableNew, ddk::ResumableNew, ddk::PerformanceTunable,
+                               ddk::Suspendable, ddk::Resumable, ddk::PerformanceTunable,
                                ddk::AutoSuspendable, ddk::Initializable>;
 class TestPowerDriverChild : public DeviceType, public TestDevice::Interface {
  public:
@@ -55,9 +55,9 @@ class TestPowerDriverChild : public DeviceType, public TestDevice::Interface {
   }
   void DdkInit(ddk::InitTxn txn);
   void DdkRelease() { delete this; }
-  void DdkSuspendNew(ddk::SuspendTxn txn);
+  void DdkSuspend(ddk::SuspendTxn txn);
   zx_status_t DdkSetPerformanceState(uint32_t requested_state, uint32_t* out_state);
-  void DdkResumeNew(ddk::ResumeTxn txn);
+  void DdkResume(ddk::ResumeTxn txn);
   zx_status_t DdkConfigureAutoSuspend(bool enable, uint8_t deepest_sleep_state);
 
   void SavePowerStateInfo(std::unique_ptr<device_power_state_info_t[]> states, uint8_t states_count,
@@ -91,7 +91,7 @@ void TestPowerDriverChild::DdkInit(ddk::InitTxn txn) {
   txn.Reply(ZX_OK, states_.get(), states_count_, perf_states_.get(), perf_states_count_);
 }
 
-void TestPowerDriverChild::DdkSuspendNew(ddk::SuspendTxn txn) {
+void TestPowerDriverChild::DdkSuspend(ddk::SuspendTxn txn) {
   if (reply_suspend_status_ == ZX_OK) {
     reply_out_power_state_ = txn.requested_state();
   }
@@ -110,7 +110,7 @@ zx_status_t TestPowerDriverChild::DdkSetPerformanceState(uint32_t requested_stat
   return ZX_OK;
 }
 
-void TestPowerDriverChild::DdkResumeNew(ddk::ResumeTxn txn) {
+void TestPowerDriverChild::DdkResume(ddk::ResumeTxn txn) {
   if (reply_resume_status_ == ZX_OK) {
     reply_out_power_state_ = DEV_POWER_STATE_D0;
     reply_out_performance_state_ = txn.requested_state();

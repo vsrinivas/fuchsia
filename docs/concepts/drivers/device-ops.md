@@ -62,10 +62,10 @@ different connections will be indeterminately sequenced.
 
 ### Device Power Management
 
-The [zx_device_ops_t][device] *suspend_new* hook is sequenced before itself (e.g.
+The [zx_device_ops_t][device] *suspend* hook is sequenced before itself (e.g.
 if a request to suspend to D1 happens, and while that is being executed a
 request to suspend to D2 happens, the first will finish before the latter
-begins).  It is also sequenced before the *resume_new* hook.
+begins).  It is also sequenced before the *resume* hook.
 
 The `set_performance_state` hook is sequenced before itself.
 It has no particular ordering with suspend/resume hooks.
@@ -83,7 +83,7 @@ On failure, the out_state will have the state that the device can go into.
 The `configure_autosuspend` hook is sequenced before itself and is used to configure whether
 devices can suspend or resume themselves depending on their idleness. The hook is called with
 the deepest sleep state the device is expected to be in which is when the device is suspended.
-If the entire system is being suspended to a sleep state, the driver should expect `suspend_new`
+If the entire system is being suspended to a sleep state, the driver should expect `suspend`
 hook to be called, even if the auto suspend is configured. It is not supported to selectively
 suspend a device when auto suspend is configured.
 

@@ -188,7 +188,7 @@ zx_status_t Device::Suspend(uint8_t requested_state, bool wakeup_enabled, uint8_
   return status;
 }
 
-void Device::DdkSuspendNew(ddk::SuspendTxn txn) {
+void Device::DdkSuspend(ddk::SuspendTxn txn) {
   uint8_t out_state;
   zx_status_t status =
       Device::Suspend(txn.requested_state(), txn.enable_wake(), txn.suspend_reason(), &out_state);

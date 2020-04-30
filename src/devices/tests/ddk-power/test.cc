@@ -751,7 +751,7 @@ TEST_F(PowerTestCase, SystemSuspend_AutoSuspendEnabled) {
   const auto &suspend_response = suspend_result.value();
   ASSERT_OK(suspend_response.status);
 
-  // Verify the child's DdkSuspendNew routine gets called.
+  // Verify the child's DdkSuspend routine gets called.
   auto child_dev_suspend_response =
       TestDevice::Call::GetCurrentDevicePowerState(zx::unowned(child2_device_handle));
   ASSERT_OK(child_dev_suspend_response.status());
@@ -1039,7 +1039,7 @@ TEST_F(PowerTestCase, SystemSuspend_SuspendReasonReboot) {
   const auto &suspend_response = suspend_result.value();
   ASSERT_OK(suspend_response.status);
 
-  // Verify the child's DdkSuspendNew routine gets called.
+  // Verify the child's DdkSuspend routine gets called.
   auto child_dev_suspend_response =
       TestDevice::Call::GetCurrentDevicePowerState(zx::unowned(child2_device_handle));
   ASSERT_OK(child_dev_suspend_response.status());
@@ -1120,7 +1120,7 @@ TEST_F(PowerTestCase, SystemSuspend_SuspendReasonRebootRecovery) {
   const auto &suspend_response = suspend_result.value();
   ASSERT_OK(suspend_response.status);
 
-  // Verify the child's DdkSuspendNew routine gets called.
+  // Verify the child's DdkSuspend routine gets called.
   auto child_dev_suspend_response =
       TestDevice::Call::GetCurrentDevicePowerState(zx::unowned(child2_device_handle));
   ASSERT_OK(child_dev_suspend_response.status());

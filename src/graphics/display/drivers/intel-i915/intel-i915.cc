@@ -1968,7 +1968,7 @@ zx_status_t Controller::DdkGetProtocol(uint32_t proto_id, void* out) {
   return ZX_OK;
 }
 
-void Controller::DdkSuspendNew(ddk::SuspendTxn txn) {
+void Controller::DdkSuspend(ddk::SuspendTxn txn) {
   // TODO(fxb/43204): Implement the suspend hook based on suspendtxn
   if (txn.suspend_reason() == DEVICE_SUSPEND_REASON_MEXEC) {
     uint32_t format, width, height, stride;
@@ -2029,7 +2029,7 @@ void Controller::DdkSuspendNew(ddk::SuspendTxn txn) {
   txn.Reply(ZX_OK, txn.requested_state());
 }
 
-void Controller::DdkResumeNew(ddk::ResumeTxn txn) {
+void Controller::DdkResume(ddk::ResumeTxn txn) {
   fbl::AutoLock lock(&display_lock_);
   BringUpDisplayEngine(true);
 

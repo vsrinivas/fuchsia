@@ -156,7 +156,7 @@ zx_status_t BlockDevice::Suspend() {
   return operation.Execute(this);
 }
 
-void BlockDevice::DdkSuspendNew(ddk::SuspendTxn txn) {
+void BlockDevice::DdkSuspend(ddk::SuspendTxn txn) {
   zxlogf(INFO, "FTL: Suspend");
   zx_status_t status = Suspend();
   txn.Reply(status, txn.requested_state());

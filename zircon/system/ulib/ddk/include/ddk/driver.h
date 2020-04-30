@@ -242,16 +242,16 @@ void device_async_remove(zx_device_t* device);
 // This does not necessarily need to be called from within the |unbind| hook.
 void device_unbind_reply(zx_device_t* device);
 
-// This is used to signal completion of the device's |suspend_new| hook.
-// Need not necessarily need to be called from within the |suspend_new| hook.
+// This is used to signal completion of the device's |suspend| hook.
+// Need not necessarily need to be called from within the |suspend| hook.
 // |status| is the status of the suspend.
 // If |status| is success, the |out_state| is same as the requested_state that is
-// sent to the suspend_new hook. If |status| is failure, the |out_state| is the
+// sent to the suspend hook. If |status| is failure, the |out_state| is the
 // state that the device can go into.
 void device_suspend_reply(zx_device_t* device, zx_status_t status, uint8_t out_state);
 
-// This is used to signal completion of the device's |resume_new| hook.
-// Need not necessarily need to be called from within the |resume_new| hook.
+// This is used to signal completion of the device's |resume| hook.
+// Need not necessarily need to be called from within the |resume| hook.
 // |status| is the status of the resume operation.
 // If |status| is success, the |out_perf_state| has the working performance state
 // that the device is in currently.

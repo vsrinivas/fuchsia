@@ -55,7 +55,7 @@ class HardwareInterface {
 };
 
 class Device;
-using DeviceType = ddk::Device<Device, ddk::UnbindableNew, ddk::SuspendableNew>;
+using DeviceType = ddk::Device<Device, ddk::UnbindableNew, ddk::Suspendable>;
 
 class Device : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_TPM> {
  public:
@@ -77,7 +77,7 @@ class Device : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_TPM> {
   // DDK methods
   void DdkRelease();
   void DdkUnbindNew(ddk::UnbindTxn txn);
-  void DdkSuspendNew(ddk::SuspendTxn txn);
+  void DdkSuspend(ddk::SuspendTxn txn);
 
   zx_status_t Init();
   zx_status_t Suspend(uint8_t requested_state, bool wakeup_enabled, uint8_t suspend_reason,

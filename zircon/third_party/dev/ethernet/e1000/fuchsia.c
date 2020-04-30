@@ -249,8 +249,8 @@ static void e1000_release(void* ctx) {
 
 static zx_protocol_device_t e1000_device_ops = {
     .version = DEVICE_OPS_VERSION,
-    .suspend_new = e1000_suspend,
-    .resume_new = e1000_resume,
+    .suspend = e1000_suspend,
+    .resume = e1000_resume,
     .release = e1000_release,
 };
 

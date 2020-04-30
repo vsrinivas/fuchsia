@@ -266,15 +266,15 @@ constexpr void CheckMessageable() {
       "'zx_status_t DdkMessage(fidl_msg_t*, fidl_txn_t*)'.");
 }
 
-DECLARE_HAS_MEMBER_FN(has_ddk_suspend_new, DdkSuspendNew);
+DECLARE_HAS_MEMBER_FN(has_ddk_suspend, DdkSuspend);
 
 template <typename D>
-constexpr void CheckSuspendableNew() {
-  static_assert(has_ddk_suspend_new<D>::value,
-                "SuspendableNew classes must implement DdkSuspendNew");
-  static_assert(std::is_same<decltype(&D::DdkSuspendNew), void (D::*)(SuspendTxn txn)>::value,
-                "DdkSuspendNew must be a public non-static member function with signature "
-                "'zx_status_t DdkSuspendNew(SuspendTxn txn)'.");
+constexpr void CheckSuspendable() {
+  static_assert(has_ddk_suspend<D>::value,
+                "Suspendable classes must implement DdkSuspend");
+  static_assert(std::is_same<decltype(&D::DdkSuspend), void (D::*)(SuspendTxn txn)>::value,
+                "DdkSuspend must be a public non-static member function with signature "
+                "'zx_status_t DdkSuspend(SuspendTxn txn)'.");
 }
 
 DECLARE_HAS_MEMBER_FN(has_ddk_auto_configure_suspend, DdkConfigureAutoSuspend);
@@ -289,14 +289,14 @@ constexpr void CheckConfigureAutoSuspend() {
       "'zx_status_t DdkConfigureAutoSuspend(bool, uint8_t)'.");
 }
 
-DECLARE_HAS_MEMBER_FN(has_ddk_resume_new, DdkResumeNew);
+DECLARE_HAS_MEMBER_FN(has_ddk_resume, DdkResume);
 
 template <typename D>
-constexpr void CheckResumableNew() {
-  static_assert(has_ddk_resume_new<D>::value, "ResumableNew classes must implement DdkResumeNew");
-  static_assert(std::is_same<decltype(&D::DdkResumeNew), void (D::*)(ResumeTxn txn)>::value,
-                "DdkResumeNew must be a public non-static member function with signature "
-                "'void DdkResumeNew(ResumeTxn)'.");
+constexpr void CheckResumable() {
+  static_assert(has_ddk_resume<D>::value, "Resumable classes must implement DdkResume");
+  static_assert(std::is_same<decltype(&D::DdkResume), void (D::*)(ResumeTxn txn)>::value,
+                "DdkResume must be a public non-static member function with signature "
+                "'void DdkResume(ResumeTxn)'.");
 }
 
 DECLARE_HAS_MEMBER_FN(has_ddk_set_performance_state, DdkSetPerformanceState);

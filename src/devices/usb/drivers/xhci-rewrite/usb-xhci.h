@@ -67,7 +67,7 @@ static inline void InvalidatePageCache(void* addr, uint32_t options) {
 // This is the main class for the USB XHCI host controller driver.
 // Refer to 3.1 for general architectural information on xHCI.
 class UsbXhci;
-using UsbXhciType = ddk::Device<UsbXhci, ddk::SuspendableNew, ddk::UnbindableNew>;
+using UsbXhciType = ddk::Device<UsbXhci, ddk::Suspendable, ddk::UnbindableNew>;
 class UsbXhci : public UsbXhciType, public ddk::UsbHciProtocol<UsbXhci, ddk::base_protocol> {
  public:
   explicit UsbXhci(zx_device_t* parent)
@@ -91,7 +91,7 @@ class UsbXhci : public UsbXhciType, public ddk::UsbHciProtocol<UsbXhci, ddk::bas
   // be recovered from.
   void Shutdown(zx_status_t status);
   // Device protocol implementation.
-  void DdkSuspendNew(ddk::SuspendTxn txn);
+  void DdkSuspend(ddk::SuspendTxn txn);
   void DdkUnbindNew(ddk::UnbindTxn txn);
 
   void DdkRelease();

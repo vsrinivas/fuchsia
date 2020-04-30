@@ -30,7 +30,7 @@ static constexpr const char* kDeviceName = "aml-securemem";
 class AmlogicSecureMemDevice;
 
 using AmlogicSecureMemDeviceBase =
-    ddk::Device<AmlogicSecureMemDevice, ddk::Messageable, ddk::SuspendableNew>;
+    ddk::Device<AmlogicSecureMemDevice, ddk::Messageable, ddk::Suspendable>;
 
 class AmlogicSecureMemDevice : public AmlogicSecureMemDeviceBase,
                                public ::llcpp::fuchsia::hardware::securemem::Device::Interface,
@@ -42,7 +42,7 @@ class AmlogicSecureMemDevice : public AmlogicSecureMemDeviceBase,
 
   zx_status_t DdkOpen(zx_device_t** out_dev, uint32_t flags);
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* parent);
-  void DdkSuspendNew(ddk::SuspendTxn txn);
+  void DdkSuspend(ddk::SuspendTxn txn);
   void DdkRelease() { delete this; }
 
   // LLCPP interface implementations

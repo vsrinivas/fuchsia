@@ -214,7 +214,7 @@ TEST(SimpleAudioTest, DdkLifeCycleTest) {
   auto server = audio::SimpleAudioStream::Create<MockSimpleAudio>(fake_ddk::kFakeParent);
   ASSERT_NOT_NULL(server);
   ddk::SuspendTxn txn(server->zxdev(), 0, false, DEVICE_SUSPEND_REASON_SELECTIVE_SUSPEND);
-  server->DdkSuspendNew(std::move(txn));
+  server->DdkSuspend(std::move(txn));
   EXPECT_FALSE(tester.IsRemoved());
   server->DdkUnbindDeprecated();
   EXPECT_TRUE(tester.Ok());

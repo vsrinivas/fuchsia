@@ -280,8 +280,8 @@ typedef struct zx_protocol_device {
   // thread.
   zx_off_t (*get_size)(void* ctx);
 
-  //@ ## suspend_new
-  // The suspend_new hook is used for suspending a device from a working to
+  //@ ## suspend
+  // The suspend hook is used for suspending a device from a working to
   // non-working low power state(sleep state), or from a non-working sleep state
   // to a deeper sleep state.
   //
@@ -300,13 +300,10 @@ typedef struct zx_protocol_device {
   //
   // This hook assumes that the drivers are aware of their current state. This hook will only
   // be executed on the devhost's main thread.
-  //
-  // TODO(ravoorir): Remove the old suspend when all the drivers are moved to
-  // new suspend and rename suspend_new to suspend.
-  void (*suspend_new)(void* ctx, uint8_t requested_state, bool enable_wake, uint8_t suspend_reason);
+  void (*suspend)(void* ctx, uint8_t requested_state, bool enable_wake, uint8_t suspend_reason);
 
-  //@ ## resume_new
-  // The resume_new hook is used for resuming a device from a non-working sleep
+  //@ ## resume
+  // The resume hook is used for resuming a device from a non-working sleep
   // state to a working state. It requires reinitializing the device completely
   // or partially depending on the sleep state that device was in, when the
   // resume call was made.
@@ -325,7 +322,7 @@ typedef struct zx_protocol_device {
   // This hook assumes that the drivers are aware of their current state.
   //
   // This hook will only be executed on the devhost's main thread.
-  void (*resume_new)(void* ctx, uint32_t requested_state);
+  void (*resume)(void* ctx, uint32_t requested_state);
 
   //@ ## set_performance_state
   // The set_performance_state hook is used for transitioning the performant state of

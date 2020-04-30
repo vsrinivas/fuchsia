@@ -27,7 +27,7 @@
 namespace dwc2 {
 
 class Dwc2;
-using Dwc2Type = ddk::Device<Dwc2, ddk::UnbindableDeprecated, ddk::SuspendableNew>;
+using Dwc2Type = ddk::Device<Dwc2, ddk::UnbindableDeprecated, ddk::Suspendable>;
 
 class Dwc2 : public Dwc2Type, public ddk::UsbDciProtocol<Dwc2, ddk::base_protocol> {
  public:
@@ -40,7 +40,7 @@ class Dwc2 : public Dwc2Type, public ddk::UsbDciProtocol<Dwc2, ddk::base_protoco
   // Device protocol implementation.
   void DdkUnbindDeprecated();
   void DdkRelease();
-  void DdkSuspendNew(ddk::SuspendTxn txn);
+  void DdkSuspend(ddk::SuspendTxn txn);
 
   // USB DCI protocol implementation.
   void UsbDciRequestQueue(usb_request_t* req, const usb_request_complete_t* cb);

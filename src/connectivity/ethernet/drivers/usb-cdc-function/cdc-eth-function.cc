@@ -728,7 +728,7 @@ static zx_protocol_device_t usb_cdc_proto = []() {
   dev.version = DEVICE_OPS_VERSION;
   dev.unbind = usb_cdc_unbind;
   dev.release = usb_cdc_release;
-  dev.suspend_new = usb_cdc_suspend;
+  dev.suspend = usb_cdc_suspend;
   return dev;
 }();
 

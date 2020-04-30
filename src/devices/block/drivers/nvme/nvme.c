@@ -628,8 +628,8 @@ static zx_protocol_device_t device_ops = {
 
     .get_size = nvme_get_size,
 
-    .suspend_new = nvme_suspend,
-    .resume_new = nvme_resume,
+    .suspend = nvme_suspend,
+    .resume = nvme_resume,
     .release = nvme_release,
 };
 

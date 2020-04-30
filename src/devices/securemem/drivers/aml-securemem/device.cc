@@ -115,7 +115,7 @@ zx_status_t AmlogicSecureMemDevice::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn)
 // TODO(36888): Determine if we only ever use mexec to reboot from zedboot into a netboot(ed) image.
 // Iff so, we could avoid some complexity here by not loading aml-securemem in zedboot, and not
 // handling suspend(mexec) here, and not having UnregisterSecureMem().
-void AmlogicSecureMemDevice::DdkSuspendNew(ddk::SuspendTxn txn) {
+void AmlogicSecureMemDevice::DdkSuspend(ddk::SuspendTxn txn) {
   LOG(TRACE, "aml-securemem: begin DdkSuspend() - Suspend Reason: %d", txn.suspend_reason());
 
   if ((txn.suspend_reason() & DEVICE_MASK_SUSPEND_REASON) != DEVICE_SUSPEND_REASON_MEXEC) {

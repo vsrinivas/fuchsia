@@ -320,7 +320,7 @@ static zx_protocol_device_t acpi_battery_device_proto = [] {
   zx_protocol_device_t ops = {};
   ops.version = DEVICE_OPS_VERSION;
   ops.release = acpi_battery_release;
-  ops.suspend_new = acpi_battery_suspend;
+  ops.suspend = acpi_battery_suspend;
   ops.message = fuchsia_battery_message_instance;
   return ops;
 }();

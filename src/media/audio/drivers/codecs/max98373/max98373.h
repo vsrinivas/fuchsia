@@ -24,7 +24,7 @@
 namespace audio {
 
 class Max98373;
-using DeviceType = ddk::Device<Max98373, ddk::UnbindableNew, ddk::SuspendableNew>;
+using DeviceType = ddk::Device<Max98373, ddk::UnbindableNew, ddk::Suspendable>;
 
 class Max98373 : public DeviceType,  // Not final for unit tests.
                  public ddk::CodecProtocol<Max98373, ddk::base_protocol> {
@@ -42,7 +42,7 @@ class Max98373 : public DeviceType,  // Not final for unit tests.
     txn.Reply();
   }
 
-  void DdkSuspendNew(ddk::SuspendTxn txn) {
+  void DdkSuspend(ddk::SuspendTxn txn) {
     // TODO(fxb/42613): Implement proper power management based on the requested state.
     Shutdown();
     txn.Reply(ZX_OK, txn.requested_state());

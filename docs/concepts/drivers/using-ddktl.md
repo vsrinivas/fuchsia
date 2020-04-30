@@ -26,8 +26,8 @@ Mixin class            | Function             | Purpose
 `ddk::Closable`           | **DdkClose()**       | client's **close()**
 `ddk::UnbindableNew`      | **DdkUnbindNew()**   | called when this device is being removed
 `ddk::Messageable`        | **DdkMessage()**     | for FIDL IPC messages
-`ddk::SuspendableNew`     | **DdkSuspendNew()**  | to suspend device
-`ddk::ResumableNew`       | **DdkResumeNew()**   | to resume device
+`ddk::Suspendable`        | **DdkSuspend()**     | to suspend device
+`ddk::Resumable`          | **DdkResume()**      | to resume device
 `ddk::PerformanceTunable` | **DdkSetPerformanceState()**   | to transition the performant state
 `ddk::AutoSuspendable`    | **DdkConfigureAutoSuspend()**   | to configure whether a driver can auto suspend the device
 `ddk::Rxrpcable`          | **DdkRxrpc()**       | remote messages for bus devices
@@ -36,7 +36,6 @@ For completeness, the following mixins are also provided, but have been deprecat
 
 Deprecated Mixin class      | Function             | Purpose
 ----------------------------|----------------------|------------------------------
-`ddk::Resumable`            | **DdkResume()**      | to resume device
 `ddk::Readable`             | **DdkRead()**        | client's **read()**
 `ddk::Writable`             | **DdkWrite()**       | client's **write()**
 `ddk::GetSizable`           | **DdkGetSize()**     | returns size of device

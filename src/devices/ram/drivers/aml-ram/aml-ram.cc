@@ -176,7 +176,7 @@ AmlRam::AmlRam(zx_device_t* parent, ddk::MmioBuffer mmio)
   }
 }
 
-void AmlRam::DdkSuspendNew(ddk::SuspendTxn txn) {
+void AmlRam::DdkSuspend(ddk::SuspendTxn txn) {
   Shutdown();
   txn.Reply(ZX_OK, txn.requested_state());
 }

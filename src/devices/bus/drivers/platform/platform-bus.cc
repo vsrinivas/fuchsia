@@ -429,7 +429,7 @@ static zx_protocol_device_t sys_device_proto = []() {
   zx_protocol_device_t result = {};
 
   result.version = DEVICE_OPS_VERSION;
-  result.suspend_new = sys_device_suspend;
+  result.suspend = sys_device_suspend;
   result.release = sys_device_release;
   return result;
 }();

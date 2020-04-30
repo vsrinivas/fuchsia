@@ -69,16 +69,16 @@ BEGIN_SUCCESS_CASE(Messageable)
 zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) { return ZX_OK; }
 END_SUCCESS_CASE
 
-BEGIN_SUCCESS_CASE(SuspendableNew)
+BEGIN_SUCCESS_CASE(Suspendable)
 // As the txn does not contain a valid device pointer, the destructor won't throw an error
 // if we don't reply.
-void DdkSuspendNew(ddk::SuspendTxn txn) {}
+void DdkSuspend(ddk::SuspendTxn txn) {}
 END_SUCCESS_CASE
 
-BEGIN_SUCCESS_CASE(ResumableNew)
+BEGIN_SUCCESS_CASE(Resumable)
 // As the txn does not contain a valid device pointer, the destructor won't throw an error
 // if we don't reply.
-void DdkResumeNew(ddk::ResumeTxn txn) {}
+void DdkResume(ddk::ResumeTxn txn) {}
 END_SUCCESS_CASE
 
 BEGIN_SUCCESS_CASE(Rxrpcable)
@@ -138,9 +138,9 @@ struct TestDispatch : public ddk::FullDevice<TestDispatch> {
     return 0;
   }
 
-  void DdkSuspendNew(ddk::SuspendTxn txn) { suspend_called = true; }
+  void DdkSuspend(ddk::SuspendTxn txn) { suspend_called = true; }
 
-  void DdkResumeNew(ddk::ResumeTxn txn) { resume_called = true; }
+  void DdkResume(ddk::ResumeTxn txn) { resume_called = true; }
 
   zx_status_t DdkRxrpc(zx_handle_t channel) {
     rxrpc_called = true;
@@ -181,8 +181,8 @@ static bool test_dispatch() {
   EXPECT_EQ(ZX_OK, ops->read(ctx, nullptr, 0, 0, nullptr), "");
   EXPECT_EQ(ZX_OK, ops->write(ctx, nullptr, 0, 0, nullptr), "");
   EXPECT_EQ(0, ops->get_size(ctx), "");
-  ops->suspend_new(ctx, 2, false, 0);
-  ops->resume_new(ctx, DEV_POWER_STATE_D0);
+  ops->suspend(ctx, 2, false, 0);
+  ops->resume(ctx, DEV_POWER_STATE_D0);
   EXPECT_EQ(ZX_OK, ops->rxrpc(ctx, 0), "");
 
   EXPECT_TRUE(dev->get_protocol_called, "");
@@ -224,7 +224,7 @@ DEFINE_FAIL_CASE(Readable)
 DEFINE_FAIL_CASE(Writable)
 DEFINE_FAIL_CASE(IotxnQueueable)
 DEFINE_FAIL_CASE(GetSizable)
-DEFINE_FAIL_CASE(SuspendableNew)
+DEFINE_FAIL_CASE(Suspendable)
 DEFINE_FAIL_CASE(Resumable)
 DEFINE_FAIL_CASE(Rxrpcable)
 
@@ -287,8 +287,8 @@ RUN_NAMED_TEST("ddk::UnbindableNew", do_test<TestUnbindableNew>);
 RUN_NAMED_TEST("ddk::Readable", do_test<TestReadable>);
 RUN_NAMED_TEST("ddk::Writable", do_test<TestWritable>);
 RUN_NAMED_TEST("ddk::GetSizable", do_test<TestGetSizable>);
-RUN_NAMED_TEST("ddk::SuspendableNew", do_test<TestSuspendableNew>);
-RUN_NAMED_TEST("ddk::ResumableNew", do_test<TestResumableNew>);
+RUN_NAMED_TEST("ddk::Suspendable", do_test<TestSuspendable>);
+RUN_NAMED_TEST("ddk::Resumable", do_test<TestResumable>);
 RUN_NAMED_TEST("ddk::Rxrpcable", do_test<TestRxrpcable>);
 
 RUN_NAMED_TEST("Method dispatch test", test_dispatch);

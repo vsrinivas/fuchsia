@@ -24,7 +24,7 @@
 namespace audio {
 
 class Tas5805;
-using DeviceType = ddk::Device<Tas5805, ddk::UnbindableNew, ddk::SuspendableNew>;
+using DeviceType = ddk::Device<Tas5805, ddk::UnbindableNew, ddk::Suspendable>;
 
 class Tas5805 : public DeviceType,  // Not final for unit tests.
                 public ddk::CodecProtocol<Tas5805, ddk::base_protocol> {
@@ -41,7 +41,7 @@ class Tas5805 : public DeviceType,  // Not final for unit tests.
     txn.Reply();
   }
 
-  void DdkSuspendNew(ddk::SuspendTxn txn) {
+  void DdkSuspend(ddk::SuspendTxn txn) {
     // TODO(fxb/42613): Implement proper power management based on the requested state.
     Shutdown();
     txn.Reply(ZX_OK, txn.requested_state());

@@ -97,8 +97,8 @@ const zx_protocol_device_t kDeviceDefaultOps = []() {
   ops.read = default_read;
   ops.write = default_write;
   ops.get_size = default_get_size;
-  ops.suspend_new = default_suspend;
-  ops.resume_new = default_resume;
+  ops.suspend = default_suspend;
+  ops.resume = default_resume;
   ops.rxrpc = default_rxrpc;
   ops.message = default_message;
   ops.set_performance_state = default_set_performance_state;
@@ -116,9 +116,9 @@ static zx_protocol_device_t device_invalid_ops = []() {
   ops.open = +[](void* ctx, zx_device_t**, uint32_t) -> zx_status_t { device_invalid_fatal(ctx); };
   ops.close = +[](void* ctx, uint32_t) -> zx_status_t { device_invalid_fatal(ctx); };
   ops.unbind = +[](void* ctx) { device_invalid_fatal(ctx); };
-  ops.suspend_new = +[](void* ctx, uint8_t requested_state, bool enable_wake,
+  ops.suspend = +[](void* ctx, uint8_t requested_state, bool enable_wake,
                         uint8_t suspend_reason) { device_invalid_fatal(ctx); };
-  ops.resume_new = +[](void* ctx, uint32_t) { device_invalid_fatal(ctx); };
+  ops.resume = +[](void* ctx, uint32_t) { device_invalid_fatal(ctx); };
   ops.release = +[](void* ctx) { device_invalid_fatal(ctx); };
   ops.read =
       +[](void* ctx, void*, size_t, size_t, size_t*) -> zx_status_t { device_invalid_fatal(ctx); };
@@ -744,7 +744,7 @@ void DriverHostContext::DeviceSystemSuspend(const fbl::RefPtr<zx_device>& dev, u
   }
   zx_status_t status = ZX_ERR_NOT_SUPPORTED;
   // If new suspend hook is implemented, prefer that.
-  if (dev->ops->suspend_new) {
+  if (dev->ops->suspend) {
     llcpp::fuchsia::device::SystemPowerStateInfo new_state_info;
     uint8_t suspend_reason = DEVICE_SUSPEND_REASON_SELECTIVE_SUSPEND;
 
@@ -754,7 +754,7 @@ void DriverHostContext::DeviceSystemSuspend(const fbl::RefPtr<zx_device>& dev, u
       enum_lock_acquire();
       {
         api_lock_.Release();
-        dev->ops->suspend_new(dev->ctx, static_cast<uint8_t>(new_state_info.dev_state),
+        dev->ops->suspend(dev->ctx, static_cast<uint8_t>(new_state_info.dev_state),
                               new_state_info.wakeup_enable, suspend_reason);
         api_lock_.Acquire();
       }
@@ -781,14 +781,14 @@ void DriverHostContext::DeviceSystemResume(const fbl::RefPtr<zx_device>& dev,
 
   zx_status_t status = ZX_ERR_NOT_SUPPORTED;
   // If new resume hook is implemented, prefer that.
-  if (dev->ops->resume_new) {
+  if (dev->ops->resume) {
     enum_lock_acquire();
     {
       api_lock_.Release();
       auto& sys_power_states = dev->GetSystemPowerStateMapping();
       uint32_t requested_perf_state =
           internal::get_perf_state(dev, sys_power_states[target_system_state].performance_state);
-      dev->ops->resume_new(dev->ctx, requested_perf_state);
+      dev->ops->resume(dev->ctx, requested_perf_state);
       api_lock_.Acquire();
     }
     enum_lock_release();
@@ -817,8 +817,8 @@ void DriverHostContext::DeviceSuspendNew(const fbl::RefPtr<zx_device>& dev,
     return;
   }
 
-  if (dev->ops->suspend_new) {
-    dev->ops->suspend_new(dev->ctx, static_cast<uint8_t>(requested_state),
+  if (dev->ops->suspend) {
+    dev->ops->suspend(dev->ctx, static_cast<uint8_t>(requested_state),
                           DEVICE_SUSPEND_REASON_SELECTIVE_SUSPEND, false /* wake_configured */);
     return;
   }
@@ -854,10 +854,10 @@ void DriverHostContext::DeviceResumeNew(const fbl::RefPtr<zx_device>& dev) {
     return;
   }
   // If new resume hook is implemented, prefer that.
-  if (dev->ops->resume_new) {
+  if (dev->ops->resume) {
     uint32_t requested_perf_state =
         internal::get_perf_state(dev, llcpp::fuchsia::device::DEVICE_PERFORMANCE_STATE_P0);
-    dev->ops->resume_new(dev->ctx, requested_perf_state);
+    dev->ops->resume(dev->ctx, requested_perf_state);
     return;
   }
   dev->resume_cb(ZX_ERR_NOT_SUPPORTED,

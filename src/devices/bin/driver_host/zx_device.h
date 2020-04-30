@@ -133,8 +133,8 @@ struct zx_device : fbl::RefCountedUpgradeable<zx_device>, fbl::Recyclable<zx_dev
 
   void SuspendNewOp(uint8_t requested_state, bool enable_wake, uint8_t suspend_reason) {
     TraceLabelBuffer trace_label;
-    TRACE_DURATION("driver_host:driver-hooks", get_trace_label("suspend_new", &trace_label));
-    Dispatch(ops->suspend_new, requested_state, enable_wake, suspend_reason);
+    TRACE_DURATION("driver_host:driver-hooks", get_trace_label("suspend", &trace_label));
+    Dispatch(ops->suspend, requested_state, enable_wake, suspend_reason);
   }
 
   zx_status_t SetPerformanceStateOp(uint32_t requested_state, uint32_t* out_state) {
@@ -152,8 +152,8 @@ struct zx_device : fbl::RefCountedUpgradeable<zx_device>, fbl::Recyclable<zx_dev
 
   void ResumeNewOp(uint32_t requested_state) {
     TraceLabelBuffer trace_label;
-    TRACE_DURATION("driver_host:driver-hooks", get_trace_label("resume_new", &trace_label));
-    Dispatch(ops->resume_new, requested_state);
+    TRACE_DURATION("driver_host:driver-hooks", get_trace_label("resume", &trace_label));
+    Dispatch(ops->resume, requested_state);
   }
 
   zx_status_t ReadOp(void* buf, size_t count, zx_off_t off, size_t* actual) {

@@ -19,7 +19,7 @@ namespace amlogic_ram {
 // to query performance counters. For example effective DDR bandwith.
 
 class AmlRam;
-using DeviceType = ddk::Device<AmlRam, ddk::SuspendableNew, ddk::Messageable>;
+using DeviceType = ddk::Device<AmlRam, ddk::Suspendable, ddk::Messageable>;
 
 class AmlRam : public DeviceType {
  public:
@@ -29,7 +29,7 @@ class AmlRam : public DeviceType {
 
   explicit AmlRam(zx_device_t* parent, ddk::MmioBuffer mmio);
   void DdkRelease();
-  void DdkSuspendNew(ddk::SuspendTxn txn);
+  void DdkSuspend(ddk::SuspendTxn txn);
 
   // Implements ddk::Messageable
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);

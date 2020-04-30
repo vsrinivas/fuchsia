@@ -459,7 +459,7 @@ static zx_protocol_device_t acpi_ec_device_proto = [] {
   zx_protocol_device_t ops = {};
   ops.version = DEVICE_OPS_VERSION;
   ops.release = acpi_ec_release;
-  ops.suspend_new = acpi_ec_suspend;
+  ops.suspend = acpi_ec_suspend;
   return ops;
 }();
 

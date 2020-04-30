@@ -60,9 +60,9 @@
 // | ddk::Messageable        | zx_status_t DdkMessage(fidl_msg_t* msg,            |
 // |                         |                        fidl_txn_t* txn)            |
 // |                         |                                                    |
-// | ddk::SuspendableNew     | void DdkSuspendNew(ddk::SuspendTxn txn)            |
+// | ddk::Suspendable        | void DdkSuspend(ddk::SuspendTxn txn)               |
 // |                         |                                                    |
-// | ddk::ResumableNew       | zx_status_t DdkResumeNew(uint8_t requested_state,  |
+// | ddk::Resumable          | zx_status_t DdkResume(uint8_t requested_state,     |
 // |                         |                          uint8_t* out_state)       |
 // |                         |                                                    |
 // | ddk::Rxrpcable          | zx_status_t DdkRxrpc(zx_handle_t channel)          |
@@ -81,8 +81,6 @@
 // |                          |                                                    |
 // | ddk::GetSizable          | zx_off_t DdkGetSize()                              |
 // |                          |                                                    |
-// | ddk::Resumable           | zx_status_t DdkResume(uint32_t flags)              |
-// |                          |                                                    |
 // | ddk::UnbindableDeprecated| void DdkUnbindDeprecated()                         |
 // |                          |                                                    |
 // +--------------------------+----------------------------------------------------+
@@ -97,7 +95,7 @@
 // // Define our device type using a type alias.
 // class MyDevice;
 // using DeviceType = ddk::Device<MyDevice, ddk::Openable, ddk::Closable,
-//                                          ddk::Readable, ddk::Unbindable, ddk::SuspendableNew>;
+//                                          ddk::Readable, ddk::Unbindable, ddk::Suspendable>;
 //
 // class MyDevice : public DeviceType {
 //   public:
@@ -115,7 +113,7 @@
 //     zx_status_t DdkClose(uint32_t flags);
 //     zx_status_t DdkRead(void* buf, size_t count, zx_off_t off, size_t* actual);
 //     void DdkUnbindNew(ddk::UnbindTxn txn);
-//     void DdkSuspendNew(ddk::SuspendTxn txn);
+//     void DdkSuspend(ddk::SuspendTxn txn);
 //     void DdkRelease();
 // };
 //
@@ -288,11 +286,11 @@ class Messageable : public base_mixin {
 };
 
 template <typename D>
-class SuspendableNew : public base_mixin {
+class Suspendable : public base_mixin {
  protected:
   static constexpr void InitOp(zx_protocol_device_t* proto) {
-    internal::CheckSuspendableNew<D>();
-    proto->suspend_new = Suspend_New;
+    internal::CheckSuspendable<D>();
+    proto->suspend = Suspend_New;
   }
 
  private:
@@ -300,7 +298,7 @@ class SuspendableNew : public base_mixin {
                           uint8_t suspend_reason) {
     auto dev = static_cast<D*>(ctx);
     SuspendTxn txn(dev->zxdev(), requested_state, enable_wake, suspend_reason);
-    static_cast<D*>(ctx)->DdkSuspendNew(std::move(txn));
+    static_cast<D*>(ctx)->DdkSuspend(std::move(txn));
   }
 };
 
@@ -334,18 +332,18 @@ class AutoSuspendable : public base_mixin {
 };
 
 template <typename D>
-class ResumableNew : public base_mixin {
+class Resumable : public base_mixin {
  protected:
   static constexpr void InitOp(zx_protocol_device_t* proto) {
-    internal::CheckResumableNew<D>();
-    proto->resume_new = Resume_New;
+    internal::CheckResumable<D>();
+    proto->resume = Resume_New;
   }
 
  private:
   static void Resume_New(void* ctx, uint32_t requested_state) {
     auto dev = static_cast<D*>(ctx);
     ResumeTxn txn(dev->zxdev(), requested_state);
-    static_cast<D*>(ctx)->DdkResumeNew(std::move(txn));
+    static_cast<D*>(ctx)->DdkResume(std::move(txn));
   }
 };
 
@@ -554,7 +552,7 @@ class Device : public ::ddk::internal::base_device<D, Mixins...> {
 // zx_protocol_device_t methods.
 template <class D>
 using FullDevice = Device<D, GetProtocolable, Initializable, Openable, Closable, UnbindableNew,
-                          Readable, Writable, GetSizable, SuspendableNew, ResumableNew, Rxrpcable>;
+                          Readable, Writable, GetSizable, Suspendable, Resumable, Rxrpcable>;
 
 }  // namespace ddk
 

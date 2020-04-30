@@ -47,7 +47,7 @@ struct FtlOp {
 
 class BlockDevice;
 using DeviceType = ddk::Device<BlockDevice, ddk::GetSizable, ddk::UnbindableNew, ddk::Messageable,
-                               ddk::SuspendableNew, ddk::ResumableNew, ddk::GetProtocolable>;
+                               ddk::Suspendable, ddk::Resumable, ddk::GetProtocolable>;
 
 // Provides the bulk of the functionality for a FTL-backed block device.
 class BlockDevice : public DeviceType,
@@ -69,8 +69,8 @@ class BlockDevice : public DeviceType,
   zx_off_t DdkGetSize() { return params_.GetSize(); }
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
   zx_status_t Suspend();
-  void DdkSuspendNew(ddk::SuspendTxn txn);
-  void DdkResumeNew(ddk::ResumeTxn txn) {
+  void DdkSuspend(ddk::SuspendTxn txn);
+  void DdkResume(ddk::ResumeTxn txn) {
     txn.Reply(ZX_OK, DEV_POWER_STATE_D0, txn.requested_state());
   }
   zx_status_t DdkGetProtocol(uint32_t proto_id, void* out_protocol);

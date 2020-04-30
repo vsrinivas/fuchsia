@@ -567,7 +567,7 @@ TRBPromise UsbXhci::USBRequestToTRBPromise(fit::promise<OwnedRequest, void> prom
       .box();
 }
 
-void UsbXhci::DdkSuspendNew(ddk::SuspendTxn txn) {
+void UsbXhci::DdkSuspend(ddk::SuspendTxn txn) {
   sync_completion_wait(&init_complete_, ZX_TIME_INFINITE);
   if (!mmio_.has_value()) {
     txn.Reply(ZX_ERR_BAD_STATE, 0);

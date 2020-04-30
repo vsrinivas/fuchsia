@@ -171,7 +171,7 @@ void SimpleAudioStream::DdkRelease() {
   auto thiz = fbl::ImportFromRawPtr(this);
 }
 
-void SimpleAudioStream::DdkSuspendNew(ddk::SuspendTxn txn) {
+void SimpleAudioStream::DdkSuspend(ddk::SuspendTxn txn) {
   // TODO(fxb/42613): Implement proper power management based on the requested state.
   Shutdown();
   txn.Reply(ZX_OK, txn.requested_state());

@@ -21,7 +21,7 @@
 namespace usb_xhci {
 
 class UsbXhci;
-using UsbXhciType = ddk::Device<UsbXhci, ddk::SuspendableNew, ddk::UnbindableNew>;
+using UsbXhciType = ddk::Device<UsbXhci, ddk::Suspendable, ddk::UnbindableNew>;
 
 // This is the main class for the USB XHCI host controller driver.
 class UsbXhci : public UsbXhciType, public ddk::UsbHciProtocol<UsbXhci, ddk::base_protocol> {
@@ -32,7 +32,7 @@ class UsbXhci : public UsbXhciType, public ddk::UsbHciProtocol<UsbXhci, ddk::bas
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 
   // Device protocol implementation.
-  void DdkSuspendNew(ddk::SuspendTxn txn);
+  void DdkSuspend(ddk::SuspendTxn txn);
   void DdkUnbindNew(ddk::UnbindTxn txn);
   void DdkRelease();
 

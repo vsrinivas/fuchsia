@@ -56,7 +56,7 @@ struct SimpleAudioStreamProtocol : public ddk::internal::base_protocol {
 };
 
 class SimpleAudioStream;
-using SimpleAudioStreamBase = ddk::Device<SimpleAudioStream, ddk::Messageable, ddk::SuspendableNew,
+using SimpleAudioStreamBase = ddk::Device<SimpleAudioStream, ddk::Messageable, ddk::Suspendable,
                                           ddk::UnbindableDeprecated>;
 
 // The SimpleAudioStream server (thread compatible) implements Device::Interface and
@@ -112,7 +112,7 @@ class SimpleAudioStream : public SimpleAudioStreamBase,
   void DdkUnbindDeprecated();
   void DdkRelease();
 
-  void DdkSuspendNew(ddk::SuspendTxn txn);
+  void DdkSuspend(ddk::SuspendTxn txn);
 
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
     DdkTransaction transaction(txn);

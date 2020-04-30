@@ -954,7 +954,7 @@ void Dwc2::DdkUnbindDeprecated() {
 
 void Dwc2::DdkRelease() { delete this; }
 
-void Dwc2::DdkSuspendNew(ddk::SuspendTxn txn) {
+void Dwc2::DdkSuspend(ddk::SuspendTxn txn) {
   HandleSuspend();
   txn.Reply(ZX_OK, 0);
 }

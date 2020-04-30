@@ -224,8 +224,8 @@ static void eth_release(void* ctx) {
 
 static zx_protocol_device_t device_ops = {
     .version = DEVICE_OPS_VERSION,
-    .suspend_new = eth_suspend,
-    .resume_new = eth_resume,
+    .suspend = eth_suspend,
+    .resume = eth_resume,
     .release = eth_release,
 };
 
