@@ -8,6 +8,7 @@
 #include <fcntl.h>
 #include <inttypes.h>
 #include <lib/processargs/processargs.h>
+#include <lib/zircon-internal/align.h>
 #include <lib/zircon-internal/default_stack_size.h>
 #include <limits.h>
 #include <link.h>
@@ -25,7 +26,6 @@
 #include <sys/stat.h>
 #include <sys/uio.h>
 #include <unistd.h>
-#include <lib/zircon-internal/align.h>
 #include <zircon/dlfcn.h>
 #include <zircon/fidl.h>
 #include <zircon/process.h>
@@ -53,8 +53,9 @@ static void loader_svc_config(const char* config);
 
 #define VMO_NAME_DL_ALLOC "ld.so.1-internal-heap"
 #define VMO_NAME_UNKNOWN "<unknown ELF file>"
-#define VMO_NAME_PREFIX_BSS "bss:"
-#define VMO_NAME_PREFIX_DATA "data:"
+#define VMO_NAME_PREFIX_BSS "bssN:"
+#define VMO_NAME_PREFIX_DATA "dataN:"
+#define VMO_NAME_PREFIX_RELRO "relro:"
 
 #define KEEP_DSO_VMAR __has_feature(xray_instrument)
 
@@ -1004,6 +1005,7 @@ __NO_SAFESTACK NO_ASAN static zx_status_t map_library(zx_handle_t vmo, struct ds
   base = map - addr_min;
   dso->phdr = 0;
   dso->phnum = 0;
+  uint_fast16_t nbss = 0, ndata = 0;
   for (ph = ph0, i = eh->e_phnum; i; i--, ph = (void*)((char*)ph + eh->e_phentsize)) {
     if (ph->p_type != PT_LOAD)
       continue;
@@ -1037,6 +1039,8 @@ __NO_SAFESTACK NO_ASAN static zx_status_t map_library(zx_handle_t vmo, struct ds
           char name[ZX_MAX_NAME_LEN] = VMO_NAME_PREFIX_BSS;
           memcpy(&name[sizeof(VMO_NAME_PREFIX_BSS) - 1], vmo_name,
                  ZX_MAX_NAME_LEN - sizeof(VMO_NAME_PREFIX_BSS));
+          // Replace the N with a digit for how many bssN's there have been.
+          name[sizeof(VMO_NAME_PREFIX_BSS) - 3] = "0123456789abcdef"[nbss++];
           _zx_object_set_property(map_vmo, ZX_PROP_NAME, name, strlen(name));
         }
       } else {
@@ -1057,6 +1061,15 @@ __NO_SAFESTACK NO_ASAN static zx_status_t map_library(zx_handle_t vmo, struct ds
           char name[ZX_MAX_NAME_LEN] = VMO_NAME_PREFIX_DATA;
           memcpy(&name[sizeof(VMO_NAME_PREFIX_DATA) - 1], vmo_name,
                  ZX_MAX_NAME_LEN - sizeof(VMO_NAME_PREFIX_DATA));
+          if (ph->p_vaddr >= dso->relro_start && ph->p_vaddr + ph->p_memsz <= dso->relro_end) {
+            // Make "data1" be "relro" instead when the RELRO region covers
+            // the entire segment.
+            static_assert(sizeof(VMO_NAME_PREFIX_DATA) == sizeof(VMO_NAME_PREFIX_RELRO), "");
+            memcpy(name, VMO_NAME_PREFIX_RELRO, sizeof(VMO_NAME_PREFIX_RELRO) - 1);
+          } else {
+            // Replace the N with a digit for how many dataN's.
+            name[sizeof(VMO_NAME_PREFIX_DATA) - 3] = "0123456789abcdef"[ndata++];
+          }
           _zx_object_set_property(map_vmo, ZX_PROP_NAME, name, strlen(name));
         }
       }
@@ -1640,7 +1653,7 @@ __NO_SAFESTACK static void update_tls_size(void) {
   libc.tls_align = tls_align;
   libc.tls_size =
       ZX_ALIGN((1 + tls_cnt) * sizeof(void*) + tls_offset + sizeof(struct pthread) + tls_align * 2,
-            tls_align);
+               tls_align);
   // TODO(mcgrathr): The TLS block is always allocated in whole pages.
   // We should keep track of the available slop to the end of the page
   // and make dlopen use that for new dtv/TLS space when it fits.
