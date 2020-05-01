@@ -433,7 +433,6 @@ TEST(MiscTestCase, TestOutput) {
       nullptr /* props_data */, 0 /* props_count */, "mock-device", ZX_PROTOCOL_TEST,
       nullptr /* driver_path */, nullptr /* args */, false /* invisible */, false /* has_init */,
       true /* always_init */, zx::channel() /* client_remote */, &device);
-  device->AddRef();  // refcount starts at zero, so bump it up to keep us from being cleaned up
   ASSERT_OK(status);
   ASSERT_EQ(1, coordinator.devices().size_slow());
 
