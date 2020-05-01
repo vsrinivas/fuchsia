@@ -244,7 +244,21 @@ test_package("netemul_guest_test") {
       name = "grpc_client_stress_test"
 
       # TODO(47487): test hangs w/ ASan. Fix and switch to [ nuc_env ].
-      environments = nuc_env_fails_on_asan
+      if (nuc_env_fails_on_asan != []) {
+        nuc_scope = nuc_env_fails_on_asan[0]
+
+        environments = [
+          {
+            dimensions = nuc_scope.dimensions
+
+            # TODO(49752): test occasionally exceeds 5 minute timeout.
+            tags = [ "flaky" ]
+          },
+        ]
+      } else {
+        # Disable this test for all non-NUC environments.
+        environments = []
+      }
     },
     {
       name = "multiple_guests_test"
