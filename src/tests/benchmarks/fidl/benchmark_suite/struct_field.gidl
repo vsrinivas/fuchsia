@@ -285,6 +285,8 @@ benchmark("StructField/256") {
 }
 
 benchmark("StructField/4096") {
+    // The Rust bindings for StructField4096 take too long to compile.
+    bindings_denylist=[rust],
     value = StructField4096{
         field0: 0,
         field1: 1,

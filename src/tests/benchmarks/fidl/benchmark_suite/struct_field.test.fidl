@@ -282,6 +282,8 @@ struct StructField256 {
     uint8 field255;
 };
 
+// The Rust bindings for StructField4096 take too long to compile.
+[BindingsDenylist = "rust"]
 struct StructField4096 {
     uint8 field0;
     uint8 field1;

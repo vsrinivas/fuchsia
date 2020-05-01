@@ -24,11 +24,15 @@ var ByteArrayFidl = FidlFile{
 			Config: Config{
 				Size: 4096,
 			},
+			// The Rust bindings only supports arrays of size 0-32, 64, and 256.
+			Denylist: []Binding{Rust},
 		},
 		{
 			Config: Config{
 				Size: 65536,
 			},
+			// The Rust bindings only supports arrays of size 0-32, 64, and 256.
+			Denylist: []Binding{Rust},
 		},
 	},
 }

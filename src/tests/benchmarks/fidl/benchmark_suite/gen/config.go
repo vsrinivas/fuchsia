@@ -42,5 +42,6 @@ type FidlFile struct {
 }
 
 type Definition struct {
-	Config Config
+	Config   Config
+	Denylist []Binding
 }

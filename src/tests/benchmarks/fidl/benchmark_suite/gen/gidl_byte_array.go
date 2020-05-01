@@ -27,14 +27,14 @@ var ByteArrayGidl = GidlFile{
 			Config: Config{
 				Size: 4096,
 			},
-			Denylist: []Binding{HLCPP, LLCPP},
+			Denylist: []Binding{HLCPP, LLCPP, Rust},
 		},
 		{
 			Name: "ByteArray/65536",
 			Config: Config{
 				Size: 65536,
 			},
-			Denylist: []Binding{HLCPP, LLCPP},
+			Denylist: []Binding{HLCPP, LLCPP, Rust},
 		},
 	},
 }

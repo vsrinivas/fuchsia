@@ -9,6 +9,7 @@ import (
 	"log"
 	"os"
 	"path"
+	"strings"
 	"text/template"
 	"time"
 )
@@ -44,6 +45,14 @@ func genFidlFile(filepath string, fidl FidlFile) error {
 		out, err := fidl.Gen(definition.Config)
 		if err != nil {
 			return err
+		}
+		if len(definition.Denylist) != 0 {
+			strs := make([]string, len(definition.Denylist))
+			for i, binding := range definition.Denylist {
+				strs[i] = string(binding)
+			}
+			attribute := "[BindingsDenylist = \"" + strings.Join(strs, ", ") + "\"]"
+			out = attribute + "\n" + out
 		}
 		definitions = append(definitions, out)
 	}

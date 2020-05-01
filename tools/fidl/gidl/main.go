@@ -36,7 +36,7 @@ var conformanceGenerators = map[string]Generator{
 	"llcpp":       gidlllcpp.GenerateConformanceTests,
 	"cpp":         gidlcpp.GenerateConformanceTests,
 	"dart":        gidldart.Generate,
-	"rust":        gidlrust.Generate,
+	"rust":        gidlrust.GenerateConformanceTests,
 	"transformer": gidltransformer.Generate,
 }
 
@@ -44,6 +44,7 @@ var benchmarkGenerators = map[string]Generator{
 	"go":    gidlgolang.GenerateBenchmarks,
 	"llcpp": gidlllcpp.GenerateBenchmarks,
 	"cpp":   gidlcpp.GenerateBenchmarks,
+	"rust":  gidlrust.GenerateBenchmarks,
 }
 
 var allGenerators = map[string]map[string]Generator{

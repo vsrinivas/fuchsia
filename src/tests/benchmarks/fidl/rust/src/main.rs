@@ -2,11 +2,34 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fuchsia_criterion::FuchsiaCriterion;
-
-mod benchmark_suite;
+use {
+    benchmark_suite,
+    criterion::Criterion,
+    fuchsia_criterion::{criterion::Benchmark, FuchsiaCriterion},
+    std::{mem, time::Duration},
+};
 
 fn main() {
-    let mut c = FuchsiaCriterion::default();
-    benchmark_suite::benches(&mut c);
+    // TODO(fxb/51122): Use Criterion::benchmark_group.
+    let all = &benchmark_suite::ALL_BENCHMARKS;
+    let (first_label, first_function) = all[0];
+    let mut benchmark = Benchmark::new(wall_time_label(first_label), first_function);
+    for (label, function) in &all[1..] {
+        benchmark = benchmark.with_function(wall_time_label(label), function);
+    }
+
+    // FuchsiaCriterion is a wrapper around Criterion. To configure the inner
+    // Criterion we have to use a strange, indirect approach. This is because
+    // FuchsiaCriterion only provides access to it via DerefMut, and Criterion
+    // only provides a builder API (i.e. consuming self) for configuration.
+    let mut fc = FuchsiaCriterion::default();
+    let c: &mut Criterion = &mut fc;
+    *c = mem::take(c)
+        .warm_up_time(Duration::from_millis(200))
+        .measurement_time(Duration::from_millis(1800));
+    fc.bench("fuchsia.fidl_microbenchmarks", benchmark);
+}
+
+fn wall_time_label(base: &str) -> String {
+    format!("Rust/{}/WallTime", base)
 }

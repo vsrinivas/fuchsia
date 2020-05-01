@@ -3,17 +3,46 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_library.gni")
 import("//build/test/test_package.gni")
+import("//src/tests/benchmarks/fidl/benchmark_suite/benchmark_suite.gni")
+import("//tools/fidl/gidl/gidl.gni")
 
-rustc_binary("rust_fidl_microbenchmarks_bin") {
-  name = "rust_fidl_microbenchmarks"
+gidl_rust_out_file = "$target_gen_dir/src/lib.rs"
+
+gidl("benchmark_suite_rust") {
+  testonly = true
+  type = "benchmark"
+  language = "rust"
+  inputs = benchmark_suite_gidl_files
+  fidl = "//src/tests/benchmarks/fidl/benchmark_suite:benchmark_suite_fidl"
+  output = gidl_rust_out_file
+}
+
+rustc_library("benchmark_suite_rust_lib") {
+  testonly = true
+  name = "benchmark_suite"
   edition = "2018"
-  with_unit_tests = true
+  source_root = gidl_rust_out_file
 
   deps = [
     "//src/developer/fuchsia-criterion",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
+    "//src/tests/benchmarks/fidl/benchmark_suite:benchmark_suite_fidl-rustc",
+  ]
+  non_rust_deps = [ ":benchmark_suite_rust" ]
+}
+
+rustc_binary("rust_fidl_microbenchmarks_bin") {
+  testonly = true
+  name = "rust_fidl_microbenchmarks"
+  edition = "2018"
+
+  deps = [
+    ":benchmark_suite_rust_lib",
+    "//src/developer/fuchsia-criterion",
+    "//third_party/rust_crates:criterion",
   ]
 }
 
