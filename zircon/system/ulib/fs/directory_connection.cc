@@ -144,14 +144,14 @@ void DirectoryConnection::Open(uint32_t open_flags, uint32_t mode, fidl::StringV
 
   if (!PrevalidateFlags(open_flags)) {
     FS_PRETTY_TRACE_DEBUG("[DirectoryOpen] prevalidate failed",
-                          ", incoming flags: ", ZxFlags(open_flags), ", path: ", path);
+                          ", incoming flags: ", ZxFlags(open_flags), ", path: ", path.data());
     if (open_options.flags.describe) {
       return write_error(std::move(channel), ZX_ERR_INVALID_ARGS);
     }
   }
 
   FS_PRETTY_TRACE_DEBUG("[DirectoryOpen] our options: ", options(),
-                        ", incoming options: ", open_options, ", path: ", path);
+                        ", incoming options: ", open_options, ", path: ", path.data());
   if (options().flags.node_reference) {
     return write_error(std::move(channel), ZX_ERR_BAD_HANDLE);
   }
@@ -176,7 +176,7 @@ void DirectoryConnection::Open(uint32_t open_flags, uint32_t mode, fidl::StringV
 }
 
 void DirectoryConnection::Unlink(fidl::StringView path, UnlinkCompleter::Sync completer) {
-  FS_PRETTY_TRACE_DEBUG("[DirectoryUnlink] our options: ", options(), ", path: ", path);
+  FS_PRETTY_TRACE_DEBUG("[DirectoryUnlink] our options: ", options(), ", path: ", path.data());
 
   if (options().flags.node_reference) {
     return completer.Reply(ZX_ERR_BAD_HANDLE);
@@ -226,8 +226,8 @@ void DirectoryConnection::GetToken(GetTokenCompleter::Sync completer) {
 
 void DirectoryConnection::Rename(fidl::StringView src, zx::handle dst_parent_token,
                                  fidl::StringView dst, RenameCompleter::Sync completer) {
-  FS_PRETTY_TRACE_DEBUG("[DirectoryRename] our options: ", options(), ", src: ", src,
-                        ", dst: ", dst);
+  FS_PRETTY_TRACE_DEBUG("[DirectoryRename] our options: ", options(), ", src: ", src.data(),
+                        ", dst: ", dst.data());
 
   // |fuchsia.io/Directory.Rename| only specified the token to be a generic handle; casting it here.
   zx::event token(dst_parent_token.release());
@@ -249,7 +249,8 @@ void DirectoryConnection::Rename(fidl::StringView src, zx::handle dst_parent_tok
 
 void DirectoryConnection::Link(fidl::StringView src, zx::handle dst_parent_token,
                                fidl::StringView dst, LinkCompleter::Sync completer) {
-  FS_PRETTY_TRACE_DEBUG("[DirectoryLink] our options: ", options(), ", src: ", src, ", dst: ", dst);
+  FS_PRETTY_TRACE_DEBUG("[DirectoryLink] our options: ", options(), ", src: ", src.data(),
+                        ", dst: ", dst.data());
 
   // |fuchsia.io/Directory.Rename| only specified the token to be a generic handle; casting it here.
   zx::event token(dst_parent_token.release());
