@@ -4,18 +4,15 @@
 
 #include <bitmap/raw-bitmap.h>
 #include <bitmap/storage.h>
-
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 namespace bitmap {
 namespace tests {
 
 template <typename RawBitmap>
-static bool InitializedEmpty(void) {
-  BEGIN_TEST;
-
+static void InitializedEmpty(void) {
   RawBitmap bitmap;
   EXPECT_EQ(bitmap.Reset(0), ZX_OK);
   EXPECT_EQ(bitmap.size(), 0U, "get size");
@@ -28,14 +25,10 @@ static bool InitializedEmpty(void) {
   EXPECT_FALSE(bitmap.GetOne(0), "get one bit");
   EXPECT_EQ(bitmap.SetOne(0), ZX_OK, "set one bit");
   EXPECT_EQ(bitmap.ClearOne(0), ZX_OK, "clear one bit");
-
-  END_TEST;
 }
 
 template <typename RawBitmap>
-static bool SingleBit(void) {
-  BEGIN_TEST;
-
+static void SingleBit(void) {
   RawBitmap bitmap;
   EXPECT_EQ(bitmap.Reset(128), ZX_OK);
   EXPECT_EQ(bitmap.size(), 128U, "get size");
@@ -47,14 +40,10 @@ static bool SingleBit(void) {
 
   EXPECT_EQ(bitmap.ClearOne(2), ZX_OK, "clear bit");
   EXPECT_FALSE(bitmap.GetOne(2), "get bit after clearing");
-
-  END_TEST;
 }
 
 template <typename RawBitmap>
-static bool SetTwice(void) {
-  BEGIN_TEST;
-
+static void SetTwice(void) {
   RawBitmap bitmap;
   EXPECT_EQ(bitmap.Reset(128), ZX_OK);
   EXPECT_EQ(bitmap.size(), 128U, "get size");
@@ -64,14 +53,10 @@ static bool SetTwice(void) {
 
   EXPECT_EQ(bitmap.SetOne(2), ZX_OK, "set bit again");
   EXPECT_TRUE(bitmap.GetOne(2), "get bit after setting again");
-
-  END_TEST;
 }
 
 template <typename RawBitmap>
-static bool ClearTwice(void) {
-  BEGIN_TEST;
-
+static void ClearTwice(void) {
   RawBitmap bitmap;
   EXPECT_EQ(bitmap.Reset(128), ZX_OK);
   EXPECT_EQ(bitmap.size(), 128U, "get size");
@@ -83,14 +68,10 @@ static bool ClearTwice(void) {
 
   EXPECT_EQ(bitmap.ClearOne(2), ZX_OK, "clear bit again");
   EXPECT_FALSE(bitmap.GetOne(2), "get bit after clearing again");
-
-  END_TEST;
 }
 
 template <typename RawBitmap>
-static bool GetReturnArg(void) {
-  BEGIN_TEST;
-
+static void GetReturnArg(void) {
   RawBitmap bitmap;
   EXPECT_EQ(bitmap.Reset(128), ZX_OK);
   EXPECT_EQ(bitmap.size(), 128U, "get size");
@@ -111,14 +92,10 @@ static bool GetReturnArg(void) {
   EXPECT_EQ(bitmap.SetOne(3), ZX_OK, "set another bit");
   EXPECT_FALSE(bitmap.Get(2, 5, &first_unset), "get larger range after setting another");
   EXPECT_EQ(first_unset, 4U, "check returned arg");
-
-  END_TEST;
 }
 
 template <typename RawBitmap>
-static bool SetRange(void) {
-  BEGIN_TEST;
-
+static void SetRange(void) {
   RawBitmap bitmap;
   EXPECT_EQ(bitmap.Reset(128), ZX_OK);
   EXPECT_EQ(bitmap.size(), 128U, "get size");
@@ -169,14 +146,10 @@ static bool SetRange(void) {
 
   EXPECT_TRUE(bitmap.Scan(100, 200, false), "scan past end of bitmap");
   EXPECT_TRUE(bitmap.ReverseScan(100, 200, false), "reverse scan past end of bitmap");
-
-  END_TEST;
 }
 
 template <typename RawBitmap>
-static bool FindSimple(void) {
-  BEGIN_TEST;
-
+static void FindSimple(void) {
   RawBitmap bitmap;
   EXPECT_EQ(bitmap.Reset(128), ZX_OK);
   EXPECT_EQ(bitmap.size(), 128U, "get size");
@@ -326,14 +299,10 @@ static bool FindSimple(void) {
             "fail to find (large)");
   EXPECT_EQ(bitmap.ReverseFind(false, 0, 128, 1, &bitoff_start), ZX_ERR_NO_RESOURCES,
             "reverse fail to find (large)");
-
-  END_TEST;
 }
 
 template <typename RawBitmap>
-static bool ClearAll(void) {
-  BEGIN_TEST;
-
+static void ClearAll(void) {
   RawBitmap bitmap;
   EXPECT_EQ(bitmap.Reset(128), ZX_OK);
   EXPECT_EQ(bitmap.size(), 128U, "get size");
@@ -349,14 +318,10 @@ static bool ClearAll(void) {
   EXPECT_EQ(bitmap.Set(0, 99), ZX_OK, "set range");
   EXPECT_FALSE(bitmap.Get(0, 100, &first), "get range");
   EXPECT_EQ(first, 99U, "all clear");
-
-  END_TEST;
 }
 
 template <typename RawBitmap>
-static bool ClearSubrange(void) {
-  BEGIN_TEST;
-
+static void ClearSubrange(void) {
   RawBitmap bitmap;
   EXPECT_EQ(bitmap.Reset(128), ZX_OK);
   EXPECT_EQ(bitmap.size(), 128U, "get size");
@@ -377,14 +342,10 @@ static bool ClearSubrange(void) {
 
   EXPECT_FALSE(bitmap.Get(50, 80, &first_unset), "get cleared range");
   EXPECT_EQ(first_unset, 50U, "check returned arg");
-
-  END_TEST;
 }
 
 template <typename RawBitmap>
-static bool BoundaryArguments(void) {
-  BEGIN_TEST;
-
+static void BoundaryArguments(void) {
   RawBitmap bitmap;
   EXPECT_EQ(bitmap.Reset(128), ZX_OK);
   EXPECT_EQ(bitmap.size(), 128U, "get size");
@@ -400,14 +361,10 @@ static bool BoundaryArguments(void) {
   EXPECT_TRUE(bitmap.Get(0, 0), "range contains no bits, so all are true");
   EXPECT_TRUE(bitmap.Get(5, 4), "range contains no bits, so all are true");
   EXPECT_TRUE(bitmap.Get(5, 5), "range contains no bits, so all are true");
-
-  END_TEST;
 }
 
 template <typename RawBitmap>
-static bool SetOutOfOrder(void) {
-  BEGIN_TEST;
-
+static void SetOutOfOrder(void) {
   RawBitmap bitmap;
   EXPECT_EQ(bitmap.Reset(128), ZX_OK);
   EXPECT_EQ(bitmap.size(), 128U, "get size");
@@ -417,13 +374,10 @@ static bool SetOutOfOrder(void) {
 
   EXPECT_TRUE(bitmap.GetOne(0x64), "getting first set");
   EXPECT_TRUE(bitmap.GetOne(0x60), "getting second set");
-  END_TEST;
 }
 
 template <typename RawBitmap>
-static bool MoveConstructorTest(void) {
-  BEGIN_TEST;
-
+static void MoveConstructorTest(void) {
   RawBitmap src;
   EXPECT_EQ(src.Reset(128), ZX_OK);
   EXPECT_EQ(src.size(), 128U, "get size");
@@ -433,14 +387,10 @@ static bool MoveConstructorTest(void) {
   RawBitmap target(std::move(src));
   EXPECT_TRUE(target.GetOne(0x64), "getting bit");
   EXPECT_EQ(src.Reset(0), ZX_OK, "we can still reset the moved-from object");
-
-  END_TEST;
 }
 
 template <typename RawBitmap>
-static bool MoveAssignmentTest(void) {
-  BEGIN_TEST;
-
+static void MoveAssignmentTest(void) {
   RawBitmap src;
   EXPECT_EQ(src.Reset(128), ZX_OK);
   EXPECT_EQ(src.size(), 128U, "get size");
@@ -450,14 +400,10 @@ static bool MoveAssignmentTest(void) {
   RawBitmap target = std::move(src);
   EXPECT_TRUE(target.GetOne(0x64), "getting bit");
   EXPECT_EQ(src.Reset(0), ZX_OK, "we can still reset the moved-from object");
-
-  END_TEST;
 }
 
 template <typename RawBitmap>
-static bool GrowAcrossPage(void) {
-  BEGIN_TEST;
-
+static void GrowAcrossPage(void) {
   RawBitmap bitmap;
   EXPECT_EQ(bitmap.Reset(128), ZX_OK);
   EXPECT_EQ(bitmap.size(), 128u);
@@ -491,14 +437,10 @@ static bool GrowAcrossPage(void) {
   EXPECT_EQ(bitmap.Grow(16 * PAGE_SIZE), ZX_OK);
   EXPECT_FALSE(bitmap.GetOne(100));
   EXPECT_FALSE(bitmap.GetOne(16 * PAGE_SIZE - 1));
-
-  END_TEST;
 }
 
 template <typename RawBitmap>
-static bool GrowShrink(void) {
-  BEGIN_TEST;
-
+static void GrowShrink(void) {
   RawBitmap bitmap;
   EXPECT_EQ(bitmap.Reset(128), ZX_OK);
   EXPECT_EQ(bitmap.size(), 128u);
@@ -538,14 +480,10 @@ static bool GrowShrink(void) {
       }
     }
   }
-
-  END_TEST;
 }
 
 template <typename RawBitmap>
-static bool GrowFailure(void) {
-  BEGIN_TEST;
-
+static void GrowFailure(void) {
   RawBitmap bitmap;
   EXPECT_EQ(bitmap.Reset(128), ZX_OK);
   EXPECT_EQ(bitmap.size(), 128u);
@@ -554,32 +492,32 @@ static bool GrowFailure(void) {
   EXPECT_EQ(bitmap.Grow(128), ZX_ERR_NO_RESOURCES);
   EXPECT_EQ(bitmap.Grow(128 + 1), ZX_ERR_NO_RESOURCES);
   EXPECT_EQ(bitmap.Grow(8 * PAGE_SIZE), ZX_ERR_NO_RESOURCES);
-  END_TEST;
 }
 
-#define RUN_TEMPLATIZED_TEST(test, specialization) RUN_TEST(test<specialization>)
-#define ALL_TESTS(specialization)                         \
-  RUN_TEMPLATIZED_TEST(InitializedEmpty, specialization)  \
-  RUN_TEMPLATIZED_TEST(SingleBit, specialization)         \
-  RUN_TEMPLATIZED_TEST(SetTwice, specialization)          \
-  RUN_TEMPLATIZED_TEST(ClearTwice, specialization)        \
-  RUN_TEMPLATIZED_TEST(GetReturnArg, specialization)      \
-  RUN_TEMPLATIZED_TEST(SetRange, specialization)          \
-  RUN_TEMPLATIZED_TEST(FindSimple, specialization)        \
-  RUN_TEMPLATIZED_TEST(ClearSubrange, specialization)     \
-  RUN_TEMPLATIZED_TEST(BoundaryArguments, specialization) \
-  RUN_TEMPLATIZED_TEST(ClearAll, specialization)          \
-  RUN_TEMPLATIZED_TEST(SetOutOfOrder, specialization)
+#define TEMPLATIZED_TEST(test, specialization) \
+  TEST(RawBitmapTests, test##_##specialization) { test<RawBitmapGeneric<specialization>>(); }
 
-BEGIN_TEST_CASE(raw_bitmap_tests)
-ALL_TESTS(RawBitmapGeneric<DefaultStorage>)
-ALL_TESTS(RawBitmapGeneric<VmoStorage>)
-RUN_TEST(MoveConstructorTest<RawBitmapGeneric<VmoStorage>>)
-RUN_TEST(MoveAssignmentTest<RawBitmapGeneric<VmoStorage>>)
-RUN_TEST(GrowAcrossPage<RawBitmapGeneric<VmoStorage>>)
-RUN_TEST(GrowShrink<RawBitmapGeneric<VmoStorage>>)
-RUN_TEST(GrowFailure<RawBitmapGeneric<DefaultStorage>>)
-END_TEST_CASE(raw_bitmap_tests)
+#define ALL_TESTS(specialization)                     \
+  TEMPLATIZED_TEST(InitializedEmpty, specialization)  \
+  TEMPLATIZED_TEST(SingleBit, specialization)         \
+  TEMPLATIZED_TEST(SetTwice, specialization)          \
+  TEMPLATIZED_TEST(ClearTwice, specialization)        \
+  TEMPLATIZED_TEST(GetReturnArg, specialization)      \
+  TEMPLATIZED_TEST(SetRange, specialization)          \
+  TEMPLATIZED_TEST(FindSimple, specialization)        \
+  TEMPLATIZED_TEST(ClearSubrange, specialization)     \
+  TEMPLATIZED_TEST(BoundaryArguments, specialization) \
+  TEMPLATIZED_TEST(ClearAll, specialization)          \
+  TEMPLATIZED_TEST(SetOutOfOrder, specialization)
+
+ALL_TESTS(DefaultStorage)
+ALL_TESTS(VmoStorage)
+
+TEMPLATIZED_TEST(MoveConstructorTest, VmoStorage)
+TEMPLATIZED_TEST(MoveAssignmentTest, VmoStorage)
+TEMPLATIZED_TEST(GrowAcrossPage, VmoStorage)
+TEMPLATIZED_TEST(GrowShrink, VmoStorage)
+TEMPLATIZED_TEST(GrowFailure, DefaultStorage)
 
 }  // namespace tests
 }  // namespace bitmap
