@@ -72,12 +72,6 @@ springboard_t* tu_launch_init(zx_handle_t job, const char* name, int argc, const
 
 zx_handle_t tu_launch_fini(springboard_t* sb);
 
-// A wrapper on zx_object_wait_many that can be easier to call.
-// |num_objects| is the number of elements in |handles,signals,pending|.
-
-zx_status_t tu_wait(uint32_t num_objects, const zx_handle_t* handles, const zx_signals_t* signals,
-                    zx_signals_t* pending);
-
 // Wait for |channel| to be readable.
 // Returns true if the channel is readable, and false if the peer has closed its end.
 // Note: This waits "forever", and relies on the watchdog to catch hung tests.

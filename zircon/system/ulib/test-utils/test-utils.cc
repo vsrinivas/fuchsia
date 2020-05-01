@@ -53,24 +53,10 @@ static void tu_check(const char* what, zx_status_t status) {
   }
 }
 
-zx_status_t tu_wait(uint32_t num_objects, const zx_handle_t* handles, const zx_signals_t* signals,
-                    zx_signals_t* pending) {
-  zx_wait_item_t items[num_objects];
-  for (uint32_t n = 0; n < num_objects; n++) {
-    items[n].handle = handles[n];
-    items[n].waitfor = signals[n];
-  }
-  zx_status_t status = zx_object_wait_many(items, num_objects, ZX_TIME_INFINITE);
-  for (uint32_t n = 0; n < num_objects; n++) {
-    pending[n] = items[n].pending;
-  }
-  return status;
-}
-
 bool tu_channel_wait_readable(zx_handle_t channel) {
   zx_signals_t signals = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
   zx_signals_t pending;
-  zx_status_t result = tu_wait(1, &channel, &signals, &pending);
+  zx_status_t result = zx_object_wait_one(channel, signals, ZX_TIME_INFINITE, &pending);
   if (result != ZX_OK)
     tu_fatal(__func__, result);
   if ((pending & ZX_CHANNEL_READABLE) == 0) {
@@ -276,11 +262,11 @@ zx_handle_t tu_launch_fini(springboard* sb) {
 void tu_process_wait_signaled(zx_handle_t process) {
   zx_signals_t signals = ZX_PROCESS_TERMINATED;
   zx_signals_t pending;
-  zx_status_t result = tu_wait(1, &process, &signals, &pending);
+  zx_status_t result = zx_object_wait_one(process, signals, ZX_TIME_INFINITE, &pending);
   if (result != ZX_OK)
     tu_fatal(__func__, result);
   if ((pending & ZX_PROCESS_TERMINATED) == 0) {
-    unittest_printf_critical("%s: unexpected return from tu_wait\n", __func__);
+    unittest_printf_critical("%s: unexpected return from zx_object_wait_one\n", __func__);
     exit(TU_FAIL_ERRCODE);
   }
 }

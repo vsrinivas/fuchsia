@@ -482,7 +482,7 @@ TEST(ExceptionTest, ExitClosingExcpHandle) {
 
   zx_signals_t signals = ZX_PROCESS_TERMINATED;
   zx_signals_t pending;
-  EXPECT_OK(tu_wait(1, &child, &signals, &pending));
+  EXPECT_OK(zx_object_wait_one(child, signals, ZX_TIME_INFINITE, &pending));
   EXPECT_TRUE(pending & ZX_PROCESS_TERMINATED);
 
   EXPECT_EQ(tu_process_get_return_code(child), 0);
@@ -1192,7 +1192,6 @@ TEST(ExceptionTest, DebugChannelClosedBeforeSecondChance) {
   ASSERT_OK(catcher.ExpectException(loop.aux_thread()));
   EXPECT_OK(loop.aux_thread().wait_one(ZX_THREAD_TERMINATED, zx::time::infinite(), nullptr));
 }
-
 
 TEST(ExceptionTest, ThreadLifecycleChannelExceptions) {
   TestLoop loop(TestLoop::Control::kManual);
