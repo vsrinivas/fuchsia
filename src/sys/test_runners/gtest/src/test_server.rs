@@ -193,7 +193,7 @@ impl SuiteServer for TestServer {
                         error!("server failed for test {}: {:?}", test_url, e);
                     }
                 }
-                Err(e) => error!("server aborted for test {}: {:?}", test_url, e),
+                Err(e) => debug!("server aborted for test {}: {:?}", test_url, e),
             }
             debug!("Done running server for {}.", test_url);
 

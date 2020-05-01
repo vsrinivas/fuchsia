@@ -240,9 +240,9 @@ where
 
     let resolved_url = url.clone();
     fasync::spawn_local(async move {
-        if let Err(e) = fut.await {
-            fx_log_err!("Test {} ended with error {:?}", url, e);
-        }
+        // as error on abortable will always return Aborted,
+        // no need to check that, as it is a valid usecase.
+        fut.await.ok();
     });
 
     let controller_stream = server_end.into_stream().map_err(|e| {
