@@ -160,7 +160,7 @@ void StreamImpl::PostSetBufferCollection(
       }
     }
 
-    // Synchronize duplications then pass the final token to the device for constraints application.
+    // Synchronize and pass the final token to the device for constraints application.
     token->Sync([this, token = std::move(token)]() mutable {
       ZX_ASSERT(on_stream_requested_);
       frame_waiters_.clear();

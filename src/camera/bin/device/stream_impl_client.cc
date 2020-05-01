@@ -44,8 +44,11 @@ void StreamImpl::Client::PostCloseConnection(zx_status_t epitaph) {
 
 void StreamImpl::Client::PostReceiveBufferCollection(
     fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) {
-  ZX_ASSERT(async::PostTask(loop_.dispatcher(), [this, token = std::move(token)]() mutable {
-              buffers_.Set(std::move(token));
+  ZX_ASSERT(async::PostTask(loop_.dispatcher(), [this, token_handle = std::move(token)]() mutable {
+              fuchsia::sysmem::BufferCollectionTokenPtr token;
+              ZX_ASSERT(token.Bind(std::move(token_handle)) == ZX_OK);
+              token->Sync(
+                  [this, token = std::move(token)]() mutable { buffers_.Set(std::move(token)); });
             }) == ZX_OK);
 }
 
