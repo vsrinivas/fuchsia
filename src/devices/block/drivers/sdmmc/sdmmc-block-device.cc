@@ -21,7 +21,8 @@ constexpr size_t kTranMaxAttempts = 10;
 
 constexpr uint32_t kBlockOp(uint32_t op) { return op & BLOCK_OP_MASK; }
 
-constexpr uint32_t kBootSizeMultiplier = 128'000;
+// Boot and RPMB partition sizes are in units of 128 KiB/KB.
+constexpr uint32_t kBootSizeMultiplier = 128 * 1024;
 
 inline void BlockComplete(sdmmc::BlockOperation& txn, zx_status_t status) {
   if (txn.node()->complete_cb()) {

@@ -731,8 +731,8 @@ TEST_F(SdmmcBlockDeviceTest, QueryBootPartitions) {
   boot1_.Query(&boot1_info, &boot1_op_size);
   boot2_.Query(&boot2_info, &boot2_op_size);
 
-  EXPECT_EQ(boot1_info.block_count, (0x10 * 128'000) / FakeSdmmcDevice::kBlockSize);
-  EXPECT_EQ(boot2_info.block_count, (0x10 * 128'000) / FakeSdmmcDevice::kBlockSize);
+  EXPECT_EQ(boot1_info.block_count, (0x10 * 128 * 1024) / FakeSdmmcDevice::kBlockSize);
+  EXPECT_EQ(boot2_info.block_count, (0x10 * 128 * 1024) / FakeSdmmcDevice::kBlockSize);
 
   EXPECT_EQ(boot1_info.block_size, FakeSdmmcDevice::kBlockSize);
   EXPECT_EQ(boot2_info.block_size, FakeSdmmcDevice::kBlockSize);
@@ -871,22 +871,22 @@ TEST_F(SdmmcBlockDeviceTest, AccessBootPartitionOutOfRange) {
   ASSERT_TRUE(boot1_.is_valid());
 
   std::optional<block::Operation<OperationContext>> op1;
-  ASSERT_NO_FATAL_FAILURES(MakeBlockOp(BLOCK_OP_WRITE, 1, 4000, &op1));
+  ASSERT_NO_FATAL_FAILURES(MakeBlockOp(BLOCK_OP_WRITE, 1, 4096, &op1));
 
   std::optional<block::Operation<OperationContext>> op2;
-  ASSERT_NO_FATAL_FAILURES(MakeBlockOp(BLOCK_OP_WRITE, 8, 3992, &op2));
+  ASSERT_NO_FATAL_FAILURES(MakeBlockOp(BLOCK_OP_WRITE, 8, 4088, &op2));
 
   std::optional<block::Operation<OperationContext>> op3;
-  ASSERT_NO_FATAL_FAILURES(MakeBlockOp(BLOCK_OP_READ, 9, 3992, &op3));
+  ASSERT_NO_FATAL_FAILURES(MakeBlockOp(BLOCK_OP_READ, 9, 4088, &op3));
 
   std::optional<block::Operation<OperationContext>> op4;
-  ASSERT_NO_FATAL_FAILURES(MakeBlockOp(BLOCK_OP_WRITE, 16, 3992, &op4));
+  ASSERT_NO_FATAL_FAILURES(MakeBlockOp(BLOCK_OP_WRITE, 16, 4088, &op4));
 
   std::optional<block::Operation<OperationContext>> op5;
-  ASSERT_NO_FATAL_FAILURES(MakeBlockOp(BLOCK_OP_READ, 0, 2000, &op5));
+  ASSERT_NO_FATAL_FAILURES(MakeBlockOp(BLOCK_OP_READ, 0, 2048, &op5));
 
   std::optional<block::Operation<OperationContext>> op6;
-  ASSERT_NO_FATAL_FAILURES(MakeBlockOp(BLOCK_OP_WRITE, 1, 3999, &op6));
+  ASSERT_NO_FATAL_FAILURES(MakeBlockOp(BLOCK_OP_WRITE, 1, 4095, &op6));
 
   CallbackContext ctx(6);
 
