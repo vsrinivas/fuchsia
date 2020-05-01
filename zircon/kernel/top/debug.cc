@@ -31,15 +31,30 @@ void spin(uint32_t usecs) {
     ;
 }
 
-void panic(const char *fmt, ...) {
+void panic(const char* fmt, ...) {
   platform_panic_start();
 
-  printf("\npanic (caller %p frame %p): ", __GET_CALLER(), __GET_FRAME());
+  // Print the program counter of our caller (i.e., the program counter of
+  // of the "call panic" instruction) and the current stack frame pointer.
+  printf(
+      "\n"
+      "*** KERNEL PANIC (caller pc: %p, stack frame: %p):\n"
+      "*** ",
+      __GET_CALLER(), __GET_FRAME());
 
   va_list ap;
   va_start(ap, fmt);
   vprintf(fmt, ap);
   va_end(ap);
+
+  // Add a newline to the end of the panic message if it was missing.
+  size_t len = strlen(fmt);
+  if (len == 0 || fmt[len - 1] != '\n') {
+    printf("\n");
+  }
+
+  // Leave a blank line between the panic message and the to-be-printed backtrace.
+  printf("\n");
 
   platform_halt(HALT_ACTION_HALT, ZirconCrashReason::Panic);
 }
