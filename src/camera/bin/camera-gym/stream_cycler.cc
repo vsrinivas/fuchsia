@@ -86,10 +86,15 @@ void StreamCycler::WatchDevicesCallback(std::vector<fuchsia::camera3::WatchDevic
             ZX_ASSERT(!configurations_[kConfigId].streams.empty());
             device_->SetCurrentConfiguration(kConfigId);
             device_->WatchCurrentConfiguration([this](uint32_t index) {
-              const uint32_t stream_count = configurations_[kConfigId].streams.size();
-              for (uint32_t stream_index = 0; stream_index < stream_count; ++stream_index) {
-                ConnectToStream(kConfigId, stream_index);
-              }
+              // TODO(42241) - In order to work around fxb/42241, all camera3 clients must connect
+              // to their respective streams in sequence and without possibility of overlap. Since
+              // the camera connection sequence requires a series of asynchronous steps, we must
+              // daisy-chain from one complete stream connection to the next. This is why the
+              // original simple loop does not work reliably at this time.
+
+              // BEGIN: Daisy-chain work around for fxb/42241
+              ConnectToStream(kConfigId, 0 /* stream_index */ );
+              // END: Daisy-chain work around for fxb/42241
             });
           });
     }
@@ -123,6 +128,15 @@ void StreamCycler::ConnectToStream(uint32_t config_index, uint32_t stream_index)
     } else {
       token_back.BindSync()->Close();
     }
+
+    // BEGIN: Daisy-chain work around for fxb/42241
+    const uint32_t stream_count = configurations_[kConfigId].streams.size();
+    uint32_t next_stream_index = stream_index + 1;
+    if (next_stream_index < stream_count) {
+      ConnectToStream(kConfigId, next_stream_index);
+    }
+    // END: Daisy-chain work around for fxb/42241
+
     // Kick start the stream
     stream->GetNextFrame([this, stream_index](fuchsia::camera3::FrameInfo frame_info) {
       OnNextFrame(stream_index, std::move(frame_info));
