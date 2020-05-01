@@ -99,7 +99,7 @@ zx_status_t Tas5720::Init(std::optional<uint8_t> slot, uint32_t rate) {
   if (status != ZX_OK) {
     return status;
   }
-  return SetGain(-12.f);  // Conservative default gain.
+  return SetGain(0);
 }
 
 zx_status_t Tas5720::Standby() {
