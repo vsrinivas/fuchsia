@@ -7,7 +7,7 @@
 #include <stdint.h>
 #include <threads.h>
 
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 static mtx_t big_lock;
 
@@ -16,17 +16,11 @@ int block_forever(void *arg) TA_ACQ(&big_lock) {
   return 0;
 }
 
-bool mutex_block(void) TA_ACQ(&big_lock) {
-  BEGIN_TEST;
+TEST(HardToExit, MutexBlock) TA_ACQ(&big_lock) {
   mtx_init(&big_lock, mtx_plain);
   mtx_lock(&big_lock);
 
   thrd_t thread;
   thrd_create_with_name(&thread, block_forever, NULL, "block_forever");
   thrd_detach(thread);
-  END_TEST;
 }
-
-BEGIN_TEST_CASE(hard_to_exit)
-RUN_TEST(mutex_block)
-END_TEST_CASE(hard_to_exit)
