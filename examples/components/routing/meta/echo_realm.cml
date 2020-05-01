@@ -30,5 +30,10 @@
             from: "#echo_server",
             to: [ "#echo_client" ],
         },
+        {
+            protocol: "/svc/fuchsia.logger.LogSink",
+            from: "realm",
+            to: [ "#echo_client" ],
+        },
     ],
 }
