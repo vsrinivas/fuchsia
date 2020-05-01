@@ -43,12 +43,6 @@ __BEGIN_CDECLS
 /* systemwide halts */
 void panic(const char *fmt, ...) __PRINTFLIKE(1, 2) __NO_RETURN __NO_INLINE;
 
-void _panic_no_format(const char *msg, size_t len) __NO_RETURN __NO_INLINE;
-
-__NO_RETURN static inline void panic_no_format(const char *msg) {
-  _panic_no_format(msg, __builtin_strlen(msg));
-}
-
 #define PANIC_UNIMPLEMENTED panic("%s unimplemented\n", __PRETTY_FUNCTION__)
 
 void __stack_chk_fail(void) __NO_RETURN;

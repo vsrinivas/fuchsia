@@ -44,12 +44,6 @@ void panic(const char *fmt, ...) {
   platform_halt(HALT_ACTION_HALT, ZirconCrashReason::Panic);
 }
 
-void _panic_no_format(const char* msg, size_t len) {
-  platform_panic_start();
-  stdout->Write({msg, len});
-  platform_halt(HALT_ACTION_HALT, ZirconCrashReason::Panic);
-}
-
 __NO_SAFESTACK uintptr_t choose_stack_guard(void) {
   uintptr_t guard;
   if (hw_rng_get_entropy(&guard, sizeof(guard)) != sizeof(guard)) {
