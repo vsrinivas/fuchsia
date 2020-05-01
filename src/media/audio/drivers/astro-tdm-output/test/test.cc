@@ -69,7 +69,7 @@ struct AmlTdmDeviceTest : public AmlTdmDevice {
   void Shutdown() override {}
 };
 
-TEST(AstroAudioStreamOutTest, CodecInitGood) {
+TEST(AstroAudioStreamOutTest, DISABLED_CodecInitGood) {
   fake_ddk::Bind tester;
 
   zx::interrupt irq;
@@ -116,7 +116,7 @@ TEST(AstroAudioStreamOutTest, CodecInitGood) {
   server->DdkRelease();
 }
 
-TEST(AstroAudioStreamOutTest, CodecInitBad) {
+TEST(AstroAudioStreamOutTest, DISABLED_CodecInitBad) {
   fake_ddk::Bind tester;
 
   zx::interrupt irq;
@@ -141,7 +141,7 @@ TEST(AstroAudioStreamOutTest, CodecInitBad) {
   mock_fault.VerifyAndClear();
 }
 
-TEST(AstroAudioStreamOutTest, ChangeRate96K) {
+TEST(AstroAudioStreamOutTest, DISABLED_ChangeRate96K) {
   struct CodecRate96KTest : Tas27xx {
     CodecRate96KTest(ddk::I2cChannel i2c, ddk::GpioProtocolClient ena,
                      ddk::GpioProtocolClient fault)
