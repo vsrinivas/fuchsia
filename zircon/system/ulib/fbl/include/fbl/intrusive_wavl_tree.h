@@ -801,10 +801,6 @@ class __POINTER(KeyType_) WAVLTree {
   struct AddGenericNodeState<BaseNodeTraits,
                              std::enable_if_t<!internal::has_node_state_v<BaseNodeTraits>>>
       : public BaseNodeTraits {
-   private:
-    using RankType = decltype(std::remove_reference_t<decltype(BaseNodeTraits::node_state(
-                                  *std::declval<typename PtrTraits::RawPtrType>()))>::rank_);
-
    public:
     static auto& node_state(typename PtrTraits::RefType obj) {
       return DefaultWAVLTreeTraits<PtrType>::template node_state<TagType>(obj);

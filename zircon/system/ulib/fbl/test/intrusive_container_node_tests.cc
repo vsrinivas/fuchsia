@@ -126,7 +126,7 @@ TEST(IntrusiveContainerNodeTest, EmbeddedSingleNode) {
 
   struct DLL {
     uint32_t a, b, c;
-    fbl::SinglyLinkedListNodeState<DLL*, NodeOptTag2> dll_node_state_;
+    fbl::DoublyLinkedListNodeState<DLL*, NodeOptTag2> dll_node_state_;
     uint32_t d, e, f;
   } test_dll_obj;
 
@@ -136,8 +136,9 @@ TEST(IntrusiveContainerNodeTest, EmbeddedSingleNode) {
   ASSERT_TRUE(Range::Of(FindDLLNode(test_dll_obj)).ContainedBy(Range::Of(test_dll_obj)));
 
   struct WAVL {
+    uintptr_t GetKey() const { return reinterpret_cast<uintptr_t>(this); }
     uint32_t a, b, c;
-    fbl::SinglyLinkedListNodeState<WAVL*, NodeOptTag3> wavl_node_state_;
+    fbl::WAVLTreeNodeState<WAVL*, NodeOptTag3> wavl_node_state_;
     uint32_t d, e, f;
   } test_wavl_obj;
 
@@ -145,6 +146,11 @@ TEST(IntrusiveContainerNodeTest, EmbeddedSingleNode) {
   static_assert(TYPE(FindWAVLNode(test_wavl_obj))::kNodeOptions == NodeOptTag3,
                 "Default traits found the wrong node!");
   ASSERT_TRUE(Range::Of(FindWAVLNode(test_wavl_obj)).ContainedBy(Range::Of(test_wavl_obj)));
+
+  // Make sure that we can instantiate containers which use these nodes.
+  [[maybe_unused]] fbl::SinglyLinkedList<SLL*> sll;
+  [[maybe_unused]] fbl::DoublyLinkedList<DLL*> dll;
+  [[maybe_unused]] fbl::WAVLTree<uintptr_t, WAVL*> tree;
 }
 
 TEST(IntrusiveContainerNodeTest, DefaultSingleNode) {
@@ -169,6 +175,7 @@ TEST(IntrusiveContainerNodeTest, DefaultSingleNode) {
   ASSERT_TRUE(Range::Of(FindDLLNode(test_dll_obj)).ContainedBy(Range::Of(test_dll_obj)));
 
   struct WAVL : public fbl::WAVLTreeContainable<WAVL*, NodeOptTag3> {
+    uintptr_t GetKey() const { return reinterpret_cast<uintptr_t>(this); }
     uint32_t a, b, c;
   } test_wavl_obj;
 
@@ -176,6 +183,11 @@ TEST(IntrusiveContainerNodeTest, DefaultSingleNode) {
   static_assert(TYPE(FindWAVLNode(test_wavl_obj))::kNodeOptions == NodeOptTag3,
                 "Default traits found the wrong node!");
   ASSERT_TRUE(Range::Of(FindWAVLNode(test_wavl_obj)).ContainedBy(Range::Of(test_wavl_obj)));
+
+  // Make sure that we can instantiate containers which use these nodes.
+  [[maybe_unused]] fbl::SinglyLinkedList<SLL*> sll;
+  [[maybe_unused]] fbl::DoublyLinkedList<DLL*> dll;
+  [[maybe_unused]] fbl::WAVLTree<uintptr_t, WAVL*> tree;
 }
 
 TEST(IntrusiveContainerNodeTest, MultipleSLLTaggedNodes) {
@@ -207,6 +219,11 @@ TEST(IntrusiveContainerNodeTest, MultipleSLLTaggedNodes) {
       Range::Of(FindSLLNode<TagType2>(test_sll_obj)),
       Range::Of(FindSLLNode<TagType3>(test_sll_obj)),
   }));
+
+  // Make sure that we can instantiate containers which use these nodes.
+  [[maybe_unused]] fbl::TaggedSinglyLinkedList<SLL*, TagType1> list1;
+  [[maybe_unused]] fbl::TaggedSinglyLinkedList<SLL*, TagType2> list2;
+  [[maybe_unused]] fbl::TaggedSinglyLinkedList<SLL*, TagType3> list3;
 }
 
 TEST(IntrusiveContainerNodeTest, MultipleDLLTaggedNodes) {
@@ -238,6 +255,11 @@ TEST(IntrusiveContainerNodeTest, MultipleDLLTaggedNodes) {
       Range::Of(FindDLLNode<TagType2>(test_dll_obj)),
       Range::Of(FindDLLNode<TagType3>(test_dll_obj)),
   }));
+
+  // Make sure that we can instantiate containers which use these nodes.
+  [[maybe_unused]] fbl::TaggedDoublyLinkedList<DLL*, TagType1> list1;
+  [[maybe_unused]] fbl::TaggedDoublyLinkedList<DLL*, TagType2> list2;
+  [[maybe_unused]] fbl::TaggedDoublyLinkedList<DLL*, TagType3> list3;
 }
 
 TEST(IntrusiveContainerNodeTest, MultipleWAVLTaggedNodes) {
@@ -247,6 +269,7 @@ TEST(IntrusiveContainerNodeTest, MultipleWAVLTaggedNodes) {
       : public fbl::ContainableBaseClasses<fbl::WAVLTreeContainable<WAVL*, NodeOptTag1, TagType1>,
                                            fbl::WAVLTreeContainable<WAVL*, NodeOptTag2, TagType2>,
                                            fbl::WAVLTreeContainable<WAVL*, NodeOptTag3, TagType3>> {
+    uintptr_t GetKey() const { return reinterpret_cast<uintptr_t>(this); }
     uint32_t a, b, c;
   } test_wavl_obj;
 
@@ -270,6 +293,11 @@ TEST(IntrusiveContainerNodeTest, MultipleWAVLTaggedNodes) {
       Range::Of(FindWAVLNode<TagType2>(test_wavl_obj)),
       Range::Of(FindWAVLNode<TagType3>(test_wavl_obj)),
   }));
+
+  // Make sure that we can instantiate containers which use these nodes.
+  [[maybe_unused]] fbl::TaggedWAVLTree<uintptr_t, WAVL*, TagType1> tree1;
+  [[maybe_unused]] fbl::TaggedWAVLTree<uintptr_t, WAVL*, TagType2> tree2;
+  [[maybe_unused]] fbl::TaggedWAVLTree<uintptr_t, WAVL*, TagType3> tree3;
 }
 
 TEST(IntrusiveContainerNodeTest, MultipleDifferentTaggedNodes) {
@@ -279,6 +307,7 @@ TEST(IntrusiveContainerNodeTest, MultipleDifferentTaggedNodes) {
       : public fbl::ContainableBaseClasses<fbl::SinglyLinkedListable<Obj*, NodeOptTag1, TagType1>,
                                            fbl::DoublyLinkedListable<Obj*, NodeOptTag2, TagType2>,
                                            fbl::WAVLTreeContainable<Obj*, NodeOptTag3, TagType3>> {
+    uintptr_t GetKey() const { return reinterpret_cast<uintptr_t>(this); }
     uint32_t a, b, c;
   } test_obj;
 
@@ -313,6 +342,11 @@ TEST(IntrusiveContainerNodeTest, MultipleDifferentTaggedNodes) {
   { auto& [[maybe_unused]] node = FindWAVLNode<TagType1>(test_obj); };
   { auto& [[maybe_unused]] node = FindWAVLNode<TagType2>(test_obj); };
 #endif
+
+  // Make sure that we can instantiate containers which use these nodes.
+  [[maybe_unused]] fbl::TaggedSinglyLinkedList<Obj*, TagType1> sll;
+  [[maybe_unused]] fbl::TaggedDoublyLinkedList<Obj*, TagType2> dll;
+  [[maybe_unused]] fbl::TaggedWAVLTree<uintptr_t, Obj*, TagType3> tree;
 }
 
 TEST(IntrusiveContainerNodeTest, MultipleDifferentDefaultNodes) {
@@ -344,6 +378,11 @@ TEST(IntrusiveContainerNodeTest, MultipleDifferentDefaultNodes) {
       Range::Of(FindDLLNode(test_obj)),
       Range::Of(FindWAVLNode(test_obj)),
   }));
+
+  // Make sure that we can instantiate containers which use these nodes.
+  [[maybe_unused]] fbl::SinglyLinkedList<Obj*> sll;
+  [[maybe_unused]] fbl::DoublyLinkedList<Obj*> dll;
+  [[maybe_unused]] fbl::WAVLTree<uintptr_t, Obj*> tree;
 }
 
 TEST(IntrusiveContainerNodeTest, ComplicatedContainables) {
@@ -411,6 +450,19 @@ TEST(IntrusiveContainerNodeTest, ComplicatedContainables) {
       Range::Of(FindDLLNode<TagType8>(test_obj)),
       Range::Of(FindWAVLNode<TagType9>(test_obj)),
   }));
+
+  // Make sure that we can instantiate containers which use these nodes.
+  [[maybe_unused]] fbl::SinglyLinkedList<Obj*> default_sll;
+  [[maybe_unused]] fbl::TaggedSinglyLinkedList<Obj*, TagType4> sll_tag4;
+  [[maybe_unused]] fbl::TaggedSinglyLinkedList<Obj*, TagType7> sll_tag7;
+
+  [[maybe_unused]] fbl::DoublyLinkedList<Obj*> default_dll;
+  [[maybe_unused]] fbl::TaggedDoublyLinkedList<Obj*, TagType5> dll_tag5;
+  [[maybe_unused]] fbl::TaggedDoublyLinkedList<Obj*, TagType8> dll_tag8;
+
+  [[maybe_unused]] fbl::WAVLTree<uintptr_t, Obj*> default_tree;
+  [[maybe_unused]] fbl::TaggedWAVLTree<uintptr_t, Obj*, TagType6> tree_tag6;
+  [[maybe_unused]] fbl::TaggedWAVLTree<uintptr_t, Obj*, TagType9> tree_tag9;
 }
 
 TEST(IntrusiveContainerNodeTest, ContainerNodeTypeMatches) {
