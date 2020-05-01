@@ -101,7 +101,7 @@ zx_status_t NelsonAudioStreamOut::InitHW() {
   lib_->ConfigTdmOutSwaps(0x00000010);
 
   // Lane 0, unmask first 2 slots (0x00000003),
-  auto status = lib_->ConfigTdmOutLane(0, 0x00000003);
+  auto status = lib_->ConfigTdmOutLane(0, 0x00000003, 0);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s could not configure TDM out lane %d", __FILE__, status);
     return status;

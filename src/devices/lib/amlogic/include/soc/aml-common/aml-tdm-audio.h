@@ -39,7 +39,8 @@ class AmlTdmDevice {
                         uint8_t bits_per_sample, uint8_t mix_mask);
 
   // Configures Lanes.
-  zx_status_t ConfigTdmOutLane(size_t lane, uint32_t mask);
+  virtual zx_status_t ConfigTdmOutLane(size_t lane, uint32_t enable_mask,
+                                       uint32_t mute_mask);  // virtual for unit testing.
 
   // Configures TDM swaps.
   void ConfigTdmOutSwaps(uint32_t swaps);

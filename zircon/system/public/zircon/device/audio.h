@@ -155,6 +155,8 @@ typedef struct audio_stream_cmd_get_formats_resp {
 static_assert(sizeof(audio_stream_cmd_get_formats_resp_t) == 256,
               "audio_stream_cmd_get_formats_resp_t must be 256 bytes");
 
+#define AUDIO_SET_FORMAT_REQ_BITMASK_DISABLED ((uint64_t)0)
+
 // AUDIO_STREAM_CMD_SET_FORMAT
 //
 // Must not be used with the NO_ACK flag.
@@ -163,6 +165,7 @@ typedef struct audio_stream_cmd_set_format_req {
   uint32_t frames_per_second;
   audio_sample_format_t sample_format;
   uint16_t channels;
+  uint64_t channels_to_use_bitmask;
 } audio_stream_cmd_set_format_req_t;
 
 typedef struct audio_stream_cmd_set_format_resp {

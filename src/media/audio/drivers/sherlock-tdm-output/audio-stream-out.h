@@ -65,6 +65,7 @@ class SherlockAudioStreamOut : public SimpleAudioStream {
   uint32_t us_per_notification_ = 0;
   uint32_t frames_per_second_ = 0;
   uint32_t rb_size_ = 0;
+  uint64_t channels_to_use_bitmask_ = AUDIO_SET_FORMAT_REQ_BITMASK_DISABLED;
 
   async::TaskClosureMethod<SherlockAudioStreamOut, &SherlockAudioStreamOut::ProcessRingNotification>
       notify_timer_ TA_GUARDED(domain_token()){this};

@@ -299,12 +299,6 @@ void SimpleAudioStream::CreateRingBuffer(
     sample_format |= AUDIO_SAMPLE_FORMAT_FLAG_UNSIGNED;
   }
 
-  if (format_v1.channels_to_use_bitmask != ((1 << format_v1.number_of_channels) - 1)) {
-    zxlogf(ERROR, "Unsupported format: Not all channels enabled");
-    completer.Close(ZX_ERR_INVALID_ARGS);
-    return;
-  }
-
   // Check the format for compatibility
   for (const auto& fmt : supported_formats_) {
     if (audio::utils::FormatIsCompatible(format_v1.frame_rate,
@@ -345,6 +339,7 @@ void SimpleAudioStream::CreateRingBuffer(
   req.frames_per_second = format_v1.frame_rate;
   req.sample_format = sample_format;
   req.channels = static_cast<uint16_t>(format_v1.number_of_channels);
+  req.channels_to_use_bitmask = format_v1.channels_to_use_bitmask;
 
   // Actually attempt to change the format.
   auto result = ChangeFormat(req);

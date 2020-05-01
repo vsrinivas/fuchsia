@@ -15,18 +15,20 @@
 namespace audio {
 namespace sherlock {
 
-static constexpr uint32_t kTestFrameRate1 = 48000;
-static constexpr uint32_t kTestFrameRate2 = 96000;
-static constexpr uint8_t kTestNumberOfChannels = 2;
+static constexpr uint32_t kTestFrameRate1 = 48'000;
+static constexpr uint32_t kTestFrameRate2 = 96'000;
+static constexpr uint8_t kTestNumberOfChannels = 4;
+static constexpr uint8_t kTestChannelsToUseBitmask = 0xf;
 static constexpr uint32_t kTestFifoDepth = 16;
+static constexpr size_t kMaxLanes = 2;
 
 using ::llcpp::fuchsia::hardware::audio::Device;
 namespace audio_fidl = ::llcpp::fuchsia::hardware::audio;
 
 audio_fidl::PcmFormat GetDefaultPcmFormat() {
   audio_fidl::PcmFormat format;
-  format.number_of_channels = 2;
-  format.channels_to_use_bitmask = 0x03;
+  format.number_of_channels = kTestNumberOfChannels;
+  format.channels_to_use_bitmask = kTestChannelsToUseBitmask;
   format.sample_format = audio_fidl::SampleFormat::PCM_SIGNED;
   format.frame_rate = kTestFrameRate1;
   format.bytes_per_sample = 2;
@@ -63,6 +65,26 @@ struct Tas5720SomeBadInitTest : Tas5720 {
   }  // Gains work since not all Inits fail.
 };
 
+struct AmlTdmDeviceTest : public AmlTdmDevice {
+  template <typename T>
+  static std::unique_ptr<T> Create() {
+    constexpr size_t n_registers = 4096;  // big enough.
+    static fbl::Array<ddk_mock::MockMmioReg> unused_mocks =
+        fbl::Array(new ddk_mock::MockMmioReg[n_registers], n_registers);
+    static ddk_mock::MockMmioRegRegion unused_region(unused_mocks.data(), sizeof(uint32_t),
+                                                     n_registers);
+    return std::make_unique<T>(unused_region.GetMmioBuffer(), HIFI_PLL, TDM_OUT_C, FRDDR_A, MCLK_C,
+                               0, AmlVersion::kS905D2G);
+  }
+  AmlTdmDeviceTest(ddk::MmioBuffer mmio, ee_audio_mclk_src_t clk_src, aml_tdm_out_t tdm,
+                   aml_frddr_t frddr, aml_tdm_mclk_t mclk, uint32_t fifo_depth, AmlVersion version)
+      : AmlTdmDevice(std::move(mmio), clk_src, tdm, frddr, mclk, fifo_depth, version) {}
+  void Initialize() override { initialize_called_++; }
+  void Shutdown() override { shutdown_called_++; }
+  size_t initialize_called_ = 0;
+  size_t shutdown_called_ = 0;
+};
+
 struct SherlockAudioStreamOutCodecInitTest : public SherlockAudioStreamOut {
   SherlockAudioStreamOutCodecInitTest(zx_device_t* parent,
                                       fbl::Array<std::unique_ptr<Tas5720>> codecs,
@@ -78,24 +100,185 @@ struct SherlockAudioStreamOutCodecInitTest : public SherlockAudioStreamOut {
   void ShutdownHook() override {}  // Do not perform shutdown since we don't initialize in InitPDev.
 };
 
-struct AmlTdmDeviceTest : public AmlTdmDevice {
-  static std::unique_ptr<AmlTdmDeviceTest> Create() {
-    constexpr size_t n_registers = 4096;  // big enough.
-    static fbl::Array<ddk_mock::MockMmioReg> unused_mocks =
-        fbl::Array(new ddk_mock::MockMmioReg[n_registers], n_registers);
-    static ddk_mock::MockMmioRegRegion unused_region(unused_mocks.data(), sizeof(uint32_t),
-                                                     n_registers);
-    return std::make_unique<AmlTdmDeviceTest>(unused_region.GetMmioBuffer(), HIFI_PLL, TDM_OUT_C,
-                                              FRDDR_A, MCLK_C, 0, AmlVersion::kS905D2G);
+struct SherlockAudioStreamOutDefaultTest : public SherlockAudioStreamOut {
+  SherlockAudioStreamOutDefaultTest(zx_device_t* parent,
+                                    fbl::Array<std::unique_ptr<Tas5720>> codecs,
+                                    const gpio_protocol_t* audio_enable_gpio)
+      : SherlockAudioStreamOut(parent) {
+    codecs_ = std::move(codecs);
+    audio_en_ = ddk::GpioProtocolClient(audio_enable_gpio);
+    aml_audio_ = AmlTdmDeviceTest::Create<AmlTdmDeviceTest>();
   }
-  AmlTdmDeviceTest(ddk::MmioBuffer mmio, ee_audio_mclk_src_t clk_src, aml_tdm_out_t tdm,
-                   aml_frddr_t frddr, aml_tdm_mclk_t mclk, uint32_t fifo_depth, AmlVersion version)
-      : AmlTdmDevice(std::move(mmio), clk_src, tdm, frddr, mclk, fifo_depth, version) {}
-  void Initialize() override { initialize_called_++; }
-  void Shutdown() override { shutdown_called_++; }
-  size_t initialize_called_ = 0;
-  size_t shutdown_called_ = 0;
+  zx_status_t Init() __TA_REQUIRES(domain_token()) override {
+    audio_stream_format_range_t range;
+    range.min_channels = kTestNumberOfChannels;
+    range.max_channels = kTestNumberOfChannels;
+    range.sample_formats = AUDIO_SAMPLE_FORMAT_16BIT;
+    range.min_frames_per_second = kTestFrameRate1;
+    range.max_frames_per_second = kTestFrameRate2;
+    range.flags = ASF_RANGE_FLAG_FPS_48000_FAMILY;
+    supported_formats_.push_back(range);
+
+    fifo_depth_ = kTestFifoDepth;
+
+    cur_gain_state_ = {};
+
+    SetInitialPlugState(AUDIO_PDNF_CAN_NOTIFY);
+
+    snprintf(device_name_, sizeof(device_name_), "test-audio-in");
+    snprintf(mfr_name_, sizeof(mfr_name_), "Bike Sheds, Inc.");
+    snprintf(prod_name_, sizeof(prod_name_), "testy_mctestface");
+
+    unique_id_ = AUDIO_STREAM_UNIQUE_ID_BUILTIN_MICROPHONE;
+
+    return ZX_OK;
+  }
+
+  bool init_hw_called_ = false;
 };
+
+TEST(SherlockAudioStreamOutTest, MuteChannels) {
+  struct AmlTdmDeviceMuteTest : public AmlTdmDeviceTest {
+    AmlTdmDeviceMuteTest(ddk::MmioBuffer mmio, ee_audio_mclk_src_t clk_src, aml_tdm_out_t tdm,
+                         aml_frddr_t frddr, aml_tdm_mclk_t mclk, uint32_t fifo_depth,
+                         AmlVersion version)
+        : AmlTdmDeviceTest(std::move(mmio), clk_src, tdm, frddr, mclk, fifo_depth, version) {}
+    zx_status_t ConfigTdmOutLane(size_t lane, uint32_t enable_mask, uint32_t mute_mask) override {
+      if (lane >= kMaxLanes) {
+        return ZX_ERR_INTERNAL;
+      }
+      last_enable_mask_[lane] = enable_mask;
+      last_mute_mask_[lane] = mute_mask;
+      return ZX_OK;
+    }
+    virtual ~AmlTdmDeviceMuteTest() = default;
+
+    uint32_t last_enable_mask_[kMaxLanes] = {};
+    uint32_t last_mute_mask_[kMaxLanes] = {};
+  };
+  struct SherlockAudioStreamOutMuteTest : public SherlockAudioStreamOutDefaultTest {
+    SherlockAudioStreamOutMuteTest(zx_device_t* parent, fbl::Array<std::unique_ptr<Tas5720>> codecs,
+                                   const gpio_protocol_t* audio_enable_gpio)
+        : SherlockAudioStreamOutDefaultTest(parent, std::move(codecs), audio_enable_gpio) {
+      aml_audio_ = AmlTdmDeviceMuteTest::Create<AmlTdmDeviceMuteTest>();
+    }
+    AmlTdmDevice* GetAmlTdmDevice() { return aml_audio_.get(); }
+  };
+
+  fake_ddk::Bind tester;
+  mock_i2c::MockI2c mock_i2c;
+
+  ddk::MockGpio audio_enable_gpio;
+  audio_enable_gpio.ExpectWrite(ZX_OK, 1);
+  audio_enable_gpio.ExpectWrite(ZX_OK, 1);
+  audio_enable_gpio.ExpectWrite(ZX_OK, 1);
+  audio_enable_gpio.ExpectWrite(ZX_OK, 1);
+  audio_enable_gpio.ExpectWrite(ZX_OK, 0);
+
+  auto codecs = fbl::Array(new std::unique_ptr<Tas5720>[3], 3);
+  codecs[0] = std::make_unique<Tas5720GoodInitTest>(mock_i2c.GetProto());
+  codecs[1] = std::make_unique<Tas5720GoodInitTest>(mock_i2c.GetProto());
+  codecs[2] = std::make_unique<Tas5720GoodInitTest>(mock_i2c.GetProto());
+  auto server = audio::SimpleAudioStream::Create<SherlockAudioStreamOutMuteTest>(
+      fake_ddk::kFakeParent, std::move(codecs), audio_enable_gpio.GetProto());
+  ASSERT_NOT_NULL(server);
+
+  Device::SyncClient client_wrap(std::move(tester.FidlClient()));
+  Device::ResultOf::GetChannel channel_wrap = client_wrap.GetChannel();
+  ASSERT_EQ(channel_wrap.status(), ZX_OK);
+
+  audio_fidl::StreamConfig::SyncClient client(std::move(channel_wrap->channel));
+
+  auto aml = static_cast<AmlTdmDeviceMuteTest*>(server->GetAmlTdmDevice());
+
+  // 1st case everything enabled.
+  {
+    zx::channel local, remote;
+    ASSERT_OK(zx::channel::create(0, &local, &remote));
+    audio_fidl::PcmFormat pcm_format = GetDefaultPcmFormat();
+    fidl::aligned<audio_fidl::PcmFormat> aligned_pcm_format = std::move(pcm_format);
+    auto builder = audio_fidl::Format::UnownedBuilder();
+    builder.set_pcm_format(fidl::unowned_ptr(&aligned_pcm_format));
+    client.CreateRingBuffer(builder.build(), std::move(remote));
+    // To make sure call initialization in the server, make a sync call
+    // (we know the server is single threaded, init completed if received a reply).
+    auto props = audio_fidl::RingBuffer::Call::GetProperties(zx::unowned_channel(local));
+    ASSERT_OK(props.status());
+  }
+  // All 4 channels enabled, nothing muted.
+  EXPECT_EQ(aml->last_enable_mask_[0], 3);
+  EXPECT_EQ(aml->last_mute_mask_[0], 0);
+  EXPECT_EQ(aml->last_enable_mask_[1], 3);
+  EXPECT_EQ(aml->last_mute_mask_[1], 0);
+
+  // 2nd case only 1 channel enabled.
+  {
+    zx::channel local, remote;
+    ASSERT_OK(zx::channel::create(0, &local, &remote));
+    audio_fidl::PcmFormat pcm_format = GetDefaultPcmFormat();
+    pcm_format.channels_to_use_bitmask = 1;
+    fidl::aligned<audio_fidl::PcmFormat> aligned_pcm_format = std::move(pcm_format);
+    auto builder = audio_fidl::Format::UnownedBuilder();
+    builder.set_pcm_format(fidl::unowned_ptr(&aligned_pcm_format));
+    client.CreateRingBuffer(builder.build(), std::move(remote));
+    // To make sure call initialization in the server, make a sync call
+    // (we know the server is single threaded, init completed if received a reply).
+    auto props = audio_fidl::RingBuffer::Call::GetProperties(zx::unowned_channel(local));
+    ASSERT_OK(props.status());
+  }
+  // All 4 channels enabled, 3 muted.
+  EXPECT_EQ(aml->last_enable_mask_[0], 3);
+  EXPECT_EQ(aml->last_mute_mask_[0], 2);  // Mutes 1 channel in lane 0.
+  EXPECT_EQ(aml->last_enable_mask_[1], 3);
+  EXPECT_EQ(aml->last_mute_mask_[1], 3);  // Mutes 2 channels in lane 1.
+
+  // 3rd case 2 channels enabled.
+  {
+    zx::channel local, remote;
+    ASSERT_OK(zx::channel::create(0, &local, &remote));
+    audio_fidl::PcmFormat pcm_format = GetDefaultPcmFormat();
+    pcm_format.channels_to_use_bitmask = 0xa;
+    fidl::aligned<audio_fidl::PcmFormat> aligned_pcm_format = std::move(pcm_format);
+    auto builder = audio_fidl::Format::UnownedBuilder();
+    builder.set_pcm_format(fidl::unowned_ptr(&aligned_pcm_format));
+    client.CreateRingBuffer(builder.build(), std::move(remote));
+    // To make sure call initialization in the server, make a sync call
+    // (we know the server is single threaded, init completed if received a reply).
+    auto props = audio_fidl::RingBuffer::Call::GetProperties(zx::unowned_channel(local));
+    ASSERT_OK(props.status());
+  }
+  // All 4 channels enabled, 2 muted.
+  EXPECT_EQ(aml->last_enable_mask_[0], 3);
+  EXPECT_EQ(aml->last_mute_mask_[0], 1);  // Mutes 1 channel in lane 0.
+  EXPECT_EQ(aml->last_enable_mask_[1], 3);
+  EXPECT_EQ(aml->last_mute_mask_[1], 1);  // Mutes 1 channel in lane 1.
+
+  // 4th case all channels enabled when channels_to_use_bitmask is 0.
+  {
+    zx::channel local, remote;
+    ASSERT_OK(zx::channel::create(0, &local, &remote));
+    audio_fidl::PcmFormat pcm_format = GetDefaultPcmFormat();
+    pcm_format.channels_to_use_bitmask = 0;
+    fidl::aligned<audio_fidl::PcmFormat> aligned_pcm_format = std::move(pcm_format);
+    auto builder = audio_fidl::Format::UnownedBuilder();
+    builder.set_pcm_format(fidl::unowned_ptr(&aligned_pcm_format));
+    client.CreateRingBuffer(builder.build(), std::move(remote));
+    // To make sure call initialization in the server, make a sync call
+    // (we know the server is single threaded, init completed if received a reply).
+    auto props = audio_fidl::RingBuffer::Call::GetProperties(zx::unowned_channel(local));
+    ASSERT_OK(props.status());
+  }
+  // All 4 channels enabled, nothing muted.
+  EXPECT_EQ(aml->last_enable_mask_[0], 3);
+  EXPECT_EQ(aml->last_mute_mask_[0], 0);
+  EXPECT_EQ(aml->last_enable_mask_[1], 3);
+  EXPECT_EQ(aml->last_mute_mask_[1], 0);
+
+  server->DdkUnbindDeprecated();
+  EXPECT_TRUE(tester.Ok());
+  audio_enable_gpio.VerifyAndClear();
+  server->DdkRelease();
+}
 
 TEST(SherlockAudioStreamOutTest, CodecInitGood) {
   fake_ddk::Bind tester;
@@ -168,7 +351,7 @@ TEST(SherlockAudioStreamOutTest, LibraryShutdwonOnInitNormal) {
         : SherlockAudioStreamOut(parent) {
       codecs_ = std::move(codecs);
       audio_en_ = ddk::GpioProtocolClient(audio_enable_gpio);
-      aml_audio_ = AmlTdmDeviceTest::Create();
+      aml_audio_ = AmlTdmDeviceTest::Create<AmlTdmDeviceTest>();
     }
     size_t LibraryInitialized() {
       AmlTdmDeviceTest* test_aml_audio = static_cast<AmlTdmDeviceTest*>(aml_audio_.get());
@@ -216,7 +399,7 @@ TEST(SherlockAudioStreamOutTest, LibraryShutdwonOnInitWithError) {
         : SherlockAudioStreamOut(parent) {
       codecs_ = std::move(codecs);
       audio_en_ = ddk::GpioProtocolClient(audio_enable_gpio);
-      aml_audio_ = AmlTdmDeviceTest::Create();
+      aml_audio_ = AmlTdmDeviceTest::Create<AmlTdmDeviceTest>();
     }
     bool LibraryInitialized() {
       AmlTdmDeviceTest* test_aml_audio = static_cast<AmlTdmDeviceTest*>(aml_audio_.get());
@@ -273,41 +456,6 @@ TEST(SherlockAudioStreamOutTest, ChangeRate96K) {
     zx_status_t SetGain(float gain) override { return ZX_OK; }
     uint32_t last_rate_requested_ = 0;
   };
-  struct Rate96KTest : public SherlockAudioStreamOut {
-    Rate96KTest(zx_device_t* parent, fbl::Array<std::unique_ptr<Tas5720>> codecs,
-                const gpio_protocol_t* audio_enable_gpio)
-        : SherlockAudioStreamOut(parent) {
-      codecs_ = std::move(codecs);
-      audio_en_ = ddk::GpioProtocolClient(audio_enable_gpio);
-      aml_audio_ = AmlTdmDeviceTest::Create();
-    }
-    zx_status_t Init() __TA_REQUIRES(domain_token()) override {
-      audio_stream_format_range_t range;
-      range.min_channels = kTestNumberOfChannels;
-      range.max_channels = kTestNumberOfChannels;
-      range.sample_formats = AUDIO_SAMPLE_FORMAT_16BIT;
-      range.min_frames_per_second = kTestFrameRate1;
-      range.max_frames_per_second = kTestFrameRate2;
-      range.flags = ASF_RANGE_FLAG_FPS_48000_FAMILY;
-      supported_formats_.push_back(range);
-
-      fifo_depth_ = kTestFifoDepth;
-
-      cur_gain_state_ = {};
-
-      SetInitialPlugState(AUDIO_PDNF_CAN_NOTIFY);
-
-      snprintf(device_name_, sizeof(device_name_), "test-audio-in");
-      snprintf(mfr_name_, sizeof(mfr_name_), "Bike Sheds, Inc.");
-      snprintf(prod_name_, sizeof(prod_name_), "testy_mctestface");
-
-      unique_id_ = AUDIO_STREAM_UNIQUE_ID_BUILTIN_MICROPHONE;
-
-      return ZX_OK;
-    }
-
-    bool init_hw_called_ = false;
-  };
 
   fake_ddk::Bind tester;
   mock_i2c::MockI2c mock_i2c;
@@ -324,7 +472,7 @@ TEST(SherlockAudioStreamOutTest, ChangeRate96K) {
   codecs[0] = std::unique_ptr<CodecRate96KTest>(raw_codecs[0]);
   codecs[1] = std::unique_ptr<CodecRate96KTest>(raw_codecs[1]);
   codecs[2] = std::unique_ptr<CodecRate96KTest>(raw_codecs[2]);
-  auto server = audio::SimpleAudioStream::Create<Rate96KTest>(
+  auto server = audio::SimpleAudioStream::Create<SherlockAudioStreamOutDefaultTest>(
       fake_ddk::kFakeParent, std::move(codecs), audio_enable_gpio.GetProto());
   ASSERT_NOT_NULL(server);
 

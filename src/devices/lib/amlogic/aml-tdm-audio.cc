@@ -261,19 +261,23 @@ void AmlTdmDevice::ConfigTdmOutSlot(uint8_t bit_offset, uint8_t num_slots, uint8
   mmio_.Write32(reg, GetTdmOffset(TDMOUT_CTRL1_OFFS));
 }
 
-zx_status_t AmlTdmDevice::ConfigTdmOutLane(size_t lane, uint32_t mask) {
+zx_status_t AmlTdmDevice::ConfigTdmOutLane(size_t lane, uint32_t enable_mask, uint32_t mute_mask) {
   switch (lane) {
     case 0:
-      mmio_.Write32(mask, GetTdmOffset(TDMOUT_MASK0_OFFS));
+      mmio_.Write32(enable_mask, GetTdmOffset(TDMOUT_MASK0_OFFS));
+      mmio_.Write32(mute_mask, GetTdmOffset(TDMOUT_MUTE0_OFFS));
       break;
     case 1:
-      mmio_.Write32(mask, GetTdmOffset(TDMOUT_MASK1_OFFS));
+      mmio_.Write32(enable_mask, GetTdmOffset(TDMOUT_MASK1_OFFS));
+      mmio_.Write32(mute_mask, GetTdmOffset(TDMOUT_MUTE1_OFFS));
       break;
     case 2:
-      mmio_.Write32(mask, GetTdmOffset(TDMOUT_MASK2_OFFS));
+      mmio_.Write32(enable_mask, GetTdmOffset(TDMOUT_MASK2_OFFS));
+      mmio_.Write32(mute_mask, GetTdmOffset(TDMOUT_MUTE2_OFFS));
       break;
     case 3:
-      mmio_.Write32(mask, GetTdmOffset(TDMOUT_MASK3_OFFS));
+      mmio_.Write32(enable_mask, GetTdmOffset(TDMOUT_MASK3_OFFS));
+      mmio_.Write32(mute_mask, GetTdmOffset(TDMOUT_MUTE3_OFFS));
       break;
     default:
       return ZX_ERR_INVALID_ARGS;

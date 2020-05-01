@@ -57,7 +57,7 @@ zx_status_t AstroAudioStreamOut::InitHW() {
   aml_audio_->ConfigTdmOutSwaps(0x00000010);
 
   // Lane 0, unmask first 2 slots (0x00000003),
-  status = aml_audio_->ConfigTdmOutLane(0, 0x00000003);
+  status = aml_audio_->ConfigTdmOutLane(0, 0x00000003, 0);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s could not configure TDM out lane %d", __FILE__, status);
     return status;

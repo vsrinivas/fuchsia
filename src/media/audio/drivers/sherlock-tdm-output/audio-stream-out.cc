@@ -97,14 +97,20 @@ zx_status_t SherlockAudioStreamOut::InitHW() {
   aml_audio_->ConfigTdmOutSwaps(0x00003210);
 
   // Tweeters: Lane 0, unmask TDM slots 0 & 1 (L+R FRDDR slots 0 & 1).
-  status = aml_audio_->ConfigTdmOutLane(0, 0x00000003);
+  uint32_t mute_slots = (channels_to_use_bitmask_ != AUDIO_SET_FORMAT_REQ_BITMASK_DISABLED)
+                            ? (~static_cast<uint32_t>(channels_to_use_bitmask_)) & 3
+                            : 0;
+  status = aml_audio_->ConfigTdmOutLane(0, 0x00000003, mute_slots);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s could not configure TDM out lane0 %d", __FILE__, status);
     return status;
   }
 
   // Woofer: Lane 1, unmask TDM slot 0 & 1 (Woofer FRDDR slots 2 & 3).
-  status = aml_audio_->ConfigTdmOutLane(1, 0x00000003);
+  mute_slots = (channels_to_use_bitmask_ != AUDIO_SET_FORMAT_REQ_BITMASK_DISABLED)
+                   ? ((~static_cast<uint32_t>(channels_to_use_bitmask_)) & 0xc) >> 2
+                   : 0;
+  status = aml_audio_->ConfigTdmOutLane(1, 0x00000003, mute_slots);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s could not configure TDM out lane1 %d", __FILE__, status);
     return status;
@@ -304,12 +310,16 @@ zx_status_t SherlockAudioStreamOut::ChangeFormat(const audio_proto::StreamSetFmt
     return ZX_ERR_INVALID_ARGS;
   }
 
-  if (req.frames_per_second != frames_per_second_) {
+  if (req.frames_per_second != frames_per_second_ ||
+      (channels_to_use_bitmask_ != req.channels_to_use_bitmask)) {
+    auto last_channels_to_use_bitmask = channels_to_use_bitmask_;
+    channels_to_use_bitmask_ = req.channels_to_use_bitmask;
     auto last_rate = frames_per_second_;
     frames_per_second_ = req.frames_per_second;
     auto status = InitHW();
     if (status != ZX_OK) {
       frames_per_second_ = last_rate;
+      channels_to_use_bitmask_ = last_channels_to_use_bitmask;
       return status;
     }
 
