@@ -8,6 +8,7 @@
 #include <string.h>
 #include <zircon/compiler.h>
 
+#include <string_view>
 #include <type_traits>
 
 #include <fbl/string_traits.h>
@@ -24,24 +25,24 @@ constexpr static size_t constexpr_strlen(const char* str) {
 
 // A string-like object that points to a sized piece of memory.
 //
-// fbl::StringPiece is designed to resemble std::string_view.
+// fbl::StringPiece is an extension of std::string_view. Beyond the standard API,
+// it only adds conversions from fbl's string-like types and from nullptr.
 //
 // |length()| does NOT include a trailing NUL and no guarantee is made that
 // you can check |data()[length()]| to see if a NUL is there.
 //
 // Basically, these aren't C strings, don't think otherwise.
 // The string piece does not own the data it points to.
-class __POINTER(char) StringPiece {
+
+class StringPiece : public std::string_view {
  public:
-  constexpr StringPiece() : data_(nullptr), length_(0U) {}
+  // These constructors recreate the std constuctor API.
+  constexpr StringPiece(const StringPiece&) = default;
+  constexpr StringPiece() : std::string_view() {}
+  constexpr StringPiece(const char* s, size_t count) : std::string_view(s, count) {}
+  constexpr StringPiece(const char* s) : std::string_view(s) {}
 
-  constexpr StringPiece(const char* data)
-      : data_(data), length_(data != nullptr ? constexpr_strlen(data) : 0U) {}
-
-  constexpr StringPiece(const char* data, size_t length) : data_(data), length_(length) {}
-
-  constexpr StringPiece(const StringPiece& other) = default;
-  constexpr StringPiece(StringPiece&& other) = default;
+  // The remaining constructors are non-standard.
 
   // Creates a string piece from a string-like object.
   //
@@ -51,58 +52,9 @@ class __POINTER(char) StringPiece {
   constexpr StringPiece(const T& value)
       : StringPiece(GetStringData(value), GetStringLength(value)) {}
 
-  constexpr const char* data() const { return data_; }
-
-  constexpr size_t length() const { return length_; }
-  constexpr size_t size() const { return length_; }
-  constexpr bool empty() const { return length_ == 0U; }
-
-  constexpr const char* begin() const { return data_; }
-  constexpr const char* cbegin() const { return data_; }
-  constexpr const char* end() const { return data_ + length_; }
-  constexpr const char* cend() const { return data_ + length_; }
-
-  constexpr const char& operator[](size_t pos) const { return data_[pos]; }
-
-  int compare(const StringPiece& other) const;
-
-  constexpr StringPiece& operator=(const StringPiece& other) = default;
-  constexpr StringPiece& operator=(StringPiece&& other) = default;
-
-  template <typename T, typename = typename std::enable_if<is_string_like<T>::value>::type>
-  constexpr StringPiece& operator=(const T& value) {
-    data_ = GetStringData(value);
-    length_ = GetStringLength(value);
-    return *this;
-  }
-
- private:
-  // Pointer to string data, not necessarily null terminated.
-  const char* data_;
-
-  // Length of the string data.
-  size_t length_;
+  // Create a StringPiece from a nullptr. Equivalent to the standard default constructor.
+  constexpr StringPiece(decltype(nullptr)) : std::string_view() {}
 };
-
-bool operator==(const StringPiece& lhs, const StringPiece& rhs);
-
-inline bool operator!=(const StringPiece& lhs, const StringPiece& rhs) { return !(lhs == rhs); }
-
-inline bool operator<(const StringPiece& lhs, const StringPiece& rhs) {
-  return lhs.compare(rhs) < 0;
-}
-
-inline bool operator>(const StringPiece& lhs, const StringPiece& rhs) {
-  return lhs.compare(rhs) > 0;
-}
-
-inline bool operator<=(const StringPiece& lhs, const StringPiece& rhs) {
-  return lhs.compare(rhs) <= 0;
-}
-
-inline bool operator>=(const StringPiece& lhs, const StringPiece& rhs) {
-  return lhs.compare(rhs) >= 0;
-}
 
 }  // namespace fbl
 
