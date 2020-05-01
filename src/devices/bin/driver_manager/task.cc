@@ -81,6 +81,10 @@ void Task::Complete(zx_status_t status) {
   dependents_.reset();
   dependencies_.reset();
 
+  // Take an additional self reference while calling the completion, to prevent the completion from
+  // dropping the last reference and running the dtor.
+  fbl::RefPtr<Task> keep_alive(this);
+
   Completion completion(std::move(completion_));
   if (completion) {
     completion(status);

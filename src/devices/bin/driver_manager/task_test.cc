@@ -286,4 +286,32 @@ TEST_F(TaskTestCase, DependentOnParentFailure) {
   }
 }
 
+// A task that completes immediately, triggering its completion
+class CompletionTask : public Task {
+ public:
+  explicit CompletionTask(Completion completion)
+      : Task(async_get_default_dispatcher(), std::move(completion)) {}
+
+  static fbl::RefPtr<CompletionTask> Create(Completion completion) {
+    return fbl::MakeRefCounted<CompletionTask>(std::move(completion));
+  }
+
+  fbl::String TaskDescription() const override { return "CompletionTask"; }
+
+ private:
+  void Run() override { Complete(ZX_OK); }
+};
+
+// Test that we do not use-after-free if the task completion hook
+// drops the last external task reference.
+TEST_F(TaskTestCase, CompletionDropsLastExternalTaskRef) {
+  bool ran = false;
+  fbl::RefPtr<CompletionTask> task = CompletionTask::Create([&task, &ran](zx_status_t status) {
+    task.reset();
+    ran = true;
+  });
+  loop().RunUntilIdle();
+  ASSERT_TRUE(ran);
+}
+
 }  // namespace
