@@ -79,11 +79,26 @@ class BufferAllocator final : public Allocator {
     }
   }
 
-  allocation_result allocate(size_t obj_size, size_t count, destructor dtor) override {
+  // Check if we have enough space to make the given allocation.
+  bool can_allocate(size_t block_size, destructor dtor) const {
+    DestructorMetadata* metadata_ptr = last_destructor_metadata_;
+
+    if (dtor != trivial_destructor) {
+      metadata_ptr--;
+    }
+    return ((next_object_ + block_size) <= reinterpret_cast<uint8_t*>(metadata_ptr));
+  }
+
+  allocation_result allocate(AllocationType type, size_t obj_size, size_t count,
+                             destructor dtor) override {
     assert(count <= static_cast<size_t>(std::numeric_limits<uint32_t>::max()) &&
            "fidl::BufferAllocator expects a count that can fit within uint32_t");
     size_t block_size = FIDL_ALIGN(obj_size * count);
     void* block = next_object_;
+
+    if (!can_allocate(block_size, dtor)) {
+      return allocation_result{.data = nullptr, .requires_delete = false};
+    }
 
     if (dtor != trivial_destructor) {
       last_destructor_metadata_--;
@@ -93,11 +108,6 @@ class BufferAllocator final : public Allocator {
     }
 
     next_object_ += block_size;
-
-    if (next_object_ > reinterpret_cast<uint8_t*>(last_destructor_metadata_)) {
-      // OOM - the two pointers allocating from either end crossed.
-      abort();
-    }
 
     return allocation_result{.data = block, .requires_delete = false};
   }

@@ -44,18 +44,18 @@ class Allocator {
   // blocks. More complication always has more performance impact, though.
   template <typename T, typename = std::enable_if_t<!std::is_array<T>::value>, typename... Args>
   tracking_ptr<T> make(Args&&... args) {
-    allocation_result result = allocate(sizeof(T), 1, destructors<T>::make_destructor());
-    fidl::aligned<T>* ptr = new (result.data) fidl::aligned<T>(std::forward<Args>(args)...);
-
-#if TRACKING_PTR_ENABLE_UNIQUE_PTR_CONSTRUCTOR
-    if (result.requires_delete) {
-      return std::unique_ptr<T>(&ptr->value);
-    } else {
-#endif
-      return fidl::unowned_ptr_t<fidl::aligned<T>>(ptr);
-#if TRACKING_PTR_ENABLE_UNIQUE_PTR_CONSTRUCTOR
+    allocation_result result =
+        allocate(AllocationType::kNonArray, sizeof(T), 1, destructors<T>::make_destructor());
+    if (result.data == nullptr) {
+      abort();
     }
-#endif
+
+    if (result.requires_delete) {
+      return std::unique_ptr<T>(new (result.data) T(std::forward<Args>(args)...));
+    } else {
+      fidl::aligned<T>* ptr = new (result.data) fidl::aligned<T>(std::forward<Args>(args)...);
+      return fidl::unowned_ptr_t<fidl::aligned<T>>(ptr);
+    }
   }
 
   // make allocates an array of the specified type and size.
@@ -64,20 +64,22 @@ class Allocator {
   template <typename T, typename = std::enable_if_t<std::is_array<T>::value>,
             typename ArraylessT = std::remove_extent_t<T>>
   tracking_ptr<T> make(size_t count) {
-    allocation_result result =
-        allocate(sizeof(ArraylessT), count, destructors<ArraylessT>::make_destructor());
-    ArraylessT* ptr = new (result.data) ArraylessT[count]();
-
-#if TRACKING_PTR_ENABLE_UNIQUE_PTR_CONSTRUCTOR
-    if (result.requires_delete) {
-      return std::unique_ptr<T>(&ptr->value);
-    } else {
-#endif
-      return fidl::unowned_ptr_t<ArraylessT>(ptr);
-#if TRACKING_PTR_ENABLE_UNIQUE_PTR_CONSTRUCTOR
+    allocation_result result = allocate(AllocationType::kArray, sizeof(ArraylessT), count,
+                                        destructors<ArraylessT>::make_destructor());
+    if (result.data == nullptr) {
+      abort();
     }
-#endif
+
+    ArraylessT* ptr = new (result.data) ArraylessT[count]();
+    if (result.requires_delete) {
+      return std::unique_ptr<T>(ptr);
+    } else {
+      return fidl::unowned_ptr_t<ArraylessT>(ptr);
+    }
   }
+
+  template <typename, typename...>
+  friend class FailoverHeapAllocator;
 
  protected:
   Allocator() {}
@@ -88,11 +90,17 @@ class Allocator {
   typedef void (*destructor)(void* ptr, size_t count);
   static constexpr destructor trivial_destructor = nullptr;
 
+  enum class AllocationType {
+    kArray = 1,
+    kNonArray = 2,
+  };
+
   struct allocation_result {
     void* data;
     bool requires_delete;
   };
-  virtual allocation_result allocate(size_t obj_size, size_t count, destructor dtor) = 0;
+  virtual allocation_result allocate(AllocationType type, size_t obj_size, size_t count,
+                                     destructor dtor) = 0;
 
  private:
   template <typename T>
