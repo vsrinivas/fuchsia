@@ -112,4 +112,4 @@ static struct hw_rng_ops ops = {
 
 static void intel_rng_init(uint level) { hw_rng_register(&ops); }
 
-LK_INIT_HOOK(intel_rng_init, intel_rng_init, LK_INIT_LEVEL_TARGET_EARLY)
+LK_INIT_HOOK(intel_rng_init, intel_rng_init, LK_INIT_LEVEL_PLATFORM_EARLY + 1)

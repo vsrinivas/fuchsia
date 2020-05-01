@@ -464,4 +464,4 @@ static void dlog_init_hook(uint level) {
   }
 }
 
-LK_INIT_HOOK(debuglog, dlog_init_hook, LK_INIT_LEVEL_TARGET)
+LK_INIT_HOOK(debuglog, dlog_init_hook, LK_INIT_LEVEL_PLATFORM)

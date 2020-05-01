@@ -118,8 +118,8 @@ static void EarlyBootSeed(uint level) {
 
   // Before doing anything else, test our entropy collector. This is
   // explicitly called here rather than in another init hook to ensure
-  // ordering (at level LK_INIT_LEVEL_TARGET_EARLY, but before the rest of
-  // EarlyBootSeed).
+  // ordering (at level LK_INIT_LEVEL_PLATFORM_EARLY + 1, but before the rest
+  // of EarlyBootSeed).
   entropy::EarlyBootTest();
 
   // Statically allocate an array of bytes to put the PRNG into.  We do this
@@ -208,7 +208,7 @@ static void StartReseedThread(uint level) {
 
 }  // namespace crypto
 
-LK_INIT_HOOK(global_prng_seed, crypto::GlobalPRNG::EarlyBootSeed, LK_INIT_LEVEL_TARGET_EARLY + 1)
+LK_INIT_HOOK(global_prng_seed, crypto::GlobalPRNG::EarlyBootSeed, LK_INIT_LEVEL_PLATFORM_EARLY + 1)
 
 LK_INIT_HOOK(global_prng_thread_safe, crypto::GlobalPRNG::BecomeThreadSafe,
              LK_INIT_LEVEL_THREADING - 1)

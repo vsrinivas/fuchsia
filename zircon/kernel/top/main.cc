@@ -18,7 +18,6 @@
 #include <lib/heap.h>
 #include <platform.h>
 #include <string.h>
-#include <target.h>
 #include <zircon/compiler.h>
 
 #include <kernel/init.h>
@@ -64,15 +63,11 @@ void lk_main() {
   lk_primary_cpu_init_level(LK_INIT_LEVEL_ARCH_EARLY, LK_INIT_LEVEL_PLATFORM_EARLY - 1);
   platform_early_init();
 
-  // do any super early target initialization
-  lk_primary_cpu_init_level(LK_INIT_LEVEL_PLATFORM_EARLY, LK_INIT_LEVEL_TARGET_EARLY - 1);
-  target_early_init();
-
   dprintf(INFO, "\nwelcome to Zircon\n\n");
 
   dprintf(INFO, "KASLR: .text section at %p\n", __code_start);
 
-  lk_primary_cpu_init_level(LK_INIT_LEVEL_TARGET_EARLY, LK_INIT_LEVEL_VM_PREHEAP - 1);
+  lk_primary_cpu_init_level(LK_INIT_LEVEL_PLATFORM_EARLY, LK_INIT_LEVEL_VM_PREHEAP - 1);
   dprintf(SPEW, "initializing vm pre-heap\n");
   vm_init_preheap();
 
@@ -123,13 +118,8 @@ static int bootstrap2(void*) {
   // late CPU initialization, after platform is available
   arch_cpu_late_init();
 
-  // initialize the target
-  dprintf(SPEW, "initializing target\n");
-  lk_primary_cpu_init_level(LK_INIT_LEVEL_PLATFORM, LK_INIT_LEVEL_TARGET - 1);
-  target_init();
-
   dprintf(SPEW, "moving to last init level\n");
-  lk_primary_cpu_init_level(LK_INIT_LEVEL_TARGET, LK_INIT_LEVEL_LAST);
+  lk_primary_cpu_init_level(LK_INIT_LEVEL_PLATFORM, LK_INIT_LEVEL_LAST);
 
   timeline_init.Set(current_ticks());
   return 0;

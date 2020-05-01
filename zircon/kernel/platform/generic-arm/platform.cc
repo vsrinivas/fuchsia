@@ -17,7 +17,6 @@
 #include <mexec.h>
 #include <platform.h>
 #include <reg.h>
-#include <target.h>
 #include <trace.h>
 
 #include <arch/arch_ops.h>

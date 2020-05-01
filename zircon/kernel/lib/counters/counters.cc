@@ -29,4 +29,4 @@ KCOUNTER(init_time, "init.target.time.msec")
 
 static void counters_init(unsigned level) { init_time.Add(current_time() / 1000000LL); }
 
-LK_INIT_HOOK(kcounters, counters_init, LK_INIT_LEVEL_TARGET)
+LK_INIT_HOOK(kcounters, counters_init, LK_INIT_LEVEL_USER - 1)

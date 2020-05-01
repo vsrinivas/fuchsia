@@ -20,6 +20,5 @@ source_set("top") {
     "$zx/kernel/lib/userabi",
     "$zx/kernel/lib/version",
     "$zx/kernel/platform",
-    "$zx/kernel/target",
   ]
 }
