@@ -44,6 +44,9 @@ Some language-specific targets are also SDK-ready:
 In order to add documentation to an SDK, use the
 [`sdk_documentation`](sdk_documentation.gni) template.
 
+Static data (e.g. configuration or LICENSE files) being added to the SDK should use the
+[`sdk_data`](sdk_data.gni) template.
+
 A target `//foo/bar` declared with one of these templates will yield an
 additional target `//foo/bar:bar_sdk` which is an atom ready to be included in
 an SDK.
