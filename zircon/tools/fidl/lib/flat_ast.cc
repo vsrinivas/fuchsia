@@ -296,7 +296,7 @@ bool Typespace::CreateNotOwned(const flat::Name& name, const Type* arg_type,
 
   auto type_template = LookupTemplate(name);
   if (type_template == nullptr) {
-    error_reporter_->ReportError(ErrUnknownTypeTemplate, name.span(), name);
+    error_reporter_->ReportError(ErrUnknownType, name.span(), name);
     return false;
   }
   return type_template->Create({.span = name.span(),
@@ -2958,7 +2958,7 @@ bool Library::CompileProtocol(Protocol* protocol_declaration) {
       auto ordinal_result =
           method_scope.ordinals.Insert(method.generated_ordinal32->value, method.name);
       if (method.generated_ordinal32->value == 0)
-        return Fail(ErrZeroValueOrdinal, method.generated_ordinal32->span());
+        return Fail(ErrGeneratedZeroValueOrdinal, method.generated_ordinal32->span());
       if (!ordinal_result.ok()) {
         std::string replacement_method(
             fidl::ordinals::GetSelector(method.attributes.get(), method.name));

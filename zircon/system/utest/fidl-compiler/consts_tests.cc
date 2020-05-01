@@ -729,6 +729,22 @@ struct Example { string:dependency.MAX s; };
   END_TEST;
 }
 
+bool BadParameterizePrimitive() {
+  BEGIN_TEST;
+
+  TestLibrary library(R"FIDL(
+library example;
+
+const uint8<string> u = 0;
+)FIDL");
+  ASSERT_FALSE(library.Compile());
+  const auto& errors = library.errors();
+  ASSERT_GE(errors.size(), 1);
+  ASSERT_ERR(errors[0], fidl::ErrCannotBeParameterized);
+
+  END_TEST;
+}
+
 bool BadConstTestAssignTypeName() {
   BEGIN_TEST;
 
@@ -753,6 +769,23 @@ bool BadConstTestAssignTypeName() {
     ASSERT_GE(errors.size(), 1);
     ASSERT_ERR(errors[0], fidl::ErrExpectedValueButGotType);
   }
+
+  END_TEST;
+}
+
+bool BadNameCollision() {
+  BEGIN_TEST;
+
+  TestLibrary library(R"FIDL(
+library example;
+
+const uint8 FOO = 0;
+const uint8 FOO = 1;
+)FIDL");
+  ASSERT_FALSE(library.Compile());
+  const auto& errors = library.errors();
+  ASSERT_GE(errors.size(), 1);
+  ASSERT_ERR(errors[0], fidl::ErrNameCollision);
 
   END_TEST;
 }
@@ -903,6 +936,29 @@ const uint16 two_fifty_seven = one | two_fifty_six;
   EXPECT_TRUE(CheckConstEq<uint16_t>(library, "two_fifty_seven", 257,
                                      fidl::flat::Constant::Kind::kBinaryOperator,
                                      fidl::flat::ConstantValue::Kind::kUint16));
+
+  END_TEST;
+}
+
+bool BadOrOperatorNonPrimitiveTypesTest() {
+  BEGIN_TEST;
+
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
+
+  TestLibrary library(R"FIDL(
+library example;
+
+const string HI = "hi";
+const string THERE = "there";
+const string result = HI | THERE;
+  )FIDL",
+                      std::move(experimental_flags));
+  ASSERT_FALSE(library.Compile());
+  const auto& errors = library.errors();
+  ASSERT_EQ(errors.size(), 2);
+  ASSERT_ERR(errors[0], fidl::ErrOrOperatorOnNonPrimitiveValue);
+  ASSERT_ERR(errors[1], fidl::ErrCannotResolveConstantValue);
 
   END_TEST;
 }
@@ -1131,7 +1187,10 @@ RUN_TEST(GoodMaxBoundTestConvertFromUnbounded)
 RUN_TEST(BadMaxBoundTestAssignToConst)
 RUN_TEST(BadMaxBoundTestLibraryQualified)
 
+RUN_TEST(BadParameterizePrimitive)
+
 RUN_TEST(BadConstTestAssignTypeName)
+RUN_TEST(BadNameCollision)
 
 RUN_TEST(GoodMultiFileConstReference)
 
@@ -1141,6 +1200,7 @@ RUN_TEST(UnknownBitsMemberTest)
 RUN_TEST(OrOperatorTest)
 RUN_TEST(BadOrOperatorDifferentTypesTest)
 RUN_TEST(GoodOrOperatorDifferentTypesTest)
+RUN_TEST(BadOrOperatorNonPrimitiveTypesTest)
 RUN_TEST(GoodOrOperatorParenthesesTest)
 RUN_TEST(BadOrOperatorMissingRightParenTest)
 RUN_TEST(BadOrOperatorMissingLeftParenTest)

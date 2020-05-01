@@ -69,7 +69,7 @@ table NonDenseTable {
   EXPECT_FALSE(library.Compile());
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 4);
-  ASSERT_ERR(errors[0], fidl::ErrUnknownTypeTemplate);
+  ASSERT_ERR(errors[0], fidl::ErrUnknownType);
   ASSERT_ERR(errors[1], fidl::ErrDuplicateMemberName);
   ASSERT_ERR(errors[2], fidl::ErrNonDenseOrdinal);
   ASSERT_ERR(errors[3], fidl::ErrDuplicateMemberValue);

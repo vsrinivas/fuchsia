@@ -84,9 +84,10 @@ enum Fruit : uint64 {
 )FIDL");
   ASSERT_FALSE(library.Compile());
   const auto& errors = library.errors();
-  ASSERT_GE(errors.size(), 1);
+  ASSERT_EQ(errors.size(), 2);
   ASSERT_ERR(errors[0], fidl::ErrConstantCannotBeInterpretedAsType);
   ASSERT_STR_STR(errors[0]->msg.c_str(), "-2");
+  ASSERT_ERR(errors[1], fidl::ErrCouldNotResolveMember);
 
   END_TEST;
 }
@@ -104,9 +105,10 @@ enum Fruit {
 )FIDL");
   ASSERT_FALSE(library.Compile());
   const auto& errors = library.errors();
-  ASSERT_GE(errors.size(), 1);
+  ASSERT_EQ(errors.size(), 2);
   ASSERT_ERR(errors[0], fidl::ErrConstantCannotBeInterpretedAsType);
   ASSERT_STR_STR(errors[0]->msg.c_str(), "-2");
+  ASSERT_ERR(errors[1], fidl::ErrCouldNotResolveMember);
 
   END_TEST;
 }
@@ -124,9 +126,28 @@ enum Fruit : uint8 {
 )FIDL");
   ASSERT_FALSE(library.Compile());
   const auto& errors = library.errors();
-  ASSERT_GE(errors.size(), 1);
+  ASSERT_EQ(errors.size(), 2);
   ASSERT_ERR(errors[0], fidl::ErrConstantCannotBeInterpretedAsType);
   ASSERT_STR_STR(errors[0]->msg.c_str(), "256");
+  ASSERT_ERR(errors[1], fidl::ErrCouldNotResolveMember);
+
+  END_TEST;
+}
+
+bool BadEnumTestFloatType() {
+  BEGIN_TEST;
+
+  TestLibrary library(R"FIDL(
+library example;
+
+enum Error: float64 {
+    ONE_POINT_FIVE = 1.5;
+};
+)FIDL");
+  ASSERT_FALSE(library.Compile());
+  const auto& errors = library.errors();
+  ASSERT_EQ(errors.size(), 1);
+  ASSERT_ERR(errors[0], fidl::ErrEnumTypeMustBeIntegralPrimitive);
 
   END_TEST;
 }
@@ -148,6 +169,22 @@ enum Fruit : uint64 {
   ASSERT_GE(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrDuplicateMemberName);
   ASSERT_STR_STR(errors[0]->msg.c_str(), "ORANGE");
+
+  END_TEST;
+}
+
+bool BadEnumTestNoMembers() {
+  BEGIN_TEST;
+
+  TestLibrary library(R"FIDL(
+library example;
+
+enum E {};
+)FIDL");
+  ASSERT_FALSE(library.Compile());
+  const auto& errors = library.errors();
+  ASSERT_EQ(errors.size(), 1);
+  ASSERT_ERR(errors[0], fidl::ErrMustHaveOneMember);
 
   END_TEST;
 }
@@ -202,7 +239,9 @@ RUN_TEST(BadEnumTestWithNonUniqueValuesOutOfLine)
 RUN_TEST(BadEnumTestUnsignedWithNegativeMember)
 RUN_TEST(BadEnumTestInferredUnsignedWithNegativeMember)
 RUN_TEST(BadEnumTestMemberOverflow)
+RUN_TEST(BadEnumTestFloatType)
 RUN_TEST(BadEnumTestDuplicateMember)
+RUN_TEST(BadEnumTestNoMembers)
 RUN_TEST(GoodEnumTestKeywordNames)
 RUN_TEST(BadEnumShantBeNullable)
 

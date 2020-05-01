@@ -111,9 +111,7 @@ class Parser {
 
   void UpdateMarks(Token& token) {
     // There should always be at least one of these - the outermost.
-    if (active_ast_scopes_.size() == 0) {
-      Fail(ErrUnbalancedParseTree);
-    }
+    assert(active_ast_scopes_.size() > 0 && "internal compiler error: unbalanced parse tree");
 
     if (!suppress_gap_checks_) {
       // If the end of the last node was the start of a gap, record that.

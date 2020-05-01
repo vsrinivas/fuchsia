@@ -122,6 +122,36 @@ table Foo {
     ASSERT_ERR(library.errors().at(0), fidl::ErrExpectedOrdinalOrCloseBrace);
   }
 
+  {
+    // Duplicate field names are invalid.
+    auto library = TestLibrary(R"FIDL(
+library fidl.test.tables;
+
+table Duplicates {
+    1: string field;
+    2: uint32 field;
+};
+)FIDL");
+    EXPECT_FALSE(library.Compile());
+    EXPECT_EQ(library.errors().size(), 1u);
+    ASSERT_ERR(library.errors().at(0), fidl::ErrDuplicateTableFieldName);
+  }
+
+  {
+    // Duplicate ordinals are invalid.
+    auto library = TestLibrary(R"FIDL(
+library fidl.test.tables;
+
+table Duplicates {
+    1: string foo;
+    1: uint32 bar;
+};
+)FIDL");
+    EXPECT_FALSE(library.Compile());
+    EXPECT_EQ(library.errors().size(), 1u);
+    ASSERT_ERR(library.errors().at(0), fidl::ErrDuplicateTableFieldOrdinal);
+  }
+
   // Attributes on fields.
   EXPECT_TRUE(Compiles(R"FIDL(
 library fidl.test.tables;
@@ -234,6 +264,20 @@ flexible union OptionalTableContainer {
 };
 
 )FIDL"));
+
+  {
+    // Optional fields in tables are invalid.
+    auto library = TestLibrary(R"FIDL(
+library fidl.test.tables;
+
+table Foo {
+    1: int64? t;
+};
+)FIDL");
+    EXPECT_FALSE(library.Compile());
+    EXPECT_EQ(library.errors().size(), 1u);
+    ASSERT_ERR(library.errors().at(0), fidl::ErrNullableTableMember);
+  }
 
   END_TEST;
 }

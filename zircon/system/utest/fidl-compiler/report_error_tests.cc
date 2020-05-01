@@ -14,9 +14,8 @@ using fidl::BaseError;
 using fidl::ErrorDef;
 using fidl::ErrorReporter;
 
-constexpr ErrorDef<std::string, std::string> ErrTest (
-  "This test error has one string param '{}' and another '{}'."
-);
+constexpr ErrorDef<std::string, std::string> ErrTest(
+    "This test error has one string param '{}' and another '{}'.");
 
 bool ReportErrorFormatParams() {
   BEGIN_TEST;

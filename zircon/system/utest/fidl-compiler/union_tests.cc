@@ -207,6 +207,23 @@ union Foo {
   END_TEST;
 }
 
+bool ordinal_out_of_bounds() {
+  BEGIN_TEST;
+
+  TestLibrary library(R"FIDL(
+library test;
+
+union Foo {
+  -1: uint32 foo;
+};
+)FIDL");
+  ASSERT_FALSE(library.Compile());
+  ASSERT_EQ(library.errors().size(), 1u);
+  ASSERT_ERR(library.errors().at(0), fidl::ErrOrdinalOutOfBound);
+
+  END_TEST;
+}
+
 bool ordinals_must_be_unique() {
   BEGIN_TEST;
 
@@ -221,6 +238,24 @@ union Foo {
   ASSERT_FALSE(library.Compile());
   ASSERT_EQ(library.errors().size(), 1u);
   ASSERT_ERR(library.errors().at(0), fidl::ErrDuplicateUnionMemberOrdinal);
+
+  END_TEST;
+}
+
+bool member_names_must_be_unique() {
+  BEGIN_TEST;
+
+  TestLibrary library(R"FIDL(
+library test;
+
+union Duplicates {
+    1: string s;
+    2: int32 s;
+};
+)FIDL");
+  ASSERT_FALSE(library.Compile());
+  ASSERT_EQ(library.errors().size(), 1u);
+  ASSERT_ERR(library.errors().at(0), fidl::ErrDuplicateUnionMemberName);
 
   END_TEST;
 }
@@ -470,7 +505,9 @@ RUN_TEST(must_have_explicit_ordinals)
 RUN_TEST(explicit_ordinals)
 RUN_TEST(explicit_ordinals_with_reserved)
 RUN_TEST(explicit_ordinals_out_of_order)
+RUN_TEST(ordinal_out_of_bounds)
 RUN_TEST(ordinals_must_be_unique)
+RUN_TEST(member_names_must_be_unique)
 RUN_TEST(cannot_mix_explicit_and_hashed_ordinals)
 RUN_TEST(cannot_start_at_zero)
 RUN_TEST(default_not_allowed)

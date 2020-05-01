@@ -250,6 +250,22 @@ struct Foo {
   END_TEST;
 }
 
+bool invalid_unknown_dependent_library() {
+  BEGIN_TEST;
+
+  TestLibrary library("example.fidl", R"FIDL(
+library example;
+
+const foo.bar.baz QUX = 0;
+)FIDL");
+  ASSERT_FALSE(library.Compile());
+  const auto& errors = library.errors();
+  ASSERT_EQ(1, errors.size());
+  ASSERT_ERR(errors[0], fidl::ErrUnknownDependentLibrary);
+
+  END_TEST;
+}
+
 bool invalid_too_many_provided_libraries() {
   BEGIN_TEST;
 
@@ -265,6 +281,26 @@ bool invalid_too_many_provided_libraries() {
   auto unused = shared.all_libraries.Unused(library.library());
   ASSERT_EQ(1, unused.size());
   ASSERT_STR_EQ("not.used", fidl::NameLibrary(*unused.begin()).c_str());
+
+  END_TEST;
+}
+
+bool files_disagree_on_library_name() {
+  BEGIN_TEST;
+
+  TestLibrary library("lib_file1.fidl",
+                      R"FIDL(
+library lib;
+)FIDL");
+  library.AddSource("lib_file2.fidl",
+                    R"FIDL(
+library dib;
+  )FIDL");
+
+  ASSERT_FALSE(library.Compile());
+  const auto& errors = library.errors();
+  ASSERT_EQ(1, errors.size());
+  ASSERT_ERR(errors[0], fidl::ErrFilesDisagreeOnLibraryName);
 
   END_TEST;
 }
@@ -382,7 +418,9 @@ RUN_TEST(invalid_missing_using)
 RUN_TEST(invalid_unknown_using)
 RUN_TEST(invalid_duplicate_using)
 RUN_TEST(invalid_unused_using)
+RUN_TEST(invalid_unknown_dependent_library)
 RUN_TEST(invalid_too_many_provided_libraries)
+RUN_TEST(files_disagree_on_library_name)
 RUN_TEST(library_declaration_name_collision)
 RUN_TEST(aliased_library_declaration_name_collision)
 RUN_TEST(aliased_library_nonaliased_declaration_name_collision)

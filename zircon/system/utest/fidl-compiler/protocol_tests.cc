@@ -235,6 +235,25 @@ protocol Child {
   END_TEST;
 }
 
+bool invalid_cannot_compose_non_protocol() {
+  BEGIN_TEST;
+
+  TestLibrary library(R"FIDL(
+library example;
+
+struct S {};
+protocol P {
+    compose S;
+};
+)FIDL");
+  ASSERT_FALSE(library.Compile());
+  const auto& errors = library.errors();
+  ASSERT_EQ(errors.size(), 1);
+  ASSERT_ERR(errors[0], fidl::ErrComposingNonProtocol);
+
+  END_TEST;
+}
+
 bool invalid_cannot_use_ordinals_in_protocol_declaration() {
   BEGIN_TEST;
 
@@ -360,6 +379,80 @@ protocol YearningForSimplicity {
   END_TEST;
 }
 
+bool invalid_request_must_be_protocol() {
+  BEGIN_TEST;
+
+  TestLibrary library(R"FIDL(
+library example;
+
+struct S {};
+protocol P {
+    Method(request<S> r);
+};
+)FIDL");
+  ASSERT_FALSE(library.Compile());
+  const auto& errors = library.errors();
+  ASSERT_EQ(errors.size(), 1);
+  ASSERT_ERR(errors[0], fidl::ErrMustBeAProtocol);
+
+  END_TEST;
+}
+
+bool invalid_request_must_be_parameterized() {
+  BEGIN_TEST;
+
+  TestLibrary library(R"FIDL(
+library example;
+
+protocol P {
+    Method(request r);
+};
+)FIDL");
+  ASSERT_FALSE(library.Compile());
+  const auto& errors = library.errors();
+  ASSERT_EQ(errors.size(), 1);
+  ASSERT_ERR(errors[0], fidl::ErrMustBeParameterized);
+
+  END_TEST;
+}
+
+bool invalid_request_cannot_have_size() {
+  BEGIN_TEST;
+
+  TestLibrary library(R"FIDL(
+library example;
+
+protocol P {};
+struct S {
+    request<P>:0 p;
+};
+)FIDL");
+  ASSERT_FALSE(library.Compile());
+  const auto& errors = library.errors();
+  ASSERT_EQ(errors.size(), 1);
+  ASSERT_ERR(errors[0], fidl::ErrCannotHaveSize);
+
+  END_TEST;
+}
+
+bool invalid_duplicate_parameter_name() {
+  BEGIN_TEST;
+
+  TestLibrary library(R"FIDL(
+library example;
+
+protocol P {
+  MethodWithDuplicateParams(uint8 foo, uint8 foo);
+};
+)FIDL");
+  ASSERT_FALSE(library.Compile());
+  const auto& errors = library.errors();
+  ASSERT_EQ(errors.size(), 1);
+  ASSERT_ERR(errors[0], fidl::ErrDuplicateMethodParameterName);
+
+  END_TEST;
+}
+
 }  // namespace
 
 BEGIN_TEST_CASE(protocol_tests)
@@ -372,9 +465,14 @@ RUN_TEST(invalid_cannot_attach_attributes_to_compose)
 RUN_TEST(invalid_cannot_compose_yourself)
 RUN_TEST(invalid_cannot_compose_twice_the_same_protocol)
 RUN_TEST(invalid_cannot_compose_missing_protocol)
+RUN_TEST(invalid_cannot_compose_non_protocol)
 RUN_TEST(invalid_cannot_use_ordinals_in_protocol_declaration)
 RUN_TEST(invalid_no_other_pragma_than_compose)
 RUN_TEST(invalid_composed_protocols_have_clashing_names)
 RUN_TEST(invalid_composed_protocols_have_clashing_ordinals)
 RUN_TEST(invalid_simple_constraint_applies_to_composed_methods_too)
+RUN_TEST(invalid_request_must_be_protocol)
+RUN_TEST(invalid_request_must_be_parameterized)
+RUN_TEST(invalid_request_cannot_have_size)
+RUN_TEST(invalid_duplicate_parameter_name)
 END_TEST_CASE(protocol_tests)

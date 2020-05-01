@@ -552,6 +552,30 @@ protocol MyProtocol {
   END_TEST;
 }
 
+bool invalid_simple_union() {
+  BEGIN_TEST;
+
+  TestLibrary library(R"FIDL(
+library fidl.test;
+
+union U {
+    1: string s;
+};
+
+[Layout = "Simple"]
+protocol P {
+    -> Event(U u);
+};
+)FIDL");
+  EXPECT_FALSE(library.Compile());
+  const auto& errors = library.errors();
+  ASSERT_EQ(errors.size(), 2);
+  ASSERT_ERR(errors[0], fidl::ErrUnionCannotBeSimple);
+  ASSERT_ERR(errors[1], fidl::ErrMemberMustBeSimple);
+
+  END_TEST;
+}
+
 bool MustHaveThreeMembers(fidl::ErrorReporter* error_reporter,
                           const fidl::raw::Attribute& attribute, const fidl::flat::Decl* decl) {
   switch (decl->kind) {
@@ -679,6 +703,44 @@ table MyTable {
   END_TEST;
 }
 
+bool max_bytes_bound_too_big() {
+  BEGIN_TEST;
+
+  TestLibrary library(R"FIDL(
+library fidl.test;
+
+[MaxBytes = "4294967296"] // 2^32
+table MyTable {
+  1: uint8 u;
+};
+)FIDL");
+  EXPECT_FALSE(library.Compile());
+  const auto& errors = library.errors();
+  ASSERT_EQ(errors.size(), 1);
+  ASSERT_ERR(errors[0], fidl::ErrBoundIsTooBig);
+
+  END_TEST;
+}
+
+bool max_bytes_unable_to_parse_bound() {
+  BEGIN_TEST;
+
+  TestLibrary library(R"FIDL(
+library fidl.test;
+
+[MaxBytes = "invalid"]
+table MyTable {
+  1: uint8 u;
+};
+)FIDL");
+  EXPECT_FALSE(library.Compile());
+  const auto& errors = library.errors();
+  ASSERT_EQ(errors.size(), 1);
+  ASSERT_ERR(errors[0], fidl::ErrUnableToParseBound);
+
+  END_TEST;
+}
+
 bool max_handles() {
   BEGIN_TEST;
 
@@ -699,6 +761,25 @@ union MyUnion {
   ASSERT_ERR(errors[0], fidl::ErrTooManyHandles);
   ASSERT_STR_STR(errors[0]->msg.c_str(), "2");  // 2 allowed
   ASSERT_STR_STR(errors[0]->msg.c_str(), "6");  // 6 found
+
+  END_TEST;
+}
+
+bool invalid_attribute_value() {
+  BEGIN_TEST;
+
+  TestLibrary library(R"FIDL(
+library fidl.test;
+
+[Layout = "Complex"]
+protocol P {
+    Method();
+};
+)FIDL");
+  EXPECT_FALSE(library.Compile());
+  const auto& errors = library.errors();
+  ASSERT_EQ(errors.size(), 1);
+  ASSERT_ERR(errors[0], fidl::ErrInvalidAttributeValue);
 
   END_TEST;
 }
@@ -788,11 +869,15 @@ RUN_TEST(syscall_transport)
 RUN_TEST(multiple_transports)
 RUN_TEST(multiple_transports_with_bogus)
 RUN_TEST(incorrect_placement_layout)
+RUN_TEST(invalid_simple_union)
 RUN_TEST(constraint_only_three_members_on_struct)
 RUN_TEST(constraint_only_three_members_on_method)
 RUN_TEST(constraint_only_three_members_on_protocol)
 RUN_TEST(max_bytes)
+RUN_TEST(max_bytes_bound_too_big)
+RUN_TEST(max_bytes_unable_to_parse_bound)
 RUN_TEST(max_handles)
+RUN_TEST(invalid_attribute_value)
 RUN_TEST(selector_incorrect_placement)
 RUN_TEST(no_attributes_on_reserved)
 RUN_TEST(parameter_attribute_incorrect_placement)

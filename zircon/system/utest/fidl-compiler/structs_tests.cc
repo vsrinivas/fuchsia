@@ -244,6 +244,25 @@ struct MyStruct {
   END_TEST;
 }
 
+bool BadDuplicateMemberName() {
+  BEGIN_TEST;
+
+  TestLibrary library(R"FIDL(
+library example;
+
+struct Duplicates {
+    string s;
+    uint8 s;
+};
+)FIDL");
+  ASSERT_FALSE(library.Compile());
+  const auto& errors = library.errors();
+  ASSERT_EQ(errors.size(), 1);
+  ASSERT_ERR(errors[0], fidl::ErrDuplicateStructMemberName);
+
+  END_TEST;
+}
+
 }  // namespace
 
 BEGIN_TEST_CASE(structs_tests)
@@ -263,5 +282,6 @@ RUN_TEST(BadDefaultValueBitsType)
 RUN_TEST(BadDefaultValuePrimitiveInBits)
 RUN_TEST(BadLegacyEnumMemberReference)
 RUN_TEST(BadDefaultValueNullableString)
+RUN_TEST(BadDuplicateMemberName)
 
 END_TEST_CASE(structs_tests)

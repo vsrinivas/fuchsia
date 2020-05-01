@@ -12,6 +12,7 @@
 #include <fidl/source_file.h>
 #include <unittest/unittest.h>
 
+#include "error_test.h"
 #include "test_library.h"
 
 namespace {
@@ -69,6 +70,30 @@ struct MyStruct {
   END_TEST;
 }
 
+bool invalid_handle_rights_test() {
+  BEGIN_TEST;
+
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
+
+  TestLibrary library(R"FIDL(
+library example;
+
+protocol P {
+    Method(handle<vmo, 4294967296> h);  // uint32 max + 1
+};
+)FIDL",
+                      std::move(experimental_flags));
+
+  EXPECT_FALSE(library.Compile());
+  const auto& errors = library.errors();
+  ASSERT_EQ(errors.size(), 2);
+  ASSERT_ERR(errors[0], fidl::ErrConstantCannotBeInterpretedAsType);
+  ASSERT_ERR(errors[1], fidl::ErrCouldNotResolveHandleRights);
+
+  END_TEST;
+}
+
 bool plain_handle_test() {
   BEGIN_TEST;
 
@@ -99,5 +124,6 @@ struct MyStruct {
 BEGIN_TEST_CASE(handle_tests)
 RUN_TEST(handle_rights_test)
 RUN_TEST(no_handle_rights_test)
+RUN_TEST(invalid_handle_rights_test)
 RUN_TEST(plain_handle_test)
 END_TEST_CASE(handle_tests)

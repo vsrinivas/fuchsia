@@ -21,8 +21,6 @@ constexpr ErrorDef<std::string_view> ErrInvalidCharacter(
 // ---------------------------------------------------------------------------
 constexpr ErrorDef ErrExpectedDeclaration(
     "expected start of declaration");
-constexpr ErrorDef ErrUnbalancedParseTree(
-    "Internal compiler error: unbalanced parse tree");
 constexpr ErrorDef ErrUnexpectedToken(
     "found unexpected token");
 constexpr ErrorDef<Token::KindAndSubkind, Token::KindAndSubkind> ErrUnexpectedTokenOfKind(
@@ -160,13 +158,11 @@ constexpr ErrorDef ErrUnknownAttributeOnInvalidType(
     "[Unknown] attribute can be only be used on flexible or [Transitional] types.");
 constexpr ErrorDef ErrUnknownAttributeOnMultipleMembers(
     "[Unknown] attribute can be only applied to one member.");
-constexpr ErrorDef<flat::Name> ErrUnknownType(
-    "unknown type {}");
 constexpr ErrorDef ErrComposingNonProtocol(
     "This declaration is not a protocol");
 constexpr ErrorDef<SourceSpan> ErrDuplicateMethodName(
     "Multiple methods with the same name in a protocol; last occurrence was at {}");
-constexpr ErrorDef ErrZeroValueOrdinal(
+constexpr ErrorDef ErrGeneratedZeroValueOrdinal(
     "Ordinal value 0 disallowed.");
 constexpr ErrorDef<SourceSpan, std::string> ErrDuplicateMethodOrdinal(
     "Multiple methods with the same ordinal in a protocol; previous was at {}. "
@@ -236,7 +232,7 @@ constexpr ErrorDef<std::string, std::string> WarnAttributeTypo(
 // ---------------------------------------------------------------------------
 // Type Templates
 // ---------------------------------------------------------------------------
-constexpr ErrorDef<flat::Name> ErrUnknownTypeTemplate(
+constexpr ErrorDef<flat::Name> ErrUnknownType(
     "unknown type {}");
 constexpr ErrorDef<const flat::TypeTemplate *> ErrMustBeAProtocol(
     "{} must be a protocol");
