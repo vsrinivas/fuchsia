@@ -468,12 +468,10 @@ template("package") {
       }
 
       if (bootfs_only) {
-        url_scheme_and_host = "fuchsia-boot://"
-        url_pkg_name = ""
         dest = "test/sys/$dest"
         path = "/boot/$dest"
       } else {
-        url_scheme_and_host = "fuchsia-pkg://fuchsia.com"
+        url = "fuchsia-pkg://fuchsia.com"
         dest = "test/$dest"
         if (pkg.__deprecated_system_image) {
           url_pkg_name = "system"
@@ -482,9 +480,9 @@ template("package") {
           url_pkg_name = pkg.package_name
           path = ""
         }
+        url += "/${url_pkg_name}"
       }
 
-      url_resource_path = dest
       dest_name = get_path_info(dest, "name")
       not_needed([ "dest_name" ])
 
@@ -493,19 +491,19 @@ template("package") {
           (!defined(require_bare_tests_allowlist) ||
            !require_bare_tests_allowlist)) {
         require_bare_tests_allowlist = true
+        url_resource_path = ""
         foreach(meta, pkg.meta) {
           extension = get_path_info(meta.dest, "extension")
           if (extension == "cmx" || extension == "cm") {
             meta_name = get_path_info(meta.dest, "name")
             if (dest_name == meta_name) {
               require_bare_tests_allowlist = false
-              url_resource_path = "meta/${meta.dest}"
+              url_resource_path = "#meta/${meta.dest}"
             }
           }
         }
+        url += url_resource_path
       }
-
-      url = "${url_scheme_and_host}/${url_pkg_name}#${url_resource_path}"
 
       if (!is_disabled) {
         test_spec_name = "${pkg.package_name}_${dest}_test_spec"
@@ -516,7 +514,9 @@ template("package") {
           name = test.name
           target = main_target_name
           path = path
-          package_url = url
+          if (!bootfs_only) {
+            package_url = url
+          }
           forward_variables_from(test, [ "environments" ])
         }
       } else {
