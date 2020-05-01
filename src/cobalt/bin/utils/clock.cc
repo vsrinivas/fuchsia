@@ -34,7 +34,7 @@ void FuchsiaSystemClock::WatchStateCallback(const fuchsia::time::UtcState& utc_s
   } else {
     FX_LOGS(INFO) << "Clock is not accurate yet, "
                   << "making another call to check the state of the "
-                  << "system clock (this should block)";
+                  << "system clock. Expect response when clock becomes accurate.";
     utc_->WatchState([this](fuchsia::time::UtcState utc_state) { WatchStateCallback(utc_state); });
   }
 }
