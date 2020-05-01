@@ -1323,19 +1323,18 @@ void Coordinator::Resume(ResumeContext ctx, std::function<void(zx_status_t)> cal
     return;
   }
 
-  resume_context() = std::move(ctx);
-  for (auto& dev : devices_) {
-    auto completion = [this, &dev, callback](zx_status_t status) {
+  auto schedule_resume = [this, callback](fbl::RefPtr<Device> dev) {
+    auto completion = [this, dev, callback](zx_status_t status) {
       auto& ctx = resume_context();
       if (status != ZX_OK) {
         LOGF(ERROR, "Failed to resume: %s", zx_status_get_string(status));
         ctx.set_flags(ResumeContext::Flags::kSuspended);
-        auto task = ctx.take_pending_task(dev);
+        auto task = ctx.take_pending_task(*dev);
         callback(status);
         return;
       }
-      dev.clear_active_resume();
-      std::optional<fbl::RefPtr<ResumeTask>> task = ctx.take_pending_task(dev);
+      dev->clear_active_resume();
+      std::optional<fbl::RefPtr<ResumeTask>> task = ctx.take_pending_task(*dev);
       if (task.has_value()) {
         ctx.push_completed_task(std::move(task.value()));
       } else {
@@ -1351,12 +1350,21 @@ void Coordinator::Resume(ResumeContext ctx, std::function<void(zx_status_t)> cal
         });
       }
     };
-    auto task = ResumeTask::Create(fbl::RefPtr(&dev),
-                                   static_cast<uint32_t>(resume_context().target_state()),
+    auto task = ResumeTask::Create(dev, static_cast<uint32_t>(resume_context().target_state()),
                                    std::move(completion));
     resume_context().push_pending_task(task);
-    dev.SetActiveResume(std::move(task));
+    dev->SetActiveResume(std::move(task));
+  };
+
+  resume_context() = std::move(ctx);
+  for (auto& dev : devices_) {
+    schedule_resume(fbl::RefPtr(&dev));
+    if (dev.proxy()) {
+      schedule_resume(dev.proxy());
+    }
   }
+  schedule_resume(sys_device_);
+  schedule_resume(sys_device_->proxy());
 
   // Post a delayed task in case drivers do not complete the resume.
   auto status = async::PostDelayedTask(
