@@ -656,6 +656,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore] // Flake(49943)
     fn auto_connect_falis_incompatible() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
         let id = "auto_connect_to_known_ess";
