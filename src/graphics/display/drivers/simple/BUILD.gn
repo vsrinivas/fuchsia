@@ -24,6 +24,7 @@ simple_drivers = [
   "amd-kaveri",
   "nv",
   "intel",
+  "vmware",
 ]
 
 foreach(driver, simple_drivers) {

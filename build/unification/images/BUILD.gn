@@ -514,6 +514,7 @@ aggregate_manifest("migrated-image") {
       "//src/graphics/display/drivers/simple:simple-bochs-manifest",
       "//src/graphics/display/drivers/simple:simple-intel-manifest",
       "//src/graphics/display/drivers/simple:simple-nv-manifest",
+      "//src/graphics/display/drivers/simple:simple-vmware-manifest",
       "//src/graphics/display/drivers/ssd1306:ssd1306-manifest",
       "//src/graphics/display/drivers/goldfish-display:goldfish-display-manifest",
       "//src/graphics/display/drivers/hikey-display:hikey-display-manifest",
