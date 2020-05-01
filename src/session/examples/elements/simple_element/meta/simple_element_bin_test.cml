@@ -1,15 +1,11 @@
 {
     program: {
-        binary: "bin/rust_test_adapter",
-        args: [ "/pkg/test/simple_element_bin_test" ],
+        binary: "test/simple_element_bin_test",
     },
     use: [
-        { runner: "elf" },
+        { runner: "rust_test_runner" },
         { protocol: "/svc/fuchsia.session.examples.ElementPing" },
-
-        // These last "use" statements is needed for the RustTestAdapter trampoline
         { protocol: "/svc/fuchsia.logger.LogSink" },
-        { protocol: "/svc/fuchsia.process.Launcher" },
     ],
     expose: [
         {

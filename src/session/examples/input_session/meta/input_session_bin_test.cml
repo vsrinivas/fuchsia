@@ -1,7 +1,6 @@
 {
     program: {
-        binary: "bin/rust_test_adapter",
-        args: [ "/pkg/test/input_session_bin_test" ],
+        binary: "test/input_session_bin_test",
     },
     collections: [
         {
@@ -10,17 +9,14 @@
         },
     ],
     use: [
-        { runner: "elf" },
+        { runner: "rust_test_runner" },
         {
             directory: "/dev/class/input-report",
             from: "realm",
             rights: [ "r*" ],
         },
         {
-            protocol: [
-                "/svc/fuchsia.logger.LogSink",
-                "/svc/fuchsia.process.Launcher",
-            ],
+            protocol: [ "/svc/fuchsia.logger.LogSink" ],
         },
         {
             protocol: [

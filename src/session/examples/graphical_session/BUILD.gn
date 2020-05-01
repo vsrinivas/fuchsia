@@ -71,7 +71,6 @@ package("graphical_session_tests") {
   deps = [
     ":graphical_session_bin",
     ":graphical_session_bin_test",
-    "//src/sys/test_adapters/rust",
   ]
 
   meta = [
@@ -82,9 +81,6 @@ package("graphical_session_tests") {
   ]
 
   binaries = [
-    {
-      name = "rust_test_adapter"
-    },
     {
       name = "graphical_session"
     },

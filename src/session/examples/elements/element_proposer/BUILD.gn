@@ -50,7 +50,6 @@ package("element_proposer_tests") {
   deps = [
     ":element_proposer_bin",
     ":element_proposer_bin_test",
-    "//src/sys/test_adapters/rust",
   ]
 
   meta = [
@@ -61,9 +60,6 @@ package("element_proposer_tests") {
   ]
 
   binaries = [
-    {
-      name = "rust_test_adapter"
-    },
     {
       name = "element_proposer"
     },

@@ -61,7 +61,6 @@ package("input_session_tests") {
   deps = [
     ":input_session_bin",
     ":input_session_bin_test",
-    "//src/sys/test_adapters/rust",
   ]
 
   meta = [
@@ -72,9 +71,6 @@ package("input_session_tests") {
   ]
 
   binaries = [
-    {
-      name = "rust_test_adapter"
-    },
     {
       name = "input_session"
     },

@@ -65,7 +65,6 @@ package("scene_manager_session_tests") {
   deps = [
     ":scene_manager_session_bin",
     ":scene_manager_session_bin_test",
-    "//src/sys/test_adapters/rust",
   ]
 
   meta = [
@@ -76,9 +75,6 @@ package("scene_manager_session_tests") {
   ]
 
   binaries = [
-    {
-      name = "rust_test_adapter"
-    },
     {
       name = "scene_manager_session"
     },

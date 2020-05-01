@@ -50,7 +50,6 @@ package("simple_element_tests") {
   deps = [
     ":simple_element_bin",
     ":simple_element_bin_test",
-    "//src/sys/test_adapters/rust",
   ]
 
   meta = [
@@ -61,9 +60,6 @@ package("simple_element_tests") {
   ]
 
   binaries = [
-    {
-      name = "rust_test_adapter"
-    },
     {
       name = "simple_element"
     },

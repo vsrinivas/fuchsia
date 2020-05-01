@@ -56,7 +56,6 @@ package("element_session_tests") {
   deps = [
     ":element_session_bin",
     ":element_session_bin_test",
-    "//src/sys/test_adapters/rust",
   ]
 
   meta = [
@@ -67,9 +66,6 @@ package("element_session_tests") {
   ]
 
   binaries = [
-    {
-      name = "rust_test_adapter"
-    },
     {
       name = "element_session"
     },

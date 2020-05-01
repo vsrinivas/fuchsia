@@ -1,7 +1,6 @@
 {
     program: {
-        binary: "bin/rust_test_adapter",
-        args: [ "/pkg/test/element_session_bin_test" ],
+        binary: "test/element_session_bin_test",
     },
     children: [
         {
@@ -17,15 +16,12 @@
         },
     ],
     use: [
-        { runner: "elf" },
+        { runner: "rust_test_runner" },
         {
             protocol: "/svc/fuchsia.sys2.Realm",
             from: "framework",
         },
-
-        // These last "use" statements is needed for the RustTestAdapter trampoline
         { protocol: "/svc/fuchsia.logger.LogSink" },
-        { protocol: "/svc/fuchsia.process.Launcher" },
     ],
     offer: [
         // Offer the ELF runner to children.
