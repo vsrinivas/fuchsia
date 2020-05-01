@@ -5,36 +5,39 @@
 import("//build/config/fuchsia/rules.gni")
 import("//build/driver_package.gni")
 
-driver_module("imx227_driver") {
-  output_name = "imx227"
+source_set("source") {
   sources = [
     "imx227.cc",
     "imx227_otp.cc",
-    "imx227_test.cc",
   ]
+
   deps = [
+    "//src/devices/lib/driver",
+    "//zircon/public/lib/fzl",
+  ]
+
+  public_deps = [
     "//sdk/banjo/ddk.protocol.clock",
     "//sdk/banjo/ddk.protocol.composite",
     "//sdk/banjo/ddk.protocol.gpio",
     "//sdk/banjo/ddk.protocol.mipicsi",
-    "//sdk/banjo/ddk.protocol.platform.bus",
     "//sdk/banjo/ddk.protocol.platform.device",
-    "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test_c",
     "//src/devices/bus/lib/device-protocol-pdev",
     "//src/devices/i2c/lib/device-protocol-i2c-channel",
-    "//src/devices/lib/driver",
-    "//zircon/public/lib/ddk",
-    "//zircon/public/lib/ddktl",
-    "//zircon/public/lib/device-protocol-i2c",
-    "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fidl",
-    "//zircon/public/lib/fzl",
-    "//zircon/public/lib/mmio",
-    "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/banjo/ddk.protocol.i2c",
     "//zircon/system/ulib/driver-unit-test",
+  ]
+}
+
+driver_module("driver") {
+  output_name = "imx227"
+
+  sources = [ "test/imx227_hardware_test.cc" ]
+
+  deps = [
+    ":source",
+    "//sdk/fidl/fuchsia.driver.test",
   ]
 
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
@@ -42,7 +45,7 @@ driver_module("imx227_driver") {
 }
 
 driver_package("imx227") {
-  deps = [ ":imx227_driver" ]
+  deps = [ ":driver" ]
 
   drivers = [
     {
