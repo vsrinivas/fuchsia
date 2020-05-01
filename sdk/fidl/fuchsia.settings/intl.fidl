@@ -14,8 +14,8 @@ using fuchsia.intl;
 /// FILE_READ_ERROR
 [Discoverable]
 protocol Intl {
-    /// DEPRECATED: new watches should use Watch2.
-    [Transitional = "Deprecated in favor of Watch2"]
+    /// TO BE DEPRECATED: new watches will use Watch2 in the future.
+    [Transitional = "To be deprecated in favor of Watch2"]
     Watch() -> (IntlSettings settings) error Error;
 
     /// Gets the current [IntlSettings]. Returns immediately on first call;
@@ -23,7 +23,7 @@ protocol Intl {
     ///
     /// If this call fails, it is considered a fatal error and the channel
     /// will be closed.
-    [Transitional = "Replacement for Watch"]
+    [Transitional = "Future Replacement for Watch"]
     Watch2() -> (IntlSettings settings);
 
     /// Sets [IntlSettings] settings. Any field not explicitly set in the table performs a

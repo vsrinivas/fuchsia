@@ -12,8 +12,8 @@ using fuchsia.ui.types;
 /// REQUEST_NOT_SUPPORTED, INTERNAL_SERVICE_ERROR, PERSISTENT_STORAGE_ERROR
 [Discoverable]
 protocol Display {
-    /// DEPRECATED: new watches should use Watch2.
-    [Transitional = "Deprecated in favor of Watch2"]
+    /// TO BE DEPRECATED: new watches will use Watch2 in the future.
+    [Transitional = "To be deprecated in favor of Watch2"]
     Watch() -> (DisplaySettings settings) error Error;
 
     /// Gets the current [DisplaySettings]. Returns immediately on first call;
@@ -21,7 +21,7 @@ protocol Display {
     ///
     /// If this call fails, it is considered a fatal error and the channel
     /// will be closed.
-    [Transitional = "Replacement for Watch"]
+    [Transitional = "Future Replacement for Watch"]
     Watch2() -> (DisplaySettings settings);
 
     /// DEPRECATED: new watches should use WatchLightSensor2.
