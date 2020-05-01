@@ -85,6 +85,16 @@ func TestBeforeAfterSetPkgURL(t *testing.T) {
 			"Manifest action should have 'update?hash=abcdef', is %s",
 			data.App[0].UpdateCheck.Manifest.Actions.Action[0].Run)
 	}
+	if data.App[0].UpdateCheck.Manifest.Actions.Action[0].Event != "update" {
+		t.Fatalf(
+			"First manifest action should have event 'update', is %s",
+			data.App[0].UpdateCheck.Manifest.Actions.Action[0].Event)
+	}
+	if data.App[0].UpdateCheck.Manifest.Actions.Action[1].Event != "postinstall" {
+		t.Fatalf(
+			"Second manifest action should have event 'postinstall', is %s",
+			data.App[0].UpdateCheck.Manifest.Actions.Action[1].Event)
+	}
 	if data.App[0].UpdateCheck.Manifest.Packages.Pkg[0].Name != "update?hash=abcdef" {
 		t.Fatalf(
 			"Manifest package should have 'update?hash=abcdef', is %s",

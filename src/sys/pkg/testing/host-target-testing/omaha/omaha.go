@@ -60,7 +60,7 @@ type action struct {
 }
 
 type actions struct {
-	Action []action `json:"package"`
+	Action []action `json:"action"`
 }
 
 type manifest struct {
@@ -160,11 +160,11 @@ func NewOmahaServer(ctx context.Context, localHostname string) (*OmahaServer, er
 					ElapsedDays:    200,
 				},
 				App: []app{{
-					CohortHint: "integration-test",
+					CohortHint: "a-cohort-hint",
 					AppId:      "some-id",
 					Cohort:     "1:1:",
 					Status:     "ok",
-					CohortName: "integration-test-name",
+					CohortName: "a-cohort-name",
 					UpdateCheck: updateCheck{
 						Status: "ok",
 						Urls: urls{
@@ -175,7 +175,7 @@ func NewOmahaServer(ctx context.Context, localHostname string) (*OmahaServer, er
 							Actions: actions{
 								Action: []action{{
 									Run:   o.updatePkg,
-									Event: "install",
+									Event: "update",
 								},
 									{
 										Event: "postinstall",
@@ -222,5 +222,5 @@ func (o *OmahaServer) SetUpdatePkgURL(updatePkgURL string) error {
 		o.updatePkg = matches[2]
 		return nil
 	}
-	return fmt.Errorf("Invalid updatePkgURL: %s", updatePkgURL)
+	return fmt.Errorf("invalid updatePkgURL: %s", updatePkgURL)
 }
