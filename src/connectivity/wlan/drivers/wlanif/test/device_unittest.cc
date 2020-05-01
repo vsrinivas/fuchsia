@@ -108,13 +108,8 @@ struct SmeChannelTestContext {
 
 wlanif_impl_protocol_ops_t EmptyProtoOps() {
   return wlanif_impl_protocol_ops_t{
+      // Each instance is required to provide its own .start() method to store the MLME channels.
       // SME Channel will be provided to wlanif-impl-driver when it calls back into its parent.
-      .start =
-          [](void* ctx, const wlanif_impl_ifc_protocol_t* ifc, zx_handle_t* out_sme_channel) {
-            auto [new_sme, new_mlme] = make_channel();
-            *out_sme_channel = new_sme.release();
-            return ZX_OK;
-          },
       .query = [](void* ctx, wlanif_query_info_t* info) {},
       .start_scan = [](void* ctx, const wlanif_scan_req_t* req) {},
       .join_req = [](void* ctx, const wlanif_join_req_t* req) {},
@@ -279,24 +274,34 @@ struct EthernetTestFixture : public ::testing::Test {
   }
   void TearDown() override { device_.EthUnbind(); }
 
+  fake_ddk::Bind fake_ddk_;
   wlanif_impl_protocol_ops_t proto_ops_ = EmptyProtoOps();
   wlanif_impl_protocol_t proto_{.ops = &proto_ops_, .ctx = this};
   // Unsafe cast, however, parent is never used as fake_ddk replaces default device manager.
   wlanif::Device device_{reinterpret_cast<zx_device_t*>(&fake_ddk_), proto_};
   ethernet_ifc_protocol_ops_t eth_ops_{};
   ethernet_ifc_protocol_t eth_proto_ = {.ops = &eth_ops_, .ctx = this};
-  fake_ddk::Bind fake_ddk_;
   wlan_info_mac_role_t role_ = WLAN_INFO_MAC_ROLE_CLIENT;
   uint32_t ethernet_status_{0};
+
+  zx::channel mlme_;
 };
 
 #define ETH_DEV(c) static_cast<EthernetTestFixture*>(c)
+static zx_status_t hook_start(void* ctx, const wlanif_impl_ifc_protocol_t* ifc,
+                              zx_handle_t* out_sme_channel) {
+  auto [new_sme, new_mlme] = make_channel();
+  ETH_DEV(ctx)->mlme_ = std::move(new_mlme);
+  *out_sme_channel = new_sme.release();
+  return ZX_OK;
+}
 static void hook_query(void* ctx, wlanif_query_info_t* info) { info->role = ETH_DEV(ctx)->role_; }
 static void hook_eth_status(void* ctx, uint32_t status) { ETH_DEV(ctx)->ethernet_status_ = status; }
 #undef ETH_DEV
 
 void EthernetTestFixture::InitDeviceWithRole(wlan_info_mac_role_t role) {
   role_ = role;
+  proto_ops_.start = hook_start;
   proto_ops_.query = hook_query;
   eth_proto_.ops->status = hook_eth_status;
   ASSERT_EQ(device_.Bind(), ZX_OK);
