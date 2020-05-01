@@ -698,6 +698,8 @@ void platform_early_init(void) {
   boot_reserve_wire();
 }
 
+void platform_prevm_init() {}
+
 static void platform_init_smp(void) {
   fbl::AllocChecker ac;
   fbl::Vector<uint32_t> apic_ids;

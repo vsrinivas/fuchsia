@@ -15,13 +15,22 @@ __BEGIN_CDECLS
 
 struct iframe_t;
 
+// Early platform initialization, before UART, MMU, kernel command line args, etc.
 void arch_early_init(void);
+
+// Perform any set up required before virtual memory is enabled, or the heap is set up.
+void arch_prevm_init(void);
+
+// Perform any set up required after heap/MMU is available.
 void arch_init(void);
+
+// Perform any set up required after the platform has brought up all cores.
 void arch_cpu_late_init(void);
 
 // Called just before initiating a system suspend to give the arch layer a
 // chance to save state.  Must be called with interrupts disabled.
 void arch_suspend(void);
+
 // Called immediately after resuming from a system suspend to let the arch layer
 // reinitialize arch components.  Must be called with interrupts disabled.
 void arch_resume(void);

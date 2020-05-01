@@ -22,17 +22,40 @@ typedef void (*lk_init_hook)(uint level);
 enum lk_init_level {
   LK_INIT_LEVEL_EARLIEST = 1,
 
+  // Arch and platform specific init required to get system into a known state
+  // and parsing the kernel command line.
+  //
+  // Most code should be deferred to later stages if possible, after the command
+  // line is parsed and a debug UART is available.
   LK_INIT_LEVEL_ARCH_EARLY = 0x10000,
   LK_INIT_LEVEL_PLATFORM_EARLY = 0x20000,
-  LK_INIT_LEVEL_VM_PREHEAP = 0x30000,
-  LK_INIT_LEVEL_HEAP = 0x40000,
-  LK_INIT_LEVEL_VM = 0x50000,
-  LK_INIT_LEVEL_TOPOLOGY = 0x60000,
-  LK_INIT_LEVEL_KERNEL = 0x70000,
-  LK_INIT_LEVEL_THREADING = 0x80000,
-  LK_INIT_LEVEL_ARCH = 0x90000,
-  LK_INIT_LEVEL_PLATFORM = 0xa0000,
-  LK_INIT_LEVEL_USER = 0xb0000,
+
+  // Arch and platform specific code that needs to run prior to heap/virtual
+  // memory being set up.
+  //
+  // The kernel command line and a UART is available, but no heap or VM.
+  LK_INIT_LEVEL_ARCH_PREVM = 0x30000,
+  LK_INIT_LEVEL_PLATFORM_PREVM = 0x40000,
+
+  // Heap and VM initialization.
+  LK_INIT_LEVEL_VM_PREHEAP = 0x50000,
+  LK_INIT_LEVEL_HEAP = 0x60000,
+  LK_INIT_LEVEL_VM = 0x70000,
+
+  // Kernel and threading setup.
+  LK_INIT_LEVEL_TOPOLOGY = 0x80000,
+  LK_INIT_LEVEL_KERNEL = 0x90000,
+  LK_INIT_LEVEL_THREADING = 0xa0000,
+
+  // Arch and platform specific set up.
+  //
+  // Kernel heap, VM, and threads are available. Most init code should go
+  // in these stages.
+  LK_INIT_LEVEL_ARCH = 0xb0000,
+  LK_INIT_LEVEL_PLATFORM = 0xc0000,
+
+  // Userspace started.
+  LK_INIT_LEVEL_USER = 0xd0000,
 
   LK_INIT_LEVEL_LAST = UINT_MAX,
 };

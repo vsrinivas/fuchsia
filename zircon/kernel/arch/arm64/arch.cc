@@ -202,6 +202,8 @@ void arch_early_init() {
   platform_init_mmu_mappings();
 }
 
+void arch_prevm_init() {}
+
 void arch_init() TA_NO_THREAD_SAFETY_ANALYSIS {
   arch_mp_init_percpu();
 

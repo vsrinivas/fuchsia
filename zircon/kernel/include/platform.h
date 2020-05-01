@@ -42,6 +42,9 @@ bool platform_usermode_can_access_tick_registers(void);
 /* super early platform initialization, before almost everything */
 void platform_early_init(void);
 
+/* Perform any set up required before virtual memory is enabled, or the heap is set up. */
+void platform_prevm_init(void);
+
 /* later init, after the kernel has come up */
 void platform_init(void);
 

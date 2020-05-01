@@ -55,41 +55,52 @@ void lk_main() {
   // deal with any static constructors
   call_constructors();
 
-  // early arch stuff
   lk_primary_cpu_init_level(LK_INIT_LEVEL_EARLIEST, LK_INIT_LEVEL_ARCH_EARLY - 1);
-  arch_early_init();
 
-  // do any super early platform initialization
+  // Carry out any early architecture-specific and platform-specific init
+  // required to get the boot CPU and platform into a known state.
+  arch_early_init();
   lk_primary_cpu_init_level(LK_INIT_LEVEL_ARCH_EARLY, LK_INIT_LEVEL_PLATFORM_EARLY - 1);
   platform_early_init();
+  lk_primary_cpu_init_level(LK_INIT_LEVEL_PLATFORM_EARLY, LK_INIT_LEVEL_ARCH_PREVM - 1);
+
+  // At this point, the kernel command line and serial are set up.
 
   dprintf(INFO, "\nwelcome to Zircon\n\n");
-
   dprintf(INFO, "KASLR: .text section at %p\n", __code_start);
 
-  lk_primary_cpu_init_level(LK_INIT_LEVEL_PLATFORM_EARLY, LK_INIT_LEVEL_VM_PREHEAP - 1);
+  // Perform any additional arch and platform-specific set up that needs to be done
+  // before virtual memory or the heap are set up.
+  dprintf(SPEW, "initializing arch pre-vm\n");
+  arch_prevm_init();
+  lk_primary_cpu_init_level(LK_INIT_LEVEL_ARCH_PREVM, LK_INIT_LEVEL_PLATFORM_PREVM - 1);
+  dprintf(SPEW, "initializing platform pre-vm\n");
+  platform_prevm_init();
+  lk_primary_cpu_init_level(LK_INIT_LEVEL_PLATFORM_PREVM, LK_INIT_LEVEL_VM_PREHEAP - 1);
+
+  // perform basic virtual memory setup
   dprintf(SPEW, "initializing vm pre-heap\n");
   vm_init_preheap();
+  lk_primary_cpu_init_level(LK_INIT_LEVEL_VM_PREHEAP, LK_INIT_LEVEL_HEAP - 1);
 
   // bring up the kernel heap
-  lk_primary_cpu_init_level(LK_INIT_LEVEL_VM_PREHEAP, LK_INIT_LEVEL_HEAP - 1);
   dprintf(SPEW, "initializing heap\n");
   heap_init();
-
   lk_primary_cpu_init_level(LK_INIT_LEVEL_HEAP, LK_INIT_LEVEL_VM - 1);
+
+  // enable virtual memory
   dprintf(SPEW, "initializing vm\n");
   vm_init();
+  lk_primary_cpu_init_level(LK_INIT_LEVEL_VM, LK_INIT_LEVEL_TOPOLOGY - 1);
 
   // initialize the system topology
-  lk_primary_cpu_init_level(LK_INIT_LEVEL_VM, LK_INIT_LEVEL_TOPOLOGY - 1);
   dprintf(SPEW, "initializing system topology\n");
   topology_init();
-
-  // initialize the kernel
   lk_primary_cpu_init_level(LK_INIT_LEVEL_TOPOLOGY, LK_INIT_LEVEL_KERNEL - 1);
+
+  // initialize other parts of the kernel
   dprintf(SPEW, "initializing kernel\n");
   kernel_init();
-
   lk_primary_cpu_init_level(LK_INIT_LEVEL_KERNEL, LK_INIT_LEVEL_THREADING - 1);
 
   // create a thread to complete system initialization

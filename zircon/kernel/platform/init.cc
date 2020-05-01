@@ -20,6 +20,8 @@ __WEAK void platform_early_init() {}
 
 __WEAK void platform_init() {}
 
+__WEAK void platform_prevm_init() {}
+
 __WEAK void platform_quiesce() {}
 
 __WEAK void platform_panic_start() {}
