@@ -2583,6 +2583,8 @@ bool Library::SortDeclarations() {
 }
 
 bool Library::CompileDecl(Decl* decl) {
+  if (decl->compiled)
+    return true;
   Compiling guard(decl);
   switch (decl->kind) {
     case Decl::Kind::kBits: {
@@ -2975,22 +2977,12 @@ bool Library::CompileProtocol(Protocol* protocol_declaration) {
     return false;
 
   for (auto& method : protocol_declaration->methods) {
-    auto CreateMessage = [&](Struct* message) -> bool {
-      Scope<std::string_view> scope;
-      for (auto& param : message->members) {
-        if (!scope.Insert(param.name.data(), param.name).ok())
-          return Fail(ErrDuplicateMethodParameterName, param.name);
-        if (!CompileTypeConstructor(param.type_ctor.get()))
-          return false;
-      }
-      return true;
-    };
     if (method.maybe_request) {
-      if (!CreateMessage(method.maybe_request))
+      if (!CompileDecl(method.maybe_request))
         return false;
     }
     if (method.maybe_response) {
-      if (!CreateMessage(method.maybe_response))
+      if (!CompileDecl(method.maybe_response))
         return false;
     }
   }
@@ -3021,11 +3013,17 @@ bool Library::CompileStruct(Struct* struct_declaration) {
   Scope<std::string_view> scope;
   for (auto& member : struct_declaration->members) {
     auto name_result = scope.Insert(member.name.data(), member.name);
-    if (!name_result.ok())
-      return Fail(ErrDuplicateStructMemberName, member.name, name_result.previous_occurrence());
+    if (!name_result.ok()) {
+      return Fail(struct_declaration->is_request_or_response ?
+                      ErrDuplicateMethodParameterName :
+                      ErrDuplicateStructMemberName,
+                  member.name, name_result.previous_occurrence());
+    }
 
     if (!CompileTypeConstructor(member.type_ctor.get()))
       return false;
+    assert(!(struct_declaration->is_request_or_response && member.maybe_default_value) &&
+           "method parameters cannot have default values");
     if (member.maybe_default_value) {
       const auto* default_value_type = member.type_ctor.get()->type;
       if (!TypeCanBeConst(default_value_type)) {

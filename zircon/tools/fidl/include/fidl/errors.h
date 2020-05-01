@@ -172,8 +172,8 @@ constexpr ErrorDef<SourceSpan, std::string> ErrDuplicateMethodOrdinal(
     "Multiple methods with the same ordinal in a protocol; previous was at {}. "
     "Consider using attribute [Selector=\"{}\"] to change the name used to "
     "calculate the ordinal.");
-constexpr ErrorDef ErrDuplicateMethodParameterName(
-    "Multiple parameters with the same name in a method");
+constexpr ErrorDef<SourceSpan> ErrDuplicateMethodParameterName(
+    "Multiple parameters with the same name in a method; previous was at {}");
 constexpr ErrorDef<SourceSpan> ErrDuplicateServiceMemberName(
     "multiple service members with the same name; previous was at {}");
 constexpr ErrorDef ErrNonProtocolServiceMember(
