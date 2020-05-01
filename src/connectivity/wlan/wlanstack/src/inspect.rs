@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    fuchsia_inspect::Inspector,
+    fuchsia_inspect::{Inspector, NumericProperty, Property, UintProperty},
     fuchsia_inspect_contrib::nodes::BoundedListNode,
     parking_lot::Mutex,
     rand,
@@ -27,6 +27,9 @@ pub struct WlanstackTree {
     pub device_events: Mutex<BoundedListNode>,
     /// "iface-<n>" subtrees, where n is the iface ID.
     ifaces_trees: Mutex<IfacesTrees>,
+    /// "active_iface" property, what's the currently active iface. This assumes only one iface
+    /// is active at a time
+    latest_active_client_iface: Mutex<Option<UintProperty>>,
 }
 
 impl WlanstackTree {
@@ -40,6 +43,7 @@ impl WlanstackTree {
             hash_key: rand::random::<u64>().to_le_bytes(),
             device_events: Mutex::new(BoundedListNode::new(device_events, DEVICE_EVENTS_LIMIT)),
             ifaces_trees: Mutex::new(ifaces_trees),
+            latest_active_client_iface: Mutex::new(None),
         }
     }
 
@@ -49,5 +53,67 @@ impl WlanstackTree {
 
     pub fn notify_iface_removed(&self, iface_id: u16) {
         self.ifaces_trees.lock().notify_iface_removed(iface_id)
+    }
+
+    pub fn mark_active_client_iface(&self, iface_id: u16) {
+        self.latest_active_client_iface
+            .lock()
+            .get_or_insert_with(|| {
+                self.inspector.root().create_uint("latest_active_client_iface", iface_id as u64)
+            })
+            .set(iface_id as u64);
+    }
+
+    pub fn unmark_active_client_iface(&self, iface_id: u16) {
+        let mut active_iface = self.latest_active_client_iface.lock();
+        if let Some(property) = active_iface.as_ref() {
+            if let Ok(id) = property.get() {
+                if id == iface_id as u64 {
+                    active_iface.take();
+                }
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use {super::*, wlan_common::assert_variant};
+
+    #[test]
+    fn test_mark_unmark_active_client_iface_simple() {
+        let inspect_tree = WlanstackTree::new(Inspector::new());
+        inspect_tree.mark_active_client_iface(0);
+        assert_active_client_iface_eq(&inspect_tree, 0);
+        inspect_tree.unmark_active_client_iface(0);
+        assert_variant!(inspect_tree.latest_active_client_iface.lock().as_ref(), None);
+    }
+
+    #[test]
+    fn test_mark_unmark_active_client_iface_interleave() {
+        let inspect_tree = WlanstackTree::new(Inspector::new());
+
+        inspect_tree.mark_active_client_iface(0);
+        assert_active_client_iface_eq(&inspect_tree, 0);
+        // We don't support two concurrent active client iface in practice. This test is
+        // just us being paranoid about the unmark call coming later than the call to
+        // mark the new iface.
+        inspect_tree.mark_active_client_iface(1);
+        assert_active_client_iface_eq(&inspect_tree, 1);
+
+        // Stale unmark call should have no effect on the tree
+        inspect_tree.unmark_active_client_iface(0);
+        assert_active_client_iface_eq(&inspect_tree, 1);
+
+        inspect_tree.unmark_active_client_iface(1);
+        assert_variant!(inspect_tree.latest_active_client_iface.lock().as_ref(), None);
+    }
+
+    fn assert_active_client_iface_eq(inspect_tree: &WlanstackTree, iface_id: u64) {
+        assert_variant!(inspect_tree.latest_active_client_iface.lock().as_ref(), Some(property) => {
+            assert_variant!(property.get(), Ok(id) => {
+                assert_eq!(id, iface_id);
+            });
+        });
     }
 }

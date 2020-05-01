@@ -161,6 +161,9 @@ pub async fn query_and_serve_iface(
     inspect_log!(inspect_tree.device_events.lock(), {
         msg: format!("new iface #{} with role '{:?}'", id, device_info.role)
     });
+    if let fidl_mlme::MacRole::Client = device_info.role {
+        inspect_tree.mark_active_client_iface(id);
+    }
     let mlme_query = MlmeQueryProxy::new(mlme_proxy);
     let is_softmac = device_info.driver_features.contains(&DriverFeature::TempSoftmac);
     // For testing only: All synthetic devices are softmac devices.
@@ -175,6 +178,7 @@ pub async fn query_and_serve_iface(
     let result = sme_fut.await.map_err(|e| format_err!("error while serving SME: {}", e));
     info!("iface removed: #{}", id);
     inspect_log!(inspect_tree.device_events.lock(), msg: format!("iface removed: #{}", id));
+    inspect_tree.unmark_active_client_iface(id);
     ifaces.remove(&id);
     result
 }
