@@ -40,7 +40,7 @@ use {
 };
 
 mod server;
-use server::OmahaReponse;
+use server::OmahaResponse;
 
 const OMAHA_CLIENT_CMX: &str =
     "fuchsia-pkg://fuchsia.com/omaha-client-integration-tests#meta/omaha-client-service-for-integration-test.cmx";
@@ -88,7 +88,7 @@ struct Proxies {
 
 struct TestEnvBuilder {
     paver: MockPaver,
-    response: OmahaReponse,
+    response: OmahaResponse,
     version: String,
 }
 
@@ -96,7 +96,7 @@ impl TestEnvBuilder {
     fn new() -> Self {
         Self {
             paver: MockPaver::new(Status::OK),
-            response: OmahaReponse::NoUpdate,
+            response: OmahaResponse::NoUpdate,
             version: "0.1.2.3".to_string(),
         }
     }
@@ -105,7 +105,7 @@ impl TestEnvBuilder {
         Self { paver: paver, response: self.response, version: self.version }
     }
 
-    fn response(self, response: OmahaReponse) -> Self {
+    fn response(self, response: OmahaResponse) -> Self {
         Self { paver: self.paver, response: response, version: self.version }
     }
 
@@ -444,7 +444,7 @@ fn progress(fraction_completed: Option<f32>) -> Option<InstallationProgress> {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_omaha_client_update() {
-    let mut env = TestEnvBuilder::new().response(OmahaReponse::Update).build();
+    let mut env = TestEnvBuilder::new().response(OmahaResponse::Update).build();
 
     env.register_package(
         "update?hash=deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
@@ -524,7 +524,7 @@ async fn test_omaha_client_update() {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_omaha_client_update_error() {
-    let env = TestEnvBuilder::new().response(OmahaReponse::Update).build();
+    let env = TestEnvBuilder::new().response(OmahaResponse::Update).build();
 
     let mut stream = env.check_now().await;
     expect_states(
@@ -624,7 +624,7 @@ async fn test_omaha_client_no_update() {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_omaha_client_invalid_response() {
-    let env = TestEnvBuilder::new().response(OmahaReponse::InvalidResponse).build();
+    let env = TestEnvBuilder::new().response(OmahaResponse::InvalidResponse).build();
 
     let mut stream = env.check_now().await;
     expect_states(
@@ -652,7 +652,7 @@ async fn test_omaha_client_invalid_response() {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_omaha_client_invalid_url() {
-    let env = TestEnvBuilder::new().response(OmahaReponse::InvalidURL).build();
+    let env = TestEnvBuilder::new().response(OmahaResponse::InvalidURL).build();
 
     let mut stream = env.check_now().await;
     expect_states(

@@ -16,7 +16,7 @@ use {
 };
 
 #[derive(Copy, Clone, Debug)]
-pub enum OmahaReponse {
+pub enum OmahaResponse {
     Update,
     NoUpdate,
     InvalidResponse,
@@ -25,11 +25,11 @@ pub enum OmahaReponse {
 
 /// A mock Omaha server.
 pub struct OmahaServer {
-    response: OmahaReponse,
+    response: OmahaResponse,
 }
 
 impl OmahaServer {
-    pub fn new(response: OmahaReponse) -> Self {
+    pub fn new(response: OmahaResponse) -> Self {
         OmahaServer { response }
     }
 
@@ -61,7 +61,7 @@ impl OmahaServer {
 
 async fn handle_omaha_request(
     req: Request<Body>,
-    response: OmahaReponse,
+    response: OmahaResponse,
 ) -> Result<Response<Body>, Error> {
     assert_eq!(req.method(), Method::POST);
     assert_eq!(req.uri().query(), None);
@@ -81,7 +81,7 @@ async fn handle_omaha_request(
     let is_update_check = app.get("updatecheck").is_some();
     let app = if is_update_check {
         let updatecheck = match response {
-            OmahaReponse::Update => json!({
+            OmahaResponse::Update => json!({
                 "status": "ok",
                 "urls": {
                     "url": [
@@ -114,13 +114,13 @@ async fn handle_omaha_request(
                     }
                 }
             }),
-            OmahaReponse::NoUpdate => json!({
+            OmahaResponse::NoUpdate => json!({
                 "status": "noupdate",
             }),
-            OmahaReponse::InvalidResponse => json!({
+            OmahaResponse::InvalidResponse => json!({
                 "invalid_status": "invalid",
             }),
-            OmahaReponse::InvalidURL => json!({
+            OmahaResponse::InvalidURL => json!({
                 "status": "ok",
                 "urls": {
                     "url": [
