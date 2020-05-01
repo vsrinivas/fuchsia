@@ -564,6 +564,13 @@ void DeviceCtx::SetOutputBuffer(const CodecBuffer* buffer) {
       .set_bit_1(1)
       .set_bit_0(0)
       .WriteTo(&dosbus_);
+
+  current_output_ = buffer;
+  zx_status_t status = zx_cache_flush(buffer->base(), buffer->size(),
+                          ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE);
+  if (status != ZX_OK) {
+    ENCODE_ERROR("failed to flush output buffer");
+  }
 }
 
 zx_status_t DeviceCtx::PowerOn() {
@@ -1562,6 +1569,7 @@ zx_status_t DeviceCtx::EncodeFrame(uint32_t* output_len) {
   HcodecIeMeMbType::MbType mb_type = HcodecIeMeMbType::MbType::kDefault;
 
   ZX_DEBUG_ASSERT(output_len);
+  ZX_DEBUG_ASSERT(current_output_);
 
   auto status = EnsureHwInited();
   if (status != ZX_OK) {
@@ -1600,6 +1608,13 @@ zx_status_t DeviceCtx::EncodeFrame(uint32_t* output_len) {
 
   // commit and swap to next canvas buffer
   std::swap(ref_buf_canvas_, dblk_buf_canvas_);
+
+  // TODO(afoxley) If output is in RAM domain the invalidate would not be required
+  status = zx_cache_flush(current_output_->base(), *output_len,
+                          ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE);
+  if (status != ZX_OK) {
+    return status;
+  }
 
   return ZX_OK;
 }

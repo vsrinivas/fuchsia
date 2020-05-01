@@ -187,6 +187,8 @@ class DeviceCtx : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_MEDIA
   std::optional<InternalBuffer> dump_info_;
   std::optional<InternalBuffer> cbr_info_;
 
+  const CodecBuffer* current_output_ = nullptr;
+
   async::Loop loop_;
   thrd_t loop_thread_;
 
