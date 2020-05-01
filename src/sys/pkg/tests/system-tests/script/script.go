@@ -32,15 +32,11 @@ func RunScript(
 		return nil
 	}
 
-	// It's possible the script could have rebooted the device, so
-	// to be safe, disconnect from sl4f before running the script, then
-	// reconnect afterwards.
-	connectToSl4f := false
-	if rpcClient != nil && *rpcClient != nil {
-		(*rpcClient).Close()
-		*rpcClient = nil
-		connectToSl4f = true
-	}
+	// It's possible the script could reboot the device, which means we
+	// need to reconnect to sl4f. So register a disconnection listener so
+	// we know if we disconnect.
+	ch := make(chan struct{})
+	device.RegisterDisconnectListener(ch)
 
 	log.Printf("running script: %s", script)
 	cmd := exec.CommandContext(ctx, "/bin/sh", "-c", script)
@@ -52,12 +48,22 @@ func RunScript(
 		return fmt.Errorf("script %v failed to run: %w", err)
 	}
 
-	if connectToSl4f {
-		rpc, err := device.StartRpcSession(ctx, repo)
-		if err != nil {
-			return fmt.Errorf("unable to connect to sl4f after running script: %w", err)
+	// Reconnect to sl4f if we disconnected.
+	//
+	// FIXME(47145) To avoid fxbug.dev/47145, we need to delay
+	// disconnecting from sl4f until after we reboot the device. Otherwise
+	// we risk leaving the ssh session in a bad state.
+	if rpcClient != nil && *rpcClient != nil {
+		select {
+		case <-ch:
+			var err error
+			(*rpcClient).Close()
+			*rpcClient, err = device.StartRpcSession(ctx, repo)
+			if err != nil {
+				return fmt.Errorf("unable to connect to sl4f after running script: %w", err)
+			}
+		default:
 		}
-		*rpcClient = rpc
 	}
 
 	return nil

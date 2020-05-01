@@ -51,7 +51,11 @@ func NewClient(ctx context.Context, sshClient *sshutil.Client, addr string, repo
 }
 
 func (c *Client) Close() {
-	c.disconnect()
+	if c.server != nil {
+		// Closing the session kills the remote command.
+		c.server.Close()
+		c.server = nil
+	}
 }
 
 func (c *Client) connect(ctx context.Context) error {
@@ -91,29 +95,20 @@ func (c *Client) connect(ctx context.Context) error {
 		logger.Infof(ctx, "unable to launch sl4f: %s", err)
 		return err
 	}
+	c.server = server
 
 	// Wait a few seconds for it to respond to requests.
 	pingCtx, cancel = context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 	for pingCtx.Err() == nil {
 		if err := c.ping(pingCtx); err == nil {
-			c.server = server
 			return nil
 		}
 		time.Sleep(time.Second)
 	}
 
 	logger.Infof(ctx, "unable to ping sl4f: %s", pingCtx.Err())
-	server.Close()
 	return pingCtx.Err()
-}
-
-func (c *Client) disconnect() {
-	if c.server != nil {
-		// Closing the session kills the remote command.
-		c.server.Close()
-		c.server = nil
-	}
 }
 
 // ping attempts to perform an sl4f command that should always succeed if the server is up.

@@ -273,12 +273,6 @@ func systemOTA(
 		return fmt.Errorf("device already updated to the expected version %q", expectedSystemImageMerkle)
 	}
 
-	// Disconnect from sl4f since the OTA should reboot the device.
-	if *rpcClient != nil {
-		(*rpcClient).Close()
-		*rpcClient = nil
-	}
-
 	logger.Infof(ctx, "Rebooting device")
 	startTime := time.Now()
 
@@ -289,6 +283,16 @@ func systemOTA(
 
 	logger.Infof(ctx, "OTA complete in %s", time.Now().Sub(startTime))
 	logger.Infof(ctx, "Validating device")
+
+	// Disconnect from sl4f since we rebooted the device.
+	//
+	// FIXME(47145) To avoid fxbug.dev/47145, we need to delay
+	// disconnecting from sl4f until after we reboot the device. Otherwise
+	// we risk leaving the ssh session in a bad state.
+	if *rpcClient != nil {
+		(*rpcClient).Close()
+		*rpcClient = nil
+	}
 
 	*rpcClient, err = device.StartRpcSession(ctx, repo)
 	if err != nil {
@@ -375,12 +379,6 @@ func otaToPackage(
 		return fmt.Errorf("failed to download OTA: %s", err)
 	}
 
-	// Disconnect from sl4f since the OTA should reboot the device.
-	if *rpcClient != nil {
-		(*rpcClient).Close()
-		*rpcClient = nil
-	}
-
 	logger.Infof(ctx, "Rebooting device")
 	startTime := time.Now()
 
@@ -390,6 +388,16 @@ func otaToPackage(
 
 	logger.Infof(ctx, "Reboot complete in %s", time.Now().Sub(startTime))
 	logger.Infof(ctx, "Validating device")
+
+	// Disconnect from sl4f since we rebooted the device.
+	//
+	// FIXME(47145) To avoid fxbug.dev/47145, we need to delay
+	// disconnecting from sl4f until after we reboot the device. Otherwise
+	// we risk leaving the ssh session in a bad state.
+	if *rpcClient != nil {
+		(*rpcClient).Close()
+		*rpcClient = nil
+	}
 
 	*rpcClient, err = device.StartRpcSession(ctx, repo)
 	if err != nil {

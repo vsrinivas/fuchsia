@@ -73,16 +73,31 @@ func TestReboot(t *testing.T) {
 		logger.Fatalf(ctx, "failed to get downgrade build: %v", err)
 	}
 
+	ch := make(chan *sl4f.Client, 1)
 	if err := util.RunWithTimeout(ctx, c.paveTimeout, func() error {
-		return initializeDevice(ctx, device, build)
+		rpcClient, err := initializeDevice(ctx, device, build)
+		ch <- rpcClient
+		return err
 	}); err != nil {
 		logger.Fatalf(ctx, "initialization failed: %v", err)
 	}
 
-	testReboot(ctx, device, build)
+	rpcClient := <-ch
+	defer func() {
+		if rpcClient != nil {
+			rpcClient.Close()
+		}
+	}()
+
+	testReboot(ctx, device, build, &rpcClient)
 }
 
-func testReboot(ctx context.Context, device *device.Client, build artifacts.Build) {
+func testReboot(
+	ctx context.Context,
+	device *device.Client,
+	build artifacts.Build,
+	rpcClient **sl4f.Client,
+) {
 	for i := 1; i <= c.cycleCount; i++ {
 		logger.Infof(ctx, "Reboot Attempt %d", i)
 
@@ -90,28 +105,23 @@ func testReboot(ctx context.Context, device *device.Client, build artifacts.Buil
 		// setting a timeout on the context, and running the actual test in a
 		// closure.
 		if err := util.RunWithTimeout(ctx, c.cycleTimeout, func() error {
-			return doTestReboot(ctx, device, build)
+			return doTestReboot(ctx, device, build, rpcClient)
 		}); err != nil {
 			logger.Fatalf(ctx, "Reboot Cycle %d failed: %v", i, err)
 		}
 	}
 }
 
-func doTestReboot(ctx context.Context, device *device.Client, build artifacts.Build) error {
+func doTestReboot(
+	ctx context.Context,
+	device *device.Client,
+	build artifacts.Build,
+	rpcClient **sl4f.Client,
+) error {
 	repo, err := build.GetPackageRepository(ctx)
 	if err != nil {
 		return fmt.Errorf("unable to get repository: %w", err)
 	}
-
-	rpcClient, err := device.StartRpcSession(ctx, repo)
-	if err != nil {
-		return fmt.Errorf("unable to connect to sl4f: %s", err)
-	}
-	defer func() {
-		if rpcClient != nil {
-			rpcClient.Close()
-		}
-	}()
 
 	// Install version N on the device if it is not already on that version.
 	expectedSystemImageMerkle, err := repo.LookupUpdateSystemImageMerkle()
@@ -119,7 +129,7 @@ func doTestReboot(ctx context.Context, device *device.Client, build artifacts.Bu
 		return fmt.Errorf("error extracting expected system image merkle: %s", err)
 	}
 
-	expectedConfig, err := check.DetermineActiveABRConfig(ctx, rpcClient)
+	expectedConfig, err := check.DetermineActiveABRConfig(ctx, *rpcClient)
 	if err != nil {
 		return fmt.Errorf("error determining target config: %s", err)
 	}
@@ -127,7 +137,7 @@ func doTestReboot(ctx context.Context, device *device.Client, build artifacts.Bu
 	if err := check.ValidateDevice(
 		ctx,
 		device,
-		rpcClient,
+		*rpcClient,
 		expectedSystemImageMerkle,
 		expectedConfig,
 		false,
@@ -135,15 +145,18 @@ func doTestReboot(ctx context.Context, device *device.Client, build artifacts.Bu
 		return err
 	}
 
-	// Disconnect from sl4f since the OTA should reboot the device.
-	rpcClient.Close()
-	rpcClient = nil
-
 	if err := device.Reboot(ctx); err != nil {
 		return fmt.Errorf("error rebooting: %s", err)
 	}
 
-	rpcClient, err = device.StartRpcSession(ctx, repo)
+	// Disconnect from sl4f since we rebooted the device.
+	//
+	// FIXME(47145) To avoid fxbug.dev/47145, we need to delay
+	// disconnecting from sl4f until after we reboot the device. Otherwise
+	// we risk leaving the ssh session in a bad state.
+	(*rpcClient).Close()
+
+	*rpcClient, err = device.StartRpcSession(ctx, repo)
 	if err != nil {
 		return fmt.Errorf("unable to connect to sl4f: %s", err)
 	}
@@ -151,7 +164,7 @@ func doTestReboot(ctx context.Context, device *device.Client, build artifacts.Bu
 	if err := check.ValidateDevice(
 		ctx,
 		device,
-		rpcClient,
+		*rpcClient,
 		expectedSystemImageMerkle,
 		expectedConfig,
 		false,
@@ -159,7 +172,7 @@ func doTestReboot(ctx context.Context, device *device.Client, build artifacts.Bu
 		return fmt.Errorf("failed to validate device: %s", err)
 	}
 
-	if err := script.RunScript(ctx, device, repo, &rpcClient, c.afterTestScript); err != nil {
+	if err := script.RunScript(ctx, device, repo, rpcClient, c.afterTestScript); err != nil {
 		return fmt.Errorf("failed to run after-test-script: %w", err)
 	}
 
@@ -170,49 +183,48 @@ func initializeDevice(
 	ctx context.Context,
 	device *device.Client,
 	build artifacts.Build,
-) error {
+) (*sl4f.Client, error) {
 	logger.Infof(ctx, "Initializing device")
 
 	repo, err := build.GetPackageRepository(ctx)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if err := script.RunScript(ctx, device, repo, nil, c.beforeInitScript); err != nil {
-		return fmt.Errorf("failed to run before-init-script: %w", err)
+		return nil, fmt.Errorf("failed to run before-init-script: %w", err)
 	}
 
 	expectedSystemImageMerkle, err := repo.LookupUpdateSystemImageMerkle()
 	if err != nil {
-		return fmt.Errorf("error extracting expected system image merkle: %w", err)
+		return nil, fmt.Errorf("error extracting expected system image merkle: %w", err)
 	}
 
 	// Only pave if the device is not running the expected version.
 	upToDate, err := check.IsDeviceUpToDate(ctx, device, expectedSystemImageMerkle)
 	if err != nil {
-		return fmt.Errorf("failed to check if up to date during initialization: %w", err)
+		return nil, fmt.Errorf("failed to check if up to date during initialization: %w", err)
 	}
 	if upToDate {
 		logger.Infof(ctx, "device already up to date")
-		return nil
-	}
-
-	if err := pave.PaveDevice(ctx, device, build, c.otaToRecovery); err != nil {
-		return fmt.Errorf("failed to pave device during initialization: %w", err)
+	} else {
+		if err := pave.PaveDevice(ctx, device, build, c.otaToRecovery); err != nil {
+			return nil, fmt.Errorf("failed to pave device during initialization: %w", err)
+		}
 	}
 
 	rpcClient, err := device.StartRpcSession(ctx, repo)
 	if err != nil {
-		return fmt.Errorf("unable to connect to sl4f: %w", err)
+		return nil, fmt.Errorf("unable to connect to sl4f: %w", err)
 	}
-	defer rpcClient.Close()
 
 	// Check if we support ABR. If so, we always boot into A after a pave.
 	expectedConfig, err := check.DetermineActiveABRConfig(ctx, rpcClient)
 	if err != nil {
-		return err
+		rpcClient.Close()
+		return nil, err
 	}
-	if expectedConfig != nil {
+	if !upToDate && expectedConfig != nil {
 		config := sl4f.ConfigurationA
 		expectedConfig = &config
 	}
@@ -225,12 +237,14 @@ func initializeDevice(
 		expectedConfig,
 		false,
 	); err != nil {
-		return err
+		rpcClient.Close()
+		return nil, err
 	}
 
 	if err := script.RunScript(ctx, device, repo, &rpcClient, c.afterInitScript); err != nil {
-		return fmt.Errorf("failed to run after-init-script: %w", err)
+		rpcClient.Close()
+		return nil, fmt.Errorf("failed to run after-init-script: %w", err)
 	}
 
-	return nil
+	return rpcClient, nil
 }
