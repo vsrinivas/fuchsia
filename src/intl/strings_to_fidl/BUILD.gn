@@ -1,0 +1,48 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/host.gni")
+import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_test.gni")
+import("//build/testing/environments.gni")
+import("//build/testing/host_test_data.gni")
+
+group("strings_to_fidl") {
+  testonly = true
+  public_deps = [
+    ":install",
+    ":tests",
+  ]
+}
+
+group("tests") {
+  testonly = true
+
+  public_deps = [ ":strings_to_fidl_bin_test($host_toolchain)" ]
+}
+
+install_host_tools("install") {
+  deps = [ ":strings_to_fidl_bin($host_toolchain)" ]
+  outputs = [ "strings_to_fidl" ]
+}
+
+if (host_toolchain == current_toolchain) {
+  rustc_binary("strings_to_fidl_bin") {
+    name = "strings_to_fidl"
+    with_unit_tests = true
+    edition = "2018"
+    deps = [
+      "//src/lib/intl/strings:lib",
+      "//third_party/rust_crates:anyhow",
+      "//third_party/rust_crates:handlebars",
+      "//third_party/rust_crates:serde",
+      "//third_party/rust_crates:serde_json",
+      "//third_party/rust_crates:structopt",
+      "//third_party/rust_crates:thiserror",
+      "//third_party/rust_crates:xml-rs",
+    ]
+
+    test_deps = []
+  }
+}

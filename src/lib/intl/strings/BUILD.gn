@@ -1,17 +1,14 @@
-# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
 import("//build/host.gni")
-import("//build/rust/rustc_binary.gni")
-import("//build/rust/rustc_test.gni")
-import("//build/testing/environments.gni")
-import("//build/testing/host_test_data.gni")
+import("//build/rust/rustc_library.gni")
 
-group("fidl") {
+group("strings") {
   testonly = true
   public_deps = [
-    ":install",
+    ":lib($host_toolchain)",
     ":tests",
   ]
 }
@@ -19,16 +16,12 @@ group("fidl") {
 group("tests") {
   testonly = true
 
-  public_deps = [ ":strings_to_fidl_test($host_toolchain)" ]
-}
-
-install_host_tools("install") {
-  deps = [ ":strings_to_fidl($host_toolchain)" ]
-  outputs = [ "strings_to_fidl" ]
+  public_deps = [ ":lib_test($host_toolchain)" ]
 }
 
 if (host_toolchain == current_toolchain) {
-  rustc_binary("strings_to_fidl") {
+  rustc_library("lib") {
+    name = "intl_strings"
     with_unit_tests = true
     edition = "2018"
     deps = [

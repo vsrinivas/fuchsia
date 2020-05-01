@@ -4,12 +4,18 @@
 
 group("intl") {
   testonly = true
-  public_deps = [ "intl_services" ]
+  public_deps = [
+    "intl_services",
+    "strings_to_fidl",
+  ]
 }
 
 group("tests") {
   testonly = true
-  public_deps = [ "intl_services:tests" ]
+  public_deps = [
+    "intl_services:tests",
+    "strings_to_fidl:tests",
+  ]
 }
 
 group("config") {

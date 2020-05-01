@@ -20,6 +20,6 @@ output into `strings.xml.fidl`.
 ## Running tests
 
 ```
-fx test //src/intl/fidl
+fx test //src/intl/strings_to_fidl
 ```
 
