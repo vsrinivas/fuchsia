@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use anyhow::{format_err, Context as _, Error};
-use fdio;
 use fidl_fuchsia_hardware_gpu_clock as fidl_gpu;
 use fidl_fuchsia_hardware_thermal as fidl_thermal;
 use fuchsia_async as fasync;

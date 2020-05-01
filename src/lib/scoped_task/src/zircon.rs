@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fdio;
 use fuchsia_runtime as runtime;
 use fuchsia_syslog as syslog;
 use fuchsia_zircon as zx;

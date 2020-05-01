@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use anyhow::{Context, Error};
-use fdio;
 use fidl::endpoints::ServerEnd;
 use fidl_fuchsia_wlan_device::{ConnectorProxy, PhyProxy};
 use fidl_fuchsia_wlan_device_service::{DeviceServiceMarker, DeviceServiceProxy};

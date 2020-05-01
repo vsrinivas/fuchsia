@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use anyhow::{format_err, Context as _, Error};
-use fdio;
 use fidl_fuchsia_hardware_ethernet as zx_eth;
 use fidl_fuchsia_net as net;
 use fidl_fuchsia_net_icmp;

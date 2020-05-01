@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use anyhow;
-use fdio;
 use fidl::endpoints::ServerEnd;
 use fidl_fuchsia_wlan_device as wlan;
 use fidl_fuchsia_wlan_mlme as mlme;

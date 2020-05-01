@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use anyhow::{format_err, Error};
-use fdio;
 use fidl_fuchsia_device::ControllerSynchronousProxy;
 use fidl_fuchsia_device_test::{DeviceSynchronousProxy, RootDeviceSynchronousProxy};
 use std::fs::File;
