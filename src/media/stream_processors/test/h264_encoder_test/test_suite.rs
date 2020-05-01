@@ -6,6 +6,7 @@ use anyhow::format_err;
 use fidl_fuchsia_media::*;
 use fidl_fuchsia_sysmem as sysmem;
 use fuchsia_zircon as zx;
+use std::io::Write;
 use std::rc::Rc;
 use stream_processor_encoder_factory::*;
 use stream_processor_test::*;
@@ -15,6 +16,17 @@ use crate::video_frame::*;
 
 pub struct H264NalValidator {
     pub expected_nals: Option<Vec<H264NalKind>>,
+    pub output_file: Option<&'static str>,
+}
+
+impl H264NalValidator {
+    fn output_file(&self) -> Result<impl Write> {
+        Ok(if let Some(file) = self.output_file {
+            Box::new(std::fs::File::create(file)?) as Box<dyn Write>
+        } else {
+            Box::new(std::io::sink()) as Box<dyn Write>
+        })
+    }
 }
 
 impl OutputValidator for H264NalValidator {
@@ -26,8 +38,10 @@ impl OutputValidator for H264NalValidator {
         let expected = self.expected_nals.as_ref().unwrap();
 
         let packets: Vec<&OutputPacket> = output_packets(output).collect();
+        let mut file = self.output_file()?;
         let mut stream = H264Stream::from(vec![]);
         for packet in packets {
+            file.write_all(&packet.data)?;
             stream.append(&mut packet.data.clone());
         }
 
@@ -62,12 +76,16 @@ pub struct H264EncoderTestCase {
     // This is a function because FIDL unions are not Copy or Clone.
     pub settings: Rc<dyn Fn() -> EncoderSettings>,
     pub expected_nals: Option<Vec<H264NalKind>>,
+    pub output_file: Option<&'static str>,
 }
 
 impl H264EncoderTestCase {
     pub async fn run(self) -> Result<()> {
         let stream = self.create_test_stream()?;
-        let nal_validator = Rc::new(H264NalValidator { expected_nals: self.expected_nals.clone() });
+        let nal_validator = Rc::new(H264NalValidator {
+            expected_nals: self.expected_nals.clone(),
+            output_file: self.output_file,
+        });
         let eos_validator = Rc::new(TerminatesWithValidator {
             expected_terminal_output: Output::Eos { stream_lifetime_ordinal: 1 },
         });

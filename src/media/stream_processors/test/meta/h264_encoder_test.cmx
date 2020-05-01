@@ -20,7 +20,9 @@
             "class/media-codec",
             "class/sysmem"
         ],
-        "features": [],
+        "features": [
+            "isolated-temp"
+        ],
         "services": [
             "fuchsia.logger.LogSink",
             "fuchsia.mediacodec.CodecFactory",
