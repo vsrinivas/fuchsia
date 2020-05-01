@@ -31,10 +31,10 @@ void spin(uint32_t usecs) {
     ;
 }
 
-void _panic(void* caller, void* frame, const char* fmt, ...) {
+void panic(const char *fmt, ...) {
   platform_panic_start();
 
-  printf("panic (caller %p frame %p): ", caller, frame);
+  printf("\npanic (caller %p frame %p): ", __GET_CALLER(), __GET_FRAME());
 
   va_list ap;
   va_start(ap, fmt);

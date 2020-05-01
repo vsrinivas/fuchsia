@@ -41,11 +41,9 @@ __BEGIN_CDECLS
   } while (0)
 
 /* systemwide halts */
-void _panic(void *caller, void *frame, const char *fmt, ...) __PRINTFLIKE(3, 4) __NO_RETURN;
+void panic(const char *fmt, ...) __PRINTFLIKE(1, 2) __NO_RETURN __NO_INLINE;
 
-#define panic(x...) _panic(__GET_CALLER(), __GET_FRAME(), x)
-
-void _panic_no_format(const char *msg, size_t len) __NO_RETURN;
+void _panic_no_format(const char *msg, size_t len) __NO_RETURN __NO_INLINE;
 
 __NO_RETURN static inline void panic_no_format(const char *msg) {
   _panic_no_format(msg, __builtin_strlen(msg));
