@@ -14,7 +14,7 @@
 #include <fbl/intrusive_double_list.h>
 #include <fbl/string.h>
 
-struct Driver {
+struct Driver : public fbl::DoublyLinkedListable<std::unique_ptr<Driver>> {
   Driver() = default;
 
   fbl::String name;
@@ -24,11 +24,6 @@ struct Driver {
   uint32_t binding_size = 0;
   uint32_t flags = 0;
   zx::vmo dso_vmo;
-
-  fbl::DoublyLinkedListNodeState<Driver*> node;
-  struct Node {
-    static fbl::DoublyLinkedListNodeState<Driver*>& node_state(Driver& obj) { return obj.node; }
-  };
 
   fbl::String libname;
 

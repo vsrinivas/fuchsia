@@ -309,8 +309,8 @@ class Coordinator : public power_fidl::statecontrol::Admin::Interface,
     loader_service_connector_ = std::move(loader_service_connector);
   }
 
-  fbl::DoublyLinkedList<Driver*, Driver::Node>& drivers() { return drivers_; }
-  const fbl::DoublyLinkedList<Driver*, Driver::Node>& drivers() const { return drivers_; }
+  fbl::DoublyLinkedList<std::unique_ptr<Driver>>& drivers() { return drivers_; }
+  const fbl::DoublyLinkedList<std::unique_ptr<Driver>>& drivers() const { return drivers_; }
   fbl::DoublyLinkedList<fbl::RefPtr<Device>, Device::AllDevicesNode>& devices() { return devices_; }
   const fbl::DoublyLinkedList<fbl::RefPtr<Device>, Device::AllDevicesNode>& devices() const {
     return devices_;
@@ -367,13 +367,13 @@ class Coordinator : public power_fidl::statecontrol::Admin::Interface,
   DriverHost::LoaderServiceConnector loader_service_connector_;
 
   // All Drivers
-  fbl::DoublyLinkedList<Driver*, Driver::Node> drivers_;
+  fbl::DoublyLinkedList<std::unique_ptr<Driver>> drivers_;
 
   // Drivers to try last
-  fbl::DoublyLinkedList<Driver*, Driver::Node> fallback_drivers_;
+  fbl::DoublyLinkedList<std::unique_ptr<Driver>> fallback_drivers_;
 
   // List of drivers loaded from /system by system_driver_loader()
-  fbl::DoublyLinkedList<Driver*, Driver::Node> system_drivers_;
+  fbl::DoublyLinkedList<std::unique_ptr<Driver>> system_drivers_;
 
   // All DriverHosts
   fbl::DoublyLinkedList<DriverHost*> driver_hosts_;

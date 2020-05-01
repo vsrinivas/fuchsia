@@ -131,7 +131,7 @@ Coordinator::Coordinator(CoordinatorConfig config)
   }
 }
 
-Coordinator::~Coordinator() { drivers_.clear(); }
+Coordinator::~Coordinator() {}
 
 bool Coordinator::InSuspend() const {
   return suspend_context().flags() == SuspendContext::Flags::kSuspend;
@@ -1406,9 +1406,10 @@ void Coordinator::DriverAdded(Driver* drv, const char* version) {
   if (!driver) {
     return;
   }
-  async::PostTask(dispatcher(), [this, drv = driver.release()] {
-    drivers_.push_back(drv);
-    zx_status_t status = BindDriver(drv);
+  async::PostTask(dispatcher(), [this, drv = std::move(driver)]() mutable {
+    Driver* borrow_ref = drv.get();
+    drivers_.push_back(std::move(drv));
+    zx_status_t status = BindDriver(borrow_ref);
     if (status != ZX_OK && status != ZX_ERR_UNAVAILABLE) {
       LOGF(ERROR, "Failed to bind driver '%s': %s", drv->name.data(), zx_status_get_string(status));
     }
@@ -1434,13 +1435,13 @@ void Coordinator::DriverAddedInit(Driver* drv, const char* version) {
 
   if (version[0] == '*') {
     // fallback driver, load only if all else fails
-    fallback_drivers_.push_front(driver.release());
+    fallback_drivers_.push_front(std::move(driver));
   } else if (version[0] == '!') {
     // debugging / development hack
     // prioritize drivers with version "!..." over others
-    drivers_.push_front(driver.release());
+    drivers_.push_front(std::move(driver));
   } else {
-    drivers_.push_back(driver.release());
+    drivers_.push_back(std::move(driver));
   }
 }
 
@@ -1461,9 +1462,9 @@ void Coordinator::DriverAddedSys(Driver* drv, const char* version) {
   }
   if (version[0] == '*') {
     // de-prioritize drivers that are "fallback"
-    system_drivers_.push_back(driver.release());
+    system_drivers_.push_back(std::move(driver));
   } else {
-    system_drivers_.push_front(driver.release());
+    system_drivers_.push_front(std::move(driver));
   }
 }
 
@@ -1620,11 +1621,12 @@ zx_status_t Coordinator::ScanSystemDrivers() {
 }
 
 void Coordinator::BindSystemDrivers() {
-  Driver* drv;
+  std::unique_ptr<Driver> drv;
   // Bind system drivers.
   while ((drv = system_drivers_.pop_front()) != nullptr) {
-    drivers_.push_back(drv);
-    zx_status_t status = BindDriver(drv);
+    Driver* borrow_ref = drv.get();
+    drivers_.push_back(std::move(drv));
+    zx_status_t status = BindDriver(borrow_ref);
     if (status != ZX_OK && status != ZX_ERR_UNAVAILABLE) {
       LOGF(ERROR, "Failed to bind driver '%s': %s", drv->name.data(), zx_status_get_string(status));
     }
@@ -1632,8 +1634,9 @@ void Coordinator::BindSystemDrivers() {
   // Bind remaining fallback drivers.
   while ((drv = fallback_drivers_.pop_front()) != nullptr) {
     LOGF(INFO, "Fallback driver '%s' is available", drv->name.data());
-    drivers_.push_back(drv);
-    zx_status_t status = BindDriver(drv);
+    Driver* borrow_ref = drv.get();
+    drivers_.push_back(std::move(drv));
+    zx_status_t status = BindDriver(borrow_ref);
     if (status != ZX_OK && status != ZX_ERR_UNAVAILABLE) {
       LOGF(ERROR, "Failed to bind driver '%s': %s", drv->name.data(), zx_status_get_string(status));
     }
