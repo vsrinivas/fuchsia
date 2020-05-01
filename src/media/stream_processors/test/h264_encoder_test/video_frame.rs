@@ -157,7 +157,13 @@ mod test {
         let stream = VideoFrameStream::create(
             format.image_format,
             /*num_frames=*/ 2,
-            Rc::new(move || -> EncoderSettings { EncoderSettings::H264(H264EncoderSettings {}) }),
+            Rc::new(move || -> EncoderSettings {
+                EncoderSettings::H264(H264EncoderSettings {
+                    bit_rate: Some(200000),
+                    frame_rate: Some(60),
+                    ..H264EncoderSettings::empty()
+                })
+            }),
             /*frames_per_second=*/ 60,
             /*timebase=*/ Some(zx::Duration::from_seconds(1).into_nanos() as u64),
         )

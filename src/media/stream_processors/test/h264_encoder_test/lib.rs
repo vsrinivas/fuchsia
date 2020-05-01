@@ -44,7 +44,12 @@ fn h264_stream_output_generated() -> Result<()> {
         },
         num_frames: 1,
         settings: Rc::new(move || -> EncoderSettings {
-            EncoderSettings::H264(H264EncoderSettings {})
+            EncoderSettings::H264(H264EncoderSettings {
+                bit_rate: Some(200000),
+                frame_rate: Some(30),
+                gop_size: Some(8),
+                ..H264EncoderSettings::empty()
+            })
         }),
         expected_nals: Some(vec![
             H264NalKind::NotPicture,
