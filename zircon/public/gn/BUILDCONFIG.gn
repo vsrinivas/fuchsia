@@ -143,8 +143,9 @@ template("_shlib_toolchain_target") {
                                          [ invoker.match ] == dep.types) {
           # The types list doesn't include this target's type, so skip this
           # element.
-        } else if (defined(dep.unless_configs) && configs + dep.unless_configs -
-                                                  dep.unless_configs != configs) {
+        } else if (defined(dep.unless_configs) &&
+                   configs + dep.unless_configs - dep.unless_configs !=
+                   configs) {
           # Something in the unless_configs list is in this target's configs,
           # so skip this element.
         } else {
@@ -231,8 +232,8 @@ template("shared_library") {
               dist = rebase_path(output_file, root_build_dir)
             }
             if (current_os != "mac" && current_os != "win") {
-              elf_build_id =
-                  rebase_path("${output_file}.build-id.stamp", root_build_dir)
+              elf_build_id = rebase_path("${output_file_base}.build-id.stamp",
+                                         root_build_dir)
             }
             if (toolchain.breakpad_syms) {
               breakpad = rebase_path("${output_file_base}.sym", root_build_dir)
@@ -1420,8 +1421,8 @@ template("_basic_executable") {
             dist = rebase_path(output_file, root_build_dir)
           }
           if (current_os != "mac" && current_os != "win") {
-            elf_build_id =
-                rebase_path("${output_file}.build-id.stamp", root_build_dir)
+            elf_build_id = rebase_path("${output_file_base}.build-id.stamp",
+                                       root_build_dir)
           }
           if (toolchain.breakpad_syms) {
             breakpad = rebase_path("${output_file_base}.sym", root_build_dir)
@@ -1805,8 +1806,8 @@ template("_loadable_module") {
             dist = rebase_path(output_file, root_build_dir)
           }
           if (current_os != "mac" && current_os != "win") {
-            elf_build_id =
-                rebase_path("${output_file}.build-id.stamp", root_build_dir)
+            elf_build_id = rebase_path("${output_file_base}.build-id.stamp",
+                                       root_build_dir)
           }
           if (toolchain.breakpad_syms) {
             breakpad = rebase_path("${output_file_base}.sym", root_build_dir)
