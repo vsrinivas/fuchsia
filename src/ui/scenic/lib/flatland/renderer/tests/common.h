@@ -83,6 +83,7 @@ inline void SetClientConstraintsAndWaitForAllocated(
 // Common testing base class to be used across different unittests that
 // require Vulkan and a SysmemAllocator.
 class RendererTest : public escher::test::TestWithVkValidationLayer {
+ protected:
   void SetUp() override {
     TestWithVkValidationLayer::SetUp();
     // Create the SysmemAllocator.
@@ -95,7 +96,6 @@ class RendererTest : public escher::test::TestWithVkValidationLayer {
     TestWithVkValidationLayer::TearDown();
   }
 
- protected:
   fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator_;
 };
 

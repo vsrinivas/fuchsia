@@ -14,7 +14,7 @@ executable("unittests") {
   sources = [
     "buffer_collection_unittest.cc",
     "gpu_mem_unittest.cc",
-    "null_renderer_unittest.cc",
+    "renderer_unittest.cc",
 
     # Registers a global Escher environment for testing.
     "run_all_unittests.cc",

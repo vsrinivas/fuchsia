@@ -13,6 +13,8 @@ source_set("renderer") {
     "null_renderer.cc",
     "null_renderer.h",
     "renderer.h",
+    "vk_renderer.cc",
+    "vk_renderer.h",
   ]
 
   public_deps = [ "//zircon/public/lib/zxc" ]
