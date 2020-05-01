@@ -95,7 +95,9 @@ CompressionFormatMetrics::CompressionFormatMetrics(
   std::vector<fs_metrics::CompressionFormat> formats = {
       fs_metrics::CompressionFormat::kUnknown, fs_metrics::CompressionFormat::kUncompressed,
       fs_metrics::CompressionFormat::kCompressedLZ4, fs_metrics::CompressionFormat::kCompressedZSTD,
-      fs_metrics::CompressionFormat::kCompressedZSTDSeekable};
+      fs_metrics::CompressionFormat::kCompressedZSTDSeekable,
+      fs_metrics::CompressionFormat::kCompressedZSTDChunked,
+  };
   for (auto format : formats) {
     counters.emplace(format, std::make_unique<cobalt_client::Counter>(
                                  MakeCompressionMetricOptions(source, format), collector));

@@ -21,6 +21,26 @@ constexpr zx::duration kCobaltFlushTimer = zx::min(5);
 
 size_t TicksToMs(const zx::ticks& ticks) { return fzl::TicksToNs(ticks) / zx::msec(1); }
 
+fs_metrics::CompressionFormat FormatForInode(const Inode* inode) {
+  if (inode->IsCompressed()) {
+    auto compression = inode->header.flags & kBlobFlagMaskAnyCompression;
+    switch (compression) {
+      case kBlobFlagLZ4Compressed:
+        return fs_metrics::CompressionFormat::kCompressedLZ4;
+      case kBlobFlagZSTDCompressed:
+        return fs_metrics::CompressionFormat::kCompressedZSTD;
+      case kBlobFlagZSTDSeekableCompressed:
+        return fs_metrics::CompressionFormat::kCompressedZSTDSeekable;
+      case kBlobFlagChunkCompressed:
+        return fs_metrics::CompressionFormat::kCompressedZSTDChunked;
+      default:
+        return fs_metrics::CompressionFormat::kUnknown;
+    }
+  } else {
+    return fs_metrics::CompressionFormat::kUncompressed;
+  }
+}
+
 }  // namespace
 
 BlobfsMetrics::~BlobfsMetrics() { Dump(); }
@@ -134,25 +154,7 @@ void BlobfsMetrics::IncrementCompressionFormatMetric(const Inode* inode) {
   if (!Collecting()) {
     return;
   }
-  fs_metrics::CompressionFormat format;
-  if (inode->IsCompressed()) {
-    auto compression = inode->header.flags & kBlobFlagMaskAnyCompression;
-    switch (compression) {
-      case kBlobFlagLZ4Compressed:
-        format = fs_metrics::CompressionFormat::kCompressedLZ4;
-        break;
-      case kBlobFlagZSTDCompressed:
-        format = fs_metrics::CompressionFormat::kCompressedZSTD;
-        break;
-      case kBlobFlagZSTDSeekableCompressed:
-        format = fs_metrics::CompressionFormat::kCompressedZSTDSeekable;
-        break;
-      default:
-        format = fs_metrics::CompressionFormat::kUnknown;
-    }
-  } else {
-    format = fs_metrics::CompressionFormat::kUncompressed;
-  }
+  fs_metrics::CompressionFormat format = FormatForInode(inode);
   cobalt_metrics_.mutable_compression_format_metrics()->IncrementCounter(format, inode->blob_size);
 }
 

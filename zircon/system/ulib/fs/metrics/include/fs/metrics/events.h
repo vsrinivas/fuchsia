@@ -46,7 +46,8 @@ enum class CompressionFormat {
   kCompressedLZ4 = 2,
   kCompressedZSTD = 3,
   kCompressedZSTDSeekable = 4,
-  kNumFormats = 5
+  kCompressedZSTDChunked = 5,
+  kNumFormats = 6
 };
 
 // Collection of Vnode Events.

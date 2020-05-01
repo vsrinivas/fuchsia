@@ -136,7 +136,9 @@ TEST(CobaltMetricsTest, CreateCompressionFormatMetrics) {
   std::vector<fs_metrics::CompressionFormat> formats = {
       fs_metrics::CompressionFormat::kUnknown, fs_metrics::CompressionFormat::kUncompressed,
       fs_metrics::CompressionFormat::kCompressedLZ4, fs_metrics::CompressionFormat::kCompressedZSTD,
-      fs_metrics::CompressionFormat::kCompressedZSTDSeekable};
+      fs_metrics::CompressionFormat::kCompressedZSTDSeekable,
+      fs_metrics::CompressionFormat::kCompressedZSTDChunked,
+  };
 
   for (const auto fmt : formats) {
     // Counters don't make it to the logger before the collector is Flush()'d.
@@ -166,7 +168,9 @@ TEST(CobaltMetricsTest, IncrementCompressionFormatMetrics) {
   std::vector<fs_metrics::CompressionFormat> formats = {
       fs_metrics::CompressionFormat::kUnknown, fs_metrics::CompressionFormat::kUncompressed,
       fs_metrics::CompressionFormat::kCompressedLZ4, fs_metrics::CompressionFormat::kCompressedZSTD,
-      fs_metrics::CompressionFormat::kCompressedZSTDSeekable};
+      fs_metrics::CompressionFormat::kCompressedZSTDSeekable,
+      fs_metrics::CompressionFormat::kCompressedZSTDChunked,
+  };
 
   // No counters incremented yet.
   for (const auto fmt : formats) {
