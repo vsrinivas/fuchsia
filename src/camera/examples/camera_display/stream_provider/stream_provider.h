@@ -19,7 +19,6 @@
 class StreamProvider {
  public:
   enum class Source {
-    ISP,
     CONTROLLER,
     NUM_SOURCES,
   };
