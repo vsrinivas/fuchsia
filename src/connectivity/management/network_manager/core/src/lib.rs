@@ -23,6 +23,7 @@ pub mod portmgr;
 mod servicemgr;
 
 use {
+    crate::config::InterfaceType,
     crate::lifmgr::{LIFProperties, LIFType},
     crate::portmgr::PortId,
     fidl_fuchsia_net_stack as stack, fidl_fuchsia_netstack as netstack,
@@ -289,12 +290,48 @@ impl DeviceState {
         Ok(())
     }
 
+    /// Configures this device according the defaults provided in `default_interface`.
+    async fn configure_default_interface(
+        &mut self,
+        pid: PortId,
+        topological_path: &str,
+    ) -> error::Result<()> {
+        match self.config.default_interface() {
+            Some(default_interface) => match default_interface.config.interface_type {
+                config::InterfaceType::IfUplink => self.configure_wan(pid, topological_path).await,
+                config::InterfaceType::IfEthernet => {
+                    self.configure_lan(&[pid], topological_path).await
+                }
+                InterfaceType::IfAggregate
+                | InterfaceType::IfLoopback
+                | InterfaceType::IfRoutedVlan
+                | InterfaceType::IfSonet
+                | InterfaceType::IfTunnelGre4
+                | InterfaceType::IfTunnelGre6 => {
+                    Err(error::NetworkManager::Config(error::Config::NotSupported {
+                        msg: format!(
+                            "Unsupported default interface type: {:?}",
+                            default_interface.config.interface_type
+                        ),
+                    }))
+                }
+            },
+            None => Err(error::NetworkManager::Config(error::Config::NotFound {
+                msg: format!(
+                    "Trying to configure {} as a default interface but none was provided",
+                    topological_path
+                ),
+            })),
+        }
+    }
+
     /// Applies configuration to the new port.
     async fn apply_configuration_on_new_port(
         &mut self,
         pid: PortId,
         topological_path: &str,
     ) -> error::Result<()> {
+        // TODO(51208): Figure out a better way to do this.
         if self.config.device_id_is_an_uplink(topological_path) {
             info!("Discovered a new uplink: {}", topological_path);
             return self.configure_wan(pid, topological_path).await;
@@ -303,16 +340,20 @@ impl DeviceState {
             info!("Discovered a new downlink: {}", topological_path);
             return self.configure_lan(&[pid], topological_path).await;
         }
+        if self.config.is_unknown_device_id(topological_path) {
+            info!("Discovered a new unknown device: {}", topological_path);
+            return self.configure_default_interface(pid, topological_path).await;
+        }
 
-        // TODO(cgibson): Refactor this when we have the ability to add one port at a time the
+        // TODO(43251): Refactor this when we have the ability to add one port at a time to the
         // bridge, currently we have to wait until we've discovered all the ports before creating
-        // the bridge. fxb/43251.
+        // the bridge.
         self.lans.push(pid);
 
         // If the configuration contains switched_vlan interfaces that matches this
         // topological_path add it to the bridge.
         if self.config.device_id_is_a_switched_vlan(topological_path) {
-            // TODO(cgibson): Need to do this until we can add individual bridge members.
+            // TODO(43251): Need to do this until we can add individual bridge members.
             if self.lans.len() == NUMBER_OF_PORTS_IN_LAN {
                 let lans = self.lans.clone();
                 info!("Creating new bridge with LAN ports: {:?}", lans);

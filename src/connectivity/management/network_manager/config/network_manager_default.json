@@ -1,5 +1,23 @@
 {
     "device": {
+        "default_interface": {
+            "config": {
+                "name": "default",
+                "type": "IF_UPLINK"
+            },
+            "subinterfaces": [
+                {
+                    "admin_state": "UP",
+                    "ipv4": {
+                        "addresses": [
+                            {
+                                "dhcp_client": true
+                            }
+                        ]
+                    }
+                }
+            ]
+        },
         "interfaces": [
             {
                 "interface": {
@@ -19,15 +37,7 @@
                                 ]
                             }
                         }
-                    ],
-                    "ethernet": {
-                        "config": {
-                            "auto_negotiate": true,
-                            "duplex_mode": "FULL",
-                            "enable_flow_control": true,
-                            "port_speed": "SPEED_1G"
-                        }
-                    }
+                    ]
                 }
             },
             {
@@ -65,120 +75,6 @@
                             "port_speed": "SPEED_1G"
                         }
                     }
-                }
-            },
-            {
-                "interface": {
-                    "config": {
-                        "name": "usb",
-                        "type": "IF_UPLINK"
-                    },
-                    "device_id": "cdc-eth-function",
-                    "subinterfaces": [
-                        {
-                            "admin_state": "UP",
-                            "ipv4": {
-                                "addresses": [
-                                    {
-                                        "dhcp_client": true
-                                    }
-                                ]
-                            }
-                        }
-                    ],
-                    "ethernet": {
-                        "config": {
-                            "auto_negotiate": true,
-                            "duplex_mode": "FULL",
-                            "enable_flow_control": true,
-                            "port_speed": "SPEED_1G"
-                        }
-                    }
-                }
-            },
-            {
-                "interface": {
-                    "config": {
-                        "name": "usb1",
-                        "type": "IF_UPLINK"
-                    },
-                    "device_id": "usb-cdc-ecm",
-                    "subinterfaces": [
-                        {
-                            "admin_state": "UP",
-                            "ipv4": {
-                                "addresses": [
-                                    {
-                                        "dhcp_client": true
-                                    }
-                                ]
-                            }
-                        }
-                    ],
-                    "ethernet": {
-                        "config": {
-                            "auto_negotiate": true,
-                            "duplex_mode": "FULL",
-                            "enable_flow_control": true,
-                            "port_speed": "SPEED_1G"
-                        }
-                    }
-                }
-            },
-            {
-                "interface": {
-                    "config": {
-                        "name": "usb2",
-                        "type": "IF_UPLINK"
-                    },
-                    "device_id": "ax88179",
-                    "subinterfaces": [
-                        {
-                            "admin_state": "UP",
-                            "ipv4": {
-                                "addresses": [
-                                    {
-                                        "dhcp_client": true
-                                    }
-                                ]
-                            }
-                        }
-                    ],
-                    "ethernet": {
-                        "config": {
-                            "auto_negotiate": true,
-                            "duplex_mode": "FULL",
-                            "enable_flow_control": true,
-                            "port_speed": "SPEED_1G"
-                        }
-                    }
-                }
-            },
-            {
-                "interface": {
-                    "config": {
-                        "name": "lo0",
-                        "type": "IF_LOOPBACK"
-                    },
-                    "subinterfaces": [
-                        {
-                            "admin_state": "UP",
-                            "ipv4": {
-                                "addresses": [
-                                    {
-                                        "cidr_address": "127.0.0.1/8"
-                                    }
-                                ]
-                            },
-                            "ipv6": {
-                                "addresses": [
-                                    {
-                                        "cidr_address": "::1/128"
-                                    }
-                                ]
-                            }
-                        }
-                    ]
                 }
             }
         ],

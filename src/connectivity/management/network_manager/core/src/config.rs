@@ -134,6 +134,8 @@ pub struct DeviceConfig {
 #[serde(deny_unknown_fields)]
 pub struct Device {
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub default_interface: Option<Interface>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub interfaces: Option<Vec<Interfaces>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub acls: Option<Acls>,
@@ -963,6 +965,28 @@ impl Config {
                 }));
             }
         };
+        if let Some(default_intf) = self.default_interface() {
+            if default_intf.device_id.is_some() {
+                return Err(error::NetworkManager::Config(error::Config::FailedToValidateConfig {
+                    path: String::from(self.startup_path().to_string_lossy()),
+                    error: "The default_interface cannot contain a device_id".to_string(),
+                }));
+            }
+            match default_intf.config.interface_type {
+                InterfaceType::IfUplink | InterfaceType::IfEthernet => (),
+                InterfaceType::IfAggregate
+                | InterfaceType::IfLoopback
+                | InterfaceType::IfRoutedVlan
+                | InterfaceType::IfSonet
+                | InterfaceType::IfTunnelGre4
+                | InterfaceType::IfTunnelGre6 => {
+                    return Err(error::NetworkManager::Config(error::Config::NotSupported {
+                        msg: "default_interface type must be 'IF_UPLINK' or 'IF_ETHERNET'"
+                            .to_string(),
+                    }))
+                }
+            }
+        }
         for intfs in intfs.iter() {
             self.validate_interface(&intfs.interface)?;
 
@@ -993,6 +1017,11 @@ impl Config {
     /// Returns all the configured [`config::Interfaces`].
     pub fn interfaces(&self) -> Option<&Vec<Interfaces>> {
         self.device().ok().and_then(|x| x.interfaces.as_ref())
+    }
+
+    /// Returns the default [`config::Interface`], if provided.
+    pub fn default_interface(&self) -> Option<&Interface> {
+        self.device().ok().and_then(|x| x.default_interface.as_ref())
     }
 
     /// Returns the configured [`config::Acls`].
@@ -1039,7 +1068,8 @@ impl Config {
                 }
             }
         }
-        None
+        // If no default interface is configured, this will result in `None` being returned.
+        self.default_interface()
     }
 
     /// Returns `true` if the device id from the `topo_path` is an uplink.
@@ -1069,7 +1099,16 @@ impl Config {
     }
 
     /// Returns name of the interface at topo_path.
+    ///
+    /// If there is a `default_interface` configured, then use the topological path name instead.
     pub fn get_interface_name(&self, topo_path: &str) -> error::Result<String> {
+        if self.is_unknown_device_id(topo_path) && self.default_interface().is_some() {
+            // TODO(51107): This special case is needed because LIF manager seems to enforce that
+            // names be unique across the system. If more than one unconfigured interface were to be
+            // connected then LIF manager would refuse to register the device. We should revisit
+            // this decision to see if it is still valid.
+            return Ok(topo_path.to_owned());
+        }
         if let Some(intf) = self.get_interface_by_device_id(topo_path) {
             return Ok(intf.config.name.clone());
         }
@@ -1268,6 +1307,20 @@ impl Config {
     /// Returns `true` if `topo_path` resolves to a [`config::SwitchedVlan`].
     pub fn device_id_is_a_switched_vlan(&self, topo_path: &str) -> bool {
         self.get_switched_vlan_by_device_id(topo_path).is_ok()
+    }
+
+    /// Returns true if `topo_path` does not appear in the config.
+    pub fn is_unknown_device_id(&self, topo_path: &str) -> bool {
+        if let Some(ifs) = self.interfaces() {
+            for intfs in ifs.iter() {
+                if let Some(device_id) = &intfs.interface.device_id {
+                    if device_id.as_str() == topo_path {
+                        return false;
+                    }
+                }
+            }
+        }
+        true
     }
 
     /// Resolves a [`config::SwitchedVlan`] to it's [`config::RoutedVlan`] configuration.
@@ -1510,6 +1563,29 @@ mod tests {
     fn build_full_config() -> DeviceConfig {
         DeviceConfig {
             device: Device {
+                default_interface: Some(Interface {
+                    config: InterfaceConfig {
+                        name: "default_dhcp_policy".to_string(),
+                        interface_type: InterfaceType::IfUplink,
+                    },
+                    oper_state: None,
+                    device_id: None,
+                    ethernet: None,
+                    tcp_offload: None,
+                    routed_vlan: None,
+                    switched_vlan: None,
+                    subinterfaces: Some(vec![Subinterface {
+                        admin_state: Some(AdminState::Up),
+                        ipv4: Some(IpAddressConfig {
+                            addresses: vec![IpAddress {
+                                dhcp_client: Some(true),
+                                cidr_address: None,
+                            }],
+                            dhcp_server: None,
+                        }),
+                        ipv6: None,
+                    }]),
+                }),
                 interfaces: Some(vec![
                     Interfaces {
                         interface: Interface {
@@ -1884,27 +1960,22 @@ mod tests {
         let test_config = create_test_config_no_paths();
 
         // Missing config should raise an `error::Config::ConfigNotFound`.
-        let doesntexist = String::from("/doesntexist");
-        match test_config.try_load_config(Path::new(&doesntexist)).await {
-            Err(error::NetworkManager::Config(error::Config::ConfigNotFound { path })) => {
-                assert_eq!(doesntexist, path);
-            }
-            Ok(r) => panic!("Got unexpected 'Ok' result: {}", r),
-            Err(e) => panic!("Got unexpected error result: {}", e),
-        }
+        assert_eq!(
+            test_config.try_load_config(Path::new("/doesntexist")).await,
+            Err(error::NetworkManager::Config(error::Config::ConfigNotFound {
+                path: "/doesntexist".to_string()
+            }))
+        );
 
         // An invalid config should fail to deserialize.
         let invalid_empty = String::from("/pkg/data/invalid_empty.json");
-        match test_config.try_load_config(Path::new(&invalid_empty)).await {
+        assert_eq!(
+            test_config.try_load_config(Path::new(&invalid_empty)).await,
             Err(error::NetworkManager::Config(error::Config::FailedToDeserializeConfig {
-                path,
-                error: _,
-            })) => {
-                assert_eq!(invalid_empty, path);
-            }
-            Ok(r) => panic!("Got unexpected 'Ok' result: {}", r),
-            Err(e) => panic!("Got unexpected error result: {}", e),
-        }
+                path: "/pkg/data/invalid_empty.json".to_string(),
+                error: "EOF while parsing an object at line 2 column 0".to_string(),
+            }))
+        );
 
         // A valid config should deserialize successfully.
         let valid_empty = String::from("/pkg/data/valid_empty.json");
@@ -1912,19 +1983,11 @@ mod tests {
             .expect(format!("Failed to open testdata file: {}", valid_empty).as_str());
 
         // The expected configuration should deserialize successfully.
-        let expected_config: Value;
-        match serde_json::from_str(&contents) {
-            Ok(j) => expected_config = j,
-            Err(e) => panic!("Got unexpected error result: {}", e),
-        }
-
-        // The serde_json::Value's should match.
-        match test_config.try_load_config(Path::new(&valid_empty)).await {
-            Ok(j) => {
-                assert_eq!(expected_config, j);
-            }
-            Err(e) => panic!("Got unexpected error result: {}", e),
-        }
+        let expected_config: Value = serde_json::from_str(&contents).unwrap();
+        assert_eq!(
+            test_config.try_load_config(Path::new(&valid_empty)).await.unwrap(),
+            expected_config
+        );
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -1982,10 +2045,7 @@ mod tests {
         }
 
         // Make sure that the configuration actually validates.
-        match test_config.validate_with_schema(&expected_config).await {
-            Ok(_) => (),
-            Err(e) => panic!("Want {:?}, got unexpected error result: {}", valid_config, e),
-        }
+        assert!(test_config.validate_with_schema(&expected_config).await.is_ok());
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -2006,10 +2066,7 @@ mod tests {
             }
             Err(e) => panic!("Got unexpected error result: {}", e),
         }
-        match test_config.final_validation().await {
-            Ok(()) => (),
-            Err(e) => panic!("Got unexpected error result: {}", e),
-        }
+        assert!(test_config.final_validation().await.is_ok());
     }
 
     #[test]
@@ -2031,10 +2088,7 @@ mod tests {
         // defined.
         intf.config =
             InterfaceConfig { name: "test".to_string(), interface_type: InterfaceType::IfUplink };
-        match test_config.validate_interface_types(&intf) {
-            Ok(_) => (),
-            Err(e) => panic!("Got unexpected error result: {:?}", e),
-        }
+        assert!(test_config.validate_interface_types(&intf).is_ok());
 
         // If the Interface type is `InterfaceType::IfRoutedVlan`, then there must be a
         // 'routed_vlan' defined. Anything else should fail.
@@ -2042,10 +2096,7 @@ mod tests {
             name: "test".to_string(),
             interface_type: InterfaceType::IfRoutedVlan,
         };
-        match test_config.validate_interface_types(&intf) {
-            Ok(_) => panic!("Got unexpected 'ok' result"),
-            Err(_) => (),
-        }
+        assert!(test_config.validate_interface_types(&intf).is_err());
     }
 
     #[test]
@@ -2055,10 +2106,7 @@ mod tests {
         let mut intf = create_test_interface();
 
         // Should pass because an interface must have exactly one configuration.
-        match test_config.validate_interface_config(&intf) {
-            Ok(_) => (),
-            Err(e) => panic!("Got unexpected error result: {:?}", e),
-        }
+        assert!(test_config.validate_interface_config(&intf).is_ok());
 
         // The following should all fail for the same reason as above, exactly one configuration
         // per interface.
@@ -2115,10 +2163,7 @@ mod tests {
             }),
             ipv6: None,
         }];
-        match test_config.validate_subinterfaces(&test_subif) {
-            Ok(_) => (),
-            Err(e) => panic!("Got unexpected error result: {}", e),
-        }
+        assert!(test_config.validate_subinterfaces(&test_subif).is_ok());
 
         // Should fail because `dhcp_client` is set to true and has dhcp server configured.
         let test_subif = vec![Subinterface {
@@ -2137,10 +2182,8 @@ mod tests {
             }),
             ipv6: None,
         }];
-        match test_config.validate_subinterfaces(&test_subif) {
-            Ok(_) => panic!("should be invalid"),
-            Err(_) => (),
-        }
+        assert!(test_config.validate_subinterfaces(&test_subif).is_err());
+
         // Should not fail with dhcp_client set to false, ip and prefix set to valid values.
         let test_subif = vec![Subinterface {
             admin_state: Some(AdminState::Up),
@@ -2156,10 +2199,7 @@ mod tests {
             }),
             ipv6: None,
         }];
-        match test_config.validate_subinterfaces(&test_subif) {
-            Ok(_) => (),
-            Err(e) => panic!("Got unexpected error result: {}", e),
-        }
+        assert!(test_config.validate_subinterfaces(&test_subif).is_ok());
 
         // Should fail with dhcp_client set to false, ip and prefix set to None.
         let test_subif = vec![Subinterface {
@@ -2191,10 +2231,7 @@ mod tests {
             }),
             ipv6: None,
         }];
-        match test_config.validate_subinterfaces(&test_subif) {
-            Ok(_) => (),
-            Err(e) => panic!("Got unexpected error result: {}", e),
-        }
+        assert!(test_config.validate_subinterfaces(&test_subif).is_ok());
 
         // Should not fail with dhcp client set to None, ip, and prefx set to valid values,
         // and dhcp server.
@@ -2217,10 +2254,7 @@ mod tests {
             }),
             ipv6: None,
         }];
-        match test_config.validate_subinterfaces(&test_subif) {
-            Ok(_) => (),
-            Err(e) => panic!("Got unexpected error result: {}", e),
-        }
+        assert!(test_config.validate_subinterfaces(&test_subif).is_ok());
 
         // Should fail with dhcp client set to None, ip, and prefx set to valid values,
         // but dhcp server pool misconfiguredr.
@@ -2658,87 +2692,62 @@ mod tests {
     fn test_get_device() {
         let mut test_config = create_test_config_no_paths();
         test_config.device_config = Some(build_full_config());
-        match test_config.device() {
-            Ok(d) => {
-                assert_eq!(*d, build_full_config().device);
-            }
-            Err(e) => panic!("Got unexpected error result: {}", e),
-        }
+        assert_eq!(test_config.device().unwrap(), &build_full_config().device);
     }
 
     #[test]
     fn test_get_interfaces() {
         let mut test_config = create_test_config_no_paths();
         test_config.device_config = Some(build_full_config());
-        match test_config.interfaces() {
-            Some(i) => {
-                assert_eq!(*i, build_full_config().device.interfaces.unwrap());
-            }
-            None => panic!("Got unexpected 'None' option"),
-        }
+        assert_eq!(
+            test_config.interfaces().unwrap(),
+            &build_full_config().device.interfaces.unwrap()
+        );
     }
 
     #[test]
     fn test_get_interface_by_device_id() {
         let mut test_config = create_test_config_no_paths();
         test_config.device_config = Some(build_full_config());
-        match test_config.get_interface_by_device_id("/dev/sys/pci/test_wan_up_id/ethernet") {
-            Some(i) => {
-                let intfs = &build_full_config().device.interfaces.unwrap()[1];
-                assert_eq!(*i, intfs.interface, "Got {:?}, Want: {:?}", *i, intfs.interface);
-            }
-            None => panic!("Got unexpected 'None' option"),
-        }
 
-        match test_config.get_interface_by_device_id("does_not_exist") {
-            Some(_) => panic!("Got unexpected 'None' option"),
-            None => (),
-        }
+        assert_eq!(
+            test_config.get_interface_by_device_id("/dev/sys/pci/test_wan_up_id/ethernet").unwrap(),
+            &build_full_config().device.interfaces.unwrap()[1].interface
+        );
+
+        assert_eq!(
+            test_config.get_interface_by_device_id("does_not_exist").unwrap(),
+            &build_full_config().device.default_interface.unwrap()
+        );
     }
 
     #[test]
     fn test_device_id_is_an_uplink() {
         let mut test_config = create_test_config_no_paths();
         test_config.device_config = Some(build_full_config());
-        match test_config.device_id_is_an_uplink("/dev/sys/pci/test_wan_up_id/ethernet") {
-            true => (),
-            false => panic!("Got unexpected 'false' value"),
-        }
 
-        match test_config.device_id_is_an_uplink("does_not_exist") {
-            true => panic!("Got unexpected 'true' value"),
-            false => (),
-        }
-
-        match test_config.device_id_is_an_uplink("/dev/sys/pci/test_lan_up_id/ethernet") {
-            true => panic!("Got unexpected 'true' value"),
-            false => (),
-        }
+        assert!(test_config.device_id_is_an_uplink("/dev/sys/pci/test_wan_up_id/ethernet"),);
+        assert_eq!(
+            test_config.device_id_is_an_uplink("/dev/sys/pci/test_lan_up_id/ethernet"),
+            false
+        );
+        assert!(test_config.device_id_is_an_uplink("does_not_exist"));
     }
 
     #[test]
     fn test_device_id_is_a_downlink() {
         let mut test_config = create_test_config_no_paths();
         test_config.device_config = Some(build_full_config());
-        match test_config.device_id_is_a_downlink("/dev/sys/pci/test_lan_up_id/ethernet") {
-            true => (),
-            false => panic!("Got unexpected 'true' value"),
-        }
 
-        match test_config.device_id_is_a_downlink("does_not_exist") {
-            true => panic!("Got unexpected 'true' value"),
-            false => (),
-        }
-
-        match test_config.device_id_is_a_downlink("/dev/sys/pci/test_wan_up_id/ethernet") {
-            true => panic!("Got unexpected 'true' value"),
-            false => (),
-        }
-
-        match test_config.device_id_is_an_uplink("/dev/sys/pci/test_lan_up_id/ethernet") {
-            true => panic!("Got unexpected 'true' value"),
-            false => (),
-        }
+        assert_eq!(
+            test_config.device_id_is_a_downlink("/dev/sys/pci/test_lan_up_id/ethernet"),
+            true
+        );
+        assert_eq!(
+            test_config.device_id_is_a_downlink("/dev/sys/pci/test_wan_up_id/ethernet"),
+            false
+        );
+        assert_eq!(test_config.device_id_is_a_downlink("does_not_exist"), false);
     }
 
     #[test]
@@ -2768,8 +2777,14 @@ mod tests {
         assert_eq!(test_config.get_ip_forwarding_state(), true);
 
         // removing the ip forwarding config should still return the default of false.
-        test_config.device_config =
-            Some(DeviceConfig { device: Device { acls: None, interfaces: None, services: None } });
+        test_config.device_config = Some(DeviceConfig {
+            device: Device {
+                acls: None,
+                default_interface: None,
+                interfaces: None,
+                services: None,
+            },
+        });
         assert_eq!(test_config.get_ip_forwarding_state(), false);
     }
 
@@ -2780,8 +2795,14 @@ mod tests {
         assert_eq!(test_config.get_nat_state(), true);
 
         // removing the nat section of the config should still return the default of false.
-        test_config.device_config =
-            Some(DeviceConfig { device: Device { acls: None, interfaces: None, services: None } });
+        test_config.device_config = Some(DeviceConfig {
+            device: Device {
+                acls: None,
+                default_interface: None,
+                interfaces: None,
+                services: None,
+            },
+        });
         assert_eq!(test_config.get_nat_state(), false);
     }
 
@@ -2843,13 +2864,9 @@ mod tests {
         let intfs = build_full_config().device.interfaces.unwrap();
         let subif = &intfs[0].interface.subinterfaces.as_ref().unwrap()[0];
         let expected_addr = &subif.ipv4.as_ref().unwrap().addresses[0];
-        match test_config.get_ip_address(&intfs[0].interface) {
-            Ok((Some(v4addr), None)) => {
-                assert_eq!(*v4addr, *expected_addr);
-            }
-            Ok(e) => panic!("Got unexpected result pair: {:?}", e),
-            Err(e) => panic!("Got unexpected result pair: {:?}", e),
-        }
+        let (actual_v4, actual_v6) = test_config.get_ip_address(&intfs[0].interface).unwrap();
+        assert_eq!(actual_v4.unwrap(), expected_addr);
+        assert_eq!(actual_v6, None);
     }
 
     #[test]
@@ -2942,32 +2959,69 @@ mod tests {
     #[test]
     fn test_get_interface_name() {
         let mut test_config = create_test_config_no_paths();
+
+        // Ensure that if no default interface is configured and no topological path is found, then
+        // make sure that an error is raised.
+        test_config.device_config = Some(DeviceConfig {
+            device: Device {
+                default_interface: None,
+                interfaces: Some(vec![Interfaces {
+                    interface: Interface {
+                        config: InterfaceConfig {
+                            name: "some_interface_name".to_string(),
+                            interface_type: InterfaceType::IfUplink,
+                        },
+                        oper_state: None,
+                        device_id: None,
+                        ethernet: None,
+                        tcp_offload: None,
+                        routed_vlan: None,
+                        switched_vlan: None,
+                        subinterfaces: Some(vec![Subinterface {
+                            admin_state: Some(AdminState::Up),
+                            ipv4: Some(IpAddressConfig {
+                                addresses: vec![IpAddress {
+                                    dhcp_client: Some(true),
+                                    cidr_address: None,
+                                }],
+                                dhcp_server: None,
+                            }),
+                            ipv6: None,
+                        }]),
+                    },
+                }]),
+                acls: None,
+                services: None,
+            },
+        });
+
+        assert_eq!(
+            test_config.get_interface_name("empty"),
+            Err(error::NetworkManager::Config(error::Config::NotFound {
+                msg: "Getting interface name for empty failed.".to_string()
+            }))
+        );
+
+        // Make sure that the interface name is returned as expected.
         test_config.device_config = Some(build_full_config());
-        match test_config.get_interface_name("") {
-            Err(error::NetworkManager::Config(error::Config::NotFound { msg: _ })) => (),
-            Err(e) => panic!("Got unexpected 'Err' result: {}", e),
-            Ok(r) => panic!("Got unexpected 'Ok' result: {}", r),
-        }
-        match test_config.get_interface_name("bridge") {
-            Ok(r) => panic!("Got unexpected 'Ok' result: {}", r),
-            Err(error::NetworkManager::Config(error::Config::NotFound { msg: _ })) => (),
-            Err(e) => panic!("Got unexpected 'Err' result: {}", e),
-        }
-        let expected_name = "test_wan_up".to_string();
-        match test_config.get_interface_name("test_wan_up_id") {
-            Ok(r) => assert_eq!(r, expected_name),
-            Err(e) => panic!("Got unexpected 'Err' result: {}", e),
-        }
+        assert_eq!(
+            test_config.get_interface_name("test_wan_up_id").unwrap(),
+            "test_wan_up".to_string()
+        );
+
+        // Test that if a default interface is configured and the topological path is not found, the
+        // default interface configuration is used.
+        assert_eq!(
+            test_config.get_interface_name("some_device_id").unwrap(),
+            "some_device_id".to_string()
+        );
     }
 
     #[test]
     fn test_get_switched_vlan_by_device_id() {
         let mut test_config = create_test_config_no_paths();
         test_config.device_config = Some(build_full_config());
-        assert_eq!(
-            test_config.device_id_is_a_switched_vlan("/dev/foo/whatever/switched_vlan/test"),
-            true
-        );
+        assert!(test_config.device_id_is_a_switched_vlan("/dev/foo/whatever/switched_vlan/test"));
     }
 
     #[test]
@@ -2992,6 +3046,7 @@ mod tests {
         let mut test_config = create_test_config_no_paths();
         test_config.device_config = Some(DeviceConfig {
             device: Device {
+                default_interface: None,
                 acls: None,
                 interfaces: Some(vec![Interfaces {
                     interface: Interface {
@@ -3021,13 +3076,16 @@ mod tests {
         };
 
         let mut test_config = create_test_config_no_paths();
-        test_config.device_config =
-            Some(DeviceConfig { device: Device { acls: None, interfaces: None, services: None } });
-        match test_config.get_routed_vlan_interfaces() {
-            // If there are no interfaces, then should return 'None'.
-            Some(_) => panic!("Got unexpected 'Some' result: Was expecting 'None'"),
-            None => (),
-        };
+        test_config.device_config = Some(DeviceConfig {
+            device: Device {
+                default_interface: None,
+                acls: None,
+                interfaces: None,
+                services: None,
+            },
+        });
+        // If there are no interfaces, then should return 'None'.
+        assert!(test_config.get_routed_vlan_interfaces().is_none());
     }
 
     #[test]
@@ -3041,10 +3099,10 @@ mod tests {
         };
 
         let expected_if = test_config.get_routed_vlan_interfaces().unwrap().nth(0).unwrap();
-        match test_config.resolve_to_routed_vlans(&switched_vlan) {
-            Ok(r) => assert_eq!(expected_if.routed_vlan.as_ref().unwrap().vlan_id, r.vlan_id),
-            Err(e) => panic!("Got unexpected 'Error' result: {}", e),
-        }
+        assert_eq!(
+            expected_if.routed_vlan.as_ref().unwrap().vlan_id,
+            test_config.resolve_to_routed_vlans(&switched_vlan).unwrap().vlan_id
+        );
 
         let new_sv = SwitchedVlan {
             interface_mode: InterfaceMode::Access,
@@ -3053,6 +3111,7 @@ mod tests {
         };
         let new_config = Some(DeviceConfig {
             device: Device {
+                default_interface: None,
                 interfaces: Some(vec![Interfaces {
                     interface: Interface {
                         device_id: Some("doesntmatter".to_string()),
@@ -3075,11 +3134,16 @@ mod tests {
         let mut test_config = create_test_config_no_paths();
         test_config.device_config = new_config;
         // Should fail because VLAN ID 4000 does not match the routed_vlan configuration.
-        match test_config.resolve_to_routed_vlans(&new_sv) {
-            Err(error::NetworkManager::Config(error::Config::NotFound { msg: _ })) => (),
-            Err(e) => panic!("Got unexpected 'Error' result: {}", e),
-            Ok(r) => panic!("Got unexpected 'Ok' result: {:?}", r),
-        }
+        assert_eq!(
+            test_config.resolve_to_routed_vlans(&new_sv),
+            Err(error::NetworkManager::Config(error::Config::NotFound {
+                msg: concat!(
+                    "Switched VLAN port does not resolve to a routed VLAN: SwitchedVlan {",
+                    " interface_mode: Access, access_vlan: Some(4000), trunk_vlans: None }"
+                )
+                .to_string()
+            }))
+        );
     }
 
     #[test]
@@ -3361,27 +3425,42 @@ mod tests {
     fn test_parse_port_range_fromstr() {
         // A single `port` value between 0-65k should parse: the start and end values should be the
         // same.
-        match "22".parse::<PortRange>() {
-            Ok(v) => {
-                assert_eq!(v.from, 22u16);
-                assert_eq!(v.to, 22u16);
-            }
-            Err(e) => panic!("Unexpected 'Error' result: {:?}", e),
-        }
+        let actual = "22".parse::<PortRange>().unwrap();
+        assert_eq!(actual.from, 22u16);
+        assert_eq!(actual.to, 22u16);
 
         // Valid port range should parse successfully.
-        match "6667-6669".parse::<PortRange>() {
-            Ok(v) => {
-                assert_eq!(v.from, 6667u16);
-                assert_eq!(v.to, 6669u16);
-            }
-            Err(e) => panic!("Unexpected 'Error' result: {:?}", e),
-        }
+        let actual = "6667-6669".parse::<PortRange>().unwrap();
+        assert_eq!(actual.from, 6667u16);
+        assert_eq!(actual.to, 6669u16);
 
-        // Multiple port ranges are not supported yet: fxb/45891.
-        match "6666,6667-6669".parse::<PortRange>() {
-            Ok(v) => panic!("Unexpected 'Ok' result: {:?}", v),
-            Err(_) => (),
-        }
+        // TODO(45891): Multiple port ranges are not supported yet.
+        assert!("6666,6667-6669".parse::<PortRange>().is_err());
+    }
+
+    #[test]
+    fn test_get_default_interface() {
+        let mut test_config = create_test_config_no_paths();
+        test_config.device_config = Some(DeviceConfig {
+            device: Device {
+                default_interface: None,
+                interfaces: None,
+                acls: None,
+                services: None,
+            },
+        });
+        assert_eq!(test_config.default_interface(), None);
+
+        test_config.device_config = Some(build_full_config());
+        let expected = &build_full_config().device.default_interface.unwrap();
+        assert_eq!(test_config.default_interface().unwrap(), expected);
+    }
+
+    #[test]
+    fn test_unknown_device_id() {
+        let mut test_config = create_test_config_no_paths();
+        test_config.device_config = Some(build_full_config());
+        assert_eq!(test_config.is_unknown_device_id("this_doesnt_exist"), true);
+        assert_eq!(test_config.is_unknown_device_id("test_wan_no_admin_state_id"), false);
     }
 }
