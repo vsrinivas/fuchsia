@@ -73,10 +73,6 @@ zx_status_t AudioOutput::Play(AudioSource& source) {
   playout_rd = playout_amt = 0;
 
   while (true) {
-    uint32_t bytes_read, junk;
-    audio_rb_position_notify_t pos_notif;
-    zx_signals_t sigs;
-
     // Top up the buffer.  In theory, we should only need to loop 2 times in
     // order to handle a ring discontinuity
     for (uint32_t i = 0; i < 2; ++i) {
@@ -133,42 +129,10 @@ zx_status_t AudioOutput::Play(AudioSource& source) {
       started = true;
     }
 
-    res =
-        rb_ch_.wait_one(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), &sigs);
+    auto position =
+        audio_fidl::RingBuffer::Call::WatchClockRecoveryPositionInfo(zx::unowned_channel(rb_ch_));
 
-    if (res != ZX_OK) {
-      printf("Failed to wait for notificiation (res %d)\n", res);
-      break;
-    }
-
-    if (sigs & ZX_CHANNEL_PEER_CLOSED) {
-      printf("Peer closed connection during playback!\n");
-      break;
-    }
-
-    res = rb_ch_.read(0, &pos_notif, nullptr, sizeof(pos_notif), 0, &bytes_read, &junk);
-    if (res != ZX_OK) {
-      printf("Failed to read notification from ring buffer channel (res %d)\n", res);
-      break;
-    }
-
-    if (bytes_read != sizeof(pos_notif)) {
-      printf("Bad size when reading notification from ring buffer channel (%u != %zu)\n",
-             bytes_read, sizeof(pos_notif));
-      res = ZX_ERR_INTERNAL;
-      break;
-    }
-
-    if (pos_notif.hdr.cmd != AUDIO_RB_POSITION_NOTIFY) {
-      printf(
-          "Unexpected command type when reading notification from ring "
-          "buffer channel (cmd %04x)\n",
-          pos_notif.hdr.cmd);
-      res = ZX_ERR_INTERNAL;
-      break;
-    }
-
-    rd = pos_notif.ring_buffer_pos;
+    rd = position->position_info.position;
 
     // rd has moved.  If the source has finished and rd has moved at least
     // the playout distance, we are finsihed.
@@ -201,4 +165,5 @@ zx_status_t AudioOutput::Play(AudioSource& source) {
 }
 
 }  // namespace utils
+
 }  // namespace audio

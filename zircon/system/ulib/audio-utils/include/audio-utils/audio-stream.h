@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef AUDIO_UTILS_AUDIO_STREAM_H_
+#define AUDIO_UTILS_AUDIO_STREAM_H_
 
-#include <zircon/types.h>
 #include <zircon/device/audio.h>
+#include <zircon/types.h>
 
 namespace audio {
 namespace utils {
@@ -35,3 +36,5 @@ class AudioSink : public AudioStream {
 
 }  // namespace utils
 }  // namespace audio
+
+#endif  // AUDIO_UTILS_AUDIO_STREAM_H_
