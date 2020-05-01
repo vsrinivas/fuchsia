@@ -13,6 +13,7 @@ use fidl_fuchsia_sys_internal::{
 };
 use fuchsia_async as fasync;
 use fuchsia_inspect as inspect;
+use fuchsia_inspect_derive::Inspect;
 use fuchsia_zircon as zx;
 use futures::{
     channel::mpsc, future, lock::Mutex, sink::SinkExt, FutureExt, StreamExt, TryStreamExt,
@@ -38,27 +39,30 @@ use stats::LogSource;
 const OLD_MSGS_BUF_SIZE: usize = 4 * 1024 * 1024;
 
 /// The `LogManager` is responsible for brokering all logging in the archivist.
-#[derive(Clone)]
+#[derive(Clone, Inspect)]
 pub struct LogManager {
+    #[inspect(forward)]
     inner: Arc<Mutex<ManagerInner>>,
 }
 
+#[derive(Inspect)]
 struct ManagerInner {
+    #[inspect(skip)]
     listeners: Pool,
+    #[inspect(rename = "buffer_stats")]
     log_msg_buffer: buffer::MemoryBoundedBuffer<Message>,
     stats: stats::LogManagerStats,
+    inspect_node: inspect::Node,
 }
 
 impl LogManager {
-    pub fn new(node: inspect::Node) -> Self {
+    pub fn new() -> Self {
         Self {
             inner: Arc::new(Mutex::new(ManagerInner {
                 listeners: Pool::default(),
-                log_msg_buffer: buffer::MemoryBoundedBuffer::new(
-                    OLD_MSGS_BUF_SIZE,
-                    node.create_child("buffer_stats"),
-                ),
-                stats: stats::LogManagerStats::new(node),
+                log_msg_buffer: buffer::MemoryBoundedBuffer::new(OLD_MSGS_BUF_SIZE),
+                stats: stats::LogManagerStats::new_detached(),
+                inspect_node: inspect::Node::default(),
             })),
         }
     }
@@ -614,15 +618,15 @@ mod tests {
         fn new() -> Self {
             let inspector = inspect::Inspector::new();
             let (sin, sout) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
-            let node = inspector.root().create_child("log_stats");
-            let buffer_node = node.create_child("buffer_stats");
             let inner = Arc::new(Mutex::new(ManagerInner {
                 listeners: Pool::default(),
-                log_msg_buffer: buffer::MemoryBoundedBuffer::new(OLD_MSGS_BUF_SIZE, buffer_node),
-                stats: stats::LogManagerStats::new(node),
+                log_msg_buffer: buffer::MemoryBoundedBuffer::new(OLD_MSGS_BUF_SIZE),
+                stats: stats::LogManagerStats::new_detached(),
+                inspect_node: inspect::Node::default(),
             }));
 
-            let lm = LogManager { inner };
+            let mut lm = LogManager { inner };
+            lm.iattach(inspector.root(), "log_stats").unwrap();
 
             let (log_proxy, log_stream) =
                 fidl::endpoints::create_proxy_and_stream::<LogMarker>().unwrap();
@@ -694,15 +698,15 @@ mod tests {
         debug_log: TestDebugLog,
     ) -> inspect::Inspector {
         let inspector = inspect::Inspector::new();
-        let node = inspector.root().create_child("log_stats");
-        let buffer_node = node.create_child("buffer_stats");
         let inner = Arc::new(Mutex::new(ManagerInner {
             listeners: Pool::default(),
-            log_msg_buffer: buffer::MemoryBoundedBuffer::new(OLD_MSGS_BUF_SIZE, buffer_node),
-            stats: stats::LogManagerStats::new(node),
+            log_msg_buffer: buffer::MemoryBoundedBuffer::new(OLD_MSGS_BUF_SIZE),
+            stats: stats::LogManagerStats::new_detached(),
+            inspect_node: inspect::Node::default(),
         }));
 
-        let lm = LogManager { inner };
+        let mut lm = LogManager { inner };
+        lm.iattach(inspector.root(), "log_stats").unwrap();
         let (log_proxy, log_stream) =
             fidl::endpoints::create_proxy_and_stream::<LogMarker>().unwrap();
         lm.spawn_log_handler(log_stream);

@@ -4,10 +4,11 @@
 
 use super::message::{Message, Severity};
 use fuchsia_inspect::{self as inspect, NumericProperty};
+use fuchsia_inspect_derive::Inspect;
 
 /// Structure that holds stats for the log manager.
+#[derive(Default, Inspect)]
 pub(super) struct LogManagerStats {
-    _node: inspect::Node,
     total_logs: inspect::UintProperty,
     kernel_logs: inspect::UintProperty,
     logsink_logs: inspect::UintProperty,
@@ -22,34 +23,10 @@ pub(super) struct LogManagerStats {
 }
 
 impl LogManagerStats {
-    /// Create a stat holder, publishing counters under the given node.
-    pub fn new(node: inspect::Node) -> Self {
-        let total_logs = node.create_uint("total_logs", 0);
-        let kernel_logs = node.create_uint("kernel_logs", 0);
-        let logsink_logs = node.create_uint("logsink_logs", 0);
-        let trace_logs = node.create_uint("trace_logs", 0);
-        let debug_logs = node.create_uint("debug_logs", 0);
-        let info_logs = node.create_uint("info_logs", 0);
-        let warning_logs = node.create_uint("warning_logs", 0);
-        let error_logs = node.create_uint("error_logs", 0);
-        let fatal_logs = node.create_uint("fatal_logs", 0);
-        let closed_streams = node.create_uint("closed_streams", 0);
-        let unattributed_log_sinks = node.create_uint("unattributed_log_sinks", 0);
-
-        Self {
-            _node: node,
-            kernel_logs,
-            logsink_logs,
-            total_logs,
-            trace_logs,
-            debug_logs,
-            info_logs,
-            warning_logs,
-            error_logs,
-            fatal_logs,
-            closed_streams,
-            unattributed_log_sinks,
-        }
+    /// Create a stat holder. Note that this needs to be attached to inspect in order
+    /// for it to be inspected. See `fuchsia_inspect_derive::Inspect`.
+    pub fn new_detached() -> Self {
+        Self::default()
     }
 
     /// Record an incoming log from a given source.

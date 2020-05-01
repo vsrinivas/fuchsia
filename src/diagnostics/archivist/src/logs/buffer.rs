@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use fuchsia_inspect as inspect;
+use fuchsia_inspect_derive::Inspect;
 use inspect::NumericProperty;
 use std::collections::VecDeque;
 
@@ -13,11 +14,15 @@ pub trait Accounted {
 }
 
 /// A Memory bounded buffer. Sizes are calculated by items' implementation of `Accounted`.
+#[derive(Inspect)]
 pub(super) struct MemoryBoundedBuffer<T> {
+    #[inspect(skip)]
     inner: VecDeque<T>,
+    #[inspect(skip)]
     total_size: usize,
+    #[inspect(skip)]
     capacity: usize,
-    _node: inspect::Node,
+    inspect_node: inspect::Node,
     rolled_out_entries: inspect::UintProperty,
 }
 
@@ -25,15 +30,14 @@ impl<T> MemoryBoundedBuffer<T>
 where
     T: Accounted,
 {
-    pub fn new(capacity: usize, node: inspect::Node) -> MemoryBoundedBuffer<T> {
+    pub fn new(capacity: usize) -> MemoryBoundedBuffer<T> {
         assert!(capacity > 0, "capacity should be more than 0");
-        let rolled_out_entries = node.create_uint("rolled_out_entries", 0);
         MemoryBoundedBuffer {
             inner: VecDeque::new(),
             capacity: capacity,
             total_size: 0,
-            _node: node,
-            rolled_out_entries,
+            inspect_node: inspect::Node::default(),
+            rolled_out_entries: inspect::UintProperty::default(),
         }
     }
 
@@ -71,7 +75,8 @@ mod tests {
     #[test]
     fn test_simple() {
         let inspector = inspect::Inspector::new();
-        let mut m = MemoryBoundedBuffer::new(12, inspector.root().create_child("buffer_stats"));
+        let mut m = MemoryBoundedBuffer::new(12);
+        m.iattach(inspector.root(), "buffer_stats").unwrap();
         m.push((1, 4));
         m.push((2, 4));
         m.push((3, 4));
@@ -87,7 +92,8 @@ mod tests {
     #[test]
     fn test_bound() {
         let inspector = inspect::Inspector::new();
-        let mut m = MemoryBoundedBuffer::new(12, inspector.root().create_child("buffer_stats"));
+        let mut m = MemoryBoundedBuffer::new(12);
+        m.iattach(inspector.root(), "buffer_stats").unwrap();
         m.push((1, 4));
         m.push((2, 4));
         m.push((3, 5));
