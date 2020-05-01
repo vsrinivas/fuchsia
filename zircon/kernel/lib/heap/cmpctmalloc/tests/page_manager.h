@@ -32,6 +32,11 @@ class PageManager {
   void FreePages(void* p, size_t num_pages);
 
  private:
+ struct PageAlignedDeleter {
+    void operator()(char* ptr) const {
+          operator delete[](ptr, std::align_val_t{ZX_PAGE_SIZE});
+    }
+  };
   // Represents an OS-allocated block of pages that tracks the contiguous
   // subset of pages of it still available for use.
   //
@@ -41,7 +46,7 @@ class PageManager {
     Block(size_t num_pages)
         : used_bytes(num_pages * ZX_PAGE_SIZE),
           available_bytes(used_bytes),
-          contents(new char[used_bytes]),
+          contents(new(std::align_val_t{ZX_PAGE_SIZE}) char[used_bytes], PageAlignedDeleter()),
           available_start(contents.get()) {
       memset(contents.get(), kCleanFill, used_bytes);
     }
@@ -100,7 +105,7 @@ class PageManager {
     // The size of the available subregion, in bytes.
     size_t available_bytes;
     // The contents of the block.
-    std::unique_ptr<char[]> contents;
+    std::unique_ptr<char[], PageAlignedDeleter> contents;
     // The start of the available region.
     char* available_start;
   };
