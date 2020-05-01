@@ -59,29 +59,15 @@ func execute(ctx context.Context, socketPath string, stdout io.Writer) error {
 	m := iomisc.NewSequenceMatchingReader(socket, successString)
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
-	errs := make(chan error)
-	go func() {
-		if _, err := io.Copy(stdout, m); err != nil {
-			errs <- err
-		}
-	}()
 
-	go func() {
-		for {
-			if m.Match() != nil {
-				logger.Debugf(ctx, "success string found: %q", successString)
-				errs <- nil
-				return
-			}
+	if _, err := iomisc.ReadUntilMatch(ctx, m, stdout); err != nil {
+		if ctx.Err() != nil {
+			return fmt.Errorf("timed out before success string %q was read from serial", successString)
 		}
-	}()
-
-	select {
-	case <-ctx.Done():
-		return fmt.Errorf("timed out before success string %q was read from serial", successString)
-	case err := <-errs:
-		return err
+		return fmt.Errorf("error trying to read from socket: %w", err)
 	}
+	logger.Debugf(ctx, "success string found: %q", successString)
+	return nil
 }
 
 func main() {

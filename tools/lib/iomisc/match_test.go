@@ -6,6 +6,7 @@ package iomisc
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"regexp"
 	"testing"
@@ -125,5 +126,27 @@ func assertMatch(t *testing.T, m *MatchingReader, match []byte) {
 	t.Helper()
 	if bytes.Compare(match, m.Match()) != 0 {
 		t.Fatalf("expected match of %q; not %q", match, m.Match())
+	}
+}
+
+func TestReadUntilMatch(t *testing.T) {
+	r, w := io.Pipe()
+	defer w.Close()
+	defer r.Close()
+
+	m := NewPatternMatchingReader(r, regexp.MustCompile("ABCD(E|F)"), 5)
+
+	go func() {
+		w.Write([]byte("ABC"))
+		w.Write([]byte("D"))
+		w.Write([]byte("EFGH"))
+	}()
+	match, err := ReadUntilMatch(context.Background(), m, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if bytes.Compare(match, []byte("ABCDE")) != 0 {
+		t.Fatalf("expected match of ABCDE; not %q", match)
 	}
 }

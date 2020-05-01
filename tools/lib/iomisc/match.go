@@ -6,8 +6,10 @@ package iomisc
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"regexp"
 	"sync"
 
@@ -28,7 +30,7 @@ type MatchingReader struct {
 	match        []byte
 }
 
-// NewPatterMatchingReader returns a matching reader wrapping a given reader and
+// NewPatternMatchingReader returns a matching reader wrapping a given reader and
 // pattern looking for a match up to the given size.
 func NewPatternMatchingReader(reader io.Reader, pattern *regexp.Regexp, maxMatchSize int) *MatchingReader {
 	if maxMatchSize <= 0 {
@@ -94,6 +96,41 @@ func (m *MatchingReader) Read(p []byte) (int, error) {
 		p = p[maxBytes:]
 	}
 	return n, err
+}
+
+// ReadUntilMatch reads from a MatchingReader until a match has been read,
+// and ultimately tries to return those matches.
+func ReadUntilMatch(ctx context.Context, m *MatchingReader, output io.Writer) ([]byte, error) {
+	if output == nil {
+		output = ioutil.Discard
+	}
+
+	errs := make(chan error)
+	go func() {
+		for {
+			if _, err := io.Copy(output, m); err != nil {
+				errs <- err
+				break
+			}
+		}
+	}()
+
+	mc := make(chan struct{})
+	go func() {
+		for m.Match() == nil {
+		}
+		mc <- struct{}{}
+	}()
+
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	case err := <-errs:
+		return nil, err
+	case <-mc:
+	}
+
+	return m.Match(), nil
 }
 
 func min(a, b int) int {
