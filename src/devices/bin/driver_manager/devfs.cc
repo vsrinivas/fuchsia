@@ -179,7 +179,7 @@ namespace {
 
 struct ProtocolInfo {
   const char* name;
-  Devnode* devnode;
+  std::unique_ptr<Devnode> devnode;
   uint32_t id;
   uint32_t flags;
 };
@@ -192,7 +192,7 @@ ProtocolInfo proto_infos[] = {
 Devnode* proto_dir(uint32_t id) {
   for (const auto& info : proto_infos) {
     if (info.id == id) {
-      return info.devnode;
+      return info.devnode.get();
     }
   }
   return nullptr;
@@ -202,7 +202,7 @@ void prepopulate_protocol_dirs() {
   class_devnode = devfs_mkdir(root_devnode.get(), "class");
   for (auto& info : proto_infos) {
     if (!(info.flags & PF_NOPUB)) {
-      info.devnode = devfs_mkdir(class_devnode.get(), info.name).release();
+      info.devnode = devfs_mkdir(class_devnode.get(), info.name);
     }
   }
 }
