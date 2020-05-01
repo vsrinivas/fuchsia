@@ -19,7 +19,7 @@ Future<void> _validateNode(sl4f.Inspect inspect, String selector) async {
   }
 
   final paths = list[1].split('/');
-  var node = top[0]['contents'];
+  var node = top[0]['payload'];
   for (final name in paths) {
     node = node[name];
   }
