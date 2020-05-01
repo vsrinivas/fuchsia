@@ -10,6 +10,7 @@ executable("bin") {
   output_name = "fuchsia_microbenchmarks"
   testonly = true
   sources = [
+    "async_loop.cc",
     "atomics.cc",
     "channels.cc",
     "clock.cc",
@@ -82,7 +83,10 @@ fidl("fidl_interface") {
 
   testonly = true
   name = "fuchsia.zircon.benchmarks"
-  sources = [ "round_trip_service.fidl" ]
+  sources = [
+    "async_loop.fidl",
+    "round_trip_service.fidl",
+  ]
 }
 
 # Installing this package causes fuchsia_microbenchmarks to be run in unit
