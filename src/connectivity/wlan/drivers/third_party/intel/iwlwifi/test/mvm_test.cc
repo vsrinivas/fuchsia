@@ -310,7 +310,6 @@ TEST_F(ScanTest, RegPassiveScanAborted) TA_NO_THREAD_SAFETY_ANALYSIS {
 TEST_F(ScanTest, RegPassiveScanTimeout) TA_NO_THREAD_SAFETY_ANALYSIS {
   ASSERT_EQ(0, mvm_->scan_status & IWL_MVM_SCAN_REGULAR);
   ASSERT_EQ(nullptr, mvm_->scan_vif);
-  mvm_->scan_timeout_delay = ZX_MSEC(5);
 
   ASSERT_EQ(false, scan_result.sme_notified);
   ASSERT_EQ(false, scan_result.success);
@@ -318,11 +317,10 @@ TEST_F(ScanTest, RegPassiveScanTimeout) TA_NO_THREAD_SAFETY_ANALYSIS {
   EXPECT_EQ(IWL_MVM_SCAN_REGULAR, mvm_->scan_status & IWL_MVM_SCAN_REGULAR);
   EXPECT_EQ(&mvmvif_sta, mvm_->scan_vif);
 
-  // Do not call notify complete, and let the scan timeout timer expire.
-  // We need to unlock here to allow for the timeout callback to be able
-  // to acquire the lock.
+  // Do not call notify complete, instead invoke the timeout callback
+  // to simulate a timeout event.
   mtx_unlock(&mvm_->mutex);
-  zx_nanosleep(zx_deadline_after(ZX_MSEC(100)));
+  iwl_mvm_scan_timeout(mvm_->dispatcher, &mvm_->scan_timeout_task, ZX_OK);
   mtx_lock(&mvm_->mutex);
 
   EXPECT_EQ(0, mvm_->scan_status & IWL_MVM_SCAN_REGULAR);
@@ -334,7 +332,6 @@ TEST_F(ScanTest, RegPassiveScanTimeout) TA_NO_THREAD_SAFETY_ANALYSIS {
 TEST_F(ScanTest, RegPassiveScanTimerShutdown) TA_NO_THREAD_SAFETY_ANALYSIS {
   ASSERT_EQ(0, mvm_->scan_status & IWL_MVM_SCAN_REGULAR);
   ASSERT_EQ(nullptr, mvm_->scan_vif);
-  mvm_->scan_timeout_delay = ZX_MSEC(5);
 
   ASSERT_EQ(false, scan_result.sme_notified);
   ASSERT_EQ(false, scan_result.success);
@@ -342,12 +339,10 @@ TEST_F(ScanTest, RegPassiveScanTimerShutdown) TA_NO_THREAD_SAFETY_ANALYSIS {
   EXPECT_EQ(IWL_MVM_SCAN_REGULAR, mvm_->scan_status & IWL_MVM_SCAN_REGULAR);
   EXPECT_EQ(&mvmvif_sta, mvm_->scan_vif);
 
-  // Immediately shutdown the scan timeout timer, faking an unintentional timer error.
-  async_loop_shutdown(trans_->loop);
-
-  // Do not call notify complete, and wait beyond timeout expiry.
+  // Do not call notify complete, and invoke the timeout callback with
+  // status CANCELED. This simulates a timer shutdown while it is pending.
   mtx_unlock(&mvm_->mutex);
-  zx_nanosleep(zx_deadline_after(ZX_MSEC(100)));
+  iwl_mvm_scan_timeout(mvm_->dispatcher, &mvm_->scan_timeout_task, ZX_ERR_CANCELED);
   mtx_lock(&mvm_->mutex);
 
   // Ensure the state is such that no FW response or timeout has happened.
