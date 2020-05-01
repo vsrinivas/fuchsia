@@ -44,11 +44,11 @@ class PageManager {
   // expected to have their contents filled with Block::kCleanFill.
   struct Block {
     Block(size_t num_pages)
-        : used_bytes(num_pages * ZX_PAGE_SIZE),
-          available_bytes(used_bytes),
-          contents(new(std::align_val_t{ZX_PAGE_SIZE}) char[used_bytes], PageAlignedDeleter()),
+        : size_bytes(num_pages * ZX_PAGE_SIZE),
+          available_bytes(size_bytes),
+          contents(new(std::align_val_t{ZX_PAGE_SIZE}) char[size_bytes], PageAlignedDeleter()),
           available_start(contents.get()) {
-      memset(contents.get(), kCleanFill, used_bytes);
+      memset(contents.get(), kCleanFill, size_bytes);
     }
 
     ~Block() {
@@ -59,7 +59,7 @@ class PageManager {
       // in use. We can only make guarantees that its complement as remained
       // unallocated since being freed.
       ZX_ASSERT(RangeIsCleanFilled(contents.get(), available_start));
-      ZX_ASSERT(RangeIsCleanFilled(available_end() + 1, contents.get() + used_bytes));
+      ZX_ASSERT(RangeIsCleanFilled(available_end() + 1, contents.get() + size_bytes));
     }
 
     Block(Block&& other) = default;
@@ -100,8 +100,8 @@ class PageManager {
 
     // See Block documentation.
     static constexpr char kCleanFill = 0x41;
-    // The size of the block, in bytes.
-    size_t used_bytes;
+    // The total size of the block, in bytes.
+    size_t size_bytes;
     // The size of the available subregion, in bytes.
     size_t available_bytes;
     // The contents of the block.
