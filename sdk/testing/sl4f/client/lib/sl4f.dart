@@ -8,6 +8,7 @@
 export 'src/audio.dart';
 export 'src/device.dart';
 export 'src/device_log.dart';
+export 'src/diagnostics.dart';
 export 'src/dump.dart';
 export 'src/exceptions.dart';
 export 'src/factory_store.dart';

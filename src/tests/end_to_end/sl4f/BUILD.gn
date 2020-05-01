@@ -10,6 +10,7 @@ dart_test("sl4f_test") {
   sources = [
     "audio_test.dart",
     "device_log_test.dart",
+    "diagnostics_test.dart",
     "dump_test.dart",
     "performance_test.dart",
     "setui_test.dart",

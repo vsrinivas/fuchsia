@@ -17,6 +17,7 @@ dart_library("client") {
     "src/audio.dart",
     "src/device.dart",
     "src/device_log.dart",
+    "src/diagnostics.dart",
     "src/dump.dart",
     "src/exceptions.dart",
     "src/factory_store.dart",
