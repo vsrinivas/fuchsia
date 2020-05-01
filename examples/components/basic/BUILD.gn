@@ -107,19 +107,11 @@ package("components_basic_example") {
 }
 
 test_package("hello-world-tests") {
-  deps = [
-    ":hello_world_bin_test",
-    "//src/sys/test_adapters/rust",
-  ]
+  deps = [ ":hello_world_bin_test" ]
   v2_tests = [
     {
       name = "hello_world_bin_test"
       environments = basic_envs
-    },
-  ]
-  binaries = [
-    {
-      name = "rust_test_adapter"
     },
   ]
 }
