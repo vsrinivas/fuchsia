@@ -64,16 +64,7 @@ package("pkg") {
 
 # Run with `fx test my-component-v2-rust-tests`.
 test_package("my-component-v2-rust-tests") {
-  deps = [
-    ":bin_test",
-    "//src/sys/test_adapters/rust",
-  ]
-
-  binaries = [
-    {
-      name = "rust_test_adapter"
-    },
-  ]
+  deps = [ ":bin_test" ]
 
   v2_tests = [
     {

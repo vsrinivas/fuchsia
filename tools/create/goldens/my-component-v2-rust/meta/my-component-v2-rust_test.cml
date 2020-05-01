@@ -11,17 +11,11 @@
 // see https://fuchsia.dev/fuchsia-src/concepts/components/component_manifests.
 {
     program: {
-        // Run the Rust test adapter, which will configure the environment
-        // and execute the test binary.
-        binary: "bin/rust_test_adapter",
-        args: [ "/pkg/test/my-component-v2-rust_test" ],
+        binary: "test/my-component-v2-rust_test",
     },
     use: [
-        // Use the built-in ELF runner to run Rust binaries.
-        { runner: "elf" },
-
-        // Needed for the Rust test framework to run tests in sub-processes.
-        { protocol: "/svc/fuchsia.process.Launcher" },
+        // Use test runner which will expose `fuchsia.test.Suite` on test's behalf.
+        { runner: "rust_test_runner" },
     ],
     expose: [
         // The Fuchsia Test Framework expects this service to be exposed from the
