@@ -37,6 +37,5 @@ zx_library("audio-utils") {
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/zx",
-
   ]
 }

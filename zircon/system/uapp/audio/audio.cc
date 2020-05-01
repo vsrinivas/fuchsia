@@ -122,63 +122,28 @@ void usage(const char* prog_name) {
   // clang-format on
 }
 
-void dump_format_range(size_t ndx, const audio_stream_format_range_t& range) {
-  printf("[%2zu] Sample Format :", ndx);
-
-  struct {
-    audio_sample_format_t flag;
-    const char* name;
-  } SF_FLAG_LUT[] = {
-      {AUDIO_SAMPLE_FORMAT_FLAG_UNSIGNED, "Unsigned"},
-      {AUDIO_SAMPLE_FORMAT_FLAG_INVERT_ENDIAN, "Inv Endian"},
-  };
-
-  for (const auto& sf : SF_FLAG_LUT) {
-    if (range.sample_formats & sf.flag) {
-      printf(" %s", sf.name);
-    }
-  }
-
-  struct {
-    audio_sample_format_t flag;
-    const char* name;
-  } SF_FORMAT_LUT[] = {
-      {AUDIO_SAMPLE_FORMAT_BITSTREAM, "Bitstream"},
-      {AUDIO_SAMPLE_FORMAT_8BIT, "8"},
-      {AUDIO_SAMPLE_FORMAT_16BIT, "16"},
-      {AUDIO_SAMPLE_FORMAT_20BIT_PACKED, "20-packed"},
-      {AUDIO_SAMPLE_FORMAT_24BIT_PACKED, "24-packed"},
-      {AUDIO_SAMPLE_FORMAT_20BIT_IN32, "20-in-32"},
-      {AUDIO_SAMPLE_FORMAT_24BIT_IN32, "24-in-32"},
-      {AUDIO_SAMPLE_FORMAT_32BIT, "32"},
-      {AUDIO_SAMPLE_FORMAT_32BIT_FLOAT, "Float 32"},
-  };
-
-  bool first = true;
-  printf(" [");
-  for (const auto& sf : SF_FORMAT_LUT) {
-    if (range.sample_formats & sf.flag) {
-      printf("%s%s", first ? "" : ", ", sf.name);
-      first = false;
-    }
-  }
-  printf("]\n");
-
-  printf("     Channel Count : [%u, %u]\n", range.min_channels, range.max_channels);
-  printf("     Frame Rates   :");
-  if (range.flags & ASF_RANGE_FLAG_FPS_CONTINUOUS) {
-    printf(" [%u, %u] Hz continuous\n", range.min_frames_per_second, range.max_frames_per_second);
-  } else {
-    audio::utils::FrameRateEnumerator enumerator(range);
-
-    first = true;
-    for (uint32_t rate : enumerator) {
-      printf("%s%u", first ? " " : ", ", rate);
-      first = false;
-    }
-
-    printf(" Hz\n");
-  }
+void dump_formats(const audio::utils::AudioDeviceStream& stream) {
+  stream.GetSupportedFormats(
+      [](const ::llcpp::fuchsia::hardware::audio::SupportedFormats& formats) {
+        auto& pcm = formats.pcm_supported_formats();
+        printf("\nNumber of channels:");
+        for (auto i : pcm.number_of_channels) {
+          printf(" %u", i);
+        }
+        printf("\nFrame rate        :");
+        for (auto i : pcm.frame_rates) {
+          printf(" %uHz", i);
+        }
+        printf("\nBits per channel   :");
+        for (auto i : pcm.bytes_per_sample) {
+          printf(" %u", 8 * i);
+        }
+        printf("\nValid bits per channel  :");
+        for (auto i : pcm.valid_bits_per_sample) {
+          printf(" %u", i);
+        }
+        printf("\n");
+      });
 }
 
 static void FixupStringRequest(audio_stream_cmd_get_string_resp_t* resp, zx_status_t res) {
@@ -239,8 +204,11 @@ zx_status_t dump_stream_info(const audio::utils::AudioDeviceStream& stream) {
   printf("  Product      : %s\n", str_resp.str);
 
   // Fetch and print the current gain settings for this audio stream.
+  // Since we reconnect to the audio stream every time we run this uapp and we are guaranteed by the
+  // audio driver interface definition that the driver will reply to the first watch request, we
+  // can get the gain state by issuing a watch FIDL call.
   audio_stream_cmd_get_gain_resp gain_state;
-  res = stream.GetGain(&gain_state);
+  res = stream.WatchGain(&gain_state);
   if (res != ZX_OK) {
     printf("Failed to fetch gain information! (res %d)\n", res);
     return res;
@@ -262,8 +230,11 @@ zx_status_t dump_stream_info(const audio::utils::AudioDeviceStream& stream) {
   printf("; %s AGC\n", gain_state.can_agc ? "can" : "cannot");
 
   // Fetch and print the current pluged/unplugged state for this audio stream.
+  // Since we reconnect to the audio stream every time we run this uapp and we are guaranteed by the
+  // audio driver interface definition that the driver will reply to the first watch request, we
+  // can get the plug state by issuing a watch FIDL call.
   audio_stream_cmd_plug_detect_resp plug_state;
-  res = stream.GetPlugState(&plug_state);
+  res = stream.WatchPlugState(&plug_state);
   if (res != ZX_OK) {
     printf("Failed to fetch plug state information! (res %d)\n", res);
     return res;
@@ -278,16 +249,7 @@ zx_status_t dump_stream_info(const audio::utils::AudioDeviceStream& stream) {
                                                            : "dynamic (synchronous)"));
 
   // Fetch and print the currently supported audio formats for this audio stream.
-  fbl::Vector<audio_stream_format_range_t> fmts;
-  res = stream.GetSupportedFormats(&fmts);
-  if (res != ZX_OK) {
-    printf("Failed to fetch supported formats! (res %d)\n", res);
-    return res;
-  }
-
-  printf("\nStream supports %zu format range%s\n", fmts.size(), fmts.size() == 1 ? "" : "s");
-  for (size_t i = 0; i < fmts.size(); ++i)
-    dump_format_range(i, fmts[i]);
+  dump_formats(stream);
 
   return ZX_OK;
 }

@@ -42,7 +42,7 @@ source_set("src") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/audio-proto-utils",
-    "//zircon/system/ulib/audio-utils-legacy",
+    "//zircon/system/ulib/audio-utils",
   ]
   deps = [ "//zircon/public/lib/fdio" ]
 }
