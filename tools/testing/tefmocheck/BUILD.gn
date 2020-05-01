@@ -1,0 +1,35 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/go/go_binary.gni")
+import("//build/go/go_library.gni")
+import("//build/go/go_test.gni")
+
+go_library("lib") {
+  name = "go.fuchsia.dev/fuchsia/tools/testing/tefmocheck/lib"
+}
+
+go_library("main") {
+  name = "go.fuchsia.dev/fuchsia/tools/testing/tefmocheck/cmd/lib"
+  source_dir = "cmd"
+  deps = [
+    ":lib",
+    "//tools/testing/runtests",
+  ]
+}
+
+go_binary("tefmocheck") {
+  gopackage = "go.fuchsia.dev/fuchsia/tools/testing/tefmocheck/cmd/lib"
+  deps = [ ":main" ]
+}
+
+go_test("tests") {
+  output_name = "tefmocheck_tests"
+  gopackages = [ "go.fuchsia.dev/fuchsia/tools/testing/tefmocheck/cmd/lib" ]
+  deps = [
+    ":main",
+    "//third_party/golibs:github.com/google/go-cmp",
+    "//tools/testing/runtests",
+  ]
+}
