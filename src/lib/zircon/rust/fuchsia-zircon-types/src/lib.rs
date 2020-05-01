@@ -847,6 +847,49 @@ pub struct zx_info_vmo_t {
 struct_decl_macro! {
     #[repr(C)]
     #[derive(Default, Debug, Copy, Clone, Eq, PartialEq)]
+    pub struct <zx_info_cpu_stats_t> {
+        pub cpu_number: u32,
+        pub flags: u32,
+        pub idle_time: zx_duration_t,
+        pub reschedules: u64,
+        pub context_switches: u64,
+        pub irq_preempts: u64,
+        pub preempts: u64,
+        pub yields: u64,
+        pub ints: u64,
+        pub timer_ints: u64,
+        pub timers: u64,
+        pub page_faults: u64,
+        pub exceptions: u64,
+        pub syscalls: u64,
+        pub reschedule_ipis: u64,
+        pub generic_ipis: u64,
+    }
+}
+
+zx_info_cpu_stats_t!(zx_info_cpu_stats_t);
+
+struct_decl_macro! {
+    #[repr(C)]
+    #[derive(Default, Debug, Copy, Clone, Eq, PartialEq)]
+    pub struct <zx_info_kmem_stats_t> {
+        pub total_bytes: u64,
+        pub free_bytes: u64,
+        pub wired_bytes: u64,
+        pub total_heap_bytes: u64,
+        pub free_heap_bytes: u64,
+        pub vmo_bytes: u64,
+        pub mmu_overhead_bytes: u64,
+        pub ipc_bytes: u64,
+        pub other_bytes: u64,
+    }
+}
+
+zx_info_kmem_stats_t!(zx_info_kmem_stats_t);
+
+struct_decl_macro! {
+    #[repr(C)]
+    #[derive(Default, Debug, Copy, Clone, Eq, PartialEq)]
     pub struct <zx_info_resource_t> {
         pub kind: u32,
         pub flags: u32,
