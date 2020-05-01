@@ -197,7 +197,6 @@
         // Non-zircon services for svchost
         {
             protocol: [
-                "/svc/fuchsia.devicesettings.DeviceSettingsManager",
                 "/svc/fuchsia.exception.Handler",
                 "/svc/fuchsia.logger.Log",
                 "/svc/fuchsia.logger.LogSink",

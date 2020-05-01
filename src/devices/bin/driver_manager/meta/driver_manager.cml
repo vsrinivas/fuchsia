@@ -87,7 +87,6 @@
                 "/svc/fuchsia.boot.RootResource",
                 "/svc/fuchsia.boot.WriteOnlyLog",
                 "/svc/fuchsia.cobalt.LoggerFactory",
-                "/svc/fuchsia.devicesettings.DeviceSettingsManager",
                 "/svc/fuchsia.exception.Handler",
 
                 // These are services from fshost that driver_manager uses directly

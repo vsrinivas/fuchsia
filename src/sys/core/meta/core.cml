@@ -174,7 +174,6 @@
             protocol: [
                 "/svc/fuchsia.amber.Control",
                 "/svc/fuchsia.cobalt.LoggerFactory",
-                "/svc/fuchsia.devicesettings.DeviceSettingsManager",
                 "/svc/fuchsia.exception.Handler",
                 "/svc/fuchsia.logger.Log",
                 "/svc/fuchsia.logger.LogSink",
