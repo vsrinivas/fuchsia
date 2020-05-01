@@ -69,7 +69,7 @@ struct AmlTdmDeviceTest : public AmlTdmDevice {
   void Shutdown() override {}
 };
 
-TEST(AstroAudioStreamOutTest, DISABLED_CodecInitGood) {
+TEST(AstroAudioStreamOutTest, CodecInitGood) {
   fake_ddk::Bind tester;
 
   zx::interrupt irq;
@@ -116,7 +116,7 @@ TEST(AstroAudioStreamOutTest, DISABLED_CodecInitGood) {
   server->DdkRelease();
 }
 
-TEST(AstroAudioStreamOutTest, DISABLED_CodecInitBad) {
+TEST(AstroAudioStreamOutTest, CodecInitBad) {
   fake_ddk::Bind tester;
 
   zx::interrupt irq;
@@ -127,7 +127,11 @@ TEST(AstroAudioStreamOutTest, DISABLED_CodecInitBad) {
 
   ddk::MockGpio mock_ena;
   ddk::MockGpio mock_fault;
-  mock_ena.ExpectWrite(ZX_OK, 0).ExpectWrite(ZX_OK, 1).ExpectWrite(ZX_OK, 0);
+  mock_ena
+    .ExpectWrite(ZX_OK, 0)
+    .ExpectWrite(ZX_OK, 1)
+    .ExpectWrite(ZX_OK, 0)
+    .ExpectWrite(ZX_OK, 0);
 
   auto codec = std::make_unique<Tas27xxInitTest>(mock_i2c.GetProto(), mock_ena.GetProto(),
                                                  mock_fault.GetProto());
@@ -141,7 +145,7 @@ TEST(AstroAudioStreamOutTest, DISABLED_CodecInitBad) {
   mock_fault.VerifyAndClear();
 }
 
-TEST(AstroAudioStreamOutTest, DISABLED_ChangeRate96K) {
+TEST(AstroAudioStreamOutTest, ChangeRate96K) {
   struct CodecRate96KTest : Tas27xx {
     CodecRate96KTest(ddk::I2cChannel i2c, ddk::GpioProtocolClient ena,
                      ddk::GpioProtocolClient fault)
