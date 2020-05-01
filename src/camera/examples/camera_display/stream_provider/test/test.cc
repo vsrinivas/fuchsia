@@ -209,6 +209,8 @@ TEST_P(StreamProviderTest, DISABLED_ValidateFrames) {
 
 static std::string ParamToString(testing::TestParamInfo<StreamProvider::Source> param) {
   switch (param.param) {
+    case StreamProvider::Source::ISP:
+      return "ISP";
     case StreamProvider::Source::CONTROLLER:
       return "CONTROLLER";
     default:
