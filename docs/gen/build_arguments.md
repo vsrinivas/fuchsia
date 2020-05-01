@@ -189,6 +189,25 @@ required for the filesystem.
 
 From //build/images/fvm.gni:41
 
+### board_bootfs_labels
+A list of bootfs manifest labels to include in the ZBI.
+
+**Current value for `target_cpu = "arm64"`:** `["//garnet/bin/power_manager/node_config:base.manifest"]`
+
+From //boards/arm64.gni:18
+
+**Overridden from the default:** `[]`
+
+From //build/board.gni:14
+
+**Current value for `target_cpu = "x64"`:** `["//garnet/bin/power_manager/node_config:base.manifest"]`
+
+From //boards/x64.gni:19
+
+**Overridden from the default:** `[]`
+
+From //build/board.gni:14
+
 ### board_extra_vbmeta_images
 Board level extra vbmeta images to be combined into the top-level vbmeta
 struct.
@@ -211,7 +230,7 @@ required by this board. See also kernel_cmdline_args in
 
 **Current value (from the default):** `[]`
 
-From //build/board.gni:16
+From //build/board.gni:19
 
 ### board_name
 Board name used for paving and amber updates.
@@ -259,7 +278,7 @@ required by this board. See also zedboot_cmdline_args in
 
 **Current value (from the default):** `[]`
 
-From //build/board.gni:21
+From //build/board.gni:24
 
 ### bootfs_allowlist_recovery
 List of binaries to include in the bootfs manifest for recovery. This
@@ -619,7 +638,7 @@ This defaults to JIT, use `fx set <ARCH> --args
 
 **Current value (from the default):** `"dart_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/41576608264deff01956b528adb913911ff5a93c/runtime/dart/dart_component.gni#19)
+From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/9319bf341fa47ca6b449ca968d3eaed0be239dd3/runtime/dart/dart_component.gni#19)
 
 ### dart_enable_wasm
 Whether dart:wasm should be enabled.
@@ -634,7 +653,7 @@ we use to build products.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/41576608264deff01956b528adb913911ff5a93c/runtime/dart/config.gni#10)
+From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/9319bf341fa47ca6b449ca968d3eaed0be239dd3/runtime/dart/config.gni#10)
 
 ### dart_lib_export_symbols
 Whether libdart should export the symbols of the Dart API.
@@ -684,7 +703,7 @@ Whether experimental space dart mode is enabled for Dart applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:35](https://fuchsia.googlesource.com/topaz/+/41576608264deff01956b528adb913911ff5a93c/runtime/dart/dart_component.gni#35)
+From [//topaz/runtime/dart/dart_component.gni:35](https://fuchsia.googlesource.com/topaz/+/9319bf341fa47ca6b449ca968d3eaed0be239dd3/runtime/dart/dart_component.gni#35)
 
 ### dart_target_arch
 Explicitly set the target architecture to use a simulator.
@@ -996,7 +1015,7 @@ From //build/images/args.gni:68
 
 **Current value (from the default):** `"flutter_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/41576608264deff01956b528adb913911ff5a93c/runtime/dart/dart_component.gni#12)
+From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/9319bf341fa47ca6b449ca968d3eaed0be239dd3/runtime/dart/dart_component.gni#12)
 
 ### flutter_driver_enabled
 Enables/Disables flutter driver using '--args=flutter_driver_enabled=[true/false]'
@@ -1011,14 +1030,14 @@ From //build/testing/flutter_driver.gni:9
 
 **Current value (from the default):** `true`
 
-From [//topaz/runtime/dart/dart_component.gni:26](https://fuchsia.googlesource.com/topaz/+/41576608264deff01956b528adb913911ff5a93c/runtime/dart/dart_component.gni#26)
+From [//topaz/runtime/dart/dart_component.gni:26](https://fuchsia.googlesource.com/topaz/+/9319bf341fa47ca6b449ca968d3eaed0be239dd3/runtime/dart/dart_component.gni#26)
 
 ### flutter_space_dart
 Whether experimental space dart mode is enabled for Flutter applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/41576608264deff01956b528adb913911ff5a93c/runtime/dart/dart_component.gni#32)
+From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/9319bf341fa47ca6b449ca968d3eaed0be239dd3/runtime/dart/dart_component.gni#32)
 
 ### font_catalog_paths
 
@@ -1621,7 +1640,7 @@ Maximum allowable size for fuchsia.zbi
 
 **Current value for `target_cpu = "arm64"`:** `"16777216"`
 
-From //boards/arm64.gni:18
+From //boards/arm64.gni:20
 
 **Overridden from the default:** `"0"`
 
@@ -1629,7 +1648,7 @@ From //build/images/filesystem_limits.gni:31
 
 **Current value for `target_cpu = "x64"`:** `"16777216"`
 
-From //boards/x64.gni:19
+From //boards/x64.gni:21
 
 **Overridden from the default:** `"0"`
 
@@ -1656,7 +1675,7 @@ Maximum allowable size for zedboot.zbi
 
 **Current value for `target_cpu = "arm64"`:** `"16777216"`
 
-From //boards/arm64.gni:19
+From //boards/arm64.gni:21
 
 **Overridden from the default:** `"0"`
 
@@ -1664,7 +1683,7 @@ From //build/images/filesystem_limits.gni:34
 
 **Current value for `target_cpu = "x64"`:** `"16777216"`
 
-From //boards/x64.gni:20
+From //boards/x64.gni:22
 
 **Overridden from the default:** `"0"`
 
@@ -1865,14 +1884,14 @@ ignore warnings.
 
 **Current value (from the default):** `"deny"`
 
-From //build/rust/config.gni:45
+From //build/rust/config.gni:40
 
 ### rust_lto
 Sets the default LTO type for rustc bulids.
 
 **Current value (from the default):** `""`
 
-From //build/rust/config.gni:32
+From //build/rust/config.gni:27
 
 ### rust_override_lto
 Overrides the LTO setting for all Rust builds, regardless of
@@ -1881,7 +1900,7 @@ Valid values are "none", "thin", and "fat".
 
 **Current value (from the default):** `""`
 
-From //build/rust/config.gni:55
+From //build/rust/config.gni:50
 
 ### rust_override_opt
 Overrides the optimization level for all Rust builds, regardless of
@@ -1890,7 +1909,7 @@ Valid values are 0-3, o, and z.
 
 **Current value (from the default):** `""`
 
-From //build/rust/config.gni:50
+From //build/rust/config.gni:45
 
 ### rust_panic
 DEPRECATED: Sets the panic type for Rust on fuchsia.
@@ -1899,7 +1918,7 @@ This arg will be removed soon, and we will always use "abort".
 
 **Current value (from the default):** `"abort"`
 
-From //build/rust/config.gni:37
+From //build/rust/config.gni:32
 
 ### rust_sysroot
 Sets a custom base directory for where rust tooling
@@ -1907,14 +1926,14 @@ looks for the standard library
 
 **Current value (from the default):** `"../prebuilt/third_party/rust/linux-x64"`
 
-From //build/rust/config.gni:29
+From //build/rust/config.gni:24
 
 ### rust_toolchain_triple_suffix
 Sets the fuchsia toolchain target triple suffix (after arch)
 
 **Current value (from the default):** `"fuchsia"`
 
-From //build/rust/config.gni:40
+From //build/rust/config.gni:35
 
 ### rustc_prefix
 Sets a custom base directory for `rustc` and `cargo`.
@@ -1922,7 +1941,7 @@ This can be used to test custom Rust toolchains.
 
 **Current value (from the default):** `"../prebuilt/third_party/rust/linux-x64/bin"`
 
-From //build/rust/config.gni:25
+From //build/rust/config.gni:20
 
 ### scenic_display_frame_number
 Draws the current frame number in the top-left corner.
