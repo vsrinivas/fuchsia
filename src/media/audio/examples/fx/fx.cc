@@ -710,7 +710,7 @@ int main(int argc, char** argv) {
 
   // TODO(johngro) : Fetch the supported stream_types from the audio
   // input itself and select from them, do not hardcode this.
-  res = input->SetFormat(48000u, NUM_CHANNELS, AUDIO_SAMPLE_FORMAT_16BIT);
+  res = input->SetFormat(48000u, NUM_CHANNELS, 0, AUDIO_SAMPLE_FORMAT_16BIT);
   if (res != ZX_OK) {
     return res;
   }

@@ -45,10 +45,12 @@ zx_status_t AudioOutput::Play(AudioSource& source) {
     return res;
   }
 
-  res = SetFormat(format.frame_rate, format.channels, format.sample_format);
+  res = SetFormat(format.frame_rate, format.channels, format.channels_to_use_bitmask,
+                  format.sample_format);
   if (res != ZX_OK) {
-    printf("Failed to set source format [%u Hz, %hu Chan, %08x fmt] (res %d)\n", format.frame_rate,
-           format.channels, format.sample_format, res);
+    printf("Failed to set source format [%u Hz, %hu Chan, %016lx Mask, %08x fmt] (res %d)\n",
+           format.frame_rate, format.channels, format.channels_to_use_bitmask, format.sample_format,
+           res);
     return res;
   }
 

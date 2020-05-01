@@ -228,6 +228,7 @@ zx_status_t AudioDeviceStream::PlugMonitor(float duration, PlugMonitorCallback* 
 }
 
 zx_status_t AudioDeviceStream::SetFormat(uint32_t frames_per_second, uint16_t channels,
+                                         uint64_t channels_to_use_bitmask,
                                          audio_sample_format_t sample_format) {
   if ((stream_ch_ == ZX_HANDLE_INVALID) || (rb_ch_ != ZX_HANDLE_INVALID))
     return ZX_ERR_BAD_STATE;
@@ -253,7 +254,7 @@ zx_status_t AudioDeviceStream::SetFormat(uint32_t frames_per_second, uint16_t ch
 
   audio_fidl::PcmFormat pcm_format = {};
   pcm_format.number_of_channels = static_cast<uint8_t>(channel_cnt_);
-  pcm_format.channels_to_use_bitmask = (1 << channel_cnt_) - 1;  // Use all channels.
+  pcm_format.channels_to_use_bitmask = channels_to_use_bitmask;
   pcm_format.sample_format = audio_fidl::SampleFormat::PCM_SIGNED;
   pcm_format.frame_rate = frames_per_second;
   pcm_format.bytes_per_sample = channel_size_ / 8;

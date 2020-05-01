@@ -42,7 +42,7 @@ class AudioDeviceStream {
                         audio_stream_cmd_get_string_resp_t* out_str) const;
   zx_status_t PlugMonitor(float duration, PlugMonitorCallback* monitor);
   zx_status_t SetFormat(uint32_t frames_per_second, uint16_t channels,
-                        audio_sample_format_t sample_format);
+                        uint64_t channels_to_use_bitmask, audio_sample_format_t sample_format);
   zx_status_t GetBuffer(uint32_t frames, uint32_t irqs_per_ring);
   zx_status_t StartRingBuffer();
   zx_status_t StopRingBuffer();

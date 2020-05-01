@@ -17,6 +17,7 @@ class AudioStream {
     uint32_t frame_rate;
     uint16_t channels;
     audio_sample_format_t sample_format;
+    uint64_t channels_to_use_bitmask;
   };
 };
 

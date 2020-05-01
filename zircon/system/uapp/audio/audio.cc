@@ -79,7 +79,7 @@ void usage(const char* prog_name) {
          "  -b <bits/sample> : Bits per sample to use.  Defaults to 16\n"
          "  -c <channels>    : Number of channels to use.  Defaults to 2\n"
          "  -a <active>      : Active channel mask (e.g. 0xf or 15 for channels 0, 1, 2 and 3).\n"
-         "                     Defaults to all channels active (not set).\n");
+         "                     Defaults to all channels.\n");
   printf("\nValid command are\n");
   printf("info   : Fetches capability and status info for the specified stream\n");
   printf("mute   : Mute the specified stream\n");
@@ -580,7 +580,7 @@ int main(int argc, const char** argv) {
       }
 
       WAVSource wav_source;
-      res = wav_source.Initialize(wav_filename);
+      res = wav_source.Initialize(wav_filename, active);
       if (res != ZX_OK)
         return res;
 
@@ -593,7 +593,7 @@ int main(int argc, const char** argv) {
         return -1;
       }
 
-      res = stream->SetFormat(frame_rate, static_cast<uint16_t>(channels), sample_format);
+      res = stream->SetFormat(frame_rate, static_cast<uint16_t>(channels), active, sample_format);
       if (res != ZX_OK) {
         printf("Failed to set format (rate %u, chan %u, fmt 0x%08x, res %d)\n", frame_rate,
                channels, sample_format, res);
