@@ -1,15 +1,16 @@
-# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
 import("//build/rust/rustc_test.gni")
 
 rustc_test("test") {
-  name = "no_rust_tests"
+  name = "huge_rust_tests"
   edition = "2018"
+  deps = [ "macro:gen-tests-macro" ]
 }
 
-group("no_rust_tests") {
+group("huge-rust-tests") {
   testonly = true
   public_deps = [ ":test" ]
 }

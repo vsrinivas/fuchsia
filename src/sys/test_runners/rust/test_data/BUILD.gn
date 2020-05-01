@@ -8,8 +8,9 @@ group("test_data") {
   testonly = true
   public_deps = [
     ":rust-test-runner-example",
+    "huge-rust-tests",
+    "no-rust-tests",
     "sample-rust-tests",
-    "//src/sys/test_adapters/rust/test_data",
   ]
 }
 
@@ -17,6 +18,8 @@ package("rust-test-runner-example") {
   testonly = true
   deps = [
     "echo-example",
+    "huge-rust-tests",
+    "no-rust-tests",
     "sample-rust-tests",
     "//examples/components/routing/echo_server",
   ]
@@ -30,6 +33,12 @@ package("rust-test-runner-example") {
     },
     {
       name = "sample_rust_tests"
+    },
+    {
+      name = "huge_rust_tests"
+    },
+    {
+      name = "no_rust_tests"
     },
   ]
 
@@ -49,6 +58,14 @@ package("rust-test-runner-example") {
     {
       path = "sample-rust-tests/meta/sample_rust_tests.cml"
       dest = "sample_rust_tests.cm"
+    },
+    {
+      path = "huge-rust-tests/meta/huge_rust_tests.cml"
+      dest = "huge_rust_tests.cm"
+    },
+    {
+      path = "no-rust-tests/meta/no_rust_tests.cml"
+      dest = "no_rust_tests.cm"
     },
   ]
 }

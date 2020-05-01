@@ -102,6 +102,15 @@ async fn launch_and_test_echo_test() {
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
+async fn launch_and_test_file_with_no_test() {
+    let test_url = "fuchsia-pkg://fuchsia.com/rust-test-runner-example#meta/no_rust_tests.cm";
+    let events = run_test(test_url).await.unwrap();
+
+    let expected_events = vec![TestEvent::test_finished()];
+    assert_eq!(expected_events, events);
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
 async fn launch_and_run_sample_test() {
     let test_url = "fuchsia-pkg://fuchsia.com/rust-test-runner-example#meta/sample_rust_tests.cm";
     let events = run_test(test_url).await.unwrap();
@@ -148,3 +157,28 @@ async fn launch_and_run_sample_test() {
         &TestEvent::log_message("my_tests::failing_test", "test failed.")
     );
 }
+
+/*
+// fxb/50793: ignore doesn't work right now.
+// Stress test with a very large gtest suite.
+#[fuchsia_async::run_singlethreaded(test)]
+#[ignore = "Timeouts on CQ bots"]
+async fn launch_and_run_hugetest() {
+    let test_url = "fuchsia-pkg://fuchsia.com/rust-test-runner-example#meta/huge_rust_tests.cm";
+    let mut events = run_test(test_url).await.unwrap();
+
+    let mut expected_events = vec![];
+
+    for i in 1..=1000 {
+        let s = format!("test_{}", i);
+        expected_events.extend(vec![
+            TestEvent::test_case_started(&s),
+            TestEvent::test_case_finished(&s, TestResult::Passed),
+        ])
+    }
+    expected_events.push(TestEvent::test_finished());
+    expected_events.sort();
+    events.sort();
+    assert_eq!(expected_events, events);
+}
+*/
