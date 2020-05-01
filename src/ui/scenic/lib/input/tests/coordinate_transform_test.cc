@@ -314,33 +314,37 @@ TEST_F(CoordinateTransformTest, ScaledInFront) {
 // This test verifies that rotation is handled correctly when events are delivered to clients.
 //
 // Below are ASCII diagrams showing the scene setup.
+// Each character is a point on a surface, the top left point representing (0,0)
+// and the bottom right (5,5).
 // Note that the notated X,Y coordinate system is the screen coordinate system. The view's
 // coordinate system has its origin at corner '1'.
 //
 // View pre-transformation (1,2,3,4 denote corners of view):
 // Note that the view's coordinate system is the same as the screen coordinate system.
 //   X ->
-// Y 1 O O O 2 - - - -
-// | O O O O O - - - -
-// v O O O O O - - - -
-//   O O O O O - - - -
-//   4 O O O 3 - - - -
-//   - - - - - - - - -
-//   - - - - - - - - -
-//   - - - - - - - - -
-//   - - - - - - - - -
+// Y 1 O O O O 2 - - - -
+// | O O O O O O - - - -
+// v O O O O O O - - - -
+//   O O O O O O - - - -
+//   O O O O O O - - - -
+//   4 O O O O 3 - - - -
+//   - - - - - - - - - -
+//   - - - - - - - - - -
+//   - - - - - - - - - -
+//   - - - - - - - - - -
 //
 // View post-transformation:
 //   X ->
-// Y 4A O O O 1D- - - -
-// | O  O O O O - - - -
-// V O  O O O O - - - -
-//   O  O O O O - - - -
-//   3U O O O 2M- - - -
-//   -  - - - - - - - -
-//   -  - - - - - - - -
-//   -  - - - - - - - -
-//   -  - - - - - - - -
+// Y 4A O O O O 1D- - - -
+// | O  O O O O O - - - -
+// V O  O O O O O - - - -
+//   O  O O O O O - - - -
+//   O  O O O O O - - - -
+//   3U O O O O 2M- - - -
+//   -  - - - - - - - - -
+//   -  - - - - - - - - -
+//   -  - - - - - - - - -
+//   -  - - - - - - - - -
 //
 // A - Add event
 // D - Down event
@@ -410,50 +414,58 @@ TEST_F(CoordinateTransformTest, Rotated) {
 // confirm that the coordinates received by the session are correctly transformed.
 //
 // Below are ASCII diagrams showing the scene setup.
+// Each character is a point on a surface, the top left point representing (0,0)
+// and the bottom right (5,5).
 // Note that the notated X,Y coordinate system is the screen coordinate system. The view's
 // coordinate system has its origin at corner '1'.
 //
 // Scene pre-transformation (1,2,3,4 denote the corners of the view):
 // Note that the view's coordinate system is the same as the screen coordinate system.
 //   X ->
-// Y 1 O O O 2 - - - -
-// | O O O O O - - - -
-// v O O O O O - - - -
-//   O O O O O - - - -
-//   4 O O O 3 - - - -
-//   - - - - - - - - -
-//   - - - - - - - - -
-//   - - - - - - - - -
-//   - - - - - - - - -
+// Y 1 O O O O 2 - - - -
+// | O O O O O O - - - -
+// v O O O O O O - - - -
+//   O O O O O O - - - -
+//   O O O O O O - - - -
+//   4 O O O O 3 - - - -
+//   - - - - - - - - - -
+//   - - - - - - - - - -
+//   - - - - - - - - - -
+//   - - - - - - - - - -
 //
 // Scene after scale, before offset:
-// 1   O   O   O   2
+// 1   O   O   O   O   2
 //
-// O   O   O   O   O
+// O   O   O   O   O   O
 //
-// O   O   O - O - O - - - -
-//         - - - - - - - - -
-// O   O   O - O - O - - - -
-//         - - - - - - - - -
-// 4   O   O - O - 3 - - - -
-//         - - - - - - - - -
-//         - - - - - - - - -
-//         - - - - - - - - -
-//         - - - - - - - - -
+// O   O   O - O - O - O - - -
+//         - - - - - - - - - -
+// O   O   O - O - O - O - - -
+//         - - - - - - - - - -
+// O   O   O - O - O - O - - -
+//         - - - - - - - - - -
+// 4   O   O - O   O - 3 - - -
+//         - - - - - - - - - -
+//         - - - - - - - - - -
+//         - - - - - - - - - -
+//         - - - - - - - - - -
+//         - - - - - - - - - -
 //
 // Scene post-scale, post-offset:
 // The X and Y dimensions of the view are now effectively scaled up to 10x10
 // (compared to the 9x9 of the screen), with origin at screen space origin.
 //   X ->
-// Y 1A- O - D - O - 2
-// | - - - - - - - - -
-// V O - O - O - O - O
-//   - - - - - - - - -
-//   U - O - M - O - O
-//   - - - - - - - - -
-//   O - O - O - O - O
-//   - - - - - - - - -
-//   4 - O - O - O - 3
+// Y 1A- O - D - O - O - 2
+// | - - - - - - - - - -
+// V O - O - O - O - O - O
+//   - - - - - - - - - -
+//   U - O - M - O - O - O
+//   - - - - - - - - - -
+//   O - O - O - O - O - O
+//   - - - - - - - - - -
+//   O - O - O - O - O - O
+//   - - - - - - - - - -
+//   4   O   O   O   O   3
 //
 // A - Add event
 // D - Down event
@@ -524,51 +536,58 @@ TEST_F(CoordinateTransformTest, ClipSpaceTransformed) {
 // transformed.
 //
 // Below are ASCII diagrams showing the scene setup.
+// Each character is a point on a surface, the top left point representing (0,0)
+// and the bottom right (5,5).
 // Note that the notated X,Y coordinate system is the screen coordinate system. The view's
 // coordinate system has its origin at corner '1'.
 //
 // Scene pre-transformation (1,2,3,4 denote the corners of the view):
 // Note that the view's coordinate system is the same as the screen coordinate system.
 //   X ->
-// Y 1 O O O 2 - - - -
-// | O O O O O - - - -
-// v O O O O O - - - -
-//   O O O O O - - - -
-//   4 O O O 3 - - - -
-//   - - - - - - - - -
-//   - - - - - - - - -
-//   - - - - - - - - -
-//   - - - - - - - - -
+// Y 1 O O O O 2 - - - -
+// | O O O O O O - - - -
+// v O O O O O O - - - -
+//   O O O O O O - - - -
+//   O O O O O O - - - -
+//   4 O O O O 3 - - - -
+//   - - - - - - - - - -
+//   - - - - - - - - - -
+//   - - - - - - - - - -
+//   - - - - - - - - - -
 //
 // Scene after post-clip space transform, pre-translation:
-// 1   O   O   O   2
+// 1   O   O   O   O   2
 //
-// O   O   O   O   O
+// O   O   O   O   O   O
 //
-// O   O   O - O - O - - - -
-//         - - - - - - - - -
-// O   O   O - O - O - - - -
-//         - - - - - - - - -
-// 4   O   O - O - 3 - - - -
-//         - - - - - - - - -
-//         - - - - - - - - -
-//         - - - - - - - - -
-//         - - - - - - - - -
+// O   O   O   O   O   O
+//           - - - - - - - - - -
+// O   O   O - O - O - O - - - -
+//           - - - - - - - - - -
+// O   O   O - O - O - O - - - -
+//           - - - - - - - - - -
+// 4   O   O - O - O - 3 - - - -
+//           - - - - - - - - - -
+//           - - - - - - - - - -
+//           - - - - - - - - - -
+//           - - - - - - - - - -
 //
 // Scene after post-clip space transform, post-translation:
 // Size of view is effectively 10x10, translated by (1,1).
-//   X ->
-// Y 1   O   O   O   2
-// |
-// V O   A - O - D - O - -
-//       - - - - - - - - -
-//   O   O - O - O - O - -
-//       - - - - - - - - -
-//   O   U - O - M - O - -
-//       - - - - - - - - -
-//   4   O - O - O - 3 - -
-//       - - - - - - - - -
-//       - - - - - - - - -
+// 1   O   O   O   O   2
+//
+// O   O   O   O   O   O
+//       A - - - D - - - - -
+// O   O - O - O - O - O - -
+//       - - - - - - - - - -
+// O   O - O - O - O - O - -
+//       U - - - M - - - - -
+// O   O - O - O - O - O - -
+//       - - - - - - - - - -
+// 4   O - O - O - O - 3 - -
+//       - - - - - - - - - -
+//       - - - - - - - - - -
+//
 // A - Add event
 // D - Down event
 // M - Move event

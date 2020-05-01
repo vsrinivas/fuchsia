@@ -447,58 +447,65 @@ TEST_F(PointerCaptureTest, IfViewDetached_ListenerShouldGetNoInput) {
 //
 // Scene pre-transformation (1,2,3,4 denote the corners of the view):
 // Note that the view's coordinate system is the same as the screen coordinate system.
+// Scene pre-transformation (1,2,3,4 denote the corners of the target view):
 //   X ->
-// Y 1 O O O 2 - - - -
-// | O O O O O - - - -
-// v O O O O O - - - -
-//   O O O O O - - - -
-//   4 O O O 3 - - - -
-//   - - - - - - - - -
-//   - - - - - - - - -
-//   - - - - - - - - -
-//   - - - - - - - - -
+// Y 1 O O O O 2 - - - -
+// | O O O O O O - - - -
+// v O O O O O O - - - -
+//   O O O O O O - - - -
+//   O O O O O O - - - -
+//   4 O O O O 3 - - - -
+//   - - - - - - - - - -
+//   - - - - - - - - - -
+//   - - - - - - - - - -
+//   - - - - - - - - - -
 //
-// Scene after scale:
-// View is now 10x15 instead of 5x5 on screen.
+// After scale:
 //   X ->
-// Y 1 - O - O - O - 2
-// | - - - - - - - - -
-// V - - - - - - - - -
-//   O - O - O - O - O
-//   - - - - - - - - -
-//   - - - - - - - - -
-//   O - O - O - O - O
-//   - - - - - - - - -
-//   - - - - - - - - -
-//   O   O   O   O   O
+// Y 1 - O - O - O   O   2
+// | - - - - - - - - - -
+// V - - - - - - - - - -
+//   O - O - O - O - O - O
+//   - - - - - - - - - -
+//   - - - - - - - - - -
+//   O - O - O - O - O - O
+//   - - - - - - - - - -
+//   - - - - - - - - - -
+//   O - O - O - O - O - O
 //
 //
-//   4   O   O   O   3
+//   O   O   O   O   O   O
 //
-// Scene after rotation:
+//
+//   4   O   O   O   O   3
+//
+// After rotation:
 //   X ->
-// Y 4      O      O      O      1 - - - - - - - - -
-// |                               - - - - - - - - -
-// V O      O      O      O      O - - - - - - - - -
-//                                 - - - - - - - - -
-//   O      O      O      O      O - - - - - - - - -
-//                                 - - - - - - - - -
-//   O      O      O      O      O - - - - - - - - -
-//                                 - - - - - - - - -
-//   3      O      O      O      2 - - - - - - - - -
+// Y 4      O      O      O      O      1 - - - - - - - - - -
+// |                                      - - - - - - - - - -
+// V O      O      O      O      O      O - - - - - - - - - -
+//                                        - - - - - - - - - -
+//   O      O      O      O      O      O - - - - - - - - - -
+//                                        - - - - - - - - - -
+//   O      O      O      O      O      O - - - - - - - - - -
+//                                        - - - - - - - - - -
+//   O      O      O      O      O      O - - - - - - - - - -
+//                                        - - - - - - - - - -
+//   3      O      O      O      O      2
 //
-// Scene after translation:
+// After translation:
 //   X ->
-// Y 4      O      O      O    D 1 - - - M1- - -
-// |                           - - - - - - - - -
-// V O      O      O      O    - O - - - - - - -
-//                             - - - - - - - - -
-//   O      O      O      O    - O - - - - - - -
-//                             U - - - - M2- - -
-//   O      O      O      O    - O - - - - - - -
-//                             - - - - - - - - -
-//   3      O      O      O    - 2 - - - - - - -
-//
+// Y 4      O      O      O      O    - 1 - - - - - - - - -
+// |                                  - - - - - - - - - - -
+// V O      O      O      O      O    - O - - - - - - - - -
+//                                    - - - - - - - - - - -
+//   O      O      O      O      O    - O - - - - - - - - -
+//                                    - - - - - - - - - - -
+//   O      O      O      O      O    - O - - - - - - - - -
+//                                    - - - - - - - - - - -
+//   O      O      O      O      O    - O - - - - - - - - -
+//                                    - - - - - - - - - - -
+//   3      O      O      O      O      2
 
 TEST_F(PointerCaptureTest, TransformedListenerView_ShouldGetTransformedInput) {
   auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
