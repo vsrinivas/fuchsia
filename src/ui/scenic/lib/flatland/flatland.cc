@@ -86,6 +86,10 @@ void Flatland::Present(PresentCallback callback) {
       uber_struct->local_matrices[handle] = matrix_data.GetMatrix();
     }
 
+    for (const auto& [image_id, image_data] : images_) {
+      uber_struct->images[image_data.handle] = image_data.metadata;
+    }
+
     uber_struct_system_->SetUberStruct(instance_id_, std::move(uber_struct));
     // TODO(36161): Once present operations can be pipelined, this variable will change state based
     // on the number of outstanding Present calls. Until then, this call is synchronous, and we can
@@ -557,6 +561,37 @@ void Flatland::SetLinkOnTransform(LinkId link_id, TransformId transform_id) {
     }
 
     transform_graph_.SetPriorityChild(transform_kv->second, link_kv->second.link.graph_handle);
+    return true;
+  });
+}
+
+void Flatland::SetImageOnTransform(ImageId image_id, TransformId transform_id) {
+  pending_operations_.push_back([=]() {
+    if (transform_id == kInvalidId) {
+      FX_LOGS(ERROR) << "SetImageOnTransform called with transform_id zero";
+      return false;
+    }
+
+    auto transform_kv = transforms_.find(transform_id);
+
+    if (transform_kv == transforms_.end()) {
+      FX_LOGS(ERROR) << "SetImageOnTransform failed, transform_id " << transform_id << " not found";
+      return false;
+    }
+
+    if (image_id == 0) {
+      transform_graph_.ClearPriorityChild(transform_kv->second);
+      return true;
+    }
+
+    auto image_kv = images_.find(image_id);
+
+    if (image_kv == images_.end()) {
+      FX_LOGS(ERROR) << "SetImageOnTransform failed, image_id " << image_id << " not found";
+      return false;
+    }
+
+    transform_graph_.SetPriorityChild(transform_kv->second, image_kv->second.handle);
     return true;
   });
 }

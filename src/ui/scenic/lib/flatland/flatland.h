@@ -98,6 +98,8 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
   // |fuchsia::ui::scenic::internal::Flatland|
   void SetLinkOnTransform(LinkId link_id, TransformId transform_id) override;
   // |fuchsia::ui::scenic::internal::Flatland|
+  void SetImageOnTransform(ImageId image_id, TransformId transform_id) override;
+  // |fuchsia::ui::scenic::internal::Flatland|
   void SetLinkProperties(LinkId id,
                          fuchsia::ui::scenic::internal::LinkProperties properties) override;
   // |fuchsia::ui::scenic::internal::Flatland|

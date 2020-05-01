@@ -332,7 +332,25 @@ protocol Flatland {
     /// as long as the Transform is visible from the root Transform. The contents of the Link will
     /// be rendered before, and therefore "behind", any content attached to the descendants of the
     /// Transform.
+    ///
+    /// Note that setting a Link on a Transform will remove any other content currently attached to
+    /// that Transform.
+    ///
+    /// Calling this function with a Link id of zero will remove any content currently attached to
+    /// the given Transform id, including other non-Link Content.
     SetLinkOnTransform(LinkId link_id, TransformId transform_id);
+
+    /// Setting an Image on a Transform makes the contents of the Image visible in the render tree
+    /// as long as the Transform is visible from the root Transfrm. The contents of the Image will
+    /// be rendered before, and therefore "behind", any content attached to the descendants of the
+    /// Transform.
+    ///
+    /// Note that setting an Image on a Transform will remove any other content currently attached
+    /// to that Transform.
+    ///
+    /// Calling this function with a Image id of zero will remove any content currently attached to
+    /// the given Transform id, including other non-Image content.
+    SetImageOnTransform(ImageId image_id, TransformId transform_id);
 
     // Content mutators
 

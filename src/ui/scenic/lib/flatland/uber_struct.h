@@ -16,6 +16,7 @@
 
 #include <glm/mat3x3.hpp>
 
+#include "src/ui/scenic/lib/flatland/renderer/renderer.h"
 #include "src/ui/scenic/lib/flatland/transform_graph.h"
 #include "src/ui/scenic/lib/flatland/transform_handle.h"
 
@@ -42,6 +43,9 @@ struct UberStruct {
   // The local (i.e. relative to the parent) geometric transformation matrix of each
   // TransformHandle. Handles with no entry indicate an identity matrix.
   std::unordered_map<TransformHandle, glm::mat3> local_matrices;
+
+  // The images associated with each TransformHandle.
+  std::unordered_map<TransformHandle, ImageMetadata> images;
 };
 
 }  // namespace flatland
