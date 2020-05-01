@@ -1,9 +1,7 @@
 {
     program: {
         binary: "bin/driver_manager",
-        lifecycle: {
-            stop_event: "notify",
-        },
+        lifecycle: { stop_event: "notify" },
     },
     use: [
         { runner: "elf" },
@@ -75,7 +73,6 @@
                 // The following are non-Zircon services that some zircon tests assume they
                 // can reach, and thus are proxied through svchost. This should mirror the
                 // list in //zircon/system/core/svchost/svchost.cc
-                "/svc/fuchsia.amber.Control",
 
                 // Services from bootsvc
                 "/svc/fuchsia.boot.Arguments",
@@ -86,7 +83,11 @@
                 "/svc/fuchsia.boot.RootJobForInspect",
                 "/svc/fuchsia.boot.RootResource",
                 "/svc/fuchsia.boot.WriteOnlyLog",
+
+                // Used by a test (fxb/50992)
                 "/svc/fuchsia.cobalt.LoggerFactory",
+
+                // Used by crashsvc to report exceptions (fxb/50992)
                 "/svc/fuchsia.exception.Handler",
 
                 // These are services from fshost that driver_manager uses directly
@@ -97,7 +98,12 @@
                 "/svc/fuchsia.fshost.Loader",
                 "/svc/fuchsia.fshost.Registry",
 
-                // Services from console
+                // Services for serial console, not used by driver_manager or
+                // drivers.
+
+                // TODO(fxb/51234) Split serial console into separate component
+                // Amber control is thought to be used by serial console (fxb/50992)
+                "/svc/fuchsia.amber.Control",
                 "/svc/fuchsia.hardware.pty.Device",
                 "/svc/fuchsia.kernel.Stats",
                 "/svc/fuchsia.logger.Log",
@@ -110,6 +116,8 @@
                 "/svc/fuchsia.pkg.RepositoryManager",
                 "/svc/fuchsia.pkg.rewrite.Engine",
                 "/svc/fuchsia.posix.socket.Provider",
+                // Thought to be used by serial console only (fxb/50992)
+                "/svc/fuchsia.wlan.service.Wlan",
 
                 // Builtin service
                 "/svc/fuchsia.process.Launcher",
@@ -123,7 +131,6 @@
 
                 // Service from appmgr
                 "/svc/fuchsia.tracing.provider.Registry",
-                "/svc/fuchsia.wlan.service.Wlan",
             ],
         },
     ],
