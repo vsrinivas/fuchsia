@@ -37,16 +37,19 @@ if (is_host) {
     ]
   }
 
+  host_test_data("icu_data_extractor") {
+    sources = [ "$root_out_dir/icu_data_extractor" ]
+    deps =
+        [ "//src/lib/icu/tools/extractor:icu_data_extractor($host_toolchain)" ]
+  }
+
   group("test_files") {
     testonly = true
     data_deps = [
+      ":icu_data_extractor",
       ":icudtl_dat",
       ":tzres",
-      "//src/lib/icu/tools/extractor:icu_data_extractor($host_toolchain)",
     ]
-    metadata = {
-      test_runtime_deps = [ "$root_out_dir/icu_data_extractor" ]
-    }
   }
 }
 

@@ -57,10 +57,8 @@ if (is_linux) {
     ]
   }
 
-  group("main_zbi") {
-    metadata = {
-      test_runtime_deps = [ "$root_build_dir/fuchsia.zbi" ]
-    }
+  host_test_data("main_zbi") {
+    sources = [ "$root_build_dir/fuchsia.zbi" ]
   }
 
   host_out_dir = get_label_info("//bogus($host_toolchain)", "root_out_dir")

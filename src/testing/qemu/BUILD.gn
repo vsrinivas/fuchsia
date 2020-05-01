@@ -4,6 +4,7 @@
 
 import("//build/config/fuchsia/zircon.gni")
 import("//build/go/go_library.gni")
+import("//build/testing/host_test_data.gni")
 
 # Currently, we ony support working with the QEMU simulator on Linux.
 if (is_linux) {
@@ -11,10 +12,10 @@ if (is_linux) {
   # qemu, so we need to archive our own copy of qemu from the source
   # tree.
   action("archive") {
+    testonly = true
     visibility = [ ":*" ]
 
     archive_path = "$root_out_dir/test_data/qemu/qemu.tar.gz"
-
     outputs = [ archive_path ]
 
     depfile = "${archive_path}.d"
@@ -29,13 +30,9 @@ if (is_linux) {
       "--depfile",
       rebase_path(depfile, root_build_dir),
     ]
-
-    metadata = {
-      test_runtime_deps = [ archive_path ]
-    }
   }
 
-  copy("kernel") {
+  host_test_data("kernel") {
     visibility = [ ":*" ]
 
     kernel_binary = ""
@@ -46,26 +43,34 @@ if (is_linux) {
     } else {
       assert(false, "CPU not supported")
     }
-    target_cpu_txt = "$root_out_dir/test_data/qemu/target_cpu.txt"
 
     sources = [ "$zircon_root_build_dir/$kernel_binary" ]
     outputs = [ "$root_out_dir/test_data/qemu/$kernel_binary" ]
+  }
 
-    write_file(target_cpu_txt, target_cpu)
+  target_cpu_txt = "$root_out_dir/test_data/qemu/target_cpu.txt"
+  generated_file("target_cpu_txt") {
+    testonly = true
+    contents = target_cpu
+    outputs = [ target_cpu_txt ]
+  }
 
-    metadata = {
-      test_runtime_deps = [
-        outputs[0],
-        target_cpu_txt,
-      ]
-    }
+  host_test_data("test_data") {
+    sources = [ target_cpu_txt ] + get_target_outputs(":archive")
+    deps = [
+      ":archive",
+      ":kernel",
+      ":target_cpu_txt",
+    ]
   }
 
   go_library("qemu") {
+    testonly = true
     name = "fuchsia.googlesource.com/testing/qemu"
     non_go_deps = [
       ":archive",
       ":kernel",
+      ":test_data",
     ]
   }
 }

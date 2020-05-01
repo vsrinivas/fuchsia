@@ -6,6 +6,7 @@ import("//build/package.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
+import("//build/testing/host_test_data.gni")
 
 source_set("fostr") {
   sources = [
@@ -37,13 +38,16 @@ shared_library("fostr_shared") {
     "indent.cc",
     "indent.h",
   ]
+}
 
-  metadata = {
+if (is_host) {
+  host_test_data("fostr_shared_test_data") {
     if (is_linux) {
-      test_runtime_deps = [ "$root_out_dir/libfostr_shared.so" ]
+      sources = [ "$root_out_dir/libfostr_shared.so" ]
     } else if (is_mac) {
-      test_runtime_deps = [ "$root_out_dir/libfostr_shared.dylib" ]
+      sources = [ "$root_out_dir/libfostr_shared.dylib" ]
     }
+    deps = [ ":fostr_shared($host_toolchain)" ]
   }
 }
 

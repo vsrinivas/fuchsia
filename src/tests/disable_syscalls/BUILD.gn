@@ -34,10 +34,8 @@ if (is_linux) {
     deps = [ "//src/testing/qemu" ]
   }
 
-  group("syscall_zbi") {
-    metadata = {
-      test_runtime_deps = [ "$root_build_dir/zedboot.zbi" ]
-    }
+  host_test_data("syscall_zbi") {
+    sources = [ "$root_build_dir/zedboot.zbi" ]
   }
 
   host_test_data("misc_tools") {

@@ -11,13 +11,15 @@ group("test_data") {
 
 group("tests") {
   testonly = true
-  deps = [ ":triage_sample_config_test" ]
+  deps = [ ":triage_sample_config_test($host_toolchain)" ]
 }
 
-triage_config_test("triage_sample_config_test") {
-  sources = [
-    "other.triage",
-    "sample.triage",
-    "sample_tags.triage",
-  ]
+if (is_host) {
+  triage_config_test("triage_sample_config_test") {
+    sources = [
+      "other.triage",
+      "sample.triage",
+      "sample_tags.triage",
+    ]
+  }
 }

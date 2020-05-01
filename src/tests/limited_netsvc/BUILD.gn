@@ -25,10 +25,8 @@ if (is_linux) {
     deps = [ "//src/testing/qemu" ]
   }
 
-  group("main_zbi") {
-    metadata = {
-      test_runtime_deps = [ "$root_build_dir/fuchsia.zbi" ]
-    }
+  host_test_data("main_zbi") {
+    sources = [ "$root_build_dir/fuchsia.zbi" ]
   }
 
   net_tools = [

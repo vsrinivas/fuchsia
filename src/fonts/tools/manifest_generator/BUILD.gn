@@ -73,15 +73,17 @@ if (is_host) {
     ]
   }
 
+  host_test_data("generator") {
+    sources = [ "$root_out_dir/font_manifest_generator" ]
+    deps = [ ":font_manifest_generator" ]
+  }
+
   group("test_files") {
     testonly = true
     data_deps = [
-      ":font_manifest_generator",
+      ":generator",
       ":test_data",
     ]
-    metadata = {
-      test_runtime_deps = [ "$root_out_dir/font_manifest_generator" ]
-    }
   }
 }
 

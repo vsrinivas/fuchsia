@@ -6,6 +6,7 @@ import("//build/board.gni")
 import("//build/images/assemble_system.gni")
 import("//build/images/ta.gni")
 import("//build/images/zedboot/zedboot_args.gni")
+import("//build/testing/host_test_data.gni")
 
 declare_args() {
   # List of binaries to include in the bootfs manifest for recovery. This
@@ -83,10 +84,6 @@ assemble_system("recovery-eng") {
   # XXX(comfoltey): Disable bootfs_allowlist_recovery while build
   # unification is in progress
   bootfs_allowlist = []
-  metadata = {
-    test_runtime_deps = [ "${target_out_dir}/${target_name}.zbi" ]
-  }
-
   ta_uuids = recovery_ta_uuids
 }
 
@@ -103,9 +100,19 @@ assemble_system("recovery-fdr") {
   # XXX(comfoltey): Disable bootfs_allowlist_recovery while build
   # unification is in progress
   bootfs_allowlist = []
-  metadata = {
-    test_runtime_deps = [ "${target_out_dir}/${target_name}.zbi" ]
-  }
-
   ta_uuids = recovery_ta_uuids
+}
+
+if (is_host) {
+  host_test_data("test_data") {
+    out_dir = get_label_info(":anything($target_toolchain)", "target_out_dir")
+    sources = [
+      "${out_dir}/recovery-eng.zbi",
+      "${out_dir}/recovery-fdr.zbi",
+    ]
+    deps = [
+      ":recovery-eng($target_toolchain)",
+      ":recovery-fdr($target_toolchain)",
+    ]
+  }
 }

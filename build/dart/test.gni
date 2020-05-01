@@ -4,6 +4,7 @@
 
 import("//build/dart/dart_library.gni")
 import("//build/dart/toolchain.gni")
+import("//build/testing/host_test_data.gni")
 import("//build/testing/test_spec.gni")
 
 # Defines a Dart test suite.
@@ -47,6 +48,10 @@ template("dart_test") {
   _snapshot_target_name = "${target_name}_snapshot"
   _spec_target_name = "${target_name}_spec"
 
+  if (is_host) {
+    _test_data_target_name = "${target_name}_test_data"
+  }
+
   if (defined(invoker.source_dir)) {
     _source_dir = invoker.source_dir
   } else {
@@ -83,7 +88,7 @@ template("dart_test") {
     }
   }
 
-  # When using the prebuilt, we copy the dart binary imto the build directory
+  # When using the prebuilt, we copy the dart binary into the build directory
   # so that it can be used without the prebuilt directory in the source tree.
   if (use_prebuilt_dart_sdk) {
     _dart_binary = "$target_gen_dir/$_main_target_name/dart"
@@ -130,11 +135,17 @@ template("dart_test") {
              ":$_dart_library_target_name",
              ":$_test_grouping_target_name",
            ]
+  }
 
-    metadata = {
-      test_runtime_deps = [
+  if (is_host) {
+    host_test_data(_test_data_target_name) {
+      sources = [
         _dart_binary,
         _snapshot,
+      ]
+      deps = [
+        ":$_copy_target_name",
+        ":$_snapshot_target_name",
       ]
     }
   }
@@ -148,6 +159,9 @@ template("dart_test") {
     forward_variables_from(invoker, [ "environments" ])
 
     deps = [ ":$_snapshot_target_name" ]
+    if (is_host) {
+      deps += [ ":$_test_data_target_name" ]
+    }
 
     if (defined(invoker.deps)) {
       deps += invoker.deps

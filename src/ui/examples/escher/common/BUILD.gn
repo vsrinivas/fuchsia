@@ -27,10 +27,16 @@ static_library("common") {
     deps += [ ":demo_harness_fuchsia" ]
   }
   if (is_linux) {
-    deps += [
-      ":demo_harness_linux",
-      "assets:linux_assets",
-      "//src/ui/lib/escher/shaders:linux_shader_data",
+    deps += [ ":demo_harness_linux" ]
+  }
+}
+
+if (is_linux) {
+  group("host_test_data") {
+    testonly = true
+    deps = [
+      "assets:linux_assets($host_toolchain)",
+      "//src/ui/lib/escher/shaders:linux_shader_data($host_toolchain)",
     ]
   }
 }

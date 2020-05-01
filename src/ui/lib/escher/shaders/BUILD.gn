@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/testing/host_test_data.gni")
 import("//src/ui/lib/escher/shaders/shaders.gni")
 
 assert(is_linux,
@@ -10,33 +11,27 @@ assert(is_linux,
 # Copies shaders needed for escher linux tests to a specific test data
 # directory near the test binary.
 group_deps = []
-test_data = []
 foreach(shader, escher_shaders_resources) {
-  name = get_path_info(shader.path, "file")
-  copy_name = "copy_$name"
-  copy(copy_name) {
+  shader_target_name = "shader_" + get_path_info(shader.path, "file")
+  host_test_data(shader_target_name) {
     sources = [ shader.path ]
     outputs = [ "$root_out_dir/test_data/escher/" + shader.dest ]
   }
-  group_deps += [ ":$copy_name" ]
-  test_data += get_target_outputs(":$copy_name")
+  group_deps += [ ":$shader_target_name" ]
 }
 
-foreach(shader,
-        escher_shaders_spirv_resources + escher_test_shaders_spirv_resources) {
-  name = get_path_info(shader.path, "file")
-  copy_name = "copy_$name"
-  copy(copy_name) {
+spirv_resources =
+    escher_shaders_spirv_resources + escher_test_shaders_spirv_resources
+foreach(shader, spirv_resources) {
+  shader_target_name = "shader_" + get_path_info(shader.path, "file")
+  host_test_data(shader_target_name) {
     sources = [ shader.path ]
     outputs = [ "$root_out_dir/test_data/escher/" + shader.dest ]
   }
-  group_deps += [ ":$copy_name" ]
-  test_data += get_target_outputs(":$copy_name")
+  group_deps += [ ":$shader_target_name" ]
 }
 
 group("linux_shader_data") {
+  testonly = true
   deps = group_deps
-  metadata = {
-    test_runtime_deps = test_data
-  }
 }

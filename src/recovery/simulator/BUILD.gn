@@ -31,6 +31,6 @@ if (is_linux) {
     timeout = "0"
     gopackages = [ "fuchsia.googlesource.com/recovery/simulator" ]
     deps = [ ":lib" ]
-    non_go_deps = [ "//build/images/recovery($target_toolchain)" ]
+    non_go_deps = [ "//build/images/recovery:test_data($host_toolchain)" ]
   }
 }

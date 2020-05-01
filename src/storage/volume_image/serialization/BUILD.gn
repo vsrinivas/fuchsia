@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file
 
+import("//build/testing/host_test_data.gni")
+
 config("schema_path") {
   if (is_host) {
     defines = [ "STORAGE_VOLUME_IMAGE_SCHEMA_PATH=\"schema/\"" ]
@@ -10,27 +12,22 @@ config("schema_path") {
   }
 }
 
-copy("schema_json") {
-  sources = [
-    "address_descriptor.schema.json",
-    "volume_descriptor.schema.json",
-    "volume_image.schema.json",
-  ]
-  outputs = [ "$root_out_dir/schema/{{source_file_part}}" ]
-}
-
 source_set("schema") {
   sources = [ "schema.cc" ]
   public = [ "schema.h" ]
 
   configs += [ ":schema_path" ]
   deps = [ "//src/storage/volume_image/utils:path" ]
+}
 
-  if (is_host) {
-    deps += [ ":schema_json" ]
-    metadata = {
-      runtime_deps = get_target_outputs(":schema_json")
-    }
+if (is_host) {
+  host_test_data("schema_json") {
+    sources = [
+      "address_descriptor.schema.json",
+      "volume_descriptor.schema.json",
+      "volume_image.schema.json",
+    ]
+    outputs = [ "$root_out_dir/schema/{{source_file_part}}" ]
   }
 }
 
@@ -44,9 +41,7 @@ source_set("schema-test") {
   ]
 
   if (is_host) {
-    metadata = {
-      test_runtime_deps = get_target_outputs(":schema_json")
-    }
+    deps += [ ":schema_json" ]
   }
 }
 
