@@ -4,15 +4,14 @@
     },
     "sandbox": {
         "dev": [
-            "camera-controller",
-            "class/isp-device-test"
+            "class/camera",
+            "camera-controller"
         ],
         "features": [
             "isolated-persistent-storage"
         ],
         "services": [
-            "fuchsia.logger.LogSink",
-            "fuchsia.process.Launcher"
+            "fuchsia.logger.LogSink"
         ]
     }
 }

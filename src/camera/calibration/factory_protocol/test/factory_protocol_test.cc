@@ -14,18 +14,10 @@
 namespace camera {
 namespace {
 
-const auto kDirPath = "/data/calibration";
-const auto kFilename = "/frame_0.raw";
-const auto kCameraVendorName = "Google Inc.";
-const auto kCameraProductName = "Fuchsia Sherlock Camera";
-const uint16_t kCameraVendorId = 0x18D1;
-const uint16_t kCameraProductId = 0xF00D;
-const uint8_t kStrLength = 17;
-
-class FactoryProtocolTest : public testing::Test {
+class FactoryServerTest : public testing::Test {
  public:
-  FactoryProtocolTest() : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
-  ~FactoryProtocolTest() override { loop_.Shutdown(); }
+  FactoryServerTest() : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
+  ~FactoryServerTest() override { loop_.Shutdown(); }
 
   void SetUp() override {
     thrd_t thread;
@@ -37,94 +29,28 @@ class FactoryProtocolTest : public testing::Test {
         ADD_FAILURE() << "Channel Failure: " << status;
     });
 
-    auto result = FactoryProtocol::Create(std::move(channel), loop_.dispatcher());
+    fidl::InterfaceHandle<fuchsia::camera2::hal::Controller> controller;
+
+    auto result = FactoryServer::Create(std::move(controller));
     ASSERT_FALSE(result.is_error());
 
-    factory_impl_ = std::move(result.value());
-    ASSERT_FALSE(factory_impl_->streaming());
+    factory_server_ = std::move(result.value());
+    ASSERT_FALSE(factory_server_->streaming());
   }
 
   void TearDown() override {
-    factory_impl_ = nullptr;
     factory_protocol_ = nullptr;
+    factory_server_ = nullptr;
+    loop_.RunUntilIdle();
   }
 
   async::Loop loop_;
-  std::unique_ptr<FactoryProtocol> factory_impl_;
+  std::unique_ptr<FactoryServer> factory_server_;
   fuchsia::factory::camera::CameraFactoryPtr factory_protocol_;
 };
 
-TEST_F(FactoryProtocolTest, DISABLED_StreamingWritesToFile) {
-  ASSERT_EQ(ZX_OK, factory_impl_->ConnectToStream());
-  const std::string kDirPathStr(kDirPath, kStrLength);
-  ASSERT_TRUE(files::IsDirectory(kDirPathStr));
-  ASSERT_FALSE(factory_impl_->frames_received());
-
-  while (!factory_impl_->frames_received() && !HasFailure()) {
-    loop_.RunUntilIdle();
-  }
-
-  auto path = kDirPathStr + kFilename;
-  ASSERT_TRUE(files::IsFile(path));
-}
-
-// TODO(nzo): ConnectToStream() should only be called once in the current implementation, should
-// make this clear in testing
-TEST_F(FactoryProtocolTest, DISABLED_ShutdownClosesChannelAndStream) {
-  ASSERT_EQ(ZX_OK, factory_impl_->ConnectToStream());
-  ASSERT_TRUE(factory_impl_->streaming());
-
-  factory_impl_->Shutdown(ZX_OK);
-  zx_status_t status =
-      factory_protocol_.channel().wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), nullptr);
-  if (status != ZX_OK) {
-    EXPECT_EQ(status, ZX_ERR_BAD_HANDLE);
-  }
-
-  ASSERT_FALSE(factory_impl_->streaming());
-}
-
-TEST_F(FactoryProtocolTest, DISABLED_DetectCameraFIDL) {
-  auto test_done = false;
-  factory_protocol_->DetectCamera(
-      [&test_done](fuchsia::factory::camera::CameraFactory_DetectCamera_Result result) {
-        EXPECT_EQ(0, result.response().camera_id);
-        auto device_info = std::move(result.response().camera_info);
-        EXPECT_EQ(kCameraVendorName, device_info.vendor_name());
-        EXPECT_EQ(kCameraVendorId, device_info.vendor_id());
-        EXPECT_EQ(kCameraProductName, device_info.product_name());
-        EXPECT_EQ(kCameraProductId, device_info.product_id());
-        EXPECT_EQ(fuchsia::camera2::DeviceType::BUILTIN, device_info.type());
-        test_done = true;
-      });
-
-  while (!test_done && !HasFailure())
-    loop_.RunUntilIdle();
-}
-
-// This is the same test as `ShutdownClosesChannelAndStream` but for the FIDL call
-TEST_F(FactoryProtocolTest, DISABLED_StartStopFIDL) {
-  factory_protocol_->Start();
-  while (!factory_impl_->streaming() && !HasFailure()) {
-    loop_.RunUntilIdle();
-  }
-
-  // Nothing happens when Start() is called while already streaming
-  factory_protocol_->Start();
-  loop_.RunUntilIdle();
-  ASSERT_TRUE(factory_impl_->streaming());
-
-  factory_protocol_->Stop();
-  while (factory_impl_->streaming() && !HasFailure()) {
-    loop_.RunUntilIdle();
-  }
-  zx_status_t status =
-      factory_protocol_.channel().wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), nullptr);
-  if (status != ZX_OK) {
-    EXPECT_EQ(status, ZX_ERR_BAD_HANDLE);
-  }
-
-  ASSERT_FALSE(factory_impl_->streaming());
+TEST_F(FactoryServerTest, DummyNoOp) {
+  ASSERT_TRUE(true);
 }
 
 }  // namespace
