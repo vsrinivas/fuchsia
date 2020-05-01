@@ -27,4 +27,5 @@ zircon/tools/kazoo/golden-test \
   --builddir out/default.zircon \
   --syscalls zircon/vdso \
   --p4merge \
-  --output-touch /dev/null
+  --output-touch /dev/null \
+  --tmp-base /tmp

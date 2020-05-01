@@ -43,6 +43,9 @@ def parse_args():
     parser.add_argument('--output-touch',
                         help='file to touch on success',
                         required=True)
+    parser.add_argument('--tmp-base',
+                        help='location to use for temporary files',
+                        required=True)
     return parser.parse_args()
 
 
@@ -62,9 +65,9 @@ def generate_fidlc_json(fidlc_binary, syscall_dir, output_fidlc_json_path):
 def build_golden(input_files, output_combined):
     with open(output_combined, 'w') as outf:
         for filename in input_files:
-            outf.write('----- %s START -----\n' % filename)
+            outf.write('----- %s START -----\n' % os.path.basename(filename))
             outf.write(open(filename, 'r').read())
-            outf.write('----- %s END -----\n\n\n' % filename)
+            outf.write('----- %s END -----\n\n\n' % os.path.basename(filename))
 
 
 def generate_kazoo_outputs(kazoo_binary, fidlc_json_path, all_output_styles,
@@ -100,11 +103,11 @@ def read_rsp_and_rebase(path, builddir):
 def main():
     args = parse_args()
 
-    tmp_json = '/tmp/syscalls.json'
+    tmp_json = os.path.join(args.tmp_base, 'syscalls.json')
     fidlc = read_rsp_and_rebase(args.fidlc, args.builddir)
     generate_fidlc_json(fidlc, args.syscalls, tmp_json)
 
-    tmp_kazoo_dir = '/tmp/kazoo-outputs'
+    tmp_kazoo_dir = os.path.join(args.tmp_base, 'kazoo-outputs')
     try:
         shutil.rmtree(tmp_kazoo_dir)
     except:
@@ -132,7 +135,7 @@ def main():
     kazoo = read_rsp_and_rebase(args.kazoo, args.builddir)
     files = generate_kazoo_outputs(kazoo, tmp_json, all_styles, tmp_kazoo_dir)
 
-    tmp_golden = '/tmp/new-golden.txt'
+    tmp_golden = os.path.join(args.tmp_base, 'new-golden.txt')
     build_golden(files, tmp_golden)
     rc = subprocess.call(['diff', GOLDEN, tmp_golden])
     if rc != 0:

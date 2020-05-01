@@ -1,4 +1,4 @@
------ /tmp/kazoo-outputs/c-ulib-header.h START -----
+----- c-ulib-header.h START -----
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
@@ -107,10 +107,10 @@ typedef uint64_t zx_uintptr_t;
 __END_CDECLS
 
 #endif  // LIB_ZXIO_TYPES_H_
------ /tmp/kazoo-outputs/c-ulib-header.h END -----
+----- c-ulib-header.h END -----
 
 
------ /tmp/kazoo-outputs/category.h START -----
+----- category.h START -----
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
@@ -176,10 +176,10 @@ SYSCALL_CATEGORY_BEGIN(vdsocall)
     SYSCALL_IN_CATEGORY(system_get_features)
 SYSCALL_CATEGORY_END(vdsocall)
 
------ /tmp/kazoo-outputs/category.h END -----
+----- category.h END -----
 
 
------ /tmp/kazoo-outputs/go-syscall-arm64-asm.go START -----
+----- go-syscall-arm64-asm.go START -----
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
@@ -908,10 +908,10 @@ TEXT ·Sys_vmo_create_contiguous(SB),NOSPLIT,$0
 TEXT ·Sys_vmo_create_physical(SB),NOSPLIT,$0
 	JMP runtime·vdsoCall_zx_vmo_create_physical(SB)
 
------ /tmp/kazoo-outputs/go-syscall-arm64-asm.go END -----
+----- go-syscall-arm64-asm.go END -----
 
 
------ /tmp/kazoo-outputs/go-syscall-stubs.go START -----
+----- go-syscall-stubs.go START -----
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
@@ -1642,10 +1642,10 @@ func Sys_vmo_create_contiguous(bti Handle, size uint, alignment_log2 uint32, out
 //go:nosplit
 func Sys_vmo_create_physical(resource Handle, paddr Paddr, size uint, out *Handle) Status
 
------ /tmp/kazoo-outputs/go-syscall-stubs.go END -----
+----- go-syscall-stubs.go END -----
 
 
------ /tmp/kazoo-outputs/go-syscall-x86-asm.go START -----
+----- go-syscall-x86-asm.go START -----
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
@@ -2374,10 +2374,10 @@ TEXT ·Sys_vmo_create_contiguous(SB),NOSPLIT,$0
 TEXT ·Sys_vmo_create_physical(SB),NOSPLIT,$0
 	JMP runtime·vdsoCall_zx_vmo_create_physical(SB)
 
------ /tmp/kazoo-outputs/go-syscall-x86-asm.go END -----
+----- go-syscall-x86-asm.go END -----
 
 
------ /tmp/kazoo-outputs/go-vdso-arm64-calls.s START -----
+----- go-vdso-arm64-calls.s START -----
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
@@ -5546,10 +5546,10 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$0-36
 	MOVD $0, m_vdsoSP(R21)
 	RET
 
------ /tmp/kazoo-outputs/go-vdso-arm64-calls.s END -----
+----- go-vdso-arm64-calls.s END -----
 
 
------ /tmp/kazoo-outputs/go-vdso-keys.go START -----
+----- go-vdso-keys.go START -----
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
@@ -7013,10 +7013,10 @@ var (
 	vdso_zx_vmo_create_contiguous uintptr
 	vdso_zx_vmo_create_physical uintptr
 )
------ /tmp/kazoo-outputs/go-vdso-keys.go END -----
+----- go-vdso-keys.go END -----
 
 
------ /tmp/kazoo-outputs/go-vdso-x86-calls.s START -----
+----- go-vdso-x86-calls.s START -----
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
@@ -11140,10 +11140,10 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
 	MOVQ $0, m_vdsoSP(R14)
 	RET
 
------ /tmp/kazoo-outputs/go-vdso-x86-calls.s END -----
+----- go-vdso-x86-calls.s END -----
 
 
------ /tmp/kazoo-outputs/json.json START -----
+----- json.json START -----
 {
   "syscalls": [
     {
@@ -18275,10 +18275,10 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
     }
   ]
 }
------ /tmp/kazoo-outputs/json.json END -----
+----- json.json END -----
 
 
------ /tmp/kazoo-outputs/kernel-header.h START -----
+----- kernel-header.h START -----
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
@@ -19448,10 +19448,10 @@ KERNEL_SYSCALL(vmo_create_physical, zx_status_t, /* no attributes */, 4,
     size_t size,
     _ZX_SYSCALL_ANNO(acquire_handle("Fuchsia")) user_out_handle* out))
 
------ /tmp/kazoo-outputs/kernel-header.h END -----
+----- kernel-header.h END -----
 
 
------ /tmp/kazoo-outputs/kernel-wrappers.h START -----
+----- kernel-wrappers.h START -----
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
@@ -20746,10 +20746,10 @@ syscall_result wrapper_vmo_create_physical(zx_handle_t resource, zx_paddr_t padd
     });
 }
 }
------ /tmp/kazoo-outputs/kernel-wrappers.h END -----
+----- kernel-wrappers.h END -----
 
 
------ /tmp/kazoo-outputs/private-header.h START -----
+----- private-header.h START -----
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
@@ -21919,10 +21919,10 @@ KERNEL_SYSCALL(vmo_create_physical, zx_status_t, /* no attributes */, 4,
     size_t size,
     _ZX_SYSCALL_ANNO(acquire_handle("Fuchsia")) zx_handle_t* out))
 
------ /tmp/kazoo-outputs/private-header.h END -----
+----- private-header.h END -----
 
 
------ /tmp/kazoo-outputs/public-header.h START -----
+----- public-header.h START -----
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
@@ -22995,10 +22995,10 @@ _ZX_SYSCALL_DECL(vmo_create_physical, zx_status_t, /* no attributes */, 4,
     size_t size,
     _ZX_SYSCALL_ANNO(acquire_handle("Fuchsia")) zx_handle_t* out))
 
------ /tmp/kazoo-outputs/public-header.h END -----
+----- public-header.h END -----
 
 
------ /tmp/kazoo-outputs/rust.rs START -----
+----- rust.rs START -----
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
@@ -24148,10 +24148,10 @@ extern {
         ) -> zx_status_t;
 
 }
------ /tmp/kazoo-outputs/rust.rs END -----
+----- rust.rs END -----
 
 
------ /tmp/kazoo-outputs/syscall-numbers.h START -----
+----- syscall-numbers.h START -----
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
@@ -24325,10 +24325,10 @@ extern {
 #define ZX_SYS_vmo_create_contiguous 164
 #define ZX_SYS_vmo_create_physical 165
 #define ZX_SYS_COUNT 166
------ /tmp/kazoo-outputs/syscall-numbers.h END -----
+----- syscall-numbers.h END -----
 
 
------ /tmp/kazoo-outputs/testonly-public-header.h START -----
+----- testonly-public-header.h START -----
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
@@ -24413,6 +24413,6 @@ _ZX_SYSCALL_DECL(syscall_test_handle_create, zx_status_t, /* no attributes */, 2
     zx_status_t return_value,
     _ZX_SYSCALL_ANNO(acquire_handle("Fuchsia")) zx_handle_t* out))
 
------ /tmp/kazoo-outputs/testonly-public-header.h END -----
+----- testonly-public-header.h END -----
 
 

@@ -254,6 +254,8 @@ if (defined(zx)) {
       rebase_path("../../vdso"),
       "--output-touch",
       outputs[0],
+      "--tmp-base",
+      target_gen_dir,
     ]
   }
 }
