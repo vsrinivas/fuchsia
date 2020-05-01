@@ -27,11 +27,22 @@ pub struct Constant {
     comments: Vec<String>,
 }
 
-// Generates a locally unique identifier for [message].  The unique identifier
-// is generated based on the content, so any two messages identical in content
-// end up having the same identifier here.
-fn gen_id(message: impl AsRef<str>) -> u64 {
+// Generates a locally unique identifier for [message].  The unique identifier is generated stably
+// based on the name and content.  This is not very sophisticated, but for as long as we are
+// rebuilding all messages at compile time, this is good enough.
+//
+// This is needed so that messages that are homoglyphs in English but are not in other languages
+// can coexist:
+//
+// ```
+// <!-- читати -->
+// <string name="action_read">Read</string>
+// <!-- прочитане -->
+// <string name="label_read_messages>Read</string>
+// ```
+fn gen_id(name: impl AsRef<str>, message: impl AsRef<str>) -> u64 {
     let mut hasher = DefaultHasher::new();
+    name.as_ref().hash(&mut hasher);
     message.as_ref().hash(&mut hasher);
     hasher.finish()
 }
@@ -60,7 +71,7 @@ fn split_message(message: impl AsRef<str>) -> Vec<String> {
 pub fn from_dictionary(dict: &parser::Dictionary, library_name: impl AsRef<str>) -> Result<Model> {
     let constants = dict
         .iter()
-        .map(|(name, message)| Constant::new(name, gen_id(message), &split_message(message)))
+        .map(|(name, message)| Constant::new(name, gen_id(name, message), &split_message(message)))
         .collect::<Vec<Constant>>();
     let model = Model::new(library_name, &constants);
     Ok(model)
@@ -193,7 +204,7 @@ library library;
 
 enum MessageIds : uint64 {
     // 'text_string'
-    string_name = 16479498444549137679;
+    string_name = 17128972970596363087;
 };
 "#,
             },
@@ -216,7 +227,7 @@ library library;
 enum MessageIds : uint64 {
     // 'long long long long long long long long long long '
     // 'long long long'
-    string_name = 18059451882864842113;
+    string_name = 18286701466023369706;
 };
 "#,
             },
@@ -239,7 +250,7 @@ library library;
 
 enum MessageIds : uint64 {
     // 'text with an intervening newline'
-    string_name = 7254939001732941199;
+    string_name = 18178872703820217636;
 };
 "#,
             },
@@ -265,9 +276,9 @@ library library;
 
 enum MessageIds : uint64 {
     // 'text'
-    string_name = 9737151508951142383;
+    string_name = 15068421743305203572;
     // 'text'
-    string_name_2 = 9737151508951142383;
+    string_name_2 = 7479881158875375733;
 };
 "#,
             },
@@ -291,7 +302,7 @@ library library;
 enum MessageIds : uint64 {
     // 'љубазни фењерџија чађавог лица хоће да ми покаже ш'
     // 'тос'
-    string_name = 10417041116524418271;
+    string_name = 3117970476734116355;
 };
 "#,
             },
