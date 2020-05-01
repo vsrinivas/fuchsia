@@ -157,15 +157,6 @@ zx_info_thread_t tu_thread_get_info(zx_handle_t thread);
 
 uint32_t tu_thread_get_state(zx_handle_t thread);
 
-// Set the scaling factor for timeouts.
-// The default is 1. A value of 2 waits twice as long, and so on.
-// This is useful when running tests under a debugger or with a
-// massive amount of tracing turned on.
-// If 0 is passed no change is made.
-// Returns the previous value.
-
-int tu_set_timeout_scale(int scale);
-
 const char* tu_exception_to_string(uint32_t exception);
 
 __END_CDECLS
