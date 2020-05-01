@@ -5,13 +5,16 @@
 #include "power_manager.h"
 
 #include "platform_buffer.h"
+#include "platform_trace.h"
 #include "registers.h"
 
 PowerManager::PowerManager(magma::RegisterIo* io) {
   power_state_semaphore_ = magma::PlatformSemaphore::Create();
   // Initialize current set of running cores.
   ReceivedPowerInterrupt(io);
-  last_check_time_ = std::chrono::steady_clock::now();
+  auto now = std::chrono::steady_clock::now();
+  last_check_time_ = now;
+  last_trace_time_ = now;
 }
 
 void PowerManager::EnableCores(magma::RegisterIo* io, uint64_t shader_bitmask) {
@@ -106,16 +109,15 @@ void PowerManager::UpdateGpuActive(bool active) {
 void PowerManager::UpdateGpuActiveLocked(bool active) {
   auto now = std::chrono::steady_clock::now();
   std::chrono::steady_clock::duration total_time = now - last_check_time_;
-  constexpr uint32_t kMemoryMilliseconds = 100;
-  std::chrono::milliseconds memory_duration(kMemoryMilliseconds);
+  constexpr std::chrono::milliseconds kMemoryDuration(100);
 
   if (active) {
     total_active_time_ += std::chrono::duration_cast<std::chrono::nanoseconds>(total_time).count();
   }
 
   // Ignore long periods of inactive time.
-  if (total_time > memory_duration)
-    total_time = memory_duration;
+  if (total_time > kMemoryDuration)
+    total_time = kMemoryDuration;
 
   std::chrono::steady_clock::duration active_time =
       gpu_active_ ? total_time : std::chrono::steady_clock::duration(0);
@@ -135,8 +137,31 @@ void PowerManager::UpdateGpuActiveLocked(bool active) {
   if (!coalesced)
     time_periods_.push_back(TimePeriod{now, total_time, active_time});
 
-  while (!time_periods_.empty() && (now - time_periods_.front().end_time > memory_duration)) {
+  while (!time_periods_.empty() && (now - time_periods_.front().end_time > kMemoryDuration)) {
     time_periods_.pop_front();
+  }
+
+  if ((now - last_trace_time_) > kMemoryDuration) {
+    TRACE_COUNTER("magma", "GPU Utilization", 0, "utilization",
+                  [this]() MAGMA_REQUIRES(active_time_mutex_) {
+                    std::chrono::steady_clock::duration total_time_accumulate(0);
+                    std::chrono::steady_clock::duration active_time_accumulate(0);
+                    for (const auto& period : time_periods_) {
+                      total_time_accumulate += period.total_time;
+                      active_time_accumulate += period.active_time;
+                    }
+                    double utilization_value =
+                        (total_time_accumulate == std::chrono::steady_clock::duration::zero())
+                            ? (0.0)
+                            : (double(std::chrono::duration_cast<std::chrono::microseconds>(
+                                          active_time_accumulate)
+                                          .count()) /
+                               double(std::chrono::duration_cast<std::chrono::microseconds>(
+                                          total_time_accumulate)
+                                          .count()));
+                    return utilization_value;
+                  }());
+    last_trace_time_ = now;
   }
 
   last_check_time_ = now;

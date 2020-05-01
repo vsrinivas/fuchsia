@@ -70,6 +70,7 @@ class PowerManager {
   // |gpu_active_| is true if the GPU is currently processing work.
   MAGMA_GUARDED(active_time_mutex_) bool gpu_active_ = false;
   MAGMA_GUARDED(active_time_mutex_) std::chrono::steady_clock::time_point last_check_time_;
+  MAGMA_GUARDED(active_time_mutex_) std::chrono::steady_clock::time_point last_trace_time_;
 
   MAGMA_GUARDED(active_time_mutex_) uint64_t total_active_time_ = 0u;
 };
