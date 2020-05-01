@@ -9,7 +9,7 @@
 #include <stdint.h>
 #include <wchar.h>
 
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 // stdint.h defines the following types:
 // Fixed width types:
@@ -280,9 +280,7 @@ static_assert(UINTMAX_C(0xffffffffffffffff) == 0xffffffffffffffff, "");
     }                                          \
   } while (0)
 
-static bool check_format_specifiers(void) {
-  BEGIN_TEST;
-
+TEST(IntTypesC, FormatSpecifiers) {
   CHECK_FORMATS(8, int8_t, INT8_MAX);
   CHECK_FORMATS(16, int16_t, INT16_MAX);
   CHECK_FORMATS(32, int32_t, INT32_MAX);
@@ -322,10 +320,4 @@ static bool check_format_specifiers(void) {
   // wchar_t is simply %sl.
 
   // No particular format specifier or macro is defined for sig_atomic_t.
-
-  END_TEST;
 }
-
-BEGIN_TEST_CASE(c_format_specifiers)
-RUN_TEST(check_format_specifiers)
-END_TEST_CASE(c_format_specifiers)
