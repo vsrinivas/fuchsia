@@ -30,20 +30,18 @@ func ToTCPIPAddress(addr netfidl.IpAddress) tcpip.Address {
 }
 
 func ToNetIpAddress(addr tcpip.Address) netfidl.IpAddress {
-	var out netfidl.IpAddress
 	switch l := len(addr); l {
 	case net.IPv4len:
 		var ipv4 netfidl.Ipv4Address
 		copy(ipv4.Addr[:], addr)
-		out.SetIpv4(ipv4)
+		return netfidl.IpAddressWithIpv4(ipv4)
 	case net.IPv6len:
 		var ipv6 netfidl.Ipv6Address
 		copy(ipv6.Addr[:], addr)
-		out.SetIpv6(ipv6)
+		return netfidl.IpAddressWithIpv6(ipv6)
 	default:
 		panic(fmt.Sprintf("invalid IP address length = %d: %x", l, addr))
 	}
-	return out
 }
 
 func ToNetSocketAddress(addr tcpip.FullAddress) netfidl.SocketAddress {

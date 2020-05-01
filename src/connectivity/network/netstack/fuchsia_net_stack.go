@@ -78,7 +78,7 @@ func getInterfaceInfo(nicInfo tcpipstack.NICInfo) stack.InterfaceInfo {
 			Topopath:             topopath,
 			Filepath:             filepath,
 			Mac:                  mac,
-			Mtu:                  uint32(ifs.endpoint.MTU()),
+			Mtu:                  ifs.endpoint.MTU(),
 			AdministrativeStatus: administrativeStatus,
 			PhysicalStatus:       physicalStatus,
 			Features:             features,
