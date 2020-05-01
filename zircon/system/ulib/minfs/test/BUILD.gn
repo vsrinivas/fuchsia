@@ -62,6 +62,7 @@ test("minfs-unit") {
     "unit/superblock_test.cc",
     "unit/transaction_test.cc",
     "unit/truncate_test.cc",
+    "unit/vnode_mapper_test.cc",
     "unit/vnode_test.cc",
   ]
   deps = [

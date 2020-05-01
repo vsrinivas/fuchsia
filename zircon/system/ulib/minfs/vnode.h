@@ -39,6 +39,9 @@
 #include <minfs/transaction_limits.h>
 #include <minfs/writeback.h>
 
+#include "lazy_buffer.h"
+#include "vnode_mapper.h"
+
 namespace minfs {
 
 // Used by fsck
@@ -82,6 +85,7 @@ class VnodeMinfs : public fs::Vnode,
   bool IsUnlinked() const { return inode_.link_count == 0; }
 
   const Inode* GetInode() const { return &inode_; }
+  Inode* GetMutableInode() { return &inode_; }
   ino_t GetIno() const { return ino_; }
 
   ino_t GetKey() const { return ino_; }
@@ -209,6 +213,9 @@ class VnodeMinfs : public fs::Vnode,
 
   // Allocates an indirect block.
   void AllocateIndirect(PendingWork* transaction, blk_t* block);
+
+  // Initializes (if necessary) and returns the indirect file.
+  [[nodiscard]] zx::status<LazyBuffer*> GetIndirectFile();
 
   // TODO(smklein): These operations and members are protected as a historical artifact
   // of "File + Directory + Vnode" being a single class. They should be transitioned to
@@ -455,6 +462,10 @@ class VnodeMinfs : public fs::Vnode,
 
   fs::WatcherContainer watcher_{};
 #endif
+
+  // vnode_mapper.cc explains what this is and the code there is responsible for manipulating it. It
+  // is created on-demand.
+  std::unique_ptr<LazyBuffer> indirect_file_;
 
   ino_t ino_{};
 

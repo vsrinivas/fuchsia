@@ -139,6 +139,17 @@ zx_status_t VnodeMinfs::BlocksShrink(Transaction* transaction, blk_t start) {
   return ZX_OK;
 }
 
+zx::status<LazyBuffer*> VnodeMinfs::GetIndirectFile() {
+  if (!indirect_file_) {
+    zx::status<std::unique_ptr<LazyBuffer>> buffer =
+        LazyBuffer::Create(fs_->bc_.get(), "minfs-indirect-file", kMinfsBlockSize);
+    if (buffer.is_error())
+      return buffer.take_error();
+    indirect_file_ = std::move(buffer).value();
+  }
+  return zx::ok(indirect_file_.get());
+}
+
 #ifdef __Fuchsia__
 
 // Since we cannot yet register the filesystem as a paging service (and cleanly
@@ -730,6 +741,10 @@ VnodeMinfs::~VnodeMinfs() {
     fs_->bc_->GetDevice()->FifoTransaction(&request[0], request_count);
   }
 #endif
+  if (indirect_file_) {
+    zx_status_t status = indirect_file_->Detach(fs_->bc_.get());
+    ZX_DEBUG_ASSERT(status == ZX_OK);
+  }
 }
 
 zx_status_t VnodeMinfs::Open([[maybe_unused]] ValidatedOptions options,

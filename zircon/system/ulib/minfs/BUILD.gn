@@ -51,6 +51,7 @@ zx_library("minfs") {
     "resizeable_array_buffer.cc",
     "transaction_limits.cc",
     "vnode.cc",
+    "vnode_mapper.cc",
     "writeback.cc",
   ]
   if (is_fuchsia) {
