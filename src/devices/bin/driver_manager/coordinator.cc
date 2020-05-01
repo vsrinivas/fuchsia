@@ -1325,6 +1325,8 @@ void Coordinator::Resume(ResumeContext ctx, std::function<void(zx_status_t)> cal
 
   auto schedule_resume = [this, callback](fbl::RefPtr<Device> dev) {
     auto completion = [this, dev, callback](zx_status_t status) {
+      dev->clear_active_resume();
+
       auto& ctx = resume_context();
       if (status != ZX_OK) {
         LOGF(ERROR, "Failed to resume: %s", zx_status_get_string(status));
@@ -1333,7 +1335,6 @@ void Coordinator::Resume(ResumeContext ctx, std::function<void(zx_status_t)> cal
         callback(status);
         return;
       }
-      dev->clear_active_resume();
       std::optional<fbl::RefPtr<ResumeTask>> task = ctx.take_pending_task(*dev);
       if (task.has_value()) {
         ctx.push_completed_task(std::move(task.value()));
