@@ -18,8 +18,10 @@
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 
+#include <optional>
 #include <utility>
 
+#include <blobfs/compression-algorithm.h>
 #include <blobfs/fsck.h>
 #include <blobfs/mkfs.h>
 #include <blobfs/mount.h>
@@ -117,6 +119,19 @@ const struct {
     {"mount", Mount, "mount filesystem"},
 };
 
+std::optional<blobfs::CompressionAlgorithm> ParseAlgorithm(const char* str) {
+  if (!strcmp(str, "UNCOMPRESSED")) {
+    return blobfs::CompressionAlgorithm::UNCOMPRESSED;
+  } else if (!strcmp(str, "ZSTD")) {
+    return blobfs::CompressionAlgorithm::ZSTD;
+  } else if (!strcmp(str, "ZSTD_SEEKABLE")) {
+    return blobfs::CompressionAlgorithm::ZSTD_SEEKABLE;
+  } else if (!strcmp(str, "ZSTD_CHUNKED")) {
+    return blobfs::CompressionAlgorithm::CHUNKED;
+  }
+  return std::nullopt;
+}
+
 int usage() {
   fprintf(
       stderr,
@@ -128,7 +143,10 @@ int usage() {
       "         -j|--journal               Utilize the blobfs journal\n"
       "                                    For fsck, the journal is replayed before verification\n"
       "         -p|--pager                 Enable user pager\n"
-      "         -u|--write-uncompressed    Write blobs uncompressed\n"
+      "         -c|--compression [alg]     compression algorithm to apply to newly stored blobs.\n"
+      "                                    Does not affect any blobs already stored on-disk.\n"
+      "                                    'alg' can be one of ZSTD, ZSTD_SEEKABLE, ZSTD_CHUNKED,\n"
+      "                                    or UNCOMPRESSED.\n"
       "         -h|--help                  Display this message\n"
       "\n"
       "On Fuchsia, blobfs takes the block device argument by handle.\n"
@@ -151,10 +169,11 @@ zx_status_t ProcessArgs(int argc, char** argv, CommandFunction* func,
         {"verbose", no_argument, nullptr, 'v'}, {"readonly", no_argument, nullptr, 'r'},
         {"metrics", no_argument, nullptr, 'm'}, {"journal", no_argument, nullptr, 'j'},
         {"pager", no_argument, nullptr, 'p'},   {"write-uncompressed", no_argument, nullptr, 'u'},
-        {"help", no_argument, nullptr, 'h'},    {nullptr, 0, nullptr, 0},
+        {"compression", required_argument, nullptr, 'c'}, {"help", no_argument, nullptr, 'h'},
+        {nullptr, 0, nullptr, 0},
     };
     int opt_index;
-    int c = getopt_long(argc, argv, "vrmjpuh", opts, &opt_index);
+    int c = getopt_long(argc, argv, "vrmjpuc:h", opts, &opt_index);
 
     if (c < 0) {
       break;
@@ -173,8 +192,18 @@ zx_status_t ProcessArgs(int argc, char** argv, CommandFunction* func,
         options->pager = true;
         break;
       case 'u':
-        options->write_uncompressed = true;
+        // TODO(jfsulliv): Remove legacy parameter.
+        options->write_compression_algorithm = blobfs::CompressionAlgorithm::UNCOMPRESSED;
         break;
+      case 'c': {
+        std::optional<blobfs::CompressionAlgorithm> algorithm = ParseAlgorithm(optarg);
+        if (!algorithm) {
+          fprintf(stderr, "Invalid compression algorithm: %s\n", optarg);
+          return usage();
+        }
+        options->write_compression_algorithm = *algorithm;
+        break;
+      }
       case 'v':
         options->verbose = true;
         break;

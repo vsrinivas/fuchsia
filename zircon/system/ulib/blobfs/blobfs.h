@@ -64,9 +64,6 @@ using storage::UnbufferedOperationsBuilder;
 
 constexpr char kOutgoingDataRoot[] = "root";
 
-constexpr CompressionAlgorithm kBlobfsDefaultCompressionAlgorithm =
-    CompressionAlgorithm::ZSTD_SEEKABLE;
-
 class Blobfs : public TransactionManager, public UserPager, public BlockIteratorProvider {
  public:
   DISALLOW_COPY_ASSIGN_AND_MOVE(Blobfs);
@@ -77,12 +74,6 @@ class Blobfs : public TransactionManager, public UserPager, public BlockIterator
   static zx_status_t Create(async_dispatcher_t* dispatcher, std::unique_ptr<BlockDevice> device,
                             MountOptions* options, zx::resource vmex_resource,
                             std::unique_ptr<Blobfs>* out);
-
-  // Same as Create() but uses a specified compression algorithm.
-  static zx_status_t CreateWithWriteCompressionAlgorithm(
-      async_dispatcher_t* dispatcher, std::unique_ptr<BlockDevice> device, MountOptions* options,
-      CompressionAlgorithm write_compression_algorithm, zx::resource vmex_resource,
-      std::unique_ptr<Blobfs>* out);
 
   static std::unique_ptr<BlockDevice> Destroy(std::unique_ptr<Blobfs> blobfs);
 
@@ -192,7 +183,9 @@ class Blobfs : public TransactionManager, public UserPager, public BlockIterator
 
   bool PagingEnabled() const { return paging_enabled_; }
 
-  bool ShouldCompress() const { return !write_uncompressed_; }
+  bool ShouldCompress() const {
+    return write_compression_algorithm_ != CompressionAlgorithm::UNCOMPRESSED;
+  }
 
   const zx::resource& vmex_resource() const { return vmex_resource_; }
 
@@ -300,10 +293,6 @@ class Blobfs : public TransactionManager, public UserPager, public BlockIterator
 
   storage::Vmoid transfer_vmoid_;
   bool paging_enabled_ = false;
-
-  // Compression is enabled by default. Use the kernel commandline "blobfs.uncompressed"
-  // to disable it.
-  bool write_uncompressed_ = false;
 
   BlobLoader loader_;
 };

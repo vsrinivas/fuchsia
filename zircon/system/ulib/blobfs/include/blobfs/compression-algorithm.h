@@ -20,6 +20,8 @@ enum class CompressionAlgorithm {
   CHUNKED,
 };
 
+const char* CompressionAlgorithmToString(CompressionAlgorithm);
+
 // Returns the compression algorithm used in |inode|.
 CompressionAlgorithm AlgorithmForInode(const Inode& inode);
 

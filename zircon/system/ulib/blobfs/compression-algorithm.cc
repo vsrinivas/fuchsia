@@ -11,6 +11,24 @@
 
 namespace blobfs {
 
+const char* CompressionAlgorithmToString(CompressionAlgorithm algorithm) {
+  switch (algorithm) {
+    case CompressionAlgorithm::LZ4:
+      return "LZ4";
+    case CompressionAlgorithm::ZSTD:
+      return "ZSTD";
+    case CompressionAlgorithm::ZSTD_SEEKABLE:
+      return "ZSTD_SEEKABLE";
+    case CompressionAlgorithm::CHUNKED:
+      return "ZSTD_CHUNKED";
+    case CompressionAlgorithm::UNCOMPRESSED:
+      return "UNCOMPRESSED";
+    default:
+      ZX_ASSERT(false);
+      return "";
+  }
+}
+
 CompressionAlgorithm AlgorithmForInode(const Inode& inode) {
   if (inode.header.flags & kBlobFlagLZ4Compressed) {
     return CompressionAlgorithm::LZ4;

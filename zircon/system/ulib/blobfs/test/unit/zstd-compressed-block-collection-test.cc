@@ -39,7 +39,7 @@ class ZSTDCompressedBlockCollectionTest : public zxtest::Test {
 
     // Write API used to put desired bytes on block device (uncompressed), not exercise compression
     // code paths.
-    options.write_uncompressed = true;
+    options.write_compression_algorithm = CompressionAlgorithm::UNCOMPRESSED;
 
     auto device =
         std::make_unique<block_client::FakeBlockDevice>(kNumFilesystemBlocks, kBlobfsBlockSize);

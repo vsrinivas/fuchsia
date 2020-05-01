@@ -198,7 +198,7 @@ class UncompressedBlobLoaderTest : public BlobLoaderTest {
  public:
   void SetUp() final {
     MountOptions options;
-    options.write_uncompressed = true;
+    options.write_compression_algorithm = CompressionAlgorithm::UNCOMPRESSED;
     Init(options);
   }
 };

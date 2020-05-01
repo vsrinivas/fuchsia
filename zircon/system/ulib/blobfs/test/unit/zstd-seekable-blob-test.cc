@@ -52,14 +52,14 @@ class ZSTDSeekableBlobTest : public zxtest::Test {
  public:
   void SetUp() {
     MountOptions options;
+    options.write_compression_algorithm = CompressionAlgorithm::ZSTD_SEEKABLE;
     auto device =
         std::make_unique<block_client::FakeBlockDevice>(kNumFilesystemBlocks, kBlobfsBlockSize);
     ASSERT_OK(FormatFilesystem(device.get()));
     loop_.StartThread();
 
-    ASSERT_OK(Blobfs::CreateWithWriteCompressionAlgorithm(
-        loop_.dispatcher(), std::move(device), &options, CompressionAlgorithm::ZSTD_SEEKABLE,
-        zx::resource(), &fs_));
+    ASSERT_OK(Blobfs::Create(loop_.dispatcher(), std::move(device), &options, zx::resource(),
+                             &fs_));
     ASSERT_OK(ZSTDSeekableBlobCollection::Create(vmoid_registry(), space_manager(),
                                                  transaction_handler(), node_finder(),
                                                  &compressed_blob_collection_));
@@ -126,6 +126,7 @@ class ZSTDSeekableBlobWrongAlgorithmTest : public ZSTDSeekableBlobTest {
  public:
   void SetUp() {
     MountOptions options;
+    options.write_compression_algorithm = CompressionAlgorithm::ZSTD;
     auto device =
         std::make_unique<block_client::FakeBlockDevice>(kNumFilesystemBlocks, kBlobfsBlockSize);
     ASSERT_OK(FormatFilesystem(device.get()));
@@ -133,9 +134,8 @@ class ZSTDSeekableBlobWrongAlgorithmTest : public ZSTDSeekableBlobTest {
 
     // Construct BlobFS with non-seekable ZSTD algorithm. This should cause errors in the seekable
     // read path.
-    ASSERT_OK(Blobfs::CreateWithWriteCompressionAlgorithm(loop_.dispatcher(), std::move(device),
-                                                          &options, CompressionAlgorithm::ZSTD,
-                                                          zx::resource(), &fs_));
+    ASSERT_OK(Blobfs::Create(loop_.dispatcher(), std::move(device), &options, zx::resource(),
+                             &fs_));
 
     ASSERT_OK(ZSTDSeekableBlobCollection::Create(vmoid_registry(), space_manager(),
                                                  transaction_handler(), node_finder(),

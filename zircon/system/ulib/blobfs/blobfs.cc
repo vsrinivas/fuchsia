@@ -109,16 +109,6 @@ zx_status_t InitializeUnjournalledWriteback(fs::TransactionHandler* transaction_
 zx_status_t Blobfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<BlockDevice> device,
                            MountOptions* options, zx::resource vmex_resource,
                            std::unique_ptr<Blobfs>* out) {
-  return CreateWithWriteCompressionAlgorithm(dispatcher, std::move(device), options,
-                                             kBlobfsDefaultCompressionAlgorithm,
-                                             std::move(vmex_resource), out);
-}
-
-// static.
-zx_status_t Blobfs::CreateWithWriteCompressionAlgorithm(
-    async_dispatcher_t* dispatcher, std::unique_ptr<BlockDevice> device, MountOptions* options,
-    CompressionAlgorithm write_compression_algorithm, zx::resource vmex_resource,
-    std::unique_ptr<Blobfs>* out) {
   TRACE_DURATION("blobfs", "Blobfs::Create");
   char block[kBlobfsBlockSize];
   zx_status_t status = device->ReadBlock(0, kBlobfsBlockSize, block);
@@ -161,7 +151,8 @@ zx_status_t Blobfs::CreateWithWriteCompressionAlgorithm(
   // Construct the Blobfs object, without intensive validation, since it
   // may require upgrades / journal replays to become valid.
   auto fs = std::unique_ptr<Blobfs>(new Blobfs(dispatcher, std::move(device), superblock,
-                                               options->writability, write_compression_algorithm,
+                                               options->writability,
+                                               options->write_compression_algorithm,
                                                std::move(vmex_resource)));
   fs->block_info_ = std::move(block_info);
 
@@ -288,10 +279,8 @@ zx_status_t Blobfs::CreateWithWriteCompressionAlgorithm(
     fs->journal()->schedule_task(fs->journal()->WriteMetadata(operations.TakeOperations()));
   }
 
-  fs->write_uncompressed_ = options->write_uncompressed;
-  if (fs->write_uncompressed_) {
-    FS_TRACE_INFO("blobfs: Compression disabled\n");
-  }
+  FS_TRACE_INFO("blobfs: Using compression %s\n",
+                CompressionAlgorithmToString(fs->write_compression_algorithm_));
 
   auto* fs_ptr = fs.get();
   fs->loader_ = BlobLoader(fs_ptr, fs_ptr, fs->GetNodeFinder(), fs_ptr, fs->Metrics());
