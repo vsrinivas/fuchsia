@@ -19,6 +19,11 @@
             ],
         },
         {
+            runner: "rust_test_runner",
+            from: "realm",
+            to: [ "#driver" ],
+        },
+        {
             protocol: "/svc/fuchsia.pkg.FontResolver",
             from: "#font_resolver",
             to: [ "#driver" ],
@@ -32,13 +37,8 @@
             to: [ "#driver" ],
             subdir: "fonts",
         },
-
-        // These "offer" statements are needed for the RustTestAdapter trampoline
         {
-            protocol: [
-                "/svc/fuchsia.logger.LogSink",
-                "/svc/fuchsia.process.Launcher",
-            ],
+            protocol: [ "/svc/fuchsia.logger.LogSink" ],
             from: "realm",
             to: [ "#driver" ],
         },

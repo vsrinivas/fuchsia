@@ -125,19 +125,7 @@ package("pkg") {
 }
 
 test_package("font_provider_unit_tests") {
-  deps = [
-    ":font_provider_test",
-
-    # TODO: Remove once tests use a test runner
-    "//src/sys/test_adapters/rust",
-  ]
-
-  binaries = [
-    {
-      # TODO: Remove once tests use a test runner
-      name = "rust_test_adapter"
-    },
-  ]
+  deps = [ ":font_provider_test" ]
 
   v2_tests = [
     {
