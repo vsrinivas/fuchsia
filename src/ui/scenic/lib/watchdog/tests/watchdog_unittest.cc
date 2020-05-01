@@ -77,7 +77,7 @@ TEST_F(WatchdogUnittest, TimeoutTest) {
 
 // This checks whether it works correctly if we use different values for
 // |warning_interval| and |timeout| in WatchdogImpl.
-TEST_F(WatchdogUnittest, MultipleTimeoutsAllowed) {
+TEST_F(WatchdogUnittest, DISABLED_MultipleTimeoutsAllowed) {
   const uint64_t kWatchdogWarningInterval = 5ul;
   const uint64_t kWatchdogTimeoutMs = 15ul;
   std::shared_ptr<int> counter_check = std::make_shared<int>(0);
