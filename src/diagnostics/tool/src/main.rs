@@ -33,8 +33,11 @@ use {
     },
 };
 
-static JSON_MONIKER_KEY: &str = "path";
-static JSON_PAYLOAD_KEY: &str = "contents";
+static VERSION_KEY: &str = "version";
+static PATH_KEY: &str = "path";
+static CONTENTS_KEY: &str = "contents";
+static MONIKER_KEY: &str = "moniker";
+static PAYLOAD_KEY: &str = "payload";
 
 #[derive(Debug, StructOpt)]
 struct Options {
@@ -192,9 +195,10 @@ fn filter_json_schema_by_selectors(
     mut value: serde_json::Value,
     selector_vec: &Vec<Arc<Selector>>,
 ) -> Option<serde_json::Value> {
-    let moniker_string_opt = value[JSON_MONIKER_KEY].as_str();
+    let (moniker_key, payload_key) = get_keys_from_schema(&value);
+    let moniker_string_opt = value[moniker_key].as_str();
     let deserialized_hierarchy =
-        RawJsonNodeHierarchySerializer::deserialize(value[JSON_PAYLOAD_KEY].clone());
+        RawJsonNodeHierarchySerializer::deserialize(value[payload_key].clone());
 
     match (moniker_string_opt, deserialized_hierarchy) {
         (Some(moniker_path), Ok(hierarchy)) => {
@@ -218,7 +222,7 @@ fn filter_json_schema_by_selectors(
                         Ok(Some(filtered)) => {
                             let serialized_hierarchy =
                                 RawJsonNodeHierarchySerializer::serialize(filtered);
-                            value[JSON_PAYLOAD_KEY] = serialized_hierarchy;
+                            value[payload_key] = serialized_hierarchy;
                             Some(value)
                         }
                         Ok(None) => {
@@ -227,7 +231,7 @@ fn filter_json_schema_by_selectors(
                             None
                         }
                         Err(e) => {
-                            value[JSON_PAYLOAD_KEY] = serde_json::json!(format!(
+                            value[payload_key] = serde_json::json!(format!(
                                 "Filtering the hierarchy of {}, an error occurred: {:?}",
                                 moniker_path, e
                             ));
@@ -236,7 +240,7 @@ fn filter_json_schema_by_selectors(
                     }
                 }
                 Err(e) => {
-                    value[JSON_PAYLOAD_KEY] = serde_json::json!(format!(
+                    value[payload_key] = serde_json::json!(format!(
                         "Evaulating selectors for {} met an unexpected error condition: {:?}",
                         moniker_path, e
                     ));
@@ -260,7 +264,7 @@ fn filter_json_schema_by_selectors(
                         .expect("We've already verified that the deserialization failed.")
                 ))
             }
-            value[JSON_PAYLOAD_KEY] = serde_json::json!(errorful_report);
+            value[payload_key] = serde_json::json!(errorful_report);
             Some(value)
         }
     }
@@ -292,17 +296,20 @@ fn filter_data_to_lines(
     let diffable_source = match requested_name_opt {
         Some(requested_name) => arr
             .into_iter()
-            .filter(|value| match value[JSON_MONIKER_KEY].as_str() {
-                Some(moniker_str) => {
-                    let moniker = selectors::parse_path_to_moniker(moniker_str)
-                        .expect("Bugreport contained an unparsable path.");
-                    let component_name = moniker
-                        .last()
-                        .expect("Monikers in provided data dumps are required to be non-empty.");
+            .filter(|value| {
+                let (moniker_key, _) = get_keys_from_schema(value);
+                match value[moniker_key].as_str() {
+                    Some(moniker_str) => {
+                        let moniker = selectors::parse_path_to_moniker(moniker_str)
+                            .expect("Bugreport contained an unparsable path.");
+                        let component_name = moniker.last().expect(
+                            "Monikers in provided data dumps are required to be non-empty.",
+                        );
 
-                    requested_name == component_name
+                        requested_name == component_name
+                    }
+                    None => false,
                 }
-                None => false,
             })
             .collect(),
         None => arr,
@@ -357,6 +364,15 @@ fn filter_data_to_lines(
         .collect())
 }
 
+/// Determines the correct keys for extracting component moniker and payload from schema, based
+/// on version.
+fn get_keys_from_schema(value: &serde_json::Value) -> (&'static str, &'static str) {
+    match value.get(VERSION_KEY) {
+        Some(serde_json::Value::Number(_)) => (MONIKER_KEY, PAYLOAD_KEY),
+        _ => (PATH_KEY, CONTENTS_KEY),
+    }
+}
+
 fn generate_selectors<'a>(
     data: &'a serde_json::Value,
     component_name: Option<String>,
@@ -374,12 +390,10 @@ fn generate_selectors<'a>(
     let matching_hierarchies: Vec<MatchedHierarchy> = arr
         .iter()
         .filter_map(|value| {
-            let moniker = selectors::parse_path_to_moniker(
-                value[JSON_MONIKER_KEY].as_str().expect(&format!(
-                    "Bugreport had an entry missing the moniker key: {}",
-                    JSON_MONIKER_KEY
-                )),
-            )
+            let (moniker_key, payload_key) = get_keys_from_schema(value);
+            let moniker = selectors::parse_path_to_moniker(value[moniker_key].as_str().expect(
+                &format!("Bugreport had an entry missing the moniker key: {}", moniker_key),
+            ))
             .expect("Bugreport contained an unparsable path.");
 
             let component_name_matches = component_name.is_none()
@@ -390,7 +404,7 @@ fn generate_selectors<'a>(
 
             if component_name_matches {
                 let hierarchy =
-                    JsonNodeHierarchySerializer::deserialize(value[JSON_PAYLOAD_KEY].to_string())
+                    JsonNodeHierarchySerializer::deserialize(value[payload_key].to_string())
                         .unwrap();
                 Some(MatchedHierarchy { moniker, hierarchy: hierarchy })
             } else {
@@ -737,6 +751,54 @@ realm1/realm2/session5/account_manager.cmx:root/listeners:total_opened";
         );
     }
 
+    #[test]
+    fn v1_filter_data_to_lines_test() {
+        let full_tree_selector = "*/realm2/session5/account_manager.cmx:root/accounts:active
+realm1/realm*/sessio*/account_manager.cmx:root/accounts:total
+realm1/realm2/session5/account_manager.cmx:root/auth_providers:types
+realm1/realm2/session5/account_manager.cmx:root/listeners:active
+realm1/realm2/session5/account_*:root/listeners:events
+realm1/realm2/session5/account_manager.cmx:root/listeners:total_opened";
+
+        setup_and_run_selector_filtering(
+            full_tree_selector,
+            get_v1_json_dump(),
+            get_v1_json_dump(),
+            None,
+        );
+
+        setup_and_run_selector_filtering(
+            full_tree_selector,
+            get_v1_json_dump(),
+            get_v1_json_dump(),
+            Some("account_manager.cmx".to_string()),
+        );
+
+        let single_value_selector =
+            "realm1/realm2/session5/account_manager.cmx:root/accounts:active";
+
+        setup_and_run_selector_filtering(
+            single_value_selector,
+            get_v1_json_dump(),
+            get_v1_single_value_json(),
+            None,
+        );
+
+        setup_and_run_selector_filtering(
+            single_value_selector,
+            get_v1_json_dump(),
+            get_v1_single_value_json(),
+            Some("account_manager.cmx".to_string()),
+        );
+
+        setup_and_run_selector_filtering(
+            single_value_selector,
+            get_v1_json_dump(),
+            get_empty_value_json(),
+            Some("bloop.cmx".to_string()),
+        );
+    }
+
     fn get_legacy_json_dump() -> serde_json::Value {
         serde_json::json!(
             [
@@ -818,6 +880,63 @@ realm1/realm2/session5/account_manager.cmx:root/listeners:total_opened";
                         }
                     },
                     "path": "realm1/realm2/session5/account_manager.cmx"
+                }
+            ]
+        )
+    }
+
+    fn get_v1_json_dump() -> serde_json::Value {
+        serde_json::json!(
+            [
+                {
+                    "data_source":"Inspect",
+                    "metadata":{
+                        "errors":null,
+                        "filename":"fuchsia.inspect.Tree",
+                        "timestamp":0
+                    },
+                    "moniker":"realm1/realm2/session5/account_manager.cmx",
+                    "payload":{
+                        "root": {
+                            "accounts": {
+                                "active": 0,
+                                "total": 0
+                            },
+                            "auth_providers": {
+                                "types": "google"
+                            },
+                            "listeners": {
+                                "active": 1,
+                                "events": 0,
+                                "total_opened": 1
+                            }
+                        }
+                    },
+                    "version":1
+                }
+            ]
+        )
+    }
+
+    fn get_v1_single_value_json() -> serde_json::Value {
+        serde_json::json!(
+            [
+                {
+                    "data_source":"Inspect",
+                    "metadata":{
+                        "errors":null,
+                        "filename":"fuchsia.inspect.Tree",
+                        "timestamp":0
+                    },
+                    "moniker":"realm1/realm2/session5/account_manager.cmx",
+                    "payload":{
+                        "root": {
+                            "accounts": {
+                                "active": 0
+                            }
+                        }
+                    },
+                    "version":1
                 }
             ]
         )
