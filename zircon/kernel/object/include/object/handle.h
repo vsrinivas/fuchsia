@@ -25,56 +25,14 @@ constexpr uint32_t kHandleReservedBits = 2;
 template <typename T>
 class KernelHandle;
 
-// HandleOwner wraps a Handle in a unique_ptr-like object that has single
-// ownership of the Handle and deletes it whenever it falls out of scope.
-class HandleOwner {
- public:
-  HandleOwner() = default;
-  HandleOwner(decltype(nullptr)) : h_(nullptr) {}
-
-  explicit HandleOwner(Handle* h) : h_(h) {}
-
-  HandleOwner(const HandleOwner&) = delete;
-  HandleOwner& operator=(const HandleOwner&) = delete;
-
-  HandleOwner(HandleOwner&& other) : h_(other.release()) {}
-
-  HandleOwner& operator=(HandleOwner&& other) {
-    reset(other.release());
-    return *this;
-  }
-
-  ~HandleOwner() { Destroy(); }
-
-  Handle* operator->() const { return h_; }
-
-  Handle* get() const { return h_; }
-
-  Handle* release() {
-    Handle* h = h_;
-    h_ = nullptr;
-    return h;
-  }
-
-  void reset(Handle* h) {
-    Destroy();
-    h_ = h;
-  }
-
-  void swap(HandleOwner& other) {
-    Handle* h = h_;
-    h_ = other.h_;
-    other.h_ = h;
-  }
-
-  explicit operator bool() const { return h_ != nullptr; }
-
- private:
-  // Defined inline below.
-  inline void Destroy();
-
-  Handle* h_ = nullptr;
+// Callable object for destroying uniquely owned handles.
+struct HandleDestroyer {
+  void operator()(Handle*);
 };
+
+// HandleOwner wraps a Handle in a unique_ptr that has single
+// ownership of the Handle and deletes it whenever it falls out of scope.
+using HandleOwner = ktl::unique_ptr<Handle, HandleDestroyer>;
 
 class HandleTableArena;
 
@@ -151,9 +109,6 @@ class Handle final {
   // against the arena bounds before being cast to a Handle*.
   static uintptr_t IndexToHandle(uint32_t index);
 
-  // Only HandleOwner is allowed to call Delete.
-  friend class HandleOwner;
-
   // process_id_ is atomic because threads from different processes can
   // access it concurrently, while holding different instances of
   // handle_table_lock_.
@@ -197,11 +152,13 @@ class HandleTableArena {
   friend Handle;
 };
 
-// This can't be defined directly in the HandleOwner class definition
+// This can't be defined directly in the HandleDestroyer struct definition
 // because Handle is an incomplete type at that point.
-inline void HandleOwner::Destroy() {
-  if (h_)
-    HandleTableArena::Delete(h_);
+inline void HandleDestroyer::operator()(Handle* handle) {
+  // ktl::unique_ptr only calls its deleter when the pointer is non-null.
+  // Still, we double check.
+  DEBUG_ASSERT(handle != nullptr);
+  HandleTableArena::Delete(handle);
 }
 
 // A minimal wrapper around a Dispatcher which is owned by the kernel.
