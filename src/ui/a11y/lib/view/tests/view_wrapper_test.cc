@@ -19,6 +19,7 @@
 
 #include "src/lib/syslog/cpp/logger.h"
 #include "src/ui/a11y/lib/annotation/annotation_view.h"
+#include "src/ui/a11y/lib/annotation/tests/mocks/mock_annotation_view.h"
 #include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantic_listener.h"
 #include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantic_provider.h"
 #include "src/ui/a11y/lib/util/util.h"
@@ -53,72 +54,6 @@ class MockSemanticTreeServiceFactory : public a11y::SemanticTreeServiceFactory {
   a11y::SemanticTreeService* service_ = nullptr;
 };
 
-class MockAnnotationView : public a11y::AnnotationViewInterface {
- public:
-  MockAnnotationView(ViewPropertiesChangedCallback view_properties_changed_callback,
-                     ViewAttachedCallback view_attached_callback,
-                     ViewDetachedCallback view_detached_callback)
-      : view_properties_changed_callback_(std::move(view_properties_changed_callback)),
-        view_attached_callback_(std::move(view_attached_callback)),
-        view_detached_callback_(std::move(view_detached_callback)) {}
-
-  ~MockAnnotationView() override = default;
-
-  void InitializeView(fuchsia::ui::views::ViewRef client_view_ref) override {
-    initialize_view_called_ = true;
-  }
-
-  // Draws four rectangles corresponding to the top, bottom, left, and right edges the specified
-  // bounding box.
-  void DrawHighlight(const fuchsia::ui::gfx::BoundingBox& bounding_box) override {
-    current_highlight_ = bounding_box;
-  }
-
-  // Hides annotation view contents by detaching the subtree containing the annotations from the
-  // view.
-  void DetachViewContents() override { current_highlight_ = std::nullopt; }
-
-  void SimulateViewPropertyChange() { view_properties_changed_callback_(); }
-  void SimulateViewAttachment() { view_attached_callback_(); }
-  void SimulateViewDetachment() { view_detached_callback_(); }
-
-  bool IsInitialized() { return initialize_view_called_; }
-  const std::optional<fuchsia::ui::gfx::BoundingBox>& GetCurrentHighlight() {
-    return current_highlight_;
-  }
-
- private:
-  ViewPropertiesChangedCallback view_properties_changed_callback_;
-  ViewAttachedCallback view_attached_callback_;
-  ViewDetachedCallback view_detached_callback_;
-
-  bool initialize_view_called_ = false;
-  std::optional<fuchsia::ui::gfx::BoundingBox> current_highlight_;
-};
-
-class MockAnnotationViewFactory : public a11y::AnnotationViewFactoryInterface {
- public:
-  MockAnnotationViewFactory() = default;
-  ~MockAnnotationViewFactory() override = default;
-
-  std::unique_ptr<a11y::AnnotationViewInterface> CreateAndInitAnnotationView(
-      fuchsia::ui::views::ViewRef client_view_ref) override {
-    auto annotation_view = std::make_unique<MockAnnotationView>(
-        std::move(view_properties_changed_callback_), std::move(view_attached_callback_),
-        std::move(view_detached_callback_));
-    annotation_view_ = annotation_view.get();
-
-    annotation_view_->InitializeView(std::move(client_view_ref));
-
-    return annotation_view;
-  }
-
-  MockAnnotationView* GetAnnotationView() { return annotation_view_; }
-
- private:
-  MockAnnotationView* annotation_view_;
-};
-
 class ViewWrapperTest : public gtest::TestLoopFixture {
  public:
   ViewWrapperTest() {}
@@ -133,9 +68,11 @@ class ViewWrapperTest : public gtest::TestLoopFixture {
         std::make_unique<fidl::Binding<fuchsia::accessibility::semantics::SemanticListener>>(
             mock_semantic_listener_.get());
 
+    koid_ = a11y::GetKoid(view_ref_);
+
     fuchsia::accessibility::semantics::SemanticListenerPtr semantic_listener_ptr;
     auto tree_service = semantic_tree_service_factory_->NewService(
-        a11y::GetKoid(view_ref_), std::move(semantic_listener_ptr),
+        koid_, std::move(semantic_listener_ptr),
         context_provider_.context()->outgoing()->debug_dir(), [] {});
     tree_service_ = tree_service.get();
 
@@ -153,7 +90,7 @@ class ViewWrapperTest : public gtest::TestLoopFixture {
     EXPECT_TRUE(semantic_tree_service_factory_->service()->UpdatesEnabled());
 
     // Verify that annotation view is initialized.
-    auto annotation_view_ptr = mock_annotation_view_factory_->GetAnnotationView();
+    auto annotation_view_ptr = mock_annotation_view_factory_->GetAnnotationView(koid_);
     ASSERT_TRUE(annotation_view_ptr);
     EXPECT_TRUE(annotation_view_ptr->IsInitialized());
   }
@@ -186,6 +123,7 @@ class ViewWrapperTest : public gtest::TestLoopFixture {
   a11y::SemanticTreeService* tree_service_;
   fuchsia::accessibility::semantics::SemanticTreePtr tree_ptr_;
   fuchsia::ui::views::ViewRef view_ref_;
+  zx_koid_t koid_;
 };
 
 TEST_F(ViewWrapperTest, HighlightAndClear) {
@@ -197,7 +135,7 @@ TEST_F(ViewWrapperTest, HighlightAndClear) {
   // Highlight node 0.
   view_wrapper_->HighlightNode(0u);
 
-  auto annotation_view_ptr = mock_annotation_view_factory_->GetAnnotationView();
+  auto annotation_view_ptr = mock_annotation_view_factory_->GetAnnotationView(koid_);
   ASSERT_TRUE(annotation_view_ptr);
 
   // Verify that annotation view received bounding_box (defined above) as parameter to
@@ -228,7 +166,7 @@ TEST_F(ViewWrapperTest, ViewPropretiesChanged) {
   // Highlight node 0.
   view_wrapper_->HighlightNode(0u);
 
-  auto annotation_view_ptr = mock_annotation_view_factory_->GetAnnotationView();
+  auto annotation_view_ptr = mock_annotation_view_factory_->GetAnnotationView(koid_);
   ASSERT_TRUE(annotation_view_ptr);
 
   // Verify that annotation view received bounding_box (defined above) as parameter to
@@ -270,7 +208,7 @@ TEST_F(ViewWrapperTest, ViewDetachedAndAttached) {
   // Highlight node 0.
   view_wrapper_->HighlightNode(0u);
 
-  auto annotation_view_ptr = mock_annotation_view_factory_->GetAnnotationView();
+  auto annotation_view_ptr = mock_annotation_view_factory_->GetAnnotationView(koid_);
   ASSERT_TRUE(annotation_view_ptr);
 
   // Simulate view detachment event.

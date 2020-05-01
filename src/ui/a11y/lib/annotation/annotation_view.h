@@ -1,4 +1,3 @@
-
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
@@ -144,31 +143,22 @@ class AnnotationViewFactoryInterface {
   virtual ~AnnotationViewFactoryInterface() = default;
 
   virtual std::unique_ptr<AnnotationViewInterface> CreateAndInitAnnotationView(
-      fuchsia::ui::views::ViewRef client_view_ref) = 0;
-
-  virtual void SetViewPropertiesChangedCallback(
-      AnnotationViewInterface::ViewPropertiesChangedCallback view_properties_changed_callback);
-  virtual void SetViewAttachedCallback(
-      AnnotationViewInterface::ViewAttachedCallback view_attached_callback);
-  virtual void SetViewDetachedCallback(
-      AnnotationViewInterface::ViewDetachedCallback view_detached_callback);
-
- protected:
-  AnnotationViewInterface::ViewPropertiesChangedCallback view_properties_changed_callback_;
-  AnnotationViewInterface::ViewAttachedCallback view_attached_callback_;
-  AnnotationViewInterface::ViewDetachedCallback view_detached_callback_;
+      fuchsia::ui::views::ViewRef client_view_ref, sys::ComponentContext* context,
+      AnnotationViewInterface::ViewPropertiesChangedCallback view_properties_changed_callback,
+      AnnotationViewInterface::ViewAttachedCallback view_attached_callback,
+      AnnotationViewInterface::ViewDetachedCallback view_detached_callback) = 0;
 };
 
 class AnnotationViewFactory : public AnnotationViewFactoryInterface {
  public:
-  AnnotationViewFactory(sys::ComponentContext* context) : context_(context) {}
+  AnnotationViewFactory() = default;
   ~AnnotationViewFactory() override = default;
 
   std::unique_ptr<AnnotationViewInterface> CreateAndInitAnnotationView(
-      fuchsia::ui::views::ViewRef client_view_ref) override;
-
- private:
-  sys::ComponentContext* context_;
+      fuchsia::ui::views::ViewRef client_view_ref, sys::ComponentContext* context,
+      AnnotationViewInterface::ViewPropertiesChangedCallback view_properties_changed_callback,
+      AnnotationViewInterface::ViewAttachedCallback view_attached_callback,
+      AnnotationViewInterface::ViewDetachedCallback view_detached_callback) override;
 };
 
 }  // namespace a11y

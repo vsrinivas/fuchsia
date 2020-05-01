@@ -1,0 +1,61 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#include "src/ui/a11y/lib/annotation/tests/mocks/mock_annotation_view.h"
+
+#include "src/ui/a11y/lib/util/util.h"
+
+namespace accessibility_test {
+
+MockAnnotationView::MockAnnotationView(
+    ViewPropertiesChangedCallback view_properties_changed_callback,
+    ViewAttachedCallback view_attached_callback, ViewDetachedCallback view_detached_callback)
+    : view_properties_changed_callback_(std::move(view_properties_changed_callback)),
+      view_attached_callback_(std::move(view_attached_callback)),
+      view_detached_callback_(std::move(view_detached_callback)) {}
+
+void MockAnnotationView::InitializeView(fuchsia::ui::views::ViewRef client_view_ref) {
+  initialize_view_called_ = true;
+}
+
+void MockAnnotationView::DrawHighlight(const fuchsia::ui::gfx::BoundingBox& bounding_box) {
+  current_highlight_ = bounding_box;
+}
+
+void MockAnnotationView::DetachViewContents() { current_highlight_ = std::nullopt; }
+
+void MockAnnotationView::SimulateViewPropertyChange() { view_properties_changed_callback_(); }
+
+void MockAnnotationView::SimulateViewAttachment() { view_attached_callback_(); }
+
+void MockAnnotationView::SimulateViewDetachment() { view_detached_callback_(); }
+
+bool MockAnnotationView::IsInitialized() { return initialize_view_called_; }
+
+const std::optional<fuchsia::ui::gfx::BoundingBox>& MockAnnotationView::GetCurrentHighlight() {
+  return current_highlight_;
+}
+
+std::unique_ptr<a11y::AnnotationViewInterface>
+MockAnnotationViewFactory::CreateAndInitAnnotationView(
+    fuchsia::ui::views::ViewRef client_view_ref, sys::ComponentContext* context,
+    a11y::AnnotationViewInterface::ViewPropertiesChangedCallback view_properties_changed_callback,
+    a11y::AnnotationViewInterface::ViewAttachedCallback view_attached_callback,
+    a11y::AnnotationViewInterface::ViewDetachedCallback view_detached_callback) {
+  auto annotation_view = std::make_unique<MockAnnotationView>(
+      std::move(view_properties_changed_callback), std::move(view_attached_callback),
+      std::move(view_detached_callback));
+  auto koid = a11y::GetKoid(client_view_ref);
+
+  annotation_view->InitializeView(std::move(client_view_ref));
+
+  annotation_views_[koid] = annotation_view.get();
+  return annotation_view;
+}
+
+MockAnnotationView* MockAnnotationViewFactory::GetAnnotationView(zx_koid_t koid) {
+  return annotation_views_[koid];
+}
+
+}  // namespace accessibility_test

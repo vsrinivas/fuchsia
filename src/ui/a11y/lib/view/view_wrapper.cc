@@ -22,19 +22,26 @@ ViewWrapper::ViewWrapper(
     return;
   }
 
-  annotation_view_factory_->SetViewPropertiesChangedCallback([this]() { DrawHighlight(); });
-  annotation_view_factory_->SetViewAttachedCallback([this]() {
-    if (annotation_state_.has_annotations) {
-      DrawHighlight();
-    }
-  });
-  annotation_view_factory_->SetViewDetachedCallback([this]() {
-    if (annotation_state_.has_annotations) {
-      HideHighlights();
-    }
-  });
-
-  annotation_view_ = annotation_view_factory_->CreateAndInitAnnotationView(ViewRefClone());
+  annotation_view_ = annotation_view_factory_->CreateAndInitAnnotationView(
+      ViewRefClone(), context,
+      // callback invoked when view properties change
+      [this]() {
+        if (annotation_state_.has_annotations) {
+          DrawHighlight();
+        }
+      },
+      // callback invoked when view is attached to scene
+      [this]() {
+        if (annotation_state_.has_annotations) {
+          DrawHighlight();
+        }
+      },
+      // callback invoked when view is detached from scene
+      [this]() {
+        if (annotation_state_.has_annotations) {
+          HideHighlights();
+        }
+      });
 }
 
 ViewWrapper::~ViewWrapper() { semantic_tree_binding_.Unbind(); }
