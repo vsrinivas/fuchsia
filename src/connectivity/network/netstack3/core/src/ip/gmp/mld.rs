@@ -755,14 +755,12 @@ mod tests {
         }
     }
 
-    // TODO(fxbug.dev/49298): It seems like the RNG is always giving us quite
-    // small values, so the test logic for the timers doesn't hold. Ignore the
-    // test for now until we have a way to reliably generate a larger value for
-    // duration.
     #[test]
-    #[ignore]
     fn test_mld_integration_delay_reset_timer() {
         let mut ctx = DummyContext::default();
+        // This seed was carefully chosen to produce a substantial duration
+        // value below.
+        ctx.seed_rng(123456);
         ctx.mld_join_group(DummyLinkDeviceId, GROUP_ADDR);
         assert_eq!(ctx.timers().len(), 1);
         let instant1 = ctx.timers()[0].0.clone();
@@ -770,6 +768,13 @@ mod tests {
         let duration = instant1 - start;
 
         receive_mld_query(&mut ctx, duration, GROUP_ADDR);
+        assert_eq!(ctx.frames().len(), 1);
+        assert_eq!(ctx.timers().len(), 1);
+        let instant2 = ctx.timers()[0].0.clone();
+        // This new timer should be sooner.
+        assert!(instant2 <= instant1);
+        assert!(ctx.trigger_next_timer());
+        assert!(ctx.now() - start <= duration);
         assert_eq!(ctx.frames().len(), 2);
         // The frames are all reports.
         for (_, frame) in ctx.frames() {

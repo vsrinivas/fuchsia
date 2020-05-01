@@ -821,6 +821,11 @@ pub(crate) mod testutil {
             }
         }
 
+        /// Seed the testing RNG with a specific value.
+        pub(crate) fn seed_rng(&mut self, seed: u64) {
+            self.rng = FakeCryptoRng::new_xorshift(seed);
+        }
+
         /// Move the clock forward by the given duration without firing any
         /// timers.
         ///

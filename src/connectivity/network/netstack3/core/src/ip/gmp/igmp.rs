@@ -766,24 +766,21 @@ mod tests {
         ensure_ttl_ihl_rtr(&ctx);
     }
 
-    // TODO(zeling): add this test back once we can have a reliable and
-    // deterministic way to make `duration` longer than 100ms.
     #[test]
-    #[ignore]
     fn test_igmp_integration_delay_reset_timer() {
         let mut ctx = setup_simple_test_environment();
+        // This seed value was chosen to later produce a timer duration > 100ms.
+        ctx.seed_rng(123456);
         ctx.igmp_join_group(DummyLinkDeviceId, GROUP_ADDR);
         assert_eq!(ctx.timers().len(), 1);
         let instant1 = ctx.timers()[0].0.clone();
         let start = ctx.now();
         let duration = Duration::from_micros(((instant1 - start).as_micros() / 2) as u64);
-        if duration.as_millis() < 100 {
-            return;
-        }
+        assert!(duration.as_millis() > 100);
         receive_igmp_query(&mut ctx, duration);
         assert_eq!(ctx.frames().len(), 1);
-        assert_eq!(ctx.timers().len(), 2);
-        let instant2 = ctx.timers()[1].0.clone();
+        assert_eq!(ctx.timers().len(), 1);
+        let instant2 = ctx.timers()[0].0.clone();
         // because of the message, our timer should be reset to a nearer future
         assert!(instant2 <= instant1);
         assert!(ctx.trigger_next_timer());
