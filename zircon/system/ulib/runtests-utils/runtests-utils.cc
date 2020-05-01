@@ -15,6 +15,8 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <zircon/status.h>
+#include <zircon/syscalls.h>
 
 #include <map>
 #include <memory>
@@ -364,8 +366,8 @@ bool RunTests(const fbl::Vector<fbl::String>& test_paths, const fbl::Vector<fbl:
           "RUNNING TEST: %s\n\n",
           output_test_name.c_str());
       fflush(stdout);
-      std::unique_ptr<Result> result = RunTest(argv.data(), output_dir, output_filename,
-                                               output_test_name.c_str(), timeout_msec);
+      std::unique_ptr<Result> result =
+          RunTest(argv.data(), output_dir, output_filename, output_test_name.c_str(), timeout_msec);
       if (result->launch_status != SUCCESS) {
         *failed_count += 1;
       }

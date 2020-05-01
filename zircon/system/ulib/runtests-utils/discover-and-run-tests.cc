@@ -39,15 +39,18 @@ int Usage(const char* name, const fbl::Vector<fbl::String>& default_test_dirs) {
           "    [-w timeout] [-t test names] [-o directory]       \n"
           "    [directory globs ...]                             \n"
           "    [-- [-args -to -the -test -bin]]                  \n"
-          "\n"
-          "The %s [directory globs...] is a list of        \n"
+          "                                                      \n"
+          "The %s [directory globs...] is a list of              \n"
           "globs which match directories containing tests to run,\n"
           "non-recursively. Note that non-directories captured by\n"
           "a glob will be silently ignored.                      \n"
-          "\n"
+          "                                                      \n"
           "After directory globs, `--` can be followed by any    \n"
           "number of arguments to pass to the binaries under     \n"
-          "test.\n",
+          "test.                                                 \n"
+          "                                                      \n"
+          "After test is run, a signature of [runtests][PASSED]  \n"
+          "or [runtests][FAILED] will be printed                 \n",
           name, test_dirs_required ? "required" : "optional");
   if (!test_dirs_required) {
     fprintf(stderr, "If unspecified, the default set of directories is\n");
@@ -338,42 +341,44 @@ int DiscoverAndRunTests(int argc, const char* const* argv,
     }
   }
 
-  // Display any failed tests, and free the test results.
-  if (failed_count) {
-    printf("\nThe following tests failed:\n");
-  }
-  for (const std::unique_ptr<Result>& result : results) {
-    switch (result->launch_status) {
-      case SUCCESS:
-        break;
-      case FAILED_TO_LAUNCH:
-        printf("%s: failed to launch\n", result->name.c_str());
-        break;
-      case FAILED_TO_WAIT:
-        printf("%s: failed to wait\n", result->name.c_str());
-        break;
-      case FAILED_TO_RETURN_CODE:
-        printf("%s: failed to return exit code\n", result->name.c_str());
-        break;
-      case FAILED_NONZERO_RETURN_CODE:
-        printf("%s: returned nonzero: %" PRId64 "\n", result->name.c_str(), result->return_code);
-        break;
-      case TIMED_OUT:
-        printf("%s: timed out\n", result->name.c_str());
-        break;
-      default:
-        printf("%s: unknown result\n", result->name.c_str());
-        break;
+  if (results.is_empty()) {
+    printf("\nWARNING: 0 tests run.\n");
+  } else if (results.size() > 1) {
+    // In the the case of a single test, this information is already present in
+    // the last line of output.
+    if (failed_count) {
+        printf("\nThe following tests failed:\n");
     }
+    for (const std::unique_ptr<Result>& result : results) {
+      switch (result->launch_status) {
+        case SUCCESS:
+          break;
+        case FAILED_TO_LAUNCH:
+          printf("%s: failed to launch\n", result->name.c_str());
+          break;
+        case FAILED_TO_WAIT:
+          printf("%s: failed to wait\n", result->name.c_str());
+          break;
+        case FAILED_TO_RETURN_CODE:
+          printf("%s: failed to return exit code\n", result->name.c_str());
+          break;
+        case FAILED_NONZERO_RETURN_CODE:
+          printf("%s: returned nonzero: %" PRId64 "\n", result->name.c_str(), result->return_code);
+          break;
+        case TIMED_OUT:
+          printf("%s: timed out\n", result->name.c_str());
+          break;
+        default:
+          printf("%s: unknown result\n", result->name.c_str());
+          break;
+      }
+    }
+
+    // TODO(ZX-2051): Include total duration in summary.json.
+    uint64_t time_taken_ms = stopwatch->DurationInMsecs();
+    printf("\nSUMMARY: Ran %lu tests: %d failed (%" PRIu64 ".%03u sec)\n", results.size(),
+           failed_count, time_taken_ms / 1000, (unsigned)(time_taken_ms % 1000));
   }
-
-  // TODO(ZX-2051): Include total duration in summary.json.
-  uint64_t time_taken_ms = stopwatch->DurationInMsecs();
-
-  // Print this last, since some infra recipes will shut down the fuchsia
-  // environment once it appears.
-  printf("\nSUMMARY: Ran %lu tests: %d failed (%" PRIu64 ".%03u sec)\n", results.size(),
-         failed_count, time_taken_ms / 1000, (unsigned)(time_taken_ms % 1000));
 
   return failed_count ? EXIT_FAILURE : EXIT_SUCCESS;
 }

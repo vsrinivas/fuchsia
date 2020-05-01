@@ -34,7 +34,6 @@
 #include <string>
 #include <unordered_map>
 #include <utility>
-#include <system_error>
 
 #include <fbl/auto_call.h>
 #include <fbl/string.h>
@@ -43,8 +42,12 @@
 #include <fs/synchronous_vfs.h>
 #include <loader-service/loader-service.h>
 #include <runtests-utils/fuchsia-run-test.h>
-#include <runtests-utils/service-proxy-dir.h>
 #include <runtests-utils/profile.h>
+#include <runtests-utils/service-proxy-dir.h>
+
+// Signatures to print to indicate failure or success.
+constexpr char kFailureSignature[] = "\n[runtests][FAILURE]";
+constexpr char kSuccessSignature[] = "\n[runtests][SUCCESS]";
 
 namespace fio = ::llcpp::fuchsia::io;
 
@@ -597,14 +600,16 @@ std::unique_ptr<Result> RunTest(const char* argv[], const char* output_dir,
 
   std::unique_ptr<Result> result;
   if (proc_info.return_code == 0) {
-    fprintf(stderr, "PASSED: %s passed\n", test_name);
+    fprintf(stderr, "%s %s passed", kSuccessSignature, test_name);
     result = std::make_unique<Result>(test_name, SUCCESS, 0, duration_milliseconds);
   } else {
-    fprintf(stderr, "FAILURE: %s exited with nonzero status: %" PRId64 "\n", test_name,
+    fprintf(stderr, "%s %s exited with nonzero status: %" PRId64, kFailureSignature, test_name,
             proc_info.return_code);
     result = std::make_unique<Result>(test_name, FAILED_NONZERO_RETURN_CODE, proc_info.return_code,
                                       duration_milliseconds);
   }
+  fprintf(stderr, " (%" PRIu64 ".%03u sec)\n", duration_milliseconds / 1000,
+          (unsigned)(duration_milliseconds % 1000));
 
   if (output_dir == nullptr) {
     return result;
