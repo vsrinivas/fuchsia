@@ -135,6 +135,8 @@ async fn output_device_remove_unplugged() -> Result<()> {
 
 #[fasync::run_singlethreaded]
 #[test]
+// TODO(51204): Fix flake
+#[ignore]
 async fn plug_unplug_durability() -> Result<()> {
     let env = Environment::new()?;
 
