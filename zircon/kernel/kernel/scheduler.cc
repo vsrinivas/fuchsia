@@ -15,7 +15,6 @@
 #include <platform.h>
 #include <stdio.h>
 #include <string.h>
-#include <target.h>
 #include <trace.h>
 #include <zircon/listnode.h>
 #include <zircon/types.h>
@@ -852,9 +851,6 @@ void Scheduler::RescheduleCommon(SchedTime now, EndTraceCallback end_outer_trace
                  Round<uint64_t>(next_thread->scheduler_state_.time_slice_ns_));
 
     TraceContextSwitch(current_thread, next_thread, current_cpu);
-
-    // Blink the optional debug LEDs on the target.
-    target_set_debug_led(0, !next_thread->IsIdle());
 
     SCHED_LTRACEF("current=(%s, flags 0x%#x) next=(%s, flags 0x%#x)\n", current_thread->name_,
                   current_thread->flags_, next_thread->name_, next_thread->flags_);
