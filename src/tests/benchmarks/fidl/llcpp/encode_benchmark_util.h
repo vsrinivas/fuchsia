@@ -33,10 +33,8 @@ struct BenchmarkLinearizeResult {
 };
 
 template <typename FidlType>
-BenchmarkLinearizeResult<FidlType> InlineLinearize(perftest::RepeatState* state, FidlType* value,
+BenchmarkLinearizeResult<FidlType> InlineLinearize(FidlType* value,
                                                    uint8_t buffer[BufferSize<FidlType>]) {
-  if (state != nullptr)
-    state->NextStep();  // Finished allocating buffer for linearization.
   return BenchmarkLinearizeResult<FidlType>{
       .result =
           fidl::LinearizeResult(ZX_OK, nullptr,
@@ -48,11 +46,8 @@ BenchmarkLinearizeResult<FidlType> InlineLinearize(perftest::RepeatState* state,
 }
 
 template <typename FidlType>
-BenchmarkLinearizeResult<FidlType> StackAllocateLinearize(perftest::RepeatState* state,
-                                                          FidlType* value,
+BenchmarkLinearizeResult<FidlType> StackAllocateLinearize(FidlType* value,
                                                           uint8_t buffer[BufferSize<FidlType>]) {
-  if (state != nullptr)
-    state->NextStep();  // Finished allocating buffer for linearization.
   auto linearize_result = fidl::Linearize(value, fidl::BytePart(buffer, BufferSize<FidlType>));
   return BenchmarkLinearizeResult<FidlType>{
       .result = std::move(linearize_result),
@@ -61,12 +56,9 @@ BenchmarkLinearizeResult<FidlType> StackAllocateLinearize(perftest::RepeatState*
 }
 
 template <typename FidlType>
-BenchmarkLinearizeResult<FidlType> HeapAllocateLinearize(perftest::RepeatState* state,
-                                                         FidlType* value) {
+BenchmarkLinearizeResult<FidlType> HeapAllocateLinearize(FidlType* value) {
   constexpr size_t size = MessageSize<FidlType>;
   auto buffer = std::make_unique<uint8_t[]>(size);
-  if (state != nullptr)
-    state->NextStep();  // Finished allocating buffer for linearization.
   auto linearize_result = fidl::Linearize(value, fidl::BytePart(buffer.get(), size));
   return BenchmarkLinearizeResult<FidlType>{
       .result = std::move(linearize_result),
@@ -75,45 +67,48 @@ BenchmarkLinearizeResult<FidlType> HeapAllocateLinearize(perftest::RepeatState* 
 }
 
 template <typename FidlType>
-BenchmarkLinearizeResult<FidlType> Linearize(perftest::RepeatState* state, FidlType* value,
+BenchmarkLinearizeResult<FidlType> Linearize(FidlType* value,
                                              uint8_t buffer[BufferSize<FidlType>]) {
   static_assert(fidl::IsFidlType<FidlType>::value, "FIDL type required");
 
   if constexpr (FidlType::HasPointer) {
     if constexpr (MessageSize<FidlType> <= MaxLinearizeStackSize) {
-      return StackAllocateLinearize(state, value, buffer);
+      return StackAllocateLinearize(value, buffer);
     }
-    return HeapAllocateLinearize(state, value);
+    return HeapAllocateLinearize(value);
   }
-  return InlineLinearize(state, value, buffer);
+  return InlineLinearize(value, buffer);
 }
 
 }  // namespace
 
 namespace llcpp_benchmarks {
 
-template <typename FidlType>
-bool EncodeBenchmark(perftest::RepeatState* state, fidl::aligned<FidlType>* aligned_value) {
+template <typename BuilderFunc>
+bool EncodeBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
+  using FidlType = std::invoke_result_t<BuilderFunc>;
   static_assert(fidl::IsFidlType<FidlType>::value, "FIDL type required");
 
-  state->DeclareStep("AllocateForLinearization/WallTime");
-  state->DeclareStep("LinearizeStep/WallTime");
+  state->DeclareStep("Setup/WallTime");
   state->DeclareStep("Encode/WallTime");
-  state->DeclareStep("Destructors/WallTime");
+  state->DeclareStep("Teardown/WallTime");
 
   uint8_t linearize_buffer[BufferSize<FidlType>];
 
   while (state->KeepRunning()) {
-    auto benchmark_linearize_result = Linearize(state, &aligned_value->value, linearize_buffer);
-    auto& linearize_result = benchmark_linearize_result.result;
-    ZX_ASSERT(linearize_result.status == ZX_OK && linearize_result.error == nullptr);
+    fidl::aligned<FidlType> aligned_value = builder();
 
-    state->NextStep();  // Finished Linearization. Next: Encode.
+    state->NextStep();  // End: Setup. Begin: Encode.
 
-    auto encode_result = fidl::Encode(std::move(linearize_result.message));
-    ZX_ASSERT(encode_result.status == ZX_OK && encode_result.error == nullptr);
+    {
+      auto benchmark_linearize_result = Linearize(&aligned_value.value, linearize_buffer);
+      auto& linearize_result = benchmark_linearize_result.result;
+      ZX_ASSERT(linearize_result.status == ZX_OK && linearize_result.error == nullptr);
+      auto encode_result = fidl::Encode(std::move(linearize_result.message));
+      ZX_ASSERT(encode_result.status == ZX_OK && encode_result.error == nullptr);
+    }
 
-    state->NextStep();  // Next: Destructors called.
+    state->NextStep();  // End: Encode. Begin: Teardown.
   }
 
   return true;

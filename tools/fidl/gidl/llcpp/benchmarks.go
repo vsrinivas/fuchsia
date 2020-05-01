@@ -24,37 +24,30 @@ var benchmarksTmpl = template.Must(template.New("tmpl").Parse(`
 #include "src/tests/benchmarks/fidl/llcpp/encode_benchmark_util.h"
 #include "src/tests/benchmarks/fidl/llcpp/memcpy_benchmark_util.h"
 
-constexpr size_t allocator_buf_size = 65536;
-
 namespace {
 
 {{ range .BuilderBenchmarks }}
-{{ .Type }} Build{{ .Name }}Heap(perftest::RepeatState* state) {
+{{ .Type }} Build{{ .Name }}Heap() {
 	{{ .ValueBuildHeap }}
 	auto obj = {{ .ValueVarHeap }};
-	if (state != nullptr)
-	  state->NextStep();  // Next: Destructors
 	return obj;
 }
-{{ .Type }} Build{{ .Name }}Allocator(perftest::RepeatState* state, fidl::Allocator* allocator) {
+{{ .Type }} Build{{ .Name }}Allocator(fidl::Allocator* allocator) {
 	{{ .ValueBuildAllocator }}
 	auto obj = {{ .ValueVarAllocator }};
-	if (state != nullptr)
-	  state->NextStep();  // Next: Destructors
 	return obj;
 }
-{{ .Type }} Build{{ .Name }}Unowned(perftest::RepeatState* state) {
+{{ .Type }} Build{{ .Name }}Unowned() {
 	{{ .ValueBuildUnowned }}
 	auto obj = std::move({{ .ValueVarUnowned }});
-	if (state != nullptr)
-	  state->NextStep();  // Next: Destructors
 	return obj;
 }
 bool BenchmarkBuilder{{ .Name }}Heap(perftest::RepeatState* state) {
 	return llcpp_benchmarks::BuilderBenchmark(state, Build{{ .Name }}Heap);
 }
 bool BenchmarkBuilder{{ .Name }}Allocator(perftest::RepeatState* state) {
-	return llcpp_benchmarks::BuilderBenchmark<fidl::BufferAllocator<allocator_buf_size>>(state, Build{{ .Name }}Allocator);
+	using AllocatorType = fidl::BufferAllocator<MessageSize<{{ .Type }}>>;
+	return llcpp_benchmarks::BuilderBenchmark<AllocatorType>(state, Build{{ .Name }}Allocator);
 }
 bool BenchmarkBuilder{{ .Name }}Unowned(perftest::RepeatState* state) {
 	return llcpp_benchmarks::BuilderBenchmark(state, Build{{ .Name }}Unowned);
@@ -63,20 +56,17 @@ bool BenchmarkBuilder{{ .Name }}Unowned(perftest::RepeatState* state) {
 
 {{ range .EncodeBenchmarks }}
 bool BenchmarkEncode{{ .Name }}(perftest::RepeatState* state) {
-	fidl::aligned<{{ .Type }}> obj = Build{{ .Name }}Heap(nullptr);
-	return llcpp_benchmarks::EncodeBenchmark(state, &obj);
+	return llcpp_benchmarks::EncodeBenchmark(state, Build{{ .Name }}Heap);
 }
 
 bool BenchmarkMemcpy{{ .Name }}(perftest::RepeatState* state) {
-	fidl::aligned<{{ .Type }}> obj = Build{{ .Name }}Heap(nullptr);
-	return llcpp_benchmarks::MemcpyBenchmark(state, &obj);
+	return llcpp_benchmarks::MemcpyBenchmark(state, Build{{ .Name }}Heap);
 }
 {{ end }}
 
 {{ range .DecodeBenchmarks }}
 bool BenchmarkDecode{{ .Name }}(perftest::RepeatState* state) {
-	fidl::aligned<{{ .Type }}>  obj = Build{{ .Name }}Heap(nullptr);
-	return llcpp_benchmarks::DecodeBenchmark(state, &obj);
+	return llcpp_benchmarks::DecodeBenchmark(state, Build{{ .Name }}Heap);
 }
 {{ end }}
 

@@ -9,13 +9,15 @@
 
 namespace llcpp_benchmarks {
 
-template <typename FidlType>
-bool DecodeBenchmark(perftest::RepeatState* state, fidl::aligned<FidlType>* aligned_value) {
+template <typename BuilderFunc>
+bool DecodeBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
+  using FidlType = std::invoke_result_t<BuilderFunc>;
   static_assert(fidl::IsFidlType<FidlType>::value, "FIDL type required");
 
   // Encode the value.
+  fidl::aligned<FidlType> aligned_value = builder();
   uint8_t linearize_buffer[BufferSize<FidlType>];
-  auto benchmark_linearize_result = Linearize(nullptr, &aligned_value->value, linearize_buffer);
+  auto benchmark_linearize_result = Linearize(&aligned_value.value, linearize_buffer);
   auto& linearize_result = benchmark_linearize_result.result;
   ZX_ASSERT(linearize_result.status == ZX_OK && linearize_result.error == nullptr);
   auto encode_result = fidl::Encode(std::move(linearize_result.message));
@@ -24,21 +26,22 @@ bool DecodeBenchmark(perftest::RepeatState* state, fidl::aligned<FidlType>* alig
 
   state->DeclareStep("Setup/WallTime");
   state->DeclareStep("Decode/WallTime");
-  state->DeclareStep("Destructors/WallTime");
+  state->DeclareStep("Teardown/WallTime");
 
   std::vector<uint8_t> test_data(bytes.size());
   while (state->KeepRunning()) {
-    // TODO(fxb/49815) Move the memcpy out of the main loop.
     memcpy(test_data.data(), bytes.data(), bytes.size());
-    fidl::EncodedMessage<FidlType> message(
-        fidl::BytePart(&test_data[0], test_data.size(), test_data.size()));
 
-    state->NextStep();  // Done with setup. Next: Decode.
+    state->NextStep();  // End: Setup. Begin: Decode.
 
-    auto decode_result = fidl::Decode(std::move(message));
-    ZX_ASSERT(decode_result.status == ZX_OK);
+    {
+      fidl::EncodedMessage<FidlType> message(
+          fidl::BytePart(&test_data[0], test_data.size(), test_data.size()));
+      auto decode_result = fidl::Decode(std::move(message));
+      ZX_ASSERT(decode_result.status == ZX_OK);
+    }
 
-    state->NextStep();  // Next: Destructors called.
+    state->NextStep();  // End: Decode. Begin: Teardown.
   }
   return true;
 }

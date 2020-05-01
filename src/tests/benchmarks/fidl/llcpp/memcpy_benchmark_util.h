@@ -9,12 +9,14 @@
 
 namespace llcpp_benchmarks {
 
-template <typename FidlType>
-bool MemcpyBenchmark(perftest::RepeatState* state, fidl::aligned<FidlType>* aligned_value) {
+template <typename BuilderFunc>
+bool MemcpyBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
+  using FidlType = std::invoke_result_t<BuilderFunc>;
   static_assert(fidl::IsFidlType<FidlType>::value, "FIDL type required");
 
+  fidl::aligned<FidlType> aligned_value = builder();
   uint8_t linearize_buffer[BufferSize<FidlType>];
-  auto benchmark_linearize_result = Linearize(nullptr, &aligned_value->value, linearize_buffer);
+  auto benchmark_linearize_result = Linearize(&aligned_value.value, linearize_buffer);
   auto& linearize_result = benchmark_linearize_result.result;
   ZX_ASSERT(linearize_result.status == ZX_OK && linearize_result.error == nullptr);
   fidl::BytePart bytes = linearize_result.message.Release();

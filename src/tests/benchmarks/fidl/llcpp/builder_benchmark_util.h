@@ -9,11 +9,8 @@ namespace llcpp_benchmarks {
 
 template <typename BuilderFunc>
 bool BuilderBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
-  state->DeclareStep("Build/WallTime");
-  state->DeclareStep("Destructors/WallTime");
-
   while (state->KeepRunning()) {
-    builder(state);
+    builder();
   }
 
   return true;
@@ -21,14 +18,9 @@ bool BuilderBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
 
 template <typename Allocator, typename BuilderFunc>
 bool BuilderBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
-  state->DeclareStep("CreateAllocator/WallTime");
-  state->DeclareStep("Build/WallTime");
-  state->DeclareStep("Destructors/WallTime");
-
   while (state->KeepRunning()) {
     Allocator allocator;
-    state->NextStep();
-    builder(state, &allocator);
+    builder(&allocator);
   }
 
   return true;
