@@ -20,12 +20,16 @@
 #include <ddktl/protocol/hiddevice.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
+#include <hid-parser/item.h>
+#include <hid-parser/parser.h>
+#include <hid-parser/usages.h>
 
 #include "hid-fifo.h"
 #include "hid-instance.h"
-#include "hid-parser.h"
 
 namespace hid_driver {
+
+typedef uint8_t input_report_id_t;
 
 class HidDevice;
 
@@ -59,8 +63,8 @@ class HidDevice : public HidDeviceType,
 
   static void IoQueue(void* cookie, const void* _buf, size_t len, zx_time_t time);
 
-  input_report_size_t GetMaxInputReportSize();
-  input_report_size_t GetReportSizeById(input_report_id_t id, ReportType type);
+  size_t GetMaxInputReportSize();
+  size_t GetReportSizeById(input_report_id_t id, ReportType type);
   BootProtocol GetBootProtocol();
   hid_info_t GetHidInfo() { return info_; }
 
@@ -72,8 +76,7 @@ class HidDevice : public HidDeviceType,
   const uint8_t* GetReportDesc() { return hid_report_desc_.data(); }
   size_t GetNumReports() { return num_reports_; }
 
-  // Needs to be called with an array of size |fuchsia_hardware_input_MAX_REPORT_IDS|.
-  void GetReportIds(uint8_t* report_ids);
+  zx_status_t GetReportIds(size_t report_ids_size, uint8_t* report_ids, size_t* out_size);
 
   const char* GetName();
 
@@ -98,8 +101,8 @@ class HidDevice : public HidDeviceType,
 
   std::vector<uint8_t> hid_report_desc_;
 
+  hid::DeviceDescriptor* parsed_hid_desc_ = nullptr;
   size_t num_reports_ = 0;
-  std::array<hid_report_size_t, kHidMaxReportIds> sizes_;
 
   fbl::Mutex instance_lock_;
   // Unmanaged linked-list because the HidInstances free themselves through DdkRelease.

@@ -26,22 +26,18 @@
 
 namespace hid_driver {
 
-static constexpr input_report_size_t BitsToBytes(input_report_size_t bits) {
-  return static_cast<input_report_size_t>(((bits + 7) / 8));
-}
-
-input_report_size_t HidDevice::GetReportSizeById(input_report_id_t id, ReportType type) {
-  for (size_t i = 0; i < num_reports_; i++) {
+size_t HidDevice::GetReportSizeById(input_report_id_t id, ReportType type) {
+  for (size_t i = 0; i < parsed_hid_desc_->rep_count; i++) {
     // If we have more than one report, get the report with the right id. If we only have
     // one report, then always match that report.
-    if ((sizes_[i].id == id) || (num_reports_ == 1)) {
+    if ((parsed_hid_desc_->report[i].report_id == id) || (parsed_hid_desc_->rep_count == 1)) {
       switch (type) {
         case ReportType::INPUT:
-          return BitsToBytes(sizes_[i].in_size);
+          return parsed_hid_desc_->report[i].input_byte_sz;
         case ReportType::OUTPUT:
-          return BitsToBytes(sizes_[i].out_size);
+          return parsed_hid_desc_->report[i].output_byte_sz;
         case ReportType::FEATURE:
-          return BitsToBytes(sizes_[i].feat_size);
+          return parsed_hid_desc_->report[i].feature_byte_sz;
       }
     }
   }
@@ -71,46 +67,48 @@ void HidDevice::RemoveHidInstanceFromList(HidInstance* instance) {
   }
 }
 
-void HidDevice::GetReportIds(uint8_t* report_ids) {
-  for (size_t i = 0; i < num_reports_; i++) {
-    report_ids[i] = sizes_[i].id;
+zx_status_t HidDevice::GetReportIds(size_t report_ids_size, uint8_t* report_ids, size_t* out_size) {
+  if (report_ids_size < parsed_hid_desc_->rep_count) {
+    *out_size = 0;
+    return ZX_ERR_BUFFER_TOO_SMALL;
   }
+  for (size_t i = 0; i < parsed_hid_desc_->rep_count; i++) {
+    report_ids[i] = parsed_hid_desc_->report[i].report_id;
+  }
+  *out_size = parsed_hid_desc_->rep_count;
+  return ZX_OK;
 }
 
-input_report_size_t HidDevice::GetMaxInputReportSize() {
-  input_report_size_t size = 0;
-  for (size_t i = 0; i < num_reports_; i++) {
-    if (sizes_[i].in_size > size)
-      size = sizes_[i].in_size;
+size_t HidDevice::GetMaxInputReportSize() {
+  size_t size = 0;
+  for (size_t i = 0; i < parsed_hid_desc_->rep_count; i++) {
+    if (parsed_hid_desc_->report[i].input_byte_sz > size)
+      size = parsed_hid_desc_->report[i].input_byte_sz;
   }
-  return BitsToBytes(size);
-}
-
-void hid_reports_set_boot_mode(hid_reports_t* reports) {
-  reports->num_reports = 1;
-  reports->sizes[0].id = 0;
-  reports->sizes[0].in_size = 24;
-  reports->sizes[0].out_size = 0;
-  reports->sizes[0].feat_size = 0;
-  reports->has_rpt_id = false;
+  return size;
 }
 
 zx_status_t HidDevice::ProcessReportDescriptor() {
-  hid_reports_t reports;
-  reports.num_reports = 0;
-  reports.sizes_len = kHidMaxReportIds;
-  reports.sizes = sizes_.data();
-  reports.has_rpt_id = false;
-
-  zx_status_t status =
-      hid_lib_parse_reports(hid_report_desc_.data(), hid_report_desc_.size(), &reports);
-  if (status != ZX_OK) {
-    return status;
+  hid::ParseResult res = hid::ParseReportDescriptor(hid_report_desc_.data(),
+                                                    hid_report_desc_.size(), &parsed_hid_desc_);
+  if (res != hid::ParseResult::kParseOk) {
+    return ZX_ERR_INTERNAL;
   }
 
-  num_reports_ = reports.num_reports;
-  ZX_DEBUG_ASSERT(num_reports_ <= countof(sizes_));
-  return status;
+  size_t num_reports = 0;
+  for (size_t i = 0; i < parsed_hid_desc_->rep_count; i++) {
+    if (parsed_hid_desc_->report[i].input_count != 0) {
+      num_reports++;
+    }
+    if (parsed_hid_desc_->report[i].output_count != 0) {
+      num_reports++;
+    }
+    if (parsed_hid_desc_->report[i].feature_count != 0) {
+      num_reports++;
+    }
+  }
+  num_reports_ = num_reports;
+  return ZX_OK;
 }
 
 void HidDevice::ReleaseReassemblyBuffer() {
@@ -135,7 +133,7 @@ zx_status_t HidDevice::InitReassemblyBuffer() {
   // full speed, we can expect it to deliver up to 64 bytes at a time.  If the
   // maximum HID input report size is only 60 bytes, we should not need a
   // reassembly buffer.
-  input_report_size_t max_report_size = GetMaxInputReportSize();
+  size_t max_report_size = GetMaxInputReportSize();
   rbuf_ = static_cast<uint8_t*>(malloc(max_report_size));
   if (rbuf_ == NULL) {
     return ZX_ERR_NO_MEMORY;
@@ -147,6 +145,9 @@ zx_status_t HidDevice::InitReassemblyBuffer() {
 
 void HidDevice::DdkRelease() {
   ReleaseReassemblyBuffer();
+  if (parsed_hid_desc_) {
+    FreeDeviceDescriptor(parsed_hid_desc_);
+  }
   delete this;
 }
 
@@ -295,7 +296,7 @@ zx_status_t HidDevice::HidDeviceGetDescriptor(uint8_t* out_descriptor_data, size
 zx_status_t HidDevice::HidDeviceGetReport(hid_report_type_t rpt_type, uint8_t rpt_id,
                                           uint8_t* out_report_data, size_t report_count,
                                           size_t* out_report_actual) {
-  input_report_size_t needed = GetReportSizeById(rpt_id, static_cast<ReportType>(rpt_type));
+  size_t needed = GetReportSizeById(rpt_id, static_cast<ReportType>(rpt_type));
   if (needed == 0) {
     return ZX_ERR_NOT_FOUND;
   }
@@ -317,7 +318,7 @@ zx_status_t HidDevice::HidDeviceGetReport(hid_report_type_t rpt_type, uint8_t rp
 
 zx_status_t HidDevice::HidDeviceSetReport(hid_report_type_t rpt_type, uint8_t rpt_id,
                                           const uint8_t* report_data, size_t report_count) {
-  input_report_size_t needed = GetReportSizeById(rpt_id, static_cast<ReportType>(rpt_type));
+  size_t needed = GetReportSizeById(rpt_id, static_cast<ReportType>(rpt_type));
   if (needed < report_count) {
     return ZX_ERR_BUFFER_TOO_SMALL;
   }

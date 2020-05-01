@@ -197,26 +197,33 @@ void HidInstance::GetNumReports(GetNumReportsCompleter::Sync completer) {
 }
 
 void HidInstance::GetReportIds(GetReportIdsCompleter::Sync completer) {
-  uint8_t report_ids[::llcpp::fuchsia::hardware::input::MAX_REPORT_IDS];
-  base_->GetReportIds(report_ids);
+  uint8_t report_ids[::llcpp::fuchsia::hardware::input::MAX_REPORT_IDS] = {};
+  size_t out_size = 0;
+  zx_status_t status = base_->GetReportIds(sizeof(report_ids), report_ids, &out_size);
+  if (status != ZX_OK) {
+    completer.Reply(fidl::VectorView<uint8_t>(nullptr, 0));
+  }
 
-  fidl::VectorView id_view(fidl::unowned_ptr(report_ids), base_->GetNumReports());
-
+  fidl::VectorView id_view(fidl::unowned_ptr(report_ids), out_size);
   completer.Reply(std::move(id_view));
 }
 
 void HidInstance::GetReportSize(ReportType type, uint8_t id,
                                 GetReportSizeCompleter::Sync completer) {
-  input_report_size_t size = base_->GetReportSizeById(id, type);
-  completer.Reply((size == 0) ? ZX_ERR_NOT_FOUND : ZX_OK, size);
+  size_t size = base_->GetReportSizeById(id, type);
+  zx_status_t status = (size == 0) ? ZX_ERR_NOT_FOUND : ZX_OK;
+  if (size > UINT16_MAX) {
+    status = ZX_ERR_INTERNAL;
+  }
+  completer.Reply((size == 0) ? ZX_ERR_NOT_FOUND : ZX_OK, static_cast<uint16_t>(size));
 }
 
 void HidInstance::GetMaxInputReportSize(GetMaxInputReportSizeCompleter::Sync completer) {
-  completer.Reply(base_->GetMaxInputReportSize());
+  completer.Reply(static_cast<uint16_t>(base_->GetMaxInputReportSize()));
 }
 
 void HidInstance::GetReport(ReportType type, uint8_t id, GetReportCompleter::Sync completer) {
-  input_report_size_t needed = base_->GetReportSizeById(id, type);
+  size_t needed = base_->GetReportSizeById(id, type);
   if (needed == 0) {
     completer.Reply(ZX_ERR_NOT_FOUND, fidl::VectorView<uint8_t>(nullptr, 0));
     return;
@@ -233,7 +240,7 @@ void HidInstance::GetReport(ReportType type, uint8_t id, GetReportCompleter::Syn
 
 void HidInstance::SetReport(ReportType type, uint8_t id, ::fidl::VectorView<uint8_t> report,
                             SetReportCompleter::Sync completer) {
-  input_report_size_t needed = base_->GetReportSizeById(id, type);
+  size_t needed = base_->GetReportSizeById(id, type);
   if (needed < report.count()) {
     completer.Reply(ZX_ERR_BUFFER_TOO_SMALL);
     return;

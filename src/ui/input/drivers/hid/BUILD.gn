@@ -16,7 +16,6 @@ driver_module("hid") {
   sources = [
     "hid-fifo.c",
     "hid-instance.cc",
-    "hid-parser-lib.cc",
     "hid.cc",
   ]
   deps = [
@@ -37,7 +36,6 @@ test("hid-test") {
   sources = [
     "hid-fifo.c",
     "hid-instance.cc",
-    "hid-parser-lib.cc",
     "hid-test.cc",
     "hid.cc",
   ]
