@@ -21,16 +21,7 @@ rustc_test("test") {
 
 package("session_manager_integration_tests") {
   testonly = true
-  deps = [
-    ":test",
-    "//src/sys/test_adapters/rust",
-  ]
-
-  binaries = [
-    {
-      name = "rust_test_adapter"
-    },
-  ]
+  deps = [ ":test" ]
 
   tests = [
     {

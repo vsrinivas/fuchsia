@@ -63,15 +63,11 @@ package("session_control_tests") {
     ":bin",
     ":bin_test",
     "//src/session/bin/session_manager:lib",
-    "//src/sys/test_adapters/rust",
     "//third_party/rust_crates:async-trait",
   ]
   binaries = [
     {
       name = "session_control"
-    },
-    {
-      name = "rust_test_adapter"
     },
   ]
   tests = [

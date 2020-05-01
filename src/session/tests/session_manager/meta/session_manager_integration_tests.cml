@@ -1,7 +1,6 @@
 {
     program: {
-        binary: "bin/rust_test_adapter",
-        args: [ "/pkg/test/session_manager_integration_tests" ],
+        binary: "test/session_manager_integration_tests",
     },
     collections: [
         {
@@ -10,14 +9,11 @@
         },
     ],
     use: [
-        { runner: "elf" },
+        { runner: "rust_test_runner" },
         {
             protocol: "/svc/fuchsia.sys2.Realm",
             from: "framework",
         },
-
-        // The last "use" statements are needed for the RustTestAdapter trampoline
-        { protocol: "/svc/fuchsia.process.Launcher" },
         { protocol: "/svc/fuchsia.logger.LogSink" },
     ],
     offer: [
