@@ -12,6 +12,7 @@ rustc_library("quiche") {
   deps = [
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:libc",
+    "//third_party/rust_crates:libm",
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:ring",
   ]
