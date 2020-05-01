@@ -9,12 +9,12 @@ group("test") {
   testonly = true
   deps = [
     ":usb-desc-lib-test",
-    ":usb-request-cpp-test",
+    ":usb-request-test",
     ":usb-wrapper-test",
   ]
 }
 
-test("usb-request-cpp-test") {
+test("usb-request-test") {
   # Dependent manifests unfortunately cannot be marked as `testonly`.
   # TODO(44278): Remove when converting this file to proper GN build idioms.
   if (is_fuchsia) {
@@ -23,8 +23,11 @@ test("usb-request-cpp-test") {
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
-  output_name = "usb-request-cpp-test"
-  sources = [ "request-cpp-test.cc" ]
+  output_name = "usb-request-test"
+  sources = [
+    "request-c-test.cc",
+    "request-cpp-test.cc",
+  ]
   deps = [
     "//sdk/banjo/ddk.protocol.usb",
     "//sdk/banjo/ddk.protocol.usb.function",
@@ -86,8 +89,8 @@ test("usb-desc-lib-test") {
   ]
 }
 
-migrated_manifest("usb-request-cpp-test-manifest") {
-  deps = [ ":usb-request-cpp-test" ]
+migrated_manifest("usb-request-test-manifest") {
+  deps = [ ":usb-request-test" ]
 }
 
 migrated_manifest("usb-wrapper-test-manifest") {
