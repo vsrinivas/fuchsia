@@ -2,19 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_UAPP_AUDIO_WAV_SOURCE_H_
-#define ZIRCON_SYSTEM_UAPP_AUDIO_WAV_SOURCE_H_
-
-#include <zircon/types.h>
+#pragma once
 
 #include <audio-utils/audio-stream.h>
+#include <zircon/types.h>
 
 #include "wav-common.h"
 
 class WAVSource : public WAVCommon, public audio::utils::AudioSource {
  public:
   WAVSource() {}
-  zx_status_t Initialize(const char* filename, uint64_t channels_to_use_bitmask);
+  zx_status_t Initialize(const char* filename);
 
   // AudioSource interface
   zx_status_t GetFormat(AudioStream::Format* out_format) final;
@@ -26,5 +24,3 @@ class WAVSource : public WAVCommon, public audio::utils::AudioSource {
   uint32_t payload_played_ = 0;
   AudioStream::Format audio_format_;
 };
-
-#endif  // ZIRCON_SYSTEM_UAPP_AUDIO_WAV_SOURCE_H_

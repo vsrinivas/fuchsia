@@ -5,14 +5,14 @@
 #include "wav-source.h"
 
 #include <fcntl.h>
-#include <lib/fdio/io.h>
 #include <stdio.h>
+
 #include <zircon/assert.h>
-
-#include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
+#include <fbl/algorithm.h>
+#include <lib/fdio/io.h>
 
-zx_status_t WAVSource::Initialize(const char* filename, uint64_t channels_to_use_bitmask) {
+zx_status_t WAVSource::Initialize(const char* filename) {
   zx_status_t res = WAVCommon::Initialize(filename, InitMode::SOURCE);
   if (res != ZX_OK)
     return res;
@@ -85,7 +85,6 @@ zx_status_t WAVSource::Initialize(const char* filename, uint64_t channels_to_use
 
   audio_format_.frame_rate = wav_info.frame_rate;
   audio_format_.channels = wav_info.channel_count;
-  audio_format_.channels_to_use_bitmask = channels_to_use_bitmask;
 
   // Skip any extra data in the format chunk
   size_t total_wav_hdr_size = wav_info.fmt_chunk_len + offsetof(WAVHeader, format);
