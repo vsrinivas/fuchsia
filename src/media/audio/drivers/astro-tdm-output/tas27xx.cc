@@ -11,6 +11,7 @@
 #include <ddk/protocol/i2c.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
+#include <fbl/auto_call.h>
 
 namespace audio {
 namespace astro {
@@ -41,8 +42,6 @@ int Tas27xx::Thread() {
   zx::time timestamp;
   zx_status_t status;
   uint8_t ltch0, ltch1, ltch2;
-
-  running_.store(true);
 
   while (true) {
     status = irq_.wait(&timestamp);
@@ -179,6 +178,9 @@ zx_status_t Tas27xx::Init(uint32_t rate) {
   // Make it safe to re-init an already running device
   HardwareShutdown();
 
+  // Clean up and shutdown hardware in event of error
+  auto on_error = fbl::MakeAutoCall([this]() { HardwareShutdown(); });
+
   ena_gpio_.Write(1);
   DelayMs(1);
 
@@ -264,15 +266,22 @@ zx_status_t Tas27xx::Init(uint32_t rate) {
   }
 
   // Start the monitoring thread
+  running_.store(true);
   auto thunk = [](void* arg) -> int { return reinterpret_cast<Tas27xx*>(arg)->Thread(); };
   int ret = thrd_create_with_name(&thread_, thunk, this, "tas27xx-thread");
   if (ret != thrd_success) {
-    HardwareShutdown();
+    running_.store(false);
     irq_.destroy();
     return ZX_ERR_NO_RESOURCES;
   }
 
-  return Start();
+  status = Start();
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  on_error.cancel();
+  return ZX_OK;
 }
 
 zx_status_t Tas27xx::ReadReg(uint8_t reg, uint8_t* value) { return i2c_.ReadSync(reg, value, 1); }
