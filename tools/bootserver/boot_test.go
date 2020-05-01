@@ -37,7 +37,7 @@ func TestDownloadImagesToDir(t *testing.T) {
 		Name:   "noArgsImage",
 		Reader: bytes.NewReader([]byte("content of noArgsImage")),
 	})
-	newImgs, closeFunc, err := downloadImagesToDir(tmpDir, imgs)
+	newImgs, closeFunc, err := downloadImagesToDir(context.Background(), tmpDir, imgs)
 	if err != nil {
 		t.Fatalf("failed to download image: %v", err)
 	}
@@ -71,6 +71,9 @@ type mockTftpClient struct {
 	// Expected files that should be written (in order), with the error to
 	// return from the corresponding call to Write().
 	expectedWrites []expectedWrite
+
+	// Expected output from Read().
+	expectedReads []string
 }
 
 type expectedWrite struct {
@@ -82,8 +85,9 @@ type expectedWrite struct {
 }
 
 func (c *mockTftpClient) Read(_ context.Context, _ string) (*bytes.Reader, error) {
-	c.t.Fatal("Unexpected call to mockTftpClient.Read()")
-	panic("notreached")
+	expected := c.expectedReads[0]
+	c.expectedReads = c.expectedReads[1:]
+	return bytes.NewReader([]byte(expected)), nil
 }
 
 func (c *mockTftpClient) RemoteAddr() *net.UDPAddr {
@@ -123,7 +127,7 @@ func validateTransferImages(t *testing.T, imageArgs []string, expectedWrites []e
 	for _, arg := range imageArgs {
 		images = append(images, testImage(arg))
 	}
-	client := mockTftpClient{t, expectedWrites}
+	client := mockTftpClient{t, expectedWrites, []string{}}
 
 	_, err := transferImages(context.Background(), &client, images, nil, nil)
 	if err != nil {
@@ -206,4 +210,40 @@ func TestTransferImagesSkipFirmwareFailure(t *testing.T) {
 			{filename: "<<image>>zirconb.img"},
 		},
 	)
+}
+
+func TestValidateBoard(t *testing.T) {
+	for _, test := range []struct {
+		name         string
+		board        string
+		expectedRead string
+		wantErr      bool
+	}{
+		{
+			name:         "board is valid",
+			board:        "x64",
+			expectedRead: "x64",
+			wantErr:      false,
+		},
+		{
+			name:         "null-terminated board is valid",
+			board:        "x64",
+			expectedRead: "x64\x00",
+			wantErr:      false,
+		},
+		{
+			name:         "board is invalid",
+			board:        "x64",
+			expectedRead: "arm64",
+			wantErr:      true,
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			client := &mockTftpClient{t: t, expectedReads: []string{test.expectedRead}}
+			err := ValidateBoard(context.Background(), client, test.board)
+			if test.wantErr != (err != nil) {
+				t.Errorf("failed to validate board; want err: %v, err: %v", test.wantErr, err)
+			}
+		})
+	}
 }

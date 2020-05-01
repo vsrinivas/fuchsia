@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"os"
 	"path/filepath"
 	"sort"
@@ -20,6 +19,7 @@ import (
 	"time"
 
 	"go.fuchsia.dev/fuchsia/tools/lib/iomisc"
+	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"go.fuchsia.dev/fuchsia/tools/lib/retry"
 	"go.fuchsia.dev/fuchsia/tools/net/netboot"
 	"go.fuchsia.dev/fuchsia/tools/net/tftp"
@@ -30,6 +30,7 @@ import (
 const (
 	// Special image names recognized by fuchsia's netsvc.
 	authorizedKeysNetsvcName = "<<image>>authorized_keys"
+	boardInfoNetsvcName      = "<<image>>board_info"
 	bootloaderNetsvcName     = "<<image>>bootloader.img"
 	cmdlineNetsvcName        = "<<netboot>>cmdline"
 	efiNetsvcName            = "<<image>>efi.img"
@@ -110,7 +111,7 @@ func skipOnTransferError(name string) bool {
 	return strings.HasPrefix(name, firmwareNetsvcPrefix)
 }
 
-func downloadImagesToDir(dir string, imgs []Image) ([]Image, func() error, error) {
+func downloadImagesToDir(ctx context.Context, dir string, imgs []Image) ([]Image, func() error, error) {
 	// Copy each in a goroutine for efficiency's sake.
 	eg := errgroup.Group{}
 	mux := sync.Mutex{}
@@ -121,7 +122,7 @@ func downloadImagesToDir(dir string, imgs []Image) ([]Image, func() error, error
 		}
 		img := img
 		eg.Go(func() error {
-			f, err := downloadAndOpenImage(filepath.Join(dir, img.Name), img)
+			f, err := downloadAndOpenImage(ctx, filepath.Join(dir, img.Name), img)
 			if err != nil {
 				return err
 			}
@@ -149,7 +150,7 @@ func downloadImagesToDir(dir string, imgs []Image) ([]Image, func() error, error
 	return newImgs, func() error { return closeImages(newImgs) }, nil
 }
 
-func downloadAndOpenImage(dest string, img Image) (*os.File, error) {
+func downloadAndOpenImage(ctx context.Context, dest string, img Image) (*os.File, error) {
 	f, ok := img.Reader.(*os.File)
 	if ok {
 		return f, nil
@@ -171,7 +172,7 @@ func downloadAndOpenImage(dest string, img Image) (*os.File, error) {
 	defer ticker.Stop()
 	go func() {
 		for range ticker.C {
-			log.Printf("transferring %s...\n", filepath.Base(dest))
+			logger.Infof(ctx, "transferring %s...\n", filepath.Base(dest))
 		}
 	}()
 
@@ -209,7 +210,7 @@ func transferImages(ctx context.Context, t tftp.Client, imgs []Image, cmdlineArg
 		return false, err
 	}
 	defer os.RemoveAll(workdir)
-	imgs, closeFunc, err := downloadImagesToDir(workdir, imgs)
+	imgs, closeFunc, err := downloadImagesToDir(ctx, workdir, imgs)
 	if err != nil {
 		return false, err
 	}
@@ -268,6 +269,50 @@ func transferImages(ctx context.Context, t tftp.Client, imgs []Image, cmdlineArg
 	return hasRAMKernel, err
 }
 
+// ValidateBoard reads the board info from the target and validates that it matches boardName.
+func ValidateBoard(ctx context.Context, t tftp.Client, boardName string) error {
+	var r *bytes.Reader
+	var err error
+	// Attempt to read a file. If the server tells us we need to wait, then try
+	// again as long as it keeps telling us this. ErrShouldWait implies the server
+	// is still responding and will eventually be able to handle our request.
+	logger.Infof(ctx, "attempting to read %s...\n", boardInfoNetsvcName)
+	for {
+		if ctx.Err() != nil {
+			return nil
+		}
+		r, err = t.Read(ctx, boardInfoNetsvcName)
+		switch err {
+		case nil:
+		case tftp.ErrShouldWait:
+			// The target is busy, so let's sleep for a bit before
+			// trying again, otherwise we'll be wasting cycles and
+			// printing too often.
+			logger.Infof(ctx, "target is busy, retrying in one second\n")
+			time.Sleep(time.Second)
+			continue
+		default:
+		}
+		break
+	}
+	if err != nil {
+		return fmt.Errorf("Unable to read the board info from [%s]: %w", boardInfoNetsvcName, err)
+	}
+	buf := make([]byte, r.Size())
+	if _, err = r.Read(buf); err != nil {
+		return fmt.Errorf("Unable to read the board info from [%s]: %w", boardInfoNetsvcName, err)
+	}
+	// Get the bytes before the first null byte.
+	if index := bytes.IndexAny(buf, "\x00"); index >= 0 {
+		buf = buf[:index]
+	}
+	targetBoardName := string(buf)
+	if targetBoardName != boardName {
+		return fmt.Errorf("Expected target to be [%s], but found target is [%s]", boardName, targetBoardName)
+	}
+	return nil
+}
+
 // Boot prepares and boots a device at the given IP address.
 func Boot(ctx context.Context, t tftp.Client, imgs []Image, cmdlineArgs []string, signers []ssh.Signer) error {
 	hasRAMKernel, err := transferImages(ctx, t, imgs, cmdlineArgs, signers)
@@ -316,7 +361,7 @@ func transfer(ctx context.Context, t tftp.Client, files []*netsvcFile) error {
 			// Attempt to send a file. If the server tells us we need to wait, then try
 			// again as long as it keeps telling us this. ErrShouldWait implies the server
 			// is still responding and will eventually be able to handle our request.
-			log.Printf("attempting to send %s (%d)...\n", f.name, f.size)
+			logger.Infof(ctx, "attempting to send %s (%d)...\n", f.name, f.size)
 			for {
 				if ctx.Err() != nil {
 					return nil
@@ -328,20 +373,20 @@ func transfer(ctx context.Context, t tftp.Client, files []*netsvcFile) error {
 					// The target is busy, so let's sleep for a bit before
 					// trying again, otherwise we'll be wasting cycles and
 					// printing too often.
-					log.Printf("target is busy, retrying in one second\n")
+					logger.Infof(ctx, "target is busy, retrying in one second\n")
 					time.Sleep(time.Second)
 					continue
 				default:
 					if skipOnTransferError(f.name) {
-						log.Printf("failed to send %s; skipping and continuing: %v\n", f.name, err)
+						logger.Infof(ctx, "failed to send %s; skipping and continuing: %v\n", f.name, err)
 					} else {
-						log.Printf("failed to send %s; starting from the top: %v\n", f.name, err)
+						logger.Infof(ctx, "failed to send %s; starting from the top: %v\n", f.name, err)
 						return err
 					}
 				}
 				break
 			}
-			log.Printf("done\n")
+			logger.Infof(ctx, "done\n")
 		}
 		return nil
 	}, nil)

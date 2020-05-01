@@ -9,12 +9,12 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"log"
 	"net"
 	"os"
 	"strings"
 
 	"go.fuchsia.dev/fuchsia/tools/bootserver/lib"
+	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"go.fuchsia.dev/fuchsia/tools/net/netutil"
 	"go.fuchsia.dev/fuchsia/tools/net/tftp"
 )
@@ -90,13 +90,14 @@ func init() {
 	flag.StringVar(&imageManifest, "images", "", "use an image manifest to pave")
 	flag.Var(&mode, "mode", "bootserver modes: either pave, netboot, or pave-zedboot")
 
+	flag.StringVar(&boardName, "board_name", "", "name of the board files are meant for")
+
 	//  TODO(fxbug.dev/38517): Implement the following unsupported flags.
 	flag.BoolVar(&bootOnce, "1", false, "only boot once, then exit")
 	flag.StringVar(&bootIpv6, "a", "", "only boot device with this IPv6 address")
 	flag.IntVar(&tftpBlockSize, "b", defaultTftpBlockSize, "tftp block size")
 	flag.IntVar(&packetInterval, "i", defaultMicrosecBetweenPackets, "number of microseconds between packets; ignored with --tftp")
 	flag.IntVar(&windowSize, "w", defaultTftpWindowSize, "tftp window size, ignored with --netboot")
-	flag.StringVar(&boardName, "board_name", "", "name of the board files are meant for")
 	flag.StringVar(&authorizedKeys, "authorized-keys", "", "use the supplied file as an authorized_keys file")
 	flag.BoolVar(&failFast, "fail-fast", false, "exit on first error")
 	// We currently always default to tftp
@@ -281,6 +282,12 @@ func connectAndBoot(ctx context.Context, nodename string, imgs []bootserver.Imag
 		return err
 	}
 
+	if boardName != "" {
+		if err := bootserver.ValidateBoard(ctx, client, boardName); err != nil {
+			return err
+		}
+	}
+
 	// TODO(fxbug.dev/38517): Create ssh signers if an authorized key file was provided along with the image manifest.
 	return bootserver.Boot(ctx, client, imgs, cmdlineArgs, nil)
 }
@@ -310,6 +317,10 @@ func execute(ctx context.Context, cmdlineArgs []string) error {
 		firmware = firmware[1:]
 	}
 
+	if boardName != "" {
+		logger.Infof(ctx, "Board name set to [%s]", boardName)
+	}
+
 	imgs, closeFunc, err := getImages(ctx)
 	if err != nil {
 		return err
@@ -329,7 +340,8 @@ func execute(ctx context.Context, cmdlineArgs []string) error {
 func main() {
 	flag.Parse()
 
-	if err := execute(context.Background(), flag.Args()); err != nil {
-		log.Fatal(err)
+	ctx := context.Background()
+	if err := execute(ctx, flag.Args()); err != nil {
+		logger.Fatalf(ctx, err.Error())
 	}
 }
