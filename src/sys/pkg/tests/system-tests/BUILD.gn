@@ -6,6 +6,7 @@ import("//build/config/fuchsia/zircon.gni")
 import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 import("//build/host.gni")
+import("//build/images/vbmeta.gni")
 import("//build/testing/environments.gni")
 import("//build/testing/host_test_data.gni")
 import("//src/sys/pkg/tests/system-tests/system-tests.gni")
@@ -17,6 +18,12 @@ if (is_host) {
       "//prebuilt/tools/artifacts/artifacts",
       "//prebuilt/tools/lkgb/lkgb",
     ]
+    if (use_vbmeta) {
+      sources += [
+        avb_atx_metadata,
+        avb_key,
+      ]
+    }
     outputs = [ "$root_out_dir/test_data/system-tests/{{source_file_part}}" ]
     public_deps = [ "//tools/net/dev_finder:host($host_toolchain)" ]
   }
