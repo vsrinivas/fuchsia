@@ -6,7 +6,7 @@ use {
     crate::{
         cache::{BlobFetcher, CacheError, MerkleForError, PackageCache, ToResolveStatus as _},
         font_package_manager::FontPackageManager,
-        queue,
+        inspect_util, queue,
         repository_manager::RepositoryManager,
         repository_manager::{GetPackageError, GetPackageHashError},
         rewrite_manager::RewriteManager,
@@ -21,6 +21,7 @@ use {
     },
     fidl_fuchsia_pkg_ext::BlobId,
     fuchsia_cobalt::CobaltSender,
+    fuchsia_inspect as inspect,
     fuchsia_pkg::PackagePath,
     fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn},
     fuchsia_trace as trace,
@@ -35,6 +36,27 @@ use {
 
 pub type PackageFetcher = queue::WorkSender<PkgUrl, (), Result<BlobId, Status>>;
 
+pub struct ResolverServiceInspectState {
+    _node: inspect::Node,
+
+    /// How many times the resolver service has fallen back to the
+    /// cache package set due to a remote repository returning NOT_FOUND.
+    /// TODO(50764): remove this stat when we remove this cache fallback behavior.
+    cache_fallbacks_due_to_not_found: inspect_util::Counter,
+}
+
+impl ResolverServiceInspectState {
+    pub fn new(node: inspect::Node) -> Self {
+        Self {
+            cache_fallbacks_due_to_not_found: inspect_util::Counter::new(
+                &node,
+                "cache_fallbacks_due_to_not_found",
+            ),
+            _node: node,
+        }
+    }
+}
+
 pub fn make_package_fetch_queue(
     cache: PackageCache,
     system_cache_list: Arc<CachePackages>,
@@ -42,6 +64,7 @@ pub fn make_package_fetch_queue(
     rewriter: Arc<RwLock<RewriteManager>>,
     blob_fetcher: BlobFetcher,
     max_concurrency: usize,
+    inspect: Arc<ResolverServiceInspectState>,
 ) -> (impl Future<Output = ()>, PackageFetcher) {
     let (package_fetch_queue, package_fetcher) =
         queue::work_queue(max_concurrency, move |url: PkgUrl, _: ()| {
@@ -50,6 +73,7 @@ pub fn make_package_fetch_queue(
             let repo_manager = Arc::clone(&repo_manager);
             let rewriter = Arc::clone(&rewriter);
             let blob_fetcher = blob_fetcher.clone();
+            let inspect = Arc::clone(&inspect);
             async move {
                 Ok(package_from_repo_or_cache(
                     &repo_manager,
@@ -58,6 +82,7 @@ pub fn make_package_fetch_queue(
                     &url,
                     cache,
                     blob_fetcher,
+                    &inspect,
                 )
                 .await?)
             }
@@ -73,6 +98,7 @@ pub async fn run_resolver_service(
     system_cache_list: Arc<CachePackages>,
     stream: PackageResolverRequestStream,
     cobalt_sender: CobaltSender,
+    inspect: Arc<ResolverServiceInspectState>,
 ) -> Result<(), Error> {
     stream
         .map_err(anyhow::Error::new)
@@ -120,6 +146,7 @@ pub async fn run_resolver_service(
                             &repo_manager,
                             &system_cache_list,
                             &package_url.url,
+                            &inspect,
                         )
                         .await
                         {
@@ -150,11 +177,37 @@ fn rewrite_url(rewriter: &RwLock<RewriteManager>, url: &PkgUrl) -> Result<PkgUrl
     Ok(rewritten_url)
 }
 
+fn missing_cache_package_disk_fallback(
+    rewritten_url: &PkgUrl,
+    pkg_url: &PkgUrl,
+    system_cache_list: &CachePackages,
+    inspect_state: &ResolverServiceInspectState,
+) -> Option<BlobId> {
+    let possible_fallback = lookup_from_system_cache(&pkg_url, system_cache_list);
+
+    if possible_fallback.is_some() {
+        fx_log_warn!(
+            "Did not find {} at URL {}, but did find a matching package name in the \
+            built-in cache packages set, so falling back to it. Your package \
+            repository may not be configured to serve the package correctly, or may \
+            be overriding the domain for the repository which would normally serve \
+            this package. This will be an error in a future version of Fuchsia, see \
+            fxbug.dev/50748.",
+            rewritten_url.name().unwrap_or("unknown package"),
+            rewritten_url
+        );
+        inspect_state.cache_fallbacks_due_to_not_found.increment();
+    }
+
+    possible_fallback
+}
+
 async fn hash_from_repo_or_cache(
     repo_manager: &RwLock<RepositoryManager>,
     rewriter: &RwLock<RewriteManager>,
     system_cache_list: &CachePackages,
     pkg_url: &PkgUrl,
+    inspect_state: &ResolverServiceInspectState,
 ) -> Result<BlobId, Status> {
     let rewritten_url = rewrite_url(rewriter, &pkg_url)?;
     // The RwLock created by `.read()` must not exist across the `.await` (to e.g. prevent
@@ -165,8 +218,15 @@ async fn hash_from_repo_or_cache(
         Ok(b) => Ok(b),
         Err(e @ GetPackageHashError::MerkleFor(MerkleForError::NotFound)) => {
             // If we can get metadata but the repo doesn't know about the package,
-            // it shouldn't be in the cache, and we wouldn't trust it if it was.
-            Err(e)
+            // it shouldn't be in the cache, BUT some SDK customers currently rely on this behavior.
+            // TODO(50764): remove this behavior.
+            missing_cache_package_disk_fallback(
+                &rewritten_url,
+                pkg_url,
+                system_cache_list,
+                inspect_state,
+            )
+            .ok_or(e)
         }
         Err(e) => {
             // If we couldn't get TUF metadata, we might not have networking. Check in
@@ -202,6 +262,7 @@ async fn package_from_repo_or_cache(
     pkg_url: &PkgUrl,
     cache: PackageCache,
     blob_fetcher: BlobFetcher,
+    inspect_state: &ResolverServiceInspectState,
 ) -> Result<BlobId, Status> {
     let rewritten_url = rewrite_url(rewriter, &pkg_url)?;
     // The RwLock created by `.read()` must not exist across the `.await` (to e.g. prevent
@@ -212,8 +273,14 @@ async fn package_from_repo_or_cache(
         Ok(b) => Ok(b),
         Err(e @ GetPackageError::Cache(CacheError::MerkleFor(MerkleForError::NotFound))) => {
             // If we can get metadata but the repo doesn't know about the package,
-            // it shouldn't be in the cache, and we wouldn't trust it if it was.
-            Err(e)
+            // it shouldn't be in the cache, BUT some SDK customers currently rely on this behavior.
+            missing_cache_package_disk_fallback(
+                &rewritten_url,
+                pkg_url,
+                system_cache_list,
+                inspect_state,
+            )
+            .ok_or(e)
         }
         Err(e) => {
             // If we couldn't get TUF metadata, we might not have networking. Check in
@@ -287,6 +354,7 @@ async fn get_hash(
     repo_manager: &RwLock<RepositoryManager>,
     system_cache_list: &CachePackages,
     url: &str,
+    inspect_state: &ResolverServiceInspectState,
 ) -> Result<BlobId, Status> {
     let pkg_url = match PkgUrl::parse(url) {
         Ok(url) => url,
@@ -295,8 +363,14 @@ async fn get_hash(
         }
     };
     trace::duration_begin!("app", "get-hash", "url" => pkg_url.to_string().as_str());
-    let hash_or_status =
-        hash_from_repo_or_cache(&repo_manager, &rewriter, &system_cache_list, &pkg_url).await;
+    let hash_or_status = hash_from_repo_or_cache(
+        &repo_manager,
+        &rewriter,
+        &system_cache_list,
+        &pkg_url,
+        inspect_state,
+    )
+    .await;
 
     trace::duration_end!("app", "get-hash", "status" => hash_or_status.err().unwrap_or(Status::OK).to_string().as_str());
     hash_or_status

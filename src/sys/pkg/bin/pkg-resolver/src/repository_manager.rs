@@ -53,6 +53,7 @@ struct RepositoryManagerInspectState {
 #[derive(Debug)]
 pub struct Stats {
     node: inspect::Node,
+
     mirrors_node: inspect::Node,
     mirrors: HashMap<String, Arc<MirrorStats>>,
 }

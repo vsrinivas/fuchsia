@@ -49,6 +49,9 @@ async fn test_initial_inspect_state() {
                 stats: {
                     mirrors: {}
                 }
+            },
+            resolver_service: {
+                cache_fallbacks_due_to_not_found: 0u64,
             }
         }
     );
@@ -95,6 +98,9 @@ async fn test_adding_repo_updates_inspect_state() {
                 stats: {
                     mirrors: {}
                 }
+            },
+            resolver_service: {
+                cache_fallbacks_due_to_not_found: 0u64,
             }
         }
     );
@@ -183,6 +189,9 @@ async fn test_resolving_package_updates_inspect_state() {
                         },
                     },
                 },
+            },
+            resolver_service: {
+                cache_fallbacks_due_to_not_found: 0u64,
             }
         }
     );

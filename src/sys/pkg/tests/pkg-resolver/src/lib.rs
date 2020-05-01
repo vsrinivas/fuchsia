@@ -675,7 +675,7 @@ impl<P: PkgFs> TestEnv<P> {
         )
         .expect("glob pattern successfully compiles");
         let mut paths = paths.collect::<Result<Vec<_>, _>>().unwrap();
-        assert_eq!(paths.len(), 1, "{:?}", paths);
+        assert_eq!(paths.len(), 1, "found 0 or >1 hub paths : {:?}", paths);
         let path = paths.pop().unwrap();
 
         let (tree, server_end) =

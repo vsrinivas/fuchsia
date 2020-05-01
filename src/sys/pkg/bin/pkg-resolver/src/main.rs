@@ -47,6 +47,7 @@ use crate::{
     ota_channel::ChannelInspectState,
     repository_manager::{RepositoryManager, RepositoryManagerBuilder},
     repository_service::RepositoryService,
+    resolver_service::ResolverServiceInspectState,
     rewrite_manager::{RewriteManager, RewriteManagerBuilder},
     rewrite_service::RewriteService,
 };
@@ -135,6 +136,9 @@ async fn main_inner_async(startup_time: Instant) -> Result<(), Error> {
     );
     futures.push(blob_fetch_queue.boxed_local());
 
+    let resolver_service_inspect_state = Arc::new(ResolverServiceInspectState::new(
+        inspector.root().create_child("resolver_service"),
+    ));
     let (package_fetch_queue, package_fetcher) = resolver_service::make_package_fetch_queue(
         cache.clone(),
         Arc::clone(&system_cache_list),
@@ -142,6 +146,7 @@ async fn main_inner_async(startup_time: Instant) -> Result<(), Error> {
         Arc::clone(&rewrite_manager),
         blob_fetcher.clone(),
         MAX_CONCURRENT_PACKAGE_FETCHES,
+        Arc::clone(&resolver_service_inspect_state),
     );
     futures.push(package_fetch_queue.boxed_local());
     let package_fetcher = Arc::new(package_fetcher);
@@ -153,6 +158,7 @@ async fn main_inner_async(startup_time: Instant) -> Result<(), Error> {
         let package_fetcher = Arc::clone(&package_fetcher);
         let system_cache_list = Arc::clone(&system_cache_list);
         let cobalt_sender = cobalt_sender.clone();
+        let resolver_service_inspect = Arc::clone(&resolver_service_inspect_state);
         move |stream| {
             fasync::spawn_local(
                 resolver_service::run_resolver_service(
@@ -163,6 +169,7 @@ async fn main_inner_async(startup_time: Instant) -> Result<(), Error> {
                     Arc::clone(&system_cache_list),
                     stream,
                     cobalt_sender.clone(),
+                    Arc::clone(&resolver_service_inspect),
                 )
                 .unwrap_or_else(|e| fx_log_err!("failed to spawn_local {:#}", anyhow!(e))),
             )

@@ -342,7 +342,7 @@ async fn retries() {
         hierarchy,
         root: contains {
             repository_manager: contains {
-                stats: {
+                stats: contains {
                     mirrors: {
                         var repo_blob_url: {
                             network_blips: 2u64,
@@ -414,7 +414,7 @@ async fn handles_429_responses() {
         hierarchy,
         root: contains {
             repository_manager: contains {
-                stats: {
+                stats: contains {
                     mirrors: {
                         var repo_blob_url: {
                             network_blips: 0u64,
