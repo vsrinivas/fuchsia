@@ -23,6 +23,7 @@ use {
     },
     parking_lot::RwLock,
     std::pin::Pin,
+    std::sync::Arc,
     std::{net::IpAddr, rc::Rc},
     trust_dns_proto::rr::{domain::IntoName, TryParseIp},
     trust_dns_resolver::{
@@ -352,6 +353,7 @@ async fn run_name_lookup<T: ResolverLookup>(
 /// Serves `stream` and forwards received configurations to `sink`.
 async fn run_lookup_admin(
     sink: mpsc::Sender<dns::policy::ServerConfig>,
+    policy_state: Arc<dns::policy::ServerConfigState>,
     stream: LookupAdminRequestStream,
 ) -> Result<(), anyhow::Error> {
     stream
@@ -368,6 +370,12 @@ async fn run_lookup_admin(
                     };
                     let () = responder.send(&mut response)?;
                     Ok(ret)
+                }
+                LookupAdminRequest::GetDnsServers { responder } => {
+                    let () = responder.send(
+                        &mut policy_state.consolidate_map(|s| s.clone().into()).into_iter(),
+                    )?;
+                    Ok(None)
                 }
             }
         })
@@ -387,6 +395,7 @@ async fn run_lookup_admin(
 /// Configuration changes are only when the returned `Future` is polled.
 fn create_policy_fut<T: ResolverLookup>(
     resolver: &SharedResolver<T>,
+    config_state: Arc<dns::policy::ServerConfigState>,
 ) -> (
     mpsc::Sender<dns::policy::ServerConfig>,
     impl futures::Future<Output = Result<(), anyhow::Error>> + '_,
@@ -394,10 +403,15 @@ fn create_policy_fut<T: ResolverLookup>(
     // Create configuration channel pair. A small buffer in the channel allows
     // for multiple configurations coming in rapidly to be flushed together.
     let (servers_config_sink, servers_config_source) = mpsc::channel(10);
+    let policy = ServerConfigPolicy::new_with_state(
+        SharedResolverConfigSink::new(&resolver)
+            .sink_map_err(never::Never::into_any::<anyhow::Error>),
+        config_state,
+    );
     let policy_fut = servers_config_source
         .map(Ok)
-        .forward(ServerConfigPolicy::new(SharedResolverConfigSink::new(&resolver)))
-        .map_err(never::Never::into_any);
+        .forward(policy)
+        .map_err(|e| anyhow::anyhow!("Sink error {:?}", e));
     (servers_config_sink, policy_fut)
 }
 
@@ -419,7 +433,8 @@ async fn main() -> Result<(), Error> {
             .expect("failed to create resolver"),
     );
 
-    let (servers_config_sink, policy_fut) = create_policy_fut(&resolver);
+    let config_state = Arc::new(dns::policy::ServerConfigState::new());
+    let (servers_config_sink, policy_fut) = create_policy_fut(&resolver, config_state.clone());
 
     let dns_watcher = {
         let stack =
@@ -444,9 +459,11 @@ async fn main() -> Result<(), Error> {
         .for_each_concurrent(None, |incoming_service| async {
             match incoming_service {
                 IncomingRequest::LookupAdmin(stream) => {
-                    run_lookup_admin(servers_config_sink.clone(), stream).await.unwrap_or_else(
-                        |e| fx_log_err!("run_lookup_admin finished with error: {:?}", e),
-                    )
+                    run_lookup_admin(servers_config_sink.clone(), config_state.clone(), stream)
+                        .await
+                        .unwrap_or_else(|e| {
+                            fx_log_err!("run_lookup_admin finished with error: {:?}", e)
+                        })
                 }
                 IncomingRequest::NameLookup(stream) => {
                     run_name_lookup(&resolver, stream).await.unwrap_or_else(|e| {
@@ -705,6 +722,7 @@ mod tests {
 
     struct TestEnvironment {
         shared_resolver: SharedResolver<MockResolver>,
+        config_state: Arc<dns::policy::ServerConfigState>,
     }
 
     impl TestEnvironment {
@@ -719,6 +737,7 @@ mod tests {
                         NameServerConfigGroup::with_capacity(0),
                     ),
                 }),
+                config_state: Arc::new(dns::policy::ServerConfigState::new()),
             }
         }
 
@@ -748,15 +767,29 @@ mod tests {
                 fidl::endpoints::create_proxy_and_stream::<fname::LookupAdminMarker>()
                     .expect("failed to create AdminResolverProxy");
 
-            let (sink, policy_fut) = create_policy_fut(&self.shared_resolver);
+            let (sink, policy_fut) =
+                create_policy_fut(&self.shared_resolver, self.config_state.clone());
 
             let ((), (), ()) = futures::future::try_join3(
-                run_lookup_admin(sink, lookup_admin_stream),
+                run_lookup_admin(sink, self.config_state.clone(), lookup_admin_stream),
                 policy_fut,
                 f(lookup_admin_proxy).map(Ok),
             )
             .await
             .expect("Error running admin future");
+        }
+
+        async fn run_config_sink<F, Fut>(&self, f: F)
+        where
+            Fut: futures::Future<Output = ()>,
+            F: FnOnce(mpsc::Sender<dns::policy::ServerConfig>) -> Fut,
+        {
+            let (sink, policy_fut) =
+                create_policy_fut(&self.shared_resolver, self.config_state.clone());
+
+            let ((), ()) = futures::future::try_join(policy_fut, f(sink).map(Ok))
+                .await
+                .expect("Error running admin future");
         }
     }
 
@@ -945,5 +978,70 @@ mod tests {
 
         // Assert that config didn't change.
         assert_eq!(env.shared_resolver.read().config.name_servers().to_vec(), vec![]);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_get_servers() {
+        const STATIC_SERVER_IPV4: fnet::Ipv4Address = fnet::Ipv4Address { addr: [8, 8, 8, 8] };
+        const STATIC_SERVER: fnet::IpAddress = fnet::IpAddress::Ipv4(STATIC_SERVER_IPV4);
+
+        const DHCP_SERVER: fname::DnsServer_ = fname::DnsServer_ {
+            address: Some(fnet::SocketAddress::Ipv4(fnet::Ipv4SocketAddress {
+                address: fnet::Ipv4Address { addr: [8, 8, 4, 4] },
+                port: DEFAULT_PORT,
+            })),
+            source: Some(fname::DnsServerSource::Dhcp(fname::DhcpDnsServerSource {
+                source_interface: Some(1),
+            })),
+        };
+        const NDP_SERVER: fname::DnsServer_ = fname::DnsServer_ {
+            address: Some(fnet::SocketAddress::Ipv6(fnet::Ipv6SocketAddress {
+                address: fnet::Ipv6Address {
+                    addr: [
+                        0x20, 0x01, 0x48, 0x60, 0x48, 0x60, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                        0x00, 0x00, 0x44, 0x44,
+                    ],
+                },
+                port: DEFAULT_PORT,
+                zone_index: 2,
+            })),
+            source: Some(fname::DnsServerSource::Ndp(fname::NdpDnsServerSource {
+                source_interface: Some(2),
+            })),
+        };
+
+        let env = TestEnvironment::new();
+        env.run_config_sink(|mut sink| async move {
+            let () = sink
+                .send(dns::policy::ServerConfig::DefaultServers(vec![STATIC_SERVER]))
+                .await
+                .unwrap();
+            let () = sink
+                .send(dns::policy::ServerConfig::DynamicServers(vec![NDP_SERVER, DHCP_SERVER]))
+                .await
+                .unwrap();
+        })
+        .await;
+
+        env.run_admin(|proxy| async move {
+            let servers = proxy.get_dns_servers().await.expect("Failed to get DNS servers");
+            assert_eq!(
+                servers,
+                vec![
+                    NDP_SERVER,
+                    DHCP_SERVER,
+                    fname::DnsServer_ {
+                        address: Some(fnet::SocketAddress::Ipv4(fnet::Ipv4SocketAddress {
+                            address: STATIC_SERVER_IPV4,
+                            port: DEFAULT_PORT
+                        })),
+                        source: Some(fname::DnsServerSource::StaticSource(
+                            fname::StaticDnsServerSource {}
+                        )),
+                    }
+                ]
+            )
+        })
+        .await;
     }
 }

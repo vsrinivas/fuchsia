@@ -10,10 +10,8 @@ import (
 	"syscall/zx/dispatch"
 	"syscall/zx/fidl"
 
-	"netstack/dns"
-	"netstack/fidlconv"
-
 	"fidl/fuchsia/net/name"
+	"netstack/dns"
 )
 
 type broadcastChannel struct {
@@ -111,13 +109,7 @@ func (w *dnsServerWatcher) WatchServers(ctx fidl.Context) ([]name.DnsServer, err
 
 	dnsServer := make([]name.DnsServer, 0, len(servers))
 	for _, v := range servers {
-		s := name.DnsServer{
-			Address:        fidlconv.ToNetSocketAddress(v.Address),
-			AddressPresent: true,
-			Source:         v.Source,
-			SourcePresent:  true,
-		}
-		dnsServer = append(dnsServer, s)
+		dnsServer = append(dnsServer, dnsServerToFidl(v))
 	}
 	// Store the last observed servers to compare in subsequent calls.
 	w.mu.lastObserved = servers

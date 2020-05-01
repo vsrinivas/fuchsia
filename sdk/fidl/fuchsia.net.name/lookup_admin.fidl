@@ -17,5 +17,9 @@ protocol LookupAdmin {
     /// ones specified here.
     /// * error Returns `ZX_ERR_INVALID_ARGS` if any of the provided addresses does not meet the
     /// conditions above.
-    SetDefaultDnsServers(vector<fuchsia.net.IpAddress>:256 servers) -> () error zx.status;
+    SetDefaultDnsServers(vector<fuchsia.net.IpAddress>:MAX servers) -> () error zx.status;
+
+    /// Gets the DNS servers currently in use to resolve name lookups.
+    /// - response `servers` The list of servers in use by `LookupAdmin`, in priority order.
+    GetDnsServers() -> (vector<DnsServer>:MAX servers);
 };
