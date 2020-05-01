@@ -11,6 +11,7 @@
 #include <optional>
 
 #include <blobfs/format.h>
+#include <lib/zx/status.h>
 #include <src/lib/chunked-compression/chunked-decompressor.h>
 #include <src/lib/chunked-compression/streaming-chunked-compressor.h>
 
@@ -83,7 +84,7 @@ class SeekableChunkedDecompressor : public SeekableDecompressor {
   zx_status_t DecompressRange(void* uncompressed_buf, size_t* uncompressed_size,
                               const void* compressed_buf, size_t max_compressed_size,
                               size_t offset) final;
-  std::optional<CompressionMapping> MappingForDecompressedAddress(size_t offset) final;
+  zx::status<CompressionMapping> MappingForDecompressedRange(size_t offset, size_t len) final;
 
  private:
   chunked_compression::SeekTable seek_table_;

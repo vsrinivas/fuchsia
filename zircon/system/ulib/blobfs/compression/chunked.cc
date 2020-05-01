@@ -9,6 +9,7 @@
 #include <zircon/types.h>
 
 #include <fs/trace.h>
+#include <lib/zx/status.h>
 #include <src/lib/chunked-compression/chunked-archive.h>
 #include <src/lib/chunked-compression/chunked-decompressor.h>
 #include <src/lib/chunked-compression/status.h>
@@ -162,20 +163,31 @@ zx_status_t SeekableChunkedDecompressor::DecompressRange(void* uncompressed_buf,
   return ZX_OK;
 }
 
-std::optional<CompressionMapping> SeekableChunkedDecompressor::MappingForDecompressedAddress(
-    size_t offset) {
-  std::optional<unsigned> idx = seek_table_.EntryForDecompressedOffset(offset);
-  if (!idx) {
-    return std::nullopt;
+zx::status<CompressionMapping> SeekableChunkedDecompressor::MappingForDecompressedRange(
+    size_t offset, size_t len) {
+  std::optional<unsigned> first_idx = seek_table_.EntryForDecompressedOffset(offset);
+  std::optional<unsigned> last_idx = seek_table_.EntryForDecompressedOffset(offset + len - 1);
+  if (!first_idx || !last_idx) {
+    return zx::error(ZX_ERR_OUT_OF_RANGE);
   }
 
-  const chunked_compression::SeekTableEntry& entry = seek_table_.Entries()[*idx];
-  return CompressionMapping {
-      .compressed_offset = entry.compressed_offset,
-      .compressed_length = entry.compressed_size,
-      .decompressed_offset = entry.decompressed_offset,
-      .decompressed_length = entry.decompressed_size,
-  };
+  const chunked_compression::SeekTableEntry& first_entry = seek_table_.Entries()[*first_idx];
+  const chunked_compression::SeekTableEntry& last_entry = seek_table_.Entries()[*last_idx];
+  size_t compressed_end = last_entry.compressed_offset + last_entry.compressed_size;
+  size_t decompressed_end = last_entry.decompressed_offset + last_entry.decompressed_size;
+  if (compressed_end < first_entry.compressed_offset
+      || decompressed_end < first_entry.decompressed_offset) {
+    // This likely indicates a seek table corruption.
+    // Note that this condition is also checked by the underlying compression library during
+    // parsing, but we defensively check it here as well.
+    return zx::error(ZX_ERR_IO_DATA_INTEGRITY);
+  }
+  return zx::ok(CompressionMapping {
+      .compressed_offset = first_entry.compressed_offset,
+      .compressed_length = compressed_end - first_entry.compressed_offset,
+      .decompressed_offset = first_entry.decompressed_offset,
+      .decompressed_length = decompressed_end - first_entry.decompressed_offset,
+  });
 }
 
 }  // namespace blobfs
