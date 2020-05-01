@@ -27,7 +27,7 @@ Future<Process> fxCommandRunWithIO(
   List<String> args,
 ]) {
   eventSink(
-    TestInfo(stylizer('> fx $cmd ${args.join(' ')}', [green, styleBold])),
+    TestInfo(stylizer('> fx $cmd', [green, styleBold])),
   );
   return Process.start(fx, [cmd, ...?args]).then((Process process) {
     process

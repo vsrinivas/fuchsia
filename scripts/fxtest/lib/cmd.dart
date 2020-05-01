@@ -163,17 +163,13 @@ class FuchsiaTestCommand {
       );
 
   Future<void> runTests(List<TestBundle> testBundles) async {
-    // Enforce a limit
-    var _testBundles = testsConfig.flags.limit > 0
-        ? testBundles.sublist(0, testsConfig.flags.limit)
-        : testBundles;
-
-    if (!await checklist.isDeviceReady(_testBundles)) {
+    if (!await checklist.isDeviceReady(testBundles)) {
       emitEvent(FatalError('Device is not ready for running device tests'));
       return;
     }
 
-    for (TestBundle testBundle in _testBundles) {
+    var count = 0;
+    for (TestBundle testBundle in testBundles) {
       await testBundle.run().forEach((TestEvent event) {
         emitEvent(event);
         if (event is FatalError) {
@@ -182,7 +178,12 @@ class FuchsiaTestCommand {
           exitCode = event.exitCode ?? failureExitCode;
         }
       });
-      _numberOfTests += 1;
+
+      count += 1;
+      _numberOfTests = count;
+      if (testsConfig.flags.limit > 0 && count >= testsConfig.flags.limit) {
+        break;
+      }
     }
   }
 

@@ -23,11 +23,6 @@ enum TestType {
   unsupportedDeviceTest,
 }
 
-const Set<TestType> hostTestTypes = {
-  TestType.command,
-  TestType.host,
-};
-
 const Set<TestType> unsupportedTestTypes = {
   TestType.unsupportedDeviceTest,
   TestType.unsupported,
