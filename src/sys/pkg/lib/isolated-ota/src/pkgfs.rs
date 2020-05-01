@@ -63,7 +63,6 @@ impl Pkgfs {
     }
 
     /// Get a handle to the root directory of the pkgfs.
-    #[allow(dead_code)] // Will be removed in next CL when user is added.
     pub fn root_handle(&self) -> Result<ClientEnd<DirectoryMarker>, Error> {
         let (root_clone, server_end) = zx::Channel::create()?;
         self.root.clone(fidl_fuchsia_io::CLONE_FLAG_SAME_RIGHTS, server_end.into())?;
@@ -72,7 +71,7 @@ impl Pkgfs {
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use {
         super::*,
         blobfs_ramdisk::BlobfsRamdisk,
@@ -86,9 +85,9 @@ mod tests {
         std::io::Read,
     };
 
-    struct PkgfsForTest {
+    pub struct PkgfsForTest {
         _blobfs: BlobfsRamdisk,
-        pkgfs: Pkgfs,
+        pub pkgfs: Pkgfs,
     }
 
     impl PkgfsForTest {

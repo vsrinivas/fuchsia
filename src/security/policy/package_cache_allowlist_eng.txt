@@ -4,3 +4,5 @@ fuchsia-pkg://fuchsia.com/amberctl-tests#meta/pkg-resolver-for-integration-test.
 fuchsia-pkg://fuchsia.com/pkg-resolver-integration-tests#meta/pkg-resolver.cmx
 fuchsia-pkg://fuchsia.com/pkgctl-integration-tests#meta/pkgctl.cmx
 fuchsia-pkg://fuchsia.com/policy-integration-tests#meta/package_cache_allowed.cmx
+fuchsia-pkg://fuchsia.com/isolated-swd#meta/pkg-resolver-isolated.cmx
+fuchsia-pkg://fuchsia.com/isolated-ota-tests#meta/pkg-resolver.cmx
