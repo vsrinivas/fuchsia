@@ -139,7 +139,10 @@ receiving Testability+1.
 
 ## What does require testing
 
-### Tests must be tested for flakiness (if supported)
+### Recommended: Test for flakiness (if supported)
+
+This is currently recomended but will become required once
+<http://fxbug.dev/50483> is done.
 
 Note: This feature is not currently supported for bringup builders.
 
@@ -168,10 +171,11 @@ MULTIPLY: foo_tests (fuchsia): 30
 Note: "os" and "run_count" are both optional; see [below](#multiply-examples)
 for more examples.
 
-You should then choose a tryjob that runs your tests. These tests show as
-separate shards for each test, which run that test as many times as the
-specified run count. The timeout for running these tests is 40 minutes on
-most builders. If a test takes too long, the shard may time out.
+Then do a CQ dry run (or choose a tryjob that runs your tests).
+These tests show as separate shards for each test, which run that test as
+many times as the specified run count. The timeout for running these tests
+is 40 minutes on most builders. If a test takes too long, the shard may
+time out.
 
 The test name can be any of the following:
 
