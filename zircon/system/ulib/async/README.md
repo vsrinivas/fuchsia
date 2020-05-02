@@ -62,7 +62,7 @@ void handler(async_dispatcher_t* async, async_wait_t* wait,
     free(wait);
 }
 
-zx_status_t await(zx_handle_t object, zx_signals_t trigger, void* data) {
+zx_status_t await(zx_handle_t object, zx_signals_t trigger) {
     async_dispatcher_t* async = async_get_default_dispatcher();
     async_wait_t* wait = calloc(1, sizeof(async_wait_t));
     wait->handler = handler;
