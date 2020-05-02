@@ -310,30 +310,13 @@ zxtest and handles logging for you.
 
 [helper class]: /zircon/system/ulib/driver-unit-test/include/lib/driver-unit-test/logger.h
 
-
 ### Integration tests
 
-`ZX_PROTOCOL_TEST` provides a mechanism to test drivers by running the driver
-under test in an emulated environment. Write a driver that binds to a
-`ZX_PROTOCOL_TEST` device. This driver should publish a device that the driver
-under test can bind to, and it should implement the protocol functions the
-driver under test invokes in normal operation. This helper driver should be
-declared with `BI_ABORT_IF_AUTOBIND` in the bindings.
+Driver authors can use several means for writing integration tests.  For simple cases,
+the [fake-ddk](/zircon/system/dev/lib/fake_ddk) library is recommended.  For more complicated ones,
+[driver-integration-test](/zircon/system/ulib/driver-integration-test) is recommended.
 
-The test harness calls `fuchsia.device.test.RootDevice/CreateDevice` on
-`/dev/test/test`, which will create a `ZX_PROTOCOL_TEST` device and return
-its path. Then it calls `fuchsia.device.Controller/Bind` with the helper driver on the
-newly created device.  This approach generally works better for mid-layer
-protocol drivers. It's possible to emulate real hardware with the same
-approach but it may not be as useful.
-
-
-The bindings defined in
-[test.banjo](/sdk/banjo/ddk.protocol.test/test.banjo) are used
-for testing libraries that run as part of a driver. For an example, refer to
-[system/ulib/ddk/test](/zircon/system/ulib/ddk/test). The test harness for these
-tests is
-[system/utest/driver-test/main.cc](/zircon/system/utest/driver-test/main.cc)
+TODO(fxb/51320): Fill out more detail here.
 
 ## Driver rights
 
