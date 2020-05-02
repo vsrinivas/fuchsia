@@ -303,6 +303,11 @@ zx_status_t HidDevice::HidDeviceGetReport(hid_report_type_t rpt_type, uint8_t rp
   if (needed > report_count) {
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
+  if (needed > HID_MAX_REPORT_LEN) {
+    zxlogf(ERROR, "hid: GetReport: Report size 0x%lx larger than max size 0x%x", needed,
+           HID_MAX_REPORT_LEN);
+    return ZX_ERR_INTERNAL;
+  }
 
   uint8_t report[HID_MAX_REPORT_LEN];
   size_t actual = 0;

@@ -693,4 +693,37 @@ TEST_F(HidDeviceTest, BanjoGetSetReport) {
   ASSERT_BYTES_EQ(&feature_report, &received_report, actual);
 }
 
+// Tests that a device with too large reports don't cause buffer overruns.
+TEST_F(HidDeviceTest, GetReportBufferOverrun) {
+  const uint8_t desc[] = {
+      0x05, 0x01,                    // Usage Page (Generic Desktop Ctrls)
+      0x09, 0x02,                    // Usage (Mouse)
+      0xA1, 0x01,                    // Collection (Application)
+      0x05, 0x09,                    //   Usage Page (Button)
+      0x09, 0x30,                    //   Usage (0x30)
+      0x97, 0x00, 0xF0, 0x00, 0x00,  //   Report Count (65279)
+      0x75, 0x08,                    //   Report Size (8)
+      0x25, 0x01,                    //   Logical Maximum (1)
+      0x81, 0x02,  //   Input (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position)
+      0xC0,        // End Collection
+
+      // 22 bytes
+  };
+  size_t desc_size = sizeof(desc);
+  fake_hidbus_.SetDescriptor(desc, desc_size);
+
+  hid_info_t info = {};
+  info.device_class = HID_DEVICE_CLASS_OTHER;
+  info.boot_device = false;
+  fake_hidbus_.SetHidInfo(info);
+
+  ASSERT_OK(device_->Bind(fake_hidbus_.GetProto()));
+
+  std::vector<uint8_t> report(0xFF0000);
+  size_t actual;
+  ASSERT_EQ(
+      device_->HidDeviceGetReport(HID_REPORT_TYPE_INPUT, 0, report.data(), report.size(), &actual),
+      ZX_ERR_INTERNAL);
+}
+
 }  // namespace hid_driver
