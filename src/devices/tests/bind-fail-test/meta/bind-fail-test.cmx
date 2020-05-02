@@ -1,0 +1,16 @@
+{
+    "program": {
+        "binary": "test/bind-fail-test"
+    },
+    "sandbox": {
+        "boot": [
+          "bin",
+          "driver",
+          "lib"
+        ],
+        "services": [
+          "fuchsia.process.Launcher"
+        ]
+    }
+}
+

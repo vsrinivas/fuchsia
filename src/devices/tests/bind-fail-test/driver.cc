@@ -13,5 +13,8 @@ static zx_driver_ops_t bind_fail_driver_ops = {
     .bind = not_supported_bind,
 };
 
+// clang-format off
 ZIRCON_DRIVER_BEGIN(bind_fail, bind_fail_driver_ops, "zircon", "0.1", 2)
-BI_ABORT_IF_AUTOBIND, BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_TEST), ZIRCON_DRIVER_END(bind_fail)
+BI_ABORT_IF_AUTOBIND,
+BI_MATCH(),
+ZIRCON_DRIVER_END(bind_fail)

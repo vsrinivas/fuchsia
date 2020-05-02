@@ -480,7 +480,6 @@ aggregate_manifest("migrated-image") {
       "//src/devices/spi/drivers/dw-spi:dw-spi-manifest",
       "//src/devices/spi/drivers/mtk-spi:mtk-spi-manifest",
       "//src/devices/tests/bind-debugger-test:bind-debugger-test-driver-manifest",
-      "//src/devices/tests/bind-fail-test:bind-fail-test-manifest",
       "//src/devices/tests/crash-device:crash-device-manifest",
       "//src/devices/tests/ddk-lifecycle:ddk-lifecycle-test-manifest",
       "//src/devices/tests/ddk-power:ddk-power-test-child-manifest",

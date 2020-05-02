@@ -6,6 +6,7 @@ group("tests") {
   testonly = true
   deps = [
     "bind-debugger-test",
+    "bind-fail-test",
     "ddk-instance-lifecycle-test",
     "libdriver-integration-test",
   ]

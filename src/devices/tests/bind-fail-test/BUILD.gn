@@ -3,22 +3,66 @@
 # found in the LICENSE file.
 
 import("//build/config/fuchsia/rules.gni")
-import("//build/unification/images/migrated_manifest.gni")
+import("//build/test.gni")
+import("//build/test/test_package.gni")
+import("//src/lib/isolated_devmgr/devmgr_manifest.gni")
 
-driver_module("bind-fail-test") {
+driver_module("driver") {
+  output_name = "bind-fail-test"
+
   test = true
   defines = [ "_ALL_SOURCE" ]
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
-  configs += [ "//build/unification/config:zircon-migrated" ]
-  sources = [ "bind-fail-test.c" ]
+  sources = [ "driver.cc" ]
   deps = [
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
   ]
+  visibility = [ ":*" ]
 }
 
-migrated_manifest("bind-fail-test-manifest") {
-  deps = [ ":bind-fail-test" ]
+test("tests") {
+  output_name = "bind-fail-test"
+
+  testonly = true
+  sources = [ "test.cc" ]
+  deps = [
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/fidl/fuchsia-device:llcpp",
+    "//zircon/system/ulib/devmgr-integration-test",
+    "//zircon/system/ulib/devmgr-launcher",
+  ]
+  visibility = [ ":*" ]
+}
+
+devmgr_manifest("devmgr-manifest") {
+}
+
+test_package("bind-fail-test") {
+  deps = [
+    ":devmgr-manifest",
+    ":driver",
+    ":tests",
+  ]
+
+  extra = [ "$target_gen_dir/devmgr.manifest" ]
+
+  tests = [
+    {
+      name = "bind-fail-test"
+      environments = basic_envs
+    },
+  ]
+
+  resources = [
+    {
+      path = rebase_path("${root_build_dir}/bind-fail-test.so")
+      dest = "bind-fail-test.so"
+    },
+  ]
 }

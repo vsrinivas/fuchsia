@@ -28,7 +28,6 @@
 #include <fbl/unique_fd.h>
 
 static constexpr const char kDriverTestDir[] = "/boot/driver/test";
-static constexpr const char kBindFailDriver[] = "bind-fail-test.so";
 
 using devmgr_integration_test::IsolatedDevmgr;
 
@@ -74,15 +73,6 @@ void do_one_test(const IsolatedDevmgr& devmgr,
     if (resp->result.is_err()) {
       status = resp->result.err();
     }
-  }
-  if (status == ZX_ERR_NOT_SUPPORTED &&
-      !strncmp(drv_libname, kBindFailDriver, strlen(kBindFailDriver))) {
-    *report = {
-        .test_count = 1,
-        .success_count = 1,
-        .failure_count = 0,
-    };
-    return;
   }
   if (status != ZX_OK) {
     printf("driver-tests: error %d binding to %s\n", status, libpath);
