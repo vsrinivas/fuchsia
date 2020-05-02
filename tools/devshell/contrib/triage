@@ -128,13 +128,18 @@ done
 
 for tag in "${tags[@]}"
 do
-	flags="${flags} --tag ${tag}"
+  flags="${flags} --tag ${tag}"
 done
 
 for tag in "${exclude_tags[@]}"
 do
   flags="${flags} --exclude-tag ${tag}"
 done
+
+if [[ ! -f "$triage_exe" ]]; then
+  echo "Building Triage..."
+  fx-command-run build triage
+fi
 
 echo "${triage_exe} ${flags}"
 $triage_exe ${flags}
