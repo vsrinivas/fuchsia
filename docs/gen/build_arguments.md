@@ -287,7 +287,7 @@ binaries are included in the final image.
 
 **Current value (from the default):** `[]`
 
-From //build/images/recovery/BUILD.gn:14
+From //build/images/recovery/BUILD.gn:15
 
 ### bootfs_extra
 List of extra manifest entries for files to add to the BOOTFS.
