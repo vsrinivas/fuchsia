@@ -22,5 +22,14 @@
                 }
             }
         }
+    },
+    {
+        "moniker": "session-1/app.cmx",
+        "payload": {
+            "root": {
+              "requests": 100,
+              "errors": 95
+            }
+        }
     }
 ]

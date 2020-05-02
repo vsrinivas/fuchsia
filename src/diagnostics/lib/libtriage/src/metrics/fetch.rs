@@ -91,7 +91,11 @@ impl TryFrom<Vec<JsonValue>> for InspectFetcher {
         }
 
         fn path_from(component: &JsonValue) -> Result<String, Error> {
-            Ok(extract_json_value(component, "path")?
+            let value = match extract_json_value(component, "moniker") {
+                Err(_) => extract_json_value(component, "path"),
+                v => v,
+            }?;
+            Ok(value
                 .as_str()
                 .ok_or_else(|| anyhow!("Inspect component path wasn't a valid string"))?
                 .to_owned())
@@ -108,7 +112,10 @@ impl TryFrom<Vec<JsonValue>> for InspectFetcher {
                 .map(|raw_component| {
                     let path = path_from(raw_component)?;
                     let moniker = moniker_from(&path)?;
-                    let raw_contents = extract_json_value(raw_component, "contents")?;
+                    let raw_contents = match extract_json_value(raw_component, "payload") {
+                        Err(_) => extract_json_value(raw_component, "contents"),
+                        v => v,
+                    }?;
                     let processed_data =
                         RawJsonNodeHierarchySerializer::deserialize(raw_contents.clone())
                             .with_context(|| {
@@ -195,45 +202,63 @@ mod test {
 
     #[test]
     fn test_fetch() -> Result<(), Error> {
-        let json = r#"[{"path":"asdf/foo/qwer",
-                        "contents":{"root":{"dataInt":5, "child":{"dataFloat":2.3}}}},
-                        {"path":"zxcv/bar/hjkl",
-                        "contents":{"base":{"dataInt":42, "array":[2,3,4], "yes": true}}}
-                        ]"#;
-        let inspect = InspectFetcher::try_from(json)?;
-        macro_rules! assert_wrong {
-            ($selector:expr, $error:expr) => {
-                assert_eq!(
-                    inspect.fetch_str($selector),
-                    vec![MetricValue::Missing($error.to_string())]
-                )
-            };
+        let json_options = vec![
+            r#"[
+        {"path":"asdf/foo/qwer",
+         "contents":{"root":{"dataInt":5, "child":{"dataFloat":2.3}}}},
+        {"path":"zxcv/bar/hjkl",
+         "contents":{"base":{"dataInt":42, "array":[2,3,4], "yes": true}}}
+        ]"#,
+            r#"[
+        {"moniker":"asdf/foo/qwer",
+         "payload":{"root":{"dataInt":5, "child":{"dataFloat":2.3}}}},
+        {"moniker":"zxcv/bar/hjkl",
+         "payload":{"base":{"dataInt":42, "array":[2,3,4], "yes": true}}}
+        ]"#,
+        ];
+
+        for json in json_options.into_iter() {
+            let inspect = InspectFetcher::try_from(json)?;
+            macro_rules! assert_wrong {
+                ($selector:expr, $error:expr) => {
+                    assert_eq!(
+                        inspect.fetch_str($selector),
+                        vec![MetricValue::Missing($error.to_string())]
+                    )
+                };
+            }
+            assert_wrong!("INSPET:*/foo/*:root:dataInt", "Bad selector INSPET:*/foo/*:root:dataInt: Invalid selector type \'INSPET\' - must be INSPECT");
+            assert_eq!(
+                inspect.fetch_str("INSPECT:*/foo/*:root:dataInt"),
+                vec![MetricValue::Int(5)]
+            );
+            assert_eq!(
+                inspect.fetch_str("INSPECT:*/foo/*:root/child:dataFloat"),
+                vec![MetricValue::Float(2.3)]
+            );
+            assert_eq!(
+                inspect.fetch_str("INSPECT:*/bar/*:base:yes"),
+                vec![MetricValue::Bool(true)]
+            );
+            assert_wrong!(
+                "INSPECT:*/foo/*:root.dataInt",
+                "Tree of */foo/*:root.dataInt matched nothing"
+            );
+            assert_wrong!(
+                "INSPECT:*/fo/*:root.dataInt",
+                "Component of */fo/*:root.dataInt matched nothing"
+            );
+            assert_wrong!("INSPECT:*/foo/*:root:data:Int", "Fetch SelectorString { full_selector: \"INSPECT:*/foo/*:root:data:Int\", selector_type: Inspect, body: \"*/foo/*:root:data:Int\" } -> Selector format requires at least 2 subselectors delimited by a `:`.");
+            assert_wrong!(
+                "INSPECT:*/foo/*:root/kid:dataInt",
+                "Tree of */foo/*:root/kid:dataInt matched nothing"
+            );
+            assert_wrong!(
+                "INSPECT:*/bar/*:base/array:dataInt",
+                "Tree of */bar/*:base/array:dataInt matched nothing"
+            );
+            assert_wrong!("INSPECT:*/bar/*:base:array", "Arrays not supported yet");
         }
-        assert_wrong!("INSPET:*/foo/*:root:dataInt", "Bad selector INSPET:*/foo/*:root:dataInt: Invalid selector type \'INSPET\' - must be INSPECT");
-        assert_eq!(inspect.fetch_str("INSPECT:*/foo/*:root:dataInt"), vec![MetricValue::Int(5)]);
-        assert_eq!(
-            inspect.fetch_str("INSPECT:*/foo/*:root/child:dataFloat"),
-            vec![MetricValue::Float(2.3)]
-        );
-        assert_eq!(inspect.fetch_str("INSPECT:*/bar/*:base:yes"), vec![MetricValue::Bool(true)]);
-        assert_wrong!(
-            "INSPECT:*/foo/*:root.dataInt",
-            "Tree of */foo/*:root.dataInt matched nothing"
-        );
-        assert_wrong!(
-            "INSPECT:*/fo/*:root.dataInt",
-            "Component of */fo/*:root.dataInt matched nothing"
-        );
-        assert_wrong!("INSPECT:*/foo/*:root:data:Int", "Fetch SelectorString { full_selector: \"INSPECT:*/foo/*:root:data:Int\", selector_type: Inspect, body: \"*/foo/*:root:data:Int\" } -> Selector format requires at least 2 subselectors delimited by a `:`.");
-        assert_wrong!(
-            "INSPECT:*/foo/*:root/kid:dataInt",
-            "Tree of */foo/*:root/kid:dataInt matched nothing"
-        );
-        assert_wrong!(
-            "INSPECT:*/bar/*:base/array:dataInt",
-            "Tree of */bar/*:base/array:dataInt matched nothing"
-        );
-        assert_wrong!("INSPECT:*/bar/*:base:array", "Arrays not supported yet");
         Ok(())
     }
 }

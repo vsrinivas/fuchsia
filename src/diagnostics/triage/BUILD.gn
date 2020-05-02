@@ -35,6 +35,7 @@ copy("copy_configs") {
 
   # Any data that is needed for a test should be included in this list.
   sources = [
+    "test_data/config/error_rate.triage",
     "test_data/config/other.triage",
     "test_data/config/sample.triage",
     "test_data/config/sample_tags.triage",

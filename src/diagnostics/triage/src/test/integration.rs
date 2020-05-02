@@ -269,3 +269,12 @@ integration_test!(
     0,
     ""
 );
+
+integration_test!(
+    error_rate_with_moniker_payload,
+    vec!["error_rate.triage"],
+    vec![],
+    vec![],
+    0,
+    "Warning: 'error_rate_too_high' in 'error_rate' detected 'Error rate for app.cmx is too high': 'error_rate_90' was true"
+);

@@ -1,0 +1,52 @@
+{
+    select: {
+        requests: "INSPECT:session-*/app.cmx:root:requests",
+        errors: "INSPECT:session-*/app.cmx:root:errors",
+    },
+    eval: {
+        error_rate: "errors / requests",
+        error_rate_90: "error_rate > 0.9",
+    },
+    act: {
+        error_rate_too_high: {
+            trigger: "error_rate_90",
+            print: "Error rate for app.cmx is too high",
+        },
+    },
+    test: {
+        error_rate_triggered: {
+            yes: [
+                "error_rate_too_high",
+            ],
+            no: [],
+            inspect: [
+                {
+                    moniker: "session-3/app.cmx",
+                    payload: {
+                        root: {
+                            requests: 100,
+                            errors: 95,
+                        },
+                    },
+                },
+            ],
+        },
+        error_rate_not_triggered: {
+            yes: [],
+            no: [
+                "error_rate_too_high",
+            ],
+            inspect: [
+                {
+                    moniker: "session-3/app.cmx",
+                    payload: {
+                        root: {
+                            requests: 100,
+                            errors: 80,
+                        },
+                    },
+                },
+            ],
+        },
+    },
+}
