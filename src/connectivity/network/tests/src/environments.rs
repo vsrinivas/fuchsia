@@ -48,6 +48,7 @@ pub enum KnownServices {
     MockCobalt,
     SecureStash,
     DhcpServer,
+    LoopkupAdmin,
 }
 
 impl KnownServices {
@@ -69,6 +70,8 @@ impl KnownServices {
                                            "fuchsia-pkg://fuchsia.com/stash#meta/stash_secure.cmx"),
             KnownServices::DhcpServer => (<fidl_fuchsia_net_dhcp::Server_Marker as fidl::endpoints::DiscoverableService>::SERVICE_NAME,
                                           fuchsia_component::fuchsia_single_component_package_url!("dhcpd-testing")),
+            KnownServices::LoopkupAdmin => (<fidl_fuchsia_net_name::LookupAdminMarker as fidl::endpoints::DiscoverableService>::SERVICE_NAME,
+                                            fuchsia_component::fuchsia_single_component_package_url!("dns_resolver"))
         }
     }
 
@@ -337,6 +340,8 @@ impl TestSandbox {
 pub enum InterfaceConfig {
     /// Interface is configured with a static address.
     StaticIp(fidl_fuchsia_net_stack::InterfaceAddress),
+    /// Interface is configured to use DHCP to obtain an address.
+    Dhcp,
     /// No address configuration is performed.
     None,
 }
@@ -397,6 +402,9 @@ impl<'a> TestEnvironment<'a> {
         let () = match config {
             InterfaceConfig::StaticIp(addr) => {
                 interface.add_ip_addr(addr).await.context("failed to add static IP")?
+            }
+            InterfaceConfig::Dhcp => {
+                interface.start_dhcp().await.context("failed to start DHCP")?;
             }
             InterfaceConfig::None => (),
         };

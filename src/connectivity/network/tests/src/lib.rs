@@ -10,7 +10,7 @@ use environments::*;
 
 use anyhow::Context as _;
 
-use fidl_fuchsia_net_ext::ip_addr;
+use fidl_fuchsia_net_ext::{ip_addr, ipv4_addr};
 use fidl_fuchsia_net_stack_ext::{exec_fidl, FidlReturn};
 use futures::stream::{self, StreamExt, TryStreamExt};
 
@@ -710,4 +710,140 @@ async fn test_dhcp(
     .await?;
 
     Ok(())
+}
+
+/// Tests that Netstack exposes DNS servers discovered through DHCP and
+/// `dns_resolver` loads them into its name servers configuration.
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_discovered_dns() -> Result {
+    const SERVER_IP: fidl_fuchsia_net::IpAddress = ip_addr![192, 168, 0, 1];
+    /// DNS server served by DHCP.
+    const DHCP_DNS_SERVER: fidl_fuchsia_net::Ipv4Address = ipv4_addr![123, 12, 34, 56];
+    /// Static DNS server given directly to `LookupAdmin`.
+    const STATIC_DNS_SERVER: fidl_fuchsia_net::Ipv4Address = ipv4_addr![123, 12, 34, 99];
+
+    /// Maximum number of times we'll poll `LookupAdmin` to check DNS configuration
+    /// succeeded.
+    const RETRY_COUNT: u64 = 60;
+    /// Duration to sleep between polls.
+    const POLL_WAIT: fuchsia_zircon::Duration = fuchsia_zircon::Duration::from_seconds(1);
+
+    const DEFAULT_DNS_PORT: u16 = 53;
+
+    let name = "test_discovered_dns";
+    let sandbox = TestSandbox::new().context("failed to create sandbox")?;
+
+    let network = sandbox.create_network("net").await.context("failed to create network")?;
+    let server_environment = sandbox
+        .create_netstack_environment_with::<Netstack2, _, _>(
+            format!("{}_server", name),
+            vec![KnownServices::DhcpServer.into_launch_service_with_arguments(vec![
+                // TODO: Once DHCP server supports dynamic configuration
+                // (fxbug.dev/45830), stop using the config file and configure
+                // it programatically. For now, the constants defined in this
+                // test reflect the ones defined in test_config.json.
+                "--config",
+                "/pkg/data/test_config.json",
+            ])],
+        )
+        .context("failed to create server environment")?;
+
+    let client_environment = sandbox
+        .create_netstack_environment_with::<Netstack2, _, _>(
+            format!("{}_client", name),
+            &[KnownServices::LoopkupAdmin],
+        )
+        .context("failed to create client environment")?;
+
+    let _server_iface = server_environment
+        .join_network(
+            &network,
+            "server-ep",
+            InterfaceConfig::StaticIp(fidl_fuchsia_net_stack::InterfaceAddress {
+                ip_address: SERVER_IP,
+                prefix_len: 24,
+            }),
+        )
+        .await
+        .context("failed to configure server networking")?;
+
+    let dhcp_server = server_environment
+        .connect_to_service::<fidl_fuchsia_net_dhcp::Server_Marker>()
+        .context("failed to connext to DHCP server")?;
+
+    let () = dhcp_server
+        .set_option(&mut fidl_fuchsia_net_dhcp::Option_::DomainNameServer(vec![DHCP_DNS_SERVER]))
+        .await
+        .context("Failed to set DNS option")?
+        .map_err(fuchsia_zircon::Status::from_raw)
+        .context("dhcp/Server.SetOption returned error")?;
+
+    // Connect to lookup admin and set up the default servers.
+    let lookup_admin = client_environment
+        .connect_to_service::<fidl_fuchsia_net_name::LookupAdminMarker>()
+        .context("failed to connect to LookupAdmin")?;
+
+    lookup_admin
+        .set_default_dns_servers(
+            &mut vec![fidl_fuchsia_net::IpAddress::Ipv4(STATIC_DNS_SERVER)].iter_mut(),
+        )
+        .await
+        .context("Failed to set default DNS servers")?
+        .map_err(fuchsia_zircon::Status::from_raw)
+        .context("LookupAdmin.SetDefaultDnsServers returned error")?;
+
+    // Start networking on client environment.
+    let client_iface = client_environment
+        .join_network(&network, "client-ep", InterfaceConfig::Dhcp)
+        .await
+        .context("failed to configure client networking")?;
+
+    // The list of servers we expect to retrieve from LookupAdmin.
+    let expect = vec![
+        fidl_fuchsia_net_name::DnsServer_ {
+            address: Some(fidl_fuchsia_net::SocketAddress::Ipv4(
+                fidl_fuchsia_net::Ipv4SocketAddress {
+                    address: DHCP_DNS_SERVER,
+                    port: DEFAULT_DNS_PORT,
+                },
+            )),
+            source: Some(fidl_fuchsia_net_name::DnsServerSource::Dhcp(
+                fidl_fuchsia_net_name::DhcpDnsServerSource {
+                    source_interface: Some(client_iface.id()),
+                },
+            )),
+        },
+        fidl_fuchsia_net_name::DnsServer_ {
+            address: Some(fidl_fuchsia_net::SocketAddress::Ipv4(
+                fidl_fuchsia_net::Ipv4SocketAddress {
+                    address: STATIC_DNS_SERVER,
+                    port: DEFAULT_DNS_PORT,
+                },
+            )),
+            source: Some(fidl_fuchsia_net_name::DnsServerSource::StaticSource(
+                fidl_fuchsia_net_name::StaticDnsServerSource {},
+            )),
+        },
+    ];
+
+    // Poll LookupAdmin until we get the servers we want or after too many tries.
+    for i in 0..RETRY_COUNT {
+        let () = fuchsia_async::Timer::new(fuchsia_async::Time::after(POLL_WAIT)).await;
+        let servers: Vec<fidl_fuchsia_net_name::DnsServer_> =
+            lookup_admin.get_dns_servers().await.context("Failed to get DNS servers")?;
+        println!("attempt {}) Got DNS servers {:?}", i, servers);
+        if servers.len() > expect.len() {
+            return Err(anyhow::anyhow!(
+                "Got too many servers {:?}. Expected {:?}",
+                servers,
+                expect
+            ));
+        }
+        if servers.len() == expect.len() {
+            assert_eq!(servers, expect);
+            return Ok(());
+        }
+    }
+    // Too many retries.
+    Err(anyhow::anyhow!("Timed out waiting for DNS server configurations"))
 }

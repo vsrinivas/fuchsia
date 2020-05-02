@@ -30,6 +30,7 @@ rustc_test("netstack_fidl_integration_test") {
     "//sdk/fidl/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet-rustc",
     "//sdk/fidl/fuchsia.inspect.deprecated:fuchsia.inspect.deprecated-rustc",
     "//sdk/fidl/fuchsia.net.dhcp:fuchsia.net.dhcp-rustc",
+    "//sdk/fidl/fuchsia.net.name:fuchsia.net.name-rustc",
     "//sdk/fidl/fuchsia.net.stack:fuchsia.net.stack-rustc",
     "//sdk/fidl/fuchsia.netstack:fuchsia.netstack-rustc",
     "//sdk/fidl/fuchsia.stash:fuchsia.stash-rustc",
@@ -115,6 +116,9 @@ group("netstack_integration_tests") {
 
     # mock_cobalt provides fuchsia.cobalt.LoggerFactory and fuchsia.cobalt.test.LoggerQuerier.
     "//src/cobalt/bin/testing/mock_cobalt",
+
+    # dns_resolver integration with netstack is tested.
+    "//src/connectivity/network/dns:dns_resolver",
   ]
 }
 
