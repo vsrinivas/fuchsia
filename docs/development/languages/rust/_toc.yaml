@@ -6,6 +6,8 @@ toc:
   path: /docs/development/languages/rust
 - title: "Fuchsia Rust crates"
   path: /docs/development/languages/rust/crates.md
+- title: "FIDL Rust crates"
+  path: /docs/development/languages/rust/fidl_crates.md
 - title: "Rust editor configurations"
   path: /docs/development/languages/rust/editors.md
 - title: "Logging"

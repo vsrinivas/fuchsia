@@ -1,24 +1,29 @@
 # Rust bindings
 
+## Generating FIDL Rust crates
+
+A FIDL Rust crate can be generated from a FIDL library in two ways:
+
+1. Manually, using the
+   [standard FIDL toolchain](/docs/development/languages/fidl/guides/cli.md).
+2. Automatically,
+   [using the Fuchsia build system](/docs/development/languages/rust/fidl_crates.md)
+   (which under the hood uses the standard FIDL toolchain). This option is only
+   available within the Fuchsia source tree.
+
 ## Libraries {#libraries}
 
-When built using the standard FIDL toolchain, all generated code for a given
-`library` is placed in a corresponding Rust module. For example, given the
-`library` declaration:
+A FIDL `library` maps to a Rust library crate named `fidl_`, followed by the
+full library path with underscores instead of dots.
+
+For example, given the `library` declaration:
 
 ```fidl
 library games.tictactoe;
 ```
 
-All generated code is placed in a `fidl_games_tictactoe.rs` file.
+The corresponding FIDL crate is named `fidl_games_tictactoe`.
 
-The FIDL toolchain expects libraries to follow this naming scheme when referring
-to some variable `Board` in an external `games.tictactoe` library, the
-generated code will use `fidl_games_tictactoe::Board`.
-
-In the Fuchsia tree, these generated FIDL modules are often bound to a shorter
-name when being imported, e.g.
-`use fidl_fuchsia_io2 as fio2;`, or `use fidl_fuchsia_data as fdata;`.
 
 ## Constants {#constants}
 
