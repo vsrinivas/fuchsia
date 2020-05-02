@@ -1,0 +1,61 @@
+{
+    select: {
+        status: "INSPECT:stash.cmx:root/fuchsia.inspect.Health:status",
+        is_secure: "INSPECT:stash.cmx:root:secure_mode",
+    },
+    eval: {
+        not_ok: "status != 'OK'",
+    },
+    act: {
+        unhealthy: {
+            trigger: "not_ok",
+            print: "Stash server is experiencing errors",
+        },
+        should_not_be_secure: {
+            trigger: "is_secure",
+            print: "The stash should not be running in secure mode",
+        },
+    },
+    test: {
+        failure: {
+            yes: [
+                "unhealthy",
+                "should_not_be_secure",
+            ],
+            no: [],
+            inspect: [
+                {
+                    moniker: "stash.cmx",
+                    payload: {
+                        root: {
+                            "fuchsia.inspect.Health": {
+                                status: "UNHEALTHY",
+                            },
+                            secure_mode: true,
+                        },
+                    },
+                },
+            ],
+        },
+        ok: {
+            yes: [],
+            no: [
+                "unhealthy",
+                "should_not_be_secure",
+            ],
+            inspect: [
+                {
+                    moniker: "stash.cmx",
+                    payload: {
+                        root: {
+                            "fuchsia.inspect.Health": {
+                                status: "OK",
+                            },
+                            secure_mode: false,
+                        },
+                    },
+                },
+            ],
+        },
+    },
+}

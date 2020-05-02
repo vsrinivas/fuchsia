@@ -18,6 +18,8 @@ if (is_host) {
   triage_config_test("triage_configs_test") {
     sources = [
       "disk.triage",
+      "stash.triage",
+      "stash_secure.triage",
       "timezone.triage",
     ]
     source_dir = "."
