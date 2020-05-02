@@ -188,7 +188,7 @@ zx_status_t fdio_open_fd_at(int dir_fd, const char* path, uint32_t flags, int* o
   }
 
   fdio_t* iodir = fdio_unsafe_fd_to_io(dir_fd);
-  if (iodir == NULL) {
+  if (iodir == nullptr) {
     return ZX_ERR_INVALID_ARGS;
   }
 

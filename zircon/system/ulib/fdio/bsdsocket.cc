@@ -180,7 +180,7 @@ int accept4(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict len,
   if (flags & ~SOCK_NONBLOCK) {
     return ERRNO(EINVAL);
   }
-  if ((addr == NULL) != (len == NULL)) {
+  if ((addr == nullptr) != (len == nullptr)) {
     return ERRNO(EINVAL);
   }
 
@@ -352,7 +352,7 @@ int _getaddrinfo_from_dns(struct address buf[MAXADDRS], char canon[256], const c
 }
 __EXPORT
 int getsockname(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict len) {
-  if (len == NULL || addr == NULL) {
+  if (len == nullptr || addr == nullptr) {
     return ERRNO(EINVAL);
   }
 
@@ -363,7 +363,7 @@ int getsockname(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict 
 
 __EXPORT
 int getpeername(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict len) {
-  if (len == NULL || addr == NULL) {
+  if (len == nullptr || addr == nullptr) {
     return ERRNO(EINVAL);
   }
 
@@ -375,7 +375,7 @@ int getpeername(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict 
 __EXPORT
 int getsockopt(int fd, int level, int optname, void* __restrict optval,
                socklen_t* __restrict optlen) {
-  if (optval == NULL || optlen == NULL) {
+  if (optval == nullptr || optlen == nullptr) {
     return ERRNO(EFAULT);
   }
 
@@ -399,7 +399,7 @@ int getsockopt(int fd, int level, int optname, void* __restrict optval,
         break;
     }
     if (timeout) {
-      if (optlen == NULL || *optlen < sizeof(struct timeval)) {
+      if (optlen == nullptr || *optlen < sizeof(struct timeval)) {
         return ERRNO(EINVAL);
       }
       *optlen = sizeof(struct timeval);
@@ -429,7 +429,7 @@ int getsockopt(int fd, int level, int optname, void* __restrict optval,
 __EXPORT
 int setsockopt(int fd, int level, int optname, const void* optval, socklen_t optlen) {
   fdio_t* io = fd_to_io(fd);
-  if (io == NULL) {
+  if (io == nullptr) {
     return ERRNO(EBADF);
   }
   auto clean_io = fbl::MakeAutoCall([io] { fdio_release(io); });
@@ -470,7 +470,7 @@ int setsockopt(int fd, int level, int optname, const void* optval, socklen_t opt
       // ref: net/ipv4/ip_sockglue.c, net/ipv6/ipv6_sockglue.c
       switch (optname) {
         case IP_TOS:
-          if (optval == NULL) {
+          if (optval == nullptr) {
             return ERRNO(EFAULT);
           }
           break;
@@ -481,7 +481,7 @@ int setsockopt(int fd, int level, int optname, const void* optval, socklen_t opt
     case IPPROTO_IPV6:
       switch (optname) {
         case IPV6_TCLASS:
-          if (optval == NULL) {
+          if (optval == nullptr) {
             return 0;
           }
           break;

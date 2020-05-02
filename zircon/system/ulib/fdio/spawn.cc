@@ -115,7 +115,7 @@ static zx_status_t load_path(const char* path, zx::vmo* out_vmo, char* err_msg) 
 
   if (strlen(path) >= ZX_MAX_NAME_LEN) {
     const char* p = strrchr(path, '/');
-    if (p != NULL) {
+    if (p != nullptr) {
       path = p + 1;
     }
   }
@@ -176,7 +176,7 @@ static zx_status_t resolve_name(const char* name, size_t name_len, zx::vmo* out_
 // Find the starting point of the interpreter and the interpreter arguments in a #! script header.
 // Note that the input buffer (line) will be modified to add a NUL after the interpreter name.
 static zx_status_t parse_interp_spec(char* line, char** interp_start, char** args_start) {
-  *args_start = NULL;
+  *args_start = nullptr;
 
   // Skip the '#!' prefix
   char* next_char = line + 2;
@@ -266,7 +266,7 @@ static zx_status_t handle_interpreters(zx::vmo* executable, zx::channel* ldsvc,
       // If there's no newline, then the script may be a single line and lack a trailing newline.
       // Look for the actual end of the script.
       line_end = reinterpret_cast<char*>(memchr(line, '\0', sizeof(line)));
-      if (line_end == NULL) {
+      if (line_end == nullptr) {
         // This implies that the first line is longer than MAX_INTERPRETER_LINE_LEN.
         report_error(err_msg, "first line of script is too long");
         return ZX_ERR_OUT_OF_RANGE;
@@ -310,7 +310,7 @@ static zx_status_t handle_interpreters(zx::vmo* executable, zx::channel* ldsvc,
       // args_start and interp_start are safe to treat as NUL terminated because parse_interp_spec
       // adds a NUL at the end of the interpreter name and we added an overall line NUL terminator
       // above when finding the line end.
-      if (args_start != NULL) {
+      if (args_start != nullptr) {
         extra_args->emplace_front(args_start);
       }
       extra_args->emplace_front(interp_start);
@@ -362,7 +362,7 @@ static zx_status_t send_cstring_array(const zx::channel& launcher, uint64_t ordi
     offset += FIDL_ALIGN(size);
   }
 
-  return launcher.write(0, msg, static_cast<uint32_t>(msg_len), NULL, 0);
+  return launcher.write(0, msg, static_cast<uint32_t>(msg_len), nullptr, 0);
 }
 
 static zx_status_t send_handles(const zx::channel& launcher, size_t handle_capacity, uint32_t flags,
@@ -615,7 +615,7 @@ static zx_status_t send_namespace(const zx::channel& launcher, size_t name_count
 __EXPORT
 zx_status_t fdio_spawn(zx_handle_t job, uint32_t flags, const char* path, const char* const* argv,
                        zx_handle_t* process_out) {
-  return fdio_spawn_etc(job, flags, path, argv, NULL, 0, NULL, process_out, NULL);
+  return fdio_spawn_etc(job, flags, path, argv, nullptr, 0, nullptr, process_out, nullptr);
 }
 
 __EXPORT
@@ -630,9 +630,9 @@ zx_status_t fdio_spawn_etc(zx_handle_t job, uint32_t flags, const char* path,
 
   if (status != ZX_OK) {
     report_error(err_msg, "failed to load executable from %s: %s", path, path_msg);
-    // Set |err_msg| to NULL to prevent |fdio_spawn_vmo| from generating
+    // Set |err_msg| to nullptr to prevent |fdio_spawn_vmo| from generating
     // a less useful error message.
-    err_msg = NULL;
+    err_msg = nullptr;
   }
 
   // Always call fdio_spawn_vmo to clean up arguments. If |executable| is
@@ -686,7 +686,7 @@ zx_status_t fdio_spawn_vmo(zx_handle_t job, uint32_t flags, zx_handle_t executab
                            size_t action_count, const fdio_spawn_action_t* actions,
                            zx_handle_t* process_out, char* err_msg) {
   zx_status_t status = ZX_OK;
-  fdio_flat_namespace_t* flat = NULL;
+  fdio_flat_namespace_t* flat = nullptr;
   size_t name_count = 0;
   size_t name_len = 0;
   size_t handle_capacity = 0;
@@ -695,7 +695,7 @@ zx_status_t fdio_spawn_vmo(zx_handle_t job, uint32_t flags, zx_handle_t executab
   zx::channel launcher_request;
   zx_handle_t msg_handles[FDIO_SPAWN_LAUNCH_HANDLE_COUNT];
   zx::channel ldsvc;
-  const char* process_name = NULL;
+  const char* process_name = nullptr;
   size_t process_name_size = 0;
   std::list<std::string> extra_args;
   zx_handle_t utc_clock = ZX_HANDLE_INVALID;
@@ -749,7 +749,7 @@ zx_status_t fdio_spawn_vmo(zx_handle_t job, uint32_t flags, zx_handle_t executab
         ++handle_capacity;
         break;
       case FDIO_SPAWN_ACTION_SET_NAME:
-        if (actions[i].name.data == NULL) {
+        if (actions[i].name.data == nullptr) {
           status = ZX_ERR_INVALID_ARGS;
           goto cleanup;
         }

@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <lib/fdio/fd.h>
-
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/unsafe.h>
 #include <zircon/assert.h>
@@ -37,7 +36,7 @@ __EXPORT
 zx_status_t fdio_fd_clone(int fd, zx_handle_t* out_handle) {
   zx_status_t status;
   fdio_t* io = nullptr;
-  if ((io = fdio_unsafe_fd_to_io(fd)) == NULL) {
+  if ((io = fdio_unsafe_fd_to_io(fd)) == nullptr) {
     return ZX_ERR_INVALID_ARGS;
   }
   // TODO(ZX-973): implement/honor close-on-exec flag

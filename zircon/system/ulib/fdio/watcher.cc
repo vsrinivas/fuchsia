@@ -110,12 +110,12 @@ static zx_status_t fdio_watcher_loop(fdio_watcher_t* w, zx_time_t deadline) {
     uint8_t msg[fio::MAX_BUF + 1];
     uint32_t sz = fio::MAX_BUF;
     zx_status_t status;
-    if ((status = zx_channel_read(w->h, 0, msg, NULL, sz, 0, &sz, NULL)) < 0) {
+    if ((status = zx_channel_read(w->h, 0, msg, nullptr, sz, 0, &sz, nullptr)) < 0) {
       if (status != ZX_ERR_SHOULD_WAIT) {
         return status;
       }
       if ((status = zx_object_wait_one(w->h, ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, deadline,
-                                       NULL)) < 0) {
+                                       nullptr)) < 0) {
         return status;
       }
       continue;
@@ -134,7 +134,7 @@ static void fdio_watcher_destroy(fdio_watcher_t* watcher) {
 
 __EXPORT
 zx_status_t fdio_watch_directory(int dirfd, watchdir_func_t cb, zx_time_t deadline, void* cookie) {
-  fdio_watcher_t* watcher = NULL;
+  fdio_watcher_t* watcher = nullptr;
 
   zx_status_t status;
   if ((status = fdio_watcher_create(dirfd, &watcher)) < 0) {

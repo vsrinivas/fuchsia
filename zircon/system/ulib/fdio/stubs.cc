@@ -3,12 +3,11 @@
 // found in the LICENSE file.
 
 #include <dirent.h>
+#include <errno.h>
 #include <fcntl.h>
 #include <sys/socket.h>
-#include <unistd.h>
-
-#include <errno.h>
 #include <sys/stat.h>
+#include <unistd.h>
 
 #include "private-socket.h"
 #include "unistd.h"
@@ -41,7 +40,7 @@ static int checkfileat(int fd, const char* path, int flags, int err) {
 
 static int checkfd(int fd, int err) {
   fdio_t* io;
-  if ((io = fd_to_io(fd)) == NULL) {
+  if ((io = fd_to_io(fd)) == nullptr) {
     errno = EBADF;
     return -1;
   }
@@ -51,12 +50,12 @@ static int checkfd(int fd, int err) {
 
 static int check2fds(int fd1, int fd2, int err) {
   fdio_t* io;
-  if ((io = fd_to_io(fd1)) == NULL) {
+  if ((io = fd_to_io(fd1)) == nullptr) {
     errno = EBADF;
     return -1;
   }
   fdio_release(io);
-  if ((io = fd_to_io(fd2)) == NULL) {
+  if ((io = fd_to_io(fd2)) == nullptr) {
     errno = EBADF;
     return -1;
   }
@@ -70,7 +69,7 @@ static int checkfilefd(const char* path, int fd, int err) {
     return -1;
   }
   fdio_t* io;
-  if ((io = fd_to_io(fd)) == NULL) {
+  if ((io = fd_to_io(fd)) == nullptr) {
     errno = EBADF;
     return -1;
   }
@@ -80,7 +79,7 @@ static int checkfilefd(const char* path, int fd, int err) {
 
 static int checksocket(int fd, int sock_err, int err) {
   fdio_t* io = fd_to_io(fd);
-  if (io == NULL) {
+  if (io == nullptr) {
     errno = EBADF;
     return -1;
   }

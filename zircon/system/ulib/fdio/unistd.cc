@@ -72,7 +72,7 @@ static constexpr fdio_state_t initialize_fdio_state() {
 fdio_state_t __fdio_global_state = initialize_fdio_state();
 
 static bool fdio_is_reserved_or_null(fdio_t* io) {
-  if (io == NULL || io == fdio_get_reserved_io()) {
+  if (io == nullptr || io == fdio_get_reserved_io()) {
     return true;
   }
   return false;
@@ -85,7 +85,7 @@ int fdio_reserve_fd(int starting_fd) {
   }
   fbl::AutoLock lock(&fdio_lock);
   for (int fd = starting_fd; fd < FDIO_MAX_FD; fd++) {
-    if (fdio_fdtab[fd] == NULL) {
+    if (fdio_fdtab[fd] == nullptr) {
       fdio_fdtab[fd] = fdio_get_reserved_io();
       return fd;
     }
@@ -117,7 +117,7 @@ int fdio_release_reserved(int fd) {
     errno = EINVAL;
     return -1;
   }
-  fdio_fdtab[fd] = NULL;
+  fdio_fdtab[fd] = nullptr;
   return fd;
 }
 
@@ -126,7 +126,7 @@ int fdio_release_reserved(int fd) {
 // fdtab prior to binding.
 __EXPORT
 int fdio_bind_to_fd(fdio_t* io, int fd, int starting_fd) {
-  fdio_t* io_to_close = NULL;
+  fdio_t* io_to_close = nullptr;
   {
     fbl::AutoLock lock(&fdio_lock);
     if (fd < 0) {
@@ -139,7 +139,7 @@ int fdio_bind_to_fd(fdio_t* io, int fd, int starting_fd) {
       // A negative fd implies that any free fd value can be used
       // TODO: bitmap, ffs, etc
       for (fd = starting_fd; fd < FDIO_MAX_FD; fd++) {
-        if (fdio_fdtab[fd] == NULL) {
+        if (fdio_fdtab[fd] == nullptr) {
           goto free_fd_found;
         }
       }
@@ -160,7 +160,7 @@ int fdio_bind_to_fd(fdio_t* io, int fd, int starting_fd) {
       if (fdio_get_dupcount(io_to_close) > 0) {
         // still alive in another fdtab slot
         fdio_release(io_to_close);
-        io_to_close = NULL;
+        io_to_close = nullptr;
       }
     }
 
@@ -197,7 +197,7 @@ zx_status_t fdio_unbind_from_fd(int fd, fdio_t** out) {
     return ZX_ERR_UNAVAILABLE;
   }
   fdio_dupcount_release(io);
-  fdio_fdtab[fd] = NULL;
+  fdio_fdtab[fd] = nullptr;
   *out = io;
   return ZX_OK;
 }
@@ -205,14 +205,14 @@ zx_status_t fdio_unbind_from_fd(int fd, fdio_t** out) {
 __EXPORT
 fdio_t* fdio_unsafe_fd_to_io(int fd) {
   if ((fd < 0) || (fd >= FDIO_MAX_FD)) {
-    return NULL;
+    return nullptr;
   }
-  fdio_t* io = NULL;
+  fdio_t* io = nullptr;
   fbl::AutoLock lock(&fdio_lock);
   io = fdio_fdtab[fd];
   if (fdio_is_reserved_or_null(io)) {
     // Never hand back the reserved io as it does not have an ops table.
-    io = NULL;
+    io = nullptr;
   } else {
     fdio_acquire(io);
   }
@@ -300,7 +300,7 @@ static uint32_t zxio_flags_to_fdio(uint32_t flags) {
 // the cwd, or, for the ...at variants, dirfd. In the absolute path
 // case, *path is also adjusted.
 static fdio_t* fdio_iodir(const char** path, int dirfd) {
-  fdio_t* iodir = NULL;
+  fdio_t* iodir = nullptr;
   fbl::AutoLock lock(&fdio_lock);
   if (*path[0] == '/') {
     iodir = fdio_root_handle;
@@ -318,7 +318,7 @@ static fdio_t* fdio_iodir(const char** path, int dirfd) {
   } else if ((dirfd >= 0) && (dirfd < FDIO_MAX_FD)) {
     iodir = fdio_fdtab[dirfd];
   }
-  if (iodir != NULL) {
+  if (iodir != nullptr) {
     fdio_acquire(iodir);
   }
   return iodir;
@@ -425,14 +425,14 @@ zx_status_t __fdio_cleanpath(const char* in, char* out, size_t* outlen, bool* is
 
 static zx_status_t __fdio_open_at_impl(fdio_t** io, int dirfd, const char* path, int flags,
                                        uint32_t mode, bool enforce_eisdir) {
-  if (path == NULL) {
+  if (path == nullptr) {
     return ZX_ERR_INVALID_ARGS;
   }
   if (path[0] == '\0') {
     return ZX_ERR_NOT_FOUND;
   }
   fdio_t* iodir = fdio_iodir(&path, dirfd);
-  if (iodir == NULL) {
+  if (iodir == nullptr) {
     return ZX_ERR_BAD_HANDLE;
   }
 
@@ -500,7 +500,7 @@ static void update_cwd_path(const char* path) {
   const char* next;
   for (; path[0]; path = next) {
     next = strchr(path, '/');
-    if (next == NULL) {
+    if (next == nullptr) {
       seglen = strlen(path);
       next = path + seglen;
     } else {
@@ -518,7 +518,7 @@ static void update_cwd_path(const char* path) {
     if ((seglen == 2) && (path[0] == '.') && (path[1] == '.')) {
       // parent directory, remove the trailing path segment from cwd_path
       char* x = strrchr(fdio_cwd_path, '/');
-      if (x == NULL) {
+      if (x == nullptr) {
         // shouldn't ever happen
         goto wat;
       }
@@ -556,12 +556,12 @@ wat:
 // must be a buffer that can fit [NAME_MAX + 1] characters.
 static zx_status_t __fdio_opendir_containing_at(fdio_t** io, int dirfd, const char* path,
                                                 char* out) {
-  if (path == NULL) {
+  if (path == nullptr) {
     return ZX_ERR_INVALID_ARGS;
   }
 
   fdio_t* iodir = fdio_iodir(&path, dirfd);
-  if (iodir == NULL) {
+  if (iodir == nullptr) {
     return ZX_ERR_BAD_HANDLE;
   }
 
@@ -643,7 +643,7 @@ extern "C" __EXPORT void __libc_extensions_init(uint32_t handle_count, zx_handle
 
     switch (PA_HND_TYPE(handle_info[n])) {
       case PA_FD: {
-        fdio_t* io = NULL;
+        fdio_t* io = nullptr;
         status = fdio_create(h, &io);
         if (status != ZX_OK) {
           zx_handle_close(h);
@@ -652,7 +652,7 @@ extern "C" __EXPORT void __libc_extensions_init(uint32_t handle_count, zx_handle
         ZX_ASSERT_MSG(arg_fd < FDIO_MAX_FD,
                       "unreasonably large fd number %u in PA_FD (must be less than %u)", arg_fd,
                       FDIO_MAX_FD);
-        ZX_ASSERT_MSG(fdio_fdtab[arg_fd] == NULL, "duplicate fd number %u in PA_FD", arg_fd);
+        ZX_ASSERT_MSG(fdio_fdtab[arg_fd] == nullptr, "duplicate fd number %u in PA_FD", arg_fd);
         fdio_fdtab[arg_fd] = io;
         fdio_dupcount_acquire(fdio_fdtab[arg_fd]);
         break;
@@ -682,15 +682,15 @@ extern "C" __EXPORT void __libc_extensions_init(uint32_t handle_count, zx_handle
   }
 
   const char* cwd = getenv("PWD");
-  cwd = (cwd == NULL) ? "/" : cwd;
+  cwd = (cwd == nullptr) ? "/" : cwd;
 
   update_cwd_path(cwd);
 
-  fdio_t* use_for_stdio = (stdio_fd >= 0) ? fdio_fdtab[stdio_fd] : NULL;
+  fdio_t* use_for_stdio = (stdio_fd >= 0) ? fdio_fdtab[stdio_fd] : nullptr;
 
   // configure stdin/out/err if not init'd
   for (uint32_t n = 0; n < 3; n++) {
-    if (fdio_fdtab[n] == NULL) {
+    if (fdio_fdtab[n] == nullptr) {
       if (use_for_stdio) {
         fdio_acquire(use_for_stdio);
         fdio_fdtab[n] = use_for_stdio;
@@ -710,7 +710,7 @@ extern "C" __EXPORT void __libc_extensions_init(uint32_t handle_count, zx_handle
     // placeholder null handle
     fdio_root_handle = fdio_null_create();
   }
-  if (fdio_cwd_handle == NULL) {
+  if (fdio_cwd_handle == nullptr) {
     fdio_cwd_handle = fdio_null_create();
   }
 }
@@ -726,7 +726,7 @@ extern "C" __EXPORT void __libc_extensions_fini(void) __TA_ACQUIRE(&fdio_lock) {
   for (int fd = 0; fd < FDIO_MAX_FD; fd++) {
     fdio_t* io = fdio_fdtab[fd];
     if (!fdio_is_reserved_or_null(io)) {
-      fdio_fdtab[fd] = NULL;
+      fdio_fdtab[fd] = nullptr;
       fdio_dupcount_release(io);
       if (fdio_get_dupcount(io) == 0) {
         fdio_get_ops(io)->close(io);
@@ -740,7 +740,7 @@ __EXPORT
 zx_status_t fdio_ns_get_installed(fdio_ns_t** ns) {
   zx_status_t status = ZX_OK;
   fbl::AutoLock lock(&fdio_lock);
-  if (fdio_root_ns == NULL) {
+  if (fdio_root_ns == nullptr) {
     status = ZX_ERR_NOT_FOUND;
   } else {
     *ns = fdio_root_ns;
@@ -771,7 +771,7 @@ zx_status_t fdio_wait(fdio_t* io, uint32_t events, zx::time deadline, uint32_t* 
 __EXPORT
 zx_status_t fdio_wait_fd(int fd, uint32_t events, uint32_t* out_pending, zx_time_t deadline) {
   fdio_t* io = fd_to_io(fd);
-  if (io == NULL)
+  if (io == nullptr)
     return ZX_ERR_BAD_HANDLE;
 
   zx_status_t status = fdio_wait(io, events, zx::time(deadline), out_pending);
@@ -885,7 +885,7 @@ int fdio_status_to_errno(zx_status_t status) {
 extern "C" __EXPORT zx_status_t _mmap_file(size_t offset, size_t len, zx_vm_option_t zx_options,
                                            int flags, int fd, off_t fd_off, uintptr_t* out) {
   fdio_t* io;
-  if ((io = fd_to_io(fd)) == NULL) {
+  if ((io = fd_to_io(fd)) == nullptr) {
     return ZX_ERR_BAD_HANDLE;
   }
 
@@ -948,7 +948,7 @@ ssize_t writev(int fd, const struct iovec* iov, int iovcnt) {
 __EXPORT
 ssize_t preadv(int fd, const struct iovec* iov, int iovcnt, off_t offset) {
   fdio_t* io = fd_to_io(fd);
-  if (io == NULL) {
+  if (io == nullptr) {
     return ERRNO(EBADF);
   }
   bool nonblocking = *fdio_get_ioflag(io) & IOFLAG_NONBLOCK;
@@ -981,7 +981,7 @@ ssize_t preadv(int fd, const struct iovec* iov, int iovcnt, off_t offset) {
 __EXPORT
 ssize_t pwritev(int fd, const struct iovec* iov, int iovcnt, off_t offset) {
   fdio_t* io = fd_to_io(fd);
-  if (io == NULL) {
+  if (io == nullptr) {
     return ERRNO(EBADF);
   }
   bool nonblocking = *fdio_get_ioflag(io) & IOFLAG_NONBLOCK;
@@ -1046,13 +1046,13 @@ ssize_t write(int fd, const void* buf, size_t count) {
 __EXPORT
 int close(int fd) {
   mtx_lock(&fdio_lock);
-  if ((fd < 0) || (fd >= FDIO_MAX_FD) || (fdio_fdtab[fd] == NULL)) {
+  if ((fd < 0) || (fd >= FDIO_MAX_FD) || (fdio_fdtab[fd] == nullptr)) {
     mtx_unlock(&fdio_lock);
     return ERRNO(EBADF);
   }
   fdio_t* io = fdio_fdtab[fd];
   fdio_dupcount_release(io);
-  fdio_fdtab[fd] = NULL;
+  fdio_fdtab[fd] = nullptr;
   if (fdio_get_dupcount(io) > 0) {
     // still alive in other fdtab slots
     mtx_unlock(&fdio_lock);
@@ -1068,7 +1068,7 @@ int close(int fd) {
 
 static int fdio_dup(int oldfd, int newfd, int starting_fd) {
   fdio_t* io = fd_to_io(oldfd);
-  if (io == NULL) {
+  if (io == nullptr) {
     return ERRNO(EBADF);
   }
   int fd = fdio_bind_to_fd(io, newfd, starting_fd);
@@ -1121,7 +1121,7 @@ int fcntl(int fd, int cmd, ...) {
     }
     case F_GETFD: {
       fdio_t* io = fd_to_io(fd);
-      if (io == NULL) {
+      if (io == nullptr) {
         return ERRNO(EBADF);
       }
       int flags = (int)(*fdio_get_ioflag(io) & IOFLAG_FD_FLAGS);
@@ -1132,7 +1132,7 @@ int fcntl(int fd, int cmd, ...) {
     }
     case F_SETFD: {
       fdio_t* io = fd_to_io(fd);
-      if (io == NULL) {
+      if (io == nullptr) {
         return ERRNO(EBADF);
       }
       GET_INT_ARG(flags);
@@ -1144,7 +1144,7 @@ int fcntl(int fd, int cmd, ...) {
     }
     case F_GETFL: {
       fdio_t* io = fd_to_io(fd);
-      if (io == NULL) {
+      if (io == nullptr) {
         return ERRNO(EBADF);
       }
       uint32_t flags = 0;
@@ -1168,7 +1168,7 @@ int fcntl(int fd, int cmd, ...) {
     }
     case F_SETFL: {
       fdio_t* io = fd_to_io(fd);
-      if (io == NULL) {
+      if (io == nullptr) {
         return ERRNO(EBADF);
       }
       GET_INT_ARG(n);
@@ -1216,7 +1216,7 @@ int fcntl(int fd, int cmd, ...) {
 __EXPORT
 off_t lseek(int fd, off_t offset, int whence) {
   fdio_t* io = fd_to_io(fd);
-  if (io == NULL) {
+  if (io == nullptr) {
     return ERRNO(EBADF);
   }
 
@@ -1255,7 +1255,7 @@ int truncate(const char* path, off_t len) { return truncateat(AT_FDCWD, path, le
 __EXPORT
 int ftruncate(int fd, off_t len) {
   fdio_t* io = fd_to_io(fd);
-  if (io == NULL) {
+  if (io == nullptr) {
     return ERRNO(EBADF);
   }
 
@@ -1331,7 +1331,7 @@ __EXPORT
 int unlink(const char* path) { return unlinkat(AT_FDCWD, path, 0); }
 
 static int vopenat(int dirfd, const char* path, int flags, va_list args) {
-  fdio_t* io = NULL;
+  fdio_t* io = nullptr;
   zx_status_t r;
   int fd;
   uint32_t mode = 0;
@@ -1382,7 +1382,7 @@ int mkdir(const char* path, mode_t mode) { return mkdirat(AT_FDCWD, path, mode);
 
 __EXPORT
 int mkdirat(int dirfd, const char* path, mode_t mode) {
-  fdio_t* io = NULL;
+  fdio_t* io = nullptr;
   zx_status_t r;
 
   mode = (mode & 0777) | S_IFDIR;
@@ -1398,7 +1398,7 @@ int mkdirat(int dirfd, const char* path, mode_t mode) {
 __EXPORT
 int fsync(int fd) {
   fdio_t* io = fd_to_io(fd);
-  if (io == NULL) {
+  if (io == nullptr) {
     return ERRNO(EBADF);
   }
   zx_status_t status = zxio_sync(fdio_get_zxio(io));
@@ -1425,7 +1425,7 @@ int syncfs(int fd) {
 __EXPORT
 int fstat(int fd, struct stat* s) {
   fdio_t* io = fd_to_io(fd);
-  if (io == NULL) {
+  if (io == nullptr) {
     return ERRNO(EBADF);
   }
   int r = STATUS(fdio_stat(io, s));
@@ -1463,7 +1463,7 @@ char* realpath(const char* __restrict filename, char* __restrict resolved) {
 
   if (!filename) {
     errno = EINVAL;
-    return NULL;
+    return nullptr;
   }
 
   if (filename[0] != '/') {
@@ -1476,7 +1476,7 @@ char* realpath(const char* __restrict filename, char* __restrict resolved) {
       cwd_len = strlen(fdio_cwd_path);
       if (cwd_len + 1 + file_len >= PATH_MAX) {
         errno = ENAMETOOLONG;
-        return NULL;
+        return nullptr;
       }
       memcpy(tmp2, fdio_cwd_path, cwd_len);
     }
@@ -1485,19 +1485,19 @@ char* realpath(const char* __restrict filename, char* __restrict resolved) {
     zx_status_t status = __fdio_cleanpath(tmp2, tmp, &outlen, &is_dir);
     if (status != ZX_OK) {
       errno = EINVAL;
-      return NULL;
+      return nullptr;
     }
   } else {
     // Clean the provided absolute path
     zx_status_t status = __fdio_cleanpath(filename, tmp, &outlen, &is_dir);
     if (status != ZX_OK) {
       errno = EINVAL;
-      return NULL;
+      return nullptr;
     }
 
     r = stat(tmp, &st);
     if (r < 0) {
-      return NULL;
+      return nullptr;
     }
   }
   return resolved ? strcpy(resolved, tmp) : strdup(tmp);
@@ -1508,7 +1508,7 @@ static zx_status_t zx_utimens(fdio_t* io, const struct timespec times[2], int fl
 
   uint64_t modification_time;
   // Extract modify time.
-  if (times == NULL || times[1].tv_nsec == UTIME_NOW) {
+  if (times == nullptr || times[1].tv_nsec == UTIME_NOW) {
     zx_time_t now;
     zx_status_t status = zx_clock_get(ZX_CLOCK_UTC, &now);
     if (status != ZX_OK) {
@@ -1519,7 +1519,7 @@ static zx_status_t zx_utimens(fdio_t* io, const struct timespec times[2], int fl
     modification_time = zx_time_add_duration(ZX_SEC(times[1].tv_sec), times[1].tv_nsec);
   }
 
-  if (times == NULL || times[1].tv_nsec != UTIME_OMIT) {
+  if (times == nullptr || times[1].tv_nsec != UTIME_OMIT) {
     // For setattr, tell which fields are valid.
     ZXIO_NODE_ATTR_SET(attr, modification_time, modification_time);
   }
@@ -1673,15 +1673,15 @@ int faccessat(int dirfd, const char* filename, int amode, int flag) {
 __EXPORT
 char* getcwd(char* buf, size_t size) {
   char tmp[PATH_MAX];
-  if (buf == NULL) {
+  if (buf == nullptr) {
     buf = tmp;
     size = PATH_MAX;
   } else if (size == 0) {
     errno = EINVAL;
-    return NULL;
+    return nullptr;
   }
 
-  char* out = NULL;
+  char* out = nullptr;
   {
     fbl::AutoLock lock(&fdio_cwd_lock);
     size_t len = strlen(fdio_cwd_path) + 1;
@@ -1747,9 +1747,9 @@ __EXPORT
 DIR* opendir(const char* name) {
   int fd = open(name, O_RDONLY | O_DIRECTORY);
   if (fd < 0)
-    return NULL;
+    return nullptr;
   DIR* dir = internal_opendir(fd);
-  if (dir == NULL)
+  if (dir == nullptr)
     close(fd);
   return dir;
 }
@@ -1759,9 +1759,9 @@ DIR* fdopendir(int fd) {
   // Check the fd for validity, but we'll just store the fd
   // number so we don't save the fdio_t pointer.
   fdio_t* io = fd_to_io(fd);
-  if (io == NULL) {
+  if (io == nullptr) {
     errno = EBADF;
-    return NULL;
+    return nullptr;
   }
   // TODO(mcgrathr): Technically this should verify that it's
   // really a directory and fail with ENOTDIR if not.  But
@@ -1870,7 +1870,7 @@ int dirfd(DIR* dir) { return dir->fd; }
 __EXPORT
 int isatty(int fd) {
   fdio_t* io = fd_to_io(fd);
-  if (io == NULL) {
+  if (io == nullptr) {
     errno = EBADF;
     return 0;
   }
@@ -1953,13 +1953,13 @@ int ppoll(struct pollfd* fds, nfds_t n, const struct timespec* timeout_ts,
     struct pollfd* pfd = &fds[i];
     pfd->revents = 0;  // initialize to zero
 
-    ios[i] = NULL;
+    ios[i] = nullptr;
     if (pfd->fd < 0) {
       // if fd is negative, the entry is invalid
       continue;
     }
     fdio_t* io;
-    if ((io = fd_to_io(pfd->fd)) == NULL) {
+    if ((io = fd_to_io(pfd->fd)) == nullptr) {
       // fd is not opened
       pfd->revents = POLLNVAL;
       continue;
@@ -2002,7 +2002,7 @@ int ppoll(struct pollfd* fds, nfds_t n, const struct timespec* timeout_ts,
         struct pollfd* pfd = &fds[i];
         fdio_t* io = ios[i];
 
-        if (io == NULL) {
+        if (io == nullptr) {
           // skip an invalid entry
           continue;
         }
@@ -2032,8 +2032,8 @@ int ppoll(struct pollfd* fds, nfds_t n, const struct timespec* timeout_ts,
 __EXPORT
 int poll(struct pollfd* fds, nfds_t n, int timeout) {
   struct timespec timeout_ts = {timeout / 1000, (timeout % 1000) * 1000000};
-  struct timespec* ts = timeout >= 0 ? &timeout_ts : NULL;
-  return ppoll(fds, n, ts, NULL);
+  struct timespec* ts = timeout >= 0 ? &timeout_ts : nullptr;
+  return ppoll(fds, n, ts, nullptr);
 }
 
 __EXPORT
@@ -2052,7 +2052,7 @@ int select(int n, fd_set* __restrict rfds, fd_set* __restrict wfds, fd_set* __re
   zx_wait_item_t items[n];
 
   for (int fd = 0; fd < n; fd++) {
-    ios[fd] = NULL;
+    ios[fd] = nullptr;
 
     uint32_t events = 0;
     if (rfds && FD_ISSET(fd, rfds))
@@ -2066,7 +2066,7 @@ int select(int n, fd_set* __restrict rfds, fd_set* __restrict wfds, fd_set* __re
     }
 
     fdio_t* io;
-    if ((io = fd_to_io(fd)) == NULL) {
+    if ((io = fd_to_io(fd)) == nullptr) {
       r = ZX_ERR_BAD_HANDLE;
       break;
     }
@@ -2089,7 +2089,7 @@ int select(int n, fd_set* __restrict rfds, fd_set* __restrict wfds, fd_set* __re
   int nfds = 0;
   if (r == ZX_OK && nvalid > 0) {
     zx_time_t tmo =
-        (tv == NULL)
+        (tv == nullptr)
             ? ZX_TIME_INFINITE
             : zx_deadline_after(zx_duration_add_duration(ZX_SEC(tv->tv_sec), ZX_USEC(tv->tv_usec)));
     r = zx_object_wait_many(items, nvalid, tmo);
@@ -2099,7 +2099,7 @@ int select(int n, fd_set* __restrict rfds, fd_set* __restrict wfds, fd_set* __re
 
       for (int fd = 0; fd < n; fd++) {
         fdio_t* io = ios[fd];
-        if (io == NULL) {
+        if (io == nullptr) {
           // skip an invalid entry
           continue;
         }
@@ -2155,7 +2155,7 @@ int select(int n, fd_set* __restrict rfds, fd_set* __restrict wfds, fd_set* __re
 __EXPORT
 int ioctl(int fd, int req, ...) {
   fdio_t* io;
-  if ((io = fd_to_io(fd)) == NULL) {
+  if ((io = fd_to_io(fd)) == nullptr) {
     return ERRNO(EBADF);
   }
 
@@ -2214,7 +2214,7 @@ ssize_t recvfrom(int fd, void* __restrict buf, size_t buflen, int flags,
 __EXPORT
 ssize_t sendmsg(int fd, const struct msghdr* msg, int flags) {
   fdio_t* io = fd_to_io(fd);
-  if (io == NULL) {
+  if (io == nullptr) {
     return ERRNO(EBADF);
   }
   // The |flags| are typically used to express intent *not* to issue SIGPIPE
@@ -2261,7 +2261,7 @@ ssize_t sendmsg(int fd, const struct msghdr* msg, int flags) {
 __EXPORT
 ssize_t recvmsg(int fd, struct msghdr* msg, int flags) {
   fdio_t* io = fd_to_io(fd);
-  if (io == NULL) {
+  if (io == nullptr) {
     return ERRNO(EBADF);
   }
   bool nonblocking = (*fdio_get_ioflag(io) & IOFLAG_NONBLOCK) || (flags & MSG_DONTWAIT);
@@ -2319,7 +2319,7 @@ int shutdown(int fd, int how) {
 // statfs.
 static int fs_stat(int fd, struct statfs* buf) {
   fdio_t* io;
-  if ((io = fd_to_io(fd)) == NULL) {
+  if ((io = fd_to_io(fd)) == nullptr) {
     return ERRNO(EBADF);
   }
   zx_handle_t handle = fdio_unsafe_borrow_channel(io);
