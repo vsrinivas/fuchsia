@@ -67,6 +67,7 @@ base_package_labels += [
   "//src/security/root_ssl_certificates",
   "//src/sys/appmgr",
   "//src/sys/appmgr:appmgr_scheme_config",
+  "//src/sys/appmgr:core_component_id_index",
   "//src/sys/core",
   "//src/sys/device_settings:device_settings_manager",
   "//src/sys/pkg:core",

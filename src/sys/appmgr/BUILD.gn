@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/component/component_id_index.gni")
 import("//build/config.gni")
 import("//build/package.gni")
 import("//build/test/test_package.gni")
@@ -185,6 +186,12 @@ config_data("appmgr_scheme_config") {
   for_pkg = "appmgr"
   sources = [ "scheme_map.config" ]
   outputs = [ "scheme_map/default.config" ]
+}
+
+# Supply a component ID index to appmgr. This index contains component ID entries for components
+# whose source-code lives in this repository (fuchsia.git).
+component_id_index("core_component_id_index") {
+  source = "config/core_component_id_index.json"
 }
 
 group("unittests") {

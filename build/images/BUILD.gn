@@ -4,6 +4,7 @@
 
 import("//build/board.gni")
 import("//build/compiled_action.gni")
+import("//build/component/component_id_index.gni")
 import("//build/config.gni")
 import("//build/config/clang/clang.gni")
 import("//build/config/fuchsia/zbi.gni")
@@ -128,7 +129,10 @@ group("package_lists") {
 config_package("config-data") {
   testonly = true
   visibility = [ ":*" ]
-  deps = [ ":universe_packages" ]
+  deps = [
+    ":component_id_index_config_data",
+    ":universe_packages",
+  ]
 }
 
 shell_commands("shell-commands") {
@@ -1848,7 +1852,17 @@ generate_package_metadata("all_package_manifests.list") {
   ]
 }
 
-# The component index is the index of components in all universe packages.
+# A component ID index maps component instance IDs to component monikers.
+# Indices are defined using the component_id_index() GN template. They are
+# merged together into a single index and supplied to appmgr using the
+# component_id_index_config_data() template.
+component_id_index_config_data("component_id_index_config_data") {
+  testonly = true
+
+  # crawl for component_id_index()s in the universe of packages.
+  deps = [ ":universe_packages" ]
+}
+
 component_index_metadata = "$target_out_dir/component_index_metadata"
 generate_component_index("component_index_metadata") {
   visibility = [

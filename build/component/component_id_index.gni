@@ -1,0 +1,97 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config.gni")
+
+# Define a component ID index which maps monikers (component URL + realm path) to component instance IDs.
+# appmgr uses this index to key a component's storage directory to its instance ID.
+#
+# There may be multiple component_id_index()s in the build, which are merged into a single index in the build and
+# delivered to appmgr using config_data(for=appmgr).
+#
+# Parameters
+#
+#   source (required)
+#     [string] This is a relative path to index file.
+#
+#   visibility (optional)
+#   testonly (optional)
+#     Usual GN meanings.
+template("component_id_index") {
+  group(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "visibility",
+                             "testonly",
+                           ])
+
+    assert(defined(invoker.source), "source must be specified.")
+    metadata = {
+      component_id_index = [ rebase_path(invoker.source, root_build_dir) ]
+      component_id_index_barrier = []
+    }
+  }
+}
+
+# Produce a config_data() for appmgr containing a merged component ID index.
+# All component ID indices are merged together by transitively traversing `deps`,
+# and a single merged index is supplied to the config_data().
+#
+# A target defined from this template must be a (transitive) dependency of config_package().
+#
+# Parameters
+#
+#   deps (optional)
+#     A list of deps to traverse to collect component_id_index()s.
+#
+#   public_deps (optional)
+#   testonly (optional)
+#     Usual GN meanings.
+template("component_id_index_config_data") {
+  # Step 1:  Collect a list of index file paths into intermediary file `component_id_index_merge_input_manifest`.
+  component_id_index_input_manifest_path =
+      "${target_gen_dir}/${target_name}_merge_input_manifest"
+  component_id_index_merged_inputs = "${target_name}_merged_inputs"
+  generated_file(component_id_index_merged_inputs) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "public_deps",
+                             "testonly",
+                             "visibility",
+                           ])
+
+    data_keys = [ "component_id_index" ]
+    walk_keys = [ "component_id_index_barrier" ]
+    outputs = [ component_id_index_input_manifest_path ]
+  }
+
+  # Step 2: Merge the collected index files (listed in the intermediary file) into 1 index.
+  component_id_index_merge = "${target_name}_merge"
+  component_id_index_merged_index_path =
+      "${target_gen_dir}/${target_name}_merged_index.json"
+  compiled_action(component_id_index_merge) {
+    forward_variables_from(invoker, [ "testonly" ])
+    tool = "//tools/component_id_index"
+    sources = [ component_id_index_input_manifest_path ]
+    outputs = [ component_id_index_merged_index_path ]
+    args = [
+      "-i",
+      rebase_path(component_id_index_input_manifest_path),
+      "-o",
+      rebase_path(component_id_index_merged_index_path),
+    ]
+    deps = [ ":${component_id_index_merged_inputs}" ]
+  }
+
+  # Step 3: Supply the merged index file to appmgr as config data.
+  config_data(target_name) {
+    forward_variables_from(invoker, [ "testonly" ])
+    for_pkg = "appmgr"
+    sources = [ rebase_path(component_id_index_merged_index_path) ]
+    outputs = [ "component_id_index" ]
+
+    deps = [ ":${component_id_index_merge}" ]
+  }
+}
