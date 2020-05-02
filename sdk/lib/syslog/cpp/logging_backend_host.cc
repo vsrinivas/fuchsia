@@ -3,24 +3,23 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
+#include <lib/syslog/cpp/logging_backend.h>
 #include <unistd.h>
 
 #include <iostream>
 
-#include "src/lib/fxl/logging_backend.h"
-
-namespace fxl_logging_backend {
+namespace syslog_backend {
 
 namespace {
 
 // It's OK to keep global state here even though this file is in a source_set because on host
 // we don't use shared libraries.
-fxl::LogSettings g_log_settings;
+syslog::LogSettings g_log_settings;
 
 }  // namespace
 
-void SetSettings(const fxl::LogSettings& settings) {
-  g_log_settings.min_log_level = std::min(fxl::LOG_FATAL, settings.min_log_level);
+void SetLogSettings(const syslog::LogSettings& settings) {
+  g_log_settings.min_log_level = std::min(syslog::LOG_FATAL, settings.min_log_level);
 
   if (g_log_settings.log_file != settings.log_file) {
     if (!settings.log_file.empty()) {
@@ -42,15 +41,15 @@ void SetSettings(const fxl::LogSettings& settings) {
   }
 }
 
-void SetSettings(const fxl::LogSettings& settings, const std::initializer_list<std::string>& tags) {
-  // Global tags aren't supported on host.
-  SetSettings(settings);
+void SetLogSettings(const syslog::LogSettings& settings,
+                    const std::initializer_list<std::string>& tags) {
+  syslog_backend::SetLogSettings(settings);
 }
 
-void SetTags(const std::initializer_list<std::string>& tags) {
+void SetLogTags(const std::initializer_list<std::string>& tags) {
   // Global tags aren't supported on host.
 }
 
-fxl::LogSeverity GetMinLogLevel() { return g_log_settings.min_log_level; }
+syslog::LogSeverity GetMinLogLevel() { return g_log_settings.min_log_level; }
 
-}  // namespace fxl_logging_backend
+}  // namespace syslog_backend

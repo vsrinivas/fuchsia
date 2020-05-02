@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_LIB_FXL_LOG_LEVEL_H_
-#define SRC_LIB_FXL_LOG_LEVEL_H_
+#ifndef LIB_SYSLOG_CPP_LOG_LEVEL_H_
+#define LIB_SYSLOG_CPP_LOG_LEVEL_H_
 
-namespace fxl {
+namespace syslog {
 
 typedef int LogSeverity;
 
@@ -25,6 +25,6 @@ const LogSeverity LOG_DFATAL = LOG_FATAL;
 
 inline LogSeverity LOG_LEVEL(int level) { return level; }
 
-}  // namespace fxl
+}  // namespace syslog
 
-#endif  // SRC_LIB_FXL_LOG_LEVEL_H_
+#endif  // LIB_SYSLOG_CPP_LOG_LEVEL_H_

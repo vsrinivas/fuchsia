@@ -14,7 +14,6 @@
 namespace fxl {
 
 class CommandLine;
-struct LogSettings;
 
 // Parses log settings from standard command-line options.
 //

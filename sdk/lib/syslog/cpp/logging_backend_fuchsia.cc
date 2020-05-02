@@ -2,28 +2,29 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/syslog/cpp/log_level.h>
+#include <lib/syslog/cpp/logging_backend.h>
 #include <lib/syslog/global.h>
 #include <lib/zx/process.h>
 
-#include "src/lib/fxl/log_level.h"
-#include "src/lib/fxl/logging_backend.h"
+static_assert(syslog::LOG_INFO == FX_LOG_INFO);
+static_assert(syslog::LOG_WARNING == FX_LOG_WARNING);
+static_assert(syslog::LOG_ERROR == FX_LOG_ERROR);
+static_assert(syslog::LOG_FATAL == FX_LOG_FATAL);
 
-static_assert(fxl::LOG_INFO == FX_LOG_INFO);
-static_assert(fxl::LOG_WARNING == FX_LOG_WARNING);
-static_assert(fxl::LOG_ERROR == FX_LOG_ERROR);
+namespace syslog_backend {
 
-namespace fxl_logging_backend {
-
-void SetSettings(const fxl::LogSettings& settings) {
+void SetLogSettings(const syslog::LogSettings& settings) {
   char process_name[ZX_MAX_NAME_LEN] = "";
   zx_status_t status =
       zx::process::self()->get_property(ZX_PROP_NAME, process_name, sizeof(process_name));
   if (status != ZX_OK)
     process_name[0] = '\0';
-  SetLogSettings(settings, {process_name});
+  syslog_backend::SetLogSettings(settings, {process_name});
 }
 
-void SetSettings(const fxl::LogSettings& settings, const std::initializer_list<std::string>& tags) {
+void SetLogSettings(const syslog::LogSettings& settings,
+                    const std::initializer_list<std::string>& tags) {
   const char* ctags[FX_LOG_MAX_TAGS];
   int i = 0;
   for (auto& tag : tags) {
@@ -44,6 +45,6 @@ void SetSettings(const fxl::LogSettings& settings, const std::initializer_list<s
   fx_log_reconfigure(&config);
 }
 
-fxl::LogSeverity GetMinLogLevel() { return fx_logger_get_min_severity(fx_log_get_logger()); }
+syslog::LogSeverity GetMinLogLevel() { return fx_logger_get_min_severity(fx_log_get_logger()); }
 
-}  // namespace fxl_logging_backend
+}  // namespace syslog_backend

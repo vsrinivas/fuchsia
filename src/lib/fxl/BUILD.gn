@@ -18,28 +18,14 @@ source_set("common") {
 
 source_set("fxl_logging") {
   sources = [
-    "debug/debugger.cc",
-    "debug/debugger.h",
-    "log_level.h",
-    "log_settings.cc",
     "log_settings.h",
-    "logging.cc",
     "logging.h",
-    "logging_backend.h",
   ]
 
-  public_deps = [ ":common" ]
-
-  if (is_fuchsia) {
-    sources += [ "logging_backend_fuchsia.cc" ]
-    libs = [ "zircon" ]
-    public_deps += [
-      "//zircon/public/lib/syslog",
-      "//zircon/public/lib/zx",
-    ]
-  } else {
-    sources += [ "logging_backend_host.cc" ]
-  }
+  public_deps = [
+    ":common",
+    "//sdk/lib/syslog/cpp",
+  ]
 }
 
 source_set("memory") {
@@ -153,12 +139,11 @@ executable("fxl_unittests") {
     "//src/lib/files/glob_unittest.cc",
     "//src/lib/files/path_unittest.cc",
     "//src/lib/files/scoped_temp_dir_unittest.cc",
+    "//src/lib/fxl/log_settings_command_line_unittest.cc",
     "arraysize_unittest.cc",
     "command_line_unittest.cc",
     "functional/apply_unittest.cc",
     "functional/cancelable_callback_unittest.cc",
-    "log_settings_unittest.cc",
-    "logging_unittest.cc",
     "memory/ref_counted_unittest.cc",
     "memory/weak_ptr_unittest.cc",
     "observer_list_unittest.cc",
@@ -175,10 +160,6 @@ executable("fxl_unittests") {
     "synchronization/thread_checker_unittest.cc",
     "test/test_settings_unittest.cc",
   ]
-
-  if (is_fuchsia) {
-    sources += [ "logging_socket_unittest.cc" ]
-  }
 
   deps = [
     ":fxl",

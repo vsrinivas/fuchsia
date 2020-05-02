@@ -11,7 +11,7 @@
 
 #include <iostream>
 
-#include "src/lib/fxl/log_level.h"
+#include "src/lib/fxl/logging.h"
 #include "src/ui/lib/yuv/yuv.h"
 
 namespace yuv_to_image_pipe {

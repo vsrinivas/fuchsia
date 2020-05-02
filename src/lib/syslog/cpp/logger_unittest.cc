@@ -11,6 +11,8 @@
 
 #include <gtest/gtest.h>
 
+#include "src/lib/fxl/log_settings.h"
+
 __BEGIN_CDECLS
 
 // This does not come from header file as this function should only be used in
@@ -36,7 +38,7 @@ bool ends_with(const char* str, const char* suffix) {
 }
 
 inline zx_status_t init_helper(zx_handle_t handle, const char** tags, size_t ntags) {
-  fxl::SetLogSettings({.min_log_level = fxl::LOG_INFO}, {});
+  fxl::SetLogSettings({.min_log_level = syslog::LOG_INFO}, {});
   fx_logger_config_t config = {.min_severity = FX_LOG_INFO,
                                .console_fd = -1,
                                .log_service_channel = handle,

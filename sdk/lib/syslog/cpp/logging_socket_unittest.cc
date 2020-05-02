@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/syslog/cpp/log_settings.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/syslog/global.h>
 #include <lib/syslog/wire_format.h>
 #include <lib/zx/socket.h>
@@ -10,11 +12,9 @@
 #include <gtest/gtest.h>
 
 #include "src/lib/fxl/command_line.h"
-#include "src/lib/fxl/log_settings.h"
 #include "src/lib/fxl/log_settings_command_line.h"
-#include "src/lib/fxl/logging.h"
 
-namespace fxl {
+namespace syslog {
 namespace {
 
 struct LogPacket {
@@ -102,7 +102,7 @@ TEST_F(LoggingSocketTest, VLog) {
   FX_VLOGS(1) << kMsg1;
   CheckSocketEmpty();
 
-  fxl::SetLogSettings({.min_log_level = -1, .log_file = ""}, {});
+  SetLogSettings({.min_log_level = -1, .log_file = ""}, {});
   FX_VLOGS(1) << kMsg2;
   ReadPacketAndCompare(-1, kMsg2);
   CheckSocketEmpty();
@@ -124,7 +124,8 @@ TEST_F(LoggingSocketTest, VLogWithTag) {
   FX_VLOGST(1, kTag1) << kMsg1;
   CheckSocketEmpty();
 
-  fxl::SetLogSettings({.min_log_level = -1}, {});
+  SetLogSettings({.min_log_level = -1}, {});
+
   FX_VLOGST(1, kTag2) << kMsg2;
   ReadPacketAndCompare(-1, kMsg2, {kTag2});
   CheckSocketEmpty();
@@ -190,8 +191,8 @@ TEST_F(LoggingSocketTest, SetSettingsAndTagsFromCommandLine) {
   constexpr const char* kLogMessage = "Hello";
   constexpr const char* kTag = "1234";
 
-  CommandLine command_line = CommandLineFromInitializerList({"argv0", "--quiet"});
-  SetLogSettingsFromCommandLine(command_line, {kTag});
+  fxl::CommandLine command_line = fxl::CommandLineFromInitializerList({"argv0", "--quiet"});
+  fxl::SetLogSettingsFromCommandLine(command_line, {kTag});
 
   FX_LOGS(ERROR) << kLogMessage;
   ReadPacketAndCompare(FX_LOG_ERROR, kLogMessage, {kTag});
@@ -199,4 +200,4 @@ TEST_F(LoggingSocketTest, SetSettingsAndTagsFromCommandLine) {
 }
 
 }  // namespace
-}  // namespace fxl
+}  // namespace syslog

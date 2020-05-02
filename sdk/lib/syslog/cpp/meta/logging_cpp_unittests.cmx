@@ -1,0 +1,13 @@
+{
+    "program": {
+        "binary": "test/logging_cpp_unittests"
+    },
+    "sandbox": {
+        "features": [
+            "isolated-temp"
+        ],
+        "services": [
+            "fuchsia.process.Launcher"
+        ]
+    }
+}

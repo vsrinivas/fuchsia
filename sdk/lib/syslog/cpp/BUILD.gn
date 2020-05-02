@@ -1,0 +1,69 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/cpp/sdk_source_set.gni")
+import("//build/test.gni")
+import("//build/test/test_package.gni")
+
+sdk_source_set("cpp") {
+  # Keep internal for now until the API stabilizes.
+  category = "internal"
+
+  sdk_name = "syslog_cpp"
+
+  include_base = "//sdk"
+
+  sources = [
+    "log_level.h",
+    "log_settings.cc",
+    "log_settings.h",
+    "logging_backend.h",
+    "macros.cc",
+    "macros.h",
+  ]
+
+  if (is_fuchsia) {
+    sources += [ "logging_backend_fuchsia.cc" ]
+    libs = [ "zircon" ]
+    public_deps = [
+      "//zircon/public/lib/syslog",
+      "//zircon/public/lib/zx",
+    ]
+  } else {
+    sources += [ "logging_backend_host.cc" ]
+  }
+
+  public_configs = [ "//sdk/config" ]
+}
+
+executable("logging_cpp_unittests") {
+  testonly = true
+
+  sources = [
+    "log_settings_unittest.cc",
+    "logging_unittest.cc",
+  ]
+
+  if (is_fuchsia) {
+    sources += [ "logging_socket_unittest.cc" ]
+  }
+
+  deps = [
+    ":cpp",
+    "//src/lib/fxl",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+test_package("logging-cpp-tests") {
+  deps = [ ":logging_cpp_unittests" ]
+
+  tests = [
+    {
+      name = "logging_cpp_unittests"
+    },
+  ]
+}

@@ -2,14 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/lib/fxl/logging.h"
+#include <lib/syslog/cpp/log_settings.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <algorithm>
 #include <iostream>
-
-#include "src/lib/fxl/build_config.h"
-#include "src/lib/fxl/debug/debugger.h"
-#include "src/lib/fxl/log_settings.h"
 
 #if defined(__Fuchsia__)
 #include <lib/syslog/global.h>
@@ -20,7 +17,7 @@
 #include <lib/syslog.h>
 #endif
 
-namespace fxl {
+namespace syslog {
 namespace {
 
 #ifndef __Fuchsia__
@@ -127,7 +124,7 @@ LogMessage::~LogMessage() {
 #endif
 
   if (severity_ >= LOG_FATAL)
-    BreakDebugger();
+    __builtin_debugtrap();
 }
 
 bool LogFirstNState::ShouldLog(uint32_t n) {
@@ -139,4 +136,4 @@ int GetVlogVerbosity() { return std::max(-1, LOG_INFO - GetMinLogLevel()); }
 
 bool ShouldCreateLogMessage(LogSeverity severity) { return severity >= GetMinLogLevel(); }
 
-}  // namespace fxl
+}  // namespace syslog

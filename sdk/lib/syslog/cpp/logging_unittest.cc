@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/lib/fxl/logging.h"
+#include <lib/syslog/cpp/log_settings.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <string>
 
@@ -11,7 +12,6 @@
 
 #include "src/lib/files/file.h"
 #include "src/lib/files/scoped_temp_dir.h"
-#include "src/lib/fxl/log_settings.h"
 
 #ifdef __Fuchsia__
 #include <lib/syslog/global.h>
@@ -20,7 +20,7 @@
 #include <lib/zx/socket.h>
 #endif
 
-namespace fxl {
+namespace syslog {
 namespace {
 
 class LoggingFixture : public ::testing::Test {
@@ -61,13 +61,13 @@ TEST_F(LoggingFixture, Log) {
   ASSERT_TRUE(files::ReadFileToString(new_settings.log_file, &log));
 
 #ifdef __Fuchsia__
-  EXPECT_THAT(log, testing::HasSubstr("ERROR: [src/lib/fxl/logging_unittest.cc(" +
+  EXPECT_THAT(log, testing::HasSubstr("ERROR: [sdk/lib/syslog/cpp/logging_unittest.cc(" +
                                       std::to_string(error_line) + ")] something at error"));
 
   EXPECT_THAT(log, testing::HasSubstr("INFO: [logging_unittest.cc(" + std::to_string(info_line) +
                                       ")] and some other at info level"));
 #else
-  EXPECT_THAT(log, testing::HasSubstr("[ERROR:src/lib/fxl/logging_unittest.cc(" +
+  EXPECT_THAT(log, testing::HasSubstr("[ERROR:sdk/lib/syslog/cpp/logging_unittest.cc(" +
                                       std::to_string(error_line) + ")] something at error"));
 
   EXPECT_THAT(log, testing::HasSubstr("[INFO:logging_unittest.cc(" + std::to_string(info_line) +
@@ -121,14 +121,14 @@ TEST_F(LoggingFixture, LogT) {
   ASSERT_TRUE(files::ReadFileToString(new_settings.log_file, &log));
 
 #ifdef __Fuchsia__
-  EXPECT_THAT(log, testing::HasSubstr("first] ERROR: [src/lib/fxl/logging_unittest.cc(" +
+  EXPECT_THAT(log, testing::HasSubstr("first] ERROR: [sdk/lib/syslog/cpp/logging_unittest.cc(" +
                                       std::to_string(error_line) + ")] something at error"));
 
   EXPECT_THAT(log,
               testing::HasSubstr("second] INFO: [logging_unittest.cc(" + std::to_string(info_line) +
                                  ")] and some other at info level"));
 #else
-  EXPECT_THAT(log, testing::HasSubstr("[first] [ERROR:src/lib/fxl/logging_unittest.cc(" +
+  EXPECT_THAT(log, testing::HasSubstr("[first] [ERROR:sdk/lib/syslog/cpp/logging_unittest.cc(" +
                                       std::to_string(error_line) + ")] something at error"));
 
   EXPECT_THAT(log,
@@ -235,13 +235,13 @@ TEST_F(LoggingFixture, PlogT) {
   std::string log;
   ASSERT_TRUE(files::ReadFileToString(new_settings.log_file, &log));
 
-  EXPECT_THAT(log, testing::HasSubstr("abcd] ERROR: [src/lib/fxl/logging_unittest.cc(" +
+  EXPECT_THAT(log, testing::HasSubstr("abcd] ERROR: [sdk/lib/syslog/cpp/logging_unittest.cc(" +
                                       std::to_string(line1) + ")] should be ok: 0 (ZX_OK)"));
-  EXPECT_THAT(log, testing::HasSubstr("qwerty] ERROR: [src/lib/fxl/logging_unittest.cc(" +
+  EXPECT_THAT(log, testing::HasSubstr("qwerty] ERROR: [sdk/lib/syslog/cpp/logging_unittest.cc(" +
                                       std::to_string(line2) +
                                       ")] got access denied: -30 (ZX_ERR_ACCESS_DENIED)"));
 }
 #endif  // defined(__Fuchsia__)
 
 }  // namespace
-}  // namespace fxl
+}  // namespace syslog
