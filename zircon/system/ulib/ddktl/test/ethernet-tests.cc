@@ -6,8 +6,7 @@
 
 #include <ddktl/device.h>
 #include <ddktl/protocol/ethernet.h>
-#include <fbl/alloc_checker.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 namespace {
 
@@ -35,13 +34,11 @@ class TestEthernetIfc : public ddk::Device<TestEthernetIfc>,
     recv_called_ = true;
   }
 
-  bool VerifyCalls() const {
-    BEGIN_HELPER;
+  void VerifyCalls() const {
     EXPECT_EQ(this_, status_this_, "");
     EXPECT_EQ(this_, recv_this_, "");
     EXPECT_TRUE(status_called_, "");
     EXPECT_TRUE(recv_called_, "");
-    END_HELPER;
   }
 
   ethernet_ifc_protocol_t ethernet_ifc() { return {&ethernet_ifc_protocol_ops_, this}; }
@@ -110,8 +107,7 @@ class TestEthernetImplProtocol
   }
   void EthernetImplGetBti(zx::bti* bti) { bti->reset(); }
 
-  bool VerifyCalls() const {
-    BEGIN_HELPER;
+  void VerifyCalls() const {
     EXPECT_EQ(this_, query_this_, "");
     EXPECT_EQ(this_, start_this_, "");
     EXPECT_EQ(this_, stop_this_, "");
@@ -122,7 +118,6 @@ class TestEthernetImplProtocol
     EXPECT_TRUE(stop_called_, "");
     EXPECT_TRUE(queue_tx_called_, "");
     EXPECT_TRUE(set_param_called_, "");
-    END_HELPER;
   }
 
   bool TestIfc() {
@@ -150,23 +145,17 @@ class TestEthernetImplProtocol
   std::unique_ptr<ddk::EthernetIfcProtocolClient> client_;
 };
 
-static bool test_ethernet_ifc() {
-  BEGIN_TEST;
-
+TEST(DdktlEthernet, EthernetIfc) {
   TestEthernetIfc dev;
 
   auto ifc = dev.ethernet_ifc();
   ethernet_ifc_status(&ifc, 0);
   ethernet_ifc_recv(&ifc, nullptr, 0, 0);
 
-  EXPECT_TRUE(dev.VerifyCalls(), "");
-
-  END_TEST;
+  ASSERT_NO_FATAL_FAILURES(dev.VerifyCalls());
 }
 
-static bool test_ethernet_ifc_client() {
-  BEGIN_TEST;
-
+TEST(DdktlEthernet, EthernetIfcClient) {
   TestEthernetIfc dev;
   const ethernet_ifc_protocol_t ifc = dev.ethernet_ifc();
   ddk::EthernetIfcProtocolClient client(&ifc);
@@ -174,14 +163,10 @@ static bool test_ethernet_ifc_client() {
   client.Status(0);
   client.Recv(nullptr, 0, 0);
 
-  EXPECT_TRUE(dev.VerifyCalls(), "");
-
-  END_TEST;
+  ASSERT_NO_FATAL_FAILURES(dev.VerifyCalls());
 }
 
-static bool test_ethernet_impl_protocol() {
-  BEGIN_TEST;
-
+TEST(DdktlEthernet, EthernetImplProtocol) {
   TestEthernetImplProtocol dev;
 
   // Normally we would use device_op_get_protocol, but we haven't added the device to devmgr so
@@ -201,14 +186,10 @@ static bool test_ethernet_impl_protocol() {
   ethernet_impl_queue_tx(&proto, 0, &netbuf, nullptr, nullptr);
   EXPECT_EQ(ZX_OK, ethernet_impl_set_param(&proto, 0, 0, nullptr, 0), "");
 
-  EXPECT_TRUE(dev.VerifyCalls(), "");
-
-  END_TEST;
+  ASSERT_NO_FATAL_FAILURES(dev.VerifyCalls());
 }
 
-static bool test_ethernet_impl_protocol_client() {
-  BEGIN_TEST;
-
+TEST(DdktlEthernet, EthernetImplProtocolClient) {
   // The EthernetImplProtocol device to wrap. This would live in the parent device
   // our driver was binding to.
   TestEthernetImplProtocol protocol_dev;
@@ -231,14 +212,10 @@ static bool test_ethernet_impl_protocol_client() {
   client.QueueTx(0, &netbuf, nullptr, nullptr);
   EXPECT_EQ(ZX_OK, client.SetParam(0, 0, nullptr, 0));
 
-  EXPECT_TRUE(protocol_dev.VerifyCalls(), "");
-
-  END_TEST;
+  ASSERT_NO_FATAL_FAILURES(protocol_dev.VerifyCalls());
 }
 
-static bool test_ethernet_impl_protocol_ifc_client() {
-  BEGIN_TEST;
-
+TEST(DdktlEthernet, EthernetImplProtocolIfcClient) {
   // We create a protocol device that we will start from an ifc device. The protocol device will
   // then use the pointer passed to it to call methods on the ifc device. This ensures the void*
   // casting is correct.
@@ -256,20 +233,7 @@ static bool test_ethernet_impl_protocol_ifc_client() {
   // Execute the EthernetIfc methods
   ASSERT_TRUE(protocol_dev.TestIfc(), "");
   // Verify that they were called
-  EXPECT_TRUE(ifc_dev.VerifyCalls(), "");
-
-  END_TEST;
+  ASSERT_NO_FATAL_FAILURES(ifc_dev.VerifyCalls());
 }
 
 }  // namespace
-
-BEGIN_TEST_CASE(ddktl_ethernet_device)
-RUN_NAMED_TEST("ddk::EthernetIfcProtocol", test_ethernet_ifc);
-RUN_NAMED_TEST("ddk::EthernetIfcProtocolClient", test_ethernet_ifc_client);
-RUN_NAMED_TEST("ddk::EthernetImplProtocol", test_ethernet_impl_protocol);
-RUN_NAMED_TEST("ddk::EthernetImplProtocolClient", test_ethernet_impl_protocol_client);
-RUN_NAMED_TEST("EthernetImplProtocol using EthernetIfcClient",
-               test_ethernet_impl_protocol_ifc_client);
-END_TEST_CASE(ddktl_ethernet_device)
-
-test_case_element* test_case_ddktl_ethernet_device = TEST_CASE_ELEMENT(ddktl_ethernet_device);

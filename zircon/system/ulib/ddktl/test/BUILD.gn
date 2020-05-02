@@ -13,25 +13,12 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/config/fuchsia/rules.gni")
-import("//build/unification/images/migrated_manifest.gni")
+import("//build/test.gni")
+import("//build/test/test_package.gni")
 
-group("test") {
-  testonly = true
-  deps = [ ":ddktl-test" ]
-}
-
-driver_module("ddktl-test") {
-  test = true
-  defines = [ "_ALL_SOURCE" ]
+test("ddktl") {
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
-  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
   sources = [
-    "ddktl-test-binding.c",
-    "ddktl-test.cc",
     "device-tests.cc",
     "ethernet-tests.cc",
   ]
@@ -41,13 +28,24 @@ driver_module("ddktl-test") {
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
-    "//zircon/public/lib/unittest",
     "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
   ]
+
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  testonly = false
 }
 
-migrated_manifest("ddktl-test-manifest") {
-  deps = [ ":ddktl-test" ]
+unittest_package("ddktl-unittest-package") {
+  package_name = "ddktl"
+  deps = [ ":ddktl" ]
+
+  tests = [
+    {
+      name = "ddktl"
+      dest = "ddktl-test"
+    },
+  ]
 }

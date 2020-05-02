@@ -5,9 +5,9 @@
 #include <memory>
 
 #include <ddktl/device.h>
-#include <fbl/alloc_checker.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
+// TODO(fxb/51303): The negative compilation tests are broken
 //#define TEST_WILL_NOT_COMPILE 1
 
 namespace {
@@ -86,14 +86,8 @@ zx_status_t DdkRxrpc(zx_handle_t channel) { return ZX_OK; }
 END_SUCCESS_CASE
 
 template <typename T>
-static bool do_test() {
-  BEGIN_TEST;
-
-  fbl::AllocChecker ac;
-  auto dev = std::unique_ptr<T>(new (&ac) T);
-  ASSERT_TRUE(ac.check(), "");
-
-  END_TEST;
+static void do_test() {
+  auto dev = std::make_unique<T>();
 }
 
 struct TestDispatch : public ddk::FullDevice<TestDispatch> {
@@ -161,12 +155,8 @@ struct TestDispatch : public ddk::FullDevice<TestDispatch> {
   bool rxrpc_called = false;
 };
 
-static bool test_dispatch() {
-  BEGIN_TEST;
-
-  fbl::AllocChecker ac;
-  auto dev = std::unique_ptr<TestDispatch>(new (&ac) TestDispatch);
-  ASSERT_TRUE(ac.check(), "");
+TEST(DdktlDevice, Dispatch) {
+  auto dev = std::make_unique<TestDispatch>();
 
   // Since we're not adding the device to devmgr, we don't have a valid zx_device_t.
   // TODO: use a devmgr API to add a test device, and use that instead
@@ -197,8 +187,6 @@ static bool test_dispatch() {
   EXPECT_TRUE(dev->suspend_called, "");
   EXPECT_TRUE(dev->resume_called, "");
   EXPECT_TRUE(dev->rxrpc_called, "");
-
-  END_TEST;
 }
 
 #if TEST_WILL_NOT_COMPILE || 0
@@ -222,7 +210,6 @@ DEFINE_FAIL_CASE(Closable)
 DEFINE_FAIL_CASE(UnbindableNew)
 DEFINE_FAIL_CASE(Readable)
 DEFINE_FAIL_CASE(Writable)
-DEFINE_FAIL_CASE(IotxnQueueable)
 DEFINE_FAIL_CASE(GetSizable)
 DEFINE_FAIL_CASE(Suspendable)
 DEFINE_FAIL_CASE(Resumable)
@@ -275,44 +262,36 @@ class TestNotAllMixins : public TestNotAllMixinsType {
 };
 #endif
 
+TEST(DdktlDevice, NoMixins) { do_test<TestNone>(); }
+TEST(DdktlDevice, MixinGetProtocolable) { do_test<TestGetProtocolable>(); }
+TEST(DdktlDevice, MixinInitializable) { do_test<TestInitializable>(); }
+TEST(DdktlDevice, MixinOpenable) { do_test<TestOpenable>(); }
+TEST(DdktlDevice, MixinClosable) { do_test<TestClosable>(); }
+TEST(DdktlDevice, MixinUnbindableNew) { do_test<TestUnbindableNew>(); }
+TEST(DdktlDevice, MixinReadable) { do_test<TestReadable>(); }
+TEST(DdktlDevice, MixinWritable) { do_test<TestWritable>(); }
+TEST(DdktlDevice, MixinGetSizable) { do_test<TestGetSizable>(); }
+TEST(DdktlDevice, MixinSuspendable) { do_test<TestSuspendable>(); }
+TEST(DdktlDevice, MixinResumable) { do_test<TestResumable>(); }
+TEST(DdktlDevice, MixinRxrpcable) { do_test<TestRxrpcable>(); }
+
 }  // namespace
 
-BEGIN_TEST_CASE(ddktl_device)
-RUN_NAMED_TEST("No mixins", do_test<TestNone>);
-RUN_NAMED_TEST("ddk::GetProtocolable", do_test<TestGetProtocolable>);
-RUN_NAMED_TEST("ddk::Initializable", do_test<TestInitializable>);
-RUN_NAMED_TEST("ddk::Openable", do_test<TestOpenable>);
-RUN_NAMED_TEST("ddk::Closable", do_test<TestClosable>);
-RUN_NAMED_TEST("ddk::UnbindableNew", do_test<TestUnbindableNew>);
-RUN_NAMED_TEST("ddk::Readable", do_test<TestReadable>);
-RUN_NAMED_TEST("ddk::Writable", do_test<TestWritable>);
-RUN_NAMED_TEST("ddk::GetSizable", do_test<TestGetSizable>);
-RUN_NAMED_TEST("ddk::Suspendable", do_test<TestSuspendable>);
-RUN_NAMED_TEST("ddk::Resumable", do_test<TestResumable>);
-RUN_NAMED_TEST("ddk::Rxrpcable", do_test<TestRxrpcable>);
-
-RUN_NAMED_TEST("Method dispatch test", test_dispatch);
-
 #if TEST_WILL_NOT_COMPILE || 0
-RUN_NAMED_TEST("FailNoDdkGetProtocol", do_test<TestNotGetProtocolable>);
-RUN_NAMED_TEST("FailNoDdkInitializable", do_test<TestNotInitializable>);
-RUN_NAMED_TEST("FailNoDdkOpen", do_test<TestNotOpenable>);
-RUN_NAMED_TEST("FailNoDdkClose", do_test<TestNotClosable>);
-RUN_NAMED_TEST("FailNoDdkUnbindNew", do_test<TestNotUnbindableNew>);
-RUN_NAMED_TEST("FailNoDdkRelease", do_test<TestNotReleasable>);
-RUN_NAMED_TEST("FailNoDdkRead", do_test<TestNotReadable>);
-RUN_NAMED_TEST("FailNoDdkWrite", do_test<TestNotWritable>);
-RUN_NAMED_TEST("FailNoDdkIotxnQueue", do_test<TestNotIotxnQueueable>);
-RUN_NAMED_TEST("FailNoDdkGetSize", do_test<TestNotGetSizable>);
-RUN_NAMED_TEST("FailNoDdkSuspend", do_test<TestNotSuspendable>);
-RUN_NAMED_TEST("FailNoDdkResume", do_test<TestNotResumable>);
-RUN_NAMED_TEST("FailNoDdkRxrpc", do_test<TestNotRxrpcable>);
-RUN_NAMED_TEST("FailBadOverride", do_test<TestBadOverride>);
-RUN_NAMED_TEST("FailHiddenOverride", do_test<TestHiddenOverride>);
-RUN_NAMED_TEST("FailStaticOverride", do_test<TestStaticOverride>);
-RUN_NAMED_TEST("FailNotAMixin", do_test<TestNotAMixin>);
-RUN_NAMED_TEST("FailNotAllMixins", do_test<TestNotAllMixins>);
+TEST(DdktlDevice, FailNoGetProtocol) { do_test<TestNotGetProtocolable>(); }
+TEST(DdktlDevice, FailNoInitialize) { do_test<TestNotInitializable>(); }
+TEST(DdktlDevice, FailNoOpen) { do_test<TestNotOpenable>(); }
+TEST(DdktlDevice, FailNoClose) { do_test<TestNotClosable>(); }
+TEST(DdktlDevice, FailNoUnbindeNew) { do_test<TestNotUnbindableNew>(); }
+TEST(DdktlDevice, FailNoReade) { do_test<TestNotReadable>(); }
+TEST(DdktlDevice, FailNoWrite) { do_test<TestNotWritable>(); }
+TEST(DdktlDevice, FailNoGetSize) { do_test<TestNotGetSizable>(); }
+TEST(DdktlDevice, FailNoSuspende) { do_test<TestNotSuspendable>(); }
+TEST(DdktlDevice, FailNoResume) { do_test<TestNotResumable>(); }
+TEST(DdktlDevice, FailNoRxrpc) { do_test<TestNotRxrpcable>(); }
+TEST(DdktlDevice, FailBadOverride) { do_test<TestBadOverride>(); }
+TEST(DdktlDevice, FailHiddenOverride) { do_test<TestHiddenOverride>(); }
+TEST(DdktlDevice, FailStaticOverride) { do_test<TestStaticOverride>(); }
+TEST(DdktlDevice, FailNotAMixin) { do_test<TestNotAMixin>(); }
+TEST(DdktlDevice, FailNotAllMixins) { do_test<TestNotAllMixins>(); }
 #endif
-END_TEST_CASE(ddktl_device)
-
-test_case_element* test_case_ddktl_device = TEST_CASE_ELEMENT(ddktl_device);

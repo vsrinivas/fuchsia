@@ -38,6 +38,7 @@ group("tests") {
     "//zircon/system/ulib/bootfs/test:bootfs-test-package",
     "//zircon/system/ulib/cobalt-client/test:cobalt-client-unit-package",
     "//zircon/system/ulib/ddk/test:ddk-unittest-package",
+    "//zircon/system/ulib/ddktl/test:ddktl-unittest-package",
     "//zircon/system/ulib/debugdata/test:debugdata-package",
     "//zircon/system/ulib/digest/test:digest-package",
     "//zircon/system/ulib/driver-unit-test/test:logger-unit-package",
