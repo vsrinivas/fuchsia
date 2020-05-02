@@ -8,11 +8,20 @@
 #include <lib/inspect/cpp/hierarchy.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/inspect/testing/cpp/inspect.h>
+#include <lib/zx/time.h>
+
+#include <memory>
+#include <vector>
 
 #include "src/developer/feedback/crash_reports/config.h"
 #include "src/developer/feedback/crash_reports/constants.h"
 #include "src/developer/feedback/crash_reports/info/info_context.h"
 #include "src/developer/feedback/crash_reports/main_service.h"
+#include "src/developer/feedback/testing/cobalt_test_fixture.h"
+#include "src/developer/feedback/testing/stubs/cobalt_logger_factory.h"
+#include "src/developer/feedback/testing/stubs/device_id_provider.h"
+#include "src/developer/feedback/testing/stubs/network_reachability_provider.h"
+#include "src/developer/feedback/testing/stubs/utc_provider.h"
 #include "src/developer/feedback/testing/unit_test_fixture.h"
 #include "src/lib/syslog/cpp/logger.h"
 #include "src/lib/timekeeper/test_clock.h"
@@ -33,9 +42,11 @@ using testing::UnorderedElementsAreArray;
 
 constexpr char kCrashServerUrl[] = "localhost:1234";
 
-class MainServiceTest : public UnitTestFixture {
- protected:
-  void SetUpAgent() {
+class MainServiceTest : public UnitTestFixture, public CobaltTestFixture {
+ public:
+  MainServiceTest() : UnitTestFixture(), CobaltTestFixture(/*unit_test_fixture=*/this) {}
+
+  void SetUp() override {
     Config config = {/*crash_server=*/
                      {
                          /*upload_policy=*/CrashServerConfig::UploadPolicy::ENABLED,
@@ -44,11 +55,19 @@ class MainServiceTest : public UnitTestFixture {
     inspector_ = std::make_unique<inspect::Inspector>();
     info_context_ =
         std::make_shared<InfoContext>(&inspector_->GetRoot(), clock_, dispatcher(), services());
+
+    SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
+    SetUpDeviceIdProviderServer();
+    SetUpNetworkReachabilityProviderServer();
+    SetUpUtcProviderServer();
+
     main_service_ =
         MainService::TryCreate(dispatcher(), services(), clock_, info_context_, std::move(config));
     FX_CHECK(main_service_);
+    RunLoopUntilIdle();
   }
 
+ protected:
   inspect::Hierarchy InspectTree() {
     auto result = inspect::ReadFromVmo(inspector_->DuplicateVmo());
     FX_CHECK(result.is_ok());
@@ -56,16 +75,38 @@ class MainServiceTest : public UnitTestFixture {
   }
 
  private:
+  void SetUpDeviceIdProviderServer() {
+    device_id_provider_server_ = std::make_unique<stubs::DeviceIdProvider>("my-device-id");
+    InjectServiceProvider(device_id_provider_server_.get());
+  }
+
+  void SetUpNetworkReachabilityProviderServer() {
+    network_reachability_provider_server_ = std::make_unique<stubs::NetworkReachabilityProvider>();
+    InjectServiceProvider(network_reachability_provider_server_.get());
+  }
+
+  void SetUpUtcProviderServer() {
+    utc_provider_server_ = std::make_unique<stubs::UtcProvider>(
+        dispatcher(), std::vector<stubs::UtcProvider::Response>({stubs::UtcProvider::Response(
+                          stubs::UtcProvider::Response::Value::kExternal, zx::nsec(0))}));
+    InjectServiceProvider(utc_provider_server_.get());
+  }
+
+ protected:
   std::unique_ptr<inspect::Inspector> inspector_;
   timekeeper::TestClock clock_;
   std::shared_ptr<InfoContext> info_context_;
+
+  // Stubs servers.
+  std::unique_ptr<stubs::DeviceIdProviderBase> device_id_provider_server_;
+  std::unique_ptr<stubs::NetworkReachabilityProvider> network_reachability_provider_server_;
+  std::unique_ptr<stubs::UtcProviderBase> utc_provider_server_;
 
  protected:
   std::unique_ptr<MainService> main_service_;
 };
 
 TEST_F(MainServiceTest, Check_InitialInspectTree) {
-  SetUpAgent();
   EXPECT_THAT(
       InspectTree(),
       ChildrenMatch(UnorderedElementsAre(
@@ -99,7 +140,6 @@ TEST_F(MainServiceTest, Check_InitialInspectTree) {
 }
 
 TEST_F(MainServiceTest, CrashReporter_CheckInspect) {
-  SetUpAgent();
   const size_t kNumConnections = 4;
   fuchsia::feedback::CrashReporterSyncPtr crash_reporters[kNumConnections];
 

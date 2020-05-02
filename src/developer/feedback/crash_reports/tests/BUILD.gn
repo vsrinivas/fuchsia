@@ -251,12 +251,18 @@ executable("main_service_unittest") {
     "//src/developer/feedback/crash_reports:constants",
     "//src/developer/feedback/crash_reports:main_service",
     "//src/developer/feedback/crash_reports/info",
+    "//src/developer/feedback/testing:cobalt_test_fixture",
     "//src/developer/feedback/testing:gtest_with_syslog_main",
     "//src/developer/feedback/testing:unit_test_fixture",
+    "//src/developer/feedback/testing/stubs:cobalt",
+    "//src/developer/feedback/testing/stubs:device_id_provider",
+    "//src/developer/feedback/testing/stubs:network_reachability_provider",
+    "//src/developer/feedback/testing/stubs:utc_provider",
     "//src/lib/syslog/cpp",
     "//src/lib/timekeeper:testing",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
+    "//zircon/public/lib/zx",
   ]
 }
 
