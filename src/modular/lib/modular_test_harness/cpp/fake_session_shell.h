@@ -103,8 +103,10 @@ class SimpleStoryProviderWatcher : public fuchsia::modular::StoryProviderWatcher
   using OnChange2Function =
       fit::function<void(fuchsia::modular::StoryInfo2, fuchsia::modular::StoryState,
                          fuchsia::modular::StoryVisibilityState)>;
+  using OnDeleteFunction = fit::function<void(std::string)>;
 
   void set_on_change_2(OnChange2Function on_change_2) { on_change_2_ = std::move(on_change_2); }
+  void set_on_delete(OnDeleteFunction on_delete) { on_delete_ = std::move(on_delete); }
 
   // Start watching for story state changes in the given story_provider. Takes
   // a lambda that allows the caller to do something with the StoryInfo data
@@ -123,17 +125,24 @@ class SimpleStoryProviderWatcher : public fuchsia::modular::StoryProviderWatcher
   // |fuchsia::modular::StoryProviderWatcher|
   void OnChange2(fuchsia::modular::StoryInfo2 story_info, fuchsia::modular::StoryState story_state,
                  fuchsia::modular::StoryVisibilityState story_visibility_state) override {
+    if (!on_change_2_) {
+      return;
+    }
     on_change_2_(std::move(story_info), story_state, story_visibility_state);
   }
 
   // |fuchsia::modular::StoryProviderWatcher|
-  void OnDelete(std::string story_id) override {}
+  void OnDelete(std::string story_id) override {
+    if (!on_delete_) {
+      return;
+    }
+    on_delete_(story_id);
+  }
 
-  // Optional user-provided lambda that will run with each OnChange2(). Defaults
-  // to doing nothing.
-  OnChange2Function on_change_2_ =
-      [](fuchsia::modular::StoryInfo2 story_info, fuchsia::modular::StoryState story_state,
-         fuchsia::modular::StoryVisibilityState story_visibility_state) {};
+  // Optional user-provided lambda that will run with each OnChange2().
+  OnChange2Function on_change_2_;
+  // Optional user-provided lambda that will run with each OnDelete().
+  OnDeleteFunction on_delete_;
 
   fidl::Binding<fuchsia::modular::StoryProviderWatcher> binding_;
 };

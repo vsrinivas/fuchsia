@@ -458,7 +458,7 @@ TEST_F(SessionShellTest, GetStoryInfo2HasId) {
     // GetStoryInfo2().
     story_provider->GetStoryInfo2(kStoryId, [&execute_and_get_story_info_called,
                                              kStoryId](fuchsia::modular::StoryInfo2 story_info) {
-      EXPECT_FALSE(story_info.IsEmpty());
+      ASSERT_FALSE(story_info.IsEmpty());
       EXPECT_TRUE(story_info.has_id());
       EXPECT_EQ(story_info.id(), kStoryId);
       execute_and_get_story_info_called = true;
@@ -502,9 +502,9 @@ TEST_F(SessionShellTest, GetStories2ReturnsStoryInfo) {
     story_provider->GetStories2(/*watcher=*/nullptr,
                                 [&execute_and_get_stories_called,
                                  kStoryId](std::vector<fuchsia::modular::StoryInfo2> story_infos) {
-                                  EXPECT_FALSE(story_infos.empty());
+                                  ASSERT_FALSE(story_infos.empty());
                                   const auto& story_info = story_infos.at(0);
-                                  EXPECT_FALSE(story_info.IsEmpty());
+                                  ASSERT_FALSE(story_info.IsEmpty());
                                   EXPECT_TRUE(story_info.has_id());
                                   EXPECT_EQ(story_info.id(), kStoryId);
                                   execute_and_get_stories_called = true;
@@ -513,7 +513,7 @@ TEST_F(SessionShellTest, GetStories2ReturnsStoryInfo) {
   RunLoopUntil([&] { return execute_and_get_stories_called; });
 }
 
-TEST_F(SessionShellTest, OnChange2ReturnsStoryInfo2) {
+TEST_F(SessionShellTest, StoryProviderWatcher) {
   RunHarnessAndInterceptSessionShell();
 
   // Create a new story using PuppetMaster and start a new story shell.
@@ -530,14 +530,13 @@ TEST_F(SessionShellTest, OnChange2ReturnsStoryInfo2) {
   const char kStoryId[] = "my_story";
 
   // Once the story is created, OnChange2 should be called with a StoryInfo2 that has the story ID.
-  bool called_on_change_2 = false;
   modular_testing::SimpleStoryProviderWatcher watcher;
-  watcher.set_on_change_2([&called_on_change_2, kStoryId](StoryInfo2 story_info, StoryState _,
-                                                          StoryVisibilityState __) {
-    EXPECT_TRUE(story_info.has_id());
-    EXPECT_EQ(story_info.id(), kStoryId);
-    called_on_change_2 = true;
+  std::vector<StoryInfo2> on_change_calls;
+  watcher.set_on_change_2([&](StoryInfo2 story_info, StoryState, StoryVisibilityState) {
+    on_change_calls.push_back(std::move(story_info));
   });
+  std::vector<std::string> on_delete_calls;
+  watcher.set_on_delete([&](std::string story_id) { on_delete_calls.push_back(story_id); });
   watcher.Watch(story_provider, /*on_get_stories=*/nullptr);
 
   puppet_master->ControlStory(kStoryId, story_master.NewRequest());
@@ -555,7 +554,25 @@ TEST_F(SessionShellTest, OnChange2ReturnsStoryInfo2) {
   story_master->Enqueue(std::move(commands));
   story_master->Execute([](fuchsia::modular::ExecuteResult result) {});
 
-  RunLoopUntil([&] { return called_on_change_2; });
+  RunLoopUntil([&] { return on_change_calls.size() >= 1; });
+  EXPECT_TRUE(on_change_calls.at(0).has_id());
+  EXPECT_EQ(on_change_calls.at(0).id(), kStoryId);
+
+  // Delete the story twice. Expect that we are notified only once.
+  bool story_deleted = false;
+  EXPECT_EQ(on_delete_calls.size(), 0u);
+  puppet_master->DeleteStory(kStoryId, [] {});
+  puppet_master->DeleteStory(kStoryId, [&] { story_deleted = true; });
+  RunLoopUntil([&] { return story_deleted; });
+
+  // In order to ensure that both DeleteStory() operations have completed,
+  // perform another operation that is enqueued after them and wait for it
+  // to return.
+  bool get_stories_done = false;
+  story_provider->GetStories2(nullptr, [&](auto /*ignored*/) { get_stories_done = true; });
+
+  RunLoopUntil([&] { return get_stories_done; });
+  EXPECT_EQ(on_delete_calls.size(), 1u);
 }
 
 TEST_F(SessionShellTest, StoryControllerAnnotate) {
