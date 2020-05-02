@@ -17,21 +17,9 @@
 
 #include "page_manager.h"
 
+namespace {
+
 constexpr uint32_t kRandomSeed = 101;
-
-//
-// Heap implementation.
-//
-static PageManager* page_manager;
-
-void* heap_page_alloc(size_t pages) {
-  ZX_ASSERT(page_manager != nullptr);
-  return page_manager->AllocatePages(pages);
-}
-void heap_page_free(void* ptr, size_t pages) {
-  ZX_ASSERT(page_manager != nullptr);
-  page_manager->FreePages(ptr, pages);
-}
 
 // A convenience class that allows us to allocate memory of random sizes, and
 // then free that memory in various orders.
@@ -78,6 +66,42 @@ class RandomAllocator {
   std::vector<void*> allocated_;
 };
 
+size_t heap_used_bytes() {
+  size_t used_bytes;
+  cmpct_get_info(&used_bytes, nullptr, nullptr);
+  return used_bytes;
+}
+
+size_t heap_free_bytes() {
+  size_t free_bytes;
+  cmpct_get_info(nullptr, &free_bytes, nullptr);
+  return free_bytes;
+}
+
+size_t heap_cached_bytes() {
+  size_t cached_bytes;
+  cmpct_get_info(nullptr, nullptr, &cached_bytes);
+  return cached_bytes;
+}
+
+PageManager* page_manager;
+
+}  // namespace
+
+//
+// Heap implementation.
+//
+void* heap_page_alloc(size_t pages) {
+  ZX_ASSERT(page_manager != nullptr);
+  return page_manager->AllocatePages(pages);
+}
+void heap_page_free(void* ptr, size_t pages) {
+  ZX_ASSERT(page_manager != nullptr);
+  page_manager->FreePages(ptr, pages);
+}
+
+namespace {
+
 class CmpctmallocTest : public zxtest::Test {
  public:
   void SetUp() final {
@@ -95,6 +119,17 @@ TEST_F(CmpctmallocTest, ZeroAllocIsNull) { EXPECT_NULL(cmpct_alloc(0)); }
 
 TEST_F(CmpctmallocTest, NullCanBeFreed) { cmpct_free(nullptr); }
 
+TEST_F(CmpctmallocTest, HeapIsProperlyInitialized) {
+  // Assumes that we have called |cmpct_init|, which was done in the test case
+  // set-up.
+
+  // The heap should have space.
+  EXPECT_GT(heap_used_bytes(), 0);
+  EXPECT_GT(heap_free_bytes(), 0);
+  // Nothing should have been cached at this point.
+  EXPECT_EQ(heap_cached_bytes(), 0);
+}
+
 TEST_F(CmpctmallocTest, CanAllocAndFree) {
   RandomAllocator::FreeOrder orders[] = {
       RandomAllocator::FreeOrder::kChronological,
@@ -103,9 +138,14 @@ TEST_F(CmpctmallocTest, CanAllocAndFree) {
   };
   for (const auto& order : orders) {
     RandomAllocator ra;
-    // TODO(fxbug.dev/49123): Rephrase as allocating until N requests are made
-    // of the page manager.
-    ra.Allocate(100);
+    // Allocate until we grow the heap ten times.
+    size_t times_grown = 0;
+    while (times_grown < 10) {
+      size_t before = heap_used_bytes();
+      ra.Allocate(1);
+      size_t after = heap_used_bytes();
+      times_grown += (after > before);
+    }
     ra.Free(order);
   }
 }
@@ -117,21 +157,38 @@ TEST_F(CmpctmallocTest, LargeAllocsAreNull) {
   EXPECT_NULL(p);
 }
 
-// TODO(fxbug.dev/49123): Add two test cases for coverage of the behavior of
-// the cached allocation:
-//
-// In the first, we find the threshold at which repeated calls to, say,
-// |cmpct_alloc(1000| trigger a request to the heap for more pages. We then
-// alternatingly alloc and free across this threshold and expect no more
-// pages sent back to the heap. Finally, freeing all alloc'ed addresses
-// should also result in no further pages sent back to the heap.
-//
-// In the second, we verify with continual allocation up until pages have been
-// requested of the heap, say, 10 times, that on freeing everying we only see
-// 9 requests to the heap to free pages, which means we would have held onto
-// a cached allocation of pages.
+TEST_F(CmpctmallocTest, CachedAllocationIsEfficientlyUsed) {
+  std::vector<void*> allocations;
+  bool grown = false;
+  while (!grown) {
+    size_t before = heap_used_bytes();
+    allocations.push_back(cmpct_alloc(1000));
+    size_t after = heap_used_bytes();
+    grown = (after > before);
+  }
+
+  // As we alternatingly allocate and free across the threshold at which we
+  // saw a request to the heap for more pages, we expect to only be using
+  // our cached allocation.
+  for (int i = 0; i < 1000; i++) {
+    cmpct_free(allocations.back());
+    allocations.pop_back();
+    EXPECT_GT(heap_cached_bytes(), 0);
+
+    allocations.push_back(cmpct_alloc(1000));
+    EXPECT_EQ(0, heap_cached_bytes());
+  }
+
+  // Ditto if we now free everything.
+  while (!allocations.empty()) {
+    cmpct_free(allocations.back());
+    allocations.pop_back();
+  }
+  EXPECT_GT(heap_cached_bytes(), 0);
+}
 
 // TODO(fxbug.dev/49123): Add cases to cover
-// * cmpct_get_info();
 // * cmpct_realloc();
 // * cmpct_memalign();
+
+}  // namespace
