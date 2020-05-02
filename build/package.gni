@@ -657,33 +657,25 @@ template("package") {
       not_needed([ "component_indices" ])
     }
 
-    # Fuchsia package aggregates a manifest from it's arguments and builds a
-    # metadata archive.
-
-    manifest = "${pkg_target_name}.manifest"
-
     # Synthesize the meta/package file.
-    pkg_meta_package = "${pkg_target_name}_meta_package.json"
-    action(pkg_meta_package) {
-      visibility = [ ":$manifest" ]
-      script = "//build/gn/write_package_json.py"
-      outputs = [ "$target_out_dir/$pkg_meta_package" ]
-      args = [
-        "--name",
-        pkg.package_name,
-        "--version",
-        pkg.package_version,
-        rebase_path(pkg_meta_package, root_build_dir, target_out_dir),
-      ]
+    pkg_meta_generated = "${pkg_target_name}_meta_package.json"
+    pkg_meta_output = "$target_out_dir/${pkg_target_name}_meta_package.json"
+    generated_file(pkg_meta_generated) {
+      contents = "{\"name\":\"${pkg.package_name}\",\"version\":\"${pkg.package_version}\"}"
+      outputs = [ pkg_meta_output ]
+      output_conversion = "string"
     }
 
+    # Fuchsia package aggregates a manifest from its arguments and builds a
+    # metadata archive.
+    manifest = "${pkg_target_name}.manifest"
     generate_manifest(manifest) {
       visibility = [ ":" + pkg_target_name ]
-      sources = manifest_sources + get_target_outputs(":$pkg_meta_package")
+      sources = manifest_sources + [ pkg_meta_output ]
       args =
           manifest_args + [ "--entry=meta/package=" +
-                            rebase_path(pkg_meta_package, "", target_out_dir) ]
-      deps = pkg.deps + [ ":$pkg_meta_package" ]
+                            rebase_path(pkg_meta_output, "", target_out_dir) ]
+      deps = pkg.deps + [ ":$pkg_meta_generated" ]
       public_deps = pkg.public_deps
     }
 
