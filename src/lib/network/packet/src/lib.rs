@@ -1860,27 +1860,27 @@ impl<'b, 'a: 'b> BufferViewMut<&'b mut [u8]> for &'b mut &'a mut [u8] {}
 
 fn take_front<'a>(bytes: &mut &'a [u8], n: usize) -> &'a [u8] {
     let (prefix, rest) = mem::replace(bytes, &[]).split_at(n);
-    mem::replace(bytes, rest);
+    *bytes = rest;
     prefix
 }
 
 fn take_back<'a>(bytes: &mut &'a [u8], n: usize) -> &'a [u8] {
     let split = bytes.len() - n;
     let (rest, suffix) = mem::replace(bytes, &[]).split_at(split);
-    mem::replace(bytes, rest);
+    *bytes = rest;
     suffix
 }
 
 fn take_front_mut<'a>(bytes: &mut &'a mut [u8], n: usize) -> &'a mut [u8] {
     let (prefix, rest) = mem::replace(bytes, &mut []).split_at_mut(n);
-    mem::replace(bytes, rest);
+    *bytes = rest;
     prefix
 }
 
 fn take_back_mut<'a>(bytes: &mut &'a mut [u8], n: usize) -> &'a mut [u8] {
     let split = <[u8]>::len(bytes) - n;
     let (rest, suffix) = mem::replace(bytes, &mut []).split_at_mut(split);
-    mem::replace(bytes, rest);
+    *bytes = rest;
     suffix
 }
 

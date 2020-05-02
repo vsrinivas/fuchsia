@@ -63,7 +63,7 @@ impl EventSender {
                 }
             })
             .collect();
-        replace(DerefMut::deref_mut(&mut clients_guard), clients);
+        *clients_guard = clients;
     }
 
     /// Number of clients that `send` will attempt to communicate with.

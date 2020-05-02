@@ -515,7 +515,7 @@ impl<'a> packet::BufferView<&'a [u8]> for LongLivedBuff<'a> {
     fn take_front(&mut self, n: usize) -> Option<&'a [u8]> {
         if self.0.len() >= n {
             let (prefix, rest) = std::mem::replace(&mut self.0, &[]).split_at(n);
-            std::mem::replace(&mut self.0, rest);
+            self.0 = rest;
             Some(prefix)
         } else {
             None
@@ -525,7 +525,7 @@ impl<'a> packet::BufferView<&'a [u8]> for LongLivedBuff<'a> {
     fn take_back(&mut self, n: usize) -> Option<&'a [u8]> {
         if self.0.len() >= n {
             let (rest, suffix) = std::mem::replace(&mut self.0, &[]).split_at(n);
-            std::mem::replace(&mut self.0, rest);
+            self.0 = rest;
             Some(suffix)
         } else {
             None

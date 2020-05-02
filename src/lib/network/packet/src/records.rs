@@ -817,7 +817,7 @@ impl<'a> BufferView<&'a [u8]> for LongLivedBuff<'a> {
     fn take_front(&mut self, n: usize) -> Option<&'a [u8]> {
         if self.0.len() >= n {
             let (prefix, rest) = core::mem::replace(&mut self.0, &[]).split_at(n);
-            core::mem::replace(&mut self.0, rest);
+            self.0 = rest;
             Some(prefix)
         } else {
             None
@@ -827,7 +827,7 @@ impl<'a> BufferView<&'a [u8]> for LongLivedBuff<'a> {
     fn take_back(&mut self, n: usize) -> Option<&'a [u8]> {
         if self.0.len() >= n {
             let (rest, suffix) = core::mem::replace(&mut self.0, &[]).split_at(n);
-            core::mem::replace(&mut self.0, rest);
+            self.0 = rest;
             Some(suffix)
         } else {
             None
