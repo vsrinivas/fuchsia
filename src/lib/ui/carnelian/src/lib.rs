@@ -66,6 +66,7 @@ pub mod color;
 pub mod drawing;
 pub mod geometry;
 pub mod input;
+pub mod input_ext;
 mod label;
 mod message;
 pub mod render;

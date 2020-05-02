@@ -10,6 +10,7 @@ use {
         drawing::{FontFace, GlyphMap, Text},
         geometry::Corners,
         input::{self},
+        input_ext::TouchEventResampler,
         make_app_assistant,
         render::*,
         AnimationMode, App, AppAssistant, Point, RenderOptions, Size, ViewAssistant,
@@ -956,11 +957,10 @@ struct InfiniteScroll {
     scene: Scene,
     contents: BTreeMap<u64, Contents>,
     last_presentation_time: Time,
-    pending_pointer_events: VecDeque<input::Event>,
+    touch_event_resampler: TouchEventResampler,
     touch_points: Vec<Point>,
     touch_time: Time,
     previous_touch_points: Vec<Point>,
-    previous_touch_time: Time,
     scroll_origin: Vector2D<f32>,
     fling_curve: Option<FlingCurve>,
     fake_scroll_start: Time,
@@ -989,11 +989,10 @@ impl InfiniteScroll {
             scene,
             contents: BTreeMap::new(),
             last_presentation_time: Time::get(ClockId::Monotonic),
-            pending_pointer_events: VecDeque::new(),
+            touch_event_resampler: TouchEventResampler::new(),
             touch_points: Vec::new(),
             touch_time: Time::from_nanos(0),
             previous_touch_points: Vec::new(),
-            previous_touch_time: Time::from_nanos(0),
             scroll_origin: Vector2D::zero(),
             fling_curve: None,
             fake_scroll_start,
@@ -1019,9 +1018,8 @@ impl InfiniteScroll {
 
         // Process touch events.
         //
-        // Smooth motion is achieved by using a fixed offset from the
-        // presentation time and approximating the touch location at
-        // the exact sampling time.
+        // Smooth motion is achieved by re-sampling touch events at
+        // a fixed offset relative to presentation time.
         //
         // Determine sample time by removing sampling offset from
         // presentation time.
@@ -1031,69 +1029,48 @@ impl InfiniteScroll {
             points.iter().fold(Vector2D::zero(), |sum, x| sum + x.to_vector()) / points.len() as f32
         }
 
-        // Process events until we have one event past the sample time.
-        while self.touch_time <= sample_time {
-            match self.pending_pointer_events.pop_front() {
-                Some(event) => {
-                    if let input::EventType::Touch(touch_event) = event.event_type {
-                        // Save previous touch state.
-                        self.previous_touch_time = self.touch_time;
-                        self.previous_touch_points.clear();
-                        self.previous_touch_points.extend(self.touch_points.drain(..));
-                        // Update touch points and origin. Origin is the average of
-                        // all touch points.
-                        for contact in touch_event.contacts.iter() {
-                            match contact.phase {
-                                input::touch::Phase::Down(point, _) => {
-                                    self.touch_points.push(point.to_f32())
-                                }
-                                input::touch::Phase::Moved(point, _) => {
-                                    self.touch_points.push(point.to_f32())
-                                }
-                                _ => {}
-                            }
+        let events = self.touch_event_resampler.dequeue_and_sample(sample_time);
+        for event in events {
+            if let input::EventType::Touch(touch_event) = event.event_type {
+                // Save previous touch state.
+                self.previous_touch_points.clear();
+                self.previous_touch_points.extend(self.touch_points.drain(..));
+                // Update touch points and origin. Origin is the average of
+                // all touch points.
+                for contact in touch_event.contacts.iter() {
+                    match contact.phase {
+                        input::touch::Phase::Down(point, _) => {
+                            self.touch_points.push(point.to_f32())
                         }
-                        counter!("input", "touch_y", 0, "y" => (average(&self.touch_points)).y.round() as u32);
-
-                        // Update touch time.
-                        self.touch_time = Time::from_nanos(event.event_time as i64);
-
-                        // Ignore previous touch points and set scroll origin if number of
-                        // touch points changed.
-                        if self.previous_touch_points.len() != self.touch_points.len() {
-                            self.scroll_origin = average(&self.touch_points);
-                            self.previous_touch_points.clear();
+                        input::touch::Phase::Moved(point, _) => {
+                            self.touch_points.push(point.to_f32())
                         }
+                        _ => {}
                     }
                 }
-                // Stop when no more events are available.
-                _ => break,
+                counter!("input", "touch_y", 0, "y" => (average(&self.touch_points)).y.round() as u32);
+
+                // Ignore previous touch points and set scroll origin if number of
+                // touch points changed.
+                if self.previous_touch_points.len() != self.touch_points.len() {
+                    self.scroll_origin = average(&self.touch_points);
+                    self.previous_touch_points.clear();
+                }
             }
         }
 
         if !self.touch_points.is_empty() && !self.previous_touch_points.is_empty() {
             let origin = average(&self.touch_points);
-            // Approximate origin at the sample time by assuming a linear
-            // change to touch location over the sampling interval.
-            if self.touch_time > sample_time && self.touch_time > self.previous_touch_time {
-                let interval = (self.touch_time - self.previous_touch_time).into_nanos() as f32;
-                let scalar =
-                    (sample_time - self.previous_touch_time).into_nanos() as f32 / interval;
-                let previous_origin = average(&self.previous_touch_points);
-                let estimated_origin = previous_origin + (origin - previous_origin) * scalar;
-                scroll_distance = Some(-(estimated_origin.y - self.scroll_origin.y));
-            } else {
-                let touch_latency = presentation_time - self.touch_time;
-                // Print a warning if touch sampling offset is too low for
-                // accurate touch point sampling.
-                if touch_latency > self.touch_sampling_offset {
-                    println!(
-                        "warning: high touch latency {:?} ms",
-                        touch_latency.into_nanos() as f32 / 1e+6
-                    );
-                }
-                scroll_distance = Some(-(origin.y - self.scroll_origin.y));
+            let touch_latency = presentation_time - self.touch_time;
+            // Print a warning if touch sampling offset is too low for
+            // accurate touch point sampling.
+            if touch_latency > self.touch_sampling_offset {
+                println!(
+                    "warning: high touch latency {:?} ms",
+                    touch_latency.into_nanos() as f32 / 1e+6
+                );
             }
+            scroll_distance = Some(-(origin.y - self.scroll_origin.y));
 
             // Delay the start of fake scrolling.
             self.fake_scroll_start =
@@ -1176,7 +1153,10 @@ impl InfiniteScroll {
     }
 
     fn handle_pointer_event(&mut self, event: &input::Event) {
-        self.pending_pointer_events.push_back(event.clone());
+        self.touch_event_resampler.enqueue(event.clone());
+        if let input::EventType::Touch(_) = &event.event_type {
+            self.touch_time = Time::from_nanos(event.event_time as i64);
+        }
     }
 }
 
