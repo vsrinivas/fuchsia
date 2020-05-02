@@ -4,19 +4,22 @@
 
 #include <limits.h>
 
+#include <ddk/binding.h>
+#include <ddk/debug.h>
 #include <ddk/device.h>
-#include <unittest/unittest.h>
+#include <ddk/driver.h>
+#include <zxtest/zxtest.h>
 
-extern zx_device_t* ddk_test_dev;
+namespace {
 
-static const char* TEST_STRING = "testing 1 2 3";
+zx_device_t* ddk_test_dev;
 
-static bool test_add_metadata(void) {
+const char* TEST_STRING = "testing 1 2 3";
+
+TEST(MetadataTest, AddMetadata) {
   char buffer[32] = {};
   zx_status_t status;
   size_t actual;
-
-  BEGIN_TEST;
 
   status = device_get_metadata(ddk_test_dev, 1, buffer, sizeof(buffer), &actual);
   ASSERT_EQ(status, ZX_ERR_NOT_FOUND, "device_get_metadata did not return ZX_ERR_NOT_FOUND");
@@ -33,36 +36,27 @@ static bool test_add_metadata(void) {
   ASSERT_EQ(status, ZX_OK, "device_get_metadata failed");
   ASSERT_EQ(actual, strlen(TEST_STRING) + 1, "");
   ASSERT_EQ(strcmp(buffer, TEST_STRING), 0, "");
-
-  END_TEST;
 }
 
-static bool test_add_metadata_large_input(void) {
-  BEGIN_TEST;
-
+TEST(MetadataTest, AddMetadataLargeInput) {
   size_t large_len = 1024u * 16;
-  char* large = malloc(large_len);
-  ASSERT_NE(large, NULL, "allocation failure");
-  zx_status_t status = device_add_metadata(ddk_test_dev, 1, large, large_len);
+  auto large = std::make_unique<char[]>(large_len);
+  zx_status_t status = device_add_metadata(ddk_test_dev, 1, large.get(), large_len);
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS, "device_add_metadata shoud return ZX_ERR_INVALID_ARGS");
-  free(large);
-
-  END_TEST;
 }
 
-static bool test_publish_metadata(void) {
+TEST(MetadataTest, PublishMetadata) {
   char buffer[32] = {};
   zx_status_t status;
   size_t actual;
 
-  BEGIN_TEST;
   // This should fail since the path does not match us or our potential children.
   status = device_publish_metadata(ddk_test_dev, "/dev/misc/null", 2, TEST_STRING,
                                    strlen(TEST_STRING) + 1);
   ASSERT_EQ(status, ZX_ERR_ACCESS_DENIED, "");
 
   // We are allowed to add metadata to own path.
-  status = device_publish_metadata(ddk_test_dev, "/dev/test/test/ddk-test", 2, TEST_STRING,
+  status = device_publish_metadata(ddk_test_dev, "/dev/test/test", 2, TEST_STRING,
                                    strlen(TEST_STRING) + 1);
   ASSERT_EQ(status, ZX_OK, "");
 
@@ -72,49 +66,66 @@ static bool test_publish_metadata(void) {
   ASSERT_EQ(strcmp(buffer, TEST_STRING), 0, "");
 
   // We are allowed to add metadata to our potential children.
-  status = device_publish_metadata(ddk_test_dev, "/dev/test/test/ddk-test/child", 2, TEST_STRING,
+  status = device_publish_metadata(ddk_test_dev, "/dev/test/test/child", 2, TEST_STRING,
                                    strlen(TEST_STRING) + 1);
   ASSERT_EQ(status, ZX_OK, "");
-
-  END_TEST;
 }
 
-static bool test_publish_metadata_large_input(void) {
-  BEGIN_TEST;
-
+TEST(MetadataTest, PublishMetadataLargeInput) {
   size_t large_len = 1024u * 16;
-  char* large = malloc(large_len);
-  ASSERT_NE(large, NULL, "allocation failure");
+  auto large = std::make_unique<char[]>(large_len);
   zx_status_t status =
-      device_publish_metadata(ddk_test_dev, "/dev/test/test/ddk-test/child", 2, large, large_len);
+      device_publish_metadata(ddk_test_dev, "/dev/test/test/child", 2, large.get(), large_len);
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS, "device_add_metadata shoud return ZX_ERR_INVALID_ARGS");
-  free(large);
-
-  END_TEST;
 }
 
-static bool test_get_metadata_would_overflow(void) {
+TEST(MetadataTest, GetMetadataWouldOverflow) {
   char buffer[32] = {};
   zx_status_t status;
   size_t actual;
 
-  BEGIN_TEST;
-  status = device_publish_metadata(ddk_test_dev, "/dev/test/test/ddk-test", 2, TEST_STRING,
+  status = device_publish_metadata(ddk_test_dev, "/dev/test/test", 2, TEST_STRING,
                                    strlen(TEST_STRING) + 1);
   ASSERT_EQ(status, ZX_OK, "");
 
   status = device_get_metadata(ddk_test_dev, 2, buffer, 1, &actual);
   ASSERT_EQ(status, ZX_ERR_BUFFER_TOO_SMALL, "device_get_metadata overflowed buffer");
-
-  END_TEST;
 }
 
-BEGIN_TEST_CASE(metadata_tests)
-RUN_TEST(test_add_metadata)
-RUN_TEST(test_add_metadata_large_input)
-RUN_TEST(test_publish_metadata)
-RUN_TEST(test_publish_metadata_large_input)
-RUN_TEST(test_get_metadata_would_overflow)
-END_TEST_CASE(metadata_tests)
+// A special LogSink that just redirects all output to zxlogf
+class LogSink : public zxtest::LogSink {
+ public:
+  void Write(const char* format, ...) override {
+    std::array<char, 1024> line_buf;
+    va_list args;
+    va_start(args, format);
+    vsnprintf(line_buf.data(), line_buf.size(), format, args);
+    va_end(args);
+    line_buf[line_buf.size() - 1] = 0;
+    zxlogf(INFO, "%s", line_buf.data());
+  }
+  void Flush() override {}
+};
 
-struct test_case_element* test_case_ddk_metadata = TEST_CASE_ELEMENT(metadata_tests);
+zx_status_t metadata_test_bind(void* ctx, zx_device_t* parent) {
+  zxlogf(ERROR, "HERE IN BIND");
+  zxtest::Runner::GetInstance()->mutable_reporter()->set_log_sink(std::make_unique<LogSink>());
+  ddk_test_dev = parent;
+  if (RUN_ALL_TESTS(0, nullptr) != 0) {
+    return ZX_ERR_BAD_STATE;
+  }
+  return ZX_OK;
+}
+
+static zx_driver_ops_t metadata_test_driver_ops = {
+    .version = DRIVER_OPS_VERSION,
+    .bind = metadata_test_bind,
+};
+
+}  // namespace
+
+// clang-format off
+ZIRCON_DRIVER_BEGIN(metadata_test, metadata_test_driver_ops, "zircon", "0.1", 2)
+BI_ABORT_IF_AUTOBIND,
+BI_MATCH(),
+ZIRCON_DRIVER_END(metadata_test)

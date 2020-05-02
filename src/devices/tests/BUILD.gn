@@ -8,6 +8,7 @@ group("tests") {
     "bind-debugger-test",
     "bind-fail-test",
     "ddk-instance-lifecycle-test",
+    "ddk-metadata-test",
     "libdriver-integration-test",
   ]
 }

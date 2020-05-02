@@ -488,7 +488,6 @@ aggregate_manifest("migrated-image") {
       "//src/devices/tests/ddk-runcompatibilityhook:ddk-runcompatibilityhook-test-manifest",
       "//src/devices/tests/ddk-schedule-work:ddk-schedule-work-perf-manifest",
       "//src/devices/tests/ddk-schedule-work:ddk-schedule-work-test-manifest",
-      "//src/devices/tests/ddk-test:ddk-test-manifest",
       "//src/devices/tests/devhost-test:devhost-test-child-manifest",
       "//src/devices/tests/devhost-test:devhost-test-manifest",
       "//src/devices/tests/devhost-test:devhost-test-manual-manifest",
@@ -590,7 +589,6 @@ aggregate_manifest("migrated-image") {
 
 aggregate_manifest("migrated-aux") {
   deps = [
-    "//src/devices/tests/ddk-test:ddk-test-manifest",
     "//zircon/system/uapp/audio:test-manifest",
 
     # Please uncomment and update to //zircon/whatever below, but keep these
@@ -857,7 +855,6 @@ aggregate_manifest("migrated-aux") {
 
 aggregate_manifest("migrated-tests") {
   deps = [
-    "//src/devices/tests/ddk-test:ddk-test-manifest",
     "//zircon/system/uapp/audio:test-manifest",
 
     # Please uncomment and update to //zircon/whatever below, but keep these
