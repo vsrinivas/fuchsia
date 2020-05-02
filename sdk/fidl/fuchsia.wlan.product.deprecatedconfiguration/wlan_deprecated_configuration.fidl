@@ -6,6 +6,13 @@ library fuchsia.wlan.product.deprecatedconfiguration;
 
 using fuchsia.net;
 
+/// Represents error statuses returned by
+/// [`fuchsia.wlan.product.deprecatedconfiguration/DeprecatedConfigurator.SuggestAccessPointMacAddress`]
+enum SuggestMacAddressError {
+    NOT_SUPPORTED = 1;
+    INVALID_ARGUMENTS = 2;
+};
+
 // NOTE: This FIDL protocol is deprecated.  Please do not add new uses that depend on it.
 /// Allows for the configuration of WLAN devices to support legacy applications.
 [Discoverable]
@@ -13,4 +20,8 @@ protocol DeprecatedConfigurator {
     /// Suggests a MAC address for [`fuchsia.wlan.policy/AccessPointProvider`] to use when creating
     /// new access point interfaces.
     SetPreferredAccessPointMacAddress(fuchsia.net.MacAddress mac);
+
+    /// Suggests a MAC address for [`fuchsia.wlan.policy/AccessPointProvider`] to use when creating
+    /// new soft access point interfaces and notifies when the request is complete.
+    SuggestAccessPointMacAddress(fuchsia.net.MacAddress mac) -> () error SuggestMacAddressError;
 };
