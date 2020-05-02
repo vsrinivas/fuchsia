@@ -1,0 +1,60 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.feedback;
+using zx;
+
+/// Get information about why a device last shutdown. The term reboot is used instead of shutdown
+/// since many developers phrase their questions about shutdowns in terms of reboots and most
+/// components are interested in knowing why the system just rebooted.
+[Discoverable]
+protocol LastRebootInfoProvider {
+    Get() -> (LastReboot last_reboot);
+};
+
+/// Information about why a device last rebooted.
+table LastReboot {
+    /// Whether the last reboot was graceful, i.e. the device didn't reboot in response to an error
+    /// and rebooted in a controlled manner. This can be determined from |reason|, however
+    /// |graceful| is provided for clients that care don't need the detail |reason| provides.
+    ///
+    /// For instance, a reboot after a software update is graceful while a reboot due to the system
+    /// running out of memory is not.
+    1: bool graceful;
+
+    /// Why a device last rebooted.
+    2: RebootReason reason;
+
+    /// The uptime of the device before it rebooted.
+    3: zx.duration uptime;
+};
+
+/// Reasons why a device last rebooted.
+enum RebootReason : uint16 {
+    /// The device rebooted gracefully, e.g. because the user rebooted the device or the system
+    /// software was updated.
+    ///
+    /// In the future, additional, more granular reasons for graceful reboots may be added when the
+    /// platform can distinguish between them.
+    GENERIC_GRACEFUL = 1;
+
+    /// The device booted from a cold state.
+    ///
+    /// This is most likely the result of an extended period of time without power or a device
+    /// booting with Fuchsia for the first time.
+    COLD = 2;
+
+    /// The device rebooted due to a brief loss of power.
+    ///
+    /// On some hardware this could be the result of a user disconnecting, then reconnecting their
+    /// device's power supply in rapid succession.
+    BRIEF_POWER_LOSS = 3;
+
+    /// The device rebooted because its voltage dipped below an allowable level
+    /// without going to 0.
+    BROWNOUT = 4;
+    KERNEL_PANIC = 5;
+    SYSTEM_OUT_OF_MEMORY = 6;
+    HARDWARE_WATCHDOG_TIMEOUT = 7;
+    SOFTWARE_WATCHDOG_TIMEOUT = 8;
+};
