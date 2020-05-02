@@ -58,7 +58,6 @@ executable_package("basemgr") {
     "//src/modular/lib/fidl:app_client",
     "//src/modular/lib/fidl:clone",
     "//src/modular/lib/fidl:environment",
-    "//src/modular/lib/ledger_client:page_client",
     "//src/modular/lib/lifecycle/cpp",
     "//src/modular/lib/modular_config",
     "//zircon/public/lib/async-loop-cpp",

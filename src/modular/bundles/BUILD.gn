@@ -22,7 +22,6 @@ group("tools") {
 group("framework") {
   public_deps = [
     "//src/identity/bin:modular",
-    "//src/ledger/bin",
     "//src/modular/bin/basemgr",
     "//src/modular/bin/basemgr:auto_login_base_shell",
     "//src/modular/bin/sessionmgr",

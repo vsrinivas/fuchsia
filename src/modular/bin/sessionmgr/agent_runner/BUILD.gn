@@ -16,7 +16,6 @@ source_set("agent_runner") {
     ":public",
     "//sdk/lib/sys/inspect/cpp",
     "//src/modular/bin/sessionmgr:agent_services_factory",
-    "//src/modular/lib/ledger_client:page_client",
   ]
 
   deps = [
@@ -27,7 +26,6 @@ source_set("agent_runner") {
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
-    "//src/ledger/fidl/fuchsia.ledger",
     "//src/lib/fsl",
     "//src/modular/bin/sessionmgr:component_context",
     "//src/modular/bin/sessionmgr/storage:constants_and_utils",
@@ -37,8 +35,6 @@ source_set("agent_runner") {
     "//src/modular/lib/fidl:app_client",
     "//src/modular/lib/fidl:array_to_string",
     "//src/modular/lib/fidl:json_xdr",
-    "//src/modular/lib/ledger_client:page_client",
-    "//src/modular/lib/ledger_client:types",
     "//zircon/public/lib/fdio",
     "//zircon/system/fidl/fuchsia-io",
   ]
@@ -60,11 +56,10 @@ executable("agent_runner_unittest") {
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
     "//src/modular/lib/fidl:array_to_string",
-    "//src/modular/lib/ledger_client:page_client",
     "//src/modular/lib/pseudo_dir",
     "//src/modular/lib/testing:mock_base",
-    "//src/modular/lib/testing:test_with_ledger",
     "//src/modular/tests:fuchsia.testing.modular",
     "//zircon/public/lib/fs",
     "//zircon/public/lib/trace",
@@ -86,8 +81,6 @@ source_set("public") {
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/inspect/cpp",
-    "//src/ledger/fidl/fuchsia.ledger",
-    "//src/ledger/fidl/fuchsia.ledger.internal",
     "//src/modular/bin/sessionmgr:agent_services_factory",
     "//src/modular/lib/async/cpp:operation",
   ]

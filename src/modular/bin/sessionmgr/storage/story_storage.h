@@ -12,9 +12,6 @@
 #include <map>
 
 #include "src/modular/lib/async/cpp/future.h"
-#include "src/modular/lib/ledger_client/ledger_client.h"
-#include "src/modular/lib/ledger_client/page_client.h"
-#include "src/modular/lib/ledger_client/page_id.h"
 
 using fuchsia::modular::LinkPath;
 using fuchsia::modular::LinkPathPtr;
@@ -28,18 +25,10 @@ namespace modular {
 // * Manage the persistence of metadata about what mods are part of a single
 //   story.
 // * Manage the persistence of link values in a single story.
-// * Observe the metadata and call clients back when changes initiated by other
-//   Ledger clients appear.
-//
-// All calls operate directly on the Ledger itself: no local caching is
-// performed.
-class StoryStorage : public PageClient {
+class StoryStorage {
  public:
-  // Constructs a new StoryStorage with storage on |page_id| in the ledger
-  // given by |ledger_client|.
-  //
-  // |ledger_client| must outlive *this.
-  StoryStorage(LedgerClient* ledger_client, fuchsia::ledger::PageId page_id);
+  // Constructs a new StoryStorage with self-contained storage.
+  StoryStorage();
 
   enum class Status {
     OK = 0,
@@ -54,20 +43,32 @@ class StoryStorage : public PageClient {
     INVALID_ENTITY_COOKIE = 4,
   };
 
+  enum class NotificationInterest {
+    // Indicates the returning function wishes to be removed from the set of
+    // module data change watchers, should not be called again, and that
+    // StoryStorage should release its reference to the function.
+    STOP = 0,
+    // Indicates the returning function wishes to continue receiving module data
+    // change notifications.
+    CONTINUE = 1,
+  };
+
+  // Adds a callback to be called whenever ModuleData is added or updated in the
+  // underlying storage.  When the provided callback is triggered, the return
+  // value is used to express whether the callback wishes to be unsubscribed
+  // from future notifications or not.
+  void SubscribeModuleDataUpdated(fit::function<NotificationInterest(ModuleData)> callback) {
+    module_data_updated_watchers_.push_back(std::move(callback));
+  }
+
   // =========================================================================
   // ModuleData
-
-  // Sets the callback that is called whenever ModuleData is added or updated
-  // in underlying storage. Excludes notifications for changes (such as with
-  // WriteModuleData() or UpdateModuleData()) made on this instance of
-  // StoryStorage.
-  void set_on_module_data_updated(fit::function<void(ModuleData)> callback) {
-    on_module_data_updated_ = std::move(callback);
-  }
 
   // Returns the current ModuleData for |module_path|. If not found, the
   // returned value is null.
   FuturePtr<ModuleDataPtr> ReadModuleData(const std::vector<std::string>& module_path);
+  // Like ReadModuleData, but synchronous for convenience.
+  ModuleDataPtr ReadModuleDataSync(const std::vector<std::string>& module_path);
 
   // Writes |module_data| to storage. The returned future is completed
   // once |module_data| has been written and a notification confirming the
@@ -117,44 +118,20 @@ class StoryStorage : public PageClient {
                                     fit::function<void(fidl::StringPtr* value)> mutate_fn,
                                     const void* context);
 
-  // Completes the returned future after all prior methods have completed.
-  FuturePtr<> Sync();
-
  private:
-  // |PageClient|
-  void OnPageChange(const std::string& key, fuchsia::mem::BufferPtr value) override;
+  void DispatchWatchers(ModuleData& module_data);
 
-  // |PageClient|
-  void OnPageDelete(const std::string& key) override;
+  // The actual module data, indexed by a key derived from module_data.module_path() values.
+  std::map<std::string, ModuleData> module_data_backing_storage_;
 
-  // |PageClient|
-  void OnPageConflict(Conflict* conflict) override;
+  // The actual backing storage for link values.
+  std::map<std::string, std::string> link_backing_storage_;
 
-  // Completes the returned Future when the ledger notifies us (through
-  // OnPageChange()) of a write for |key| with |value|.
-  FuturePtr<> WaitForWrite(const std::string& key, const std::string& value);
-
-  fxl::WeakPtr<StoryStorage> GetWeakPtr();
-
-  LedgerClient* const ledger_client_;
-  const fuchsia::ledger::PageId page_id_;
-  // NOTE: This operation queue serializes all link operations, even though
-  // operations on different links do not have an impact on each other. Consider
-  // adding an OperationQueue per link if we want to increase concurrency.
-  OperationQueue operation_queue_;
-
-  // Called when new ModuleData is encountered from the Ledger.
-  fit::function<void(ModuleData)> on_module_data_updated_;
-
-  // A map of ledger (key, value) to (vec of future). When we see a
-  // notification in OnPageChange() for a matching (key, value), we complete
-  // all the respective futures.
-  //
-  // NOTE: we use a map<> of vector<> here instead of a multimap<> because we
-  // complete all the Futures for a given key/value pair at once.
-  std::map<std::pair<std::string, std::string>, std::vector<FuturePtr<>>> pending_writes_;
-
-  fxl::WeakPtrFactory<StoryStorage> weak_ptr_factory_;
+  // List of watchers to call when ModuleData is created.
+  // Each watcher will be called for each ModuleData change until it returns
+  // true, indicating satisfaction, at which point StoryStorage will remove
+  // the callback from the watch list.
+  std::vector<fit::function<NotificationInterest(ModuleData)>> module_data_updated_watchers_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(StoryStorage);
 };

@@ -12,7 +12,6 @@
 #include "src/lib/fsl/types/type_converters.h"
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/syslog/cpp/logger.h"
-#include "src/modular/lib/ledger_client/page_id.h"
 #include "src/modular/lib/testing/test_with_session_storage.h"
 
 namespace modular {
@@ -22,7 +21,7 @@ class AddModCommandRunnerTest : public modular_testing::TestWithSessionStorage {
  public:
   void SetUp() override {
     modular_testing::TestWithSessionStorage::SetUp();
-    session_storage_ = MakeSessionStorage("page");
+    session_storage_ = MakeSessionStorage();
     story_id_ = CreateStory(session_storage_.get()).value_or("");
     story_storage_ = GetStoryStorage(session_storage_.get(), story_id_);
     runner_ = MakeRunner();
@@ -96,7 +95,7 @@ class AddModCommandRunnerTest : public modular_testing::TestWithSessionStorage {
 
   std::unique_ptr<AddModCommandRunner> runner_;
   std::unique_ptr<SessionStorage> session_storage_;
-  std::unique_ptr<StoryStorage> story_storage_;
+  std::shared_ptr<StoryStorage> story_storage_;
   std::string story_id_;
 };
 

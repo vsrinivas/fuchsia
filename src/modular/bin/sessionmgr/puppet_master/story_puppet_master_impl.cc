@@ -43,7 +43,7 @@ class ExecuteOperation : public Operation<fuchsia::modular::ExecuteResult> {
 
   void CreateStory() {
     session_storage_->CreateStory(story_name_, /*annotations=*/{})
-        ->WeakThen(GetWeakPtr(), [this](fidl::StringPtr story_id, auto /* ignored */) {
+        ->WeakThen(GetWeakPtr(), [this](fidl::StringPtr story_id) {
           story_id_ = std::move(story_id);
           ExecuteCommands();
         });
@@ -106,7 +106,7 @@ class AnnotateOperation : public Operation<fuchsia::modular::StoryPuppetMaster_A
     }
 
     session_storage_->CreateStory(story_name_, std::move(annotations_))
-        ->WeakThen(GetWeakPtr(), [this](fidl::StringPtr story_id, auto /* ignored */) {
+        ->WeakThen(GetWeakPtr(), [this](fidl::StringPtr story_id) {
           fuchsia::modular::StoryPuppetMaster_Annotate_Result result{};
           result.set_response({});
           Done(std::move(result));
@@ -168,9 +168,9 @@ class AnnotateModuleOperation
     }
 
     session_storage_->GetStoryStorage(story_name_)
-        ->WeakAsyncMap(
+        ->WeakThen(
             GetWeakPtr(),
-            [this](std::unique_ptr<StoryStorage> story_storage) {
+            [this](std::shared_ptr<StoryStorage> story_storage) {
               if (story_storage == nullptr) {
                 // Since Modules are created by an external component, and the external component
                 // would only be able to add a Module to a Story that it managed, it isn't possible
@@ -179,30 +179,31 @@ class AnnotateModuleOperation
                 fuchsia::modular::StoryPuppetMaster_AnnotateModule_Result result{};
                 result.set_err(fuchsia::modular::AnnotationError::NOT_FOUND);
                 Done(std::move(result));
-                return static_cast<FuturePtr<fuchsia::modular::ModuleDataPtr>>(nullptr);
+                return;
               }
               story_storage_ = std::move(story_storage);
-              // Add a callback on module_data updates before attempting ReadModuleData,
-              // then try to ReadModuleData(), if it exists in |StoryStorage|.
-              // If the module_data is not found, the callback will be called if and
-              // when the ModuleData is stored, later.
-              story_storage_->set_on_module_data_updated(
-                  [&](fuchsia::modular::ModuleData new_module_data) {
-                    if (new_module_data.module_path().back() == module_id_) {
-                      AnnotateModuleIfFirstAttempt(std::make_unique<fuchsia::modular::ModuleData>(
-                          std::move(new_module_data)));
-                    }
-                  });
-              return story_storage_->ReadModuleData({module_id_})
-                  ->WeakMap(GetWeakPtr(), [](fuchsia::modular::ModuleDataPtr module_data) mutable {
-                    return module_data;
-                  });
-            })
-        ->WeakThen(GetWeakPtr(), [this](fuchsia::modular::ModuleDataPtr module_data) mutable {
-          if (module_data != nullptr) {
-            AnnotateModuleIfFirstAttempt(std::move(module_data));
-          }
-        });
+              auto module_data = story_storage_->ReadModuleDataSync({module_id_});
+              if (module_data != nullptr) {
+                AnnotateModuleIfFirstAttempt(std::move(module_data));
+              } else {
+                // If the module_data is not found, the callback will be called if and
+                // when the ModuleData is stored, later.
+                story_storage_->SubscribeModuleDataUpdated(
+                    [&](fuchsia::modular::ModuleData new_module_data) {
+                      if (new_module_data.module_path().back() == module_id_) {
+                        AnnotateModuleIfFirstAttempt(std::make_unique<fuchsia::modular::ModuleData>(
+                            std::move(new_module_data)));
+                        // We've fulfilled our goal.  Signal to story_storage_
+                        // that we're no longer interested in callbacks, so
+                        // it'll drop its reference to this lambda before we
+                        // complete and get deallocated.
+                        return StoryStorage::NotificationInterest::STOP;
+                      }
+                      // Otherwise keep subscribed to other updates
+                      return StoryStorage::NotificationInterest::CONTINUE;
+                    });
+              }
+            });
   }
 
   void AnnotateModuleIfFirstAttempt(fuchsia::modular::ModuleDataPtr module_data) {
@@ -232,7 +233,7 @@ class AnnotateModuleOperation
   }
 
   SessionStorage* const session_storage_;
-  std::unique_ptr<StoryStorage> story_storage_;
+  std::shared_ptr<StoryStorage> story_storage_;
   std::string story_name_;
   std::string module_id_;
   std::vector<fuchsia::modular::Annotation> annotations_;

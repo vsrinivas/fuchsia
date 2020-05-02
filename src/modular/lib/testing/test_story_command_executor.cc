@@ -7,7 +7,7 @@
 namespace modular_testing {
 
 void TestStoryCommandExecutor::SetStoryStorage(
-    std::unique_ptr<modular::StoryStorage> story_storage) {
+    std::shared_ptr<modular::StoryStorage> story_storage) {
   story_storage_ = std::move(story_storage);
 }
 
@@ -51,8 +51,8 @@ void TestStoryCommandExecutor::ExecuteCommandsInternal(
         //   Intent intent
         //   SurfaceRelation surface_relation
 
-        // Queue asynchronous write. The returned Future<> is not needed.
-        // done() is called after all writes complete, via the Sync callback, below.
+        // These calls are all synchronous now, masquerading as asynchronous
+        // callbacks for incremental refactoring purposes.
         story_storage_->WriteModuleData(std::move(module_data));
 
         // This test currently only persists adding mods (assuming there is a story_storage_);
@@ -64,12 +64,7 @@ void TestStoryCommandExecutor::ExecuteCommandsInternal(
   }
   last_story_id_ = story_id;
   last_commands_ = std::move(commands);
-  if (!story_storage_) {
-    done(std::move(result));
-  } else {
-    story_storage_->Sync()->Then(
-        [done = std::move(done), result = std::move(result)] { done(std::move(result)); });
-  }
+  done(std::move(result));
 }
 
 }  // namespace modular_testing
