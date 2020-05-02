@@ -90,7 +90,7 @@ def main():
             continue
         for service in services.iterkeys():
             if service in seen_services:
-                if not service_conflicts:
+                if not service in service_conflicts:
                     service_conflicts[service] = [seen_services[service]]
                 service_conflicts[service].append(config_file)
             else:
