@@ -5,6 +5,7 @@
 #include "src/ui/scenic/lib/gfx/resources/material.h"
 
 #include "src/ui/lib/escher/renderer/sampler_cache.h"
+#include "src/ui/lib/escher/util/image_utils.h"
 #include "src/ui/scenic/lib/gfx/engine/session.h"
 #include "src/ui/scenic/lib/gfx/resources/image.h"
 #include "src/ui/scenic/lib/gfx/resources/image_base.h"
@@ -45,10 +46,7 @@ void Material::UpdateEscherMaterial(escher::BatchGpuUploader* gpu_uploader,
     if (escher_image) {
       escher::SamplerPtr sampler;
 
-      // TODO(SCN-1403): Technically, eG8B8R82Plane420Unorm is not enough to
-      // assume NV12, but it's currently the only format we support at the
-      // sampler level.
-      if (escher_image->format() == vk::Format::eG8B8R82Plane420Unorm) {
+      if (escher::image_utils::IsYuvFormat(escher_image->format())) {
         // TODO(ES-199, ES-200): Reusing samplers is just good policy, but it is a necessity for
         // immutable samplers, because allocating duplicate samplers will result in creation of
         // duplicate pipelines, descriptor set allocators.

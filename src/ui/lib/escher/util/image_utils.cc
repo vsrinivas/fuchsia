@@ -101,6 +101,7 @@ bool IsYuvFormat(vk::Format format) {
   switch (format) {
     case vk::Format::eG8B8G8R8422Unorm:
     case vk::Format::eG8B8R82Plane420Unorm:
+    case vk::Format::eG8B8R83Plane420Unorm:
       return true;
     default:
       return false;

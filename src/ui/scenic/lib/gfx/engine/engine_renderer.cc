@@ -311,7 +311,8 @@ void EngineRenderer::WarmPipelineCache(std::set<vk::Format> framebuffer_formats)
   if (escher_->allow_ycbcr()) {
     // Generate the list of immutable samples for all of the YUV types that we expect to see.
     const std::vector<vk::Format> immutable_sampler_formats{vk::Format::eG8B8G8R8422Unorm,
-                                                            vk::Format::eG8B8R82Plane420Unorm};
+                                                            vk::Format::eG8B8R82Plane420Unorm,
+                                                            vk::Format::eG8B8R83Plane420Unorm};
     for (auto fmt : immutable_sampler_formats) {
       immutable_samplers.push_back(
           escher_->sampler_cache()->ObtainYuvSampler(fmt, vk::Filter::eLinear));
