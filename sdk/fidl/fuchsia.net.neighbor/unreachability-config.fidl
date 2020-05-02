@@ -32,7 +32,7 @@ table UnreachabilityConfig {
     ///
     /// After this time, an entry will transition from REACHABLE to STALE state.
     ///
-    /// Originally referred to as "BaseReachableTime" by RFC 4861.
+    /// Referred to as "BaseReachableTime" by RFC 4861.
     ///
     /// Must be greater than 0.
     1: zx.duration base_reachable_time;
@@ -62,7 +62,7 @@ table UnreachabilityConfig {
     /// Duration between retransmissions of reachability probes in the PROBE
     /// state.
     ///
-    /// Originally referred to as "RetransTimer" by RFC 4861.
+    /// Referred to as "RetransTimer" by RFC 4861.
     ///
     /// Must be greater than 0.
     5: zx.duration retransmit_timer;
@@ -82,15 +82,19 @@ table UnreachabilityConfig {
     /// The number of reachability probes to send before concluding negative
     /// reachability and deleting the entry from the INCOMPLETE state.
     ///
+    /// Referred to as "MAX_MULTICAST_SOLICIT" by RFC 4861.
+    ///
     /// Must be greater than 0.
-    8: uint32 max_multicast_solicit;
+    8: uint32 max_multicast_probes;
 
     /// The number of reachability probes to send before concluding
     /// retransmissions from within the PROBE state should cease and the entry
     /// SHOULD be deleted.
     ///
+    /// Referred to as "MAX_UNICAST_SOLICIT" by RFC 4861.
+    ///
     /// Must be greater than 0.
-    9: uint32 max_unicast_solicit;
+    9: uint32 max_unicast_probes;
 
     /// If the target address is an anycast address, the stack SHOULD delay
     /// sending a response for a random time between 0 and this duration.
@@ -100,7 +104,7 @@ table UnreachabilityConfig {
     /// confirmations messages to all-nodes multicast address when a node
     /// determines its link-layer address has changed.
     ///
-    /// Originally referred to as "MAX_NEIGHBOR_ADVERTISEMENT" by RFC 4861.
+    /// Referred to as "MAX_NEIGHBOR_ADVERTISEMENT" by RFC 4861.
     11: uint32 max_reachability_confirmations;
 };
 
@@ -129,13 +133,13 @@ const float32 DEFAULT_MIN_RANDOM_FACTOR = 0.5;
 /// by RFC 4861 section 10.
 const float32 DEFAULT_MAX_RANDOM_FACTOR = 1.5;
 
-/// Default value for [`UnreachabilityConfig.max_multicast_solicit`] as
+/// Default value for [`UnreachabilityConfig.max_multicast_probes`] as
 /// recommended by RFC 4861 section 10.
-const uint32 DEFAULT_MAX_MULITCAST_SOLICIT = 3;
+const uint32 DEFAULT_MAX_MULITCAST_PROBES = 3;
 
-/// Default value for [`UnreachabilityConfig.max_unicast_solicit`] as
+/// Default value for [`UnreachabilityConfig.max_unicast_probes`] as
 /// recommended by RFC 4861 section 10.
-const uint32 DEFAULT_MAX_UNICAST_SOLICIT = 3;
+const uint32 DEFAULT_MAX_UNICAST_PROBES = 3;
 
 /// Default value for [`UnreachabilityConfig.max_reachability_confirmations`] as
 /// recommended by RFC 4861 section 10.
