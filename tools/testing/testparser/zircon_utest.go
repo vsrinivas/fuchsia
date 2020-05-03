@@ -7,15 +7,14 @@ package testparser
 import (
 	"fmt"
 	"regexp"
-	"strings"
 	"time"
 )
 
 var (
-	zirconUtestPreamblePattern = regexp.MustCompile(`CASE\s*(.*?)\s*\[STARTED\]`)
-	zirconUtestPassCasePattern = regexp.MustCompile(`\s*(.*?)\s+\[RUNNING\] \[PASSED\] \((.*?)\)`)
-	zirconUtestFailCasePattern = regexp.MustCompile(`\s*(.*?)\s+\[RUNNING\] \[FAILED\] \((.*?)\)`)
-	zirconUtestSkipCasePattern = regexp.MustCompile(`\s*(.*?)\s+\[IGNORED\]`)
+	zirconUtestPreamblePattern = regexp.MustCompile(`^CASE\s*(.*?)\s*\[STARTED\] $`)
+	zirconUtestPassCasePattern = regexp.MustCompile(`^    (.*?)\s{1,51}\[RUNNING\] \[PASSED\] \((\d+) ms\)$`)
+	zirconUtestFailCasePattern = regexp.MustCompile(`^    (.*?)\s{1,51}\[RUNNING\] \[FAILED\] \((\d+) ms\)$`)
+	zirconUtestSkipCasePattern = regexp.MustCompile(`^    (.*?)\s{1,51}\[IGNORED\]$`)
 )
 
 func parseZirconUtest(lines [][]byte) []TestCaseResult {
@@ -29,8 +28,7 @@ func parseZirconUtest(lines [][]byte) []TestCaseResult {
 		} else if m = zirconUtestPassCasePattern.FindStringSubmatch(line); m != nil {
 			caseName := m[1]
 			displayName := fmt.Sprintf("%s.%s", suiteName, caseName)
-			// Convert e.g. "4 ms" to "4ms" which parses to Duration successfully
-			duration, _ := time.ParseDuration(strings.ReplaceAll(m[2], " ", ""))
+			duration, _ := time.ParseDuration(m[2] + "ms")
 			res = append(res, TestCaseResult{
 				DisplayName: displayName,
 				SuiteName:   suiteName,
@@ -42,8 +40,7 @@ func parseZirconUtest(lines [][]byte) []TestCaseResult {
 		} else if m = zirconUtestFailCasePattern.FindStringSubmatch(line); m != nil {
 			caseName := m[1]
 			displayName := fmt.Sprintf("%s.%s", suiteName, caseName)
-			// Convert e.g. "4 ms" to "4ms" which parses to Duration successfully
-			duration, _ := time.ParseDuration(strings.ReplaceAll(m[2], " ", ""))
+			duration, _ := time.ParseDuration(m[2] + "ms")
 			res = append(res, TestCaseResult{
 				DisplayName: displayName,
 				SuiteName:   suiteName,

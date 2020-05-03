@@ -7,13 +7,12 @@ package testparser
 import (
 	"fmt"
 	"regexp"
-	"strings"
 	"time"
 )
 
 var (
-	googleTestPreamblePattern = regexp.MustCompile(`\[==========\] Running \d* tests? from \d* test (?:(?:suites?)|(?:cases?))\.`)
-	googleTestCasePattern     = regexp.MustCompile(`\[\s*(\w*)\s*\] (.*?)\.(.*?) \((.*?)\)`)
+	googleTestPreamblePattern = regexp.MustCompile(`^\[==========\] Running \d* tests? from \d* test (?:(?:suites?)|(?:cases?))\.$`)
+	googleTestCasePattern     = regexp.MustCompile(`^\[(       OK |  FAILED  |  SKIPPED )\] (.*?)\.(.*?) \((\d+) ms\)$`)
 )
 
 func parseGoogleTest(lines [][]byte) []TestCaseResult {
@@ -26,18 +25,17 @@ func parseGoogleTest(lines [][]byte) []TestCaseResult {
 		}
 		var status TestCaseStatus
 		switch m[1] {
-		case "OK":
+		case "       OK ":
 			status = Pass
-		case "FAILED":
+		case "  FAILED  ":
 			status = Fail
-		case "SKIPPED":
+		case "  SKIPPED ":
 			status = Skip
 		}
 		suiteName := m[2]
 		caseName := m[3]
 		displayName := fmt.Sprintf("%s.%s", suiteName, caseName)
-		// Convert e.g. "4 ms" to "4ms" which parses to Duration successfully
-		duration, _ := time.ParseDuration(strings.ReplaceAll(m[4], " ", ""))
+		duration, _ := time.ParseDuration(m[4] + "ms")
 		res = append(res, TestCaseResult{
 			DisplayName: displayName,
 			SuiteName:   suiteName,

@@ -10,8 +10,8 @@ import (
 )
 
 var (
-	rustTestPreamblePattern = regexp.MustCompile(`running \d* tests?`)
-	rustTestCasePattern     = regexp.MustCompile(`test (.*?)::(.*?) \.\.\. (\w*)`)
+	rustTestPreamblePattern = regexp.MustCompile(`^running \d* tests?$`)
+	rustTestCasePattern     = regexp.MustCompile(`^test (.*?)::(.*?) \.\.\. (\w*)$`)
 )
 
 func parseRustTest(lines [][]byte) []TestCaseResult {

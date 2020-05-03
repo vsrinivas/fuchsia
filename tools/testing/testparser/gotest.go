@@ -11,8 +11,8 @@ import (
 )
 
 var (
-	goTestPreamblePattern = regexp.MustCompile(`==================== Test output for (.*?):`)
-	goTestCasePattern     = regexp.MustCompile(`--- (\w*?): (.*?) \((.*?)\)`)
+	goTestPreamblePattern = regexp.MustCompile(`^==================== Test output for (.*?):$`)
+	goTestCasePattern     = regexp.MustCompile(`^--- (\w*?): (.*?) \((.*?)\)$`)
 )
 
 func parseGoTest(lines [][]byte) []TestCaseResult {
