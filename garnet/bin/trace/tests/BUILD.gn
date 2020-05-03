@@ -423,8 +423,6 @@ executable("provider_destruction_tests") {
 }
 
 test_package("trace_tests") {
-  rootjob_svc = true
-
   deps = [
     ":basic_integration_test_app",
     ":detach_tests",

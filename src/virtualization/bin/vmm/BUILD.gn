@@ -153,8 +153,6 @@ executable("bin") {
 }
 
 package("vmm") {
-  rootresource_svc = true
-
   binary = "vmm"
 
   deps = [ ":bin" ]

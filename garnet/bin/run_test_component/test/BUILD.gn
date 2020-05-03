@@ -65,8 +65,6 @@ rustc_binary("component_to_test_standard_out") {
 }
 
 test_package("run_test_component_test") {
-  deprecated_shell = true
-
   deps = [
     ":bin",
     ":component_to_test_standard_out",

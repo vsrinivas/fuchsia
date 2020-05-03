@@ -81,9 +81,6 @@ executable("bin") {
 }
 
 package("system_monitor_harvester") {
-  rootresource_svc = true
-  rootjob_svc = true
-
   deps = [ ":bin" ]
 
   binaries = [
@@ -134,9 +131,6 @@ executable("system_monitor_harvester_test") {
 }
 
 test_package("system_monitor_harvester_tests") {
-  rootresource_svc = true
-  rootjob_svc = true
-
   deps = [ ":system_monitor_harvester_test" ]
 
   tests = [

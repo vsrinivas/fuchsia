@@ -129,8 +129,6 @@ executable("static_pie_test_util") {
 }
 
 test_package("process_builder_tests") {
-  rootjob_svc = true
-
   deps = [
     ":process_builder_test",
     ":root_job_test_runner",

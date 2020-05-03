@@ -54,9 +54,6 @@ rustc_binary("bin") {
 }
 
 package("system-update-checker") {
-  deprecated_misc_storage = true
-  deprecated_shell = true
-
   deps = [ ":bin" ]
   binaries = [
     {

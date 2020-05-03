@@ -51,8 +51,6 @@ executable("components_binary_test") {
 }
 
 test_package("components_binary_tests") {
-  deprecated_shell = true
-
   deps = [
     ":components_binary_test",
     ":echo1",

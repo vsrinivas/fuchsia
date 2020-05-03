@@ -60,8 +60,6 @@ package("pkgfs") {
 }
 
 package("amber") {
-  deprecated_misc_storage = true
-
   deps = [ "//garnet/go/src/grand_unified_binary" ]
 
   binaries = [

@@ -11,8 +11,6 @@ executable("bin") {
 }
 
 package("glob") {
-  deprecated_shell = true
-
   deps = [ ":bin" ]
 
   binary = "glob"

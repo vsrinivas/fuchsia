@@ -20,8 +20,6 @@ group("benchmark") {
 visibility = [ "//src/ledger/*" ]
 
 package("ledger_benchmarks") {
-  rootjob_svc = true
-
   testonly = true
 
   deps = [

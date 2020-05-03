@@ -34,8 +34,6 @@ executable("bin") {
 }
 
 package("sshd-host") {
-  deprecated_shell = true
-
   deps = [
     ":bin",
     "//third_party/openssh-portable:hostkeygen",

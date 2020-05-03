@@ -180,8 +180,6 @@ template("package") {
             "binaries",
             "binary",
             "data_deps",
-            "deprecated_misc_storage",
-            "deprecated_shell",
             "deprecated_system_image",  # TODO(bwb) remove after soft-transition
             "__deprecated_system_image",
             "deps",
@@ -193,8 +191,6 @@ template("package") {
             "meta",
             "package_name",
             "resources",
-            "rootjob_svc",
-            "rootresource_svc",
             "visibility",
             "tests",
           ])
@@ -323,19 +319,6 @@ template("package") {
         cmx_validate(validate_target) {
           data = manifest_path
           deps = manifest_deps
-          if (defined(pkg.deprecated_misc_storage) &&
-              pkg.deprecated_misc_storage) {
-            block_deprecated_misc_storage = false
-          }
-          if (defined(pkg.deprecated_shell) && pkg.deprecated_shell) {
-            block_deprecated_shell = false
-          }
-          if (defined(pkg.rootjob_svc) && pkg.rootjob_svc) {
-            block_rootjob_svc = false
-          }
-          if (defined(pkg.rootresource_svc) && pkg.rootresource_svc) {
-            block_rootresource_svc = false
-          }
         }
         pkg.deps += [ ":$validate_target" ]
 

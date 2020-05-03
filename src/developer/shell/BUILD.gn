@@ -46,7 +46,6 @@ action("generate_fidl_json") {
 }
 
 test_package("shell_tests") {
-  rootjob_svc = true
   deps = [
     ":generate_fidl_json",
     "//src/developer/shell/console:console_unittests_bin",

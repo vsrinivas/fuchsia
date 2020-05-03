@@ -43,8 +43,6 @@ executable("bin") {
 }
 
 package("loadbench") {
-  rootresource_svc = true
-
   deps = [ ":bin" ]
 
   binary = "loadbench"
@@ -96,8 +94,6 @@ executable("loadbench_unittests") {
 }
 
 test_package("loadbench_tests") {
-  rootresource_svc = true
-
   deps = [ ":loadbench_unittests" ]
 
   tests = [

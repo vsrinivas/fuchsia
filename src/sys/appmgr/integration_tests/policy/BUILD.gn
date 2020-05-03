@@ -13,9 +13,6 @@ group("policy") {
 }
 
 test_package("policy-integration-tests") {
-  deprecated_shell = true
-  rootjob_svc = true
-  rootresource_svc = true
   deps = [
     ":policy_test",
     "//src/sys/appmgr/integration_tests:echo_server",

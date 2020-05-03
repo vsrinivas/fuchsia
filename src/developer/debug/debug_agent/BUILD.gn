@@ -125,8 +125,6 @@ executable("bin") {
 }
 
 package("debug_agent") {
-  rootjob_svc = true
-
   deps = [ ":bin" ]
 
   meta = [
@@ -210,8 +208,6 @@ executable("unit_tests") {
 }
 
 test_package("debug_agent_tests") {
-  rootjob_svc = true
-
   package_name = "debug_agent_tests"
   deps = []
   binaries = []
