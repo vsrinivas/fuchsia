@@ -23,6 +23,7 @@ constexpr unsigned kOffset = kMinfsBlockSize * 3 - 4;
 // We treat the buffer as an array of uint32_t.
 constexpr unsigned kIndex = kOffset / 4;
 
+// SimpleMapper multiplies the file block by 2.
 class SimpleMapper : public MapperInterface {
  public:
   zx::status<DeviceBlockRange> Map(BlockRange range) {
@@ -125,6 +126,28 @@ TEST_F(LazyBufferTest, ShrinkDoesNotGrowIfAlreadySmaller) {
   buffer_->Shrink(kIndex + 3);
 
   EXPECT_EQ(fbl::round_up(kOffset + 8, kMinfsBlockSize), buffer_->size());
+}
+
+TEST_F(LazyBufferTest, ShrinkClearsLoaded) {
+  SimpleMapper mapper;
+  LazyBuffer::Reader reader(bcache_.get(), &mapper, buffer_.get());
+  // This should cause a block to be loaded.
+  BufferView<uint32_t> view = buffer_->GetView<uint32_t>(0, 1, &reader).value();
+
+  buffer_->Shrink(0);
+
+  // To test that loaded was cleared, write to the buffer directly and then see that it can be read
+  // back.
+  storage::VmoBuffer temp_buffer;
+  ASSERT_OK(temp_buffer.Initialize(bcache_->device(), 1, kMinfsBlockSize, "temp"));
+  constexpr uint8_t kData = 0xaf;
+  memset(temp_buffer.Data(0), kData, 1);
+  EXPECT_OK(bcache_->RunOperation(
+      storage::Operation{
+          .type = storage::OperationType::kWrite, .vmo_offset = 0, .dev_offset = 0, .length = 1},
+      &temp_buffer));
+  view = buffer_->GetView<uint32_t>(0, 1, &reader).value();
+  EXPECT_EQ(kData, *view);
 }
 
 TEST_F(LazyBufferTest, FlushWritesAllBlocksInRange) {

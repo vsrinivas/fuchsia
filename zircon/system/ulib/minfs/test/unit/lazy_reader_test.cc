@@ -220,5 +220,36 @@ TEST(LazyReaderTest, RunRequestsError) {
   EXPECT_TRUE(reader.run_requests_called());
 }
 
+TEST(LazyReaderTest, SetLoadedMarksBlocksAsLoaded) {
+  LazyReader lazy_reader;
+
+  lazy_reader.SetLoaded(BlockRange(1, 2), true);
+
+  MockReader reader;
+  ASSERT_OK(
+      lazy_reader.Read(ByteRange(reader.BlockSize() - 1, 2 * reader.BlockSize() + 1), &reader));
+  ASSERT_EQ(2, reader.enqueued().size());
+  EXPECT_EQ(0, reader.enqueued()[0].Start());
+  EXPECT_EQ(1, reader.enqueued()[0].End());
+  EXPECT_EQ(2, reader.enqueued()[1].Start());
+  EXPECT_EQ(3, reader.enqueued()[1].End());
+}
+
+TEST(LazyReaderTest, ClearLoadedMarksBlocksAsNotLoaded) {
+  LazyReader lazy_reader;
+  MockReader reader;
+  ASSERT_OK(
+      lazy_reader.Read(ByteRange(reader.BlockSize() - 1, 2 * reader.BlockSize() + 1), &reader));
+
+  lazy_reader.SetLoaded(BlockRange(1, 2), false);
+
+  reader.Reset();
+  ASSERT_OK(
+      lazy_reader.Read(ByteRange(reader.BlockSize() - 1, 2 * reader.BlockSize() + 1), &reader));
+  ASSERT_EQ(1, reader.enqueued().size());
+  EXPECT_EQ(1, reader.enqueued()[0].Start());
+  EXPECT_EQ(2, reader.enqueued()[0].End());
+}
+
 }  // namespace
 }  // namespace minfs

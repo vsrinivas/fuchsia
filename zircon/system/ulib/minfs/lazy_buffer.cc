@@ -16,6 +16,7 @@ zx::status<std::unique_ptr<LazyBuffer>> LazyBuffer::Create(Bcache* bcache, const
 }
 
 void LazyBuffer::Shrink(size_t block_count) {
+  lazy_reader_.SetLoaded(BlockRange(block_count, std::numeric_limits<uint64_t>::max()), false);
   // ResizeableVmoBuffer has a minimum block size of 1.
   if (block_count < 1)
     block_count = 1;

@@ -52,8 +52,12 @@ class LazyReader {
   };
 
   // Reads |length| bytes at offset |offset| into the buffer (if it isn't already pressent) using
-  // the provided ReaderInterface.
+  // the provided ReaderInterface. The actual reads will be blocks and so |range| will be aligned to
+  // the nearest block boundaries that encompass |range|.
   [[nodiscard]] zx_status_t Read(ByteRange range, ReaderInterface* reader);
+
+  // Marks the given block range as loaded or not according to |set|.
+  void SetLoaded(BlockRange range, bool set);
 
  private:
   bitmap::RleBitmap mapped_;

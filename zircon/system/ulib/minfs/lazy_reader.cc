@@ -39,6 +39,14 @@ zx_status_t LazyReader::Read(ByteRange range, ReaderInterface* reader) {
   return ZX_OK;
 }
 
+void LazyReader::SetLoaded(BlockRange range, bool set) {
+  if (set) {
+    mapped_.Set(range.Start(), range.End());
+  } else {
+    mapped_.Clear(range.Start(), range.End());
+  }
+}
+
 zx::status<uint64_t> MappedFileReader::Enqueue(BlockRange range) {
   zx::status<DeviceBlockRange> status = mapper_.Map(range);
   if (status.is_error())
