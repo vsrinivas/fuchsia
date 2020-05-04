@@ -12,12 +12,9 @@
 
 #include "src/lib/files/file.h"
 #include "src/lib/syslog/cpp/logger.h"
-#include "src/modular/bin/basemgr/cobalt/cobalt.h"
 #include "src/modular/lib/connect/connect.h"
 
 namespace modular {
-
-using cobalt_registry::SessionAgentEventsMetricDimensionEventType;
 
 namespace {
 
@@ -137,8 +134,6 @@ void StartupAgentLauncher::StartSessionAgent(AgentRunner* agent_runner, const st
       } else {
         FX_LOGS(WARNING) << url << " failed to restart more than " << kSessionAgentRetryLimit.count
                          << " times in " << kSessionAgentRetryLimit.period.to_secs() << " seconds.";
-        ReportSessionAgentEvent(url,
-                                SessionAgentEventsMetricDimensionEventType::CrashLimitExceeded);
         // Erase so that incoming connection requests fail fast rather than
         // enqueue forever.
         session_agents_.erase(it);

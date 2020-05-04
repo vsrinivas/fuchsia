@@ -44,14 +44,4 @@ void ReportStoryLaunchTime(zx::duration time) {
   }
 }
 
-void ReportSessionAgentEvent(const std::string& url,
-                             cobalt_registry::SessionAgentEventsMetricDimensionEventType event) {
-  if (g_cobalt_logger) {
-    g_cobalt_logger->LogEventCount(
-        static_cast<uint32_t>(cobalt_registry::kSessionAgentEventsMetricId),
-        static_cast<uint32_t>(event), url /* component */,
-        zx::duration(0) /* period_duration_micros */, 1 /* count */);
-  }
-}
-
 }  // namespace modular

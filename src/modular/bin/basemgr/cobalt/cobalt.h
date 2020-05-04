@@ -26,9 +26,6 @@ void ReportEvent(cobalt_registry::ModularLifetimeEventsMetricDimensionEventType 
 // Report a story launch time duration to Cobalt.
 void ReportStoryLaunchTime(zx::duration time);
 
-void ReportSessionAgentEvent(const std::string& url,
-                             cobalt_registry::SessionAgentEventsMetricDimensionEventType event);
-
 }  // namespace modular
 
 #endif  // SRC_MODULAR_BIN_BASEMGR_COBALT_COBALT_H_
