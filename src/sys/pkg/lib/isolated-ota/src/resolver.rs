@@ -13,7 +13,7 @@ use {
         server::{NestedEnvironment, ServiceFs, ServiceObj},
     },
     fuchsia_syslog::fx_log_err,
-    fuchsia_zircon::HandleBased,
+    fuchsia_zircon::{self as zx, HandleBased},
     futures::prelude::*,
     std::sync::Arc,
 };
@@ -50,6 +50,7 @@ impl IsolatedBootArgs {
 pub struct Resolver {
     _pkg_cache: App,
     _pkg_resolver: App,
+    pkg_resolver_directory: Arc<zx::Channel>,
     _env: NestedEnvironment,
 }
 
@@ -76,7 +77,7 @@ impl Resolver {
         let mut pkg_cache = AppBuilder::new(cache_url)
             .add_handle_to_namespace("/pkgfs".to_owned(), pkgfs.root_handle()?.into_handle());
 
-        let pkg_resolver = AppBuilder::new(resolver_url)
+        let mut pkg_resolver = AppBuilder::new(resolver_url)
             .add_handle_to_namespace("/pkgfs".to_owned(), pkgfs.root_handle()?.into_handle())
             .add_dir_to_namespace("/config/data/repositories".to_owned(), repo_config)?
             .add_dir_to_namespace(SSL_CERTS_PATH.to_owned(), ssl_dir)?;
@@ -99,16 +100,27 @@ impl Resolver {
         let env = fs.create_salted_nested_environment("isolated-ota-env")?;
         fasync::spawn(fs.collect());
 
+        let directory =
+            pkg_resolver.directory_request().context("getting directory request")?.clone();
         let pkg_cache = pkg_cache.spawn(env.launcher()).context("launching package cache")?;
         let pkg_resolver =
             pkg_resolver.spawn(env.launcher()).context("launching package resolver")?;
 
-        Ok(Resolver { _pkg_cache: pkg_cache, _pkg_resolver: pkg_resolver, _env: env })
+        Ok(Resolver {
+            _pkg_cache: pkg_cache,
+            _pkg_resolver: pkg_resolver,
+            pkg_resolver_directory: directory,
+            _env: env,
+        })
+    }
+
+    pub fn directory_request(&self) -> Arc<fuchsia_zircon::Channel> {
+        self.pkg_resolver_directory.clone()
     }
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use {
         super::*,
         crate::pkgfs::tests::PkgfsForTest,
@@ -118,18 +130,17 @@ mod tests {
         fuchsia_pkg_testing::{
             serve::ServedRepository, PackageBuilder, Repository, RepositoryBuilder,
         },
-        fuchsia_zircon as zx,
     };
 
-    struct ResolverForTest {
-        _pkgfs: PkgfsForTest,
-        resolver: Resolver,
+    pub struct ResolverForTest {
+        pub pkgfs: PkgfsForTest,
+        pub resolver: Resolver,
         _served_repo: ServedRepository,
     }
 
     const TEST_REPO_URL: &str = "fuchsia-pkg://test";
     const SSL_TEST_CERTS_PATH: &str = "/pkg/data/ssl";
-    const EMPTY_REPO_PATH: &str = "/pkg/empty-repo";
+    pub const EMPTY_REPO_PATH: &str = "/pkg/empty-repo";
 
     impl ResolverForTest {
         pub async fn new(
@@ -170,7 +181,7 @@ mod tests {
             )
             .context("launching resolver")?;
 
-            Ok(ResolverForTest { _pkgfs: pkgfs, resolver, _served_repo: served_repo })
+            Ok(ResolverForTest { pkgfs, resolver, _served_repo: served_repo })
         }
 
         pub async fn resolve_package(&self, url: &str) -> Result<DirectoryProxy, Error> {

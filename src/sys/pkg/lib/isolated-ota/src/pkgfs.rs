@@ -86,7 +86,7 @@ pub mod tests {
     };
 
     pub struct PkgfsForTest {
-        _blobfs: BlobfsRamdisk,
+        pub blobfs: BlobfsRamdisk,
         pub pkgfs: Pkgfs,
     }
 
@@ -98,7 +98,7 @@ pub mod tests {
                 false,
             )
             .context("launching pkgfs")?;
-            Ok(PkgfsForTest { _blobfs: blobfs, pkgfs })
+            Ok(PkgfsForTest { blobfs, pkgfs })
         }
 
         pub fn root_proxy(&self) -> Result<DirectoryProxy, Error> {
