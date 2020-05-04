@@ -13,7 +13,7 @@ import("//build/rust/config.gni")
 group("rust_test_metadata") {
   metadata = {
     if (rust_panic == "abort") {
-      test_metadata_manifest_patches = [
+      cmx_patches_data = [
         {
           sandbox = {
             services = [ "fuchsia.process.Launcher" ]

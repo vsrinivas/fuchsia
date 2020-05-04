@@ -12,7 +12,7 @@ devmgr_manifest("devmgr-manifest") {
 
 test_package("ot-radio-tests") {
   package_name = "ot-radio-tests"
-  public_deps = [
+  deps = [
     ":ot-radio-ncp-ver-query",
     ":ot-stack-ncp-ver-query",
     ":ot-stack-soft-reset",
@@ -76,7 +76,7 @@ rustc_test("ot-stack-soft-reset") {
 test_package("ot-radio-component-tests") {
   package_name = "ot-radio-component-tests"
 
-  public_deps = [
+  deps = [
     ":devmgr-manifest",
     ":ot-radio-ncp-ver-query-mock",
     ":ot-stack-ncp-ver-query-mock",

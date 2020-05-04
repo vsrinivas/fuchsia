@@ -154,7 +154,7 @@ template("rustc_test") {
     if (is_fuchsia) {
       deps += [ "//build/test:rust_test_metadata" ]
       metadata = {
-        test_barrier = [ "//build/test:rust_test_metadata" ]
+        cmx_patches_walk = [ "//build/test:rust_test_metadata" ]
       }
     }
 

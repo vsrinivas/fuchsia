@@ -12,7 +12,7 @@ devmgr_manifest("devmgr-manifest") {
 test_package("telephony-tests") {
   package_name = "telephony-tests"
 
-  public_deps = [
+  deps = [
     ":devmgr-manifest",
     "component-integration:fake-at-driver-test",
     "component-integration:fake-at-query",

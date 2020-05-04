@@ -23,9 +23,10 @@ package("timekeeper") {
     },
   ]
 
-  public_deps = [ ":timekeeper_config" ]
-
-  deps = [ ":bin" ]
+  deps = [
+    ":bin",
+    ":timekeeper_config",
+  ]
 
   binaries = [
     {
@@ -66,7 +67,7 @@ rustc_binary("bin") {
 }
 
 test_package("timekeeper_bin_test") {
-  public_deps = [ ":bin_test" ]
+  deps = [ ":bin_test" ]
 
   tests = [
     {
@@ -89,5 +90,5 @@ test_package("timekeeper_bin_test") {
 
 group("tests") {
   testonly = true
-  public_deps = [ ":timekeeper_bin_test" ]
+  deps = [ ":timekeeper_bin_test" ]
 }

@@ -17,22 +17,14 @@ import("//src/sys/cmc/build/cmc.gni")
 #     [file] The path to the cmx file that is to be validated
 #
 #   deps (optional)
-#   public_deps (optional)
 #   testonly (optional)
 #   visibility (optional)
-#
-# Example of usage:
-#
-#   cmx_validate(format) {
-#     data = meta.path
-#   }
 template("cmx_validate") {
   cmc(target_name) {
     forward_variables_from(invoker,
                            [
                              "deps",
                              "sources",
-                             "public_deps",
                              "testonly",
                              "visibility",
                            ])
@@ -73,7 +65,6 @@ template("cmx_validate") {
 #     [list of files] A list of cmx files that are to be merged.
 #
 #   deps (optional)
-#   public_deps (optional)
 #   testonly (optional)
 #   visibility (optional)
 #     Standard GN meaning.
@@ -81,23 +72,12 @@ template("cmx_validate") {
 #   dest (optional)
 #     The name the output file in the target out directory. Defaults to the
 #     target name.
-#
-# Example of usage:
-#
-#   cmx_merge(format) {
-#     sources = [
-#       rebase_path(meta.path),
-#       rebase_path(
-#           "//topaz/runtime/dart_runner/meta/aot${product_suffix}_runtime"),
-#     ]
-#   }
 template("cmx_merge") {
   cmc(target_name) {
     forward_variables_from(invoker,
                            [
                              "deps",
                              "sources",
-                             "public_deps",
                              "testonly",
                              "visibility",
                              "dest",
@@ -134,22 +114,14 @@ template("cmx_merge") {
 #     [file] The path to the cmx file that is to be formatted
 #
 #   deps (optional)
-#   public_deps (optional)
 #   testonly (optional)
 #   visibility (optional)
 #     Standard GN meaning.
-#
-# Example of usage:
-#
-#   cmx_format(format) {
-#     data = rebase_path(meta.path)
-#   }
 template("cmx_format") {
   cmc(target_name) {
     forward_variables_from(invoker,
                            [
                              "deps",
-                             "public_deps",
                              "testonly",
                              "visibility",
                            ])
@@ -162,11 +134,77 @@ template("cmx_format") {
       "format",
       "--output",
       rebase_path(formatted_output, root_build_dir),
-      invoker.data,
+      rebase_path(invoker.data, root_build_dir),
     ]
 
     if (is_debug) {
       args += [ "--pretty" ]
     }
+  }
+}
+
+# Prepares a cmx file for packaging
+#
+# Parameters
+#
+#   data (required)
+#     [file] The cmx file
+template("cmx_package") {
+  cmx_validate("${target_name}_validate") {
+    forward_variables_from(invoker,
+                           [
+                             "data",
+                             "deps",
+                             "testonly",
+                           ])
+    visibility = [ ":*" ]
+  }
+  invoker.deps += [ ":${target_name}_validate" ]
+
+  patches_name = "${target_name}_patches"
+  cmx_patches = "${target_out_dir}/${target_name}_cmx_patches"
+  generated_file(patches_name) {
+    data_keys = [ "cmx_patches_data" ]
+    walk_keys = [ "cmx_patches_walk" ]
+    outputs = [ cmx_patches ]
+    output_conversion = "json"
+    visibility = [ ":*" ]
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "testonly",
+                           ])
+  }
+
+  needs_debugdata =
+      select_variant + [ "profile" ] - [ "profile" ] != select_variant
+
+  cmx_merge("${target_name}_merge") {
+    sources = [
+      cmx_patches,
+      invoker.data,
+    ]
+    if (needs_debugdata) {
+      sources += [ "//build/config/sanitizers/debugdata.cmx" ]
+    }
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "testonly",
+                           ])
+    deps += [ ":${patches_name}" ]
+    visibility = [ ":*" ]
+  }
+  invoker.deps += [ ":${target_name}_merge" ]
+  merged = get_target_outputs(":${target_name}_merge")
+  merged = merged[0]
+
+  cmx_format(target_name) {
+    data = merged
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "testonly",
+                           ])
   }
 }
