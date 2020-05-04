@@ -2,9 +2,7 @@
 // client.
 {
     program: {
-        // Use the rust test adapter because we don't have the ability to use a runner yet.
-        binary: "bin/rust_test_adapter",
-        args: [ "/pkg/test/routing_integration_test" ],
+        binary: "test/routing_integration_test",
     },
 
     // Two children: a server and client. `echo_client` exposes the `Trigger` service which the
@@ -20,20 +18,15 @@
         },
     ],
     use: [
-        { runner: "elf" },
+        { runner: "rust_test_runner" },
 
         // Needed to bind to children
         {
             protocol: "/svc/fuchsia.sys2.Realm",
             from: "framework",
         },
-
-        // These "use" statements are needed for the RustTestAdapter trampoline
         {
-            protocol: [
-                "/svc/fuchsia.logger.LogSink",
-                "/svc/fuchsia.process.Launcher",
-            ],
+            protocol: [ "/svc/fuchsia.logger.LogSink" ],
         },
     ],
 

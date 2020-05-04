@@ -92,15 +92,11 @@ package("elf_runner_lifecycle_test") {
     ":lifecycle_timeout_unresponsive",
     ":unresponsive_component",
     "//examples/components/basic:lifecycle_full",
-    "//src/sys/test_adapters/rust",
   ]
 
   binaries = [
     {
       name = "lifecycle_full"
-    },
-    {
-      name = "rust_test_adapter"
     },
     {
       name = "unresponsive_component"

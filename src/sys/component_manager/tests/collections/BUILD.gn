@@ -29,9 +29,6 @@ test_package("collections_integration_test") {
     "//examples/components/routing/echo_client",
     "//examples/components/routing/echo_server",
     "//src/sys/component_manager/tests:trigger_bin",
-
-    # TODO: Remove once tests use a test runner
-    "//src/sys/test_adapters/rust",
   ]
 
   meta = [
@@ -59,10 +56,6 @@ test_package("collections_integration_test") {
     },
     {
       name = "trigger"
-    },
-    {
-      # TODO: Remove once tests use a test runner
-      name = "rust_test_adapter"
     },
   ]
 

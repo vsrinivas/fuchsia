@@ -32,7 +32,6 @@ test_package("routing_integration_test") {
     ":routing_integration_test_bin",
     "//examples/components/routing/echo_server",
     "//src/sys/component_manager/tests:trigger_bin",
-    "//src/sys/test_adapters/rust:bin",
   ]
 
   meta = [
@@ -52,9 +51,6 @@ test_package("routing_integration_test") {
     },
     {
       name = "trigger"
-    },
-    {
-      name = "rust_test_adapter"
     },
   ]
 
