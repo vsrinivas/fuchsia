@@ -522,7 +522,7 @@ group("ulib-host") {
     "$zx/third_party/ulib/safemath",
 #------------------
 #------------------
-    "$zx/third_party/ulib/uboringssl",
+    "$zx/third_party/ulib/boringssl",
 #------------------
 #------------------
     "$zx/third_party/ulib/zstd",

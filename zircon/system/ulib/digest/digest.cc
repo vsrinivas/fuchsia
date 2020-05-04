@@ -15,7 +15,7 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/string.h>
 
-// See note in //zircon/third_party/ulib/uboringssl/rules.mk
+// See note in //zircon/third_party/ulib/boringssl/BUILD.gn
 #define BORINGSSL_NO_CXX
 #include <utility>
 

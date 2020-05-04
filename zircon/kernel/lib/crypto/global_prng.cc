@@ -26,7 +26,7 @@
 #include <kernel/thread.h>
 #include <lk/init.h>
 
-// See note in //zircon/third_party/ulib/uboringssl/BUILD.gn
+// See note in //zircon/third_party/ulib/boringssl/BUILD.gn
 #define BORINGSSL_NO_CXX
 #include <openssl/sha.h>
 

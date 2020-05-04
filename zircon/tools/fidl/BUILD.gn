@@ -54,7 +54,7 @@ if (defined(zx)) {
       ":json_schema",
       "$zx/system/ulib/cmdline",
       "$zx/system/ulib/fit",
-      "$zx/third_party/ulib/uboringssl",
+      "$zx/third_party/ulib/boringssl",
     ]
     configs += [ ":fidlc_config" ]
   }

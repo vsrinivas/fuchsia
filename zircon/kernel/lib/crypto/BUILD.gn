@@ -18,7 +18,7 @@ zx_library("crypto") {
     "$zx/kernel/lib/ktl",
     "$zx/kernel/lib/unittest",
     "$zx/system/ulib/explicit-memory",
-    "$zx/third_party/ulib/uboringssl",
+    "$zx/third_party/ulib/boringssl",
     "entropy",
   ]
   public_deps = [
@@ -26,7 +26,7 @@ zx_library("crypto") {
     "$zx/kernel/lib/ktl:headers",
 
     # lib/crypto/prng.h has #include <openssl/sha.h>.
-    "$zx/third_party/ulib/uboringssl:headers",
+    "$zx/third_party/ulib/boringssl:headers",
 
     # <lib/crypto/entropy/jitterentropy_collector.h> has #include <lib/jitterentropy/jitterentropy.h>.
     "$zx/third_party/lib/jitterentropy:headers",
