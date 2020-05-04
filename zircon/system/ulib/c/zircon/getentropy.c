@@ -11,6 +11,7 @@
 
 static_assert(MAX_LENGTH <= ZX_CPRNG_DRAW_MAX_LEN, "");
 
+__EXPORT
 int getentropy(void* buffer, size_t length) {
   if (length > MAX_LENGTH) {
     errno = EIO;

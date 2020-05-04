@@ -37,6 +37,7 @@ void __libc_startup_handles_init(uint32_t nhandles, zx_handle_t handles[], uint3
   shave_back();
 }
 
+__EXPORT
 zx_handle_t zx_take_startup_handle(uint32_t hnd_info) {
   zx_handle_t result = ZX_HANDLE_INVALID;
   mtx_lock(&startup_handles_lock);

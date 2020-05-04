@@ -9,11 +9,13 @@
 
 static std::atomic<zx_handle_t> g_zx_utc_reference_handle{ZX_HANDLE_INVALID};
 
+__EXPORT
 zx_handle_t _zx_utc_reference_get(void) { return g_zx_utc_reference_handle.load(); }
 
-decltype(zx_utc_reference_get) zx_utc_reference_get
+__EXPORT decltype(zx_utc_reference_get) zx_utc_reference_get
     __attribute__((weak, alias("_zx_utc_reference_get")));
 
+__EXPORT
 zx_status_t _zx_utc_reference_swap(zx_handle_t new_utc_reference,
                                    zx_handle_t* prev_utc_reference_out) {
   // If the user is not disabling the UTC clock entirely, validate the handle
@@ -33,5 +35,5 @@ zx_status_t _zx_utc_reference_swap(zx_handle_t new_utc_reference,
   return ZX_OK;
 }
 
-decltype(zx_utc_reference_swap) zx_utc_reference_swap
+__EXPORT decltype(zx_utc_reference_swap) zx_utc_reference_swap
     __attribute__((weak, alias("_zx_utc_reference_swap")));
