@@ -40,6 +40,7 @@ source_set("common") {
     "//sdk/banjo/ddk.protocol.platform.device",
     "//sdk/banjo/ddk.protocol.power",
     "//sdk/banjo/ddk.protocol.sysmem",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_llcpp",
     "//src/devices/bus/lib/device-protocol-pdev",
     "//src/devices/bus/lib/device-protocol-platform-device",
     "//src/devices/lib/driver",
@@ -51,7 +52,6 @@ source_set("common") {
     "//zircon/public/lib/mmio",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
-    "//zircon/system/fidl/fuchsia-sysmem:llcpp",
     "//zircon/system/ulib/image-format",
     "//zircon/system/ulib/image-format:image-format-llcpp",
     "//zircon/system/ulib/mipi-dsi",
@@ -76,6 +76,7 @@ test("dsi-host") {
   ]
   deps = [
     ":common",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_llcpp",
     "//src/devices/sysmem/testing/mock-sysmem",
     "//src/devices/testing/fake-bti",
     "//src/devices/testing/fake_ddk",
@@ -84,7 +85,6 @@ test("dsi-host") {
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fidl-async-cpp",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/fidl/fuchsia-sysmem:llcpp",
     "//zircon/system/ulib/image-format:image-format-llcpp",
   ]
 }

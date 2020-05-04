@@ -25,6 +25,7 @@ executable("bin") {
   deps = [
     "//sdk/fidl/fuchsia.camera3",
     "//sdk/fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.sysmem",
     "//sdk/fidl/fuchsia.ui.app",
     "//sdk/fidl/fuchsia.ui.policy",
     "//sdk/fidl/fuchsia.ui.scenic",
@@ -36,7 +37,6 @@ executable("bin") {
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/fzl",
-    "//zircon/system/fidl/fuchsia-sysmem",
   ]
 
   defines = [ camera_debug_define ]

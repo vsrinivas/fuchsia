@@ -57,6 +57,7 @@ driver_module("sherlock") {
     "//sdk/banjo/ddk.protocol.serial",
     "//sdk/fidl/fuchsia.hardware.serial:fuchsia.hardware.serial_c",
     "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal_c",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
     "//src/connectivity/openthread/lib/ot-radio",
     "//src/devices/lib/amlogic",
     "//src/devices/lib/broadcom",
@@ -71,7 +72,6 @@ driver_module("sherlock") {
     "//zircon/public/lib/mmio",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
-    "//zircon/system/fidl/fuchsia-sysmem:c",
   ]
 }
 

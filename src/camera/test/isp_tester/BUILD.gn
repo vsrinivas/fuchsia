@@ -10,6 +10,6 @@ fidl("fuchsia.camera.test") {
   sources = [ "isp.fidl" ]
   public_deps = [
     "//sdk/fidl/fuchsia.camera2",
-    "//zircon/system/fidl/fuchsia-sysmem",
+    "//sdk/fidl/fuchsia.sysmem",
   ]
 }

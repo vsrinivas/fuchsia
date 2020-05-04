@@ -36,12 +36,12 @@ source_set("display") {
   deps = [
     ":surface_header",
     "//sdk/fidl/fuchsia.hardware.display:fuchsia.hardware.display_c",
+    "//sdk/fidl/fuchsia.sysmem",
     "//src/lib/vulkan:micro_layer_common",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/fzl",
-    "//zircon/system/fidl/fuchsia-sysmem",
     "//zircon/system/ulib/fdio-caller",
   ]
   public_deps = [

@@ -37,6 +37,6 @@ fidl("fuchsia.media") {
     "//sdk/fidl/fuchsia.hardware.audio",
     "//sdk/fidl/fuchsia.images",
     "//sdk/fidl/fuchsia.media.audio",
-    "//zircon/system/fidl/fuchsia-sysmem",
+    "//sdk/fidl/fuchsia.sysmem",
   ]
 }

@@ -23,6 +23,6 @@ source_set("text_node") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.camera2",
-    "//zircon/system/fidl/fuchsia-sysmem",
+    "//sdk/fidl/fuchsia.sysmem",
   ]
 }

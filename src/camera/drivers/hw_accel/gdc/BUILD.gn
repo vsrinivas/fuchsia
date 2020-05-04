@@ -19,6 +19,7 @@ driver_module("gdc-driver") {
     "//sdk/banjo/ddk.protocol.platform.bus",
     "//sdk/banjo/ddk.protocol.platform.device",
     "//sdk/banjo/ddk.protocol.sysmem",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
     "//src/camera/drivers/hw_accel/task:camera-task",
     "//src/devices/bus/lib/device-protocol-pdev",
     "//src/devices/bus/lib/device-protocol-platform-device",
@@ -38,7 +39,6 @@ driver_module("gdc-driver") {
     "//zircon/public/lib/syslog",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/fidl/fuchsia-sysmem:fuchsia-sysmem_c",
     "//zircon/system/ulib/fidl-utils",
     "//zircon/system/ulib/image-format",
   ]

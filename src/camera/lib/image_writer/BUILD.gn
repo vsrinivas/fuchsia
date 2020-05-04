@@ -13,10 +13,10 @@ source_set("image_writer") {
   ]
 
   public_deps = [
+    "//sdk/fidl/fuchsia.sysmem",
     "//sdk/lib/fidl/cpp",
     "//src/lib/syslog/cpp",
     "//zircon/public/lib/fzl",
-    "//zircon/system/fidl/fuchsia-sysmem",
   ]
 }
 
@@ -33,12 +33,12 @@ source_set("hsv_color_source") {
 
   deps = [
     ":image_format_rgba",
+    "//sdk/fidl/fuchsia.sysmem",
     "//sdk/lib/fidl/cpp",
     "//src/lib/syslog/cpp",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/zx",
-    "//zircon/system/fidl/fuchsia-sysmem",
     "//zircon/system/ulib/image-format",
   ]
 }
@@ -49,12 +49,12 @@ source_set("image_format_rgba") {
   public = [ "image_format_rgba.h" ]
 
   deps = [
+    "//sdk/fidl/fuchsia.sysmem",
     "//sdk/lib/fidl/cpp",
     "//src/lib/syslog/cpp",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/zx",
-    "//zircon/system/fidl/fuchsia-sysmem",
     "//zircon/system/ulib/image-format",
   ]
 }

@@ -10,10 +10,10 @@ source_set("stream_utils_lib") {
   sources = [ "image_io_util.cc" ]
 
   deps = [
+    "//sdk/fidl/fuchsia.sysmem",
     "//src/lib/files",
     "//src/lib/syslog/cpp",
     "//zircon/public/lib/fzl",
-    "//zircon/system/fidl/fuchsia-sysmem",
   ]
 }
 

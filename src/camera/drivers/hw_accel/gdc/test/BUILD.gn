@@ -18,6 +18,7 @@ executable("test") {
     "//sdk/banjo/ddk.protocol.platform.bus",
     "//sdk/banjo/ddk.protocol.platform.device",
     "//sdk/banjo/ddk.protocol.sysmem",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
     "//src/camera/drivers/hw_accel/task:camera-task",
     "//src/camera/drivers/test_utils",
     "//src/devices/bus/lib/device-protocol-pdev",
@@ -38,7 +39,6 @@ executable("test") {
     "//zircon/public/lib/syslog",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/fidl/fuchsia-sysmem:fuchsia-sysmem_c",
     "//zircon/system/ulib/fidl-utils",
     "//zircon/system/ulib/image-format",
   ]

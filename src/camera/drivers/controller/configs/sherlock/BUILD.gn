@@ -28,9 +28,9 @@ source_set("controller-configs") {
     "//sdk/fidl/fuchsia.camera2",
     "//sdk/fidl/fuchsia.camera2.hal",
     "//sdk/fidl/fuchsia.hardware.camera:fuchsia.hardware.camera_c",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
     "//src/camera/lib/stream_utils:stream_configs",
     "//zircon/public/lib/async-loop-cpp",
-    "//zircon/system/fidl/fuchsia-sysmem:fuchsia-sysmem_c",
     "//zircon/system/ulib/fidl-utils",
     "//zircon/system/ulib/image-format",
   ]

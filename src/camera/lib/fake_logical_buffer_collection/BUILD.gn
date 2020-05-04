@@ -9,12 +9,12 @@ source_set("fake_logical_buffer_collection") {
   ]
 
   deps = [
+    "//sdk/fidl/fuchsia.sysmem",
     "//src/lib/syslog/cpp",
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fs",
-    "//zircon/system/fidl/fuchsia-sysmem",
     "//zircon/system/ulib/image-format",
   ]
   public_deps = [

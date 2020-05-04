@@ -18,6 +18,7 @@ driver_module("dsi-mt") {
     "//sdk/banjo/ddk.protocol.platform.bus",
     "//sdk/banjo/ddk.protocol.platform.device",
     "//sdk/banjo/ddk.protocol.sysmem",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
     "//src/devices/bus/lib/device-protocol-pdev",
     "//src/devices/bus/lib/device-protocol-platform-device",
     "//src/devices/lib/driver",
@@ -31,7 +32,6 @@ driver_module("dsi-mt") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.i2c",
-    "//zircon/system/fidl/fuchsia-sysmem:c",
     "//zircon/system/ulib/mipi-dsi",
   ]
 }

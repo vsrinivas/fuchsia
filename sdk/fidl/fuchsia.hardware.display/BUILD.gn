@@ -7,5 +7,5 @@ import("//build/fidl/fidl.gni")
 fidl("fuchsia.hardware.display") {
   sources = [ "display-controller.fidl" ]
 
-  public_deps = [ "//zircon/system/fidl/fuchsia-sysmem" ]
+  public_deps = [ "//sdk/fidl/fuchsia.sysmem" ]
 }

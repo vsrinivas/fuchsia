@@ -11,11 +11,11 @@ executable("test") {
 
   deps = [
     "..",
+    "//sdk/fidl/fuchsia.sysmem",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/syslog/cpp",
     "//src/lib/testing/loop_fixture",
     "//zircon/public/lib/fzl",
-    "//zircon/system/fidl/fuchsia-sysmem",
   ]
 }

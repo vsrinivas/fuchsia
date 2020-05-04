@@ -30,13 +30,13 @@ driver_module("gauss") {
     "//sdk/banjo/ddk.protocol.iommu",
     "//sdk/banjo/ddk.protocol.platform.bus",
     "//sdk/banjo/ddk.protocol.platform.device",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
     "//src/devices/lib/amlogic",
     "//src/devices/lib/driver",
     "//src/devices/pci/lib/designware",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/device-protocol-i2c",
     "//zircon/public/lib/sync",
-    "//zircon/system/fidl/fuchsia-sysmem:c",
   ]
   data_deps = [ ":gauss-i2c-test" ]
 }

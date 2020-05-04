@@ -66,6 +66,7 @@ source_set("source") {
     "//sdk/fidl/fuchsia.camera2.hal",
     "//sdk/fidl/fuchsia.hardware.camera",
     "//sdk/fidl/fuchsia.hardware.camera:fuchsia.hardware.camera_c",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
     "//src/camera/drivers/controller/configs/sherlock:controller-configs",
     "//src/camera/lib/format_conversion",
     "//src/devices/bus/lib/device-protocol-pdev",
@@ -89,7 +90,6 @@ source_set("source") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/fidl/fuchsia-sysmem:fuchsia-sysmem_c",
     "//zircon/system/ulib/fidl-utils",
     "//zircon/system/ulib/image-format",
   ]

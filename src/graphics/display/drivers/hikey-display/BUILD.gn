@@ -25,6 +25,7 @@ driver_module("hikey-display") {
     "//sdk/banjo/ddk.protocol.gpio",
     "//sdk/banjo/ddk.protocol.platform.device",
     "//sdk/banjo/ddk.protocol.sysmem",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
     "//src/devices/bus/lib/device-protocol-platform-device",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
@@ -38,7 +39,6 @@ driver_module("hikey-display") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.i2c",
-    "//zircon/system/fidl/fuchsia-sysmem:c",
     "//zircon/system/ulib/edid",
     "//zircon/system/ulib/mipi-dsi",
   ]
@@ -59,6 +59,8 @@ test("hikey-display-test") {
     "//sdk/banjo/ddk.protocol.gpio",
     "//sdk/banjo/ddk.protocol.platform.device",
     "//sdk/banjo/ddk.protocol.sysmem",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_llcpp",
     "//src/devices/bus/lib/device-protocol-platform-device",
     "//src/devices/sysmem/testing/mock-sysmem",
     "//src/devices/testing/fake_ddk",
@@ -77,8 +79,6 @@ test("hikey-display-test") {
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/banjo/ddk.protocol.i2c",
-    "//zircon/system/fidl/fuchsia-sysmem:c",
-    "//zircon/system/fidl/fuchsia-sysmem:llcpp",
     "//zircon/system/ulib/edid",
     "//zircon/system/ulib/mipi-dsi",
   ]

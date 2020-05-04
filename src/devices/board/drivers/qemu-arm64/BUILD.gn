@@ -23,12 +23,12 @@ driver_module("qemu-arm64") {
   deps = [
     "//sdk/banjo/ddk.protocol.platform.bus",
     "//sdk/banjo/ddk.protocol.platform.device",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
-    "//zircon/system/fidl/fuchsia-sysmem:c",
   ]
   if (current_cpu == "arm64") {
     # TODO(47406): restore some form of data dependency on qemu

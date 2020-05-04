@@ -12,5 +12,5 @@ fidl("fuchsia.camera2") {
     "stream.fidl",
   ]
 
-  public_deps = [ "//zircon/system/fidl/fuchsia-sysmem" ]
+  public_deps = [ "//sdk/fidl/fuchsia.sysmem" ]
 }

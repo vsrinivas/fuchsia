@@ -17,6 +17,7 @@ executable("test") {
     "//garnet/packages/prod:sysmem_connector",
     "//sdk/fidl/fuchsia.camera2.hal",
     "//sdk/fidl/fuchsia.camera3",
+    "//sdk/fidl/fuchsia.sysmem",
     "//sdk/lib/sys/cpp",
     "//src/camera/bin/device:lib",
     "//src/camera/lib/fake_legacy_stream",
@@ -25,6 +26,5 @@ executable("test") {
     "//src/lib/testing/loop_fixture",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
-    "//zircon/system/fidl/fuchsia-sysmem",
   ]
 }

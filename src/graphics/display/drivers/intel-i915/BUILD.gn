@@ -31,6 +31,7 @@ driver_module("intel-i915") {
     "//sdk/banjo/ddk.protocol.pci",
     "//sdk/banjo/ddk.protocol.sysmem",
     "//sdk/fidl/fuchsia.hardware.backlight:fuchsia.hardware.backlight_llcpp",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
     "//src/devices/lib/driver",
     "//src/devices/pci/lib/device-protocol-pci",
     "//zircon/public/lib/ddk",
@@ -41,7 +42,6 @@ driver_module("intel-i915") {
     "//zircon/public/lib/region-alloc",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
-    "//zircon/system/fidl/fuchsia-sysmem:c",
     "//zircon/system/ulib/edid",
     "//zircon/system/ulib/image-format",
   ]
@@ -68,6 +68,8 @@ test("intel-i915-test") {
     "//sdk/banjo/ddk.protocol.pci",
     "//sdk/banjo/ddk.protocol.sysmem",
     "//sdk/fidl/fuchsia.hardware.backlight:fuchsia.hardware.backlight_llcpp",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_llcpp",
     "//src/devices/pci/lib/device-protocol-pci",
     "//src/devices/sysmem/testing/mock-sysmem",
     "//src/devices/testing/fake_ddk",
@@ -84,8 +86,6 @@ test("intel-i915-test") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/fidl/fuchsia-sysmem:c",
-    "//zircon/system/fidl/fuchsia-sysmem:llcpp",
     "//zircon/system/ulib/edid",
     "//zircon/system/ulib/image-format",
   ]

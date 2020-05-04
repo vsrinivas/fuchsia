@@ -16,6 +16,7 @@ executable("display-test") {
     "//sdk/banjo/ddk.protocol.display.controller",
     "//sdk/fidl/fuchsia.hardware.display:fuchsia.hardware.display_llcpp",
     "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo_llcpp",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_llcpp",
     "//src/graphics/display/testing",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
@@ -23,7 +24,6 @@ executable("display-test") {
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
-    "//zircon/system/fidl/fuchsia-sysmem:llcpp",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/image-format:image-format-llcpp",
   ]

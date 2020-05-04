@@ -20,6 +20,7 @@ executable("test") {
     "//sdk/fidl/fuchsia.camera2",
     "//sdk/fidl/fuchsia.camera2.hal",
     "//sdk/fidl/fuchsia.hardware.camera",
+    "//sdk/fidl/fuchsia.sysmem",
     "//sdk/lib/sys/cpp",
     "//src/camera/drivers/controller/configs/sherlock:controller-configs",
     "//src/camera/drivers/test_utils",
@@ -39,7 +40,6 @@ executable("test") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/syslog",
     "//zircon/public/lib/zx",
-    "//zircon/system/fidl/fuchsia-sysmem",
     "//zircon/system/ulib/fidl-utils",
     "//zircon/system/ulib/image-format",
   ]

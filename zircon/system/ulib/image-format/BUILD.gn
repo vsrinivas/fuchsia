@@ -18,11 +18,11 @@ zx_library("image-format") {
   sdk = "source"
   sdk_headers = [ "lib/image-format/image_format.h" ]
   sources = [ "image_format.cc" ]
-  public_deps = [ "//zircon/system/fidl/fuchsia-sysmem:c" ]
+  public_deps = [ "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c" ]
   deps = [
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
-    "//zircon/system/fidl/fuchsia-sysmem:c",
   ]
 }
 
@@ -32,12 +32,12 @@ zx_library("image-format-llcpp") {
   sources = [ "image-format-llcpp.cc" ]
   public_deps = [
     ":image-format",
-    "//zircon/system/fidl/fuchsia-sysmem:c",
-    "//zircon/system/fidl/fuchsia-sysmem:llcpp",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_llcpp",
   ]
   deps = [
     ":image-format",
-    "//zircon/system/fidl/fuchsia-sysmem:c",
-    "//zircon/system/fidl/fuchsia-sysmem:llcpp",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_llcpp",
   ]
 }

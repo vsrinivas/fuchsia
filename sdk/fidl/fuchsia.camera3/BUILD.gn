@@ -15,6 +15,6 @@ fidl("fuchsia.camera3") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.math",
-    "//zircon/system/fidl/fuchsia-sysmem",
+    "//sdk/fidl/fuchsia.sysmem",
   ]
 }
