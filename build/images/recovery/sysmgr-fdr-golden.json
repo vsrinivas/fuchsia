@@ -6,10 +6,10 @@
   "services": {
     "fuchsia.deprecatedtimezone.TimeService": "fuchsia-pkg://fuchsia.com/network_time_service#meta/network_time_service.cmx",
     "fuchsia.net.Connectivity": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
-    "fuchsia.net.NameLookup": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
+    "fuchsia.net.NameLookup": "fuchsia-pkg://fuchsia.com/dns-resolver#meta/dns-resolver.cmx",
     "fuchsia.net.filter.Filter": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
     "fuchsia.net.http.Loader": "fuchsia-pkg://fuchsia.com/http_client#meta/http_client.cmx",
-    "fuchsia.net.name.LookupAdmin": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
+    "fuchsia.net.name.LookupAdmin": "fuchsia-pkg://fuchsia.com/dns-resolver#meta/dns-resolver.cmx",
     "fuchsia.net.stack.Log": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
     "fuchsia.net.stack.Stack": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
     "fuchsia.netstack.Netstack": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
