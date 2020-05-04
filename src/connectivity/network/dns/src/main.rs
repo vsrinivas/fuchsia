@@ -14,6 +14,7 @@ use {
     fidl_fuchsia_net_name::{self as fname, LookupAdminRequest, LookupAdminRequestStream},
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
+    fuchsia_inspect,
     fuchsia_syslog::{self as fx_syslog, fx_log_err, fx_log_info},
     fuchsia_zircon as zx,
     futures::{
@@ -415,6 +416,41 @@ fn create_policy_fut<T: ResolverLookup>(
     (servers_config_sink, policy_fut)
 }
 
+/// Adds a [`dns::policy:::ServerConfigState`] inspection child node to
+/// `parent`.
+fn add_config_state_inspect(
+    parent: &fuchsia_inspect::Node,
+    config_state: Arc<dns::policy::ServerConfigState>,
+) -> fuchsia_inspect::LazyNode {
+    parent.create_lazy_child("servers", move || {
+        let config_state = config_state.clone();
+        async move {
+            let srv = fuchsia_inspect::Inspector::new();
+            let server_list = config_state.consolidate();
+            for (i, server) in server_list.iter().enumerate() {
+                let child = srv.root().create_child(format!("{}", i));
+                let net_ext::SocketAddress(addr) = server.address.into();
+                let () = child.record_string("address", format!("{}", addr));
+                let source = child.create_child("source");
+                let (name, source_interface) = match &server.source {
+                    fname::DnsServerSource::StaticSource(_static_source) => ("static", None),
+                    fname::DnsServerSource::Dhcp(dhcp) => ("DHCP", dhcp.source_interface),
+                    fname::DnsServerSource::Ndp(ndp) => ("NDP", ndp.source_interface),
+                };
+                let () = source.record_string("type", name);
+                if let Some(source_interface) = source_interface {
+                    let () = source.record_uint("interface", source_interface);
+                }
+
+                let () = child.record(source);
+                let () = srv.root().record(child);
+            }
+            Ok(srv)
+        }
+        .boxed()
+    })
+}
+
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     fx_syslog::init_with_tags(&["dns_resolver"]).expect("cannot init logger");
@@ -450,6 +486,11 @@ async fn main() -> Result<(), Error> {
         .forward(servers_config_sink.clone().sink_map_err(anyhow::Error::from));
 
     let mut fs = ServiceFs::new_local();
+
+    let inspector = fuchsia_inspect::component::inspector();
+    let _state_inspect_node = add_config_state_inspect(inspector.root(), config_state.clone());
+    let () = inspector.serve(&mut fs)?;
+
     fs.dir("svc")
         .add_fidl_service(IncomingRequest::NameLookup)
         .add_fidl_service(IncomingRequest::LookupAdmin);
@@ -483,6 +524,7 @@ mod tests {
     use super::*;
 
     use dns::DEFAULT_PORT;
+    use fuchsia_inspect::assert_inspect_tree;
     use std::net::SocketAddr;
     use std::{
         net::{IpAddr, Ipv4Addr, Ipv6Addr},
@@ -518,6 +560,34 @@ mod tests {
     const REMOTE_IPV6_HOST_EXTRA: &str = "www.bar2.com";
     // host which has IPv4 and IPv6 address if reset name servers.
     const REMOTE_IPV4_IPV6_HOST: &str = "www.foobar.com";
+
+    const STATIC_SERVER_IPV4: fnet::Ipv4Address = fnet::Ipv4Address { addr: [8, 8, 8, 8] };
+    const STATIC_SERVER: fnet::IpAddress = fnet::IpAddress::Ipv4(STATIC_SERVER_IPV4);
+
+    const DHCP_SERVER: fname::DnsServer_ = fname::DnsServer_ {
+        address: Some(fnet::SocketAddress::Ipv4(fnet::Ipv4SocketAddress {
+            address: fnet::Ipv4Address { addr: [8, 8, 4, 4] },
+            port: DEFAULT_PORT,
+        })),
+        source: Some(fname::DnsServerSource::Dhcp(fname::DhcpDnsServerSource {
+            source_interface: Some(1),
+        })),
+    };
+    const NDP_SERVER: fname::DnsServer_ = fname::DnsServer_ {
+        address: Some(fnet::SocketAddress::Ipv6(fnet::Ipv6SocketAddress {
+            address: fnet::Ipv6Address {
+                addr: [
+                    0x20, 0x01, 0x48, 0x60, 0x48, 0x60, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                    0x00, 0x44, 0x44,
+                ],
+            },
+            port: DEFAULT_PORT,
+            zone_index: 2,
+        })),
+        source: Some(fname::DnsServerSource::Ndp(fname::NdpDnsServerSource {
+            source_interface: Some(2),
+        })),
+    };
 
     async fn setup_namelookup_service() -> fnet::NameLookupProxy {
         let (proxy, stream) = fidl::endpoints::create_proxy_and_stream::<fnet::NameLookupMarker>()
@@ -982,34 +1052,6 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_get_servers() {
-        const STATIC_SERVER_IPV4: fnet::Ipv4Address = fnet::Ipv4Address { addr: [8, 8, 8, 8] };
-        const STATIC_SERVER: fnet::IpAddress = fnet::IpAddress::Ipv4(STATIC_SERVER_IPV4);
-
-        const DHCP_SERVER: fname::DnsServer_ = fname::DnsServer_ {
-            address: Some(fnet::SocketAddress::Ipv4(fnet::Ipv4SocketAddress {
-                address: fnet::Ipv4Address { addr: [8, 8, 4, 4] },
-                port: DEFAULT_PORT,
-            })),
-            source: Some(fname::DnsServerSource::Dhcp(fname::DhcpDnsServerSource {
-                source_interface: Some(1),
-            })),
-        };
-        const NDP_SERVER: fname::DnsServer_ = fname::DnsServer_ {
-            address: Some(fnet::SocketAddress::Ipv6(fnet::Ipv6SocketAddress {
-                address: fnet::Ipv6Address {
-                    addr: [
-                        0x20, 0x01, 0x48, 0x60, 0x48, 0x60, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-                        0x00, 0x00, 0x44, 0x44,
-                    ],
-                },
-                port: DEFAULT_PORT,
-                zone_index: 2,
-            })),
-            source: Some(fname::DnsServerSource::Ndp(fname::NdpDnsServerSource {
-                source_interface: Some(2),
-            })),
-        };
-
         let env = TestEnvironment::new();
         env.run_config_sink(|mut sink| async move {
             let () = sink
@@ -1043,5 +1085,51 @@ mod tests {
             )
         })
         .await;
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_config_inspect() {
+        let env = TestEnvironment::new();
+        let inspector = fuchsia_inspect::Inspector::new();
+        let _config_state_node =
+            add_config_state_inspect(inspector.root(), env.config_state.clone());
+        assert_inspect_tree!(inspector, root:{
+            servers: {}
+        });
+        env.run_config_sink(|mut sink| async move {
+            let () = sink
+                .send(dns::policy::ServerConfig::DefaultServers(vec![STATIC_SERVER]))
+                .await
+                .unwrap();
+            let () = sink
+                .send(dns::policy::ServerConfig::DynamicServers(vec![NDP_SERVER, DHCP_SERVER]))
+                .await
+                .unwrap();
+        })
+        .await;
+        assert_inspect_tree!(inspector, root:{
+            servers: {
+                "0": {
+                    address: "[2001:4860:4860::4444]:53",
+                    source: {
+                        "type": "NDP",
+                        interface: 2u64
+                    }
+                },
+                "1": {
+                    address: "8.8.4.4:53",
+                    source: {
+                        "type": "DHCP",
+                        interface: 1u64
+                    }
+                },
+                "2": {
+                    address: "8.8.8.8:53",
+                    source: {
+                        "type": "static",
+                    }
+                },
+            }
+        });
     }
 }
