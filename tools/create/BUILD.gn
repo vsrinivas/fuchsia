@@ -20,7 +20,10 @@ if (host_toolchain == current_toolchain) {
       "//third_party/rust_crates:termion",
     ]
 
-    test_deps = [ "//third_party/rust_crates:matches" ]
+    test_deps = [
+      "//third_party/rust_crates:matches",
+      "//third_party/rust_crates:tempfile",
+    ]
 
     with_unit_tests = true
   }
