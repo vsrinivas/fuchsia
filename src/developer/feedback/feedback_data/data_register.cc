@@ -4,7 +4,7 @@
 
 #include "src/developer/feedback/feedback_data/data_register.h"
 
-#include "src/developer/feedback/feedback_data/annotations/aliases.h"
+#include "src/developer/feedback/feedback_data/annotations/types.h"
 #include "src/developer/feedback/feedback_data/constants.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/syslog/cpp/logger.h"
@@ -20,7 +20,7 @@ Annotations Flatten(const std::map<std::string, Annotations>& namespaced_annotat
   Annotations flat_annotations;
   for (const auto& [namespace_, annotations] : namespaced_annotations) {
     for (const auto& [k, v] : annotations) {
-      flat_annotations[namespace_ + kNamespaceSeparator + k] = v;
+      flat_annotations.insert({namespace_ + kNamespaceSeparator + k, v});
     }
   }
   return flat_annotations;
@@ -53,7 +53,8 @@ void DataRegister::Upsert(fuchsia::feedback::ComponentData data, UpsertCallback 
   }
 
   for (const auto& annotation : data.annotations()) {
-    namespaced_annotations_[namespace_][annotation.key] = annotation.value;
+    namespaced_annotations_[namespace_].insert_or_assign(annotation.key,
+                                                         AnnotationOr(annotation.value));
   }
   // TODO(fxb/48666): close all connections if false.
   datastore_->TrySetExtraAnnotations(Flatten(namespaced_annotations_));

@@ -7,7 +7,7 @@
 
 #include <lib/fit/promise.h>
 
-#include "src/developer/feedback/feedback_data/annotations/aliases.h"
+#include "src/developer/feedback/feedback_data/annotations/types.h"
 
 namespace feedback {
 

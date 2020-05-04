@@ -69,7 +69,7 @@ source_set("config") {
   ]
 
   public_deps = [
-    "//src/developer/feedback/feedback_data/annotations:aliases",
+    "//src/developer/feedback/feedback_data/annotations:types",
     "//src/developer/feedback/feedback_data/attachments:aliases",
     "//zircon/public/lib/zx",
   ]
@@ -114,7 +114,8 @@ source_set("data_provider") {
     "//garnet/public/lib/fostr/fidl/fuchsia.images",
     "//sdk/fidl/fuchsia.images",
     "//sdk/fidl/fuchsia.ui.scenic",
-    "//src/developer/feedback/feedback_data/annotations:aliases",
+    "//src/developer/feedback/feedback_data/annotations:types",
+    "//src/developer/feedback/feedback_data/annotations:utils",
     "//src/developer/feedback/feedback_data/attachments:aliases",
     "//src/developer/feedback/feedback_data/attachments:attachment_providers",
     "//src/developer/feedback/feedback_data/attachments:util",
@@ -136,7 +137,7 @@ source_set("datastore") {
 
   public_deps = [
     "//sdk/lib/sys/cpp",
-    "//src/developer/feedback/feedback_data/annotations:aliases",
+    "//src/developer/feedback/feedback_data/annotations:types",
     "//src/developer/feedback/feedback_data/attachments:aliases",
     "//src/developer/feedback/utils/cobalt",
     "//zircon/public/lib/async-cpp",
@@ -165,7 +166,7 @@ source_set("data_register") {
     ":constants",
     ":datastore",
     "//sdk/fidl/fuchsia.feedback",
-    "//src/developer/feedback/feedback_data/annotations:aliases",
+    "//src/developer/feedback/feedback_data/annotations:types",
     "//src/lib/fxl",
   ]
 
@@ -178,10 +179,14 @@ source_set("device_id_provider") {
     "device_id_provider.h",
   ]
 
-  public_deps = [ "//sdk/fidl/fuchsia.feedback" ]
+  public_deps = [
+    "//sdk/fidl/fuchsia.feedback",
+    "//src/developer/feedback/feedback_data/annotations:types",
+  ]
 
   deps = [
     ":constants",
+    "//src/developer/feedback/utils:errors",
     "//src/lib/files",
     "//src/lib/fxl",
     "//src/lib/syslog/cpp",

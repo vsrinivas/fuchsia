@@ -4,10 +4,11 @@
 
 #include "src/developer/feedback/feedback_data/annotations/channel_provider.h"
 
+#include "src/developer/feedback/feedback_data/annotations/types.h"
 #include "src/developer/feedback/feedback_data/annotations/utils.h"
 #include "src/developer/feedback/feedback_data/constants.h"
+#include "src/developer/feedback/utils/errors.h"
 #include "src/developer/feedback/utils/fidl/channel_provider_ptr.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
 namespace {
@@ -34,12 +35,13 @@ ChannelProvider::ChannelProvider(async_dispatcher_t* dispatcher,
                  timeout_,
                  /*action=*/
                  [cobalt = cobalt_] { cobalt->LogOccurrence(cobalt::TimedOutData::kChannel); }))
-      .and_then([](const AnnotationValue& channel) -> ::fit::result<Annotations> {
-        return ::fit::ok(Annotations({{kAnnotationSystemUpdateChannelCurrent, channel}}));
-      })
-      .or_else([] {
-        FX_LOGS(WARNING) << "Failed to build annotation " << kAnnotationSystemUpdateChannelCurrent;
-        return ::fit::error();
+      .then([](const ::fit::result<std::string, Error>& result) {
+        AnnotationOr annotation =
+            (result.is_ok()) ? AnnotationOr(result.value()) : AnnotationOr(result.error());
+
+        return ::fit::ok(Annotations({
+            {kAnnotationSystemUpdateChannelCurrent, std::move(annotation)},
+        }));
       });
 }
 

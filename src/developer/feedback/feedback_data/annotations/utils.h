@@ -5,12 +5,21 @@
 #ifndef SRC_DEVELOPER_FEEDBACK_FEEDBACK_DATA_ANNOTATIONS_UTILS_H_
 #define SRC_DEVELOPER_FEEDBACK_FEEDBACK_DATA_ANNOTATIONS_UTILS_H_
 
-#include "src/developer/feedback/feedback_data/annotations/aliases.h"
+#include <fuchsia/feedback/cpp/fidl.h>
+
+#include <optional>
+
+#include "src/developer/feedback/feedback_data/annotations/types.h"
 
 namespace feedback {
 
 AnnotationKeys RestrictAllowlist(const AnnotationKeys& allowlist,
                                  const AnnotationKeys& restrict_to);
+
+// Each annotation in |annotations| that has a value will be converted into a
+// fuchshia::feedback::Annotation
+std::vector<fuchsia::feedback::Annotation> ToFeedbackAnnotationVector(
+    const Annotations& annotations);
 
 }  // namespace feedback
 

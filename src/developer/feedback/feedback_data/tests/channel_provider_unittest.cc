@@ -15,13 +15,14 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "src/developer/feedback/feedback_data/annotations/aliases.h"
+#include "src/developer/feedback/feedback_data/annotations/types.h"
 #include "src/developer/feedback/feedback_data/constants.h"
 #include "src/developer/feedback/testing/cobalt_test_fixture.h"
 #include "src/developer/feedback/testing/stubs/channel_provider.h"
 #include "src/developer/feedback/testing/stubs/cobalt_logger_factory.h"
 #include "src/developer/feedback/testing/unit_test_fixture.h"
 #include "src/developer/feedback/utils/cobalt/event.h"
+#include "src/developer/feedback/utils/errors.h"
 #include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
@@ -41,7 +42,7 @@ class ChannelProviderTest : public UnitTestFixture, public CobaltTestFixture {
     }
   }
 
-  std::optional<std::string> GetCurrentChannel(
+  AnnotationOr GetCurrentChannel(
       const AnnotationKeys& allowlist = {kAnnotationSystemUpdateChannelCurrent},
       const zx::duration timeout = zx::sec(1)) {
     SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
@@ -51,26 +52,29 @@ class ChannelProviderTest : public UnitTestFixture, public CobaltTestFixture {
     auto promise = provider.GetAnnotations(allowlist);
 
     bool was_called = false;
-    std::optional<std::string> channel;
+    std::optional<AnnotationOr> channel;
     executor_.schedule_task(
         std::move(promise).then([&was_called, &channel](::fit::result<Annotations>& res) {
           was_called = true;
 
           if (res.is_error()) {
-            channel = std::nullopt;
+            channel = AnnotationOr(Error::kNotSet);
           } else {
             Annotations annotations = res.take_value();
             if (annotations.empty()) {
-              channel = std::nullopt;
+              channel = AnnotationOr(Error::kNotSet);
             } else {
               FX_CHECK(annotations.size() == 1u);
-              channel = std::move(annotations.begin()->second);
+              channel = annotations.begin()->second;
             }
           }
         }));
     RunLoopFor(timeout);
+
     FX_CHECK(was_called);
-    return channel;
+    FX_CHECK(channel.has_value());
+
+    return channel.value();
   }
 
   async::Executor executor_;
@@ -85,8 +89,7 @@ TEST_F(ChannelProviderTest, Succeed_SomeChannel) {
 
   const auto result = GetCurrentChannel();
 
-  ASSERT_TRUE(result);
-  EXPECT_EQ(result.value(), "my-channel");
+  EXPECT_EQ(result, AnnotationOr("my-channel"));
 }
 
 TEST_F(ChannelProviderTest, Succeed_EmptyChannel) {
@@ -94,8 +97,7 @@ TEST_F(ChannelProviderTest, Succeed_EmptyChannel) {
 
   const auto result = GetCurrentChannel();
 
-  ASSERT_TRUE(result);
-  EXPECT_EQ(result.value(), "");
+  EXPECT_EQ(result, AnnotationOr(""));
 }
 
 TEST_F(ChannelProviderTest, Succeed_NoRequestedKeysInAllowlist) {
@@ -103,7 +105,7 @@ TEST_F(ChannelProviderTest, Succeed_NoRequestedKeysInAllowlist) {
 
   const auto result = GetCurrentChannel({"not-returned-by-channel-provider"});
 
-  ASSERT_FALSE(result);
+  EXPECT_EQ(result, AnnotationOr(Error::kNotSet));
 }
 
 TEST_F(ChannelProviderTest, Fail_ChannelProviderServerNotAvailable) {
@@ -111,7 +113,7 @@ TEST_F(ChannelProviderTest, Fail_ChannelProviderServerNotAvailable) {
 
   const auto result = GetCurrentChannel();
 
-  ASSERT_FALSE(result);
+  EXPECT_EQ(result, AnnotationOr(Error::kConnectionError));
 }
 
 TEST_F(ChannelProviderTest, Fail_ChannelProviderServerClosesConnection) {
@@ -119,7 +121,7 @@ TEST_F(ChannelProviderTest, Fail_ChannelProviderServerClosesConnection) {
 
   const auto result = GetCurrentChannel();
 
-  ASSERT_FALSE(result);
+  EXPECT_EQ(result, AnnotationOr(Error::kConnectionError));
 }
 
 TEST_F(ChannelProviderTest, Fail_ChannelProviderServerNeverReturns) {
@@ -127,7 +129,7 @@ TEST_F(ChannelProviderTest, Fail_ChannelProviderServerNeverReturns) {
 
   const auto result = GetCurrentChannel();
 
-  ASSERT_FALSE(result);
+  EXPECT_EQ(result, AnnotationOr(Error::kTimeout));
   EXPECT_THAT(ReceivedCobaltEvents(), UnorderedElementsAreArray({
                                           cobalt::Event(cobalt::TimedOutData::kChannel),
                                       }));

@@ -5,7 +5,7 @@
 #ifndef SRC_DEVELOPER_FEEDBACK_FEEDBACK_DATA_ANNOTATIONS_STATIC_ANNOTATIONS_H_
 #define SRC_DEVELOPER_FEEDBACK_FEEDBACK_DATA_ANNOTATIONS_STATIC_ANNOTATIONS_H_
 
-#include "src/developer/feedback/feedback_data/annotations/aliases.h"
+#include "src/developer/feedback/feedback_data/annotations/types.h"
 #include "src/developer/feedback/feedback_data/device_id_provider.h"
 
 namespace feedback {

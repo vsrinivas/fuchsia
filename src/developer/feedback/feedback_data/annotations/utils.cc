@@ -16,4 +16,18 @@ AnnotationKeys RestrictAllowlist(const AnnotationKeys& allowlist,
   return filtered;
 }
 
+std::vector<fuchsia::feedback::Annotation> ToFeedbackAnnotationVector(
+    const Annotations& annotations) {
+  std::vector<fuchsia::feedback::Annotation> vec;
+  for (const auto& [key, value] : annotations) {
+    if (value.HasValue()) {
+      fuchsia::feedback::Annotation annotation;
+      annotation.key = key;
+      annotation.value = value.Value();
+      vec.push_back(std::move(annotation));
+    }
+  }
+  return vec;
+}
+
 }  // namespace feedback

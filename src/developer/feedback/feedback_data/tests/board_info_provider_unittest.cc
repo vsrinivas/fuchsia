@@ -16,7 +16,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "src/developer/feedback/feedback_data/annotations/aliases.h"
+#include "src/developer/feedback/feedback_data/annotations/types.h"
 #include "src/developer/feedback/feedback_data/constants.h"
 #include "src/developer/feedback/testing/cobalt_test_fixture.h"
 #include "src/developer/feedback/testing/stubs/board_info_provider.h"
@@ -24,6 +24,7 @@
 #include "src/developer/feedback/testing/unit_test_fixture.h"
 #include "src/developer/feedback/utils/cobalt/event.h"
 #include "src/developer/feedback/utils/cobalt/logger.h"
+#include "src/developer/feedback/utils/errors.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/split_string.h"
 
@@ -68,16 +69,7 @@ class BoardInfoProviderTest : public UnitTestFixture, public CobaltTestFixture {
         }));
     RunLoopFor(timeout);
 
-    if (annotations.empty()) {
-      return {};
-    }
-
-    Annotations board_info;
-    for (auto& [key, value] : annotations) {
-      board_info[key] = std::move(value);
-    }
-
-    return board_info;
+    return annotations;
   }
 
   async::Executor executor_;
@@ -86,7 +78,7 @@ class BoardInfoProviderTest : public UnitTestFixture, public CobaltTestFixture {
   std::unique_ptr<stubs::BoardInfoProviderBase> board_provider_server_;
 };
 
-BoardInfo CreateBoardInfo(const Annotations& annotations) {
+BoardInfo CreateBoardInfo(const std::map<AnnotationKey, std::string>& annotations) {
   BoardInfo info;
 
   for (const auto& [key, value] : annotations) {
@@ -112,8 +104,8 @@ TEST_F(BoardInfoProviderTest, Succeed_AllAnnotationsRequested) {
       kAnnotationHardwareBoardRevision,
   });
   EXPECT_THAT(board_info, ElementsAreArray({
-                              Pair(kAnnotationHardwareBoardName, "some-name"),
-                              Pair(kAnnotationHardwareBoardRevision, "some-revision"),
+                              Pair(kAnnotationHardwareBoardName, AnnotationOr("some-name")),
+                              Pair(kAnnotationHardwareBoardRevision, AnnotationOr("some-revision")),
                           }));
 }
 
@@ -128,7 +120,7 @@ TEST_F(BoardInfoProviderTest, Succeed_SingleAnnotationRequested) {
       kAnnotationHardwareBoardName,
   });
   EXPECT_THAT(board_info, ElementsAreArray({
-                              Pair(kAnnotationHardwareBoardName, "some-name"),
+                              Pair(kAnnotationHardwareBoardName, AnnotationOr("some-name")),
                           }));
 }
 
@@ -145,8 +137,8 @@ TEST_F(BoardInfoProviderTest, Succeed_SpuriousAnnotationRequested) {
       "bad-key",
   });
   EXPECT_THAT(board_info, ElementsAreArray({
-                              Pair(kAnnotationHardwareBoardName, "some-name"),
-                              Pair(kAnnotationHardwareBoardRevision, "some-revision"),
+                              Pair(kAnnotationHardwareBoardName, AnnotationOr("some-name")),
+                              Pair(kAnnotationHardwareBoardRevision, AnnotationOr("some-revision")),
                           }));
 }
 
@@ -160,9 +152,11 @@ TEST_F(BoardInfoProviderTest, Succeed_SingleAnnotationInResponse) {
       kAnnotationHardwareBoardName,
       kAnnotationHardwareBoardRevision,
   });
-  EXPECT_THAT(board_info, ElementsAreArray({
-                              Pair(kAnnotationHardwareBoardName, "some-name"),
-                          }));
+  EXPECT_THAT(board_info,
+              ElementsAreArray({
+                  Pair(kAnnotationHardwareBoardName, AnnotationOr("some-name")),
+                  Pair(kAnnotationHardwareBoardRevision, AnnotationOr(Error::kMissingValue)),
+              }));
 }
 
 TEST_F(BoardInfoProviderTest, Succeed_NoRequestedKeysInAllowlist) {
@@ -186,7 +180,10 @@ TEST_F(BoardInfoProviderTest, Check_CobaltLogsTimeout) {
       kAnnotationHardwareBoardRevision,
   });
 
-  ASSERT_TRUE(board_info.empty());
+  EXPECT_THAT(board_info, ElementsAreArray({
+                              Pair(kAnnotationHardwareBoardName, AnnotationOr(Error::kTimeout)),
+                              Pair(kAnnotationHardwareBoardRevision, AnnotationOr(Error::kTimeout)),
+                          }));
   EXPECT_THAT(ReceivedCobaltEvents(), ElementsAreArray({
                                           cobalt::Event(cobalt::TimedOutData::kBoardInfo),
                                       }));

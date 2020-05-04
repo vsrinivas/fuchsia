@@ -13,6 +13,8 @@
 
 #include <ostream>
 
+#include "src/developer/feedback/feedback_data/annotations/types.h"
+#include "src/developer/feedback/utils/errors.h"
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/syslog/cpp/logger.h"
 
@@ -37,6 +39,22 @@ void PrintTo(const fit::result_state& state, std::ostream* os) {
 }
 
 }  // namespace fit
+
+namespace feedback {
+
+void PrintTo(const AnnotationOr& value, std::ostream* os) {
+  *os << fostr::Indent;
+  *os << "{ ";
+  if (value.HasValue()) {
+    *os << "HAS VALUE : " << value.Value();
+  } else {
+    *os << "MISSING : " << ToString(value.Error());
+  }
+  *os << " }";
+  *os << fostr::Outdent;
+}
+
+}  // namespace feedback
 
 namespace fuchsia {
 namespace feedback {

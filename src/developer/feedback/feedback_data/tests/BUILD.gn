@@ -203,8 +203,8 @@ executable("channel_provider_unittest") {
 
   deps = [
     "//src/developer/feedback/feedback_data:constants",
-    "//src/developer/feedback/feedback_data/annotations:aliases",
     "//src/developer/feedback/feedback_data/annotations:channel_provider",
+    "//src/developer/feedback/feedback_data/annotations:types",
     "//src/developer/feedback/testing:cobalt_test_fixture",
     "//src/developer/feedback/testing:gtest_with_syslog_main",
     "//src/developer/feedback/testing:unit_test_fixture",
@@ -249,7 +249,7 @@ executable("data_provider_unittest") {
     "//src/developer/feedback/feedback_data:constants",
     "//src/developer/feedback/feedback_data:data_provider",
     "//src/developer/feedback/feedback_data:device_id_provider",
-    "//src/developer/feedback/feedback_data/annotations:aliases",
+    "//src/developer/feedback/feedback_data/annotations:types",
     "//src/developer/feedback/feedback_data/attachments:aliases",
     "//src/developer/feedback/testing:cobalt_test_fixture",
     "//src/developer/feedback/testing:gmatchers",
@@ -295,10 +295,11 @@ executable("datastore_unittest") {
     "//src/developer/feedback/feedback_data:constants",
     "//src/developer/feedback/feedback_data:datastore",
     "//src/developer/feedback/feedback_data:device_id_provider",
-    "//src/developer/feedback/feedback_data/annotations:aliases",
+    "//src/developer/feedback/feedback_data/annotations:types",
     "//src/developer/feedback/feedback_data/attachments:aliases",
     "//src/developer/feedback/feedback_data/attachments:util",
     "//src/developer/feedback/testing:cobalt_test_fixture",
+    "//src/developer/feedback/testing:gmatchers",
     "//src/developer/feedback/testing:gtest_with_syslog_main",
     "//src/developer/feedback/testing:unit_test_fixture",
     "//src/developer/feedback/testing/stubs:board_info_provider",
@@ -325,7 +326,9 @@ executable("device_id_provider_unittest") {
 
   deps = [
     "//src/developer/feedback/feedback_data:device_id_provider",
+    "//src/developer/feedback/feedback_data/annotations:types",
     "//src/developer/feedback/testing:gtest_with_syslog_main",
+    "//src/developer/feedback/utils:errors",
     "//src/lib/files:files",
     "//src/lib/uuid:uuid",
     "//third_party/googletest:gmock",

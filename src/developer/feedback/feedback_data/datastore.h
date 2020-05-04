@@ -9,7 +9,7 @@
 #include <lib/fit/promise.h>
 #include <lib/sys/cpp/service_directory.h>
 
-#include "src/developer/feedback/feedback_data/annotations/aliases.h"
+#include "src/developer/feedback/feedback_data/annotations/types.h"
 #include "src/developer/feedback/feedback_data/attachments/aliases.h"
 #include "src/developer/feedback/feedback_data/device_id_provider.h"
 #include "src/developer/feedback/utils/cobalt/logger.h"

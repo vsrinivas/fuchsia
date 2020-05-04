@@ -45,7 +45,7 @@ class ChannelProviderPtrTest : public UnitTestFixture {
     bool was_called = false;
     std::optional<std::string> channel;
     executor_.schedule_task(
-        std::move(promise).then([&was_called, &channel](::fit::result<std::string>& res) {
+        std::move(promise).then([&was_called, &channel](::fit::result<std::string, Error>& res) {
           was_called = true;
 
           if (res.is_error()) {

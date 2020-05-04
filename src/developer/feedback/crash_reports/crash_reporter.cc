@@ -138,7 +138,7 @@ void CrashReporter::File(fuchsia::feedback::CrashReport report, FileCallback cal
       ::fit::join_promises(std::move(channel_promise), std::move(data_promise),
                            std::move(device_id_promise))
           .then([this, report = std::move(report)](
-                    ::fit::result<std::tuple<::fit::result<std::string>, ::fit::result<Data>,
+                    ::fit::result<std::tuple<::fit::result<std::string, Error>, ::fit::result<Data>,
                                              ::fit::result<std::string>>>& results) mutable
                 -> ::fit::result<void> {
             if (results.is_error()) {

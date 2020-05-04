@@ -17,7 +17,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "src/developer/feedback/feedback_data/annotations/aliases.h"
+#include "src/developer/feedback/feedback_data/annotations/types.h"
 #include "src/developer/feedback/feedback_data/constants.h"
 #include "src/developer/feedback/testing/cobalt_test_fixture.h"
 #include "src/developer/feedback/testing/stubs/cobalt_logger_factory.h"
@@ -25,6 +25,7 @@
 #include "src/developer/feedback/testing/unit_test_fixture.h"
 #include "src/developer/feedback/utils/cobalt/event.h"
 #include "src/developer/feedback/utils/cobalt/logger.h"
+#include "src/developer/feedback/utils/errors.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/split_string.h"
 
@@ -41,9 +42,10 @@ using testing::ElementsAreArray;
 using testing::IsEmpty;
 using testing::Pair;
 
-class ProductInfoProviderTest : public UnitTestFixture,
-                                public CobaltTestFixture,
-                                public testing::WithParamInterface<Annotations> {
+class ProductInfoProviderTest
+    : public UnitTestFixture,
+      public CobaltTestFixture,
+      public testing::WithParamInterface<std::map<AnnotationKey, std::string>> {
  public:
   ProductInfoProviderTest()
       : CobaltTestFixture(/*unit_test_fixture=*/this), executor_(dispatcher()) {}
@@ -73,16 +75,7 @@ class ProductInfoProviderTest : public UnitTestFixture,
         }));
     RunLoopFor(timeout);
 
-    if (annotations.empty()) {
-      return {};
-    }
-
-    Annotations product_info;
-    for (auto& [key, value] : annotations) {
-      product_info[key] = std::move(value);
-    }
-
-    return product_info;
+    return annotations;
   }
 
   async::Executor executor_;
@@ -91,7 +84,7 @@ class ProductInfoProviderTest : public UnitTestFixture,
   std::unique_ptr<stubs::ProductInfoProviderBase> product_provider_server_;
 };
 
-ProductInfo CreateProductInfo(const Annotations& annotations) {
+ProductInfo CreateProductInfo(const std::map<AnnotationKey, std::string>& annotations) {
   ProductInfo info;
 
   for (const auto& [key, value] : annotations) {
@@ -140,8 +133,8 @@ TEST_F(ProductInfoProviderTest, Check_OnlyGetRequestedAnnotations) {
       kAnnotationHardwareProductModel,
   });
   EXPECT_THAT(product_info, ElementsAreArray({
-                                Pair(kAnnotationHardwareProductModel, "some-model"),
-                                Pair(kAnnotationHardwareProductSKU, "some-sku"),
+                                Pair(kAnnotationHardwareProductModel, AnnotationOr("some-model")),
+                                Pair(kAnnotationHardwareProductSKU, AnnotationOr("some-sku")),
                             }));
 }
 
@@ -163,37 +156,26 @@ TEST_F(ProductInfoProviderTest, Check_BadKeyNotInAnnotations) {
   });
 
   EXPECT_THAT(product_info, ElementsAreArray({
-                                Pair(kAnnotationHardwareProductModel, "some-model"),
-                                Pair(kAnnotationHardwareProductSKU, "some-sku"),
+                                Pair(kAnnotationHardwareProductModel, AnnotationOr("some-model")),
+                                Pair(kAnnotationHardwareProductSKU, AnnotationOr("some-sku")),
                             }));
 }
 
 TEST_F(ProductInfoProviderTest, Succeed_ProductInfoReturnsFewerAnnotations) {
   SetUpProductProviderServer(std::make_unique<stubs::ProductInfoProvider>(CreateProductInfo({
-      {kAnnotationHardwareProductLocaleList, "some-locale1, some-locale2, some-locale3"},
-      {kAnnotationHardwareProductModel, "some-model"},
-      {kAnnotationHardwareProductName, "some-name"},
       {kAnnotationHardwareProductSKU, "some-sku"},
   })));
 
   auto product_info = GetProductInfo(/*allowlist=*/{
       kAnnotationHardwareProductSKU,
       kAnnotationHardwareProductLanguage,
-      kAnnotationHardwareProductRegulatoryDomain,
-      kAnnotationHardwareProductLocaleList,
-      kAnnotationHardwareProductName,
-      kAnnotationHardwareProductModel,
-      kAnnotationHardwareProductManufacturer,
   });
 
-  EXPECT_THAT(
-      product_info,
-      ElementsAreArray({
-          Pair(kAnnotationHardwareProductLocaleList, "some-locale1, some-locale2, some-locale3"),
-          Pair(kAnnotationHardwareProductModel, "some-model"),
-          Pair(kAnnotationHardwareProductName, "some-name"),
-          Pair(kAnnotationHardwareProductSKU, "some-sku"),
-      }));
+  EXPECT_THAT(product_info,
+              ElementsAreArray({
+                  Pair(kAnnotationHardwareProductLanguage, AnnotationOr(Error::kMissingValue)),
+                  Pair(kAnnotationHardwareProductSKU, AnnotationOr("some-sku")),
+              }));
 }
 
 TEST_F(ProductInfoProviderTest, Succeed_NoRequestedKeysInAllowlist) {
@@ -221,13 +203,15 @@ TEST_F(ProductInfoProviderTest, Check_CobaltLogsTimeout) {
       kAnnotationHardwareProductSKU,
   });
 
-  ASSERT_TRUE(product_info.empty());
+  EXPECT_THAT(product_info, ElementsAreArray({
+                                Pair(kAnnotationHardwareProductSKU, AnnotationOr(Error::kTimeout)),
+                            }));
   EXPECT_THAT(ReceivedCobaltEvents(), ElementsAreArray({
                                           cobalt::Event(cobalt::TimedOutData::kProductInfo),
                                       }));
 }
 
-const Annotations ProductInfoValues = {
+const std::map<AnnotationKey, std::string> ProductInfoValues = {
     {kAnnotationHardwareProductSKU, "some-sku"},
     {kAnnotationHardwareProductLanguage, "some-language"},
     {kAnnotationHardwareProductRegulatoryDomain, "some-country-code"},
@@ -237,8 +221,8 @@ const Annotations ProductInfoValues = {
     {kAnnotationHardwareProductManufacturer, "some-manufacturer"},
 };
 
-std::vector<Annotations> GetProductInfoMapsWithOneKey() {
-  std::vector<Annotations> maps;
+std::vector<std::map<AnnotationKey, std::string>> GetProductInfoMapsWithOneKey() {
+  std::vector<std::map<AnnotationKey, std::string>> maps;
 
   for (const auto& [key, value] : ProductInfoValues) {
     maps.push_back({{key, value}});
@@ -247,14 +231,15 @@ std::vector<Annotations> GetProductInfoMapsWithOneKey() {
   return maps;
 }
 
-std::vector<Annotations> GetProductInfosToTest() {
+std::vector<std::map<AnnotationKey, std::string>> GetProductInfosToTest() {
   auto maps = GetProductInfoMapsWithOneKey();
   maps.push_back(ProductInfoValues);
   return maps;
 }
 
 // Return all of the strings after the last '.' in each key concatenated together in camelCase.
-std::string GetTestCaseName(const testing::TestParamInfo<Annotations>& info) {
+std::string GetTestCaseName(
+    const testing::TestParamInfo<std::map<AnnotationKey, std::string>>& info) {
   bool is_first = true;
   std::string name;
   for (const auto& [key, _] : info.param) {
@@ -277,7 +262,7 @@ INSTANTIATE_TEST_SUITE_P(WithVariousProductInfoResponses, ProductInfoProviderTes
                          testing::ValuesIn(GetProductInfosToTest()), &GetTestCaseName);
 
 TEST_P(ProductInfoProviderTest, Succeed_OnAnnotations) {
-  Annotations annotations = GetParam();
+  std::map<AnnotationKey, std::string> annotations = GetParam();
   SetUpProductProviderServer(
       std::make_unique<stubs::ProductInfoProvider>(CreateProductInfo(annotations)));
 
@@ -289,7 +274,7 @@ TEST_P(ProductInfoProviderTest, Succeed_OnAnnotations) {
   auto product_info = GetProductInfo(/*allowlist=*/keys);
   EXPECT_EQ(product_info.size(), annotations.size());
   for (const auto& [key, value] : annotations) {
-    EXPECT_EQ(product_info[key], value);
+    EXPECT_EQ(product_info.at(key), AnnotationOr(value));
   }
 }
 

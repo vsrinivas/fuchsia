@@ -49,11 +49,11 @@ TEST_F(DataRegisterTest, Upsert_Basic) {
   EXPECT_THAT(data_register_.GetNamespacedAnnotations(),
               UnorderedElementsAreArray({
                   Pair("namespace", UnorderedElementsAreArray({
-                                        Pair("k", "v"),
+                                        Pair("k", AnnotationOr("v")),
                                     })),
               }));
   EXPECT_THAT(datastore_.GetExtraAnnotations(), UnorderedElementsAreArray({
-                                                    Pair("namespace.k", "v"),
+                                                    Pair("namespace.k", AnnotationOr("v")),
                                                 }));
 }
 
@@ -68,11 +68,11 @@ TEST_F(DataRegisterTest, Upsert_DefaultNamespaceIfNoNamespaceProvided) {
   EXPECT_THAT(data_register_.GetNamespacedAnnotations(),
               UnorderedElementsAreArray({
                   Pair("misc", UnorderedElementsAreArray({
-                                   Pair("k", "v"),
+                                   Pair("k", AnnotationOr("v")),
                                })),
               }));
   EXPECT_THAT(datastore_.GetExtraAnnotations(), UnorderedElementsAreArray({
-                                                    Pair("misc.k", "v"),
+                                                    Pair("misc.k", AnnotationOr("v")),
                                                 }));
 }
 
@@ -110,11 +110,11 @@ TEST_F(DataRegisterTest, Upsert_NoUpdatesOnEmptyAnnotations) {
   EXPECT_THAT(data_register_.GetNamespacedAnnotations(),
               UnorderedElementsAreArray({
                   Pair("namespace", UnorderedElementsAreArray({
-                                        Pair("k", "v"),
+                                        Pair("k", AnnotationOr("v")),
                                     })),
               }));
   EXPECT_THAT(datastore_.GetExtraAnnotations(), UnorderedElementsAreArray({
-                                                    Pair("namespace.k", "v"),
+                                                    Pair("namespace.k", AnnotationOr("v")),
                                                 }));
 
   // We upsert another ComponentData with no annotations.
@@ -127,11 +127,11 @@ TEST_F(DataRegisterTest, Upsert_NoUpdatesOnEmptyAnnotations) {
   EXPECT_THAT(data_register_.GetNamespacedAnnotations(),
               UnorderedElementsAreArray({
                   Pair("namespace", UnorderedElementsAreArray({
-                                        Pair("k", "v"),
+                                        Pair("k", AnnotationOr("v")),
                                     })),
               }));
   EXPECT_THAT(datastore_.GetExtraAnnotations(), UnorderedElementsAreArray({
-                                                    Pair("namespace.k", "v"),
+                                                    Pair("namespace.k", AnnotationOr("v")),
                                                 }));
 }
 
@@ -147,11 +147,11 @@ TEST_F(DataRegisterTest, Upsert_InsertIfDifferentNamespaces) {
   EXPECT_THAT(data_register_.GetNamespacedAnnotations(),
               UnorderedElementsAreArray({
                   Pair("namespace", UnorderedElementsAreArray({
-                                        Pair("k", "v"),
+                                        Pair("k", AnnotationOr("v")),
                                     })),
               }));
   EXPECT_THAT(datastore_.GetExtraAnnotations(), UnorderedElementsAreArray({
-                                                    Pair("namespace.k", "v"),
+                                                    Pair("namespace.k", AnnotationOr("v")),
                                                 }));
 
   // We upsert another ComponentData with the same annotations, but under a different namespace.
@@ -166,15 +166,15 @@ TEST_F(DataRegisterTest, Upsert_InsertIfDifferentNamespaces) {
   EXPECT_THAT(data_register_.GetNamespacedAnnotations(),
               UnorderedElementsAreArray({
                   Pair("namespace", UnorderedElementsAreArray({
-                                        Pair("k", "v"),
+                                        Pair("k", AnnotationOr("v")),
                                     })),
                   Pair("namespace2", UnorderedElementsAreArray({
-                                         Pair("k", "v"),
+                                         Pair("k", AnnotationOr("v")),
                                      })),
               }));
   EXPECT_THAT(datastore_.GetExtraAnnotations(), UnorderedElementsAreArray({
-                                                    Pair("namespace.k", "v"),
-                                                    Pair("namespace2.k", "v"),
+                                                    Pair("namespace.k", AnnotationOr("v")),
+                                                    Pair("namespace2.k", AnnotationOr("v")),
                                                 }));
 }
 
@@ -190,11 +190,11 @@ TEST_F(DataRegisterTest, Upsert_InsertIfDifferentKey) {
   EXPECT_THAT(data_register_.GetNamespacedAnnotations(),
               UnorderedElementsAreArray({
                   Pair("namespace", UnorderedElementsAreArray({
-                                        Pair("k", "v"),
+                                        Pair("k", AnnotationOr("v")),
                                     })),
               }));
   EXPECT_THAT(datastore_.GetExtraAnnotations(), UnorderedElementsAreArray({
-                                                    Pair("namespace.k", "v"),
+                                                    Pair("namespace.k", AnnotationOr("v")),
                                                 }));
 
   // We upsert another ComponentData under the same namespace, but with a different key.
@@ -209,13 +209,13 @@ TEST_F(DataRegisterTest, Upsert_InsertIfDifferentKey) {
   EXPECT_THAT(data_register_.GetNamespacedAnnotations(),
               UnorderedElementsAreArray({
                   Pair("namespace", UnorderedElementsAreArray({
-                                        Pair("k", "v"),
-                                        Pair("k2", "v2"),
+                                        Pair("k", AnnotationOr("v")),
+                                        Pair("k2", AnnotationOr("v2")),
                                     })),
               }));
   EXPECT_THAT(datastore_.GetExtraAnnotations(), UnorderedElementsAreArray({
-                                                    Pair("namespace.k", "v"),
-                                                    Pair("namespace.k2", "v2"),
+                                                    Pair("namespace.k", AnnotationOr("v")),
+                                                    Pair("namespace.k2", AnnotationOr("v2")),
                                                 }));
 }
 
@@ -231,11 +231,11 @@ TEST_F(DataRegisterTest, Upsert_UpdateIfSameKey) {
   EXPECT_THAT(data_register_.GetNamespacedAnnotations(),
               UnorderedElementsAreArray({
                   Pair("namespace", UnorderedElementsAreArray({
-                                        Pair("k", "v"),
+                                        Pair("k", AnnotationOr("v")),
                                     })),
               }));
   EXPECT_THAT(datastore_.GetExtraAnnotations(), UnorderedElementsAreArray({
-                                                    Pair("namespace.k", "v"),
+                                                    Pair("namespace.k", AnnotationOr("v")),
                                                 }));
 
   // We upsert another ComponentData under the same namespace and the same key.
@@ -250,11 +250,11 @@ TEST_F(DataRegisterTest, Upsert_UpdateIfSameKey) {
   EXPECT_THAT(data_register_.GetNamespacedAnnotations(),
               UnorderedElementsAreArray({
                   Pair("namespace", UnorderedElementsAreArray({
-                                        Pair("k", "v2"),
+                                        Pair("k", AnnotationOr("v2")),
                                     })),
               }));
   EXPECT_THAT(datastore_.GetExtraAnnotations(), UnorderedElementsAreArray({
-                                                    Pair("namespace.k", "v2"),
+                                                    Pair("namespace.k", AnnotationOr("v2")),
                                                 }));
 }
 

@@ -15,7 +15,8 @@
 
 #include <memory>
 
-#include "src/developer/feedback/feedback_data/annotations/aliases.h"
+#include "src/developer/feedback/feedback_data/annotations/types.h"
+#include "src/developer/feedback/feedback_data/annotations/utils.h"
 #include "src/developer/feedback/feedback_data/attachments/aliases.h"
 #include "src/developer/feedback/feedback_data/attachments/screenshot_ptr.h"
 #include "src/developer/feedback/feedback_data/attachments/util.h"
@@ -48,17 +49,6 @@ DataProvider::DataProvider(async_dispatcher_t* dispatcher,
 
 namespace {
 
-std::vector<fuchsia::feedback::Annotation> ToAnnotationVector(const Annotations& annotations) {
-  std::vector<fuchsia::feedback::Annotation> vec;
-  for (const auto& [key, value] : annotations) {
-    fuchsia::feedback::Annotation annotation;
-    annotation.key = key;
-    annotation.value = value;
-    vec.push_back(std::move(annotation));
-  }
-  return vec;
-}
-
 std::vector<fuchsia::feedback::Attachment> ToAttachmentVector(const Attachments& attachments) {
   std::vector<fuchsia::feedback::Attachment> vec;
   for (const auto& [key, value] : attachments) {
@@ -90,7 +80,7 @@ void DataProvider::GetData(GetDataCallback callback) {
 
             auto& annotations_or_error = std::get<0>(annotations_and_attachments);
             if (annotations_or_error.is_ok()) {
-              data.set_annotations(ToAnnotationVector(annotations_or_error.take_value()));
+              data.set_annotations(ToFeedbackAnnotationVector(annotations_or_error.take_value()));
             } else {
               FX_LOGS(WARNING) << "Failed to retrieve any annotations";
             }

@@ -10,14 +10,13 @@
 
 #include <optional>
 
-#include "src/developer/feedback/feedback_data/annotations/aliases.h"
+#include "src/developer/feedback/feedback_data/annotations/types.h"
 #include "src/developer/feedback/feedback_data/annotations/utils.h"
 #include "src/developer/feedback/feedback_data/constants.h"
 #include "src/developer/feedback/utils/errors.h"
 #include "src/developer/feedback/utils/fit/promise.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/join_strings.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
 namespace {
@@ -49,17 +48,23 @@ BoardInfoProvider::BoardInfoProvider(async_dispatcher_t* dispatcher,
 
   return fit::ExtendArgsLifetimeBeyondPromise(std::move(board_info),
                                               /*args=*/std::move(board_info_ptr))
-      .and_then([=](const Annotations& board_info) {
+      .then([=](const ::fit::result<std::map<AnnotationKey, std::string>, Error>& result) {
         Annotations annotations;
 
-        for (const auto& key : annotations_to_get) {
-          if (board_info.find(key) == board_info.end()) {
-            FX_LOGS(WARNING) << "Failed to build annotation " << key;
-            continue;
+        if (result.is_error()) {
+          for (const auto& key : annotations_to_get) {
+            annotations.insert({key, AnnotationOr(result.error())});
           }
-          annotations[key] = board_info.at(key);
+        } else {
+          for (const auto& key : annotations_to_get) {
+            const auto& board_info = result.value();
+            if (board_info.find(key) == board_info.end()) {
+              annotations.insert({key, AnnotationOr(Error::kMissingValue)});
+            } else {
+              annotations.insert({key, board_info.at(key)});
+            }
+          }
         }
-
         return ::fit::ok(std::move(annotations));
       });
 }
@@ -69,13 +74,14 @@ BoardInfoPtr::BoardInfoPtr(async_dispatcher_t* dispatcher,
                            std::shared_ptr<sys::ServiceDirectory> services)
     : board_ptr_(dispatcher, services) {}
 
-::fit::promise<Annotations> BoardInfoPtr::GetBoardInfo(fit::Timeout timeout) {
+::fit::promise<std::map<AnnotationKey, std::string>, Error> BoardInfoPtr::GetBoardInfo(
+    fit::Timeout timeout) {
   board_ptr_->GetInfo([this](BoardInfo info) {
     if (board_ptr_.IsAlreadyDone()) {
       return;
     }
 
-    Annotations board_info;
+    std::map<AnnotationKey, std::string> board_info;
 
     if (info.has_name()) {
       board_info[kAnnotationHardwareBoardName] = info.name();
@@ -88,9 +94,7 @@ BoardInfoPtr::BoardInfoPtr(async_dispatcher_t* dispatcher,
     board_ptr_.CompleteOk(std::move(board_info));
   });
 
-  return board_ptr_.WaitForDone(std::move(timeout)).or_else([](const Error& error) {
-    return ::fit::error();
-  });
+  return board_ptr_.WaitForDone(std::move(timeout));
 }
 
 }  // namespace internal

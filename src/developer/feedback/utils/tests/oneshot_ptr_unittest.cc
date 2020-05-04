@@ -91,7 +91,7 @@ TEST_F(OneShotPtrTest, Fail_ClosedChannel) {
 
   const auto result = ExecutePromise(channel_ptr.WaitForDone());
   EXPECT_TRUE(result.is_error());
-  EXPECT_EQ(result.error(), Error::kDefault);
+  EXPECT_EQ(result.error(), Error::kConnectionError);
 }
 
 TEST_F(OneShotPtrTest, Fail_Timeout) {

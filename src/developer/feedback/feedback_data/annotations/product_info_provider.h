@@ -46,10 +46,10 @@ class ProductInfoPtr {
  public:
   ProductInfoPtr(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services);
 
-  ::fit::promise<Annotations> GetProductInfo(fit::Timeout timeout);
+  ::fit::promise<std::map<AnnotationKey, std::string>, Error> GetProductInfo(fit::Timeout timeout);
 
  private:
-  fidl::OneShotPtr<fuchsia::hwinfo::Product, Annotations> product_ptr_;
+  fidl::OneShotPtr<fuchsia::hwinfo::Product, std::map<AnnotationKey, std::string>> product_ptr_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ProductInfoPtr);
 };

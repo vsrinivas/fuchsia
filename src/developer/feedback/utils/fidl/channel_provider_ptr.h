@@ -23,9 +23,9 @@ namespace fidl {
 // Fetches the current update channel.
 //
 // fuchsia.update.channel.Provider is expected to be in |services|.
-::fit::promise<std::string> GetCurrentChannel(async_dispatcher_t* dispatcher,
-                                              std::shared_ptr<sys::ServiceDirectory> services,
-                                              fit::Timeout timeout);
+::fit::promise<std::string, Error> GetCurrentChannel(
+    async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
+    fit::Timeout timeout);
 
 // Wraps around fuchsia::update::channel::ProviderPtr to handle establishing the connection,
 // losing the connection, waiting for the callback, enforcing a timeout, etc.
@@ -37,7 +37,7 @@ class ChannelProviderPtr {
   ChannelProviderPtr(async_dispatcher_t* dispatcher,
                      std::shared_ptr<sys::ServiceDirectory> services);
 
-  ::fit::promise<std::string> GetCurrentChannel(fit::Timeout timeout);
+  ::fit::promise<std::string, Error> GetCurrentChannel(fit::Timeout timeout);
 
  private:
   OneShotPtr<fuchsia::update::channel::Provider, std::string> channel_ptr_;

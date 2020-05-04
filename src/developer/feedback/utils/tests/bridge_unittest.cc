@@ -65,7 +65,7 @@ TEST_F(BridgeTest, ExecutesIfTimeout) {
   RunLoopFor(kTimeout);
 
   EXPECT_TRUE(timeout_did_run);
-  EXPECT_EQ(error, Error::kDefault);
+  EXPECT_EQ(error, Error::kTimeout);
 }
 
 TEST_F(BridgeTest, CompleteError) {

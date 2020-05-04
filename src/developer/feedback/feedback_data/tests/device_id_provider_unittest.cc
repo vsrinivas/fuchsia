@@ -11,6 +11,8 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "src/developer/feedback/feedback_data/annotations/types.h"
+#include "src/developer/feedback/utils/errors.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
@@ -105,6 +107,9 @@ TEST_F(DeviceIdTest, Fail_IfPathIsADirectory) {
   DeleteDeviceIdFile();
   ASSERT_TRUE(files::CreateDirectory(device_id_path_));
   EXPECT_FALSE(GetDeviceId().has_value());
+
+  DeviceIdProvider device_id_provider(device_id_path_);
+  EXPECT_EQ(device_id_provider.GetId(), AnnotationOr(Error::kFileReadFailure));
 }
 
 }  // namespace

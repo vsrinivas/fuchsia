@@ -7,8 +7,9 @@
 
 #include <fuchsia/feedback/cpp/fidl.h>
 
-#include <optional>
 #include <string>
+
+#include "src/developer/feedback/feedback_data/annotations/types.h"
 
 namespace feedback {
 
@@ -17,13 +18,13 @@ class DeviceIdProvider : public fuchsia::feedback::DeviceIdProvider {
  public:
   DeviceIdProvider(const std::string& path);
 
-  std::optional<std::string> GetId();
+  AnnotationOr GetId();
 
   // |fuchsia.feedback.DeviceIdProvider|
   void GetId(GetIdCallback callback) override;
 
  private:
-  std::optional<std::string> device_id_;
+  AnnotationOr device_id_;
 };
 
 }  // namespace feedback

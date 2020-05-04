@@ -6,11 +6,11 @@
 
 #include <lib/zx/time.h>
 
-#include <optional>
 #include <string>
 
 #include "src/developer/feedback/feedback_data/annotations/utils.h"
 #include "src/developer/feedback/feedback_data/constants.h"
+#include "src/developer/feedback/utils/errors.h"
 #include "src/developer/feedback/utils/time.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/syslog/cpp/logger.h"
@@ -26,22 +26,24 @@ const AnnotationKeys kSupportedAnnotations = {
     kAnnotationDeviceUTCTime,
 };
 
-std::optional<std::string> GetUptime() {
-  const std::optional<std::string> uptime = FormatDuration(zx::nsec(zx_clock_get_monotonic()));
+AnnotationOr GetUptime() {
+  const auto uptime = FormatDuration(zx::nsec(zx_clock_get_monotonic()));
   if (!uptime) {
     FX_LOGS(ERROR) << "got negative uptime from zx_clock_get_monotonic()";
+    return AnnotationOr(Error::kBadValue);
   }
 
-  return uptime;
+  return AnnotationOr(*uptime);
 }
 
-std::optional<std::string> GetUTCTime(const Clock& clock) {
-  const std::optional<std::string> time = CurrentUTCTime(clock);
+AnnotationOr GetUTCTime(const Clock& clock) {
+  const auto time = CurrentUTCTime(clock);
   if (!time) {
     FX_LOGS(ERROR) << "error getting UTC time from timekeeper::Clock::Now()";
+    return AnnotationOr(Error::kBadValue);
   }
 
-  return time;
+  return AnnotationOr(*time);
 }
 
 }  // namespace
@@ -57,19 +59,13 @@ TimeProvider::TimeProvider(std::unique_ptr<Clock> clock) : clock_(std::move(cloc
   Annotations annotations;
 
   for (const auto& key : annotations_to_get) {
-    std::optional<AnnotationValue> value;
     if (key == kAnnotationDeviceUptime) {
-      value = GetUptime();
+      annotations.insert({key, GetUptime()});
     } else if (key == kAnnotationDeviceUTCTime) {
-      value = GetUTCTime(*clock_);
-    }
-
-    if (value) {
-      annotations[key] = std::move(value.value());
-    } else {
-      FX_LOGS(WARNING) << "Failed to build annotation " << key;
+      annotations.insert({key, GetUTCTime(*clock_)});
     }
   }
+
   return ::fit::make_ok_promise(annotations);
 }
 

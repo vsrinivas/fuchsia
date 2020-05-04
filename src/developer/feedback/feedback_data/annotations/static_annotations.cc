@@ -7,10 +7,11 @@
 #include <optional>
 #include <string>
 
-#include "src/developer/feedback/feedback_data/annotations/aliases.h"
 #include "src/developer/feedback/feedback_data/annotations/board_name_provider.h"
+#include "src/developer/feedback/feedback_data/annotations/types.h"
 #include "src/developer/feedback/feedback_data/annotations/utils.h"
 #include "src/developer/feedback/feedback_data/constants.h"
+#include "src/developer/feedback/utils/errors.h"
 #include "src/lib/files/file.h"
 #include "src/lib/fxl/strings/trim.h"
 #include "src/lib/syslog/cpp/logger.h"
@@ -24,38 +25,35 @@ const AnnotationKeys kSupportedAnnotations = {
     kAnnotationDeviceFeedbackId,
 };
 
-std::optional<std::string> ReadStringFromFilepath(const std::string& filepath) {
+AnnotationOr ReadStringFromFilepath(const std::string& filepath) {
   std::string content;
   if (!files::ReadFileToString(filepath, &content)) {
-    return std::nullopt;
+    return AnnotationOr(Error::kFileReadFailure);
   }
-  return fxl::TrimString(content, "\r\n").ToString();
+  return AnnotationOr(fxl::TrimString(content, "\r\n").ToString());
 }
 
-std::optional<AnnotationValue> ReadAnnotationValueFromFilepath(const AnnotationKey& key,
-                                                               const std::string& filepath) {
+AnnotationOr ReadAnnotationOrFromFilepath(const AnnotationKey& key,
+                                                const std::string& filepath) {
   const auto value = ReadStringFromFilepath(filepath);
-  if (!value.has_value()) {
-    FX_LOGS(WARNING) << "Failed to build annotation " << key;
-  }
   return value;
 }
 
-std::optional<AnnotationValue> BuildAnnotationValue(const AnnotationKey& key,
-                                                    DeviceIdProvider* device_id_provider) {
+AnnotationOr BuildAnnotationOr(const AnnotationKey& key,
+                                     DeviceIdProvider* device_id_provider) {
   if (key == kAnnotationBuildBoard) {
-    return ReadAnnotationValueFromFilepath(key, "/config/build-info/board");
+    return ReadAnnotationOrFromFilepath(key, "/config/build-info/board");
   } else if (key == kAnnotationBuildProduct) {
-    return ReadAnnotationValueFromFilepath(key, "/config/build-info/product");
+    return ReadAnnotationOrFromFilepath(key, "/config/build-info/product");
   } else if (key == kAnnotationBuildLatestCommitDate) {
-    return ReadAnnotationValueFromFilepath(key, "/config/build-info/latest-commit-date");
+    return ReadAnnotationOrFromFilepath(key, "/config/build-info/latest-commit-date");
   } else if (key == kAnnotationBuildVersion) {
-    return ReadAnnotationValueFromFilepath(key, "/config/build-info/version");
+    return ReadAnnotationOrFromFilepath(key, "/config/build-info/version");
   } else if (key == kAnnotationBuildIsDebug) {
 #ifndef NDEBUG
-    return "true";
+    return AnnotationOr("true");
 #else
-    return "false";
+    return AnnotationOr("false");
 #endif
   } else if (key == kAnnotationDeviceBoardName) {
     return GetBoardName();
@@ -65,7 +63,7 @@ std::optional<AnnotationValue> BuildAnnotationValue(const AnnotationKey& key,
 
   // We should never attempt to build a non-static annotation as a static annotation.
   FX_LOGS(FATAL) << "Attempting to get non-static annotation " << key << " as a static annotation";
-  return std::nullopt;
+  return AnnotationOr(Error::kNotSet);
 }
 
 }  // namespace
@@ -75,10 +73,7 @@ Annotations GetStaticAnnotations(const AnnotationKeys& allowlist,
   Annotations annotations;
 
   for (const auto& key : RestrictAllowlist(allowlist, kSupportedAnnotations)) {
-    const auto value = BuildAnnotationValue(key, device_id_provider);
-    if (value.has_value()) {
-      annotations[key] = value.value();
-    }
+    annotations.insert({key, BuildAnnotationOr(key, device_id_provider)});
   }
   return annotations;
 }

@@ -18,11 +18,12 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "src/developer/feedback/feedback_data/annotations/aliases.h"
+#include "src/developer/feedback/feedback_data/annotations/types.h"
 #include "src/developer/feedback/feedback_data/attachments/aliases.h"
 #include "src/developer/feedback/feedback_data/constants.h"
 #include "src/developer/feedback/feedback_data/device_id_provider.h"
 #include "src/developer/feedback/testing/cobalt_test_fixture.h"
+#include "src/developer/feedback/testing/gmatchers.h"
 #include "src/developer/feedback/testing/stubs/board_info_provider.h"
 #include "src/developer/feedback/testing/stubs/channel_provider.h"
 #include "src/developer/feedback/testing/stubs/cobalt_logger_factory.h"
@@ -149,8 +150,8 @@ class DatastoreTest : public UnitTestFixture, public CobaltTestFixture {
 
   std::string device_id() {
     auto device_id = device_id_provider_.GetId();
-    FX_CHECK(device_id.has_value());
-    return device_id.value();
+    FX_CHECK(device_id.HasValue());
+    return device_id.Value();
   }
 
   ::fit::result<Annotations> GetAnnotations() {
@@ -232,10 +233,11 @@ TEST_F(DatastoreTest, GetAnnotations_BoardInfo) {
 
   ::fit::result<Annotations> annotations = GetAnnotations();
   ASSERT_TRUE(annotations.is_ok());
-  EXPECT_THAT(annotations.take_value(), ElementsAreArray({
-                                            Pair(kAnnotationHardwareBoardName, "my-board-name"),
-                                            Pair(kAnnotationHardwareBoardRevision, "my-revision"),
-                                        }));
+  EXPECT_THAT(annotations.take_value(),
+              ElementsAreArray({
+                  Pair(kAnnotationHardwareBoardName, AnnotationOr("my-board-name")),
+                  Pair(kAnnotationHardwareBoardRevision, AnnotationOr("my-revision")),
+              }));
 
   EXPECT_THAT(GetStaticAnnotations(), IsEmpty());
 }
@@ -248,7 +250,7 @@ TEST_F(DatastoreTest, GetAnnotations_Channel) {
   ASSERT_TRUE(annotations.is_ok());
   EXPECT_THAT(annotations.take_value(),
               ElementsAreArray({
-                  Pair(kAnnotationSystemUpdateChannelCurrent, "my-channel"),
+                  Pair(kAnnotationSystemUpdateChannelCurrent, AnnotationOr("my-channel")),
               }));
 
   EXPECT_THAT(GetStaticAnnotations(), IsEmpty());
@@ -303,16 +305,18 @@ TEST_F(DatastoreTest, GetAnnotations_ProductInfo) {
 
   ::fit::result<Annotations> annotations = GetAnnotations();
   ASSERT_TRUE(annotations.is_ok());
-  EXPECT_THAT(annotations.take_value(),
-              ElementsAreArray({
-                  Pair(kAnnotationHardwareProductLanguage, "my-language"),
-                  Pair(kAnnotationHardwareProductLocaleList, "my-locale1, my-locale2, my-locale3"),
-                  Pair(kAnnotationHardwareProductManufacturer, "my-manufacturer"),
-                  Pair(kAnnotationHardwareProductModel, "my-model"),
-                  Pair(kAnnotationHardwareProductName, "my-name"),
-                  Pair(kAnnotationHardwareProductRegulatoryDomain, "my-regulatory-domain"),
-                  Pair(kAnnotationHardwareProductSKU, "my-sku"),
-              }));
+  EXPECT_THAT(
+      annotations.take_value(),
+      ElementsAreArray({
+          Pair(kAnnotationHardwareProductLanguage, AnnotationOr("my-language")),
+          Pair(kAnnotationHardwareProductLocaleList,
+               AnnotationOr("my-locale1, my-locale2, my-locale3")),
+          Pair(kAnnotationHardwareProductManufacturer, AnnotationOr("my-manufacturer")),
+          Pair(kAnnotationHardwareProductModel, AnnotationOr("my-model")),
+          Pair(kAnnotationHardwareProductName, AnnotationOr("my-name")),
+          Pair(kAnnotationHardwareProductRegulatoryDomain, AnnotationOr("my-regulatory-domain")),
+          Pair(kAnnotationHardwareProductSKU, AnnotationOr("my-sku")),
+      }));
 
   EXPECT_THAT(GetStaticAnnotations(), IsEmpty());
 }
@@ -328,8 +332,8 @@ TEST_F(DatastoreTest, GetAnnotations_Time) {
   ::fit::result<Annotations> annotations = GetAnnotations();
   ASSERT_TRUE(annotations.is_ok());
   EXPECT_THAT(annotations.take_value(), ElementsAreArray({
-                                            Pair(kAnnotationDeviceUptime, Not(IsEmpty())),
-                                            Pair(kAnnotationDeviceUTCTime, Not(IsEmpty())),
+                                            Pair(kAnnotationDeviceUptime, HasValue()),
+                                            Pair(kAnnotationDeviceUTCTime, HasValue()),
                                         }));
 
   EXPECT_THAT(GetStaticAnnotations(), IsEmpty());
@@ -337,11 +341,11 @@ TEST_F(DatastoreTest, GetAnnotations_Time) {
 
 TEST_F(DatastoreTest, GetAnnotations_ExtraAnnotations) {
   SetUpDatastore(kDefaultAnnotationsToAvoidSpuriousLogs, kDefaultAttachmentsToAvoidSpuriousLogs);
-  EXPECT_TRUE(TrySetExtraAnnotations({{"extra.k", "v"}}));
+  EXPECT_TRUE(TrySetExtraAnnotations({{"extra.k", AnnotationOr("v")}}));
 
   ::fit::result<Annotations> annotations = GetAnnotations();
   ASSERT_TRUE(annotations.is_ok());
-  EXPECT_THAT(annotations.take_value(), Contains(Pair("extra.k", "v")));
+  EXPECT_THAT(annotations.take_value(), Contains(Pair("extra.k", AnnotationOr("v"))));
 }
 
 TEST_F(DatastoreTest, GetAnnotations_ExtraAnnotationsAboveLimit) {
@@ -356,24 +360,25 @@ TEST_F(DatastoreTest, GetAnnotations_ExtraAnnotationsAboveLimit) {
   // We inject more than the limit in extra annotations.
   Annotations extra_annotations;
   for (size_t i = 0; i < kMaxNumExtraAnnotations + 1; i++) {
-    extra_annotations[fxl::StringPrintf("k%lu", i)] = fxl::StringPrintf("v%lu", i);
+    extra_annotations.insert(
+        {fxl::StringPrintf("k%lu", i), AnnotationOr(fxl::StringPrintf("v%lu", i))});
   }
   EXPECT_FALSE(TrySetExtraAnnotations(extra_annotations));
 
   ::fit::result<Annotations> annotations = GetAnnotations();
   ASSERT_TRUE(annotations.is_ok());
   EXPECT_THAT(annotations.take_value(), ElementsAreArray({
-                                            Pair(kAnnotationBuildIsDebug, Not(IsEmpty())),
+                                            Pair(kAnnotationBuildIsDebug, HasValue()),
                                         }));
 }
 
 TEST_F(DatastoreTest, GetAnnotations_ExtraAnnotationsOnEmptyAllowlist) {
   SetUpDatastore({}, kDefaultAttachmentsToAvoidSpuriousLogs);
-  EXPECT_TRUE(TrySetExtraAnnotations({{"extra.k", "v"}}));
+  EXPECT_TRUE(TrySetExtraAnnotations({{"extra.k", AnnotationOr("v")}}));
 
   ::fit::result<Annotations> annotations = GetAnnotations();
   ASSERT_TRUE(annotations.is_ok());
-  EXPECT_THAT(annotations.take_value(), ElementsAreArray({Pair("extra.k", "v")}));
+  EXPECT_THAT(annotations.take_value(), ElementsAreArray({Pair("extra.k", AnnotationOr("v"))}));
 }
 
 TEST_F(DatastoreTest, GetAnnotations_FailOn_EmptyAnnotationAllowlist) {
@@ -389,7 +394,12 @@ TEST_F(DatastoreTest, GetAnnotations_FailOn_OnlyUnknownAnnotationInAllowlist) {
   SetUpDatastore({"unknown.annotation"}, kDefaultAttachmentsToAvoidSpuriousLogs);
 
   ::fit::result<Annotations> annotations = GetAnnotations();
-  ASSERT_TRUE(annotations.is_error());
+
+  ASSERT_TRUE(annotations.is_ok());
+  EXPECT_THAT(annotations.value(),
+              ElementsAreArray({
+                  Pair("unknown.annotation", AnnotationOr(Error::kMissingValue)),
+              }));
 
   EXPECT_THAT(GetStaticAnnotations(), IsEmpty());
 }

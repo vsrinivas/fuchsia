@@ -11,8 +11,8 @@
 
 #include <memory>
 
-#include "src/developer/feedback/feedback_data/annotations/aliases.h"
 #include "src/developer/feedback/feedback_data/annotations/annotation_provider.h"
+#include "src/developer/feedback/feedback_data/annotations/types.h"
 #include "src/developer/feedback/utils/cobalt/logger.h"
 #include "src/lib/fxl/macros.h"
 

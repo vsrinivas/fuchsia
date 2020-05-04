@@ -21,7 +21,7 @@
 #include <gtest/gtest.h>
 
 #include "garnet/public/lib/fostr/fidl/fuchsia/math/formatting.h"
-#include "src/developer/feedback/feedback_data/annotations/aliases.h"
+#include "src/developer/feedback/feedback_data/annotations/types.h"
 #include "src/developer/feedback/feedback_data/attachments/aliases.h"
 #include "src/developer/feedback/feedback_data/constants.h"
 #include "src/developer/feedback/feedback_data/device_id_provider.h"

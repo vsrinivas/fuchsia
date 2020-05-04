@@ -12,14 +12,13 @@
 #include <optional>
 #include <string>
 
-#include "src/developer/feedback/feedback_data/annotations/aliases.h"
+#include "src/developer/feedback/feedback_data/annotations/types.h"
 #include "src/developer/feedback/feedback_data/annotations/utils.h"
 #include "src/developer/feedback/feedback_data/constants.h"
 #include "src/developer/feedback/utils/errors.h"
 #include "src/developer/feedback/utils/fit/promise.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/join_strings.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
 namespace {
@@ -35,17 +34,6 @@ const AnnotationKeys kSupportedAnnotations = {
     kAnnotationHardwareProductModel,
     kAnnotationHardwareProductManufacturer,
 };
-
-// Required annotations as per /src/hwinfo/hwinfo_product_config_schema.json.
-bool IsRequired(const AnnotationKey& annotation) {
-  static const AnnotationKeys required_annotations = {
-      kAnnotationHardwareProductName,
-      kAnnotationHardwareProductModel,
-      kAnnotationHardwareProductManufacturer,
-  };
-
-  return required_annotations.find(annotation) != required_annotations.end();
-}
 
 }  // namespace
 
@@ -67,19 +55,23 @@ ProductInfoProvider::ProductInfoProvider(async_dispatcher_t* dispatcher,
 
   return fit::ExtendArgsLifetimeBeyondPromise(std::move(product_info),
                                               /*args=*/std::move(product_info_ptr))
-      .and_then([=](const Annotations& product_info) {
+      .then([=](const ::fit::result<std::map<AnnotationKey, std::string>, Error>& result) {
         Annotations annotations;
 
-        for (const auto& key : annotations_to_get) {
-          if (product_info.find(key) == product_info.end()) {
-            if (IsRequired(key)) {
-              FX_LOGS(WARNING) << "Failed to build annotation " << key;
-            }
-            continue;
+        if (result.is_error()) {
+          for (const auto& key : annotations_to_get) {
+            annotations.insert({key, AnnotationOr(result.error())});
           }
-          annotations[key] = product_info.at(key);
+        } else {
+          for (const auto& key : annotations_to_get) {
+            const auto& product_info = result.value();
+            if (product_info.find(key) == product_info.end()) {
+              annotations.insert({key, AnnotationOr(Error::kMissingValue)});
+            } else {
+              annotations.insert({key, product_info.at(key)});
+            }
+          }
         }
-
         return ::fit::ok(std::move(annotations));
       });
 }
@@ -118,13 +110,14 @@ ProductInfoPtr::ProductInfoPtr(async_dispatcher_t* dispatcher,
                                std::shared_ptr<sys::ServiceDirectory> services)
     : product_ptr_(dispatcher, services) {}
 
-::fit::promise<Annotations> ProductInfoPtr::GetProductInfo(fit::Timeout timeout) {
+::fit::promise<std::map<AnnotationKey, std::string>, Error> ProductInfoPtr::GetProductInfo(
+    fit::Timeout timeout) {
   product_ptr_->GetInfo([this](ProductInfo info) {
     if (product_ptr_.IsAlreadyDone()) {
       return;
     }
 
-    Annotations product_info;
+    std::map<AnnotationKey, std::string> product_info;
 
     if (info.has_sku()) {
       product_info[kAnnotationHardwareProductSKU] = info.sku();
@@ -163,9 +156,7 @@ ProductInfoPtr::ProductInfoPtr(async_dispatcher_t* dispatcher,
     product_ptr_.CompleteOk(std::move(product_info));
   });
 
-  return product_ptr_.WaitForDone(std::move(timeout)).or_else([](const Error& error) {
-    return ::fit::error();
-  });
+  return product_ptr_.WaitForDone(std::move(timeout));
 }
 
 }  // namespace internal

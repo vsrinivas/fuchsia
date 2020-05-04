@@ -15,9 +15,9 @@
 namespace feedback {
 namespace fidl {
 
-::fit::promise<std::string> GetCurrentChannel(async_dispatcher_t* dispatcher,
-                                              std::shared_ptr<sys::ServiceDirectory> services,
-                                              fit::Timeout timeout) {
+::fit::promise<std::string, Error> GetCurrentChannel(
+    async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
+    fit::Timeout timeout) {
   auto ptr = std::make_unique<fidl::ChannelProviderPtr>(dispatcher, services);
 
   // We must store the promise in a variable due to the fact that the order of evaluation of
@@ -31,7 +31,7 @@ ChannelProviderPtr::ChannelProviderPtr(async_dispatcher_t* dispatcher,
                                        std::shared_ptr<sys::ServiceDirectory> services)
     : channel_ptr_(dispatcher, services) {}
 
-::fit::promise<std::string> ChannelProviderPtr::GetCurrentChannel(fit::Timeout timeout) {
+::fit::promise<std::string, Error> ChannelProviderPtr::GetCurrentChannel(fit::Timeout timeout) {
   channel_ptr_->GetCurrent([this](std::string channel) {
     if (channel_ptr_.IsAlreadyDone()) {
       return;
@@ -40,9 +40,7 @@ ChannelProviderPtr::ChannelProviderPtr(async_dispatcher_t* dispatcher,
     channel_ptr_.CompleteOk(channel);
   });
 
-  return channel_ptr_.WaitForDone(std::move(timeout)).or_else([](const Error& error) {
-    return ::fit::error();
-  });
+  return channel_ptr_.WaitForDone(std::move(timeout));
 }
 
 }  // namespace fidl

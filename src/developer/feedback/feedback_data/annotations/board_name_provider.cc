@@ -15,19 +15,20 @@
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
+#include "src/developer/feedback/utils/errors.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
 
-std::optional<AnnotationValue> GetBoardName() {
+AnnotationOr GetBoardName() {
   fuchsia::sysinfo::SysInfoSyncPtr sysinfo;
 
   if (const zx_status_t status = fdio_service_connect("/svc/fuchsia.sysinfo.SysInfo",
                                                       sysinfo.NewRequest().TakeChannel().release());
       status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Error connecting to sysinfo";
-    return std::nullopt;
+    return AnnotationOr(Error::kConnectionError);
   }
 
   ::fidl::StringPtr out_board_name;
@@ -35,18 +36,18 @@ std::optional<AnnotationValue> GetBoardName() {
   if (const zx_status_t status = sysinfo->GetBoardName(&out_status, &out_board_name);
       status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Failed to get device board name";
-    return std::nullopt;
+    return AnnotationOr(Error::kConnectionError);
   }
   if (out_status != ZX_OK) {
     FX_PLOGS(ERROR, out_status) << "Failed to get device board name";
-    return std::nullopt;
+    return AnnotationOr(Error::kBadValue);
   }
   if (!out_board_name) {
     FX_PLOGS(ERROR, out_status) << "Failed to get device board name";
-    return std::nullopt;
+    return AnnotationOr(Error::kMissingValue);
   }
 
-  return out_board_name.value();
+  return AnnotationOr(out_board_name.value());
 }
 
 }  // namespace feedback

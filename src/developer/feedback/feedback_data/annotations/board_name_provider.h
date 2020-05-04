@@ -7,12 +7,12 @@
 
 #include <optional>
 
-#include "src/developer/feedback/feedback_data/annotations/aliases.h"
+#include "src/developer/feedback/feedback_data/annotations/types.h"
 
 namespace feedback {
 
 // Synchronously fetches the name of the device's board.
-std::optional<AnnotationValue> GetBoardName();
+AnnotationOr GetBoardName();
 
 }  // namespace feedback
 

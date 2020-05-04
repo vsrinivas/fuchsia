@@ -11,8 +11,8 @@
 #include <lib/sys/cpp/service_directory.h>
 #include <zircon/time.h>
 
-#include "src/developer/feedback/feedback_data/annotations/aliases.h"
 #include "src/developer/feedback/feedback_data/annotations/annotation_provider.h"
+#include "src/developer/feedback/feedback_data/annotations/types.h"
 #include "src/developer/feedback/utils/cobalt/logger.h"
 #include "src/developer/feedback/utils/fidl/oneshot_ptr.h"
 #include "src/developer/feedback/utils/fit/timeout.h"
@@ -46,10 +46,10 @@ class BoardInfoPtr {
  public:
   BoardInfoPtr(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services);
 
-  ::fit::promise<Annotations> GetBoardInfo(fit::Timeout timeout);
+  ::fit::promise<std::map<AnnotationKey, std::string>, Error> GetBoardInfo(fit::Timeout timeout);
 
  private:
-  fidl::OneShotPtr<fuchsia::hwinfo::Board, Annotations> board_ptr_;
+  fidl::OneShotPtr<fuchsia::hwinfo::Board, std::map<AnnotationKey, std::string>> board_ptr_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(BoardInfoPtr);
 };

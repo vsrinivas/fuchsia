@@ -9,9 +9,9 @@
 
 #include <utility>
 
-#include "src/developer/feedback/feedback_data/annotations/aliases.h"
 #include "src/developer/feedback/feedback_data/annotations/annotation_provider_factory.h"
 #include "src/developer/feedback/feedback_data/annotations/static_annotations.h"
+#include "src/developer/feedback/feedback_data/annotations/types.h"
 #include "src/developer/feedback/feedback_data/attachments/aliases.h"
 #include "src/developer/feedback/feedback_data/attachments/inspect_ptr.h"
 #include "src/developer/feedback/feedback_data/attachments/kernel_log_ptr.h"
@@ -89,7 +89,7 @@ Datastore::Datastore(async_dispatcher_t* dispatcher,
         for (auto& result : annotations) {
           if (result.is_ok()) {
             for (const auto& [key, value] : result.take_value()) {
-              ok_annotations[key] = value;
+              ok_annotations.insert({key, value});
             }
           }
         }
@@ -99,11 +99,21 @@ Datastore::Datastore(async_dispatcher_t* dispatcher,
         // we cap the number of platform annotations and cap the number of extra annotations to
         // sum to the max number of annotations we can return.
         for (const auto& [key, value] : extra_annotations_) {
-          ok_annotations[key] = value;
+          ok_annotations.insert({key, value});
         }
 
-        if (ok_annotations.empty()) {
-          return ::fit::error();
+        for (const auto& key : annotation_allowlist_) {
+          if (ok_annotations.find(key) == ok_annotations.end()) {
+            FX_LOGS(ERROR) << "No provider collected annotation " << key;
+            ok_annotations.insert({key, AnnotationOr(Error::kMissingValue)});
+          }
+        }
+
+        for (const auto& [key, value] : ok_annotations) {
+          if (!value.HasValue()) {
+            FX_LOGS(WARNING) << "Failed to build annotation " << key << ": "
+                             << ToString(value.Error());
+          }
         }
 
         return ::fit::ok(ok_annotations);
@@ -161,7 +171,7 @@ Datastore::Datastore(async_dispatcher_t* dispatcher,
                               MakeCobaltTimeout(cobalt::TimedOutData::kInspect));
   }
   // There are static attachments in the allowlist that we just skip here.
-  return ::fit::make_result_promise<AnnotationValue>(::fit::error());
+  return ::fit::make_result_promise<AttachmentValue>(::fit::error());
 }
 
 bool Datastore::TrySetExtraAnnotations(const Annotations& extra_annotations) {

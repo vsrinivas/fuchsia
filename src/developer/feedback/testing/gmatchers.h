@@ -102,6 +102,14 @@ MATCHER_P(MatchesStringBuffer, expected, "'" + std::string(expected) + "'") {
   return internal::DoStringBufferMatch(arg, expected, result_listener);
 }
 
+MATCHER(HasValue, negation ? "is missing" : "has value") {
+  if (arg.HasValue()) {
+    return true;
+  }
+
+  return false;
+}
+
 }  // namespace feedback
 
 #endif  // SRC_DEVELOPER_FEEDBACK_TESTING_GMATCHERS_H_
