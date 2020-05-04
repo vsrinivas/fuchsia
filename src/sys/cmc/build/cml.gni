@@ -9,39 +9,30 @@ import("//src/sys/cmc/build/cmc.gni")
 #
 # Parameters
 #
-#   data (required)
+#   manifest (required)
 #     [file] The path to the cml file that is to be compiled.
 #
 #   deps (optional)
-#   public_deps (optional)
 #   testonly (optional)
 #   visibility (optional)
-#     Standard GN meaning.
-#
-# Example of usage:
-#
-#   cm(format) {
-#     data = rebase_path(meta.path)
-#   }
 template("cm") {
   cmc(target_name) {
     forward_variables_from(invoker,
                            [
                              "deps",
-                             "public_deps",
                              "testonly",
                              "visibility",
                            ])
 
-    compiled_output = "$target_out_dir/$target_name"
-    inputs = [ invoker.data ]
+    compiled_output = "${target_out_dir}/${target_name}"
+    inputs = [ invoker.manifest ]
     outputs = [ compiled_output ]
 
     args = [
       "compile",
       "--output",
       rebase_path(compiled_output, root_build_dir),
-      rebase_path(invoker.data, root_build_dir),
+      rebase_path(invoker.manifest, root_build_dir),
     ]
 
     if (is_debug) {

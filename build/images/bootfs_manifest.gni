@@ -168,7 +168,7 @@ template("bootfs_manifest") {
 
     compile_label = "compile_boot_" + get_path_info(dest, "file")
     cm(compile_label) {
-      data = m.path
+      manifest = m.path
     }
     manifest_deps += [ ":$compile_label" ]
 

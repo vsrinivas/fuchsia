@@ -13,7 +13,7 @@ import("//src/sys/cmc/build/cmc.gni")
 #
 # Parameters
 #
-#   data (required)
+#   manifest (required)
 #     [file] The path to the cmx file that is to be validated
 #
 #   deps (optional)
@@ -31,7 +31,7 @@ template("cmx_validate") {
 
     stamp_file = "$target_gen_dir/$target_name.verified"
 
-    inputs = [ invoker.data ]
+    inputs = [ invoker.manifest ]
 
     outputs = [ stamp_file ]
 
@@ -39,7 +39,7 @@ template("cmx_validate") {
       "--stamp",
       rebase_path(stamp_file, root_build_dir),
       "validate",
-      rebase_path(invoker.data, root_build_dir),
+      rebase_path(invoker.manifest, root_build_dir),
     ]
   }
 
@@ -50,7 +50,7 @@ template("cmx_validate") {
                              "testonly",
                              "visibility",
                            ])
-    cmx = invoker.data
+    cmx = invoker.manifest
   }
 }
 
@@ -110,7 +110,7 @@ template("cmx_merge") {
 #
 # Parameters
 #
-#   data (required)
+#   manifest (required)
 #     [file] The path to the cmx file that is to be formatted
 #
 #   deps (optional)
@@ -127,14 +127,14 @@ template("cmx_format") {
                            ])
 
     formatted_output = "$target_out_dir/$target_name"
-    inputs = [ invoker.data ]
+    inputs = [ invoker.manifest ]
     outputs = [ formatted_output ]
 
     args = [
       "format",
       "--output",
       rebase_path(formatted_output, root_build_dir),
-      rebase_path(invoker.data, root_build_dir),
+      rebase_path(invoker.manifest, root_build_dir),
     ]
 
     if (is_debug) {
@@ -147,13 +147,13 @@ template("cmx_format") {
 #
 # Parameters
 #
-#   data (required)
+#   manifest (required)
 #     [file] The cmx file
 template("cmx_package") {
   cmx_validate("${target_name}_validate") {
     forward_variables_from(invoker,
                            [
-                             "data",
+                             "manifest",
                              "deps",
                              "testonly",
                            ])
@@ -182,7 +182,7 @@ template("cmx_package") {
   cmx_merge("${target_name}_merge") {
     sources = [
       cmx_patches,
-      invoker.data,
+      invoker.manifest,
     ]
     if (needs_debugdata) {
       sources += [ "//build/config/sanitizers/debugdata.cmx" ]
@@ -200,7 +200,7 @@ template("cmx_package") {
   merged = merged[0]
 
   cmx_format(target_name) {
-    data = merged
+    manifest = merged
     forward_variables_from(invoker,
                            [
                              "deps",

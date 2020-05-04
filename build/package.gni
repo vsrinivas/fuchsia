@@ -282,40 +282,35 @@ template("package") {
 
       if (get_path_info(meta.dest, "extension") == "cmx") {
         cmx_package(manifest_target) {
-          data = meta.path
+          manifest = meta.path
           forward_variables_from(pkg,
                                  [
                                    "deps",
                                    "testonly",
                                  ])
         }
-
-        manifest_output = []
-        manifest_output = get_target_outputs(":$manifest_target")
-        meta.path = manifest_output[0]
-        pkg.deps += [ ":$manifest_target" ]
 
         component_index_target = "${manifest_target}_component_index"
         add_to_component_index(component_index_target) {
           package_name = pkg.package_name
-          manifest_path = "meta/${meta.dest}"
+          manifest = "meta/${meta.dest}"
         }
         pkg.deps += [ ":$component_index_target" ]
       } else if (get_path_info(meta.path, "extension") == "cml") {
         cm(manifest_target) {
-          data = meta.path
+          manifest = meta.path
           forward_variables_from(pkg,
                                  [
                                    "deps",
                                    "testonly",
                                  ])
         }
-
-        manifest_output = []
-        manifest_output = get_target_outputs(":$manifest_target")
-        meta.path = manifest_output[0]
-        pkg.deps += [ ":$manifest_target" ]
       }
+
+      manifest_output = []
+      manifest_output = get_target_outputs(":$manifest_target")
+      meta.path = manifest_output[0]
+      pkg.deps += [ ":$manifest_target" ]
       formatted_manifest += [ meta ]
     }
 

@@ -37,14 +37,16 @@ template("generate_component_index") {
 # Parameters
 #
 #   package_name (required)
-#   manifest_path (required)
+#   manifest (required)
 template("add_to_component_index") {
   assert(defined(invoker.package_name), "Missing package_name")
-  assert(defined(invoker.manifest_path), "Missing manifest path")
+  assert(defined(invoker.manifest), "Missing manifest")
 
   group(target_name) {
     metadata = {
-      component_index = [ "fuchsia-pkg://fuchsia.com/${invoker.package_name}#${invoker.manifest_path}" ]
+      component_index = [
+        "fuchsia-pkg://fuchsia.com/${invoker.package_name}#${invoker.manifest}",
+      ]
     }
   }
 }
