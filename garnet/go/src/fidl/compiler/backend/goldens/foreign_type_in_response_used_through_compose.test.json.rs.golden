@@ -85,7 +85,7 @@ impl TopProxy {
         self.client.into_channel().map_err(|client| Self { client })
     }
 
-    /// Get a Stream of events from the remote end of the Top interface
+    /// Get a Stream of events from the remote end of the Top protocol
     pub fn take_event_stream(&self) -> TopEventStream {
         TopEventStream { event_receiver: self.client.take_event_receiver() }
     }

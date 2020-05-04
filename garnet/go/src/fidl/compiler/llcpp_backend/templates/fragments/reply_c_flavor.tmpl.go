@@ -10,7 +10,7 @@ Reply({{ template "Params" .Response }})
 {{- end }}
 
 {{- define "ReplyCFlavorMethodDefinition" }}
-void {{ .LLProps.InterfaceName }}::Interface::{{ .Name }}CompleterBase::{{ template "ReplyCFlavorMethodSignature" . }} {
+void {{ .LLProps.ProtocolName }}::Interface::{{ .Name }}CompleterBase::{{ template "ReplyCFlavorMethodSignature" . }} {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<{{ .Name }}Response, ::fidl::MessageDirection::kSending>();
 
   {{- if .LLProps.ClientContext.StackAllocResponse }}
@@ -48,7 +48,7 @@ ReplySuccess({{ template "Params" .Result.ValueMembers }})
 {{- end }}
 
 {{- define "ReplyCFlavorResultSuccessMethodDefinition" }}
-void {{ .LLProps.InterfaceName }}::Interface::{{ .Name }}CompleterBase::{{ template "ReplyCFlavorResultSuccessMethodSignature" . }} {
+void {{ .LLProps.ProtocolName }}::Interface::{{ .Name }}CompleterBase::{{ template "ReplyCFlavorResultSuccessMethodSignature" . }} {
   ::fidl::aligned<{{ .Result.ValueStructDecl }}> response;
   {{- range .Result.ValueMembers }}
   response.value.{{ .Name }} = std::move({{ .Name }});
@@ -63,7 +63,7 @@ ReplyError({{ .Result.ErrorDecl }} error)
 {{- end }}
 
 {{- define "ReplyCFlavorResultErrorMethodDefinition" }}
-void {{ .LLProps.InterfaceName }}::Interface::{{ .Name }}CompleterBase::{{ template "ReplyCFlavorResultErrorMethodSignature" . }} {
+void {{ .LLProps.ProtocolName }}::Interface::{{ .Name }}CompleterBase::{{ template "ReplyCFlavorResultErrorMethodSignature" . }} {
   Reply({{ .Result.ResultDecl }}::WithErr(::fidl::unowned_ptr(&error)));
 }
 {{- end }}

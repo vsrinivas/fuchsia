@@ -86,7 +86,7 @@ impl ParentProxy {
         self.client.into_channel().map_err(|client| Self { client })
     }
 
-    /// Get a Stream of events from the remote end of the Parent interface
+    /// Get a Stream of events from the remote end of the Parent protocol
     pub fn take_event_stream(&self) -> ParentEventStream {
         ParentEventStream { event_receiver: self.client.take_event_receiver() }
     }
@@ -446,7 +446,7 @@ impl ChildProxy {
         self.client.into_channel().map_err(|client| Self { client })
     }
 
-    /// Get a Stream of events from the remote end of the Child interface
+    /// Get a Stream of events from the remote end of the Child protocol
     pub fn take_event_stream(&self) -> ChildEventStream {
         ChildEventStream { event_receiver: self.client.take_event_receiver() }
     }

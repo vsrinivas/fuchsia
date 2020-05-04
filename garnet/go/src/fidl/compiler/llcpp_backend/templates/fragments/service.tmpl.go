@@ -19,7 +19,7 @@ class {{ .Name }} final {
  public:
   static constexpr char Name[] = "{{ .ServiceName }}";
 
-  // Client interface for connecting to member protocols of a service instance.
+  // Client protocol for connecting to member protocols of a service instance.
   class ServiceClient final {
     ServiceClient() = delete;
    public:
@@ -40,7 +40,7 @@ class {{ .Name }} final {
     // Since the call to |Open| is asynchronous, an error sent by the remote end will not
     // result in a failure of this method. Any errors sent by the remote will appear on
     // the |ClientChannel| returned from this method.
-    ::fidl::result<::fidl::ClientChannel<{{ .InterfaceType }}>> connect_{{ .Name }}() {
+    ::fidl::result<::fidl::ClientChannel<{{ .ProtocolType }}>> connect_{{ .Name }}() {
       ::zx::channel local, remote;
       zx_status_t result = ::zx::channel::create(0, &local, &remote);
       if (result != ZX_OK) {
@@ -51,7 +51,7 @@ class {{ .Name }} final {
       if (result != ZX_OK) {
         return ::fit::error(result);
       }
-      return ::fit::ok(::fidl::ClientChannel<{{ .InterfaceType}}>(std::move(local)));
+      return ::fit::ok(::fidl::ClientChannel<{{ .ProtocolType}}>(std::move(local)));
     }
     {{- end }}
 

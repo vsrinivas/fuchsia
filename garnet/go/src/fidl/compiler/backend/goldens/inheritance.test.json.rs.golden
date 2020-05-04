@@ -84,7 +84,7 @@ impl Super_Proxy {
         self.client.into_channel().map_err(|client| Self { client })
     }
 
-    /// Get a Stream of events from the remote end of the Super_ interface
+    /// Get a Stream of events from the remote end of the Super_ protocol
     pub fn take_event_stream(&self) -> Super_EventStream {
         Super_EventStream { event_receiver: self.client.take_event_receiver() }
     }
@@ -530,7 +530,7 @@ impl SubProxy {
         self.client.into_channel().map_err(|client| Self { client })
     }
 
-    /// Get a Stream of events from the remote end of the Sub interface
+    /// Get a Stream of events from the remote end of the Sub protocol
     pub fn take_event_stream(&self) -> SubEventStream {
         SubEventStream { event_receiver: self.client.take_event_receiver() }
     }

@@ -125,7 +125,7 @@ type TableMember struct {
 	Ordinal int
 }
 
-type Interface struct {
+type Protocol struct {
 	types.Attributes
 	RequestDerives derives
 	EventDerives   derives
@@ -162,10 +162,10 @@ type Service struct {
 
 type ServiceMember struct {
 	types.Attributes
-	InterfaceType string
-	Name          string
-	CamelName     string
-	SnakeName     string
+	ProtocolType string
+	Name         string
+	CamelName    string
+	SnakeName    string
 }
 
 type Root struct {
@@ -177,14 +177,14 @@ type Root struct {
 	Unions       []Union
 	Results      []Result
 	Tables       []Table
-	Interfaces   []Interface
+	Protocols    []Protocol
 	Services     []Service
 }
 
-func (r *Root) findInterface(eci EncodedCompoundIdentifier) *Interface {
-	for i := range r.Interfaces {
-		if r.Interfaces[i].ECI == eci {
-			return &r.Interfaces[i]
+func (r *Root) findProtocol(eci EncodedCompoundIdentifier) *Protocol {
+	for i := range r.Protocols {
+		if r.Protocols[i].ECI == eci {
+			return &r.Protocols[i]
 		}
 	}
 	return nil
@@ -313,7 +313,7 @@ var reservedSuffixes = []string{
 	"Impl",
 	"Marker",
 	"Proxy",
-	"ProxyInterface",
+	"ProxyProtocol",
 	"ControlHandle",
 	"Responder",
 	"Server",
@@ -635,13 +635,13 @@ func (c *compiler) compileType(val types.Type, borrowed bool) Type {
 				// TODO(fxb/42304): Replace with "&mut %s".
 				r = t
 			}
-		case types.InterfaceDeclType:
+		case types.ProtocolDeclType:
 			r = fmt.Sprintf("fidl::endpoints::ClientEnd<%sMarker>", t)
 			if val.Nullable {
 				r = fmt.Sprintf("Option<%s>", r)
 			}
 		default:
-			log.Panic("Unknown declaration type in interface: ", declType)
+			log.Panic("Unknown declaration type in protocol: ", declType)
 		}
 	default:
 		log.Panic("Unknown type kind: ", val.Kind)
@@ -711,8 +711,8 @@ func (c *compiler) compileParameterArray(payload types.EncodedCompoundIdentifier
 	return parameters
 }
 
-func (c *compiler) compileInterface(val types.Interface) Interface {
-	r := Interface{
+func (c *compiler) compileProtocol(val types.Protocol) Protocol {
+	r := Protocol{
 		Attributes:  val.Attributes,
 		ECI:         val.Name,
 		Name:        c.compileCamelCompoundIdentifier(val.Name),
@@ -753,11 +753,11 @@ func (c *compiler) compileService(val types.Service) Service {
 
 	for _, v := range val.Members {
 		m := ServiceMember{
-			Attributes:    v.Attributes,
-			Name:          string(v.Name),
-			CamelName:     compileCamelIdentifier(v.Name),
-			SnakeName:     compileSnakeIdentifier(v.Name),
-			InterfaceType: c.compileCamelCompoundIdentifier(v.Type.Identifier),
+			Attributes:   v.Attributes,
+			Name:         string(v.Name),
+			CamelName:    compileCamelIdentifier(v.Name),
+			SnakeName:    compileSnakeIdentifier(v.Name),
+			ProtocolType: c.compileCamelCompoundIdentifier(v.Type.Identifier),
 		}
 		r.Members = append(r.Members, m)
 	}
@@ -973,7 +973,7 @@ func (c *compiler) fillDerives(ir *Root) {
 	}
 
 	// Bits and enums always derive all traits
-	for _, v := range ir.Interfaces {
+	for _, v := range ir.Protocols {
 		dc.fillDerivesForECI(v.ECI)
 	}
 	for _, v := range ir.Structs {
@@ -1035,8 +1035,8 @@ typeSwitch:
 		// Enums and bits are always simple, non-float primitives which
 		// implement all derivable traits.
 		derivesOut = derivesAll
-	case types.InterfaceDeclType:
-		// Derives output for interfaces is only used when talking about ClientEnds,
+	case types.ProtocolDeclType:
+		// Derives output for protocols is only used when talking about ClientEnds,
 		// which are neither Copy nor Clone. Note: this does *not* refer to the
 		// derives used in either the `Request` or `Event` enums, which are the
 		// values filled in by this function.
@@ -1047,17 +1047,17 @@ typeSwitch:
 			break typeSwitch
 		}
 
-		iface := dc.root.findInterface(eci)
-		if iface == nil {
-			log.Panic("interface not found: ", eci)
+		protocol := dc.root.findProtocol(eci)
+		if protocol == nil {
+			log.Panic("protocol not found: ", eci)
 		}
 		// Requests and events are at *most* ever Debug.
-		// FIXME(cramertj): all of the interface logic here can
+		// FIXME(cramertj): all of the protocol logic here can
 		// be removed once all types (large arrays) are Debug,
-		// since that's all we care about for interfaces
+		// since that's all we care about for protocols
 		requestDerives := derivesDebug
 		eventDerives := derivesDebug
-		for _, method := range iface.Methods {
+		for _, method := range protocol.Methods {
 			if method.HasRequest {
 				// Request enum object-- consider all request data
 				for _, requestParam := range method.Request {
@@ -1072,8 +1072,8 @@ typeSwitch:
 				}
 			}
 		}
-		iface.RequestDerives = requestDerives
-		iface.EventDerives = eventDerives
+		protocol.RequestDerives = requestDerives
+		protocol.EventDerives = eventDerives
 	case types.StructDeclType:
 		st := dc.root.findStruct(eci)
 		if st == nil {
@@ -1291,8 +1291,8 @@ func Compile(r types.Root) Root {
 		root.Tables = append(root.Tables, c.compileTable(v))
 	}
 
-	for _, v := range r.Interfaces {
-		root.Interfaces = append(root.Interfaces, c.compileInterface(v))
+	for _, v := range r.Protocols {
+		root.Protocols = append(root.Protocols, c.compileProtocol(v))
 	}
 
 	c.fillDerives(&root)

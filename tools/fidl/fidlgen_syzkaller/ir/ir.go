@@ -58,23 +58,23 @@ type Union struct {
 	VarLen  bool
 }
 
-// Interface represents a FIDL interface in terms of syzkaller structures.
-type Interface struct {
+// Protocol represents a FIDL protocol in terms of syzkaller structures.
+type Protocol struct {
 	Name string
 
-	// ServiceNameString is the string service name for this FIDL interface.
+	// ServiceNameString is the string service name for this FIDL protocol.
 	ServiceNameString string
 
-	// Methods is a list of methods for this FIDL interface.
+	// Methods is a list of methods for this FIDL protocol.
 	Methods []Method
 }
 
-// Method represents a method of a FIDL interface in terms of syzkaller syscalls.
+// Method represents a method of a FIDL protocol in terms of syzkaller syscalls.
 type Method struct {
 	// Ordinal is the ordinal for this method.
 	Ordinal uint64
 
-	// Name is the name of the Method, including the interface name as a prefix.
+	// Name is the name of the Method, including the protocol name as a prefix.
 	Name string
 
 	// Request represents a struct containing the request parameters.
@@ -104,8 +104,8 @@ type Root struct {
 	// C header file path to be included in syscall description.
 	HeaderPath string
 
-	// Interfaces represent the list of FIDL interfaces represented as a collection of syskaller syscall descriptions.
-	Interfaces []Interface
+	// Protocols represent the list of FIDL protocols represented as a collection of syskaller syscall descriptions.
+	Protocols []Protocol
 
 	// Structs correspond to syzkaller structs.
 	Structs []Struct
@@ -418,7 +418,7 @@ func (c *compiler) compileStructMember(p types.StructMember) (StructMember, *Str
 				Type: Type(fmt.Sprintf("flags[%s, %s]", c.compileCompoundIdentifier(p.Type.Identifier, ""), c.compilePrimitiveSubtype(c.bits[p.Type.Identifier].Type.PrimitiveSubtype))),
 				Name: c.compileIdentifier(p.Name, ""),
 			}
-		case types.InterfaceDeclType:
+		case types.ProtocolDeclType:
 			i = StructMember{
 				Type: Type("flags[fidl_handle_presence, int32]"),
 				Name: c.compileIdentifier(p.Name, ""),
@@ -577,8 +577,8 @@ func (c *compiler) compileParameters(name string, ordinal uint64, params []types
 		}
 }
 
-func (c *compiler) compileMethod(ifaceName types.EncodedCompoundIdentifier, val types.Method) Method {
-	methodName := c.compileCompoundIdentifier(ifaceName, string(val.Name))
+func (c *compiler) compileMethod(protocolName types.EncodedCompoundIdentifier, val types.Method) Method {
+	methodName := c.compileCompoundIdentifier(protocolName, string(val.Name))
 	r := Method{
 		Name:    methodName,
 		Ordinal: val.Ordinal,
@@ -604,8 +604,8 @@ func (c *compiler) compileMethod(ifaceName types.EncodedCompoundIdentifier, val 
 	return r
 }
 
-func (c *compiler) compileInterface(val types.Interface) Interface {
-	r := Interface{
+func (c *compiler) compileProtocol(val types.Protocol) Protocol {
+	r := Protocol{
 		Name:              c.compileCompoundIdentifier(val.Name, ""),
 		ServiceNameString: strings.Trim(val.GetServiceName(), "\""),
 	}
@@ -702,12 +702,12 @@ func Compile(fidlData types.Root) Root {
 		})
 	}
 
-	for _, v := range fidlData.Interfaces {
-		root.Interfaces = append(root.Interfaces, c.compileInterface(v))
+	for _, v := range fidlData.Protocols {
+		root.Protocols = append(root.Protocols, c.compileProtocol(v))
 	}
 
 	exists := make(map[string]bool)
-	for _, i := range root.Interfaces {
+	for _, i := range root.Protocols {
 		for _, m := range i.Methods {
 			for _, s := range m.Structs {
 				if _, ok := exists[s.Name]; !ok {

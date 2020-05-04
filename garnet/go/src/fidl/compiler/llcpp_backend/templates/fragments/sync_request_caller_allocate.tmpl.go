@@ -23,7 +23,7 @@ const SyncRequestCallerAllocate = `
 
 {{- define "SyncRequestCallerAllocateMethodDefinition" }}
 {{ if .HasResponse -}} template <> {{- end }}
-{{ .LLProps.InterfaceName }}::UnownedResultOf::{{ .Name }}_Impl {{- if .HasResponse -}} <{{ .LLProps.InterfaceName }}::{{ .Name }}Response> {{- end }}::{{ .Name }}_Impl(
+{{ .LLProps.ProtocolName }}::UnownedResultOf::{{ .Name }}_Impl {{- if .HasResponse -}} <{{ .LLProps.ProtocolName }}::{{ .Name }}Response> {{- end }}::{{ .Name }}_Impl(
   {{- template "StaticCallSyncRequestCallerAllocateMethodArguments" . }}) {
   {{- if not .Request }}
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof({{ .Name }}Request)] = {};
@@ -63,18 +63,18 @@ const SyncRequestCallerAllocate = `
 
   {{- if .HasResponse }}
   Super::SetResult(
-      {{ .LLProps.InterfaceName }}::InPlace::{{ .Name }}(std::move(_client_end)
+      {{ .LLProps.ProtocolName }}::InPlace::{{ .Name }}(std::move(_client_end)
       {{- if .Request }}, std::move(_decoded_request){{ end -}}
       , std::move(_response_buffer)));
   {{- else }}
   Super::operator=(
-      {{ .LLProps.InterfaceName }}::InPlace::{{ .Name }}(std::move(_client_end)
+      {{ .LLProps.ProtocolName }}::InPlace::{{ .Name }}(std::move(_client_end)
       {{- if .Request }}, std::move(_decoded_request){{ end -}}
   ));
   {{- end }}
 }
 
-{{ .LLProps.InterfaceName }}::UnownedResultOf::{{ .Name }} {{ .LLProps.InterfaceName }}::SyncClient::{{ .Name }}(
+{{ .LLProps.ProtocolName }}::UnownedResultOf::{{ .Name }} {{ .LLProps.ProtocolName }}::SyncClient::{{ .Name }}(
   {{- template "SyncRequestCallerAllocateMethodArguments" . }}) {
   return UnownedResultOf::{{ .Name }}(::zx::unowned_channel(this->channel_)
     {{- if .Request -}}
@@ -88,7 +88,7 @@ const SyncRequestCallerAllocate = `
 {{- end }}
 
 {{- define "StaticCallSyncRequestCallerAllocateMethodDefinition" }}
-{{ .LLProps.InterfaceName }}::UnownedResultOf::{{ .Name }} {{ .LLProps.InterfaceName }}::Call::{{ .Name }}(
+{{ .LLProps.ProtocolName }}::UnownedResultOf::{{ .Name }} {{ .LLProps.ProtocolName }}::Call::{{ .Name }}(
   {{- template "StaticCallSyncRequestCallerAllocateMethodArguments" . }}) {
   return UnownedResultOf::{{ .Name }}(std::move(_client_end)
     {{- if .Request -}}

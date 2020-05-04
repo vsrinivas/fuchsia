@@ -100,14 +100,14 @@ func (a Amendments) ApplyExclusions(root types.Root) types.Root {
 	}
 	root.Enums = newEnums
 
-	newInterfaces := root.Interfaces[:0]
-	for _, element := range root.Interfaces {
+	newProtocols := root.Protocols[:0]
+	for _, element := range root.Protocols {
 		_, found := excludeMap[element.Name]
 		if !found {
-			newInterfaces = append(newInterfaces, element)
+			newProtocols = append(newProtocols, element)
 		}
 	}
-	root.Interfaces = newInterfaces
+	root.Protocols = newProtocols
 
 	newStructs := root.Structs[:0]
 	for _, element := range root.Structs {
@@ -151,16 +151,16 @@ func (a Amendments) ApplyExclusions(root types.Root) types.Root {
 // Root struct passed as the initial 'dot' for the template.
 type Root struct {
 	types.Root
-	OutputBase       string
-	templates        *template.Template
-	options          Options
-	constsByName     map[types.EncodedCompoundIdentifier]*types.Const
-	enumsByName      map[types.EncodedCompoundIdentifier]*types.Enum
-	interfacesByName map[types.EncodedCompoundIdentifier]*types.Interface
-	structsByName    map[types.EncodedCompoundIdentifier]*types.Struct
-	tablesByName     map[types.EncodedCompoundIdentifier]*types.Table
-	unionsByName     map[types.EncodedCompoundIdentifier]*types.Union
-	librariesByName  map[types.EncodedLibraryIdentifier]*types.Library
+	OutputBase      string
+	templates       *template.Template
+	options         Options
+	constsByName    map[types.EncodedCompoundIdentifier]*types.Const
+	enumsByName     map[types.EncodedCompoundIdentifier]*types.Enum
+	protocolsByName map[types.EncodedCompoundIdentifier]*types.Protocol
+	structsByName   map[types.EncodedCompoundIdentifier]*types.Struct
+	tablesByName    map[types.EncodedCompoundIdentifier]*types.Table
+	unionsByName    map[types.EncodedCompoundIdentifier]*types.Union
+	librariesByName map[types.EncodedLibraryIdentifier]*types.Library
 }
 
 func NewRoot(fidl types.Root, outputBase string, templates *template.Template, options Options) *Root {
@@ -174,9 +174,9 @@ func NewRoot(fidl types.Root, outputBase string, templates *template.Template, o
 		enumsByName[member.Name] = &fidl.Enums[index]
 	}
 
-	interfacesByName := make(map[types.EncodedCompoundIdentifier]*types.Interface)
-	for index, member := range fidl.Interfaces {
-		interfacesByName[member.Name] = &fidl.Interfaces[index]
+	protocolsByName := make(map[types.EncodedCompoundIdentifier]*types.Protocol)
+	for index, member := range fidl.Protocols {
+		protocolsByName[member.Name] = &fidl.Protocols[index]
 	}
 
 	// filter out all anonymous structs
@@ -216,7 +216,7 @@ func NewRoot(fidl types.Root, outputBase string, templates *template.Template, o
 		options,
 		constsByName,
 		enumsByName,
-		interfacesByName,
+		protocolsByName,
 		structsByName,
 		tablesByName,
 		unionsByName,
@@ -260,9 +260,9 @@ func (root Root) GetEnum(name types.EncodedCompoundIdentifier) *types.Enum {
 	return root.enumsByName[name]
 }
 
-// Gets a interface by name.
-func (root Root) GetInterface(name types.EncodedCompoundIdentifier) *types.Interface {
-	return root.interfacesByName[name]
+// Gets a protocol by name.
+func (root Root) GetProtocol(name types.EncodedCompoundIdentifier) *types.Protocol {
+	return root.protocolsByName[name]
 }
 
 // Gets a struct by name.
@@ -351,8 +351,8 @@ func GenerateFidl(templatePath string, fidl types.Root, outputBase *string, opti
 			err = root.templates.ExecuteTemplate(buffer, template, data)
 			return buffer.String(), err
 		},
-		// Determines if an interface is discoverable.
-		"isDiscoverable": func(i types.Interface) bool {
+		// Determines if a protocol is discoverable.
+		"isDiscoverable": func(i types.Protocol) bool {
 			_, found := i.LookupAttribute("Discoverable")
 			return found
 		},

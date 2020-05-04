@@ -24,7 +24,7 @@ namespace {{ . }} {
 {{- range .Decls }}
 {{- if Eq .Kind Kinds.Bits }}{{ template "BitsForwardDeclaration" . }}{{- end }}
 {{- if Eq .Kind Kinds.Enum }}{{ template "EnumForwardDeclaration" . }}{{- end }}
-{{- if Eq .Kind Kinds.Interface }}{{ template "DispatchInterfaceForwardDeclaration" . }}{{- end }}
+{{- if Eq .Kind Kinds.Protocol }}{{ template "DispatchProtocolForwardDeclaration" . }}{{- end }}
 {{- if Eq .Kind Kinds.Service }}{{ template "DispatchServiceForwardDeclaration" . }}{{- end }}
 {{- if Eq .Kind Kinds.Struct }}{{ template "StructForwardDeclaration" . }}{{- end }}
 {{- if Eq .Kind Kinds.Table }}{{ template "TableForwardDeclaration" . }}{{- end }}
@@ -33,7 +33,7 @@ namespace {{ . }} {
 
 {{- range .Decls }}
 {{- if Eq .Kind Kinds.Const }}{{ template "ConstDeclaration" . }}{{- end }}
-{{- if Eq .Kind Kinds.Interface }}{{ template "DispatchProtocolDeclaration" . }}{{- end }}
+{{- if Eq .Kind Kinds.Protocol }}{{ template "DispatchProtocolDeclaration" . }}{{- end }}
 {{- if Eq .Kind Kinds.Service }}{{ template "DispatchServiceDeclaration" . }}{{- end }}
 {{- if Eq .Kind Kinds.Struct }}{{ template "StructDeclaration" . }}{{- end }}
 {{- if Eq .Kind Kinds.Table }}{{ template "TableDeclaration" . }}{{- end }}
@@ -49,7 +49,7 @@ namespace fidl {
 {{- range .Decls }}
 {{- if Eq .Kind Kinds.Bits }}{{ template "BitsTraits" . }}{{- end }}
 {{- if Eq .Kind Kinds.Enum }}{{ template "EnumTraits" . }}{{- end }}
-{{- if Eq .Kind Kinds.Interface }}{{ template "DispatchProtocolTraits" . }}{{- end }}
+{{- if Eq .Kind Kinds.Protocol }}{{ template "DispatchProtocolTraits" . }}{{- end }}
 {{- if Eq .Kind Kinds.Struct }}{{ template "StructTraits" . }}{{- end }}
 {{- if Eq .Kind Kinds.Table }}{{ template "TableTraits" . }}{{- end }}
 {{- if Eq .Kind Kinds.Union }}{{ template "UnionTraits" . }}{{- end }}
@@ -58,9 +58,9 @@ namespace fidl {
 }  // namespace fidl
 {{ end }}
 
-{{- define "DispatchInterfaceForwardDeclaration" -}}
+{{- define "DispatchProtocolForwardDeclaration" -}}
 {{- range $transport, $_ := .Transports }}
-{{- if eq $transport "Channel" -}}{{ template "InterfaceForwardDeclaration" $ }}{{- end }}
+{{- if eq $transport "Channel" -}}{{ template "ProtocolForwardDeclaration" $ }}{{- end }}
 {{- end }}
 {{- end -}}
 

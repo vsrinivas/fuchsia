@@ -64,7 +64,7 @@ func NewGenerator() *Generator {
 		fragments.Const,
 		fragments.Enum,
 		fragments.Helpers,
-		fragments.Interface,
+		fragments.Protocol,
 		fragments.ReplyCFlavor,
 		fragments.ReplyCallerAllocate,
 		fragments.ReplyInPlace,

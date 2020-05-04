@@ -6,7 +6,7 @@ package fragments
 
 const Helpers = `
 {{- define "SetTransactionHeaderForResponse" }}
-  {{ .LLProps.InterfaceName }}::SetTransactionHeaderFor::{{ .Name }}Response(
+  {{ .LLProps.ProtocolName }}::SetTransactionHeaderFor::{{ .Name }}Response(
       ::fidl::DecodedMessage<{{ .Name }}Response>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               {{ .Name }}Response::PrimarySize,
@@ -14,26 +14,26 @@ const Helpers = `
 {{- end }}
 
 {{- define "SetTransactionHeaderForRequestMethodSignature" }}
-{{- $interface_name := .LLProps.InterfaceName -}}
-{{- .Name }}Request(const ::fidl::DecodedMessage<{{ $interface_name}}::{{ .Name }}Request>& _msg)
+{{- $protocol_name := .LLProps.ProtocolName -}}
+{{- .Name }}Request(const ::fidl::DecodedMessage<{{ $protocol_name}}::{{ .Name }}Request>& _msg)
 {{- end }}
 
 {{- define "SetTransactionHeaderForRequestMethodDefinition" -}}
-{{- $interface_name := .LLProps.InterfaceName -}}
-void {{ $interface_name }}::SetTransactionHeaderFor::{{ template "SetTransactionHeaderForRequestMethodSignature" . }} {
+{{- $protocol_name := .LLProps.ProtocolName -}}
+void {{ $protocol_name }}::SetTransactionHeaderFor::{{ template "SetTransactionHeaderForRequestMethodSignature" . }} {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, {{ .Ordinals.Write.Name }});
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 {{- end }}
 
 {{- define "SetTransactionHeaderForResponseMethodSignature" }}
-{{- $interface_name := .LLProps.InterfaceName -}}
-{{- .Name }}Response(const ::fidl::DecodedMessage<{{ $interface_name}}::{{ .Name }}Response>& _msg)
+{{- $protocol_name := .LLProps.ProtocolName -}}
+{{- .Name }}Response(const ::fidl::DecodedMessage<{{ $protocol_name}}::{{ .Name }}Response>& _msg)
 {{- end }}
 
 {{- define "SetTransactionHeaderForResponseMethodDefinition" -}}
-{{- $interface_name := .LLProps.InterfaceName -}}
-void {{ $interface_name }}::SetTransactionHeaderFor::{{ template "SetTransactionHeaderForResponseMethodSignature" . }} {
+{{- $protocol_name := .LLProps.ProtocolName -}}
+void {{ $protocol_name }}::SetTransactionHeaderFor::{{ template "SetTransactionHeaderForResponseMethodSignature" . }} {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, {{ .Ordinals.Write.Name }});
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }

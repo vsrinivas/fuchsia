@@ -467,7 +467,7 @@ fn get_mock_expect_args(m: &ast::Method) -> Result<String, Error> {
         .join(", "))
 }
 
-/// Checks whether a decl is an protocol, and if it is an protocol, checks that it is a "ddk-interface".
+/// Checks whether a decl is a protocol, and if it is a protocol, checks that it is a "ddk-interface".
 fn filter_interface<'a>(
     decl: &'a ast::Decl,
 ) -> Option<(&'a Ident, &'a Vec<ast::Method>, &'a ast::Attrs)> {
@@ -481,7 +481,7 @@ fn filter_interface<'a>(
     None
 }
 
-/// Checks whether a decl is an protocol, and if it is an protocol, checks that it is a "ddk-protocol".
+/// Checks whether a decl is a protocol, and if it is a protocol, checks that it is a "ddk-protocol".
 fn filter_protocol<'a>(
     decl: &'a ast::Decl,
 ) -> Option<(&'a Ident, &'a Vec<ast::Method>, &'a ast::Attrs)> {

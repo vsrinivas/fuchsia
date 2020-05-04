@@ -27,7 +27,7 @@ const SyncRequestManaged = `
 
 {{- define "SyncRequestManagedMethodDefinition" }}
 {{ if .HasResponse -}} template <> {{- end }}
-{{ .LLProps.InterfaceName }}::ResultOf::{{ .Name }}_Impl {{- if .HasResponse -}} <{{ .LLProps.InterfaceName }}::{{ .Name }}Response> {{- end }}::{{ .Name }}_Impl(
+{{ .LLProps.ProtocolName }}::ResultOf::{{ .Name }}_Impl {{- if .HasResponse -}} <{{ .LLProps.ProtocolName }}::{{ .Name }}Response> {{- end }}::{{ .Name }}_Impl(
   {{- template "StaticCallSyncRequestManagedMethodArguments" . }}) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<{{ .Name }}Request, ::fidl::MessageDirection::kSending>();
 
@@ -64,18 +64,18 @@ const SyncRequestManaged = `
 
   {{- if .HasResponse }}
   Super::SetResult(
-      {{ .LLProps.InterfaceName }}::InPlace::{{ .Name }}(std::move(_client_end)
+      {{ .LLProps.ProtocolName }}::InPlace::{{ .Name }}(std::move(_client_end)
       {{- if .Request }}, std::move(_decoded_request){{ end -}}
       , Super::response_buffer()));
   {{- else }}
   Super::operator=(
-      {{ .LLProps.InterfaceName }}::InPlace::{{ .Name }}(std::move(_client_end)
+      {{ .LLProps.ProtocolName }}::InPlace::{{ .Name }}(std::move(_client_end)
       {{- if .Request }}, std::move(_decoded_request){{ end -}}
   ));
   {{- end }}
 }
 
-{{ .LLProps.InterfaceName }}::ResultOf::{{ .Name }} {{ .LLProps.InterfaceName }}::SyncClient::{{ .Name }}(
+{{ .LLProps.ProtocolName }}::ResultOf::{{ .Name }} {{ .LLProps.ProtocolName }}::SyncClient::{{ .Name }}(
   {{- template "SyncRequestManagedMethodArguments" . }}) {
     return ResultOf::{{ .Name }}(::zx::unowned_channel(this->channel_)
     {{- if .Request }}, {{ end }}
@@ -85,7 +85,7 @@ const SyncRequestManaged = `
 {{- end }}
 
 {{- define "StaticCallSyncRequestManagedMethodDefinition" }}
-{{ .LLProps.InterfaceName }}::ResultOf::{{ .Name }} {{ .LLProps.InterfaceName }}::Call::{{ .Name }}(
+{{ .LLProps.ProtocolName }}::ResultOf::{{ .Name }} {{ .LLProps.ProtocolName }}::Call::{{ .Name }}(
   {{- template "StaticCallSyncRequestManagedMethodArguments" . }}) {
   return ResultOf::{{ .Name }}(std::move(_client_end)
     {{- if .Request }}, {{ end }}

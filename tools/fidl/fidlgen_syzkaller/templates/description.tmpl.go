@@ -35,8 +35,8 @@ include <{{ .HeaderPath }}>
 {{ template "UnionDefinition" . }}
 {{- end }}
 
-{{ range $interface := .Interfaces -}}
-{{ template "InterfaceDefinition" $interface }}
+{{ range $protocol := .Protocols -}}
+{{ template "ProtocolDefinition" $protocol }}
 {{- end -}}
 
 {{- end -}}

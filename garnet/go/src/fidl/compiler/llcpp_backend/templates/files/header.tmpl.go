@@ -47,7 +47,7 @@ namespace {{ . }} {
 {{- range .Decls }}
 {{- if Eq .Kind Kinds.Bits }}{{ template "BitsForwardDeclaration" . }}{{- end }}
 {{- if Eq .Kind Kinds.Enum }}{{ template "EnumForwardDeclaration" . }}{{- end }}
-{{- if Eq .Kind Kinds.Interface }}{{ template "InterfaceForwardDeclaration" . }}{{- end }}
+{{- if Eq .Kind Kinds.Protocol }}{{ template "ProtocolForwardDeclaration" . }}{{- end }}
 {{- if Eq .Kind Kinds.Service }}{{ template "ServiceForwardDeclaration" . }}{{- end }}
 {{- if Eq .Kind Kinds.Struct }}{{ template "StructForwardDeclaration" . }}{{- end }}
 {{- if Eq .Kind Kinds.Table }}{{ template "TableForwardDeclaration" . }}{{- end }}
@@ -64,7 +64,7 @@ namespace {{ . }} {
 
 {{- range .Decls }}
 {{- if Eq .Kind Kinds.Const }}{{ template "ConstDeclaration" . }}{{- end }}
-{{- if Eq .Kind Kinds.Interface }}{{ template "InterfaceDeclaration" . }}{{- end }}
+{{- if Eq .Kind Kinds.Protocol }}{{ template "ProtocolDeclaration" . }}{{- end }}
 {{- if Eq .Kind Kinds.Service }}{{ template "ServiceDeclaration" . }}{{- end }}
 {{- if Eq .Kind Kinds.Struct }}{{ template "StructDeclaration" . }}{{- end }}
 {{- end }}
@@ -79,7 +79,7 @@ namespace fidl {
 
 {{- range .Decls }}
 {{- if Eq .Kind Kinds.Bits }}{{ template "BitsTraits" . }}{{- end }}
-{{- if Eq .Kind Kinds.Interface }}{{ template "InterfaceTraits" . }}{{- end }}
+{{- if Eq .Kind Kinds.Protocol }}{{ template "ProtocolTraits" . }}{{- end }}
 {{- if Eq .Kind Kinds.Struct }}{{ template "StructTraits" . }}{{- end }}
 {{- if Eq .Kind Kinds.Table }}{{ template "TableTraits" . }}{{- end }}
 {{- if Eq .Kind Kinds.Union }}{{ template "UnionTraits" . }}{{- end }}

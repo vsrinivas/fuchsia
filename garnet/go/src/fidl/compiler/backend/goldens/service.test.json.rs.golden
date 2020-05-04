@@ -83,7 +83,7 @@ impl FirstProtocolProxy {
         self.client.into_channel().map_err(|client| Self { client })
     }
 
-    /// Get a Stream of events from the remote end of the FirstProtocol interface
+    /// Get a Stream of events from the remote end of the FirstProtocol protocol
     pub fn take_event_stream(&self) -> FirstProtocolEventStream {
         FirstProtocolEventStream { event_receiver: self.client.take_event_receiver() }
     }
@@ -423,7 +423,7 @@ impl SecondProtocolProxy {
         self.client.into_channel().map_err(|client| Self { client })
     }
 
-    /// Get a Stream of events from the remote end of the SecondProtocol interface
+    /// Get a Stream of events from the remote end of the SecondProtocol protocol
     pub fn take_event_stream(&self) -> SecondProtocolEventStream {
         SecondProtocolEventStream { event_receiver: self.client.take_event_receiver() }
     }

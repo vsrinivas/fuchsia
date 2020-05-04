@@ -19,7 +19,7 @@ namespace {{ . }} {
 
 {{- range .Decls }}
 {{- if Eq .Kind Kinds.Const }}{{ template "ConstDefinition" . }}{{- end }}
-{{- if Eq .Kind Kinds.Interface }}{{ template "DispatchProtocolDefinition" . }}{{- end }}
+{{- if Eq .Kind Kinds.Protocol }}{{ template "DispatchProtocolDefinition" . }}{{- end }}
 {{- if Eq .Kind Kinds.Struct }}{{ template "StructDefinition" . }}{{- end }}
 {{- if Eq .Kind Kinds.Union }}{{ template "UnionDefinition" . }}{{- end }}
 {{- if Eq .Kind Kinds.Table }}{{ template "TableDefinition" . }}{{- end }}

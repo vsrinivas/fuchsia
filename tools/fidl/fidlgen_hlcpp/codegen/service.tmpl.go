@@ -29,8 +29,8 @@ class {{ .Name }} final {
 
   {{- range .Members }}
   /// Returns a |fidl::MemberConnector| which can be used to connect to the member protocol "{{ .Name }}".
-  ::fidl::MemberConnector<{{ .InterfaceType }}> {{ .MethodName }}() const {
-    return ::fidl::MemberConnector<{{ .InterfaceType }}>(service_.get(), "{{ .Name }}");
+  ::fidl::MemberConnector<{{ .ProtocolType }}> {{ .MethodName }}() const {
+    return ::fidl::MemberConnector<{{ .ProtocolType }}>(service_.get(), "{{ .Name }}");
   }
   {{- end }}
 
@@ -51,7 +51,7 @@ class {{ .Name }}::Handler final {
   /// # Errors
   ///
   /// Returns ZX_ERR_ALREADY_EXISTS if the member was already added.
-  zx_status_t add_{{ .Name }}(::fidl::InterfaceRequestHandler<{{ .InterfaceType }}> handler) {
+  zx_status_t add_{{ .Name }}(::fidl::InterfaceRequestHandler<{{ .ProtocolType }}> handler) {
     return service_->AddMember("{{ .Name }}", std::move(handler));
   }
   {{- end }}

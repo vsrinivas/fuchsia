@@ -32,7 +32,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
     loop_ = new ::async::Loop(&kAsyncLoopConfigAttachToCurrentThread);
   }
 
-  // Must fuzz some interface; first two bytes used to select protocol and
+  // Must fuzz some protocol; first two bytes used to select protocol and
   // method.
   if (size_ < 2) {
     xprintf("Early exit: Input too small: %zu\n", size_);
@@ -40,21 +40,21 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
   }
   size_ -= 2;
 
-  uint8_t iface_selector_ = data_[0];
-  uint8_t iface_selection_ = iface_selector_ % 1;
+  uint8_t protocol_selector_ = data_[0];
+  uint8_t protocol_selection_ = protocol_selector_ % 1;
 
   xprintf("Starting fuzzer with %zu bytes of data\n", size_);
 
-  // Hardcode mutually-exclusive if blocks that selects exactly one interface.
+  // Hardcode mutually-exclusive if blocks that selects exactly one protocol.
   zx_status_t status_;
-  if (iface_selection_ == 0) {
+  if (protocol_selection_ == 0) {
 #if !defined(PROTOCOL_test_name_Interface)
-    // Selected interface from FIDL file that is not part of this fuzzer.
+    // Selected protocol from FIDL file that is not part of this fuzzer.
     xprintf("Early exit: Chose disabled protocol: test_name_Interface\n");
     return 0;
 #else
 
-    ::fidl::InterfacePtr< ::test::name::Interface> iface_;
+    ::fidl::InterfacePtr< ::test::name::Interface> protocol_;
 
     xprintf("Starting test_name_Interface service\n");
     ::fidl::fuzzing::Fuzzer< ::test::name::Interface> fuzzer_(
@@ -70,7 +70,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
       return 0;
     }
 
-    if ((status_ = fuzzer_.BindClient(&iface_, loop_->dispatcher())) != ZX_OK) {
+    if ((status_ = fuzzer_.BindClient(&protocol_, loop_->dispatcher())) !=
+        ZX_OK) {
       xprintf("Early exit: fuzzer.BindClient returned bad status: %d\n",
               status_);
       return 0;
@@ -82,7 +83,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
     uint8_t method_selection_ = method_selector_ % 2;
     if (method_selection_ == 0) {
 #if !(ALL_METHODS || defined(METHOD_Method))
-      // Selected method from interface that is not part of this fuzzer.
+      // Selected method from protocol that is not part of this fuzzer.
       xprintf("Early exit: Chose disabled method: Method\n");
       return 0;
 #else
@@ -104,12 +105,12 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
       size_t param_size_;
 
       xprintf("Invoking method test_name_Interface.Method\n");
-      iface_->Method();
+      protocol_->Method();
 #endif
     }
     if (method_selection_ == 1) {
 #if !(ALL_METHODS || defined(METHOD_OnEvent))
-      // Selected method from interface that is not part of this fuzzer.
+      // Selected method from protocol that is not part of this fuzzer.
       xprintf("Early exit: Chose disabled method: OnEvent\n");
       return 0;
 #else
@@ -131,7 +132,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
       size_t param_size_;
 
       xprintf("Invoking method test_name_Interface.OnEvent\n");
-      iface_->OnEvent();
+      protocol_->OnEvent();
 #endif
     }
 
@@ -141,7 +142,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
       xprintf("fuzzer.WaitForCallback returned bad status: %d\n", status_);
     }
 
-    iface_.Unbind();
+    protocol_.Unbind();
 #endif
   }
 

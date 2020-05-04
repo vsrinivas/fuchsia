@@ -136,7 +136,7 @@ class SomeProtocol final {
   SomeProtocol() = delete;
 
  public:
-  // Collection of return types of FIDL calls in this interface.
+  // Collection of return types of FIDL calls in this protocol.
   class ResultOf final {
     ResultOf() = delete;
 
@@ -144,7 +144,7 @@ class SomeProtocol final {
    public:
   };
 
-  // Collection of return types of FIDL calls in this interface,
+  // Collection of return types of FIDL calls in this protocol,
   // when the caller-allocate flavor or in-place call is used.
   class UnownedResultOf final {
     UnownedResultOf() = delete;

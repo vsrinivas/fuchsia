@@ -13,9 +13,9 @@ import (
 )
 
 /*
-This file contains types which describe FIDL interfaces.
+This file contains types which describe FIDL protocols.
 
-These types are intended to be directly deserialized from the FIDL interface
+These types are intended to be directly deserialized from the FIDL protocol
 JSON representation. The types are then passed directly to language-specific
 generators which produce source code.
 
@@ -39,6 +39,10 @@ func ReadJSONIr(filename string) (Root, error) {
 	if err != nil {
 		return root, fmt.Errorf("Error parsing JSON IR: %v", err)
 	}
+
+	// TODO(fxb/50195): This is for backward compatibility with fidlgen_dart in
+	// Topaz, and should be removed after fidlgen_dart code has been updated.
+	root.Interfaces = root.Protocols
 
 	return root, nil
 }
@@ -412,7 +416,7 @@ type Attribute struct {
 }
 
 // Attributes represents a list of attributes. It conveniently implements the
-// `Annotated` interface, such that it can be embedded into other node structs
+// `Annotated` protocol, such that it can be embedded into other node structs
 // which are annotated.
 type Attributes struct {
 	Attributes []Attribute `json:"maybe_attributes,omitempty"`
@@ -605,14 +609,18 @@ func EmptyStructMember(name string) StructMember {
 	}
 }
 
-// Interface represents the declaration of a FIDL interface.
-type Interface struct {
+// Protocol represents the declaration of a FIDL protocol.
+type Protocol struct {
 	Attributes
 	Name    EncodedCompoundIdentifier `json:"name"`
 	Methods []Method                  `json:"methods"`
 }
 
-func (d *Interface) GetServiceName() string {
+// TODO(fxb/50195): This is for backward compatibility with fidlgen_dart in
+// Topaz, and should be removed after fidlgen_dart code has been updated.
+type Interface = Protocol
+
+func (d *Protocol) GetServiceName() string {
 	_, found := d.LookupAttribute("Discoverable")
 	if found {
 		ci := ParseCompoundIdentifier(d.Name)
@@ -745,14 +753,18 @@ func (s Strictness) IsFlexible() bool {
 type DeclType string
 
 const (
-	ConstDeclType     DeclType = "const"
-	BitsDeclType               = "bits"
-	EnumDeclType               = "enum"
-	InterfaceDeclType          = "interface"
-	ServiceDeclType            = "service"
-	StructDeclType             = "struct"
-	TableDeclType              = "table"
-	UnionDeclType              = "union"
+	ConstDeclType    DeclType = "const"
+	BitsDeclType              = "bits"
+	EnumDeclType              = "enum"
+	ProtocolDeclType          = "interface"
+	ServiceDeclType           = "service"
+	StructDeclType            = "struct"
+	TableDeclType             = "table"
+	UnionDeclType             = "union"
+
+	// TODO(fxb/50195): This is for backward compatibility with fidlgen_dart in
+	// Topaz, and should be removed after fidlgen_dart code has been updated.
+	InterfaceDeclType = "interface"
 )
 
 type DeclMap map[EncodedCompoundIdentifier]DeclType
@@ -775,18 +787,22 @@ type Library struct {
 // Root is the top-level object for a FIDL library.
 // It contains lists of all declarations and dependencies within the library.
 type Root struct {
-	Name       EncodedLibraryIdentifier    `json:"name,omitempty"`
-	Consts     []Const                     `json:"const_declarations,omitempty"`
-	Bits       []Bits                      `json:"bits_declarations,omitempty"`
-	Enums      []Enum                      `json:"enum_declarations,omitempty"`
-	Interfaces []Interface                 `json:"interface_declarations,omitempty"`
-	Services   []Service                   `json:"service_declarations,omitempty"`
-	Structs    []Struct                    `json:"struct_declarations,omitempty"`
-	Tables     []Table                     `json:"table_declarations,omitempty"`
-	Unions     []Union                     `json:"union_declarations,omitempty"`
-	DeclOrder  []EncodedCompoundIdentifier `json:"declaration_order,omitempty"`
-	Decls      DeclMap                     `json:"declarations,omitempty"`
-	Libraries  []Library                   `json:"library_dependencies,omitempty"`
+	Name      EncodedLibraryIdentifier    `json:"name,omitempty"`
+	Consts    []Const                     `json:"const_declarations,omitempty"`
+	Bits      []Bits                      `json:"bits_declarations,omitempty"`
+	Enums     []Enum                      `json:"enum_declarations,omitempty"`
+	Protocols []Protocol                  `json:"interface_declarations,omitempty"`
+	Services  []Service                   `json:"service_declarations,omitempty"`
+	Structs   []Struct                    `json:"struct_declarations,omitempty"`
+	Tables    []Table                     `json:"table_declarations,omitempty"`
+	Unions    []Union                     `json:"union_declarations,omitempty"`
+	DeclOrder []EncodedCompoundIdentifier `json:"declaration_order,omitempty"`
+	Decls     DeclMap                     `json:"declarations,omitempty"`
+	Libraries []Library                   `json:"library_dependencies,omitempty"`
+
+	// TODO(fxb/50195): This is for backward compatibility with fidlgen_dart in
+	// Topaz, and should be removed after fidlgen_dart code has been updated.
+	Interfaces []Protocol
 }
 
 // DeclsWithDependencies returns a single DeclMap containining the FIDL
@@ -832,9 +848,9 @@ func (r *Root) ForBindings(language string) Root {
 			res.Decls[v.Name] = r.Decls[v.Name]
 		}
 	}
-	for _, v := range r.Interfaces {
+	for _, v := range r.Protocols {
 		if !v.BindingsDenylistIncludes(language) {
-			res.Interfaces = append(res.Interfaces, v)
+			res.Protocols = append(res.Protocols, v)
 			res.Decls[v.Name] = r.Decls[v.Name]
 		}
 	}

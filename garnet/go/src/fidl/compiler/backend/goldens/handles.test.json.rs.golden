@@ -255,7 +255,7 @@ impl SomeProtocolProxy {
         self.client.into_channel().map_err(|client| Self { client })
     }
 
-    /// Get a Stream of events from the remote end of the SomeProtocol interface
+    /// Get a Stream of events from the remote end of the SomeProtocol protocol
     pub fn take_event_stream(&self) -> SomeProtocolEventStream {
         SomeProtocolEventStream { event_receiver: self.client.take_event_receiver() }
     }

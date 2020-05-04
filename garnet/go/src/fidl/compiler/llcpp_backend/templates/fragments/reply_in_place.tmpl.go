@@ -10,8 +10,8 @@ Reply(::fidl::DecodedMessage<{{ .Name }}Response> params)
 {{- end }}
 
 {{- define "ReplyInPlaceMethodDefinition" }}
-void {{ .LLProps.InterfaceName }}::Interface::{{ .Name }}CompleterBase::{{ template "ReplyInPlaceMethodSignature" . }} {
-  {{ .LLProps.InterfaceName }}::SetTransactionHeaderFor::{{ .Name }}Response(params);
+void {{ .LLProps.ProtocolName }}::Interface::{{ .Name }}CompleterBase::{{ template "ReplyInPlaceMethodSignature" . }} {
+  {{ .LLProps.ProtocolName }}::SetTransactionHeaderFor::{{ .Name }}Response(params);
   CompleterBase::SendReply(std::move(params));
 }
 {{- end }}

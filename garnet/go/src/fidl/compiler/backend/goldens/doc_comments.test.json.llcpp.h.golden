@@ -370,7 +370,7 @@ class Interface final {
     fit::callback<zx_status_t()> unknown;
   };
 
-  // Collection of return types of FIDL calls in this interface.
+  // Collection of return types of FIDL calls in this protocol.
   class ResultOf final {
     ResultOf() = delete;
 
@@ -392,7 +392,7 @@ class Interface final {
     using Method = Method_Impl;
   };
 
-  // Collection of return types of FIDL calls in this interface,
+  // Collection of return types of FIDL calls in this protocol,
   // when the caller-allocate flavor or in-place call is used.
   class UnownedResultOf final {
     UnownedResultOf() = delete;
@@ -503,7 +503,7 @@ class Interface final {
                           ::fidl::Transaction* txn);
 
   // Dispatches the incoming message to one of the handlers functions in the
-  // interface. If there is no matching handler, it closes all the handles in
+  // protocol. If there is no matching handler, it closes all the handles in
   // |msg| and closes the channel with a |ZX_ERR_NOT_SUPPORTED| epitaph, before
   // returning false. The message should then be discarded.
   static bool Dispatch(Interface* impl, fidl_msg_t* msg,
@@ -544,7 +544,7 @@ class Service final {
  public:
   static constexpr char Name[] = "test.name.Service";
 
-  // Client interface for connecting to member protocols of a service instance.
+  // Client protocol for connecting to member protocols of a service instance.
   class ServiceClient final {
     ServiceClient() = delete;
 

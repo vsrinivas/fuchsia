@@ -44,8 +44,8 @@ const (
 {{ range $table := .Tables -}}
 {{ template "TableDefinition" $table }}
 {{ end -}}
-{{ range $interface := .Interfaces -}}
-{{ template "InterfaceDefinition" $interface }}
+{{ range $protocol := .Protocols -}}
+{{ template "ProtocolDefinition" $protocol }}
 {{ end -}}
 
 {{- end -}}

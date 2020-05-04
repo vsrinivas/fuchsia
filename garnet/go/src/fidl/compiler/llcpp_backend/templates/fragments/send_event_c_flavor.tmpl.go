@@ -10,7 +10,7 @@ Send{{ .Name }}Event(::zx::unowned_channel _chan {{- if .Response }}, {{ end }}{
 {{- end }}
 
 {{- define "SendEventCFlavorMethodDefinition" }}
-zx_status_t {{ .LLProps.InterfaceName }}::{{ template "SendEventCFlavorMethodSignature" . }} {
+zx_status_t {{ .LLProps.ProtocolName }}::{{ template "SendEventCFlavorMethodSignature" . }} {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<{{ .Name }}Response, ::fidl::MessageDirection::kSending>();
 
   {{- if .LLProps.ClientContext.StackAllocResponse }}

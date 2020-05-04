@@ -169,7 +169,7 @@ impl WithAndWithoutRequestResponseProxy {
         self.client.into_channel().map_err(|client| Self { client })
     }
 
-    /// Get a Stream of events from the remote end of the WithAndWithoutRequestResponse interface
+    /// Get a Stream of events from the remote end of the WithAndWithoutRequestResponse protocol
     pub fn take_event_stream(&self) -> WithAndWithoutRequestResponseEventStream {
         WithAndWithoutRequestResponseEventStream {
             event_receiver: self.client.take_event_receiver(),
@@ -1334,7 +1334,7 @@ impl WithErrorSyntaxProxy {
         self.client.into_channel().map_err(|client| Self { client })
     }
 
-    /// Get a Stream of events from the remote end of the WithErrorSyntax interface
+    /// Get a Stream of events from the remote end of the WithErrorSyntax protocol
     pub fn take_event_stream(&self) -> WithErrorSyntaxEventStream {
         WithErrorSyntaxEventStream { event_receiver: self.client.take_event_receiver() }
     }
@@ -2150,7 +2150,7 @@ impl ChannelProtocolProxy {
         self.client.into_channel().map_err(|client| Self { client })
     }
 
-    /// Get a Stream of events from the remote end of the ChannelProtocol interface
+    /// Get a Stream of events from the remote end of the ChannelProtocol protocol
     pub fn take_event_stream(&self) -> ChannelProtocolEventStream {
         ChannelProtocolEventStream { event_receiver: self.client.take_event_receiver() }
     }

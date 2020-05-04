@@ -33,7 +33,7 @@ func NewFidlGenerator() *FidlGenerator {
 			}
 			return s2
 		},
-		"Interfaces": interfaces,
+		"Protocols": protocols,
 	})
 
 	template.Must(tmpls.Parse(tmplBits))
@@ -99,13 +99,13 @@ func (gen FidlGenerator) GenerateFidl(fidl types.Root, config *types.Config, cla
 	}
 	defer sourceFormatterPipe.Close()
 
-	if len(fidl.Interfaces) > 0 {
+	if len(fidl.Protocols) > 0 {
 		mthdCount := 0
-		for _, iface := range fidl.Interfaces {
-			mthdCount += len(iface.Methods)
+		for _, protocol := range fidl.Protocols {
+			mthdCount += len(protocol.Methods)
 		}
 		if mthdCount == 0 {
-			return fmt.Errorf("No non-empty interfaces in FIDL library: %s", string(fidl.Name))
+			return fmt.Errorf("No non-empty protocols in FIDL library: %s", string(fidl.Name))
 		}
 
 		if err := gen.GenerateSource(sourceFormatterPipe, tree); err != nil {
@@ -122,12 +122,12 @@ func prepareTree(name types.EncodedLibraryIdentifier, tree *cpp.Root) {
 	tree.Headers = []string{pkgPath + "/cpp/fidl.h"}
 }
 
-func interfaces(decls []cpp.Decl) []*cpp.Interface {
-	ifaces := make([]*cpp.Interface, 0, len(decls))
+func protocols(decls []cpp.Decl) []*cpp.Protocol {
+	protocols := make([]*cpp.Protocol, 0, len(decls))
 	for _, decl := range decls {
-		if iface, ok := decl.(*cpp.Interface); ok {
-			ifaces = append(ifaces, iface)
+		if protocol, ok := decl.(*cpp.Protocol); ok {
+			protocols = append(protocols, protocol)
 		}
 	}
-	return ifaces
+	return protocols
 }

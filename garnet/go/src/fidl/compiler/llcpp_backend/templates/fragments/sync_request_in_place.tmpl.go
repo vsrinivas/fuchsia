@@ -10,12 +10,12 @@ const SyncRequestInPlace = `
 {{- end }}
 
 {{- define "StaticCallSyncRequestInPlaceMethodDefinition" }}
-{{- $interface_name := .LLProps.InterfaceName }}
+{{- $protocol_name := .LLProps.ProtocolName }}
 {{ if .HasResponse -}}
-::fidl::DecodeResult<{{ $interface_name }}::{{ .Name }}Response>
+::fidl::DecodeResult<{{ $protocol_name }}::{{ .Name }}Response>
 {{- else -}}
 ::fidl::internal::StatusAndError
-{{- end }} {{ $interface_name }}::InPlace::{{ template "StaticCallSyncRequestInPlaceMethodSignature" . }} {
+{{- end }} {{ $protocol_name }}::InPlace::{{ template "StaticCallSyncRequestInPlaceMethodSignature" . }} {
   {{- if not .Request }}
   constexpr uint32_t _write_num_bytes = sizeof({{ .Name }}Request);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
@@ -23,11 +23,11 @@ const SyncRequestInPlace = `
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<{{ .Name }}Request> params(std::move(_request_buffer));
   {{- end }}
-  {{ $interface_name }}::SetTransactionHeaderFor::{{ .Name }}Request(params);
+  {{ $protocol_name }}::SetTransactionHeaderFor::{{ .Name }}Request(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
   {{- if .HasResponse }}
-    return ::fidl::DecodeResult<{{ $interface_name }}::{{ .Name }}Response>::FromFailure(
+    return ::fidl::DecodeResult<{{ $protocol_name }}::{{ .Name }}Response>::FromFailure(
         std::move(_encode_request_result));
   {{- else }}
     return ::fidl::internal::StatusAndError::FromFailure(
@@ -38,7 +38,7 @@ const SyncRequestInPlace = `
   auto _call_result = ::fidl::Call<{{ .Name }}Request, {{ .Name }}Response>(
     std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<{{ $interface_name }}::{{ .Name }}Response>::FromFailure(
+    return ::fidl::DecodeResult<{{ $protocol_name }}::{{ .Name }}Response>::FromFailure(
         std::move(_call_result));
   }
   return ::fidl::Decode(std::move(_call_result.message));

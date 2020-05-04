@@ -5,7 +5,7 @@ errors for every protocol that extends ledger.Syncable. These protocols
 must also implement a |Sync| method that will return when all requests called
 before the |Sync| call have been handled.
 
-When impementing such an protocol, one must keep track of each connection to be
+When impementing such a protocol, one must keep track of each connection to be
 able to close it with the correct status in case of error, and must also
 implement the |Sync| method.
 
@@ -13,7 +13,7 @@ To reduce the amount of repeating code, the files in this directory allow to
 automatically generate an SyncableDelegate and an implementation of the
 base protocol that delegates to it.
 
-When one wants to implement an protocol extending ledger.Syncable, one
+When one wants to implement a protocol extending ledger.Syncable, one
 therefore only need to implement the generated delegate protocol. For each
 method in the initial protocol, the delegate will have a corresponding method
 with an additional callback taking a ::ledger::Status. The implementor

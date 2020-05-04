@@ -200,7 +200,7 @@ class Example final {
     using ResponseType = fooResponse;
   };
 
-  // Collection of return types of FIDL calls in this interface.
+  // Collection of return types of FIDL calls in this protocol.
   class ResultOf final {
     ResultOf() = delete;
 
@@ -228,7 +228,7 @@ class Example final {
     using foo = foo_Impl<fooResponse>;
   };
 
-  // Collection of return types of FIDL calls in this interface,
+  // Collection of return types of FIDL calls in this protocol,
   // when the caller-allocate flavor or in-place call is used.
   class UnownedResultOf final {
     UnownedResultOf() = delete;
@@ -353,7 +353,7 @@ class Example final {
                           ::fidl::Transaction* txn);
 
   // Dispatches the incoming message to one of the handlers functions in the
-  // interface. If there is no matching handler, it closes all the handles in
+  // protocol. If there is no matching handler, it closes all the handles in
   // |msg| and closes the channel with a |ZX_ERR_NOT_SUPPORTED| epitaph, before
   // returning false. The message should then be discarded.
   static bool Dispatch(Interface* impl, fidl_msg_t* msg,

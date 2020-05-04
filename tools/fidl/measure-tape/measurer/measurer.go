@@ -362,7 +362,7 @@ func (m *Measurer) lookup(name fidlcommon.Name) (keyedDecl, bool) {
 			}, true
 		}
 	}
-	for _, decl := range root.Interfaces {
+	for _, decl := range root.Protocols {
 		if name := string(decl.Name); name == fqn {
 			return keyedDecl{key: fqn, decl: handleDecl{}}, true
 		}

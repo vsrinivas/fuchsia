@@ -51,9 +51,9 @@ use fidl::{
 {{ range $table := .Tables -}}
 {{ template "TableDeclaration" $table }}
 {{ end -}}
-{{ range $interface := .Interfaces -}}
+{{ range $protocol := .Protocols -}}
 {{ range $transport, $_ := .Transports -}}
-{{ if eq $transport "Channel" -}}{{ template "InterfaceDeclaration" $interface }}{{- end }}
+{{ if eq $transport "Channel" -}}{{ template "ProtocolDeclaration" $protocol }}{{- end }}
 {{ end -}}
 {{ end -}}
 {{ range $service := .Services -}}

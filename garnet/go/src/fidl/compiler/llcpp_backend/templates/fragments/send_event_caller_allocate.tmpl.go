@@ -10,7 +10,7 @@ Send{{ .Name }}Event(::zx::unowned_channel _chan, ::fidl::BytePart _buffer, {{ t
 {{- end }}
 
 {{- define "SendEventCallerAllocateMethodDefinition" }}
-zx_status_t {{ .LLProps.InterfaceName }}::{{ template "SendEventCallerAllocateMethodSignature" . }} {
+zx_status_t {{ .LLProps.ProtocolName }}::{{ template "SendEventCallerAllocateMethodSignature" . }} {
   if (_buffer.capacity() < {{ .Name }}Response::PrimarySize) {
     return ZX_ERR_BUFFER_TOO_SMALL;
   }

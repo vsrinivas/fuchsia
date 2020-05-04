@@ -22,21 +22,21 @@ const llcppMaxStackAllocSize = 512
 type bitsKind struct{}
 type constKind struct{}
 type enumKind struct{}
-type interfaceKind struct{}
+type protocolKind struct{}
 type serviceKind struct{}
 type structKind struct{}
 type tableKind struct{}
 type unionKind struct{}
 
 var Kinds = struct {
-	Const     constKind
-	Bits      bitsKind
-	Enum      enumKind
-	Interface interfaceKind
-	Service   serviceKind
-	Struct    structKind
-	Table     tableKind
-	Union     unionKind
+	Const    constKind
+	Bits     bitsKind
+	Enum     enumKind
+	Protocol protocolKind
+	Service  serviceKind
+	Struct   structKind
+	Table    tableKind
+	Union    unionKind
 }{}
 
 type Decl interface{}
@@ -202,7 +202,7 @@ type StructMember struct {
 	Offset       int
 }
 
-type Interface struct {
+type Protocol struct {
 	types.Attributes
 	Namespace           string
 	Name                string
@@ -219,7 +219,7 @@ type Interface struct {
 	ResponseDecoderName string
 	Methods             []Method
 	HasEvents           bool
-	Kind                interfaceKind
+	Kind                protocolKind
 }
 
 type Service struct {
@@ -233,9 +233,9 @@ type Service struct {
 
 type ServiceMember struct {
 	types.Attributes
-	InterfaceType string
-	Name          string
-	MethodName    string
+	ProtocolType string
+	Name         string
+	MethodName   string
 }
 
 // TODO: There are common fields between Request and Response; consider factoring them out.
@@ -285,7 +285,7 @@ type LLContextProps struct {
 
 // LLProps contain properties of a method specific to llcpp
 type LLProps struct {
-	InterfaceName     string
+	ProtocolName      string
 	LinearizeRequest  bool
 	LinearizeResponse bool
 	ClientContext     LLContextProps
@@ -440,7 +440,7 @@ var reservedWords = map[string]bool{
 	"IsEmpty":         true,
 	"HandleEvents":    true,
 	// TODO(ianloic) add: "Clone"
-	// There are Clone methods on a couple of interfaces that are used
+	// There are Clone methods on a couple of protocols that are used
 	// across layers so this will be a breaking change.
 	// FIDL-461
 }
@@ -689,7 +689,7 @@ func (c *compiler) compileType(val types.Type) Type {
 				r.LLDecl = ft
 				r.NeedsDtor = true
 			}
-		case types.InterfaceDeclType:
+		case types.ProtocolDeclType:
 			r.Decl = fmt.Sprintf("::fidl::InterfaceHandle<class %s>", t)
 			r.LLDecl = "::zx::channel"
 			r.NeedsDtor = true
@@ -817,9 +817,9 @@ func (m Method) NewLLContextProps(context LLContext) LLContextProps {
 	}
 }
 
-func (m Method) NewLLProps(r Interface, reqTypeShape types.TypeShape, respTypeShape types.TypeShape) LLProps {
+func (m Method) NewLLProps(r Protocol, reqTypeShape types.TypeShape, respTypeShape types.TypeShape) LLProps {
 	return LLProps{
-		InterfaceName:     r.Name,
+		ProtocolName:      r.Name,
 		LinearizeRequest:  len(m.Request) > 0 && reqTypeShape.Depth > 0,
 		LinearizeResponse: len(m.Response) > 0 && respTypeShape.Depth > 0,
 		ClientContext:     m.NewLLContextProps(clientContext),
@@ -827,8 +827,8 @@ func (m Method) NewLLProps(r Interface, reqTypeShape types.TypeShape, respTypeSh
 	}
 }
 
-func (c *compiler) compileInterface(val types.Interface) Interface {
-	r := Interface{
+func (c *compiler) compileProtocol(val types.Protocol) Protocol {
+	r := Protocol{
 		Attributes:          val.Attributes,
 		Namespace:           c.namespace,
 		Name:                c.compileCompoundIdentifier(val.Name, "", "", false),
@@ -923,10 +923,10 @@ func (c *compiler) compileService(val types.Service) Service {
 
 func (c *compiler) compileServiceMember(val types.ServiceMember) ServiceMember {
 	return ServiceMember{
-		Attributes:    val.Attributes,
-		InterfaceType: c.compileCompoundIdentifier(val.Type.Identifier, "", "", false),
-		Name:          string(val.Name),
-		MethodName:    changeIfReserved(val.Name, ""),
+		Attributes:   val.Attributes,
+		ProtocolType: c.compileCompoundIdentifier(val.Type.Identifier, "", "", false),
+		Name:         string(val.Name),
+		MethodName:   changeIfReserved(val.Name, ""),
 	}
 }
 
@@ -1189,8 +1189,8 @@ func compile(r types.Root, namespaceFormatter func(types.LibraryIdentifier, stri
 		decls[v.Name] = &d
 	}
 
-	for _, v := range r.Interfaces {
-		d := c.compileInterface(v)
+	for _, v := range r.Protocols {
+		d := c.compileProtocol(v)
 		decls[v.Name] = &d
 	}
 
@@ -1218,8 +1218,8 @@ func compile(r types.Root, namespaceFormatter func(types.LibraryIdentifier, stri
 		root.LLHeaders = append(root.LLHeaders, fmt.Sprintf("%s/llcpp/fidl.h", formatLibraryPath(libraryIdent)))
 	}
 
-	// zx::channel is always referenced by the interfaces in llcpp bindings API
-	if len(r.Interfaces) > 0 {
+	// zx::channel is always referenced by the protocols in llcpp bindings API
+	if len(r.Protocols) > 0 {
 		c.handleTypes["channel"] = true
 	}
 

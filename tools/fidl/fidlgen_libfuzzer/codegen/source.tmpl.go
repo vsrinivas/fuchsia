@@ -22,7 +22,7 @@ const tmplSource = `
 using namespace ::fuzzing;
 using namespace {{ range .Library }}::{{ . }}{{ end }};
 
-{{- $ifaces := Interfaces .Decls }}
+{{- $protocols := Protocols .Decls }}
 
 // Add //build/fuzzing:fuzzing_verbose_logging to a GN target's configs to enable.
 #if FUZZING_VERBOSE_LOGGING
@@ -42,32 +42,32 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
     loop_ = new ::async::Loop(&kAsyncLoopConfigAttachToCurrentThread);
   }
 
-  // Must fuzz some interface; first two bytes used to select protocol and method.
+  // Must fuzz some protocol; first two bytes used to select protocol and method.
   if (size_ < 2) {
     xprintf("Early exit: Input too small: %zu\n", size_);
     return 0;
   }
   size_ -= 2;
 
-  uint8_t iface_selector_ = data_[0];
-  uint8_t iface_selection_ = iface_selector_ % {{ len $ifaces }};
+  uint8_t protocol_selector_ = data_[0];
+  uint8_t protocol_selection_ = protocol_selector_ % {{ len $protocols }};
 
   xprintf("Starting fuzzer with %zu bytes of data\n", size_);
 
-  // Hardcode mutually-exclusive if blocks that selects exactly one interface.
+  // Hardcode mutually-exclusive if blocks that selects exactly one protocol.
   zx_status_t status_;
-{{- range $ifaceIdx, $iface := $ifaces }}{{ if len $iface.Methods }}
-  if (iface_selection_ == {{ $ifaceIdx }}) {
-#if !defined(PROTOCOL_{{ DoubleColonToUnderscore $iface.Namespace }}_{{ $iface.Name }})
-    // Selected interface from FIDL file that is not part of this fuzzer.
-    xprintf("Early exit: Chose disabled protocol: {{ DoubleColonToUnderscore $iface.Namespace }}_{{ $iface.Name }}\n");
+{{- range $protocolIdx, $protocol := $protocols }}{{ if len $protocol.Methods }}
+  if (protocol_selection_ == {{ $protocolIdx }}) {
+#if !defined(PROTOCOL_{{ DoubleColonToUnderscore $protocol.Namespace }}_{{ $protocol.Name }})
+    // Selected protocol from FIDL file that is not part of this fuzzer.
+    xprintf("Early exit: Chose disabled protocol: {{ DoubleColonToUnderscore $protocol.Namespace }}_{{ $protocol.Name }}\n");
     return 0;
 #else
 
-    ::fidl::InterfacePtr<{{ $iface.Namespace }}::{{ $iface.Name }}> iface_;
+    ::fidl::InterfacePtr<{{ $protocol.Namespace }}::{{ $protocol.Name }}> protocol_;
 
-    xprintf("Starting {{ DoubleColonToUnderscore $iface.Namespace }}_{{ $iface.Name }} service\n");
-    ::fidl::fuzzing::Fuzzer<{{ $iface.Namespace }}::{{ $iface.Name }}> fuzzer_(loop_->dispatcher());
+    xprintf("Starting {{ DoubleColonToUnderscore $protocol.Namespace }}_{{ $protocol.Name }} service\n");
+    ::fidl::fuzzing::Fuzzer<{{ $protocol.Namespace }}::{{ $protocol.Name }}> fuzzer_(loop_->dispatcher());
     if ((status_ = fuzzer_.Init()) != ZX_OK) {
       xprintf("Early exit: fuzzer.Init returned bad status: %d\n", status_);
       return 0;
@@ -78,7 +78,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
       return 0;
     }
 
-    if ((status_ = fuzzer_.BindClient(&iface_, loop_->dispatcher())) != ZX_OK) {
+    if ((status_ = fuzzer_.BindClient(&protocol_, loop_->dispatcher())) != ZX_OK) {
       xprintf("Early exit: fuzzer.BindClient returned bad status: %d\n", status_);
       return 0;
     }
@@ -86,12 +86,12 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
     FuzzInput src_(data_, size_);
 
     uint8_t method_selector_ = data_[1];
-    uint8_t method_selection_ = method_selector_ % {{ len $iface.Methods }};
+    uint8_t method_selection_ = method_selector_ % {{ len $protocol.Methods }};
 
   {{- range $methodIdx, $method := .Methods }}
     if (method_selection_ == {{ $methodIdx }}) {
 #if !(ALL_METHODS || defined(METHOD_{{ $method.Name }}))
-      // Selected method from interface that is not part of this fuzzer.
+      // Selected method from protocol that is not part of this fuzzer.
       xprintf("Early exit: Chose disabled method: {{ $method.Name }}\n");
       return 0;
 #else
@@ -117,8 +117,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
       {{ .Type.Decl }} {{ .Name }} = Allocate<{{ .Type.Decl }}>{}(&src_, &param_size_);
   {{- end }}
 
-      xprintf("Invoking method {{ DoubleColonToUnderscore $iface.Namespace }}_{{ $iface.Name }}.{{ $method.Name }}\n");
-      iface_->{{ $method.Name }}({{ range $paramIdx, $param := $method.Request }}
+      xprintf("Invoking method {{ DoubleColonToUnderscore $protocol.Namespace }}_{{ $protocol.Name }}.{{ $method.Name }}\n");
+      protocol_->{{ $method.Name }}({{ range $paramIdx, $param := $method.Request }}
           {{- if $paramIdx }}, {{ end -}}
           std::move({{ $param.Name }})
         {{- end }}
@@ -128,7 +128,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
             {{- if $paramIdx }}, {{ end -}}
             {{ $param.Type.Decl }} {{ $param.Name }}
           {{- end }}) {
-        xprintf("Invoked {{ DoubleColonToUnderscore $iface.Namespace }}_{{ $iface.Name }}.{{ $method.Name }}\n");
+        xprintf("Invoked {{ DoubleColonToUnderscore $protocol.Namespace }}_{{ $protocol.Name }}.{{ $method.Name }}\n");
         zx_status_t status_ = signaller.SignalCallback();
         if (status_ != ZX_OK) {
           xprintf("signaller.SignalCallback returned bad status: %d\n", status_);
@@ -145,7 +145,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
       xprintf("fuzzer.WaitForCallback returned bad status: %d\n", status_);
     }
 
-    iface_.Unbind();
+    protocol_.Unbind();
 #endif
   }
 {{- end }}{{ end }}

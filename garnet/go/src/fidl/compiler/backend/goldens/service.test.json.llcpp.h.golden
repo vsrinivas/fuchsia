@@ -42,7 +42,7 @@ class SecondProtocol final {
  public:
   using MethodOnSecondRequest = ::fidl::AnyZeroArgMessage;
 
-  // Collection of return types of FIDL calls in this interface.
+  // Collection of return types of FIDL calls in this protocol.
   class ResultOf final {
     ResultOf() = delete;
 
@@ -64,7 +64,7 @@ class SecondProtocol final {
     using MethodOnSecond = MethodOnSecond_Impl;
   };
 
-  // Collection of return types of FIDL calls in this interface,
+  // Collection of return types of FIDL calls in this protocol,
   // when the caller-allocate flavor or in-place call is used.
   class UnownedResultOf final {
     UnownedResultOf() = delete;
@@ -152,7 +152,7 @@ class SecondProtocol final {
                           ::fidl::Transaction* txn);
 
   // Dispatches the incoming message to one of the handlers functions in the
-  // interface. If there is no matching handler, it closes all the handles in
+  // protocol. If there is no matching handler, it closes all the handles in
   // |msg| and closes the channel with a |ZX_ERR_NOT_SUPPORTED| epitaph, before
   // returning false. The message should then be discarded.
   static bool Dispatch(Interface* impl, fidl_msg_t* msg,
@@ -188,7 +188,7 @@ class FirstProtocol final {
  public:
   using MethodOnFirstRequest = ::fidl::AnyZeroArgMessage;
 
-  // Collection of return types of FIDL calls in this interface.
+  // Collection of return types of FIDL calls in this protocol.
   class ResultOf final {
     ResultOf() = delete;
 
@@ -210,7 +210,7 @@ class FirstProtocol final {
     using MethodOnFirst = MethodOnFirst_Impl;
   };
 
-  // Collection of return types of FIDL calls in this interface,
+  // Collection of return types of FIDL calls in this protocol,
   // when the caller-allocate flavor or in-place call is used.
   class UnownedResultOf final {
     UnownedResultOf() = delete;
@@ -298,7 +298,7 @@ class FirstProtocol final {
                           ::fidl::Transaction* txn);
 
   // Dispatches the incoming message to one of the handlers functions in the
-  // interface. If there is no matching handler, it closes all the handles in
+  // protocol. If there is no matching handler, it closes all the handles in
   // |msg| and closes the channel with a |ZX_ERR_NOT_SUPPORTED| epitaph, before
   // returning false. The message should then be discarded.
   static bool Dispatch(Interface* impl, fidl_msg_t* msg,
@@ -330,7 +330,7 @@ class SingleMemberService final {
  public:
   static constexpr char Name[] = "test.name.SingleMemberService";
 
-  // Client interface for connecting to member protocols of a service instance.
+  // Client protocol for connecting to member protocols of a service instance.
   class ServiceClient final {
     ServiceClient() = delete;
 
@@ -403,7 +403,7 @@ class MultiHomogeneousMemberService final {
  public:
   static constexpr char Name[] = "test.name.MultiHomogeneousMemberService";
 
-  // Client interface for connecting to member protocols of a service instance.
+  // Client protocol for connecting to member protocols of a service instance.
   class ServiceClient final {
     ServiceClient() = delete;
 
@@ -516,7 +516,7 @@ class MultiHeterogeneousMemberService final {
  public:
   static constexpr char Name[] = "test.name.MultiHeterogeneousMemberService";
 
-  // Client interface for connecting to member protocols of a service instance.
+  // Client protocol for connecting to member protocols of a service instance.
   class ServiceClient final {
     ServiceClient() = delete;
 

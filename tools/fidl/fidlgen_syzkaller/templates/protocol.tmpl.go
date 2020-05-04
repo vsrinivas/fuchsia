@@ -4,8 +4,8 @@
 
 package templates
 
-const Interface = `
-{{- define "InterfaceDefinition" -}}
+const Protocol = `
+{{- define "ProtocolDefinition" -}}
 
 {{- range .Methods }}
 {{- if .Request }}

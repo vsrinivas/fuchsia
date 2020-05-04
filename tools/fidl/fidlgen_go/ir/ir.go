@@ -297,51 +297,51 @@ type TableMember struct {
 	Tags Tags
 }
 
-// Interface represents a FIDL interface in terms of golang structures.
-type Interface struct {
+// Protocol represents a FIDL protocol in terms of golang structures.
+type Protocol struct {
 	types.Attributes
 
-	// Name is the Golang name of the interface.
+	// Name is the Golang name of the protocol.
 	Name string
 
-	// ProxyName is the name of the proxy type for this FIDL interface.
+	// ProxyName is the name of the proxy type for this FIDL protocol.
 	ProxyName string
 
-	// ProxyType is concrete type of proxy used for this FIDL interface.
+	// ProxyType is concrete type of proxy used for this FIDL protocol.
 	ProxyType string
 
-	// StubName is the name of the stub type for this FIDL interface.
+	// StubName is the name of the stub type for this FIDL protocol.
 	StubName string
 
-	// EventProxyName is the name of the event proxy type for this FIDL interface.
+	// EventProxyName is the name of the event proxy type for this FIDL protocol.
 	EventProxyName string
 
 	// TransitionalBaseName is the name of the base implementation for transitional methods
-	// for this FIDL interface.
+	// for this FIDL protocol.
 	TransitionalBaseName string
 
-	// RequestName is the name of the interface request type for this FIDL interface.
+	// RequestName is the name of the protocol request type for this FIDL protocol.
 	RequestName string
 
-	// ServerName is the name of the server type for this FIDL interface.
+	// ServerName is the name of the server type for this FIDL protocol.
 	ServerName string
 
-	// ServiceNameString is the string service name for this FIDL interface.
+	// ServiceNameString is the string service name for this FIDL protocol.
 	ServiceNameString string
 
-	// ServiceNameConstant is the name of the service name constant for this FIDL interface.
+	// ServiceNameConstant is the name of the service name constant for this FIDL protocol.
 	ServiceNameConstant string
 
-	// Methods is a list of methods for this FIDL interface.
+	// Methods is a list of methods for this FIDL protocol.
 	Methods []Method
 }
 
-// Method represents a method of a FIDL interface in terms of golang structures.
+// Method represents a method of a FIDL protocol in terms of golang structures.
 type Method struct {
 	types.Attributes
 	types.Ordinals
 
-	// Name is the name of the Method, including the interface name as a prefix.
+	// Name is the name of the Method, including the protocol name as a prefix.
 	Name string
 
 	// HasRequest is true if this method has a request
@@ -407,8 +407,8 @@ type Root struct {
 	// Table represents the list of FIDL tables represented as Go structs.
 	Tables []Table
 
-	// Interfaces represents the list of FIDL interfaces represented as Go types.
-	Interfaces []Interface
+	// Protocols represents the list of FIDL protocols represented as Go types.
+	Protocols []Protocol
 
 	// Libraries represents the set of library dependencies for this FIDL library.
 	Libraries []Library
@@ -572,7 +572,7 @@ func (c *compiler) computeHandleSubtype(t types.Type) (types.ObjectType, bool) {
 		if !ok {
 			log.Fatal("Unknown identifier: ", t.Identifier)
 		}
-		if declType == types.InterfaceDeclType {
+		if declType == types.ProtocolDeclType {
 			return types.ObjectTypeChannel, true
 		}
 	case types.ArrayType, types.VectorType:
@@ -715,7 +715,7 @@ func (c *compiler) compileType(val types.Type) (r Type, t StackOfBoundsTag) {
 			fallthrough
 		case types.EnumDeclType:
 			r = Type(e)
-		case types.InterfaceDeclType:
+		case types.ProtocolDeclType:
 			r = Type(e + WithCtxSuffix + ProxySuffix)
 		case types.StructDeclType:
 			fallthrough
@@ -924,15 +924,15 @@ func (c *compiler) compileTable(val types.Table) Table {
 	}
 }
 
-func (c *compiler) compileMethod(ifaceName types.EncodedCompoundIdentifier, val types.Method) Method {
+func (c *compiler) compileMethod(protocolName types.EncodedCompoundIdentifier, val types.Method) Method {
 	methodName := c.compileIdentifier(val.Name, true, "")
 	r := Method{
 		Attributes: val.Attributes,
 		Name:       methodName,
 		Ordinals: types.NewOrdinalsStep7(
 			val,
-			c.compileCompoundIdentifier(ifaceName, true, methodName+"Ordinal"),
-			c.compileCompoundIdentifier(ifaceName, true, methodName+"GenOrdinal"),
+			c.compileCompoundIdentifier(protocolName, true, methodName+"Ordinal"),
+			c.compileCompoundIdentifier(protocolName, true, methodName+"GenOrdinal"),
 		),
 		EventExpectName: "Expect" + methodName,
 		IsEvent:         !val.HasRequest && val.HasResponse,
@@ -945,7 +945,7 @@ func (c *compiler) compileMethod(ifaceName types.EncodedCompoundIdentifier, val 
 		if !ok {
 			log.Panic("Unknown request struct: ", val.RequestPayload)
 		}
-		requestStruct.Name = c.compileCompoundIdentifier(ifaceName, false, WithCtxSuffix+methodName+"Request")
+		requestStruct.Name = c.compileCompoundIdentifier(protocolName, false, WithCtxSuffix+methodName+"Request")
 		r.Request = &requestStruct
 	}
 	if val.HasResponse && val.ResponsePayload != "" {
@@ -953,19 +953,19 @@ func (c *compiler) compileMethod(ifaceName types.EncodedCompoundIdentifier, val 
 		if !ok {
 			log.Panic("Unknown response struct: ", val.ResponsePayload)
 		}
-		responseStruct.Name = c.compileCompoundIdentifier(ifaceName, false, WithCtxSuffix+methodName+"Response")
+		responseStruct.Name = c.compileCompoundIdentifier(protocolName, false, WithCtxSuffix+methodName+"Response")
 		r.Response = &responseStruct
 	}
 	return r
 }
 
-func (c *compiler) compileInterface(val types.Interface) Interface {
+func (c *compiler) compileProtocol(val types.Protocol) Protocol {
 	var proxyType string
 	switch val.Attributes.GetAttribute("Transport").Value {
 	case "", "Channel":
 		proxyType = "ChannelProxy"
 	}
-	r := Interface{
+	r := Protocol{
 		Attributes:           val.Attributes,
 		Name:                 c.compileCompoundIdentifier(val.Name, true, WithCtxSuffix),
 		TransitionalBaseName: c.compileCompoundIdentifier(val.Name, true, WithCtxSuffix+TransitionalBaseSuffix),
@@ -1059,16 +1059,16 @@ func Compile(fidlData types.Root) Root {
 	for _, v := range fidlData.Tables {
 		r.Tables = append(r.Tables, c.compileTable(v))
 	}
-	if len(fidlData.Structs) != 0 || len(fidlData.Interfaces) != 0 {
+	if len(fidlData.Structs) != 0 || len(fidlData.Protocols) != 0 {
 		c.usedLibraryDeps[BindingsPackage] = BindingsAlias
 	}
-	for _, v := range fidlData.Interfaces {
-		iface := c.compileInterface(v)
-		r.Interfaces = append(r.Interfaces, iface)
-		if iface.ProxyType == "ChannelProxy" && len(iface.ServiceNameString) != 0 {
+	for _, v := range fidlData.Protocols {
+		protocol := c.compileProtocol(v)
+		r.Protocols = append(r.Protocols, protocol)
+		if protocol.ProxyType == "ChannelProxy" && len(protocol.ServiceNameString) != 0 {
 			c.usedLibraryDeps[SyscallZxPackage] = SyscallZxAlias
 		}
-		for _, method := range iface.Methods {
+		for _, method := range protocol.Methods {
 			if method.Request != nil {
 				r.Structs = append(r.Structs, *method.Request)
 			}

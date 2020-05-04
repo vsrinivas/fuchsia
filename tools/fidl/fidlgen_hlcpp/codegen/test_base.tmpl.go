@@ -21,7 +21,7 @@ namespace testing {
 {{ "" }}
 
 {{- range .Decls }}
-{{- if Eq .Kind Kinds.Interface }}{{ template "ProtocolTestBase" . }}{{- end }}
+{{- if Eq .Kind Kinds.Protocol }}{{ template "ProtocolTestBase" . }}{{- end }}
 {{- end -}}
 
 }  // namespace testing

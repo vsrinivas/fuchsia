@@ -28,7 +28,7 @@ pub enum {{ $service.Name }}Request {
     {{- range $service.DocComments }}
     ///{{ . }}
     {{- end }}
-    {{ $member.CamelName }}({{ $member.InterfaceType }}RequestStream),
+    {{ $member.CamelName }}({{ $member.ProtocolType }}RequestStream),
     {{- end}}
 }
 
@@ -40,7 +40,7 @@ impl fidl::endpoints::UnifiedServiceRequest for {{ $service.Name }}Request {
         match name {
             {{- range $member := $service.Members }}
             "{{ $member.Name }}" => Self::{{ $member.CamelName }}(
-                <{{ $member.InterfaceType }}RequestStream as fidl::endpoints::RequestStream>::from_channel(channel),
+                <{{ $member.ProtocolType }}RequestStream as fidl::endpoints::RequestStream>::from_channel(channel),
             ),
             {{- end }}
             _ => panic!("no such member protocol name for service {{ $service.Name }}"),
@@ -77,11 +77,11 @@ impl {{ $service.Name }}Proxy {
     {{- range $member.DocComments }}
     ///{{ . }}
     {{- end }}
-    pub fn {{ $member.SnakeName }}(&self) -> Result<{{ $member.InterfaceType }}Proxy, fidl::Error> {
+    pub fn {{ $member.SnakeName }}(&self) -> Result<{{ $member.ProtocolType }}Proxy, fidl::Error> {
         let (proxy, server) = zx::Channel::create().map_err(fidl::Error::ChannelPairCreate)?;
         self.0.open_member("{{ $member.Name }}", server)?;
         let proxy = ::fuchsia_async::Channel::from_channel(proxy).map_err(fidl::Error::AsyncChannel)?;
-        Ok({{ $member.InterfaceType }}Proxy::new(proxy))
+        Ok({{ $member.ProtocolType }}Proxy::new(proxy))
     }
     {{- end }}
 }

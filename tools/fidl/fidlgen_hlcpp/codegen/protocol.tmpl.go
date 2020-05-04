@@ -5,7 +5,7 @@
 package codegen
 
 const protocolTemplate = `
-{{- define "InterfaceForwardDeclaration" }}
+{{- define "ProtocolForwardDeclaration" }}
 #ifdef __Fuchsia__
 {{range .DocComments}}
 ///{{ . }}

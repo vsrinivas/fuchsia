@@ -5,7 +5,6 @@
 package typestest
 
 import (
-	"encoding/json"
 	"io/ioutil"
 	"path/filepath"
 	"strings"
@@ -35,11 +34,8 @@ func AllExamples(basePath string) []string {
 
 // GetExample retrieves an example by filename, and parses it.
 func GetExample(basePath, filename string) types.Root {
-	var (
-		data = GetGolden(basePath, filename)
-		fidl types.Root
-	)
-	if err := json.Unmarshal(data, &fidl); err != nil {
+	fidl, err := types.ReadJSONIr(filepath.Join(basePath, filename))
+	if err != nil {
 		panic(err)
 	}
 	return fidl

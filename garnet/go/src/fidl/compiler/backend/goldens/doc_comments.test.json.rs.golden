@@ -167,7 +167,7 @@ impl InterfaceProxy {
         self.client.into_channel().map_err(|client| Self { client })
     }
 
-    /// Get a Stream of events from the remote end of the Interface interface
+    /// Get a Stream of events from the remote end of the Interface protocol
     pub fn take_event_stream(&self) -> InterfaceEventStream {
         InterfaceEventStream { event_receiver: self.client.take_event_receiver() }
     }

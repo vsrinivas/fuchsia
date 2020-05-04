@@ -4,8 +4,8 @@
 
 package fragments
 
-const Interface = `
-{{- define "InterfaceForwardDeclaration" }}
+const Protocol = `
+{{- define "ProtocolForwardDeclaration" }}
 class {{ .Name }};
 {{- end }}
 
@@ -36,8 +36,8 @@ class {{ .Name }};
 {{- end }}
 {{- end }}
 
-{{- define "InterfaceDeclaration" }}
-{{- $interface := . }}
+{{- define "ProtocolDeclaration" }}
+{{- $protocol := . }}
 {{ "" }}
   {{- range .Methods }}
 extern "C" const fidl_type_t {{ .RequestTypeName }};
@@ -138,7 +138,7 @@ class {{ .Name }} final {
   };
   {{- end }}
 
-  // Collection of return types of FIDL calls in this interface.
+  // Collection of return types of FIDL calls in this protocol.
   class ResultOf final {
     ResultOf() = delete;
    private:
@@ -176,7 +176,7 @@ class {{ .Name }} final {
     {{- end }}
   };
 
-  // Collection of return types of FIDL calls in this interface,
+  // Collection of return types of FIDL calls in this protocol,
   // when the caller-allocate flavor or in-place call is used.
   class UnownedResultOf final {
     UnownedResultOf() = delete;
@@ -312,7 +312,7 @@ class {{ .Name }} final {
    public:
     Interface() = default;
     virtual ~Interface() = default;
-    using _Outer = {{ $interface.Name }};
+    using _Outer = {{ $protocol.Name }};
     using _Base = ::fidl::CompleterBase;
 {{ "" }}
     {{- range .Methods }}
@@ -360,7 +360,7 @@ class {{ .Name }} final {
   // It is possible to chain multiple TryDispatch functions in this manner.
   static bool TryDispatch{{ template "SyncServerDispatchMethodSignature" }};
 
-  // Dispatches the incoming message to one of the handlers functions in the interface.
+  // Dispatches the incoming message to one of the handlers functions in the protocol.
   // If there is no matching handler, it closes all the handles in |msg| and closes the channel with
   // a |ZX_ERR_NOT_SUPPORTED| epitaph, before returning false. The message should then be discarded.
   static bool Dispatch{{ template "SyncServerDispatchMethodSignature" }};
@@ -419,32 +419,32 @@ class {{ .Name }} final {
 };
 {{- end }}
 
-{{- define "InterfaceTraits" -}}
-{{ $interface := . -}}
+{{- define "ProtocolTraits" -}}
+{{ $protocol := . -}}
 {{ range .Methods -}}
 {{ $method := . -}}
 {{- if and .HasRequest .Request }}
 
 template <>
-struct IsFidlType<{{ $interface.Namespace }}::{{ $interface.Name }}::{{ .Name }}Request> : public std::true_type {};
+struct IsFidlType<{{ $protocol.Namespace }}::{{ $protocol.Name }}::{{ .Name }}Request> : public std::true_type {};
 template <>
-struct IsFidlMessage<{{ $interface.Namespace }}::{{ $interface.Name }}::{{ .Name }}Request> : public std::true_type {};
-static_assert(sizeof({{ $interface.Namespace }}::{{ $interface.Name }}::{{ .Name }}Request)
-    == {{ $interface.Namespace }}::{{ $interface.Name }}::{{ .Name }}Request::PrimarySize);
+struct IsFidlMessage<{{ $protocol.Namespace }}::{{ $protocol.Name }}::{{ .Name }}Request> : public std::true_type {};
+static_assert(sizeof({{ $protocol.Namespace }}::{{ $protocol.Name }}::{{ .Name }}Request)
+    == {{ $protocol.Namespace }}::{{ $protocol.Name }}::{{ .Name }}Request::PrimarySize);
 {{- range $index, $param := .Request }}
-static_assert(offsetof({{ $interface.Namespace }}::{{ $interface.Name }}::{{ $method.Name }}Request, {{ $param.Name }}) == {{ $param.Offset }});
+static_assert(offsetof({{ $protocol.Namespace }}::{{ $protocol.Name }}::{{ $method.Name }}Request, {{ $param.Name }}) == {{ $param.Offset }});
 {{- end }}
 {{- end }}
 {{- if and .HasResponse .Response }}
 
 template <>
-struct IsFidlType<{{ $interface.Namespace }}::{{ $interface.Name }}::{{ .Name }}Response> : public std::true_type {};
+struct IsFidlType<{{ $protocol.Namespace }}::{{ $protocol.Name }}::{{ .Name }}Response> : public std::true_type {};
 template <>
-struct IsFidlMessage<{{ $interface.Namespace }}::{{ $interface.Name }}::{{ .Name }}Response> : public std::true_type {};
-static_assert(sizeof({{ $interface.Namespace }}::{{ $interface.Name }}::{{ .Name }}Response)
-    == {{ $interface.Namespace }}::{{ $interface.Name }}::{{ .Name }}Response::PrimarySize);
+struct IsFidlMessage<{{ $protocol.Namespace }}::{{ $protocol.Name }}::{{ .Name }}Response> : public std::true_type {};
+static_assert(sizeof({{ $protocol.Namespace }}::{{ $protocol.Name }}::{{ .Name }}Response)
+    == {{ $protocol.Namespace }}::{{ $protocol.Name }}::{{ .Name }}Response::PrimarySize);
 {{- range $index, $param := .Response }}
-static_assert(offsetof({{ $interface.Namespace }}::{{ $interface.Name }}::{{ $method.Name }}Response, {{ $param.Name }}) == {{ $param.Offset }});
+static_assert(offsetof({{ $protocol.Namespace }}::{{ $protocol.Name }}::{{ $method.Name }}Response, {{ $param.Name }}) == {{ $param.Offset }});
 {{- end }}
 {{- end }}
 {{- end }}
@@ -468,10 +468,10 @@ static_assert(offsetof({{ $interface.Namespace }}::{{ $interface.Name }}::{{ $me
 {{- end }}
 {{- end }}
 
-{{- define "InterfaceDefinition" }}
+{{- define "ProtocolDefinition" }}
 
 namespace {
-{{ $interface := . -}}
+{{ $protocol := . -}}
 
 {{- range .Methods }}
   {{- range .Ordinals.Reads }}

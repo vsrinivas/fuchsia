@@ -596,7 +596,7 @@ class ChannelProtocol final {
     fit::callback<zx_status_t()> unknown;
   };
 
-  // Collection of return types of FIDL calls in this interface.
+  // Collection of return types of FIDL calls in this protocol.
   class ResultOf final {
     ResultOf() = delete;
 
@@ -656,7 +656,7 @@ class ChannelProtocol final {
     using MutateSocket = MutateSocket_Impl<MutateSocketResponse>;
   };
 
-  // Collection of return types of FIDL calls in this interface,
+  // Collection of return types of FIDL calls in this protocol,
   // when the caller-allocate flavor or in-place call is used.
   class UnownedResultOf final {
     UnownedResultOf() = delete;
@@ -898,7 +898,7 @@ class ChannelProtocol final {
                           ::fidl::Transaction* txn);
 
   // Dispatches the incoming message to one of the handlers functions in the
-  // interface. If there is no matching handler, it closes all the handles in
+  // protocol. If there is no matching handler, it closes all the handles in
   // |msg| and closes the channel with a |ZX_ERR_NOT_SUPPORTED| epitaph, before
   // returning false. The message should then be discarded.
   static bool Dispatch(Interface* impl, fidl_msg_t* msg,
@@ -1111,7 +1111,7 @@ class WithAndWithoutRequestResponse final {
     fit::callback<zx_status_t()> unknown;
   };
 
-  // Collection of return types of FIDL calls in this interface.
+  // Collection of return types of FIDL calls in this protocol.
   class ResultOf final {
     ResultOf() = delete;
 
@@ -1240,7 +1240,7 @@ class WithAndWithoutRequestResponse final {
         WithRequestWithResponse_Impl<WithRequestWithResponseResponse>;
   };
 
-  // Collection of return types of FIDL calls in this interface,
+  // Collection of return types of FIDL calls in this protocol,
   // when the caller-allocate flavor or in-place call is used.
   class UnownedResultOf final {
     UnownedResultOf() = delete;
@@ -1640,7 +1640,7 @@ class WithAndWithoutRequestResponse final {
                           ::fidl::Transaction* txn);
 
   // Dispatches the incoming message to one of the handlers functions in the
-  // interface. If there is no matching handler, it closes all the handles in
+  // protocol. If there is no matching handler, it closes all the handles in
   // |msg| and closes the channel with a |ZX_ERR_NOT_SUPPORTED| epitaph, before
   // returning false. The message should then be discarded.
   static bool Dispatch(Interface* impl, fidl_msg_t* msg,
@@ -1792,7 +1792,7 @@ class WithErrorSyntax final {
   };
   using ErrorAsEnumRequest = ::fidl::AnyZeroArgMessage;
 
-  // Collection of return types of FIDL calls in this interface.
+  // Collection of return types of FIDL calls in this protocol.
   class ResultOf final {
     ResultOf() = delete;
 
@@ -1858,7 +1858,7 @@ class WithErrorSyntax final {
     using ErrorAsEnum = ErrorAsEnum_Impl<ErrorAsEnumResponse>;
   };
 
-  // Collection of return types of FIDL calls in this interface,
+  // Collection of return types of FIDL calls in this protocol,
   // when the caller-allocate flavor or in-place call is used.
   class UnownedResultOf final {
     UnownedResultOf() = delete;
@@ -2106,7 +2106,7 @@ class WithErrorSyntax final {
                           ::fidl::Transaction* txn);
 
   // Dispatches the incoming message to one of the handlers functions in the
-  // interface. If there is no matching handler, it closes all the handles in
+  // protocol. If there is no matching handler, it closes all the handles in
   // |msg| and closes the channel with a |ZX_ERR_NOT_SUPPORTED| epitaph, before
   // returning false. The message should then be discarded.
   static bool Dispatch(Interface* impl, fidl_msg_t* msg,

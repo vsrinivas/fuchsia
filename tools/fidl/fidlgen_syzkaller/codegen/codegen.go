@@ -20,7 +20,7 @@ type Generator struct {
 func NewGenerator() *Generator {
 	tmpls := template.New("SyzkallerTemplates")
 	template.Must(tmpls.Parse(templates.SyscallDescription))
-	template.Must(tmpls.Parse(templates.Interface))
+	template.Must(tmpls.Parse(templates.Protocol))
 	template.Must(tmpls.Parse(templates.Struct))
 	template.Must(tmpls.Parse(templates.Union))
 	return &Generator{

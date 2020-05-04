@@ -96,7 +96,7 @@ impl EmptyProtocolProxy {
         self.client.into_channel().map_err(|client| Self { client })
     }
 
-    /// Get a Stream of events from the remote end of the EmptyProtocol interface
+    /// Get a Stream of events from the remote end of the EmptyProtocol protocol
     pub fn take_event_stream(&self) -> EmptyProtocolEventStream {
         EmptyProtocolEventStream { event_receiver: self.client.take_event_receiver() }
     }

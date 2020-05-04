@@ -24,7 +24,7 @@ func NewGenerator() *Generator {
 	tmpls := template.New("GoTemplates")
 	template.Must(tmpls.Parse(templates.Bits))
 	template.Must(tmpls.Parse(templates.Enum))
-	template.Must(tmpls.Parse(templates.Interface))
+	template.Must(tmpls.Parse(templates.Protocol))
 	template.Must(tmpls.Parse(templates.Library))
 	template.Must(tmpls.Parse(templates.Struct))
 	template.Must(tmpls.Parse(templates.Union))

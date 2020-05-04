@@ -11,7 +11,7 @@ import (
 
 // CommaSeparatedList holds the result of parsing a command-line flag that
 // accepts a comma-separated list of strings. This type satisfies the flag.Value
-// interface.
+// protocol.
 type CommaSeparatedList []string
 
 func (l *CommaSeparatedList) String() string {
