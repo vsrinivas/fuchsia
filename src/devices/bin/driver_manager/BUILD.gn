@@ -81,7 +81,7 @@ source_set("lib") {
     "//zircon/public/lib/memfs",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
-    "//zircon/system/fidl/fuchsia-boot:c",
+    "//zircon/system/fidl/fuchsia-boot",
     "//zircon/system/fidl/fuchsia-boot:llcpp",
     "//zircon/system/fidl/fuchsia-device-manager",
     "//zircon/system/fidl/fuchsia-device-manager:c",

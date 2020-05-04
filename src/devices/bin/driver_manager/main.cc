@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/boot/c/fidl.h>
+#include <fuchsia/boot/cpp/fidl.h>
 #include <fuchsia/boot/llcpp/fidl.h>
 #include <fuchsia/ldsvc/llcpp/fidl.h>
 #include <getopt.h>
@@ -79,37 +79,32 @@ DriverManagerParams GetDriverManagerParams(llcpp::fuchsia::boot::Arguments::Sync
           bool_resp->values[3], bool_resp->values[4], bool_resp->values[5]};
 }
 
-constexpr char kRootJobPath[] = "/svc/" fuchsia_boot_RootJob_Name;
-constexpr char kRootResourcePath[] = "/svc/" fuchsia_boot_RootResource_Name;
+static const std::string kRootJobPath = "/svc/" + std::string(fuchsia::boot::RootJob::Name_);
+static const std::string kRootResourcePath =
+    "/svc/" + std::string(fuchsia::boot::RootResource::Name_);
 
 // Get the root job from the root job service.
 zx_status_t get_root_job(zx::job* root_job) {
-  zx::channel local, remote;
-  zx_status_t status = zx::channel::create(0, &local, &remote);
+  fuchsia::boot::RootJobSyncPtr root_job_ptr;
+  zx_status_t status = fdio_service_connect(kRootJobPath.c_str(),
+                            root_job_ptr.NewRequest().TakeChannel().release());
   if (status != ZX_OK) {
     return status;
   }
-  status = fdio_service_connect(kRootJobPath, remote.release());
-  if (status != ZX_OK) {
-    return status;
-  }
-  return fuchsia_boot_RootJobGet(local.get(), root_job->reset_and_get_address());
+  return root_job_ptr->Get(root_job);
 }
 
 // Get the root resource from the root resource service. Not receiving the
 // startup handle is logged, but not fatal.  In test environments, it would not
 // be present.
 zx_status_t get_root_resource(zx::resource* root_resource) {
-  zx::channel local, remote;
-  zx_status_t status = zx::channel::create(0, &local, &remote);
+  fuchsia::boot::RootResourceSyncPtr root_resource_ptr;
+  zx_status_t status = fdio_service_connect(kRootResourcePath.c_str(),
+                            root_resource_ptr.NewRequest().TakeChannel().release());
   if (status != ZX_OK) {
     return status;
   }
-  status = fdio_service_connect(kRootResourcePath, remote.release());
-  if (status != ZX_OK) {
-    return status;
-  }
-  return fuchsia_boot_RootResourceGet(local.get(), root_resource->reset_and_get_address());
+  return root_resource_ptr->Get(root_resource);
 }
 
 void ParseArgs(int argc, char** argv, DevmgrArgs* out) {
