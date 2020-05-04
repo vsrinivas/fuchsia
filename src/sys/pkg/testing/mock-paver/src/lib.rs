@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use {
-    anyhow::Error,
+    anyhow::{anyhow, Error},
     fidl_fuchsia_paver as paver, fuchsia_async as fasync,
     fuchsia_zircon::{Status, Vmo},
     futures::prelude::*,
@@ -107,6 +107,20 @@ pub struct MockPaverService {
 impl MockPaverService {
     pub fn take_events(&self) -> Vec<PaverEvent> {
         std::mem::replace(&mut *self.events.lock(), vec![])
+    }
+
+    /// Spawns a new task to serve the data sink protocol.
+    pub fn spawn_data_sink_service(self: &Arc<Self>) -> paver::DataSinkProxy {
+        let (proxy, stream) =
+            fidl::endpoints::create_proxy_and_stream::<paver::DataSinkMarker>().unwrap();
+
+        fasync::spawn(
+            Arc::clone(self)
+                .run_data_sink_service(stream)
+                .unwrap_or_else(|e| panic!("error running data sink service: {:#}", anyhow!(e))),
+        );
+
+        proxy
     }
 
     async fn run_data_sink_service(

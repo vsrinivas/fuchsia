@@ -11,6 +11,7 @@ use {
 
 mod args;
 mod images;
+mod paver;
 
 #[fuchsia_async::run_singlethreaded]
 async fn main() {

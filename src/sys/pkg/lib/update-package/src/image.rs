@@ -42,7 +42,7 @@ pub struct Image {
 
 impl Image {
     /// Construct an Image using the given filename that does not contain a subtype.
-    pub(crate) fn new(filename: impl Into<String>) -> Self {
+    pub fn new(filename: impl Into<String>) -> Self {
         Self { filename: filename.into(), type_separator: None }
     }
 
@@ -77,8 +77,7 @@ impl Image {
     }
 
     /// Test helper to construct an Image from a given name and optional subtype.
-    #[cfg(test)]
-    pub(crate) fn join<'a>(name: &'a str, subtype: impl Into<Option<&'a str>>) -> Self {
+    pub fn join<'a>(name: &'a str, subtype: impl Into<Option<&'a str>>) -> Self {
         match subtype.into() {
             Some("") | None => Self { filename: name.to_owned(), type_separator: None },
             Some(subtype) => {
