@@ -55,7 +55,7 @@ class NandDevice : public DeviceType, public ddk::NandProtocol<NandDevice, ddk::
                       fzl::VmoMapper* oob, uint8_t** vaddr_oob);
 
   // Calls controller specific read function.
-  // data, oob: pointers to user oob/data buffers.
+  // data, oob: pointers to user out-of-band data and data buffers.
   // nand_page : NAND page address to read.
   // ecc_correct : Number of ecc corrected bitflips (< 0 indicates
   // ecc could not correct all bitflips - caller needs to check that).

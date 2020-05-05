@@ -10,7 +10,7 @@ Software outside of the [Platform Source
 Tree](../docs/glossary.md#platform-source-tree) should depend only on the Fuchsia
 SDK.
 
-> [Learn more](../docs/development/sdk/README.md)
+> [Learn more](../docs/concepts/sdk/README.md)
 
 ## Categories
 
@@ -25,5 +25,5 @@ projects. See [sdk_atom.gni](../build/sdk/sdk_atom.gni) for more details.
 ## Governance
 
 The API surface described by the SDK is governed by the
-[Fuchsia API Council](../docs/development/api/council.md) and should conform to
-the appropriate [API rubrics](../docs/development/api/README.md).
+[Fuchsia API Council](../docs/concepts/api/council.md) and should conform to
+the appropriate [API rubrics](../docs/concepts/api/README.md).

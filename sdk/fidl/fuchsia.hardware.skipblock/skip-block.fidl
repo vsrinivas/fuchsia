@@ -42,6 +42,12 @@ struct WriteBytesOperation {
     uint64 size;
 };
 
+/// SkipBlock is a layer on top of a raw NAND device that skips bad blocks, but provides no
+/// higher-level processing like wear leveling.
+///
+/// Skip-block partitions are used when data needs to be accessible by the bootloader. The
+/// bootloader doesn't understand the more advanced FTL partitions and this data isn't written
+/// frequently enough for performance or wear-leveling to be an issue.
 [Layout = "Simple"]
 protocol SkipBlock {
     /// Returns information about the skip-block partition.

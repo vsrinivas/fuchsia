@@ -17,6 +17,10 @@ struct BrokerRequest {
     bool oob_vmo; // True to read or write OOB data.
 };
 
+/// The Broker allows for serialized entry to the raw nand, which ensures only a single client is
+/// ever talking to the nand device, and all higher level clients have disconnected. In addition,
+/// access to raw nand is restricted from the system during production where nand-broker is not
+/// present.
 [Layout = "Simple"]
 protocol Broker {
     // Retrieves the nand info from the underlying device.

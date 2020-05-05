@@ -49,7 +49,7 @@ class BlockDevice;
 using DeviceType = ddk::Device<BlockDevice, ddk::GetSizable, ddk::UnbindableNew, ddk::Messageable,
                                ddk::Suspendable, ddk::Resumable, ddk::GetProtocolable>;
 
-// Provides the bulk of the functionality for a FTL-backed block device.
+// Exposes the FTL library as a Fuchsia BlockDevice protocol.
 class BlockDevice : public DeviceType,
                     public ddk::BlockImplProtocol<BlockDevice, ddk::base_protocol>,
                     public ddk::BlockPartitionProtocol<BlockDevice>,

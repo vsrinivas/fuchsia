@@ -18,7 +18,8 @@
 
 namespace ftl {
 
-// Encapsulates the lower layer TargetFtl-Ndm driver.
+// Implementation of the FTL library's driver interface in terms of a device implementing Fuchsia's
+// NAND protocol.
 class NandDriver : public ftl::NdmBaseDriver {
  public:
   static std::unique_ptr<NandDriver> Create(const nand_protocol_t* parent,

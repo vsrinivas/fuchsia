@@ -9,15 +9,17 @@ using zx;
 
 [Layout = "ddk-protocol"]
 protocol RawNand {
-    /// Read one nand page with hwecc.
+    /// Read one NAND page and its out-of-band data with hardware ECC.
     ReadPageHwecc(uint32 nandpage) -> (zx.status s, vector<voidptr> data, vector<voidptr> oob,
                                        uint32 ecc_correct);
 
-    /// Write one nand page with hwecc.
-    /// Should return ZX_ERR_IO *only* when error ocurred due to underlying hardware.
+    /// Write one NAND page and its out-of-band data with hardware ECC.
+    ///
+    /// Should return ZX_ERR_IO *only* when an error ocurred due to underlying hardware.
     WritePageHwecc(vector<voidptr> data, vector<voidptr> oob, uint32 nandpage) -> (zx.status s);
 
-    /// Erase nand block.
+    /// Erase NAND block.
+    ///
     /// Should return ZX_ERR_IO *only* when error ocurred due to underlying hardware.
     EraseBlock(uint32 nandpage) -> (zx.status s);
 

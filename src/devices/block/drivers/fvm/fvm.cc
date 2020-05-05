@@ -101,7 +101,9 @@ zx_status_t VPartitionManager::AddPartition(std::unique_ptr<VPartition> vp) cons
   if ((status = vp->DdkAdd(name)) != ZX_OK) {
     return status;
   }
-  // TODO(johngro): ask smklein why it is OK to release this managed pointer.
+
+  // The VPartition object was added to the DDK and is now owned by it. It will be deleted when the
+  // device is released.
   __UNUSED auto ptr = vp.release();
   return ZX_OK;
 }
