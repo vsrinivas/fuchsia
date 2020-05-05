@@ -132,7 +132,7 @@ class Fixed {
   constexpr Fixed Fraction() const { return *this - Fixed{Floor()}; }
 
   // Returns the absolute value of this fixed-point value.
-  constexpr Fixed Absolute() {
+  constexpr Fixed Absolute() const {
     // Compute a mask and bit to conditionally convert |value_| to positive.
     // When |value_| is negative, then |mask| = -1 and |one| = 1, otherwise both
     // are zero.

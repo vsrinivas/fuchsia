@@ -61,7 +61,7 @@ struct FixedFormat {
   static constexpr size_t FractionalBits = FractionalBits_;
   static constexpr size_t IntegralBits = Bits - FractionalBits - (IsSigned ? 1 : 0);
   static constexpr size_t PositiveBits = IntegralBits + FractionalBits;
-  static constexpr size_t Power = size_t{1} << FractionalBits;
+  static constexpr size_t Power = FractionalBits == 64 ? 0 : size_t{1} << FractionalBits;
 
   static constexpr Integer One = 1;  // Typed constant used in shifts below.
   static constexpr Integer FractionalMask = Power - 1;
@@ -85,8 +85,10 @@ struct FixedFormat {
 
   static constexpr Integer Min = std::numeric_limits<Integer>::min();
   static constexpr Integer Max = std::numeric_limits<Integer>::max();
-  static constexpr Integer IntegralMin = static_cast<Integer>(Min / Power);
-  static constexpr Integer IntegralMax = static_cast<Integer>(Max / Power);
+  static constexpr Integer IntegralMin =
+      FractionalBits == 64 ? 0 : static_cast<Integer>(Min / Power);
+  static constexpr Integer IntegralMax =
+      FractionalBits == 64 ? 0 : static_cast<Integer>(Max / Power);
 
   // Saturates an intermediate value to the valid range of the base type.
   template <typename I, typename = std::enable_if_t<std::is_integral_v<I>>>

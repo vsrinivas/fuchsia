@@ -10,6 +10,7 @@
 #include <ffl/expression.h>
 #include <ffl/fixed.h>
 #include <ffl/saturating_arithmetic.h>
+#include <ffl/string.h>
 #include <zxtest/zxtest.h>
 
 namespace {
@@ -22,6 +23,7 @@ using ffl::FromRaw;
 using ffl::SaturateAdd;
 using ffl::SaturateMultiply;
 using ffl::SaturateSubtract;
+using ffl::String;
 using ffl::ToResolution;
 
 // Helper for the macro below. Consumes the tokens passed as two boolean
@@ -1054,9 +1056,213 @@ static_assert(Fixed<uint16_t, 16>::Min() == Fixed<uint16_t, 16>::Min().Absolute(
 static_assert(Fixed<uint32_t, 32>::Min() == Fixed<uint32_t, 32>::Min().Absolute());
 static_assert(Fixed<uint64_t, 64>::Min() == Fixed<uint64_t, 64>::Min().Absolute());
 
+// Test that String is valid in constexpr context.
+static_assert(Format(Fixed<uint8_t, 0>::Min()).c_str() != nullptr);
+static_assert(Format(Fixed<int8_t, 0>::Min()).c_str() != nullptr);
+static_assert(Format(Fixed<uint16_t, 0>::Min()).c_str() != nullptr);
+static_assert(Format(Fixed<int16_t, 0>::Min()).c_str() != nullptr);
+static_assert(Format(Fixed<uint32_t, 0>::Min()).c_str() != nullptr);
+static_assert(Format(Fixed<int32_t, 0>::Min()).c_str() != nullptr);
+static_assert(Format(Fixed<uint64_t, 0>::Min()).c_str() != nullptr);
+static_assert(Format(Fixed<int64_t, 0>::Min()).c_str() != nullptr);
+
+constexpr bool CStrEqualsData(const String& value) { return value.c_str() == value.data(); }
+
+static_assert(CStrEqualsData(Format(Fixed<uint8_t, 0>::Min())));
+static_assert(CStrEqualsData(Format(Fixed<int8_t, 0>::Min())));
+static_assert(CStrEqualsData(Format(Fixed<uint16_t, 0>::Min())));
+static_assert(CStrEqualsData(Format(Fixed<int16_t, 0>::Min())));
+static_assert(CStrEqualsData(Format(Fixed<uint32_t, 0>::Min())));
+static_assert(CStrEqualsData(Format(Fixed<int32_t, 0>::Min())));
+static_assert(CStrEqualsData(Format(Fixed<uint64_t, 0>::Min())));
+static_assert(CStrEqualsData(Format(Fixed<int64_t, 0>::Min())));
+
 }  // anonymous namespace
 
-TEST(FuchsiaFixedPoint, Dummy) {
-  // We don't have anything to test at runtime, but infra expects something.
-  EXPECT_TRUE(true);
+TEST(FuchsiaFixedPoint, Copy) {
+  using F = Fixed<uint64_t, 0>;
+
+  String string;
+  EXPECT_STR_EQ(string.c_str(), "");
+
+  string = Format(F::Max());
+  EXPECT_STR_EQ(string.c_str(), "18446744073709551615.0");
+
+  String string_copy = string;
+  EXPECT_STR_EQ(string.c_str(), string_copy.c_str());
+  EXPECT_NE(string.c_str(), string_copy.c_str());
+}
+
+TEST(FuchsiaFixedPoint, String) {
+  {
+    using F = Fixed<uint8_t, 0>;
+    EXPECT_STR_EQ(Format(F::Min()).c_str(), "0.0");
+    EXPECT_STR_EQ(Format(F{F::Min() / 2}).c_str(), "0.0");
+    EXPECT_STR_EQ(Format(F{F::Max() / 2}).c_str(), "127.0");
+    EXPECT_STR_EQ(Format(F::Max()).c_str(), "255.0");
+  }
+  {
+    using F = Fixed<uint8_t, 4>;
+    EXPECT_STR_EQ(Format(F::Min()).c_str(), "0.0");
+    EXPECT_STR_EQ(Format(F{F::Min() / 2}).c_str(), "0.0");
+    EXPECT_STR_EQ(Format(F{F::Max() / 2}).c_str(), "7.9375");
+    EXPECT_STR_EQ(Format(F::Max()).c_str(), "15.9375");
+  }
+  {
+    using F = Fixed<uint8_t, 8>;
+    EXPECT_STR_EQ(Format(F::Min()).c_str(), "0.0");
+    EXPECT_STR_EQ(Format(F{F::Min() / 2}).c_str(), "0.0");
+    EXPECT_STR_EQ(Format(F{F::Max() / 2}).c_str(), "0.49609375");
+    EXPECT_STR_EQ(Format(F::Max()).c_str(), "0.99609375");
+  }
+  {
+    using F = Fixed<int8_t, 0>;
+    EXPECT_STR_EQ(Format(F::Min()).c_str(), "-128.0");
+    EXPECT_STR_EQ(Format(F{F::Min() / 2}).c_str(), "-64.0");
+    EXPECT_STR_EQ(Format(F{F::Max() / 2}).c_str(), "63.0");
+    EXPECT_STR_EQ(Format(F::Max()).c_str(), "127.0");
+  }
+  {
+    using F = Fixed<int8_t, 4>;
+    EXPECT_STR_EQ(Format(F::Min()).c_str(), "-8.0");
+    EXPECT_STR_EQ(Format(F{F::Min() / 2}).c_str(), "-4.0");
+    EXPECT_STR_EQ(Format(F{F::Max() / 2}).c_str(), "3.9375");
+    EXPECT_STR_EQ(Format(F::Max()).c_str(), "7.9375");
+  }
+  {
+    using F = Fixed<int8_t, 7>;
+    EXPECT_STR_EQ(Format(F::Min()).c_str(), "-1.0");
+    EXPECT_STR_EQ(Format(F{F::Min() / 2}).c_str(), "-0.5");
+    EXPECT_STR_EQ(Format(F{F::Max() / 2}).c_str(), "0.4921875");
+    EXPECT_STR_EQ(Format(F::Max()).c_str(), "0.9921875");
+  }
+
+  {
+    using F = Fixed<uint16_t, 0>;
+    EXPECT_STR_EQ(Format(F::Min()).c_str(), "0.0");
+    EXPECT_STR_EQ(Format(F{F::Min() / 2}).c_str(), "0.0");
+    EXPECT_STR_EQ(Format(F{F::Max() / 2}).c_str(), "32767.0");
+    EXPECT_STR_EQ(Format(F::Max()).c_str(), "65535.0");
+  }
+  {
+    using F = Fixed<uint16_t, 8>;
+    EXPECT_STR_EQ(Format(F::Min()).c_str(), "0.0");
+    EXPECT_STR_EQ(Format(F{F::Min() / 2}).c_str(), "0.0");
+    EXPECT_STR_EQ(Format(F{F::Max() / 2}).c_str(), "127.99609375");
+    EXPECT_STR_EQ(Format(F::Max()).c_str(), "255.99609375");
+  }
+  {
+    using F = Fixed<uint16_t, 16>;
+    EXPECT_STR_EQ(Format(F::Min()).c_str(), "0.0");
+    EXPECT_STR_EQ(Format(F{F::Min() / 2}).c_str(), "0.0");
+    EXPECT_STR_EQ(Format(F{F::Max() / 2}).c_str(), "0.4999847412");
+    EXPECT_STR_EQ(Format(F::Max()).c_str(), "0.9999847412");
+  }
+  {
+    using F = Fixed<int16_t, 0>;
+    EXPECT_STR_EQ(Format(F::Min()).c_str(), "-32768.0");
+    EXPECT_STR_EQ(Format(F{F::Min() / 2}).c_str(), "-16384.0");
+    EXPECT_STR_EQ(Format(F{F::Max() / 2}).c_str(), "16383.0");
+    EXPECT_STR_EQ(Format(F::Max()).c_str(), "32767.0");
+  }
+  {
+    using F = Fixed<int16_t, 8>;
+    EXPECT_STR_EQ(Format(F::Min()).c_str(), "-128.0");
+    EXPECT_STR_EQ(Format(F{F::Min() / 2}).c_str(), "-64.0");
+    EXPECT_STR_EQ(Format(F{F::Max() / 2}).c_str(), "63.99609375");
+    EXPECT_STR_EQ(Format(F::Max()).c_str(), "127.99609375");
+  }
+  {
+    using F = Fixed<int16_t, 15>;
+    EXPECT_STR_EQ(Format(F::Min()).c_str(), "-1.0");
+    EXPECT_STR_EQ(Format(F{F::Min() / 2}).c_str(), "-0.5");
+    EXPECT_STR_EQ(Format(F{F::Max() / 2}).c_str(), "0.4999694824");
+    EXPECT_STR_EQ(Format(F::Max()).c_str(), "0.9999694824");
+  }
+
+  {
+    using F = Fixed<uint32_t, 0>;
+    EXPECT_STR_EQ(Format(F::Min()).c_str(), "0.0");
+    EXPECT_STR_EQ(Format(F{F::Min() / 2}).c_str(), "0.0");
+    EXPECT_STR_EQ(Format(F{F::Max() / 2}).c_str(), "2147483647.0");
+    EXPECT_STR_EQ(Format(F::Max()).c_str(), "4294967295.0");
+  }
+  {
+    using F = Fixed<uint32_t, 16>;
+    EXPECT_STR_EQ(Format(F::Min()).c_str(), "0.0");
+    EXPECT_STR_EQ(Format(F{F::Min() / 2}).c_str(), "0.0");
+    EXPECT_STR_EQ(Format(F{F::Max() / 2}).c_str(), "32767.9999847412");
+    EXPECT_STR_EQ(Format(F::Max()).c_str(), "65535.9999847412");
+  }
+  {
+    using F = Fixed<uint32_t, 32>;
+    EXPECT_STR_EQ(Format(F::Min()).c_str(), "0.0");
+    EXPECT_STR_EQ(Format(F{F::Min() / 2}).c_str(), "0.0");
+    EXPECT_STR_EQ(Format(F{F::Max() / 2}).c_str(), "0.4999999997");
+    EXPECT_STR_EQ(Format(F::Max()).c_str(), "0.9999999997");
+  }
+  {
+    using F = Fixed<int32_t, 0>;
+    EXPECT_STR_EQ(Format(F::Min()).c_str(), "-2147483648.0");
+    EXPECT_STR_EQ(Format(F{F::Min() / 2}).c_str(), "-1073741824.0");
+    EXPECT_STR_EQ(Format(F{F::Max() / 2}).c_str(), "1073741823.0");
+    EXPECT_STR_EQ(Format(F::Max()).c_str(), "2147483647.0");
+  }
+  {
+    using F = Fixed<int32_t, 16>;
+    EXPECT_STR_EQ(Format(F::Min()).c_str(), "-32768.0");
+    EXPECT_STR_EQ(Format(F{F::Min() / 2}).c_str(), "-16384.0");
+    EXPECT_STR_EQ(Format(F{F::Max() / 2}).c_str(), "16383.9999847412");
+    EXPECT_STR_EQ(Format(F::Max()).c_str(), "32767.9999847412");
+  }
+  {
+    using F = Fixed<int32_t, 31>;
+    EXPECT_STR_EQ(Format(F::Min()).c_str(), "-1.0");
+    EXPECT_STR_EQ(Format(F{F::Min() / 2}).c_str(), "-0.5");
+    EXPECT_STR_EQ(Format(F{F::Max() / 2}).c_str(), "0.4999999995");
+    EXPECT_STR_EQ(Format(F::Max()).c_str(), "0.9999999995");
+  }
+
+  {
+    using F = Fixed<uint64_t, 0>;
+    EXPECT_STR_EQ(Format(F::Min()).c_str(), "0.0");
+    EXPECT_STR_EQ(Format(F{F::Min() / 2}).c_str(), "0.0");
+    EXPECT_STR_EQ(Format(F{F::Max() / 2}).c_str(), "9223372036854775807.0");
+    EXPECT_STR_EQ(Format(F::Max()).c_str(), "18446744073709551615.0");
+  }
+  {
+    using F = Fixed<uint64_t, 32>;
+    EXPECT_STR_EQ(Format(F::Min()).c_str(), "0.0");
+    EXPECT_STR_EQ(Format(F{F::Min() / 2}).c_str(), "0.0");
+    EXPECT_STR_EQ(Format(F{F::Max() / 2}).c_str(), "2147483647.9999999997");
+    EXPECT_STR_EQ(Format(F::Max()).c_str(), "4294967295.9999999997");
+  }
+  {
+    using F = Fixed<uint64_t, 64>;
+    EXPECT_STR_EQ(Format(F::Min()).c_str(), "0.0");
+    EXPECT_STR_EQ(Format(F{F::Min() / 2}).c_str(), "0.0");
+    EXPECT_STR_EQ(Format(F{F::Max() / 2}).c_str(), "0.4999999999");
+    EXPECT_STR_EQ(Format(F::Max()).c_str(), "0.9999999999");
+  }
+  {
+    using F = Fixed<int64_t, 0>;
+    EXPECT_STR_EQ(Format(F::Min()).c_str(), "-9223372036854775808.0");
+    EXPECT_STR_EQ(Format(F{F::Min() / 2}).c_str(), "-4611686018427387904.0");
+    EXPECT_STR_EQ(Format(F{F::Max() / 2}).c_str(), "4611686018427387903.0");
+    EXPECT_STR_EQ(Format(F::Max()).c_str(), "9223372036854775807.0");
+  }
+  {
+    using F = Fixed<int64_t, 32>;
+    EXPECT_STR_EQ(Format(F::Min()).c_str(), "-2147483648.0");
+    EXPECT_STR_EQ(Format(F{F::Min() / 2}).c_str(), "-1073741824.0");
+    EXPECT_STR_EQ(Format(F{F::Max() / 2}).c_str(), "1073741823.9999999997");
+    EXPECT_STR_EQ(Format(F::Max()).c_str(), "2147483647.9999999997");
+  }
+  {
+    using F = Fixed<int64_t, 63>;
+    EXPECT_STR_EQ(Format(F::Min()).c_str(), "-1.0");
+    EXPECT_STR_EQ(Format(F{F::Min() / 2}).c_str(), "-0.5");
+    EXPECT_STR_EQ(Format(F{F::Max() / 2}).c_str(), "0.4999999999");
+    EXPECT_STR_EQ(Format(F::Max()).c_str(), "0.9999999999");
+  }
 }

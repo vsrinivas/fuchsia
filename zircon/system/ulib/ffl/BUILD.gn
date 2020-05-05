@@ -9,6 +9,7 @@ zx_library("ffl") {
     "ffl/fixed_format.h",
     "ffl/fixed.h",
     "ffl/saturating_arithmetic.h",
+    "ffl/string.h",
     "ffl/utility.h",
   ]
   sources = []
