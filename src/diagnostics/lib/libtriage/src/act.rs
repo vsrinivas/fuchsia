@@ -5,7 +5,7 @@
 use {
     super::{
         config::DiagnosticData,
-        metrics::{MetricState, MetricValue, Metrics},
+        metrics::{Metric, MetricState, MetricValue, Metrics},
     },
     anyhow::Error,
     log::*,
@@ -82,8 +82,8 @@ pub type ActionsSchema = HashMap<String, Action>;
 /// the string from [print] will be printed as a warning.
 #[derive(Deserialize, Debug)]
 pub struct Action {
-    pub trigger: String,     // The name of a boolean Metric
-    pub print: String,       // What to print if trigger is true
+    pub trigger: Metric, // An expression to evaluate which determines if this action triggers.
+    pub print: String,   // What to print if trigger is true
     pub tag: Option<String>, // An optional tag to associate with this Action
 }
 
@@ -99,8 +99,7 @@ impl ActionContext<'_> {
     }
 
     fn consider(&mut self, action: &Action, namespace: &String, name: &String) {
-        let was_triggered = match self.metric_state.metric_value_by_name(namespace, &action.trigger)
-        {
+        let was_triggered = match self.metric_state.metric_value(namespace, &action.trigger) {
             MetricValue::Bool(true) => {
                 self.act(namespace, name, &action);
                 true
@@ -157,16 +156,29 @@ mod test {
         let mut action_file = ActionsSchema::new();
         action_file.insert(
             "do_true".to_string(),
-            Action { trigger: "true".to_string(), print: "True was fired".to_string(), tag: None },
+            Action {
+                trigger: Metric::Eval("true".to_string()),
+                print: "True was fired".to_string(),
+                tag: None,
+            },
         );
         action_file.insert(
             "do_false".to_string(),
             Action {
-                trigger: "false".to_string(),
+                trigger: Metric::Eval("false".to_string()),
                 print: "False was fired".to_string(),
                 tag: None,
             },
         );
+        action_file.insert(
+            "do_operation".to_string(),
+            Action {
+                trigger: Metric::Eval("0 < 10".to_string()),
+                print: "Inequality triggered".to_string(),
+                tag: None,
+            },
+        );
+
         actions.insert("file".to_string(), action_file);
         let inspect_context =
             DiagnosticData { source: String::from("source"), inspect: InspectFetcher::new_empty() };
@@ -175,6 +187,10 @@ mod test {
         assert!(warnings_include(
             results.get_warnings(),
             "Warning: 'do_true' in 'file' detected 'True was fired': 'true' was true"
+        ));
+        assert!(warnings_include(
+            results.get_warnings(),
+            "Warning: 'do_operation' in 'file' detected 'Inequality triggered': '0 < 10' was true"
         ));
         assert!(!warnings_include(results.get_warnings(), "False was fired"));
     }

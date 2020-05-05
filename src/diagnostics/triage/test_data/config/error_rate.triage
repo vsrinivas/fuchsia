@@ -5,11 +5,10 @@
     },
     eval: {
         error_rate: "errors / requests",
-        error_rate_90: "error_rate > 0.9",
     },
     act: {
         error_rate_too_high: {
-            trigger: "error_rate_90",
+            trigger: "error_rate > 0.9",
             print: "Error rate for app.cmx is too high",
         },
     },

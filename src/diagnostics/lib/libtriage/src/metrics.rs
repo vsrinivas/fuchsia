@@ -8,13 +8,13 @@ use {
     super::config::{self},
     fetch::{InspectFetcher, SelectorString, SelectorType},
     fuchsia_inspect_node_hierarchy::Property as DiagnosticProperty,
-    serde_derive::Deserialize,
+    serde::{Deserialize, Deserializer},
     serde_json::Value as JsonValue,
-    std::{clone::Clone, collections::HashMap},
+    std::{clone::Clone, collections::HashMap, convert::TryFrom},
 };
 
 /// The contents of a single Metric. Metrics produce a value for use in Actions or other Metrics.
-#[derive(Deserialize, Clone, Debug)]
+#[derive(Clone, Debug)]
 pub enum Metric {
     /// Selector tells where to find a value in the Inspect data.
     // Note: This can't be a fidl_fuchsia_diagnostics::Selector because it's not deserializable or
@@ -23,6 +23,29 @@ pub enum Metric {
     /// Eval contains an arithmetic expression,
     // TODO(cphoenix): Parse and validate this at load-time.
     Eval(String),
+}
+
+impl<'de> Deserialize<'de> for Metric {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let value = String::deserialize(deserializer)?;
+        if SelectorString::is_selector(&value) {
+            Ok(Metric::Selector(SelectorString::try_from(value).map_err(serde::de::Error::custom)?))
+        } else {
+            Ok(Metric::Eval(value))
+        }
+    }
+}
+
+impl std::fmt::Display for Metric {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Metric::Selector(s) => write!(f, "{:?}", s),
+            Metric::Eval(s) => write!(f, "{}", s),
+        }
+    }
 }
 
 /// [Metrics] are a map from namespaces to the named [Metric]s stored within that namespace.

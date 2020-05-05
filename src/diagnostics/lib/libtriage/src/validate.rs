@@ -66,19 +66,16 @@ fn check_failure(
                 println!("Action {} not found in trial {}", action_name, trial_name);
                 return true;
             }
-            Some(action) => {
-                let trigger_name = &action.trigger;
-                match metric_state.metric_value_by_name(namespace, &trigger_name) {
-                    MetricValue::Bool(actual) if actual == expected => return false,
-                    other => {
-                        println!(
-                            "Test {} failed: trigger {} of action {} returned {:?}, expected {}",
-                            trial_name, trigger_name, action_name, other, expected
-                        );
-                        return true;
-                    }
+            Some(action) => match metric_state.metric_value(namespace, &action.trigger) {
+                MetricValue::Bool(actual) if actual == expected => return false,
+                other => {
+                    println!(
+                        "Test {} failed: trigger '{}' of action {} returned {:?}, expected {}",
+                        trial_name, action.trigger, action_name, other, expected
+                    );
+                    return true;
                 }
-            }
+            },
         },
     }
 }
@@ -110,12 +107,16 @@ mod test {
             build_map!(
                 (
                     "fires",
-                    Action { trigger: "true".to_string(), print: "good".to_string(), tag: None }
+                    Action {
+                        trigger: Metric::Eval("true".to_string()),
+                        print: "good".to_string(),
+                        tag: None
+                    }
                 ),
                 (
                     "inert",
                     Action {
-                        trigger: "false".to_string(),
+                        trigger: Metric::Eval("false".to_string()),
                         print: "what?!?".to_string(),
                         tag: None
                     }

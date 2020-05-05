@@ -3,12 +3,9 @@
         status: "INSPECT:stash.cmx:root/fuchsia.inspect.Health:status",
         is_secure: "INSPECT:stash.cmx:root:secure_mode",
     },
-    eval: {
-        not_ok: "status != 'OK'",
-    },
     act: {
         unhealthy: {
-            trigger: "not_ok",
+            trigger: "status != 'OK'",
             print: "Stash server is experiencing errors",
         },
         should_not_be_secure: {

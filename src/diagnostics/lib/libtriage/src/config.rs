@@ -287,7 +287,7 @@ mod test {
                 let mut m =  ActionsSchema::new();
                 $(
                     let action = Action {
-                        trigger: $trigger.to_string(),
+                        trigger: Metric::Eval($trigger.to_string()),
                         print: $print.to_string(),
                         tag: $tag
                     };
@@ -304,7 +304,11 @@ mod test {
             let a = $result.get(&$key.to_string());
             assert!(a.is_some());
             let a = a.unwrap();
-            assert_eq!(a.trigger, $trigger.to_string());
+            if let Metric::Eval(trigger_eval) = &a.trigger {
+                assert_eq!(trigger_eval, $trigger);
+            } else {
+                assert!(false, "Trigger {:?} was not an expression to Eval", a.trigger);
+            }
             assert_eq!(a.print, $print.to_string());
         };
     }

@@ -276,5 +276,5 @@ integration_test!(
     vec![],
     vec![],
     0,
-    "Warning: 'error_rate_too_high' in 'error_rate' detected 'Error rate for app.cmx is too high': 'error_rate_90' was true"
+    "Warning: 'error_rate_too_high' in 'error_rate' detected 'Error rate for app.cmx is too high': 'error_rate > 0.9' was true"
 );
