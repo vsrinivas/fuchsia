@@ -58,6 +58,14 @@ TEST_F(TestRingbuffer, Size) {
   auto ringbuffer = std::make_unique<Ringbuffer>(magma::PlatformBuffer::Create(kBufferSize, "test"),
                                                  kRingbufferSize);
   EXPECT_EQ(ringbuffer->size(), kRingbufferSize);
+
+  const uint64_t kGpuAddr = 0x10000;
+  auto owner = std::make_unique<AddressSpaceOwner>();
+  auto address_space =
+      std::make_shared<NonAllocatingAddressSpace>(owner.get(), kGpuAddr + kBufferSize);
+
+  EXPECT_TRUE(ringbuffer->MultiMap(address_space, kGpuAddr));
+  EXPECT_EQ(kBufferSize, address_space->inserted_size(kGpuAddr));
 }
 
 TEST_F(TestRingbuffer, Write) {

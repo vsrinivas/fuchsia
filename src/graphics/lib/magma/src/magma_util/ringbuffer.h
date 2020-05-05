@@ -158,8 +158,9 @@ bool Ringbuffer<GpuMapping>::MultiMap(std::shared_ptr<AddressSpace<GpuMapping>> 
     return DRETF(false, "Ringbuffer was already mapped in address space %p\n", address_space.get());
   }
 
-  DASSERT(magma::is_page_aligned(size_));
-  uint64_t page_count = size_ / magma::page_size();
+  uint64_t page_count =
+      BufferAccessor<typename GpuMapping::BufferType>::platform_buffer(buffer_.get())->size() /
+      magma::page_size();
 
   std::shared_ptr<GpuMapping> gpu_mapping;
   magma::Status status = AddressSpace<GpuMapping>::MapBufferGpu(

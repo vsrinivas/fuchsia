@@ -120,6 +120,12 @@ class FakeNonAllocatingAddressSpace : public AddressSpaceBase {
     return false;
   }
 
+  uint64_t inserted_size(uint64_t addr) {
+    auto iter = map_.find(addr);
+    DASSERT(iter != map_.end());
+    return iter->second;
+  }
+
  private:
   // Map of address, size.
   std::multimap<uint64_t, uint64_t> map_;
