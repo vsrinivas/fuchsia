@@ -5,3 +5,9 @@
 library fuchsia.bluetooth.gatt;
 
 const uint16 MAX_VALUE_LENGTH = 512;
+
+// Maximum number of ReadByTypeResults that fit in a FIDL message.
+const uint16 MAX_READ_BY_TYPE_RESULTS = 189;
+
+// From Bluetooth Core Spec v5.2, Vol 3, Part F, 3.4.4.2.
+const uint16 MAX_READ_BY_TYPE_VALUE_LENGTH = 253;

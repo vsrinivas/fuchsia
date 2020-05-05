@@ -22,6 +22,34 @@ enum ErrorCode {
     NOT_PERMITTED = 3;
 };
 
+/// Errors that are returned by bluetooth.gatt methods.
+enum Error {
+    /// A general error occurred that can not be classified as one of the more specific statuses.
+    FAILURE = 1;
+
+    /// Indicates that the response received from the server was invalid.
+    INVALID_RESPONSE = 2;
+
+    /// Indicates that more results were read than can fit in a FIDL response. Consider
+    /// reading attributes individually.
+    TOO_MANY_RESULTS = 3;
+
+    /// This attribute requires authorization, but the client is not authorized.
+    INSUFFICIENT_AUTHORIZATION = 4;
+
+    /// This attribute requires authentication, but the client is not authenticated.
+    INSUFFICIENT_AUTHENTICATION = 5;
+
+    /// This attribute requires a connection encrypted by a larger encryption key.
+    INSUFFICIENT_ENCRYPTION_KEY_SIZE = 6;
+
+    /// This attribute requires encryption, but the connection is not encrypted.
+    INSUFFICIENT_ENCRYPTION = 7;
+
+    /// This attribute is not readable.
+    READ_NOT_PERMITTED = 8;
+};
+
 /// Represents encryption, authentication, and authorization permissions that can
 /// be assigned to a specific access permission.
 struct SecurityRequirements {

@@ -6,6 +6,15 @@ library fuchsia.bluetooth.gatt;
 
 using fuchsia.bluetooth;
 
+table ReadByTypeResult {
+    /// Characteristic or descriptor id.
+    1: uint64 id;
+    /// Truncated value of characteristic or descriptor, if it was read successfully.
+    2: bytes:MAX_READ_BY_TYPE_VALUE_LENGTH value;
+    /// Reason the value could not be read, if reading it resulted in an error.
+    3: Error error;
+};
+
 protocol RemoteService {
     /// Returns the characteristics and characteristic descriptors that belong to
     /// this service.
@@ -107,6 +116,19 @@ protocol RemoteService {
     /// of the responses from this function signify the order in which the remote
     /// service received them, not necessarily the order in which it is called.
     WriteLongDescriptor(uint64 id, uint16 offset, bytes:MAX_VALUE_LENGTH value) -> (fuchsia.bluetooth.Status status);
+
+    /// Reads characteristics and descriptors with the given `uuid`. If no values are
+    /// read, `results` will be empty. If reading a value results in a permission error,
+    /// the handle and error will be included in `results`.
+    ///
+    /// NOTE: Values in `results` will be truncated to `MAX_READ_BY_TYPE_VALUE_LENGTH`
+    /// bytes. `ReadCharacteristic`, `ReadLongCharacteristic()`, `ReadDescriptor`, or
+    /// `ReadLongDescriptor()` should be used to read the complete values.
+    ///
+    /// This method is useful for reading values before discovery has completed, thereby
+    /// reducing latency.
+    ReadByType(fuchsia.bluetooth.Uuid uuid)
+        -> (vector<ReadByTypeResult>:MAX_READ_BY_TYPE_RESULTS results) error Error;
 
     /// Subscribe or unsubscribe to notifications/indications from the characteristic with
     /// the given `id`. Notifications or indications will be enabled if `enable` is
