@@ -448,7 +448,7 @@ mod tests {
     #[test]
     fn scans_only_requested_with_saved_networks() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let id = "scans_only_requested_with_saved_networks";
+        let id = line!().to_string();
         let temp_dir = TempDir::new().expect("failed to create temporary directory");
         let path = temp_dir.path().join("networks.json");
         let tmp_path = temp_dir.path().join("networks.tmp");
@@ -487,7 +487,7 @@ mod tests {
     #[test]
     fn auto_connect_to_known_ess() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let id = "auto_connect_to_known_ess";
+        let id = line!().to_string();
         let temp_dir = TempDir::new().expect("failed to create temporary directory");
         let path = temp_dir.path().join("networks.json");
         let tmp_path = temp_dir.path().join("networks.tmp");
@@ -555,7 +555,7 @@ mod tests {
     #[test]
     fn auto_connect_to_wep() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let id = "auto_connect_to_known_ess";
+        let id = line!().to_string();
         let temp_dir = TempDir::new().expect("failed to create temporary directory");
         let path = temp_dir.path().join("networks.json");
         let tmp_path = temp_dir.path().join("networks.tmp");
@@ -589,7 +589,7 @@ mod tests {
     #[test]
     fn auto_connect_to_wpa1() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let id = "auto_connect_to_known_ess";
+        let id = line!().to_string();
         let temp_dir = TempDir::new().expect("failed to create temporary directory");
         let path = temp_dir.path().join("networks.json");
         let tmp_path = temp_dir.path().join("networks.tmp");
@@ -623,7 +623,7 @@ mod tests {
     #[test]
     fn auto_connect_to_wpa1wpa2() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let id = "auto_connect_to_known_ess";
+        let id = line!().to_string();
         let temp_dir = TempDir::new().expect("failed to create temporary directory");
         let path = temp_dir.path().join("networks.json");
         let tmp_path = temp_dir.path().join("networks.tmp");
@@ -656,10 +656,9 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // Flake(49943)
-    fn auto_connect_falis_incompatible() {
+    fn auto_connect_fails_incompatible() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let id = "auto_connect_to_known_ess";
+        let id = line!().to_string();
         let temp_dir = TempDir::new().expect("failed to create temporary directory");
         let path = temp_dir.path().join("networks.json");
         let tmp_path = temp_dir.path().join("networks.tmp");
@@ -695,7 +694,7 @@ mod tests {
     #[test]
     fn failed_auto_connect_to_known_ess() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let id = "failed_auto_connect_to_known_ess";
+        let id = line!().to_string();
         let temp_dir = TempDir::new().expect("failed to create temporary directory");
         let path = temp_dir.path().join("networks.json");
         let tmp_path = temp_dir.path().join("networks.tmp");
@@ -742,7 +741,7 @@ mod tests {
     #[test]
     fn auto_connect_to_multiple_bss() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let id = "auto_connect_to_multiple_bss";
+        let id = line!().to_string();
         let temp_dir = TempDir::new().expect("failed to create temporary directory");
         let path = temp_dir.path().join("networks.json");
         let tmp_path = temp_dir.path().join("networks.tmp");
@@ -795,7 +794,7 @@ mod tests {
     #[test]
     fn auto_connect_when_deauth() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let id = "auto_connect_when_deauth";
+        let id = line!().to_string();
         let temp_dir = TempDir::new().expect("failed to create temporary directory");
         let path = temp_dir.path().join("networks.json");
         let tmp_path = temp_dir.path().join("networks.tmp");
@@ -872,7 +871,7 @@ mod tests {
     #[test]
     fn manual_connect_cancels_auto_connect() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let id = "manual_connect_cancels_auto_connect";
+        let id = line!().to_string();
         let temp_dir = TempDir::new().expect("failed to create temporary directory");
         let path = temp_dir.path().join("networks.json");
         let tmp_path = temp_dir.path().join("networks.tmp");
@@ -925,7 +924,7 @@ mod tests {
     #[test]
     fn manual_connect_cancels_manual_connect() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let id = "manual_connect_cancels_manual_conenct";
+        let id = line!().to_string();
         let temp_dir = TempDir::new().expect("failed to create temporary directory");
         let path = temp_dir.path().join("networks.json");
         let tmp_path = temp_dir.path().join("networks.tmp");
@@ -992,7 +991,7 @@ mod tests {
     #[test]
     fn manual_connect_when_already_connected() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let id = "manual_connect_when_already_connected";
+        let id = line!().to_string();
         let temp_dir = TempDir::new().expect("failed to create temporary directory");
         let path = temp_dir.path().join("networks.json");
         let tmp_path = temp_dir.path().join("networks.tmp");
@@ -1066,7 +1065,7 @@ mod tests {
     #[test]
     fn manual_connect_failure_triggers_auto_connect() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let id = "manual_connect_failure_triggers_auto_connect";
+        let id = line!().to_string();
         let temp_dir = TempDir::new().expect("failed to create temporary directory");
         let path = temp_dir.path().join("networks.json");
         let tmp_path = temp_dir.path().join("networks.tmp");
@@ -1125,7 +1124,7 @@ mod tests {
     #[test]
     fn manual_connect_after_sme_disconnected() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let id = "manual_connect_after_sme_disconnecting";
+        let id = line!().to_string();
         let temp_dir = TempDir::new().expect("failed to create temporary directory");
         let path = temp_dir.path().join("networks.json");
         let tmp_path = temp_dir.path().join("networks.tmp");
@@ -1163,7 +1162,7 @@ mod tests {
     #[test]
     fn manual_connect_while_sme_is_disconnecting() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let id = "manual_connect_while_sme_is_disconnecting";
+        let id = line!().to_string();
         let temp_dir = TempDir::new().expect("failed to create temporary directory");
         let path = temp_dir.path().join("networks.json");
         let tmp_path = temp_dir.path().join("networks.tmp");
@@ -1211,7 +1210,7 @@ mod tests {
     #[test]
     fn disconnect_request_when_already_disconnected() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let id = "disconnect_request_when_already_disconnected";
+        let id = line!().to_string();
         let temp_dir = TempDir::new().expect("failed to create temporary directory");
         let path = temp_dir.path().join("networks.json");
         let tmp_path = temp_dir.path().join("networks.tmp");
@@ -1243,7 +1242,7 @@ mod tests {
     #[test]
     fn disconnect_request_when_manually_connecting() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let id = "disconnect_request_when_manually_connecting";
+        let id = line!().to_string();
         let temp_dir = TempDir::new().expect("failed to create temporary directory");
         let path = temp_dir.path().join("networks.json");
         let tmp_path = temp_dir.path().join("networks.tmp");
@@ -1287,7 +1286,7 @@ mod tests {
     #[test]
     fn disconnect_when_connected() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let id = "disconnect_when_connected";
+        let id = line!().to_string();
         let temp_dir = TempDir::new().expect("failed to create temporary directory");
         let path = temp_dir.path().join("networks.json");
         let tmp_path = temp_dir.path().join("networks.tmp");
