@@ -34,6 +34,11 @@ import("//build/sdk/sdk_atom.gni")
 #   include_base (optional)
 #     Path to the root directory for includes.
 #     Defaults to "include".
+#
+#   build_as_static (optional)
+#     Whether the sources should be exposed as a static library.
+#     This is mostly used in the transition of Zircon libraries to the GN build.
+#     Defaults to false.
 
 template("sdk_source_set") {
   assert(defined(invoker.category), "Must define an SDK category")
@@ -49,7 +54,12 @@ template("sdk_source_set") {
   main_target_name = target_name
   sdk_target_name = "${target_name}_sdk"
 
-  source_set(main_target_name) {
+  target_type = "source_set"
+  if (defined(invoker.build_as_static) && invoker.build_as_static) {
+    target_type = "static_library"
+  }
+
+  target(target_type, main_target_name) {
     forward_variables_from(invoker,
                            "*",
                            [

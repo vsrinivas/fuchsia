@@ -34,6 +34,7 @@ class Library(object):
         self.has_unexported = any(s.sdk == Sdk.NOPE for s in self.stats)
         self.has_sdk = any(s.sdk_publishable for s in self.stats)
         self.has_shared = any(s.sdk == Sdk.SHARED for s in self.stats)
+        self.has_non_source = any(s.sdk != Sdk.SOURCE for s in self.stats)
 
 
 def main():
@@ -74,8 +75,8 @@ def main():
             continue
 
         # No SDK libraries for now.
-        if library.has_sdk:
-            print('Cannot convert SDK libraries for now, ignoring ' + lib)
+        if library.has_sdk and library.has_non_source:
+            print('Cannot convert non-source SDK libraries for now, ignoring ' + lib)
             continue
 
         # Gather build files with references to the library.
@@ -185,6 +186,18 @@ def main():
             with open(alias_path, 'w') as alias_file:
                 json.dump(data, alias_file, indent=2, sort_keys=True,
                           separators=(',', ': '))
+
+        # Update references to the library if it belongs to any SDK.
+        if library.has_sdk:
+            sdk_path = os.path.join(FUCHSIA_ROOT, 'sdk', 'BUILD.gn')
+            folder = os.path.basename(library.name)
+            for line in fileinput.FileInput(sdk_path, inplace=True):
+                for name in [s.name for s in library.stats]:
+                    if '"//zircon/public/lib/' + folder + ':' + name + '_sdk' + '",' in line:
+                        sys.stdout.write(line.replace('public/lib', 'system/ulib'))
+                    else:
+                        sys.stdout.write(line)
+            fx_format(sdk_path)
 
         # Remove the reference in the ZN aggregation target.
         aggregation_path = os.path.join(FUCHSIA_ROOT, 'zircon', 'system',

@@ -27,13 +27,28 @@ template("zx_library") {
   assert(!defined(invoker.kernel) || !invoker.kernel,
          "Kernel libraries not supported")
 
-  sdkable = defined(invoker.sdk_publishable) && invoker.sdk_publishable
-  assert(!sdkable, "Libraries available in SDKs are currently not supported")
-
   assert(defined(invoker.sdk),
          "Can only migrate libraries exposed to the GN build")
   shape = invoker.sdk
-  if (shape == "source" || shape == "static") {
+
+  sdkable = defined(invoker.sdk_publishable) && invoker.sdk_publishable
+  assert(!sdkable || shape == "source",
+         "Non-source libraries available in SDKs are currently not supported.")
+
+  extra_target_args = {}
+  if (shape == "source") {
+    if (sdkable) {
+      target_type = "sdk_source_set"
+      extra_target_args = {
+        category = "partner"
+        api = "//sdk/lib/$target_name/$target_name.api"
+        sdk_name = target_name
+        build_as_static = true
+      }
+    } else {
+      target_type = "static_library"
+    }
+  } else if (shape == "static") {
     target_type = "static_library"
   } else if (shape == "shared") {
     target_type = "shared_library"
@@ -50,6 +65,8 @@ template("zx_library") {
 
   target(target_type, main_target_name) {
     forward_variables_from(invoker, "*", template_params)
+
+    forward_variables_from(extra_target_args, "*")
 
     configs += [ "//build/unification/config:zircon-library" ]
 
