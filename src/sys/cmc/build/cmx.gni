@@ -64,30 +64,29 @@ template("cmx_validate") {
 #   sources (required)
 #     [list of files] A list of cmx files that are to be merged.
 #
+#   output_name (optional)
+#     [path] Name for the output.
+#     If not specified, the target name is used.
+#
 #   deps (optional)
 #   testonly (optional)
 #   visibility (optional)
 #     Standard GN meaning.
-#
-#   dest (optional)
-#     The name the output file in the target out directory. Defaults to the
-#     target name.
 template("cmx_merge") {
   cmc(target_name) {
     forward_variables_from(invoker,
                            [
                              "deps",
+                             "output_name",
                              "sources",
                              "testonly",
                              "visibility",
-                             "dest",
                            ])
-
-    if (!defined(dest)) {
-      dest = target_name
+    if (!defined(output_name)) {
+      output_name = target_name
     }
 
-    merged_output = "${target_out_dir}/${dest}"
+    merged_output = "${target_out_dir}/${output_name}"
     inputs = invoker.sources
     outputs = [ merged_output ]
 
@@ -113,6 +112,10 @@ template("cmx_merge") {
 #   manifest (required)
 #     [file] The path to the cmx file that is to be formatted
 #
+#   output_name (optional)
+#     [path] Name for the output.
+#     If not specified, the target name is used.
+#
 #   deps (optional)
 #   testonly (optional)
 #   visibility (optional)
@@ -122,11 +125,15 @@ template("cmx_format") {
     forward_variables_from(invoker,
                            [
                              "deps",
+                             "output_name",
                              "testonly",
                              "visibility",
                            ])
+    if (!defined(output_name)) {
+      output_name = target_name
+    }
 
-    formatted_output = "$target_out_dir/$target_name"
+    formatted_output = "${target_out_dir}/${output_name}"
     inputs = [ invoker.manifest ]
     outputs = [ formatted_output ]
 
@@ -149,7 +156,11 @@ template("cmx_format") {
 #
 #   manifest (required)
 #     [file] The cmx file
-template("cmx_package") {
+#
+#   output_name (optional)
+#     [path] Name for the output.
+#     If not specified, the target name is used.
+template("cmx") {
   cmx_validate("${target_name}_validate") {
     forward_variables_from(invoker,
                            [
@@ -204,7 +215,9 @@ template("cmx_package") {
     forward_variables_from(invoker,
                            [
                              "deps",
+                             "output_name",
                              "testonly",
+                             "visibility",
                            ])
   }
 }

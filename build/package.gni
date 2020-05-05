@@ -281,7 +281,7 @@ template("package") {
       manifest_target = pkg_target_name + "_" + get_path_info(meta.dest, "file")
 
       if (get_path_info(meta.dest, "extension") == "cmx") {
-        cmx_package(manifest_target) {
+        cmx(manifest_target) {
           manifest = meta.path
           forward_variables_from(pkg,
                                  [

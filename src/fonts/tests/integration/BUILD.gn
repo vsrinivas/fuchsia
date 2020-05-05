@@ -49,7 +49,7 @@ cmx_merge("fonts_with_ephemeral_fonts_cml") {
     rebase_path("../../meta/fonts.cml"),
     rebase_path("meta/ephemeral_fonts_shard.cml"),
   ]
-  dest = "fonts_with_ephemeral_fonts.cml"
+  output_name = "fonts_with_ephemeral_fonts.cml"
 }
 
 cmx_merge("fonts_with_aliases_fonts_cml") {
@@ -57,7 +57,7 @@ cmx_merge("fonts_with_aliases_fonts_cml") {
     rebase_path("../../meta/fonts.cml"),
     rebase_path("meta/aliases_fonts_shard.cml"),
   ]
-  dest = "fonts_with_aliases_fonts.cml"
+  output_name = "fonts_with_aliases_fonts.cml"
 }
 
 cmx_merge("fonts_with_small_fonts_cml") {
@@ -65,7 +65,7 @@ cmx_merge("fonts_with_small_fonts_cml") {
     rebase_path("../../meta/fonts.cml"),
     rebase_path("meta/small_fonts_shard.cml"),
   ]
-  dest = "fonts_with_small_fonts.cml"
+  output_name = "fonts_with_small_fonts.cml"
 }
 
 cmx_merge("fonts_with_medium_fonts_cml") {
@@ -73,7 +73,7 @@ cmx_merge("fonts_with_medium_fonts_cml") {
     rebase_path("../../meta/fonts.cml"),
     rebase_path("meta/medium_fonts_shard.cml"),
   ]
-  dest = "fonts_with_medium_fonts.cml"
+  output_name = "fonts_with_medium_fonts.cml"
 }
 
 cmx_merge("fonts_with_large_fonts_cml") {
@@ -81,7 +81,7 @@ cmx_merge("fonts_with_large_fonts_cml") {
     rebase_path("../../meta/fonts.cml"),
     rebase_path("meta/large_fonts_shard.cml"),
   ]
-  dest = "fonts_with_large_fonts.cml"
+  output_name = "fonts_with_large_fonts.cml"
 }
 
 test_package("font_provider_integration_tests") {
