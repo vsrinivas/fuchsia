@@ -73,6 +73,7 @@ rustc_binary("bin") {
 
   test_deps = [
     "//sdk/fidl/fuchsia.stash:fuchsia.stash-rustc",
+    "//third_party/rust_crates:matches",
     "//third_party/rust_crates:rand",
   ]
 }

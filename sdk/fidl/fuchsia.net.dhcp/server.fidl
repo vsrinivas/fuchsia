@@ -92,6 +92,26 @@ enum ParameterName {
 /// Provides methods for DHCP Server configuration.
 [Discoverable]
 protocol Server {
+    /// Starts serving DHCP leases.
+    ///
+    /// Starts the DHCP server with the current set of parameters.
+    ///
+    /// On error the server remains in the stopped state. If the server is
+    /// already serving, `StartServing` is a no-op.
+    ///
+    /// *error a zx.status indicating why the server could not be started.
+    StartServing() -> () error zx.status;
+
+    /// Stops serving DHCP leases.
+    ///
+    /// Stopping causes all the listening ports to be closed.
+    ///
+    /// Configuring parameters on the DHCP server is only allowed when the
+    /// server is stopped.
+    ///
+    /// If the server is not currently serving, `StopServing` is a no-op.
+    StopServing() -> ();
+
     /// Returns the requested Option if it is supported.
     ///
     /// + request `code` the code of an Option whose value has been requested.
@@ -117,9 +137,10 @@ protocol Server {
     /// Sets the Parameter to the argument. On success, the new parameter value
     /// can be queried by GetParameter or ListParameter immediately. However,
     /// the server may require a restart in order for the new Parameter value to
-    /// take effect. To ensure expected operation, administrators should restart
-    /// the server after mutating its parameters with SetParameter or
-    /// ResetParameters.
+    /// take effect.
+    ///
+    /// Setting parameters is only allowed if the server is stopped.
+    /// `ZX_ERR_BAD_STATE` is returned otherwise.
     ///
     /// + request `value` a Parameter whose value will be set to the value of
     /// this argument.
@@ -157,9 +178,10 @@ protocol Server {
     /// Resets all DHCP server parameters to their default value. On success,
     /// the reset parameter values can be queried immediately with GetParameter
     /// or ListParameters. However, the server must be restarted before all new
-    /// parameter values take effect. To ensure expected operation,
-    /// administrators should restart the server after mutating its parameters
-    /// with SetParameter or ResetParameters.
+    /// parameter values take effect.
+    ///
+    /// Setting parameters is only allowed if the server is stopped.
+    /// `ZX_ERR_BAD_STATE` is returned otherwise.
     ///
     /// * error a zx.status indicating the cause of failure.
     ResetParameters() -> () error zx.status;

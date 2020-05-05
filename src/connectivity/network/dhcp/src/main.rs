@@ -18,7 +18,7 @@ use {
     fuchsia_async::{self as fasync, net::UdpSocket, Interval},
     fuchsia_component::server::ServiceFs,
     fuchsia_zircon::DurationNum,
-    futures::{Future, FutureExt, StreamExt, TryFutureExt, TryStreamExt},
+    futures::{Future, SinkExt, StreamExt, TryFutureExt, TryStreamExt},
     net2::unix::UnixUdpBuilderExt,
     std::{
         cell::RefCell,
@@ -73,21 +73,7 @@ async fn main() -> Result<(), Error> {
         log::warn!("failed to load parameters from stash: {:?}", e);
         default_params.clone()
     });
-    let socks = if params.bound_device_names.len() > 0 {
-        params.bound_device_names.iter().map(String::as_str).try_fold::<_, _, Result<_, Error>>(
-            Vec::new(),
-            |mut acc, name| {
-                let sock = create_socket(Some(name), Ipv4Addr::UNSPECIFIED)?;
-                let () = acc.push(sock);
-                Ok(acc)
-            },
-        )?
-    } else {
-        vec![create_socket(None, Ipv4Addr::UNSPECIFIED)?]
-    };
-    if socks.len() == 0 {
-        return Err(anyhow::Error::msg("no valid sockets to receive messages from"));
-    }
+
     let options = stash.load_options().await.unwrap_or_else(|e| {
         log::warn!("failed to load options from stash: {:?}", e);
         HashMap::new()
@@ -96,16 +82,35 @@ async fn main() -> Result<(), Error> {
         log::warn!("failed to load cached client config from stash: {:?}", e);
         HashMap::new()
     });
-    let server = RefCell::new(Server::new(stash, params, options, cache));
+    let server =
+        RefCell::new(ServerDispatcherRuntime::new(Server::new(stash, params, options, cache)));
 
     let mut fs = ServiceFs::new_local();
     fs.dir("svc").add_fidl_service(IncomingService::Server);
     fs.take_and_serve_directory_handle()?;
+
+    let (mut socket_sink, socket_stream) =
+        futures::channel::mpsc::channel::<ServerSocketCollection<UdpSocket>>(1);
+
+    // Attempt to enable the server on startup.
+    // NOTE(brunodalbo): Enabling the server on startup should be an explicit
+    // configuration loaded from default configs and stash. For now, just mimic
+    // existing behavior and try to enable. It'll fail if we don't have a valid
+    // configuration from stash/config.
+    match server.borrow_mut().enable() {
+        Ok(None) => unreachable!("server can't be enabled already"),
+        Ok(Some(socket_collection)) => {
+            // Sending here should never fail; we just created the stream above.
+            let () = socket_sink.try_send(socket_collection)?;
+        }
+        Err(e) => log::error!("Failed to start server on startup: {:?}", e),
+    }
+
     let admin_fut =
         fs.then(futures::future::ok).try_for_each_concurrent(None, |incoming_service| async {
             match incoming_service {
                 IncomingService::Server(stream) => {
-                    run_server(stream, &server, &default_params)
+                    run_server(stream, &server, &default_params, socket_sink.clone())
                         .inspect_err(|e| log::warn!("run_server failed: {:?}", e))
                         .await?;
                     Ok(())
@@ -113,74 +118,219 @@ async fn main() -> Result<(), Error> {
             }
         });
 
-    if !server.borrow().is_serving() {
-        log::info!("starting server in configuration only mode");
-        let () = admin_fut.await?;
-    } else {
-        let msg_loops = socks
-            .into_iter()
-            .map(|sock| define_msg_handling_loop_future(sock, &server).boxed_local());
-        let lease_expiration_handler = define_lease_expiration_handler_future(&server);
-        log::info!("starting server");
-        let (_void, (), ()) = futures::try_join!(
-            futures::future::select_ok(msg_loops),
-            admin_fut,
-            lease_expiration_handler
-        )?;
-    }
+    let server_fut = define_running_server_fut(&server, socket_stream);
+
+    log::info!("running");
+    let ((), ()) = futures::try_join!(server_fut, admin_fut)?;
+
     Ok(())
 }
 
-fn create_socket(name: Option<&str>, src: Ipv4Addr) -> Result<UdpSocket, Error> {
-    let sock = net2::UdpBuilder::new_v4()?;
-    // Since dhcpd may listen to multiple interfaces, we must enable
-    // SO_REUSEPORT so that binding the same (address, port) pair to each
-    // interface can still succeed.
-    let sock = sock.reuse_port(true)?;
-    if let Some(name) = name {
-        // There are currently no safe Rust interfaces to set SO_BINDTODEVICE,
-        // so we must set it through libc.
-        if unsafe {
-            libc::setsockopt(
-                sock.as_raw_fd(),
-                libc::SOL_SOCKET,
-                libc::SO_BINDTODEVICE,
-                name.as_ptr() as *const libc::c_void,
-                name.len() as libc::socklen_t,
-            )
-        } == -1
-        {
-            return Err(anyhow::format_err!(
-                "setsockopt(SO_BINDTODEVICE) failed for {}: {}",
-                name,
-                std::io::Error::last_os_error()
-            ));
-        }
-    }
-    let sock = sock.bind((src, SERVER_PORT))?;
-    let () = sock.set_broadcast(true)?;
-    Ok(UdpSocket::from_socket(sock)?)
+trait SocketServerDispatcher: ServerDispatcher {
+    type Socket;
+
+    fn create_socket(name: Option<&str>, src: Ipv4Addr) -> Result<Self::Socket, Error>;
+    fn dispatch_message(&mut self, msg: Message) -> Result<ServerAction, ServerError>;
 }
 
-async fn define_msg_handling_loop_future(
-    sock: UdpSocket,
-    server: &RefCell<Server>,
-) -> Result<Void, Error> {
-    let mut send_socks: HashMap<Ipv4Addr, UdpSocket> = HashMap::new();
-    let mut buf = vec![0u8; BUF_SZ];
-    loop {
-        let (received, mut sender) =
-            sock.recv_from(&mut buf).await.context("failed to read from socket")?;
+impl SocketServerDispatcher for Server {
+    type Socket = UdpSocket;
+
+    fn create_socket(name: Option<&str>, src: Ipv4Addr) -> Result<Self::Socket, Error> {
+        let sock = net2::UdpBuilder::new_v4()?;
+        // Since dhcpd may listen to multiple interfaces, we must enable
+        // SO_REUSEPORT so that binding the same (address, port) pair to each
+        // interface can still succeed.
+        let sock = sock.reuse_port(true)?;
+        if let Some(name) = name {
+            // There are currently no safe Rust interfaces to set SO_BINDTODEVICE,
+            // so we must set it through libc.
+            if unsafe {
+                libc::setsockopt(
+                    sock.as_raw_fd(),
+                    libc::SOL_SOCKET,
+                    libc::SO_BINDTODEVICE,
+                    name.as_ptr() as *const libc::c_void,
+                    name.len() as libc::socklen_t,
+                )
+            } == -1
+            {
+                return Err(anyhow::format_err!(
+                    "setsockopt(SO_BINDTODEVICE) failed for {}: {}",
+                    name,
+                    std::io::Error::last_os_error()
+                ));
+            }
+        }
+        let sock = sock.bind((src, SERVER_PORT))?;
+        let () = sock.set_broadcast(true)?;
+        Ok(UdpSocket::from_socket(sock)?)
+    }
+
+    fn dispatch_message(&mut self, msg: Message) -> Result<ServerAction, ServerError> {
+        self.dispatch(msg)
+    }
+}
+
+/// A wrapper around a [`ServerDispatcher`] that keeps information about the
+/// server status through a [`futures::future::AbortHandle`].
+struct ServerDispatcherRuntime<S> {
+    abort_handle: Option<futures::future::AbortHandle>,
+    server: S,
+}
+
+impl<S> std::ops::Deref for ServerDispatcherRuntime<S> {
+    type Target = S;
+
+    fn deref(&self) -> &Self::Target {
+        &self.server
+    }
+}
+
+impl<S> std::ops::DerefMut for ServerDispatcherRuntime<S> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.server
+    }
+}
+
+impl<S: SocketServerDispatcher> ServerDispatcherRuntime<S> {
+    /// Creates a new runtime with `server`.
+    fn new(server: S) -> Self {
+        Self { abort_handle: None, server }
+    }
+
+    /// Disables the server.
+    ///
+    /// `disable` will cancel the previous
+    /// [`futures::future::AbortRegistration`] returned by `enable`.
+    ///
+    /// If the server is already disabled, `disable` is a no-op.
+    fn disable(&mut self) {
+        if let Some(abort_handle) = self.abort_handle.take() {
+            let () = abort_handle.abort();
+        }
+    }
+
+    /// Enables the server.
+    ///
+    /// Attempts to enable the server, returning a new
+    /// [`ServerSocketCollection`] on success. The returned collection contains
+    /// the list of sockets where the server can listen on and an abort
+    /// registration that is used to cancel the future that listen on the
+    /// sockets when [`ServerDispatcherRuntime::disable`] is called.
+    ///
+    /// Returns an error if the server couldn't be started or if the closure
+    /// fails, maintaining the server in the disabled state.
+    ///
+    /// If the server is already enabled, `enable` returns `Ok(None)`.
+    fn enable(
+        &mut self,
+    ) -> Result<Option<ServerSocketCollection<S::Socket>>, fuchsia_zircon::Status> {
+        if self.abort_handle.is_some() {
+            // Server already running.
+            return Ok(None);
+        }
+        let params = self.server.try_validate_parameters()?;
+        // Provide the closure with an AbortRegistration and a ref to
+        // parameters.
+        let (abort_handle, abort_registration) = futures::future::AbortHandle::new_pair();
+
+        let sockets = create_sockets_from_params::<S>(params).map_err(|e| {
+            log::error!("Failed to create server sockets: {}", e);
+            fuchsia_zircon::Status::IO
+        })?;
+        if sockets.is_empty() {
+            log::error!("No sockets to run server on");
+            return Err(fuchsia_zircon::Status::INVALID_ARGS);
+        }
+        self.abort_handle = Some(abort_handle);
+        Ok(Some(ServerSocketCollection { sockets, abort_registration }))
+    }
+
+    /// Runs the closure `f` only if the server is currently disabled.
+    ///
+    /// Returns `BAD_STATE` error otherwise.
+    fn if_disabled<R, F: FnOnce(&mut S) -> Result<R, fuchsia_zircon::Status>>(
+        &mut self,
+        f: F,
+    ) -> Result<R, fuchsia_zircon::Status> {
+        if self.abort_handle.is_none() {
+            f(&mut self.server)
+        } else {
+            Err(fuchsia_zircon::Status::BAD_STATE)
+        }
+    }
+}
+
+fn create_sockets_from_params<S: SocketServerDispatcher>(
+    params: &configuration::ServerParameters,
+) -> Result<Vec<S::Socket>, Error> {
+    Ok(if params.bound_device_names.len() > 0 {
+        params.bound_device_names.iter().map(String::as_str).try_fold::<_, _, Result<_, Error>>(
+            Vec::new(),
+            |mut acc, name| {
+                let sock = S::create_socket(Some(name), Ipv4Addr::UNSPECIFIED)?;
+                let () = acc.push(sock);
+                Ok(acc)
+            },
+        )?
+    } else {
+        vec![S::create_socket(None, Ipv4Addr::UNSPECIFIED)?]
+    })
+}
+
+/// Helper struct to handle buffer data from sockets.
+struct MessageHandler<'a, S: SocketServerDispatcher> {
+    server: &'a RefCell<ServerDispatcherRuntime<S>>,
+    send_socks: HashMap<Ipv4Addr, S::Socket>,
+}
+
+impl<'a, S: SocketServerDispatcher> MessageHandler<'a, S> {
+    /// Creates a new `MessageHandler` for `server`.
+    fn new(server: &'a RefCell<ServerDispatcherRuntime<S>>) -> Self {
+        Self { server, send_socks: HashMap::new() }
+    }
+
+    /// Handles `buf` from `sender`.
+    ///
+    /// Returns `Ok(Some(sock, dst, data))` if a `data` must be sent to `dst`
+    /// over `sock`.
+    ///
+    /// Returns `Ok(None)` if no action is required and the handler is ready to
+    /// receive more messages.
+    ///
+    /// Returns `Err` if an unrecoverable error occurs and the server must stop
+    /// serving.  
+    fn handle_from_sender(
+        &mut self,
+        buf: &[u8],
+        mut sender: std::net::SocketAddr,
+    ) -> Result<Option<(&S::Socket, std::net::SocketAddr, Vec<u8>)>, Error> {
         log::info!("received message from: {}", sender);
-        let msg = Message::from_buffer(&buf[..received])?;
+        let msg = match Message::from_buffer(buf) {
+            Ok(msg) => msg,
+            Err(e) => {
+                log::error!("failed to parse message from {}: {}", sender, e);
+                return Ok(None);
+            }
+        };
         log::info!("parsed message: {:?}", msg);
 
         // This call should not block because the server is single-threaded.
-        let result = server.borrow_mut().dispatch(msg);
+        let result = self.server.borrow_mut().dispatch_message(msg);
         match result {
-            Err(e) => log::error!("error processing client message: {:?}", e),
-            Ok(ServerAction::AddressRelease(addr)) => log::info!("released address: {}", addr),
-            Ok(ServerAction::AddressDecline(addr)) => log::info!("allocated address: {}", addr),
+            Err(e) => {
+                log::error!("error processing client message: {:?}", e);
+                Ok(None)
+            }
+            Ok(ServerAction::AddressRelease(addr)) => {
+                log::info!("released address: {}", addr);
+                Ok(None)
+            }
+            Ok(ServerAction::AddressDecline(addr)) => {
+                log::info!("allocated address: {}", addr);
+                Ok(None)
+            }
             Ok(ServerAction::SendResponse(message, dest)) => {
                 log::info!("generated response: {:?}", message);
 
@@ -191,19 +341,37 @@ async fn define_msg_handling_loop_future(
                 let src =
                     get_server_id_from(&message).ok_or(ServerError::MissingServerIdentifier)?;
                 let response_buffer = message.serialize();
-                let sock = match send_socks.entry(src) {
+                let sock = match self.send_socks.entry(src) {
                     Entry::Occupied(entry) => entry.into_mut(),
-                    Entry::Vacant(entry) => entry.insert(create_socket(None, src)?),
+                    Entry::Vacant(entry) => entry.insert(S::create_socket(None, src)?),
                 };
-                sock.send_to(&response_buffer, sender).await.context("unable to send response")?;
-                log::info!("response sent to: {}", sender);
+                Ok(Some((sock, sender, response_buffer)))
             }
         }
     }
 }
 
+async fn define_msg_handling_loop_future(
+    sock: UdpSocket,
+    server: &RefCell<ServerDispatcherRuntime<Server>>,
+) -> Result<Void, Error> {
+    let mut handler = MessageHandler::new(server);
+    let mut buf = vec![0u8; BUF_SZ];
+    loop {
+        let (received, sender) =
+            sock.recv_from(&mut buf).await.context("failed to read from socket")?;
+        if let Some((sock, dst, response)) = handler
+            .handle_from_sender(&buf[..received], sender)
+            .context("failed to handle buffer")?
+        {
+            sock.send_to(&response, dst).await.context("unable to send response")?;
+            log::info!("response sent to: {}", dst);
+        }
+    }
+}
+
 fn define_lease_expiration_handler_future<'a>(
-    server: &'a RefCell<Server>,
+    server: &'a RefCell<ServerDispatcherRuntime<Server>>,
 ) -> impl Future<Output = Result<(), Error>> + 'a {
     let expiration_interval = Interval::new(EXPIRATION_INTERVAL_SECS.seconds());
     expiration_interval
@@ -212,14 +380,83 @@ fn define_lease_expiration_handler_future<'a>(
         .try_collect::<()>()
 }
 
-async fn run_server<S: ServerDispatcher>(
+fn define_running_server_fut<'a, S>(
+    server: &'a RefCell<ServerDispatcherRuntime<Server>>,
+    socket_stream: S,
+) -> impl Future<Output = Result<(), Error>> + 'a
+where
+    S: futures::Stream<Item = ServerSocketCollection<<Server as SocketServerDispatcher>::Socket>>
+        + 'static,
+{
+    socket_stream.map(Ok).try_for_each(move |socket_collection| async move {
+        let ServerSocketCollection { sockets, abort_registration } = socket_collection;
+        let msg_loops = futures::future::try_join_all(
+            sockets.into_iter().map(|sock| define_msg_handling_loop_future(sock, server)),
+        );
+        let lease_expiration_handler = define_lease_expiration_handler_future(server);
+
+        let fut = futures::future::try_join(msg_loops, lease_expiration_handler);
+
+        match futures::future::Abortable::new(fut, abort_registration).await {
+            Ok(Ok((_void, ()))) => Err(anyhow::anyhow!("Server futures finished unexpectedly")),
+            Ok(Err(error)) => {
+                // There was an error handling the server sockets or lease
+                // expiration. Disable the server.
+                log::error!("Server encountered an error: {}. Stopping server.", error);
+                let () = server.borrow_mut().disable();
+                Ok(())
+            }
+            Err(futures::future::Aborted {}) => {
+                log::info!("Server stopped");
+                Ok(())
+            }
+        }
+    })
+}
+
+struct ServerSocketCollection<S> {
+    sockets: Vec<S>,
+    abort_registration: futures::future::AbortRegistration,
+}
+
+async fn run_server<S, C>(
     stream: fidl_fuchsia_net_dhcp::Server_RequestStream,
-    server: &RefCell<S>,
+    server: &RefCell<ServerDispatcherRuntime<S>>,
     default_params: &dhcp::configuration::ServerParameters,
-) -> Result<(), fidl::Error> {
+    socket_sink: C,
+) -> Result<(), fidl::Error>
+where
+    S: SocketServerDispatcher,
+    C: futures::sink::Sink<ServerSocketCollection<S::Socket>> + Unpin,
+    C::Error: std::fmt::Debug,
+{
     stream
-        .try_for_each(|request| async {
+        .try_fold(socket_sink, |mut socket_sink, request| async move {
             match request {
+                fidl_fuchsia_net_dhcp::Server_Request::StartServing { responder } => {
+                    responder.send(
+                        &mut match server.borrow_mut().enable() {
+                            Ok(Some(socket_collection)) => {
+                                socket_sink.send(socket_collection).await.map_err(|e| {
+                                    log::error!("Failed to send sockets to sink: {:?}", e);
+                                    // Disable the server again to keep a consistent state.
+                                    let () = server.borrow_mut().disable();
+                                    fuchsia_zircon::Status::INTERNAL
+                                })
+                            }
+                            Ok(None) => {
+                                log::info!("Server already running");
+                                Ok(())
+                            }
+                            Err(status) => Err(status),
+                        }
+                        .map_err(fuchsia_zircon::Status::into_raw),
+                    )
+                }
+                fidl_fuchsia_net_dhcp::Server_Request::StopServing { responder } => {
+                    let () = server.borrow_mut().disable();
+                    responder.send()
+                }
                 fidl_fuchsia_net_dhcp::Server_Request::GetOption { code: c, responder: r } => {
                     r.send(&mut server.borrow().dispatch_get_option(c).map_err(|e| e.into_raw()))
                 }
@@ -234,7 +471,7 @@ async fn run_server<S: ServerDispatcher>(
                     .send(
                         &mut server
                             .borrow_mut()
-                            .dispatch_set_parameter(v)
+                            .if_disabled(|s| s.dispatch_set_parameter(v))
                             .map_err(|e| e.into_raw()),
                     ),
                 fidl_fuchsia_net_dhcp::Server_Request::ListOptions { responder: r } => {
@@ -249,7 +486,7 @@ async fn run_server<S: ServerDispatcher>(
                 fidl_fuchsia_net_dhcp::Server_Request::ResetParameters { responder: r } => r.send(
                     &mut server
                         .borrow_mut()
-                        .dispatch_reset_parameters(&default_params)
+                        .if_disabled(|s| s.dispatch_reset_parameters(&default_params))
                         .map_err(|e| e.into_raw()),
                 ),
                 fidl_fuchsia_net_dhcp::Server_Request::ClearLeases { responder: r } => r.send(
@@ -259,18 +496,54 @@ async fn run_server<S: ServerDispatcher>(
                         .map_err(fuchsia_zircon::Status::into_raw),
                 ),
             }
+            .map(|()| socket_sink)
         })
         .await
+        // Discard the socket sink.
+        .map(|_socket_sink: C| ())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use dhcp::configuration::ServerParameters;
+    use futures::{sink::drain, FutureExt};
     use std::convert::TryFrom;
 
-    struct CannedDispatcher {}
+    #[derive(Debug, Eq, PartialEq)]
+    struct CannedSocket {
+        name: Option<String>,
+        src: Ipv4Addr,
+    }
+
+    struct CannedDispatcher {
+        params: Option<ServerParameters>,
+        mock_leases: u32,
+    }
+
+    impl CannedDispatcher {
+        fn new() -> Self {
+            Self { params: None, mock_leases: 0 }
+        }
+    }
+
+    impl SocketServerDispatcher for CannedDispatcher {
+        type Socket = CannedSocket;
+
+        fn create_socket(name: Option<&str>, src: Ipv4Addr) -> Result<Self::Socket, Error> {
+            Ok(CannedSocket { name: name.map(|s| s.to_string()), src })
+        }
+
+        fn dispatch_message(&mut self, _msg: Message) -> Result<ServerAction, ServerError> {
+            Ok(ServerAction::SendResponse(Message::new(), None))
+        }
+    }
 
     impl ServerDispatcher for CannedDispatcher {
+        fn try_validate_parameters(&self) -> Result<&ServerParameters, fuchsia_zircon::Status> {
+            self.params.as_ref().ok_or(fuchsia_zircon::Status::INVALID_ARGS)
+        }
+
         fn dispatch_get_option(
             &self,
             _code: fidl_fuchsia_net_dhcp::OptionCode,
@@ -320,6 +593,7 @@ mod tests {
             Ok(())
         }
         fn dispatch_clear_leases(&mut self) -> Result<(), fuchsia_zircon::Status> {
+            self.mock_leases = 0;
             Ok(())
         }
     }
@@ -349,12 +623,12 @@ mod tests {
     async fn get_option_with_subnet_mask_returns_subnet_mask() -> Result<(), Error> {
         let (proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<fidl_fuchsia_net_dhcp::Server_Marker>()?;
-        let server = RefCell::new(CannedDispatcher {});
+        let server = RefCell::new(ServerDispatcherRuntime::new(CannedDispatcher::new()));
 
         let defaults = default_params();
         let res = futures::select! {
             res = proxy.get_option(fidl_fuchsia_net_dhcp::OptionCode::SubnetMask).fuse() => res.context("get_option failed"),
-            server_fut = run_server(stream, &server, &defaults).fuse() => Err(anyhow::Error::msg("server finished before request")),
+            server_fut = run_server(stream, &server, &defaults, drain()).fuse() => Err(anyhow::Error::msg("server finished before request")),
         }?;
 
         let expected_result =
@@ -369,12 +643,12 @@ mod tests {
     async fn get_parameter_with_lease_length_returns_lease_length() -> Result<(), Error> {
         let (proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<fidl_fuchsia_net_dhcp::Server_Marker>()?;
-        let server = RefCell::new(CannedDispatcher {});
+        let server = RefCell::new(ServerDispatcherRuntime::new(CannedDispatcher::new()));
 
         let defaults = default_params();
         let res = futures::select! {
             res = proxy.get_parameter(fidl_fuchsia_net_dhcp::ParameterName::LeaseLength).fuse() => res.context("get_parameter failed"),
-            server_fut = run_server(stream, &server, &defaults).fuse() => Err(anyhow::Error::msg("server finished before request")),
+            server_fut = run_server(stream, &server, &defaults, drain()).fuse() => Err(anyhow::Error::msg("server finished before request")),
         }?;
         let expected_result =
             Ok(fidl_fuchsia_net_dhcp::Parameter::Lease(fidl_fuchsia_net_dhcp::LeaseLength {
@@ -389,14 +663,14 @@ mod tests {
     async fn set_option_with_subnet_mask_returns_unit() -> Result<(), Error> {
         let (proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<fidl_fuchsia_net_dhcp::Server_Marker>()?;
-        let server = RefCell::new(CannedDispatcher {});
+        let server = RefCell::new(ServerDispatcherRuntime::new(CannedDispatcher::new()));
 
         let defaults = default_params();
         let res = futures::select! {
             res = proxy.set_option(&mut fidl_fuchsia_net_dhcp::Option_::SubnetMask(
             fidl_fuchsia_net::Ipv4Address { addr: [0, 0, 0, 0] },
         )).fuse() => res.context("set_option failed"),
-            server_fut = run_server(stream, &server, &defaults).fuse() => Err(anyhow::Error::msg("server finished before request")),
+            server_fut = run_server(stream, &server, &defaults, drain()).fuse() => Err(anyhow::Error::msg("server finished before request")),
         }?;
         assert_eq!(res, Ok(()));
         Ok(())
@@ -406,14 +680,14 @@ mod tests {
     async fn set_parameter_with_lease_length_returns_unit() -> Result<(), Error> {
         let (proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<fidl_fuchsia_net_dhcp::Server_Marker>()?;
-        let server = RefCell::new(CannedDispatcher {});
+        let server = RefCell::new(ServerDispatcherRuntime::new(CannedDispatcher::new()));
 
         let defaults = default_params();
         let res = futures::select! {
             res = proxy.set_parameter(&mut fidl_fuchsia_net_dhcp::Parameter::Lease(
             fidl_fuchsia_net_dhcp::LeaseLength { default: None, max: None },
         )).fuse() => res.context("set_parameter failed"),
-            server_fut = run_server(stream, &server, &defaults).fuse() => Err(anyhow::Error::msg("server finished before request")),
+            server_fut = run_server(stream, &server, &defaults, drain()).fuse() => Err(anyhow::Error::msg("server finished before request")),
         }?;
         assert_eq!(res, Ok(()));
         Ok(())
@@ -423,12 +697,12 @@ mod tests {
     async fn list_options_returns_empty_vec() -> Result<(), Error> {
         let (proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<fidl_fuchsia_net_dhcp::Server_Marker>()?;
-        let server = RefCell::new(CannedDispatcher {});
+        let server = RefCell::new(ServerDispatcherRuntime::new(CannedDispatcher::new()));
 
         let defaults = default_params();
         let res = futures::select! {
             res = proxy.list_options().fuse() => res.context("list_options failed"),
-            server_fut = run_server(stream, &server, &defaults).fuse() => Err(anyhow::Error::msg("server finished before request")),
+            server_fut = run_server(stream, &server, &defaults, drain()).fuse() => Err(anyhow::Error::msg("server finished before request")),
         }?;
         assert_eq!(res, Ok(vec![]));
         Ok(())
@@ -438,12 +712,12 @@ mod tests {
     async fn list_parameters_returns_empty_vec() -> Result<(), Error> {
         let (proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<fidl_fuchsia_net_dhcp::Server_Marker>()?;
-        let server = RefCell::new(CannedDispatcher {});
+        let server = RefCell::new(ServerDispatcherRuntime::new(CannedDispatcher::new()));
 
         let defaults = default_params();
         let res = futures::select! {
             res = proxy.list_parameters().fuse() => res.context("list_parameters failed"),
-            server_fut = run_server(stream, &server, &defaults).fuse() => Err(anyhow::Error::msg("server finished before request")),
+            server_fut = run_server(stream, &server, &defaults, drain()).fuse() => Err(anyhow::Error::msg("server finished before request")),
         }?;
         assert_eq!(res, Ok(vec![]));
         Ok(())
@@ -453,12 +727,12 @@ mod tests {
     async fn reset_options_returns_unit() -> Result<(), Error> {
         let (proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<fidl_fuchsia_net_dhcp::Server_Marker>()?;
-        let server = RefCell::new(CannedDispatcher {});
+        let server = RefCell::new(ServerDispatcherRuntime::new(CannedDispatcher::new()));
 
         let defaults = default_params();
         let res = futures::select! {
             res = proxy.reset_options().fuse() => res.context("reset_options failed"),
-            server_fut = run_server(stream, &server, &defaults).fuse() => Err(anyhow::Error::msg("server finished before request")),
+            server_fut = run_server(stream, &server, &defaults, drain()).fuse() => Err(anyhow::Error::msg("server finished before request")),
         }?;
 
         assert_eq!(res, Ok(()));
@@ -469,12 +743,12 @@ mod tests {
     async fn reset_parameters_returns_unit() -> Result<(), Error> {
         let (proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<fidl_fuchsia_net_dhcp::Server_Marker>()?;
-        let server = RefCell::new(CannedDispatcher {});
+        let server = RefCell::new(ServerDispatcherRuntime::new(CannedDispatcher::new()));
 
         let defaults = default_params();
         let res = futures::select! {
             res = proxy.reset_parameters().fuse() => res.context("reset_parameters failed"),
-            server_fut = run_server(stream, &server, &defaults).fuse() => Err(anyhow::Error::msg("server finished before request")),
+            server_fut = run_server(stream, &server, &defaults, drain()).fuse() => Err(anyhow::Error::msg("server finished before request")),
         }?;
 
         assert_eq!(res, Ok(()));
@@ -485,15 +759,163 @@ mod tests {
     async fn clear_leases_returns_unit() -> Result<(), Error> {
         let (proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<fidl_fuchsia_net_dhcp::Server_Marker>()?;
-        let server = RefCell::new(CannedDispatcher {});
+        let server = RefCell::new(ServerDispatcherRuntime::new(CannedDispatcher::new()));
 
         let defaults = default_params();
         let res = futures::select! {
             res = proxy.clear_leases().fuse() => res.context("clear_leases failed"),
-            server_fut = run_server(stream, &server, &defaults).fuse() => Err(anyhow::Error::msg("server finished before request")),
+            server_fut = run_server(stream, &server, &defaults, drain()).fuse() => Err(anyhow::Error::msg("server finished before request")),
         }?;
 
         assert_eq!(res, Ok(()));
         Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn start_stop_server() -> Result<(), Error> {
+        let (proxy, stream) =
+            fidl::endpoints::create_proxy_and_stream::<fidl_fuchsia_net_dhcp::Server_Marker>()?;
+        let (socket_sink, mut socket_stream) =
+            futures::channel::mpsc::channel::<ServerSocketCollection<CannedSocket>>(1);
+
+        let server = RefCell::new(ServerDispatcherRuntime::new(CannedDispatcher::new()));
+        // Set default parameters to the server so we can create sockets.
+        server.borrow_mut().params = Some(default_params());
+
+        let defaults = default_params();
+
+        // Set mock leases that should not change when the server is disabled.
+        server.borrow_mut().mock_leases = 1;
+
+        let test_fut = async {
+            for _ in 0..3 {
+                let () = proxy
+                    .start_serving()
+                    .await
+                    .context("start_serving failed")?
+                    .map_err(fuchsia_zircon::Status::from_raw)
+                    .context("start_serving returned an error")?;
+
+                let socket_collection = socket_stream
+                    .next()
+                    .await
+                    .ok_or_else(|| anyhow::anyhow!("Socket stream ended unexpectedly"))?;
+
+                // Assert that the sockets that would be created are correct.
+                assert_eq!(
+                    socket_collection.sockets,
+                    vec![CannedSocket { name: None, src: Ipv4Addr::UNSPECIFIED }]
+                );
+
+                // Create a dummy future that should be aborted when we disable the
+                // server.
+                let dummy_fut = futures::future::Abortable::new(
+                    futures::future::pending::<()>(),
+                    socket_collection.abort_registration,
+                );
+
+                let () = proxy.stop_serving().await.context("stop_serving failed")?;
+
+                // Dummy future was aborted.
+                assert_eq!(dummy_fut.await, Err(futures::future::Aborted {}));
+                // Leases were not cleared.
+                assert_eq!(server.borrow().mock_leases, 1);
+            }
+
+            Ok::<(), Error>(())
+        };
+
+        let () = futures::select! {
+            res = test_fut.fuse() => res.context("test future failed"),
+            server_fut = run_server(stream, &server, &defaults, socket_sink).fuse() => Err(anyhow::Error::msg("server finished before request")),
+        }?;
+
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn start_server_fails_on_bad_params() -> Result<(), Error> {
+        let (proxy, stream) =
+            fidl::endpoints::create_proxy_and_stream::<fidl_fuchsia_net_dhcp::Server_Marker>()?;
+        let server = RefCell::new(ServerDispatcherRuntime::new(CannedDispatcher::new()));
+
+        let defaults = default_params();
+        let res = futures::select! {
+            res = proxy.start_serving().fuse() => res.context("start_serving failed"),
+            server_fut = run_server(stream, &server, &defaults, drain()).fuse() => Err(anyhow::Error::msg("server finished before request")),
+        }?.map_err(fuchsia_zircon::Status::from_raw);
+
+        // Must have failed to start the server.
+        assert_eq!(res, Err(fuchsia_zircon::Status::INVALID_ARGS));
+        // No abort handler must've been set.
+        assert!(server.borrow().abort_handle.is_none());
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn disallow_change_parameters_if_enabled() -> Result<(), Error> {
+        let (proxy, stream) =
+            fidl::endpoints::create_proxy_and_stream::<fidl_fuchsia_net_dhcp::Server_Marker>()?;
+
+        let server = RefCell::new(ServerDispatcherRuntime::new(CannedDispatcher::new()));
+        // Set default parameters to the server so we can create sockets.
+        server.borrow_mut().params = Some(default_params());
+
+        let defaults = default_params();
+
+        let test_fut = async {
+            let () = proxy
+                .start_serving()
+                .await
+                .context("start_serving failed")?
+                .map_err(fuchsia_zircon::Status::from_raw)
+                .context("start_serving returned an error")?;
+
+            // SetParameter disallowed when the server is enabled.
+            assert_eq!(
+                proxy
+                    .set_parameter(&mut fidl_fuchsia_net_dhcp::Parameter::Lease(
+                        fidl_fuchsia_net_dhcp::LeaseLength { default: None, max: None },
+                    ))
+                    .await
+                    .context("set_parameter FIDL failure")?
+                    .map_err(fuchsia_zircon::Status::from_raw),
+                Err(fuchsia_zircon::Status::BAD_STATE)
+            );
+
+            // ResetParameters disallowed when the server is enabled.
+            assert_eq!(
+                proxy
+                    .reset_parameters()
+                    .await
+                    .context("reset_parameters FIDL failure")?
+                    .map_err(fuchsia_zircon::Status::from_raw),
+                Err(fuchsia_zircon::Status::BAD_STATE)
+            );
+
+            Ok::<(), Error>(())
+        };
+
+        let () = futures::select! {
+            res = test_fut.fuse() => res.context("test future failed"),
+            server_fut = run_server(stream, &server, &defaults, drain()).fuse() => Err(anyhow::Error::msg("server finished before request")),
+        }?;
+
+        Ok(())
+    }
+
+    /// Test that a malformed message does not cause MessageHandler to return an
+    /// error.
+    #[test]
+    fn test_handle_failed_parse() {
+        let server = RefCell::new(ServerDispatcherRuntime::new(CannedDispatcher::new()));
+        let mut handler = MessageHandler::new(&server);
+        matches::assert_matches!(
+            handler.handle_from_sender(
+                &[0xFF, 0x00, 0xBA, 0x03],
+                std::net::SocketAddr::new(Ipv4Addr::UNSPECIFIED.into(), 0),
+            ),
+            Ok(None)
+        );
     }
 }

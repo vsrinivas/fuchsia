@@ -192,11 +192,6 @@ impl Server {
         }
     }
 
-    /// Returns true if the server has a populated address pool and is therefore serving requests.
-    pub fn is_serving(&self) -> bool {
-        !self.pool.is_empty()
-    }
-
     /// Dispatches an incoming DHCP message to the appropriate handler for processing.
     ///
     /// If the incoming message is a valid client DHCP message, then the server will attempt to
@@ -642,6 +637,14 @@ impl Server {
         }
         Ok(())
     }
+
+    /// Saves current parameters to stash.
+    fn save_params(&self) -> Result<(), Status> {
+        self.stash.store_parameters(&self.params).map_err(|e| {
+            log::warn!("store_parameters({:?}) in stash failed: {}", self.params, e);
+            fuchsia_zircon::Status::INTERNAL
+        })
+    }
 }
 
 /// Clears the stash instance at the end of a test.
@@ -665,6 +668,10 @@ impl Drop for Server {
 /// server parameters, and leases issued to clients, and support the trait methods to retrieve and
 /// modify these stores.
 pub trait ServerDispatcher {
+    /// Validates the current set of server parameters returning a reference to
+    /// the parameters if the configuration is valid or an error otherwise.
+    fn try_validate_parameters(&self) -> Result<&ServerParameters, Status>;
+
     /// Retrieves the stored DHCP option value that corresponds to the OptionCode argument.
     fn dispatch_get_option(
         &self,
@@ -695,6 +702,16 @@ pub trait ServerDispatcher {
 }
 
 impl ServerDispatcher for Server {
+    fn try_validate_parameters(&self) -> Result<&ServerParameters, Status> {
+        // Validate that the server parameters are valid to start leasing
+        // addresses.
+        if self.pool.is_empty() {
+            log::error!("Server validation failed: Address pool is empty");
+            return Err(Status::INVALID_ARGS);
+        }
+        Ok(&self.params)
+    }
+
     fn dispatch_get_option(
         &self,
         code: fidl_fuchsia_net_dhcp::OptionCode,
@@ -780,6 +797,12 @@ impl ServerDispatcher for Server {
                 self.params.server_ips = Vec::<Ipv4Addr>::from_fidl(ip_addrs)
             }
             fidl_fuchsia_net_dhcp::Parameter::AddressPool(managed_addrs) => {
+                // Be overzealous and do not allow the managed addresses to
+                // change if we currently have leases.
+                if !self.cache.is_empty() {
+                    return Err(Status::BAD_STATE);
+                }
+
                 self.params.managed_addrs =
                     match crate::configuration::ManagedAddresses::try_from_fidl(managed_addrs) {
                         Ok(managed_addrs) => managed_addrs,
@@ -790,7 +813,9 @@ impl ServerDispatcher for Server {
                             );
                             return Err(Status::INVALID_ARGS);
                         }
-                    }
+                    };
+                // Update the pool with the new parameters.
+                self.pool = AddressPool::new(self.params.managed_addrs.pool_range());
             }
             fidl_fuchsia_net_dhcp::Parameter::Lease(lease_length) => {
                 self.params.lease_length =
@@ -830,10 +855,7 @@ impl ServerDispatcher for Server {
                 return Err(Status::INVALID_ARGS)
             }
         };
-        let () = self.stash.store_parameters(&self.params).map_err(|e| {
-            log::warn!("store_parameters({:?}) in stash failed: {}", self.params, e);
-            fuchsia_zircon::Status::INTERNAL
-        })?;
+        let () = self.save_params()?;
         Ok(())
     }
 
@@ -894,10 +916,7 @@ impl ServerDispatcher for Server {
 
     fn dispatch_reset_parameters(&mut self, defaults: &ServerParameters) -> Result<(), Status> {
         self.params = defaults.clone();
-        let () = self.stash.store_parameters(&self.params).map_err(|e| {
-            log::warn!("store_parameters({:?}) in stash failed: {}", self.params, e);
-            fuchsia_zircon::Status::INTERNAL
-        })?;
+        let () = self.save_params()?;
         Ok(())
     }
 
@@ -3158,6 +3177,58 @@ pub mod tests {
         let stored_leases =
             server.stash.load_client_configs().await.context("load_client_configs() failed")?;
         assert_eq!(empty_map, stored_leases);
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_server_dispatcher_validate_params() -> Result<(), Error> {
+        let mut server = new_test_minimal_server().await?;
+        let () = server.pool.available_addrs.clear();
+        assert_eq!(server.try_validate_parameters(), Err(Status::INVALID_ARGS));
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_set_address_pool_fails_if_leases_present() -> Result<(), Error> {
+        let mut server = new_test_minimal_server().await?;
+        server.cache.insert(MacAddr { octets: [1, 2, 3, 4, 5, 6] }, CachedConfig::default());
+        assert_eq!(
+            server.dispatch_set_parameter(fidl_fuchsia_net_dhcp::Parameter::AddressPool(
+                fidl_fuchsia_net_dhcp::AddressPool {
+                    network_id: Some(fidl_fuchsia_net::Ipv4Address { addr: [192, 168, 0, 0] }),
+                    broadcast: Some(fidl_fuchsia_net::Ipv4Address { addr: [192, 168, 0, 255] }),
+                    mask: Some(fidl_fuchsia_net::Ipv4Address { addr: [255, 255, 255, 0] }),
+                    pool_range_start: Some(fidl_fuchsia_net::Ipv4Address {
+                        addr: [192, 168, 0, 2]
+                    }),
+                    pool_range_stop: Some(fidl_fuchsia_net::Ipv4Address {
+                        addr: [192, 168, 0, 254]
+                    })
+                }
+            )),
+            Err(Status::BAD_STATE)
+        );
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_set_address_pool_updates_internal_pool() -> Result<(), Error> {
+        let mut server = new_test_minimal_server().await?;
+        let () = server.pool.available_addrs.clear();
+        let () = server
+            .dispatch_set_parameter(fidl_fuchsia_net_dhcp::Parameter::AddressPool(
+                fidl_fuchsia_net_dhcp::AddressPool {
+                    network_id: Some(fidl_fuchsia_net::Ipv4Address { addr: [192, 168, 0, 0] }),
+                    broadcast: Some(fidl_fuchsia_net::Ipv4Address { addr: [192, 168, 0, 255] }),
+                    mask: Some(fidl_fuchsia_net::Ipv4Address { addr: [255, 255, 255, 0] }),
+                    pool_range_start: Some(fidl_fuchsia_net::Ipv4Address {
+                        addr: [192, 168, 0, 2],
+                    }),
+                    pool_range_stop: Some(fidl_fuchsia_net::Ipv4Address { addr: [192, 168, 0, 5] }),
+                },
+            ))
+            .context("failed to set parameter")?;
+        assert_eq!(server.pool.available_addrs.len(), 3);
         Ok(())
     }
 }
