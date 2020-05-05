@@ -199,5 +199,13 @@ TEST_F(LoggingSocketTest, SetSettingsAndTagsFromCommandLine) {
   CheckSocketEmpty();
 }
 
+TEST_F(LoggingSocketTest, TooManyTags) {
+  constexpr const char* kLogMessage = "Hello";
+  syslog::SetTags({"1", "2", "3", "4", "5"});
+  FX_LOGS(ERROR) << kLogMessage;
+  ReadPacketAndCompare(FX_LOG_ERROR, kLogMessage, {"1", "2", "3", "4"});
+  CheckSocketEmpty();
+}
+
 }  // namespace
 }  // namespace syslog

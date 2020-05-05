@@ -26,9 +26,11 @@ void SetLogSettings(const syslog::LogSettings& settings) {
 void SetLogSettings(const syslog::LogSettings& settings,
                     const std::initializer_list<std::string>& tags) {
   const char* ctags[FX_LOG_MAX_TAGS];
-  int i = 0;
+  size_t num_tags = 0;
   for (auto& tag : tags) {
-    ctags[i++] = tag.c_str();
+    ctags[num_tags++] = tag.c_str();
+    if (num_tags >= FX_LOG_MAX_TAGS)
+      break;
   }
   int fd = -1;
   if (!settings.log_file.empty()) {
@@ -41,7 +43,7 @@ void SetLogSettings(const syslog::LogSettings& settings,
                                .console_fd = fd,
                                .log_service_channel = ZX_HANDLE_INVALID,
                                .tags = ctags,
-                               .num_tags = tags.size()};
+                               .num_tags = num_tags};
   fx_log_reconfigure(&config);
 }
 
