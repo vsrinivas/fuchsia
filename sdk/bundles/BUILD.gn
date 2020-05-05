@@ -12,7 +12,6 @@ group("tools") {
     "//garnet/packages/prod:debug_agent",
     "//garnet/packages/prod:far",
     "//garnet/packages/prod:iquery",
-    "//garnet/packages/prod:iquery",
     "//garnet/packages/prod:run",
     "//garnet/packages/prod:sbase",
     "//garnet/packages/prod:setui_client",
