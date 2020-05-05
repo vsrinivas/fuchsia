@@ -196,7 +196,7 @@ impl Control {
                 let watch_auto_result =
                     self.watch_auto_brightness(watch_auto_handler, responder).await;
                 match watch_auto_result {
-                    Ok(_v) => fx_log_info!("Watch auto brightness successfully."),
+                    Ok(_v) => {}
                     Err(e) => fx_log_err!("Watch auto brightness failed due to err {}.", e),
                 }
             }
@@ -208,7 +208,7 @@ impl Control {
                 let watch_current_result =
                     self.watch_current_brightness(watch_current_handler, responder).await;
                 match watch_current_result {
-                    Ok(_v) => fx_log_info!("Watch current brightness successfully."),
+                    Ok(_v) => {}
                     Err(e) => fx_log_err!("Watch current brightness failed due to err {}.", e),
                 }
             }
@@ -234,7 +234,7 @@ impl Control {
                     .watch_auto_brightness_adjustment(watch_adjustment_handler, responder)
                     .await;
                 match watch_adjustment_result {
-                    Ok(_v) => fx_log_info!("Watch adjustment successfully."),
+                    Ok(_v) => {}
                     Err(e) => fx_log_err!("Watch adjustment failed due to err {}.", e),
                 }
             }
@@ -276,7 +276,6 @@ impl Control {
         watch_auto_handler: Arc<Mutex<WatchHandler<bool, WatcherAutoResponder>>>,
         responder: ControlWatchAutoBrightnessResponder,
     ) -> Result<(), Error> {
-        fx_log_info!("Watching auto brightness.");
         let mut hanging_get_lock = watch_auto_handler.lock().await;
         hanging_get_lock.watch(WatcherAutoResponder { watcher_auto_responder: responder })?;
         Ok(())
@@ -346,7 +345,6 @@ impl Control {
         watch_current_handler: Arc<Mutex<WatchHandler<f32, WatcherCurrentResponder>>>,
         responder: ControlWatchCurrentBrightnessResponder,
     ) -> Result<(), Error> {
-        fx_log_info!("Watching current brightness.");
         let mut hanging_get_lock = watch_current_handler.lock().await;
         hanging_get_lock.watch(WatcherCurrentResponder { watcher_current_responder: responder })?;
         Ok(())
