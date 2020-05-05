@@ -58,6 +58,8 @@ const sysconfig_header kLegacyLayout = {
 
 constexpr size_t kAstroPageSize = 4 * kKilobyte;
 
+constexpr zx_vm_option_t kVmoRw = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE;
+
 zx_status_t FindSysconfigPartition(const fbl::unique_fd& devfs_root,
                                    std::optional<skipblock::SkipBlock::SyncClient>* out) {
   fbl::unique_fd dir_fd(openat(devfs_root.get(), "class/skip-block/", O_RDONLY));
@@ -528,6 +530,149 @@ zx_status_t SyncClient::UpdateLayout(const sysconfig_header& target_header) {
 
   header_ = std::make_unique<sysconfig_header>(header);
   return ZX_OK;
+}
+
+zx_status_t SyncClientBuffered::GetPartitionSize(PartitionType partition, size_t* size) {
+  return client_.GetPartitionSize(partition, size);
+}
+
+zx_status_t SyncClientBuffered::GetPartitionOffset(PartitionType partition, size_t* size) {
+  return client_.GetPartitionOffset(partition, size);
+}
+
+uint32_t SyncClientBuffered::PartitionTypeToCacheMask(PartitionType partition) {
+  switch (partition) {
+    case PartitionType::kSysconfig:
+      return CacheBitMask::kSysconfig;
+    case PartitionType::kABRMetadata:
+      return CacheBitMask::kAbrMetadata;
+    case PartitionType::kVerifiedBootMetadataA:
+      return CacheBitMask::kVbmetaA;
+    case PartitionType::kVerifiedBootMetadataB:
+      return CacheBitMask::kVbmetaB;
+    case PartitionType::kVerifiedBootMetadataR:
+      return CacheBitMask::kVbmetaR;
+  }
+  ZX_ASSERT_MSG(false, "Unknown partition type %d\n", static_cast<int>(partition));
+}
+
+bool SyncClientBuffered::IsCacheEmpty(PartitionType partition) {
+  return (cache_modified_flag_ & PartitionTypeToCacheMask(partition)) == 0;
+}
+
+void SyncClientBuffered::MarkCacheNonEmpty(PartitionType partition) {
+  cache_modified_flag_ |= PartitionTypeToCacheMask(partition);
+}
+
+zx_status_t SyncClientBuffered::CreateCache() {
+  if (cache_.vmo()) {
+    return ZX_OK;
+  }
+
+  if (auto status = cache_.CreateAndMap(kAstroSysconfigPartitionSize, "sysconfig cache", kVmoRw);
+      status != ZX_OK) {
+    fprintf(stderr, "failed to create cache. %s\n", zx_status_get_string(status));
+    return status;
+  }
+
+  if (auto status = client_.Read(0, kAstroSysconfigPartitionSize, cache_.vmo(), 0);
+      status != ZX_OK) {
+    fprintf(stderr, "failed to initialize cache content. %s\n", zx_status_get_string(status));
+    return status;
+  }
+  return ZX_OK;
+}
+
+void SyncClientBuffered::InvalidateCache() {
+  cache_modified_flag_ = 0;
+  cache_.Reset();
+}
+
+bool SyncClientBuffered::IsAllCacheEmpty() { return cache_modified_flag_ == 0; }
+
+zx_status_t SyncClientBuffered::WritePartition(PartitionType partition, const zx::vmo& vmo,
+                                               zx_off_t vmo_offset) {
+  return WriteCache(partition, vmo, vmo_offset);
+}
+
+zx_status_t SyncClientBuffered::WriteCache(PartitionType partition, const zx::vmo& vmo,
+                                           zx_off_t vmo_offset) {
+  if (auto status = CreateCache(); status != ZX_OK) {
+    return status;
+  }
+
+  size_t size;
+  uint8_t* start;
+  if (auto status = GetSubpartitionCacheAddrSize(partition, &start, &size); status != ZX_OK) {
+    return status;
+  }
+
+  if (auto status = vmo.read(start, vmo_offset, size); status != ZX_OK) {
+    fprintf(stderr, "WriteCache: Failed to write to cache. %s\n", zx_status_get_string(status));
+    return status;
+  }
+  MarkCacheNonEmpty(partition);
+
+  return ZX_OK;
+}
+
+zx_status_t SyncClientBuffered::ReadPartition(PartitionType partition, const zx::vmo& vmo,
+                                              zx_off_t vmo_offset) {
+  return IsCacheEmpty(partition) ? client_.ReadPartition(partition, vmo, vmo_offset)
+                                 : ReadCache(partition, vmo, vmo_offset);
+}
+
+zx_status_t SyncClientBuffered::ReadCache(PartitionType partition, const zx::vmo& vmo,
+                                          zx_off_t vmo_offset) {
+  size_t size;
+  uint8_t* start;
+  if (auto status = GetSubpartitionCacheAddrSize(partition, &start, &size); status != ZX_OK) {
+    return status;
+  }
+
+  if (auto status = vmo.write(start, vmo_offset, size); status != ZX_OK) {
+    fprintf(stderr, "ReadCache::Failed to read from cached %d, %s\n", static_cast<int>(partition),
+            zx_status_get_string(status));
+    return status;
+  }
+  return ZX_OK;
+}
+
+zx_status_t SyncClientBuffered::Flush() {
+  if (IsAllCacheEmpty()) {
+    return ZX_OK;
+  }
+
+  if (auto status = client_.Write(0, kAstroSysconfigPartitionSize, cache_.vmo(), 0);
+      status != ZX_OK) {
+    fprintf(stderr, "Failed to flush write. %s\n", zx_status_get_string(status));
+    return status;
+  }
+
+  InvalidateCache();
+  return ZX_OK;
+}
+
+zx_status_t SyncClientBuffered::GetSubpartitionCacheAddrSize(PartitionType partition,
+                                                             uint8_t** start, size_t* size) {
+  zx_status_t status_get_header;
+  auto header = client_.GetHeader(&status_get_header);
+  if (!header) {
+    return status_get_header;
+  }
+  auto info = GetSubpartitionInfo(*header, partition);
+  *start = static_cast<uint8_t*>(cache_.start()) + info.offset;
+  *size = info.size;
+  return ZX_OK;
+}
+
+const uint8_t* SyncClientBuffered::GetCacheBuffer(PartitionType partition) {
+  size_t size;
+  uint8_t* start;
+  if (auto status = GetSubpartitionCacheAddrSize(partition, &start, &size); status != ZX_OK) {
+    return nullptr;
+  }
+  return start;
 }
 
 }  // namespace sysconfig

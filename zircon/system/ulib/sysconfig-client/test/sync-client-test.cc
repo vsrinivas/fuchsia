@@ -574,7 +574,6 @@ TEST_F(SyncClientTest, UpdateLayoutReverseOrderWithGap) {
   TestLayoutUpdate(std::nullopt, reverse_order);
 }
 
-namespace {
 sysconfig_header shrunken_configdata_abr_expand_at_end = {
     .sysconfig_data = {4 * kKilobyte, 20 * kKilobyte},
     .abr_metadata = {216 * kKilobyte, 40 * kKilobyte},
@@ -590,7 +589,6 @@ sysconfig_header empty_configdata_abr_expand_at_end = {
     .vb_metadata_b = {68 * kKilobyte, 64 * kKilobyte},
     .vb_metadata_r = {132 * kKilobyte, 64 * kKilobyte},
 };
-}  // namespace
 
 TEST_F(SyncClientTest, UpdateLayoutShrinkConfigDataExpandAbrAtEnd) {
   TestLayoutUpdate(std::nullopt, shrunken_configdata_abr_expand_at_end);
@@ -602,6 +600,285 @@ TEST_F(SyncClientTest, UpdateLayoutEmptyConfigDataExpandAbrAtEnd) {
 
 TEST_F(SyncClientTest, UpdateLayoutFromShrukenToEmptyConfigData) {
   TestLayoutUpdate(shrunken_configdata_abr_expand_at_end, empty_configdata_abr_expand_at_end);
+}
+
+class SyncClientBufferedTest : public SyncClientTest {
+ public:
+  struct PartitionInfo {
+    PartitionType partition;
+    size_t partition_offset;
+    size_t partition_size;
+    std::optional<uint8_t> write_value;
+  };
+
+  // Tests that SyncClientBuffered correctly writes to caches and storage for one or more
+  // sub-partitions.
+  void TestWrite(const std::vector<PartitionInfo>& parts_to_test_write);
+
+  // Tests that SyncClientBuffered correctly reads from cache and storage for one or more
+  // sub-partitions.
+  void TestRead(const std::vector<PartitionInfo>& parts_to_test_read);
+
+  // Tests that SyncClientBuffered correctly writes according to a non-legacy header for
+  // one or more sub-partitions.
+  void TestWriteWithHeader(const std::vector<PartitionInfo>& parts_to_test_write);
+
+ protected:
+  void ValidateReadBuffer(const void* buffer, size_t len, uint8_t expected) const {
+    auto mem = static_cast<const uint8_t*>(buffer);
+    for (size_t i = 0; i < len; i++) {
+      ASSERT_EQ(mem[i], expected, "offset = %zu", i);
+    }
+  }
+
+  std::optional<uint8_t> GetExpectedWriteValue(size_t index,
+                                               const std::vector<PartitionInfo>& parts,
+                                               uint8_t unwritten_default) const {
+    for (auto& part : parts) {
+      if (index >= part.partition_offset && index < part.partition_offset + part.partition_size) {
+        return part.write_value;
+      }
+    }
+    return unwritten_default;
+  }
+
+  void ValidateMemory(const std::vector<PartitionInfo>& parts) {
+    const uint8_t* start = static_cast<uint8_t*>(device_->mapper().start()) + (4 * kBlockSize);
+    for (size_t i = 0; i < 256 * kKilobyte; i++) {
+      if (auto expected = GetExpectedWriteValue(i, parts, 0xff); expected) {
+        ASSERT_EQ(start[i], *expected, "offset = %zu", i);
+      }
+    }
+  }
+};
+
+void SyncClientBufferedTest::TestWrite(const std::vector<PartitionInfo>& parts_to_test_write) {
+  std::optional<sysconfig::SyncClient> client;
+  ASSERT_OK(sysconfig::SyncClient::Create(device_->devfs_root(), &client));
+  sysconfig::SyncClientBuffered sync_client_buffered(*std::move(client));
+
+  // Write something to cache.
+  for (auto& part : parts_to_test_write) {
+    zx::vmo vmo;
+    ASSERT_NO_FATAL_FAILURES(
+        CreatePayload(part.partition_size, &vmo, part.write_value ? *part.write_value : 0x4a));
+    ASSERT_OK(sync_client_buffered.WritePartition(part.partition, vmo, 0));
+  }
+
+  // Verify that cache is correctly written.
+  for (auto& part : parts_to_test_write) {
+    if (part.write_value) {
+      auto cache_buffer = sync_client_buffered.GetCacheBuffer(part.partition);
+      ASSERT_NOT_NULL(cache_buffer);
+      ValidateReadBuffer(cache_buffer, part.partition_size, *part.write_value);
+    }
+  }
+
+  // Verify that nothing is written to memory yet.
+  ASSERT_NO_FATAL_FAILURES(ValidateMemory({}));
+
+  ASSERT_OK(sync_client_buffered.Flush());
+
+  // Veiry that memory is correctly written after flushing
+  ASSERT_NO_FATAL_FAILURES(ValidateMemory(parts_to_test_write));
+}
+
+constexpr SyncClientBufferedTest::PartitionInfo kLegacySysconfigPartitionInfo = {
+    PartitionType::kSysconfig, 0, 60 * kKilobyte, 0x1};
+constexpr SyncClientBufferedTest::PartitionInfo kLegacyAbrPartitionInfo = {
+    PartitionType::kABRMetadata, 60 * kKilobyte, 4 * kKilobyte, 0x2};
+constexpr SyncClientBufferedTest::PartitionInfo kLegacyVbAPartitionInfo = {
+    PartitionType::kVerifiedBootMetadataA, 64 * kKilobyte, 64 * kKilobyte, 0x3};
+constexpr SyncClientBufferedTest::PartitionInfo kLegacyVbBPartitionInfo = {
+    PartitionType::kVerifiedBootMetadataB, 128 * kKilobyte, 64 * kKilobyte, 0x4};
+constexpr SyncClientBufferedTest::PartitionInfo kLegacyVbRPartitionInfo = {
+    PartitionType::kVerifiedBootMetadataR, 192 * kKilobyte, 64 * kKilobyte, 0x5};
+
+TEST_F(SyncClientBufferedTest, WritePartitionSysconfig) {
+  TestWrite({kLegacySysconfigPartitionInfo});
+}
+
+TEST_F(SyncClientBufferedTest, WritePartitionAbrMetadata) { TestWrite({kLegacyAbrPartitionInfo}); }
+
+TEST_F(SyncClientBufferedTest, WritePartitionVbMetaA) { TestWrite({kLegacyVbAPartitionInfo}); }
+
+TEST_F(SyncClientBufferedTest, WritePartitionVbMetaB) { TestWrite({kLegacyVbBPartitionInfo}); }
+
+TEST_F(SyncClientBufferedTest, WritePartitionVbMetaR) { TestWrite({kLegacyVbRPartitionInfo}); }
+
+TEST_F(SyncClientBufferedTest, WriteAllPartitions) {
+  TestWrite({
+      kLegacySysconfigPartitionInfo,
+      kLegacyAbrPartitionInfo,
+      kLegacyVbAPartitionInfo,
+      kLegacyVbBPartitionInfo,
+      kLegacyVbRPartitionInfo,
+  });
+}
+
+void SyncClientBufferedTest::TestRead(const std::vector<PartitionInfo>& parts_to_test_read) {
+  std::optional<sysconfig::SyncClient> client;
+  ASSERT_OK(sysconfig::SyncClient::Create(device_->devfs_root(), &client));
+  sysconfig::SyncClientBuffered sync_client_buffered(*std::move(client));
+
+  // Write something to cache.
+  for (auto& part : parts_to_test_read) {
+    zx::vmo vmo;
+    ASSERT_NO_FATAL_FAILURES(
+        CreatePayload(part.partition_size, &vmo, part.write_value ? *part.write_value : 0x4a));
+    ASSERT_OK(sync_client_buffered.WritePartition(part.partition, vmo, 0));
+  }
+
+  // Verify that data from cache is correctly read.
+  for (auto& part : parts_to_test_read) {
+    fzl::OwnedVmoMapper mapper;
+    ASSERT_OK(mapper.CreateAndMap(part.partition_size, "test"));
+    ASSERT_OK(sync_client_buffered.ReadPartition(part.partition, mapper.vmo(), 0));
+    uint8_t expected = part.write_value ? *part.write_value : 0x4a;
+    ASSERT_NO_FATAL_FAILURES(ValidateReadBuffer(mapper.start(), part.partition_size, expected));
+  }
+
+  ASSERT_OK(sync_client_buffered.Flush());
+
+  // Verify that data can still be correctly read after flushing to memory.
+  for (auto& part : parts_to_test_read) {
+    fzl::OwnedVmoMapper mapper;
+    ASSERT_OK(mapper.CreateAndMap(part.partition_size, "test"));
+    ASSERT_OK(sync_client_buffered.ReadPartition(part.partition, mapper.vmo(), 0));
+    uint8_t expected = part.write_value ? *part.write_value : 0x4a;
+    ASSERT_NO_FATAL_FAILURES(ValidateReadBuffer(mapper.start(), part.partition_size, expected));
+  }
+
+  // Overwrite the memory with new data directly.
+  for (auto& part : parts_to_test_read) {
+    ASSERT_NO_FATAL_FAILURES(WriteData(part.partition_offset, part.partition_size));
+  }
+
+  // Verify that new data from memory is correctly read.
+  for (auto& part : parts_to_test_read) {
+    fzl::OwnedVmoMapper mapper;
+    ASSERT_OK(mapper.CreateAndMap(part.partition_size, "test"));
+    ASSERT_OK(sync_client_buffered.ReadPartition(part.partition, mapper.vmo(), 0));
+    ASSERT_NO_FATAL_FAILURES(ValidateReadBuffer(mapper.start(), part.partition_size, 0x5c));
+  }
+}
+
+TEST_F(SyncClientBufferedTest, ReadPartitionSysconfig) {
+  TestRead({kLegacySysconfigPartitionInfo});
+}
+
+TEST_F(SyncClientBufferedTest, ReadPartitionAbrMetadata) { TestRead({kLegacyAbrPartitionInfo}); }
+
+TEST_F(SyncClientBufferedTest, ReadPartitionVbMetaA) { TestRead({kLegacyVbAPartitionInfo}); }
+
+TEST_F(SyncClientBufferedTest, ReadPartitionVbMetaB) { TestRead({kLegacyVbBPartitionInfo}); }
+
+TEST_F(SyncClientBufferedTest, ReadPartitionVbMetaR) { TestRead({kLegacyVbRPartitionInfo}); }
+
+TEST_F(SyncClientBufferedTest, ReadAllPartitions) {
+  TestRead({
+      kLegacySysconfigPartitionInfo,
+      kLegacyAbrPartitionInfo,
+      kLegacyVbAPartitionInfo,
+      kLegacyVbBPartitionInfo,
+      kLegacyVbRPartitionInfo,
+  });
+}
+
+sysconfig_subpartition GetSubpartitionInfo(const sysconfig_header& header,
+                                           sysconfig::SyncClient::PartitionType partition) {
+  switch (partition) {
+    case sysconfig::SyncClient::PartitionType::kSysconfig:
+      return header.sysconfig_data;
+    case sysconfig::SyncClient::PartitionType::kABRMetadata:
+      return header.abr_metadata;
+    case sysconfig::SyncClient::PartitionType::kVerifiedBootMetadataA:
+      return header.vb_metadata_a;
+    case sysconfig::SyncClient::PartitionType::kVerifiedBootMetadataB:
+      return header.vb_metadata_b;
+    case sysconfig::SyncClient::PartitionType::kVerifiedBootMetadataR:
+      return header.vb_metadata_r;
+  }
+  ZX_ASSERT(false);  // Unreachable.
+}
+
+void SyncClientBufferedTest::TestWriteWithHeader(
+    const std::vector<PartitionInfo>& parts_to_test_write) {
+  std::optional<sysconfig::SyncClient> client;
+  ASSERT_OK(sysconfig::SyncClient::Create(device_->devfs_root(), &client));
+  sysconfig::SyncClientBuffered sync_client_buffered(*std::move(client));
+  // Sysconfig partition starts at the 5th block in this test environment.
+  // Please refer to kNandInfo definition.
+  auto memory = static_cast<uint8_t*>(device_->mapper().start()) + 4 * kBlockSize;
+
+  sysconfig_header header = {
+      .magic = SYSCONFIG_HEADER_MAGIC_ARRAY,
+      .sysconfig_data = {200 * kKilobyte, 56 * kKilobyte},
+      .abr_metadata = {196 * kKilobyte, 4 * kKilobyte},
+      .vb_metadata_a = {4 * kKilobyte, 64 * kKilobyte},
+      .vb_metadata_b = {68 * kKilobyte, 64 * kKilobyte},
+      .vb_metadata_r = {132 * kKilobyte, 64 * kKilobyte},
+  };
+  update_sysconfig_header_magic_and_crc(&header);
+  memcpy(memory, &header, sizeof(header));
+
+  for (auto& part : parts_to_test_write) {
+    if (!part.write_value) {
+      continue;
+    }
+    auto subpartition_info = GetSubpartitionInfo(header, part.partition);
+    zx::vmo vmo;
+    ASSERT_NO_FATAL_FAILURES(
+        CreatePayload(subpartition_info.size, &vmo, part.write_value ? *part.write_value : 0x4a));
+    ASSERT_OK(sync_client_buffered.WritePartition(part.partition, vmo, 0));
+  }
+
+  ASSERT_OK(sync_client_buffered.Flush());
+
+  // set sub-partition offset and size according to our test header.
+  auto parts_copy = parts_to_test_write;
+  for (auto& part : parts_copy) {
+    auto subpartition_info = GetSubpartitionInfo(header, part.partition);
+    part.partition_offset = subpartition_info.offset;
+    part.partition_size = subpartition_info.size;
+  }
+
+  // Header in storage shall not change
+  ASSERT_BYTES_EQ(memory, &header, sizeof(header));
+
+  // make a dummy header partition to exempt it from validation
+  parts_copy.push_back({.partition_offset = 0, .partition_size = 4 * kKilobyte, .write_value = {}});
+
+  ASSERT_NO_FATAL_FAILURES(ValidateMemory(parts_copy));
+}
+
+TEST_F(SyncClientBufferedTest, WritePartitionSysconfigWithHeader) {
+  // Subpartition position determined by header. No need to pass offset and size here.
+  TestWriteWithHeader({{PartitionType::kSysconfig, 0, 0, 0x4a}});
+}
+
+TEST_F(SyncClientBufferedTest, WritePartitionAbrMetadataWithHeader) {
+  TestWriteWithHeader({{PartitionType::kABRMetadata, 0, 0, 0x4a}});
+}
+
+TEST_F(SyncClientBufferedTest, WritePartitionVbMetaAWithHeader) {
+  TestWriteWithHeader({{PartitionType::kVerifiedBootMetadataA, 0, 0, 0x4a}});
+}
+
+TEST_F(SyncClientBufferedTest, WritePartitionVbMetaBWithHeader) {
+  TestWriteWithHeader({{PartitionType::kVerifiedBootMetadataB, 0, 0, 0x4a}});
+}
+
+TEST_F(SyncClientBufferedTest, WritePartitionVbMetaRWithHeader) {
+  TestWriteWithHeader({{PartitionType::kVerifiedBootMetadataR, 0, 0, 0x4a}});
+}
+
+TEST_F(SyncClientBufferedTest, WriteAllPartitionsWithHeader) {
+  TestWriteWithHeader({{PartitionType::kSysconfig, 0, 0, 0x1},
+                       {PartitionType::kABRMetadata, 0, 0, 0x2},
+                       {PartitionType::kVerifiedBootMetadataA, 0, 0, 0x3},
+                       {PartitionType::kVerifiedBootMetadataB, 0, 0, 0x4},
+                       {PartitionType::kVerifiedBootMetadataR, 0, 0, 0x5}});
 }
 
 }  // namespace
