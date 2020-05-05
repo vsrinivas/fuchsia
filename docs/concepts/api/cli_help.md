@@ -11,7 +11,7 @@ documentation and feature discovery.
 ## Guide
 
 Help documentation must include a usage section written in
-[Usage](#bookmark=id.yv0npmd9oldw) format, followed by brief written prose
+[Usage](#usage) format, followed by brief written prose
 describing the command, and the following sections (as needed): Options,
 Commands, Examples, Notes, and Error codes.
 
@@ -91,7 +91,7 @@ prose.
   command name and usage text will only contain portable ASCII characters
   (without Unicode).
 
-### Usage
+### Usage {:#usage}
 
 Usage is required and includes the "`Usage:`" header.
 
