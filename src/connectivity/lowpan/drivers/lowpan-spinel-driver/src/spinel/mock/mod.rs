@@ -6,3 +6,6 @@ use super::*;
 
 pub mod mock_device_client;
 pub use mock_device_client::*;
+
+pub mod fake_device_client;
+pub use fake_device_client::*;

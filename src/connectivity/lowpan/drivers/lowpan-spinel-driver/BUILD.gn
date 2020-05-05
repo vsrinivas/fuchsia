@@ -12,6 +12,7 @@ rustc_binary("bin") {
   edition = "2018"
   deps = [
     "//sdk/fidl/fuchsia.lowpan:fuchsia.lowpan-rustc",
+    "//sdk/fidl/fuchsia.lowpan.device:fuchsia.lowpan.device-rustc",
     "//sdk/fidl/fuchsia.lowpan.spinel:fuchsia.lowpan.spinel-rustc",
     "//src/connectivity/lowpan/lib/lowpan_driver_common",
     "//src/connectivity/lowpan/lib/spinel_pack",
@@ -20,7 +21,9 @@ rustc_binary("bin") {
     "//src/lib/fuchsia-component",
     "//src/lib/syslog/rust:syslog",
     "//src/lib/zircon/rust:fuchsia-zircon",
+    "//src/lib/zircon/rust:fuchsia-zircon-status",
     "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:argh",
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:log",
