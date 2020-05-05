@@ -4,7 +4,10 @@
 
 #include "src/modular/lib/pseudo_dir/pseudo_dir_server.h"
 
+#include <lib/fdio/directory.h>
 #include <lib/gtest/real_loop_fixture.h>
+#include <lib/vfs/cpp/pseudo_dir.h>
+#include <lib/vfs/cpp/service.h>
 
 #include <gtest/gtest.h>
 #include <src/lib/files/directory.h>
@@ -61,6 +64,25 @@ TEST_F(PseudoDirServerTest, Serve) {
   std::string contents;
   ASSERT_TRUE(files::ReadFileToStringAt(dir_fd.get(), kFileName, &contents));
   EXPECT_EQ(kContents, contents);
+}
+
+// Test that |PseudoDirServer::Serve| serves a directory that contains a service.
+TEST_F(PseudoDirServerTest, ServeService) {
+  constexpr char kServiceName[] = "service_name";
+
+  bool svc_requested = false;
+  auto svc_dir = std::make_unique<vfs::PseudoDir>();
+  svc_dir->AddEntry(kServiceName,
+                    std::make_unique<vfs::Service>(
+                        [&svc_requested](zx::channel request, async_dispatcher_t* dispatcher) {
+                          svc_requested = true;
+                        }));
+
+  modular::PseudoDirServer server(std::move(svc_dir));
+  auto dir = server.Serve().Unbind().TakeChannel();
+  fuchsia::io::NodePtr node;
+  fdio_service_connect_at(dir.get(), kServiceName, node.NewRequest().TakeChannel().release());
+  RunLoopUntil([&] { return svc_requested; });
 }
 
 }  // namespace

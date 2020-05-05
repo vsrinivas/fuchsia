@@ -283,8 +283,7 @@ zx_status_t TestHarnessImpl::PopulateEnvServicesWithServiceDir(
     added_svcs->insert(svc_name);
   }
 
-  env_service_dir_ = std::make_unique<sys::ServiceDirectory>(dir.Unbind().TakeChannel());
-
+  env_service_dir_ = std::make_unique<sys::ServiceDirectory>(std::move(dir));
   return ZX_OK;
 }
 

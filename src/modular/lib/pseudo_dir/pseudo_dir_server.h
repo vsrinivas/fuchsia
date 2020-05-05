@@ -29,47 +29,29 @@ namespace modular {
 // This class is thread-unsafe.
 class PseudoDirServer final {
  public:
-  // Spins up a thread to serve the given |pseudo_dir| directory calls over.
-  // This constructor blocks the current thread until the child thread has
-  // initialized.
-  //
-  // Requires that the calling thread has an async dispatcher.
+  // Serves |pseudo_dir| on an async loop on a new thread. All requests to |pseudo_dir|
+  // are processed on the new thread.
   PseudoDirServer(std::unique_ptr<vfs::PseudoDir> pseudo_dir);
 
-  // This destructor blocks the current thread until the child thread exits.
+  // Stops |loop_| and blocks the current thread until the |loop_| thread is finished.
   ~PseudoDirServer();
 
   // Opens a read-only FD at |path|.  |path| must not lead with a '/'.
   fbl::unique_fd OpenAt(std::string path);
 
-  // Returns a directory connection for this pseudo dir. This directory is
-  // served on a different thread than the caller's thread.
+  // Returns a new directory connection to |pseudo_dir_|.
   fuchsia::io::DirectoryPtr Serve();
 
-  // Serves |pseudo_dir| on a new thread and binds |request| to the serving
-  // directory.
+  // Binds |request| to |pseudo_dir_|.
   void Serve(zx::channel request);
 
  private:
-  // This method is the handler for a new thread. It lets the owning thread
-  // know that it has started and serves a directory requests. The thread is
-  // exited when this object is destroyed.
-  void StartThread(fidl::InterfaceRequest<fuchsia::io::Directory> request);
-
+  // This loop is configured to attach to its own thread.
+  async::Loop loop_;
   std::unique_ptr<vfs::PseudoDir> pseudo_dir_;
 
-  // The directory connection which |OpenAt()| uses. This directory connection
-  // is served on |serving_thread_|'s thread.
-  fuchsia::io::DirectoryPtr dir_;
-
-  // The mutex & condition variable are used by the new thread (owned by
-  // |serving_thread_|) to signal to the owning thread that it has started,
-  // making it safe to then access |thread_loop_|.
-  std::mutex ready_mutex_;
-  std::condition_variable thread_loop_ready_;
-  async::Loop* thread_loop_ = nullptr;  // serving thread's loop.
-
-  std::thread serving_thread_;
+  // A directory connection, bound to |pseudo_dir_|, used by |OpenAt()|.
+  fuchsia::io::DirectoryPtr dir_ptr_;
 };
 
 }  // namespace modular

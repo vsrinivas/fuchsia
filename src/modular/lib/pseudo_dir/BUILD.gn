@@ -34,6 +34,7 @@ source_set("pseudo_dir_server") {
     "//src/lib/syslog/cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
+    "//zircon/public/lib/fdio:fdio_sdk",
   ]
 }
 
