@@ -58,6 +58,17 @@ void StreamImpl::Client::PostReceiveResolution(fuchsia::math::Size coded_size) {
   ZX_DEBUG_ASSERT(status == ZX_OK);
 }
 
+void StreamImpl::Client::PostReceiveCropRegion(std::unique_ptr<fuchsia::math::RectF> region) {
+  zx_status_t status =
+      async::PostTask(loop_.dispatcher(), [this, region = std::move(region)]() mutable {
+        // TODO(51176): Because unique_ptr is non-copyable, the hanging get helper assumes all
+        // values are never the same as previous values. In this case, however, back-to-back null
+        // regions or identical regions should not be sent twice.
+        crop_region_.Set(std::move(region));
+      });
+  ZX_DEBUG_ASSERT(status == ZX_OK);
+}
+
 bool& StreamImpl::Client::Participant() { return participant_; }
 
 void StreamImpl::Client::OnClientDisconnected(zx_status_t status) {
@@ -71,11 +82,26 @@ void StreamImpl::Client::CloseConnection(zx_status_t status) {
 }
 
 void StreamImpl::Client::SetCropRegion(std::unique_ptr<fuchsia::math::RectF> region) {
-  CloseConnection(ZX_ERR_NOT_SUPPORTED);
+  if (!stream_.properties_.supports_crop_region) {
+    CloseConnection(ZX_ERR_NOT_SUPPORTED);
+    return;
+  }
+
+  if (region && (region->x < 0.0f || region->y < 0.0f || region->x + region->width > 1.0f ||
+                 region->y + region->height > 1.0f)) {
+    FX_LOGS(INFO) << "Client requested invalid crop region {" << region->x << ", " << region->y
+                  << ", " << region->width << ", " << region->height << "}";
+    CloseConnection(ZX_ERR_INVALID_ARGS);
+    return;
+  }
+
+  stream_.PostSetCropRegion(id_, std::move(region));
 }
 
 void StreamImpl::Client::WatchCropRegion(WatchCropRegionCallback callback) {
-  CloseConnection(ZX_ERR_NOT_SUPPORTED);
+  if (crop_region_.Get(std::move(callback))) {
+    CloseConnection(ZX_ERR_BAD_STATE);
+  }
 }
 
 void StreamImpl::Client::SetResolution(fuchsia::math::Size coded_size) {

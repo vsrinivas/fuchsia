@@ -58,6 +58,7 @@ void StreamImpl::OnNewRequest(fidl::InterfaceRequest<fuchsia::camera3::Stream> r
       async::PostTask(loop_.dispatcher(), [this, request = std::move(request)]() mutable {
         auto client = std::make_unique<Client>(*this, client_id_next_, std::move(request));
         client->PostReceiveResolution(current_resolution_);
+        client->PostReceiveCropRegion(nullptr);
         clients_.emplace(client_id_next_++, std::move(client));
       });
   ZX_ASSERT(status == ZX_OK);
@@ -244,5 +245,38 @@ void StreamImpl::PostSetResolution(uint32_t id, fuchsia::math::Size coded_size) 
       client->PostReceiveResolution(best_size);
     }
   });
+  ZX_DEBUG_ASSERT(status == ZX_OK);
+}
+
+void StreamImpl::PostSetCropRegion(uint32_t id, std::unique_ptr<fuchsia::math::RectF> region) {
+  zx_status_t status =
+      async::PostTask(loop_.dispatcher(), [this, region = std::move(region)]() mutable {
+        if (legacy_stream_) {
+          float x_min = 0.0f;
+          float y_min = 0.0f;
+          float x_max = 1.0f;
+          float y_max = 1.0f;
+          if (region) {
+            x_min = region->x;
+            y_min = region->y;
+            x_max = x_min + region->width;
+            y_max = y_min + region->height;
+          }
+          legacy_stream_->SetRegionOfInterest(x_min, y_min, x_max, y_max, [](zx_status_t status) {
+            // TODO(50908): Make this an error once RegionOfInterest support is known at init time.
+            FX_PLOGS(WARNING, status) << "Stream does not support crop region.";
+          });
+        }
+        current_crop_region_ = std::move(region);
+
+        // Inform clients of the resolution change.
+        for (auto& [id, client] : clients_) {
+          std::unique_ptr<fuchsia::math::RectF> region;
+          if (current_crop_region_) {
+            region = std::make_unique<fuchsia::math::RectF>(*current_crop_region_);
+          }
+          client->PostReceiveCropRegion(std::move(region));
+        }
+      });
   ZX_DEBUG_ASSERT(status == ZX_OK);
 }

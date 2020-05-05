@@ -61,6 +61,9 @@ class StreamImpl {
   // Posts a task from the client with the given id to change the resolution of the stream.
   void PostSetResolution(uint32_t id, fuchsia::math::Size coded_size);
 
+  // Posts a task from the client with the given id to change the crop region of the stream.
+  void PostSetCropRegion(uint32_t id, std::unique_ptr<fuchsia::math::RectF> region);
+
   // Represents a single client connection to the StreamImpl class.
   class Client : public fuchsia::camera3::Stream {
    public:
@@ -80,6 +83,9 @@ class StreamImpl {
 
     // Posts a task to update the client's resolution.
     void PostReceiveResolution(fuchsia::math::Size coded_size);
+
+    // Posts a task to update the client's crop region.
+    void PostReceiveCropRegion(std::unique_ptr<fuchsia::math::RectF> region);
 
     // Returns a mutable reference to this client's state as a participant in buffer renegotiation.
     // This state must be managed by the parent stream's thread, not the client thread.
@@ -114,6 +120,7 @@ class StreamImpl {
     camera::HangingGetHelper<fuchsia::math::Size,
                              fit::function<bool(fuchsia::math::Size, fuchsia::math::Size)>>
         resolution_;
+    camera::HangingGetHelper<std::unique_ptr<fuchsia::math::RectF>> crop_region_;
     GetNextFrameCallback frame_callback_;
     bool participant_;
   };
@@ -134,6 +141,7 @@ class StreamImpl {
   std::queue<fuchsia::camera3::FrameInfo> frames_;
   std::map<uint32_t, std::unique_ptr<async::Wait>> frame_waiters_;
   fuchsia::math::Size current_resolution_;
+  std::unique_ptr<fuchsia::math::RectF> current_crop_region_;
   friend class Client;
 };
 

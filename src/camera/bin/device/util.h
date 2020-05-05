@@ -47,6 +47,8 @@ inline fit::result<fuchsia::camera3::Configuration, zx_status_t> Convert(
     stream_properties.frame_rate.numerator = stream_config.frame_rate.frames_per_sec_numerator;
     stream_properties.frame_rate.denominator = stream_config.frame_rate.frames_per_sec_denominator;
     stream_properties.image_format = stream_config.image_formats[0];
+    // TODO(50908): Detect ROI support during initialization.
+    stream_properties.supports_crop_region = true;
     ret.streams.push_back(std::move(stream_properties));
   }
   return fit::ok(std::move(ret));

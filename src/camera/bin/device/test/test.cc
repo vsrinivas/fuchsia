@@ -562,4 +562,40 @@ TEST_F(DeviceTest, OrphanStream) {
   Sync(stream2);
 }
 
+TEST_F(DeviceTest, SetCropRegion) {
+  fuchsia::camera3::DevicePtr device;
+  SetFailOnError(device, "Device");
+  device_->GetHandler()(device.NewRequest());
+  fuchsia::camera3::StreamPtr stream;
+  device->ConnectToStream(0, stream.NewRequest());
+  SetFailOnError(stream, "Stream");
+  bool callback_received = false;
+  stream->WatchCropRegion([&](std::unique_ptr<fuchsia::math::RectF> region) {
+    EXPECT_EQ(region, nullptr);
+    callback_received = true;
+  });
+  RunLoopUntilFailureOr(callback_received);
+  constexpr fuchsia::math::RectF kCropRegion{.x = 0.1f, .y = 0.4f, .width = 0.7f, .height = 0.2f};
+  callback_received = false;
+  stream->WatchCropRegion([&](std::unique_ptr<fuchsia::math::RectF> region) {
+    ASSERT_NE(region, nullptr);
+    EXPECT_EQ(region->x, kCropRegion.x);
+    EXPECT_EQ(region->y, kCropRegion.y);
+    EXPECT_EQ(region->width, kCropRegion.width);
+    EXPECT_EQ(region->height, kCropRegion.height);
+    callback_received = true;
+  });
+  stream->SetCropRegion(std::make_unique<fuchsia::math::RectF>(kCropRegion));
+  RunLoopUntilFailureOr(callback_received);
+  bool error_received = false;
+  stream.set_error_handler([&](zx_status_t status) {
+    EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
+    error_received = true;
+  });
+  constexpr fuchsia::math::RectF kInvalidCropRegion{
+      .x = 0.1f, .y = 0.4f, .width = 0.7f, .height = 0.7f};
+  stream->SetCropRegion(std::make_unique<fuchsia::math::RectF>(kInvalidCropRegion));
+  RunLoopUntilFailureOr(error_received);
+}
+
 }  // namespace camera
