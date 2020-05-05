@@ -13,6 +13,7 @@
 #include <zircon/threads.h>
 
 #include <ddk/debug.h>
+#include <ddk/trace/event.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/array.h>
 #include <fbl/auto_lock.h>
@@ -53,6 +54,7 @@ int I2cBus::I2cThread() {
     sync_completion_reset(&txn_signal_);
     I2cTxn* txn;
 
+    TRACE_DURATION("i2c", "I2cBus Process Queued Transacts");
     mutex_.Acquire();
     while ((txn = list_remove_head_type(&queued_txns_, I2cTxn, node)) != nullptr) {
       mutex_.Release();
@@ -105,6 +107,7 @@ int I2cBus::I2cThread() {
 
 void I2cBus::Transact(uint16_t address, const i2c_op_t* op_list, size_t op_count,
                       i2c_transact_callback callback, void* cookie) {
+  TRACE_DURATION("i2c", "I2cBus Queue Transact");
   size_t writes_length = 0;
   for (size_t i = 0; i < op_count; ++i) {
     if (op_list[i].data_size == 0 || op_list[i].data_size > max_transfer_) {

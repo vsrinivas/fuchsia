@@ -19,6 +19,7 @@
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/i2cimpl.h>
 #include <ddk/protocol/platform/device.h>
+#include <ddk/trace/event.h>
 #include <hw/reg.h>
 
 #define I2C_ERROR_SIGNAL ZX_USER_SIGNAL_0
@@ -133,6 +134,7 @@ static zx_status_t aml_i2c_wait_event(aml_i2c_dev_t* dev, uint32_t sig_mask) {
 }
 
 static zx_status_t aml_i2c_write(aml_i2c_dev_t* dev, const uint8_t* buff, uint32_t len, bool stop) {
+  TRACE_DURATION("i2c", "aml-i2c Write");
   ZX_DEBUG_ASSERT(len <= AML_I2C_MAX_TRANSFER);
   uint32_t token_num = 0;
   uint64_t token_reg = 0;
@@ -181,6 +183,7 @@ static zx_status_t aml_i2c_write(aml_i2c_dev_t* dev, const uint8_t* buff, uint32
 
 static zx_status_t aml_i2c_read(aml_i2c_dev_t* dev, uint8_t* buff, uint32_t len, bool stop) {
   ZX_DEBUG_ASSERT(len <= AML_I2C_MAX_TRANSFER);
+  TRACE_DURATION("i2c", "aml-i2c Read");
   uint32_t token_num = 0;
   uint64_t token_reg = 0;
 
@@ -290,6 +293,7 @@ static zx_status_t aml_i2c_set_bitrate(void* ctx, uint32_t bus_id, uint32_t bitr
 
 static zx_status_t aml_i2c_transact(void* ctx, uint32_t bus_id, const i2c_impl_op_t* rws,
                                     size_t count) {
+  TRACE_DURATION("i2c", "aml-i2c Transact");
   size_t i;
   for (i = 0; i < count; ++i) {
     if (rws[i].data_size > AML_I2C_MAX_TRANSFER) {
