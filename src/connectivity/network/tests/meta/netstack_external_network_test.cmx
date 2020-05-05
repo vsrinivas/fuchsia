@@ -4,7 +4,7 @@
             "default_url": "fuchsia-pkg://fuchsia.com/netstack_c_api_tests#meta/netstack_external_network_test_client.cmx",
             "environment": {
                 "devices": [
-                    "external_network_endpoint"
+                    "device"
                 ],
                 "name": "external_network_environment",
                 "services": {
@@ -16,7 +16,7 @@
                     {
                         "arguments": [
                             "-e",
-                            "external_network_endpoint",
+                            "device",
                             "-i",
                             "192.168.0.1/24"
                         ],
@@ -32,7 +32,7 @@
                     "endpoints": [
                         {
                             "mac": "aa:bb:cc:dd:ee:ff",
-                            "name": "external_network_endpoint"
+                            "name": "device"
                         }
                     ],
                     "name": "external_network"

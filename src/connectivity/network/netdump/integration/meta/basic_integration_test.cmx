@@ -3,8 +3,8 @@
         "fuchsia.netemul": {
             "environment": {
                 "devices": [
-                    "basic_integration_rx",
-                    "basic_integration_tx"
+                    "basic_rx",
+                    "basic_tx"
                 ],
                 "services": {
                     "fuchsia.netstack.Netstack": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
@@ -14,7 +14,7 @@
                     {
                         "arguments": [
                             "-e",
-                            "basic_integration_rx",
+                            "basic_rx",
                             "-i",
                             "192.168.0.2/24"
                         ],
@@ -23,7 +23,7 @@
                     {
                         "arguments": [
                             "-e",
-                            "basic_integration_tx",
+                            "basic_tx",
                             "-i",
                             "192.168.0.1/24"
                         ],
@@ -38,13 +38,13 @@
                 {
                     "endpoints": [
                         {
-                            "name": "basic_integration_rx"
+                            "name": "basic_rx"
                         },
                         {
-                            "name": "basic_integration_tx"
+                            "name": "basic_tx"
                         }
                     ],
-                    "name": "basic_integration_net"
+                    "name": "basic_net"
                 }
             ],
             "timeout": 120

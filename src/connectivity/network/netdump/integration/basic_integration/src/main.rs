@@ -14,7 +14,8 @@ const PACKET_COUNT: usize = 10;
 const PAYLOAD_SIZE: usize = 100; // octets.
 
 fn main() -> Result<(), Error> {
-    static TEST_NAME: &str = "basic_integration";
+    // `basic_integration` is too long for endpoint_names.
+    const TEST_NAME: &str = "basic";
     let mut env = TestEnvironment::new(fasync::Executor::new()?, TEST_NAME)?;
 
     // Example integration tests of basic packet sniffing functionality.

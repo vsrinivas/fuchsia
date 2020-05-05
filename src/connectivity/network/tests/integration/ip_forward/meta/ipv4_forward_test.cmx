@@ -11,7 +11,7 @@
                             {
                                 "arguments": [
                                     "-e",
-                                    "client-ep",
+                                    "client",
                                     "-i",
                                     "192.168.1.2/24",
                                     "-g",
@@ -35,7 +35,7 @@
                             {
                                 "arguments": [
                                     "-e",
-                                    "router-client-ep",
+                                    "router-client",
                                     "-i",
                                     "192.168.1.1/24"
                                 ],
@@ -44,7 +44,7 @@
                             {
                                 "arguments": [
                                     "-e",
-                                    "router-server-ep",
+                                    "router-server",
                                     "-i",
                                     "192.168.0.1/24"
                                 ],
@@ -70,7 +70,7 @@
                     {
                         "arguments": [
                             "-e",
-                            "server-ep",
+                            "server",
                             "-i",
                             "192.168.0.2/24",
                             "-g",
@@ -92,10 +92,10 @@
                 {
                     "endpoints": [
                         {
-                            "name": "client-ep"
+                            "name": "client"
                         },
                         {
-                            "name": "router-client-ep"
+                            "name": "router-client"
                         }
                     ],
                     "name": "net-B"
@@ -103,10 +103,10 @@
                 {
                     "endpoints": [
                         {
-                            "name": "router-server-ep"
+                            "name": "router-server"
                         },
                         {
-                            "name": "server-ep"
+                            "name": "server"
                         }
                     ],
                     "name": "net-A"

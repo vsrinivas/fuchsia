@@ -55,13 +55,12 @@ async fn config_netstack(opt: Opt) -> Result<(), Error> {
     let device_connection = ep.get_device().await?;
     fx_log_info!("Got device connection.");
 
-    let if_name = format!("eth-{}", opt.endpoint);
     // connect to netstack:
     let netstack = client::connect_to_service::<NetstackMarker>()?;
 
     let mut cfg = InterfaceConfig {
-        name: if_name.to_string(),
-        filepath: format!("/vdev/{}", opt.endpoint).to_string(),
+        name: opt.endpoint.clone(),
+        filepath: format!("/vdev/{}", opt.endpoint),
         metric: DEFAULT_METRIC,
         ip_address_config: IGNORED_IP_ADDRESS_CONFIG,
     };
@@ -69,7 +68,7 @@ async fn config_netstack(opt: Opt) -> Result<(), Error> {
         fidl_fuchsia_netemul_network::DeviceConnection::Ethernet(e) => netstack
             .add_ethernet_device(&format!("/vdev/{}", opt.endpoint), &mut cfg, e)
             .await
-            .context("can't add ethernet device")?,
+            .with_context(|| format!("can't add ethernet device {:?}", cfg))?,
         fidl_fuchsia_netemul_network::DeviceConnection::NetworkDevice(device) => todo!(
             "(48860) Support NetworkDevice configuration. Got unexpected NetworkDevice {:?}",
             device
@@ -140,7 +139,7 @@ async fn config_netstack(opt: Opt) -> Result<(), Error> {
     let (if_id, hwaddr) = netstack
         .take_event_stream()
         .try_filter_map(|fidl_fuchsia_netstack::NetstackEvent::OnInterfacesChanged { interfaces }| {
-            if let Some(iface) = interfaces.iter().find(|iface| iface.name == if_name) {
+            if let Some(iface) = interfaces.iter().find(|iface| iface.name == opt.endpoint) {
                 if !opt.skip_up_check {
                     if iface.flags & fidl_fuchsia_netstack::NET_INTERFACE_FLAG_UP == 0
                     {

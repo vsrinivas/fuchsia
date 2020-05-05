@@ -4,9 +4,10 @@
 
 library fuchsia.netstack;
 
-using fuchsia.net;
-using fuchsia.net.dhcp;
 using fuchsia.hardware.ethernet;
+using fuchsia.net.dhcp;
+using fuchsia.net;
+using fuchsia.posix.socket;
 using zx;
 
 enum Protocol {
@@ -30,7 +31,7 @@ struct NetErr {
 };
 
 struct InterfaceConfig {
-    string name;
+    fuchsia.posix.socket.interface_name name;
 
     /// An unstable file path corresponding to the interface. Used in watching the creation
     /// and destruction of the interface, or in accessing the interface using netdump.
@@ -53,7 +54,7 @@ struct NetInterface {
     uint32 flags;
     uint32 features;
     uint32 configuration;
-    string name;
+    fuchsia.posix.socket.interface_name name;
     /// addr is one of the interface's IPv4 addresses, even if the interface
     /// holds multiple. No guarantees are made about which address is used when
     /// an interface has multiple IPv4 addresses.
@@ -84,7 +85,7 @@ struct NetInterface2 {
     uint32 features;
     uint32 configuration;
     uint32 metric;
-    string name;
+    fuchsia.posix.socket.interface_name name;
     /// addr is one of the interface's IPv4 addresses, even if the interface
     /// holds multiple. No guarantees are made about which address is used when
     /// an interface has multiple IPv4 addresses.
@@ -138,10 +139,6 @@ protocol Netstack {
     /// Returns the list of registered network interfaces.
     GetInterfaces() -> (vector<NetInterface> interfaces);
     GetInterfaces2() -> (vector<NetInterface2> interfaces);
-
-    // DEPRECATED: see devicesettings.fidl
-    // Returns the netstack's node name.
-    // 5: GetNodeName() -> (string node_name);
 
     /// Returns current route table.
     GetRouteTable() -> (vector<RouteTableEntry> rt);
