@@ -12,6 +12,7 @@
 
 #include "device_request.h"
 #include "gpu_features.h"
+#include "gpu_progress.h"
 #include "magma_util/macros.h"
 #include "magma_util/register_io.h"
 #include "magma_util/thread.h"
@@ -25,6 +26,7 @@
 #include "platform_device.h"
 #include "platform_semaphore.h"
 #include "ringbuffer.h"
+#include "sequencer.h"
 
 class MsdVslDevice : public msd_device_t,
                      public AddressSpace::Owner,
@@ -53,8 +55,8 @@ class MsdVslDevice : public msd_device_t,
   magma_status_t ChipOption(magma_vsl_gc_chip_option* out_option);
 
   struct DumpState {
-    uint64_t max_completed_sequence_number;
-    uint64_t next_sequence_number;
+    uint64_t last_completed_sequence_number;
+    uint64_t last_submitted_sequence_number;
     bool idle;
     // This may be false if no batch has been submitted yet.
     bool page_table_arrays_enabled;
@@ -118,6 +120,7 @@ class MsdVslDevice : public msd_device_t,
   if (x)                            \
   DASSERT(!magma::ThreadIdCheck::IsCurrent(*x))
 
+  void HangCheckTimeout();
   bool Init(void* device_handle);
   void HardwareInit();
   void HardwareReset();
@@ -226,15 +229,15 @@ class MsdVslDevice : public msd_device_t,
 
   std::thread interrupt_thread_;
   std::unique_ptr<magma::PlatformInterrupt> interrupt_;
+  std::atomic_uint64_t last_interrupt_timestamp_;
   std::atomic_bool stop_interrupt_thread_{false};
 
   std::thread device_thread_;
   std::unique_ptr<magma::PlatformThreadId> device_thread_id_;
   std::atomic_bool stop_device_thread_{false};
 
-  // Stores the largest seen sequence number in all completed events.
-  uint64_t max_completed_sequence_number_ = 0;
-  uint64_t next_sequence_number_ = 1;
+  std::unique_ptr<Sequencer> sequencer_;
+  std::unique_ptr<GpuProgress> progress_;
 
   class BatchRequest;
   class DumpRequest;

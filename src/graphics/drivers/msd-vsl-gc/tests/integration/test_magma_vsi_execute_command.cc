@@ -120,6 +120,12 @@ class MagmaExecuteMsdVsi : public testing::Test {
       WriteCommand((from & 0x1f) | ((to << 8) & 0x1f00));
     }
 
+    void EtnaLink(uint16_t prefetch, uint32_t gpu_address) {
+      constexpr uint32_t kLinkCommand = 0x40000000;
+      WriteCommand(kLinkCommand | prefetch);
+      WriteCommand(gpu_address);
+    }
+
    protected:
     std::shared_ptr<EtnaBuffer> etna_buffer = nullptr;
     uint32_t index = 0;
@@ -227,12 +233,25 @@ class MagmaExecuteMsdVsi : public testing::Test {
     std::shared_ptr<EtnaCommandStream> command_stream = CreateEtnaCommandStream(kCodeSize);
     ASSERT_TRUE(command_stream);
 
-    constexpr uint32_t kLinkCommand = 0x40000000;
     // Jump to an unmapped address.
-    command_stream->WriteCommand(kLinkCommand | 0x8 /* arbitrary prefetch */);
-    command_stream->WriteCommand(next_gpu_addr_);
+    command_stream->EtnaLink(0x8 /* arbitrary prefetch */, next_gpu_addr_);
 
     static constexpr uint32_t kTimeoutMs = 10;
+    ExecuteCommand(command_stream, kTimeoutMs);
+
+    EXPECT_EQ(MAGMA_STATUS_CONNECTION_LOST, magma_get_error(magma_vsi_.GetConnection()));
+  }
+
+  void TestHang() {
+    static constexpr size_t kCodeSize = 4096;
+
+    std::shared_ptr<EtnaCommandStream> command_stream = CreateEtnaCommandStream(kCodeSize);
+    ASSERT_TRUE(command_stream);
+
+    // Infinite loop by jumping back to the link command.
+    command_stream->EtnaLink(0x8 /* prefetch */, command_stream->etna_buffer->gpu_address_);
+
+    static constexpr uint32_t kTimeoutMs = 6000;
     ExecuteCommand(command_stream, kTimeoutMs);
 
     EXPECT_EQ(MAGMA_STATUS_CONNECTION_LOST, magma_get_error(magma_vsi_.GetConnection()));
@@ -283,6 +302,14 @@ TEST_F(MagmaExecuteMsdVsi, ExecuteMany) {
 
 TEST_F(MagmaExecuteMsdVsi, MmuExceptionRecovery) {
   TestExecuteMmuException();
+  TearDown();
+  // Verify new commands complete successfully.
+  SetUp();
+  Test();
+}
+
+TEST_F(MagmaExecuteMsdVsi, HangRecovery) {
+  TestHang();
   TearDown();
   // Verify new commands complete successfully.
   SetUp();

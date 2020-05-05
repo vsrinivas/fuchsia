@@ -149,11 +149,15 @@ bool MsdVslDevice::Init(void* device_handle) {
   DASSERT(ringbuffer_size <= AddressSpaceLayout::system_gpu_addr_size());
 
   auto buffer = MsdVslBuffer::Create(ringbuffer_size, "ring-buffer");
-
   buffer->platform_buffer()->SetCachePolicy(MAGMA_CACHE_POLICY_UNCACHED);
 
   ringbuffer_ =
       std::make_unique<Ringbuffer>(std::move(buffer), AddressSpaceLayout::ringbuffer_size());
+
+  progress_ = std::make_unique<GpuProgress>();
+
+  constexpr uint32_t kFirstSequenceNumber = 0x1;
+  sequencer_ = std::make_unique<Sequencer>(kFirstSequenceNumber);
 
   device_request_semaphore_ = magma::PlatformSemaphore::Create();
 
@@ -235,6 +239,7 @@ void MsdVslDevice::Reset() {
 
   ringbuffer_->Reset(0);
   configured_address_space_ = nullptr;
+  progress_ = std::make_unique<GpuProgress>();
 
   HardwareInit();
 }
@@ -246,6 +251,19 @@ void MsdVslDevice::DisableInterrupts() {
   }
   auto reg = registers::IrqEnable::Get().FromValue(0);
   reg.WriteTo(register_io_.get());
+}
+
+void MsdVslDevice::HangCheckTimeout() {
+  std::vector<std::string> dump;
+  DumpToString(&dump, false /* fault_present */);
+
+  MAGMA_LOG(WARNING, "Suspected GPU hang:");
+  MAGMA_LOG(WARNING, "last_interrupt_timestamp %lu", last_interrupt_timestamp_.load());
+  for (auto& str : dump) {
+    MAGMA_LOG(WARNING, "%s", str.c_str());
+  }
+  KillCurrentContext();
+  Reset();
 }
 
 void MsdVslDevice::StartDeviceThread() {
@@ -274,13 +292,23 @@ int MsdVslDevice::DeviceThreadLoop() {
   std::unique_lock<std::mutex> lock(device_request_mutex_, std::defer_lock);
 
   while (!stop_device_thread_) {
-    // TODO(fxb/44651): add a timeout to detect when the hardware is hung.
+    constexpr uint32_t kTimeoutMs = 5000;
+
     auto timeout = std::chrono::duration_cast<std::chrono::milliseconds>(
-        std::chrono::steady_clock::duration::max());
+        progress_->GetHangcheckTimeout(kTimeoutMs, std::chrono::steady_clock::now()));
     magma::Status status = device_request_semaphore_->Wait(timeout.count());
     switch (status.get()) {
       case MAGMA_STATUS_OK:
         break;
+      case MAGMA_STATUS_TIMED_OUT: {
+        // Check that there are no pending device requests.
+        lock.lock();
+        bool empty = device_request_list_.empty();
+        lock.unlock();
+        if (empty) {
+          HangCheckTimeout();
+        }
+      } break;
       default:
         MAGMA_LOG(WARNING, "device_request_semaphore_ Wait failed: %d", status.get());
         DASSERT(false);
@@ -329,6 +357,8 @@ int MsdVslDevice::InterruptThreadLoop() {
     if (stop_interrupt_thread_) {
       break;
     }
+
+    last_interrupt_timestamp_ = magma::get_monotonic_ns();
 
     auto request = std::make_unique<InterruptRequest>();
     auto reply = request->GetReply();
@@ -385,9 +415,8 @@ magma::Status MsdVslDevice::ProcessInterrupt() {
   }
   if (max_seq_num) {
     DASSERT(rb_new_head != kInvalidRingbufferOffset);
-    DASSERT(max_seq_num > max_completed_sequence_number_);
     ringbuffer_->update_head(rb_new_head);
-    max_completed_sequence_number_ = max_seq_num;
+    progress_->Completed(max_seq_num, std::chrono::steady_clock::now());
   } else {
     DMESSAGE("Interrupt thread did not find any interrupt events");
     do_dump = true;
@@ -961,10 +990,9 @@ magma::Status MsdVslDevice::ProcessBatch(std::unique_ptr<MappedBatch> batch, boo
                     batch->GetBatchBufferId(), batch->IsCommandBuffer());
   }
 
-  batch->SetSequenceNumber(next_sequence_number_);
-  next_sequence_number_++;
-  // TODO(fxb/43815): handle sequence number overflow.
-  DASSERT(next_sequence_number_ > batch->GetSequenceNumber());
+  uint32_t sequence_number = sequencer_->next_sequence_number();
+  batch->SetSequenceNumber(sequence_number);
+  progress_->Submitted(sequence_number, std::chrono::steady_clock::now());
 
   uint32_t event_id;
   if (!AllocInterruptEvent(true /* free_on_complete */, &event_id)) {

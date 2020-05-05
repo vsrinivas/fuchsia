@@ -33,8 +33,8 @@ const char* FaultTypeToString(uint32_t mmu_status) {
 }  // namespace
 
 void MsdVslDevice::Dump(DumpState* dump_out, bool fault_present) {
-  dump_out->max_completed_sequence_number = max_completed_sequence_number_;
-  dump_out->next_sequence_number = next_sequence_number_;
+  dump_out->last_completed_sequence_number = progress_->last_completed_sequence_number();
+  dump_out->last_submitted_sequence_number = progress_->last_submitted_sequence_number();
   dump_out->idle = IsIdle();
   dump_out->page_table_arrays_enabled = page_table_arrays_->IsEnabled(register_io());
   dump_out->exec_addr = registers::DmaAddress::Get().ReadFrom(register_io_.get()).reg_value();
@@ -69,16 +69,18 @@ void MsdVslDevice::FormatDump(DumpState* dump_state, std::vector<std::string>* d
   dump_out->clear();
 
   const char* build = magma::kDebug ? "DEBUG" : "RELEASE";
-  const char* fmt =
-      "---- GPU dump begin ----\n"
-      "%s build\n"
-      "Device id: 0x%x Revision: 0x%x\n"
-      "max_completed_sequence_number: %lu\n"
-      "next_sequence_number: %lu\n"
-      "idle: %s";
-  OutputFormattedString(dump_out, fmt, build, device_id(), revision(),
-                        dump_state->max_completed_sequence_number, dump_state->next_sequence_number,
-                        dump_state->idle ? "true" : "false");
+  const char* fmt = "---- GPU dump begin ----";
+  OutputFormattedString(dump_out, fmt);
+  fmt = "%s build";
+  OutputFormattedString(dump_out, fmt, build);
+  fmt = "Device id: 0x%x Revision: 0x%x";
+  OutputFormattedString(dump_out, fmt, device_id());
+  fmt = "last_completed_sequence_number: %lu";
+  OutputFormattedString(dump_out, fmt, dump_state->last_completed_sequence_number);
+  fmt = "last_submitted_sequence_number: %lu";
+  OutputFormattedString(dump_out, fmt, dump_state->last_submitted_sequence_number);
+  fmt = "idle: %s";
+  OutputFormattedString(dump_out, fmt, dump_state->idle ? "true" : "false");
 
   // We are only interested in the execution address if the device has started executing batches
   // and the page table arrays have been enabled.

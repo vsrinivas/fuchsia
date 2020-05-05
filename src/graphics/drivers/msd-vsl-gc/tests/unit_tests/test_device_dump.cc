@@ -77,8 +77,8 @@ void TestDeviceDump::CreateCommandBuffer(std::shared_ptr<MsdVslContext> context,
 TEST_F(TestDeviceDump, DumpBasic) {
   MsdVslDevice::DumpState dump_state;
   device_->Dump(&dump_state, false /* fault_present */);
-  EXPECT_EQ(dump_state.max_completed_sequence_number, 0u);
-  EXPECT_EQ(dump_state.next_sequence_number, 1u);
+  EXPECT_EQ(dump_state.last_completed_sequence_number, 0u);
+  EXPECT_EQ(dump_state.last_submitted_sequence_number, 0u);
   EXPECT_TRUE(dump_state.idle);
   EXPECT_FALSE(dump_state.page_table_arrays_enabled);
   EXPECT_TRUE(dump_state.inflight_batches.empty());
