@@ -4,6 +4,7 @@
     },
     "sandbox": {
         "services": [
+            "fuchsia.logger.LogSink",
             "fuchsia.modular.SessionShellContext",
             "fuchsia.ui.scenic.Scenic"
         ]
