@@ -37,16 +37,6 @@ pub enum PropertyFormat {
 pub struct Block<T> {
     index: u32,
     container: T,
-    pub(in crate) version: Option<usize>,
-}
-
-macro_rules! versioned_get {
-    ($version:expr, $value:ident, $method:ident) => {
-        match $version {
-            Some(0) => paste::expr! { $value.[<$method _v0>]() },
-            _ => $value.$method(),
-        }
-    };
 }
 
 pub trait ReadableBlockContainer {
@@ -100,16 +90,7 @@ impl WritableBlockContainer for Arc<Mapping> {
 impl<T: ReadableBlockContainer> Block<T> {
     /// Creates a new block.
     pub fn new(container: T, index: u32) -> Self {
-        Block { container, index, version: None }
-    }
-
-    /// Creates a new block with the given version.
-    pub(in crate) fn new_with_version(container: T, index: u32, version: usize) -> Self {
-        Block { container, index, version: Some(version) }
-    }
-
-    pub(in crate) fn make_v0(&mut self) {
-        self.version = Some(0);
+        Block { container, index }
     }
 
     /// Returns index of the block in the vmo.
@@ -131,8 +112,7 @@ impl<T: ReadableBlockContainer> Block<T> {
     /// Returns the version of a HEADER block.
     pub fn header_version(&self) -> Result<u32, Error> {
         self.check_type(BlockType::Header)?;
-        let header = self.read_header();
-        Ok(versioned_get!(self.version, header, header_version))
+        Ok(self.read_header().header_version())
     }
 
     /// Returns the generation count of a HEADER block.
@@ -196,8 +176,7 @@ impl<T: ReadableBlockContainer> Block<T> {
     /// Returns the next EXTENT in an EXTENT chain.
     pub fn next_extent(&self) -> Result<u32, Error> {
         self.check_type(BlockType::Extent)?;
-        let header = self.read_header();
-        Ok(versioned_get!(self.version, header, extent_next_index))
+        Ok(self.read_header().extent_next_index())
     }
 
     /// Returns the payload bytes value of an EXTENT block.
@@ -212,8 +191,7 @@ impl<T: ReadableBlockContainer> Block<T> {
     /// Gets the NAME block index of a *_VALUE block.
     pub fn name_index(&self) -> Result<u32, Error> {
         self.check_any_value()?;
-        let header = self.read_header();
-        Ok(versioned_get!(self.version, header, value_name_index))
+        Ok(self.read_header().value_name_index())
     }
 
     /// Gets the format of an ARRAY_VALUE block.
@@ -322,8 +300,7 @@ impl<T: ReadableBlockContainer> Block<T> {
     /// Get the parent block index of a *_VALUE block.
     pub fn parent_index(&self) -> Result<u32, Error> {
         self.check_any_value()?;
-        let header = self.read_header();
-        Ok(versioned_get!(self.version, header, value_parent_index))
+        Ok(self.read_header().value_parent_index())
     }
 
     /// Get the child count of a NODE_VALUE block.
@@ -335,15 +312,13 @@ impl<T: ReadableBlockContainer> Block<T> {
     /// Get next free block
     pub fn free_next_index(&self) -> Result<u32, Error> {
         self.check_type(BlockType::Free)?;
-        let header = self.read_header();
-        Ok(versioned_get!(self.version, header, free_next_index))
+        Ok(self.read_header().free_next_index())
     }
 
     /// Get the length of the name of a NAME block
     pub fn name_length(&self) -> Result<usize, Error> {
         self.check_type(BlockType::Name)?;
-        let header = self.read_header();
-        Ok(versioned_get!(self.version, header, name_length).to_usize().unwrap())
+        Ok(self.read_header().name_length().to_usize().unwrap())
     }
 
     /// Returns the contents of a NAME block.
@@ -357,15 +332,13 @@ impl<T: ReadableBlockContainer> Block<T> {
 
     /// Returns the type of a block. Panics on an invalid value.
     pub fn block_type(&self) -> BlockType {
-        let header = self.read_header();
-        let block_type = versioned_get!(self.version, header, block_type);
+        let block_type = self.read_header().block_type();
         BlockType::from_u8(block_type).unwrap()
     }
 
     /// Returns the type of a block or an error if invalid.
     pub fn block_type_or(&self) -> Result<BlockType, Error> {
-        let header = self.read_header();
-        let raw_type = versioned_get!(self.version, header, block_type);
+        let raw_type = self.read_header().block_type();
         BlockType::from_u8(raw_type)
             .ok_or_else(|| format_err!("Invalid block type {} at index {}", raw_type, self.index()))
     }
@@ -373,8 +346,7 @@ impl<T: ReadableBlockContainer> Block<T> {
     /// Check that the block type is |block_type|
     fn check_type(&self, block_type: BlockType) -> Result<(), Error> {
         if cfg!(debug_assertions) {
-            let header = self.read_header();
-            let self_type = versioned_get!(self.version, header, block_type);
+            let self_type = self.read_header().block_type();
             return self.check_type_eq(self_type, block_type);
         }
         Ok(())
