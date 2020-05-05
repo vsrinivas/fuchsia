@@ -9,13 +9,17 @@ import (
 	"log"
 	"os"
 	"path"
+
+	// Register fidl and gidl files.
+	_ "gen/fidl"
+	_ "gen/gidl"
 )
 
-type Flags struct {
+type allFlags struct {
 	OutDir *string
 }
 
-var flags = Flags{
+var flags = allFlags{
 	OutDir: flag.String("out_dir", "",
 		"[optional] Path to the output dir. Defaults to $FUCHSIA_DIR/src/tests/benchmarks/fidl/benchmark_suite"),
 }

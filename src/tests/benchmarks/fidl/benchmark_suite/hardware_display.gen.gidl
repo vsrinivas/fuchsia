@@ -1,0 +1,19 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// GENERATED FILE: Regen with $(fx get-build-dir)/host-tools/regen_fidl_benchmark_suite
+
+// Based on fuchsia.hardware.display.Controller.OnVsync
+benchmark("HardwareDisplay/OnVsyncEvent/Image64") {
+    value = OnVsyncEvent{
+        display_id: 1,
+        timestamp: 1,
+        images: [
+            0, 1, 2, 3, 4, 5, 6, 7,
+            8, 9, 10, 11, 12, 13, 14, 15,
+            16, 17, 18, 19, 20, 21, 22, 23,
+            24, 25, 26, 27, 28, 29, 30, 31,
+        ],
+    },
+}

@@ -32,6 +32,10 @@ template("gidl") {
   assert(defined(invoker.type))
   assert(defined(invoker.fidl))
   assert(defined(invoker.inputs))
+  in_deps = []
+  if (defined(invoker.deps)) {
+    in_deps = invoker.deps
+  }
 
   fidl_target =
       get_label_info(invoker.fidl, "label_no_toolchain") + "($fidl_toolchain)"
@@ -52,7 +56,7 @@ template("gidl") {
            ] + rebase_path(invoker.inputs)
     inputs = invoker.inputs
     outputs = [ invoker.output ]
-    deps = [ fidl_target ]
+    deps = [ fidl_target ] + in_deps
     forward_variables_from(invoker, [ "testonly" ])
   }
 }

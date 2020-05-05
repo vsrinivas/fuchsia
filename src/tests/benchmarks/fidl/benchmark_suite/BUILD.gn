@@ -8,7 +8,7 @@ import("//src/tests/benchmarks/fidl/benchmark_suite/benchmark_suite.gni")
 import("//tools/fidl/gidl/gidl.gni")
 
 benchmark_suite_fidl_files = [
-  "byte_array.test.fidl",
+  "byte_array.gen.test.fidl",
   "byte_vector.test.fidl",
   "gpu_magma.test.fidl",
   "hardware_display.test.fidl",
@@ -17,10 +17,10 @@ benchmark_suite_fidl_files = [
   "result.test.fidl",
   "socket.test.fidl",
   "string.test.fidl",
-  "struct_field.test.fidl",
-  "table.test.fidl",
-  "table_reserved.test.fidl",
-  "union.test.fidl",
+  "struct_field.gen.test.fidl",
+  "table.gen.test.fidl",
+  "table_reserved.gen.test.fidl",
+  "union.gen.test.fidl",
 ]
 
 fidl("benchmark_suite_fidl") {
