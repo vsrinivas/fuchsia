@@ -386,7 +386,10 @@ impl AvdtpFacade {
                         let peer =
                             client.into_proxy().expect("Error: Couldn't obtain peer client proxy");
                         match peer_map.write().entry(peer_id.value.to_string()) {
-                            Entry::Occupied(_) => {}
+                            Entry::Occupied(mut entry) => {
+                                entry.insert(peer);
+                                fx_log_info!("Overriding device in PeerFactoryMap");
+                            }
                             Entry::Vacant(entry) => {
                                 entry.insert(peer);
                                 fx_log_info!("Inserted device into PeerFactoryMap");
