@@ -26,6 +26,8 @@
 #include "src/developer/feedback/testing/unit_test_fixture.h"
 #include "src/developer/feedback/utils/cobalt/event.h"
 #include "src/developer/feedback/utils/cobalt/logger.h"
+#include "src/lib/files/file.h"
+#include "src/lib/files/path.h"
 #include "src/lib/files/scoped_temp_dir.h"
 
 namespace feedback {
@@ -36,6 +38,8 @@ using testing::IsEmpty;
 
 constexpr ::fit::result_state kError = ::fit::result_state::error;
 constexpr ::fit::result_state kOk = ::fit::result_state::ok;
+
+constexpr char kHasHandledRebootLogPath[] = "/tmp/has_handled_reboot_log.txt";
 
 struct TestParam {
   std::string test_name;
@@ -50,6 +54,8 @@ class RebootLogHandlerTest : public UnitTestFixture,
                              public testing::WithParamInterface<TestParam> {
  public:
   RebootLogHandlerTest() : CobaltTestFixture(/*unit_test_fixture=*/this), executor_(dispatcher()) {}
+
+  void TearDown() override { files::DeletePath(kHasHandledRebootLogPath, /*recursive=*/false); }
 
  protected:
   void SetUpCrashReporterServer(std::unique_ptr<stubs::CrashReporterBase> server) {
@@ -106,6 +112,7 @@ TEST_F(RebootLogHandlerTest, Succeed_WellFormedRebootLog) {
 
   EXPECT_THAT(ReceivedCobaltEvents(),
               ElementsAre(cobalt::Event(cobalt::RebootReason::kKernelPanic)));
+  EXPECT_TRUE(files::IsFile(kHasHandledRebootLogPath));
 }
 
 TEST_F(RebootLogHandlerTest, Succeed_NoUptime) {
@@ -201,6 +208,22 @@ TEST_F(RebootLogHandlerTest, Fail_CallHandleTwice) {
   handler.Handle(reboot_log);
   ASSERT_DEATH(handler.Handle(reboot_log),
                testing::HasSubstr("Handle() is not intended to be called twice"));
+}
+
+TEST_F(RebootLogHandlerTest, Succeed_DoesNothingIfAlreadyHandled) {
+  ASSERT_TRUE(files::WriteFile(kHasHandledRebootLogPath, /*data=*/"", /*size=*/0));
+
+  const RebootLog reboot_log(RebootReason::kKernelPanic,
+                             "ZIRCON REBOOT REASON (KERNEL PANIC)\n\nUPTIME (ms)\n74715002",
+                             zx::msec(74715002));
+
+  SetUpCrashReporterServer(std::make_unique<stubs::CrashReporterNoFileExpected>());
+  SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
+
+  const auto result = HandleRebootLog(reboot_log);
+  EXPECT_EQ(result.state(), kOk);
+
+  EXPECT_THAT(ReceivedCobaltEvents(), IsEmpty());
 }
 
 INSTANTIATE_TEST_SUITE_P(WithVariousRebootLogs, RebootLogHandlerTest,

@@ -6,6 +6,9 @@
         "boot": [
             "log"
         ],
+        "features": [
+            "isolated-temp"
+        ],
         "services": [
             "fuchsia.cobalt.LoggerFactory",
             "fuchsia.feedback.CrashReporter",

@@ -20,8 +20,19 @@
 #include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
+namespace {
+
+constexpr char kHasHandledRebootLogPath[] = "/tmp/has_handled_reboot_log.txt";
+
+}  // namespace
 ::fit::promise<void> HandleRebootLog(const RebootLog& reboot_log, async_dispatcher_t* dispatcher,
                                      std::shared_ptr<sys::ServiceDirectory> services) {
+  if (files::IsFile(kHasHandledRebootLogPath)) {
+    FX_LOGS(INFO) << "Reboot log has already been handled in another instance of this component "
+                     "for this boot cycle";
+    return ::fit::make_result_promise(::fit::ok());
+  }
+
   auto handler = std::make_unique<internal::RebootLogHandler>(dispatcher, services);
 
   // We must store the promise in a variable due to the fact that the order of evaluation of
@@ -40,6 +51,10 @@ RebootLogHandler::RebootLogHandler(async_dispatcher_t* dispatcher,
 ::fit::promise<void> RebootLogHandler::Handle(const RebootLog& reboot_log) {
   FX_CHECK(!has_called_handle_) << "Handle() is not intended to be called twice";
   has_called_handle_ = true;
+
+  if (!files::WriteFile(kHasHandledRebootLogPath, /*data=*/"", /*size=*/0)) {
+    FX_LOGS(ERROR) << "Failed to record reboot log as handled";
+  }
 
   // TODO(49689): Start logging Cobalt events and filing crash reports for non-parseable reboot
   // logs.
