@@ -20,8 +20,11 @@ VER_AEMU="$(cat "${SCRIPT_SRC_DIR}/aemu.version")"
 VER_GRPCWEBPROXY="$(cat "${SCRIPT_SRC_DIR}/grpcwebproxy.version")"
 ENABLE_GRPCWEBPROXY=0
 PREBUILT_GRPCWEBPROXY_DIR=""
+# Default architecture is x64, if the system image is arm64 then
+# it requires --experiment-arm64 since there is no auto detection.
+FUCHSIA_ARCH="x64"
 
-# Export variables needed here but also in femu.sh
+# Export variables needed here but also in fx-image-common.sh
 FUCHSIA_SDK_PATH="$(get-fuchsia-sdk-dir)"
 export FUCHSIA_SDK_PATH
 FUCHSIA_IMAGE_WORK_DIR="$(get-fuchsia-sdk-data-dir)"
@@ -72,9 +75,12 @@ usage () {
   echo "  [--authorized-keys <file>]"
   echo "    The authorized public key file for securing the device.  Defaults to "
   echo "    ${FUCHSIA_IMAGE_WORK_DIR}/.ssh/authorized_keys, which is generated if needed."
-  echo "  [--version <version>"
+  echo "  [--version <version>]"
   echo "    Specify the CIPD version of AEMU to download."
   echo "    Defaults to aemu.version file with ${VER_AEMU}"
+  echo "  [--experiment-arm64]"
+  echo "    Override FUCHSIA_ARCH to arm64, instead of the default x64."
+  echo "    This is required for *-arm64 system images, and is not auto detected."
   echo "  [--help] [-h]"
   echo "    Show command line options for femu.sh and emu subscript"
   echo
@@ -122,6 +128,10 @@ case $1 in
     shift
     PREBUILT_GRPCWEBPROXY_DIR="$1"
     ;;
+    --experiment-arm64)
+    FUCHSIA_ARCH="arm64"
+    EMU_ARGS+=( "$1" )
+    ;;
     *)
     # Unknown options are passed to emu
     EMU_ARGS+=( "$1" )
@@ -158,6 +168,7 @@ fi
 # Export variables needed for fx emu and fx-image-common.sh
 export FUCHSIA_BUILD_DIR="${FUCHSIA_IMAGE_WORK_DIR}/image"
 export PREBUILT_AEMU_DIR="${DOWNLOADS_DIR}/aemu-${ARCH}-${LABEL_AEMU}"
+export FUCHSIA_ARCH
 
 download-extract-cipd \
   "https://chrome-infra-packages.appspot.com/dl/fuchsia/third_party/aemu/${ARCH}/+/${VER_AEMU}" \

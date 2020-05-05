@@ -57,6 +57,44 @@ TEST_femu_standalone() {
   gn-test-check-mock-partial -fuchsia
 }
 
+# Verifies that the --experiment-arm64 option selects arm64 support
+TEST_femu_arm64() {
+
+  PATH_DIR_FOR_TEST="${BT_TEMP_DIR}/_isolated_path_for"
+  export PATH="${PATH_DIR_FOR_TEST}:${PATH}"
+
+  # Create fake ZIP file download so femu.sh doesn't try to download it, and
+  # later on provide a mocked emulator script so it doesn't try to unzip it.
+  touch "${FUCHSIA_WORK_DIR}/emulator/aemu-${PLATFORM}-${AEMU_LABEL}.zip"
+
+  # Need to configure a DISPLAY so that we can get past the graphics error checks
+  export DISPLAY="fakedisplay"
+
+  # Run command.
+  BT_EXPECT gn-test-run-bash-script "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/femu.sh" \
+    --experiment-arm64 \
+    --image qemu-arm64 \
+    --software-gpu
+
+  # Check that fpave.sh was called to download the needed system images
+  # shellcheck disable=SC1090
+  source "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fpave.sh.mock_state"
+  gn-test-check-mock-args _ANY_ --prepare --image qemu-arm64 --bucket fuchsia --work-dir "${FUCHSIA_WORK_DIR}"
+
+  # Check that fserve.sh was called to download the needed system images
+  # shellcheck disable=SC1090
+  source "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fserve.sh.mock_state"
+  gn-test-check-mock-args _ANY_ --prepare --image qemu-arm64 --bucket fuchsia --work-dir "${FUCHSIA_WORK_DIR}"
+
+  # Verify some of the arguments passed to the emulator binary
+  # shellcheck disable=SC1090
+  source "${FUCHSIA_WORK_DIR}/emulator/aemu-${PLATFORM}-${AEMU_LABEL}/emulator.mock_state"
+  gn-test-check-mock-partial -fuchsia
+  gn-test-check-mock-partial -avd-arch arm64
+  gn-test-check-mock-partial -cpu cortex-a53
+  gn-test-check-mock-partial -gpu swiftshader_indirect
+}
+
 # Verifies that the correct emulator command is run by femu, along with the image setup.
 # This tests the -N option for networking.
 TEST_femu_networking() {
