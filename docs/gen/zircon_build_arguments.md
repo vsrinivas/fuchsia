@@ -147,13 +147,13 @@ sets `assert_level = 0` everywhere where `is_kernel == true`, while:
     {
       environment = [ "efi" ]
       assert_level = 2
-      opt_level = 0
+      optimize = "none"
     },
   ]
 ```
 sets `assert_level = 0` everywhere where `is_kernel == false`,
 sets `assert_level = 1` most places where `is_kernel == true`,
-but sets `assert_level = 2` and `opt_level = 0` in the "efi"
+but sets `assert_level = 2` and `optimize = "none"` in the "efi"
 environment (where `is_kernel == true` also holds, but the later
 clause overrides the preceding `assert_level = 1`).
 
@@ -323,15 +323,16 @@ From //kernel/lib/version/BUILD.gn:11
 
 From //third_party/ulib/musl/BUILD.gn:6
 
-### opt_level
-* -1 means really unoptimized (-O0), usually only build-tested and not run.
-* 0 means "optimized for debugging" (-Og), light enough to avoid confusion.
-  1, 2, and 3 are increasing levels of optimization.
-* 4 is optimized for space rather than purely for speed.
+### optimize
+* none means really unoptimized, usually only build-tested and not run
+* debug means "optimized for debugging", light enough to avoid confusion
+* default means default optimization level
+* size means optimized for space rather than purely for speed
+* speed means optimized purely for speed
 
-**Current value (from the default):** `2`
+**Current value (from the default):** `"default"`
 
-From //public/gn/config/levels.gni:19
+From //public/gn/config/levels.gni:29
 
 ### output_breakpad_syms
 If true, produce a Breakpad symbol file for each binary.
@@ -366,7 +367,7 @@ From //kernel/params.gni:14
 
 **Current value (from the default):** `2`
 
-From //public/gn/config/levels.gni:24
+From //public/gn/config/levels.gni:18
 
 ### sysroot
 The `--sysroot` directory for host compilations.

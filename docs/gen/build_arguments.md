@@ -638,7 +638,7 @@ This defaults to JIT, use `fx set <ARCH> --args
 
 **Current value (from the default):** `"dart_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/087a1444d9d48ca1ffe3aa45d554f703c7db8521/runtime/dart/dart_component.gni#19)
+From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/6f4e38d45e082441c7a63f4ba6ecb10bcd22610e/runtime/dart/dart_component.gni#19)
 
 ### dart_enable_wasm
 Whether dart:wasm should be enabled.
@@ -653,7 +653,7 @@ we use to build products.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/087a1444d9d48ca1ffe3aa45d554f703c7db8521/runtime/dart/config.gni#10)
+From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/6f4e38d45e082441c7a63f4ba6ecb10bcd22610e/runtime/dart/config.gni#10)
 
 ### dart_lib_export_symbols
 Whether libdart should export the symbols of the Dart API.
@@ -703,7 +703,7 @@ Whether experimental space dart mode is enabled for Dart applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:35](https://fuchsia.googlesource.com/topaz/+/087a1444d9d48ca1ffe3aa45d554f703c7db8521/runtime/dart/dart_component.gni#35)
+From [//topaz/runtime/dart/dart_component.gni:35](https://fuchsia.googlesource.com/topaz/+/6f4e38d45e082441c7a63f4ba6ecb10bcd22610e/runtime/dart/dart_component.gni#35)
 
 ### dart_target_arch
 Explicitly set the target architecture to use a simulator.
@@ -957,7 +957,7 @@ This is just added to [`known_variants`](#known_variants).
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:652
+From //build/config/BUILDCONFIG.gn:654
 
 ### fastboot_product
 
@@ -1015,7 +1015,7 @@ From //build/images/args.gni:68
 
 **Current value (from the default):** `"flutter_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/087a1444d9d48ca1ffe3aa45d554f703c7db8521/runtime/dart/dart_component.gni#12)
+From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/6f4e38d45e082441c7a63f4ba6ecb10bcd22610e/runtime/dart/dart_component.gni#12)
 
 ### flutter_driver_enabled
 Enables/Disables flutter driver using '--args=flutter_driver_enabled=[true/false]'
@@ -1030,14 +1030,14 @@ From //build/testing/flutter_driver.gni:9
 
 **Current value (from the default):** `true`
 
-From [//topaz/runtime/dart/dart_component.gni:26](https://fuchsia.googlesource.com/topaz/+/087a1444d9d48ca1ffe3aa45d554f703c7db8521/runtime/dart/dart_component.gni#26)
+From [//topaz/runtime/dart/dart_component.gni:26](https://fuchsia.googlesource.com/topaz/+/6f4e38d45e082441c7a63f4ba6ecb10bcd22610e/runtime/dart/dart_component.gni#26)
 
 ### flutter_space_dart
 Whether experimental space dart mode is enabled for Flutter applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/087a1444d9d48ca1ffe3aa45d554f703c7db8521/runtime/dart/dart_component.gni#32)
+From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/6f4e38d45e082441c7a63f4ba6ecb10bcd22610e/runtime/dart/dart_component.gni#32)
 
 ### font_catalog_paths
 
@@ -1496,7 +1496,7 @@ Each element of the list is one variant, which is a scope defining:
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:577
+From //build/config/BUILDCONFIG.gn:579
 
 ### launch_basemgr_on_boot
 Indicates whether to include basemgr.cmx in the boot sequence for the
@@ -1808,6 +1808,17 @@ From //products/core.gni:9
 
 From //build/unification/images/BUILD.gn:20
 
+### optimize
+* none means really unoptimized, usually only build-tested and not run
+* debug means "optimized for debugging", light enough to avoid confusion
+* default means default optimization level
+* size means optimized for space rather than purely for speed
+* speed means optimized purely for speed
+
+**Current value (from the default):** `"none"`
+
+From //build/config/compiler.gni:32
+
 ### output_breakpad_syms
 Sets if we should output breakpad symbols for Fuchsia binaries.
 
@@ -2060,7 +2071,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:865
+From //build/config/BUILDCONFIG.gn:867
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -2069,7 +2080,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:870
+From //build/config/BUILDCONFIG.gn:872
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -2096,7 +2107,7 @@ a list that can be spliced into [`select_variant`](#select_variant).
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:698
+From //build/config/BUILDCONFIG.gn:700
 
 ### signed_image
 
@@ -2167,7 +2178,7 @@ appear when using this level.
 
 **Current value (from the default):** `2`
 
-From //build/config/compiler.gni:13
+From //build/config/compiler.gni:21
 
 ### syzkaller_dir
 Used by syz-ci to build with own syz-executor source.
@@ -2330,7 +2341,7 @@ From //build/config/sanitizers/BUILD.gn:30
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:672
+From //build/config/BUILDCONFIG.gn:674
 
 ### universe_package_labels
 If you add package labels to this variable, the packages will be included
