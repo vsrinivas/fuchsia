@@ -15,6 +15,7 @@
 #include "src/camera/bin/device/test/fake_controller.h"
 #include "src/camera/bin/device/util.h"
 #include "src/camera/lib/fake_legacy_stream/fake_legacy_stream.h"
+#include "src/lib/fsl/handles/object_info.h"
 #include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 
 namespace camera {
@@ -303,15 +304,31 @@ TEST_F(DeviceTest, RequestStreamFromController) {
   fuchsia::sysmem::BufferCollectionTokenPtr token;
   allocator_->AllocateSharedCollection(token.NewRequest());
   token->Sync([&]() { stream->SetBufferCollection(std::move(token)); });
+  fuchsia::sysmem::BufferCollectionPtr buffers;
+  SetFailOnError(buffers, "BufferCollection");
+  bool buffers_allocated_returned = false;
+  zx::vmo vmo;
   stream->WatchBufferCollection(
       [&](fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) {
-        fuchsia::sysmem::BufferCollectionPtr buffers;
-        SetFailOnError(buffers, "BufferCollection");
         allocator_->BindSharedCollection(std::move(token), buffers.NewRequest());
         buffers->SetConstraints(true, {.usage{.cpu = fuchsia::sysmem::cpuUsageRead},
                                        .min_buffer_count_for_camping = 1});
-        buffers->Close();
+        buffers->WaitForBuffersAllocated(
+            [&](zx_status_t status, fuchsia::sysmem::BufferCollectionInfo_2 buffers) {
+              EXPECT_EQ(status, ZX_OK);
+              vmo = std::move(buffers.buffers[0].vmo);
+              buffers_allocated_returned = true;
+            });
       });
+  RunLoopUntilFailureOr(buffers_allocated_returned);
+
+  std::string vmo_name;
+  RunLoopUntil([&] {
+    vmo_name = fsl::GetObjectName(vmo.get());
+    return vmo_name != "Sysmem-core";
+  });
+  EXPECT_EQ(vmo_name, "camera_c0_s0_b0");
+
   constexpr uint32_t kBufferId = 42;
   bool callback_received = false;
   stream->GetNextFrame([&](fuchsia::camera3::FrameInfo info) {
@@ -333,6 +350,8 @@ TEST_F(DeviceTest, RequestStreamFromController) {
     }
   }
   RunLoopUntilFailureOr(callback_received);
+  buffers->Close();
+  RunLoopUntilIdle();
 }
 
 TEST_F(DeviceTest, DeviceClientDisconnect) {

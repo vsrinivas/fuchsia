@@ -13,6 +13,7 @@
 
 #include "src/camera/bin/device/messages.h"
 #include "src/camera/bin/device/util.h"
+#include "src/lib/fsl/handles/object_info.h"
 
 DeviceImpl::DeviceImpl() : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
 
@@ -247,11 +248,9 @@ void DeviceImpl::OnStreamRequested(
         // Assign friendly names to each buffer for debugging and profiling.
         for (uint32_t i = 0; i < buffers.buffer_count; ++i) {
           std::ostringstream oss;
-          oss << "Camera Config " << current_configuration_index_ << " Stream " << index
-              << " Buffer " << i;
-          auto str = oss.str();
-          ZX_ASSERT(buffers.buffers[i].vmo.set_property(ZX_PROP_NAME, str.c_str(), str.length()) ==
-                    ZX_OK);
+          oss << "camera_c" << current_configuration_index_ << "_s" << index << "_b" << i;
+          fsl::MaybeSetObjectName(buffers.buffers[i].vmo.get(), oss.str(),
+                                  [](std::string s) { return s.find("Sysmem") == 0; });
         }
 
         // Get the legacy stream using the negotiated buffers.

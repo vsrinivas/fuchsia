@@ -9,6 +9,7 @@
 
 #include <trace/event.h>
 
+#include "src/lib/fsl/handles/object_info.h"
 #include "src/ui/lib/escher/flib/fence.h"
 #include "src/ui/scenic/lib/gfx/engine/image_pipe_updater.h"
 #include "src/ui/scenic/lib/gfx/engine/session.h"
@@ -216,11 +217,6 @@ void ImagePipe2::AddImage(uint32_t image_id, uint32_t buffer_collection_id,
       return;
     }
     FX_DCHECK(info.buffer_collection_info.buffer_count > 0);
-    for (uint32_t i = 0; i < info.buffer_collection_info.buffer_count; ++i) {
-      const char* kVmoName = "ImagePipe2Surface";
-      info.buffer_collection_info.buffers[i].vmo.set_property(ZX_PROP_NAME, kVmoName,
-                                                              strlen(kVmoName));
-    }
   }
 
   // Check given |buffer_collection_index| against actually allocated number of buffers.
@@ -229,6 +225,11 @@ void ImagePipe2::AddImage(uint32_t image_id, uint32_t buffer_collection_id,
     CloseConnectionAndCleanUp();
     return;
   }
+
+  // Set a friendly name if currently unset.
+  const char* kVmoName = "ImagePipe2Surface";
+  fsl::MaybeSetObjectName(info.buffer_collection_info.buffers[buffer_collection_index].vmo.get(),
+                          kVmoName, [](std::string s) { return s.find("Sysmem") == 0; });
 
   ImagePtr image = CreateImage(session_, image_id, info, buffer_collection_index, image_format);
   if (!image) {

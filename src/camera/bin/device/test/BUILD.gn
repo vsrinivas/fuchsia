@@ -21,6 +21,7 @@ executable("test") {
     "//sdk/lib/sys/cpp",
     "//src/camera/bin/device:lib",
     "//src/camera/lib/fake_legacy_stream",
+    "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/syslog/cpp",
     "//src/lib/testing/loop_fixture",

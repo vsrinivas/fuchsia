@@ -8,6 +8,7 @@
 #include <zircon/types.h>
 
 #include "lib/zx/vmo.h"
+#include "src/lib/fsl/handles/object_info.h"
 #include "src/lib/syslog/cpp/logger.h"
 
 namespace camera {
@@ -42,8 +43,8 @@ fit::result<fuchsia::sysmem::BufferCollectionInfo_2, zx_status_t> GetBuffers(
     for (uint32_t i = 0; i < info->output_buffers.buffer_count; i++) {
       std::string buffer_collection_name = "camera_controller_output_node";
       auto buffer_name = buffer_collection_name.append(std::to_string(i));
-      info->output_buffers.buffers[i].vmo.set_property(ZX_PROP_NAME, buffer_name.data(),
-                                                       buffer_name.size());
+      fsl::MaybeSetObjectName(info->output_buffers.buffers[i].vmo.get(), buffer_name,
+                              [](std::string s) { return s.find("Sysmem") == 0; });
     }
     return fit::ok(std::move(info->output_buffers));
   }
