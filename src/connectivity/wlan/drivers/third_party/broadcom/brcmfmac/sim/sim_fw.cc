@@ -75,18 +75,6 @@ zx_status_t SimFirmware::BusPreinit() {
 
 void SimFirmware::BusStop() { ZX_PANIC("%s unimplemented", __FUNCTION__); }
 
-zx_status_t SimFirmware::BusTxData(struct brcmf_netbuf* netbuf) {
-  // For now we just save data and len and ignore bcdc header, further operations will be added
-  // soon.
-  uint32_t data_size = netbuf->len - BCDC_HEADER_LEN;
-  last_pkt_buf_.data.reset(new uint8_t[data_size]);
-
-  memcpy(last_pkt_buf_.data.get(), netbuf->data + BCDC_HEADER_LEN, data_size);
-  last_pkt_buf_.len = data_size;
-  last_pkt_buf_.allocated_size_of_buf_in = netbuf->allocated_size;
-  return ZX_OK;
-}
-
 // Returns a bufer that can be used for BCDC-formatted communications, with the requested
 // payload size and an initialized BCDC header. "offset_out" represents the offset of the
 // payload within the returned buffer.
@@ -346,6 +334,62 @@ zx_status_t SimFirmware::BusTxCtl(unsigned char* msg, unsigned int len) {
   return status;
 }
 
+zx_status_t SimFirmware::BusTxData(struct brcmf_netbuf* netbuf) {
+  if (netbuf->len < BCDC_HEADER_LEN + sizeof(ethhdr)) {
+    BRCMF_DBG(SIM, "Data netbuf (%u) smaller than BCDC + ethernet header %lu\n", netbuf->len,
+              BCDC_HEADER_LEN + sizeof(ethhdr));
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  // Ignore the BCDC Header
+  ethhdr* ethFrame = reinterpret_cast<ethhdr*>(netbuf->data + BCDC_HEADER_LEN);
+
+  // Build MAC frame
+  simulation::SimQosDataFrame dataFrame;
+
+  // we can't send data frames if we aren't associated with anything
+  if (assoc_state_.opts == nullptr) {
+    return ZX_ERR_BAD_STATE;
+  }
+
+  // IEEE Std 802.11-2016, 9.4.1.4
+  switch (assoc_state_.opts->bss_type) {
+    case WLAN_BSS_TYPE_IBSS:
+      // We don't support IBSS
+      ZX_ASSERT_MSG(false, "Non-infrastructure types not currently supported by sim-fw\n");
+      dataFrame.toDS_ = 0;
+      dataFrame.fromDS_ = 0;
+      dataFrame.addr1_ = common::MacAddr(ethFrame->h_dest);
+      dataFrame.addr2_ = common::MacAddr(ethFrame->h_source);
+      dataFrame.addr3_ = assoc_state_.opts->bssid;
+      break;
+    case WLAN_BSS_TYPE_ANY_BSS:
+      // It seems that our driver typically uses this with the intention the the firmware will treat
+      // it as an infrastructure bss, so we'll do the same
+    case WLAN_BSS_TYPE_INFRASTRUCTURE:
+      dataFrame.toDS_ = 1;
+      dataFrame.fromDS_ = 0;
+      dataFrame.addr1_ = assoc_state_.opts->bssid;
+      dataFrame.addr2_ = common::MacAddr(ethFrame->h_source);
+      dataFrame.addr3_ = common::MacAddr(ethFrame->h_dest);
+      break;
+    default:
+      // TODO: support other bss types such as Mesh
+      ZX_ASSERT_MSG(false, "Non-infrastructure types not currently supported by sim-fw\n");
+      break;
+  }
+
+  // For now, since the LLC information would always be the same aside from the redundant ethernet
+  // type (Table M2 IEEE 802.11 2016). we will not append/parse LLC headers
+  uint32_t payload_size = netbuf->len - BCDC_HEADER_LEN - sizeof(ethhdr);
+  dataFrame.payload_.resize(payload_size);
+  memcpy(dataFrame.payload_.data(), netbuf->data + BCDC_HEADER_LEN + sizeof(ethhdr), payload_size);
+
+  hw_.Tx(&dataFrame);
+
+  return ZX_OK;
+}
+
 uint16_t SimFirmware::GetNumClients(uint16_t ifidx) {
   if (ifidx >= kMaxIfSupported || !iface_tbl_[ifidx].allocated || !iface_tbl_[ifidx].ap_mode) {
     BRCMF_DBG(SIM, "GetNumClients: invalid if: %d", ifidx);
@@ -571,6 +615,9 @@ void SimFirmware::AssocScanDone() {
   assoc_opts->bssid = ap.bssid;
   if (scan_state_.opts->ssid)
     assoc_opts->ssid = scan_state_.opts->ssid.value();
+
+  // assoc_opts->bss_type
+  assoc_state_.ifidx = scan_state_.ifidx;
 
   AssocInit(std::move(assoc_opts), scan_state_.ifidx, ap.channel);
   // Send an event of the first scan result to driver when assoc scan is done.
@@ -845,6 +892,23 @@ void SimFirmware::RxAssocResp(const simulation::SimAssocRespFrame* frame) {
   if (frame->status_ == WLAN_ASSOC_RESULT_SUCCESS) {
     // Notify the driver that association succeeded
     assoc_state_.state = AssocState::ASSOCIATED;
+
+    // IEEE Std 802.11-2016, 9.4.1.4 to determine bss type
+    bool capIbss = frame->capability_info_.ibss();
+    bool capEss = frame->capability_info_.ess();
+
+    if (capIbss && !capEss) {
+      ZX_ASSERT_MSG(false, "Non-infrastructure types not currently supported by sim-fw\n");
+      assoc_state_.opts->bss_type = WLAN_BSS_TYPE_IBSS;
+    } else if (!capIbss && capEss) {
+      assoc_state_.opts->bss_type = WLAN_BSS_TYPE_INFRASTRUCTURE;
+    } else if (capIbss && capEss) {
+      ZX_ASSERT_MSG(false, "Non-infrastructure types not currently supported by sim-fw\n");
+      assoc_state_.opts->bss_type = WLAN_BSS_TYPE_MESH;
+    } else {
+      BRCMF_WARN("Station with impossible capability not being an ess or ibss found\n");
+    }
+
     SendEventToDriver(0, nullptr, BRCMF_E_LINK, BRCMF_E_STATUS_SUCCESS, assoc_state_.ifidx, nullptr,
                       BRCMF_EVENT_MSG_LINK);
     SendEventToDriver(0, nullptr, BRCMF_E_SET_SSID, BRCMF_E_STATUS_SUCCESS, assoc_state_.ifidx,
@@ -1463,6 +1527,9 @@ void SimFirmware::Rx(const simulation::SimFrame* frame, simulation::WlanRxInfo& 
   if (frame->FrameType() == simulation::SimFrame::FRAME_TYPE_MGMT) {
     auto mgmt_frame = static_cast<const simulation::SimManagementFrame*>(frame);
     RxMgmtFrame(mgmt_frame, info);
+  } else if (frame->FrameType() == simulation::SimFrame::FRAME_TYPE_DATA) {
+    auto data_frame = static_cast<const simulation::SimDataFrame*>(frame);
+    RxDataFrame(data_frame, info);
   }
 }
 
@@ -1514,6 +1581,17 @@ void SimFirmware::RxMgmtFrame(const simulation::SimManagementFrame* mgmt_frame,
     default:
       break;
   }
+}
+
+void SimFirmware::RxDataFrame(const simulation::SimDataFrame* data_frame,
+                              simulation::WlanRxInfo& info) {
+  common::MacAddr mac_addr(mac_addr_);
+  // Not intended for us
+  if (data_frame->addr1_ != mac_addr) {
+    return;
+  }
+
+  SendFrameToDriver(data_frame->payload_.size(), data_frame->payload_);
 }
 
 // Start or restart the beacon watchdog. This is a timeout event mirroring how the firmware can
@@ -1780,4 +1858,18 @@ void SimFirmware::SendEventToDriver(size_t payload_size,
 
   brcmf_sim_rx_event(simdev_, std::move(buf));
 }
+
+void SimFirmware::SendFrameToDriver(size_t payload_size, const std::vector<uint8_t>& buffer_in) {
+  size_t header_offset;
+  auto buf = CreateBcdcBuffer(payload_size, &header_offset);
+
+  if (payload_size != 0) {
+    ZX_ASSERT(!buffer_in.empty());
+    uint8_t* buf_data = buf->data();
+    memcpy(&buf_data[header_offset], buffer_in.data(), payload_size);
+  }
+
+  brmcf_sim_rx_frame(simdev_, std::move(buf));
+}
+
 }  // namespace wlan::brcmfmac

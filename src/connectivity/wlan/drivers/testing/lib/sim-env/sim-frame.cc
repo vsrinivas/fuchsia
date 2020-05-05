@@ -92,4 +92,12 @@ SimManagementFrame::SimMgmtFrameType SimDeauthFrame::MgmtFrameType() const {
   return FRAME_TYPE_DEAUTH;
 }
 
+SimDataFrame::~SimDataFrame() = default;
+SimFrame::SimFrameType SimDataFrame::FrameType() const { return FRAME_TYPE_DATA; }
+
+SimQosDataFrame::~SimQosDataFrame() = default;
+SimDataFrame::SimDataFrameType SimQosDataFrame::DataFrameType() const {
+  return FRAME_TYPE_QOS_DATA;
+}
+
 }  // namespace wlan::simulation

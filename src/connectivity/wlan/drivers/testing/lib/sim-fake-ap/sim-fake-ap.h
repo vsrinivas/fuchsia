@@ -59,6 +59,9 @@ class FakeAp : public StationIfc {
     tx_info_.channel = chan;
     beacon_state_.beacon_frame_.bssid_ = bssid;
     beacon_state_.beacon_frame_.ssid_ = ssid;
+    // By default, assume AP is part of an infrastructure network
+    beacon_state_.beacon_frame_.capability_info_.set_ibss(0);
+    beacon_state_.beacon_frame_.capability_info_.set_ess(1);
   }
 
   ~FakeAp() { environment_->RemoveStation(this); }
@@ -103,12 +106,16 @@ class FakeAp : public StationIfc {
   void RemoveClient(common::MacAddr mac_addr);
 
   void RxMgmtFrame(const SimManagementFrame* mgmt_frame);
+  void RxDataFrame(const SimDataFrame* data_frame);
 
   void ScheduleNextBeacon();
   void ScheduleAssocResp(uint16_t status, const common::MacAddr& dst);
   void ScheduleProbeResp(const common::MacAddr& dst);
   void ScheduleAuthResp(uint16_t seq_num_in, const common::MacAddr& dst, SimAuthType auth_type,
                         uint16_t status);
+  void ScheduleQosData(bool toDS, bool fromDS, const common::MacAddr& addr1,
+                       const common::MacAddr& addr2, const common::MacAddr& addr3,
+                       const std::vector<uint8_t>& payload);
 
   // Event handlers
   void HandleBeaconNotification();
@@ -117,6 +124,9 @@ class FakeAp : public StationIfc {
   void HandleProbeRespNotification(common::MacAddr dst);
   void HandleAuthRespNotification(uint16_t seq_num, common::MacAddr dst, SimAuthType auth_type,
                                   uint16_t status);
+  void HandleQosDataNotification(bool toDS, bool fromDS, const common::MacAddr& addr1,
+                                 const common::MacAddr& addr2, const common::MacAddr& addr3,
+                                 const std::vector<uint8_t>& payload);
 
   // The environment in which this fake AP is operating.
   Environment* environment_;
@@ -158,6 +168,8 @@ class FakeAp : public StationIfc {
   zx::duration probe_resp_interval_ = zx::msec(1);
   // Delay between an auth request and an auth response
   zx::duration auth_resp_interval_ = zx::msec(1);
+  // Delay between forwarding data frames
+  zx::duration data_forward_interval_ = zx::msec(1);
 
   std::list<std::shared_ptr<Client>> clients_;
 };

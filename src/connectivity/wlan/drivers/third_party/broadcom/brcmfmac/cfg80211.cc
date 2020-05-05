@@ -1834,7 +1834,7 @@ void brcmf_cfg80211_rx(struct brcmf_if* ifp, const void* data, size_t size) {
   struct net_device* ndev = ifp->ndev;
   THROTTLE(10, BRCMF_DBG_HEX_DUMP(BRCMF_IS_ON(BYTES) && BRCMF_IS_ON(DATA), data,
                                   std::min<size_t>(size, 64u),
-                                  "Data received (%zu bytes, max 64 shown):", size););
+                                  "Data received (%zu bytes, max 64 shown):", size));
   // IEEE Std. 802.3-2015, 3.1.1
   const uint16_t eth_type = ((uint16_t*)(data))[6];
   const char* const data_bytes = reinterpret_cast<const char*>(data);
@@ -2800,7 +2800,6 @@ void brcmf_if_join_req(net_device* ndev, const wlanif_join_req_t* req) {
             result.result_code == WLAN_JOIN_RESULT_SUCCESS
                 ? "success"
                 : result.result_code == WLAN_JOIN_RESULT_FAILURE_TIMEOUT ? "timeout" : "unknown");
-
   wlanif_impl_ifc_join_conf(&ndev->if_proto, &result);
 }
 

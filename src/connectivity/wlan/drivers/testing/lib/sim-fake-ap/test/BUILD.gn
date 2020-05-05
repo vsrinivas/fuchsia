@@ -57,6 +57,23 @@ executable("beacon_unittests") {
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
+executable("data_unittests") {
+  output_name = "data_unittests"
+
+  testonly = true
+
+  sources = [ "data_unittests.cc" ]
+
+  deps = [
+    "//src/connectivity/wlan/drivers/testing/lib/sim-fake-ap",
+    "//src/lib/fxl/test:gtest_main",
+  ]
+  public_configs = [ "//build/config:Wno-reorder-init-list" ]
+
+  # TODO(48206): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
+}
+
 executable("probe_unittests") {
   output_name = "probe_unittests"
 
@@ -79,6 +96,7 @@ unittest_package("wlan-sim-fake-ap-test") {
     ":assoc_unittests",
     ":auth_unittests",
     ":beacon_unittests",
+    ":data_unittests",
     ":probe_unittests",
   ]
 
@@ -88,15 +106,19 @@ unittest_package("wlan-sim-fake-ap-test") {
       environments = basic_envs
     },
     {
+      name = "auth_unittests"
+      environments = basic_envs
+    },
+    {
       name = "beacon_unittests"
       environments = basic_envs
     },
     {
-      name = "probe_unittests"
+      name = "data_unittests"
       environments = basic_envs
     },
     {
-      name = "auth_unittests"
+      name = "probe_unittests"
       environments = basic_envs
     },
   ]

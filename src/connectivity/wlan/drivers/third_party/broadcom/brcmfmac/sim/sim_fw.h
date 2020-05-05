@@ -100,6 +100,7 @@ class SimFirmware {
   struct AssocOpts {
     common::MacAddr bssid;
     wlan_ssid_t ssid;
+    wlan_bss_type_t bss_type;
   };
 
  public:
@@ -185,8 +186,8 @@ class SimFirmware {
   // Bus operations: calls from driver
   zx_status_t BusPreinit();
   void BusStop();
-  zx_status_t BusTxData(struct brcmf_netbuf* netbuf);
   zx_status_t BusTxCtl(unsigned char* msg, uint len);
+  zx_status_t BusTxData(struct brcmf_netbuf* netbuf);
   zx_status_t BusRxCtl(unsigned char* msg, uint len, int* rxlen_out);
   struct pktq* BusGetTxQueue();
   void BusWowlConfig(bool enabled);
@@ -194,9 +195,6 @@ class SimFirmware {
   zx_status_t BusGetMemdump(void* data, size_t len);
   zx_status_t BusGetFwName(uint chip, uint chiprev, unsigned char* fw_name, size_t* fw_name_size);
   zx_status_t BusGetBootloaderMacAddr(uint8_t* mac_addr);
-
-  // Need to be verified by sim_test.
-  struct PacketBuf last_pkt_buf_;
 
  private:
   /* SoftAP specific config
@@ -296,6 +294,7 @@ class SimFirmware {
   void Rx(const simulation::SimFrame* frame, simulation::WlanRxInfo& info);
 
   void RxMgmtFrame(const simulation::SimManagementFrame* mgmt_frame, simulation::WlanRxInfo& info);
+  void RxDataFrame(const simulation::SimDataFrame* data_frame, simulation::WlanRxInfo& info);
 
   void RxBeacon(const wlan_channel_t& channel, const simulation::SimBeaconFrame* frame);
   void RxAssocResp(const simulation::SimAssocRespFrame* frame);
@@ -318,6 +317,9 @@ class SimFirmware {
                          uint32_t event_type, uint32_t status, uint16_t ifidx,
                          char* ifname = nullptr, uint16_t flags = 0, uint32_t reason = 0,
                          std::optional<common::MacAddr> addr = {});
+
+  // Send received frame over the bus to the driver
+  void SendFrameToDriver(size_t payload_size, const std::vector<uint8_t>& buffer_in);
 
   // Get the idx of the SoftAP IF based on Mac address
   int16_t GetIfidxByMac(const common::MacAddr& addr);

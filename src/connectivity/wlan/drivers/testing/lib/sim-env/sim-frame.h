@@ -8,6 +8,7 @@
 #include <zircon/types.h>
 
 #include <list>
+#include <optional>
 
 #include "sim-sta-ifc.h"
 #include "src/connectivity/wlan/lib/common/cpp/include/wlan/common/mac_frame.h"
@@ -181,6 +182,7 @@ class SimAssocRespFrame : public SimManagementFrame {
   SimMgmtFrameType MgmtFrameType() const override;
 
   uint16_t status_;
+  wlan::CapabilityInfo capability_info_;
 };
 
 class SimDisassocReqFrame : public SimManagementFrame {
@@ -225,6 +227,61 @@ class SimDeauthFrame : public SimManagementFrame {
   SimMgmtFrameType MgmtFrameType() const override;
 
   uint16_t reason_;
+};
+
+// No support for contention-free data frames, aggregation or fragmentation for now
+// Assumes singular MSDU frames
+// reassembly, decryption also not supported
+class SimDataFrame : public SimFrame {
+ public:
+  enum SimDataFrameType { FRAME_TYPE_QOS_DATA };
+
+  SimDataFrame() = default;
+  explicit SimDataFrame(bool toDS, bool fromDS, common::MacAddr addr1, common::MacAddr addr2,
+                        common::MacAddr addr3, std::vector<uint8_t> payload)
+      : toDS_(toDS),
+        fromDS_(fromDS),
+        addr1_(addr1),
+        addr2_(addr2),
+        addr3_(addr3),
+        payload_(payload) {}
+  ~SimDataFrame() override;
+
+  SimFrameType FrameType() const override;
+
+  // Frame subtype identifier for data frames
+  virtual SimDataFrameType DataFrameType() const = 0;
+
+  // Control bits
+  bool toDS_;
+  bool fromDS_;
+
+  // IEEE Std. 802.11-2016, 9.3.2.1 Table 9-26
+  common::MacAddr addr1_;
+
+  common::MacAddr addr2_;
+
+  common::MacAddr addr3_;
+
+  std::optional<common::MacAddr> addr4_;
+
+  // This field is not currently used
+  std::optional<uint16_t> qosControl_;
+
+  // MAC Payload
+  std::vector<uint8_t> payload_;
+};
+
+class SimQosDataFrame : public SimDataFrame {
+ public:
+  SimQosDataFrame() = default;
+  explicit SimQosDataFrame(bool toDS, bool fromDS, common::MacAddr addr1,
+                           common::MacAddr addr2, common::MacAddr addr3,
+                           std::vector<uint8_t> payload)
+      : SimDataFrame(toDS, fromDS, addr1, addr2, addr3, payload) {}
+  ~SimQosDataFrame() override;
+
+  SimDataFrameType DataFrameType() const override;
 };
 
 }  // namespace wlan::simulation

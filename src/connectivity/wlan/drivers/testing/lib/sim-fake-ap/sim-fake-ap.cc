@@ -189,6 +189,15 @@ void FakeAp::ScheduleAuthResp(uint16_t seq_num_in, const common::MacAddr& dst,
   environment_->ScheduleNotification(this, auth_resp_interval_, static_cast<void*>(handler));
 }
 
+void FakeAp::ScheduleQosData(bool toDS, bool fromDS, const common::MacAddr& addr1,
+                             const common::MacAddr& addr2, const common::MacAddr& addr3,
+                             const std::vector<uint8_t>& payload) {
+  auto handler = new std::function<void()>;
+  *handler = std::bind(&FakeAp::HandleQosDataNotification, this, toDS, fromDS, addr1, addr2, addr3,
+                       payload);
+  environment_->ScheduleNotification(this, data_forward_interval_, static_cast<void*>(handler));
+}
+
 void FakeAp::Rx(const SimFrame* frame, WlanRxInfo& info) {
   // Make sure we heard it
   if (!CanReceiveChannel(info.channel)) {
@@ -201,7 +210,11 @@ void FakeAp::Rx(const SimFrame* frame, WlanRxInfo& info) {
       RxMgmtFrame(mgmt_frame);
       break;
     }
-
+    case SimFrame::FRAME_TYPE_DATA: {
+      auto data_frame = static_cast<const SimDataFrame*>(frame);
+      RxDataFrame(data_frame);
+      break;
+    }
     default:
       break;
   }
@@ -371,6 +384,39 @@ void FakeAp::RxMgmtFrame(const SimManagementFrame* mgmt_frame) {
   }
 }
 
+void FakeAp::RxDataFrame(const SimDataFrame* data_frame) {
+  switch (data_frame->DataFrameType()) {
+    case SimDataFrame::FRAME_TYPE_QOS_DATA:
+      // If we are not the intended receiver, ignore it
+      if (data_frame->addr1_ != bssid_) {
+        return;
+      }
+
+        // IEEE Std 802.11-2016, 9.2.4.1.4
+      if (data_frame->toDS_ && data_frame->fromDS_) {
+        ZX_ASSERT_MSG(false, "No support for Mesh data frames in Fake AP\n");
+      } else if (data_frame->toDS_ && !data_frame->fromDS_) {
+        // Currently no sim support for any PAE and any higher level protocols, so just check other
+        // local clients in infrastructure BSS, otherwise don't deliver anything
+        for (auto client : clients_) {
+          if (data_frame->addr3_ == client->mac_addr_) {
+            // Forward frame to destination
+            ScheduleQosData(false, true, client->mac_addr_, bssid_, data_frame->addr2_,
+                            data_frame->payload_);
+            break;
+          }
+        }
+      } else {
+        // Under the assumption that the Fake AP does not support Mesh data frames
+        ZX_ASSERT_MSG(false,
+                      "Data frame addressed to AP but marked destination as STA, frame invalid\n");
+      }
+      break;
+    default:
+      break;
+  }
+}
+
 zx_status_t FakeAp::DisassocSta(const common::MacAddr& sta_mac, uint16_t reason) {
   // Make sure the client is already associated
   SimDisassocReqFrame disassoc_req_frame(bssid_, sta_mac, reason);
@@ -406,6 +452,7 @@ void FakeAp::HandleStopCSABeaconNotification() {
 
 void FakeAp::HandleAssocRespNotification(uint16_t status, common::MacAddr dst) {
   SimAssocRespFrame assoc_resp_frame(bssid_, dst, status);
+  assoc_resp_frame.capability_info_.set_val(beacon_state_.beacon_frame_.capability_info_.val());
   environment_->Tx(&assoc_resp_frame, tx_info_, this);
 }
 
@@ -419,6 +466,13 @@ void FakeAp::HandleAuthRespNotification(uint16_t seq_num, common::MacAddr dst,
                                         SimAuthType auth_type, uint16_t status) {
   SimAuthFrame auth_resp_frame(bssid_, dst, seq_num, auth_type, status);
   environment_->Tx(&auth_resp_frame, tx_info_, this);
+}
+
+void FakeAp::HandleQosDataNotification(bool toDS, bool fromDS, const common::MacAddr& addr1,
+                                       const common::MacAddr& addr2, const common::MacAddr& addr3,
+                                       const std::vector<uint8_t>& payload) {
+  SimQosDataFrame data_frame(toDS, fromDS, addr1, addr2, addr3, payload);
+  environment_->Tx(&data_frame, tx_info_, this);
 }
 
 void FakeAp::ReceiveNotification(void* payload) {
