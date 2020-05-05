@@ -10,15 +10,13 @@
 #include <lib/zx/channel.h>
 #include <lib/zx/event.h>
 
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 #include "fidl_coded_types.h"
 
 namespace {
 
-bool message_test() {
-  BEGIN_TEST;
-
+TEST(Message, BasicTests) {
   uint8_t byte_buffer[ZX_CHANNEL_MAX_MSG_BYTES];
   zx_handle_t handle_buffer[ZX_CHANNEL_MAX_MSG_HANDLES];
 
@@ -61,13 +59,9 @@ bool message_test() {
 
   EXPECT_EQ(message.txid(), 5u);
   EXPECT_EQ(message.ordinal(), 42u);
-
-  END_TEST;
 }
 
-bool message_builder_test() {
-  BEGIN_TEST;
-
+TEST(MessageBuilder, BasicTests) {
   zx::event e;
   EXPECT_EQ(zx::event::create(0, &e), ZX_OK);
   EXPECT_NE(e.get(), ZX_HANDLE_INVALID);
@@ -89,25 +83,17 @@ bool message_builder_test() {
   EXPECT_EQ(message.handles().actual(), 1u);
   EXPECT_EQ(message.handles().size(), 1u);
   EXPECT_EQ(message.handles().data()[0], handle_value);
-
-  END_TEST;
 }
 
-bool message_part_is_stl_container_test() {
-  BEGIN_TEST;
-
+TEST(MessagePart, IsStlContainerTest) {
   EXPECT_EQ(sizeof(uint8_t), sizeof(fidl::BytePart::value_type));
   EXPECT_EQ(sizeof(zx_handle_t), sizeof(fidl::HandlePart::value_type));
 
   EXPECT_EQ(sizeof(const uint8_t*), sizeof(fidl::BytePart::const_iterator));
   EXPECT_EQ(sizeof(const zx_handle_t*), sizeof(fidl::HandlePart::const_iterator));
-
-  END_TEST;
 }
 
-bool message_part_size_test() {
-  BEGIN_TEST;
-
+TEST(MessagePart, Size) {
   fidl::Message message;
 
   EXPECT_EQ(message.bytes().size(), 0u);
@@ -121,13 +107,9 @@ bool message_part_size_test() {
 
   EXPECT_EQ(new_msg.size(), 10u);
   EXPECT_EQ(msg.size(), 0u);
-
-  END_TEST;
 }
 
-bool message_part_wrap_array_test() {
-  BEGIN_TEST;
-
+TEST(MessagePart, WrapArray) {
   uint8_t dummy[42];
 
   auto full = fidl::MessagePart<uint8_t>::WrapFull(dummy);
@@ -139,8 +121,6 @@ bool message_part_wrap_array_test() {
   EXPECT_EQ(empty.data(), dummy);
   EXPECT_EQ(empty.actual(), 0);
   EXPECT_EQ(empty.capacity(), 42);
-
-  END_TEST;
 }
 
 extern "C" {
@@ -154,9 +134,7 @@ extern const uint8_t sandwich1_case1_v1[0x30];
 extern const uint8_t sandwich1_case1_old[0x10];
 }
 
-bool transform_with_callback_noop() {
-  BEGIN_TEST;
-
+TEST(Message, TransformWithCallbackNoop) {
   const auto& src_bytes = simpletablearraystruct_v1_and_old;
   uint32_t src_num_bytes = sizeof(simpletablearraystruct_v1_and_old);
   uint32_t num_called = 0;
@@ -175,12 +153,9 @@ bool transform_with_callback_noop() {
                                                    &example_SimpleTableArrayStructTable, src_bytes,
                                                    src_num_bytes, nullptr, callback));
   ASSERT_EQ(num_called, 1);
-  END_TEST;
 }
 
-bool transform_with_callback() {
-  BEGIN_TEST;
-
+TEST(Message, TransformWithCallback) {
   uint32_t num_called = 0;
   auto callback = [&](const uint8_t* dst_bytes, uint32_t dst_num_bytes) -> zx_status_t {
     num_called++;
@@ -194,17 +169,6 @@ bool transform_with_callback() {
                                                    &example_Sandwich1Table, sandwich1_case1_old,
                                                    sizeof(sandwich1_case1_old), nullptr, callback));
   ASSERT_EQ(num_called, 1);
-  END_TEST;
 }
 
 }  // namespace
-
-BEGIN_TEST_CASE(message_tests)
-RUN_NAMED_TEST("Message test", message_test)
-RUN_NAMED_TEST("MessageBuilder test", message_builder_test)
-RUN_NAMED_TEST("MessagePart friendly with STL test", message_part_is_stl_container_test)
-RUN_NAMED_TEST("MessagePart size test", message_part_size_test)
-RUN_NAMED_TEST("MessagePart wrap array test", message_part_wrap_array_test)
-RUN_TEST(transform_with_callback_noop)
-RUN_TEST(transform_with_callback)
-END_TEST_CASE(message_tests)
