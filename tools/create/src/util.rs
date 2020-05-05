@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::anyhow;
+use anyhow::{anyhow, Context};
 use std::ffi::OsStr;
 use std::path::PathBuf;
 use std::{env, fs, io};
 
 /// Return the fuchsia root directory.
 pub fn get_fuchsia_root() -> Result<PathBuf, anyhow::Error> {
-    let dir = env::var("FUCHSIA_DIR")?;
-    Ok(fs::canonicalize(dir)?)
+    let dir = env::var("FUCHSIA_DIR").context("failed to get_fuchsia_root")?;
+    Ok(fs::canonicalize(dir).context("failed to get_fuchsia_root")?)
 }
 
 /// Returns the path to the template files.

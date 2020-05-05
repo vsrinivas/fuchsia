@@ -5,7 +5,7 @@
 mod template_helpers;
 mod util;
 
-use anyhow::{anyhow, bail};
+use anyhow::{anyhow, bail, Context};
 use chrono::{Datelike, Utc};
 use handlebars::Handlebars;
 use serde::Serialize;
@@ -308,7 +308,7 @@ impl TemplateArgs {
                 .strip_prefix(&fuchsia_root)
                 .map_err(|_| {
                     anyhow!(
-                        "current working directory must be a descendant of FUCHSIA_DIR ({:?})",
+                        "current working directory ({:?}) must be a descendant of FUCHSIA_DIR ({:?})", &absolute_project_path,
                         &fuchsia_root
                     )
                 })?
@@ -466,13 +466,15 @@ enum RenderedTree {
 
 impl RenderedTree {
     /// Write the RenderedTree to the `dest` path.
-    fn write(&self, dest: &Path) -> io::Result<()> {
+    fn write(&self, dest: &Path) -> Result<(), anyhow::Error> {
         match self {
             Self::File(contents) => {
-                fs::write(dest, &contents)?;
+                fs::write(dest, &contents)
+                    .with_context(|| format!("failed to write to {:?}", dest))?;
             }
             Self::Dir(tree) => {
-                fs::create_dir(dest)?;
+                fs::create_dir(dest)
+                    .with_context(|| format!("failed to create directory {:?}", dest))?;
                 for (filename, subtree) in tree {
                     let dest = dest.join(filename);
                     subtree.write(&dest)?;
@@ -486,15 +488,16 @@ impl RenderedTree {
 /// Trait to enable testing of the template tree creation logic.
 /// Allows mocking out reading from the file system.
 trait FileReader {
-    fn read_to_string(&self, p: impl AsRef<Path>) -> io::Result<String>;
+    fn read_to_string(&self, p: impl AsRef<Path>) -> Result<String, anyhow::Error>;
 }
 
 /// Standard library filesystem implementation of FileReader.
 struct StdFs;
 
 impl FileReader for StdFs {
-    fn read_to_string(&self, p: impl AsRef<Path>) -> io::Result<String> {
-        fs::read_to_string(p)
+    fn read_to_string(&self, p: impl AsRef<Path>) -> Result<String, anyhow::Error> {
+        let p = p.as_ref();
+        fs::read_to_string(p).with_context(|| format!("failed to read from {:?}", p))
     }
 }
 
@@ -577,10 +580,10 @@ mod tests {
     }
 
     impl<'a> FileReader for HashMap<&'a Path, &'a str> {
-        fn read_to_string(&self, path: impl AsRef<Path>) -> io::Result<String> {
-            self.get(path.as_ref())
-                .map(|c| c.to_string())
-                .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "file not found"))
+        fn read_to_string(&self, path: impl AsRef<Path>) -> Result<String, anyhow::Error> {
+            self.get(path.as_ref()).map(|c| c.to_string()).ok_or_else(|| {
+                anyhow::Error::from(io::Error::new(io::ErrorKind::NotFound, "file not found"))
+            })
         }
     }
 
