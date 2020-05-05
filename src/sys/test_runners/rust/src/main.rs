@@ -11,7 +11,7 @@ use {
     fuchsia_component::server::ServiceFs,
     futures::prelude::*,
     log::{error, info},
-    test_runners_lib::elf_component::start_component,
+    test_runners_lib::elf_component,
     test_server::TestServer,
     thiserror::Error,
 };
@@ -44,10 +44,7 @@ async fn start_runner(
     while let Some(event) = request_stream.try_next().await.map_err(RunnerError::RequestRead)? {
         match event {
             fcrunner::ComponentRunnerRequest::Start { start_info, controller, .. } => {
-                if let Err(e) = start_component(start_info, controller, get_new_test_server) {
-                    error!("cannot start test: {:?}", e);
-                    continue;
-                }
+                let _ = elf_component::start_component(start_info, controller, get_new_test_server);
             }
         }
     }

@@ -1,0 +1,25 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// Intentionally broken, component manifest for the `echo_server` example
+// program, to demonstrate failed routing due to a non-startable component.
+{
+    program: {
+        // Wrong binary name.
+        binary: "bin/routing_failed_echo_server_oops",
+    },
+    use: [
+        { runner: "elf" },
+    ],
+    expose: [
+        {
+            protocol: "/svc/fidl.examples.routing.echo.Echo2",
+            from: "self",
+        },
+        {
+            directory: "/hub",
+            from: "framework",
+        },
+    ],
+}

@@ -33,22 +33,34 @@ use {
     thiserror::Error,
 };
 
+/// Connect to a FIDL service using the provided channel.
+pub fn connect_channel_to_service<S: DiscoverableService>(
+    server_end: zx::Channel,
+) -> Result<(), Error> {
+    connect_channel_to_service_at::<S>(server_end, "/svc")
+}
+
 /// Connect to a FIDL service using the provided channel and namespace prefix.
 pub fn connect_channel_to_service_at<S: DiscoverableService>(
     server_end: zx::Channel,
     service_prefix: &str,
 ) -> Result<(), Error> {
     let service_path = format!("{}/{}", service_prefix, S::SERVICE_NAME);
-    fdio::service_connect(&service_path, server_end)
-        .with_context(|| format!("Error connecting to service path: {}", service_path))?;
-    Ok(())
+    connect_channel_to_service_at_path::<S>(server_end, &service_path)
 }
 
-/// Connect to a FIDL service using the provided channel.
-pub fn connect_channel_to_service<S: DiscoverableService>(
+/// Connect to a FIDL service using the provided channel and namespace path.
+pub fn connect_channel_to_service_at_path<S: DiscoverableService>(
     server_end: zx::Channel,
+    service_path: &str,
 ) -> Result<(), Error> {
-    connect_channel_to_service_at::<S>(server_end, "/svc")
+    fdio::service_connect(&service_path, server_end)
+        .with_context(|| format!("Error connecting to service path: {}", service_path))
+}
+
+/// Connect to a FIDL service using the application root namespace.
+pub fn connect_to_service<S: DiscoverableService>() -> Result<S::Proxy, Error> {
+    connect_to_service_at::<S>("/svc")
 }
 
 /// Connect to a FIDL service using the provided namespace prefix.
@@ -61,9 +73,14 @@ pub fn connect_to_service_at<S: DiscoverableService>(
     Ok(S::Proxy::from_channel(proxy))
 }
 
-/// Connect to a FIDL service using the application root namespace.
-pub fn connect_to_service<S: DiscoverableService>() -> Result<S::Proxy, Error> {
-    connect_to_service_at::<S>("/svc")
+/// Connect to a FIDL service using the provided path.
+pub fn connect_to_service_at_path<S: DiscoverableService>(
+    service_path: &str,
+) -> Result<S::Proxy, Error> {
+    let (proxy, server) = zx::Channel::create()?;
+    connect_channel_to_service_at_path::<S>(server, service_path)?;
+    let proxy = fasync::Channel::from_channel(proxy)?;
+    Ok(S::Proxy::from_channel(proxy))
 }
 
 struct DirectoryProtocolImpl(DirectoryProxy);

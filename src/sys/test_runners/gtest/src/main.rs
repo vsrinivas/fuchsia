@@ -11,11 +11,11 @@ use {
     fidl_fuchsia_io::{OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
-    fuchsia_syslog::{fx_log_err, fx_log_info},
+    fuchsia_syslog::fx_log_info,
     futures::prelude::*,
     rand::Rng,
     std::{fs, path::Path},
-    test_runners_lib::elf_component::start_component,
+    test_runners_lib::elf_component,
     test_server::TestServer,
     thiserror::Error,
 };
@@ -53,10 +53,7 @@ async fn start_runner(
     while let Some(event) = stream.try_next().await.map_err(RunnerError::RequestRead)? {
         match event {
             fcrunner::ComponentRunnerRequest::Start { start_info, controller, .. } => {
-                if let Err(e) = start_component(start_info, controller, get_new_test_server) {
-                    fx_log_err!("cannot start test: {:?}", e);
-                    continue;
-                }
+                let _ = elf_component::start_component(start_info, controller, get_new_test_server);
             }
         }
     }

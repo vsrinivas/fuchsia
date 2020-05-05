@@ -4,7 +4,7 @@
 
 use {
     async_trait::async_trait,
-    fidl::endpoints::ServerEnd,
+    fidl::endpoints::{ServerEnd, ServiceMarker},
     fidl_fuchsia_component_runner as fcrunner,
     fidl_fuchsia_io::DirectoryMarker,
     fuchsia_async as fasync,
@@ -18,6 +18,7 @@ use {
     runner::component::ComponentNamespace,
     std::{
         convert::TryFrom,
+        mem,
         ops::Deref,
         path::Path,
         sync::{Arc, Mutex, Weak},
@@ -55,6 +56,23 @@ pub enum ComponentError {
 
     #[error("invalid url")]
     InvalidUrl,
+}
+
+impl ComponentError {
+    /// Convert this error into its approximate `fuchsia.component.Error` equivalent.
+    pub fn as_zx_status(&self) -> zx::Status {
+        match self {
+            Self::InvalidStartInfo(_) => zx::Status::INVALID_ARGS,
+            Self::InvalidArgs(_, _) => zx::Status::INVALID_ARGS,
+            Self::MissingNamespace(_) => zx::Status::INVALID_ARGS,
+            Self::MissingOutDir(_) => zx::Status::INVALID_ARGS,
+            Self::ServeSuite(_) => zx::Status::INTERNAL,
+            Self::Fidl(_, _) => zx::Status::INTERNAL,
+            Self::CreateJob(_) => zx::Status::INTERNAL,
+            Self::DuplicateJob(_) => zx::Status::INTERNAL,
+            Self::InvalidUrl => zx::Status::INVALID_ARGS,
+        }
+    }
 }
 
 /// All information about this test component.
@@ -198,7 +216,31 @@ impl ComponentRuntime {
 /// |F|: Funciton which returns new instance of `SuitServer`.
 pub fn start_component<F, S>(
     start_info: fcrunner::ComponentStartInfo,
-    server_end: ServerEnd<fcrunner::ComponentControllerMarker>,
+    mut server_end: ServerEnd<fcrunner::ComponentControllerMarker>,
+    get_test_server: F,
+) -> Result<(), ComponentError>
+where
+    F: 'static + Fn() -> S,
+    S: SuiteServer,
+{
+    let resolved_url = runner::get_resolved_url(&start_info).unwrap_or(String::new());
+    if let Err(e) = start_component_inner(start_info, &mut server_end, get_test_server) {
+        // Take ownership of `server_end`.
+        let server_end = take_server_end(&mut server_end);
+        runner::component::report_start_error(
+            e.as_zx_status(),
+            format!("{}", e),
+            &resolved_url,
+            server_end,
+        );
+        return Err(e);
+    }
+    Ok(())
+}
+
+fn start_component_inner<F, S>(
+    start_info: fcrunner::ComponentStartInfo,
+    server_end: &mut ServerEnd<fcrunner::ComponentControllerMarker>,
     get_test_server: F,
 ) -> Result<(), ComponentError>
 where
@@ -245,6 +287,7 @@ where
         fut.await.ok();
     });
 
+    let server_end = take_server_end(server_end);
     let controller_stream = server_end.into_stream().map_err(|e| {
         ComponentError::Fidl("failed to convert server end to controller".to_owned(), e)
     })?;
@@ -256,6 +299,11 @@ where
     });
 
     Ok(())
+}
+
+fn take_server_end<S: ServiceMarker>(end: &mut ServerEnd<S>) -> ServerEnd<S> {
+    let invalid_end: ServerEnd<S> = zx::Handle::invalid().into();
+    mem::replace(end, invalid_end)
 }
 
 /// Trait implemented by suite server for elf component test.
@@ -278,10 +326,11 @@ mod tests {
     use {
         super::*,
         anyhow::Error,
-        fidl::endpoints::ClientEnd,
+        fidl::endpoints::{self, ClientEnd},
         fidl_fuchsia_io::OPEN_RIGHT_READABLE,
         fuchsia_runtime::job_default,
         futures::future::Aborted,
+        matches::assert_matches,
         runner::component::{ComponentNamespace, ComponentNamespaceError},
     };
 
@@ -326,6 +375,38 @@ mod tests {
 
     async fn dummy_func() -> u32 {
         2
+    }
+
+    struct DummyServer {}
+    impl SuiteServer for DummyServer {
+        fn run(
+            self,
+            _component: Weak<Component>,
+            _test_url: &str,
+            _stream: fidl_fuchsia_test::SuiteRequestStream,
+        ) -> AbortHandle {
+            let (_, handle) = abortable(async {});
+            handle
+        }
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn start_component_error() {
+        let start_info = fcrunner::ComponentStartInfo {
+            resolved_url: None,
+            program: None,
+            ns: None,
+            outgoing_dir: None,
+            runtime_dir: None,
+        };
+        let (client_controller, server_controller) = endpoints::create_proxy().unwrap();
+        let get_test_server = || DummyServer {};
+        let err = start_component(start_info, server_controller, get_test_server);
+        assert_matches!(err, Err(ComponentError::InvalidStartInfo(_)));
+        assert_matches!(
+            client_controller.take_event_stream().next().await,
+            Some(Err(fidl::Error::ClientChannelClosed(zx::Status::INVALID_ARGS)))
+        );
     }
 
     #[fuchsia_async::run_singlethreaded(test)]

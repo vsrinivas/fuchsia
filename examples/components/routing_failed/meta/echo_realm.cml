@@ -13,6 +13,10 @@
             url: "fuchsia-pkg://fuchsia.com/components-routing-failed-example#meta/echo_server.cm",
         },
         {
+            name: "echo_server_bad",
+            url: "fuchsia-pkg://fuchsia.com/components-routing-failed-example#meta/echo_server_bad.cm",
+        },
+        {
             name: "echo_client",
             url: "fuchsia-pkg://fuchsia.com/components-routing-failed-example#meta/echo_client.cm",
             startup: "eager",
@@ -28,6 +32,7 @@
             to: [
                 "#echo_client",
                 "#echo_server",
+                "#echo_server_bad",
             ],
         },
 
@@ -35,6 +40,14 @@
         {
             protocol: "/svc/fidl.examples.routing.echo.Echo.oops",
             from: "#echo_server",
+            to: [ "#echo_client" ],
+        },
+
+        // Failed routing! The definition of `echo_server_bad.cml` is wrong, making it not
+        // startable.
+        {
+            protocol: "/svc/fidl.examples.routing.echo.Echo2",
+            from: "#echo_server_bad",
             to: [ "#echo_client" ],
         },
     ],

@@ -5,7 +5,10 @@
 use {
     anyhow::Error,
     async_trait::async_trait,
-    fidl::endpoints::ClientEnd,
+    fidl::{
+        endpoints::{ClientEnd, ServerEnd},
+        epitaph::ChannelEpitaphExt,
+    },
     fidl_fuchsia_component_runner as fcrunner, fidl_fuchsia_io as fio,
     fidl_fuchsia_process as fproc, fuchsia_async as fasync,
     fuchsia_runtime::{job_default, HandleInfo, HandleType},
@@ -13,6 +16,7 @@ use {
     futures::{future::BoxFuture, prelude::*},
     lazy_static::lazy_static,
     library_loader,
+    log::*,
     std::convert::TryFrom,
     std::path::Path,
     std::path::PathBuf,
@@ -334,6 +338,18 @@ pub async fn configure_launcher(
         job: job,
         name: config_args.name.to_owned(),
     })
+}
+
+/// Sets an epitaph on `ComponentController` `server_end` for a runner failure and the outgoing
+/// directory, and logs it.
+pub fn report_start_error(
+    err: zx::Status,
+    err_str: String,
+    resolved_url: &str,
+    controller_server_end: ServerEnd<fcrunner::ComponentControllerMarker>,
+) {
+    let _ = controller_server_end.into_channel().close_with_epitaph(err);
+    error!("Failed to start component `{}`: {}", resolved_url, err_str,);
 }
 
 #[cfg(test)]

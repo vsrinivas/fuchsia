@@ -11,7 +11,7 @@ use {
     anyhow::{format_err, Context as _, Error},
     async_trait::async_trait,
     clonable_error::ClonableError,
-    fidl::{endpoints::ServerEnd, epitaph::ChannelEpitaphExt},
+    fidl::endpoints::ServerEnd,
     fidl_fuchsia_component_runner as fcrunner, fidl_fuchsia_data as fdata,
     fidl_fuchsia_io::{DirectoryMarker, NodeMarker, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
     fidl_fuchsia_process as fproc,
@@ -482,6 +482,7 @@ impl Runner for ElfRunner {
     ) {
         // start the component and move the Controller into a new async
         // execution context.
+        let resolved_url = runner::get_resolved_url(&start_info).unwrap_or(String::new());
         match self.start_component(start_info).await {
             Ok(Some(elf_component)) => {
                 // This future completes when the
@@ -498,8 +499,12 @@ impl Runner for ElfRunner {
                 // TODO(fxb/): Should this signal an error?
             }
             Err(err) => {
-                // Deliver any errors as epitaphs over ComponentController.
-                let _ = server_end.into_channel().close_with_epitaph(err.as_zx_status());
+                runner::component::report_start_error(
+                    err.as_zx_status(),
+                    format!("{}", err),
+                    &resolved_url,
+                    server_end,
+                );
             }
         }
     }
