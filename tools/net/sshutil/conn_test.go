@@ -212,7 +212,7 @@ func TestRun(t *testing.T) {
 		check("fail", 1, "fail stdout", "fail stderr")
 	})
 
-	t.Run("stops running command if context canceled", func(t *testing.T) {
+	t.Run("exits early if context canceled while creating session", func(t *testing.T) {
 		// By not passing an `onNewChannel` function we ensure that the command
 		// will hang until the context is canceled.
 		conn, _, cleanup := setUpConn(ctx, t, nil, nil)
@@ -232,6 +232,27 @@ func TestRun(t *testing.T) {
 		case err := <-errs:
 			if !errors.Is(err, context.Canceled) {
 				t.Errorf("context was canceled but Run() returned wrong error: %v", err)
+			}
+		}
+	})
+
+	t.Run("exits early if session creation fails", func(t *testing.T) {
+		client, server, cleanup := setUpClient(ctx, t, nil, nil)
+		defer cleanup()
+
+		server.stop()
+
+		errs := make(chan error)
+		go func() {
+			errs <- client.Run(ctx, []string{"foo"}, nil, nil)
+		}()
+
+		select {
+		case <-time.After(testTimeout):
+			t.Errorf("Run() should exit if the server becomes unavailable")
+		case err := <-errs:
+			if err == nil {
+				t.Errorf("Run() should return an error if the server is unavailable")
 			}
 		}
 	})
