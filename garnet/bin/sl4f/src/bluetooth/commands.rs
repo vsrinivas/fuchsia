@@ -6,10 +6,7 @@ use crate::server::Facade;
 use anyhow::{format_err, Error};
 use async_trait::async_trait;
 use fidl_fuchsia_bluetooth_gatt::ServiceInfo;
-use fidl_fuchsia_bluetooth_le::{
-    AdvertisingData, AdvertisingParameters, ConnectionOptions, ScanFilter,
-};
-use fuchsia_syslog::macros::*;
+use fidl_fuchsia_bluetooth_le::ScanFilter;
 use parking_lot::RwLock;
 use serde_json::{to_value, Value};
 
@@ -31,43 +28,6 @@ use crate::common_utils::common::{
 };
 
 use crate::common_utils::common::macros::parse_arg;
-
-// Takes a serde_json::Value and converts it to arguments required for
-// a FIDL ble_advertise command
-fn ble_advertise_args_to_fidl(args_raw: Value) -> Result<AdvertisingParameters, Error> {
-    let adv_data_raw = match args_raw.get("advertising_data") {
-        Some(adr) => adr.clone(),
-        None => return Err(format_err!("Advertising data missing.")),
-    };
-
-    let conn_raw = args_raw.get("connectable").ok_or(format_err!("Connectable missing"))?;
-
-    // Unpack the name for advertising data, as well as interval of advertising
-    let name: Option<String> = adv_data_raw["name"].as_str().map(String::from);
-    let connectable: bool = conn_raw.as_bool().unwrap_or(false);
-    let conn_opts =
-        if connectable { Some(ConnectionOptions { bondable_mode: Some(true) }) } else { None };
-    // TODO(NET-1026): Is there a better way to unpack the args into an AdvData
-    // struct? Unfortunately, can't derive deserialize for AdvData
-    let parameters = AdvertisingParameters {
-        data: Some(AdvertisingData {
-            name,
-            appearance: None,
-            tx_power_level: None,
-            service_uuids: None,
-            service_data: None,
-            manufacturer_data: None,
-            uris: None,
-        }),
-        scan_response: None,
-        mode_hint: None,
-        connectable: None,
-        connection_options: conn_opts,
-    };
-
-    fx_log_info!(tag: "ble_advertise_args_to_fidl", "advertising parameters: {:?}", parameters);
-    Ok(parameters)
-}
 
 // Takes a serde_json::Value and converts it to arguments required for a FIDL
 // ble_scan command
@@ -116,16 +76,14 @@ impl Facade for BleAdvertiseFacade {
         let id = to_value(BleAdvertiseResponse::new(Some("singleton-instance".to_string())))?;
         match method.as_ref() {
             "BleAdvertise" => {
-                let params = ble_advertise_args_to_fidl(args)?;
-                self.start_adv(params).await?;
-                Ok(id)
+                self.start_adv(args).await?;
             }
             "BleStopAdvertise" => {
                 self.stop_adv();
-                Ok(id)
             }
             _ => return Err(format_err!("Invalid BleAdvertise FIDL method: {:?}", method)),
-        }
+        };
+        Ok(id)
     }
 
     fn cleanup(&self) {
