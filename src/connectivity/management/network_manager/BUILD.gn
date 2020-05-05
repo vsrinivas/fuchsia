@@ -66,13 +66,19 @@ package("network_manager") {
   ]
 }
 
-config_data("network_manager_config") {
+config_data("config_default") {
   for_pkg = "network_manager"
-  sources = [ rebase_path("config/network_manager_default.json") ]
+  sources = [ rebase_path("config/default.json") ]
   outputs = [ "factory_config.json" ]
 }
 
-config_data("router_config") {
+config_data("config_no_ssh_over_wlan") {
+  for_pkg = "network_manager"
+  sources = [ rebase_path("config/no_ssh_over_wlan.json") ]
+  outputs = [ "factory_config.json" ]
+}
+
+config_data("config_toulouse") {
   for_pkg = "network_manager"
   sources = [ rebase_path("config/toulouse.json") ]
   outputs = [ "factory_config.json" ]
@@ -98,15 +104,15 @@ test_package("network_manager_tests") {
   resources = [
     {
       path = rebase_path("testdata/invalid_empty.json")
-      dest = "invalid_empty.json"
+      dest = "invalid_factory_configs/invalid_empty.json"
     },
     {
       path = rebase_path("testdata/valid_empty.json")
-      dest = "valid_empty.json"
+      dest = "valid_factory_configs/valid_empty.json"
     },
     {
       path = rebase_path("testdata/valid_factory_config.json")
-      dest = "valid_factory_config.json"
+      dest = "valid_factory_configs/valid_factory_config.json"
     },
     {
       path = rebase_path("data/device_schema.json")
@@ -114,11 +120,15 @@ test_package("network_manager_tests") {
     },
     {
       path = rebase_path("config/toulouse.json")
-      dest = "toulouse_factory_config.json"
+      dest = "valid_factory_configs/toulouse.json"
     },
     {
-      path = rebase_path("config/network_manager_default.json")
-      dest = "default_factory_config.json"
+      path = rebase_path("config/default.json")
+      dest = "valid_factory_configs/config.json"
+    },
+    {
+      path = rebase_path("config/no_ssh_over_wlan.json")
+      dest = "valid_factory_configs/no_ssh_over_wlan.json"
     },
   ]
 }

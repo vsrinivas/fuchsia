@@ -1968,17 +1968,17 @@ mod tests {
         );
 
         // An invalid config should fail to deserialize.
-        let invalid_empty = String::from("/pkg/data/invalid_empty.json");
+        let invalid_empty = String::from("/pkg/data/invalid_factory_configs/invalid_empty.json");
         assert_eq!(
             test_config.try_load_config(Path::new(&invalid_empty)).await,
             Err(error::NetworkManager::Config(error::Config::FailedToDeserializeConfig {
-                path: "/pkg/data/invalid_empty.json".to_string(),
+                path: "/pkg/data/invalid_factory_configs/invalid_empty.json".to_string(),
                 error: "EOF while parsing an object at line 2 column 0".to_string(),
             }))
         );
 
         // A valid config should deserialize successfully.
-        let valid_empty = String::from("/pkg/data/valid_empty.json");
+        let valid_empty = String::from("/pkg/data/valid_factory_configs/valid_empty.json");
         let contents = fs::read_to_string(&valid_empty)
             .expect(format!("Failed to open testdata file: {}", valid_empty).as_str());
 
@@ -2050,7 +2050,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_verify_toulouse_factory_config() {
-        let config_path = "/pkg/data/toulouse_factory_config.json";
+        let config_path = "/pkg/data/valid_factory_configs/toulouse.json";
         let mut contents = String::new();
         let mut f = File::open(config_path).unwrap();
         f.read_to_string(&mut contents).unwrap();
@@ -2070,13 +2070,18 @@ mod tests {
     }
 
     #[test]
-    fn verify_default_factory_config() {
-        let config_path = "/pkg/data/default_factory_config.json";
-        let mut contents = String::new();
-        let mut f = File::open(config_path).unwrap();
-        f.read_to_string(&mut contents).unwrap();
-        let _deserialized_config: DeviceConfig = serde_json::from_str(&contents)
-            .expect(format!("Failed to deserialized {}", config_path).as_ref());
+    fn verify_factory_configs() {
+        // Verify that /pkg/data/valid_factory_configs/* are all valid configs.
+        let entries = std::fs::read_dir("/pkg/data/valid_factory_configs/")
+            .expect("could not list /pkg/data/valid_factory_configs/");
+        for entry in entries {
+            let entry = entry.expect("could not list /pkg/data/valid_factory_configs/");
+            let mut contents = String::new();
+            let mut f = File::open(entry.path()).unwrap();
+            f.read_to_string(&mut contents).unwrap();
+            let _deserialized_config: DeviceConfig = serde_json::from_str(&contents)
+                .expect(&format!("Failed to deserialized {:?}", entry.path()));
+        }
     }
 
     #[test]
