@@ -6,14 +6,14 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <zircon/process.h>
+#include <zircon/status.h>
+#include <zircon/threads.h>
 
 #include <atomic>
 
 #include <test-utils/test-utils.h>
 #include <unittest/unittest.h>
-#include <zircon/process.h>
-#include <zircon/threads.h>
-#include <zircon/status.h>
 
 #include "inferior-control.h"
 #include "inferior.h"
@@ -103,15 +103,23 @@ bool test_hw_breakpoint_impl(zx_handle_t excp_channel) {
 
   // We wait for the exception.
   tu_channel_wait_readable(excp_channel);
-  tu_exception_t exception = tu_read_exception(excp_channel);
-  ASSERT_EQ(exception.info.type, ZX_EXCP_HW_BREAKPOINT);
+
+  zx_handle_t exception;
+  zx_exception_info_t info;
+  uint32_t num_bytes = sizeof(info);
+  uint32_t num_handles = 1;
+  status =
+      zx_channel_read(excp_channel, 0, &info, &exception, num_bytes, num_handles, nullptr, nullptr);
+  ASSERT_EQ(status, ZX_OK);
+
+  ASSERT_EQ(info.type, ZX_EXCP_HW_BREAKPOINT);
 
   // Clear the state and resume the thread.
   status = unset_hw_breakpoint(thread_handle);
   ASSERT_EQ(status, ZX_OK);
   gBreakpointThreadShouldContinue = false;
 
-  tu_resume_from_exception(exception.exception);
+  tu_resume_from_exception(exception);
 
   // join the thread.
   int res = -1;

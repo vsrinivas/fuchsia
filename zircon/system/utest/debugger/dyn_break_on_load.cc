@@ -26,8 +26,15 @@ bool dyn_break_on_load_test_handler(inferior_data_t* data, const zx_port_packet_
 
   // This test is supposed to only get an exception and nothing else.
   ASSERT_EQ(tu_get_koid(data->exception_channel), packet->key);
-  auto [info, raw_exception] = tu_read_exception(data->exception_channel);
-  zx::exception exception(raw_exception);
+
+  zx::exception exception;
+  zx_exception_info_t info;
+  uint32_t num_bytes = sizeof(info);
+  uint32_t num_handles = 1;
+  zx_status_t status =
+      zx_channel_read(data->exception_channel, 0, &info, exception.reset_and_get_address(),
+                      num_bytes, num_handles, nullptr, nullptr);
+  ASSERT_EQ(status, ZX_OK);
 
   switch (info.type) {
     case ZX_EXCP_SW_BREAKPOINT: {

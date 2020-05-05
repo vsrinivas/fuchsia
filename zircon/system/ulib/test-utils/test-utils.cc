@@ -324,17 +324,6 @@ zx_handle_t tu_create_exception_channel(zx_handle_t task, uint32_t options) {
   return channel;
 }
 
-tu_exception_t tu_read_exception(zx_handle_t channel) {
-  tu_exception_t exception;
-  uint32_t num_bytes = sizeof(exception.info);
-  uint32_t num_handles = 1;
-  zx_status_t status = zx_channel_read(channel, 0, &exception.info, &exception.exception, num_bytes,
-                                       num_handles, nullptr, nullptr);
-  if (status < 0)
-    tu_fatal(__func__, status);
-  return exception;
-}
-
 zx_handle_t tu_exception_get_process(zx_handle_t exception) {
   zx_handle_t process = ZX_HANDLE_INVALID;
   zx_status_t status = zx_exception_get_process(exception, &process);

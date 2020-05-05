@@ -111,15 +111,6 @@ size_t tu_process_get_threads(zx_handle_t process, zx_koid_t* threads, size_t ma
 
 zx_handle_t tu_create_exception_channel(zx_handle_t task, uint32_t options);
 
-// Reads an exception from an exception channel.
-
-typedef struct tu_exception {
-  zx_exception_info_t info;
-  zx_handle_t exception;
-} tu_exception_t;
-
-tu_exception_t tu_read_exception(zx_handle_t channel);
-
 // Extracts task handles from an exception.
 
 zx_handle_t tu_exception_get_process(zx_handle_t exception);
