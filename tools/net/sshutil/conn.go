@@ -52,13 +52,22 @@ func NewConn(ctx context.Context, addr net.Addr, config *ssh.ClientConfig) (*Con
 	if err != nil {
 		return nil, err
 	}
+
+	// We want to log from the keepalive thread, but we don't want to inherit
+	// any of `ctx`'s cancellations. So we will create a new context and
+	// initialize it with the logger in `ctx`.
+	keepaliveCtx := context.Background()
+	if v := logger.LoggerFromContext(ctx); v != nil {
+		keepaliveCtx = logger.WithLogger(keepaliveCtx, v)
+	}
+
 	go func() {
 		t := time.NewTicker(defaultKeepaliveInterval)
 		defer t.Stop()
 		timeout := func() <-chan time.Time {
 			return time.After(defaultKeepaliveTimeout)
 		}
-		conn.keepalive(ctx, t.C, timeout)
+		conn.keepalive(keepaliveCtx, t.C, timeout)
 	}()
 	return conn, nil
 }

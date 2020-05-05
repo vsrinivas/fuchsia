@@ -22,6 +22,14 @@ func WithLogger(ctx context.Context, logger *Logger) context.Context {
 	return context.WithValue(ctx, globalLoggerKeyType{}, logger)
 }
 
+// LoggerFromContext returns the context logger if configured, otherwise nil.
+func LoggerFromContext(ctx context.Context) *Logger {
+	if v, ok := ctx.Value(globalLoggerKeyType{}).(*Logger); ok && v != nil {
+		return v
+	}
+	return nil
+}
+
 // Logger represents a specific LogLevel with a specified color and prefix.
 type Logger struct {
 	LoggerLevel   LogLevel
@@ -156,7 +164,7 @@ func Logf(ctx context.Context, logLevel LogLevel, format string, a ...interface{
 }
 
 func logf(callDepth int, ctx context.Context, logLevel LogLevel, format string, a ...interface{}) {
-	if v, ok := ctx.Value(globalLoggerKeyType{}).(*Logger); ok && v != nil {
+	if v := LoggerFromContext(ctx); v != nil {
 		v.logf(callDepth+1, logLevel, format, a...)
 	} else {
 		goLog.Output(callDepth+1, fmt.Sprintf(format, a...))
