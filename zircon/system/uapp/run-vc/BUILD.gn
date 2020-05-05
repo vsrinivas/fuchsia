@@ -25,7 +25,10 @@ executable("run-vc") {
 
   # TODO(44350): UBSan has found an instance of undefined behavior in this target.
   # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
-  configs += [ "//build/config:temporarily_disable_ubsan_do_not_use" ]
+  configs += [
+    "//build/config:temporarily_disable_ubsan_do_not_use",
+    "$zx_build/public/gn/config:static-libc++",
+  ]
 }
 
 migrated_manifest("run-vc-manifest") {
