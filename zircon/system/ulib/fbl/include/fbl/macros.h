@@ -21,12 +21,6 @@
   _class_name(const _class_name&) = delete;              \
   _class_name& operator=(const _class_name&) = delete
 
-// Macro used to simplify the task of deleting the new and new[]
-// operators. (IOW - disallow heap allocations)
-#define DISALLOW_NEW                          \
-  static void* operator new(size_t) = delete; \
-  static void* operator new[](size_t) = delete
-
 // Macro for defining a trait that checks if a type T has a method with the
 // given name. This is not as strong as using is_same to check function
 // signatures, but checking this trait first gives a better static_assert
