@@ -327,7 +327,7 @@ TEST_F(UnbindTestCase, AddDuringParentUnbind) {
   status = coordinator_.AddDevice(
       parent_device->device, std::move(controller_local), std::move(coordinator_local),
       nullptr /* props_data */, 0 /* props_count */, "child", 0 /* protocol_id */,
-      nullptr /* driver_path */, nullptr /* args */, false /* invisible */, false /* has_init */,
+      {} /* driver_path */, {} /* args */, false /* invisible */, false /* has_init */,
       true /* always_init */, zx::channel() /* client_remote */, &child);
   ASSERT_NOT_OK(status);
   coordinator_loop()->RunUntilIdle();

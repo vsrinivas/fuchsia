@@ -1171,7 +1171,7 @@ void Coordinator::HandleNewDevice(const fbl::RefPtr<Device>& dev) {
   }
   // TODO(tesienbe): We probably should do something with the return value
   // from this...
-  BindDevice(dev, nullptr /* autobind */, true /* new device */);
+  BindDevice(dev, {} /* libdrvname */, true /* new device */);
 }
 
 static void dump_suspend_task_dependencies(const SuspendTask* task, int depth = 0) {

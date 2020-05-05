@@ -52,8 +52,7 @@ class StringPiece : public std::string_view {
   constexpr StringPiece(const T& value)
       : StringPiece(GetStringData(value), GetStringLength(value)) {}
 
-  // Create a StringPiece from a nullptr. Equivalent to the standard default constructor.
-  constexpr StringPiece(decltype(nullptr)) : std::string_view() {}
+  StringPiece(decltype(nullptr)) = delete;
 };
 
 }  // namespace fbl

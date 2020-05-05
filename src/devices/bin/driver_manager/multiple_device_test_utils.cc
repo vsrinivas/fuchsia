@@ -135,8 +135,8 @@ void MultipleDeviceTestCase::SetUp() {
 
     status = coordinator_.AddDevice(
         coordinator_.sys_device()->proxy(), std::move(local), std::move(local2),
-        /* props_data */ nullptr, /* props_count */ 0, "platform-bus", 0, /* driver_path */ nullptr,
-        /* args */ nullptr, /* invisible */ false, /* has_init */ false, /* always_init */ true,
+        /* props_data */ nullptr, /* props_count */ 0, "platform-bus", 0, /* driver_path */ {},
+        /* args */ {}, /* invisible */ false, /* has_init */ false, /* always_init */ true,
         /* client_remote */ zx::channel(), &platform_bus_.device);
     ASSERT_OK(status);
     coordinator_loop_.RunUntilIdle();
@@ -198,7 +198,7 @@ void MultipleDeviceTestCase::AddDevice(const fbl::RefPtr<Device>& parent, const 
 
   status = coordinator_.AddDevice(
       parent, std::move(local), std::move(local2), /* props_data */ nullptr, /* props_count */ 0,
-      name, /* driver_path */ protocol_id, driver.data(), /* args */ nullptr, invisible, has_init,
+      name, /* driver_path */ protocol_id, driver.data(), /* args */ {}, invisible, has_init,
       always_init, /* client_remote */ zx::channel(), &state.device);
   state.device->flags |= DEV_CTX_ALLOW_MULTI_COMPOSITE;
   ASSERT_OK(status);

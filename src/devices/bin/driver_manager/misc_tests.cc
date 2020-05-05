@@ -380,7 +380,7 @@ TEST(MiscTestCase, BindDevices) {
   status = coordinator.AddDevice(
       coordinator.test_device(), std::move(controller_local), std::move(coordinator_local),
       nullptr /* props_data */, 0 /* props_count */, "mock-device", ZX_PROTOCOL_TEST,
-      nullptr /* driver_path */, nullptr /* args */, false /* invisible */, false /* has_init */,
+      {} /* driver_path */, {} /* args */, false /* invisible */, false /* has_init */,
       true /* always_init */, zx::channel() /* client_remote */, &device);
   ASSERT_OK(status);
   ASSERT_EQ(1, coordinator.devices().size_slow());
@@ -431,7 +431,7 @@ TEST(MiscTestCase, TestOutput) {
   status = coordinator.AddDevice(
       coordinator.test_device(), std::move(controller_local), std::move(coordinator_local),
       nullptr /* props_data */, 0 /* props_count */, "mock-device", ZX_PROTOCOL_TEST,
-      nullptr /* driver_path */, nullptr /* args */, false /* invisible */, false /* has_init */,
+      {} /* driver_path */, {} /* args */, false /* invisible */, false /* has_init */,
       true /* always_init */, zx::channel() /* client_remote */, &device);
   ASSERT_OK(status);
   ASSERT_EQ(1, coordinator.devices().size_slow());
@@ -508,8 +508,8 @@ void AddDeviceWithProperties(const llcpp::fuchsia::device::manager::DeviceProper
   fbl::RefPtr<Device> device;
   status = coordinator.AddDevice(
       coordinator.test_device(), std::move(controller_local), std::move(coordinator_local),
-      props_data, props_count, "mock-device", ZX_PROTOCOL_TEST, nullptr /* driver_path */,
-      nullptr /* args */, false /* invisible */, false /* has_init */, true /* always_init */,
+      props_data, props_count, "mock-device", ZX_PROTOCOL_TEST, {} /* driver_path */, {} /* args */,
+      false /* invisible */, false /* has_init */, true /* always_init */,
       zx::channel() /* client_remote */, &device);
   ASSERT_OK(status);
 

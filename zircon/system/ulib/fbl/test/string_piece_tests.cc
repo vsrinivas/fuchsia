@@ -97,10 +97,6 @@ TEST(StringPieceTest, CopyMoveAndAssignment) {
     str = data;
     EXPECT_EQ(data, str.data());
     EXPECT_EQ(3u, str.length());
-
-    str = nullptr;
-    EXPECT_NULL(str.data());
-    EXPECT_EQ(0u, str.length());
   }
 }
 
