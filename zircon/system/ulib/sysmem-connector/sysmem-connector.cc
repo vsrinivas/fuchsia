@@ -77,6 +77,8 @@ class SysmemConnector : public sysmem_connector {
   fbl::unique_fd sysmem_dir_fd_;
   zx::channel driver_connector_client_;
 
+  bool logged_connection_request_ = false;
+  bool logged_connected_ = false;
   //
   // Synchronized using lock_.
   //
@@ -109,6 +111,12 @@ zx_status_t SysmemConnector::Start() {
 
 void SysmemConnector::QueueRequest(zx::channel allocator_request) {
   ZX_DEBUG_ASSERT(thrd_current() != process_queue_thrd_);
+  if (!logged_connection_request_) {
+    // TODO(fxb/50876): Remove once hang has been debugged.
+    printf("sysmem-connector: Got first QueueRequest\n");
+    fflush(stdout);
+    logged_connection_request_ = true;
+  }
   bool trigger_needed;
   {  // scope lock
     fbl::AutoLock lock(&lock_);
@@ -237,6 +245,11 @@ void SysmemConnector::ProcessQueue() {
       connection_requests_.pop();
     }  // ~lock
     ZX_DEBUG_ASSERT(allocator_request);
+    if (!logged_connected_) {
+      // TODO(fxb/50876): Remove once hang has been debugged.
+      printf("sysmem-connector: Executing first QueueRequest\n");
+      fflush(stdout);
+    }
 
     // Poll for PEER_CLOSED just before we need the channel to be usable, to
     // avoid routing a request to a stale no-longer-usable sysmem device
@@ -299,6 +312,12 @@ void SysmemConnector::ProcessQueue() {
       // the next request will try ConnectToSysmemDriver() again.
       //
       // continue with next request
+    }
+    if (!logged_connected_) {
+      // TODO(fxb/50876): Remove once hang has been debugged.
+      printf("sysmem-connector: Finished first QueueRequest\n");
+      fflush(stdout);
+      logged_connected_ = true;
     }
   }
 }
