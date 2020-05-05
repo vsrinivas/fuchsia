@@ -40,7 +40,7 @@ pub struct Constant {
 // <!-- прочитане -->
 // <string name="label_read_messages>Read</string>
 // ```
-fn gen_id(name: impl AsRef<str>, message: impl AsRef<str>) -> u64 {
+pub(crate) fn gen_id(name: impl AsRef<str>, message: impl AsRef<str>) -> u64 {
     let mut hasher = DefaultHasher::new();
     name.as_ref().hash(&mut hasher);
     message.as_ref().hash(&mut hasher);

@@ -27,5 +27,6 @@ macro_rules! veprintln{
     }}
 }
 
+pub mod json;
 pub mod message_ids;
 pub mod parser;

@@ -56,6 +56,16 @@ impl Dictionary {
         self.messages.contains_key(key)
     }
 
+    /// Looks up a message by [key].
+    pub fn get(&self, key: &str) -> Option<&str> {
+        self.messages.get(key).map(|k| k.as_str())
+    }
+
+    /// Returns the number of elements in the dictionary.
+    pub fn len(&self) -> usize {
+        self.messages.len()
+    }
+
     /// Creates a [Dictionary] from a sequence of `{ key => value}` pairs.
     #[cfg(test)]
     pub fn from_init(init: &[(&str, &str)]) -> Dictionary {
@@ -341,6 +351,17 @@ mod tests {
         anyhow::{anyhow, Context, Error, Result},
         xml::reader::EventReader,
     };
+
+    #[test]
+    fn dictionary_api() -> Result<(), Error> {
+        let d = Dictionary::from_init(&vec![("string_name", "text_string")]);
+        assert_eq!(d.len(), 1);
+        assert_eq!(d.get("string_name").unwrap(), "text_string");
+        assert!(d.get("unknown").is_none(), "text_string");
+        assert_eq!(d.iter().map(|(k, _)| k.as_str()).collect::<Vec<&str>>(), vec!["string_name"]);
+        assert_eq!(d.iter().map(|(_, v)| v.as_str()).collect::<Vec<&str>>(), vec!["text_string"]);
+        Ok(())
+    }
 
     #[test]
     fn read_ok() -> Result<(), Error> {
