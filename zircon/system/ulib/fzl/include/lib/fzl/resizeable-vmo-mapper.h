@@ -16,7 +16,7 @@
 
 namespace fzl {
 
-// ResizeableVmoMapper is an extension of the basic VmoMapper utility which
+// ResizeableVmoMapper is an extension of the basic OwnedVmoMapper utility which
 // allows resizing of the mapping after it has been created.
 //
 class ResizeableVmoMapper : protected OwnedVmoMapper {
@@ -50,26 +50,31 @@ class ResizeableVmoMapper : protected OwnedVmoMapper {
                   zx_vm_option_t map_options = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
                   fbl::RefPtr<VmarManager> vmar_manager = nullptr);
 
-  // Attempts to reduce both the VMO size and VMAR mapping
-  // from |size_| to |size|.
+  // Attempts to reduce both the VMO size and the VMAR mapping from |size_| to |size|.
   //
-  // Attempting to shrink the mapping to a size of zero or
-  // requesting a "shrink" that would increase the mapping size
-  // returns an error.
+  // The start address of the mapping, |start_|, remains unchanged as a result of this call.
   //
-  // If |size| is not page aligned, shrinking will fail.
+  // Failure conditions:
+  // Attempting to shrink the mapping to a size of zero or requesting a "shrink" that would increase
+  // the mapping size returns an error.
+  //
+  // If |size| is not page-aligned, shrinking will fail.
+  //
+  // On failure, the mapping will be safe to use, but will remain at its original size.
   zx_status_t Shrink(size_t size);
 
-  // Attempts to increase both VMO size and VMAR mapping:
-  // From [addr_, addr_ + size_]
-  // To   [addr_, addr_ + size]
+  // Attempts to increase both the VMO size and the VMAR mapping from |size_| to |size|.
   //
-  // Attempting to grow the mapping to a size smaller than the
-  // current size will return an error.
-  //
-  // On failure, the Mapping will be safe to use, but will remain at its original size.
+  // Note that the VMAR mapping, and hence its start address, |start_|, might change. So it is not
+  // safe to retain any pointers computed using the old mapping's addresses. The client is
+  // expected to ensure their usage of the mapping is safe across a call to Grow().
   //
   // Unlike shrinking, it's permissible to grow to a non-page-aligned |size|.
+  //
+  // Failure conditions:
+  // Attempting to grow the mapping to a size smaller than the current size will return an error.
+  //
+  // On failure, the mapping will be safe to use, but will remain at its original size.
   zx_status_t Grow(size_t size);
 
   using OwnedVmoMapper::Release;
