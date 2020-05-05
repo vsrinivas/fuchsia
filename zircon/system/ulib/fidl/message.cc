@@ -155,21 +155,27 @@ zx_status_t Message::Read(zx_handle_t channel, uint32_t flags) {
   zx_status_t status =
       zx_channel_read(channel, flags, bytes_.data(), handles_.data(), bytes_.capacity(),
                       handles_.capacity(), &actual_bytes, &actual_handles);
-  if (status == ZX_OK) {
-    bytes_.set_actual(actual_bytes);
-    handles_.set_actual(actual_handles);
+  if (status != ZX_OK) {
+    return status;
   }
+
+  // Ensure we received enough bytes for the FIDL header.
   if (actual_bytes < sizeof(fidl_message_header_t)) {
-    // When reading a message, the size should always greater than the header size.
     return ZX_ERR_INVALID_ARGS;
   }
-  return status;
+
+  bytes_.set_actual(actual_bytes);
+  handles_.set_actual(actual_handles);
+  return ZX_OK;
 }
 
 zx_status_t Message::Write(zx_handle_t channel, uint32_t flags) {
   zx_status_t status = zx_channel_write(channel, flags, bytes_.data(), bytes_.actual(),
                                         handles_.data(), handles_.actual());
+
+  // Handles are cleared by the kernel on either success or failure.
   ClearHandlesUnsafe();
+
   return status;
 }
 

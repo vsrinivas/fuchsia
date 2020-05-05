@@ -61,6 +61,45 @@ TEST(Message, BasicTests) {
   EXPECT_EQ(message.ordinal(), 42u);
 }
 
+TEST(Message, ReadErrorCodes) {
+  // Create a Message buffer.
+  constexpr size_t kBufferSize = 100;
+  uint8_t byte_buffer[kBufferSize];
+  fidl::Message message(fidl::BytePart::WrapEmpty(byte_buffer), fidl::HandlePart());
+
+  // Create a channel.
+  zx::channel client, server;
+  EXPECT_OK(zx::channel::create(0, &client, &server));
+
+  // Read from an empty channel.
+  EXPECT_EQ(message.Read(client.get(), /*flags=*/0), ZX_ERR_SHOULD_WAIT);
+
+  // Read with invalid flags.
+  EXPECT_EQ(message.Read(client.get(), /*flags=*/~0), ZX_ERR_NOT_SUPPORTED);
+
+  // Read a message smaller than the FIDL header size.
+  {
+    uint8_t write_buffer[1] = {0};
+    EXPECT_OK(
+        server.write(/*flags=*/0, &write_buffer, sizeof(write_buffer), /*handles=*/nullptr, 0));
+    EXPECT_EQ(message.Read(client.get(), /*flags=*/0), ZX_ERR_INVALID_ARGS);
+  }
+
+  // Read a message larger than our receive buffer.
+  {
+    uint8_t write_buffer[kBufferSize + 1];
+    memset(write_buffer, 0xff, sizeof(write_buffer));
+    EXPECT_OK(
+        server.write(/*flags=*/0, &write_buffer, sizeof(write_buffer), /*handles=*/nullptr, 0));
+    EXPECT_EQ(message.Read(client.get(), /*flags=*/ZX_CHANNEL_READ_MAY_DISCARD),
+              ZX_ERR_BUFFER_TOO_SMALL);
+  }
+
+  // Read from closed channel.
+  server.reset();
+  EXPECT_EQ(message.Read(client.get(), /*flags=*/0), ZX_ERR_PEER_CLOSED);
+}
+
 TEST(MessageBuilder, BasicTests) {
   zx::event e;
   EXPECT_EQ(zx::event::create(0, &e), ZX_OK);
