@@ -2581,6 +2581,8 @@ static uint8_t brcmf_cfg80211_start_ap(struct net_device* ndev, const wlanif_sta
       BRCMF_ERR("Failed to install RSNE: %s", zx_status_get_string(status));
       goto fail;
     }
+  } else {
+    brcmf_configure_opensecurity(ifp);
   }
 
   status = brcmf_fil_cmd_int_set(ifp, BRCMF_C_SET_BCNPRD, req->beacon_period, &fw_err);

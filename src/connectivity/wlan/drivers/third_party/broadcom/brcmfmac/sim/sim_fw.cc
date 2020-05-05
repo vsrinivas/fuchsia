@@ -312,7 +312,7 @@ zx_status_t SimFirmware::BusTxCtl(unsigned char* msg, unsigned int len) {
           memcpy(assoc_opts->ssid.ssid, join_params->ssid_le.SSID, IEEE80211_MAX_SSID_LEN);
 
           AssocInit(std::move(assoc_opts), ifidx, channel);
-          AuthStart();
+          AuthStart(ifidx);
         }
       }
       break;
@@ -623,7 +623,7 @@ void SimFirmware::AssocScanDone() {
   // Send an event of the first scan result to driver when assoc scan is done.
   EscanResultSeen(ap);
 
-  AuthStart();
+  AuthStart(scan_state_.ifidx);
 }
 
 void SimFirmware::AssocClearContext() {
@@ -646,11 +646,11 @@ void SimFirmware::AssocHandleFailure() {
   } else {
     assoc_state_.num_attempts++;
     auth_state_.state = AuthState::NOT_AUTHENTICATED;
-    AuthStart();
+    AuthStart(assoc_state_.ifidx);
   }
 }
 
-void SimFirmware::AuthStart() {
+void SimFirmware::AuthStart(uint16_t ifidx) {
   common::MacAddr srcAddr(mac_addr_);
   common::MacAddr bssid(assoc_state_.opts->bssid);
 
@@ -667,21 +667,22 @@ void SimFirmware::AuthStart() {
     // When auth_state_.auth_type == BRCMF_AUTH_MODE_AUTO
     auth_type = simulation::AUTH_TYPE_SHARED_KEY;
   }
-
+  // Store the ifidx if auth needs to be restarted
+  auth_state_.ifidx = ifidx;
   simulation::SimAuthFrame auth_req_frame(srcAddr, bssid, 1, auth_type, WLAN_AUTH_RESULT_SUCCESS);
 
-  if (wsec_ == WEP_ENABLED) {
-    ZX_ASSERT(wpa_auth_ == WPA_AUTH_DISABLED);
+  if (iface_tbl_[ifidx].wsec == WEP_ENABLED) {
+    ZX_ASSERT(iface_tbl_[ifidx].wpa_auth == WPA_AUTH_DISABLED);
     auth_state_.sec_type = simulation::SEC_PROTO_TYPE_WEP;
   }
 
-  if (wpa_auth_ == WPA_AUTH_PSK) {
-    ZX_ASSERT((wsec_ & (uint32_t)WSEC_NONE) == 0U);
+  if (iface_tbl_[ifidx].wpa_auth == WPA_AUTH_PSK) {
+    ZX_ASSERT((iface_tbl_[ifidx].wsec & (uint32_t)WSEC_NONE) == 0U);
     auth_state_.sec_type = simulation::SEC_PROTO_TYPE_WPA1;
   }
 
-  if (wpa_auth_ == WPA2_AUTH_PSK) {
-    ZX_ASSERT((wsec_ & (uint32_t)WSEC_NONE) == 0U);
+  if (iface_tbl_[ifidx].wpa_auth == WPA2_AUTH_PSK) {
+    ZX_ASSERT((iface_tbl_[ifidx].wsec & (uint32_t)WSEC_NONE) == 0U);
     auth_state_.sec_type = simulation::SEC_PROTO_TYPE_WPA2;
   }
 
@@ -732,7 +733,7 @@ void SimFirmware::RxAuthResp(const simulation::SimAuthFrame* frame) {
       if (frame->status_ == WLAN_AUTH_RESULT_REFUSED) {
         auth_state_.state = AuthState::NOT_AUTHENTICATED;
         auth_state_.auth_type = BRCMF_AUTH_MODE_OPEN;
-        AuthStart();
+        AuthStart(auth_state_.ifidx);
         return;
       }
       // If we receive the second auth frame when we are expecting it, we send out the third one and
@@ -1145,7 +1146,8 @@ zx_status_t SimFirmware::SetIFChanspec(uint16_t ifidx, uint16_t chanspec) {
   return ZX_OK;
 }
 
-zx_status_t SimFirmware::HandleBssCfgSet(const char* name, const void* value, size_t value_len) {
+zx_status_t SimFirmware::HandleBssCfgSet(const uint16_t ifidx, const char* name, const void* value,
+                                         size_t value_len) {
   if (!std::strcmp(name, "interface_remove")) {
     if (value_len < sizeof(int32_t)) {
       return ZX_ERR_IO;
@@ -1160,6 +1162,35 @@ zx_status_t SimFirmware::HandleBssCfgSet(const char* name, const void* value, si
     return HandleIfaceRequest(true, value, value_len);
   }
 
+  if (!std::strcmp(name, "wsec")) {
+    // bsscfgidx is in the first 4 bytes
+    if (value_len < sizeof(int32_t) * 2) {
+      return ZX_ERR_IO;
+    }
+    auto wsec = static_cast<const uint32_t*>(value);
+    wsec++;
+    iface_tbl_[ifidx].wsec = *wsec;
+  }
+
+  if (!std::strcmp(name, "wpa_auth")) {
+    // bsscfgidx is in the first 4 bytes
+    if (value_len < sizeof(int32_t) * 2) {
+      return ZX_ERR_IO;
+    }
+    auto wpa_auth = static_cast<const uint32_t*>(value);
+    wpa_auth++;
+    iface_tbl_[ifidx].wpa_auth = *wpa_auth;
+  }
+
+  if (!std::strcmp(name, "wsec_key")) {
+    // bsscfgidx is in the first 4 bytes
+    if (value_len < sizeof(brcmf_wsec_key_le) + sizeof(uint32_t)) {
+      return ZX_ERR_IO;
+    }
+    auto key_buf = static_cast<const uint8_t*>(value);
+    memcpy(&iface_tbl_[ifidx].wsec_key, key_buf + sizeof(uint32_t), sizeof(brcmf_wsec_key_le));
+  }
+
   BRCMF_DBG(SIM, "Ignoring request to set bsscfg iovar '%s'", name);
   return ZX_OK;
 }
@@ -1168,7 +1199,7 @@ zx_status_t SimFirmware::IovarsSet(uint16_t ifidx, const char* name, const void*
                                    size_t value_len) {
   const size_t bsscfg_prefix_len = strlen(BRCMF_FWIL_BSSCFG_PREFIX);
   if (!std::strncmp(name, BRCMF_FWIL_BSSCFG_PREFIX, bsscfg_prefix_len)) {
-    return HandleBssCfgSet(name + bsscfg_prefix_len, value, value_len);
+    return HandleBssCfgSet(ifidx, name + bsscfg_prefix_len, value, value_len);
   }
 
   if (!std::strcmp(name, "country")) {
@@ -1203,13 +1234,19 @@ zx_status_t SimFirmware::IovarsSet(uint16_t ifidx, const char* name, const void*
   }
 
   if (!std::strcmp(name, "wsec")) {
+    if (value_len < sizeof(uint32_t)) {
+      return ZX_ERR_IO;
+    }
     auto wsec = static_cast<const uint32_t*>(value);
-    wsec_ = *wsec;
+    iface_tbl_[ifidx].wsec = *wsec;
   }
 
   if (!std::strcmp(name, "wsec_key")) {
+    if (value_len < sizeof(brcmf_wsec_key_le)) {
+      return ZX_ERR_IO;
+    }
     auto wk_req = static_cast<const brcmf_wsec_key_le*>(value);
-    wsec_key_ = *wk_req;
+    iface_tbl_[ifidx].wsec_key = *wk_req;
   }
 
   if (!std::strcmp(name, "assoc_retry_max")) {
@@ -1245,8 +1282,11 @@ zx_status_t SimFirmware::IovarsSet(uint16_t ifidx, const char* name, const void*
   }
 
   if (!std::strcmp(name, "wpa_auth")) {
+    if (value_len < sizeof(uint32_t)) {
+      return ZX_ERR_IO;
+    }
     auto wpa_auth = static_cast<const uint32_t*>(value);
-    wpa_auth_ = *wpa_auth;
+    iface_tbl_[ifidx].wpa_auth = *wpa_auth;
   }
 
   if (!std::strcmp(name, "auth")) {
@@ -1303,25 +1343,25 @@ zx_status_t SimFirmware::IovarsGet(uint16_t ifidx, const char* name, void* value
       memcpy(value_out, &mpc_, sizeof(uint32_t));
     }
   } else if (!std::strcmp(name, "wsec")) {
-    if (value_len < sizeof(wsec_)) {
+    if (value_len < sizeof(uint32_t)) {
       return ZX_ERR_INVALID_ARGS;
     }
-    memcpy(value_out, &wsec_, sizeof(wsec_));
+    memcpy(value_out, &iface_tbl_[ifidx].wsec, sizeof(uint32_t));
   } else if (!std::strcmp(name, "wpa_auth")) {
-    if (value_len < sizeof(wpa_auth_)) {
+    if (value_len < sizeof(uint32_t)) {
       return ZX_ERR_INVALID_ARGS;
     }
-    memcpy(value_out, &wpa_auth_, sizeof(wpa_auth_));
+    memcpy(value_out, &iface_tbl_[ifidx].wpa_auth, sizeof(uint32_t));
   } else if (!std::strcmp(name, "auth")) {
     if (value_len < sizeof(auth_state_.auth_type)) {
       return ZX_ERR_INVALID_ARGS;
     }
     memcpy(value_out, &auth_state_.auth_type, sizeof(auth_state_.auth_type));
   } else if (!std::strcmp(name, "wsec_key")) {
-    if (value_len < sizeof(wsec_key_)) {
+    if (value_len < sizeof(brcmf_wsec_key_le)) {
       return ZX_ERR_INVALID_ARGS;
     }
-    memcpy(value_out, &wsec_key_, sizeof(wsec_key_));
+    memcpy(value_out, &iface_tbl_[ifidx].wsec_key, sizeof(brcmf_wsec_key_le));
   } else if (!std::strcmp(name, "chanspec")) {
     if (value_len < sizeof(uint16_t)) {
       return ZX_ERR_INVALID_ARGS;

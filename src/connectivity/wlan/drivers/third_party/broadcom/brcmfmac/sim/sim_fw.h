@@ -147,6 +147,7 @@ class SimFirmware {
     uint64_t auth_timer_id;
     enum simulation::SimSecProtoType sec_type = simulation::SEC_PROTO_TYPE_OPEN;
     common::MacAddr bssid;
+    uint16_t ifidx;
   };
 
   struct ChannelSwitchState {
@@ -181,7 +182,8 @@ class SimFirmware {
   // Firmware iovar accessors
   zx_status_t IovarsSet(uint16_t ifidx, const char* name, const void* value, size_t value_len);
   zx_status_t IovarsGet(uint16_t ifidx, const char* name, void* value_out, size_t value_len);
-  zx_status_t HandleBssCfgSet(const char* name, const void* data, size_t value_len);
+  zx_status_t HandleBssCfgSet(const uint16_t ifidx, const char* name, const void* data,
+                              size_t value_len);
 
   // Bus operations: calls from driver
   zx_status_t BusPreinit();
@@ -232,6 +234,9 @@ class SimFirmware {
     int32_t bsscfgidx;
     bool allocated;
     int8_t iface_id;
+    uint32_t wsec = 0;
+    struct brcmf_wsec_key_le wsec_key;
+    uint32_t wpa_auth = 0;
     bool ap_mode;
     ApConfig ap_config;
   } sim_iface_entry_t;
@@ -278,7 +283,7 @@ class SimFirmware {
                  wlan_channel_t& channel);
   void AssocScanResultSeen(const ScanResult& scan_result);
   void AssocScanDone();
-  void AuthStart();  // Scan complete, start authentication process
+  void AuthStart(uint16_t ifidx);  // Scan complete, start authentication process
   void AssocStart();
   void AssocClearContext();
   void AuthClearContext();
@@ -367,9 +372,6 @@ class SimFirmware {
   uint32_t assoc_max_retries_ = 0;
   bool dev_is_up_ = false;
   uint32_t mpc_ = 1;  // Read FW appears to be setting this to 1 by default.
-  uint32_t wsec_ = 0;
-  struct brcmf_wsec_key_le wsec_key_;
-  uint32_t wpa_auth_ = 0;
   zx::duration beacon_timeout_ = kBeaconTimeout;
 };
 

@@ -6,6 +6,7 @@
 
 #include "src/connectivity/wlan/drivers/testing/lib/sim-device/device.h"
 #include "src/connectivity/wlan/drivers/testing/lib/sim-env/sim-env.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/cfg80211.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/sim.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/test/sim_test.h"
 
@@ -23,7 +24,7 @@ class CreateSoftAPTest : public SimTest {
   void Init();
   void CreateInterface();
   void DeleteInterface();
-  zx_status_t StartSoftAP();
+  zx_status_t StartSoftAP(bool sec_enabled = false);
   zx_status_t StopSoftAP();
   uint32_t DeviceCount();
   void TxAssocReq();
@@ -54,6 +55,7 @@ class CreateSoftAPTest : public SimTest {
   void OnDeauthInd(const wlanif_deauth_indication_t* ind);
   void OnAssocInd(const wlanif_assoc_ind_t* ind);
   void OnDisassocInd(const wlanif_disassoc_indication_t* ind);
+  uint16_t CreateRsneIe(uint8_t* buffer);
 };
 
 wlanif_impl_ifc_protocol_ops_t CreateSoftAPTest::sme_ops_ = {
@@ -104,15 +106,73 @@ void CreateSoftAPTest::DeleteInterface() {
 
 uint32_t CreateSoftAPTest::DeviceCount() { return (dev_mgr_->DevicesCount()); }
 
-zx_status_t CreateSoftAPTest::StartSoftAP() {
+uint16_t CreateSoftAPTest::CreateRsneIe(uint8_t* buffer) {
+  // construct a fake rsne ie in the input buffer
+  uint16_t offset = 0;
+  uint8_t* ie = buffer;
+
+  ie[offset++] = WLAN_IE_TYPE_RSNE;
+  ie[offset++] = 20;  // The length of following content.
+
+  // These two bytes are 16-bit version number.
+  ie[offset++] = 1;  // Lower byte
+  ie[offset++] = 0;  // Higher byte
+
+  memcpy(&ie[offset], RSN_OUI,
+         TLV_OUI_LEN);  // RSN OUI for multicast cipher suite.
+  offset += TLV_OUI_LEN;
+  ie[offset++] = WPA_CIPHER_TKIP;  // Set multicast cipher suite.
+
+  // These two bytes indicate the length of unicast cipher list, in this case is 1.
+  ie[offset++] = 1;  // Lower byte
+  ie[offset++] = 0;  // Higher byte
+
+  memcpy(&ie[offset], RSN_OUI,
+         TLV_OUI_LEN);  // RSN OUI for unicast cipher suite.
+  offset += TLV_OUI_LEN;
+  ie[offset++] = WPA_CIPHER_CCMP_128;  // Set unicast cipher suite.
+
+  // These two bytes indicate the length of auth management suite list, in this case is 1.
+  ie[offset++] = 1;  // Lower byte
+  ie[offset++] = 0;  // Higher byte
+
+  memcpy(&ie[offset], RSN_OUI,
+         TLV_OUI_LEN);  // RSN OUI for auth management suite.
+  offset += TLV_OUI_LEN;
+  ie[offset++] = RSN_AKM_PSK;  // Set auth management suite.
+
+  // These two bytes indicate RSN capabilities, in this case is \x0c\x00.
+  ie[offset++] = 12;  // Lower byte
+  ie[offset++] = 0;   // Higher byte
+
+  // ASSERT_EQ(offset, (const uint32_t) (ie[TLV_LEN_OFF] + TLV_HDR_LEN));
+  return offset;
+}
+
+zx_status_t CreateSoftAPTest::StartSoftAP(bool sec_enabled) {
   wlanif_start_req_t start_req = {
       .ssid = {.len = 6, .data = "Sim_AP"},
       .bss_type = WLAN_BSS_TYPE_INFRASTRUCTURE,
       .beacon_period = 100,
       .dtim_period = 100,
       .channel = kDefaultCh,
+      .rsne_len = 0,
   };
+  // If sec mode is requested, create a dummy RSNE IE (our SoftAP only
+  // supports WPA2)
+  if (sec_enabled == true) {
+    start_req.rsne_len = CreateRsneIe(start_req.rsne);
+  }
   softap_ifc_->if_impl_ops_->start_req(softap_ifc_->if_impl_ctx_, &start_req);
+
+  // Retrieve wsec from SIM FW to check if it is set appropriately
+  brcmf_simdev* sim = device_->GetSim();
+  int32_t wsec;
+  sim->sim_fw->IovarsGet(softap_ifc_->iface_id_, "wsec", &wsec, sizeof(wsec));
+  if (sec_enabled == true)
+    EXPECT_NE(wsec, 0);
+  else
+    EXPECT_EQ(wsec, 0);
   return ZX_OK;
 }
 
@@ -240,6 +300,22 @@ TEST_F(CreateSoftAPTest, CreateSoftAP) {
   CreateInterface();
   EXPECT_EQ(DeviceCount(), static_cast<size_t>(2));
   StartSoftAP();
+  StopSoftAP();
+  DeleteInterface();
+}
+
+// Start SoftAP in secure mode and then restart in open mode.
+// Appropriate secure mode is checked in StartSoftAP() after SoftAP
+// is started
+TEST_F(CreateSoftAPTest, CreateSecureSoftAP) {
+  Init();
+  CreateInterface();
+  EXPECT_EQ(DeviceCount(), static_cast<size_t>(2));
+  // Start SoftAP in secure mode
+  StartSoftAP(true);
+  StopSoftAP();
+// Restart SoftAP in open mode
+  StartSoftAP(true);
   StopSoftAP();
   DeleteInterface();
 }
