@@ -4,6 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <lib/cmdline.h>
 #include <lib/console.h>
 #include <lib/unittest/unittest.h>
 #include <zircon/syscalls/system.h>
@@ -100,6 +101,51 @@ static bool test_x64_msrs_k_commands() {
   BEGIN_TEST;
 
   console_run_script_locked("cpu rdmsr 0 0x10");
+
+  END_TEST;
+}
+
+static bool test_x64_hwp_k_commands() {
+  BEGIN_TEST;
+
+  // Don't test at all if HWP disabled on the command line.
+  if (!gCmdline.GetBool("kernel.x86.hwp", /*default_value=*/true)) {
+    return true;
+  }
+
+  // If we don't support HWP, expect every command to just return "not supported".
+  cpu_id::CpuId cpuid;
+  if (!x86::IntelHwpSupported(&cpuid)) {
+    EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, console_run_script_locked("hwp"));
+    return all_ok;
+  }
+
+  // Test top-level parsing.
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, console_run_script_locked("hwp"));
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, console_run_script_locked("hwp invalid"));
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, console_run_script_locked("hwp 3"));
+
+  // Set policy.
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, console_run_script_locked("hwp set-policy"));
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, console_run_script_locked("hwp set-policy invalid-policy"));
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, console_run_script_locked("hwp set-policy 3"));
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, console_run_script_locked("hwp set-policy performance 42"));
+  EXPECT_EQ(ZX_OK, console_run_script_locked("hwp set-policy performance"));
+  EXPECT_EQ(ZX_OK, console_run_script_locked("hwp set-policy power-save"));
+
+  // Set Freq
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, console_run_script_locked("hwp set-freq"));
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, console_run_script_locked("hwp set-freq 0"));
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, console_run_script_locked("hwp set-freq 256"));
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, console_run_script_locked("hwp set-freq 10 10"));
+  EXPECT_EQ(ZX_OK, console_run_script_locked("hwp set-freq 100"));
+  EXPECT_EQ(ZX_OK, console_run_script_locked("hwp set-freq 255"));
+
+  // Restore the policy to default.
+  MsrAccess msr;
+  x86::IntelHwpPolicy policy = x86::IntelHwpParsePolicy(gCmdline.GetString("kernel.x86.hwp_policy"))
+                                   .value_or(x86::IntelHwpPolicy::kBiosSpecified);
+  x86::IntelHwpInit(&cpuid, &msr, policy);
 
   END_TEST;
 }
@@ -764,6 +810,7 @@ static bool test_turbo_enable_disable() {
 UNITTEST_START_TESTCASE(x64_platform_tests)
 UNITTEST("basic test of read/write MSR variants", test_x64_msrs)
 UNITTEST("test k cpu rdmsr commands", test_x64_msrs_k_commands)
+UNITTEST("test k hwp commands", test_x64_hwp_k_commands)
 UNITTEST("test uarch_config is correctly selected", test_x64_cpu_uarch_config_selection)
 UNITTEST("test enumeration of x64 Meltdown vulnerability", test_x64_meltdown_enumeration)
 UNITTEST("test enumeration of x64 L1TF vulnerability", test_x64_l1tf_enumeration)

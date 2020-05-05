@@ -198,54 +198,103 @@ bool IntelHwpSupported(const cpu_id::CpuId* cpuid) {
          cpuid->ReadFeatures().HasFeature(cpu_id::Features::HWP_PREF);
 }
 
-static void hwp_set_hint_sync_task(void* ctx) {
-  uint8_t hint = (unsigned long)ctx & 0xff;
-  uint64_t hwp_req = read_msr(X86_MSR_IA32_HWP_REQUEST) & ~(0xff << 16);
-  hwp_req |= (hint << 16);
-  hwp_req &= ~(0xffffffffull << 32);
-  write_msr(X86_MSR_IA32_HWP_REQUEST, hwp_req);
+namespace {
+
+void CmdPrintUsage() {
+  printf(
+      "usage:\n"
+      "  hwp set-policy <policy-name>  - set performance policy\n"
+      "                                  valid policies include bios-specified, performance,\n"
+      "                                  balanced, power-save, stable-performance.\n"
+      "  hwp set-freq <int>            - set processor frequency to given value.\n"
+      "                                  values map directly onto frequency targets, but the \n"
+      "                                  exact meaning is processor-dependant.\n");
 }
 
-static void hwp_set_desired_performance(unsigned long hint) {
-  Guard<Mutex> guard{hwp_lock::Get()};
-
-  if (!x86_feature_test(X86_FEATURE_HWP_PREF)) {
-    printf("HWP hint not supported\n");
-    return;
-  }
-  mp_sync_exec(MP_IPI_TARGET_ALL, 0, hwp_set_hint_sync_task, (void*)hint);
-}
-
-static int cmd_hwp(int argc, const cmd_args* argv, uint32_t flags) {
-  if (argc < 2) {
-  notenoughargs:
-    printf("not enough arguments\n");
-  usage:
-    printf("usage:\n");
-    printf("%s hint <1-255>: set clock speed hint (as a multiple of 100MHz)\n", argv[0].str);
-    printf("%s hint 0: enable autoscaling\n", argv[0].str);
-    return ZX_ERR_INTERNAL;
+zx_status_t CmdSetPolicy(int argc, const cmd_args* argv, uint32_t flags) {
+  if (argc != 1) {
+    CmdPrintUsage();
+    return ZX_ERR_INVALID_ARGS;
   }
 
-  if (!strcmp(argv[1].str, "hint")) {
-    if (argc < 3) {
-      goto notenoughargs;
-    }
-    if (argv[2].u > 0xff) {
-      printf("hint must be between 0 and 255\n");
-      goto usage;
-    }
-    hwp_set_desired_performance(argv[2].u);
-  } else {
-    printf("unknown command\n");
-    goto usage;
+  std::optional<IntelHwpPolicy> policy = IntelHwpParsePolicy(argv[0].str);
+  if (!policy.has_value()) {
+    printf("Unknown policy '%s'.\n", argv[0].str);
+    return ZX_ERR_INVALID_ARGS;
   }
 
+  mp_sync_exec(
+      MP_IPI_TARGET_ALL, 0,
+      [](void* policy_ptr) {
+        auto policy = reinterpret_cast<std::optional<IntelHwpPolicy>*>(policy_ptr)->value();
+        cpu_id::CpuId cpuid;
+        MsrAccess msr;
+        IntelHwpInit(&cpuid, &msr, policy);
+      },
+      &policy);
+
+  printf("Policy updated to '%s'.\n", argv[0].str);
   return ZX_OK;
 }
 
+zx_status_t CmdSetFreq(int argc, const cmd_args* argv, uint32_t flags) {
+  if (argc != 1) {
+    CmdPrintUsage();
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  unsigned long desired_freq = argv[0].u;
+  if (desired_freq == 0 || desired_freq >= 256) {
+    printf("Invalid frequency target.\n");
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  mp_sync_exec(
+      MP_IPI_TARGET_ALL, 0,
+      [](void* desired_freq_ptr) {
+        auto desired_freq = PerformanceLevel(
+            static_cast<uint8_t>(*reinterpret_cast<unsigned long*>(desired_freq_ptr)));
+        MsrAccess msr;
+        msr.write_msr(X86_MSR_IA32_HWP_REQUEST,
+                      MakeHwpRequest(/*min_perf=*/desired_freq, /*max_perf=*/desired_freq,
+                                     /*desired_perf=*/desired_freq, /*epp=*/kMaxPerformanceEPP));
+      },
+      &desired_freq);
+
+  printf("Frequency set to target %lu.\n", desired_freq);
+  return ZX_OK;
+}
+
+zx_status_t CmdHwp(int argc, const cmd_args* argv, uint32_t flags) {
+  // Ensure we have the hardware.
+  cpu_id::CpuId cpuid;
+  if (!IntelHwpSupported(&cpuid)) {
+    printf("HWP not supported on system.\n");
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  // Each command needs at least two tokens: "hwp <subcommand>".
+  if (argc < 2) {
+    CmdPrintUsage();
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  std::string_view subcommand(argv[1].str);
+  if (subcommand == "set-policy"sv) {
+    return CmdSetPolicy(argc - 2, argv + 2, flags);
+  }
+
+  if (subcommand == "set-freq"sv) {
+    return CmdSetFreq(argc - 2, argv + 2, flags);
+  }
+
+  CmdPrintUsage();
+  return ZX_ERR_INVALID_ARGS;
+}
+
+}  // namespace
 }  // namespace x86
 
 STATIC_COMMAND_START
-STATIC_COMMAND("hwp", "hardware controlled performance states\n", &x86::cmd_hwp)
+STATIC_COMMAND("hwp", "hardware controlled performance states\n", &x86::CmdHwp)
 STATIC_COMMAND_END(hwp)

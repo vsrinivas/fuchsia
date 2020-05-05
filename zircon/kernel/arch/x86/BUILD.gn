@@ -215,6 +215,7 @@ source_set("tests") {
   deps = [
     ":headers",
     "$zx/kernel/lib/acpi_tables:headers",
+    "$zx/kernel/lib/cmdline",
     "$zx/kernel/lib/console:headers",
     "$zx/kernel/lib/topology:headers",
     "$zx/kernel/lib/unittest",
