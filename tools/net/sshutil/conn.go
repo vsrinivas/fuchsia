@@ -146,7 +146,10 @@ func (c *Conn) makeSession(ctx context.Context, stdout io.Writer, stderr io.Writ
 
 	select {
 	case r := <-ch:
-		return r.session, r.err
+		if r.err != nil {
+			return nil, fmt.Errorf("failed to start ssh session: %w", r.err)
+		}
+		return r.session, nil
 	case <-ctx.Done():
 		return nil, ctx.Err()
 	}
@@ -160,7 +163,7 @@ func (c *Conn) Start(ctx context.Context, command []string, stdout io.Writer, st
 		return nil, err
 	}
 
-	logger.Debugf(ctx, "spawning: %s", command)
+	logger.Debugf(ctx, "starting over ssh: %s", command)
 
 	if err := session.Start(ctx, command); err != nil {
 		session.Close()
@@ -178,9 +181,23 @@ func (c *Conn) Run(ctx context.Context, command []string, stdout io.Writer, stde
 	}
 	defer session.Close()
 
-	logger.Debugf(ctx, "running: %s", command)
+	logger.Debugf(ctx, "running over ssh: %v", command)
 
-	return session.Run(ctx, command)
+	if err := session.Run(ctx, command); err != nil {
+		var log string
+		switch e := err.(type) {
+		case *ssh.ExitError:
+			log = fmt.Sprintf("ssh command failed with exit code %d", e.ExitStatus())
+		case *ssh.ExitMissingError:
+			log = "ssh command failed with no exit code"
+		default:
+			log = fmt.Sprintf("ssh command failed with error %q", e.Error())
+		}
+		logger.Errorf(ctx, "%s: %v", log, command)
+		return err
+	}
+	logger.Debugf(ctx, "successfully ran over ssh: %v", command)
+	return nil
 }
 
 // Close the ssh client connections.
@@ -261,6 +278,8 @@ func (c *Conn) keepalive(ctx context.Context, ticks <-chan time.Time, timeout fu
 			ch <- err
 		}()
 
+		sendTime := time.Now()
+
 		select {
 		case <-c.shuttingDown:
 			// Ignore the keepalive result if we are shutting down.
@@ -287,7 +306,8 @@ func (c *Conn) keepalive(ctx context.Context, ticks <-chan time.Time, timeout fu
 			}
 
 		case <-timeout():
-			logger.Errorf(ctx, "timed out sending keepalive, disconnecting")
+			timeoutDuration := time.Since(sendTime)
+			logger.Errorf(ctx, "ssh keepalive timed out after %.3f, disconnecting", timeoutDuration.Seconds())
 			c.disconnect()
 			return
 		}
