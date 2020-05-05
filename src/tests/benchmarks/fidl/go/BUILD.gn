@@ -19,6 +19,7 @@ gidl("benchmark_suite_go") {
   inputs = benchmark_suite_gidl_files
   fidl = "//src/tests/benchmarks/fidl/benchmark_suite:benchmark_suite_fidl"
   output = "$gidl_go_out_dir/benchmark_suite.go"
+  deps = [ "//src/tests/benchmarks/fidl/benchmark_suite/gen:host" ]
 }
 
 go_library("benchmark_suite_go_lib") {
