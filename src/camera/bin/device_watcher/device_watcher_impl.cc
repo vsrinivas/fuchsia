@@ -57,9 +57,11 @@ fit::result<PersistentDeviceId, zx_status_t> DeviceWatcherImpl::AddDevice(
   });
 
   fuchsia::camera2::DeviceInfo info_return;
-  ctrl->GetDeviceInfo([&](fuchsia::camera2::DeviceInfo info) {
-    info_return = std::move(info);
-    event.signal(0, kInfoSignal);
+  async::PostTask(loop_.dispatcher(), [&] {
+    ctrl->GetDeviceInfo([&](fuchsia::camera2::DeviceInfo info) {
+      info_return = std::move(info);
+      event.signal(0, kInfoSignal);
+    });
   });
 
   zx_signals_t signaled{};
@@ -129,8 +131,10 @@ void DeviceWatcherImpl::OnNewRequest(
   }
   auto client = result.take_value();
   async::PostTask(loop_.dispatcher(),
-                  [this, client = client.get()]() { client->UpdateDevices(devices_); });
-  clients_[client_id_next_] = std::move(client);
+                  [this, client = std::move(client), id = client_id_next_]() mutable {
+                    client->UpdateDevices(devices_);
+                    clients_[id] = std::move(client);
+                  });
   FX_LOGS(DEBUG) << "DeviceWatcher client " << client_id_next_ << " connected.";
   ++client_id_next_;
 }
