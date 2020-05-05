@@ -12,7 +12,7 @@ use {
     settings::agent::restore_agent::RestoreAgent,
     settings::config::default_settings::DefaultSetting,
     settings::registry::device_storage::StashDeviceStorageFactory,
-    settings::switchboard::base::get_all_setting_types,
+    settings::switchboard::base::get_default_setting_types,
     settings::EnvironmentBuilder,
     settings::ServiceConfiguration,
     std::sync::Arc,
@@ -31,7 +31,7 @@ fn main() -> Result<(), Error> {
         connect_to_service::<fidl_fuchsia_stash::StoreMarker>().unwrap(),
     );
 
-    let default_configuration = ServiceConfiguration { services: get_all_setting_types() };
+    let default_configuration = ServiceConfiguration { services: get_default_setting_types() };
 
     let configuration = DefaultSetting::new(
         default_configuration,

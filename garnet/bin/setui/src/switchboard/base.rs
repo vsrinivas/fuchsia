@@ -99,6 +99,22 @@ pub fn get_all_setting_types() -> HashSet<SettingType> {
     .collect();
 }
 
+/// Returns default setting types. These types should be product-agnostic,
+/// capable of operating with platform level support.
+pub fn get_default_setting_types() -> HashSet<SettingType> {
+    return vec![
+        SettingType::Accessibility,
+        SettingType::Device,
+        SettingType::Intl,
+        SettingType::Power,
+        SettingType::Privacy,
+        SettingType::Setup,
+        SettingType::System,
+    ]
+    .into_iter()
+    .collect();
+}
+
 /// The possible requests that can be made on a setting. The sink will expect a
 /// subset of the values defined below based on the associated type.
 /// The types are arranged alphabetically.
