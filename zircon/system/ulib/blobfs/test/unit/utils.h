@@ -65,7 +65,7 @@ class MockTransactionManager : public TransactionManager {
 
   Superblock& MutableInfo() { return superblock_; }
 
-  zx_status_t AddInodes(fzl::ResizeableVmoMapper* node_map) final { return ZX_ERR_NOT_SUPPORTED; }
+  zx_status_t AddInodes(Allocator*) final { return ZX_ERR_NOT_SUPPORTED; }
 
   zx_status_t AddBlocks(size_t nblocks, RawBitmap* map) final { return ZX_ERR_NOT_SUPPORTED; }
 
@@ -96,7 +96,7 @@ class MockSpaceManager : public SpaceManager {
   Superblock& MutableInfo() { return superblock_; }
 
   const Superblock& Info() const final { return superblock_; }
-  zx_status_t AddInodes(fzl::ResizeableVmoMapper* node_map) final { return ZX_ERR_NOT_SUPPORTED; }
+  zx_status_t AddInodes(Allocator*) final { return ZX_ERR_NOT_SUPPORTED; }
   zx_status_t AddBlocks(size_t nblocks, RawBitmap* map) final { return ZX_ERR_NOT_SUPPORTED; }
   zx_status_t BlockAttachVmo(const zx::vmo& vmo, storage::Vmoid* out) final { return ZX_ERR_NOT_SUPPORTED; }
   zx_status_t BlockDetachVmo(storage::Vmoid vmoid) final { return ZX_ERR_NOT_SUPPORTED; }

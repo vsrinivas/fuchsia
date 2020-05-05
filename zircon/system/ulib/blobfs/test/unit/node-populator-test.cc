@@ -85,7 +85,7 @@ TEST(NodePopulatorTest, WalkOne) {
   };
 
   // Before walking, observe that the node is not allocated.
-  const Inode* inode = allocator->GetNode(node_index);
+  const InodePtr inode = allocator->GetNode(node_index);
   ASSERT_FALSE(inode->header.IsAllocated());
   ASSERT_FALSE(inode->header.IsExtentContainer());
   ASSERT_EQ(0, inode->header.next_node);
@@ -141,7 +141,7 @@ TEST(NodePopulatorTest, WalkAllInlineExtents) {
   };
 
   // Before walking, observe that the node is not allocated.
-  const Inode* inode = allocator->GetNode(allocated_nodes[0]);
+  const InodePtr inode = allocator->GetNode(allocated_nodes[0]);
   ASSERT_FALSE(inode->header.IsAllocated());
   ASSERT_FALSE(inode->header.IsExtentContainer());
   ASSERT_EQ(0, inode->header.next_node);
@@ -201,7 +201,7 @@ TEST(NodePopulatorTest, WalkManyNodes) {
   };
 
   // Before walking, observe that the node is not allocated.
-  Inode* inode = allocator->GetNode(allocated_nodes[0]);
+  InodePtr inode = allocator->GetNode(allocated_nodes[0]);
   ASSERT_FALSE(inode->header.IsAllocated());
   ASSERT_FALSE(inode->header.IsExtentContainer());
   ASSERT_EQ(0, inode->header.next_node);
@@ -260,7 +260,7 @@ TEST(NodePopulatorTest, WalkManyContainers) {
   CopyNodes(nodes, &allocated_nodes);
 
   // Before walking, observe that the node is not allocated.
-  Inode* inode = allocator->GetNode(allocated_nodes[0]);
+  InodePtr inode = allocator->GetNode(allocated_nodes[0]);
   ASSERT_FALSE(inode->header.IsAllocated());
   ASSERT_FALSE(inode->header.IsExtentContainer());
   ASSERT_EQ(0, inode->header.next_node);
@@ -345,7 +345,7 @@ TEST(NodePopulatorTest, WalkExtraNodes) {
   CopyNodes(nodes, &allocated_nodes);
 
   // Before walking, observe that the node is not allocated.
-  Inode* inode = allocator->GetNode(allocated_nodes[0]);
+  InodePtr inode = allocator->GetNode(allocated_nodes[0]);
   ASSERT_FALSE(inode->header.IsAllocated());
   ASSERT_FALSE(inode->header.IsExtentContainer());
   ASSERT_EQ(0, inode->header.next_node);
@@ -418,7 +418,7 @@ TEST(NodePopulatorTest, WalkExtraExtents) {
   CopyNodes(nodes, &allocated_nodes);
 
   // Before walking, observe that the node is not allocated.
-  Inode* inode = allocator->GetNode(allocated_nodes[0]);
+  InodePtr inode = allocator->GetNode(allocated_nodes[0]);
   ASSERT_FALSE(inode->header.IsAllocated());
   ASSERT_FALSE(inode->header.IsExtentContainer());
   ASSERT_EQ(0, inode->header.next_node);

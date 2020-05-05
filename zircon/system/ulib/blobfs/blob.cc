@@ -265,7 +265,7 @@ fit::promise<void, zx_status_t> Blob::WriteMetadata() {
       return NodePopulator::IterationCommand::Continue;
     };
 
-    Inode* mapped_inode = blobfs_->GetNode(map_index_);
+    InodePtr mapped_inode = blobfs_->GetNode(map_index_);
     *mapped_inode = inode_;
     NodePopulator populator(blobfs_->GetAllocator(), std::move(write_info_->extents),
                             std::move(write_info_->node_indices));

@@ -36,9 +36,11 @@ Allocator::Allocator(SpaceManager* space_manager, RawBitmap block_map,
 
 Allocator::~Allocator() = default;
 
-Inode* Allocator::GetNode(uint32_t node_index) {
+InodePtr Allocator::GetNode(uint32_t node_index) {
   ZX_DEBUG_ASSERT(node_index < node_map_.size() / kBlobfsInodeSize);
-  return &reinterpret_cast<Inode*>(node_map_.start())[node_index];
+  node_map_grow_mutex_.lock_shared();
+  return InodePtr(&reinterpret_cast<Inode*>(node_map_.start())[node_index],
+                  InodePtrDeleter(this));
 }
 
 bool Allocator::CheckBlocksAllocated(uint64_t start_block, uint64_t end_block,
@@ -154,7 +156,7 @@ zx_status_t Allocator::ReserveNodes(uint64_t num_nodes, fbl::Vector<ReservedNode
 }
 
 zx_status_t Allocator::Grow() {
-  zx_status_t status = space_manager_->AddInodes(&node_map_);
+  zx_status_t status = space_manager_->AddInodes(this);
   if (status != ZX_OK) {
     return status;
   }
@@ -199,7 +201,7 @@ void Allocator::MarkNodeAllocated(uint32_t node_index) {
 }
 
 void Allocator::MarkInodeAllocated(const ReservedNode& node) {
-  Inode* mapped_inode = GetNode(node.index());
+  InodePtr mapped_inode = GetNode(node.index());
   ZX_ASSERT((mapped_inode->header.flags & kBlobFlagAllocated) == 0);
   mapped_inode->header.flags = kBlobFlagAllocated;
   mapped_inode->header.next_node = 0;
@@ -256,8 +258,9 @@ zx_status_t Allocator::ResetNodeMapSize() {
   ZX_DEBUG_ASSERT(nodemap_size / kBlobfsBlockSize == NodeMapBlocks(info));
 
   if (nodemap_size > node_map_.size()) {
-    status = node_map_.Grow(nodemap_size);
+    status = GrowNodeMap(nodemap_size);
   } else if (nodemap_size < node_map_.size()) {
+    // It is safe to shrink node_map_ without a lock because the mapping won't change in that case.
     status = node_map_.Shrink(nodemap_size);
   }
   if (status != ZX_OK) {
@@ -496,6 +499,15 @@ fbl::Vector<BlockRegion> Allocator::GetAllocatedRegions() const {
     out_regions.push_back({offset, end - offset});
   }
   return out_regions;
+}
+
+zx_status_t Allocator::GrowNodeMap(size_t size) {
+  std::scoped_lock lock(node_map_grow_mutex_);
+  return node_map_.Grow(size);
+}
+
+void Allocator::DropInodePtr() {
+  node_map_grow_mutex_.unlock_shared();
 }
 
 }  // namespace blobfs

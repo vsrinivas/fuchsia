@@ -21,9 +21,9 @@ constexpr zx::duration kCobaltFlushTimer = zx::min(5);
 
 size_t TicksToMs(const zx::ticks& ticks) { return fzl::TicksToNs(ticks) / zx::msec(1); }
 
-fs_metrics::CompressionFormat FormatForInode(const Inode* inode) {
-  if (inode->IsCompressed()) {
-    auto compression = inode->header.flags & kBlobFlagMaskAnyCompression;
+fs_metrics::CompressionFormat FormatForInode(const Inode& inode) {
+  if (inode.IsCompressed()) {
+    auto compression = inode.header.flags & kBlobFlagMaskAnyCompression;
     switch (compression) {
       case kBlobFlagLZ4Compressed:
         return fs_metrics::CompressionFormat::kCompressedLZ4;
@@ -150,12 +150,12 @@ void BlobfsMetrics::UpdateMerkleVerify(uint64_t size_data, uint64_t size_merkle,
   }
 }
 
-void BlobfsMetrics::IncrementCompressionFormatMetric(const Inode* inode) {
+void BlobfsMetrics::IncrementCompressionFormatMetric(const Inode& inode) {
   if (!Collecting()) {
     return;
   }
   fs_metrics::CompressionFormat format = FormatForInode(inode);
-  cobalt_metrics_.mutable_compression_format_metrics()->IncrementCounter(format, inode->blob_size);
+  cobalt_metrics_.mutable_compression_format_metrics()->IncrementCounter(format, inode.blob_size);
 }
 
 }  // namespace blobfs

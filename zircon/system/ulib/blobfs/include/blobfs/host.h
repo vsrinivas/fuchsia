@@ -147,7 +147,7 @@ class Blobfs : public fbl::RefCounted<Blobfs>, public NodeFinder {
   zx_status_t WriteInfo();
 
   // Access the |node_index|-th inode
-  Inode* GetNode(uint32_t node_index) final;
+  InodePtr GetNode(uint32_t node_index) final;
 
   NodeFinder* GetNodeFinder() { return this; }
 

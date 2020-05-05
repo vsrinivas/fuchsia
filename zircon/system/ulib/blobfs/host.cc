@@ -715,20 +715,20 @@ zx_status_t Blobfs::ResetCache() {
   return ZX_OK;
 }
 
-Inode* Blobfs::GetNode(uint32_t index) {
+InodePtr Blobfs::GetNode(uint32_t index) {
   size_t bno = node_map_start_block_ + index / kBlobfsInodesPerBlock;
 
   if (bno >= data_start_block_) {
     // Set cache to 0 so we can return a pointer to an empty inode
     if (ResetCache() != ZX_OK) {
-      return nullptr;
+      return {};
     }
   } else if (ReadBlock(bno) < 0) {
-    return nullptr;
+    return {};
   }
 
   auto iblock = reinterpret_cast<Inode*>(cache_.blk);
-  return &iblock[index % kBlobfsInodesPerBlock];
+  return InodePtr(&iblock[index % kBlobfsInodesPerBlock], InodePtrDeleter(this));
 }
 
 zx_status_t Blobfs::LoadAndVerifyBlob(uint32_t node_index) {

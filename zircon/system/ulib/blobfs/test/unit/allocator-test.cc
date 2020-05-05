@@ -489,5 +489,47 @@ TEST(AllocatorTest, ResetFromStorageTest) {
       CompareData(&bitmap_data[0], allocator.GetNodeMapVmo(), kDeviceBlockSize));
 }
 
+TEST(AllocatorTest, LiveInodePtrBlocksGrow) {
+  MockSpaceManager space_manager;
+  RawBitmap block_map;
+  fzl::ResizeableVmoMapper node_map;
+  ASSERT_OK(node_map.CreateAndMap(kBlobfsBlockSize, "node map"));
+  std::unique_ptr<IdAllocator> nodes_bitmap = {};
+  ASSERT_OK(IdAllocator::Create(0, &nodes_bitmap), "nodes bitmap");
+  Allocator allocator(&space_manager, std::move(block_map), std::move(node_map),
+                      std::move(nodes_bitmap));
+
+  // Whilst inode pointer is alive, we cannot grow the node_map.
+  InodePtr inode = allocator.GetNode(0);
+  bool done = false;
+  std::thread thread([&]() {
+                       ASSERT_OK(allocator.GrowNodeMap(kBlobfsBlockSize * 5));
+                       done = true;
+                     });
+  // Sleeping is usually bad in tests, but this is a halting problem.
+  zx_nanosleep(zx_deadline_after(ZX_MSEC(50)));
+  EXPECT_FALSE(done);
+
+  // Reset the pointer and the thread should be unblocked.
+  inode.reset();
+
+  thread.join();
+  EXPECT_TRUE(done);
+}
+
+TEST(AllocatorTest, TwoInodePtrsDontBlock) {
+  MockSpaceManager space_manager;
+  RawBitmap block_map;
+  fzl::ResizeableVmoMapper node_map;
+  ASSERT_OK(node_map.CreateAndMap(kBlobfsBlockSize, "node map"));
+  std::unique_ptr<IdAllocator> nodes_bitmap = {};
+  ASSERT_OK(IdAllocator::Create(0, &nodes_bitmap), "nodes bitmap");
+  Allocator allocator(&space_manager, std::move(block_map), std::move(node_map),
+                      std::move(nodes_bitmap));
+
+  InodePtr inode1 = allocator.GetNode(0);
+  InodePtr inode2 = allocator.GetNode(1);
+}
+
 }  // namespace
 }  // namespace blobfs

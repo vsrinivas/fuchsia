@@ -341,7 +341,7 @@ void Blobfs::FreeNode(uint32_t node_index, storage::UnbufferedOperationsBuilder*
 void Blobfs::FreeInode(uint32_t node_index, storage::UnbufferedOperationsBuilder* operations,
                        std::vector<storage::BufferedOperation>* trim_data) {
   TRACE_DURATION("blobfs", "Blobfs::FreeInode", "node_index", node_index);
-  Inode* mapped_inode = GetNode(node_index);
+  InodePtr mapped_inode = GetNode(node_index);
   ZX_DEBUG_ASSERT(operations != nullptr);
 
   if (mapped_inode->header.IsAllocated()) {
@@ -515,7 +515,7 @@ zx_status_t Blobfs::BlockDetachVmo(storage::Vmoid vmoid) {
   return Device()->BlockDetachVmo(std::move(vmoid));
 }
 
-zx_status_t Blobfs::AddInodes(fzl::ResizeableVmoMapper* node_map) {
+zx_status_t Blobfs::AddInodes(Allocator* allocator) {
   TRACE_DURATION("blobfs", "Blobfs::AddInodes");
 
   if (!(info_.flags & kBlobFlagFVM)) {
@@ -541,7 +541,7 @@ zx_status_t Blobfs::AddInodes(fzl::ResizeableVmoMapper* node_map) {
                          kBlobfsInodesPerBlock;
   ZX_DEBUG_ASSERT(inoblks_old <= inoblks);
 
-  if (node_map->Grow(inoblks * kBlobfsBlockSize) != ZX_OK) {
+  if (allocator->GrowNodeMap(inoblks * kBlobfsBlockSize) != ZX_OK) {
     return ZX_ERR_NO_SPACE;
   }
 
@@ -551,15 +551,16 @@ zx_status_t Blobfs::AddInodes(fzl::ResizeableVmoMapper* node_map) {
 
   // Reset new inodes to 0, and update the info block.
   uint64_t zeroed_nodes_blocks = inoblks - inoblks_old;
-  uintptr_t addr = reinterpret_cast<uintptr_t>(node_map->start());
-  memset(reinterpret_cast<void*>(addr + kBlobfsBlockSize * inoblks_old), 0,
-         (kBlobfsBlockSize * (zeroed_nodes_blocks)));
+  // Use GetNode to get a pointer to the first node we need to zero and also to keep the map locked
+  // whilst we zero them.
+  InodePtr new_nodes = allocator->GetNode(inoblks_old * kBlobfsInodesPerBlock);
+  memset(&*new_nodes, 0, kBlobfsBlockSize * zeroed_nodes_blocks);
 
   storage::UnbufferedOperationsBuilder builder;
   WriteInfo(&builder);
   if (zeroed_nodes_blocks > 0) {
     storage::UnbufferedOperation operation = {
-        .vmo = zx::unowned_vmo(node_map->vmo().get()),
+      .vmo = zx::unowned_vmo(allocator->GetNodeMapVmo().get()),
         {
             .type = storage::OperationType::kWrite,
             .vmo_offset = inoblks_old,
@@ -718,7 +719,7 @@ zx_status_t Blobfs::InitializeVnodes() {
   uint32_t total_allocated = 0;
 
   for (uint32_t node_index = 0; node_index < info_.inode_count; node_index++) {
-    const Inode* inode = GetNode(node_index);
+    const InodePtr inode = GetNode(node_index);
     // We are not interested in free nodes.
     if (!inode->header.IsAllocated()) {
       continue;
@@ -746,7 +747,7 @@ zx_status_t Blobfs::InitializeVnodes() {
       return status;
     }
     metrics_.UpdateLookup(vnode->SizeData());
-    metrics_.IncrementCompressionFormatMetric(inode);
+    metrics_.IncrementCompressionFormatMetric(*inode);
   }
 
   if (total_allocated != info_.alloc_inode_count) {

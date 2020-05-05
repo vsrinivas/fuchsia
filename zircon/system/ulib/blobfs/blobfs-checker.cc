@@ -30,7 +30,7 @@ namespace blobfs {
 
 void BlobfsChecker::TraverseInodeBitmap() {
   for (unsigned n = 0; n < blobfs_->info_.inode_count; n++) {
-    Inode* inode = blobfs_->GetNode(n);
+    InodePtr inode = blobfs_->GetNode(n);
     if (inode->header.IsAllocated()) {
       alloc_inodes_++;
       if (inode->header.IsExtentContainer()) {

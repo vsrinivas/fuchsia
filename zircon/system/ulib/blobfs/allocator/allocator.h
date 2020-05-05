@@ -14,6 +14,7 @@
 #include <zircon/types.h>
 
 #include <optional>
+#include <shared_mutex>
 
 #include <bitmap/raw-bitmap.h>
 #include <bitmap/rle-bitmap.h>
@@ -33,6 +34,8 @@
 
 namespace blobfs {
 
+class Allocator;
+
 struct BlockRegion {
   uint64_t offset;
   uint64_t length;
@@ -45,8 +48,8 @@ class SpaceManager : public storage::VmoidRegistry {
 
   virtual const Superblock& Info() const = 0;
 
-  // Adds any number of nodes to |node_map|, extending the volume if necessary.
-  virtual zx_status_t AddInodes(fzl::ResizeableVmoMapper* node_map) = 0;
+  // Adds any number of nodes to |allocator|'s node map, extending the volume if necessary.
+  virtual zx_status_t AddInodes(Allocator* allocator) = 0;
 
   // Adds space for |nblocks| blocks to |map|, extending the volume if necessary.
   virtual zx_status_t AddBlocks(uint64_t nblocks, RawBitmap* map) = 0;
@@ -71,7 +74,7 @@ class Allocator : private ExtentReserver, private NodeReserver, public NodeFinde
   // TODO(smklein): It may be possible to convert NodeFinder from an interface
   // to a concrete base class if we can reconcile the differences with host.
 
-  Inode* GetNode(uint32_t node_index) final;
+  InodePtr GetNode(uint32_t node_index) final;
 
   ////////////////
   // Other interfaces.
@@ -139,6 +142,12 @@ class Allocator : private ExtentReserver, private NodeReserver, public NodeFinde
   // Record the location and size of all non-free block regions.
   fbl::Vector<BlockRegion> GetAllocatedRegions() const;
 
+  // Called when InodePtr goes out of scope.
+  void DropInodePtr() override;
+
+  // Grows node map to |size|. The caller takes responsibility for initializing the new entries.
+  [[nodiscard]] zx_status_t GrowNodeMap(size_t size);
+
  private:
   // Resets the size of the block map based on |Info().data_block_count|.
   //
@@ -200,6 +209,8 @@ class Allocator : private ExtentReserver, private NodeReserver, public NodeFinde
 
   RawBitmap block_map_ = {};
   fzl::ResizeableVmoMapper node_map_;
+  // Guards growing node_map_, which will invalidate outstanding pointers.
+  std::shared_mutex node_map_grow_mutex_;
   std::unique_ptr<id_allocator::IdAllocator> node_bitmap_;
 
   bool log_allocation_failure_ = true;

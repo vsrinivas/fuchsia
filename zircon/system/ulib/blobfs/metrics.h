@@ -84,7 +84,7 @@ class BlobfsMetrics {
 
   // Increments Cobalt metrics tracking compression formats. Extracts the compression format from
   // the |inode| header, and increments the counter for that format with the inode's |blob_size|.
-  void IncrementCompressionFormatMetric(const Inode* inode);
+  void IncrementCompressionFormatMetric(const Inode& inode);
 
  private:
   // Returns the underlying collector of cobalt metrics.

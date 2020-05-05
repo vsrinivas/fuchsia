@@ -35,7 +35,7 @@ BlobLoader::BlobLoader(
 
 zx_status_t BlobLoader::LoadBlob(uint32_t node_index, fzl::OwnedVmoMapper* data_out,
                                  fzl::OwnedVmoMapper* merkle_out) {
-  const Inode* const inode = node_finder_->GetNode(node_index);
+  const InodePtr inode = node_finder_->GetNode(node_index);
   // LoadBlob should only be called for Inodes. If this doesn't hold, one of two things happened:
   //   - Programmer error
   //   - Corruption of a blob's Inode
@@ -97,7 +97,7 @@ zx_status_t BlobLoader::LoadBlobPaged(uint32_t node_index,
                                       std::unique_ptr<PageWatcher>* page_watcher_out,
                                       fzl::OwnedVmoMapper* data_out,
                                       fzl::OwnedVmoMapper* merkle_out) {
-  const Inode* const inode = node_finder_->GetNode(node_index);
+  const InodePtr inode = node_finder_->GetNode(node_index);
   // LoadBlobPaged should only be called for Inodes. If this doesn't hold, one of two things
   // happened:
   //   - Programmer error

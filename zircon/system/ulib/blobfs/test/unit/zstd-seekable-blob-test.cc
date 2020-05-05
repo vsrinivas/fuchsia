@@ -145,7 +145,7 @@ class ZSTDSeekableBlobWrongAlgorithmTest : public ZSTDSeekableBlobTest {
 
 class NullNodeFinder : public NodeFinder {
  public:
-  Inode* GetNode(uint32_t node_index) final { return nullptr; }
+  InodePtr GetNode(uint32_t node_index) final { return {}; }
 };
 
 class ZSTDSeekableBlobNullNodeFinderTest : public ZSTDSeekableBlobTest {

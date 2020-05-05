@@ -65,7 +65,7 @@ class AllocatedExtentIterator : public ExtentIterator {
   zx_status_t NextContainer();
 
   NodeFinder* finder_;
-  Inode* inode_;
+  InodePtr inode_;
   // The index of the node we're currently observing.
   uint32_t node_index_;
   ExtentContainer* extent_node_ = nullptr;

@@ -107,7 +107,7 @@ class Blobfs : public TransactionManager, public UserPager, public BlockIterator
   const Superblock& Info() const final { return info_; }
   zx_status_t BlockAttachVmo(const zx::vmo& vmo, storage::Vmoid* out) final;
   zx_status_t BlockDetachVmo(storage::Vmoid vmoid) final;
-  zx_status_t AddInodes(fzl::ResizeableVmoMapper* node_map) final;
+  zx_status_t AddInodes(Allocator* allocator) final;
   zx_status_t AddBlocks(size_t nblocks, RawBitmap* block_map) final;
 
   ////////////////
@@ -145,7 +145,7 @@ class Blobfs : public TransactionManager, public UserPager, public BlockIterator
 
   Allocator* GetAllocator() { return allocator_.get(); }
 
-  Inode* GetNode(uint32_t node_index) { return allocator_->GetNode(node_index); }
+  InodePtr GetNode(uint32_t node_index) { return allocator_->GetNode(node_index); }
 
   // Invokes "open" on the root directory.
   // Acts as a special-case to bootstrap filesystem mounting.

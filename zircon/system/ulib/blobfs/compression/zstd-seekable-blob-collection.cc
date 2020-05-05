@@ -72,8 +72,8 @@ ZSTDSeekableBlobCollection::ZSTDSeekableBlobCollection(storage::VmoidRegistry* v
 
 zx_status_t ZSTDSeekableBlobCollection::Read(uint32_t node_index, uint8_t* buf,
                                              uint64_t data_byte_offset, uint64_t num_bytes) {
-  Inode* node = node_finder_->GetNode(node_index);
-  if (node == nullptr) {
+  InodePtr node = node_finder_->GetNode(node_index);
+  if (!node) {
     FS_TRACE_ERROR("[blobfs][compressed] Invalid node index: %u\n", node_index);
     return ZX_ERR_INVALID_ARGS;
   }

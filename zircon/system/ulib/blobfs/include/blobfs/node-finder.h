@@ -9,6 +9,21 @@
 
 namespace blobfs {
 
+class NodeFinder;
+
+// NodeFinder subclasses return pointers to Inodes. When they go out of scope, DropInodePtr is
+// called. This can be used to maintain any locks that might need to be in place.
+struct InodePtrDeleter {
+  InodePtrDeleter() = default;
+  explicit InodePtrDeleter(NodeFinder* finder) : finder_(finder) {}
+  void operator()(Inode* inode);
+  NodeFinder* finder_ = nullptr;
+};
+
+// Don't assume that memory is freed when the pointer goes out of scope. Subclasses are free to
+// implement a cache of nodes and hand out pointers to the cache instead.
+using InodePtr = std::unique_ptr<Inode, InodePtrDeleter>;
+
 // Interface to look up nodes.
 class NodeFinder {
  public:
@@ -17,8 +32,17 @@ class NodeFinder {
   // Returns a pointer to the requested node.
   //
   // TODO(smklein): Return a zx_status_t to allow for invalid |ino| values.
-  virtual Inode* GetNode(uint32_t node_index) = 0;
+  virtual InodePtr GetNode(uint32_t node_index) = 0;
+
+  // Called when an InodePtr goes out of scope.
+  virtual void DropInodePtr() {}
 };
+
+inline void InodePtrDeleter::operator ()(Inode* inode) {
+  if (finder_) {
+    finder_->DropInodePtr();
+  }
+}
 
 }  // namespace blobfs
 
