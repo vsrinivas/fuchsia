@@ -249,6 +249,7 @@ int main(int argc, const char** argv) {
                  (time / kMillisInSec) % kMicrosInSec, log.pid, log.tid,
                  join_tags(std::move(log.tags)).c_str(), log_level(log.severity).c_str(),
                  log.msg.c_str());
+          fflush(stdout);
         });
       });
 
