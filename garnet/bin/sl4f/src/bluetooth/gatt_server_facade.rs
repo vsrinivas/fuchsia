@@ -339,12 +339,13 @@ impl GattServerFacade {
 
         if permissions & PERMISSION_READ_ENCRYPTED != 0 {
             read_encryption_required = true;
+            read_authentication_required = true;
+            read_authorization_required = true;
         }
 
         if permissions & PERMISSION_READ_ENCRYPTED_MITM != 0 {
             read_encryption_required = true;
-            read_authentication_required = true;
-            read_authorization_required = true;
+            update_encryption_required = true;
         }
 
         if permissions & PERMISSION_WRITE_ENCRYPTED != 0 {
@@ -354,8 +355,6 @@ impl GattServerFacade {
 
         if permissions & PERMISSION_WRITE_ENCRYPTED_MITM != 0 {
             write_encryption_required = true;
-            write_authentication_required = true;
-            write_authorization_required = true;
             update_encryption_required = true;
             update_authentication_required = true;
             update_authorization_required = true;
