@@ -72,15 +72,11 @@ package("workstation_session_tests") {
   deps = [
     ":bin",
     ":bin_test",
-    "//src/sys/test_adapters/rust",
   ]
 
   binaries = [
     {
       name = "workstation_session"
-    },
-    {
-      name = "rust_test_adapter"
     },
   ]
 
