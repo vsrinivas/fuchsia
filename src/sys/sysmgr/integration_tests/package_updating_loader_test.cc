@@ -179,8 +179,11 @@ TEST_F(PackageUpdatingLoaderTest, Failure) {
   Init(&provider_service);
 
   // Launch a component in the environment, and prove it started successfully
-  // by trying to use a service offered by it. Note: launching the component
-  // should succeed even though the update failed.
+  // by trying to use a service offered by it. Launching the component will
+  // succeed if the test is in base, as PackageUpdateLoader will fall back
+  // to loading from pkgfs. However, if the test is in universe, the package
+  // cannot be loaded from pkgfs because we don't support loading non-static
+  // packages from pkgfs, so we expect CreateComponent to fail.
   zx::channel h1, h2;
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &h1, &h2));
   auto launch_info = CreateLaunchInfo(kEchoServerURL, std::move(h2));
@@ -189,9 +192,11 @@ TEST_F(PackageUpdatingLoaderTest, Failure) {
   ConnectToServiceAt(std::move(h1), echo.NewRequest());
   const std::string message = "component launched";
   std::string ret_msg = "";
+  bool terminated = false;
+  controller.events().OnTerminated =
+      [&terminated](int64_t code, fuchsia::sys::TerminationReason reason) { terminated = true; };
   echo->EchoString(message, [&](fidl::StringPtr retval) { ret_msg = retval.value_or(""); });
-  // Even though the update failed, the loader should load the component anyway.
-  RunLoopUntil([&] { return ret_msg == message; });
+  RunLoopUntil([&] { return ret_msg == message || terminated; });
 }
 
 TEST_F(PackageUpdatingLoaderTest, HandleResolverDisconnectCorrectly) {
