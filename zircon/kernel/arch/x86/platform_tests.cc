@@ -26,6 +26,9 @@
 extern void x86_amd_set_lfence_serializing(const cpu_id::CpuId*, MsrAccess*);
 extern "C" void _x86_usercopy_quad(void*, void*, size_t);
 extern "C" void _x86_usercopy_erms(void*, void*, size_t);
+extern char __x86_indirect_thunk_r11;
+extern char interrupt_maybe_mds_buff_overwrite;
+extern char syscall_maybe_mds_buff_overwrite;
 
 namespace {
 
@@ -735,6 +738,60 @@ static bool test_spectre_v2_mitigations() {
       : "=r"(sp_match)::"memory", "%r11");
   EXPECT_EQ(sp_match, true);
 
+  // Test that retpoline thunks are correctly patched.
+  unsigned char check_buffer[16] = {};
+  memcpy(check_buffer, &__x86_indirect_thunk_r11, sizeof(check_buffer));
+  if (x86_get_disable_spec_mitigations() == true || x86_cpu_has_enhanced_ibrs()) {
+    // If speculative execution mitigations are disabled or Enhanced IBRS is enabled, we expect the
+    // retpoline thunk to be:
+    // __x86_indirect_thunk:
+    //   41 ff e3        jmp *%r11
+    EXPECT_EQ(check_buffer[0], 0x41);
+    EXPECT_EQ(check_buffer[1], 0xff);
+    EXPECT_EQ(check_buffer[2], 0xe3);
+  } else if (x86_vendor == X86_VENDOR_INTEL) {
+    // We expect the generic thunk to be:
+    // __x86_indirect_thunk:
+    //  e8 ?? ?? ?? ?? call ...
+    //
+    // We cannot test the exact contents of the thunk as the call target depends on the internal
+    // alignment. Instead check that the first byte is the call instruction we expect.
+    EXPECT_EQ(check_buffer[0], 0xe8);
+  } else if (x86_vendor == X86_VENDOR_AMD) {
+    // We expect the AMD thunk to be:
+    // __x86_indirect_thunk:
+    //   0f ae e8      lfence
+    //   41 ff e3      jmp *%r11
+    EXPECT_EQ(check_buffer[0], 0x0f);
+    EXPECT_EQ(check_buffer[1], 0xae);
+    EXPECT_EQ(check_buffer[2], 0xe8);
+    EXPECT_EQ(check_buffer[3], 0x41);
+    EXPECT_EQ(check_buffer[4], 0xff);
+    EXPECT_EQ(check_buffer[5], 0xe3);
+  } else {
+    ASSERT_TRUE(false, "Unknown vendor.");
+  }
+
+  END_TEST;
+}
+
+static bool test_mds_mitigations() {
+  BEGIN_TEST;
+
+  for (char *src : { &interrupt_maybe_mds_buff_overwrite, &syscall_maybe_mds_buff_overwrite }) {
+    unsigned char check_buffer[5];
+    memcpy(check_buffer, src, sizeof(check_buffer));
+    if (x86_cpu_should_md_clear_on_user_return()) {
+      EXPECT_EQ(check_buffer[0], 0xe8);  // Expect a call to mds_buff_overwrite
+    } else {
+      // If speculative execution mitigations are disabled or we're not affected by MDS or don't
+      // have MD_CLEAR, expect NOPs.
+      for (size_t i = 0; i < sizeof(check_buffer); i++) {
+        EXPECT_EQ(check_buffer[i], 0x90);
+      }
+    }
+  }
+
   END_TEST;
 }
 
@@ -824,6 +881,7 @@ UNITTEST("test Intel x86 microcode patch loader mechanism", test_x64_intel_ucode
 UNITTEST("test pkg power limit change", test_x64_power_limits)
 UNITTEST("test amd_platform_init", test_amd_platform_init)
 UNITTEST("test spectre v2 mitigation building blocks", test_spectre_v2_mitigations)
+UNITTEST("test mds mitigation building blocks", test_mds_mitigations)
 UNITTEST("test usercopy variants", test_usercopy_variants)
 UNITTEST("test enable/disable turbo/core performance boost", test_turbo_enable_disable)
 UNITTEST_END_TESTCASE(x64_platform_tests, "x64_platform_tests", "")
