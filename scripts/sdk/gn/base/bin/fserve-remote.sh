@@ -130,6 +130,9 @@ args=(
   -6 # We want ipv6 binds for the port forwards
   -L "\*:8083:localhost:8083" # requests to the package server address locally go to the workstation
   -R "8022:[${DEVICE_IP}]:22" # requests from the workstation to ssh to localhost:8022 will make it to the target
+  -R "2345:[${DEVICE_IP}]:2345" # requests from the workstation to 2345 are forwarded to the target for zxdb, fidlcat.
+  -R "8443:[${DEVICE_IP}]:8443" # port 8443 on workstation to target port 8443
+  -R "9080:[${DEVICE_IP}]:80" # port 9080 on workstation to target port 80
   -o "ExitOnForwardFailure=yes"
   "${REMOTE_HOST}"
 )

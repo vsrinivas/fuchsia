@@ -9,6 +9,8 @@ set -e
 
 FSERVE_REMOTE_CMD="${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fserve-remote.sh"
 FCONFIG_CMD="${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fconfig.sh"
+EXPECTED_REDIRECTS=(-R "8022:[fe80::c0ff:eec0:ffee%coffee]:22" -R "2345:[fe80::c0ff:eec0:ffee%coffee]:2345"
+  -R "8443:[fe80::c0ff:eec0:ffee%coffee]:8443"  -R "9080:[fe80::c0ff:eec0:ffee%coffee]:80")
 
 # Sets up an ssh mock binary on the $PATH of any subshell.
 set_up_ssh() {
@@ -58,7 +60,9 @@ TEST_fserve_remote() {
   source "${SSH_MOCK_PATH}/ssh.mock_state.1"
   expected=(_ANY_ "-O" "check" "glinux.google.com")
 
-  expected_ssh_args=("${SSH_MOCK_PATH}/ssh" -6 -L "\*:8083:localhost:8083" -R "8022:[fe80::c0ff:eec0:ffee%coffee]:22" -o "ExitOnForwardFailure=yes" "glinux.google.com")
+  expected_ssh_args=("${SSH_MOCK_PATH}/ssh" -6 -L "\*:8083:localhost:8083")
+  expected_ssh_args+=("${EXPECTED_REDIRECTS[@]}")
+  expected_ssh_args+=(-o "ExitOnForwardFailure=yes" "glinux.google.com")
 
   # Next SSH is checking socket status
   # shellcheck disable=SC1090
@@ -100,7 +104,9 @@ TEST_fserve_remote_with_config() {
   expected=(_ANY_ "-O" "check" "glinux.google.com")
   gn-test-check-mock-args "${expected[@]}"
 
-  expected_ssh_args=("${SSH_MOCK_PATH}/ssh" -6 -L "\*:8083:localhost:8083" -R "8022:[fe80::c0ff:eec0:ffee%coffee]:22" -o "ExitOnForwardFailure=yes" "glinux.google.com")
+  expected_ssh_args=("${SSH_MOCK_PATH}/ssh" -6 -L "\*:8083:localhost:8083")
+  expected_ssh_args+=("${EXPECTED_REDIRECTS[@]}")
+  expected_ssh_args+=(-o "ExitOnForwardFailure=yes" "glinux.google.com")
 
   # Next SSH is checking socket status
   # shellcheck disable=SC1090
