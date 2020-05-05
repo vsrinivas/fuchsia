@@ -50,6 +50,18 @@ zx_status_t SetObjectName(zx_handle_t handle, const std::string& name) {
   return zx_object_set_property(handle, ZX_PROP_NAME, name.c_str(), name.size());
 }
 
+bool MaybeSetObjectName(zx_handle_t handle, const std::string& name,
+                        std::function<bool(std::string)> replace) {
+  auto current_name = GetObjectName(handle);
+  if (current_name.empty() || replace(current_name)) {
+    auto status = SetObjectName(handle, name);
+    if (status == ZX_OK) {
+      return true;
+    }
+  }
+  return false;
+}
+
 zx_koid_t GetCurrentProcessKoid() { return GetKoid(zx_process_self()); }
 
 std::string GetCurrentProcessName() { return GetObjectName(zx_process_self()); }

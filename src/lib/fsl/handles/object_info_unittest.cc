@@ -6,6 +6,7 @@
 
 #include <lib/zx/channel.h>
 #include <lib/zx/event.h>
+#include <lib/zx/vmo.h>
 #include <zircon/process.h>
 #include <zircon/syscalls/object.h>
 #include <zircon/threads.h>
@@ -192,6 +193,29 @@ TEST(ObjectInfo, GetCurrentProcessMemorySharedBytes) {
 TEST(ObjectInfo, GetCurrentProcessMemoryScaledSharedBytes) {
   // Expect this not to blow up.
   GetCurrentProcessMemoryScaledSharedBytes();
+}
+
+TEST(ObjectInfo, MaybeSetVmoName) {
+  zx::vmo vmo;
+  ASSERT_EQ(zx::vmo::create(1, 0, &vmo), ZX_OK);
+  auto name = GetObjectName(vmo.get());
+  EXPECT_TRUE(name.empty());
+  constexpr auto kName1 = "Foo";
+  constexpr auto kName2 = "Bar";
+  EXPECT_TRUE(MaybeSetObjectName(vmo.get(), kName1));
+  EXPECT_EQ(GetObjectName(vmo.get()), kName1);
+  EXPECT_FALSE(MaybeSetObjectName(vmo.get(), kName2));
+  EXPECT_EQ(GetObjectName(vmo.get()), kName1);
+  EXPECT_FALSE(MaybeSetObjectName(vmo.get(), kName2, [=](std::string current_name) {
+    EXPECT_EQ(current_name, kName1);
+    return false;
+  }));
+  EXPECT_EQ(GetObjectName(vmo.get()), kName1);
+  EXPECT_TRUE(MaybeSetObjectName(vmo.get(), kName2, [=](std::string current_name) {
+    EXPECT_EQ(current_name, kName1);
+    return true;
+  }));
+  EXPECT_EQ(GetObjectName(vmo.get()), kName2);
 }
 
 }  // namespace

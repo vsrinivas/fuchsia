@@ -61,6 +61,13 @@ FXL_EXPORT std::string GetObjectName(zx_handle_t handle);
 // Note: The kernel truncates names to |ZX_MAX_NAME_LEN|.
 FXL_EXPORT zx_status_t SetObjectName(zx_handle_t handle, const std::string& name);
 
+// Sets the name of a kernel object if it is currently unset or the |replace| function returns true
+// when passed the current name. For example, a caller may choose to only set the name if its
+// current name begins with "Sysmem". Returns true iff the name was set successfully.
+FXL_EXPORT bool MaybeSetObjectName(
+    zx_handle_t handle, const std::string& name,
+    std::function<bool(std::string)> replace = [](std::string current_name) { return false; });
+
 // Gets the kernel object id of the current process.
 FXL_EXPORT zx_koid_t GetCurrentProcessKoid();
 
