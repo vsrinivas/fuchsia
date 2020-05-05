@@ -1317,7 +1317,7 @@ static uint32_t x86_linear_address_width() {
 // because if the kernel returns to that address using SYSRET, that can
 // cause a fault in kernel mode that is exploitable.  See
 // sysret_problem.md.
-TEST(Threads, NoncanonicalRipAddress) {
+TEST(Threads, NoncanonicalRipAddressSyscall) {
 #if defined(__x86_64__)
   zx_handle_t event;
   ASSERT_EQ(zx_event_create(0, &event), ZX_OK);
@@ -1338,7 +1338,7 @@ TEST(Threads, NoncanonicalRipAddress) {
   // Example addresses to test.
   uintptr_t noncanonical_addr = ((uintptr_t)1) << (x86_linear_address_width() - 1);
   uintptr_t canonical_addr = noncanonical_addr - 1;
-  uint64_t kKernelAddr = 0xffff800000000000;
+  uint64_t kKernelAddr = 0xffffff8000000000UL;
 
   zx_thread_state_general_regs_t regs_modified = regs;
 
@@ -1374,6 +1374,49 @@ TEST(Threads, NoncanonicalRipAddress) {
   ASSERT_EQ(zx_handle_close(event), ZX_OK);
   ASSERT_EQ(zx_handle_close(thread_handle), ZX_OK);
 #endif
+}
+
+// Test that zx_thread_write_state() does not allow setting RIP to a
+// non-canonical address for a thread that was suspended inside an interrupt,
+// because if the kernel returns to that address using IRET, that can
+// cause a fault in kernel mode that is exploitable.
+// See docs/concepts/kernel/sysret_problem.md
+TEST(Threads, NoncanonicalRipAddressIRETQ) {
+#if defined(__x86_64__)
+  // Example addresses to test.
+  uintptr_t noncanonical_addr = ((uintptr_t)1) << (x86_linear_address_width() - 1);
+  uintptr_t kernel_addr = 0xffffff8000000000UL;
+
+  // canonical address that is safe to resume the thread to.
+  uintptr_t canonical_addr = reinterpret_cast<uintptr_t>(&spin_address);
+
+  auto test_rip_value = [&](uintptr_t address, zx_status_t expected) {
+    zx_thread_state_general_regs_t func_regs;
+    RegisterReadSetup<zx_thread_state_general_regs_t> setup;
+    setup.RunUntil(&spin_with_general_regs, &func_regs, reinterpret_cast<uintptr_t>(&spin_address));
+
+    zx_thread_state_general_regs_t regs;
+    ASSERT_OK(zx_thread_read_state(setup.thread_handle(), ZX_THREAD_STATE_GENERAL_REGS, &regs,
+                                   sizeof(regs)));
+
+    regs.rip = address;
+    EXPECT_EQ(expected, zx_thread_write_state(setup.thread_handle(), ZX_THREAD_STATE_GENERAL_REGS,
+                                              &regs, sizeof(regs)));
+
+    // Resume and re-suspend the thread. Even if the zx_thread_write_state
+    // returns an error but sets the registers, we still want to observe the
+    // crash. Note that there is no guarantee that it would happen, as the
+    // thread might get supsended before it even resumes execution.
+    setup.Resume();
+    setup.Suspend();
+  };
+
+  test_rip_value(canonical_addr, ZX_OK);
+
+  test_rip_value(noncanonical_addr, ZX_ERR_INVALID_ARGS);
+  test_rip_value(kernel_addr, ZX_ERR_INVALID_ARGS);
+
+#endif  // defined(__x86_64__)
 }
 
 // Test that, on ARM64, userland cannot use zx_thread_write_state() to

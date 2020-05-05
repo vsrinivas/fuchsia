@@ -53,8 +53,9 @@ void general_regs_fill_test_values(zx_thread_state_general_regs_t* regs) {
                  (1 << 21);   // ID: used for testing for CPUID support
 
   // Set these to canonical addresses to avoid an error.
-  regs->fs_base = 0;
-  regs->gs_base = 0;
+  regs->fs_base = 0x0;
+  regs->gs_base = 0x0;
+  regs->rip = 0x0;
 #elif defined(__aarch64__)
   // Only set the 4 flag bits that are readable and writable by the
   // instructions "msr nzcv, REG" and "mrs REG, nzcv".

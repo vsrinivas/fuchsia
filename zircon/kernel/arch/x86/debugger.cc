@@ -219,21 +219,21 @@ zx_status_t arch_set_general_regs(Thread* thread, const zx_thread_state_general_
   if (!x86_is_vaddr_canonical(in->gs_base))
     return ZX_ERR_INVALID_ARGS;
 
+  // fxbug.dev/50633: Disallow setting RIP to a non-canonical address, to
+  // prevent returning to such addresses using the SYSRET or IRETQ
+  // instructions. See docs/concepts/kernel/sysret_problem.md.
+  //
+  // The code also restricts the RIP to userspace addresses. There is no use
+  // case for setting the RIP to a kernel address.
+  if (!x86_is_vaddr_canonical(in->rip) || is_kernel_address(in->rip))
+    return ZX_ERR_INVALID_ARGS;
+
   DEBUG_ASSERT(thread->arch_.suspended_general_regs.gregs);
   switch (GeneralRegsSource(thread->arch_.general_regs_source)) {
     case GeneralRegsSource::Iframe:
       x86_fill_in_iframe_from_gregs(thread->arch_.suspended_general_regs.iframe, in);
       break;
     case GeneralRegsSource::Syscall: {
-      // Disallow setting RIP to a non-canonical address, to prevent
-      // returning to such addresses using the SYSRET instruction.
-      // See docs/sysret_problem.md.  Note that this check also
-      // disallows canonical top-bit-set addresses, but allowing such
-      // addresses is not useful and it is simpler to disallow them.
-      uint8_t addr_width = x86_linear_address_width();
-      uint64_t noncanonical_addr = ((uint64_t)1) << (addr_width - 1);
-      if (in->rip >= noncanonical_addr)
-        return ZX_ERR_INVALID_ARGS;
       x86_fill_in_syscall_from_gregs(thread->arch_.suspended_general_regs.syscall, in);
       break;
     }
