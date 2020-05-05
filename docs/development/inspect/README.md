@@ -13,7 +13,7 @@ that expose information.
 **Not sure where to start? [Quick Start](quickstart.md)**
 
 * [iquery](iquery.md) &mdash; The userspace tool for inspecting components.
-* [Getting started with Inspect](gsw-inspect.md) &mdash; A quick start guide.
+* [Codelab](codelab/README.md) &mdash; A full codelab in C++, Rust, and Dart.
 * [Health checks](health.md) &mdash; Describes the health check subsystem.
 
 ## Concepts

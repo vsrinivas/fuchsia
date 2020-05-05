@@ -3,6 +3,9 @@
 Getting Started with Fuchsia's Inspect API
 =====
 
+WARNING: This document is out of date and being rewritten. Start instead
+with the [Codelab](codelab/codelab.md).
+
 The Fuchsia **Inspect API** allows your program to provide structured
 information in an abstract, language-independent format for the use of
 other programs and services.
