@@ -11,19 +11,21 @@ implementation for Rust. This is the recommended workflow and will work with min
 generated based on the build graph at `gn gen` time. A symlink to the `rust-project.json` is located
 in the root directory of the Fuchsia tree.
 
-## Alternative setup with Cargo.toml files
-This is a volunteer maintaned workflow that exits because many tools in the Rust ecosystem assume
+## Alternative setup with `Cargo.toml` files
+This is a volunteer-maintained workflow that exists because many tools in the Rust ecosystem assume
 cargo integration. GN and Cargo have some design mismatches that may result in manual tweaks
-being needed for the generated Cargo.tomls.
+being needed for the generated `Cargo.toml`s.
 
-### Generating Cargo.toml files for use by editors {#generating-cargo-toml}
+### Generating `Cargo.toml` files for use by editors {#generating-cargo-toml}
 
-Generate the cargo files based on the build graph of GN. This adds a few seconds at `gn gen` time.
+In order to generate the cargo files based on the build graph of GN, add `--cargo-toml-gen` to
+the `fx set` and `fx args` commands. This adds a few seconds at `gn gen` time. For example:
+
 ```sh
-fx set --cargo-toml-gen <normal fx commands>
+fx set --cargo-toml-gen <normal fx args>
 ```
 
-Most editors require the Cargo.toml file to be in a location that is adjacent to the `src/` directory.
+Most editors require the `Cargo.toml` file to be in a location that is adjacent to the `src/` directory.
 Symlinks to these files can be generated using the following commands, where
 `//garnet/foo/path/to/target:label` is the GN target that you want to work on:
 
@@ -31,8 +33,8 @@ Symlinks to these files can be generated using the following commands, where
 fx gen-cargo garnet/foo/path/to/target:some_label
 ```
 
-Note that this label must point to a `rustc_...` GN template, not a Fuchsia package or other GN
-target. For example:
+Note that this label must point to a [`rustc_...` GN template](README.md#build)
+(not a Fuchsia package or other GN target). For example:
 
 ```
 rustc_binary("some_label") {
@@ -66,7 +68,7 @@ Some plugins require a `.cargo/config` file to allow cargo to operate correctly 
 ## Intellij (Custom code completion)
 
 See instructions on [the Intellij Rust site](https://intellij-rust.github.io/).
-Finally, follow the steps above to generate a Cargo.toml file for use by Intellij.
+Finally, follow the steps above to generate a `Cargo.toml` file for use by Intellij.
 
 ## Vim
 
@@ -214,7 +216,7 @@ using are Fuchsia versions of those.  From your fuchsia root, type:
 rustup toolchain link fuchsia $PWD/prebuilt/third_party/rust/linux-x64 && rustup default fuchsia
 ```
 
-Finally, follow the steps at the top of this page to generate a Cargo.toml for the GN target
+Finally, follow the steps at the top of this page to generate a `Cargo.toml` for the GN target
 that you want to work on.
 
 You can [read about](http://www.flycheck.org/en/latest/user/error-reports.html)
@@ -268,10 +270,10 @@ the Sublime command palette.
 
 #### Usage
 
-In order for the language server to work, you need to open a folder that contains a Cargo.toml
+In order for the language server to work, you need to open a folder that contains a `Cargo.toml`
 as the root of your Sublime project. There are two ways you can do this:
 
-1. Open a new Sublime window for the folder that contains the cargo.toml (e.g.
+1. Open a new Sublime window for the folder that contains the `Cargo.toml` (e.g.
 `garnet/foo/path/to/target`)
 2. Or, go to the top menu bar -> Project -> Add Folder to Project. This will keep all your files
 inside one Sublime window, and works even if you have the broader `fuchsia` folder also open.

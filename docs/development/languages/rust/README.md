@@ -2,7 +2,7 @@
 
 ## Build
 
-There are two GN target templates which should be used for Rust projects:
+There are four GN target templates which should be used for Rust projects:
 
 - [`rustc_library`][target-library-rustc] defines a library and optionally a
   unit test target. The library can be depended on by other targets.
