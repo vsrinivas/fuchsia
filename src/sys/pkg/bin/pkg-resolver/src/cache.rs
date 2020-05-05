@@ -196,7 +196,7 @@ pub async fn cache_package<'a>(
         .err_into::<CacheError>()
         .try_for_each(|needs| {
             // Fetch the blobs with some amount of concurrency.
-            fx_log_info!("Fetching blobs: {:#?}", needs);
+            fx_log_info!("Fetching blobs for {}: {:#?}", url, needs);
             blob_fetcher
                 .push_all(needs.into_iter().map(|need| {
                     (
