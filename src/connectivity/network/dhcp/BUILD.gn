@@ -35,7 +35,7 @@ rustc_library("lib") {
   ]
 }
 
-test_package("dhcp_tests") {
+test_package("dhcp-tests") {
   deps = [ ":lib_test" ]
 
   tests = [
@@ -128,7 +128,7 @@ package("dhcpd-testing") {
   ]
 }
 
-test_package("dhcpd_tests") {
+test_package("dhcpd-tests") {
   deps = [ ":bin_test" ]
 
   tests = [
@@ -140,7 +140,6 @@ test_package("dhcpd_tests") {
 }
 
 group("dhcp") {
-  testonly = true
   public_deps = [
     ":dhcpd",
     "//src/connectivity/network/dhcp/config",
@@ -150,9 +149,7 @@ group("dhcp") {
 group("tests") {
   testonly = true
   deps = [
-    ":dhcp",
-    ":dhcp_tests",
-    ":dhcpd-testing",
-    ":dhcpd_tests",
+    ":dhcp-tests",
+    ":dhcpd-tests",
   ]
 }

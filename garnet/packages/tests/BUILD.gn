@@ -126,8 +126,6 @@ group("all") {
     "//sdk/testing/sl4f/client:tests",
     "//src/cobalt/bin:cobalt_tests",
     "//src/connectivity/bluetooth:tests",
-    "//src/connectivity/network/dhcp:dhcp_tests",
-    "//src/connectivity/network/dhcp:dhcpd_tests",
     "//src/connectivity/network/netstack:tests",
     "//src/connectivity/network/testing/netemul:tests",
     "//src/connectivity/telephony:tests",
