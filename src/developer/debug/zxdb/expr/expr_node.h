@@ -40,9 +40,6 @@ class UnaryOpExprNode;
 // Represents one node in the abstract syntax tree.
 class ExprNode : public fxl::RefCountedThreadSafe<ExprNode> {
  public:
-  ExprNode() = default;
-  virtual ~ExprNode() = default;
-
   virtual const AddressOfExprNode* AsAddressOf() const { return nullptr; }
   virtual const ArrayAccessExprNode* AsArrayAccess() const { return nullptr; }
   virtual const BinaryOpExprNode* AsBinaryOp() const { return nullptr; }
@@ -91,6 +88,12 @@ class ExprNode : public fxl::RefCountedThreadSafe<ExprNode> {
 
   // Dumps the tree to a stream with the given indent. Used for unit testing and debugging.
   virtual void Print(std::ostream& out, int indent) const = 0;
+
+ protected:
+  FRIEND_REF_COUNTED_THREAD_SAFE(ExprNode);
+
+  ExprNode() = default;
+  virtual ~ExprNode() = default;
 };
 
 // Implements taking an address of n expression ("&" in C).

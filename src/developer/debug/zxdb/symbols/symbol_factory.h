@@ -30,12 +30,15 @@ class Symbol;
 // interface be virtual and duplicated.
 class SymbolFactory : public fxl::RefCountedThreadSafe<SymbolFactory> {
  public:
-  SymbolFactory() = default;
-  virtual ~SymbolFactory() = default;
-
   // This function should never return null. To indicate failure, return a new default-constructed
   // Symbol object.
   virtual fxl::RefPtr<Symbol> CreateSymbol(uint32_t factory_data) = 0;
+
+ protected:
+  FRIEND_REF_COUNTED_THREAD_SAFE(SymbolFactory);
+
+  SymbolFactory() = default;
+  virtual ~SymbolFactory() = default;
 };
 
 }  // namespace zxdb

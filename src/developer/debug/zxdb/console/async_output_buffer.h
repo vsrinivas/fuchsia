@@ -61,8 +61,6 @@ class AsyncOutputBuffer : public fxl::RefCountedThreadSafe<AsyncOutputBuffer> {
  public:
   using CompletionCallback = fit::callback<void()>;
 
-  ~AsyncOutputBuffer() = default;
-
   // Setting the completion callback will assert if the buffer is_complete() because in that case it
   // will never be called.
   //
@@ -110,6 +108,7 @@ class AsyncOutputBuffer : public fxl::RefCountedThreadSafe<AsyncOutputBuffer> {
   FRIEND_MAKE_REF_COUNTED(AsyncOutputBuffer);
 
   AsyncOutputBuffer() = default;
+  ~AsyncOutputBuffer() = default;
 
   // Called when something happened that could have affected is_complete() to issue the callback.
   void CheckComplete();

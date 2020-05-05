@@ -64,9 +64,6 @@ class MemoryAnalysis : public fxl::RefCountedThreadSafe<MemoryAnalysis> {
  public:
   using Callback = fit::callback<void(const Err& err, OutputBuffer analysis, uint64_t next_addr)>;
 
-  MemoryAnalysis(const AnalyzeMemoryOptions& opts, Callback cb);
-  ~MemoryAnalysis() = default;
-
   // Opts is passed again so we don't have to save it in the constructor, which is unsafe (the
   // process and thread pointers aren't weak and may disappear).
   void Schedule(const AnalyzeMemoryOptions& opts);
@@ -78,6 +75,12 @@ class MemoryAnalysis : public fxl::RefCountedThreadSafe<MemoryAnalysis> {
   void SetMemory(MemoryDump dump);
 
  private:
+  FRIEND_REF_COUNTED_THREAD_SAFE(MemoryAnalysis);
+  FRIEND_MAKE_REF_COUNTED(MemoryAnalysis);
+
+  MemoryAnalysis(const AnalyzeMemoryOptions& opts, Callback cb);
+  ~MemoryAnalysis() = default;
+
   void DoAnalysis();
 
   // Request callbacks.

@@ -22,8 +22,6 @@ class MockSymbolDataProvider : public SymbolDataProvider {
   // Holds a list of time-ordered (address, data) pairs of memory writes.
   using MemoryWrites = std::vector<std::pair<uint64_t, std::vector<uint8_t>>>;
 
-  MockSymbolDataProvider();
-
   void set_ip(uint64_t ip) { ip_ = ip; }
   void set_bp(uint64_t bp) { bp_ = bp; }
   void set_cfa(uint64_t cfa) { cfa_ = cfa; }
@@ -60,6 +58,9 @@ class MockSymbolDataProvider : public SymbolDataProvider {
   void WriteMemory(uint64_t address, std::vector<uint8_t> data, WriteCallback cb) override;
 
  private:
+  FRIEND_MAKE_REF_COUNTED(MockSymbolDataProvider);
+  FRIEND_REF_COUNTED_THREAD_SAFE(MockSymbolDataProvider);
+
   struct RegData {
     RegData() = default;
     RegData(bool sync, std::vector<uint8_t> v) : synchronous(sync), value(v) {}
@@ -67,6 +68,8 @@ class MockSymbolDataProvider : public SymbolDataProvider {
     bool synchronous = false;
     std::vector<uint8_t> value;
   };
+
+  MockSymbolDataProvider();
 
   uint64_t ip_ = 0;
   uint64_t bp_ = 0;
