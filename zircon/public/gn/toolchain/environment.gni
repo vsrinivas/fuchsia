@@ -43,13 +43,13 @@ declare_args() {
   #     {
   #       environment = [ "efi" ]
   #       assert_level = 2
-  #       opt_level = 0
+  #       optimize = "none"
   #     },
   #   ]
   # ```
   # sets `assert_level = 0` everywhere where `is_kernel == false`,
   # sets `assert_level = 1` most places where `is_kernel == true`,
-  # but sets `assert_level = 2` and `opt_level = 0` in the "efi"
+  # but sets `assert_level = 2` and `optimize = "none"` in the "efi"
   # environment (where `is_kernel == true` also holds, but the later
   # clause overrides the preceding `assert_level = 1`).
   #

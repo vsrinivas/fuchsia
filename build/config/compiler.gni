@@ -2,6 +2,14 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+if (is_debug) {
+  # TODO(phosek): consider using "debug" in debug mode to improve performance.
+  default_optimize = "none"
+} else {
+  # TODO(phosek): consider using "size" in release mode to reduce size.
+  default_optimize = "speed"
+}
+
 declare_args() {
   # How many symbols to include in the build. This affects the performance of
   # the build since the symbols are large and dealing with them is slow.
@@ -12,3 +20,18 @@ declare_args() {
   #   0 means no symbols.
   symbol_level = 2
 }
+
+# NOTE: Keep in sync with //zircon/public/gn/config/levels.gni
+# TODO: Unify the default value between the two builds.
+declare_args() {
+  # * none means really unoptimized, usually only build-tested and not run
+  # * debug means "optimized for debugging", light enough to avoid confusion
+  # * default means default optimization level
+  # * size means optimized for space rather than purely for speed
+  # * speed means optimized purely for speed
+  optimize = default_optimize
+}
+
+assert(optimize == "none" || optimize == "debug" || optimize == "default" ||
+           optimize == "size" || optimize == "speed",
+       "invalid optimize value: ${optimize}")

@@ -34,9 +34,9 @@ if (current_toolchain == default_toolchain) {
       solink = true
 
       toolchain_args = {
-        if (opt_level < 2) {
+        if (optimize == "none" || optimize == "debug") {
           # userboot doesn't stay sufficiently pure without optimization.
-          opt_level = 2
+          optimize = "regular"
         }
 
         # No runtime to print asserts, so can't compile them in.

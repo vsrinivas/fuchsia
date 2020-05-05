@@ -15,15 +15,16 @@ zx_library("jitterentropy") {
   # levels. If there is a significant difference in entropy quality,
   # replace the relevant C code by assembly code to protect against future
   # compiler changes.
-  configs -= [ "$zx/public/gn/config:opt_level" ]
-  configs += [ ":config" ]
+  configs -= [ "$zx/public/gn/config:default_optimize" ]
+  configs += [
+    ":config",
+    "$zx/public/gn/config:optimize_none",
+  ]
 }
 
 config("config") {
   visibility = [ ":*" ]
   cflags = [
-    "-O0",
-
     # The original Makefile also specifies -fwrapv.
     "-fwrapv",
   ]

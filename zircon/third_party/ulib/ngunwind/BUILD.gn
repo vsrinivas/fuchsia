@@ -119,10 +119,10 @@ zx_library("ngunwind") {
     configs += [ "$zx_build/public/gn/config:frame_pointers" ]
   }
 
-  if (opt_level < 2) {
+  if (optimize == "none" || optimize == "debug") {
     # Force -O2 since the library doesn't build with -Og.
-    configs -= [ "$zx_build/public/gn/config:opt_level" ]
-    cflags = [ "-O2" ]
+    configs -= [ "$zx_build/public/gn/config:default_optimize" ]
+    configs += [ "$zx_build/public/gn/config:optimize_regular" ]
   }
 }
 

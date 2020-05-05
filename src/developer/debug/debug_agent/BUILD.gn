@@ -104,8 +104,8 @@ if (include_test_app) {
   executable("zxdb_test_app") {
     if (is_debug) {
       # Force no optimization in debug builds.
-      configs -= [ "//build/config:debug" ]
-      cflags = [ "-O0" ]
+      configs -= [ "//build/config:default_optimize" ]
+      configs += [ "//build/config:optimize_none" ]
     }
 
     sources = [ "zxdb_test_app.cc" ]

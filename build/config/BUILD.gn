@@ -222,29 +222,11 @@ config("relative_paths") {
 }
 
 config("debug") {
-  cflags = [ "-O0" ]
-  ldflags = cflags
-  rustflags = [ "-Copt-level=0" ]
+  # TODO(phosek): remove this config when nothing refers on it.
 }
 
 config("release") {
   defines = [ "NDEBUG=1" ]
-  cflags = [
-    "-O3",
-    "-fdata-sections",
-    "-ffunction-sections",
-  ]
-  rustflags = [ "-Copt-level=z" ]
-
-  ldflags = cflags
-  if (current_os == "mac") {
-    ldflags += [ "-Wl,-dead_strip" ]
-  } else {
-    ldflags += [
-      "-Wl,-O2",
-      "-Wl,--gc-sections",
-    ]
-  }
 }
 
 config("exceptions") {
@@ -276,6 +258,80 @@ config("default_include_dirs") {
     "//",
     root_gen_dir,
   ]
+}
+
+config("linker_gc") {
+  cflags = [
+    "-fdata-sections",
+    "-ffunction-sections",
+  ]
+  ldflags = cflags
+  if (current_os == "mac") {
+    ldflags += [ "-Wl,-dead_strip" ]
+  } else {
+    ldflags += [ "-Wl,--gc-sections" ]
+  }
+}
+
+# This is separate from default_optimize so it can be removed.
+config("default_linker_gc") {
+  if (optimize != "none") {
+    configs = [ ":linker_gc" ]
+  }
+}
+
+config("linker_string_merging") {
+  if (current_os == "win") {
+    ldflags = [ "-Wl,/opt:lldtailmerge" ]
+  } else if (current_os != "mac") {
+    ldflags = [ "-Wl,-O2" ]
+  }
+}
+
+# Each optimize_$optimize config below corresponds to a single setting that's
+# controlled by the optimize argument. The default_optimize level is set to
+# optimize_$optimize for convenience, but individual targets can override their
+# optimization level by remove default_optimize and manually applying one of
+# the configs below.
+
+# NOTE: Keep in sync with //zircon/public/gn/config/BUILD.gn
+
+config("optimize_none") {
+  cflags = [ "-O0" ]
+  ldflags = cflags
+  rustflags = [ "-Copt-level=0" ]
+}
+
+config("optimize_debug") {
+  cflags = [ "-Og" ]
+  ldflags = cflags
+  rustflags = [ "-Copt-level=1" ]
+}
+
+config("optimize_default") {
+  cflags = [ "-O2" ]
+  ldflags = cflags
+  rustflags = [ "-Copt-level=2" ]
+}
+
+config("optimize_size") {
+  cflags = [ "-Oz" ]
+  ldflags = cflags
+  rustflags = [ "-Copt-level=z" ]
+  configs = [ ":linker_string_merging" ]
+}
+
+config("optimize_speed") {
+  cflags = [ "-O3" ]
+  ldflags = cflags
+
+  # TODO(phosek): this should be the same as for C/C++.
+  rustflags = [ "-Copt-level=z" ]
+  configs = [ ":linker_string_merging" ]
+}
+
+config("default_optimize") {
+  configs = [ ":optimize_${optimize}" ]
 }
 
 config("minimal_symbols") {

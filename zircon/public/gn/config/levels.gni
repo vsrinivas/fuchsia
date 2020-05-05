@@ -12,14 +12,19 @@ declare_args() {
   # * 2 enables all asserts.
   assert_level = 2
 
-  # * -1 means really unoptimized (-O0), usually only build-tested and not run.
-  # * 0 means "optimized for debugging" (-Og), light enough to avoid confusion.
-  #   1, 2, and 3 are increasing levels of optimization.
-  # * 4 is optimized for space rather than purely for speed.
-  opt_level = 2
-
   # * 0 means no debugging information.
   # * 1 means minimal debugging information sufficient to symbolize backtraces.
   # * 2 means full debugging information for use with a symbolic debugger.
   symbol_level = 2
+}
+
+# NOTE: Keep in sync with //build/config/compiler.gni
+# TODO: Unify the default value between the two builds.
+declare_args() {
+  # * none means really unoptimized, usually only build-tested and not run
+  # * debug means "optimized for debugging", light enough to avoid confusion
+  # * default means default optimization level
+  # * size means optimized for space rather than purely for speed
+  # * speed means optimized purely for speed
+  optimize = "default"
 }

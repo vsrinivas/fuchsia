@@ -348,57 +348,77 @@ config("assert_level") {
   }
 }
 
-config("opt_level") {
-  if (opt_level == -1) {
-    compiler_flags = [ "-O0" ]
-  } else {
-    assert(opt_level >= 0)
-
-    # TODO(TC-472): opt_level==0 should mean -Og if that ever comes
-    # to mean something useful.  Correctly clang -Og is just -O1, which
-    # is still not as debugging-friendly as -O0, so don't use it.  It
-    # also doesn't actually work at all when LTO is enabled (the linker
-    # plugin doesn't grok -Og, but the compiler driver passes it -Og).
-    if (opt_level == 4) {
-      if (is_gcc) {
-        compiler_flags = [ "-Os" ]
-      } else {
-        compiler_flags = [ "-Oz" ]
-      }
-    } else {
-      compiler_flags = [ "-O$opt_level" ]
-    }
-  }
-
-  asmflags = compiler_flags
-  cflags = compiler_flags
-  ldflags = compiler_flags
-
-  if (opt_level > 2) {
-    # Enable optimal string merging.
-    if (current_os == "win") {
-      ldflags += [ "-Wl,/opt:lldtailmerge" ]
-    } else {
-      ldflags += [ "-Wl,-O2" ]
-    }
+config("linker_string_merging") {
+  if (current_os == "win") {
+    ldflags = [ "-Wl,/opt:lldtailmerge" ]
+  } else if (current_os != "mac") {
+    ldflags = [ "-Wl,-O2" ]
   }
 }
 
-# This is separate from opt_level so it can be removed.
+# Each optimize_$optimize config below corresponds to a single setting that's
+# controlled by the optimize argument. The default_optimize level is set to
+# optimize_$optimize for convenience, but individual targets can override their
+# optimization level by remove default_optimize and manually applying one of
+# the configs below.
+
+# NOTE: Keep in sync with //build/config/BUILD.gn
+
+config("optimize_none") {
+  cflags = [ "-O0" ]
+  ldflags = cflags
+  rustflags = [ "-Copt-level=0" ]
+}
+
+config("optimize_debug") {
+  cflags = [ "-Og" ]
+  ldflags = cflags
+  rustflags = [ "-Copt-level=1" ]
+}
+
+config("optimize_default") {
+  cflags = [ "-O2" ]
+  ldflags = cflags
+  rustflags = [ "-Copt-level=2" ]
+}
+
+config("optimize_size") {
+  if (is_gcc) {
+    cflags = [ "-Os" ]
+  } else {
+    cflags = [ "-Oz" ]
+  }
+  ldflags = cflags
+  rustflags = [ "-Copt-level=z" ]
+  configs = [ ":linker_string_merging" ]
+}
+
+config("optimize_speed") {
+  cflags = [ "-O3" ]
+  ldflags = cflags
+  rustflags = [ "-Copt-level=3" ]
+  configs = [ ":linker_string_merging" ]
+}
+
+config("default_optimize") {
+  configs = [ ":optimize_${optimize}" ]
+}
+
+# This is separate from default_optimize so it can be removed.
 config("default_icf") {
-  if (opt_level > 1) {
+  if (optimize != "none" && optimize != "debug") {
     # Our code should never rely on C's unique function pointer semantics,
     # which is broken by --icf=all for sometimes substantial space savings.
     configs = [ ":icf" ]
   }
 }
 
-# This is separate from opt_level so it can be removed.
+# This is separate from default_optimize so it can be removed.
 config("default_linker_gc") {
   # TODO(mcgrathr): Kernel can't be built without --gc-sections.
   # The macOS host linker seems to have some bugs with its
   # equivalent, so don't use it there.
-  if ((opt_level > 0 || toolchain.environment == "kernel") &&
+  if ((optimize != "none" || toolchain.environment == "kernel") &&
       current_os != "mac") {
     configs = [ ":linker_gc" ]
   }
