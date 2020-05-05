@@ -8,7 +8,7 @@ use {
         create_message_hub as create_setting_handler_message_hub, Address, Payload,
     },
     crate::message::base::{Audience, MessageEvent, MessengerType},
-    crate::registry::base::{Command, ContextBuilder, HandlerId, State},
+    crate::registry::base::{Command, ContextBuilder, State},
     crate::registry::device_storage::testing::*,
     crate::registry::setting_handler::{
         controller, persist::controller as data_controller,
@@ -199,14 +199,14 @@ impl controller::Handle for StateController {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_event_propagation() {
     let factory = create_setting_handler_message_hub();
-    let handler_id: HandlerId = 3;
     let setting_type = SettingType::Unknown;
 
     let (messenger, _) =
         factory.create(MessengerType::Addressable(Address::Registry)).await.unwrap();
     let (event_tx, mut event_rx) = unbounded::<State>();
     let (handler_messenger, handler_receptor) =
-        factory.create(MessengerType::Addressable(Address::Handler(handler_id))).await.unwrap();
+        factory.create(MessengerType::Unbound).await.unwrap();
+    let signature = handler_messenger.get_signature();
     let context = ContextBuilder::new(
         setting_type,
         InMemoryStorageFactory::create(),
@@ -220,7 +220,7 @@ async fn test_event_propagation() {
     messenger
         .message(
             Payload::Command(Command::ChangeState(State::Listen)),
-            Audience::Address(Address::Handler(handler_id)),
+            Audience::Messenger(signature.clone()),
         )
         .send()
         .ack();
@@ -230,7 +230,7 @@ async fn test_event_propagation() {
     messenger
         .message(
             Payload::Command(Command::ChangeState(State::EndListen)),
-            Audience::Address(Address::Handler(handler_id)),
+            Audience::Messenger(signature.clone()),
         )
         .send()
         .ack();
@@ -265,12 +265,12 @@ impl controller::Handle for StubController {
 async fn test_unimplemented_error() {
     for setting_type in get_all_setting_types() {
         let factory = create_setting_handler_message_hub();
-        let handler_id: HandlerId = 3;
 
         let (messenger, _) =
             factory.create(MessengerType::Addressable(Address::Registry)).await.unwrap();
         let (handler_messenger, handler_receptor) =
-            factory.create(MessengerType::Addressable(Address::Handler(handler_id))).await.unwrap();
+            factory.create(MessengerType::Unbound).await.unwrap();
+        let signature = handler_messenger.get_signature();
         let context = ContextBuilder::new(
             setting_type,
             InMemoryStorageFactory::create(),
@@ -284,7 +284,7 @@ async fn test_unimplemented_error() {
         let mut receptor = messenger
             .message(
                 Payload::Command(Command::HandleRequest(SettingRequest::Get)),
-                Audience::Address(Address::Handler(handler_id)),
+                Audience::Messenger(signature),
             )
             .send();
 

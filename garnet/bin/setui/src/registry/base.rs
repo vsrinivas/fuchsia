@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::internal::handler::{MessengerClient, MessengerFactory, Receptor};
+use crate::internal::handler::{MessengerClient, MessengerFactory, Receptor, Signature};
 use crate::registry::device_storage::DeviceStorageFactory;
 use crate::service_context::{ServiceContext, ServiceContextHandle};
 use crate::switchboard::base::{SettingRequest, SettingType};
@@ -13,7 +13,6 @@ use futures::lock::Mutex;
 use std::collections::HashSet;
 use std::sync::Arc;
 
-pub type HandlerId = usize;
 pub type SettingHandlerResult = Result<(), Error>;
 
 pub type GenerateHandler<T> =
@@ -41,7 +40,7 @@ pub trait SettingHandlerFactory {
         &mut self,
         setting_type: SettingType,
         messenger_factory: MessengerFactory,
-    ) -> Option<HandlerId>;
+    ) -> Option<Signature>;
 }
 
 pub struct Environment<T: DeviceStorageFactory> {

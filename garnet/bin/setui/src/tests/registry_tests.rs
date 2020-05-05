@@ -4,11 +4,11 @@
 use crate::internal::core::{create_message_hub, Address, Payload};
 use crate::internal::handler::{
     create_message_hub as create_handler_message_hub, reply, Address as HandlerAddress,
-    MessengerClient, MessengerFactory, Payload as HandlerPayload, Receptor,
+    MessengerClient, MessengerFactory, Payload as HandlerPayload, Receptor, Signature,
 };
 use crate::message::base::{Audience, MessageEvent, MessengerType};
 use crate::message::receptor::Receptor as BaseReceptor;
-use crate::registry::base::{Command, HandlerId, SettingHandlerFactory, State};
+use crate::registry::base::{Command, SettingHandlerFactory, State};
 use crate::registry::registry_impl::RegistryImpl;
 use crate::switchboard::base::{
     SettingAction, SettingActionData, SettingEvent, SettingRequest, SettingResponseResult,
@@ -103,10 +103,9 @@ impl SettingHandler {
 }
 
 struct FakeFactory {
-    handlers: HashMap<SettingType, HandlerId>,
+    handlers: HashMap<SettingType, Signature>,
     request_counts: HashMap<SettingType, u64>,
     messenger_factory: MessengerFactory,
-    next_id: HandlerId,
 }
 
 impl FakeFactory {
@@ -115,19 +114,15 @@ impl FakeFactory {
             handlers: HashMap::new(),
             request_counts: HashMap::new(),
             messenger_factory: messenger_factory,
-            next_id: 0,
         }
     }
 
     pub async fn create(&mut self, setting_type: SettingType) -> (MessengerClient, Receptor) {
-        let messenger_result = self
-            .messenger_factory
-            .create(MessengerType::Addressable(HandlerAddress::Handler(self.next_id)))
-            .await;
-        self.handlers.insert(setting_type, self.next_id);
-        self.next_id += 1;
+        let (client, receptor) =
+            self.messenger_factory.create(MessengerType::Unbound).await.unwrap();
+        self.handlers.insert(setting_type, client.get_signature());
 
-        messenger_result.unwrap()
+        (client, receptor)
     }
 
     pub fn get_request_count(&mut self, setting_type: SettingType) -> u64 {
@@ -145,12 +140,12 @@ impl SettingHandlerFactory for FakeFactory {
         &mut self,
         setting_type: SettingType,
         _: MessengerFactory,
-    ) -> Option<HandlerId> {
+    ) -> Option<Signature> {
         let existing_count = self.get_request_count(setting_type);
 
-        if let Some(handler_id) = self.handlers.get(&setting_type) {
+        if let Some(signature) = self.handlers.get(&setting_type) {
             self.request_counts.insert(setting_type, existing_count + 1);
-            return Some(*handler_id);
+            return Some(signature.clone());
         } else {
             return None;
         }

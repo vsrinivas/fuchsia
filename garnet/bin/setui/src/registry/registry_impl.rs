@@ -5,10 +5,10 @@
 use crate::internal::core::{Address, MessageClient, MessengerClient, MessengerFactory, Payload};
 use crate::internal::handler::{
     Address as ControllerAddress, MessengerClient as ControllerMessengerClient,
-    MessengerFactory as ControllerMessengerFactory, Payload as ControllerPayload,
+    MessengerFactory as ControllerMessengerFactory, Payload as ControllerPayload, Signature,
 };
 use crate::message::base::{Audience, DeliveryStatus, MessageEvent, MessengerType};
-use crate::registry::base::{Command, HandlerId, SettingHandlerFactory, State};
+use crate::registry::base::{Command, SettingHandlerFactory, State};
 use crate::switchboard::base::{
     SettingAction, SettingActionData, SettingEvent, SettingRequest, SettingType, SwitchboardError,
 };
@@ -21,7 +21,7 @@ use std::sync::Arc;
 
 pub struct RegistryImpl {
     messenger_client: MessengerClient,
-    active_controllers: HashMap<SettingType, HandlerId>,
+    active_controllers: HashMap<SettingType, Signature>,
     /// The current types being listened in on.
     active_listeners: Vec<SettingType>,
     /// handler factory
@@ -112,22 +112,22 @@ impl RegistryImpl {
         }
     }
 
-    async fn get_handler_id(&mut self, setting_type: SettingType) -> Option<HandlerId> {
+    async fn get_handler_signature(&mut self, setting_type: SettingType) -> Option<Signature> {
         if !self.active_controllers.contains_key(&setting_type) {
-            if let Some(id) = self
+            if let Some(signature) = self
                 .handler_factory
                 .lock()
                 .await
                 .generate(setting_type, self.controller_messenger_factory.clone())
                 .await
             {
-                self.active_controllers.insert(setting_type, id);
+                self.active_controllers.insert(setting_type, signature);
             }
         }
 
         // HashMap returns a reference, we need a value here.
-        if let Some(id) = self.active_controllers.get(&setting_type) {
-            return Some(*id);
+        if let Some(signature) = self.active_controllers.get(&setting_type) {
+            return Some(signature.clone());
         } else {
             return None;
         }
@@ -137,12 +137,12 @@ impl RegistryImpl {
     /// non-zero and we aren't already listening for changes to the type or there
     /// are no more listeners and we are actively listening.
     async fn process_listen(&mut self, setting_type: SettingType, size: u64) {
-        let optional_handler_id = self.get_handler_id(setting_type).await;
-        if optional_handler_id.is_none() {
+        let optional_handler_signature = self.get_handler_signature(setting_type).await;
+        if optional_handler_signature.is_none() {
             return;
         }
 
-        let handler_id = optional_handler_id.unwrap();
+        let handler_signature = optional_handler_signature.unwrap();
 
         let listening = self.active_listeners.contains(&setting_type);
 
@@ -164,7 +164,7 @@ impl RegistryImpl {
             self.controller_messenger_client
                 .message(
                     ControllerPayload::Command(Command::ChangeState(state)),
-                    Audience::Address(ControllerAddress::Handler(handler_id)),
+                    Audience::Messenger(handler_signature),
                 )
                 .send()
                 .ack();
@@ -195,7 +195,7 @@ impl RegistryImpl {
         request: SettingRequest,
         client: MessageClient,
     ) {
-        match self.get_handler_id(setting_type).await {
+        match self.get_handler_signature(setting_type).await {
             None => {
                 client
                     .reply(Payload::Event(SettingEvent::Response(
@@ -204,12 +204,12 @@ impl RegistryImpl {
                     )))
                     .send();
             }
-            Some(handler_id) => {
+            Some(signature) => {
                 let mut receptor = self
                     .controller_messenger_client
                     .message(
                         ControllerPayload::Command(Command::HandleRequest(request.clone())),
-                        Audience::Address(ControllerAddress::Handler(handler_id)),
+                        Audience::Messenger(signature),
                     )
                     .send();
 

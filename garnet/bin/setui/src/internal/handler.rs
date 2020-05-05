@@ -1,6 +1,8 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
+use crate::message::base::Signature as BaseSignature;
 use crate::message::message_client::MessageClient as BaseMessageClient;
 use crate::message::message_hub::MessageHub;
 use crate::message::messenger::{
@@ -17,6 +19,7 @@ pub type MessengerFactory = BaseFactory<Payload, Address>;
 pub type MessengerClient = BaseMessengerClient<Payload, Address>;
 pub type Receptor = BaseReceptor<Payload, Address>;
 pub type MessageClient = BaseMessageClient<Payload, Address>;
+pub type Signature = BaseSignature<Address>;
 
 // Registry addresses senders by the type they service.
 #[derive(PartialEq, Clone, Debug, Eq, Hash)]
