@@ -13,7 +13,6 @@
 ## "fx bugreport" and uses its "inspect.json" file.
 ##
 ##    --config <config-file-or-dir>      Path to config file or dir
-##    --inspect <path-to-inspect.json>   Path to inspect.json
 ##    --bugreport <dir>                  Directory to get an inspect.json file from
 ##    --tag <tag>                        Adds an action tag to include
 ##    --exclude-tag <tag>                Adds an action tag to exclude
