@@ -6,8 +6,6 @@
 #define FBL_RING_BUFFER_H_
 
 #include <zircon/assert.h>
-#include <zircon/errors.h>
-#include <zircon/types.h>
 
 #include <type_traits>
 

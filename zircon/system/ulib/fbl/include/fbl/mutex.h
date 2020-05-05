@@ -25,7 +25,6 @@ using Mutex = ::Mutex;
 
 #else  // if _KERNEL
 
-#include <zircon/types.h>
 #include <threads.h>
 
 namespace fbl {

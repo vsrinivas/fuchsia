@@ -19,7 +19,6 @@
 #include <fbl/macros.h>
 #include <fbl/mutex.h>
 #include <zircon/compiler.h>
-#include <zircon/types.h>
 
 namespace fbl {
 
