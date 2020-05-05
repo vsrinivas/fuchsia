@@ -348,11 +348,8 @@ enum EnumUint8 : uint8 {
 // Regression1, but with enums.
 struct Regression5 {
     uint8 f1;
-    // TODO(fxb/43254): Make f2 and f3 enums once GIDL supports them.
-    // EnumUint32 f2;
-    // EnumUint8 f3;
-    uint32 f2;
-    uint8 f3;
+    EnumUint32 f2;
+    EnumUint8 f3;
     uint16 f4;
     uint64 f5;
     uint8 f6;
@@ -372,9 +369,8 @@ bits BitsUint8 : uint8 {
 // Regression1, but with bits.
 struct Regression6 {
     uint8 f1;
-    // TODO(fxb/43254): Make f2 and f3 bits once GIDL supports them.
-    uint32 f2;
-    uint8 f3;
+    BitsUint32 f2;
+    BitsUint8 f3;
     uint16 f4;
     uint64 f5;
     uint8 f6;

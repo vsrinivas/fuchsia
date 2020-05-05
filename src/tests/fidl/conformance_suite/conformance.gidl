@@ -932,8 +932,7 @@ success("FlexibleEnumKnownValue") {
 }
 
 success("FlexibleEnumUnknownValue") {
-    // TODO(fxb/43254): Support enums in the Dart backend.
-    // TODO(fxb/7874): Implement flexible enums in Rust, HLCPP, and LLCPP.
+    // TODO(fxb/7874): Implement flexible enums in Dart, Rust, HLCPP, and LLCPP.
     bindings_denylist = [dart,rust,cpp,llcpp],
     value = FlexibleEnumStruct {
         e: 0xffffffff,
@@ -946,8 +945,7 @@ success("FlexibleEnumUnknownValue") {
 }
 
 success("FlexibleEnumUint64UnknownValue") {
-    // TODO(fxb/43254): Support enums in the Dart backend.
-    // TODO(fxb/7874): Implement flexible enums in Rust, HLCPP, and LLCPP.
+    // TODO(fxb/7874): Implement flexible enums in Dart, Rust, HLCPP, and LLCPP.
     bindings_denylist = [dart,rust,cpp,llcpp],
     value = FlexibleEnumUint64Struct {
         e: 0x0102030405060708,

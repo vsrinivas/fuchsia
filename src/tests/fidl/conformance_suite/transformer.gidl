@@ -2927,7 +2927,6 @@ success("Regression4") {
 }
 
 success("Regression5Enums") {
-    // TODO(fxb/43254): Make f2 and f3 enums once GIDL supports them.
     value = Regression5 {
         f1: 1,
         f2: 0x3231302f,
@@ -2966,10 +2965,9 @@ success("Regression5Enums") {
 }
 
 success("Regression6Bits") {
-    // TODO(fxb/43254): Make f2 and f3 bits once GIDL supports them.
     value = Regression6 {
         f1: 1,
-        f2: 0x3231302f,
+        f2: 0x30000003,
         f3: 0x08,
         f4: 0x1615,
         f5: 0x64636261605f5e5d,
@@ -2980,7 +2978,7 @@ success("Regression6Bits") {
         old = [
             32: raw(
                 0x01, 0x00, 0x00, 0x00,  // f1 (uint8) + padding
-                0x2f, 0x30, 0x31, 0x32,  // f2 (uint32 bits)
+                0x03, 0x00, 0x00, 0x30,  // f2 (uint32 bits)
                 0x08, 0x00, 0x15, 0x16,  // f3 (uint8 bits) + padding + f4 (uint16)
                 0x00, 0x00, 0x00, 0x00,  // padding
                 0x5d, 0x5e, 0x5f, 0x60,  // f5 (uint64)
@@ -2992,7 +2990,7 @@ success("Regression6Bits") {
         v1 = [
             32: raw(
                 0x01, 0x00, 0x00, 0x00,  // f1 (uint8) + padding
-                0x2f, 0x30, 0x31, 0x32,  // f2 (uint32 bits)
+                0x03, 0x00, 0x00, 0x30,  // f2 (uint32 bits)
                 0x08, 0x00, 0x15, 0x16,  // f3 (uint8 bits) + padding + f4 (uint16)
                 0x00, 0x00, 0x00, 0x00,  // padding
                 0x5d, 0x5e, 0x5f, 0x60,  // f5 (uint64)
