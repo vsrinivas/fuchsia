@@ -197,7 +197,8 @@ func TestConversion(t *testing.T) {
 		},
 	}
 
-	files, err := ConvertFiles(testExport, "/path/to/fuchsia", nil)
+	// We pass an empty diff mapping to avoid invoking Git.
+	files, err := ConvertFiles(testExport, "/path/to/fuchsia", &DiffMapping{})
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -5,16 +5,23 @@
 package covargs
 
 import (
+	"bytes"
 	"compress/zlib"
-	"encoding/json"
 	"fmt"
 	"math"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"runtime"
 	"sort"
+	"strconv"
+	"strings"
+	"sync"
 
+	"github.com/golang/protobuf/jsonpb"
 	"go.fuchsia.dev/fuchsia/tools/debug/covargs/api/llvm"
 	"go.fuchsia.dev/fuchsia/tools/debug/covargs/api/third_party/codecoverage"
+	"golang.org/x/sync/errgroup"
 )
 
 // DiffMapping represents a source transformation done by a diff (i.e. patch),
@@ -167,6 +174,33 @@ func compressData(lines lineData, blocks blockData) ([]*codecoverage.LineRange, 
 	return lr, cr
 }
 
+func getRevision(path string) (string, int64, error) {
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		return "", 0, nil
+	}
+	var stdout bytes.Buffer
+	cmd := exec.Command("git", "--literal-pathspecs", "log", "-n", "1", `--pretty=format:%H:%ct`, path)
+	cmd.Dir = filepath.Dir(path)
+	cmd.Stdout = &stdout
+	if err := cmd.Run(); err != nil {
+		return "", 0, fmt.Errorf("failed to obtain revision: %w", err)
+	}
+	out := strings.TrimSpace(stdout.String())
+	if out == "" {
+		return "", 0, nil
+	}
+	parts := strings.Split(out, ":")
+	if len(parts) != 2 {
+		return "", 0, fmt.Errorf("not in hash:timestamp format: %s", out)
+	}
+	hash := parts[0]
+	timestamp, err := strconv.ParseInt(parts[1], 10, 64)
+	if err != nil {
+		return "", 0, fmt.Errorf("invalid timestamp %q: %w", parts[1], err)
+	}
+	return hash, timestamp, nil
+}
+
 func convertFile(file llvm.File, base string, mapping *DiffMapping) (*codecoverage.File, error) {
 	if file.Segments == nil {
 		return nil, nil
@@ -182,9 +216,16 @@ func convertFile(file llvm.File, base string, mapping *DiffMapping) (*codecovera
 		return ld[i].line < ld[j].line
 	})
 
+	var revision string
+	var timestamp int64
 	if mapping != nil {
 		if _, ok := (*mapping)[rel]; ok {
 			ld, bd = rebaseData(ld, bd, (*mapping)[rel])
+		}
+	} else {
+		revision, timestamp, err = getRevision(file.Filename)
+		if err != nil {
+			return nil, err
 		}
 	}
 
@@ -211,6 +252,8 @@ func convertFile(file llvm.File, base string, mapping *DiffMapping) (*codecovera
 				Total:   int32(file.Summary.Lines.Count),
 			},
 		},
+		Revision:  revision,
+		Timestamp: timestamp,
 	}, nil
 }
 
@@ -305,15 +348,28 @@ func ComputeSummaries(files []*codecoverage.File) ([]*codecoverage.GroupCoverage
 // compressed coverage format used by Chromium coverage service.
 func ConvertFiles(export *llvm.Export, base string, mapping *DiffMapping) ([]*codecoverage.File, error) {
 	var files []*codecoverage.File
+	var g errgroup.Group
+	var mu sync.Mutex
+	s := make(chan struct{}, runtime.NumCPU())
 	for _, d := range export.Data {
-		// TODO(phosek): Use goroutines to process files in parallel.
 		for _, f := range d.Files {
-			file, err := convertFile(f, base, mapping)
-			if err != nil {
-				return nil, err
-			}
-			files = append(files, file)
+			f := f
+			s <- struct{}{}
+			g.Go(func() error {
+				defer func() { <-s }()
+				file, err := convertFile(f, base, mapping)
+				if err != nil {
+					return err
+				}
+				mu.Lock()
+				files = append(files, file)
+				mu.Unlock()
+				return nil
+			})
 		}
+	}
+	if err := g.Wait(); err != nil {
+		return nil, err
 	}
 	return files, nil
 }
@@ -326,7 +382,11 @@ func saveReport(report *codecoverage.CoverageReport, filename string) error {
 	defer f.Close()
 	w := zlib.NewWriter(f)
 	defer w.Close()
-	if err := json.NewEncoder(w).Encode(report); err != nil {
+	m := &jsonpb.Marshaler{
+		OrigName:     true,
+		EmitDefaults: true,
+	}
+	if err := m.Marshal(w, report); err != nil {
 		return fmt.Errorf("cannot marshal report: %w", err)
 	}
 	return nil

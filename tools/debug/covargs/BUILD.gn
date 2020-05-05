@@ -24,6 +24,7 @@ go_library("covargs_lib") {
     ":codecoverage_api",
     ":llvm_api",
     "//third_party/golibs:github.com/golang/protobuf",
+    "//third_party/golibs:golang.org/x/sync",
     "//tools/debug/symbolize:symbolize_lib",
     "//tools/lib/logger",
     "//tools/testing/runtests",
