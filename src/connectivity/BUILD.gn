@@ -18,6 +18,17 @@ group("connectivity") {
   ]
 }
 
+group("tools") {
+  testonly = true
+  public_deps = [
+    "//src/connectivity/management/network_manager_cli",
+    "//src/connectivity/network/dhcpd-cli",
+    "//src/connectivity/network/netdump",
+    "//src/connectivity/network/netstack:tools",
+    "//src/connectivity/wlan:tools",
+  ]
+}
+
 group("tests") {
   testonly = true
   deps = [
