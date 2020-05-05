@@ -596,20 +596,11 @@ func (c *Client) Attach(dispatcher stack.NetworkDispatcher) {
 						return err
 					}
 					if obs&zx.Signals(ethernet.SignalStatus) != 0 {
-						if status, err := c.GetStatus(); err != nil {
+						c.mu.Lock()
+						if err := c.updateStatusLocked("FIFO signal"); err != nil {
 							_ = syslog.WarnTf(tag, "status error: %s", err)
-						} else {
-							_ = syslog.VLogTf(syslog.TraceVerbosity, tag, "status: %d", status)
-
-							c.mu.Lock()
-							switch status {
-							case LinkDown:
-								c.changeStateLocked(link.StateDown)
-							case LinkUp:
-								c.changeStateLocked(link.StateStarted)
-							}
-							c.mu.Unlock()
 						}
+						c.mu.Unlock()
 					}
 					if obs&zx.SignalFIFOReadable != 0 {
 						switch status, count := FifoRead(c.fifos.Rx, scratch); status {
@@ -689,6 +680,7 @@ func (c *Client) changeStateLocked(s link.State) {
 
 // Up enables the interface.
 func (c *Client) Up() error {
+	_ = syslog.VLogTf(syslog.TraceVerbosity, tag, "client Up")
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if c.state != link.StateStarted {
@@ -697,15 +689,8 @@ func (c *Client) Up() error {
 		} else if err := checkStatus(status, "Start"); err != nil {
 			return err
 		}
-		if status, err := c.GetStatus(); err != nil {
+		if err := c.updateStatusLocked("Up"); err != nil {
 			return err
-		} else {
-			switch status {
-			case LinkDown:
-				c.changeStateLocked(link.StateDown)
-			case LinkUp:
-				c.changeStateLocked(link.StateStarted)
-			}
 		}
 	}
 
@@ -799,10 +784,20 @@ const (
 	LinkUp
 )
 
-// GetStatus returns the underlying device's status.
-func (c *Client) GetStatus() (LinkStatus, error) {
+// updateStatusLocked fetches the current device status and notifies endpoint
+// status changes.
+func (c *Client) updateStatusLocked(debugSource string) error {
 	status, err := c.device.GetStatus(context.Background())
+	if err != nil {
+		return err
+	}
 	linkStatus := LinkStatus(status & ethernet.DeviceStatusOnline)
-	syslog.InfoTf(tag, "fuchsia.hardware.ethernet.Device.GetStatus() = %s", linkStatus)
-	return linkStatus, err
+	_ = syslog.InfoTf(tag, "fuchsia.hardware.ethernet.Device.GetStatus() = %s (%s)", linkStatus, debugSource)
+	switch linkStatus {
+	case LinkDown:
+		c.changeStateLocked(link.StateDown)
+	case LinkUp:
+		c.changeStateLocked(link.StateStarted)
+	}
+	return nil
 }
