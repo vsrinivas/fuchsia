@@ -6,6 +6,8 @@
 
 use {
     anyhow::{anyhow, Context, Error, Result},
+    lazy_static::lazy_static,
+    regex::Regex,
     std::collections::BTreeMap,
     std::io,
     xml::attribute,
@@ -91,6 +93,31 @@ enum State {
 
     // Final accepting state of the parser, no more input is expected.
     Done,
+}
+
+lazy_static! {
+    // All string names must match this regex string. (This should be fixed up
+    // to match the FIDL naming rules)
+    //
+    // Example:
+    // __hello_WORLD -- acceptable
+    // 0cool -- not acceptable, leading number
+    // добар_дан -- not acceptable, not A-Z.
+    static ref RAW_REGEX_STRING: &'static str = r"^[_a-zA-Z][_a-zA-Z_0-9]*$";
+
+    static ref VALID_TOKEN_NAME: Regex = Regex::new(&RAW_REGEX_STRING).unwrap();
+}
+
+// Verifies that [name] is a valid string name.
+pub(crate) fn validate_token_name(name: &str, verbose: bool) -> bool {
+    let is_match = VALID_TOKEN_NAME.is_match(name);
+    veprintln!(
+        verbose,
+        "validate_token_name: checking identifier: '{}'; is_match: {}",
+        name,
+        is_match
+    );
+    is_match
 }
 
 /// The XML parser state.
@@ -209,6 +236,13 @@ impl Instance {
                 }
                 if self.messages.contains_key(&token_name) {
                     return Err(anyhow!("duplicate string with name: {}", token_name));
+                }
+                if !validate_token_name(&token_name, self.verbose) {
+                    return Err(anyhow!(
+                        "name is not acceptable: '{}', does not match: {}",
+                        &token_name,
+                        *RAW_REGEX_STRING
+                    ));
                 }
                 self.messages.insert(token_name, text);
                 self.state = State::Resources;
@@ -432,6 +466,19 @@ with intervening newlines
                </resources>
             "#,
             },
+            TestCase {
+                name: "string_name has unexpected comma",
+                content: r#"
+               <!-- comment -->
+               <?xml version="1.0" encoding="utf-8"?>
+               <resources>
+                 <!-- comment -->
+                 <string
+                   name="string_name,"
+                     >text_string</string>
+               </resources>
+            "#,
+            },
         ];
         for test in tests {
             let input = EventReader::from_str(&test.content);
@@ -444,6 +491,25 @@ with intervening newlines
                 _ => {}
             }
         }
+        Ok(())
+    }
+
+    use super::validate_token_name;
+
+    #[test]
+    fn acceptable_and_unacceptable_names() -> Result<(), Error> {
+        assert_eq!(true, validate_token_name("_hello", true /*verbose*/));
+        assert_eq!(true, validate_token_name("__hello", true /*verbose*/));
+        assert_eq!(true, validate_token_name("__HELLO__", true /*verbose*/));
+        assert_eq!(true, validate_token_name("__H_e_l_l_o__", true /*verbose*/));
+        assert_eq!(true, validate_token_name("__H_e_l_l_o_1234__", true /*verbose*/));
+
+        // Starts with zero
+        assert_eq!(false, validate_token_name("0cool", true /*verbose*/));
+        // Unexpected comma.
+        assert_eq!(false, validate_token_name("role_table,", true /*verbose*/));
+        // Unicode overdose.
+        assert_eq!(false, validate_token_name("хелло_њорлд", true /*verbose*/));
         Ok(())
     }
 }
