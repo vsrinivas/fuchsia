@@ -14,6 +14,7 @@ namespace cobalt {
 using fuchsia::cobalt::Status;
 
 constexpr char kChannelCacheFilenameSuffix[] = "last_reported_channel";
+constexpr char kRealmCacheFilenameSuffix[] = "last_reported_realm";
 
 SystemDataUpdaterImpl::SystemDataUpdaterImpl(encoder::SystemDataInterface* system_data,
                                              const std::string& cache_file_name_prefix)
@@ -40,9 +41,16 @@ void SystemDataUpdaterImpl::RestoreData() {
   if (d != "") {
     system_data_->SetChannel(d);
   }
+  d = Restore(kRealmCacheFilenameSuffix);
+  if (d != "") {
+    system_data_->SetRealm(d);
+  }
 }
 
-void SystemDataUpdaterImpl::ClearData() { DeleteData(kChannelCacheFilenameSuffix); }
+void SystemDataUpdaterImpl::ClearData() {
+  DeleteData(kChannelCacheFilenameSuffix);
+  DeleteData(kRealmCacheFilenameSuffix);
+}
 
 std::string SystemDataUpdaterImpl::Restore(const std::string& suffix) {
   std::ifstream file(cache_file_name_prefix_ + suffix);
@@ -68,13 +76,32 @@ void SystemDataUpdaterImpl::DeleteData(const std::string& suffix) {
 }
 
 void SystemDataUpdaterImpl::SetChannel(std::string current_channel, SetChannelCallback callback) {
-  FX_LOGS(INFO) << "Setting channel to `" << current_channel << "`";
-  if (current_channel == "") {
-    system_data_->SetChannel("<unknown>");
-  } else {
-    Persist(kChannelCacheFilenameSuffix, current_channel);
-    system_data_->SetChannel(current_channel);
+  fuchsia::cobalt::SoftwareDistributionInfo current_info;
+  if (current_channel != "") {
+    current_info.set_current_channel(std::move(current_channel));
   }
+  SetSoftwareDistributionInfo(std::move(current_info), [&callback](Status status) { callback(status); });
+}
+
+void SystemDataUpdaterImpl::SetSoftwareDistributionInfo(fuchsia::cobalt::SoftwareDistributionInfo current_info,
+                                                        SetSoftwareDistributionInfoCallback callback) {
+
+  std::string realm = "<unknown>";
+  std::string channel = "<unknown>";
+  if (current_info.has_current_realm()) {
+    realm = current_info.current_realm();
+    Persist(kRealmCacheFilenameSuffix, realm);
+  }
+
+  if (current_info.has_current_channel()) {
+    channel = current_info.current_channel();
+    Persist(kChannelCacheFilenameSuffix, channel);
+  }
+
+  FX_LOGS(INFO) << "Setting realm to `" << realm << "`";
+  FX_LOGS(INFO) << "Setting channel to `" << channel << "`";
+  system_data_->SetRealm(realm);
+  system_data_->SetChannel(channel);
   callback(Status::OK);
 }
 

@@ -10,6 +10,7 @@
 #include <lib/sys/cpp/testing/component_context_provider.h>
 
 #include <fstream>
+#include "fuchsia/cobalt/cpp/fidl.h"
 
 namespace cobalt {
 
@@ -18,6 +19,7 @@ using fidl::VectorPtr;
 using fuchsia::cobalt::ExperimentPtr;
 using fuchsia::cobalt::Status;
 using fuchsia::cobalt::SystemDataUpdaterPtr;
+using fuchsia::cobalt::SoftwareDistributionInfo;
 
 class CobaltAppForTest {
  public:
@@ -68,6 +70,10 @@ class SystemDataUpdaterImplTests : public gtest::TestLoopFixture {
 
   const std::string& channel() {
     return cobalt_app_->system_make_data().system_profile().channel();
+  }
+
+  const std::string& realm() {
+    return cobalt_app_->system_make_data().system_profile().realm();
   }
 
   std::vector<fuchsia::cobalt::Experiment> ExperimentVectorWithIdAndArmId(int64_t experiment_id,
@@ -143,6 +149,28 @@ TEST_F(SystemDataUpdaterImplTests, SetChannel) {
   EXPECT_EQ(channel(), "fishfood");
 }
 
+TEST_F(SystemDataUpdaterImplTests, SetSoftwareDistributionInfo) {
+  SystemDataUpdaterPtr system_data_updater = GetSystemDataUpdater();
+
+  EXPECT_EQ(channel(), "<unset>");
+  EXPECT_EQ(realm(), "<unset>");
+
+  system_data_updater->SetSoftwareDistributionInfo(SoftwareDistributionInfo(), [](Status s) {});
+  RunLoopUntilIdle();
+
+  EXPECT_EQ(channel(), "<unknown>");
+  EXPECT_EQ(realm(), "<unknown>");
+
+  SoftwareDistributionInfo info = SoftwareDistributionInfo();
+  info.set_current_realm("dogfood");
+  info.set_current_channel("fishfood_release");
+  system_data_updater->SetSoftwareDistributionInfo(std::move(info), [](Status s) {});
+  RunLoopUntilIdle();
+
+  EXPECT_EQ(channel(), "fishfood_release");
+  EXPECT_EQ(realm(), "dogfood");
+}
+
 namespace {
 
 std::unique_ptr<SystemData> make_data() { return std::make_unique<SystemData>("test", "test", ReleaseStage::DEBUG); }
@@ -153,7 +181,7 @@ std::unique_ptr<SystemDataUpdaterImpl> make_updater(SystemData* data) {
 
 }  // namespace
 
-TEST(SystemDataUpdaterImpl, TestPersistence) {
+TEST(SystemDataUpdaterImpl, TestChannelPersistence) {
   auto system_data = make_data();
   auto updater = make_updater(system_data.get());
 
@@ -171,6 +199,34 @@ TEST(SystemDataUpdaterImpl, TestPersistence) {
   system_data = make_data();
   updater = make_updater(system_data.get());
   EXPECT_EQ(system_data->system_profile().channel(), "<unset>");
+}
+
+TEST(SystemDataUpdaterImpl, TestSoftwareDistributionInfoPersistence) {
+  auto system_data = make_data();
+  auto updater = make_updater(system_data.get());
+
+  EXPECT_EQ(system_data->system_profile().channel(), "<unset>");
+  EXPECT_EQ(system_data->system_profile().realm(), "<unset>");
+  SoftwareDistributionInfo info = SoftwareDistributionInfo();
+
+  info.set_current_realm("dogfood");
+  info.set_current_channel("fishfood_release");
+  updater->SetSoftwareDistributionInfo(std::move(info), [](Status s) {});
+  EXPECT_EQ(system_data->system_profile().realm(), "dogfood");
+  EXPECT_EQ(system_data->system_profile().channel(), "fishfood_release");
+
+  // Test restoring data.
+  system_data = make_data();
+  updater = make_updater(system_data.get());
+  EXPECT_EQ(system_data->system_profile().realm(), "dogfood");
+  EXPECT_EQ(system_data->system_profile().channel(), "fishfood_release");
+
+  // Test default behavior with no data.
+  updater->ClearData();
+  system_data = make_data();
+  updater = make_updater(system_data.get());
+  EXPECT_EQ(system_data->system_profile().channel(), "<unset>");
+  EXPECT_EQ(system_data->system_profile().realm(), "<unset>");
 }
 
 }  // namespace cobalt

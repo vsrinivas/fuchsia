@@ -29,6 +29,9 @@ class SystemDataUpdaterImpl : public fuchsia::cobalt::SystemDataUpdater {
 
   void SetChannel(std::string current_channel, SetChannelCallback callback) override;
 
+  void SetSoftwareDistributionInfo(fuchsia::cobalt::SoftwareDistributionInfo current_info,
+                                   SetSoftwareDistributionInfoCallback callback) override;
+
  private:
   // Persist stores the specified |value| to disk
   //
