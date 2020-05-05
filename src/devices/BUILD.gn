@@ -29,6 +29,7 @@ group("tests") {
     "power:tests",
     "pwm:tests",
     "pwm:tests",
+    "ram:tests",
     "serial:tests",
     "shareddma:tests",
     "tests",
