@@ -22,10 +22,7 @@ source_set("fxl_logging") {
     "logging.h",
   ]
 
-  public_deps = [
-    ":common",
-    "//sdk/lib/syslog/cpp",
-  ]
+  public_deps = [ "//sdk/lib/syslog/cpp" ]
 }
 
 source_set("memory") {

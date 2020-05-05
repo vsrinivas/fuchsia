@@ -10,6 +10,7 @@
 #include <sstream>
 
 #include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/macros.h"
 
 namespace scenic_impl {
 

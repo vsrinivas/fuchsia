@@ -20,6 +20,7 @@
 #include <vector>
 
 #include "fuchsia/netemul/guest/cpp/fidl.h"
+#include "src/lib/fxl/macros.h"
 #include "src/virtualization/lib/guest_interaction/client/client_impl.h"
 #include "src/virtualization/lib/guest_interaction/platform_interface/platform_interface.h"
 #include "src/virtualization/lib/guest_interaction/proto/guest_interaction.grpc.pb.h"

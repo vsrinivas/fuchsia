@@ -10,6 +10,7 @@
 
 #include "lib/fidl/cpp/binding_set.h"
 #include "src/cobalt/bin/app/metric_event_logger_impl.h"
+#include "src/lib/fxl/macros.h"
 #include "third_party/cobalt/src/public/cobalt_service_interface.h"
 
 namespace cobalt {

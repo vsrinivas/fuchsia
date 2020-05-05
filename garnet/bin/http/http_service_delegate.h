@@ -10,6 +10,7 @@
 #include <memory>
 
 #include "garnet/bin/http/http_service_impl.h"
+#include "src/lib/fxl/macros.h"
 
 namespace http {
 

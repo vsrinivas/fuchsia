@@ -11,6 +11,7 @@
 #include "lib/fidl/cpp/binding_set.h"
 #include "src/cobalt/bin/app/logger_impl.h"
 #include "src/cobalt/bin/app/timer_manager.h"
+#include "src/lib/fxl/macros.h"
 #include "third_party/cobalt/src/public/cobalt_service_interface.h"
 
 namespace cobalt {
