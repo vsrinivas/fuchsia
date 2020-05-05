@@ -1,0 +1,19 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.validate.logs;
+
+using fuchsia.mem;
+using fuchsia.diagnostics.stream;
+
+enum ValidateError {
+    UnsupportedRecord = 1;
+};
+
+[Discoverable]
+protocol Validate {
+    /// Log takes a record and converts it into a buffer.
+    /// Returns an error if record contains unsupported type
+    Log(fuchsia.diagnostics.stream.Record record) -> (fuchsia.mem.Buffer result) error ValidateError;
+};
