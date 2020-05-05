@@ -7,6 +7,7 @@
 
 #include <lib/devmgr-integration-test/fixture.h>
 
+#include <optional>
 #include <string>
 
 #include <fbl/macros.h>
@@ -58,7 +59,7 @@ class Environment : public zxtest::Environment {
     bool show_help;
     bool use_journal = true;
     bool use_pager = false;
-    bool write_uncompressed = false;
+    const char* write_compression_algorithm = nullptr;
 
     // Power-failure related tests.
     uint32_t power_stride = 1;  // Number of steps to skip between runs.
@@ -84,7 +85,12 @@ class Environment : public zxtest::Environment {
 
   bool use_pager() const { return config_.use_pager; }
 
-  bool write_uncompressed() const { return config_.write_uncompressed; }
+  std::optional<const char*> write_compression_algorithm() const {
+    if (config_.write_compression_algorithm == nullptr) {
+      return std::nullopt;
+    }
+    return config_.write_compression_algorithm;
+  }
 
   disk_format_type format_type() const { return config_.format_type; }
 

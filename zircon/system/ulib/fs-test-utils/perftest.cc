@@ -311,7 +311,7 @@ bool ParseCommandLineArgs(int argc, const char* const* argv, FixtureOptions* fix
       {"runs", required_argument, nullptr, 0},
       {"seed", required_argument, nullptr, 0},
       {"pager", no_argument, nullptr, 0},
-      {"write-uncompressed", no_argument, nullptr, 0},
+      {"compression", required_argument, nullptr, 'c'},
       {0, 0, 0, 0},
   };
   // Resets the internal state of getopt*, making this function idempotent.
@@ -325,7 +325,7 @@ bool ParseCommandLineArgs(int argc, const char* const* argv, FixtureOptions* fix
 
   int c = -1;
   int option_index = -1;
-  while ((c = getopt_long(argc, argvs, "ph", opts, &option_index)) >= 0) {
+  while ((c = getopt_long(argc, argvs, "phc:", opts, &option_index)) >= 0) {
     switch (c) {
       case 0:
         switch (option_index) {
@@ -381,15 +381,15 @@ bool ParseCommandLineArgs(int argc, const char* const* argv, FixtureOptions* fix
           case 13:
             fixture_options->use_pager = true;
             break;
-          case 14:
-            fixture_options->write_uncompressed = true;
-            break;
           default:
             break;
         }
         break;
       case 'p':
         *performance_test_options = PerformanceTestOptions::PerformanceTest();
+        break;
+      case 'c':
+        fixture_options->write_compression_algorithm = optarg;
         break;
       case 'h':
       default:

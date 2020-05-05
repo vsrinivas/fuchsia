@@ -123,7 +123,7 @@ static constexpr init_options_t readonly_options = {
     .wait_until_ready = true,
     .enable_journal = true,
     .enable_pager = false,
-    .write_uncompressed = false,
+    .write_compression_algorithm = nullptr,
     .callback = launch_stdio_async,
 };
 
