@@ -18,10 +18,10 @@ driver_module("virtio_block") {
   sources = [ "block_driver.cc" ]
   deps = [
     ":block_lib",
+    "//sdk/banjo/ddk.protocol.block",
     "//src/devices/bus/lib/virtio",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddktl",
-    "//zircon/system/banjo/ddk.protocol.block",
   ]
 }
 
@@ -29,9 +29,9 @@ source_set("block_lib") {
   defines = [ "_ALL_SOURCE" ]
   sources = [ "block.cc" ]
   public_deps = [
+    "//sdk/banjo/ddk.protocol.block",
     "//src/devices/bus/lib/virtio",
     "//zircon/public/lib/ddktl",
-    "//zircon/system/banjo/ddk.protocol.block",
   ]
 }
 
@@ -39,10 +39,10 @@ source_set("scsi_lib") {
   defines = [ "_ALL_SOURCE" ]
   sources = [ "scsi.cc" ]
   public_deps = [
+    "//sdk/banjo/ddk.protocol.block",
     "//src/devices/block/lib/scsi",
     "//src/devices/bus/lib/virtio",
     "//zircon/public/lib/ddktl",
-    "//zircon/system/banjo/ddk.protocol.block",
   ]
 }
 

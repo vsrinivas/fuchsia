@@ -35,13 +35,13 @@ test("ahci-unittest") {
   ]
   deps = [
     ":shared",
+    "//sdk/banjo/ddk.protocol.block",
     "//src/devices/testing/fake-bti",
     "//src/devices/testing/fake_ddk",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/banjo/ddk.protocol.block",
   ]
 }
 
@@ -56,6 +56,7 @@ source_set("shared") {
     "sata.cc",
   ]
   deps = [
+    "//sdk/banjo/ddk.protocol.block",
     "//sdk/banjo/ddk.protocol.pci",
     "//src/devices/pci/lib/device-protocol-pci",
     "//zircon/public/lib/ddk",
@@ -63,7 +64,6 @@ source_set("shared") {
     "//zircon/public/lib/mmio",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
-    "//zircon/system/banjo/ddk.protocol.block",
   ]
 }
 

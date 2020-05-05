@@ -49,7 +49,7 @@ for writing drivers in Fuchsia.  It allows authors to automatically supply the
 [ulib/ddk](/zircon/system/ulib/ddk) function pointers and callbacks by using templatized mix-ins.  In the
 case of zxcrypt, the [device](/src/devices/block/drivers/zxcrypt/device.h) is "Messageable",
 "IotxnQueueable", "GetSizable", "UnbindableDeprecated", and implements the methods listed in DDKTL's
-[BlockProtocol](/zircon/system/banjo/ddk.protocol.block/block.banjo).
+[BlockProtocol](/sdk/banjo/ddk.protocol.block/block.banjo).
 
 There are two small pieces of functionality which cannot be written in DDKTL and C++:
 * The driver binding logic, written using the C preprocessor macros of DDK's

@@ -14,6 +14,7 @@ driver_module("gpt") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "gpt.cc" ]
   deps = [
+    "//sdk/banjo/ddk.protocol.block",
     "//sdk/banjo/ddk.protocol.block.partition",
     "//src/devices/lib/driver",
     "//zircon/public/lib/cksum",
@@ -21,7 +22,6 @@ driver_module("gpt") {
     "//zircon/public/lib/fit",
     "//zircon/public/lib/gpt",
     "//zircon/public/lib/sync",
-    "//zircon/system/banjo/ddk.protocol.block",
   ]
 }
 
@@ -36,6 +36,7 @@ test("gpt-device-test") {
     "gpt_device_test.cc",
   ]
   deps = [
+    "//sdk/banjo/ddk.protocol.block",
     "//sdk/banjo/ddk.protocol.block.partition",
     "//src/devices/testing/fake_ddk",
     "//zircon/public/lib/cksum",
@@ -47,7 +48,6 @@ test("gpt-device-test") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/banjo/ddk.protocol.block",
   ]
 }
 

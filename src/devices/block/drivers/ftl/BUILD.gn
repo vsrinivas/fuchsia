@@ -35,6 +35,7 @@ source_set("common") {
   ]
   public_deps = [
     "//sdk/banjo/ddk.protocol.badblock",
+    "//sdk/banjo/ddk.protocol.block",
     "//sdk/banjo/ddk.protocol.block.partition",
     "//sdk/banjo/ddk.protocol.nand",
     "//zircon/public/lib/ddk",
@@ -47,7 +48,6 @@ source_set("common") {
     "//zircon/public/lib/trace-driver",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
-    "//zircon/system/banjo/ddk.protocol.block",
     "//zircon/system/fidl/fuchsia-hardware-block:llcpp",
     "//zircon/system/fidl/fuchsia-hardware-nand:c",
     "//zircon/system/ulib/ftl",

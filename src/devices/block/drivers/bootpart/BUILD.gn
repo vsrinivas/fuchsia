@@ -13,12 +13,12 @@ driver_module("bootpart") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "bootpart.c" ]
   deps = [
+    "//sdk/banjo/ddk.protocol.block",
     "//sdk/banjo/ddk.protocol.block.partition",
     "//src/devices/lib/driver",
     "//zircon/public/lib/cksum",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/sync",
-    "//zircon/system/banjo/ddk.protocol.block",
   ]
 }
 

@@ -28,11 +28,11 @@ test("storage-metrics") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "storage-metrics-test.cc" ]
   deps = [
+    "//sdk/banjo/ddk.protocol.block",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/banjo/ddk.protocol.block",
     "//zircon/system/fidl/fuchsia-hardware-block:c",
     "//zircon/system/fidl/fuchsia-minfs:c",
     "//zircon/system/fidl/fuchsia-storage-metrics:c",

@@ -29,6 +29,7 @@ driver_module("zxcrypt") {
   # static or already linked by the devhost.  We consider libc, libzircon, and
   # libdriver safe to depend on dynamically here.
   deps = [
+    "//sdk/banjo/ddk.protocol.block",
     "//sdk/banjo/ddk.protocol.block.partition",
     "//sdk/banjo/ddk.protocol.block.volume",
     "//sdk/fidl/fuchsia.hardware.block.encrypted:fuchsia.hardware.block.encrypted_c",
@@ -40,7 +41,6 @@ driver_module("zxcrypt") {
     "//zircon/public/lib/pretty",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
-    "//zircon/system/banjo/ddk.protocol.block",
     "//zircon/system/ulib/zircon-crypto:zircon-crypto-static",
     "//zircon/system/ulib/zxcrypt:zxcrypt-dev",
   ]

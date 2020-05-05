@@ -22,6 +22,7 @@ test("scsilib-disk-test") {
   }
   sources = [ "scsilib-disk-test.cc" ]
   deps = [
+    "//sdk/banjo/ddk.protocol.block",
     "//src/devices/block/lib/scsi",
     "//src/devices/lib/driver",
     "//src/devices/testing/fake-bti",
@@ -33,7 +34,6 @@ test("scsilib-disk-test") {
     "//zircon/public/lib/fit",
     "//zircon/public/lib/unittest",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/banjo/ddk.protocol.block",
   ]
 }
 

@@ -13,6 +13,7 @@ driver_module("ums-function") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "ums-function.c" ]
   deps = [
+    "//sdk/banjo/ddk.protocol.block",
     "//sdk/banjo/ddk.protocol.usb",
     "//sdk/banjo/ddk.protocol.usb.function",
     "//sdk/banjo/ddk.protocol.usb.request",
@@ -21,7 +22,6 @@ driver_module("ums-function") {
     "//src/devices/usb/lib/usb",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/sync",
-    "//zircon/system/banjo/ddk.protocol.block",
   ]
 }
 

@@ -11,15 +11,15 @@ such as flash drives, external hard drives, and other types of removable media
 connected through USB. The USB mass storage driver is split into two parts.
 
 * [Block device interface](/src/devices/block/drivers/usb-mass-storage/block.cc)
-Uses the [block](/zircon/system/banjo/ddk.protocol.block/block.banjo) protocol.
+Uses the [block](/sdk/banjo/ddk.protocol.block/block.banjo) protocol.
 * [Core](/src/devices/block/drivers/usb-mass-storage/usb-mass-storage.cc) device
 Interfaces with the USB stack.
 
 ## Block device
 
 The block device implements
-[BlockImplQuery](/zircon/system/banjo/ddk.protocol.block/block.banjo#95), and
-[BlockImplQueue](/zircon/system/banjo/ddk.protocol.block/block.banjo#102). It
+[BlockImplQuery](/sdk/banjo/ddk.protocol.block/block.banjo#95), and
+[BlockImplQueue](/sdk/banjo/ddk.protocol.block/block.banjo#102). It
 supports read and write operations, but flush is not implemented. If power is
 lost after a write operation, changes written to a USB mass storage device may
 not be persisted to the device.The driver has no mechanism to inform drivers

@@ -15,6 +15,7 @@ driver_module("mtk-sdmmc") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "mtk-sdmmc.cc" ]
   deps = [
+    "//sdk/banjo/ddk.protocol.block",
     "//sdk/banjo/ddk.protocol.clock",
     "//sdk/banjo/ddk.protocol.composite",
     "//sdk/banjo/ddk.protocol.gpio",
@@ -32,7 +33,6 @@ driver_module("mtk-sdmmc") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
-    "//zircon/system/banjo/ddk.protocol.block",
   ]
 }
 
@@ -44,6 +44,7 @@ test("mtk-sdmmc-test") {
     "mtk-sdmmc.cc",
   ]
   deps = [
+    "//sdk/banjo/ddk.protocol.block",
     "//sdk/banjo/ddk.protocol.clock",
     "//sdk/banjo/ddk.protocol.composite",
     "//sdk/banjo/ddk.protocol.gpio",
@@ -64,7 +65,6 @@ test("mtk-sdmmc-test") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/banjo/ddk.protocol.block",
   ]
 }
 

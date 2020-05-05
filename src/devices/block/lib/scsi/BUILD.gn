@@ -22,10 +22,10 @@ zx_library("scsi") {
   ]
   sources = [ "scsilib.cc" ]
   deps = [
+    "//sdk/banjo/ddk.protocol.block",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
-    "//zircon/system/banjo/ddk.protocol.block",
   ]
   public_deps = [
     "//src/devices/lib/driver",
