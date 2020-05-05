@@ -84,43 +84,32 @@ together.
 
 #### Bash scripts test
 
-To test the bash scripts, run the `bash_tests/run_bash_tests.sh` script.
+To test the bash scripts, run `fx test gn_sdk_script_tests`
 
-```sh
-$ scripts/sdk/gn/bash_tests/run_bash_tests.sh
-```
-
-This runs the tests in the `scripts/sdk/gn/bash_tests` which tests the scripts found in `scripts/sdk/gn/base/bin`.
 
 #### Test project test
 
 To test the SDK on a test project, the `generate.py` must be run with the `--tests` flag. `generate.py` requires a IDK (integrator development kit) build
 
-1. Create a temporary directory with subdirectories for the SDK and test
-   workspaces:
-
-   ```sh
-   mkdir -p temp/gn_sdk_dir temp/test_workspace
-   ```
-
 1. Download the latest IDK (integrator development kit) to a temporary
-directory:
+directory (assuming the current directory is $FUCHSIA_DIR):
 
    ```sh
+   $ mkdir out/temp
    $ BUILD_ID="$(gsutil cat gs://fuchsia/development/LATEST_LINUX)"
-   gsutil cp gs://fuchsia/development/$BUILD_ID/sdk/linux-amd64/core.tar.gz temp/idk.tar.gz
+   gsutil cp gs://fuchsia/development/$BUILD_ID/sdk/linux-amd64/core.tar.gz out/temp/idk.tar.gz
    ```
 1. Generate the test workspace into a temporary directory:
 
    ```sh
    $ scripts/sdk/gn/generate.py \
-    --archive temp/idk.tar.gz \
-    --output temp/gn_sdk_dir/ \
-    --tests temp/test_workspace
+    --archive out/temp/idk.tar.gz \
+    --output out/temp/gn_sdk_dir/ \
+    --tests out/temp/test_workspace
    ```
 
 1. Run the `run.py` file in the test workspace:
 
    ```sh
-   $ temp/test_workspace/run.py
+   $ out/temp/test_workspace/run.py
    ```

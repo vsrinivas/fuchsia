@@ -1,0 +1,92 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Helper templates for host_script_test.gni. These templates
+# should not be used directly. See host_script_test.gni for
+# details.
+
+# Internal template for copying a directory of files and adding
+# the files to the test dependency metadata.
+template("_host_testa_data_impl_data_copy") {
+  copy(target_name) {
+    sources = invoker.source_files
+    outputs = [ "${invoker.dest_path}/{{source_file_part}}" ]
+    forward_variables_from(invoker, [ "data_deps" ])
+    metadata = {
+      test_runtime_deps = []
+      foreach(f, invoker.source_files) {
+        test_runtime_deps +=
+            [ "${invoker.dest_path}/" + get_path_info(f, "file") ]
+      }
+    }
+  }
+}
+
+# Internal template for handling subdirectories within a data file scope.
+#
+#  Parameters:
+#       data - a scope as defined in host_test_data.
+#       data_deps
+#       visibility
+template("host_testa_data_impl_data_set_copy") {
+  set = invoker.data
+  last_dir = "/"
+  base_dir = set.target_base_dir
+  data_path = invoker.data_path
+  dir_count = 0
+  file_set = []
+  dep_target_list = []
+  foreach(file, set.files) {
+    # Need a copy target for each source directory within the source_base_dir.
+    sub_dir = get_path_info(file, "dir")
+    if (sub_dir != ".") {
+      sub_dir = string_replace(sub_dir, set.source_base_dir, "")
+      assert(sub_dir == "." || sub_dir != get_path_info(file, "dir"),
+             "Error file $file not under ${set.source_base_dir}")
+    }
+    if (last_dir == "/") {
+      last_dir = sub_dir
+    }
+
+    # make sure the file is under the source base directory.
+    if (last_dir != sub_dir && file_set != []) {
+      copy_target_name = "${target_name}_dir${dir_count}"
+      _host_testa_data_impl_data_copy(copy_target_name) {
+        dest_path = "${root_out_dir}/${data_path}/${base_dir}/${last_dir}"
+        source_files = file_set
+        forward_variables_from(invoker,
+                               [
+                                 "data_deps",
+                                 "visibility",
+                               ])
+      }
+      dep_target_list += [ ":$copy_target_name" ]
+      dir_count = dir_count + 1
+      file_set = []
+      last_dir = sub_dir
+    }
+
+    file_set += [ file ]
+  }
+
+  # write out the last copy
+  if (file_set != []) {
+    copy_target_name = "${target_name}_dir${dir_count}"
+    _host_testa_data_impl_data_copy(copy_target_name) {
+      dest_path = "${root_out_dir}/${data_path}/${base_dir}/${last_dir}"
+      source_files = file_set
+      forward_variables_from(invoker,
+                             [
+                               "data_deps",
+                               "visiibility",
+                             ])
+    }
+    dep_target_list += [ ":${copy_target_name}" ]
+  }
+
+  group(target_name) {
+    data_deps = dep_target_list
+    forward_variables_from(invoker, [ "visibility" ])
+  }
+}

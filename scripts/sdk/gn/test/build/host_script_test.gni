@@ -1,0 +1,133 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/go/go_library.gni")
+import("//build/go/go_test.gni")
+import("//build/testing/test_spec.gni")
+import("//scripts/sdk/gn/test/build/host_test_data_impl.gni")
+
+# Templates for defining host tests that are based which require
+# many runtime files. The impetus for this is creating a way to
+# test bash scripts distributed as part of the GN SDK.
+#
+# The two top level templates are:
+#
+# host_test_data
+# host_test_script
+
+# Define a data set for a host test.
+#
+# This rule is used to define a collection of files
+# that are copied to the output directory as runtime
+# test dependencies. The files can be sourced from anywhere
+# in the source tree, and are copied into the relative path
+# defined by `base_dir`.
+#
+#   The copied files are also tagged with  "test_runtime_deps" metadata.
+#
+# Parameters
+#
+#   data_path:
+#     the name of the relative subdirectory that is the destination
+#     location of the files.
+#
+#   data_deps
+#     Optional:  runtime dependencies for this rule.
+#
+#   datasets: array of scopes
+#       List of files to copy to the base_dir. Each scope defines 1 source directory. If files from
+#       multiple directories are needed, then a scope should be defined for each one.
+#       Each scope defines:
+#         * source_base_dir - this is the source directory which contains all the files to copy. This
+#                             must be the dirname of the files listed.
+#         * target_base_dir - this is the base_dir relative path of the files. A common best practice
+#                             is to make this mirror the source code layout. For example, if you are
+#                             needing files in //scripts/sdk/gn/base/bin, then the target_base_dir should be
+#                             `scripts/sdk/gn/base/bin`. This makes the relative position of files the same
+#                             as in the source tree.
+#         * files           - The list of source files to copy from soure_base_dir.
+#
+template("host_test_data") {
+  forward_variables_from(invoker,
+                         [
+                           "data_path",
+                           "datasets",
+                           "testonly",
+                           "data_deps",
+                           "visibility",
+                         ])
+  assert(defined(data_path) && data_path != "", "data_path is required.")
+  dep_target_list = []
+  set_count = 0
+  foreach(set, datasets) {
+    assert(defined(set.source_base_dir),
+           "Error: source_base_dir not found for dataset entry $set")
+    assert(defined(set.target_base_dir),
+           "Error: target_base_dir not found for dataset entry $set")
+    assert(defined(set.files), "Error: files not found for dataset entry $set")
+    host_testa_data_impl_data_set_copy("dataset_set$set_count") {
+      data_path = invoker.data_path
+      data = set
+    }
+    dep_target_list += [ ":dataset_set$set_count" ]
+    set_count = set_count + 1
+  }
+  group(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                             "public_deps",
+                           ])
+    if (!defined(data_deps)) {
+      data_deps = dep_target_list
+    } else {
+      data_deps += dep_target_list
+    }
+  }
+}
+
+# Template for defining a host test which runs a testscript.
+#
+# Parameters
+#   test_script
+#       Required: this is the root relative path of the test script to execute.
+#         The path cannot be absolute since the paths are not consistent from desktop builds,
+#         and the CQ test environment.
+#   test_root
+#       Optional: this is the root relative path to use as the CWD when running the test script.
+#       This must be a part of the path of test_script.
+#
+#   Standard GN parameters: data_deps
+template("host_test_script") {
+  forward_variables_from(invoker,
+                         [
+                           "test_script",
+                           "test_root",
+                           "data_deps",
+                         ])
+  assert(defined(test_script), "test_script is required.")
+
+  # Only build this for host targets
+  if (!is_linux && !is_mac) {
+    not_needed([
+                 "test_script",
+                 "data_deps",
+                 "test_root",
+               ])
+    group(target_name) {
+    }
+  } else {
+    # Wrapper for running test. This runs the test_script in the test_root directory.
+    go_test(target_name) {
+      gopackages = [ "gnsdktest" ]
+      deps = [ "//scripts/sdk/gn/test:host_gnsdk_test_lib" ]
+      args = [ "-testscript=${test_script}" ]
+      if (defined(test_root)) {
+        args += [ "--testroot=${test_root}" ]
+      }
+      non_go_deps = data_deps
+    }
+  }
+}
