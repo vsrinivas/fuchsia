@@ -377,10 +377,9 @@ bad:
     // If we are affected by the MDS speculative execution vulnerability, flush microarchitectural
     // buffers via mds_buff_overwrite(). x86_mds_flush_select() will NOP out the flush where it is
     // not required.
-.global syscall_maybe_mds_buff_overwrite
-syscall_maybe_mds_buff_overwrite:
+.Lmaybe_mds_buff_overwrite:
     call mds_buff_overwrite
-    APPLY_CODE_PATCH_FUNC_WITH_DEFAULT(x86_mds_flush_select, syscall_maybe_mds_buff_overwrite, 5)
+    APPLY_CODE_PATCH_FUNC_WITH_DEFAULT(x86_mds_flush_select, .Lmaybe_mds_buff_overwrite, 5)
 
     /* restore the user stack */
     pop_value %rsp

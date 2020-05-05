@@ -158,10 +158,9 @@ interrupt_common_iframe_set_up_for_debugger:
     testb $3, 0x18(%rsp)
     jz    1f
 
-.global interrupt_maybe_mds_buff_overwrite
-interrupt_maybe_mds_buff_overwrite:
+.Lmaybe_mds_buff_overwrite:
     call mds_buff_overwrite
-    APPLY_CODE_PATCH_FUNC_WITH_DEFAULT(x86_mds_flush_select, interrupt_maybe_mds_buff_overwrite, 5)
+    APPLY_CODE_PATCH_FUNC_WITH_DEFAULT(x86_mds_flush_select, .Lmaybe_mds_buff_overwrite, 5)
 
     /* swap gs back to user space */
     swapgs
