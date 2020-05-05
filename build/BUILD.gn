@@ -125,7 +125,6 @@ group("deprecated_package_underscore") {
     "//garnet/bin/trace_stress:trace_stress",
     "//garnet/bin/ui/benchmarks/image_grid_cpp:image_grid_cpp",
     "//garnet/bin/ui/benchmarks/transparency_benchmark:transparency_benchmark",
-    "//garnet/bin/ui/tests/performance:benchmark_tests",
     "//garnet/bin/vsock_service:vsock_service",
     "//garnet/bin/vsock_service:vsock_service-tests",
     "//garnet/bin/wayland:wayland_tests",

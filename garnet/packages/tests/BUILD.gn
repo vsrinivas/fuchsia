@@ -209,7 +209,6 @@ group("scenic") {
   public_deps = [
     "//garnet/bin/ui/benchmarks/image_grid_cpp",
     "//garnet/bin/ui/benchmarks/transparency_benchmark",
-    "//garnet/bin/ui/tests/performance:benchmark_tests",
     "//garnet/packages/examples:scenic",
     "//garnet/packages/prod:scenic",
     "//src/ui/scenic:tests",

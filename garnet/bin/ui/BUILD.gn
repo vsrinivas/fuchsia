@@ -6,6 +6,5 @@ group("ui") {
   testonly = true
   deps = [
     "benchmarks",
-    "tests",
   ]
 }
