@@ -27,6 +27,5 @@ fidl("fuchsia.devicesettings") {
     "//src/modular/lib/modular_test_harness/*",
     "//src/modular/tests/*",
     "//src/sys/device_settings/*",
-    "//topaz/lib/settings/*",
   ]
 }
