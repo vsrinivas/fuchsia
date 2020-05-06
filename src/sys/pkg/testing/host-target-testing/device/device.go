@@ -419,7 +419,7 @@ func (c *Client) RegisterPackageRepository(ctx context.Context, repo *packages.S
 	} else {
 		subcmd = "add_repo_cfg"
 	}
-	cmd := []string{"amberctl", subcmd, "-f", repo.URL, "-h", repo.Hash, "-verbose"}
+	cmd := []string{"amberctl", subcmd, "-f", repo.URL, "-h", repo.Hash}
 	return c.Run(ctx, cmd, os.Stdout, os.Stderr)
 }
 
