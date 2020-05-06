@@ -155,8 +155,9 @@ class TestsConfig {
     return TestsConfig(
       flags: flags,
       fuchsiaLocator: fuchsiaLocator ?? FuchsiaLocator.shared,
-      runnerTokens:
-          flags.realm != null ? ['--realm-label=${flags.realm}'] : const [],
+      runnerTokens: flags.realm != null
+          ? ['--realm-label=${flags.realm}', '--restrict-logs']
+          : ['--restrict-logs'],
       testArguments: _testArguments,
       testNameGroups: _testNamesCollector.collect(),
     );
