@@ -16,7 +16,6 @@ flutter_app("localized_flutter_app") {
     "//third_party/dart-pkg/git/flutter/packages/flutter",
     "//third_party/dart-pkg/git/flutter/packages/flutter_localizations",
     "//third_party/dart/third_party/pkg/intl",
-    "//topaz/public/dart/widgets:lib.widgets",
   ]
 
   meta = [
