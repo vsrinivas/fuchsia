@@ -22,6 +22,7 @@ fn main() -> Result<(), Error> {
         match opt {
             Opt::Client(cmd) => do_policy_client_cmd(cmd).await,
             Opt::AccessPoint(cmd) => do_policy_ap_cmd(cmd).await,
+            Opt::Deprecated(cmd) => do_deprecated_cmd(cmd).await,
         }
     };
     exec.run_singlethreaded(fut)
@@ -84,6 +85,20 @@ async fn do_policy_ap_cmd(cmd: opts::PolicyAccessPointCmd) -> Result<(), Error> 
         opts::PolicyAccessPointCmd::Listen => {
             let update_stream = get_ap_listener_stream()?;
             handle_ap_listen(update_stream).await?
+        }
+    }
+    Ok(())
+}
+
+async fn do_deprecated_cmd(cmd: opts::DeprecatedConfiguratorCmd) -> Result<(), Error> {
+    match cmd {
+        opts::DeprecatedConfiguratorCmd::SetPreferredAccessPointMacAddress { mac } => {
+            let configurator = get_deprecated_configurator()?;
+            handle_set_preferred_ap_mac(configurator, mac)?;
+        }
+        opts::DeprecatedConfiguratorCmd::SuggestAccessPointMacAddress { mac } => {
+            let configurator = get_deprecated_configurator()?;
+            handle_suggest_ap_mac(configurator, mac).await?;
         }
     }
     Ok(())

@@ -5,6 +5,7 @@
 #![allow(deprecated)] // Necessary for AsciiExt usage from clap args_enum macro
 
 use clap::arg_enum;
+use eui48::MacAddress;
 use fidl_fuchsia_wlan_common as wlan_common;
 use fidl_fuchsia_wlan_device as wlan;
 use fidl_fuchsia_wlan_policy as wlan_policy;
@@ -145,9 +146,25 @@ pub enum PolicyAccessPointCmd {
 }
 
 #[derive(StructOpt, Clone, Debug)]
+pub enum DeprecatedConfiguratorCmd {
+    #[structopt(name = "set-mac")]
+    SetPreferredAccessPointMacAddress {
+        #[structopt(raw(required = "true"))]
+        mac: MacAddress,
+    },
+    #[structopt(name = "suggest-mac")]
+    SuggestAccessPointMacAddress {
+        #[structopt(raw(required = "true"))]
+        mac: MacAddress,
+    },
+}
+
+#[derive(StructOpt, Clone, Debug)]
 pub enum Opt {
     #[structopt(name = "client")]
     Client(PolicyClientCmd),
     #[structopt(name = "ap")]
     AccessPoint(PolicyAccessPointCmd),
+    #[structopt(name = "deprecated")]
+    Deprecated(DeprecatedConfiguratorCmd),
 }
