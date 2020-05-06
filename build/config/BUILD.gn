@@ -273,13 +273,6 @@ config("linker_gc") {
   }
 }
 
-# This is separate from default_optimize so it can be removed.
-config("default_linker_gc") {
-  if (optimize != "none") {
-    configs = [ ":linker_gc" ]
-  }
-}
-
 config("linker_string_merging") {
   if (current_os == "win") {
     ldflags = [ "-Wl,/opt:lldtailmerge" ]
@@ -293,6 +286,9 @@ config("linker_string_merging") {
 # optimize_$optimize for convenience, but individual targets can override their
 # optimization level by remove default_optimize and manually applying one of
 # the configs below.
+#
+# The linker_gc_$optimize configs are an exact parallel.  default_linker_gc
+# is separate from default_optimize so it can be removed separately.
 
 # NOTE: Keep in sync with //zircon/public/gn/config/BUILD.gn
 
@@ -342,6 +338,39 @@ config("optimize_profile") {
 
 config("default_optimize") {
   configs = [ ":optimize_${optimize}" ]
+}
+
+config("linker_gc_none") {
+  # No linker GC when wholly unoptimized.
+}
+
+# Linker GC is a good default for most cases.
+config("linker_gc_debug") {
+  configs = [ ":linker_gc" ]
+}
+
+config("linker_gc_default") {
+  configs = [ ":linker_gc" ]
+}
+
+config("linker_gc_size") {
+  configs = [ ":linker_gc" ]
+}
+
+config("linker_gc_speed") {
+  configs = [ ":linker_gc" ]
+}
+
+config("linker_gc_sanitizer") {
+  # TODO(51487): Enable when known rust/asan interaction bug is fixed.
+}
+
+config("linker_gc_profile") {
+  # TODO(51509): See if we can enable linker GC for profile.
+}
+
+config("default_linker_gc") {
+  configs = [ ":linker_gc_$optimize" ]
 }
 
 config("minimal_symbols") {

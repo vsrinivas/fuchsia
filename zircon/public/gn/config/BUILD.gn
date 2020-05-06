@@ -361,6 +361,9 @@ config("linker_string_merging") {
 # optimize_$optimize for convenience, but individual targets can override their
 # optimization level by remove default_optimize and manually applying one of
 # the configs below.
+#
+# The linker_gc_$optimize configs are an exact parallel.  default_linker_gc
+# is separate from default_optimize so it can be removed separately.
 
 # NOTE: Keep in sync with //build/config/BUILD.gn
 
@@ -414,23 +417,45 @@ config("default_optimize") {
   configs = [ ":optimize_${optimize}" ]
 }
 
+config("linker_gc_none") {
+  # No linker GC when wholly unoptimized.
+}
+
+# Linker GC is a good default for most cases.
+config("linker_gc_debug") {
+  configs = [ ":linker_gc" ]
+}
+
+config("linker_gc_default") {
+  configs = [ ":linker_gc" ]
+}
+
+config("linker_gc_size") {
+  configs = [ ":linker_gc" ]
+}
+
+config("linker_gc_speed") {
+  configs = [ ":linker_gc" ]
+}
+
+config("linker_gc_sanitizer") {
+  # TODO(51487): Enable when known rust/asan interaction bug is fixed.
+}
+
+config("linker_gc_profile") {
+  # TODO(51509): See if we can enable linker GC for profile.
+}
+
+config("default_linker_gc") {
+  configs = [ ":linker_gc_$optimize" ]
+}
+
 # This is separate from default_optimize so it can be removed.
 config("default_icf") {
   if (optimize != "none" && optimize != "debug") {
     # Our code should never rely on C's unique function pointer semantics,
     # which is broken by --icf=all for sometimes substantial space savings.
     configs = [ ":icf" ]
-  }
-}
-
-# This is separate from default_optimize so it can be removed.
-config("default_linker_gc") {
-  # TODO(mcgrathr): Kernel can't be built without --gc-sections.
-  # The macOS host linker seems to have some bugs with its
-  # equivalent, so don't use it there.
-  if ((optimize != "none" || toolchain.environment == "kernel") &&
-      current_os != "mac") {
-    configs = [ ":linker_gc" ]
   }
 }
 

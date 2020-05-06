@@ -84,6 +84,8 @@ if (current_toolchain == default_toolchain) {
         # because of crufty acpica code, and some compiler instrumentation
         # is broken wrt --gc-sections semantics.
         exclude_variant_tags = [ "breaks-gc-sections" ]
+        configs -= [ "$zx/public/gn/config:default_linker_gc" ]
+        configs += [ "$zx/public/gn/config:linker_gc" ]
       }
     }
   }
@@ -398,7 +400,7 @@ if (current_toolchain == default_toolchain) {
     # If the span of where fixups might be is short enough, the fixup code
     # itself can be shorter.  Assume the kernel will fit under the
     # threshold (about 1MB) in well-optimized builds.
-    if ((optimize != "none" && optimize != "debug") &&
+    if (optimize != "none" && optimize != "debug" &&
         toolchain.tags + [ "instrumented" ] - [ "instrumented" ] ==
         toolchain.tags) {
       defines = [ "TINY" ]
