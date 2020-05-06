@@ -212,11 +212,16 @@ void InputSystem::Register(fuchsia::ui::pointerflow::InjectorConfig config,
       /*is_descendant_and_connected*/
       [this](zx_koid_t descendant, zx_koid_t ancestor) {
         return IsDescendantAndConnected(scene_graph_->view_tree(), descendant, ancestor);
+      },
+      /*inject*/
+      [](zx_koid_t context, zx_koid_t target,
+         const fuchsia::ui::input::PointerEvent& context_local_event) {
+        // TODO(48972, 50438): Add injection.
       });
   FX_CHECK(success) << "Injector already exists.";
 
   // Remove the injector if the channel has an error.
-  injectors_.at(id).set_error_handler([this, id](zx_status_t status) { injectors_.erase(id); });
+  injectors_.at(id).SetErrorHandler([this, id](zx_status_t status) { injectors_.erase(id); });
 
   callback();
 }

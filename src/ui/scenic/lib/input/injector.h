@@ -5,9 +5,12 @@
 #ifndef SRC_UI_SCENIC_LIB_INPUT_INJECTOR_H_
 #define SRC_UI_SCENIC_LIB_INPUT_INJECTOR_H_
 
+#include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/ui/pointerflow/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fidl/cpp/binding.h>
+
+#include <set>
 
 namespace scenic_impl {
 namespace input {
@@ -29,17 +32,33 @@ class Injector : public fuchsia::ui::pointerflow::Injector {
   Injector(InjectorId id, InjectorSettings settings,
            fidl::InterfaceRequest<fuchsia::ui::pointerflow::Injector> injector,
            fit::function<bool(/*descendant*/ zx_koid_t, /*ancestor*/ zx_koid_t)>
-               is_descendant_and_connected);
+               is_descendant_and_connected,
+           fit::function<void(/*context*/ zx_koid_t, /*target*/ zx_koid_t,
+                              /*context_local_event*/ const fuchsia::ui::input::PointerEvent&)>
+               inject);
 
   // |fuchsia::ui::pointerflow::Injector|
   void Inject(std::vector<fuchsia::ui::pointerflow::Event> events,
               InjectCallback callback) override;
 
-  void set_error_handler(fit::function<void(zx_status_t)> error_handler) {
-    binding_.set_error_handler(std::move(error_handler));
-  }
+  void SetErrorHandler(fit::function<void(zx_status_t)> error_handler);
 
  private:
+  // Tracks event streams for each pointer id. Returns true if the event stream is valid, false
+  // otherwise.
+  // Event streams are expected to start with an ADD, followed by a number of CHANGE events, and
+  // ending in either a REMOVE or a CANCEL. Anything else is invalid.
+  bool ValidateEventStream(uint32_t pointer_id, fuchsia::ui::input3::PointerEventPhase phase);
+
+  // Injects a CANCEL event for each ongoing stream and stops tracking them.
+  void CancelOngoingStreams();
+
+  // Closes the fidl channel. This triggers the destruction of the Injector object through the
+  // error handler set in InputSystem.
+  // NOTE: No further method calls or member accesses should be made after CloseChannel(), since
+  // they might be made on a destroyed object.
+  void CloseChannel(zx_status_t epitaph);
+
   fidl::Binding<fuchsia::ui::pointerflow::Injector> binding_;
 
   // Scenic-internal identifier.
@@ -48,8 +67,20 @@ class Injector : public fuchsia::ui::pointerflow::Injector {
   // Client defined data.
   const InjectorSettings settings_;
 
+  // Tracks stream's status (per pointer_id) as it moves through its state machine. Used to
+  // validate each event's phase.
+  // - ADD: add stream to set
+  // - CHANGE: no-op
+  // - REMOVE/CANCEL: remove stream from set.
+  // Hence, each stream here matches ADD - CHANGE*.
+  std::set<uint32_t> ongoing_streams_;
+
   fit::function<bool(/*descendant*/ zx_koid_t, /*ancestor*/ zx_koid_t)>
       is_descendant_and_connected_;
+
+  fit::function<void(/*context*/ zx_koid_t, /*target*/ zx_koid_t,
+                     /*context_local_event*/ const fuchsia::ui::input::PointerEvent&)>
+      inject_;
 };
 
 }  // namespace input
