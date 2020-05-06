@@ -7,7 +7,6 @@
 // and is able to run a story with a single module through its life cycle.
 
 #include <fuchsia/auth/cpp/fidl.h>
-#include <fuchsia/identity/account/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -67,7 +66,6 @@ class DevBaseShellApp : modular::SingleServiceApp<fuchsia::modular::BaseShell> {
       : SingleServiceApp(component_context),
         settings_(std::move(settings)),
         weak_ptr_factory_(this) {
-    this->component_context()->svc()->Connect(account_manager_.NewRequest());
     if (settings_.use_test_runner) {
       modular_testing::Init(this->component_context(), __FILE__);
       // Start a timer to quit in case a test component misbehaves and hangs. If
@@ -121,34 +119,10 @@ class DevBaseShellApp : modular::SingleServiceApp<fuchsia::modular::BaseShell> {
                      " unimplemented.";
   }
 
-  void Login(const std::string& account_id) {
-    fuchsia::modular::UserLoginParams2 params;
-    params.account_id = account_id;
-    user_provider_->Login2(std::move(params));
-  }
-
   void Connect() {
     if (user_provider_ && view_token_.value) {
-      if (settings_.user.empty()) {
-        // Login as a guest user.
-        Login("");
-        return;
-      }
-
-      // We provision a new auth account with the expectation that basemgr is
-      // subscribed as an account listener.
-      account_manager_->GetAccountIds([this](std::vector<uint64_t> accounts) {
-        if (!accounts.empty()) {
-          return;
-        }
-
-        account_manager_->ProvisionNewAccount(
-            fuchsia::identity::account::Lifetime::PERSISTENT, nullptr, [](auto) {
-              FX_LOGS(INFO) << "Provisioned new account. Translating "
-                               "this account into a "
-                               "fuchsia::modular::auth::Account.";
-            });
-      });
+      bool is_ephemeral_account = settings_.user.empty();
+      user_provider_->Login3(is_ephemeral_account);
     }
   }
 
@@ -157,12 +131,10 @@ class DevBaseShellApp : modular::SingleServiceApp<fuchsia::modular::BaseShell> {
   fuchsia::modular::BaseShellContextPtr base_shell_context_;
   fuchsia::modular::UserProviderPtr user_provider_;
 
-  fuchsia::identity::account::AccountManagerPtr account_manager_;
-
   fxl::WeakPtrFactory<DevBaseShellApp> weak_ptr_factory_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(DevBaseShellApp);
-};  // namespace modular
+};
 
 }  // namespace modular
 

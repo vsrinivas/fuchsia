@@ -5,8 +5,6 @@
 #ifndef SRC_MODULAR_BIN_BASEMGR_SESSION_USER_PROVIDER_IMPL_H_
 #define SRC_MODULAR_BIN_BASEMGR_SESSION_USER_PROVIDER_IMPL_H_
 
-#include <fuchsia/auth/cpp/fidl.h>
-#include <fuchsia/identity/account/cpp/fidl.h>
 #include <fuchsia/modular/auth/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
@@ -22,32 +20,14 @@ namespace modular {
 // The current policy is to automatically login every newly added account's
 // default persona into a new session. Whether a new session gets started or not
 // is up to |session_provider_impl|.
-class SessionUserProviderImpl : fuchsia::auth::AuthenticationContextProvider,
-                                fuchsia::modular::UserProvider,
-                                fuchsia::identity::account::AccountListener {
+class SessionUserProviderImpl : fuchsia::modular::UserProvider {
  public:
-  // Called after SessionUserProviderImpl successfully registers as an account
-  // listener.
-  using OnInitializeCallback = fit::function<void()>;
-
   // Called after SessionUserProviderImpl successfully logs in a user.
   using OnLoginCallback = fit::function<void(bool is_ephemeral_account)>;
 
-  // |account_manager| Used to register SessionUserProviderImpl as an
-  // |AccountListener| to receive updates on newly added/removed accounts. Must
-  // be present, and must outlive this instance.
-  //
-  // |auth_context_provider| Used to forward authentication UI requests from
-  // auth to the base shell. Must be present.
-  //
-  // |on_initialize| Callback invoked when |AccountManager| has initialized with
-  // initial data. Must be present.
-  //
-  // |on_login| Callback  invoked when a persona is ready to be logged into a
+  // |on_login| Callback invoked when a persona is ready to be logged into a
   // new session. Must be present.
-  SessionUserProviderImpl(fuchsia::identity::account::AccountManager* const account_manager,
-                          fuchsia::auth::AuthenticationContextProviderPtr auth_context_provider,
-                          OnInitializeCallback on_initialize, OnLoginCallback on_login);
+  SessionUserProviderImpl(OnLoginCallback on_login);
 
   void Connect(fidl::InterfaceRequest<fuchsia::modular::UserProvider> request);
 
@@ -57,10 +37,10 @@ class SessionUserProviderImpl : fuchsia::auth::AuthenticationContextProvider,
   void RemoveAllUsers(fit::function<void()> callback);
 
  private:
-  // |fuchsia::modular::UserProvider|.
+  // |fuchsia::modular::UserProvider|
   void Login(fuchsia::modular::UserLoginParams params) override;
 
-  // |fuchsia::modular::UserProvider|.
+  // |fuchsia::modular::UserProvider|
   void Login2(fuchsia::modular::UserLoginParams2 params) override;
 
   // |fuchsia::modular::UserProvider|
@@ -70,38 +50,11 @@ class SessionUserProviderImpl : fuchsia::auth::AuthenticationContextProvider,
   // |fuchsia::modular::UserProvider|
   void RemoveUser(std::string account_id, RemoveUserCallback callback) override;
 
-  // |fuchsia::modular::UserProvider|, also called by |basemgr_impl|.
+  // |fuchsia::modular::UserProvider|
   void PreviousUsers(PreviousUsersCallback callback) override;
-
-  // |fuchsia::auth::AuthenticationContextProvider|
-  void GetAuthenticationUIContext(
-      fidl::InterfaceRequest<fuchsia::auth::AuthenticationUIContext> request) override;
-
-  // OnInitialize, session_user_provider_impl will invoke |on_initialize_|.
-  // OnAccountAdded, session_user_provider_impl will call |on_login_|.
-  //
-  // |fuchsia::identity::account::AccountListner|
-  void OnInitialize(std::vector<fuchsia::identity::account::InitialAccountState>,
-                    OnInitializeCallback) override;
-  // |fuchsia::identity::account::AccountListner|
-  void OnAccountAdded(fuchsia::identity::account::InitialAccountState,
-                      OnAccountAddedCallback) override;
-  // |fuchsia::identity::account::AccountListner|
-  void OnAccountRemoved(uint64_t, OnAccountRemovedCallback) override;
-  // |fuchsia::identity::account::AccountListner|
-  void OnAuthStateChanged(fuchsia::identity::account::AccountAuthState,
-                          OnAuthStateChangedCallback) override;
 
   fidl::BindingSet<fuchsia::modular::UserProvider> bindings_;
 
-  fuchsia::identity::account::AccountManager* const account_manager_;  // Neither owned nor copied.
-  fuchsia::auth::AuthenticationContextProviderPtr authentication_context_provider_;
-
-  fidl::Binding<fuchsia::auth::AuthenticationContextProvider>
-      authentication_context_provider_binding_;
-  fidl::Binding<fuchsia::identity::account::AccountListener> account_listener_binding_;
-
-  OnInitializeCallback on_initialize_;
   OnLoginCallback on_login_;
 
   fxl::WeakPtrFactory<SessionUserProviderImpl> weak_factory_;

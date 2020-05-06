@@ -7,7 +7,6 @@
 // and is able to run a story with a single module through its life cycle.
 
 #include <fuchsia/auth/cpp/fidl.h>
-#include <fuchsia/identity/account/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -42,9 +41,7 @@ class AutoLoginBaseShellApp : modular::SingleServiceApp<fuchsia::modular::BaseSh
   explicit AutoLoginBaseShellApp(sys::ComponentContext* const component_context, Settings settings)
       : SingleServiceApp(component_context),
         settings_(std::move(settings)),
-        weak_ptr_factory_(this) {
-    this->component_context()->svc()->Connect(account_manager_.NewRequest());
-  }
+        weak_ptr_factory_(this) {}
 
   ~AutoLoginBaseShellApp() override = default;
 
@@ -78,30 +75,10 @@ class AutoLoginBaseShellApp : modular::SingleServiceApp<fuchsia::modular::BaseSh
                      " unimplemented.";
   }
 
-  void Login(bool is_ephemeral_account) { user_provider_->Login3(is_ephemeral_account); }
-
   void Connect() {
     if (user_provider_ && view_token_.value) {
-      if (!settings_.persist_user) {
-        // Login as an ephemeral guest user.
-        Login(/* is_ephemeral_account */ true);
-        return;
-      }
-
-      // We provision a new auth account with the expectation that basemgr is
-      // subscribed as an account listener.
-      account_manager_->GetAccountIds([this](std::vector<uint64_t> accounts) {
-        if (!accounts.empty()) {
-          return;
-        }
-
-        account_manager_->ProvisionNewAccount(
-            fuchsia::identity::account::Lifetime::PERSISTENT, nullptr, [](auto) {
-              FX_LOGS(INFO) << "Provisioned new account. Translating "
-                               "this account into a "
-                               "fuchsia::modular::auth::Account.";
-            });
-      });
+      bool is_ephemeral_account = !settings_.persist_user;
+      user_provider_->Login3(is_ephemeral_account);
     }
   }
 
@@ -109,8 +86,6 @@ class AutoLoginBaseShellApp : modular::SingleServiceApp<fuchsia::modular::BaseSh
   fuchsia::ui::views::ViewToken view_token_;
   fuchsia::modular::BaseShellContextPtr base_shell_context_;
   fuchsia::modular::UserProviderPtr user_provider_;
-
-  fuchsia::identity::account::AccountManagerPtr account_manager_;
 
   fxl::WeakPtrFactory<AutoLoginBaseShellApp> weak_ptr_factory_;
 

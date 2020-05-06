@@ -11,49 +11,9 @@
 
 namespace modular {
 
-SessionUserProviderImpl::SessionUserProviderImpl(
-    fuchsia::identity::account::AccountManager* const account_manager,
-    fuchsia::auth::AuthenticationContextProviderPtr authentication_context_provider,
-    OnInitializeCallback on_initialize, OnLoginCallback on_login)
-    : account_manager_(account_manager),
-      authentication_context_provider_(std::move(authentication_context_provider)),
-      authentication_context_provider_binding_(this),
-      account_listener_binding_(this),
-      on_initialize_(std::move(on_initialize)),
-      on_login_(std::move(on_login)),
-      weak_factory_(this) {
-  FX_CHECK(account_manager_);
-  FX_CHECK(authentication_context_provider_);
-  FX_CHECK(on_initialize_);
+SessionUserProviderImpl::SessionUserProviderImpl(OnLoginCallback on_login)
+    : on_login_(std::move(on_login)), weak_factory_(this) {
   FX_CHECK(on_login_);
-
-  authentication_context_provider_binding_.set_error_handler([this](zx_status_t status) {
-    FX_LOGS(WARNING) << "AuthenticationContextProvider disconnected.";
-    authentication_context_provider_binding_.Unbind();
-  });
-
-  // Register SessionUserProvider as an AccountListener. All added accounts will
-  // be logged in to a session.
-  account_listener_binding_.set_error_handler([](zx_status_t status) {
-    FX_LOGS(FATAL) << "AccountListener disconnected with status: " << zx_status_get_string(status);
-  });
-
-  fuchsia::identity::account::AccountListenerOptions options;
-  options.initial_state = true;
-  options.add_account = true;
-  account_manager_->RegisterAccountListener(
-      account_listener_binding_.NewBinding(), std::move(options),
-      [weak_this = weak_factory_.GetWeakPtr()](auto result) {
-        if (!weak_this) {
-          return;
-        }
-        if (result.is_response()) {
-          FX_LOGS(INFO) << "AccountListener registered.";
-        } else {
-          FX_LOGS(FATAL) << "AccountListener registration failed with status: "
-                         << (uint32_t)result.err();
-        }
-      });
 }
 
 void SessionUserProviderImpl::Connect(
@@ -87,22 +47,12 @@ void SessionUserProviderImpl::Login3(bool is_ephemeral_account) {
 }
 
 void SessionUserProviderImpl::RemoveAllUsers(fit::function<void()> callback) {
-  account_manager_->GetAccountIds(
-      [weak_this = weak_factory_.GetWeakPtr(),
-       callback = std::move(callback)](std::vector<uint64_t> account_ids) mutable {
-        if (!weak_this) {
-          return;
-        }
-        if (account_ids.empty()) {
-          callback();
-          return;
-        }
-
-        // We only expect there to be one account at most.
-        weak_this->account_manager_->RemoveAccount(
-            account_ids.at(0), true, /* Force account removal */
-            [callback = std::move(callback)](auto) { callback(); });
-      });
+  // No action needs to be taken in response to RemoveAllUsers: Basemgr no
+  // longer maintains a set of accounts within the account system. Legacy
+  // accounts may still exist in the account system, but these do not contain
+  // any user data and therefore it is not important to remove them.
+  FX_LOGS(INFO) << "RemoveAllUsers() called. No implementation required.";
+  callback();
 }
 
 void SessionUserProviderImpl::RemoveUser(std::string account_id, RemoveUserCallback callback) {
@@ -114,36 +64,6 @@ void SessionUserProviderImpl::PreviousUsers(PreviousUsersCallback callback) {
   FX_LOGS(INFO) << "PreviousUsers() is not implemented yet";
   std::vector<::fuchsia::modular::auth::Account> users;
   callback(std::move(users));
-}
-
-void SessionUserProviderImpl::GetAuthenticationUIContext(
-    fidl::InterfaceRequest<fuchsia::auth::AuthenticationUIContext> request) {
-  authentication_context_provider_->GetAuthenticationUIContext(std::move(request));
-}
-
-void SessionUserProviderImpl::OnInitialize(
-    std::vector<fuchsia::identity::account::InitialAccountState>, OnInitializeCallback callback) {
-  callback();
-  on_initialize_();
-}
-
-void SessionUserProviderImpl::OnAccountAdded(
-    fuchsia::identity::account::InitialAccountState account_state,
-    OnAccountAddedCallback callback) {
-  // Base shell may also call Login after adding the account, but the Login
-  // flow should be resilient to multiple invocations. We assume only persistent
-  // accounts are added through the AccountManager.
-  Login3(/* is_ephemeral_account */ false);
-  callback();
-}
-
-void SessionUserProviderImpl::OnAccountRemoved(uint64_t, OnAccountRemovedCallback callback) {
-  callback();
-}
-
-void SessionUserProviderImpl::OnAuthStateChanged(fuchsia::identity::account::AccountAuthState,
-                                                 OnAuthStateChangedCallback callback) {
-  callback();
 }
 
 }  // namespace modular

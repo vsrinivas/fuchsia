@@ -5,7 +5,6 @@
 #ifndef SRC_MODULAR_BIN_BASEMGR_BASEMGR_IMPL_H_
 #define SRC_MODULAR_BIN_BASEMGR_BASEMGR_IMPL_H_
 
-#include <fuchsia/auth/cpp/fidl.h>
 #include <fuchsia/device/manager/cpp/fidl.h>
 #include <fuchsia/devicesettings/cpp/fidl.h>
 #include <fuchsia/modular/auth/cpp/fidl.h>
@@ -38,7 +37,6 @@ namespace modular {
 // 3) Manages the lifecycle of sessions, represented as |sessionmgr| processes.
 class BasemgrImpl : public fuchsia::modular::Lifecycle,
                     fuchsia::modular::BaseShellContext,
-                    fuchsia::auth::AuthenticationContextProvider,
                     fuchsia::modular::internal::BasemgrDebug,
                     modular::SessionProvider::Delegate {
  public:
@@ -59,7 +57,6 @@ class BasemgrImpl : public fuchsia::modular::Lifecycle,
                        fuchsia::ui::policy::PresenterPtr presenter,
                        fuchsia::devicesettings::DeviceSettingsManagerPtr device_settings_manager,
                        fuchsia::wlan::service::WlanPtr wlan,
-                       fuchsia::identity::account::AccountManagerPtr account_manager,
                        fuchsia::device::manager::AdministratorPtr device_administrator,
                        fit::function<void()> on_shutdown);
 
@@ -95,10 +92,6 @@ class BasemgrImpl : public fuchsia::modular::Lifecycle,
   void GetUserProvider(fidl::InterfaceRequest<fuchsia::modular::UserProvider> request) override;
 
   void Shutdown() override;
-
-  // |fuchsia::auth::AuthenticationContextProvider|
-  void GetAuthenticationUIContext(
-      fidl::InterfaceRequest<fuchsia::auth::AuthenticationUIContext> request) override;
 
   // |fuchsia::modular::internal::BasemgrDebug|
   // Toggles to the next session shell in basemgr.config if one exists.
@@ -154,8 +147,6 @@ class BasemgrImpl : public fuchsia::modular::Lifecycle,
   fuchsia::devicesettings::DeviceSettingsManagerPtr device_settings_manager_;
   // Used to reset Wi-Fi during factory reset.
   fuchsia::wlan::service::WlanPtr wlan_;
-  // Used for account management in the framework.
-  fuchsia::identity::account::AccountManagerPtr account_manager_;
   // Used to trigger device reboot.
   fuchsia::device::manager::AdministratorPtr device_administrator_;
   fit::function<void()> on_shutdown_;
@@ -168,8 +159,6 @@ class BasemgrImpl : public fuchsia::modular::Lifecycle,
 
   fidl::BindingSet<fuchsia::modular::internal::BasemgrDebug> basemgr_debug_bindings_;
   fidl::Binding<fuchsia::modular::BaseShellContext> base_shell_context_binding_;
-  fidl::Binding<fuchsia::auth::AuthenticationContextProvider>
-      authentication_context_provider_binding_;
 
   fuchsia::ui::lifecycle::LifecycleControllerPtr scenic_lifecycle_controller_;
 

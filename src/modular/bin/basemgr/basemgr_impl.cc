@@ -61,7 +61,6 @@ BasemgrImpl::BasemgrImpl(fuchsia::modular::session::ModularConfig config,
                          fuchsia::ui::policy::PresenterPtr presenter,
                          fuchsia::devicesettings::DeviceSettingsManagerPtr device_settings_manager,
                          fuchsia::wlan::service::WlanPtr wlan,
-                         fuchsia::identity::account::AccountManagerPtr account_manager,
                          fuchsia::device::manager::AdministratorPtr device_administrator,
                          fit::function<void()> on_shutdown)
     : config_(std::move(config)),
@@ -71,11 +70,9 @@ BasemgrImpl::BasemgrImpl(fuchsia::modular::session::ModularConfig config,
       presenter_(std::move(presenter)),
       device_settings_manager_(std::move(device_settings_manager)),
       wlan_(std::move(wlan)),
-      account_manager_(std::move(account_manager)),
       device_administrator_(std::move(device_administrator)),
       on_shutdown_(std::move(on_shutdown)),
       base_shell_context_binding_(this),
-      authentication_context_provider_binding_(this),
       session_provider_("SessionProvider") {
   UpdateSessionShellConfig();
 
@@ -92,7 +89,6 @@ void BasemgrImpl::Connect(
 void BasemgrImpl::StartBaseShell() {
   if (base_shell_running_) {
     FX_DLOGS(INFO) << "StartBaseShell() called when already running";
-
     return;
   }
 
@@ -204,11 +200,9 @@ void BasemgrImpl::Start() {
 
 void BasemgrImpl::InitializeUserProvider() {
   session_user_provider_impl_ = std::make_unique<SessionUserProviderImpl>(
-      account_manager_.get(), authentication_context_provider_binding_.NewBinding().Bind(),
-      /* on_initialize= */
-      [this] { ShowSetupOrLogin(); },
       /* on_login= */
       [this](bool is_ephemeral_account) { OnLogin(is_ephemeral_account); });
+  ShowSetupOrLogin();
 }
 
 void BasemgrImpl::GetUserProvider(fidl::InterfaceRequest<fuchsia::modular::UserProvider> request) {
@@ -241,14 +235,6 @@ void BasemgrImpl::Shutdown() {
 }
 
 void BasemgrImpl::Terminate() { Shutdown(); }
-
-void BasemgrImpl::GetAuthenticationUIContext(
-    fidl::InterfaceRequest<fuchsia::auth::AuthenticationUIContext> request) {
-  // TODO(MI4-1107): Basemgr needs to implement AuthenticationUIContext
-  // itself, and proxy calls for StartOverlay & StopOverlay to BaseShell,
-  // starting it if it's not running yet.
-  base_shell_->GetAuthenticationUIContext(std::move(request));
-}
 
 void BasemgrImpl::OnLogin(bool is_ephemeral_account) {
   if (state_ == State::SHUTTING_DOWN) {
@@ -326,24 +312,10 @@ void BasemgrImpl::UpdateSessionShellConfig() {
 
 void BasemgrImpl::ShowSetupOrLogin() {
   auto show_setup_or_login = [this] {
-    // If there are no session shell settings specified, default to showing
-    // setup.
-    if (active_session_shell_configs_index_ >=
-        config_.basemgr_config().session_shell_map().size()) {
-      StartBaseShell();
-      return;
-    }
-
-    // Login as the first user, or show setup. This asssumes that:
-    // 1) Basemgr has exclusive access to AccountManager.
-    // 2) There are only 0 or 1 authenticated accounts ever.
-    account_manager_->GetAccountIds([this](std::vector<uint64_t> account_ids) {
-      if (account_ids.empty()) {
-        StartBaseShell();
-      } else {
-        session_user_provider_impl_->Login3(/* is_ephemeral_account */ false);
-      }
-    });
+    // We no longer maintain a set of accounts within the account system,
+    // and so launch the BaseShell in all circumstances. A BaseShell may login
+    // as its first and only action (e.g. auto_login_base_shell).
+    StartBaseShell();
   };
 
   // TODO(MF-347): Handle scenario where device settings manager channel is

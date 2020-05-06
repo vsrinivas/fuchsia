@@ -130,16 +130,13 @@ std::unique_ptr<modular::BasemgrImpl> ConfigureBasemgr(
   component_context->svc()->Connect(device_settings_manager.NewRequest());
   fuchsia::wlan::service::WlanPtr wlan;
   component_context->svc()->Connect(wlan.NewRequest());
-  fuchsia::identity::account::AccountManagerPtr account_manager;
-  component_context->svc()->Connect(account_manager.NewRequest());
   fuchsia::device::manager::AdministratorPtr administrator;
   component_context->svc()->Connect(administrator.NewRequest());
 
   return std::make_unique<modular::BasemgrImpl>(
       std::move(config), component_context->svc(), component_context->outgoing(),
       component_context->svc()->Connect<fuchsia::sys::Launcher>(), std::move(presenter),
-      std::move(device_settings_manager), std::move(wlan), std::move(account_manager),
-      std::move(administrator),
+      std::move(device_settings_manager), std::move(wlan), std::move(administrator),
       /*on_shutdown=*/
       [loop, cobalt_cleanup = std::move(cobalt_cleanup), component_context]() mutable {
         cobalt_cleanup.call();
