@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/factory_protocol_test"
+        "binary": "test/factory_test"
     },
     "sandbox": {
         "dev": [

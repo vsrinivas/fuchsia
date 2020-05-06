@@ -3,12 +3,12 @@
 # found in the LICENSE file.
 
 executable("test") {
-  output_name = "factory_protocol_test"
+  output_name = "factory_test"
   testonly = true
-  sources = [ "factory_protocol_test.cc" ]
+  sources = [ "factory_server_test.cc" ]
 
   deps = [
-    "//src/camera/calibration/factory_protocol",
+    "//src/camera/calibration/factory",
     "//src/lib/files:files",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",

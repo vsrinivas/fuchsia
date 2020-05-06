@@ -6,6 +6,6 @@ group("calibration") {
   testonly = true
   public_deps = [
     "algorithms",
-    "factory_protocol",
+    "factory",
   ]
 }

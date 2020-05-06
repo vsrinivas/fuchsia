@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/camera/calibration/factory_protocol/factory_protocol.h"
+#include "src/camera/calibration/factory/factory_server.h"
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>

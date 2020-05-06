@@ -4,10 +4,10 @@
 
 import("//build/package.gni")
 
-source_set("factory_protocol") {
-  sources = [ "factory_protocol.cc" ]
+source_set("factory") {
+  sources = [ "factory_server.cc" ]
 
-  public = [ "factory_protocol.h" ]
+  public = [ "factory_server.h" ]
 
   deps = [
     "//sdk/fidl/fuchsia.hardware.camera",
