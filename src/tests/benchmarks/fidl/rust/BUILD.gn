@@ -17,7 +17,6 @@ gidl("benchmark_suite_rust") {
   inputs = benchmark_suite_gidl_files
   fidl = "//src/tests/benchmarks/fidl/benchmark_suite:benchmark_suite_fidl"
   output = gidl_rust_out_file
-  deps = [ "//src/tests/benchmarks/fidl/benchmark_suite/gen:host" ]
 }
 
 rustc_library("benchmark_suite_rust_lib") {

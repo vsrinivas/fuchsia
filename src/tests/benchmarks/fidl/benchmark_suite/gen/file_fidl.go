@@ -5,8 +5,7 @@
 package main
 
 import (
-	"gen/config"
-	fidlutil "gen/fidl/util"
+	"io"
 	"log"
 	"os"
 	"path"
@@ -20,30 +19,30 @@ var fidlTmpl = template.Must(template.New("fidlTmpl").Parse(
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// GENERATED FILE: Regen with $(fx get-build-dir)/host-tools/regen_fidl_benchmark_suite
+// GENERATED FILE: Regen with out/default/host-tools/regen_fidl_benchmark_suite
 
 library benchmarkfidl;
-{{ range .Definitions -}}
-{{ .Comment }}
-{{ .Body }}
+
+{{ range .Definitions }}
+{{ . }}
 {{ end -}}
 `))
 
-type fidlTmplInput struct {
-	Year        int
-	Definitions []fidlTmplDefinition
+func writeFidl(w io.Writer, definitions []string) error {
+	var formattedDefs []string
+	for _, def := range definitions {
+		formattedDefs = append(formattedDefs, format(0, def))
+	}
+	return fidlTmpl.Execute(w, map[string]interface{}{
+		"Year":        time.Now().Year(),
+		"Definitions": formattedDefs,
+	})
 }
 
-type fidlTmplDefinition struct {
-	Comment  string
-	Body     string
-	Denylist []config.Binding
-}
-
-func genFidlFile(filepath string, fidl config.FidlFile) error {
-	var definitions []fidlTmplDefinition
+func genFidlFile(filepath string, fidl FidlFile) error {
+	var definitions []string
 	for _, definition := range fidl.Definitions {
-		body, err := fidl.Gen(definition.Config)
+		out, err := fidl.Gen(definition.Config)
 		if err != nil {
 			return err
 		}
@@ -53,12 +52,9 @@ func genFidlFile(filepath string, fidl config.FidlFile) error {
 				strs[i] = string(binding)
 			}
 			attribute := "[BindingsDenylist = \"" + strings.Join(strs, ", ") + "\"]"
-			body = attribute + "\n" + body
+			out = attribute + "\n" + out
 		}
-		definitions = append(definitions, fidlTmplDefinition{
-			Body:    formatObj(0, body),
-			Comment: formatComment(definition.Comment),
-		})
+		definitions = append(definitions, out)
 	}
 
 	f, err := os.Create(filepath)
@@ -66,17 +62,14 @@ func genFidlFile(filepath string, fidl config.FidlFile) error {
 		return err
 	}
 	defer f.Close()
-	return fidlTmpl.Execute(f, fidlTmplInput{
-		Year:        time.Now().Year(),
-		Definitions: definitions,
-	})
+	if err := writeFidl(f, definitions); err != nil {
+		return err
+	}
+	return nil
 }
 
 func genFidl(outdir string) {
-	for _, fidl := range fidlutil.AllFidlFiles() {
-		if !strings.HasSuffix(fidl.Filename, ".gen.test.fidl") {
-			log.Fatalf("%s needs .gen.test.fidl suffix", fidl.Filename)
-		}
+	for _, fidl := range allFidlFiles() {
 		filepath := path.Join(outdir, fidl.Filename)
 		if err := genFidlFile(filepath, fidl); err != nil {
 			log.Fatalf("Error generating %s: %s", fidl.Filename, err)
