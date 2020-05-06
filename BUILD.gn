@@ -699,11 +699,6 @@ group("recovery_image") {
   deps = [ "build/images/recovery" ]
 }
 
-group("breakpad_symbols") {
-  testonly = true
-  public_deps = [ "//build/gn:breakpad_symbols" ]
-}
-
 group("package_archive") {
   testonly = true
   public_deps = [ "//build/gn:package_archive" ]

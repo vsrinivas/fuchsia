@@ -8,7 +8,6 @@ group("tools") {
   public_deps = [
     "//tools/debug/bloatalyzer",
     "//tools/debug/covargs",
-    "//tools/debug/dump_breakpad_symbols",
     "//tools/debug/symbolize",
     "//tools/debug/unpack_debug_symbols",
   ]
@@ -21,7 +20,6 @@ group("tests") {
     "//tools/debug/bloaty:bloaty_tests",
     "//tools/debug/breakpad:breakpad_tests",
     "//tools/debug/covargs:covargs_tests",
-    "//tools/debug/dump_breakpad_symbols:dump_breakpad_symbols_tests",
     "//tools/debug/elflib:tools_debug_elflib_tests",
     "//tools/debug/symbolize:symbolize_tests",
   ]
