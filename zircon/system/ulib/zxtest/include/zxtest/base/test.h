@@ -22,7 +22,7 @@ class Test : private internal::TestInternal {
     static_assert(std::is_base_of<Test, Derived>::value, "Must inherit from zxtest::TestInternal.");
     std::unique_ptr<Derived> derived = std::make_unique<Derived>();
     derived->driver_ = driver;
-    return std::move(derived);
+    return derived;
   }
 
   virtual ~Test() = default;

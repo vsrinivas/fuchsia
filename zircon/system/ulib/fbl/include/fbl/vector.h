@@ -199,7 +199,7 @@ class __OWNER(T) Vector {
     auto val = std::move(ptr_[index]);
     shift_forward(index);
     consider_shrinking();
-    return std::move(val);
+    return val;
   }
 
   void pop_back() {
