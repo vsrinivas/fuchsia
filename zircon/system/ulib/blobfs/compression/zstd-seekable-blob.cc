@@ -230,6 +230,9 @@ zx_status_t ZSTDSeekableBlob::Create(
 }
 
 zx_status_t ZSTDSeekableBlob::Read(uint8_t* buf, uint64_t data_byte_offset, uint64_t num_bytes) {
+  TRACE_DURATION("blobfs", "ZSTDSeekableBlob::Read", "data byte offset", data_byte_offset,
+                 "num bytes", num_bytes);
+
   ZSTD_seekable* d_stream = ZSTD_seekable_create();
   if (d_stream == nullptr) {
     FS_TRACE_ERROR("[blobfs][zstd-seekable] Failed to create seekable dstream\n");
