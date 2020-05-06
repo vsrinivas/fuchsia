@@ -42,6 +42,9 @@ constexpr uint32_t kInitialQuant = 26;
 constexpr uint32_t kCanvasMinWidthAlignment = 32;
 constexpr uint32_t kCanvasMinHeightAlignment = 16;
 constexpr uint32_t kPictureMinAlignment = 16;
+constexpr uint32_t kDefaultGopSize = 8;
+constexpr uint32_t kDefaultBitRate = 200000;
+constexpr uint32_t kDefaultFrameRate = 30;
 
 enum InputFormat {
   kNv12 = 3,
@@ -118,17 +121,15 @@ class DeviceCtx : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_MEDIA
 
   // encoder control
   zx_status_t EncoderInit(const fuchsia::media::FormatDetails& format_details);
+  zx_status_t UpdateEncoderSettings(const fuchsia::media::FormatDetails& format_details);
 
-  zx_status_t EnsureHwInited();
+  zx_status_t EnsureFwLoaded();
   zx_status_t StopEncoder();
 
   zx_status_t SetInputBuffer(const CodecBuffer* buffer);
   void SetOutputBuffer(const CodecBuffer* buffer);
+  // Fills current output buffer with encoded NAL's. Will include SPS/PPS headers for each IDR.
   zx_status_t EncodeFrame(uint32_t* output_len);
-
-  // TODO(afoxley), this should likely take some encoder specific info struct. The intention is to
-  // support quality adjustments on the fly.
-  void SetEncodeParams(fuchsia::media::FormatDetails format_details);
 
  private:
   void ShutDown();
@@ -141,9 +142,14 @@ class DeviceCtx : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_MEDIA
   zx_status_t ParseFirmwarePackage();
   zx_status_t LoadFirmware();
   zx_status_t ParseFirmwarePackage(uintptr_t* firmware);
+  void FrameReset(bool idr);
+  zx_status_t EncodeSPSPPS();
+  void Start();
   void Reset();
   void Config(bool idr);
-  void ReferenceBuffersInit();
+  void ReferenceBuffersConfig();
+  void OutputBufferConfig(zx_paddr_t phys, size_t size);
+  void InputBufferConfig(zx_paddr_t phys, size_t size);
   zx_status_t CanvasConfig(zx_handle_t vmo, uint32_t height, uint32_t bytes_per_row,
                            uint32_t offset, ScopedCanvasId* canvas_id_out, uint32_t alloc_flag);
   void SetInputFormat();
@@ -170,7 +176,7 @@ class DeviceCtx : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_MEDIA
   // points into firmware_package_ptr_ at parsed out location
   uintptr_t firmware_ptr_ = 0;
   uint32_t firmware_size_ = 0;
-  bool needs_reset_ = false;
+  bool firmware_loaded_ = false;
 
   EncoderStatus hw_status_;
 
@@ -186,8 +192,11 @@ class DeviceCtx : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_MEDIA
   std::optional<InternalBuffer> scale_buff_;
   std::optional<InternalBuffer> dump_info_;
   std::optional<InternalBuffer> cbr_info_;
+  std::optional<InternalBuffer> sps_pps_data_;
+  uint32_t sps_pps_size_ = 0;
 
-  const CodecBuffer* current_output_ = nullptr;
+  const CodecBuffer* input_buffer_ = nullptr;
+  const CodecBuffer* output_buffer_ = nullptr;
 
   async::Loop loop_;
   thrd_t loop_thread_;
@@ -197,12 +206,16 @@ class DeviceCtx : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_MEDIA
   std::unique_ptr<CodecAdmissionControl> codec_admission_control_;
   std::unique_ptr<CodecImpl> codec_instance_;
 
+  // Encoding settings
+  uint32_t gop_size_ = kDefaultGopSize;
+  uint32_t bit_rate_ = kDefaultBitRate;
+  uint32_t frame_rate_ = kDefaultFrameRate;
   // Picture info
   uint32_t encoder_width_;
   uint32_t encoder_height_;
   uint32_t rows_per_slice_;
   // reset to 0 for IDR
-  uint32_t idr_pic_id_ = 0;
+  uint16_t idr_pic_id_ = 0;
   // increment each frame
   uint32_t frame_number_ = 0;
   // reset to 0 for IDR and imcrement by 2 for NON-IDR

@@ -9,6 +9,7 @@
 #include <zircon/assert.h>
 #include <zircon/types.h>
 
+#include <limits>
 #include <memory>
 #include <optional>
 
@@ -426,6 +427,7 @@ zx_status_t DeviceCtx::BufferAlloc() {
   constexpr uint32_t kScaleBufSize = 0x300000;
   constexpr uint32_t kDumpInfoSize = 0xa0000;
   constexpr uint32_t kCbrInfoSize = 0x2000;
+  constexpr uint32_t kSPSPPSSize = 0x1000;
 
   auto result = InternalBuffer::Create("H264EncoderDec0", &sysmem_sync_ptr_, bti(), kDec0Size,
                                        /*is_writable=*/true,
@@ -489,18 +491,20 @@ zx_status_t DeviceCtx::BufferAlloc() {
   }
   cbr_info_.emplace(result.take_value());
 
+  result = InternalBuffer::Create("H264EncoderSPSPPS", &sysmem_sync_ptr_, bti(), kSPSPPSSize,
+                                  /*is_writable=*/true,
+                                  /*is_mapping_needed*/
+                                  true);
+  if (!result.is_ok()) {
+    ENCODE_ERROR("Failed to make buffer - status: %d", result.error());
+    return result.error();
+  }
+  sps_pps_data_.emplace(result.take_value());
+
   return ZX_OK;
 }
 
 zx_status_t DeviceCtx::SetInputBuffer(const CodecBuffer* buffer) {
-  HcodecQdctMbStartPtr::Get().FromValue(buffer->physical_base()).WriteTo(&dosbus_);
-  HcodecQdctMbEndPtr::Get()
-      .FromValue(buffer->physical_base() + buffer->size() - 1)
-      .WriteTo(&dosbus_);
-  HcodecQdctMbWrPtr::Get().FromValue(buffer->physical_base()).WriteTo(&dosbus_);
-  HcodecQdctMbRdPtr::Get().FromValue(buffer->physical_base()).WriteTo(&dosbus_);
-  HcodecQdctMbBuff::Get().FromValue(0).WriteTo(&dosbus_);
-
   input_y_canvas_.Reset();
   input_uv_canvas_.Reset();
 
@@ -532,6 +536,7 @@ zx_status_t DeviceCtx::SetInputBuffer(const CodecBuffer* buffer) {
     return status;
   }
 
+  input_buffer_ = buffer;
   input_canvas_ids_ = ((input_uv_canvas_.id()) << 8) | input_y_canvas_.id();
   input_format_ = InputFormat::kNv12;
   noise_reduction_ = NoiseReductionMode::kSNROnly;
@@ -540,34 +545,9 @@ zx_status_t DeviceCtx::SetInputBuffer(const CodecBuffer* buffer) {
 }
 
 void DeviceCtx::SetOutputBuffer(const CodecBuffer* buffer) {
-  HcodecVlcVbMemCtl::Get()
-      .FromValue(0)
-      .set_bit_31(1)
-      .set_bits_30_24(0x3f)
-      .set_bits_23_16(0x20)
-      .set_bits_1_0(0x2)
-      .WriteTo(&dosbus_);
-
-  HcodecVlcVbStartPtr::Get().FromValue(buffer->physical_base()).WriteTo(&dosbus_);
-  HcodecVlcVbWrPtr::Get().FromValue(buffer->physical_base()).WriteTo(&dosbus_);
-  HcodecVlcVbSwRdPtr::Get().FromValue(buffer->physical_base()).WriteTo(&dosbus_);
-  HcodecVlcVbEndPtr::Get()
-      .FromValue(buffer->physical_base() + buffer->size() - 1)
-      .WriteTo(&dosbus_);
-
-  // TODO(afoxley) Ask amlogic what these bits do.
-  HcodecVlcVbControl::Get().FromValue(0).set_bit_0(1).WriteTo(&dosbus_);
-  HcodecVlcVbControl::Get()
-      .FromValue(0)
-      .set_bit_14(0)
-      .set_bits_5_3(0x7)
-      .set_bit_1(1)
-      .set_bit_0(0)
-      .WriteTo(&dosbus_);
-
-  current_output_ = buffer;
+  output_buffer_ = buffer;
   zx_status_t status = zx_cache_flush(buffer->base(), buffer->size(),
-                          ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE);
+                                      ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE);
   if (status != ZX_OK) {
     ENCODE_ERROR("failed to flush output buffer");
   }
@@ -882,7 +862,40 @@ void DeviceCtx::SetInputFormat() {
       .WriteTo(&dosbus_);
 }
 
-void DeviceCtx::ReferenceBuffersInit() {
+void DeviceCtx::InputBufferConfig(zx_paddr_t phys, size_t size) {
+  HcodecQdctMbStartPtr::Get().FromValue(phys).WriteTo(&dosbus_);
+  HcodecQdctMbEndPtr::Get().FromValue(phys + size - 1).WriteTo(&dosbus_);
+  HcodecQdctMbWrPtr::Get().FromValue(phys).WriteTo(&dosbus_);
+  HcodecQdctMbRdPtr::Get().FromValue(phys).WriteTo(&dosbus_);
+  HcodecQdctMbBuff::Get().FromValue(0).WriteTo(&dosbus_);
+}
+
+void DeviceCtx::OutputBufferConfig(zx_paddr_t phys, size_t size) {
+  HcodecVlcVbMemCtl::Get()
+      .FromValue(0)
+      .set_bit_31(1)
+      .set_bits_30_24(0x3f)
+      .set_bits_23_16(0x20)
+      .set_bits_1_0(0x2)
+      .WriteTo(&dosbus_);
+
+  HcodecVlcVbStartPtr::Get().FromValue(phys).WriteTo(&dosbus_);
+  HcodecVlcVbWrPtr::Get().FromValue(phys).WriteTo(&dosbus_);
+  HcodecVlcVbSwRdPtr::Get().FromValue(phys).WriteTo(&dosbus_);
+  HcodecVlcVbEndPtr::Get().FromValue(phys + size - 1).WriteTo(&dosbus_);
+
+  // TODO(afoxley) Ask amlogic what these bits do.
+  HcodecVlcVbControl::Get().FromValue(0).set_bit_0(1).WriteTo(&dosbus_);
+  HcodecVlcVbControl::Get()
+      .FromValue(0)
+      .set_bit_14(0)
+      .set_bits_5_3(0x7)
+      .set_bit_1(1)
+      .set_bit_0(0)
+      .WriteTo(&dosbus_);
+}
+
+void DeviceCtx::ReferenceBuffersConfig() {
   HcodecRecCanvasAddr::Get().FromValue(dblk_buf_canvas_).WriteTo(&dosbus_);
   HcodecDbkRCanvasAddr::Get().FromValue(dblk_buf_canvas_).WriteTo(&dosbus_);
   HcodecDbkWCanvasAddr::Get().FromValue(dblk_buf_canvas_).WriteTo(&dosbus_);
@@ -903,7 +916,6 @@ void DeviceCtx::IeMeParameterInit(HcodecIeMeMbType::MbType mb_type) {
   if (rows_per_slice_ != picture_to_mb(encoder_height_)) {
     uint32_t mb_per_slice = picture_to_mb(encoder_height_) * rows_per_slice_;
     HcodecFixedSliceCfg::Get().FromValue(mb_per_slice).WriteTo(&dosbus_);
-
   } else {
     HcodecFixedSliceCfg::Get().FromValue(0).WriteTo(&dosbus_);
   }
@@ -967,7 +979,6 @@ void DeviceCtx::Reset() {
 }
 
 void DeviceCtx::Config(bool idr) {
-  constexpr uint32_t kInitQpPicture = 26;
   constexpr uint32_t kLog2MaxFrameNum = 4;
   constexpr uint32_t kLog2MaxPicOrderCntLsb = 4;
   constexpr uint32_t kAnc0BufferId = 0;
@@ -990,7 +1001,7 @@ void DeviceCtx::Config(bool idr) {
   HcodecLog2MaxPicOrderCntLsb::Get().FromValue(kLog2MaxPicOrderCntLsb).WriteTo(&dosbus_);
   HcodecLog2MaxFrameNum::Get().FromValue(kLog2MaxFrameNum).WriteTo(&dosbus_);
   HcodecAnc0BufferId::Get().FromValue(kAnc0BufferId).WriteTo(&dosbus_);
-  HcodecQpPicture::Get().FromValue(kInitQpPicture).WriteTo(&dosbus_);
+  HcodecQpPicture::Get().FromValue(kInitialQuant).WriteTo(&dosbus_);
 
   HcodecHdecMcOmemAuto::Get()
       .FromValue(0)
@@ -1416,16 +1427,16 @@ void DeviceCtx::Config(bool idr) {
 
 // encoder control
 zx_status_t DeviceCtx::EncoderInit(const fuchsia::media::FormatDetails& format_details) {
-  if (!format_details.has_domain() || !format_details.domain().is_video() ||
-      !format_details.domain().video().is_uncompressed()) {
-    return ZX_ERR_INVALID_ARGS;
+  memset(quant_table_i4_, kInitialQuant, sizeof(quant_table_i4_));
+  memset(quant_table_i16_, kInitialQuant, sizeof(quant_table_i16_));
+  memset(quant_table_me_, kInitialQuant, sizeof(quant_table_me_));
+
+  auto status = UpdateEncoderSettings(format_details);
+  if (status != ZX_OK) {
+    return status;
   }
 
-  encoder_width_ = format_details.domain().video().uncompressed().image_format.display_width;
-  encoder_height_ = format_details.domain().video().uncompressed().image_format.display_height;
-  rows_per_slice_ = picture_to_mb(encoder_height_);
-
-  auto status = BufferAlloc();
+  status = BufferAlloc();
   if (status != ZX_OK) {
     return status;
   }
@@ -1440,32 +1451,65 @@ zx_status_t DeviceCtx::EncoderInit(const fuchsia::media::FormatDetails& format_d
     return status;
   }
 
-  needs_reset_ = true;
+  firmware_loaded_ = false;
   return ZX_OK;
 }
 
-zx_status_t DeviceCtx::EnsureHwInited() {
-  if (!needs_reset_) {
-    return ZX_OK;
+zx_status_t DeviceCtx::UpdateEncoderSettings(const fuchsia::media::FormatDetails& format_details) {
+  if (format_details.has_domain() && format_details.domain().is_video() &&
+      format_details.domain().video().is_uncompressed()) {
+    uint32_t width = format_details.domain().video().uncompressed().image_format.display_width;
+    uint32_t height = format_details.domain().video().uncompressed().image_format.display_height;
+
+    if ((encoder_width_ && width != encoder_width_) ||
+        (encoder_height_ && height != encoder_height_)) {
+      ENCODE_ERROR("frame size change not allowed");
+      return ZX_ERR_INVALID_ARGS;
+    }
+
+    encoder_width_ = width;
+    encoder_height_ = height;
+    rows_per_slice_ = picture_to_mb(encoder_height_);
   }
 
-  needs_reset_ = false;
-
-  auto status = LoadFirmware();
-  if (status != ZX_OK) {
-    return status;
+  if (encoder_width_ == 0 || encoder_height_ == 0) {
+    ENCODE_ERROR("frame size must be specified");
+    return ZX_ERR_INVALID_ARGS;
   }
 
-  Reset();
+  if (encoder_width_ % 16 != 0 || encoder_height_ % 2 != 0) {
+    ENCODE_ERROR("frame size must be multiple of 16");
+    return ZX_ERR_INVALID_ARGS;
+  }
 
-  Config(/*idr*/ false);
+  if (format_details.has_encoder_settings() && format_details.encoder_settings().is_h264()) {
+    auto& settings = format_details.encoder_settings().h264();
+    // TODO(afoxley) reset any stream level state when these settings change
+    if (settings.has_bit_rate()) {
+      bit_rate_ = settings.bit_rate();
+      sps_pps_size_ = 0;
+    }
+    if (settings.has_frame_rate()) {
+      frame_rate_ = settings.frame_rate();
+      sps_pps_size_ = 0;
+    }
+    if (settings.has_gop_size()) {
+      gop_size_ = settings.gop_size();
+      if (gop_size_ > std::numeric_limits<uint16_t>::max()) {
+        gop_size_ = std::numeric_limits<uint16_t>::max();
+      }
 
-  ReferenceBuffersInit();
+      // reset any in progress group
+      frame_number_ = 0;
+      pic_order_cnt_lsb_ = 0;
+      sps_pps_size_ = 0;
+    }
+  }
 
-  IeMeParameterInit(HcodecIeMeMbType::MbType::kDefault);
+  return ZX_OK;
+}
 
-  HcodecEncoderStatus::Get().FromValue(EncoderStatus::kIdle).WriteTo(&dosbus_);
-
+void DeviceCtx::Start() {
   for (int i = 0; i < 3; i++) {
     // delay
     DosSwReset1::Get().ReadFrom(&dosbus_);
@@ -1480,8 +1524,43 @@ zx_status_t DeviceCtx::EnsureHwInited() {
   }
 
   HcodecMpsr::Get().FromValue(0x0001).WriteTo(&dosbus_);
+}
+
+zx_status_t DeviceCtx::EnsureFwLoaded() {
+  if (firmware_loaded_) {
+    return ZX_OK;
+  }
+
+  auto status = LoadFirmware();
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  firmware_loaded_ = true;
+
+  Reset();
+  HcodecEncoderStatus::Get().FromValue(EncoderStatus::kIdle).WriteTo(&dosbus_);
+  Start();
 
   return ZX_OK;
+}
+
+void DeviceCtx::FrameReset(bool idr) {
+  ZX_DEBUG_ASSERT(input_buffer_);
+  ZX_DEBUG_ASSERT(output_buffer_);
+  HcodecIeMeMbType::MbType mb_type = HcodecIeMeMbType::MbType::kAuto;
+
+  Reset();
+  Config(idr);
+  ReferenceBuffersConfig();
+  InputBufferConfig(input_buffer_->physical_base(), input_buffer_->size());
+  OutputBufferConfig(output_buffer_->physical_base(), output_buffer_->size());
+
+  if (idr) {
+    mb_type = HcodecIeMeMbType::MbType::kI4MB;
+  }
+  IeMeParameterInit(mb_type);
+  SetInputFormat();
 }
 
 zx_status_t DeviceCtx::StopEncoder() {
@@ -1554,8 +1633,6 @@ zx_status_t DeviceCtx::EncodeCmd(EncoderStatus cmd, uint32_t* output_len) {
   if (hw_status_ == EncoderStatus::kIdrDone || hw_status_ == EncoderStatus::kNonIdrDone ||
       hw_status_ == EncoderStatus::kPictureDone || hw_status_ == EncoderStatus::kSequenceDone) {
     *output_len = HcodecVlcTotalBytes::Get().ReadFrom(&dosbus_).reg_value();
-
-    // TODO(afoxley) invalidate output buffer
   } else {
     ENCODE_ERROR("status %d", hw_status_);
     return ZX_ERR_TIMED_OUT;
@@ -1565,53 +1642,64 @@ zx_status_t DeviceCtx::EncodeCmd(EncoderStatus cmd, uint32_t* output_len) {
 }
 
 zx_status_t DeviceCtx::EncodeFrame(uint32_t* output_len) {
-  EncoderStatus cmd = EncoderStatus::kIdr;
-  HcodecIeMeMbType::MbType mb_type = HcodecIeMeMbType::MbType::kDefault;
-
   ZX_DEBUG_ASSERT(output_len);
-  ZX_DEBUG_ASSERT(current_output_);
+  ZX_DEBUG_ASSERT(output_buffer_);
+  ZX_DEBUG_ASSERT(input_buffer_);
 
-  auto status = EnsureHwInited();
+  auto status = EnsureFwLoaded();
   if (status != ZX_OK) {
     return status;
   }
 
-  if (cmd == EncoderStatus::kIdr || cmd == EncoderStatus::kNonIdr) {
-    ReferenceBuffersInit();
-    SetInputFormat();
-    if (cmd == EncoderStatus::kIdr) {
-      mb_type = HcodecIeMeMbType::MbType::kI4MB;
-    } else {
-      mb_type = HcodecIeMeMbType::MbType::kAuto;
-    }
+  EncoderStatus cmd = EncoderStatus::kIdr;
+  if (frame_number_ > 0) {
+    cmd = EncoderStatus::kNonIdr;
   }
+  bool idr = cmd == EncoderStatus::kIdr;
 
-  IeMeParameterInit(mb_type);
-
-  if (cmd == EncoderStatus::kIdr) {
-    // TODO(afoxley) only need to include SPS/PPS if format changes or we haven't got them yet
-    status = EncodeCmd(EncoderStatus::kSequence, output_len);
-    if (status != ZX_OK) {
-      return status;
-    }
-
-    status = EncodeCmd(EncoderStatus::kPicture, output_len);
+  if (idr && !sps_pps_size_) {
+    status = EncodeSPSPPS();
     if (status != ZX_OK) {
       return status;
     }
   }
+
+  FrameReset(idr);
 
   status = EncodeCmd(cmd, output_len);
   if (status != ZX_OK) {
     return status;
   }
 
+  // setup for next frame
+  if (idr) {
+    idr_pic_id_++;
+  }
+
+  pic_order_cnt_lsb_ += 2;
+  frame_number_ += 1;
+
+  if (frame_number_ >= gop_size_) {
+    frame_number_ = 0;
+    pic_order_cnt_lsb_ = 0;
+  }
+
   // commit and swap to next canvas buffer
   std::swap(ref_buf_canvas_, dblk_buf_canvas_);
 
   // TODO(afoxley) If output is in RAM domain the invalidate would not be required
-  status = zx_cache_flush(current_output_->base(), *output_len,
+  status = zx_cache_flush(output_buffer_->base(), *output_len,
                           ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE);
+
+  if (idr) {
+    // The encoder hardware aparently requires the output pointer to be 16 byte aligned, so always
+    // encode to the start and then shuffle the SPS/PPS data in when we insert it.
+    // TODO(afoxley), if frequent SPS/PPS NAL's are required then make a separate API for them.
+    memmove(output_buffer_->base() + sps_pps_size_, output_buffer_->base(), *output_len);
+    memcpy(output_buffer_->base(), sps_pps_data_->virt_base(), sps_pps_size_);
+    *output_len += sps_pps_size_;
+  }
+
   if (status != ZX_OK) {
     return status;
   }
@@ -1619,7 +1707,26 @@ zx_status_t DeviceCtx::EncodeFrame(uint32_t* output_len) {
   return ZX_OK;
 }
 
-void DeviceCtx::SetEncodeParams(fuchsia::media::FormatDetails format_details) {}
+zx_status_t DeviceCtx::EncodeSPSPPS() {
+  sps_pps_size_ = 0;
+  FrameReset(/*idr*/ false);
+  OutputBufferConfig(sps_pps_data_->phys_base(), sps_pps_data_->size());
+
+  IeMeParameterInit(HcodecIeMeMbType::kDefault);
+  auto status = EncodeCmd(EncoderStatus::kSequence, &sps_pps_size_);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  IeMeParameterInit(HcodecIeMeMbType::kDefault);
+  status = EncodeCmd(EncoderStatus::kPicture, &sps_pps_size_);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  sps_pps_data_->CacheFlushInvalidate(0, sps_pps_size_);
+  return ZX_OK;
+}
 
 fidl::InterfaceHandle<fuchsia::sysmem::Allocator> DeviceCtx::ConnectToSysmem() {
   fidl::InterfaceHandle<fuchsia::sysmem::Allocator> client_end;

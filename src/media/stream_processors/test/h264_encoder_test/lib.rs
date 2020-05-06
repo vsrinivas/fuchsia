@@ -24,6 +24,8 @@ use stream_processor_test::*;
 
 #[test]
 fn h264_stream_output_generated() -> Result<()> {
+    let mut exec = fasync::Executor::new()?;
+
     let test_case = H264EncoderTestCase {
         input_format: sysmem::ImageFormat2 {
             pixel_format: sysmem::PixelFormat {
@@ -42,23 +44,28 @@ fn h264_stream_output_generated() -> Result<()> {
             pixel_aspect_ratio_width: 0,
             pixel_aspect_ratio_height: 0,
         },
-        num_frames: 1,
+        num_frames: 4,
         settings: Rc::new(move || -> EncoderSettings {
             EncoderSettings::H264(H264EncoderSettings {
                 bit_rate: Some(200000),
                 frame_rate: Some(30),
-                gop_size: Some(8),
+                gop_size: Some(2),
                 ..H264EncoderSettings::empty()
             })
         }),
         expected_nals: Some(vec![
-            H264NalKind::NotPicture,
-            H264NalKind::NotPicture,
-            H264NalKind::Picture,
+            H264NalKind::SPS,
+            H264NalKind::PPS,
+            H264NalKind::IDR,
+            H264NalKind::NonIDR,
+            H264NalKind::SPS,
+            H264NalKind::PPS,
+            H264NalKind::IDR,
+            H264NalKind::NonIDR,
         ]),
         output_file: None,
     };
 
-    let mut exec = fasync::Executor::new()?;
-    exec.run_singlethreaded(test_case.run())
+    exec.run_singlethreaded(test_case.run())?;
+    Ok(())
 }

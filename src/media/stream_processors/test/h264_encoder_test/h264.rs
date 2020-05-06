@@ -48,8 +48,10 @@ impl ElementaryStream for H264Stream {
             known_end_access_unit: true,
             data: nal.data,
             significance: match nal.kind {
-                H264NalKind::Picture => Significance::Video(VideoSignificance::Picture),
-                H264NalKind::NotPicture => Significance::Video(VideoSignificance::NotPicture),
+                H264NalKind::IDR | H264NalKind::NonIDR => {
+                    Significance::Video(VideoSignificance::Picture)
+                }
+                _ => Significance::Video(VideoSignificance::NotPicture),
             },
             timestamp: None,
         }))
@@ -64,20 +66,27 @@ pub struct H264Nal<'a> {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum H264NalKind {
-    Picture,
-    NotPicture,
+    IDR,
+    NonIDR,
+    SPS,
+    PPS,
+    Unknown,
 }
 
-impl H264NalKind {
-    const NON_IDR_PICTURE_CODE: u8 = 1;
-    const IDR_PICTURE_CODE: u8 = 5;
+const IDR_PICTURE_CODE: u8 = 5;
+const NON_IDR_PICTURE_CODE: u8 = 1;
+const SPS_CODE: u8 = 7;
+const PPS_CODE: u8 = 8;
 
+impl H264NalKind {
     fn from_header(header: u8) -> Self {
         let kind = header & 0xf;
-        if kind == Self::NON_IDR_PICTURE_CODE || kind == Self::IDR_PICTURE_CODE {
-            H264NalKind::Picture
-        } else {
-            H264NalKind::NotPicture
+        match kind {
+            kind if kind == IDR_PICTURE_CODE => H264NalKind::IDR,
+            kind if kind == NON_IDR_PICTURE_CODE => H264NalKind::NonIDR,
+            kind if kind == SPS_CODE => H264NalKind::SPS,
+            kind if kind == PPS_CODE => H264NalKind::PPS,
+            _ => H264NalKind::Unknown,
         }
     }
 }

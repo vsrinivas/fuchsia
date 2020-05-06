@@ -31,12 +31,6 @@ impl H264NalValidator {
 
 impl OutputValidator for H264NalValidator {
     fn validate(&self, output: &[Output]) -> Result<()> {
-        if let None = self.expected_nals {
-            return Ok(());
-        }
-
-        let expected = self.expected_nals.as_ref().unwrap();
-
         let packets: Vec<&OutputPacket> = output_packets(output).collect();
         let mut file = self.output_file()?;
         let mut stream = H264Stream::from(vec![]);
@@ -44,6 +38,11 @@ impl OutputValidator for H264NalValidator {
             file.write_all(&packet.data)?;
             stream.append(&mut packet.data.clone());
         }
+
+        if let None = self.expected_nals {
+            return Ok(());
+        }
+        let expected = self.expected_nals.as_ref().unwrap();
 
         let mut current = 0;
         for nal in stream.nal_iter() {

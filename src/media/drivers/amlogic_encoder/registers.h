@@ -483,7 +483,7 @@ REGISTER_END
 
 DEFINE_REGISTER(HcodecQdctMbBuff, DosRegisterIo, 0x1f17)
 REGISTER_BEGIN(HcodecQdctQQuantI, DosRegisterIo, 0x1f1c)
-DEF_FIELD(25, 22, i_pic_qp_c);
+DEF_FIELD(31, 22, i_pic_qp_c);
 DEF_FIELD(21, 16, i_pic_qp);
 DEF_FIELD(15, 12, i_pic_qp_c_mod6);
 DEF_FIELD(11, 8, i_pic_qp_c_div6);
@@ -491,7 +491,7 @@ DEF_FIELD(7, 4, i_pic_qp_mod6);
 DEF_FIELD(3, 0, i_pic_qp_div6);
 REGISTER_END
 REGISTER_BEGIN(HcodecQdctQQuantP, DosRegisterIo, 0x1f1d)
-DEF_FIELD(25, 22, p_pic_qp_c);
+DEF_FIELD(31, 22, p_pic_qp_c);
 DEF_FIELD(21, 16, p_pic_qp);
 DEF_FIELD(15, 12, p_pic_qp_c_mod6);
 DEF_FIELD(11, 8, p_pic_qp_c_div6);

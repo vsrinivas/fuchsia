@@ -6,6 +6,7 @@ use fidl::encoding::Decodable;
 use fidl_fuchsia_media::*;
 use fidl_fuchsia_sysmem as sysmem;
 use fuchsia_zircon as zx;
+use std::cmp;
 use std::rc::Rc;
 use stream_processor_test::*;
 
@@ -16,11 +17,34 @@ pub struct VideoFrame {
 }
 
 impl VideoFrame {
-    pub fn create(format: sysmem::ImageFormat2) -> Self {
+    pub fn create(format: sysmem::ImageFormat2, _frame_number: usize) -> Self {
         // For 4:2:0 YUV, the UV data is 1/2 the size of the Y data,
         // so the size of the frame is 3/2 the size of the Y plane.
-        let frame_size = format.bytes_per_row * format.coded_height * 3 / 2;
-        Self { format, data: vec![0; frame_size as usize] }
+        let width = format.bytes_per_row as usize;
+        let height = format.coded_height as usize;
+        let frame_size = width * height * 3usize / 2usize;
+        let mut data = vec![0; frame_size];
+
+        // generate checkerboard in Y plane
+        const NUM_BLOCKS: usize = 5usize;
+        let block_size = width / NUM_BLOCKS;
+        let mut y_on = true;
+        let mut x_on = true;
+        for y in 0..height {
+            if y % block_size == 0 {
+                y_on = !y_on;
+                x_on = y_on;
+            }
+            for x in 0..width {
+                let color = if x_on { 0xff } else { 0x00 };
+                data[y * width + x] = color;
+                if x % block_size == 0 {
+                    x_on = !x_on;
+                }
+            }
+        }
+
+        Self { format, data }
     }
 }
 
@@ -40,12 +64,15 @@ impl TimestampGenerator {
 }
 
 pub struct VideoFrameStream {
+    pub num_frames: usize,
     pub frames: Vec<VideoFrame>,
     pub format: sysmem::ImageFormat2,
     pub encoder_settings: Rc<dyn Fn() -> EncoderSettings>,
     pub frames_per_second: usize,
     pub timebase: Option<u64>,
 }
+
+const MAX_FRAMES: usize = 60;
 
 impl VideoFrameStream {
     pub fn create(
@@ -55,8 +82,10 @@ impl VideoFrameStream {
         frames_per_second: usize,
         timebase: Option<u64>,
     ) -> Result<Self> {
-        let frames = (0..num_frames).map(|_| VideoFrame::create(format.clone())).collect();
-        Ok(Self { frames, format, encoder_settings, frames_per_second, timebase })
+        let frames = (0..cmp::min(num_frames, MAX_FRAMES))
+            .map(|frame_number| VideoFrame::create(format.clone(), frame_number))
+            .collect();
+        Ok(Self { num_frames, frames, format, encoder_settings, frames_per_second, timebase })
     }
 
     pub fn timestamp_generator(&self) -> Option<TimestampGenerator> {
@@ -88,11 +117,12 @@ impl ElementaryStream for VideoFrameStream {
     }
 
     fn stream<'a>(&'a self) -> Box<dyn Iterator<Item = ElementaryStreamChunk<'_>> + 'a> {
-        Box::new((0..self.frames.len()).map(move |input_index| {
+        Box::new((0..self.num_frames).map(move |input_index| {
             ElementaryStreamChunk {
                 start_access_unit: false,
                 known_end_access_unit: false,
-                data: &self.frames[input_index].data,
+                // allow looping input frames
+                data: &self.frames[input_index % self.frames.len()].data,
                 significance: Significance::Video(VideoSignificance::Picture),
                 timestamp: self
                     .timestamp_generator()

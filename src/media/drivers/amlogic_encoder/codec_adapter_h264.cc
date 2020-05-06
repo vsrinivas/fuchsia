@@ -521,9 +521,9 @@ void CodecAdapterH264::ProcessInput() {
     is_process_input_queued_ = false;
   }  // ~lock
 
-  auto status = device_->EnsureHwInited();
+  auto status = device_->EnsureFwLoaded();
   if (status != ZX_OK) {
-    LOG(ERROR, "failed to init hw");
+    events_->onCoreCodecFailCodec("failed to init hw");
     return;
   }
 
@@ -531,19 +531,22 @@ void CodecAdapterH264::ProcessInput() {
     CodecInputItem item = DequeueInputItem();
 
     if (!item.is_valid()) {
+      // input loop should exit
       return;
     }
 
     if (item.is_format_details()) {
-      auto format_details = fidl::Clone(item.format_details());
-
-      // TODO(afoxley) handle setting up new encode params here
-      device_->SetEncodeParams(std::move(format_details));
+      status = device_->UpdateEncoderSettings(item.format_details());
+      if (status != ZX_OK) {
+        events_->onCoreCodecFailCodec("failed update encoder settings");
+        return;
+      }
 
       if (output_sink_->OutputBufferCount() < kOutputMinBufferCountForCamping) {
-        // Currently, this will only run if output buffers aren't presently configured.  In future,
-        // new encode params may imply a need to re-configure output buffers that are already
-        // configured but too small or too few in number for higher output bitrate.
+        // Currently, this will only run if output buffers aren't presently configured.
+        // TODO(afoxley) In future, new encode params may imply a need to re-configure
+        // output buffers that are already configured but too small or too few in number
+        // for higher output bitrate.
         events_->onCoreCodecMidStreamOutputConstraintsChange(
             /*output_re_config_required=*/true);
       }
