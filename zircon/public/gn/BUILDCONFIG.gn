@@ -652,6 +652,7 @@ template("library") {
       targets = true
       not_needed(invoker, "*")
       group(_library_name) {
+        forward_variables_from(invoker, [ "testonly" ])
         public_deps = [ ":${_library_name}.headers" ]
         metadata = {
           legacy_barrier = []

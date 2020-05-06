@@ -10,6 +10,8 @@
 #include <optional>
 #include <type_traits>
 
+#include <hwreg/internal.h>
+
 namespace hwreg {
 
 // The io() pointer can be passed to ReadFrom and WriteTo methods.  The

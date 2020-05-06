@@ -92,6 +92,7 @@ aggregate_manifest("legacy-aux") {
     ":test.sys.noop-test.ubsan-sancov",
     ":test.sys.noop-test.ubsan-sancov-full",
     ":test.sys.stdio-test",
+    ":test.sys.uart-unittests-test",
   ]
 
   deps += [
@@ -195,6 +196,7 @@ aggregate_manifest("legacy-tests") {
     ":test.sys.noop-test.ubsan-sancov",
     ":test.sys.noop-test.ubsan-sancov-full",
     ":test.sys.stdio-test",
+    ":test.sys.uart-unittests-test",
   ]
 
   reference = "legacy-tests-$target_cpu"

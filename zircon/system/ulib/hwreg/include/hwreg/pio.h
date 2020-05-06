@@ -40,7 +40,7 @@ class RegisterDirectPio {
       Write(static_cast<uint32_t>(value), port);
       Write(static_cast<uint32_t>(value >> 32), port + 1);
     } else {
-      auto p = AdjustPort(port);
+      uint16_t p = AdjustPort(port);
       // The "a" constraint means the A register, so %al, %ax, or %eax,
       // depending on the type of the value.  The "N" constraint means an
       // 8-bit immediate, so use that if it's constant and fits; otherwise
@@ -58,7 +58,7 @@ class RegisterDirectPio {
       auto hi = Read<uint32_t>(port + 1);
       value = (static_cast<IntType>(hi) << 32) | lo;
     } else {
-      auto p = AdjustPort(port);
+      uint16_t p = AdjustPort(port);
       // Same operands as above, except "=a" for output to the A register,
       // and the opposite order in the assembly syntax.
       __asm__ volatile("in %[p], %[v]" : [v] "=a"(value) : [p] "Nd"(p));
@@ -70,9 +70,9 @@ class RegisterDirectPio {
   const uint16_t base_ = 0;
 
   uint16_t AdjustPort(uint32_t offset) const {
-    auto p = static_cast<uint16_t>(offset);
+    uint16_t p = static_cast<uint16_t>(offset);
     ZX_DEBUG_ASSERT(p == offset);
-    p += base_;
+    p = static_cast<uint16_t>(base_ + p);
     ZX_DEBUG_ASSERT(p == base_ + offset);
     return p;
   }

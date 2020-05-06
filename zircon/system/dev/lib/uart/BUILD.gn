@@ -1,0 +1,39 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+zx_library("uart") {
+  kernel = true
+  host = true
+  sources = []
+  public_deps = [
+    # <lib/uart/uart.h> has #include <lib/arch/intrin.h>.
+    "$zx/kernel/lib/arch:headers",
+
+    # <lib/uart/uart.h> has #include <lib/zircon-internal/thread_annotations.h>.
+    "$zx/system/ulib/zircon-internal:headers",
+
+    # <lib/uart/uart.h> has #include <hwreg/mmio.h>.
+    "$zx/system/ulib/hwreg:headers",
+  ]
+  if (is_kernel) {
+    public_deps += [ "$zx/kernel/lib/ktl:headers" ]
+  }
+}
+
+zx_library("uart-mock") {
+  testonly = true
+  kernel = true
+  host = true
+  sources = []
+  public_deps = [
+    # <lib/uart/mock.h> has #include <lib/mock-function/mock-function.h>.
+    "$zx/system/ulib/mock-function:headers",
+
+    # <lib/uart/mock.h> has #include <hwreg/mock.h>
+    "$zx/system/ulib/hwreg:hwreg-mock.headers",
+  ]
+  if (is_kernel) {
+    public_deps += [ "$zx/kernel/lib/ktl:headers" ]
+  }
+}

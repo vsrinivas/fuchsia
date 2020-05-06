@@ -7,4 +7,4 @@ environments are and what constraints each has.
 The main uses for this code are physboot, boot shims, and tests for those.
 In the future it will also cover a variety of EFI cases.
 
-[`lib/arch`](../lib/arch)
+[`lib/arch`]: ../lib/arch
