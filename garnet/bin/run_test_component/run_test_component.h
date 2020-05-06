@@ -22,6 +22,7 @@ struct ParseArgsResult {
   /// Timeout in seconds for test. By default there is no timeout.
   int32_t timeout = -1;
   int32_t min_log_severity = FX_LOG_INFO;
+  bool restrict_logs = false;
 };
 
 // Parses args.

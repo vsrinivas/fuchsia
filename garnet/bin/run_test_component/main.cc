@@ -53,6 +53,7 @@ const uint64_t kNanosInSec = 1000000000UL;
 const std::string max_severity_config_path =
     "/pkgfs/packages/config-data/0/data/run_test_component";
 
+// TODO(anmittal): Doucment --restrict-logs, once it is implemented.
 void PrintUsage() {
   fprintf(stderr, R"(
 Usage: run_test_component [--realm-label=<label>] [--timeout=<seconds>] [--min-severity-logs=string]<test_url>|<test_matcher> [arguments...]
@@ -188,6 +189,7 @@ int main(int argc, const char** argv) {
     PrintUsage();
     return 1;
   }
+
   if (parse_result.matching_urls.size() > 1) {
     fprintf(stderr, "Found multiple matching components. Did you mean?\n");
     for (auto url : parse_result.matching_urls) {

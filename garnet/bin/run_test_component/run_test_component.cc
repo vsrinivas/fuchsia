@@ -29,6 +29,15 @@ static constexpr char kComponentIndexerUrl[] =
 static constexpr char kLabelArgPrefix[] = "--realm-label=";
 static constexpr char kTimeoutArgPrefix[] = "--timeout=";
 static constexpr char kSeverityArgPrefix[] = "--min-severity-logs=";
+static constexpr char kRestrictLogsArgPrefix[] = "--restrict-logs";
+
+bool to_bool(std::string str) {
+  std::transform(str.begin(), str.end(), str.begin(), ::tolower);
+  std::istringstream is(str);
+  bool b;
+  is >> std::boolalpha >> b;
+  return b;
+}
 
 ParseArgsResult ParseArgs(const std::shared_ptr<sys::ServiceDirectory>& services, int argc,
                           const char** argv) {
@@ -49,6 +58,7 @@ ParseArgsResult ParseArgs(const std::shared_ptr<sys::ServiceDirectory>& services
     const size_t kLabelArgPrefixLength = strlen(kLabelArgPrefix);
     const size_t kTimeoutArgPrefixLength = strlen(kTimeoutArgPrefix);
     const size_t kSeverityArgPrefixLength = strlen(kSeverityArgPrefix);
+    const size_t kRestrictLogsArgPrefixLength = strlen(kRestrictLogsArgPrefix);
     if (argument.substr(0, kLabelArgPrefixLength) == kLabelArgPrefix) {
       result.realm_label = argument.substr(kLabelArgPrefixLength);
       url_or_matcher_argi++;
@@ -73,6 +83,24 @@ ParseArgsResult ParseArgs(const std::shared_ptr<sys::ServiceDirectory>& services
         result.error = true;
         result.error_msg = fxl::StringPrintf("Invalid severity %s", level.c_str());
         return result;
+      }
+      url_or_matcher_argi++;
+      continue;
+    }
+
+    if (argument.substr(0, kRestrictLogsArgPrefixLength) == kRestrictLogsArgPrefix) {
+      std::string arg = argument.substr(kRestrictLogsArgPrefixLength);
+      result.restrict_logs = false;
+      if (arg.length() == 0) {
+        result.restrict_logs = true;
+      } else {
+        if (arg[0] != '=') {
+          result.error = true;
+          result.error_msg = fxl::StringPrintf("\"%s\" is not a valid argument.", argument.c_str());
+          return result;
+        }
+        arg = arg.substr(1);
+        result.restrict_logs = to_bool(std::move(arg));
       }
       url_or_matcher_argi++;
       continue;
