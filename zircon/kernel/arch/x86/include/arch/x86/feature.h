@@ -70,8 +70,15 @@ struct x86_cpuid_bit {
 #define X86_CPUID_BIT(leaf, word, bit) \
   (struct x86_cpuid_bit) { (enum x86_cpuid_leaf_num)(leaf), (word), (bit) }
 
-void x86_feature_init(void);
-void x86_cpu_feature_late_init(void);
+/* Invoked on each CPU prior to lk_main being called. */
+void x86_feature_early_init_percpu(void);
+
+/* Invoked on boot CPU after command line and UART enabled, but before
+ * code patching or the MMU are enabled. */
+void x86_cpu_feature_init(void);
+
+/* Invoked on each CPU late in init sequence. */
+void x86_cpu_feature_late_init_percpu(void);
 
 static inline const struct cpuid_leaf* x86_get_cpuid_leaf(enum x86_cpuid_leaf_num leaf) {
   extern struct cpuid_leaf _cpuid[MAX_SUPPORTED_CPUID + 1];

@@ -49,7 +49,9 @@ void* _zbi_base;
 
 void arch_early_init(void) { x86_mmu_early_init(); }
 
-void arch_prevm_init(void) {}
+void arch_prevm_init(void) {
+  x86_cpu_feature_init();
+}
 
 void arch_init(void) {
   const struct x86_model_info* model = x86_get_model();
@@ -67,7 +69,10 @@ void arch_init(void) {
   x86_processor_trace_init();
 }
 
-void arch_cpu_late_init(void) { x86_cpu_feature_late_init(); }
+void arch_late_init_percpu(void) {
+  // Call per-CPU init function for the boot CPU.
+  x86_cpu_feature_late_init_percpu();
+}
 
 void arch_setup_uspace_iframe(iframe_t* iframe, uintptr_t pc, uintptr_t sp, uintptr_t arg1,
                               uintptr_t arg2) {

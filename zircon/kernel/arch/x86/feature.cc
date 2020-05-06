@@ -70,7 +70,7 @@ static ktl::atomic<bool> g_cpuid_initialized;
 
 static enum x86_hypervisor_list get_hypervisor();
 
-void x86_feature_init(void) {
+void x86_feature_early_init_percpu(void) {
   if (g_cpuid_initialized.exchange(true)) {
     return;
   }
@@ -165,78 +165,84 @@ void x86_feature_init(void) {
       x86_feature_test(X86_FEATURE_PCID) && x86_feature_test(X86_FEATURE_INVPCID);
 }
 
-// Invoked on each CPU during boot, after platform is available.
-void x86_cpu_feature_late_init(void) {
+// Invoked on the boot CPU during boot, after platform is available.
+void x86_cpu_feature_init() {
+  DEBUG_ASSERT(arch_curr_cpu_num() == 0);
+
   cpu_id::CpuId cpuid;
   MsrAccess msr;
 
-  if (arch_curr_cpu_num() == 0) {
-    // Get microcode patch level
-    switch (x86_vendor) {
-      case X86_VENDOR_INTEL:
-        model_info.patch_level = x86_intel_get_patch_level();
-        break;
-      case X86_VENDOR_AMD:
-        model_info.patch_level = x86_amd_get_patch_level();
-        break;
-      default:
-        break;
-    }
-
-    // Evaluate speculative execution mitigation settings.
-    g_disable_spec_mitigations = gCmdline.GetBool("kernel.x86.disable_spec_mitigations",
-                                                  /*default_value=*/false);
-    if (x86_vendor == X86_VENDOR_INTEL) {
-      g_has_meltdown = x86_intel_cpu_has_meltdown(&cpuid, &msr);
-      g_has_l1tf = x86_intel_cpu_has_l1tf(&cpuid, &msr);
-      g_l1d_flush_on_vmentry = ((x86_get_disable_spec_mitigations() == false)) && g_has_l1tf &&
-                               x86_feature_test(X86_FEATURE_L1D_FLUSH);
-      if (x86_get_disable_spec_mitigations() == false) {
-        // If mitigations are enabled, try to disable TSX. Disabling TSX prevents exploiting
-        // TAA/CacheOut attacks and potential future exploits. It also avoids MD_CLEAR on CPUs
-        // without MDS.
-        //
-        // WARNING: If we disable TSX, we must do so before we determine whether we are affected by
-        // TAA/Cacheout; otherwise the TAA/Cacheout determination code will run before the TSX
-        // CPUID bit is masked.
-        x86_intel_cpu_try_disable_tsx(&cpuid, &msr);
-      }
-      g_has_mds_taa = x86_intel_cpu_has_mds_taa(&cpuid, &msr);
-      g_has_md_clear = cpuid.ReadFeatures().HasFeature(cpu_id::Features::MD_CLEAR);
-      g_md_clear_on_user_return = ((x86_get_disable_spec_mitigations() == false)) &&
-                                  g_has_mds_taa && g_has_md_clear &&
-                                  gCmdline.GetBool("kernel.x86.md_clear_on_user_return",
-                                                   /*default_value=*/true);
-      g_has_swapgs_bug = x86_intel_cpu_has_swapgs_bug(&cpuid);
-      g_has_ssb = x86_intel_cpu_has_ssb(&cpuid, &msr);
-      g_has_ssbd = x86_intel_cpu_has_ssbd(&cpuid, &msr);
-      g_has_ibpb = cpuid.ReadFeatures().HasFeature(cpu_id::Features::SPEC_CTRL);
-      g_has_enhanced_ibrs = x86_intel_cpu_has_enhanced_ibrs(&cpuid, &msr);
-    } else if (x86_vendor == X86_VENDOR_AMD) {
-      g_has_ssb = x86_amd_cpu_has_ssb(&cpuid, &msr);
-      g_has_ssbd = x86_amd_cpu_has_ssbd(&cpuid, &msr);
-      g_has_ibpb = cpuid.ReadFeatures().HasFeature(cpu_id::Features::AMD_IBPB);
-      // Certain AMD CPUs may prefer modes where retpolines are not used and IBRS is enabled
-      // early in boot. This is similar to Intel's "Enhanced IBRS" but enumerated differently.
-      // See "Indirect Branch Control Extension" Revision 4.10.18, Extended Usage Models.
-      g_has_enhanced_ibrs = x86_amd_cpu_has_ibrs_always_on(&cpuid);
-    }
-    g_ras_fill_on_ctxt_switch = (x86_get_disable_spec_mitigations() == false);
-    g_cpu_vulnerable_to_rsb_underflow = (x86_get_disable_spec_mitigations() == false) &&
-                                        (x86_vendor == X86_VENDOR_INTEL) &&
-                                        x86_intel_cpu_has_rsb_fallback(&cpuid, &msr);
-    // TODO(fxb/33667, fxb/12150): Consider whether a process can opt-out of an IBPB on switch,
-    // either on switch-in (ex: its compiled with a retpoline) or switch-out (ex: it promises
-    // not to attack the next process).
-    // TODO(fxb/33667, fxb/12150): Should we have an individual knob for IBPB?
-    g_should_ibpb_on_ctxt_switch = (x86_get_disable_spec_mitigations() == false) && g_has_ibpb;
-    // Unconditionally enable Enhanced IBRS if it is supported, to comply with the architectural
-    // specification - Enhanced IBRS processors may not be retpoline-safe.
-    g_enhanced_ibrs_enabled = (x86_get_disable_spec_mitigations() == false) && g_has_enhanced_ibrs;
-    g_ssb_mitigated = (x86_get_disable_spec_mitigations() == false) && g_has_ssb && g_has_ssbd &&
-                      gCmdline.GetBool("kernel.x86.spec_store_bypass_disable",
-                                       /*default_value=*/false);
+  // Get microcode patch level
+  switch (x86_vendor) {
+    case X86_VENDOR_INTEL:
+      model_info.patch_level = x86_intel_get_patch_level();
+      break;
+    case X86_VENDOR_AMD:
+      model_info.patch_level = x86_amd_get_patch_level();
+      break;
+    default:
+      break;
   }
+
+  // Evaluate speculative execution mitigation settings.
+  g_disable_spec_mitigations = gCmdline.GetBool("kernel.x86.disable_spec_mitigations",
+                                                /*default_value=*/false);
+  if (x86_vendor == X86_VENDOR_INTEL) {
+    g_has_meltdown = x86_intel_cpu_has_meltdown(&cpuid, &msr);
+    g_has_l1tf = x86_intel_cpu_has_l1tf(&cpuid, &msr);
+    g_l1d_flush_on_vmentry = ((x86_get_disable_spec_mitigations() == false)) && g_has_l1tf &&
+                             x86_feature_test(X86_FEATURE_L1D_FLUSH);
+    if (x86_get_disable_spec_mitigations() == false) {
+      // If mitigations are enabled, try to disable TSX. Disabling TSX prevents exploiting
+      // TAA/CacheOut attacks and potential future exploits. It also avoids MD_CLEAR on CPUs
+      // without MDS.
+      //
+      // WARNING: If we disable TSX, we must do so before we determine whether we are affected by
+      // TAA/Cacheout; otherwise the TAA/Cacheout determination code will run before the TSX
+      // CPUID bit is masked.
+      x86_intel_cpu_try_disable_tsx(&cpuid, &msr);
+    }
+    g_has_mds_taa = x86_intel_cpu_has_mds_taa(&cpuid, &msr);
+    g_has_md_clear = cpuid.ReadFeatures().HasFeature(cpu_id::Features::MD_CLEAR);
+    g_md_clear_on_user_return = ((x86_get_disable_spec_mitigations() == false)) && g_has_mds_taa &&
+                                g_has_md_clear &&
+                                gCmdline.GetBool("kernel.x86.md_clear_on_user_return",
+                                                 /*default_value=*/true);
+    g_has_swapgs_bug = x86_intel_cpu_has_swapgs_bug(&cpuid);
+    g_has_ssb = x86_intel_cpu_has_ssb(&cpuid, &msr);
+    g_has_ssbd = x86_intel_cpu_has_ssbd(&cpuid, &msr);
+    g_has_ibpb = cpuid.ReadFeatures().HasFeature(cpu_id::Features::SPEC_CTRL);
+    g_has_enhanced_ibrs = x86_intel_cpu_has_enhanced_ibrs(&cpuid, &msr);
+  } else if (x86_vendor == X86_VENDOR_AMD) {
+    g_has_ssb = x86_amd_cpu_has_ssb(&cpuid, &msr);
+    g_has_ssbd = x86_amd_cpu_has_ssbd(&cpuid, &msr);
+    g_has_ibpb = cpuid.ReadFeatures().HasFeature(cpu_id::Features::AMD_IBPB);
+    // Certain AMD CPUs may prefer modes where retpolines are not used and IBRS is enabled
+    // early in boot. This is similar to Intel's "Enhanced IBRS" but enumerated differently.
+    // See "Indirect Branch Control Extension" Revision 4.10.18, Extended Usage Models.
+    g_has_enhanced_ibrs = x86_amd_cpu_has_ibrs_always_on(&cpuid);
+  }
+  g_ras_fill_on_ctxt_switch = (x86_get_disable_spec_mitigations() == false);
+  g_cpu_vulnerable_to_rsb_underflow = (x86_get_disable_spec_mitigations() == false) &&
+                                      (x86_vendor == X86_VENDOR_INTEL) &&
+                                      x86_intel_cpu_has_rsb_fallback(&cpuid, &msr);
+  // TODO(fxb/33667, fxb/12150): Consider whether a process can opt-out of an IBPB on switch,
+  // either on switch-in (ex: its compiled with a retpoline) or switch-out (ex: it promises
+  // not to attack the next process).
+  // TODO(fxb/33667, fxb/12150): Should we have an individual knob for IBPB?
+  g_should_ibpb_on_ctxt_switch = (x86_get_disable_spec_mitigations() == false) && g_has_ibpb;
+  // Unconditionally enable Enhanced IBRS if it is supported, to comply with the architectural
+  // specification - Enhanced IBRS processors may not be retpoline-safe.
+  g_enhanced_ibrs_enabled = (x86_get_disable_spec_mitigations() == false) && g_has_enhanced_ibrs;
+  g_ssb_mitigated = (x86_get_disable_spec_mitigations() == false) && g_has_ssb && g_has_ssbd &&
+                    gCmdline.GetBool("kernel.x86.spec_store_bypass_disable",
+                                     /*default_value=*/false);
+}
+
+// Invoked on each CPU during boot, after platform init has taken place.
+void x86_cpu_feature_late_init_percpu(void) {
+  cpu_id::CpuId cpuid;
+  MsrAccess msr;
 
   // Mitigate Spectre V4 (Speculative Store Bypass) if requested.
   if (x86_cpu_should_mitigate_ssb()) {

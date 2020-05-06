@@ -24,8 +24,8 @@ void arch_prevm_init(void);
 // Perform any set up required after heap/MMU is available.
 void arch_init(void);
 
-// Perform any set up required after the platform has brought up all cores.
-void arch_cpu_late_init(void);
+// Perform any per-CPU set up required.
+void arch_late_init_percpu(void);
 
 // Called just before initiating a system suspend to give the arch layer a
 // chance to save state.  Must be called with interrupts disabled.

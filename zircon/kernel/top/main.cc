@@ -118,18 +118,21 @@ static int bootstrap2(void*) {
 
   dprintf(SPEW, "top of bootstrap2()\n");
 
+  // Initialize the rest of the architecture and platform.
   lk_primary_cpu_init_level(LK_INIT_LEVEL_THREADING, LK_INIT_LEVEL_ARCH - 1);
   arch_init();
 
-  // initialize the rest of the platform
   dprintf(SPEW, "initializing platform\n");
   lk_primary_cpu_init_level(LK_INIT_LEVEL_ARCH, LK_INIT_LEVEL_PLATFORM - 1);
   platform_init();
 
-  // late CPU initialization, after platform is available
+  // At this point, other cores in the system have been started (though may
+  // not yet be online).
+
+  // Perform per-CPU set up on the boot CPU.
   dprintf(SPEW, "initializing late arch\n");
   lk_primary_cpu_init_level(LK_INIT_LEVEL_PLATFORM, LK_INIT_LEVEL_ARCH_LATE - 1);
-  arch_cpu_late_init();
+  arch_late_init_percpu();
 
   dprintf(SPEW, "moving to last init level\n");
   lk_primary_cpu_init_level(LK_INIT_LEVEL_ARCH_LATE, LK_INIT_LEVEL_LAST);
@@ -140,6 +143,7 @@ static int bootstrap2(void*) {
 
 void lk_secondary_cpu_entry() {
   uint cpu = arch_curr_cpu_num();
+  DEBUG_ASSERT(cpu != 0);
 
   if (cpu > secondary_idle_thread_count) {
     dprintf(CRITICAL,
@@ -149,7 +153,7 @@ void lk_secondary_cpu_entry() {
   }
 
   // late CPU initialization for secondary CPUs
-  arch_cpu_late_init();
+  arch_late_init_percpu();
 
   // secondary cpu initialize from threading level up. 0 to threading was handled in arch
   lk_init_level(LK_INIT_FLAG_SECONDARY_CPUS, LK_INIT_LEVEL_THREADING, LK_INIT_LEVEL_LAST);
