@@ -495,7 +495,19 @@ impl PackageBuilder {
                 File::open(packagedir.path()).context("open /packages")?,
             )?
             .output(&launcher()?)?;
-        fut.await?.ok()?;
+        let pm_output = fut.await?;
+        match pm_output.ok() {
+            Ok(_) => (),
+            Err(e) => {
+                eprintln!(
+                    "pm exited with status {}, stdout:\n{}\nstderr:\n{}",
+                    pm_output.exit_status,
+                    String::from_utf8(pm_output.stdout)?,
+                    String::from_utf8(pm_output.stderr)?,
+                );
+                return Err(e)?;
+            }
+        }
 
         let meta_far_merkle =
             fs::read_to_string(packagedir.path().join("meta.far.merkle"))?.parse()?;
