@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <string.h>
+
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <region-alloc/region-alloc.h>
-#include <string.h>
 
 // Support for Pool allocated bookkeeping
 RegionAllocator::RegionPool::RefPtr RegionAllocator::RegionPool::Create(size_t max_memory) {
@@ -406,8 +407,8 @@ void RegionAllocator::ReleaseRegion(Region* region) {
   // allocated_regions_by_base tree, but not in either of the avail_regions
   // trees, and not in any free list.  Remove it from the allocated_regions
   // bookkeeping and add it back to the available regions.
-  ZX_DEBUG_ASSERT(region->ns_tree_sort_by_base_.InContainer());
-  ZX_DEBUG_ASSERT(!region->ns_tree_sort_by_size_.InContainer());
+  ZX_DEBUG_ASSERT(fbl::InContainer<SortByBaseTag>(*region));
+  ZX_DEBUG_ASSERT(!fbl::InContainer<SortBySizeTag>(*region));
 
   allocated_regions_by_base_.erase(*region);
   AddRegionToAvailLocked(region);
@@ -515,8 +516,8 @@ zx_status_t RegionAllocator::AllocFromAvailLocked(Region::WAVLTreeSortBySize::it
 void RegionAllocator::AddRegionToAvailLocked(Region* region, bool allow_overlap) {
   // Sanity checks.  This region should not exist in any bookkeeping, and
   // should not overlap with any of the regions we are currently tracking.
-  ZX_DEBUG_ASSERT(!region->ns_tree_sort_by_base_.InContainer());
-  ZX_DEBUG_ASSERT(!region->ns_tree_sort_by_size_.InContainer());
+  ZX_DEBUG_ASSERT(!fbl::InContainer<SortByBaseTag>(*region));
+  ZX_DEBUG_ASSERT(!fbl::InContainer<SortBySizeTag>(*region));
   ZX_DEBUG_ASSERT(!IntersectsLocked(allocated_regions_by_base_, *region));
   ZX_DEBUG_ASSERT(allow_overlap || !IntersectsLocked(avail_regions_by_base_, *region));
 

@@ -99,7 +99,7 @@
 //      RegionAllocator::RegionPool::Create(32 << 10, 32 << 10));
 //
 //  /* Add regions to the pool which can be allocated from */
-//  alloc.AddRegion({ .base = 0xC0000000, .  size = 0x40000000 });  // [3GB,   4GB)
+//  alloc.AddRegion({ .base = 0xC0000000,   .size = 0x40000000 });  // [3GB,   4GB)
 //  alloc.AddRegion({ .base = 0x4000000000, .size = 0x40000000 });  // [256GB, 257GB)
 //
 //  /* Grab some specific regions out of the available regions.
@@ -238,11 +238,21 @@ __END_CDECLS
 
 // C++ API
 class RegionAllocator {
+ private:
+  // Tag types used by the Region class to exist in multiple trees
+  // simultaneously.
+  struct SortByBaseTag {};
+  struct SortBySizeTag {};
+
  public:
   class Region;
   using RegionSlabTraits = fbl::ManualDeleteSlabAllocatorTraits<Region*, REGION_POOL_SLAB_SIZE>;
 
-  class Region : public ralloc_region_t, public fbl::SlabAllocated<RegionSlabTraits> {
+  class Region
+      : public ralloc_region_t,
+        public fbl::SlabAllocated<RegionSlabTraits>,
+        public fbl::ContainableBaseClasses<fbl::TaggedWAVLTreeContainable<Region*, SortByBaseTag>,
+                                           fbl::TaggedWAVLTreeContainable<Region*, SortBySizeTag>> {
    private:
     struct RegionDeleter;
 
@@ -250,16 +260,7 @@ class RegionAllocator {
     using UPtr = std::unique_ptr<const Region, RegionDeleter>;
 
    private:
-    using WAVLTreeNodeState = fbl::WAVLTreeNodeState<Region*>;
     using KeyTraitsSortByBase = fbl::DefaultKeyedObjectTraits<uint64_t, Region>;
-
-    struct WAVLTreeNodeTraitsSortByBase {
-      static WAVLTreeNodeState& node_state(Region& r) { return r.ns_tree_sort_by_base_; }
-    };
-
-    struct WAVLTreeNodeTraitsSortBySize {
-      static WAVLTreeNodeState& node_state(Region& r) { return r.ns_tree_sort_by_size_; }
-    };
 
     struct KeyTraitsSortBySize {
       static const ralloc_region_t& GetKey(const Region& r) { return r; }
@@ -300,9 +301,9 @@ class RegionAllocator {
     };
 
     using WAVLTreeSortByBase =
-        fbl::WAVLTree<uint64_t, Region*, KeyTraitsSortByBase, WAVLTreeNodeTraitsSortByBase>;
+        fbl::TaggedWAVLTree<uint64_t, Region*, SortByBaseTag, KeyTraitsSortByBase>;
     using WAVLTreeSortBySize =
-        fbl::WAVLTree<ralloc_region_t, Region*, KeyTraitsSortBySize, WAVLTreeNodeTraitsSortBySize>;
+        fbl::TaggedWAVLTree<ralloc_region_t, Region*, SortBySizeTag, KeyTraitsSortBySize>;
 
     // Used by SortByBase key traits
     uint64_t GetKey() const { return base; }
@@ -312,8 +313,6 @@ class RegionAllocator {
     friend class RegionPool;
     friend KeyTraitsSortByBase;
     friend struct KeyTraitsSortBySize;
-    friend struct WAVLTreeNodeTraitsSortByBase;
-    friend struct WAVLTreeNodeTraitsSortBySize;
     friend class fbl::SlabAllocator<RegionSlabTraits>;
 
     // Regions can only be placement new'ed by the RegionPool slab
@@ -324,8 +323,6 @@ class RegionAllocator {
     DISALLOW_COPY_ASSIGN_AND_MOVE(Region);
 
     RegionAllocator* owner_;
-    WAVLTreeNodeState ns_tree_sort_by_base_;
-    WAVLTreeNodeState ns_tree_sort_by_size_;
   };
 
   class RegionPool : public fbl::RefCounted<RegionPool>,
