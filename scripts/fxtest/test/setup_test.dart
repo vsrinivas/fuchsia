@@ -148,6 +148,110 @@ void main() {
       // validated, which would otherwise throw an exception
       expect(logged, true);
     });
+
+    test('skip update-if-in-base for command tests', () async {
+      var testsConfig = TestsConfig.fromRawArgs(rawArgs: []);
+      var cmd = FuchsiaTestCommand.fromConfig(
+        testsConfig,
+        testRunnerBuilder: (testsConfig) => TestRunner(),
+      );
+      var checklist =
+          PreChecker.fromConfig(testsConfig, eventSink: (event) => null);
+      expect(checklist.hasDeviceTests(<TestBundle>[]), false);
+
+      var bundles = <TestBundle>[
+        cmd.testBundleBuilder(
+          TestDefinition.fromJson(
+            {
+              'environments': [],
+              'test': {
+                'command': ['some', 'command'],
+                'cpu': 'x64',
+                'label': '//scripts/lib:lib_tests(//build/toolchain:host_x64)',
+                'name': 'lib_tests',
+                'os': 'linux',
+                'path': 'host_x64/lib_tests',
+                'runtime_deps': 'host_x64/gen/scripts/lib/lib_tests.deps.json'
+              }
+            },
+            buildDir: '/whatever',
+            fx: '/whatever/fx',
+          ),
+        ),
+      ];
+
+      // Command tests are "device" tests for this context
+      expect(checklist.hasDeviceTests(bundles), false);
+    });
+
+    test('skip update-if-in-base for host tests', () async {
+      var testsConfig = TestsConfig.fromRawArgs(rawArgs: []);
+      var cmd = FuchsiaTestCommand.fromConfig(
+        testsConfig,
+        testRunnerBuilder: (testsConfig) => TestRunner(),
+      );
+      var checklist =
+          PreChecker.fromConfig(testsConfig, eventSink: (event) => null);
+      expect(checklist.hasDeviceTests(<TestBundle>[]), false);
+
+      var bundles = <TestBundle>[
+        cmd.testBundleBuilder(
+          TestDefinition.fromJson(
+            {
+              'environments': [],
+              'test': {
+                'cpu': 'x64',
+                'label': '//scripts/lib:lib_tests(//build/toolchain:host_x64)',
+                'name': 'lib_tests',
+                'os': 'linux',
+                'path': 'host_x64/lib_tests',
+                'runtime_deps': 'host_x64/gen/scripts/lib/lib_tests.deps.json'
+              }
+            },
+            buildDir: '/whatever',
+            fx: '/whatever/fx',
+          ),
+        ),
+      ];
+
+      // Outright device test
+      expect(checklist.hasDeviceTests(bundles), false);
+    });
+
+    test('run update-if-in-base for component tests', () async {
+      var testsConfig = TestsConfig.fromRawArgs(rawArgs: []);
+      var cmd = FuchsiaTestCommand.fromConfig(
+        testsConfig,
+        testRunnerBuilder: (testsConfig) => TestRunner(),
+      );
+      var checklist =
+          PreChecker.fromConfig(testsConfig, eventSink: (event) => null);
+      expect(checklist.hasDeviceTests(<TestBundle>[]), false);
+
+      var bundles = <TestBundle>[
+        cmd.testBundleBuilder(
+          TestDefinition.fromJson(
+            {
+              'environments': [],
+              'test': {
+                'cpu': 'x64',
+                'label': '//scripts/lib:lib_tests(//build/toolchain:host_x64)',
+                'name': 'lib_tests',
+                'os': 'fuchsia',
+                'package_url':
+                    'fuchsia-pkg://fuchsia.com/pkg-name#meta/component-name.cmx',
+                'runtime_deps': 'host_x64/gen/scripts/lib/lib_tests.deps.json'
+              }
+            },
+            buildDir: '/whatever',
+            fx: '/whatever/fx',
+          ),
+        ),
+      ];
+
+      // Component tests are definitely device tests
+      expect(checklist.hasDeviceTests(bundles), true);
+    });
   });
 
   group('command cli-wrapper', () {

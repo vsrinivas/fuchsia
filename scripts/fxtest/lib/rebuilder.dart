@@ -13,7 +13,8 @@ Future<Process> fxCommandRun(String fx, String cmd, [List<String> args]) {
       .then((Process process) async {
     final _exitCode = await process.exitCode;
     if (_exitCode != 0) {
-      throw FxRunException('fx $cmd $args', _exitCode);
+      throw FxRunException(
+          'fx $cmd ${args == null ? '' : args.join(' ')}', _exitCode);
     }
     return process;
   });
@@ -27,7 +28,8 @@ Future<Process> fxCommandRunWithIO(
   List<String> args,
 ]) {
   eventSink(
-    TestInfo(stylizer('> fx $cmd', [green, styleBold])),
+    TestInfo(stylizer(
+        '> fx $cmd ${args == null ? '' : args.join(' ')}', [green, styleBold])),
   );
   return Process.start(fx, [cmd, ...?args]).then((Process process) {
     process

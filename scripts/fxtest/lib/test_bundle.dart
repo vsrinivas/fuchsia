@@ -218,6 +218,7 @@ class TestBundle {
   String toString() => [
         '<TestBundle',
         '  testName: ${testDefinition.name}',
+        '  testType: ${testDefinition.executionHandle.testType}',
         '  extraFlags: $extraFlags',
         '  runnerFlags: $runnerFlags',
         '/>',
