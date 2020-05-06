@@ -1012,47 +1012,64 @@ pub(crate) fn receive_ipv4_packet<B: BufferMut, D: BufferDispatcher<B>>(
             dst_ip,
             Ipv4
         );
-    } else if let Some(dest) = forward(ctx, device, packet.dst_ip()) {
-        let ttl = packet.ttl();
-        if ttl > 1 {
-            trace!("receive_ipv4_packet: forwarding");
-
-            packet.set_ttl(ttl - 1);
-            drop_packet_and_undo_parse!(packet, buffer);
-            if crate::device::send_ip_frame(ctx, dest.device, dest.next_hop, buffer).is_err() {
-                debug!("failed to forward IPv4 packet: MTU exceeded");
-            }
-        } else {
-            debug!("received IPv4 packet dropped due to expired TTL");
-
-            // TTL is 0 or would become 0 after decrement; see "TTL" section,
-            // https://tools.ietf.org/html/rfc791#page-14
-            let (src_ip, dst_ip, proto, meta) = drop_packet_and_undo_parse!(packet, buffer);
-            icmp::send_icmpv4_ttl_expired(
-                ctx,
-                device,
-                frame_dst,
-                src_ip,
-                dst_ip,
-                proto,
-                buffer,
-                meta.header_len(),
-            );
-        }
     } else {
-        let (src_ip, dst_ip, proto, meta) = drop_packet_and_undo_parse!(packet, buffer);
-        debug!("received IPv4 packet with no known route to destination {}", dst_ip);
+        match forward(ctx, device, packet.dst_ip()) {
+            ForwardDestination::Destination(dest) => {
+                let ttl = packet.ttl();
+                if ttl > 1 {
+                    trace!("receive_ipv4_packet: forwarding");
 
-        icmp::send_icmpv4_net_unreachable(
-            ctx,
-            device,
-            frame_dst,
-            src_ip,
-            dst_ip,
-            proto,
-            buffer,
-            meta.header_len(),
-        );
+                    packet.set_ttl(ttl - 1);
+                    drop_packet_and_undo_parse!(packet, buffer);
+                    if crate::device::send_ip_frame(ctx, dest.device, dest.next_hop, buffer)
+                        .is_err()
+                    {
+                        debug!("failed to forward IPv4 packet: MTU exceeded");
+                    }
+                } else {
+                    debug!("received IPv4 packet dropped due to expired TTL");
+
+                    // TTL is 0 or would become 0 after decrement; see "TTL" section,
+                    // https://tools.ietf.org/html/rfc791#page-14
+                    let (src_ip, dst_ip, proto, meta) = drop_packet_and_undo_parse!(packet, buffer);
+                    icmp::send_icmpv4_ttl_expired(
+                        ctx,
+                        device,
+                        frame_dst,
+                        src_ip,
+                        dst_ip,
+                        proto,
+                        buffer,
+                        meta.header_len(),
+                    );
+                }
+            }
+            ForwardDestination::NoRouteToHost => {
+                let (src_ip, dst_ip, proto, meta) = drop_packet_and_undo_parse!(packet, buffer);
+                debug!("received IPv4 packet with no known route to destination {}", dst_ip);
+
+                icmp::send_icmpv4_net_unreachable(
+                    ctx,
+                    device,
+                    frame_dst,
+                    src_ip,
+                    dst_ip,
+                    proto,
+                    buffer,
+                    meta.header_len(),
+                );
+            }
+            ForwardDestination::ForwardingDisabled => {
+                // RFC 1122 § 3.2.1.3 "A host MUST silently discard an incoming
+                // datagram that is not destined for the host." If forwarding is
+                // disabled (we are not acting as a router) we follow this host
+                // rule.
+                debug!(
+                    "received IPv4 packet to non-local destination {} with forwarding disabled",
+                    packet.dst_ip()
+                );
+            }
+        }
     }
 }
 
@@ -1224,82 +1241,100 @@ pub(crate) fn receive_ipv6_packet<B: BufferMut, D: BufferDispatcher<B>>(
                 );
             }
         }
-    } else if let Some(dest) = forward(ctx, device, packet.dst_ip()) {
-        let ttl = packet.ttl();
-        if ttl > 1 {
-            trace!("receive_ipv6_packet: forwarding");
+    } else {
+        match forward(ctx, device, packet.dst_ip()) {
+            ForwardDestination::Destination(dest) => {
+                let ttl = packet.ttl();
+                if ttl > 1 {
+                    trace!("receive_ipv6_packet: forwarding");
 
-            // Handle extension headers first.
-            match ipv6::handle_extension_headers(ctx, device, frame_dst, &packet, false) {
-                Ipv6PacketAction::_Discard => {
-                    trace!("receive_ipv6_packet: handled IPv6 extension headers: discarding packet");
-                    return;
+                    // Handle extension headers first.
+                    match ipv6::handle_extension_headers(ctx, device, frame_dst, &packet, false) {
+                        Ipv6PacketAction::_Discard => {
+                            trace!("receive_ipv6_packet: handled IPv6 extension headers: discarding packet");
+                            return;
+                        }
+                        Ipv6PacketAction::Continue => {
+                            trace!("receive_ipv6_packet: handled IPv6 extension headers: forwarding packet");
+                        }
+                        Ipv6PacketAction::ProcessFragment => unreachable!("When forwarding packets, we should only ever look at the hop by hop options extension header (if present)"),
+                    }
+
+                    packet.set_ttl(ttl - 1);
+                    let (src_ip, dst_ip, proto, meta) = drop_packet_and_undo_parse!(packet, buffer);
+                    if let Err(buffer) =
+                        crate::device::send_ip_frame(ctx, dest.device, dest.next_hop, buffer)
+                    {
+                        debug!("failed to forward IPv6 packet: MTU exceeded");
+                        trace!("receive_ipv6_packet: Sending ICMPv6 Packet Too Big");
+                        // TODO(joshlf): Increment the TTL since we just decremented it.
+                        // The fact that we don't do this is technically a violation of
+                        // the ICMP spec (we're not encapsulating the original packet
+                        // that caused the issue, but a slightly modified version of
+                        // it), but it's not that big of a deal because it won't affect
+                        // the sender's ability to figure out the minimum path MTU. This
+                        // may break other logic, though, so we should still fix it
+                        // eventually.
+                        let mtu = crate::device::get_mtu(ctx, device);
+                        crate::ip::icmp::send_icmpv6_packet_too_big(
+                            ctx,
+                            device,
+                            frame_dst,
+                            src_ip,
+                            dst_ip,
+                            proto,
+                            mtu,
+                            buffer,
+                            meta.header_len(),
+                        );
+                    }
+                } else {
+                    debug!("received IPv6 packet dropped due to expired Hop Limit");
+
+                    // Hop Limit is 0 or would become 0 after decrement; see RFC 2460
+                    // Section 3.
+                    let (src_ip, dst_ip, proto, meta) = drop_packet_and_undo_parse!(packet, buffer);
+                    icmp::send_icmpv6_ttl_expired(
+                        ctx,
+                        device,
+                        frame_dst,
+                        src_ip,
+                        dst_ip,
+                        proto,
+                        buffer,
+                        meta.header_len(),
+                    );
                 }
-                Ipv6PacketAction::Continue => {
-                    trace!("receive_ipv6_packet: handled IPv6 extension headers: forwarding packet");
-                }
-                Ipv6PacketAction::ProcessFragment => unreachable!("When forwarding packets, we should only ever look at the hop by hop options extension header (if present)"),
             }
+            ForwardDestination::NoRouteToHost => {
+                let (src_ip, dst_ip, proto, meta) = drop_packet_and_undo_parse!(packet, buffer);
+                debug!("received IPv6 packet with no known route to destination {}", dst_ip);
 
-            packet.set_ttl(ttl - 1);
-            let (src_ip, dst_ip, proto, meta) = drop_packet_and_undo_parse!(packet, buffer);
-            if let Err(buffer) =
-                crate::device::send_ip_frame(ctx, dest.device, dest.next_hop, buffer)
-            {
-                debug!("failed to forward IPv6 packet: MTU exceeded");
-                trace!("receive_ipv6_packet: Sending ICMPv6 Packet Too Big");
-                // TODO(joshlf): Increment the TTL since we just decremented it.
-                // The fact that we don't do this is technically a violation of
-                // the ICMP spec (we're not encapsulating the original packet
-                // that caused the issue, but a slightly modified version of
-                // it), but it's not that big of a deal because it won't affect
-                // the sender's ability to figure out the minimum path MTU. This
-                // may break other logic, though, so we should still fix it
-                // eventually.
-                let mtu = crate::device::get_mtu(ctx, device);
-                crate::ip::icmp::send_icmpv6_packet_too_big(
+                icmp::send_icmpv6_net_unreachable(
                     ctx,
                     device,
                     frame_dst,
                     src_ip,
                     dst_ip,
                     proto,
-                    mtu,
                     buffer,
                     meta.header_len(),
                 );
             }
-        } else {
-            debug!("received IPv6 packet dropped due to expired Hop Limit");
-
-            // Hop Limit is 0 or would become 0 after decrement; see RFC 2460
-            // Section 3.
-            let (src_ip, dst_ip, proto, meta) = drop_packet_and_undo_parse!(packet, buffer);
-            icmp::send_icmpv6_ttl_expired(
-                ctx,
-                device,
-                frame_dst,
-                src_ip,
-                dst_ip,
-                proto,
-                buffer,
-                meta.header_len(),
-            );
+            ForwardDestination::ForwardingDisabled => {
+                // TODO(21182): Check to make sure the behavior here is the
+                // same as for IPv4.
+                //
+                // When forwarding is disabled, we silently drop packets not
+                // destined for this host, based on RFC 1122 § 3.2.1.3, however
+                // this RFC predates IPv6, so the v6 behavior could be
+                // different.
+                debug!(
+                    "received IPv6 packet to non-local destination {} with forwarding disabled",
+                    packet.dst_ip()
+                );
+            }
         }
-    } else {
-        let (src_ip, dst_ip, proto, meta) = drop_packet_and_undo_parse!(packet, buffer);
-        debug!("received IPv6 packet with no known route to destination {}", dst_ip);
-
-        icmp::send_icmpv6_net_unreachable(
-            ctx,
-            device,
-            frame_dst,
-            src_ip,
-            dst_ip,
-            proto,
-            buffer,
-            meta.header_len(),
-        );
     }
 }
 
@@ -1362,34 +1397,48 @@ fn deliver_ipv6<D: EventDispatcher>(
             .map_or(false, |a| crate::device::is_in_ip_multicast(ctx, device, a))
 }
 
+/// Either a reason a packet should not be forwarded, or the destination it
+/// should be forwarded to.
+enum ForwardDestination<A: IpAddress> {
+    /// The packet should not be forwarded because the netstack is not configured
+    /// for forwarding for the requested IP version, either globally or for the
+    /// inbound device.
+    ForwardingDisabled,
+    /// The packet should not be forwarded because no route to the specified host
+    /// could be found.
+    NoRouteToHost,
+    /// The packet should be forwarded to the given destination.
+    Destination(Destination<A, DeviceId>),
+}
+
 // Should we forward this packet, and if so, to whom?
 fn forward<D: EventDispatcher, A: IpAddress>(
     ctx: &mut Context<D>,
     device_id: DeviceId,
     dst_ip: A,
-) -> Option<Destination<A, DeviceId>> {
+) -> ForwardDestination<A> {
     trace!("ip::forward: destination ip = {:?}", dst_ip);
 
     // Is this netstack configured to foward packets not destined for it?
     if !crate::ip::is_routing_enabled::<_, A::Version>(ctx) {
         trace!("ip::forward: can't forward because netstack not configured to do so");
-        return None;
+        return ForwardDestination::ForwardingDisabled;
     }
 
     // Does the interface the packet arrived on have routing enabled?
     if !crate::device::is_routing_enabled::<_, A::Version>(ctx, device_id) {
         trace!("ip::forward: can't forward because packet arrived on an interface without routing enabled; device = {:?}", device_id);
-        return None;
+        return ForwardDestination::ForwardingDisabled;
     }
 
     match SpecifiedAddr::new(dst_ip).map_or(None, |dst_ip| lookup_route(ctx, dst_ip)) {
         Some(dest) => {
             trace!("ip::forward: found a valid route to {:?} -> {:?}", dst_ip, dest);
-            Some(dest)
+            ForwardDestination::Destination(dest)
         }
         None => {
             trace!("ip::forward: can't forward because no valid route exists to {:?}", dst_ip);
-            None
+            ForwardDestination::NoRouteToHost
         }
     }
 }

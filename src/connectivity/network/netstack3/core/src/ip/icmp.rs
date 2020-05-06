@@ -2383,7 +2383,9 @@ mod tests {
         // Receive an IP packet for an unreachable destination address. Check to
         // make sure that we respond with the appropriate ICMP message.
         test_receive_ip_packet::<Ipv4, _, _, _, _>(
-            |_| {},
+            |sb| {
+                sb.ipv4_builder().forward(true);
+            },
             &mut [0u8; 128],
             Ipv4Addr::new([1, 2, 3, 4]),
             64,
@@ -2397,7 +2399,9 @@ mod tests {
             |packet| assert_eq!(packet.original_packet().bytes().len(), 84),
         );
         test_receive_ip_packet::<Ipv6, _, _, _, _>(
-            |_| {},
+            |sb| {
+                sb.ipv6_builder().forward(true);
+            },
             &mut [0u8; 128],
             Ipv6Addr::new([1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8]),
             64,

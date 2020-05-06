@@ -548,6 +548,11 @@ pub(crate) trait TestIpExt: Ip {
     ///
     /// `last` is the value to be put in the last octet of the IP address.
     fn get_other_ip_address(last: u8) -> SpecifiedAddr<Self::Addr>;
+
+    /// Get an IP address in a different subnet from `Self::DUMMY_CONFIG`.
+    ///
+    /// `last` is the value to be put in the last octet of the IP address.
+    fn get_other_remote_ip_address(last: u8) -> SpecifiedAddr<Self::Addr>;
 }
 
 impl TestIpExt for Ipv4 {
@@ -558,6 +563,13 @@ impl TestIpExt for Ipv4 {
         bytes[bytes.len() - 1] = last;
         SpecifiedAddr::new(Ipv4Addr::new(bytes)).unwrap()
     }
+
+    fn get_other_remote_ip_address(last: u8) -> SpecifiedAddr<Self::Addr> {
+        let mut bytes = Self::DUMMY_CONFIG.local_ip.get().ipv4_bytes();
+        bytes[bytes.len() - 3] += 1;
+        bytes[bytes.len() - 1] = last;
+        SpecifiedAddr::new(Ipv4Addr::new(bytes)).unwrap()
+    }
 }
 
 impl TestIpExt for Ipv6 {
@@ -565,6 +577,13 @@ impl TestIpExt for Ipv6 {
 
     fn get_other_ip_address(last: u8) -> SpecifiedAddr<Ipv6Addr> {
         let mut bytes = Self::DUMMY_CONFIG.local_ip.get().ipv6_bytes();
+        bytes[bytes.len() - 1] = last;
+        SpecifiedAddr::new(Ipv6Addr::new(bytes)).unwrap()
+    }
+
+    fn get_other_remote_ip_address(last: u8) -> SpecifiedAddr<Self::Addr> {
+        let mut bytes = Self::DUMMY_CONFIG.local_ip.get().ipv6_bytes();
+        bytes[bytes.len() - 3] += 1;
         bytes[bytes.len() - 1] = last;
         SpecifiedAddr::new(Ipv6Addr::new(bytes)).unwrap()
     }

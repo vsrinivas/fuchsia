@@ -1923,10 +1923,10 @@ mod tests {
         assert!(!is_routing_enabled::<_, I>(&ctx, device));
         check_other_is_routing_enabled::<I>(&ctx, device, false);
 
-        // Receiving a packet not destined for the node should result in a dest unreachable message.
+        // Receiving a packet not destined for the node should only result in a
+        // dest unreachable message if routing is enabled.
         receive_ip_packet::<_, _, I>(&mut ctx, device, frame_dst, buf.clone());
-        assert_eq!(ctx.dispatcher().frames_sent().len(), 1);
-        check_icmp::<I>(&ctx.dispatcher().frames_sent()[0].1);
+        assert_eq!(ctx.dispatcher().frames_sent().len(), 0);
 
         // Attempting to set router should work, but it still won't be able to
         // route packets.
@@ -1935,8 +1935,8 @@ mod tests {
         // Should not update other Ip routing status.
         check_other_is_routing_enabled::<I>(&ctx, device, false);
         receive_ip_packet::<_, _, I>(&mut ctx, device, frame_dst, buf.clone());
-        assert_eq!(ctx.dispatcher().frames_sent().len(), 2);
-        check_icmp::<I>(&ctx.dispatcher().frames_sent()[1].1);
+        // Still should not send ICMP because device has routing disabled.
+        assert_eq!(ctx.dispatcher().frames_sent().len(), 0);
 
         //
         // Test with netstack fowarding
@@ -1958,10 +1958,10 @@ mod tests {
         assert!(!is_routing_enabled::<_, I>(&ctx, device));
         check_other_is_routing_enabled::<I>(&ctx, device, false);
 
-        // Receiving a packet not destined for the node should result in a dest unreachable message.
+        // Receiving a packet not destined for the node should not result in an
+        // unreachable message when routing is disabled.
         receive_ip_packet::<_, _, I>(&mut ctx, device, frame_dst, buf.clone());
-        assert_eq!(ctx.dispatcher().frames_sent().len(), 1);
-        check_icmp::<I>(&ctx.dispatcher().frames_sent()[0].1);
+        assert_eq!(ctx.dispatcher().frames_sent().len(), 0);
 
         // Attempting to set router should work
         set_routing_enabled::<_, I>(&mut ctx, device, true);
@@ -1971,17 +1971,35 @@ mod tests {
 
         // Should route the packet since routing fully enabled (netstack & device).
         receive_ip_packet::<_, _, I>(&mut ctx, device, frame_dst, buf.clone());
-        assert_eq!(ctx.dispatcher().frames_sent().len(), 2);
+        assert_eq!(ctx.dispatcher().frames_sent().len(), 1);
         println!("{:?}", buf.as_ref());
-        println!("{:?}", ctx.dispatcher().frames_sent()[1].1);
+        println!("{:?}", ctx.dispatcher().frames_sent()[0].1);
         let (packet_buf, _, _, packet_src_ip, packet_dst_ip, proto, ttl) =
-            parse_ip_packet_in_ethernet_frame::<I>(&ctx.dispatcher().frames_sent()[1].1[..])
+            parse_ip_packet_in_ethernet_frame::<I>(&ctx.dispatcher().frames_sent()[0].1[..])
                 .unwrap();
         assert_eq!(src_ip.get(), packet_src_ip);
         assert_eq!(config.remote_ip.get(), packet_dst_ip);
         assert_eq!(proto, IpProto::Tcp);
         assert_eq!(body, packet_buf);
         assert_eq!(ttl, 63);
+
+        // Test routing a packet to an unknown address.
+        let buf_unknown_dest = Buf::new(&mut body[..], ..)
+            .encapsulate(I::PacketBuilder::new(
+                src_ip.get(),
+                // Addr must be remote, otherwise this will cause an NDP/ARP
+                // request rather than ICMP unreachable.
+                I::get_other_remote_ip_address(10).get(),
+                64,
+                IpProto::Tcp,
+            ))
+            .serialize_vec_outer()
+            .ok()
+            .unwrap()
+            .unwrap_b();
+        receive_ip_packet::<_, _, I>(&mut ctx, device, frame_dst, buf_unknown_dest);
+        assert_eq!(ctx.dispatcher().frames_sent().len(), 2);
+        check_icmp::<I>(&ctx.dispatcher().frames_sent()[1].1);
 
         // Attempt to unset router
         set_routing_enabled::<_, I>(&mut ctx, device, false);
@@ -1990,8 +2008,7 @@ mod tests {
 
         // Should not route packets anymore
         receive_ip_packet::<_, _, I>(&mut ctx, device, frame_dst, buf.clone());
-        assert_eq!(ctx.dispatcher().frames_sent().len(), 3);
-        check_icmp::<I>(&ctx.dispatcher().frames_sent()[2].1);
+        assert_eq!(ctx.dispatcher().frames_sent().len(), 2);
     }
 
     #[ip_test]
