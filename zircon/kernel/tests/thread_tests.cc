@@ -878,7 +878,7 @@ static int spinner_thread(void* arg) {
 }
 
 int spinner(int argc, const cmd_args* argv, uint32_t) {
-  if (argc < 1) {
+  if (argc < 2) {
     printf("not enough args\n");
     printf("usage: %s <priority>\n", argv[0].str);
     return -1;
