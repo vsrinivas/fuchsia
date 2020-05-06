@@ -113,10 +113,87 @@ enum class NodeOptions : uint64_t {
   AllowCopyMoveFromContainer =
       static_cast<uint64_t>(AllowCopyFromContainer) | static_cast<uint64_t>(AllowMoveFromContainer),
 
+  // Allow an object to exist in multiple containers at once, even if one or
+  // more of those containers tracks the object using a unique_ptr (or any other
+  // non-copyable pointer type).
+  //
+  // Generally, it would be a mistake to define an object which can exist in
+  // multiple containers concurrently, and track those objects in their
+  // containers using unique_ptr semantics.  In theory, it should be impossible
+  // for two different containers to track the same object at the same time,
+  // each using something like a unique_ptr.  This would violate the uniqueness of
+  // the pointer.
+  //
+  // Because of this, the ContainableBaseClasses helper (see below) will, by
+  // default, complain and refuse to build if someone attempts to use it in
+  // conjunction with a Containable mix-in which tracks objects using
+  // unique_ptr-style pointers.
+  //
+  // There are special cases, however, where a user might want this behavior to
+  // be permitted.  Consider an object whose lifecycle is managed by a central
+  // list of unique_ptrs, but which can also exist on a temporary list which
+  // tracks the objects using raw pointers for strictly algorithmic purposes.
+  // Provided that the user carefully ensures that the object does not disappear
+  // from the central list while it exists on the temporary list, this should be
+  // completely fine.  More concretely, the following should be allowed provided
+  // that the user opts in.
+  //
+  // using MainList = fbl::TaggedDoublyLinkedList<std::unique_ptr<Obj>, MainListTag>;
+  // using TmpList = fbl::TaggedSinglyLinkedList<Obj*, TmpListTag>;
+  //
+  // fbl::Mutex all_objects_lock;
+  // MainList all_objects TA_GUARDED(all_objects_lock);
+  //
+  // void do_interesting_things() TA_EXCL(all_objects_lock) {
+  //   fbl::AutoLock lock(&all_objects_lock);
+  //   TmpList interesting_objects;
+  //
+  //   for (auto& obj : all_objects) {
+  //     if (object_is_interesting(obj)) {
+  //       interesting_objects.push(obj);
+  //     }
+  //   }
+  //
+  //   do_interesting_things_to_interesting_objects(std::move(interesting_objects));
+  // }
+  //
+  // Users who have carefully considered the lifecycle management of their
+  // objects and wish to allow this behavior should pass the
+  // AllowMultiContainerUptr option to their Containable mix-in.
+  AllowMultiContainerUptr = (1 << 4),
+
   // Reserved bits reserved for testing purposes and should always be ignored by
   // node implementations.
   ReservedBits = 0xF000000000000000,
 };
+
+// Helper functions which make it a bit easier to use the enum class NodeOptions
+// in a flag style fashion.
+//
+// The | operator will take two options and or them together to produce their
+// composition without needing to do all sorts of nasty casting.  In other
+// words:
+//
+//   fbl::NodeOptions::AllowX | fbl::NodeOptions::AllowY
+//
+// is legal.
+//
+// The & operator is overloaded to perform the bitwise and of the
+// underlying flags and test against zero returning a bool.  This allows us to
+// say things like:
+//
+//   if constexpr (SomeOptions | fbl::NodeOptions::AllowX) { ... }
+//
+constexpr fbl::NodeOptions operator|(fbl::NodeOptions A, fbl::NodeOptions B) {
+  return static_cast<fbl::NodeOptions>(
+      static_cast<std::underlying_type<fbl::NodeOptions>::type>(A) |
+      static_cast<std::underlying_type<fbl::NodeOptions>::type>(B));
+}
+
+constexpr bool operator&(fbl::NodeOptions A, fbl::NodeOptions B) {
+  return (static_cast<std::underlying_type<fbl::NodeOptions>::type>(A) &
+          static_cast<std::underlying_type<fbl::NodeOptions>::type>(B)) != 0;
+}
 
 struct DefaultObjectTag {};
 
@@ -180,8 +257,10 @@ template <template <typename, NodeOptions, typename> class Containable, typename
 struct ContainableBaseClassEnumerator<Containable<PtrType, Options, TagType>, Rest...>
     : public Containable<PtrType, Options, TagType>,
       public ContainableBaseClassEnumerator<Rest...> {
-  static_assert(internal::ContainerPtrTraits<PtrType>::CanCopy || sizeof...(Rest) == 0,
-                "You can't have a unique_ptr in multiple containers at once.");
+  static_assert(internal::ContainerPtrTraits<PtrType>::CanCopy ||
+                    (Options & NodeOptions::AllowMultiContainerUptr),
+                "You can't have a unique_ptr in multiple containers at once without specifying the "
+                "AllowMultiContainerUptr flag in your node options.");
   static_assert(!std::is_same_v<TagType, DefaultObjectTag>,
                 "Do not use fbl::DefaultObjectTag when inheriting from "
                 "fbl::ContainableBaseClasses; define your own instead.");
@@ -257,34 +336,6 @@ bool InContainer(const Containable& c) {
 enum class SizeOrder { N, Constant };
 
 }  // namespace fbl
-
-// Helper functions which make it a bit easier to use the enum class NodeOptions
-// in a flag style fashion.
-//
-// The | operator will take two options and or them together to produce their
-// composition without needing to do all sorts of nasty casting.  In other
-// words:
-//
-//   fbl::NodeOptions::AllowX | fbl::NodeOptions::AllowY
-//
-// is legal.
-//
-// The global & operator is overloaded to perform the bitwise and of the
-// underlying flags and test against zero returning a bool.  This allows us to
-// say things like:
-//
-//   if constexpr (SomeOptions | fbl::NodeOptions::AllowX) { ... }
-//
-constexpr fbl::NodeOptions operator|(fbl::NodeOptions A, fbl::NodeOptions B) {
-  return static_cast<fbl::NodeOptions>(
-      static_cast<std::underlying_type<fbl::NodeOptions>::type>(A) |
-      static_cast<std::underlying_type<fbl::NodeOptions>::type>(B));
-}
-
-constexpr bool operator&(fbl::NodeOptions A, fbl::NodeOptions B) {
-  return (static_cast<std::underlying_type<fbl::NodeOptions>::type>(A) &
-          static_cast<std::underlying_type<fbl::NodeOptions>::type>(B)) != 0;
-}
 
 namespace fbl::internal {
 

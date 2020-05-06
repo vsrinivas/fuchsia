@@ -984,5 +984,73 @@ TEST(IntrusiveContainerNodeTest, CopyMoveAllowedWhileInsideContainer) {
   ASSERT_NO_FAILURES(MoveTestHelper<TestWAVLContainer<Opts::AllowCopyMoveFromContainer>>());
 }
 
+TEST(IntrusiveContainerNodeTest, AllowMultiContainerUptrTest) {
+  // Make sure that objects which can exist in multiple containers
+  // simultaniously, but which use unique_ptr to track the object lifecycle,
+  // need to explicitly enable the behavior using the AllowMultiContainerUptr
+  // node option.
+
+  // Start with the example used in the Option's comment.
+  struct TwoListsOneUptrObj
+      : public fbl::ContainableBaseClasses<
+            fbl::DoublyLinkedListable<std::unique_ptr<TwoListsOneUptrObj>,
+                                      fbl::NodeOptions::AllowMultiContainerUptr, TagType1>,
+            fbl::TaggedSinglyLinkedListable<TwoListsOneUptrObj*, TagType2>> {
+    uint32_t a, b, c;
+  };
+
+  {
+    [[maybe_unused]] fbl::TaggedDoublyLinkedList<std::unique_ptr<TwoListsOneUptrObj>, TagType1> dll;
+    [[maybe_unused]] fbl::TaggedSinglyLinkedList<TwoListsOneUptrObj*, TagType2> sll;
+  }
+
+  // An object which can exist in either one container type, or the other (just
+  // not simultaneously) is also legal if the user opts-in.
+  struct DisjointObj
+      : public fbl::ContainableBaseClasses<
+            fbl::DoublyLinkedListable<std::unique_ptr<DisjointObj>,
+                                      fbl::NodeOptions::AllowMultiContainerUptr, TagType1>,
+            fbl::WAVLTreeContainable<std::unique_ptr<DisjointObj>,
+                                     fbl::NodeOptions::AllowMultiContainerUptr, TagType2>> {
+    uint32_t GetKey() const { return a; }
+    uint32_t a, b, c;
+  };
+
+  {
+    [[maybe_unused]] fbl::TaggedDoublyLinkedList<std::unique_ptr<DisjointObj>, TagType1> dll;
+    [[maybe_unused]] fbl::TaggedWAVLTree<uint32_t, std::unique_ptr<DisjointObj>, TagType2> tree;
+  }
+
+  // Not passing the option, however, is not legal and should fail to compile.
+#if TEST_WILL_NOT_COMPILE || 0
+  struct IllegalTwoListObj
+      : public fbl::ContainableBaseClasses<
+            fbl::TaggedDoublyLinkedListable<std::unique_ptr<IllegalTwoListObj>, TagType1>,
+            fbl::TaggedDoublyLinkedListable<std::unique_ptr<IllegalTwoListObj>, TagType2>> {
+    uint32_t a, b, c;
+  };
+
+  {
+    [[maybe_unused]] fbl::TaggedDoublyLinkedList<std::unique_ptr<IllegalTwoListObj>, TagType1> dll1;
+    [[maybe_unused]] fbl::TaggedDoublyLinkedList<std::unique_ptr<IllegalTwoListObj>, TagType2> dll2;
+  }
+#endif
+
+  // Even attempting to use ContainableBaseClasses with only one base class will
+  // fail if the option is not passed.  Users must actively opt-in to this
+  // behavior.
+#if TEST_WILL_NOT_COMPILE || 0
+  struct IllegalOneListObj
+      : public fbl::ContainableBaseClasses<
+            fbl::TaggedDoublyLinkedListable<std::unique_ptr<IllegalOneListObj>, TagType1>> {
+    uint32_t a, b, c;
+  };
+
+  {
+    [[maybe_unused]] fbl::TaggedDoublyLinkedList<std::unique_ptr<IllegalOneListObj>, TagType1> dll;
+  }
+#endif
+}
+
 }  // namespace
 }  // namespace
