@@ -127,3 +127,8 @@ func (e *ExponentialBackoff) Next() time.Duration {
 	e.iteration++
 	return time.Duration(float64(time.Second) * next)
 }
+
+// NoRetries returns a backoff that will do a single attempt, with no retries.
+func NoRetries() Backoff {
+	return WithMaxAttempts(&ZeroBackoff{}, 1)
+}

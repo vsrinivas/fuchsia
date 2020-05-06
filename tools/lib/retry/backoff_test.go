@@ -94,3 +94,14 @@ func TestExponentialBackoff(t *testing.T) {
 	backoff.Reset()
 	testBackoff()
 }
+
+func TestNoRetries(t *testing.T) {
+	backoff := NoRetries()
+	if backoff.Next() != Stop {
+		t.Errorf("expected NoRetries backoff to not retry")
+	}
+	backoff.Reset()
+	if backoff.Next() != Stop {
+		t.Errorf("expected NoRetries backoff to not retry after a reset")
+	}
+}
