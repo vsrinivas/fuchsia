@@ -201,7 +201,7 @@ impl RenderViewStrategy {
     ) -> ViewAssistantContext<'a> {
         ViewAssistantContext {
             key: view_details.key,
-            size: view_details.physical_size,
+            size: view_details.logical_size,
             metrics: view_details.metrics,
             presentation_time: Time::get(ClockId::Monotonic),
             messages: Vec::new(),

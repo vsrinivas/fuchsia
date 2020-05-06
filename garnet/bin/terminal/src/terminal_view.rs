@@ -221,7 +221,7 @@ impl TerminalViewAssistant {
     }
 
     /// Checks to see if the size of terminal has changed and resizes if it has.
-    fn resize_if_needed(&mut self, new_size: &Size) -> Result<(), Error> {
+    fn resize_if_needed(&mut self, new_size: &Size, metrics: &Size) -> Result<(), Error> {
         // The shell works on logical size units but the views operate based on the size
         if TerminalViewAssistant::needs_resize(&self.last_known_size, new_size) {
             let floored_size = new_size.floor();
@@ -237,7 +237,7 @@ impl TerminalViewAssistant {
             let cell_height = last_size_info.cell_height;
             let padding_x = last_size_info.padding_x;
             let padding_y = last_size_info.padding_y;
-            let dpr = last_size_info.dpr;
+            let dpr = metrics.width.min(metrics.height) as f64;
 
             let term_size_info = SizeInfo {
                 width: term_size.width,
@@ -393,7 +393,7 @@ impl ViewAssistant for TerminalViewAssistant {
         // setup method causes us to receive write events before the view is
         // prepared to draw.
         self.spawn_pty_loop()?;
-        self.resize_if_needed(&context.size)?;
+        self.resize_if_needed(&context.size, &context.metrics)?;
 
         // Tell the termnial scene to render the values
         let canvas = &mut context.canvas.as_ref().unwrap().borrow_mut();
@@ -416,7 +416,7 @@ impl ViewAssistant for TerminalViewAssistant {
 
         drop(grid);
 
-        self.terminal_scene.render(canvas, context.metrics, iter);
+        self.terminal_scene.render(canvas, iter);
         Ok(())
     }
 
@@ -458,6 +458,10 @@ mod tests {
         futures::future::Either,
         term_model::grid::Scroll,
     };
+
+    fn unit_metrics() -> Size {
+        Size::new(1.0, 1.0)
+    }
 
     #[test]
     fn can_create_view() {
@@ -533,7 +537,7 @@ mod tests {
     fn term_is_resized_when_needed() {
         let mut view = TerminalViewAssistant::new_for_test();
         let new_size = Size::new(100.5, 100.9);
-        view.resize_if_needed(&new_size).expect("call to resize failed");
+        view.resize_if_needed(&new_size, &unit_metrics()).expect("call to resize failed");
 
         let size_info = view.last_known_size_info.clone();
         let expected_size = TerminalScene::calculate_term_size_from_size(&view.last_known_size);
@@ -548,7 +552,7 @@ mod tests {
     fn last_known_size_is_floored_on_resize() {
         let mut view = TerminalViewAssistant::new_for_test();
         let new_size = Size::new(100.3, 100.4);
-        view.resize_if_needed(&new_size).expect("call to resize failed");
+        view.resize_if_needed(&new_size, &unit_metrics()).expect("call to resize failed");
 
         assert_eq!(view.last_known_size.width, 100.0);
         assert_eq!(view.last_known_size.height, 100.0);
@@ -603,7 +607,8 @@ mod tests {
 
         view.pty_context = Some(pty_context);
 
-        view.resize_if_needed(&Size::new(1000.0, 2000.0)).expect("call to resize failed");
+        view.resize_if_needed(&Size::new(1000.0, 2000.0), &unit_metrics())
+            .expect("call to resize failed");
 
         let event = receiver.next().await.expect("failed to receive pty event");
         assert_eq!(event.window_size.width, 1000);
@@ -684,7 +689,7 @@ mod tests {
 
         // make sure we have a big enough size that a single character does not wrap
         let large_size = Size::new(1000.0, 1000.0);
-        view.resize_if_needed(&large_size)?;
+        view.resize_if_needed(&large_size, &unit_metrics())?;
 
         // Resizing will cause an update so we need to wait for that before we write.
         wait_until_update_received_or_timeout(&mut receiver)

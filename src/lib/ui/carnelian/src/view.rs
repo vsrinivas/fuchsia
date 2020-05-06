@@ -424,6 +424,7 @@ fn scenic_present_done(scenic_resources: &mut ScenicResources) {
 
 pub(crate) type Canvases = BTreeMap<ImageId, RefCell<Canvas<MappingPixelSink>>>;
 
+#[derive(Debug)]
 pub(crate) struct ViewDetails {
     key: ViewKey,
     metrics: Size,
