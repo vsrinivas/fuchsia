@@ -245,8 +245,7 @@ def collect_binaries(manifest, input_binaries, aux_binaries, examined):
         add_binary(binary)
     for target in unexamined_binaries.iterkeys():
         assert target in binaries, (
-            "Target %s missing from %s" %
-            (target, binaries.keys()))
+            "Target %s missing from %s" % (target, binaries.keys()))
 
     matched_binaries = set()
     for input_binary in input_binaries:
@@ -418,15 +417,6 @@ def emit_manifests(args, selected, unselected, input_binaries):
             output.file, manifest.format_manifest_file(output.manifest),
             force_update)
 
-    # Emit the build ID list.
-    # Sort so that functionally identical output is textually identical.
-    debug_files = sorted(
-        all_debug_files.itervalues(), key=lambda info: info.build_id)
-    update_file(
-        args.build_id_file, ''.join(
-            info.build_id + ' ' + os.path.abspath(info.filename) + '\n'
-            for info in debug_files))
-
     # Emit the depfile.
     if args.depfile:
         with open(args.depfile, 'w') as f:
@@ -461,11 +451,6 @@ just supplies auxiliary files implicitly required by other (later) input
 manifests, but does not add all its files to any --output manifest.  This
 is used for shared libraries and the like.
 ''')
-    parser.add_argument(
-        '--build-id-file',
-        required=True,
-        metavar='FILE',
-        help='Output build ID list')
     parser.add_argument(
         '--build-id-dir',
         required=False,

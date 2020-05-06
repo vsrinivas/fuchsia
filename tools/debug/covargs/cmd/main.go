@@ -39,8 +39,6 @@ var (
 	level             logger.LogLevel
 	summaryFile       flagmisc.StringsValue
 	buildIDDirPaths   flagmisc.StringsValue
-	idsFile           string
-	idsPaths          flagmisc.StringsValue
 	symbolServers     flagmisc.StringsValue
 	symbolCache       string
 	symbolizeDumpFile flagmisc.StringsValue
@@ -64,7 +62,6 @@ func init() {
 	flag.Var(&level, "level", "can be fatal, error, warning, info, debug or trace")
 	flag.Var(&summaryFile, "summary", "path to summary.json file")
 	flag.Var(&buildIDDirPaths, "build-id-dir", "path to .build-id directory")
-	flag.Var(&idsPaths, "ids", "path to ids.txt")
 	flag.Var(&symbolServers, "symbol-server", "a GCS URL or bucket name that contains debug binaries indexed by build ID")
 	flag.StringVar(&symbolCache, "symbol-cache", "", "path to directory to store cached debug binaries in")
 	flag.Var(&symbolizeDumpFile, "symbolize-dump", "path to the json emited from the symbolizer")
@@ -388,9 +385,6 @@ func main() {
 	var repo symbolize.CompositeRepo
 	for _, dir := range buildIDDirPaths {
 		repo.AddRepo(symbolize.NewBuildIDRepo(dir))
-	}
-	for _, idsPath := range idsPaths {
-		repo.AddRepo(symbolize.NewIDsTxtRepo(idsPath, false))
 	}
 	var fileCache *cache.FileCache
 	if len(symbolServers) > 0 {

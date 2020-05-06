@@ -185,7 +185,7 @@ template("assemble_system") {
 
   system_manifest_outputs =
       get_target_outputs(":${image_name}_system_image.manifest")
-  assert(boot_manifest == system_manifest_outputs[2])
+  assert(boot_manifest == system_manifest_outputs[1])
 
   pm_build("${image_name}_system_image.meta") {
     visibility = [ ":*" ]

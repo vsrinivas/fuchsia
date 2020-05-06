@@ -103,8 +103,7 @@ template("generate_response_file") {
 # Action target that generates a manifest file in the `target=/abs/file`
 # format used by `zbi`, `blobfs`, etc.  ELF files in the manifest have
 # their dynamic linking details examined and other necessary ELF files
-# implicitly added to the manifest.  All such files have their build IDs
-# and unstripped files recorded in a build ID map (`ids.txt` file).
+# implicitly added to the manifest.
 # Outputs: $target_out_dir/$target_name, $target_out_dir/$target_name.ids.txt
 #
 # Parameters
@@ -170,7 +169,6 @@ template("generate_manifest") {
       manifest_file = "$target_out_dir/$target_name"
     }
     depfile = "${manifest_file}.d"
-    build_id_file = "${manifest_file}.ids.txt"
     stripped_dir = "${manifest_file}.stripped"
 
     script = "//build/images/finalize_manifests.py"
@@ -181,25 +179,15 @@ template("generate_manifest") {
                          ],
                          "",
                          "//build/images")
-    outputs = [
-      manifest_file,
-      build_id_file,
-    ]
+    outputs = [ manifest_file ]
     args = extra_manifest_args + [
              "--depfile=" + rebase_path(depfile, root_build_dir),
-             "--build-id-file=" + rebase_path(build_id_file, root_build_dir),
              "--stripped-dir=" + rebase_path(stripped_dir, root_build_dir),
              "--build-id-dir=" + rebase_path("$root_build_dir/.build-id"),
              "--clang-lib-dir=" + clang_lib_dir,
              "@{{response_file_name}}",
            ]
     response_file_contents = []
-
-    # Collected by //build/images:ids.txt
-    metadata = {
-      build_ids_barrier = []
-      build_ids = [ rebase_path(build_id_file, root_build_dir) ]
-    }
 
     # First the Zircon manifests are pure auxiliaries:
     # they just supply libraries that might satisfy dependencies.

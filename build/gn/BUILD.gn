@@ -6,9 +6,7 @@ import("//build/compiled_action.gni")
 
 group("archives") {
   testonly = true
-  deps = [
-    ":package_archive",
-  ]
+  deps = [ ":package_archive" ]
 }
 
 # Generates an archive of package metadata.
