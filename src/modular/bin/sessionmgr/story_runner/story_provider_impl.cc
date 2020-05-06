@@ -597,7 +597,7 @@ void StoryProviderImpl::OnFocusChange(fuchsia::modular::FocusInfoPtr info) {
       return;
     }
 
-    // Last focus time is recorded in the ledger, and story provider
+    // Last focus time is recorded in SessionStorage, and story provider
     // watchers are notified through watching SessionStorage.
     auto on_run = Future<>::Create("StoryProviderImpl.OnFocusChange.on_run");
     auto done = on_run->AsyncMap([this, story_id = info->focused_story_id] {

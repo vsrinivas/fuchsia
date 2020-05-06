@@ -61,14 +61,6 @@ exceptions = {
         '//topaz/public',
         '//topaz/runtime',
     ],
-    '//src/ledger': [
-        '//peridot/lib/',
-        '//peridot/third_party/modp_b64:modp_b64',
-    ],
-    '//src/ledger/bin/testing/ledger_test_instance_provider': [
-        '//peridot/lib/',
-        '//src/ledger/bin/fidl:fidl',
-    ],
     '//src/lib/process_builder': [
         '//garnet/examples/fidl/services:echo-rustc',
     ],

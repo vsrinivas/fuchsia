@@ -47,18 +47,6 @@ void AddPerfTests(benchmarking::BenchmarksRunner* benchmarks_runner, bool perfco
   benchmarks_runner->AddTspecBenchmark(
       "rust_inspect_bench", "/pkgfs/packages/rust_inspect_benchmarks/0/data/benchmarks.tspec");
 
-  // Run "local" Ledger benchmarks.  These don't need external services to
-  // function properly.
-  //
-  // This list should be kept in sync with the list in
-  // src/tests/end_to_end/perf/test/ledger_perf_test.dart until this list
-  // is removed (TODO(fxb/23091)).
-
-  // clang-format off
-  benchmarks_runner->AddTspecBenchmark("ledger.stories_single_active", "/pkgfs/packages/ledger_benchmarks/0/data/stories_single_active.tspec");
-  benchmarks_runner->AddTspecBenchmark("ledger.stories_many_active", "/pkgfs/packages/ledger_benchmarks/0/data/stories_many_active.tspec");
-  benchmarks_runner->AddTspecBenchmark("ledger.stories_wait_cached", "/pkgfs/packages/ledger_benchmarks/0/data/stories_wait_cached.tspec");
-
   // Run netstack benchmarks.
   benchmarks_runner->AddTspecBenchmark("netstack.udp_micro_benchmarks", "/pkgfs/packages/netstack_benchmarks/0/data/udp_benchmark.tspec");
 

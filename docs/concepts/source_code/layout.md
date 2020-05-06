@@ -334,7 +334,6 @@ separate repositories that are mapped into the directory structure using `jiri`
     * **`experiences/`**
     * `graphics/`
     * `identity/`
-    * `ledger/`
     * `media/`
     * `modular/`
     * `storage/`

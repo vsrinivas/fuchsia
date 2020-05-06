@@ -22,7 +22,6 @@ group("src") {
     "graphics",
     "identity",
     "intl",
-    "ledger",
     "lib",
     "media",
     "modular",
@@ -59,7 +58,6 @@ group("tests") {
     "hwinfo:tests",
     "identity:tests",
     "intl:tests",
-    "ledger:tests",
     "lib:tests",
     "media:tests",
     "modular:tests",
@@ -83,9 +81,4 @@ group("zircon_host_tests") {
     "//build/unification/tests:host",
     "//zircon/kernel/lib/heap/cmpctmalloc/tests($host_toolchain)",
   ]
-}
-
-group("host_tests") {
-  testonly = true
-  public_deps = [ "//src/ledger:host_tests" ]
 }

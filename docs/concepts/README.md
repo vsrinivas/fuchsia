@@ -41,7 +41,6 @@ also provides core drivers and Fuchsia's libc implementation.
  - [Block devices](/docs/concepts/storage/block_devices.md)
  - [File systems](/docs/concepts/filesystems/filesystems.md)
  - Directory hierarchy
- - [Ledger][ledger]
  - Document store
  - Application cache
 
@@ -97,7 +96,6 @@ also provides core drivers and Fuchsia's libc implementation.
 [zircon-ddk]: /docs/concepts/drivers/overview.md
 [FIDL]: /docs/development/languages/fidl/README.md
 [framework-components]: /docs/concepts/components/README.md
-[ledger]: /src/ledger/docs/README.md
 [bluetooth]: /src/connectivity/bluetooth/README.md
 [telephony]: /src/connectivity/telephony/
 [magma]: /docs/concepts/graphics/magma/README.md

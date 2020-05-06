@@ -22,7 +22,6 @@ amberctl
 # Needed to load trace specs for tests
 benchmark
 rust_inspect_benchmarks
-ledger_benchmarks
 netstack_benchmarks
 garnet_input_latency_benchmarks
 fuchsia_benchmarks

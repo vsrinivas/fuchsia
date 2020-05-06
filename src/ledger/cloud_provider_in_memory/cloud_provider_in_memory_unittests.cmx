@@ -1,5 +1,0 @@
-{
-    "program": {
-        "binary": "test/cloud_provider_in_memory_unittests"
-    }
-}

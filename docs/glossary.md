@@ -603,13 +603,6 @@ A Kernel Object Identifier.
 
 -   [Kernel Object](#kernel-object)
 
-### **Ledger** {#ledger}
-
-[Ledger](/src/ledger/docs/README.md) is a distributed storage system for
-Fuchsia. Applications use Ledger either directly or through state
-synchronization primitives exposed by the [Modular](/docs/concepts/modular/overview.md) framework that are based on
-Ledger under-the-hood.
-
 ### **LK** {#lk}
 
 Little Kernel (LK) is the embedded kernel that formed the core of the Zircon

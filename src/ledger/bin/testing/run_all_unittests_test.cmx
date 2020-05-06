@@ -1,5 +1,0 @@
-{
-    "program": {
-        "binary": "test/run_all_unittests_test"
-    }
-}
