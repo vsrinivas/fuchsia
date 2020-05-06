@@ -48,6 +48,13 @@ func NewRepository(dir string) (*Repository, error) {
 	if err != nil {
 		return nil, err
 	}
+	// Add an empty list of packages, which should update the targets
+	// expiration date.
+	if err := repo.AddTargets([]string{}, nil); err != nil {
+		return nil, err
+	}
+	// Commit the update, which should update the snapshot and timestamp
+	// expiration date.
 	if err := repo.CommitUpdates(true); err != nil {
 		return nil, err
 	}
