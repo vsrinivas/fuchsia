@@ -3,14 +3,20 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{bail, Context, Error},
+    anyhow::{anyhow, bail, Context, Error},
     fidl_fuchsia_mem::Buffer,
-    fidl_fuchsia_paver::{Asset, Configuration, DataSinkProxy, WriteFirmwareResult},
+    fidl_fuchsia_paver::{
+        Asset, BootManagerMarker, BootManagerProxy, Configuration, DataSinkMarker, DataSinkProxy,
+        PaverMarker, WriteFirmwareResult,
+    },
     fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn},
     fuchsia_zircon::{Status, VmoChildOptions},
     thiserror::Error,
     update_package::{Image, UpdatePackage},
 };
+
+mod configuration;
+use configuration::{ActiveConfiguration, InactiveConfiguration, TargetConfiguration};
 
 #[derive(Debug, Error)]
 enum WriteAssetError {
@@ -54,29 +60,6 @@ async fn paver_write_asset(
     Ok(())
 }
 
-/// The [`fidl_fuchsia_paver::Configuration`]s to which an image should be written.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum TargetConfiguration {
-    /// The image has a well defined configuration to which it should be written. For example,
-    /// Recovery, or, for devices that support ABR, the "inactive" configuration.
-    Single(Configuration),
-
-    /// The image would target the A or B configuration, but ABR is not supported on this platform,
-    /// so write to A and try to write to B (if a B partition exists).
-    AB,
-}
-
-impl TargetConfiguration {
-    /// For an image that should target the inactive configuration, determine the appropriate
-    /// [`TargetConfiguration`].
-    fn from_inactive_config(inactive_config: Option<Configuration>) -> Self {
-        match inactive_config {
-            Some(config) => TargetConfiguration::Single(config),
-            None => TargetConfiguration::AB,
-        }
-    }
-}
-
 #[derive(Debug, PartialEq, Eq)]
 enum ImageTarget<'a> {
     Firmware { subtype: &'a str },
@@ -85,16 +68,16 @@ enum ImageTarget<'a> {
 
 fn classify_image(
     image: &Image,
-    inactive_config: Option<Configuration>,
+    inactive_config: InactiveConfiguration,
 ) -> Result<ImageTarget<'_>, Error> {
     let target = match image.name() {
         "zbi" | "zbi.signed" => ImageTarget::Asset {
             asset: Asset::Kernel,
-            configuration: TargetConfiguration::from_inactive_config(inactive_config),
+            configuration: inactive_config.to_target_configuration(),
         },
         "fuchsia.vbmeta" => ImageTarget::Asset {
             asset: Asset::VerifiedBootMetadata,
-            configuration: TargetConfiguration::from_inactive_config(inactive_config),
+            configuration: inactive_config.to_target_configuration(),
         },
         "zedboot" | "zedboot.signed" => ImageTarget::Asset {
             asset: Asset::Kernel,
@@ -106,7 +89,7 @@ fn classify_image(
         },
         "bootloader" | "firmware" => {
             // Keep support for update packages still using the older "bootloader" file, which is
-            // haandled identically to "firmware" but without subtype support.
+            // handled identically to "firmware" but without subtype support.
             ImageTarget::Firmware { subtype: image.subtype().unwrap_or("") }
         }
         _ => bail!("unrecognized image: {}", image.name()),
@@ -175,7 +158,7 @@ async fn write_image_buffer(
     paver: &DataSinkProxy,
     buffer: Buffer,
     image: &Image,
-    inactive_config: Option<Configuration>,
+    inactive_config: InactiveConfiguration,
 ) -> Result<(), Error> {
     let target = classify_image(image, inactive_config)?;
     let payload = Payload { display_name: image.filename(), buffer };
@@ -192,6 +175,77 @@ async fn write_image_buffer(
     Ok(())
 }
 
+// TODO(49911) use this. Note: this behavior will be tested with the integration tests.
+pub fn connect_in_namespace() -> Result<(DataSinkProxy, BootManagerProxy), Error> {
+    let paver = fuchsia_component::client::connect_to_service::<PaverMarker>()
+        .context("connect to fuchsia.paver.Paver")?;
+
+    let (data_sink, server_end) = fidl::endpoints::create_proxy::<DataSinkMarker>()?;
+    let () = paver.find_data_sink(server_end).context("connect to fuchsia.paver.DataSink")?;
+
+    let (boot_manager, server_end) = fidl::endpoints::create_proxy::<BootManagerMarker>()?;
+    let () = paver.find_boot_manager(server_end).context("connect to fuchsia.paver.BootManager")?;
+
+    Ok((data_sink, boot_manager))
+}
+
+/// Determines the active configuration which will be used as the default boot choice on a normal
+/// cold boot, which may or may not be the currently running configuration, or none if no
+/// configurations are currently bootable.
+async fn paver_query_active_configuration(
+    paver: &BootManagerProxy,
+) -> Result<ActiveConfiguration, Error> {
+    match paver.query_active_configuration().await {
+        Ok(Ok(Configuration::A)) => Ok(ActiveConfiguration::A),
+        Ok(Ok(Configuration::B)) => Ok(ActiveConfiguration::B),
+        Ok(Ok(Configuration::Recovery)) => {
+            fx_log_err!("ignoring active configuration of recovery and assuming A is active");
+            Ok(ActiveConfiguration::A)
+        }
+        // FIXME Configuration::Recovery isn't actually possible.
+        //Ok(Ok(configuration)) => Err(anyhow!(
+        //    "query_active_configuration responded with invalid configuration: {:?}",
+        //    configuration
+        //)),
+        Ok(Err(status)) => {
+            Err(anyhow!("query_active_configuration responded with {}", Status::from_raw(status)))
+        }
+        Err(fidl::Error::ClientChannelClosed(Status::NOT_SUPPORTED)) => {
+            fx_log_warn!("device does not support ABR. Kernel image updates will not be atomic.");
+            Ok(ActiveConfiguration::NotSupported)
+        }
+        Err(err) => Err(anyhow!(err).context("while performing query_active_configuration call")),
+    }
+}
+
+/// Determines the current inactive configuration to which new kernel images should be written.
+// TODO(49911) use this. Note: this behavior will be tested with the integration tests.
+pub async fn query_inactive_configuration(
+    paver: &BootManagerProxy,
+) -> Result<InactiveConfiguration, Error> {
+    let active_config = paver_query_active_configuration(paver).await?;
+
+    Ok(active_config.to_inactive_configuration())
+}
+
+/// Sets the given inactive `configuration` as active for subsequent boot attempts. If ABR is not
+/// supported, do nothing.
+// TODO(49911) use this. Note: this behavior will be tested with the integration tests.
+#[allow(dead_code)]
+pub async fn set_configuration_active(
+    paver: &BootManagerProxy,
+    configuration: InactiveConfiguration,
+) -> Result<(), Error> {
+    if let Some(configuration) = configuration.to_configuration() {
+        let status = paver
+            .set_configuration_active(configuration)
+            .await
+            .context("while performing set_configuration_active call")?;
+        Status::ok(status).context("set_configuration_active responded with")?;
+    }
+    Ok(())
+}
+
 /// Write the given `image` from the update package through the paver to the appropriate
 /// partitions.
 // TODO(49911) use this. Note: this behavior will be tested with the integration tests.
@@ -201,7 +255,7 @@ pub async fn write_image(
     paver: &DataSinkProxy,
     update_pkg: UpdatePackage,
     image: Image,
-    inactive_config: Option<Configuration>,
+    inactive_config: InactiveConfiguration,
 ) -> Result<(), Error> {
     let buffer = update_pkg
         .open_image(&image)
@@ -245,6 +299,61 @@ mod tests {
     };
 
     #[fuchsia_async::run_singlethreaded(test)]
+    async fn query_inactive_configuration_with_a_active() {
+        let paver =
+            Arc::new(MockPaverServiceBuilder::new().active_config(Configuration::A).build());
+        let boot_manager = paver.spawn_boot_manager_service();
+
+        assert_eq!(
+            query_inactive_configuration(&boot_manager).await.unwrap(),
+            InactiveConfiguration::B
+        );
+
+        assert_eq!(paver.take_events(), vec![PaverEvent::QueryActiveConfiguration]);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn query_inactive_configuration_with_b_active() {
+        let paver =
+            Arc::new(MockPaverServiceBuilder::new().active_config(Configuration::B).build());
+        let boot_manager = paver.spawn_boot_manager_service();
+
+        assert_eq!(
+            query_inactive_configuration(&boot_manager).await.unwrap(),
+            InactiveConfiguration::A
+        );
+
+        assert_eq!(paver.take_events(), vec![PaverEvent::QueryActiveConfiguration]);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn query_inactive_configuration_with_invalid_active() {
+        let paver =
+            Arc::new(MockPaverServiceBuilder::new().active_config(Configuration::Recovery).build());
+        let boot_manager = paver.spawn_boot_manager_service();
+
+        assert_eq!(
+            query_inactive_configuration(&boot_manager).await.unwrap(),
+            InactiveConfiguration::B
+        );
+
+        assert_eq!(paver.take_events(), vec![PaverEvent::QueryActiveConfiguration]);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn set_configuration_active_makes_call() {
+        let paver = Arc::new(MockPaverServiceBuilder::new().build());
+        let boot_manager = paver.spawn_boot_manager_service();
+
+        set_configuration_active(&boot_manager, InactiveConfiguration::B).await.unwrap();
+
+        assert_eq!(
+            paver.take_events(),
+            vec![PaverEvent::SetConfigurationActive { configuration: Configuration::B }]
+        );
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
     async fn write_image_buffer_writes_firmware() {
         let paver = Arc::new(MockPaverServiceBuilder::new().build());
         let data_sink = paver.spawn_data_sink_service();
@@ -253,7 +362,7 @@ mod tests {
             &data_sink,
             make_buffer("firmware contents"),
             &Image::new("bootloader"),
-            Some(Configuration::A), // Configuration is ignored for firmware
+            InactiveConfiguration::A, // Configuration is ignored for firmware
         )
         .await
         .unwrap();
@@ -262,7 +371,7 @@ mod tests {
             &data_sink,
             make_buffer("firmware_foo contents"),
             &Image::join("firmware", "foo"),
-            None,
+            InactiveConfiguration::NotSupported,
         )
         .await
         .unwrap();
@@ -298,7 +407,7 @@ mod tests {
             &data_sink,
             make_buffer("firmware of the future!"),
             &Image::join("firmware", "unknown"),
-            None,
+            InactiveConfiguration::NotSupported,
         )
         .await
         .unwrap();
@@ -331,7 +440,7 @@ mod tests {
                 &data_sink,
                 make_buffer("oops"),
                 &Image::join("firmware", "error"),
-                None,
+                InactiveConfiguration::NotSupported,
             )
             .await,
             Err(e) if e.to_string().contains("firmware failed to write")
@@ -355,7 +464,7 @@ mod tests {
                 &data_sink,
                 make_buffer("unknown"),
                 &Image::new("unknown"),
-                Some(Configuration::A),
+                InactiveConfiguration::A,
             )
             .await,
             Err(e) if e.to_string().contains("unrecognized image")
@@ -371,7 +480,7 @@ mod tests {
                 &data_sink,
                 make_buffer("unknown"),
                 &Image::join("zbi", "2"),
-                Some(Configuration::A),
+                InactiveConfiguration::A,
             )
             .await,
             Err(e) if e.to_string().contains("unsupported subtype")
@@ -387,7 +496,7 @@ mod tests {
             &data_sink,
             make_buffer("zbi contents"),
             &Image::new("zbi"),
-            Some(Configuration::A),
+            InactiveConfiguration::A,
         )
         .await
         .unwrap();
@@ -419,7 +528,7 @@ mod tests {
                 &data_sink,
                 make_buffer("zbi contents"),
                 &Image::new("zbi"),
-                Some(Configuration::A),
+                InactiveConfiguration::A,
             )
             .await,
             Err(e) if e.to_string().contains("write_asset responded with")
@@ -430,7 +539,7 @@ mod tests {
                 &data_sink,
                 make_buffer("vbmeta contents"),
                 &Image::new("fuchsia.vbmeta"),
-                Some(Configuration::A),
+                InactiveConfiguration::A,
             )
             .await,
             Err(e) if e.to_string().contains("write_asset responded with")
@@ -441,7 +550,7 @@ mod tests {
                 &data_sink,
                 make_buffer("zbi contents"),
                 &Image::new("zbi"),
-                Some(Configuration::B),
+                InactiveConfiguration::B,
             )
             .await,
             Err(e) if e.to_string().contains("write_asset responded with")
@@ -452,7 +561,7 @@ mod tests {
                 &data_sink,
                 make_buffer("vbmeta contents"),
                 &Image::new("fuchsia.vbmeta"),
-                Some(Configuration::B),
+                InactiveConfiguration::B,
             )
             .await,
             Err(e) if e.to_string().contains("write_asset responded with")
@@ -478,7 +587,7 @@ mod tests {
                 &data_sink,
                 make_buffer(format!("{} buffer", name)),
                 &Image::new(*name),
-                Some(Configuration::B),
+                InactiveConfiguration::B,
             )
             .await
             .unwrap();
@@ -540,6 +649,33 @@ mod abr_not_supported_tests {
     };
 
     #[fuchsia_async::run_singlethreaded(test)]
+    async fn query_inactive_configuration_returns_not_supported() {
+        let paver = Arc::new(
+            MockPaverServiceBuilder::new()
+                .boot_manager_close_with_epitaph(Status::NOT_SUPPORTED)
+                .build(),
+        );
+        let boot_manager = paver.spawn_boot_manager_service();
+
+        assert_eq!(
+            query_inactive_configuration(&boot_manager).await.unwrap(),
+            InactiveConfiguration::NotSupported
+        );
+
+        assert_eq!(paver.take_events(), vec![]);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn set_configuration_active_is_noop() {
+        let paver = Arc::new(MockPaverServiceBuilder::new().build());
+        let boot_manager = paver.spawn_boot_manager_service();
+
+        set_configuration_active(&boot_manager, InactiveConfiguration::NotSupported).await.unwrap();
+
+        assert_eq!(paver.take_events(), vec![]);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
     async fn write_image_buffer_writes_asset_to_both_configs() {
         let paver = Arc::new(MockPaverServiceBuilder::new().build());
         let data_sink = paver.spawn_data_sink_service();
@@ -548,7 +684,7 @@ mod abr_not_supported_tests {
             &data_sink,
             make_buffer("zbi.signed contents"),
             &Image::new("zbi.signed"),
-            None,
+            InactiveConfiguration::NotSupported,
         )
         .await
         .unwrap();
@@ -557,7 +693,7 @@ mod abr_not_supported_tests {
             &data_sink,
             make_buffer("the new vbmeta"),
             &Image::new("fuchsia.vbmeta"),
-            None,
+            InactiveConfiguration::NotSupported,
         )
         .await
         .unwrap();
@@ -610,7 +746,7 @@ mod abr_not_supported_tests {
                 &data_sink,
                 make_buffer("zbi.signed contents"),
                 &Image::new("zbi.signed"),
-                None,
+                InactiveConfiguration::NotSupported,
             )
             .await,
             Err(_)
@@ -646,7 +782,7 @@ mod abr_not_supported_tests {
             &data_sink,
             make_buffer("zbi.signed contents"),
             &Image::new("zbi.signed"),
-            None,
+            InactiveConfiguration::NotSupported,
         )
         .await
         .unwrap();
@@ -689,7 +825,7 @@ mod abr_not_supported_tests {
                 &data_sink,
                 make_buffer("zbi.signed contents"),
                 &Image::new("zbi.signed"),
-                None,
+                InactiveConfiguration::NotSupported,
             )
             .await,
             Err(_)

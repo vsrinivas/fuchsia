@@ -123,6 +123,20 @@ impl MockPaverService {
         proxy
     }
 
+    /// Spawns a new task to serve the boot manager protocol.
+    pub fn spawn_boot_manager_service(self: &Arc<Self>) -> paver::BootManagerProxy {
+        let (proxy, server_end) =
+            fidl::endpoints::create_proxy::<paver::BootManagerMarker>().unwrap();
+
+        fasync::spawn(
+            Arc::clone(self)
+                .run_boot_manager_service(server_end)
+                .unwrap_or_else(|e| panic!("error running boot manager service: {:#}", anyhow!(e))),
+        );
+
+        proxy
+    }
+
     async fn run_data_sink_service(
         self: Arc<Self>,
         mut stream: paver::DataSinkRequestStream,

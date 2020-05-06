@@ -30,6 +30,10 @@ async fn main() {
     let images = images.verify(UpdateMode::Normal).unwrap();
     println!("Images: {:#?}", images);
 
+    let (_data_sink, boot_manager) = paver::connect_in_namespace().unwrap();
+    let inactive_config = paver::query_inactive_configuration(&boot_manager).await.unwrap();
+    println!("Inactive configuration: {:#?}", inactive_config);
+
     std::process::exit(1);
 }
 
