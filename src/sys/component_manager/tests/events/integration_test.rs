@@ -239,6 +239,7 @@ async fn expect_and_get_timestamp<T: Event>(
     Ok(timestamp)
 }
 
+#[ignore]
 #[fasync::run_singlethreaded(test)]
 async fn event_dispatch_order_test() -> Result<(), Error> {
     let test = BlackBoxTest::default(
