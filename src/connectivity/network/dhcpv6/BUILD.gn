@@ -10,6 +10,7 @@ rustc_library("dhcpv6") {
   edition = "2018"
   with_unit_tests = true
   deps = [
+    "//src/lib/mdns",
     "//src/lib/network/packet",
     "//src/lib/syslog/rust:syslog",
     "//src/lib/zerocopy",

@@ -836,7 +836,7 @@ impl<B: ByteSlice + Clone> Debug for Domain<B> {
 }
 
 /// An mDNS compliant domain builder. Does not support message compression.
-#[derive(Clone)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct DomainBuilder {
     // TODO(awdavies): This can probably use the Buf struct instead.
     data: Vec<u8>,

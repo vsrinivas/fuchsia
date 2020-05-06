@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 group("mdns") {
-  testonly = true
   public_deps = [ "rust" ]
 }
 

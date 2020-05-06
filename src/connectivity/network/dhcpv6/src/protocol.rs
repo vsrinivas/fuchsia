@@ -6,19 +6,24 @@
 
 use byteorder::{ByteOrder, NetworkEndian};
 use fuchsia_syslog::fx_log_warn;
+use mdns::protocol::{Domain, ParseError};
 use num_derive::FromPrimitive;
 use packet::{
     records::{Records, RecordsImpl, RecordsImplLayout, RecordsSerializer, RecordsSerializerImpl},
     BufferView, BufferViewMut, InnerPacketBuilder, ParsablePacket, ParseMetadata,
 };
-use std::convert::TryFrom;
-use std::mem;
-use std::slice::Iter;
+use std::{
+    convert::{TryFrom, TryInto},
+    mem,
+    net::Ipv6Addr,
+    slice::Iter,
+};
 use thiserror::Error;
 use uuid::Uuid;
 use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 
 type U16 = zerocopy::U16<NetworkEndian>;
+type U32 = zerocopy::U32<NetworkEndian>;
 
 #[derive(Debug, Error, PartialEq)]
 pub enum ProtocolError {
@@ -30,6 +35,8 @@ pub enum ProtocolError {
     InvalidOpLen(Dhcpv6OptionCode, usize),
     #[error("buffer exhausted while more byts are expected")]
     BufferExhausted,
+    #[error("failed to parse domain {:?}", _0)]
+    DomainParseError(ParseError),
 }
 
 /// A DHCPv6 message type as defined in [RFC 8415, Section 7.3].
@@ -82,6 +89,9 @@ pub enum Dhcpv6OptionCode {
     Oro = 6,
     Preference = 7,
     ElapsedTime = 8,
+    DnsServers = 23,
+    DomainList = 24,
+    InformationRefreshTime = 32,
 }
 
 impl From<Dhcpv6OptionCode> for u16 {
@@ -117,6 +127,49 @@ enum Dhcpv6Option<'a> {
     Preference(u8),
     // https://tools.ietf.org/html/rfc8415#section-21.9
     ElapsedTime(u16),
+    // https://tools.ietf.org/html/rfc8415#section-21.23
+    InformationRefreshTime(u32),
+    // https://tools.ietf.org/html/rfc3646#section-3
+    DnsServers(Vec<Ipv6Addr>),
+    // https://tools.ietf.org/html/rfc3646#section-4
+    DomainList(Vec<checked::Domain>),
+}
+
+mod checked {
+    use crate::protocol::ProtocolError;
+    use mdns::protocol::{DomainBuilder, EmbeddedPacketBuilder};
+    use packet::BufferViewMut;
+    use zerocopy::ByteSliceMut;
+
+    /// A checked domain that can only be created through the provided constructor.
+    #[derive(Debug, PartialEq)]
+    pub(crate) struct Domain {
+        domain: String,
+        builder: DomainBuilder,
+    }
+
+    impl Domain {
+        /// Constructs a `Domain` and takes ownership of the input string.
+        ///
+        /// # Errors
+        ///
+        /// If the input is not a valid domain following the definition in [RFC 1035].
+        ///
+        /// [RFC 1035]: https://tools.ietf.org/html/rfc1035
+        pub(crate) fn from_string(s: String) -> Result<Self, ProtocolError> {
+            let builder =
+                DomainBuilder::from_str(&s).map_err(|err| ProtocolError::DomainParseError(err))?;
+            Ok(Domain { domain: s, builder })
+        }
+
+        pub(crate) fn bytes_len(&self) -> usize {
+            self.builder.bytes_len()
+        }
+
+        pub(crate) fn serialize<B: ByteSliceMut, BV: BufferViewMut<B>>(&self, bv: &mut BV) {
+            self.builder.serialize(bv);
+        }
+    }
 }
 
 /// An ID that uniquely identifies a DHCPv6 client or server, defined in [RFC8415, Section 11].
@@ -141,7 +194,10 @@ impl Dhcpv6Option<'_> {
             Dhcpv6Option::ServerId(_),
             Dhcpv6Option::Oro(_),
             Dhcpv6Option::Preference(_),
-            Dhcpv6Option::ElapsedTime(_)
+            Dhcpv6Option::ElapsedTime(_),
+            Dhcpv6Option::InformationRefreshTime(_),
+            Dhcpv6Option::DnsServers(_),
+            Dhcpv6Option::DomainList(_)
         )
     }
 }
@@ -172,7 +228,7 @@ impl<'a> RecordsImpl<'a> for Dhcpv6OptionsImpl {
         let opt_code = data.take_obj_front::<U16>().ok_or(ProtocolError::BufferExhausted)?.get();
         let opt_len =
             usize::from(data.take_obj_front::<U16>().ok_or(ProtocolError::BufferExhausted)?.get());
-        let opt_val = data.take_front(opt_len).ok_or(ProtocolError::BufferExhausted)?;
+        let mut opt_val = data.take_front(opt_len).ok_or(ProtocolError::BufferExhausted)?;
 
         let opt = match Dhcpv6OptionCode::try_from(opt_code)? {
             Dhcpv6OptionCode::ClientId => Ok(Dhcpv6Option::ClientId(opt_val)),
@@ -194,6 +250,40 @@ impl<'a> RecordsImpl<'a> for Dhcpv6OptionsImpl {
                 &[b0, b1] => Ok(Dhcpv6Option::ElapsedTime(u16::from_be_bytes([b0, b1]))),
                 _ => Err(ProtocolError::InvalidOpLen(Dhcpv6OptionCode::ElapsedTime, opt_val.len())),
             },
+            Dhcpv6OptionCode::InformationRefreshTime => match opt_val {
+                &[b0, b1, b2, b3] => {
+                    Ok(Dhcpv6Option::InformationRefreshTime(u32::from_be_bytes([b0, b1, b2, b3])))
+                }
+                _ => Err(ProtocolError::InvalidOpLen(
+                    Dhcpv6OptionCode::InformationRefreshTime,
+                    opt_val.len(),
+                )),
+            },
+            Dhcpv6OptionCode::DnsServers => match opt_len % 16 {
+                0 => Ok(Dhcpv6Option::DnsServers(
+                    opt_val
+                        .chunks(16)
+                        .map(|opt| {
+                            let opt: [u8; 16] =
+                                opt.try_into().expect("unexpected byte slice length after chunk");
+                            Ipv6Addr::from(opt)
+                        })
+                        .collect::<Vec<Ipv6Addr>>(),
+                )),
+                _ => Err(ProtocolError::InvalidOpLen(Dhcpv6OptionCode::DnsServers, opt_len)),
+            },
+            Dhcpv6OptionCode::DomainList => {
+                let mut opt_val = &mut opt_val;
+                let mut domains = Vec::new();
+                while opt_val.len() > 0 {
+                    domains.push(checked::Domain::from_string(
+                        Domain::parse(&mut opt_val, None)
+                            .map_err(|err| ProtocolError::DomainParseError(err))?
+                            .to_string(),
+                    )?);
+                }
+                Ok(Dhcpv6Option::DomainList(domains))
+            }
         }?;
 
         Ok(Some(Some(opt)))
@@ -232,6 +322,14 @@ impl<'a> RecordsSerializerImpl<'a> for Dhcpv6OptionsImpl {
             Dhcpv6Option::Oro(opts) => u16::try_from(2 * opts.len()).unwrap_or(0) as usize,
             Dhcpv6Option::Preference(_) => 1,
             Dhcpv6Option::ElapsedTime(_) => 2,
+            Dhcpv6Option::InformationRefreshTime(_) => 4,
+            Dhcpv6Option::DnsServers(recursive_name_servers) => {
+                u16::try_from(16 * recursive_name_servers.len()).unwrap_or(0) as usize
+            }
+            Dhcpv6Option::DomainList(domains) => {
+                u16::try_from(domains.iter().fold(0, |tot, domain| tot + domain.bytes_len()))
+                    .unwrap_or(0) as usize
+            }
         }
     }
 
@@ -267,7 +365,7 @@ impl<'a> RecordsSerializerImpl<'a> for Dhcpv6OptionsImpl {
                 buf.write_obj_front(duid);
             }
             Dhcpv6Option::Oro(requested_opts) => {
-                let empty = vec![];
+                let empty = Vec::new();
                 let (requested_opts, len) = u16::try_from(2 * requested_opts.len()).map_or_else(
                     |err| {
                         // Do not panic, so OROs with size exceeding u16 won't introduce DoS
@@ -299,6 +397,51 @@ impl<'a> RecordsSerializerImpl<'a> for Dhcpv6OptionsImpl {
             Dhcpv6Option::ElapsedTime(elapsed_time) => {
                 buf.write_obj_front(&U16::new(2));
                 buf.write_obj_front(&U16::new(*elapsed_time));
+            }
+            Dhcpv6Option::InformationRefreshTime(information_refresh_time) => {
+                buf.write_obj_front(&U16::new(4));
+                buf.write_obj_front(&U32::new(*information_refresh_time));
+            }
+            Dhcpv6Option::DnsServers(recursive_name_servers) => {
+                let empty = Vec::new();
+                let (recursive_name_servers, len) =
+                    u16::try_from(16 * recursive_name_servers.len()).map_or_else(
+                        |err| {
+                            // Do not panic, so DnsServers with size exceeding u16 won't introduce
+                            // DoS vulnerability.
+                            fx_log_warn!(
+                                "failed to convert recursive name servers option length to u16: {}, using empty list",
+                                err
+                            );
+                            (&empty, 0)
+                        },
+                        |len| (recursive_name_servers, len),
+                    );
+                buf.write_obj_front(&U16::new(len));
+                recursive_name_servers.iter().for_each(|server_addr| {
+                    buf.write_obj_front(&server_addr.octets());
+                })
+            }
+            Dhcpv6Option::DomainList(domains) => {
+                let empty = Vec::new();
+                let (domains, len) =
+                    u16::try_from(domains.iter().fold(0, |tot, domain| tot + domain.bytes_len()))
+                        .map_or_else(
+                            |err| {
+                                // Do not panic, so DomainList with size exceeding u16 won't
+                                // introduce DoS vulnerability.
+                                fx_log_warn!(
+                                    "failed to convert domain list option length to u16: {}, using empty list",
+                                    err
+                                );
+                                (&empty, 0)
+                            },
+                            |len| (domains, len),
+                        );
+                buf.write_obj_front(&U16::new(len));
+                domains.iter().for_each(|domain| {
+                    domain.serialize(&mut buf);
+                })
             }
         }
     }
@@ -392,11 +535,25 @@ mod tests {
             Dhcpv6Option::Oro(vec![Dhcpv6OptionCode::ClientId, Dhcpv6OptionCode::ServerId]),
             Dhcpv6Option::Preference(42),
             Dhcpv6Option::ElapsedTime(3600),
+            Dhcpv6Option::InformationRefreshTime(86400),
+            Dhcpv6Option::DnsServers(vec![
+                Ipv6Addr::from([0, 1, 2, 3, 4, 5, 6, 107, 108, 109, 110, 111, 212, 213, 214, 215]),
+                Ipv6Addr::from([10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25]),
+            ]),
+            Dhcpv6Option::DomainList(vec![
+                checked::Domain::from_string("fuchsia.dev".to_string())
+                    .expect("failed to construct test domain"),
+                checked::Domain::from_string("www.google.com".to_string())
+                    .expect("failed to construct test domain"),
+            ]),
         ];
         let builder = Dhcpv6MessageBuilder::new(Dhcpv6MessageType::Solicit, [1, 2, 3], &options);
         let mut buf = vec![0; builder.bytes_len()];
+
         builder.serialize(&mut buf);
-        assert_eq!(buf.len(), 35);
+
+        assert_eq!(buf.len(), 112);
+        #[rustfmt::skip]
         assert_eq!(
             buf,
             vec![
@@ -407,6 +564,15 @@ mod tests {
                 0, 6, 0, 4, 0, 1, 0, 2, // option - ORO
                 0, 7, 0, 1, 42, // option - preference
                 0, 8, 0, 2, 14, 16, // option - elapsed time
+                0, 32, 0, 4, 0, 1, 81, 128, // option - informtion refresh time
+                // option - Dns servers
+                0, 23, 0, 32,
+                0, 1, 2, 3, 4, 5, 6, 107, 108, 109, 110, 111, 212, 213, 214, 215,
+                10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25,
+                // option - Dns domains
+                0, 24, 0, 29,
+                7, 102, 117, 99, 104, 115, 105, 97, 3, 100, 101, 118, 0,
+                3, 119, 119, 119, 6, 103, 111, 111, 103, 108, 101, 3, 99, 111, 109, 0
             ],
         );
     }
@@ -419,6 +585,14 @@ mod tests {
             Dhcpv6Option::Oro(vec![Dhcpv6OptionCode::ClientId, Dhcpv6OptionCode::ServerId]),
             Dhcpv6Option::Preference(42),
             Dhcpv6Option::ElapsedTime(3600),
+            Dhcpv6Option::InformationRefreshTime(86400),
+            Dhcpv6Option::DnsServers(vec![Ipv6Addr::from(0 as u128)]),
+            Dhcpv6Option::DomainList(vec![
+                checked::Domain::from_string("fuchsia.dev".to_string())
+                    .expect("failed to construct test domain"),
+                checked::Domain::from_string("www.google.com".to_string())
+                    .expect("failed to construct test domain"),
+            ]),
         ];
         let builder = Dhcpv6MessageBuilder::new(Dhcpv6MessageType::Solicit, [1, 2, 3], &options);
         let mut buf = vec![0; builder.bytes_len()];
@@ -583,6 +757,34 @@ mod tests {
             0, 8, // opt code = 8, elapsed time
             0, 3, // invalid opt length, must be even
             0, 0, 0,
+        ]);
+        assert!(Dhcpv6Message::parse(&mut &buf[..], ()).is_err());
+    }
+
+    // Information refresh time must have option length 4, according to [RFC 8145, Section 21.23].
+    //
+    // [RFC 8145, Section 21.23]: https://tools.ietf.org/html/rfc8415#section-21.23
+    #[test]
+    fn test_information_refresh_time_invalid_opt_len() {
+        let mut buf = test_buf_with_no_options();
+        buf.append(&mut vec![
+            0, 32, // opt code = 32, information refresh time
+            0, 3, // invalid opt length, must be 4
+            0, 0, 0,
+        ]);
+        assert!(Dhcpv6Message::parse(&mut &buf[..], ()).is_err());
+    }
+
+    // Option length of Dns servers must be multiples of 16, according to [RFC 3646, Section 3].
+    //
+    // [RFC 3646, Section 3]: https://tools.ietf.org/html/rfc3646#section-3
+    #[test]
+    fn test_dns_servers_invalid_opt_len() {
+        let mut buf = test_buf_with_no_options();
+        buf.append(&mut vec![
+            0, 23, // opt code = 23, dns servers
+            0, 17, // invalid opt length, must be multiple of 16
+            0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
         ]);
         assert!(Dhcpv6Message::parse(&mut &buf[..], ()).is_err());
     }
