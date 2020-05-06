@@ -301,6 +301,7 @@ aggregate_manifest("migrated-image") {
     "//src/devices/pwm/drivers/aml-pwm-init:aml-pwm-init-manifest",
     "//src/devices/pwm/drivers/aml-pwm:aml-pwm-manifest",
     "//src/devices/pwm/drivers/pwm:pwm-manifest",
+    "//src/devices/ram/bin/ram-info:ram-info-manifest",
     "//src/devices/ram/drivers/aml-ram:aml-ram-manifest",
     "//src/devices/rtc/drivers/fallback:fallback-manifest",
     "//src/devices/rtc/drivers/nxp:nxp-manifest",

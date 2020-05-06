@@ -1,0 +1,65 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test.gni")
+import("//build/test/test_package.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
+executable("ram-info") {
+  configs += [ "//build/unification/config:zircon-migrated" ]
+  sources = [
+    "main.cc",
+    "ram-info.cc",
+  ]
+  deps = [
+    "//sdk/fidl/fuchsia.hardware.ram.metrics:fuchsia.hardware.ram.metrics_llcpp",
+    "//src/devices/lib/amlogic",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/fidl",
+    "//zircon/public/lib/zx",
+  ]
+}
+
+test("ram-info-test") {
+  configs += [ "//build/unification/config:zircon-migrated" ]
+  output_name = "ram-info-test"
+  sources = [
+    "ram-info-test.cc",
+    "ram-info.cc",
+  ]
+  deps = [
+    "//sdk/fidl/fuchsia.hardware.ram.metrics:fuchsia.hardware.ram.metrics_llcpp",
+    "//src/devices/lib/amlogic",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/fidl",
+    "//zircon/public/lib/fidl-async-cpp",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
+  ]
+}
+
+migrated_manifest("ram-info-manifest") {
+  deps = [ ":ram-info" ]
+}
+
+unittest_package("ram-info-test-package") {
+  package_name = "ram-info-test"
+  deps = [ ":ram-info-test" ]
+
+  tests = [
+    {
+      name = "ram-info-test"
+      environments = basic_envs
+    },
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":ram-info-test-package" ]
+}
