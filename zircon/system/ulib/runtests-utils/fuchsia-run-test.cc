@@ -63,6 +63,10 @@ constexpr char kRunTestComponentPath[] = "/bin/run-test-component";
 // component url as its parameter.
 constexpr char kRunTestSuitePath[] = "/bin/run-test-suite";
 
+// This will tell `run-test-component` to fail if test produces logs with severity more than some
+// predetermined value.
+constexpr char kFlagRestrictLogs[] = "--restrict-logs";
+
 fbl::String RootName(const fbl::String& path) {
   const size_t i = strspn(path.c_str(), "/");
   const char* start = &path.c_str()[i];
@@ -137,15 +141,15 @@ std::optional<std::vector<DumpFile>> ProcessProfiles(const std::vector<zx::vmo>&
             strerror(errno));
     return {};
   }
-  fbl::unique_fd sink_dir_fd{
-      openat(data_sink_dir_fd.get(), kProfileSink, O_RDONLY | O_DIRECTORY)};
+  fbl::unique_fd sink_dir_fd{openat(data_sink_dir_fd.get(), kProfileSink, O_RDONLY | O_DIRECTORY)};
   if (!sink_dir_fd) {
     fprintf(stderr, "FAILURE: cannot open data-sink directory \"%s\": %s\n", kProfileSink,
             strerror(errno));
     return {};
   }
 
-  std::unordered_map<std::string, std::forward_list<std::reference_wrapper<const zx::vmo>>> profiles;
+  std::unordered_map<std::string, std::forward_list<std::reference_wrapper<const zx::vmo>>>
+      profiles;
   std::vector<DumpFile> dump_files;
 
   // Group data by profile name. The name is a hash computed from profile metadata and
@@ -162,7 +166,8 @@ std::optional<std::vector<DumpFile>> ProcessProfiles(const std::vector<zx::vmo>&
   for (auto& [name, vmos] : profiles) {
     fbl::unique_fd fd{openat(sink_dir_fd.get(), name.c_str(), O_RDWR | O_CREAT, 0666)};
     if (!fd) {
-      fprintf(stderr, "FAILURE: Cannot open data-sink file \"%s\": %s\n", name.c_str(), strerror(errno));
+      fprintf(stderr, "FAILURE: Cannot open data-sink file \"%s\": %s\n", name.c_str(),
+              strerror(errno));
       return {};
     }
 
@@ -171,7 +176,8 @@ std::optional<std::vector<DumpFile>> ProcessProfiles(const std::vector<zx::vmo>&
 
     struct stat stat;
     if (fstat(fd.get(), &stat) == -1) {
-      fprintf(stderr, "FAILURE: Cannot stat data-sink file \"%s\": %s\n", name.c_str(), strerror(errno));
+      fprintf(stderr, "FAILURE: Cannot stat data-sink file \"%s\": %s\n", name.c_str(),
+              strerror(errno));
       return {};
     }
     if (auto file_size = static_cast<uint64_t>(stat.st_size); file_size > 0) {
@@ -179,7 +185,8 @@ std::optional<std::vector<DumpFile>> ProcessProfiles(const std::vector<zx::vmo>&
       buffer_size = file_size;
       buffer = std::make_unique<uint8_t[]>(buffer_size);
       if (std::error_code ec = ReadFile(fd, buffer.get(), file_size); ec) {
-        fprintf(stderr, "FAILURE: Cannot read data from \"%s\": %s\n", name.c_str(), strerror(ec.value()));
+        fprintf(stderr, "FAILURE: Cannot read data from \"%s\": %s\n", name.c_str(),
+                strerror(ec.value()));
         return {};
       }
     }
@@ -201,13 +208,13 @@ std::optional<std::vector<DumpFile>> ProcessProfiles(const std::vector<zx::vmo>&
       if (vmo_size > 0) {
         zx_status_t status = mapper.Map(vmo, 0, vmo_size, ZX_VM_PERM_READ);
         if (status != ZX_OK) {
-          fprintf(stderr, "FAILURE: Cannot map VMO \"%s\" for data-sink \"%s\": %s\n",
-                  name.c_str(), kProfileSink, zx_status_get_string(status));
+          fprintf(stderr, "FAILURE: Cannot map VMO \"%s\" for data-sink \"%s\": %s\n", name.c_str(),
+                  kProfileSink, zx_status_get_string(status));
           return {};
         }
       } else {
-        fprintf(stderr, "WARNING: Empty VMO \"%s\" published for data-sink \"%s\"\n",
-                kProfileSink, name.c_str());
+        fprintf(stderr, "WARNING: Empty VMO \"%s\" published for data-sink \"%s\"\n", kProfileSink,
+                name.c_str());
         continue;
       }
 
@@ -237,7 +244,8 @@ std::optional<std::vector<DumpFile>> ProcessProfiles(const std::vector<zx::vmo>&
 
     // Write the data back to the file.
     if (std::error_code ec = WriteFile(fd, buffer.get(), buffer_size); ec) {
-      fprintf(stderr, "FAILURE: Cannot write data to \"%s\": %s\n", name.c_str(), strerror(ec.value()));
+      fprintf(stderr, "FAILURE: Cannot write data to \"%s\": %s\n", name.c_str(),
+              strerror(ec.value()));
       return {};
     }
 
@@ -282,21 +290,21 @@ std::optional<DumpFile> ProcessDataSinkDump(const std::string& sink_name, const 
   if (size > 0) {
     zx_status_t status = mapper.Map(file_data, 0, size, ZX_VM_PERM_READ);
     if (status != ZX_OK) {
-      fprintf(stderr, "FAILURE: Cannot map VMO \"%s\" for data-sink \"%s\": %s\n",
-              name->c_str(), sink_name.c_str(), zx_status_get_string(status));
+      fprintf(stderr, "FAILURE: Cannot map VMO \"%s\" for data-sink \"%s\": %s\n", name->c_str(),
+              sink_name.c_str(), zx_status_get_string(status));
       return {};
     }
   } else {
-    fprintf(stderr, "WARNING: Empty VMO \"%s\" published for data-sink \"%s\"\n",
-            name->c_str(), sink_name.c_str());
+    fprintf(stderr, "WARNING: Empty VMO \"%s\" published for data-sink \"%s\"\n", name->c_str(),
+            sink_name.c_str());
     return {};
   }
 
   zx_info_handle_basic_t info;
   status = file_data.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
   if (status != ZX_OK) {
-    fprintf(stderr, "FAILURE: Cannot get a basic info for VMO \"%s\": %s\n",
-            name->c_str(), zx_status_get_string(status));
+    fprintf(stderr, "FAILURE: Cannot get a basic info for VMO \"%s\": %s\n", name->c_str(),
+            zx_status_get_string(status));
     return {};
   }
 
@@ -355,7 +363,7 @@ std::unique_ptr<Result> RunTest(const char* argv[], const char* output_dir,
     return std::make_unique<Result>(path, FAILED_TO_LAUNCH, 0, 0);
   }
 
-  const char* component_launch_args[argc + 2];
+  const char* component_launch_args[argc + 3];
   if (component_executor.length() > 0) {
     // Check whether the executor is present and print a more helpful error, rather than failing
     // later in the fdio_spawn_etc call.
@@ -368,9 +376,16 @@ std::unique_ptr<Result> RunTest(const char* argv[], const char* output_dir,
       return std::make_unique<Result>(path, FAILED_TO_LAUNCH, 0, 0);
     }
     component_launch_args[0] = component_executor.c_str();
-    component_launch_args[1] = path;
+    int j = 1;
+    if (component_executor == kRunTestComponentPath) {
+      component_launch_args[j] = kFlagRestrictLogs;
+      j++;
+    }
+    component_launch_args[j] = path;
+    j++;
     for (size_t i = 1; i <= argc; i++) {
-      component_launch_args[1 + i] = argv[i];
+      component_launch_args[j] = argv[i];
+      j++;
     }
     args = component_launch_args;
   }
