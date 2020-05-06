@@ -230,12 +230,10 @@ mod linux {
                 // Presuming that this is a multicast address, we need to join
                 // on every interface.
                 for iface in unsafe { net::linux::get_mcast_interfaces()? } {
-                    for iface_addr in iface.addrs.iter() {
-                        // If the iface doesn't have a link local IPv6 address,
-                        // this will panic.
-                        if iface_addr.is_ipv6() {
-                            socket.join_multicast_v6(&addr.ip(), iface.id)?;
-                        }
+                    // If the iface doesn't have a link local IPv6 address,
+                    // this will panic.
+                    if iface.addrs.iter().any(|addr| addr.is_ipv6()) {
+                        socket.join_multicast_v6(&addr.ip(), iface.id)?;
                     }
                 }
 
