@@ -116,6 +116,10 @@ zx_status_t BlockPartitionClient::Setup(const zx::vmo& vmo, vmoid_t* out_vmoid) 
 }
 
 zx_status_t BlockPartitionClient::Read(const zx::vmo& vmo, size_t size) {
+  return Read(vmo, size, 0);
+}
+
+zx_status_t BlockPartitionClient::Read(const zx::vmo& vmo, size_t size, size_t dev_offset) {
   vmoid_t vmoid;
   zx_status_t status = Setup(vmo, &vmoid);
   if (status != ZX_OK) {
@@ -134,7 +138,7 @@ zx_status_t BlockPartitionClient::Read(const zx::vmo& vmo, size_t size) {
   }
   request.length = static_cast<uint32_t>(length);
   request.vmo_offset = 0;
-  request.dev_offset = 0;
+  request.dev_offset = dev_offset;
 
   if ((status = client_->Transaction(&request, 1)) != ZX_OK) {
     ERROR("Error reading partition data: %s\n", zx_status_get_string(status));
@@ -508,5 +512,42 @@ zx_status_t Bl2PartitionClient::Write(const zx::vmo& vmo, size_t size) {
   }
   return WriteBytes(vmo, kNandPageSize, kBl2Size);
 }
+
+zx_status_t SherlockBootloaderPartitionClient::GetBlockSize(size_t* out_size) {
+  return client_.GetBlockSize(out_size);
+}
+
+// Sherlock bootloader partition starts with one block of metadata used only
+// by the firmware, our read/write/size functions should skip it.
+zx_status_t SherlockBootloaderPartitionClient::GetPartitionSize(size_t* out_size) {
+  size_t block_size = 0;
+  if (zx_status_t status = GetBlockSize(&block_size); status != ZX_OK) {
+    return status;
+  }
+
+  size_t full_size = 0;
+  if (zx_status_t status = client_.GetPartitionSize(&full_size); status != ZX_OK) {
+    return status;
+  }
+
+  *out_size = full_size - block_size;
+  return ZX_OK;
+}
+
+zx_status_t SherlockBootloaderPartitionClient::Read(const zx::vmo& vmo, size_t size) {
+  return client_.Read(vmo, size, 1);
+}
+
+zx_status_t SherlockBootloaderPartitionClient::Write(const zx::vmo& vmo, size_t vmo_size) {
+  return client_.Write(vmo, vmo_size, 1);
+}
+
+zx_status_t SherlockBootloaderPartitionClient::Trim() { return client_.Trim(); }
+
+zx_status_t SherlockBootloaderPartitionClient::Flush() { return client_.Flush(); }
+
+zx::channel SherlockBootloaderPartitionClient::GetChannel() { return client_.GetChannel(); }
+
+fbl::unique_fd SherlockBootloaderPartitionClient::block_fd() { return client_.block_fd(); }
 
 }  // namespace paver

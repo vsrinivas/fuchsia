@@ -58,6 +58,7 @@ class BlockPartitionClient final : public PartitionClient {
   zx_status_t GetBlockSize(size_t* out_size) final;
   zx_status_t GetPartitionSize(size_t* out_size) final;
   zx_status_t Read(const zx::vmo& vmo, size_t size) final;
+  zx_status_t Read(const zx::vmo& vmo, size_t size, size_t dev_offset);
   zx_status_t Write(const zx::vmo& vmo, size_t vmo_size) final;
   zx_status_t Write(const zx::vmo& vmo, size_t vmo_size, size_t dev_offset);
   zx_status_t Trim() final;
@@ -192,18 +193,14 @@ class SherlockBootloaderPartitionClient final : public PartitionClient {
   explicit SherlockBootloaderPartitionClient(zx::channel partition)
       : client_(std::move(partition)) {}
 
-  zx_status_t GetBlockSize(size_t* out_size) final { return client_.GetBlockSize(out_size); }
-  zx_status_t GetPartitionSize(size_t* out_size) final {
-    return client_.GetPartitionSize(out_size);
-  }
-  zx_status_t Read(const zx::vmo& vmo, size_t size) final { return client_.Read(vmo, size); }
-  zx_status_t Write(const zx::vmo& vmo, size_t vmo_size) final {
-    return client_.Write(vmo, vmo_size, 1);
-  }
-  zx_status_t Trim() final { return client_.Trim(); }
-  zx_status_t Flush() final { return client_.Flush(); }
-  zx::channel GetChannel() final { return client_.GetChannel(); }
-  fbl::unique_fd block_fd() final { return client_.block_fd(); }
+  zx_status_t GetBlockSize(size_t* out_size) final;
+  zx_status_t GetPartitionSize(size_t* out_size) final;
+  zx_status_t Read(const zx::vmo& vmo, size_t size) final;
+  zx_status_t Write(const zx::vmo& vmo, size_t vmo_size) final;
+  zx_status_t Trim() final;
+  zx_status_t Flush() final;
+  zx::channel GetChannel() final;
+  fbl::unique_fd block_fd() final;
 
   // No copy, no move.
   SherlockBootloaderPartitionClient(const SherlockBootloaderPartitionClient&) = delete;

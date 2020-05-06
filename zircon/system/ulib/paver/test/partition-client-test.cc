@@ -6,6 +6,7 @@
 
 #include <lib/devmgr-integration-test/fixture.h>
 #include <lib/driver-integration-test/fixture.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/fdio.h>
 #include <string.h>
 #include <zircon/hw/gpt.h>
@@ -362,8 +363,8 @@ TEST(PartitionCopyClientTest, BlockFdMultilplePartition) {
 }
 
 class SherlockBootloaderPartitionClientTest : public zxtest::Test {
- protected:
-  SherlockBootloaderPartitionClientTest() {
+ public:
+  void SetUp() override {
     IsolatedDevmgr::Args args;
     args.driver_search_paths.push_back("/boot/driver");
     args.disable_block_watcher = false;
@@ -372,37 +373,92 @@ class SherlockBootloaderPartitionClientTest : public zxtest::Test {
     fbl::unique_fd fd;
     ASSERT_OK(RecursiveWaitForFile(devmgr_.devfs_root(), "misc/ramctl", &fd));
     ASSERT_OK(RecursiveWaitForFile(devmgr_.devfs_root(), "sys/platform", &fd));
+
+    constexpr uint8_t kEmptyType[GPT_GUID_LEN] = GUID_EMPTY_VALUE;
+    ASSERT_NO_FATAL_FAILURES(
+        BlockDevice::Create(devmgr_.devfs_root(), kEmptyType, 2, 512, &gpt_dev_));
+    ASSERT_OK(fdio_get_service_handle(gpt_dev_->fd(), service_channel_.reset_and_get_address()));
   }
 
+  // Creates a BlockPartitionClient which will read/write the entire device.
+  std::unique_ptr<paver::BlockPartitionClient> RawClient() {
+    return std::make_unique<paver::BlockPartitionClient>(
+        zx::channel(fdio_service_clone(service_channel_.get())));
+  }
+
+  // Creates a SherlockBootloaderPartitionClient which will read/write using
+  // the custom sherlock bootloader logic.
+  std::unique_ptr<paver::SherlockBootloaderPartitionClient> BootloaderClient() {
+    return std::make_unique<paver::SherlockBootloaderPartitionClient>(
+        zx::channel(fdio_service_clone(service_channel_.get())));
+  }
+
+ private:
   IsolatedDevmgr devmgr_;
+  std::unique_ptr<BlockDevice> gpt_dev_;
+  zx::channel service_channel_;
 };
 
-TEST_F(SherlockBootloaderPartitionClientTest, Write) {
-  constexpr uint8_t kEmptyType[GPT_GUID_LEN] = GUID_EMPTY_VALUE;
-  char ref[1024] = {0};
-  strcpy(&ref[512], "Test");
+// Writes |data| to |client|.
+// Call with ASSERT_NO_FATAL_FAILURES().
+void Write(std::unique_ptr<paver::PartitionClient> client, std::string_view data) {
+  // Write data to a VMO.
+  zx::vmo vmo;
+  ASSERT_OK(zx::vmo::create(data.size(), 0, &vmo));
+  ASSERT_OK(vmo.write(data.data(), 0, data.size()));
 
-  zx::vmo vmo_write;
-  ASSERT_OK(zx::vmo::create(1024, 0, &vmo_write));
-  ASSERT_OK(vmo_write.write("Test", 0, sizeof("Test")));
+  // Write VMO to the client.
+  ASSERT_OK(client->Write(vmo, data.size()));
+}
 
-  std::unique_ptr<BlockDevice> gpt_dev;
-  ASSERT_NO_FATAL_FAILURES(BlockDevice::Create(devmgr_.devfs_root(), kEmptyType, 2, 512, &gpt_dev));
+// Reads |size| bytes from |client| into |data|.
+// Call with ASSERT_NO_FATAL_FAILURES().
+void Read(std::unique_ptr<paver::PartitionClient> client, std::string* data, size_t size) {
+  data->resize(size);
 
-  zx::channel chan;
-  ASSERT_OK(fdio_get_service_handle(gpt_dev->fd(), chan.reset_and_get_address()));
+  // Read client to a VMO.
+  zx::vmo vmo;
+  ASSERT_OK(zx::vmo::create(data->size(), 0, &vmo));
+  ASSERT_OK(client->Read(vmo, data->size()));
 
-  paver::SherlockBootloaderPartitionClient client(std::move(chan));
-  ASSERT_OK(client.Write(vmo_write, 512));
+  // Read VMO to data.
+  ASSERT_OK(vmo.read(data->data(), 0, data->size()));
+}
 
-  zx::vmo vmo_read;
-  ASSERT_OK(zx::vmo::create(1024, 0, &vmo_read));
-  ASSERT_OK(client.Read(vmo_read, 1024));
+TEST_F(SherlockBootloaderPartitionClientTest, BootloaderPartitionSize) {
+  size_t size = 0;
 
-  char buf[1024] = {0};
-  ASSERT_OK(vmo_read.read(buf, 0, 1024));
+  ASSERT_OK(RawClient()->GetPartitionSize(&size));
+  ASSERT_EQ(1024, size);
 
-  ASSERT_EQ(std::memcmp(buf, ref, 1024), 0);
+  // Bootloader size should not count block 0.
+  ASSERT_OK(BootloaderClient()->GetPartitionSize(&size));
+  ASSERT_EQ(512, size);
+}
+
+TEST_F(SherlockBootloaderPartitionClientTest, ReadBootloaderPartition) {
+  const std::string block0(512, '0');
+  const std::string firmware(512, 'F');
+
+  ASSERT_NO_FATAL_FAILURES(Write(RawClient(), block0 + firmware));
+
+  // Bootloader read should skip block 0.
+  std::string actual;
+  ASSERT_NO_FATAL_FAILURES(Read(BootloaderClient(), &actual, 512));
+  ASSERT_EQ(firmware, actual);
+}
+
+TEST_F(SherlockBootloaderPartitionClientTest, WriteBootloaderPartition) {
+  const std::string block0(512, '0');
+  const std::string firmware(512, 'F');
+
+  ASSERT_NO_FATAL_FAILURES(Write(RawClient(), block0 + block0));
+  ASSERT_NO_FATAL_FAILURES(Write(BootloaderClient(), firmware));
+
+  // Bootloader write should have skipped block 0.
+  std::string actual;
+  ASSERT_NO_FATAL_FAILURES(Read(RawClient(), &actual, 1024));
+  ASSERT_EQ(block0 + firmware, actual);
 }
 
 }  // namespace
