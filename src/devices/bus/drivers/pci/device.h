@@ -47,13 +47,10 @@ class BusLinkInterface;
 // device this corresponds to.
 class Device;
 using PciDeviceType = ddk::Device<pci::Device, ddk::Rxrpcable>;
-class Device : public PciDeviceType, public fbl::DoublyLinkedListable<Device*> {
+class Device : public PciDeviceType,
+               public fbl::DoublyLinkedListable<Device*>,
+               public fbl::WAVLTreeContainable<fbl::RefPtr<pci::Device>> {
  public:
-  using NodeState = fbl::WAVLTreeNodeState<fbl::RefPtr<pci::Device>>;
-  struct BusListTraits {
-    static NodeState& node_state(Device& device) { return device.bus_list_state_; }
-  };
-
   // These traits are used for the WAVL tree implementation. They allow device objects
   // to be sorted and found in trees by composite bdf address.
   struct KeyTraitsSortByBdf {
@@ -221,7 +218,7 @@ class Device : public PciDeviceType, public fbl::DoublyLinkedListable<Device*> {
   bool plugged_in_ = false;
   bool disabled_ = false;
   bool quirks_done_ = false;
-  mutable fbl::Mutex dev_lock_;
+  fbl::Mutex dev_lock_;
 
   // Info about the BARs computed and cached during the initial setup/probe,
   // indexed by starting BAR register index.
@@ -268,12 +265,6 @@ class Device : public PciDeviceType, public fbl::DoublyLinkedListable<Device*> {
   // Used for Rxrpc / RpcReply for protocol buffers.
   PciRpcMsg request_;
   PciRpcMsg response_;
-
-  // These allow a device to exist in an upstream node list as well
-  // as the top level bus list of all devices.
-  friend struct BusListTraits;
-  friend struct UpstreamListTraits;
-  NodeState bus_list_state_;
 };
 
 }  // namespace pci

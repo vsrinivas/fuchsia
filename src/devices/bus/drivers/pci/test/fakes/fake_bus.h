@@ -17,25 +17,25 @@ namespace pci {
 class FakeBus : public BusLinkInterface {
  public:
   void LinkDevice(fbl::RefPtr<pci::Device> device) final {
-    fbl::AutoLock dev_list_lock(&dev_list_lock_);
-    device_list_.insert(device);
+    fbl::AutoLock devices_lock(&devices_lock_);
+    devices_.insert(device);
   }
 
   void UnlinkDevice(pci::Device* device) final {
-    fbl::AutoLock dev_list_lock(&dev_list_lock_);
-    device_list_.erase(*device);
+    fbl::AutoLock devices_lock(&devices_lock_);
+    devices_.erase(*device);
   }
 
-  pci::Device& get_device(pci_bdf_t bdf) { return *device_list_.find(bdf); }
+  pci::Device& get_device(pci_bdf_t bdf) { return *devices_.find(bdf); }
 
   // For use with Devices that need to link to a Bus.
   BusLinkInterface* bli() { return static_cast<BusLinkInterface*>(this); }
 
-  const pci::DeviceList& device_list() { return device_list_; }
+  const pci::DeviceTree& devices() { return devices_; }
 
  private:
-  mutable fbl::Mutex dev_list_lock_;
-  pci::DeviceList device_list_;
+  fbl::Mutex devices_lock_;
+  pci::DeviceTree devices_;
 };
 
 }  // namespace pci

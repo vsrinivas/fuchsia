@@ -39,8 +39,8 @@ struct BusScanEntry {
   UpstreamNode* upstream;
 };
 
-using DeviceList = fbl::WAVLTree<pci_bdf_t, fbl::RefPtr<pci::Device>,
-                                 pci::Device::KeyTraitsSortByBdf, pci::Device::BusListTraits>;
+using DeviceTree =
+    fbl::WAVLTree<pci_bdf_t, fbl::RefPtr<pci::Device>, pci::Device::KeyTraitsSortByBdf>;
 
 class Bus;
 using PciBusType = ddk::Device<Bus>;
@@ -51,13 +51,13 @@ class Bus : public PciBusType, public BusLinkInterface {
 
   // Accessors for the device list, used by BusLinkInterface
   void LinkDevice(fbl::RefPtr<pci::Device> device) final {
-    fbl::AutoLock dev_list_lock(&dev_list_lock_);
-    device_list_.insert(device);
+    fbl::AutoLock devices_lock(&devices_lock_);
+    devices_.insert(device);
   }
 
   void UnlinkDevice(pci::Device* device) final {
-    fbl::AutoLock dev_list_lock(&dev_list_lock_);
-    device_list_.erase(*device);
+    fbl::AutoLock devices_lock(&devices_lock_);
+    devices_.erase(*device);
   }
 
  private:
@@ -84,11 +84,11 @@ class Bus : public PciBusType, public BusLinkInterface {
   pci_platform_info_t info_;
   std::optional<ddk::MmioBuffer> ecam_;
   std::unique_ptr<PciRoot> root_;
-  mutable fbl::Mutex dev_list_lock_;
+  fbl::Mutex devices_lock_;
 
   // All devices downstream of this bus are held here. Devices are keyed by
   // BDF so they will not experience any collisions.
-  pci::DeviceList device_list_;
+  pci::DeviceTree devices_;
 };
 
 }  // namespace pci

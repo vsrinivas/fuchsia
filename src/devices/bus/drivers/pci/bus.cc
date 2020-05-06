@@ -87,8 +87,11 @@ zx_status_t Bus::Initialize() {
   ScanDownstream();
   root_->ConfigureDownstreamDevices();
   pci_infof("AllDevicesList:\n");
-  for (auto& dev : device_list_) {
-    dev.Dump();
+  {
+    fbl::AutoLock devices_lock(&devices_lock_);
+    for (auto& dev : devices_) {
+      dev.Dump();
+    }
   }
 
   pci_infof("%s init done.\n", info_.name);

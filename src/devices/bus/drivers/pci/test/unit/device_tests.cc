@@ -162,7 +162,7 @@ TEST_F(PciDeviceTests, InvalidPtrCapabilityTest) {
             Device::Create(fake_ddk::kFakeParent, std::move(cfg), &upstream(), &bus()));
 
   // Ensure no device was added.
-  EXPECT_TRUE(bus().device_list().is_empty());
+  EXPECT_TRUE(bus().devices().is_empty());
 }
 
 // This test checks for proper handling (ZX_ERR_BAD_STATE) upon
@@ -196,7 +196,7 @@ TEST_F(PciDeviceTests, PtrCycleCapabilityTest) {
             Device::Create(fake_ddk::kFakeParent, std::move(cfg), &upstream(), &bus()));
 
   // Ensure no device was added.
-  EXPECT_TRUE(bus().device_list().is_empty());
+  EXPECT_TRUE(bus().devices().is_empty());
 }
 
 // Test that we properly bail out if we see multiple of a capability
@@ -231,7 +231,7 @@ TEST_F(PciDeviceTests, DuplicateFixedCapabilityTest) {
             Device::Create(fake_ddk::kFakeParent, std::move(cfg), &upstream(), &bus()));
 
   // Ensure no device was added.
-  EXPECT_TRUE(bus().device_list().is_empty());
+  EXPECT_TRUE(bus().devices().is_empty());
 }
 
 // Ensure we parse MSI capabilities properly in the Quadro device.
