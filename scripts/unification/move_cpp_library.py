@@ -34,7 +34,22 @@ class Library(object):
         self.has_unexported = any(s.sdk == Sdk.NOPE for s in self.stats)
         self.has_sdk = any(s.sdk_publishable for s in self.stats)
         self.has_shared = any(s.sdk == Sdk.SHARED for s in self.stats)
-        self.has_non_source = any(s.sdk != Sdk.SOURCE for s in self.stats)
+        self.has_static = any(s.sdk == Sdk.STATIC for s in self.stats)
+
+
+def replace_lines(path, replacer):
+    '''Replaces lines in a file based on the output of the given function.'''
+    for line in fileinput.FileInput(path, inplace=True):
+        replacement = replacer(line)
+        if replacement is None:
+            # No modification needed.
+            sys.stdout.write(line)
+            continue
+        if not replacement:
+            # The line should be removed.
+            continue
+        # The line should be updated.
+        sys.stdout.write(replacement)
 
 
 def main():
@@ -75,8 +90,8 @@ def main():
             continue
 
         # No SDK libraries for now.
-        if library.has_sdk and library.has_non_source:
-            print('Cannot convert non-source SDK libraries for now, ignoring ' + lib)
+        if library.has_sdk and library.has_static:
+            print('Cannot convert static SDK libraries for now, ignoring ' + lib)
             continue
 
         # Gather build files with references to the library.
@@ -164,10 +179,12 @@ def main():
         if library.has_shared:
             unification_path = os.path.join(FUCHSIA_ROOT, 'build',
                                             'unification', 'images', 'BUILD.gn')
-            for line in fileinput.FileInput(unification_path, inplace=True):
+            def unification_replacer(line):
                 for name in [s.name for s in library.stats]:
-                    if not re.match('^\s*"' + name + '",$', line):
-                        sys.stdout.write(line)
+                    if re.match('^\s*"' + name + '",$', line):
+                        # Remove the line.
+                        return ''
+            replace_lines(unification_path, unification_replacer)
 
         # Generate an alias for the library under //zircon/public/lib if a soft
         # transition is necessary.
@@ -191,12 +208,11 @@ def main():
         if library.has_sdk:
             sdk_path = os.path.join(FUCHSIA_ROOT, 'sdk', 'BUILD.gn')
             folder = os.path.basename(library.name)
-            for line in fileinput.FileInput(sdk_path, inplace=True):
+            def sdk_replacer(line):
                 for name in [s.name for s in library.stats]:
-                    if '"//zircon/public/lib/' + folder + ':' + name + '_sdk' + '",' in line:
-                        sys.stdout.write(line.replace('public/lib', 'system/ulib'))
-                    else:
-                        sys.stdout.write(line)
+                    if '"//zircon/public/lib/' + folder + ':' + name + '_sdk' + '"' in line:
+                        return line.replace('public/lib', 'system/ulib')
+            replace_lines(sdk_path, sdk_replacer)
             fx_format(sdk_path)
 
         # Remove the reference in the ZN aggregation target.
@@ -205,11 +221,12 @@ def main():
                                         'BUILD.gn')
         if os.path.exists(aggregation_path):
             folder = os.path.basename(library.name)
-            for line in fileinput.FileInput(aggregation_path, inplace=True):
+            def aggregation_replacer(line):
                 for name in [s.name for s in library.stats]:
-                    if (not '"' + folder + ':' + name + '"' in line and
-                        not '"' + folder + '"' in line):
-                        sys.stdout.write(line)
+                    if ('"' + folder + ':' + name + '"' in line or
+                        '"' + folder + '"' in line):
+                        return ''
+            replace_lines(aggregation_path, aggregation_replacer)
         else:
             print('Warning: some references to ' + lib + ' might still exist '
                   'in the ZN build, please remove them manually')
