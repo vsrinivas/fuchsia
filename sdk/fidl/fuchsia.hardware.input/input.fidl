@@ -17,7 +17,6 @@ enum BootProtocol : uint32 {
 const uint16 MAX_DESC_LEN = 8192;
 const uint16 MAX_REPORT_LEN = 8192;
 const uint16 MAX_REPORT_DATA = 8192;
-const uint16 MAX_REPORT_IDS = 256;
 
 enum ReportType : uint8 {
     INPUT = 1;
@@ -46,23 +45,8 @@ protocol Device {
     /// If it is a mock HID decice, the IDs will either be 0's or user defined.
     GetDeviceIds() -> (DeviceIds ids);
 
-    /// Get the size of the report descriptor
-    GetReportDescSize() -> (uint16 size);
-
     /// Get the report descriptor
     GetReportDesc() -> (vector<uint8>:MAX_DESC_LEN desc);
-
-    /// Get the number of reports in the report descriptor
-    GetNumReports() -> (uint16 count);
-
-    /// Get the report ids that are used in the report descriptor
-    GetReportIds() -> (vector<ReportId>:MAX_REPORT_IDS ids);
-
-    /// Get the size of a single report for the given (type, id) pair.
-    GetReportSize(ReportType type, ReportId id) -> (zx.status status, uint16 size);
-
-    /// Get the maximum size of a single input report.
-    GetMaxInputReportSize() -> (uint16 size);
 
     /// Read one report out of the report FIFO. Only a single report will be
     /// returned in this API. `time` is the time the report was created, from

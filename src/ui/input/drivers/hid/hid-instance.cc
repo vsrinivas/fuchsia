@@ -178,10 +178,6 @@ void HidInstance::GetDeviceIds(GetDeviceIdsCompleter::Sync completer) {
   completer.Reply(ids);
 }
 
-void HidInstance::GetReportDescSize(GetReportDescSizeCompleter::Sync completer) {
-  completer.Reply(static_cast<uint16_t>(base_->GetReportDescLen()));
-}
-
 void HidInstance::GetReportDesc(GetReportDescCompleter::Sync completer) {
   size_t desc_size = base_->GetReportDescLen();
   const uint8_t* desc = base_->GetReportDesc();
@@ -190,36 +186,6 @@ void HidInstance::GetReportDesc(GetReportDescCompleter::Sync completer) {
   // as const in LLCPP. We know the data is not modified.
   completer.Reply(
       ::fidl::VectorView<uint8_t>(fidl::unowned_ptr(const_cast<uint8_t*>(desc)), desc_size));
-}
-
-void HidInstance::GetNumReports(GetNumReportsCompleter::Sync completer) {
-  completer.Reply(static_cast<uint16_t>(base_->GetNumReports()));
-}
-
-void HidInstance::GetReportIds(GetReportIdsCompleter::Sync completer) {
-  uint8_t report_ids[::llcpp::fuchsia::hardware::input::MAX_REPORT_IDS] = {};
-  size_t out_size = 0;
-  zx_status_t status = base_->GetReportIds(sizeof(report_ids), report_ids, &out_size);
-  if (status != ZX_OK) {
-    completer.Reply(fidl::VectorView<uint8_t>(nullptr, 0));
-  }
-
-  fidl::VectorView id_view(fidl::unowned_ptr(report_ids), out_size);
-  completer.Reply(std::move(id_view));
-}
-
-void HidInstance::GetReportSize(ReportType type, uint8_t id,
-                                GetReportSizeCompleter::Sync completer) {
-  size_t size = base_->GetReportSizeById(id, type);
-  zx_status_t status = (size == 0) ? ZX_ERR_NOT_FOUND : ZX_OK;
-  if (size > UINT16_MAX) {
-    status = ZX_ERR_INTERNAL;
-  }
-  completer.Reply((size == 0) ? ZX_ERR_NOT_FOUND : ZX_OK, static_cast<uint16_t>(size));
-}
-
-void HidInstance::GetMaxInputReportSize(GetMaxInputReportSizeCompleter::Sync completer) {
-  completer.Reply(static_cast<uint16_t>(base_->GetMaxInputReportSize()));
 }
 
 void HidInstance::GetReport(ReportType type, uint8_t id, GetReportCompleter::Sync completer) {
@@ -241,8 +207,10 @@ void HidInstance::GetReport(ReportType type, uint8_t id, GetReportCompleter::Syn
 void HidInstance::SetReport(ReportType type, uint8_t id, ::fidl::VectorView<uint8_t> report,
                             SetReportCompleter::Sync completer) {
   size_t needed = base_->GetReportSizeById(id, type);
-  if (needed < report.count()) {
-    completer.Reply(ZX_ERR_BUFFER_TOO_SMALL);
+  if (needed != report.count()) {
+    zxlogf(ERROR, "%s: Tried to set Report %d (size 0x%lx) with 0x%lx bytes\n", base_->GetName(),
+           id, needed, report.count());
+    completer.Reply(ZX_ERR_INVALID_ARGS);
     return;
   }
 

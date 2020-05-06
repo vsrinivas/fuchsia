@@ -139,13 +139,6 @@ TEST_F(HidDriverTest, BootMouseTest) {
     ASSERT_EQ(mouse_report.rel_y, test_report.rel_y);
   }
 
-  // Check that report descriptors have the same length
-  {
-    auto response = client.GetReportDescSize();
-    ASSERT_OK(response.status());
-    ASSERT_EQ(sizeof(kBootMouseReportDesc), response->size);
-  }
-
   // Check that report descriptors match completely
   {
     auto response = client.GetReportDesc();

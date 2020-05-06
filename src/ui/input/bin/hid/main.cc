@@ -26,6 +26,11 @@
 #include <vector>
 
 #include <fbl/algorithm.h>
+#include <fbl/auto_call.h>
+#include <hid-parser/parser.h>
+#include <hid-parser/report.h>
+#include <hid-parser/units.h>
+#include <hid-parser/usages.h>
 
 // defined in report.cpp
 void print_report_descriptor(const uint8_t* rpt_desc, size_t desc_len);
@@ -138,19 +143,7 @@ static zx_status_t print_hid_protocol(input_args_t* args) {
   return ZX_OK;
 }
 
-static zx_status_t get_report_desc_len(input_args_t* args, size_t* report_desc_len) {
-  auto result = args->sync_client->GetReportDescSize();
-  if (result.status() != ZX_OK) {
-    lprintf("hid: could not get report descriptor length from %s (status=%d)\n", args->devpath,
-            result.status());
-  } else {
-    *report_desc_len = result->size;
-    lprintf("hid: %s report descriptor len=%zu\n", args->devpath, *report_desc_len);
-  }
-  return ZX_OK;
-}
-
-static zx_status_t print_report_desc(input_args_t* args, size_t report_desc_len) {
+static zx_status_t print_report_desc(input_args_t* args) {
   auto result = args->sync_client->GetReportDesc();
   if (result.status() != ZX_OK) {
     lprintf("hid: could not get report descriptor from %s (status=%d)\n", args->devpath,
@@ -158,11 +151,7 @@ static zx_status_t print_report_desc(input_args_t* args, size_t report_desc_len)
     return result.status();
   }
 
-  if (result->desc.count() != report_desc_len) {
-    lprintf("hid: got unexpected length on report descriptor: %zu versus %zu\n",
-            result->desc.count(), report_desc_len);
-    return ZX_ERR_BAD_STATE;
-  }
+  lprintf("hid: %s report descriptor len=%zu\n", args->devpath, result->desc.count());
 
   mtx_lock(&print_lock);
   printf("hid: %s report descriptor:\n", args->devpath);
@@ -174,75 +163,6 @@ static zx_status_t print_report_desc(input_args_t* args, size_t report_desc_len)
   return ZX_OK;
 }
 
-static zx_status_t get_num_reports(input_args_t* args, size_t* num_reports) {
-  auto result = args->sync_client->GetNumReports();
-  if (result.status() != ZX_OK) {
-    lprintf("hid: could not get number of reports from %s (status=%d)\n", args->devpath,
-            result.status());
-  } else {
-    *num_reports = result->count;
-    lprintf("hid: %s num reports: %zu\n", args->devpath, *num_reports);
-  }
-  return ZX_OK;
-}
-
-static zx_status_t print_report_ids(input_args_t* args, size_t num_reports) {
-  auto result = args->sync_client->GetReportIds();
-  if (result.status() != ZX_OK) {
-    lprintf("hid: could not get report ids from %s (status=%d)\n", args->devpath, result.status());
-    return ZX_OK;
-  }
-  if (result->ids.count() != num_reports) {
-    lprintf("hid: got unexpected number of reports: %zu versus %zu\n", result->ids.count(),
-            num_reports);
-    return ZX_ERR_BAD_STATE;
-  }
-
-  mtx_lock(&print_lock);
-  printf("hid: %s report ids...\n", args->devpath);
-  for (size_t i = 0; i < num_reports; i++) {
-    static const struct {
-      llcpp::fuchsia::hardware::input::ReportType type;
-      const char* tag;
-    } TYPES[] = {
-        {.type = llcpp::fuchsia::hardware::input::ReportType::INPUT, .tag = "Input"},
-        {.type = llcpp::fuchsia::hardware::input::ReportType::OUTPUT, .tag = "Output"},
-        {.type = llcpp::fuchsia::hardware::input::ReportType::FEATURE, .tag = "Feature"},
-    };
-
-    bool found = false;
-    for (size_t j = 0; j < fbl::count_of(TYPES); ++j) {
-      auto res = args->sync_client->GetReportSize(TYPES[j].type, result->ids[i]);
-      if (res.status() == ZX_OK && res->status == ZX_OK) {
-        printf("  ID 0x%02x : TYPE %7s : SIZE %u bytes\n", result->ids[i], TYPES[j].tag, res->size);
-        found = true;
-      }
-    }
-
-    if (!found) {
-      printf("  hid: failed to find any report sizes for report id 0x%02x's (dev %s)\n",
-             result->ids[i], args->devpath);
-    }
-  }
-
-  mtx_unlock(&print_lock);
-  return ZX_OK;
-}
-
-static zx_status_t get_max_report_len(input_args_t* args, uint16_t* max_report_len) {
-  auto result = args->sync_client->GetMaxInputReportSize();
-  if (result.status() != ZX_OK) {
-    lprintf("hid: could not get max report size from %s (status=%d)\n", args->devpath,
-            result.status());
-  } else {
-    lprintf("hid: %s maxreport=%u\n", args->devpath, result->size);
-  }
-  if (max_report_len) {
-    *max_report_len = result->size;
-  }
-  return ZX_OK;
-}
-
 #define TRY(fn)              \
   do {                       \
     zx_status_t status = fn; \
@@ -250,20 +170,48 @@ static zx_status_t get_max_report_len(input_args_t* args, uint16_t* max_report_l
       return status;         \
   } while (0)
 
-static zx_status_t hid_status(input_args_t* args, uint16_t* max_report_len) {
-  size_t num_reports;
-
+static zx_status_t print_hid_status(input_args_t* args) {
   TRY(print_hid_protocol(args));
-  TRY(get_num_reports(args, &num_reports));
-  TRY(print_report_ids(args, num_reports));
-  TRY(get_max_report_len(args, max_report_len));
+
+  hid::DeviceDescriptor* dev_desc = nullptr;
+  {
+    auto result = args->sync_client->GetReportDesc();
+    if (result.status() != ZX_OK) {
+      return result.status();
+    }
+    auto parse_result =
+        hid::ParseReportDescriptor(result->desc.data(), result->desc.count(), &dev_desc);
+    if (parse_result != hid::ParseResult::kParseOk) {
+      return ZX_ERR_INTERNAL;
+    }
+  }
+  auto ac = fbl::MakeAutoCall([&dev_desc]() { hid::FreeDeviceDescriptor(dev_desc); });
+
+  mtx_lock(&print_lock);
+  printf("hid: %s num reports: %zu\n", args->devpath, dev_desc->rep_count);
+
+  printf("hid: %s report ids...\n", args->devpath);
+  for (size_t i = 0; i < dev_desc->rep_count; i++) {
+    if (dev_desc->report[i].input_byte_sz != 0) {
+      printf("  ID 0x%02x : TYPE %7s : SIZE %lu bytes\n", dev_desc->report[i].report_id, "Input",
+             dev_desc->report[i].input_byte_sz);
+    }
+    if (dev_desc->report[i].output_byte_sz != 0) {
+      printf("  ID 0x%02x : TYPE %7s : SIZE %lu bytes\n", dev_desc->report[i].report_id, "Output",
+             dev_desc->report[i].output_byte_sz);
+    }
+    if (dev_desc->report[i].feature_byte_sz != 0) {
+      printf("  ID 0x%02x : TYPE %7s : SIZE %lu bytes\n", dev_desc->report[i].report_id, "Feature",
+             dev_desc->report[i].feature_byte_sz);
+    }
+  }
+  mtx_unlock(&print_lock);
+
   return ZX_OK;
 }
 
 static zx_status_t parse_rpt_descriptor(input_args_t* args) {
-  size_t report_desc_len;
-  TRY(get_report_desc_len(args, &report_desc_len));
-  TRY(print_report_desc(args, report_desc_len));
+  TRY(print_report_desc(args));
   return ZX_OK;
 }
 
@@ -293,13 +241,11 @@ static zx_status_t hid_input_read_report(input_args_t* args, const zx::event& re
 }
 
 static int hid_read_reports(input_args_t* args) {
-  uint16_t max_report_len = 0;
-  ssize_t rc = hid_status(args, &max_report_len);
-  if (rc < 0) {
-    return static_cast<int>(rc);
+  zx_status_t status = print_hid_status(args);
+  if (status != ZX_OK) {
+    return static_cast<int>(status);
   }
 
-  zx_status_t status;
   zx::event report_event;
   auto result = args->sync_client->GetReportsEvent();
   if ((result.status() != ZX_OK) || (result->status != ZX_OK)) {
@@ -310,9 +256,7 @@ static int hid_read_reports(input_args_t* args) {
   }
   report_event = std::move(result->event);
 
-  // Add 1 to the max report length to make room for a Report ID.
-  max_report_len++;
-  std::vector<uint8_t> report(max_report_len);
+  std::vector<uint8_t> report(llcpp::fuchsia::hardware::input::MAX_REPORT_LEN);
   for (uint32_t i = 0; i < args->num_reads; i++) {
     size_t returned_size;
     status =
@@ -416,17 +360,7 @@ int get_report(input_args_t* args) {
 }
 
 int set_report(input_args_t* args) {
-  xprintf("hid: setting report size for id=0x%02x\n", args->report_id);
-
-  auto result = args->sync_client->GetReportSize(args->report_type, args->report_id);
-  if (result.status() != ZX_OK || result->status != ZX_OK) {
-    printf("hid: could not get report (id 0x%02x type %u) size from %s (status=%d, %d)\n",
-           args->report_id, static_cast<uint8_t>(args->report_type), args->devpath, result.status(),
-           result->status);
-    return -1;
-  }
-
-  xprintf("hid: report size=%u, tx payload size=%lu\n", result->size, args->data_size);
+  xprintf("hid: setting report (id=0x%02x payload size=%lu)\n", args->report_id, args->data_size);
 
   std::unique_ptr<uint8_t[]> report(new uint8_t[args->data_size]);
   for (size_t i = 0; i < args->data_size; i++) {

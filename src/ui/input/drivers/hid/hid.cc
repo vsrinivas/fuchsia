@@ -67,18 +67,6 @@ void HidDevice::RemoveHidInstanceFromList(HidInstance* instance) {
   }
 }
 
-zx_status_t HidDevice::GetReportIds(size_t report_ids_size, uint8_t* report_ids, size_t* out_size) {
-  if (report_ids_size < parsed_hid_desc_->rep_count) {
-    *out_size = 0;
-    return ZX_ERR_BUFFER_TOO_SMALL;
-  }
-  for (size_t i = 0; i < parsed_hid_desc_->rep_count; i++) {
-    report_ids[i] = parsed_hid_desc_->report[i].report_id;
-  }
-  *out_size = parsed_hid_desc_->rep_count;
-  return ZX_OK;
-}
-
 size_t HidDevice::GetMaxInputReportSize() {
   size_t size = 0;
   for (size_t i = 0; i < parsed_hid_desc_->rep_count; i++) {

@@ -52,12 +52,7 @@ class HidInstance : public HidInstanceDeviceType,
 
   void GetBootProtocol(GetBootProtocolCompleter::Sync _completer) override;
   void GetDeviceIds(GetDeviceIdsCompleter::Sync _completer) override;
-  void GetReportDescSize(GetReportDescSizeCompleter::Sync _completer) override;
   void GetReportDesc(GetReportDescCompleter::Sync _completer) override;
-  void GetNumReports(GetNumReportsCompleter::Sync _completer) override;
-  void GetReportIds(GetReportIdsCompleter::Sync _completer) override;
-  void GetReportSize(ReportType type, uint8_t id, GetReportSizeCompleter::Sync _completer) override;
-  void GetMaxInputReportSize(GetMaxInputReportSizeCompleter::Sync _completer) override;
   void GetReportsEvent(GetReportsEventCompleter::Sync _completer) override;
   void GetReport(ReportType type, uint8_t id, GetReportCompleter::Sync _completer) override;
   void SetReport(ReportType type, uint8_t id, ::fidl::VectorView<uint8_t> report,

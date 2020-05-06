@@ -74,15 +74,10 @@ class HidDevice : public HidDeviceType,
 
   size_t GetReportDescLen() { return hid_report_desc_.size(); }
   const uint8_t* GetReportDesc() { return hid_report_desc_.data(); }
-  size_t GetNumReports() { return num_reports_; }
-
-  zx_status_t GetReportIds(size_t report_ids_size, uint8_t* report_ids, size_t* out_size);
 
   const char* GetName();
 
  private:
-  // TODO(dgilhooley): Don't hardcode this limit
-  static constexpr size_t kHidMaxReportIds = 32;
 
   zx_status_t ProcessReportDescriptor();
   zx_status_t InitReassemblyBuffer();

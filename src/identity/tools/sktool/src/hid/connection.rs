@@ -61,6 +61,9 @@ pub mod fidl {
     const OUTPUT_REPORT_ID: u8 = 0;
     #[allow(dead_code)]
     const INPUT_REPORT_ID: u8 = 0;
+    // TODO(jsankey): This should be removed because the HID API no longer returns a max packet
+    // size.
+    const MAX_PACKET_LENGTH: u16 = 64;
 
     lazy_static! {
         /// Time to wait before declaring a FIDL call to be failed.
@@ -178,13 +181,7 @@ pub mod fidl {
         }
 
         async fn max_packet_length(&self) -> Result<u16, Error> {
-            self.proxy
-                .get_max_input_report_size()
-                .map_err(|err| format_err!("FIDL error: {:?}", err))
-                .on_timeout(Time::after(*FIDL_TIMEOUT), || {
-                    Err(format_err!("FIDL timeout on GetMaxinputReportSize"))
-                })
-                .await
+            Ok(MAX_PACKET_LENGTH)
         }
     }
 
@@ -197,7 +194,6 @@ pub mod fidl {
         use fuchsia_zircon::AsHandleRef;
         use futures::TryStreamExt;
 
-        const TEST_REPORT_LENGTH: u16 = 99;
         const TEST_REPORT_DESCRIPTOR: [u8; 8] = [0x06, 0xd0, 0xf1, 0x09, 0x01, 0xa1, 0x01, 0x09];
         const TEST_CHANNEL: u32 = 0xfeefbccb;
         const TEST_PACKET: [u8; 9] = [0xfe, 0xef, 0xbc, 0xcb, 0x86, 0x00, 0x02, 0x88, 0x99];
@@ -366,23 +362,9 @@ pub mod fidl {
         }
 
         #[fasync::run_until_stalled(test)]
-        async fn max_packet_length() -> Result<(), Error> {
-            let proxy = valid_mock_device_proxy(|req, _| match req {
-                DeviceRequest::GetMaxInputReportSize { responder } => {
-                    responder.send(TEST_REPORT_LENGTH).expect("failed to send response");
-                }
-                _ => panic!("got unexpected device request."),
-            });
-            let connection = FidlConnection::new(proxy);
-            assert_eq!(connection.max_packet_length().await?, TEST_REPORT_LENGTH);
-            Ok(())
-        }
-
-        #[fasync::run_until_stalled(test)]
         async fn fidl_error() -> Result<(), Error> {
             let connection = FidlConnection::new(invalid_mock_device_proxy());
             connection.report_descriptor().await.expect_err("Should have failed to get descriptor");
-            connection.max_packet_length().await.expect_err("Should have failed to get packet len");
             Ok(())
         }
     }
