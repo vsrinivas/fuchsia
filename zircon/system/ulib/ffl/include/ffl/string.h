@@ -89,7 +89,7 @@ constexpr void String::BasicFormat(Fixed<Integer, FractionalBits> value) {
   // String convert the integral component into the reserved region.
   remaining_value = integral_value;
   do {
-    buffer_[start--] = '0' + static_cast<char>(remaining_value % 10);
+    buffer_[start--] = static_cast<char>('0' + remaining_value % 10);
     remaining_value /= 10;
   } while (remaining_value > 0);
 
@@ -109,7 +109,7 @@ constexpr void String::BasicFormat(Fixed<Integer, FractionalBits> value) {
   do {
     remaining_value &= F::Format::FractionalMask;
     remaining_value *= 10;
-    const char digit = '0' + static_cast<char>(remaining_value >> F::Format::FractionalBits);
+    const char digit = static_cast<char>('0' + (remaining_value >> F::Format::FractionalBits));
     if (digit != '0') {
       last_nonzero = end;
     }
