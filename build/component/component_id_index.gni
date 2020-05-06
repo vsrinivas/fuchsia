@@ -4,11 +4,16 @@
 
 import("//build/config.gni")
 
-# Define a component ID index which maps monikers (component URL + realm path) to component instance IDs.
-# appmgr uses this index to key a component's storage directory to its instance ID.
+# Define a component ID index which maps monikers (component URL + realm path)
+# to component instance IDs.  appmgr uses this index to key a component's
+# storage directory to its instance ID.
 #
-# There may be multiple component_id_index()s in the build, which are merged into a single index in the build and
-# delivered to appmgr using config_data(for=appmgr).
+# There may be multiple component_id_index()s in the build, which are merged
+# into a single index in the build and delivered to appmgr using
+# config_data(for=appmgr).
+#
+# See //docs/development/components/component_id_index.md for more details on
+# how to define a component ID index.
 #
 # Parameters
 #
@@ -35,21 +40,27 @@ template("component_id_index") {
 }
 
 # Produce a config_data() for appmgr containing a merged component ID index.
-# All component ID indices are merged together by transitively traversing `deps`,
-# and a single merged index is supplied to the config_data().
+# All component ID indices are merged together by transitively traversing
+# `deps`, and a single merged index is supplied to the config_data().
 #
-# A target defined from this template must be a (transitive) dependency of config_package().
+# A target defined from this template must be a (transitive) dependency of
+# config_package().
+#
+# For more details on how to include this target in a system assembly, see:
+# //docs/development/components/component_id_index.md
 #
 # Parameters
 #
 #   deps (optional)
 #     A list of deps to traverse to collect component_id_index()s.
+#     //build/images:universe_packages is a good candidate to include as a dep.
 #
 #   public_deps (optional)
 #   testonly (optional)
 #     Usual GN meanings.
 template("component_id_index_config_data") {
-  # Step 1:  Collect a list of index file paths into intermediary file `component_id_index_merge_input_manifest`.
+  # Step 1:  Collect a list of index file paths into intermediary file
+  # `component_id_index_merge_input_manifest`.
   component_id_index_input_manifest_path =
       "${target_gen_dir}/${target_name}_merge_input_manifest"
   component_id_index_merged_inputs = "${target_name}_merged_inputs"
@@ -67,7 +78,8 @@ template("component_id_index_config_data") {
     outputs = [ component_id_index_input_manifest_path ]
   }
 
-  # Step 2: Merge the collected index files (listed in the intermediary file) into 1 index.
+  # Step 2: Merge the collected index files (listed in the intermediary file)
+  # into 1 index.
   component_id_index_merge = "${target_name}_merge"
   component_id_index_merged_index_path =
       "${target_gen_dir}/${target_name}_merged_index.json"

@@ -225,6 +225,26 @@ Additional metadata that is carried in a
 [component manifest](#component-manifest). This is an extension point to the
 [component framework](#component-framework).
 
+### **Moniker** {#moniker}
+
+A moniker identifies a specific component instance in the component tree using a topological path.
+
+A v1 component's moniker is defined as a tuple of (path to the component's [realm][#realm], component URL).
+
+A v2 component's moniker is defined as a path to the component instance in the [component instance tree](#component-instance-tree).
+
+[moniker]: /docs/concepts/components/monikers.md
+
+### *Component Instance Identifier** {#component-instance-id}
+
+A unique, stable identifer for a component instance. The instance id is _the_
+canonical identifier for a component instance. The component runtime uses this
+to key a component's persistent resources, if it has any. While a component
+instance's moniker may change, its instance ID remains the same.
+
+Instance IDs are assigned to component instances using a [component ID
+index](/docs/development/components/component_id_index.md).
+
 ### **Component URL**
 
 A [URL][component-url] that identifies a component, most often used when
