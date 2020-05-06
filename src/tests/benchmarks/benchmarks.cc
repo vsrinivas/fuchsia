@@ -107,42 +107,6 @@ void AddPerfTests(benchmarking::BenchmarksRunner* benchmarks_runner, bool perfco
     benchmarks_runner->AddCustomBenchmark("fidl_roundtrip",
                                           {"/bin/roundtrip_fidl_benchmarks", out_file}, out_file);
   }
-
-  // TODO(PT-181, PT-182): The following input latency benchmarks do not make
-  // an effort to close the graphics application being benchmarked at exit
-  // (the app will continue to run even after the benchmark driver process has
-  // exited).  Because of this, it is important that they run at the end, so
-  // that the residual graphics application is not running during other
-  // benchmarks. The long term plan is to migrate them away from here and into
-  // the e2e testing framework, which is tracked in the TODO bugs.
-
-  // TODO(PT-118): Input latency tests are only currently supported on NUC.
-#if !defined(__aarch64__)
-  // simplest_app
-  {
-    constexpr const char* kLabel = "fuchsia.input_latency.simplest_app";
-    std::string out_file = benchmarks_runner->MakePerfResultsOutputFilename(kLabel);
-    benchmarks_runner->AddCustomBenchmark(
-        kLabel,
-        {"/bin/run",
-         "fuchsia-pkg://fuchsia.com/garnet_input_latency_benchmarks#meta/"
-         "run_simplest_app_benchmark.cmx",
-         "--out_file", out_file, "--benchmark_label", kLabel},
-        out_file);
-  }
-  // yuv_to_image_pipe
-  {
-    constexpr const char* kLabel = "fuchsia.input_latency.yuv_to_image_pipe";
-    std::string out_file = benchmarks_runner->MakePerfResultsOutputFilename(kLabel);
-    benchmarks_runner->AddCustomBenchmark(
-        kLabel,
-        {"/bin/run",
-         "fuchsia-pkg://fuchsia.com/garnet_input_latency_benchmarks#meta/"
-         "run_yuv_to_image_pipe_benchmark.cmx",
-         "--out_file", out_file, "--benchmark_label", kLabel},
-        out_file);
-  }
-#endif
 }
 
 }  // namespace
