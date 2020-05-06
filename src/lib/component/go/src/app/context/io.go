@@ -159,7 +159,7 @@ func (*pprofDirectory) ForEach(fn func(string, Node)) {
 }
 
 type DirectoryWrapper struct {
-	Directory
+	Directory Directory
 }
 
 var _ Node = (*DirectoryWrapper)(nil)
@@ -243,14 +243,14 @@ func (dirState *directoryState) Open(ctx fidl.Context, flags, mode uint32, path 
 	}
 
 	if i := strings.Index(path, slash); i != -1 {
-		if node, ok := dirState.Get(path[:i]); ok {
+		if node, ok := dirState.Directory.Get(path[:i]); ok {
 			node := node.getIO()
 			if dir, ok := node.(fidlio.DirectoryWithCtx); ok {
 				return dir.Open(ctx, flags, mode, path[i+len(slash):], req)
 			}
 			return respond(ctx, flags, req, &zx.Error{Status: zx.ErrNotDir}, node)
 		}
-	} else if node, ok := dirState.Get(path); ok {
+	} else if node, ok := dirState.Directory.Get(path); ok {
 		return node.addConnection(ctx, flags, mode, req)
 	}
 
@@ -295,7 +295,7 @@ func (dirState *directoryState) ReadDirents(ctx fidl.Context, maxOut uint64) (in
 			}
 		}
 		writeFn(dot, dirState)
-		dirState.ForEach(writeFn)
+		dirState.Directory.ForEach(writeFn)
 		dirState.reading = true
 	} else if dirState.dirents.Len() == 0 {
 		status, err := dirState.Rewind(ctx)
@@ -335,7 +335,7 @@ func (dirState *directoryState) Watch(_ fidl.Context, mask uint32, options uint3
 }
 
 type File interface {
-	GetBytes() []byte
+	GetReader() (Reader, uint64)
 }
 
 var _ File = (*pprofFile)(nil)
@@ -344,25 +344,27 @@ type pprofFile struct {
 	p *pprof.Profile
 }
 
-func (p *pprofFile) GetBytes() []byte {
+func (p *pprofFile) GetReader() (Reader, uint64) {
 	var b bytes.Buffer
 	if err := p.p.WriteTo(&b, 0); err != nil {
 		panic(err)
 	}
-	return b.Bytes()
+	return bytes.NewReader(b.Bytes()), uint64(b.Len())
 }
 
 var _ Node = (*FileWrapper)(nil)
 
 type FileWrapper struct {
-	File
+	File File
 }
 
 func (file *FileWrapper) getFile() fidlio.FileWithCtx {
-	buf := file.GetBytes()
-	fState := fileState{FileWrapper: file}
-	fState.Reset(buf)
-	return &fState
+	reader, size := file.File.GetReader()
+	return &fileState{
+		FileWrapper: file,
+		reader:      reader,
+		size:        size,
+	}
 }
 
 func (file *FileWrapper) getIO() fidlio.NodeWithCtx {
@@ -388,11 +390,18 @@ func (file *FileWrapper) addConnection(ctx fidl.Context, flags, mode uint32, req
 
 var _ fidlio.FileWithCtx = (*fileState)(nil)
 
+type Reader interface {
+	io.Reader
+	io.ReaderAt
+	io.Seeker
+}
+
 // TODO(fxb/37419): Remove TransitionalBase after methods landed.
 type fileState struct {
 	*fidlio.FileWithCtxTransitionalBase
 	*FileWrapper
-	bytes.Reader
+	reader Reader
+	size   uint64
 }
 
 func (fState *fileState) Clone(ctx fidl.Context, flags uint32, req fidlio.NodeWithCtxInterfaceRequest) error {
@@ -417,7 +426,7 @@ func (fState *fileState) GetAttr(fidl.Context) (int32, fidlio.NodeAttributes, er
 	return int32(zx.ErrOk), fidlio.NodeAttributes{
 		Mode:        fidlio.ModeTypeFile | uint32(fdio.VtypeIRUSR),
 		Id:          fidlio.InoUnknown,
-		ContentSize: uint64(fState.Size()),
+		ContentSize: fState.size,
 		LinkCount:   1,
 	}, nil
 }
@@ -427,11 +436,11 @@ func (fState *fileState) SetAttr(_ fidl.Context, flags uint32, attributes fidlio
 }
 
 func (fState *fileState) Read(_ fidl.Context, count uint64) (int32, []uint8, error) {
-	if l := uint64(fState.Len()); l < count {
+	if l := fState.size; l < count {
 		count = l
 	}
 	b := make([]byte, count)
-	n, err := fState.Reader.Read(b)
+	n, err := fState.reader.Read(b)
 	if err != nil && err != io.EOF {
 		return 0, nil, err
 	}
@@ -440,11 +449,11 @@ func (fState *fileState) Read(_ fidl.Context, count uint64) (int32, []uint8, err
 }
 
 func (fState *fileState) ReadAt(_ fidl.Context, count uint64, offset uint64) (int32, []uint8, error) {
-	if l := uint64(fState.Size()) - offset; l < count {
+	if l := fState.size - offset; l < count {
 		count = l
 	}
 	b := make([]byte, count)
-	n, err := fState.Reader.ReadAt(b, int64(offset))
+	n, err := fState.reader.ReadAt(b, int64(offset))
 	if err != nil && err != io.EOF {
 		return 0, nil, err
 	}
@@ -461,7 +470,7 @@ func (fState *fileState) WriteAt(_ fidl.Context, data []uint8, offset uint64) (i
 }
 
 func (fState *fileState) Seek(_ fidl.Context, offset int64, start fidlio.SeekOrigin) (int32, uint64, error) {
-	n, err := fState.Reader.Seek(offset, int(start))
+	n, err := fState.reader.Seek(offset, int(start))
 	return int32(zx.ErrOk), uint64(n), err
 }
 
