@@ -76,3 +76,7 @@ func (d *ctlDirectory) Unlink(path string) error {
 
 	return d.unsupportedDirectory.Unlink(path)
 }
+
+func (d *ctlDirectory) Sync() error {
+	return d.fs.blobfs.Sync()
+}

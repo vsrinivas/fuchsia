@@ -40,6 +40,11 @@ func (m *Manager) OpenFile(root string, flags int, mode uint32) (*os.File, error
 	return iou.OpenFrom(m.dir, root, flags, mode)
 }
 
+// Sync flushes cached packages.
+func (m *Manager) Sync() error {
+	return m.dir.Sync()
+}
+
 // Channel returns an the FDIO directory handle for the blobfs root
 func (m *Manager) Channel() zx.Channel {
 	return zx.Channel(m.dir.Handles()[0])

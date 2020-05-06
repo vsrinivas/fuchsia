@@ -337,6 +337,17 @@ func TestListCtl(t *testing.T) {
 	}
 }
 
+func TestSync(t *testing.T) {
+	d, err := iou.OpenFrom(pkgfsDir, "ctl", os.O_RDONLY|syscall.O_DIRECTORY, 0777)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = d.Sync(); err != nil {
+		t.Fatal(err)
+	}
+	d.Close()
+}
+
 func TestTriggerGC(t *testing.T) {
 	// always perform the operation on a dedicated channel, so that pkgfsDir is not
 	// closed.

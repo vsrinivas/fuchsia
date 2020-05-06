@@ -17,6 +17,17 @@ pub enum GcError {
     UnlinkError(Status),
 }
 
+/// An error encountered while syncing
+#[derive(Debug, Error)]
+#[allow(missing_docs)]
+pub enum SyncError {
+    #[error("while sending request: {}", _0)]
+    Fidl(fidl::Error),
+
+    #[error("sync failed with status: {}", _0)]
+    SyncError(Status),
+}
+
 /// An open handle to /pkgfs/ctl
 #[derive(Debug, Clone)]
 pub struct Client {
@@ -52,20 +63,56 @@ impl Client {
             Err(err) => Err(GcError::Fidl(err)),
         }
     }
+
+    /// Performs a sync
+    pub async fn sync(&self) -> Result<(), SyncError> {
+        match self.proxy.sync().await.map(Status::from_raw) {
+            Ok(Status::OK) => Ok(()),
+            Ok(status) => Err(SyncError::SyncError(status)),
+            Err(err) => Err(SyncError::Fidl(err)),
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use {super::*, matches::assert_matches, pkgfs_ramdisk::PkgfsRamdisk};
+    use {
+        super::*,
+        fidl::endpoints::create_proxy_and_stream,
+        fidl_fuchsia_io::{DirectoryMarker, DirectoryRequest},
+        fuchsia_async as fasync,
+        futures_util::stream::TryStreamExt,
+        matches::assert_matches,
+    };
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fasync::run_singlethreaded(test)]
     async fn gc() {
-        let pkgfs = PkgfsRamdisk::start().unwrap();
-        let root = pkgfs.root_dir_proxy().unwrap();
-        let client = Client::open_from_pkgfs_root(&root).unwrap();
+        let (proxy, mut stream) = create_proxy_and_stream::<DirectoryMarker>().unwrap();
+        fasync::spawn(async move {
+            match stream.try_next().await.unwrap().unwrap() {
+                DirectoryRequest::Unlink { path, responder } => {
+                    assert_eq!(path, "garbage");
+                    responder.send(Status::OK.into_raw()).unwrap();
+                }
+                other => panic!("unexpected request: {:?}", other),
+            }
+        });
 
-        assert_matches!(client.gc().await, Ok(()));
+        assert_matches!(Client { proxy }.gc().await, Ok(()));
+    }
 
-        pkgfs.stop().await.unwrap();
+    #[fasync::run_singlethreaded(test)]
+    async fn sync() {
+        let (proxy, mut stream) = create_proxy_and_stream::<DirectoryMarker>().unwrap();
+        fasync::spawn(async move {
+            match stream.try_next().await.unwrap().unwrap() {
+                DirectoryRequest::Sync { responder } => {
+                    responder.send(Status::OK.into_raw()).unwrap();
+                }
+                other => panic!("unexpected request: {:?}", other),
+            }
+        });
+
+        assert_matches!(Client { proxy }.sync().await, Ok(()));
     }
 }
