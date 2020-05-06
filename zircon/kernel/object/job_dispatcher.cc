@@ -197,7 +197,7 @@ bool JobDispatcher::AddChildJob(const fbl::RefPtr<JobDispatcher>& job) {
 
   // This can only be called once, the job should not already be part
   // of any job tree.
-  DEBUG_ASSERT(!job->dll_job_raw_.InContainer());
+  DEBUG_ASSERT(!fbl::InContainer<JobDispatcher::RawListTag>(*job));
   DEBUG_ASSERT(neighbor != job.get());
 
   jobs_.push_back(job.get());
@@ -214,8 +214,9 @@ void JobDispatcher::RemoveChildProcess(ProcessDispatcher* process) {
     Guard<Mutex> guard{get_lock()};
     // The process dispatcher can call us in its destructor, Kill(),
     // or RemoveThread().
-    if (!ProcessDispatcher::JobListTraitsRaw::node_state(*process).InContainer())
+    if (!fbl::InContainer<ProcessDispatcher::RawJobListTag>(*process)) {
       return;
+    }
     procs_.erase(*process);
     --process_count_;
     UpdateSignalsDecrementLocked();
@@ -232,8 +233,10 @@ void JobDispatcher::RemoveChildJob(JobDispatcher* job) {
   bool should_die = false;
   {
     Guard<Mutex> guard{get_lock()};
-    if (!JobDispatcher::ListTraitsRaw::node_state(*job).InContainer())
+    if (!fbl::InContainer<JobDispatcher::RawListTag>(*job)) {
       return;
+    }
+
     jobs_.erase(*job);
     --job_count_;
     UpdateSignalsDecrementLocked();

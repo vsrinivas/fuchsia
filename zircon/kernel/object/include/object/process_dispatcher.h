@@ -33,28 +33,28 @@
 
 class JobDispatcher;
 
+namespace internal {
+// Tag for a ProcessDispatcher's parent JobDispatcher's raw job list.
+struct ProcessDispatcherRawJobListTag {};
+// Tag for a ProcessDispatcher's parent JobDispatcher's job list.
+struct ProcessDispatcherJobListTag {};
+}  // namespace internal
+
 class ProcessDispatcher final
-    : public SoloDispatcher<ProcessDispatcher, ZX_DEFAULT_PROCESS_RIGHTS> {
+    : public SoloDispatcher<ProcessDispatcher, ZX_DEFAULT_PROCESS_RIGHTS>,
+      public fbl::ContainableBaseClasses<
+          fbl::TaggedDoublyLinkedListable<ProcessDispatcher*,
+                                          internal::ProcessDispatcherRawJobListTag>,
+          fbl::TaggedSinglyLinkedListable<fbl::RefPtr<ProcessDispatcher>,
+                                          internal::ProcessDispatcherJobListTag>> {
  public:
+  using RawJobListTag = internal::ProcessDispatcherRawJobListTag;
+  using JobListTag = internal::ProcessDispatcherJobListTag;
+
   static zx_status_t Create(fbl::RefPtr<JobDispatcher> job, ktl::string_view name, uint32_t flags,
                             KernelHandle<ProcessDispatcher>* handle, zx_rights_t* rights,
                             KernelHandle<VmAddressRegionDispatcher>* root_vmar_handle,
                             zx_rights_t* root_vmar_rights);
-
-  // Traits to belong in the parent job's raw list.
-  struct JobListTraitsRaw {
-    static fbl::DoublyLinkedListNodeState<ProcessDispatcher*>& node_state(ProcessDispatcher& obj) {
-      return obj.dll_job_raw_;
-    }
-  };
-
-  // Traits to belong in the parent job's list.
-  struct JobListTraits {
-    static fbl::SinglyLinkedListNodeState<fbl::RefPtr<ProcessDispatcher>>& node_state(
-        ProcessDispatcher& obj) {
-      return obj.dll_job_;
-    }
-  };
 
   static ProcessDispatcher* GetCurrent() {
     ThreadDispatcher* current = ThreadDispatcher::GetCurrent();
@@ -438,10 +438,6 @@ class ProcessDispatcher final
   //
   // It is critical that this field is immutable as it will be accessed without synchronization.
   const JobPolicy policy_;
-
-  // The process can belong to either of these lists independently.
-  fbl::DoublyLinkedListNodeState<ProcessDispatcher*> dll_job_raw_;
-  fbl::SinglyLinkedListNodeState<fbl::RefPtr<ProcessDispatcher>> dll_job_;
 
   uint32_t handle_rand_ = 0;
 

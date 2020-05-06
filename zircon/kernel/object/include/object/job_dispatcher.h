@@ -42,6 +42,11 @@ class JobEnumerator {
   virtual ~JobEnumerator() = default;
 };
 
+namespace internal {
+struct JobDispatcherRawListTag {};  // Tag for a JobDispatcher's parent's raw job list.
+struct JobDispatcherListTag {};     // Tag for a JobDispatcher's parent's job list.
+}  // namespace internal
+
 // This class implements the Job object kernel interface. Each Job has a parent
 // Job and zero or more child Jobs and zero or more Child processes. This
 // creates a DAG (tree) that connects every living task in the system.
@@ -61,22 +66,14 @@ class JobEnumerator {
 // and job count reaches zero. The root job is not exposed to user mode, instead
 // the single child Job of the root job is given to the userboot process.
 class JobDispatcher final
-    : public SoloDispatcher<JobDispatcher, ZX_DEFAULT_JOB_RIGHTS, 0u, lockdep::LockFlagsNestable> {
+    : public SoloDispatcher<JobDispatcher, ZX_DEFAULT_JOB_RIGHTS, 0u, lockdep::LockFlagsNestable>,
+      public fbl::ContainableBaseClasses<
+          fbl::TaggedDoublyLinkedListable<JobDispatcher*, internal::JobDispatcherRawListTag>,
+          fbl::TaggedSinglyLinkedListable<fbl::RefPtr<JobDispatcher>,
+                                          internal::JobDispatcherListTag>> {
  public:
-  // Traits to belong to the parent's raw job list.
-  struct ListTraitsRaw {
-    static fbl::DoublyLinkedListNodeState<JobDispatcher*>& node_state(JobDispatcher& obj) {
-      return obj.dll_job_raw_;
-    }
-  };
-
-  // Traits to belong to the parent's job list.
-  struct ListTraits {
-    static fbl::SinglyLinkedListNodeState<fbl::RefPtr<JobDispatcher>>& node_state(
-        JobDispatcher& obj) {
-      return obj.dll_job_;
-    }
-  };
+  using RawListTag = internal::JobDispatcherRawListTag;
+  using ListTag = internal::JobDispatcherListTag;
 
   static fbl::RefPtr<JobDispatcher> CreateRootJob();
   static zx_status_t Create(uint32_t flags, fbl::RefPtr<JobDispatcher> parent,
@@ -207,9 +204,6 @@ class JobDispatcher final
   const fbl::RefPtr<JobDispatcher> parent_;
   const uint32_t max_height_;
 
-  fbl::DoublyLinkedListNodeState<JobDispatcher*> dll_job_raw_;
-  fbl::SinglyLinkedListNodeState<fbl::RefPtr<JobDispatcher>> dll_job_;
-
   // The user-friendly job name. For debug purposes only. That
   // is, there is no mechanism to mint a handle to a job via this name.
   fbl::Name<ZX_MAX_NAME_LEN> name_;
@@ -222,13 +216,13 @@ class JobDispatcher final
   // TODO(cpu): The OOM kill system is incomplete, see ZX-2731 for details.
   bool kill_on_oom_ TA_GUARDED(get_lock());
 
-  using RawJobList = fbl::DoublyLinkedList<JobDispatcher*, ListTraitsRaw>;
-  using RawProcessList =
-      fbl::DoublyLinkedList<ProcessDispatcher*, ProcessDispatcher::JobListTraitsRaw>;
+  using RawJobList = fbl::TaggedDoublyLinkedList<JobDispatcher*, RawListTag>;
+  using JobList = fbl::TaggedSinglyLinkedList<fbl::RefPtr<JobDispatcher>, ListTag>;
 
+  using RawProcessList =
+      fbl::TaggedDoublyLinkedList<ProcessDispatcher*, ProcessDispatcher::RawJobListTag>;
   using ProcessList =
-      fbl::SinglyLinkedList<fbl::RefPtr<ProcessDispatcher>, ProcessDispatcher::JobListTraits>;
-  using JobList = fbl::SinglyLinkedList<fbl::RefPtr<JobDispatcher>, ListTraits>;
+      fbl::TaggedSinglyLinkedList<fbl::RefPtr<ProcessDispatcher>, ProcessDispatcher::JobListTag>;
 
   // Access to the pointers in these lists, especially any promotions to
   // RefPtr, must be handled very carefully, because the children can die
