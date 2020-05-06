@@ -7,6 +7,7 @@ group("intl") {
   public_deps = [
     "intl_services",
     "strings_to_fidl",
+    "strings_to_json",
   ]
 }
 
@@ -15,6 +16,7 @@ group("tests") {
   public_deps = [
     "intl_services:tests",
     "strings_to_fidl:tests",
+    "strings_to_json:tests",
   ]
 }
 

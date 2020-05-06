@@ -1,0 +1,42 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/host.gni")
+import("//build/rust/rustc_binary.gni")
+
+group("strings_to_json") {
+  testonly = true
+  public_deps = [
+    ":install",
+    ":tests",
+  ]
+}
+
+group("tests") {
+  testonly = true
+
+  public_deps = [ ":strings_to_json_bin_test($host_toolchain)" ]
+}
+
+install_host_tools("install") {
+  deps = [ ":strings_to_json_bin($host_toolchain)" ]
+  outputs = [ "strings_to_json" ]
+}
+
+if (host_toolchain == current_toolchain) {
+  rustc_binary("strings_to_json_bin") {
+    name = "strings_to_json"
+    with_unit_tests = true
+    edition = "2018"
+    deps = [
+      "//src/lib/intl/strings:lib",
+      "//third_party/rust_crates:anyhow",
+      "//third_party/rust_crates:structopt",
+      "//third_party/rust_crates:thiserror",
+      "//third_party/rust_crates:xml-rs",
+    ]
+
+    test_deps = [ "//third_party/rust_crates:tempfile" ]
+  }
+}
