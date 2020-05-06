@@ -113,7 +113,7 @@ TEST(DmaBufferTests, InitWithCacheDisabled) {
   ASSERT_OK(PagedBuffer::Create(kFakeBti, ZX_PAGE_SIZE, false, &buffer));
   auto& state = syscall_state.vmos.begin()->second;
   ASSERT_EQ(state.alignment_log2, 0);
-  ASSERT_EQ(state.cache_policy, ZX_CACHE_POLICY_UNCACHED);
+  ASSERT_EQ(state.cache_policy, ZX_CACHE_POLICY_UNCACHED_DEVICE);
   ASSERT_EQ(state.size, ZX_PAGE_SIZE);
   ASSERT_EQ(buffer->virt(), state.virt);
   ASSERT_EQ(buffer->size(), state.size);

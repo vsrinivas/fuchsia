@@ -8,7 +8,7 @@
 
 namespace dma_buffer {
 
-__EXPORT zx_status_t ContiguousBuffer::Create(const zx::bti& bti, size_t size,
+__EXPORT __WEAK zx_status_t ContiguousBuffer::Create(const zx::bti& bti, size_t size,
                                               uint32_t alignment_log2,
                                               std::optional<ContiguousBuffer>* out) {
   zx::vmo vmo;
@@ -34,9 +34,9 @@ __EXPORT zx_status_t ContiguousBuffer::Create(const zx::bti& bti, size_t size,
   return ZX_OK;
 }
 
-__EXPORT ContiguousBuffer::~ContiguousBuffer() {}
+__EXPORT __WEAK ContiguousBuffer::~ContiguousBuffer() {}
 
-__EXPORT zx_status_t PagedBuffer::Create(const zx::bti& bti, size_t size, bool is_cached,
+__EXPORT __WEAK zx_status_t PagedBuffer::Create(const zx::bti& bti, size_t size, bool is_cached,
                                          std::optional<PagedBuffer>* out) {
   zx::vmo vmo;
   zx_status_t status;
@@ -45,7 +45,7 @@ __EXPORT zx_status_t PagedBuffer::Create(const zx::bti& bti, size_t size, bool i
     return status;
   }
   if (!is_cached) {
-    status = vmo.set_cache_policy(ZX_CACHE_POLICY_UNCACHED);
+    status = vmo.set_cache_policy(ZX_CACHE_POLICY_UNCACHED_DEVICE);
   }
   if (status != ZX_OK) {
     return status;
@@ -72,6 +72,6 @@ __EXPORT zx_status_t PagedBuffer::Create(const zx::bti& bti, size_t size, bool i
   return ZX_OK;
 }
 
-__EXPORT PagedBuffer::~PagedBuffer() {}
+__EXPORT __WEAK PagedBuffer::~PagedBuffer() {}
 
 }  // namespace dma_buffer

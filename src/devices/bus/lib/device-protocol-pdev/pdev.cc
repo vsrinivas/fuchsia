@@ -19,7 +19,7 @@ void PDev::ShowInfo() {
   }
 }
 
-zx_status_t PDev::MapMmio(uint32_t index, std::optional<MmioBuffer>* mmio) {
+__WEAK zx_status_t PDev::MapMmio(uint32_t index, std::optional<MmioBuffer>* mmio) {
   pdev_mmio_t pdev_mmio;
 
   zx_status_t status = GetMmio(index, &pdev_mmio);
