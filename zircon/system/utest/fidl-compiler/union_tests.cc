@@ -309,9 +309,8 @@ union Foo {
 
 )FIDL");
   ASSERT_FALSE(library.Compile());
-  ASSERT_EQ(library.errors().size(), 2u);
-  ASSERT_ERR(library.errors().at(0), fidl::ErrUnexpectedTokenOfKind);
-  ASSERT_ERR(library.errors().at(1), fidl::ErrMissingOrdinalBeforeType);
+  ASSERT_EQ(library.errors().size(), 1u);
+  ASSERT_ERR(library.errors().at(0), fidl::ErrDefaultsOnUnionsNotSupported);
 
   END_TEST;
 }

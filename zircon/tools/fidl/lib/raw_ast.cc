@@ -286,6 +286,9 @@ void UnionMember::Accept(TreeVisitor* visitor) const {
   if (maybe_used != nullptr) {
     visitor->OnTypeConstructor(maybe_used->type_ctor);
     visitor->OnIdentifier(maybe_used->identifier);
+    if (maybe_used->maybe_default_value != nullptr) {
+      visitor->OnConstant(maybe_used->maybe_default_value);
+    }
   }
 }
 

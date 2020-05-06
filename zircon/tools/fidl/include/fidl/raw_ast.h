@@ -579,6 +579,8 @@ struct TableMember final : public SourceElement {
           attributes(std::move(attributes)) {}
     std::unique_ptr<TypeConstructor> type_ctor;
     std::unique_ptr<Identifier> identifier;
+    // We parse default values on union members so that we can give precise
+    // errors later in the compiler, but defaults are not supported
     std::unique_ptr<Constant> maybe_default_value;
     std::unique_ptr<AttributeList> attributes;
   };
@@ -607,11 +609,12 @@ class UnionMember final : public SourceElement {
  public:
   UnionMember(SourceElement const& element, std::unique_ptr<Ordinal32> ordinal,
               std::unique_ptr<TypeConstructor> type_ctor, std::unique_ptr<Identifier> identifier,
+              std::unique_ptr<Constant> maybe_default_value,
               std::unique_ptr<AttributeList> attributes)
       : SourceElement(element),
         ordinal(std::move(ordinal)),
         maybe_used(std::make_unique<Used>(std::move(type_ctor), std::move(identifier),
-                                          std::move(attributes))) {}
+                                          std::move(maybe_default_value), std::move(attributes))) {}
 
   UnionMember(SourceElement const& element, std::unique_ptr<Ordinal32> ordinal)
       : SourceElement(element), ordinal(std::move(ordinal)) {}
@@ -623,12 +626,16 @@ class UnionMember final : public SourceElement {
   // A used member is not 'reserved'
   struct Used {
     Used(std::unique_ptr<TypeConstructor> type_ctor, std::unique_ptr<Identifier> identifier,
-         std::unique_ptr<AttributeList> attributes)
+         std::unique_ptr<Constant> maybe_default_value, std::unique_ptr<AttributeList> attributes)
         : type_ctor(std::move(type_ctor)),
           identifier(std::move(identifier)),
+          maybe_default_value(std::move(maybe_default_value)),
           attributes(std::move(attributes)) {}
     std::unique_ptr<TypeConstructor> type_ctor;
     std::unique_ptr<Identifier> identifier;
+    // We parse default values on union members so that we can give precise
+    // errors later in the compiler, but defaults are not supported
+    std::unique_ptr<Constant> maybe_default_value;
     std::unique_ptr<AttributeList> attributes;
   };
   std::unique_ptr<Used> maybe_used;

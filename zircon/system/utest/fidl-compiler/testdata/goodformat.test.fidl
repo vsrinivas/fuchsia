@@ -65,6 +65,10 @@ flexible union MyExplicitXUnion {
     3: int32 y;
 };
 
+union MyUnion {
+    1: string default_value = "Default Value";
+};
+
 /// Doc comments
 /// of multiple
 /// lines
@@ -96,6 +100,10 @@ table Table3 {
     /// Multiline
     /// doc comments should
     1: int64 indent_correctly;
+};
+
+table Table4 {
+    1: int64 default = 0;
 };
 
 // This { should } not be indented

@@ -1189,9 +1189,18 @@ std::unique_ptr<raw::UnionMember> Parser::ParseUnionMember() {
   if (!Ok())
     return Fail();
 
+  std::unique_ptr<raw::Constant> maybe_default_value;
+  if (MaybeConsumeToken(OfKind(Token::Kind::kEqual))) {
+    if (!Ok())
+      return Fail();
+    maybe_default_value = ParseConstant();
+    if (!Ok())
+      return Fail();
+  }
+
   return std::make_unique<raw::UnionMember>(scope.GetSourceElement(), std::move(ordinal),
                                             std::move(type_ctor), std::move(identifier),
-                                            std::move(attributes));
+                                            std::move(maybe_default_value), std::move(attributes));
 }
 
 std::unique_ptr<raw::UnionDeclaration> Parser::ParseUnionDeclaration(

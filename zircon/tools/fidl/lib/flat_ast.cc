@@ -1772,7 +1772,10 @@ void Library::ConsumeUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> uni
       std::unique_ptr<TypeConstructor> type_ctor;
       if (!ConsumeTypeConstructor(std::move(member->maybe_used->type_ctor), span, &type_ctor))
         return;
-
+      if (member->maybe_used->maybe_default_value) {
+        const auto default_value = member->maybe_used->maybe_default_value.get();
+        error_reporter_->ReportError(ErrDefaultsOnUnionsNotSupported, default_value->span());
+      }
       if (type_ctor->nullability != types::Nullability::kNonnullable) {
         Fail(ErrNullableUnionMember, member->span());
         return;
