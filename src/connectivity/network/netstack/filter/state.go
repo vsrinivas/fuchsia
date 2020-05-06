@@ -59,9 +59,6 @@ func (s *State) String() string {
 const (
 	TCPMaxAckWindow  = 65535 + 1500 // Defined as slightly larger than the max TCP data length (65535).
 	TCPMaxZWPDataLen = 1            // Max data length we expect for TCP Zero Window Probe.
-
-	icmpIDOffset  = 4
-	icmpIDMinSize = 6
 )
 
 const (
@@ -381,8 +378,10 @@ func (ss *States) createState(dir Direction, nic tcpip.NICID, transProto tcpip.T
 		}
 		dataLen = payloadLength - 8 // ICMP header size is 8.
 		var id uint16
-		if l := len(transportHeader); l >= icmpIDMinSize {
-			id = binary.BigEndian.Uint16(transportHeader[icmpIDOffset:])
+		if len(transportHeader) > 4 {
+			id = binary.BigEndian.Uint16(transportHeader[4:])
+		} else if len(transportHeader)+payload.Size() > 4 {
+			id = binary.BigEndian.Uint16(payload.First()[4-len(transportHeader):])
 		}
 		srcPort = id
 		dstPort = id
@@ -578,10 +577,12 @@ func (ss *States) findStateICMPv4(dir Direction, netProto tcpip.NetworkProtocolN
 	} else {
 		dataLen := payloadLength - 8 // ICMP header size is 8.
 
-		// ICMP query/reply message.
 		var id uint16
-		if l := len(transportHeader); l >= icmpIDMinSize {
-			id = binary.BigEndian.Uint16(transportHeader[icmpIDOffset:])
+		// ICMP query/reply message.
+		if len(transportHeader) > 4 {
+			id = binary.BigEndian.Uint16(transportHeader[4:])
+		} else if len(transportHeader)+payload.Size() > 4 {
+			id = binary.BigEndian.Uint16(payload.First()[4-len(transportHeader):])
 		}
 		s := ss.getState(dir, transProto, srcAddr, id, dstAddr, id)
 		if s == nil {

@@ -400,11 +400,10 @@ func TestDHCP(t *testing.T) {
 func mustMsgType(t *testing.T, b stack.PacketBuffer) dhcpMsgType {
 	t.Helper()
 
-	h := hdr(b.Data.ToView())
+	h := hdr(b.Data.First())
 	if !h.isValid() {
 		t.Fatalf("invalid header: %s", h)
 	}
-
 	opts, err := h.options()
 	if err != nil {
 		t.Fatalf("invalid header: %s, %s", err, h)
@@ -720,7 +719,7 @@ func mustCloneWithNewMsgType(t *testing.T, b stack.PacketBuffer, msgType dhcpMsg
 	t.Helper()
 
 	// Create a deep copy of the DHCP header from `b`, so we don't mutate the original.
-	h := hdr(append([]byte(nil), b.Data.ToView()...))
+	h := hdr(append([]byte(nil), b.Data.First()...))
 	opts, err := h.options()
 	if err != nil {
 		t.Fatalf("failed to get options from header: %s", err)

@@ -15,10 +15,7 @@ import (
 
 // expiringDNSServerState is the state for an expiring DNS server.
 type expiringDNSServerState struct {
-	// Timer to invalidate a DNS server.
-	//
-	// May not be nil.
-	timer *tcpip.CancellableTimer
+	timer tcpip.CancellableTimer
 }
 
 /// Server is a DNS server with an address and configuration source.
@@ -249,7 +246,7 @@ func (d *serversConfig) UpdateNdpServers(servers []tcpip.FullAddress, lifetime t
 				// We do not yet have the server and it has a non-zero lifetime.
 				s := s
 				state = expiringDNSServerState{
-					timer: tcpip.NewCancellableTimer(&d.mu, func() {
+					timer: tcpip.MakeCancellableTimer(&d.mu, func() {
 						// Clear the cache of DNS servers.
 						d.mu.serversCache = nil
 						delete(d.mu.ndpServers, s)

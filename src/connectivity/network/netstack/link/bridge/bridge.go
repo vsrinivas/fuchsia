@@ -3,6 +3,7 @@
 package bridge
 
 import (
+	"fmt"
 	"hash/fnv"
 	"math"
 	"sort"
@@ -270,10 +271,16 @@ func (ep *Endpoint) DeliverNetworkPacket(rxEP stack.LinkEndpoint, srcLinkAddr, d
 	r := stack.Route{LocalLinkAddress: srcLinkAddr, RemoteLinkAddress: dstLinkAddr, NetProto: protocol}
 
 	// The contract of WritePacket differs from that of DeliverNetworkPacket.
-	// WritePacket expects Header to contain enough bytes for the LinkEndpoint's
-	// headers, whereas DeliverNetworkPacket only expects Data to be populated.
+	// WritePacket treats Header and Data as disjoint buffers;
+	// DeliverNetworkPacket expects Data to contain the full packet, including
+	// any Header bytes if they are present.
 	outPkt := pkt.Clone()
-	outPkt.Header = buffer.NewPrependable(int(ep.MaxHeaderLength()))
+	header := outPkt.Data.First()
+	outPkt.Data.RemoveFirst()
+	outPkt.Header = buffer.NewPrependable(int(ep.MaxHeaderLength()) + len(header))
+	if n := copy(outPkt.Header.Prepend(len(header)), header); n != len(header) {
+		panic(fmt.Sprintf("copied %d/%d header bytes", n, len(header)))
+	}
 
 	// TODO(NET-690): Learn which destinations are on which links and restrict transmission, like a bridge.
 	rxaddr := rxEP.LinkAddress()

@@ -10,9 +10,8 @@ package filter
 import (
 	"sync/atomic"
 
-	"netstack/packetbuffer"
-
 	"gvisor.dev/gvisor/pkg/tcpip"
+	"gvisor.dev/gvisor/pkg/tcpip/buffer"
 	"gvisor.dev/gvisor/pkg/tcpip/stack"
 )
 
@@ -50,24 +49,19 @@ func (e *Endpoint) IsEnabled() bool {
 
 // DeliverNetworkPacket implements stack.NetworkDispatcher.
 func (e *Endpoint) DeliverNetworkPacket(linkEP stack.LinkEndpoint, dstLinkAddr, srcLinkAddr tcpip.LinkAddress, protocol tcpip.NetworkProtocolNumber, pkt stack.PacketBuffer) {
-	if atomic.LoadUint32(&e.enabled) == 0 {
-		e.dispatcher.DeliverNetworkPacket(e, dstLinkAddr, srcLinkAddr, protocol, pkt)
-		return
-	}
+	if atomic.LoadUint32(&e.enabled) == 1 {
+		pkt := pkt.Clone()
+		hdr := pkt.Header
+		if hdr.UsedLength() == 0 {
+			hdr = buffer.NewPrependableFromView(pkt.Data.First())
+			pkt.Data.RemoveFirst()
+		}
 
-	// The filter expects the packet's header to be in the packet buffer's header.
-	//
-	// Since we are delivering the packet to a NetworkDispatcher, we do not need
-	// to allocate bytes for a LinkEndpoint's header.
-	//
-	// TODO(50424): Support using a buffer.VectorisedView when parsing packets
-	// so we don't need to create a single view here.
-	packetbuffer.EnsurePopulatedHeader(&pkt, 0)
-	if e.filter.Run(Incoming, protocol, pkt.Header, pkt.Data) != Pass {
-		return
+		if e.filter.Run(Incoming, protocol, hdr, pkt.Data) != Pass {
+			return
+		}
 	}
-
-	e.dispatcher.DeliverNetworkPacket(e, dstLinkAddr, srcLinkAddr, protocol, packetbuffer.OutboundToInbound(pkt))
+	e.dispatcher.DeliverNetworkPacket(e, dstLinkAddr, srcLinkAddr, protocol, pkt)
 }
 
 // Attach implements stack.LinkEndpoint.
@@ -78,21 +72,10 @@ func (e *Endpoint) Attach(dispatcher stack.NetworkDispatcher) {
 
 // WritePacket implements stack.LinkEndpoint.
 func (e *Endpoint) WritePacket(r *stack.Route, gso *stack.GSO, protocol tcpip.NetworkProtocolNumber, pkt stack.PacketBuffer) *tcpip.Error {
-	if atomic.LoadUint32(&e.enabled) == 0 {
-		return e.LinkEndpoint.WritePacket(r, gso, protocol, pkt)
+	if atomic.LoadUint32(&e.enabled) == 1 && e.filter.Run(Outgoing, protocol, pkt.Header, pkt.Data) != Pass {
+		return nil
 	}
-
-	// The filter expects the packet's header to be in the packet buffer's
-	// header.
-	//
-	// TODO(50424): Support using a buffer.VectorisedView when parsing packets
-	// so we don't need to create a single view here.
-	packetbuffer.EnsurePopulatedHeader(&pkt, int(e.LinkEndpoint.MaxHeaderLength()))
-	if e.filter.Run(Outgoing, protocol, pkt.Header, pkt.Data) == Pass {
-		return e.LinkEndpoint.WritePacket(r, gso, protocol, pkt)
-	}
-
-	return nil
+	return e.LinkEndpoint.WritePacket(r, gso, protocol, pkt)
 }
 
 // WritePackets implements stack.LinkEndpoint.
@@ -100,20 +83,13 @@ func (e *Endpoint) WritePackets(r *stack.Route, gso *stack.GSO, pkts stack.Packe
 	if atomic.LoadUint32(&e.enabled) == 0 {
 		return e.LinkEndpoint.WritePackets(r, gso, pkts, protocol)
 	}
-
 	var filtered stack.PacketBufferList
 	for pkt := pkts.Front(); pkt != nil; pkt = pkt.Next() {
-		// The filter expects the packet's header to be in the packet buffer's
-		// header.
-		//
-		// TODO(50424): Support using a buffer.VectorisedView when parsing packets
-		// so we don't need to create a single view here.
-		packetbuffer.EnsurePopulatedHeader(pkt, int(e.LinkEndpoint.MaxHeaderLength()))
-		if e.filter.Run(Outgoing, protocol, pkt.Header, pkt.Data) == Pass {
-			filtered.PushBack(pkt)
+		if e.filter.Run(Outgoing, protocol, pkt.Header, pkt.Data) != Pass {
+			continue
 		}
+		filtered.PushBack(pkt)
 	}
-
 	return e.LinkEndpoint.WritePackets(r, gso, filtered, protocol)
 }
 
