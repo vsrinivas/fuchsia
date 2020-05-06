@@ -39,6 +39,10 @@ import("//build/sdk/sdk_atom.gni")
 #     Whether the sources should be exposed as a static library.
 #     This is mostly used in the transition of Zircon libraries to the GN build.
 #     Defaults to false.
+#
+#   non_sdk_deps (optional)
+#     List of dependencies that should not be reflected in SDKs.
+#     Mostly useful for code generation.
 
 template("sdk_source_set") {
   assert(defined(invoker.category), "Must define an SDK category")
@@ -66,6 +70,7 @@ template("sdk_source_set") {
                              "api",
                              "category",
                              "include_base",
+                             "non_sdk_deps",
                              "sdk_name",
                              "source_dir",
                            ])
@@ -78,16 +83,21 @@ template("sdk_source_set") {
   # Identify dependencies and their metadata files.
   sdk_metas = []
   sdk_deps = []
+  all_deps = []
+  if (defined(invoker.deps)) {
+    all_deps += invoker.deps
+  }
   if (defined(invoker.public_deps)) {
-    foreach(dep, invoker.public_deps) {
-      full_label = get_label_info(dep, "label_no_toolchain")
-      sdk_dep = "${full_label}_sdk"
-      sdk_deps += [ sdk_dep ]
+    all_deps += invoker.public_deps
+  }
+  foreach(dep, all_deps) {
+    full_label = get_label_info(dep, "label_no_toolchain")
+    sdk_dep = "${full_label}_sdk"
+    sdk_deps += [ sdk_dep ]
 
-      gen_dir = get_label_info(sdk_dep, "target_gen_dir")
-      name = get_label_info(sdk_dep, "name")
-      sdk_metas += [ rebase_path("$gen_dir/$name.meta.json") ]
-    }
+    gen_dir = get_label_info(sdk_dep, "target_gen_dir")
+    name = get_label_info(sdk_dep, "name")
+    sdk_metas += [ rebase_path("$gen_dir/$name.meta.json") ]
   }
 
   # Sort headers vs. sources.
@@ -212,8 +222,8 @@ template("sdk_source_set") {
 
     # Explicitly add non-public dependencies, in case some of the source files
     # are generated.
-    if (defined(invoker.deps)) {
-      non_sdk_deps += invoker.deps
+    if (defined(invoker.non_sdk_deps)) {
+      non_sdk_deps += invoker.non_sdk_deps
     }
   }
 }

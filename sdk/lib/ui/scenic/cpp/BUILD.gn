@@ -41,7 +41,7 @@ sdk_source_set("cpp") {
     "//zircon/public/lib/zx",
   ]
 
-  deps = [ ":gen_command_sizing" ]
+  non_sdk_deps = [ ":gen_command_sizing" ]
 }
 
 compiled_action("gen_command_sizing") {
