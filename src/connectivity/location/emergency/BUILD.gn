@@ -1,0 +1,72 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/rust/rustc_binary.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+group("emergency") {
+  testonly = true
+  deps = [
+    ":pkg",
+    ":tests",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":emergency-tests" ]
+}
+
+rustc_binary("bin") {
+  name = "emergency"
+
+  # Generates a GN target for unit-tests with the label `bin_test`, and
+  # a binary named `emergency_bin_test`.
+  with_unit_tests = true
+
+  deps = [
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+  ]
+}
+
+package("pkg") {
+  package_name = "emergency"
+
+  deps = [ ":bin" ]
+
+  binaries = [
+    {
+      name = "emergency"
+      dest = "emergency"
+    },
+  ]
+
+  meta = [
+    # Include the package's CMX manifest.
+    # The resulting component manifest can be referenced through the URL
+    # fuchsia-pkg://fuchsia.com/emergency#meta/emergency.cmx.
+    {
+      path = rebase_path("meta/emergency.cmx")
+      dest = "emergency.cmx"
+    },
+  ]
+}
+
+# Run with `fx test emergency-tests`.
+test_package("emergency-tests") {
+  deps = [ ":bin_test" ]
+
+  tests = [
+    {
+      name = "emergency_bin_test"
+      dest = "emergency_test"
+      environments = basic_envs
+    },
+  ]
+}
