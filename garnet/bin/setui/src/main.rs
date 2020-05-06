@@ -44,9 +44,6 @@ fn main() -> Result<(), Error> {
     // block here and therefore continue without waiting for the result.
     EnvironmentBuilder::new(Arc::new(Mutex::new(storage_factory)))
         .configuration(configuration)
-        .agents(&[
-            Arc::new(Mutex::new(EarconsAgent::new())),
-            Arc::new(Mutex::new(RestoreAgent::new())),
-        ])
+        .agents(&[Arc::new(RestoreAgent::create), Arc::new(EarconsAgent::create)])
         .spawn(executor)
 }

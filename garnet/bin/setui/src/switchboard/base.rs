@@ -375,6 +375,13 @@ pub struct SwitchboardClient {
     handle: SwitchboardHandle,
 }
 
+// TODO(fxb/50511): Remove once not part of Invocation.
+impl std::fmt::Debug for SwitchboardClient {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_tuple("").finish()
+    }
+}
+
 impl SwitchboardClient {
     pub fn new(handle: &SwitchboardHandle) -> Self {
         Self { handle: handle.clone() }

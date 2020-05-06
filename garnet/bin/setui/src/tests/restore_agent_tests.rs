@@ -42,7 +42,7 @@ async fn verify_restore_handling(
                     }
                 })),
             )
-            .agents(&[Arc::new(Mutex::new(RestoreAgent::new()))])
+            .agents(&[Arc::new(RestoreAgent::create)])
             .settings(&[SettingType::Unknown])
             .spawn_nested(ENV_NAME)
             .await

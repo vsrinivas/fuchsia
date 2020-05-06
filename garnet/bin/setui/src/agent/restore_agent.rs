@@ -4,10 +4,12 @@
 
 /// The Restore Agent is responsible for signaling to all components to restore
 /// external sources to the last known value. It is invoked during startup.
-use crate::agent::base::{Agent, Invocation, Lifespan};
+use crate::agent::base::{AgentError, Invocation, InvocationResult, Lifespan};
+use crate::internal::agent::{Payload, Receptor};
+use crate::message::base::MessageEvent;
 use crate::switchboard::base::{SettingRequest, SwitchboardError};
-use anyhow::Error;
 use fuchsia_async as fasync;
+use fuchsia_syslog::{fx_log_err, fx_log_info};
 
 #[derive(Debug)]
 pub struct RestoreAgent;
@@ -16,52 +18,52 @@ impl RestoreAgent {
     pub fn new() -> RestoreAgent {
         RestoreAgent {}
     }
-}
 
-async fn reply(invocation: Invocation, result: Result<(), Error>) {
-    if let Some(sender) = invocation.ack_sender.lock().await.take() {
-        sender.send(result).ok();
+    pub fn create(mut receptor: Receptor) {
+        let mut agent = RestoreAgent::new();
+
+        fasync::spawn(async move {
+            while let Ok(event) = receptor.watch().await {
+                if let MessageEvent::Message(Payload::Invocation(invocation), client) = event {
+                    client.reply(Payload::Complete(agent.handle(invocation).await)).send().ack();
+                }
+            }
+        });
     }
-}
 
-impl Agent for RestoreAgent {
-    fn invoke(&mut self, invocation: Invocation) -> Result<bool, Error> {
-        // Only process initialization lifespans.
-        if let Lifespan::Initialization(context) = invocation.lifespan.clone() {
-            fasync::spawn(async move {
+    async fn handle(&mut self, invocation: Invocation) -> InvocationResult {
+        match invocation.lifespan.clone() {
+            Lifespan::Initialization(context) => {
                 for component in context.available_components {
                     if let Ok(result_rx) =
                         context.switchboard_client.request(component, SettingRequest::Restore).await
                     {
-                        if let Ok(result) = result_rx.await {
-                            if result.is_ok() {
+                        match result_rx.await {
+                            Ok(Ok(_)) => {
                                 continue;
                             }
-
-                            if let Err(SwitchboardError::UnimplementedRequest {
-                                setting_type: _,
+                            Ok(Err(SwitchboardError::UnimplementedRequest {
+                                setting_type,
                                 request: _,
-                            }) = result
-                            {
+                            })) => {
+                                fx_log_info!("setting does not support restore:{:?}", setting_type);
                                 continue;
+                            }
+                            _ => {
+                                fx_log_err!("error during restore for {:?}", component);
+                                return Err(AgentError::UnexpectedError);
                             }
                         }
+                    } else {
+                        return Err(AgentError::UnexpectedError);
                     }
-
-                    reply(
-                        invocation,
-                        Err(anyhow::format_err!("could not request restore from component")),
-                    )
-                    .await;
-                    return;
                 }
-
-                reply(invocation, Ok(())).await;
-            });
-
-            return Ok(true);
-        } else {
-            return Ok(false);
+            }
+            _ => {
+                return Err(AgentError::UnhandledLifespan);
+            }
         }
+
+        Ok(())
     }
 }

@@ -2,15 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::agent::base::{Agent, Invocation, Lifespan};
+use crate::agent::base::{AgentError, Invocation, InvocationResult, Lifespan};
 use crate::agent::bluetooth_earcons_handler::watch_bluetooth_connections;
 use crate::agent::volume_change_earcons_handler::{
     listen_to_audio_events, watch_background_usage, VolumeChangeEarconsHandler,
 };
+use crate::internal::agent::{Payload, Receptor};
 use crate::service_context::ServiceContextHandle;
 use crate::switchboard::base::ListenSession;
 
-use anyhow::{Context, Error};
+use anyhow::Context;
 use fidl_fuchsia_media_sounds::{PlayerMarker, PlayerProxy};
 use fuchsia_async as fasync;
 use fuchsia_syslog::fx_log_err;
@@ -51,34 +52,33 @@ impl Drop for SwitchboardListenSessionHolder {
     }
 }
 
-impl EarconsAgent {
-    pub fn new() -> EarconsAgent {
-        Self {
-            priority_stream_playing: Arc::new(AtomicBool::new(false)),
-            sound_player_connection: Arc::new(Mutex::new(None)),
-        }
-    }
-}
-
 impl SwitchboardListenSessionHolder {
     pub fn new() -> SwitchboardListenSessionHolder {
         Self { listen_session: None }
     }
 }
 
-async fn reply(invocation: Invocation, result: Result<(), Error>) {
-    if let Some(sender) = invocation.ack_sender.lock().await.take() {
-        sender.send(result).ok();
-    }
-}
+impl EarconsAgent {
+    pub fn create(mut receptor: Receptor) {
+        let mut agent = Self {
+            priority_stream_playing: Arc::new(AtomicBool::new(false)),
+            sound_player_connection: Arc::new(Mutex::new(None)),
+        };
 
-impl Agent for EarconsAgent {
-    fn invoke(&mut self, invocation: Invocation) -> Result<bool, Error> {
+        fasync::spawn(async move {
+            while let Ok((payload, client)) = receptor.next_payload().await {
+                if let Payload::Invocation(invocation) = payload {
+                    client.reply(Payload::Complete(agent.handle(invocation))).send().ack();
+                }
+            }
+        });
+    }
+
+    fn handle(&mut self, invocation: Invocation) -> InvocationResult {
         // Only process service lifespans.
         if let Lifespan::Service(context) = invocation.lifespan.clone() {
             let priority_stream_playing = self.priority_stream_playing.clone();
             let service_context = invocation.service_context.clone();
-            let return_invocation = invocation.clone();
             let sound_player_connection = self.sound_player_connection.clone();
             let sound_player_added_files: Arc<Mutex<HashSet<&str>>> =
                 Arc::new(Mutex::new(HashSet::new()));
@@ -123,13 +123,11 @@ impl Agent for EarconsAgent {
                     common_earcons_params_clone.clone(),
                     bluetooth_connection_active,
                 );
-
-                reply(return_invocation, Ok(())).await;
             });
 
-            return Ok(true);
+            return Ok(());
         } else {
-            return Ok(false);
+            return Err(AgentError::UnhandledLifespan);
         }
     }
 }

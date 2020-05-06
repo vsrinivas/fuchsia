@@ -15,7 +15,6 @@ use {
     fidl_fuchsia_settings::*,
     fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::future::BoxFuture,
-    futures::lock::Mutex,
     futures::prelude::*,
     std::sync::Arc,
 };
@@ -142,7 +141,7 @@ async fn validate_restore(manual_brightness: f32, auto_brightness: bool) {
 
     assert!(EnvironmentBuilder::new(storage_factory)
         .service(Box::new(ServiceRegistry::serve(service_registry)))
-        .agents(&[Arc::new(Mutex::new(RestoreAgent::new()))])
+        .agents(&[Arc::new(RestoreAgent::create)])
         .settings(&[SettingType::Display])
         .spawn_nested(ENV_NAME)
         .await

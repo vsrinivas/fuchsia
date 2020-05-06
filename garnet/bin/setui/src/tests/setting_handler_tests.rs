@@ -22,7 +22,6 @@ use {
     crate::EnvironmentBuilder,
     async_trait::async_trait,
     futures::channel::mpsc::{unbounded, UnboundedSender},
-    futures::lock::Mutex,
     futures::StreamExt,
     std::marker::PhantomData,
     std::sync::Arc,
@@ -130,7 +129,7 @@ async fn verify_handler<C: Control + Sync + Send + 'static>(should_succeed: bool
         should_succeed,
         EnvironmentBuilder::new(InMemoryStorageFactory::create())
             .handler(SettingType::Unknown, Box::new(Handler::<Controller<C>>::spawn))
-            .agents(&[Arc::new(Mutex::new(RestoreAgent::new()))])
+            .agents(&[Arc::new(RestoreAgent::create)])
             .settings(&[SettingType::Unknown])
             .spawn_nested(ENV_NAME)
             .await
@@ -148,7 +147,7 @@ async fn verify_data_handler<C: Control + Sync + Send + 'static>(should_succeed:
                     DataHandler::<DoNotDisturbInfo, DataController<C, DoNotDisturbInfo>>::spawn,
                 ),
             )
-            .agents(&[Arc::new(Mutex::new(RestoreAgent::new()))])
+            .agents(&[Arc::new(RestoreAgent::create)])
             .settings(&[SettingType::Unknown])
             .spawn_nested(ENV_NAME)
             .await

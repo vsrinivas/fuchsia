@@ -7,7 +7,7 @@ use {
     crate::accessibility::spawn_accessibility_fidl_handler,
     crate::account::account_controller::AccountController,
     crate::agent::authority_impl::AuthorityImpl,
-    crate::agent::base::{AgentHandle, Authority, InitializationContext, Lifespan, RunContext},
+    crate::agent::base::{Authority, GenerateAgent, InitializationContext, Lifespan, RunContext},
     crate::audio::audio_controller::AudioController,
     crate::audio::spawn_audio_fidl_handler,
     crate::device::device_controller::DeviceController,
@@ -119,7 +119,7 @@ impl Environment {
 /// and ultimately spawns an environment based on them.
 pub struct EnvironmentBuilder<T: DeviceStorageFactory + Send + Sync + 'static> {
     configuration: Option<ServiceConfiguration>,
-    agents: Vec<AgentHandle>,
+    agents: Vec<GenerateAgent>,
     storage_factory: Arc<Mutex<T>>,
     generate_service: Option<GenerateService>,
     handlers: HashMap<SettingType, GenerateHandler<T>>,
@@ -171,7 +171,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
     }
 
     /// Agents to participate
-    pub fn agents(mut self, agents: &[AgentHandle]) -> EnvironmentBuilder<T> {
+    pub fn agents(mut self, agents: &[GenerateAgent]) -> EnvironmentBuilder<T> {
         self.agents.append(&mut agents.to_vec());
         self
     }
@@ -344,7 +344,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
 async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>(
     mut service_dir: ServiceFsDir<'_, ServiceObj<'a, ()>>,
     components: HashSet<switchboard::base::SettingType>,
-    agents: Vec<AgentHandle>,
+    agents: Vec<GenerateAgent>,
     service_context_handle: ServiceContextHandle,
     handler_factory: Arc<Mutex<SettingHandlerFactoryImpl<T>>>,
 ) -> Result<(), Error> {
@@ -359,7 +359,8 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
             .await
             .expect("could not create switchboard");
 
-    let mut agent_authority = AuthorityImpl::new();
+    let mut agent_authority =
+        AuthorityImpl::create(crate::internal::agent::create_message_hub()).await?;
 
     // Creates registry, used to register handlers for setting types.
     let _ = RegistryImpl::create(
@@ -448,10 +449,9 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
         });
     }
 
-    // Register agents
-    for agent in agents {
-        if agent_authority.register(agent.clone()).is_err() {
-            fx_log_err!("failed to register agent: {:?}", agent.clone().lock().await);
+    for generate_agent in agents {
+        if agent_authority.register(generate_agent).await.is_err() {
+            fx_log_err!("failed to register agent");
         }
     }
 

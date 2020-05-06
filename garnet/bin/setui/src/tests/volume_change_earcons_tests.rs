@@ -107,10 +107,7 @@ async fn create_environment(
     let env = EnvironmentBuilder::new(storage_factory)
         .service(ServiceRegistry::serve(service_registry))
         .settings(&[SettingType::Audio])
-        .agents(&[
-            Arc::new(Mutex::new(EarconsAgent::new())),
-            Arc::new(Mutex::new(RestoreAgent::new())),
-        ])
+        .agents(&[Arc::new(RestoreAgent::create), Arc::new(EarconsAgent::create)])
         .spawn_and_get_nested_environment(ENV_NAME)
         .await
         .unwrap();

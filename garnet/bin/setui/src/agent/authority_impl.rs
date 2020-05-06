@@ -4,36 +4,39 @@
 
 use crate::agent::base::*;
 
+use crate::internal::agent::{Address, MessengerClient, MessengerFactory, Payload};
+use crate::message::base::{Audience, MessengerType, Signature};
+use crate::message::message_client::MessageClient;
 use crate::service_context::ServiceContextHandle;
 use anyhow::{format_err, Error};
-use futures::lock::Mutex;
-use std::sync::Arc;
-
-type AckReceiver = futures::channel::oneshot::Receiver<Result<(), Error>>;
+use async_trait::async_trait;
 
 /// AuthorityImpl is the default implementation of the Authority trait. It
 /// provides the ability to execute agents sequentially or simultaneously for a
 /// given stage.
 pub struct AuthorityImpl {
-    // A mapping of lifespans to vectors of agents, ordered by registration
-    // sequence.
-    agents: Vec<AgentHandle>,
-}
-
-/// Waits on an invocation to be acknowledged and verifies whether an error
-/// occurred or was returned.
-async fn process_invocation_ack(ack_rx: AckReceiver) -> Result<(), Error> {
-    let response_result = ack_rx.await;
-    if response_result.is_err() || response_result.unwrap().is_err() {
-        return Err(anyhow::format_err!("agent failed to acknowledge"));
-    }
-
-    return Ok(());
+    // A mapping of agent addresses
+    agent_signatures: Vec<Signature<Address>>,
+    // Factory to generate messengers to comunicate with the agent
+    messenger_factory: MessengerFactory,
+    // Messenger
+    messenger: MessengerClient,
 }
 
 impl AuthorityImpl {
-    pub fn new() -> AuthorityImpl {
-        return AuthorityImpl { agents: Vec::new() };
+    pub async fn create(messenger_factory: MessengerFactory) -> Result<AuthorityImpl, Error> {
+        let messenger_result = messenger_factory.create(MessengerType::Unbound).await;
+
+        if messenger_result.is_err() {
+            return Err(anyhow::format_err!("could not create agent messenger for authority"));
+        }
+
+        let (client, _) = messenger_result.unwrap();
+        return Ok(AuthorityImpl {
+            agent_signatures: Vec::new(),
+            messenger_factory: messenger_factory,
+            messenger: client,
+        });
     }
 
     /// Invokes each registered agent for a given lifespan. If sequential is true,
@@ -48,46 +51,35 @@ impl AuthorityImpl {
         service_context: ServiceContextHandle,
         sequential: bool,
     ) -> Result<(), Error> {
-        let mut pending_acks = Vec::new();
+        let mut pending_receptors = Vec::new();
 
-        for agent in &self.agents {
-            // Create ack channel.
-            let (response_tx, response_rx) =
-                futures::channel::oneshot::channel::<Result<(), Error>>();
-            match agent.lock().await.invoke(Invocation {
-                lifespan: lifespan.clone(),
-                service_context: service_context.clone(),
-                ack_sender: Arc::new(Mutex::new(Some(response_tx))),
-            }) {
-                Ok(handled) => {
-                    // did not process result.
-                    if !handled {
-                        continue;
-                    }
+        for signature in &self.agent_signatures {
+            let mut receptor = self
+                .messenger
+                .message(
+                    Payload::Invocation(Invocation {
+                        lifespan: lifespan.clone(),
+                        service_context: service_context.clone(),
+                    }),
+                    Audience::Messenger(signature.clone()),
+                )
+                .send();
 
-                    // Wait for invocation ack is sequential, otherwise store receiver to
-                    // be waited on later.
-                    if sequential {
-                        let result = process_invocation_ack(response_rx).await;
-
-                        if result.is_err() {
-                            return result;
-                        }
-                    } else {
-                        pending_acks.push(response_rx);
-                    }
+            if sequential {
+                let result = process_payload(receptor.next_payload().await);
+                if result.is_err() {
+                    return result;
                 }
-                _ => {
-                    return Err(format_err!("failed to invoke agent"));
-                }
+            } else {
+                pending_receptors.push(receptor);
             }
         }
 
         // Pending acks should only be present for non sequential execution. In
         // this case wait for each to complete.
-        for ack in pending_acks {
-            let result = process_invocation_ack(ack).await;
-            if result.is_err() {
+        for mut receptor in pending_receptors {
+            let result = process_payload(receptor.next_payload().await);
+            if result.is_err()  {
                 return result;
             }
         }
@@ -96,9 +88,32 @@ impl AuthorityImpl {
     }
 }
 
+fn process_payload(
+    payload: Result<(Payload, MessageClient<Payload, Address>), Error>,
+) -> Result<(), Error> {
+    match payload {
+        Ok((Payload::Complete(Ok(_)), _)) => Ok(()),
+        Ok((Payload::Complete(Err(AgentError::UnhandledLifespan)), _)) => Ok(()),
+        _ => Err(format_err!("invocation failed")),
+    }
+}
+
+#[async_trait]
 impl Authority for AuthorityImpl {
-    fn register(&mut self, agent: AgentHandle) -> Result<(), Error> {
-        self.agents.push(agent);
-        return Ok(());
+    async fn register(&mut self, generate: GenerateAgent) -> Result<(), Error> {
+        let create_result = self.messenger_factory.create(MessengerType::Unbound).await;
+
+        if create_result.is_err() {
+            return Err(format_err!("could not register"));
+        }
+
+        let (messenger, receptor) = create_result?;
+        let signature = messenger.get_signature();
+
+        generate(receptor);
+
+        self.agent_signatures.push(signature);
+
+        Ok(())
     }
 }

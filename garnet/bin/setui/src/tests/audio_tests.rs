@@ -255,7 +255,7 @@ async fn test_volume_restore() {
 
     assert!(EnvironmentBuilder::new(storage_factory)
         .service(Box::new(ServiceRegistry::serve(service_registry)))
-        .agents(&[Arc::new(Mutex::new(RestoreAgent::new()))])
+        .agents(&[Arc::new(RestoreAgent::create)])
         .settings(&[SettingType::Audio])
         .spawn_nested(ENV_NAME)
         .await
@@ -357,7 +357,7 @@ async fn test_persisted_values_applied_at_start() {
 
     let env = EnvironmentBuilder::new(storage_factory)
         .service(ServiceRegistry::serve(service_registry))
-        .agents(&[Arc::new(Mutex::new(RestoreAgent::new()))])
+        .agents(&[Arc::new(RestoreAgent::create)])
         .settings(&[SettingType::Audio])
         .spawn_and_get_nested_environment(ENV_NAME)
         .await

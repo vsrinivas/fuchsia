@@ -39,10 +39,7 @@ async fn create_environment(service_registry: Arc<Mutex<ServiceRegistry>>) -> Ne
     let env = EnvironmentBuilder::new(InMemoryStorageFactory::create())
         .service(ServiceRegistry::serve(service_registry))
         .settings(&[])
-        .agents(&[
-            Arc::new(Mutex::new(EarconsAgent::new())),
-            Arc::new(Mutex::new(RestoreAgent::new())),
-        ])
+        .agents(&[Arc::new(RestoreAgent::create), Arc::new(EarconsAgent::create)])
         .spawn_and_get_nested_environment(ENV_NAME)
         .await
         .unwrap();

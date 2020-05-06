@@ -1,9 +1,10 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#[cfg(test)]
 use crate::agent::authority_impl::AuthorityImpl;
 use crate::agent::base::*;
+#[cfg(test)]
+use crate::internal::agent::{create_message_hub, Payload, Receptor};
 use crate::internal::core::create_message_hub as create_registry_hub;
 use crate::registry::device_storage::testing::*;
 use crate::service_context::ServiceContext;
@@ -22,6 +23,9 @@ use std::collections::HashSet;
 use std::sync::Arc;
 
 const ENV_NAME: &str = "settings_service_agent_test_environment";
+
+type CallbackSender = UnboundedSender<(u32, Invocation, AckSender)>;
+type AckSender = futures::channel::oneshot::Sender<InvocationResult>;
 
 #[derive(PartialEq, Clone)]
 enum LifespanTarget {
@@ -43,31 +47,7 @@ struct TestAgent {
     id: u32,
     lifespan_target: LifespanTarget,
     last_invocation: Option<Invocation>,
-    callback: Option<UnboundedSender<(u32, Invocation)>>,
-}
-
-impl Agent for TestAgent {
-    fn invoke(&mut self, invocation: Invocation) -> Result<bool, Error> {
-        match invocation.lifespan.clone() {
-            Lifespan::Initialization(_) => {
-                if self.lifespan_target != LifespanTarget::Initialization {
-                    return Ok(false);
-                }
-            }
-            Lifespan::Service(_) => {
-                if self.lifespan_target != LifespanTarget::Service {
-                    return Ok(false);
-                }
-            }
-        }
-
-        self.last_invocation = Some(invocation.clone());
-        if let Some(callback) = &self.callback {
-            callback.unbounded_send((self.id, invocation.clone())).ok();
-        }
-
-        return Ok(true);
-    }
+    callback: CallbackSender,
 }
 
 impl Debug for TestAgent {
@@ -81,32 +61,73 @@ impl TestAgent {
     // registered with the given authority for the lifespan specified. The
     // callback will be invoked whenever an invocation is encountered, passing a
     // reference to this agent.
-    pub fn create(
+    pub async fn create_and_register(
         id: u32,
         lifespan_target: LifespanTarget,
         authority: &mut dyn Authority,
-        callback: UnboundedSender<(u32, Invocation)>,
+        callback: CallbackSender,
     ) -> Result<Arc<Mutex<TestAgent>>, Error> {
-        let agent = TestAgent::new(id, lifespan_target, Some(callback));
+        let (agent, generate) = Self::create(id, lifespan_target, callback);
 
-        if !authority.register(agent.clone()).is_ok() {
+        if !authority.register(generate).await.is_ok() {
             return Err(format_err!("could not register"));
         }
 
-        return Ok(agent.clone());
+        Ok(agent)
     }
 
-    pub fn new(
+    pub fn create(
         id: u32,
         lifespan_target: LifespanTarget,
-        callback: Option<UnboundedSender<(u32, Invocation)>>,
-    ) -> Arc<Mutex<TestAgent>> {
-        return Arc::new(Mutex::new(TestAgent {
+        callback: CallbackSender,
+    ) -> (Arc<Mutex<TestAgent>>, GenerateAgent) {
+        let agent = Arc::new(Mutex::new(TestAgent {
             id: id,
             last_invocation: None,
             lifespan_target: lifespan_target,
             callback: callback,
         }));
+
+        let agent_clone = agent.clone();
+        let generate = Arc::new(move |mut receptor: Receptor| {
+            let agent = agent_clone.clone();
+            fasync::spawn(async move {
+                while let Ok((payload, client)) = receptor.next_payload().await {
+                    if let Payload::Invocation(invocation) = payload {
+                        client
+                            .reply(Payload::Complete(agent.lock().await.handle(invocation).await))
+                            .send()
+                            .ack();
+                    }
+                }
+            });
+        });
+
+        (agent.clone(), generate)
+    }
+
+    async fn handle(&mut self, invocation: Invocation) -> InvocationResult {
+        match invocation.lifespan.clone() {
+            Lifespan::Initialization(_) => {
+                if self.lifespan_target != LifespanTarget::Initialization {
+                    return Err(AgentError::UnhandledLifespan);
+                }
+            }
+            Lifespan::Service(_) => {
+                if self.lifespan_target != LifespanTarget::Service {
+                    return Err(AgentError::UnhandledLifespan);
+                }
+            }
+        }
+
+        self.last_invocation = Some(invocation.clone());
+        let (tx, rx) = futures::channel::oneshot::channel::<InvocationResult>();
+        self.callback.unbounded_send((self.id, invocation.clone(), tx)).ok();
+        if let Ok(result) = rx.await {
+            return result;
+        } else {
+            return Err(AgentError::UnexpectedError);
+        }
     }
 
     /// Returns the id specified at construction time.
@@ -129,20 +150,23 @@ impl TestAgent {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_environment_startup() {
     let startup_agent_id = 1;
-    let (startup_tx, mut startup_rx) = futures::channel::mpsc::unbounded::<(u32, Invocation)>();
+    let (startup_tx, mut startup_rx) =
+        futures::channel::mpsc::unbounded::<(u32, Invocation, AckSender)>();
 
     let service_agent_id = 2;
-    let (service_tx, mut service_rx) = futures::channel::mpsc::unbounded::<(u32, Invocation)>();
-    let service_agent = TestAgent::new(service_agent_id, LifespanTarget::Service, Some(service_tx));
+    let (service_tx, mut service_rx) =
+        futures::channel::mpsc::unbounded::<(u32, Invocation, AckSender)>();
+    let (service_agent, service_agent_generate) =
+        TestAgent::create(service_agent_id, LifespanTarget::Service, service_tx);
 
     {
         let service_agent = service_agent.clone();
         fasync::spawn(async move {
             // Wait for the initialization agent to receive invocation
-            if let Some((id, invocation)) = startup_rx.next().await {
+            if let Some((id, _, tx)) = startup_rx.next().await {
                 // Verify the correct agent was invoked.
                 assert_eq!(id, startup_agent_id);
-                assert!(invocation.acknowledge(Ok(())).await.is_ok());
+                assert!(tx.send(Ok(())).is_ok());
                 // Ensure the service agent hasn't been invoked
                 assert!(service_agent.lock().await.last_invocation.is_none());
             }
@@ -151,19 +175,19 @@ async fn test_environment_startup() {
 
     fasync::spawn(async move {
         // Wait for service agent to receive notification
-        if let Some((id, invocation)) = service_rx.next().await {
+        if let Some((id, _, tx)) = service_rx.next().await {
             // Verify the correct agent was invoked
             assert_eq!(id, service_agent_id);
             // Ensure acknowledging succeeds
-            assert!(invocation.acknowledge(Ok(())).await.is_ok());
+            assert!(tx.send(Ok(())).is_ok());
         }
     });
 
+    let (_, agent_generate) =
+        TestAgent::create(startup_agent_id, LifespanTarget::Initialization, startup_tx);
+
     assert!(EnvironmentBuilder::new(InMemoryStorageFactory::create())
-        .agents(&[
-            TestAgent::new(startup_agent_id, LifespanTarget::Initialization, Some(startup_tx)),
-            service_agent.clone(),
-        ])
+        .agents(&[service_agent_generate, agent_generate,])
         .settings(&[SettingType::Display])
         .spawn_nested(ENV_NAME)
         .await
@@ -174,16 +198,17 @@ async fn test_environment_startup() {
 /// completion ack only is sent when all agents have completed.
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_sequential() {
-    let (tx, mut rx) = futures::channel::mpsc::unbounded::<(u32, Invocation)>();
+    let (tx, mut rx) = futures::channel::mpsc::unbounded::<(u32, Invocation, AckSender)>();
     let messenger_factory = create_registry_hub();
     let inspect_node = component::inspector().root().create_child("switchboard");
     let switchboard_client =
         SwitchboardImpl::create(messenger_factory, inspect_node).await.unwrap();
-    let mut authority = AuthorityImpl::new();
+    let mut authority = AuthorityImpl::create(create_message_hub()).await.unwrap();
     let service_context = ServiceContext::create(None);
 
     // Create a number of agents.
-    let agent_ids = create_agents(12, LifespanTarget::Initialization, &mut authority, tx.clone());
+    let agent_ids =
+        create_agents(12, LifespanTarget::Initialization, &mut authority, tx.clone()).await;
 
     fasync::spawn(async move {
         // Process the agent callbacks, making sure they are received in the right
@@ -192,11 +217,11 @@ async fn test_sequential() {
         // invocation.
         for agent_id in agent_ids {
             match rx.next().await {
-                Some((id, invocation)) => {
+                Some((id, _, tx)) => {
                     assert!(rx.try_next().is_err());
 
                     if agent_id == id {
-                        assert!(invocation.acknowledge(Ok(())).await.is_ok());
+                        assert!(tx.send(Ok(())).is_ok());
                     }
                 }
                 _ => {
@@ -224,32 +249,33 @@ async fn test_sequential() {
 /// and the completion ack waits for all to complete.
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_simultaneous() {
-    let (tx, mut rx) = futures::channel::mpsc::unbounded::<(u32, Invocation)>();
+    let (tx, mut rx) = futures::channel::mpsc::unbounded::<(u32, Invocation, AckSender)>();
     let messenger_factory = create_registry_hub();
     let inspect_node = component::inspector().root().create_child("switchboard");
     let switchboard_client =
         SwitchboardImpl::create(messenger_factory, inspect_node).await.unwrap();
-    let mut authority = AuthorityImpl::new();
+    let mut authority = AuthorityImpl::create(create_message_hub()).await.unwrap();
     let service_context = ServiceContext::create(None);
-    let agent_ids = create_agents(12, LifespanTarget::Initialization, &mut authority, tx.clone());
+    let agent_ids =
+        create_agents(12, LifespanTarget::Initialization, &mut authority, tx.clone()).await;
 
     fasync::spawn(async move {
         // Ensure that each agent has received the invocation. Note that we are not
         // acknowledging the invocations here. Each agent should be notified
         // regardless of order.
-        let mut invocations = Vec::new();
+        let mut senders = Vec::new();
         for agent_id in agent_ids {
-            if let Some((id, invocation)) = rx.next().await {
+            if let Some((id, _, tx)) = rx.next().await {
                 assert_eq!(id, agent_id);
-                invocations.push(invocation.clone());
+                senders.push(tx);
             } else {
                 panic!("should be able to retrieve agent");
             }
         }
 
         // Acknowledge each invocation.
-        for invocation in invocations {
-            assert!(invocation.acknowledge(Ok(())).await.is_ok());
+        for sender in senders {
+            assert!(sender.send(Ok(())).is_ok());
         }
     });
 
@@ -270,32 +296,42 @@ async fn test_simultaneous() {
 /// Checks that errors returned from an agent stop execution of a lifecycle.
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_err_handling() {
-    let (tx, mut rx) = futures::channel::mpsc::unbounded::<(u32, Invocation)>();
+    let (tx, mut rx) = futures::channel::mpsc::unbounded::<(u32, Invocation, AckSender)>();
 
     let messenger_factory = create_registry_hub();
     let inspect_node = component::inspector().root().create_child("switchboard");
     let switchboard_client =
         SwitchboardImpl::create(messenger_factory, inspect_node).await.unwrap();
-    let mut authority = AuthorityImpl::new();
+    let mut authority = AuthorityImpl::create(create_message_hub()).await.unwrap();
     let service_context = ServiceContext::create(None);
     let mut rng = rand::thread_rng();
 
-    let agent_1_id =
-        TestAgent::create(rng.gen(), LifespanTarget::Initialization, &mut authority, tx.clone())
-            .unwrap()
-            .lock()
-            .await
-            .id();
+    let agent_1_id = TestAgent::create_and_register(
+        rng.gen(),
+        LifespanTarget::Initialization,
+        &mut authority,
+        tx.clone(),
+    )
+    .await
+    .unwrap()
+    .lock()
+    .await
+    .id();
 
-    let agent2_lock =
-        TestAgent::create(rng.gen(), LifespanTarget::Initialization, &mut authority, tx.clone())
-            .unwrap();
+    let agent2_lock = TestAgent::create_and_register(
+        rng.gen(),
+        LifespanTarget::Initialization,
+        &mut authority,
+        tx.clone(),
+    )
+    .await
+    .unwrap();
 
     fasync::spawn(async move {
         // Ensure the first agent received an invocation, acknowledge with an error.
-        if let Some((id, invocation)) = rx.next().await {
+        if let Some((id, _, tx)) = rx.next().await {
             assert_eq!(agent_1_id, id);
-            assert!(invocation.acknowledge(Err(format_err!("injected error"))).await.is_ok());
+            assert!(tx.send(Err(AgentError::UnexpectedError)).is_ok());
         } else {
             panic!("did not receive expected response from agent");
         }
@@ -321,22 +357,27 @@ async fn test_err_handling() {
 /// execute_lifespan.
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_available_components() {
-    let (tx, mut rx) = futures::channel::mpsc::unbounded::<(u32, Invocation)>();
+    let (tx, mut rx) = futures::channel::mpsc::unbounded::<(u32, Invocation, AckSender)>();
 
     let messenger_factory = create_registry_hub();
     let inspect_node = component::inspector().root().create_child("switchboard");
     let switchboard_client =
         SwitchboardImpl::create(messenger_factory, inspect_node).await.unwrap();
-    let mut authority = AuthorityImpl::new();
+    let mut authority = AuthorityImpl::create(create_message_hub()).await.unwrap();
     let service_context = ServiceContext::create(None);
     let mut rng = rand::thread_rng();
 
-    let agent_id =
-        TestAgent::create(rng.gen(), LifespanTarget::Initialization, &mut authority, tx.clone())
-            .unwrap()
-            .lock()
-            .await
-            .id();
+    let agent_id = TestAgent::create_and_register(
+        rng.gen(),
+        LifespanTarget::Initialization,
+        &mut authority,
+        tx.clone(),
+    )
+    .await
+    .unwrap()
+    .lock()
+    .await
+    .id();
 
     let mut available_components = HashSet::new();
 
@@ -346,11 +387,11 @@ async fn test_available_components() {
     let available_components_clone = available_components.clone();
     fasync::spawn(async move {
         // Ensure the first agent received an invocation and verify components match
-        if let Some((id, invocation)) = rx.next().await {
+        if let Some((id, invocation, tx)) = rx.next().await {
             assert_eq!(agent_id, id);
             if let Lifespan::Initialization(context) = invocation.lifespan.clone() {
                 assert_eq!(available_components_clone, context.available_components);
-                assert!(invocation.acknowledge(Ok(())).await.is_ok());
+                assert!(tx.send(Ok(())).is_ok());
             } else {
                 panic!("should have encountered initialization lifespan");
             }
@@ -373,11 +414,11 @@ async fn test_available_components() {
         .is_ok());
 }
 
-fn create_agents(
+async fn create_agents(
     count: u32,
     lifespan_target: LifespanTarget,
     authority: &mut dyn Authority,
-    sender: UnboundedSender<(u32, Invocation)>,
+    sender: UnboundedSender<(u32, Invocation, AckSender)>,
 ) -> Vec<u32> {
     let mut return_agents = Vec::new();
     let mut rng = rand::thread_rng();
@@ -385,7 +426,14 @@ fn create_agents(
     for _i in 0..count {
         let id = rng.gen();
         return_agents.push(id);
-        assert!(TestAgent::create(id, lifespan_target.clone(), authority, sender.clone()).is_ok())
+        assert!(TestAgent::create_and_register(
+            id,
+            lifespan_target.clone(),
+            authority,
+            sender.clone()
+        )
+        .await
+        .is_ok())
     }
 
     return return_agents;
