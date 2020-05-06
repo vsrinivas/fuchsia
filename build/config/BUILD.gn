@@ -330,6 +330,16 @@ config("optimize_speed") {
   configs = [ ":linker_string_merging" ]
 }
 
+config("optimize_sanitizer") {
+  # TODO(51509): Probably should use a different default.
+  configs = [ ":optimize_none" ]
+}
+
+config("optimize_profile") {
+  # TODO(51509): Perhaps use a different default.
+  configs = [ ":optimize_none" ]
+}
+
 config("default_optimize") {
   configs = [ ":optimize_${optimize}" ]
 }

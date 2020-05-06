@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/board.gni")
+import("//build/config/compiler.gni")
 import("//build/config/fuchsia/zbi.gni")
 import("//build/config/fuchsia/zircon.gni")
 import("//build/images/args.gni")
@@ -103,6 +104,12 @@ declare_args() {
       clang_tool_dir = rebase_path(clang_prefix, "", root_build_dir)
     }
     variants = zircon_variants
+    if (optimize == "sanitizer" || optimize == "profile") {
+      # TODO(mcgrathr): Only propagate sanitizer/profile for now.  "Normal"
+      # Zircon builds use a different default than Fuchsia builds.  These
+      # should be harmonized at some point so this is always passed through.
+      optimize = optimize
+    }
     default_deps = [
                      "//:legacy-$target_cpu",
                      "//:legacy_host_targets-$host_os-$host_cpu",

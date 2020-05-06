@@ -24,14 +24,25 @@ declare_args() {
 # NOTE: Keep in sync with //zircon/public/gn/config/levels.gni
 # TODO: Unify the default value between the two builds.
 declare_args() {
-  # * none means really unoptimized, usually only build-tested and not run
-  # * debug means "optimized for debugging", light enough to avoid confusion
-  # * default means default optimization level
-  # * size means optimized for space rather than purely for speed
-  # * speed means optimized purely for speed
+  # * `none`: really unoptimized, usually only build-tested and not run
+  # * `debug`: "optimized for debugging", light enough to avoid confusion
+  # * `default`: default optimization level
+  # * `size`:  optimized for space rather than purely for speed
+  # * `speed`: optimized purely for speed
+  # * `sanitizer`: optimized for sanitizers (ASan, etc.)
+  # * `profile`: optimized for coverage/profile data collection
   optimize = default_optimize
 }
 
-assert(optimize == "none" || optimize == "debug" || optimize == "default" ||
-           optimize == "size" || optimize == "speed",
-       "invalid optimize value: ${optimize}")
+_optimize_valid = [
+  "none",
+  "debug",
+  "default",
+  "size",
+  "speed",
+  "sanitizer",
+  "profile",
+]
+
+assert(_optimize_valid + [ optimize ] - [ optimize ] != _optimize_valid,
+       "`optimize=\"...\"` must be one of $_optimize_valid")
