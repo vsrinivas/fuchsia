@@ -81,6 +81,7 @@ rand_os = "0.1.2"
 rayon = "1.2.1"
 regex = "1.0.6"
 regex-syntax = "0.6.5"
+rental = "0.5.4"
 ring = "0.16"
 rustc-hash = "1.0.1"
 rust-crypto = "0.2"
@@ -147,7 +148,6 @@ pretty = "0.5.2"
 prettytable-rs = "0.8.0"
 proc-macro-nested = "0.1.4"
 rand_xorshift = "0.1.1"
-rental = "0.5.4"
 rouille = "3.0.0"
 rust_icu_common = { version = "0.1.1", default-features = false, features = ["renaming"] }
 rust_icu_sys = { version = "0.1.1", default-features = false, features = ["renaming"] }
@@ -180,7 +180,7 @@ webpki = "0.21"
 
 # Host-side only dependencies
 [target.'cfg(not(target_os = "fuchsia"))'.dependencies]
-async-std = "1.5.0"
+async-std = { version = "1.5.0", features = ["attributes"] }
 flate2 = { version = "1.0.14", default-features = false, features = ["rust_backend"] }
 handlebars = "2.0.0-beta.2"
 indoc = "0.3.3"

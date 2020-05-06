@@ -410,11 +410,10 @@ group("regex-syntax") {
   deps = [ ":regex-syntax-v0_6_17" ]
 }
 
-if (is_fuchsia) {
-  group("rental") {
-    deps = [ ":rental-v0_5_4" ]
-  }
+group("rental") {
+  deps = [ ":rental-v0_5_4" ]
 }
+
 group("ring") {
   deps = [ ":ring-v0_16_9" ]
 }
@@ -980,6 +979,29 @@ rust_library("ascii-v0_8_7") {
   ]
 }
 
+rust_proc_macro("async-attributes-v1_1_1") {
+  crate_name = "async_attributes"
+  crate_root = "//third_party/rust_crates/vendor/async-attributes/src/lib.rs"
+  output_name = "async_attributes-92ae212165e44b2b"
+  configs -= [
+    "//build/config:rust_edition_2018",
+    "//build/config:rust_2018_idioms",
+  ]
+
+  deps = []
+  deps += [ ":quote-v1_0_2" ]
+  deps += [ ":syn-v1_0_11" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=92ae212165e44b2b",
+    "-Cextra-filename=92ae212165e44b2b",
+  ]
+}
+
 rust_library("async-std-v1_5_0") {
   crate_name = "async_std"
   crate_root = "//third_party/rust_crates/vendor/async-std/src/lib.rs"
@@ -990,6 +1012,7 @@ rust_library("async-std-v1_5_0") {
   ]
 
   deps = []
+  deps += [ ":async-attributes-v1_1_1($host_toolchain)" ]
   deps += [ ":async-task-v1_3_1" ]
   deps += [ ":crossbeam-channel-v0_4_2" ]
   deps += [ ":crossbeam-deque-v0_7_3" ]
@@ -1015,7 +1038,9 @@ rust_library("async-std-v1_5_0") {
     "--edition=2018",
     "-Cmetadata=f8ce9a816d6a0428",
     "-Cextra-filename=f8ce9a816d6a0428",
+    "--cfg=feature=\"async-attributes\"",
     "--cfg=feature=\"async-task\"",
+    "--cfg=feature=\"attributes\"",
     "--cfg=feature=\"crossbeam-channel\"",
     "--cfg=feature=\"crossbeam-deque\"",
     "--cfg=feature=\"crossbeam-utils\"",
