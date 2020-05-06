@@ -19,7 +19,7 @@
 #include "src/developer/feedback/feedback_data/annotations/utils.h"
 #include "src/developer/feedback/feedback_data/attachments/aliases.h"
 #include "src/developer/feedback/feedback_data/attachments/screenshot_ptr.h"
-#include "src/developer/feedback/feedback_data/attachments/util.h"
+#include "src/developer/feedback/feedback_data/attachments/utils.h"
 #include "src/developer/feedback/feedback_data/image_conversion.h"
 #include "src/lib/fsl/vmo/sized_vmo.h"
 #include "src/lib/fsl/vmo/strings.h"

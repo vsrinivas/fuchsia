@@ -64,10 +64,10 @@ source_set("static_attachments") {
   ]
 }
 
-source_set("util") {
+source_set("utils") {
   sources = [
-    "util.cc",
-    "util.h",
+    "utils.cc",
+    "utils.h",
   ]
 
   public_deps = [ "//sdk/fidl/fuchsia.feedback" ]

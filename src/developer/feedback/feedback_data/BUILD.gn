@@ -118,7 +118,7 @@ source_set("data_provider") {
     "//src/developer/feedback/feedback_data/annotations:utils",
     "//src/developer/feedback/feedback_data/attachments:aliases",
     "//src/developer/feedback/feedback_data/attachments:attachment_providers",
-    "//src/developer/feedback/feedback_data/attachments:util",
+    "//src/developer/feedback/feedback_data/attachments:utils",
     "//src/developer/feedback/utils:archive",
     "//src/developer/feedback/utils/fit",
     "//src/lib/fsl",
@@ -151,7 +151,6 @@ source_set("datastore") {
     "//src/developer/feedback/feedback_data/annotations:static_annotations",
     "//src/developer/feedback/feedback_data/attachments:attachment_providers",
     "//src/developer/feedback/feedback_data/attachments:static_attachments",
-    "//src/developer/feedback/feedback_data/attachments:util",
     "//src/lib/syslog/cpp",
   ]
 }
