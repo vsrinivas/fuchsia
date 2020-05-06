@@ -215,11 +215,12 @@ int ZSTDSeek(void* void_ptr_zstd_seekable_file, long long byte_offset, int origi
 }
 
 zx_status_t ZSTDSeekableBlob::Create(
+    uint32_t node_index,
     fzl::VmoMapper* mapped_vmo,
     std::unique_ptr<ZSTDCompressedBlockCollection> compressed_block_collection,
     std::unique_ptr<ZSTDSeekableBlob>* out) {
   std::unique_ptr<ZSTDSeekableBlob> blob(
-      new ZSTDSeekableBlob(mapped_vmo, std::move(compressed_block_collection)));
+      new ZSTDSeekableBlob(node_index, mapped_vmo, std::move(compressed_block_collection)));
   zx_status_t status = blob->ReadHeader();
   if (status != ZX_OK) {
     return status;
@@ -289,9 +290,10 @@ zx_status_t ZSTDSeekableBlob::Read(uint8_t* buf, uint64_t data_byte_offset, uint
 }
 
 ZSTDSeekableBlob::ZSTDSeekableBlob(
+  uint32_t node_index,
     fzl::VmoMapper* mapped_vmo,
     std::unique_ptr<ZSTDCompressedBlockCollection> compressed_block_collection)
-    : mapped_vmo_(mapped_vmo),
+    : node_index_(node_index), mapped_vmo_(mapped_vmo),
       compressed_block_collection_(std::move(compressed_block_collection)) {}
 
 zx_status_t ZSTDSeekableBlob::ReadHeader() {

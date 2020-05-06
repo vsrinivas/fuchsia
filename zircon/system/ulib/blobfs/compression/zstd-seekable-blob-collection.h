@@ -8,6 +8,7 @@
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/zx/vmo.h>
 #include <stdint.h>
+#include <stddef.h>
 #include <zircon/device/block.h>
 #include <zircon/types.h>
 
@@ -21,8 +22,11 @@
 
 #include "allocator/allocator.h"
 #include "compression/zstd-seekable.h"
+#include "compression/zstd-seekable-blob-cache.h"
 
 namespace blobfs {
+
+constexpr size_t kZSTDSeekableBlobCacheSize = 128;
 
 // The number of bytes for the singleton transfer buffer that reads from storage in the compressed
 // case. The choice to use a singleton buffer is somewhat arbitrary, but it simplifies code that
@@ -64,7 +68,7 @@ class ZSTDSeekableBlobCollection {
 
  private:
   ZSTDSeekableBlobCollection(storage::VmoidRegistry* vmoid_registry, SpaceManager* space_manager,
-                             fs::LegacyTransactionHandler* txn_handler, NodeFinder* node_finder);
+                             fs::LegacyTransactionHandler* txn_handler, NodeFinder* node_finder, size_t cache_size);
 
   // Parameters passed through to |ZSTDCompressedBlockCollection| construction.
   SpaceManager* space_manager_;
@@ -84,6 +88,7 @@ class ZSTDSeekableBlobCollection {
   zx::vmo transfer_vmo_;
   storage::OwnedVmoid vmoid_;
   fzl::VmoMapper mapped_vmo_;
+  ZSTDSeekableLRUBlobCache cache_;
 };
 
 }  // namespace blobfs

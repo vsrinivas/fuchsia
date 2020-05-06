@@ -250,7 +250,7 @@ TEST_F(ZSTDSeekAndReadTest, SmallReadOverTwoBlocks) {
   auto blocks_for_file = blocks.get();
 
   std::unique_ptr<ZSTDSeekableBlob> blob;
-  ASSERT_OK(ZSTDSeekableBlob::Create(&mapper, std::move(blocks), &blob));
+  ASSERT_OK(ZSTDSeekableBlob::Create(node_index, &mapper, std::move(blocks), &blob));
 
   ZSTDSeekableFile file = ZSTDSeekableFile{
       .blob = blob.get(),
