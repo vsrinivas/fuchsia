@@ -93,7 +93,7 @@ def main():
             deps.append(name)
         else:
             raise Exception('Unsupported dependency type: %s' % type)
-    metadata['deps'] = sorted(deps)
+    metadata['deps'] = sorted(set(deps))
 
     with open(args.out, 'w') as out_file:
         json.dump(

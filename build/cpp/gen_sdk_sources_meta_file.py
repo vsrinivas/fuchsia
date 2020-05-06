@@ -46,8 +46,8 @@ def main():
             fidl_deps.append(name)
         else:
             raise Exception('Unsupported dependency type: %s' % type)
-    metadata['deps'] = deps
-    metadata['fidl_deps'] = fidl_deps
+    metadata['deps'] = sorted(set(deps))
+    metadata['fidl_deps'] = sorted(set(fidl_deps))
 
     with open(args.out, 'w') as out_file:
         json.dump(
