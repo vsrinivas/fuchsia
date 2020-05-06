@@ -261,7 +261,6 @@ sdk_molecule("core_lib") {
     "//zircon/public/lib/async-loop:async-loop_sdk",
     "//zircon/public/lib/async-loop-cpp:async-loop-cpp_sdk",
     "//zircon/public/lib/async-loop-default:async-loop-default_sdk",
-    "//zircon/public/lib/async-testing:async-testing_sdk",
     "//zircon/public/lib/fdio:fdio_sdk",
     "//zircon/public/lib/inspect:inspect_sdk",
     "//zircon/public/lib/memfs:memfs_sdk",
@@ -270,6 +269,7 @@ sdk_molecule("core_lib") {
     "//zircon/public/lib/trace:trace_sdk",
     "//zircon/public/lib/trace-engine:trace-engine_sdk",
     "//zircon/public/lib/trace-provider-so:trace-provider-so_sdk",
+    "//zircon/system/ulib/async-testing:async-testing_sdk",
   ]
 }
 

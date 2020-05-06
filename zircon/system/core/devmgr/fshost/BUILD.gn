@@ -214,11 +214,11 @@ test("fshost-metrics-test") {
   sources = [ "metrics-test.cc" ]
   deps = [
     ":metrics",
-    "//zircon/public/lib/async-testing",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/in-memory-logger",
     "//zircon/public/lib/zxtest",
     "//zircon/system/fidl/fuchsia-boot:llcpp",
+    "//zircon/system/ulib/async-testing",
     "//zircon/system/ulib/fs/metrics:metrics-cobalt",
   ]
 }

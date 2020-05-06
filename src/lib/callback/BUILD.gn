@@ -47,7 +47,7 @@ executable("callback_unittests") {
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/async-testing",
+    "//zircon/system/ulib/async-testing",
   ]
 }
 

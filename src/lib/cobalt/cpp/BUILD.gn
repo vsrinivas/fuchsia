@@ -42,7 +42,7 @@ source_set("unittests") {
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fsl",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/async-testing",
+    "//zircon/system/ulib/async-testing",
   ]
 }
 

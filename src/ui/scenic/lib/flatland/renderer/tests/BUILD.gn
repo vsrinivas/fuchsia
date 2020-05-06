@@ -23,7 +23,7 @@ executable("unittests") {
   public_deps = [
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
-    "//zircon/public/lib/async-testing",
+    "//zircon/system/ulib/async-testing",
   ]
 
   deps = [

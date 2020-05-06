@@ -67,7 +67,7 @@ executable("cobalt_utils_unittests") {
     "//src/lib/fsl",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/async-testing",
+    "//zircon/system/ulib/async-testing",
   ]
 
   # TODO(46555): Fix the leaks and remove this.

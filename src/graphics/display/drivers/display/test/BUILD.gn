@@ -24,9 +24,9 @@ test("display-core-unittests") {
     "//sdk/fidl/fuchsia.hardware.display:fuchsia.hardware.display_llcpp",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_llcpp",
     "//src/devices/testing/fake_ddk",
-    "//zircon/public/lib/async-testing",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zircon-internal",
+    "//zircon/system/ulib/async-testing",
   ]
 }
 
@@ -51,8 +51,8 @@ static_library("base") {
     "//src/devices/testing/fake_ddk",
     "//src/graphics/display/drivers/display:shared",
     "//src/graphics/display/drivers/fake:fake-lib",
-    "//zircon/public/lib/async-testing",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/async-testing",
   ]
 }
 

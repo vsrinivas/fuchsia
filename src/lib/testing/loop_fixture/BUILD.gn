@@ -30,9 +30,9 @@ source_set("gtest") {
     "//third_party/googletest:gtest",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
-    "//zircon/public/lib/async-testing",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/async-testing",
   ]
 
   public_configs = [ "//garnet/public:config" ]

@@ -22,7 +22,7 @@ executable("test") {
     "//src/devices/testing/fake_ddk",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/syslog/cpp",
-    "//zircon/public/lib/async-testing",
+    "//zircon/system/ulib/async-testing",
   ]
   if (internal_access) {
     defines = [ "INTERNAL_ACCESS" ]
