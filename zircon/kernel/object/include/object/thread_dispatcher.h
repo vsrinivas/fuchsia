@@ -34,15 +34,9 @@
 
 class ProcessDispatcher;
 
-class ThreadDispatcher final : public SoloDispatcher<ThreadDispatcher, ZX_DEFAULT_THREAD_RIGHTS> {
+class ThreadDispatcher final : public SoloDispatcher<ThreadDispatcher, ZX_DEFAULT_THREAD_RIGHTS>,
+                               public fbl::DoublyLinkedListable<ThreadDispatcher*> {
  public:
-  // Traits to belong in the parent process's list.
-  struct ThreadListTraits {
-    static fbl::DoublyLinkedListNodeState<ThreadDispatcher*>& node_state(ThreadDispatcher& obj) {
-      return obj.dll_thread_;
-    }
-  };
-
   // When in a blocking syscall, or blocked in an exception, the blocking reason.
   // There is one of these for each syscall marked "blocking".
   // See //zircon/vdso.
@@ -236,8 +230,6 @@ class ThreadDispatcher final : public SoloDispatcher<ThreadDispatcher, ZX_DEFAUL
   zx_status_t WriteStateGeneric(F set_state_func, Thread* thread, user_in_ptr<const void> buffer,
                                 size_t buffer_size);
 
-  // The containing process holds a list of all its threads.
-  fbl::DoublyLinkedListNodeState<ThreadDispatcher*> dll_thread_;
   // a ref pointer back to the parent process.
   const fbl::RefPtr<ProcessDispatcher> process_;
 

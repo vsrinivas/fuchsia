@@ -442,8 +442,7 @@ class ProcessDispatcher final
   uint32_t handle_rand_ = 0;
 
   // list of threads in this process
-  using ThreadList = fbl::DoublyLinkedList<ThreadDispatcher*, ThreadDispatcher::ThreadListTraits>;
-  ThreadList thread_list_ TA_GUARDED(get_lock());
+  fbl::DoublyLinkedList<ThreadDispatcher*> thread_list_ TA_GUARDED(get_lock());
 
   // our address space
   fbl::RefPtr<VmAspace> aspace_;
