@@ -11,6 +11,9 @@ zx_library("unittest") {
     "user_memory.cc",
   ]
   public_deps = [
+    # <lib/unittest/user_memory.h> has #include <lib/instrumentation/asan.h>.
+    "$zx/kernel/lib/instrumentation:headers",
+
     # <lib/unittest/user_memory.h> has #include <ktl/move.h>.
     "$zx/kernel/lib/ktl:headers",
 

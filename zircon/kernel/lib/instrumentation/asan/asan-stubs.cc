@@ -9,6 +9,8 @@
 
 #include <sanitizer/asan_interface.h>
 
+#include "asan-internal.h"
+
 // LLVM provides no documentation on the ABI between the compiler and
 // the runtime.  The set of function signatures here was culled from
 // the LLVM sources for the compiler instrumentation and the runtime
@@ -19,6 +21,16 @@ extern "C" {
 
 extern decltype(memcpy) __unsanitized_memcpy;
 extern decltype(memset) __unsanitized_memset;
+
+namespace {
+
+void asan_check(uintptr_t addr, size_t size) {
+  uint8_t* shadow_addr =
+      reinterpret_cast<uint8_t*>(KASAN_SHADOW_OFFSET + ((addr - KERNEL_ASPACE_BASE) >> kAsanShift));
+  ZX_ASSERT(shadow_addr[0] == 0);
+}
+
+}  // namespace
 
 void* __asan_memcpy(void* dst, const void* src, size_t n) {
   return __unsanitized_memcpy(dst, src, n);
@@ -87,21 +99,15 @@ PANIC_STUB(void __asan_report_exp_store_n(uintptr_t addr, size_t size, uint32_t 
 // poison check.
 
 // TODO(30033): For now, don't actually check at all.
-void __asan_loadN(uintptr_t addr, size_t size) {}
-void __asan_storeN(uintptr_t addr, size_t size) {}
-
-#define ASAN_MEMORY_ACCESS_CALLBACK_BODY(type, is_write, size, exp) __asan_##type##N(addr, size)
+void __asan_loadN(uintptr_t addr, size_t size) { asan_check(addr, size); }
+void __asan_storeN(uintptr_t addr, size_t size) { asan_check(addr, size); }
 
 // This is the same macro used in compiler-rt/lib/asan/asan_rtl.cc,
 // where it makes use of the is_write argument.  The list of invocations
 // of this macro below is taken verbatim from that file.
-#define ASAN_MEMORY_ACCESS_CALLBACK(type, is_write, size)        \
-  void __asan_##type##size(uintptr_t addr) {                     \
-    ASAN_MEMORY_ACCESS_CALLBACK_BODY(type, is_write, size, 0);   \
-  }                                                              \
-  void __asan_exp_##type##size(uintptr_t addr, uint32_t exp) {   \
-    ASAN_MEMORY_ACCESS_CALLBACK_BODY(type, is_write, size, exp); \
-  }
+#define ASAN_MEMORY_ACCESS_CALLBACK(type, is_write, size)              \
+  void __asan_##type##size(uintptr_t addr) { asan_check(addr, size); } \
+  void __asan_exp_##type##size(uintptr_t addr, uint32_t exp) { asan_check(addr, size); }
 
 ASAN_MEMORY_ACCESS_CALLBACK(load, false, 1)
 ASAN_MEMORY_ACCESS_CALLBACK(load, false, 2)

@@ -7,6 +7,7 @@
 #ifndef ZIRCON_KERNEL_LIB_UNITTEST_INCLUDE_LIB_UNITTEST_USER_MEMORY_H_
 #define ZIRCON_KERNEL_LIB_UNITTEST_INCLUDE_LIB_UNITTEST_USER_MEMORY_H_
 
+#include <lib/instrumentation/asan.h>
 #include <lib/user_copy/user_ptr.h>
 
 #include <ktl/move.h>
@@ -37,15 +38,15 @@ class UserMemory {
 
   const fbl::RefPtr<VmAspace>& aspace() const { return mapping_->aspace(); }
 
-  // TODO(30033): These direct accesses to non-kernel memory are funnelled
-  // through these two functions, which can be annotated to suppress asan.
+  // put() and get() make direct accesses to non-kernel virtual addresses, so
+  // they must be marked with NO_ASAN to suppress address checking.
   template <typename T>
-  void put(const T& value, size_t i = 0) {
+  NO_ASAN void put(const T& value, size_t i = 0) {
     reinterpret_cast<T*>(base())[i] = value;
   }
 
   template <typename T>
-  T get(size_t i = 0) {
+  NO_ASAN T get(size_t i = 0) {
     return reinterpret_cast<const T*>(base())[i];
   }
 

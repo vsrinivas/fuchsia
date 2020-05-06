@@ -8,6 +8,7 @@
 #include <debug.h>
 #include <lib/cmdline.h>
 #include <lib/debuglog.h>
+#include <lib/instrumentation/asan.h>
 #include <mexec.h>
 #include <platform.h>
 #include <string.h>
@@ -309,8 +310,8 @@ zx_status_t sys_system_mexec_payload_get(zx_handle_t resource, user_out_ptr<void
 }
 
 // zx_status_t zx_system_mexec
-zx_status_t sys_system_mexec(zx_handle_t resource, zx_handle_t kernel_vmo,
-                             zx_handle_t bootimage_vmo) {
+NO_ASAN zx_status_t sys_system_mexec(zx_handle_t resource, zx_handle_t kernel_vmo,
+                                     zx_handle_t bootimage_vmo) {
   if (!DebuggingSyscallsEnabled()) {
     return ZX_ERR_NOT_SUPPORTED;
   }

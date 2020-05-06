@@ -7,6 +7,7 @@
 #include <align.h>
 #include <assert.h>
 #include <err.h>
+#include <lib/instrumentation/asan.h>
 #include <lib/unittest/unittest.h>
 #include <lib/unittest/user_memory.h>
 #include <zircon/types.h>
@@ -680,12 +681,12 @@ static bool pmm_get_arena_info_test() {
 
 static uint32_t test_rand(uint32_t seed) { return (seed = seed * 1664525 + 1013904223); }
 
-// TODO(30033): These two functions do direct access to specially-mapped
-// memory that's outside the normal range of kernel pointers.  Hence any
-// memory access instrumentation needs to be disabled in these functions.
+// These two functions do direct access to specially-mapped memory that is
+// outside the normal range of kernel pointers.  Hence any memory access instrumentation
+// instrumentation needs to be disabled in these functions.
 
 // fill a region of memory with a pattern based on the address of the region
-static void fill_region(uintptr_t seed, void* _ptr, size_t len) {
+NO_ASAN static void fill_region(uintptr_t seed, void* _ptr, size_t len) {
   uint32_t* ptr = (uint32_t*)_ptr;
 
   ASSERT(IS_ALIGNED((uintptr_t)ptr, 4));
@@ -702,7 +703,7 @@ static void fill_region(uintptr_t seed, void* _ptr, size_t len) {
 }
 
 // test a region of memory against a known pattern
-static bool test_region(uintptr_t seed, void* _ptr, size_t len) {
+NO_ASAN static bool test_region(uintptr_t seed, void* _ptr, size_t len) {
   uint32_t* ptr = (uint32_t*)_ptr;
 
   ASSERT(IS_ALIGNED((uintptr_t)ptr, 4));

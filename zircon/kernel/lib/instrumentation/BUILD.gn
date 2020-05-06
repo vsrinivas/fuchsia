@@ -21,6 +21,10 @@ zx_library("instrumentation") {
     public_deps += [
       # <lib/instrumentation/vmo.h> has #include <ktl/array.h>.
       "$zx/kernel/lib/ktl:headers",
+
+      # TODO(fxb/51163): Move this to deps when possible.
+      # <lib/instrumentation/asan/asan-init.cc> has #include <vm/vm_aspace.h>.
+      "$zx/kernel/vm:headers",
     ]
   }
 }

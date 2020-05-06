@@ -8,10 +8,12 @@
 // https://opensource.org/licenses/MIT
 
 #include <asm.h>
+#include <arch/defines.h>
 #include <arch/x86/asm.h>
 #include <arch/x86/descriptor.h>
 #include <arch/x86/mmu.h>
 #include <arch/x86/registers.h>
+#include <lib/instrumentation/asan.h>
 #include <zircon/tls.h>
 
 #define ADDR_OFFSET_MASK ((1 << ADDR_OFFSET)-1)
@@ -149,6 +151,42 @@ FUNCTION_LABEL(_start)
     add  $8, %esi
     addl $4096, %eax
     loop 0b
+
+#if __has_feature(address_sanitizer)
+    // kASAN tracks memory validity with a 'shadow map' starting at a fixed offset. The shadow map
+    // tracks the validity of accesses within an eight-byte region with one byte - zero means that
+    // all bytes are valid, non-zero tracks either fine-grained validity or various invalid states.
+    //
+    // At boot, start with a shadow map of all zeros, allowing every access. Efficiently encode the
+    // zeroed shadow map by using a single page of zeros and pointing all kASAN page tables at it.
+    //
+    // The shadow map covers 512 GB of kernel address space which is the current virtual address
+    // space of the kernel. This requires 64 GB of kernel virtual address space, which requires
+    // 64 PDP entries.
+    // TODO(fxb/30033): Unmap the shadow's shadow, the region of shadow memory covering the
+    // shadow map. This should never be accessed.
+
+    // Make the kasan Page Tables point to the zero page
+    movl $NO_OF_PT_ENTRIES, %ecx
+    movl $PHYS(kasan_shadow_pt), %edi
+    movabs $PHYS(kasan_zero_page) + X86_KERNEL_KASAN_INITIAL_PT_FLAGS, %rax
+    rep stosq
+
+    // Make the Page Directory point to the Page Table
+    movl $NO_OF_PT_ENTRIES, %ecx
+    movl $PHYS(kasan_shadow_pd),  %edi
+    movabs $PHYS(kasan_shadow_pt) + X86_KERNEL_KASAN_PD_FLAGS, %rax
+    rep stosq
+
+    // Put the page directory entry into the pdp_high. It's 64 entries starting from
+    // the index corresponding to the KASAN_SHADOW_OFFSET virtual address.
+    // 64 pdp entries span 64GB of shadow map, covering 512 GB of kernel address space
+#define PDP_HIGH_OFFSET_START (((KASAN_SHADOW_OFFSET) >> 30) & 0x1ff)
+    movl $PHYS(pdp_high + PDP_HIGH_OFFSET_START * 8), %edi
+    movl $X86_KERNEL_KASAN_PDP_ENTRIES, %ecx
+    movabs $PHYS(kasan_shadow_pd) + X86_KERNEL_KASAN_PD_FLAGS, %rax
+    rep stosq
+#endif  // __has_feature(address_sanitizer)
 
     /*
      * Set PGE to enable global kernel pages

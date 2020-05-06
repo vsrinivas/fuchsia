@@ -37,7 +37,10 @@ if (is_asan) {
       "$zx/public/gn/config:frame_pointers",
     ]
     configs += [ "$zx/public/gn/config:frame_pointers" ]
-    sources = [ "asan-stubs.cc" ]
+    sources = [
+      "asan-init.cc",
+      "asan-stubs.cc",
+    ]
     deps = [ "..:headers" ]
   }
 }
