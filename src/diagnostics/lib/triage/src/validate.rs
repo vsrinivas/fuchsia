@@ -5,7 +5,8 @@
 use {
     super::{
         act::Actions,
-        metrics::{fetch::InspectFetcher, MetricState, MetricValue, Metrics},
+        config::ParseResult,
+        metrics::{fetch::InspectFetcher, MetricState, MetricValue},
     },
     anyhow::{format_err, Error},
     serde::Deserialize,
@@ -13,7 +14,7 @@ use {
     std::{collections::HashMap, convert::TryFrom},
 };
 
-#[derive(Deserialize, Debug)]
+#[derive(Clone, Deserialize, Debug)]
 pub struct Trial {
     yes: Vec<String>,
     no: Vec<String>,
@@ -24,9 +25,10 @@ pub struct Trial {
 pub type Trials = HashMap<String, TrialsSchema>;
 pub type TrialsSchema = HashMap<String, Trial>;
 
-pub fn validate(metrics: &Metrics, actions: &Actions, trials: &Trials) -> Result<(), Error> {
+pub fn validate(parse_result: &ParseResult) -> Result<(), Error> {
+    let ParseResult { metrics, actions, tests } = parse_result;
     let mut failed = false;
-    for (namespace, trial_map) in trials {
+    for (namespace, trial_map) in tests {
         for (trial_name, trial) in trial_map {
             let inspect = InspectFetcher::try_from(trial.inspect.clone())?;
             let state = MetricState { metrics, inspect: &inspect };
@@ -93,6 +95,16 @@ mod test {
             map
     })}
 
+    macro_rules! create_parse_result {
+        (metrics: $metrics:expr, actions: $actions:expr, tests: $tests:expr) => {
+            ParseResult {
+                metrics: $metrics.clone(),
+                actions: $actions.clone(),
+                tests: $tests.clone(),
+            }
+        };
+    }
+
     #[test]
     fn validate_works() -> Result<(), Error> {
         let metrics = build_map!((
@@ -128,11 +140,11 @@ mod test {
             no: vec!["inert".to_string()],
             inspect: vec![],
         };
-        assert!(validate(
-            &metrics,
-            &actions,
-            &build_map!(("foo", build_map!(("good", good_trial))))
-        )
+        assert!(validate(&create_parse_result!(
+            metrics: metrics,
+            actions: actions,
+            tests: build_map!(("foo", build_map!(("good", good_trial))))
+        ))
         .is_ok());
         // Make sure it objects if a trial that should fire doesn't.
         // Also, make sure it signals failure if there's both a good and a bad trial.
@@ -146,11 +158,11 @@ mod test {
             no: vec!["inert".to_string()],
             inspect: vec![],
         };
-        assert!(validate(
-            &metrics,
-            &actions,
-            &build_map!(("foo", build_map!(("good", good_trial), ("bad", bad_trial))))
-        )
+        assert!(validate(&create_parse_result!(
+            metrics: metrics,
+            actions: actions,
+            tests: build_map!(("foo", build_map!(("good", good_trial), ("bad", bad_trial))))
+        ))
         .is_err());
         // Make sure it objects if a trial fires when it shouldn't.
         let bad_trial = Trial {
@@ -158,8 +170,12 @@ mod test {
             no: vec!["fires".to_string(), "inert".to_string()],
             inspect: vec![],
         };
-        assert!(validate(&metrics, &actions, &build_map!(("foo", build_map!(("bad", bad_trial)))))
-            .is_err());
+        assert!(validate(&create_parse_result!(
+            metrics: metrics,
+            actions: actions,
+            tests: build_map!(("foo", build_map!(("bad", bad_trial))))
+        ))
+        .is_err());
         Ok(())
     }
 }

@@ -6,7 +6,7 @@ import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_test.gni")
 
 shared_deps = [
-  "//src/diagnostics/lib/libtriage",
+  "//src/diagnostics/lib/triage",
   "//src/diagnostics/triage:triage_lib",
   "//third_party/rust_crates:anyhow",
   "//third_party/rust_crates:structopt",

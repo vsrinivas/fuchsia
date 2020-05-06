@@ -7,17 +7,9 @@ use {
         config::DiagnosticData,
         metrics::{Metric, MetricState, MetricValue, Metrics},
     },
-    anyhow::Error,
-    log::*,
     serde::Deserialize,
     std::collections::HashMap,
 };
-
-/// Reports an [Error] to stdout and logs at "error" level.
-pub fn report_failure(e: Error) {
-    error!("Triage failed: {:?}", e);
-    println!("Triage failed: {:?}", e);
-}
 
 /// Provides the [metric_state] context to evaluate [Action]s and results of the [actions].
 pub struct ActionContext<'a> {
@@ -80,7 +72,7 @@ pub type ActionsSchema = HashMap<String, Action>;
 /// [Action] stores the specification for an action. [trigger] should name a
 /// [Metric] that calculates a Boolean value. If the [Metric] is true, then
 /// the string from [print] will be printed as a warning.
-#[derive(Deserialize, Debug)]
+#[derive(Clone, Deserialize, Debug)]
 pub struct Action {
     pub trigger: Metric, // An expression to evaluate which determines if this action triggers.
     pub print: String,   // What to print if trigger is true

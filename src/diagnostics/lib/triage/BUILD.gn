@@ -13,7 +13,6 @@ lib_deps = [
   "//third_party/rust_crates:clap",
   "//third_party/rust_crates:json5",
   "//third_party/rust_crates:lazy_static",
-  "//third_party/rust_crates:log",
   "//third_party/rust_crates:nom",
   "//third_party/rust_crates:regex",
   "//third_party/rust_crates:serde",
@@ -25,13 +24,13 @@ lib_deps = [
   "//third_party/rust_crates:valico",
 ]
 
-rustc_library("libtriage") {
+rustc_library("triage") {
   edition = 2018
   version = "0.0.1"
 
   deps = lib_deps
 }
 
-rustc_test("libtriage_test") {
-  deps = [ ":libtriage" ] + lib_deps
+rustc_test("unittests") {
+  deps = [ ":triage" ] + lib_deps
 }

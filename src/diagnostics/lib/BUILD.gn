@@ -6,10 +6,10 @@ group("tests") {
   testonly = true
   deps = [
     "inspect-fidl-load:tests",
-    "libtriage:libtriage_test",
     "selectors:tests",
     "streams/cpp:tests",
     "streams/dart:tests",
+    "triage:unittests",
     "validating-log-listener:tests",
   ]
 }

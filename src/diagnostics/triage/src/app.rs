@@ -8,10 +8,7 @@ use {
         Options,
     },
     anyhow::{Context as _, Error},
-    libtriage::{
-        act::{self, ActionContext, ActionResults},
-        result_format::ActionResultFormatter,
-    },
+    triage::{analyze, ActionResults, ActionResultFormatter},
 };
 
 /// The entry point for the CLI app.
@@ -31,17 +28,11 @@ impl App {
     /// to examine results. If an error occurs during the running of the app
     /// it will be returned as an Error.
     pub fn run(self) -> Result<RunResult, Error> {
-        let ProgramStateHolder { metrics, actions, diagnostic_data, output_format } =
+        // TODO(fxb/50449): Use 'argh' crate.
+        let ProgramStateHolder { parse_result, diagnostic_data, output_format } =
             config::initialize(self.options)?;
-        // TODO(cphoenix): argh::from_env();
 
-        let mut action_contexts: Vec<ActionContext<'_>> = diagnostic_data
-            .iter()
-            .map(|d| act::ActionContext::new(&metrics, &actions, d))
-            .collect();
-
-        let action_results: Vec<ActionResults> =
-            action_contexts.iter_mut().map(|c| c.process().clone()).collect();
+        let action_results = analyze(&diagnostic_data, &parse_result)?;
 
         Ok(RunResult::new(output_format, action_results))
     }
@@ -75,12 +66,12 @@ impl RunResult {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use {super::*, triage::ActionResults};
 
     macro_rules! make_action_result {
         ($source:expr, $($action:expr => $r:literal),+) => {
             {
-                let mut result = libtriage::act::ActionResults::new($source);
+                let mut result = ActionResults::new($source);
                 $(
                     result.set_result($action, $r);
                 )*

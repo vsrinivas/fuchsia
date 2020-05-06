@@ -9,14 +9,17 @@ use {
             fetch::{InspectFetcher, SelectorString},
             Metric, Metrics,
         },
-        validate::{Trials, TrialsSchema},
+        validate::{validate, Trials, TrialsSchema},
     },
     anyhow::{bail, format_err, Context, Error},
     serde_derive::Deserialize,
-    std::{collections::HashMap, convert::TryFrom, fs, path::Path},
+    std::{collections::HashMap, convert::TryFrom},
 };
 
-pub mod parse;
+#[cfg(not(target_arch = "wasm32"))]
+use std::{fs, path::Path};
+
+pub(crate) mod parse;
 
 /// Schema for JSON triage configuration. This structure is parsed directly from the configuration
 /// files using serde_json.
@@ -55,30 +58,23 @@ pub struct DiagnosticData {
 }
 
 impl DiagnosticData {
-    pub fn initialize_from_directory(directory_path: String) -> Result<DiagnosticData, Error> {
-        let inspect_text = Self::text_from_file(&directory_path, "inspect.json")?;
-        Self::initialize_from_text(inspect_text, directory_path)
-    }
-
-    pub fn initialize_from_text(
-        inspect_text: String,
-        directory_path: String,
-    ) -> Result<DiagnosticData, Error> {
+    pub fn new(source: String, inspect_text: String) -> Result<DiagnosticData, Error> {
         let inspect = InspectFetcher::try_from(&*inspect_text).context("Parsing inspect.json")?;
-        Ok(DiagnosticData { source: directory_path, inspect })
+        Ok(DiagnosticData { source, inspect })
     }
 
-    fn text_from_file(directory: &String, file_name: &str) -> Result<String, Error> {
-        let file_path =
-            Path::new(&directory).join(file_name).into_os_string().to_string_lossy().to_string();
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn from_directory(directory: &Path) -> Result<DiagnosticData, Error> {
+        let inspect_text = Self::text_from_file(&directory, "inspect.json")?;
+        Self::new(directory.as_os_str().to_string_lossy().to_string(), inspect_text)
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    fn text_from_file(directory: &Path, file_name: &str) -> Result<String, Error> {
+        let file_path = directory.join(file_name).into_os_string().to_string_lossy().to_string();
         fs::read_to_string(&file_path)
             .context(format!("Couldn't read file '{}' to string", file_path))
     }
-}
-
-pub fn initialize_for_validation(config_files: Vec<String>) -> Result<ParseResult, Error> {
-    let config_file_map = load_config_files(&config_files)?;
-    parse_config_files(config_file_map, ActionTagDirective::AllowAll)
 }
 
 pub struct ParseResult {
@@ -87,58 +83,71 @@ pub struct ParseResult {
     pub tests: Trials,
 }
 
-pub fn load_config_files(config_files: &Vec<String>) -> Result<HashMap<String, String>, Error> {
-    let mut config_file_map = HashMap::new();
-    for file_name in config_files {
-        let namespace = base_name(&file_name)?;
-        let file_data = match fs::read_to_string(file_name.clone()) {
-            Ok(data) => data,
-            Err(e) => {
-                bail!("Couldn't read config file '{}' to string, {}", file_name, e);
-            }
-        };
-        config_file_map.insert(namespace, file_data);
-    }
-    Ok(config_file_map)
-}
+impl ParseResult {
+    pub fn new(
+        configs: &HashMap<String, String>,
+        action_tag_directive: &ActionTagDirective,
+    ) -> Result<ParseResult, Error> {
+        let mut actions = HashMap::new();
+        let mut metrics = HashMap::new();
+        let mut tests = HashMap::new();
 
-pub fn parse_config_files(
-    config_files: HashMap<String, String>,
-    action_tag_directive: ActionTagDirective,
-) -> Result<ParseResult, Error> {
-    let mut actions = HashMap::new();
-    let mut metrics = HashMap::new();
-    let mut tests = HashMap::new();
-
-    for (namespace, file_data) in config_files {
-        let file_config = match ConfigFileSchema::try_from(file_data) {
-            Ok(c) => c,
-            Err(e) => bail!("Parsing file '{}': {}", namespace, e),
-        };
-        let ConfigFileSchema { file_actions, file_selectors, file_evals, file_tests } = file_config;
-        let file_actions = file_actions.unwrap_or_else(|| HashMap::new());
-        let file_selectors = file_selectors.unwrap_or_else(|| HashMap::new());
-        let file_evals = file_evals.unwrap_or_else(|| HashMap::new());
-        let file_tests = file_tests.unwrap_or_else(|| HashMap::new());
-        let file_actions = filter_actions(file_actions, &action_tag_directive);
-        let mut file_metrics = HashMap::new();
-        for (key, value) in file_selectors.into_iter() {
-            file_metrics.insert(key, Metric::Selector(SelectorString::try_from(value)?));
-        }
-        for (key, value) in file_evals.into_iter() {
-            if file_metrics.contains_key(&key) {
-                bail!("Duplicate metric name {} in file {}", key, namespace);
+        for (namespace, file_data) in configs {
+            let file_config = match ConfigFileSchema::try_from(file_data.clone()) {
+                Ok(c) => c,
+                Err(e) => bail!("Parsing file '{}': {}", namespace, e),
+            };
+            let ConfigFileSchema { file_actions, file_selectors, file_evals, file_tests } =
+                file_config;
+            let file_actions = file_actions.unwrap_or_else(|| HashMap::new());
+            let file_selectors = file_selectors.unwrap_or_else(|| HashMap::new());
+            let file_evals = file_evals.unwrap_or_else(|| HashMap::new());
+            let file_tests = file_tests.unwrap_or_else(|| HashMap::new());
+            let file_actions = filter_actions(file_actions, &action_tag_directive);
+            let mut file_metrics = HashMap::new();
+            for (key, value) in file_selectors.into_iter() {
+                file_metrics.insert(key, Metric::Selector(SelectorString::try_from(value)?));
             }
-            file_metrics.insert(key, Metric::Eval(value));
+            for (key, value) in file_evals.into_iter() {
+                if file_metrics.contains_key(&key) {
+                    bail!("Duplicate metric name {} in file {}", key, namespace);
+                }
+                file_metrics.insert(key, Metric::Eval(value));
+            }
+            metrics.insert(namespace.clone(), file_metrics);
+            actions.insert(namespace.clone(), file_actions);
+            tests.insert(namespace.clone(), file_tests);
         }
-        metrics.insert(namespace.clone(), file_metrics);
-        actions.insert(namespace.clone(), file_actions);
-        tests.insert(namespace, file_tests);
+
+        Ok(ParseResult { actions, metrics, tests })
     }
 
-    Ok(ParseResult { actions, metrics, tests })
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn from_files(
+        config_files: &Vec<String>,
+        action_tag_directive_from_tags: &ActionTagDirective,
+    ) -> Result<ParseResult, Error> {
+        let mut config_file_map = HashMap::new();
+        for file_name in config_files {
+            let namespace = base_name(&file_name)?;
+            let file_data = match fs::read_to_string(file_name.clone()) {
+                Ok(data) => data,
+                Err(e) => {
+                    bail!("Couldn't read config file '{}' to string, {}", file_name, e);
+                }
+            };
+            config_file_map.insert(namespace, file_data);
+        }
+
+        Self::new(&config_file_map, &action_tag_directive_from_tags)
+    }
+
+    pub fn validate(&self) -> Result<(), Error> {
+        validate(self)
+    }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 fn base_name(path: &String) -> Result<String, Error> {
     let file_path = Path::new(path);
     if let Some(s) = file_path.file_stem() {
@@ -161,24 +170,23 @@ pub enum ActionTagDirective {
     Exclude(Vec<String>),
 }
 
-/// Creates a new ActionTagDirective based on the following rules,
-///
-/// - AllowAll iff tags is empty and exclude_tags is empty.
-/// - Include if tags is not empty and exclude_tags is empty.
-/// - Include if tags is not empty and exclude_tags is not empty, in this
-///   situation the exclude_ags will be ignored since include implies excluding
-///   all other tags.
-/// - Exclude iff tags is empty and exclude_tags is not empty.
-pub fn action_tag_directive_from_tags(
-    tags: Vec<String>,
-    exclude_tags: Vec<String>,
-) -> ActionTagDirective {
-    match (tags.is_empty(), exclude_tags.is_empty()) {
-        // tags are not empty
-        (false, _) => ActionTagDirective::Include(tags),
-        // tags are empty, exclude_tags are not empty
-        (true, false) => ActionTagDirective::Exclude(exclude_tags),
-        _ => ActionTagDirective::AllowAll,
+impl ActionTagDirective {
+    /// Creates a new ActionTagDirective based on the following rules,
+    ///
+    /// - AllowAll iff tags is empty and exclude_tags is empty.
+    /// - Include if tags is not empty and exclude_tags is empty.
+    /// - Include if tags is not empty and exclude_tags is not empty, in this
+    ///   situation the exclude_ags will be ignored since include implies excluding
+    ///   all other tags.
+    /// - Exclude iff tags is empty and exclude_tags is not empty.
+    pub fn from_tags(tags: Vec<String>, exclude_tags: Vec<String>) -> ActionTagDirective {
+        match (tags.is_empty(), exclude_tags.is_empty()) {
+            // tags are not empty
+            (false, _) => ActionTagDirective::Include(tags),
+            // tags are empty, exclude_tags are not empty
+            (true, false) => ActionTagDirective::Exclude(exclude_tags),
+            _ => ActionTagDirective::AllowAll,
+        }
     }
 }
 
@@ -235,7 +243,7 @@ mod test {
 
     #[test]
     fn action_tag_directive_from_tags_allow_all() {
-        let result = action_tag_directive_from_tags(vec![], vec![]);
+        let result = ActionTagDirective::from_tags(vec![], vec![]);
         match result {
             ActionTagDirective::AllowAll => (),
             _ => panic!("failed to create correct ActionTagDirective"),
@@ -245,7 +253,7 @@ mod test {
     #[test]
     fn action_tag_directive_from_tags_include() {
         let result =
-            action_tag_directive_from_tags(vec!["t1".to_string(), "t2".to_string()], vec![]);
+            ActionTagDirective::from_tags(vec!["t1".to_string(), "t2".to_string()], vec![]);
         match result {
             ActionTagDirective::Include(tags) => {
                 assert_eq!(tags, vec!["t1".to_string(), "t2".to_string()])
@@ -256,7 +264,7 @@ mod test {
 
     #[test]
     fn action_tag_directive_from_tags_include_override_exclude() {
-        let result = action_tag_directive_from_tags(
+        let result = ActionTagDirective::from_tags(
             vec!["t1".to_string(), "t2".to_string()],
             vec!["t3".to_string()],
         );
@@ -271,7 +279,7 @@ mod test {
     #[test]
     fn action_tag_directive_from_tags_exclude() {
         let result =
-            action_tag_directive_from_tags(vec![], vec!["t1".to_string(), "t2".to_string()]);
+            ActionTagDirective::from_tags(vec![], vec!["t1".to_string(), "t2".to_string()]);
         match result {
             ActionTagDirective::Exclude(tags) => {
                 assert_eq!(tags, vec!["t1".to_string(), "t2".to_string()])

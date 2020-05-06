@@ -5,16 +5,8 @@
 use {
     crate::Options,
     anyhow::{bail, format_err, Error},
-    libtriage::{
-        act::Actions,
-        config::{
-            action_tag_directive_from_tags, load_config_files, parse_config_files, DiagnosticData,
-            ParseResult,
-        },
-        metrics::Metrics,
-        validate::validate,
-    },
-    std::str::FromStr,
+    std::{path::Path, str::FromStr},
+    triage::{ActionTagDirective, DiagnosticData, ParseResult},
 };
 
 // TODO(fxb/50451): Add support for CSV.
@@ -37,8 +29,7 @@ impl FromStr for OutputFormat {
 
 /// Complete program execution context.
 pub struct ProgramStateHolder {
-    pub metrics: Metrics,
-    pub actions: Actions,
+    pub parse_result: ParseResult,
     pub diagnostic_data: Vec<DiagnosticData>,
     pub output_format: OutputFormat,
 }
@@ -47,24 +38,20 @@ pub struct ProgramStateHolder {
 pub fn initialize(options: Options) -> Result<ProgramStateHolder, Error> {
     let Options { data_directories, output_format, config_files, tags, exclude_tags, .. } = options;
 
-    let action_tag_directive = action_tag_directive_from_tags(tags, exclude_tags);
-
-    let diagnostic_data = data_directories
-        .into_iter()
-        .map(|path| DiagnosticData::initialize_from_directory(path))
-        .collect::<Result<Vec<_>, Error>>()?;
-
     if config_files.len() == 0 {
         bail!("Need at least one config file; use --config");
     }
 
-    let config_file_map = load_config_files(&config_files)?;
-    let ParseResult { actions, metrics, tests } =
-        parse_config_files(config_file_map, action_tag_directive)?;
+    let parse_result =
+        ParseResult::from_files(&config_files, &ActionTagDirective::from_tags(tags, exclude_tags))?;
+    parse_result.validate()?;
 
-    validate(&metrics, &actions, &tests)?;
+    let diagnostic_data = data_directories
+        .into_iter()
+        .map(|path| DiagnosticData::from_directory(&Path::new(&path)))
+        .collect::<Result<Vec<_>, Error>>()?;
 
-    Ok(ProgramStateHolder { metrics, actions, diagnostic_data, output_format })
+    Ok(ProgramStateHolder { parse_result, diagnostic_data, output_format })
 }
 
 #[cfg(test)]
