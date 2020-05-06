@@ -24,6 +24,14 @@ namespace {
 ::fidl::fuzzing::ServerProvider<::fuchsia::cobalt::Logger, ::cobalt::LoggerImpl>*
     fuzzer_server_provider;
 
+std::unique_ptr<cobalt::CobaltRegistry> ToRegistry(const std::string& registry) {
+  auto cobalt_registry = std::make_unique<cobalt::CobaltRegistry>();
+  if (!cobalt_registry->ParseFromString(registry)) {
+    FX_LOGS(ERROR) << "Unable to parse global registry";
+  }
+  return cobalt_registry;
+}
+
 cobalt::CobaltConfig cfg = {
     .file_system = std::make_unique<cobalt::util::PosixFileSystem>(),
     .use_memory_observation_store = true,
@@ -39,6 +47,7 @@ cobalt::CobaltConfig cfg = {
     .initial_interval = std::chrono::seconds(10),
 
     .target_pipeline = std::make_unique<cobalt::LocalPipeline>(),
+    .global_registry = ToRegistry(cobalt::Base64Decode(cobalt::logger::kConfig)),
 
     .api_key = "",
     .client_secret = cobalt::encoder::ClientSecret::GenerateNewSecret(),
