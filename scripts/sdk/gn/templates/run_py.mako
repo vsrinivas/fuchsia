@@ -38,10 +38,6 @@ TEST_GEN_PATH = os.path.join(
     FUCHSIA_ROOT, 'scripts', 'sdk', 'gn', 'test_generate.py')
 test_generate = imp.load_source('test_generate', TEST_GEN_PATH)
 
-# bash_tests constants
-BASH_TESTS_PATH = os.path.join(
-    FUCHSIA_ROOT, 'scripts', 'sdk', 'gn', 'bash_tests', 'run_bash_tests.sh')
-
 # gn and ninja constants
 DEFAULT_HOST = 'linux-x64'
 THIRD_PARTY_DIR = os.path.join(FUCHSIA_ROOT, 'prebuilt', 'third_party')
@@ -89,10 +85,6 @@ class GnTester(object):
     def _gen_fild_resp_file_unittest(self):
         self._run_unit_test(self.gen_fidl_response_file_unittest)
         print "FIDL response file unit test passed."
-
-    def _bash_tests(self):
-        self._run_cmd([BASH_TESTS_PATH])
-        print "Bash tests passed."
 
     def _run_cmd(self, args, cwd=None):
         job = Popen(args, cwd=cwd, stdout=PIPE)
@@ -207,7 +199,6 @@ class GnTester(object):
     def run(self):
         self._run_test("_generate_test")
         self._run_test("_gen_fild_resp_file_unittest")
-        self._run_test("_bash_tests")
         if platform.system() == 'Darwin':
             print "The GN SDK does not support building on macOS."
         else:
