@@ -34,6 +34,7 @@
 #include "src/ui/scenic/lib/gfx/resources/nodes/shape_node.h"
 #include "src/ui/scenic/lib/gfx/resources/renderers/renderer.h"
 #include "src/ui/scenic/lib/input/helper.h"
+#include "src/ui/scenic/lib/input/input_system.h"
 #include "src/ui/scenic/lib/scenic/event_reporter.h"
 #include "src/ui/scenic/lib/scenic/util/error_reporter.h"
 #include "src/ui/scenic/lib/scenic/util/print_event.h"
@@ -225,13 +226,14 @@ TEST_F(SingleSessionHitTestTest, HitCoordinates) {
     // * hit ray is at z = 0 (1 length behind the camera) with direction z = 1
     //   (result: hit z = 0.999)
     TestHitAccumulator<ViewHit> accumulator;
-    const escher::ray4 ray = input::CreateScreenPerpendicularRay(1, 1.5f);
-    layer_stack()->HitTest(ray, &accumulator);
+    const glm::vec2 screen_space_point{1, 1.5f};
+    PerformGlobalHitTest(layer_stack(), screen_space_point, &accumulator);
     ASSERT_FALSE(accumulator.hits().empty());
 
     const ViewHit& hit = accumulator.hits().front();
     EXPECT_EQ(hit.view->global_id(), GlobalId(1, kViewId));
     EXPECT_NEAR(hit.distance, 0.999f, std::numeric_limits<float>::epsilon());
+    const escher::ray4 ray = CreateScreenPerpendicularRay(screen_space_point);
     const glm::vec4 view = hit.screen_to_view_transform * ray.At(hit.distance);
     static const glm::vec4 expected = {1, 1.5f, -1, 1};
     // We need to use 1000 * epsilon as the projection transform scales by 1000.
@@ -286,13 +288,14 @@ TEST_F(SingleSessionHitTestTest, Scaling) {
     // Hit from (1, 1.5) should be at (1, 1.5, -1) in view coordinates and depth should
     // be 0.999 (z = -1 in 1000-space). Although the rectangle is scaled, the view is not.
     TestHitAccumulator<ViewHit> accumulator;
-    const escher::ray4 ray = input::CreateScreenPerpendicularRay(1, 1.5f);
-    layer_stack()->HitTest(ray, &accumulator);
+    const glm::vec2 screen_space_point{1, 1.5f};
+    PerformGlobalHitTest(layer_stack(), screen_space_point, &accumulator);
     ASSERT_FALSE(accumulator.hits().empty());
 
     const ViewHit& hit = accumulator.hits().front();
     EXPECT_EQ(hit.view->global_id(), GlobalId(1, kViewId));
     EXPECT_NEAR(hit.distance, 0.999f, std::numeric_limits<float>::epsilon());
+    const escher::ray4 ray = CreateScreenPerpendicularRay(screen_space_point);
     const glm::vec4 view = hit.screen_to_view_transform * ray.At(hit.distance);
     static const glm::vec4 expected = {1, 1.5f, -1, 1};
     // We need to use 1000 * epsilon as the projection transform scales by 1000.
@@ -349,14 +352,14 @@ TEST_F(SingleSessionHitTestTest, ViewTransform) {
     // Hit from (5, 6) should be at (2/3, 4/3, -1) in view coordinates and depth should
     // be 0.998 (z = -2 in 1000-space).
     TestHitAccumulator<ViewHit> accumulator;
-    const escher::ray4 ray = input::CreateScreenPerpendicularRay(5, 6);
-    layer_stack()->HitTest(ray, &accumulator);
+    const glm::vec2 screen_space_point{5, 6};
+    PerformGlobalHitTest(layer_stack(), screen_space_point, &accumulator);
     ASSERT_FALSE(accumulator.hits().empty());
 
     const ViewHit& hit = accumulator.hits().front();
     EXPECT_EQ(hit.view->global_id(), GlobalId(1, kViewId));
     EXPECT_NEAR(hit.distance, 0.998f, std::numeric_limits<float>::epsilon());
-
+    const escher::ray4 ray = CreateScreenPerpendicularRay(screen_space_point);
     const glm::vec4 view = hit.screen_to_view_transform * ray.At(hit.distance);
     static const glm::vec4 expected = {2.f / 3, 4.f / 3, -1, 1};
     // We need to use 1000 * epsilon as the projection transform scales by 1000.
@@ -418,13 +421,14 @@ TEST_F(SingleSessionHitTestTest, CameraTransform) {
     // effective input space, scaled down 3x to view space).
     // Depth should still be 1.999 (the clip-space scaling is not applied to Z).
     TestHitAccumulator<ViewHit> accumulator;
-    const escher::ray4 ray = input::CreateScreenPerpendicularRay(1, 1.5f);
-    layer_stack()->HitTest(ray, &accumulator);
+    const glm::vec2 screen_space_point{1, 1.5f};
+    PerformGlobalHitTest(layer_stack(), screen_space_point, &accumulator);
     ASSERT_FALSE(accumulator.hits().empty());
 
     const ViewHit& hit = accumulator.hits().front();
     EXPECT_EQ(hit.view->global_id(), GlobalId(1, kViewId));
     EXPECT_NEAR(hit.distance, 0.999f, std::numeric_limits<float>::epsilon());
+    const escher::ray4 ray = CreateScreenPerpendicularRay(screen_space_point);
     const glm::vec4 view = hit.screen_to_view_transform * ray.At(hit.distance);
     static const glm::vec4 expected = {5, 7.5f / 3, -1, 1};
     // We need to use 1000 * epsilon as the projection transform scales by 1000.
@@ -498,16 +502,14 @@ TEST_F(SingleSessionHitTestTest, ViewClipping) {
   {
     // First hit test should intersect the view's bounding box.
     TestHitAccumulator<ViewHit> accumulator;
-    layer_stack()->HitTest(input::CreateScreenPerpendicularRay(5, layer_height() / 2),
-                           &accumulator);
+    PerformGlobalHitTest(layer_stack(), glm::vec2{5, layer_height() / 2}, &accumulator);
     EXPECT_EQ(accumulator.hits().size(), 1u) << "Should see a hit on the rectangle";
   }
   {
     // Second hit test should completely miss the view's bounding box.
     TestHitAccumulator<ViewHit> accumulator;
-    layer_stack()->HitTest(
-        input::CreateScreenPerpendicularRay(layer_width() / 2 + 50, layer_height() / 2),
-        &accumulator);
+    PerformGlobalHitTest(layer_stack(), glm::vec2{layer_width() / 2 + 50, layer_height() / 2},
+                         &accumulator);
     EXPECT_EQ(accumulator.hits().size(), 0u)
         << "Should see no hits since its outside the view bounds";
   }
@@ -649,12 +651,12 @@ TEST_F(SingleSessionHitTestTest, InclusiveViewBounds) {
 
   {
     TestHitAccumulator<ViewHit> accumulator;
-    layer_stack()->HitTest(input::CreateScreenPerpendicularRay(4, 4.5f), &accumulator);
+    PerformGlobalHitTest(layer_stack(), glm::vec2{4, 4.5f}, &accumulator);
     EXPECT_FALSE(accumulator.hits().empty());
   }
   {
     TestHitAccumulator<ViewHit> accumulator;
-    layer_stack()->HitTest(input::CreateScreenPerpendicularRay(12, 4.5f), &accumulator);
+    PerformGlobalHitTest(layer_stack(), glm::vec2{12, 4.5f}, &accumulator);
     EXPECT_FALSE(accumulator.hits().empty());
   }
 }
@@ -851,9 +853,8 @@ TEST_F(MultiSessionHitTestTest, ChildCompletelyClipped) {
 
   {
     TestHitAccumulator<ViewHit> accumulator;
-    layer_stack()->HitTest(
-        input::CreateScreenPerpendicularRay(3 * layer_width() / 4, 3 * layer_height() / 4),
-        &accumulator);
+    PerformGlobalHitTest(layer_stack(), glm::vec2{3 * layer_width() / 4, 3 * layer_height() / 4},
+                         &accumulator);
     EXPECT_TRUE(accumulator.hits().empty());
   }
 }
@@ -949,7 +950,7 @@ TEST_F(MultiSessionHitTestTest, GlobalHits) {
 
   {
     SessionHitAccumulator accumulator;
-    layer_stack()->HitTest(input::CreateScreenPerpendicularRay(4, 4), &accumulator);
+    PerformGlobalHitTest(layer_stack(), glm::vec2{4, 4}, &accumulator);
 
     const auto& hits = accumulator.hits();
 

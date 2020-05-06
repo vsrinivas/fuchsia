@@ -12,7 +12,7 @@
 #include "src/lib/fsl/handles/object_info.h"
 #include "src/lib/fxl/logging.h"
 #include "src/ui/lib/glm_workaround/glm_workaround.h"
-#include "src/ui/scenic/lib/gfx/engine/hit_accumulator.h"
+#include "src/ui/scenic/lib/gfx/engine/hit_tester.h"
 #include "src/ui/scenic/lib/gfx/resources/compositor/layer.h"
 #include "src/ui/scenic/lib/gfx/resources/compositor/layer_stack.h"
 #include "src/ui/scenic/lib/input/helper.h"
@@ -29,17 +29,6 @@ using fuchsia::ui::input::PointerEvent;
 using fuchsia::ui::input::PointerEventType;
 
 namespace {
-
-// The x and y values are in layer (screen) coordinates.
-// NOTE: The accumulated hit structs contain resources that callers should let go of as soon as
-// possible.
-void PerformGlobalHitTest(const gfx::LayerStackPtr& layer_stack, const glm::vec2& pointer,
-                          gfx::HitAccumulator<gfx::ViewHit>* accumulator) {
-  escher::ray4 ray = CreateScreenPerpendicularRay(pointer.x, pointer.y);
-  FX_VLOGS(1) << "HitTest: device point (" << ray.origin.x << ", " << ray.origin.y << ")";
-
-  layer_stack->HitTest(ray, accumulator);
-}
 
 // Helper function to build an AccessibilityPointerEvent when there is a
 // registered accessibility listener.

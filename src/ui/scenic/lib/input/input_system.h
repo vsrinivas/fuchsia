@@ -14,6 +14,8 @@
 #include <map>
 #include <optional>
 
+#include "src/ui/scenic/lib/gfx/engine/hit.h"
+#include "src/ui/scenic/lib/gfx/engine/hit_accumulator.h"
 #include "src/ui/scenic/lib/input/injector.h"
 #include "src/ui/scenic/lib/input/input_command_dispatcher.h"
 #include "src/ui/scenic/lib/scenic/system.h"

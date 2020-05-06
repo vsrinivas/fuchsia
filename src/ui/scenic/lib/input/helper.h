@@ -14,22 +14,18 @@
 namespace scenic_impl {
 namespace input {
 
-// Creates a ray pointing into the screen at position (|x|, |y|).
-escher::ray4 CreateScreenPerpendicularRay(float x, float y);
-
 // Clone |event| and set its coordinates to |coords|.
 fuchsia::ui::input::PointerEvent ClonePointerWithCoords(
-    const fuchsia::ui::input::PointerEvent& event, const escher::vec2& coords);
+    const fuchsia::ui::input::PointerEvent& event, const glm::vec2& coords);
 
 // Extracts the coordinates from |event|.
-escher::vec2 PointerCoords(const fuchsia::ui::input::PointerEvent& event);
+glm::vec2 PointerCoords(const fuchsia::ui::input::PointerEvent& event);
 
 // Applies |transform| to |pointer|.
-escher::vec2 TransformPointerCoords(const escher::vec2& pointer, const glm::mat4 transform);
+glm::vec2 TransformPointerCoords(const glm::vec2& pointer, const glm::mat4 transform);
 
 // Finds (Vulkan) normalized device coordinates with respect to the (single) layer.
-escher::vec2 NormalizePointerCoords(const escher::vec2& pointer,
-                                    const gfx::LayerStackPtr& layer_stack);
+glm::vec2 NormalizePointerCoords(const glm::vec2& pointer, const gfx::LayerStackPtr& layer_stack);
 
 // TODO(SCN-1278): Remove this.
 // Turn two floats (high bits, low bits) into a 64-bit uint.

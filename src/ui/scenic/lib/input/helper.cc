@@ -13,23 +13,7 @@ namespace input {
 
 using fuchsia::ui::input::PointerEvent;
 
-escher::ray4 CreateScreenPerpendicularRay(float x, float y) {
-  // We set the elevation for the origin point, and Z value for the direction,
-  // such that we start above the scene and point into the scene.
-  //
-  // For hit testing, these values work in conjunction with
-  // Camera::ProjectRayIntoScene to create an appropriate ray4 that works
-  // correctly with the hit tester.
-  //
-  // During hit testing, we translate an arbitrary pointer's (x,y) device-space
-  // coordinates to a View's (x', y') model-space coordinates.
-  return {
-      .origin = {x, y, 0, 1},  // Origin as homogeneous point.
-      .direction = {0, 0, 1, 0},
-  };
-}
-
-PointerEvent ClonePointerWithCoords(const PointerEvent& event, const escher::vec2& coords) {
+PointerEvent ClonePointerWithCoords(const PointerEvent& event, const glm::vec2& coords) {
   PointerEvent clone;
   fidl::Clone(event, &clone);
   clone.x = coords.x;
@@ -37,12 +21,12 @@ PointerEvent ClonePointerWithCoords(const PointerEvent& event, const escher::vec
   return clone;
 }
 
-escher::vec2 PointerCoords(const PointerEvent& event) { return {event.x, event.y}; }
+glm::vec2 PointerCoords(const PointerEvent& event) { return {event.x, event.y}; }
 
-escher::vec2 TransformPointerCoords(const escher::vec2& pointer, const glm::mat4 transform) {
-  const escher::vec4 homogenous_pointer{pointer.x, pointer.y, 0, 1};
-  const escher::vec4 transformed_pointer = transform * homogenous_pointer;
-  const escher::vec2 homogenized_transformed_pointer{escher::homogenize(transformed_pointer)};
+glm::vec2 TransformPointerCoords(const glm::vec2& pointer, const glm::mat4 transform) {
+  const glm::vec4 homogenous_pointer{pointer.x, pointer.y, 0, 1};
+  const glm::vec4 transformed_pointer = transform * homogenous_pointer;
+  const glm::vec2 homogenized_transformed_pointer{escher::homogenize(transformed_pointer)};
 
   FX_VLOGS(2) << "Coordinate transform (device->view): (" << pointer.x << ", " << pointer.y
               << ")->(" << homogenized_transformed_pointer.x << ", "
@@ -53,8 +37,7 @@ escher::vec2 TransformPointerCoords(const escher::vec2& pointer, const glm::mat4
 
 // Finds (Vulkan) normalized device coordinates with respect to the (single) layer. This is intended
 // for magnification gestures.
-escher::vec2 NormalizePointerCoords(const escher::vec2& pointer,
-                                    const gfx::LayerStackPtr& layer_stack) {
+glm::vec2 NormalizePointerCoords(const glm::vec2& pointer, const gfx::LayerStackPtr& layer_stack) {
   if (layer_stack->layers().empty()) {
     return {0, 0};
   }

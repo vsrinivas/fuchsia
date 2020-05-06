@@ -13,9 +13,18 @@ namespace gfx {
 
 // Performs a hit test on the contents and subtree of a node along the specified ray, adding hit
 // candidates to the given accumulator. The accumulator determines which hits are kept and how they
-// are handled. The ray and the node should be in the same coordinate system (before applying the
-// node's own transform).
-void HitTest(Node* node, const escher::ray4& ray, HitAccumulator<NodeHit>* accumulator);
+// are handled. The ray should be in World Space.
+void HitTest(Node* starting_node, const escher::ray4& world_space_ray,
+             HitAccumulator<NodeHit>* accumulator);
+
+// Takes a screen space point and a layer stack, and performs a hit test in the Z-direction on all
+// layers in |layer_stack|.
+void PerformGlobalHitTest(const gfx::LayerStackPtr& layer_stack,
+                          const glm::vec2& screen_space_coords,
+                          gfx::HitAccumulator<gfx::ViewHit>* accumulator);
+
+// Creates a ray in the Z-direction (pointing into the screen) at |screen_space_coords|.
+escher::ray4 CreateScreenPerpendicularRay(glm::vec2 screen_space_coords);
 
 }  // namespace gfx
 }  // namespace scenic_impl

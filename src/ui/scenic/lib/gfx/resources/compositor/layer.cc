@@ -8,7 +8,6 @@
 
 #include "src/lib/fxl/logging.h"
 #include "src/ui/lib/escher/util/type_utils.h"
-#include "src/ui/scenic/lib/gfx/engine/hit_tester.h"
 #include "src/ui/scenic/lib/gfx/resources/camera.h"
 #include "src/ui/scenic/lib/gfx/resources/compositor/layer_stack.h"
 #include "src/ui/scenic/lib/gfx/resources/renderers/renderer.h"
@@ -17,30 +16,6 @@
 
 namespace scenic_impl {
 namespace gfx {
-
-namespace {
-
-std::optional<ViewHit> CreateViewHit(const NodeHit& hit,
-                                     const escher::mat4& screen_to_world_transform) {
-  FX_DCHECK(hit.node);
-  ViewPtr view = hit.node->FindOwningView();
-
-  if (!view) {
-    return std::nullopt;
-  }
-
-  FX_DCHECK(view->GetViewNode());
-
-  const escher::mat4 world_to_model = glm::inverse(view->GetViewNode()->GetGlobalTransform());
-  const escher::mat4 screen_to_model = world_to_model * screen_to_world_transform;
-  return ViewHit{
-      .view = view,
-      .screen_to_view_transform = screen_to_model,
-      .distance = hit.distance,
-  };
-}
-
-}  // namespace
 
 const ResourceTypeInfo Layer::kTypeInfo = {ResourceType::kLayer, "Layer"};
 
@@ -81,9 +56,17 @@ bool Layer::Detach(ErrorReporter* reporter) {
   return true;
 }
 
+fxl::WeakPtr<Scene> Layer::scene() {
+  if (!renderer_ || !renderer_->camera())
+    return {};
+
+  return renderer_->camera()->scene()->GetWeakPtr();
+}
+
 void Layer::CollectScenes(std::set<Scene*>* scenes_out) {
-  if (renderer_ && renderer_->camera() && renderer_->camera()->scene()) {
-    scenes_out->insert(renderer_->camera()->scene().get());
+  fxl::WeakPtr scene = this->scene();
+  if (scene) {
+    scenes_out->insert(scene.get());
   }
 }
 
@@ -94,29 +77,6 @@ bool Layer::IsDrawable() const {
 
   // TODO(SCN-249): Layers can also have a material or image pipe.
   return renderer_ && renderer_->camera() && renderer_->camera()->scene();
-}
-
-void Layer::HitTest(const escher::ray4& ray, HitAccumulator<ViewHit>* hit_accumulator) const {
-  if (width() == 0.f || height() == 0.f) {
-    return;
-  }
-
-  const escher::mat4 screen_to_world_transform = GetScreenToWorldSpaceTransform();
-  MappingAccumulator<NodeHit, ViewHit> transforming_accumulator(
-      hit_accumulator, [transform = screen_to_world_transform](const NodeHit& hit) {
-        return CreateViewHit(hit, transform);
-      });
-
-  // This operation can be thought of as constructing the ray originating at the
-  // camera's position, that passes through a point on the near plane.
-  //
-  // For more information about world, view, and projection matrices, and how
-  // they can be used for ray picking, see:
-  //
-  // http://www.codinglabs.net/article_world_view_projection_matrix.aspx
-  // https://stackoverflow.com/questions/2093096/implementing-ray-picking
-  const escher::ray4 camera_ray = screen_to_world_transform * ray;
-  gfx::HitTest(renderer_->camera()->scene().get(), camera_ray, &transforming_accumulator);
 }
 
 escher::ViewingVolume Layer::GetViewingVolume() const {

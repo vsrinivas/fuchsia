@@ -18,17 +18,6 @@ LayerStack::LayerStack(Session* session, SessionId session_id, ResourceId id)
 
 LayerStack::~LayerStack() = default;
 
-void LayerStack::HitTest(const escher::ray4& ray, HitAccumulator<ViewHit>* hit_accumulator) const {
-  FX_CHECK(hit_accumulator);
-
-  for (auto& layer : layers_) {
-    layer->HitTest(ray, hit_accumulator);
-    if (!hit_accumulator->EndLayer()) {
-      break;
-    }
-  }
-}
-
 bool LayerStack::AddLayer(LayerPtr layer, ErrorReporter* reporter) {
   if (layer->layer_stack_) {
     reporter->ERROR() << "LayerStack::AddLayer(): layer already belongs to a LayerStack.";

@@ -10,8 +10,6 @@
 
 #include "src/ui/lib/escher/geometry/types.h"
 #include "src/ui/lib/escher/scene/viewing_volume.h"
-#include "src/ui/scenic/lib/gfx/engine/hit.h"
-#include "src/ui/scenic/lib/gfx/engine/hit_accumulator.h"
 #include "src/ui/scenic/lib/gfx/resources/resource.h"
 
 namespace scenic_impl {
@@ -53,6 +51,9 @@ class Layer : public Resource {
   // |Resource|, DetachCmd.
   bool Detach(ErrorReporter* reporter) override;
 
+  // Return the scene rendered by this layer, if any.
+  fxl::WeakPtr<Scene> scene();
+
   // Add the scene rendered by this layer, if any, to |scenes_out|.
   void CollectScenes(std::set<Scene*>* scenes_out);
 
@@ -64,13 +65,6 @@ class Layer : public Resource {
 
   // TODO(SCN-250): support detecting and/or setting layer opacity.
   bool opaque() const { return false; }
-
-  // Performs a hit test into the scene of renderer, along the provided ray in
-  // the layer's coordinate system.
-  //
-  // The hit collection behavior depends on the hit tester and accumulator. These hits include
-  // transforms into view space.
-  void HitTest(const escher::ray4& ray, HitAccumulator<ViewHit>* hit_accumulator) const;
 
   // Returns the current viewing volume of the layer. Used by the compositor
   // when initializing the stage, as well as for hit testing.
