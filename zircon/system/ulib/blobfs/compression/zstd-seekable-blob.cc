@@ -218,23 +218,154 @@ int ZSTDSeek(void* void_ptr_zstd_seekable_file, long long byte_offset, int origi
 }
 
 zx_status_t ZSTDSeekableBlob::Create(
-    uint32_t node_index, fzl::VmoMapper* mapped_vmo,
+    uint32_t node_index, ZSTD_DStream* d_stream, fzl::VmoMapper* mapped_vmo,
     std::unique_ptr<ZSTDCompressedBlockCollection> compressed_block_collection,
     std::unique_ptr<ZSTDSeekableBlob>* out) {
-  std::unique_ptr<ZSTDSeekableBlob> blob(
-      new ZSTDSeekableBlob(node_index, mapped_vmo, std::move(compressed_block_collection)));
+  std::unique_ptr<ZSTDSeekableBlob> blob(new ZSTDSeekableBlob(
+      node_index, d_stream, mapped_vmo, std::move(compressed_block_collection)));
   zx_status_t status = blob->ReadHeader();
   if (status != ZX_OK) {
     return status;
   }
+  status = blob->LoadSeekTable();
 
   *out = std::move(blob);
   return ZX_OK;
 }
 
-zx_status_t ZSTDSeekableBlob::Read(uint8_t* buf, uint64_t data_byte_offset, uint64_t num_bytes) {
-  TRACE_DURATION("blobfs", "ZSTDSeekableBlob::Read", "data byte offset", data_byte_offset,
-                 "num bytes", num_bytes);
+zx_status_t ZSTDSeekableBlob::Read(uint8_t* buf, uint64_t buf_size, uint64_t* data_byte_offset,
+                                   uint64_t* num_bytes) {
+  ZX_DEBUG_ASSERT(buf != nullptr);
+  ZX_DEBUG_ASSERT(data_byte_offset != nullptr);
+  ZX_DEBUG_ASSERT(num_bytes != nullptr);
+
+  TRACE_DURATION("blobfs", "ZSTDSeekableBlob::Read", "data byte offset", *data_byte_offset,
+                 "num bytes", *num_bytes);
+
+  if (*num_bytes == 0) {
+    return ZX_OK;
+  }
+
+  size_t zstd_return = ZSTD_DCtx_reset(d_stream_, ZSTD_reset_session_only);
+  if (ZSTD_isError(zstd_return)) {
+    FS_TRACE_ERROR("[blobfs][zstd-seekable] Failed to reset decompression stream: %s\n",
+                   ZSTD_getErrorName(zstd_return));
+    return ZX_ERR_INTERNAL;
+  }
+  zstd_return = ZSTD_DCtx_refDDict(d_stream_, nullptr);
+  if (ZSTD_isError(zstd_return)) {
+    FS_TRACE_ERROR(
+        "[blobfs][zstd-seekable] Failed to reset dictionary for decompression stream: %s\n",
+        ZSTD_getErrorName(zstd_return));
+    return ZX_ERR_INTERNAL;
+  }
+
+  unsigned first_frame = ZSTD_seekTable_offsetToFrameIndex(seek_table_, *data_byte_offset);
+  unsigned uncompressed_frame_byte_start =
+      ZSTD_seekTable_getFrameDecompressedOffset(seek_table_, first_frame);
+  unsigned compressed_frame_byte_start =
+      ZSTD_seekTable_getFrameCompressedOffset(seek_table_, first_frame);
+
+  unsigned last_frame =
+      ZSTD_seekTable_offsetToFrameIndex(seek_table_, (*data_byte_offset) + +(*num_bytes) - 1);
+  unsigned uncompressed_frame_byte_end =
+      ZSTD_seekTable_getFrameDecompressedOffset(seek_table_, last_frame) +
+      ZSTD_seekTable_getFrameDecompressedSize(seek_table_, last_frame);
+  unsigned compressed_frame_byte_end =
+      ZSTD_seekTable_getFrameCompressedOffset(seek_table_, last_frame) +
+      ZSTD_seekTable_getFrameCompressedSize(seek_table_, last_frame);
+
+  if (uncompressed_frame_byte_end <= uncompressed_frame_byte_start) {
+    FS_TRACE_ERROR("[blobfs][zstd-seekable] End block overflow\n");
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+
+  unsigned uncompressed_frame_byte_size =
+      uncompressed_frame_byte_end - uncompressed_frame_byte_start;
+  if (buf_size < uncompressed_frame_byte_size) {
+    FS_TRACE_ERROR("[blobfs][zstd-seekable] Uncompressed output buffer too small: %lu < %u\n",
+                   buf_size, uncompressed_frame_byte_size);
+    return ZX_ERR_BUFFER_TOO_SMALL;
+  }
+
+  // ZSTD Seekable blob data contains: [header][zstd-seekable-archive].
+  unsigned blob_byte_start = kZSTDSeekableHeaderSize + compressed_frame_byte_start;
+  unsigned blob_byte_end = kZSTDSeekableHeaderSize + compressed_frame_byte_end;
+  unsigned blob_block_byte_offset = fbl::round_down(blob_byte_start, kBlobfsBlockSize);
+  unsigned blob_block_offset_unsigned = blob_block_byte_offset / kBlobfsBlockSize;
+  if (blob_block_offset_unsigned > std::numeric_limits<uint32_t>::max()) {
+    FS_TRACE_ERROR("[blobfs][zstd-seekable] Start block overflow\n");
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+  uint32_t blob_block_offset = static_cast<uint32_t>(blob_block_offset_unsigned);
+
+  unsigned blob_block_end = fbl::round_up(blob_byte_end, kBlobfsBlockSize) / kBlobfsBlockSize;
+  if (blob_block_end <= blob_block_offset_unsigned) {
+    FS_TRACE_ERROR("[blobfs][zstd-seekable] End block overflow\n");
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+
+  unsigned num_blocks_unsigned = blob_block_end - blob_block_offset_unsigned;
+  if (num_blocks_unsigned > std::numeric_limits<uint32_t>::max()) {
+    FS_TRACE_ERROR("[blobfs][zstd-seekable] Number of block overflow\n");
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+  uint32_t num_blocks = static_cast<uint32_t>(num_blocks_unsigned);
+
+  zx_status_t status = compressed_block_collection_->Read(blob_block_offset, num_blocks);
+  if (status != ZX_OK) {
+    FS_TRACE_ERROR("[blobfs][zstd-seekable] Failed to read from compressed block collection: %s\n",
+                   zx_status_get_string(status));
+    return status;
+  }
+
+  ZSTD_inBuffer compressed_buf = ZSTD_inBuffer{
+      .src = mapped_vmo_->start(),
+      .size = mapped_vmo_->size(),
+      .pos = blob_byte_start - blob_block_byte_offset,
+  };
+  ZSTD_outBuffer uncompressed_buf = ZSTD_outBuffer{
+      .dst = buf,
+      .size = uncompressed_frame_byte_size,
+      .pos = 0,
+  };
+
+  size_t prev_output_pos = 0;
+  do {
+    prev_output_pos = uncompressed_buf.pos;
+    zstd_return = ZSTD_decompressStream(d_stream_, &uncompressed_buf, &compressed_buf);
+    if (ZSTD_isError(zstd_return)) {
+      FS_TRACE_ERROR("[blobfs][zstd-seekable] Failed to decompress: %s\n",
+                     ZSTD_getErrorName(zstd_return));
+      return ZX_ERR_INTERNAL;
+    }
+  } while (uncompressed_buf.pos < uncompressed_buf.size && prev_output_pos != uncompressed_buf.pos);
+  if (uncompressed_buf.pos < uncompressed_buf.size) {
+    FS_TRACE_ERROR(
+        "[blobfs][zstd-seekable] Decompression stopped making progress before decompressing all "
+        "bytes\n");
+    return ZX_ERR_INTERNAL;
+  }
+
+  *data_byte_offset = uncompressed_frame_byte_start;
+  *num_bytes = uncompressed_frame_byte_size;
+  return ZX_OK;
+}
+
+ZSTDSeekableBlob::ZSTDSeekableBlob(
+    uint32_t node_index, ZSTD_DStream* d_stream, fzl::VmoMapper* mapped_vmo,
+    std::unique_ptr<ZSTDCompressedBlockCollection> compressed_block_collection)
+    : node_index_(node_index),
+      mapped_vmo_(mapped_vmo),
+      compressed_block_collection_(std::move(compressed_block_collection)),
+      seek_table_(nullptr),
+      d_stream_(d_stream) {}
+
+zx_status_t ZSTDSeekableBlob::LoadSeekTable() {
+  zx_status_t status = ReadHeader();
+  if (status != ZX_OK) {
+    return status;
+  }
 
   ZSTD_seekable* d_stream = ZSTD_seekable_create();
   if (d_stream == nullptr) {
@@ -262,41 +393,15 @@ zx_status_t ZSTDSeekableBlob::Read(uint8_t* buf, uint64_t data_byte_offset, uint
     return ZX_ERR_INTERNAL;
   }
 
-  size_t decompressed = 0;
-  do {
-    zstd_return =
-        ZSTD_seekable_decompress(d_stream, buf, num_bytes, data_byte_offset + decompressed);
-    if (ZSTD_isError(zstd_return)) {
-      FS_TRACE_ERROR("[blobfs][zstd-seekable] Failed to decompress: %s\n",
-                     ZSTD_getErrorName(zstd_return));
-      if (zstd_seekable_file.status != ZX_OK) {
-        return zstd_seekable_file.status;
-      }
-
-      return ZX_ERR_IO_DATA_INTEGRITY;
-    }
-
-    // Non-error case: |ZSTD_seekable_decompress| returns number of bytes decompressed.
-    decompressed += zstd_return;
-
-    // From the ZSTD_seekable_decompress Documentation:
-    //   The return value is the number of bytes decompressed, or an error code checkable with
-    //   ZSTD_isError().
-    // Assume that a return value of 0 indicates, not only that 0 bytes were decompressed, but also
-    // that there are no more bytes to decompress.
-  } while (zstd_return > 0 && decompressed < num_bytes);
-
-  // TODO(markdittmer): Perform verification over block-aligned data that was read.
+  zstd_return = ZSTD_seekable_copySeekTable(d_stream, &seek_table_);
+  if (ZSTD_isError(zstd_return)) {
+    FS_TRACE_ERROR("[blobfs][zstd-seekable] Failed to initialize seek table: %s\n",
+                   ZSTD_getErrorName(zstd_return));
+    return ZX_ERR_INTERNAL;
+  }
 
   return ZX_OK;
 }
-
-ZSTDSeekableBlob::ZSTDSeekableBlob(
-    uint32_t node_index, fzl::VmoMapper* mapped_vmo,
-    std::unique_ptr<ZSTDCompressedBlockCollection> compressed_block_collection)
-    : node_index_(node_index),
-      mapped_vmo_(mapped_vmo),
-      compressed_block_collection_(std::move(compressed_block_collection)) {}
 
 zx_status_t ZSTDSeekableBlob::ReadHeader() {
   // The header is an internal BlobFS data structure that fits into one block.

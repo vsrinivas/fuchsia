@@ -870,7 +870,7 @@ zx_status_t Blobfs::PopulateCompressedTransferVmo(uint64_t offset, uint64_t leng
   // Only supported paged compression format is ZSTD Seekable.
   ZX_DEBUG_ASSERT(info && info->compression_algorithm == CompressionAlgorithm::ZSTD_SEEKABLE);
 
-  // Assume |ExtendReadRange| already called on |offset| and |length|.
+  // Assume |ExtendReadRange()| already called on |offset| and |length|.
   ZX_DEBUG_ASSERT(offset % kBlobfsBlockSize == 0);
   ZX_DEBUG_ASSERT(length % kBlobfsBlockSize == 0 || offset + length == info->data_length_bytes);
 
@@ -886,13 +886,20 @@ zx_status_t Blobfs::PopulateCompressedTransferVmo(uint64_t offset, uint64_t leng
     return status;
   }
 
-  status = compressed_blobs_for_paging_->Read(
-      info->identifier, static_cast<uint8_t*>(mapping.start()), offset, length);
+  uint64_t read_offset = offset;
+  uint64_t read_length = length;
+  status =
+      compressed_blobs_for_paging_->Read(info->identifier, static_cast<uint8_t*>(mapping.start()),
+                                         mapping.size(), &read_offset, &read_length);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("blobfs: Failed to read from ZSTD Seekable archive to service page fault: %s\n",
                    zx_status_get_string(status));
     return status;
   }
+
+  // Assume |ExtendReadRange()| already calibrated to line up with frame boundaries.
+  ZX_DEBUG_ASSERT(read_offset == offset);
+  ZX_DEBUG_ASSERT(read_length == length);
 
   return ZX_OK;
 }

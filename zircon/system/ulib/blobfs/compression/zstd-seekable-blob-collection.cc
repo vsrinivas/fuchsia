@@ -31,6 +31,13 @@ zx_status_t ZSTDSeekableBlobCollection::Create(storage::VmoidRegistry* vmoid_reg
   std::unique_ptr<ZSTDSeekableBlobCollection> cbc(new ZSTDSeekableBlobCollection(
       vmoid_registry, space_manager, txn_handler, node_finder, kZSTDSeekableBlobCacheSize));
 
+  // Initialize shared decompression stream.
+  cbc->d_stream_ = ZSTD_createDStream();
+  if (cbc->d_stream_ == nullptr) {
+    FS_TRACE_ERROR("[blobfs][compressed] Failed to create shared decompression stream\n");
+    return ZX_ERR_INTERNAL;
+  }
+
   // Initialize shared transfer buffer.
   zx_status_t status = zx::vmo::create(kCompressedTransferBufferBytes, 0, &cbc->transfer_vmo_);
   if (status != ZX_OK) {
@@ -60,7 +67,10 @@ zx_status_t ZSTDSeekableBlobCollection::Create(storage::VmoidRegistry* vmoid_reg
   return ZX_OK;
 }
 
-ZSTDSeekableBlobCollection::~ZSTDSeekableBlobCollection() { mapped_vmo_.Unmap(); }
+ZSTDSeekableBlobCollection::~ZSTDSeekableBlobCollection() {
+  mapped_vmo_.Unmap();
+  ZSTD_freeDStream(d_stream_);
+}
 
 ZSTDSeekableBlobCollection::ZSTDSeekableBlobCollection(storage::VmoidRegistry* vmoid_registry,
                                                        SpaceManager* space_manager,
@@ -70,12 +80,13 @@ ZSTDSeekableBlobCollection::ZSTDSeekableBlobCollection(storage::VmoidRegistry* v
       txn_handler_(txn_handler),
       node_finder_(node_finder),
       vmoid_(vmoid_registry),
-      cache_(cache_size) {}
+      cache_(cache_size),
+      d_stream_(nullptr) {}
 
-zx_status_t ZSTDSeekableBlobCollection::Read(uint32_t node_index, uint8_t* buf,
-                                             uint64_t data_byte_offset, uint64_t num_bytes) {
+zx_status_t ZSTDSeekableBlobCollection::Read(uint32_t node_index, uint8_t* buf, uint64_t buf_size,
+                                             uint64_t* data_byte_offset, uint64_t* num_bytes) {
   InodePtr node = node_finder_->GetNode(node_index);
-  if (!node) {
+  if (node == nullptr) {
     FS_TRACE_ERROR("[blobfs][compressed] Invalid node index: %u\n", node_index);
     return ZX_ERR_INVALID_ARGS;
   }
@@ -97,8 +108,8 @@ zx_status_t ZSTDSeekableBlobCollection::Read(uint32_t node_index, uint8_t* buf,
           &mapped_vmo_, &vmoid_, kCompressedTransferBufferBlocks, space_manager_, txn_handler_,
           node_finder_, node_index, num_merkle_blocks);
       std::unique_ptr<ZSTDSeekableBlob> new_blob;
-      zx_status_t status =
-          ZSTDSeekableBlob::Create(node_index, &mapped_vmo_, std::move(blocks), &new_blob);
+      zx_status_t status = ZSTDSeekableBlob::Create(node_index, d_stream_, &mapped_vmo_,
+                                                    std::move(blocks), &new_blob);
       if (status != ZX_OK) {
         FS_TRACE_ERROR("[blobfs][compressed] Failed to construct ZSTDSeekableBlob: %s\n",
                        zx_status_get_string(status));
@@ -109,12 +120,12 @@ zx_status_t ZSTDSeekableBlobCollection::Read(uint32_t node_index, uint8_t* buf,
       ZX_ASSERT(blob != nullptr);
     }
 
-    zx_status_t status = blob->Read(buf, data_byte_offset, num_bytes);
+    zx_status_t status = blob->Read(buf, buf_size, data_byte_offset, num_bytes);
     if (status != ZX_OK) {
       FS_TRACE_ERROR(
           "[blobfs][compressed] Failed to Read from blob: node_index=%u, data_byte_offset=%lu, "
           "num_bytes=%lu: %s\n",
-          node_index, data_byte_offset, num_bytes, zx_status_get_string(status));
+          node_index, *data_byte_offset, *num_bytes, zx_status_get_string(status));
       return status;
     }
   }

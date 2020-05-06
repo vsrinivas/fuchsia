@@ -33,7 +33,8 @@ class RandomAccessCompressedBlob {
   // Load into |buf| exactly |num_bytes| bytes starting at _uncompressed_ file contents byte offset
   // |data_byte_offset|. The value of data in |buf| is expected to be valid if and only if the
   // return value is |ZX_OK|.
-  virtual zx_status_t Read(uint8_t* buf, uint64_t data_byte_offset, uint64_t num_bytes) = 0;
+  virtual zx_status_t Read(uint8_t* buf, uint64_t buf_size, uint64_t* data_byte_offset,
+                           uint64_t* num_bytes) = 0;
 };
 
 // ZSTDSeekableBlob as an implementation of |RandomAccessCompressedBlob| that uses the ZSTD Seekable
@@ -45,12 +46,13 @@ class ZSTDSeekableBlob : public RandomAccessCompressedBlob {
   // Create a |ZSTDSeekableBlob|. It is the invoker's responsibility to ensure that the VMO
   // populated on |compressed_block_collection.Read()| corresponds to |mapped_vmo|.
   static zx_status_t Create(
-      uint32_t node_index, fzl::VmoMapper* mapped_vmo,
+      uint32_t node_index, ZSTD_DStream* d_stream, fzl::VmoMapper* mapped_vmo,
       std::unique_ptr<ZSTDCompressedBlockCollection> compressed_block_collection,
       std::unique_ptr<ZSTDSeekableBlob>* out);
 
   // RandomAccessCompressedBlob implementation.
-  zx_status_t Read(uint8_t* buf, uint64_t data_byte_offset, uint64_t num_bytes) final;
+  zx_status_t Read(uint8_t* buf, uint64_t buf_size, uint64_t* data_byte_offset,
+                   uint64_t* num_bytes) final;
 
   const uint8_t* compressed_data_start() const {
     return static_cast<uint8_t*>(mapped_vmo_->start());
@@ -59,15 +61,18 @@ class ZSTDSeekableBlob : public RandomAccessCompressedBlob {
   uint32_t node_index() { return node_index_; }
 
  private:
-  ZSTDSeekableBlob(uint32_t node_index, fzl::VmoMapper* mapped_vmo,
+  ZSTDSeekableBlob(uint32_t node_index, ZSTD_DStream* d_stream, fzl::VmoMapper* mapped_vmo,
                    std::unique_ptr<ZSTDCompressedBlockCollection> compressed_block_collection);
 
+  zx_status_t LoadSeekTable();
   zx_status_t ReadHeader();
 
   uint32_t node_index_;
   ZSTDSeekableHeader header_;
   fzl::VmoMapper* mapped_vmo_;
   std::unique_ptr<ZSTDCompressedBlockCollection> compressed_block_collection_;
+  ZSTD_seekTable* seek_table_;
+  ZSTD_DStream* d_stream_;
 };
 
 // Type used for opaque pointer in ZSTD Seekable custom |ZSTD_seekable_seek| and

@@ -80,8 +80,10 @@ class ZSTDSeekableBlobTest : public zxtest::Test {
   void CheckRead(uint32_t node_index, std::vector<uint8_t>* buf, std::vector<uint8_t>* expected_buf,
                  uint64_t data_byte_offset, uint64_t num_bytes) {
     uint8_t* expected = expected_buf->data() + data_byte_offset;
+    uint64_t offset = data_byte_offset;
+    uint64_t length = num_bytes;
     ASSERT_OK(
-        compressed_blob_collection()->Read(node_index, buf->data(), data_byte_offset, num_bytes));
+        compressed_blob_collection()->Read(node_index, buf->data(), buf->size(), &offset, &length));
     ASSERT_BYTES_EQ(expected, buf->data(), num_bytes);
   }
 
@@ -246,7 +248,10 @@ TEST_F(ZSTDSeekAndReadTest, SmallReadOverTwoBlocks) {
   auto blocks_for_file = blocks.get();
 
   std::unique_ptr<ZSTDSeekableBlob> blob;
-  ASSERT_OK(ZSTDSeekableBlob::Create(node_index, &mapper, std::move(blocks), &blob));
+  ZSTD_DStream* d_stream = ZSTD_createDStream();
+  ASSERT_NOT_NULL(d_stream);
+  auto clean_up = fbl::MakeAutoCall([&]() { ZSTD_freeDStream(d_stream); });
+  ASSERT_OK(ZSTDSeekableBlob::Create(node_index, d_stream, &mapper, std::move(blocks), &blob));
 
   ZSTDSeekableFile file = ZSTDSeekableFile{
       .blob = blob.get(),
@@ -275,7 +280,10 @@ TEST_F(ZSTDSeekableBlobTest, CompleteRead) {
   std::vector<uint8_t> buf(blob_info->size_data);
   std::vector<uint8_t> expected(blob_info->size_data);
   ZeroToSevenBlobSrcFunction(reinterpret_cast<char*>(expected.data()), blob_info->size_data);
-  ASSERT_OK(compressed_blob_collection()->Read(node_index, buf.data(), 0, blob_info->size_data));
+  uint64_t offset = 0;
+  uint64_t length = blob_info->size_data;
+  ASSERT_OK(
+      compressed_blob_collection()->Read(node_index, buf.data(), buf.size(), &offset, &length));
   ASSERT_BYTES_EQ(expected.data(), buf.data(), blob_info->size_data);
 }
 
@@ -338,8 +346,10 @@ TEST_F(ZSTDSeekableBlobTest, BadOffset) {
 
   // Attempt to read one byte passed the end of the blob.
   std::vector<uint8_t> buf(1);
-  ASSERT_EQ(ZX_ERR_IO_DATA_INTEGRITY,
-            compressed_blob_collection()->Read(node_index, buf.data(), blob_info->size_data, 1));
+  uint64_t offset = blob_info->size_data;
+  uint64_t length = 1;
+  ASSERT_EQ(ZX_ERR_IO_DATA_INTEGRITY, compressed_blob_collection()->Read(
+                                          node_index, buf.data(), buf.size(), &offset, &length));
 }
 
 TEST_F(ZSTDSeekableBlobTest, BadSize) {
@@ -349,15 +359,20 @@ TEST_F(ZSTDSeekableBlobTest, BadSize) {
 
   // Attempt to read two bytes: the last byte in the blob, and one byte passed the end.
   std::vector<uint8_t> buf(2);
+  uint64_t offset = blob_info->size_data - 1;
+  uint64_t length = 2;
   ASSERT_EQ(ZX_ERR_IO_DATA_INTEGRITY, compressed_blob_collection()->Read(
-                                          node_index, buf.data(), blob_info->size_data - 1, 2));
+                                          node_index, buf.data(), buf.size(), &offset, &length));
 }
 
 TEST_F(ZSTDSeekableBlobNullNodeFinderTest, BadNode) {
   std::vector<uint8_t> buf(1);
 
   // Attempt to read a byte from a node that doesn't exist.
-  ASSERT_EQ(ZX_ERR_INVALID_ARGS, compressed_blob_collection()->Read(42, buf.data(), 0, 1));
+  uint64_t offset = 0;
+  uint64_t length = 1;
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS,
+            compressed_blob_collection()->Read(42, buf.data(), buf.size(), &offset, &length));
 }
 
 TEST_F(ZSTDSeekableBlobWrongAlgorithmTest, BadFlags) {
@@ -367,7 +382,10 @@ TEST_F(ZSTDSeekableBlobWrongAlgorithmTest, BadFlags) {
   std::vector<uint8_t> buf(1);
 
   // Attempt to read a byte from a blob that is not zstd-seekable.
-  ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, compressed_blob_collection()->Read(node_index, buf.data(), 0, 1));
+  uint64_t offset = 0;
+  uint64_t length = 1;
+  ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, compressed_blob_collection()->Read(node_index, buf.data(),
+                                                                     buf.size(), &offset, &length));
 }
 
 }  // namespace

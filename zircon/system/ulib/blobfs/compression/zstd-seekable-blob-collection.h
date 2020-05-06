@@ -63,8 +63,8 @@ class ZSTDSeekableBlobCollection {
   // Load exactly |num_bytes| bytes starting at _uncompressed_ file contents byte offset
   // |data_byte_offset| from blob identified by inode index |node_index| into |buf|. The value of
   // data in |buf| is expected to be valid if and only if the return value is |ZX_OK|.
-  zx_status_t Read(uint32_t node_index, uint8_t* buf, uint64_t data_byte_offset,
-                   uint64_t num_bytes);
+  zx_status_t Read(uint32_t node_index, uint8_t* buf, uint64_t buf_size, uint64_t* data_byte_offset,
+                   uint64_t* num_bytes);
 
  private:
   ZSTDSeekableBlobCollection(storage::VmoidRegistry* vmoid_registry, SpaceManager* space_manager,
@@ -90,6 +90,7 @@ class ZSTDSeekableBlobCollection {
   storage::OwnedVmoid vmoid_;
   fzl::VmoMapper mapped_vmo_;
   ZSTDSeekableLRUBlobCache cache_;
+  ZSTD_DStream* d_stream_;
 };
 
 }  // namespace blobfs
