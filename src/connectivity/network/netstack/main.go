@@ -23,16 +23,15 @@ import (
 	"time"
 
 	appcontext "app/context"
-	"syslog"
-
 	"netstack/connectivity"
 	"netstack/dns"
 	"netstack/filter"
-	networking_metrics "networking_metrics_golib"
+	"networking_metrics_golib"
+	"syslog"
 
 	"fidl/fuchsia/cobalt"
 	"fidl/fuchsia/device"
-	inspect "fidl/fuchsia/inspect/deprecated"
+	deprecatedInspect "fidl/fuchsia/inspect/deprecated"
 	"fidl/fuchsia/net"
 	"fidl/fuchsia/net/name"
 	"fidl/fuchsia/net/stack"
@@ -271,7 +270,7 @@ func Main() {
 		}},
 	}
 
-	var inspectService inspect.InspectService
+	var inspectService deprecatedInspect.InspectService
 	appCtx.OutgoingService.AddDiagnostics("counters", &appcontext.DirectoryWrapper{
 		Directory: &inspectDirectory{
 			asService: (&inspectImpl{
