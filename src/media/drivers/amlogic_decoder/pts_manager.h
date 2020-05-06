@@ -14,7 +14,19 @@
 
 class PtsManager {
  public:
-  static constexpr uint32_t kMaxEntriesToKeep = 100;
+  // 8 is the max number of frames in a VP9 superframe.  For H264, num_reorder_frames is max 16.  So
+  // 32 should be enough for both VP9 and H264.
+  static constexpr uint32_t kMaxEntriesDueToFrameReordering = 32;
+  // Large enough to store an entry per every 4 bytes of the 4k h264 stream buffer.  This assumes
+  // every frame is a 3 byte start code + 1 byte NALU header and that's all.  Real frames are
+  // larger, so this will be enough entries for our current worst case.
+  static constexpr uint32_t kMaxEntriesDueToH264SingleStreamBuffering = 4 * 1024 / 4;
+  // This "extra" value should take care of any buffering in the video decoder itself, and any delay
+  // outputting a decompressed frame after it has been removed from the stream buffer.
+  static constexpr uint32_t kMaxEntriesDueToExtraDecoderDelay = 32;
+  static constexpr uint32_t kMaxEntriesToKeep = kMaxEntriesDueToFrameReordering +
+                                                kMaxEntriesDueToH264SingleStreamBuffering +
+                                                kMaxEntriesDueToExtraDecoderDelay;
   class LookupResult {
    public:
     // Outside of PtsManager, can only be copied, not created from scratch and
@@ -61,8 +73,7 @@ class PtsManager {
   // input stream data (stream offset of last input stream byte + 1).
   void SetEndOfStreamOffset(uint64_t end_of_stream_offset);
 
-  // Offset must be within the frame that's being looked up. Only the last 100
-  // PTS inserted are kept around (last 100 by stream offset).
+  // Offset must be within the frame that's being looked up.
   const LookupResult Lookup(uint64_t offset);
 
  private:
@@ -73,6 +84,11 @@ class PtsManager {
   std::mutex lock_;
   __TA_GUARDED(lock_)
   uint32_t lookup_bit_width_ = 64;
+
+  // TODO(dustingreen): Consider switching to a SortedCircularBuffer (to be implemented) of size
+  // kMaxEntries instead, to avoid so many pointers and separate heap allocations.  Despite the
+  // memory inefficiency vs. a circular buffer, this likely consumes ~128KiB, so switching isn't
+  // urgent.
   __TA_GUARDED(lock_)
   std::map<uint64_t, LookupResult> offset_to_result_;
 };
