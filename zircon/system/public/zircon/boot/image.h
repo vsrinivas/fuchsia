@@ -443,10 +443,24 @@ typedef struct {
 } zbi_topology_processor_t;
 
 typedef struct {
-    // Relative performance level of this processor in the system, with 0
-    // representing the lowest performance.
-    // For example on a two cluster ARM big.LITTLE system 0 would be the little
-    // cores and 1 would represent the big cores.
+    // Relative performance level of this processor in the system. The value is
+    // interpreted as the performance of this processor relative to the maximum
+    // performance processor in the system. No specific values are required for
+    // the performance level, only that the following relationship holds:
+    //
+    //   Pmax is the value of performance_class for the maximum performance
+    //   processor in the system, operating at its maximum operating point.
+    //
+    //   P is the value of performance_class for this processor, operating at
+    //   its maximum operating point.
+    //
+    //   R is the performance ratio of this processor to the maximum performance
+    //   processor in the system in the range (0.0, 1.0].
+    //
+    //   R = (P + 1) / (Pmax + 1)
+    //
+    // If accuracy is limited, choose a conservative value that slightly under-
+    // estimates the performance of lower-performance processors.
     uint8_t performance_class;
 } zbi_topology_cluster_t;
 

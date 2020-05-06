@@ -136,6 +136,10 @@ class Graph {
 
 inline const Graph& GetSystemTopology() { return Graph::GetSystemTopology(); }
 
+// Looks up the performance class of the given logical CPU. Returns zero if no
+// cpu or cluster node is found.
+uint8_t GetPerformanceClass(cpu_num_t cpu_id);
+
 }  // namespace system_topology
 
 #endif  // ZIRCON_KERNEL_LIB_TOPOLOGY_INCLUDE_LIB_SYSTEM_TOPOLOGY_H_

@@ -14,6 +14,7 @@
 
 #include <arch/ops.h>
 #include <fbl/intrusive_double_list.h>
+#include <ffl/fixed.h>
 #include <kernel/align.h>
 #include <kernel/dpc.h>
 #include <kernel/event.h>
@@ -40,6 +41,14 @@ struct percpu {
   // deadline of this cpu's platform timer or ZX_TIME_INFINITE if not set
   zx_time_t next_timer_deadline;
 
+  // Performance scale of this CPU relative to the highest performance CPU. This
+  // value is determined from the system topology, when available. The precision
+  // accommodates the 8bit performance values available for ARM and x86.
+  using PerformanceScale = ffl::Fixed<int32_t, 8>;
+  PerformanceScale performance_scale{1};
+  PerformanceScale performance_scale_reciprocal{1};
+
+  // per cpu scheduler
   Scheduler scheduler;
 
 #if WITH_LOCK_DEP

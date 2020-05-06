@@ -6,12 +6,17 @@
 
 #include "kernel/percpu.h"
 
+#include <debug.h>
 #include <lib/counters.h>
 #include <lib/system-topology.h>
 
 #include <arch/ops.h>
+#include <fbl/alloc_checker.h>
+#include <ffl/string.h>
 #include <kernel/align.h>
 #include <kernel/lockdep.h>
+#include <ktl/algorithm.h>
+#include <ktl/unique_ptr.h>
 #include <lk/init.h>
 #include <lockdep/lockdep.h>
 
@@ -63,6 +68,30 @@ void percpu::InitializeSecondary(uint32_t /*init_level*/) {
   for (cpu_num_t i = 1; i < processor_count_; i++) {
     processor_index_[i] = &secondary_processors_[i - 1];
     new (&secondary_processors_[i - 1]) percpu{i};
+  }
+
+  // Compute the performance scale of each CPU.
+  {
+    fbl::AllocChecker checker;
+    ktl::unique_ptr<uint8_t[]> performance_class{new (&checker) uint8_t[processor_count_]};
+    if (checker.check()) {
+      uint8_t max_performance_class = 0;
+      for (cpu_num_t i = 0; i < processor_count_; i++) {
+        performance_class[i] = system_topology::GetPerformanceClass(i);
+        max_performance_class = ktl::max(performance_class[i], max_performance_class);
+      }
+
+      dprintf(INFO, "CPU performance scales:\n");
+      for (cpu_num_t i = 0; i < processor_count_; i++) {
+        PerformanceScale scale =
+            ffl::FromRatio(performance_class[i] + 1, max_performance_class + 1);
+        processor_index_[i]->performance_scale = scale;
+        processor_index_[i]->performance_scale_reciprocal = 1 / scale;
+        dprintf(INFO, "CPU %2u: %s\n", i, Format(scale).c_str());
+      }
+    } else {
+      dprintf(INFO, "Failed to allocate temp buffer, using default performance for all CPUs\n");
+    }
   }
 }
 

@@ -4,6 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <assert.h>
+#include <debug.h>
 #include <lib/system-topology.h>
 #include <zircon/boot/image.h>
 #include <zircon/errors.h>
@@ -209,6 +211,23 @@ bool Graph::Validate(const zbi_topology_node_t* nodes, size_t count) {
     }
   }
   return true;
+}
+
+uint8_t GetPerformanceClass(cpu_num_t cpu_id) {
+  Node* cpu_node = nullptr;
+  if (GetSystemTopology().ProcessorByLogicalId(cpu_id, &cpu_node) != ZX_OK) {
+    dprintf(INFO, "System topology: Failed to get processor node for cpu %u\n", cpu_id);
+    return 0;
+  }
+  DEBUG_ASSERT(cpu_node != nullptr);
+
+  for (Node* node = cpu_node->parent; node != nullptr; node = node->parent) {
+    if (node->entity_type == ZBI_TOPOLOGY_ENTITY_CLUSTER) {
+      return node->entity.cluster.performance_class;
+    }
+  }
+
+  return 0;
 }
 
 }  // namespace system_topology
