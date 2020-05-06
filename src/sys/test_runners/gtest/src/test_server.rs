@@ -92,12 +92,12 @@ struct TestSuiteResult {
 ///      "testsuite": [
 ///        {
 ///          "name": "Test1",
-///          "file": "../../src/sys/test_adapters/gtest/test_data/sample_tests.cc",
+///          "file": "../../src/sys/test_runners/gtest/test_data/sample_tests.cc",
 ///          "line": 7
 ///        },
 ///        {
 ///          "name": "Test2",
-///          "file": "../../src/sys/test_adapters/gtest/test_data/sample_tests.cc",
+///          "file": "../../src/sys/test_runners/gtest/test_data/sample_tests.cc",
 ///          "line": 9
 ///        }
 ///      ]

@@ -667,7 +667,6 @@ group("deprecated_package_underscore") {
     "//src/sys/run_test_suite:run_test_suite_pkg",
     "//src/sys/sysmgr/integration_tests:integration_tests",
     "//src/sys/sysmgr/test:sysmgr_tests",
-    "//src/sys/test_adapters/rust:rust_test_adapter_tests",
     "//src/sys/test_manager/tests:test_manager_test",
     "//src/sys/test_manager:test_manager_pkg",
     "//src/sys/test_runners/gtest:gtest_runner",

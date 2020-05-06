@@ -31,7 +31,6 @@ package("test_manager_test") {
   deps = [
     ":test_manager_test_bin",
     "test_data",
-    "//src/sys/test_adapters/rust",
   ]
 
   meta = [
@@ -52,9 +51,6 @@ package("test_manager_test") {
   ]
 
   binaries = [
-    {
-      name = "rust_test_adapter"
-    },
     {
       name = "no_suite_service"
     },

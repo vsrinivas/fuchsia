@@ -79,7 +79,6 @@ test_package("remote-control-lib-tests") {
   deps = [
     ":lib_test",
     "//src/developer/remote-control/testing/mock-sys-launcher:mock-sys-launcher-bin",
-    "//src/sys/test_adapters/rust",
   ]
   meta = [
     {

@@ -30,7 +30,6 @@ group("tests") {
     "run_test_suite:tests",
     "stash:tests",
     "sysmgr:tests",
-    "test_adapters:tests",
     "test_manager:tests",
     "test_runners:tests",
     "timekeeper:tests",

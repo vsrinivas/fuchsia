@@ -1,7 +1,6 @@
 {
     program: {
-        binary: "bin/rust_test_adapter",
-        args: [ "/pkg/test/test_manager_test" ],
+        binary: "test/test_manager_test",
     },
     children: [
         {
@@ -10,16 +9,13 @@
         },
     ],
     use: [
-        { runner: "elf" },
+        { runner: "rust_test_runner" },
         {
             protocol: "/svc/fuchsia.sys2.Realm",
             from: "framework",
         },
         {
-            protocol: [
-                "/svc/fuchsia.logger.LogSink",
-                "/svc/fuchsia.process.Launcher",
-            ],
+            protocol: [ "/svc/fuchsia.logger.LogSink" ],
         },
     ],
     offer: [
