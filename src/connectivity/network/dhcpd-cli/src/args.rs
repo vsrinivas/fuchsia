@@ -19,6 +19,10 @@ pub struct Cli {
 #[derive(Debug, FromArgs)]
 #[argh(subcommand)]
 pub enum Command {
+    /// Starts the DHCP server.
+    Start(Start),
+    /// Stops the DHCP server.
+    Stop(Stop),
     /// a primary command to retrieve the value of a DHCP option or server parameter.
     Get(Get),
     /// a primary command to set the value of a DHCP option or server parameter.
@@ -31,6 +35,16 @@ pub enum Command {
     // The value of this variant is required by the argh crate but is not actually used.
     ClearLeases(ClearLeases),
 }
+
+/// A primary command to start the DHCP server.
+#[derive(Debug, FromArgs)]
+#[argh(subcommand, name = "start")]
+pub struct Start {}
+
+/// A primary command to stop the DHCP server.
+#[derive(Debug, FromArgs)]
+#[argh(subcommand, name = "stop")]
+pub struct Stop {}
 
 /// A primary command to retrieve the value of a DHCP option or server parameter.
 #[derive(Debug, FromArgs)]

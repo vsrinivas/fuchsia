@@ -72,6 +72,6 @@ group("tests") {
   deps = [
     ":dhcpd-cli",
     ":dhcpd-cli-tests",
-    "//src/connectivity/network/dhcp",
+    "//src/connectivity/network/dhcp:dhcpd-testing",
   ]
 }

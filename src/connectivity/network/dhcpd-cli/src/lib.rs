@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#![cfg(test)]
+
 use futures::{FutureExt, StreamExt};
 use rand::Rng;
 
@@ -11,8 +13,7 @@ struct Command<'a> {
     expected_stderr: &'a str,
 }
 
-#[cfg(test)]
-async fn test_cli(commands: Vec<Command<'_>>) {
+async fn test_cli_with_config(config: &'static str, commands: Vec<Command<'_>>) {
     let mut fs = fuchsia_component::server::ServiceFs::new_local();
     //TODO(atait): Why can't two component proxies establish a connection with one another? It would be
     // preferable to have both fuchsia.net.dhcp.Server and fuchsia.stash.Store added as component
@@ -22,10 +23,12 @@ async fn test_cli(commands: Vec<Command<'_>>) {
     // case does not pollute another.
     fs.add_proxy_service::<fidl_fuchsia_stash::StoreMarker, _>()
         .add_component_proxy_service::<fidl_fuchsia_net_dhcp::Server_Marker, _>(
-        fuchsia_component::fuchsia_single_component_package_url!("dhcpd").to_string(),
+        fuchsia_component::fuchsia_single_component_package_url!("dhcpd-testing").to_string(),
         Some(vec![
             "--stash".to_string(),
             rand::thread_rng().sample_iter(&rand::distributions::Alphanumeric).take(8).collect(),
+            "--config".to_string(),
+            format!("/pkg/data/{}.json", config),
         ]),
     );
     let env =
@@ -50,6 +53,10 @@ async fn test_cli(commands: Vec<Command<'_>>) {
         assert_eq!(stderr, expected_stderr);
         assert_eq!(stdout, expected_stdout);
     }
+}
+
+async fn test_cli(commands: Vec<Command<'_>>) {
+    test_cli_with_config("default_config", commands).await
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
@@ -313,4 +320,30 @@ async fn test_reset_parameter() {
 async fn test_clear_leases() {
     test_cli(vec![Command { args: vec!["clear-leases"], expected_stdout: "", expected_stderr: "" }])
         .await
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_start_fails() {
+    test_cli(vec![Command {
+        args: vec!["start"],
+        expected_stdout: "",
+        // Starting the server fails because the default configuration has an
+        // empty address pool.
+        expected_stderr: "Error: failed to start server\n\nCaused by:\n    INVALID_ARGS\n",
+    }])
+    .await
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_start_succeeds() {
+    test_cli_with_config(
+        "test_config",
+        vec![Command { args: vec!["start"], expected_stdout: "", expected_stderr: "" }],
+    )
+    .await
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_stop() {
+    test_cli(vec![Command { args: vec!["stop"], expected_stdout: "", expected_stderr: "" }]).await
 }

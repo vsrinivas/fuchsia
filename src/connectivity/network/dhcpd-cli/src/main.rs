@@ -17,18 +17,28 @@ async fn main() -> Result<(), Error> {
     let server = fuchsia_component::client::connect_to_service::<Server_Marker>()
         .with_context(|| format!("failed to connect to {} service", Server_Marker::DEBUG_NAME))?;
     let () = match argh::from_env() {
+        Cli { cmd: Command::Start(Start {}) } => do_start(server).await?,
+        Cli { cmd: Command::Stop(Stop {}) } => do_stop(server).await?,
         Cli { cmd: Command::Get(get_arg) } => do_get(get_arg, server).await?,
         Cli { cmd: Command::Set(set_arg) } => do_set(set_arg, server).await?,
         Cli { cmd: Command::List(list_arg) } => do_list(list_arg, server).await?,
         Cli { cmd: Command::Reset(reset_arg) } => do_reset(reset_arg, server).await?,
-        Cli { cmd: Command::ClearLeases(ClearLeases {}) } => server
-            .clear_leases()
-            .await?
-            .map_err(fuchsia_zircon::Status::from_raw)
-            .context("clear_leases() failed")?,
+        Cli { cmd: Command::ClearLeases(ClearLeases {}) } => do_clear_leases(server).await?,
     };
 
     Ok(())
+}
+
+async fn do_start(server: Server_Proxy) -> Result<(), Error> {
+    server
+        .start_serving()
+        .await?
+        .map_err(fuchsia_zircon::Status::from_raw)
+        .context("failed to start server")
+}
+
+async fn do_stop(server: Server_Proxy) -> Result<(), Error> {
+    Ok(server.stop_serving().await.context("failed to stop server")?)
 }
 
 async fn do_get(get_arg: Get, server: Server_Proxy) -> Result<(), Error> {
@@ -114,4 +124,12 @@ async fn do_reset(reset_arg: Reset, server: Server_Proxy) -> Result<(), Error> {
         }
     };
     Ok(())
+}
+
+async fn do_clear_leases(server: Server_Proxy) -> Result<(), Error> {
+    server
+        .clear_leases()
+        .await?
+        .map_err(fuchsia_zircon::Status::from_raw)
+        .context("clear_leases() failed")
 }
