@@ -869,9 +869,9 @@ zx_status_t Blobfs::PopulateCompressedTransferVmo(uint64_t offset, uint64_t leng
   // with appropriate values.
 
   // Only supported paged compression format is ZSTD Seekable.
-  ZX_DEBUG_ASSERT(info && *info->compression_algorithm == CompressionAlgorithm::ZSTD_SEEKABLE);
+  ZX_DEBUG_ASSERT(info && info->compression_algorithm == CompressionAlgorithm::ZSTD_SEEKABLE);
 
-  // Assume |AlignForVerification| already called on |offset| and |length|.
+  // Assume |ExtendReadRange| already called on |offset| and |length|.
   ZX_DEBUG_ASSERT(offset % kBlobfsBlockSize == 0);
   ZX_DEBUG_ASSERT(length % kBlobfsBlockSize == 0 || offset + length == info->data_length_bytes);
 
