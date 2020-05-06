@@ -5,7 +5,8 @@
 #include "src/camera/calibration/factory_protocol/factory_protocol.h"
 
 #include <fcntl.h>
-#include <lib/fdio/fdio.h>
+#include <fuchsia/hardware/camera/cpp/fidl.h>
+#include <lib/fdio/directory.h>
 
 #include <fbl/unique_fd.h>
 #include <src/lib/files/file.h>
@@ -13,169 +14,80 @@
 
 namespace camera {
 
-constexpr auto kTag = "camera_calibration";
+inline constexpr auto kTag = "camera_factory_server";
+inline constexpr auto kDirPath = "/calibration";
 
-static constexpr const char* kIspDevicePath = "/dev/class/isp-device-test/000";
-static constexpr const char* kControllerDevicePath =
-    "/dev/camera-controller/camera-controller-device";
-static constexpr const char* kDirPath = "/calibration";
+inline constexpr auto kCameraPath = "/dev/class/camera";
 
-fit::result<std::unique_ptr<FactoryProtocol>, zx_status_t> FactoryProtocol::Create(
-    zx::channel channel, async_dispatcher_t* dispatcher) {
-  auto factory_impl = std::make_unique<FactoryProtocol>(dispatcher);
-  factory_impl->binding_.set_error_handler(
-      [&factory_impl](zx_status_t status) { factory_impl->Shutdown(status); });
-
-  zx_status_t status = factory_impl->binding_.Bind(std::move(channel), factory_impl->dispatcher_);
+static fit::result<fuchsia::hardware::camera::DeviceHandle, zx_status_t> GetCamera(
+    const std::string& path) {
+  fuchsia::hardware::camera::DeviceHandle camera;
+  zx_status_t status =
+      fdio_service_connect(path.c_str(), camera.NewRequest().TakeChannel().release());
   if (status != ZX_OK) {
-    FX_PLOGST(ERROR, kTag, status);
+    FX_PLOGS(ERROR, status);
     return fit::error(status);
   }
-
-  // Connect to the isp-tester device.
-  int result = open(kIspDevicePath, O_RDONLY);
-  if (result < 0) {
-    FX_LOGST(ERROR, kTag) << "Error opening " << kIspDevicePath;
-    return fit::error(ZX_ERR_IO);
-  }
-  fbl::unique_fd isp_fd_(result);
-
-  zx::channel isp_tester_channel;
-  status = fdio_get_service_handle(isp_fd_.get(), isp_tester_channel.reset_and_get_address());
-  if (status != ZX_OK) {
-    FX_PLOGST(ERROR, kTag, status) << "Failed to get service handle";
-    return fit::error(status);
-  }
-
-  factory_impl->isp_tester_.Bind(std::move(isp_tester_channel));
-
-  // Connect to the controller device.
-  result = open(kControllerDevicePath, O_RDONLY);
-  if (result < 0) {
-    FX_LOGST(ERROR, kTag) << "Error opening " << kControllerDevicePath;
-    return fit::error(ZX_ERR_IO);
-  }
-  fbl::unique_fd controller_fd(result);
-
-  zx::channel controller_channel;
-  status = fdio_get_service_handle(controller_fd.get(), controller_channel.reset_and_get_address());
-  if (status != ZX_OK) {
-    FX_PLOGST(ERROR, kTag, status) << "Failed to get service handle";
-    return fit::error(status);
-  }
-
-  // TODO(nzo): Is there any harm to reusing the same dispatcher?
-  fuchsia::hardware::camera::DevicePtr device;
-  device.Bind(std::move(controller_channel), factory_impl->dispatcher_);
-
-  device->GetChannel2(factory_impl->controller_.NewRequest().TakeChannel());
-  if (!factory_impl->controller_) {
-    FX_LOGST(ERROR, kTag) << "Failed to get channel to controller device";
-    return fit::error(ZX_ERR_INTERNAL);
-  }
-
-  return fit::ok(std::move(factory_impl));
+  return fit::ok(std::move(camera));
 }
 
-zx_status_t FactoryProtocol::ConnectToStream() {
-  fuchsia::sysmem::ImageFormat_2 format;
-  fuchsia::sysmem::BufferCollectionInfo_2 buffers;
+fit::result<std::unique_ptr<FactoryServer>, zx_status_t> FactoryServer::Create(
+    fidl::InterfaceHandle<fuchsia::camera2::hal::Controller> controller) {
+  auto factory_server = std::make_unique<FactoryServer>();
 
-  // TODO(nzo): Is there any harm to reusing the same dispatcher?
-  auto request = stream_.NewRequest(dispatcher_);
-  zx_status_t status = isp_tester_->CreateStream(std::move(request), &buffers, &format);
-  if (status != ZX_OK) {
-    FX_PLOGST(ERROR, kTag, status) << "Failed to create stream";
-    return status;
+  auto result = GetCamera(kCameraPath);
+  if (result.is_error()) {
+    FX_LOGS(ERROR) << "Couldn't get camera from " << kCameraPath;
+    return fit::error(result.error());
   }
-  image_io_util_ = ImageIOUtil::Create(&buffers, kDirPath);
+  auto camera = result.take_value();
+  fuchsia::hardware::camera::DeviceSyncPtr dev;
+  dev.Bind(std::move(camera));
+  zx_status_t status = dev->GetChannel2(controller.NewRequest().TakeChannel());
+  if (status != ZX_OK) {
+    return fit::error(status);
+  }
 
-  stream_.set_error_handler([&](zx_status_t status) {
-    FX_PLOGS(ERROR, status) << "Stream disconnected";
-    Shutdown(status);
+  status =
+      factory_server->controller_.Bind(std::move(controller), factory_server->loop_.dispatcher());
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "Failed to get controller interface from device";
+    return fit::error(status);
+  }
+  factory_server->controller_.set_error_handler([&](zx_status_t status) {
+    FX_PLOGS(ERROR, status) << "Controller server disconnected during initialization.";
   });
-  stream_.events().OnFrameAvailable = [&](fuchsia::camera2::FrameAvailableInfo info) {
-    OnFrameAvailable(std::move(info));
-    frames_received_ = true;
-  };
-  stream_->Start();
-  streaming_ = true;
 
-  return ZX_OK;
-};
-
-void FactoryProtocol::Shutdown(zx_status_t status) {
-  // Close the connection if it's open.
-  if (binding_.is_bound()) {
-    binding_.Close(status);
-  }
-
-  // Stop streaming if it's started.
-  if (streaming_) {
-    stream_->Stop();
-    streaming_ = false;
-  }
+  return fit::ok(std::move(factory_server));
 }
+
+void FactoryServer::ConnectToStream() { FX_NOTIMPLEMENTED(); };
 
 // |fuchsia::camera2::Stream|
 
-void FactoryProtocol::OnFrameAvailable(fuchsia::camera2::FrameAvailableInfo info) {
-  if (info.frame_status != fuchsia::camera2::FrameStatus::OK) {
-    FX_LOGST(ERROR, kTag) << "Received OnFrameAvailable with error event";
-    return;
-  }
-
-  // Only allow a single write.
-  if (write_allowed_) {
-    zx_status_t status = image_io_util_->WriteImageData(info.buffer_id);
-    if (status != ZX_OK) {
-      FX_PLOGST(ERROR, kTag, status) << "Failed to write to disk";
-      return;
-    }
-    write_allowed_ = false;
-  }
-
-  stream_->ReleaseFrame(info.buffer_id);
+void FactoryServer::OnFrameAvailable(fuchsia::camera2::FrameAvailableInfo /* info */) {
+  FX_NOTIMPLEMENTED();
 }
 
 // |fuchsia::factory::camera::CameraFactory|
 
-void FactoryProtocol::DetectCamera(DetectCameraCallback callback) {
-  fuchsia::camera2::DeviceInfo device_info;
-  zx_status_t status = controller_->GetDeviceInfo(&device_info);
-  if (status != ZX_OK) {
-    FX_PLOGST(ERROR, kTag, status) << "Failed to call GetDeviceInfo";
-    Shutdown(status);
-  }
+void FactoryServer::DetectCamera(DetectCameraCallback /* callback */) { FX_NOTIMPLEMENTED(); }
 
-  auto response = fuchsia::factory::camera::CameraFactory_DetectCamera_Response();
-  // TODO(41671): account for multiple cameras on a single device.
-  response.camera_id = 0;
-  response.camera_info = std::move(device_info);
+void FactoryServer::Start() { FX_NOTIMPLEMENTED(); }
 
-  auto result = fuchsia::factory::camera::CameraFactory_DetectCamera_Result::WithResponse(
-      std::move(response));
-  callback(std::move(result));
-}
+void FactoryServer::Stop() { FX_NOTIMPLEMENTED(); }
 
-void FactoryProtocol::Start() {
-  if (!streaming_) {
-    ConnectToStream();
-  }
-}
-
-void FactoryProtocol::Stop() { Shutdown(ZX_OK); }
-
-void FactoryProtocol::SetConfig(uint32_t mode, int32_t integration_time, int32_t analog_gain,
-                                int32_t digital_gain, SetConfigCallback callback) {
+void FactoryServer::SetConfig(uint32_t /* mode */, int32_t /* integration_time */,
+                              int32_t /* analog_gain */, int32_t /* digital_gain */,
+                              SetConfigCallback /* callback */) {
   FX_NOTIMPLEMENTED();
 }
 
-void FactoryProtocol::CaptureImage(CaptureImageCallback callback) { FX_NOTIMPLEMENTED(); }
+void FactoryServer::CaptureImage(CaptureImageCallback /* callback */) { FX_NOTIMPLEMENTED(); }
 
-void FactoryProtocol::WriteCalibrationData(fuchsia::mem::Buffer calibration_data,
-                                           std::string file_path,
-                                           WriteCalibrationDataCallback callback) {
+void FactoryServer::WriteCalibrationData(fuchsia::mem::Buffer /* calibration_data */,
+                                         std::string /* file_path */,
+                                         WriteCalibrationDataCallback /* callback */) {
   FX_NOTIMPLEMENTED();
 }
 

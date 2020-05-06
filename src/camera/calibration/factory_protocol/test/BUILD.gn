@@ -9,10 +9,8 @@ executable("test") {
 
   deps = [
     "//src/camera/calibration/factory_protocol",
-    "//src/camera/drivers/test_utils",
     "//src/lib/files:files",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
+    "//src/lib/testing/loop_fixture",
   ]
 }
