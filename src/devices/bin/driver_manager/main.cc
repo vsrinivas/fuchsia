@@ -3,8 +3,6 @@
 // found in the LICENSE file.
 
 #include <fuchsia/boot/cpp/fidl.h>
-#include <fuchsia/boot/llcpp/fidl.h>
-#include <fuchsia/ldsvc/llcpp/fidl.h>
 #include <getopt.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
