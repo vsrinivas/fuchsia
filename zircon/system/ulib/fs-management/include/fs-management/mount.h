@@ -23,8 +23,9 @@ typedef struct mount_options {
   bool enable_journal;
   // Enable paging on the file system (if supported).
   bool enable_pager;
-  // Write files uncompressed. Disables compression (if supported).
-  bool write_uncompressed;
+  // An optional compression algorithm specifier for the filesystem to use when storing files (if
+  // the filesystem supports it).
+  const char* write_compression_algorithm;
   // If true will register with /svc/fuchsia.fshost.Registry.
   bool register_fs;
   // If set, run fsck after every transaction.

@@ -57,8 +57,9 @@ zx_status_t InitNativeFs(const char* binary, zx::channel device, const init_opti
   if (options.enable_pager) {
     argv.push_back("--pager");
   }
-  if (options.write_uncompressed) {
-    argv.push_back("--write-uncompressed");
+  if (options.write_compression_algorithm) {
+    argv.push_back("--compression");
+    argv.push_back(options.write_compression_algorithm);
   }
   if (options.fsck_after_every_transaction) {
     argv.push_back("--fsck_after_every_transaction");
@@ -104,7 +105,7 @@ const init_options_t default_init_options = {
     .wait_until_ready = true,
     .enable_journal = true,
     .enable_pager = false,
-    .write_uncompressed = false,
+    .write_compression_algorithm = nullptr,
     .fsck_after_every_transaction = false,
     .callback = launch_stdio_async,
 };

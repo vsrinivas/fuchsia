@@ -245,8 +245,8 @@ zx_status_t Fixture::Mount() {
   if (options_.use_pager) {
     mount_options.enable_pager = true;
   }
-  if (options_.write_uncompressed) {
-    mount_options.write_uncompressed = true;
+  if (options_.write_compression_algorithm) {
+    mount_options.write_compression_algorithm = options_.write_compression_algorithm;
   }
 
   disk_format_t format = detect_disk_format(fd.get());

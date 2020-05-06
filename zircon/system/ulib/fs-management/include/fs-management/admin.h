@@ -27,8 +27,9 @@ typedef struct init_options {
   bool enable_journal;
   // Enable paging on the file system (if supported).
   bool enable_pager;
-  // Write files uncompressed. Disables compression (if supported).
-  bool write_uncompressed;
+  // An optional compression algorithm specifier for the filesystem to use when storing files (if
+  // the filesystem supports it).
+  const char* write_compression_algorithm;
   // If true, run fsck after every transaction (if supported). This is for testing/debugging
   // purposes.
   bool fsck_after_every_transaction;
