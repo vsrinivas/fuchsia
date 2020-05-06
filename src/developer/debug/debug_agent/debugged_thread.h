@@ -69,7 +69,7 @@ class DebuggedThread {
     zx::thread handle;
     ThreadCreationOption creation_option = ThreadCreationOption::kRunningKeepRunning;
 
-    zx::exception exception;  // Optional.
+    std::unique_ptr<zx::exception> exception;  // Optional.
 
     std::shared_ptr<arch::ArchProvider> arch_provider;
     std::shared_ptr<ObjectProvider> object_provider;
@@ -84,13 +84,16 @@ class DebuggedThread {
   zx::thread& handle() { return handle_; }
   const zx::thread& handle() const { return handle_; }
 
-  zx::exception& exception_handle() { return exception_handle_; }
-  const zx::exception& exception_handle() const { return exception_handle_; }
-  void set_exception_handle(zx::exception exception) { exception_handle_ = std::move(exception); }
+  zx::exception* exception_handle() { return exception_handle_.get(); }
+  const zx::exception* exception_handle() const { return exception_handle_.get(); }
+  void set_exception_handle(std::unique_ptr<zx::exception> exception) {
+    exception_handle_ = std::move(exception);
+  }
 
   fxl::WeakPtr<DebuggedThread> GetWeakPtr();
 
-  void OnException(zx::exception exception_handle, zx_exception_info_t exception_info);
+  void OnException(std::unique_ptr<zx::exception> exception_handle,
+                   zx_exception_info_t exception_info);
 
   // Resumes execution of the thread. The thread should currently be in a
   // stopped state. If it's not stopped, this will be ignored.
@@ -167,7 +170,9 @@ class DebuggedThread {
   bool running() const { return !IsSuspended() && !IsInException(); }
 
   virtual bool IsSuspended() const { return ref_counted_suspend_token_.is_valid(); }
-  virtual bool IsInException() const { return exception_handle_.is_valid(); }
+  virtual bool IsInException() const {
+    return !!exception_handle_ && exception_handle_->is_valid();
+  }
 
   int ref_counted_suspend_count() const { return suspend_count_; }
 
@@ -240,7 +245,7 @@ class DebuggedThread {
   zx::suspend_token ref_counted_suspend_token_;
 
   // Active if the thread is currently on an exception.
-  zx::exception exception_handle_;
+  std::unique_ptr<zx::exception> exception_handle_;
 
   // Whether this thread is currently stepping over.
   bool stepping_over_breakpoint_ = false;

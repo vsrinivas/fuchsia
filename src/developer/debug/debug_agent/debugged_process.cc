@@ -606,7 +606,7 @@ void DebuggedProcess::OnThreadStarting(zx::exception exception,
   create_info.process = this;
   create_info.koid = exception_info.tid;
   create_info.handle = std::move(handle);
-  create_info.exception = std::move(exception);
+  create_info.exception = std::make_unique<zx::exception>(std::move(exception));
   create_info.creation_option = ThreadCreationOption::kSuspendedKeepSuspended;
   create_info.arch_provider = arch_provider_;
   create_info.object_provider = object_provider_;
@@ -656,7 +656,7 @@ void DebuggedProcess::OnException(zx::exception exception_token,
     return;
   }
 
-  thread->OnException(std::move(exception_token), exception_info);
+  thread->OnException(std::make_unique<zx::exception>(std::move(exception_token)), exception_info);
 }
 
 void DebuggedProcess::OnAddressSpace(const debug_ipc::AddressSpaceRequest& request,

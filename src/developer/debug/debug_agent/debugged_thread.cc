@@ -151,7 +151,7 @@ DebuggedThread::~DebuggedThread() = default;
 
 fxl::WeakPtr<DebuggedThread> DebuggedThread::GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
 
-void DebuggedThread::OnException(zx::exception exception_handle,
+void DebuggedThread::OnException(std::unique_ptr<zx::exception> exception_handle,
                                  zx_exception_info_t exception_info) {
   exception_handle_ = std::move(exception_handle);
 
@@ -197,7 +197,7 @@ void DebuggedThread::OnException(zx::exception exception_handle,
   // The exception was unhandled, so we close it so that the system can run its
   // course. The destructor would've done it anyway, but being explicit helps
   // readability.
-  exception_handle_.reset();
+  exception_handle_->reset();
 }
 
 void DebuggedThread::HandleSingleStep(debug_ipc::NotifyException* exception,
@@ -356,13 +356,14 @@ void DebuggedThread::Resume(const debug_ipc::ResumeRequest& request) {
 }
 
 void DebuggedThread::ResumeException() {
-  // We need to mark that this token is correctly handled before closing it.
-  if (exception_handle_.is_valid()) {
-    DEBUG_LOG(Thread) << ThreadPreamble(this) << "Resuming exception handle.";
-    uint32_t state = ZX_EXCEPTION_STATE_HANDLED;
-    exception_handle_.set_property(ZX_PROP_EXCEPTION_STATE, &state, sizeof(state));
+  if (!IsInException()) {
+    return;  
   }
-  exception_handle_.reset();
+  // We need to mark that this token is correctly handled before closing it.
+  DEBUG_LOG(Thread) << ThreadPreamble(this) << "Resuming exception handle.";
+  uint32_t state = ZX_EXCEPTION_STATE_HANDLED;
+  exception_handle_->set_property(ZX_PROP_EXCEPTION_STATE, &state, sizeof(state));
+  exception_handle_->reset();
 }
 
 void DebuggedThread::ResumeSuspension() {

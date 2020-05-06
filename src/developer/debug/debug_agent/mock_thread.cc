@@ -12,10 +12,11 @@ namespace debug_agent {
 MockThread::MockThread(DebuggedProcess* process, zx_koid_t thread_koid,
                        std::shared_ptr<arch::ArchProvider> arch_provider,
                        std::shared_ptr<ObjectProvider> object_provider)
-    : DebuggedThread(nullptr, DebuggedThread::CreateInfo{
-                                  process, thread_koid, zx::thread(thread_koid),
-                                  ThreadCreationOption::kRunningKeepRunning, zx::exception(),
-                                  std::move(arch_provider), std::move(object_provider)}) {}
+    : DebuggedThread(
+          nullptr, DebuggedThread::CreateInfo{
+                       process, thread_koid, zx::thread(thread_koid),
+                       ThreadCreationOption::kRunningKeepRunning, nullptr,
+                       std::move(arch_provider), std::move(object_provider)}) {}
 
 MockThread::~MockThread() {
   // We clear the handle that is fake.

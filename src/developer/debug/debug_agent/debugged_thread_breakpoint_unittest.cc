@@ -253,7 +253,7 @@ TEST(DebuggedThreadBreakpoint, NormalException) {
   exception_info.pid = proc_object->koid;
   exception_info.tid = thread_object->koid;
   exception_info.type = ZX_EXCP_FATAL_PAGE_FAULT;
-  thread.OnException(zx::exception(), exception_info);
+  thread.OnException(std::make_unique<zx::exception>(), exception_info);
 
   // We should've received an exception notification.
   ASSERT_EQ(context.backend->exceptions().size(), 1u);
@@ -298,7 +298,7 @@ TEST(DebuggedThreadBreakpoint, SWBreakpoint) {
   exception_info.pid = proc_object->koid;
   exception_info.tid = thread_object->koid;
   exception_info.type = ZX_EXCP_SW_BREAKPOINT;
-  thread.OnException(zx::exception(), exception_info);
+  thread.OnException(std::unique_ptr<zx::exception>(), exception_info);
 
   // We should've received an exception notification.
   ASSERT_EQ(context.backend->exceptions().size(), 1u);
@@ -331,7 +331,7 @@ TEST(DebuggedThreadBreakpoint, SWBreakpoint) {
   context.arch_provider->AppendBreakpoint(kAddress);
 
   // Throw the same breakpoint exception.
-  thread.OnException(zx::exception(), exception_info);
+  thread.OnException(std::make_unique<zx::exception>(), exception_info);
 
   // We should've received an exception notification with hit breakpoints.
   ASSERT_EQ(context.backend->exceptions().size(), 2u);
@@ -393,7 +393,7 @@ TEST(DebuggedThreadBreakpoint, HWBreakpoint) {
   exception_info.pid = proc_object->koid;
   exception_info.tid = thread_object->koid;
   exception_info.type = ZX_EXCP_HW_BREAKPOINT;
-  thread.OnException(zx::exception(), exception_info);
+  thread.OnException(std::make_unique<zx::exception>(), exception_info);
 
   // We should've received an exception notification.
   ASSERT_EQ(context.backend->exceptions().size(), 1u);
@@ -459,7 +459,7 @@ TEST(DebuggedThreadBreakpoint, Watchpoint) {
   exception_info.pid = proc_object->koid;
   exception_info.tid = thread_object->koid;
   exception_info.type = ZX_EXCP_HW_BREAKPOINT;
-  thread.OnException(zx::exception(), exception_info);
+  thread.OnException(std::make_unique<zx::exception>(), exception_info);
 
   // We should've received an exception notification.
   {

@@ -555,7 +555,7 @@ TEST_F(DebugAgentTests, AttachToLimbo) {
 
     ASSERT_TRUE(exception_thread);
     ASSERT_TRUE(exception_thread->IsInException());
-    EXPECT_EQ(exception_thread->exception_handle().get(), thread_object->koid);
+    EXPECT_EQ(exception_thread->exception_handle()->get(), thread_object->koid);
   }
 }
 

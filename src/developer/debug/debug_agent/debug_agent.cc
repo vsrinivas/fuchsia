@@ -740,7 +740,8 @@ zx_status_t DebugAgent::AttachToLimboProcess(zx_koid_t process_koid, uint32_t tr
   }
 
   FX_DCHECK(exception_thread);
-  exception_thread->set_exception_handle(std::move(*exception.mutable_exception()));
+  exception_thread->set_exception_handle(
+      std::make_unique<zx::exception>(std::move(*exception.mutable_exception())));
 
   return ZX_OK;
 }
