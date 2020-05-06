@@ -121,11 +121,19 @@ class InputSystem : public System,
   // Called by PointerEventBuffer.
   void DispatchDeferredPointerEvent(PointerEventBuffer::DeferredPointerEvent views_and_event);
 
-  void InjectTouchEvent(const fuchsia::ui::input::PointerEvent& world_space_pointer_event,
-                        const glm::vec2 screen_space_coords, const gfx::LayerStackPtr& layer_stack,
-                        bool parallel_dispatch, bool a11y_enabled);
-  void InjectMouseEvent(const fuchsia::ui::input::PointerEvent& world_space_pointer_event,
-                        const glm::vec2 screen_space_coords, const gfx::LayerStackPtr& layer_stack);
+  // Injects a touch event directly to the View with koid |target|.
+  void InjectTouchEventExclusive(
+      const fuchsia::ui::input::PointerEvent& context_local_pointer_event, zx_koid_t context,
+      zx_koid_t target);
+
+  // Injects a touch event by hit testing for appropriate targets.
+  void InjectTouchEventHitTested(const fuchsia::ui::input::PointerEvent& world_space_pointer_event,
+                                 const glm::vec2 screen_space_coords,
+                                 const gfx::LayerStackPtr& layer_stack, bool parallel_dispatch,
+                                 bool a11y_enabled);
+  void InjectMouseEventHitTested(const fuchsia::ui::input::PointerEvent& world_space_pointer_event,
+                                 const glm::vec2 screen_space_coords,
+                                 const gfx::LayerStackPtr& layer_stack);
 
   // Retrieve KOID of focus chain's root view.
   // Return ZX_KOID_INVALID if scene does not exist, or if the focus chain is empty.
@@ -147,8 +155,14 @@ class InputSystem : public System,
   void ReportPointerEventToView(const fuchsia::ui::input::PointerEvent& world_space_pointer,
                                 zx_koid_t view_ref_koid) const;
 
+  // Gets the transform matrix from the Local Space of the |view_ref|'s View to World Space.
+  // Return std::nullopt for exceptional cases (e.g., invalid, unknown or disconnected view ref).
+  // Precondition: scene_graph_ must be set.
+  std::optional<glm::mat4> GetViewToWorldTransform(zx_koid_t view_ref_koid) const;
+
   // Gets the transform matrix from World Space to the Local Space of the |view_ref|'s View.
   // Return std::nullopt for exceptional cases (e.g., invalid or unknown view ref).
+  // Precondition: scene_graph_ must be set.
   std::optional<glm::mat4> GetWorldToViewTransform(zx_koid_t view_ref_koid) const;
 
   InjectorId last_injector_id_ = 0;

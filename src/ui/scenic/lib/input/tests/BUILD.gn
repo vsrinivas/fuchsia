@@ -16,6 +16,7 @@ executable("unittests") {
   sources = [
     "accessibility_pointer_events_test.cc",
     "coordinate_transform_test.cc",
+    "coordinate_transform_test2.cc",
     "delivery_interruption_test.cc",
     "focus_avoidance_test.cc",
     "focus_transfer_test.cc",

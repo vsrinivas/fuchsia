@@ -14,7 +14,12 @@
 #include "src/lib/fxl/logging.h"
 #include "src/ui/scenic/lib/input/tests/util.h"
 
-// These tests exercise the coordinate transform logic applied to pointer events sent to sessions.
+// These tests exercise the Screen Space to View Space coordinate transform logic applied to
+// pointer events sent to sessions.
+// Setup:
+// Injection done in screen space, with fuchsia.ui.input.Command (legacy)
+// Target(s) specified with hit test
+// Dispatch done in fuchsia.ui.scenic.SessionListener (legacy)
 
 namespace lib_ui_input_tests {
 namespace {

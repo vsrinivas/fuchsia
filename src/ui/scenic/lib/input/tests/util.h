@@ -47,7 +47,12 @@ class SessionWrapper {
     return view_koid_;
   }
 
-  const fuchsia::ui::views::ViewRef& view_ref() { return view_ref_.value(); }
+  fuchsia::ui::views::ViewRef view_ref() {
+    FX_CHECK(view_ref_) << "No ViewRef set.";
+    fuchsia::ui::views::ViewRef clone;
+    view_ref_->Clone(&clone);
+    return clone;
+  }
 
   scenic::View* view() { return view_.get(); }
 

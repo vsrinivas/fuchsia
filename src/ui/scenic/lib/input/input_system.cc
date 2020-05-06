@@ -214,9 +214,9 @@ void InputSystem::Register(fuchsia::ui::pointerflow::InjectorConfig config,
         return IsDescendantAndConnected(scene_graph_->view_tree(), descendant, ancestor);
       },
       /*inject*/
-      [](zx_koid_t context, zx_koid_t target,
-         const fuchsia::ui::input::PointerEvent& context_local_event) {
-        // TODO(48972, 50438): Add injection.
+      [this](zx_koid_t context, zx_koid_t target,
+             const fuchsia::ui::input::PointerEvent& context_local_event) {
+        InjectTouchEventExclusive(context_local_event, context, target);
       });
   FX_CHECK(success) << "Injector already exists.";
 
@@ -292,8 +292,8 @@ void InputSystem::DispatchPointerCommand(const fuchsia::ui::input::SendPointerIn
         FX_LOGS(WARNING) << "Oops, touch device had unexpected HOVER event.";
         return;
       }
-      InjectTouchEvent(world_space_pointer_event, screen_space_coords, layer_stack,
-                       parallel_dispatch, IsA11yListenerEnabled());
+      InjectTouchEventHitTested(world_space_pointer_event, screen_space_coords, layer_stack,
+                                parallel_dispatch, IsA11yListenerEnabled());
       break;
     }
     case PointerEventType::MOUSE: {
@@ -305,7 +305,7 @@ void InputSystem::DispatchPointerCommand(const fuchsia::ui::input::SendPointerIn
                          << ") had an unexpected event: " << command.pointer_event.phase;
         return;
       }
-      InjectMouseEvent(world_space_pointer_event, screen_space_coords, layer_stack);
+      InjectMouseEventHitTested(world_space_pointer_event, screen_space_coords, layer_stack);
       break;
     }
     default:
@@ -317,6 +317,23 @@ void InputSystem::DispatchPointerCommand(const fuchsia::ui::input::SendPointerIn
   }
 }
 
+void InputSystem::InjectTouchEventExclusive(
+    const fuchsia::ui::input::PointerEvent& context_local_pointer_event, zx_koid_t context,
+    zx_koid_t target) {
+  if (!scene_graph_)
+    return;
+
+  std::optional<glm::mat4> context_to_world_transform = GetViewToWorldTransform(context);
+  if (!context_to_world_transform)
+    return;
+
+  const glm::vec2 world_space_coords = TransformPointerCoords(
+      PointerCoords(context_local_pointer_event), context_to_world_transform.value());
+  const fuchsia::ui::input::PointerEvent world_space_pointer_event =
+      ClonePointerWithCoords(context_local_pointer_event, world_space_coords);
+  ReportPointerEventToView(world_space_pointer_event, target);
+}
+
 // The touch state machine comprises ADD/DOWN/MOVE*/UP/REMOVE. Some notes:
 //  - We assume one touchscreen device, and use the device-assigned finger ID.
 //  - Touch ADD associates the following ADD/DOWN/MOVE*/UP/REMOVE event sequence
@@ -324,7 +341,7 @@ void InputSystem::DispatchPointerCommand(const fuchsia::ui::input::SendPointerIn
 //    disambiguation, we perform parallel dispatch to all clients.
 //  - Touch DOWN triggers a focus change, honoring the "may receive focus" property.
 //  - Touch REMOVE drops the association between event stream and client.
-void InputSystem::InjectTouchEvent(
+void InputSystem::InjectTouchEventHitTested(
     const fuchsia::ui::input::PointerEvent& world_space_pointer_event,
     const glm::vec2 screen_space_coords, const gfx::LayerStackPtr& layer_stack,
     bool parallel_dispatch, bool a11y_enabled) {
@@ -464,7 +481,7 @@ void InputSystem::InjectTouchEvent(
 //    cursors(!) do not roll up to any View (as expected), but may appear in the
 //    hit test; our dispatch needs to account for such behavior.
 // TODO(SCN-1078): Enhance trackpad support.
-void InputSystem::InjectMouseEvent(
+void InputSystem::InjectMouseEventHitTested(
     const fuchsia::ui::input::PointerEvent& world_space_pointer_event,
     glm::vec2 screen_space_coords, const gfx::LayerStackPtr& layer_stack) {
   FX_DCHECK(world_space_pointer_event.type == PointerEventType::MOUSE);
@@ -647,8 +664,14 @@ void InputSystem::ReportPointerEventToView(
   event_reporter->EnqueueEvent(std::move(event));
 }
 
+std::optional<glm::mat4> InputSystem::GetViewToWorldTransform(zx_koid_t view_ref_koid) const {
+  FX_DCHECK(scene_graph_) << "precondition";
+  return scene_graph_->view_tree().GlobalTransformOf(view_ref_koid);
+}
+
 std::optional<glm::mat4> InputSystem::GetWorldToViewTransform(zx_koid_t view_ref_koid) const {
-  const auto view_to_world_transform = scene_graph_->view_tree().GlobalTransformOf(view_ref_koid);
+  FX_DCHECK(scene_graph_) << "precondition";
+  const auto view_to_world_transform = GetViewToWorldTransform(view_ref_koid);
   if (!view_to_world_transform)
     return std::nullopt;
 

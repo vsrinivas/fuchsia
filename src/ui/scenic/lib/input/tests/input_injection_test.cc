@@ -54,9 +54,8 @@ class InputInjectionTest : public InputSystemTest {
     SessionWrapper child = CreateClient("child_view", std::move(v2));
     RequestToPresent(child.session());
 
-    ViewRef parent_view_ref, child_view_ref;
-    fidl::Clone(parent.view_ref(), &parent_view_ref);
-    fidl::Clone(child.view_ref(), &child_view_ref);
+    ViewRef parent_view_ref = parent.view_ref();
+    ViewRef child_view_ref = child.view_ref();
 
     root_session_ = std::make_unique<SessionWrapper>(std::move(root_session));
     parent_ = std::make_unique<SessionWrapper>(std::move(parent));
