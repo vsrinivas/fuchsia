@@ -298,7 +298,7 @@ success("InlineXUnionInStruct") {
             0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // envelope data is present
 
             0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // "after" length
-            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // "before" presence
+            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // "after" presence
 
             // secondary object 1: "before"
             'b', 'e', 'f', 'o', 'r', 'e', 0x00, 0x00,
@@ -529,6 +529,76 @@ decode_failure("StrictXUnion Field Unknown") {
         ),
     ],
     err = STRICT_UNION_UNKNOWN_FIELD,
+}
+
+success("RecursiveVectorUnionStruct") {
+    // TODO(fxb/38191): Fix stack overflow and enable for Go.
+    // TODO(fxb/7644): Fix self-references and enable for Dart.
+    // TODO(fxb/51443): Transformer should not assume that old == v1.
+    bindings_denylist = [go,dart,transformer],
+    value = RecursiveVectorUnionStruct {
+        u: RecursiveVectorUnion {
+            vec: [
+                RecursiveVectorUnion {
+                    vec: [],
+                },
+            ],
+        },
+    },
+    bytes = {
+        v1 = [
+            80:raw(
+                // primary object: outer union
+                0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00, // ordinal
+                0x38,0x00,0x00,0x00,0x00,0x00,0x00,0x00, // num bytes + num handles
+                0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff, // envelope data is present
+                // secondary object 1: outer vector
+                0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00, // size 1
+                0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff, // present
+                // secondary object 2: inner union
+                0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00, // ordinal
+                0x10,0x00,0x00,0x00,0x00,0x00,0x00,0x00, // num bytes + num handles
+                0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff, // envelope data is present
+                // secondary object 3: inner vector
+                0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, // size 0
+                0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff, // present
+            ),
+        ],
+    },
+}
+
+success("MutualRecursionUnionStruct") {
+    // TODO(fxb/38191): Fix stack overflow and enable for Go.
+    // TODO(fxb/7644): Fix self-references and enable for Dart.
+    // TODO(fxb/51443): Transformer should not assume that old == v1.
+    bindings_denylist = [go,dart,transformer],
+    value = MutualRecursionUnionStruct {
+        u: MutualRecursionUnion {
+            s: MutualRecursionUnionStruct {
+                u: MutualRecursionUnion {
+                    s: MutualRecursionUnionStruct {},
+                },
+            },
+        },
+    },
+    bytes = {
+        v1 = [
+            72:raw(
+                // primary object: outer union
+                0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00, // ordinal
+                0x30,0x00,0x00,0x00,0x00,0x00,0x00,0x00, // num bytes + num handles
+                0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff, // envelope data is present
+                // secondary object 1: inner union
+                0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00, // ordinal
+                0x18,0x00,0x00,0x00,0x00,0x00,0x00,0x00, // num bytes + num handles
+                0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff, // envelope data is present
+                // secondary object 2: null union
+                0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, // ordinal
+                0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, // num bytes + num handles
+                0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, // envelope data is not present
+            ),
+        ],
+    },
 }
 
 success("AddEthernetDeviceRequest") {

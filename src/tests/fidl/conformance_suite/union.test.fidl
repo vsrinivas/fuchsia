@@ -31,3 +31,23 @@ union ReverseOrdinalUnion {
 struct ReverseOrdinalUnionStruct {
     ReverseOrdinalUnion u;
 };
+
+[BindingsDenylist = "dart"]
+union RecursiveVectorUnion {
+    1: vector<RecursiveVectorUnion?> vec;
+};
+
+[BindingsDenylist = "dart"]
+struct RecursiveVectorUnionStruct {
+    RecursiveVectorUnion u;
+};
+
+[BindingsDenylist = "dart"]
+union MutualRecursionUnion {
+    1: MutualRecursionUnionStruct s;
+};
+
+[BindingsDenylist = "dart"]
+struct MutualRecursionUnionStruct {
+    MutualRecursionUnion? u;
+};
