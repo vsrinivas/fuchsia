@@ -75,13 +75,15 @@ async fn serve_fidl(
     let serve_client_policy_listeners = util::listener::serve::<
         fidl_policy::ClientStateUpdatesProxy,
         fidl_policy::ClientStateSummary,
+        util::listener::ClientStateUpdate,
     >(listener_msgs)
     .fuse();
     pin_mut!(serve_client_policy_listeners);
 
     let serve_ap_policy_listeners = util::listener::serve::<
         fidl_policy::AccessPointStateUpdatesProxy,
-        fidl_policy::AccessPointState,
+        Vec<fidl_policy::AccessPointState>,
+        util::listener::ApStatesUpdate,
     >(ap_listener_msgs)
     .fuse();
     pin_mut!(serve_ap_policy_listeners);
