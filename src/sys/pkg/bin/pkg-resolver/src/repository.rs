@@ -173,8 +173,8 @@ impl Repository {
     ) -> Result<CustomTargetMetadata, MerkleForError> {
         let mut updating_client = self.updating_client.lock().await;
         match updating_client.update_if_stale().await {
-            Ok(UpdateResult::Deferred) => fx_log_info!("skipping TUF metadata update"),
-            Ok(UpdateResult::UpToDate) => fx_log_info!("local TUF metadata in sync with remote"),
+            // These are the common cases and can be inferred from AutoClient inspect.
+            Ok(UpdateResult::Deferred) | Ok(UpdateResult::UpToDate) => (),
             Ok(UpdateResult::Updated) => fx_log_info!(
                 "updated local TUF metadata: {:?}",
                 updating_client.metadata_versions()
