@@ -240,8 +240,8 @@ zx_status_t brcmf_set_country(brcmf_pub* drvr, const wlanphy_country_t* country)
   ccreq.country_abbrev[2] = 0;
 
   // Log out the country code settings for reference
-  BRCMF_ERR("Country code set ccode %s, abbrev %s, rev %d", ccreq.ccode, ccreq.country_abbrev,
-            ccreq.rev);
+  BRCMF_INFO("Country code set ccode %s, abbrev %s, rev %d", ccreq.ccode, ccreq.country_abbrev,
+             ccreq.rev);
   // Set the country info in firmware
   err = brcmf_fil_iovar_data_set(ifp, "country", &ccreq, sizeof(ccreq), &fw_err);
   if (err != ZX_OK) {

@@ -1287,7 +1287,7 @@ static zx_status_t brcmf_configure_wpaie(struct brcmf_if* ifp, const struct brcm
   }
   /* Don't set SES_OW_ENABLED for now (since we don't support WPS yet) */
   wsec = (pval | gval);
-  BRCMF_ERR("WSEC: 0x%x WPA AUTH: 0x%x", wsec, wpa_auth);
+  BRCMF_INFO("WSEC: 0x%x WPA AUTH: 0x%x", wsec, wpa_auth);
 
   /* set wsec */
   err = brcmf_fil_bsscfg_int_set(ifp, "wsec", wsec);

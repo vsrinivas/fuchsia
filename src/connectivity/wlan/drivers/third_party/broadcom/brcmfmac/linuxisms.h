@@ -163,7 +163,7 @@ LINUX_FUNCVI(cfg80211_connect_done)
 LINUX_FUNCVV(cfg80211_michael_mic_failure)
 LINUX_FUNCVI(netif_carrier_off)
 
-#define netdev_for_each_mc_addr(a, b) for (({BRCMF_ERR("Calling netdev_for_each_mc_addr\n"); \
+#define netdev_for_each_mc_addr(a, b) for (({BRCMF_INFO("Calling netdev_for_each_mc_addr\n"); \
                                              a = nullptr;});1;)
 
 #define KBUILD_MODNAME "brcmfmac"
