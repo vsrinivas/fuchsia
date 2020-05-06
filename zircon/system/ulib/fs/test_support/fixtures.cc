@@ -65,9 +65,7 @@ void FilesystemTest::Mount() {
   init_options_t options = default_init_options;
   options.enable_journal = environment_->use_journal();
   options.enable_pager = environment_->use_pager();
-  if (environment_->write_compression_algorithm()) {
-    options.write_compression_algorithm = *environment_->write_compression_algorithm();
-  }
+  options.write_uncompressed = environment_->write_uncompressed();
 
   if (read_only_) {
     options.readonly = true;

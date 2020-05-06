@@ -104,7 +104,7 @@ zx_status_t StartFilesystem(fbl::unique_fd device_fd, disk_format_t df,
       .wait_until_ready = options->wait_until_ready,
       .enable_journal = options->enable_journal,
       .enable_pager = options->enable_pager,
-      .write_compression_algorithm = options->write_compression_algorithm,
+      .write_uncompressed = options->write_uncompressed,
       .fsck_after_every_transaction = options->fsck_after_every_transaction,
       .callback = cb,
   };
@@ -134,7 +134,7 @@ const mount_options_t default_mount_options = {
     .create_mountpoint = false,
     .enable_journal = true,
     .enable_pager = false,
-    .write_compression_algorithm = nullptr,
+    .write_uncompressed = false,
     .register_fs = true,
     .fsck_after_every_transaction = false,
 };

@@ -32,17 +32,10 @@ For address spaces that use ASLR this controls the number of bits of entropy in
 the randomization. Higher entropy results in a sparser address space and uses
 more memory for page tables. Valid values range from 0-36, with default being 30.
 
-## blobfs.write-compression-algorithm=\<algorithm\>
+## blobfs.uncompressed=\<bool\>
 
-The compression algorithm that blobfs should use for writing blobs at runtime.
-If unset, an internally defined system default is used.
-
-The following values are supported:
-
-*   `ZSTD`
-*   `ZSTD_SEEKABLE`
-*   `ZSTD_CHUNKED`
-*   `UNCOMPRESSED`
+If this option is set, new blobs that blobfs writes at runtime are uncompressed.
+Blobfs compression is enabled by default.
 
 ## blobfs.userpager=\<bool\>
 

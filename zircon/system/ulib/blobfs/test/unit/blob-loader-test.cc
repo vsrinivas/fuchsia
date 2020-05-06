@@ -203,7 +203,6 @@ class UncompressedBlobLoaderTest : public BlobLoaderTest {
   }
 };
 
-// TODO(jfsulliv): Split to each compression algorithm supported.
 class CompressedBlobLoaderTest : public BlobLoaderTest {
  public:
   void SetUp() final {

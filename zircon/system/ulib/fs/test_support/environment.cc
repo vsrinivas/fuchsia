@@ -30,7 +30,7 @@ Options:
 --device path_to_device (-d): Performs tests on top of a specific block device
 --no-journal: Don't use journal
 --pager (-p): Use pager (if supported by the filesystem)
---compression (-c) algorithm: Comprssion algorithm to use for the filesystem (if supported).
+--write-uncompressed (-u): Write files uncompressed. Disable compression (if supported by the filesystem)
 --power_stride n: Increment the operation count by n with each power cycle
                   (default 1)
 --power_start n: Start cycling power at count n (default 1)
@@ -54,7 +54,7 @@ bool GetOptions(int argc, char** argv, fs::Environment::TestConfig* config) {
         {"device", required_argument, nullptr, 'd'},
         {"no-journal", no_argument, nullptr, 'j'},  // No short option.
         {"pager", no_argument, nullptr, 'p'},
-        {"compression", required_argument, nullptr, 'c'},
+        {"write-uncompressed", no_argument, nullptr, 'u'},
         {"power_stride", required_argument, nullptr, '1'},
         {"power_start", required_argument, nullptr, '2'},
         {"power_cycles", required_argument, nullptr, '3'},
@@ -68,7 +68,7 @@ bool GetOptions(int argc, char** argv, fs::Environment::TestConfig* config) {
         {nullptr, 0, nullptr, 0},
     };
     int opt_index;
-    int c = getopt_long(argc, argv, "d:pc:hf::l::s::i:r:b::", options, &opt_index);
+    int c = getopt_long(argc, argv, "d:puhf::l::s::i:r:b::", options, &opt_index);
     if (c < 0) {
       break;
     }
@@ -82,8 +82,8 @@ bool GetOptions(int argc, char** argv, fs::Environment::TestConfig* config) {
       case 'p':
         config->use_pager = true;
         break;
-      case 'c':
-        config->write_compression_algorithm = optarg;
+      case 'u':
+        config->write_uncompressed = true;
         break;
       case '1':
         config->power_stride = std::max(static_cast<uint32_t>(strtoul(optarg, NULL, 0)), 1U);

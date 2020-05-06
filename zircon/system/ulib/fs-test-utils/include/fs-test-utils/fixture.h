@@ -60,7 +60,7 @@ struct FixtureOptions {
     options.seed = static_cast<unsigned int>(zx::ticks::now().get());
     options.isolated_devmgr = false;
     options.use_pager = false;
-    options.write_compression_algorithm = nullptr;
+    options.write_uncompressed = false;
     return options;
   }
 
@@ -106,9 +106,8 @@ struct FixtureOptions {
   // Whether to use the user pager (if supported by the |fs_format|).
   bool use_pager = false;
 
-  // An optional compression algorithm specifier for the filesystem to use when storing files (if
-  // the filesystem supports it).
-  const char* write_compression_algorithm = nullptr;
+  // Write files uncompressed. Disables compression (if supported).
+  bool write_uncompressed = false;
 };
 
 // Provides a base fixture for File system tests.

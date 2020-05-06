@@ -59,6 +59,8 @@ class FshostBootArgs {
 
   bool blobfs_enable_userpager() { return blobfs_userpager_; }
 
+  bool blobfs_write_uncompressed() { return blobfs_uncompressed_; }
+
   std::unique_ptr<std::string> pkgfs_file_with_prefix_and_name(const char* prefix,
                                                                const char* name) {
     char key[256];
@@ -89,15 +91,6 @@ class FshostBootArgs {
     return std::make_unique<std::string>(ret->value.data(), ret->value.size());
   }
 
-  // Returns the write compression algorithm to pass to blobfs (via the --compression flag).
-  // If nullptr, no value should be passed.
-  const char* blobfs_write_compression_algorithm() const {
-    if (!blobfs_write_compression_algorithm_) {
-      return nullptr;
-    }
-    return blobfs_write_compression_algorithm_->c_str();
-  }
-
  protected:
   // Protected constructor for FshostBootArgs that allows injecting a
   // different BootArgs member, for use in unit tests.
@@ -113,7 +106,7 @@ class FshostBootArgs {
   bool zircon_system_filesystem_check_ = false;
   bool zircon_system_wait_for_data_ = true;
   bool blobfs_userpager_ = false;
-  std::optional<std::string> blobfs_write_compression_algorithm_ = std::nullopt;
+  bool blobfs_uncompressed_ = false;
 
   void InitParams() {
     llcpp::fuchsia::boot::BoolPair defaults[] = {
@@ -136,24 +129,7 @@ class FshostBootArgs {
     zircon_system_filesystem_check_ = ret->values[2];
     zircon_system_wait_for_data_ = ret->values[3];
     blobfs_userpager_ = ret->values[4];
-    bool legacy_uncompressed_flag = ret->values[5];
-
-    if (legacy_uncompressed_flag) {
-      // Convert the legacy blobfs.uncompressed flag to the new blobfs.write-compression-algorithm
-      // flag. The value will be overridden by the new flag, if it is also set.
-      blobfs_write_compression_algorithm_ = "UNCOMPRESSED";
-    }
-
-    auto algorithm = boot_args_->GetString(fidl::StringView{"blobfs.write-compression-algorithm"});
-    if (!algorithm.ok()) {
-      fprintf(stderr, "fshost: failed to get parameters: %s", algorithm.error());
-      return;
-    }
-
-    if (!algorithm->value.is_null()) {
-      blobfs_write_compression_algorithm_ = std::string(algorithm->value.data(),
-                                                        algorithm->value.size());
-    }
+    blobfs_uncompressed_ = ret->values[5];
   }
 };
 

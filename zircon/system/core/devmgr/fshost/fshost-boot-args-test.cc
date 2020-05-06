@@ -46,6 +46,7 @@ TEST(FshostBootArgsTest, GetDefaultBools) {
   ASSERT_EQ(false, boot_args->check_filesystems());
   ASSERT_EQ(true, boot_args->wait_for_data());
   ASSERT_EQ(false, boot_args->blobfs_enable_userpager());
+  ASSERT_EQ(false, boot_args->blobfs_write_uncompressed());
 }
 
 TEST(FshostBootArgsTest, GetNonDefaultBools) {
@@ -66,8 +67,7 @@ TEST(FshostBootArgsTest, GetNonDefaultBools) {
   ASSERT_EQ(true, boot_args->check_filesystems());
   ASSERT_EQ(false, boot_args->wait_for_data());
   ASSERT_EQ(true, boot_args->blobfs_enable_userpager());
-  // Legacy argument blobfs.uncompressed is converted to blobfs.write-compression-algorithm
-  ASSERT_STR_EQ("UNCOMPRESSED", boot_args->blobfs_write_compression_algorithm());
+  ASSERT_EQ(true, boot_args->blobfs_write_uncompressed());
 }
 
 TEST(FshostBootArgsTest, GetPkgfsFile) {
@@ -96,24 +96,4 @@ TEST(FshostBootArgsTest, GetPkgfsCmd) {
   auto boot_args = CreateFshostBootArgs(loop.dispatcher(), server);
 
   ASSERT_STR_EQ("foobar", *boot_args->pkgfs_cmd());
-}
-
-TEST(FshostBootArgsTest, GetBlobfsCompressionAlgorithm) {
-  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  ASSERT_OK(loop.StartThread());
-  std::map<std::string, std::string> config = {{"blobfs.write-compression-algorithm", "ZSTD"}};
-  auto server = mock_boot_arguments::Server{std::move(config)};
-  auto boot_args = CreateFshostBootArgs(loop.dispatcher(), server);
-
-  ASSERT_STR_EQ("ZSTD", boot_args->blobfs_write_compression_algorithm());
-}
-
-TEST(FshostBootArgsTest, GetBlobfsCompressionAlgorithm_Unspecified) {
-  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  ASSERT_OK(loop.StartThread());
-  std::map<std::string, std::string> config = {{}};
-  auto server = mock_boot_arguments::Server{std::move(config)};
-  auto boot_args = CreateFshostBootArgs(loop.dispatcher(), server);
-
-  ASSERT_EQ(nullptr, boot_args->blobfs_write_compression_algorithm());
 }
