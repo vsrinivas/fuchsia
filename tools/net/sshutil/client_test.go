@@ -12,6 +12,7 @@ import (
 	"sync/atomic"
 	"testing"
 
+	"go.fuchsia.dev/fuchsia/tools/lib/retry"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -31,7 +32,7 @@ func setUpClient(
 		}
 	}()
 
-	client, err = NewClient(ctx, server.addr, server.clientConfig)
+	client, err = NewClient(ctx, server.addr, server.clientConfig, retry.NoRetries())
 	if err != nil {
 		t.Fatalf("failed to create client: %v", err)
 	}

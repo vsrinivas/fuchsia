@@ -12,6 +12,8 @@ import (
 	"testing"
 	"time"
 
+	"go.fuchsia.dev/fuchsia/tools/lib/retry"
+
 	"golang.org/x/crypto/ssh"
 )
 
@@ -33,7 +35,7 @@ func setUpConn(
 		}
 	}()
 
-	conn, err = connect(ctx, server.addr, server.clientConfig)
+	conn, err = connect(ctx, server.addr, server.clientConfig, retry.NoRetries())
 	if err != nil {
 		t.Fatalf("failed to create conn: %v", err)
 	}

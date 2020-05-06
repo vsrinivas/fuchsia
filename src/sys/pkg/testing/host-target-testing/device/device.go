@@ -24,10 +24,13 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/net/sshutil"
 
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
+	"go.fuchsia.dev/fuchsia/tools/lib/retry"
 	"golang.org/x/crypto/ssh"
 )
 
 const rebootCheckPath = "/tmp/ota_test_should_reboot"
+
+var sshConnectBackoff = retry.NewConstantBackoff(5 * time.Second)
 
 type RecoveryMode int
 
@@ -54,7 +57,7 @@ func NewClient(ctx context.Context, deviceHostname string, name string, privateK
 	if err != nil {
 		return nil, err
 	}
-	sshClient, err := sshutil.NewClient(ctx, addr, sshConfig)
+	sshClient, err := sshutil.NewClient(ctx, addr, sshConfig, sshConnectBackoff)
 	if err != nil {
 		return nil, err
 	}

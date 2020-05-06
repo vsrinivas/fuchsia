@@ -10,12 +10,18 @@ import (
 	"net"
 	"sync"
 
+	"go.fuchsia.dev/fuchsia/tools/lib/retry"
+
 	"golang.org/x/crypto/ssh"
 )
 
 type Client struct {
 	addr   net.Addr
 	config *ssh.ClientConfig
+
+	// The backoff that will be used when trying to establish a connection to
+	// the remote.
+	connectBackoff retry.Backoff
 
 	// The following fields are protected by this mutex.
 	mu        sync.Mutex
@@ -24,17 +30,18 @@ type Client struct {
 }
 
 // NewClient creates a new ssh client to the address.
-func NewClient(ctx context.Context, addr net.Addr, config *ssh.ClientConfig) (*Client, error) {
-	conn, err := NewConn(ctx, addr, config)
+func NewClient(ctx context.Context, addr net.Addr, config *ssh.ClientConfig, connectBackoff retry.Backoff) (*Client, error) {
+	conn, err := newConn(ctx, addr, config, connectBackoff)
 	if err != nil {
 		return nil, err
 	}
 
 	return &Client{
-		addr:      addr,
-		config:    config,
-		conn:      conn,
-		connected: true,
+		addr:           addr,
+		config:         config,
+		connectBackoff: connectBackoff,
+		conn:           conn,
+		connected:      true,
 	}, nil
 }
 
@@ -69,7 +76,7 @@ func (c *Client) Reconnect(ctx context.Context) error {
 		c.connected = false
 	}
 
-	conn, err := NewConn(ctx, c.addr, c.config)
+	conn, err := newConn(ctx, c.addr, c.config, c.connectBackoff)
 	if err != nil {
 		return err
 	}
