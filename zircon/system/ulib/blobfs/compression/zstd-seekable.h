@@ -26,7 +26,8 @@ struct ZSTDSeekableHeader {
 };
 
 constexpr size_t kZSTDSeekableHeaderSize = sizeof(ZSTDSeekableHeader);
-constexpr unsigned kZSTDSeekableMaxFrameSize = 128 * kBlobfsBlockSize;
+// Match |kPrefetchClusterSize|.
+constexpr unsigned kZSTDSeekableMaxFrameSize = (128 * (1 << 10));
 
 // Compressor implementation for the zstd seekable format library implemented in
 // //third_party/zstd/contrib/seekable_format. The library provides a convenient API for

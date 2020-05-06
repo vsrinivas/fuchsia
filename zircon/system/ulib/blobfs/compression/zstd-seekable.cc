@@ -21,7 +21,9 @@
 
 namespace blobfs {
 
-constexpr int kSeekableCompressionLevel = 5;
+// Size below is appropriate for
+// |kZSTDSeekableMaxFrameSize| = |kPrefetchClusterSize| = (128 * (1 << 10)).
+constexpr int kSeekableCompressionLevel = 16;
 
 // TODO(49551): Consider disabling checksums if cryptographic verification suffices.
 constexpr int kSeekableChecksumFlag = 1;
