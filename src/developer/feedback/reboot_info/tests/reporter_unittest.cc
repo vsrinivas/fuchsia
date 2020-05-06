@@ -122,7 +122,7 @@ TEST_F(ReporterTest, Succeed_NoUptime) {
 }
 
 TEST_F(ReporterTest, Succeed_NoCrashReportFiledCleanReboot) {
-  const RebootLog reboot_log(RebootReason::kClean,
+  const RebootLog reboot_log(RebootReason::kGenericGraceful,
                              "ZIRCON REBOOT REASON (NO CRASH)\n\nUPTIME (ms)\n74715002",
                              zx::msec(74715002));
 

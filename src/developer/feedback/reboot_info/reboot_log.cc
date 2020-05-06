@@ -15,7 +15,7 @@ namespace {
 
 RebootReason ExtractRebootReason(const std::string& line) {
   if (line == "ZIRCON REBOOT REASON (NO CRASH)") {
-    return RebootReason::kClean;
+    return RebootReason::kGenericGraceful;
   } else if (line == "ZIRCON REBOOT REASON (KERNEL PANIC)") {
     return RebootReason::kKernelPanic;
   } else if (line == "ZIRCON REBOOT REASON (OOM)") {

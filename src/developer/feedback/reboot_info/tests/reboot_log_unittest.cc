@@ -42,7 +42,7 @@ INSTANTIATE_TEST_SUITE_P(WithVariousRebootLogs, RebootLogTest,
                                  "Clean",
                                  "ZIRCON REBOOT REASON (NO CRASH)\n\nUPTIME (ms)\n74715002",
                                  zx::msec(74715002),
-                                 RebootReason::kClean,
+                                 RebootReason::kGenericGraceful,
                              },
                              {
                                  "KernelPanic",

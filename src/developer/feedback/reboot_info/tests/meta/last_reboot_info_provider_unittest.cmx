@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/last_reboot_info_provider_unittest"
+    }
+}

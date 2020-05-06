@@ -19,6 +19,9 @@ group("tests") {
 test_package("reboot-info-tests") {
   tests = [
     {
+      name = "last_reboot_info_provider_unittest"
+    },
+    {
       name = "reboot_log_unittest"
     },
     {
@@ -30,6 +33,7 @@ test_package("reboot-info-tests") {
   ]
 
   deps = [
+    ":last_reboot_info_provider_unittest",
     ":reboot_log_unittest",
     ":reboot_reason_unittest",
     ":reporter_unittest",
@@ -39,6 +43,22 @@ test_package("reboot-info-tests") {
 ###############################################################################
 # EXECUTABLES
 ###############################################################################
+executable("last_reboot_info_provider_unittest") {
+  testonly = true
+
+  sources = [ "last_reboot_info_provider_unittest.cc" ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.feedback",
+    "//src/developer/feedback/reboot_info:last_reboot_info_provider",
+    "//src/developer/feedback/reboot_info:reboot_reason",
+    "//src/developer/feedback/testing:gpretty_printers",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+}
+
 executable("reboot_log_unittest") {
   testonly = true
 
@@ -63,6 +83,7 @@ executable("reboot_reason_unittest") {
   sources = [ "reboot_reason_unittest.cc" ]
 
   deps = [
+    "//sdk/fidl/fuchsia.feedback",
     "//src/developer/feedback/reboot_info:reboot_reason",
     "//src/developer/feedback/utils/cobalt",
     "//src/lib/fxl/test:gtest_main",
