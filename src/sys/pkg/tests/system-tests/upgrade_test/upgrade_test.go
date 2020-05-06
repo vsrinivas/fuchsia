@@ -180,7 +180,7 @@ func initializeDevice(
 
 	repo, err := build.GetPackageRepository(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("error etting downgrade repository: %s", err)
+		return nil, fmt.Errorf("error getting downgrade repository: %w", err)
 	}
 
 	expectedSystemImageMerkle, err := repo.LookupUpdateSystemImageMerkle()
