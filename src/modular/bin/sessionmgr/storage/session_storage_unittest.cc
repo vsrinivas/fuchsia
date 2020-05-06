@@ -110,6 +110,36 @@ TEST_F(SessionStorageTest, Create_VerifyData) {
   EXPECT_TRUE(fidl::Equals(cached_data, all_data->at(0)));
 }
 
+
+TEST_F(SessionStorageTest, Create_VerifyData_NoAnntations) {
+  // Create a single story with no annotations, and verify that the data we have stored about it is
+  // correct.
+  auto storage = CreateStorage();
+
+  auto future_story = storage->CreateStory("story_name", {});
+  bool done{};
+  future_story->Then([&](fidl::StringPtr name) {
+    done = true;
+  });
+  RunLoopUntil([&] { return done; });
+
+  // Get the StoryData for this story.
+  auto future_data = storage->GetStoryData("story_name");
+  done = false;
+  future_data->Then([&](fuchsia::modular::internal::StoryDataPtr data) {
+    ASSERT_TRUE(data);
+
+    EXPECT_EQ("story_name", data->story_name());
+    EXPECT_EQ("story_name", data->story_info().id());
+
+    EXPECT_TRUE(data->story_info().has_annotations());
+    EXPECT_EQ(0u, data->story_info().annotations().size());
+
+    done = true;
+  });
+  RunLoopUntil([&] { return done; });
+}
+
 TEST_F(SessionStorageTest, CreateGetAllDelete) {
   // Create a single story, call GetAllStoryData() to show that it was created,
   // and then delete it.

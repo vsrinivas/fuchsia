@@ -35,9 +35,7 @@ FuturePtr<fidl::StringPtr> SessionStorage::CreateStory(
     story_data.set_story_name(story_name.value_or(""));
     story_data.mutable_story_info()->set_id(story_name.value_or(""));
     story_data.mutable_story_info()->set_last_focus_time(0);
-    if (!annotations.empty()) {
-      story_data.mutable_story_info()->set_annotations(std::move(annotations));
-    }
+    story_data.mutable_story_info()->set_annotations(std::move(annotations));
 
     fidl::StringPtr story_name_for_callback = story_name;
     fuchsia::modular::internal::StoryData callback_data;
