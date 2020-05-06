@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 mod client;
-pub mod deprecated_configuration;
 pub mod device;
 pub mod known_ess_store;
 pub mod shim;

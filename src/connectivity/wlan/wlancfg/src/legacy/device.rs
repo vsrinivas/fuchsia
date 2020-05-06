@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        client,
+        access_point, client,
         config_management::SavedNetworksManager,
         legacy::{client as legacy_client, shim},
         mode_management::phy_manager::PhyManagerApi,
@@ -24,6 +24,7 @@ pub(crate) struct Listener {
     legacy_client: shim::ClientRef,
     phy_manager: Arc<Mutex<dyn PhyManagerApi + Send>>,
     client: client::ClientPtr,
+    ap: access_point::AccessPoint,
 }
 
 pub(crate) async fn handle_event(
@@ -73,12 +74,20 @@ async fn on_phy_added(listener: &Listener, phy_id: u16) {
         return;
     }
 
-    // When a new PHY is detected, attempt to get a client.  It is possible that the PHY does not
-    // support client or AP mode, so failing to get an interface for either role should not result
-    // in failure.
+    // When a new PHY is detected, attempt to get a client and AP interface for it.  It is
+    // possible that the PHY does not support client or AP mode, so failing to get an
+    // interface for either role should not result in failure.
     match phy_manager.get_client() {
         Some(iface_id) => info!("created client iface {}", iface_id),
         None => {}
+    }
+
+    match phy_manager.create_or_get_ap_iface().await {
+        Ok(iface) => match iface {
+            Some(iface_id) => info!("created AP iface {}", iface_id),
+            None => {}
+        },
+        Err(e) => info!("getting an AP interface failed: {:?}", e),
     }
 }
 
@@ -122,8 +131,21 @@ async fn on_iface_added(
             legacy_client.set_if_empty(lc);
             client.lock().set_sme(sme);
         }
-        // The AP service make direct use of the PhyManager to get interfaces.
-        wlan::MacRole::Ap => {}
+        wlan::MacRole::Ap => {
+            let mut ap = listener.ap.clone();
+            let (sme, remote) = create_proxy()
+                .map_err(|e| format_err!("Failed to create a FIDL channel: {}", e))?;
+
+            let status = service
+                .get_ap_sme(iface_id, remote)
+                .await
+                .map_err(|e| format_err!("Failed to get client SME: {}", e))?;
+
+            zx::Status::ok(status)
+                .map_err(|e| format_err!("GetClientSme returned an error: {}", e))?;
+
+            ap.set_sme(sme);
+        }
         wlan::MacRole::Mesh => {
             return Err(format_err!("Unexpectedly observed a mesh iface: {}", iface_id))
         }
@@ -138,7 +160,8 @@ impl Listener {
         legacy_client: shim::ClientRef,
         phy_manager: Arc<Mutex<dyn PhyManagerApi + Send>>,
         client: client::ClientPtr,
+        ap: access_point::AccessPoint,
     ) -> Self {
-        Listener { proxy, legacy_client, phy_manager, client }
+        Listener { proxy, legacy_client, phy_manager, client, ap }
     }
 }

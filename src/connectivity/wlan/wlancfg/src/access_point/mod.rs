@@ -3,17 +3,14 @@
 // found in the LICENSE file.
 
 use {
-    crate::{mode_management::phy_manager::PhyManagerApi, util::listener},
+    crate::util::listener,
     anyhow::{format_err, Error},
-    fidl::endpoints::create_proxy,
     fidl::epitaph::ChannelEpitaphExt,
-    fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_device_service,
-    fidl_fuchsia_wlan_policy as fidl_policy, fidl_fuchsia_wlan_sme as fidl_sme,
-    fuchsia_zircon as zx,
+    fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_policy as fidl_policy,
+    fidl_fuchsia_wlan_sme as fidl_sme, fuchsia_zircon as zx,
     futures::{
         channel::mpsc,
         future::BoxFuture,
-        lock::Mutex as FutureMutex,
         select,
         sink::SinkExt,
         stream::{FuturesUnordered, StreamExt, TryStreamExt},
@@ -38,12 +35,9 @@ impl From<fidl_sme::ApSmeProxy> for AccessPointInner {
 // Wrapper around an AP interface allowing a watcher to set the underlying SME and the policy API
 // servicing routines to utilize the SME.
 #[derive(Clone)]
-pub(crate) struct AccessPoint {
+pub struct AccessPoint {
     inner: Arc<Mutex<AccessPointInner>>,
-    phy_manager: Arc<FutureMutex<dyn PhyManagerApi + Send>>,
-    device_service: fidl_fuchsia_wlan_device_service::DeviceServiceProxy,
     update_sender: Option<listener::ApMessageSender>,
-    iface_id: Arc<Mutex<Option<u16>>>,
 }
 
 // This number was chosen arbitrarily.
@@ -54,21 +48,12 @@ type ApRequests = fidl::endpoints::ServerEnd<fidl_policy::AccessPointControllerM
 impl AccessPoint {
     /// Creates a new, empty AccessPoint. The returned AccessPoint effectively represents the state
     /// in which no AP interface is available.
-    pub fn new_empty(
-        phy_manager: Arc<FutureMutex<dyn PhyManagerApi + Send>>,
-        device_service: fidl_fuchsia_wlan_device_service::DeviceServiceProxy,
-    ) -> Self {
-        Self {
-            inner: Arc::new(Mutex::new(AccessPointInner { proxy: None })),
-            phy_manager,
-            device_service,
-            update_sender: None,
-            iface_id: Arc::new(Mutex::new(None)),
-        }
+    pub fn new_empty() -> Self {
+        Self { inner: Arc::new(Mutex::new(AccessPointInner { proxy: None })), update_sender: None }
     }
 
-    /// Set the SME when a new AP interface is created.
-    fn set_sme(&mut self, new_proxy: fidl_sme::ApSmeProxy) {
+    /// Allows the device watcher service to set the SME when a new AP interface is observed.
+    pub fn set_sme(&mut self, new_proxy: fidl_sme::ApSmeProxy) {
         self.inner.lock().proxy = Some(new_proxy);
     }
 
@@ -93,20 +78,11 @@ impl AccessPoint {
         }
     }
 
-    fn set_iface_id(&mut self, iface_id: Option<u16>) {
-        let mut inner_iface_id = self.iface_id.lock();
-        *inner_iface_id = iface_id;
-    }
-
-    fn access_iface_id(&mut self) -> Option<u16> {
-        self.iface_id.lock().clone()
-    }
-
     /// Serves the AccessPointProvider protocol.  Only one caller is allowed to interact with an
     /// AccessPointController.  This routine ensures that one active user has access at a time.
     /// Additional requests are terminated immediately.
     pub async fn serve_provider_requests(
-        mut self,
+        self,
         mut requests: fidl_policy::AccessPointProviderRequestStream,
     ) {
         let mut pending_response_queue =
@@ -123,14 +99,10 @@ impl AccessPoint {
                     Ok(req) => {
                         // If there is an active controller - reject new requests.
                         if provider_reqs.is_empty() {
-                            let mut ap = self.clone();
-                            let sink_copy = internal_messages_sink.clone();
-                            let fut = async move {
-                                ap.handle_provider_request(
-                                    sink_copy,
-                                    req
-                                ).await
-                            };
+                            let fut = self.clone().handle_provider_request(
+                                internal_messages_sink.clone(),
+                                req
+                            );
                             provider_reqs.push(fut);
                         } else {
                             if let Err(e) = reject_provider_request(req) {
@@ -147,7 +119,7 @@ impl AccessPoint {
                         self.handle_sme_start_response(result)
                     },
                     Ok(Response::StopResponse(result)) => {
-                        self.handle_sme_stop_response(result).await
+                        self.handle_sme_stop_response(result)
                     },
                     Err(e) => error!("error while processing AP requests: {}", e)
                 }
@@ -157,7 +129,7 @@ impl AccessPoint {
 
     /// Handles any incoming requests for the AccessPointProvider protocol.
     async fn handle_provider_request(
-        &mut self,
+        self,
         internal_msg_sink: mpsc::Sender<BoxFuture<'static, Result<Response, Error>>>,
         req: fidl_policy::AccessPointProviderRequest,
     ) -> Result<(), fidl::Error> {
@@ -185,50 +157,9 @@ impl AccessPoint {
         serve_fut.await;
     }
 
-    /// Creates an AP SME proxy from a given interface ID.
-    async fn create_ap_sme(&mut self) -> Result<fidl_sme::ApSmeProxy, Error> {
-        // Begin listening for new WLAN device updates.
-        let (watcher_proxy, watcher_server_end) = fidl::endpoints::create_proxy()?;
-        self.device_service.watch_devices(watcher_server_end)?;
-        let mut event_stream = watcher_proxy.take_event_stream();
-
-        // If the PhyManager has a PHY that can operate as an AP, request an AP interface from it
-        // and create an AP SME proxy.
-        let mut phy_manager = self.phy_manager.lock().await;
-        let iface_id = match phy_manager.create_or_get_ap_iface().await? {
-            Some(iface_id) => iface_id,
-            None => return Err(format_err!("no available PHYs can function as APs")),
-        };
-
-        // Wait until and OnIfaceAdded update with the desired interface ID is seen.  This update
-        // indicates that the interface is ready and that clients can proceed with acquiring an SME
-        // proxy.
-        while let Some(event) = event_stream.try_next().await? {
-            match event {
-                fidl_fuchsia_wlan_device_service::DeviceWatcherEvent::OnIfaceAdded {
-                    iface_id: new_iface_id,
-                } => {
-                    if new_iface_id == iface_id {
-                        break;
-                    }
-                }
-                _ => continue,
-            }
-        }
-
-        let (sme, remote) = create_proxy()?;
-        let status = self.device_service.get_ap_sme(iface_id, remote).await?;
-        zx::ok(status)?;
-        drop(phy_manager);
-
-        self.set_sme(sme.clone());
-        self.set_iface_id(Some(iface_id));
-        Ok(sme)
-    }
-
     /// Handles all requests of the AccessPointController.
     async fn handle_ap_requests(
-        &mut self,
+        &self,
         mut internal_msg_sink: mpsc::Sender<BoxFuture<'static, Result<Response, Error>>>,
         requests: ApRequests,
     ) -> Result<(), fidl::Error> {
@@ -244,15 +175,10 @@ impl AccessPoint {
                 } => {
                     let sme = match self.access_sme() {
                         Some(sme) => sme,
-                        None => match self.create_ap_sme().await {
-                            Ok(sme) => sme,
-                            Err(e) => {
-                                error!("could not start AP: {}", e);
-                                responder
-                                    .send(fidl_common::RequestStatus::RejectedIncompatibleMode)?;
-                                continue;
-                            }
-                        },
+                        None => {
+                            responder.send(fidl_common::RequestStatus::RejectedIncompatibleMode)?;
+                            continue;
+                        }
                     };
 
                     let mut ap_config = match derive_ap_config(&config, band) {
@@ -363,18 +289,7 @@ impl AccessPoint {
         }
     }
 
-    async fn handle_sme_stop_response(&mut self, result: StopParameters) {
-        if let Some(iface_id) = self.access_iface_id() {
-            let mut phy_manager = self.phy_manager.lock().await;
-            if let Err(e) = phy_manager.destroy_ap_iface(iface_id).await {
-                error!("failed to delete AP iface: {}", e);
-            } else {
-                drop(phy_manager);
-                self.inner.lock().proxy = None;
-                self.set_iface_id(None);
-            }
-        }
-
+    fn handle_sme_stop_response(&self, result: StopParameters) {
         let state = match result.result {
             Ok(()) => None,
             Err(e) => {
@@ -499,72 +414,13 @@ fn log_ap_request(request: &fidl_policy::AccessPointControllerRequest) {
 mod tests {
     use {
         super::*,
-        crate::{mode_management::phy_manager::PhyManagerError, util::logger::set_logger_for_test},
-        async_trait::async_trait,
-        fidl::endpoints::{create_proxy, create_request_stream, RequestStream},
+        crate::util::logger::set_logger_for_test,
+        fidl::endpoints::{create_proxy, create_request_stream},
         fuchsia_async as fasync,
         futures::task::Poll,
         pin_utils::pin_mut,
         wlan_common::assert_variant,
     };
-
-    const TEST_AP_IFACE_ID: u16 = 1;
-
-    #[derive(Debug)]
-    struct FakePhyManager {
-        ap_iface: Option<u16>,
-    }
-
-    impl FakePhyManager {
-        fn new() -> Self {
-            FakePhyManager { ap_iface: Some(TEST_AP_IFACE_ID) }
-        }
-
-        fn set_iface(&mut self, ap_iface: Option<u16>) {
-            self.ap_iface = ap_iface;
-        }
-    }
-
-    #[async_trait]
-    impl PhyManagerApi for FakePhyManager {
-        async fn add_phy(&mut self, _phy_id: u16) -> Result<(), PhyManagerError> {
-            Ok(())
-        }
-
-        fn remove_phy(&mut self, _phy_id: u16) {}
-
-        async fn on_iface_added(&mut self, _iface_id: u16) -> Result<(), PhyManagerError> {
-            Ok(())
-        }
-
-        fn on_iface_removed(&mut self, _iface_id: u16) {}
-
-        async fn create_all_client_ifaces(&mut self) -> Result<(), PhyManagerError> {
-            Ok(())
-        }
-
-        async fn destroy_all_client_ifaces(&mut self) -> Result<(), PhyManagerError> {
-            Ok(())
-        }
-
-        fn get_client(&mut self) -> Option<u16> {
-            None
-        }
-
-        async fn create_or_get_ap_iface(&mut self) -> Result<Option<u16>, PhyManagerError> {
-            Ok(self.ap_iface)
-        }
-
-        async fn destroy_ap_iface(&mut self, _iface_id: u16) -> Result<(), PhyManagerError> {
-            Ok(())
-        }
-
-        async fn destroy_all_ap_ifaces(&mut self) -> Result<(), PhyManagerError> {
-            Ok(())
-        }
-
-        fn suggest_ap_mac(&mut self, _mac: eui48::MacAddress) {}
-    }
 
     /// Requests a new AccessPointController from the given AccessPointProvider.
     fn request_controller(
@@ -581,13 +437,10 @@ mod tests {
     }
 
     /// Creates an AccessPoint wrapper.
-    fn create_ap(
-        phy_manager: Arc<FutureMutex<dyn PhyManagerApi + Send>>,
-        device_service_proxy: fidl_fuchsia_wlan_device_service::DeviceServiceProxy,
-    ) -> (AccessPoint, fidl_sme::ApSmeRequestStream) {
+    fn create_ap() -> (AccessPoint, fidl_sme::ApSmeRequestStream) {
         let (ap_sme, remote) =
             create_proxy::<fidl_sme::ApSmeMarker>().expect("error creating proxy");
-        let mut ap = AccessPoint::new_empty(phy_manager, device_service_proxy);
+        let mut ap = AccessPoint::new_empty();
         ap.set_sme(ap_sme);
         (ap, remote.into_stream().expect("failed to create stream"))
     }
@@ -595,12 +448,10 @@ mod tests {
     struct TestValues {
         provider: fidl_policy::AccessPointProviderProxy,
         requests: fidl_policy::AccessPointProviderRequestStream,
-        device_service_stream: fidl_fuchsia_wlan_device_service::DeviceServiceRequestStream,
         sender: mpsc::UnboundedSender<listener::ApMessage>,
         receiver: mpsc::UnboundedReceiver<listener::ApMessage>,
         ap: AccessPoint,
         sme_stream: fidl_sme::ApSmeRequestStream,
-        phy_manager: Arc<FutureMutex<FakePhyManager>>,
     }
 
     /// Setup channels and proxies needed for the tests to use use the AP Provider and
@@ -609,30 +460,10 @@ mod tests {
         let (provider, requests) = create_proxy::<fidl_policy::AccessPointProviderMarker>()
             .expect("failed to create ClientProvider proxy");
         let requests = requests.into_stream().expect("failed to create stream");
-
-        let mut phy_manager = FakePhyManager::new();
-        phy_manager.set_iface(Some(TEST_AP_IFACE_ID));
-        let phy_manager = Arc::new(FutureMutex::new(phy_manager));
-
-        let (device_service_proxy, device_service_requests) =
-            create_proxy::<fidl_fuchsia_wlan_device_service::DeviceServiceMarker>()
-                .expect("failed to create SeviceService proxy");
-        let device_service_stream =
-            device_service_requests.into_stream().expect("failed to create stream");
-
-        let (ap, sme_stream) = create_ap(phy_manager.clone(), device_service_proxy);
+        let (ap, sme_stream) = create_ap();
         let (sender, receiver) = mpsc::unbounded();
         set_logger_for_test();
-        TestValues {
-            provider,
-            requests,
-            device_service_stream,
-            sender,
-            receiver,
-            ap,
-            sme_stream,
-            phy_manager,
-        }
+        TestValues { provider, requests, sender, receiver, ap, sme_stream }
     }
 
     /// Tests the case where StartAccessPoint is called and there is a valid interface to service
@@ -782,23 +613,10 @@ mod tests {
     #[test]
     fn test_start_access_point_no_iface() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let mut test_values = test_setup();
-
-        // Set up the AccessPoint so that there is no SME.
-        {
-            test_values.ap.inner.lock().proxy = None;
-        }
-
-        // Setup the PhyManager so that there are no available AP ifaces.
-        {
-            let mut fut = test_values.phy_manager.lock();
-            assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(mut phy_manager) => {
-                phy_manager.set_iface(None);
-            });
-        }
-
-        test_values.ap.set_update_sender(test_values.sender);
-        let serve_fut = test_values.ap.serve_provider_requests(test_values.requests);
+        let test_values = test_setup();
+        let mut ap = AccessPoint::new_empty();
+        ap.set_update_sender(test_values.sender);
+        let serve_fut = ap.serve_provider_requests(test_values.requests);
         pin_mut!(serve_fut);
 
         // No request has been sent yet. Future should be idle.
@@ -822,115 +640,6 @@ mod tests {
             exec.run_until_stalled(&mut start_fut),
             Poll::Ready(Ok(fidl_common::RequestStatus::RejectedIncompatibleMode))
         );
-    }
-
-    /// Tests the case where the AccessPoint initially does not have an interface but is able to
-    /// create one.
-    #[test]
-    fn test_start_access_point_create_iface() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let mut test_values = test_setup();
-
-        // Set up the AccessPoint so that there is no SME.
-        {
-            test_values.ap.inner.lock().proxy = None;
-        }
-
-        test_values.ap.set_update_sender(test_values.sender);
-        let serve_fut = test_values.ap.serve_provider_requests(test_values.requests);
-        pin_mut!(serve_fut);
-
-        // No request has been sent yet. Future should be idle.
-        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
-
-        // Request a new controller.
-        let (controller, _) = request_controller(&test_values.provider);
-        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
-
-        // Clear the initial state upate.
-        assert_variant!(
-            exec.run_until_stalled(&mut test_values.receiver.next()),
-            Poll::Ready(Some(_))
-        );
-
-        // Issue StartAP request.
-        let network_id = fidl_policy::NetworkIdentifier {
-            ssid: b"test".to_vec(),
-            type_: fidl_policy::SecurityType::None,
-        };
-        let network_config = fidl_policy::NetworkConfig { id: Some(network_id), credential: None };
-        let connectivity_mode = fidl_policy::ConnectivityMode::LocalOnly;
-        let operating_band = fidl_policy::OperatingBand::Any;
-        let start_fut =
-            controller.start_access_point(network_config, connectivity_mode, operating_band);
-        pin_mut!(start_fut);
-
-        // Process start request.  The FakePhyManager will indicate that there is an available
-        // iface that can function as an AP.  The service will then wait to be notified that the
-        // iface has been created.
-        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
-
-        // Send back a response notifying that the iface has been created.
-        assert_variant!(
-            exec.run_until_stalled(&mut test_values.device_service_stream.next()),
-            Poll::Ready(Some(Ok(
-                fidl_fuchsia_wlan_device_service::DeviceServiceRequest::WatchDevices{ watcher, control_handle: _ }
-            ))) => {
-                let stream = watcher.into_stream().unwrap();
-                let handle = stream.control_handle();
-                assert!(handle.send_on_iface_added(TEST_AP_IFACE_ID).is_ok());
-            }
-        );
-
-        // Wait for a request and then send back an SME proxy.
-        let mut sme_remote_end: fidl_fuchsia_wlan_sme::ApSmeRequestStream;
-
-        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
-        assert_variant!(
-            exec.run_until_stalled(&mut test_values.device_service_stream.next()),
-            Poll::Ready(Some(Ok(
-                fidl_fuchsia_wlan_device_service::DeviceServiceRequest::GetApSme { iface_id, sme, responder }
-            ))) => {
-                assert_eq!(iface_id, TEST_AP_IFACE_ID);
-                sme_remote_end = sme.into_stream().unwrap();
-                assert!(responder.send(zx::Status::OK.into_raw()).is_ok());
-            }
-        );
-
-        // Verify the SME's request to initially stop the AP.
-        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
-        assert_variant!(
-            exec.run_until_stalled(&mut sme_remote_end.next()),
-            Poll::Ready(Some(Ok(fidl_sme::ApSmeRequest::Stop { responder }))) => {
-                assert!(responder.send().is_ok());
-            }
-        );
-
-        // Verify that the caller got back an acknowledgement.
-        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
-        assert_variant!(
-            exec.run_until_stalled(&mut start_fut),
-            Poll::Ready(Ok(fidl_common::RequestStatus::Acknowledged))
-        );
-
-        // Verify the SME's request to start the AP.
-        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
-        assert_variant!(
-            exec.run_until_stalled(&mut sme_remote_end.next()),
-            Poll::Ready(Some(Ok(fidl_sme::ApSmeRequest::Start { config: _, responder}))) => {
-                assert!(responder.send(fidl_sme::StartApResultCode::Success).is_ok());
-            }
-        );
-
-        // Verify that the listener sees the state update.
-        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
-
-        let summary = assert_variant!(
-            exec.run_until_stalled(&mut test_values.receiver.next()),
-            Poll::Ready(Some(listener::Message::NotifyListeners(summary))) => summary
-        );
-
-        assert_eq!(summary.state.unwrap(), fidl_policy::OperatingState::Active);
     }
 
     /// Tests the case where StopAccessPoint is called and there is a valid interface to handle the
@@ -1043,15 +752,10 @@ mod tests {
     #[test]
     fn test_stop_access_point_no_iface() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let mut test_values = test_setup();
-
-        // Set up the AccessPoint so that there is no SME.
-        {
-            test_values.ap.inner.lock().proxy = None;
-        }
-
-        test_values.ap.set_update_sender(test_values.sender);
-        let serve_fut = test_values.ap.serve_provider_requests(test_values.requests);
+        let test_values = test_setup();
+        let mut ap = AccessPoint::new_empty();
+        ap.set_update_sender(test_values.sender);
+        let serve_fut = ap.serve_provider_requests(test_values.requests);
         pin_mut!(serve_fut);
 
         // No request has been sent yet. Future should be idle.

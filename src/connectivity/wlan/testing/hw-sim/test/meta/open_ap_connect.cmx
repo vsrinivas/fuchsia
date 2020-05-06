@@ -10,9 +10,6 @@
                 "fuchsia.wlan.devmgr.IsolatedDevmgr": [
                     "fuchsia-pkg://fuchsia.com/wlan_devmgr#meta/wlan_devmgr.cmx"
                 ],
-                "fuchsia.wlan.policy.AccessPointProvider": [
-                    "fuchsia-pkg://fuchsia.com/wlancfg#meta/wlancfg.cmx"
-                ],
                 "fuchsia.wlan.service.Wlan": [
                     "fuchsia-pkg://fuchsia.com/wlancfg#meta/wlancfg.cmx"
                 ]
@@ -27,7 +24,6 @@
             "fuchsia.stash.SecureStore",
             "fuchsia.wlan.device.service.DeviceService",
             "fuchsia.wlan.devmgr.IsolatedDevmgr",
-            "fuchsia.wlan.policy.AccessPointProvider",
             "fuchsia.wlan.service.Wlan"
         ]
     }
