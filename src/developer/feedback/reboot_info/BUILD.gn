@@ -35,7 +35,7 @@ executable("main") {
 
   deps = [
     ":reboot_log",
-    ":reboot_log_handler",
+    ":reporter",
     "//sdk/lib/sys/cpp",
     "//src/lib/syslog/cpp",
     "//zircon/public/lib/async-cpp",
@@ -62,33 +62,6 @@ source_set("reboot_log") {
   ]
 }
 
-source_set("reboot_log_handler") {
-  sources = [
-    "reboot_log_handler.cc",
-    "reboot_log_handler.h",
-  ]
-
-  public_deps = [
-    ":reboot_log",
-    ":reboot_reason",
-    "//sdk/fidl/fuchsia.feedback",
-    "//sdk/lib/sys/cpp",
-    "//src/developer/feedback/utils/cobalt",
-    "//zircon/public/lib/fit",
-    "//zircon/system/fidl/fuchsia-cobalt",
-  ]
-
-  deps = [
-    "//src/developer/feedback/utils/fit",
-    "//src/lib/files",
-    "//src/lib/fsl",
-    "//src/lib/fxl",
-    "//src/lib/syslog/cpp",
-    "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/zx",
-  ]
-}
-
 source_set("reboot_reason") {
   sources = [
     "reboot_reason.cc",
@@ -100,4 +73,32 @@ source_set("reboot_reason") {
   deps = [ "//src/lib/syslog/cpp" ]
 
   visibility = [ "//src/developer/feedback/reboot_info/*" ]
+}
+
+source_set("reporter") {
+  sources = [
+    "reporter.cc",
+    "reporter.h",
+  ]
+
+  public_deps = [
+    ":reboot_log",
+    ":reboot_reason",
+    "//sdk/fidl/fuchsia.feedback",
+    "//sdk/lib/sys/cpp",
+    "//src/developer/feedback/utils:errors",
+    "//src/developer/feedback/utils/cobalt",
+    "//src/developer/feedback/utils/fidl:oneshot_ptr",
+    "//zircon/public/lib/fit",
+    "//zircon/system/fidl/fuchsia-cobalt",
+  ]
+
+  deps = [
+    "//src/lib/files",
+    "//src/lib/fsl",
+    "//src/lib/fxl",
+    "//src/lib/syslog/cpp",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/zx",
+  ]
 }

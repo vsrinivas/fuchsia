@@ -36,6 +36,8 @@ std::string ToString(const RebootReason reboot_reason) {
 
 }  // namespace
 
+bool IsGraceful(const RebootReason reboot_reason) { return reboot_reason == RebootReason::kClean; }
+
 cobalt::RebootReason ToCobaltRebootReason(const RebootReason reboot_reason) {
   switch (reboot_reason) {
     case RebootReason::kNotParseable:

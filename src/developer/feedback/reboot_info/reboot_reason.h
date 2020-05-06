@@ -5,6 +5,7 @@
 #ifndef SRC_DEVELOPER_FEEDBACK_REBOOT_INFO_REBOOT_REASON_H_
 #define SRC_DEVELOPER_FEEDBACK_REBOOT_INFO_REBOOT_REASON_H_
 
+#include <optional>
 #include <string>
 
 #include "src/developer/feedback/utils/cobalt/metrics.h"
@@ -31,9 +32,10 @@ enum class RebootReason {
   kBrownout,
 };
 
-cobalt::RebootReason ToCobaltRebootReason(const RebootReason reboot_reason);
-std::string ToCrashSignature(const RebootReason reboot_reason);
-std::string ToCrashProgramName(const RebootReason reboot_reason);
+bool IsGraceful(RebootReason reboot_reason);
+cobalt::RebootReason ToCobaltRebootReason(RebootReason reboot_reason);
+std::string ToCrashSignature(RebootReason reboot_reason);
+std::string ToCrashProgramName(RebootReason reboot_reason);
 
 }  // namespace feedback
 

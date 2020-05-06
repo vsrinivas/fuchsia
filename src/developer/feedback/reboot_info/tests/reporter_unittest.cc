@@ -2,9 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/feedback/reboot_info/reboot_log_handler.h"
+#include "src/developer/feedback/reboot_info/reporter.h"
 
-#include <lib/async/cpp/executor.h>
 #include <lib/fit/result.h>
 #include <lib/zx/time.h>
 #include <zircon/errors.h>
@@ -36,10 +35,7 @@ namespace {
 using testing::ElementsAre;
 using testing::IsEmpty;
 
-constexpr ::fit::result_state kError = ::fit::result_state::error;
-constexpr ::fit::result_state kOk = ::fit::result_state::ok;
-
-constexpr char kHasHandledRebootLogPath[] = "/tmp/has_handled_reboot_log.txt";
+constexpr char kHasReportedOnPath[] = "/tmp/has_reported_on_reboot_log.txt";
 
 struct TestParam {
   std::string test_name;
@@ -49,13 +45,13 @@ struct TestParam {
   cobalt::RebootReason output_event_code;
 };
 
-class RebootLogHandlerTest : public UnitTestFixture,
-                             public CobaltTestFixture,
-                             public testing::WithParamInterface<TestParam> {
+class ReporterTest : public UnitTestFixture,
+                     public CobaltTestFixture,
+                     public testing::WithParamInterface<TestParam> {
  public:
-  RebootLogHandlerTest() : CobaltTestFixture(/*unit_test_fixture=*/this), executor_(dispatcher()) {}
+  ReporterTest() : CobaltTestFixture(/*unit_test_fixture=*/this) {}
 
-  void TearDown() override { files::DeletePath(kHasHandledRebootLogPath, /*recursive=*/false); }
+  void TearDown() override { files::DeletePath(kHasReportedOnPath, /*recursive=*/false); }
 
  protected:
   void SetUpCrashReporterServer(std::unique_ptr<stubs::CrashReporterBase> server) {
@@ -69,24 +65,17 @@ class RebootLogHandlerTest : public UnitTestFixture,
     FX_CHECK(tmp_dir_.NewTempFileWithData(contents, &reboot_log_path_));
   }
 
-  ::fit::result<void> HandleRebootLog() {
-    return HandleRebootLog(RebootLog::ParseRebootLog(reboot_log_path_));
+  void ReportOnRebootLog() {
+    const auto reboot_log = RebootLog::ParseRebootLog(reboot_log_path_);
+    ReportOn(reboot_log);
   }
 
-  ::fit::result<void> HandleRebootLog(const RebootLog& reboot_log) {
-    ::fit::result<void> result;
-    executor_.schedule_task(
-        feedback::HandleRebootLog(reboot_log, dispatcher(), services())
-            .then([&result](::fit::result<void>& res) { result = std::move(res); }));
-    // TODO(fxb/46216, fxb/48485): remove delay.
-    RunLoopFor(zx::sec(90));
-    return result;
+  void ReportOn(const RebootLog& reboot_log) {
+    Reporter reporter(dispatcher(), services());
+    reporter.ReportOn(reboot_log, /*delay=*/zx::sec(0));
+    RunLoopUntilIdle();
   }
 
- private:
-  async::Executor executor_;
-
- protected:
   std::string reboot_log_path_;
   std::unique_ptr<stubs::CrashReporterBase> crash_reporter_server_;
 
@@ -94,7 +83,7 @@ class RebootLogHandlerTest : public UnitTestFixture,
   files::ScopedTempDir tmp_dir_;
 };
 
-TEST_F(RebootLogHandlerTest, Succeed_WellFormedRebootLog) {
+TEST_F(ReporterTest, Succeed_WellFormedRebootLog) {
   const RebootLog reboot_log(RebootReason::kKernelPanic,
                              "ZIRCON REBOOT REASON (KERNEL PANIC)\n\nUPTIME (ms)\n74715002",
                              zx::msec(74715002));
@@ -107,15 +96,14 @@ TEST_F(RebootLogHandlerTest, Succeed_WellFormedRebootLog) {
       }));
   SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
 
-  const auto result = HandleRebootLog(reboot_log);
-  EXPECT_EQ(result.state(), kOk);
+  ReportOn(reboot_log);
 
   EXPECT_THAT(ReceivedCobaltEvents(),
               ElementsAre(cobalt::Event(cobalt::RebootReason::kKernelPanic)));
-  EXPECT_TRUE(files::IsFile(kHasHandledRebootLogPath));
+  EXPECT_TRUE(files::IsFile(kHasReportedOnPath));
 }
 
-TEST_F(RebootLogHandlerTest, Succeed_NoUptime) {
+TEST_F(ReporterTest, Succeed_NoUptime) {
   const RebootLog reboot_log(RebootReason::kKernelPanic, "ZIRCON REBOOT REASON (KERNEL PANIC)\n",
                              std::nullopt);
 
@@ -127,14 +115,13 @@ TEST_F(RebootLogHandlerTest, Succeed_NoUptime) {
       }));
   SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
 
-  const auto result = HandleRebootLog(reboot_log);
-  EXPECT_EQ(result.state(), kOk);
+  ReportOn(reboot_log);
 
   EXPECT_THAT(ReceivedCobaltEvents(),
               ElementsAre(cobalt::Event(cobalt::RebootReason::kKernelPanic)));
 }
 
-TEST_F(RebootLogHandlerTest, Succeed_NoCrashReportFiledCleanReboot) {
+TEST_F(ReporterTest, Succeed_NoCrashReportFiledCleanReboot) {
   const RebootLog reboot_log(RebootReason::kClean,
                              "ZIRCON REBOOT REASON (NO CRASH)\n\nUPTIME (ms)\n74715002",
                              zx::msec(74715002));
@@ -142,76 +129,37 @@ TEST_F(RebootLogHandlerTest, Succeed_NoCrashReportFiledCleanReboot) {
   SetUpCrashReporterServer(std::make_unique<stubs::CrashReporterNoFileExpected>());
   SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
 
-  const auto result = HandleRebootLog(reboot_log);
-  EXPECT_EQ(result.state(), kOk);
+  ReportOn(reboot_log);
 
   EXPECT_THAT(ReceivedCobaltEvents(), ElementsAre(cobalt::Event(cobalt::RebootReason::kClean)));
 }
 
-TEST_F(RebootLogHandlerTest, Succeed_NoCrashReportFiledColdReboot) {
+TEST_F(ReporterTest, Succeed_NoCrashReportFiledColdReboot) {
   const RebootLog reboot_log(RebootReason::kCold, std::nullopt, std::nullopt);
 
   SetUpCrashReporterServer(std::make_unique<stubs::CrashReporterNoFileExpected>());
   SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
 
-  const auto result = HandleRebootLog(reboot_log);
-  EXPECT_EQ(result.state(), kOk);
+  ReportOn(reboot_log);
 
   EXPECT_THAT(ReceivedCobaltEvents(), ElementsAre(cobalt::Event(cobalt::RebootReason::kCold)));
 }
 
-TEST_F(RebootLogHandlerTest, Fail_CrashReporterNotAvailable) {
-  const RebootLog reboot_log(RebootReason::kKernelPanic,
-                             "ZIRCON REBOOT REASON (KERNEL PANIC)\n\nUPTIME (ms)\n74715002",
-                             zx::msec(74715002));
-  SetUpCrashReporterServer(nullptr);
-  SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
-
-  const auto result = HandleRebootLog(reboot_log);
-  EXPECT_EQ(result.state(), kError);
-
-  EXPECT_THAT(ReceivedCobaltEvents(),
-              ElementsAre(cobalt::Event(cobalt::RebootReason::kKernelPanic)));
-}
-
-TEST_F(RebootLogHandlerTest, Fail_CrashReporterClosesConnection) {
-  const RebootLog reboot_log(RebootReason::kKernelPanic,
-                             "ZIRCON REBOOT REASON (KERNEL PANIC)\n\nUPTIME (ms)\n74715002",
-                             zx::msec(74715002));
-  SetUpCrashReporterServer(std::make_unique<stubs::CrashReporterClosesConnection>());
-  SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
-
-  const auto result = HandleRebootLog(reboot_log);
-  EXPECT_EQ(result.state(), kError);
-
-  EXPECT_THAT(ReceivedCobaltEvents(),
-              ElementsAre(cobalt::Event(cobalt::RebootReason::kKernelPanic)));
-}
-
-TEST_F(RebootLogHandlerTest, Fail_CrashReporterFailsToFile) {
+TEST_F(ReporterTest, Fail_CrashReporterFailsToFile) {
   const RebootLog reboot_log(RebootReason::kKernelPanic,
                              "ZIRCON REBOOT REASON (KERNEL PANIC)\n\nUPTIME (ms)\n74715002",
                              zx::msec(74715002));
   SetUpCrashReporterServer(std::make_unique<stubs::CrashReporterAlwaysReturnsError>());
   SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
 
-  const auto result = HandleRebootLog(reboot_log);
-  EXPECT_EQ(result.state(), kError);
+  ReportOn(reboot_log);
 
   EXPECT_THAT(ReceivedCobaltEvents(),
               ElementsAre(cobalt::Event(cobalt::RebootReason::kKernelPanic)));
 }
 
-TEST_F(RebootLogHandlerTest, Fail_CallHandleTwice) {
-  const RebootLog reboot_log(RebootReason::kNotParseable, std::nullopt, std::nullopt);
-  internal::RebootLogHandler handler(dispatcher(), services());
-  handler.Handle(reboot_log);
-  ASSERT_DEATH(handler.Handle(reboot_log),
-               testing::HasSubstr("Handle() is not intended to be called twice"));
-}
-
-TEST_F(RebootLogHandlerTest, Succeed_DoesNothingIfAlreadyHandled) {
-  ASSERT_TRUE(files::WriteFile(kHasHandledRebootLogPath, /*data=*/"", /*size=*/0));
+TEST_F(ReporterTest, Succeed_DoesNothingIfAlreadyReportedOn) {
+  ASSERT_TRUE(files::WriteFile(kHasReportedOnPath, /*data=*/"", /*size=*/0));
 
   const RebootLog reboot_log(RebootReason::kKernelPanic,
                              "ZIRCON REBOOT REASON (KERNEL PANIC)\n\nUPTIME (ms)\n74715002",
@@ -220,13 +168,12 @@ TEST_F(RebootLogHandlerTest, Succeed_DoesNothingIfAlreadyHandled) {
   SetUpCrashReporterServer(std::make_unique<stubs::CrashReporterNoFileExpected>());
   SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
 
-  const auto result = HandleRebootLog(reboot_log);
-  EXPECT_EQ(result.state(), kOk);
+  ReportOn(reboot_log);
 
   EXPECT_THAT(ReceivedCobaltEvents(), IsEmpty());
 }
 
-INSTANTIATE_TEST_SUITE_P(WithVariousRebootLogs, RebootLogHandlerTest,
+INSTANTIATE_TEST_SUITE_P(WithVariousRebootLogs, ReporterTest,
                          ::testing::ValuesIn(std::vector<TestParam>({
                              {
                                  "KernelPanic",
@@ -275,7 +222,7 @@ INSTANTIATE_TEST_SUITE_P(WithVariousRebootLogs, RebootLogHandlerTest,
                            return info.param.test_name;
                          });
 
-TEST_P(RebootLogHandlerTest, Succeed) {
+TEST_P(ReporterTest, Succeed) {
   const auto param = GetParam();
 
   WriteRebootLogContents(param.input_reboot_log);
@@ -287,8 +234,7 @@ TEST_P(RebootLogHandlerTest, Succeed) {
       }));
   SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
 
-  fit::result<void> result = HandleRebootLog();
-  EXPECT_EQ(result.state(), kOk);
+  ReportOnRebootLog();
 
   EXPECT_THAT(ReceivedCobaltEvents(), ElementsAre(cobalt::Event(param.output_event_code)));
 }

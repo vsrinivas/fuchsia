@@ -19,48 +19,26 @@ group("tests") {
 test_package("reboot-info-tests") {
   tests = [
     {
-      name = "reboot_log_handler_unittest"
-    },
-    {
       name = "reboot_log_unittest"
     },
     {
       name = "reboot_reason_unittest"
     },
+    {
+      name = "reporter_unittest"
+    },
   ]
 
   deps = [
-    ":reboot_log_handler_unittest",
     ":reboot_log_unittest",
     ":reboot_reason_unittest",
+    ":reporter_unittest",
   ]
 }
 
 ###############################################################################
 # EXECUTABLES
 ###############################################################################
-executable("reboot_log_handler_unittest") {
-  testonly = true
-
-  sources = [ "reboot_log_handler_unittest.cc" ]
-
-  deps = [
-    "//src/developer/feedback/reboot_info:reboot_log_handler",
-    "//src/developer/feedback/testing:cobalt_test_fixture",
-    "//src/developer/feedback/testing:gpretty_printers",
-    "//src/developer/feedback/testing:gtest_with_syslog_main",
-    "//src/developer/feedback/testing:unit_test_fixture",
-    "//src/developer/feedback/testing/stubs:cobalt",
-    "//src/developer/feedback/testing/stubs:crash_reporter",
-    "//src/developer/feedback/utils/cobalt",
-    "//src/lib/files",
-    "//third_party/googletest:gmock",
-    "//third_party/googletest:gtest",
-    "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/zx",
-  ]
-}
-
 executable("reboot_log_unittest") {
   testonly = true
 
@@ -90,5 +68,27 @@ executable("reboot_reason_unittest") {
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
+  ]
+}
+
+executable("reporter_unittest") {
+  testonly = true
+
+  sources = [ "reporter_unittest.cc" ]
+
+  deps = [
+    "//src/developer/feedback/reboot_info:reporter",
+    "//src/developer/feedback/testing:cobalt_test_fixture",
+    "//src/developer/feedback/testing:gpretty_printers",
+    "//src/developer/feedback/testing:gtest_with_syslog_main",
+    "//src/developer/feedback/testing:unit_test_fixture",
+    "//src/developer/feedback/testing/stubs:cobalt",
+    "//src/developer/feedback/testing/stubs:crash_reporter",
+    "//src/developer/feedback/utils/cobalt",
+    "//src/lib/files",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/zx",
   ]
 }
