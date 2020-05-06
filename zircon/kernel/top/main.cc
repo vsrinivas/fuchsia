@@ -127,10 +127,12 @@ static int bootstrap2(void*) {
   platform_init();
 
   // late CPU initialization, after platform is available
+  dprintf(SPEW, "initializing late arch\n");
+  lk_primary_cpu_init_level(LK_INIT_LEVEL_PLATFORM, LK_INIT_LEVEL_ARCH_LATE - 1);
   arch_cpu_late_init();
 
   dprintf(SPEW, "moving to last init level\n");
-  lk_primary_cpu_init_level(LK_INIT_LEVEL_PLATFORM, LK_INIT_LEVEL_LAST);
+  lk_primary_cpu_init_level(LK_INIT_LEVEL_ARCH_LATE, LK_INIT_LEVEL_LAST);
 
   timeline_init.Set(current_ticks());
   return 0;

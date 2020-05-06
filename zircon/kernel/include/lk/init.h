@@ -53,9 +53,10 @@ enum lk_init_level {
   // in these stages.
   LK_INIT_LEVEL_ARCH = 0xb0000,
   LK_INIT_LEVEL_PLATFORM = 0xc0000,
+  LK_INIT_LEVEL_ARCH_LATE = 0xd0000,
 
   // Userspace started.
-  LK_INIT_LEVEL_USER = 0xd0000,
+  LK_INIT_LEVEL_USER = 0xe0000,
 
   LK_INIT_LEVEL_LAST = UINT_MAX,
 };
