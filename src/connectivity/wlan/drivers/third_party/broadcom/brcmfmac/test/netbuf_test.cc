@@ -327,6 +327,7 @@ TEST_F(BrcmfNetbufList, RemoveTail) {
   EXPECT_EQ(brcmf_netbuf_list_remove_tail(&list), buf2);
   int32_t tags2[] = {1, -1};
   ExpectOrder(tags2);
+  brcmf_netbuf_free(buf2);
 }
 
 TEST_F(BrcmfNetbufList, RemoveHead) {
@@ -343,6 +344,7 @@ TEST_F(BrcmfNetbufList, RemoveHead) {
   EXPECT_EQ(brcmf_netbuf_list_remove_head(&list), buf1);
   int32_t tags2[] = {2, -1};
   ExpectOrder(tags2);
+  brcmf_netbuf_free(buf1);
 }
 
 TEST_F(BrcmfNetbufList, Remove) {
@@ -368,6 +370,7 @@ TEST_F(BrcmfNetbufList, Remove) {
   brcmf_netbuf_list_remove(&list, buf2);
   int32_t tags3[] = {1, 3, -1};
   ExpectOrder(tags3);
+  brcmf_netbuf_free(buf2);
 }
 
 TEST_F(BrcmfNetbufList, AddAfter) {
