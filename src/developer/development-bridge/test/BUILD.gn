@@ -1,0 +1,34 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_library.gni")
+
+if (host_toolchain == current_toolchain) {
+  rustc_library("lib") {
+    name = "ffx_test"
+    version = "0.1.0"
+    edition = "2018"
+    with_unit_tests = true
+
+    deps = [
+      "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol-rustc",
+      "//sdk/fidl/fuchsia.test:fuchsia.test-rustc",
+      "//sdk/fidl/fuchsia.test.manager:fuchsia.test.manager-rustc",
+      "//src/connectivity/overnet/lib/hoist",
+      "//src/lib/fidl/rust/fidl",
+      "//src/lib/test_executor/rust:test_executor",
+      "//third_party/rust_crates:anyhow",
+      "//third_party/rust_crates:argh",
+      "//third_party/rust_crates:futures",
+      "//third_party/rust_crates:log",
+      "//third_party/rust_crates:regex",
+    ]
+    non_rust_deps = [ "//third_party/boringssl" ]
+  }
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":lib_test($host_toolchain)" ]
+}

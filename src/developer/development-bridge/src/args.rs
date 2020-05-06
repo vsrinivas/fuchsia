@@ -2,7 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {crate::config::args::ConfigCommand, argh::FromArgs};
+use {
+    crate::config::args::ConfigCommand, argh::FromArgs,
+    ffx_run_component::args::RunComponentCommand, ffx_test::args::TestCommand,
+};
 
 #[derive(FromArgs, Debug, PartialEq)]
 /// Fuchsia Development Bridge
@@ -20,26 +23,6 @@ pub struct Ffx {
 pub struct DaemonCommand {}
 
 #[derive(FromArgs, Debug, PartialEq)]
-#[argh(subcommand, name = "test", description = "run tests")]
-pub struct TestCommand {
-    #[argh(positional)]
-    /// test suite component URL
-    pub url: String,
-
-    #[argh(positional)]
-    /// target device
-    pub devices: Option<String>,
-
-    #[argh(option)]
-    /// target device
-    pub tests: Option<String>,
-
-    #[argh(switch)]
-    /// list tests in the Test Suite
-    pub list: bool,
-}
-
-#[derive(FromArgs, Debug, PartialEq)]
 #[argh(subcommand, name = "echo", description = "run echo test")]
 pub struct EchoCommand {
     #[argh(positional)]
@@ -52,17 +35,6 @@ pub struct EchoCommand {
 pub struct ListCommand {
     #[argh(positional)]
     pub nodename: Option<String>,
-}
-
-#[derive(FromArgs, Debug, PartialEq)]
-#[argh(subcommand, name = "run-component", description = "run component")]
-pub struct RunComponentCommand {
-    #[argh(positional)]
-    /// url of component to run
-    pub url: String,
-    #[argh(positional)]
-    /// args for the component
-    pub args: Vec<String>,
 }
 
 #[derive(FromArgs, Debug, PartialEq)]
@@ -131,28 +103,5 @@ mod tests {
 
         let nodename = String::from("thumb-set-human-neon");
         check(&["list", &nodename], nodename.clone());
-    }
-
-    #[test]
-    fn test_run_component() {
-        fn check(args: &[&str], expected_url: String, expected_args: Vec<String>) {
-            assert_eq!(
-                Ffx::from_args(CMD_NAME, args),
-                Ok(Ffx {
-                    config: None,
-                    subcommand: Subcommand::RunComponent(RunComponentCommand {
-                        url: expected_url,
-                        args: expected_args,
-                    })
-                })
-            )
-        }
-
-        let test_url = "http://test.com";
-        let arg1 = "test1";
-        let arg2 = "test2";
-        let args = vec![arg1.to_string(), arg2.to_string()];
-
-        check(&["run-component", test_url, arg1, arg2], test_url.to_string(), args);
     }
 }
