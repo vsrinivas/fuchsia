@@ -34,7 +34,7 @@ namespace blobfs {
 // case, so pages will not be decommitted by construction. Hence, this value should be sufficiently
 // large but no larger.
 constexpr uint64_t kCompressedTransferBufferBytes = fbl::round_up(
-    std::max<uint64_t>(kZSTDSeekableHeaderSize, kZSTDSeekableMaxFrameSize), kBlobfsBlockSize);
+    std::max<uint64_t>(kZSTDSeekableHeaderSize, 4 * kZSTDSeekableMaxFrameSize), kBlobfsBlockSize);
 
 // The number of blocks for the singleton transfer buffer that reads from storage in the compressed
 // case. Due to the types used in contexts that need this value, it is necessary to be assured that
