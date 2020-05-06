@@ -4,22 +4,22 @@
 
 #include "zstd-seekable-block-cache.h"
 
-#include <memory>
-#include <vector>
-
 #include <stdint.h>
 #include <string.h>
-
-#include <zircon/status.h>
 #include <zircon/errors.h>
+#include <zircon/status.h>
+
+#include <memory>
+#include <vector>
 
 // TODO: This is just for an experiment.
 #include <fs/trace.h>
 
 namespace blobfs {
 
-ZSTDSeekableProxyBlockCache::ZSTDSeekableProxyBlockCache(std::unique_ptr<ZSTDSeekableBlockCache> delegate)
- : delegate_(std::move(delegate)) {}
+ZSTDSeekableProxyBlockCache::ZSTDSeekableProxyBlockCache(
+    std::unique_ptr<ZSTDSeekableBlockCache> delegate)
+    : delegate_(std::move(delegate)) {}
 
 zx_status_t ZSTDSeekableProxyBlockCache::WriteBlock(uint8_t* buf, uint32_t data_block_offset) {
   if (delegate_ == nullptr) {
@@ -37,8 +37,9 @@ zx_status_t ZSTDSeekableProxyBlockCache::ReadBlock(uint8_t* buf, uint32_t data_b
   return delegate_->ReadBlock(buf, data_block_offset);
 }
 
-ZSTDSeekableSingleBlockCache::ZSTDSeekableSingleBlockCache(std::unique_ptr<ZSTDSeekableBlockCache> delegate)
-: ZSTDSeekableProxyBlockCache(std::move(delegate)) {}
+ZSTDSeekableSingleBlockCache::ZSTDSeekableSingleBlockCache(
+    std::unique_ptr<ZSTDSeekableBlockCache> delegate)
+    : ZSTDSeekableProxyBlockCache(std::move(delegate)) {}
 
 zx_status_t ZSTDSeekableSingleBlockCache::WriteBlock(uint8_t* buf, uint32_t data_block_offset) {
   if (block_ == nullptr) {
@@ -58,8 +59,9 @@ zx_status_t ZSTDSeekableSingleBlockCache::ReadBlock(uint8_t* buf, uint32_t data_
   return ZX_OK;
 }
 
-ZSTDSeekableMostRecentBlockCache::ZSTDSeekableMostRecentBlockCache(std::unique_ptr<ZSTDSeekableBlockCache> delegate)
-  : ZSTDSeekableSingleBlockCache(std::move(delegate)) {}
+ZSTDSeekableMostRecentBlockCache::ZSTDSeekableMostRecentBlockCache(
+    std::unique_ptr<ZSTDSeekableBlockCache> delegate)
+    : ZSTDSeekableSingleBlockCache(std::move(delegate)) {}
 
 zx_status_t ZSTDSeekableMostRecentBlockCache::WriteBlock(uint8_t* buf, uint32_t data_block_offset) {
   data_block_offset_ = data_block_offset;
@@ -75,8 +77,9 @@ zx_status_t ZSTDSeekableMostRecentBlockCache::ReadBlock(uint8_t* buf, uint32_t d
   return ZSTDSeekableProxyBlockCache::ReadBlock(buf, data_block_offset);
 }
 
-ZSTDSeekableFirstBlockCache::ZSTDSeekableFirstBlockCache(std::unique_ptr<ZSTDSeekableBlockCache> delegate)
-  : ZSTDSeekableSingleBlockCache(std::move(delegate)) {}
+ZSTDSeekableFirstBlockCache::ZSTDSeekableFirstBlockCache(
+    std::unique_ptr<ZSTDSeekableBlockCache> delegate)
+    : ZSTDSeekableSingleBlockCache(std::move(delegate)) {}
 
 zx_status_t ZSTDSeekableFirstBlockCache::WriteBlock(uint8_t* buf, uint32_t data_block_offset) {
   if (data_block_offset == 0) {
@@ -102,9 +105,12 @@ zx_status_t ZSTDSeekableFirstBlockCache::ReadBlock(uint8_t* buf, uint32_t data_b
   return ZSTDSeekableProxyBlockCache::ReadBlock(buf, data_block_offset);
 }
 
-ZSTDSeekableLastBlockCache::ZSTDSeekableLastBlockCache(uint32_t num_data_blocks) : ZSTDSeekableSingleBlockCache(nullptr), num_data_blocks_(num_data_blocks) {}
+ZSTDSeekableLastBlockCache::ZSTDSeekableLastBlockCache(uint32_t num_data_blocks)
+    : ZSTDSeekableSingleBlockCache(nullptr), num_data_blocks_(num_data_blocks) {}
 
-ZSTDSeekableLastBlockCache::ZSTDSeekableLastBlockCache(uint32_t num_data_blocks, std::unique_ptr<ZSTDSeekableBlockCache> delegate) : ZSTDSeekableSingleBlockCache(std::move(delegate)), num_data_blocks_(num_data_blocks) {}
+ZSTDSeekableLastBlockCache::ZSTDSeekableLastBlockCache(
+    uint32_t num_data_blocks, std::unique_ptr<ZSTDSeekableBlockCache> delegate)
+    : ZSTDSeekableSingleBlockCache(std::move(delegate)), num_data_blocks_(num_data_blocks) {}
 
 zx_status_t ZSTDSeekableLastBlockCache::WriteBlock(uint8_t* buf, uint32_t data_block_offset) {
   if (data_block_offset == num_data_blocks_ - 1) {
@@ -134,8 +140,9 @@ zx_status_t ZSTDSeekableLastBlockCache::ReadBlock(uint8_t* buf, uint32_t data_bl
 // Last block of blob, or else return first block of blob, or else return most recently read block
 // of blob.
 ZSTDSeekableDefaultBlockCache::ZSTDSeekableDefaultBlockCache(uint32_t num_data_blocks)
- : ZSTDSeekableProxyBlockCache(std::make_unique<ZSTDSeekableLastBlockCache>(num_data_blocks,
- std::make_unique<ZSTDSeekableMostRecentBlockCache>(std::make_unique<ZSTDSeekableSingleBlockCache>()))) {}
+    : ZSTDSeekableProxyBlockCache(std::make_unique<ZSTDSeekableLastBlockCache>(
+          num_data_blocks, std::make_unique<ZSTDSeekableMostRecentBlockCache>(
+                               std::make_unique<ZSTDSeekableSingleBlockCache>()))) {}
 
 // TODO: This is just for an experiment.
 zx_status_t ZSTDSeekableDefaultBlockCache::ReadBlock(uint8_t* buf, uint32_t data_block_offset) {

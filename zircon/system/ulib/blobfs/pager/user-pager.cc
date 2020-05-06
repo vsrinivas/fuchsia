@@ -66,7 +66,8 @@ UserPager::ReadRange UserPager::ExtendReadRange(UserPagerInfo* info, uint64_t of
 
   uint64_t read_ahead_offset = fbl::round_down(offset, kReadAheadClusterSize);
   uint64_t end_offset = fbl::max(read_ahead_offset + kReadAheadClusterSize, offset + length);
-  uint64_t read_ahead_length = fbl::min(end_offset - read_ahead_offset, info->data_length_bytes - read_ahead_offset);
+  uint64_t read_ahead_length =
+      fbl::min(end_offset - read_ahead_offset, info->data_length_bytes - read_ahead_offset);
 
   // Align to the block size for verification. (In practice this means alignment to 8k).
   zx_status_t status = info->verifier->Align(&read_ahead_offset, &read_ahead_length);
@@ -88,8 +89,8 @@ zx_status_t UserPager::TransferPagesToVmo(uint64_t requested_offset, uint64_t re
 
   size_t end;
   if (add_overflow(requested_offset, requested_length, &end)) {
-    FS_TRACE_ERROR("blobfs: Transfer range would overflow (off=%lu, len=%lu)\n",
-                   requested_offset, requested_length);
+    FS_TRACE_ERROR("blobfs: Transfer range would overflow (off=%lu, len=%lu)\n", requested_offset,
+                   requested_length);
     return ZX_ERR_OUT_OF_RANGE;
   }
   const auto [offset, length] = ExtendReadRange(info, requested_offset, requested_length);
@@ -121,10 +122,11 @@ zx_status_t UserPager::TransferPagesToVmo(uint64_t requested_offset, uint64_t re
   ZX_DEBUG_ASSERT(requested_offset >= offset);
   uint64_t supply_pages_offset = requested_offset;
   uint64_t transfer_buffer_offset = requested_offset - offset;
-  uint64_t supply_pages_length = fbl::round_up<uint64_t, uint64_t>(length - transfer_buffer_offset, PAGE_SIZE);
+  uint64_t supply_pages_length =
+      fbl::round_up<uint64_t, uint64_t>(length - transfer_buffer_offset, PAGE_SIZE);
   // Move the pages from the transfer buffer to the destination VMO.
-  status = pager_.supply_pages(vmo, supply_pages_offset, supply_pages_length,
-                               transfer_buffer_, transfer_buffer_offset);
+  status = pager_.supply_pages(vmo, supply_pages_offset, supply_pages_length, transfer_buffer_,
+                               transfer_buffer_offset);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("blobfs: Failed to supply pages to paged VMO: %s\n",
                    zx_status_get_string(status));

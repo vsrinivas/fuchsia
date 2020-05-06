@@ -176,8 +176,7 @@ zx_status_t ZSTDSeekableDecompressor::Decompress(void* uncompressed_buf, size_t*
 zx_status_t ZSTDSeekableDecompressor::DecompressRange(void* uncompressed_buf,
                                                       size_t* uncompressed_size,
                                                       const void* compressed_buf,
-                                                      size_t max_compressed_size,
-                                                      size_t offset) {
+                                                      size_t max_compressed_size, size_t offset) {
   TRACE_DURATION("blobfs", "ZSTDSeekableDecompressor::DecompressRange", "uncompressed_size",
                  *uncompressed_size, "max_compressed_size", max_compressed_size);
 

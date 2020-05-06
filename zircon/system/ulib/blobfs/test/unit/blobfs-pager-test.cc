@@ -13,12 +13,12 @@
 #include <cstdint>
 #include <memory>
 
+#include <blobfs/compression-algorithm.h>
 #include <blobfs/format.h>
 #include <digest/digest.h>
 #include <digest/merkle-tree.h>
 #include <fbl/auto_call.h>
 #include <zxtest/zxtest.h>
-#include <blobfs/compression-algorithm.h>
 
 #include "blob-verifier.h"
 #include "pager/page-watcher.h"
@@ -42,8 +42,7 @@ class MockBlob {
 
     size_t tree_len;
     Digest root;
-    ASSERT_OK(
-        digest::MerkleTreeCreator::Create(data, kBlobSize, &merkle_tree_, &tree_len, &root));
+    ASSERT_OK(digest::MerkleTreeCreator::Create(data, kBlobSize, &merkle_tree_, &tree_len, &root));
 
     std::unique_ptr<BlobVerifier> verifier;
     ASSERT_OK(BlobVerifier::Create(std::move(root), metrics, merkle_tree_.get(), tree_len,

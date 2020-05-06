@@ -4,13 +4,12 @@
 
 #include "zstd-seekable-blob-cache.h"
 
-#include <memory>
-#include <list>
-
 #include <stdint.h>
-
-#include <zircon/status.h>
 #include <zircon/errors.h>
+#include <zircon/status.h>
+
+#include <list>
+#include <memory>
 
 #include "zstd-seekable-blob.h"
 
@@ -32,7 +31,8 @@ uint64_t gNumBlobCacheHits = 0;
 
 ZSTDSeekableLRUBlobCache::ZSTDSeekableLRUBlobCache(size_t max_size) : max_size_(max_size) {}
 
-const std::unique_ptr<ZSTDSeekableBlob>& ZSTDSeekableLRUBlobCache::WriteBlob(std::unique_ptr<ZSTDSeekableBlob> blob) {
+const std::unique_ptr<ZSTDSeekableBlob>& ZSTDSeekableLRUBlobCache::WriteBlob(
+    std::unique_ptr<ZSTDSeekableBlob> blob) {
   if (blobs_.size() == max_size_) {
     blobs_.pop_front();
   }
@@ -45,8 +45,8 @@ const std::unique_ptr<ZSTDSeekableBlob>& ZSTDSeekableLRUBlobCache::ReadBlob(uint
   // TODO: This is just for an experiment.
   // if (gNumBlobCacheReads % 1000 == 0) {
   //   FS_TRACE_ERROR(
-  //     "\n\n{\"blob_cache_reads\": %lu, \"blob_cache_writes\": %lu, \"blob_cache_hits\": %lu}\n\n",
-  //     gNumBlobCacheReads, gNumBlobCacheWrites, gNumBlobCacheHits);
+  //     "\n\n{\"blob_cache_reads\": %lu, \"blob_cache_writes\": %lu, \"blob_cache_hits\":
+  //     %lu}\n\n", gNumBlobCacheReads, gNumBlobCacheWrites, gNumBlobCacheHits);
   // }
 
   gNumBlobCacheReads++;

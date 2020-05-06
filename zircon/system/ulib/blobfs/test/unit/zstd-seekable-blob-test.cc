@@ -12,6 +12,7 @@
 #include <lib/zx/time.h>
 #include <lib/zx/vmo.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <string.h>
 #include <zircon/device/block.h>
 #include <zircon/errors.h>
@@ -27,7 +28,6 @@
 #include <fbl/auto_call.h>
 #include <zxtest/base/test.h>
 #include <zxtest/zxtest.h>
-#include <stdlib.h>
 
 #include "allocator/allocator.h"
 #include "blob.h"
@@ -53,13 +53,10 @@ void ZeroToSevenBlobSrcFunction(char* data, size_t length) {
   }
 }
 
-void CanaryBlobSrcFunction(char* data, size_t length) {
-  memset(data, kCanaryInt, length);
-}
+void CanaryBlobSrcFunction(char* data, size_t length) { memset(data, kCanaryInt, length); }
 
 class ZSTDSeekableBlobTest : public zxtest::Test {
  public:
-
   void SetUp() {
     MountOptions options;
     options.write_compression_algorithm = CompressionAlgorithm::ZSTD_SEEKABLE;
@@ -243,8 +240,8 @@ TEST_F(ZSTDSeekAndReadTest, SmallReadOverTwoBlocks) {
   ASSERT_OK(vmoid.AttachVmo(read_buffer_vmo));
   uint32_t num_merkle_blocks = ComputeNumMerkleTreeBlocks(*node_finder()->GetNode(node_index));
   auto blocks = std::make_unique<ZSTDCompressedBlockCollectionImpl>(
-      &mapper, &vmoid, 2 /* 2 blocks in only blob in test */, space_manager(), transaction_handler(),
-      node_finder(), node_index, num_merkle_blocks);
+      &mapper, &vmoid, 2 /* 2 blocks in only blob in test */, space_manager(),
+      transaction_handler(), node_finder(), node_index, num_merkle_blocks);
 
   // Extract blocks pointer for use in testing `ZSTDRead` API before moving it.
   auto blocks_for_file = blocks.get();

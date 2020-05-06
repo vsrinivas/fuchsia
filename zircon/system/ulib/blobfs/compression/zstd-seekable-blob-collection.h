@@ -7,8 +7,8 @@
 
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/zx/vmo.h>
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <zircon/device/block.h>
 #include <zircon/types.h>
 
@@ -21,8 +21,8 @@
 #include <storage/buffer/vmoid_registry.h>
 
 #include "allocator/allocator.h"
-#include "compression/zstd-seekable.h"
 #include "compression/zstd-seekable-blob-cache.h"
+#include "compression/zstd-seekable.h"
 
 namespace blobfs {
 
@@ -68,7 +68,8 @@ class ZSTDSeekableBlobCollection {
 
  private:
   ZSTDSeekableBlobCollection(storage::VmoidRegistry* vmoid_registry, SpaceManager* space_manager,
-                             fs::LegacyTransactionHandler* txn_handler, NodeFinder* node_finder, size_t cache_size);
+                             fs::LegacyTransactionHandler* txn_handler, NodeFinder* node_finder,
+                             size_t cache_size);
 
   // Parameters passed through to |ZSTDCompressedBlockCollection| construction.
   SpaceManager* space_manager_;

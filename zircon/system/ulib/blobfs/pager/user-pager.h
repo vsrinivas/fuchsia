@@ -13,6 +13,7 @@
 #include <lib/async-loop/default.h>
 #include <lib/async/dispatcher.h>
 #include <lib/zx/pager.h>
+
 #include <blobfs/compression-algorithm.h>
 
 #include "../blob-verifier.h"
@@ -117,7 +118,6 @@ class UserPager {
   // |info| provided.
   virtual zx_status_t VerifyTransferVmo(uint64_t offset, uint64_t length,
                                         const zx::vmo& transfer_vmo, UserPagerInfo* info) = 0;
-
 
   // Async loop for pager requests.
   async::Loop pager_loop_ = async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread);

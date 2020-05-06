@@ -19,10 +19,10 @@
 #include <storage/buffer/vmoid_registry.h>
 #include <zstd/zstd_seekable.h>
 
-#include "zstd-seekable-block-cache.h"
 #include "allocator/allocator.h"
 #include "iterator/block-iterator-provider.h"
 #include "iterator/block-iterator.h"
+#include "zstd-seekable-block-cache.h"
 
 namespace blobfs {
 
@@ -65,11 +65,10 @@ class ZSTDCompressedBlockCollectionImpl : public ZSTDCompressedBlockCollection {
   // The owner of this |ZSTDCompressedBlockCollectionImpl| is responsible for ensuring that the
   // above assumptions hold.
   ZSTDCompressedBlockCollectionImpl(fzl::VmoMapper* vmo_mapper, storage::OwnedVmoid* vmoid,
-                                    uint32_t num_vmo_blocks,
-                                    SpaceManager* space_manager,
+                                    uint32_t num_vmo_blocks, SpaceManager* space_manager,
                                     fs::LegacyTransactionHandler* txn_handler,
-                                    NodeFinder* node_finder,
-                                    uint32_t node_index, uint32_t num_merkle_blocks);
+                                    NodeFinder* node_finder, uint32_t node_index,
+                                    uint32_t num_merkle_blocks);
 
   // ZSTDCompressedBlockCollection implementation. Reads are copied to the beginning of the VMO
   // referred to by |vmoid_|.

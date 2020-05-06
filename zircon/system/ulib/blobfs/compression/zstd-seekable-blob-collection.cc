@@ -28,8 +28,8 @@ zx_status_t ZSTDSeekableBlobCollection::Create(storage::VmoidRegistry* vmoid_reg
                                                NodeFinder* node_finder,
                                                std::unique_ptr<ZSTDSeekableBlobCollection>* out) {
   // |space_manager|, |txn_handler|, |node_finder| passed through on |Read()|.
-  std::unique_ptr<ZSTDSeekableBlobCollection> cbc(
-      new ZSTDSeekableBlobCollection(vmoid_registry, space_manager, txn_handler, node_finder, kZSTDSeekableBlobCacheSize));
+  std::unique_ptr<ZSTDSeekableBlobCollection> cbc(new ZSTDSeekableBlobCollection(
+      vmoid_registry, space_manager, txn_handler, node_finder, kZSTDSeekableBlobCacheSize));
 
   // Initialize shared transfer buffer.
   zx_status_t status = zx::vmo::create(kCompressedTransferBufferBytes, 0, &cbc->transfer_vmo_);
@@ -88,7 +88,7 @@ zx_status_t ZSTDSeekableBlobCollection::Read(uint32_t node_index, uint8_t* buf,
 
   {
     TRACE_DURATION("blobfs", "ZSTDSeekableBlobCollection::Read", "node index", node_index,
-                  "data byte offset", data_byte_offset, "number of bytes", num_bytes);
+                   "data byte offset", data_byte_offset, "number of bytes", num_bytes);
 
     ZSTDSeekableBlob* blob = cache_.ReadBlob(node_index).get();
     if (blob == nullptr) {
@@ -97,10 +97,11 @@ zx_status_t ZSTDSeekableBlobCollection::Read(uint32_t node_index, uint8_t* buf,
           &mapped_vmo_, &vmoid_, kCompressedTransferBufferBlocks, space_manager_, txn_handler_,
           node_finder_, node_index, num_merkle_blocks);
       std::unique_ptr<ZSTDSeekableBlob> new_blob;
-      zx_status_t status = ZSTDSeekableBlob::Create(node_index, &mapped_vmo_, std::move(blocks), &new_blob);
+      zx_status_t status =
+          ZSTDSeekableBlob::Create(node_index, &mapped_vmo_, std::move(blocks), &new_blob);
       if (status != ZX_OK) {
         FS_TRACE_ERROR("[blobfs][compressed] Failed to construct ZSTDSeekableBlob: %s\n",
-                      zx_status_get_string(status));
+                       zx_status_get_string(status));
         return status;
       }
       blob = cache_.WriteBlob(std::move(new_blob)).get();

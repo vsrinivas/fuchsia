@@ -45,8 +45,7 @@ class ZSTDSeekableBlob : public RandomAccessCompressedBlob {
   // Create a |ZSTDSeekableBlob|. It is the invoker's responsibility to ensure that the VMO
   // populated on |compressed_block_collection.Read()| corresponds to |mapped_vmo|.
   static zx_status_t Create(
-      uint32_t node_index,
-      fzl::VmoMapper* mapped_vmo,
+      uint32_t node_index, fzl::VmoMapper* mapped_vmo,
       std::unique_ptr<ZSTDCompressedBlockCollection> compressed_block_collection,
       std::unique_ptr<ZSTDSeekableBlob>* out);
 

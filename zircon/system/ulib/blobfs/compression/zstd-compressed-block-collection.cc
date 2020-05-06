@@ -20,18 +20,18 @@
 #include <fs/trace.h>
 #include <storage/buffer/owned_vmoid.h>
 
-#include "zstd-seekable-block-cache.h"
 #include "allocator/allocator.h"
 #include "iterator/allocated-extent-iterator.h"
 #include "iterator/block-iterator.h"
+#include "zstd-seekable-block-cache.h"
 #include "zstd-seekable.h"
 
 namespace blobfs {
 
 ZSTDCompressedBlockCollectionImpl::ZSTDCompressedBlockCollectionImpl(
-    fzl::VmoMapper* vmo_mapper, storage::OwnedVmoid* vmoid, uint32_t num_vmo_blocks, SpaceManager* space_manager,
-    fs::LegacyTransactionHandler* txn_handler, NodeFinder* node_finder, uint32_t node_index,
-    uint32_t num_merkle_blocks)
+    fzl::VmoMapper* vmo_mapper, storage::OwnedVmoid* vmoid, uint32_t num_vmo_blocks,
+    SpaceManager* space_manager, fs::LegacyTransactionHandler* txn_handler, NodeFinder* node_finder,
+    uint32_t node_index, uint32_t num_merkle_blocks)
     : vmo_mapper_(vmo_mapper),
       vmoid_(vmoid),
       num_vmo_blocks_(num_vmo_blocks),
@@ -68,7 +68,8 @@ zx_status_t ZSTDCompressedBlockCollectionImpl::Read(uint32_t data_block_offset,
   bool first_block_cached = false;
   if (cache_ != nullptr) {
     TRACE_DURATION("blobfs", "ZSTDCompressedBlockCollectionImpl::Read::ReadCache");
-    zx_status_t status = cache_->ReadBlock(static_cast<uint8_t*>(vmo_mapper_->start()), data_block_offset);
+    zx_status_t status =
+        cache_->ReadBlock(static_cast<uint8_t*>(vmo_mapper_->start()), data_block_offset);
     if (status == ZX_OK) {
       if (num_blocks == 1) {
         return ZX_OK;
@@ -114,7 +115,8 @@ zx_status_t ZSTDCompressedBlockCollectionImpl::Read(uint32_t data_block_offset,
             // Should have early exit if only reading one block.
             ZX_DEBUG_ASSERT(n_blocks > 1);
             // Skip first block that would have been read (because it was cached).
-            txn.Enqueue(vmoid_->get(), actual_vmo_block_offset + 1, actual_dev_block_offset + 1, n_blocks - 1);
+            txn.Enqueue(vmoid_->get(), actual_vmo_block_offset + 1, actual_dev_block_offset + 1,
+                        n_blocks - 1);
           } else {
             txn.Enqueue(vmoid_->get(), actual_vmo_block_offset, actual_dev_block_offset, n_blocks);
           }
@@ -144,7 +146,9 @@ zx_status_t ZSTDCompressedBlockCollectionImpl::Read(uint32_t data_block_offset,
     }
 
     // Usual case: Cache last block read.
-    cache_->WriteBlock(static_cast<uint8_t*>(vmo_mapper_->start()) + ((num_blocks - 1) * kBlobfsBlockSize), data_block_offset + num_blocks - 1);
+    cache_->WriteBlock(
+        static_cast<uint8_t*>(vmo_mapper_->start()) + ((num_blocks - 1) * kBlobfsBlockSize),
+        data_block_offset + num_blocks - 1);
   }
 
   return ZX_OK;

@@ -90,7 +90,8 @@ class ZSTDSeekableFirstBlockCache : public ZSTDSeekableSingleBlockCache {
 class ZSTDSeekableLastBlockCache : public ZSTDSeekableSingleBlockCache {
  public:
   explicit ZSTDSeekableLastBlockCache(uint32_t num_data_blocks);
-  ZSTDSeekableLastBlockCache(uint32_t num_data_blocks, std::unique_ptr<ZSTDSeekableBlockCache> delegate);
+  ZSTDSeekableLastBlockCache(uint32_t num_data_blocks,
+                             std::unique_ptr<ZSTDSeekableBlockCache> delegate);
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(ZSTDSeekableLastBlockCache);
 
   zx_status_t WriteBlock(uint8_t* buf, uint32_t data_block_offset) final;

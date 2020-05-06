@@ -36,7 +36,8 @@ class ZSTDSeekableBlobCache {
   // at logical data block offset `data_block_offset`. If the cache stores the block, it will create
   // a copy of `data` internally. The return value indicates whether or not the cache is in a
   // consistent state.
-  virtual const std::unique_ptr<ZSTDSeekableBlob>& WriteBlob(std::unique_ptr<ZSTDSeekableBlob> blob) = 0;
+  virtual const std::unique_ptr<ZSTDSeekableBlob>& WriteBlob(
+      std::unique_ptr<ZSTDSeekableBlob> blob) = 0;
 
   // TODO(markdittmer): Copy pasta from ZSTDSeekableBlockCollection.
   //
