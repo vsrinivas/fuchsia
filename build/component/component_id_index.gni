@@ -34,7 +34,6 @@ template("component_id_index") {
     assert(defined(invoker.source), "source must be specified.")
     metadata = {
       component_id_index = [ rebase_path(invoker.source, root_build_dir) ]
-      component_id_index_barrier = []
     }
   }
 }
@@ -74,7 +73,6 @@ template("component_id_index_config_data") {
                            ])
 
     data_keys = [ "component_id_index" ]
-    walk_keys = [ "component_id_index_barrier" ]
     outputs = [ component_id_index_input_manifest_path ]
   }
 
