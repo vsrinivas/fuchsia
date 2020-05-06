@@ -5,12 +5,14 @@
 success("EmptyStruct") {
     value = EmptyStruct {
     },
-    bytes = [
-        8:raw(
-            0x00, // one byte
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // padding
-        ),
-    ],
+    bytes = {
+        old, v1 = [
+            8:raw(
+                0x00, // one byte
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // padding
+            ),
+        ],
+    },
 }
 
 success("EmptyStructSandwich") {
@@ -19,20 +21,22 @@ success("EmptyStructSandwich") {
         es: EmptyStruct {},
         after: "after",
     },
-    bytes = [
-        56:raw(
-            6, 0, 0, 0, 0, 0, 0, 0, // length of "before"
-            255, 255, 255, 255, 255, 255, 255, 255, // "before" is present
-            0,                   // empty struct zero field
-            0, 0, 0, 0, 0, 0, 0, // 7 bytes of padding after empty struct, to align to 64 bits
-            5, 0, 0, 0, 0, 0, 0, 0, // length of "after"
-            255, 255, 255, 255, 255, 255, 255, 255, // "after" is present
-            'b', 'e', 'f', 'o', 'r', 'e',
-            0, 0, // 2 bytes of padding after "before", to align to 64 bits
-            'a', 'f', 't', 'e', 'r', // "after" string
-            0, 0, 0, // 3 bytes of padding after "after", to align to 64 bits
-        ),
-    ],
+    bytes = {
+        old, v1 = [
+            56:raw(
+                6, 0, 0, 0, 0, 0, 0, 0, // length of "before"
+                255, 255, 255, 255, 255, 255, 255, 255, // "before" is present
+                0,                   // empty struct zero field
+                0, 0, 0, 0, 0, 0, 0, // 7 bytes of padding after empty struct, to align to 64 bits
+                5, 0, 0, 0, 0, 0, 0, 0, // length of "after"
+                255, 255, 255, 255, 255, 255, 255, 255, // "after" is present
+                'b', 'e', 'f', 'o', 'r', 'e',
+                0, 0, // 2 bytes of padding after "before", to align to 64 bits
+                'a', 'f', 't', 'e', 'r', // "after" string
+                0, 0, 0, // 3 bytes of padding after "after", to align to 64 bits
+            ),
+        ],
+    },
 }
 
 success("Uint8Uint16Uint32Uint64") {
@@ -42,15 +46,17 @@ success("Uint8Uint16Uint32Uint64") {
         f3: 0x04050607,
         f4: 0x08090a0b0c0d0e0f,
     },
-    bytes = [
-        16:raw(
-            0x01, // f1
-            0x00, // padding
-            0x03, 0x02, // f2
-            0x07, 0x06, 0x05, 0x04, // f3
-            0x0f, 0x0e, 0x0d, 0x0c, 0x0b, 0x0a, 0x09, 0x08, // f4
-        ),
-    ],
+    bytes = {
+        old, v1 = [
+            16:raw(
+                0x01, // f1
+                0x00, // padding
+                0x03, 0x02, // f2
+                0x07, 0x06, 0x05, 0x04, // f3
+                0x0f, 0x0e, 0x0d, 0x0c, 0x0b, 0x0a, 0x09, 0x08, // f4
+            ),
+        ],
+    },
 }
 
 success("Uint64Uint32Uint16Uint8") {
@@ -60,27 +66,31 @@ success("Uint64Uint32Uint16Uint8") {
         f3: 0x0203,
         f4: 0x01,
     },
-    bytes = [
-        16:raw(
-            0x0f, 0x0e, 0x0d, 0x0c, 0x0b, 0x0a, 0x09, 0x08, // f1
-            0x07, 0x06, 0x05, 0x04, // f2
-            0x03, 0x02, // f3
-            0x01, // f4
-            0x00, // padding
-        ),
-    ],
+    bytes = {
+        old, v1 = [
+            16:raw(
+                0x0f, 0x0e, 0x0d, 0x0c, 0x0b, 0x0a, 0x09, 0x08, // f1
+                0x07, 0x06, 0x05, 0x04, // f2
+                0x03, 0x02, // f3
+                0x01, // f4
+                0x00, // padding
+            ),
+        ],
+    },
 }
 
 success("SimpleTableEmpty") {
     value = StructOfSimpleTable {
         table: SimpleTable {},
     },
-    bytes = [
-        16:raw(
-            0, 0, 0, 0, 0, 0, 0, 0, // max ordinal
-            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
-        ),
-    ],
+    bytes = {
+        old, v1 = [
+            16:raw(
+                0, 0, 0, 0, 0, 0, 0, 0, // max ordinal
+                255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            ),
+        ],
+    },
 }
 
 success("SimpleTableXAndY") {
@@ -90,24 +100,26 @@ success("SimpleTableXAndY") {
             y: 67,
         },
     },
-    bytes = [
-        112:raw(
-            5, 0, 0, 0, 0, 0, 0, 0, // max ordinal
-            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
-            8, 0, 0, 0, 0, 0, 0, 0, // envelope 1: num bytes / num handles
-            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
-            0, 0, 0, 0, 0, 0, 0, 0, // envelope 2: num bytes / num handles
-            0, 0, 0, 0, 0, 0, 0, 0, // no alloc
-            0, 0, 0, 0, 0, 0, 0, 0, // envelope 3: num bytes / num handles
-            0, 0, 0, 0, 0, 0, 0, 0, // no alloc
-            0, 0, 0, 0, 0, 0, 0, 0, // envelope 4: num bytes / num handles
-            0, 0, 0, 0, 0, 0, 0, 0, // no alloc
-            8, 0, 0, 0, 0, 0, 0, 0, // envelope 5: num bytes / num handles
-            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
-            42, 0, 0, 0, 0, 0, 0, 0, // field X
-            67, 0, 0, 0, 0, 0, 0, 0, // field Y
-        ),
-    ],
+    bytes = {
+        old, v1 = [
+            112:raw(
+                5, 0, 0, 0, 0, 0, 0, 0, // max ordinal
+                255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+                8, 0, 0, 0, 0, 0, 0, 0, // envelope 1: num bytes / num handles
+                255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+                0, 0, 0, 0, 0, 0, 0, 0, // envelope 2: num bytes / num handles
+                0, 0, 0, 0, 0, 0, 0, 0, // no alloc
+                0, 0, 0, 0, 0, 0, 0, 0, // envelope 3: num bytes / num handles
+                0, 0, 0, 0, 0, 0, 0, 0, // no alloc
+                0, 0, 0, 0, 0, 0, 0, 0, // envelope 4: num bytes / num handles
+                0, 0, 0, 0, 0, 0, 0, 0, // no alloc
+                8, 0, 0, 0, 0, 0, 0, 0, // envelope 5: num bytes / num handles
+                255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+                42, 0, 0, 0, 0, 0, 0, 0, // field X
+                67, 0, 0, 0, 0, 0, 0, 0, // field Y
+            ),
+        ],
+    },
 }
 
 success("SimpleTableJustY") {
@@ -116,23 +128,25 @@ success("SimpleTableJustY") {
             y: 67,
         },
     },
-    bytes = [
-        104:raw(
-            5, 0, 0, 0, 0, 0, 0, 0, // max ordinal
-            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
-            0, 0, 0, 0, 0, 0, 0, 0, // envelope 1: num bytes / num handles
-            0, 0, 0, 0, 0, 0, 0, 0, // no alloc
-            0, 0, 0, 0, 0, 0, 0, 0, // envelope 2: num bytes / num handles
-            0, 0, 0, 0, 0, 0, 0, 0, // no alloc
-            0, 0, 0, 0, 0, 0, 0, 0, // envelope 3: num bytes / num handles
-            0, 0, 0, 0, 0, 0, 0, 0, // no alloc
-            0, 0, 0, 0, 0, 0, 0, 0, // envelope 4: num bytes / num handles
-            0, 0, 0, 0, 0, 0, 0, 0, // no alloc
-            8, 0, 0, 0, 0, 0, 0, 0, // envelope 5: num bytes / num handles
-            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
-            67, 0, 0, 0, 0, 0, 0, 0, // field Y
-        ),
-    ],
+    bytes = {
+        old, v1 = [
+            104:raw(
+                5, 0, 0, 0, 0, 0, 0, 0, // max ordinal
+                255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+                0, 0, 0, 0, 0, 0, 0, 0, // envelope 1: num bytes / num handles
+                0, 0, 0, 0, 0, 0, 0, 0, // no alloc
+                0, 0, 0, 0, 0, 0, 0, 0, // envelope 2: num bytes / num handles
+                0, 0, 0, 0, 0, 0, 0, 0, // no alloc
+                0, 0, 0, 0, 0, 0, 0, 0, // envelope 3: num bytes / num handles
+                0, 0, 0, 0, 0, 0, 0, 0, // no alloc
+                0, 0, 0, 0, 0, 0, 0, 0, // envelope 4: num bytes / num handles
+                0, 0, 0, 0, 0, 0, 0, 0, // no alloc
+                8, 0, 0, 0, 0, 0, 0, 0, // envelope 5: num bytes / num handles
+                255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+                67, 0, 0, 0, 0, 0, 0, 0, // field Y
+            ),
+        ],
+    },
 }
 
 success("TableWithStringAndVectorNoVectorContent") {
@@ -142,20 +156,22 @@ success("TableWithStringAndVectorNoVectorContent") {
             bar: 27,
         },
     },
-    bytes = [
-        80:raw(
-            2, 0, 0, 0, 0, 0, 0, 0, // max ordinal
-            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
-            24, 0, 0, 0, 0, 0, 0, 0, // envelope 1: num bytes / num handles
-            255, 255, 255, 255, 255, 255, 255, 255, // envelope 1: alloc present
-            8, 0, 0, 0, 0, 0, 0, 0, // envelope 2: num bytes / num handles
-            255, 255, 255, 255, 255, 255, 255, 255, // envelope 2: alloc present
-            5, 0, 0, 0, 0, 0, 0, 0, // element 1: length
-            255, 255, 255, 255, 255, 255, 255, 255, // element 1: alloc present
-            104, 101, 108, 108, 111, 0, 0, 0, // element 1: hello
-            27, 0, 0, 0, 0, 0, 0, 0, // element 2: value
-        ),
-    ],
+    bytes = {
+        old, v1 = [
+            80:raw(
+                2, 0, 0, 0, 0, 0, 0, 0, // max ordinal
+                255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+                24, 0, 0, 0, 0, 0, 0, 0, // envelope 1: num bytes / num handles
+                255, 255, 255, 255, 255, 255, 255, 255, // envelope 1: alloc present
+                8, 0, 0, 0, 0, 0, 0, 0, // envelope 2: num bytes / num handles
+                255, 255, 255, 255, 255, 255, 255, 255, // envelope 2: alloc present
+                5, 0, 0, 0, 0, 0, 0, 0, // element 1: length
+                255, 255, 255, 255, 255, 255, 255, 255, // element 1: alloc present
+                104, 101, 108, 108, 111, 0, 0, 0, // element 1: hello
+                27, 0, 0, 0, 0, 0, 0, 0, // element 2: value
+            ),
+        ],
+    },
 }
 
 // TODO(FIDL-626): Create test with TableWithStringAndVectorHasVectorContent.
@@ -168,25 +184,27 @@ success("SimpleTableThenUint64") {
         },
         number: 0xdeadbeefdeadbeef,
     },
-    bytes = [
-        120:raw(
-            5, 0, 0, 0, 0, 0, 0, 0, // max ordinal
-            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
-            0xef, 0xbe, 0xad, 0xde, 0xef, 0xbe, 0xad, 0xde, // uint64 number
-            8, 0, 0, 0, 0, 0, 0, 0, // envelope 1: num bytes / num handles
-            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
-            0, 0, 0, 0, 0, 0, 0, 0, // envelope 2: num bytes / num handles
-            0, 0, 0, 0, 0, 0, 0, 0, // no alloc
-            0, 0, 0, 0, 0, 0, 0, 0, // envelope 3: num bytes / num handles
-            0, 0, 0, 0, 0, 0, 0, 0, // no alloc
-            0, 0, 0, 0, 0, 0, 0, 0, // envelope 4: num bytes / num handles
-            0, 0, 0, 0, 0, 0, 0, 0, // no alloc
-            8, 0, 0, 0, 0, 0, 0, 0, // envelope 5: num bytes / num handles
-            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
-            42, 0, 0, 0, 0, 0, 0, 0, // field X
-            67, 0, 0, 0, 0, 0, 0, 0, // field Y
-        ),
-    ],
+    bytes = {
+        old, v1 = [
+            120:raw(
+                5, 0, 0, 0, 0, 0, 0, 0, // max ordinal
+                255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+                0xef, 0xbe, 0xad, 0xde, 0xef, 0xbe, 0xad, 0xde, // uint64 number
+                8, 0, 0, 0, 0, 0, 0, 0, // envelope 1: num bytes / num handles
+                255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+                0, 0, 0, 0, 0, 0, 0, 0, // envelope 2: num bytes / num handles
+                0, 0, 0, 0, 0, 0, 0, 0, // no alloc
+                0, 0, 0, 0, 0, 0, 0, 0, // envelope 3: num bytes / num handles
+                0, 0, 0, 0, 0, 0, 0, 0, // no alloc
+                0, 0, 0, 0, 0, 0, 0, 0, // envelope 4: num bytes / num handles
+                0, 0, 0, 0, 0, 0, 0, 0, // no alloc
+                8, 0, 0, 0, 0, 0, 0, 0, // envelope 5: num bytes / num handles
+                255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+                42, 0, 0, 0, 0, 0, 0, 0, // field X
+                67, 0, 0, 0, 0, 0, 0, 0, // field Y
+            ),
+        ],
+    },
 }
 
 success("ReverseOrdinalTable") {
@@ -197,51 +215,55 @@ success("ReverseOrdinalTable") {
             z: 0xcc,
         },
     },
-    bytes = [
-        104:raw(
-            // table
-            0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // max ordinal 4
-            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // present
-            // z envelope (ordinal 1)
-            0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // 8 bytes, 0 handles
-            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // present
-            // y envelope (ordinal 2)
-            0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // 8 bytes, 0 handles
-            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // present
-            // empty envelope (reserved ordinal 3)
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // 0 bytes, 0 handles
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // null
-            // x envelope (ordinal 4)
-            0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // 8 bytes, 0 handles
-            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // present
+    bytes = {
+        old, v1 = [
+            104:raw(
+                // table
+                0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // max ordinal 4
+                0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // present
+                // z envelope (ordinal 1)
+                0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // 8 bytes, 0 handles
+                0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // present
+                // y envelope (ordinal 2)
+                0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // 8 bytes, 0 handles
+                0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // present
+                // empty envelope (reserved ordinal 3)
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // 0 bytes, 0 handles
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // null
+                // x envelope (ordinal 4)
+                0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // 8 bytes, 0 handles
+                0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // present
 
-            0xcc, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // z
-            0xbb, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // y
-            0xaa, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // x
-        ),
-    ],
+                0xcc, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // z
+                0xbb, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // y
+                0xaa, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // x
+            ),
+        ],
+    },
 }
 
 decode_success("TableWithUnknownReservedFields") {
-    bytes = [
-        120:raw(
-            5, 0, 0, 0, 0, 0, 0, 0, // max ordinal
-            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
-            8, 0, 0, 0, 0, 0, 0, 0, // envelope 1: num bytes / num handles
-            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
-            0, 0, 0, 0, 0, 0, 0, 0, // envelope 2: num bytes / num handles
-            0, 0, 0, 0, 0, 0, 0, 0, // no alloc
-            8, 0, 0, 0, 0, 0, 0, 0, // envelope 3: num bytes / num handles
-            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
-            0, 0, 0, 0, 0, 0, 0, 0, // envelope 4: num bytes / num handles
-            0, 0, 0, 0, 0, 0, 0, 0, // no alloc
-            8, 0, 0, 0, 0, 0, 0, 0, // envelope 5: num bytes / num handles
-            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
-            42, 0, 0, 0, 0, 0, 0, 0, // field X
-            1,  2, 3, 4, 5, 6, 7, 8, // 8 unknown bytes for envelope 3
-            67, 0, 0, 0, 0, 0, 0, 0, // field Y
-        ),
-    ],
+    bytes = {
+        old, v1 = [
+            120:raw(
+                5, 0, 0, 0, 0, 0, 0, 0, // max ordinal
+                255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+                8, 0, 0, 0, 0, 0, 0, 0, // envelope 1: num bytes / num handles
+                255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+                0, 0, 0, 0, 0, 0, 0, 0, // envelope 2: num bytes / num handles
+                0, 0, 0, 0, 0, 0, 0, 0, // no alloc
+                8, 0, 0, 0, 0, 0, 0, 0, // envelope 3: num bytes / num handles
+                255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+                0, 0, 0, 0, 0, 0, 0, 0, // envelope 4: num bytes / num handles
+                0, 0, 0, 0, 0, 0, 0, 0, // no alloc
+                8, 0, 0, 0, 0, 0, 0, 0, // envelope 5: num bytes / num handles
+                255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+                42, 0, 0, 0, 0, 0, 0, 0, // field X
+                1,  2, 3, 4, 5, 6, 7, 8, // 8 unknown bytes for envelope 3
+                67, 0, 0, 0, 0, 0, 0, 0, // field Y
+            ),
+        ],
+    },
     value = StructOfSimpleTable {
         table: SimpleTable {
             x: 42,
@@ -251,27 +273,29 @@ decode_success("TableWithUnknownReservedFields") {
 }
 
 decode_success("TableWithUnknownTrailingFields") {
-    bytes = [
-        136:raw(
-            6, 0, 0, 0, 0, 0, 0, 0, // max ordinal
-            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
-            8, 0, 0, 0, 0, 0, 0, 0, // envelope 1: num bytes / num handles
-            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
-            0, 0, 0, 0, 0, 0, 0, 0, // envelope 2: num bytes / num handles
-            0, 0, 0, 0, 0, 0, 0, 0, // no alloc
-            0, 0, 0, 0, 0, 0, 0, 0, // envelope 3: num bytes / num handles
-            0, 0, 0, 0, 0, 0, 0, 0, // no alloc
-            0, 0, 0, 0, 0, 0, 0, 0, // envelope 4: num bytes / num handles
-            0, 0, 0, 0, 0, 0, 0, 0, // no alloc
-            8, 0, 0, 0, 0, 0, 0, 0, // envelope 5: num bytes / num handles
-            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
-            8, 0, 0, 0, 0, 0, 0, 0, // envelope 6: num bytes / num handles
-            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
-            42, 0, 0, 0, 0, 0, 0, 0, // field X
-            67, 0, 0, 0, 0, 0, 0, 0, // field Y
-            1,  2, 3, 4, 5, 6, 7, 8, // 8 unknown bytes for envelope 6
-        ),
-    ],
+    bytes = {
+        old, v1 = [
+            136:raw(
+                6, 0, 0, 0, 0, 0, 0, 0, // max ordinal
+                255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+                8, 0, 0, 0, 0, 0, 0, 0, // envelope 1: num bytes / num handles
+                255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+                0, 0, 0, 0, 0, 0, 0, 0, // envelope 2: num bytes / num handles
+                0, 0, 0, 0, 0, 0, 0, 0, // no alloc
+                0, 0, 0, 0, 0, 0, 0, 0, // envelope 3: num bytes / num handles
+                0, 0, 0, 0, 0, 0, 0, 0, // no alloc
+                0, 0, 0, 0, 0, 0, 0, 0, // envelope 4: num bytes / num handles
+                0, 0, 0, 0, 0, 0, 0, 0, // no alloc
+                8, 0, 0, 0, 0, 0, 0, 0, // envelope 5: num bytes / num handles
+                255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+                8, 0, 0, 0, 0, 0, 0, 0, // envelope 6: num bytes / num handles
+                255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+                42, 0, 0, 0, 0, 0, 0, 0, // field X
+                67, 0, 0, 0, 0, 0, 0, 0, // field Y
+                1,  2, 3, 4, 5, 6, 7, 8, // 8 unknown bytes for envelope 6
+            ),
+        ],
+    },
     value = StructOfSimpleTable {
         table: SimpleTable {
             x: 42,
@@ -288,28 +312,30 @@ success("InlineXUnionInStruct") {
         },
         after: "after",
     },
-    bytes = [
-        80:raw(
-            0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // "before" length
-            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // "before" presence
+    bytes = {
+        old, v1 = [
+            80:raw(
+                0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // "before" length
+                0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // "before" presence
 
-            0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // xunion discriminator + padding
-            0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // num bytes + num handles
-            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // envelope data is present
+                0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // xunion discriminator + padding
+                0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // num bytes + num handles
+                0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // envelope data is present
 
-            0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // "after" length
-            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // "after" presence
+                0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // "after" length
+                0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // "after" presence
 
-            // secondary object 1: "before"
-            'b', 'e', 'f', 'o', 'r', 'e', 0x00, 0x00,
+                // secondary object 1: "before"
+                'b', 'e', 'f', 'o', 'r', 'e', 0x00, 0x00,
 
-            // secondary object 2: xunion content
-            0xef, 0xbe, 0xad, 0xde, 0x00, 0x00, 0x00, 0x00, // xunion envelope content (0xdeadbeef) + padding
+                // secondary object 2: xunion content
+                0xef, 0xbe, 0xad, 0xde, 0x00, 0x00, 0x00, 0x00, // xunion envelope content (0xdeadbeef) + padding
 
-            // secondary object 3: "after"
-            'a', 'f', 't', 'e', 'r', 0x00, 0x00, 0x00,
-        ),
-    ],
+                // secondary object 3: "after"
+                'a', 'f', 't', 'e', 'r', 0x00, 0x00, 0x00,
+            ),
+        ],
+    },
     bindings_denylist = [transformer],
 }
 
@@ -319,25 +345,27 @@ success("OptionalXUnionInStructAbsent") {
         // no SampleXUnion
         after: "after",
     },
-    bytes = [
-        72:raw(
-            0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // "before" length
-            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // "before" presence
+    bytes = {
+        old, v1 = [
+            72:raw(
+                0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // "before" length
+                0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // "before" presence
 
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // xunion discriminator + padding
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // num bytes + num handles
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // envelope data is absent
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // xunion discriminator + padding
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // num bytes + num handles
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // envelope data is absent
 
-            0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // "after" length
-            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // "before" presence
+                0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // "after" length
+                0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // "before" presence
 
-            // secondary object 1: "before"
-            'b', 'e', 'f', 'o', 'r', 'e', 0x00, 0x00,
+                // secondary object 1: "before"
+                'b', 'e', 'f', 'o', 'r', 'e', 0x00, 0x00,
 
-            // secondary object 2: "after"
-            'a', 'f', 't', 'e', 'r', 0x00, 0x00, 0x00,
-        ),
-    ],
+                // secondary object 2: "after"
+                'a', 'f', 't', 'e', 'r', 0x00, 0x00, 0x00,
+            ),
+        ],
+    },
     bindings_denylist = [transformer],
 }
 
@@ -349,28 +377,30 @@ success("OptionalXUnionInStructPresent") {
         },
         after: "after",
     },
-    bytes = [
-        80:raw(
-            0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // "before" length
-            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // "before" presence
+    bytes = {
+        old, v1 = [
+            80:raw(
+                0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // "before" length
+                0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // "before" presence
 
-            0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // xunion discriminator + padding
-            0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // num bytes + num handles
-            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // envelope data is present
+                0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // xunion discriminator + padding
+                0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // num bytes + num handles
+                0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // envelope data is present
 
-            0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // "after" length
-            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // "after" presence
+                0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // "after" length
+                0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // "after" presence
 
-            // secondary object 1: "before"
-            'b', 'e', 'f', 'o', 'r', 'e', 0x00, 0x00,
+                // secondary object 1: "before"
+                'b', 'e', 'f', 'o', 'r', 'e', 0x00, 0x00,
 
-            // secondary object 2: xunion content
-            0xef, 0xbe, 0xad, 0xde, 0x00, 0x00, 0x00, 0x00, // xunion envelope content (0xdeadbeef) + padding
+                // secondary object 2: xunion content
+                0xef, 0xbe, 0xad, 0xde, 0x00, 0x00, 0x00, 0x00, // xunion envelope content (0xdeadbeef) + padding
 
-            // secondary object 3: "after"
-            'a', 'f', 't', 'e', 'r', 0x00, 0x00, 0x00,
-        ),
-    ],
+                // secondary object 3: "after"
+                'a', 'f', 't', 'e', 'r', 0x00, 0x00, 0x00,
+            ),
+        ],
+    },
     bindings_denylist = [transformer],
 }
 
@@ -382,38 +412,40 @@ success("XUnionInTableXUnionAbsent") {
             after: "after",
         },
     },
-    bytes = [
-        112:raw(
-            // primary object
-            0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // vector<envelope> element count
-            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // vector<envelope> present
+    bytes = {
+        old, v1 = [
+            112:raw(
+                // primary object
+                0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // vector<envelope> element count
+                0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // vector<envelope> present
 
-            // secondary object 1: vector data
-            // vector[0]: envelope<string before>
-            0x18, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // size + handle count
-            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // "before" is present
-            // vector[1]: envelope<SampleXUnion xu>
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // size + handle count
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // xunion is absent
-            // vector[2]: envelope<string after>
-            0x18, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // size + handle count
-            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // "after" is present
+                // secondary object 1: vector data
+                // vector[0]: envelope<string before>
+                0x18, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // size + handle count
+                0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // "before" is present
+                // vector[1]: envelope<SampleXUnion xu>
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // size + handle count
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // xunion is absent
+                // vector[2]: envelope<string after>
+                0x18, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // size + handle count
+                0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // "after" is present
 
-            // secondary object 2: "before" length + pointer
-            0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // "before" length
-            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // "before" present
+                // secondary object 2: "before" length + pointer
+                0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // "before" length
+                0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // "before" present
 
-            // secondary object 3: "before"
-            'b', 'e', 'f', 'o', 'r', 'e', 0x00, 0x00, // "before"
+                // secondary object 3: "before"
+                'b', 'e', 'f', 'o', 'r', 'e', 0x00, 0x00, // "before"
 
-            // secondary object 4: "after" length + pointer
-            0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // "after" length
-            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // "after" present
+                // secondary object 4: "after" length + pointer
+                0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // "after" length
+                0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // "after" present
 
-            // secondary object 5: "before"
-            'a', 'f', 't', 'e', 'r', 0x00, 0x00, 0x00, // "after"
-        ),
-    ],
+                // secondary object 5: "before"
+                'a', 'f', 't', 'e', 'r', 0x00, 0x00, 0x00, // "after"
+            ),
+        ],
+    },
 }
 
 success("XUnionInTableXUnionPresent") {
@@ -426,46 +458,48 @@ success("XUnionInTableXUnionPresent") {
             after: "after",
         },
     },
-    bytes = [
-        144:raw(
-            // primary object
-            0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // vector<envelope> element count
-            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // vector<envelope> present
+    bytes = {
+        old, v1 = [
+            144:raw(
+                // primary object
+                0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // vector<envelope> element count
+                0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // vector<envelope> present
 
-            // secondary object 1: vector data
-            // vector[0]: envelope<string before>
-            0x18, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // size + handle count
-            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // "before" is present
-            // vector[1]: envelope<SampleXUnion xu>
-            0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // size + handle count
-            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // xunion is present
-            // vector[2]: envelope<string after>
-            0x18, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // size + handle count
-            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // "after" is present
+                // secondary object 1: vector data
+                // vector[0]: envelope<string before>
+                0x18, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // size + handle count
+                0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // "before" is present
+                // vector[1]: envelope<SampleXUnion xu>
+                0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // size + handle count
+                0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // xunion is present
+                // vector[2]: envelope<string after>
+                0x18, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // size + handle count
+                0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // "after" is present
 
-            // secondary object 2: "before" length + pointer
-            0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // "before" length
-            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // "before" present
+                // secondary object 2: "before" length + pointer
+                0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // "before" length
+                0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // "before" present
 
-            // secondary object 3: "before"
-            'b', 'e', 'f', 'o', 'r', 'e', 0x00, 0x00, // "before"
+                // secondary object 3: "before"
+                'b', 'e', 'f', 'o', 'r', 'e', 0x00, 0x00, // "before"
 
-            // secondary object 4: xunion
-            0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // xunion discriminator + padding
-            0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // num bytes + num handles
-            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // envelope data is present
+                // secondary object 4: xunion
+                0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // xunion discriminator + padding
+                0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // num bytes + num handles
+                0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // envelope data is present
 
-            // secondary object 5: xunion content
-            0xef, 0xbe, 0xad, 0xde, 0x00, 0x00, 0x00, 0x00, // 0xdeadbeef + padding
+                // secondary object 5: xunion content
+                0xef, 0xbe, 0xad, 0xde, 0x00, 0x00, 0x00, 0x00, // 0xdeadbeef + padding
 
-            // secondary object 6: "after" length + pointer
-            0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // "after" length
-            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // "after" present
+                // secondary object 6: "after" length + pointer
+                0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // "after" length
+                0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // "after" present
 
-            // secondary object 7: "before"
-            'a', 'f', 't', 'e', 'r', 0x00, 0x00, 0x00, // "after"
-        ),
-    ],
+                // secondary object 7: "before"
+                'a', 'f', 't', 'e', 'r', 0x00, 0x00, 0x00, // "after"
+            ),
+        ],
+    },
     bindings_denylist = [transformer],
 }
 
@@ -480,14 +514,16 @@ success("Flexible XUnion Field Unknown") {
             },
         },
     },
-    bytes = [
-        32:raw(
-            0x04, 0x03, 0x02, 0x01, 0x00, 0x00, 0x00, 0x00,  // invalid ordinal + padding
-            0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // envelope: # of bytes + # of handles
-            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  // envelope: data is present
-            0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // fake out-of-line data
-        ),
-    ],
+    bytes = {
+        old, v1 = [
+            32:raw(
+                0x04, 0x03, 0x02, 0x01, 0x00, 0x00, 0x00, 0x00,  // invalid ordinal + padding
+                0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // envelope: # of bytes + # of handles
+                0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  // envelope: data is present
+                0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // fake out-of-line data
+            ),
+        ],
+    },
 }
 
 success("StrictXUnion") {
@@ -496,14 +532,16 @@ success("StrictXUnion") {
             u: 0xdeadbeef,
         },
     },
-    bytes = [
-        32:raw(
-            0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-            0x08,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-            0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
-            0xef,0xbe,0xad,0xde,0x00,0x00,0x00,0x00,
-        ),
-    ],
+    bytes = {
+        old, v1 = [
+            32:raw(
+                0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+                0x08,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+                0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
+                0xef,0xbe,0xad,0xde,0x00,0x00,0x00,0x00,
+            ),
+        ],
+    },
     bindings_denylist = [transformer],
 }
 
@@ -520,14 +558,16 @@ decode_failure("StrictXUnion Field Unknown") {
     // TODO(8047) Enable this. Currently only go supports this error.
     bindings_allowlist = [dart,go,],
     type = TestStrictXUnionInStruct,
-    bytes = [
-        32:raw(
-            0x11, 0xba, 0x5e, 0xba, 0x00, 0x00, 0x00, 0x00,  // invalid ordinal + padding
-            0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // envelope: # of bytes + # of handles
-            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  // envelope: data is present
-            0xde, 0xad, 0xbe, 0xef, 0x5c, 0xa1, 0xab, 0x1e,  // fake out-of-line data
-        ),
-    ],
+    bytes = {
+        old, v1 = [
+            32:raw(
+                0x11, 0xba, 0x5e, 0xba, 0x00, 0x00, 0x00, 0x00,  // invalid ordinal + padding
+                0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // envelope: # of bytes + # of handles
+                0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  // envelope: data is present
+                0xde, 0xad, 0xbe, 0xef, 0x5c, 0xa1, 0xab, 0x1e,  // fake out-of-line data
+            ),
+        ],
+    },
     err = STRICT_UNION_UNKNOWN_FIELD,
 }
 
@@ -668,18 +708,20 @@ success("FileGetAttrResponse") {
             modification_time: 0x00ffeeddccbbaa99,
         },
     },
-    bytes = [
-        64:raw(
-            0xaf, 0xbe, 0xad, 0x7e, 0x00, 0x00, 0x00, 0x00,
-            0xa4, 0x81, 0x23, 0x96, 0x00, 0x00, 0x00, 0x00,
-            1, 0, 0, 0, 0, 0, 0, 0,
-            231, 0, 0, 0, 0, 0, 0, 0,
-            231, 0, 0, 0, 0, 0, 0, 0,
-            1, 0, 0, 0, 0, 0, 0, 0,
-            0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88,
-            0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff, 0x00,
-        ),
-    ],
+    bytes = {
+        old, v1 = [
+            64:raw(
+                0xaf, 0xbe, 0xad, 0x7e, 0x00, 0x00, 0x00, 0x00,
+                0xa4, 0x81, 0x23, 0x96, 0x00, 0x00, 0x00, 0x00,
+                1, 0, 0, 0, 0, 0, 0, 0,
+                231, 0, 0, 0, 0, 0, 0, 0,
+                231, 0, 0, 0, 0, 0, 0, 0,
+                1, 0, 0, 0, 0, 0, 0, 0,
+                0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88,
+                0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff, 0x00,
+            ),
+        ],
+    },
 }
 
 // See comment in optionals.test.fidl for why this test case exists.
@@ -770,32 +812,34 @@ success("Arrays") {
         arr_nullable_struct: [null,StructWithInt{x: 0x01020304,},],
         arr_arr_int: [[1, 2, 3,], [4, 5, 6,],],
     },
-    bytes = [
-        152:raw(
-            // primary object
-            0x01,0x00,0x00,0x00,0x02,0x00,0x00,0x00, // arr_int: 1, 2
-            0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00, // arr_string: "a" size 1
-            0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff, //   "a" present
-            0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00, //   "b" size 1
-            0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff, //   "b" present
-            0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00, // arr_nullable_string: "c" size 1
-            0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff, //   "c" present
-            0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, //   null size 0
-            0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, //   null not present
-            0x01,0x00,0x00,0x00,0x02,0x00,0x00,0x00, // arr_struct: {x: 1}, {x: 2}
-            0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, // arr_nullable_struct: null not present
-            0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff, //   {x: 0x01020304} present
-            0x01,0x00,0x00,0x00,0x02,0x00,0x00,0x00, // arr_arr_int: 1, 2,
-            0x03,0x00,0x00,0x00,0x04,0x00,0x00,0x00, //   3, 4,
-            0x05,0x00,0x00,0x00,0x06,0x00,0x00,0x00, //   5, 6,
+    bytes = {
+        old, v1 = [
+            152:raw(
+                // primary object
+                0x01,0x00,0x00,0x00,0x02,0x00,0x00,0x00, // arr_int: 1, 2
+                0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00, // arr_string: "a" size 1
+                0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff, //   "a" present
+                0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00, //   "b" size 1
+                0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff, //   "b" present
+                0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00, // arr_nullable_string: "c" size 1
+                0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff, //   "c" present
+                0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, //   null size 0
+                0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, //   null not present
+                0x01,0x00,0x00,0x00,0x02,0x00,0x00,0x00, // arr_struct: {x: 1}, {x: 2}
+                0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, // arr_nullable_struct: null not present
+                0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff, //   {x: 0x01020304} present
+                0x01,0x00,0x00,0x00,0x02,0x00,0x00,0x00, // arr_arr_int: 1, 2,
+                0x03,0x00,0x00,0x00,0x04,0x00,0x00,0x00, //   3, 4,
+                0x05,0x00,0x00,0x00,0x06,0x00,0x00,0x00, //   5, 6,
 
-            // secondary objects
-            0x61,0x00,0x00,0x00,0x00,0x00,0x00,0x00, // "a"
-            0x62,0x00,0x00,0x00,0x00,0x00,0x00,0x00, // "b"
-            0x63,0x00,0x00,0x00,0x00,0x00,0x00,0x00, // "c"
-            0x04,0x03,0x02,0x01,0x00,0x00,0x00,0x00, // {x: 0x01020304} + padding
-        ),
-    ],
+                // secondary objects
+                0x61,0x00,0x00,0x00,0x00,0x00,0x00,0x00, // "a"
+                0x62,0x00,0x00,0x00,0x00,0x00,0x00,0x00, // "b"
+                0x63,0x00,0x00,0x00,0x00,0x00,0x00,0x00, // "c"
+                0x04,0x03,0x02,0x01,0x00,0x00,0x00,0x00, // {x: 0x01020304} + padding
+            ),
+        ],
+    },
 }
 
 success("Vectors") {
@@ -808,52 +852,54 @@ success("Vectors") {
         vec_nullable_struct: [null, null, StructWithInt{x: 2,},],
         vec_vec_int: [[1, 2,], [3,],],
     },
-    bytes = [
-        312:raw(
-            // primary object
-            0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, // vec_empty: size 0
-            0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff, //   present
-            0x02,0x00,0x00,0x00,0x00,0x00,0x00,0x00, // vec_int: size 2
-            0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff, //   present
-            0x02,0x00,0x00,0x00,0x00,0x00,0x00,0x00, // vec_string: size 2
-            0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff, //   present
-            0x03,0x00,0x00,0x00,0x00,0x00,0x00,0x00, // vec_nullable_string: size 3
-            0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff, //   present
-            0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00, // vec_struct: size 1
-            0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff, //   present
-            0x03,0x00,0x00,0x00,0x00,0x00,0x00,0x00, // vec_nullable_struct: size 3
-            0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff, //   present
-            0x02,0x00,0x00,0x00,0x00,0x00,0x00,0x00, // vec_vec_int: size 2
-            0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff, //   present
+    bytes = {
+        old, v1 = [
+            312:raw(
+                // primary object
+                0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, // vec_empty: size 0
+                0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff, //   present
+                0x02,0x00,0x00,0x00,0x00,0x00,0x00,0x00, // vec_int: size 2
+                0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff, //   present
+                0x02,0x00,0x00,0x00,0x00,0x00,0x00,0x00, // vec_string: size 2
+                0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff, //   present
+                0x03,0x00,0x00,0x00,0x00,0x00,0x00,0x00, // vec_nullable_string: size 3
+                0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff, //   present
+                0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00, // vec_struct: size 1
+                0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff, //   present
+                0x03,0x00,0x00,0x00,0x00,0x00,0x00,0x00, // vec_nullable_struct: size 3
+                0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff, //   present
+                0x02,0x00,0x00,0x00,0x00,0x00,0x00,0x00, // vec_vec_int: size 2
+                0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff, //   present
 
-            // secondary objects
-            0x01,0x00,0x00,0x00,0x02,0x00,0x00,0x00, // vec_int: 1, 2
-            0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00, // vec_string: "a" size 1
-            0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff, //   "a" present
-            0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00, //   "b" size 1
-            0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff, //   "b" present
-            0x61,0x00,0x00,0x00,0x00,0x00,0x00,0x00, // "a"
-            0x62,0x00,0x00,0x00,0x00,0x00,0x00,0x00, // "b"
-            0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, // vec_nullable_string: null size 0
-            0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, //   null not present
-            0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00, //   "c" size 1
-            0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff, //   "c" present
-            0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, //   null size 0
-            0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, //   null not present
-            0x63,0x00,0x00,0x00,0x00,0x00,0x00,0x00, // "c"
-            0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00, // vec_struct: {x: 1}
-            0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, // vec_nullable_struct: null not present
-            0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, //   null not present
-            0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff, //   {x: 2} present
-            0x02,0x00,0x00,0x00,0x00,0x00,0x00,0x00, // {x: 2}
-            0x02,0x00,0x00,0x00,0x00,0x00,0x00,0x00, // vec_vec_int: [1, 2] size 2
-            0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff, //   [1, 2] present
-            0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00, //   [3] size 1
-            0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff, //   [3] present
-            0x01,0x00,0x00,0x00,0x02,0x00,0x00,0x00, // [1, 2]
-            0x03,0x00,0x00,0x00,0x00,0x00,0x00,0x00, // [3]
-        ),
-    ],
+                // secondary objects
+                0x01,0x00,0x00,0x00,0x02,0x00,0x00,0x00, // vec_int: 1, 2
+                0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00, // vec_string: "a" size 1
+                0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff, //   "a" present
+                0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00, //   "b" size 1
+                0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff, //   "b" present
+                0x61,0x00,0x00,0x00,0x00,0x00,0x00,0x00, // "a"
+                0x62,0x00,0x00,0x00,0x00,0x00,0x00,0x00, // "b"
+                0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, // vec_nullable_string: null size 0
+                0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, //   null not present
+                0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00, //   "c" size 1
+                0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff, //   "c" present
+                0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, //   null size 0
+                0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, //   null not present
+                0x63,0x00,0x00,0x00,0x00,0x00,0x00,0x00, // "c"
+                0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00, // vec_struct: {x: 1}
+                0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, // vec_nullable_struct: null not present
+                0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, //   null not present
+                0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff, //   {x: 2} present
+                0x02,0x00,0x00,0x00,0x00,0x00,0x00,0x00, // {x: 2}
+                0x02,0x00,0x00,0x00,0x00,0x00,0x00,0x00, // vec_vec_int: [1, 2] size 2
+                0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff, //   [1, 2] present
+                0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00, //   [3] size 1
+                0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff, //   [3] present
+                0x01,0x00,0x00,0x00,0x02,0x00,0x00,0x00, // [1, 2]
+                0x03,0x00,0x00,0x00,0x00,0x00,0x00,0x00, // [3]
+            ),
+        ],
+    },
 }
 
 encode_failure("StringExceedsLimit") {
@@ -867,12 +913,14 @@ encode_failure("StringExceedsLimit") {
 
 decode_failure("NonEmptyStringWithNullPtrBody") {
     type = StringWrapper,
-    bytes = [
-        16:raw(
-            0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // length of string data
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // invalid null pointer to content
-        ),
-    ],
+    bytes = {
+        old, v1 = [
+            16:raw(
+                0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // length of string data
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // invalid null pointer to content
+            ),
+        ],
+    },
     err = NON_EMPTY_STRING_WITH_NULL_BODY,
 }
 
@@ -880,22 +928,26 @@ success("StrictBitsKnownValue") {
     value = StrictBitsStruct {
         b: 1,
     },
-    bytes = [
-        8:raw(
-            0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        )
-    ],
+    bytes = {
+        old, v1 = [
+            8:raw(
+                0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            )
+        ],
+    },
 }
 
 success("StrictBitsCombinedValue") {
     value = StrictBitsStruct {
         b: 3,
     },
-    bytes = [
-        8:raw(
-            0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        )
-    ],
+    bytes = {
+        old, v1 = [
+            8:raw(
+                0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            )
+        ],
+    },
 }
 
 encode_failure("StrictBitsUnknownBit") {
@@ -912,11 +964,13 @@ decode_failure("StrictBitsUnknownBit") {
     // TODO(fxb/7874): Implement strict bits in Dart and Go.
     bindings_denylist = [dart,go],
     type = StrictBitsStruct,
-    bytes = [
-        8:raw(
-            0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        ),
-    ],
+    bytes = {
+        old, v1 = [
+            8:raw(
+                0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            ),
+        ],
+    },
     err = STRICT_BITS_UNKNOWN_BIT,
 }
 
@@ -924,11 +978,13 @@ success("FlexibleBitsKnownValue") {
     value = FlexibleBitsStruct {
         b: 1,
     },
-    bytes = [
-        8:raw(
-            0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        )
-    ],
+    bytes = {
+        old, v1 = [
+            8:raw(
+                0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            )
+        ],
+    },
 }
 
 success("FlexibleBitsUnknownValue") {
@@ -937,11 +993,13 @@ success("FlexibleBitsUnknownValue") {
     value = FlexibleBitsStruct {
         b: 0xffffffff,
     },
-    bytes = [
-        8:raw(
-            0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,
-        )
-    ],
+    bytes = {
+        old, v1 = [
+            8:raw(
+                0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,
+            )
+        ],
+    },
 }
 
 success("FlexibleBitsUint64UnknownValue") {
@@ -950,22 +1008,26 @@ success("FlexibleBitsUint64UnknownValue") {
     value = FlexibleBitsUint64Struct {
         b: 0x0102030405060708,
     },
-    bytes = [
-        8:raw(
-            0x08, 0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01,
-        )
-    ],
+    bytes = {
+        old, v1 = [
+            8:raw(
+                0x08, 0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01,
+            )
+        ],
+    },
 }
 
 success("StrictEnumKnownValue") {
     value = StrictEnumStruct {
         e: 1,
     },
-    bytes = [
-        8:raw(
-            0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        ),
-    ],
+    bytes = {
+        old, v1 = [
+            8:raw(
+                0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            ),
+        ],
+    },
 }
 
 encode_failure("StrictEnumUnknownValue") {
@@ -982,11 +1044,13 @@ decode_failure("StrictEnumUnknownValue") {
     // TODO(fxb/7874): Implement strict enums in Dart and Go.
     bindings_denylist = [dart,go],
     type = StrictEnumStruct,
-    bytes = [
-        8:raw(
-            0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        ),
-    ],
+    bytes = {
+        old, v1 = [
+            8:raw(
+                0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            ),
+        ],
+    },
     err = STRICT_ENUM_UNKOWN_VALUE,
 }
 
@@ -994,11 +1058,13 @@ success("FlexibleEnumKnownValue") {
     value = FlexibleEnumStruct {
         e: 1,
     },
-    bytes = [
-        8:raw(
-            0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        )
-    ],
+    bytes = {
+        old, v1 = [
+            8:raw(
+                0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            )
+        ],
+    },
 }
 
 success("FlexibleEnumUnknownValue") {
@@ -1007,11 +1073,13 @@ success("FlexibleEnumUnknownValue") {
     value = FlexibleEnumStruct {
         e: 0xffffffff,
     },
-    bytes = [
-        8:raw(
-            0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,
-        )
-    ],
+    bytes = {
+        old, v1 = [
+            8:raw(
+                0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,
+            )
+        ],
+    },
 }
 
 success("FlexibleEnumUint64UnknownValue") {
@@ -1020,9 +1088,11 @@ success("FlexibleEnumUint64UnknownValue") {
     value = FlexibleEnumUint64Struct {
         e: 0x0102030405060708,
     },
-    bytes = [
-        8:raw(
-            0x08, 0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01,
-        )
-    ],
+    bytes = {
+        old, v1 = [
+            8:raw(
+                0x08, 0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01,
+            )
+        ],
+    },
 }

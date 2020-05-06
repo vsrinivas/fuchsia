@@ -570,24 +570,31 @@ func (p *Parser) parseLanguageList() (ir.LanguageList, error) {
 }
 
 func (p *Parser) parseByteSection() ([]ir.Encoding, error) {
-	firstTok := p.peekToken()
-	if firstTok.kind == tLsquare {
-		if b, err := p.parseByteList(); err == nil {
-			return []ir.Encoding{{
-				// Default to the V1 wire format.
-				WireFormat: ir.V1WireFormat,
-				Bytes:      b,
-			}}, nil
-		} else {
-			return nil, err
-		}
-	}
 	var res []ir.Encoding
-	wireFormats := map[ir.WireFormat]struct{}{}
+	seenWireFormats := map[ir.WireFormat]struct{}{}
+	firstTok := p.peekToken()
 	err := p.parseCommaSeparated(tLacco, tRacco, func() error {
-		tok, ok := p.consumeToken(tText)
-		if !ok {
-			return p.failExpectedToken(tText, tok)
+		var wireFormats []ir.WireFormat
+		for {
+			tok, ok := p.consumeToken(tText)
+			if !ok {
+				return p.failExpectedToken(tText, tok)
+			}
+			wf, err := ir.WireFormatByName(tok.value)
+			if err != nil {
+				return err
+			}
+			if _, ok := seenWireFormats[wf]; ok {
+				return p.newParseError(tok, "duplicate wire format: %s", tok.value)
+			}
+			seenWireFormats[wf] = struct{}{}
+			wireFormats = append(wireFormats, wf)
+			if p.peekTokenKind(tEqual) {
+				break
+			}
+			if tok, ok := p.consumeToken(tComma); !ok {
+				return p.failExpectedToken(tComma, tok)
+			}
 		}
 		if teq, ok := p.consumeToken(tEqual); !ok {
 			return p.failExpectedToken(tEqual, teq)
@@ -596,18 +603,12 @@ func (p *Parser) parseByteSection() ([]ir.Encoding, error) {
 		if err != nil {
 			return err
 		}
-		wf, err := ir.WireFormatByName(tok.value)
-		if err != nil {
-			return err
+		for _, wf := range wireFormats {
+			res = append(res, ir.Encoding{
+				WireFormat: wf,
+				Bytes:      b,
+			})
 		}
-		if _, ok := wireFormats[wf]; ok {
-			return p.newParseError(tok, "duplicate wire format: %s", tok.value)
-		}
-		wireFormats[wf] = struct{}{}
-		res = append(res, ir.Encoding{
-			WireFormat: wf,
-			Bytes:      b,
-		})
 		return nil
 	})
 	if err != nil {
