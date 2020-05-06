@@ -25,7 +25,7 @@ type Device struct {
 	ListenStartImpl                       func() (int32, error)
 	ListenStopImpl                        func() error
 	SetClientNameImpl                     func(string) (int32, error)
-	GetStatusImpl                         func() (uint32, error)
+	GetStatusImpl                         func() (ethernet.DeviceStatus, error)
 	SetPromiscuousModeImpl                func(bool) (int32, error)
 	ConfigMulticastAddMacImpl             func(addr ethernet.MacAddress) (int32, error)
 	ConfigMulticastDeleteMacImpl          func(addr ethernet.MacAddress) (int32, error)
@@ -106,7 +106,7 @@ func (d *Device) SetClientName(_ fidl.Context, name string) (int32, error) {
 	return fn(name)
 }
 
-func (d *Device) GetStatus(fidl.Context) (uint32, error) {
+func (d *Device) GetStatus(fidl.Context) (ethernet.DeviceStatus, error) {
 	fn := d.GetStatusImpl
 	if fn == nil {
 		d.Helper()

@@ -777,13 +777,6 @@ func (c *Client) ListenTX() error {
 	return nil
 }
 
-type LinkStatus int
-
-const (
-	LinkDown LinkStatus = iota
-	LinkUp
-)
-
 // updateStatusLocked fetches the current device status and notifies endpoint
 // status changes.
 func (c *Client) updateStatusLocked(debugSource string) error {
@@ -791,13 +784,11 @@ func (c *Client) updateStatusLocked(debugSource string) error {
 	if err != nil {
 		return err
 	}
-	linkStatus := LinkStatus(status & ethernet.DeviceStatusOnline)
-	_ = syslog.InfoTf(tag, "fuchsia.hardware.ethernet.Device.GetStatus() = %s (%s)", linkStatus, debugSource)
-	switch linkStatus {
-	case LinkDown:
-		c.changeStateLocked(link.StateDown)
-	case LinkUp:
-		c.changeStateLocked(link.StateStarted)
+	_ = syslog.InfoTf(tag, "fuchsia.hardware.ethernet.Device.GetStatus() = %s (%s)", status, debugSource)
+	state := link.StateStarted
+	if status&ethernet.DeviceStatusOnline == 0 {
+		state = link.StateDown
 	}
+	c.changeStateLocked(state)
 	return nil
 }

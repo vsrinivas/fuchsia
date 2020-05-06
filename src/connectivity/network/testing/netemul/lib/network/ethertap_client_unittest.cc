@@ -197,7 +197,9 @@ TEST_F(EthertapClientTest, EthertapLink) {
 TEST_F(EthertapClientTest, EthertapClose) {
   ASSERT_NO_FATAL_FAILURE(PushInterface());
   bool ok = false;
-  eth()->device()->GetStatus([&ok](uint32_t status) { ok = true; });
+
+  eth()->device()->GetStatus(
+      [&ok](fuchsia::hardware::ethernet::DeviceStatus status) { ok = true; });
   ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&ok]() { return ok; }, zx::sec(2)));
   ok = false;
   eth()->SetPeerClosedCallback([&ok]() { ok = true; });

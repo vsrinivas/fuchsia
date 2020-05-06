@@ -500,8 +500,8 @@ int EthernetClientFactory::OpenDir() {
 
 void EthernetClient::WatchLinkSignal() {
   fifos_->WatchLinkSignal([this]() {
-    device_->GetStatus([this](int32_t status) mutable {
-      set_online((status & fuchsia::hardware::ethernet::DEVICE_STATUS_ONLINE) != 0);
+    device_->GetStatus([this](fuchsia::hardware::ethernet::DeviceStatus status) mutable {
+      set_online(static_cast<bool>(status & fuchsia::hardware::ethernet::DeviceStatus::ONLINE));
       WatchLinkSignal();
     });
   });

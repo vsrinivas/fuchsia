@@ -125,15 +125,6 @@ impl From<fidl::Info> for EthernetInfo {
     }
 }
 
-bitflags! {
-    /// Status flags for an Ethernet device.
-    #[repr(transparent)]
-    pub struct EthernetStatus: u32 {
-        /// The Ethernet device is online, meaning its physical link is up.
-        const ONLINE = fidl::DEVICE_STATUS_ONLINE;
-    }
-}
-
 #[cfg(test)]
 mod tests {
 

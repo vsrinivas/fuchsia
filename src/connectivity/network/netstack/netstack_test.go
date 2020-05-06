@@ -23,7 +23,6 @@ import (
 	"netstack/dhcp"
 	"netstack/dns"
 	"netstack/fidlconv"
-	"netstack/link/eth"
 	"netstack/routes"
 	"netstack/util"
 
@@ -1312,8 +1311,8 @@ func deviceForAddEth(info ethernet.Info, t *testing.T) ethernetext.Device {
 		TB:                t,
 		GetInfoImpl:       func() (ethernet.Info, error) { return info, nil },
 		SetClientNameImpl: func(string) (int32, error) { return 0, nil },
-		GetStatusImpl: func() (uint32, error) {
-			return uint32(eth.LinkUp), nil
+		GetStatusImpl: func() (ethernet.DeviceStatus, error) {
+			return ethernet.DeviceStatusOnline, nil
 		},
 		GetFifosImpl: func() (int32, *ethernet.Fifos, error) {
 			return int32(zx.ErrOk), &ethernet.Fifos{

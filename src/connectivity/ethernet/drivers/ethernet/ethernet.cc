@@ -220,7 +220,7 @@ void EthDev0::SetStatus(uint32_t status) {
   zxlogf(TRACE, "eth: status() %08x", status);
 
   fbl::AutoLock lock(&ethdev_lock_);
-  static_assert(ETHERNET_STATUS_ONLINE == fuchsia_hardware_ethernet_DEVICE_STATUS_ONLINE, "");
+  static_assert(ETHERNET_STATUS_ONLINE == fuchsia_hardware_ethernet_DeviceStatus_ONLINE, "");
   status_ = status;
 
   static_assert(fuchsia_hardware_ethernet_SIGNAL_STATUS == ZX_USER_SIGNAL_0, "");
@@ -950,8 +950,7 @@ zx_status_t EthDev0::AddDevice() {
   ops = proto.ops;
   if (ops->query == nullptr || ops->stop == nullptr || ops->start == nullptr ||
       ops->queue_tx == nullptr || ops->set_param == nullptr) {
-    zxlogf(ERROR, "eth: bind: device '%s': incomplete ethermac protocol",
-           device_get_name(parent_));
+    zxlogf(ERROR, "eth: bind: device '%s': incomplete ethermac protocol", device_get_name(parent_));
     return ZX_ERR_NOT_SUPPORTED;
   }
 

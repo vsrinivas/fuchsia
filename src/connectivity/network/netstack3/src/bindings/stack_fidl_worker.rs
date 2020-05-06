@@ -162,7 +162,7 @@ impl<'a, C: StackContext> LockedFidlWorker<'a, C> {
         let online = client
             .get_status()
             .await
-            .map(|s| s.contains(ethernet_worker::EthernetStatus::ONLINE))
+            .map(|s| s.contains(ethernet_worker::DeviceStatus::Online))
             .unwrap_or(false);
         // We do not support updating the device's mac-address,
         // mtu, and features during it's lifetime, their cached

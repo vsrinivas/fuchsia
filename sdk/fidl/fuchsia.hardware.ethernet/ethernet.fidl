@@ -36,8 +36,9 @@ struct Fifos {
 // TODO(teisenbe/kulakowski): find a better way to represent this
 const uint32 SIGNAL_STATUS = 0x01000000;
 
-// device_status bits
-const uint32 DEVICE_STATUS_ONLINE = 0x00000001;
+bits DeviceStatus : uint32 {
+    ONLINE = 1;
+};
 
 /// Max client name length
 const uint32 MAX_CLIENT_NAME_LEN = 15;
@@ -99,7 +100,7 @@ protocol Device {
     /// Obtain the device status bits
     /// When these change, the signal SIGNAL_STATUS is asserted on the rx fifo.
     /// When these are read, the signal is deasserted.
-    GetStatus() -> (uint32 device_status);
+    GetStatus() -> (DeviceStatus device_status);
 
     SetPromiscuousMode(bool enabled) -> (zx.status status);
 

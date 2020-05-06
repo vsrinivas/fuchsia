@@ -4,8 +4,9 @@
 
 use anyhow::Error;
 use ethernet as eth;
+pub use fidl_ethernet::DeviceStatus;
 use fidl_fuchsia_hardware_ethernet as fidl_ethernet;
-pub use fidl_fuchsia_hardware_ethernet_ext::{EthernetInfo, EthernetStatus};
+pub use fidl_fuchsia_hardware_ethernet_ext::EthernetInfo;
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
 use futures::{TryFutureExt, TryStreamExt};
@@ -53,7 +54,7 @@ impl<C: StackContext> EthernetWorker<C> {
                 info!("device {:?} status changed to: {:?}", self.id, status);
                 // Handle the new device state. If this results in no change, no state
                 // will be modified.
-                if status.contains(EthernetStatus::ONLINE) {
+                if status.contains(fidl_ethernet::DeviceStatus::Online) {
                     ctx.update_device_state(self.id, |dev_info| dev_info.set_phy_up(true));
                     ctx.enable_interface(self.id)
                         .unwrap_or_else(|e| trace!("Phy enable interface failed: {:?}", e));

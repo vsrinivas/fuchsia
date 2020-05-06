@@ -8,7 +8,7 @@
 
 use bitflags::bitflags;
 use fidl_fuchsia_hardware_ethernet as sys;
-use fidl_fuchsia_hardware_ethernet_ext::{EthernetInfo, EthernetStatus};
+use fidl_fuchsia_hardware_ethernet_ext::EthernetInfo;
 use fuchsia_async as fasync;
 use fuchsia_zircon::{self as zx, AsHandleRef};
 use futures::{
@@ -154,8 +154,8 @@ impl Client {
     }
 
     /// Get the status of the Ethernet device.
-    pub async fn get_status(&self) -> Result<EthernetStatus, fidl::Error> {
-        Ok(EthernetStatus::from_bits_truncate(self.inner.dev.get_status().await?))
+    pub async fn get_status(&self) -> Result<sys::DeviceStatus, fidl::Error> {
+        self.inner.dev.get_status().await
     }
 
     /// Send a buffer with the Ethernet device.

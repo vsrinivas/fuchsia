@@ -599,7 +599,7 @@ static bool EthernetImplStartTest() {
   EXPECT_TRUE(obs & fuchsia_hardware_ethernet_SIGNAL_STATUS);
 
   EXPECT_EQ(ZX_OK, client.GetStatus(&eth_status));
-  EXPECT_EQ(fuchsia_hardware_ethernet_DEVICE_STATUS_ONLINE, eth_status);
+  EXPECT_EQ(fuchsia_hardware_ethernet_DeviceStatus_ONLINE, eth_status);
 
   ASSERT_TRUE(EthernetCleanupHelper(&tap, &client));
   END_TEST;
@@ -622,7 +622,7 @@ static bool EthernetLinkStatusTest() {
   // Link status should be ONLINE since it's set in OpenFirstClientHelper
   uint32_t eth_status = 0;
   EXPECT_EQ(ZX_OK, client.GetStatus(&eth_status));
-  EXPECT_EQ(fuchsia_hardware_ethernet_DEVICE_STATUS_ONLINE, eth_status);
+  EXPECT_EQ(fuchsia_hardware_ethernet_DeviceStatus_ONLINE, eth_status);
 
   // Now the device goes offline
   EXPECT_EQ(ZX_OK, tap.SetOnline(false));
@@ -738,7 +738,8 @@ static bool EthernetMulticastSetsAddresses() {
   END_TEST;
 }
 
-// This value is implementation dependent, set in src/connectivity/ethernet/drivers/ethernet/ethernet.c
+// This value is implementation dependent, set in
+// src/connectivity/ethernet/drivers/ethernet/ethernet.c
 #define MULTICAST_LIST_LIMIT 32
 
 static bool EthernetMulticastPromiscOnOverflow() {

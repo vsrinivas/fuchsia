@@ -201,7 +201,7 @@ void GuestEthernet::SetClientName(std::string name, SetClientNameCallback callba
 }
 
 void GuestEthernet::GetStatus(GetStatusCallback callback) {
-  callback(fuchsia::hardware::ethernet::DEVICE_STATUS_ONLINE);
+  callback(fuchsia::hardware::ethernet::DeviceStatus::ONLINE);
 }
 
 void GuestEthernet::SetPromiscuousMode(bool enabled, SetPromiscuousModeCallback callback) {
