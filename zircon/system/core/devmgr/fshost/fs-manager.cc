@@ -58,6 +58,12 @@ FsManager::~FsManager() {
     zx_signals_t pending;
     event_.wait_one(FSHOST_SIGNAL_EXIT_DONE, deadline, &pending);
   }
+  // Ensure all asynchronous work on global_loop_ finishes.
+  // Some of the asynchronous work references memory owned by this instance, so we need to ensure
+  // the work is complete before destruction.
+  // TODO(sdemos): Clean up ordering of fields to let the natural destructor ordering handle
+  // shutdown.
+  global_loop_->Shutdown();
 }
 
 zx_status_t FsManager::Create(loader_service_t* loader_svc, zx::channel dir_request,
