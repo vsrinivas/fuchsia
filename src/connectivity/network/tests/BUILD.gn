@@ -118,7 +118,7 @@ group("netstack_integration_tests") {
     "//src/cobalt/bin/testing/mock_cobalt",
 
     # dns_resolver integration with netstack is tested.
-    "//src/connectivity/network/dns:dns_resolver",
+    "//src/connectivity/network/dns:dns-resolver",
   ]
 }
 

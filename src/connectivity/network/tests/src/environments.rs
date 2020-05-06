@@ -71,7 +71,7 @@ impl KnownServices {
             KnownServices::DhcpServer => (<fidl_fuchsia_net_dhcp::Server_Marker as fidl::endpoints::DiscoverableService>::SERVICE_NAME,
                                           fuchsia_component::fuchsia_single_component_package_url!("dhcpd-testing")),
             KnownServices::LoopkupAdmin => (<fidl_fuchsia_net_name::LookupAdminMarker as fidl::endpoints::DiscoverableService>::SERVICE_NAME,
-                                            fuchsia_component::fuchsia_single_component_package_url!("dns_resolver"))
+                                            fuchsia_component::fuchsia_single_component_package_url!("dns-resolver"))
         }
     }
 

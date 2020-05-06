@@ -24,7 +24,7 @@ rustc_library("lib") {
   ]
 }
 
-test_package("dns_tests") {
+test_package("dns-tests") {
   deps = [ ":lib_test" ]
 
   tests = [
@@ -62,23 +62,22 @@ rustc_binary("bin") {
   ]
 }
 
-package("dns_resolver") {
+package("dns-resolver") {
   deps = [ ":bin" ]
   binaries = [
     {
       name = "dns_resolver"
-      dest = "dns_resolver"
     },
   ]
   meta = [
     {
-      path = rebase_path("meta/dns_resolver.cmx")
-      dest = "dns_resolver.cmx"
+      path = rebase_path("meta/dns-resolver.cmx")
+      dest = "dns-resolver.cmx"
     },
   ]
 }
 
-unittest_package("dns_resolver_tests") {
+unittest_package("dns-resolver-tests") {
   deps = [ ":bin_test" ]
 
   tests = [
@@ -92,7 +91,7 @@ unittest_package("dns_resolver_tests") {
 group("tests") {
   testonly = true
   deps = [
-    ":dns_resolver_tests",
-    ":dns_tests",
+    ":dns-resolver-tests",
+    ":dns-tests",
   ]
 }
