@@ -8,10 +8,7 @@ import("//build/testing/environments.gni")
 
 group("test") {
   testonly = true
-  deps = [
-    ":bin",
-    ":run_test_component_test",
-  ]
+  deps = [ ":run_test_component_test" ]
 }
 
 executable("bin") {

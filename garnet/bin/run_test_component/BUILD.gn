@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/config.gni")
 import("//build/package.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
@@ -15,6 +16,8 @@ source_set("lib") {
     "env_config.h",
     "log_collector.cc",
     "log_collector.h",
+    "max_severity_config.cc",
+    "max_severity_config.h",
     "output_collector.cc",
     "output_collector.h",
     "run_test_component.cc",
@@ -74,8 +77,9 @@ executable("bin") {
   ]
 }
 
-package("run_test_component") {
+package("run-test-component") {
   testonly = true
+  package_name = "run_test_component"
 
   deps = [ ":bin" ]
 
@@ -99,6 +103,7 @@ executable("test_bin") {
 
   sources = [
     "log_collector_unittests.cc",
+    "max_severity_config_unittests.cc",
     "output_collector_unittests.cc",
     "run_test_component_unittest.cc",
     "test_metadata_unittest.cc",
@@ -124,5 +129,62 @@ test_package("run_test_component_unittests") {
       name = "run_test_component_unittests"
       environments = basic_envs
     },
+  ]
+
+  resources = [
+    {
+      path = "test_configs/max_severity/valid1.config"
+      dest = "max_severity/valid/1.config"
+    },
+    {
+      path = "test_configs/max_severity/valid2.config"
+      dest = "max_severity/valid/2.config"
+    },
+    {
+      path = "test_configs/max_severity/valid3.config"
+      dest = "max_severity/valid/3.config"
+    },
+    {
+      path = "test_configs/max_severity/no_url.config"
+      dest = "max_severity/no_url/no_url.config"
+    },
+    {
+      path = "test_configs/max_severity/invalid_url.config"
+      dest = "max_severity/invalid_url/invalid_url.config"
+    },
+    {
+      path = "test_configs/max_severity/no_severity.config"
+      dest = "max_severity/no_severity/no_severity.config"
+    },
+    {
+      path = "test_configs/max_severity/invalid_severity.config"
+      dest = "max_severity/invalid_severity/invalid_severity.config"
+    },
+    {
+      path = "test_configs/max_severity/url_conflict.config"
+      dest = "max_severity/url_conflict/url_conflict.config"
+    },
+  ]
+}
+
+config_data("max_severity") {
+  testonly = true
+  for_pkg = "run_test_component"
+  sources = [ "max_severity_fuchsia.config" ]
+}
+
+group("run_test_component") {
+  testonly = true
+  public_deps = [
+    ":max_severity",
+    ":run-test-component",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  public_deps = [
+    ":run_test_component_unittests",
+    "test",
   ]
 }

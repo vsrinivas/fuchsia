@@ -34,6 +34,7 @@
 #include "garnet/bin/run_test_component/component.h"
 #include "garnet/bin/run_test_component/env_config.h"
 #include "garnet/bin/run_test_component/log_collector.h"
+#include "garnet/bin/run_test_component/max_severity_config.h"
 #include "garnet/bin/run_test_component/run_test_component.h"
 #include "garnet/bin/run_test_component/test_metadata.h"
 #include "lib/fidl/cpp/interface_request.h"
@@ -48,6 +49,9 @@ constexpr char kEnvPrefix[] = "test_env_";
 const uint64_t kMillisInSec = 1000UL;
 const uint64_t kMicrosInSec = 1000000UL;
 const uint64_t kNanosInSec = 1000000000UL;
+
+const std::string max_severity_config_path =
+    "/pkgfs/packages/config-data/0/data/run_test_component";
 
 void PrintUsage() {
   fprintf(stderr, R"(
@@ -168,6 +172,9 @@ std::unique_ptr<run::Component> launch_observer(const fuchsia::sys::LauncherPtr&
 }  // namespace
 
 int main(int argc, const char** argv) {
+  // Get and store config. We will use it later.
+  auto max_severity_config = run::MaxSeverityConfig::ParseFromDirectory(max_severity_config_path);
+
   // Services which we get from /svc. They might be different depending on in which shell this
   // binary is launched from, so can't use it to create underlying environment.
   auto namespace_services = sys::ServiceDirectory::CreateFromNamespace();
