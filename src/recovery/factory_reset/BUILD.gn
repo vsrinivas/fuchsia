@@ -126,6 +126,7 @@ test("factory_reset_unittests") {
 
   deps = [
     ":lib",
+    "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_c",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
@@ -133,7 +134,6 @@ test("factory_reset_unittests") {
     "//zircon/public/lib/fzl",
     "//zircon/system/fidl/fuchsia-device:fuchsia-device_llcpp",
     "//zircon/system/fidl/fuchsia-device-manager",
-    "//zircon/system/fidl/fuchsia-hardware-block-volume:fuchsia-hardware-block-volume_c",
     "//zircon/system/ulib/devmgr-integration-test",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fs-management",

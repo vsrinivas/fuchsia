@@ -26,6 +26,7 @@ executable("fvm") {
     configs -= fdio_config
   }
   deps = [
+    "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_c",
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-default",
@@ -50,7 +51,6 @@ executable("fvm") {
     "//zircon/public/lib/zxtest",
     "//zircon/system/fidl/fuchsia-device:c",
     "//zircon/system/fidl/fuchsia-device:llcpp",
-    "//zircon/system/fidl/fuchsia-hardware-block-volume:c",
     "//zircon/system/fidl/fuchsia-io:c",
     "//zircon/system/ulib/blobfs",
     "//zircon/system/ulib/block-client",

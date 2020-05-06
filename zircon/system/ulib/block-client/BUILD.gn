@@ -42,12 +42,13 @@ zx_library("block-client") {
     "//zircon/system/ulib/storage-metrics",
 
     # <block-client/cpp/block-device.h> has #include <.../fidl.h>
+    "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_c",
     "//zircon/system/fidl/fuchsia-device:c",
     "//zircon/system/fidl/fuchsia-device:llcpp",
     "//zircon/system/fidl/fuchsia-hardware-block:c",
-    "//zircon/system/fidl/fuchsia-hardware-block-volume:c",
   ]
   deps = [
+    "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_c",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
@@ -56,7 +57,6 @@ zx_library("block-client") {
     "//zircon/public/lib/zx",
     "//zircon/system/fidl/fuchsia-device:llcpp",
     "//zircon/system/fidl/fuchsia-hardware-block:c",
-    "//zircon/system/fidl/fuchsia-hardware-block-volume:c",
     "//zircon/system/fidl/fuchsia-io:c",
   ]
 }
@@ -82,12 +82,12 @@ zx_library("fake-device") {
     "//zircon/system/ulib/storage-metrics",
   ]
   deps = [
+    "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_c",
     "//zircon/public/lib/buffer",
     "//zircon/public/lib/range",
     "//zircon/public/lib/zxtest",
     "//zircon/system/fidl/fuchsia-device:c",
     "//zircon/system/fidl/fuchsia-hardware-block:c",
-    "//zircon/system/fidl/fuchsia-hardware-block-volume:c",
     "//zircon/system/ulib/fvm",
     "//zircon/system/ulib/storage-metrics",
   ]

@@ -31,6 +31,7 @@ source_set("shared") {
     "//sdk/banjo/ddk.protocol.block",
     "//sdk/banjo/ddk.protocol.block.partition",
     "//sdk/banjo/ddk.protocol.block.volume",
+    "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_c",
     "//zircon/public/lib/boringssl",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
@@ -44,7 +45,6 @@ source_set("shared") {
     "//zircon/public/lib/zx",
     "//zircon/system/fidl/fuchsia-hardware-block:c",
     "//zircon/system/fidl/fuchsia-hardware-block-partition:c",
-    "//zircon/system/fidl/fuchsia-hardware-block-volume:c",
     "//zircon/system/ulib/fidl-utils",
     "//zircon/system/ulib/fvm",
   ]

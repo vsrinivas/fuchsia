@@ -51,11 +51,11 @@ zx_library("fvm") {
     sources += [ "client.cc" ]
 
     deps += [
+      "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_c",
       "//zircon/public/lib/fzl",
       "//zircon/public/lib/gpt",
       "//zircon/public/lib/sync",
       "//zircon/public/lib/zx",
-      "//zircon/system/fidl/fuchsia-hardware-block-volume:c",
       "//zircon/system/ulib/block-client",
     ]
   } else {

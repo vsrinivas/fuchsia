@@ -51,7 +51,6 @@ group("fidl") {
     "fuchsia-hardware-block-partition",
 #------------------
 #------------------
-    "fuchsia-hardware-block-volume",
 #------------------
 #------------------
 #------------------

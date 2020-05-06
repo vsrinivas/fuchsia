@@ -96,10 +96,10 @@ zx_library("minfs") {
   ]
   if (is_fuchsia) {
     public_deps += [
+      "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_c",
       "//zircon/public/lib/fzl",
       "//zircon/public/lib/zx",
       "//zircon/system/fidl/fuchsia-hardware-block:c",
-      "//zircon/system/fidl/fuchsia-hardware-block-volume:c",
       "//zircon/system/fidl/fuchsia-minfs:llcpp",
       "//zircon/system/ulib/block-client",
       "//zircon/system/ulib/storage-metrics",

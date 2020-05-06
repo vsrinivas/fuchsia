@@ -20,13 +20,14 @@ zx_library("fvm-devices") {
   testonly = true
   sources = [ "device-ref.cc" ]
   public_deps = [
+    "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_c",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
-    "//zircon/system/fidl/fuchsia-hardware-block-volume:c",
     "//zircon/system/ulib/fvm",
     "//zircon/system/ulib/ramdevice-client",
   ]
   deps = [
+    "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_c",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/fidl",
@@ -35,7 +36,6 @@ zx_library("fvm-devices") {
     "//zircon/public/lib/zxtest",
     "//zircon/system/fidl/fuchsia-device:llcpp",
     "//zircon/system/fidl/fuchsia-hardware-block-partition:c",
-    "//zircon/system/fidl/fuchsia-hardware-block-volume:c",
     "//zircon/system/fidl/fuchsia-io:llcpp",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fs-management",

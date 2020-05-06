@@ -10,10 +10,10 @@ test("fvm-driver-integration") {
   sources = [ "volume_manager_api_test.cc" ]
   include_dirs = [ ".." ]
   deps = [
+    "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_llcpp",
     "//src/devices/block/drivers/fvm:shared",
     "//src/devices/testing/fake_ddk",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/fidl/fuchsia-hardware-block-volume:llcpp",
     "//zircon/system/ulib/devmgr-integration-test",
     "//zircon/system/ulib/devmgr-launcher",
     "//zircon/system/ulib/fvm",
