@@ -21,10 +21,11 @@ class UpSwipeGestureRecognizer : public SwipeRecognizerBase {
   // so in order for a swipe to be recognized as "up", it must fall within 30 degrees of vertical.
   static constexpr float kMinUpSwipeSlopeMagnitude = 1.732f;
 
-  UpSwipeGestureRecognizer(
+  explicit UpSwipeGestureRecognizer(
       SwipeGestureCallback callback,
+      uint32_t number_of_finger = SwipeRecognizerBase::kDefaultNumberOfFingers,
       zx::duration swipe_gesture_timeout = SwipeRecognizerBase::kDefaultSwipeGestureTimeout)
-      : SwipeRecognizerBase(std::move(callback), swipe_gesture_timeout) {}
+      : SwipeRecognizerBase(std::move(callback), number_of_finger, swipe_gesture_timeout) {}
 
   std::string DebugName() const override { return "up_swipe_gesture_recognizer"; };
 
@@ -32,7 +33,7 @@ class UpSwipeGestureRecognizer : public SwipeRecognizerBase {
   // Verifies that the absolute value of the slope of the line containing the gesture start point
   // and the location of the pointer event in question is sufficiently large (i.e. the swipe is
   // "vertical"), and that y_displacement is positive (i.e. the swipe is "up").
-  bool ValidateSwipeSlopeAndDirection(float x_displacement, float y_displacement) override;
+  bool SwipeHasValidSlopeAndDirection(float x_displacement, float y_displacement) const override;
 };
 
 // Recognizer for downward-oriented swipes.
@@ -43,10 +44,11 @@ class DownSwipeGestureRecognizer : public SwipeRecognizerBase {
   // so in order for a swipe to be recognized as "down", it must fall within 30 degrees of vertical.
   static constexpr float kMinDownSwipeSlopeMagnitude = 1.732f;
 
-  DownSwipeGestureRecognizer(
+  explicit DownSwipeGestureRecognizer(
       SwipeGestureCallback callback,
+      uint32_t number_of_finger = SwipeRecognizerBase::kDefaultNumberOfFingers,
       zx::duration swipe_gesture_timeout = SwipeRecognizerBase::kDefaultSwipeGestureTimeout)
-      : SwipeRecognizerBase(std::move(callback), swipe_gesture_timeout) {}
+      : SwipeRecognizerBase(std::move(callback), number_of_finger, swipe_gesture_timeout) {}
 
   std::string DebugName() const override { return "down_swipe_gesture_recognizer"; };
 
@@ -54,7 +56,7 @@ class DownSwipeGestureRecognizer : public SwipeRecognizerBase {
   // Verifies that the absolute value of the slope of the line containing the gesture start point
   // and the location of the pointer event in question is sufficiently large (i.e. the swipe is
   // "vertical"), and that y_displacement is negative (i.e. the swipe is "down").
-  bool ValidateSwipeSlopeAndDirection(float x_displacement, float y_displacement) override;
+  bool SwipeHasValidSlopeAndDirection(float x_displacement, float y_displacement) const override;
 };
 
 // Recognizer for right-oriented swipes.
@@ -66,10 +68,11 @@ class RightSwipeGestureRecognizer : public SwipeRecognizerBase {
   // horizontal.
   static constexpr float kMaxRightSwipeSlopeMagnitude = 0.577f;
 
-  RightSwipeGestureRecognizer(
+  explicit RightSwipeGestureRecognizer(
       SwipeGestureCallback callback,
+      uint32_t number_of_finger = SwipeRecognizerBase::kDefaultNumberOfFingers,
       zx::duration swipe_gesture_timeout = SwipeRecognizerBase::kDefaultSwipeGestureTimeout)
-      : SwipeRecognizerBase(std::move(callback), swipe_gesture_timeout) {}
+      : SwipeRecognizerBase(std::move(callback), number_of_finger, swipe_gesture_timeout) {}
 
   std::string DebugName() const override { return "right_swipe_gesture_recognizer"; };
 
@@ -77,7 +80,7 @@ class RightSwipeGestureRecognizer : public SwipeRecognizerBase {
   // Verifies that the absolute value of the slope of the line containing the gesture start point
   // and the location of the pointer event in question is sufficiently small (i.e. the swipe is
   // "horizontal"), and that x_displacement is positive (i.e. the swipe is "right").
-  bool ValidateSwipeSlopeAndDirection(float x_displacement, float y_displacement) override;
+  bool SwipeHasValidSlopeAndDirection(float x_displacement, float y_displacement) const override;
 };
 
 // Recognizer for left-oriented swipes.
@@ -89,10 +92,11 @@ class LeftSwipeGestureRecognizer : public SwipeRecognizerBase {
   // horizontal.
   static constexpr float kMaxLeftSwipeSlopeMagnitude = 0.577f;
 
-  LeftSwipeGestureRecognizer(
+  explicit LeftSwipeGestureRecognizer(
       SwipeGestureCallback callback,
+      uint32_t number_of_finger = SwipeRecognizerBase::kDefaultNumberOfFingers,
       zx::duration swipe_gesture_timeout = SwipeRecognizerBase::kDefaultSwipeGestureTimeout)
-      : SwipeRecognizerBase(std::move(callback), swipe_gesture_timeout) {}
+      : SwipeRecognizerBase(std::move(callback), number_of_finger, swipe_gesture_timeout) {}
 
   std::string DebugName() const override { return "left_swipe_gesture_recognizer"; };
 
@@ -100,7 +104,7 @@ class LeftSwipeGestureRecognizer : public SwipeRecognizerBase {
   // Verifies that the absolute value of the slope of the line containing the gesture start point
   // and the location of the pointer event in question is sufficiently small (i.e. the swipe is
   // "horizontal"), and that x_displacement is left (i.e. the swipe is "left").
-  bool ValidateSwipeSlopeAndDirection(float x_displacement, float y_displacement) override;
+  bool SwipeHasValidSlopeAndDirection(float x_displacement, float y_displacement) const override;
 };
 
 }  // namespace a11y
