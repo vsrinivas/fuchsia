@@ -5,6 +5,7 @@
 use {
     crate::test_utils,
     fidl_fuchsia_wlan_device_service::{DeviceServiceProxy, QueryIfaceResponse},
+    fidl_fuchsia_wlan_policy as fidl_policy,
     fidl_fuchsia_wlan_sme::{ApSmeProxy, ClientSmeProxy},
     fidl_fuchsia_wlan_tap::WlantapPhyConfig,
     fuchsia_zircon::{sys::ZX_OK, DurationNum},
@@ -23,8 +24,15 @@ impl<'a> CreateDeviceHelper<'a> {
     pub async fn create_device(
         &mut self,
         config: WlantapPhyConfig,
+        network_config: Option<fidl_policy::NetworkConfig>,
     ) -> Result<(test_utils::TestHelper, u16), anyhow::Error> {
-        let helper = test_utils::TestHelper::begin_test(config).await;
+        let helper = match network_config {
+            Some(network_config) => {
+                test_utils::TestHelper::begin_ap_test(config, network_config).await
+            }
+            None => test_utils::TestHelper::begin_test(config).await,
+        };
+
         let iface_id = get_first_matching_iface_id(self.wlanstack_svc, |iface| {
             !self.iface_ids.contains(&iface.id)
         })

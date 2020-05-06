@@ -3,10 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    fidl_fuchsia_wlan_device::MacRole::Ap,
-    fidl_fuchsia_wlan_device_service::DeviceServiceMarker,
     fidl_fuchsia_wlan_service::{ConnectConfig, ErrCode, WlanMarker, WlanProxy},
-    fidl_fuchsia_wlan_sme::{ApConfig, StartApResultCode},
     fidl_fuchsia_wlan_tap::{WlantapPhyEvent, WlantapPhyProxy},
     fuchsia_async::{Time, Timer},
     fuchsia_component::client::connect_to_service,
@@ -14,12 +11,7 @@ use {
     futures::{channel::oneshot, join, TryFutureExt},
     pin_utils::pin_mut,
     std::panic,
-    wlan_common::{
-        bss::Protection::Wpa2Personal,
-        channel::{Cbw, Phy},
-        test_utils::ExpectWithin,
-        RadioConfig,
-    },
+    wlan_common::bss::Protection::Wpa2Personal,
     wlan_hw_sim::*,
 };
 
@@ -65,23 +57,6 @@ async fn verify_client_connects_to_ap(
     ap_helper: &mut test_utils::TestHelper,
 ) {
     let wlancfg_svc = connect_to_service::<WlanMarker>().expect("connecting to wlancfg service");
-    let wlanstack_svc =
-        connect_to_service::<DeviceServiceMarker>().expect("connecting to wlanstack service");
-
-    let ap_iface_id = get_first_matching_iface_id(&wlanstack_svc, |iface| iface.role == Ap)
-        .expect_within(5.seconds(), "no AP iface found")
-        .await;
-
-    let ap_sme = get_ap_sme(&wlanstack_svc, ap_iface_id).await;
-
-    // Start AP
-    let mut config = ApConfig {
-        ssid: SSID.to_vec(),
-        password: PASS_PHRASE.to_string().into_bytes(),
-        radio_cfg: RadioConfig::new(Phy::Ht, Cbw::Cbw20, CHANNEL.primary).to_fidl(),
-    };
-    let result_code = ap_sme.start(&mut config).await.expect("expect start ap result code");
-    assert_eq!(result_code, StartApResultCode::Success);
 
     let (sender, connect_confirm_receiver) = oneshot::channel();
     let mut connect_config = create_connect_config(SSID, PASS_PHRASE);
@@ -231,12 +206,18 @@ async fn verify_ethernet_in_both_directions(
 /// and ethernet frames can reach each other from both ends.
 #[fuchsia_async::run_singlethreaded(test)]
 async fn sim_client_vs_sim_ap() {
+    let network_config = test_utils::NetworkConfigBuilder::new()
+        .ssid(&SSID.to_vec())
+        .protected(&PASS_PHRASE.as_bytes().to_vec())
+        .into();
+
     let mut client_helper =
         test_utils::TestHelper::begin_test(default_wlantap_config_client()).await;
     let client_proxy = client_helper.proxy();
     let () = loop_until_iface_is_found().await;
 
-    let mut ap_helper = test_utils::TestHelper::begin_test(default_wlantap_config_ap()).await;
+    let mut ap_helper =
+        test_utils::TestHelper::begin_ap_test(default_wlantap_config_ap(), network_config).await;
     let ap_proxy = ap_helper.proxy();
 
     verify_client_connects_to_ap(&client_proxy, &ap_proxy, &mut client_helper, &mut ap_helper)

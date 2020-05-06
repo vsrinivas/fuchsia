@@ -7,8 +7,7 @@ use {
     fidl_fuchsia_wlan_common as fidl_common,
     fidl_fuchsia_wlan_device_service::DeviceServiceMarker,
     fidl_fuchsia_wlan_sme::{
-        self as fidl_sme, ApConfig, ClientSmeProxy, ConnectRequest, ConnectResultCode, Credential,
-        StartApResultCode,
+        self as fidl_sme, ClientSmeProxy, ConnectRequest, ConnectResultCode, Credential,
     },
     fuchsia_component::client::connect_to_service,
     fuchsia_zircon::DurationNum,
@@ -55,15 +54,18 @@ async fn multiple_clients_ap() {
     let wlanstack_svc =
         connect_to_service::<DeviceServiceMarker>().expect("connecting to wlanstack service");
 
+    let network_config = test_utils::NetworkConfigBuilder::new().ssid(&SSID.to_vec()).open().into();
+
     let mut dc = CreateDeviceHelper::new(&wlanstack_svc);
 
-    let (mut ap_helper, ap_iface_id) =
-        dc.create_device(default_wlantap_config_ap()).await.expect("create ap");
+    let (mut ap_helper, _) = dc
+        .create_device(default_wlantap_config_ap(), Some(network_config))
+        .await
+        .expect("create ap");
     let ap_proxy = ap_helper.proxy();
-    let ap_sme = get_ap_sme(&wlanstack_svc, ap_iface_id).await;
 
     let (mut client1_helper, client1_iface_id) = dc
-        .create_device(wlantap_config_client(format!("wlantap-client-1"), CLIENT1_MAC_ADDR))
+        .create_device(wlantap_config_client(format!("wlantap-client-1"), CLIENT1_MAC_ADDR), None)
         .await
         .expect("create client1");
     let client1_proxy = client1_helper.proxy();
@@ -71,25 +73,12 @@ async fn multiple_clients_ap() {
     let (client1_confirm_sender, client1_confirm_receiver) = oneshot::channel();
 
     let (mut client2_helper, client2_iface_id) = dc
-        .create_device(wlantap_config_client(format!("wlantap-client-2"), CLIENT2_MAC_ADDR))
+        .create_device(wlantap_config_client(format!("wlantap-client-2"), CLIENT2_MAC_ADDR), None)
         .await
         .expect("create client2");
     let client2_proxy = client2_helper.proxy();
     let client2_sme = get_client_sme(&wlanstack_svc, client2_iface_id).await;
     let (client2_confirm_sender, client2_confirm_receiver) = oneshot::channel();
-
-    // Start AP
-    assert_eq!(
-        ap_sme
-            .start(&mut ApConfig {
-                ssid: SSID.to_vec(),
-                password: vec![],
-                radio_cfg: RadioConfig::new(Phy::Ht, Cbw::Cbw20, CHANNEL.primary).to_fidl(),
-            })
-            .await
-            .expect("expect start ap result code"),
-        StartApResultCode::Success
-    );
 
     let ap_fut = ap_helper
         .run_until_complete_or_timeout(
