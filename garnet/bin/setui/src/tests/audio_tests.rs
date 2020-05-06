@@ -253,14 +253,13 @@ async fn test_volume_restore() {
         assert!(store.lock().await.write(&stored_info, false).await.is_ok());
     }
 
-    let env = EnvironmentBuilder::new(storage_factory)
+    assert!(EnvironmentBuilder::new(storage_factory)
         .service(Box::new(ServiceRegistry::serve(service_registry)))
         .agents(&[Arc::new(Mutex::new(RestoreAgent::new()))])
         .settings(&[SettingType::Audio])
         .spawn_nested(ENV_NAME)
         .await
-        .unwrap();
-    assert!(env.completion_rx.await.unwrap().is_ok());
+        .is_ok());
 
     let stored_info =
         fake_services.audio_core.lock().await.get_level_and_mute(AudioRenderUsage::Media).unwrap();

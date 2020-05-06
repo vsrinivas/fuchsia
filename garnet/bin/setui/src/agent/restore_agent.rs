@@ -5,10 +5,9 @@
 /// The Restore Agent is responsible for signaling to all components to restore
 /// external sources to the last known value. It is invoked during startup.
 use crate::agent::base::{Agent, Invocation, Lifespan};
-use crate::switchboard::base::SettingRequest;
+use crate::switchboard::base::{SettingRequest, SwitchboardError};
 use anyhow::Error;
 use fuchsia_async as fasync;
-use fuchsia_syslog::fx_log_err;
 
 #[derive(Debug)]
 pub struct RestoreAgent;
@@ -34,17 +33,27 @@ impl Agent for RestoreAgent {
                     if let Ok(result_rx) =
                         context.switchboard_client.request(component, SettingRequest::Restore).await
                     {
-                        if result_rx.await.is_err() {
-                            fx_log_err!("could not restore the following setting:{:?}", component);
+                        if let Ok(result) = result_rx.await {
+                            if result.is_ok() {
+                                continue;
+                            }
+
+                            if let Err(SwitchboardError::UnimplementedRequest {
+                                setting_type: _,
+                                request: _,
+                            }) = result
+                            {
+                                continue;
+                            }
                         }
-                    } else {
-                        reply(
-                            invocation,
-                            Err(anyhow::format_err!("could not request restore from component")),
-                        )
-                        .await;
-                        return;
                     }
+
+                    reply(
+                        invocation,
+                        Err(anyhow::format_err!("could not request restore from component")),
+                    )
+                    .await;
+                    return;
                 }
 
                 reply(invocation, Ok(())).await;

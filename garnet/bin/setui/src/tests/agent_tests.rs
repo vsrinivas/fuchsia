@@ -12,6 +12,7 @@ use crate::switchboard::switchboard_impl::SwitchboardImpl;
 use crate::EnvironmentBuilder;
 use anyhow::{format_err, Error};
 use core::fmt::{Debug, Formatter};
+use fuchsia_async as fasync;
 use fuchsia_inspect::component;
 use futures::channel::mpsc::UnboundedSender;
 use futures::lock::Mutex;
@@ -134,7 +135,31 @@ async fn test_environment_startup() {
     let (service_tx, mut service_rx) = futures::channel::mpsc::unbounded::<(u32, Invocation)>();
     let service_agent = TestAgent::new(service_agent_id, LifespanTarget::Service, Some(service_tx));
 
-    let environment = EnvironmentBuilder::new(InMemoryStorageFactory::create())
+    {
+        let service_agent = service_agent.clone();
+        fasync::spawn(async move {
+            // Wait for the initialization agent to receive invocation
+            if let Some((id, invocation)) = startup_rx.next().await {
+                // Verify the correct agent was invoked.
+                assert_eq!(id, startup_agent_id);
+                assert!(invocation.acknowledge(Ok(())).await.is_ok());
+                // Ensure the service agent hasn't been invoked
+                assert!(service_agent.lock().await.last_invocation.is_none());
+            }
+        });
+    }
+
+    fasync::spawn(async move {
+        // Wait for service agent to receive notification
+        if let Some((id, invocation)) = service_rx.next().await {
+            // Verify the correct agent was invoked
+            assert_eq!(id, service_agent_id);
+            // Ensure acknowledging succeeds
+            assert!(invocation.acknowledge(Ok(())).await.is_ok());
+        }
+    });
+
+    assert!(EnvironmentBuilder::new(InMemoryStorageFactory::create())
         .agents(&[
             TestAgent::new(startup_agent_id, LifespanTarget::Initialization, Some(startup_tx)),
             service_agent.clone(),
@@ -142,27 +167,7 @@ async fn test_environment_startup() {
         .settings(&[SettingType::Display])
         .spawn_nested(ENV_NAME)
         .await
-        .unwrap();
-
-    // Wait for the initialization agent to receive invocation
-    if let Some((id, invocation)) = startup_rx.next().await {
-        // Verify the correct agent was invoked.
-        assert_eq!(id, startup_agent_id);
-        assert!(invocation.acknowledge(Ok(())).await.is_ok());
-        // Ensure the service agent hasn't been invoked
-        assert!(service_agent.lock().await.last_invocation.is_none());
-    }
-
-    // Wait for the environment creation to complete after initialization agents
-    assert!(environment.completion_rx.await.unwrap().is_ok());
-
-    // Wait for service agent to receive notification
-    if let Some((id, invocation)) = service_rx.next().await {
-        // Verify the correct agent was invoked
-        assert_eq!(id, service_agent_id);
-        // Ensure acknowledging succeeds
-        assert!(invocation.acknowledge(Ok(())).await.is_ok());
-    }
+        .is_ok());
 }
 
 /// Ensures that agents are executed in sequential order and the
@@ -180,41 +185,39 @@ async fn test_sequential() {
     // Create a number of agents.
     let agent_ids = create_agents(12, LifespanTarget::Initialization, &mut authority, tx.clone());
 
-    // Execute the lifespan sequentially.
-    let completion_ack = authority.execute_lifespan(
-        Lifespan::Initialization(InitializationContext::new(
-            switchboard_client.clone(),
-            HashSet::new(),
-        )),
-        service_context,
-        true,
-    );
+    fasync::spawn(async move {
+        // Process the agent callbacks, making sure they are received in the right
+        // order and acknowledging the acks. Note that this is a chain reaction.
+        // Processing the first agent is necessary before the second can receive its
+        // invocation.
+        for agent_id in agent_ids {
+            match rx.next().await {
+                Some((id, invocation)) => {
+                    assert!(rx.try_next().is_err());
 
-    // Process the agent callbacks, making sure they are received in the right
-    // order and acknowledging the acks. Note that this is a chain reaction.
-    // Processing the first agent is necessary before the second can receive its
-    // invocation.
-    for agent_id in agent_ids {
-        match rx.next().await {
-            Some((id, invocation)) => {
-                assert!(rx.try_next().is_err());
-
-                if agent_id == id {
-                    assert!(invocation.acknowledge(Ok(())).await.is_ok());
+                    if agent_id == id {
+                        assert!(invocation.acknowledge(Ok(())).await.is_ok());
+                    }
+                }
+                _ => {
+                    panic!("couldn't get invocation");
                 }
             }
-            _ => {
-                panic!("couldn't get invocation");
-            }
         }
-    }
+    });
 
     // Ensure lifespan execution completes.
-    if let Ok(success) = completion_ack.await {
-        assert!(success.is_ok());
-    } else {
-        panic!("did not complete successfully");
-    }
+    assert!(authority
+        .execute_lifespan(
+            Lifespan::Initialization(InitializationContext::new(
+                switchboard_client.clone(),
+                HashSet::new(),
+            )),
+            service_context,
+            true,
+        )
+        .await
+        .is_ok());
 }
 
 /// Ensures that in simultaneous execution agents are not blocked on each other
@@ -230,40 +233,38 @@ async fn test_simultaneous() {
     let service_context = ServiceContext::create(None);
     let agent_ids = create_agents(12, LifespanTarget::Initialization, &mut authority, tx.clone());
 
-    // Execute lifespan non-sequentially.
-    let completion_ack = authority.execute_lifespan(
-        Lifespan::Initialization(InitializationContext::new(
-            switchboard_client.clone(),
-            HashSet::new(),
-        )),
-        service_context,
-        false,
-    );
-
-    // Ensure that each agent has received the invocation. Note that we are not
-    // acknowledging the invocations here. Each agent should be notified
-    // regardless of order.
-    let mut invocations = Vec::new();
-    for agent_id in agent_ids {
-        if let Some((id, invocation)) = rx.next().await {
-            assert_eq!(id, agent_id);
-            invocations.push(invocation.clone());
-        } else {
-            panic!("should be able to retrieve agent");
+    fasync::spawn(async move {
+        // Ensure that each agent has received the invocation. Note that we are not
+        // acknowledging the invocations here. Each agent should be notified
+        // regardless of order.
+        let mut invocations = Vec::new();
+        for agent_id in agent_ids {
+            if let Some((id, invocation)) = rx.next().await {
+                assert_eq!(id, agent_id);
+                invocations.push(invocation.clone());
+            } else {
+                panic!("should be able to retrieve agent");
+            }
         }
-    }
 
-    // Acknowledge each invocation.
-    for invocation in invocations {
-        assert!(invocation.acknowledge(Ok(())).await.is_ok());
-    }
+        // Acknowledge each invocation.
+        for invocation in invocations {
+            assert!(invocation.acknowledge(Ok(())).await.is_ok());
+        }
+    });
 
-    // Ensure lifespan execution completes.
-    if let Ok(success) = completion_ack.await {
-        assert!(success.is_ok());
-    } else {
-        panic!("did not complete successfully");
-    }
+    // Execute lifespan non-sequentially.
+    assert!(authority
+        .execute_lifespan(
+            Lifespan::Initialization(InitializationContext::new(
+                switchboard_client.clone(),
+                HashSet::new(),
+            )),
+            service_context,
+            false,
+        )
+        .await
+        .is_ok());
 }
 
 /// Checks that errors returned from an agent stop execution of a lifecycle.
@@ -290,35 +291,28 @@ async fn test_err_handling() {
         TestAgent::create(rng.gen(), LifespanTarget::Initialization, &mut authority, tx.clone())
             .unwrap();
 
-    // Execute lifespan sequentially
-    let completion_ack = authority.execute_lifespan(
-        Lifespan::Initialization(InitializationContext::new(
-            switchboard_client.clone(),
-            HashSet::new(),
-        )),
-        service_context,
-        true,
-    );
+    fasync::spawn(async move {
+        // Ensure the first agent received an invocation, acknowledge with an error.
+        if let Some((id, invocation)) = rx.next().await {
+            assert_eq!(agent_1_id, id);
+            assert!(invocation.acknowledge(Err(format_err!("injected error"))).await.is_ok());
+        } else {
+            panic!("did not receive expected response from agent");
+        }
+    });
 
-    // Ensure the first agent received an invocation, acknowledge with an error.
-    if let Some((id, invocation)) = rx.next().await {
-        assert_eq!(agent_1_id, id);
-        assert!(invocation.acknowledge(Err(format_err!("injected error"))).await.is_ok());
-    } else {
-        panic!("did not receive expected response from agent");
-    }
-
-    let completion_result = completion_ack.await;
-
-    // Make sure the completion result could be fetched.
-    if completion_result.is_err() {
-        panic!("completion ack not properly received");
-    }
-
-    // Verify an error was encountered during completion.
-    if completion_result.unwrap().is_ok() {
-        panic!("an error should have been encountered");
-    }
+    // Execute lifespan sequentially. Should fail since agent 2 returns an error.
+    assert!(authority
+        .execute_lifespan(
+            Lifespan::Initialization(InitializationContext::new(
+                switchboard_client.clone(),
+                HashSet::new(),
+            )),
+            service_context,
+            true,
+        )
+        .await
+        .is_err());
 
     assert!(agent2_lock.lock().await.last_invocation().is_none());
 }
@@ -349,27 +343,34 @@ async fn test_available_components() {
     available_components.insert(SettingType::Display);
     available_components.insert(SettingType::Intl);
 
-    // Execute lifespan sequentially
-    let _ = authority.execute_lifespan(
-        Lifespan::Initialization(InitializationContext::new(
-            switchboard_client.clone(),
-            available_components.clone(),
-        )),
-        service_context,
-        true,
-    );
-
-    // Ensure the first agent received an invocation and verify components match
-    if let Some((id, invocation)) = rx.next().await {
-        assert_eq!(agent_id, id);
-        if let Lifespan::Initialization(context) = invocation.lifespan {
-            assert_eq!(available_components, context.available_components);
+    let available_components_clone = available_components.clone();
+    fasync::spawn(async move {
+        // Ensure the first agent received an invocation and verify components match
+        if let Some((id, invocation)) = rx.next().await {
+            assert_eq!(agent_id, id);
+            if let Lifespan::Initialization(context) = invocation.lifespan.clone() {
+                assert_eq!(available_components_clone, context.available_components);
+                assert!(invocation.acknowledge(Ok(())).await.is_ok());
+            } else {
+                panic!("should have encountered initialization lifespan");
+            }
         } else {
-            panic!("should have encountered initialization lifespan");
+            panic!("did not receive expected response from agent");
         }
-    } else {
-        panic!("did not receive expected response from agent");
-    }
+    });
+
+    // Execute lifespan sequentially
+    assert!(authority
+        .execute_lifespan(
+            Lifespan::Initialization(InitializationContext::new(
+                switchboard_client.clone(),
+                available_components.clone(),
+            )),
+            service_context,
+            true,
+        )
+        .await
+        .is_ok());
 }
 
 fn create_agents(

@@ -23,37 +23,33 @@ async fn verify_restore_handling(
     let counter: Arc<Mutex<u64>> = Arc::new(Mutex::new(0));
 
     let counter_clone = counter.clone();
-    if let Ok(environment) = EnvironmentBuilder::new(InMemoryStorageFactory::create())
-        .handler(
-            SettingType::Unknown,
-            create_setting_handler(Box::new(move |request| {
-                let counter = counter_clone.clone();
-                if request == SettingRequest::Restore {
-                    let result = (response_generate)();
-                    return Box::pin(async move {
-                        let mut counter_lock = counter.lock().await;
-                        *counter_lock += 1;
-                        return result;
-                    });
-                } else {
-                    return Box::pin(async { Ok(None) });
-                }
-            })),
-        )
-        .agents(&[Arc::new(Mutex::new(RestoreAgent::new()))])
-        .settings(&[SettingType::Unknown])
-        .spawn_nested(ENV_NAME)
-        .await
-    {
-        if let Ok(result) = environment.completion_rx.await {
-            assert!(result.is_ok(), success);
-            assert_eq!(*counter.lock().await, 1);
-        } else {
-            panic!("Completion rx should have returned the environment initialization result");
-        }
-    } else {
-        panic!("Should have successfully created environment");
-    }
+    assert_eq!(
+        success,
+        EnvironmentBuilder::new(InMemoryStorageFactory::create())
+            .handler(
+                SettingType::Unknown,
+                create_setting_handler(Box::new(move |request| {
+                    let counter = counter_clone.clone();
+                    if request == SettingRequest::Restore {
+                        let result = (response_generate)();
+                        return Box::pin(async move {
+                            let mut counter_lock = counter.lock().await;
+                            *counter_lock += 1;
+                            return result;
+                        });
+                    } else {
+                        return Box::pin(async { Ok(None) });
+                    }
+                })),
+            )
+            .agents(&[Arc::new(Mutex::new(RestoreAgent::new()))])
+            .settings(&[SettingType::Unknown])
+            .spawn_nested(ENV_NAME)
+            .await
+            .is_ok()
+    );
+
+    assert_eq!(*counter.lock().await, 1);
 }
 
 #[fuchsia_async::run_singlethreaded(test)]

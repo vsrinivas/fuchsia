@@ -54,7 +54,6 @@ use {
     fuchsia_component::server::{NestedEnvironment, ServiceFs, ServiceFsDir, ServiceObj},
     fuchsia_inspect::component,
     fuchsia_syslog::fx_log_err,
-    futures::channel::oneshot::Receiver,
     futures::lock::Mutex,
     futures::StreamExt,
     serde::{Deserialize, Serialize},
@@ -108,15 +107,11 @@ pub struct ServiceConfiguration {
 /// complete.
 pub struct Environment {
     pub nested_environment: Option<NestedEnvironment>,
-    pub completion_rx: Receiver<Result<(), Error>>,
 }
 
 impl Environment {
-    pub fn new(
-        nested_environment: Option<NestedEnvironment>,
-        completion_rx: Receiver<Result<(), Error>>,
-    ) -> Environment {
-        Environment { nested_environment: nested_environment, completion_rx: completion_rx }
+    pub fn new(nested_environment: Option<NestedEnvironment>) -> Environment {
+        Environment { nested_environment: nested_environment }
     }
 }
 
@@ -184,7 +179,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
     async fn prepare_env(
         self,
         runtime: Runtime,
-    ) -> (ServiceFs<ServiceObj<'static, ()>>, Receiver<Result<(), Error>>) {
+    ) -> Result<ServiceFs<ServiceObj<'static, ()>>, Error> {
         let mut fs = ServiceFs::new();
         // Initialize inspect.
         component::inspector().serve(&mut fs).ok();
@@ -210,31 +205,44 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
 
         EnvironmentBuilder::get_configuration_handlers(&mut handler_factory);
 
-        let rx = create_environment(
+        if create_environment(
             service_dir,
             settings,
             self.agents,
             service_context,
             Arc::new(Mutex::new(handler_factory)),
         )
-        .await;
+        .await
+        .is_err()
+        {
+            return Err(format_err!("could not create environment"));
+        }
 
-        (fs, rx)
+        Ok(fs)
     }
 
-    pub fn spawn(self, mut executor: fasync::Executor) {
-        let env_future = self.prepare_env(Runtime::Service);
-        let (mut fs, _) = executor.run_singlethreaded(env_future);
-        fs.take_and_serve_directory_handle().expect("could not service directory handle");
-        let () = executor.run_singlethreaded(fs.collect());
+    pub fn spawn(self, mut executor: fasync::Executor) -> Result<(), Error> {
+        match executor.run_singlethreaded(self.prepare_env(Runtime::Service)) {
+            Ok(mut fs) => {
+                fs.take_and_serve_directory_handle().expect("could not service directory handle");
+                let () = executor.run_singlethreaded(fs.collect());
+
+                Ok(())
+            }
+            Err(error) => Err(error),
+        }
     }
 
     pub async fn spawn_nested(self, env_name: &'static str) -> Result<Environment, Error> {
-        let (mut fs, rx) = self.prepare_env(Runtime::Nested(env_name)).await;
-        let nested_environment = Some(fs.create_salted_nested_environment(&env_name)?);
-        fasync::spawn(fs.collect());
+        match self.prepare_env(Runtime::Nested(env_name)).await {
+            Ok(mut fs) => {
+                let nested_environment = Some(fs.create_salted_nested_environment(&env_name)?);
+                fasync::spawn(fs.collect());
 
-        Ok(Environment::new(nested_environment, rx))
+                Ok(Environment::new(nested_environment))
+            }
+            Err(error) => Err(error),
+        }
     }
 
     /// Spawns a nested environment and returns the associated
@@ -246,8 +254,6 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
         env_name: &'static str,
     ) -> Result<NestedEnvironment, Error> {
         let environment = self.spawn_nested(env_name).await?;
-        // Wait for environment to be setup.
-        let _ = environment.completion_rx.await??;
 
         if let Some(env) = environment.nested_environment {
             return Ok(env);
@@ -341,7 +347,7 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
     agents: Vec<AgentHandle>,
     service_context_handle: ServiceContextHandle,
     handler_factory: Arc<Mutex<SettingHandlerFactoryImpl<T>>>,
-) -> Receiver<Result<(), Error>> {
+) -> Result<(), Error> {
     let registry_messenger_factory = create_registry_message_hub();
     let setting_handler_messenger_factory = create_setting_handler_message_hub();
 
@@ -442,47 +448,40 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
         });
     }
 
-    let (response_tx, response_rx) = futures::channel::oneshot::channel::<Result<(), Error>>();
-    let switchboard_client_clone = switchboard_client.clone();
-    fasync::spawn(async move {
-        // Register agents
-        for agent in agents {
-            if agent_authority.register(agent.clone()).is_err() {
-                fx_log_err!("failed to register agent: {:?}", agent.clone().lock().await);
-            }
+    // Register agents
+    for agent in agents {
+        if agent_authority.register(agent.clone()).is_err() {
+            fx_log_err!("failed to register agent: {:?}", agent.clone().lock().await);
         }
+    }
 
-        // Execute initialization agents sequentially
-        if let Ok(Ok(())) = agent_authority
-            .execute_lifespan(
-                Lifespan::Initialization(InitializationContext {
-                    available_components: components.clone(),
-                    switchboard_client: switchboard_client_clone.clone(),
-                }),
-                service_context_handle.clone(),
-                true,
-            )
-            .await
-        {
-            response_tx.send(Ok(())).ok();
-        } else {
-            response_tx.send(Err(format_err!("Agent initialization failed"))).ok();
-        }
+    // Execute initialization agents sequentially
+    if agent_authority
+        .execute_lifespan(
+            Lifespan::Initialization(InitializationContext {
+                available_components: components.clone(),
+                switchboard_client: switchboard_client.clone(),
+            }),
+            service_context_handle.clone(),
+            true,
+        )
+        .await
+        .is_err()
+    {
+        return Err(format_err!("Agent initialization failed"));
+    }
 
-        // Execute service agents concurrently
-        agent_authority
-            .execute_lifespan(
-                Lifespan::Service(RunContext {
-                    switchboard_client: switchboard_client_clone.clone(),
-                }),
-                service_context_handle.clone(),
-                false,
-            )
-            .await
-            .ok();
-    });
+    // Execute service agents concurrently
+    agent_authority
+        .execute_lifespan(
+            Lifespan::Service(RunContext { switchboard_client: switchboard_client.clone() }),
+            service_context_handle.clone(),
+            false,
+        )
+        .await
+        .ok();
 
-    return response_rx;
+    return Ok(());
 }
 
 #[cfg(test)]

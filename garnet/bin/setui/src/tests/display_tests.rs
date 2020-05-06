@@ -140,15 +140,13 @@ async fn validate_restore(manual_brightness: f32, auto_brightness: bool) {
         assert!(store.lock().await.write(&info, false).await.is_ok());
     }
 
-    let env = EnvironmentBuilder::new(storage_factory)
+    assert!(EnvironmentBuilder::new(storage_factory)
         .service(Box::new(ServiceRegistry::serve(service_registry)))
         .agents(&[Arc::new(Mutex::new(RestoreAgent::new()))])
         .settings(&[SettingType::Display])
         .spawn_nested(ENV_NAME)
         .await
-        .unwrap();
-
-    assert!(env.completion_rx.await.unwrap().is_ok());
+        .is_ok());
 
     if auto_brightness {
         let service_auto_brightness =

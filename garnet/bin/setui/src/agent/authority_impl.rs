@@ -6,7 +6,6 @@ use crate::agent::base::*;
 
 use crate::service_context::ServiceContextHandle;
 use anyhow::{format_err, Error};
-use fuchsia_async as fasync;
 use futures::lock::Mutex;
 use std::sync::Arc;
 
@@ -43,71 +42,57 @@ impl AuthorityImpl {
     /// agents will receive their invocations without waiting. However, the
     /// overall completion (signaled through the receiver returned by the method),
     /// will not return until all invocations have been acknowledged.
-    pub fn execute_lifespan(
+    pub async fn execute_lifespan(
         &self,
         lifespan: Lifespan,
         service_context: ServiceContextHandle,
         sequential: bool,
-    ) -> futures::channel::oneshot::Receiver<Result<(), Error>> {
-        let (completion_tx, completion_rx) =
-            futures::channel::oneshot::channel::<Result<(), Error>>();
-        let agents = self.agents.clone();
+    ) -> Result<(), Error> {
+        let mut pending_acks = Vec::new();
 
-        // Due to waiting on acknowledgements, we must spawn a separate task.
-        fasync::spawn(async move {
-            let mut pending_acks = Vec::new();
-
-            for agent in agents {
-                // Create ack channel.
-                let (response_tx, response_rx) =
-                    futures::channel::oneshot::channel::<Result<(), Error>>();
-                match agent.lock().await.invoke(Invocation {
-                    lifespan: lifespan.clone(),
-                    service_context: service_context.clone(),
-                    ack_sender: Arc::new(Mutex::new(Some(response_tx))),
-                }) {
-                    Ok(handled) => {
-                        // did not process result.
-                        if !handled {
-                            continue;
-                        }
-
-                        // Wait for invocation ack is sequential, otherwise store receiver to
-                        // be waited on later.
-                        if sequential {
-                            let result = process_invocation_ack(response_rx).await;
-                            // This cannot be part of process_invocation_ack since completion_tx
-                            // would be moved.
-                            if result.is_err() {
-                                completion_tx.send(result).ok();
-                                return;
-                            }
-                        } else {
-                            pending_acks.push(response_rx);
-                        }
+        for agent in &self.agents {
+            // Create ack channel.
+            let (response_tx, response_rx) =
+                futures::channel::oneshot::channel::<Result<(), Error>>();
+            match agent.lock().await.invoke(Invocation {
+                lifespan: lifespan.clone(),
+                service_context: service_context.clone(),
+                ack_sender: Arc::new(Mutex::new(Some(response_tx))),
+            }) {
+                Ok(handled) => {
+                    // did not process result.
+                    if !handled {
+                        continue;
                     }
-                    _ => {
-                        completion_tx.send(Err(format_err!("failed to invoke agent"))).ok();
-                        return;
+
+                    // Wait for invocation ack is sequential, otherwise store receiver to
+                    // be waited on later.
+                    if sequential {
+                        let result = process_invocation_ack(response_rx).await;
+
+                        if result.is_err() {
+                            return result;
+                        }
+                    } else {
+                        pending_acks.push(response_rx);
                     }
                 }
-            }
-
-            // Pending acks should only be present for non sequential execution. In
-            // this case wait for each to complete.
-            for ack in pending_acks {
-                let result = process_invocation_ack(ack).await;
-                if result.is_err() {
-                    completion_tx.send(result).ok();
-                    return;
+                _ => {
+                    return Err(format_err!("failed to invoke agent"));
                 }
             }
+        }
 
-            // Acknowledge completion of the execution.
-            completion_tx.send(Ok(())).ok();
-        });
+        // Pending acks should only be present for non sequential execution. In
+        // this case wait for each to complete.
+        for ack in pending_acks {
+            let result = process_invocation_ack(ack).await;
+            if result.is_err() {
+                return result;
+            }
+        }
 
-        return completion_rx;
+        Ok(())
     }
 }
 

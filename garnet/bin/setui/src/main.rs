@@ -48,7 +48,5 @@ fn main() -> Result<(), Error> {
             Arc::new(Mutex::new(EarconsAgent::new())),
             Arc::new(Mutex::new(RestoreAgent::new())),
         ])
-        .spawn(executor);
-
-    Ok(())
+        .spawn(executor)
 }

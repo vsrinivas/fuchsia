@@ -19,8 +19,7 @@ use {
         get_all_setting_types, DoNotDisturbInfo, SettingRequest, SettingResponseResult,
         SettingType, SwitchboardError,
     },
-    crate::{Environment, EnvironmentBuilder},
-    anyhow::Error,
+    crate::EnvironmentBuilder,
     async_trait::async_trait,
     futures::channel::mpsc::{unbounded, UnboundedSender},
     futures::lock::Mutex,
@@ -117,29 +116,31 @@ impl<C: Control + Sync + Send + 'static, S: Storage> controller::Handle for Data
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_spawn() {
     // Exercises successful spawn of a simple controller.
-    verify_handler::<SucceedControl>().await;
+    verify_handler::<SucceedControl>(true).await;
     // Exercises failed spawn of a simple controller.
-    verify_handler::<FailControl>().await;
+    verify_handler::<FailControl>(false).await;
     // Exercises successful spawn of a data controller.
-    verify_data_handler::<SucceedControl>().await;
+    verify_data_handler::<SucceedControl>(true).await;
     // Exercises failed spawn of a data controller.
-    verify_data_handler::<FailControl>().await;
+    verify_data_handler::<FailControl>(false).await;
 }
 
-async fn verify_handler<C: Control + Sync + Send + 'static>() {
-    verify_environment_startup(
+async fn verify_handler<C: Control + Sync + Send + 'static>(should_succeed: bool) {
+    assert_eq!(
+        should_succeed,
         EnvironmentBuilder::new(InMemoryStorageFactory::create())
             .handler(SettingType::Unknown, Box::new(Handler::<Controller<C>>::spawn))
             .agents(&[Arc::new(Mutex::new(RestoreAgent::new()))])
             .settings(&[SettingType::Unknown])
             .spawn_nested(ENV_NAME)
-            .await,
-    )
-    .await;
+            .await
+            .is_ok()
+    );
 }
 
-async fn verify_data_handler<C: Control + Sync + Send + 'static>() {
-    verify_environment_startup(
+async fn verify_data_handler<C: Control + Sync + Send + 'static>(should_succeed: bool) {
+    assert_eq!(
+        should_succeed,
         EnvironmentBuilder::new(InMemoryStorageFactory::create())
             .handler(
                 SettingType::Unknown,
@@ -150,21 +151,9 @@ async fn verify_data_handler<C: Control + Sync + Send + 'static>() {
             .agents(&[Arc::new(Mutex::new(RestoreAgent::new()))])
             .settings(&[SettingType::Unknown])
             .spawn_nested(ENV_NAME)
-            .await,
-    )
-    .await;
-}
-
-async fn verify_environment_startup(spawn_result: Result<Environment, Error>) {
-    if let Ok(environment) = spawn_result {
-        if let Ok(result) = environment.completion_rx.await {
-            assert!(result.is_ok());
-        } else {
-            panic!("Completion rx should have returned the environment initialization result");
-        }
-    } else {
-        panic!("Should have successfully created environment");
-    }
+            .await
+            .is_ok()
+    );
 }
 
 /// StateController allows for exposing incoming handler state to an outside
