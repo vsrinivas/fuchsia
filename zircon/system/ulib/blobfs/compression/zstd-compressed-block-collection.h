@@ -19,6 +19,7 @@
 #include <storage/buffer/vmoid_registry.h>
 #include <zstd/zstd_seekable.h>
 
+#include "zstd-seekable-block-cache.h"
 #include "allocator/allocator.h"
 #include "iterator/block-iterator-provider.h"
 #include "iterator/block-iterator.h"
@@ -63,7 +64,8 @@ class ZSTDCompressedBlockCollectionImpl : public ZSTDCompressedBlockCollection {
   //
   // The owner of this |ZSTDCompressedBlockCollectionImpl| is responsible for ensuring that the
   // above assumptions hold.
-  ZSTDCompressedBlockCollectionImpl(storage::OwnedVmoid* vmoid, uint32_t num_vmo_blocks,
+  ZSTDCompressedBlockCollectionImpl(fzl::VmoMapper* vmo_mapper, storage::OwnedVmoid* vmoid,
+                                    uint32_t num_vmo_blocks,
                                     SpaceManager* space_manager,
                                     fs::LegacyTransactionHandler* txn_handler,
                                     NodeFinder* node_finder,
@@ -74,6 +76,7 @@ class ZSTDCompressedBlockCollectionImpl : public ZSTDCompressedBlockCollection {
   zx_status_t Read(uint32_t data_block_offset, uint32_t num_blocks) final;
 
  private:
+  fzl::VmoMapper* vmo_mapper_;
   storage::OwnedVmoid* vmoid_;
   uint32_t num_vmo_blocks_;
   SpaceManager* space_manager_;
@@ -81,6 +84,7 @@ class ZSTDCompressedBlockCollectionImpl : public ZSTDCompressedBlockCollection {
   NodeFinder* node_finder_;
   uint32_t node_index_;
   uint32_t num_merkle_blocks_;
+  std::unique_ptr<ZSTDSeekableBlockCache> cache_;
 };
 
 }  // namespace blobfs

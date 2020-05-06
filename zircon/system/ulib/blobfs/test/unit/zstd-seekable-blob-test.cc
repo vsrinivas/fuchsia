@@ -243,7 +243,7 @@ TEST_F(ZSTDSeekAndReadTest, SmallReadOverTwoBlocks) {
   ASSERT_OK(vmoid.AttachVmo(read_buffer_vmo));
   uint32_t num_merkle_blocks = ComputeNumMerkleTreeBlocks(*node_finder()->GetNode(node_index));
   auto blocks = std::make_unique<ZSTDCompressedBlockCollectionImpl>(
-      &vmoid, 2 /* 2 blocks in only blob in test */, space_manager(), transaction_handler(),
+      &mapper, &vmoid, 2 /* 2 blocks in only blob in test */, space_manager(), transaction_handler(),
       node_finder(), node_index, num_merkle_blocks);
 
   // Extract blocks pointer for use in testing `ZSTDRead` API before moving it.

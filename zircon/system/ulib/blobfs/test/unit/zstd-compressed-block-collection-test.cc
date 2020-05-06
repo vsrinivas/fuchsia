@@ -70,8 +70,8 @@ class ZSTDCompressedBlockCollectionTest : public zxtest::Test {
     ASSERT_OK(fs_->BlockAttachVmo(vmo_, &vmoid_.GetReference(fs_.get())));
 
     *out_coll = std::make_unique<ZSTDCompressedBlockCollectionImpl>(
-        &vmoid_, num_vmo_blocks, SpaceManager(), TransactionHandler(), NodeFinder(),
-        LookupInode(blob_info), num_merkle_blocks);
+        &mapper_, &vmoid_, num_vmo_blocks, SpaceManager(), TransactionHandler(),
+        NodeFinder(), LookupInode(blob_info), num_merkle_blocks);
   }
 
  protected:

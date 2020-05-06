@@ -89,7 +89,7 @@ zx_status_t ZSTDSeekableBlobCollection::Read(uint32_t node_index, uint8_t* buf,
   // RandomAccessCompressedBlob(ZSTDCompressedBlockCollectionImpl) composition.
   uint32_t num_merkle_blocks = ComputeNumMerkleTreeBlocks(*node);
   auto blocks = std::make_unique<ZSTDCompressedBlockCollectionImpl>(
-      &vmoid_, kCompressedTransferBufferBlocks, space_manager_, txn_handler_, node_finder_,
+      &mapped_vmo_, &vmoid_, kCompressedTransferBufferBlocks, space_manager_, txn_handler_, node_finder_,
       node_index, num_merkle_blocks);
   std::unique_ptr<ZSTDSeekableBlob> blob;
   zx_status_t status = ZSTDSeekableBlob::Create(&mapped_vmo_, std::move(blocks), &blob);
