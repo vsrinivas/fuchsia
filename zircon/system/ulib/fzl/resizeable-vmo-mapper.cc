@@ -92,13 +92,7 @@ zx_status_t ResizeableVmoMapper::Grow(size_t size) {
 
   size = fbl::round_up<size_t>(size, ZX_PAGE_SIZE);
   zx_status_t status;
-
-  zx_info_vmar_t vmar_info;
   zx_handle_t vmar_handle = vmar_manager_ ? vmar_manager_->vmar().get() : zx_vmar_root_self();
-  if ((status = zx_object_get_info(vmar_handle, ZX_INFO_VMAR, &vmar_info, sizeof(vmar_info), NULL,
-                                   NULL)) != ZX_OK) {
-    return status;
-  }
 
   if ((status = vmo().set_size(size)) != ZX_OK) {
     return status;
