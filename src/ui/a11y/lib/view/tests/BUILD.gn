@@ -13,6 +13,7 @@ executable("view_tests") {
   testonly = true
 
   sources = [
+    "a11y_view_semantics_test.cc",
     "view_manager_test.cc",
     "view_wrapper_test.cc",
   ]
