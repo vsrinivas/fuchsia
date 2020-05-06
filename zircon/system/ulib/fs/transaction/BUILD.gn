@@ -27,9 +27,9 @@ zx_library("transaction") {
   ]
 
   public_deps = [
-    "//zircon/public/lib/buffer",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/operation",
+    "//zircon/system/ulib/storage/buffer",
   ]
 
   if (is_fuchsia) {

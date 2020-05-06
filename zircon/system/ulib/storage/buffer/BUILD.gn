@@ -2,6 +2,18 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36548.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/unification/zx_library.gni")
+
 zx_library("buffer") {
   sdk = "source"
   sdk_headers = [
@@ -29,21 +41,22 @@ zx_library("buffer") {
       "vmo_buffer.cc",
     ]
     public_deps = [
-      "$zx/system/ulib/fbl:headers",
-      "$zx/system/ulib/fzl:headers",
-      "$zx/system/ulib/storage/operation:headers",
-      "$zx/system/ulib/zx:headers",
+      "//zircon/public/lib/fbl",
+      "//zircon/public/lib/fzl",
+      "//zircon/public/lib/operation",
+      "//zircon/public/lib/zx",
     ]
     deps = [
-      "$zx/system/ulib/fbl",
-      "$zx/system/ulib/fdio",
+      "//zircon/public/lib/fbl",
+      "//zircon/public/lib/fdio",
 
       # TODO(38240): Clean up any remaining 'fs' dependencies. Only for fs/trace
-      "$zx/system/ulib/fs:headers",
-      "$zx/system/ulib/fzl",
-      "$zx/system/ulib/storage/operation",
-      "$zx/system/ulib/zircon",
-      "$zx/system/ulib/zx",
+      "//zircon/public/lib/fs",
+      "//zircon/public/lib/fzl",
+      "//zircon/public/lib/operation",
+      "//zircon/public/lib/zx",
     ]
+  } else {
+    public_deps = [ "//zircon/system/public" ]
   }
 }

@@ -87,12 +87,12 @@ zx_library("blobfs") {
   ]
   public_deps = [
     "//zircon/public/lib/bitmap",
-    "//zircon/public/lib/buffer",
     "//zircon/public/lib/fs",
     "//zircon/public/lib/range",
     "//zircon/public/lib/zxc",
     "//zircon/system/ulib/fs/journal",
     "//zircon/system/ulib/fs/transaction",
+    "//zircon/system/ulib/storage/buffer",
 
     # Seekable zstd include_dirs config required for all compilation units that incorporate it.
     "//third_party/zstd:zstdseek",
@@ -107,7 +107,6 @@ zx_library("blobfs") {
     "//third_party/zstd",
     "//third_party/zstd:zstdseek",
     "//zircon/public/lib/bitmap",
-    "//zircon/public/lib/buffer",
     "//zircon/public/lib/cksum",
     "//zircon/public/lib/digest",
     "//zircon/public/lib/fbl",
@@ -122,6 +121,7 @@ zx_library("blobfs") {
     "//zircon/system/ulib/fs/journal",
     "//zircon/system/ulib/fs/transaction",
     "//zircon/system/ulib/fvm",
+    "//zircon/system/ulib/storage/buffer",
   ]
   if (is_fuchsia) {
     sources += [

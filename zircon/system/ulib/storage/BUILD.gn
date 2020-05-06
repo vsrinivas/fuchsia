@@ -4,7 +4,6 @@
 
 group("storage") {
   deps = [
-    "buffer",
     "operation",
   ]
 }
