@@ -94,7 +94,9 @@ class VmEnumerator {
 // DEAD, then the VmAddressRegion is invalid and has no meaning.
 //
 // All VmAddressRegion and VmMapping state is protected by the aspace lock.
-class VmAddressRegionOrMapping : public fbl::RefCounted<VmAddressRegionOrMapping> {
+class VmAddressRegionOrMapping
+    : public fbl::RefCounted<VmAddressRegionOrMapping>,
+      public fbl::WAVLTreeContainable<fbl::RefPtr<VmAddressRegionOrMapping>> {
  public:
   // If a VMO-mapping, unmap all pages and remove dependency on vm object it has a ref to.
   // Otherwise recursively destroy child VMARs and transition to the DEAD state.
@@ -129,14 +131,6 @@ class VmAddressRegionOrMapping : public fbl::RefCounted<VmAddressRegionOrMapping
   // Dump debug info
   virtual void Dump(uint depth, bool verbose) const = 0;
 
-  // utility so WAVL tree can find the intrusive node for the child list
-  struct WAVLTreeTraits {
-    static fbl::WAVLTreeNodeState<fbl::RefPtr<VmAddressRegionOrMapping>>& node_state(
-        VmAddressRegionOrMapping& obj) {
-      return obj.subregion_list_node_;
-    }
-  };
-
  private:
   fbl::Canary<fbl::magic("VMRM")> canary_;
 
@@ -147,6 +141,10 @@ class VmAddressRegionOrMapping : public fbl::RefCounted<VmAddressRegionOrMapping
   // destructor, should only be invoked from RefPtr
   virtual ~VmAddressRegionOrMapping();
   friend fbl::RefPtr<VmAddressRegionOrMapping>;
+
+  bool in_subregion_tree() const {
+    return fbl::WAVLTreeContainable<fbl::RefPtr<VmAddressRegionOrMapping>>::InContainer();
+  }
 
   enum class LifeCycleState {
     // Initial state: if NOT_READY, then do not invoke Destroy() in the
@@ -201,17 +199,13 @@ class VmAddressRegionOrMapping : public fbl::RefCounted<VmAddressRegionOrMapping
 
   // pointer back to our parent region (nullptr if root or destroyed)
   VmAddressRegion* parent_;
-
-  // node for element in list of parent's children.
-  fbl::WAVLTreeNodeState<fbl::RefPtr<VmAddressRegionOrMapping>> subregion_list_node_;
 };
 
 // A list of regions ordered by virtual address.
 class RegionList final {
  public:
-  using ChildList = fbl::WAVLTree<vaddr_t, fbl::RefPtr<VmAddressRegionOrMapping>,
-                                  fbl::DefaultKeyedObjectTraits<vaddr_t, VmAddressRegionOrMapping>,
-                                  VmAddressRegionOrMapping::WAVLTreeTraits>;
+  using ChildList = fbl::WAVLTree<vaddr_t, fbl::RefPtr<VmAddressRegionOrMapping>>;
+
   // Remove *region* from the list, returns the removed region.
   fbl::RefPtr<VmAddressRegionOrMapping> RemoveRegion(VmAddressRegionOrMapping* region);
 

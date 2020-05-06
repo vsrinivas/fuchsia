@@ -624,7 +624,7 @@ zx_status_t VmMapping::DestroyLocked() {
 
   // Detach the now dead region from the parent
   if (parent_) {
-    DEBUG_ASSERT(subregion_list_node_.InContainer());
+    DEBUG_ASSERT(this->in_subregion_tree());
     parent_->subregions_.RemoveRegion(this);
   }
 

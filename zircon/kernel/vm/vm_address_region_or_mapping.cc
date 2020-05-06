@@ -48,7 +48,7 @@ VmAddressRegionOrMapping::~VmAddressRegionOrMapping() {
     Destroy();
   }
 
-  DEBUG_ASSERT(!subregion_list_node_.InContainer());
+  DEBUG_ASSERT(!this->in_subregion_tree());
 }
 
 bool VmAddressRegionOrMapping::IsAliveLocked() const {

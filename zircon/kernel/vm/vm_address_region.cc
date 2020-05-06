@@ -316,7 +316,7 @@ zx_status_t VmAddressRegion::DestroyLocked() {
     } else {
       // All children are destroyed, so now destroy the current node.
       if (cur->parent_) {
-        DEBUG_ASSERT(cur->subregion_list_node_.InContainer());
+        DEBUG_ASSERT(cur->in_subregion_tree());
         cur->parent_->subregions_.RemoveRegion(cur.get());
       }
       cur->state_ = LifeCycleState::DEAD;
