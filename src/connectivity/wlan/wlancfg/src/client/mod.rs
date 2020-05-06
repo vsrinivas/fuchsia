@@ -319,13 +319,13 @@ async fn handle_sme_connect_response(
             fidl_sme::ConnectResultCode::Success => {
                 info!("connection request successful to: {:?}", String::from_utf8_lossy(&id.ssid));
                 saved_networks.record_connect_success(id.clone(), &credential);
-                let update = listener::ClientStateUpdate {
+                let update = fidl_policy::ClientStateSummary {
                     state: None,
-                    networks: vec![listener::ClientNetworkState {
-                        id: id.into(),
-                        state: fidl_policy::ConnectionState::Connected,
+                    networks: Some(vec![fidl_policy::NetworkState {
+                        id: Some(id.into()),
+                        state: Some(fidl_policy::ConnectionState::Connected),
                         status: None,
-                    }],
+                    }]),
                 };
                 let _ignored =
                     update_sender.unbounded_send(listener::Message::NotifyListeners(update));
@@ -338,7 +338,7 @@ async fn handle_sme_connect_response(
                     String::from_utf8_lossy(&id.ssid),
                     error_code
                 );
-                // TODO(mnck): Send failure update.
+                // TODO(hahnr): Send failure update.
             }
         },
     }
@@ -841,16 +841,16 @@ mod tests {
             exec.run_until_stalled(&mut test_values.listener_updates.next()),
             Poll::Ready(Some(listener::Message::NotifyListeners(summary))) => summary
         );
-        let expected_summary = listener::ClientStateUpdate {
+        let expected_summary = fidl_policy::ClientStateSummary {
             state: None,
-            networks: vec![listener::ClientNetworkState {
-                id: fidl_policy::NetworkIdentifier {
+            networks: Some(vec![fidl_policy::NetworkState {
+                id: Some(fidl_policy::NetworkIdentifier {
                     ssid: b"foobar".to_vec(),
                     type_: fidl_policy::SecurityType::None,
-                },
-                state: fidl_policy::ConnectionState::Connected,
+                }),
+                state: Some(fidl_policy::ConnectionState::Connected),
                 status: None,
-            }],
+            }]),
         };
         assert_eq!(summary, expected_summary);
 

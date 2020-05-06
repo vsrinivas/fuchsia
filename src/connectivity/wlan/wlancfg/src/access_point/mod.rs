@@ -350,14 +350,12 @@ impl AccessPoint {
                 fidl_policy::OperatingState::Failed
             }
         };
-        let update = listener::ApStatesUpdate {
-            access_points: vec![listener::ApStateUpdate {
-                state: state,
-                mode: Some(result.mode),
-                band: Some(result.band),
-                frequency: None,
-                clients: None,
-            }],
+        let update = fidl_policy::AccessPointState {
+            state: Some(state),
+            mode: Some(result.mode),
+            band: Some(result.band),
+            frequency: None,
+            clients: None,
         };
         match self.send_listener_message(listener::Message::NotifyListeners(update)) {
             Ok(()) => {}
@@ -377,20 +375,19 @@ impl AccessPoint {
             }
         }
 
-        let update = listener::ApStatesUpdate {
-            access_points: match result.result {
-                Ok(()) => vec![],
-                Err(e) => {
-                    error!("Failed to stop AP: {}", e);
-                    vec![listener::ApStateUpdate {
-                        state: fidl_policy::OperatingState::Failed,
-                        mode: None,
-                        band: None,
-                        frequency: None,
-                        clients: None,
-                    }]
-                }
-            },
+        let state = match result.result {
+            Ok(()) => None,
+            Err(e) => {
+                error!("Failed to stop AP: {}", e);
+                Some(fidl_policy::OperatingState::Failed)
+            }
+        };
+        let update = fidl_policy::AccessPointState {
+            state: state,
+            mode: None,
+            band: None,
+            frequency: None,
+            clients: None,
         };
         match self.send_listener_message(listener::Message::NotifyListeners(update)) {
             Ok(()) => {}
@@ -706,7 +703,7 @@ mod tests {
             Poll::Ready(Some(listener::Message::NotifyListeners(summary))) => summary
         );
 
-        assert_eq!(summary.access_points[0].state, fidl_policy::OperatingState::Active);
+        assert_eq!(summary.state.unwrap(), fidl_policy::OperatingState::Active);
     }
 
     /// Tests the case where StartAccessPoint is called and there is a valid interface to service
@@ -777,7 +774,7 @@ mod tests {
             Poll::Ready(Some(listener::Message::NotifyListeners(summary))) => summary
         );
 
-        assert_eq!(summary.access_points[0].state, fidl_policy::OperatingState::Failed);
+        assert_eq!(summary.state.unwrap(), fidl_policy::OperatingState::Failed);
     }
 
     /// Tests the case where there are no interfaces available to handle a StartAccessPoint
@@ -933,7 +930,7 @@ mod tests {
             Poll::Ready(Some(listener::Message::NotifyListeners(summary))) => summary
         );
 
-        assert_eq!(summary.access_points[0].state, fidl_policy::OperatingState::Active);
+        assert_eq!(summary.state.unwrap(), fidl_policy::OperatingState::Active);
     }
 
     /// Tests the case where StopAccessPoint is called and there is a valid interface to handle the
@@ -988,7 +985,7 @@ mod tests {
             Poll::Ready(Some(listener::Message::NotifyListeners(summary))) => summary
         );
 
-        assert_eq!(summary.access_points.len(), 0);
+        assert!(summary.state.is_none());
     }
 
     /// Tests the case where StopAccessPoint is called and there is a valid interface to service
@@ -1038,7 +1035,7 @@ mod tests {
             Poll::Ready(Some(listener::Message::NotifyListeners(summary))) => summary
         );
 
-        assert_eq!(summary.access_points[0].state, fidl_policy::OperatingState::Failed);
+        assert_eq!(summary.state.unwrap(), fidl_policy::OperatingState::Failed);
     }
 
     /// Tests the case where StopAccessPoint is called, but there are no interfaces to service the
@@ -1120,7 +1117,7 @@ mod tests {
             Poll::Ready(Some(listener::Message::NotifyListeners(summary))) => summary
         );
 
-        assert_eq!(summary.access_points.len(), 0);
+        assert!(summary.state.is_none());
     }
 
     /// Tests the case where StopAccessPoints is called and there is a valid interface to handle
@@ -1160,7 +1157,7 @@ mod tests {
             Poll::Ready(Some(listener::Message::NotifyListeners(summary))) => summary
         );
 
-        assert_eq!(summary.access_points[0].state, fidl_policy::OperatingState::Failed);
+        assert_eq!(summary.state.unwrap(), fidl_policy::OperatingState::Failed);
     }
 
     #[test]
