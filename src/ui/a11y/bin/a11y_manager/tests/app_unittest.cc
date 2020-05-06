@@ -48,7 +48,8 @@ class AppUnitTest : public gtest::TestLoopFixture {
                       context_->outgoing()->debug_dir()),
         tts_manager_(context_),
         color_transform_manager_(context_),
-        app_(context_, &view_manager_, &tts_manager_, &color_transform_manager_) {}
+        app_(context_, &view_manager_, &tts_manager_, &color_transform_manager_,
+             &gesture_listener_registry_) {}
   void SetUp() override {
     TestLoopFixture::SetUp();
 
@@ -104,6 +105,7 @@ class AppUnitTest : public gtest::TestLoopFixture {
   a11y::ViewManager view_manager_;
   a11y::TtsManager tts_manager_;
   a11y::ColorTransformManager color_transform_manager_;
+  a11y::GestureListenerRegistry gesture_listener_registry_;
 
   // App under test
   a11y_manager::App app_;

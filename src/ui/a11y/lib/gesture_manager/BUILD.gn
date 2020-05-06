@@ -6,11 +6,14 @@ source_set("gesture_manager") {
   sources = [
     "gesture_handler.cc",
     "gesture_handler.h",
+    "gesture_listener_registry.cc",
+    "gesture_listener_registry.h",
     "gesture_manager.cc",
     "gesture_manager.h",
   ]
 
   public_deps = [
+    "//sdk/fidl/fuchsia.accessibility.gesture",
     "//sdk/fidl/fuchsia.math",
     "//sdk/fidl/fuchsia.ui.input",
     "//sdk/fidl/fuchsia.ui.input.accessibility",

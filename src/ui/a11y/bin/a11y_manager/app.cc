@@ -15,17 +15,22 @@ namespace a11y_manager {
 const float kDefaultMagnificationZoomFactor = 1.0;
 
 App::App(sys::ComponentContext* context, a11y::ViewManager* view_manager,
-         a11y::TtsManager* tts_manager, a11y::ColorTransformManager* color_transform_manager)
+         a11y::TtsManager* tts_manager, a11y::ColorTransformManager* color_transform_manager,
+         a11y::GestureListenerRegistry* gesture_listener_registry)
     : view_manager_(view_manager),
       tts_manager_(tts_manager),
-      color_transform_manager_(color_transform_manager) {
+      color_transform_manager_(color_transform_manager),
+      gesture_listener_registry_(gesture_listener_registry) {
   FX_DCHECK(context);
   FX_DCHECK(view_manager);
   FX_DCHECK(tts_manager);
   FX_DCHECK(color_transform_manager);
+  FX_DCHECK(gesture_listener_registry_);
 
   context->outgoing()->AddPublicService(semantics_manager_bindings_.GetHandler(view_manager_));
   context->outgoing()->AddPublicService(magnifier_bindings_.GetHandler(&magnifier_));
+  context->outgoing()->AddPublicService(
+      gesture_listener_registry_bindings_.GetHandler(gesture_listener_registry_));
 
   // Connect to Root presenter service.
   pointer_event_registry_ =

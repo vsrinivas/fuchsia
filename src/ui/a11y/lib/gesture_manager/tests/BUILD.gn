@@ -10,7 +10,10 @@ group("tests") {
 executable("gesture_manager_tests") {
   testonly = true
 
-  sources = [ "gesture_manager_unittest.cc" ]
+  sources = [
+    "gesture_listener_registry_unittest.cc",
+    "gesture_manager_unittest.cc",
+  ]
 
   deps = [
     "//garnet/public/lib/gtest",

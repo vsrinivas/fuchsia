@@ -6,6 +6,7 @@
 #define SRC_UI_A11Y_BIN_A11Y_MANAGER_APP_H_
 
 #include <fuchsia/accessibility/cpp/fidl.h>
+#include <fuchsia/accessibility/gesture/cpp/fidl.h>
 #include <fuchsia/settings/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/focus/cpp/fidl.h>
@@ -20,6 +21,7 @@
 #include "src/lib/fxl/macros.h"
 #include "src/ui/a11y/lib/configuration/color_transform_manager.h"
 #include "src/ui/a11y/lib/focus_chain/focus_chain_manager.h"
+#include "src/ui/a11y/lib/gesture_manager/gesture_listener_registry.h"
 #include "src/ui/a11y/lib/gesture_manager/gesture_manager.h"
 #include "src/ui/a11y/lib/magnifier/magnifier.h"
 #include "src/ui/a11y/lib/screen_reader/screen_reader.h"
@@ -79,8 +81,11 @@ class A11yManagerState {
 // A11y manager application entry point.
 class App {
  public:
+  // App dependencies which are trivial to set up and contribute to easier test should be
+  // passed in the constructor.
   explicit App(sys::ComponentContext* context, a11y::ViewManager* view_manager,
-               a11y::TtsManager* tts_manager, a11y::ColorTransformManager* color_transform_manager);
+               a11y::TtsManager* tts_manager, a11y::ColorTransformManager* color_transform_manager,
+               a11y::GestureListenerRegistry* gesture_listener_registry);
   ~App();
 
   // Sets the a11y manager to the given configuration. Visible for testing.
@@ -120,6 +125,7 @@ class App {
   a11y::ViewManager* view_manager_;
   a11y::TtsManager* tts_manager_;
   a11y::ColorTransformManager* color_transform_manager_;
+  a11y::GestureListenerRegistry* gesture_listener_registry_;
 
   std::unique_ptr<a11y::FocusChainManager> focus_chain_manager_;
   // The gesture manager is instantiated whenever a11y manager starts listening
@@ -134,6 +140,9 @@ class App {
   fidl::BindingSet<fuchsia::ui::focus::FocusChainListener> focus_chain_listener_bindings_;
 
   fidl::BindingSet<fuchsia::accessibility::Magnifier> magnifier_bindings_;
+
+  fidl::BindingSet<fuchsia::accessibility::gesture::ListenerRegistry>
+      gesture_listener_registry_bindings_;
 
   // Interface between a11y manager and Root presenter to register a
   // accessibility pointer event listener.

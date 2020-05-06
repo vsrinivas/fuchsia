@@ -21,8 +21,10 @@ int main(int argc, const char** argv) {
                                  context->outgoing()->debug_dir());
   a11y::TtsManager tts_manager(context.get());
   a11y::ColorTransformManager color_transform_manager(context.get());
+  a11y::GestureListenerRegistry gesture_listener_registry;
 
-  a11y_manager::App app(context.get(), &view_manager, &tts_manager, &color_transform_manager);
+  a11y_manager::App app(context.get(), &view_manager, &tts_manager, &color_transform_manager,
+                        &gesture_listener_registry);
   loop.Run();
   return 0;
 }
