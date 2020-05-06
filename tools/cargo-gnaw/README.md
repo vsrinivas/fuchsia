@@ -81,7 +81,7 @@ rust_library("simple-1-0-25") {
   rustflags = ["--cap-lints=allow",
                "--edition=2018",
                "-Cmetadata=9ac42213326ac72d",
-               "-Cextra-filename=9ac42213326ac72d"]
+               "-Cextra-filename=-9ac42213326ac72d"]
 }
 
 ```

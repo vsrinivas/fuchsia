@@ -722,7 +722,7 @@ rust_library("adler32-v1_0_4") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=49c7289baa3c93e2",
-    "-Cextra-filename=49c7289baa3c93e2",
+    "-Cextra-filename=-49c7289baa3c93e2",
   ]
 }
 
@@ -744,7 +744,7 @@ rust_library("aho-corasick-v0_7_10") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=fe50af6a16f014ba",
-    "-Cextra-filename=fe50af6a16f014ba",
+    "-Cextra-filename=-fe50af6a16f014ba",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
   ]
@@ -770,7 +770,7 @@ rust_library("ansi_term-v0_11_0") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=c2aacb35c8d0666a",
-    "-Cextra-filename=c2aacb35c8d0666a",
+    "-Cextra-filename=-c2aacb35c8d0666a",
   ]
 }
 
@@ -791,7 +791,7 @@ rust_library("anyhow-v1_0_25") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=7791292ca6d4cc50",
-    "-Cextra-filename=7791292ca6d4cc50",
+    "-Cextra-filename=-7791292ca6d4cc50",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
   ]
@@ -815,7 +815,7 @@ rust_library("approx-v0_3_1") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=173777c44c3a845d",
-    "-Cextra-filename=173777c44c3a845d",
+    "-Cextra-filename=-173777c44c3a845d",
   ]
 }
 
@@ -837,7 +837,7 @@ rust_library("arbitrary-v0_4_0") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=7339b6a6d9177c8a",
-    "-Cextra-filename=7339b6a6d9177c8a",
+    "-Cextra-filename=-7339b6a6d9177c8a",
     "--cfg=feature=\"derive\"",
     "--cfg=feature=\"derive_arbitrary\"",
   ]
@@ -860,7 +860,7 @@ rust_library("arc-swap-v0_4_4") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=575b61fb70feca0a",
-    "-Cextra-filename=575b61fb70feca0a",
+    "-Cextra-filename=-575b61fb70feca0a",
   ]
 }
 
@@ -883,7 +883,7 @@ rust_library("argh-v0_1_3") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=e6d3638980bc6cc2",
-    "-Cextra-filename=e6d3638980bc6cc2",
+    "-Cextra-filename=-e6d3638980bc6cc2",
   ]
 }
 
@@ -909,7 +909,7 @@ rust_proc_macro("argh_derive-v0_1_1") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=1a52dd25b67cbf93",
-    "-Cextra-filename=1a52dd25b67cbf93",
+    "-Cextra-filename=-1a52dd25b67cbf93",
   ]
 }
 
@@ -930,7 +930,7 @@ rust_library("argh_shared-v0_1_1") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=caab17a714e9e1db",
-    "-Cextra-filename=caab17a714e9e1db",
+    "-Cextra-filename=-caab17a714e9e1db",
   ]
 }
 
@@ -952,7 +952,7 @@ rust_library("arrayvec-v0_4_10") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=44ee89976bf67263",
-    "-Cextra-filename=44ee89976bf67263",
+    "-Cextra-filename=-44ee89976bf67263",
   ]
 }
 
@@ -973,7 +973,7 @@ rust_library("ascii-v0_8_7") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=d2b82686072c612a",
-    "-Cextra-filename=d2b82686072c612a",
+    "-Cextra-filename=-d2b82686072c612a",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
   ]
@@ -1037,7 +1037,7 @@ rust_library("async-std-v1_5_0") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=f8ce9a816d6a0428",
-    "-Cextra-filename=f8ce9a816d6a0428",
+    "-Cextra-filename=-f8ce9a816d6a0428",
     "--cfg=feature=\"async-attributes\"",
     "--cfg=feature=\"async-task\"",
     "--cfg=feature=\"attributes\"",
@@ -1085,7 +1085,7 @@ rust_library("async-task-v1_3_1") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=7a4f88d524406133",
-    "-Cextra-filename=7a4f88d524406133",
+    "-Cextra-filename=-7a4f88d524406133",
   ]
 }
 
@@ -1109,7 +1109,7 @@ rust_proc_macro("async-trait-v0_1_22") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=815e9516aea025f1",
-    "-Cextra-filename=815e9516aea025f1",
+    "-Cextra-filename=-815e9516aea025f1",
   ]
 }
 
@@ -1130,7 +1130,7 @@ rust_library("atom-v0_3_5") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=e5d6d7aa13ea54d2",
-    "-Cextra-filename=e5d6d7aa13ea54d2",
+    "-Cextra-filename=-e5d6d7aa13ea54d2",
   ]
 }
 
@@ -1160,7 +1160,7 @@ rust_library("atty-v0_2_11") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=8928199b13c115d5",
-    "-Cextra-filename=8928199b13c115d5",
+    "-Cextra-filename=-8928199b13c115d5",
   ]
 }
 
@@ -1185,7 +1185,7 @@ rust_library("backtrace-v0_3_42") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=8890db06d187a09",
-    "-Cextra-filename=8890db06d187a09",
+    "-Cextra-filename=-8890db06d187a09",
     "--cfg=feature=\"backtrace-sys\"",
     "--cfg=feature=\"dbghelp\"",
     "--cfg=feature=\"default\"",
@@ -1214,7 +1214,7 @@ rust_library("backtrace-sys-v0_1_32") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=ad4f80b07cdcc6a",
-    "-Cextra-filename=ad4f80b07cdcc6a",
+    "-Cextra-filename=-ad4f80b07cdcc6a",
   ]
 }
 
@@ -1236,7 +1236,7 @@ rust_library("base64-v0_10_1") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=97cd7606f23ece87",
-    "-Cextra-filename=97cd7606f23ece87",
+    "-Cextra-filename=-97cd7606f23ece87",
   ]
 }
 
@@ -1259,7 +1259,7 @@ rust_library("base64-v0_9_3") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=4feaf160d10ad83f",
-    "-Cextra-filename=4feaf160d10ad83f",
+    "-Cextra-filename=-4feaf160d10ad83f",
   ]
 }
 
@@ -1282,7 +1282,7 @@ rust_library("bincode-v1_1_1") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=ca4f5e63cc529fc0",
-    "-Cextra-filename=ca4f5e63cc529fc0",
+    "-Cextra-filename=-ca4f5e63cc529fc0",
   ]
 }
 
@@ -1304,7 +1304,7 @@ rust_library("bit-set-v0_5_0") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=ff87f32c24820532",
-    "-Cextra-filename=ff87f32c24820532",
+    "-Cextra-filename=-ff87f32c24820532",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
   ]
@@ -1327,7 +1327,7 @@ rust_library("bit-vec-v0_5_0") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=56024dde80975899",
-    "-Cextra-filename=56024dde80975899",
+    "-Cextra-filename=-56024dde80975899",
     "--cfg=feature=\"std\"",
   ]
 }
@@ -1349,7 +1349,7 @@ rust_library("bitfield-v0_13_1") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=1fad8370b10e06b",
-    "-Cextra-filename=1fad8370b10e06b",
+    "-Cextra-filename=-1fad8370b10e06b",
   ]
 }
 
@@ -1370,7 +1370,7 @@ rust_library("bitflags-v1_2_1") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=8e1938b48c59a475",
-    "-Cextra-filename=8e1938b48c59a475",
+    "-Cextra-filename=-8e1938b48c59a475",
     "--cfg=feature=\"default\"",
     "--cfg=bitflags_const_fn",
   ]
@@ -1394,7 +1394,7 @@ rust_library("brotli-sys-v0_3_2") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=ad0de28a565fc089",
-    "-Cextra-filename=ad0de28a565fc089",
+    "-Cextra-filename=-ad0de28a565fc089",
   ]
 }
 
@@ -1417,7 +1417,7 @@ rust_library("brotli2-v0_3_2") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=a2408c65b4caa1c0",
-    "-Cextra-filename=a2408c65b4caa1c0",
+    "-Cextra-filename=-a2408c65b4caa1c0",
   ]
 }
 
@@ -1442,7 +1442,7 @@ rust_library("bstr-v0_2_12") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=e2e94202b5ae2111",
-    "-Cextra-filename=e2e94202b5ae2111",
+    "-Cextra-filename=-e2e94202b5ae2111",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"lazy_static\"",
     "--cfg=feature=\"regex-automata\"",
@@ -1473,7 +1473,7 @@ rust_library("buf_redux-v0_8_1") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=c5ef6bbd4411a19d",
-    "-Cextra-filename=c5ef6bbd4411a19d",
+    "-Cextra-filename=-c5ef6bbd4411a19d",
   ]
 }
 
@@ -1494,7 +1494,7 @@ rust_library("bumpalo-v3_2_1") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=6c0f43d1ab0e9655",
-    "-Cextra-filename=6c0f43d1ab0e9655",
+    "-Cextra-filename=-6c0f43d1ab0e9655",
     "--cfg=feature=\"default\"",
   ]
 }
@@ -1516,7 +1516,7 @@ rust_library("bytecount-v0_6_0") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=b4fade0a2dc4ee4a",
-    "-Cextra-filename=b4fade0a2dc4ee4a",
+    "-Cextra-filename=-b4fade0a2dc4ee4a",
   ]
 }
 
@@ -1537,7 +1537,7 @@ rust_library("byteorder-v1_3_1") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=e4429ddc31d502a7",
-    "-Cextra-filename=e4429ddc31d502a7",
+    "-Cextra-filename=-e4429ddc31d502a7",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"i128\"",
     "--cfg=feature=\"std\"",
@@ -1565,7 +1565,7 @@ rust_library("bytes-v0_4_11") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=9db293c39283cbe0",
-    "-Cextra-filename=9db293c39283cbe0",
+    "-Cextra-filename=-9db293c39283cbe0",
     "--cfg=feature=\"either\"",
   ]
 }
@@ -1587,7 +1587,7 @@ rust_library("bytes-v0_5_4") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=b8d56db65f2354f4",
-    "-Cextra-filename=b8d56db65f2354f4",
+    "-Cextra-filename=-b8d56db65f2354f4",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
   ]
@@ -1611,7 +1611,7 @@ rust_library("c2-chacha-v0_2_3") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=e250d97399ca3ae3",
-    "-Cextra-filename=e250d97399ca3ae3",
+    "-Cextra-filename=-e250d97399ca3ae3",
     "--cfg=feature=\"simd\"",
     "--cfg=feature=\"std\"",
   ]
@@ -1638,7 +1638,7 @@ rust_library("cargo_metadata-v0_9_1") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=cc51a76810d0c63c",
-    "-Cextra-filename=cc51a76810d0c63c",
+    "-Cextra-filename=-cc51a76810d0c63c",
     "--cfg=feature=\"default\"",
   ]
 }
@@ -1660,7 +1660,7 @@ rust_library("cast-v0_2_2") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=2e8d76cdb85d3e9e",
-    "-Cextra-filename=2e8d76cdb85d3e9e",
+    "-Cextra-filename=-2e8d76cdb85d3e9e",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
   ]
@@ -1683,7 +1683,7 @@ rust_library("cfg-if-v0_1_10") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=de3fee777d28505f",
-    "-Cextra-filename=de3fee777d28505f",
+    "-Cextra-filename=-de3fee777d28505f",
   ]
 }
 
@@ -1707,7 +1707,7 @@ rust_library("chrono-v0_4_6") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=d43546254418dc10",
-    "-Cextra-filename=d43546254418dc10",
+    "-Cextra-filename=-d43546254418dc10",
     "--cfg=feature=\"clock\"",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"time\"",
@@ -1731,7 +1731,7 @@ rust_library("chunked_transfer-v0_3_1") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=fcaf6689849b0a6b",
-    "-Cextra-filename=fcaf6689849b0a6b",
+    "-Cextra-filename=-fcaf6689849b0a6b",
   ]
 }
 
@@ -1761,7 +1761,7 @@ rust_library("clap-v2_33_0") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=b00b06b1e3d703b7",
-    "-Cextra-filename=b00b06b1e3d703b7",
+    "-Cextra-filename=-b00b06b1e3d703b7",
     "--cfg=feature=\"ansi_term\"",
     "--cfg=feature=\"atty\"",
     "--cfg=feature=\"color\"",
@@ -1790,7 +1790,7 @@ rust_library("cloudabi-v0_0_3") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=e4327fa628aa1d7e",
-    "-Cextra-filename=e4327fa628aa1d7e",
+    "-Cextra-filename=-e4327fa628aa1d7e",
     "--cfg=feature=\"bitflags\"",
     "--cfg=feature=\"default\"",
   ]
@@ -1813,7 +1813,7 @@ rust_library("crc-v1_8_1") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=b07cba2eb65fd100",
-    "-Cextra-filename=b07cba2eb65fd100",
+    "-Cextra-filename=-b07cba2eb65fd100",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
   ]
@@ -1837,7 +1837,7 @@ rust_library("crc32fast-v1_2_0") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=6606a11d9036fb05",
-    "-Cextra-filename=6606a11d9036fb05",
+    "-Cextra-filename=-6606a11d9036fb05",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
     "--cfg=crc32fast_stdarchx86",
@@ -1878,7 +1878,7 @@ rust_library("criterion-v0_2_11") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=b8034bd1e116f938",
-    "-Cextra-filename=b8034bd1e116f938",
+    "-Cextra-filename=-b8034bd1e116f938",
   ]
 }
 
@@ -1905,7 +1905,7 @@ rust_library("crossbeam-v0_7_3") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=398f15e80c220e91",
-    "-Cextra-filename=398f15e80c220e91",
+    "-Cextra-filename=-398f15e80c220e91",
     "--cfg=feature=\"crossbeam-channel\"",
     "--cfg=feature=\"crossbeam-deque\"",
     "--cfg=feature=\"crossbeam-queue\"",
@@ -1933,7 +1933,7 @@ rust_library("crossbeam-channel-v0_4_2") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=b1ac2d23ad50ed6a",
-    "-Cextra-filename=b1ac2d23ad50ed6a",
+    "-Cextra-filename=-b1ac2d23ad50ed6a",
   ]
 }
 
@@ -1957,7 +1957,7 @@ rust_library("crossbeam-deque-v0_7_3") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=1b8ed12e68dce902",
-    "-Cextra-filename=1b8ed12e68dce902",
+    "-Cextra-filename=-1b8ed12e68dce902",
   ]
 }
 
@@ -1984,7 +1984,7 @@ rust_library("crossbeam-epoch-v0_8_2") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=c9fde0457794d33",
-    "-Cextra-filename=c9fde0457794d33",
+    "-Cextra-filename=-c9fde0457794d33",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"lazy_static\"",
     "--cfg=feature=\"std\"",
@@ -2010,7 +2010,7 @@ rust_library("crossbeam-queue-v0_1_2") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=7bd6e9d83d57d2bd",
-    "-Cextra-filename=7bd6e9d83d57d2bd",
+    "-Cextra-filename=-7bd6e9d83d57d2bd",
   ]
 }
 
@@ -2033,7 +2033,7 @@ rust_library("crossbeam-queue-v0_2_1") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=e8eb2d3b2d6a8126",
-    "-Cextra-filename=e8eb2d3b2d6a8126",
+    "-Cextra-filename=-e8eb2d3b2d6a8126",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
   ]
@@ -2059,7 +2059,7 @@ rust_library("crossbeam-utils-v0_6_6") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=c334bfa6908b4ef",
-    "-Cextra-filename=c334bfa6908b4ef",
+    "-Cextra-filename=-c334bfa6908b4ef",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"lazy_static\"",
     "--cfg=feature=\"std\"",
@@ -2085,7 +2085,7 @@ rust_library("crossbeam-utils-v0_7_2") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=5b2f6810d5833e99",
-    "-Cextra-filename=5b2f6810d5833e99",
+    "-Cextra-filename=-5b2f6810d5833e99",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"lazy_static\"",
     "--cfg=feature=\"std\"",
@@ -2114,7 +2114,7 @@ rust_library("csv-v1_1_3") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=c447310fd6863403",
-    "-Cextra-filename=c447310fd6863403",
+    "-Cextra-filename=-c447310fd6863403",
   ]
 }
 
@@ -2136,7 +2136,7 @@ rust_library("csv-core-v0_1_10") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=736f88686751ea8f",
-    "-Cextra-filename=736f88686751ea8f",
+    "-Cextra-filename=-736f88686751ea8f",
     "--cfg=feature=\"default\"",
   ]
 }
@@ -2159,7 +2159,7 @@ rust_library("ct-logs-v0_6_0") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=1d46bea7ecea0aa7",
-    "-Cextra-filename=1d46bea7ecea0aa7",
+    "-Cextra-filename=-1d46bea7ecea0aa7",
   ]
 }
 
@@ -2180,7 +2180,7 @@ rust_library("data-encoding-v2_1_2") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=29add1a44d9631dd",
-    "-Cextra-filename=29add1a44d9631dd",
+    "-Cextra-filename=-29add1a44d9631dd",
   ]
 }
 
@@ -2204,7 +2204,7 @@ rust_library("deflate-v0_7_19") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=65e9287bc3778641",
-    "-Cextra-filename=65e9287bc3778641",
+    "-Cextra-filename=-65e9287bc3778641",
     "--cfg=feature=\"gzip\"",
     "--cfg=feature=\"gzip-header\"",
   ]
@@ -2230,7 +2230,7 @@ rust_proc_macro("derivative-v1_0_2") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=27a3abed22cae427",
-    "-Cextra-filename=27a3abed22cae427",
+    "-Cextra-filename=-27a3abed22cae427",
   ]
 }
 
@@ -2254,7 +2254,7 @@ rust_proc_macro("derive_arbitrary-v0_4_0") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=707386e28fd45df8",
-    "-Cextra-filename=707386e28fd45df8",
+    "-Cextra-filename=-707386e28fd45df8",
   ]
 }
 
@@ -2276,7 +2276,7 @@ rust_library("derp-v0_0_13") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=a056a6fa5b02e971",
-    "-Cextra-filename=a056a6fa5b02e971",
+    "-Cextra-filename=-a056a6fa5b02e971",
   ]
 }
 
@@ -2297,7 +2297,7 @@ rust_library("difference-v2_0_0") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=729c4c18786eef68",
-    "-Cextra-filename=729c4c18786eef68",
+    "-Cextra-filename=-729c4c18786eef68",
     "--cfg=feature=\"default\"",
   ]
 }
@@ -2319,7 +2319,7 @@ rust_library("either-v1_5_0") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=22a1bbc0eb940e7e",
-    "-Cextra-filename=22a1bbc0eb940e7e",
+    "-Cextra-filename=-22a1bbc0eb940e7e",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"use_std\"",
   ]
@@ -2342,7 +2342,7 @@ rust_library("encode_unicode-v0_3_5") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=ab58d040036a3fcc",
-    "-Cextra-filename=ab58d040036a3fcc",
+    "-Cextra-filename=-ab58d040036a3fcc",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
   ]
@@ -2369,7 +2369,7 @@ rust_proc_macro("enum-as-inner-v0_3_0") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=1ccf1af5f033dd92",
-    "-Cextra-filename=1ccf1af5f033dd92",
+    "-Cextra-filename=-1ccf1af5f033dd92",
   ]
 }
 
@@ -2391,7 +2391,7 @@ rust_library("error-chain-v0_12_0") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=ba7b1075069f9cf9",
-    "-Cextra-filename=ba7b1075069f9cf9",
+    "-Cextra-filename=-ba7b1075069f9cf9",
     "--cfg=feature=\"backtrace\"",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"example_generated\"",
@@ -2416,7 +2416,7 @@ rust_library("euclid-v0_20_7") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=4687831aa0edfe47",
-    "-Cextra-filename=4687831aa0edfe47",
+    "-Cextra-filename=-4687831aa0edfe47",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
   ]
@@ -2441,7 +2441,7 @@ rust_library("eui48-v0_4_6") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=82065d8958fea295",
-    "-Cextra-filename=82065d8958fea295",
+    "-Cextra-filename=-82065d8958fea295",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"disp_hexstring\"",
     "--cfg=feature=\"serde\"",
@@ -2472,7 +2472,7 @@ rust_library("filetime-v0_2_4") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=244356ab2e506ab",
-    "-Cextra-filename=244356ab2e506ab",
+    "-Cextra-filename=-244356ab2e506ab",
   ]
 
   aliased_deps = {
@@ -2504,7 +2504,7 @@ rust_library("flate2-v1_0_14") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=28efad300e8652f3",
-    "-Cextra-filename=28efad300e8652f3",
+    "-Cextra-filename=-28efad300e8652f3",
     "--cfg=feature=\"miniz_oxide\"",
     "--cfg=feature=\"rust_backend\"",
   ]
@@ -2527,7 +2527,7 @@ rust_library("fnv-v1_0_6") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=aea2659b6e57ee72",
-    "-Cextra-filename=aea2659b6e57ee72",
+    "-Cextra-filename=-aea2659b6e57ee72",
   ]
 }
 
@@ -2550,7 +2550,7 @@ static_library("freetype-v0_4_1") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=7e0fcaa8724dd96",
-    "-Cextra-filename=7e0fcaa8724dd96",
+    "-Cextra-filename=-7e0fcaa8724dd96",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"servo-freetype-sys\"",
   ]
@@ -2577,7 +2577,7 @@ rust_library("fuchsia-cprng-v0_1_1") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=2003c73715c7fc44",
-    "-Cextra-filename=2003c73715c7fc44",
+    "-Cextra-filename=-2003c73715c7fc44",
   ]
 }
 
@@ -2600,7 +2600,7 @@ rust_library("fuchsia-zircon-v0_3_3") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=60603820f072d290",
-    "-Cextra-filename=60603820f072d290",
+    "-Cextra-filename=-60603820f072d290",
   ]
 }
 
@@ -2621,7 +2621,7 @@ rust_library("fuchsia-zircon-sys-v0_3_3") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=126e49067c23ad96",
-    "-Cextra-filename=126e49067c23ad96",
+    "-Cextra-filename=-126e49067c23ad96",
   ]
 }
 
@@ -2642,7 +2642,7 @@ rust_library("futures-v0_1_29") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=4895479edadce94b",
-    "-Cextra-filename=4895479edadce94b",
+    "-Cextra-filename=-4895479edadce94b",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"use_std\"",
     "--cfg=feature=\"with-deprecated\"",
@@ -2673,7 +2673,7 @@ rust_library("futures-v0_3_4") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=5d6d797920ff3c49",
-    "-Cextra-filename=5d6d797920ff3c49",
+    "-Cextra-filename=-5d6d797920ff3c49",
     "--cfg=feature=\"alloc\"",
     "--cfg=feature=\"async-await\"",
     "--cfg=feature=\"compat\"",
@@ -2704,7 +2704,7 @@ rust_library("futures-channel-v0_3_4") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=8d03c1f9797c867b",
-    "-Cextra-filename=8d03c1f9797c867b",
+    "-Cextra-filename=-8d03c1f9797c867b",
     "--cfg=feature=\"alloc\"",
     "--cfg=feature=\"futures-sink\"",
     "--cfg=feature=\"sink\"",
@@ -2729,7 +2729,7 @@ rust_library("futures-core-v0_3_4") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=c13e092b6a3b3369",
-    "-Cextra-filename=c13e092b6a3b3369",
+    "-Cextra-filename=-c13e092b6a3b3369",
     "--cfg=feature=\"alloc\"",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
@@ -2756,7 +2756,7 @@ rust_library("futures-executor-v0_3_4") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=8a4359533843b23a",
-    "-Cextra-filename=8a4359533843b23a",
+    "-Cextra-filename=-8a4359533843b23a",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
   ]
@@ -2779,7 +2779,7 @@ rust_library("futures-io-v0_3_4") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=2664d38fa85e18bc",
-    "-Cextra-filename=2664d38fa85e18bc",
+    "-Cextra-filename=-2664d38fa85e18bc",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
   ]
@@ -2806,7 +2806,7 @@ rust_proc_macro("futures-macro-v0_3_4") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=79e62131362b46fd",
-    "-Cextra-filename=79e62131362b46fd",
+    "-Cextra-filename=-79e62131362b46fd",
   ]
 }
 
@@ -2827,7 +2827,7 @@ rust_library("futures-sink-v0_3_4") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=f98781056b6ad880",
-    "-Cextra-filename=f98781056b6ad880",
+    "-Cextra-filename=-f98781056b6ad880",
     "--cfg=feature=\"alloc\"",
     "--cfg=feature=\"std\"",
   ]
@@ -2850,7 +2850,7 @@ rust_library("futures-task-v0_3_4") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=1d1871e7d1411ab0",
-    "-Cextra-filename=1d1871e7d1411ab0",
+    "-Cextra-filename=-1d1871e7d1411ab0",
     "--cfg=feature=\"alloc\"",
     "--cfg=feature=\"std\"",
   ]
@@ -2879,7 +2879,7 @@ rust_library("futures-test-v0_3_4") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=a2f4ba529b85ce86",
-    "-Cextra-filename=a2f4ba529b85ce86",
+    "-Cextra-filename=-a2f4ba529b85ce86",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
   ]
@@ -2902,7 +2902,7 @@ rust_library("futures-timer-v2_0_2") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=1e7f2880ce725b30",
-    "-Cextra-filename=1e7f2880ce725b30",
+    "-Cextra-filename=-1e7f2880ce725b30",
   ]
 }
 
@@ -2936,7 +2936,7 @@ rust_library("futures-util-v0_3_4") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=26b7144ecdd73141",
-    "-Cextra-filename=26b7144ecdd73141",
+    "-Cextra-filename=-26b7144ecdd73141",
     "--cfg=feature=\"alloc\"",
     "--cfg=feature=\"async-await\"",
     "--cfg=feature=\"async-await-macro\"",
@@ -2982,7 +2982,7 @@ rust_library("getopts-v0_2_18") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=ee306262a9b3a5b0",
-    "-Cextra-filename=ee306262a9b3a5b0",
+    "-Cextra-filename=-ee306262a9b3a5b0",
   ]
 }
 
@@ -3010,7 +3010,7 @@ rust_library("getrandom-v0_1_13") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=37dd2a246b257ac6",
-    "-Cextra-filename=37dd2a246b257ac6",
+    "-Cextra-filename=-37dd2a246b257ac6",
     "--cfg=feature=\"std\"",
   ]
 }
@@ -3032,7 +3032,7 @@ rust_library("glob-v0_3_0") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=aa5b2e2c44f5f401",
-    "-Cextra-filename=aa5b2e2c44f5f401",
+    "-Cextra-filename=-aa5b2e2c44f5f401",
   ]
 }
 
@@ -3054,7 +3054,7 @@ rust_library("gzip-header-v0_2_0") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=afa30ac783b3f0e9",
-    "-Cextra-filename=afa30ac783b3f0e9",
+    "-Cextra-filename=-afa30ac783b3f0e9",
   ]
 }
 
@@ -3085,7 +3085,7 @@ rust_library("h2-v0_1_16") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=dd6512fb815a83f7",
-    "-Cextra-filename=dd6512fb815a83f7",
+    "-Cextra-filename=-dd6512fb815a83f7",
   ]
 }
 
@@ -3117,7 +3117,7 @@ rust_library("handlebars-v2_0_0-beta_2") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=64c1f63c35898973",
-    "-Cextra-filename=64c1f63c35898973",
+    "-Cextra-filename=-64c1f63c35898973",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"dir_source\"",
     "--cfg=feature=\"log\"",
@@ -3144,7 +3144,7 @@ rust_library("hashbrown-v0_2_2") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=d251d5dab4b25374",
-    "-Cextra-filename=d251d5dab4b25374",
+    "-Cextra-filename=-d251d5dab4b25374",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"serde\"",
   ]
@@ -3168,7 +3168,7 @@ rust_library("heck-v0_3_1") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=e3dad0497ab5b0fe",
-    "-Cextra-filename=e3dad0497ab5b0fe",
+    "-Cextra-filename=-e3dad0497ab5b0fe",
   ]
 }
 
@@ -3190,7 +3190,7 @@ rust_library("hermit-abi-v0_1_8") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=f84c675d3602a4e4",
-    "-Cextra-filename=f84c675d3602a4e4",
+    "-Cextra-filename=-f84c675d3602a4e4",
     "--cfg=feature=\"default\"",
   ]
 }
@@ -3212,7 +3212,7 @@ rust_library("hex-v0_3_2") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=67ad4b3000c63154",
-    "-Cextra-filename=67ad4b3000c63154",
+    "-Cextra-filename=-67ad4b3000c63154",
   ]
 }
 
@@ -3236,7 +3236,7 @@ rust_library("http-v0_1_21") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=bd98e9b27f03cd25",
-    "-Cextra-filename=bd98e9b27f03cd25",
+    "-Cextra-filename=-bd98e9b27f03cd25",
   ]
 }
 
@@ -3261,7 +3261,7 @@ rust_library("http-body-v0_1_0") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=daa9e112ab148b2e",
-    "-Cextra-filename=daa9e112ab148b2e",
+    "-Cextra-filename=-daa9e112ab148b2e",
   ]
 }
 
@@ -3282,7 +3282,7 @@ rust_library("httparse-v1_3_3") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=52a50b12991f65bb",
-    "-Cextra-filename=52a50b12991f65bb",
+    "-Cextra-filename=-52a50b12991f65bb",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
     "--cfg=httparse_simd",
@@ -3319,7 +3319,7 @@ rust_library("hyper-v0_12_35") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=20422db3ff0b166f",
-    "-Cextra-filename=20422db3ff0b166f",
+    "-Cextra-filename=-20422db3ff0b166f",
     "--cfg=error_source",
     "--cfg=try_from",
   ]
@@ -3349,7 +3349,7 @@ rust_library("hyper-rustls-v0_17_1") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=b5421f83eb32a736",
-    "-Cextra-filename=b5421f83eb32a736",
+    "-Cextra-filename=-b5421f83eb32a736",
   ]
 }
 
@@ -3371,7 +3371,7 @@ rust_library("id_tree-v1_5_0") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=dcaa51240080dc87",
-    "-Cextra-filename=dcaa51240080dc87",
+    "-Cextra-filename=-dcaa51240080dc87",
   ]
 }
 
@@ -3395,7 +3395,7 @@ rust_library("idna-v0_1_5") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=682a1dbddbc2bf79",
-    "-Cextra-filename=682a1dbddbc2bf79",
+    "-Cextra-filename=-682a1dbddbc2bf79",
   ]
 }
 
@@ -3419,7 +3419,7 @@ rust_library("idna-v0_2_0") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=5c3c4f537fb8313f",
-    "-Cextra-filename=5c3c4f537fb8313f",
+    "-Cextra-filename=-5c3c4f537fb8313f",
   ]
 }
 
@@ -3440,7 +3440,7 @@ rust_library("indexmap-v1_0_2") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=e44704bec4fb41ed",
-    "-Cextra-filename=e44704bec4fb41ed",
+    "-Cextra-filename=-e44704bec4fb41ed",
   ]
 }
 
@@ -3463,7 +3463,7 @@ rust_library("indoc-v0_3_3") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=f092045a458190be",
-    "-Cextra-filename=f092045a458190be",
+    "-Cextra-filename=-f092045a458190be",
   ]
 }
 
@@ -3489,7 +3489,7 @@ rust_proc_macro("indoc-impl-v0_3_3") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=32e49cf2e672c9bc",
-    "-Cextra-filename=32e49cf2e672c9bc",
+    "-Cextra-filename=-32e49cf2e672c9bc",
   ]
 }
 
@@ -3511,7 +3511,7 @@ rust_library("inflate-v0_4_5") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=e2d006b321248ecb",
-    "-Cextra-filename=e2d006b321248ecb",
+    "-Cextra-filename=-e2d006b321248ecb",
     "--cfg=feature=\"default\"",
   ]
 }
@@ -3539,7 +3539,7 @@ rust_library("iovec-v0_1_2") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=f2596b64a4450bb1",
-    "-Cextra-filename=f2596b64a4450bb1",
+    "-Cextra-filename=-f2596b64a4450bb1",
   ]
 }
 
@@ -3561,7 +3561,7 @@ rust_library("itertools-v0_8_0") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=1f61a40f0ca305b",
-    "-Cextra-filename=1f61a40f0ca305b",
+    "-Cextra-filename=-1f61a40f0ca305b",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"use_std\"",
   ]
@@ -3584,7 +3584,7 @@ rust_library("itoa-v0_4_3") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=f3a32c9a05744438",
-    "-Cextra-filename=f3a32c9a05744438",
+    "-Cextra-filename=-f3a32c9a05744438",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
   ]
@@ -3610,7 +3610,7 @@ rust_library("json5-v0_2_4") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=1d3fde29e2961c21",
-    "-Cextra-filename=1d3fde29e2961c21",
+    "-Cextra-filename=-1d3fde29e2961c21",
   ]
 }
 
@@ -3637,7 +3637,7 @@ rust_library("json5format-v0_1_0") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=21dd6d6a386d6e53",
-    "-Cextra-filename=21dd6d6a386d6e53",
+    "-Cextra-filename=-21dd6d6a386d6e53",
   ]
 }
 
@@ -3660,7 +3660,7 @@ rust_library("jsonway-v2_0_0") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=5ed994a48b787f8e",
-    "-Cextra-filename=5ed994a48b787f8e",
+    "-Cextra-filename=-5ed994a48b787f8e",
   ]
 }
 
@@ -3682,7 +3682,7 @@ rust_library("kernel32-sys-v0_2_2") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=f88317a30a39d57e",
-    "-Cextra-filename=f88317a30a39d57e",
+    "-Cextra-filename=-f88317a30a39d57e",
   ]
 }
 
@@ -3704,7 +3704,7 @@ rust_library("kv-log-macro-v1_0_4") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=2c8748eae76691b4",
-    "-Cextra-filename=2c8748eae76691b4",
+    "-Cextra-filename=-2c8748eae76691b4",
   ]
 }
 
@@ -3726,7 +3726,7 @@ rust_library("lazy_static-v1_4_0") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=cdf593bd3fb3d68f",
-    "-Cextra-filename=cdf593bd3fb3d68f",
+    "-Cextra-filename=-cdf593bd3fb3d68f",
     "--cfg=feature=\"spin\"",
     "--cfg=feature=\"spin_no_std\"",
   ]
@@ -3749,7 +3749,7 @@ rust_library("libc-v0_2_66") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=abb91a5c7ac3855a",
-    "-Cextra-filename=abb91a5c7ac3855a",
+    "-Cextra-filename=-abb91a5c7ac3855a",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
     "--cfg=freebsd11",
@@ -3800,7 +3800,7 @@ rust_library("linked-hash-map-v0_5_2") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=e5551c52889e93a7",
-    "-Cextra-filename=e5551c52889e93a7",
+    "-Cextra-filename=-e5551c52889e93a7",
   ]
 }
 
@@ -3822,7 +3822,7 @@ rust_library("lipsum-v0_6_0") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=3f3d810083da13c9",
-    "-Cextra-filename=3f3d810083da13c9",
+    "-Cextra-filename=-3f3d810083da13c9",
   ]
 }
 
@@ -3845,7 +3845,7 @@ rust_library("lock_api-v0_1_5") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=fcce642a961a65a3",
-    "-Cextra-filename=fcce642a961a65a3",
+    "-Cextra-filename=-fcce642a961a65a3",
     "--cfg=feature=\"owning_ref\"",
   ]
 }
@@ -3868,7 +3868,7 @@ rust_library("lock_api-v0_3_1") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=9032a0e55cc00aa",
-    "-Cextra-filename=9032a0e55cc00aa",
+    "-Cextra-filename=-9032a0e55cc00aa",
   ]
 }
 
@@ -3890,7 +3890,7 @@ rust_library("log-v0_3_9") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=4bbdf7782c62a657",
-    "-Cextra-filename=4bbdf7782c62a657",
+    "-Cextra-filename=-4bbdf7782c62a657",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"use_std\"",
   ]
@@ -3914,7 +3914,7 @@ rust_library("log-v0_4_8") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=51a8548556518bd3",
-    "-Cextra-filename=51a8548556518bd3",
+    "-Cextra-filename=-51a8548556518bd3",
     "--cfg=feature=\"kv_unstable\"",
     "--cfg=feature=\"std\"",
     "--cfg=atomic_cas",
@@ -3939,7 +3939,7 @@ rust_library("lru-cache-v0_1_2") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=d0de9f2b92e5e947",
-    "-Cextra-filename=d0de9f2b92e5e947",
+    "-Cextra-filename=-d0de9f2b92e5e947",
   ]
 }
 
@@ -3960,7 +3960,7 @@ rust_library("maplit-v1_0_1") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=42f6d562ec404170",
-    "-Cextra-filename=42f6d562ec404170",
+    "-Cextra-filename=-42f6d562ec404170",
   ]
 }
 
@@ -3981,7 +3981,7 @@ rust_library("matches-v0_1_8") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=5301f47ad84dbc66",
-    "-Cextra-filename=5301f47ad84dbc66",
+    "-Cextra-filename=-5301f47ad84dbc66",
   ]
 }
 
@@ -4002,7 +4002,7 @@ rust_library("maybe-owned-v0_3_2") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=cd58fab7b411c920",
-    "-Cextra-filename=cd58fab7b411c920",
+    "-Cextra-filename=-cd58fab7b411c920",
   ]
 }
 
@@ -4023,7 +4023,7 @@ rust_library("maybe-uninit-v2_0_0") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=fb89acfa5fdd5d93",
-    "-Cextra-filename=fb89acfa5fdd5d93",
+    "-Cextra-filename=-fb89acfa5fdd5d93",
     "--cfg=derive_copy",
     "--cfg=repr_transparent",
     "--cfg=native_uninit",
@@ -4047,7 +4047,7 @@ rust_library("memchr-v2_3_3") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=523a962cdfbcb111",
-    "-Cextra-filename=523a962cdfbcb111",
+    "-Cextra-filename=-523a962cdfbcb111",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
     "--cfg=feature=\"use_std\"",
@@ -4075,7 +4075,7 @@ rust_library("memoffset-v0_5_3") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=86fca2d18c439f83",
-    "-Cextra-filename=86fca2d18c439f83",
+    "-Cextra-filename=-86fca2d18c439f83",
   ]
 }
 
@@ -4097,7 +4097,7 @@ rust_library("mime-v0_2_6") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=d925572a37a44efa",
-    "-Cextra-filename=d925572a37a44efa",
+    "-Cextra-filename=-d925572a37a44efa",
   ]
 }
 
@@ -4121,7 +4121,7 @@ rust_library("mime_guess-v1_8_6") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=d58800c9ff9e34fd",
-    "-Cextra-filename=d58800c9ff9e34fd",
+    "-Cextra-filename=-d58800c9ff9e34fd",
   ]
 }
 
@@ -4143,7 +4143,7 @@ rust_library("miniz_oxide-v0_3_6") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=9a756a7abca21ed4",
-    "-Cextra-filename=9a756a7abca21ed4",
+    "-Cextra-filename=-9a756a7abca21ed4",
   ]
 }
 
@@ -4180,7 +4180,7 @@ rust_library("mio-v0_6_19") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=81a7eacf8d526aa2",
-    "-Cextra-filename=81a7eacf8d526aa2",
+    "-Cextra-filename=-81a7eacf8d526aa2",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"with-deprecated\"",
   ]
@@ -4212,7 +4212,7 @@ rust_library("mio-uds-v0_6_7") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=d89fa551211c3350",
-    "-Cextra-filename=d89fa551211c3350",
+    "-Cextra-filename=-d89fa551211c3350",
   ]
 }
 
@@ -4237,7 +4237,7 @@ rust_library("miow-v0_2_1") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=147280a3688929c0",
-    "-Cextra-filename=147280a3688929c0",
+    "-Cextra-filename=-147280a3688929c0",
   ]
 
   aliased_deps = {
@@ -4273,7 +4273,7 @@ rust_library("multipart-v0_15_4") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=49e1a74e1e6b3693",
-    "-Cextra-filename=49e1a74e1e6b3693",
+    "-Cextra-filename=-49e1a74e1e6b3693",
     "--cfg=feature=\"buf_redux\"",
     "--cfg=feature=\"httparse\"",
     "--cfg=feature=\"quick-error\"",
@@ -4307,7 +4307,7 @@ rust_library("net2-v0_2_33") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=176f1b4a4f28c623",
-    "-Cextra-filename=176f1b4a4f28c623",
+    "-Cextra-filename=-176f1b4a4f28c623",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"duration\"",
   ]
@@ -4330,7 +4330,7 @@ rust_library("nodrop-v0_1_13") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=85c02ac1f7243ac4",
-    "-Cextra-filename=85c02ac1f7243ac4",
+    "-Cextra-filename=-85c02ac1f7243ac4",
   ]
 }
 
@@ -4354,7 +4354,7 @@ rust_library("nom-v5_0_0") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=75597d9e6590c988",
-    "-Cextra-filename=75597d9e6590c988",
+    "-Cextra-filename=-75597d9e6590c988",
     "--cfg=feature=\"alloc\"",
     "--cfg=feature=\"lazy_static\"",
     "--cfg=feature=\"regex\"",
@@ -4384,7 +4384,7 @@ rust_library("nom_locate-v2_0_0") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=9b54fbce8f44d169",
-    "-Cextra-filename=9b54fbce8f44d169",
+    "-Cextra-filename=-9b54fbce8f44d169",
     "--cfg=feature=\"alloc\"",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
@@ -4414,7 +4414,7 @@ rust_library("num-v0_2_0") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=fd01d44f35253e6d",
-    "-Cextra-filename=fd01d44f35253e6d",
+    "-Cextra-filename=-fd01d44f35253e6d",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"num-bigint\"",
     "--cfg=feature=\"std\"",
@@ -4441,7 +4441,7 @@ rust_library("num-bigint-v0_2_2") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=61c27594421f5cd0",
-    "-Cextra-filename=61c27594421f5cd0",
+    "-Cextra-filename=-61c27594421f5cd0",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"rand\"",
     "--cfg=feature=\"std\"",
@@ -4467,7 +4467,7 @@ rust_library("num-complex-v0_2_1") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=8a072fd0857db963",
-    "-Cextra-filename=8a072fd0857db963",
+    "-Cextra-filename=-8a072fd0857db963",
     "--cfg=feature=\"std\"",
     "--cfg=has_i128",
   ]
@@ -4493,7 +4493,7 @@ rust_proc_macro("num-derive-v0_2_4") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=e75273d0ebcf1af3",
-    "-Cextra-filename=e75273d0ebcf1af3",
+    "-Cextra-filename=-e75273d0ebcf1af3",
     "--cfg=has_i128",
   ]
 }
@@ -4516,7 +4516,7 @@ rust_library("num-integer-v0_1_39") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=784ce5b14502b374",
-    "-Cextra-filename=784ce5b14502b374",
+    "-Cextra-filename=-784ce5b14502b374",
     "--cfg=feature=\"std\"",
     "--cfg=has_i128",
   ]
@@ -4541,7 +4541,7 @@ rust_library("num-iter-v0_1_37") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=56f02b88a493c33a",
-    "-Cextra-filename=56f02b88a493c33a",
+    "-Cextra-filename=-56f02b88a493c33a",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
     "--cfg=has_i128",
@@ -4568,7 +4568,7 @@ rust_library("num-rational-v0_2_1") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=7e86b517853427e3",
-    "-Cextra-filename=7e86b517853427e3",
+    "-Cextra-filename=-7e86b517853427e3",
     "--cfg=feature=\"bigint\"",
     "--cfg=feature=\"num-bigint\"",
     "--cfg=feature=\"std\"",
@@ -4593,7 +4593,7 @@ rust_library("num-traits-v0_2_11") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=a6e1ee504861eea7",
-    "-Cextra-filename=a6e1ee504861eea7",
+    "-Cextra-filename=-a6e1ee504861eea7",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
     "--cfg=has_i128",
@@ -4621,7 +4621,7 @@ rust_library("num_cpus-v1_12_0") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=5d7427ef5ac8370a",
-    "-Cextra-filename=5d7427ef5ac8370a",
+    "-Cextra-filename=-5d7427ef5ac8370a",
   ]
 }
 
@@ -4642,7 +4642,7 @@ rust_library("numtoa-v0_1_0") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=7acb857cdac0bf2",
-    "-Cextra-filename=7acb857cdac0bf2",
+    "-Cextra-filename=-7acb857cdac0bf2",
     "--cfg=feature=\"std\"",
   ]
 }
@@ -4665,7 +4665,7 @@ rust_library("once_cell-v1_2_0") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=abca80b257fbf446",
-    "-Cextra-filename=abca80b257fbf446",
+    "-Cextra-filename=-abca80b257fbf446",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"parking_lot\"",
     "--cfg=feature=\"std\"",
@@ -4690,7 +4690,7 @@ rust_library("openat-v0_1_17") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=b3aae38d235053dc",
-    "-Cextra-filename=b3aae38d235053dc",
+    "-Cextra-filename=-b3aae38d235053dc",
   ]
 }
 
@@ -4712,7 +4712,7 @@ rust_library("ordered-float-v1_0_1") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=a677600a9cc57dbb",
-    "-Cextra-filename=a677600a9cc57dbb",
+    "-Cextra-filename=-a677600a9cc57dbb",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
   ]
@@ -4736,7 +4736,7 @@ rust_library("owning_ref-v0_4_0") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=163177019c6dfe3a",
-    "-Cextra-filename=163177019c6dfe3a",
+    "-Cextra-filename=-163177019c6dfe3a",
   ]
 }
 
@@ -4759,7 +4759,7 @@ rust_library("parking_lot-v0_7_1") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=ee551828d5b81c55",
-    "-Cextra-filename=ee551828d5b81c55",
+    "-Cextra-filename=-ee551828d5b81c55",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"owning_ref\"",
   ]
@@ -4784,7 +4784,7 @@ rust_library("parking_lot-v0_9_0") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=6721767503fecbee",
-    "-Cextra-filename=6721767503fecbee",
+    "-Cextra-filename=-6721767503fecbee",
     "--cfg=feature=\"default\"",
   ]
 }
@@ -4815,7 +4815,7 @@ rust_library("parking_lot_core-v0_4_0") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=62d7d2565ebbce0a",
-    "-Cextra-filename=62d7d2565ebbce0a",
+    "-Cextra-filename=-62d7d2565ebbce0a",
   ]
 }
 
@@ -4850,7 +4850,7 @@ rust_library("parking_lot_core-v0_6_2") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=32ade8d5cf038200",
-    "-Cextra-filename=32ade8d5cf038200",
+    "-Cextra-filename=-32ade8d5cf038200",
   ]
 
   aliased_deps = {
@@ -4877,7 +4877,7 @@ rust_library("paste-v0_1_5") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=b3b6d3ea85a05423",
-    "-Cextra-filename=b3b6d3ea85a05423",
+    "-Cextra-filename=-b3b6d3ea85a05423",
   ]
 }
 
@@ -4902,7 +4902,7 @@ rust_proc_macro("paste-impl-v0_1_5") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=b64b4bb81dc68dc0",
-    "-Cextra-filename=b64b4bb81dc68dc0",
+    "-Cextra-filename=-b64b4bb81dc68dc0",
   ]
 }
 
@@ -4923,7 +4923,7 @@ rust_library("percent-encoding-v1_0_1") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=ac2a99b38019401d",
-    "-Cextra-filename=ac2a99b38019401d",
+    "-Cextra-filename=-ac2a99b38019401d",
   ]
 }
 
@@ -4944,7 +4944,7 @@ rust_library("percent-encoding-v2_1_0") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=d6833841fde4a923",
-    "-Cextra-filename=d6833841fde4a923",
+    "-Cextra-filename=-d6833841fde4a923",
   ]
 }
 
@@ -4966,7 +4966,7 @@ rust_library("pest-v2_1_0") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=c441aed71f967ff5",
-    "-Cextra-filename=c441aed71f967ff5",
+    "-Cextra-filename=-c441aed71f967ff5",
   ]
 }
 
@@ -4989,7 +4989,7 @@ rust_proc_macro("pest_derive-v2_1_0") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=1b54193ee8a497b9",
-    "-Cextra-filename=1b54193ee8a497b9",
+    "-Cextra-filename=-1b54193ee8a497b9",
   ]
 }
 
@@ -5015,7 +5015,7 @@ rust_library("pest_generator-v2_1_3") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=8216af62d67b03b3",
-    "-Cextra-filename=8216af62d67b03b3",
+    "-Cextra-filename=-8216af62d67b03b3",
   ]
 }
 
@@ -5038,7 +5038,7 @@ rust_library("pest_meta-v2_1_0") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=97d599c12fc59f03",
-    "-Cextra-filename=97d599c12fc59f03",
+    "-Cextra-filename=-97d599c12fc59f03",
   ]
 }
 
@@ -5060,7 +5060,7 @@ rust_library("phf-v0_7_24") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=b1c3ba777c6cb9d2",
-    "-Cextra-filename=b1c3ba777c6cb9d2",
+    "-Cextra-filename=-b1c3ba777c6cb9d2",
     "--cfg=feature=\"unicase\"",
   ]
 }
@@ -5084,7 +5084,7 @@ rust_library("phf_shared-v0_7_24") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=310fac8e05c2d167",
-    "-Cextra-filename=310fac8e05c2d167",
+    "-Cextra-filename=-310fac8e05c2d167",
     "--cfg=feature=\"unicase\"",
   ]
 }
@@ -5107,7 +5107,7 @@ rust_library("pin-project-v0_4_6") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=d1b279b72d9787d8",
-    "-Cextra-filename=d1b279b72d9787d8",
+    "-Cextra-filename=-d1b279b72d9787d8",
   ]
 }
 
@@ -5132,7 +5132,7 @@ rust_proc_macro("pin-project-internal-v0_4_6") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=c87bbc725092e3c5",
-    "-Cextra-filename=c87bbc725092e3c5",
+    "-Cextra-filename=-c87bbc725092e3c5",
   ]
 }
 
@@ -5153,7 +5153,7 @@ rust_library("pin-project-lite-v0_1_4") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=56ada01194125122",
-    "-Cextra-filename=56ada01194125122",
+    "-Cextra-filename=-56ada01194125122",
   ]
 }
 
@@ -5174,7 +5174,7 @@ rust_library("pin-utils-v0_1_0-alpha_4") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=e70b78866e2f8c75",
-    "-Cextra-filename=e70b78866e2f8c75",
+    "-Cextra-filename=-e70b78866e2f8c75",
   ]
 }
 
@@ -5199,7 +5199,7 @@ rust_library("png-v0_14_0") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=496bf2b92540669a",
-    "-Cextra-filename=496bf2b92540669a",
+    "-Cextra-filename=-496bf2b92540669a",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"deflate\"",
     "--cfg=feature=\"png-encoding\"",
@@ -5223,7 +5223,7 @@ rust_library("ppv-lite86-v0_2_6") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=4f2afd05532d6926",
-    "-Cextra-filename=4f2afd05532d6926",
+    "-Cextra-filename=-4f2afd05532d6926",
     "--cfg=feature=\"simd\"",
     "--cfg=feature=\"std\"",
   ]
@@ -5247,7 +5247,7 @@ rust_library("pretty-v0_5_2") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=80700aa60373011",
-    "-Cextra-filename=80700aa60373011",
+    "-Cextra-filename=-80700aa60373011",
   ]
 }
 
@@ -5270,7 +5270,7 @@ rust_library("pretty_assertions-v0_5_1") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=fcd9aa92a106be53",
-    "-Cextra-filename=fcd9aa92a106be53",
+    "-Cextra-filename=-fcd9aa92a106be53",
   ]
 }
 
@@ -5297,7 +5297,7 @@ rust_library("prettytable-rs-v0_8_0") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=7f7c01207fcbc28d",
-    "-Cextra-filename=7f7c01207fcbc28d",
+    "-Cextra-filename=-7f7c01207fcbc28d",
     "--cfg=feature=\"csv\"",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"win_crlf\"",
@@ -5321,7 +5321,7 @@ rust_proc_macro("proc-macro-hack-v0_5_15") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=a1810dc6d464784e",
-    "-Cextra-filename=a1810dc6d464784e",
+    "-Cextra-filename=-a1810dc6d464784e",
   ]
 }
 
@@ -5342,7 +5342,7 @@ rust_library("proc-macro-nested-v0_1_4") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=e7df40e354462005",
-    "-Cextra-filename=e7df40e354462005",
+    "-Cextra-filename=-e7df40e354462005",
   ]
 }
 
@@ -5364,7 +5364,7 @@ rust_library("proc-macro2-v0_4_27") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=b6435296c5b4a378",
-    "-Cextra-filename=b6435296c5b4a378",
+    "-Cextra-filename=-b6435296c5b4a378",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"proc-macro\"",
     "--cfg=u128",
@@ -5391,7 +5391,7 @@ rust_library("proc-macro2-v1_0_9") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=265cd8154d351836",
-    "-Cextra-filename=265cd8154d351836",
+    "-Cextra-filename=-265cd8154d351836",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"proc-macro\"",
     "--cfg=use_proc_macro",
@@ -5428,7 +5428,7 @@ rust_library("proptest-v0_9_3") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=5501bd7bbeeb32df",
-    "-Cextra-filename=5501bd7bbeeb32df",
+    "-Cextra-filename=-5501bd7bbeeb32df",
     "--cfg=feature=\"bit-set\"",
     "--cfg=feature=\"break-dead-code\"",
     "--cfg=feature=\"default\"",
@@ -5463,7 +5463,7 @@ rust_proc_macro("proptest-derive-v0_1_1") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=c677256b817d9125",
-    "-Cextra-filename=c677256b817d9125",
+    "-Cextra-filename=-c677256b817d9125",
   ]
 }
 
@@ -5489,7 +5489,7 @@ rust_library("publicsuffix-v1_5_2") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=432c80925f3efce9",
-    "-Cextra-filename=432c80925f3efce9",
+    "-Cextra-filename=-432c80925f3efce9",
   ]
 }
 
@@ -5514,7 +5514,7 @@ rust_library("pulldown-cmark-v0_6_0") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=de13a6fc690a4786",
-    "-Cextra-filename=de13a6fc690a4786",
+    "-Cextra-filename=-de13a6fc690a4786",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"getopts\"",
   ]
@@ -5539,7 +5539,7 @@ rust_library("pulse-v0_5_3") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=c8d41d8ba488b402",
-    "-Cextra-filename=c8d41d8ba488b402",
+    "-Cextra-filename=-c8d41d8ba488b402",
     "--cfg=feature=\"default\"",
   ]
 }
@@ -5561,7 +5561,7 @@ rust_library("quick-error-v1_2_2") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=5bd842b4b1c97fb4",
-    "-Cextra-filename=5bd842b4b1c97fb4",
+    "-Cextra-filename=-5bd842b4b1c97fb4",
   ]
 }
 
@@ -5583,7 +5583,7 @@ rust_library("quote-v0_6_11") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=4a6a7c47667b0a02",
-    "-Cextra-filename=4a6a7c47667b0a02",
+    "-Cextra-filename=-4a6a7c47667b0a02",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"proc-macro\"",
   ]
@@ -5607,7 +5607,7 @@ rust_library("quote-v1_0_2") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=bdfeff46186783c8",
-    "-Cextra-filename=bdfeff46186783c8",
+    "-Cextra-filename=-bdfeff46186783c8",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"proc-macro\"",
   ]
@@ -5632,7 +5632,7 @@ rust_library("rand-v0_3_23") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=2c666fe219af820b",
-    "-Cextra-filename=2c666fe219af820b",
+    "-Cextra-filename=-2c666fe219af820b",
   ]
 }
 
@@ -5666,7 +5666,7 @@ rust_library("rand-v0_4_6") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=875e21dccd44d7c9",
-    "-Cextra-filename=875e21dccd44d7c9",
+    "-Cextra-filename=-875e21dccd44d7c9",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"libc\"",
     "--cfg=feature=\"std\"",
@@ -5703,7 +5703,7 @@ rust_library("rand-v0_5_6") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=1f6e0de9691219e8",
-    "-Cextra-filename=1f6e0de9691219e8",
+    "-Cextra-filename=-1f6e0de9691219e8",
     "--cfg=feature=\"alloc\"",
     "--cfg=feature=\"cloudabi\"",
     "--cfg=feature=\"default\"",
@@ -5745,7 +5745,7 @@ rust_library("rand-v0_6_5") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=49454de2a45e84d2",
-    "-Cextra-filename=49454de2a45e84d2",
+    "-Cextra-filename=-49454de2a45e84d2",
     "--cfg=feature=\"alloc\"",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"i128_support\"",
@@ -5785,7 +5785,7 @@ rust_library("rand-v0_7_2") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=20e81bc4d0ea2cd2",
-    "-Cextra-filename=20e81bc4d0ea2cd2",
+    "-Cextra-filename=-20e81bc4d0ea2cd2",
     "--cfg=feature=\"alloc\"",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"getrandom\"",
@@ -5816,7 +5816,7 @@ rust_library("rand_chacha-v0_1_1") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=4d71541867d8f94f",
-    "-Cextra-filename=4d71541867d8f94f",
+    "-Cextra-filename=-4d71541867d8f94f",
     "--cfg=rustc_1_26",
   ]
 }
@@ -5840,7 +5840,7 @@ rust_library("rand_chacha-v0_2_1") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=e6eac7ee40461c84",
-    "-Cextra-filename=e6eac7ee40461c84",
+    "-Cextra-filename=-e6eac7ee40461c84",
     "--cfg=feature=\"std\"",
   ]
 }
@@ -5863,7 +5863,7 @@ rust_library("rand_core-v0_3_1") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=1d548fa20a792394",
-    "-Cextra-filename=1d548fa20a792394",
+    "-Cextra-filename=-1d548fa20a792394",
     "--cfg=feature=\"alloc\"",
     "--cfg=feature=\"std\"",
   ]
@@ -5886,7 +5886,7 @@ rust_library("rand_core-v0_4_0") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=b977c15482d5a8aa",
-    "-Cextra-filename=b977c15482d5a8aa",
+    "-Cextra-filename=-b977c15482d5a8aa",
     "--cfg=feature=\"alloc\"",
     "--cfg=feature=\"std\"",
   ]
@@ -5910,7 +5910,7 @@ rust_library("rand_core-v0_5_1") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=3b8db019998b7ccd",
-    "-Cextra-filename=3b8db019998b7ccd",
+    "-Cextra-filename=-3b8db019998b7ccd",
     "--cfg=feature=\"alloc\"",
     "--cfg=feature=\"getrandom\"",
     "--cfg=feature=\"std\"",
@@ -5935,7 +5935,7 @@ rust_library("rand_hc-v0_1_0") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=e9f4f74a87ae5d3b",
-    "-Cextra-filename=e9f4f74a87ae5d3b",
+    "-Cextra-filename=-e9f4f74a87ae5d3b",
   ]
 }
 
@@ -5957,7 +5957,7 @@ rust_library("rand_hc-v0_2_0") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=dcd34d22f422cc06",
-    "-Cextra-filename=dcd34d22f422cc06",
+    "-Cextra-filename=-dcd34d22f422cc06",
   ]
 }
 
@@ -5979,7 +5979,7 @@ rust_library("rand_isaac-v0_1_1") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=3b88f072e0dd7a40",
-    "-Cextra-filename=3b88f072e0dd7a40",
+    "-Cextra-filename=-3b88f072e0dd7a40",
   ]
 }
 
@@ -6007,7 +6007,7 @@ rust_library("rand_jitter-v0_1_3") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=f950fa4b6ab9b786",
-    "-Cextra-filename=f950fa4b6ab9b786",
+    "-Cextra-filename=-f950fa4b6ab9b786",
     "--cfg=feature=\"std\"",
   ]
 }
@@ -6045,7 +6045,7 @@ rust_library("rand_os-v0_1_2") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=b32b7b23928c4779",
-    "-Cextra-filename=b32b7b23928c4779",
+    "-Cextra-filename=-b32b7b23928c4779",
   ]
 }
 
@@ -6067,7 +6067,7 @@ rust_library("rand_pcg-v0_1_1") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=acb26d14eb85350b",
-    "-Cextra-filename=acb26d14eb85350b",
+    "-Cextra-filename=-acb26d14eb85350b",
     "--cfg=rust_1_26",
   ]
 }
@@ -6090,7 +6090,7 @@ rust_library("rand_xorshift-v0_1_1") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=7904c04fa5190cb3",
-    "-Cextra-filename=7904c04fa5190cb3",
+    "-Cextra-filename=-7904c04fa5190cb3",
   ]
 }
 
@@ -6113,7 +6113,7 @@ rust_library("rand_xoshiro-v0_1_0") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=1085831e9652f99c",
-    "-Cextra-filename=1085831e9652f99c",
+    "-Cextra-filename=-1085831e9652f99c",
   ]
 }
 
@@ -6137,7 +6137,7 @@ rust_library("rayon-v1_3_0") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=9313a85f140dc837",
-    "-Cextra-filename=9313a85f140dc837",
+    "-Cextra-filename=-9313a85f140dc837",
   ]
 }
 
@@ -6163,7 +6163,7 @@ rust_library("rayon-core-v1_7_0") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=1bba12a11050e3f7",
-    "-Cextra-filename=1bba12a11050e3f7",
+    "-Cextra-filename=-1bba12a11050e3f7",
   ]
 }
 
@@ -6185,7 +6185,7 @@ rust_library("rdrand-v0_4_0") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=f63300c5315f5e88",
-    "-Cextra-filename=f63300c5315f5e88",
+    "-Cextra-filename=-f63300c5315f5e88",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
   ]
@@ -6208,7 +6208,7 @@ rust_library("redox_syscall-v0_1_51") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=23d5cea1a557a7af",
-    "-Cextra-filename=23d5cea1a557a7af",
+    "-Cextra-filename=-23d5cea1a557a7af",
   ]
 }
 
@@ -6230,7 +6230,7 @@ rust_library("redox_termios-v0_1_1") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=961497fce38cbc39",
-    "-Cextra-filename=961497fce38cbc39",
+    "-Cextra-filename=-961497fce38cbc39",
   ]
 
   aliased_deps = {
@@ -6259,7 +6259,7 @@ rust_library("regex-v1_3_5") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=be3eec66bf66867d",
-    "-Cextra-filename=be3eec66bf66867d",
+    "-Cextra-filename=-be3eec66bf66867d",
     "--cfg=feature=\"aho-corasick\"",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"memchr\"",
@@ -6300,7 +6300,7 @@ rust_library("regex-automata-v0_1_9") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=cdaa0041c57f3413",
-    "-Cextra-filename=cdaa0041c57f3413",
+    "-Cextra-filename=-cdaa0041c57f3413",
   ]
 }
 
@@ -6321,7 +6321,7 @@ rust_library("regex-syntax-v0_6_17") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=579ced0738b0164d",
-    "-Cextra-filename=579ced0738b0164d",
+    "-Cextra-filename=-579ced0738b0164d",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"unicode\"",
     "--cfg=feature=\"unicode-age\"",
@@ -6354,7 +6354,7 @@ rust_library("remove_dir_all-v0_5_1") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=202715e376d8ea96",
-    "-Cextra-filename=202715e376d8ea96",
+    "-Cextra-filename=-202715e376d8ea96",
   ]
 }
 
@@ -6377,7 +6377,7 @@ rust_library("rental-v0_5_4") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=9bf0e036dc6b950b",
-    "-Cextra-filename=9bf0e036dc6b950b",
+    "-Cextra-filename=-9bf0e036dc6b950b",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
   ]
@@ -6403,7 +6403,7 @@ rust_proc_macro("rental-impl-v0_5_4") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=3fbb9126d186639f",
-    "-Cextra-filename=3fbb9126d186639f",
+    "-Cextra-filename=-3fbb9126d186639f",
   ]
 }
 
@@ -6441,7 +6441,7 @@ rust_library("ring-v0_16_9") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=1a4d2989c2a229ab",
-    "-Cextra-filename=1a4d2989c2a229ab",
+    "-Cextra-filename=-1a4d2989c2a229ab",
     "--cfg=feature=\"alloc\"",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"dev_urandom_fallback\"",
@@ -6483,7 +6483,7 @@ rust_library("rouille-v3_0_0") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=88f0139a27ad0c5d",
-    "-Cextra-filename=88f0139a27ad0c5d",
+    "-Cextra-filename=-88f0139a27ad0c5d",
     "--cfg=feature=\"brotli\"",
     "--cfg=feature=\"brotli2\"",
     "--cfg=feature=\"default\"",
@@ -6513,7 +6513,7 @@ rust_library("rust-crypto-v0_2_36") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=a8e75d2b9766ddb7",
-    "-Cextra-filename=a8e75d2b9766ddb7",
+    "-Cextra-filename=-a8e75d2b9766ddb7",
   ]
 }
 
@@ -6537,7 +6537,7 @@ rust_library("rust_icu_common-v0_1_1") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=8d23fa074240f674",
-    "-Cextra-filename=8d23fa074240f674",
+    "-Cextra-filename=-8d23fa074240f674",
     "--cfg=feature=\"renaming\"",
   ]
 }
@@ -6561,7 +6561,7 @@ rust_library("rust_icu_sys-v0_1_1") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=22c2e4eb60d1a6ba",
-    "-Cextra-filename=22c2e4eb60d1a6ba",
+    "-Cextra-filename=-22c2e4eb60d1a6ba",
     "--cfg=feature=\"renaming\"",
   ]
 }
@@ -6589,7 +6589,7 @@ rust_library("rust_icu_ucal-v0_1_1") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=ae542e5d8b939378",
-    "-Cextra-filename=ae542e5d8b939378",
+    "-Cextra-filename=-ae542e5d8b939378",
     "--cfg=feature=\"renaming\"",
   ]
 }
@@ -6619,7 +6619,7 @@ rust_library("rust_icu_udat-v0_1_1") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=21d79c0f1a782244",
-    "-Cextra-filename=21d79c0f1a782244",
+    "-Cextra-filename=-21d79c0f1a782244",
     "--cfg=feature=\"renaming\"",
   ]
 }
@@ -6645,7 +6645,7 @@ rust_library("rust_icu_udata-v0_1_1") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=2759e658124937d7",
-    "-Cextra-filename=2759e658124937d7",
+    "-Cextra-filename=-2759e658124937d7",
     "--cfg=feature=\"renaming\"",
   ]
 }
@@ -6670,7 +6670,7 @@ rust_library("rust_icu_uenum-v0_1_1") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=d0d5d97e14493463",
-    "-Cextra-filename=d0d5d97e14493463",
+    "-Cextra-filename=-d0d5d97e14493463",
     "--cfg=feature=\"renaming\"",
   ]
 }
@@ -6698,7 +6698,7 @@ rust_library("rust_icu_uloc-v0_1_1") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=23556cfee0e5337d",
-    "-Cextra-filename=23556cfee0e5337d",
+    "-Cextra-filename=-23556cfee0e5337d",
     "--cfg=feature=\"renaming\"",
   ]
 }
@@ -6724,7 +6724,7 @@ rust_library("rust_icu_ustring-v0_1_1") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=2aae005ad966d95b",
-    "-Cextra-filename=2aae005ad966d95b",
+    "-Cextra-filename=-2aae005ad966d95b",
     "--cfg=feature=\"renaming\"",
   ]
 }
@@ -6749,7 +6749,7 @@ rust_library("rust_icu_utext-v0_1_1") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=5c0417325923792",
-    "-Cextra-filename=5c0417325923792",
+    "-Cextra-filename=-5c0417325923792",
     "--cfg=feature=\"renaming\"",
   ]
 }
@@ -6771,7 +6771,7 @@ rust_library("rustc-demangle-v0_1_13") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=15077281ef0a6d3f",
-    "-Cextra-filename=15077281ef0a6d3f",
+    "-Cextra-filename=-15077281ef0a6d3f",
   ]
 }
 
@@ -6793,7 +6793,7 @@ rust_library("rustc-hash-v1_0_1") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=d18fd5c05c7b0ca4",
-    "-Cextra-filename=d18fd5c05c7b0ca4",
+    "-Cextra-filename=-d18fd5c05c7b0ca4",
   ]
 }
 
@@ -6814,7 +6814,7 @@ rust_library("rustc-serialize-v0_3_24") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=cf1d65d911e642f1",
-    "-Cextra-filename=cf1d65d911e642f1",
+    "-Cextra-filename=-cf1d65d911e642f1",
   ]
 }
 
@@ -6840,7 +6840,7 @@ rust_library("rustls-v0_16_0") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=f6aecf6cdd8f1804",
-    "-Cextra-filename=f6aecf6cdd8f1804",
+    "-Cextra-filename=-f6aecf6cdd8f1804",
     "--cfg=feature=\"dangerous_configuration\"",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"log\"",
@@ -6869,7 +6869,7 @@ rust_library("rusttype-v0_7_5") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=3d74d06ebd427455",
-    "-Cextra-filename=3d74d06ebd427455",
+    "-Cextra-filename=-3d74d06ebd427455",
   ]
 }
 
@@ -6894,7 +6894,7 @@ rust_library("rusty-fork-v0_2_1") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=ac04dd6dceaad5be",
-    "-Cextra-filename=ac04dd6dceaad5be",
+    "-Cextra-filename=-ac04dd6dceaad5be",
     "--cfg=feature=\"timeout\"",
     "--cfg=feature=\"wait-timeout\"",
   ]
@@ -6917,7 +6917,7 @@ rust_library("ryu-v0_2_7") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=247bfca05763f946",
-    "-Cextra-filename=247bfca05763f946",
+    "-Cextra-filename=-247bfca05763f946",
     "--cfg=integer128",
     "--cfg=must_use_return",
   ]
@@ -6940,7 +6940,7 @@ rust_library("ryu-v1_0_3") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=892abe88d9705b75",
-    "-Cextra-filename=892abe88d9705b75",
+    "-Cextra-filename=-892abe88d9705b75",
     "--cfg=integer128",
     "--cfg=must_use_return",
     "--cfg=maybe_uninit",
@@ -6964,7 +6964,7 @@ rust_library("safemem-v0_2_0") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=4153149682bcbffa",
-    "-Cextra-filename=4153149682bcbffa",
+    "-Cextra-filename=-4153149682bcbffa",
   ]
 }
 
@@ -6985,7 +6985,7 @@ rust_library("safemem-v0_3_0") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=aa454cc1e0ab7f9f",
-    "-Cextra-filename=aa454cc1e0ab7f9f",
+    "-Cextra-filename=-aa454cc1e0ab7f9f",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
   ]
@@ -7011,7 +7011,7 @@ rust_library("same-file-v1_0_4") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=460d9eb4eb179eea",
-    "-Cextra-filename=460d9eb4eb179eea",
+    "-Cextra-filename=-460d9eb4eb179eea",
   ]
 }
 
@@ -7032,7 +7032,7 @@ rust_library("scopeguard-v0_3_3") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=e82be4b7277f65",
-    "-Cextra-filename=e82be4b7277f65",
+    "-Cextra-filename=-e82be4b7277f65",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"use_std\"",
   ]
@@ -7055,7 +7055,7 @@ rust_library("scopeguard-v1_0_0") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=bfe66f8a0233b245",
-    "-Cextra-filename=bfe66f8a0233b245",
+    "-Cextra-filename=-bfe66f8a0233b245",
   ]
 }
 
@@ -7078,7 +7078,7 @@ rust_library("sct-v0_6_0") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=879ad9017e22db73",
-    "-Cextra-filename=879ad9017e22db73",
+    "-Cextra-filename=-879ad9017e22db73",
   ]
 }
 
@@ -7101,7 +7101,7 @@ rust_library("semver-v0_9_0") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=cafeca1c46011ca9",
-    "-Cextra-filename=cafeca1c46011ca9",
+    "-Cextra-filename=-cafeca1c46011ca9",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"serde\"",
   ]
@@ -7124,7 +7124,7 @@ rust_library("semver-parser-v0_7_0") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=cd0215f2368b3722",
-    "-Cextra-filename=cd0215f2368b3722",
+    "-Cextra-filename=-cd0215f2368b3722",
   ]
 }
 
@@ -7146,7 +7146,7 @@ rust_library("serde-v1_0_104") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=47ebe2dd896460d9",
-    "-Cextra-filename=47ebe2dd896460d9",
+    "-Cextra-filename=-47ebe2dd896460d9",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"derive\"",
     "--cfg=feature=\"serde_derive\"",
@@ -7187,7 +7187,7 @@ rust_proc_macro("serde_derive-v1_0_104") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=8edebf314413ac4f",
-    "-Cextra-filename=8edebf314413ac4f",
+    "-Cextra-filename=-8edebf314413ac4f",
     "--cfg=feature=\"default\"",
   ]
 }
@@ -7212,7 +7212,7 @@ rust_library("serde_json-v1_0_38") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=e16cf83bbc279b95",
-    "-Cextra-filename=e16cf83bbc279b95",
+    "-Cextra-filename=-e16cf83bbc279b95",
     "--cfg=feature=\"default\"",
   ]
 }
@@ -7237,7 +7237,7 @@ rust_proc_macro("serde_repr-v0_1_3") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=821e19f1d7a82d0e",
-    "-Cextra-filename=821e19f1d7a82d0e",
+    "-Cextra-filename=-821e19f1d7a82d0e",
   ]
 }
 
@@ -7259,7 +7259,7 @@ rust_library("servo-freetype-sys-v4_0_5") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=e1fd76a775a364ef",
-    "-Cextra-filename=e1fd76a775a364ef",
+    "-Cextra-filename=-e1fd76a775a364ef",
   ]
 }
 
@@ -7280,7 +7280,7 @@ rust_library("sha1-v0_6_0") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=3b0af8831da37bad",
-    "-Cextra-filename=3b0af8831da37bad",
+    "-Cextra-filename=-3b0af8831da37bad",
   ]
 }
 
@@ -7302,7 +7302,7 @@ rust_library("sharded-slab-v0_0_9") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=a5fb9ebc6e519d9e",
-    "-Cextra-filename=a5fb9ebc6e519d9e",
+    "-Cextra-filename=-a5fb9ebc6e519d9e",
   ]
 }
 
@@ -7325,7 +7325,7 @@ rust_library("signal-hook-v0_1_13") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=95886d608472996a",
-    "-Cextra-filename=95886d608472996a",
+    "-Cextra-filename=-95886d608472996a",
   ]
 }
 
@@ -7349,7 +7349,7 @@ rust_library("signal-hook-registry-v1_2_0") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=89f29a6954981833",
-    "-Cextra-filename=89f29a6954981833",
+    "-Cextra-filename=-89f29a6954981833",
   ]
 }
 
@@ -7373,7 +7373,7 @@ rust_library("simplelog-v0_7_5") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=b68b3dad32069c38",
-    "-Cextra-filename=b68b3dad32069c38",
+    "-Cextra-filename=-b68b3dad32069c38",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"term\"",
   ]
@@ -7396,7 +7396,7 @@ rust_library("siphasher-v0_2_3") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=c0f71ec8ce76c479",
-    "-Cextra-filename=c0f71ec8ce76c479",
+    "-Cextra-filename=-c0f71ec8ce76c479",
   ]
 }
 
@@ -7417,7 +7417,7 @@ rust_library("slab-v0_4_2") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=8335b1c9e90ee478",
-    "-Cextra-filename=8335b1c9e90ee478",
+    "-Cextra-filename=-8335b1c9e90ee478",
   ]
 }
 
@@ -7439,7 +7439,7 @@ rust_library("smallvec-v0_6_13") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=15257cc85e7a16b9",
-    "-Cextra-filename=15257cc85e7a16b9",
+    "-Cextra-filename=-15257cc85e7a16b9",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
   ]
@@ -7462,7 +7462,7 @@ rust_library("smallvec-v1_1_0") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=285ba3d5a6d48af",
-    "-Cextra-filename=285ba3d5a6d48af",
+    "-Cextra-filename=-285ba3d5a6d48af",
   ]
 }
 
@@ -7483,7 +7483,7 @@ rust_library("snowflake-v1_3_0") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=ce6dd979630de036",
-    "-Cextra-filename=ce6dd979630de036",
+    "-Cextra-filename=-ce6dd979630de036",
     "--cfg=feature=\"default\"",
   ]
 }
@@ -7505,7 +7505,7 @@ rust_library("spin-v0_5_2") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=50733eeb0bba4c8d",
-    "-Cextra-filename=50733eeb0bba4c8d",
+    "-Cextra-filename=-50733eeb0bba4c8d",
   ]
 }
 
@@ -7526,7 +7526,7 @@ rust_library("splines-v2_2_0") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=d1b51f4ec5d923f7",
-    "-Cextra-filename=d1b51f4ec5d923f7",
+    "-Cextra-filename=-d1b51f4ec5d923f7",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
   ]
@@ -7549,7 +7549,7 @@ rust_library("stable_deref_trait-v1_1_1") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=1bde01aa2aa758b9",
-    "-Cextra-filename=1bde01aa2aa758b9",
+    "-Cextra-filename=-1bde01aa2aa758b9",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
   ]
@@ -7572,7 +7572,7 @@ rust_library("static_assertions-v1_1_0") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=5fff9c36214c34b7",
-    "-Cextra-filename=5fff9c36214c34b7",
+    "-Cextra-filename=-5fff9c36214c34b7",
   ]
 }
 
@@ -7594,7 +7594,7 @@ rust_library("stb_truetype-v0_2_6") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=5e019b3ceb8fd52f",
-    "-Cextra-filename=5e019b3ceb8fd52f",
+    "-Cextra-filename=-5e019b3ceb8fd52f",
   ]
 }
 
@@ -7615,7 +7615,7 @@ rust_library("string-v0_1_3") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=a461874f5259da6b",
-    "-Cextra-filename=a461874f5259da6b",
+    "-Cextra-filename=-a461874f5259da6b",
   ]
 }
 
@@ -7636,7 +7636,7 @@ rust_library("strsim-v0_8_0") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=a6895684b05e64cd",
-    "-Cextra-filename=a6895684b05e64cd",
+    "-Cextra-filename=-a6895684b05e64cd",
   ]
 }
 
@@ -7659,7 +7659,7 @@ rust_library("structopt-v0_2_14") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=282f1735ac1cc133",
-    "-Cextra-filename=282f1735ac1cc133",
+    "-Cextra-filename=-282f1735ac1cc133",
     "--cfg=feature=\"default\"",
   ]
 }
@@ -7685,7 +7685,7 @@ rust_proc_macro("structopt-derive-v0_2_14") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=809c043d87d920da",
-    "-Cextra-filename=809c043d87d920da",
+    "-Cextra-filename=-809c043d87d920da",
   ]
 }
 
@@ -7709,7 +7709,7 @@ rust_library("syn-v0_15_26") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=45b33f047f6103c6",
-    "-Cextra-filename=45b33f047f6103c6",
+    "-Cextra-filename=-45b33f047f6103c6",
     "--cfg=feature=\"clone-impls\"",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"derive\"",
@@ -7744,7 +7744,7 @@ rust_library("syn-v1_0_11") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=221bfb0393a04099",
-    "-Cextra-filename=221bfb0393a04099",
+    "-Cextra-filename=-221bfb0393a04099",
     "--cfg=feature=\"clone-impls\"",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"derive\"",
@@ -7780,7 +7780,7 @@ rust_library("synstructure-v0_12_1") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=379147eabfeddd75",
-    "-Cextra-filename=379147eabfeddd75",
+    "-Cextra-filename=-379147eabfeddd75",
   ]
 }
 
@@ -7809,7 +7809,7 @@ rust_library("tar-v0_4_25") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=f84162c57b5f3fa8",
-    "-Cextra-filename=f84162c57b5f3fa8",
+    "-Cextra-filename=-f84162c57b5f3fa8",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"xattr\"",
   ]
@@ -7838,7 +7838,7 @@ rust_library("tempdir-v0_3_7") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=5354d0e7cf9ac43a",
-    "-Cextra-filename=5354d0e7cf9ac43a",
+    "-Cextra-filename=-5354d0e7cf9ac43a",
   ]
 }
 
@@ -7871,7 +7871,7 @@ rust_library("tempfile-v3_1_0") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=7b1346fb1d7972df",
-    "-Cextra-filename=7b1346fb1d7972df",
+    "-Cextra-filename=-7b1346fb1d7972df",
   ]
 
   aliased_deps = {
@@ -7900,7 +7900,7 @@ rust_library("term-v0_5_1") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=2cb16ccbdf283d91",
-    "-Cextra-filename=2cb16ccbdf283d91",
+    "-Cextra-filename=-2cb16ccbdf283d91",
     "--cfg=feature=\"default\"",
   ]
 }
@@ -7930,7 +7930,7 @@ rust_library("termion-v1_5_3") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=bd203e66cab9a985",
-    "-Cextra-filename=bd203e66cab9a985",
+    "-Cextra-filename=-bd203e66cab9a985",
   ]
 
   aliased_deps = {
@@ -7958,7 +7958,7 @@ rust_proc_macro("test-case-v1_0_0") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=1a4ea1b5541f1479",
-    "-Cextra-filename=1a4ea1b5541f1479",
+    "-Cextra-filename=-1a4ea1b5541f1479",
   ]
 }
 
@@ -7980,7 +7980,7 @@ rust_library("textwrap-v0_11_0") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=942fc263da8a1e95",
-    "-Cextra-filename=942fc263da8a1e95",
+    "-Cextra-filename=-942fc263da8a1e95",
   ]
 }
 
@@ -8002,7 +8002,7 @@ rust_library("thiserror-v1_0_9") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=eafe64cb9fc967f6",
-    "-Cextra-filename=eafe64cb9fc967f6",
+    "-Cextra-filename=-eafe64cb9fc967f6",
   ]
 }
 
@@ -8026,7 +8026,7 @@ rust_proc_macro("thiserror-impl-v1_0_9") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=469322d8438d8ad7",
-    "-Cextra-filename=469322d8438d8ad7",
+    "-Cextra-filename=-469322d8438d8ad7",
   ]
 }
 
@@ -8048,7 +8048,7 @@ rust_library("thread_local-v1_0_1") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=c08961bcca26f08e",
-    "-Cextra-filename=c08961bcca26f08e",
+    "-Cextra-filename=-c08961bcca26f08e",
   ]
 }
 
@@ -8070,7 +8070,7 @@ rust_library("threadpool-v1_7_1") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=d926d0ce4d1b599c",
-    "-Cextra-filename=d926d0ce4d1b599c",
+    "-Cextra-filename=-d926d0ce4d1b599c",
   ]
 }
 
@@ -8098,7 +8098,7 @@ rust_library("time-v0_1_42") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=8624bef189b0fa67",
-    "-Cextra-filename=8624bef189b0fa67",
+    "-Cextra-filename=-8624bef189b0fa67",
   ]
 
   aliased_deps = {
@@ -8125,7 +8125,7 @@ rust_library("timebomb-v0_1_2") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=29a9884c96189d4e",
-    "-Cextra-filename=29a9884c96189d4e",
+    "-Cextra-filename=-29a9884c96189d4e",
   ]
 }
 
@@ -8151,7 +8151,7 @@ rust_library("tiny_http-v0_6_2") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=c62ae95a2a7c45ea",
-    "-Cextra-filename=c62ae95a2a7c45ea",
+    "-Cextra-filename=-c62ae95a2a7c45ea",
     "--cfg=feature=\"default\"",
   ]
 }
@@ -8191,7 +8191,7 @@ rust_library("tokio-v0_1_22") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=3b37e1b1451b5d95",
-    "-Cextra-filename=3b37e1b1451b5d95",
+    "-Cextra-filename=-3b37e1b1451b5d95",
     "--cfg=feature=\"bytes\"",
     "--cfg=feature=\"codec\"",
     "--cfg=feature=\"default\"",
@@ -8241,7 +8241,7 @@ rust_library("tokio-buf-v0_1_1") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=fbbfb7067251f78b",
-    "-Cextra-filename=fbbfb7067251f78b",
+    "-Cextra-filename=-fbbfb7067251f78b",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"either\"",
     "--cfg=feature=\"util\"",
@@ -8268,7 +8268,7 @@ rust_library("tokio-codec-v0_1_1") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=79a4999fd45b8704",
-    "-Cextra-filename=79a4999fd45b8704",
+    "-Cextra-filename=-79a4999fd45b8704",
   ]
 }
 
@@ -8292,7 +8292,7 @@ rust_library("tokio-current-thread-v0_1_6") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=cfc1621fd47b8137",
-    "-Cextra-filename=cfc1621fd47b8137",
+    "-Cextra-filename=-cfc1621fd47b8137",
   ]
 }
 
@@ -8315,7 +8315,7 @@ rust_library("tokio-executor-v0_1_10") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=42b5572ee83ff97c",
-    "-Cextra-filename=42b5572ee83ff97c",
+    "-Cextra-filename=-42b5572ee83ff97c",
   ]
 }
 
@@ -8339,7 +8339,7 @@ rust_library("tokio-fs-v0_1_6") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=d3f9892fe7bbbb00",
-    "-Cextra-filename=d3f9892fe7bbbb00",
+    "-Cextra-filename=-d3f9892fe7bbbb00",
   ]
 }
 
@@ -8363,7 +8363,7 @@ rust_library("tokio-io-v0_1_11") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=c664b4df91f55d3d",
-    "-Cextra-filename=c664b4df91f55d3d",
+    "-Cextra-filename=-c664b4df91f55d3d",
   ]
 }
 
@@ -8395,7 +8395,7 @@ rust_library("tokio-reactor-v0_1_9") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=ff6394b58d980030",
-    "-Cextra-filename=ff6394b58d980030",
+    "-Cextra-filename=-ff6394b58d980030",
   ]
 }
 
@@ -8422,7 +8422,7 @@ rust_library("tokio-rustls-v0_10_2") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=2de5d312ceec4047",
-    "-Cextra-filename=2de5d312ceec4047",
+    "-Cextra-filename=-2de5d312ceec4047",
   ]
 }
 
@@ -8445,7 +8445,7 @@ rust_library("tokio-sync-v0_1_6") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=c7c3d6c25d19b031",
-    "-Cextra-filename=c7c3d6c25d19b031",
+    "-Cextra-filename=-c7c3d6c25d19b031",
   ]
 }
 
@@ -8472,7 +8472,7 @@ rust_library("tokio-tcp-v0_1_3") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=c32192e1d66afacd",
-    "-Cextra-filename=c32192e1d66afacd",
+    "-Cextra-filename=-c32192e1d66afacd",
   ]
 }
 
@@ -8502,7 +8502,7 @@ rust_library("tokio-threadpool-v0_1_15") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=6eac45c082ab9282",
-    "-Cextra-filename=6eac45c082ab9282",
+    "-Cextra-filename=-6eac45c082ab9282",
   ]
 }
 
@@ -8527,7 +8527,7 @@ rust_library("tokio-timer-v0_2_11") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=2bae3272f0920172",
-    "-Cextra-filename=2bae3272f0920172",
+    "-Cextra-filename=-2bae3272f0920172",
   ]
 }
 
@@ -8555,7 +8555,7 @@ rust_library("tokio-udp-v0_1_3") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=691d15f6847fd07d",
-    "-Cextra-filename=691d15f6847fd07d",
+    "-Cextra-filename=-691d15f6847fd07d",
   ]
 }
 
@@ -8586,7 +8586,7 @@ rust_library("tokio-uds-v0_2_5") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=cac6fad360f30bf0",
-    "-Cextra-filename=cac6fad360f30bf0",
+    "-Cextra-filename=-cac6fad360f30bf0",
   ]
 }
 
@@ -8608,7 +8608,7 @@ rust_library("toml-v0_5_6") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=2563c91c8a85577d",
-    "-Cextra-filename=2563c91c8a85577d",
+    "-Cextra-filename=-2563c91c8a85577d",
     "--cfg=feature=\"default\"",
   ]
 }
@@ -8637,7 +8637,7 @@ rust_library("tracing-v0_1_10") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=5ac624eb3041f417",
-    "-Cextra-filename=5ac624eb3041f417",
+    "-Cextra-filename=-5ac624eb3041f417",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"log\"",
     "--cfg=feature=\"std\"",
@@ -8663,7 +8663,7 @@ rust_proc_macro("tracing-attributes-v0_1_5") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=66b36643411a013d",
-    "-Cextra-filename=66b36643411a013d",
+    "-Cextra-filename=-66b36643411a013d",
   ]
 }
 
@@ -8689,7 +8689,7 @@ rust_library("tracing-core-v0_1_7") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=649338ac0e66f6cf",
-    "-Cextra-filename=649338ac0e66f6cf",
+    "-Cextra-filename=-649338ac0e66f6cf",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
   ]
@@ -8714,7 +8714,7 @@ rust_library("tracing-futures-v0_2_0") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=9d29aa06e5c66502",
-    "-Cextra-filename=9d29aa06e5c66502",
+    "-Cextra-filename=-9d29aa06e5c66502",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"pin-project\"",
     "--cfg=feature=\"std-future\"",
@@ -8741,7 +8741,7 @@ rust_library("tracing-log-v0_1_1") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=e2660b4a22826952",
-    "-Cextra-filename=e2660b4a22826952",
+    "-Cextra-filename=-e2660b4a22826952",
     "--cfg=feature=\"log-tracer\"",
     "--cfg=feature=\"std\"",
   ]
@@ -8768,7 +8768,7 @@ rust_library("tracing-subscriber-v0_2_5") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=bc593657f911aa68",
-    "-Cextra-filename=bc593657f911aa68",
+    "-Cextra-filename=-bc593657f911aa68",
     "--cfg=feature=\"chrono\"",
     "--cfg=feature=\"registry\"",
     "--cfg=feature=\"sharded-slab\"",
@@ -8804,7 +8804,7 @@ rust_library("trust-dns-proto-v0_19_2") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=fb47e36b3bae247a",
-    "-Cextra-filename=fb47e36b3bae247a",
+    "-Cextra-filename=-fb47e36b3bae247a",
     "--cfg=feature=\"testing\"",
   ]
 }
@@ -8835,7 +8835,7 @@ rust_library("trust-dns-resolver-v0_19_2") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=a99b11721b9b5ef8",
-    "-Cextra-filename=a99b11721b9b5ef8",
+    "-Cextra-filename=-a99b11721b9b5ef8",
     "--cfg=feature=\"testing\"",
   ]
 }
@@ -8857,7 +8857,7 @@ rust_library("try-lock-v0_2_2") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=d2aa576612eef943",
-    "-Cextra-filename=d2aa576612eef943",
+    "-Cextra-filename=-d2aa576612eef943",
   ]
 }
 
@@ -8879,7 +8879,7 @@ rust_library("twoway-v0_1_8") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=b1a1d820a8c2c969",
-    "-Cextra-filename=b1a1d820a8c2c969",
+    "-Cextra-filename=-b1a1d820a8c2c969",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"use_std\"",
   ]
@@ -8902,7 +8902,7 @@ rust_library("typed-arena-v1_4_1") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=ac595f153985a983",
-    "-Cextra-filename=ac595f153985a983",
+    "-Cextra-filename=-ac595f153985a983",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
   ]
@@ -8925,7 +8925,7 @@ rust_library("ucd-trie-v0_1_1") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=91d111d170cc5f0b",
-    "-Cextra-filename=91d111d170cc5f0b",
+    "-Cextra-filename=-91d111d170cc5f0b",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
   ]
@@ -8953,7 +8953,7 @@ rust_library("unic-char-property-v0_9_0") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=445d81b4a0ae40c1",
-    "-Cextra-filename=445d81b4a0ae40c1",
+    "-Cextra-filename=-445d81b4a0ae40c1",
   ]
 }
 
@@ -8978,7 +8978,7 @@ rust_library("unic-char-range-v0_9_0") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=9b60d6d5dd1543b8",
-    "-Cextra-filename=9b60d6d5dd1543b8",
+    "-Cextra-filename=-9b60d6d5dd1543b8",
     "--cfg=feature=\"default\"",
   ]
 }
@@ -9004,7 +9004,7 @@ rust_library("unic-common-v0_9_0") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=48117e25b313876",
-    "-Cextra-filename=48117e25b313876",
+    "-Cextra-filename=-48117e25b313876",
     "--cfg=feature=\"default\"",
   ]
 }
@@ -9033,7 +9033,7 @@ rust_library("unic-ucd-block-v0_9_0") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=5587140b130c5f84",
-    "-Cextra-filename=5587140b130c5f84",
+    "-Cextra-filename=-5587140b130c5f84",
   ]
 }
 
@@ -9059,7 +9059,7 @@ rust_library("unic-ucd-version-v0_9_0") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=cfee15212f1e7220",
-    "-Cextra-filename=cfee15212f1e7220",
+    "-Cextra-filename=-cfee15212f1e7220",
   ]
 }
 
@@ -9080,7 +9080,7 @@ rust_library("unicase-v1_4_2") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=324a0505811b5eab",
-    "-Cextra-filename=324a0505811b5eab",
+    "-Cextra-filename=-324a0505811b5eab",
     "--cfg=__unicase__default_hasher",
     "--cfg=__unicase__iter_cmp",
   ]
@@ -9103,7 +9103,7 @@ rust_library("unicase-v2_5_1") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=be8b50383665a777",
-    "-Cextra-filename=be8b50383665a777",
+    "-Cextra-filename=-be8b50383665a777",
     "--cfg=__unicase__default_hasher",
     "--cfg=__unicase__const_funs",
     "--cfg=__unicase__iter_cmp",
@@ -9128,7 +9128,7 @@ rust_library("unicode-bidi-v0_3_4") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=29cb3fce6b8017f7",
-    "-Cextra-filename=29cb3fce6b8017f7",
+    "-Cextra-filename=-29cb3fce6b8017f7",
     "--cfg=feature=\"default\"",
   ]
 }
@@ -9152,7 +9152,7 @@ rust_library("unicode-normalization-v0_1_8") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=601188fd7b0d2a4d",
-    "-Cextra-filename=601188fd7b0d2a4d",
+    "-Cextra-filename=-601188fd7b0d2a4d",
   ]
 }
 
@@ -9174,7 +9174,7 @@ rust_library("unicode-segmentation-v1_2_1") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=6ac80cf67426e677",
-    "-Cextra-filename=6ac80cf67426e677",
+    "-Cextra-filename=-6ac80cf67426e677",
   ]
 }
 
@@ -9195,7 +9195,7 @@ rust_library("unicode-width-v0_1_5") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=6f95bd0c0297e7ef",
-    "-Cextra-filename=6f95bd0c0297e7ef",
+    "-Cextra-filename=-6f95bd0c0297e7ef",
     "--cfg=feature=\"default\"",
   ]
 }
@@ -9217,7 +9217,7 @@ rust_library("unicode-xid-v0_1_0") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=8c0b837e1e0cd2cd",
-    "-Cextra-filename=8c0b837e1e0cd2cd",
+    "-Cextra-filename=-8c0b837e1e0cd2cd",
     "--cfg=feature=\"default\"",
   ]
 }
@@ -9239,7 +9239,7 @@ rust_library("unicode-xid-v0_2_0") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=8b9ce29b16dc5a7f",
-    "-Cextra-filename=8b9ce29b16dc5a7f",
+    "-Cextra-filename=-8b9ce29b16dc5a7f",
     "--cfg=feature=\"default\"",
   ]
 }
@@ -9261,7 +9261,7 @@ rust_library("unindent-v0_1_3") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=80aa0ce7cd6efa63",
-    "-Cextra-filename=80aa0ce7cd6efa63",
+    "-Cextra-filename=-80aa0ce7cd6efa63",
   ]
 }
 
@@ -9282,7 +9282,7 @@ rust_library("untrusted-v0_7_0") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=5f8476d9b2f7fe29",
-    "-Cextra-filename=5f8476d9b2f7fe29",
+    "-Cextra-filename=-5f8476d9b2f7fe29",
   ]
 }
 
@@ -9306,7 +9306,7 @@ rust_library("url-v1_7_2") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=a33a870434d6f716",
-    "-Cextra-filename=a33a870434d6f716",
+    "-Cextra-filename=-a33a870434d6f716",
   ]
 }
 
@@ -9330,7 +9330,7 @@ rust_library("url-v2_1_0") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=10398e48bf00aca4",
-    "-Cextra-filename=10398e48bf00aca4",
+    "-Cextra-filename=-10398e48bf00aca4",
   ]
 }
 
@@ -9351,7 +9351,7 @@ rust_library("utf8parse-v0_1_1") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=ef54bf3166380f1",
-    "-Cextra-filename=ef54bf3166380f1",
+    "-Cextra-filename=-ef54bf3166380f1",
   ]
 }
 
@@ -9374,7 +9374,7 @@ rust_library("uuid-v0_7_2") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=9a6c95af1cabc2e6",
-    "-Cextra-filename=9a6c95af1cabc2e6",
+    "-Cextra-filename=-9a6c95af1cabc2e6",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"rand\"",
     "--cfg=feature=\"serde\"",
@@ -9409,7 +9409,7 @@ rust_library("valico-v2_4_2") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=179ee54e44a59467",
-    "-Cextra-filename=179ee54e44a59467",
+    "-Cextra-filename=-179ee54e44a59467",
   ]
 }
 
@@ -9430,7 +9430,7 @@ rust_library("vec_map-v0_8_1") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=d78a1471c87b7920",
-    "-Cextra-filename=d78a1471c87b7920",
+    "-Cextra-filename=-d78a1471c87b7920",
   ]
 }
 
@@ -9451,7 +9451,7 @@ rust_library("vk-sys-v0_4_0") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=64c5d0becd520497",
-    "-Cextra-filename=64c5d0becd520497",
+    "-Cextra-filename=-64c5d0becd520497",
   ]
 }
 
@@ -9472,7 +9472,7 @@ rust_library("void-v1_0_2") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=3a0ca0e9ebe9ddab",
-    "-Cextra-filename=3a0ca0e9ebe9ddab",
+    "-Cextra-filename=-3a0ca0e9ebe9ddab",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
   ]
@@ -9496,7 +9496,7 @@ rust_library("vte-v0_3_3") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=8f5a30c97a835161",
-    "-Cextra-filename=8f5a30c97a835161",
+    "-Cextra-filename=-8f5a30c97a835161",
   ]
 }
 
@@ -9518,7 +9518,7 @@ rust_library("wait-timeout-v0_1_5") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=6681f14e0f8d09c3",
-    "-Cextra-filename=6681f14e0f8d09c3",
+    "-Cextra-filename=-6681f14e0f8d09c3",
   ]
 }
 
@@ -9544,7 +9544,7 @@ rust_library("walkdir-v2_3_1") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=3afd3201e5295e86",
-    "-Cextra-filename=3afd3201e5295e86",
+    "-Cextra-filename=-3afd3201e5295e86",
   ]
 }
 
@@ -9568,7 +9568,7 @@ rust_library("want-v0_2_0") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=461bb7c5f46ed01f",
-    "-Cextra-filename=461bb7c5f46ed01f",
+    "-Cextra-filename=-461bb7c5f46ed01f",
   ]
 }
 
@@ -9589,7 +9589,7 @@ rust_library("wasi-v0_7_0") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=db34952771d0e0f1",
-    "-Cextra-filename=db34952771d0e0f1",
+    "-Cextra-filename=-db34952771d0e0f1",
     "--cfg=feature=\"alloc\"",
     "--cfg=feature=\"default\"",
   ]
@@ -9614,7 +9614,7 @@ rust_library("wasm-bindgen-v0_2_60") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=170fd7409417d807",
-    "-Cextra-filename=170fd7409417d807",
+    "-Cextra-filename=-170fd7409417d807",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"spans\"",
     "--cfg=feature=\"std\"",
@@ -9646,7 +9646,7 @@ rust_library("wasm-bindgen-backend-v0_2_60") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=14835867b17fa11a",
-    "-Cextra-filename=14835867b17fa11a",
+    "-Cextra-filename=-14835867b17fa11a",
     "--cfg=feature=\"spans\"",
   ]
 }
@@ -9670,7 +9670,7 @@ rust_proc_macro("wasm-bindgen-macro-v0_2_60") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=787ef10a23c0675c",
-    "-Cextra-filename=787ef10a23c0675c",
+    "-Cextra-filename=-787ef10a23c0675c",
     "--cfg=feature=\"spans\"",
   ]
 }
@@ -9698,7 +9698,7 @@ rust_library("wasm-bindgen-macro-support-v0_2_60") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=4017d91a063a2714",
-    "-Cextra-filename=4017d91a063a2714",
+    "-Cextra-filename=-4017d91a063a2714",
     "--cfg=feature=\"spans\"",
   ]
 }
@@ -9720,7 +9720,7 @@ rust_library("wasm-bindgen-shared-v0_2_60") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=9fdc313316279fe6",
-    "-Cextra-filename=9fdc313316279fe6",
+    "-Cextra-filename=-9fdc313316279fe6",
   ]
 }
 
@@ -9741,7 +9741,7 @@ rust_library("web-sys-v0_3_36") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=41fe16a596d7ee0d",
-    "-Cextra-filename=41fe16a596d7ee0d",
+    "-Cextra-filename=-41fe16a596d7ee0d",
     "--cfg=feature=\"Crypto\"",
     "--cfg=feature=\"Window\"",
   ]
@@ -9766,7 +9766,7 @@ rust_library("webpki-v0_21_0") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=cf5d3581502ba661",
-    "-Cextra-filename=cf5d3581502ba661",
+    "-Cextra-filename=-cf5d3581502ba661",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
     "--cfg=feature=\"trust_anchor_util\"",
@@ -9790,7 +9790,7 @@ rust_library("winapi-v0_2_8") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=8ef403ac66a39c0c",
-    "-Cextra-filename=8ef403ac66a39c0c",
+    "-Cextra-filename=-8ef403ac66a39c0c",
   ]
 }
 
@@ -9811,7 +9811,7 @@ rust_library("winapi-v0_3_8") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=8420c37d53967cec",
-    "-Cextra-filename=8420c37d53967cec",
+    "-Cextra-filename=-8420c37d53967cec",
     "--cfg=feature=\"consoleapi\"",
     "--cfg=feature=\"errhandlingapi\"",
     "--cfg=feature=\"fileapi\"",
@@ -9856,7 +9856,7 @@ rust_library("winapi-util-v0_1_2") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=b3a9f54dd0078b71",
-    "-Cextra-filename=b3a9f54dd0078b71",
+    "-Cextra-filename=-b3a9f54dd0078b71",
   ]
 }
 
@@ -9878,7 +9878,7 @@ rust_library("ws2_32-sys-v0_2_1") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=97adf20aa8b30112",
-    "-Cextra-filename=97adf20aa8b30112",
+    "-Cextra-filename=-97adf20aa8b30112",
   ]
 }
 
@@ -9900,7 +9900,7 @@ rust_library("xattr-v0_2_2") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=b313ffbe9c2b6197",
-    "-Cextra-filename=b313ffbe9c2b6197",
+    "-Cextra-filename=-b313ffbe9c2b6197",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"unsupported\"",
   ]
@@ -9923,6 +9923,6 @@ rust_library("xml-rs-v0_8_0") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=b4c35f2449a37a92",
-    "-Cextra-filename=b4c35f2449a37a92",
+    "-Cextra-filename=-b4c35f2449a37a92",
   ]
 }

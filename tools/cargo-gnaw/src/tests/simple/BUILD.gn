@@ -20,7 +20,7 @@ rust_library("simple-v1_0_25") {
 
   rustenv = []
 
-  rustflags = ["--cap-lints=allow","--edition=2018","-Cmetadata=3b5ec47e038ac967","-Cextra-filename=3b5ec47e038ac967"]
+  rustflags = ["--cap-lints=allow","--edition=2018","-Cmetadata=3b5ec47e038ac967","-Cextra-filename=-3b5ec47e038ac967"]
 
   
 }

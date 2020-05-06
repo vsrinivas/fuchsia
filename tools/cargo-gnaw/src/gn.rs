@@ -255,7 +255,7 @@ pub fn write_rule<W: io::Write>(
     rustflags.add_cfg("--cap-lints=allow");
     rustflags.add_cfg(format!("--edition={}", target.edition));
     rustflags.add_cfg(format!("-Cmetadata={}", target.metadata_hash()));
-    rustflags.add_cfg(format!("-Cextra-filename={}", target.metadata_hash()));
+    rustflags.add_cfg(format!("-Cextra-filename=-{}", target.metadata_hash()));
 
     // Aggregate feature flags
     for feature in target.features {
@@ -350,7 +350,7 @@ fn simple_target() {
 
   rustenv = []
 
-  rustflags = ["--cap-lints=allow","--edition=2018","-Cmetadata=b9ab75307aed635c","-Cextra-filename=b9ab75307aed635c"]
+  rustflags = ["--cap-lints=allow","--edition=2018","-Cmetadata=b9ab75307aed635c","-Cextra-filename=-b9ab75307aed635c"]
 
   
 }

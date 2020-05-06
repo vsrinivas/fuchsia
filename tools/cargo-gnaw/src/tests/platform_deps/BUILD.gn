@@ -23,7 +23,7 @@ rust_library("anyhow-v1_0_27") {
 
   rustenv = []
 
-  rustflags = ["--cap-lints=allow","--edition=2018","-Cmetadata=d49cfcf8c47646f2","-Cextra-filename=d49cfcf8c47646f2","--cfg=feature=\"default\"","--cfg=feature=\"std\"","--cfg=backtrace"]
+  rustflags = ["--cap-lints=allow","--edition=2018","-Cmetadata=d49cfcf8c47646f2","-Cextra-filename=-d49cfcf8c47646f2","--cfg=feature=\"default\"","--cfg=feature=\"std\"","--cfg=backtrace"]
 
   
 }
