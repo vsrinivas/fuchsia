@@ -63,6 +63,7 @@ enum class CloneType {
 namespace internal {
 struct ChildListTag {};
 struct GlobalListTag {};
+struct RangeChangeListTag {};
 }  // namespace internal
 
 // The base vm object that holds a range of bytes of data
@@ -72,7 +73,8 @@ struct GlobalListTag {};
 class VmObject : public fbl::RefCountedUpgradeable<VmObject>,
                  public fbl::ContainableBaseClasses<
                      fbl::TaggedDoublyLinkedListable<VmObject*, internal::ChildListTag>,
-                     fbl::TaggedDoublyLinkedListable<VmObject*, internal::GlobalListTag>> {
+                     fbl::TaggedDoublyLinkedListable<VmObject*, internal::GlobalListTag>,
+                     fbl::TaggedSinglyLinkedListable<VmObject*, internal::RangeChangeListTag>> {
  public:
   // public API
   virtual zx_status_t Resize(uint64_t size) { return ZX_ERR_NOT_SUPPORTED; }
@@ -330,15 +332,13 @@ class VmObject : public fbl::RefCountedUpgradeable<VmObject>,
   friend fbl::RefPtr<VmObject>;
 
   // Types for an additional linked list over the VmObject for use when doing a RangeChangeUpdate.
-  using RangeChangeNodeState = fbl::SinglyLinkedListNodeState<VmObject*>;
-  struct RangeChangeListTraits {
-    static RangeChangeNodeState& node_state(VmObject& vmo) { return vmo.range_change_node_state_; }
-  };
-  using RangeChangeList = fbl::SinglyLinkedList<VmObject*, RangeChangeListTraits>;
-  // This is state that is used when doing a RangeChangeUpdate. To avoid unbounded stack growth we
-  // need to reserve the memory here so that we can have a flat iteration over a work list. These
-  // members should only be used by the RangeChangeUpdate code.
-  RangeChangeNodeState range_change_node_state_ TA_GUARDED(lock_);
+  //
+  // To avoid unbounded stack growth we need to reserve the memory to exist on a
+  // RangeChange list in our object so that we can have a flat iteration over a
+  // work list. RangeChangeLists should only be used by the RangeChangeUpdate
+  // code.
+  using RangeChangeList = fbl::TaggedSinglyLinkedList<VmObject*, internal::RangeChangeListTag>;
+
   uint64_t range_change_offset_ TA_GUARDED(lock_);
   uint64_t range_change_len_ TA_GUARDED(lock_);
 
