@@ -33,7 +33,7 @@ void FakeAp::SetChannel(const wlan_channel_t& channel) {
     }
 
     if (beacon_state_.is_switching_channel) {
-      environment_->CancelNotification(this, beacon_state_.channel_switch_notification_id);
+      CancelNotification(beacon_state_.channel_switch_notification_id);
     }
 
     beacon_state_.beacon_frame_.AddCSAIE(channel, cs_count);
@@ -115,20 +115,27 @@ void FakeAp::EnableBeacon(zx::duration beacon_period) {
 
 void FakeAp::DisableBeacon() {
   // If it is not beaconing, do nothing.
-  if (!beacon_state_.is_beaconing)
+  if (!beacon_state_.is_beaconing) {
     return;
+  }
 
   // If we stop beaconing when channel is switching, we cancel the channel switch event and directly
   // set channel to new channel.
   if (beacon_state_.is_switching_channel) {
     tx_info_.channel = beacon_state_.channel_after_CSA;
     beacon_state_.is_switching_channel = false;
-    ZX_ASSERT(environment_->CancelNotification(
-                  this, beacon_state_.channel_switch_notification_id) == ZX_OK);
+    CancelNotification(beacon_state_.channel_switch_notification_id);
   }
 
   beacon_state_.is_beaconing = false;
-  ZX_ASSERT(environment_->CancelNotification(this, beacon_state_.beacon_notification_id) == ZX_OK);
+  CancelNotification(beacon_state_.beacon_notification_id);
+}
+
+void FakeAp::CancelNotification(uint64_t id) {
+  void* payload = nullptr;
+  ZX_ASSERT(environment_->CancelNotification(this, id, &payload) == ZX_OK);
+  auto handler = static_cast<std::function<void()>*>(payload);
+  delete handler;
 }
 
 std::shared_ptr<FakeAp::Client> FakeAp::AddClient(common::MacAddr mac_addr) {
