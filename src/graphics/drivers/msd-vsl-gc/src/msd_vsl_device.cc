@@ -807,7 +807,8 @@ bool MsdVslDevice::SubmitFlushTlb(std::shared_ptr<MsdVslContext> context) {
   // We need to write the new block of ringbuffer instructions contiguously.
   // Since only 30 concurrent events are supported, it should not be possible to run out
   // of space in the ringbuffer.
-  DASSERT(ringbuffer_->ReserveContiguous(prefetch * sizeof(uint64_t)));
+  bool reserved = ringbuffer_->ReserveContiguous(prefetch * sizeof(uint64_t));
+  DASSERT(reserved);
 
   // Save the gpu address pointing to the new instructions so we can link to it.
   uint32_t new_rb_instructions_start_offset = ringbuffer_->tail();
@@ -901,7 +902,8 @@ bool MsdVslDevice::SubmitCommandBuffer(std::shared_ptr<MsdVslContext> context,
   // We need to write the new block of ringbuffer instructions contiguously.
   // Since only 30 concurrent events are supported, it should not be possible to run out
   // of space in the ringbuffer.
-  DASSERT(ringbuffer_->ReserveContiguous(kRbPrefetch * sizeof(uint64_t)));
+  bool reserved = ringbuffer_->ReserveContiguous(kRbPrefetch * sizeof(uint64_t));
+  DASSERT(reserved);
 
   // Calculate where to jump to after completion of the command buffer.
   // This will point to EVENT WAIT LINK.
