@@ -771,7 +771,6 @@ group("deprecated_package_underscore") {
     "//third_party/cobalt:cobalt_core_tests",
     "//third_party/crashpad:crashpad_database_util",
     "//third_party/crashpad:crashpad_test",
-    "//third_party/dart-pkg/git/flutter/examples/flutter_gallery:flutter_gallery_pkg",
     "//third_party/go:go_fidl_tests",
     "//third_party/go:go_stdlib_tests",
     "//third_party/leveldb:leveldb_benchmarks",
