@@ -199,16 +199,13 @@ void NotificationReceived(EventTest* test_ptr, uint64_t value) {
 
   if (value == 1) {  // 2s into the test
     // Try to cancel an already-passed event
-    EXPECT_EQ(ZX_ERR_NOT_FOUND,
-              test_ptr->env_.CancelNotification(test_ptr, cancel_state.ids[0]));
+    EXPECT_EQ(ZX_ERR_NOT_FOUND, test_ptr->env_.CancelNotification(test_ptr, cancel_state.ids[0]));
 
     // Try to cancel our current event
-    EXPECT_EQ(ZX_ERR_NOT_FOUND,
-              test_ptr->env_.CancelNotification(test_ptr, cancel_state.ids[1]));
+    EXPECT_EQ(ZX_ERR_NOT_FOUND, test_ptr->env_.CancelNotification(test_ptr, cancel_state.ids[1]));
 
     // Try to cancel a future event with incorrect recipient
-    EXPECT_EQ(ZX_ERR_NOT_FOUND,
-              test_ptr->env_.CancelNotification(nullptr, cancel_state.ids[3]));
+    EXPECT_EQ(ZX_ERR_NOT_FOUND, test_ptr->env_.CancelNotification(nullptr, cancel_state.ids[3]));
 
     // Try to cancel a future event with incorrect ID
     uint64_t fake_id = 0x6b46616b654964;
@@ -231,8 +228,7 @@ void NotificationReceived(EventTest* test_ptr, uint64_t value) {
 
   if (value == 2) {  // 3s into the test
     // Try cancelling a previously-cancelled event
-    EXPECT_EQ(ZX_ERR_NOT_FOUND,
-              test_ptr->env_.CancelNotification(test_ptr, cancel_state.ids[3]));
+    EXPECT_EQ(ZX_ERR_NOT_FOUND, test_ptr->env_.CancelNotification(test_ptr, cancel_state.ids[3]));
   }
 }
 

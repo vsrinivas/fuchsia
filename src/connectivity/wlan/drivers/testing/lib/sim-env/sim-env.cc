@@ -71,11 +71,9 @@ zx_status_t Environment::ScheduleNotification(StationIfc* sta, zx::duration dela
 }
 
 // Since all events are processed synchronously, we don't have to worry about locking.
-zx_status_t Environment::CancelNotification(StationIfc* sta, uint64_t id, void** payload_out) {
+zx_status_t Environment::CancelNotification(StationIfc* sta, uint64_t id) {
   for (auto& event_iter : events_) {
     if (event_iter->requester == sta && event_iter->id == id) {
-      if (payload_out != nullptr)
-        *payload_out = event_iter->payload;
       events_.remove(event_iter);
       return ZX_OK;
     }

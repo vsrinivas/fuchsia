@@ -101,7 +101,6 @@ class FakeAp : public StationIfc {
   void ReceiveNotification(void* payload) override;
 
  private:
-  void CancelNotification(uint64_t id);
   std::shared_ptr<Client> AddClient(common::MacAddr mac_addr);
   std::shared_ptr<Client> FindClient(common::MacAddr mac_addr);
   void RemoveClient(common::MacAddr mac_addr);

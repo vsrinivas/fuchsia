@@ -63,7 +63,9 @@ class Environment {
   }
 
   // Remove a station from the environment.
-  void RemoveStation(StationIfc* sta) { stations_.erase(sta); }
+  void RemoveStation(StationIfc* sta) {
+    stations_.erase(sta);
+  }
 
   // Change the location of a station in the environment.
   void MoveStation(StationIfc* sta, int32_t x, int32_t y) {
@@ -82,8 +84,8 @@ class Environment {
   zx_status_t ScheduleNotification(StationIfc* sta, zx::duration delay, void* payload,
                                    uint64_t* id_out = nullptr);
 
-  // Cancel a future notification, return scheduled payload for station to handle
-  zx_status_t CancelNotification(StationIfc* sta, uint64_t id, void** payload_out = nullptr);
+  // Cancel a future notification
+  zx_status_t CancelNotification(StationIfc* sta, uint64_t id);
 
   // Get simulation absolute time
   zx::time GetTime() { return time_; }
