@@ -390,7 +390,6 @@ struct Thread {
   using List = fbl::DoublyLinkedList<Thread*, ThreadListTrait>;
 
   // active bits
-  struct list_node queue_node_;
   enum thread_state state_;
   unsigned int flags_;
   unsigned int signals_;
@@ -403,8 +402,7 @@ struct Thread {
   // a list of the wait queues currently owned by this thread.
   fbl::DoublyLinkedList<OwnedWaitQueue*> owned_wait_queues_ TA_GUARDED(thread_lock);
 
-  // list of other wait queue heads if we're a head
-  struct list_node wait_queue_heads_node_;
+  WaitQueueState wait_queue_state_;
 
   // return code if woken up abnormally from suspend, sleep, or block
   zx_status_t blocked_status_;

@@ -36,6 +36,30 @@ enum class ResourceOwnership {
 // the priority change should be propagated down the PI chain (if any) or not.
 enum class PropagatePI : bool { No = false, Yes };
 
+// Encapsulation of all the per-thread state for the wait queue data structure.
+struct WaitQueueState {
+  WaitQueueState() = default;
+
+  struct list_node queue_node_;
+  struct list_node wait_queue_heads_node_;
+
+  // Disallow copying.
+  WaitQueueState(const WaitQueueState&) = delete;
+  WaitQueueState& operator=(const WaitQueueState&) = delete;
+};
+
+// Encapsulation of the data structure backing the wait queue.
+struct WaitQueueCollection {
+  constexpr WaitQueueCollection() {}
+
+  int count_ = 0;
+  struct list_node heads_ = LIST_INITIAL_VALUE(heads_);
+
+  // Disallow copying.
+  WaitQueueCollection(const WaitQueueCollection&) = delete;
+  WaitQueueCollection& operator=(const WaitQueueCollection&) = delete;
+};
+
 // NOTE: must be inside critical section when using these
 class WaitQueue {
   // TODO(kulakowski) Currently, all of this is public, until Thread is completely migrated off
@@ -90,7 +114,7 @@ class WaitQueue {
   // Whether the wait queue is currently empty.
   bool IsEmpty() const TA_REQ(thread_lock);
 
-  uint32_t Count() const TA_REQ(thread_lock) { return count_; }
+  uint32_t Count() const TA_REQ(thread_lock) { return collection_.count_; }
 
   // Dequeue the first waiting thread, and set its blocking status, then return a
   // pointer to the thread which was dequeued.  Do not actually schedule the
@@ -101,8 +125,7 @@ class WaitQueue {
   // schedule the thread to run.
   void DequeueThread(Thread* t, zx_status_t wait_queue_error) TA_REQ(thread_lock);
 
-  explicit constexpr WaitQueue(uint32_t magic)
-      : magic_(magic), count_(0), heads_(LIST_INITIAL_VALUE(this->heads_)) {}
+  explicit constexpr WaitQueue(uint32_t magic) : magic_(magic) {}
 
   // Move the specified thread from the source wait queue to the dest wait queue.
   static void MoveThread(WaitQueue* source, WaitQueue* dest, Thread* t) TA_REQ(thread_lock);
@@ -133,8 +156,7 @@ class WaitQueue {
   static constexpr uint32_t kMagic = fbl::magic("wait");
   uint32_t magic_;
 
-  int count_;
-  struct list_node heads_;
+  WaitQueueCollection collection_;
 };
 
 #endif  // ZIRCON_KERNEL_INCLUDE_KERNEL_WAIT_H_

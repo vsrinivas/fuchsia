@@ -33,12 +33,12 @@ bool wait_queue_waiters_priority_changed(WaitQueue* wq, int old_prio) TA_REQ(thr
 inline void wait_queue_dequeue_thread_internal(WaitQueue* wait, Thread* t,
                                                zx_status_t wait_queue_error) TA_REQ(thread_lock) {
   DEBUG_ASSERT(t != nullptr);
-  DEBUG_ASSERT(list_in_list(&t->queue_node_));
+  DEBUG_ASSERT(list_in_list(&t->wait_queue_state_.queue_node_));
   DEBUG_ASSERT(t->state_ == THREAD_BLOCKED || t->state_ == THREAD_BLOCKED_READ_LOCK);
   DEBUG_ASSERT(t->blocking_wait_queue_ == wait);
 
   wait_queue_remove_thread(t);
-  wait->count_--;
+  wait->collection_.count_--;
   t->blocked_status_ = wait_queue_error;
   t->blocking_wait_queue_ = NULL;
 }
@@ -91,7 +91,7 @@ inline zx_status_t wait_queue_block_etc_pre(WaitQueue* wait, const Deadline& dea
   }
 
   wait_queue_insert(wait, current_thread);
-  wait->count_++;
+  wait->collection_.count_++;
   current_thread->state_ =
       (reason == ResourceOwnership::Normal) ? THREAD_BLOCKED : THREAD_BLOCKED_READ_LOCK;
   current_thread->blocking_wait_queue_ = wait;

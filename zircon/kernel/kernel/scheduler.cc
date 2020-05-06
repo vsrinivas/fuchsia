@@ -610,7 +610,7 @@ cpu_num_t Scheduler::FindTargetCpu(Thread* thread) {
                                    Scheduler* const queue_b) TA_REQ(thread_lock) {
     if (queue_a->total_deadline_utilization_ == queue_b->total_deadline_utilization_) {
       return queue_a->total_expected_runtime_ns_.load() <
-          queue_b->total_expected_runtime_ns_.load();
+             queue_b->total_expected_runtime_ns_.load();
     }
     return queue_a->total_deadline_utilization_ < queue_b->total_deadline_utilization_;
   };
@@ -1128,7 +1128,6 @@ void Scheduler::Remove(Thread* thread) {
   if (state->OnRemove()) {
     state->curr_cpu_ = INVALID_CPU;
 
-
     total_expected_runtime_ns_ = total_expected_runtime_ns_.load() - state->expected_runtime_ns_;
     DEBUG_ASSERT(total_expected_runtime_ns_.load() >= SchedDuration{0});
 
@@ -1206,7 +1205,7 @@ bool Scheduler::Unblock(list_node* list) {
 
   cpu_mask_t cpus_to_reschedule_mask = 0;
   Thread* thread;
-  while ((thread = list_remove_tail_type(list, Thread, queue_node_)) != nullptr) {
+  while ((thread = list_remove_tail_type(list, Thread, wait_queue_state_.queue_node_)) != nullptr) {
     DEBUG_ASSERT(thread->magic_ == THREAD_MAGIC);
     DEBUG_ASSERT(!thread->IsIdle());
 

@@ -222,7 +222,8 @@ class OwnedWaitQueue : public WaitQueue, public fbl::DoublyLinkedListable<OwnedW
       Thread* next;
 
       while (true) {
-        next = list_peek_head_type(&queue_head->queue_node_, Thread, queue_node_);
+        next = list_peek_head_type(&queue_head->wait_queue_state_.queue_node_, Thread,
+                                   wait_queue_state_.queue_node_);
 
         if (!visit_thread(queue_head)) {
           return false;
@@ -234,7 +235,7 @@ class OwnedWaitQueue : public WaitQueue, public fbl::DoublyLinkedListable<OwnedW
         }
 
         // If next is not the new queue head, stop.
-        if (!list_in_list(&next->wait_queue_heads_node_)) {
+        if (!list_in_list(&next->wait_queue_state_.wait_queue_heads_node_)) {
           break;
         }
 
@@ -246,7 +247,9 @@ class OwnedWaitQueue : public WaitQueue, public fbl::DoublyLinkedListable<OwnedW
       DEBUG_ASSERT(next);
       do {
         Thread* t = next;
-        next = list_next_type(&queue_head->queue_node_, &t->queue_node_, Thread, queue_node_);
+        next = list_next_type(&queue_head->wait_queue_state_.queue_node_,
+                              &t->wait_queue_state_.queue_node_, Thread,
+                              wait_queue_state_.queue_node_);
 
         if (!visit_thread(t)) {
           return false;
@@ -259,7 +262,8 @@ class OwnedWaitQueue : public WaitQueue, public fbl::DoublyLinkedListable<OwnedW
     Thread* last_queue_head = nullptr;
     Thread* queue_head;
 
-    list_for_every_entry (&this->heads_, queue_head, Thread, wait_queue_heads_node_) {
+    list_for_every_entry (&this->collection_.heads_, queue_head, Thread,
+                          wait_queue_state_.wait_queue_heads_node_) {
       if ((last_queue_head != nullptr) && !consider_queue(last_queue_head)) {
         return;
       }
