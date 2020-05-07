@@ -42,7 +42,6 @@ executable("fvm") {
     "//zircon/public/lib/fs",
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/gpt",
-    "//zircon/public/lib/memfs",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/trace",
     "//zircon/public/lib/trace-engine",
@@ -60,6 +59,7 @@ executable("fvm") {
     "//zircon/system/ulib/fs-management",
     "//zircon/system/ulib/fvm",
     "//zircon/system/ulib/fvm-devices",
+    "//zircon/system/ulib/memfs",
     "//zircon/system/ulib/minfs",
     "//zircon/system/ulib/ramdevice-client",
   ]

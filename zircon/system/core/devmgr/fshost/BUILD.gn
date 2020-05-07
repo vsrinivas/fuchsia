@@ -45,18 +45,18 @@ source_set("fshost-registry") {
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/fs",
-    "//zircon/public/lib/memfs",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/memfs",
   ]
   deps = [
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/fidl-async-cpp",
-    "//zircon/public/lib/memfs-cpp",
     "//zircon/public/lib/zircon-internal",
     "//zircon/system/fidl/fuchsia-boot:llcpp",
     "//zircon/system/ulib/loader-service",
+    "//zircon/system/ulib/memfs:memfs-cpp",
   ]
 }
 
@@ -96,10 +96,10 @@ source_set("block-watcher") {
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/fs",
-    "//zircon/public/lib/memfs",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/fdio-caller",
+    "//zircon/system/ulib/memfs",
   ]
   deps = [
     "//sdk/fidl/fuchsia.hardware.block.encrypted:fuchsia.hardware.block.encrypted_c",

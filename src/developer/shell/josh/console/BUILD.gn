@@ -47,7 +47,7 @@ source_set("tests") {
     "//zircon/public/lib/async-loop",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
-    "//zircon/public/lib/memfs",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/memfs",
   ]
 }

@@ -174,7 +174,7 @@ executable("linux_runner_unittests") {
     "//sdk/lib/sys/cpp/testing:unit",
     "//sdk/lib/virtualization/testing",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/lib/memfs",
+    "//zircon/system/ulib/memfs",
   ]
 
   # TODO(46750): Fix the leaks and remove this.

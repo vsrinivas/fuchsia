@@ -32,8 +32,8 @@ test("runtests-utils") {
   ]
   deps = [
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/memfs",
     "//zircon/public/lib/unittest",
+    "//zircon/system/ulib/memfs",
     "//zircon/system/ulib/runtests-utils",
   ]
   data_deps = [

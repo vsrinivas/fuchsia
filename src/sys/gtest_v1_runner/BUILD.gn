@@ -37,8 +37,8 @@ rustc_binary("bin") {
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/async-loop",
     "//zircon/public/lib/async-loop-default",
-    "//zircon/public/lib/memfs",
     "//zircon/public/lib/sync",
+    "//zircon/system/ulib/memfs",
   ]
 }
 

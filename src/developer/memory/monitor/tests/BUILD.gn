@@ -33,8 +33,8 @@ executable("memory_monitor_unittests") {
     "//src/developer/memory/metrics/tests:utils",
     "//src/developer/memory/monitor:lib",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/lib/memfs",
     "//zircon/system/fidl/fuchsia-boot:fuchsia-boot_c",
+    "//zircon/system/ulib/memfs",
   ]
 }
 

@@ -2,6 +2,18 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36548.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/unification/zx_library.gni")
+
 # libmemfs-cpp.a: The C++ client library.
 #
 # Used to implement the C++ components of Memfs, which
@@ -17,15 +29,14 @@ zx_library("memfs-cpp") {
     "vmo.cc",
   ]
   deps = [
-    "$zx/system/fidl/fuchsia-io:llcpp",
-    "$zx/system/ulib/async",
-    "$zx/system/ulib/async:async-cpp",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/fs",
-    "$zx/system/ulib/sync",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zx",
+    "//zircon/public/lib/async",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/fs",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/zx",
+    "//zircon/system/fidl/fuchsia-io:llcpp",
   ]
 }
 
@@ -40,17 +51,16 @@ zx_library("memfs") {
   sources = [ "memfs-local.cc" ]
   public_deps = [
     # <lib/memfs/memfs.h> has #include <lib/async/dispatcher.h>.
-    "$zx/system/ulib/async:headers",
-    "$zx/system/ulib/fit:headers",
+    "//zircon/public/lib/async",
+    "//zircon/public/lib/fit",
 
     # <lib/memfs/memfs.h> has #include <lib/sync/completion.h>.
-    "$zx/system/ulib/sync:headers",
+    "//zircon/public/lib/sync",
   ]
   deps = [
     ":memfs-cpp",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/fs",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/fs",
   ]
-  configs += [ "$zx_build/public/gn/config:static-libc++" ]
 }

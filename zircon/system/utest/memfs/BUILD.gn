@@ -39,14 +39,14 @@ test("memfs") {
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/fs",
     "//zircon/public/lib/fzl",
-    "//zircon/public/lib/memfs",
-    "//zircon/public/lib/memfs-cpp",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/trace-engine",
     "//zircon/public/lib/unittest",
     "//zircon/public/lib/zx",
     "//zircon/system/fidl/fuchsia-io:llcpp",
     "//zircon/system/ulib/fdio-caller",
+    "//zircon/system/ulib/memfs",
+    "//zircon/system/ulib/memfs:memfs-cpp",
   ]
 }
 
