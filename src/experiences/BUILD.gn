@@ -19,9 +19,15 @@ group("tests") {
   public_deps = [
     ":dart_target_tests",
     ":dart_unittests",
+    ":test_config",
     "bin/terminal_settings_agent:tests",
     "session_shells/ermine/session:tests",
   ]
+}
+
+group("test_config") {
+  testonly = true
+  deps = [ "tests/config" ]
 }
 
 # Dart tests which can run on target
