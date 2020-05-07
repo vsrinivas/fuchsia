@@ -29,6 +29,7 @@ group("tests") {
     "//src/lib/fidl/rust/fidl:fidl_test($host_toolchain)",
     "//src/lib/fidl/rust/fidl:tests",
     "//third_party/go:go_fidl_tests",
+    "//tools/fidl/fidldoc:tests($host_toolchain)",
     "//tools/fidl/fidlgen_go:fidlgen_go_test($host_toolchain)",
     "//tools/fidl/fidlgen_hlcpp:fidlgen_hlcpp_test($host_toolchain)",
     "//tools/fidl/fidlgen_libfuzzer:fidlgen_libfuzzer_test($host_toolchain)",
