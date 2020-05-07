@@ -15,7 +15,7 @@ use fuchsia_inspect::{
     BoolProperty, BytesProperty, DoubleProperty, IntProperty, Node, Property, StringProperty,
     UintProperty,
 };
-pub use inspect::{AttachError, Inspect};
+pub use inspect::{AttachError, Inspect, WithInspect};
 use std::marker::PhantomData;
 
 /// The `Unit` derive macro can be applied to named structs in order to generate an

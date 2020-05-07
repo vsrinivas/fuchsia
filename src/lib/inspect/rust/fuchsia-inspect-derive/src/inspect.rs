@@ -142,3 +142,27 @@ where
         }
     }
 }
+
+/// Extension trait for types that #[derive(Inspect)] (or implements
+/// `Inspect for &mut T` some other way), providing a convenient way of
+/// attaching to inspect during construction. See the `Inspect` trait for
+/// more details.
+pub trait WithInspect
+where
+    Self: Sized,
+{
+    /// Attaches self to the inspect tree. It is recommended to invoke this as
+    /// part of construction. For example:
+    ///
+    /// `let yak =  Yak::new().with_inspect(inspector.root(), "my_yak")?;`
+    fn with_inspect(self, parent: &Node, name: impl AsRef<str>) -> Result<Self, AttachError>;
+}
+
+impl<T> WithInspect for T
+where
+    for<'a> &'a mut T: Inspect,
+{
+    fn with_inspect(mut self, parent: &Node, name: impl AsRef<str>) -> Result<Self, AttachError> {
+        self.iattach(parent, name).map(|()| self)
+    }
+}

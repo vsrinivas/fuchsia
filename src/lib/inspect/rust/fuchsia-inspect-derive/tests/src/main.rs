@@ -13,7 +13,7 @@ use fuchsia_async as fasync;
 use fuchsia_inspect::{
     assert_inspect_tree, Inspector, Node, NumericProperty, Property, StringProperty, UintProperty,
 };
-use fuchsia_inspect_derive::{AttachError, IDebug, IValue, Inspect, Unit};
+use fuchsia_inspect_derive::{AttachError, IDebug, IValue, Inspect, Unit, WithInspect};
 
 // TODO(49049): Add negative tests when compile failure tests are possible.
 
@@ -600,6 +600,62 @@ fn derive_inspect_generic() -> Result<(), AttachError> {
     assert_inspect_tree!(inspector, root: { generic_yak: {
         special_ability: "lifetime parameterization",
     }});
+    std::mem::drop(yak);
+    assert_inspect_tree!(inspector, root: {});
+    Ok(())
+}
+
+#[fasync::run_until_stalled(test)]
+async fn with_inspect_mutable() -> Result<(), AttachError> {
+    let inspector = Inspector::new();
+    let mut yakling = inner::AutoYakling::default().with_inspect(inspector.root(), "my_yak")?;
+    let mut happy = IValue::new(false).with_inspect(inspector.root(), "happy")?;
+    assert_inspect_tree!(inspector, root: {
+        my_yak: {
+            age: 0u64,
+        },
+        happy: false,
+    });
+    yakling.bday();
+    happy.iset(true);
+    assert_inspect_tree!(inspector, root: {
+        my_yak: {
+            age: 1u64,
+        },
+        happy: true,
+    });
+    std::mem::drop(yakling);
+    std::mem::drop(happy);
+    assert_inspect_tree!(inspector, root: {});
+    Ok(())
+}
+
+#[fasync::run_until_stalled(test)]
+async fn with_inspect_interior_mutability() -> Result<(), AttachError> {
+    let inspector = Inspector::new();
+    let yak = AutoYakWrapper::from(AutoYak::new("Sebastian".to_string()))
+        .with_inspect(inspector.root(), "my_yak")?;
+    assert_inspect_tree!(inspector, root: {
+        my_yak: {
+            name: "Sebastian",
+            horse_type: "Icelandic",
+            child: {
+                age: 0u64,
+            },
+        },
+        wrapper_data: "some data",
+    });
+    yak.inner.lock().host_bday().await;
+    assert_inspect_tree!(inspector, root: {
+        my_yak: {
+            name: "Sebastian",
+            horse_type: "Icelandic",
+            child: {
+                age: 1u64,
+            },
+        },
+        wrapper_data: "some data",
+    });
     std::mem::drop(yak);
     assert_inspect_tree!(inspector, root: {});
     Ok(())
