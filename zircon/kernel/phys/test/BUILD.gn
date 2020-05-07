@@ -5,14 +5,91 @@
 # https://opensource.org/licenses/MIT
 
 import("$zx/kernel/phys/phys_executable.gni")
+import("$zx/public/gn/test/zbi_test.gni")
 
 assert(toolchain.environment == "kernel.phys")
+
+# This provides a PhysMain function appropriate for zbi_test() targets.
+source_set("qemu-test-main") {
+  sources = [
+    "qemu-test-main.cc",
+    "test-main.h",
+  ]
+  defines = [ "ZBI_TEST_SUCCESS_STRING=\"$zbi_test_success_string\"" ]
+  deps = [
+    "$zx/kernel/lib/arch",
+    "$zx/kernel/lib/libc",
+    "$zx/system/dev/lib/uart",
+    "..:main",
+  ]
+  public_deps = [ "$zx/kernel/lib/arch:headers" ]
+}
 
 # This is linked into the special-case phys_executable() tests that
 # are run directly as QEMU kernels.
 source_set("qemu-header") {
   visibility = [ ":*" ]
   sources = [ "qemu-header.S" ]
+}
+
+# Build a test that runs directly as a QEMU kernel.  This is wired up as a
+# zbi_test() for infrastructure purposes though there is nothing in the ZBI.
+template("phys_qemu_test") {
+  main_target = target_name
+  executable_target = "_qemu_phys_test.$target_name.executable"
+  zbi_target = "_qemu_phys_test.$target_name.zbi_test"
+
+  phys_executable(executable_target) {
+    testonly = true
+    visibility = [ ":*" ]
+    deps = []
+    forward_variables_from(invoker,
+                           "*",
+                           [
+                             "linker_script",
+                             "output_dir",
+                             "output_extension",
+                             "output_name",
+                             "testonly",
+                           ])
+    linker_script = "../phys.ld"
+    deps += [
+      ":qemu-header",
+      ":qemu-test-main",
+    ]
+  }
+
+  zbi_test(zbi_target) {
+    visibility = [ ":*" ]
+
+    # The ZBI is empty other than the boilerplate cmdline, and does not
+    # contain a ZBI-bootable kernel.
+    args = []
+    cpu = ""
+    deps = []
+    tags = [ "incomplete" ]
+
+    # The special kernel is all that really matters for this test.
+    qemu_kernel = ":$executable_target"
+
+    # Set a short timeout since the tests don't necessarily shut down QEMU
+    # after printing the success string.
+    timeout = 30  # seconds
+  }
+
+  # The "null redirect" is needed to perform variant selection consistent
+  # with what the phys_executable will do.  That way the $executable_target
+  # label is in the right toolchain to be found in images.json.
+  environment_redirect(main_target) {
+    testonly = true
+    forward_variables_from(invoker, [ "visibility" ])
+    deps = [ ":$zbi_target" ]
+  }
+}
+
+phys_qemu_test("hello-world-test") {
+  sources = [ "hello-world-test.cc" ]
+  deps = [ "$zx/kernel/lib/libc" ]
 }
 
 # Ideally we'd test all four combinations on arm64 and both combinations on
@@ -36,6 +113,9 @@ group("test") {
 
   # TODO(46879): Get it building for x86 too.
   if (current_cpu == "arm64") {
-    deps = [ ":start-test" ]
+    deps = [
+      ":hello-world-test",
+      ":start-test",
+    ]
   }
 }

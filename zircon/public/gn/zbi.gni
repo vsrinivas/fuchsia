@@ -276,12 +276,8 @@ template("zbi") {
   generated_file(rspfile_target) {
     visibility = [ ":$zbi_target" ]
     forward_variables_from(invoker, [ "testonly" ])
-    deps = [
-      ":$input_target",
-    ]
-    outputs = [
-      rspfile,
-    ]
+    deps = [ ":$input_target" ]
+    outputs = [ rspfile ]
     data_keys = [ "zbi_input_args" ]
     walk_keys = [ "zbi_barrier" ]
     output_conversion = "list lines"
@@ -296,12 +292,8 @@ template("zbi") {
   generated_file(json_target) {
     visibility = [ ":$zbi_target" ]
     forward_variables_from(invoker, [ "testonly" ])
-    deps = [
-      ":$input_target",
-    ]
-    outputs = [
-      json_file,
-    ]
+    deps = [ ":$input_target" ]
+    outputs = [ json_file ]
     data_keys = [ "zbi_bootfs_manifest" ]
     walk_keys = [ "zbi_barrier" ]
     output_conversion = "json"
@@ -310,6 +302,7 @@ template("zbi") {
         {
           cpu = current_cpu
           name = "$zbi_target.bootfs"
+          label = get_label_info(":$zbi_target", "label_with_toolchain")
           type = "json"
           path = rebase_path(json_file, root_build_dir)
           forward_variables_from(invoker, [ "tags" ])
@@ -335,13 +328,9 @@ template("zbi") {
       ":$json_target",
       ":$rspfile_target",
     ]
-    outputs = [
-      output_file,
-    ]
+    outputs = [ output_file ]
     depfile = "${output_file}.d"
-    sources = [
-      rspfile,
-    ]
+    sources = [ rspfile ]
 
     tool = "$zx/tools/zbi"
     args = [

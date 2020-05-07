@@ -446,6 +446,9 @@ build_api_module("images") {
     # not in fact have a complete description. See the associated
     # conditional at this group also.
     "build/images",
+
+    # This has the images referred to by $qemu_kernel_label entries.
+    "//build/zircon/zbi_tests",
   ]
 }
 
@@ -604,27 +607,10 @@ build_api_module("zbi_tests") {
   testonly = true
   data_keys = [ "zbi_tests" ]
   deps = [
-    ":zbi_tests.zircon",
     "build/images",
     "build/unification/zbi:tests",
+    "build/zircon/zbi_tests",
   ]
-}
-
-group("zbi_tests.zircon") {
-  visibility = [ ":zbi_tests" ]
-  zircon_entries = read_file("$zircon_root_build_dir/zbi_tests.json", "json")
-  metadata = {
-    zbi_tests = []
-    foreach(zbi_test, zircon_entries) {
-      zbi_tests += [
-        {
-          forward_variables_from(zbi_test, "*")
-          path = rebase_path(path, root_build_dir, zircon_root_build_dir)
-          label = string_replace(label, "//", "//zircon/")
-        },
-      ]
-    }
-  }
 }
 
 # Describes how to invoke Njnja for the Zircon build.

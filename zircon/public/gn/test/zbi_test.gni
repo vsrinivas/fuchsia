@@ -50,7 +50,18 @@ import("$zx/public/gn/zbi.gni")
 #     - Default: [ "QEMU" ]
 #     - Type: list(string)
 #
+#   * qemu_kernel
+#     - Optional: Label of a target (image_binary() or similar,
+#     e.g. phys_executable()) that should be launched by QEMU as the
+#     "kernel" in place of the standard boot shim.
+#     - Type: label
+#
+#   * timeout
+#     - Optional: Timeout for running the test, in seconds.
+#     - Type: seconds
+#
 # See zbi() for other parameters.
+#
 template("zbi_test") {
   test_target = target_name
   cmdline_target = "_zbi_test.$target_name.cmdline"
@@ -68,10 +79,12 @@ template("zbi_test") {
 
   zbi(zbi_target) {
     testonly = true
+    data_deps = []
     forward_variables_from(invoker,
                            [
                              "cpu",
                              "compress",
+                             "data_deps",
                              "output_dir",
                              "output_extension",
                              "output_name",
@@ -85,16 +98,13 @@ template("zbi_test") {
       output_name = test_target
     }
     deps = invoker.deps + [ ":$cmdline_target" ]
+    if (defined(invoker.qemu_kernel)) {
+      data_deps += [ invoker.qemu_kernel ]
+    }
   }
 
   outputs = get_target_outputs(":$zbi_target")
   output_path = outputs[0]
-
-  if (defined(invoker.device_types)) {
-    _device_types = invoker.device_types
-  } else {
-    _device_types = [ "QEMU" ]
-  }
 
   # The main target is a group that provides a metadata.zbi_barrier
   # blocking collection of the zbi() target's metadata.zbi_input_args.
@@ -118,14 +128,25 @@ template("zbi_test") {
       zbi_tests = [
         {
           cpu = current_cpu
-          disabled =
-              defined(tags) && tags + [ "disabled" ] - [ "disabled" ] != tags
+          disabled = defined(invoker.tags) && invoker.tags + [ "disabled" ] -
+                                              [ "disabled" ] != invoker.tags
           name = test_target
           label = get_label_info(":$test_target", "label_with_toolchain")
           path = rebase_path(output_path, root_build_dir)
           bootserver_netboot = [ "--boot" ]
           success_string = zbi_test_success_string
-          device_types = _device_types
+          if (defined(invoker.device_types)) {
+            device_types = invoker.device_types
+          } else {
+            device_types = [ "QEMU" ]
+          }
+          if (defined(invoker.qemu_kernel)) {
+            assert(device_types == [ "QEMU" ],
+                   "`qemu_kernel` tests can only run on QEMU")
+            qemu_kernel_label =
+                get_label_info(invoker.qemu_kernel, "label_with_toolchain")
+          }
+          forward_variables_from(invoker, [ "timeout" ])
         },
       ]
     }

@@ -1,0 +1,48 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/fuchsia/zircon_images.gni")
+
+# This provides metadata in the //:images and //:zbi_tests schemas
+# transliterated from the Zircon data for $zx/:zbi_tests and the
+# subset of $zx/:images it refers to.
+group("zbi_tests") {
+  visibility = [
+    "//:images",
+    "//:zbi_tests",
+  ]
+  testonly = true
+  zircon_entries = read_file("$zircon_root_build_dir/zbi_tests.json", "json")
+  metadata = {
+    images = []
+    zbi_tests = []
+    foreach(zbi_test, zircon_entries) {
+      if (defined(zbi_test.qemu_kernel_label)) {
+        foreach(image, zircon_images) {
+          assert(defined(image.label), "$image")
+          if (image.label == zbi_test.qemu_kernel_label) {
+            images += [
+              {
+                forward_variables_from(image, "*")
+                path = rebase_path(path, root_build_dir, zircon_root_build_dir)
+                label = string_replace(label, "//", "//zircon/")
+              },
+            ]
+          }
+        }
+      }
+      zbi_tests += [
+        {
+          forward_variables_from(zbi_test, "*")
+          path = rebase_path(path, root_build_dir, zircon_root_build_dir)
+          label = string_replace(label, "//", "//zircon/")
+          if (defined(qemu_kernel_label)) {
+            qemu_kernel_label =
+                string_replace(qemu_kernel_label, "//", "//zircon/")
+          }
+        },
+      ]
+    }
+  }
+}

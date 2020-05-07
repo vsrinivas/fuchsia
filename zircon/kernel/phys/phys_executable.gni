@@ -119,9 +119,11 @@ template("phys_executable") {
             label = get_label_info(":$target_name", "label_with_toolchain")
             name = target_name
             forward_variables_from(invoker, [ "tags" ])
-            type = output_extension
             path = rebase_path(output_path, root_build_dir)
             cpu = current_cpu
+
+            # Botanist needs this exact value for images used as QEMU kernels.
+            type = "kernel"
           },
         ]
       }
