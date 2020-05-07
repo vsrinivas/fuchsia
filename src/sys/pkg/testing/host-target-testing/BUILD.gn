@@ -20,6 +20,7 @@ go_library("host-target-testing") {
 }
 
 test_packages = [
+  "packages",
   "paver",
   "omaha",
 ]

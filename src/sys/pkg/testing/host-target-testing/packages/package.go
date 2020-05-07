@@ -6,12 +6,16 @@ package packages
 
 import (
 	"bytes"
+	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 
 	"fuchsia.googlesource.com/far"
 	"fuchsia.googlesource.com/pm/build"
 )
+
+type FileData []byte
 
 type Package struct {
 	merkle   string
@@ -69,4 +73,47 @@ func (p *Package) ReadFile(path string) ([]byte, error) {
 	}
 
 	return ioutil.ReadAll(r)
+}
+
+func (p *Package) Expand(dir string) error {
+	for path := range p.contents {
+		data, err := p.ReadFile(path)
+		if err != nil {
+			return fmt.Errorf("invalid path. %w", err)
+		}
+		realPath := filepath.Join(dir, path)
+		if err := os.MkdirAll(filepath.Dir(realPath), 0755); err != nil {
+			return fmt.Errorf("could not create parent directories for %s, %w", realPath, err)
+		}
+		if err = ioutil.WriteFile(realPath, data, 0644); err != nil {
+			return fmt.Errorf("could not export %s to %s. %w", path, realPath, err)
+		}
+	}
+	blob, err := p.repo.OpenBlob(p.merkle)
+	if err != nil {
+		return fmt.Errorf("failed to open meta.far blob. %w", err)
+	}
+	defer blob.Close()
+
+	f, err := far.NewReader(blob)
+	if err != nil {
+		return fmt.Errorf("failed to open reader on blob. %w", err)
+	}
+	defer f.Close()
+
+	for _, path := range f.List() {
+		data, err := f.ReadFile(path)
+		if err != nil {
+			fmt.Errorf("failed to read %s. %w", path, err)
+		}
+		realPath := filepath.Join(dir, path)
+		if err := os.MkdirAll(filepath.Dir(realPath), 0755); err != nil {
+			return fmt.Errorf("could not create parent directories for %s, %w", realPath, err)
+		}
+		if err = ioutil.WriteFile(realPath, data, 0644); err != nil {
+			fmt.Errorf("failed to write file %s. %w", realPath, err)
+		}
+	}
+
+	return nil
 }
