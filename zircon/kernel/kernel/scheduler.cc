@@ -22,6 +22,7 @@
 #include <algorithm>
 #include <new>
 
+#include <ffl/string.h>
 #include <kernel/lockdep.h>
 #include <kernel/mp.h>
 #include <kernel/percpu.h>
@@ -185,19 +186,19 @@ cpu_mask_t GetEffectiveCpuMask(cpu_mask_t active_mask, const Thread* thread) {
 }  // anonymous namespace
 
 void Scheduler::Dump() {
-  printf("\tweight_total=%#x fair_tasks=%d deadline_tasks=%d vtime=%" PRId64 " period=%" PRId64
-         " ema=%" PRId64 " deadline_utilization=%" PRId64 "\n",
-         static_cast<uint32_t>(weight_total_.raw_value()), runnable_fair_task_count_,
-         runnable_deadline_task_count_, virtual_time_.raw_value(),
-         scheduling_period_grans_.raw_value(), total_expected_runtime_ns_.load().raw_value(),
-         total_deadline_utilization_.raw_value());
+  printf("\ttweight=%s nfair=%d ndeadline=%d vtime=%" PRId64 " period=%" PRId64 " ema=%" PRId64
+         " tutil=%s\n",
+         Format(weight_total_).c_str(), runnable_fair_task_count_, runnable_deadline_task_count_,
+         virtual_time_.raw_value(), scheduling_period_grans_.raw_value(),
+         total_expected_runtime_ns_.load().raw_value(),
+         Format(total_deadline_utilization_).c_str());
 
   if (active_thread_ != nullptr) {
     const SchedulerState& state = active_thread_->scheduler_state_;
     if (IsFairThread(active_thread_)) {
-      printf("\t-> name=%s weight=%#x start=%" PRId64 " finish=%" PRId64 " ts=%" PRId64
+      printf("\t-> name=%s weight=%s start=%" PRId64 " finish=%" PRId64 " ts=%" PRId64
              " ema=%" PRId64 "\n",
-             active_thread_->name_, static_cast<uint32_t>(state.fair_.weight.raw_value()),
+             active_thread_->name_, Format(state.fair_.weight).c_str(),
              state.start_time_.raw_value(), state.finish_time_.raw_value(),
              state.time_slice_ns_.raw_value(), state.expected_runtime_ns_.raw_value());
     } else {
@@ -222,11 +223,11 @@ void Scheduler::Dump() {
 
   for (const Thread& thread : fair_run_queue_) {
     const SchedulerState& state = thread.scheduler_state_;
-    printf("\t   name=%s weight=%#x start=%" PRId64 " finish=%" PRId64 " ts=%" PRId64
-           " ema=%" PRId64 "\n",
-           thread.name_, static_cast<uint32_t>(state.fair_.weight.raw_value()),
-           state.start_time_.raw_value(), state.finish_time_.raw_value(),
-           state.time_slice_ns_.raw_value(), state.expected_runtime_ns_.raw_value());
+    printf("\t   name=%s weight=%s start=%" PRId64 " finish=%" PRId64 " ts=%" PRId64 " ema=%" PRId64
+           "\n",
+           thread.name_, Format(state.fair_.weight).c_str(), state.start_time_.raw_value(),
+           state.finish_time_.raw_value(), state.time_slice_ns_.raw_value(),
+           state.expected_runtime_ns_.raw_value());
   }
 }
 
@@ -1143,9 +1144,8 @@ void Scheduler::Remove(Thread* thread) {
       weight_total_ -= state->fair_.weight;
       DEBUG_ASSERT(weight_total_ >= SchedWeight{0});
 
-      SCHED_LTRACEF("name=%s weight_total=%#x weight=%#x\n", thread->name_,
-                    static_cast<uint32_t>(weight_total_.raw_value()),
-                    static_cast<uint32_t>(state->fair_.weight.raw_value()));
+      SCHED_LTRACEF("name=%s weight_total=%s weight=%s\n", thread->name_,
+                    Format(weight_total_).c_str(), Format(state->fair_.weight).c_str());
     } else {
       DEBUG_ASSERT(total_deadline_utilization_ > SchedUtilization{0});
       total_deadline_utilization_ -= state->deadline_.utilization;
