@@ -62,6 +62,15 @@ pub async fn run_all_trials(url: &str, results: &mut results::Results) {
     }
 }
 
+#[derive(PartialEq)]
+enum StepResult {
+    // Signals that we should continue with the next step.
+    Continue,
+    // Signals that the state after executing this step is inconsistent, we should stop running
+    // further steps.
+    Stop,
+}
+
 async fn run_trial(
     puppet: &mut puppet::Puppet,
     data: &mut Data,
@@ -72,18 +81,23 @@ async fn run_trial(
     // We have to give explicit type here because compiler can't deduce it from None option value.
     try_compare::<validate::Action>(data, puppet, &trial_name, -1, None, -1, &results).await?;
     for (step_index, step) in trial.steps.iter_mut().enumerate() {
-        match step {
+        let step_result = match step {
             Step::Actions(actions) => {
-                run_actions(actions, data, puppet, &trial.name, step_index, results).await?;
+                run_actions(actions, data, puppet, &trial.name, step_index, results).await?
             }
             Step::WithMetrics(actions, step_name) => {
-                run_actions(actions, data, puppet, &trial.name, step_index, results).await?;
+                let r =
+                    run_actions(actions, data, puppet, &trial.name, step_index, results).await?;
                 results.remember_metrics(puppet.metrics()?, &trial.name, step_index, step_name);
+                r
             }
             Step::LazyActions(actions) => {
-                run_lazy_actions(actions, data, puppet, &trial.name, step_index, results).await?;
+                run_lazy_actions(actions, data, puppet, &trial.name, step_index, results).await?
             }
         };
+        if step_result == StepResult::Stop {
+            break;
+        }
     }
     Ok(())
 }
@@ -95,7 +109,7 @@ async fn run_actions(
     trial_name: &str,
     step_index: usize,
     results: &mut results::Results,
-) -> Result<(), Error> {
+) -> Result<StepResult, Error> {
     for (action_number, action) in actions.iter_mut().enumerate() {
         if let Err(e) = data.apply(action) {
             bail!(
@@ -119,7 +133,7 @@ async fn run_actions(
             Ok(validate::TestResult::Ok) => {}
             Ok(validate::TestResult::Unimplemented) => {
                 results.unimplemented(puppet.name(), action);
-                return Ok(());
+                return Ok(StepResult::Stop);
             }
             Ok(bad_result) => {
                 bail!(
@@ -142,7 +156,7 @@ async fn run_actions(
         )
         .await?;
     }
-    Ok(())
+    Ok(StepResult::Continue)
 }
 
 async fn run_lazy_actions(
@@ -152,7 +166,7 @@ async fn run_lazy_actions(
     trial_name: &str,
     step_index: usize,
     results: &mut results::Results,
-) -> Result<(), Error> {
+) -> Result<StepResult, Error> {
     for (action_number, action) in actions.iter_mut().enumerate() {
         if let Err(e) = data.apply_lazy(action) {
             bail!(
@@ -176,7 +190,7 @@ async fn run_lazy_actions(
             Ok(validate::TestResult::Ok) => {}
             Ok(validate::TestResult::Unimplemented) => {
                 results.unimplemented(puppet.name(), action);
-                return Ok(());
+                return Ok(StepResult::Stop);
             }
             Ok(bad_result) => {
                 bail!(
@@ -199,7 +213,7 @@ async fn run_lazy_actions(
         )
         .await?;
     }
-    Ok(())
+    Ok(StepResult::Continue)
 }
 
 async fn try_compare<ActionType: std::fmt::Debug>(
@@ -295,7 +309,11 @@ async fn try_compare<ActionType: std::fmt::Debug>(
 #[cfg(test)]
 mod tests {
     use {
-        super::*, crate::trials::tests::trial_with_action, crate::*, fidl_test_inspect_validate::*,
+        super::*,
+        crate::trials::tests::trial_with_action,
+        crate::trials::{Step, Trial},
+        crate::*,
+        fidl_test_inspect_validate::*,
         fuchsia_async as fasync,
     };
 
@@ -311,14 +329,32 @@ mod tests {
             create_numeric_property!(
             parent: ROOT_ID, id: 2, name: "uint", value: Number::UintT(0)),
         );
+        let mut uint_create_delete = Trial {
+            name: "foo".to_string(),
+            steps: vec![
+                Step::Actions(vec![
+                    create_numeric_property!(parent: ROOT_ID, id: 2, name: "uint", value: Number::UintT(0)),
+                ]),
+                Step::Actions(vec![delete_property!(id: 2)]),
+            ],
+        };
         let mut results = results::Results::new();
         let mut puppet = puppet::tests::local_incomplete_puppet().await?;
-        let mut data = Data::new();
         // results contains a list of the _un_implemented actions. local_incomplete_puppet()
-        // implements Int creation, but not Uint. So results should not include Int but should
-        // include Uint.
-        run_trial(&mut puppet, &mut data, &mut int_maker, &mut results).await?;
-        run_trial(&mut puppet, &mut data, &mut uint_maker, &mut results).await?;
+        // implements Int creation, but not Uint. So results should not include Uint but should
+        // include Int.
+        {
+            let mut data = Data::new();
+            run_trial(&mut puppet, &mut data, &mut int_maker, &mut results).await?;
+        }
+        {
+            let mut data = Data::new();
+            run_trial(&mut puppet, &mut data, &mut uint_maker, &mut results).await?;
+        }
+        {
+            let mut data = Data::new();
+            run_trial(&mut puppet, &mut data, &mut uint_create_delete, &mut results).await?;
+        }
         assert!(!results.to_json().contains(&format!("{}: CreateProperty(Int)", puppet.name())));
         assert!(results.to_json().contains(&format!("{}: CreateProperty(Uint)", puppet.name())));
         Ok(())
