@@ -12,5 +12,8 @@ group("openthread") {
 
 group("tests") {
   testonly = true
-  deps = [ "tests" ]
+  deps = [
+    "tests",
+    "third_party:tests",
+  ]
 }

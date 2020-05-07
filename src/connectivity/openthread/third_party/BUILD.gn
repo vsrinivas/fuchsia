@@ -5,3 +5,8 @@
 group("third_party") {
   deps = [ "openthread" ]
 }
+
+group("tests") {
+  testonly = true
+  deps = [ "openthread:tests" ]
+}

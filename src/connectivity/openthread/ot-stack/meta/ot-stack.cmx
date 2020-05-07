@@ -11,6 +11,9 @@
         "dev": [
             "class/ot-radio"
         ],
+        "features": [
+            "isolated-persistent-storage"
+        ],
         "services": [
             "fuchsia.exception.Handler",
             "fuchsia.logger.LogSink",
