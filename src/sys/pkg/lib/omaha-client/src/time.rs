@@ -224,10 +224,26 @@ pub trait TimeSource {
     /// Returns the current ComplexTime (both wall and monotonic times).
     fn now(&self) -> ComplexTime;
 }
+
 // Implementations and tests for `TimeSource`
 pub mod time_source;
 pub use time_source::MockTimeSource;
 pub use time_source::StandardTimeSource;
+
+impl<T> TimeSource for &T
+where
+    T: TimeSource,
+{
+    fn now_in_walltime(&self) -> SystemTime {
+        (*self).now_in_walltime()
+    }
+    fn now_in_monotonic(&self) -> Instant {
+        (*self).now_in_monotonic()
+    }
+    fn now(&self) -> ComplexTime {
+        (*self).now()
+    }
+}
 
 /// Helper struct for providing a consistent, readable `SystemTime`.
 ///

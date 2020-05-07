@@ -133,6 +133,11 @@ pub trait Policy {
 }
 
 pub trait PolicyEngine {
+    type TimeSource: TimeSource + Clone;
+
+    /// Provides the time source used by the PolicyEngine to the state machine.
+    fn time_source(&self) -> &Self::TimeSource;
+
     /// When should the next update happen?
     fn compute_next_update_time(
         &mut self,

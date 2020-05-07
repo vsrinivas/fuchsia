@@ -25,15 +25,7 @@ use crate::{
 };
 
 #[cfg(test)]
-use crate::{
-    common::{ProtocolState, UpdateCheckSchedule},
-    http_request::StubHttpRequest,
-    installer::stub::StubInstaller,
-    metrics::StubMetricsReporter,
-    policy::StubPolicyEngine,
-    storage::StubStorage,
-    time::{timers::StubTimer, MockTimeSource},
-};
+use crate::common::{ProtocolState, UpdateCheckSchedule};
 
 use futures::{
     channel::{mpsc, oneshot},
@@ -52,6 +44,9 @@ use thiserror::Error;
 
 pub mod update_check;
 
+mod builder;
+pub use builder::StateMachineBuilder;
+
 mod observer;
 use observer::StateMachineProgressObserver;
 pub use observer::{InstallProgress, StateMachineEvent};
@@ -64,18 +59,17 @@ const CONSECUTIVE_FAILED_UPDATE_CHECKS: &str = "consecutive_failed_update_checks
 /// This is the core state machine for a client's update check.  It is instantiated and used to
 /// perform update checks over time or to perform a single update check process.
 #[derive(Debug)]
-pub struct StateMachine<PE, HR, IN, TM, TS, MR, ST>
+pub struct StateMachine<PE, HR, IN, TM, MR, ST>
 where
     PE: PolicyEngine,
     HR: HttpRequest,
     IN: Installer,
     TM: Timer,
-    TS: TimeSource,
     MR: MetricsReporter,
     ST: Storage,
 {
     /// The immutable configuration of the client itself.
-    client_config: Config,
+    config: Config,
 
     policy_engine: PE,
 
@@ -85,7 +79,7 @@ where
 
     timer: TM,
 
-    time_source: TS,
+    time_source: PE::TimeSource,
 
     metrics_reporter: MR,
 
@@ -239,139 +233,12 @@ impl ControlHandle {
     }
 }
 
-/// Helper type to build/start a `StateMachine`.
-#[derive(Debug)]
-pub struct StateMachineBuilder<PE, HR, IN, TM, TS, MR, ST>
+impl<PE, HR, IN, TM, MR, ST> StateMachine<PE, HR, IN, TM, MR, ST>
 where
     PE: PolicyEngine,
     HR: HttpRequest,
     IN: Installer,
     TM: Timer,
-    TS: TimeSource,
-    MR: MetricsReporter,
-    ST: Storage,
-{
-    policy_engine: PE,
-    http: HR,
-    installer: IN,
-    timer: TM,
-    time_source: TS,
-    metrics_reporter: MR,
-    storage: Rc<Mutex<ST>>,
-    config: Config,
-    app_set: AppSet,
-}
-
-impl<'a, PE, HR, IN, TM, TS, MR, ST> StateMachineBuilder<PE, HR, IN, TM, TS, MR, ST>
-where
-    PE: 'a + PolicyEngine,
-    HR: 'a + HttpRequest,
-    IN: 'a + Installer,
-    TM: 'a + Timer,
-    TS: 'a + TimeSource,
-    MR: 'a + MetricsReporter,
-    ST: 'a + Storage,
-{
-    /// Creates a new `StateMachineBuilder` using the given trait implementations.
-    pub fn new(
-        policy_engine: PE,
-        http: HR,
-        installer: IN,
-        timer: TM,
-        time_source: TS,
-        metrics_reporter: MR,
-        storage: Rc<Mutex<ST>>,
-        config: Config,
-        app_set: AppSet,
-    ) -> Self {
-        Self {
-            policy_engine,
-            http,
-            installer,
-            timer,
-            time_source,
-            metrics_reporter,
-            storage,
-            config,
-            app_set,
-        }
-    }
-
-    async fn build(self) -> StateMachine<PE, HR, IN, TM, TS, MR, ST> {
-        let StateMachineBuilder {
-            policy_engine,
-            http,
-            installer,
-            timer,
-            time_source,
-            metrics_reporter,
-            storage,
-            config,
-            mut app_set,
-        } = self;
-
-        let ((), context) = {
-            let storage = storage.lock().await;
-            futures::join!(app_set.load(&*storage), update_check::Context::load(&*storage))
-        };
-
-        StateMachine {
-            client_config: config,
-            policy_engine,
-            http,
-            installer,
-            timer,
-            time_source,
-            metrics_reporter,
-            storage_ref: storage,
-            context,
-            state: State::Idle,
-            app_set,
-        }
-    }
-
-    /// Start the StateMachine to do periodic update checks in the background or when requested
-    /// through the returned control handle.  The returned stream must be polled to make
-    /// forward progress.
-    // TODO: find a better name for this function.
-    pub async fn start(self) -> (ControlHandle, impl Stream<Item = StateMachineEvent> + 'a) {
-        let state_machine = self.build().await;
-
-        let (send, recv) = mpsc::channel(0);
-        (
-            ControlHandle(send),
-            async_generator::generate(move |co| state_machine.run(recv, co)).into_yielded(),
-        )
-    }
-
-    /// Run start_upate_check once, returning a stream of the states it produces.
-    #[cfg(test)]
-    pub async fn oneshot_check(
-        self,
-        options: CheckOptions,
-    ) -> impl Stream<Item = StateMachineEvent> + 'a {
-        let mut state_machine = self.build().await;
-
-        async_generator::generate(move |mut co| async move {
-            state_machine.start_update_check(options, &mut co).await
-        })
-        .into_yielded()
-    }
-
-    /// Run perform_update_check once, returning the update check result.
-    #[cfg(test)]
-    pub async fn oneshot(self) -> Result<update_check::Response, UpdateCheckError> {
-        self.build().await.oneshot().await
-    }
-}
-
-impl<PE, HR, IN, TM, TS, MR, ST> StateMachine<PE, HR, IN, TM, TS, MR, ST>
-where
-    PE: PolicyEngine,
-    HR: HttpRequest,
-    IN: Installer,
-    TM: Timer,
-    TS: TimeSource,
     MR: MetricsReporter,
     ST: Storage,
 {
@@ -645,7 +512,7 @@ where
         self.report_check_interval().await;
 
         // Construct a request for the app(s).
-        let mut request_builder = RequestBuilder::new(&self.client_config, &request_params);
+        let mut request_builder = RequestBuilder::new(&self.config, &request_params);
         for app in &apps {
             request_builder = request_builder.add_update_check(app).add_ping(app);
         }
@@ -883,7 +750,7 @@ where
         event: Event,
         apps: &'a Vec<App>,
     ) {
-        let mut request_builder = RequestBuilder::new(&self.client_config, &request_params);
+        let mut request_builder = RequestBuilder::new(&self.config, &request_params);
         for app in apps {
             request_builder = request_builder.add_event(app, &event);
         }
@@ -1039,13 +906,12 @@ fn randomize(n: u64, range: u64) -> u64 {
 }
 
 #[cfg(test)]
-impl<PE, HR, IN, TM, TS, MR, ST> StateMachine<PE, HR, IN, TM, TS, MR, ST>
+impl<PE, HR, IN, TM, MR, ST> StateMachine<PE, HR, IN, TM, MR, ST>
 where
     PE: PolicyEngine,
     HR: HttpRequest,
     IN: Installer,
     TM: Timer,
-    TS: TimeSource,
     MR: MetricsReporter,
     ST: Storage,
 {
@@ -1084,34 +950,6 @@ where
 }
 
 #[cfg(test)]
-impl
-    StateMachineBuilder<
-        StubPolicyEngine<MockTimeSource>,
-        StubHttpRequest,
-        StubInstaller,
-        StubTimer,
-        MockTimeSource,
-        StubMetricsReporter,
-        StubStorage,
-    >
-{
-    /// Create a new StateMachine with stub implementations.
-    pub fn new_stub(config: Config, app_set: AppSet, mock_time: MockTimeSource) -> Self {
-        Self::new(
-            StubPolicyEngine::new(mock_time.clone()),
-            StubHttpRequest,
-            StubInstaller::default(),
-            StubTimer,
-            mock_time,
-            StubMetricsReporter,
-            Rc::new(Mutex::new(StubStorage)),
-            config,
-            app_set,
-        )
-    }
-}
-
-#[cfg(test)]
 mod tests {
     use super::update_check::*;
     use super::*;
@@ -1119,13 +957,12 @@ mod tests {
         common::{
             App, CheckOptions, PersistedApp, ProtocolState, UpdateCheckSchedule, UserCounting,
         },
-        configuration::test_support::config_generator,
-        http_request::{mock::MockHttpRequest, StubHttpRequest},
+        http_request::mock::MockHttpRequest,
         installer::{
             stub::{StubInstallErrors, StubInstaller, StubPlan},
             ProgressObserver,
         },
-        metrics::{MockMetricsReporter, StubMetricsReporter},
+        metrics::MockMetricsReporter,
         policy::{MockPolicyEngine, StubPolicyEngine},
         protocol::{response, Cohort},
         storage::MemStorage,
@@ -1173,7 +1010,6 @@ mod tests {
     #[test]
     fn run_simple_check_with_noupdate_result() {
         block_on(async {
-            let config = config_generator();
             let response = json!({"response":{
               "server": "prod",
               "protocol": "3.0",
@@ -1188,21 +1024,7 @@ mod tests {
             let response = serde_json::to_vec(&response).unwrap();
             let http = MockHttpRequest::new(hyper::Response::new(response.into()));
 
-            let mock_time = MockTimeSource::new_from_now();
-            StateMachineBuilder::new(
-                StubPolicyEngine::new(mock_time.clone()),
-                http,
-                StubInstaller::default(),
-                StubTimer,
-                mock_time,
-                StubMetricsReporter,
-                Rc::new(Mutex::new(StubStorage)),
-                config,
-                make_test_app_set(),
-            )
-            .oneshot()
-            .await
-            .unwrap();
+            StateMachineBuilder::new_stub().http(http).oneshot().await.unwrap();
 
             info!("update check complete!");
         });
@@ -1211,7 +1033,6 @@ mod tests {
     #[test]
     fn test_cohort_returned_with_noupdate_result() {
         block_on(async {
-            let config = config_generator();
             let response = json!({"response":{
               "server": "prod",
               "protocol": "3.0",
@@ -1228,21 +1049,7 @@ mod tests {
             let response = serde_json::to_vec(&response).unwrap();
             let http = MockHttpRequest::new(hyper::Response::new(response.into()));
 
-            let mock_time = MockTimeSource::new_from_now();
-            let response = StateMachineBuilder::new(
-                StubPolicyEngine::new(mock_time.clone()),
-                http,
-                StubInstaller::default(),
-                StubTimer,
-                mock_time,
-                StubMetricsReporter,
-                Rc::new(Mutex::new(StubStorage)),
-                config,
-                make_test_app_set(),
-            )
-            .oneshot()
-            .await
-            .unwrap();
+            let response = StateMachineBuilder::new_stub().http(http).oneshot().await.unwrap();
             assert_eq!("{00000000-0000-0000-0000-000000000001}", response.app_responses[0].app_id);
             assert_eq!(Some("1".into()), response.app_responses[0].cohort.id);
             assert_eq!(Some("stable-channel".into()), response.app_responses[0].cohort.name);
@@ -1253,29 +1060,15 @@ mod tests {
     #[test]
     fn test_report_parse_response_error() {
         block_on(async {
-            let config = config_generator();
             let http = MockHttpRequest::new(hyper::Response::new("invalid response".into()));
 
-            let mock_time = MockTimeSource::new_from_now();
-            let mut state_machine = StateMachineBuilder::new(
-                StubPolicyEngine::new(mock_time.clone()),
-                http,
-                StubInstaller::default(),
-                StubTimer,
-                mock_time,
-                StubMetricsReporter,
-                Rc::new(Mutex::new(StubStorage)),
-                config.clone(),
-                make_test_app_set(),
-            )
-            .build()
-            .await;
+            let mut state_machine = StateMachineBuilder::new_stub().http(http).build().await;
 
             let response = state_machine.oneshot().await;
             assert_matches!(response, Err(UpdateCheckError::ResponseParser(_)));
 
             let request_params = RequestParams::default();
-            let mut request_builder = RequestBuilder::new(&config, &request_params);
+            let mut request_builder = RequestBuilder::new(&state_machine.config, &request_params);
             let event = Event {
                 event_type: EventType::UpdateComplete,
                 errorcode: Some(EventErrorCode::ParseResponse),
@@ -1290,7 +1083,6 @@ mod tests {
     #[test]
     fn test_report_construct_install_plan_error() {
         block_on(async {
-            let config = config_generator();
             let response = json!({"response":{
               "server": "prod",
               "protocol": "4.0",
@@ -1305,26 +1097,13 @@ mod tests {
             let response = serde_json::to_vec(&response).unwrap();
             let http = MockHttpRequest::new(hyper::Response::new(response.into()));
 
-            let mock_time = MockTimeSource::new_from_now();
-            let mut state_machine = StateMachineBuilder::new(
-                StubPolicyEngine::new(mock_time.clone()),
-                http,
-                StubInstaller::default(),
-                StubTimer,
-                mock_time,
-                StubMetricsReporter,
-                Rc::new(Mutex::new(StubStorage)),
-                config.clone(),
-                make_test_app_set(),
-            )
-            .build()
-            .await;
+            let mut state_machine = StateMachineBuilder::new_stub().http(http).build().await;
 
             let response = state_machine.oneshot().await;
             assert_matches!(response, Err(UpdateCheckError::InstallPlan(_)));
 
             let request_params = RequestParams::default();
-            let mut request_builder = RequestBuilder::new(&config, &request_params);
+            let mut request_builder = RequestBuilder::new(&state_machine.config, &request_params);
             let event = Event {
                 event_type: EventType::UpdateComplete,
                 errorcode: Some(EventErrorCode::ConstructInstallPlan),
@@ -1339,7 +1118,6 @@ mod tests {
     #[test]
     fn test_report_installation_error() {
         block_on(async {
-            let config = config_generator();
             let response = json!({"response":{
               "server": "prod",
               "protocol": "3.0",
@@ -1354,26 +1132,17 @@ mod tests {
             let response = serde_json::to_vec(&response).unwrap();
             let http = MockHttpRequest::new(hyper::Response::new(response.into()));
 
-            let mock_time = MockTimeSource::new_from_now();
-            let mut state_machine = StateMachineBuilder::new(
-                StubPolicyEngine::new(mock_time.clone()),
-                http,
-                StubInstaller { should_fail: true },
-                StubTimer,
-                mock_time,
-                StubMetricsReporter,
-                Rc::new(Mutex::new(StubStorage)),
-                config.clone(),
-                make_test_app_set(),
-            )
-            .build()
-            .await;
+            let mut state_machine = StateMachineBuilder::new_stub()
+                .http(http)
+                .installer(StubInstaller { should_fail: true })
+                .build()
+                .await;
 
             let response = state_machine.oneshot().await.unwrap();
             assert_eq!(Action::InstallPlanExecutionError, response.app_responses[0].result);
 
             let request_params = RequestParams::default();
-            let mut request_builder = RequestBuilder::new(&config, &request_params);
+            let mut request_builder = RequestBuilder::new(&state_machine.config, &request_params);
             let event = Event {
                 event_type: EventType::UpdateComplete,
                 errorcode: Some(EventErrorCode::Installation),
@@ -1388,7 +1157,6 @@ mod tests {
     #[test]
     fn test_report_deferred_by_policy() {
         block_on(async {
-            let config = config_generator();
             let response = json!({"response":{
               "server": "prod",
               "protocol": "3.0",
@@ -1407,25 +1175,17 @@ mod tests {
                 update_decision: UpdateDecision::DeferredByPolicy,
                 ..MockPolicyEngine::default()
             };
-            let mut state_machine = StateMachineBuilder::new(
-                policy_engine,
-                http,
-                StubInstaller::default(),
-                StubTimer,
-                MockTimeSource::new_from_now(),
-                StubMetricsReporter,
-                Rc::new(Mutex::new(StubStorage)),
-                config.clone(),
-                make_test_app_set(),
-            )
-            .build()
-            .await;
+            let mut state_machine = StateMachineBuilder::new_stub()
+                .policy_engine(policy_engine)
+                .http(http)
+                .build()
+                .await;
 
             let response = state_machine.oneshot().await.unwrap();
             assert_eq!(Action::DeferredByPolicy, response.app_responses[0].result);
 
             let request_params = RequestParams::default();
-            let mut request_builder = RequestBuilder::new(&config, &request_params);
+            let mut request_builder = RequestBuilder::new(&state_machine.config, &request_params);
             let event = Event {
                 event_type: EventType::UpdateComplete,
                 event_result: EventResult::UpdateDeferred,
@@ -1440,7 +1200,6 @@ mod tests {
     #[test]
     fn test_report_denied_by_policy() {
         block_on(async {
-            let config = config_generator();
             let response = json!({"response":{
               "server": "prod",
               "protocol": "3.0",
@@ -1458,25 +1217,18 @@ mod tests {
                 update_decision: UpdateDecision::DeniedByPolicy,
                 ..MockPolicyEngine::default()
             };
-            let mut state_machine = StateMachineBuilder::new(
-                policy_engine,
-                http,
-                StubInstaller::default(),
-                StubTimer,
-                MockTimeSource::new_from_now(),
-                StubMetricsReporter,
-                Rc::new(Mutex::new(StubStorage)),
-                config.clone(),
-                make_test_app_set(),
-            )
-            .build()
-            .await;
+
+            let mut state_machine = StateMachineBuilder::new_stub()
+                .policy_engine(policy_engine)
+                .http(http)
+                .build()
+                .await;
 
             let response = state_machine.oneshot().await.unwrap();
             assert_eq!(Action::DeniedByPolicy, response.app_responses[0].result);
 
             let request_params = RequestParams::default();
-            let mut request_builder = RequestBuilder::new(&config, &request_params);
+            let mut request_builder = RequestBuilder::new(&state_machine.config, &request_params);
             let event = Event {
                 event_type: EventType::UpdateComplete,
                 errorcode: Some(EventErrorCode::DeniedByPolicy),
@@ -1491,28 +1243,17 @@ mod tests {
     #[test]
     fn test_wait_timer() {
         let mut pool = LocalPool::new();
-        let config = config_generator();
         let mock_time = MockTimeSource::new_from_now();
         let next_update_time = mock_time.now() + Duration::from_secs(111);
         let (timer, mut timers) = BlockingTimer::new();
         let policy_engine = MockPolicyEngine {
             check_timing: Some(CheckTiming::builder().time(next_update_time).build()),
+            time_source: mock_time,
             ..MockPolicyEngine::default()
         };
 
         let (_ctl, state_machine) = pool.run_until(
-            StateMachineBuilder::new(
-                policy_engine,
-                StubHttpRequest,
-                StubInstaller::default(),
-                timer,
-                mock_time,
-                StubMetricsReporter,
-                Rc::new(Mutex::new(StubStorage)),
-                config,
-                make_test_app_set(),
-            )
-            .start(),
+            StateMachineBuilder::new_stub().policy_engine(policy_engine).timer(timer).start(),
         );
 
         pool.spawner().spawn_local(state_machine.map(|_| ()).collect()).unwrap();
@@ -1526,7 +1267,6 @@ mod tests {
     #[test]
     fn test_cohort_and_user_counting_updates_are_used_in_subsequent_requests() {
         block_on(async {
-            let config = config_generator();
             let response = json!({"response":{
                 "server": "prod",
                 "protocol": "3.0",
@@ -1549,21 +1289,9 @@ mod tests {
             http.add_response(hyper::Response::new(response.into()));
             let last_request_viewer = MockHttpRequest::from_request_cell(http.get_request_cell());
             let apps = make_test_app_set();
-            let mock_time = MockTimeSource::new_from_now();
 
-            let mut state_machine = StateMachineBuilder::new(
-                StubPolicyEngine::new(mock_time.clone()),
-                http,
-                StubInstaller::default(),
-                StubTimer,
-                mock_time,
-                StubMetricsReporter,
-                Rc::new(Mutex::new(StubStorage)),
-                config.clone(),
-                apps.clone(),
-            )
-            .build()
-            .await;
+            let mut state_machine =
+                StateMachineBuilder::new_stub().http(http).app_set(apps.clone()).build().await;
 
             // Run it the first time.
             state_machine.run_once().await;
@@ -1578,9 +1306,10 @@ mod tests {
             state_machine.run_once().await;
 
             let request_params = RequestParams::default();
-            let expected_request_builder = RequestBuilder::new(&config, &request_params)
-                .add_update_check(&apps[0])
-                .add_ping(&apps[0]);
+            let expected_request_builder =
+                RequestBuilder::new(&state_machine.config, &request_params)
+                    .add_update_check(&apps[0])
+                    .add_ping(&apps[0]);
             // Check that the second update check used the new app.
             assert_request(last_request_viewer, expected_request_builder).await;
         });
@@ -1589,7 +1318,6 @@ mod tests {
     #[test]
     fn test_user_counting_returned() {
         block_on(async {
-            let config = config_generator();
             let response = json!({"response":{
             "server": "prod",
             "protocol": "3.0",
@@ -1610,21 +1338,7 @@ mod tests {
             let response = serde_json::to_vec(&response).unwrap();
             let http = MockHttpRequest::new(hyper::Response::new(response.into()));
 
-            let mock_time = MockTimeSource::new_from_now();
-            let response = StateMachineBuilder::new(
-                StubPolicyEngine::new(mock_time.clone()),
-                http,
-                StubInstaller::default(),
-                StubTimer,
-                mock_time,
-                StubMetricsReporter,
-                Rc::new(Mutex::new(StubStorage)),
-                config,
-                make_test_app_set(),
-            )
-            .oneshot()
-            .await
-            .unwrap();
+            let response = StateMachineBuilder::new_stub().http(http).oneshot().await.unwrap();
 
             assert_eq!(
                 UserCounting::ClientRegulatedByDate(Some(1234567)),
@@ -1636,23 +1350,17 @@ mod tests {
     #[test]
     fn test_observe_state() {
         block_on(async {
-            let config = config_generator();
-
-            let actual_states = StateMachineBuilder::new_stub(
-                config,
-                make_test_app_set(),
-                MockTimeSource::new_from_now(),
-            )
-            .oneshot_check(CheckOptions::default())
-            .await
-            .filter_map(|event| {
-                future::ready(match event {
-                    StateMachineEvent::StateChange(state) => Some(state),
-                    _ => None,
+            let actual_states = StateMachineBuilder::new_stub()
+                .oneshot_check(CheckOptions::default())
+                .await
+                .filter_map(|event| {
+                    future::ready(match event {
+                        StateMachineEvent::StateChange(state) => Some(state),
+                        _ => None,
+                    })
                 })
-            })
-            .collect::<Vec<State>>()
-            .await;
+                .collect::<Vec<State>>()
+                .await;
 
             let expected_states =
                 vec![State::CheckingForUpdates, State::ErrorCheckingForUpdate, State::Idle];
@@ -1663,20 +1371,19 @@ mod tests {
     #[test]
     fn test_observe_schedule() {
         block_on(async {
-            let config = config_generator();
             let mock_time = MockTimeSource::new_from_now();
-            let actual_schedules =
-                StateMachineBuilder::new_stub(config, make_test_app_set(), mock_time.clone())
-                    .oneshot_check(CheckOptions::default())
-                    .await
-                    .filter_map(|event| {
-                        future::ready(match event {
-                            StateMachineEvent::ScheduleChange(schedule) => Some(schedule),
-                            _ => None,
-                        })
+            let actual_schedules = StateMachineBuilder::new_stub()
+                .policy_engine(StubPolicyEngine::new(&mock_time))
+                .oneshot_check(CheckOptions::default())
+                .await
+                .filter_map(|event| {
+                    future::ready(match event {
+                        StateMachineEvent::ScheduleChange(schedule) => Some(schedule),
+                        _ => None,
                     })
-                    .collect::<Vec<UpdateCheckSchedule>>()
-                    .await;
+                })
+                .collect::<Vec<UpdateCheckSchedule>>()
+                .await;
 
             // The resultant schedule should only contain the timestamp of the above update check.
             let expected_schedule =
@@ -1689,20 +1396,17 @@ mod tests {
     #[test]
     fn test_observe_protocol_state() {
         block_on(async {
-            let config = config_generator();
-            let mock_time = MockTimeSource::new_from_now();
-            let actual_protocol_states =
-                StateMachineBuilder::new_stub(config, make_test_app_set(), mock_time.clone())
-                    .oneshot_check(CheckOptions::default())
-                    .await
-                    .filter_map(|event| {
-                        future::ready(match event {
-                            StateMachineEvent::ProtocolStateChange(state) => Some(state),
-                            _ => None,
-                        })
+            let actual_protocol_states = StateMachineBuilder::new_stub()
+                .oneshot_check(CheckOptions::default())
+                .await
+                .filter_map(|event| {
+                    future::ready(match event {
+                        StateMachineEvent::ProtocolStateChange(state) => Some(state),
+                        _ => None,
                     })
-                    .collect::<Vec<ProtocolState>>()
-                    .await;
+                })
+                .collect::<Vec<ProtocolState>>()
+                .await;
 
             let expected_protocol_state =
                 ProtocolState { consecutive_failed_update_checks: 1, ..ProtocolState::default() };
@@ -1714,7 +1418,6 @@ mod tests {
     #[test]
     fn test_observe_omaha_server_response() {
         block_on(async {
-            let config = config_generator();
             let response = json!({"response":{
               "server": "prod",
               "protocol": "3.0",
@@ -1732,28 +1435,18 @@ mod tests {
             let expected_omaha_response = response::parse_json_response(&response).unwrap();
             let http = MockHttpRequest::new(hyper::Response::new(response.into()));
 
-            let mock_time = MockTimeSource::new_from_now();
-            let actual_omaha_response = StateMachineBuilder::new(
-                StubPolicyEngine::new(mock_time.clone()),
-                http,
-                StubInstaller::default(),
-                StubTimer,
-                mock_time,
-                StubMetricsReporter,
-                Rc::new(Mutex::new(StubStorage)),
-                config,
-                make_test_app_set(),
-            )
-            .oneshot_check(CheckOptions::default())
-            .await
-            .filter_map(|event| {
-                future::ready(match event {
-                    StateMachineEvent::OmahaServerResponse(response) => Some(response),
-                    _ => None,
+            let actual_omaha_response = StateMachineBuilder::new_stub()
+                .http(http)
+                .oneshot_check(CheckOptions::default())
+                .await
+                .filter_map(|event| {
+                    future::ready(match event {
+                        StateMachineEvent::OmahaServerResponse(response) => Some(response),
+                        _ => None,
+                    })
                 })
-            })
-            .collect::<Vec<response::Response>>()
-            .await;
+                .collect::<Vec<response::Response>>()
+                .await;
 
             assert_eq!(actual_omaha_response, vec![expected_omaha_response]);
         });
@@ -1762,26 +1455,14 @@ mod tests {
     #[test]
     fn test_metrics_report_update_check_response_time() {
         block_on(async {
-            let config = config_generator();
-            let mock_time = MockTimeSource::new_from_now();
-            let mut state_machine = StateMachineBuilder::new(
-                StubPolicyEngine::new(mock_time.clone()),
-                StubHttpRequest,
-                StubInstaller::default(),
-                StubTimer,
-                mock_time,
-                MockMetricsReporter::new(false),
-                Rc::new(Mutex::new(StubStorage)),
-                config,
-                make_test_app_set(),
-            )
-            .build()
-            .await;
+            let mut metrics_reporter = MockMetricsReporter::new();
+            let _response = StateMachineBuilder::new_stub()
+                .metrics_reporter(&mut metrics_reporter)
+                .oneshot()
+                .await;
 
-            let _response = state_machine.oneshot().await;
-
-            assert!(!state_machine.metrics_reporter.metrics.is_empty());
-            match &state_machine.metrics_reporter.metrics[0] {
+            assert!(!metrics_reporter.metrics.is_empty());
+            match &metrics_reporter.metrics[0] {
                 Metrics::UpdateCheckResponseTime(_) => {} // expected
                 metric => panic!("Unexpected metric {:?}", metric),
             }
@@ -1791,53 +1472,28 @@ mod tests {
     #[test]
     fn test_metrics_report_update_check_retries() {
         block_on(async {
-            let config = config_generator();
-            let mock_time = MockTimeSource::new_from_now();
-            let mut state_machine = StateMachineBuilder::new(
-                StubPolicyEngine::new(mock_time.clone()),
-                StubHttpRequest,
-                StubInstaller::default(),
-                StubTimer,
-                mock_time,
-                MockMetricsReporter::new(false),
-                Rc::new(Mutex::new(StubStorage)),
-                config,
-                make_test_app_set(),
-            )
-            .build()
-            .await;
+            let mut metrics_reporter = MockMetricsReporter::new();
+            let _response = StateMachineBuilder::new_stub()
+                .metrics_reporter(&mut metrics_reporter)
+                .oneshot()
+                .await;
 
-            let _response = state_machine.oneshot().await;
-
-            assert!(state_machine
-                .metrics_reporter
-                .metrics
-                .contains(&Metrics::UpdateCheckRetries(1)));
+            assert!(metrics_reporter.metrics.contains(&Metrics::UpdateCheckRetries(1)));
         });
     }
 
     #[test]
     fn test_update_check_retries_backoff_with_mock_timer() {
         block_on(async {
-            let config = config_generator();
             let mut timer = MockTimer::new();
             timer.expect_for_range(Duration::from_millis(500), Duration::from_millis(1500));
             timer.expect_for_range(Duration::from_millis(1500), Duration::from_millis(2500));
             let requested_waits = timer.get_requested_waits_view();
-            let mock_time = MockTimeSource::new_from_now();
-            let response = StateMachineBuilder::new(
-                StubPolicyEngine::new(mock_time.clone()),
-                MockHttpRequest::empty(),
-                StubInstaller::default(),
-                timer,
-                mock_time,
-                MockMetricsReporter::new(false),
-                Rc::new(Mutex::new(StubStorage)),
-                config,
-                make_test_app_set(),
-            )
-            .oneshot()
-            .await;
+            let response = StateMachineBuilder::new_stub()
+                .http(MockHttpRequest::empty())
+                .timer(timer)
+                .oneshot()
+                .await;
 
             let waits = requested_waits.borrow();
             assert_eq!(waits.len(), 2);
@@ -1860,26 +1516,15 @@ mod tests {
     #[test]
     fn test_metrics_report_update_check_failure_reason_omaha() {
         block_on(async {
-            let config = config_generator();
-            let mock_time = MockTimeSource::new_from_now();
-            let mut state_machine = StateMachineBuilder::new(
-                StubPolicyEngine::new(mock_time.clone()),
-                StubHttpRequest,
-                StubInstaller::default(),
-                StubTimer,
-                mock_time,
-                MockMetricsReporter::new(false),
-                Rc::new(Mutex::new(StubStorage)),
-                config,
-                make_test_app_set(),
-            )
-            .build()
-            .await;
+            let mut metrics_reporter = MockMetricsReporter::new();
+            let mut state_machine = StateMachineBuilder::new_stub()
+                .metrics_reporter(&mut metrics_reporter)
+                .build()
+                .await;
 
             state_machine.run_once().await;
 
-            assert!(state_machine
-                .metrics_reporter
+            assert!(metrics_reporter
                 .metrics
                 .contains(&Metrics::UpdateCheckFailureReason(UpdateCheckFailureReason::Omaha)));
         });
@@ -1888,26 +1533,16 @@ mod tests {
     #[test]
     fn test_metrics_report_update_check_failure_reason_network() {
         block_on(async {
-            let config = config_generator();
-            let mock_time = MockTimeSource::new_from_now();
-            let mut state_machine = StateMachineBuilder::new(
-                StubPolicyEngine::new(mock_time.clone()),
-                MockHttpRequest::empty(),
-                StubInstaller::default(),
-                StubTimer,
-                mock_time,
-                MockMetricsReporter::new(false),
-                Rc::new(Mutex::new(StubStorage)),
-                config,
-                make_test_app_set(),
-            )
-            .build()
-            .await;
+            let mut metrics_reporter = MockMetricsReporter::new();
+            let mut state_machine = StateMachineBuilder::new_stub()
+                .http(MockHttpRequest::empty())
+                .metrics_reporter(&mut metrics_reporter)
+                .build()
+                .await;
 
             state_machine.run_once().await;
 
-            assert!(state_machine
-                .metrics_reporter
+            assert!(metrics_reporter
                 .metrics
                 .contains(&Metrics::UpdateCheckFailureReason(UpdateCheckFailureReason::Network)));
         });
@@ -1916,26 +1551,15 @@ mod tests {
     #[test]
     fn test_persist_last_update_time() {
         block_on(async {
-            let config = config_generator();
             let storage = Rc::new(Mutex::new(MemStorage::new()));
 
-            let mock_time = MockTimeSource::new_from_now();
-            StateMachineBuilder::new(
-                StubPolicyEngine::new(mock_time.clone()),
-                StubHttpRequest,
-                StubInstaller::default(),
-                StubTimer,
-                mock_time,
-                StubMetricsReporter,
-                Rc::clone(&storage),
-                config,
-                make_test_app_set(),
-            )
-            .oneshot_check(CheckOptions::default())
-            .await
-            .map(|_| ())
-            .collect::<()>()
-            .await;
+            StateMachineBuilder::new_stub()
+                .storage(Rc::clone(&storage))
+                .oneshot_check(CheckOptions::default())
+                .await
+                .map(|_| ())
+                .collect::<()>()
+                .await;
 
             let storage = storage.lock().await;
             storage.get_int(LAST_UPDATE_TIME).await.unwrap();
@@ -1948,26 +1572,15 @@ mod tests {
         block_on(async {
             // TODO: update this test to have a mocked http response with server dictated poll
             // interval when out code support parsing it from the response.
-            let config = config_generator();
             let storage = Rc::new(Mutex::new(MemStorage::new()));
 
-            let mock_time = MockTimeSource::new_from_now();
-            StateMachineBuilder::new(
-                StubPolicyEngine::new(mock_time.clone()),
-                StubHttpRequest,
-                StubInstaller::default(),
-                StubTimer,
-                mock_time,
-                StubMetricsReporter,
-                Rc::clone(&storage),
-                config,
-                make_test_app_set(),
-            )
-            .oneshot_check(CheckOptions::default())
-            .await
-            .map(|_| ())
-            .collect::<()>()
-            .await;
+            StateMachineBuilder::new_stub()
+                .storage(Rc::clone(&storage))
+                .oneshot_check(CheckOptions::default())
+                .await
+                .map(|_| ())
+                .collect::<()>()
+                .await;
 
             let storage = storage.lock().await;
             assert!(storage.get_int(SERVER_DICTATED_POLL_INTERVAL).await.is_none());
@@ -1978,27 +1591,17 @@ mod tests {
     #[test]
     fn test_persist_app() {
         block_on(async {
-            let config = config_generator();
             let storage = Rc::new(Mutex::new(MemStorage::new()));
             let app_set = make_test_app_set();
 
-            let mock_time = MockTimeSource::new_from_now();
-            StateMachineBuilder::new(
-                StubPolicyEngine::new(mock_time.clone()),
-                StubHttpRequest,
-                StubInstaller::default(),
-                StubTimer,
-                mock_time,
-                StubMetricsReporter,
-                Rc::clone(&storage),
-                config,
-                app_set.clone(),
-            )
-            .oneshot_check(CheckOptions::default())
-            .await
-            .map(|_| ())
-            .collect::<()>()
-            .await;
+            StateMachineBuilder::new_stub()
+                .storage(Rc::clone(&storage))
+                .app_set(app_set.clone())
+                .oneshot_check(CheckOptions::default())
+                .await
+                .map(|_| ())
+                .collect::<()>()
+                .await;
 
             let storage = storage.lock().await;
             let apps = app_set.to_vec().await;
@@ -2010,29 +1613,20 @@ mod tests {
     #[test]
     fn test_load_last_update_time() {
         block_on(async {
-            let config = config_generator();
             let mut storage = MemStorage::new();
             let mock_time = MockTimeSource::new_from_now();
             let last_update_time = mock_time.now() - Duration::from_secs(999);
             let stored_time = last_update_time.checked_to_micros_since_epoch().unwrap();
-            // The exptected time is to account for the loss of precision in the conversions.
+            // The expected time is to account for the loss of precision in the conversions.
             // (nanos to micros)
             let expected_time = PartialComplexTime::from_micros_since_epoch(stored_time);
             storage.set_int(LAST_UPDATE_TIME, stored_time).await.unwrap();
 
-            let state_machine = StateMachineBuilder::new(
-                StubPolicyEngine::new(mock_time.clone()),
-                StubHttpRequest,
-                StubInstaller::default(),
-                StubTimer,
-                mock_time,
-                StubMetricsReporter,
-                Rc::new(Mutex::new(storage)),
-                config,
-                make_test_app_set(),
-            )
-            .build()
-            .await;
+            let state_machine = StateMachineBuilder::new_stub()
+                .policy_engine(StubPolicyEngine::new(&mock_time))
+                .storage(Rc::new(Mutex::new(storage)))
+                .build()
+                .await;
 
             assert_eq!(state_machine.context.schedule.last_update_time.unwrap(), expected_time);
         });
@@ -2041,24 +1635,11 @@ mod tests {
     #[test]
     fn test_load_server_dictated_poll_interval() {
         block_on(async {
-            let config = config_generator();
             let mut storage = MemStorage::new();
             storage.set_int(SERVER_DICTATED_POLL_INTERVAL, 56789).await.unwrap();
 
-            let mock_time = MockTimeSource::new_from_now();
-            let state_machine = StateMachineBuilder::new(
-                StubPolicyEngine::new(mock_time.clone()),
-                StubHttpRequest,
-                StubInstaller::default(),
-                StubTimer,
-                mock_time,
-                StubMetricsReporter,
-                Rc::new(Mutex::new(storage)),
-                config,
-                make_test_app_set(),
-            )
-            .build()
-            .await;
+            let state_machine =
+                StateMachineBuilder::new_stub().storage(Rc::new(Mutex::new(storage))).build().await;
 
             assert_eq!(
                 Some(Duration::from_micros(56789)),
@@ -2070,7 +1651,6 @@ mod tests {
     #[test]
     fn test_load_app() {
         block_on(async {
-            let config = config_generator();
             let app_set = AppSet::new(vec![App::new(
                 "{00000000-0000-0000-0000-000000000001}",
                 [1, 2, 3, 4],
@@ -2089,20 +1669,11 @@ mod tests {
             let apps = app_set.to_vec().await;
             storage.set_string(&apps[0].id, &json).await.unwrap();
 
-            let mock_time = MockTimeSource::new_from_now();
-            let _state_machine = StateMachineBuilder::new(
-                StubPolicyEngine::new(mock_time.clone()),
-                StubHttpRequest,
-                StubInstaller::default(),
-                StubTimer,
-                mock_time,
-                StubMetricsReporter,
-                Rc::new(Mutex::new(storage)),
-                config,
-                app_set.clone(),
-            )
-            .build()
-            .await;
+            let _state_machine = StateMachineBuilder::new_stub()
+                .storage(Rc::new(Mutex::new(storage)))
+                .app_set(app_set.clone())
+                .build()
+                .await;
 
             let apps = app_set.to_vec().await;
             assert_eq!(persisted_app.cohort, apps[0].cohort);
@@ -2113,25 +1684,17 @@ mod tests {
     #[test]
     fn test_report_check_interval() {
         block_on(async {
-            let config = config_generator();
             let mut mock_time = MockTimeSource::new_from_now();
             // Conversion from ComplexTime to i64 microseconds, necessary for a change in precision
             // as the Time structs have nanosecond precision.
             let start_time = mock_time.now();
             let start_time_i64_micros = start_time.checked_to_micros_since_epoch().unwrap();
-            let mut state_machine = StateMachineBuilder::new(
-                StubPolicyEngine::new(mock_time.clone()),
-                StubHttpRequest,
-                StubInstaller::default(),
-                StubTimer,
-                mock_time.clone(),
-                MockMetricsReporter::new(false),
-                Rc::new(Mutex::new(MemStorage::new())),
-                config,
-                make_test_app_set(),
-            )
-            .build()
-            .await;
+            let mut state_machine = StateMachineBuilder::new_stub()
+                .policy_engine(StubPolicyEngine::new(mock_time.clone()))
+                .metrics_reporter(MockMetricsReporter::new())
+                .storage(Rc::new(Mutex::new(MemStorage::new())))
+                .build()
+                .await;
 
             state_machine.report_check_interval().await;
             // No metrics should be reported because no last check time in storage.
@@ -2234,7 +1797,6 @@ mod tests {
     #[test]
     fn test_report_successful_update_duration() {
         block_on(async {
-            let config = config_generator();
             let response = json!({"response":{
               "server": "prod",
               "protocol": "3.0",
@@ -2265,19 +1827,14 @@ mod tests {
             let expected_duration_since_first_seen =
                 update_completed_time.wall_duration_since(first_seen_time_from_i64).unwrap();
 
-            let mut state_machine = StateMachineBuilder::new(
-                StubPolicyEngine::new(mock_time.clone()),
-                http,
-                TestInstaller::builder(mock_time.clone()).build(),
-                StubTimer,
-                mock_time.clone(),
-                MockMetricsReporter::new(false),
-                Rc::clone(&storage),
-                config,
-                make_test_app_set(),
-            )
-            .build()
-            .await;
+            let mut state_machine = StateMachineBuilder::new_stub()
+                .http(http)
+                .installer(TestInstaller::builder(mock_time.clone()).build())
+                .policy_engine(StubPolicyEngine::new(mock_time.clone()))
+                .metrics_reporter(MockMetricsReporter::new())
+                .storage(Rc::clone(&storage))
+                .build()
+                .await;
 
             {
                 let mut storage = storage.lock().await;
@@ -2315,7 +1872,6 @@ mod tests {
     #[test]
     fn test_report_failed_update_duration() {
         block_on(async {
-            let config = config_generator();
             let response = json!({"response":{
               "server": "prod",
               "protocol": "3.0",
@@ -2329,20 +1885,12 @@ mod tests {
             }});
             let response = serde_json::to_vec(&response).unwrap();
             let http = MockHttpRequest::new(hyper::Response::new(response.into()));
-            let mock_time = MockTimeSource::new_from_now();
-            let mut state_machine = StateMachineBuilder::new(
-                StubPolicyEngine::new(mock_time.clone()),
-                http,
-                StubInstaller { should_fail: true },
-                StubTimer,
-                mock_time,
-                MockMetricsReporter::new(false),
-                Rc::new(Mutex::new(StubStorage)),
-                config,
-                make_test_app_set(),
-            )
-            .build()
-            .await;
+            let mut state_machine = StateMachineBuilder::new_stub()
+                .http(http)
+                .installer(StubInstaller { should_fail: true })
+                .metrics_reporter(MockMetricsReporter::new())
+                .build()
+                .await;
             // clock::mock::set(time::i64_to_time(123456789));
 
             state_machine.run_once().await;
@@ -2357,22 +1905,9 @@ mod tests {
     #[test]
     fn test_record_update_first_seen_time() {
         block_on(async {
-            let config = config_generator();
             let storage = Rc::new(Mutex::new(MemStorage::new()));
-            let mock_time = MockTimeSource::new_from_now();
-            let mut state_machine = StateMachineBuilder::new(
-                StubPolicyEngine::new(mock_time.clone()),
-                StubHttpRequest,
-                StubInstaller::default(),
-                StubTimer,
-                mock_time,
-                StubMetricsReporter,
-                Rc::clone(&storage),
-                config,
-                make_test_app_set(),
-            )
-            .build()
-            .await;
+            let mut state_machine =
+                StateMachineBuilder::new_stub().storage(Rc::clone(&storage)).build().await;
 
             let now = micros_from_epoch_to_system_time(123456789);
             assert_eq!(state_machine.record_update_first_seen_time("id", now).await, now);
@@ -2407,22 +1942,13 @@ mod tests {
     #[test]
     fn test_report_attempts_to_succeed() {
         block_on(async {
-            let config = config_generator();
             let storage = Rc::new(Mutex::new(MemStorage::new()));
-            let mock_time = MockTimeSource::new_from_now();
-            let mut state_machine = StateMachineBuilder::new(
-                StubPolicyEngine::new(mock_time.clone()),
-                StubHttpRequest,
-                StubInstaller { should_fail: true },
-                StubTimer,
-                mock_time,
-                MockMetricsReporter::new(false),
-                Rc::clone(&storage),
-                config,
-                make_test_app_set(),
-            )
-            .build()
-            .await;
+            let mut state_machine = StateMachineBuilder::new_stub()
+                .installer(StubInstaller { should_fail: true })
+                .metrics_reporter(MockMetricsReporter::new())
+                .storage(Rc::clone(&storage))
+                .build()
+                .await;
 
             state_machine.report_attempts_to_succeed(true).await;
             {
@@ -2462,7 +1988,6 @@ mod tests {
     #[test]
     fn test_successful_update_triggers_reboot() {
         block_on(async {
-            let config = config_generator();
             let response = json!({"response":{
               "server": "prod",
               "protocol": "3.0",
@@ -2477,19 +2002,12 @@ mod tests {
             let response = serde_json::to_vec(&response).unwrap();
             let http = MockHttpRequest::new(hyper::Response::new(response.into()));
             let mock_time = MockTimeSource::new_from_now();
-            let mut state_machine = StateMachineBuilder::new(
-                StubPolicyEngine::new(mock_time.clone()),
-                http,
-                TestInstaller::builder(mock_time.clone()).build(),
-                StubTimer,
-                mock_time,
-                MockMetricsReporter::new(false),
-                Rc::new(Mutex::new(MemStorage::new())),
-                config,
-                make_test_app_set(),
-            )
-            .build()
-            .await;
+            let mut state_machine = StateMachineBuilder::new_stub()
+                .http(http)
+                .installer(TestInstaller::builder(mock_time.clone()).build())
+                .policy_engine(StubPolicyEngine::new(mock_time))
+                .build()
+                .await;
 
             state_machine.run_once().await;
 
@@ -2500,7 +2018,6 @@ mod tests {
     #[test]
     fn test_failed_update_does_not_trigger_reboot() {
         block_on(async {
-            let config = config_generator();
             let response = json!({"response":{
               "server": "prod",
               "protocol": "3.0",
@@ -2515,19 +2032,12 @@ mod tests {
             let response = serde_json::to_vec(&response).unwrap();
             let http = MockHttpRequest::new(hyper::Response::new(response.into()));
             let mock_time = MockTimeSource::new_from_now();
-            let mut state_machine = StateMachineBuilder::new(
-                StubPolicyEngine::new(mock_time.clone()),
-                http,
-                TestInstaller::builder(mock_time.clone()).should_fail(true).build(),
-                StubTimer,
-                mock_time,
-                MockMetricsReporter::new(false),
-                Rc::new(Mutex::new(StubStorage)),
-                config,
-                make_test_app_set(),
-            )
-            .build()
-            .await;
+            let mut state_machine = StateMachineBuilder::new_stub()
+                .http(http)
+                .installer(TestInstaller::builder(mock_time.clone()).should_fail(true).build())
+                .policy_engine(StubPolicyEngine::new(mock_time))
+                .build()
+                .await;
 
             state_machine.run_once().await;
 
@@ -2631,20 +2141,11 @@ mod tests {
         let response = serde_json::to_vec(&response).unwrap();
         let http = MockHttpRequest::new(hyper::Response::new(response.into()));
         let (send_install, mut recv_install) = mpsc::channel(0);
-        let mock_time = MockTimeSource::new_from_now();
         let (mut ctl, state_machine) = pool.run_until(
-            StateMachineBuilder::new(
-                StubPolicyEngine::new(mock_time.clone()),
-                http,
-                BlockingInstaller { on_install: send_install },
-                StubTimer,
-                mock_time,
-                StubMetricsReporter,
-                Rc::new(Mutex::new(StubStorage)),
-                config_generator(),
-                make_test_app_set(),
-            )
-            .start(),
+            StateMachineBuilder::new_stub()
+                .http(http)
+                .installer(BlockingInstaller { on_install: send_install })
+                .start(),
         );
 
         let observer = TestObserver::default();
@@ -2683,21 +2184,11 @@ mod tests {
         let (timer, mut timers) = BlockingTimer::new();
         let policy_engine = MockPolicyEngine {
             check_timing: Some(CheckTiming::builder().time(next_update_time).build()),
+            time_source: mock_time.clone(),
             ..MockPolicyEngine::default()
         };
         let (mut ctl, state_machine) = pool.run_until(
-            StateMachineBuilder::new(
-                policy_engine,
-                StubHttpRequest,
-                StubInstaller::default(),
-                timer,
-                mock_time.clone(),
-                StubMetricsReporter,
-                Rc::new(Mutex::new(StubStorage)),
-                config_generator(),
-                make_test_app_set(),
-            )
-            .start(),
+            StateMachineBuilder::new_stub().policy_engine(policy_engine).timer(timer).start(),
         );
 
         let observer = TestObserver::default();
@@ -2737,7 +2228,6 @@ mod tests {
     #[test]
     fn test_progress_observer() {
         block_on(async {
-            let config = config_generator();
             let response = json!({"response":{
               "server": "prod",
               "protocol": "3.0",
@@ -2752,29 +2242,22 @@ mod tests {
             let response = serde_json::to_vec(&response).unwrap();
             let http = MockHttpRequest::new(hyper::Response::new(response.into()));
             let mock_time = MockTimeSource::new_from_now();
-            let progresses = StateMachineBuilder::new(
-                StubPolicyEngine::new(mock_time.clone()),
-                http,
-                TestInstaller::builder(mock_time.clone()).build(),
-                StubTimer,
-                mock_time,
-                MockMetricsReporter::new(false),
-                Rc::new(Mutex::new(MemStorage::new())),
-                config,
-                make_test_app_set(),
-            )
-            .oneshot_check(CheckOptions::default())
-            .await
-            .filter_map(|event| {
-                future::ready(match event {
-                    StateMachineEvent::InstallProgressChange(InstallProgress { progress }) => {
-                        Some(progress)
-                    }
-                    _ => None,
+            let progresses = StateMachineBuilder::new_stub()
+                .http(http)
+                .installer(TestInstaller::builder(mock_time.clone()).build())
+                .policy_engine(StubPolicyEngine::new(mock_time))
+                .oneshot_check(CheckOptions::default())
+                .await
+                .filter_map(|event| {
+                    future::ready(match event {
+                        StateMachineEvent::InstallProgressChange(InstallProgress { progress }) => {
+                            Some(progress)
+                        }
+                        _ => None,
+                    })
                 })
-            })
-            .collect::<Vec<f32>>()
-            .await;
+                .collect::<Vec<f32>>()
+                .await;
             assert_eq!(progresses, [0.0, 0.3, 0.9, 1.0]);
         });
     }

@@ -59,7 +59,6 @@ fn main() -> Result<(), Error> {
             http,
             installer,
             timer::FuchsiaTimer,
-            StandardTimeSource,
             metrics_reporter,
             stash_ref.clone(),
             config.clone(),

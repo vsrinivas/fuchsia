@@ -6,19 +6,38 @@ use crate::{
     common::{App, CheckOptions, ProtocolState, UpdateCheckSchedule},
     installer::Plan,
     policy::{CheckDecision, CheckTiming, PolicyEngine, UpdateDecision},
+    time::MockTimeSource,
 };
 use futures::future::BoxFuture;
 use futures::prelude::*;
 
 /// A mock PolicyEngine that returns mocked data.
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct MockPolicyEngine {
     pub check_timing: Option<CheckTiming>,
     pub check_decision: CheckDecision,
     pub update_decision: UpdateDecision,
+    pub time_source: MockTimeSource,
+}
+
+impl Default for MockPolicyEngine {
+    fn default() -> Self {
+        Self {
+            check_timing: Default::default(),
+            check_decision: Default::default(),
+            update_decision: Default::default(),
+            time_source: MockTimeSource::new_from_now(),
+        }
+    }
 }
 
 impl PolicyEngine for MockPolicyEngine {
+    type TimeSource = MockTimeSource;
+
+    fn time_source(&self) -> &Self::TimeSource {
+        &self.time_source
+    }
+
     fn compute_next_update_time(
         &mut self,
         _apps: &[App],

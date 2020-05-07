@@ -13,8 +13,11 @@ pub struct MockMetricsReporter {
 }
 
 impl MockMetricsReporter {
-    pub fn new(should_fail: bool) -> Self {
-        MockMetricsReporter { should_fail, metrics: vec![] }
+    pub fn new_failing() -> Self {
+        MockMetricsReporter { should_fail: true, metrics: vec![] }
+    }
+    pub fn new() -> Self {
+        MockMetricsReporter { should_fail: false, metrics: vec![] }
     }
 }
 
@@ -35,14 +38,14 @@ mod tests {
 
     #[test]
     fn test_mock_metrics_reporter() {
-        let mut mock = MockMetricsReporter::new(false);
+        let mut mock = MockMetricsReporter::new();
         let result = mock.report_metrics(Metrics::UpdateCheckResponseTime(Duration::from_secs(2)));
         assert!(result.is_ok(), "{:?}", result);
     }
 
     #[test]
     fn test_mock_metrics_reporter_error() {
-        let mut mock = MockMetricsReporter::new(true);
+        let mut mock = MockMetricsReporter::new_failing();
         let result = mock.report_metrics(Metrics::UpdateCheckResponseTime(Duration::from_secs(5)));
         assert!(result.is_err());
     }

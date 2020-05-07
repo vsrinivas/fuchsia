@@ -51,3 +51,12 @@ pub enum UpdateCheckFailureReason {
 pub trait MetricsReporter {
     fn report_metrics(&mut self, metrics: Metrics) -> Result<(), Error>;
 }
+
+impl<T> MetricsReporter for &mut T
+where
+    T: MetricsReporter,
+{
+    fn report_metrics(&mut self, metrics: Metrics) -> Result<(), Error> {
+        (*self).report_metrics(metrics)
+    }
+}

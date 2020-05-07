@@ -614,14 +614,10 @@ mod stub {
             // Configure the state machine to schedule automatic update checks in the future and
             // block timers forever so we can control when update checks happen.
             let (state_machine_control, state_machine) = StateMachineBuilder::new(
-                MockPolicyEngine {
-                    allow_update_check: self.allow_update_check,
-                    time_source: time_source.clone(),
-                },
+                MockPolicyEngine { allow_update_check: self.allow_update_check, time_source },
                 StubHttpRequest,
                 StubInstaller::default(),
                 InfiniteTimer,
-                time_source,
                 StubMetricsReporter,
                 Rc::clone(&storage_ref),
                 config,
@@ -678,12 +674,18 @@ mod stub {
     /// A mock PolicyEngine implementation that allows update checks with an interval of a few
     /// seconds.
     #[derive(Debug)]
-    pub struct MockPolicyEngine<T: TimeSource> {
+    pub struct MockPolicyEngine {
         allow_update_check: bool,
-        time_source: T,
+        time_source: MockTimeSource,
     }
 
-    impl<T: TimeSource> PolicyEngine for MockPolicyEngine<T> {
+    impl PolicyEngine for MockPolicyEngine {
+        type TimeSource = MockTimeSource;
+
+        fn time_source(&self) -> &Self::TimeSource {
+            &self.time_source
+        }
+
         fn compute_next_update_time(
             &mut self,
             _apps: &[App],

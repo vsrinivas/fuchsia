@@ -153,28 +153,38 @@ impl Policy for FuchsiaPolicy {
 
 /// FuchsiaPolicyEngine just gathers the current time and hands it off to the FuchsiaPolicy as the
 /// PolicyData.
-pub struct FuchsiaPolicyEngine<T: TimeSource> {
+#[derive(Debug)]
+pub struct FuchsiaPolicyEngine<T> {
     time_source: T,
 }
 pub struct FuchsiaPolicyEngineBuilder;
-pub struct FuchsiaPolicyEngineBuilderWithTime<T: TimeSource> {
+pub struct FuchsiaPolicyEngineBuilderWithTime<T> {
     time_source: T,
 }
 impl FuchsiaPolicyEngineBuilder {
-    pub fn time_source<T: TimeSource>(
-        self,
-        time_source: T,
-    ) -> FuchsiaPolicyEngineBuilderWithTime<T> {
+    pub fn time_source<T>(self, time_source: T) -> FuchsiaPolicyEngineBuilderWithTime<T>
+    where
+        T: TimeSource + Clone,
+    {
         FuchsiaPolicyEngineBuilderWithTime { time_source }
     }
 }
-impl<T: TimeSource> FuchsiaPolicyEngineBuilderWithTime<T> {
+impl<T> FuchsiaPolicyEngineBuilderWithTime<T> {
     pub fn build(self) -> FuchsiaPolicyEngine<T> {
         FuchsiaPolicyEngine { time_source: self.time_source }
     }
 }
 
-impl<T: TimeSource> PolicyEngine for FuchsiaPolicyEngine<T> {
+impl<T> PolicyEngine for FuchsiaPolicyEngine<T>
+where
+    T: TimeSource + Clone,
+{
+    type TimeSource = T;
+
+    fn time_source(&self) -> &Self::TimeSource {
+        &self.time_source
+    }
+
     fn compute_next_update_time(
         &mut self,
         apps: &[App],
@@ -223,7 +233,7 @@ impl<T: TimeSource> PolicyEngine for FuchsiaPolicyEngine<T> {
 mod tests {
     use super::*;
     use omaha_client::installer::stub::StubPlan;
-    use omaha_client::time::{ComplexTime, MockTimeSource};
+    use omaha_client::time::{ComplexTime, MockTimeSource, TimeSource};
 
     /// Test that the correct next update time is calculated for the normal case where a check was
     /// recently done and the next needs to be scheduled.

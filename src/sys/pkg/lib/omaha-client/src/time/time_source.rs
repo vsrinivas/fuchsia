@@ -12,7 +12,9 @@ use super::{ComplexTime, TimeSource};
 
 /// A default `TimeSource` implementation that uses `SystemTime::now()` and `Instant::now()` to get
 /// the current times.
+#[derive(Clone, Debug, Default)]
 pub struct StandardTimeSource;
+
 impl TimeSource for StandardTimeSource {
     fn now_in_walltime(&self) -> SystemTime {
         SystemTime::now()

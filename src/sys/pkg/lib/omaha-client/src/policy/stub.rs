@@ -52,13 +52,23 @@ impl Policy for StubPolicy {
 pub struct StubPolicyEngine<T: TimeSource> {
     time_source: T,
 }
+
 impl<T: TimeSource> StubPolicyEngine<T> {
     pub fn new(time_source: T) -> Self {
-        StubPolicyEngine { time_source }
+        Self { time_source }
     }
 }
 
-impl<T: TimeSource> PolicyEngine for StubPolicyEngine<T> {
+impl<T> PolicyEngine for StubPolicyEngine<T>
+where
+    T: TimeSource + Clone,
+{
+    type TimeSource = T;
+
+    fn time_source(&self) -> &Self::TimeSource {
+        &self.time_source
+    }
+
     fn compute_next_update_time(
         &mut self,
         apps: &[App],
