@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use crate::internal::core::{
-    Address, MessengerClient as RegistryMessengerClient,
+    create_message_hub as create_registry_hub, Address, MessengerClient as RegistryMessengerClient,
     MessengerFactory as RegistryMessengerFactory, Payload,
 };
 use crate::message::base::{Audience, MessageEvent, MessengerType};
@@ -11,6 +11,7 @@ use crate::switchboard::clock;
 
 use anyhow::{format_err, Error};
 
+use fuchsia_inspect::component;
 use futures::channel::mpsc::UnboundedSender;
 use futures::lock::Mutex;
 use std::collections::HashMap;
@@ -105,6 +106,42 @@ impl Drop for ListenSessionImpl {
     }
 }
 
+pub struct SwitchboardBuilder {
+    registry_messenger_factory: Option<RegistryMessengerFactory>,
+    inspect_node: Option<inspect::Node>,
+}
+
+impl SwitchboardBuilder {
+    pub fn create() -> Self {
+        SwitchboardBuilder { registry_messenger_factory: None, inspect_node: None }
+    }
+
+    pub fn registry_messenger_factory(mut self, factory: RegistryMessengerFactory) -> Self {
+        self.registry_messenger_factory = Some(factory);
+        self
+    }
+
+    pub fn inspect_node(mut self, node: inspect::Node) -> Self {
+        self.inspect_node = Some(node);
+        self
+    }
+
+    pub async fn build(self) -> Result<SwitchboardClient, Error> {
+        let registry_messenger_factory = if let Some(factory) = self.registry_messenger_factory {
+            factory
+        } else {
+            create_registry_hub()
+        };
+        let inspect_node = if let Some(node) = self.inspect_node {
+            node
+        } else {
+            component::inspector().root().create_child("switchboard")
+        };
+
+        SwitchboardImpl::create(registry_messenger_factory, inspect_node).await
+    }
+}
+
 pub struct SwitchboardImpl {
     /// Next available session id.
     next_session_id: u64,
@@ -128,7 +165,7 @@ impl SwitchboardImpl {
     /// a sender to provide events in response to the actions sent.
     ///
     /// Requests will be recorded to the given inspect node.
-    pub async fn create(
+    async fn create(
         registry_messenger_factory: RegistryMessengerFactory,
         inspect_node: inspect::Node,
     ) -> Result<SwitchboardClient, Error> {
@@ -348,7 +385,7 @@ mod tests {
     use crate::message::base::Audience;
     use crate::message::receptor::Receptor;
     use crate::switchboard::intl_types::{IntlInfo, LocaleId, TemperatureUnit};
-    use fuchsia_inspect::{assert_inspect_tree, component};
+    use fuchsia_inspect::assert_inspect_tree;
 
     async fn retrieve_and_verify_action(
         receptor: &mut Receptor<Payload, Address>,
@@ -376,10 +413,7 @@ mod tests {
     /// use the return values without holding onto the Switchboard.
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_client_access() {
-        let messenger_factory = create_registry_hub();
-        let inspect_node = component::inspector().root().create_child("switchboard");
-        let switchboard_client =
-            SwitchboardImpl::create(messenger_factory.clone(), inspect_node).await.unwrap();
+        let switchboard_client = SwitchboardBuilder::create().build().await.unwrap();
 
         // Match holds the return value in a temporary location, preventing
         // resources from going out of scope and being freed.
@@ -399,9 +433,11 @@ mod tests {
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_request() {
         let messenger_factory = create_registry_hub();
-        let inspect_node = component::inspector().root().create_child("switchboard");
-        let switchboard_client =
-            SwitchboardImpl::create(messenger_factory.clone(), inspect_node).await.unwrap();
+        let switchboard_client = SwitchboardBuilder::create()
+            .registry_messenger_factory(messenger_factory.clone())
+            .build()
+            .await
+            .unwrap();
         // Create registry endpoint.
         let (_, mut receptor) =
             messenger_factory.create(MessengerType::Addressable(Address::Registry)).await.unwrap();
@@ -429,9 +465,11 @@ mod tests {
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_listen() {
         let messenger_factory = create_registry_hub();
-        let inspect_node = component::inspector().root().create_child("switchboard");
-        let switchboard_client =
-            SwitchboardImpl::create(messenger_factory.clone(), inspect_node).await.unwrap();
+        let switchboard_client = SwitchboardBuilder::create()
+            .registry_messenger_factory(messenger_factory.clone())
+            .build()
+            .await
+            .unwrap();
         let setting_type = SettingType::Unknown;
 
         // Create registry endpoint.
@@ -469,9 +507,11 @@ mod tests {
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_notify() {
         let messenger_factory = create_registry_hub();
-        let inspect_node = component::inspector().root().create_child("switchboard");
-        let switchboard_client =
-            SwitchboardImpl::create(messenger_factory.clone(), inspect_node).await.unwrap();
+        let switchboard_client = SwitchboardBuilder::create()
+            .registry_messenger_factory(messenger_factory.clone())
+            .build()
+            .await
+            .unwrap();
         let setting_type = SettingType::Unknown;
 
         // Create registry endpoint.
@@ -533,10 +573,9 @@ mod tests {
         clock::mock::set(SystemTime::UNIX_EPOCH);
 
         let inspector = inspect::Inspector::new();
-        let messenger_factory = create_registry_hub();
         let inspect_node = inspector.root().create_child("switchboard");
         let switchboard_client =
-            SwitchboardImpl::create(messenger_factory.clone(), inspect_node).await.unwrap();
+            SwitchboardBuilder::create().inspect_node(inspect_node).build().await.unwrap();
 
         // Send a few requests to make sure they get written to inspect properly.
         switchboard_client

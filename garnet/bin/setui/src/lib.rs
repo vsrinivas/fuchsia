@@ -43,7 +43,7 @@ use {
         SetupInfo, SystemInfo,
     },
     crate::switchboard::intl_types::IntlInfo,
-    crate::switchboard::switchboard_impl::SwitchboardImpl,
+    crate::switchboard::switchboard_impl::SwitchboardBuilder,
     crate::system::spawn_setui_fidl_handler,
     crate::system::spawn_system_fidl_handler,
     crate::system::system_controller::SystemController,
@@ -353,11 +353,11 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
 
     // Creates switchboard, handed to interface implementations to send messages
     // to handlers.
-    let inspect_node = component::inspector().root().create_child("switchboard");
-    let switchboard_client =
-        SwitchboardImpl::create(registry_messenger_factory.clone(), inspect_node)
-            .await
-            .expect("could not create switchboard");
+    let switchboard_client = SwitchboardBuilder::create()
+        .registry_messenger_factory(registry_messenger_factory.clone())
+        .build()
+        .await
+        .expect("could not create switchboard");
 
     let mut agent_authority =
         AuthorityImpl::create(crate::internal::agent::create_message_hub()).await?;
