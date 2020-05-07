@@ -174,13 +174,16 @@ void UnbindTask::Run() {
       return;
     }
   }
+  // Save a copy of the device in case this task's destructor runs after the
+  // completion returns.
+  fbl::RefPtr<Device> device = device_;
   // No unbind request sent, need to call the completion now.
   completion(status);
   // Since the device didn't successfully send an Unbind request, it will not
   // drop our unbind task reference. We need to drop it now unless the error was
   // that the unbind request had already been sent (ZX_ERR_UNAVAILABLE).
   if (status != ZX_ERR_UNAVAILABLE) {
-    device_->DropUnbindTask();
+    device->DropUnbindTask();
   }
 }
 
@@ -217,12 +220,15 @@ void RemoveTask::Run() {
       return;
     }
   }
+  // Save a copy of the device in case this task's destructor runs after the
+  // completion returns.
+  fbl::RefPtr<Device> device = device_;
   // No remove request sent, need to call the completion now.
   completion(status);
   // Since the device didn't successfully send an CompleteRemoval request, it will not
   // drop our remove task reference. We need to drop it now unless the error was
   // that the remove request had already been sent (ZX_ERR_UNAVAILABLE).
   if (status != ZX_ERR_UNAVAILABLE) {
-    device_->DropRemoveTask();
+    device->DropRemoveTask();
   }
 }

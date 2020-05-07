@@ -532,3 +532,38 @@ TEST_F(UnbindTestCase, RemoveParentAndChildSimultaneously) {
   ASSERT_NO_FATAL_FAILURES(CheckRemoveReceivedAndReply(parent_device->controller_remote));
   coordinator_loop()->RunUntilIdle();
 }
+
+// This tests force removing a device before running the remove task.
+TEST_F(UnbindTestCase, ForcedRemovalBeforeRemoveTask) {
+  size_t parent_index;
+  ASSERT_NO_FATAL_FAILURES(
+      AddDevice(platform_bus(), "parent", 0 /* protocol id */, "", &parent_index));
+
+  auto* parent_device = device(parent_index);
+
+  size_t child_index;
+  ASSERT_NO_FATAL_FAILURES(
+      AddDevice(parent_device->device, "child", 0 /* protocol id */, "", &child_index));
+
+  auto* child_device = device(child_index);
+
+  ASSERT_NO_FATAL_FAILURES(coordinator_.ScheduleRemove(parent_device->device));
+  coordinator_loop()->RunUntilIdle();
+
+  // Complete the unbind without running the remove task yet.
+  ASSERT_OK(child_device->device->CompleteUnbind(ZX_OK));
+  ASSERT_OK(coordinator_.RemoveDevice(child_device->device, true /* forced */));
+
+  // The remove task should now be run.
+  coordinator_loop()->RunUntilIdle();
+
+  // Since we force removed the child, the parent should be dead too since it is
+  // in the same devhost.
+  ASSERT_EQ(Device::State::kDead, parent_device->device->state());
+  ASSERT_NULL(parent_device->device->GetActiveUnbind());
+  ASSERT_NULL(parent_device->device->GetActiveRemove());
+
+  ASSERT_EQ(Device::State::kDead, child_device->device->state());
+  ASSERT_NULL(child_device->device->GetActiveUnbind());
+  ASSERT_NULL(child_device->device->GetActiveRemove());
+}
