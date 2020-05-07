@@ -26,9 +26,9 @@ driver_module("lp50xx-light") {
     "//zircon/public/lib/device-protocol-i2c",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
-    "//zircon/public/lib/hwreg-i2c",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/hwreg-i2c",
   ]
 }
 
@@ -52,10 +52,10 @@ test("lp50xx-light-test") {
     "//zircon/public/lib/device-protocol-i2c",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
-    "//zircon/public/lib/hwreg-i2c",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/hwreg-i2c",
   ]
 }
 
