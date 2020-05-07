@@ -106,43 +106,4 @@ func TestFileExists(t *testing.T) {
 	} else if !existsB {
 		t.Fatalf("%s does not exist", fB)
 	}
-
-}
-
-func TestDirIsEmpty(t *testing.T) {
-	tmpdir, err := ioutil.TempDir("", "")
-	if err != nil {
-		t.Fatalf("failed to create temp dir: %v", err)
-	}
-	defer os.RemoveAll(tmpdir)
-
-	// Directory should start off empty.
-	empty, err := DirIsEmpty(tmpdir)
-	if err != nil {
-		t.Fatal(err.Error())
-	} else if !empty {
-		t.Fatalf("directory should be empty")
-	}
-
-	if err := ioutil.WriteFile(filepath.Join(tmpdir, "file.txt"), []byte("content"), os.ModePerm); err != nil {
-		t.Fatal(err.Error())
-	}
-
-	// Directory should now be non-empty.
-	empty, err = DirIsEmpty(tmpdir)
-	if err != nil {
-		t.Fatal(err.Error())
-	} else if empty {
-		t.Fatalf("directory should be non-empty")
-	}
-
-	// Non-existent directories should be empty by convention.
-	nonexistentSubdir := filepath.Join(tmpdir, "i_dont_exist")
-	empty, err = DirIsEmpty(nonexistentSubdir)
-	if err != nil {
-		t.Fatal(err.Error())
-	} else if !empty {
-		t.Fatalf("non-existent directory should be empty")
-	}
-
 }

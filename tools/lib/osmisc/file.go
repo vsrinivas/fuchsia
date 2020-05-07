@@ -6,7 +6,6 @@ package osmisc
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 )
@@ -64,16 +63,4 @@ func FileExists(name string) (bool, error) {
 		return false, fmt.Errorf("%s is directory, not a file", name)
 	}
 	return true, nil
-}
-
-// DirIsEmpty returns whether a given directory is empty.
-// By convention, we say that a directory is empty if it does not exist.
-func DirIsEmpty(dir string) (bool, error) {
-	entries, err := ioutil.ReadDir(dir)
-	if os.IsNotExist(err) {
-		return true, nil
-	} else if err != nil {
-		return false, err
-	}
-	return len(entries) == 0, nil
 }
