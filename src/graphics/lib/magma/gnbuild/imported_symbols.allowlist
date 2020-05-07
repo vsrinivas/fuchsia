@@ -138,6 +138,10 @@ floor
 floorf
 fma
 fmaf
+fmax
+fmaxf
+fmin
+fminf
 fmod
 fmodf
 frexp
