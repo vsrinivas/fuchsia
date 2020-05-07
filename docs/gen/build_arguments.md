@@ -109,7 +109,7 @@ production builds to avoid accidental inclusion of testing targets.
 
 **Current value (from the default):** `true`
 
-From //BUILD.gn:72
+From //BUILD.gn:73
 
 ### base_package_labels
 If you add package labels to this variable, the packages will be included in
@@ -124,7 +124,7 @@ From //root_build_dir/args.gn:3
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:21
+From //BUILD.gn:22
 
 **Current value for `target_cpu = "x64"`:** `["//build/info:build-info", "//garnet/bin/http", "//src/connectivity/network/http_client", "//garnet/bin/log_listener:log_listener", "//garnet/bin/log_listener:log_listener_shell", "//garnet/bin/network_time_service", "//garnet/bin/scpi", "//garnet/bin/setui:setui_service", "//garnet/bin/sshd-host", "//garnet/bin/sshd-host:config", "//garnet/bin/sysmgr", "//garnet/bin/sysmgr:network_config", "//garnet/bin/sysmgr:services_config", "//garnet/bin/timezone", "//src/cobalt/bin/app:cobalt", "//src/cobalt/bin/app:cobalt_registry", "//src/cobalt/bin/app:config", "//src/cobalt/bin/system-metrics:cobalt_system_metrics", "//src/connectivity/bluetooth:core", "//src/connectivity/management/reachability", "//src/connectivity/management/reachability:reachability_sysmgr_config", "//src/connectivity/management:network_config_default", "//src/connectivity/network/mdns/bundles:config", "//src/connectivity/network/mdns/bundles:services", "//src/connectivity/network/net-cli", "//src/connectivity/network:config", "//src/connectivity/wlan:packages", "//src/connectivity/wlan/config:default", "//src/developer/exception_broker", "//src/developer/feedback/bugreport", "//src/developer/feedback/crash_reports:crash-reports", "//src/developer/feedback/feedback_data:feedback_agent", "//src/developer/feedback/reboot_info:reboot-info", "//src/developer/remote-control:pkg", "//src/diagnostics/archivist", "//src/diagnostics/archivist:with_default_config", "//src/hwinfo:hwinfo", "//src/hwinfo:default_product_config", "//src/media/audio/bundles:audio_config", "//src/recovery/factory_reset", "//src/security/policy:appmgr_policy_eng", "//src/security/root_ssl_certificates", "//src/sys/appmgr", "//src/sys/appmgr:appmgr_scheme_config", "//src/sys/appmgr:core_component_id_index", "//src/sys/core", "//src/sys/device_settings:device_settings_manager", "//src/sys/pkg:core", "//src/sys/pkg:pkgfs-disable-executability-restrictions", "//src/sys/pkg:system-update-checker", "//src/sys/pkg/bin/pkg-resolver:enable_dynamic_configuration", "//src/sys/stash:pkg", "//src/sys/timekeeper", "//third_party/openssh-portable/fuchsia/developer-keys:ssh_config", "//build/rust:cargo_toml_gen", "//src/sys/pkg:tools", "//tools/cargo-gnaw", "//bundles:kitchen_sink"]`
 
@@ -132,7 +132,7 @@ From //root_build_dir/args.gn:3
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:21
+From //BUILD.gn:22
 
 ### blob_blobfs_maximum_bytes
 For build/images:fvm.blob.sparse.blk, use this argument.
@@ -433,7 +433,7 @@ From //products/core.gni:96
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:29
+From //BUILD.gn:30
 
 **Current value for `target_cpu = "x64"`:** `[]`
 
@@ -441,7 +441,7 @@ From //products/core.gni:96
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:29
+From //BUILD.gn:30
 
 ### camera_debug
 
@@ -1809,15 +1809,17 @@ From //products/core.gni:9
 From //build/unification/images/BUILD.gn:20
 
 ### optimize
-* none means really unoptimized, usually only build-tested and not run
-* debug means "optimized for debugging", light enough to avoid confusion
-* default means default optimization level
-* size means optimized for space rather than purely for speed
-* speed means optimized purely for speed
+* `none`: really unoptimized, usually only build-tested and not run
+* `debug`: "optimized for debugging", light enough to avoid confusion
+* `default`: default optimization level
+* `size`:  optimized for space rather than purely for speed
+* `speed`: optimized purely for speed
+* `sanitizer`: optimized for sanitizers (ASan, etc.)
+* `profile`: optimized for coverage/profile data collection
 
 **Current value (from the default):** `"none"`
 
-From //build/config/compiler.gni:32
+From //build/config/compiler.gni:34
 
 ### output_breakpad_syms
 Sets if we should output breakpad symbols for Fuchsia binaries.
@@ -2263,7 +2265,7 @@ and causes infra to schedule tests as if each one has the same duration.
 
 **Current value (from the default):** `"//integration/infra/test_durations/default.json"`
 
-From //BUILD.gn:35
+From //BUILD.gn:36
 
 ### thinlto_cache_dir
 ThinLTO cache directory path.
@@ -2357,7 +2359,7 @@ From //products/core.gni:98
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:43
+From //BUILD.gn:44
 
 **Current value for `target_cpu = "x64"`:** `["//tools/net/dev_finder:host", "//tools/vboot_reference:cgpt_host", "//tools/vboot_reference:futility_host", "//bundles:tools"]`
 
@@ -2365,7 +2367,7 @@ From //products/core.gni:98
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:43
+From //BUILD.gn:44
 
 ### unpack_debug_archives
 To ensure that everything can be built without debug symbols present we
@@ -2409,6 +2411,14 @@ otherwise the most recently validated version is used.
 **Current value (from the default):** `false`
 
 From //src/chromium/BUILD.gn:13
+
+### use_dns_resolver
+Transitional flag to enable dns-resolver as the provider for
+fuchsia.net.name.LookupAdmin and fuchsia.net.NameLookup instead of netstack.
+
+**Current value (from the default):** `false`
+
+From //src/connectivity/network/BUILD.gn:10
 
 ### use_goma
 Set to true to enable distributed compilation using Goma.
@@ -2887,7 +2897,7 @@ silently clobber the default value shown here.
 }
 ```
 
-From //BUILD.gn:93
+From //BUILD.gn:94
 
 ### zircon_asserts
 
@@ -2912,7 +2922,7 @@ Compilation database filter. Gets passed to --export-compile-commands=<filter>.
 
 **Current value (from the default):** `"legacy-arm64"`
 
-From //BUILD.gn:67
+From //BUILD.gn:68
 
 ### zircon_extra_args
 [Zircon GN build arguments](/docs/gen/zircon_build_arguments.md).
@@ -2929,14 +2939,14 @@ to explicitly set Zircon's `variants` here.
 
 **Current value (from the default):** `{ }`
 
-From //BUILD.gn:56
+From //BUILD.gn:57
 
 ### zircon_extra_deps
 Additional Zircon GN labels to include in the Zircon build.
 
 **Current value (from the default):** `[]`
 
-From //BUILD.gn:60
+From //BUILD.gn:61
 
 ### zircon_r_partition
 
@@ -2950,7 +2960,7 @@ given the empty string. Path can be source-absolute or system-absolute.
 
 **Current value (from the default):** `""`
 
-From //BUILD.gn:64
+From //BUILD.gn:65
 
 ### zvb_partition_name
 Partition name from where image will be verified

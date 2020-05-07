@@ -324,15 +324,17 @@ From //kernel/lib/version/BUILD.gn:11
 From //third_party/ulib/musl/BUILD.gn:6
 
 ### optimize
-* none means really unoptimized, usually only build-tested and not run
-* debug means "optimized for debugging", light enough to avoid confusion
-* default means default optimization level
-* size means optimized for space rather than purely for speed
-* speed means optimized purely for speed
+* `none`: really unoptimized, usually only build-tested and not run
+* `debug`: "optimized for debugging", light enough to avoid confusion
+* `default`: default optimization level
+* `size`:  optimized for space rather than purely for speed
+* `speed`: optimized purely for speed
+* `sanitizer`: optimized for sanitizers (ASan, etc.)
+* `profile`: optimized for coverage/profile data collection
 
 **Current value (from the default):** `"default"`
 
-From //public/gn/config/levels.gni:29
+From //public/gn/config/levels.gni:31
 
 ### output_breakpad_syms
 If true, produce a Breakpad symbol file for each binary.
