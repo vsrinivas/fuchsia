@@ -516,12 +516,44 @@ void ConsoleContext::DidCreateJobContext(JobContext* job_context) {
     active_job_context_id_ = new_id;
 }
 
+void ConsoleContext::WillDestroyJobContext(JobContext* job_context) {
+  auto found_job_context = job_context_to_id_.find(job_context);
+  if (found_job_context == job_context_to_id_.end()) {
+    FX_NOTREACHED();
+    return;
+  }
+  int id = found_job_context->second;
+
+  // Clear any active job_context if it's the deleted one.
+  if (active_job_context_id_ == id)
+    active_job_context_id_ = 0;
+
+  id_to_job_context_.erase(id);
+  job_context_to_id_.erase(found_job_context);
+}
+
 void ConsoleContext::DidCreateBreakpoint(Breakpoint* breakpoint) {
   int id = next_breakpoint_id_;
   next_breakpoint_id_++;
 
   id_to_breakpoint_[id] = breakpoint;
   breakpoint_to_id_[breakpoint] = id;
+}
+
+void ConsoleContext::WillDestroyBreakpoint(Breakpoint* breakpoint) {
+  auto found_breakpoint = breakpoint_to_id_.find(breakpoint);
+  if (found_breakpoint == breakpoint_to_id_.end()) {
+    FX_NOTREACHED();
+    return;
+  }
+  int id = found_breakpoint->second;
+
+  // Clear any active breakpoint if it's the deleted one.
+  if (active_breakpoint_id_ == id)
+    active_breakpoint_id_ = 0;
+
+  id_to_breakpoint_.erase(id);
+  breakpoint_to_id_.erase(found_breakpoint);
 }
 
 void ConsoleContext::DidCreateFilter(Filter* filter) {
@@ -544,22 +576,6 @@ void ConsoleContext::WillDestroyFilter(Filter* filter) {
 
   id_to_filter_.erase(found->second);
   filter_to_id_.erase(found);
-}
-
-void ConsoleContext::WillDestroyBreakpoint(Breakpoint* breakpoint) {
-  auto found_breakpoint = breakpoint_to_id_.find(breakpoint);
-  if (found_breakpoint == breakpoint_to_id_.end()) {
-    FX_NOTREACHED();
-    return;
-  }
-  int id = found_breakpoint->second;
-
-  // Clear any active breakpoint if it's the deleted one.
-  if (active_breakpoint_id_ == id)
-    active_breakpoint_id_ = 0;
-
-  id_to_breakpoint_.erase(id);
-  breakpoint_to_id_.erase(found_breakpoint);
 }
 
 void ConsoleContext::DidCreateSymbolServer(SymbolServer* symbol_server) {

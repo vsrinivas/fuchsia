@@ -159,6 +159,7 @@ class ConsoleContext : public ProcessObserver,
 
   // SystemObserver implementation:
   void DidCreateJobContext(JobContext* job_context) override;
+  void WillDestroyJobContext(JobContext* job_context) override;
   void DidCreateBreakpoint(Breakpoint* breakpoint) override;
   void WillDestroyBreakpoint(Breakpoint* breakpoint) override;
   void DidCreateFilter(Filter* filter) override;

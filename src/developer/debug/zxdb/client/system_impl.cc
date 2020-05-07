@@ -426,6 +426,9 @@ void SystemImpl::DeleteJobContext(JobContext* job_context) {
     return;
   }
 
+  for (auto& observer : observers())
+    observer.WillDestroyJobContext(job_context);
+
   // Delete all filters that reference this job context. While it might be nice if the filter
   // registered for a notification or used a weak pointer for the job, this would imply having a
   // filter enabled/disabled state independent of the other settings which we don't have and don't

@@ -101,6 +101,12 @@ TEST_F(VerbNewRmTest, NewRm) {
   ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
   EXPECT_EQ("Removed Job 2 state=\"Not attached\" name=\"\"", event.output.AsString());
 
+  // Deleting the job again should yield an error.
+  console.ProcessInputLine("job rm");
+  event = console.GetOutputEvent();
+  ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
+  EXPECT_EQ("No job to remove.", event.output.AsString());
+
   // The associated filter should have been automatically deleted.
   console.ProcessInputLine("filter");
   event = console.GetOutputEvent();
