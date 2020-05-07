@@ -63,7 +63,6 @@ test("minfs-unit") {
     "unit/transaction_test.cc",
     "unit/truncate_test.cc",
     "unit/vnode_mapper_test.cc",
-    "unit/vnode_test.cc",
   ]
   deps = [
     "//zircon/public/lib/cksum",

@@ -650,109 +650,17 @@ zx_status_t Minfs::InoFree(Transaction* transaction, VnodeMinfs* vn) {
 
 #ifdef __Fuchsia__
   vn->CancelPendingWriteback();
-
-  VmoIndirect& vmo_indirect = vn->vmo_indirect();
 #endif
 
   inodes_->Free(transaction, vn->GetIno());
-  uint32_t block_count = vn->GetInode()->block_count;
 
-  // release all direct blocks
-  for (unsigned n = 0; n < kMinfsDirect; n++) {
-    if (vn->GetInode()->dnum[n] == 0) {
-      continue;
-    }
-    ValidateBno(vn->GetInode()->dnum[n]);
-    block_count--;
-    block_allocator_->Free(&transaction->block_reservation(), vn->GetInode()->dnum[n]);
-  }
-
-  // release all indirect blocks
-  for (unsigned n = 0; n < kMinfsIndirect; n++) {
-    if (vn->GetInode()->inum[n] == 0) {
-      continue;
-    }
-
-#ifdef __Fuchsia__
-    zx_status_t status;
-    if ((status = vmo_indirect.Init(vn)) != ZX_OK) {
-      return status;
-    }
-
-    VmoIndirect::View entry(&vmo_indirect, n);
-#else
-    uint32_t entry[kMinfsBlockSize];
-    vn->ReadIndirectBlock(vn->GetInode()->inum[n], entry);
-#endif
-
-    // release the direct blocks pointed at by the entries in the indirect block
-    for (unsigned m = 0; m < kMinfsDirectPerIndirect; m++) {
-      if (entry[m] == 0) {
-        continue;
-      }
-      block_count--;
-      block_allocator_->Free(&transaction->block_reservation(), entry[m]);
-    }
-    // release the direct block itself
-    block_count--;
-    block_allocator_->Free(&transaction->block_reservation(), vn->GetInode()->inum[n]);
-  }
-
-  // release doubly indirect blocks
-  for (unsigned n = 0; n < kMinfsDoublyIndirect; n++) {
-    if (vn->GetInode()->dinum[n] == 0) {
-      continue;
-    }
-#ifdef __Fuchsia__
-    zx_status_t status;
-    if ((status = vmo_indirect.Init(vn)) != ZX_OK) {
-      return status;
-    }
-
-    VmoIndirect::View dentry(&vmo_indirect, GetVmoOffsetForDoublyIndirect(n));
-#else
-    uint32_t dentry[kMinfsBlockSize];
-    vn->ReadIndirectBlock(vn->GetInode()->dinum[n], dentry);
-#endif
-    // release indirect blocks
-    for (unsigned m = 0; m < kMinfsDirectPerIndirect; m++) {
-      if (dentry[m] == 0) {
-        continue;
-      }
-
-#ifdef __Fuchsia__
-      if ((status = vmo_indirect.LoadIndirectWithinDoublyIndirect(vn, n)) != ZX_OK) {
-        return status;
-      }
-
-      VmoIndirect::View entry(&vmo_indirect, GetVmoOffsetForIndirect(n) + m);
-#else
-      uint32_t entry[kMinfsBlockSize];
-      vn->ReadIndirectBlock(dentry[m], entry);
-#endif
-
-      // release direct blocks
-      for (unsigned k = 0; k < kMinfsDirectPerIndirect; k++) {
-        if (entry[k] == 0) {
-          continue;
-        }
-
-        block_count--;
-        block_allocator_->Free(&transaction->block_reservation(), entry[k]);
-      }
-
-      block_count--;
-      block_allocator_->Free(&transaction->block_reservation(), dentry[m]);
-    }
-
-    // release the doubly indirect block itself
-    block_count--;
-    block_allocator_->Free(&transaction->block_reservation(), vn->GetInode()->dinum[n]);
-  }
+  zx_status_t status = vn->BlocksShrink(transaction, 0);
+  if (status != ZX_OK)
+    return status;
   vn->MarkPurged();
   InodeUpdate(transaction, vn->GetIno(), vn->GetInode());
 
-  ZX_DEBUG_ASSERT(block_count == 0);
+  ZX_DEBUG_ASSERT(vn->GetInode()->block_count == 0);
   ZX_DEBUG_ASSERT(vn->IsUnlinked());
   return ZX_OK;
 }
@@ -904,6 +812,7 @@ void Minfs::StopWriteback() {
   }
 
   if (IsReadonly() == false) {
+    // TODO(fxb/51588): Maybe check the status here?
     UpdateCleanBitAndOldestRevision(/*is_clean=*/true);
   }
 

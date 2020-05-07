@@ -37,7 +37,9 @@ class DataBuffer final : public storage::BlockBuffer {
 class BcacheTest : public zxtest::Test {
  public:
   void SetUp() final {
-    fbl::unique_fd file(open("/tmp/minfs_host_bcache_test.dat", O_RDWR | O_CREAT, 0555));
+    static constexpr char kFile[] = "/tmp/minfs_host_bcache_test.dat";
+    unlink(kFile);
+    fbl::unique_fd file(open(kFile, O_RDWR | O_CREAT, 0666));
     ASSERT_TRUE(file);
 
     ASSERT_OK(minfs::Bcache::Create(std::move(file), kNumBlocks, &bcache_));
@@ -45,7 +47,6 @@ class BcacheTest : public zxtest::Test {
 
   void TearDown() final {
     bcache_.reset();
-    unlink("/tmp/minfs_host_bcache_test.dat");
   }
 
  protected:

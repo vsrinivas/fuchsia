@@ -94,6 +94,7 @@ BaseBufferView::Flusher GetDirectFlusher(VnodeMinfs* vnode, PendingWork* transac
 // Returns a flusher responsible for flushing updated block pointers in indirect blocks;
 BaseBufferView::Flusher GetIndirectFlusher(VnodeMinfs* vnode, LazyBuffer* file,
                                            PendingWork* transaction) {
+#ifdef __Fuchsia__
   return [vnode, file, transaction](BaseBufferView* view) {
     VnodeIndirectMapper mapper(vnode);
     return file->Flush(
@@ -110,6 +111,28 @@ BaseBufferView::Flusher GetIndirectFlusher(VnodeMinfs* vnode, LazyBuffer* file,
           return ZX_OK;
         });
   };
+#else
+  // TODO(fxb/47947): For the time being, host side code must immediately write data to the device,
+  // but we should be able to make this code the same as above if storage::BufferedOperation changes
+  // a bit (so that a pointer to the buffer is kept rather than a pointer to the address in memory).
+  return [vnode, file, transaction](BaseBufferView* view) {
+    VnodeIndirectMapper mapper(vnode);
+    return file->Flush(
+        transaction, &mapper, view,
+        [vnode](ResizeableBufferType* buffer, BlockRange range, DeviceBlock device_block) {
+          return EnumerateBlocks(
+              range, [vnode, buffer, range, device_block](BlockRange r) -> zx::status<uint64_t> {
+                zx_status_t status = vnode->Vfs()->GetMutableBcache()->Writeblk(
+                    device_block.block() + (r.Start() - range.Start()), buffer->Data(r.Start()));
+                if (status == ZX_OK) {
+                  return zx::ok(1);
+                } else {
+                  return zx::error(status);
+                }
+              });
+        });
+  };
+#endif
 }
 
 // -- View Getters --
@@ -117,10 +140,11 @@ BaseBufferView::Flusher GetIndirectFlusher(VnodeMinfs* vnode, LazyBuffer* file,
 // These functions are helpers that set up BufferView objects for ranges of block pointers.
 
 // The dnum block pointers.
-zx::status<BufferView<blk_t>> GetInodeDirectView(PendingWork* transaction, VnodeMinfs* vnode, BlockPointerRange range) {
+zx::status<BufferView<blk_t>> GetInodeDirectView(PendingWork* transaction, VnodeMinfs* vnode,
+                                                 BlockPointerRange range) {
   ZX_ASSERT(range.End() <= kMinfsDirect);
-  return zx::ok(BufferView<blk_t>(BufferPtr::FromMemory(&vnode->GetMutableInode()->dnum), range.Start(),
-                                  range.End() - range.Start(),
+  return zx::ok(BufferView<blk_t>(BufferPtr::FromMemory(&vnode->GetMutableInode()->dnum),
+                                  range.Start(), range.End() - range.Start(),
                                   transaction ? GetDirectFlusher(vnode, transaction) : nullptr));
 }
 
@@ -128,17 +152,18 @@ zx::status<BufferView<blk_t>> GetInodeDirectView(PendingWork* transaction, Vnode
 zx::status<BufferView<blk_t>> GetInodeIndirectView(PendingWork* transaction, VnodeMinfs* vnode,
                                                    BlockPointerRange range) {
   ZX_ASSERT(range.End() <= kMinfsIndirect);
-  return zx::ok(BufferView<blk_t>(BufferPtr::FromMemory(&vnode->GetMutableInode()->inum), range.Start(),
-                                  range.End() - range.Start(),
+  return zx::ok(BufferView<blk_t>(BufferPtr::FromMemory(&vnode->GetMutableInode()->inum),
+                                  range.Start(), range.End() - range.Start(),
                                   transaction ? GetDirectFlusher(vnode, transaction) : nullptr));
 }
 
 // The dinum block pointers.
-zx::status<BufferView<blk_t>> GetInodeDoubleIndirectView(PendingWork* transaction, VnodeMinfs* vnode,
+zx::status<BufferView<blk_t>> GetInodeDoubleIndirectView(PendingWork* transaction,
+                                                         VnodeMinfs* vnode,
                                                          BlockPointerRange range) {
   ZX_ASSERT(range.End() <= kMinfsDoublyIndirect);
-  return zx::ok(BufferView<blk_t>(BufferPtr::FromMemory(&vnode->GetMutableInode()->dinum), range.Start(),
-                                  range.End() - range.Start(),
+  return zx::ok(BufferView<blk_t>(BufferPtr::FromMemory(&vnode->GetMutableInode()->dinum),
+                                  range.Start(), range.End() - range.Start(),
                                   transaction ? GetDirectFlusher(vnode, transaction) : nullptr));
 }
 
@@ -150,9 +175,9 @@ zx::status<BufferView<blk_t>> GetViewForIndirectFile(PendingWork* transaction, V
     return file.take_error();
   VnodeIndirectMapper mapper(vnode);
   LazyBuffer::Reader reader(vnode->Vfs()->GetMutableBcache(), &mapper, file.value());
-  return file.value()->GetView<blk_t>(range.Start(), range.End() - range.Start(), &reader,
-                                      transaction ? GetIndirectFlusher(vnode, file.value(), transaction)
-                                      : nullptr);
+  return file.value()->GetView<blk_t>(
+      range.Start(), range.End() - range.Start(), &reader,
+      transaction ? GetIndirectFlusher(vnode, file.value(), transaction) : nullptr);
 }
 
 }  // namespace
@@ -163,8 +188,8 @@ zx::status<DeviceBlockRange> VnodeIndirectMapper::Map(BlockRange range) {
   return MapForWrite(/*transaction=*/nullptr, range, /*allocated=*/nullptr);
 }
 
-zx::status<BufferView<blk_t>> VnodeIndirectMapper::GetView(
-    PendingWork* transaction, BlockRange range) {
+zx::status<BufferView<blk_t>> VnodeIndirectMapper::GetView(PendingWork* transaction,
+                                                           BlockRange range) {
   constexpr uint64_t kDoubleIndirectLeafStart = kMinfsIndirect + kMinfsDoublyIndirect;
   constexpr uint64_t kMax =
       kDoubleIndirectLeafStart + kMinfsDoublyIndirect * kMinfsDirectPerIndirect;

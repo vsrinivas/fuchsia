@@ -69,7 +69,7 @@ static inline BlockRange BytesToBlocks(ByteRange range, unsigned block_size) {
 // Helpers that will call |callback| for all the blocks that encompass the range, which
 // is in blocks. |callback| is of the form:
 //
-//   zx::status<uint64> callback(range::Range<BlockType> range);
+//   zx::status<uint64_t> callback(range::Range<BlockType> range);
 //
 // |callback| can modify |block_count| to indicate how many blocks it processed if less than all of
 // the blocks, or leave it unchanged if all blocks are processed.

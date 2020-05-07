@@ -20,7 +20,6 @@
 #include <fs/remote.h>
 #include <fs/watcher.h>
 
-#include "vmo_indirect.h"
 #include "vnode_allocation.h"
 #endif
 
@@ -97,9 +96,7 @@ class VnodeMinfs : public fs::Vnode,
 
   void AddLink() { inode_.link_count++; }
 
-  void MarkPurged() {
-    inode_.magic = kMinfsMagicPurged;
-  }
+  void MarkPurged() { inode_.magic = kMinfsMagicPurged; }
 
   static size_t GetHash(ino_t key) { return fnv1a_tiny(key, kMinfsHashBits); }
 
@@ -190,12 +187,6 @@ class VnodeMinfs : public fs::Vnode,
                                  size_t off);
   zx_status_t TruncateInternal(Transaction* transaction, size_t len);
 
-  // TODO: The following methods should be made private:
-#ifndef __Fuchsia__
-  // Reads the block at |bno| on disk.
-  void ReadIndirectBlock(blk_t bno, uint32_t* entry);
-#endif
-
   // Update the vnode's inode and write it to disk.
   void InodeSync(PendingWork* transaction, uint32_t flags);
 
@@ -207,15 +198,17 @@ class VnodeMinfs : public fs::Vnode,
   // 2) Adds itself to the "unlinked list", to be purged later.
   [[nodiscard]] zx_status_t RemoveInodeLink(Transaction* transaction);
 
-#ifdef __Fuchsia__
-  VmoIndirect& vmo_indirect() { return vmo_indirect_; }
-#endif
-
   // Allocates an indirect block.
   void AllocateIndirect(PendingWork* transaction, blk_t* block);
 
   // Initializes (if necessary) and returns the indirect file.
   [[nodiscard]] zx::status<LazyBuffer*> GetIndirectFile();
+
+  // Deletes all blocks (relative to a file) from "start" (inclusive) to the end
+  // of the file. Does not update mtime/atime.
+  // This can be extended to return indices of deleted bnos, or to delete a specific number of
+  // bnos
+  zx_status_t BlocksShrink(PendingWork* transaction, blk_t start);
 
   // TODO(smklein): These operations and members are protected as a historical artifact
   // of "File + Directory + Vnode" being a single class. They should be transitioned to
@@ -240,170 +233,6 @@ class VnodeMinfs : public fs::Vnode,
   // assumption.
   void ValidateVmoTail(uint64_t inode_size) const;
 
-  enum class BlockOp {
-    // Read skips unallocated indirect blocks, setting all output |bno| values to zero.
-    kRead,
-    // Delete avoids accessing indirect blocks, but additionally releases indirect blocks
-    // (and doubly indirect blocks) if all contained blocks have been freed.
-    //
-    // |out_dev_offset| must be zero for all callbacks invoked via this operation.
-    kDelete,
-    // Write ensures all indirect blocks are allocated before accessing the underlying |bno|.
-    // Acquiring a block via "kWrite" may cause additional writeback traffic to update
-    // the metadata itself.
-    kWrite,
-    // Swap is identical to write: It ensures all indirect blocks are allocated
-    // before being accessed.
-    kSwap,
-  };
-
-  // Callback for block operations. Called exclusively on "leaf node" blocks: indirect blocks
-  // are considered metadata, and handled internally by the "BlockOp" functions.
-  //
-  // |vmo_offset|: Block address relative to start of Vnode.
-  // |dev_offset|: Previous absolute block address at this node. Zero if unallocated.
-  // |out_dev_offset|: A new, optional output value. Set to |dev_offset| by default.
-  //            Will alter the results of |bno| returned via |ApplyOperation|.
-  using BlockOpCallback =
-      fbl::Function<void(blk_t vmo_offset, blk_t dev_offset, blk_t* out_dev_offset)>;
-
-  // Arguments to invoke |callback| on all local nodes of the file in [start, start + count).
-  //
-  // Collects result blocks in |bnos|.
-  struct BlockOpArgs {
-    BlockOpArgs(Transaction* transaction, BlockOp op, BlockOpCallback callback, blk_t start,
-                blk_t count, blk_t* bnos)
-        : transaction(transaction),
-          op(op),
-          callback(std::move(callback)),
-          start(start),
-          count(count),
-          bnos(bnos) {
-      // Initialize output array to 0 in case the indirect block(s)
-      // containing these bnos do not exist.
-      if (bnos) {
-        memset(bnos, 0, sizeof(blk_t) * count);
-      }
-    }
-
-    Transaction* transaction;
-    BlockOp op;
-    BlockOpCallback callback;
-    blk_t start;
-    blk_t count;
-    blk_t* bnos;
-  };
-
-  class DirectArgs {
-   public:
-    DirectArgs(BlockOp op, blk_t* array, blk_t count, blk_t rel_bno, blk_t* bnos)
-        : array_(array), bnos_(bnos), count_(count), rel_bno_(rel_bno), op_(op), dirty_(false) {}
-
-    BlockOp GetOp() const { return op_; }
-    blk_t GetBno(blk_t index) const { return array_[index]; }
-    void SetBno(blk_t index, blk_t value) {
-      ZX_DEBUG_ASSERT(index < GetCount());
-
-      if (bnos_ != nullptr) {
-        bnos_[index] = value ? value : array_[index];
-      }
-
-      if (array_[index] != value) {
-        array_[index] = value;
-        dirty_ = true;
-      }
-    }
-
-    blk_t GetCount() const { return count_; }
-    blk_t GetRelativeBlock() const { return rel_bno_; }
-
-    bool IsDirty() const { return dirty_; }
-
-   protected:
-    blk_t* const array_;   // array containing blocks to be operated on
-    blk_t* const bnos_;    // array of |count| bnos returned to the user
-    const blk_t count_;    // number of direct blocks to operate on
-    const blk_t rel_bno_;  // The relative bno of the first direct block we are op'ing.
-    const BlockOp op_;     // determines what operation to perform on blocks
-    bool dirty_;           // true if blocks have successfully been op'd
-  };
-
-  class IndirectArgs : public DirectArgs {
-   public:
-    IndirectArgs(BlockOp op, blk_t* array, blk_t count, blk_t rel_bno, blk_t* bnos, blk_t bindex,
-                 blk_t ib_vmo_offset)
-        : DirectArgs(op, array, count, rel_bno, bnos),
-          bindex_(bindex),
-          ib_vmo_offset_(ib_vmo_offset) {}
-
-    void SetDirty() { dirty_ = true; }
-
-    void SetBno(blk_t index, blk_t value) {
-      ZX_DEBUG_ASSERT(index < GetCount());
-      array_[index] = value;
-      SetDirty();
-    }
-
-    // Number of indirect blocks we need to iterate through to touch all |count| direct blocks.
-    blk_t GetCount() const {
-      return (bindex_ + count_ + kMinfsDirectPerIndirect - 1) / kMinfsDirectPerIndirect;
-    }
-
-    blk_t GetOffset() const { return ib_vmo_offset_; }
-
-    // Generate parameters for direct blocks in indirect block |ibindex|, which are contained
-    // in |barray|
-    DirectArgs GetDirect(blk_t* barray, unsigned ibindex) const;
-
-   protected:
-    const blk_t bindex_;  // relative index of the first direct block within the first indirect
-                          // block
-    const blk_t ib_vmo_offset_;  // index of the first indirect block
-  };
-
-  class DindirectArgs : public IndirectArgs {
-   public:
-    DindirectArgs(BlockOp op, blk_t* array, blk_t count, blk_t rel_bno, blk_t* bnos, blk_t bindex,
-                  blk_t ib_vmo_offset, blk_t ibindex, blk_t dib_vmo_offset)
-        : IndirectArgs(op, array, count, rel_bno, bnos, bindex, ib_vmo_offset),
-          ibindex_(ibindex),
-          dib_vmo_offset_(dib_vmo_offset) {}
-
-    // Number of doubly indirect blocks we need to iterate through to touch all |count| direct
-    // blocks.
-    blk_t GetCount() const {
-      return (ibindex_ + count_ + kMinfsDirectPerDindirect - 1) / kMinfsDirectPerDindirect;
-    }
-
-    blk_t GetOffset() const { return dib_vmo_offset_; }
-
-    // Generate parameters for indirect blocks in doubly indirect block |dibindex|, which are
-    // contained in |iarray|
-    IndirectArgs GetIndirect(blk_t* iarray, unsigned dibindex) const;
-
-   protected:
-    const blk_t ibindex_;         // relative index of the first indirect block within the first
-                                  // doubly indirect block
-    const blk_t dib_vmo_offset_;  // index of the first doubly indirect block
-  };
-
-  // Allocate an indirect or doubly indirect block at |offset| within the indirect vmo and clear
-  // the in-memory block array
-  // Assumes that vmo_indirect_ has already been initialized
-  void AllocateIndirect(Transaction* transaction, blk_t index, IndirectArgs* args);
-
-  // Perform operation |op| on blocks as specified by |params|
-  // The BlockOp methods should not be called directly
-  // All BlockOp methods assume that vmo_indirect_ has been grown to the required size
-  zx_status_t ApplyOperation(BlockOpArgs* params);
-  zx_status_t BlockOpDirect(BlockOpArgs* op_args, DirectArgs* params);
-  zx_status_t BlockOpIndirect(BlockOpArgs* op_args, IndirectArgs* params);
-  zx_status_t BlockOpDindirect(BlockOpArgs* op_args, DindirectArgs* params);
-
-  // Ensures that the indirect vmo is large enough to reference a block at
-  // relative block address |n| within the file.
-  zx_status_t EnsureIndirectVmoSize(blk_t n);
-
   // Get the disk block 'bno' corresponding to the 'n' block
   //
   // May or may not allocate |bno|; certain Vnodes (like File) delay allocation
@@ -415,12 +244,6 @@ class VnodeMinfs : public fs::Vnode,
   // Get the disk block 'bno' corresponding to relative block address |n| within the file.
   // Does not allocate any blocks, direct or indirect, to acquire this block.
   zx_status_t BlockGetReadable(blk_t n, blk_t* bno);
-
-  // Deletes all blocks (relative to a file) from "start" (inclusive) to the end
-  // of the file. Does not update mtime/atime.
-  // This can be extended to return indices of deleted bnos, or to delete a specific number of
-  // bnos
-  zx_status_t BlocksShrink(Transaction* transaction, blk_t start);
 
   // Deletes this Vnode from disk, freeing the inode and blocks.
   //
@@ -440,10 +263,6 @@ class VnodeMinfs : public fs::Vnode,
   // Use the watcher container to implement a directory watcher
   void Notify(fbl::StringPiece name, unsigned event) final;
   zx_status_t WatchDir(fs::Vfs* vfs, uint32_t mask, uint32_t options, zx::channel watcher) final;
-
-#else  // !__Fuchsia__
-  // Clears the block at |bno| on disk.
-  void ClearIndirectBlock(blk_t bno);
 #endif
   uint32_t FdCount() const { return fd_count_; }
 
@@ -455,11 +274,7 @@ class VnodeMinfs : public fs::Vnode,
   // a VMO into memory when it is read/written.
   zx::vmo vmo_{};
   uint64_t vmo_size_ = 0;
-
-  VmoIndirect vmo_indirect_;
-
   storage::Vmoid vmoid_;
-
   fs::WatcherContainer watcher_{};
 #endif
 
@@ -479,14 +294,6 @@ class VnodeMinfs : public fs::Vnode,
   // work to do after the last file descriptor has been closed.
   uint32_t fd_count_{};
 };
-
-// Given vnode block offset returns the indirect vmo size needed to hold the
-// vnode block map.
-// Note: Vnode block offset 0 cover vnode size from 0 to 8192 bytes.
-//                   offset 1 covers vnode size from 8193 to 16384 bytes. So on.
-//       Vnode block offset is different from vnode size in blocks.
-// TODO(43586).
-uint64_t VnodeBlockOffsetToIndirectVmoSize(blk_t vnode_block_offset);
 
 }  // namespace minfs
 

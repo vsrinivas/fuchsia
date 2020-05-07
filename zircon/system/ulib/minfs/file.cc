@@ -134,19 +134,40 @@ void File::AllocateAndCommitData(std::unique_ptr<Transaction> transaction) {
 }
 
 zx_status_t File::BlocksSwap(Transaction* transaction, blk_t start, blk_t count, blk_t* bnos) {
-  auto block_callback = [this, transaction](blk_t local_bno, blk_t old_bno, blk_t* out_bno) {
-    ZX_DEBUG_ASSERT(allocation_state_.IsPending(local_bno));
-    if (old_bno == 0) {
+  if (count == 0)
+    return ZX_OK;
+
+  VnodeMapper mapper(this);
+  VnodeIterator iterator;
+  zx_status_t status = iterator.Init(&mapper, transaction, start);
+  if (status != ZX_OK)
+    return status;
+
+  while (count > 0) {
+    const blk_t file_block = static_cast<blk_t>(iterator.file_block());
+    ZX_DEBUG_ASSERT(allocation_state_.IsPending(file_block));
+    blk_t old_block = iterator.Blk();
+    // TODO(fxb/51587): A value of zero for the block pointer has special meaning: the block is
+    // sparse or unmapped. We should add something for this magic constant and fix all places that
+    // currently hard code zero.
+    if (old_block == 0) {
       inode_.block_count++;
     }
     // For copy-on-write, swap the block out if it's a data block.
-    fs_->BlockSwap(transaction, old_bno, out_bno);
-    bool cleared = allocation_state_.ClearPending(local_bno, old_bno != 0);
+    blk_t new_block = old_block;
+    fs_->BlockSwap(transaction, old_block, &new_block);
+    zx_status_t status = iterator.SetBlk(new_block);
+    if (status != ZX_OK)
+      return status;
+    *bnos++ = new_block;
+    bool cleared = allocation_state_.ClearPending(file_block, old_block != 0);
     ZX_DEBUG_ASSERT(cleared);
-  };
-
-  BlockOpArgs op_args(transaction, BlockOp::kSwap, std::move(block_callback), start, count, bnos);
-  return ApplyOperation(&op_args);
+    --count;
+    status = iterator.Advance();
+    if (status != ZX_OK)
+      return status;
+  }
+  return iterator.Flush();
 }
 
 #endif

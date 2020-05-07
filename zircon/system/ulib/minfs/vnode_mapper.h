@@ -140,8 +140,8 @@ class VnodeIterator {
   [[nodiscard]] zx_status_t Advance(uint64_t advance = 1);
 
  private:
-  using ViewGetter = fit::function<zx::status<BufferView<blk_t>>(
-      PendingWork*, VnodeMinfs* vnode, BlockPointerRange)>;
+  using ViewGetter = fit::function<zx::status<BufferView<blk_t>>(PendingWork*, VnodeMinfs* vnode,
+                                                                 BlockPointerRange)>;
 
   // Level contains all the information required to manage block pointers at one particular
   // level. The iterator might need up to three levels of pointers to describe a particular
