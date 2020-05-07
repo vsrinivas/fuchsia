@@ -49,7 +49,8 @@ void _fromJsonCommon(Event event, Map<String, dynamic> jsonTraceEvent) {
 /// type than what is asserted here, then the JSON trace event is considered to
 /// be malformed.
 void _checkTraceEvent(Map<String, dynamic> jsonTraceEvent) {
-  if (!(jsonTraceEvent.containsKey('cat') && jsonTraceEvent['cat'] is String)) {
+  if (jsonTraceEvent['ph'] != 'M' &&
+      !(jsonTraceEvent.containsKey('cat') && jsonTraceEvent['cat'] is String)) {
     throw FormatException(
         'Expected $jsonTraceEvent to have field "cat" of type String');
   }
@@ -58,8 +59,9 @@ void _checkTraceEvent(Map<String, dynamic> jsonTraceEvent) {
     throw FormatException(
         'Expected $jsonTraceEvent to have field "name" of type String');
   }
-  if (!(jsonTraceEvent.containsKey('ts') &&
-      (jsonTraceEvent['ts'] is double || jsonTraceEvent['ts'] is int))) {
+  if (jsonTraceEvent['ph'] != 'M' &&
+      !(jsonTraceEvent.containsKey('ts') &&
+          (jsonTraceEvent['ts'] is double || jsonTraceEvent['ts'] is int))) {
     throw FormatException(
         'Expected $jsonTraceEvent to have field "ts" of type double or int');
   }
@@ -113,8 +115,45 @@ class _FlowKey {
   String category;
   String name;
   int id;
+  // Only used for 'local' flow ids.
+  int pid;
 
-  _FlowKey(this.category, this.name, this.id);
+  _FlowKey.fromTraceEvent(Map<String, dynamic> traceEvent) {
+    name = traceEvent['name'];
+    category = traceEvent['cat'];
+
+    // Unlike _AsyncKey, _FlowKey is globally scoped unless specifically local.
+    pid = 0;
+
+    if (traceEvent.containsKey('id')) {
+      if (traceEvent['id'] is int) {
+        id = traceEvent['id'];
+      } else if (traceEvent['id'] is String) {
+        id = int.tryParse(traceEvent['id']);
+      }
+    } else if (traceEvent.containsKey('id2')) {
+      final Map<String, dynamic> id2 = traceEvent['id2'];
+      if (id2.containsKey('local')) {
+        // 'local' id2 means scoped to the process.
+        pid = traceEvent['pid'];
+        if (id2['local'] is int) {
+          id = id2['local'];
+        } else if (id2['local'] is String) {
+          id = int.tryParse(id2['local']);
+        }
+      } else if (id2.containsKey('global')) {
+        if (id2['global'] is int) {
+          id = id2['global'];
+        } else if (id2['global'] is String) {
+          id = int.tryParse(id2['global']);
+        }
+      }
+    }
+
+    if (id == null) {
+      throw FormatException('Could not find id in $traceEvent');
+    }
+  }
 
   @override
   bool operator ==(Object other) {
@@ -124,7 +163,8 @@ class _FlowKey {
     _FlowKey flowKey = other;
     return category == flowKey.category &&
         name == flowKey.name &&
-        id == flowKey.id;
+        id == flowKey.id &&
+        pid == flowKey.pid;
   }
 
   @override
@@ -134,6 +174,7 @@ class _FlowKey {
     result = 37 * result + category.hashCode;
     result = 37 * result + name.hashCode;
     result = 37 * result + id.hashCode;
+    result = 37 * result + pid.hashCode;
     return result;
   }
 }
@@ -145,7 +186,40 @@ class _AsyncKey {
   String name;
   int id;
 
-  _AsyncKey(this.pid, this.category, this.name, this.id);
+  _AsyncKey.fromTraceEvent(Map<String, dynamic> traceEvent) {
+    pid = traceEvent['pid'];
+    name = traceEvent['name'];
+    category = traceEvent['cat'];
+
+    if (traceEvent.containsKey('id')) {
+      if (traceEvent['id'] is int) {
+        id = traceEvent['id'];
+      } else if (traceEvent['id'] is String) {
+        id = int.tryParse(traceEvent['id']);
+      }
+    } else if (traceEvent.containsKey('id2')) {
+      final Map<String, dynamic> id2 = traceEvent['id2'];
+      if (id2.containsKey('local')) {
+        // 'local' id2 means scoped to the process.
+        if (id2['local'] is int) {
+          id = id2['local'];
+        } else if (id2['local'] is String) {
+          id = int.tryParse(id2['local']);
+        }
+      } else if (id2.containsKey('global')) {
+        pid = 0;
+        if (id2['global'] is int) {
+          id = id2['global'];
+        } else if (id2['global'] is String) {
+          id = int.tryParse(id2['global']);
+        }
+      }
+    }
+
+    if (id == null) {
+      throw FormatException('Could not find id in $traceEvent');
+    }
+  }
 
   @override
   bool operator ==(Object other) {
@@ -190,6 +264,8 @@ Model _createModelFromJson(Map<String, dynamic> rootObject) {
   final Map<_AsyncKey, AsyncEvent> liveAsyncEvents = {};
   // Maintains in progress flow sequences.
   final Map<_FlowKey, FlowEvent> liveFlows = {};
+  // Flows with "next slide" binding that are waiting for to be bound.
+  final Map<_TrackKey, List<FlowEvent>> unboundFlowEvents = {};
 
   // A helper lambda to add duration events to the appropriate duration stack
   // and do the appropriate duration/flow graph setup.  It is used for both
@@ -227,8 +303,9 @@ Model _createModelFromJson(Map<String, dynamic> rootObject) {
 
   // Sort the events by their timestamp.  We need to iterate through the
   // events in sorted order to compute things such as duration stacks and flow
-  // sequences.
-  extendedTraceEvents.sort((a, b) => a['ts'].compareTo(b['ts']));
+  // sequences. Events without timestamps (e.g. Chrome's metadata events) are
+  // sorted to the beginning.
+  extendedTraceEvents.sort((a, b) => (a['ts'] ?? 0).compareTo(b['ts'] ?? 0));
 
   int droppedFlowEventCounter = 0;
   int droppedAsyncEventCounter = 0;
@@ -236,17 +313,18 @@ Model _createModelFromJson(Map<String, dynamic> rootObject) {
   // TODO(41309): Support nested async events.  In the meantime, just drop them.
   int droppedNestedAsyncEventCounter = 0;
 
+  final Map<int, String> pidToName = {};
+  final Map<int, String> tidToName = {};
+
   // Process the raw trace events into our model's [Event] representation.
   for (final traceEvent in extendedTraceEvents) {
     _checkTraceEvent(traceEvent);
     final int pid = traceEvent['pid'];
     final int tid = traceEvent['tid'].toInt();
-    final String name = traceEvent['name'];
-    final String category = traceEvent['cat'];
 
-    final tracekKey = _TrackKey(pid, tid);
+    final trackKey = _TrackKey(pid, tid);
     final durationStack =
-        durationStacks.putIfAbsent(tracekKey, () => <DurationEvent>[]);
+        durationStacks.putIfAbsent(trackKey, () => <DurationEvent>[]);
 
     final phase = traceEvent['ph'];
     if (phase == 'X') {
@@ -258,11 +336,25 @@ Model _createModelFromJson(Map<String, dynamic> rootObject) {
             'Expected $traceEvent to have field "dur" of type double or int');
       }
       durationEvent.duration = TimeDelta.fromMicroseconds(traceEvent['dur']);
+
+      if (unboundFlowEvents.containsKey(trackKey)) {
+        for (final flowEvent in unboundFlowEvents[trackKey]) {
+          flowEvent.enclosingDuration = durationEvent;
+        }
+        unboundFlowEvents[trackKey].clear();
+      }
       addToDurationStack(durationEvent, durationStack);
       resultEvents.add(durationEvent);
     } else if (phase == 'B') {
       final durationEvent = DurationEvent();
       _fromJsonCommon(durationEvent, traceEvent);
+
+      if (unboundFlowEvents.containsKey(trackKey)) {
+        for (final flowEvent in unboundFlowEvents[trackKey]) {
+          flowEvent.enclosingDuration = durationEvent;
+        }
+        unboundFlowEvents[trackKey].clear();
+      }
       addToDurationStack(durationEvent, durationStack);
     } else if (phase == 'E') {
       if (durationStack.isNotEmpty) {
@@ -277,23 +369,13 @@ Model _createModelFromJson(Map<String, dynamic> rootObject) {
       assert(durationStack.isNotEmpty);
       durationStack.removeLast();
     } else if (phase == 'b') {
-      if (!(traceEvent.containsKey('id') && traceEvent['id'] is int)) {
-        throw FormatException(
-            'Expected $traceEvent to have field "id" of type int');
-      }
-      final int id = traceEvent['id'];
-      final asyncKey = _AsyncKey(pid, category, name, id);
+      final asyncKey = _AsyncKey.fromTraceEvent(traceEvent);
       final asyncEvent = AsyncEvent();
       _fromJsonCommon(asyncEvent, traceEvent);
-      asyncEvent.id = id;
+      asyncEvent.id = asyncKey.id;
       liveAsyncEvents[asyncKey] = asyncEvent;
     } else if (phase == 'e') {
-      if (!(traceEvent.containsKey('id') && traceEvent['id'] is int)) {
-        throw FormatException(
-            'Expected $traceEvent to have field "id" of type int');
-      }
-      final int id = traceEvent['id'];
-      final asyncKey = _AsyncKey(pid, category, name, id);
+      final asyncKey = _AsyncKey.fromTraceEvent(traceEvent);
       final asyncEvent = liveAsyncEvents.remove(asyncKey);
       if (asyncEvent != null) {
         asyncEvent
@@ -306,7 +388,7 @@ Model _createModelFromJson(Map<String, dynamic> rootObject) {
         continue;
       }
       resultEvents.add(asyncEvent);
-    } else if (phase == 'i') {
+    } else if (phase == 'i' || phase == 'I') {
       if (!(traceEvent.containsKey('s') && traceEvent['s'] is String)) {
         throw FormatException(
             'Expected $traceEvent to have field "s" of type String');
@@ -326,28 +408,22 @@ Model _createModelFromJson(Map<String, dynamic> rootObject) {
 
       resultEvents.add(instantEvent);
     } else if (phase == 's' || phase == 't' || phase == 'f') {
-      if (!(traceEvent.containsKey('id') && traceEvent['id'] is int)) {
-        throw FormatException(
-            'Expected $traceEvent to have field "id" of type int');
+      String bindingPoint;
+
+      if (traceEvent.containsKey('bp')) {
+        if (traceEvent['bp'] == 'e') {
+          bindingPoint = 'enclosing';
+        } else {
+          throw FormatException('Found unexpected value in bp field of '
+              '$traceEvent');
+        }
+      } else if (phase == 's' || phase == 't') {
+        bindingPoint = 'enclosing';
+      } else if (phase == 'f') {
+        bindingPoint = 'next';
       }
 
-      if (phase == 'f') {
-        // Trace data emitted from Fuchsia should always have the binding
-        // point set to enclosing slice.  "next slice" binding is not
-        // supported, and is considered for now to be malformed.
-        if (!(traceEvent.containsKey('bp') && traceEvent['bp'] is String)) {
-          throw FormatException(
-              'Expected $traceEvent to have field "bp" of type String');
-        }
-        if (!(traceEvent['bp'] == 'e')) {
-          throw FormatException(
-              'Expected $traceEvent of phase "f" to have "bp" field set to "e"');
-        }
-      }
-
-      final int id = traceEvent['id'];
-
-      final flowKey = _FlowKey(category, name, id);
+      final flowKey = _FlowKey.fromTraceEvent(traceEvent);
 
       FlowEvent previousFlow;
       if (phase == 's') {
@@ -367,19 +443,26 @@ Model _createModelFromJson(Map<String, dynamic> rootObject) {
         droppedFlowEventCounter++;
         continue;
       }
-      final enclosingDuration = durationStack.last;
+      final enclosingDuration =
+          bindingPoint == 'enclosing' ? durationStack.last : null;
 
       final flowEvent = FlowEvent();
       _fromJsonCommon(flowEvent, traceEvent);
       flowEvent
-        ..id = id
+        ..id = flowKey.id
         ..phase = {
           's': FlowEventPhase.start,
           't': FlowEventPhase.step,
           'f': FlowEventPhase.end
         }[phase]
         ..enclosingDuration = enclosingDuration;
-      enclosingDuration.childFlows.add(flowEvent);
+      if (bindingPoint == 'enclosing') {
+        enclosingDuration.childFlows.add(flowEvent);
+      } else {
+        unboundFlowEvents
+            .putIfAbsent(trackKey, () => <FlowEvent>[])
+            .add(flowEvent);
+      }
 
       if (previousFlow != null) {
         previousFlow.nextFlow = flowEvent;
@@ -395,11 +478,16 @@ Model _createModelFromJson(Map<String, dynamic> rootObject) {
     } else if (phase == 'C') {
       int id;
       if (traceEvent.containsKey('id')) {
-        if (!(traceEvent['id'] is int)) {
-          throw FormatException(
-              'Expected $traceEvent with "id" field set to be of type int');
+        if (traceEvent['id'] is int) {
+          id = traceEvent['id'];
+        } else if (traceEvent['id'] is String) {
+          id = int.tryParse(traceEvent['id']);
         }
-        id = traceEvent['id'];
+        if (id == null) {
+          throw FormatException(
+              'Expected $traceEvent with "id" field set to be of type int '
+              'or a string that parses as an int');
+        }
       }
       final counterEvent = CounterEvent();
       _fromJsonCommon(counterEvent, traceEvent);
@@ -408,6 +496,48 @@ Model _createModelFromJson(Map<String, dynamic> rootObject) {
     } else if (phase == 'n') {
       // TODO(41309): Support nested async events.  In the meantime, just drop them.
       droppedNestedAsyncEventCounter++;
+    } else if (phase == 'M') {
+      // Chrome metadata events. These define process and thread names, similar
+      // to the Fuchsia systemTraceEvents.
+      if (traceEvent['name'] == 'process_name') {
+        // If traceEvent contains args, those are verified to be of type
+        // Map<String, dynamic> in _checkTraceEvent.
+        if (!traceEvent.containsKey('args') ||
+            !traceEvent['args'].containsKey('name')) {
+          throw FormatException('$traceEvent is a process_name metadata event'
+              'but doesn\'t have a name argument');
+        }
+        pidToName[pid] = traceEvent['args']['name'];
+      }
+      if (traceEvent['name'] == 'thread_name') {
+        // If traceEvent contains args, those are verified to be of type
+        // Map<String, dynamic> in _checkTraceEvent.
+        if (!traceEvent.containsKey('args') ||
+            !traceEvent['args'].containsKey('name')) {
+          throw FormatException('$traceEvent is a thread_name metadata event'
+              'but doesn\'t have a name argument');
+        }
+        tidToName[tid] = traceEvent['args']['name'];
+      }
+    } else if (phase == 'R' ||
+        phase == '(' ||
+        phase == ')' ||
+        phase == 'O' ||
+        phase == 'N' ||
+        phase == 'D' ||
+        phase == 'S' ||
+        phase == 'T' ||
+        phase == 'p' ||
+        phase == 'F') {
+      // Ignore some phases that are in Chrome traces that we don't yet have use
+      // cases for.
+      //
+      // These are:
+      // * 'R' - Mark events, similar to instants created by the Navigation
+      //         Timing API
+      // * '(', ')' - Context events
+      // * 'O', 'N', 'D' - Object events
+      // * 'S', 'T', 'p', 'F' - Legacy async events
     } else {
       throw FormatException(
           'Encountered unknown phase $phase from $traceEvent');
@@ -438,82 +568,78 @@ Model _createModelFromJson(Map<String, dynamic> rootObject) {
         'Warning, dropped $droppedNestedAsyncEventCounter nested async events');
   }
 
-  if (!(rootObject.containsKey('systemTraceEvents') &&
-      rootObject['systemTraceEvents'] is Map<String, dynamic>)) {
-    throw FormatException(
-        'Expected $rootObject to have field "systemTraceEvents" of type '
-        'Map<String, dynamic>');
-  }
-  final systemTraceEvents = rootObject['systemTraceEvents'];
-
-  if (!(systemTraceEvents.containsKey('type') &&
-      systemTraceEvents['type'] is String)) {
-    throw FormatException(
-        'Expected $systemTraceEvents to have field "type" of type String');
-  }
-  if (systemTraceEvents['type'] != 'fuchsia') {
-    throw FormatException(
-        'Expected $systemTraceEvents to have field "type" equal to value "fuchsia"');
-  }
-
-  if (!(systemTraceEvents.containsKey('events') &&
-      systemTraceEvents['events'] is List<dynamic>)) {
-    throw FormatException(
-        'Expected $systemTraceEvents to have field "events" of type '
-        'List<dynamic>');
-  }
-  final systemTraceEventsEvents = systemTraceEvents['events'];
-
-  final Map<int, String> pidToName = {};
-  final Map<int, String> tidToName = {};
-
-  for (final systemTraceEvent in systemTraceEventsEvents) {
-    if (!(systemTraceEvent.containsKey('ph') &&
-        systemTraceEvent['ph'] is String)) {
-      throw FormatException(
-          'Expected $systemTraceEvent to have field "ph" of type String');
+  if (rootObject.containsKey('systemTraceEvents')) {
+    if (!(rootObject['systemTraceEvents'] is Map<String, dynamic>)) {
+      throw FormatException('Expected field "systemTraceEvents" to be of type '
+          'Map<String, dynamic>');
     }
-    final String phase = systemTraceEvent['ph'];
-    if (phase == 'p') {
-      if (!(systemTraceEvent.containsKey('pid') &&
-          systemTraceEvent['pid'] is int)) {
+    final systemTraceEvents = rootObject['systemTraceEvents'];
+
+    if (!(systemTraceEvents.containsKey('type') &&
+        systemTraceEvents['type'] is String)) {
+      throw FormatException(
+          'Expected $systemTraceEvents to have field "type" of type String');
+    }
+    if (systemTraceEvents['type'] != 'fuchsia') {
+      throw FormatException(
+          'Expected $systemTraceEvents to have field "type" equal to value "fuchsia"');
+    }
+    if (!(systemTraceEvents.containsKey('events') &&
+        systemTraceEvents['events'] is List<dynamic>)) {
+      throw FormatException(
+          'Expected $systemTraceEvents to have field "events" of type '
+          'List<dynamic>');
+    }
+    final systemTraceEventsEvents = systemTraceEvents['events'];
+
+    for (final systemTraceEvent in systemTraceEventsEvents) {
+      if (!(systemTraceEvent.containsKey('ph') &&
+          systemTraceEvent['ph'] is String)) {
         throw FormatException(
-            'Expected $systemTraceEvent to have field "pid" of type int');
+            'Expected $systemTraceEvent to have field "ph" of type String');
       }
-      final int pid = systemTraceEvent['pid'];
-      if (!(systemTraceEvent.containsKey('name') &&
-          systemTraceEvent['name'] is String)) {
-        throw FormatException(
-            'Expected $systemTraceEvent to have field "name" of type String');
+      final String phase = systemTraceEvent['ph'];
+      if (phase == 'p') {
+        if (!(systemTraceEvent.containsKey('pid') &&
+            systemTraceEvent['pid'] is int)) {
+          throw FormatException(
+              'Expected $systemTraceEvent to have field "pid" of type int');
+        }
+        final int pid = systemTraceEvent['pid'];
+        if (!(systemTraceEvent.containsKey('name') &&
+            systemTraceEvent['name'] is String)) {
+          throw FormatException(
+              'Expected $systemTraceEvent to have field "name" of type String');
+        }
+        final String name = systemTraceEvent['name'];
+        pidToName[pid] = name;
+      } else if (phase == 't') {
+        if (!(systemTraceEvent.containsKey('pid') &&
+            systemTraceEvent['pid'] is int)) {
+          throw FormatException(
+              'Expected $systemTraceEvent to have field "pid" of type int');
+        }
+        if (!(systemTraceEvent.containsKey('tid') &&
+                (systemTraceEvent['tid'] is int) ||
+            systemTraceEvent['tid'] is double)) {
+          throw FormatException(
+              'Expected $systemTraceEvent to have field "tid" of type int or double');
+        }
+        final int tid = systemTraceEvent['tid'].toInt();
+        if (!(systemTraceEvent.containsKey('name') &&
+            systemTraceEvent['name'] is String)) {
+          throw FormatException(
+              'Expected $systemTraceEvent to have field "name" of type String');
+        }
+        final String name = systemTraceEvent['name'];
+        tidToName[tid] = name;
+      } else if (phase == 'k') {
+        // CPU events are currently ignored.  It would be interesting to support
+        // these in the future so we can track CPU durations in addition to wall
+        // durations.
+      } else {
+        print('Unknown phase $phase from $systemTraceEvent');
       }
-      final String name = systemTraceEvent['name'];
-      pidToName[pid] = name;
-    } else if (phase == 't') {
-      if (!(systemTraceEvent.containsKey('pid') &&
-          systemTraceEvent['pid'] is int)) {
-        throw FormatException(
-            'Expected $systemTraceEvent to have field "pid" of type int');
-      }
-      if (!(systemTraceEvent.containsKey('tid') &&
-              (systemTraceEvent['tid'] is int) ||
-          systemTraceEvent['tid'] is double)) {
-        throw FormatException(
-            'Expected $systemTraceEvent to have field "tid" of type int or double');
-      }
-      final int tid = systemTraceEvent['tid'].toInt();
-      if (!(systemTraceEvent.containsKey('name') &&
-          systemTraceEvent['name'] is String)) {
-        throw FormatException(
-            'Expected $systemTraceEvent to have field "name" of type String');
-      }
-      final String name = systemTraceEvent['name'];
-      tidToName[tid] = name;
-    } else if (phase == 'k') {
-      // CPU events are currently ignored.  It would be interesting to support
-      // these in the future so we can track CPU durations in addition to wall
-      // durations.
-    } else {
-      print('Unknown phase $phase from $systemTraceEvent');
     }
   }
 

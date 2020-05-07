@@ -556,4 +556,59 @@ void main(List<String> args) {
 
     expect(getAllEvents(model), isNotEmpty);
   });
+
+  test('Flow event binding points', () async {
+    final model = createModelFromJsonString(flowEventBindingJsonString);
+
+    final thread = model.processes.single.threads.single;
+    final flowEvents = filterEventsTyped<FlowEvent>(thread.events).toList();
+    expect(flowEvents.length, 6);
+    expect(
+        flowEvents[0].enclosingDuration.start.toEpochDelta().toMillisecondsF(),
+        10.0);
+    expect(
+        flowEvents[1].enclosingDuration.start.toEpochDelta().toMillisecondsF(),
+        20.0);
+    expect(
+        flowEvents[2].enclosingDuration.start.toEpochDelta().toMillisecondsF(),
+        40.0);
+    expect(
+        flowEvents[3].enclosingDuration.start.toEpochDelta().toMillisecondsF(),
+        50.0);
+    expect(
+        flowEvents[4].enclosingDuration.start.toEpochDelta().toMillisecondsF(),
+        60.0);
+    expect(
+        flowEvents[5].enclosingDuration.start.toEpochDelta().toMillisecondsF(),
+        70.0);
+  });
+
+  test('Chrome metadata events', () async {
+    final model = createModelFromJsonString(chromeMetadataJsonString);
+
+    final process = model.processes.single;
+    final thread = process.threads.single;
+
+    expect(process.name, 'Test process');
+    expect(thread.name, 'Test thread');
+  });
+
+  test('Async events with id2', () async {
+    final model = createModelFromJsonString(id2AsyncJsonString);
+
+    expect(model.processes.length, 2);
+
+    expect(
+        filterEventsTyped<AsyncEvent>(getAllEvents(model),
+                category: 'test', name: 'async')
+            .toList()
+            .length,
+        2);
+    expect(
+        filterEventsTyped<AsyncEvent>(getAllEvents(model),
+                category: 'test', name: 'async2')
+            .toList()
+            .length,
+        2);
+  });
 }
