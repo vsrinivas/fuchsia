@@ -7,7 +7,7 @@ import("//build/config.gni")
 config_data("max_severity") {
   testonly = true
   for_pkg = "run_test_component"
-  sources = [ "max_severity_experiences.config" ]
+  sources = [ "max_severity_experiences.json" ]
 }
 
 group("config") {
