@@ -1,0 +1,22 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+zx_library("hwreg-i2c") {
+  sdk = "source"
+  sdk_headers = [
+    "hwreg/i2c.h",
+  ]
+  sources = []
+  static = true
+
+  public_deps = [
+    # <hwreg/i2c.h> has #include <lib/device-protocol/i2c.h>.
+    "$zx/system/dev/lib/device-protocol-i2c:headers",
+
+    # <hwreg/i2c.h> has #include <hwreg/bitfields.h>
+    "$zx/system/ulib/hwreg:headers",
+  ]
+
+  deps = [ "$zx/system/ulib/hwreg" ]
+}

@@ -10,8 +10,7 @@
 #include <zircon/types.h>
 
 #include <ddktl/protocol/i2c.h>
-
-#include "bitfields.h"
+#include <hwreg/bitfields.h>
 
 namespace hwreg {
 
