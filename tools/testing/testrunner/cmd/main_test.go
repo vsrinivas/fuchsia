@@ -11,7 +11,6 @@ import (
 	"testing"
 
 	"go.fuchsia.dev/fuchsia/tools/build/lib"
-	"go.fuchsia.dev/fuchsia/tools/integration/testsharder/lib"
 	"go.fuchsia.dev/fuchsia/tools/net/sshutil"
 	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
 	"go.fuchsia.dev/fuchsia/tools/testing/testrunner/lib"
@@ -21,7 +20,7 @@ type fakeTester struct {
 	testErr error
 }
 
-func (t *fakeTester) Test(ctx context.Context, test testsharder.Test, stdout, stderr io.Writer) (runtests.DataSinkReference, error) {
+func (t *fakeTester) Test(ctx context.Context, test build.Test, stdout, stderr io.Writer) (runtests.DataSinkReference, error) {
 	return nil, t.testErr
 }
 
@@ -33,18 +32,13 @@ func (t *fakeTester) CopySinks(ctx context.Context, sinks []runtests.DataSinkRef
 	return nil
 }
 
-func assertEqual(t1, t2 *testrunner.TestResult) bool {
-	return t1.Name == t2.Name && t1.Result == t2.Result && t1.RunIndex == t2.RunIndex
-}
-
 func TestRunTest(t *testing.T) {
 	cases := []struct {
 		name           string
 		test           build.Test
-		runs           int
 		testErr        error
 		expectedErr    error
-		expectedResult []*testrunner.TestResult
+		expectedResult *testrunner.TestResult
 	}{
 		{
 			name: "host test pass",
@@ -54,10 +48,10 @@ func TestRunTest(t *testing.T) {
 				OS:   "linux",
 			},
 			testErr: nil,
-			expectedResult: []*testrunner.TestResult{{
+			expectedResult: &testrunner.TestResult{
 				Name:   "/foo/bar",
 				Result: runtests.TestSuccess,
-			}},
+			},
 		},
 		{
 			name: "fuchsia test pass",
@@ -68,10 +62,10 @@ func TestRunTest(t *testing.T) {
 				Package: build.Package{URL: "fuchsia-pkg://foo/bar"},
 			},
 			testErr: nil,
-			expectedResult: []*testrunner.TestResult{{
+			expectedResult: &testrunner.TestResult{
 				Name:   "fuchsia-pkg://foo/bar",
 				Result: runtests.TestSuccess,
-			}},
+			},
 		},
 		{
 			name: "fuchsia test fail",
@@ -82,10 +76,10 @@ func TestRunTest(t *testing.T) {
 				Package: build.Package{URL: "fuchsia-pkg://foo/bar"},
 			},
 			testErr: fmt.Errorf("test failed"),
-			expectedResult: []*testrunner.TestResult{{
+			expectedResult: &testrunner.TestResult{
 				Name:   "fuchsia-pkg://foo/bar",
 				Result: runtests.TestFailure,
-			}},
+			},
 		},
 		{
 			name: "fuchsia test ssh connection fail",
@@ -100,23 +94,32 @@ func TestRunTest(t *testing.T) {
 			expectedResult: nil,
 		},
 		{
-			name: "multiplier test gets unique index",
+			name: "multiplier test gets unique name",
 			test: build.Test{
 				Name:    "bar (2)",
 				Path:    "/foo/bar",
 				OS:      "fuchsia",
 				Package: build.Package{URL: "fuchsia-pkg://foo/bar"},
 			},
-			runs:    2,
 			testErr: nil,
-			expectedResult: []*testrunner.TestResult{{
+			expectedResult: &testrunner.TestResult{
+				Name:   "fuchsia-pkg://foo/bar-(2)",
+				Result: runtests.TestSuccess,
+			},
+		},
+		{
+			name: "non-multiplier test",
+			test: build.Test{
+				Name:    "bar(2)test",
+				Path:    "/foo/bar",
+				OS:      "fuchsia",
+				Package: build.Package{URL: "fuchsia-pkg://foo/bar"},
+			},
+			testErr: nil,
+			expectedResult: &testrunner.TestResult{
 				Name:   "fuchsia-pkg://foo/bar",
 				Result: runtests.TestSuccess,
-			}, {
-				Name:     "fuchsia-pkg://foo/bar",
-				Result:   runtests.TestSuccess,
-				RunIndex: 1,
-			}},
+			},
 		},
 	}
 	for _, c := range cases {
@@ -124,19 +127,14 @@ func TestRunTest(t *testing.T) {
 			tester := &fakeTester{
 				testErr: c.testErr,
 			}
-			if c.runs == 0 {
-				c.runs = 1
-			}
-			for i := 0; i < c.runs; i++ {
-				result, err := runTest(context.Background(), testsharder.Test{c.test, c.runs}, i, tester)
+			result, err := runTest(context.Background(), c.test, tester)
 
-				if err != c.expectedErr {
-					t.Errorf("got error: %v, expected: %v", err, c.expectedErr)
-				}
-				if err == nil {
-					if !assertEqual(result, c.expectedResult[i]) {
-						t.Errorf("got result: %v, expected: %v", result, c.expectedResult[i])
-					}
+			if err != c.expectedErr {
+				t.Errorf("got error: %v, expected: %v", err, c.expectedErr)
+			}
+			if err == nil {
+				if result.Name != c.expectedResult.Name || result.Result != c.expectedResult.Result {
+					t.Errorf("got result: %v, expected: %v", result, c.expectedResult)
 				}
 			}
 		})

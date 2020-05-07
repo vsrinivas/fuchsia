@@ -77,8 +77,8 @@ func TestRecordingOfOutputs(t *testing.T) {
 	}
 	defer o.Close()
 
-	outputFileA := filepath.Join("test_a", "0", "stdout-and-stderr.txt")
-	outputFileB := filepath.Join("test_b", "0", "stdout-and-stderr.txt")
+	outputFileA := filepath.Join("test_a", "stdout-and-stderr.txt")
+	outputFileB := filepath.Join("test_b", "stdout-and-stderr.txt")
 	expectedSummary := runtests.TestSummary{
 		Tests: []runtests.TestDetails{{
 			Name:           "test_a",

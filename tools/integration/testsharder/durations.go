@@ -28,8 +28,8 @@ func NewTestDurationsMap(durations []build.TestDuration) TestDurationsMap {
 
 // Get returns the duration data for a given test. If the test is not included
 // in the durations map, the default duration data is returned instead.
-func (m TestDurationsMap) Get(test Test) build.TestDuration {
-	if testData, ok := m[util.UniqueName(test.Test)]; ok {
+func (m TestDurationsMap) Get(test build.Test) build.TestDuration {
+	if testData, ok := m[util.UniqueName(test)]; ok {
 		return testData
 	}
 	return m[defaultDurationKey]

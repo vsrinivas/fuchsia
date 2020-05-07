@@ -16,6 +16,7 @@ import (
 	"strings"
 	"time"
 
+	"go.fuchsia.dev/fuchsia/tools/build/lib"
 	"go.fuchsia.dev/fuchsia/tools/testing/util"
 )
 
@@ -62,7 +63,7 @@ func extractDepsFromShard(shard *Shard, fuchsiaBuildDir string) error {
 	return nil
 }
 
-func extractDepsFromTest(test *Test, fuchsiaBuildDir string) ([]string, error) {
+func extractDepsFromTest(test *build.Test, fuchsiaBuildDir string) ([]string, error) {
 	if test.RuntimeDepsFile == "" {
 		return nil, nil
 	}
@@ -104,8 +105,9 @@ func MultiplyShards(
 ) ([]*Shard, error) {
 	for _, multiplier := range multipliers {
 		type multiplierMatch struct {
-			shard *Shard
-			test  Test
+			shard     *Shard
+			test      build.Test
+			totalRuns int
 		}
 		var exactMatches []*multiplierMatch
 		var regexMatches []*multiplierMatch
@@ -123,7 +125,7 @@ func MultiplyShards(
 				}
 
 				match := &multiplierMatch{shard: shard, test: test}
-				uniqueName := util.UniqueName(test.Test)
+				uniqueName := util.UniqueName(test)
 				if multiplier.Name == test.Name || multiplier.Name == uniqueName {
 					exactMatches = append(exactMatches, match)
 				} else if nameRegex.FindString(test.Name) != "" || nameRegex.FindString(uniqueName) != "" {
@@ -133,20 +135,20 @@ func MultiplyShards(
 				}
 
 				if multiplier.TotalRuns > 0 {
-					match.test.Runs = multiplier.TotalRuns
+					match.totalRuns = multiplier.TotalRuns
 				} else if targetDuration > 0 {
 					expectedDuration := testDurations.Get(test).MedianDuration
 					// We want to keep the total runs to a reasonable number
 					// in case test duration data is out of date and the
 					// test takes longer than expected.
-					match.test.Runs = min(
+					match.totalRuns = min(
 						int(targetDuration)/int(expectedDuration),
 						multipliedTestMaxRuns,
 					)
 				} else if targetTestCount > 0 {
-					match.test.Runs = targetTestCount
+					match.totalRuns = targetTestCount
 				} else {
-					match.test.Runs = 1
+					match.totalRuns = 1
 				}
 			}
 		}
@@ -168,7 +170,7 @@ func MultiplyShards(
 		for _, m := range matches {
 			shards = append(shards, &Shard{
 				Name:  "multiplied:" + m.shard.Name + "-" + normalizeTestName(m.test.Name),
-				Tests: []Test{m.test},
+				Tests: multiplyTest(m.test, m.totalRuns),
 				Env:   m.shard.Env,
 			})
 		}
@@ -221,7 +223,7 @@ func WithTargetDuration(
 				if duration > targetDuration {
 					targetDuration = duration
 				}
-				shardDuration += duration * time.Duration(t.Runs)
+				shardDuration += duration
 			}
 			// If any environment would exceed the maximum shard count, then its
 			// shard durations will exceed the specified target duration. So
@@ -240,15 +242,11 @@ func WithTargetDuration(
 		if targetDuration > 0 {
 			var total time.Duration
 			for _, t := range shard.Tests {
-				total += testDurations.Get(t).MedianDuration * time.Duration(t.Runs)
+				total += testDurations.Get(t).MedianDuration
 			}
 			numNewShards = divRoundUp(int(total), int(targetDuration))
 		} else {
-			var total int
-			for _, t := range shard.Tests {
-				total += t.Runs
-			}
-			numNewShards = divRoundUp(total, targetTestCount)
+			numNewShards = divRoundUp(len(shard.Tests), targetTestCount)
 		}
 		numNewShards = min(numNewShards, maxShardsPerEnvironment)
 
@@ -260,7 +258,7 @@ func WithTargetDuration(
 
 type subshard struct {
 	duration time.Duration
-	tests    []Test
+	tests    []build.Test
 }
 
 // A subshardHeap is a min heap of subshards, using subshard duration as the key
@@ -317,25 +315,12 @@ func shardByTime(shard *Shard, testDurations TestDurationsMap, numNewShards int)
 	h := (subshardHeap)(make([]subshard, numNewShards))
 
 	for _, test := range shard.Tests {
-		runsPerShard := divRoundUp(test.Runs, numNewShards)
-		extra := runsPerShard*numNewShards - test.Runs
-		for i := 0; i < numNewShards; i++ {
-			testCopy := test
-			if i < numNewShards-extra {
-				testCopy.Runs = runsPerShard
-			} else {
-				testCopy.Runs = runsPerShard - 1
-			}
-			if testCopy.Runs == 0 {
-				break
-			}
-			// Assign this test to the subshard with the lowest total expected
-			// duration at this iteration of the for loop.
-			ss := heap.Pop(&h).(subshard)
-			ss.duration += testDurations.Get(test).MedianDuration * time.Duration(testCopy.Runs)
-			ss.tests = append(ss.tests, testCopy)
-			heap.Push(&h, ss)
-		}
+		// Assign this test to the subshard with the lowest total expected
+		// duration at this iteration of the for loop.
+		ss := heap.Pop(&h).(subshard)
+		ss.duration += testDurations.Get(test).MedianDuration
+		ss.tests = append(ss.tests, test)
+		heap.Push(&h, ss)
 	}
 
 	// Sort the resulting shards by the basename of the first test. Otherwise,
@@ -369,4 +354,15 @@ func shardByTime(shard *Shard, testDurations TestDurationsMap, numNewShards int)
 func normalizeTestName(name string) string {
 	trimmedName := strings.TrimLeft(name, "/")
 	return strings.ReplaceAll(trimmedName, "/", "_")
+}
+
+// Returns a list of Tests containing the same test multiplied by the number of runs.
+func multiplyTest(test build.Test, runs int) []build.Test {
+	var tests []build.Test
+	for i := 1; i <= runs; i++ {
+		testCopy := test
+		testCopy.Name = fmt.Sprintf("%s (%d)", test.Name, i)
+		tests = append(tests, testCopy)
+	}
+	return tests
 }

@@ -32,11 +32,11 @@ func TestMultiplyShards(t *testing.T) {
 		Dimensions: build.DimensionSet{OS: "linux"},
 		Tags:       []string{},
 	}
-	makeTest := func(id int, os string) Test {
-		test := Test{build.Test{
+	makeTest := func(id int, os string) build.Test {
+		test := build.Test{
 			Name: fmt.Sprintf("test%d", id),
 			OS:   os,
-		}, 1}
+		}
 		if os == "fuchsia" {
 			test.Package = build.Package{
 				URL: fmt.Sprintf("fuchsia-pkg://fuchsia.com/test%d", id),
@@ -48,7 +48,7 @@ func TestMultiplyShards(t *testing.T) {
 	}
 
 	shard := func(env build.Environment, os string, ids ...int) *Shard {
-		var tests []Test
+		var tests []build.Test
 		for _, id := range ids {
 			tests = append(tests, makeTest(id, os))
 		}
@@ -68,11 +68,16 @@ func TestMultiplyShards(t *testing.T) {
 	}
 
 	multShard := func(env build.Environment, os string, id int, runs int) *Shard {
+		var tests []build.Test
 		test := makeTest(id, os)
-		test.Runs = runs
+		for i := 1; i <= runs; i++ {
+			testCopy := test
+			testCopy.Name = fmt.Sprintf("%s (%d)", test.Name, i)
+			tests = append(tests, testCopy)
+		}
 		return &Shard{
 			Name:  "multiplied:" + environmentName(env) + "-" + test.Name,
-			Tests: []Test{test},
+			Tests: tests,
 			Env:   env,
 		}
 	}
@@ -265,9 +270,7 @@ func assertShardsContainTests(t *testing.T, shards []*Shard, expectedShards [][]
 	for _, shard := range shards {
 		actualTestNames := []string{}
 		for _, test := range shard.Tests {
-			for i := 0; i < test.Runs; i++ {
-				actualTestNames = append(actualTestNames, util.UniqueName(test.Test))
-			}
+			actualTestNames = append(actualTestNames, util.UniqueName(test))
 		}
 
 		// Check that we're expecting a shard that contains this exact set of
@@ -458,26 +461,6 @@ func TestWithTargetDuration(t *testing.T) {
 			}
 		}
 	})
-
-	t.Run("evenly distributes multiplier shards", func(t *testing.T) {
-		input := []*Shard{{
-			Name: "env1",
-			Env:  env1,
-			Tests: []Test{{build.Test{
-				Name:    "test1",
-				OS:      "fuchsia",
-				Package: build.Package{URL: "test1"},
-			}, 5,
-			}},
-		}}
-		actual := WithTargetDuration(input, 2, 0, 0, defaultDurations)
-		expectedTests := [][]string{
-			{"test1", "test1"},
-			{"test1", "test1"},
-			{"test1"},
-		}
-		assertShardsContainTests(t, actual, expectedTests)
-	})
 }
 
 func depsFile(t *testing.T, buildDir string, deps ...string) string {
@@ -499,7 +482,7 @@ func depsFile(t *testing.T, buildDir string, deps ...string) string {
 	return relPath
 }
 
-func shardHasExpectedDeps(t *testing.T, buildDir string, tests []Test, expected []string) {
+func shardHasExpectedDeps(t *testing.T, buildDir string, tests []build.Test, expected []string) {
 	shard := &Shard{
 		Tests: tests,
 	}
@@ -533,25 +516,25 @@ func TestExtractDeps(t *testing.T) {
 	defer os.RemoveAll(buildDir)
 
 	t.Run("no deps", func(t *testing.T) {
-		tests := []Test{{
-			Test: build.Test{
+		tests := []build.Test{
+			{
 				Name: "A",
 			},
-		}}
+		}
 		expected := []string{}
 		shardHasExpectedDeps(t, buildDir, tests, expected)
 	})
 
 	t.Run("some deps", func(t *testing.T) {
-		tests := []Test{{
-			Test: build.Test{
+		tests := []build.Test{
+			{
 				Name:            "A",
 				RuntimeDepsFile: depsFile(t, buildDir, "1", "2"),
-			}}, {
-			Test: build.Test{
+			},
+			{
 				Name:            "B",
 				RuntimeDepsFile: depsFile(t, buildDir, "3"),
-			}},
+			},
 		}
 		expected := []string{"1", "2", "3"}
 		shardHasExpectedDeps(t, buildDir, tests, expected)
@@ -565,15 +548,15 @@ func TestExtractDeps(t *testing.T) {
 	})
 
 	t.Run("deps are deduped", func(t *testing.T) {
-		tests := []Test{{
-			Test: build.Test{
+		tests := []build.Test{
+			{
 				Name:            "A",
 				RuntimeDepsFile: depsFile(t, buildDir, "1", "2", "2"),
-			}}, {
-			Test: build.Test{
+			},
+			{
 				Name:            "B",
 				RuntimeDepsFile: depsFile(t, buildDir, "2", "3"),
-			}},
+			},
 		}
 		expected := []string{"1", "2", "3"}
 		shardHasExpectedDeps(t, buildDir, tests, expected)
