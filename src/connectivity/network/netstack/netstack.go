@@ -605,94 +605,102 @@ func (ifs *ifState) dhcpEnabled() bool {
 func (ifs *ifState) stateChange(s link.State) {
 	name := ifs.ns.name(ifs.nicid)
 
-	ifs.mu.Lock()
-	switch s {
-	case link.StateClosed:
-		syslog.Infof("NIC %s: link.StateClosed", name)
-		fallthrough
-	case link.StateDown:
-		syslog.Infof("NIC %s: link.StateDown", name)
+	changed := func() bool {
+		ifs.mu.Lock()
+		defer ifs.mu.Unlock()
 
-		// Stop DHCP, this triggers the removal of all dynamically obtained configuration (IP, routes,
-		// DNS servers).
-		ifs.mu.dhcp.cancel()
+		switch s {
+		case ifs.mu.state:
+			return false
+		case link.StateClosed:
+			syslog.Infof("NIC %s: link.StateClosed", name)
+			fallthrough
+		case link.StateDown:
+			syslog.Infof("NIC %s: link.StateDown", name)
 
-		// Remove DNS servers through ifs.
-		ifs.ns.dnsClient.RemoveAllServersWithNIC(ifs.nicid)
-		ifs.setDNSServersLocked(nil)
-
-		// TODO(crawshaw): more cleanup to be done here:
-		// 	- remove link endpoint
-		//	- reclaim NICID?
-
-		if s == link.StateClosed {
-			// The interface is removed, force all of its routes to be removed.
-			ifs.ns.UpdateRoutesByInterface(ifs.nicid, routes.ActionDeleteAll)
-		} else {
-			// The interface is down, disable static routes (dynamic ones are handled
-			// by the cancelled DHCP server).
-			ifs.ns.UpdateRoutesByInterface(ifs.nicid, routes.ActionDisableStatic)
-		}
-
-		if err := ifs.ns.DelRoute(ipv6LinkLocalOnLinkRoute(ifs.nicid)); err != nil && err != routes.ErrNoSuchRoute {
-			syslog.Errorf("error deleting link-local on-link route for nicID (%d): %s", ifs.nicid, err)
-		}
-
-		if s == link.StateClosed {
-			if err := ifs.ns.stack.RemoveNIC(ifs.nicid); err != nil {
-				syslog.Errorf("error removing NIC %s in stack.Stack: %s", name, err)
-			}
-		} else {
-			if err := ifs.ns.stack.DisableNIC(ifs.nicid); err != nil {
-				syslog.Errorf("error disabling NIC %s in stack.Stack: %s", name, err)
-			}
-		}
-
-	case link.StateStarted:
-		syslog.Infof("NIC %s: link.StateStarted", name)
-
-		if err := ifs.ns.stack.EnableNIC(ifs.nicid); err != nil {
-			syslog.Errorf("error enabling NIC %s in stack.Stack: %s", name, err)
-		}
-
-		// DHCPv4 sends packets to the IPv4 broadcast address so make sure there is
-		// a valid route to it. This route is only needed for the initial DHCPv4
-		// transaction. Marking the route as dynamic will result in it being removed
-		// when configurations are acquired via DHCPv4, which is okay as following
-		// DHCPv4 requests will be sent directly to the DHCPv4 server instead of
-		// broadcasting it to the whole link.
-		ifs.ns.routeTable.AddRoute(
-			tcpip.Route{Destination: util.PointSubnet(header.IPv4Broadcast), NIC: ifs.nicid},
-			lowPriorityRoute,
-			false, /* metricTracksInterface */
-			true,  /* dynamic */
-			true,  /* enabled */
-		)
-
-		// Re-enable static routes out this interface.
-		ifs.ns.UpdateRoutesByInterface(ifs.nicid, routes.ActionEnableStatic)
-		if ifs.mu.dhcp.enabled {
+			// Stop DHCP, this triggers the removal of all dynamically obtained configuration (IP, routes,
+			// DNS servers).
 			ifs.mu.dhcp.cancel()
-			ifs.runDHCPLocked(name)
+
+			// Remove DNS servers through ifs.
+			ifs.ns.dnsClient.RemoveAllServersWithNIC(ifs.nicid)
+			ifs.setDNSServersLocked(nil)
+
+			// TODO(crawshaw): more cleanup to be done here:
+			// 	- remove link endpoint
+			//	- reclaim NICID?
+
+			if s == link.StateClosed {
+				// The interface is removed, force all of its routes to be removed.
+				ifs.ns.UpdateRoutesByInterface(ifs.nicid, routes.ActionDeleteAll)
+			} else {
+				// The interface is down, disable static routes (dynamic ones are handled
+				// by the cancelled DHCP server).
+				ifs.ns.UpdateRoutesByInterface(ifs.nicid, routes.ActionDisableStatic)
+			}
+
+			if err := ifs.ns.DelRoute(ipv6LinkLocalOnLinkRoute(ifs.nicid)); err != nil && err != routes.ErrNoSuchRoute {
+				syslog.Errorf("error deleting link-local on-link route for nicID (%d): %s", ifs.nicid, err)
+			}
+
+			if s == link.StateClosed {
+				if err := ifs.ns.stack.RemoveNIC(ifs.nicid); err != nil {
+					syslog.Errorf("error removing NIC %s in stack.Stack: %s", name, err)
+				}
+			} else {
+				if err := ifs.ns.stack.DisableNIC(ifs.nicid); err != nil {
+					syslog.Errorf("error disabling NIC %s in stack.Stack: %s", name, err)
+				}
+			}
+
+		case link.StateStarted:
+			syslog.Infof("NIC %s: link.StateStarted", name)
+
+			if err := ifs.ns.stack.EnableNIC(ifs.nicid); err != nil {
+				syslog.Errorf("error enabling NIC %s in stack.Stack: %s", name, err)
+			}
+
+			// DHCPv4 sends packets to the IPv4 broadcast address so make sure there is
+			// a valid route to it. This route is only needed for the initial DHCPv4
+			// transaction. Marking the route as dynamic will result in it being removed
+			// when configurations are acquired via DHCPv4, which is okay as following
+			// DHCPv4 requests will be sent directly to the DHCPv4 server instead of
+			// broadcasting it to the whole link.
+			ifs.ns.routeTable.AddRoute(
+				tcpip.Route{Destination: util.PointSubnet(header.IPv4Broadcast), NIC: ifs.nicid},
+				lowPriorityRoute,
+				false, /* metricTracksInterface */
+				true,  /* dynamic */
+				true,  /* enabled */
+			)
+
+			// Re-enable static routes out this interface.
+			ifs.ns.UpdateRoutesByInterface(ifs.nicid, routes.ActionEnableStatic)
+			if ifs.mu.dhcp.enabled {
+				ifs.mu.dhcp.cancel()
+				ifs.runDHCPLocked(name)
+			}
+
+			// Add an on-link route for the IPv6 link-local subnet. The route is added
+			// as a 'static' route because Netstack will remove dynamic routes on DHCPv4
+			// changes. See staticRouteAvoidingLifeCycleHooks for more details.
+			ifs.ns.routeTable.AddRoute(
+				ipv6LinkLocalOnLinkRoute(ifs.nicid),
+				metricNotSet,
+				true, /* metricTracksInterface */
+				staticRouteAvoidingLifeCycleHooks,
+				true, /* enabled */
+			)
+			ifs.ns.stack.SetRouteTable(ifs.ns.routeTable.GetNetstackTable())
 		}
 
-		// Add an on-link route for the IPv6 link-local subnet. The route is added
-		// as a 'static' route because Netstack will remove dynamic routes on DHCPv4
-		// changes. See staticRouteAvoidingLifeCycleHooks for more details.
-		ifs.ns.routeTable.AddRoute(
-			ipv6LinkLocalOnLinkRoute(ifs.nicid),
-			metricNotSet,
-			true, /* metricTracksInterface */
-			staticRouteAvoidingLifeCycleHooks,
-			true, /* enabled */
-		)
-		ifs.ns.stack.SetRouteTable(ifs.ns.routeTable.GetNetstackTable())
+		ifs.mu.state = s
+		return true
+	}()
+
+	if changed {
+		ifs.ns.onInterfacesChanged()
 	}
-
-	ifs.mu.state = s
-	ifs.mu.Unlock()
-
-	ifs.ns.onInterfacesChanged()
 }
 
 var nameProviderErrorLogged uint32 = 0

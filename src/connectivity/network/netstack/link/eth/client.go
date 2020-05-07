@@ -249,9 +249,11 @@ type Client struct {
 
 	topopath, filepath string
 
-	mu        sync.Mutex
-	state     link.State
-	stateFunc func(link.State)
+	mu struct {
+		sync.Mutex
+		closed    bool
+		stateFunc func(link.State)
+	}
 
 	rx entries
 	tx struct {
@@ -481,9 +483,9 @@ func (c *Client) Attach(dispatcher stack.NetworkDispatcher) {
 			}
 		}(); err != nil {
 			c.mu.Lock()
-			state := c.state
+			closed := c.mu.closed
 			c.mu.Unlock()
-			if state != link.StateClosed {
+			if !closed {
 				_ = syslog.WarnTf(tag, "TX read loop: %s", err)
 			}
 			c.tx.mu.Lock()
@@ -539,9 +541,9 @@ func (c *Client) Attach(dispatcher stack.NetworkDispatcher) {
 			}
 		}(); err != nil {
 			c.mu.Lock()
-			state := c.state
+			closed := c.mu.closed
 			c.mu.Unlock()
-			if state != link.StateClosed {
+			if !closed {
 				_ = syslog.WarnTf(tag, "TX write loop: %s", err)
 			}
 			c.tx.mu.Lock()
@@ -596,11 +598,11 @@ func (c *Client) Attach(dispatcher stack.NetworkDispatcher) {
 						return err
 					}
 					if obs&zx.Signals(ethernet.SignalStatus) != 0 {
-						c.mu.Lock()
-						if err := c.updateStatusLocked("FIFO signal"); err != nil {
+						if err := c.changeState(func() (link.State, error) {
+							return c.getState("FIFO signal")
+						}); err != nil {
 							_ = syslog.WarnTf(tag, "status error: %s", err)
 						}
-						c.mu.Unlock()
 					}
 					if obs&zx.SignalFIFOReadable != 0 {
 						switch status, count := FifoRead(c.fifos.Rx, scratch); status {
@@ -624,9 +626,9 @@ func (c *Client) Attach(dispatcher stack.NetworkDispatcher) {
 			}
 		}(); err != nil {
 			c.mu.Lock()
-			state := c.state
+			closed := c.mu.closed
 			c.mu.Unlock()
-			if state != link.StateClosed {
+			if !closed {
 				_ = syslog.WarnTf(tag, "RX loop: %s", err)
 			}
 		}
@@ -657,8 +659,8 @@ func checkStatus(status int32, text string) error {
 
 func (c *Client) SetOnStateChange(f func(link.State)) {
 	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.stateFunc = f
+	c.mu.stateFunc = f
+	c.mu.Unlock()
 }
 
 func (c *Client) Topopath() string {
@@ -669,75 +671,70 @@ func (c *Client) Filepath() string {
 	return c.filepath
 }
 
-func (c *Client) changeStateLocked(s link.State) {
-	if s != c.state {
-		c.state = s
-		if fn := c.stateFunc; fn != nil {
-			fn(s)
-		}
+func (c *Client) changeState(fn func() (link.State, error)) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	s, err := fn()
+	if err != nil {
+		return err
 	}
+	if stateFunc := c.mu.stateFunc; stateFunc != nil {
+		stateFunc(s)
+	}
+	return nil
 }
 
 // Up enables the interface.
 func (c *Client) Up() error {
-	_ = syslog.VLogTf(syslog.TraceVerbosity, tag, "client Up")
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	if c.state != link.StateStarted {
+	return c.changeState(func() (link.State, error) {
+		_ = syslog.VLogTf(syslog.TraceVerbosity, tag, "client Up")
 		if status, err := c.device.Start(context.Background()); err != nil {
-			return err
+			return link.StateUnknown, err
 		} else if err := checkStatus(status, "Start"); err != nil {
-			return err
+			return link.StateUnknown, err
 		}
-		if err := c.updateStatusLocked("Up"); err != nil {
-			return err
-		}
-	}
 
-	return nil
+		return c.getState("Up")
+	})
 }
 
 // Down disables the interface.
 func (c *Client) Down() error {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	if c.state != link.StateDown {
+	return c.changeState(func() (link.State, error) {
 		if err := c.device.Stop(context.Background()); err != nil {
-			return err
+			return link.StateUnknown, err
 		}
-		c.changeStateLocked(link.StateDown)
-	}
-	return nil
+		return link.StateDown, nil
+	})
 }
 
 // Close closes a Client, releasing any held resources.
 func (c *Client) Close() error {
 	c.mu.Lock()
-	defer c.mu.Unlock()
-	return c.closeLocked()
-}
-
-func (c *Client) closeLocked() error {
-	if c.state == link.StateClosed {
+	closed := c.mu.closed
+	c.mu.closed = true
+	c.mu.Unlock()
+	if closed {
 		return nil
 	}
-	err := c.device.Stop(context.Background())
-	if err != nil {
-		err = fmt.Errorf("fuchsia.hardware.ethernet.Device.Stop() for path %q failed: %s", c.topopath, err)
-	}
+	return c.changeState(func() (link.State, error) {
+		err := c.device.Stop(context.Background())
+		if err != nil {
+			err = fmt.Errorf("fuchsia.hardware.ethernet.Device.Stop() for path %q failed: %s", c.topopath, err)
+		}
 
-	if err := c.fifos.Tx.Close(); err != nil {
-		_ = syslog.WarnTf(tag, "failed to close tx fifo: %s", err)
-	}
-	if err := c.fifos.Rx.Close(); err != nil {
-		_ = syslog.WarnTf(tag, "failed to close rx fifo: %s", err)
-	}
-	if err := c.iob.Close(); err != nil {
-		_ = syslog.WarnTf(tag, "failed to close IO buffer: %s", err)
-	}
-	c.changeStateLocked(link.StateClosed)
+		if err := c.fifos.Tx.Close(); err != nil {
+			_ = syslog.WarnTf(tag, "failed to close tx fifo: %s", err)
+		}
+		if err := c.fifos.Rx.Close(); err != nil {
+			_ = syslog.WarnTf(tag, "failed to close rx fifo: %s", err)
+		}
+		if err := c.iob.Close(); err != nil {
+			_ = syslog.WarnTf(tag, "failed to close IO buffer: %s", err)
+		}
 
-	return err
+		return link.StateClosed, err
+	})
 }
 
 func (c *Client) SetPromiscuousMode(enabled bool) error {
@@ -779,16 +776,15 @@ func (c *Client) ListenTX() error {
 
 // updateStatusLocked fetches the current device status and notifies endpoint
 // status changes.
-func (c *Client) updateStatusLocked(debugSource string) error {
+func (c *Client) getState(debugSource string) (link.State, error) {
 	status, err := c.device.GetStatus(context.Background())
 	if err != nil {
-		return err
+		return link.StateUnknown, err
 	}
 	_ = syslog.InfoTf(tag, "fuchsia.hardware.ethernet.Device.GetStatus() = %s (%s)", status, debugSource)
 	state := link.StateStarted
 	if status&ethernet.DeviceStatusOnline == 0 {
 		state = link.StateDown
 	}
-	c.changeStateLocked(state)
-	return nil
+	return state, nil
 }
