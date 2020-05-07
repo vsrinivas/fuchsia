@@ -140,6 +140,7 @@ impl<I: UdpSocketIpExt> UdpEventDispatcher<I> for BindingsDispatcher {
 struct UdpSocketWorker<I: UdpSocketIpExt, C: StackContext> {
     ctx: C,
     id: usize,
+    rights: u32,
     _marker: PhantomData<I>,
 }
 
@@ -260,7 +261,12 @@ where
                         .binding_data
                         .push(BindingData::<I>::new(local_event, peer_event, properties))
                 };
-                let worker = Self { ctx, id, _marker: PhantomData };
+                let worker = Self {
+                    ctx,
+                    id,
+                    rights: fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+                    _marker: PhantomData,
+                };
 
                 worker.handle_stream(events).await
             }
@@ -278,7 +284,7 @@ where
         let mut handler = self.make_handler().await;
         let state = handler.get_state_mut();
         state.ref_count += 1;
-        Self { ctx: self.ctx.clone(), id: self.id, _marker: PhantomData }
+        Self { ctx: self.ctx.clone(), id: self.id, rights: self.rights, _marker: PhantomData }
     }
 
     // Starts servicing a [Clone request](psocket::DatagramSocketRequest::Clone).
@@ -286,7 +292,7 @@ where
         &self,
         flags: u32,
         object: ServerEnd<NodeMarker>,
-        worker: UdpSocketWorker<I, C>,
+        mut worker: UdpSocketWorker<I, C>,
     ) {
         fasync::spawn(
             async move {
@@ -309,12 +315,19 @@ where
                 let conflicting_rights = flags & fio::CLONE_FLAG_SAME_RIGHTS != 0
                     && (flags & fio::OPEN_RIGHT_READABLE != 0
                         || flags & fio::OPEN_RIGHT_WRITABLE != 0);
-                // TODO(zeling): currently only CLONE_FLAG_SAME_RIGHTS is supported, we should
-                // adjust rights if the user explicitly wants to reduce rights, but currently
-                // there are no readonly or writeonly dgram sockets.
-                let no_same_rights = flags & fio::CLONE_FLAG_SAME_RIGHTS == 0;
+                // If CLONE_FLAG_SAME_RIGHTS is not set, then use the intersection of the
+                // inherited rights and the newly specified rights.
+                let new_rights = flags & (fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE);
+                let more_rights_than_original = new_rights & (!worker.rights) > 0;
+                if flags & fio::CLONE_FLAG_SAME_RIGHTS == 0 && !more_rights_than_original {
+                    worker.rights &= new_rights;
+                }
 
-                if append_no_remote || admin_executable || conflicting_rights || no_same_rights {
+                if append_no_remote
+                    || admin_executable
+                    || conflicting_rights
+                    || more_rights_than_original
+                {
                     send_on_open(zx::sys::ZX_ERR_INVALID_ARGS, None);
                     worker.make_handler().await.close().unwrap();
                     return Ok(());
@@ -332,7 +345,7 @@ where
 
     async fn make_handler(&self) -> RequestHandler<'_, I, C> {
         let ctx = self.ctx.lock().await;
-        RequestHandler { ctx, binding_id: self.id, _marker: PhantomData }
+        RequestHandler { ctx, binding_id: self.id, rights: self.rights, _marker: PhantomData }
     }
 
     /// Handles [a stream of POSIX socket requests].
@@ -528,6 +541,7 @@ impl<I: UdpSocketIpExt> BindingData<I> {
 struct RequestHandler<'a, I: UdpSocketIpExt, C: StackContext> {
     ctx: LockedStackContext<'a, C>,
     binding_id: usize,
+    rights: u32,
     _marker: PhantomData<I>,
 }
 
@@ -714,6 +728,7 @@ where
         addr_len: usize,
         data_len: usize,
     ) -> Result<(Vec<u8>, Vec<u8>, Vec<u8>, u32), libc::c_int> {
+        let () = self.need_rights(fio::OPEN_RIGHT_READABLE)?;
         let state = self.get_state_mut();
         let available = if let Some(front) = state.available_data.pop_front() {
             front
@@ -747,6 +762,7 @@ where
     }
 
     fn send_msg(&mut self, addr: Vec<u8>, data: Vec<u8>) -> Result<i64, libc::c_int> {
+        let () = self.need_rights(fio::OPEN_RIGHT_WRITABLE)?;
         let remote = if addr.is_empty() {
             None
         } else {
@@ -843,6 +859,15 @@ where
             return Ok(());
         }
         Err(libc::ENOTCONN)
+    }
+
+    /// Tests if we have sufficient rights as required; if we don't, then
+    /// an error is returned.
+    fn need_rights(&self, required: u32) -> Result<(), libc::c_int> {
+        if self.rights & required == 0 {
+            return Err(libc::EPERM);
+        }
+        Ok(())
     }
 }
 
@@ -1312,6 +1337,70 @@ mod tests {
             libc::EWOULDBLOCK
         );
 
+        {
+            let alice_readonly =
+                socket_clone(&alice_socket, fio::OPEN_RIGHT_READABLE).await.unwrap();
+            let bob_writeonly = socket_clone(&bob_cloned, fio::OPEN_RIGHT_WRITABLE).await.unwrap();
+            // We shouldn't allow the following.
+            expect_clone_invalid_args(&alice_readonly, fio::OPEN_RIGHT_WRITABLE).await;
+            expect_clone_invalid_args(&bob_writeonly, fio::OPEN_RIGHT_READABLE).await;
+
+            assert_eq!(
+                alice_readonly
+                    .send_msg(
+                        A::new(A::LOCAL_ADDR, 200).as_bytes(),
+                        &mut Some(body).into_iter(),
+                        &[],
+                        0
+                    )
+                    .await
+                    .unwrap()
+                    .expect_err("should not send_msg on a readonly socket"),
+                libc::EPERM,
+            );
+
+            assert_eq!(
+                bob_writeonly
+                    .recv_msg(std::mem::size_of::<A>() as u32, 2048, 0, 0)
+                    .await
+                    .unwrap()
+                    .expect_err("should not recv_msg on a writeonly socket"),
+                libc::EPERM,
+            );
+
+            assert_eq!(
+                bob_writeonly
+                    .send_msg(
+                        A::new(A::LOCAL_ADDR, 200).as_bytes(),
+                        &mut Some(body).into_iter(),
+                        &[],
+                        0
+                    )
+                    .await
+                    .unwrap()
+                    .expect("failed to send_msg on bob writeonly"),
+                body.len() as i64
+            );
+
+            let alice_readonly_info = alice_readonly.describe().await.expect("failed to describe");
+            let alice_readonly_event = match alice_readonly_info {
+                fidl_fuchsia_io::NodeInfo::DatagramSocket(e) => e.event,
+                _ => panic!("Got wrong describe response for UDP socket"),
+            };
+            fasync::OnSignals::new(&alice_readonly_event, ZXSIO_SIGNAL_INCOMING)
+                .await
+                .expect("failed to wait for readable event on alice readonly");
+
+            let (from, data, _, truncated) = alice_readonly
+                .recv_msg(std::mem::size_of::<A>() as u32, 2048, 0, 0)
+                .await
+                .unwrap()
+                .expect("failed to recv_msg on alice readonly");
+            assert_eq!(&data[..], body);
+            assert_eq!(truncated, 0);
+            assert_eq!(&from[..], A::new(A::REMOTE_ADDR, 200).as_bytes());
+        }
+
         // Close the socket should not invalidate the cloned socket.
         bob_socket.close().await.expect("failed to close bob's socket");
         assert_eq!(
@@ -1465,31 +1554,33 @@ mod tests {
         test_implicit_close::<SockAddr6>().await;
     }
 
+    async fn expect_clone_invalid_args(socket: &psocket::DatagramSocketProxy, flags: u32) {
+        let cloned = socket_clone(&socket, flags).await.unwrap();
+        {
+            let mut events = cloned.take_event_stream();
+            let psocket::DatagramSocketEvent::OnOpen_ { s, .. } =
+                events.next().await.expect("stream closed").expect("failed to decode");
+            assert_eq!(s, zx::sys::ZX_ERR_INVALID_ARGS);
+        }
+        assert!(cloned.into_channel().unwrap().is_closed());
+    }
+
     #[fasync::run_singlethreaded(test)]
     async fn test_invalid_clone_args() {
         let mut t = TestSetupBuilder::new().add_endpoint().add_empty_stack().build().await.unwrap();
         let test_stack = t.get(0);
         let socket = get_socket::<SockAddr4>(test_stack).await;
-        async fn expect_invalid_args(socket: &psocket::DatagramSocketProxy, flags: u32) {
-            let cloned = socket_clone(&socket, flags).await.unwrap();
-            {
-                let mut events = cloned.take_event_stream();
-                let psocket::DatagramSocketEvent::OnOpen_ { s, .. } =
-                    events.next().await.expect("stream closed").expect("failed to decode");
-                assert_eq!(s, zx::sys::ZX_ERR_INVALID_ARGS);
-            }
-            assert!(cloned.into_channel().unwrap().is_closed());
-        };
         // conflicting flags
-        expect_invalid_args(&socket, fio::CLONE_FLAG_SAME_RIGHTS | fio::OPEN_RIGHT_READABLE).await;
+        expect_clone_invalid_args(&socket, fio::CLONE_FLAG_SAME_RIGHTS | fio::OPEN_RIGHT_READABLE)
+            .await;
         // no remote
-        expect_invalid_args(&socket, fio::OPEN_FLAG_NO_REMOTE).await;
+        expect_clone_invalid_args(&socket, fio::OPEN_FLAG_NO_REMOTE).await;
         // append
-        expect_invalid_args(&socket, fio::OPEN_FLAG_APPEND).await;
+        expect_clone_invalid_args(&socket, fio::OPEN_FLAG_APPEND).await;
         // admin
-        expect_invalid_args(&socket, fio::OPEN_RIGHT_ADMIN).await;
+        expect_clone_invalid_args(&socket, fio::OPEN_RIGHT_ADMIN).await;
         // executable
-        expect_invalid_args(&socket, fio::OPEN_RIGHT_EXECUTABLE).await;
+        expect_clone_invalid_args(&socket, fio::OPEN_RIGHT_EXECUTABLE).await;
         socket.close().await.expect("failed to close");
 
         // make sure we don't leak anything.
