@@ -114,3 +114,11 @@ template("gidl_llcpp") {
     forward_variables_from(invoker, "*")
   }
 }
+
+template("gidl_walker") {
+  gidl_source_set(target_name) {
+    language = "walker"
+    bindings_suffix = "_llcpp"
+    forward_variables_from(invoker, "*")
+  }
+}

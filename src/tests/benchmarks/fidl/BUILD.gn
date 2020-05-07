@@ -11,5 +11,6 @@ group("benchmarks") {
     "llcpp",
     "roundtrip",
     "rust",
+    "walker",
   ]
 }

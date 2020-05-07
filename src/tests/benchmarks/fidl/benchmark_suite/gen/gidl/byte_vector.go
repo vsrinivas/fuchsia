@@ -30,7 +30,7 @@ func init() {
 				Config: config.Config{
 					"size": 256,
 				},
-				Denylist: []config.Binding{config.HLCPP, config.LLCPP},
+				Denylist: []config.Binding{config.HLCPP, config.LLCPP, config.Walker},
 			},
 			{
 				Name: "ByteVector/4096",
@@ -39,7 +39,7 @@ func init() {
 				Config: config.Config{
 					"size": 4096,
 				},
-				Denylist: []config.Binding{config.HLCPP, config.LLCPP},
+				Denylist: []config.Binding{config.HLCPP, config.LLCPP, config.Walker},
 			},
 			{
 				Name: "ByteVector/65536",
@@ -48,7 +48,7 @@ func init() {
 				Config: config.Config{
 					"size": 65536,
 				},
-				Denylist: []config.Binding{config.HLCPP, config.LLCPP},
+				Denylist: []config.Binding{config.HLCPP, config.LLCPP, config.Walker},
 			},
 		},
 	})

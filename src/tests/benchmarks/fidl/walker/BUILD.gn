@@ -1,0 +1,46 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/fidl.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+import("//src/tests/benchmarks/fidl/benchmark_suite/benchmark_suite.gni")
+import("//tools/fidl/gidl/gidl.gni")
+
+gidl_walker("benchmark_suite_walker") {
+  testonly = true
+  type = "benchmark"
+  inputs = benchmark_suite_gidl_files
+  fidl = "//src/tests/benchmarks/fidl/benchmark_suite:benchmark_suite_fidl"
+  deps = [
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fidl",
+    "//zircon/system/ulib/perftest",
+  ]
+}
+
+executable("bin") {
+  output_name = "walker_fidl_microbenchmarks"
+  testonly = true
+  sources = [ "main.cc" ]
+  deps = [
+    ":benchmark_suite_walker",
+    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/perftest",
+  ]
+  libs = [ "zircon" ]
+}
+
+package("walker") {
+  testonly = true
+
+  deps = [ ":bin" ]
+
+  binaries = [
+    {
+      name = "walker_fidl_microbenchmarks"
+      shell = true
+    },
+  ]
+}

@@ -12,6 +12,7 @@ import (
 
 	fidlir "fidl/compiler/backend/types"
 	gidlir "gidl/ir"
+	libllcpp "gidl/llcpp/lib"
 	gidlmixer "gidl/mixer"
 )
 
@@ -147,9 +148,9 @@ func builderBenchmarks(gidlEncodeBenchmarks []gidlir.EncodeBenchmark, schema gid
 		if gidlir.ContainsUnknownField(gidlEncodeBenchmark.Value) {
 			continue
 		}
-		valBuildUnowned, valVarUnowned := buildValueUnowned(gidlEncodeBenchmark.Value, decl)
-		valBuildHeap, valVarHeap := buildValueHeap(gidlEncodeBenchmark.Value, decl)
-		valBuildAllocator, valVarAllocator := buildValueAllocator("allocator", gidlEncodeBenchmark.Value, decl)
+		valBuildUnowned, valVarUnowned := libllcpp.BuildValueUnowned(gidlEncodeBenchmark.Value, decl)
+		valBuildHeap, valVarHeap := libllcpp.BuildValueHeap(gidlEncodeBenchmark.Value, decl)
+		valBuildAllocator, valVarAllocator := libllcpp.BuildValueAllocator("allocator", gidlEncodeBenchmark.Value, decl)
 		builderBenchmarks = append(builderBenchmarks, builderBenchmark{
 			Path:                gidlEncodeBenchmark.Name,
 			Name:                benchmarkName(gidlEncodeBenchmark.Name),

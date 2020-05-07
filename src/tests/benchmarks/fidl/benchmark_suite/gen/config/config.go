@@ -11,11 +11,13 @@ import (
 type Binding string
 
 const (
-	HLCPP  Binding = "cpp"
-	LLCPP  Binding = "llcpp"
-	Dart   Binding = "dart"
-	Rust   Binding = "rust"
-	Golang Binding = "go"
+	HLCPP Binding = "cpp"
+	LLCPP Binding = "llcpp"
+	Dart  Binding = "dart"
+	Rust  Binding = "rust"
+	Go    Binding = "go"
+	// GIDL only. Uses "LLCPP" for FIDL inputs.
+	Walker Binding = "walker"
 )
 
 type ConfigKey string

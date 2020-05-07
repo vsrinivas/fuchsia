@@ -12,6 +12,7 @@ import (
 	fidlcommon "fidl/compiler/backend/common"
 	fidlir "fidl/compiler/backend/types"
 	gidlir "gidl/ir"
+	libllcpp "gidl/llcpp/lib"
 	gidlmixer "gidl/mixer"
 )
 
@@ -120,7 +121,7 @@ func encodeSuccessCases(gidlEncodeSuccesses []gidlir.EncodeSuccess, schema gidlm
 		if gidlir.ContainsUnknownField(encodeSuccess.Value) {
 			continue
 		}
-		valueBuild, valueVar := buildValueHeap(encodeSuccess.Value, decl)
+		valueBuild, valueVar := libllcpp.BuildValueHeap(encodeSuccess.Value, decl)
 		for _, encoding := range encodeSuccess.Encodings {
 			if !wireFormatSupported(encoding.WireFormat) {
 				continue
@@ -129,7 +130,7 @@ func encodeSuccessCases(gidlEncodeSuccesses []gidlir.EncodeSuccess, schema gidlm
 				Name:       testCaseName(encodeSuccess.Name, encoding.WireFormat),
 				ValueBuild: valueBuild,
 				ValueVar:   valueVar,
-				Bytes:      bytesBuilder(encoding.Bytes),
+				Bytes:      libllcpp.BytesBuilder(encoding.Bytes),
 			})
 		}
 	}
@@ -146,7 +147,7 @@ func decodeSuccessCases(gidlDecodeSuccesses []gidlir.DecodeSuccess, schema gidlm
 		if gidlir.ContainsUnknownField(decodeSuccess.Value) {
 			continue
 		}
-		valueBuild, valueVar := buildValueHeap(decodeSuccess.Value, decl)
+		valueBuild, valueVar := libllcpp.BuildValueHeap(decodeSuccess.Value, decl)
 		for _, encoding := range decodeSuccess.Encodings {
 			if !wireFormatSupported(encoding.WireFormat) {
 				continue
@@ -155,7 +156,7 @@ func decodeSuccessCases(gidlDecodeSuccesses []gidlir.DecodeSuccess, schema gidlm
 				Name:       testCaseName(decodeSuccess.Name, encoding.WireFormat),
 				ValueBuild: valueBuild,
 				ValueVar:   valueVar,
-				Bytes:      bytesBuilder(encoding.Bytes),
+				Bytes:      libllcpp.BytesBuilder(encoding.Bytes),
 			})
 		}
 	}
@@ -169,7 +170,7 @@ func encodeFailureCases(gidlEncodeFailurees []gidlir.EncodeFailure, schema gidlm
 		if err != nil {
 			return nil, fmt.Errorf("encode failure %s: %s", encodeFailure.Name, err)
 		}
-		valueBuild, valueVar := buildValueHeap(encodeFailure.Value, decl)
+		valueBuild, valueVar := libllcpp.BuildValueHeap(encodeFailure.Value, decl)
 		errorCode := llcppErrorCode(encodeFailure.Err)
 		for _, wireFormat := range encodeFailure.WireFormats {
 			if !wireFormatSupported(wireFormat) {
@@ -202,7 +203,7 @@ func decodeFailureCases(gidlDecodeFailurees []gidlir.DecodeFailure, schema gidlm
 			decodeFailureCases = append(decodeFailureCases, decodeFailureCase{
 				Name:      decodeFailure.Name,
 				ValueType: valueType,
-				Bytes:     bytesBuilder(encoding.Bytes),
+				Bytes:     libllcpp.BytesBuilder(encoding.Bytes),
 				ErrorCode: errorCode,
 			})
 		}

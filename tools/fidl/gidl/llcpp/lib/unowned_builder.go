@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-package llcpp
+package lib
 
 import (
 	fidlir "fidl/compiler/backend/types"
@@ -13,7 +13,7 @@ import (
 	"strings"
 )
 
-func buildValueUnowned(value interface{}, decl gidlmixer.Declaration) (string, string) {
+func BuildValueUnowned(value interface{}, decl gidlmixer.Declaration) (string, string) {
 	var builder llcppValueBuilder
 	gidlmixer.Visit(&builder, value, decl)
 	valueBuild := builder.String()

@@ -35,4 +35,5 @@ void main() {
       tmpPerfResultsJson('roundtrip_fidl_benchmarks'));
   runFidlBenchmark('rust_fidl_microbenchmarks',
       tmpPerfResultsJson('rust_fidl_microbenchmarks'));
+  runFidlBenchmark('walker_fidl_microbenchmarks');
 }

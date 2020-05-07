@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-package llcpp
+package lib
 
 import (
 	"fmt"
@@ -14,7 +14,7 @@ import (
 )
 
 // Builds a LLCPP object using std::make_unique.
-func buildValueHeap(value interface{}, decl gidlmixer.Declaration) (string, string) {
+func BuildValueHeap(value interface{}, decl gidlmixer.Declaration) (string, string) {
 	var builder allocatorBuilder
 	builder.allocationFunc = "std::make_unique"
 	valueVar := builder.visit(value, decl, false)
@@ -23,7 +23,7 @@ func buildValueHeap(value interface{}, decl gidlmixer.Declaration) (string, stri
 }
 
 // Builds an LLCPP object using fidl::Allocator.
-func buildValueAllocator(allocatorVar string, value interface{}, decl gidlmixer.Declaration) (string, string) {
+func BuildValueAllocator(allocatorVar string, value interface{}, decl gidlmixer.Declaration) (string, string) {
 	var builder allocatorBuilder
 	builder.allocationFunc = fmt.Sprintf("%s->make", allocatorVar)
 	valueVar := builder.visit(value, decl, false)

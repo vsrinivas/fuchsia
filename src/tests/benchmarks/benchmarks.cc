@@ -48,7 +48,9 @@ void AddPerfTests(benchmarking::BenchmarksRunner* benchmarks_runner, bool perfco
       "rust_inspect_bench", "/pkgfs/packages/rust_inspect_benchmarks/0/data/benchmarks.tspec");
 
   // Run netstack benchmarks.
-  benchmarks_runner->AddTspecBenchmark("netstack.udp_micro_benchmarks", "/pkgfs/packages/netstack_benchmarks/0/data/udp_benchmark.tspec");
+  benchmarks_runner->AddTspecBenchmark(
+      "netstack.udp_micro_benchmarks",
+      "/pkgfs/packages/netstack_benchmarks/0/data/udp_benchmark.tspec");
 
   // clang-format on
 
@@ -95,8 +97,12 @@ void AddPerfTests(benchmarking::BenchmarksRunner* benchmarks_runner, bool perfco
     benchmarks_runner->AddCustomBenchmark("fidl_roundtrip",
                                           {"/bin/roundtrip_fidl_benchmarks", out_file}, out_file);
   }
+  {
+    benchmarks_runner->AddLibPerfTestBenchmark("fidl_microbenchmarks.walker",
+                                               "/bin/walker_fidl_microbenchmarks",
+                                               std::vector<std::string>());
+  }
 }
-
 }  // namespace
 
 int main(int argc, const char** argv) {

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-package llcpp
+package lib
 
 import (
 	"fmt"
@@ -10,7 +10,7 @@ import (
 	"strings"
 )
 
-func bytesBuilder(bytes []byte) string {
+func BytesBuilder(bytes []byte) string {
 	var builder strings.Builder
 	builder.WriteString("std::vector<uint8_t>{\n")
 	for i, b := range bytes {
