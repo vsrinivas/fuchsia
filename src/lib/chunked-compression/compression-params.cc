@@ -11,8 +11,6 @@ namespace chunked_compression {
 
 namespace {
 constexpr size_t kKiB = 1024;
-constexpr size_t kMiB = 1024 * 1024;
-constexpr size_t kGiB = 1024 * 1024 * 1024;
 }  // namespace
 
 bool CompressionParams::IsValid() {
@@ -35,17 +33,13 @@ int CompressionParams::MinCompressionLevel() { return ZSTD_minCLevel(); }
 int CompressionParams::MaxCompressionLevel() { return ZSTD_maxCLevel(); }
 
 size_t CompressionParams::ChunkSizeForInputSize(size_t len) {
-  if (len <= 4 * kMiB) {
-    return MinChunkSize();
-  } else if (len <= 4 * kGiB) {
-    // Try to keep the number of frames less than 256.
-    size_t target_size_upper = len / 256;
-    return fbl::round_up(target_size_upper, MinChunkSize());
-  } else {
+  constexpr size_t first_guess = 32 * kKiB;
+  if (len / first_guess > kChunkArchiveMaxFrames) {
     // For huge files, just max out the number of frames.
     size_t target_size_upper = len / kChunkArchiveMaxFrames;
     return fbl::round_up(target_size_upper, MinChunkSize());
   }
+  return first_guess;
 }
 
 size_t CompressionParams::MinChunkSize() { return 8 * kKiB; }
