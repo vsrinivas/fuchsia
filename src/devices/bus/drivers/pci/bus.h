@@ -4,6 +4,8 @@
 #ifndef SRC_DEVICES_BUS_DRIVERS_PCI_BUS_H_
 #define SRC_DEVICES_BUS_DRIVERS_PCI_BUS_H_
 
+#include <zircon/compiler.h>
+
 #include <list>
 #include <memory>
 
@@ -50,12 +52,12 @@ class Bus : public PciBusType, public BusLinkInterface {
   void DdkRelease();
 
   // Accessors for the device list, used by BusLinkInterface
-  void LinkDevice(fbl::RefPtr<pci::Device> device) final {
+  void LinkDevice(fbl::RefPtr<pci::Device> device) __TA_EXCLUDES(devices_lock_) final {
     fbl::AutoLock devices_lock(&devices_lock_);
     devices_.insert(device);
   }
 
-  void UnlinkDevice(pci::Device* device) final {
+  void UnlinkDevice(pci::Device* device) __TA_EXCLUDES(devices_lock_) final {
     fbl::AutoLock devices_lock(&devices_lock_);
     devices_.erase(*device);
   }
@@ -67,7 +69,7 @@ class Bus : public PciBusType, public BusLinkInterface {
         pciroot_(proto) {}
 
   // Utility methods for the bus driver
-  zx_status_t Initialize(void);
+  zx_status_t Initialize(void) __TA_EXCLUDES(devices_lock_);
   // Map an ecam VMO for Bus and Config use.
   zx_status_t MapEcam(void);
   // Scan all buses downstream from the root within the start and end
@@ -88,7 +90,7 @@ class Bus : public PciBusType, public BusLinkInterface {
 
   // All devices downstream of this bus are held here. Devices are keyed by
   // BDF so they will not experience any collisions.
-  pci::DeviceTree devices_;
+  pci::DeviceTree devices_ __TA_GUARDED(devices_lock_);
 };
 
 }  // namespace pci

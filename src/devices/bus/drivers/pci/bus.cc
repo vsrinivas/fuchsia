@@ -11,6 +11,7 @@
 #include <ddk/mmio-buffer.h>
 #include <ddk/platform-defs.h>
 #include <fbl/auto_call.h>
+#include <fbl/auto_lock.h>
 #include <fbl/vector.h>
 
 #include "bridge.h"
@@ -95,7 +96,6 @@ zx_status_t Bus::Initialize() {
   }
 
   pci_infof("%s init done.\n", info_.name);
-
   return ZX_OK;
 }
 
