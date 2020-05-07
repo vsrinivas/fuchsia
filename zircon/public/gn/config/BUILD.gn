@@ -405,12 +405,12 @@ config("optimize_speed") {
 
 config("optimize_sanitizer") {
   # TODO(51509): Probably should use a different default.
-  configs = [ ":optimize_none" ]
+  configs = [ ":optimize_default" ]
 }
 
 config("optimize_profile") {
   # TODO(51509): Perhaps use a different default.
-  configs = [ ":optimize_none" ]
+  configs = [ ":optimize_default" ]
 }
 
 config("default_optimize") {
