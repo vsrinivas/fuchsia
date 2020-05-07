@@ -26,7 +26,7 @@ None.
 
 ## DESCRIPTION
 
-Creates a new zircon clock object.  See [clocks](/docs/reference/kernel_objects/clock.md) for an
+Creates a new zircon clock object. See [clocks](/docs/reference/kernel_objects/clock.md) for an
 overview of clock objects.
 
 ### Options
@@ -41,16 +41,21 @@ The following options are defined for clock objects:
   Attempting to create a clock object with the **ZX_CLOCK_OPT_CONTINUOUS** option
   specified, but without the **ZX_CLOCK_OPT_MONOTONIC** option specified is an
   error which will be signalled with **ZX_ERR_INVALID_ARGS**.
-+ **ZX_CLOCK_OPT_AUTO_START** : When set, creates a clock that is automatically
-  started and is initially a clone of clock monotonic. Users may still update
-  the clock within the limits defined by the monotonic and continuous options, the
-  handle rights, and the backstop time of the clock.
-
++ **ZX_CLOCK_OPT_AUTO_START** : When set, creates a clock that is started
+  automatically for the user. You don't need to call zx_clock_update() to start
+  the clock running. Initially, the clock will be a clone of clock monotonic,
+  meaning that the internal transformation from clock monotonic to the newly
+  created synthetic clock is the identity function. The created clock does not
+  have to be created with either the **ZX_CLOCK_OPT_MONOTONIC** or
+  **ZX_CLOCK_OPT_CONTINUOUS** flags set, however. Once created, users may still
+  update the clock within the limits defined by the monotonic and continuous
+  properties specified at create time, the handle rights, and the backstop time
+  of the clock.
 
 ### Arguments
 
 One additional creation-time argument may be specified when configuring the clock, the backstop
-time.  See [clocks](/docs/reference/kernel_objects/clock.md) for more details about backstop times.
+time. See [clocks](/docs/reference/kernel_objects/clock.md) for more details about backstop times.
 
 In order to configure a backstop time, a user must pass a `zx_clock_create_args_v1_t` structure to
 the `zx_clock_create` call via the `args` parameter. Additionally, the `options` bits must have
