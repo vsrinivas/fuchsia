@@ -150,10 +150,9 @@ zx_status_t Blobfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<Block
 
   // Construct the Blobfs object, without intensive validation, since it
   // may require upgrades / journal replays to become valid.
-  auto fs = std::unique_ptr<Blobfs>(new Blobfs(dispatcher, std::move(device), superblock,
-                                               options->writability,
-                                               options->write_compression_algorithm,
-                                               std::move(vmex_resource)));
+  auto fs = std::unique_ptr<Blobfs>(
+      new Blobfs(dispatcher, std::move(device), superblock, options->writability,
+                 options->write_compression_algorithm, std::move(vmex_resource)));
   fs->block_info_ = std::move(block_info);
 
   if (options->pager) {
@@ -569,7 +568,7 @@ zx_status_t Blobfs::AddInodes(Allocator* allocator) {
   WriteInfo(&builder);
   if (zeroed_nodes_blocks > 0) {
     storage::UnbufferedOperation operation = {
-      .vmo = zx::unowned_vmo(allocator->GetNodeMapVmo().get()),
+        .vmo = zx::unowned_vmo(allocator->GetNodeMapVmo().get()),
         {
             .type = storage::OperationType::kWrite,
             .vmo_offset = inoblks_old,

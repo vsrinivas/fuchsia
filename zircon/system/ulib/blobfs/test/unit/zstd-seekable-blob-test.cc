@@ -65,8 +65,8 @@ class ZSTDSeekableBlobTest : public zxtest::Test {
     ASSERT_OK(FormatFilesystem(device.get()));
     loop_.StartThread();
 
-    ASSERT_OK(Blobfs::Create(loop_.dispatcher(), std::move(device), &options, zx::resource(),
-                             &fs_));
+    ASSERT_OK(
+        Blobfs::Create(loop_.dispatcher(), std::move(device), &options, zx::resource(), &fs_));
     ASSERT_OK(ZSTDSeekableBlobCollection::Create(vmoid_registry(), space_manager(),
                                                  transaction_handler(), node_finder(),
                                                  &compressed_blob_collection_));
@@ -157,8 +157,8 @@ class ZSTDSeekableBlobWrongAlgorithmTest : public ZSTDSeekableBlobTest {
 
     // Construct BlobFS with non-seekable ZSTD algorithm. This should cause errors in the seekable
     // read path.
-    ASSERT_OK(Blobfs::Create(loop_.dispatcher(), std::move(device), &options, zx::resource(),
-                             &fs_));
+    ASSERT_OK(
+        Blobfs::Create(loop_.dispatcher(), std::move(device), &options, zx::resource(), &fs_));
 
     ASSERT_OK(ZSTDSeekableBlobCollection::Create(vmoid_registry(), space_manager(),
                                                  transaction_handler(), node_finder(),
@@ -171,7 +171,7 @@ class ZSTDSeekAndReadTest : public ZSTDSeekableBlobTest {
   void SetUp() {
     // Write uncompressed to test block device-level seek and read.
     MountOptions options;
-    options.write_uncompressed = true;
+    options.write_compression_algorithm = CompressionAlgorithm::UNCOMPRESSED;
 
     // Use a blob size that will have a "leftover byte" in an extra block to test block read edge
     // case.
@@ -184,9 +184,8 @@ class ZSTDSeekAndReadTest : public ZSTDSeekableBlobTest {
 
     // Construct BlobFS with non-seekable ZSTD algorithm. This should cause errors in the seekable
     // read path.
-    ASSERT_OK(Blobfs::CreateWithWriteCompressionAlgorithm(
-        loop_.dispatcher(), std::move(device), &options, CompressionAlgorithm::ZSTD_SEEKABLE,
-        zx::resource(), &fs_));
+    ASSERT_OK(
+        Blobfs::Create(loop_.dispatcher(), std::move(device), &options, zx::resource(), &fs_));
 
     ASSERT_OK(ZSTDSeekableBlobCollection::Create(vmoid_registry(), space_manager(),
                                                  transaction_handler(), node_finder(),

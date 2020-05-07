@@ -40,7 +40,7 @@ ZSTDCompressedBlockCollectionImpl::ZSTDCompressedBlockCollectionImpl(
       node_finder_(node_finder),
       node_index_(node_index),
       num_merkle_blocks_(num_merkle_blocks) {
-  Inode* inode = node_finder->GetNode(node_index);
+  InodePtr inode = node_finder->GetNode(node_index);
   ZX_DEBUG_ASSERT(inode != nullptr);
   ZX_DEBUG_ASSERT(inode->block_count >= num_merkle_blocks);
   const uint32_t num_data_blocks = inode->block_count - num_merkle_blocks;
