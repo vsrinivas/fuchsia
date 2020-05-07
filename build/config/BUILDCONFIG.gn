@@ -205,7 +205,6 @@ if (is_fuchsia) {
     "//build/config/fuchsia:auto_var_init",
     "//build/config/fuchsia:icf",
     "//build/config/fuchsia:large_rust_stack",
-    "//build/config/fuchsia:compiler",
     "//build/config/fuchsia:thread_safety_annotations",
     "//build/config:rust_panic_abort",
 
