@@ -68,10 +68,8 @@ void main() {
             'name':
                 '//garnet/bin/run_test_component/test:run_test_component_test',
             'os': 'fuchsia',
-            'package': {
-              'url':
-                  'fuchsia-pkg://fuchsia.com/run_test_component_test#meta/run_test_component_test.cmx',
-            },
+            'package_url':
+                'fuchsia-pkg://fuchsia.com/run_test_component_test#meta/run_test_component_test.cmx',
           }
         },
       ];
@@ -81,7 +79,7 @@ void main() {
         fxLocation: fuchsiaLocator.fx,
       );
       expect(tds, hasLength(1));
-      expect(tds[0].packageUrl, testJson[0]['test']['package']['url']);
+      expect(tds[0].packageUrl, testJson[0]['test']['package_url']);
       expect(tds[0].depsFile, '');
       expect(tds[0].path, testJson[0]['test']['path']);
       expect(tds[0].name, testJson[0]['test']['name']);

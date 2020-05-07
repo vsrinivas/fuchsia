@@ -46,9 +46,7 @@ func TestValidation(t *testing.T) {
 			Name: "//src/foo:tests",
 			Path: "path/to/test",
 			OS:   "fuchsia",
-			Package: build.Package{
-				URL: "URL",
-			},
+			PackageURL: "URL",
 		},
 		Envs: []build.Environment{
 			{
@@ -76,7 +74,7 @@ func TestValidation(t *testing.T) {
 	t.Run("test with no install path nor command nor URL is invalid", func(t *testing.T) {
 		spec := getSpec(t)
 		spec.Path = ""
-		spec.Package = build.Package{URL: ""}
+		spec.PackageURL = ""
 		validate(t, []build.TestSpec{spec}, false)
 	})
 	t.Run("test with no OS is invalid", func(t *testing.T) {

@@ -265,8 +265,8 @@ func setCommand(test *build.Test, useRuntests bool, remoteOutputDir string, time
 	}
 
 	if useRuntests {
-		if test.Package.URL != "" {
-			test.Command = []string{runtestsName, "-t", test.Package.URL, "-o", remoteOutputDir}
+		if test.PackageURL != "" {
+			test.Command = []string{runtestsName, "-t", test.PackageURL, "-o", remoteOutputDir}
 		} else {
 			name := path.Base(test.Path)
 			dir := path.Dir(test.Path)
@@ -275,8 +275,8 @@ func setCommand(test *build.Test, useRuntests bool, remoteOutputDir string, time
 		if timeout > 0 {
 			test.Command = append(test.Command, "-i", fmt.Sprintf("%d", int64(timeout.Seconds())))
 		}
-	} else if test.Package.URL != "" {
-		if strings.HasSuffix(test.Package.URL, componentV2Suffix) {
+	} else if test.PackageURL != "" {
+		if strings.HasSuffix(test.PackageURL, componentV2Suffix) {
 			test.Command = []string{runTestSuiteName}
 			// TODO(fxbug.dev/49262): Once fixed, combine
 			// timeout flag setting for v1 and v2.
@@ -289,7 +289,7 @@ func setCommand(test *build.Test, useRuntests bool, remoteOutputDir string, time
 				test.Command = append(test.Command, fmt.Sprintf("--timeout=%d", int64(timeout.Seconds())))
 			}
 		}
-		test.Command = append(test.Command, test.Package.URL)
+		test.Command = append(test.Command, test.PackageURL)
 	} else {
 		test.Command = []string{test.Path}
 		if timeout > 0 {

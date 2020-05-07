@@ -56,10 +56,10 @@ func TestRunTest(t *testing.T) {
 		{
 			name: "fuchsia test pass",
 			test: build.Test{
-				Name:    "bar",
-				Path:    "/foo/bar",
-				OS:      "fuchsia",
-				Package: build.Package{URL: "fuchsia-pkg://foo/bar"},
+				Name:       "bar",
+				Path:       "/foo/bar",
+				OS:         "fuchsia",
+				PackageURL: "fuchsia-pkg://foo/bar",
 			},
 			testErr: nil,
 			expectedResult: &testrunner.TestResult{
@@ -70,10 +70,10 @@ func TestRunTest(t *testing.T) {
 		{
 			name: "fuchsia test fail",
 			test: build.Test{
-				Name:    "bar",
-				Path:    "/foo/bar",
-				OS:      "fuchsia",
-				Package: build.Package{URL: "fuchsia-pkg://foo/bar"},
+				Name:       "bar",
+				Path:       "/foo/bar",
+				OS:         "fuchsia",
+				PackageURL: "fuchsia-pkg://foo/bar",
 			},
 			testErr: fmt.Errorf("test failed"),
 			expectedResult: &testrunner.TestResult{
@@ -84,10 +84,10 @@ func TestRunTest(t *testing.T) {
 		{
 			name: "fuchsia test ssh connection fail",
 			test: build.Test{
-				Name:    "bar",
-				Path:    "/foo/bar",
-				OS:      "fuchsia",
-				Package: build.Package{URL: "fuchsia-pkg://foo/bar"},
+				Name:       "bar",
+				Path:       "/foo/bar",
+				OS:         "fuchsia",
+				PackageURL: "fuchsia-pkg://foo/bar",
 			},
 			testErr:        sshutil.ConnectionError,
 			expectedErr:    sshutil.ConnectionError,
@@ -96,10 +96,10 @@ func TestRunTest(t *testing.T) {
 		{
 			name: "multiplier test gets unique name",
 			test: build.Test{
-				Name:    "bar (2)",
-				Path:    "/foo/bar",
-				OS:      "fuchsia",
-				Package: build.Package{URL: "fuchsia-pkg://foo/bar"},
+				Name:       "bar (2)",
+				Path:       "/foo/bar",
+				OS:         "fuchsia",
+				PackageURL: "fuchsia-pkg://foo/bar",
 			},
 			testErr: nil,
 			expectedResult: &testrunner.TestResult{
@@ -110,10 +110,10 @@ func TestRunTest(t *testing.T) {
 		{
 			name: "non-multiplier test",
 			test: build.Test{
-				Name:    "bar(2)test",
-				Path:    "/foo/bar",
-				OS:      "fuchsia",
-				Package: build.Package{URL: "fuchsia-pkg://foo/bar"},
+				Name:       "bar(2)test",
+				Path:       "/foo/bar",
+				OS:         "fuchsia",
+				PackageURL: "fuchsia-pkg://foo/bar",
 			},
 			testErr: nil,
 			expectedResult: &testrunner.TestResult{

@@ -38,9 +38,7 @@ func TestMultiplyShards(t *testing.T) {
 			OS:   os,
 		}
 		if os == "fuchsia" {
-			test.Package = build.Package{
-				URL: fmt.Sprintf("fuchsia-pkg://fuchsia.com/test%d", id),
-			}
+			test.PackageURL = fmt.Sprintf("fuchsia-pkg://fuchsia.com/test%d", id)
 		} else {
 			test.Path = fmt.Sprintf("/path/to/test/%d", id)
 		}

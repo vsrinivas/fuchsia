@@ -55,9 +55,7 @@ class TestDefinition {
       label: testDetails['label'] ?? '',
       name: testDetails['name'] ?? '',
       os: testDetails['os'] ?? '',
-      packageUrl: testDetails['package'] == null
-          ? ''
-          : testDetails['package']['url'] ?? '',
+      packageUrl: testDetails['package_url'] ?? '',
       path: testDetails['path'] ?? '',
     );
   }
@@ -68,7 +66,7 @@ class TestDefinition {
   command: ${(command ?? []).join(" ")}
   deps_file: $depsFile
   label: $label
-  package: {url: $packageUrl }
+  package_url: $packageUrl
   path: $path
   name: $name
   os: $os
