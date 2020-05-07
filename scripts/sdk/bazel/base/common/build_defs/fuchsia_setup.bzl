@@ -8,15 +8,15 @@ Sets up the Fuchsia SDK.
 Must be called even if all attributes are set to false.
 """
 
-load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
 load("//build_defs/internal/crosstool:crosstool.bzl", "configure_crosstool")
 
-def fuchsia_setup(with_toolchain=False):
+def fuchsia_setup(with_toolchain = False):
     # Needed for the package component runner tool.
-    http_archive(
+    git_repository(
         name = "subpar",
-        url = "https://github.com/google/subpar/archive/1.0.0.zip",
-        strip_prefix = "subpar-1.0.0",
+        tag = "1.0.0",
+        remote = "https://fuchsia.googlesource.com/third_party/github.com/google/subpar.git",
     )
 
     if with_toolchain:
