@@ -30,7 +30,6 @@ const DEFAULT_CATEGORIES: &[&'static str] = &[
     "ledger",
     "magma",
     "modular",
-    "motown",
     "view",
     "flutter",
     "dart",
