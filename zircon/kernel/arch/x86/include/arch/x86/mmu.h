@@ -79,15 +79,9 @@
 //
 // During early boot the entire shadow is mapped read-only to a single zero page. Later, read-write
 // pages replace portions of the shadow corresponding to memory covered by ASAN.
-//
-// TODO(fxb/30033): Use X86_MMU_PG_NX for page table flags; the shadow should be no-execute.
-// We cannot enable NX yet in early boot since the early boot asan mapping happens before EFER.NXE
-// is set.
-#if __has_feature(address_sanitizer)
 #define X86_KERNEL_KASAN_INITIAL_PT_FLAGS (X86_MMU_PG_G | X86_MMU_PG_P)
 #define X86_KERNEL_KASAN_RW_PT_FLAGS (X86_MMU_PG_G | X86_MMU_PG_RW | X86_MMU_PG_P)
 #define X86_KERNEL_KASAN_PD_FLAGS (X86_MMU_PG_RW | X86_MMU_PG_P)
-#endif  // __has_feature(address_sanitizer)
 
 #define X86_PAGING_LEVELS 4
 
@@ -111,6 +105,8 @@
 #include <sys/types.h>
 #include <zircon/compiler.h>
 
+#include <arch/x86/page_tables/page_tables.h>
+
 __BEGIN_CDECLS
 
 static inline bool x86_kpti_is_enabled() {
@@ -123,6 +119,8 @@ struct map_range {
   paddr_t start_paddr; /* Physical address in the PAE mode is 32 bits wide */
   size_t size;
 };
+
+extern volatile pt_entry_t pdp_high[];
 
 bool x86_is_vaddr_canonical(vaddr_t vaddr);
 bool x86_mmu_check_paddr(paddr_t paddr);

@@ -36,4 +36,6 @@ static inline uint8_t* addr2shadow(uintptr_t address) {
 
 #endif  // __x86_64__
 
+void arch_asan_reallocate_shadow(uintptr_t physmap_shadow_begin, uintptr_t physmap_shadow_end);
+
 #endif  // ZIRCON_KERNEL_LIB_INSTRUMENTATION_ASAN_ASAN_INTERNAL_H_

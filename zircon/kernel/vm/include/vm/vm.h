@@ -72,6 +72,19 @@ static inline paddr_t get_kernel_base_phys() {
 
 static inline size_t get_kernel_size() { return _end - __code_start; }
 
+// return a pointer to the zero page
+static inline vm_page_t* vm_get_zero_page(void) {
+  extern vm_page_t* zero_page;
+  return zero_page;
+}
+
+// return the physical address of the zero page
+static inline paddr_t vm_get_zero_page_paddr(void) {
+  extern paddr_t zero_page_paddr;
+
+  return zero_page_paddr;
+}
+
 // List of the kernel program's various segments.
 struct kernel_region {
   const char *name;

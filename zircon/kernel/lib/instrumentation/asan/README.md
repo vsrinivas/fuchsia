@@ -49,4 +49,21 @@ The map in x86_64 looks like this:
 With this structure, all poison checks inside the kernel address space
 will succeed, as all shadow map memory is marked as unpoisoned.
 
+## Late Boot Setup
+
+In order to allow memory poisoning / tracking validity of kernel memory,
+asan needs to have writable pages backing portions of the shadow that
+cover the kernel physical map.
+
+Our implementation of asan only tracks memory within the physmap; this
+covers all page allocations/frees and the kernel heap, but does not
+cover additional virtual mappings within the kernel address space.
+
+During late boot, after PMM is initialized, we allocate a shadow page for
+every 8 pages of physmap that contain at least one page of real memory.
+We do not consider MMIO regions, device memory, the ISA hole, etc. as
+real memory. We then replace the early boot zero page mappings with
+mappings to the newly allocated shadow pages. All the remaining early
+boot mappings remain the same.
+
 [address-sanitizer]: https://clang.llvm.org/docs/AddressSanitizer.html

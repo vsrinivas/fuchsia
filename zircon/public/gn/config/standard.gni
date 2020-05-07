@@ -313,6 +313,12 @@ standard_variants += [
 
         # Now add frame_pointers back, only one and no default_frame_pointers.
         "$zx/public/gn/config:frame_pointers",
+
+        # kasan disables safestack for all files built with instrumentation, so
+        # we need to ensure that files built without instrumentation have a
+        # consistent no_safestack setting.
+        "$zx/public/gn/config:no_safestack",
+
         "$zx/public/gn/config/instrumentation:asan",
       ]
       implicit_deps = [
