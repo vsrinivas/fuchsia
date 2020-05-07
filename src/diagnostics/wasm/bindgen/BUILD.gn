@@ -6,7 +6,10 @@ import("//build/host.gni")
 import("//build/rust/rustc_binary.gni")
 
 rustc_binary("bin") {
-  visibility = [ "//src/diagnostics/wasm/*" ]
+  visibility = [
+    "//src/diagnostics/wasm/*",
+    "//src/diagnostics/lib/triage/wasm/*",
+  ]
 
   name = "fx_wasm_bindgen"
   with_unit_tests = false
