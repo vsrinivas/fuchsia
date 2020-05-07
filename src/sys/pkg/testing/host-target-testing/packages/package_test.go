@@ -5,7 +5,6 @@
 package packages
 
 import (
-	"encoding/json"
 	"io/ioutil"
 	"log"
 	"os"
@@ -14,61 +13,7 @@ import (
 	"testing"
 
 	"fuchsia.googlesource.com/pm/build"
-	"fuchsia.googlesource.com/pm/repo"
 )
-
-// InitRepo fills the given directory with a new repository.
-func initRepo(t *testing.T, tempDir string) (*Repository, string) {
-	// Initialize a repo.
-	pmRepo, err := repo.New(tempDir)
-	if err != nil {
-		t.Fatalf("Failed to create repo. %s", err)
-	}
-	if err = pmRepo.Init(); err != nil {
-		t.Fatalf("Failed to init repo. %s", err)
-	}
-	if err = pmRepo.GenKeys(); err != nil {
-		t.Fatalf("Failed to generate keys for repo. %s", err)
-	}
-
-	// Create a config.
-	config := build.TestConfig()
-	log.Printf("Creating meta.far in %s", config.OutputDir)
-	build.BuildTestPackage(config)
-	defer os.RemoveAll(filepath.Dir(config.OutputDir))
-
-	// Grab the merkle of the config's package manifest.
-	manifestDir := filepath.Join(config.OutputDir, "package_manifest.json")
-	manifest, err := ioutil.ReadFile(manifestDir)
-	var packageManifest build.PackageManifest
-	if err := json.Unmarshal(manifest, &packageManifest); err != nil {
-		t.Fatalf("Could not decode package_manifest.json. %s", err)
-	}
-	metaMerkle := ""
-	for _, blob := range packageManifest.Blobs {
-		if blob.Path == "meta/" {
-			metaMerkle = blob.Merkle.String()
-		}
-	}
-	if metaMerkle == "" {
-		t.Fatalf("Did not find meta.far in manifest")
-	}
-
-	// Publish the config to the repo.
-	_, err = pmRepo.PublishManifest(manifestDir)
-	if err != nil {
-		t.Fatalf("Failed to publish manifest. %s", err)
-	}
-	if err = pmRepo.CommitUpdates(true); err != nil {
-		t.Fatalf("Failed to commit updates to repo. %s", err)
-	}
-	pkgRepo, err := NewRepository(tempDir)
-	if err != nil {
-		t.Fatalf("Failed to read repo. %s", err)
-	}
-
-	return pkgRepo, metaMerkle
-}
 
 func TestExpand(t *testing.T) {
 	// Create temporary work directory.
@@ -79,31 +24,9 @@ func TestExpand(t *testing.T) {
 	defer os.RemoveAll(parentDir)
 	log.Printf("TestExpand working dir: %s", parentDir)
 
-	repoDir := filepath.Join(parentDir, "repo")
-	if err := os.MkdirAll(repoDir, 0755); err != nil {
-		t.Fatalf("Failed to create directory %s", repoDir)
-	}
-
-	// Open the repo within the directory.
-	pkgRepo, metaMerkle := initRepo(t, repoDir)
-	if pkgRepo == nil {
-		t.Fatalf("Unable to create repo.")
-	}
-
-	// Parse the package we want.
-	pkg, err := newPackage(pkgRepo, metaMerkle)
+	_, expandDir, err := CreateAndExpandPackage(parentDir)
 	if err != nil {
-		t.Fatalf("Failed to read package. %s", err)
-	}
-
-	expandDir := filepath.Join(parentDir, "expand")
-	if err := os.MkdirAll(expandDir, 0755); err != nil {
-		t.Fatalf("Failed to create directory %s", expandDir)
-	}
-
-	// Expand to the given directory.
-	if err = pkg.Expand(expandDir); err != nil {
-		t.Fatalf("Failed to expand to dir. %s", err)
+		t.Fatalf("Failed to create and expand package. %s", err)
 	}
 
 	// Make a "set" of all files we expect to see in the expand directory.
