@@ -5,6 +5,11 @@
 zx_library("uart") {
   kernel = true
   host = true
+  static = true
+
+  sdk = "source"
+  sdk_headers = []
+
   sources = []
   public_deps = [
     # <lib/uart/uart.h> has #include <lib/arch/intrin.h>.

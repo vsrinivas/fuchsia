@@ -21,6 +21,10 @@ group("ulib") {
     "$zx/kernel/lib/counters",
 #------------------
 #------------------
+    "$zx/kernel/lib/arch",
+    "$zx/kernel/lib/arch/$zircon_cpu",
+#------------------
+#------------------
     "$zx/system/dev/lib",
 #------------------
 #------------------

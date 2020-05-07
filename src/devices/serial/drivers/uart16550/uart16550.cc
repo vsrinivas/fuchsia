@@ -5,6 +5,7 @@
 #include "uart16550.h"
 
 #include <fuchsia/hardware/serial/c/fidl.h>
+#include <lib/uart/ns8250.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
@@ -17,156 +18,16 @@
 #include <ddk/protocol/serialimpl.h>
 #include <hw/inout.h>
 
-namespace {
-
-enum class InterruptType : uint8_t {
-  kNone = 0b0001,
-  kRxLineStatus = 0b0110,
-  kRxDataAvailable = 0b0100,
-  kCharTimeout = 0b1100,
-  kTxEmpty = 0b0010,
-  kModemStatus = 0b0000,
-};
-
-class RxBufferRegister : public hwreg::RegisterBase<RxBufferRegister, uint8_t> {
- public:
-  DEF_FIELD(7, 0, data);
-  static auto Get() { return hwreg::RegisterAddr<RxBufferRegister>(0); }
-};
-
-class TxBufferRegister : public hwreg::RegisterBase<TxBufferRegister, uint8_t> {
- public:
-  DEF_FIELD(7, 0, data);
-  static auto Get() { return hwreg::RegisterAddr<TxBufferRegister>(0); }
-};
-
-class InterruptEnableRegister : public hwreg::RegisterBase<InterruptEnableRegister, uint8_t> {
- public:
-  DEF_RSVDZ_FIELD(7, 4);
-  DEF_BIT(3, modem_status);
-  DEF_BIT(2, line_status);
-  DEF_BIT(1, tx_empty);
-  DEF_BIT(0, rx_available);
-  static auto Get() { return hwreg::RegisterAddr<InterruptEnableRegister>(1); }
-};
-
-class InterruptIdentRegister : public hwreg::RegisterBase<InterruptIdentRegister, uint8_t> {
- public:
-  DEF_FIELD(7, 6, fifos_enabled);
-  DEF_BIT(5, extended_fifo_enabled);
-  DEF_RSVDZ_BIT(4);
-  DEF_FIELD(3, 0, interrupt_id);
-  static auto Get() { return hwreg::RegisterAddr<InterruptIdentRegister>(2); }
-};
-
-class FifoControlRegister : public hwreg::RegisterBase<FifoControlRegister, uint8_t> {
- public:
-  DEF_FIELD(7, 6, reciever_trigger);
-  DEF_BIT(5, extended_fifo_enable);
-  DEF_RSVDZ_BIT(4);
-  DEF_BIT(3, dma_mode);
-  DEF_BIT(2, tx_fifo_reset);
-  DEF_BIT(1, rx_fifo_reset);
-  DEF_BIT(0, fifo_enable);
-
-  static constexpr uint8_t kMaxTriggerLevel = 0b11;
-
-  static auto Get() { return hwreg::RegisterAddr<FifoControlRegister>(2); }
-};
-
-class LineControlRegister : public hwreg::RegisterBase<LineControlRegister, uint8_t> {
- public:
-  DEF_BIT(7, divisor_latch_access);
-  DEF_BIT(6, break_control);
-  DEF_BIT(5, stick_parity);
-  DEF_BIT(4, even_parity);
-  DEF_BIT(3, parity_enable);
-  DEF_BIT(2, stop_bits);
-  DEF_FIELD(1, 0, word_length);
-
-  static constexpr uint8_t kWordLength5 = 0b00;
-  static constexpr uint8_t kWordLength6 = 0b01;
-  static constexpr uint8_t kWordLength7 = 0b10;
-  static constexpr uint8_t kWordLength8 = 0b11;
-
-  static constexpr uint8_t kStopBits1 = 0b0;
-  static constexpr uint8_t kStopBits2 = 0b1;
-
-  static auto Get() { return hwreg::RegisterAddr<LineControlRegister>(3); }
-};
-
-class ModemControlRegister : public hwreg::RegisterBase<ModemControlRegister, uint8_t> {
- public:
-  DEF_RSVDZ_FIELD(7, 6);
-  DEF_BIT(5, automatic_flow_control_enable);
-  DEF_BIT(4, loop);
-  DEF_BIT(3, auxiliary_out_2);
-  DEF_BIT(2, auxiliary_out_1);
-  DEF_BIT(1, request_to_send);
-  DEF_BIT(0, data_terminal_ready);
-  static auto Get() { return hwreg::RegisterAddr<ModemControlRegister>(4); }
-};
-
-class LineStatusRegister : public hwreg::RegisterBase<LineStatusRegister, uint8_t> {
- public:
-  DEF_BIT(7, error_in_rx_fifo);
-  DEF_BIT(6, tx_empty);
-  DEF_BIT(5, tx_register_empty);
-  DEF_BIT(4, break_interrupt);
-  DEF_BIT(3, framing_error);
-  DEF_BIT(2, parity_error);
-  DEF_BIT(1, overrun_error);
-  DEF_BIT(0, data_ready);
-  static auto Get() { return hwreg::RegisterAddr<LineStatusRegister>(5); }
-};
-
-class ModemStatusRegister : public hwreg::RegisterBase<ModemStatusRegister, uint8_t> {
- public:
-  DEF_BIT(7, data_carrier_detect);
-  DEF_BIT(6, ring_indicator);
-  DEF_BIT(5, data_set_ready);
-  DEF_BIT(4, clear_to_send);
-  DEF_BIT(3, delta_data_carrier_detect);
-  DEF_BIT(2, trailing_edge_ring_indicator);
-  DEF_BIT(1, delta_data_set_ready);
-  DEF_BIT(0, delta_clear_to_send);
-  static auto Get() { return hwreg::RegisterAddr<ModemStatusRegister>(6); }
-};
-
-class ScratchRegister : public hwreg::RegisterBase<ScratchRegister, uint8_t> {
- public:
-  DEF_FIELD(7, 0, data);
-  static auto Get() { return hwreg::RegisterAddr<ScratchRegister>(7); }
-};
-
-class DivisorLatchLowerRegister : public hwreg::RegisterBase<DivisorLatchLowerRegister, uint8_t> {
- public:
-  DEF_FIELD(7, 0, data);
-  static auto Get() { return hwreg::RegisterAddr<DivisorLatchLowerRegister>(0); }
-};
-
-class DivisorLatchUpperRegister : public hwreg::RegisterBase<DivisorLatchUpperRegister, uint8_t> {
- public:
-  DEF_FIELD(7, 0, data);
-  static auto Get() { return hwreg::RegisterAddr<DivisorLatchUpperRegister>(1); }
-};
-
-}  // namespace
+// The register types and constants are defined in the uart library.
+using namespace uart::ns8250;
 
 namespace uart16550 {
 
 static constexpr int64_t kPioIndex = 0;
 static constexpr int64_t kIrqIndex = 0;
 
-static constexpr uint32_t kMaxBaudRate = 115200;
 static constexpr uint8_t kDefaultConfig =
     SERIAL_DATA_BITS_8 | SERIAL_STOP_BITS_1 | SERIAL_PARITY_NONE;
-
-static constexpr uint32_t kPortCount = 8;
-
-static constexpr uint32_t kFifoDepth16750 = 64;
-static constexpr uint32_t kFifoDepth16550A = 16;
-static constexpr uint32_t kFifoDepthGeneric = 1;
 
 static constexpr serial_port_info_t kInfo = {
     .serial_class = fuchsia_hardware_serial_Class_GENERIC,
@@ -560,7 +421,7 @@ void Uart16550::ResetFifosLocked() {
       .set_tx_fifo_reset(true)
       .set_dma_mode(0)
       .set_extended_fifo_enable(true)
-      .set_reciever_trigger(FifoControlRegister::kMaxTriggerLevel)
+      .set_receiver_trigger(FifoControlRegister::kMaxTriggerLevel)
       .WriteTo(&port_io_);
   LineControlRegister::Get().FromValue(0).set_divisor_latch_access(false).WriteTo(&port_io_);
 }
@@ -601,7 +462,7 @@ void Uart16550::HandleInterrupts() {
 
     const auto identifier = InterruptIdentRegister::Get().ReadFrom(&port_io_).interrupt_id();
 
-    switch (static_cast<InterruptType>(identifier)) {
+    switch (identifier) {
       case InterruptType::kNone:
         break;
       case InterruptType::kRxLineStatus: {

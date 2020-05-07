@@ -4,8 +4,12 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-library("arm64") {
+zx_library("arm64") {
   kernel = true
   host = true
+  static = true
   sources = []
+
+  sdk = "source"
+  sdk_headers = []
 }

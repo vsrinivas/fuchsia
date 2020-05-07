@@ -4,8 +4,12 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-library("x86") {
+zx_library("x86") {
   kernel = true
   host = true
+  static = true
   sources = []
+
+  sdk = "source"
+  sdk_headers = []
 }

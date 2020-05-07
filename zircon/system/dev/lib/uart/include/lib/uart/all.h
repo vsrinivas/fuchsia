@@ -12,6 +12,7 @@
 
 #include <hwreg/internal.h>
 
+#include "ns8250.h"
 #include "null.h"
 #include "pl011.h"
 #include "uart.h"
@@ -45,7 +46,8 @@ using Driver = T<Args...,
 #ifdef __aarch64__
                  pl011::Driver,  // TODO(49423): many more...
 #endif
-#ifdef __x86_64__  // TODO(49423): i8250::MmioDriver, i8250::PioDriver
+#if defined(__x86_64__) || defined(__i386__)
+                 ns8250::MmioDriver, ns8250::PioDriver,
 #endif
                  // This is never used but permits a trailing comma above.
                  internal::DummyDriver>;

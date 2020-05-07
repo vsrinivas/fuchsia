@@ -11,6 +11,7 @@ group("test") {
 zx_test("uart-unittests") {
   sources = [
     "driver-tests.cc",
+    "ns8250-tests.cc",
     "onlcr-tests.cc",
     "pl011-tests.cc",
   ]

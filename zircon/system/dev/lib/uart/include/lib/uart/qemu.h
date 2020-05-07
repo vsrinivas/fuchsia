@@ -7,6 +7,7 @@
 
 // QEMU-only tests and boot shims hard-code a particular driver configuration.
 
+#include "ns8250.h"
 #include "null.h"
 #include "pl011.h"
 #include "uart.h"
@@ -22,7 +23,13 @@ struct Driver : public pl011::Driver {
   Driver(dcfg_simple_t cfg = {0x09000000, 33}) : pl011::Driver(cfg) {}
 };
 
-#else  // TODO(49423) x86 case
+#elif defined(__x86_64__) || defined(__i386__)
+
+struct Driver : public ns8250::PioDriver {
+  Driver(dcfg_simple_pio_t cfg = kLegacyConfig) : ns8250::Driver(cfg) {}
+};
+
+#else
 
 using Driver = null::Driver;
 

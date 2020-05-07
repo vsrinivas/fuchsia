@@ -32,6 +32,7 @@ source_set("common") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/hwreg-mock",
+    "//zircon/public/lib/uart",
     "//zircon/public/lib/zx",
   ]
 }
