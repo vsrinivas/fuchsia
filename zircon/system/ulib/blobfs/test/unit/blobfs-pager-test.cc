@@ -16,6 +16,7 @@
 #include <blobfs/format.h>
 #include <digest/digest.h>
 #include <digest/merkle-tree.h>
+#include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <zxtest/zxtest.h>
 
@@ -26,7 +27,7 @@
 namespace blobfs {
 namespace {
 
-constexpr uint64_t kPagedVmoSize = 10 * PAGE_SIZE;
+constexpr uint64_t kPagedVmoSize = 10 * ZX_PAGE_SIZE;
 // kBlobSize is intentionally not page-aligned to exercise edge cases.
 constexpr uint64_t kBlobSize = kPagedVmoSize - 42;
 constexpr uint64_t kNumReadRequests = 100;
@@ -70,6 +71,14 @@ class MockBlob {
   }
 
   ~MockBlob() { page_watcher_->DetachPagedVmoSync(); }
+
+  void CommitRange(uint64_t offset, uint64_t length) {
+    ASSERT_OK(vmo_.op_range(ZX_VMO_OP_COMMIT, offset, length, nullptr, 0));
+
+    zx_info_vmo_t info;
+    ZX_ASSERT(vmo_.get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr) == ZX_OK);
+    ASSERT_EQ(info.committed_bytes, fbl::round_up(length, ZX_PAGE_SIZE));
+  }
 
   void Read(uint64_t offset, uint64_t length) {
     char buf[length];
@@ -243,6 +252,22 @@ TEST_F(BlobfsPagerTest, ReadRandomMultipleBlobsMultithreaded) {
     ASSERT_EQ(thrd_join(threads[i], &res), thrd_success);
     ASSERT_EQ(res, 0);
   }
+}
+
+TEST_F(BlobfsPagerTest, CommitRange_ExactLength) {
+  auto blob = CreateBlob();
+  // Attempt to commit the entire blob. The zx_vmo_op_range(ZX_VMO_OP_COMMIT) call will return
+  // successfully iff the entire range was mapped by the pager; it will hang if the pager only maps
+  // in a subset of the range.
+  blob->CommitRange(0, kBlobSize);
+}
+
+TEST_F(BlobfsPagerTest, CommitRange_PageRoundedLength) {
+  auto blob = CreateBlob();
+  // Attempt to commit the entire blob. The zx_vmo_op_range(ZX_VMO_OP_COMMIT) call will return
+  // successfully iff the entire range was mapped by the pager; it will hang if the pager only maps
+  // in a subset of the range.
+  blob->CommitRange(0, kPagedVmoSize);
 }
 
 TEST_F(BlobfsPagerTest, AsyncLoopShutdown) {
