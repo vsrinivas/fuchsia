@@ -72,10 +72,7 @@ fn table_string_is_set() {
         string: Some(HELLO_WORLD_EN.to_string()),
         ..fmt::Table::empty()
     });
-    assert_eq!(
-        Size { num_bytes: 24 + 16 + (3 * 16) + 16 + 16, num_handles: 0 },
-        measure(&value)
-    )
+    assert_eq!(Size { num_bytes: 24 + 16 + (3 * 16) + 16 + 16, num_handles: 0 }, measure(&value))
 }
 
 #[test]
@@ -91,18 +88,12 @@ fn array_of_three_strings() {
         HELLO_WORLD_RU.to_string(), // 20 bytes
         HELLO_WORLD_ZH.to_string(), // 16 bytes
     ]);
-    assert_eq!(
-        Size { num_bytes: 24 + (3 * 16) + 16 + 24 + 16, num_handles: 0 },
-        measure(&value)
-    )
+    assert_eq!(Size { num_bytes: 24 + (3 * 16) + 16 + 24 + 16, num_handles: 0 }, measure(&value))
 }
 
 #[test]
 fn array_of_two_tables_both_empty() {
-    let value = fmt::TopLevelUnion::ArrayOfTwoTables([
-        fmt::Table::empty(),
-        fmt::Table::empty(),
-    ]);
+    let value = fmt::TopLevelUnion::ArrayOfTwoTables([fmt::Table::empty(), fmt::Table::empty()]);
     assert_eq!(Size { num_bytes: 24 + (2 * 16), num_handles: 0 }, measure(&value))
 }
 
@@ -182,18 +173,15 @@ fn array_of_three_structs_with_two_handles() {
 }
 
 #[test]
-fn vector_of_bytes() {
-    // vector holds 3 bytes
-    {
-        let value = fmt::TopLevelUnion::VectorOfBytes(vec![1, 2, 3]);
-        assert_eq!(Size { num_bytes: 24 + 16 + 8, num_handles: 0 }, measure(&value))
-    }
+fn vector_of_bytes_three_bytes() {
+    let value = fmt::TopLevelUnion::VectorOfBytes(vec![1, 2, 3]);
+    assert_eq!(Size { num_bytes: 24 + 16 + 8, num_handles: 0 }, measure(&value))
+}
 
-    // vector holds 9 bytes
-    {
-        let value = fmt::TopLevelUnion::VectorOfBytes(vec![1, 2, 3, 4, 5, 6, 7, 8, 9]);
-        assert_eq!(Size { num_bytes: 24 + 16 + 16, num_handles: 0 }, measure(&value))
-    }
+#[test]
+fn vector_of_bytes_nine_bytes() {
+    let value = fmt::TopLevelUnion::VectorOfBytes(vec![1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    assert_eq!(Size { num_bytes: 24 + 16 + 16, num_handles: 0 }, measure(&value))
 }
 
 #[test]
@@ -210,50 +198,38 @@ fn vector_of_strings() {
 }
 
 #[test]
-fn vector_of_handles() {
-    // empty
-    {
-        let value = fmt::TopLevelUnion::VectorOfHandles(vec![]);
-        assert_eq!(Size { num_bytes: 24 + 16, num_handles: 0 }, measure(&value))
-    }
-
-    // three handles, i.e. 16 bytes payload with alignment
-    {
-        let value = fmt::TopLevelUnion::VectorOfHandles(vec![
-            Event::create().unwrap().into_handle(),
-            Event::create().unwrap().into_handle(),
-            Event::create().unwrap().into_handle(),
-        ]);
-        assert_eq!(Size { num_bytes: 24 + 16 + 16, num_handles: 3 }, measure(&value))
-    }
+fn vector_of_handles_empty() {
+    let value = fmt::TopLevelUnion::VectorOfHandles(vec![]);
+    assert_eq!(Size { num_bytes: 24 + 16, num_handles: 0 }, measure(&value))
 }
 
 #[test]
-fn vector_of_tables() {
-    // two empty tables
-    {
-        let value = fmt::TopLevelUnion::VectorOfTables(vec![
-            fmt::Table::empty(),
-            fmt::Table::empty(),
-        ]);
-        assert_eq!(Size { num_bytes: 24 + 16 + (2 * 16), num_handles: 0 }, measure(&value))
-    }
+fn vector_of_handles_three_handles() {
+    let value = fmt::TopLevelUnion::VectorOfHandles(vec![
+        Event::create().unwrap().into_handle(),
+        Event::create().unwrap().into_handle(),
+        Event::create().unwrap().into_handle(),
+    ]);
+    assert_eq!(Size { num_bytes: 24 + 16 + 16, num_handles: 3 }, measure(&value))
+}
 
-    // mixed
-    {
-        let handle = Event::create().unwrap().into_handle();
-        let value = fmt::TopLevelUnion::VectorOfTables(vec![
-            fmt::Table { primitive: Some(42), ..fmt::Table::empty() },
-            fmt::Table { handle: Some(handle), ..fmt::Table::empty() },
-        ]);
-        assert_eq!(
-            Size {
-                num_bytes: 24 + 16 + (2 * 16) + (5 * 16) + 8 + (4 * 16) + 8,
-                num_handles: 1
-            },
-            measure(&value)
-        )
-    }
+#[test]
+fn vector_of_tables_two_empty_tables() {
+    let value = fmt::TopLevelUnion::VectorOfTables(vec![fmt::Table::empty(), fmt::Table::empty()]);
+    assert_eq!(Size { num_bytes: 24 + 16 + (2 * 16), num_handles: 0 }, measure(&value))
+}
+
+#[test]
+fn vector_of_tables_mixed() {
+    let handle = Event::create().unwrap().into_handle();
+    let value = fmt::TopLevelUnion::VectorOfTables(vec![
+        fmt::Table { primitive: Some(42), ..fmt::Table::empty() },
+        fmt::Table { handle: Some(handle), ..fmt::Table::empty() },
+    ]);
+    assert_eq!(
+        Size { num_bytes: 24 + 16 + (2 * 16) + (5 * 16) + 8 + (4 * 16) + 8, num_handles: 1 },
+        measure(&value)
+    )
 }
 
 #[test]
@@ -266,30 +242,24 @@ fn vector_of_unions() {
 }
 
 #[test]
-fn struct_with_two_vectors() {
-    // both vectors are null
-    {
-        let value = fmt::TopLevelUnion::StructWithTwoVectors(fmt::StructWithTwoVectors {
-            vector_of_bytes: None,
-            vector_of_strings: None,
-        });
-        assert_eq!(Size { num_bytes: 24 + 32, num_handles: 0 }, measure(&value))
-    }
+fn struct_with_two_vectors_both_null() {
+    let value = fmt::TopLevelUnion::StructWithTwoVectors(fmt::StructWithTwoVectors {
+        vector_of_bytes: None,
+        vector_of_strings: None,
+    });
+    assert_eq!(Size { num_bytes: 24 + 32, num_handles: 0 }, measure(&value))
+}
 
-    // three bytes in the first, two strings in the second
-    {
-        let value = fmt::TopLevelUnion::StructWithTwoVectors(fmt::StructWithTwoVectors {
-            vector_of_bytes: Some(vec![1, 2, 3]),
-            vector_of_strings: Some(vec![
-                HELLO_WORLD_RU.to_string(),
-                HELLO_WORLD_DE.to_string(),
-            ]),
-        });
-        assert_eq!(
-            Size { num_bytes: 24 + 32 + 8 + (2 * 16) + 24 + 16, num_handles: 0 },
-            measure(&value)
-        )
-    }
+#[test]
+fn struct_with_two_vectors_three_bytes_in_first_two_strings_in_second() {
+    let value = fmt::TopLevelUnion::StructWithTwoVectors(fmt::StructWithTwoVectors {
+        vector_of_bytes: Some(vec![1, 2, 3]),
+        vector_of_strings: Some(vec![HELLO_WORLD_RU.to_string(), HELLO_WORLD_DE.to_string()]),
+    });
+    assert_eq!(
+        Size { num_bytes: 24 + 32 + 8 + (2 * 16) + 24 + 16, num_handles: 0 },
+        measure(&value)
+    )
 }
 
 #[test]
