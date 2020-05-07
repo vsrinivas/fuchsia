@@ -6,6 +6,7 @@ use anyhow::Error;
 use argh::FromArgs;
 
 use crate::context::LowpanCtlContext;
+pub use crate::energy_scan_command::*;
 pub use crate::form_command::*;
 pub use crate::join_command::*;
 pub use crate::leave_command::*;
@@ -46,6 +47,7 @@ pub enum CommandEnum {
     Reset(ResetCommand),
     Join(JoinCommand),
     Form(FormCommand),
+    EnergyScan(EnergyScanCommand),
 }
 
 impl LowpanCtlInvocation {
@@ -58,6 +60,7 @@ impl LowpanCtlInvocation {
             CommandEnum::Reset(x) => x.exec(context).await,
             CommandEnum::Join(x) => x.exec(context).await,
             CommandEnum::Form(x) => x.exec(context).await,
+            CommandEnum::EnergyScan(x) => x.exec(context).await,
         }
     }
 }

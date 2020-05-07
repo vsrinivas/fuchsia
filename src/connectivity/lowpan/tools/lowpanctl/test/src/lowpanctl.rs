@@ -21,6 +21,7 @@ pub async fn test_lowpanctl() {
     test_lowpanctl_provision().await;
     test_lowpanctl_join_network().await;
     test_lowpanctl_form_network().await;
+    test_lowpanctl_energy_scan().await;
 }
 
 pub async fn test_lowpanctl_status() {
@@ -55,6 +56,18 @@ pub async fn test_lowpanctl_provision() {
     ])
     .await
     .expect("Call to `lowpanctl provision` failed.");
+}
+
+pub async fn test_lowpanctl_energy_scan() {
+    test_lowpanctl_command(vec![
+        "energy-scan".to_string(),
+        "--channels".to_string(),
+        "10,100,1000,10000".to_string(),
+        "--dwell-time-ms".to_string(),
+        "1234567890".to_string(),
+    ])
+    .await
+    .expect("Call to `lowpanctl energy-scan` failed.");
 }
 
 pub async fn test_lowpanctl_join_network() {
