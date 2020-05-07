@@ -183,6 +183,7 @@ fi
 
 if [[ -z "$QEMU_KERNEL" ]]; then
     echo -t switch is mandatory
+    HELP
 fi
 
 # construct the args for qemu
@@ -349,6 +350,11 @@ case $ARCH in
         QEMU=${QEMUDIR}qemu-system-x86_64
         ARGS+=" -machine q35"
         ARGS+=" -device isa-debug-exit,iobase=0xf4,iosize=0x04"
+
+        # Override the SeaBIOS serial port to keep it from outputting
+        # a terminal reset on start.
+        ARGS+=" -fw_cfg name=etc/sercon-port,string=0"
+
         if (( $DO_KVM )); then
           ARGS+=" -enable-kvm -cpu host,migratable=no,+invtsc"
           # ZX-3373: Work around KVM bug on AMD Zen machines
