@@ -99,7 +99,7 @@ TEST_F(ControllerMemoryAllocatorTest, VideoConfigFRGDC1) {
   constraints.push_back(gdc1_constraints);
   EXPECT_EQ(ZX_OK, controller_memory_allocator_->AllocateSharedMemory(constraints,
                                                                       &buffer_collection_info));
-  EXPECT_EQ(buffer_collection_info.buffer_count, kMlFRMinBufferForCamping);
+  EXPECT_EQ(buffer_collection_info.buffer_count, kMlFRMinBufferForCamping + kGdcBufferForCamping);
   EXPECT_TRUE(buffer_collection_info.settings.buffer_settings.is_physically_contiguous);
   EXPECT_GT(buffer_collection_info.settings.buffer_settings.size_bytes, kIspFRWidth * kIspFRHeight);
   EXPECT_TRUE(buffer_collection_info.settings.has_image_format_constraints);

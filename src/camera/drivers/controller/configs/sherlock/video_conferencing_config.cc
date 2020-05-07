@@ -217,7 +217,7 @@ fuchsia::sysmem::BufferCollectionConstraints GdcVideo1InputConstraints() {
   stream_constraints.set_bytes_per_row_divisor(kGdcBytesPerRowDivisor);
   stream_constraints.set_contiguous(true);
   stream_constraints.AddImageFormat(kIspFRWidth, kIspFRHeight, kFramePixelFormat);
-  stream_constraints.set_buffer_count_for_camping(0);
+  stream_constraints.set_buffer_count_for_camping(kGdcBufferForCamping);
   return stream_constraints.MakeBufferCollectionConstraints();
 }
 
