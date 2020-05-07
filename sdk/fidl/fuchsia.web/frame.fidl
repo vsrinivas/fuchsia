@@ -290,6 +290,11 @@ protocol Frame {
     /// appropriate. This includes calls to `play()` even after media loading is blocked.
     [Transitional]
     SetBlockMediaLoading(bool blocked);
+
+    /// Returns the amount of private (non-shared) physical memory used by the Frame's main
+    /// document. The returned size might not reflect the memory usage of embedded iframes.
+    [Transitional]
+    GetPrivateMemorySize() -> (uint64 size_bytes);
 };
 
 table WebMessage {
