@@ -5,10 +5,11 @@
 #ifndef SRC_UI_SCENIC_LIB_FLATLAND_RENDERER_VK_RENDERER_H_
 #define SRC_UI_SCENIC_LIB_FLATLAND_RENDERER_VK_RENDERER_H_
 
-#include "src/ui/scenic/lib/flatland/renderer/renderer.h"
-#include "src/ui/scenic/lib/flatland/renderer/gpu_mem.h"
-#include "src/ui/lib/escher/flatland/rectangle_compositor.h"
 #include <unordered_map>
+
+#include "src/ui/lib/escher/flatland/rectangle_compositor.h"
+#include "src/ui/scenic/lib/flatland/renderer/gpu_mem.h"
+#include "src/ui/scenic/lib/flatland/renderer/renderer.h"
 
 namespace flatland {
 
@@ -28,7 +29,8 @@ class VkRenderer final : public Renderer {
   std::optional<BufferCollectionMetadata> Validate(GlobalBufferCollectionId collection_id) override;
 
   // |Renderer|.
-  void Render(const std::vector<ImageMetadata>& images) override;
+  void Render(const ImageMetadata& render_target,
+              const std::vector<RenderableMetadata>& renderables) override;
 
  private:
   // Vulkan rendering components.
@@ -44,7 +46,6 @@ class VkRenderer final : public Renderer {
 
   // Thread-safe identifier generator. Starts at 1 as 0 is an invalid ID.
   std::atomic<GlobalBufferCollectionId> id_generator_ = 1;
-
 };
 
 }  // namespace flatland

@@ -20,7 +20,8 @@ class MockRenderer : public Renderer {
                    fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token));
   MOCK_METHOD1(Validate,
                std::optional<BufferCollectionMetadata>(GlobalBufferCollectionId collection_id));
-  MOCK_METHOD1(Render, void(const std::vector<ImageMetadata>& images));
+  MOCK_METHOD2(Render, void(const ImageMetadata& render_target,
+                            const std::vector<RenderableMetadata>& renderables));
 };
 
 }  // namespace flatland

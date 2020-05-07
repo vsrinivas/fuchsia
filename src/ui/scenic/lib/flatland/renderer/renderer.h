@@ -9,6 +9,14 @@
 
 #include <optional>
 
+// clang-format off
+#include "src/ui/lib/glm_workaround/glm_workaround.h"
+// clang-format on
+
+#include <glm/mat3x3.hpp>
+#include <glm/vec2.hpp>
+#include <glm/vec4.hpp>
+
 namespace flatland {
 
 // Used to reference buffer collections registered with the Renderer. Multiple Flatland instances
@@ -46,6 +54,24 @@ struct ImageMetadata {
   uint32_t width, height;
 };
 
+// Struct representing a full flatland renderable struct. These are the primitives
+// that are passed into the renderer to be rendered.
+struct RenderableMetadata {
+  ImageMetadata image;
+
+  // Clockwise uv coordinates, starting from the top-left.
+  std::array<glm::vec2, 4> uv_coords;
+
+  // Global transform matrix.
+  glm::mat3 matrix;
+
+  // Multiply color for the image. Contains an alpha value as well.
+  glm::vec4 multiply_color;
+
+  // Determines whether this renderable should be rendered with transparency or not.
+  bool is_transparent;
+};
+
 // This is the main renderer interface used by the Flatland System. Since Flatland is
 // agnostic to the implementation of the renderer, it is declared here as a virtual
 // interface, whose concrete implementation is to be injected into Flatland.
@@ -79,7 +105,7 @@ class Renderer {
   // in |Render|. Specifically, this function checks to make sure that the buffer collection is
   // fully allocated (which can only happen after all token holders have set constraints and the
   // client has requested for sysmem to allocate the buffer collection via a call to
-  // WaitForBuffersAlllocated() or an equivalent function).
+  // WaitForBuffersAllocated() or an equivalent function).
   //
   // If the collection has not yet been fully allocated, or if the collection has not been
   // registered with the renderer via a call to RegisterBufferCollection(), this function will
@@ -107,20 +133,16 @@ class Renderer {
   virtual std::optional<BufferCollectionMetadata> Validate(
       GlobalBufferCollectionId collection_id) = 0;
 
-  // This function is responsible for rendering a single batch of Flatland images and their
-  // associated transforms to a target. It is designed to be called on the render thread, not on any
+  // This function is responsible for rendering a single batch of Flatland renderables into a
+  // render target. This function is designed to be called on the render thread, not on any
   // Flatland instance thread. The specific behavior may differ depending on the specific subclass
   // implementation, which may also be a null renderer.
   //
   // This function assumes that clients have already validated their input data by comparing it
   // against the BufferCollectionMetadata received from calling |Validate| above. This function
   // will abort if invalid data has been passed in or if |Validate| has never been called.
-  //
-  // TODO(48025): Currently the only parameter is a vector of ImageMetadata structs, which is not
-  // enough information to actually render a batch of views. The other information that will be
-  // added in includes UV coordinate date for images, transform data for the rectangles as well as
-  // the actual target used to render into.
-  virtual void Render(const std::vector<ImageMetadata>& images) = 0;
+  virtual void Render(const ImageMetadata& render_target,
+                      const std::vector<RenderableMetadata>& renderables) = 0;
 
   virtual ~Renderer() = default;
 };

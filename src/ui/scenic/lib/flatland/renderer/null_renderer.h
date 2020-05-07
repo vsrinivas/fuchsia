@@ -28,7 +28,8 @@ class NullRenderer : public Renderer {
   std::optional<BufferCollectionMetadata> Validate(GlobalBufferCollectionId collection_id) override;
 
   // |Renderer|.
-  void Render(const std::vector<ImageMetadata>& images) override;
+  void Render(const ImageMetadata& render_target,
+              const std::vector<RenderableMetadata>& renderables) override;
 
  private:
   // This mutex is used to protect access to |collection_map_| and |collection_metadata_map_|.

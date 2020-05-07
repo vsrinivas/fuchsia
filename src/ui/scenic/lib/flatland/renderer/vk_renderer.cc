@@ -122,7 +122,8 @@ std::optional<BufferCollectionMetadata> VkRenderer::Validate(
   return result;
 }
 
-void VkRenderer::Render(const std::vector<ImageMetadata>& images) {
+void VkRenderer::Render(const ImageMetadata& render_target,
+                        const std::vector<RenderableMetadata>& renderables) {
   auto vk_device = escher_->vk_device();
   auto vk_loader = escher_->device()->dispatch_loader();
   auto resource_recycler = escher_->resource_recycler();
@@ -132,7 +133,8 @@ void VkRenderer::Render(const std::vector<ImageMetadata>& images) {
   // TODO(51119): The vector |textures| is unused right now but will be used
   // once we implement actual rendering functionality.
   std::vector<escher::TexturePtr> textures;
-  for (const auto& image : images) {
+  for (const auto& renderable : renderables) {
+    const auto& image = renderable.image;
     GpuImageInfo gpu_info;
     {
       // TODO(44335): Convert this to a lock-free structure.
@@ -146,8 +148,8 @@ void VkRenderer::Render(const std::vector<ImageMetadata>& images) {
       auto vk_collection = vk_itr->second;
 
       // Create the GPU info from the server side collection.
-      auto gpu_info = GpuImageInfo::New(vk_device, vk_loader, collection.GetSysmemInfo(),
-                                      vk_collection, image.vmo_idx);
+      gpu_info = GpuImageInfo::New(vk_device, vk_loader, collection.GetSysmemInfo(),
+                                   vk_collection, image.vmo_idx);
       FX_DCHECK(gpu_info.GetGpuMem());
     }
 
