@@ -1,0 +1,59 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// GENERATED FILE: Regen with $(fx get-build-dir)/host-tools/regen_fidl_benchmark_suite
+
+// Table with 1 field with the 1st field set
+benchmark("Table/SingleSet/1_of_1") {
+    value = Table1Struct{
+        value: Table1{
+            field1: 1,
+        },
+    },
+}
+
+// Table with 16 fields with the 1st field set
+benchmark("Table/SingleSet/1_of_16") {
+    value = Table16Struct{
+        value: Table16{
+            field1: 1,
+        },
+    },
+}
+
+// Table with 256 fields with the 1st field set
+benchmark("Table/SingleSet/1_of_256") {
+    value = Table256Struct{
+        value: Table256{
+            field1: 1,
+        },
+    },
+}
+
+// Table with 16 fields with the 16th field set
+benchmark("Table/SingleSet/16_of_16") {
+    value = Table16Struct{
+        value: Table16{
+            field16: 1,
+        },
+    },
+}
+
+// Table with 256 fields with the 16th field set
+benchmark("Table/SingleSet/16_of_256") {
+    value = Table256Struct{
+        value: Table256{
+            field16: 1,
+        },
+    },
+}
+
+// Table with 256 fields with the 256th field set
+benchmark("Table/SingleSet/256_of_256") {
+    value = Table256Struct{
+        value: Table256{
+            field256: 1,
+        },
+    },
+}

@@ -5,7 +5,8 @@
 package main
 
 import (
-	"io"
+	"gen/config"
+	gidlutil "gen/gidl/util"
 	"log"
 	"os"
 	"path"
@@ -19,56 +20,46 @@ var gidlTmpl = template.Must(template.New("gidlTmpl").Parse(
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// GENERATED FILE: Regen with out/default/host-tools/regen_fidl_benchmark_suite
+// GENERATED FILE: Regen with $(fx get-build-dir)/host-tools/regen_fidl_benchmark_suite
 
 {{- range .Benchmarks }}
 
+{{ .Comment -}}
 benchmark("{{ .Name }}") {
-    value = {{ .Value }},
     {{- if .Allowlist }}
     bindings_allowlist = {{ .Allowlist }},
     {{- end -}}
     {{- if .Denylist }}
     bindings_denylist = {{ .Denylist }},
     {{- end }}
+    value = {{ .Value }},
 }
 {{- end }}
 `))
 
-type gidlResult struct {
+type gidlTmplInput struct {
+	Year       int
+	Benchmarks []gidlTmplBenchmark
+}
+
+type gidlTmplBenchmark struct {
 	Name                string
+	Comment             string
 	Value               string
 	Allowlist, Denylist string
 }
 
-func writeGidl(w io.Writer, results []gidlResult) error {
-	return gidlTmpl.Execute(w, map[string]interface{}{
-		"Year":       time.Now().Year(),
-		"Benchmarks": results,
-	})
-}
-
-func formatBindingList(bindings []Binding) string {
-	if len(bindings) == 0 {
-		return ""
-	}
-	strs := make([]string, len(bindings))
-	for i, binding := range bindings {
-		strs[i] = string(binding)
-	}
-	return "[" + strings.Join(strs, ", ") + "]"
-}
-
-func genGidlFile(filepath string, gidl GidlFile) error {
-	var results []gidlResult
+func genGidlFile(filepath string, gidl config.GidlFile) error {
+	var results []gidlTmplBenchmark
 	for _, benchmark := range gidl.Benchmarks {
 		value, err := gidl.Gen(benchmark.Config)
 		if err != nil {
 			return err
 		}
-		results = append(results, gidlResult{
+		results = append(results, gidlTmplBenchmark{
 			Name:      benchmark.Name,
-			Value:     format(1, value),
+			Comment:   formatComment(benchmark.Comment),
+			Value:     formatObj(1, value),
 			Allowlist: formatBindingList(benchmark.Allowlist),
 			Denylist:  formatBindingList(benchmark.Denylist),
 		})
@@ -79,14 +70,17 @@ func genGidlFile(filepath string, gidl GidlFile) error {
 		return err
 	}
 	defer f.Close()
-	if err := writeGidl(f, results); err != nil {
-		return err
-	}
-	return nil
+	return gidlTmpl.Execute(f, gidlTmplInput{
+		Year:       time.Now().Year(),
+		Benchmarks: results,
+	})
 }
 
 func genGidl(outdir string) {
-	for _, gidl := range allGidlFiles() {
+	for _, gidl := range gidlutil.AllGidlFiles() {
+		if !strings.HasSuffix(gidl.Filename, ".gen.gidl") {
+			log.Fatalf("%s needs .gen.gidl suffix", gidl.Filename)
+		}
 		filepath := path.Join(outdir, gidl.Filename)
 		if err := genGidlFile(filepath, gidl); err != nil {
 			log.Fatalf("Error generating %s: %s", gidl.Filename, err)

@@ -4,10 +4,13 @@
 
 package main
 
-import "strings"
+import (
+	"gen/config"
+	"strings"
+)
 
 // Strip out existing indentation and use count of open braces to place new indentation.
-func format(initialIndent int, value string) string {
+func formatObj(initialIndent int, value string) string {
 	indentationMark := "    "
 	nIndent := initialIndent
 	var builder strings.Builder
@@ -41,4 +44,27 @@ func format(initialIndent int, value string) string {
 		}
 	}
 	return builder.String()
+}
+
+func formatComment(comment string) string {
+	if comment == "" {
+		return ""
+	}
+	parts := strings.Split(strings.TrimSpace(comment), "\n")
+	var builder strings.Builder
+	for _, part := range parts {
+		builder.WriteString("// " + strings.TrimSpace(part) + "\n")
+	}
+	return builder.String()
+}
+
+func formatBindingList(bindings []config.Binding) string {
+	if len(bindings) == 0 {
+		return ""
+	}
+	strs := make([]string, len(bindings))
+	for i, binding := range bindings {
+		strs[i] = string(binding)
+	}
+	return "[" + strings.Join(strs, ", ") + "]"
 }
