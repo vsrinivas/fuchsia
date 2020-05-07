@@ -25,16 +25,10 @@ using digest::Digest;
 class BlobCache;
 
 // An abstract blob-backed Vnode, which is managed by the BlobCache.
-class CacheNode : public fs::Vnode, fbl::Recyclable<CacheNode> {
+class CacheNode : public fs::Vnode,
+                  private fbl::Recyclable<CacheNode>,
+                  public fbl::WAVLTreeContainable<CacheNode*> {
  public:
-  // Intrusive methods and structures.
-  using WAVLTreeNodeState = fbl::WAVLTreeNodeState<CacheNode*>;
-  struct TypeWavlTraits {
-    static WAVLTreeNodeState& node_state(CacheNode& b) { return b.type_wavl_state_; }
-  };
-
-  bool InContainer() const { return type_wavl_state_.InContainer(); }
-
   explicit CacheNode(const Digest& digest);
   virtual ~CacheNode();
 
@@ -79,8 +73,6 @@ class CacheNode : public fs::Vnode, fbl::Recyclable<CacheNode> {
   digest::Digest GetKeyAsDigest() const { return digest::Digest(digest_); }
 
  private:
-  friend struct TypeWavlTraits;
-  WAVLTreeNodeState type_wavl_state_ = {};
   uint8_t digest_[digest::kSha256Length] = {};
 };
 

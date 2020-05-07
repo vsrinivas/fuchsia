@@ -138,8 +138,7 @@ class BlobCache {
 
   // CacheNodes exist in the WAVLTree as long as one or more reference exists;
   // when the Vnode is deleted, it is immediately removed from the WAVL tree.
-  using WAVLTreeByMerkle =
-      fbl::WAVLTree<const uint8_t*, CacheNode*, MerkleRootTraits, CacheNode::TypeWavlTraits>;
+  using WAVLTreeByMerkle = fbl::WAVLTree<const uint8_t*, CacheNode*, MerkleRootTraits>;
 
   CachePolicy cache_policy_ = CachePolicy::EvictImmediately;
 
