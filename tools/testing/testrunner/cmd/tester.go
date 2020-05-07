@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	"go.fuchsia.dev/fuchsia/tools/build/lib"
+	"go.fuchsia.dev/fuchsia/tools/integration/testsharder/lib"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"go.fuchsia.dev/fuchsia/tools/lib/retry"
 	"go.fuchsia.dev/fuchsia/tools/lib/runner"
@@ -84,7 +84,7 @@ func newSubprocessTester(dir string, env []string, perTestTimeout time.Duration)
 	}
 }
 
-func (t *subprocessTester) Test(ctx context.Context, test build.Test, stdout io.Writer, stderr io.Writer) (runtests.DataSinkReference, error) {
+func (t *subprocessTester) Test(ctx context.Context, test testsharder.Test, stdout io.Writer, stderr io.Writer) (runtests.DataSinkReference, error) {
 	command := test.Command
 	if len(test.Command) == 0 {
 		if test.Path == "" {
@@ -172,7 +172,7 @@ func (t *fuchsiaSSHTester) reconnectIfNecessary(ctx context.Context) error {
 	return nil
 }
 
-func (t *fuchsiaSSHTester) isTimeoutError(test build.Test, err error) bool {
+func (t *fuchsiaSSHTester) isTimeoutError(test testsharder.Test, err error) bool {
 	if t.perTestTimeout <= 0 || (
 	// We only know how to interpret the exit codes of these test runners.
 	test.Command[0] != runTestComponentName && test.Command[0] != runTestSuiteName) {
@@ -185,7 +185,7 @@ func (t *fuchsiaSSHTester) isTimeoutError(test build.Test, err error) bool {
 }
 
 // Test runs a test over SSH.
-func (t *fuchsiaSSHTester) Test(ctx context.Context, test build.Test, stdout io.Writer, stderr io.Writer) (runtests.DataSinkReference, error) {
+func (t *fuchsiaSSHTester) Test(ctx context.Context, test testsharder.Test, stdout io.Writer, stderr io.Writer) (runtests.DataSinkReference, error) {
 	setCommand(&test, t.useRuntests, dataOutputDir, t.perTestTimeout)
 	var testErr error
 	const maxReconnectAttempts = 3
@@ -259,7 +259,7 @@ func (t *fuchsiaSSHTester) Close() error {
 	return t.r.Close()
 }
 
-func setCommand(test *build.Test, useRuntests bool, remoteOutputDir string, timeout time.Duration) {
+func setCommand(test *testsharder.Test, useRuntests bool, remoteOutputDir string, timeout time.Duration) {
 	if len(test.Command) > 0 {
 		return
 	}

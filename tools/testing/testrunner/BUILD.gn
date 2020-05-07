@@ -17,7 +17,7 @@ go_library("main") {
   deps = [
     ":lib",
     "//third_party/golibs:golang.org/x/crypto",
-    "//tools/build",
+    "//tools/integration/testsharder:testsharder_lib",
     "//tools/lib/color",
     "//tools/lib/logger",
     "//tools/lib/osmisc",
