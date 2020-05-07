@@ -378,6 +378,7 @@ __EXPORT zx_status_t device_schedule_work(zx_device_t* dev, void (*callback)(voi
 
 __EXPORT bool driver_log_severity_enabled_internal(const zx_driver_t* drv, fx_log_severity_t flag) {
   if (drv != nullptr) {
+    fbl::AutoLock lock(&internal::ContextForApi()->api_lock());
     return fx_logger_get_min_severity(drv->logger()) <= flag;
   } else {
     // If we have been invoked outside of the context of a driver, return true.
@@ -391,6 +392,7 @@ __EXPORT void driver_logf_internal(const zx_driver_t* drv, fx_log_severity_t fla
   va_list args;
   va_start(args, msg);
   if (drv != nullptr && flag != DDK_LOG_SERIAL) {
+    fbl::AutoLock lock(&internal::ContextForApi()->api_lock());
     fx_logger_logvf(drv->logger(), flag, drv->name(), msg, args);
   } else {
     // If we have been invoked outside of the context of a driver, or if |flag|
