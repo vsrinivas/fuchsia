@@ -343,12 +343,10 @@ impl<'a> ValidationContext<'a> {
             }
             match strong_dependencies.topological_sort() {
                 Ok(_) => {}
-                Err(directed_graph::Error::CycleDetected) => {
-                    // TODO: Report all cycles that existed. Requires more advanced graph
-                    // traversal.
-                    return Err(Error::validate(
+                Err(e) => {
+                    return Err(Error::validate(format!(
                         "Strong dependency cycles were found between offer declarations. Break the \
-                        cycle or mark one of the dependencies as weak."));
+                        cycle or mark one of the dependencies as weak. Cycles: {}", e.format_cycle())));
                 }
             }
         }
@@ -2141,7 +2139,7 @@ mod tests {
                     ]
                 }),
             result = Err(Error::validate(
-                "Strong dependency cycles were found between offer declarations. Break the cycle or mark one of the dependencies as weak.")),
+                "Strong dependency cycles were found between offer declarations. Break the cycle or mark one of the dependencies as weak. Cycles: {{child_a -> child_b -> child_c -> child_a}, {child_b -> child_d -> child_b}}")),
         },
         test_cml_offer_weak_dependency_cycle => {
             input = json!({
