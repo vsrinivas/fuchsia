@@ -275,7 +275,7 @@ func TestSetCommand(t *testing.T) {
 				Path:       "/path/to/test",
 				PackageURL: "fuchsia-pkg://example.com/test.cmx",
 			},
-			expected: []string{"run-test-component", "fuchsia-pkg://example.com/test.cmx"},
+			expected: []string{"run-test-component", "--restrict-logs", "fuchsia-pkg://example.com/test.cmx"},
 		},
 		{
 			name:        "components v1 timeout",
@@ -285,7 +285,7 @@ func TestSetCommand(t *testing.T) {
 				PackageURL: "fuchsia-pkg://example.com/test.cmx",
 			},
 			timeout:  time.Second,
-			expected: []string{"run-test-component", "--timeout=1", "fuchsia-pkg://example.com/test.cmx"},
+			expected: []string{"run-test-component", "--restrict-logs", "--timeout=1", "fuchsia-pkg://example.com/test.cmx"},
 		},
 		{
 			name:        "components v2",

@@ -284,7 +284,8 @@ func setCommand(test *build.Test, useRuntests bool, remoteOutputDir string, time
 				test.Command = append(test.Command, "--timeout", fmt.Sprintf("%d", int64(timeout.Seconds())))
 			}
 		} else {
-			test.Command = []string{runTestComponentName}
+			// See fxbug.dev/49735 for background on --restrict-logs.
+			test.Command = []string{runTestComponentName, "--restrict-logs"}
 			if timeout > 0 {
 				test.Command = append(test.Command, fmt.Sprintf("--timeout=%d", int64(timeout.Seconds())))
 			}
