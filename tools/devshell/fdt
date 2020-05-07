@@ -12,6 +12,12 @@
 ##             in //prebuilt will be used.
 ##             VERSION is either a CIPD hash or "latest".
 
+if [[ `uname -s` == "Darwin" ]]; then
+  echo "Fuchsia DevTools doesn't run on macOS."
+  echo "Please run Fuchsia DevTools from a Linux workstation."
+  exit 1
+fi
+
 if [[ $# == 0 ]]; then
   # Use prebuilt version.
   system_monitor="$FUCHSIA_DIR/prebuilt/gui_tools/system_monitor/linux/system_monitor"
