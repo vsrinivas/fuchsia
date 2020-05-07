@@ -31,10 +31,14 @@ class GestureHandler {
     kOneFingerSingleTap,
     kOneFingerDoubleTap,
     kOneFingerDrag,
-    kUpSwipe,
-    kDownSwipe,
-    kLeftSwipe,
-    kRightSwipe,
+    kOneFingerUpSwipe,
+    kOneFingerDownSwipe,
+    kOneFingerLeftSwipe,
+    kOneFingerRightSwipe,
+    kThreeFingerUpSwipe,
+    kThreeFingerDownSwipe,
+    kThreeFingerLeftSwipe,
+    kThreeFingerRightSwipe,
   };
 
   // Some gestures need additional information about what was touched and where it was touched on
@@ -67,17 +71,9 @@ class GestureHandler {
   bool BindOneFingerDragAction(OnGestureCallback on_start, OnGestureCallback on_update,
                                OnGestureCallback on_complete);
 
-  // Binds the action defined in |callback| with the gesture |kUpSwipe|.
-  bool BindUpSwipeAction(OnGestureCallback callback);
-
-  // Binds the action defined in |callback| with the gesture |kDownSwipe|.
-  bool BindDownSwipeAction(OnGestureCallback callback);
-
-  // Binds the action defined in |callback| with the gesture |kLeftSwipe|.
-  bool BindLeftSwipeAction(OnGestureCallback callback);
-
-  // Binds the action defined in |callback| with the gesture |kRightSwipe|.
-  bool BindRightSwipeAction(OnGestureCallback callback);
+  // Binds the action defined in |callback| with the |gesture_type|. Returns true if the |callback|
+  // is bound, false otherwise
+  bool BindSwipeAction(OnGestureCallback callback, GestureType gesture_type);
 
   // Binds a recognizer that consumes everything.
   void ConsumeAll();
@@ -100,6 +96,26 @@ class GestureHandler {
   // equal to |num_of_taps| if no action is currently binded for the given |gesture_type|. Returns
   // true if the |callback| is bound, false otherwise.
   bool BindOneFingerNTapAction(OnGestureCallback callback, int number_of_taps);
+
+  // Helper function to bind the action defined in |callback| with the gesture Up swipe gesture with
+  // |gesture_type| if no action is currently binded. Returns true if the |callback| is bound,
+  // false otherwise.
+  bool BindUpSwipeAction(OnGestureCallback callback, GestureType gesture_type);
+
+  // Helper function to bind the action defined in |callback| with the gesture Down swipe gesture
+  // with |gesture_type| if no action is currently binded. Returns true if the |callback| is
+  // bound, false otherwise.
+  bool BindDownSwipeAction(OnGestureCallback callback, GestureType gesture_type);
+
+  // Helper function to bind the action defined in |callback| with the gesture Left swipe gesture
+  // with |gesture_type| if no action is currently binded. Returns true if the |callback| is
+  // bound, false otherwise.
+  bool BindLeftSwipeAction(OnGestureCallback callback, GestureType gesture_type);
+
+  // Helper function to bind the action defined in |callback| with the gesture Right swipe gesture
+  // with |gesture_type| if no action is currently binded. Returns true if the |callback| is
+  // bound, false otherwise.
+  bool BindRightSwipeAction(OnGestureCallback callback, GestureType gesture_type);
 
   // Callback to add recognizer to gesture arena.
   AddRecognizerToArenaCallback add_recognizer_callback_;

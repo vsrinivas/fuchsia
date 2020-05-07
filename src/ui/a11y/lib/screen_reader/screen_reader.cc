@@ -29,23 +29,25 @@ ScreenReader::ScreenReader(std::unique_ptr<ScreenReaderContext> context,
 void ScreenReader::BindGestures(a11y::GestureHandler* gesture_handler) {
   // Add gestures with higher priority earlier than gestures with lower priority.
   // Add DownSwipe gesture.
-  bool gesture_bind_status = gesture_handler->BindDownSwipeAction(
+  bool gesture_bind_status = gesture_handler->BindSwipeAction(
       [this](zx_koid_t viewref_koid, fuchsia::math::PointF point) {
         ScreenReaderAction::ActionData action_data;
         action_data.current_view_koid = viewref_koid;
         action_data.local_point = point;
         ExecuteAction(kNextActionLabel, action_data);
-      });
+      },
+      GestureHandler::kOneFingerDownSwipe);
   FX_DCHECK(gesture_bind_status);
 
   // Add UpSwipe Gesture.
-  gesture_bind_status = gesture_handler->BindUpSwipeAction(
+  gesture_bind_status = gesture_handler->BindSwipeAction(
       [this](zx_koid_t viewref_koid, fuchsia::math::PointF point) {
         ScreenReaderAction::ActionData action_data;
         action_data.current_view_koid = viewref_koid;
         action_data.local_point = point;
         ExecuteAction(kPreviousActionLabel, action_data);
-      });
+      },
+      GestureHandler::kOneFingerUpSwipe);
   FX_DCHECK(gesture_bind_status);
 
   // Add OneFingerDoubleTap gesture.

@@ -119,70 +119,152 @@ bool GestureHandler::BindOneFingerDragAction(OnGestureCallback on_start,
   return true;
 }
 
-bool GestureHandler::BindUpSwipeAction(OnGestureCallback callback) {
-  if (gesture_recognizers_.find(kUpSwipe) != gesture_recognizers_.end()) {
-    FX_LOGS(ERROR) << "Action already exists for Up Swipe gesture.";
+bool GestureHandler::BindSwipeAction(OnGestureCallback callback, GestureType gesture_type) {
+  switch (gesture_type) {
+    case kOneFingerUpSwipe:
+    case kThreeFingerUpSwipe:
+      return BindUpSwipeAction(std::move(callback), gesture_type);
+
+    case kOneFingerDownSwipe:
+    case kThreeFingerDownSwipe:
+      return BindDownSwipeAction(std::move(callback), gesture_type);
+
+    case kOneFingerLeftSwipe:
+    case kThreeFingerLeftSwipe:
+      return BindLeftSwipeAction(std::move(callback), gesture_type);
+      break;
+
+    case kOneFingerRightSwipe:
+    case kThreeFingerRightSwipe:
+      return BindRightSwipeAction(std::move(callback), gesture_type);
+      break;
+
+    default:
+      break;
+  }
+
+  return false;
+}
+
+bool GestureHandler::BindUpSwipeAction(OnGestureCallback callback, GestureType gesture_type) {
+  uint32_t number_of_fingers;
+  switch (gesture_type) {
+    case kOneFingerUpSwipe:
+      number_of_fingers = 1;
+      break;
+    case kThreeFingerUpSwipe:
+      number_of_fingers = 3;
+      break;
+    default:
+      return false;
+  }
+
+  if (gesture_recognizers_.find(gesture_type) != gesture_recognizers_.end()) {
+    FX_LOGS(ERROR) << "Action already exists for Up Swipe gesture with " << number_of_fingers
+                   << " finger.";
     return false;
   }
 
-  gesture_handlers_[kUpSwipe].on_complete = std::move(callback);
-  gesture_recognizers_[kUpSwipe] =
-      std::make_unique<UpSwipeGestureRecognizer>([this](GestureContext context) {
-        OnGesture(kUpSwipe, GestureEvent::kComplete,
+  gesture_handlers_[gesture_type].on_complete = std::move(callback);
+  gesture_recognizers_[gesture_type] = std::make_unique<UpSwipeGestureRecognizer>(
+      [this, gesture_type](GestureContext context) {
+        OnGesture(gesture_type, GestureEvent::kComplete,
                   {.viewref_koid = context.view_ref_koid, .coordinates = context.local_point});
-      });
-  add_recognizer_callback_(gesture_recognizers_[kUpSwipe].get());
+      },
+      number_of_fingers);
+  add_recognizer_callback_(gesture_recognizers_[gesture_type].get());
 
   return true;
 }
 
-bool GestureHandler::BindDownSwipeAction(OnGestureCallback callback) {
-  if (gesture_recognizers_.find(kDownSwipe) != gesture_recognizers_.end()) {
-    FX_LOGS(ERROR) << "Action already exists for Down Swipe gesture.";
+bool GestureHandler::BindDownSwipeAction(OnGestureCallback callback, GestureType gesture_type) {
+  uint32_t number_of_fingers;
+  switch (gesture_type) {
+    case kOneFingerDownSwipe:
+      number_of_fingers = 1;
+      break;
+    case kThreeFingerDownSwipe:
+      number_of_fingers = 3;
+      break;
+    default:
+      return false;
+  }
+
+  if (gesture_recognizers_.find(gesture_type) != gesture_recognizers_.end()) {
+    FX_LOGS(ERROR) << "Action already exists for Down Swipe gesture with " << number_of_fingers
+                   << " finger.";
     return false;
   }
 
-  gesture_handlers_[kDownSwipe].on_complete = std::move(callback);
-  gesture_recognizers_[kDownSwipe] =
-      std::make_unique<DownSwipeGestureRecognizer>([this](GestureContext context) {
-        OnGesture(kDownSwipe, GestureEvent::kComplete,
+  gesture_handlers_[gesture_type].on_complete = std::move(callback);
+  gesture_recognizers_[gesture_type] = std::make_unique<DownSwipeGestureRecognizer>(
+      [this, gesture_type](GestureContext context) {
+        OnGesture(gesture_type, GestureEvent::kComplete,
                   {.viewref_koid = context.view_ref_koid, .coordinates = context.local_point});
-      });
-  add_recognizer_callback_(gesture_recognizers_[kDownSwipe].get());
+      },
+      number_of_fingers);
+  add_recognizer_callback_(gesture_recognizers_[gesture_type].get());
 
   return true;
 }
 
-bool GestureHandler::BindLeftSwipeAction(OnGestureCallback callback) {
-  if (gesture_recognizers_.find(kLeftSwipe) != gesture_recognizers_.end()) {
-    FX_LOGS(ERROR) << "Action already exists for Left Swipe gesture.";
+bool GestureHandler::BindLeftSwipeAction(OnGestureCallback callback, GestureType gesture_type) {
+  uint32_t number_of_fingers;
+  switch (gesture_type) {
+    case kOneFingerLeftSwipe:
+      number_of_fingers = 1;
+      break;
+    case kThreeFingerLeftSwipe:
+      number_of_fingers = 3;
+      break;
+    default:
+      return false;
+  }
+  if (gesture_recognizers_.find(gesture_type) != gesture_recognizers_.end()) {
+    FX_LOGS(ERROR) << "Action already exists for Left Swipe gesture with " << number_of_fingers
+                   << " finger.";
     return false;
   }
 
-  gesture_handlers_[kLeftSwipe].on_complete = std::move(callback);
-  gesture_recognizers_[kLeftSwipe] =
-      std::make_unique<LeftSwipeGestureRecognizer>([this](GestureContext context) {
-        OnGesture(kLeftSwipe, GestureEvent::kComplete,
+  gesture_handlers_[gesture_type].on_complete = std::move(callback);
+  gesture_recognizers_[gesture_type] = std::make_unique<LeftSwipeGestureRecognizer>(
+      [this, gesture_type](GestureContext context) {
+        OnGesture(gesture_type, GestureEvent::kComplete,
                   {.viewref_koid = context.view_ref_koid, .coordinates = context.local_point});
-      });
-  add_recognizer_callback_(gesture_recognizers_[kLeftSwipe].get());
+      },
+      number_of_fingers);
+  add_recognizer_callback_(gesture_recognizers_[gesture_type].get());
 
   return true;
 }
 
-bool GestureHandler::BindRightSwipeAction(OnGestureCallback callback) {
-  if (gesture_recognizers_.find(kRightSwipe) != gesture_recognizers_.end()) {
-    FX_LOGS(ERROR) << "Action already exists for Right Swipe gesture.";
+bool GestureHandler::BindRightSwipeAction(OnGestureCallback callback, GestureType gesture_type) {
+  uint32_t number_of_fingers;
+  switch (gesture_type) {
+    case kOneFingerRightSwipe:
+      number_of_fingers = 1;
+      break;
+    case kThreeFingerRightSwipe:
+      number_of_fingers = 3;
+      break;
+    default:
+      return false;
+  }
+
+  if (gesture_recognizers_.find(gesture_type) != gesture_recognizers_.end()) {
+    FX_LOGS(ERROR) << "Action already exists for Right Swipe gesture with " << number_of_fingers
+                   << " finger.";
     return false;
   }
 
-  gesture_handlers_[kRightSwipe].on_complete = std::move(callback);
-  gesture_recognizers_[kRightSwipe] =
-      std::make_unique<RightSwipeGestureRecognizer>([this](GestureContext context) {
-        OnGesture(kRightSwipe, GestureEvent::kComplete,
+  gesture_handlers_[gesture_type].on_complete = std::move(callback);
+  gesture_recognizers_[gesture_type] = std::make_unique<RightSwipeGestureRecognizer>(
+      [this, gesture_type](GestureContext context) {
+        OnGesture(gesture_type, GestureEvent::kComplete,
                   {.viewref_koid = context.view_ref_koid, .coordinates = context.local_point});
-      });
-  add_recognizer_callback_(gesture_recognizers_[kRightSwipe].get());
+      },
+      number_of_fingers);
+  add_recognizer_callback_(gesture_recognizers_[gesture_type].get());
 
   return true;
 }
