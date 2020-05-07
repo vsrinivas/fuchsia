@@ -122,7 +122,7 @@ zx_library("ngunwind") {
   if (optimize == "none" || optimize == "debug") {
     # Force -O2 since the library doesn't build with -Og.
     configs -= [ "$zx_build/public/gn/config:default_optimize" ]
-    configs += [ "$zx_build/public/gn/config:optimize_regular" ]
+    configs += [ "$zx_build/public/gn/config:optimize_default" ]
   }
 }
 

@@ -42,4 +42,4 @@ _optimize_valid = [
 ]
 
 assert(_optimize_valid + [ optimize ] - [ optimize ] != _optimize_valid,
-       "`optimize=\"...\"` must be one of $_optimize_valid")
+       "`optimize=\"$optimize\"` must be one of $_optimize_valid")

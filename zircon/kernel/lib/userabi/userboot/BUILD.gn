@@ -36,7 +36,7 @@ if (current_toolchain == default_toolchain) {
       toolchain_args = {
         if (optimize == "none" || optimize == "debug") {
           # userboot doesn't stay sufficiently pure without optimization.
-          optimize = "regular"
+          optimize = "default"
         }
 
         # No runtime to print asserts, so can't compile them in.
