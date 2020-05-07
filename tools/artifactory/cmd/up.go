@@ -243,10 +243,10 @@ type dataSink interface {
 	// ObjectExistsAt returns whether an object of that name exists within the sink.
 	objectExistsAt(ctx context.Context, name string) (bool, error)
 
-	// Write writes the content of a file to a sink object at the given name.
+	// Write writes the content of a reader to a sink object at the given name.
 	// If an object at that name does not exists, it will be created; else it
 	// will be overwritten.
-	write(ctx context.Context, name, path string, compress bool) error
+	write(ctx context.Context, name string, reader io.Reader, compress bool) error
 }
 
 // CloudSink is a GCS-backed data sink.
@@ -290,18 +290,13 @@ func (h *hasher) Write(p []byte) (int, error) {
 	return n, err
 }
 
-func (s *cloudSink) write(ctx context.Context, name, path string, compress bool) error {
+func (s *cloudSink) write(ctx context.Context, name string, reader io.Reader, compress bool) error {
 	obj := s.bucket.Object(name)
 	sw := obj.If(storage.Conditions{DoesNotExist: true}).NewWriter(ctx)
 	sw.ChunkSize = chunkSize
 	sw.ContentType = "application/octet-stream"
 	if compress {
 		sw.ContentEncoding = "gzip"
-	}
-
-	fd, err := os.Open(path)
-	if err != nil {
-		return err
 	}
 
 	// We optionally compress on the fly, and calculate the MD5 on the
@@ -316,20 +311,17 @@ func (s *cloudSink) write(ctx context.Context, name, path string, compress bool)
 	var writeErr, zipErr error
 	if compress {
 		gzw := gzip.NewWriter(h)
-		_, writeErr = io.Copy(gzw, fd)
+		_, writeErr = io.Copy(gzw, reader)
 		zipErr = gzw.Close()
 	} else {
-		_, writeErr = io.Copy(h, fd)
+		_, writeErr = io.Copy(h, reader)
 	}
 	closeErr := sw.Close()
-
-	// Time to close the file.
-	fd.Close()
 
 	// Keep the first error we encountered - and vet it for 'permissable' GCS
 	// error states.
 	// Note: consider an errorsmisc.FirstNonNil() helper if see this logic again.
-	err = writeErr
+	err := writeErr
 	if err == nil {
 		err = zipErr
 	}
@@ -350,20 +342,20 @@ func (s *cloudSink) write(ctx context.Context, name, path string, compress bool)
 	for {
 		attrs, err := obj.Attrs(ctx)
 		if err != nil {
-			return fmt.Errorf("failed to confirm MD5 for %s due to: %w", path, err)
+			return fmt.Errorf("failed to confirm MD5 for %s due to: %w", name, err)
 		}
 		if len(attrs.MD5) == 0 {
 			time.Sleep(t)
 			if t += t / 2; t > max {
 				t = max
 			}
-			logger.Debugf(ctx, "waiting for MD5 for %s", path)
+			logger.Debugf(ctx, "waiting for MD5 for %s", name)
 			continue
 		}
 		if !bytes.Equal(attrs.MD5, d) {
-			return fmt.Errorf("MD5 mismatch for %s", path)
+			return fmt.Errorf("MD5 mismatch for %s", name)
 		}
-		logger.Infof(ctx, "Uploaded: %s", path)
+		logger.Infof(ctx, "Uploaded: %s", name)
 		break
 	}
 	return nil
@@ -483,7 +475,18 @@ func uploadFiles(ctx context.Context, files []artifactory.Upload, dest dataSink,
 
 			logger.Debugf(ctx, "object %q: attempting creation", upload.Destination)
 			if err := retry.Retry(ctx, retry.WithMaxAttempts(retry.NewConstantBackoff(uploadRetryBackoff), maxUploadAttempts), func() error {
-				if err := dest.write(ctx, upload.Destination, upload.Source, upload.Compress); err != nil {
+				var src io.Reader
+				if upload.Source != "" {
+					f, err := os.Open(upload.Source)
+					if err != nil {
+						return err
+					}
+					defer f.Close()
+					src = f
+				} else {
+					src = bytes.NewBuffer(upload.Contents)
+				}
+				if err := dest.write(ctx, upload.Destination, src, upload.Compress); err != nil {
 					return fmt.Errorf("%s: %w", upload.Destination, err)
 				}
 				return nil

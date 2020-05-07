@@ -16,6 +16,10 @@ type Upload struct {
 	// Compress is a directive to gzip the object before uploading.
 	Compress bool
 
+	// Contents contains the contents to upload to Destination. This field
+	// will only be used if Source is empty.
+	Contents []byte
+
 	// Deduplicate gives a collision strategy. If true, then an upload should
 	// not fail in the event of a collision, allowing for deduplication of, for
 	// example, content-addressed uploads.

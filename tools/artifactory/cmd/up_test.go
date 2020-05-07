@@ -6,6 +6,7 @@ package main
 
 import (
 	"context"
+	"io"
 	"io/ioutil"
 	"os"
 	"path"
@@ -43,10 +44,10 @@ func (s *memSink) objectExistsAt(ctx context.Context, name string) (bool, error)
 	return true, nil
 }
 
-func (s *memSink) write(ctx context.Context, name, path string, _ bool) error {
+func (s *memSink) write(ctx context.Context, name string, r io.Reader, _ bool) error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
-	content, err := ioutil.ReadFile(path)
+	content, err := ioutil.ReadAll(r)
 	if err != nil {
 		return err
 	}
