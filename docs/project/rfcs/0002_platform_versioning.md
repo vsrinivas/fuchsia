@@ -199,11 +199,12 @@ revision should be using `fuchsia.foo.Bar2` instead.
 At some point, the platform might wish to remove support for a given ABI
 revision. Such removals are often gated on a tail of important components that
 still rely on the old ABI revision. Rather than maintaing the full semantics
-impliked by the older ABI revisions, the platform maintains a list of *legacy
+implied by the older ABI revisions, the platform maintains a list of *legacy
 components* along with a table of *quirks* necessary to run those specific
-components. Using this mechanism, the platform can remove general support for an
-older ABI revision while still being able to run certain important components
-that target that older ABI revision.
+components. A quirk is a compatibility shim that lets a legacy component use an
+otherwise unsupported interface. Using this mechanism, the platform can remove
+general support for an older ABI revision while still being able to run certain
+important components that target that older ABI revision.
 
 > *Example.* Suppose the platform no longer supports any ABI revisions that
 include `fuchsia.foo.Bar` but that `baz.cm` is an important component that has
@@ -245,7 +246,7 @@ message) goes through the following lifecycle:
  4. The element is a *legacy* once the platform no longer supports any ABI
     revisions between the *introduction* and *deprecation* of the element. At
     this point, the platform need only support the element insofar as the
-    element is actually used by a specific legacy component.
+    element is actually used by a specific legacy component by way of a quirk.
  5. Once none of the legacy components use the element, the element can be
     *removed* from the platform entirely.
 
