@@ -69,6 +69,15 @@ void PackageLoader::LoadUrl(std::string url, LoadUrlCallback callback) {
     }
   }
 
+  // Falling back to cached (on-disk) packages for package URLs not from fuchsia.com is probably
+  // an error.
+  if (fuchsia_url.host_name() != "fuchsia.com") {
+    FX_LOGS(WARNING) << "Using /pkgfs/packages/" << fuchsia_url.package_name() << " as "
+                     << fuchsia_url.ToString()
+                     << " but since this is not a fuchsia.com URL this probably isn't what you "
+                        "wanted. Consider serving the package in your package repo. See fxb/48818.";
+  }
+
   callback(fidl::MakeOptional(std::move(package)));
 }
 
