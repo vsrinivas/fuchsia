@@ -486,7 +486,7 @@ impl AccountHandler {
                 account_arc_clone
                     .handle_requests_from_stream(&context, stream, cancel)
                     .await
-                    .unwrap_or_else(|e| error!("Error handling Account channel {:?}", e));
+                    .unwrap_or_else(|e| error!("Error handling Account channel: {:?}", e));
             })
             .await
             .map_err(|_| {

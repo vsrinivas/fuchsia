@@ -94,7 +94,7 @@ fn main() -> Result<(), Error> {
             account_handler_clone
                 .handle_requests_from_stream(stream)
                 .await
-                .unwrap_or_else(|e| error!("Error handling AccountHandlerControl channel {:?}", e))
+                .unwrap_or_else(|e| error!("Error handling AccountHandlerControl channel: {:?}", e))
         });
     });
     fs.take_and_serve_directory_handle()?;

@@ -33,10 +33,9 @@ pub fn publish_account_transfer_control(fs: &mut ServiceFs<ServiceObj<'_, ()>>) 
     fs.dir("svc").dir("debug").add_fidl_service(move |stream| {
         let transfer_control_clone = Arc::clone(&transfer_control);
         fasync::spawn(async move {
-            transfer_control_clone
-                .handle_requests_from_stream(stream)
-                .await
-                .unwrap_or_else(|e| error!("Error handling AccountTransferControl channel {:?}", e))
+            transfer_control_clone.handle_requests_from_stream(stream).await.unwrap_or_else(|e| {
+                error!("Error handling AccountTransferControl channel: {:?}", e)
+            })
         });
     });
 }

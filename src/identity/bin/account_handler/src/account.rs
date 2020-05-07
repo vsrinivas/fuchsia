@@ -364,7 +364,7 @@ impl Account {
         let persona_context =
             PersonaContext { auth_ui_context_provider: context.auth_ui_context_provider.clone() };
         let stream = persona_server_end.into_stream().map_err(|err| {
-            error!("Error opening Persona channel {:?}", err);
+            error!("Error opening Persona channel: {:?}", err);
             ApiError::Resource
         })?;
         self.default_persona
@@ -373,7 +373,7 @@ impl Account {
                 persona_clone
                     .handle_requests_from_stream(&persona_context, stream, cancel)
                     .await
-                    .unwrap_or_else(|e| error!("Error handling Persona channel {:?}", e))
+                    .unwrap_or_else(|e| error!("Error handling Persona channel: {:?}", e))
             })
             .await
             .map_err(|_| ApiError::RemovalInProgress)?;

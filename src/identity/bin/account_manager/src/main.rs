@@ -130,7 +130,7 @@ fn main() -> Result<(), Error> {
             &inspector,
         )
         .map_err(|e| {
-            error!("Error initializing AccountManager {:?}", e);
+            error!("Error initializing AccountManager: {:?}", e);
             e
         })?,
     );
@@ -141,14 +141,14 @@ fn main() -> Result<(), Error> {
             account_manager_clone
                 .handle_requests_from_stream(stream)
                 .await
-                .unwrap_or_else(|e| error!("Error handling AccountManager channel {:?}", e))
+                .unwrap_or_else(|e| error!("Error handling AccountManager channel: {:?}", e))
         });
     });
 
     if options.opt_present(PROTOTYPE_TRANSFER_FLAG) {
         prototype::publish_account_transfer_control(&mut fs);
         prototype::publish_account_manager_peer_to_overnet()
-            .unwrap_or_else(|e| error!("Error publishing AccountManagerPeer {:?}", e));
+            .unwrap_or_else(|e| error!("Error publishing AccountManagerPeer: {:?}", e));
     }
 
     fs.take_and_serve_directory_handle()?;

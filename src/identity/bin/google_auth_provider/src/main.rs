@@ -57,7 +57,7 @@ fn main() -> Result<(), Error> {
             oauth_open_id_connect_clone
                 .handle_requests_from_stream(stream)
                 .await
-                .unwrap_or_else(|e| error!("Error handling OauthOpenIdConnect channel {:?}", e));
+                .unwrap_or_else(|e| error!("Error handling OauthOpenIdConnect channel: {:?}", e));
         });
     });
 
@@ -68,7 +68,7 @@ fn main() -> Result<(), Error> {
             oauth_clone
                 .handle_requests_from_stream(stream)
                 .await
-                .unwrap_or_else(|e| error!("Error handling Oauth channel {:?}", e));
+                .unwrap_or_else(|e| error!("Error handling Oauth channel: {:?}", e));
         });
     });
 
@@ -79,7 +79,7 @@ fn main() -> Result<(), Error> {
             open_id_connect_clone
                 .handle_requests_from_stream(stream)
                 .await
-                .unwrap_or_else(|e| error!("Error handling OpenIdConnect channel {:?}", e));
+                .unwrap_or_else(|e| error!("Error handling OpenIdConnect channel: {:?}", e));
         });
     });
 

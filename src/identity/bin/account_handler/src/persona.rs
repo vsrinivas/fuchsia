@@ -174,7 +174,7 @@ impl Persona {
             auth_ui_context_provider: context.auth_ui_context_provider.clone(),
         };
         let stream = token_manager_server_end.into_stream().map_err(|err| {
-            error!("Error opening TokenManager channel {:?}", err);
+            error!("Error opening TokenManager channel: {:?}", err);
             ApiError::Resource
         })?;
         self.token_manager
@@ -183,7 +183,7 @@ impl Persona {
                 token_manager_clone
                     .handle_requests_from_stream(&token_manager_context, stream, cancel)
                     .await
-                    .unwrap_or_else(|e| error!("Error handling TokenManager channel {:?}", e))
+                    .unwrap_or_else(|e| error!("Error handling TokenManager channel: {:?}", e))
             })
             .await
             .map_err(|_| ApiError::RemovalInProgress)?;
@@ -198,7 +198,7 @@ impl Persona {
         let key_manager_clone = Arc::clone(&self.key_manager);
         let key_manager_context = KeyManagerContext::new(application_url);
         let stream = key_manager_server_end.into_stream().map_err(|err| {
-            error!("Error opening KeyManager channel {:?}", err);
+            error!("Error opening KeyManager channel: {:?}", err);
             ApiError::Resource
         })?;
         self.key_manager
@@ -207,7 +207,7 @@ impl Persona {
                 key_manager_clone
                     .handle_requests_from_stream(&key_manager_context, stream, cancel)
                     .await
-                    .unwrap_or_else(|e| error!("Error handling KeyManager channel {:?}", e))
+                    .unwrap_or_else(|e| error!("Error handling KeyManager channel: {:?}", e))
             })
             .await
             .map_err(|_| ApiError::RemovalInProgress)?;
