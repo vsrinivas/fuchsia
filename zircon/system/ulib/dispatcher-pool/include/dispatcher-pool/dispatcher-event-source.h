@@ -2,28 +2,35 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef DISPATCHER_POOL_DISPATCHER_EVENT_SOURCE_H_
+#define DISPATCHER_POOL_DISPATCHER_EVENT_SOURCE_H_
 
+#include <lib/zx/event.h>
+#include <lib/zx/handle.h>
+#include <lib/zx/port.h>
+#include <unistd.h>
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
 #include <zircon/syscalls/port.h>
 #include <zircon/types.h>
-#include <lib/zx/event.h>
-#include <lib/zx/handle.h>
-#include <lib/zx/port.h>
+
+#include <fbl/auto_lock.h>
 #include <fbl/function.h>
 #include <fbl/intrusive_double_list.h>
-#include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
-#include <unistd.h>
 
 namespace dispatcher {
 
 class Channel;
 class ExecutionDomain;
 class ThreadPool;
+
+namespace internal {
+struct EventSourceSourceListTag {};       // Tag used for our ExecutionDomain's Sources List
+struct EventSourcePendingWorkListTag {};  // Tag used for our ExecutionDomain's Pending Work List
+}  // namespace internal
 
 // class EventSource
 //
@@ -40,11 +47,19 @@ class ThreadPool;
 // needed, it may be Deactivated and finally destroyed.  An event source may not
 // be re-activated once it has been deactivated.
 //
-class EventSource : public fbl::RefCounted<EventSource> {
+class EventSource : public fbl::RefCounted<EventSource>,
+                    public fbl::ContainableBaseClasses<
+                        fbl::TaggedDoublyLinkedListable<fbl::RefPtr<EventSource>,
+                                                        internal::EventSourceSourceListTag>,
+                        fbl::TaggedDoublyLinkedListable<fbl::RefPtr<EventSource>,
+                                                        internal::EventSourcePendingWorkListTag>> {
  public:
+  using SourceListTag = internal::EventSourceSourceListTag;
+  using PendingWorkListTag = internal::EventSourcePendingWorkListTag;
+
   zx_signals_t process_signal_mask() const { return process_signal_mask_; }
-  bool InExecutionDomain() const { return sources_node_state_.InContainer(); }
-  bool InPendingList() const { return pending_work_node_state_.InContainer(); }
+  bool InExecutionDomain() const { return fbl::InContainer<SourceListTag>(*this); }
+  bool InPendingList() const { return fbl::InContainer<PendingWorkListTag>(*this); }
 
   virtual void Deactivate() __TA_EXCLUDES(obj_lock_) = 0;
 
@@ -110,28 +125,9 @@ class EventSource : public fbl::RefCounted<EventSource> {
  private:
   friend class fbl::RefPtr<EventSource>;
   friend class ExecutionDomain;
-
-  struct SourcesListTraits {
-    static fbl::DoublyLinkedListNodeState<fbl::RefPtr<EventSource>>& node_state(
-        EventSource& event_source) {
-      return event_source.sources_node_state_;
-    }
-  };
-
-  struct PendingWorkListTraits {
-    static fbl::DoublyLinkedListNodeState<fbl::RefPtr<EventSource>>& node_state(
-        EventSource& event_source) {
-      return event_source.pending_work_node_state_;
-    }
-  };
-
   const zx_signals_t process_signal_mask_;
-
-  // Node state for existing on the domain's sources_ list.
-  fbl::DoublyLinkedListNodeState<fbl::RefPtr<EventSource>> sources_node_state_;
-
-  // Node state for existing on the domain's pending_work_ list.
-  fbl::DoublyLinkedListNodeState<fbl::RefPtr<EventSource>> pending_work_node_state_;
 };
 
 }  // namespace dispatcher
+
+#endif  // DISPATCHER_POOL_DISPATCHER_EVENT_SOURCE_H_

@@ -90,9 +90,7 @@ class ThreadPool : public fbl::RefCounted<ThreadPool>,
   uint32_t active_thread_count_ __TA_GUARDED(pool_lock_) = 0;
   bool pool_shutting_down_ __TA_GUARDED(pool_lock_) = false;
 
-  fbl::DoublyLinkedList<fbl::RefPtr<ExecutionDomain>, ExecutionDomain::ThreadPoolListTraits>
-      active_domains_ __TA_GUARDED(pool_lock_);
-
+  fbl::DoublyLinkedList<fbl::RefPtr<ExecutionDomain>> active_domains_ __TA_GUARDED(pool_lock_);
   fbl::DoublyLinkedList<std::unique_ptr<Thread>> active_threads_ __TA_GUARDED(pool_lock_);
 };
 

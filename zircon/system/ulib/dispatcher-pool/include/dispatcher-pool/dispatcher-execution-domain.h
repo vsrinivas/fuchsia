@@ -2,21 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef DISPATCHER_POOL_DISPATCHER_EXECUTION_DOMAIN_H_
+#define DISPATCHER_POOL_DISPATCHER_EXECUTION_DOMAIN_H_
 
+#include <lib/zx/event.h>
+#include <lib/zx/profile.h>
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
-#include <lib/zx/event.h>
-#include <lib/zx/profile.h>
+
+#include <atomic>
+
+#include <dispatcher-pool/dispatcher-event-source.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
-
-#include <dispatcher-pool/dispatcher-event-source.h>
-
-#include <atomic>
 
 namespace dispatcher {
 
@@ -47,7 +48,8 @@ class ThreadPool;
 // dispatch operations will be started, and the system will be completely
 // deactivated when the current in-flight dispatch operation unwinds.
 //
-class ExecutionDomain : public fbl::RefCounted<ExecutionDomain> {
+class ExecutionDomain : public fbl::RefCounted<ExecutionDomain>,
+                        public fbl::DoublyLinkedListable<fbl::RefPtr<ExecutionDomain>> {
  public:
   // Token and ScopedToken are small (empty) objects which are intended to be
   // used with the clang static thread analysis framework in order to express
@@ -117,13 +119,6 @@ class ExecutionDomain : public fbl::RefCounted<ExecutionDomain> {
   friend class WakeupEvent;
   using DispatchState = EventSource::DispatchState;
 
-  struct ThreadPoolListTraits {
-    static fbl::DoublyLinkedListNodeState<fbl::RefPtr<ExecutionDomain>>& node_state(
-        ExecutionDomain& domain) {
-      return domain.thread_pool_node_state_;
-    }
-  };
-
   ExecutionDomain(fbl::RefPtr<ThreadPool> thread_pool, zx::event dispatch_idle_evt);
   virtual ~ExecutionDomain();
 
@@ -159,13 +154,12 @@ class ExecutionDomain : public fbl::RefCounted<ExecutionDomain> {
 
   // The list of all sources bound to us, as well as the sources which are
   // currently waiting to be dispatched.
-  fbl::DoublyLinkedList<fbl::RefPtr<EventSource>, EventSource::SourcesListTraits> sources_
-      __TA_GUARDED(sources_lock_);
-  fbl::DoublyLinkedList<fbl::RefPtr<EventSource>, EventSource::PendingWorkListTraits> pending_work_
-      __TA_GUARDED(sources_lock_);
-
-  // Node state for existing in our thread pool's execution domain list.
-  fbl::DoublyLinkedListNodeState<fbl::RefPtr<ExecutionDomain>> thread_pool_node_state_;
+  using SourceList =
+      fbl::TaggedDoublyLinkedList<fbl::RefPtr<EventSource>, EventSource::SourceListTag>;
+  using PendingWorkList =
+      fbl::TaggedDoublyLinkedList<fbl::RefPtr<EventSource>, EventSource::PendingWorkListTag>;
+  SourceList sources_ __TA_GUARDED(sources_lock_);
+  PendingWorkList pending_work_ __TA_GUARDED(sources_lock_);
 };
 
 // A helper macro which can ease some of the namespace pain of establishing the
@@ -182,3 +176,5 @@ class ExecutionDomain : public fbl::RefCounted<ExecutionDomain> {
   ::dispatcher::ExecutionDomain::ScopedToken _sym_name((_exe_domain)->token())
 
 }  // namespace dispatcher
+
+#endif  // DISPATCHER_POOL_DISPATCHER_EXECUTION_DOMAIN_H_

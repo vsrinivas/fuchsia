@@ -4,10 +4,10 @@
 
 #include <lib/zx/event.h>
 
+#include <utility>
+
 #include <dispatcher-pool/dispatcher-execution-domain.h>
 #include <dispatcher-pool/dispatcher-thread-pool.h>
-
-#include <utility>
 
 namespace dispatcher {
 
@@ -51,7 +51,7 @@ ExecutionDomain::~ExecutionDomain() {
   // before destructing.
   ZX_DEBUG_ASSERT(deactivated());
   ZX_DEBUG_ASSERT(sources_.is_empty());
-  ZX_DEBUG_ASSERT(!thread_pool_node_state_.InContainer());
+  ZX_DEBUG_ASSERT(InContainer());
 }
 
 void ExecutionDomain::Deactivate(bool sync_dispatch) {
@@ -59,7 +59,7 @@ void ExecutionDomain::Deactivate(bool sync_dispatch) {
   // from being added to the sources_ list.  We can then swap the contents of
   // the sources_ list with a temp list, leave the lock and deactivate all of
   // the sources at our leisure.
-  fbl::DoublyLinkedList<fbl::RefPtr<EventSource>, EventSource::SourcesListTraits> to_deactivate;
+  SourceList to_deactivate;
   bool sync_needed = false;
 
   {
