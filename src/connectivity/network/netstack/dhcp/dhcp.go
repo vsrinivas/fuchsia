@@ -118,6 +118,8 @@ const (
 	ServerPort = 67
 	// ClientPort is the well-known UDP port number for a DHCP client.
 	ClientPort = 68
+
+	dhcpMinimumSize = 241
 )
 
 var magicCookie = []byte{99, 130, 83, 99} // RFC 1497
@@ -135,7 +137,7 @@ func (h hdr) init() {
 }
 
 func (h hdr) isValid() bool {
-	if len(h) < 241 {
+	if len(h) < dhcpMinimumSize {
 		return false
 	}
 	if o := h.op(); o != opRequest && o != opReply {

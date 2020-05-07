@@ -60,12 +60,14 @@ func (e *endpoint) Attach(dispatcher stack.NetworkDispatcher) {
 }
 
 func (e *endpoint) DeliverNetworkPacket(linkEP stack.LinkEndpoint, dstLinkAddr, srcLinkAddr tcpip.LinkAddress, protocol tcpip.NetworkProtocolNumber, pkt stack.PacketBuffer) {
-	eth := header.Ethernet(pkt.Data.First())
-	if len(eth) < header.EthernetMinimumSize {
+	ethBytes, ok := pkt.Data.PullUp(header.EthernetMinimumSize)
+	if !ok {
 		// TODO(42949): record this in statistics.
 		return
 	}
 	pkt.Data.TrimFront(header.EthernetMinimumSize)
+	eth := header.Ethernet(ethBytes)
+
 	if len(dstLinkAddr) == 0 {
 		dstLinkAddr = eth.SourceAddress()
 	}
