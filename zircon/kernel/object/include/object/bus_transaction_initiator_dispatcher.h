@@ -91,12 +91,11 @@ class BusTransactionInitiatorDispatcher final
   const fbl::RefPtr<Iommu> iommu_;
   const uint64_t bti_id_;
 
-  using PmoList = fbl::DoublyLinkedList<PinnedMemoryTokenDispatcher*,
-                                        PinnedMemoryTokenDispatcher::PinnedMemoryTokenListTraits>;
-  PmoList pinned_memory_ TA_GUARDED(get_lock());
+  using PmoList = fbl::TaggedDoublyLinkedList<PinnedMemoryTokenDispatcher*, PmtListTag>;
+  using QuarantineList =
+      fbl::TaggedDoublyLinkedList<fbl::RefPtr<PinnedMemoryTokenDispatcher>, PmtQuarantineListTag>;
 
-  using QuarantineList = fbl::DoublyLinkedList<fbl::RefPtr<PinnedMemoryTokenDispatcher>,
-                                               PinnedMemoryTokenDispatcher::QuarantineListTraits>;
+  PmoList pinned_memory_ TA_GUARDED(get_lock());
   QuarantineList quarantine_ TA_GUARDED(get_lock());
 
   bool zero_handles_ TA_GUARDED(get_lock());

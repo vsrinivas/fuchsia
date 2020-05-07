@@ -104,20 +104,20 @@ void BusTransactionInitiatorDispatcher::on_zero_handles() {
 }
 
 void BusTransactionInitiatorDispatcher::AddPmoLocked(PinnedMemoryTokenDispatcher* pmt) {
-  DEBUG_ASSERT(!pmt->dll_pmt_.InContainer());
+  DEBUG_ASSERT(!fbl::InContainer<PmtListTag>(*pmt));
   pinned_memory_.push_back(pmt);
 }
 
 void BusTransactionInitiatorDispatcher::RemovePmo(PinnedMemoryTokenDispatcher* pmt) {
   Guard<Mutex> guard{get_lock()};
-  DEBUG_ASSERT(pmt->dll_pmt_.InContainer());
+  DEBUG_ASSERT(fbl::InContainer<PmtListTag>(*pmt));
   pinned_memory_.erase(*pmt);
 }
 
 void BusTransactionInitiatorDispatcher::Quarantine(fbl::RefPtr<PinnedMemoryTokenDispatcher> pmt) {
   Guard<Mutex> guard{get_lock()};
 
-  DEBUG_ASSERT(pmt->dll_pmt_.InContainer());
+  DEBUG_ASSERT(fbl::InContainer<PmtListTag>(*pmt));
   quarantine_.push_back(ktl::move(pmt));
 
   if (zero_handles_) {

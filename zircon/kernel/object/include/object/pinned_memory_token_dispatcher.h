@@ -23,30 +23,25 @@
 class BusTransactionInitiatorDispatcher;
 class VmObject;
 
+// The tag for the list type used by the containing BTI to hold a list of all
+// its PMTs, including those which are quarantined.
+struct PmtListTag {};
+
+// The tag for the list type used by the containing BTI to hold a list of all
+// its quarantined PMTs.
+struct PmtQuarantineListTag {};
+
 class PinnedMemoryTokenDispatcher final
     : public SoloDispatcher<PinnedMemoryTokenDispatcher, ZX_DEFAULT_PMT_RIGHTS>,
-      public fbl::DoublyLinkedListable<PinnedMemoryTokenDispatcher*> {
+      public fbl::ContainableBaseClasses<
+          fbl::TaggedDoublyLinkedListable<PinnedMemoryTokenDispatcher*, PmtListTag>,
+          fbl::TaggedDoublyLinkedListable<fbl::RefPtr<PinnedMemoryTokenDispatcher>, PmtQuarantineListTag>
+      > {
  public:
   ~PinnedMemoryTokenDispatcher();
 
   zx_obj_type_t get_type() const final { return ZX_OBJ_TYPE_PMT; }
   void on_zero_handles() final;
-
-  // Traits to belong in the BTI's list.
-  struct PinnedMemoryTokenListTraits {
-    static fbl::DoublyLinkedListNodeState<PinnedMemoryTokenDispatcher*>& node_state(
-        PinnedMemoryTokenDispatcher& obj) {
-      return obj.dll_pmt_;
-    }
-  };
-
-  using QuarantineListNodeState =
-      fbl::DoublyLinkedListNodeState<fbl::RefPtr<PinnedMemoryTokenDispatcher>>;
-  struct QuarantineListTraits {
-    static QuarantineListNodeState& node_state(PinnedMemoryTokenDispatcher& obj) {
-      return obj.dll_quarantine_;
-    }
-  };
 
   // Unpin this PMT. If this is not done before on_zero_handles() runs, then it will get moved to
   // the quarantine.
@@ -86,11 +81,6 @@ class PinnedMemoryTokenDispatcher final
   zx_status_t UnmapFromIommuLocked() TA_REQ(get_lock());
 
   void InvalidateMappedAddrsLocked() TA_REQ(get_lock());
-
-  // The containing BTI holds a list of all its PMTs, including those which are quarantined.
-  fbl::DoublyLinkedListNodeState<PinnedMemoryTokenDispatcher*> dll_pmt_;
-  // The containing BTI holds a list of all its quarantined PMTs.
-  QuarantineListNodeState dll_quarantine_;
 
   PinnedVmObject pinned_vmo_;
 
