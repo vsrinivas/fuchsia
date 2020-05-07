@@ -8,6 +8,7 @@
 #include <errno.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
+#include <lib/syslog/cpp/macros.h>
 #include <net/if.h>
 #include <poll.h>
 #include <sys/socket.h>
@@ -23,7 +24,6 @@
 #include "src/connectivity/network/mdns/service/mdns_interface_transceiver_v4.h"
 #include "src/connectivity/network/mdns/service/mdns_interface_transceiver_v6.h"
 #include "src/lib/files/unique_fd.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace mdns {
 

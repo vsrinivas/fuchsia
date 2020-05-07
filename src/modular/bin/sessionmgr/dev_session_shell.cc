@@ -16,13 +16,13 @@
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/syslog/cpp/log_settings.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <memory>
 #include <utility>
 
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/macros.h"
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/modular/lib/app_driver/cpp/app_driver.h"
 #include "src/modular/lib/fidl/single_service_app.h"
 #include "src/modular/lib/fidl/view_host.h"

@@ -8,12 +8,11 @@
 #include <fuchsia/cobalt/cpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fdio.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/resource.h>
 #include <zircon/status.h>
 
 #include <trace/event.h>
-
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace cobalt {
 

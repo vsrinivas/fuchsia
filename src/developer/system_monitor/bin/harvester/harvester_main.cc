@@ -5,6 +5,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fdio/fdio.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/syslog/global.h>
 #include <zircon/status.h>
 
@@ -19,7 +20,6 @@
 #include "src/lib/fxl/log_settings_command_line.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_number_conversions.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 int main(int argc, char** argv) {
   constexpr int EXIT_CODE_OK = 0;

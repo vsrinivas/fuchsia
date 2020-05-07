@@ -4,9 +4,10 @@
 
 #include "src/modular/bin/sessionmgr/component_context_impl.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <utility>
 
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/modular/bin/sessionmgr/agent_runner/agent_runner.h"
 #include "src/modular/lib/fidl/array_to_string.h"
 

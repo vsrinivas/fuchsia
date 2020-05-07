@@ -4,6 +4,8 @@
 
 #include "src/developer/feedback/crash_reports/database.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <cstdint>
 #include <memory>
 
@@ -11,7 +13,6 @@
 #include "src/developer/feedback/crash_reports/report_util.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/fxl/strings/string_printf.h"
-#include "src/lib/syslog/cpp/logger.h"
 #include "third_party/crashpad/client/prune_crash_reports.h"
 #include "third_party/crashpad/util/misc/metrics.h"
 

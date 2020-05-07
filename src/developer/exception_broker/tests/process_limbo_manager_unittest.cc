@@ -6,6 +6,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/sys/cpp/testing/service_directory_provider.h>
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 
 #include <gtest/gtest.h>
@@ -13,7 +14,6 @@
 #include "src/developer/exception_broker/exception_broker.h"
 #include "src/developer/exception_broker/tests/crasher_wrapper.h"
 #include "src/lib/fsl/handles/object_info.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace fuchsia {
 namespace exception {

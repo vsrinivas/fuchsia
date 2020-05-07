@@ -4,7 +4,7 @@
 
 #include "src/media/audio/lib/clock/pid_control.h"
 
-#include "src/lib/syslog/cpp/logger.h"
+#include <lib/syslog/cpp/macros.h>
 
 namespace media::audio::clock {
 

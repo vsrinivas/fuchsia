@@ -6,10 +6,10 @@
 
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/async/default.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <optional>
 
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/ui/a11y/lib/util/util.h"
 
 namespace a11y {

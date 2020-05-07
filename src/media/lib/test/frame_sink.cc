@@ -12,11 +12,10 @@
 #include <lib/media/codec_impl/fourcc.h>
 #include <lib/media/test/frame_sink_view.h>
 #include <lib/sys/cpp/component_context.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/vmo.h>
 
 #include <memory>
-
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace {
 

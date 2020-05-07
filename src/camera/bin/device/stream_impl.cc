@@ -7,7 +7,7 @@
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fit/function.h>
-#include <lib/syslog/cpp/logger.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
 #include <zircon/assert.h>
 #include <zircon/errors.h>
@@ -15,7 +15,6 @@
 
 #include "src/camera/bin/device/messages.h"
 #include "src/camera/bin/device/util.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 static fuchsia::math::Size ConvertToSize(fuchsia::sysmem::ImageFormat_2 format) {
   ZX_DEBUG_ASSERT(format.coded_width < std::numeric_limits<int32_t>::max());

@@ -7,13 +7,13 @@
 
 #include <lib/fit/defer.h>
 #include <lib/fit/function.h>
+#include <lib/syslog/cpp/macros.h>
 #include <oi_codec_sbc.h>
 #include <oi_status.h>
 
 #include "chunk_input_stream.h"
 #include "codec_adapter_sw.h"
 #include "fuchsia/media/cpp/fidl.h"
-#include "src/lib/syslog/cpp/logger.h"
 #include "timestamp_extrapolator.h"
 
 constexpr uint8_t kSbcSamplingFrequency16000Hz = 0b1000;

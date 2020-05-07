@@ -9,6 +9,7 @@
 #include <lib/fdio/fd.h>
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/vfs/cpp/pseudo_dir.h>
 #include <lib/zx/event.h>
 
@@ -17,7 +18,6 @@
 
 #include <gtest/gtest.h>
 
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/ui/a11y/lib/annotation/annotation_view.h"
 #include "src/ui/a11y/lib/annotation/tests/mocks/mock_annotation_view.h"
 #include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantic_listener.h"

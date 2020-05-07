@@ -34,7 +34,7 @@ source_set("ffmpeg") {
   ]
 
   public_deps = [
-    "//src/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp",
     "//src/media/lib/ffmpeg",
   ]
 
@@ -72,8 +72,8 @@ test("tests") {
   deps = [
     ":ffmpeg",
     "//garnet/public/lib/gtest",
+    "//sdk/lib/syslog/cpp",
     "//src/lib/fxl/test:gtest_main",
-    "//src/lib/syslog/cpp",
     "//src/media/playback/mediaplayer/graph",
   ]
 

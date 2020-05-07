@@ -5,8 +5,7 @@
 #include "src/virtualization/bin/vmm/device/guest_view.h"
 
 #include <lib/images/cpp/images.h>
-
-#include "src/lib/syslog/cpp/logger.h"
+#include <lib/syslog/cpp/macros.h>
 
 GuestView::GuestView(
     scenic::ViewContext view_context,

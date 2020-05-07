@@ -9,6 +9,7 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
+#include <lib/syslog/cpp/macros.h>
 #include <sys/time.h>
 #include <unistd.h>
 #include <zircon/syscalls.h>
@@ -20,7 +21,6 @@
 #include "garnet/bin/network_time/roughtime_server.h"
 #include "garnet/bin/network_time/time_server_config.h"
 #include "garnet/bin/network_time/time_util.h"
-#include "src/lib/syslog/cpp/logger.h"
 #include "zircon/system/ulib/zx/include/lib/zx/channel.h"
 
 namespace time_server {

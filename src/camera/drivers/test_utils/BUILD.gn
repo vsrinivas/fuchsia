@@ -33,7 +33,7 @@ source_set("button_checker") {
   visibility = [ ":*" ]
   sources = [ "button_checker.cc" ]
   deps = [
-    "//src/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
   ]

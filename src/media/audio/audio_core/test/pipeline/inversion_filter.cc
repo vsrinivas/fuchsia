@@ -5,13 +5,12 @@
 // Every sample value larger than the max is clipped to the max.
 
 #include <lib/media/audio/effects/audio_effects.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <cstring>
 #include <string>
 
 #include <rapidjson/document.h>
-
-#include "src/lib/syslog/cpp/logger.h"
 
 // A simple implementation of <lib/media/audio/effects/audio_effects.h>.
 namespace {

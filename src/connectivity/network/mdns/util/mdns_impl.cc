@@ -8,6 +8,7 @@
 #include <lib/async-loop/default.h>
 #include <lib/async-loop/loop.h>
 #include <lib/async/default.h>
+#include <lib/syslog/cpp/macros.h>
 #include <poll.h>
 
 #include <iostream>
@@ -17,7 +18,6 @@
 #include "src/connectivity/network/mdns/util/formatting.h"
 #include "src/connectivity/network/mdns/util/mdns_params.h"
 #include "src/lib/fsl/types/type_converters.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace mdns {
 

@@ -5,12 +5,11 @@
 #include "src/media/audio/audio_core/packet_queue.h"
 
 #include <lib/gtest/test_loop_fixture.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <unordered_map>
 
 #include <fbl/ref_ptr.h>
-
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace media::audio {
 namespace {

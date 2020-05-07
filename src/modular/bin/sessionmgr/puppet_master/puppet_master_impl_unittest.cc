@@ -6,12 +6,12 @@
 
 #include <fuchsia/modular/cpp/fidl.h>
 #include <lib/fidl/cpp/optional.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 #include "src/lib/fsl/vmo/strings.h"
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/modular/bin/sessionmgr/testing/annotations_matchers.h"
 #include "src/modular/lib/testing/test_story_command_executor.h"
 #include "src/modular/lib/testing/test_with_session_storage.h"
@@ -324,8 +324,9 @@ TEST_F(PuppetMasterTest, SetStoryInfoExtraAfterDeleteStory) {
 
   // Create the story.
   bool done{};
-  session_storage_->CreateStory(story_name, /*annotations=*/{})
-      ->Then([&](fidl::StringPtr id) { done = true; });
+  session_storage_->CreateStory(story_name, /*annotations=*/{})->Then([&](fidl::StringPtr id) {
+    done = true;
+  });
   RunLoopUntil([&] { return done; });
 
   const std::vector<fuchsia::modular::StoryInfoExtraEntry> kStoryExtraInfo{
@@ -366,9 +367,9 @@ TEST_F(PuppetMasterTest, DeleteStory) {
   std::string story_id;
 
   // Create a story.
-  session_storage_->CreateStory("foo", /*annotations=*/{})
-      ->Then(
-          [&](fidl::StringPtr id) { story_id = id.value_or(""); });
+  session_storage_->CreateStory("foo", /*annotations=*/{})->Then([&](fidl::StringPtr id) {
+    story_id = id.value_or("");
+  });
 
   // Delete it
   bool done{};

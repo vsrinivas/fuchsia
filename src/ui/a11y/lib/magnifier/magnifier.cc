@@ -5,10 +5,10 @@
 #include "src/ui/a11y/lib/magnifier/magnifier.h"
 
 #include <lib/async/default.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <fbl/algorithm.h>
 
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/lib/ui/input/gesture.h"
 #include "src/ui/a11y/lib/gesture_manager/util.h"
 

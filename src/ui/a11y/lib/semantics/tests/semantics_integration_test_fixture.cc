@@ -8,14 +8,13 @@
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <lib/fdio/spawn.h>
 #include <lib/fidl/cpp/binding.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/time.h>
 #include <zircon/status.h>
 
 #include <vector>
-
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace accessibility_test {
 

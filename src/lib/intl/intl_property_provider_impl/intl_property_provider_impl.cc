@@ -7,6 +7,7 @@
 #include <fuchsia/intl/cpp/fidl.h>
 #include <fuchsia/intl/merge/cpp/fidl.h>
 #include <fuchsia/settings/cpp/fidl.h>
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 
 #include <iterator>
@@ -19,7 +20,6 @@
 #include "lib/zx/time.h"
 #include "locale_util.h"
 #include "src/lib/fxl/macros.h"
-#include "src/lib/syslog/cpp/logger.h"
 #include "third_party/icu/source/common/unicode/locid.h"
 #include "third_party/icu/source/common/unicode/unistr.h"
 #include "third_party/icu/source/i18n/unicode/calendar.h"

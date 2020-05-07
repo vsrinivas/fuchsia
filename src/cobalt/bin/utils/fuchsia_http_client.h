@@ -8,9 +8,9 @@
 #include <fuchsia/net/http/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/dispatcher.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include "src/lib/callback/scoped_task_runner.h"
-#include "src/lib/syslog/cpp/logger.h"
 #include "third_party/cobalt/src/lib/clearcut/http_client.h"
 #include "third_party/cobalt/src/lib/statusor/statusor.h"
 

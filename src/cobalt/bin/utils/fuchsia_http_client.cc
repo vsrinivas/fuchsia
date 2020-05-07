@@ -7,11 +7,11 @@
 #include <fuchsia/net/http/cpp/fidl.h>
 #include <lib/async/cpp/time.h>
 #include <lib/async/default.h>
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 
 #include "src/lib/fsl/socket/strings.h"
 #include "src/lib/fsl/vmo/strings.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace cobalt {
 namespace utils {

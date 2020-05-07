@@ -8,6 +8,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/fit/function.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <memory>
 #include <string>
@@ -20,7 +21,6 @@
 #include "src/lib/fxl/memory/ref_counted.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace modular {
 

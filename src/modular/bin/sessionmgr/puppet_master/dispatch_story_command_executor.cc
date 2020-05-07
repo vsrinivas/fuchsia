@@ -4,9 +4,10 @@
 
 #include "src/modular/bin/sessionmgr/puppet_master/dispatch_story_command_executor.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <map>
 
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/modular/lib/async/cpp/future.h"
 #include "src/modular/lib/async/cpp/operation.h"
 

@@ -8,12 +8,11 @@
 #include <lib/async/default.h>
 #include <lib/fit/bridge.h>
 #include <lib/fit/defer.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <utility>
 
 #include <trace/event.h>
-
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace modular {
 

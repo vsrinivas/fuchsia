@@ -5,6 +5,7 @@
 #include "src/developer/feedback/feedback_data/data_register.h"
 
 #include <fuchsia/feedback/cpp/fidl.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -12,7 +13,6 @@
 #include "src/developer/feedback/feedback_data/constants.h"
 #include "src/developer/feedback/feedback_data/datastore.h"
 #include "src/developer/feedback/testing/unit_test_fixture.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
 namespace {

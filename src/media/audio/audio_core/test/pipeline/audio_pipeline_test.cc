@@ -1,6 +1,7 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
 
@@ -10,7 +11,6 @@
 #include <set>
 #include <vector>
 
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/audio/audio_core/test/pipeline/hermetic_audio_pipeline_test.h"
 #include "src/media/audio/lib/logging/logging.h"
 #include "src/media/audio/lib/test/hermetic_audio_environment.h"

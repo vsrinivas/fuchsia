@@ -1,5 +1,6 @@
 #include "src/developer/memory/monitor/metrics.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/time.h>
 
 #include <algorithm>
@@ -11,7 +12,6 @@
 
 #include "src/developer/memory/metrics/digest.h"
 #include "src/developer/memory/metrics/printer.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace monitor {
 
@@ -35,8 +35,9 @@ static const std::map<zx_duration_t, TimeSinceBoot> UptimeLevelMap = {
 
 // Metrics polls the memory state periodically asynchroniously using the passed dispatcher and sends
 // information about the memory Digests to Cobalt, in the form of several Events.
-Metrics::Metrics(zx::duration poll_frequency, async_dispatcher_t* dispatcher, sys::ComponentContext* context,
-                 fuchsia::cobalt::Logger_Sync* logger, CaptureFn capture_cb)
+Metrics::Metrics(zx::duration poll_frequency, async_dispatcher_t* dispatcher,
+                 sys::ComponentContext* context, fuchsia::cobalt::Logger_Sync* logger,
+                 CaptureFn capture_cb)
     : poll_frequency_(poll_frequency),
       dispatcher_(dispatcher),
       logger_(logger),
@@ -82,7 +83,8 @@ Metrics::Metrics(zx::duration poll_frequency, async_dispatcher_t* dispatcher, sy
       metric_memory_node_(platform_metric_node_.CreateChild(kMemoryNodeName)),
       inspect_memory_timestamp_(metric_memory_node_.CreateInt(kReadingMemoryTimestamp, 0)) {
   for (auto& element : bucket_name_to_code_) {
-    inspect_memory_usages_.insert(std::pair<std::string, inspect::UintProperty>(element.first, metric_memory_node_.CreateUint(element.first, 0)));
+    inspect_memory_usages_.insert(std::pair<std::string, inspect::UintProperty>(
+        element.first, metric_memory_node_.CreateUint(element.first, 0)));
   }
 
   task_.PostDelayed(dispatcher_, zx::usec(1));
@@ -134,7 +136,7 @@ void Metrics::WriteDigestToInspect(const memory::Digest& digest) {
 
   inspect_memory_timestamp_.Set(digest.time());
   for (auto const& bucket : digest.buckets()) {
-    if (inspect_memory_usages_.find(bucket.name())!=inspect_memory_usages_.end()){
+    if (inspect_memory_usages_.find(bucket.name()) != inspect_memory_usages_.end()) {
       inspect_memory_usages_[bucket.name()].Set(bucket.size());
     } else {
       FX_LOGS(INFO) << "Not_in_map: " << bucket.name() << ": " << bucket.size() << "\n";

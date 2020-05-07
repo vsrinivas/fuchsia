@@ -10,12 +10,12 @@
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fit/function.h>
 #include <lib/sys/cpp/component_context.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <unordered_map>
 
 #include "src/connectivity/network/mdns/service/config.h"
 #include "src/connectivity/network/mdns/service/mdns.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace mdns {
 

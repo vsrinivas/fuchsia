@@ -4,10 +4,10 @@
 
 #include "src/cobalt/bin/app/system_data_updater_impl.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <cstdio>
 #include <fstream>
-
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace cobalt {
 
@@ -80,12 +80,13 @@ void SystemDataUpdaterImpl::SetChannel(std::string current_channel, SetChannelCa
   if (current_channel != "") {
     current_info.set_current_channel(std::move(current_channel));
   }
-  SetSoftwareDistributionInfo(std::move(current_info), [&callback](Status status) { callback(status); });
+  SetSoftwareDistributionInfo(std::move(current_info),
+                              [&callback](Status status) { callback(status); });
 }
 
-void SystemDataUpdaterImpl::SetSoftwareDistributionInfo(fuchsia::cobalt::SoftwareDistributionInfo current_info,
-                                                        SetSoftwareDistributionInfoCallback callback) {
-
+void SystemDataUpdaterImpl::SetSoftwareDistributionInfo(
+    fuchsia::cobalt::SoftwareDistributionInfo current_info,
+    SetSoftwareDistributionInfoCallback callback) {
   std::string realm = "<unknown>";
   std::string channel = "<unknown>";
   if (current_info.has_current_realm()) {

@@ -4,10 +4,10 @@
 
 #include "src/cobalt/bin/testapp/cobalt_testapp_logger.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <map>
 #include <string>
-
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace cobalt {
 namespace testapp {

@@ -40,9 +40,9 @@ executable("virtual_audio_bin") {
   deps = [
     "//sdk/fidl/fuchsia.virtualaudio",
     "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp",
     "//src/lib/fsl",
     "//src/lib/fxl",
-    "//src/lib/syslog/cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
   ]

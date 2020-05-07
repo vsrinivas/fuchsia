@@ -4,7 +4,7 @@
 
 #include "src/modular/bin/sessionmgr/puppet_master/command_runners/set_focus_state_command_runner.h"
 
-#include "src/lib/syslog/cpp/logger.h"
+#include <lib/syslog/cpp/macros.h>
 
 namespace modular {
 

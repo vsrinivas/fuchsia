@@ -21,8 +21,8 @@ source_set("configuration") {
     "//sdk/fidl/fuchsia.ui.input",
     "//sdk/fidl/fuchsia.ui.views",
     "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp",
     "//src/lib/fxl",
-    "//src/lib/syslog/cpp",
     "//src/ui/scenic/lib/gfx",
   ]
 

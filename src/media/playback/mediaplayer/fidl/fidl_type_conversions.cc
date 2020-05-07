@@ -4,11 +4,12 @@
 
 #include "src/media/playback/mediaplayer/fidl/fidl_type_conversions.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include "src/media/playback/mediaplayer/graph/types/audio_stream_type.h"
 #include "src/media/playback/mediaplayer/graph/types/subpicture_stream_type.h"
 #include "src/media/playback/mediaplayer/graph/types/text_stream_type.h"
 #include "src/media/playback/mediaplayer/graph/types/video_stream_type.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace fidl {
 
@@ -50,8 +51,7 @@ bool KnownEncodingsMatch() {
                  fuchsia::media::AUDIO_ENCODING_PCMALAW) &&
          !strcmp(media_player::StreamType::kAudioEncodingPcmMuLaw,
                  fuchsia::media::AUDIO_ENCODING_PCMMULAW) &&
-         !strcmp(media_player::StreamType::kAudioEncodingSbc,
-                 fuchsia::media::AUDIO_ENCODING_SBC) &&
+         !strcmp(media_player::StreamType::kAudioEncodingSbc, fuchsia::media::AUDIO_ENCODING_SBC) &&
          !strcmp(media_player::StreamType::kAudioEncodingVorbis,
                  fuchsia::media::AUDIO_ENCODING_VORBIS) &&
          !strcmp(media_player::StreamType::kVideoEncodingH263,

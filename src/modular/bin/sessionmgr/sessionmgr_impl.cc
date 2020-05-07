@@ -7,6 +7,7 @@
 #include <fcntl.h>
 #include <fuchsia/ui/app/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <lib/zx/eventpair.h>
 #include <zircon/status.h>
@@ -15,7 +16,6 @@
 #include "src/lib/files/unique_fd.h"
 #include "src/lib/fsl/io/fd.h"
 #include "src/lib/fsl/types/type_converters.h"
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/modular/bin/basemgr/cobalt/cobalt.h"
 #include "src/modular/bin/sessionmgr/component_context_impl.h"
 #include "src/modular/bin/sessionmgr/focus.h"
@@ -303,12 +303,12 @@ void SessionmgrImpl::InitializeModular(const fidl::StringPtr& session_shell_url,
   session_storage_ = std::make_unique<SessionStorage>();
   OnTerminate(Reset(&session_storage_));
 
-  story_provider_impl_.reset(new StoryProviderImpl(
-      session_environment_.get(), session_storage_.get(), std::move(story_shell_config),
-      std::move(story_shell_factory_ptr), component_context_info,
-      std::move(focus_provider_story_provider), startup_agent_launcher_.get(),
-      presentation_provider_impl_.get(), (config_.enable_story_shell_preload()),
-      &inspect_root_node_));
+  story_provider_impl_.reset(
+      new StoryProviderImpl(session_environment_.get(), session_storage_.get(),
+                            std::move(story_shell_config), std::move(story_shell_factory_ptr),
+                            component_context_info, std::move(focus_provider_story_provider),
+                            startup_agent_launcher_.get(), presentation_provider_impl_.get(),
+                            (config_.enable_story_shell_preload()), &inspect_root_node_));
   OnTerminate(Teardown(kStoryProviderTimeout, "StoryProvider", &story_provider_impl_));
 
   fuchsia::modular::FocusProviderPtr focus_provider_puppet_master;

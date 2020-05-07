@@ -6,12 +6,12 @@
 #define SRC_MODULAR_BIN_SESSIONMGR_TESTING_ANNOTATIONS_MATCHERS_H_
 
 #include <fuchsia/modular/cpp/fidl.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <gmock/gmock.h>
 
 #include "lib/fostr/fidl/fuchsia/modular/formatting.h"
 #include "src/lib/fsl/vmo/strings.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace modular::annotations {
 

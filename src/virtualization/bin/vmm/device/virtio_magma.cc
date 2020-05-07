@@ -11,6 +11,7 @@
 #include <lib/fdio/directory.h>
 #include <lib/fit/defer.h>
 #include <lib/syslog/cpp/log_settings.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/trace-provider/provider.h>
 #include <lib/trace/event.h>
 #include <lib/zx/channel.h>
@@ -19,7 +20,6 @@
 #include <unistd.h>
 #include <zircon/status.h>
 
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/virtualization/bin/vmm/device/virtio_queue.h"
 
 static constexpr const char* kDeviceDir = "/dev/class/gpu";

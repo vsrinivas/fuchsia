@@ -4,7 +4,7 @@
 
 #include "src/media/audio/audio_core/profile_provider.h"
 
-#include <lib/syslog/cpp/logger.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include "src/media/audio/audio_core/utils.h"
 

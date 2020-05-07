@@ -31,9 +31,9 @@ source_set("mocks") {
     "//garnet/public/lib/gtest",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp/testing:unit",
+    "//sdk/lib/syslog/cpp",
     "//src/lib/fsl",
     "//src/lib/fxl",
-    "//src/lib/syslog/cpp",
     "//src/ui/a11y/lib/util",
     "//third_party/googletest:gtest",
   ]

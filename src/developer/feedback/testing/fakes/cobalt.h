@@ -8,11 +8,11 @@
 #include <fuchsia/cobalt/cpp/fidl.h>
 #include <fuchsia/cobalt/test/cpp/fidl.h>
 #include <lib/sys/cpp/service_directory.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <memory>
 
 #include "src/developer/feedback/utils/cobalt/metrics.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
 namespace fakes {

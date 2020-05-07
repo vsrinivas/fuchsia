@@ -11,7 +11,7 @@
 #include <lib/async/default.h>
 #include <lib/fidl/cpp/interface_ptr.h>
 #include <lib/fit/result.h>
-#include <lib/syslog/cpp/logger.h>
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 
 // Safely unbinds a client connection, doing so on the connection's thread if it differs from the

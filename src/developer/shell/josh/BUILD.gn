@@ -44,6 +44,6 @@ executable("bin") {
   # TODO(46840): Fix the leaks and remove this.
   deps += [
     "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS",
-    "//src/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp",
   ]
 }

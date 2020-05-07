@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <gtest/gtest.h>
 
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/lib/ui/base_view/embedded_view_utils.h"
 #include "src/ui/a11y/lib/semantics/tests/semantics_integration_test_fixture.h"
 #include "src/ui/testing/views/embedder_view.h"

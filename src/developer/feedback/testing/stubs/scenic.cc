@@ -5,11 +5,10 @@
 #include "src/developer/feedback/testing/stubs/scenic.h"
 
 #include <fuchsia/images/cpp/fidl.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/vmo.h>
 
 #include <cstdint>
-
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
 namespace stubs {

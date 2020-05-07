@@ -5,8 +5,7 @@
 #include "src/media/audio/lib/effects_loader/effects_module.h"
 
 #include <dlfcn.h>
-
-#include "src/lib/syslog/cpp/logger.h"
+#include <lib/syslog/cpp/macros.h>
 
 namespace media::audio::internal {
 namespace {

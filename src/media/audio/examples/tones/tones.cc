@@ -10,6 +10,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/fit/defer.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/clock.h>
 #include <poll.h>
 
@@ -17,7 +18,6 @@
 #include <iostream>
 #include <limits>
 
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/audio/examples/tones/midi_keyboard.h"
 
 namespace examples {

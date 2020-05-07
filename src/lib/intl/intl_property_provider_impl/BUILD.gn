@@ -37,9 +37,9 @@ source_set("intl_property_provider_impl") {
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/service/cpp",
+    "//sdk/lib/syslog/cpp",
     "//src/lib/fxl",
     "//src/lib/icu_data/cpp",
-    "//src/lib/syslog/cpp",
     "//third_party/icu",
   ]
 
@@ -64,9 +64,9 @@ executable("intl_property_provider_impl_test_bin") {
     "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/sys/cpp/testing:unit",
+    "//sdk/lib/syslog/cpp",
     "//src/lib/fidl_fuchsia_intl_ext/cpp",
     "//src/lib/fxl/test:test_settings",
-    "//src/lib/syslog/cpp",
     "//src/modular/lib/fidl:clone",
   ]
 }
@@ -81,8 +81,8 @@ source_set("locale_util") {
 
   deps = [
     "//garnet/public/lib/fostr/fidl/fuchsia.intl",
+    "//sdk/lib/syslog/cpp",
     "//src/lib/fxl",
-    "//src/lib/syslog/cpp",
   ]
 
   public_deps = [

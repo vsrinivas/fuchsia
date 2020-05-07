@@ -8,11 +8,10 @@
 #include <fuchsia/hardware/camera/cpp/fidl.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fzl/vmo-mapper.h>
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/errors.h>
 
 #include <fbl/unique_fd.h>
-
-#include "src/lib/syslog/cpp/logger.h"
 
 static constexpr const char* kDevicePath = "/dev/camera-controller/camera-controller-device";
 // NOTE: These indexes are coming from Sherlock controller configuration.

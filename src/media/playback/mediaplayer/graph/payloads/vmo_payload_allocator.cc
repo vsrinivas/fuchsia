@@ -4,9 +4,9 @@
 
 #include "src/media/playback/mediaplayer/graph/payloads/vmo_payload_allocator.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/vmar.h>
 
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/playback/mediaplayer/graph/formatting.h"
 
 namespace media_player {

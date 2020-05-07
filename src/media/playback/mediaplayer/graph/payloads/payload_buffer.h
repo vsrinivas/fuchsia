@@ -7,6 +7,7 @@
 
 #include <lib/fit/function.h>
 #include <lib/fzl/vmo-mapper.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/vmo.h>
 
 #include <memory>
@@ -15,7 +16,6 @@
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/playback/mediaplayer/graph/payloads/fifo_allocator.h"
 
 namespace media_player {

@@ -7,11 +7,11 @@
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <limits>
 #include <string>
 
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/playback/mediaplayer/fidl/fidl_type_conversions.h"
 
 namespace media_player {

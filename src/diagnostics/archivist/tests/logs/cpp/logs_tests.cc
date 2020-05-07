@@ -7,6 +7,7 @@
 #include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/syslog/wire_format.h>
 #include <zircon/syscalls/log.h>
 #include <zircon/types.h>
@@ -19,7 +20,6 @@
 
 #include "src/lib/fsl/handles/object_info.h"
 #include "src/lib/fxl/log_settings.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace {
 

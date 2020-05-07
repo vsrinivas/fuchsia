@@ -4,12 +4,12 @@
 
 #include "gather_memory_digest.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 
 #include "harvester.h"
 #include "src/developer/memory/metrics/capture.h"
 #include "src/developer/memory/metrics/digest.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 // What is the verbose output level for trivia in this file. For easy debugging,
 // change this value to 0 temporarily.

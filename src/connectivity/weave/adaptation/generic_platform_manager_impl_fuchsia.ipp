@@ -14,7 +14,7 @@
 #include <Weave/DeviceLayer/internal/GenericPlatformManagerImpl.ipp>
 // clang-format on
 
-#include <lib/syslog/cpp/logger.h>
+#include <lib/syslog/cpp/macros.h>
 
 namespace nl {
 namespace Weave {

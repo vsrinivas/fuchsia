@@ -17,8 +17,8 @@ source_set("focus") {
     "//sdk/fidl/fuchsia.ui.views",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp",
     "//src/lib/fsl",
-    "//src/lib/syslog/cpp",
     "//src/ui/a11y/lib/annotation",
     "//src/ui/a11y/lib/focus_chain",
   ]

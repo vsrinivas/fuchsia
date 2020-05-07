@@ -7,6 +7,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/cpp/time.h>
 #include <lib/async/dispatcher.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
 
 #include <memory>
@@ -20,7 +21,6 @@
 #include "gather_tasks.h"
 #include "gather_threads_and_cpu.h"
 #include "src/lib/inspect_deprecated/query/discover.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace harvester {
 

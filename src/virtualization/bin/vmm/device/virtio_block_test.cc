@@ -6,12 +6,12 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
+#include <lib/syslog/cpp/macros.h>
 #include <unistd.h>
 
 #include <fbl/unique_fd.h>
 #include <virtio/block.h>
 
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/virtualization/bin/vmm/device/block.h"
 #include "src/virtualization/bin/vmm/device/test_with_device.h"
 #include "src/virtualization/bin/vmm/device/virtio_queue_fake.h"

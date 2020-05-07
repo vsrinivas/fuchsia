@@ -16,8 +16,8 @@ source_set("async_holder") {
   ]
 
   deps = [
+    "//sdk/lib/syslog/cpp",
     "//src/lib/fsl",
-    "//src/lib/syslog/cpp",
   ]
 }
 

@@ -4,7 +4,7 @@
 #include "src/connectivity/weave/weavestack/app.h"
 
 #include <lib/async/cpp/time.h>
-#include <lib/syslog/cpp/logger.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <gtest/gtest.h>
 

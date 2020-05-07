@@ -6,12 +6,12 @@
 #include <lib/sys/cpp/component_context.h>
 #include <lib/sys/cpp/testing/service_directory_provider.h>
 #include <lib/syslog/cpp/log_settings.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <gtest/gtest.h>
 
 #include "src/developer/exception_broker/exception_broker.h"
 #include "src/lib/fxl/test/test_settings.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace fuchsia {
 namespace exception {

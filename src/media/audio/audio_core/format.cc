@@ -4,7 +4,8 @@
 
 #include "src/media/audio/audio_core/format.h"
 
-#include "src/lib/syslog/cpp/logger.h"
+#include <lib/syslog/cpp/macros.h>
+
 #include "src/media/audio/audio_core/mixer/frames.h"
 
 namespace media::audio {

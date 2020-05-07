@@ -8,13 +8,13 @@
 #include <lib/async-loop/default.h>
 #include <lib/fit/defer.h>
 #include <lib/syslog/cpp/log_settings.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/trace-provider/provider.h>
 #include <lib/trace/event.h>
 #include <lib/zx/socket.h>
 
 #include <vector>
 
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/virtualization/bin/vmm/bits.h"
 
 static constexpr uint32_t DRM_FORMAT_ARGB8888 = 0x34325241;

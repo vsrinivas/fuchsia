@@ -7,6 +7,7 @@
 #include <dirent.h>
 #include <fcntl.h>
 #include <lib/fdio/fdio.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/ui/scenic/cpp/commands.h>
 #include <lib/ui/scenic/cpp/resources.h>
 #include <lib/zx/time.h>
@@ -18,7 +19,6 @@
 
 #include <fbl/unique_fd.h>
 
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/ui/lib/glm_workaround/glm_workaround.h"
 
 #include <glm/gtc/type_ptr.hpp>

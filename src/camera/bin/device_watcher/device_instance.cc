@@ -6,7 +6,7 @@
 
 #include <fuchsia/camera2/hal/cpp/fidl.h>
 #include <lib/sys/service/cpp/service.h>
-#include <lib/syslog/cpp/logger.h>
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/errors.h>
 
 #include "fuchsia/io/cpp/fidl.h"

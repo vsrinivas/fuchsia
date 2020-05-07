@@ -4,7 +4,8 @@
 
 #include "src/modular/bin/sessionmgr/puppet_master/puppet_master_impl.h"
 
-#include "src/lib/syslog/cpp/logger.h"
+#include <lib/syslog/cpp/macros.h>
+
 #include "src/modular/bin/sessionmgr/puppet_master/story_puppet_master_impl.h"
 #include "src/modular/bin/sessionmgr/storage/session_storage.h"
 

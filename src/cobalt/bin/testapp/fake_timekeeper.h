@@ -8,12 +8,12 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/component_context.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <memory>
 
 #include "fuchsia/time/cpp/fidl.h"
 #include "fuchsia/time/cpp/fidl_test_base.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace cobalt::testapp {
 

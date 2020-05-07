@@ -5,11 +5,11 @@
 #include "src/modular/lib/fidl/json_xdr.h"
 
 #include <lib/fidl/cpp/string.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <string>
 
 #include "src/lib/fxl/macros.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 using JsonDoc = rapidjson::Document;
 using JsonValue = rapidjson::Value;

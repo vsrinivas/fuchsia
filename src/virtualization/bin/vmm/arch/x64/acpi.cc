@@ -5,6 +5,7 @@
 #include "src/virtualization/bin/vmm/arch/x64/acpi.h"
 
 #include <fcntl.h>
+#include <lib/syslog/cpp/macros.h>
 #include <limits.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -12,8 +13,6 @@
 #include <unistd.h>
 
 #include <fbl/unique_fd.h>
-
-#include "src/lib/syslog/cpp/logger.h"
 
 extern "C" {
 #include <acpica/acpi.h>

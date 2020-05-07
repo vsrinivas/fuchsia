@@ -4,8 +4,9 @@
 
 #include "src/modular/bin/sessionmgr/story/model/apply_mutations.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include "lib/fostr/fidl/fuchsia/modular/storymodel/formatting.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 using fuchsia::modular::StoryState;
 using fuchsia::modular::StoryVisibilityState;

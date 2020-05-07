@@ -4,11 +4,12 @@
 
 #include "src/connectivity/network/mdns/service/config.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <sstream>
 
 #include "src/connectivity/network/mdns/service/mdns_names.h"
 #include "src/lib/json_parser/rapidjson_validation.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace mdns {
 namespace {

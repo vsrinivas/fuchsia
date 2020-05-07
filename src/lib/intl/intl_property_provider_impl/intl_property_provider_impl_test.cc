@@ -12,6 +12,7 @@
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include "garnet/bin/trace/tests/component_context.h"
 #include "lib/fostr/fidl/fuchsia/intl/formatting.h"
@@ -20,7 +21,6 @@
 #include "src/lib/fxl/log_settings.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/test/test_settings.h"
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/modular/lib/fidl/clone.h"
 
 namespace intl {

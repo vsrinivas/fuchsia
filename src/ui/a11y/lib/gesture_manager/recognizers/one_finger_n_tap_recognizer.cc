@@ -6,10 +6,10 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace a11y {
 

@@ -5,10 +5,9 @@
 #include "src/developer/feedback/testing/fakes/privacy_settings.h"
 
 #include <lib/fit/result.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <memory>
-
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
 namespace fakes {

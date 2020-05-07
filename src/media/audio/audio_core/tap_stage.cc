@@ -4,9 +4,9 @@
 
 #include "src/media/audio/audio_core/tap_stage.h"
 
-#include <trace/event.h>
+#include <lib/syslog/cpp/macros.h>
 
-#include "src/lib/syslog/cpp/logger.h"
+#include <trace/event.h>
 
 namespace media::audio {
 

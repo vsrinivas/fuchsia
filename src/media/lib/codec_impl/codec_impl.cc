@@ -10,11 +10,10 @@
 #include <lib/fit/defer.h>
 #include <lib/media/codec_impl/codec_impl.h>
 #include <lib/media/codec_impl/log.h>
+#include <lib/syslog/cpp/macros.h>
 #include <threads.h>
 
 #include <fbl/macros.h>
-
-#include "src/lib/syslog/cpp/logger.h"
 
 // "is_bound_checks" - In several lambdas that just send a message, we check
 // is_bound() first, only because of ZX_POL_BAD_HANDLE ZX_POL_ACTION_EXCEPTION.

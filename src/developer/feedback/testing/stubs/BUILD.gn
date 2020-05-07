@@ -20,7 +20,7 @@ source_set("board_info_provider") {
     "//sdk/fidl/fuchsia.hwinfo",
   ]
 
-  deps = [ "//src/lib/syslog/cpp" ]
+  deps = [ "//sdk/lib/syslog/cpp" ]
 }
 
 source_set("channel_provider") {
@@ -56,8 +56,8 @@ source_set("cobalt") {
   ]
 
   deps = [
+    "//sdk/lib/syslog/cpp",
     "//src/lib/fsl",
-    "//src/lib/syslog/cpp",
     "//zircon/public/lib/zx",
   ]
 }
@@ -77,8 +77,8 @@ source_set("crash_reporter") {
   ]
 
   deps = [
+    "//sdk/lib/syslog/cpp",
     "//src/lib/fsl",
-    "//src/lib/syslog/cpp",
     "//zircon/public/lib/fit",
   ]
 }
@@ -100,8 +100,8 @@ source_set("data_provider") {
   ]
 
   deps = [
+    "//sdk/lib/syslog/cpp",
     "//src/lib/fsl",
-    "//src/lib/syslog/cpp",
     "//zircon/public/lib/fit",
   ]
 }
@@ -120,7 +120,7 @@ source_set("device_id_provider") {
   ]
 
   deps = [
-    "//src/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp",
     "//zircon/public/lib/zx",
   ]
 }
@@ -152,8 +152,8 @@ source_set("inspect") {
   ]
 
   deps = [
+    "//sdk/lib/syslog/cpp",
     "//src/lib/fsl",
-    "//src/lib/syslog/cpp",
     "//zircon/public/lib/fit",
   ]
 }
@@ -173,7 +173,7 @@ source_set("logger") {
     "//zircon/system/fidl/fuchsia-logger",
   ]
 
-  deps = [ "//src/lib/syslog/cpp" ]
+  deps = [ "//sdk/lib/syslog/cpp" ]
 }
 
 source_set("product_info_provider") {
@@ -189,7 +189,7 @@ source_set("product_info_provider") {
     "//sdk/fidl/fuchsia.hwinfo",
   ]
 
-  deps = [ "//src/lib/syslog/cpp" ]
+  deps = [ "//sdk/lib/syslog/cpp" ]
 }
 
 source_set("network_reachability_provider") {
@@ -206,7 +206,7 @@ source_set("network_reachability_provider") {
   ]
 
   deps = [
-    "//src/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp",
     "//zircon/public/lib/fit",
   ]
 }
@@ -226,7 +226,7 @@ source_set("scenic") {
 
   deps = [
     "//sdk/fidl/fuchsia.images",
-    "//src/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp",
     "//zircon/public/lib/zx",
   ]
 }
@@ -246,8 +246,8 @@ source_set("utc_provider") {
   ]
 
   deps = [
+    "//sdk/lib/syslog/cpp",
     "//src/lib/fxl",
-    "//src/lib/syslog/cpp",
     "//zircon/public/lib/async-cpp",
   ]
 }

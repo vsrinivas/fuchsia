@@ -15,10 +15,10 @@ source_set("lib") {
 
   public_deps = [
     "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp",
     "//src/connectivity/weave/adaptation",
     "//src/lib/fsl",
-    "//src/lib/syslog/cpp",
-    "//src/lib/syslog/cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/zx",

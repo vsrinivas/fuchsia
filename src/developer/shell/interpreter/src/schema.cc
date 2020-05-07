@@ -4,6 +4,7 @@
 
 #include "src/developer/shell/interpreter/src/schema.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <string.h>
 
 #include <algorithm>
@@ -12,7 +13,6 @@
 #include "src/developer/shell/interpreter/src/interpreter.h"
 #include "src/developer/shell/interpreter/src/nodes.h"
 #include "src/developer/shell/interpreter/src/types.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace shell::interpreter {
 

@@ -44,8 +44,8 @@ executable("virtual_audio_bin") {
     "//sdk/fidl/fuchsia.virtualaudio",
     "//sdk/fidl/fuchsia.virtualaudio:fuchsia.virtualaudio_c_client",
     "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp",
     "//src/lib/fxl",
-    "//src/lib/syslog/cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
   ]

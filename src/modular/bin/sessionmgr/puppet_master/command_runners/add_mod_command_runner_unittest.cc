@@ -6,12 +6,12 @@
 
 #include <lib/fidl/cpp/clone.h>
 #include <lib/gtest/test_loop_fixture.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <gtest/gtest.h>
 
 #include "src/lib/fsl/types/type_converters.h"
 #include "src/lib/fsl/vmo/strings.h"
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/modular/lib/testing/test_with_session_storage.h"
 
 namespace modular {

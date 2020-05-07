@@ -5,12 +5,12 @@
 #include "src/virtualization/bin/vmm/arch/arm64/pl011.h"
 
 #include <endian.h>
+#include <lib/syslog/cpp/macros.h>
 #include <stdio.h>
 #include <zircon/boot/driver-config.h>
 
 #include <libzbi/zbi.h>
 
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/virtualization/bin/vmm/guest.h"
 
 __BEGIN_CDECLS;

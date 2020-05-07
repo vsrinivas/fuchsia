@@ -4,10 +4,11 @@
 
 #include "src/camera/drivers/usb_video/camera_control_impl.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <ddk/debug.h>
 
 #include "src/camera/drivers/usb_video/usb-video-stream.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace camera {
 

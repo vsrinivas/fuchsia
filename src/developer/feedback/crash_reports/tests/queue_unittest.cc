@@ -5,6 +5,7 @@
 #include "src/developer/feedback/crash_reports/queue.h"
 
 #include <lib/inspect/cpp/inspect.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <memory>
 
@@ -26,7 +27,6 @@
 #include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/strings/string_printf.h"
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/lib/timekeeper/test_clock.h"
 #include "third_party/crashpad/client/crash_report_database.h"
 

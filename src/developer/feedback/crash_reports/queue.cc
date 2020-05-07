@@ -5,11 +5,11 @@
 #include "src/developer/feedback/crash_reports/queue.h"
 
 #include <lib/async/cpp/task.h>
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/errors.h>
 
 #include "src/developer/feedback/crash_reports/info/queue_info.h"
 #include "src/lib/fxl/strings/string_printf.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
 

@@ -4,7 +4,7 @@
 
 #include "src/developer/feedback/crash_reports/upload_report.h"
 
-#include "src/lib/syslog/cpp/logger.h"
+#include <lib/syslog/cpp/macros.h>
 
 namespace feedback {
 

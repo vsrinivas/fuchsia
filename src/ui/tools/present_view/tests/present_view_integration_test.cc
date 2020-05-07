@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/sys/cpp/testing/component_context_provider.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <optional>
 
@@ -12,7 +13,6 @@
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/gtest/test_loop_fixture.h"
 #include "lib/sys/cpp/testing/test_with_environment.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace present_view {
 

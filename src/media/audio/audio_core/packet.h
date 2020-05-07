@@ -6,6 +6,7 @@
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_PACKET_H_
 
 #include <fuchsia/media/cpp/fidl.h>
+#include <lib/syslog/cpp/macros.h>
 #include <stdint.h>
 
 #include <fbl/ref_counted.h>
@@ -13,7 +14,6 @@
 #include <fbl/slab_allocator.h>
 #include <trace/event.h>
 
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/audio/audio_core/mixer/frames.h"
 #include "src/media/audio/audio_core/utils.h"
 

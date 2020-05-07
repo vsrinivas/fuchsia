@@ -5,12 +5,12 @@
 
 #include <lib/media/cpp/timeline_function.h>
 #include <lib/media/cpp/timeline_rate.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <cstdint>
 #include <memory>
 #include <set>
 
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/audio/lib/logging/logging.h"
 #include "src/media/audio/lib/test/hermetic_audio_environment.h"
 

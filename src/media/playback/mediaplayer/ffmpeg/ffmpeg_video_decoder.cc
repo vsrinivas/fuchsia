@@ -5,11 +5,11 @@
 #include "src/media/playback/mediaplayer/ffmpeg/ffmpeg_video_decoder.h"
 
 #include <lib/sync/completion.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <algorithm>
 
 #include "lib/media/cpp/timeline_rate.h"
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/playback/mediaplayer/ffmpeg/ffmpeg_formatting.h"
 extern "C" {
 #include "libavutil/imgutils.h"

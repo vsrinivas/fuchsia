@@ -12,9 +12,9 @@ executable("test") {
 
   deps = [
     "..",
+    "//sdk/lib/syslog/cpp",
     "//src/camera/drivers/test_utils",
     "//src/lib/fxl/test:gtest_main",
-    "//src/lib/syslog/cpp",
     "//third_party/boringssl:crypto",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",

@@ -4,6 +4,7 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <iomanip>
 #include <iostream>
@@ -12,7 +13,6 @@
 
 #include "lib/fostr/hex_dump.h"
 #include "src/connectivity/network/mdns/service/mdns_interface_transceiver.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace mdns {
 namespace test {

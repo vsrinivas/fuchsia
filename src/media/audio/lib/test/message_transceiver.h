@@ -6,11 +6,10 @@
 #define SRC_MEDIA_AUDIO_LIB_TEST_MESSAGE_TRANSCEIVER_H_
 
 #include <lib/async/cpp/wait.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/channel.h>
 
 #include <queue>
-
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace media::audio::test {
 

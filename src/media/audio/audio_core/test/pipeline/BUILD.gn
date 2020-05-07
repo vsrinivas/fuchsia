@@ -11,7 +11,7 @@ loadable_module("inversion_filter") {
 
   deps = [
     "//sdk/lib/media/audio/effects",
-    "//src/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp",
     "//third_party/rapidjson",
     "//zircon/public/lib/fzl",
   ]
@@ -70,8 +70,8 @@ executable("audio_pipeline_tests_bin") {
     "//sdk/fidl/fuchsia.ultrasound",
     "//sdk/fidl/fuchsia.virtualaudio",
     "//sdk/lib/media/cpp:no_converters",
+    "//sdk/lib/syslog/cpp",
     "//src/lib/fxl/test:gtest_main",
-    "//src/lib/syslog/cpp",
     "//src/media/audio/lib/clock",
     "//src/media/audio/lib/clock/testing",
     "//src/media/audio/lib/logging",

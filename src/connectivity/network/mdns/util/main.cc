@@ -6,11 +6,11 @@
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
 #include <lib/syslog/cpp/log_settings.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include "src/connectivity/network/mdns/util/mdns_impl.h"
 #include "src/connectivity/network/mdns/util/mdns_params.h"
 #include "src/lib/fxl/command_line.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 int main(int argc, const char** argv) {
   syslog::SetTags({"mdns-util"});

@@ -8,7 +8,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/fit/function.h>
 #include <lib/fzl/vmo-mapper.h>
-#include <lib/syslog/cpp/logger.h>
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/errors.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>

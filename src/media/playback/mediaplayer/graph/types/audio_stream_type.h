@@ -5,11 +5,12 @@
 #ifndef SRC_MEDIA_PLAYBACK_MEDIAPLAYER_GRAPH_TYPES_AUDIO_STREAM_TYPE_H_
 #define SRC_MEDIA_PLAYBACK_MEDIAPLAYER_GRAPH_TYPES_AUDIO_STREAM_TYPE_H_
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <memory>
 #include <string>
 #include <vector>
 
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/playback/mediaplayer/graph/types/stream_type.h"
 
 namespace media_player {

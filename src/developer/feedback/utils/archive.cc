@@ -4,13 +4,14 @@
 
 #include "src/developer/feedback/utils/archive.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include "src/lib/files/file.h"
 #include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/fsl/vmo/file.h"
 #include "src/lib/fsl/vmo/sized_vmo.h"
 #include "src/lib/fsl/vmo/vector.h"
 #include "src/lib/fxl/strings/substitute.h"
-#include "src/lib/syslog/cpp/logger.h"
 #include "third_party/zlib/contrib/minizip/unzip.h"
 #include "third_party/zlib/contrib/minizip/zip.h"
 

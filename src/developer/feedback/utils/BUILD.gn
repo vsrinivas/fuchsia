@@ -19,10 +19,10 @@ source_set("archive") {
   ]
 
   deps = [
+    "//sdk/lib/syslog/cpp",
     "//src/lib/files",
     "//src/lib/fsl",
     "//src/lib/fxl",
-    "//src/lib/syslog/cpp",
     "//third_party/zlib:minizip",
   ]
 }
@@ -76,8 +76,8 @@ source_set("logs") {
   public_deps = [ "//zircon/system/fidl/fuchsia-logger" ]
 
   deps = [
+    "//sdk/lib/syslog/cpp",
     "//src/lib/fxl",
-    "//src/lib/syslog/cpp",
   ]
 }
 
@@ -109,6 +109,6 @@ source_set("utc_time_provider") {
 
   deps = [
     ":time",
-    "//src/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp",
   ]
 }

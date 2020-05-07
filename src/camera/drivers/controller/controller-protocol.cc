@@ -6,11 +6,10 @@
 
 #include <fuchsia/camera2/cpp/fidl.h>
 #include <lib/fidl/cpp/optional.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <ddk/trace/event.h>
 #include <fbl/auto_call.h>
-
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace camera {
 

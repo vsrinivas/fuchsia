@@ -5,10 +5,11 @@
 #ifndef SRC_MEDIA_AUDIO_LIB_EFFECTS_LOADER_TESTING_TEST_EFFECTS_H_
 #define SRC_MEDIA_AUDIO_LIB_EFFECTS_LOADER_TESTING_TEST_EFFECTS_H_
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <memory>
 #include <string_view>
 
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/audio/effects/test_effects/test_effects.h"
 
 namespace media::audio::testing {

@@ -5,6 +5,7 @@
 #include "src/developer/feedback/feedback_data/datastore.h"
 
 #include <lib/fit/promise.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
 
 #include <utility>
@@ -20,7 +21,6 @@
 #include "src/developer/feedback/feedback_data/constants.h"
 #include "src/developer/feedback/utils/cobalt/metrics.h"
 #include "src/lib/fxl/strings/string_printf.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
 namespace {

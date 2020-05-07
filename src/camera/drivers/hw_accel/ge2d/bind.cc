@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 
 #include <lib/driver-unit-test/utils.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <ddk/binding.h>
 
 #include "ge2d.h"
 #include "src/camera/drivers/hw_accel/ge2d/test/ge2d-on-device-test.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace ge2d {
 namespace {

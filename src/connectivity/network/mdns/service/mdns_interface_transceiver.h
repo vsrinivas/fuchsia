@@ -6,6 +6,7 @@
 #define SRC_CONNECTIVITY_NETWORK_MDNS_SERVICE_MDNS_INTERFACE_TRANSCEIVER_H_
 
 #include <lib/fit/function.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <memory>
 #include <vector>
@@ -17,7 +18,6 @@
 #include "src/lib/fsl/tasks/fd_waiter.h"
 #include "src/lib/inet/ip_address.h"
 #include "src/lib/inet/socket_address.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace mdns {
 

@@ -7,6 +7,7 @@
 #include <fcntl.h>
 #include <fuchsia/io/c/fidl.h>
 #include <lib/fdio/cpp/caller.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/time.h>
 #include <string.h>
@@ -23,7 +24,6 @@
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/fxl/strings/string_view.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace modular {
 

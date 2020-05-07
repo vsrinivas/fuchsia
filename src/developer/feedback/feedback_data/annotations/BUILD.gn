@@ -24,11 +24,11 @@ source_set("annotation_providers") {
     ":types",
     ":utils",
     "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp",
     "//src/developer/feedback/feedback_data:constants",
     "//src/developer/feedback/utils:errors",
     "//src/developer/feedback/utils:time",
     "//src/lib/fxl",
-    "//src/lib/syslog/cpp",
     "//src/lib/timekeeper",
     "//src/lib/timekeeper:system",
     "//zircon/public/lib/fit",
@@ -141,11 +141,11 @@ source_set("static_annotations") {
   deps = [
     ":utils",
     "//sdk/fidl/fuchsia.sysinfo",
+    "//sdk/lib/syslog/cpp",
     "//src/developer/feedback/feedback_data:constants",
     "//src/developer/feedback/utils:errors",
     "//src/lib/files",
     "//src/lib/fxl",
-    "//src/lib/syslog/cpp",
     "//zircon/public/lib/fdio",
   ]
 }
@@ -154,8 +154,8 @@ source_set("types") {
   sources = [ "types.h" ]
 
   public_deps = [
+    "//sdk/lib/syslog/cpp",
     "//src/developer/feedback/utils:errors",
-    "//src/lib/syslog/cpp",
   ]
 }
 

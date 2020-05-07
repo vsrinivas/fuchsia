@@ -8,6 +8,7 @@
 #include <lib/async/default.h>
 #include <lib/fidl/cpp/interface_handle.h>
 #include <lib/fidl/cpp/interface_request.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/syslog/logger.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
@@ -19,7 +20,6 @@
 #include "src/developer/feedback/utils/errors.h"
 #include "src/developer/feedback/utils/log_format.h"
 #include "src/lib/fxl/logging.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
 

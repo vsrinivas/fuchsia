@@ -16,6 +16,7 @@
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fidl/cpp/optional.h>
 #include <lib/sys/cpp/component_context.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <lib/zx/eventpair.h>
 
@@ -28,7 +29,6 @@
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/strings/join_strings.h"
 #include "src/lib/fxl/strings/split_string.h"
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/modular/bin/sessionmgr/annotations.h"
 #include "src/modular/bin/sessionmgr/puppet_master/command_runners/operation_calls/add_mod_call.h"
 #include "src/modular/bin/sessionmgr/puppet_master/command_runners/operation_calls/initialize_chain_call.h"
@@ -912,7 +912,6 @@ StoryControllerImpl::StoryControllerImpl(SessionStorage* const session_storage,
       story_observer_(std::move(story_observer)),
       story_shell_context_impl_{story_id_, story_provider_impl},
       weak_factory_(this) {
-
   story_storage_->SubscribeModuleDataUpdated([this](fuchsia::modular::ModuleData module_data) {
     auto* const running_mod_info = FindRunningModInfo(module_data.module_path());
     if (running_mod_info) {

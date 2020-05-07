@@ -7,11 +7,10 @@
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/syslog/cpp/log_settings.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/channel.h>
 
 #include <test/sysmgr/cpp/fidl.h>
-
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace sysmgr {
 namespace test {

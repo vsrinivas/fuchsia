@@ -4,7 +4,7 @@
 
 #include "src/modular/lib/fidl/proxy.h"
 
-#include "src/lib/syslog/cpp/logger.h"
+#include <lib/syslog/cpp/macros.h>
 
 namespace modular {
 

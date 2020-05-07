@@ -5,8 +5,7 @@
 #include "src/modular/lib/pseudo_dir/pseudo_dir_server.h"
 
 #include <lib/async/cpp/task.h>
-
-#include "src/lib/syslog/cpp/logger.h"
+#include <lib/syslog/cpp/macros.h>
 
 namespace modular {
 

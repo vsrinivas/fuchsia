@@ -5,13 +5,14 @@
 #ifndef SRC_DEVELOPER_FEEDBACK_FEEDBACK_DATA_ANNOTATIONS_TYPES_H_
 #define SRC_DEVELOPER_FEEDBACK_FEEDBACK_DATA_ANNOTATIONS_TYPES_H_
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <map>
 #include <set>
 #include <string>
 #include <variant>
 
 #include "src/developer/feedback/utils/errors.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
 

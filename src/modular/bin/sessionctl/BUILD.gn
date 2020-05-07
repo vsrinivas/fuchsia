@@ -49,7 +49,7 @@ source_set("lib") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.modular",
-    "//src/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp",
     "//src/modular/lib/async/cpp:future",
     "//third_party/rapidjson",
     "//zircon/public/lib/async-loop-cpp",

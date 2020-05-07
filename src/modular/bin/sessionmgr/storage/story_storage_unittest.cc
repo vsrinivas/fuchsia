@@ -4,13 +4,14 @@
 
 #include "src/modular/bin/sessionmgr/storage/story_storage.h"
 
+#include <lib/gtest/real_loop_fixture.h>
+#include <lib/syslog/cpp/macros.h>
+
 #include <memory>
 
 #include <gtest/gtest.h>
-#include <lib/gtest/real_loop_fixture.h>
 
 #include "src/lib/fsl/vmo/strings.h"
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/modular/lib/async/cpp/future.h"
 
 using fuchsia::modular::ModuleData;
@@ -21,9 +22,7 @@ namespace {
 
 class StoryStorageTest : public gtest::RealLoopFixture {
  protected:
-  std::unique_ptr<StoryStorage> CreateStorage() {
-    return std::make_unique<StoryStorage>();
-  }
+  std::unique_ptr<StoryStorage> CreateStorage() { return std::make_unique<StoryStorage>(); }
 };
 
 ModuleData Clone(const ModuleData& data) {

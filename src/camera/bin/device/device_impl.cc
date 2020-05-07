@@ -6,7 +6,7 @@
 
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
-#include <lib/syslog/cpp/logger.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>

@@ -5,10 +5,10 @@
 #ifndef SRC_DEVELOPER_SHELL_INTERPRETER_SRC_VALUE_H_
 #define SRC_DEVELOPER_SHELL_INTERPRETER_SRC_VALUE_H_
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <cstdint>
 #include <string>
-
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace shell {
 namespace interpreter {

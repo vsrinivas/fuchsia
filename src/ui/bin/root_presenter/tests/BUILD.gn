@@ -83,8 +83,8 @@ executable("root_presenter_apptests") {
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration",
+    "//sdk/lib/syslog/cpp",
     "//src/lib/fxl/test:gtest_main",
-    "//src/lib/syslog/cpp",
     "//src/ui/bin/root_presenter:lib",
     "//src/ui/bin/root_presenter/tests/fakes",
   ]

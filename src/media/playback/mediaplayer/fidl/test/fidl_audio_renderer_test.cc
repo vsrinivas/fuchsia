@@ -6,6 +6,7 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/clock.h>
 #include <math.h>
 #include <zircon/time.h>
@@ -21,7 +22,6 @@
 #include "lib/gtest/real_loop_fixture.h"
 #include "lib/gtest/test_loop_fixture.h"
 #include "lib/media/cpp/timeline_rate.h"
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/playback/mediaplayer/graph/graph.h"
 #include "src/media/playback/mediaplayer/graph/types/audio_stream_type.h"
 #include "src/media/playback/mediaplayer/process/processor.h"

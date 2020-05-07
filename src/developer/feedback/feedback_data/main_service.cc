@@ -5,13 +5,13 @@
 #include "src/developer/feedback/feedback_data/main_service.h"
 
 #include <lib/fdio/spawn.h>
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/processargs.h>
 #include <zircon/types.h>
 
 #include <cinttypes>
 
 #include "src/developer/feedback/feedback_data/constants.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
 namespace {

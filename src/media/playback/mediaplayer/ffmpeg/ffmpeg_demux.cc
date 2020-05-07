@@ -8,6 +8,7 @@
 #include <fuchsia/media/playback/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <condition_variable>
 #include <map>
@@ -16,7 +17,6 @@
 
 #include "lib/media/cpp/timeline_rate.h"
 #include "src/lib/fxl/synchronization/thread_annotations.h"
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/playback/mediaplayer/ffmpeg/av_codec_context.h"
 #include "src/media/playback/mediaplayer/ffmpeg/av_format_context.h"
 #include "src/media/playback/mediaplayer/ffmpeg/av_io_context.h"

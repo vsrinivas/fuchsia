@@ -4,10 +4,10 @@
 
 #include "src/virtualization/bin/vmm/io.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/port.h>
 #include <zircon/syscalls/hypervisor.h>
 
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/virtualization/bin/vmm/guest.h"
 
 static constexpr IoValue kBellValue = {};

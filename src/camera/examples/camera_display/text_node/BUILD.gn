@@ -16,7 +16,7 @@ source_set("text_node") {
   ]
 
   deps = [
-    "//src/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp",
     "//src/lib/ui/scenic/cpp",
     "//zircon/public/lib/fzl",
   ]

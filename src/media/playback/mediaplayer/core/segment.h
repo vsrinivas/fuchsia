@@ -9,8 +9,8 @@
 #include <fuchsia/media/playback/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fit/function.h>
+#include <lib/syslog/cpp/macros.h>
 
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/playback/mediaplayer/graph/graph.h"
 #include "src/media/playback/mediaplayer/graph/metadata.h"
 

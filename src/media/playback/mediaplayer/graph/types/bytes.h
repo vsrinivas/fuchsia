@@ -5,10 +5,10 @@
 #ifndef SRC_MEDIA_PLAYBACK_MEDIAPLAYER_GRAPH_TYPES_BYTES_H_
 #define SRC_MEDIA_PLAYBACK_MEDIAPLAYER_GRAPH_TYPES_BYTES_H_
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <memory>
 #include <vector>
-
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace media_player {
 

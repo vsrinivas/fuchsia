@@ -4,7 +4,7 @@
 
 #include "src/developer/feedback/crash_reports/info/queue_info.h"
 
-#include "src/lib/syslog/cpp/logger.h"
+#include <lib/syslog/cpp/macros.h>
 
 namespace feedback {
 

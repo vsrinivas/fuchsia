@@ -26,8 +26,8 @@ source_set("demux") {
 
   deps = [
     "//garnet/bin/http:errors",
+    "//sdk/lib/syslog/cpp",
     "//src/lib/fsl",
-    "//src/lib/syslog/cpp",
     "//src/media/playback/mediaplayer/graph",
     "//src/media/playback/mediaplayer/util",
   ]

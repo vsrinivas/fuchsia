@@ -8,7 +8,7 @@
 #include <lib/async/dispatcher.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fit/result.h>
-#include <lib/syslog/cpp/logger.h>
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/errors.h>
 
 #include <array>

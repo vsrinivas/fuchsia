@@ -10,13 +10,13 @@
 #include <lib/sys/cpp/component_context.h>
 #include <lib/sys/inspect/cpp/component.h>
 #include <lib/syslog/cpp/log_settings.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/timekeeper/system_clock.h>
 
 #include <utility>
 
 #include "src/developer/feedback/crash_reports/info/info_context.h"
 #include "src/developer/feedback/crash_reports/main_service.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 int main(int argc, const char** argv) {
   syslog::SetTags({"feedback"});

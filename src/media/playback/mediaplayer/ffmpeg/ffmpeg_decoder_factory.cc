@@ -4,7 +4,8 @@
 
 #include "src/media/playback/mediaplayer/ffmpeg/ffmpeg_decoder_factory.h"
 
-#include "src/lib/syslog/cpp/logger.h"
+#include <lib/syslog/cpp/macros.h>
+
 #include "src/media/playback/mediaplayer/ffmpeg/av_codec_context.h"
 #include "src/media/playback/mediaplayer/ffmpeg/ffmpeg_audio_decoder.h"
 #include "src/media/playback/mediaplayer/ffmpeg/ffmpeg_video_decoder.h"

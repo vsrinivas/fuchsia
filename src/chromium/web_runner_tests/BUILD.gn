@@ -15,7 +15,7 @@ source_set("web_context") {
   ]
 
   deps = [
-    "//src/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/fdio",
   ]
@@ -51,8 +51,8 @@ source_set("mock_server") {
   public_deps = [ ":test_server" ]
 
   deps = [
+    "//sdk/lib/syslog/cpp",
     "//src/lib/fxl",
-    "//src/lib/syslog/cpp",
     "//third_party/googletest:gtest",
   ]
 }
@@ -68,9 +68,9 @@ executable("web_runner_integration_tests") {
     "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/sys/cpp/testing:unit",
+    "//sdk/lib/syslog/cpp",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
-    "//src/lib/syslog/cpp",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/fit",
   ]
@@ -93,11 +93,11 @@ executable("web_runner_pixel_tests") {
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/fidl/fuchsia.ui.views",
     "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp",
     "//sdk/lib/ui/scenic/cpp",
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
-    "//src/lib/syslog/cpp",
     "//src/lib/ui/base_view",
     "//src/ui/testing/views",
     "//third_party/googletest:gtest",

@@ -36,8 +36,8 @@ source_set("app_client") {
 
   deps = [
     "//garnet/public/lib/svc/cpp",
+    "//sdk/lib/syslog/cpp",
     "//src/lib/fsl",
-    "//src/lib/syslog/cpp",
     "//src/modular/lib/common:async_holder",
   ]
 }
@@ -56,8 +56,8 @@ source_set("json_xdr") {
 
   public_deps = [
     "//sdk/lib/fidl/cpp",
+    "//sdk/lib/syslog/cpp",
     "//src/lib/json_parser",
-    "//src/lib/syslog/cpp",
     "//third_party/rapidjson",
   ]
 }
@@ -70,8 +70,8 @@ source_set("proxy") {
 
   deps = [
     "//sdk/lib/fidl/cpp",
+    "//sdk/lib/syslog/cpp",
     "//src/lib/fxl",
-    "//src/lib/syslog/cpp",
   ]
 }
 
@@ -89,7 +89,7 @@ source_set("environment") {
   public_deps = [
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
-    "//src/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp",
     "//zircon/public/lib/fs",
   ]
 }
@@ -103,8 +103,8 @@ source_set("single_service_app") {
     "//sdk/fidl/fuchsia.ui.app",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp",
     "//src/lib/fxl",
-    "//src/lib/syslog/cpp",
     "//zircon/public/lib/zx",
   ]
 }
@@ -118,8 +118,8 @@ source_set("view_host") {
   public_deps = [
     "//sdk/fidl/fuchsia.ui.gfx",
     "//sdk/fidl/fuchsia.ui.views",
+    "//sdk/lib/syslog/cpp",
     "//src/lib/fxl",
-    "//src/lib/syslog/cpp",
     "//src/lib/ui/base_view",
   ]
 

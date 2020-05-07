@@ -7,6 +7,7 @@
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
 #include <lib/sys/cpp/component_context.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <algorithm>
 #include <iostream>
@@ -16,7 +17,6 @@
 #include "garnet/public/lib/fostr/fidl/fuchsia/net/mdns/formatting.h"
 #include "lib/fidl/cpp/type_converter.h"
 #include "src/lib/fsl/types/type_converters.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 const std::string kLocalArgument = "--local";
 const std::string kRemoteArgument = "--remote";

@@ -6,7 +6,7 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
-#include <lib/syslog/cpp/logger.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/resource.h>
 #include <math.h>
 

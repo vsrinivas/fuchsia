@@ -4,11 +4,11 @@
 
 #include "gather_inspectable.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 
 #include "harvester.h"
 #include "src/lib/inspect_deprecated/query/discover.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace harvester {
 

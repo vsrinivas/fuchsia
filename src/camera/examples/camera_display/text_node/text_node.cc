@@ -6,10 +6,9 @@
 
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/gfx-font-data/gfx-font-data.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <algorithm>
-
-#include "src/lib/syslog/cpp/logger.h"
 
 TextNode::TextNode(scenic::Session* session) : scenic::Node(session) {
   session->Enqueue(scenic::NewCreateShapeNodeCmd(id()));

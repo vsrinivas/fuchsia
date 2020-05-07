@@ -93,7 +93,7 @@ source_set("pixel_test") {
   deps = [
     "//sdk/fidl/fuchsia.ui.gfx",
     "//sdk/fidl/fuchsia.ui.policy",
-    "//src/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp",
     "//third_party/googletest:gtest",
   ]
 }

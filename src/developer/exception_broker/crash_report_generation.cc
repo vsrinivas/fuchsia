@@ -3,6 +3,7 @@
 
 #include "src/developer/exception_broker/crash_report_generation.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/process.h>
 #include <lib/zx/thread.h>
 #include <zircon/syscalls/exception.h>
@@ -12,7 +13,6 @@
 #include <third_party/crashpad/util/fuchsia/scoped_task_suspend.h>
 
 #include "src/lib/fsl/handles/object_info.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace fuchsia {
 namespace exception {

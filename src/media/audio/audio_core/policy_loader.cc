@@ -7,6 +7,7 @@
 #include <fcntl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <fbl/unique_fd.h>
 #include <rapidjson/error/en.h>
@@ -14,8 +15,6 @@
 #include <rapidjson/schema.h>
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
-
-#include "src/lib/syslog/cpp/logger.h"
 
 #include "src/media/audio/audio_core/schema/audio_policy_schema.inl"
 

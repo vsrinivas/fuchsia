@@ -7,9 +7,8 @@
 #include <lib/async/cpp/task.h>
 #include <lib/fit/bridge.h>
 #include <lib/fit/promise.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
-
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
 namespace fidl {

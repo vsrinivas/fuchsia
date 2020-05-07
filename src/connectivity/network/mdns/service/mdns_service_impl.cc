@@ -9,6 +9,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/sys/cpp/component_context.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/time.h>
 #include <unistd.h>
@@ -17,7 +18,6 @@
 #include "src/connectivity/network/mdns/service/mdns_fidl_util.h"
 #include "src/connectivity/network/mdns/service/mdns_names.h"
 #include "src/lib/fsl/types/type_converters.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace mdns {
 namespace {

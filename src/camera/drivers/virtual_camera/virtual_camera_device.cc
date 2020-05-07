@@ -4,9 +4,10 @@
 
 #include "src/camera/drivers/virtual_camera/virtual_camera_device.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include "src/camera/drivers/virtual_camera/virtual_camera2_control.h"
 #include "src/camera/drivers/virtual_camera/virtual_camera_control.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace camera {
 

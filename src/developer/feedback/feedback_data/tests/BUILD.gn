@@ -202,6 +202,7 @@ executable("channel_provider_unittest") {
   sources = [ "channel_provider_unittest.cc" ]
 
   deps = [
+    "//sdk/lib/syslog/cpp",
     "//src/developer/feedback/feedback_data:constants",
     "//src/developer/feedback/feedback_data/annotations:channel_provider",
     "//src/developer/feedback/feedback_data/annotations:types",
@@ -210,7 +211,6 @@ executable("channel_provider_unittest") {
     "//src/developer/feedback/testing:unit_test_fixture",
     "//src/developer/feedback/testing/stubs:channel_provider",
     "//src/developer/feedback/testing/stubs:cobalt",
-    "//src/lib/syslog/cpp",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/async-cpp",
@@ -352,6 +352,7 @@ executable("feedback_data_integration_test") {
     "//sdk/lib/inspect/contrib/cpp:archive_reader",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration",
+    "//sdk/lib/syslog/cpp",
     "//src/developer/feedback/feedback_data:constants",
     "//src/developer/feedback/testing:gmatchers",
     "//src/developer/feedback/testing/fakes:cobalt",
@@ -359,7 +360,6 @@ executable("feedback_data_integration_test") {
     "//src/developer/feedback/utils/cobalt",
     "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",
-    "//src/lib/syslog/cpp",
     "//src/lib/uuid:uuid",
     "//src/ui/lib/escher/test/common:gtest_vulkan",
     "//third_party/googletest:gmock",
@@ -380,12 +380,12 @@ executable("main_service_unittest") {
 
   deps = [
     "//sdk/lib/inspect/testing/cpp",
+    "//sdk/lib/syslog/cpp",
     "//src/developer/feedback/feedback_data:main_service",
     "//src/developer/feedback/testing:cobalt_test_fixture",
     "//src/developer/feedback/testing:gtest_with_syslog_main",
     "//src/developer/feedback/testing:unit_test_fixture",
     "//src/developer/feedback/testing/stubs:cobalt",
-    "//src/lib/syslog/cpp",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/inspect",
@@ -536,7 +536,7 @@ source_set("zx_object_util") {
   ]
 
   public_deps = [
-    "//src/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp",
     "//zircon/public/lib/zx",
   ]
 }

@@ -5,9 +5,9 @@
 #include "src/developer/feedback/feedback_data/system_log_recorder/listener.h"
 
 #include <fuchsia/logger/cpp/fidl.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include "src/developer/feedback/utils/log_format.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
 

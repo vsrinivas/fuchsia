@@ -43,8 +43,8 @@ source_set("data_provider_ptr") {
   ]
 
   deps = [
+    "//sdk/lib/syslog/cpp",
     "//src/developer/feedback/utils:errors",
-    "//src/lib/syslog/cpp",
     "//zircon/public/lib/async-cpp",
   ]
 }
@@ -67,8 +67,8 @@ source_set("device_id_provider_ptr") {
   ]
 
   deps = [
+    "//sdk/lib/syslog/cpp",
     "//src/developer/feedback/utils:errors",
-    "//src/lib/syslog/cpp",
     "//zircon/public/lib/async-cpp",
   ]
 }
@@ -86,7 +86,7 @@ source_set("oneshot_ptr") {
   ]
 
   deps = [
-    "//src/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp",
     "//zircon/public/lib/async-cpp",
   ]
 }

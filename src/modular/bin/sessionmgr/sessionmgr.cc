@@ -9,11 +9,11 @@
 #include <lib/sys/cpp/component_context.h>
 #include <lib/sys/inspect/cpp/component.h>
 #include <lib/syslog/cpp/log_settings.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <trace-provider/provider.h>
 
 #include "src/lib/fxl/macros.h"
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/modular/bin/basemgr/cobalt/cobalt.h"
 #include "src/modular/bin/sessionmgr/sessionmgr_impl.h"
 #include "src/modular/lib/app_driver/cpp/app_driver.h"

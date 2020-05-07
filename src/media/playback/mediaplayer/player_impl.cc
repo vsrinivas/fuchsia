@@ -13,6 +13,7 @@
 #include <lib/fidl/cpp/type_converter.h>
 #include <lib/fit/function.h>
 #include <lib/media/cpp/type_converters.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/vfs/cpp/pseudo_file.h>
 #include <lib/zx/clock.h>
 
@@ -21,7 +22,6 @@
 #include <fs/pseudo_file.h>
 
 #include "src/lib/ui/base_view/base_view.h"
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/playback/mediaplayer/core/demux_source_segment.h"
 #include "src/media/playback/mediaplayer/core/renderer_sink_segment.h"
 #include "src/media/playback/mediaplayer/demux/file_reader.h"

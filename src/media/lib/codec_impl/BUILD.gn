@@ -55,7 +55,7 @@ source_set("codec_impl") {
   deps = [
     "//sdk/fidl/fuchsia.media",
     "//sdk/lib/fidl/cpp",
-    "//src/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp",
   ]
 }
 

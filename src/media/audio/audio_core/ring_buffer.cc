@@ -4,11 +4,11 @@
 
 #include "src/media/audio/audio_core/ring_buffer.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <memory>
 
 #include <trace/event.h>
-
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace media::audio {
 namespace {

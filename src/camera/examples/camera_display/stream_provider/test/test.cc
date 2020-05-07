@@ -4,6 +4,7 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <algorithm>
 #include <iostream>
@@ -12,7 +13,6 @@
 
 #include <gtest/gtest.h>
 #include <openssl/sha.h>
-#include <src/lib/syslog/cpp/logger.h>
 #include <trace-provider/provider.h>
 #include <trace/event.h>
 

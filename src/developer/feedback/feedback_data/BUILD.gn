@@ -52,7 +52,7 @@ executable("main") {
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/inspect/cpp",
-    "//src/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/zx",
@@ -75,8 +75,8 @@ source_set("config") {
   ]
 
   deps = [
+    "//sdk/lib/syslog/cpp",
     "//src/lib/files",
-    "//src/lib/syslog/cpp",
     "//third_party/rapidjson",
   ]
 }
@@ -114,6 +114,7 @@ source_set("data_provider") {
     "//garnet/public/lib/fostr/fidl/fuchsia.images",
     "//sdk/fidl/fuchsia.images",
     "//sdk/fidl/fuchsia.ui.scenic",
+    "//sdk/lib/syslog/cpp",
     "//src/developer/feedback/feedback_data/annotations:types",
     "//src/developer/feedback/feedback_data/annotations:utils",
     "//src/developer/feedback/feedback_data/attachments:aliases",
@@ -123,7 +124,6 @@ source_set("data_provider") {
     "//src/developer/feedback/utils/fit",
     "//src/lib/fsl",
     "//src/lib/fxl",
-    "//src/lib/syslog/cpp",
     "//third_party/libpng",
     "//zircon/system/fidl/fuchsia-mem",
   ]
@@ -147,11 +147,11 @@ source_set("datastore") {
 
   deps = [
     ":constants",
+    "//sdk/lib/syslog/cpp",
     "//src/developer/feedback/feedback_data/annotations:annotation_providers",
     "//src/developer/feedback/feedback_data/annotations:static_annotations",
     "//src/developer/feedback/feedback_data/attachments:attachment_providers",
     "//src/developer/feedback/feedback_data/attachments:static_attachments",
-    "//src/lib/syslog/cpp",
   ]
 }
 
@@ -169,7 +169,7 @@ source_set("data_register") {
     "//src/lib/fxl",
   ]
 
-  deps = [ "//src/lib/syslog/cpp" ]
+  deps = [ "//sdk/lib/syslog/cpp" ]
 }
 
 source_set("device_id_provider") {
@@ -185,10 +185,10 @@ source_set("device_id_provider") {
 
   deps = [
     ":constants",
+    "//sdk/lib/syslog/cpp",
     "//src/developer/feedback/utils:errors",
     "//src/lib/files",
     "//src/lib/fxl",
-    "//src/lib/syslog/cpp",
     "//src/lib/uuid",
   ]
 }
@@ -215,7 +215,7 @@ source_set("main_service") {
     ":constants",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
-    "//src/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp",
     "//zircon/public/lib/zx",
   ]
 }

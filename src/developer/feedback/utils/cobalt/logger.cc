@@ -5,13 +5,13 @@
 #include "src/developer/feedback/utils/cobalt/logger.h"
 
 #include <lib/async/cpp/task.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
 
 #include <string>
 
 #include "src/developer/feedback/utils/cobalt/metrics.h"
 #include "src/lib/fxl/strings/string_printf.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
 namespace cobalt {

@@ -10,7 +10,7 @@
 #include <lib/sys/inspect/cpp/component.h>
 // [END part_1_include_inspect]
 
-#include <src/lib/syslog/cpp/logger.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include "reverser.h"
 

@@ -4,11 +4,12 @@
 #ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_MIXER_CHANNEL_STRIP_H_
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_MIXER_CHANNEL_STRIP_H_
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <algorithm>
 #include <cstring>
 #include <vector>
 
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/audio/lib/logging/logging.h"
 
 namespace media::audio::mixer {

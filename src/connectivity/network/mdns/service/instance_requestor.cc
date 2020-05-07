@@ -4,10 +4,10 @@
 
 #include "src/connectivity/network/mdns/service/instance_requestor.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
 
 #include "src/connectivity/network/mdns/service/mdns_names.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace mdns {
 namespace {

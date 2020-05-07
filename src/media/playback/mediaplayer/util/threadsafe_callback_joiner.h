@@ -7,11 +7,10 @@
 
 #include <lib/async/dispatcher.h>
 #include <lib/fit/function.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <memory>
 #include <mutex>
-
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace media_player {
 

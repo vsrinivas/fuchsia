@@ -4,13 +4,13 @@
 
 #include "src/virtualization/bin/vmm/arch/x64/i8250.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <stdio.h>
 #include <zircon/boot/driver-config.h>
 #include <zircon/boot/image.h>
 
 #include <libzbi/zbi.h>
 
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/virtualization/bin/vmm/guest.h"
 
 // I8250 state flags.

@@ -3,7 +3,7 @@
 #include "{{PROJECT_PATH}}/{{snake_case PROJECT_NAME}}.h"
 
 #include <lib/async/cpp/task.h>
-#include <lib/syslog/cpp/logger.h>
+#include <lib/syslog/cpp/macros.h>
 
 namespace {{snake_case PROJECT_NAME}} {
 

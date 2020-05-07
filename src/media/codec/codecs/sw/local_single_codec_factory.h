@@ -10,9 +10,8 @@
 #include <lib/media/codec_impl/codec_adapter.h>
 #include <lib/media/codec_impl/codec_admission_control.h>
 #include <lib/media/codec_impl/codec_impl.h>
+#include <lib/syslog/cpp/macros.h>
 #include <threads.h>
-
-#include "src/lib/syslog/cpp/logger.h"
 
 // Marker type to specify these is no adapter to serve a request.
 class NoAdapter {};

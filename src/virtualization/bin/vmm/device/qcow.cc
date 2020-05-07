@@ -5,14 +5,13 @@
 #include "src/virtualization/bin/vmm/device/qcow.h"
 
 #include <fcntl.h>
+#include <lib/syslog/cpp/macros.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <unistd.h>
 
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
-
-#include "src/lib/syslog/cpp/logger.h"
 
 // Implementation based on the spec located at:
 //

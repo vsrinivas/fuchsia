@@ -4,10 +4,9 @@
 
 #include "src/connectivity/network/mdns/service/prober.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
 #include <zircon/syscalls.h>
-
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace mdns {
 

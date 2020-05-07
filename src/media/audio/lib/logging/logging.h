@@ -5,12 +5,12 @@
 #ifndef SRC_MEDIA_AUDIO_LIB_LOGGING_LOGGING_H_
 #define SRC_MEDIA_AUDIO_LIB_LOGGING_LOGGING_H_
 
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/clock.h>
 
 #include <iomanip>
 
 #include "src/lib/fxl/log_settings.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 #define AUD_LOG(level)                                                                          \
   FX_LOGS(level) << std::fixed << std::setprecision(3)                                          \

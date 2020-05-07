@@ -6,6 +6,7 @@
 
 #include <lib/fidl/cpp/binding.h>
 #include <lib/sync/completion.h>
+#include <lib/syslog/cpp/macros.h>
 #include <stdint.h>
 #include <zircon/assert.h>
 #include <zircon/threads.h>
@@ -14,8 +15,6 @@
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/driver.h>
-
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace camera {
 

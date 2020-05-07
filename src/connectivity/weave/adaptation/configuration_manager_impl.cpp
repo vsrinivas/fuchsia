@@ -17,7 +17,7 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fit/defer.h>
-#include <lib/syslog/cpp/logger.h>
+#include <lib/syslog/cpp/macros.h>
 #include <net/ethernet.h>
 
 #include "src/lib/fxl/logging.h"

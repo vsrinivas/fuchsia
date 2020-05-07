@@ -37,10 +37,10 @@ executable("headless_root_presenter_apptests") {
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:unit",
+    "//sdk/lib/syslog/cpp",
     "//sdk/lib/vfs/cpp",
     "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",
-    "//src/lib/syslog/cpp",
     "//src/ui/bin/headless_root_presenter:lib",
     "//third_party/rapidjson",
   ]

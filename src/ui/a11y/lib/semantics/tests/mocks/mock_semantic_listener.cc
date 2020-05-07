@@ -4,7 +4,7 @@
 
 #include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantic_listener.h"
 
-#include "src/lib/syslog/cpp/logger.h"
+#include <lib/syslog/cpp/macros.h>
 
 namespace accessibility_test {
 

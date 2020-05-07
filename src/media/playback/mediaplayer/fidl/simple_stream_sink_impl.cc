@@ -4,7 +4,8 @@
 
 #include "src/media/playback/mediaplayer/fidl/simple_stream_sink_impl.h"
 
-#include "src/lib/syslog/cpp/logger.h"
+#include <lib/syslog/cpp/macros.h>
+
 #include "src/media/playback/mediaplayer/graph/formatting.h"
 #include "src/media/playback/mediaplayer/graph/payloads/payload_buffer.h"
 

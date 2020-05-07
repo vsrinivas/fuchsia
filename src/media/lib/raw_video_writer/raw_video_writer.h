@@ -5,8 +5,9 @@
 #ifndef SRC_MEDIA_LIB_RAW_VIDEO_WRITER_RAW_VIDEO_WRITER_H_
 #define SRC_MEDIA_LIB_RAW_VIDEO_WRITER_RAW_VIDEO_WRITER_H_
 
+#include <lib/syslog/cpp/macros.h>
+
 #include "src/lib/files/unique_fd.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace media {
 

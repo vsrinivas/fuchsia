@@ -4,10 +4,10 @@
 
 #include "gather_introspection.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 
 #include "harvester.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace harvester {
 

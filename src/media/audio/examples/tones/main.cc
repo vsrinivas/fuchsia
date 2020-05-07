@@ -6,9 +6,9 @@
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
 #include <lib/syslog/cpp/log_settings.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include "src/lib/fxl/command_line.h"
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/audio/examples/tones/tones.h"
 
 int main(int argc, const char** argv) {

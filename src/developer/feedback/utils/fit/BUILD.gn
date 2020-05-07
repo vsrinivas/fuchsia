@@ -16,9 +16,9 @@ source_set("fit") {
   ]
 
   public_deps = [
+    "//sdk/lib/syslog/cpp",
     "//src/developer/feedback/utils:errors",
     "//src/lib/fxl",
-    "//src/lib/syslog/cpp",
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fit",

@@ -229,7 +229,7 @@ source_set("decoder_fuzzer") {
 
   public_deps = [
     ":use_media_decoder_source_set",
-    "//src/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp",
   ]
 }
 

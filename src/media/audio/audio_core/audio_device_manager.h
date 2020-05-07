@@ -9,6 +9,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fit/function.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <memory>
 #include <unordered_map>
@@ -16,7 +17,6 @@
 #include <fbl/intrusive_double_list.h>
 #include <fbl/ref_ptr.h>
 
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/audio/audio_core/audio_device.h"
 #include "src/media/audio/audio_core/audio_driver.h"
 #include "src/media/audio/audio_core/audio_input.h"

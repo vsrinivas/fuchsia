@@ -46,9 +46,9 @@ executable_package("basemgr") {
     "//sdk/fidl/fuchsia.ui.views",
     "//sdk/fidl/fuchsia.wlan.service",
     "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp",
     "//sdk/lib/ui/scenic/cpp",
     "//src/lib/fsl",
-    "//src/lib/syslog/cpp",
     "//src/modular/bin/basemgr/cobalt",
     "//src/modular/lib/async/cpp:future",
     "//src/modular/lib/async/cpp:future",
@@ -88,7 +88,7 @@ source_set("wait_for_minfs") {
   public_deps = [ "//src/lib/fsl" ]
 
   deps = [
-    "//src/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp",
     "//zircon/system/ulib/fdio-caller",
   ]
 }

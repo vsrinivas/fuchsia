@@ -6,13 +6,13 @@
 #include <lib/async-loop/default.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/syslog/cpp/log_settings.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/trace-provider/provider.h>
 #include <lib/zx/time.h>
 
 #include "src/developer/feedback/feedback_data/constants.h"
 #include "src/developer/feedback/feedback_data/system_log_recorder/system_log_recorder.h"
 #include "src/developer/feedback/utils/file_size.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 constexpr zx::duration kWritePeriod = zx::sec(1);
 

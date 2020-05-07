@@ -6,12 +6,12 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/async/dispatcher.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/clock.h>
 
 #include <queue>
 #include <unordered_set>
 
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/playback/mediaplayer/graph/formatting.h"
 #include "src/media/playback/mediaplayer/util/callback_joiner.h"
 

@@ -102,13 +102,13 @@ executable("archive_unittest") {
 
   deps = [
     "//sdk/fidl/fuchsia.feedback",
+    "//sdk/lib/syslog/cpp",
     "//src/developer/feedback/testing:gmatchers",
     "//src/developer/feedback/testing:gpretty_printers",
     "//src/developer/feedback/testing:gtest_with_syslog_main",
     "//src/developer/feedback/utils:archive",
     "//src/lib/fsl",
     "//src/lib/fxl",
-    "//src/lib/syslog/cpp",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//zircon/system/fidl/fuchsia-mem",
@@ -136,11 +136,11 @@ executable("channel_provider_ptr_unittest") {
   sources = [ "channel_provider_ptr_unittest.cc" ]
 
   deps = [
+    "//sdk/lib/syslog/cpp",
     "//src/developer/feedback/testing:gtest_with_syslog_main",
     "//src/developer/feedback/testing:unit_test_fixture",
     "//src/developer/feedback/testing/stubs:channel_provider",
     "//src/developer/feedback/utils/fidl:channel_provider_ptr",
-    "//src/lib/syslog/cpp",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/async-cpp",
@@ -205,9 +205,9 @@ executable("inspect_node_manager_unittest") {
 
   deps = [
     "//sdk/lib/inspect/testing/cpp",
+    "//sdk/lib/syslog/cpp",
     "//src/developer/feedback/testing:gtest_with_syslog_main",
     "//src/developer/feedback/utils:inspect_node_manager",
-    "//src/lib/syslog/cpp",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]
@@ -232,9 +232,9 @@ executable("log_format_unittest") {
   sources = [ "log_format_unittest.cc" ]
 
   deps = [
+    "//sdk/lib/syslog/cpp",
     "//src/developer/feedback/utils:logs",
     "//src/lib/fxl/test:gtest_main",
-    "//src/lib/syslog/cpp",
     "//third_party/googletest:gtest",
   ]
 }

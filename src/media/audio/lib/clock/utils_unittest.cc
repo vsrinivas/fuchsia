@@ -4,9 +4,9 @@
 
 #include "src/media/audio/lib/clock/utils.h"
 
-#include <gtest/gtest.h>
+#include <lib/syslog/cpp/macros.h>
 
-#include "src/lib/syslog/cpp/logger.h"
+#include <gtest/gtest.h>
 
 namespace media::audio::clock {
 namespace {

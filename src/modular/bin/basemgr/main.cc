@@ -12,15 +12,14 @@
 #include <lib/fit/function.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/syslog/cpp/log_settings.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <src/lib/fxl/command_line.h>
 #include <src/lib/fxl/macros.h>
-#include <src/lib/syslog/cpp/logger.h>
 #include <trace-provider/provider.h>
 
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/macros.h"
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/modular/bin/basemgr/basemgr_impl.h"
 #include "src/modular/bin/basemgr/cobalt/cobalt.h"
 #include "src/modular/lib/modular_config/modular_config.h"

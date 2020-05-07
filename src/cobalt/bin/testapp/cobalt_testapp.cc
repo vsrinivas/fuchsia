@@ -15,6 +15,7 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <memory>
 #include <sstream>
@@ -32,7 +33,6 @@
 #include "src/lib/fxl/log_settings_command_line.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/strings/string_view.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace cobalt {
 namespace testapp {

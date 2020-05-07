@@ -40,11 +40,11 @@ source_set("attachment_providers") {
 
   deps = [
     "//garnet/public/lib/fostr/fidl/fuchsia.diagnostics",
+    "//sdk/lib/syslog/cpp",
     "//src/developer/feedback/feedback_data:constants",
     "//src/developer/feedback/utils:logs",
     "//src/developer/feedback/utils/fit",
     "//src/lib/fsl",
-    "//src/lib/syslog/cpp",
   ]
 }
 
@@ -57,10 +57,10 @@ source_set("static_attachments") {
   public_deps = [ ":aliases" ]
 
   deps = [
+    "//sdk/lib/syslog/cpp",
     "//src/developer/feedback/feedback_data:constants",
     "//src/developer/feedback/utils:files",
     "//src/lib/files",
-    "//src/lib/syslog/cpp",
   ]
 }
 
@@ -73,10 +73,10 @@ source_set("utils") {
   public_deps = [ "//sdk/fidl/fuchsia.feedback" ]
 
   deps = [
+    "//sdk/lib/syslog/cpp",
     "//src/developer/feedback/feedback_data:constants",
     "//src/developer/feedback/utils:archive",
     "//src/lib/fsl",
-    "//src/lib/syslog/cpp",
     "//third_party/rapidjson",
   ]
 }

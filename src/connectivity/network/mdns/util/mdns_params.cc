@@ -4,11 +4,12 @@
 
 #include "src/connectivity/network/mdns/util/mdns_params.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <functional>
 #include <iostream>
 
 #include "src/lib/fxl/strings/split_string.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace mdns {
 namespace {

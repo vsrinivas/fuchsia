@@ -3,10 +3,10 @@
 
 #include "src/developer/exception_broker/json_utils.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <third_party/rapidjson/include/rapidjson/document.h>
 #include <third_party/rapidjson/include/rapidjson/error/en.h>
-
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace fuchsia {
 namespace exception {

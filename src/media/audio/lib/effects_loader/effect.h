@@ -6,11 +6,11 @@
 #define SRC_MEDIA_AUDIO_LIB_EFFECTS_LOADER_EFFECT_H_
 
 #include <lib/media/audio/effects/audio_effects.h>
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/types.h>
 
 #include <string_view>
 
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/audio/lib/effects_loader/effects_module.h"
 
 namespace media::audio {

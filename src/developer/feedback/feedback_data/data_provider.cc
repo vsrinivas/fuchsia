@@ -8,6 +8,7 @@
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/fit/promise.h>
 #include <lib/fit/result.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
@@ -24,7 +25,6 @@
 #include "src/lib/fsl/vmo/sized_vmo.h"
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/strings/string_printf.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
 namespace {

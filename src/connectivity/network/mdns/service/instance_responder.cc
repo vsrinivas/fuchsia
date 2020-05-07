@@ -4,10 +4,11 @@
 
 #include "src/connectivity/network/mdns/service/instance_responder.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <algorithm>
 
 #include "src/connectivity/network/mdns/service/mdns_names.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace mdns {
 

@@ -6,12 +6,12 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <iomanip>
 #include <iostream>
 
 #include "lib/fidl/cpp/optional.h"
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/playback/mediaplayer/graph/formatting.h"
 
 namespace media_player {

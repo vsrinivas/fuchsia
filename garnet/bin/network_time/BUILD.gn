@@ -30,8 +30,8 @@ source_set("lib") {
   deps = [
     ":time_util_lib",
     "//sdk/fidl/fuchsia.hardware.rtc",
+    "//sdk/lib/syslog/cpp",
     "//src/lib/fxl",
-    "//src/lib/syslog/cpp",
     "//third_party/boringssl",
     "//third_party/rapidjson",
     "//third_party/roughtime:client_lib",

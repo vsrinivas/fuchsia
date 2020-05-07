@@ -4,9 +4,8 @@
 
 #include "src/media/playback/mediaplayer/graph/payloads/fifo_allocator.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/compiler.h>
-
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace media_player {
 

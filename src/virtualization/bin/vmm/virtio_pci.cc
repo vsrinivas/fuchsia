@@ -4,12 +4,12 @@
 
 #include "src/virtualization/bin/vmm/virtio_pci.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <stdio.h>
 
 #include <trace/event.h>
 #include <virtio/virtio_ids.h>
 
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/virtualization/bin/vmm/bits.h"
 #include "src/virtualization/bin/vmm/device/config.h"
 #include "src/virtualization/bin/vmm/virtio_device.h"

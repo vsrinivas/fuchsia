@@ -5,8 +5,7 @@
 #include "src/modular/lib/fidl/view_host.h"
 
 #include <fuchsia/ui/scenic/cpp/fidl.h>
-
-#include "src/lib/syslog/cpp/logger.h"
+#include <lib/syslog/cpp/macros.h>
 
 namespace modular {
 

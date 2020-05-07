@@ -5,10 +5,10 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/sys/cpp/component_context.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <trace-provider/provider.h>
 
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/ui/a11y/bin/a11y_manager/app.h"
 
 int main(int argc, const char** argv) {

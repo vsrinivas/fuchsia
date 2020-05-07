@@ -30,9 +30,9 @@ executable("audio_core_hardware_tests_bin") {
   deps = [
     "//sdk/fidl/fuchsia.media",
     "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/fxl/test:test_settings",
-    "//src/lib/syslog/cpp",
     "//src/media/audio/lib/test:test_fixture",
     "//zircon/public/lib/fzl",
   ]

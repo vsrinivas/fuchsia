@@ -5,9 +5,9 @@
 #include "src/modular/bin/sessionmgr/session_ctl.h"
 
 #include <fuchsia/modular/cpp/fidl.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/vfs/cpp/service.h>
 
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/modular/bin/sessionmgr/puppet_master/puppet_master_impl.h"
 
 namespace modular {

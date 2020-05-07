@@ -5,8 +5,7 @@
 #include "src/virtualization/bin/vmm/controller/virtio_balloon.h"
 
 #include <lib/sys/cpp/service_directory.h>
-
-#include "src/lib/syslog/cpp/logger.h"
+#include <lib/syslog/cpp/macros.h>
 
 static constexpr char kVirtioBalloonUrl[] =
     "fuchsia-pkg://fuchsia.com/virtio_balloon#meta/virtio_balloon.cmx";

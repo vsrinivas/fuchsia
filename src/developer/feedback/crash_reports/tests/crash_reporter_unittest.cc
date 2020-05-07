@@ -12,6 +12,7 @@
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/inspect/cpp/reader.h>
 #include <lib/inspect/testing/cpp/inspect.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
@@ -47,7 +48,6 @@
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
 #include "src/lib/fsl/vmo/strings.h"
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/lib/timekeeper/test_clock.h"
 
 namespace feedback {

@@ -6,11 +6,10 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <iomanip>
 #include <iostream>
-
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace media_player {
 namespace test {

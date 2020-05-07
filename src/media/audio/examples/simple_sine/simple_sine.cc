@@ -8,12 +8,11 @@
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
 #include <lib/syslog/cpp/log_settings.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/clock.h>
 #include <math.h>
 
 #include <iostream>
-
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace {
 // Set the AudioRenderer stream type to: 48 kHz, mono, 32-bit float.

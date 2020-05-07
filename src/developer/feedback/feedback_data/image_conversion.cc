@@ -6,10 +6,10 @@
 
 #include <fuchsia/images/cpp/fidl.h>
 #include <lib/fostr/fidl/fuchsia/images/formatting.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include "src/lib/fsl/vmo/sized_vmo.h"
 #include "src/lib/fsl/vmo/vector.h"
-#include "src/lib/syslog/cpp/logger.h"
 #include "third_party/libpng/png.h"
 
 namespace feedback {

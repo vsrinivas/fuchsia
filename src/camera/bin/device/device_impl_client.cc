@@ -4,7 +4,7 @@
 
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
-#include <lib/syslog/cpp/logger.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <iomanip>
 #include <sstream>

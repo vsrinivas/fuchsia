@@ -6,9 +6,9 @@
 #include <lib/async-loop/default.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/syslog/cpp/log_settings.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include "src/connectivity/network/mdns/service/mdns_service_impl.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 int main(int argc, const char** argv) {
   syslog::SetTags({"mdns"});

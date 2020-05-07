@@ -4,9 +4,8 @@
 
 #include "src/media/audio/audio_core/wakeup_event.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/types.h>
-
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace media::audio {
 namespace {

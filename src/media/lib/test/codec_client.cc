@@ -6,12 +6,11 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/media/test/one_shot_event.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <algorithm>
 #include <iostream>
 #include <random>
-
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace {
 

@@ -4,7 +4,8 @@
 
 #include "src/modular/bin/sessionmgr/puppet_master/command_runners/add_mod_command_runner.h"
 
-#include "src/lib/syslog/cpp/logger.h"
+#include <lib/syslog/cpp/macros.h>
+
 #include "src/modular/bin/sessionmgr/puppet_master/command_runners/operation_calls/add_mod_call.h"
 
 namespace modular {

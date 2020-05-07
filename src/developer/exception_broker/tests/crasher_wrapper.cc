@@ -4,11 +4,11 @@
 #include "src/developer/exception_broker/tests/crasher_wrapper.h"
 
 #include <lib/fdio/spawn.h>
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 #include <zircon/syscalls/port.h>
 
 #include "src/lib/fsl/handles/object_info.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace fuchsia {
 namespace exception {

@@ -4,6 +4,7 @@
 
 #include "src/camera/drivers/controller/input_node.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
@@ -11,7 +12,6 @@
 
 #include "ddk/protocol/isp.h"
 #include "src/camera/drivers/controller/graph_utils.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace camera {
 

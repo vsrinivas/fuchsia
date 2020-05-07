@@ -8,7 +8,7 @@
 #include <lib/syslog/cpp/log_settings.h>
 // CODELAB: Include inspect.
 
-#include <src/lib/syslog/cpp/logger.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include "reverser.h"
 

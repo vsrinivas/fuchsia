@@ -6,13 +6,13 @@
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_OUTPUT_PIPELINE_H_
 
 #include <lib/media/cpp/timeline_function.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <vector>
 
 #include <fbl/ref_ptr.h>
 #include <trace/event.h>
 
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/audio/audio_core/effects_stage.h"
 #include "src/media/audio/audio_core/mix_stage.h"
 #include "src/media/audio/audio_core/pipeline_config.h"

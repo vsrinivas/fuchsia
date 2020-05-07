@@ -16,11 +16,11 @@ executable("netstack_intermediary") {
   deps = [
     "//sdk/fidl/fuchsia.netstack",
     "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp",
     "//src/connectivity/network/testing/netemul/lib/fidl:network",
     "//src/connectivity/network/testing/netemul/lib/network:ethertap",
     "//src/lib/fxl",
     "//src/lib/fxl",
-    "//src/lib/syslog/cpp",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-loop-cpp",

@@ -4,9 +4,9 @@
 
 #include "src/virtualization/bin/vmm/arch/x64/io_port.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <time.h>
 
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/virtualization/bin/vmm/bits.h"
 #include "src/virtualization/bin/vmm/guest.h"
 #include "src/virtualization/bin/vmm/rtc.h"

@@ -10,11 +10,11 @@
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fit/function.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <queue>
 
 #include "lib/media/cpp/timeline_function.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace media_player {
 namespace test {

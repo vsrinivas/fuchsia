@@ -10,13 +10,13 @@
 #include <lib/fit/result.h>
 #include <lib/fostr/fidl/fuchsia/mem/formatting.h>
 #include <lib/fostr/indent.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <ostream>
 
 #include "src/developer/feedback/feedback_data/annotations/types.h"
 #include "src/developer/feedback/utils/errors.h"
 #include "src/lib/fsl/vmo/strings.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace fit {
 

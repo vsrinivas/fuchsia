@@ -4,7 +4,7 @@
 
 #include "src/media/playback/mediaplayer/test/sink_feeder.h"
 
-#include "src/lib/syslog/cpp/logger.h"
+#include <lib/syslog/cpp/macros.h>
 
 namespace media_player {
 namespace test {

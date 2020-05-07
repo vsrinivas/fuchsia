@@ -7,7 +7,7 @@
 #include <lib/fit/bridge.h>
 #include <lib/fit/function.h>
 #include <lib/fit/single_threaded_executor.h>
-#include <lib/syslog/cpp/logger.h>
+#include <lib/syslog/cpp/macros.h>
 
 #ifdef SCENIC_ENABLE_GFX_SUBSYSTEM
 #include "src/ui/scenic/lib/gfx/gfx_system.h"

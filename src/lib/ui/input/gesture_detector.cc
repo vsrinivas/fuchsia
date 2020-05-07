@@ -4,7 +4,7 @@
 
 #include "src/lib/ui/input/gesture_detector.h"
 
-#include "src/lib/syslog/cpp/logger.h"
+#include <lib/syslog/cpp/macros.h>
 
 #include <glm/gtx/norm.hpp>
 

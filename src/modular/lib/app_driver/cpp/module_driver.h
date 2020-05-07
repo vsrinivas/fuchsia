@@ -13,12 +13,11 @@
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/sys/cpp/component_context.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <memory>
 
 #include <src/modular/lib/lifecycle/cpp/lifecycle_impl.h>
-
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace modular {
 

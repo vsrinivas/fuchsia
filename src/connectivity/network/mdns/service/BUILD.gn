@@ -102,10 +102,10 @@ source_set("source_set") {
     "//sdk/fidl/fuchsia.net.mdns",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp",
     "//src/lib/fsl",
     "//src/lib/inet",
     "//src/lib/json_parser",
-    "//src/lib/syslog/cpp",
     "//third_party/rapidjson",
     "//zircon/public/lib/fit",
     "//zircon/system/fidl/fuchsia-device",
@@ -200,8 +200,8 @@ fuzzer("packet_reader_fuzzer") {
     "packet_reader_fuzzer.cc",
   ]
   deps = [
+    "//sdk/lib/syslog/cpp",
     "//src/lib/inet",
-    "//src/lib/syslog/cpp",
   ]
 }
 
@@ -219,8 +219,8 @@ executable("mdns_netemul_test_agent") {
     "//garnet/public/lib/fostr/fidl/fuchsia.net.mdns",
     "//sdk/fidl/fuchsia.net.mdns",
     "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp",
     "//src/lib/fsl",
-    "//src/lib/syslog/cpp",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",

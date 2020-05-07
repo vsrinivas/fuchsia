@@ -6,12 +6,12 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/fit/result.h>
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
 #include "src/developer/feedback/utils/errors.h"
 #include "src/lib/fxl/logging.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
 namespace fidl {

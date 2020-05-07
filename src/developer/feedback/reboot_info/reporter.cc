@@ -6,6 +6,7 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/fit/result.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
 #include <zircon/types.h>
 
@@ -18,7 +19,6 @@
 #include "src/lib/fsl/vmo/file.h"
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/logging.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
 namespace {

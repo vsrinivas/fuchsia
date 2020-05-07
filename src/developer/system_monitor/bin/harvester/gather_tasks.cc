@@ -4,6 +4,7 @@
 
 #include "gather_tasks.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 
 #include <array>
@@ -13,7 +14,6 @@
 
 #include "harvester.h"
 #include "sample_bundle.h"
-#include "src/lib/syslog/cpp/logger.h"
 #include "task_tree.h"
 
 namespace harvester {
@@ -108,8 +108,8 @@ void SampleBundleBuilder::AddProcessStats(zx_handle_t process, zx_koid_t koid) {
       zx_object_get_info(process, ZX_INFO_TASK_STATS, &info, sizeof(info),
                          /*actual=*/nullptr, /*avail=*/nullptr);
   if (status != ZX_OK) {
-    FX_LOGS(WARNING) << ZxErrorString("AddProcessStats", status)
-                     << " for koid " << koid;
+    FX_LOGS(WARNING) << ZxErrorString("AddProcessStats", status) << " for koid "
+                     << koid;
     return;
   }
   AddKoidValue(koid, "memory_mapped_bytes", info.mem_mapped_bytes);

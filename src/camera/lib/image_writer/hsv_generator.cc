@@ -5,13 +5,12 @@
 #include "src/camera/lib/image_writer/hsv_generator.h"
 
 #include <lib/image-format/image_format.h>
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/assert.h>
 #include <zircon/syscalls.h>
 
 #include <array>
 #include <iostream>
-
-#include <src/lib/syslog/cpp/logger.h>
 
 #include "src/camera/lib/image_writer/color_source.h"
 #include "src/camera/lib/image_writer/image_format_rgba.h"

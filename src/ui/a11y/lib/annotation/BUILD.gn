@@ -20,9 +20,9 @@ source_set("annotation") {
   deps = [
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp",
     "//sdk/lib/ui/scenic/cpp",
     "//src/lib/fsl",
-    "//src/lib/syslog/cpp",
     "//src/ui/a11y/lib/util",
   ]
 }

@@ -11,12 +11,11 @@
 #include <lib/fdio/namespace.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/gtest/real_loop_fixture.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <fs/pseudo_dir.h>
 #include <fs/service.h>
 #include <fs/synchronous_vfs.h>
-
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace media::audio {
 namespace {

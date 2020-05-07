@@ -7,6 +7,7 @@
 #include <client.h>
 #include <errno.h>
 #include <lib/fit/defer.h>
+#include <lib/syslog/cpp/macros.h>
 #include <netdb.h>
 #include <poll.h>
 #include <sys/socket.h>
@@ -19,7 +20,6 @@
 #include <openssl/rand.h>
 
 #include "src/lib/files/unique_fd.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace time_server {
 

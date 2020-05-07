@@ -8,9 +8,8 @@
 #include <fuchsia/boot/c/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fdio.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/channel.h>
-
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace harvester {
 

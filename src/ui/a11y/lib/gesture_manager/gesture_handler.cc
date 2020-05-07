@@ -4,7 +4,8 @@
 
 #include "src/ui/a11y/lib/gesture_manager/gesture_handler.h"
 
-#include "src/lib/syslog/cpp/logger.h"
+#include <lib/syslog/cpp/macros.h>
+
 #include "src/ui/a11y/lib/gesture_manager/recognizers/any_recognizer.h"
 #include "src/ui/a11y/lib/gesture_manager/recognizers/directional_swipe_recognizers.h"
 #include "src/ui/a11y/lib/gesture_manager/recognizers/one_finger_drag_recognizer.h"

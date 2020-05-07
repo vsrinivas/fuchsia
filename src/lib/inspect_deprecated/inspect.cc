@@ -4,7 +4,7 @@
 
 #include "src/lib/inspect_deprecated/inspect.h"
 
-#include "src/lib/syslog/cpp/logger.h"
+#include <lib/syslog/cpp/macros.h>
 
 using component::ObjectDir;
 

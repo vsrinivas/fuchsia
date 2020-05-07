@@ -7,6 +7,7 @@
 #include <lib/inspect/cpp/hierarchy.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/inspect/cpp/reader.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
 
 #include <cstdint>
@@ -20,7 +21,6 @@
 #include "src/developer/feedback/crash_reports/constants.h"
 #include "src/developer/feedback/crash_reports/settings.h"
 #include "src/lib/fxl/strings/string_printf.h"
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/lib/timekeeper/test_clock.h"
 
 namespace feedback {

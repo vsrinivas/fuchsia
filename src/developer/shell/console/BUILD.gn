@@ -21,12 +21,12 @@ source_set("lib") {
 
   public_deps = [
     ":common",
+    "//sdk/lib/syslog/cpp",
     "//src/developer/shell/fidl/fuchsia.shell:shell_llcpp",
     "//src/developer/shell/interpreter:shell_server_lib",
     "//src/developer/shell/parser",
     "//src/lib/fsl",
     "//src/lib/line_input",
-    "//src/lib/syslog/cpp",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/cmdline",
     "//zircon/system/fidl/fuchsia-hardware-pty:c",
@@ -51,7 +51,7 @@ executable("bin") {
 
   deps = [
     ":lib",
-    "//src/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp",
     "//zircon/public/lib/async-loop-cpp",
   ]
 }

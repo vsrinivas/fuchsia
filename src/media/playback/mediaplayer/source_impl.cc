@@ -8,12 +8,12 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/fit/function.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <sstream>
 
 #include "lib/fidl/cpp/optional.h"
 #include "lib/fidl/cpp/type_converter.h"
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/playback/mediaplayer/core/demux_source_segment.h"
 #include "src/media/playback/mediaplayer/fidl/fidl_type_conversions.h"
 #include "src/media/playback/mediaplayer/fidl/simple_stream_sink_impl.h"

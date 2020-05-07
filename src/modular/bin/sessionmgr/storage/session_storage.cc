@@ -5,11 +5,11 @@
 #include "src/modular/bin/sessionmgr/storage/session_storage.h"
 
 #include <lib/fidl/cpp/clone.h>
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 
 #include <unordered_set>
 
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/lib/uuid/uuid.h"
 #include "src/modular/bin/sessionmgr/annotations.h"
 #include "src/modular/bin/sessionmgr/storage/constants_and_utils.h"
@@ -17,12 +17,10 @@
 
 namespace modular {
 
-SessionStorage::SessionStorage() {
-}
+SessionStorage::SessionStorage() {}
 
 FuturePtr<fidl::StringPtr> SessionStorage::CreateStory(
     fidl::StringPtr story_name, std::vector<fuchsia::modular::Annotation> annotations) {
-
   if (!story_name || story_name->empty()) {
     story_name = uuid::Generate();
   }
@@ -75,8 +73,8 @@ FuturePtr<> SessionStorage::UpdateLastFocusedTimestamp(fidl::StringPtr story_nam
                                                        const int64_t ts) {
   auto it = story_data_backing_store_.find(story_name);
   FX_DCHECK(it != story_data_backing_store_.end())
-      << "SessionStorage::UpdateLastFocusedTimestamp was called on story "
-      << story_name << " before it was created!";
+      << "SessionStorage::UpdateLastFocusedTimestamp was called on story " << story_name
+      << " before it was created!";
   auto& story_data = it->second;
 
   if (story_data.story_info().last_focus_time() != ts) {
@@ -153,11 +151,10 @@ FuturePtr<std::optional<fuchsia::modular::AnnotationError>> SessionStorage::Merg
 
     // Merge annotations.
     auto new_annotations =
-        story_data.story_info().has_annotations() ?
-        annotations::Merge(
-            std::move(*story_data.mutable_story_info()->mutable_annotations()),
-            std::move(annotations))
-        : std::move(annotations);
+        story_data.story_info().has_annotations()
+            ? annotations::Merge(std::move(*story_data.mutable_story_info()->mutable_annotations()),
+                                 std::move(annotations))
+            : std::move(annotations);
 
     // Mutate story in-place.
     if (new_annotations.size() > fuchsia::modular::MAX_ANNOTATIONS_PER_STORY) {
@@ -176,7 +173,6 @@ FuturePtr<std::optional<fuchsia::modular::AnnotationError>> SessionStorage::Merg
 
 FuturePtr<std::shared_ptr<StoryStorage>> SessionStorage::GetStoryStorage(
     fidl::StringPtr story_name) {
-
   std::shared_ptr<StoryStorage> value(nullptr);
   auto data_it = story_data_backing_store_.find(story_name);
   if (data_it != story_data_backing_store_.end()) {

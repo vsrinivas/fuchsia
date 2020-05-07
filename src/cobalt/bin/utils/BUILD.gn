@@ -35,7 +35,7 @@ source_set("clock") {
 
   public_deps = [
     "//sdk/lib/sys/cpp",
-    "//src/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp",
     "//src/sys/timekeeper:fuchsia.time",
     "//third_party/cobalt/src/lib/util:clock",
   ]

@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 #include <lib/syslog/cpp/log_settings.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include "src/developer/shell/josh/console/console.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 int main(int argc, char* argv[]) {
   syslog::SetTags({"josh"});

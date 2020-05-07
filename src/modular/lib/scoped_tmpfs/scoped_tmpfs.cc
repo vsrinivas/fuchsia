@@ -8,10 +8,10 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/sync/completion.h>
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/processargs.h>
 
 #include "src/lib/fsl/io/fd.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace scoped_tmpfs {
 

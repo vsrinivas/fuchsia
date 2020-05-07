@@ -12,7 +12,7 @@
 #include <lib/async/dispatcher.h>
 #include <lib/fit/bridge.h>
 #include <lib/fit/promise.h>
-#include <lib/syslog/cpp/logger.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/ui/scenic/cpp/commands.h>
 #include <lib/ui/scenic/cpp/resources.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>

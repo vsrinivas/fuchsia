@@ -24,9 +24,9 @@ source_set("semantics") {
     "//sdk/fidl/fuchsia.ui.views",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp",
     "//src/lib/fsl",
     "//src/lib/fxl",
-    "//src/lib/syslog/cpp",
     "//zircon/third_party/uapp/dash:output_h",
   ]
 }

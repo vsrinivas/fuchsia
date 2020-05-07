@@ -4,6 +4,8 @@
 
 #include "src/developer/feedback/reboot_info/reboot_log.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <string>
 
 #include <gmock/gmock.h>
@@ -11,7 +13,6 @@
 
 #include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/fxl/strings/string_printf.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
 namespace {

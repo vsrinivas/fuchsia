@@ -4,10 +4,11 @@
 #ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_MIXER_FILTER_H_
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_MIXER_FILTER_H_
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <cmath>
 #include <vector>
 
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/audio/audio_core/mixer/coefficient_table.h"
 #include "src/media/audio/audio_core/mixer/constants.h"
 

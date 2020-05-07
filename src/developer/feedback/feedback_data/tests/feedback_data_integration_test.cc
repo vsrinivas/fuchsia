@@ -14,6 +14,7 @@
 #include <lib/inspect/contrib/cpp/archive_reader.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
@@ -31,7 +32,6 @@
 #include "src/lib/files/file.h"
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/logging.h"
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/lib/uuid/uuid.h"
 #include "src/ui/lib/escher/test/common/gtest_vulkan.h"
 #include "third_party/rapidjson/include/rapidjson/document.h"

@@ -61,9 +61,9 @@ source_set("graph") {
   ]
 
   deps = [
+    "//sdk/lib/syslog/cpp",
     "//src/lib/fsl",
     "//src/lib/fxl",
-    "//src/lib/syslog/cpp",
     "//src/media/playback/mediaplayer/util",
     "//zircon/system/fidl/fuchsia-scheduler",
   ]

@@ -5,13 +5,13 @@
 #include "src/developer/feedback/testing/stubs/data_provider.h"
 
 #include <lib/fit/result.h>
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/errors.h>
 
 #include <map>
 #include <string>
 
 #include "src/lib/fsl/vmo/strings.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
 namespace stubs {

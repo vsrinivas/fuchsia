@@ -12,6 +12,7 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/channel.h>
 #include <stdlib.h>
 #include <zircon/boot/image.h>
@@ -32,7 +33,6 @@
 #include "src/lib/fxl/log_settings_command_line.h"
 #include "src/lib/fxl/strings/join_strings.h"
 #include "src/lib/fxl/strings/split_string.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 // Command-line flags
 

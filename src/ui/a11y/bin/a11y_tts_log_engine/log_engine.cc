@@ -4,7 +4,7 @@
 
 #include "src/ui/a11y/bin/a11y_tts_log_engine/log_engine.h"
 
-#include "src/lib/syslog/cpp/logger.h"
+#include <lib/syslog/cpp/macros.h>
 
 namespace a11y {
 

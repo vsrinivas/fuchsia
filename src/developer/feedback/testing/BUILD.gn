@@ -41,11 +41,11 @@ source_set("gpretty_printers") {
     "//garnet/public/lib/fostr",
     "//garnet/public/lib/fostr/fidl/fuchsia.mem",
     "//sdk/fidl/fuchsia.feedback",
+    "//sdk/lib/syslog/cpp",
     "//src/developer/feedback/feedback_data/annotations:types",
     "//src/developer/feedback/utils:errors",
     "//src/developer/feedback/utils/cobalt",
     "//src/lib/fsl",
-    "//src/lib/syslog/cpp",
     "//zircon/public/lib/zx",
     "//zircon/system/fidl/fuchsia-mem",
   ]
@@ -57,8 +57,8 @@ source_set("gtest_with_syslog_main") {
   sources = [ "gtest_with_syslog_main.cc" ]
 
   public_deps = [
+    "//sdk/lib/syslog/cpp",
     "//src/lib/fxl/test:test_settings",
-    "//src/lib/syslog/cpp",
     "//third_party/googletest:gtest",
   ]
 }
@@ -71,7 +71,7 @@ source_set("unit_test_fixture") {
   public_deps = [
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:unit",
-    "//src/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp",
     "//src/lib/testing/loop_fixture",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/zx",

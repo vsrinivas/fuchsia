@@ -4,7 +4,7 @@
 
 #include "dockyard_proxy_local.h"
 
-#include "src/lib/syslog/cpp/logger.h"
+#include <lib/syslog/cpp/macros.h>
 
 namespace harvester {
 

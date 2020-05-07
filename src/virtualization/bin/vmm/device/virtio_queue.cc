@@ -4,9 +4,9 @@
 
 #include "src/virtualization/bin/vmm/device/virtio_queue.h"
 
-#include <virtio/virtio_ring.h>
+#include <lib/syslog/cpp/macros.h>
 
-#include "src/lib/syslog/cpp/logger.h"
+#include <virtio/virtio_ring.h>
 
 VirtioQueue::VirtioQueue() { FX_CHECK(zx::event::create(0, &event_) == ZX_OK); }
 

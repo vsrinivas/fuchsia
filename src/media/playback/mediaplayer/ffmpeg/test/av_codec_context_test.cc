@@ -4,9 +4,10 @@
 
 #include "src/media/playback/mediaplayer/ffmpeg/av_codec_context.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <gtest/gtest.h>
 
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/playback/mediaplayer/graph/types/audio_stream_type.h"
 extern "C" {
 #include "libavformat/avformat.h"

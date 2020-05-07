@@ -12,12 +12,12 @@ executable("test") {
   ]
   deps = [
     "//sdk/lib/fidl/cpp",
+    "//sdk/lib/syslog/cpp",
     "//src/camera/drivers/test_utils",
     "//src/camera/lib/image_writer",
     "//src/camera/lib/image_writer:hsv_color_source",
     "//src/camera/lib/image_writer:image_format_rgba",
     "//src/lib/fxl/test:gtest_main",
-    "//src/lib/syslog/cpp",
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/syslog",
     "//zircon/system/ulib/image-format",

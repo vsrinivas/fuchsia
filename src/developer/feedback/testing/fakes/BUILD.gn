@@ -73,7 +73,7 @@ executable("crash_reporter_main") {
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
-    "//src/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
   ]
@@ -92,10 +92,10 @@ executable("data_provider_main") {
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp",
     "//src/developer/feedback/utils:archive",
     "//src/lib/fsl",
     "//src/lib/fxl",
-    "//src/lib/syslog/cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/system/fidl/fuchsia-mem",
@@ -115,7 +115,7 @@ executable("device_id_provider_main") {
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
-    "//src/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp",
     "//src/lib/uuid",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
@@ -133,9 +133,9 @@ source_set("cobalt") {
   public_deps = [
     "//sdk/fidl/fuchsia.cobalt.test",
     "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp",
     "//src/developer/feedback/utils/cobalt",
     "//src/lib/fxl",
-    "//src/lib/syslog/cpp",
     "//zircon/system/fidl/fuchsia-cobalt",
   ]
 }
@@ -155,7 +155,7 @@ source_set("privacy_settings") {
   ]
 
   deps = [
-    "//src/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp",
     "//zircon/public/lib/fit",
   ]
 }

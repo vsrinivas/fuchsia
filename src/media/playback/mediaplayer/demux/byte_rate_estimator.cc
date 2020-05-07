@@ -4,9 +4,8 @@
 
 #include "byte_rate_estimator.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/clock.h>
-
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace media_player {
 

@@ -4,13 +4,13 @@
 
 #include "runtime.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <string.h>
 
 #include "src/developer/shell/josh/lib/fdio.h"
 #include "src/developer/shell/josh/lib/fidl.h"
 #include "src/developer/shell/josh/lib/sys.h"
 #include "src/developer/shell/josh/lib/zx.h"
-#include "src/lib/syslog/cpp/logger.h"
 #include "third_party/quickjs/quickjs-libc.h"
 #include "third_party/quickjs/quickjs.h"
 

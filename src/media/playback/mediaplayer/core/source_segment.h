@@ -7,10 +7,10 @@
 
 #include <lib/async/dispatcher.h>
 #include <lib/fit/function.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <vector>
 
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/media/playback/mediaplayer/core/segment.h"
 #include "src/media/playback/mediaplayer/graph/graph.h"

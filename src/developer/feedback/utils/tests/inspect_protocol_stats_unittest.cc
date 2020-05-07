@@ -5,11 +5,11 @@
 #include "src/developer/feedback/utils/inspect_protocol_stats.h"
 
 #include <lib/inspect/testing/cpp/inspect.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <string>
 
 #include "src/developer/feedback/utils/inspect_node_manager.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
 namespace {

@@ -5,12 +5,11 @@
 #include "src/media/audio/lib/effects_loader/effects_loader.h"
 
 #include <dlfcn.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>
 
 #include <algorithm>
 #include <optional>
-
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace media::audio {
 namespace {

@@ -4,10 +4,11 @@
 
 #include "src/developer/shell/parser/ast.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <limits>
 #include <sstream>
 
-#include "src/lib/syslog/cpp/logger.h"
 #include "third_party/icu/source/common/unicode/utf8.h"
 
 namespace shell::parser::ast {

@@ -5,6 +5,7 @@
 #include "src/virtualization/bin/vmm/vcpu.h"
 
 #include <lib/fit/function.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/thread.h>
 #include <limits.h>
 #include <stdio.h>
@@ -17,7 +18,6 @@
 #include <trace/event.h>
 
 #include "src/lib/fxl/strings/string_printf.h"
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/virtualization/bin/vmm/guest.h"
 #include "src/virtualization/bin/vmm/io.h"
 

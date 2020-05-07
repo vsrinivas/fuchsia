@@ -4,6 +4,7 @@
 
 #include "src/media/playback/mediaplayer/fidl/fidl_audio_renderer.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/clock.h>
 
 #include <trace/event.h>
@@ -13,7 +14,6 @@
 #include "lib/media/cpp/timeline_rate.h"
 #include "lib/trace-engine/types.h"
 #include "lib/trace/internal/event_common.h"
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/playback/mediaplayer/fidl/fidl_type_conversions.h"
 #include "src/media/playback/mediaplayer/graph/formatting.h"
 

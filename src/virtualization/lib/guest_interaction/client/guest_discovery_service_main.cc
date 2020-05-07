@@ -4,9 +4,9 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include "src/lib/fxl/command_line.h"
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/virtualization/lib/guest_interaction/client/guest_discovery_service.h"
 
 int main(int argc, char** argv) {

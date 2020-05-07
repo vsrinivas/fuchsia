@@ -4,13 +4,14 @@
 #include "src/ui/a11y/lib/view/a11y_view_semantics.h"
 
 #include <lib/async/default.h>
-
-#include "src/lib/syslog/cpp/logger.h"
+#include <lib/syslog/cpp/macros.h>
 
 namespace a11y {
 
-A11yViewSemantics::A11yViewSemantics(std::unique_ptr<SemanticTreeService> tree_service_ptr,
-    fidl::InterfaceRequest<fuchsia::accessibility::semantics::SemanticTree> semantic_tree_request) : semantic_tree_binding_(std::move(tree_service_ptr), std::move(semantic_tree_request)) {}
+A11yViewSemantics::A11yViewSemantics(
+    std::unique_ptr<SemanticTreeService> tree_service_ptr,
+    fidl::InterfaceRequest<fuchsia::accessibility::semantics::SemanticTree> semantic_tree_request)
+    : semantic_tree_binding_(std::move(tree_service_ptr), std::move(semantic_tree_request)) {}
 
 A11yViewSemantics::~A11yViewSemantics() { semantic_tree_binding_.Unbind(); }
 
@@ -22,9 +23,11 @@ fxl::WeakPtr<::a11y::SemanticTree> A11yViewSemantics::GetTree() {
   return semantic_tree_binding_.impl()->Get();
 }
 
-std::unique_ptr<ViewSemantics> A11yViewSemanticsFactory::CreateViewSemantics(std::unique_ptr<SemanticTreeService> tree_service_ptr,
-      fidl::InterfaceRequest<fuchsia::accessibility::semantics::SemanticTree> semantic_tree_request) {
-  return std::make_unique<A11yViewSemantics>(std::move(tree_service_ptr), std::move(semantic_tree_request));
+std::unique_ptr<ViewSemantics> A11yViewSemanticsFactory::CreateViewSemantics(
+    std::unique_ptr<SemanticTreeService> tree_service_ptr,
+    fidl::InterfaceRequest<fuchsia::accessibility::semantics::SemanticTree> semantic_tree_request) {
+  return std::make_unique<A11yViewSemantics>(std::move(tree_service_ptr),
+                                             std::move(semantic_tree_request));
 }
 
-} // namespace a11y
+}  // namespace a11y

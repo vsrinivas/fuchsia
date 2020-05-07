@@ -14,8 +14,8 @@ source_set("lib") {
     "//garnet/bin/network_time:lib",
     "//sdk/fidl/fuchsia.deprecatedtimezone",
     "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp",
     "//src/lib/fxl",
-    "//src/lib/syslog/cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
   ]

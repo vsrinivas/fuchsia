@@ -8,7 +8,7 @@
 #include <fuchsia/camera3/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fit/function.h>
-#include <lib/syslog/cpp/logger.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>

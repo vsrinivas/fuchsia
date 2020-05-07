@@ -4,11 +4,10 @@
 
 #include "src/media/audio/lib/effects_loader/effects_processor.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>
 
 #include <numeric>
-
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace media::audio {
 namespace {

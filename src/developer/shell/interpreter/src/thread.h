@@ -5,12 +5,13 @@
 #ifndef SRC_DEVELOPER_SHELL_INTERPRETER_SRC_THREAD_H_
 #define SRC_DEVELOPER_SHELL_INTERPRETER_SRC_THREAD_H_
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <deque>
 #include <vector>
 
 #include "src/developer/shell/interpreter/src/code.h"
 #include "src/developer/shell/interpreter/src/scope.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace shell {
 namespace interpreter {

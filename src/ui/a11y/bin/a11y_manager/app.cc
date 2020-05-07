@@ -4,9 +4,9 @@
 
 #include "src/ui/a11y/bin/a11y_manager/app.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/ui/a11y/lib/screen_reader/focus/a11y_focus_manager.h"
 #include "src/ui/a11y/lib/screen_reader/screen_reader_context.h"
 

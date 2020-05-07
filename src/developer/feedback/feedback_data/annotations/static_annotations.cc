@@ -4,6 +4,8 @@
 
 #include "src/developer/feedback/feedback_data/annotations/static_annotations.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <optional>
 #include <string>
 
@@ -14,7 +16,6 @@
 #include "src/developer/feedback/utils/errors.h"
 #include "src/lib/files/file.h"
 #include "src/lib/fxl/strings/trim.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
 namespace {
@@ -33,14 +34,12 @@ AnnotationOr ReadStringFromFilepath(const std::string& filepath) {
   return AnnotationOr(fxl::TrimString(content, "\r\n").ToString());
 }
 
-AnnotationOr ReadAnnotationOrFromFilepath(const AnnotationKey& key,
-                                                const std::string& filepath) {
+AnnotationOr ReadAnnotationOrFromFilepath(const AnnotationKey& key, const std::string& filepath) {
   const auto value = ReadStringFromFilepath(filepath);
   return value;
 }
 
-AnnotationOr BuildAnnotationOr(const AnnotationKey& key,
-                                     DeviceIdProvider* device_id_provider) {
+AnnotationOr BuildAnnotationOr(const AnnotationKey& key, DeviceIdProvider* device_id_provider) {
   if (key == kAnnotationBuildBoard) {
     return ReadAnnotationOrFromFilepath(key, "/config/build-info/board");
   } else if (key == kAnnotationBuildProduct) {

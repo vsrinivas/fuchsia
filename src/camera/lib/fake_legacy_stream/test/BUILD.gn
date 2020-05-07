@@ -12,7 +12,7 @@ executable("test") {
   deps = [
     "..",
     "//garnet/public/lib/gtest",
+    "//sdk/lib/syslog/cpp",
     "//src/lib/fxl/test:gtest_main",
-    "//src/lib/syslog/cpp",
   ]
 }

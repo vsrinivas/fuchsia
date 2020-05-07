@@ -4,12 +4,12 @@
 
 #include "src/developer/feedback/crash_reports/main_service.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
 #include "src/developer/feedback/crash_reports/config.h"
 #include "src/lib/files/file.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
 namespace {

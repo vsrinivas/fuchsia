@@ -5,8 +5,7 @@
 #include "src/ui/a11y/lib/screen_reader/screen_reader_action.h"
 
 #include <lib/fit/bridge.h>
-
-#include "src/lib/syslog/cpp/logger.h"
+#include <lib/syslog/cpp/macros.h>
 
 namespace a11y {
 namespace {

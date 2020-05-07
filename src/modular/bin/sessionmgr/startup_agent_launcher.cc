@@ -8,10 +8,10 @@
 #include <fuchsia/cobalt/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/svc/cpp/service_namespace.h>
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 
 #include "src/lib/files/file.h"
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/modular/lib/connect/connect.h"
 
 namespace modular {

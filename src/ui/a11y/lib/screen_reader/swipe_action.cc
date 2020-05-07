@@ -6,9 +6,9 @@
 
 #include <lib/fit/bridge.h>
 #include <lib/fit/scope.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include "fuchsia/accessibility/semantics/cpp/fidl.h"
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/ui/a11y/lib/screen_reader/screen_reader_context.h"
 
 namespace a11y {

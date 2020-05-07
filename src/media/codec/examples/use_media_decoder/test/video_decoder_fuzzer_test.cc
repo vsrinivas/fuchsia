@@ -9,7 +9,7 @@
 #include <lib/media/codec_impl/fourcc.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/syslog/cpp/log_settings.h>
-#include <lib/syslog/cpp/logger.h>
+#include <lib/syslog/cpp/macros.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/stat.h>

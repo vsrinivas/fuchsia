@@ -4,7 +4,8 @@
 
 #include "src/ui/a11y/lib/screen_reader/screen_reader.h"
 
-#include "src/lib/syslog/cpp/logger.h"
+#include <lib/syslog/cpp/macros.h>
+
 #include "src/ui/a11y/lib/screen_reader/default_action.h"
 #include "src/ui/a11y/lib/screen_reader/swipe_action.h"
 

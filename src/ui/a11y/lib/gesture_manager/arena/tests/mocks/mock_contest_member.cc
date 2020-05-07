@@ -4,9 +4,9 @@
 
 #include "src/ui/a11y/lib/gesture_manager/arena/tests/mocks/mock_contest_member.h"
 
-#include <gtest/gtest.h>
+#include <lib/syslog/cpp/macros.h>
 
-#include "src/lib/syslog/cpp/logger.h"
+#include <gtest/gtest.h>
 
 namespace accessibility_test {
 

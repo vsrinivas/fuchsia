@@ -4,6 +4,7 @@
 #include "src/developer/exception_broker/exception_broker.h"
 
 #include <lib/fit/defer.h>
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 
 #include <third_party/crashpad/util/file/string_file.h>
@@ -12,7 +13,6 @@
 #include "src/developer/exception_broker/json_utils.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace fuchsia {
 namespace exception {

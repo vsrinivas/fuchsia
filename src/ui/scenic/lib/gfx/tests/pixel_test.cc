@@ -6,14 +6,13 @@
 
 #include <fuchsia/ui/gfx/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <zircon/status.h>
 
 #include <map>
 
 #include <gtest/gtest.h>
-
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace gfx {
 

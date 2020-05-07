@@ -15,6 +15,7 @@
 #include <lib/media/cpp/timeline_function.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/syslog/cpp/log_settings.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
@@ -34,7 +35,6 @@
 #include <fbl/algorithm.h>
 
 #include "src/lib/fsl/tasks/fd_waiter.h"
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/audio/lib/wav_writer/wav_writer.h"
 
 constexpr bool kWavWriterEnabled = false;

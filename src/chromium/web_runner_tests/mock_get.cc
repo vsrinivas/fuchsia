@@ -4,11 +4,12 @@
 
 #include "src/chromium/web_runner_tests/mock_get.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <gtest/gtest.h>
 
 #include "src/lib/files/file.h"
 #include "src/lib/fxl/strings/string_printf.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace web_runner_tests {
 

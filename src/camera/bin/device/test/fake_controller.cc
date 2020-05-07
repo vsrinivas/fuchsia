@@ -5,7 +5,7 @@
 #include "src/camera/bin/device/test/fake_controller.h"
 
 #include <lib/async-loop/default.h>
-#include <lib/syslog/cpp/logger.h>
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/errors.h>
 
 #include "lib/fidl/cpp/optional.h"

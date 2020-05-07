@@ -4,6 +4,7 @@
 
 #include "dockyard_proxy_grpc.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 
 #include <chrono>
@@ -13,7 +14,6 @@
 #include "dockyard_proxy.h"
 #include "sample_bundle.h"
 #include "src/developer/system_monitor/lib/proto/dockyard.grpc.pb.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace harvester {
 

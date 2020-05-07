@@ -6,8 +6,8 @@
 
 #include <lib/fit/bridge.h>
 #include <lib/fit/defer.h>
+#include <lib/syslog/cpp/macros.h>
 
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/modular/bin/sessionmgr/story/model/apply_mutations.h"
 #include "src/modular/bin/sessionmgr/story/model/story_model_storage.h"
 #include "src/modular/bin/sessionmgr/story/model/story_mutator.h"

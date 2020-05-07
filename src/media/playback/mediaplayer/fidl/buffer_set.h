@@ -6,13 +6,13 @@
 #define SRC_MEDIA_PLAYBACK_MEDIAPLAYER_FIDL_BUFFER_SET_H_
 
 #include <fuchsia/mediacodec/cpp/fidl.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 
 #include "src/lib/fxl/synchronization/thread_annotations.h"
 #include "src/lib/fxl/synchronization/thread_checker.h"
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/playback/mediaplayer/graph/payloads/payload_allocator.h"
 #include "src/media/playback/mediaplayer/graph/payloads/payload_buffer.h"
 

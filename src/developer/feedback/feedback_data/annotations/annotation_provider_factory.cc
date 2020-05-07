@@ -4,6 +4,8 @@
 
 #include "src/developer/feedback/feedback_data/annotations/annotation_provider_factory.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <memory>
 #include <vector>
 
@@ -13,7 +15,6 @@
 #include "src/developer/feedback/feedback_data/annotations/time_provider.h"
 #include "src/developer/feedback/feedback_data/constants.h"
 #include "src/developer/feedback/utils/cobalt/logger.h"
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/lib/timekeeper/system_clock.h"
 
 namespace feedback {

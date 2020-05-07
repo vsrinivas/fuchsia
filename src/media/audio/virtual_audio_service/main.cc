@@ -5,8 +5,8 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/syslog/cpp/log_settings.h>
+#include <lib/syslog/cpp/macros.h>
 
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/audio/virtual_audio_service/virtual_audio_service_impl.h"
 
 int main(int argc, const char** argv) {

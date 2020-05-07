@@ -4,9 +4,9 @@
 
 #include "src/modular/bin/basemgr/presentation_container.h"
 
-#include <cmath>
+#include <lib/syslog/cpp/macros.h>
 
-#include "src/lib/syslog/cpp/logger.h"
+#include <cmath>
 
 namespace modular {
 

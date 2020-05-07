@@ -10,13 +10,13 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/channel.h>
 #include <zircon/boot/driver-config.h>
 
 #include <fbl/unique_fd.h>
 #include <libzbi/zbi.h>
 
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/virtualization/bin/vmm/bits.h"
 #include "src/virtualization/bin/vmm/guest.h"
 #include "src/virtualization/bin/vmm/sysinfo.h"
@@ -389,8 +389,7 @@ zx_status_t GicDistributor::Read(uint64_t addr, IoValue* value) const {
     case GicdRegister::ISACTIVE0: {
       uint64_t id = Vcpu::GetCurrent()->id();
       std::lock_guard<std::mutex> lock(mutex_);
-      return redistributors_[id].Read(
-          static_cast<uint64_t>(GicrRegister::ISACTIVE0), value);
+      return redistributors_[id].Read(static_cast<uint64_t>(GicrRegister::ISACTIVE0), value);
     }
     case GicdRegister::ISACTIVE1... GicdRegister::ISACTIVE31: {
       std::lock_guard<std::mutex> lock(mutex_);
@@ -690,11 +689,11 @@ zx_status_t GicRedistributor::Write(uint64_t addr, const IoValue& value) {
     case GicrRegister::ICENABLE0:
       enabled_ &= ~value.u32;
       return ZX_OK;
-    //Set SGI and PPIs active state.
+    // Set SGI and PPIs active state.
     case GicrRegister::ISACTIVE0:
       is_active_ |= value.u32;
       return ZX_OK;
-    //Set SGI and PPIs active state.
+    // Set SGI and PPIs active state.
     case GicrRegister::ICACTIVE0:
       is_active_ &= ~value.u32;
       return ZX_OK;

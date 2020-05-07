@@ -4,8 +4,7 @@
 #include "mock_color_transform_handler.h"
 
 #include <lib/sys/cpp/testing/component_context_provider.h>
-
-#include "src/lib/syslog/cpp/logger.h"
+#include <lib/syslog/cpp/macros.h>
 namespace accessibility_test {
 
 const std::array<float, 9> kIdentityMatrix = {1, 0, 0, 0, 1, 0, 0, 0, 1};

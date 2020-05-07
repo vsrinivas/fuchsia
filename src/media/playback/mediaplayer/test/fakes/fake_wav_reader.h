@@ -7,12 +7,12 @@
 
 #include <fuchsia/media/playback/cpp/fidl.h>
 #include <lib/async/cpp/wait.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/socket.h>
 
 #include <vector>
 
 #include "lib/fidl/cpp/binding.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace media_player {
 

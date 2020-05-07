@@ -6,6 +6,7 @@
 
 #include <fuchsia/ui/input/accessibility/cpp/fidl.h>
 #include <lib/fit/function.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <array>
 #include <memory>
@@ -13,7 +14,6 @@
 
 #include <gtest/gtest.h>
 
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/ui/a11y/lib/gesture_manager/arena/contest_member.h"
 #include "src/ui/a11y/lib/gesture_manager/arena/recognizer.h"
 #include "src/ui/a11y/lib/testing/input.h"

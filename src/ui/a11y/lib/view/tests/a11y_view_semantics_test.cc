@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/ui/a11y/lib/view/a11y_view_semantics.h"
+
 #include <fuchsia/accessibility/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -9,6 +11,7 @@
 #include <lib/fdio/fd.h>
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/vfs/cpp/pseudo_dir.h>
 #include <lib/zx/event.h>
 
@@ -17,12 +20,10 @@
 
 #include <gtest/gtest.h>
 
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantic_listener.h"
 #include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantic_provider.h"
 #include "src/ui/a11y/lib/util/util.h"
 #include "src/ui/a11y/lib/view/view_manager.h"
-#include "src/ui/a11y/lib/view/a11y_view_semantics.h"
 
 namespace accessibility_test {
 
@@ -67,7 +68,8 @@ class ViewSemanticsTest : public gtest::TestLoopFixture {
         context_provider_.context()->outgoing()->debug_dir(), [] {});
     tree_service_ = tree_service.get();
 
-    view_semantics_ = std::make_unique<a11y::A11yViewSemantics>(std::move(tree_service), tree_ptr_.NewRequest());
+    view_semantics_ =
+        std::make_unique<a11y::A11yViewSemantics>(std::move(tree_service), tree_ptr_.NewRequest());
   }
 
  protected:
@@ -86,8 +88,8 @@ class ViewSemanticsTest : public gtest::TestLoopFixture {
 TEST_F(ViewSemanticsTest, TestEnableSemantics) {
   view_semantics_->EnableSemanticUpdates(true);
 
-   EXPECT_TRUE(semantic_tree_service_factory_->service());
-    EXPECT_TRUE(semantic_tree_service_factory_->service()->UpdatesEnabled());
+  EXPECT_TRUE(semantic_tree_service_factory_->service());
+  EXPECT_TRUE(semantic_tree_service_factory_->service()->UpdatesEnabled());
 }
 
-} // namespace accessibility_test
+}  // namespace accessibility_test

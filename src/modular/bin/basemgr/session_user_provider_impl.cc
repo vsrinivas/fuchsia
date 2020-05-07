@@ -5,9 +5,8 @@
 #include "src/modular/bin/basemgr/session_user_provider_impl.h"
 
 #include <lib/fit/function.h>
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
-
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace modular {
 

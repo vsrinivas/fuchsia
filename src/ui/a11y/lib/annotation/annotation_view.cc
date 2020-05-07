@@ -4,10 +4,10 @@
 
 #include "src/ui/a11y/lib/annotation/annotation_view.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <zircon/status.h>
 
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/ui/a11y/lib/util/util.h"
 
 namespace a11y {

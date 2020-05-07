@@ -9,6 +9,7 @@
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/syslog/cpp/log_settings.h>
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 
 #include <memory>
@@ -23,7 +24,6 @@
 
 #include "fuchsia/io/cpp/fidl.h"
 #include "fuchsia/io/test/cpp/fidl.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 zx_status_t DummyReader(fbl::String* output) { return ZX_OK; }
 

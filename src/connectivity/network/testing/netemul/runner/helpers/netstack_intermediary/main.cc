@@ -5,13 +5,13 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/default.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <iostream>
 
 #include "netstack_intermediary.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/logging.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 constexpr size_t kMacNetworkNameLength = 100;
 

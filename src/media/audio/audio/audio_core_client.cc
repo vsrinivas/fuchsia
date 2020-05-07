@@ -4,7 +4,7 @@
 
 #include "src/media/audio/audio/audio_core_client.h"
 
-#include "src/lib/syslog/cpp/logger.h"
+#include <lib/syslog/cpp/macros.h>
 
 namespace media::audio {
 AudioCoreClient::AudioCoreClient(sys::ComponentContext* component_context,

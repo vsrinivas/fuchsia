@@ -7,6 +7,7 @@
 #include <lib/inspect/cpp/hierarchy.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/inspect/cpp/reader.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <string>
 #include <vector>
@@ -15,7 +16,6 @@
 #include <gtest/gtest.h>
 
 #include "sdk/lib/inspect/testing/cpp/inspect.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
 namespace {

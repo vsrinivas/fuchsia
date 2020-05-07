@@ -10,6 +10,7 @@
 #include <lib/fidl/cpp/synchronous_interface_ptr.h>
 #include <lib/svc/cpp/services.h>
 #include <lib/sys/cpp/component_context.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <memory>
 #include <sstream>
@@ -20,7 +21,6 @@
 #include "src/lib/fxl/log_settings_command_line.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/strings/string_view.h"
-#include "src/lib/syslog/cpp/logger.h"
 #include "third_party/cobalt/src/lib/util/clock.h"
 
 namespace cobalt {

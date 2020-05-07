@@ -8,11 +8,11 @@
 #include <lib/async/cpp/task.h>
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fidl/cpp/internal/stub.h>
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/errors.h>
 
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/logging.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
 namespace stubs {

@@ -67,7 +67,7 @@ source_set("test_codec_packets") {
   testonly = true
   public = [ "test_codec_packets.h" ]
   public_deps = [
-    "//src/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp",
     "//src/media/lib/codec_impl",
     "//zircon/public/lib/fzl",
   ]

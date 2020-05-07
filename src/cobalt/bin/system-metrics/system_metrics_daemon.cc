@@ -5,7 +5,7 @@
 // The cobalt system metrics collection daemon uses cobalt to log system metrics
 // on a regular basis.
 #include "src/cobalt/bin/system-metrics/system_metrics_daemon.h"
-#include <sys/statvfs.h>
+
 #include <assert.h>
 #include <fcntl.h>
 #include <fuchsia/cobalt/cpp/fidl.h>
@@ -14,7 +14,9 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/sys/inspect/cpp/component.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/resource.h>
+#include <sys/statvfs.h>
 #include <zircon/status.h>
 
 #include <chrono>
@@ -31,7 +33,6 @@
 #include "src/cobalt/bin/utils/clock.h"
 #include "src/cobalt/bin/utils/status_utils.h"
 #include "src/lib/cobalt/cpp/cobalt_event_builder.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 using cobalt::CobaltEventBuilder;
 using cobalt::IntegerBuckets;

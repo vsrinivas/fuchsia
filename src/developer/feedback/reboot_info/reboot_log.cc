@@ -4,11 +4,12 @@
 
 #include "src/developer/feedback/reboot_info/reboot_log.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <array>
 #include <sstream>
 
 #include "src/lib/files/file.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
 namespace {

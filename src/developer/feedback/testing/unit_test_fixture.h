@@ -7,13 +7,13 @@
 
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/sys/cpp/testing/service_directory_provider.h>
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/errors.h>
 
 #include <memory>
 
 #include <gtest/gtest.h>
 
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 namespace feedback {

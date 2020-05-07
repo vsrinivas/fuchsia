@@ -5,9 +5,8 @@
 #include "guest_ethernet.h"
 
 #include <lib/async/default.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/fifo.h>
-
-#include "src/lib/syslog/cpp/logger.h"
 
 static constexpr uint32_t kMtu = 1500;
 

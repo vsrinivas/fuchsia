@@ -7,8 +7,7 @@
 #include <fuchsia/sysmem/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fidl/cpp/binding.h>
-
-#include <src/lib/syslog/cpp/logger.h>
+#include <lib/syslog/cpp/macros.h>
 
 namespace camera {
 void FakeLogicalBufferCollection::WaitForBuffersAllocated(

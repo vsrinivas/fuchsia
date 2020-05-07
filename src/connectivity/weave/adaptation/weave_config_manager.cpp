@@ -4,12 +4,13 @@
 
 #include "weave_config_manager.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include "rapidjson/schema.h"
 #include "rapidjson/stringbuffer.h"
 #include "rapidjson/writer.h"
 #include "src/lib/files/file.h"
 #include "src/lib/json_parser/json_parser.h"
-#include "src/lib/syslog/cpp/logger.h"
 #include "third_party/modp_b64/modp_b64.h"
 #include "weave_device_platform_error.h"
 

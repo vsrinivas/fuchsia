@@ -4,9 +4,8 @@
 #include "src/media/audio/audio_core/test/hardware/audio_core_hardware_test.h"
 
 #include <lib/sys/cpp/service_directory.h>
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
-
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace media::audio::test {
 

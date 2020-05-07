@@ -5,9 +5,9 @@
 #include "src/media/playback/mediaplayer/process/software_processor.h"
 
 #include <lib/async/default.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/clock.h>
 
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/playback/mediaplayer/graph/formatting.h"
 #include "src/media/playback/mediaplayer/graph/thread_priority.h"
 

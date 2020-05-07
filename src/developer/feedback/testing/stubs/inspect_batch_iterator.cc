@@ -5,10 +5,10 @@
 #include "src/developer/feedback/testing/stubs/inspect_batch_iterator.h"
 
 #include <lib/fit/result.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/strings/string_printf.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
 namespace stubs {

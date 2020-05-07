@@ -9,13 +9,13 @@
 #include <fuchsia/hardware/midi/c/fidl.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fit/defer.h>
+#include <lib/syslog/cpp/macros.h>
 #include <poll.h>
 #include <unistd.h>
 
 #include <cstdio>
 #include <iostream>
 
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/audio/examples/tones/midi.h"
 #include "src/media/audio/examples/tones/tones.h"
 

@@ -7,13 +7,12 @@
 #include <lib/async/cpp/task.h>
 #include <lib/fit/function.h>
 #include <lib/gtest/real_loop_fixture.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/clock.h>
 
 #include <fbl/auto_call.h>
 #include <fbl/function.h>
 #include <gtest/gtest.h>
-
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace camera {
 

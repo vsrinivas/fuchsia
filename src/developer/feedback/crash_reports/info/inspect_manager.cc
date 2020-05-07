@@ -4,6 +4,7 @@
 
 #include "src/developer/feedback/crash_reports/info/inspect_manager.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
@@ -15,7 +16,6 @@
 #include "src/developer/feedback/utils/time.h"
 #include "src/lib/files/path.h"
 #include "src/lib/fxl/strings/substitute.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
 namespace {

@@ -9,6 +9,7 @@
 #include <lib/async/cpp/executor.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/dispatcher.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <mutex>
 #include <string>
@@ -16,7 +17,6 @@
 
 #include <trace/event.h>
 
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/audio/audio_core/utils.h"
 
 namespace media::audio {

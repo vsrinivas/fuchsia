@@ -4,7 +4,7 @@
 
 #include "src/ui/a11y/lib/util/util.h"
 
-#include "src/lib/syslog/cpp/logger.h"
+#include <lib/syslog/cpp/macros.h>
 
 namespace a11y {
 

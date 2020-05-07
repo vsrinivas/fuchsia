@@ -9,12 +9,12 @@
 #include <fuchsia/modular/cpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/vfs.h>
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 
 #include <memory>
 
 #include "lib/fdio/directory.h"
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/modular/bin/sessionmgr/agent_runner/agent_runner.h"
 #include "src/modular/lib/common/teardown.h"
 

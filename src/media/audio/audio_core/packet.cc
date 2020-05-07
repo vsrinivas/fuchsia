@@ -5,10 +5,9 @@
 #include "src/media/audio/audio_core/packet.h"
 
 #include <lib/async/cpp/task.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <trace/event.h>
-
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace media::audio {
 

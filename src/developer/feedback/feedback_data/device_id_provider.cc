@@ -4,13 +4,14 @@
 
 #include "src/developer/feedback/feedback_data/device_id_provider.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <optional>
 
 #include "src/developer/feedback/utils/errors.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 #include "src/lib/fxl/strings/string_printf.h"
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/lib/uuid/uuid.h"
 
 namespace feedback {

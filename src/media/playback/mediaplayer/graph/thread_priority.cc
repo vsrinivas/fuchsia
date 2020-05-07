@@ -7,9 +7,8 @@
 #include <fuchsia/scheduler/cpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fit/result.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/channel.h>
-
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace media_player {
 namespace {

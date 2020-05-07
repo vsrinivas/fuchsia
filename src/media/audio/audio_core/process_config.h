@@ -5,9 +5,10 @@
 #ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_PROCESS_CONFIG_H_
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_PROCESS_CONFIG_H_
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <optional>
 
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/audio/audio_core/device_config.h"
 #include "src/media/audio/audio_core/loudness_transform.h"
 #include "src/media/audio/audio_core/thermal_config.h"

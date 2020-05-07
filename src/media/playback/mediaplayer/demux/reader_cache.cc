@@ -4,9 +4,10 @@
 
 #include "src/media/playback/mediaplayer/demux/reader_cache.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include "lib/async/cpp/task.h"
 #include "lib/async/default.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace media_player {
 namespace {
@@ -75,7 +76,7 @@ void ReaderCache::ReadAt(size_t position, uint8_t* buffer, size_t bytes_to_read,
 
 void ReaderCache::SetCacheOptions(size_t capacity, size_t max_backtrack) {
   FX_DCHECK(!load_in_progress_) << "SetCacheOptions cannot be called while a load is"
-                                    " in progress.";
+                                   " in progress.";
 
   buffer_ = SlidingBuffer(capacity);
   capacity_ = capacity;

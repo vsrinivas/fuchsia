@@ -3,12 +3,12 @@
 
 #include "src/media/audio/audio_core/mixer/test/audio_analysis.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <iomanip>
 #include <vector>
 
 #include <fbl/algorithm.h>
-
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace media::audio::test {
 

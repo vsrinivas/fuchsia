@@ -8,6 +8,7 @@
 #include <fuchsia/intl/cpp/fidl.h>
 #include <lib/async/cpp/executor.h>
 #include <lib/fit/result.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/syslog/logger.h>
 #include <lib/zx/time.h>
 
@@ -38,7 +39,6 @@
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
 #include "src/lib/fxl/strings/string_printf.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
 namespace {

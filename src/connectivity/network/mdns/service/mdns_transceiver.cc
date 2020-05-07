@@ -6,12 +6,12 @@
 
 #include <arpa/inet.h>
 #include <errno.h>
+#include <lib/syslog/cpp/macros.h>
 #include <sys/socket.h>
 
 #include "src/connectivity/network/mdns/service/mdns_addresses.h"
 #include "src/connectivity/network/mdns/service/mdns_fidl_util.h"
 #include "src/lib/files/unique_fd.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace mdns {
 

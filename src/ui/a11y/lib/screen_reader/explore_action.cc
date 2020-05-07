@@ -6,10 +6,10 @@
 
 #include <lib/fit/bridge.h>
 #include <lib/fit/promise.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <cstdint>
 
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/ui/a11y/lib/screen_reader/screen_reader.h"
 #include "src/ui/a11y/lib/screen_reader/screen_reader_action.h"
 

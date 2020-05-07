@@ -4,8 +4,9 @@
 
 #include "src/developer/feedback/crash_reports/tests/stub_crash_server.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include "src/lib/fxl/strings/string_printf.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
 

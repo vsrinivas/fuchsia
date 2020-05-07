@@ -7,10 +7,10 @@ executable("test") {
   testonly = true
   sources = [ "image_io_util_test.cc" ]
   deps = [
+    "//sdk/lib/syslog/cpp",
     "//src/camera/drivers/test_utils",
     "//src/camera/lib/stream_utils",
     "//src/lib/files",
     "//src/lib/fxl/test:gtest_main",
-    "//src/lib/syslog/cpp",
   ]
 }

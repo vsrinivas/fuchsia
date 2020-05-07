@@ -10,6 +10,7 @@
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/sys/cpp/component_context.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/ui/scenic/cpp/resources.h>
 
 #include <queue>
@@ -18,7 +19,6 @@
 #include <fbl/array.h>
 
 #include "src/lib/ui/base_view/base_view.h"
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/playback/mediaplayer/metrics/packet_timing_tracker.h"
 #include "src/media/playback/mediaplayer/render/video_renderer.h"
 

@@ -5,8 +5,8 @@
 #include "src/media/audio/audio_core/testing/packet_factory.h"
 
 #include <lib/async/cpp/time.h>
+#include <lib/syslog/cpp/macros.h>
 
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/audio/audio_core/mixer/constants.h"
 
 namespace media::audio::testing {

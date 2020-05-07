@@ -5,6 +5,7 @@
 #include "ge2d.h"
 
 #include <lib/image-format/image_format.h>
+#include <lib/syslog/cpp/macros.h>
 #include <stdint.h>
 #include <zircon/assert.h>
 #include <zircon/threads.h>
@@ -22,7 +23,6 @@
 #include <hw/reg.h>
 
 #include "src/camera/drivers/hw_accel/ge2d/ge2d-regs.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace ge2d {
 

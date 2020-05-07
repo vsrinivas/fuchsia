@@ -6,12 +6,12 @@
 #define SRC_MEDIA_PLAYBACK_MEDIAPLAYER_GRAPH_PAYLOADS_PAYLOAD_MANAGER_H_
 
 #include <fuchsia/sysmem/cpp/fidl.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <mutex>
 
 #include "src/lib/fxl/synchronization/thread_annotations.h"
 #include "src/lib/fxl/synchronization/thread_checker.h"
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/playback/mediaplayer/graph/payloads/local_memory_payload_allocator.h"
 #include "src/media/playback/mediaplayer/graph/payloads/payload_allocator.h"
 #include "src/media/playback/mediaplayer/graph/payloads/payload_config.h"

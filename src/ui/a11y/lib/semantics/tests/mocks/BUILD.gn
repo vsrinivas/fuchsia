@@ -33,7 +33,7 @@ source_set("mocks") {
 
   deps = [
     "//sdk/lib/sys/cpp",
-    "//src/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp",
     "//src/ui/a11y/lib/semantics",
     "//src/ui/a11y/lib/util",
   ]

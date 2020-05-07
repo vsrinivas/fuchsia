@@ -7,8 +7,8 @@
 #include <fcntl.h>
 #include <fuchsia/virtualaudio/c/fidl.h>
 #include <lib/fdio/fdio.h>
+#include <lib/syslog/cpp/macros.h>
 
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/audio/drivers/virtual_audio/virtual_audio.h"
 
 namespace virtual_audio {

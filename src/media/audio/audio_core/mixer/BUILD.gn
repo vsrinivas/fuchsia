@@ -46,7 +46,7 @@ source_set("mixer") {
 
   deps = [
     "//sdk/lib/media/cpp:no_converters",
-    "//src/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp",
   ]
 
   # TODO(46722): UBSan has found an instance of undefined behavior in this target.

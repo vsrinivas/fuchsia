@@ -4,7 +4,8 @@
 #ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_MIXER_POSITION_MANAGER_H_
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_MIXER_POSITION_MANAGER_H_
 
-#include "src/lib/syslog/cpp/logger.h"
+#include <lib/syslog/cpp/macros.h>
+
 #include "src/media/audio/audio_core/mixer/constants.h"
 #include "src/media/audio/audio_core/mixer/mixer.h"
 

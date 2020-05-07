@@ -4,9 +4,8 @@
 
 #include "src/connectivity/network/mdns/service/resource_renewer.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/clock.h>
-
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace mdns {
 

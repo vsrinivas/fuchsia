@@ -7,6 +7,7 @@
 #include <fuchsia/mem/cpp/fidl.h>
 #include <lib/fit/promise.h>
 #include <lib/fit/result.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
@@ -25,7 +26,6 @@
 #include "src/developer/feedback/utils/fit/timeout.h"
 #include "src/lib/files/file.h"
 #include "src/lib/fxl/strings/trim.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
 namespace {

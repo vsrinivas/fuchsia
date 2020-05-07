@@ -5,13 +5,13 @@
 #include "src/modular/bin/basemgr/basemgr_impl.h"
 
 #include <fuchsia/ui/app/cpp/fidl.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 
 #include <zxtest/zxtest.h>
 
 #include "src/lib/fsl/types/type_converters.h"
 #include "src/lib/intl/intl_property_provider_impl/intl_property_provider_impl.h"
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/modular/bin/basemgr/wait_for_minfs.h"
 #include "src/modular/lib/common/async_holder.h"
 #include "src/modular/lib/common/teardown.h"

@@ -7,9 +7,8 @@
 #include <lib/sys/cpp/component_context.h>
 #include <lib/sys/inspect/cpp/component.h>
 #include <lib/syslog/cpp/log_settings.h>
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
-
-#include <src/lib/syslog/cpp/logger.h>
 
 #include "reverser.h"
 

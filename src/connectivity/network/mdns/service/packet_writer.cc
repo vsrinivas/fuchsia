@@ -5,8 +5,7 @@
 #include "src/connectivity/network/mdns/service/packet_writer.h"
 
 #include <endian.h>
-
-#include "src/lib/syslog/cpp/logger.h"
+#include <lib/syslog/cpp/macros.h>
 
 namespace mdns {
 

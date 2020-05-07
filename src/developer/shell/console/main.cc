@@ -4,11 +4,11 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/syslog/cpp/log_settings.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include "lib/async-loop/default.h"
 #include "src/developer/shell/console/app.h"
 #include "src/developer/shell/console/scoped_interpreter.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace shell::console {
 

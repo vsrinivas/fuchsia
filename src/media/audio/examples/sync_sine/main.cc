@@ -6,12 +6,12 @@
 #include <lib/async-loop/default.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/syslog/cpp/log_settings.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <iostream>
 
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/strings/string_number_conversions.h"
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/audio/examples/sync_sine/sync_sine.h"
 
 namespace {

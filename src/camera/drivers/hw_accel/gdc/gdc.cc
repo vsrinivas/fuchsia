@@ -5,6 +5,7 @@
 #include "gdc.h"
 
 #include <lib/image-format/image_format.h>
+#include <lib/syslog/cpp/macros.h>
 #include <stdint.h>
 #include <zircon/assert.h>
 #include <zircon/threads.h>
@@ -20,7 +21,6 @@
 #include <hw/reg.h>
 
 #include "gdc-regs.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace gdc {
 

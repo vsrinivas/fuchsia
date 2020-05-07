@@ -13,6 +13,7 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/syslog/cpp/log_settings.h>
+#include <lib/syslog/cpp/macros.h>
 #include <sys/types.h>
 
 #include <chrono>
@@ -26,7 +27,6 @@
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
 #include "src/lib/fxl/strings/string_printf.h"
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/modular/bin/sessionctl/logger.h"
 #include "src/modular/bin/sessionctl/session_ctl_app.h"
 #include "src/modular/bin/sessionctl/session_ctl_constants.h"

@@ -4,6 +4,8 @@
 
 #include "src/developer/shell/interpreter/src/server.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <memory>
 #include <string_view>
 
@@ -15,7 +17,6 @@
 #include "src/developer/shell/interpreter/src/instructions.h"
 #include "src/developer/shell/interpreter/src/schema.h"
 #include "src/developer/shell/interpreter/src/types.h"
-#include "src/lib/syslog/cpp/logger.h"
 #include "zircon/process.h"
 #include "zircon/processargs.h"
 #include "zircon/status.h"

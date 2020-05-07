@@ -4,14 +4,13 @@
 
 #include "src/developer/feedback/feedback_data/tests/zx_object_util.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/errors.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
 #include <cstdint>
 #include <vector>
-
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
 namespace {

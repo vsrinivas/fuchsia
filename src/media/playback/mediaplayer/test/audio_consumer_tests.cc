@@ -10,6 +10,7 @@
 #include <lib/sys/cpp/component_context.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
 #include <lib/syslog/cpp/log_settings.h>
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/time.h>
 
 #include <array>
@@ -25,7 +26,6 @@
 #include "lib/ui/scenic/cpp/view_token_pair.h"
 #include "lib/zx/time.h"
 #include "src/lib/fsl/io/fd.h"
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/playback/mediaplayer/audio_consumer_impl.h"
 #include "src/media/playback/mediaplayer/test/fakes/fake_audio.h"
 #include "src/media/playback/mediaplayer/test/sink_feeder.h"

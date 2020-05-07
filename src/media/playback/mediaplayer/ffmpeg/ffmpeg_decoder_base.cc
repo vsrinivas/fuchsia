@@ -5,10 +5,10 @@
 #include "src/media/playback/mediaplayer/ffmpeg/ffmpeg_decoder_base.h"
 
 #include <lib/async/cpp/task.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <trace/event.h>
 
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/playback/mediaplayer/ffmpeg/av_codec_context.h"
 #include "src/media/playback/mediaplayer/graph/formatting.h"
 extern "C" {
@@ -90,8 +90,7 @@ bool FfmpegDecoderBase::TransformPacket(const PacketPtr& input, bool new_input, 
 
       // Take a fresh reference to the payload_buffer since av_frame_unref will
       // drop the av_frame's reference via ReleaseBufferForAvFrame.
-      *output = CreateOutputPacket(
-          *av_frame_ptr_, fbl::RefPtr(payload_buffer_raw_ptr));
+      *output = CreateOutputPacket(*av_frame_ptr_, fbl::RefPtr(payload_buffer_raw_ptr));
 
       // Release the frame returned by |avcodec_receive_frame|.
       av_frame_unref(av_frame_ptr_.get());

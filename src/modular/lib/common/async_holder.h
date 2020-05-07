@@ -6,6 +6,7 @@
 #define SRC_MODULAR_LIB_COMMON_ASYNC_HOLDER_H_
 
 #include <lib/fit/function.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
 
 #include <functional>
@@ -13,7 +14,6 @@
 #include <string>
 
 #include "src/lib/fxl/macros.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace modular {
 

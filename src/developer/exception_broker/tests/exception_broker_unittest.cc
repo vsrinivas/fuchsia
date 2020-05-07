@@ -8,6 +8,7 @@
 #include <lib/async-loop/default.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/testing/service_directory_provider.h>
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 #include <zircon/syscalls/exception.h>
 
@@ -21,7 +22,6 @@
 #include "src/developer/exception_broker/tests/crasher_wrapper.h"
 #include "src/lib/fsl/handles/object_info.h"
 #include "src/lib/fxl/test/test_settings.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace fuchsia {
 namespace exception {
@@ -276,5 +276,3 @@ TEST(ExceptionBroker, GettingInvalidVMO) {
 }  // namespace
 }  // namespace exception
 }  // namespace fuchsia
-
-

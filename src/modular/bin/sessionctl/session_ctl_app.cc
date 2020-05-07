@@ -4,9 +4,10 @@
 
 #include "src/modular/bin/sessionctl/session_ctl_app.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <regex>
 
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/modular/bin/sessionctl/session_ctl_constants.h"
 
 namespace modular {

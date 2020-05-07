@@ -4,8 +4,9 @@
 
 #include "src/media/playback/mediaplayer/ffmpeg/ffmpeg_audio_decoder.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include "lib/media/cpp/timeline_rate.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace media_player {
 

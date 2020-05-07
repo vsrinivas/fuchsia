@@ -5,9 +5,8 @@
 #include "src/camera/bin/camera-gym/stream_cycler.h"
 
 #include <lib/async-loop/default.h>
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/types.h>
-
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace camera {
 
@@ -93,7 +92,7 @@ void StreamCycler::WatchDevicesCallback(std::vector<fuchsia::camera3::WatchDevic
               // original simple loop does not work reliably at this time.
 
               // BEGIN: Daisy-chain work around for fxb/42241
-              ConnectToStream(kConfigId, 0 /* stream_index */ );
+              ConnectToStream(kConfigId, 0 /* stream_index */);
               // END: Daisy-chain work around for fxb/42241
             });
           });

@@ -9,8 +9,8 @@ executable("bin") {
   deps = [
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/inspect/cpp",
+    "//sdk/lib/syslog/cpp",
     "//src/diagnostics/examples/inspect/fidl:fuchsia.examples.inspect",
-    "//src/lib/syslog/cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
   ]

@@ -7,13 +7,12 @@
 
 #include <fuchsia/mediacodec/cpp/fidl.h>
 #include <lib/fzl/vmo-mapper.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <algorithm>
 #include <map>
 
 #include <gtest/gtest.h>
-
-#include "src/lib/syslog/cpp/logger.h"
 
 constexpr uint32_t kBufferLifetimeOrdinal = 1;
 

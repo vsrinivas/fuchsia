@@ -4,6 +4,8 @@
 
 #include "src/developer/feedback/feedback_data/attachments/static_attachments.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <filesystem>
 #include <optional>
 #include <string>
@@ -13,7 +15,6 @@
 #include "src/developer/feedback/utils/rotating_file_set.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
 namespace {

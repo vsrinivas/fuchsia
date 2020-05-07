@@ -8,13 +8,13 @@
 #include <fuchsia/sysmem/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fit/function.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <deque>
 #include <queue>
 
 #include "src/lib/fxl/synchronization/thread_annotations.h"
 #include "src/lib/fxl/synchronization/thread_checker.h"
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/playback/mediaplayer/graph/nodes/input.h"
 #include "src/media/playback/mediaplayer/graph/nodes/output.h"
 #include "src/media/playback/mediaplayer/graph/packet.h"

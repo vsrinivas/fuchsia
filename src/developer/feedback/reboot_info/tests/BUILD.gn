@@ -65,12 +65,12 @@ executable("reboot_log_unittest") {
   sources = [ "reboot_log_unittest.cc" ]
 
   deps = [
+    "//sdk/lib/syslog/cpp",
     "//src/developer/feedback/reboot_info:reboot_log",
     "//src/developer/feedback/testing:gpretty_printers",
     "//src/developer/feedback/testing:gtest_with_syslog_main",
     "//src/lib/files",
     "//src/lib/fxl",
-    "//src/lib/syslog/cpp",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/zx",

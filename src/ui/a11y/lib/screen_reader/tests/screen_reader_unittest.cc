@@ -6,8 +6,8 @@
 
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
+#include <lib/syslog/cpp/macros.h>
 
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/ui/a11y/bin/a11y_manager/tests/util/util.h"
 #include "src/ui/a11y/lib/focus_chain/tests/mocks/mock_focus_chain_registry.h"
 #include "src/ui/a11y/lib/focus_chain/tests/mocks/mock_focus_chain_requester.h"
@@ -69,8 +69,7 @@ class ScreenReaderTest : public gtest::TestLoopFixture {
         factory_ptr_(factory_.get()),
         context_provider_(),
         tts_manager_(context_provider_.context()),
-        view_manager_(std::move(factory_),
-                      std::make_unique<a11y::ViewWrapperFactory>(),
+        view_manager_(std::move(factory_), std::make_unique<a11y::ViewWrapperFactory>(),
                       context_provider_.context()->outgoing()->debug_dir()),
         a11y_focus_manager_(std::make_unique<MockA11yFocusManager>()),
         a11y_focus_manager_ptr_(a11y_focus_manager_.get()),

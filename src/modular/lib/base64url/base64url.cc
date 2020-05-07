@@ -4,7 +4,8 @@
 
 #include "src/modular/lib/base64url/base64url.h"
 
-#include "src/lib/syslog/cpp/logger.h"
+#include <lib/syslog/cpp/macros.h>
+
 #include "third_party/modp_b64/modp_b64.h"
 
 namespace base64url {

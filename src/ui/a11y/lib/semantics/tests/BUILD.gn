@@ -37,10 +37,10 @@ executable("semantics_tests") {
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:unit",
+    "//sdk/lib/syslog/cpp",
     "//sdk/lib/vfs/cpp",
     "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",
-    "//src/lib/syslog/cpp",
     "//src/ui/a11y/bin/a11y_manager/tests/util",
     "//src/ui/a11y/lib/semantics",
     "//src/ui/a11y/lib/semantics/tests/mocks",
@@ -93,8 +93,8 @@ executable("flutter_semantics_tests") {
 
   deps = [
     ":semantics_integration_test_fixture",
+    "//sdk/lib/syslog/cpp",
     "//src/lib/fxl/test:gtest_main",
-    "//src/lib/syslog/cpp",
     "//src/lib/ui/base_view",
     "//src/ui/testing/views",
     "//third_party/googletest:gtest",
@@ -106,10 +106,10 @@ executable("web_semantics_tests") {
   sources = [ "web_semantics_tests.cc" ]
   deps = [
     ":semantics_integration_test_fixture",
+    "//sdk/lib/syslog/cpp",
     "//src/chromium/web_runner_tests:mock_server",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
-    "//src/lib/syslog/cpp",
     "//src/lib/ui/base_view",
     "//src/ui/a11y/lib/view",
     "//src/ui/testing/views",
@@ -135,7 +135,7 @@ source_set("semantics_integration_test_fixture") {
     "//sdk/fidl/fuchsia.ui.input.accessibility",
     "//sdk/fidl/fuchsia.ui.policy",
     "//sdk/fidl/fuchsia.ui.scenic",
-    "//src/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/zx",
   ]

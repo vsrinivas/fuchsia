@@ -4,7 +4,7 @@
 
 #include "src/developer/feedback/testing/stubs/product_info_provider.h"
 
-#include "src/lib/syslog/cpp/logger.h"
+#include <lib/syslog/cpp/macros.h>
 
 namespace feedback {
 namespace stubs {

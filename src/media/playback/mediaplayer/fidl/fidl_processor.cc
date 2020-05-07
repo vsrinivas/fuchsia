@@ -4,11 +4,12 @@
 
 #include "src/media/playback/mediaplayer/fidl/fidl_processor.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <vector>
 
 #include "lib/fidl/cpp/clone.h"
 #include "lib/fidl/cpp/optional.h"
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/playback/mediaplayer/fidl/fidl_type_conversions.h"
 #include "src/media/playback/mediaplayer/graph/formatting.h"
 #include "src/media/playback/mediaplayer/graph/types/audio_stream_type.h"

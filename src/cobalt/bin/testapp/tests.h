@@ -5,6 +5,8 @@
 #ifndef SRC_COBALT_BIN_TESTAPP_TESTS_H_
 #define SRC_COBALT_BIN_TESTAPP_TESTS_H_
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <memory>
 #include <sstream>
 #include <string>
@@ -16,7 +18,6 @@
 #include "src/lib/fxl/log_settings_command_line.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/strings/string_view.h"
-#include "src/lib/syslog/cpp/logger.h"
 #include "third_party/cobalt/src/lib/util/clock.h"
 
 namespace cobalt {

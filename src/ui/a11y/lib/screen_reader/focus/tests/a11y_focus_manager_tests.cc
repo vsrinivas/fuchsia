@@ -4,10 +4,10 @@
 
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/gtest/real_loop_fixture.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <gtest/gtest.h>
 
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/ui/a11y/lib/annotation/tests/mocks/mock_focus_highlight_manager.h"
 #include "src/ui/a11y/lib/focus_chain/tests/mocks/mock_focus_chain_registry.h"
 #include "src/ui/a11y/lib/focus_chain/tests/mocks/mock_focus_chain_requester.h"

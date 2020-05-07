@@ -4,6 +4,8 @@
 
 #include "src/media/audio/audio_core/process_config_loader.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <sstream>
 #include <string_view>
 
@@ -13,7 +15,6 @@
 
 #include "rapidjson/prettywriter.h"
 #include "src/lib/files/file.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 #include "src/media/audio/audio_core/schema/audio_core_config_schema.inl"
 

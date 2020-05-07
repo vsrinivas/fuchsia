@@ -17,9 +17,9 @@ source_set("lib") {
   ]
 
   deps = [
+    "//sdk/lib/syslog/cpp",
     "//src/camera/lib/hanging_get_helper",
     "//src/lib/fsl",
-    "//src/lib/syslog/cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fbl",
   ]
@@ -44,7 +44,7 @@ executable("bin") {
   deps = [
     ":lib",
     "//sdk/lib/sys/cpp",
-    "//src/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp",
     "//zircon/public/lib/async-loop-default",
   ]
 }

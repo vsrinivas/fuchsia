@@ -4,6 +4,8 @@
 
 #include "src/media/audio/audio_core/mixer/output_producer.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <algorithm>
 #include <cmath>
 #include <limits>
@@ -12,7 +14,6 @@
 #include <trace/event.h>
 
 #include "lib/fidl/cpp/clone.h"
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/audio/audio_core/mixer/constants.h"
 
 namespace media::audio {

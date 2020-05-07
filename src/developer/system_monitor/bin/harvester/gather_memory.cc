@@ -4,11 +4,11 @@
 
 #include "gather_memory.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 
 #include "harvester.h"
 #include "sample_bundle.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace harvester {
 

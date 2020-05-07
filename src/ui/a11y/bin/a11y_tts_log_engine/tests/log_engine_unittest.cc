@@ -6,12 +6,12 @@
 
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/component_context.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/syslog/wire_format.h>
 
 #include <memory>
 #include <vector>
 
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/ui/a11y/lib/tts/tts_manager.h"
 
 __BEGIN_CDECLS

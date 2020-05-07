@@ -5,6 +5,8 @@
 #ifndef SRC_DEVELOPER_SHELL_INTERPRETER_SRC_SCOPE_H_
 #define SRC_DEVELOPER_SHELL_INTERPRETER_SRC_SCOPE_H_
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <cstdint>
 #include <map>
 #include <memory>
@@ -15,7 +17,6 @@
 #include "src/developer/shell/interpreter/src/code.h"
 #include "src/developer/shell/interpreter/src/nodes.h"
 #include "src/developer/shell/interpreter/src/value.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace shell {
 namespace interpreter {

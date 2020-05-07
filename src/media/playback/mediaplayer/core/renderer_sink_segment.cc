@@ -4,7 +4,8 @@
 
 #include "src/media/playback/mediaplayer/core/renderer_sink_segment.h"
 
-#include "src/lib/syslog/cpp/logger.h"
+#include <lib/syslog/cpp/macros.h>
+
 #include "src/media/playback/mediaplayer/core/conversion_pipeline_builder.h"
 #include "src/media/playback/mediaplayer/graph/types/stream_type.h"
 

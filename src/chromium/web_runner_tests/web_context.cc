@@ -5,11 +5,10 @@
 #include "src/chromium/web_runner_tests/web_context.h"
 
 #include <lib/fdio/directory.h>
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 
 #include <gtest/gtest.h>
-
-#include "src/lib/syslog/cpp/logger.h"
 
 WebContext::WebContext(sys::ComponentContext* component_context) {
   auto web_context_provider = component_context->svc()->Connect<fuchsia::web::ContextProvider>();

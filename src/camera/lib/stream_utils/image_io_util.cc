@@ -5,13 +5,13 @@
 #include "image_io_util.h"
 
 #include <lib/fzl/vmo-mapper.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <vector>
 
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace camera {
 

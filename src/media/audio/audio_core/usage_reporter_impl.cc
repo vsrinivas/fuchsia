@@ -4,7 +4,7 @@
 
 #include "src/media/audio/audio_core/usage_reporter_impl.h"
 
-#include "src/lib/syslog/cpp/logger.h"
+#include <lib/syslog/cpp/macros.h>
 
 namespace media::audio {
 

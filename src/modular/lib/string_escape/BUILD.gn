@@ -9,8 +9,8 @@ source_set("string_escape") {
   ]
 
   public_deps = [
+    "//sdk/lib/syslog/cpp",
     "//src/lib/fxl",
-    "//src/lib/syslog/cpp",
   ]
 }
 

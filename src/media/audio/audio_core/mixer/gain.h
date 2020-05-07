@@ -6,6 +6,7 @@
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_MIXER_GAIN_H_
 
 #include <fuchsia/media/cpp/fidl.h>
+#include <lib/syslog/cpp/macros.h>
 #include <stdint.h>
 
 #include <algorithm>
@@ -13,7 +14,6 @@
 #include <cmath>
 
 #include "lib/media/cpp/timeline_rate.h"
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/audio/audio_core/mixer/constants.h"
 
 namespace media::audio {

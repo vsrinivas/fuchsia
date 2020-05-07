@@ -175,7 +175,7 @@ source_set("audio_core_lib") {
     "//sdk/fidl/fuchsia.thermal",
     "//sdk/fidl/fuchsia.ultrasound",
     "//sdk/lib/sys/inspect/cpp",
-    "//src/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp",
     "//third_party/rapidjson",
     "//zircon/public/lib/ffl",
     "//zircon/public/lib/fzl",

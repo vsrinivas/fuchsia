@@ -7,11 +7,11 @@
 #include <fcntl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
+#include <lib/syslog/cpp/macros.h>
 #include <unistd.h>
 
 #include "src/lib/files/file_descriptor.h"
 #include "src/lib/fsl/io/fd.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace media_player {
 

@@ -8,6 +8,7 @@
 #include <fuchsia/math/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/fit/result.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
@@ -38,7 +39,6 @@
 #include "src/lib/fsl/vmo/vector.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/lib/timekeeper/test_clock.h"
 #include "third_party/rapidjson/include/rapidjson/document.h"
 #include "third_party/rapidjson/include/rapidjson/schema.h"

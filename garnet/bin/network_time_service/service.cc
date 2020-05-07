@@ -4,11 +4,10 @@
 
 #include "garnet/bin/network_time_service/service.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/syscalls.h>
 
 #include <fstream>
-
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace network_time_service {
 

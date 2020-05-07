@@ -194,6 +194,7 @@ executable("crash_reporter_unittest") {
     "//sdk/fidl/fuchsia.settings",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/inspect/testing/cpp",
+    "//sdk/lib/syslog/cpp",
     "//src/developer/feedback/crash_reports:constants",
     "//src/developer/feedback/crash_reports:crash_reporter",
     "//src/developer/feedback/crash_reports/info:info",
@@ -209,7 +210,6 @@ executable("crash_reporter_unittest") {
     "//src/developer/feedback/testing/stubs:utc_provider",
     "//src/developer/feedback/utils/cobalt",
     "//src/lib/fsl",
-    "//src/lib/syslog/cpp",
     "//src/lib/timekeeper:testing",
     "//src/sys/timekeeper:fuchsia.time",
     "//third_party/crashpad/util",
@@ -248,6 +248,7 @@ executable("main_service_unittest") {
 
   deps = [
     "//sdk/lib/inspect/testing/cpp",
+    "//sdk/lib/syslog/cpp",
     "//src/developer/feedback/crash_reports:constants",
     "//src/developer/feedback/crash_reports:main_service",
     "//src/developer/feedback/crash_reports/info",
@@ -258,7 +259,6 @@ executable("main_service_unittest") {
     "//src/developer/feedback/testing/stubs:device_id_provider",
     "//src/developer/feedback/testing/stubs:network_reachability_provider",
     "//src/developer/feedback/testing/stubs:utc_provider",
-    "//src/lib/syslog/cpp",
     "//src/lib/timekeeper:testing",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
@@ -279,6 +279,7 @@ executable("database_unittest") {
 
   deps = [
     "//sdk/lib/inspect/testing/cpp",
+    "//sdk/lib/syslog/cpp",
     "//src/developer/feedback/crash_reports:database",
     "//src/developer/feedback/crash_reports/info:info",
     "//src/developer/feedback/testing:cobalt_test_fixture",
@@ -287,7 +288,6 @@ executable("database_unittest") {
     "//src/developer/feedback/testing/stubs:cobalt",
     "//src/developer/feedback/utils/cobalt",
     "//src/lib/fsl",
-    "//src/lib/syslog/cpp",
     "//src/lib/timekeeper:testing",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
@@ -303,11 +303,11 @@ executable("inspect_manager_unittest") {
 
   deps = [
     "//sdk/lib/inspect/testing/cpp",
+    "//sdk/lib/syslog/cpp",
     "//src/developer/feedback/crash_reports:constants",
     "//src/developer/feedback/crash_reports/info:inspect_manager",
     "//src/developer/feedback/testing:gtest_with_syslog_main",
     "//src/lib/fxl",
-    "//src/lib/syslog/cpp",
     "//src/lib/timekeeper:testing",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",

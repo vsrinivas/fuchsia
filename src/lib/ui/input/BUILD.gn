@@ -44,7 +44,7 @@ source_set("gesture") {
     "//src/ui/lib/glm_workaround",
   ]
 
-  deps = [ "//src/lib/syslog/cpp" ]
+  deps = [ "//sdk/lib/syslog/cpp" ]
 }
 
 group("tests") {
@@ -73,8 +73,8 @@ executable("gesture_tests") {
 
   deps = [
     ":gesture",
+    "//sdk/lib/syslog/cpp",
     "//src/lib/fxl/test:gtest_main",
-    "//src/lib/syslog/cpp",
     "//third_party/googletest:gtest",
   ]
 }

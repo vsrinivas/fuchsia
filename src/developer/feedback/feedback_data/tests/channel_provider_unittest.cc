@@ -6,6 +6,7 @@
 
 #include <lib/async/cpp/executor.h>
 #include <lib/fit/promise.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
 
 #include <memory>
@@ -23,7 +24,6 @@
 #include "src/developer/feedback/testing/unit_test_fixture.h"
 #include "src/developer/feedback/utils/cobalt/event.h"
 #include "src/developer/feedback/utils/errors.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
 namespace {

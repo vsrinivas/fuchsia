@@ -10,6 +10,7 @@
 #include <lib/fdio/fdio.h>
 #include <lib/fidl/cpp/string.h>
 #include <lib/fidl/cpp/synchronous_interface_ptr.h>
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
@@ -17,7 +18,6 @@
 
 #include "src/developer/feedback/utils/errors.h"
 #include "src/lib/fxl/logging.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
 

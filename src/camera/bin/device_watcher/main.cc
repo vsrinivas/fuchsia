@@ -13,7 +13,7 @@
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/syslog/cpp/log_settings.h>
-#include <lib/syslog/cpp/logger.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include "src/camera/bin/device_watcher/device_watcher_impl.h"
 #include "src/lib/fsl/io/device_watcher.h"

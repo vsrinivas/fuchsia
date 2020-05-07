@@ -3,8 +3,9 @@
 
 #include "src/developer/exception_broker/process_limbo_manager.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include "src/lib/fsl/handles/object_info.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace fuchsia {
 namespace exception {

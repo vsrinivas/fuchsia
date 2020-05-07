@@ -9,12 +9,12 @@
 #include <fuchsia/ui/app/cpp/fidl.h>
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/sys/cpp/component_context.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/eventpair.h>
 
 #include <memory>
 
 #include "src/lib/fxl/macros.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace modular {
 

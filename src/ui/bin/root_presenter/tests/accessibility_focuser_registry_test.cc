@@ -5,10 +5,10 @@
 #include <fuchsia/ui/views/accessibility/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/ui/scenic/cpp/view_ref_pair.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/ui/bin/root_presenter/app.h"
 #include "src/ui/bin/root_presenter/tests/fakes/fake_scenic.h"
 

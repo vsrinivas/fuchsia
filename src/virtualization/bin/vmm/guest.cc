@@ -9,6 +9,7 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/channel.h>
 #include <limits.h>
 #include <string.h>
@@ -20,7 +21,6 @@
 #include <zircon/threads.h>
 
 #include "src/lib/fxl/strings/string_printf.h"
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/virtualization/bin/vmm/sysinfo.h"
 
 #ifdef __aarch64__

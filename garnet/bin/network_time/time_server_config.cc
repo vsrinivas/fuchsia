@@ -4,6 +4,7 @@
 
 #include "garnet/bin/network_time/time_server_config.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <protocol.h>
 
 #include <fstream>
@@ -15,8 +16,6 @@
 #include <rapidjson/error/en.h>
 #include <rapidjson/schema.h>
 #include <rapidjson/stringbuffer.h>
-
-#include "src/lib/syslog/cpp/logger.h"
 
 #define MULTILINE(...) #__VA_ARGS__
 

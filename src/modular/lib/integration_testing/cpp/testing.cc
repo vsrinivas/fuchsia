@@ -6,10 +6,9 @@
 
 #include <fuchsia/testing/runner/cpp/fidl.h>
 #include <lib/fit/function.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <set>
-
-#include "src/lib/syslog/cpp/logger.h"
 
 using fuchsia::testing::runner::TestRunner;
 using fuchsia::testing::runner::TestRunnerPtr;

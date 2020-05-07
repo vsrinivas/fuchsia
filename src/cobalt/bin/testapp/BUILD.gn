@@ -52,11 +52,11 @@ executable("cobalt_testapp") {
     ":testapp_metrics_registry_cc",
     "//garnet/public/lib/svc/cpp",
     "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp",
     "//src/cobalt/bin/utils:base64",
     "//src/lib/cobalt/cpp:cobalt_event_builder",
     "//src/lib/fsl",
     "//src/lib/fxl",
-    "//src/lib/syslog/cpp",
     "//src/sys/timekeeper:fuchsia.time",
     "//third_party/cobalt/src/lib/util:clock",
     "//third_party/cobalt/src/lib/util:datetime_util",
@@ -74,7 +74,7 @@ source_set("fake_timekeeper_lib") {
 
   public_deps = [
     "//sdk/lib/sys/cpp",
-    "//src/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp",
     "//src/sys/timekeeper:fuchsia.time",
   ]
 }
@@ -86,9 +86,9 @@ executable("fake_timekeeper") {
   deps = [
     ":fake_timekeeper_lib",
     "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp",
     "//src/lib/fsl",
     "//src/lib/fxl",
-    "//src/lib/syslog/cpp",
     "//src/sys/timekeeper:fuchsia.time",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",

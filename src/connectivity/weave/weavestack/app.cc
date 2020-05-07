@@ -5,7 +5,7 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/syslog/cpp/log_settings.h>
-#include <lib/syslog/cpp/logger.h>
+#include <lib/syslog/cpp/macros.h>
 #include <poll.h>
 #include <zircon/types.h>
 

@@ -5,6 +5,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/sys/cpp/component_context.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include "garnet/bin/network_time_service/service.h"
 #include "lib/fidl/cpp/binding_set.h"
@@ -12,7 +13,6 @@
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
 #include "src/lib/fxl/logging.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 constexpr char kServerConfigPath[] = "/pkg/data/roughtime-servers.json";
 

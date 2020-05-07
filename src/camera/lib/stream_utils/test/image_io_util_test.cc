@@ -2,13 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/camera/lib/stream_utils/image_io_util.h"
+
+#include <lib/syslog/cpp/macros.h>
+
 #include <array>
 
 #include <gtest/gtest.h>
 
-#include "src/camera/lib/stream_utils/image_io_util.h"
 #include "src/lib/files/file.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace camera {
 namespace {

@@ -4,8 +4,9 @@
 
 #include "src/developer/feedback/reboot_info/last_reboot_info_provider.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include "src/developer/feedback/reboot_info/reboot_reason.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
 

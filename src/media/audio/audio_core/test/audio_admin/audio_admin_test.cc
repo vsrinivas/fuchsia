@@ -5,12 +5,12 @@
 #include <fuchsia/media/cpp/fidl.h>
 #include <fuchsia/virtualaudio/cpp/fidl.h>
 #include <lib/fzl/vmo-mapper.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/clock.h>
 #include <zircon/device/audio.h>
 
 #include <fbl/algorithm.h>
 
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/audio/lib/test/hermetic_audio_test.h"
 
 namespace media::audio::test {

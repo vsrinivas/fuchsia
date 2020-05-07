@@ -4,8 +4,9 @@
 
 #include "src/developer/feedback/utils/utc_time_provider.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include "src/developer/feedback/utils/time.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
 

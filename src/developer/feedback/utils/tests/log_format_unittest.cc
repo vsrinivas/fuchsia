@@ -4,11 +4,10 @@
 
 #include "src/developer/feedback/utils/log_format.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
 
 #include <gtest/gtest.h>
-
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
 namespace {

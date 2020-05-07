@@ -7,6 +7,7 @@
 
 #include <fuchsia/ui/gfx/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/ui/scenic/cpp/resources.h>
 #include <lib/ui/scenic/cpp/session.h>
 
@@ -14,7 +15,6 @@
 #include <memory>
 
 #include "src/lib/fxl/macros.h"
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/lib/ui/base_view/base_view.h"
 
 namespace modular {

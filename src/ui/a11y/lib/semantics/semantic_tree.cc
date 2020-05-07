@@ -5,7 +5,7 @@
 #include "src/ui/a11y/lib/semantics/semantic_tree.h"
 
 #include <fuchsia/accessibility/semantics/cpp/fidl.h>
-#include <lib/syslog/cpp/logger.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <cstdint>
 #include <queue>

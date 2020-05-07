@@ -4,12 +4,11 @@
 
 #include "color_source.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/assert.h>
 #include <zircon/syscalls.h>
 
 #include <array>
-
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace camera {
 

@@ -5,6 +5,7 @@
 #ifndef SRC_CONNECTIVITY_NETWORK_MDNS_SERVICE_RESOURCE_RENEWER_H_
 #define SRC_CONNECTIVITY_NETWORK_MDNS_SERVICE_RESOURCE_RENEWER_H_
 
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/time.h>
 
@@ -16,7 +17,6 @@
 
 #include "src/connectivity/network/mdns/service/mdns_agent.h"
 #include "src/lib/inet/ip_port.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace mdns {
 

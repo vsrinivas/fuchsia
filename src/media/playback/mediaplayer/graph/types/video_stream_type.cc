@@ -4,9 +4,10 @@
 
 #include "src/media/playback/mediaplayer/graph/types/video_stream_type.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <unordered_map>
 
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/playback/mediaplayer/util/safe_clone.h"
 
 namespace media_player {

@@ -11,8 +11,8 @@ source_set("stream_utils_lib") {
 
   deps = [
     "//sdk/fidl/fuchsia.sysmem",
+    "//sdk/lib/syslog/cpp",
     "//src/lib/files",
-    "//src/lib/syslog/cpp",
     "//zircon/public/lib/fzl",
   ]
 }

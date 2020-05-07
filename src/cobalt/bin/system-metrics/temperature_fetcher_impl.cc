@@ -8,6 +8,7 @@
 #include <fcntl.h>
 #include <fuchsia/hardware/thermal/c/fidl.h>
 #include <lib/fdio/fdio.h>
+#include <lib/syslog/cpp/macros.h>
 #include <stdio.h>
 #include <zircon/status.h>
 
@@ -15,8 +16,6 @@
 
 #include <fbl/unique_fd.h>
 #include <trace/event.h>
-
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace cobalt {
 

@@ -3,12 +3,13 @@
 
 #include "src/media/audio/audio_core/mixer/linear_sampler.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <algorithm>
 #include <limits>
 
 #include <trace/event.h>
 
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/audio/audio_core/mixer/constants.h"
 #include "src/media/audio/audio_core/mixer/mixer_utils.h"
 

@@ -8,6 +8,7 @@
 #include <fuchsia/hardware/audio/cpp/fidl.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fit/defer.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/channel.h>
 #include <zircon/compiler.h>
 
@@ -18,7 +19,6 @@
 #include <trace/event.h>
 
 #include "src/lib/fsl/io/device_watcher.h"
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/audio/audio_core/reporter.h"
 #include "src/media/audio/lib/logging/logging.h"
 

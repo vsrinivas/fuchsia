@@ -7,6 +7,7 @@
 #include <fuchsia/time/cpp/fidl.h>
 #include <fuchsia/time/cpp/fidl_test_base.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <future>
 #include <optional>
@@ -16,7 +17,6 @@
 
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/gtest/test_loop_fixture.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace cobalt {
 

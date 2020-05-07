@@ -6,10 +6,10 @@
 
 #include <float.h>
 #include <fuchsia/media/cpp/fidl.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <algorithm>
 
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/audio/audio_core/mixer/gain.h"
 #include "src/media/audio/audio_core/mixer/mixer_utils.h"
 #include "src/media/audio/audio_core/process_config_loader.h"

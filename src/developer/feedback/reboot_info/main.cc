@@ -8,6 +8,7 @@
 #include <lib/fit/promise.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/syslog/cpp/log_settings.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
 
 #include <string>
@@ -15,7 +16,6 @@
 #include "src/developer/feedback/reboot_info/main_service.h"
 #include "src/developer/feedback/reboot_info/reboot_log.h"
 #include "src/developer/feedback/reboot_info/reporter.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 int main(int argc, char** argv) {
   syslog::SetTags({"feedback"});

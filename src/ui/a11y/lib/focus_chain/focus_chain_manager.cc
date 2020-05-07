@@ -5,7 +5,7 @@
 #include "src/ui/a11y/lib/focus_chain/focus_chain_manager.h"
 
 #include <lib/async/default.h>
-#include <lib/syslog/cpp/logger.h>
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
 

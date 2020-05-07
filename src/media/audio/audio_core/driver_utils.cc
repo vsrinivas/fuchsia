@@ -4,12 +4,12 @@
 
 #include "src/media/audio/audio_core/driver_utils.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <map>
 
 #include <audio-proto-utils/format-utils.h>
 #include <trace/event.h>
-
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace media::driver_utils {
 

@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <ostream>
 #include <string>
 
 #include "src/developer/shell/interpreter/src/code.h"
 #include "src/developer/shell/interpreter/src/interpreter.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace shell {
 namespace interpreter {

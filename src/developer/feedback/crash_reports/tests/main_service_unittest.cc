@@ -8,6 +8,7 @@
 #include <lib/inspect/cpp/hierarchy.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/inspect/testing/cpp/inspect.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
 
 #include <memory>
@@ -23,7 +24,6 @@
 #include "src/developer/feedback/testing/stubs/network_reachability_provider.h"
 #include "src/developer/feedback/testing/stubs/utc_provider.h"
 #include "src/developer/feedback/testing/unit_test_fixture.h"
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/lib/timekeeper/test_clock.h"
 
 namespace feedback {

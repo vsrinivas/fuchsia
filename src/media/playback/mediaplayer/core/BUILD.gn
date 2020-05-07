@@ -32,8 +32,8 @@ source_set("core") {
   deps = [
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/media/cpp",
+    "//sdk/lib/syslog/cpp",
     "//src/lib/fxl",
-    "//src/lib/syslog/cpp",
     "//src/media/playback/mediaplayer/demux",
     "//src/media/playback/mediaplayer/graph",
     "//src/media/playback/mediaplayer/process",
@@ -63,9 +63,9 @@ test("tests") {
   deps = [
     ":core",
     "//garnet/public/lib/gtest",
+    "//sdk/lib/syslog/cpp",
     "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",
-    "//src/lib/syslog/cpp",
     "//src/media/playback/mediaplayer/demux",
     "//src/media/playback/mediaplayer/graph",
     "//src/media/playback/mediaplayer/process",

@@ -6,12 +6,11 @@
 
 #include <fuchsia/logger/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
 #include <zircon/errors.h>
 
 #include <cstdint>
-
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
 namespace stubs {

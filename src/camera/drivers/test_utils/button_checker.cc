@@ -6,6 +6,7 @@
 
 #include <fcntl.h>
 #include <lib/fdio/fdio.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/channel.h>
 #include <unistd.h>
 
@@ -15,8 +16,6 @@
 #include <string>
 
 #include <fbl/unique_fd.h>
-
-#include "src/lib/syslog/cpp/logger.h"
 
 constexpr auto kDevicePath = "/dev/class/input";
 constexpr auto kTag = "button_checker";

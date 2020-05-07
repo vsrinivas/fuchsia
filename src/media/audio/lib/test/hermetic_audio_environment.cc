@@ -10,9 +10,8 @@
 #include <fuchsia/virtualaudio/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fdio/directory.h>
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
-
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace media::audio::test {
 namespace {

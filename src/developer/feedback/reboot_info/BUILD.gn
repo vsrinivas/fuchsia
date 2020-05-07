@@ -38,7 +38,7 @@ executable("main") {
     ":reboot_log",
     ":reporter",
     "//sdk/lib/sys/cpp",
-    "//src/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
@@ -62,7 +62,7 @@ source_set("last_reboot_info_provider") {
 
   deps = [
     ":reboot_reason",
-    "//src/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp",
   ]
 }
 
@@ -88,8 +88,8 @@ source_set("reboot_log") {
   public_deps = [ ":reboot_reason" ]
 
   deps = [
+    "//sdk/lib/syslog/cpp",
     "//src/lib/files",
-    "//src/lib/syslog/cpp",
   ]
 }
 
@@ -104,7 +104,7 @@ source_set("reboot_reason") {
     "//src/developer/feedback/utils/cobalt",
   ]
 
-  deps = [ "//src/lib/syslog/cpp" ]
+  deps = [ "//sdk/lib/syslog/cpp" ]
 
   visibility = [ "//src/developer/feedback/reboot_info/*" ]
 }
@@ -128,10 +128,10 @@ source_set("reporter") {
   ]
 
   deps = [
+    "//sdk/lib/syslog/cpp",
     "//src/lib/files",
     "//src/lib/fsl",
     "//src/lib/fxl",
-    "//src/lib/syslog/cpp",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/zx",
   ]

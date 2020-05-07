@@ -6,6 +6,7 @@
 
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <fuchsia/mem/cpp/fidl.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <map>
 #include <string>
@@ -20,7 +21,6 @@
 #include "src/lib/fsl/vmo/sized_vmo.h"
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fsl/vmo/vector.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
 namespace {

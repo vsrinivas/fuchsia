@@ -7,6 +7,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/sys/cpp/testing/service_directory_provider.h>
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/errors.h>
 
 #include <memory>
@@ -18,7 +19,6 @@
 #include "src/lib/files/file.h"
 #include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/fsl/vmo/strings.h"
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 namespace feedback {

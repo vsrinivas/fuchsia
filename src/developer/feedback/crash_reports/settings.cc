@@ -4,8 +4,9 @@
 
 #include "src/developer/feedback/crash_reports/settings.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include "src/developer/feedback/crash_reports/config.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
 

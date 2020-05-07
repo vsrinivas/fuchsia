@@ -5,7 +5,8 @@
 #ifndef SRC_MEDIA_AUDIO_LIB_TEST_HERMETIC_AUDIO_TEST_H_
 #define SRC_MEDIA_AUDIO_LIB_TEST_HERMETIC_AUDIO_TEST_H_
 
-#include "src/lib/syslog/cpp/logger.h"
+#include <lib/syslog/cpp/macros.h>
+
 #include "src/media/audio/lib/test/constants.h"
 #include "src/media/audio/lib/test/hermetic_audio_environment.h"
 #include "src/media/audio/lib/test/test_fixture.h"

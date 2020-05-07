@@ -4,9 +4,9 @@
 
 #include "src/connectivity/network/mdns/service/dns_writing.h"
 
-#include <limits>
+#include <lib/syslog/cpp/macros.h>
 
-#include "src/lib/syslog/cpp/logger.h"
+#include <limits>
 
 namespace mdns {
 

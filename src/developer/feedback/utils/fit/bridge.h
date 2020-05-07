@@ -10,13 +10,13 @@
 #include <lib/fit/bridge.h>
 #include <lib/fit/function.h>
 #include <lib/fit/result.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
 
 #include <type_traits>
 
 #include "src/developer/feedback/utils/errors.h"
 #include "src/developer/feedback/utils/fit/timeout.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
 namespace fit {

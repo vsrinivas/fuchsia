@@ -4,9 +4,8 @@
 
 #include "src/developer/feedback/testing/stubs/device_id_provider.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/errors.h>
-
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
 namespace stubs {

@@ -5,9 +5,9 @@
 #include "src/modular/bin/basemgr/cobalt/cobalt.h"
 
 #include <fuchsia/cobalt/cpp/fidl.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include "src/lib/cobalt/cpp/cobalt_logger.h"
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/modular/bin/basemgr/cobalt/basemgr_metrics_registry.cb.h"
 
 namespace modular {

@@ -4,11 +4,12 @@
 
 #include "src/developer/feedback/utils/log_format.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <cinttypes>
 
 #include "src/lib/fxl/strings/join_strings.h"
 #include "src/lib/fxl/strings/string_printf.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
 namespace {

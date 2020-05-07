@@ -7,13 +7,13 @@
 
 #include <fuchsia/logger/cpp/fidl.h>
 #include <lib/sys/cpp/component_context.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/syslog/wire_format.h>
 #include <zircon/syscalls/log.h>
 
 #include <vector>
 
 #include "lib/fidl/cpp/binding.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 class ProfilerLogListener : public fuchsia::logger::LogListenerSafe {
  public:

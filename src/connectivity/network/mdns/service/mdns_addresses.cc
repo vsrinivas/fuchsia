@@ -4,7 +4,7 @@
 
 #include "src/connectivity/network/mdns/service/mdns_addresses.h"
 
-#include "src/lib/syslog/cpp/logger.h"
+#include <lib/syslog/cpp/macros.h>
 
 namespace mdns {
 

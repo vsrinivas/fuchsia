@@ -4,7 +4,7 @@
 
 #include "src/modular/lib/string_escape/string_escape.h"
 
-#include "src/lib/syslog/cpp/logger.h"
+#include <lib/syslog/cpp/macros.h>
 
 using fxl::StringView;
 

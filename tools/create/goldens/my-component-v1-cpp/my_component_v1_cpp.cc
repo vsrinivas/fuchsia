@@ -5,7 +5,7 @@
 #include "tools/create/goldens/my-component-v1-cpp/my_component_v1_cpp.h"
 
 #include <lib/async/cpp/task.h>
-#include <lib/syslog/cpp/logger.h>
+#include <lib/syslog/cpp/macros.h>
 
 namespace my_component_v1_cpp {
 

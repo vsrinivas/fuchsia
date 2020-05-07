@@ -4,7 +4,7 @@
 
 #include "src/modular/bin/sessionmgr/story/model/story_model_storage.h"
 
-#include "src/lib/syslog/cpp/logger.h"
+#include <lib/syslog/cpp/macros.h>
 
 namespace modular {
 

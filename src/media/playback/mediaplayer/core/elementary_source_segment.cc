@@ -6,8 +6,8 @@
 
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
+#include <lib/syslog/cpp/macros.h>
 
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/playback/mediaplayer/util/callback_joiner.h"
 #include "src/media/playback/mediaplayer/util/safe_clone.h"
 

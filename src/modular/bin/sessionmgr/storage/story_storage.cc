@@ -7,19 +7,17 @@
 #include <fuchsia/modular/internal/cpp/fidl.h>
 #include <lib/fidl/cpp/clone.h>
 #include <lib/fit/result.h>
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/strings/string_view.h"
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/modular/bin/sessionmgr/storage/constants_and_utils.h"
 #include "src/modular/lib/fidl/clone.h"
 
 namespace modular {
 
-namespace {
-
-}  // namespace
+namespace {}  // namespace
 
 StoryStorage::StoryStorage() {}
 
@@ -69,8 +67,7 @@ FuturePtr<> StoryStorage::UpdateModuleData(const std::vector<std::string>& modul
 
 FuturePtr<ModuleDataPtr> StoryStorage::ReadModuleData(const std::vector<std::string>& module_path) {
   auto data = ReadModuleDataSync(module_path);
-  return Future<ModuleDataPtr>::CreateCompleted("StoryStorage.ReadModuleData.ret",
-                                                std::move(data));
+  return Future<ModuleDataPtr>::CreateCompleted("StoryStorage.ReadModuleData.ret", std::move(data));
 }
 
 ModuleDataPtr StoryStorage::ReadModuleDataSync(const std::vector<std::string>& module_path) {
@@ -86,8 +83,7 @@ ModuleDataPtr StoryStorage::ReadModuleDataSync(const std::vector<std::string>& m
 FuturePtr<std::vector<ModuleData>> StoryStorage::ReadAllModuleData() {
   std::vector<ModuleData> vec;
   vec.reserve(module_data_backing_storage_.size());
-  for (auto it = module_data_backing_storage_.begin();
-       it != module_data_backing_storage_.end();
+  for (auto it = module_data_backing_storage_.begin(); it != module_data_backing_storage_.end();
        ++it) {
     ModuleData elem;
     it->second.Clone(&elem);
@@ -107,9 +103,7 @@ constexpr char kJsonNull[] = "null";
 FuturePtr<StoryStorage::Status, std::string> StoryStorage::GetLinkValue(const LinkPath& link_path) {
   auto key = MakeLinkKey(link_path);
   auto it = link_backing_storage_.find(key);
-  std::string val = it != link_backing_storage_.end() ?
-      it->second :
-      kJsonNull;
+  std::string val = it != link_backing_storage_.end() ? it->second : kJsonNull;
 
   return Future<StoryStorage::Status, std::string>::CreateCompleted(
       "StoryStorage::GetLinkValue " + key, Status::OK, std::move(val));

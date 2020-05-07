@@ -5,9 +5,8 @@
 #ifndef SRC_VIRTUALIZATION_BIN_VMM_DEVICE_PHYS_MEM_H_
 #define SRC_VIRTUALIZATION_BIN_VMM_DEVICE_PHYS_MEM_H_
 
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/vmo.h>
-
-#include "src/lib/syslog/cpp/logger.h"
 
 class PhysMem {
  public:

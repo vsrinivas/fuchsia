@@ -4,6 +4,8 @@
 
 #include "src/developer/shell/interpreter/src/types.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <limits>
 #include <memory>
 #include <ostream>
@@ -15,7 +17,6 @@
 #include "src/developer/shell/interpreter/src/schema.h"
 #include "src/developer/shell/interpreter/src/scope.h"
 #include "src/developer/shell/interpreter/src/value.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace shell {
 namespace interpreter {

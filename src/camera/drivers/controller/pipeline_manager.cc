@@ -4,7 +4,7 @@
 
 #include "pipeline_manager.h"
 
-#include <lib/syslog/cpp/logger.h>
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
 

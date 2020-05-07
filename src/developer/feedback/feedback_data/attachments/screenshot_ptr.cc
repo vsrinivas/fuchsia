@@ -5,11 +5,11 @@
 #include "src/developer/feedback/feedback_data/attachments/screenshot_ptr.h"
 
 #include <lib/async/cpp/task.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include "src/developer/feedback/utils/errors.h"
 #include "src/developer/feedback/utils/fit/promise.h"
 #include "src/lib/fxl/logging.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
 namespace {

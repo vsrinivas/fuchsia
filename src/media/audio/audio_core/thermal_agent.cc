@@ -4,9 +4,10 @@
 
 #include "src/media/audio/audio_core/thermal_agent.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <set>
 
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/audio/audio_core/audio_device_manager.h"
 
 namespace media::audio {

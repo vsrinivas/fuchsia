@@ -4,12 +4,13 @@
 
 #include "src/developer/feedback/feedback_data/attachments/utils.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <string>
 
 #include "src/developer/feedback/feedback_data/constants.h"
 #include "src/developer/feedback/utils/archive.h"
 #include "src/lib/fsl/vmo/strings.h"
-#include "src/lib/syslog/cpp/logger.h"
 #include "third_party/rapidjson/include/rapidjson/document.h"
 #include "third_party/rapidjson/include/rapidjson/prettywriter.h"
 

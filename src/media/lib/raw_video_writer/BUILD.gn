@@ -11,8 +11,8 @@ source_set("raw_video_writer") {
   ]
 
   public_deps = [
+    "//sdk/lib/syslog/cpp",
     "//src/lib/fxl",
-    "//src/lib/syslog/cpp",
     "//zircon/public/lib/fbl",
   ]
 }

@@ -5,10 +5,9 @@
 #include "src/lib/inspect_deprecated/deprecated/expose.h"
 
 #include <lib/fit/defer.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <fs/service.h>
-
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace component {
 

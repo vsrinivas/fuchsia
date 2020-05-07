@@ -19,7 +19,7 @@ source_set("scoped_tmpfs") {
   ]
 
   deps = [
-    "//src/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp",
     "//zircon/public/lib/fdio",
   ]
 }

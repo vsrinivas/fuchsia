@@ -4,6 +4,7 @@
 
 #include "src/developer/shell/console/command.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <stdlib.h>
 
 #include <regex>
@@ -13,7 +14,6 @@
 
 #include "src/developer/shell/parser/ast.h"
 #include "src/developer/shell/parser/parser.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace shell::console {
 

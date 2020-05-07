@@ -19,7 +19,7 @@ source_set("render") {
     "//sdk/fidl/fuchsia.math",
     "//sdk/fidl/fuchsia.media",
     "//sdk/lib/media/cpp",
-    "//src/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp",
     "//src/media/playback/mediaplayer/graph",
   ]
 }

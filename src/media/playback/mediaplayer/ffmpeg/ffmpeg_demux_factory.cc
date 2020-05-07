@@ -4,7 +4,8 @@
 
 #include "src/media/playback/mediaplayer/ffmpeg/ffmpeg_demux_factory.h"
 
-#include "src/lib/syslog/cpp/logger.h"
+#include <lib/syslog/cpp/macros.h>
+
 #include "src/media/playback/mediaplayer/ffmpeg/ffmpeg_demux.h"
 
 namespace media_player {

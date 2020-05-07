@@ -145,7 +145,7 @@ source_set("mock_base") {
   ]
 
   deps = [
-    "//src/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp",
     "//third_party/googletest:gtest",
   ]
 }

@@ -6,12 +6,11 @@
 
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/fidl/cpp/enum.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <type_traits>
 #include <unordered_set>
 #include <variant>
-
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace media::audio {
 

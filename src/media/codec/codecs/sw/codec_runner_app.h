@@ -11,13 +11,13 @@
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/syslog/cpp/log_settings.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <memory>
 
 #include <trace-provider/provider.h>
 
 #include "local_single_codec_factory.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 // If a software can only provide an encoder or decoder, the other should be
 // assigned NoAdapter in the template arguments, e.g.:

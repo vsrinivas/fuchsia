@@ -4,6 +4,7 @@
 
 #include "src/developer/feedback/feedback_data/annotations/time_provider.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
 
 #include <string>
@@ -13,7 +14,6 @@
 #include "src/developer/feedback/utils/errors.h"
 #include "src/developer/feedback/utils/time.h"
 #include "src/lib/fxl/logging.h"
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/lib/timekeeper/clock.h"
 
 namespace feedback {

@@ -4,12 +4,12 @@
 
 #include "graph_utils.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
 #include "lib/zx/vmo.h"
 #include "src/lib/fsl/handles/object_info.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace camera {
 

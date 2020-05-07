@@ -28,10 +28,10 @@ source_set("pseudo_dir_server") {
   ]
 
   public_deps = [
+    "//sdk/lib/syslog/cpp",
     "//sdk/lib/vfs/cpp",
     "//src/lib/files",
     "//src/lib/fsl",
-    "//src/lib/syslog/cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fdio:fdio_sdk",

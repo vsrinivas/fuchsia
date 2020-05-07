@@ -15,7 +15,7 @@ source_set("clock") {
 
   public_deps = [
     "//sdk/lib/media/cpp:no_converters",
-    "//src/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp",
     "//zircon/public/lib/affine",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/zx",

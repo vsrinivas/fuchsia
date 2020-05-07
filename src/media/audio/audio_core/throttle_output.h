@@ -6,12 +6,12 @@
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_THROTTLE_OUTPUT_H_
 
 #include <fuchsia/media/cpp/fidl.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
 
 #include <fbl/ref_ptr.h>
 
 #include "src/lib/fxl/synchronization/thread_annotations.h"
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/audio/audio_core/audio_output.h"
 
 namespace media::audio {

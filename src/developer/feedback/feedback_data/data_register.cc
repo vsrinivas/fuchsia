@@ -4,10 +4,11 @@
 
 #include "src/developer/feedback/feedback_data/data_register.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include "src/developer/feedback/feedback_data/annotations/types.h"
 #include "src/developer/feedback/feedback_data/constants.h"
 #include "src/lib/fxl/strings/string_printf.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
 namespace {

@@ -7,6 +7,7 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <queue>
 
@@ -14,7 +15,6 @@
 #include "lib/media/cpp/type_converters.h"
 #include "lib/ui/scenic/cpp/view_token_pair.h"
 #include "src/lib/fsl/io/fd.h"
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/playback/mediaplayer/test/command_queue.h"
 #include "src/media/playback/mediaplayer/test/fakes/fake_audio.h"
 #include "src/media/playback/mediaplayer/test/fakes/fake_scenic.h"

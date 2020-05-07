@@ -7,10 +7,10 @@
 #include <fcntl.h>
 #include <fuchsia/hardware/camera/cpp/fidl.h>
 #include <lib/fdio/directory.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <fbl/unique_fd.h>
 #include <src/lib/files/file.h>
-#include <src/lib/syslog/cpp/logger.h>
 
 namespace camera {
 

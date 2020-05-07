@@ -5,8 +5,8 @@
 #include "src/virtualization/bin/vmm/controller/virtio_input.h"
 
 #include <lib/sys/cpp/service_directory.h>
+#include <lib/syslog/cpp/macros.h>
 
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/virtualization/bin/vmm/device/input.h"
 
 static constexpr char kVirtioInputUrl[] =

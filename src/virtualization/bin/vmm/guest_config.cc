@@ -4,6 +4,7 @@
 
 #include "src/virtualization/bin/vmm/guest_config.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <libgen.h>
 #include <unistd.h>
 #include <zircon/device/block.h>
@@ -17,7 +18,6 @@
 
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/strings/string_number_conversions.h"
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/virtualization/bin/vmm/guest.h"
 
 namespace guest_config {

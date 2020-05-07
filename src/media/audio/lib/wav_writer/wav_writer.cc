@@ -7,14 +7,13 @@
 #include <endian.h>
 #include <fcntl.h>
 #include <lib/fdio/io.h>
+#include <lib/syslog/cpp/macros.h>
 #include <unistd.h>
 #include <zircon/compiler.h>
 
 #include <iomanip>
 #include <limits>
 #include <optional>
-
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace media::audio {
 

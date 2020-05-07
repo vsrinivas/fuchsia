@@ -4,6 +4,7 @@
 
 #include "src/camera/drivers/controller/ge2d_node.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
@@ -14,7 +15,6 @@
 
 #include "src/camera/drivers/controller/graph_utils.h"
 #include "src/camera/drivers/controller/stream_pipeline_info.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace camera {
 

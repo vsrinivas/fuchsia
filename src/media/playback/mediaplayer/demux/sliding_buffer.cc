@@ -4,9 +4,8 @@
 
 #include "sliding_buffer.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <stdio.h>
-
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace media_player {
 

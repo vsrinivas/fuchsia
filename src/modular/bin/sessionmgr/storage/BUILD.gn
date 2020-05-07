@@ -29,8 +29,8 @@ source_set("constants_and_utils") {
 
   deps = [
     "//sdk/lib/fidl/cpp",
+    "//sdk/lib/syslog/cpp",
     "//src/lib/fxl",
-    "//src/lib/syslog/cpp",
     "//src/modular/lib/string_escape",
   ]
 

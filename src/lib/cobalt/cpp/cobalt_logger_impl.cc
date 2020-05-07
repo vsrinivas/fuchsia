@@ -7,13 +7,13 @@
 #include <fuchsia/cobalt/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
 
 #include <set>
 
 #include "src/lib/backoff/exponential_backoff.h"
 #include "src/lib/cobalt/cpp/cobalt_logger.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 using fuchsia::cobalt::LoggerFactory;
 using fuchsia::cobalt::Status;

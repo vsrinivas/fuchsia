@@ -5,13 +5,13 @@
 #include "src/developer/feedback/feedback_data/attachments/kernel_log_ptr.h"
 
 #include <inttypes.h>
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/syscalls/log.h>
 
 #include "src/developer/feedback/utils/errors.h"
 #include "src/developer/feedback/utils/fit/promise.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
 

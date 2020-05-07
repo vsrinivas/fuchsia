@@ -4,7 +4,7 @@
 
 #include "src/cobalt/bin/app/utils.h"
 
-#include <src/lib/syslog/cpp/logger.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include "src/lib/fxl/logging.h"
 #include "third_party/cobalt/src/lib/util/file_util.h"

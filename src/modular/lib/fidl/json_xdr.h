@@ -6,6 +6,7 @@
 #define SRC_MODULAR_LIB_FIDL_JSON_XDR_H_
 
 #include <lib/fidl/cpp/string.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <array>
 #include <map>
@@ -18,7 +19,6 @@
 
 #include "src/lib/fxl/macros.h"
 #include "src/lib/json_parser/pretty_print.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace modular {
 

@@ -5,12 +5,13 @@
 #ifndef SRC_MEDIA_PLAYBACK_MEDIAPLAYER_FFMPEG_AV_IO_CONTEXT_H_
 #define SRC_MEDIA_PLAYBACK_MEDIAPLAYER_FFMPEG_AV_IO_CONTEXT_H_
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <condition_variable>
 #include <mutex>
 
 #include "lib/async/cpp/task.h"
 #include "src/lib/fxl/synchronization/thread_annotations.h"
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/playback/mediaplayer/demux/reader.h"
 extern "C" {
 #include "libavformat/avio.h"

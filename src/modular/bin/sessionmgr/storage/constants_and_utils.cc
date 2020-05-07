@@ -4,11 +4,12 @@
 
 #include "src/modular/bin/sessionmgr/storage/constants_and_utils.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <string>
 #include <vector>
 
 #include "src/lib/fxl/strings/join_strings.h"
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/modular/lib/string_escape/string_escape.h"
 
 namespace modular {

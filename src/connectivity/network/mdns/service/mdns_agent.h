@@ -6,6 +6,7 @@
 #define SRC_CONNECTIVITY_NETWORK_MDNS_SERVICE_MDNS_AGENT_H_
 
 #include <lib/fit/function.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
 
 #include <memory>
@@ -13,7 +14,6 @@
 #include "src/connectivity/network/mdns/service/dns_message.h"
 #include "src/connectivity/network/mdns/service/mdns_addresses.h"
 #include "src/lib/inet/socket_address.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace mdns {
 

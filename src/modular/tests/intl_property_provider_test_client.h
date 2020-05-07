@@ -9,8 +9,7 @@
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/modular/testing/cpp/fidl.h>
 #include <lib/modular/testing/cpp/fake_component.h>
-
-#include <src/lib/syslog/cpp/logger.h>
+#include <lib/syslog/cpp/macros.h>
 
 namespace modular_tests {
 

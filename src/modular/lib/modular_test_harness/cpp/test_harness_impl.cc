@@ -7,6 +7,7 @@
 #include <dirent.h>
 #include <fuchsia/stash/cpp/fidl.h>
 #include <lib/fdio/directory.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/vfs/cpp/pseudo_dir.h>
 #include <lib/vfs/cpp/pseudo_file.h>
 #include <zircon/status.h>
@@ -23,7 +24,6 @@
 #include "src/lib/fxl/strings/join_strings.h"
 #include "src/lib/fxl/strings/split_string.h"
 #include "src/lib/fxl/strings/substitute.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace modular_testing {
 namespace {

@@ -6,12 +6,12 @@
 
 #include <dirent.h>
 #include <fcntl.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/unique_fd.h"
 #include "src/lib/fsl/io/fd.h"
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/modular/bin/basemgr/cobalt/cobalt.h"
 #include "src/modular/lib/common/async_holder.h"
 #include "src/modular/lib/common/teardown.h"
