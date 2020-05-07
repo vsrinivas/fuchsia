@@ -84,6 +84,16 @@ impl TestEnvBuilder {
                     .unwrap_or_else(|e| panic!("error running reboot service: {:?}", e)),
             )
         });
+        let cache_service = Arc::new(MockCacheService::new());
+        let cache_service_clone = Arc::clone(&cache_service);
+        fs.add_fidl_service(move |stream| {
+            let cache_service_clone = Arc::clone(&cache_service_clone);
+            fasync::spawn(
+                cache_service_clone
+                    .run_cache_service(stream)
+                    .unwrap_or_else(|e| panic!("error running cache service: {:?}", e)),
+            )
+        });
         let logger_factory = Arc::new(MockLoggerFactory::new());
         let logger_factory_clone = logger_factory.clone();
         fs.add_fidl_service(move |stream| {
@@ -128,6 +138,7 @@ impl TestEnvBuilder {
             resolver,
             paver_service,
             reboot_service,
+            cache_service,
             logger_factory,
             space_service,
             _test_dir: test_dir,
@@ -144,6 +155,7 @@ struct TestEnv {
     resolver: Arc<MockResolverService>,
     paver_service: Arc<MockPaverService>,
     reboot_service: Arc<MockRebootService>,
+    cache_service: Arc<MockCacheService>,
     logger_factory: Arc<MockLoggerFactory>,
     space_service: Arc<MockSpaceService>,
     _test_dir: TempDir,
@@ -339,6 +351,37 @@ impl MockResolverService {
 
     fn mock_package_result(&self, url: impl Into<String>, response: Result<PathBuf, Status>) {
         self.expectations.lock().insert(url.into(), response);
+    }
+}
+
+struct MockCacheService {
+    called: Mutex<u32>,
+    sync_response: Mutex<Option<i32>>,
+}
+impl MockCacheService {
+    fn new() -> Self {
+        Self { called: Mutex::new(0), sync_response: Mutex::new(None) }
+    }
+
+    fn set_sync_response(&self, response: i32) {
+        self.sync_response.lock().replace(response);
+    }
+
+    async fn run_cache_service(
+        self: Arc<Self>,
+        mut stream: fidl_fuchsia_pkg::PackageCacheRequestStream,
+    ) -> Result<(), Error> {
+        while let Some(event) = stream.try_next().await? {
+            match event {
+                fidl_fuchsia_pkg::PackageCacheRequest::Sync { responder } => {
+                    *self.called.lock() += 1;
+                    responder.send(self.sync_response.lock().unwrap_or(Status::OK.into_raw()))?;
+                }
+                other => panic!("unsupported PackageCache request: {:?}", other),
+            }
+        }
+
+        Ok(())
     }
 }
 
@@ -603,6 +646,7 @@ async fn test_system_update() {
         }
     );
 
+    assert_eq!(*env.cache_service.called.lock(), 1);
     assert_eq!(*env.space_service.called.lock(), 1);
     assert_eq!(*env.reboot_service.called.lock(), 1);
 }
@@ -649,6 +693,7 @@ async fn test_system_update_force_recovery() {
             PaverEvent::SetConfigurationUnbootable { configuration: paver::Configuration::B },
         ]
     );
+    assert_eq!(*env.cache_service.called.lock(), 1);
     assert_eq!(*env.space_service.called.lock(), 1);
     assert_eq!(*env.reboot_service.called.lock(), 1);
 }
@@ -787,6 +832,7 @@ async fn test_system_update_no_reboot() {
         }
     );
 
+    assert_eq!(*env.cache_service.called.lock(), 1);
     assert_eq!(*env.space_service.called.lock(), 1);
     assert_eq!(*env.reboot_service.called.lock(), 0);
 }
@@ -843,6 +889,7 @@ async fn test_broken_logger() {
     let loggers = env.logger_factory.loggers.lock().clone();
     assert_eq!(loggers.len(), 0);
 
+    assert_eq!(*env.cache_service.called.lock(), 1);
     assert_eq!(*env.space_service.called.lock(), 1);
     assert_eq!(*env.reboot_service.called.lock(), 1);
 }
@@ -888,6 +935,32 @@ async fn test_failing_package_fetch() {
         }
     );
 
+    assert_eq!(*env.cache_service.called.lock(), 0);
+    assert_eq!(*env.space_service.called.lock(), 1);
+    assert_eq!(*env.reboot_service.called.lock(), 0);
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_system_update_fails_when_sync_fails() {
+    let mut env = TestEnv::new();
+    env.cache_service.set_sync_response(Status::INTERNAL.into_raw());
+    env.register_package("update", "upd4t3").add_file(
+        "packages",
+        "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
+    );
+
+    let result = env
+        .run_system_updater(SystemUpdaterArgs {
+            initiator: "manual",
+            target: "m3rk13",
+            update: None,
+            reboot: None,
+            skip_recovery: None,
+        })
+        .await;
+
+    assert!(result.is_err(), "system_updater succeeded when it should fail");
+    assert_eq!(*env.cache_service.called.lock(), 1);
     assert_eq!(*env.space_service.called.lock(), 1);
     assert_eq!(*env.reboot_service.called.lock(), 0);
 }
@@ -914,6 +987,7 @@ async fn test_normal_requires_zbi() {
         .await;
     assert!(result.is_err(), "system_updater succeeded when it should fail");
 
+    assert_eq!(*env.cache_service.called.lock(), 1);
     assert_eq!(*env.space_service.called.lock(), 1);
 }
 
@@ -941,6 +1015,7 @@ async fn test_force_recovery_rejects_zbi() {
         .await;
     assert!(result.is_err(), "system_updater succeeded when it should fail");
 
+    assert_eq!(*env.cache_service.called.lock(), 1);
     assert_eq!(*env.space_service.called.lock(), 1);
 }
 
@@ -1060,6 +1135,7 @@ async fn test_writes_bootloader() {
         ]
     );
 
+    assert_eq!(*env.cache_service.called.lock(), 1);
     assert_eq!(*env.space_service.called.lock(), 1);
     assert_eq!(*env.reboot_service.called.lock(), 1);
 }
@@ -1104,6 +1180,7 @@ async fn test_writes_recovery() {
         ]
     );
 
+    assert_eq!(*env.cache_service.called.lock(), 1);
     assert_eq!(*env.space_service.called.lock(), 1);
     assert_eq!(*env.reboot_service.called.lock(), 1);
 }
@@ -1154,6 +1231,7 @@ async fn test_writes_recovery_vbmeta() {
         ]
     );
 
+    assert_eq!(*env.cache_service.called.lock(), 1);
     assert_eq!(*env.space_service.called.lock(), 1);
     assert_eq!(*env.reboot_service.called.lock(), 1);
 }
@@ -1198,6 +1276,7 @@ async fn test_writes_fuchsia_vbmeta() {
         ]
     );
 
+    assert_eq!(*env.cache_service.called.lock(), 1);
     assert_eq!(*env.space_service.called.lock(), 1);
     assert_eq!(*env.reboot_service.called.lock(), 1);
 }
@@ -1238,6 +1317,7 @@ async fn test_skips_recovery_vbmeta() {
         ]
     );
 
+    assert_eq!(*env.cache_service.called.lock(), 1);
     assert_eq!(*env.space_service.called.lock(), 1);
     assert_eq!(*env.reboot_service.called.lock(), 1);
 }
@@ -1293,6 +1373,7 @@ async fn do_test_working_image_write_with_abr(
         ]
     );
 
+    assert_eq!(*env.cache_service.called.lock(), 1);
     assert_eq!(*env.space_service.called.lock(), 1);
     assert_eq!(*env.reboot_service.called.lock(), 1);
 }
@@ -1360,6 +1441,7 @@ async fn test_working_image_with_unsupported_abr() {
         ]
     );
 
+    assert_eq!(*env.cache_service.called.lock(), 1);
     assert_eq!(*env.space_service.called.lock(), 1);
     assert_eq!(*env.reboot_service.called.lock(), 1);
 }
@@ -1401,6 +1483,7 @@ async fn test_failing_image_write() {
         }
     );
 
+    assert_eq!(*env.cache_service.called.lock(), 1);
     assert_eq!(*env.space_service.called.lock(), 1);
     assert_eq!(*env.reboot_service.called.lock(), 0);
 }
@@ -1431,6 +1514,7 @@ async fn test_uses_custom_update_package() {
         "fuchsia-pkg://fuchsia.com/system_image/0?hash=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296",
     ]);
 
+    assert_eq!(*env.cache_service.called.lock(), 1);
     assert_eq!(*env.space_service.called.lock(), 1);
 }
 
@@ -1451,6 +1535,7 @@ async fn test_requires_update_package() {
         .await;
     assert!(result.is_err(), "system_updater succeeded when it should fail");
 
+    assert_eq!(*env.cache_service.called.lock(), 0);
     assert_eq!(*env.space_service.called.lock(), 1);
     assert_eq!(*env.resolver.resolved_urls.lock(), vec!["fuchsia-pkg://fuchsia.com/update"]);
     assert_eq!(*env.reboot_service.called.lock(), 0);
@@ -1475,6 +1560,7 @@ async fn test_rejects_invalid_update_package_url() {
         .await;
     assert!(result.is_err(), "system_updater succeeded when it should fail");
 
+    assert_eq!(*env.cache_service.called.lock(), 0);
     assert_eq!(*env.space_service.called.lock(), 1);
     assert_eq!(*env.resolver.resolved_urls.lock(), vec![bogus_url]);
     assert_eq!(*env.reboot_service.called.lock(), 0);
@@ -1503,6 +1589,7 @@ async fn test_rejects_unknown_flags() {
         .await;
     assert!(result.is_err(), "system_updater succeeded when it should fail");
 
+    assert_eq!(*env.cache_service.called.lock(), 0);
     assert_eq!(*env.space_service.called.lock(), 0);
     assert_eq!(*env.resolver.resolved_urls.lock(), Vec::<String>::new());
     assert_eq!(*env.reboot_service.called.lock(), 0);
@@ -1524,6 +1611,7 @@ async fn test_rejects_extra_args() {
         .await;
     assert!(result.is_err(), "system_updater succeeded when it should fail");
 
+    assert_eq!(*env.cache_service.called.lock(), 0);
     assert_eq!(*env.space_service.called.lock(), 0);
     assert_eq!(*env.resolver.resolved_urls.lock(), Vec::<String>::new());
     assert_eq!(*env.reboot_service.called.lock(), 0);
@@ -1568,6 +1656,7 @@ async fn test_writes_firmware() {
         ]
     );
 
+    assert_eq!(*env.cache_service.called.lock(), 1);
     assert_eq!(*env.space_service.called.lock(), 1);
     assert_eq!(*env.reboot_service.called.lock(), 1);
 }
@@ -1628,6 +1717,7 @@ async fn test_writes_multiple_firmware_types() {
         ]
     );
 
+    assert_eq!(*env.cache_service.called.lock(), 1);
     assert_eq!(*env.space_service.called.lock(), 1);
     assert_eq!(*env.reboot_service.called.lock(), 1);
 }
@@ -1676,6 +1766,7 @@ async fn test_unsupported_firmware_type() {
         ]
     );
 
+    assert_eq!(*env.cache_service.called.lock(), 1);
     assert_eq!(*env.space_service.called.lock(), 1);
     assert_eq!(*env.reboot_service.called.lock(), 1);
 }

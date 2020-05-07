@@ -16,6 +16,7 @@ import (
 
 	appcontext "app/context"
 	devmgr "fidl/fuchsia/device/manager"
+	"fidl/fuchsia/pkg"
 	"fidl/fuchsia/space"
 	"syslog"
 
@@ -146,6 +147,10 @@ func run(ctx *appcontext.Context) (err error) {
 		}
 	}
 
+	if err := syncBlobfs(ctx); err != nil {
+		return fmt.Errorf("error syncing blobfs: %s", err)
+	}
+
 	if err := ValidateImgs(imgs, updatePkg, updateMode); err != nil {
 		return fmt.Errorf("failed to validate imgs: %s", err)
 	}
@@ -218,6 +223,27 @@ func SendReboot() {
 	if err != nil || status != 0 {
 		syslog.Errorf("error sending restart to Administrator: %s status: %d", err, status)
 	}
+}
+
+func syncBlobfs(ctx *appcontext.Context) error {
+	req, pxy, err := pkg.NewPackageCacheWithCtxInterfaceRequest()
+	if err != nil {
+		syslog.Errorf("cache control interface could not be acquired: %s", err)
+		return err
+	}
+	defer pxy.Close()
+	ctx.ConnectToEnvService(req)
+	status, err := pxy.Sync(context.Background())
+	// handle FIDL error.
+	if err != nil {
+		return err
+	}
+	// handle any actual sync error.
+	statusErr := zx.Status(status)
+	if statusErr != zx.ErrOk {
+		return &zx.Error{Status: statusErr}
+	}
+	return nil
 }
 
 func GcPackages(ctx *appcontext.Context) {
