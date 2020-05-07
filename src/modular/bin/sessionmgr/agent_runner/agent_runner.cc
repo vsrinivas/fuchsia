@@ -28,12 +28,14 @@ AgentRunner::AgentRunner(fuchsia::sys::Launcher* const launcher,
                          AgentServicesFactory* const agent_services_factory,
                          inspect::Node* session_inspect_node,
                          std::map<std::string, std::string> agent_service_index,
+                         std::vector<std::string> session_agents,
                          sys::ComponentContext* const sessionmgr_context)
     : launcher_(launcher),
       agent_services_factory_(agent_services_factory),
       terminating_(std::make_shared<bool>(false)),
       session_inspect_node_(session_inspect_node),
       agent_service_index_(std::move(agent_service_index)),
+      session_agents_(std::move(session_agents)),
       sessionmgr_context_(sessionmgr_context) {}
 
 AgentRunner::~AgentRunner() = default;
@@ -140,7 +142,7 @@ void AgentRunner::EnsureAgentIsRunning(const std::string& agent_url, fit::functi
 
 void AgentRunner::RunAgent(const std::string& agent_url) {
   // Start the agent and issue all callbacks.
-  ComponentContextInfo component_info = {this};
+  ComponentContextInfo component_info = {this, session_agents_};
   AgentContextInfo info = {component_info, launcher_, agent_services_factory_, sessionmgr_context_};
   fuchsia::modular::AppConfig agent_config;
   agent_config.url = agent_url;

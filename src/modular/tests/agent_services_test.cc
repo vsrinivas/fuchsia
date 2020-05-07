@@ -25,6 +25,9 @@ struct ConnectToAgentServiceTestConfig {
   // handler |agent_url| by name.
   std::map<std::string, std::string> service_to_agent_map;
 
+  // The session agents to pass to the modular configuration file.
+  std::vector<std::string> session_agents;
+
   // If true, include the service_name in the |AgentServiceRequest|.
   // This is required for a successful connection.
   bool provide_service_name = false;
@@ -80,6 +83,7 @@ class AgentServicesTest : public modular_testing::TestHarnessFixture {
     }
 
     spec.mutable_sessionmgr_config()->set_agent_service_index(std::move(agent_service_index));
+    spec.mutable_sessionmgr_config()->set_session_agents(std::move(test_config.session_agents));
 
     fuchsia::modular::testing::InterceptSpec intercept_spec;
     intercept_spec.set_component_url(kTestAgentUrl);
@@ -194,12 +198,15 @@ TEST_F(AgentServicesTest, ValidAndSuccessfulMultipleEntries) {
 
 // Find service successfully, from a specific handler. The index specifies this
 // agent as the default handler, but should not be necessary.
+//
+// The handler must be a session agent.
 TEST_F(AgentServicesTest, SpecificHandlerProvidedHasService) {
   ConnectToAgentServiceTestConfig test_config;
   test_config.provide_service_name = true;
   test_config.provide_handler = true;
   test_config.provide_channel = true;
   test_config.provide_agent_controller = true;
+  test_config.session_agents = {kTestAgentUrl};
 
   test_config.service_to_agent_map = {
       {"somenamespace.someappspace.SomeService",
@@ -221,6 +228,7 @@ TEST_F(AgentServicesTest, SpecificHandlerProvidedHasServiceButNotInIndex) {
   test_config.provide_handler = true;
   test_config.provide_channel = true;
   test_config.provide_agent_controller = true;
+  test_config.session_agents = {kTestAgentUrl};
 
   test_config.service_to_agent_map = {
       {"somenamespace.someappspace.SomeService",
@@ -241,6 +249,7 @@ TEST_F(AgentServicesTest, SpecificHandlerProvidedHasServiceButIndexHasDifferentH
   test_config.provide_handler = true;
   test_config.provide_channel = true;
   test_config.provide_agent_controller = true;
+  test_config.session_agents = {kTestAgentUrl};
 
   test_config.service_to_agent_map = {
       {kTestServiceName, "fuchsia-pkg://fuchsia.com/some_agent#meta/some_agent.cmx"},
@@ -566,6 +575,7 @@ TEST_F(AgentServicesSFWCompatTest, PublishToOutgoingDirectory) {
   auto spec = CreateSpecWithAgentServiceIndex(
       {{fuchsia::testing::modular::TestProtocol::Name_, serving_agent->url()}});
   spec.mutable_sessionmgr_config()->mutable_session_agents()->push_back(agent->url());
+  spec.mutable_sessionmgr_config()->mutable_session_agents()->push_back(serving_agent->url());
 
   modular_testing::TestHarnessBuilder builder(std::move(spec));
   builder.InterceptComponent(serving_agent->BuildInterceptOptions());
@@ -586,7 +596,6 @@ TEST_F(AgentServicesSFWCompatTest, PublishToOutgoingDirectory) {
   builder.BuildAndRun(test_harness());
 
   RunLoopUntil([&] { return agent->is_running(); });
-  ASSERT_FALSE(serving_agent->is_running());
 
   // Attempt to connect to the test service in all ways that are currently supported.
   std::vector<fuchsia::testing::modular::TestProtocolPtr> protocol_ptrs;

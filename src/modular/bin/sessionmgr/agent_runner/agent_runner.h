@@ -44,6 +44,7 @@ class AgentRunner {
   AgentRunner(fuchsia::sys::Launcher* launcher, AgentServicesFactory* agent_services_factory,
               inspect::Node* session_inspect_node,
               std::map<std::string, std::string> agent_service_index = {},
+              std::vector<std::string> session_agents = {},
               sys::ComponentContext* const sessionmgr_context = nullptr);
   ~AgentRunner();
 
@@ -135,6 +136,9 @@ class AgentRunner {
   // Services mapped to agents that provide those services. Used when a service is requested
   // without specifying the handling agent. May be empty.
   std::map<std::string, std::string> agent_service_index_;
+
+  // The session agents specified in the modular configuration.
+  std::vector<std::string> session_agents_;
 
   // The sys::ComponentContext in which SessionmgrImpl was launched (also needed by agents).
   // AgentContext will use this to re-expose services from the "sys" Realm, like

@@ -262,14 +262,14 @@ void SessionmgrImpl::InitializeAgentRunner() {
       sessionmgr_context_->svc()->Connect<fuchsia::sys::Launcher>(), argv_map);
   agent_runner_.reset(new AgentRunner(agent_runner_launcher_.get(), startup_agent_launcher_.get(),
                                       &inspect_root_node_, std::move(agent_service_index),
-                                      sessionmgr_context_));
+                                      config_.session_agents(), sessionmgr_context_));
   OnTerminate(Teardown(kAgentRunnerTimeout, "AgentRunner", &agent_runner_));
 }
 
 void SessionmgrImpl::InitializeModular(const fidl::StringPtr& session_shell_url,
                                        fuchsia::modular::AppConfig story_shell_config,
                                        bool use_session_shell_for_story_shell_factory) {
-  ComponentContextInfo component_context_info{agent_runner_.get()};
+  ComponentContextInfo component_context_info{agent_runner_.get(), config_.session_agents()};
 
   startup_agent_launcher_->StartAgents(agent_runner_.get(), config_.session_agents(),
                                        config_.startup_agents());

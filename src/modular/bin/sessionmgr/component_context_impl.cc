@@ -12,12 +12,25 @@
 #include "src/modular/lib/fidl/array_to_string.h"
 
 namespace modular {
+namespace {
+void LogConnectionError(const std::string& url, const std::vector<std::string>& agents) {
+  FX_LOGS(ERROR) << "Attempting to connect to agent " << url
+                 << " which is not listed as a session agent.";
+  FX_LOGS(ERROR) << "Session agents are:";
+  for (const auto& agent : agents) {
+    FX_LOGS(ERROR) << " - " << agent;
+  }
+  FX_LOGS(ERROR) << "To fix this error, please add " << url
+                 << "to the modular configuration's 'session_agents'.";
+}
+}  // namespace
 
 ComponentContextImpl::ComponentContextImpl(const ComponentContextInfo& info,
                                            std::string component_namespace,
                                            std::string component_instance_id,
                                            std::string component_url)
     : agent_runner_(info.agent_runner),
+      session_agents_(info.session_agents),
       component_namespace_(std::move(component_namespace)),
       component_instance_id_(std::move(component_instance_id)),
       component_url_(std::move(component_url)) {
@@ -53,13 +66,26 @@ void ComponentContextImpl::DeprecatedConnectToAgent(
     std::string url,
     fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> incoming_services_request,
     fidl::InterfaceRequest<fuchsia::modular::AgentController> agent_controller_request) {
+  if (!AgentIsSessionAgent(url)) {
+    LogConnectionError(url, session_agents_);
+    return;
+  }
   agent_runner_->ConnectToAgent(component_instance_id_, url, std::move(incoming_services_request),
                                 std::move(agent_controller_request));
 }
 
 void ComponentContextImpl::DeprecatedConnectToAgentService(
     fuchsia::modular::AgentServiceRequest request) {
+  if (request.has_handler() && !AgentIsSessionAgent(request.handler())) {
+    LogConnectionError(request.handler(), session_agents_);
+    return;
+  }
   agent_runner_->ConnectToAgentService(component_instance_id_, std::move(request));
+}
+
+bool ComponentContextImpl::AgentIsSessionAgent(const std::string& agent_url) {
+  return std::find(session_agents_.begin(), session_agents_.end(), agent_url) !=
+         session_agents_.end();
 }
 
 }  // namespace modular

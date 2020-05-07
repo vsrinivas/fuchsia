@@ -28,7 +28,10 @@ TEST_F(FakeAgentTest, AddAgentService) {
   fake_agent->AddAgentService<fuchsia::modular::test::harness::Pinger>(
       pinger_bindings.GetHandler(this));
 
-  modular_testing::TestHarnessBuilder builder;
+  fuchsia::modular::testing::TestHarnessSpec spec;
+  spec.mutable_sessionmgr_config()->mutable_session_agents()->push_back(fake_agent->url());
+
+  modular_testing::TestHarnessBuilder builder(std::move(spec));
   builder.InterceptComponent(fake_agent->BuildInterceptOptions());
   builder.BuildAndRun(test_harness());
 

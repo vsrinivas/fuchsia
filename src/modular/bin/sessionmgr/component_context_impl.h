@@ -21,6 +21,7 @@ class AgentRunner;
 // The parameters of component context that do not vary by instance.
 struct ComponentContextInfo {
   AgentRunner* const agent_runner;
+  std::vector<std::string> session_agents;
 };
 
 // Implements the fuchsia::modular::ComponentContext interface, which is
@@ -66,7 +67,11 @@ class ComponentContextImpl : public fuchsia::modular::ComponentContext {
   // |fuchsia::modular::ComponentContext|
   void DeprecatedConnectToAgentService(fuchsia::modular::AgentServiceRequest request) override;
 
+  // Returns true if the agent url is a session agent.
+  bool AgentIsSessionAgent(const std::string& agent_url);
+
   AgentRunner* const agent_runner_;
+  std::vector<std::string> session_agents_;
 
   const std::string component_namespace_;
   const std::string component_instance_id_;
