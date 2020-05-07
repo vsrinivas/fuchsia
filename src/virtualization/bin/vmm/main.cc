@@ -16,6 +16,7 @@
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/namespace.h>
 #include <lib/sys/cpp/component_context.h>
+#include <lib/syslog/cpp/log_settings.h>
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>

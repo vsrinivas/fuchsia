@@ -10,6 +10,7 @@
 #include <lib/async-loop/default.h>
 #include <lib/fdio/directory.h>
 #include <lib/fit/defer.h>
+#include <lib/syslog/cpp/log_settings.h>
 #include <lib/trace-provider/provider.h>
 #include <lib/trace/event.h>
 #include <lib/zx/channel.h>

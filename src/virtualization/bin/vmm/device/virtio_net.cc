@@ -10,6 +10,7 @@
 #include <lib/fit/defer.h>
 #include <lib/fit/promise.h>
 #include <lib/fit/scope.h>
+#include <lib/syslog/cpp/log_settings.h>
 #include <lib/trace-provider/provider.h>
 #include <lib/zx/fifo.h>
 #include <zircon/device/ethernet.h>

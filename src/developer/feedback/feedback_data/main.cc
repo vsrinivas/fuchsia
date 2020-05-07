@@ -8,6 +8,7 @@
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/sys/inspect/cpp/component.h>
+#include <lib/syslog/cpp/log_settings.h>
 #include <lib/syslog/cpp/logger.h>
 
 #include <memory>

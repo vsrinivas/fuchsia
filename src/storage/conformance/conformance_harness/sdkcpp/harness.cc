@@ -7,6 +7,7 @@
 #include <lib/async/default.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/component_context.h>
+#include <lib/syslog/cpp/log_settings.h>
 #include <lib/vfs/cpp/pseudo_dir.h>
 #include <lib/vfs/cpp/vmo_file.h>
 #include <zircon/status.h>

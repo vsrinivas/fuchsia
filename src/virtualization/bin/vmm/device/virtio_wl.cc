@@ -7,6 +7,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fit/defer.h>
+#include <lib/syslog/cpp/log_settings.h>
 #include <lib/trace-provider/provider.h>
 #include <lib/trace/event.h>
 #include <lib/zx/socket.h>

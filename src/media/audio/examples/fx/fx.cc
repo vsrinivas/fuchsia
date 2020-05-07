@@ -14,6 +14,7 @@
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/media/cpp/timeline_function.h>
 #include <lib/sys/cpp/component_context.h>
+#include <lib/syslog/cpp/log_settings.h>
 #include <lib/zx/time.h>
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>

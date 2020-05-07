@@ -6,6 +6,7 @@
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
 #include <lib/sys/cpp/component_context.h>
+#include <lib/syslog/cpp/log_settings.h>
 
 #include "src/lib/syslog/cpp/logger.h"
 #include "src/media/audio/audio/audio_core_client.h"

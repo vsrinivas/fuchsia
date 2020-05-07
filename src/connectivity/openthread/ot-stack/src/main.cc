@@ -4,6 +4,7 @@
 
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
+#include <lib/syslog/cpp/log_settings.h>
 
 #include "app.h"
 

@@ -5,6 +5,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
+#include <lib/syslog/cpp/log_settings.h>
 
 #include "src/connectivity/network/mdns/util/mdns_impl.h"
 #include "src/connectivity/network/mdns/util/mdns_params.h"

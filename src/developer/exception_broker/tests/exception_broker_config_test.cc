@@ -5,6 +5,7 @@
 #include <lib/async-loop/default.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/sys/cpp/testing/service_directory_provider.h>
+#include <lib/syslog/cpp/log_settings.h>
 
 #include <gtest/gtest.h>
 

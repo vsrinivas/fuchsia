@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/syslog/cpp/log_settings.h>
 
 #include "lib/async-loop/default.h"
 #include "src/developer/shell/console/app.h"

@@ -13,6 +13,7 @@
 #include <lib/fit/single_threaded_executor.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/sys/cpp/component_context.h>
+#include <lib/syslog/cpp/log_settings.h>
 #include <lib/syslog/cpp/logger.h>
 
 #include "src/camera/bin/camera-gym/buffer_collage.h"

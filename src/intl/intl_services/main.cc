@@ -7,6 +7,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/sys/cpp/component_context.h>
+#include <lib/syslog/cpp/log_settings.h>
 #include <zircon/status.h>
 
 #include "src/lib/intl/intl_property_provider_impl/intl_property_provider_impl.h"

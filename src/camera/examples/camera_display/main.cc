@@ -4,6 +4,7 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/syslog/cpp/log_settings.h>
 
 #include <src/lib/syslog/cpp/logger.h>
 #include <src/lib/ui/base_view/view_provider_component.h>

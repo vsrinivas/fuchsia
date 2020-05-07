@@ -9,6 +9,7 @@
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
+#include <lib/syslog/cpp/log_settings.h>
 #include <zircon/time.h>
 
 #include <array>

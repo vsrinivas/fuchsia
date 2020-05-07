@@ -8,6 +8,7 @@
 #include <lib/fit/defer.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/sys/inspect/cpp/component.h>
+#include <lib/syslog/cpp/log_settings.h>
 
 #include <trace-provider/provider.h>
 

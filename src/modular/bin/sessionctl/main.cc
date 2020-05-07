@@ -12,6 +12,7 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
+#include <lib/syslog/cpp/log_settings.h>
 #include <sys/types.h>
 
 #include <chrono>
