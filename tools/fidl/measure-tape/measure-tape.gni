@@ -109,7 +109,7 @@ template("measure_tape") {
 
   # code generation
   compiled_action(gen_target_name) {
-    tool = "//tools/fidl/measure-tape"
+    tool = "//tools/fidl/measure-tape/src:measure-tape"
 
     args = gen_args
     outputs = [

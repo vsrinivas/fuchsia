@@ -45,7 +45,7 @@ sdk_source_set("cpp") {
 }
 
 compiled_action("gen_command_sizing") {
-  tool = "//tools/fidl/measure-tape:measure-tape"
+  tool = "//tools/fidl/measure-tape/src:measure-tape"
 
   check_file = "$target_out_dir/scenic-measure-tape.checked"
   outputs = [ "$check_file" ]

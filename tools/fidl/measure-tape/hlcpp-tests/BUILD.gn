@@ -4,38 +4,21 @@
 
 import("//build/fidl/fidl.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
 import("//tools/fidl/measure-tape/measure-tape.gni")
 
-test_package("measure-tape-tests") {
-  deps = [ ":hlcpp_tests" ]
-
-  tests = [
-    {
-      name = "hlcpp_tests"
-    },
-  ]
-}
-
-test("hlcpp_tests") {
+test("hlcpp-tests") {
   sources = [ "hlcpp_test.cc" ]
 
   deps = [
     ":measure_tape_for_toplevelunion",
-    ":measuretape",
     "//garnet/public/lib/gtest",
     "//src/lib/fxl/test:gtest_main",
+    "//tools/fidl/measure-tape/testdata:measuretape",
   ]
 }
 
 measure_tape("measure_tape_for_toplevelunion") {
   target_binding = "hlcpp"
   target_type = "measuretape/TopLevelUnion"
-  fidls = [ ":measuretape" ]
-}
-
-fidl("measuretape") {
-  name = "measuretape"
-
-  sources = [ "measuretape.test.fidl" ]
+  fidls = [ "//tools/fidl/measure-tape/testdata:measuretape" ]
 }
