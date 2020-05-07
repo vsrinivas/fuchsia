@@ -118,6 +118,7 @@ zx_status_t FakeBlockDevice::ReadBlock(uint64_t block_num, uint64_t fs_block_siz
 
 zx_status_t FakeBlockDevice::FifoTransaction(block_fifo_request_t* requests, size_t count) {
   fbl::AutoLock lock(&lock_);
+  const uint32_t block_size = block_size_;
   for (size_t i = 0; i < count; i++) {
     // Allow pauses to take effect between each issued operation. This will potentially allow other
     // threads to issue transactions since it releases the lock, just as the actual implementation
@@ -129,13 +130,15 @@ zx_status_t FakeBlockDevice::FifoTransaction(block_fifo_request_t* requests, siz
       case BLOCKIO_READ: {
         vmoid_t vmoid = requests[i].vmoid;
         auto& target_vmoid = vmos_[vmoid];
-        uint8_t buffer[block_size_];
-        memset(buffer, 0, block_size_);
+        uint8_t buffer[block_size];
+        memset(buffer, 0, block_size);
         for (size_t j = 0; j < requests[i].length; j++) {
-          uint64_t offset = (requests[i].dev_offset + j) * block_size_;
-          EXPECT_OK(block_device_.read(buffer, offset, block_size_));
-          offset = (requests[i].vmo_offset + j) * block_size_;
-          EXPECT_OK(target_vmoid.write(buffer, offset, block_size_));
+          uint64_t offset = (requests[i].dev_offset + j) * block_size;
+          EXPECT_OK(block_device_.read(buffer, offset, block_size), "offset: %lu, block_size: %u",
+                    offset, block_size);
+          offset = (requests[i].vmo_offset + j) * block_size;
+          EXPECT_OK(target_vmoid.write(buffer, offset, block_size), "offset: %lu, block_size: %u",
+                                       offset, block_size);
         }
         UpdateStats(true, start_tick, requests[i]);
         break;
@@ -143,18 +146,20 @@ zx_status_t FakeBlockDevice::FifoTransaction(block_fifo_request_t* requests, siz
       case BLOCKIO_WRITE: {
         vmoid_t vmoid = requests[i].vmoid;
         auto& target_vmoid = vmos_[vmoid];
-        uint8_t buffer[block_size_];
-        memset(buffer, 0, block_size_);
+        uint8_t buffer[block_size];
+        memset(buffer, 0, block_size);
         for (size_t j = 0; j < requests[i].length; j++) {
           if (write_block_limit_.has_value()) {
             if (write_block_count_ >= write_block_limit_) {
               return ZX_ERR_IO;
             }
           }
-          uint64_t offset = (requests[i].vmo_offset + j) * block_size_;
-          EXPECT_OK(target_vmoid.read(buffer, offset, block_size_));
-          offset = (requests[i].dev_offset + j) * block_size_;
-          EXPECT_OK(block_device_.write(buffer, offset, block_size_));
+          uint64_t offset = (requests[i].vmo_offset + j) * block_size;
+          EXPECT_OK(target_vmoid.read(buffer, offset, block_size),
+                    "offset: %lu, block_size: %u", offset, block_size);
+          offset = (requests[i].dev_offset + j) * block_size;
+          EXPECT_OK(block_device_.write(buffer, offset, block_size),
+                    "offset: %lu, block_size: %u", offset, block_size);
           write_block_count_++;
         }
         UpdateStats(true, start_tick, requests[i]);
