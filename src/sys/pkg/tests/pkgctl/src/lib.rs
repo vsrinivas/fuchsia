@@ -432,6 +432,7 @@ impl MockPackageCacheService {
                 PackageCacheRequest::BasePackageIndex { .. } => {
                     panic!("should only support Open requests")
                 }
+                PackageCacheRequest::Sync { .. } => panic!("should only support Open requests"),
             }
         }
         Ok(())

@@ -32,31 +32,40 @@ fn main() -> Result<(), Error> {
 async fn main_inner_async() -> Result<(), Error> {
     let inspector = finspect::Inspector::new();
 
-    let mut fs = ServiceFs::new();
-
     let pkgfs_system =
         pkgfs::system::Client::open_from_namespace().context("error opening /pkgfs/system")?;
     let pkgfs_versions =
         pkgfs::versions::Client::open_from_namespace().context("error opening pkgfs/versions")?;
+    let pkgfs_ctl =
+        pkgfs::control::Client::open_from_namespace().context("error opening pkgfs/ctl")?;
 
     let static_packages = get_static_packages(pkgfs_system.clone()).await?;
 
-    fs.dir("svc").add_fidl_service(move |stream| {
-        fasync::spawn(
-            cache_service::serve(Clone::clone(&pkgfs_versions), static_packages.clone(), stream)
+    let cache_cb = {
+        let pkgfs_ctl = Clone::clone(&pkgfs_ctl);
+        move |stream| {
+            fasync::spawn(
+                cache_service::serve(
+                    Clone::clone(&pkgfs_versions),
+                    Clone::clone(&pkgfs_ctl),
+                    static_packages.clone(),
+                    stream,
+                )
                 .unwrap_or_else(|e| {
                     fx_log_err!("error handling PackageCache connection {:#}", anyhow!(e))
                 }),
-        )
-    });
+            )
+        }
+    };
 
-    let pkgfs_ctl =
-        pkgfs::control::Client::open_from_namespace().context("error opening pkgfs/ctl")?;
-    fs.dir("svc").add_fidl_service(move |stream| {
+    let gc_cb = move |stream| {
         fasync::spawn(gc_service::serve(Clone::clone(&pkgfs_ctl), stream).unwrap_or_else(|e| {
             fx_log_err!("error handling SpaceManager connection {:#}", anyhow!(e))
         }))
-    });
+    };
+
+    let mut fs = ServiceFs::new();
+    fs.dir("svc").add_fidl_service(cache_cb).add_fidl_service(gc_cb);
 
     let blob_location_fut = BlobLocation::new(
         || Ok(pkgfs_system.clone()),

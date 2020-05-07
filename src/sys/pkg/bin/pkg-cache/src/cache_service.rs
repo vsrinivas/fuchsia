@@ -24,6 +24,7 @@ use {
 
 pub async fn serve(
     pkgfs_versions: pkgfs::versions::Client,
+    pkgfs_ctl: pkgfs::control::Client,
     static_packages: Arc<StaticPackages>,
     stream: PackageCacheRequestStream,
 ) -> Result<(), Error> {
@@ -59,6 +60,16 @@ pub async fn serve(
                 PackageCacheRequest::BasePackageIndex { iterator, control_handle: _ } => {
                     let stream = iterator.into_stream()?;
                     base_package_index(Arc::clone(&static_packages), stream).await;
+                }
+                PackageCacheRequest::Sync { responder } => {
+                    let status = match pkgfs_ctl.sync().await {
+                        Ok(()) => Status::OK,
+                        Err(e) => {
+                            fx_log_err!("error syncing /pkgfs/ctl: {:#}", anyhow!(e));
+                            Status::INTERNAL
+                        }
+                    };
+                    responder.send(status.into_raw())?;
                 }
             }
 

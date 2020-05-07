@@ -20,6 +20,9 @@ protocol PackageCache {
     /// will return `ZX_OK` when the package has been fully resolved, or an error if the client
     /// closes `needed_blobs` or `dir` handle before the package has been resolved.
     ///
+    /// This method does not guarantee the missing blobs have been persisted. In order to guarantee
+    /// missing blobs are persisted, clients should call ['Sync'].
+    ///
     /// Arguments:
     /// * `meta_far_blob` is the blob info for the package's meta.far.
     /// * `selectors` are the package selectors (TODO: link to docs).
@@ -62,6 +65,13 @@ protocol PackageCache {
     /// * `packages` is a request for the `PackageIndexIterator` that will return sets of
     ///   `PackageIndexEntry` objects until all packages in the base index have been iterated.
     BasePackageIndex(request<PackageIndexIterator> iterator);
+
+    /// Synchronizes updates to the cached packages to the underlying persistent storage.
+    ///
+    /// Return Values:
+    /// * `ZX_OK` if the sync succeeds.
+    /// * `ZX_ERR_INTERNAL` if the sync fails.
+    Sync() -> (zx.status status);
 };
 
 /// The `NeededBlobs` is an abstract interface that is provided by a `PackageCache` to the

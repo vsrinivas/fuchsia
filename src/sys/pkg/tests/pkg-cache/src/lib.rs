@@ -25,6 +25,7 @@ use {
 mod base_pkg_index;
 mod inspect;
 mod space;
+mod sync;
 
 trait PkgFs {
     fn root_dir_handle(&self) -> Result<ClientEnd<DirectoryMarker>, Error>;
