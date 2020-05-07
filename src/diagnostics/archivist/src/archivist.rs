@@ -124,7 +124,8 @@ impl Archivist {
             .dir("svc")
             .add_fidl_service(move |stream| log_manager_clone.spawn_log_handler(stream))
             .add_fidl_service(move |stream| {
-                let fut = log_manager.clone().process_log_sink(stream, SourceIdentity::empty());
+                let fut =
+                    log_manager.clone().process_log_sink(stream, Arc::new(SourceIdentity::empty()));
                 if let Err(e) = sink_sender.unbounded_send(FutureObj::new(Box::new(fut))) {
                     eprintln!("Can't queue log sink connection, {}", e);
                 }

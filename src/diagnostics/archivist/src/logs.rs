@@ -99,17 +99,23 @@ impl LogManager {
     }
 
     /// Spawn a log sink for messages sent by the archivist itself.
-    pub fn spawn_internal_sink(&self, socket: zx::Socket, name: &str) -> Result<(), Error> {
-        // TODO(50105): Figure out how to properly populate SourceIdentity
-        let mut source = SourceIdentity::empty();
-        source.component_name = Some(name.to_owned());
-        let log_stream = LogMessageSocket::new(socket, source)?;
+    pub fn spawn_internal_sink(&self, socket: zx::Socket, name: &str) {
         let manager = self.clone();
+        let name = name.to_owned();
         fasync::spawn(async move {
+            // TODO(50105): Figure out how to properly populate SourceIdentity
+            let mut source = SourceIdentity::empty();
+            source.component_name = Some(name);
+            let source = Arc::new(source);
+            let component_log_stats = {
+                let inner = manager.inner.lock().await;
+                inner.stats.get_component_log_stats(&source).await
+            };
+            let log_stream = LogMessageSocket::new(socket, component_log_stats, source)
+                .expect("Unable to create internal LogMessageSocket");
             manager.drain_messages(log_stream).await;
             unreachable!();
         });
-        Ok(())
     }
 
     /// Spawn a task which attempts to act as `LogConnectionListener` for its parent realm, eventually
@@ -132,7 +138,7 @@ impl LogManager {
                                     log_request
                                         .into_stream()
                                         .expect("getting LogSinkRequestStream from serverend"),
-                                    source_identity,
+                                    Arc::new(source_identity),
                                 );
 
                                 fasync::spawn(fut);
@@ -153,30 +159,34 @@ impl LogManager {
     /// Process LogSink protocol on `stream`. The future returned by this
     /// function will not complete before all messages on this connection are
     /// processed.
-    pub async fn process_log_sink(self, mut stream: LogSinkRequestStream, source: SourceIdentity) {
+    pub async fn process_log_sink(
+        self,
+        mut stream: LogSinkRequestStream,
+        source: Arc<SourceIdentity>,
+    ) {
         if source.component_name.is_none() {
             self.inner.lock().await.stats.record_unattributed();
         }
         let (mut log_stream_sender, recv) = mpsc::channel(0);
+        let this = self.clone();
         let log_sink_fut = async move {
             while let Some(LogSinkRequest::Connect { socket, control_handle }) =
                 stream.try_next().await?
             {
-                let source = SourceIdentity {
-                    component_name: source.component_name.clone(),
-                    component_url: source.component_url.clone(),
-                    instance_id: source.instance_id.clone(),
-                    realm_path: source.realm_path.clone(),
+                let component_log_stats = {
+                    let inner = this.inner.lock().await;
+                    inner.stats.get_component_log_stats(&source).await
                 };
-                let log_stream = match LogMessageSocket::new(socket, source)
-                    .context("creating log stream from socket")
-                {
-                    Ok(s) => s,
-                    Err(e) => {
-                        control_handle.shutdown();
-                        return Err(e);
-                    }
-                };
+                let log_stream =
+                    match LogMessageSocket::new(socket, component_log_stats, source.clone())
+                        .context("creating log stream from socket")
+                    {
+                        Ok(s) => s,
+                        Err(e) => {
+                            control_handle.shutdown();
+                            return Err(e);
+                        }
+                    };
                 log_stream_sender.send(log_stream).await?;
             }
             Ok(())
@@ -287,6 +297,9 @@ impl LogManager {
     async fn ingest_message(&self, log_msg: Message, source: stats::LogSource) {
         let mut inner = self.inner.lock().await;
 
+        // We always record the log before sending messages to listeners because
+        // we want to be able to see that stats are updated as soon as we receive
+        // messages in tests.
         inner.stats.record_log(&log_msg, source);
         inner.listeners.send(&log_msg).await;
         inner.log_msg_buffer.push(log_msg);
@@ -345,10 +358,18 @@ mod tests {
         fifth_packet.metadata.severity = LogLevelFilter::Error.into_primitive().into();
         fifth_message.severity = fifth_packet.metadata.severity;
 
-        let log_stats_tree = TestHarness::new()
+        let harness = TestHarness::new();
+        let mut stream = harness.create_stream(Arc::new(SourceIdentity::empty()));
+        stream.write_packets(vec![
+            first_packet,
+            second_packet,
+            third_packet,
+            fourth_packet,
+            fifth_packet,
+        ]);
+        let log_stats_tree = harness
             .filter_test(
                 vec![first_message, second_message, third_message, fourth_message, fifth_message],
-                vec![first_packet, second_packet, third_packet, fourth_packet, fifth_packet],
                 None,
             )
             .await;
@@ -368,6 +389,164 @@ mod tests {
                     fatal_logs: 0u64,
                     closed_streams: 0u64,
                     unattributed_log_sinks: 1u64,
+                    by_component: { "(unattributed)": {
+                        total_logs: 5u64,
+                        trace_logs: 0u64,
+                        debug_logs: 0u64,
+                        info_logs: 2u64,
+                        warning_logs: 2u64,
+                        error_logs: 1u64,
+                        fatal_logs: 0u64,
+                    } },
+                    buffer_stats: {
+                        rolled_out_entries: 0u64,
+                    }
+                },
+            }
+        );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn attributed_inspect_two_streams_different_identities() {
+        let mut packet = setup_default_packet();
+        let message = LogMessage {
+            pid: packet.metadata.pid,
+            tid: packet.metadata.tid,
+            time: packet.metadata.time,
+            dropped_logs: packet.metadata.dropped_logs,
+            severity: packet.metadata.severity,
+            msg: String::from("BBBBB"),
+            tags: vec![String::from("AAAAA")],
+        };
+
+        let mut packet2 = packet.clone();
+        packet2.metadata.severity = LogLevelFilter::Error.into_primitive().into();
+        let mut message2 = message.clone();
+        message2.severity = packet2.metadata.severity;
+
+        let harness = TestHarness::new();
+
+        let identity = Arc::new(SourceIdentity {
+            component_name: Some("foo".into()),
+            component_url: Some("http://foo.com".into()),
+            instance_id: None,
+            realm_path: None,
+        });
+        let mut foo_stream = harness.create_stream(identity);
+        foo_stream.write_packet(&mut packet);
+
+        let identity = Arc::new(SourceIdentity {
+            component_name: Some("bar".into()),
+            component_url: Some("http://bar.com".into()),
+            instance_id: None,
+            realm_path: None,
+        });
+        let mut bar_stream = harness.create_stream(identity);
+        bar_stream.write_packet(&mut packet2);
+        let log_stats_tree = harness.filter_test(vec![message, message2], None).await;
+
+        assert_inspect_tree!(
+            log_stats_tree,
+            root: {
+                log_stats: {
+                    total_logs: 2u64,
+                    kernel_logs: 0u64,
+                    logsink_logs: 2u64,
+                    trace_logs: 0u64,
+                    debug_logs: 0u64,
+                    info_logs: 0u64,
+                    warning_logs: 1u64,
+                    error_logs: 1u64,
+                    fatal_logs: 0u64,
+                    closed_streams: 0u64,
+                    unattributed_log_sinks: 0u64,
+                    by_component: {
+                        "http://foo.com": {
+                            total_logs: 1u64,
+                            trace_logs: 0u64,
+                            debug_logs: 0u64,
+                            info_logs: 0u64,
+                            warning_logs: 1u64,
+                            error_logs: 0u64,
+                            fatal_logs: 0u64,
+                        },
+                        "http://bar.com": {
+                            total_logs: 1u64,
+                            trace_logs: 0u64,
+                            debug_logs: 0u64,
+                            info_logs: 0u64,
+                            warning_logs: 0u64,
+                            error_logs: 1u64,
+                            fatal_logs: 0u64,
+                        }
+                    },
+                    buffer_stats: {
+                        rolled_out_entries: 0u64,
+                    }
+                },
+            }
+        );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn attributed_inspect_two_streams_same_identity() {
+        let mut packet = setup_default_packet();
+        let message = LogMessage {
+            pid: packet.metadata.pid,
+            tid: packet.metadata.tid,
+            time: packet.metadata.time,
+            dropped_logs: packet.metadata.dropped_logs,
+            severity: packet.metadata.severity,
+            msg: String::from("BBBBB"),
+            tags: vec![String::from("AAAAA")],
+        };
+
+        let mut packet2 = packet.clone();
+        packet2.metadata.severity = LogLevelFilter::Error.into_primitive().into();
+        let mut message2 = message.clone();
+        message2.severity = packet2.metadata.severity;
+
+        let harness = TestHarness::new();
+
+        let identity = Arc::new(SourceIdentity {
+            component_name: Some("foo".into()),
+            component_url: Some("http://foo.com".into()),
+            instance_id: None,
+            realm_path: None,
+        });
+        let mut foo_stream = harness.create_stream(identity.clone());
+        foo_stream.write_packet(&mut packet);
+
+        let mut bar_stream = harness.create_stream(identity.clone());
+        bar_stream.write_packet(&mut packet2);
+        let log_stats_tree = harness.filter_test(vec![message, message2], None).await;
+
+        assert_inspect_tree!(
+            log_stats_tree,
+            root: {
+                log_stats: {
+                    total_logs: 2u64,
+                    kernel_logs: 0u64,
+                    logsink_logs: 2u64,
+                    trace_logs: 0u64,
+                    debug_logs: 0u64,
+                    info_logs: 0u64,
+                    warning_logs: 1u64,
+                    error_logs: 1u64,
+                    fatal_logs: 0u64,
+                    closed_streams: 0u64,
+                    unattributed_log_sinks: 0u64,
+                    by_component: {
+                        "http://foo.com": {
+                            total_logs: 2u64,
+                            trace_logs: 0u64,
+                            debug_logs: 0u64,
+                            info_logs: 0u64,
+                            warning_logs: 1u64,
+                            error_logs: 1u64,
+                            fatal_logs: 0u64,
+                        },
+                    },
                     buffer_stats: {
                         rolled_out_entries: 0u64,
                     }
@@ -400,7 +579,10 @@ mod tests {
             tags: vec![],
         };
 
-        TestHarness::new().filter_test(vec![lm], vec![p, p2], Some(options)).await;
+        let harness = TestHarness::new();
+        let mut stream = harness.create_stream(Arc::new(SourceIdentity::empty()));
+        stream.write_packets(vec![p, p2]);
+        harness.filter_test(vec![lm], Some(options)).await;
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -428,7 +610,10 @@ mod tests {
             tags: vec![],
         };
 
-        TestHarness::new().filter_test(vec![lm], vec![p, p2], Some(options)).await;
+        let harness = TestHarness::new();
+        let mut stream = harness.create_stream(Arc::new(SourceIdentity::empty()));
+        stream.write_packets(vec![p, p2]);
+        harness.filter_test(vec![lm], Some(options)).await;
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -463,7 +648,10 @@ mod tests {
             tags: vec![],
         };
 
-        TestHarness::new().filter_test(vec![lm], vec![p, p2, p3, p4, p5], Some(options)).await;
+        let harness = TestHarness::new();
+        let mut stream = harness.create_stream(Arc::new(SourceIdentity::empty()));
+        stream.write_packets(vec![p, p2, p3, p4, p5]);
+        harness.filter_test(vec![lm], Some(options)).await;
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -494,7 +682,10 @@ mod tests {
             tags: vec![],
         };
 
-        TestHarness::new().filter_test(vec![lm], vec![p, p2, p3], Some(options)).await;
+        let harness = TestHarness::new();
+        let mut stream = harness.create_stream(Arc::new(SourceIdentity::empty()));
+        stream.write_packets(vec![p, p2, p3]);
+        harness.filter_test(vec![lm], Some(options)).await;
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -539,7 +730,10 @@ mod tests {
             tags: vec![String::from("BBBBB"), String::from("DDDDD")],
         };
 
-        TestHarness::new().filter_test(vec![lm1, lm2], vec![p, p2], Some(options)).await;
+        let harness = TestHarness::new();
+        let mut stream = harness.create_stream(Arc::new(SourceIdentity::empty()));
+        stream.write_packets(vec![p, p2]);
+        harness.filter_test(vec![lm1, lm2], Some(options)).await;
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -608,16 +802,14 @@ mod tests {
     }
 
     struct TestHarness {
-        log_proxy: LogProxy,
-        sin: zx::Socket,
         inspector: inspect::Inspector,
-        _log_sink_proxy: LogSinkProxy,
+        log_manager: LogManager,
+        log_proxy: LogProxy,
     }
 
     impl TestHarness {
         fn new() -> Self {
             let inspector = inspect::Inspector::new();
-            let (sin, sout) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
             let inner = Arc::new(Mutex::new(ManagerInner {
                 listeners: Pool::default(),
                 log_msg_buffer: buffer::MemoryBoundedBuffer::new(OLD_MSGS_BUF_SIZE),
@@ -625,47 +817,33 @@ mod tests {
                 inspect_node: inspect::Node::default(),
             }));
 
-            let mut lm = LogManager { inner };
-            lm.iattach(inspector.root(), "log_stats").unwrap();
+            let mut log_manager = LogManager { inner };
+            log_manager.iattach(inspector.root(), "log_stats").unwrap();
 
             let (log_proxy, log_stream) =
                 fidl::endpoints::create_proxy_and_stream::<LogMarker>().unwrap();
-            lm.spawn_log_handler(log_stream);
+            log_manager.spawn_log_handler(log_stream);
 
-            let (log_sink_proxy, log_sink_stream) =
-                fidl::endpoints::create_proxy_and_stream::<LogSinkMarker>().unwrap();
-
-            let manager = lm.clone();
-            fasync::spawn(async move {
-                manager.process_log_sink(log_sink_stream, SourceIdentity::empty()).await;
-            });
-
-            log_sink_proxy.connect(sout).expect("unable to connect out socket to log sink");
-
-            Self { log_proxy, _log_sink_proxy: log_sink_proxy, sin, inspector }
+            Self { inspector, log_manager, log_proxy }
         }
 
         /// Run a filter test, returning the Inspector to check Inspect output.
         async fn filter_test(
             self,
             expected: impl IntoIterator<Item = LogMessage>,
-            packets: Vec<fx_log_packet_t>,
             filter_options: Option<LogFilterOptions>,
         ) -> inspect::Inspector {
-            for mut p in packets {
-                self.sin.write(to_u8_slice(&mut p)).unwrap();
-            }
-
             validate_log_stream(expected, self.log_proxy, filter_options).await;
             self.inspector
         }
 
         async fn manager_test(self, test_dump_logs: bool) {
             let mut p = setup_default_packet();
-            self.sin.write(to_u8_slice(&mut p)).unwrap();
+            let mut stream = self.create_stream(Arc::new(SourceIdentity::empty()));
+            stream.write_packet(&mut p);
 
             p.metadata.severity = LogLevelFilter::Info.into_primitive().into();
-            self.sin.write(to_u8_slice(&mut p)).unwrap();
+            stream.write_packet(&mut p);
 
             let mut lm1 = LogMessage {
                 time: p.metadata.time,
@@ -682,13 +860,50 @@ mod tests {
             lm3.pid = 2;
 
             p.metadata.pid = 2;
-            self.sin.write(to_u8_slice(&mut p)).unwrap();
+            stream.write_packet(&mut p);
 
             if test_dump_logs {
                 validate_log_dump(vec![lm1, lm2, lm3], self.log_proxy, None).await;
             } else {
                 validate_log_stream(vec![lm1, lm2, lm3], self.log_proxy, None).await;
             }
+        }
+
+        fn create_stream(&self, identity: Arc<SourceIdentity>) -> TestStream {
+            TestStream::new(self.log_manager.clone(), identity)
+        }
+    }
+
+    struct TestStream {
+        sin: zx::Socket,
+        _log_sink_proxy: LogSinkProxy,
+    }
+
+    impl TestStream {
+        fn new(log_manager: LogManager, identity: Arc<SourceIdentity>) -> Self {
+            let (sin, sout) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
+
+            let (log_sink_proxy, log_sink_stream) =
+                fidl::endpoints::create_proxy_and_stream::<LogSinkMarker>().unwrap();
+
+            let manager = log_manager.clone();
+            fasync::spawn(async move {
+                manager.process_log_sink(log_sink_stream, identity).await;
+            });
+
+            log_sink_proxy.connect(sout).expect("unable to connect out socket to log sink");
+
+            Self { _log_sink_proxy: log_sink_proxy, sin }
+        }
+
+        fn write_packets(&mut self, packets: Vec<fx_log_packet_t>) {
+            for mut p in packets {
+                self.write_packet(&mut p);
+            }
+        }
+
+        fn write_packet(&mut self, packet: &mut fx_log_packet_t) {
+            self.sin.write(to_u8_slice(packet)).unwrap();
         }
     }
 

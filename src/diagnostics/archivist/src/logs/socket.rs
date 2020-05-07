@@ -3,36 +3,47 @@
 
 use super::error::StreamError;
 use super::message::{Message, MAX_DATAGRAM_LEN};
+use crate::logs::stats::ComponentLogStats;
 use fidl_fuchsia_sys_internal::SourceIdentity;
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
 use futures::{
     io::{self, AsyncRead},
+    lock::Mutex,
     ready,
     task::{Context, Poll},
-    Stream,
+    Future, Stream,
 };
 use std::pin::Pin;
+use std::sync::Arc;
 
 #[must_use = "don't drop logs on the floor please!"]
 pub struct LogMessageSocket {
-    source: SourceIdentity,
+    source: Arc<SourceIdentity>,
+    /// stats represents the stats for a particular component URL. Once all sockets
+    /// that hold these stats are dropped, so is the inspect node.
+    stats: Arc<Mutex<ComponentLogStats>>,
     socket: fasync::Socket,
     buffer: [u8; MAX_DATAGRAM_LEN],
 }
 
 impl LogMessageSocket {
     /// Creates a new `LogMessageSocket` from the given `socket`.
-    pub fn new(socket: zx::Socket, source: SourceIdentity) -> Result<Self, io::Error> {
+    pub fn new(
+        socket: zx::Socket,
+        stats: Arc<Mutex<ComponentLogStats>>,
+        source: Arc<SourceIdentity>,
+    ) -> Result<Self, io::Error> {
         Ok(Self {
             socket: fasync::Socket::from_socket(socket)?,
             buffer: [0; MAX_DATAGRAM_LEN],
+            stats,
             source,
         })
     }
 
     /// What we know of the identity of the writer of these logs.
-    pub fn source(&self) -> &SourceIdentity {
+    pub fn source(&self) -> &Arc<SourceIdentity> {
         &self.source
     }
 }
@@ -44,7 +55,17 @@ impl Stream for LogMessageSocket {
         let &mut Self { ref mut socket, ref mut buffer, .. } = &mut *self;
         let len = ready!(Pin::new(socket).poll_read(cx, buffer)?);
 
-        let parsed = if len > 0 { Some(Message::from_logger(&buffer[..len])) } else { None };
+        let parsed = if len > 0 {
+            let message = Message::from_logger(&buffer[..len]);
+            if let Ok(message) = &message {
+                let mut stats = self.stats.lock();
+                let component_log_stats = ready!(Pin::new(&mut stats).poll(cx));
+                component_log_stats.record_log(&message);
+            }
+            Some(message)
+        } else {
+            None
+        };
         Poll::Ready(parsed)
     }
 }
@@ -73,7 +94,12 @@ mod tests {
         packet.fill_data(1..6, 'A' as _);
         packet.fill_data(7..12, 'B' as _);
 
-        let ls = LogMessageSocket::new(sout, SourceIdentity::empty()).unwrap();
+        let ls = LogMessageSocket::new(
+            sout,
+            Arc::new(Mutex::new(ComponentLogStats::default())),
+            Arc::new(SourceIdentity::empty()),
+        )
+        .unwrap();
         sin.write(packet.as_bytes()).unwrap();
         let mut expected_p = Message {
             size: METADATA_SIZE + 6 /* tag */+ 6, /* msg */

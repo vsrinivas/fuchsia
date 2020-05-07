@@ -70,7 +70,7 @@ fn main() -> Result<(), Error> {
         .install_logger_services()
         .add_event_source("v1", Box::new(legacy_event_provider))
         .add_event_source("v2", Box::new(event_source));
-    archivist.log_manager().spawn_internal_sink(log_server, log_name)?;
+    archivist.log_manager().spawn_internal_sink(log_server, log_name);
 
     if !opt.disable_log_connector {
         archivist.set_log_connector(connect_to_service::<LogConnectorMarker>()?);
