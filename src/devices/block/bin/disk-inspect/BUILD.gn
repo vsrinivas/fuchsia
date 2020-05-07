@@ -8,8 +8,8 @@ executable("disk-inspect") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "main.cc" ]
   deps = [
+    "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_llcpp",
     "//zircon/public/lib/fdio",
-    "//zircon/system/fidl/fuchsia-hardware-block-partition:llcpp",
     "//zircon/system/ulib/disk_inspector",
     "//zircon/system/ulib/minfs",
   ]

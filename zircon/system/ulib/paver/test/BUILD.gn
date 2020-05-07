@@ -53,6 +53,7 @@ test("paver-test") {
     "..",
   ]
   deps = [
+    "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_llcpp",
     "//sdk/fidl/fuchsia.hardware.skipblock:fuchsia.hardware.skipblock_llcpp",
     "//sdk/fidl/fuchsia.paver:fuchsia.paver_llcpp",
     "//src/devices/lib/amlogic",
@@ -69,7 +70,6 @@ test("paver-test") {
     "//zircon/system/fidl/fuchsia-boot:llcpp",
     "//zircon/system/fidl/fuchsia-device:llcpp",
     "//zircon/system/fidl/fuchsia-hardware-block:llcpp",
-    "//zircon/system/fidl/fuchsia-hardware-block-partition:llcpp",
     "//zircon/system/fidl/fuchsia-hardware-nand:c",
     "//zircon/system/ulib/block-client",
     "//zircon/system/ulib/devmgr-integration-test",
