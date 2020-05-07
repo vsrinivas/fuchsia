@@ -29,7 +29,7 @@ func validateAgainst(spec build.TestSpec, platforms []build.DimensionSet) error 
 	if spec.Test.Name == "" {
 		return fmt.Errorf("A test spec's test must have a non-empty name")
 	}
-	if len(spec.Command) == 0 && spec.Test.Path == "" && spec.PackageURL == "" {
+	if len(spec.Command) == 0 && spec.Test.Path == "" && spec.Package.URL == "" {
 		return fmt.Errorf("A test spec's test must have one of its path, URL, or command as non-empty")
 	}
 	if spec.Test.OS == "" {

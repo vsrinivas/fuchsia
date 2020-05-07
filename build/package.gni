@@ -426,7 +426,12 @@ template("package") {
           target = main_target_name
           path = path
           if (!bootfs_only) {
-            package_url = url
+            package = {
+              url = url
+              merkle_file = rebase_path(
+                      "${target_out_dir}/${main_target_name}/meta.far.merkle",
+                      root_build_dir)
+            }
           }
           forward_variables_from(test, [ "environments" ])
         }

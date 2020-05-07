@@ -25,10 +25,19 @@ import("//build/testing/platforms.gni")
 #     [list of strings]: Command to invoke to run the test. If unset, path is
 #     required and will be invoked upon execution.
 #
-#   package_url (optional)
-#     [string] In the case of a fuchsia test, this describes the packaged test
-#     via a fuchsia package URL. See //docs/the-book/package_url.md for more
-#     details.
+#   package (optional)
+#     [package] Describes the Fuchsia package containing the test. Only used in
+#     Fuchsia tests.
+#
+#       url (required)
+#        [string] Fuchsia package URL. See
+#        ///docs/concepts/packages/package_url.md for more details.
+#
+#       merkle_file (optional)
+#        [string] path to a file containing the merkle root hash of the
+#        Fuchsia package. Usually this is the meta.far.merkle file in the
+#        package directory, created by the seal operation of the pm_build
+#        template.
 #
 #   deps (optional)
 #     [list of labels]: List of labels that the test depends on.
@@ -246,7 +255,7 @@ template("test_spec") {
                                "command",
                                "name",
                                "path",
-                               "package_url",
+                               "package",
                              ])
       label = get_label_info(":${invoker.target}", "label_with_toolchain")
 

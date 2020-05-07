@@ -25,9 +25,9 @@ type Test struct {
 	// Name is the "basename" of the test, e.g. "foo_test".
 	Name string `json:"name"`
 
-	// PackageURL is the fuchsia package URL for this test. It is only set for
+	// Package describes the fuchsia package for this test. It is only set for
 	// tests targeting Fuchsia.
-	PackageURL string `json:"package_url,omitempty"`
+	Package Package `json:"package"`
 
 	// Path is the path to the test on the target OS.
 	Path string `json:"path"`
@@ -46,6 +46,18 @@ type Test struct {
 	// containing a JSON list of the test's runtime dependencies, Currently this
 	// field only makes sense for Linux and Mac tests.
 	RuntimeDepsFile string `json:"runtime_deps,omitempty"`
+}
+
+// Package describes the fuchsia package for a test.
+type Package struct {
+	// url is the fuchsia package URL for the test.
+	URL string `json:"url,omitempty"`
+
+	// merkle_file is a path to a file on the host containing the Merkle root
+	// hash generated when sealing the fuchsia package. If used as a "hash"
+	// parameter in the package URL when running a test, it addresses the
+	// same package content described by the hash.
+	MerkleFile string `json:"merkle_file,omitempty"`
 }
 
 // Environment describes the full environment a test requires.

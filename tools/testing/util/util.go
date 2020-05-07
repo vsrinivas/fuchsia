@@ -11,7 +11,7 @@ import "go.fuchsia.dev/fuchsia/tools/build/lib"
 // either path or package URL instead.
 func UniqueName(test build.Test) string {
 	if test.OS == "fuchsia" {
-		return test.PackageURL
+		return test.Package.URL
 	}
 	return test.Path
 }
