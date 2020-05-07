@@ -35,8 +35,8 @@ driver_module("gauss") {
     "//src/devices/lib/driver",
     "//src/devices/pci/lib/designware",
     "//zircon/public/lib/ddk",
-    "//zircon/public/lib/device-protocol-i2c",
     "//zircon/public/lib/sync",
+    "//zircon/system/dev/lib/device-protocol-i2c",
   ]
   data_deps = [ ":gauss-i2c-test" ]
 }
@@ -54,9 +54,9 @@ driver_module("gauss-i2c-test") {
     "//sdk/banjo/ddk.protocol.platform.device",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
-    "//zircon/public/lib/device-protocol-i2c",
     "//zircon/public/lib/sync",
     "//zircon/system/banjo/ddk.protocol.i2c",
+    "//zircon/system/dev/lib/device-protocol-i2c",
   ]
 }
 

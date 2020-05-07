@@ -24,13 +24,13 @@ driver_module("goodix") {
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
-    "//zircon/public/lib/device-protocol-i2c",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/mmio",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/trace-driver",
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.i2c",
+    "//zircon/system/dev/lib/device-protocol-i2c",
     "//zircon/system/ulib/hid",
     "//zircon/system/ulib/hid",
   ]
@@ -59,7 +59,6 @@ test("gt92xx-test") {
     "//src/ui/input/testing/mock-hidbus-ifc",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
-    "//zircon/public/lib/device-protocol-i2c",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/mock-function",
     "//zircon/public/lib/sync",
@@ -67,6 +66,7 @@ test("gt92xx-test") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/dev/lib/device-protocol-i2c",
     "//zircon/system/ulib/hid",
   ]
 }

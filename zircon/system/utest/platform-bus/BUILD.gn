@@ -244,9 +244,9 @@ foreach(driver, simple_drivers) {
       "//sdk/banjo/ddk.protocol.spi",
       "//src/devices/lib/driver",
       "//zircon/public/lib/ddk",
-      "//zircon/public/lib/device-protocol-i2c",
       "//zircon/public/lib/sync",
       "//zircon/system/banjo/ddk.protocol.i2c",
+      "//zircon/system/dev/lib/device-protocol-i2c",
     ]
   }
 

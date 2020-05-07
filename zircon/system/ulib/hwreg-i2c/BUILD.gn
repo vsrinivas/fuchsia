@@ -22,7 +22,7 @@ zx_library("hwreg-i2c") {
 
   public_deps = [
     # <hwreg/i2c.h> has #include <lib/device-protocol/i2c.h>.
-    "//zircon/public/lib/device-protocol-i2c",
+    "//zircon/system/dev/lib/device-protocol-i2c",
 
     # <hwreg/i2c.h> has #include <hwreg/bitfields.h>
     "//zircon/public/lib/hwreg",
