@@ -170,7 +170,7 @@ impl ProtocolStateNode {
 
 pub struct LastResultsNode {
     node: Node,
-    last_results: VecDeque<StringProperty>,
+    last_results: VecDeque<Node>,
 }
 
 impl LastResultsNode {
@@ -183,10 +183,13 @@ impl LastResultsNode {
         start_time: SystemTime,
         result: &Result<update_check::Response, UpdateCheckError>,
     ) {
-        // Use formatted time string as the name of the property.
+        // Use formatted time string as the name of the node.
         let time_str = DateTime::<Utc>::from(start_time).to_rfc3339();
-        let result_property = self.node.create_string(&time_str, format!("{:#?}", result));
-        self.last_results.push_back(result_property);
+        let result_node = self.node.create_child(&time_str);
+
+        result_node.record_string("result", format!("{:#?}", result));
+
+        self.last_results.push_back(result_node);
         // Dropping the string property will remove it from inspect.
         if self.last_results.len() > 10 {
             self.last_results.pop_front();
@@ -326,8 +329,8 @@ mod tests {
             inspector,
             root: {
                 last_results: {
-                    "1970-01-01T00:00:00+00:00": format!("{:#?}", result),
-                    "1970-01-02T03:46:40+00:00": format!("{:#?}", result),
+                    "1970-01-01T00:00:00+00:00": {result: format!("{:#?}", result)},
+                    "1970-01-02T03:46:40+00:00": {result: format!("{:#?}", result)},
                 }
             }
         );
@@ -339,16 +342,16 @@ mod tests {
             inspector,
             root: {
                 last_results: {
-                    "1970-01-01T00:00:00+00:00": format!("{:#?}", result),
-                    "1970-01-12T13:46:40+00:00": format!("{:#?}", result),
-                    "1970-01-24T03:33:20+00:00": format!("{:#?}", result),
-                    "1970-02-04T17:20:00+00:00": format!("{:#?}", result),
-                    "1970-02-16T07:06:40+00:00": format!("{:#?}", result),
-                    "1970-02-27T20:53:20+00:00": format!("{:#?}", result),
-                    "1970-03-11T10:40:00+00:00": format!("{:#?}", result),
-                    "1970-03-23T00:26:40+00:00": format!("{:#?}", result),
-                    "1970-04-03T14:13:20+00:00": format!("{:#?}", result),
-                    "1970-04-15T04:00:00+00:00": format!("{:#?}", result),
+                    "1970-01-01T00:00:00+00:00": {result: format!("{:#?}", result)},
+                    "1970-01-12T13:46:40+00:00": {result: format!("{:#?}", result)},
+                    "1970-01-24T03:33:20+00:00": {result: format!("{:#?}", result)},
+                    "1970-02-04T17:20:00+00:00": {result: format!("{:#?}", result)},
+                    "1970-02-16T07:06:40+00:00": {result: format!("{:#?}", result)},
+                    "1970-02-27T20:53:20+00:00": {result: format!("{:#?}", result)},
+                    "1970-03-11T10:40:00+00:00": {result: format!("{:#?}", result)},
+                    "1970-03-23T00:26:40+00:00": {result: format!("{:#?}", result)},
+                    "1970-04-03T14:13:20+00:00": {result: format!("{:#?}", result)},
+                    "1970-04-15T04:00:00+00:00": {result: format!("{:#?}", result)},
                 }
             }
         );
