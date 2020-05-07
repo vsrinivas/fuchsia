@@ -42,6 +42,7 @@ func (cg *CodeGenerator) genAllMethods() map[MethodID]*Method {
 		if mt == nil {
 			return allMethods
 		}
+		// TODO(fxb/51368): Variable naming should be defered to printing.
 		local := exprLocal("value", mt.kind, false)
 		for _, m := range []*Method{
 			cg.newMeasureMethod(mt, local),
@@ -259,23 +260,26 @@ func (cg *CodeGenerator) writeStructOutOfLine(mt *MeasuringTape, expr Expression
 }
 
 func (cg *CodeGenerator) writeUnionOutOfLine(mt *MeasuringTape, expr Expression, body *Block) {
-	variants := make(map[string]*Block)
+	variants := make(map[string]LocalWithBlock)
 
 	// known
 	for _, member := range mt.members {
 		var variantBody Block
-		variants[member.name] = &variantBody
-		cg.writeInvoke(
-			member,
-			exprMemberOf(expr, member.name, member.mt.kind, member.mt.nullable),
-			&variantBody, inlineAndOutOfLine)
+		local := exprLocal("_"+member.name, member.mt.kind, member.mt.nullable)
+		variants[member.name] = LocalWithBlock{
+			Local: local,
+			Body:  &variantBody,
+		}
+		cg.writeInvoke(member, local, &variantBody, inlineAndOutOfLine)
 	}
 
 	// unknown
 	{
 		var variantBody Block
 		variantBody.emitMaxOut()
-		variants[""] = &variantBody
+		variants[UnknownVariant] = LocalWithBlock{
+			Body: &variantBody,
+		}
 	}
 
 	body.emitSelectVariant(expr, mt.name, variants)

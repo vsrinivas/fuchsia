@@ -58,8 +58,8 @@ func TestPruningCallerCallingEmptyCalleeThroughSelectVariant(t *testing.T) {
 		expr := exprLocal("value", Struct, false)
 		var body Block
 		body.emitAddNumBytes(exprNum(1))
-		body.emitSelectVariant(nil, fidlcommon.MustReadName("fidl/TargetType"), map[string]*Block{
-			"member": &variantBlock,
+		body.emitSelectVariant(nil, fidlcommon.MustReadName("fidl/TargetType"), map[string]LocalWithBlock{
+			"member": {Body: &variantBlock},
 		})
 
 		caller = newMethod(callerID, expr, &body)

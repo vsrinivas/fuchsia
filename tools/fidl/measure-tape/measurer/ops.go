@@ -60,7 +60,7 @@ type Statement struct {
 	args       []Expression
 	body       *Block
 	targetType fidlcommon.Name
-	variants   map[string]*Block
+	variants   map[string]LocalWithBlock
 
 	deleted bool
 }
@@ -72,7 +72,7 @@ type StatementFormatter interface {
 	CaseInvoke(id MethodID, expr Expression)
 	CaseGuard(cond Expression, body *Block)
 	CaseIterate(local, expr Expression, body *Block)
-	CaseSelectVariant(expr Expression, targetType fidlcommon.Name, variants map[string]*Block)
+	CaseSelectVariant(expr Expression, targetType fidlcommon.Name, variants map[string]LocalWithBlock)
 	CaseDeclareMaxOrdinal(local Expression)
 	CaseSetMaxOrdinal(local, ordinal Expression)
 }
@@ -196,9 +196,16 @@ func (b *Block) emitMaxOut() {
 	})
 }
 
-const unknownVariant = ""
+// UnknownVariant represents the unknown variant case in a select variant
+// statement.
+const UnknownVariant = ""
 
-func (b *Block) emitSelectVariant(expr Expression, targetType fidlcommon.Name, variants map[string]*Block) {
+type LocalWithBlock struct {
+	Local Expression
+	Body  *Block
+}
+
+func (b *Block) emitSelectVariant(expr Expression, targetType fidlcommon.Name, variants map[string]LocalWithBlock) {
 	b.stmts = append(b.stmts, Statement{
 		kind:       selectVariant,
 		args:       []Expression{expr},
@@ -262,8 +269,8 @@ func (m *Method) ForAllStatements(fn func(stmt *Statement)) {
 			if stmt.body != nil {
 				blocksToVisit = append(blocksToVisit, stmt.body)
 			}
-			for _, body := range stmt.variants {
-				blocksToVisit = append(blocksToVisit, body)
+			for _, localWithBlock := range stmt.variants {
+				blocksToVisit = append(blocksToVisit, localWithBlock.Body)
 			}
 			fn(stmt)
 		})

@@ -18,6 +18,7 @@ import (
 
 	"measure-tape/hlcpp"
 	"measure-tape/measurer"
+	"measure-tape/rust"
 )
 
 type paths []string
@@ -32,16 +33,20 @@ func (filenames *paths) Set(filename string) error {
 }
 
 var jsonFiles paths
+var targetBinding = flag.String("target-binding", "",
+	"Target binding for which to generate the measre tape")
 var targetType = flag.String("target-type", "",
 	"Target type to measure, e.g. fuchsia.ui.scenic/Command")
 var outCc = flag.String("out-cc", "",
-	"Write path for .cc file")
+	"Write path for .cc file\nRequired for target binding hlcpp")
 var outH = flag.String("out-h", "",
-	"Write path for .h file")
+	"Write path for .h file\nRequired for target binding hlcpp")
 var hIncludePath = flag.String("h-include-path", "",
-	"Include path for the .h file")
+	"Include path for the .h file\nRequired for target binding hlcpp")
 var onlyCheckToFile = flag.String("only-check-to-file", "",
-	"Enables verification only mode, which checks the .cc and .h")
+	"Enables verification only mode, which checks the .cc and .h\nRequired for target binding hlcpp")
+var outRs = flag.String("out-rs", "",
+	"Write path for .rs file\nRequired for target binding rust")
 
 func flagsValid() bool {
 	if len(jsonFiles) == 0 {
@@ -50,13 +55,22 @@ func flagsValid() bool {
 	if len(*targetType) == 0 {
 		return false
 	}
-	if len(*outCc) == 0 {
-		return false
-	}
-	if len(*outH) == 0 {
-		return false
-	}
-	if len(*hIncludePath) == 0 {
+	switch *targetBinding {
+	case "hlcpp":
+		if len(*outCc) == 0 {
+			return false
+		}
+		if len(*outH) == 0 {
+			return false
+		}
+		if len(*hIncludePath) == 0 {
+			return false
+		}
+	case "rust":
+		if len(*outRs) == 0 {
+			return false
+		}
+	default:
 		return false
 	}
 	return true
@@ -87,6 +101,17 @@ func main() {
 	}
 
 	allMethods := measurer.NewCodeGenerator(targetMt).Generate()
+
+	switch *targetBinding {
+	case "hlcpp":
+		hlcppGen(m, targetMt, allMethods)
+	case "rust":
+		rustGen(m, targetMt, allMethods)
+	}
+}
+
+func hlcppGen(m *measurer.Measurer, targetMt *measurer.MeasuringTape,
+	allMethods map[measurer.MethodID]*measurer.Method) {
 
 	var (
 		printer     = hlcpp.NewPrinter(m, *hIncludePath)
@@ -137,4 +162,12 @@ func verifyMeasureTape(expectedH, expectedCc []byte) {
 		fmt.Fprintf(os.Stderr, "\n\n")
 		os.Exit(1)
 	}
+}
+
+func rustGen(m *measurer.Measurer, targetMt *measurer.MeasuringTape,
+	allMethods map[measurer.MethodID]*measurer.Method) {
+
+	var bufRs bytes.Buffer
+	rust.WriteRs(&bufRs, m, targetMt, allMethods)
+	writeFile(*outRs, bufRs.Bytes())
 }

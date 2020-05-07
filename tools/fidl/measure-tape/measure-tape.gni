@@ -11,32 +11,42 @@ import("//build/fidl/toolchain.gni")
 #
 # Parameters
 #
+#   target_binding (required)
+#     The binding for which to create the measure tape. Both `hlcpp` and `rust`
+#     are supported.
+#
 #   fidls (required)
 #     A list of GN depedencies. All those depedencies must be `fidl` targets.
 #
 #   target_type (required)
 #     The fully qualified FIDL type for which to generate a measuring tape.
 template("measure_tape") {
+  assert(defined(invoker.target_binding))
   assert(defined(invoker.fidls))
   assert(defined(invoker.target_type))
 
   # targets
+  name = target_name
   fidl_targets = invoker.fidls
-  source_set_target_name = target_name
-  config_target_name = "${target_name}_config"
   gen_target_name = "${target_name}_gen"
 
   out_cc = "${target_gen_dir}/measure_tape/hlcpp/${target_name}.cc"
   out_h = "${target_gen_dir}/measure_tape/hlcpp/${target_name}.h"
+  out_rs_root = "${target_gen_dir}/measure_tape/rust"
+  out_rs = "${out_rs_root}/src/lib.rs"
 
   # arguments for code generation tool
   gen_args = [
+    "--target-binding",
+    invoker.target_binding,
     "--target-type",
     invoker.target_type,
     "--out-cc",
     rebase_path(out_cc),
     "--out-h",
     rebase_path(out_h),
+    "--out-rs",
+    rebase_path(out_rs),
     "--h-include-path",
     "measure_tape/hlcpp/${target_name}.h",
   ]
@@ -51,26 +61,50 @@ template("measure_tape") {
     ]
   }
 
-  # source set configuration to support `#include <...>`
-  config(config_target_name) {
-    include_dirs = [ target_gen_dir ]
-  }
+  if (invoker.target_binding == "hlcpp") {
+    config_target_name = "${target_name}_config"
 
-  # source set consisting of the two generated files
-  source_set(source_set_target_name) {
-    forward_variables_from(invoker,
-                           [
-                             "defines",
-                             "testonly",
-                             "visibility",
-                           ])
-    sources = [
-      out_cc,
-      out_h,
-    ]
-    deps = [ ":$gen_target_name" ]
-    public_deps = fidl_targets
-    public_configs = [ ":$config_target_name" ]
+    # source set configuration to support `#include <...>`
+    config(config_target_name) {
+      include_dirs = [ target_gen_dir ]
+    }
+
+    # source set consisting of the two generated files
+    source_set(name) {
+      forward_variables_from(invoker,
+                             [
+                               "defines",
+                               "testonly",
+                               "visibility",
+                             ])
+      sources = [
+        out_cc,
+        out_h,
+      ]
+      deps = [ ":$gen_target_name" ]
+      public_deps = fidl_targets
+      public_configs = [ ":$config_target_name" ]
+    }
+  } else if (invoker.target_binding == "rust") {
+    import("//build/rust/rustc_library.gni")
+
+    rustc_library(name) {
+      forward_variables_from(invoker,
+                             [
+                               "testonly",
+                               "visibility",
+                             ])
+      deps = [
+        "//src/lib/fidl/rust/fidl",
+        "//src/lib/zircon/rust:fuchsia-zircon",
+      ]
+      foreach(fidl_target, fidl_targets) {
+        label = get_label_info(fidl_target, "label_no_toolchain")
+        deps += [ "${label}-rustc" ]
+      }
+      non_rust_deps = [ ":$gen_target_name" ]
+      source_root = rebase_path(out_rs)
+    }
   }
 
   # code generation
@@ -81,6 +115,7 @@ template("measure_tape") {
     outputs = [
       out_cc,
       out_h,
+      out_rs,
     ]
     deps = fidl_targets
     forward_variables_from(invoker, [ "testonly" ])

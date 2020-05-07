@@ -16,9 +16,8 @@ import (
 	fidlcommon "fidl/compiler/backend/common"
 
 	"measure-tape/measurer"
+	"measure-tape/utils"
 )
-
-// TODO(fxb/50011): Create a Rust backend similar to the below.
 
 type Printer struct {
 	m            *measurer.Measurer
@@ -176,17 +175,11 @@ func (p *Printer) WriteCc(buf *bytes.Buffer,
 		panic(err.Error())
 	}
 
-	methodsToPrint := make([]measurer.MethodID, 0, len(allMethods))
-	for id := range allMethods {
-		methodsToPrint = append(methodsToPrint, id)
-	}
-	sort.Sort(measurer.ByTargetTypeThenKind(methodsToPrint))
 	cb := codeBuffer{buf: buf, level: 1}
-	for _, id := range methodsToPrint {
+	utils.ForAllMethodsInOrder(allMethods, func(m *measurer.Method) {
 		buf.WriteString("\n")
-		m := allMethods[id]
 		cb.writeMethod(m)
-	}
+	})
 
 	if err := ccBottom.Execute(buf, params); err != nil {
 		panic(err.Error())
@@ -256,26 +249,28 @@ func (buf *codeBuffer) CaseIterate(local, val measurer.Expression, body *measure
 func (buf *codeBuffer) CaseSelectVariant(
 	val measurer.Expression,
 	targetType fidlcommon.Name,
-	variants map[string]*measurer.Block) {
+	variants map[string]measurer.LocalWithBlock) {
 
 	buf.writef("switch (%s.Which()) {\n", formatExpr{val}.String())
 	buf.indent(func() {
-		var members []string
-		for member := range variants {
-			members = append(members, member)
-		}
-		sort.Strings(members)
-		for _, member := range members {
-			if member != "" {
-				buf.writef("case %s:\n", fmtKnownVariant(targetType, member))
+		utils.ForAllVariantsInOrder(variants, func(member string, localWithBlock measurer.LocalWithBlock) {
+			if member != measurer.UnknownVariant {
+				buf.writef("case %s: {\n", fmtKnownVariant(targetType, member))
 			} else {
-				buf.writef("case %s:\n", fmtUnknownVariant(targetType))
+				buf.writef("case %s: {\n", fmtUnknownVariant(targetType))
 			}
 			buf.indent(func() {
-				buf.writeBlock(variants[member])
+				if local := localWithBlock.Local; local != nil {
+					// TODO(fxb/51366): Improve local vars handling.
+					buf.writef("__attribute__((unused)) auto const& %s = %s.%s();\n",
+						formatExpr{local},
+						formatExpr{val}, fidlcommon.ToSnakeCase(member))
+				}
+				buf.writeBlock(localWithBlock.Body)
 				buf.writef("break;\n")
 			})
-		}
+			buf.writef("}\n")
+		})
 	})
 	buf.writef("}\n")
 }
@@ -311,7 +306,7 @@ func fmtMethodKind(kind measurer.MethodKind) string {
 	case measurer.MeasureHandles:
 		return "MeasureHandles"
 	default:
-		log.Panicf("should not be reachable for kind %v", kind)
+		log.Panicf("should not be reachable for method kind %v", kind)
 		return ""
 	}
 }
@@ -346,7 +341,7 @@ func (formatExpr) CaseLocal(name string, _ measurer.TapeKind) string {
 	return name
 }
 
-func (formatExpr) CaseMemberOf(val measurer.Expression, member string) string {
+func (formatExpr) CaseMemberOf(val measurer.Expression, member string, _ measurer.TapeKind, _ bool) string {
 	var accessor string
 	if kind := val.AssertKind(measurer.Struct, measurer.Union, measurer.Table); kind != measurer.Struct {
 		accessor = "()"

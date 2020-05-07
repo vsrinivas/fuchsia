@@ -46,7 +46,7 @@ type Expression interface {
 type ExpressionFormatter interface {
 	CaseNum(num int) string
 	CaseLocal(name string, kind TapeKind) string
-	CaseMemberOf(expr Expression, member string) string
+	CaseMemberOf(expr Expression, member string, kind TapeKind, nullable bool) string
 	CaseFidlAlign(expr Expression) string
 	CaseLength(expr Expression) string
 	CaseHasMember(expr Expression, member string) string
@@ -106,7 +106,7 @@ func (expr *exprImpl) Fmt(formatter ExpressionFormatter) string {
 	case local:
 		return formatter.CaseLocal(expr.name, expr.kind)
 	case memberOf:
-		return formatter.CaseMemberOf(expr.expr, expr.member)
+		return formatter.CaseMemberOf(expr.expr, expr.member, expr.kind, expr.nullable)
 	case fidlAlign:
 		return formatter.CaseFidlAlign(expr.expr)
 	case length:
