@@ -1,0 +1,68 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test.gni")
+import("//build/test/test_package.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
+executable("gpioutil") {
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+  sources = [
+    "gpioutil.cc",
+    "main.cc",
+  ]
+  deps = [
+    "//sdk/fidl/fuchsia.hardware.gpio:fuchsia.hardware.gpio_llcpp",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/zxc",
+  ]
+}
+
+test("gpioutil-test") {
+  configs += [ "//build/unification/config:zircon-migrated" ]
+  output_name = "gpioutil-test"
+  sources = [
+    "gpioutil.cc",
+    "test/gpioutil-test.cc",
+  ]
+  include_dirs = [ "." ]
+  deps = [
+    "//sdk/fidl/fuchsia.hardware.gpio:fuchsia.hardware.gpio_llcpp",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/fidl-async-cpp",
+    "//zircon/public/lib/fidl-utils",
+    "//zircon/public/lib/mock-function",
+    "//zircon/public/lib/zxc",
+    "//zircon/public/lib/zxtest",
+  ]
+}
+
+migrated_manifest("gpioutil-manifest") {
+  deps = [ ":gpioutil" ]
+}
+
+unittest_package("gpioutil-test-package") {
+  package_name = "gpioutil-test"
+  deps = [ ":gpioutil-test" ]
+
+  tests = [
+    {
+      name = "gpioutil-test"
+      environments = basic_envs
+    },
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":gpioutil-test-package" ]
+}

@@ -274,6 +274,7 @@ aggregate_manifest("migrated-image") {
     "//src/devices/cpu/bin/cpuctl:cpuctl-manifest",
     "//src/devices/cpu/drivers/aml-cpu:aml-cpu-manifest",
     "//src/devices/fw/drivers/qcom-pil:qcom-pil-manifest",
+    "//src/devices/gpio/bin/gpioutil:gpioutil-manifest",
     "//src/devices/gpio/drivers/aml-axg-gpio:aml-axg-gpio-manifest",
     "//src/devices/gpio/drivers/aml-gxl-gpio:aml-gxl-gpio-manifest",
     "//src/devices/gpio/drivers/gpio:gpio-manifest",
