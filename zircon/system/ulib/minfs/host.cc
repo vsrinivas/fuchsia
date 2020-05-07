@@ -44,24 +44,24 @@ zx_status_t do_stat(fbl::RefPtr<fs::Vnode> vn, struct stat* s) {
   return status;
 }
 
-typedef struct {
+struct HostFile {
   fbl::RefPtr<fs::Vnode> vn;
-  uint64_t off;
+  uint64_t off = 0;
   fs::vdircookie_t dircookie;
-} file_t;
+};
 
-#define MAXFD 64
+constexpr int kMaxFd = 64;
 
-static file_t fdtab[MAXFD];
+static HostFile fdtab[kMaxFd];
 
-#define FD_MAGIC 0x45AB0000
+constexpr int kFdMagic = 0x45AB0000;
 
-file_t* file_get(int fd) {
-  if (((fd)&0xFFFF0000) != FD_MAGIC) {
+HostFile* file_get(int fd) {
+  if ((fd & 0xFFFF0000) != kFdMagic) {
     return nullptr;
   }
   fd &= 0x0000FFFF;
-  if ((fd < 0) || (fd >= MAXFD)) {
+  if ((fd < 0) || (fd >= kMaxFd)) {
     return nullptr;
   }
   if (fdtab[fd].vn == nullptr) {
@@ -94,14 +94,10 @@ int status_to_errno(zx_status_t status) {
 
 // Ensure the order of these global destructors are ordered.
 // TODO(planders): Host-side tools should avoid using globals.
-struct fakeFs {
-  ~fakeFs() {
-    fake_root = nullptr;
-    fake_vfs = nullptr;
-  }
-  fbl::RefPtr<minfs::VnodeMinfs> fake_root = nullptr;
+struct FakeFs {
   std::unique_ptr<fs::Vfs> fake_vfs = nullptr;
-} fakeFs;
+  fbl::RefPtr<minfs::VnodeMinfs> fake_root = nullptr;  // Must be destroyed before fake_vfs.
+} fake_fs;
 
 }  // namespace
 
@@ -139,11 +135,11 @@ static const minfs::MountOptions kDefaultMountOptions = {
 };
 
 int emu_mount_bcache(std::unique_ptr<minfs::Bcache> bc) {
-  zx_status_t status = minfs::Mount(std::move(bc), kDefaultMountOptions, &fakeFs.fake_root);
+  zx_status_t status = minfs::Mount(std::move(bc), kDefaultMountOptions, &fake_fs.fake_root);
   if (status != ZX_OK) {
     return -1;
   }
-  fakeFs.fake_vfs.reset(fakeFs.fake_root->Vfs());
+  fake_fs.fake_vfs.reset(fake_fs.fake_root->Vfs());
   return 0;
 }
 
@@ -202,7 +198,7 @@ int emu_get_used_resources(const char* path, uint64_t* out_data_size, uint64_t* 
   return 0;
 }
 
-bool emu_is_mounted() { return fakeFs.fake_root != nullptr; }
+bool emu_is_mounted() { return fake_fs.fake_root != nullptr; }
 
 // Converts POSIX open() flags to |VnodeConnectionOptions|.
 fs::VnodeConnectionOptions fdio_flags_to_connection_options(uint32_t flags) {
@@ -249,22 +245,21 @@ fs::VnodeConnectionOptions fdio_flags_to_connection_options(uint32_t flags) {
 int emu_open(const char* path, int flags, mode_t mode) {
   // TODO: fdtab lock
   ZX_DEBUG_ASSERT_MSG(!host_path(path), "'emu_' functions can only operate on target paths");
-  int fd;
   if (flags & O_APPEND) {
     errno = ENOTSUP;
     return -1;
   }
-  for (fd = 0; fd < MAXFD; fd++) {
+  for (int fd = 0; fd < kMaxFd; fd++) {
     if (fdtab[fd].vn == nullptr) {
       fbl::StringPiece str(path + PREFIX_SIZE);
       fs::VnodeConnectionOptions options = fdio_flags_to_connection_options(flags);
       auto result =
-          fakeFs.fake_vfs->Open(fakeFs.fake_root, str, options, fs::Rights::ReadWrite(), mode);
+          fake_fs.fake_vfs->Open(fake_fs.fake_root, str, options, fs::Rights::ReadWrite(), mode);
       if (result.is_error()) {
         STATUS(result.error());
       }
       fdtab[fd].vn = fbl::RefPtr<fs::Vnode>::Downcast(result.ok().vnode);
-      return fd | FD_MAGIC;
+      return fd | kFdMagic;
     }
   }
   FAIL(EMFILE);
@@ -272,7 +267,7 @@ int emu_open(const char* path, int flags, mode_t mode) {
 
 int emu_close(int fd) {
   // TODO: fdtab lock
-  file_t* f = file_get(fd);
+  HostFile* f = file_get(fd);
   if (f == nullptr) {
     return -1;
   }
@@ -284,11 +279,11 @@ int emu_close(int fd) {
 }
 
 ssize_t emu_write(int fd, const void* buf, size_t count) {
-  file_t* f = file_get(fd);
+  HostFile* f = file_get(fd);
   if (f == nullptr) {
     return -1;
   }
-  size_t actual;
+  size_t actual = 0;
   zx_status_t status = f->vn->Write(buf, count, f->off, &actual);
   if (status == ZX_OK) {
     f->off += actual;
@@ -301,7 +296,7 @@ ssize_t emu_write(int fd, const void* buf, size_t count) {
 }
 
 ssize_t emu_pwrite(int fd, const void* buf, size_t count, off_t off) {
-  file_t* f = file_get(fd);
+  HostFile* f = file_get(fd);
   if (f == nullptr) {
     return -1;
   }
@@ -317,11 +312,11 @@ ssize_t emu_pwrite(int fd, const void* buf, size_t count, off_t off) {
 }
 
 ssize_t emu_read(int fd, void* buf, size_t count) {
-  file_t* f = file_get(fd);
+  HostFile* f = file_get(fd);
   if (f == nullptr) {
     return -1;
   }
-  size_t actual;
+  size_t actual = 0;
   zx_status_t status = f->vn->Read(buf, count, f->off, &actual);
   if (status == ZX_OK) {
     f->off += actual;
@@ -333,7 +328,7 @@ ssize_t emu_read(int fd, void* buf, size_t count) {
 }
 
 ssize_t emu_pread(int fd, void* buf, size_t count, off_t off) {
-  file_t* f = file_get(fd);
+  HostFile* f = file_get(fd);
   if (f == nullptr) {
     return -1;
   }
@@ -348,7 +343,7 @@ ssize_t emu_pread(int fd, void* buf, size_t count, off_t off) {
 }
 
 int emu_ftruncate(int fd, off_t len) {
-  file_t* f = file_get(fd);
+  HostFile* f = file_get(fd);
   if (f == nullptr) {
     return -1;
   }
@@ -357,30 +352,31 @@ int emu_ftruncate(int fd, off_t len) {
 }
 
 off_t emu_lseek(int fd, off_t offset, int whence) {
-  file_t* f = file_get(fd);
+  HostFile* f = file_get(fd);
   if (f == nullptr) {
     return -1;
   }
 
   uint64_t old = f->off;
-  uint64_t n;
-  fs::VnodeAttributes a;
 
   switch (whence) {
-    case SEEK_SET:
+    case SEEK_SET: {
       if (offset < 0) {
         FAIL(EINVAL);
       }
       f->off = offset;
       break;
-    case SEEK_END:
+    }
+    case SEEK_END: {
+      fs::VnodeAttributes a;
       if (f->vn->GetAttributes(&a)) {
         FAIL(EINVAL);
       }
       old = a.content_size;
       __FALLTHROUGH;
-    case SEEK_CUR:
-      n = old + offset;
+    }
+    case SEEK_CUR: {
+      uint64_t n = old + offset;
       if (offset < 0) {
         if (n >= old) {
           FAIL(EINVAL);
@@ -392,14 +388,16 @@ off_t emu_lseek(int fd, off_t offset, int whence) {
       }
       f->off = n;
       break;
-    default:
+    }
+    default: {
       FAIL(EINVAL);
+    }
   }
   return f->off;
 }
 
 int emu_fstat(int fd, struct stat* s) {
-  file_t* f = file_get(fd);
+  HostFile* f = file_get(fd);
   if (f == nullptr) {
     return -1;
   }
@@ -408,11 +406,10 @@ int emu_fstat(int fd, struct stat* s) {
 
 int emu_stat(const char* fn, struct stat* s) {
   ZX_DEBUG_ASSERT_MSG(!host_path(fn), "'emu_' functions can only operate on target paths");
-  fbl::RefPtr<fs::Vnode> vn = fakeFs.fake_root;
-  fbl::RefPtr<fs::Vnode> cur = fakeFs.fake_root;
-  zx_status_t status;
+  fbl::RefPtr<fs::Vnode> vn = fake_fs.fake_root;
+  fbl::RefPtr<fs::Vnode> cur = fake_fs.fake_root;
+
   const char* nextpath = nullptr;
-  size_t len;
 
   fn += PREFIX_SIZE;
   do {
@@ -422,14 +419,14 @@ int emu_stat(const char* fn, struct stat* s) {
     if (fn[0] == 0) {
       break;
     }
-    len = strlen(fn);
+    size_t len = strlen(fn);
     nextpath = strchr(fn, '/');
     if (nextpath != nullptr) {
       len = nextpath - fn;
       nextpath++;
     }
     fbl::RefPtr<fs::Vnode> vn_fs;
-    status = cur->Lookup(&vn_fs, fbl::StringPiece(fn, len));
+    zx_status_t status = cur->Lookup(&vn_fs, fbl::StringPiece(fn, len));
     if (status != ZX_OK) {
       return -ENOENT;
     }
@@ -438,21 +435,26 @@ int emu_stat(const char* fn, struct stat* s) {
     fn = nextpath;
   } while (nextpath != nullptr);
 
-  status = do_stat(vn, s);
+  zx_status_t status = do_stat(vn, s);
   STATUS(status);
 }
 
-#define DIR_BUFSIZE 2048
+constexpr size_t kDirBufSize = 2048;
 
-typedef struct MINDIR {
-  uint64_t magic;
+struct MinDir {
+  ~MinDir() {
+    if (vn)
+      vn->Close();
+  }
+
+  uint64_t magic = minfs::kMinfsMagic0;
   fbl::RefPtr<fs::Vnode> vn;
-  fs::vdircookie_t cookie;
-  uint8_t* ptr;
-  uint8_t data[DIR_BUFSIZE];
-  size_t size;
-  struct dirent de;
-} MINDIR;
+  fs::vdircookie_t cookie = {};
+  uint8_t* ptr = nullptr;
+  uint8_t data[kDirBufSize] = {0};
+  size_t size = 0;
+  dirent de = {};
+};
 
 int emu_mkdir(const char* path, mode_t mode) {
   ZX_DEBUG_ASSERT_MSG(!host_path(path), "'emu_' functions can only operate on target paths");
@@ -472,22 +474,22 @@ DIR* emu_opendir(const char* name) {
   fs::VnodeConnectionOptions options;
   options.rights.read = true;
   options.flags.posix = true;
-  auto result = fakeFs.fake_vfs->Open(fakeFs.fake_root, path, options, fs::Rights::ReadWrite(), 0);
+  auto result =
+      fake_fs.fake_vfs->Open(fake_fs.fake_root, path, options, fs::Rights::ReadWrite(), 0);
   if (result.is_error()) {
     return nullptr;
   }
-  MINDIR* dir = reinterpret_cast<MINDIR*>(calloc(1, sizeof(MINDIR)));
-  dir->magic = minfs::kMinfsMagic0;
+  MinDir* dir = new MinDir();
   dir->vn = fbl::RefPtr<fs::Vnode>::Downcast(result.ok().vnode);
   return reinterpret_cast<DIR*>(dir);
 }
 
-struct dirent* emu_readdir(DIR* dirp) {
-  MINDIR* dir = (MINDIR*)dirp;
+dirent* emu_readdir(DIR* dirp) {
+  MinDir* dir = reinterpret_cast<MinDir*>(dirp);
   for (;;) {
     if (dir->size >= sizeof(vdirent_t)) {
-      vdirent_t* vde = (vdirent_t*)dir->ptr;
-      struct dirent* ent = &dir->de;
+      vdirent_t* vde = reinterpret_cast<vdirent_t*>(dir->ptr);
+      dirent* ent = &dir->de;
       size_t name_len = vde->size;
       size_t entry_len = vde->size + sizeof(vdirent_t);
       ZX_DEBUG_ASSERT(dir->size >= entry_len);
@@ -498,8 +500,8 @@ struct dirent* emu_readdir(DIR* dirp) {
       dir->size -= entry_len;
       return ent;
     }
-    size_t actual;
-    zx_status_t status = dir->vn->Readdir(&dir->cookie, &dir->data, DIR_BUFSIZE, &actual);
+    size_t actual = 0;
+    zx_status_t status = dir->vn->Readdir(&dir->cookie, &dir->data, kDirBufSize, &actual);
     if (status != ZX_OK || actual == 0) {
       break;
     }
@@ -510,21 +512,19 @@ struct dirent* emu_readdir(DIR* dirp) {
 }
 
 void emu_rewinddir(DIR* dirp) {
-  MINDIR* dir = (MINDIR*)dirp;
+  MinDir* dir = reinterpret_cast<MinDir*>(dirp);
   dir->size = 0;
   dir->ptr = NULL;
   dir->cookie.n = 0;
 }
 
 int emu_closedir(DIR* dirp) {
-  if (((uint64_t*)dirp)[0] != minfs::kMinfsMagic0) {
+  if (reinterpret_cast<uint64_t*>(dirp)[0] != minfs::kMinfsMagic0) {
     return closedir(dirp);
   }
 
-  MINDIR* dir = (MINDIR*)dirp;
-  dir->vn->Close();
-  dir->vn.reset();
-  free(dirp);
+  MinDir* dir = reinterpret_cast<MinDir*>(dirp);
+  delete dir;
 
   return 0;
 }
