@@ -72,7 +72,12 @@ void SimHardware::RequestCallback(std::function<void()>* callback, zx::duration 
   env_->ScheduleNotification(this, delay, static_cast<void*>(callback), id_out);
 }
 
-void SimHardware::CancelCallback(uint64_t id) { env_->CancelNotification(this, id); }
+void SimHardware::CancelCallback(uint64_t id) {
+  void* payload = nullptr;
+  env_->CancelNotification(this, id, &payload);
+  auto handler = static_cast<std::function<void()>*>(payload);
+  delete handler;
+}
 
 void SimHardware::Tx(const simulation::SimFrame* frame) {
   simulation::WlanTxInfo info = {.channel = channel_};
