@@ -5,7 +5,6 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <debug.h>
 #include <lib/unittest/unittest.h>
 #include <stdio.h>
 #include <string.h>
@@ -13,6 +12,10 @@
 #include <ktl/string_view.h>
 
 #include "tests.h"
+
+#ifndef _KERNEL
+using ssize_t = ptrdiff_t;
+#endif
 
 // Checks that vsnprintf() gives the expected string as output.
 static bool test_printf(const char* expected, const char* format, ...) {
@@ -40,10 +43,9 @@ static bool test_printf(const char* expected, const char* format, ...) {
   return success;
 }
 
-static bool printf_tests() {
+static bool numbers() {
   BEGIN_TEST;
 
-  printf("numbers:\n");
   EXPECT_TRUE(test_printf("int8:  -12 0 -2", "int8:  %hhd %hhd %hhd", -12, 0, 254));
   EXPECT_TRUE(test_printf("uint8: 244 0 254", "uint8: %hhu %hhu %hhu", -12, 0, 254));
   EXPECT_TRUE(test_printf("int16: -1234 0 1234", "int16: %hd %hd %hd", -1234, 0, 1234));
@@ -77,7 +79,12 @@ static bool printf_tests() {
                           "ptrdiff_t (u): %tu %tu %tu", (ptrdiff_t)-12345678, (ptrdiff_t)0,
                           (ptrdiff_t)12345678));
 
-  printf("hex:\n");
+  END_TEST;
+}
+
+static bool hex() {
+  BEGIN_TEST;
+
   EXPECT_TRUE(test_printf("uint8: f4 0 fe", "uint8: %hhx %hhx %hhx", -12, 0, 254));
   EXPECT_TRUE(test_printf("uint16:fb2e 0 4d2", "uint16:%hx %hx %hx", -1234, 0, 1234));
   EXPECT_TRUE(test_printf("uint:  ff439eb2 0 bc614e", "uint:  %x %x %x", -12345678, 0, 12345678));
@@ -89,12 +96,22 @@ static bool printf_tests() {
   EXPECT_TRUE(test_printf("usize_t: ffffffffff439eb2 0 bc614e", "usize_t: %zx %zx %zx",
                           (size_t)-12345678, (size_t)0, (size_t)12345678));
 
-  printf("alt/sign:\n");
+  END_TEST;
+}
+
+static bool alt_and_sign() {
+  BEGIN_TEST;
+
   EXPECT_TRUE(test_printf("uint: 0xabcdef 0XABCDEF", "uint: %#x %#X", 0xabcdef, 0xabcdef));
   EXPECT_TRUE(test_printf("int: +12345678 -12345678", "int: %+d %+d", 12345678, -12345678));
   EXPECT_TRUE(test_printf("int:  12345678 +12345678", "int: % d %+d", 12345678, 12345678));
 
-  printf("formatting\n");
+  END_TEST;
+}
+
+static bool formatting() {
+  BEGIN_TEST;
+
   EXPECT_TRUE(test_printf("int: a12345678a", "int: a%8da", 12345678));
   EXPECT_TRUE(test_printf("int: a 12345678a", "int: a%9da", 12345678));
   EXPECT_TRUE(test_printf("int: a12345678 a", "int: a%-9da", 12345678));
@@ -175,7 +192,10 @@ static bool snprintf_truncation_test() {
 }
 
 UNITTEST_START_TESTCASE(printf_tests)
-UNITTEST("printf_tests", printf_tests)
+UNITTEST("numbers", numbers)
+UNITTEST("hex", hex)
+UNITTEST("alt_and_sign", alt_and_sign)
+UNITTEST("formatting", formatting)
 UNITTEST("printf_field_width_tests", printf_field_width_test)
 UNITTEST("snprintf_truncation_test", snprintf_truncation_test)
 UNITTEST_END_TESTCASE(printf_tests, "printf_tests", "printf_tests")

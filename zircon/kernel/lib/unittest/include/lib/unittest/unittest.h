@@ -56,16 +56,16 @@
  * MODULE_DEPS += \
  *         lib/unittest   \
  */
-#include <debug.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
-#include <trace.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
+
+#include <ktl/iterator.h>
 
 // This function will help terminate the static analyzer when it reaches
 // an assertion failure site. The bugs discovered by the static analyzer will
@@ -320,13 +320,55 @@ static inline constexpr const char* unittest_get_msg(const char* msg = "") { ret
 #define ASSERT_NONNULL(actual, ...) UTCHECK_NONNULL(actual, true, __VA_ARGS__)
 
 /*
+ * Returns false if expected does or does not equal actual (based on expect_eq).
+ * Will print msg and a hexdump8 of the input buffers if the check fails.
+ */
+bool unittest_expect_bytes(const uint8_t* expected, const char* expected_name,
+                           const uint8_t* actual, const char* actual_name, size_t len,
+                           const char* msg, const char* func, int line, bool expect_eq);
+
+typedef bool (*unittest_fn_t)(void);
+
+#ifndef _KERNEL
+// In phys executables rather than the kernel proper, there is no
+// infrastructure code for collecting the tests.  Each suite is just
+// a function that has to be called explicitly.
+
+struct test_case_element {
+  const char* name;
+  unittest_fn_t fn;
+};
+
+bool unittest_testcase(const char* name, const test_case_element*, size_t n);
+
+#define UNITTEST_START_TESTCASE(global_id) \
+  bool global_id() {                       \
+    const test_case_element cases[] = {
+// The assembly silliness is to prevent the compiler from deciding it
+// can move the whole array into a static initializer with relocs.
+#define UNITTEST(name, fn)                                 \
+  []() -> test_case_element {                              \
+    const char* _n;                                        \
+    unittest_fn_t _f;                                      \
+    __asm__("nop" : "=g"(_n), "=g"(_f) : "0"(name), "1"(fn)); \
+    return {_n, _f};                                       \
+  }(),
+#define UNITTEST_END_TESTCASE(global_id, name, desc)       \
+  }                                                        \
+  ;                                                        \
+  return unittest_testcase(name, cases, ktl::size(cases)); \
+  }
+
+#else  // _KERNEL
+
+/*
  * The list of test cases is made up of these elements.
  */
 struct test_case_element {
   struct test_case_element* next;
   struct test_case_element* failed_next;
   const char* name;
-  bool (*test_case)(void);
+  unittest_fn_t test_case;
 };
 
 /*
@@ -339,19 +381,9 @@ void unittest_register_test_case(struct test_case_element* elem);
  */
 bool run_all_tests(void);
 
-/*
- * Returns false if expected does or does not equal actual (based on expect_eq).
- * Will print msg and a hexdump8 of the input buffers if the check fails.
- */
-bool unittest_expect_bytes(const uint8_t* expected, const char* expected_name,
-                           const uint8_t* actual, const char* actual_name, size_t len,
-                           const char* msg, const char* func, int line, bool expect_eq);
-
-typedef bool (*unitest_fn_t)(void);
-
 typedef struct unitest_registration {
   const char* name;
-  unitest_fn_t fn;
+  unittest_fn_t fn;
 } unittest_registration_t;
 
 typedef struct unitest_testcase_registration {
@@ -387,5 +419,7 @@ typedef struct unitest_testcase_registration {
   };
 
 #endif  // LK_DEBUGLEVEL == 0
+
+#endif  // !_KERNEL
 
 #endif  // ZIRCON_KERNEL_LIB_UNITTEST_INCLUDE_LIB_UNITTEST_UNITTEST_H_

@@ -11,18 +11,24 @@ assert(toolchain.environment == "kernel.phys")
 
 # This provides a PhysMain function appropriate for zbi_test() targets.
 source_set("qemu-test-main") {
-  sources = [
-    "qemu-test-main.cc",
-    "test-main.h",
-  ]
+  testonly = true
+  sources = [ "qemu-test-main.cc" ]
   defines = [ "ZBI_TEST_SUCCESS_STRING=\"$zbi_test_success_string\"" ]
   deps = [
     "$zx/kernel/lib/arch",
     "$zx/kernel/lib/libc",
     "$zx/system/dev/lib/uart",
+  ]
+  public_deps = [ ":test-main" ]
+}
+
+source_set("test-main") {
+  testonly = true
+  sources = [ "test-main.h" ]
+  public_deps = [
+    "$zx/kernel/lib/arch:headers",
     "..:main",
   ]
-  public_deps = [ "$zx/kernel/lib/arch:headers" ]
 }
 
 # This is linked into the special-case phys_executable() tests that
@@ -107,9 +113,22 @@ phys_qemu_test("backtrace-test") {
 # x86 so we can't disable the ABI support for it there.  The start.S code only
 # enables extra stack support conditionally so as not to waste space, so there
 # isn't a good way to test non-default configurations.
-phys_qemu_test("start-test") {
-  sources = [ "start-test.cc" ]
-  deps = [ "$zx/kernel/lib/libc" ]
+source_set("unittests") {
+  testonly = true
+  sources = [
+    "phys-unittests.cc",
+    "stack-tests.cc",
+  ]
+  deps = [
+    ":test-main",
+    "$zx/kernel/lib/libc",
+    "$zx/kernel/lib/unittest",
+    "$zx/kernel/tests",
+  ]
+}
+
+phys_qemu_test("qemu-phys-unittests") {
+  deps = [ ":unittests" ]
 }
 
 group("test") {
@@ -120,7 +139,7 @@ group("test") {
     deps = [
       ":backtrace-test",
       ":hello-world-test",
-      ":start-test",
+      ":qemu-phys-unittests",
     ]
   }
 }

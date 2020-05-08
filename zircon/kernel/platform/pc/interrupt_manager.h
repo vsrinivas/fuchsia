@@ -12,6 +12,7 @@
 #include <align.h>
 #include <err.h>
 #include <pow2.h>
+#include <trace.h>
 
 #include <arch/x86/apic.h>
 #include <arch/x86/interrupts.h>

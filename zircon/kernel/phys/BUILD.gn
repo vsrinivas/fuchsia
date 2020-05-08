@@ -4,6 +4,7 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
+import("$zx/public/gn/config/levels.gni")
 import("$zx/public/gn/config/standard.gni")
 import("$zx/public/gn/toolchain/environment.gni")
 import("$zx/public/gn/toolchain/environment_redirect.gni")
@@ -29,6 +30,7 @@ if (current_toolchain == default_toolchain) {
         "$zx/public/gn/config:pure",
         "$zx/kernel:warnings",
         "$zx/kernel/arch/$kernel_cpu:abi",
+        ":defines",
 
         # All physmem code is inherently sensitive and in a position for
         # any bug to be unusually dangerous.  So compile with minimal
@@ -52,6 +54,14 @@ if (current_toolchain == default_toolchain) {
       configs += phys_configs
       tags += phys_tags
       exclude_variant_tags += phys_exclude_variant_tags
+
+      toolchain_args = {
+        if (optimize == "none") {
+          # phys code doesn't stay sufficiently purely position-independent
+          # without optimization.
+          optimize = "debug"
+        }
+      }
     }
   }
 } else if (toolchain.environment != "kernel.phys") {
@@ -74,6 +84,11 @@ if (current_toolchain == default_toolchain) {
   }
 } else {
   # All the code gets built here in the phys environment.
+
+  config("defines") {
+    # Always enable tests and asserts in phys code.
+    defines = [ "LK_DEBUGLEVEL=2" ]
+  }
 
   # This is used implicitly by phys_executable() targets.
   source_set("phys_executable.deps") {

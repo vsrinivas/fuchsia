@@ -6,22 +6,29 @@
 
 zx_library("unittest") {
   kernel = true
-  sources = [
-    "unittest.cc",
-    "user_memory.cc",
-  ]
-  public_deps = [
-    # <lib/unittest/user_memory.h> has #include <lib/instrumentation/asan.h>.
-    "$zx/kernel/lib/instrumentation:headers",
+  sources = [ "unittest.cc" ]
+  deps = [ "$zx/system/ulib/pretty" ]
+  if (toolchain.environment == "kernel") {
+    sources += [
+      "console.cc",
+      "user_memory.cc",
+    ]
+    public_deps = [
+      # <lib/unittest/user_memory.h> has #include <lib/crypto/prng.h>.
+      "$zx/kernel/vm:headers",
 
-    # <lib/unittest/user_memory.h> has #include <ktl/move.h>.
-    "$zx/kernel/lib/ktl:headers",
+      # <lib/unittest/user_memory.h> has #include <lib/instrumentation/asan.h>.
+      "$zx/kernel/lib/instrumentation:headers",
 
-    # <lib/unittest/user_memory.h> has #include <lib/crypto/prng.h>.
-    "$zx/kernel/vm:headers",
-  ]
-  deps = [
-    "$zx/kernel/lib/console",
-    "$zx/system/ulib/pretty",
-  ]
+      # <lib/unittest/user_memory.h> has #include <ktl/move.h>.
+      "$zx/kernel/lib/ktl:headers",
+    ]
+    deps += [ "$zx/kernel/lib/console" ]
+  } else {
+    sources += [ "phys.cc" ]
+    deps += [
+      "$zx/kernel/lib/ktl",
+      "$zx/kernel/lib/libc",
+    ]
+  }
 }

@@ -606,17 +606,28 @@ template("library") {
   # TODO(crbug.com/gn/16): Empty library works OK and the source_set
   # case tickles a GN bug.  Remove `&& false` when the bug is fixed.
   if (invoker.sources == [] && false) {
-    static_library = "source_set"
+    static_library_target_type = "source_set"
   } else {
-    static_library = "static_library"
+    static_library_target_type = "static_library"
   }
-  not_needed([ "static_library" ])
+  not_needed([ "static_library_target_type" ])
 
   targets = false
   if (is_kernel) {
     if (kernel) {
       targets = true
-      source_set(_library_name) {
+      if (toolchain.environment == "kernel") {
+        # In the kernel proper, library() is always a source_set().
+        # Everything goes into the kernel and anything unused gets linker GC.
+        kernel_library_target_type = "source_set"
+      } else {
+        # In other is_kernel environments, libraries are really libraries.
+        kernel_library_target_type = static_library_target_type
+      }
+      target(kernel_library_target_type, _library_name) {
+        if (kernel_library_target_type == "static_library") {
+          complete_static_lib = true
+        }
         forward_variables_from(invoker, "*", _library_params)
         if (!defined(public_deps)) {
           public_deps = []
@@ -627,8 +638,8 @@ template("library") {
   } else if (is_host) {
     if (host) {
       targets = true
-      target(static_library, _library_name) {
-        if (static_library == "static_library") {
+      target(static_library_target_type, _library_name) {
+        if (static_library_target_type == "static_library") {
           complete_static_lib = true
         }
         forward_variables_from(invoker, "*", _library_params)
@@ -695,8 +706,8 @@ template("library") {
       }
     }
     if (static) {
-      target(static_library, "${_library_name}.static") {
-        if (static_library == "static_library") {
+      target(static_library_target_type, "${_library_name}.static") {
+        if (static_library_target_type == "static_library") {
           complete_static_lib = true
         }
         output_name = _library_name

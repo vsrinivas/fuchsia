@@ -8,6 +8,8 @@
 #ifndef ZIRCON_KERNEL_TESTS_TESTS_H_
 #define ZIRCON_KERNEL_TESTS_TESTS_H_
 
+#ifdef _KERNEL
+
 #include <lib/console.h>
 #include <zircon/compiler.h>
 
@@ -23,5 +25,7 @@ console_cmd cpu_resume_tests, semaphore_tests;
 void unittests(void);
 
 __END_CDECLS
+
+#endif  // _KERNEL
 
 #endif  // ZIRCON_KERNEL_TESTS_TESTS_H_

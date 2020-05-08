@@ -176,7 +176,7 @@ static bool test_negative_array_size() {
   END_TEST;
 }
 
-UNITTEST_START_TESTCASE(alloc_checker)
+UNITTEST_START_TESTCASE(alloc_checker_tests)
 UNITTEST("alloc checker ctor & dtor", alloc_checker_ctor)
 UNITTEST("alloc checker basic", alloc_checker_basic)
 UNITTEST("alloc checker panic", alloc_checker_panic)
@@ -184,4 +184,4 @@ UNITTEST("alloc checker new", alloc_checker_new)
 UNITTEST("alloc checker new fails", alloc_checker_new_fails)
 UNITTEST("test array size overflow check", test_array_size_overflow_check)
 UNITTEST("test negative array size", test_negative_array_size)
-UNITTEST_END_TESTCASE(alloc_checker, "alloc_cpp", "Tests of the C++ AllocChecker")
+UNITTEST_END_TESTCASE(alloc_checker_tests, "alloc_cpp", "Tests of the C++ AllocChecker")

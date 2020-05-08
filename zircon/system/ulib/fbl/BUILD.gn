@@ -60,6 +60,12 @@ zx_library("fbl") {
   if (is_kernel) {
     # Anything using libc++ headers in the kernel needs this.
     public_deps = [ "$zx/kernel/lib/ktl:headers" ]
+    if (toolchain.environment != "kernel") {
+      deps = [
+        "$zx/kernel/lib/ktl",
+        "$zx/kernel/lib/libc",
+      ]
+    }
   }
 
   if (toolchain.environment == "kernel") {
