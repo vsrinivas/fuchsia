@@ -4,7 +4,7 @@
 
 # This tool is for invoking by the performance comparison trybots.  It
 # is intended for comparing the performance of two versions of
-# Fuchsia.  It can also compare binary sizes.
+# Fuchsia.
 
 import argparse
 import glob
@@ -539,22 +539,6 @@ def ValidatePerfCompare(args, out_fh):
                  % (mean_val * len(mismatch_rates)))
 
 
-def TotalSize(snapshot_file):
-    with open(snapshot_file) as fh:
-        data = json.load(fh)
-    return sum(info['size'] for info in data['blobs'].itervalues())
-
-
-def CompareSizes(args):
-    filenames = [args.snapshot_before, args.snapshot_after]
-    sizes = [TotalSize(filename) for filename in filenames]
-    print 'Size before:  %d bytes' % sizes[0]
-    print 'Size after:   %d bytes' % sizes[1]
-    print 'Difference:   %d bytes' % (sizes[1] - sizes[0])
-    if sizes[0] != 0:
-        print 'Factor of:    %f' % (float(sizes[1]) / sizes[0])
-
-
 def Main(argv, out_fh, run_cmd=subprocess.check_call):
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers()
@@ -629,13 +613,6 @@ def Main(argv, out_fh, run_cmd=subprocess.check_call):
         ' match automatically.)')
     subparser.add_argument('results_dirs', nargs='+')
     subparser.set_defaults(func=lambda args: ValidatePerfCompare(args, out_fh))
-
-    subparser = subparsers.add_parser(
-        'compare_sizes',
-        help='Compare file sizes specified by two system.snapshot files')
-    subparser.add_argument('snapshot_before')
-    subparser.add_argument('snapshot_after')
-    subparser.set_defaults(func=CompareSizes)
 
     args = parser.parse_args(argv)
     args.func(args)
