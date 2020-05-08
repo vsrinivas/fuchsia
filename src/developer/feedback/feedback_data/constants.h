@@ -85,8 +85,8 @@ constexpr char kDeviceIdPath[] = "/data/device_id.txt";
 
 constexpr char kPreviousLogsFilePath[] = "/tmp/log.system.previous_boot.txt";
 
-// We use the 4 files below to store up to 512 kb of logs. So, assuming all components have logged
-// at least 512 kb of data, we can expect between 384 kb and 512 kb of logs to be persisted due to
+// We use the 8 files below to store up to 512 kb of logs. So, assuming all components have logged
+// at least 512 kb of data, we can expect between 448 kb and 512 kb of logs to be persisted due to
 // the log rotation.
 constexpr uint64_t kPersistentLogsMaxSizeInKb = 512;
 const std::vector<const std::string> kCurrentLogsFilePaths({
@@ -94,6 +94,10 @@ const std::vector<const std::string> kCurrentLogsFilePaths({
     "/cache/current_system_log_1.txt",
     "/cache/current_system_log_2.txt",
     "/cache/current_system_log_3.txt",
+    "/cache/current_system_log_4.txt",
+    "/cache/current_system_log_5.txt",
+    "/cache/current_system_log_6.txt",
+    "/cache/current_system_log_7.txt",
 });
 
 }  // namespace feedback
