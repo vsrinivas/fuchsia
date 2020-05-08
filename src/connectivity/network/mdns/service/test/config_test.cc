@@ -43,6 +43,24 @@ static const inet::SocketAddress kDefaultV6BindAddress(in6addr_any, kDefaultPort
 static const ReplyAddress kDefaulMulticastReplyAddress(kDefaultV4MulticastAddress,
                                                        inet::IpAddress());
 
+// Tests behavior when there is no config directory.
+TEST(ConfigTest, NoDir) {
+  Config under_test;
+  under_test.ReadConfigFiles(kHostName, kTestDir);
+  EXPECT_TRUE(under_test.valid());
+  EXPECT_EQ("", under_test.error());
+  EXPECT_TRUE(under_test.perform_host_name_probe());
+  EXPECT_TRUE(under_test.publications().empty());
+  EXPECT_EQ(kDefaultPort, under_test.addresses().port());
+  EXPECT_EQ(kDefaultV4MulticastAddress, under_test.addresses().v4_multicast());
+  EXPECT_EQ(kDefaultV6MulticastAddress, under_test.addresses().v6_multicast());
+  EXPECT_EQ(kDefaultV4BindAddress, under_test.addresses().v4_bind());
+  EXPECT_EQ(kDefaultV6BindAddress, under_test.addresses().v6_bind());
+  EXPECT_EQ(kDefaulMulticastReplyAddress, under_test.addresses().multicast_reply());
+
+  EXPECT_TRUE(files::DeletePath(kTestDir, true));
+}
+
 // Tests behavior when there are no config files.
 TEST(ConfigTest, Empty) {
   EXPECT_TRUE(files::CreateDirectory(kTestDir));

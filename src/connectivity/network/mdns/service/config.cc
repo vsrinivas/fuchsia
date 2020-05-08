@@ -4,7 +4,9 @@
 
 #include "src/connectivity/network/mdns/service/config.h"
 
+#include <fcntl.h>
 #include <lib/syslog/cpp/macros.h>
+#include <sys/stat.h>
 
 #include <sstream>
 
@@ -91,6 +93,12 @@ const char Config::kConfigDir[] = "/config/data";
 
 void Config::ReadConfigFiles(const std::string& host_name, const std::string& config_dir) {
   FX_DCHECK(MdnsNames::IsValidHostName(host_name));
+
+  struct stat buf;
+  if (fstatat(AT_FDCWD, config_dir.c_str(), &buf, 0) != 0 || !S_ISDIR(buf.st_mode)) {
+    // There's no config directory. That's OK. We'll use the defaults.
+    return;
+  }
 
   auto schema = json_parser::InitSchema(kSchema);
   parser_.ParseFromDirectory(config_dir, [this, &schema, &host_name](rapidjson::Document document) {
