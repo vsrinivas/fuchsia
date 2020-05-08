@@ -16,7 +16,7 @@
 class ModularTestHarnessTest : public modular_testing::TestHarnessFixture {};
 
 // Ensure that the TestHarnessFixture is able to launch the modular runtime.
-TEST_F(ModularTestHarnessTest, SimpleSuccess) {
+TEST_F(ModularTestHarnessTest, DISABLED_SimpleSuccess) {
   constexpr char kFakeBaseShellUrl[] =
       "fuchsia-pkg://example.com/FAKE_BASE_SHELL_PKG/fake_base_shell.cmx";
 
@@ -66,7 +66,7 @@ class ModularTestHarnessDestructionTest : public sys::testing::TestWithEnvironme
 };
 
 // Test that a session is torn down cleanly.
-TEST_F(ModularTestHarnessDestructionTest, CleanTeardown) {
+TEST_F(ModularTestHarnessDestructionTest, DISABLED_CleanTeardown) {
   modular_testing::TestHarnessBuilder builder;
 
   // Service our FakeSessionShell on a different thread -- this will allow our FakeSessionShell to
