@@ -4,7 +4,14 @@
 
 #include "garnet/testing/benchmarking/benchmarking.h"
 #include "src/lib/fxl/logging.h"
-#include "src/lib/fxl/strings/string_printf.h"
+
+// This file no longer runs any interesting test cases, but it is left in
+// place for testing (on the CQ) that garnet/testing/benchmarking/ works,
+// because that is also used for running storage performance tests (which
+// are not run on the CQ).
+//
+// TODO(fxb/51707): Remove this file once the storage performance tests are
+// converted to SL4F.
 
 namespace {
 
@@ -14,94 +21,6 @@ void AddPerfTests(benchmarking::BenchmarksRunner* benchmarks_runner, bool perfco
   // Benchmark example, here for demonstration.
   benchmarks_runner->AddTspecBenchmark("benchmark_example",
                                        "/pkgfs/packages/benchmark/0/data/benchmark_example.tspec");
-
-  // For the perfcompare CQ trybot, we run the libperftest-based processes
-  // multiple times.  That is useful for tests that exhibit between-process
-  // variation in results (e.g. due to memory layout chosen when a process
-  // starts) -- it reduces the variation in the average that we report.
-  //
-  // Ideally we would do the same for non-perfcompare mode, i.e. for the
-  // results that get uploaded to the Catapult dashboard by the perf bots
-  // on CI.  However, catapult_converter does not yet support merging
-  // results from multiple process runs.  (That is partly because
-  // catapult_converter is run separately on the results from each process
-  // run.)
-  if (perfcompare_mode) {
-    // Reduce the number of iterations of each perf test within each
-    // process given that we are launching each process multiple times.
-    std::vector<std::string> extra_args = {"--quiet", "--runs", "100"};
-
-    for (int process = 0; process < 6; ++process) {
-      benchmarks_runner->AddLibPerfTestBenchmark(
-          fxl::StringPrintf("fuchsia_microbenchmarks_process%06d", process),
-          "/bin/fuchsia_microbenchmarks", extra_args);
-    }
-  } else {
-    std::vector<std::string> extra_args = {"--quiet"};
-
-    benchmarks_runner->AddLibPerfTestBenchmark("fuchsia_microbenchmarks",
-                                               "/bin/fuchsia_microbenchmarks", extra_args);
-  }
-
-  // Fuchsia inspect Rust benchmarks.
-  benchmarks_runner->AddTspecBenchmark(
-      "rust_inspect_bench", "/pkgfs/packages/rust_inspect_benchmarks/0/data/benchmarks.tspec");
-
-  // Run netstack benchmarks.
-  benchmarks_runner->AddTspecBenchmark(
-      "netstack.udp_micro_benchmarks",
-      "/pkgfs/packages/netstack_benchmarks/0/data/udp_benchmark.tspec");
-
-  // clang-format on
-
-  // Kernel boot timeline.
-  {
-    constexpr const char* kLabel = "fuchsia.kernel.boot";
-    std::string out_file = benchmarks_runner->MakePerfResultsOutputFilename(kLabel);
-    benchmarks_runner->AddCustomBenchmark(kLabel, {"/bin/kernel-boot-timeline", out_file},
-                                          out_file);
-  }
-
-  // FIDL benchmarks.
-  {
-    benchmarks_runner->AddLibPerfTestBenchmark("fidl_microbenchmarks.lib_fidl",
-                                               "/bin/lib_fidl_microbenchmarks",
-                                               std::vector<std::string>());
-  }
-  {
-    constexpr const char* kLabel = "fidl_microbenchmarks.go";
-    std::string out_file = benchmarks_runner->MakePerfResultsOutputFilename(kLabel);
-    benchmarks_runner->AddCustomBenchmark(
-        kLabel, {"/bin/go_fidl_microbenchmarks", "--encode_counts", "--out_file", out_file},
-        out_file);
-  }
-  {
-    benchmarks_runner->AddLibPerfTestBenchmark("fidl_microbenchmarks.hlcpp",
-                                               "/bin/hlcpp_fidl_microbenchmarks",
-                                               std::vector<std::string>());
-  }
-  {
-    constexpr const char* kLabel = "fidl_microbenchmarks.rust";
-    std::string out_file = benchmarks_runner->MakePerfResultsOutputFilename(kLabel);
-    benchmarks_runner->AddCustomBenchmark(kLabel, {"/bin/rust_fidl_microbenchmarks", out_file},
-                                          out_file);
-  }
-  {
-    benchmarks_runner->AddLibPerfTestBenchmark("fidl_microbenchmarks.llcpp",
-                                               "/bin/llcpp_fidl_microbenchmarks",
-                                               std::vector<std::string>());
-  }
-  {
-    constexpr const char* kLabel = "fidl_microbenchmarks.roundtrip";
-    std::string out_file = benchmarks_runner->MakePerfResultsOutputFilename(kLabel);
-    benchmarks_runner->AddCustomBenchmark("fidl_roundtrip",
-                                          {"/bin/roundtrip_fidl_benchmarks", out_file}, out_file);
-  }
-  {
-    benchmarks_runner->AddLibPerfTestBenchmark("fidl_microbenchmarks.walker",
-                                               "/bin/walker_fidl_microbenchmarks",
-                                               std::vector<std::string>());
-  }
 }
 }  // namespace
 
