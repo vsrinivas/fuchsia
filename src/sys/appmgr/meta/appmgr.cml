@@ -127,6 +127,25 @@
             protocol: "/svc/fuchsia.process.Launcher",
             as: "/svc_for_sys/fuchsia.process.Launcher",
         },
+        {
+            protocol: "/svc/fuchsia.sys2.EventSource",
+            from: "framework",
+            as: "/svc_for_sys/fuchsia.sys2.EventSource",
+        },
+        {
+            event: [
+                "running",
+                "started",
+                "stopped",
+            ],
+            from: "realm",
+        },
+        {
+            event: "capability_ready",
+            from: "realm",
+            as: "diagnostics_ready",
+            filter: { path: "/diagnostics" },
+        },
 
         // From v2 components
         {

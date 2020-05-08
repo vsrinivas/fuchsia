@@ -6,6 +6,7 @@
 
 #include <fuchsia/process/cpp/fidl.h>
 #include <fuchsia/sys/internal/cpp/fidl.h>
+#include <fuchsia/sys2/cpp/fidl.h>
 #include <lib/async/default.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
@@ -172,6 +173,18 @@ void Namespace::MaybeAddComponentEventProvider() {
           return realm_->BindComponentEventProvider(
               fidl::InterfaceRequest<fuchsia::sys::internal::ComponentEventProvider>(
                   std::move(channel)));
+        })));
+  }
+}
+
+void Namespace::MaybeAddEventSource() {
+  if (services_->IsServiceWhitelisted(fuchsia::sys2::EventSource::Name_)) {
+    services_->AddService(
+        fuchsia::sys2::EventSource::Name_,
+        fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
+          realm_->environment_services()->Connect(
+              fidl::InterfaceRequest<fuchsia::sys2::EventSource>(std::move(channel)));
+          return ZX_OK;
         })));
   }
 }

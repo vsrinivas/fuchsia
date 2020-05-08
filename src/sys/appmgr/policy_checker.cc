@@ -13,6 +13,7 @@ constexpr char kDeprecatedShellAllowList[] = "allowlist/deprecated_shell.txt";
 constexpr char kDeprecatedAmbientReplaceAsExecAllowList[] =
     "allowlist/deprecated_ambient_replace_as_executable.txt";
 constexpr char kComponentEventProviderAllowList[] = "allowlist/component_event_provider.txt";
+constexpr char kEventSourceAllowList[] = "allowlist/event_source.txt";
 constexpr char kHubAllowList[] = "allowlist/hub.txt";
 constexpr char kPackageResolverAllowList[] = "allowlist/package_resolver.txt";
 constexpr char kPackageCacheAllowList[] = "allowlist/package_cache.txt";
@@ -27,8 +28,21 @@ PolicyChecker::PolicyChecker(fxl::UniqueFD config) : config_(std::move(config)) 
 std::optional<SecurityPolicy> PolicyChecker::Check(const SandboxMetadata& sandbox,
                                                    const FuchsiaPkgUrl& pkg_url) {
   SecurityPolicy policy;
-  if (CheckComponentEventProvider(pkg_url)) {
+  if (sandbox.HasService("fuchsia.sys.internal.ComponentEventProvider")) {
+    if (!CheckComponentEventProvider(pkg_url)) {
+      FX_LOGS(ERROR) << "Component " << pkg_url.ToString() << " is not allowed to use "
+                     << "fuchsia.sys.internal.ComponentEventProvider";
+      return std::nullopt;
+    }
     policy.enable_component_event_provider = true;
+  }
+  if (sandbox.HasService("fuchsia.sys2.EventSource")) {
+    if (!CheckEventSource(pkg_url)) {
+      FX_LOGS(ERROR) << "Component " << pkg_url.ToString() << " is not allowed to use "
+                     << "fuchsia.sys2.EventSource";
+      return std::nullopt;
+    }
+    policy.enable_event_source = true;
   }
   if (sandbox.HasFeature("deprecated-ambient-replace-as-executable")) {
     if (!CheckDeprecatedAmbientReplaceAsExecutable(pkg_url)) {
@@ -84,6 +98,11 @@ bool PolicyChecker::CheckDeprecatedAmbientReplaceAsExecutable(const FuchsiaPkgUr
 bool PolicyChecker::CheckComponentEventProvider(const FuchsiaPkgUrl& pkg_url) {
   AllowList component_event_provider_allowlist(config_, kComponentEventProviderAllowList);
   return component_event_provider_allowlist.IsAllowed(pkg_url);
+}
+
+bool PolicyChecker::CheckEventSource(const FuchsiaPkgUrl& pkg_url) {
+  AllowList event_source_allowlist(config_, kEventSourceAllowList);
+  return event_source_allowlist.IsAllowed(pkg_url);
 }
 
 bool PolicyChecker::CheckDeprecatedShell(const FuchsiaPkgUrl& pkg_url) {

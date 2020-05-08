@@ -923,6 +923,9 @@ void Realm::CreateComponentFromPackage(fuchsia::sys::PackagePtr package,
     if (security_policy->enable_component_event_provider) {
       ns->MaybeAddComponentEventProvider();
     }
+    if (security_policy->enable_event_source) {
+      ns->MaybeAddEventSource();
+    }
 
     ns->set_component_url(launch_info.url);
     zx::channel svc = ns->OpenServicesAsDirectory();

@@ -20,6 +20,7 @@ namespace component {
 struct SecurityPolicy {
   bool enable_ambient_executable = false;
   bool enable_component_event_provider = false;
+  bool enable_event_source = false;
 };
 
 // The job of the `PolicyChecker` is to enforce that security policies placed
@@ -41,6 +42,7 @@ class PolicyChecker final {
   bool CheckDeprecatedShell(const FuchsiaPkgUrl& pkg_url);
   bool CheckDeprecatedAmbientReplaceAsExecutable(const FuchsiaPkgUrl& pkg_url);
   bool CheckComponentEventProvider(const FuchsiaPkgUrl& pkg_url);
+  bool CheckEventSource(const FuchsiaPkgUrl& pkg_url);
   bool CheckHub(const FuchsiaPkgUrl& pkg_url);
   bool CheckPackageResolver(const FuchsiaPkgUrl& pkg_url);
   bool CheckPackageCache(const FuchsiaPkgUrl& pkg_url);

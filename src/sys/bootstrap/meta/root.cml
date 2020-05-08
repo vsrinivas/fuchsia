@@ -150,6 +150,23 @@
                 "#core",
             ],
         },
+
+        // Offer events to `core` for diagnostics usage.
+        {
+            event: [
+                "running",
+                "started",
+                "stopped",
+            ],
+            from: "framework",
+            to: [ "#core" ],
+        },
+        {
+            event: "capability_ready",
+            from: "framework",
+            to: [ "#core" ],
+            filter: { path: "/diagnostics" },
+        },
     ],
     expose: [
         // This handle is used by component manager to resolve packages from the

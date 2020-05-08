@@ -167,6 +167,24 @@
                 "#test_manager",
             ],
         },
+
+        // Offer core events to appmgr for routing to the archivist
+        // TODO: offer directly to archivist when it's a v2 component
+        {
+            event: [
+                "running",
+                "started",
+                "stopped",
+            ],
+            from: "realm",
+            to: [ "#appmgr" ],
+        },
+        {
+            event: "capability_ready",
+            from: "realm",
+            to: [ "#appmgr" ],
+            filter: { path: "/diagnostics" },
+        },
     ],
     expose: [
         // Non-zircon services for svchost

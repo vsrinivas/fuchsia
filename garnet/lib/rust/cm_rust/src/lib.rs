@@ -402,11 +402,11 @@ impl ComponentDecl {
         })
     }
 
-    /// Indicates whether the capability specified by `target_path` is requested.
-    pub fn uses_protocol_from_framework(&self, target_path: &CapabilityPath) -> bool {
+    /// Indicates whether the capability specified by `source_path` is requested.
+    pub fn uses_protocol_from_framework(&self, source_path: &CapabilityPath) -> bool {
         self.uses.iter().any(|use_decl| match use_decl {
             UseDecl::Protocol(ls) => {
-                ls.source == UseSource::Framework && ls.target_path == *target_path
+                ls.source == UseSource::Framework && ls.source_path == *source_path
             }
             _ => false,
         })
