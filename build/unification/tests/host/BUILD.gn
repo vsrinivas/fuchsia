@@ -57,7 +57,6 @@ listed_tests = [
 #------------------
 #------------------
 #------------------
-  "uart-unittests",
 #------------------
 #------------------
 #------------------
@@ -104,6 +103,7 @@ group("migrated-tests") {
   testonly = true
 
   deps = [
+    "//zircon/system/dev/lib/uart/test",
     "//zircon/system/ulib/fbl/test:fbl",
     "//zircon/system/ulib/ffl/test:ffl",
     "//zircon/system/ulib/fit/test",

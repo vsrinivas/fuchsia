@@ -25,7 +25,13 @@ group("ulib") {
     "$zx/kernel/lib/arch/$zircon_cpu",
 #------------------
 #------------------
-    "$zx/system/dev/lib",
+    "$zx/system/dev/lib/mmio",
+#------------------
+#------------------
+    "$zx/system/dev/lib/uart",
+#------------------
+#------------------
+    "$zx/system/dev/lib/uart:uart-mock",
 #------------------
 #------------------
     "$zx/third_party/ulib",
@@ -509,6 +515,16 @@ group("ulib-host") {
   testonly = true
   deps = [
 #------------------
+    "$zx/kernel/lib/arch",
+    "$zx/kernel/lib/arch/$zircon_cpu",
+#------------------
+#------------------
+    "$zx/system/dev/lib/uart",
+#------------------
+#------------------
+    "$zx/system/dev/lib/uart:uart-mock",
+#------------------
+#------------------
     "$zx/kernel/lib/heap/cmpctmalloc",
 #------------------
     "$zx/third_party/ulib/cksum",
@@ -584,6 +600,10 @@ group("ulib-host") {
     "gpt",
 #------------------
 #------------------
+    "hwreg",
+#------------------
+#------------------
+    "hwreg:hwreg-mock",
 #------------------
 #------------------
     "libzbi",
@@ -592,6 +612,7 @@ group("ulib-host") {
     "log",
 #------------------
 #------------------
+    "mock-function",
 #------------------
 #------------------
     "pretty",

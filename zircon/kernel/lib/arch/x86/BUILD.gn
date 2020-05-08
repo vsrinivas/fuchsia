@@ -11,5 +11,5 @@ zx_library("x86") {
   sources = []
 
   sdk = "source"
-  sdk_headers = []
+  sdk_headers = [ "lib/arch/intrin.h" ]
 }

@@ -11,5 +11,9 @@ zx_library("arm64") {
   sources = []
 
   sdk = "source"
-  sdk_headers = []
+  sdk_headers = [
+    "lib/arch/asm.h",
+    "lib/arch/intrin.h",
+    "lib/arch/ticks.h",
+  ]
 }

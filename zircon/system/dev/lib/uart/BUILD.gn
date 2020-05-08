@@ -8,7 +8,15 @@ zx_library("uart") {
   static = true
 
   sdk = "source"
-  sdk_headers = []
+  sdk_headers = [
+    "lib/uart/all.h",
+    "lib/uart/chars-from.h",
+    "lib/uart/ns8250.h",
+    "lib/uart/null.h",
+    "lib/uart/pl011.h",
+    "lib/uart/qemu.h",
+    "lib/uart/uart.h",
+  ]
 
   sources = []
   public_deps = [
@@ -29,7 +37,10 @@ zx_library("uart") {
 zx_library("uart-mock") {
   testonly = true
   kernel = true
+  static = true
   host = true
+  sdk = "source"
+  sdk_headers = [ "lib/uart/mock.h" ]
   sources = []
   public_deps = [
     # <lib/uart/mock.h> has #include <lib/mock-function/mock-function.h>.

@@ -92,7 +92,6 @@ aggregate_manifest("legacy-aux") {
     ":test.sys.noop-test.ubsan-sancov",
     ":test.sys.noop-test.ubsan-sancov-full",
     ":test.sys.stdio-test",
-    ":test.sys.uart-unittests-test",
   ]
 
   deps += [
@@ -195,7 +194,6 @@ aggregate_manifest("legacy-tests") {
     ":test.sys.noop-test.ubsan-sancov",
     ":test.sys.noop-test.ubsan-sancov-full",
     ":test.sys.stdio-test",
-    ":test.sys.uart-unittests-test",
   ]
 
   reference = "legacy-tests-$target_cpu"
@@ -837,6 +835,7 @@ aggregate_manifest("migrated-aux") {
     "//zircon/system/utest/vdso-variant:vdso-variant-helper-manifest",
     "//zircon/system/ulib/zbi-bootfs/test:zbi-bootfs-test-manifest",
     "//zircon/system/ulib/libzbi/test:zbi-manifest",
+    "//zircon/system/dev/lib/uart/test:uart-unittests-manifest",
   ]
 
   if (target_cpu == "arm64") {
@@ -1089,6 +1088,7 @@ aggregate_manifest("migrated-tests") {
     "//zircon/system/ulib/zbi-bootfs/test:zbi-bootfs-test-manifest",
     "//zircon/system/ulib/libzbi/test:zbi-manifest",
     "//src/graphics/display/bin/display-test:display-test-manifest",
+    "//zircon/system/dev/lib/uart/test:uart-unittests-manifest",
   ]
 
   if (target_cpu == "arm64") {
