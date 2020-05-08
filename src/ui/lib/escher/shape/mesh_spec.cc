@@ -4,6 +4,8 @@
 
 #include "src/ui/lib/escher/shape/mesh_spec.h"
 
+#include <type_traits>
+
 #include "src/lib/fxl/logging.h"
 #include "src/ui/lib/escher/geometry/types.h"
 #include "src/ui/lib/escher/util/bit_ops.h"
@@ -38,10 +40,14 @@ uint32_t GetMeshAttributeSize(MeshAttribute attr) {
 
 uint32_t MeshSpec::attribute_count(uint32_t vertex_buffer_index) const {
   FX_DCHECK(vertex_buffer_index < VulkanLimits::kNumVertexBuffers);
-  return CountOnes(uint32_t(attributes[vertex_buffer_index]));
+  auto attrib = std::underlying_type<MeshAttribute>::type(attributes[vertex_buffer_index]);
+  return CountOnes(static_cast<uint32_t>(attrib));
 }
 
-uint32_t MeshSpec::total_attribute_count() const { return CountOnes(uint32_t(all_attributes())); }
+uint32_t MeshSpec::total_attribute_count() const {
+  auto all_attribs = std::underlying_type<MeshAttribute>::type(all_attributes());
+  return CountOnes(static_cast<uint32_t>(all_attribs));
+}
 
 uint32_t MeshSpec::attribute_offset(uint32_t vertex_buffer_index, MeshAttribute flag) const {
   FX_DCHECK(vertex_buffer_index < VulkanLimits::kNumVertexBuffers);
@@ -114,7 +120,8 @@ MeshAttributes MeshSpec::all_attributes() const {
 uint32_t MeshSpec::vertex_buffer_count() const {
   uint32_t count = 0;
   for (auto& attrs : attributes) {
-    count += uint32_t(attrs) ? 1 : 0;
+    auto attr = std::underlying_type<MeshAttribute>::type(attrs);
+    count += static_cast<uint32_t>(attr) ? 1 : 0;
   }
   return count;
 }
@@ -152,8 +159,9 @@ bool MeshSpec::IsValidOneBufferMesh() const {
 
 std::size_t MeshSpec::HashMapHasher::operator()(const MeshSpec& spec) const {
   Hasher h;
-  for (auto& attr : spec.attributes) {
-    h.u32(uint32_t(attr));
+  for (auto& attrs : spec.attributes) {
+    auto attr = std::underlying_type<MeshAttribute>::type(attrs);
+    h.u32(static_cast<uint32_t>(attr));
   }
   return h.value().val;
 }
