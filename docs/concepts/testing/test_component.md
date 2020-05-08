@@ -92,6 +92,53 @@ When you're done exploring the contents of the directory, you may want to
 delete it to free up space or prevent it from interfering with the results of
 future tests.
 
+### Restricting log severity
+
+By default, a test component fails when the component's test environment produces [ERROR/FATAL logs][syslogs].
+
+If the test is supposed to log errors (for example: the test might be testing some failure conditions),
+or if you would like your test to not produce some other severity of logs (eg WARNING, INFO),
+the test should be added to the following configurations files.
+
+- **fuchsia**: [//garnet/bin/run_test_component/max_severity_fuchsia.json][max-severity-fuchsia]
+- **petals**: //tests/config/max_severity_\<petal\>.json
+
+For example: **experiences**: [//tests/config/max_severity_experiences.json][max-severity-experiences]
+
+To allow the test to produce **ERROR** logs, following configuration should be added to above files.
+
+```json
+{
+   "tests":[
+      {
+         "url":"fuchsia-pkg://fuchsia.com/my_package#meta/my_test.cmx",
+         "max_severity":"ERROR"
+      },
+      ...
+   ]
+}
+```
+
+To restrict the logs further, following configuration may be added to above files.
+
+```json
+{
+   "tests":[
+      {
+         "url":"fuchsia-pkg://fuchsia.com/my_package#meta/my_test.cmx",
+         "max_severity":"INFO"
+      },
+      ...
+   ]
+}
+```
+
+Above example will fail the test if it produces **WARNING** or higher level logs.
+
+After updating config files, developers need to run `fx update` or `fx ota` so that the device can get updated configuration.
+
+`max_severity` can be one of `[TRACE, DEBUG, INFO, WARN, ERROR, FATAL]`.
+
 ## Ambient Services
 
 All test components are started in a new hermetic environment. By default, this
@@ -183,3 +230,6 @@ This option would be replaced once we fix CP-144 (in component manager v2).
 
 [executing-tests]: /docs/development/testing/running_tests_as_components.md
 [run-test-component]: /docs/development/testing/running_tests_as_components.md#running_tests_legacy
+[max-severity-fuchsia]: /garnet/bin/run_test_component/max_severity_fuchsia.json
+[max-severity-experiences]: https://fuchsia.googlesource.com/experiences/+/refs/heads/master/tests/config/max_severity_experiences.json
+[syslogs]: /docs/development/logs/concepts.md
