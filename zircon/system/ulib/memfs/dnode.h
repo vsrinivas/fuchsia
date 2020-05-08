@@ -34,18 +34,9 @@ static_assert(((kDnodeNameMax + 1) & kDnodeNameMax) == 0,
 // Vnodes may be represented by multiple Dnodes (a vnode may have many names).
 //
 // Dnodes are owned by their parents.
-class Dnode {
+class Dnode : public fbl::DoublyLinkedListable<std::unique_ptr<Dnode>> {
  public:
   DISALLOW_COPY_ASSIGN_AND_MOVE(Dnode);
-  using NodeState = fbl::DoublyLinkedListNodeState<std::unique_ptr<Dnode>>;
-
-  // ChildTraits is the state used for a Dnode to appear as the child
-  // of another dnode.
-  struct TypeChildTraits {
-    static NodeState& node_state(Dnode& dn) { return dn.type_child_state_; }
-  };
-
-  using ChildList = fbl::DoublyLinkedList<std::unique_ptr<Dnode>, Dnode::TypeChildTraits>;
 
   // Allocates a dnode, attached to a vnode
   static std::unique_ptr<Dnode> Create(fbl::StringPiece name, fbl::RefPtr<VnodeMemfs> vn);
@@ -111,7 +102,6 @@ class Dnode {
   size_t NameLen() const;
   bool NameMatch(fbl::StringPiece name) const;
 
-  NodeState type_child_state_;
   fbl::RefPtr<VnodeMemfs> vnode_;
   // Refers to the parent named node in the directory hierarchy.
   // A weak reference is used here to avoid a circular dependency, where
@@ -119,7 +109,7 @@ class Dnode {
   Dnode* parent_;
   // Used to impose an absolute order on dnodes within a directory.
   size_t ordering_token_;
-  ChildList children_;
+  fbl::DoublyLinkedList<std::unique_ptr<Dnode>> children_;
   uint32_t flags_;
   std::unique_ptr<char[]> name_;
 };
