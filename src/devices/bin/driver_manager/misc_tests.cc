@@ -396,8 +396,7 @@ TEST(MiscTestCase, BindDevices) {
 
   // Bind the device to a fake driver_host.
   fbl::RefPtr<Device> dev = fbl::RefPtr(&coordinator.devices().front());
-  auto host =
-      fbl::MakeRefCounted<DriverHost>(&coordinator, zx::channel{}, zx::channel{}, zx::process{});
+  auto host = fbl::MakeRefCounted<DriverHost>(&coordinator, zx::channel{}, zx::process{});
   dev->set_host(std::move(host));
   status = coordinator.BindDevice(dev, kDriverPath, true /* new device */);
   ASSERT_OK(status);
@@ -453,8 +452,7 @@ TEST(MiscTestCase, TestOutput) {
 
   // Bind the device to a fake driver_host.
   fbl::RefPtr<Device> dev = fbl::RefPtr(&coordinator.devices().front());
-  auto host =
-      fbl::MakeRefCounted<DriverHost>(&coordinator, zx::channel{}, zx::channel{}, zx::process{});
+  auto host = fbl::MakeRefCounted<DriverHost>(&coordinator, zx::channel{}, zx::process{});
   dev->set_host(std::move(host));
   status = coordinator.BindDevice(dev, kDriverPath, true /* new device */);
   ASSERT_OK(status);

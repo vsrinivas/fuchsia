@@ -24,7 +24,7 @@ class InspectManagerTestCase : public zxtest::Test {
   async::Loop loop_;
 };
 
-TEST_F(InspectManagerTestCase, DirectoryEntries) {
+TEST_F(InspectManagerTestCase, Init) {
   // Check that sub-directories are created
   uint8_t buffer[4096];
   size_t length;
@@ -46,7 +46,6 @@ TEST_F(InspectManagerTestCase, DirectoryEntries) {
     EXPECT_EQ(node->Readdir(&cookie, buffer, sizeof(buffer), &length), ZX_OK);
     fs::DirentChecker dc(buffer, length);
     dc.ExpectEntry(".", V_TYPE_DIR);
-    dc.ExpectEntry("driver_host", V_TYPE_DIR);
     dc.ExpectEntry("dm.inspect", V_TYPE_FILE);
     dc.ExpectEnd();
   }

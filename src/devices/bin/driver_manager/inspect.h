@@ -22,8 +22,6 @@ class InspectManager {
 
   fs::PseudoDir& diagnostics_dir() { return *diagnostics_dir_; }
 
-  fbl::RefPtr<fs::PseudoDir> driver_host_dir() { return driver_host_dir_; }
-
   inspect::Node& root_node() { return inspect_.GetRoot(); }
 
  private:
@@ -32,7 +30,7 @@ class InspectManager {
 
   fbl::RefPtr<fs::PseudoDir> diagnostics_dir_;
   std::unique_ptr<fs::SynchronousVfs> diagnostics_vfs_;
-  fbl::RefPtr<fs::PseudoDir> driver_host_dir_;
+  fbl::RefPtr<fs::PseudoDir> driver_manager_dir_;
 
   zx::channel diagnostics_client_;
 };

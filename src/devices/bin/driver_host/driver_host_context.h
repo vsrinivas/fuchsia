@@ -16,7 +16,6 @@
 #include <fs/managed_vfs.h>
 
 #include "async_loop_owned_event_handler.h"
-#include "inspect.h"
 #include "lock.h"
 #include "zx_device.h"
 #include "zx_driver.h"
@@ -141,8 +140,6 @@ class DriverHostContext {
 
   ApiLock& api_lock() TA_RET_CAP(api_lock_) { return api_lock_; }
 
-  DriverHostInspect& inspect() { return inspect_; }
-
  private:
   struct WorkItem : public fbl::DoublyLinkedListable<std::unique_ptr<WorkItem>> {
     WorkItem(const fbl::RefPtr<zx_device_t>& dev, Callback callback)
@@ -219,8 +216,6 @@ class DriverHostContext {
   int enumerators_ TA_GUARDED(api_lock_) = 0;
 
   zx::resource root_resource_;
-
-  DriverHostInspect inspect_;
 };
 
 #endif  // SRC_DEVICES_BIN_DRIVER_HOST_DRIVER_HOST_CONTEXT_H_

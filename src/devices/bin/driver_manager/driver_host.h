@@ -15,7 +15,6 @@
 #include <fbl/intrusive_double_list.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
-#include <fs/pseudo_dir.h>
 
 #include "device.h"
 #include "fdio.h"
@@ -36,9 +35,8 @@ class DriverHost : public fbl::RefCounted<DriverHost>,
   // The main program logic will want to use DriverHost::Launch
   // |coordinator| must outlive this DriverHost object.
   // |rpc| is a client channel speaking fuchsia.device.manager/DriverHostController
-  // |diagnostics| is a client to driver host diagnostics directory
   // |proc| is a handle to the driver_host process this DriverHost tracks.
-  DriverHost(Coordinator* coordinator, zx::channel rpc, zx::channel diagnostics, zx::process proc);
+  DriverHost(Coordinator* coordinator, zx::channel rpc, zx::process proc);
   ~DriverHost();
 
   // |coordinator| must outlive this DriverHost object.
@@ -73,9 +71,6 @@ class DriverHost : public fbl::RefCounted<DriverHost>,
 
   // list of all devices on this driver_host
   fbl::DoublyLinkedList<Device*, Device::DriverHostNode> devices_;
-
-  // Holding reference to driver host inspect directory so that it will not be freed while in use
-  fbl::RefPtr<fs::PseudoDir> driver_host_dir_;
 };
 
 #endif  // SRC_DEVICES_BIN_DRIVER_MANAGER_DRIVER_HOST_H_
