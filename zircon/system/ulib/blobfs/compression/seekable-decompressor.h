@@ -14,6 +14,7 @@
 
 #include <blobfs/compression-algorithm.h>
 #include <fbl/macros.h>
+#include <lib/zx/status.h>
 
 namespace blobfs {
 
@@ -44,14 +45,13 @@ class SeekableDecompressor {
                                       const void* compressed_buf, size_t max_compressed_size,
                                       size_t offset) = 0;
 
-  // Looks up |offset| in the decompressed space, and returns a mapping which describes the range of
-  // bytes to decompress which will contain the target offset.
+  // Looks up the range [offset, offset+len) in the decompressed space, and returns a mapping which
+  // describes the range of bytes to decompress which will contain the target range.
   //
   // The concrete implementation is free to return an arbitrarily large range of bytes, but
-  // |offset| will always be contained in the mapping.
-  //
-  // Returns std::nullopt if the offset is out of bounds.
-  virtual std::optional<CompressionMapping> MappingForDecompressedAddress(size_t offset) = 0;
+  // [offset, offset+len) will always be contained in the mapping.
+  virtual zx::status<CompressionMapping> MappingForDecompressedRange(size_t offset,
+                                                                     size_t len) = 0;
 };
 
 }  // namespace blobfs

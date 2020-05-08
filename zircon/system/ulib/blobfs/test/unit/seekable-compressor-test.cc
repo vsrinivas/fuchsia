@@ -88,22 +88,28 @@ void DecompressionHelper(SeekableDecompressor* decompressor, unsigned* seed,
                          size_t expected_size) {
   // 1. Sequential decompression of each range
   size_t offset = 0;
-  std::optional<CompressionMapping> mapping;
-  while ((mapping = decompressor->MappingForDecompressedAddress(offset)) != std::nullopt) {
+  zx::status<CompressionMapping> mapping = zx::ok(CompressionMapping{});
+  while ((mapping = decompressor->MappingForDecompressedRange(offset, 1)).is_ok()) {
     DecompressAndVerifyMapping(decompressor, static_cast<const uint8_t*>(compressed_buf),
                                compressed_size, static_cast<const uint8_t*>(expected),
-                               expected_size, *mapping);
+                               expected_size, mapping.value());
     offset += mapping->decompressed_length;
   }
   // 2. Random offsets
   for (int i = 0; i < 100; ++i) {
     offset = rand_r(seed) % expected_size;
-    std::optional<CompressionMapping> mapping = decompressor->MappingForDecompressedAddress(offset);
-    ASSERT_TRUE(mapping);
+    mapping = decompressor->MappingForDecompressedRange(offset, 1);
+    ASSERT_TRUE(mapping.is_ok());
     DecompressAndVerifyMapping(decompressor, static_cast<const uint8_t*>(compressed_buf),
                                compressed_size, static_cast<const uint8_t*>(expected),
-                               expected_size, *mapping);
+                               expected_size, mapping.value());
   }
+  // 3. Full range
+  mapping = decompressor->MappingForDecompressedRange(0, expected_size);
+  ASSERT_TRUE(mapping.is_ok());
+  DecompressAndVerifyMapping(decompressor, static_cast<const uint8_t*>(compressed_buf),
+                             compressed_size, static_cast<const uint8_t*>(expected),
+                             expected_size, mapping.value());
 }
 
 // Tests a contained case of compression and decompression.
