@@ -82,3 +82,38 @@ func TestCallDepth(t *testing.T) {
 		t.Fatalf("Stderr output was not as expeced. Got: %s", errBytes)
 	}
 }
+
+type counterPrefixer struct {
+	counter int
+}
+
+func (p *counterPrefixer) String() string {
+	p.counter += 1
+	return fmt.Sprintf("%d ", p.counter)
+}
+
+func TestCustomPrefix(t *testing.T) {
+	infoLog, errLog := "Info log", "Error log"
+	outBuffer, errBuffer := new(bytes.Buffer), new(bytes.Buffer)
+
+	logger := NewLogger(DebugLevel, color.NewColor(color.ColorAuto), outBuffer, errBuffer, &counterPrefixer{})
+	logger.SetFlags(Ldate | Lshortfile)
+
+	logger.Infof(infoLog)
+	logger.Errorf(errLog)
+
+	outBytes, errBytes := outBuffer.Bytes(), errBuffer.Bytes()
+
+	matched, err := regexp.Match(
+		fmt.Sprintf(`\d{4}\/\d{2}\/\d{2} logger_test.go:\d+: 1 %s`, infoLog),
+		outBytes)
+	if err != nil || !matched {
+		t.Fatalf("Stdout output was not as expected. Got: %s", outBytes)
+	}
+	matched, err = regexp.Match(
+		fmt.Sprintf(`\d{4}\/\d{2}\/\d{2} logger_test.go:\d+: 2 %s%s`, regexp.QuoteMeta(logger.color.Red("ERROR: ")), errLog),
+		errBytes)
+	if err != nil || !matched {
+		t.Fatalf("Stderr output was not as expeced. Got: %s", errBytes)
+	}
+}

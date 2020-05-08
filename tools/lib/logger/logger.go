@@ -36,7 +36,7 @@ type Logger struct {
 	goLogger      *goLog.Logger
 	goErrorLogger *goLog.Logger
 	color         color.Color
-	prefix        string
+	prefix        interface{}
 }
 
 // LogLevel represents different levels for logging depending on the amount of detail wanted.
@@ -112,8 +112,8 @@ func (l *LogLevel) Set(s string) error {
 // NewLogger creates a new logger instance. The loggerLevel variable sets the log level for the logger.
 // The color variable specifies the visual color of displayed log output.
 // The outWriter and errWriter variables set the destination to which non-error and error data will be written.
-// The prefix appears on the same line directly preceding any log data.
-func NewLogger(loggerLevel LogLevel, color color.Color, outWriter, errWriter io.Writer, prefix string) *Logger {
+// The prefix appears on the same line directly preceding any log data. It should be thread-safe to format this value.
+func NewLogger(loggerLevel LogLevel, color color.Color, outWriter, errWriter io.Writer, prefix interface{}) *Logger {
 	if outWriter == nil {
 		outWriter = os.Stdout
 	}
