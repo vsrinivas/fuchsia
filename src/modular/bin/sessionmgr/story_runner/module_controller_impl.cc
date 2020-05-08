@@ -17,23 +17,6 @@
 
 namespace modular {
 
-constexpr char kAppStoragePath[] = "/data/APP_DATA";
-
-namespace {
-
-// A stopgap solution to map a module's url to a directory name where the
-// module's /data is mapped. We need three properties here - (1) two module urls
-// that are the same get mapped to the same hash, (2) two modules urls that are
-// different don't get the same name (with very high probability) and (3) the
-// name is visually inspectable.
-std::string HashModuleUrl(const std::string& module_url) {
-  std::size_t found = module_url.find_last_of('/');
-  auto last_part = found == module_url.length() - 1 ? "" : module_url.substr(found + 1);
-  return std::to_string(std::hash<std::string>{}(module_url)) + last_part;
-}
-
-};  // namespace
-
 ModuleControllerImpl::ModuleControllerImpl(StoryControllerImpl* const story_controller_impl,
                                            fuchsia::sys::Launcher* const launcher,
                                            fuchsia::modular::AppConfig module_config,
@@ -42,8 +25,7 @@ ModuleControllerImpl::ModuleControllerImpl(StoryControllerImpl* const story_cont
                                            fuchsia::ui::views::ViewToken view_token)
     : story_controller_impl_(story_controller_impl),
       app_client_(launcher, CloneStruct(module_config),
-                  std::string(kAppStoragePath) + HashModuleUrl(module_config.url),
-                  std::move(service_list)),
+        /*data_origin=*/"", std::move(service_list)),
       module_data_(module_data) {
   app_client_.SetAppErrorHandler([this] { OnAppConnectionError(); });
 

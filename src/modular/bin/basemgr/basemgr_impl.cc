@@ -96,7 +96,7 @@ void BasemgrImpl::StartBaseShell() {
       fidl::To<fuchsia::modular::AppConfig>(config_.basemgr_config().base_shell().app_config());
 
   base_shell_app_ = std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
-      launcher_.get(), std::move(base_shell_config), /* data_origin = */ "");
+      launcher_.get(), std::move(base_shell_config));
   auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
 
   fuchsia::ui::app::ViewProviderPtr base_shell_view_provider;

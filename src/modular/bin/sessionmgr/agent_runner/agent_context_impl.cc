@@ -20,20 +20,7 @@
 
 namespace modular {
 
-constexpr char kAppStoragePath[] = "/data/APP_DATA";
-
 namespace {
-
-// A stopgap solution to map an agent's url to a directory name where the
-// agent's /data is mapped. We need three properties here - (1) two module urls
-// that are the same get mapped to the same hash, (2) two modules urls that are
-// different don't get the same name (with very high probability) and (3) the
-// name is visually inspectable.
-std::string HashAgentUrl(const std::string& agent_url) {
-  std::size_t found = agent_url.find_last_of('/');
-  auto last_part = found == agent_url.length() - 1 ? "" : agent_url.substr(found + 1);
-  return std::to_string(std::hash<std::string>{}(agent_url)) + last_part;
-}
 
 // Get a list of names of the entries in a directory.
 void GetFidlDirectoryEntries(fuchsia::io::Directory* dir,
@@ -109,9 +96,7 @@ class AgentContextImpl::InitializeCall : public Operation<> {
     }
     agent_context_impl_->service_provider_impl_.AddBinding(service_list->provider.NewRequest());
     agent_context_impl_->app_client_ = std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
-        launcher_, std::move(agent_config_),
-        std::string(kAppStoragePath) + HashAgentUrl(agent_context_impl_->url_),
-        std::move(service_list));
+        launcher_, std::move(agent_config_), /*data_origin=*/"", std::move(service_list));
 
     agent_context_impl_->app_client_->services().ConnectToService(
         agent_context_impl_->agent_.NewRequest());
