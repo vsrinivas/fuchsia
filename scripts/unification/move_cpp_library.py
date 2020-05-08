@@ -34,7 +34,6 @@ class Library(object):
         self.has_unexported = any(s.sdk == Sdk.NOPE for s in self.stats)
         self.has_sdk = any(s.sdk_publishable for s in self.stats)
         self.has_shared = any(s.sdk == Sdk.SHARED for s in self.stats)
-        self.has_static = any(s.sdk == Sdk.STATIC for s in self.stats)
 
 
 def replace_lines(path, replacer):
@@ -87,11 +86,6 @@ def main():
         if library.has_unexported:
             print('Can only convert libraries already exported to the GN build,'
                   ' ignoring ' + lib)
-            continue
-
-        # No SDK libraries for now.
-        if library.has_sdk and library.has_static:
-            print('Cannot convert static SDK libraries for now, ignoring ' + lib)
             continue
 
         # Gather build files with references to the library.
