@@ -95,7 +95,7 @@ ChannelProtocol::UnownedResultOf::MethodA_Impl::MethodA_Impl(
     int64_t a, int64_t b) {
   if (_request_buffer.capacity() < MethodARequest::PrimarySize) {
     Super::status_ = ZX_ERR_BUFFER_TOO_SMALL;
-    Super::error_ = ::fidl::internal::kErrorRequestBufferTooSmall;
+    Super::error_ = ::fidl::kErrorRequestBufferTooSmall;
     return;
   }
   memset(_request_buffer.data(), 0, MethodARequest::PrimarySize);
@@ -136,8 +136,8 @@ ChannelProtocol::UnownedResultOf::MethodA ChannelProtocol::Call::MethodA(
   zx_status_t _write_status = ::fidl::Write(
       std::move(_client_end), std::move(_encode_request_result.message));
   if (_write_status != ZX_OK) {
-    return ::fidl::internal::StatusAndError(
-        _write_status, ::fidl::internal::kErrorWriteFailed);
+    return ::fidl::internal::StatusAndError(_write_status,
+                                            ::fidl::kErrorWriteFailed);
   } else {
     return ::fidl::internal::StatusAndError(ZX_OK, nullptr);
   }
@@ -182,8 +182,7 @@ ChannelProtocol::UnownedResultOf::
         int64_t a, int64_t b, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < MethodBRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<MethodBResponse>(
-        ZX_ERR_BUFFER_TOO_SMALL,
-        ::fidl::internal::kErrorRequestBufferTooSmall));
+        ZX_ERR_BUFFER_TOO_SMALL, ::fidl::kErrorRequestBufferTooSmall));
     return;
   }
   memset(_request_buffer.data(), 0, MethodBRequest::PrimarySize);
@@ -273,8 +272,7 @@ ChannelProtocol::UnownedResultOf::
         ::zx::socket a, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < MutateSocketRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<MutateSocketResponse>(
-        ZX_ERR_BUFFER_TOO_SMALL,
-        ::fidl::internal::kErrorRequestBufferTooSmall));
+        ZX_ERR_BUFFER_TOO_SMALL, ::fidl::kErrorRequestBufferTooSmall));
     return;
   }
   memset(_request_buffer.data(), 0, MutateSocketRequest::PrimarySize);
@@ -327,6 +325,259 @@ ChannelProtocol::InPlace::MutateSocket(
         FromFailure(std::move(_call_result));
   }
   return ::fidl::Decode(std::move(_call_result.message));
+}
+
+::fidl::StatusAndError ChannelProtocol::ClientImpl::MethodA(int64_t a,
+                                                            int64_t b) {
+  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
+    auto _res =
+        ResultOf::MethodA(_binding->channel(), std::move(a), std::move(b));
+    return ::fidl::StatusAndError(_res.status(), _res.error());
+  }
+  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+}
+
+::fidl::StatusAndError ChannelProtocol::ClientImpl::MethodA(
+    ::fidl::BytePart _request_buffer, int64_t a, int64_t b) {
+  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
+    auto _res = UnownedResultOf::MethodA(_binding->channel(),
+                                         std::move(_request_buffer),
+                                         std::move(a), std::move(b));
+    return ::fidl::StatusAndError(_res.status(), _res.error());
+  }
+  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+}
+
+ChannelProtocol::ResultOf::MethodB ChannelProtocol::ClientImpl::MethodB_Sync(
+    int64_t a, int64_t b) {
+  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
+    return ResultOf::MethodB(_binding->channel(), std::move(a), std::move(b));
+  }
+  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+}
+
+ChannelProtocol::UnownedResultOf::MethodB
+ChannelProtocol::ClientImpl::MethodB_Sync(::fidl::BytePart _request_buffer,
+                                          int64_t a, int64_t b,
+                                          ::fidl::BytePart _response_buffer) {
+  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
+    return UnownedResultOf::MethodB(_binding->channel(),
+                                    std::move(_request_buffer), std::move(a),
+                                    std::move(b), std::move(_response_buffer));
+  }
+  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+}
+
+::fidl::StatusAndError ChannelProtocol::ClientImpl::MethodB(
+    int64_t a, int64_t b, ::fit::callback<void(int64_t result)> _cb) {
+  class ManagedResponseContext : public MethodBResponseContext {
+   public:
+    ManagedResponseContext(::fit::callback<void(int64_t result)> cb)
+        : cb_(std::move(cb)) {}
+
+    void OnReply(::fidl::DecodedMessage<MethodBResponse> msg) override {
+      auto message = msg.message();
+      cb_(std::move(message->result));
+      delete this;
+    }
+
+    void OnError() override { delete this; }
+
+    ::fit::callback<void(int64_t result)> cb_;
+  };
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<
+      MethodBRequest, ::fidl::MessageDirection::kSending>();
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
+
+  auto* _context = new ManagedResponseContext(std::move(_cb));
+  auto status_and_error =
+      MethodB(_write_bytes_array.view(), std::move(a), std::move(b), _context);
+  if (!status_and_error.ok()) {
+    delete _context;
+  }
+  return status_and_error;
+}
+
+::fidl::StatusAndError ChannelProtocol::ClientImpl::MethodB(
+    ::fidl::BytePart _request_buffer, int64_t a, int64_t b,
+    MethodBResponseContext* _context) {
+  if (_request_buffer.capacity() < MethodBRequest::PrimarySize) {
+    return ::fidl::StatusAndError(ZX_ERR_BUFFER_TOO_SMALL,
+                                  ::fidl::kErrorRequestBufferTooSmall);
+  }
+  memset(_request_buffer.data(), 0, MethodBRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<MethodBRequest*>(_request_buffer.data());
+  _request.a = std::move(a);
+  _request.b = std::move(b);
+  _request_buffer.set_actual(sizeof(MethodBRequest));
+  ::fidl::DecodedMessage<MethodBRequest> _decoded_request(
+      std::move(_request_buffer));
+
+  ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
+  SetTransactionHeaderFor::MethodBRequest(_decoded_request, _context->Txid());
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    ::fidl::internal::ClientBase::ForgetAsyncTxn(_context);
+    return ::fidl::DecodeResult<MethodBResponse>::FromFailure(
+        std::move(_encode_request_result));
+  }
+
+  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
+    zx_status_t _write_status = ::fidl::Write(
+        _binding->channel(), std::move(_encode_request_result.message));
+    if (_write_status != ZX_OK) {
+      ::fidl::internal::ClientBase::ForgetAsyncTxn(_context);
+      return ::fidl::StatusAndError(_write_status, ::fidl::kErrorWriteFailed);
+    }
+    return ::fidl::StatusAndError(ZX_OK, nullptr);
+  }
+  ::fidl::internal::ClientBase::ForgetAsyncTxn(_context);
+  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+}
+
+ChannelProtocol::ResultOf::MutateSocket
+ChannelProtocol::ClientImpl::MutateSocket_Sync(::zx::socket a) {
+  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
+    return ResultOf::MutateSocket(_binding->channel(), std::move(a));
+  }
+  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+}
+
+ChannelProtocol::UnownedResultOf::MutateSocket
+ChannelProtocol::ClientImpl::MutateSocket_Sync(
+    ::fidl::BytePart _request_buffer, ::zx::socket a,
+    ::fidl::BytePart _response_buffer) {
+  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
+    return UnownedResultOf::MutateSocket(
+        _binding->channel(), std::move(_request_buffer), std::move(a),
+        std::move(_response_buffer));
+  }
+  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+}
+
+::fidl::StatusAndError ChannelProtocol::ClientImpl::MutateSocket(
+    ::zx::socket a, ::fit::callback<void(::zx::socket b)> _cb) {
+  class ManagedResponseContext : public MutateSocketResponseContext {
+   public:
+    ManagedResponseContext(::fit::callback<void(::zx::socket b)> cb)
+        : cb_(std::move(cb)) {}
+
+    void OnReply(::fidl::DecodedMessage<MutateSocketResponse> msg) override {
+      auto message = msg.message();
+      cb_(std::move(message->b));
+      delete this;
+    }
+
+    void OnError() override { delete this; }
+
+    ::fit::callback<void(::zx::socket b)> cb_;
+  };
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<
+      MutateSocketRequest, ::fidl::MessageDirection::kSending>();
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
+
+  auto* _context = new ManagedResponseContext(std::move(_cb));
+  auto status_and_error =
+      MutateSocket(_write_bytes_array.view(), std::move(a), _context);
+  if (!status_and_error.ok()) {
+    delete _context;
+  }
+  return status_and_error;
+}
+
+::fidl::StatusAndError ChannelProtocol::ClientImpl::MutateSocket(
+    ::fidl::BytePart _request_buffer, ::zx::socket a,
+    MutateSocketResponseContext* _context) {
+  if (_request_buffer.capacity() < MutateSocketRequest::PrimarySize) {
+    return ::fidl::StatusAndError(ZX_ERR_BUFFER_TOO_SMALL,
+                                  ::fidl::kErrorRequestBufferTooSmall);
+  }
+  memset(_request_buffer.data(), 0, MutateSocketRequest::PrimarySize);
+  auto& _request =
+      *reinterpret_cast<MutateSocketRequest*>(_request_buffer.data());
+  _request.a = std::move(a);
+  _request_buffer.set_actual(sizeof(MutateSocketRequest));
+  ::fidl::DecodedMessage<MutateSocketRequest> _decoded_request(
+      std::move(_request_buffer));
+
+  ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
+  SetTransactionHeaderFor::MutateSocketRequest(_decoded_request,
+                                               _context->Txid());
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    ::fidl::internal::ClientBase::ForgetAsyncTxn(_context);
+    return ::fidl::DecodeResult<MutateSocketResponse>::FromFailure(
+        std::move(_encode_request_result));
+  }
+
+  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
+    zx_status_t _write_status = ::fidl::Write(
+        _binding->channel(), std::move(_encode_request_result.message));
+    if (_write_status != ZX_OK) {
+      ::fidl::internal::ClientBase::ForgetAsyncTxn(_context);
+      return ::fidl::StatusAndError(_write_status, ::fidl::kErrorWriteFailed);
+    }
+    return ::fidl::StatusAndError(ZX_OK, nullptr);
+  }
+  ::fidl::internal::ClientBase::ForgetAsyncTxn(_context);
+  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+}
+
+zx_status_t ChannelProtocol::ClientImpl::Dispatch(
+    fidl_msg_t* msg, ::fidl::internal::ResponseContext* context) {
+  fidl_message_header_t* hdr =
+      reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+  switch (hdr->ordinal) {
+    case kChannelProtocol_EventA_Ordinal:
+    case kChannelProtocol_EventA_GenOrdinal: {
+      auto result = ::fidl::DecodeAs<EventAResponse>(msg);
+      if (result.status != ZX_OK) {
+        return result.status;
+      }
+      if (auto* managed = std::get_if<0>(&handlers_.event_a)) {
+        if (!(*managed)) return ZX_ERR_NOT_SUPPORTED;
+        auto message = result.message.message();
+        (*managed)(std::move(message->a), std::move(message->b));
+      } else {
+        std::get<1>(handlers_.event_a)(std::move(result.message));
+      }
+      break;
+    }
+    case kChannelProtocol_MethodB_Ordinal:
+    case kChannelProtocol_MethodB_GenOrdinal: {
+      auto result = ::fidl::DecodeAs<MethodBResponse>(msg);
+      if (result.status != ZX_OK) {
+        context->OnError();
+        return result.status;
+      }
+      static_cast<MethodBResponseContext*>(context)->OnReply(
+          std::move(result.message));
+      break;
+    }
+    case kChannelProtocol_MutateSocket_Ordinal:
+    case kChannelProtocol_MutateSocket_GenOrdinal: {
+      auto result = ::fidl::DecodeAs<MutateSocketResponse>(msg);
+      if (result.status != ZX_OK) {
+        context->OnError();
+        return result.status;
+      }
+      static_cast<MutateSocketResponseContext*>(context)->OnReply(
+          std::move(result.message));
+      break;
+    }
+    case kFidlOrdinalEpitaph:
+      if (context) return ZX_ERR_INVALID_ARGS;
+      ::fidl::internal::ClientBase::Close(
+          reinterpret_cast<fidl_epitaph_t*>(hdr)->error);
+      break;
+    default:
+      zx_handle_close_many(msg->handles, msg->num_handles);
+      if (context) context->OnError();
+      return ZX_ERR_NOT_SUPPORTED;
+  }
+  return ZX_OK;
 }
 
 zx_status_t ChannelProtocol::SyncClient::HandleEvents(
@@ -604,8 +855,9 @@ void ChannelProtocol::Interface::MutateSocketCompleterBase::Reply(
 }
 
 void ChannelProtocol::SetTransactionHeaderFor::MethodARequest(
-    const ::fidl::DecodedMessage<ChannelProtocol::MethodARequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0,
+    const ::fidl::DecodedMessage<ChannelProtocol::MethodARequest>& _msg,
+    zx_txid_t _txid) {
+  fidl_init_txn_header(&_msg.message()->_hdr, _txid,
                        kChannelProtocol_MethodA_GenOrdinal);
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
@@ -618,8 +870,9 @@ void ChannelProtocol::SetTransactionHeaderFor::EventAResponse(
 }
 
 void ChannelProtocol::SetTransactionHeaderFor::MethodBRequest(
-    const ::fidl::DecodedMessage<ChannelProtocol::MethodBRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0,
+    const ::fidl::DecodedMessage<ChannelProtocol::MethodBRequest>& _msg,
+    zx_txid_t _txid) {
+  fidl_init_txn_header(&_msg.message()->_hdr, _txid,
                        kChannelProtocol_MethodB_GenOrdinal);
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
@@ -631,8 +884,9 @@ void ChannelProtocol::SetTransactionHeaderFor::MethodBResponse(
 }
 
 void ChannelProtocol::SetTransactionHeaderFor::MutateSocketRequest(
-    const ::fidl::DecodedMessage<ChannelProtocol::MutateSocketRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0,
+    const ::fidl::DecodedMessage<ChannelProtocol::MutateSocketRequest>& _msg,
+    zx_txid_t _txid) {
+  fidl_init_txn_header(&_msg.message()->_hdr, _txid,
                        kChannelProtocol_MutateSocket_GenOrdinal);
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
@@ -774,8 +1028,8 @@ WithAndWithoutRequestResponse::InPlace::NoRequestNoResponse(
   zx_status_t _write_status = ::fidl::Write(
       std::move(_client_end), std::move(_encode_request_result.message));
   if (_write_status != ZX_OK) {
-    return ::fidl::internal::StatusAndError(
-        _write_status, ::fidl::internal::kErrorWriteFailed);
+    return ::fidl::internal::StatusAndError(_write_status,
+                                            ::fidl::kErrorWriteFailed);
   } else {
     return ::fidl::internal::StatusAndError(ZX_OK, nullptr);
   }
@@ -976,7 +1230,7 @@ WithAndWithoutRequestResponse::UnownedResultOf::WithRequestNoResponse_Impl::
                                ::fidl::StringView arg) {
   if (_request_buffer.capacity() < WithRequestNoResponseRequest::PrimarySize) {
     Super::status_ = ZX_ERR_BUFFER_TOO_SMALL;
-    Super::error_ = ::fidl::internal::kErrorRequestBufferTooSmall;
+    Super::error_ = ::fidl::kErrorRequestBufferTooSmall;
     return;
   }
   WithRequestNoResponseRequest _request = {};
@@ -1024,8 +1278,8 @@ WithAndWithoutRequestResponse::InPlace::WithRequestNoResponse(
   zx_status_t _write_status = ::fidl::Write(
       std::move(_client_end), std::move(_encode_request_result.message));
   if (_write_status != ZX_OK) {
-    return ::fidl::internal::StatusAndError(
-        _write_status, ::fidl::internal::kErrorWriteFailed);
+    return ::fidl::internal::StatusAndError(_write_status,
+                                            ::fidl::kErrorWriteFailed);
   } else {
     return ::fidl::internal::StatusAndError(ZX_OK, nullptr);
   }
@@ -1081,8 +1335,7 @@ WithAndWithoutRequestResponse::UnownedResultOf::WithRequestEmptyResponse_Impl<
   if (_request_buffer.capacity() <
       WithRequestEmptyResponseRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<WithRequestEmptyResponseResponse>(
-        ZX_ERR_BUFFER_TOO_SMALL,
-        ::fidl::internal::kErrorRequestBufferTooSmall));
+        ZX_ERR_BUFFER_TOO_SMALL, ::fidl::kErrorRequestBufferTooSmall));
     return;
   }
   WithRequestEmptyResponseRequest _request = {};
@@ -1195,8 +1448,7 @@ WithAndWithoutRequestResponse::UnownedResultOf::WithRequestWithResponse_Impl<
   if (_request_buffer.capacity() <
       WithRequestWithResponseRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<WithRequestWithResponseResponse>(
-        ZX_ERR_BUFFER_TOO_SMALL,
-        ::fidl::internal::kErrorRequestBufferTooSmall));
+        ZX_ERR_BUFFER_TOO_SMALL, ::fidl::kErrorRequestBufferTooSmall));
     return;
   }
   WithRequestWithResponseRequest _request = {};
@@ -1257,6 +1509,463 @@ WithAndWithoutRequestResponse::InPlace::WithRequestWithResponse(
         FromFailure(std::move(_call_result));
   }
   return ::fidl::Decode(std::move(_call_result.message));
+}
+
+::fidl::StatusAndError
+WithAndWithoutRequestResponse::ClientImpl::NoRequestNoResponse() {
+  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
+    auto _res = ResultOf::NoRequestNoResponse(_binding->channel());
+    return ::fidl::StatusAndError(_res.status(), _res.error());
+  }
+  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+}
+
+WithAndWithoutRequestResponse::ResultOf::NoRequestEmptyResponse
+WithAndWithoutRequestResponse::ClientImpl::NoRequestEmptyResponse_Sync() {
+  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
+    return ResultOf::NoRequestEmptyResponse(_binding->channel());
+  }
+  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+}
+
+::fidl::StatusAndError
+WithAndWithoutRequestResponse::ClientImpl::NoRequestEmptyResponse(
+    ::fit::callback<void()> _cb) {
+  class ManagedResponseContext : public NoRequestEmptyResponseResponseContext {
+   public:
+    ManagedResponseContext(::fit::callback<void()> cb) : cb_(std::move(cb)) {}
+
+    void OnReply() override {
+      cb_();
+      delete this;
+    }
+
+    void OnError() override { delete this; }
+
+    ::fit::callback<void()> cb_;
+  };
+
+  auto* _context = new ManagedResponseContext(std::move(_cb));
+  auto status_and_error = NoRequestEmptyResponse(_context);
+  if (!status_and_error.ok()) {
+    delete _context;
+  }
+  return status_and_error;
+}
+
+::fidl::StatusAndError
+WithAndWithoutRequestResponse::ClientImpl::NoRequestEmptyResponse(
+    NoRequestEmptyResponseResponseContext* _context) {
+  FIDL_ALIGNDECL uint8_t
+      _write_bytes[sizeof(NoRequestEmptyResponseRequest)] = {};
+  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
+  memset(_request_buffer.data(), 0, NoRequestEmptyResponseRequest::PrimarySize);
+  _request_buffer.set_actual(sizeof(NoRequestEmptyResponseRequest));
+  ::fidl::DecodedMessage<NoRequestEmptyResponseRequest> _decoded_request(
+      std::move(_request_buffer));
+
+  ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
+  SetTransactionHeaderFor::NoRequestEmptyResponseRequest(_decoded_request,
+                                                         _context->Txid());
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    ::fidl::internal::ClientBase::ForgetAsyncTxn(_context);
+    return ::fidl::DecodeResult<NoRequestEmptyResponseResponse>::FromFailure(
+        std::move(_encode_request_result));
+  }
+
+  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
+    zx_status_t _write_status = ::fidl::Write(
+        _binding->channel(), std::move(_encode_request_result.message));
+    if (_write_status != ZX_OK) {
+      ::fidl::internal::ClientBase::ForgetAsyncTxn(_context);
+      return ::fidl::StatusAndError(_write_status, ::fidl::kErrorWriteFailed);
+    }
+    return ::fidl::StatusAndError(ZX_OK, nullptr);
+  }
+  ::fidl::internal::ClientBase::ForgetAsyncTxn(_context);
+  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+}
+
+WithAndWithoutRequestResponse::ResultOf::NoRequestWithResponse
+WithAndWithoutRequestResponse::ClientImpl::NoRequestWithResponse_Sync() {
+  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
+    return ResultOf::NoRequestWithResponse(_binding->channel());
+  }
+  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+}
+
+WithAndWithoutRequestResponse::UnownedResultOf::NoRequestWithResponse
+WithAndWithoutRequestResponse::ClientImpl::NoRequestWithResponse_Sync(
+    ::fidl::BytePart _response_buffer) {
+  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
+    return UnownedResultOf::NoRequestWithResponse(_binding->channel(),
+                                                  std::move(_response_buffer));
+  }
+  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+}
+
+::fidl::StatusAndError
+WithAndWithoutRequestResponse::ClientImpl::NoRequestWithResponse(
+    ::fit::callback<void(::fidl::StringView ret)> _cb) {
+  class ManagedResponseContext : public NoRequestWithResponseResponseContext {
+   public:
+    ManagedResponseContext(::fit::callback<void(::fidl::StringView ret)> cb)
+        : cb_(std::move(cb)) {}
+
+    void OnReply(
+        ::fidl::DecodedMessage<NoRequestWithResponseResponse> msg) override {
+      auto message = msg.message();
+      cb_(std::move(message->ret));
+      delete this;
+    }
+
+    void OnError() override { delete this; }
+
+    ::fit::callback<void(::fidl::StringView ret)> cb_;
+  };
+
+  auto* _context = new ManagedResponseContext(std::move(_cb));
+  auto status_and_error = NoRequestWithResponse(_context);
+  if (!status_and_error.ok()) {
+    delete _context;
+  }
+  return status_and_error;
+}
+
+::fidl::StatusAndError
+WithAndWithoutRequestResponse::ClientImpl::NoRequestWithResponse(
+    NoRequestWithResponseResponseContext* _context) {
+  FIDL_ALIGNDECL uint8_t
+      _write_bytes[sizeof(NoRequestWithResponseRequest)] = {};
+  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
+  memset(_request_buffer.data(), 0, NoRequestWithResponseRequest::PrimarySize);
+  _request_buffer.set_actual(sizeof(NoRequestWithResponseRequest));
+  ::fidl::DecodedMessage<NoRequestWithResponseRequest> _decoded_request(
+      std::move(_request_buffer));
+
+  ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
+  SetTransactionHeaderFor::NoRequestWithResponseRequest(_decoded_request,
+                                                        _context->Txid());
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    ::fidl::internal::ClientBase::ForgetAsyncTxn(_context);
+    return ::fidl::DecodeResult<NoRequestWithResponseResponse>::FromFailure(
+        std::move(_encode_request_result));
+  }
+
+  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
+    zx_status_t _write_status = ::fidl::Write(
+        _binding->channel(), std::move(_encode_request_result.message));
+    if (_write_status != ZX_OK) {
+      ::fidl::internal::ClientBase::ForgetAsyncTxn(_context);
+      return ::fidl::StatusAndError(_write_status, ::fidl::kErrorWriteFailed);
+    }
+    return ::fidl::StatusAndError(ZX_OK, nullptr);
+  }
+  ::fidl::internal::ClientBase::ForgetAsyncTxn(_context);
+  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+}
+
+::fidl::StatusAndError
+WithAndWithoutRequestResponse::ClientImpl::WithRequestNoResponse(
+    ::fidl::StringView arg) {
+  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
+    auto _res =
+        ResultOf::WithRequestNoResponse(_binding->channel(), std::move(arg));
+    return ::fidl::StatusAndError(_res.status(), _res.error());
+  }
+  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+}
+
+::fidl::StatusAndError
+WithAndWithoutRequestResponse::ClientImpl::WithRequestNoResponse(
+    ::fidl::BytePart _request_buffer, ::fidl::StringView arg) {
+  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
+    auto _res = UnownedResultOf::WithRequestNoResponse(
+        _binding->channel(), std::move(_request_buffer), std::move(arg));
+    return ::fidl::StatusAndError(_res.status(), _res.error());
+  }
+  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+}
+
+WithAndWithoutRequestResponse::ResultOf::WithRequestEmptyResponse
+WithAndWithoutRequestResponse::ClientImpl::WithRequestEmptyResponse_Sync(
+    ::fidl::StringView arg) {
+  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
+    return ResultOf::WithRequestEmptyResponse(_binding->channel(),
+                                              std::move(arg));
+  }
+  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+}
+
+WithAndWithoutRequestResponse::UnownedResultOf::WithRequestEmptyResponse
+WithAndWithoutRequestResponse::ClientImpl::WithRequestEmptyResponse_Sync(
+    ::fidl::BytePart _request_buffer, ::fidl::StringView arg,
+    ::fidl::BytePart _response_buffer) {
+  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
+    return UnownedResultOf::WithRequestEmptyResponse(
+        _binding->channel(), std::move(_request_buffer), std::move(arg),
+        std::move(_response_buffer));
+  }
+  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+}
+
+::fidl::StatusAndError
+WithAndWithoutRequestResponse::ClientImpl::WithRequestEmptyResponse(
+    ::fidl::StringView arg, ::fit::callback<void()> _cb) {
+  class ManagedResponseContext
+      : public WithRequestEmptyResponseResponseContext {
+   public:
+    ManagedResponseContext(::fit::callback<void()> cb) : cb_(std::move(cb)) {}
+
+    void OnReply() override {
+      cb_();
+      delete this;
+    }
+
+    void OnError() override { delete this; }
+
+    ::fit::callback<void()> cb_;
+  };
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<
+      WithRequestEmptyResponseRequest, ::fidl::MessageDirection::kSending>();
+  std::unique_ptr _write_bytes_boxed =
+      std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
+  auto& _write_bytes_array = *_write_bytes_boxed;
+
+  auto* _context = new ManagedResponseContext(std::move(_cb));
+  auto status_and_error = WithRequestEmptyResponse(_write_bytes_array.view(),
+                                                   std::move(arg), _context);
+  if (!status_and_error.ok()) {
+    delete _context;
+  }
+  return status_and_error;
+}
+
+::fidl::StatusAndError
+WithAndWithoutRequestResponse::ClientImpl::WithRequestEmptyResponse(
+    ::fidl::BytePart _request_buffer, ::fidl::StringView arg,
+    WithRequestEmptyResponseResponseContext* _context) {
+  if (_request_buffer.capacity() <
+      WithRequestEmptyResponseRequest::PrimarySize) {
+    return ::fidl::StatusAndError(ZX_ERR_BUFFER_TOO_SMALL,
+                                  ::fidl::kErrorRequestBufferTooSmall);
+  }
+  WithRequestEmptyResponseRequest _request = {};
+  _request.arg = std::move(arg);
+  auto _linearize_result =
+      ::fidl::Linearize(&_request, std::move(_request_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    return std::move(_linearize_result);
+  }
+  ::fidl::DecodedMessage<WithRequestEmptyResponseRequest> _decoded_request =
+      std::move(_linearize_result.message);
+
+  ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
+  SetTransactionHeaderFor::WithRequestEmptyResponseRequest(_decoded_request,
+                                                           _context->Txid());
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    ::fidl::internal::ClientBase::ForgetAsyncTxn(_context);
+    return ::fidl::DecodeResult<WithRequestEmptyResponseResponse>::FromFailure(
+        std::move(_encode_request_result));
+  }
+
+  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
+    zx_status_t _write_status = ::fidl::Write(
+        _binding->channel(), std::move(_encode_request_result.message));
+    if (_write_status != ZX_OK) {
+      ::fidl::internal::ClientBase::ForgetAsyncTxn(_context);
+      return ::fidl::StatusAndError(_write_status, ::fidl::kErrorWriteFailed);
+    }
+    return ::fidl::StatusAndError(ZX_OK, nullptr);
+  }
+  ::fidl::internal::ClientBase::ForgetAsyncTxn(_context);
+  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+}
+
+WithAndWithoutRequestResponse::ResultOf::WithRequestWithResponse
+WithAndWithoutRequestResponse::ClientImpl::WithRequestWithResponse_Sync(
+    ::fidl::StringView arg) {
+  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
+    return ResultOf::WithRequestWithResponse(_binding->channel(),
+                                             std::move(arg));
+  }
+  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+}
+
+WithAndWithoutRequestResponse::UnownedResultOf::WithRequestWithResponse
+WithAndWithoutRequestResponse::ClientImpl::WithRequestWithResponse_Sync(
+    ::fidl::BytePart _request_buffer, ::fidl::StringView arg,
+    ::fidl::BytePart _response_buffer) {
+  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
+    return UnownedResultOf::WithRequestWithResponse(
+        _binding->channel(), std::move(_request_buffer), std::move(arg),
+        std::move(_response_buffer));
+  }
+  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+}
+
+::fidl::StatusAndError
+WithAndWithoutRequestResponse::ClientImpl::WithRequestWithResponse(
+    ::fidl::StringView arg, ::fit::callback<void(::fidl::StringView ret)> _cb) {
+  class ManagedResponseContext : public WithRequestWithResponseResponseContext {
+   public:
+    ManagedResponseContext(::fit::callback<void(::fidl::StringView ret)> cb)
+        : cb_(std::move(cb)) {}
+
+    void OnReply(
+        ::fidl::DecodedMessage<WithRequestWithResponseResponse> msg) override {
+      auto message = msg.message();
+      cb_(std::move(message->ret));
+      delete this;
+    }
+
+    void OnError() override { delete this; }
+
+    ::fit::callback<void(::fidl::StringView ret)> cb_;
+  };
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<
+      WithRequestWithResponseRequest, ::fidl::MessageDirection::kSending>();
+  std::unique_ptr _write_bytes_boxed =
+      std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
+  auto& _write_bytes_array = *_write_bytes_boxed;
+
+  auto* _context = new ManagedResponseContext(std::move(_cb));
+  auto status_and_error = WithRequestWithResponse(_write_bytes_array.view(),
+                                                  std::move(arg), _context);
+  if (!status_and_error.ok()) {
+    delete _context;
+  }
+  return status_and_error;
+}
+
+::fidl::StatusAndError
+WithAndWithoutRequestResponse::ClientImpl::WithRequestWithResponse(
+    ::fidl::BytePart _request_buffer, ::fidl::StringView arg,
+    WithRequestWithResponseResponseContext* _context) {
+  if (_request_buffer.capacity() <
+      WithRequestWithResponseRequest::PrimarySize) {
+    return ::fidl::StatusAndError(ZX_ERR_BUFFER_TOO_SMALL,
+                                  ::fidl::kErrorRequestBufferTooSmall);
+  }
+  WithRequestWithResponseRequest _request = {};
+  _request.arg = std::move(arg);
+  auto _linearize_result =
+      ::fidl::Linearize(&_request, std::move(_request_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    return std::move(_linearize_result);
+  }
+  ::fidl::DecodedMessage<WithRequestWithResponseRequest> _decoded_request =
+      std::move(_linearize_result.message);
+
+  ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
+  SetTransactionHeaderFor::WithRequestWithResponseRequest(_decoded_request,
+                                                          _context->Txid());
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    ::fidl::internal::ClientBase::ForgetAsyncTxn(_context);
+    return ::fidl::DecodeResult<WithRequestWithResponseResponse>::FromFailure(
+        std::move(_encode_request_result));
+  }
+
+  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
+    zx_status_t _write_status = ::fidl::Write(
+        _binding->channel(), std::move(_encode_request_result.message));
+    if (_write_status != ZX_OK) {
+      ::fidl::internal::ClientBase::ForgetAsyncTxn(_context);
+      return ::fidl::StatusAndError(_write_status, ::fidl::kErrorWriteFailed);
+    }
+    return ::fidl::StatusAndError(ZX_OK, nullptr);
+  }
+  ::fidl::internal::ClientBase::ForgetAsyncTxn(_context);
+  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+}
+
+zx_status_t WithAndWithoutRequestResponse::ClientImpl::Dispatch(
+    fidl_msg_t* msg, ::fidl::internal::ResponseContext* context) {
+  fidl_message_header_t* hdr =
+      reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+  switch (hdr->ordinal) {
+    case kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal:
+    case kWithAndWithoutRequestResponse_NoRequestEmptyResponse_GenOrdinal: {
+      auto result = ::fidl::DecodeAs<NoRequestEmptyResponseResponse>(msg);
+      if (result.status != ZX_OK) {
+        context->OnError();
+        return result.status;
+      }
+      static_cast<NoRequestEmptyResponseResponseContext*>(context)->OnReply();
+      break;
+    }
+    case kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal:
+    case kWithAndWithoutRequestResponse_NoRequestWithResponse_GenOrdinal: {
+      auto result = ::fidl::DecodeAs<NoRequestWithResponseResponse>(msg);
+      if (result.status != ZX_OK) {
+        context->OnError();
+        return result.status;
+      }
+      static_cast<NoRequestWithResponseResponseContext*>(context)->OnReply(
+          std::move(result.message));
+      break;
+    }
+    case kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal:
+    case kWithAndWithoutRequestResponse_WithRequestEmptyResponse_GenOrdinal: {
+      auto result = ::fidl::DecodeAs<WithRequestEmptyResponseResponse>(msg);
+      if (result.status != ZX_OK) {
+        context->OnError();
+        return result.status;
+      }
+      static_cast<WithRequestEmptyResponseResponseContext*>(context)->OnReply();
+      break;
+    }
+    case kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal:
+    case kWithAndWithoutRequestResponse_WithRequestWithResponse_GenOrdinal: {
+      auto result = ::fidl::DecodeAs<WithRequestWithResponseResponse>(msg);
+      if (result.status != ZX_OK) {
+        context->OnError();
+        return result.status;
+      }
+      static_cast<WithRequestWithResponseResponseContext*>(context)->OnReply(
+          std::move(result.message));
+      break;
+    }
+    case kWithAndWithoutRequestResponse_OnEmptyResponse_Ordinal:
+    case kWithAndWithoutRequestResponse_OnEmptyResponse_GenOrdinal: {
+      auto result = ::fidl::DecodeAs<OnEmptyResponseResponse>(msg);
+      if (result.status != ZX_OK) {
+        return result.status;
+      }
+      if (!handlers_.on_empty_response) return ZX_ERR_NOT_SUPPORTED;
+      handlers_.on_empty_response();
+      break;
+    }
+    case kWithAndWithoutRequestResponse_OnWithResponse_Ordinal:
+    case kWithAndWithoutRequestResponse_OnWithResponse_GenOrdinal: {
+      auto result = ::fidl::DecodeAs<OnWithResponseResponse>(msg);
+      if (result.status != ZX_OK) {
+        return result.status;
+      }
+      if (auto* managed = std::get_if<0>(&handlers_.on_with_response)) {
+        if (!(*managed)) return ZX_ERR_NOT_SUPPORTED;
+        auto message = result.message.message();
+        (*managed)(std::move(message->ret));
+      } else {
+        std::get<1>(handlers_.on_with_response)(std::move(result.message));
+      }
+      break;
+    }
+    case kFidlOrdinalEpitaph:
+      if (context) return ZX_ERR_INVALID_ARGS;
+      ::fidl::internal::ClientBase::Close(
+          reinterpret_cast<fidl_epitaph_t*>(hdr)->error);
+      break;
+    default:
+      zx_handle_close_many(msg->handles, msg->num_handles);
+      if (context) context->OnError();
+      return ZX_ERR_NOT_SUPPORTED;
+  }
+  return ZX_OK;
 }
 
 zx_status_t WithAndWithoutRequestResponse::SyncClient::HandleEvents(
@@ -1686,9 +2395,10 @@ zx_status_t WithAndWithoutRequestResponse::SendOnWithResponseEvent(
 void WithAndWithoutRequestResponse::SetTransactionHeaderFor::
     NoRequestNoResponseRequest(
         const ::fidl::DecodedMessage<
-            WithAndWithoutRequestResponse::NoRequestNoResponseRequest>& _msg) {
+            WithAndWithoutRequestResponse::NoRequestNoResponseRequest>& _msg,
+        zx_txid_t _txid) {
   fidl_init_txn_header(
-      &_msg.message()->_hdr, 0,
+      &_msg.message()->_hdr, _txid,
       kWithAndWithoutRequestResponse_NoRequestNoResponse_GenOrdinal);
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
@@ -1696,10 +2406,10 @@ void WithAndWithoutRequestResponse::SetTransactionHeaderFor::
 void WithAndWithoutRequestResponse::SetTransactionHeaderFor::
     NoRequestEmptyResponseRequest(
         const ::fidl::DecodedMessage<
-            WithAndWithoutRequestResponse::NoRequestEmptyResponseRequest>&
-            _msg) {
+            WithAndWithoutRequestResponse::NoRequestEmptyResponseRequest>& _msg,
+        zx_txid_t _txid) {
   fidl_init_txn_header(
-      &_msg.message()->_hdr, 0,
+      &_msg.message()->_hdr, _txid,
       kWithAndWithoutRequestResponse_NoRequestEmptyResponse_GenOrdinal);
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
@@ -1717,10 +2427,10 @@ void WithAndWithoutRequestResponse::SetTransactionHeaderFor::
 void WithAndWithoutRequestResponse::SetTransactionHeaderFor::
     NoRequestWithResponseRequest(
         const ::fidl::DecodedMessage<
-            WithAndWithoutRequestResponse::NoRequestWithResponseRequest>&
-            _msg) {
+            WithAndWithoutRequestResponse::NoRequestWithResponseRequest>& _msg,
+        zx_txid_t _txid) {
   fidl_init_txn_header(
-      &_msg.message()->_hdr, 0,
+      &_msg.message()->_hdr, _txid,
       kWithAndWithoutRequestResponse_NoRequestWithResponse_GenOrdinal);
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
@@ -1738,10 +2448,10 @@ void WithAndWithoutRequestResponse::SetTransactionHeaderFor::
 void WithAndWithoutRequestResponse::SetTransactionHeaderFor::
     WithRequestNoResponseRequest(
         const ::fidl::DecodedMessage<
-            WithAndWithoutRequestResponse::WithRequestNoResponseRequest>&
-            _msg) {
+            WithAndWithoutRequestResponse::WithRequestNoResponseRequest>& _msg,
+        zx_txid_t _txid) {
   fidl_init_txn_header(
-      &_msg.message()->_hdr, 0,
+      &_msg.message()->_hdr, _txid,
       kWithAndWithoutRequestResponse_WithRequestNoResponse_GenOrdinal);
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
@@ -1750,9 +2460,10 @@ void WithAndWithoutRequestResponse::SetTransactionHeaderFor::
     WithRequestEmptyResponseRequest(
         const ::fidl::DecodedMessage<
             WithAndWithoutRequestResponse::WithRequestEmptyResponseRequest>&
-            _msg) {
+            _msg,
+        zx_txid_t _txid) {
   fidl_init_txn_header(
-      &_msg.message()->_hdr, 0,
+      &_msg.message()->_hdr, _txid,
       kWithAndWithoutRequestResponse_WithRequestEmptyResponse_GenOrdinal);
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
@@ -1771,9 +2482,10 @@ void WithAndWithoutRequestResponse::SetTransactionHeaderFor::
     WithRequestWithResponseRequest(
         const ::fidl::DecodedMessage<
             WithAndWithoutRequestResponse::WithRequestWithResponseRequest>&
-            _msg) {
+            _msg,
+        zx_txid_t _txid) {
   fidl_init_txn_header(
-      &_msg.message()->_hdr, 0,
+      &_msg.message()->_hdr, _txid,
       kWithAndWithoutRequestResponse_WithRequestWithResponse_GenOrdinal);
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
@@ -2091,6 +2803,325 @@ WithErrorSyntax::InPlace::ErrorAsEnum(::zx::unowned_channel _client_end,
   return ::fidl::Decode(std::move(_call_result.message));
 }
 
+WithErrorSyntax::ResultOf::ResponseAsStruct
+WithErrorSyntax::ClientImpl::ResponseAsStruct_Sync() {
+  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
+    return ResultOf::ResponseAsStruct(_binding->channel());
+  }
+  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+}
+
+WithErrorSyntax::UnownedResultOf::ResponseAsStruct
+WithErrorSyntax::ClientImpl::ResponseAsStruct_Sync(
+    ::fidl::BytePart _response_buffer) {
+  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
+    return UnownedResultOf::ResponseAsStruct(_binding->channel(),
+                                             std::move(_response_buffer));
+  }
+  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+}
+
+::fidl::StatusAndError WithErrorSyntax::ClientImpl::ResponseAsStruct(
+    ::fit::callback<void(
+        ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Result result)>
+        _cb) {
+  class ManagedResponseContext : public ResponseAsStructResponseContext {
+   public:
+    ManagedResponseContext(
+        ::fit::callback<
+            void(::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Result
+                     result)>
+            cb)
+        : cb_(std::move(cb)) {}
+
+    void OnReply(
+        ::fidl::DecodedMessage<ResponseAsStructResponse> msg) override {
+      auto message = msg.message();
+      cb_(std::move(message->result));
+      delete this;
+    }
+
+    void OnError() override { delete this; }
+
+    ::fit::callback<void(
+        ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Result result)>
+        cb_;
+  };
+
+  auto* _context = new ManagedResponseContext(std::move(_cb));
+  auto status_and_error = ResponseAsStruct(_context);
+  if (!status_and_error.ok()) {
+    delete _context;
+  }
+  return status_and_error;
+}
+
+::fidl::StatusAndError WithErrorSyntax::ClientImpl::ResponseAsStruct(
+    ResponseAsStructResponseContext* _context) {
+  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(ResponseAsStructRequest)] = {};
+  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
+  memset(_request_buffer.data(), 0, ResponseAsStructRequest::PrimarySize);
+  _request_buffer.set_actual(sizeof(ResponseAsStructRequest));
+  ::fidl::DecodedMessage<ResponseAsStructRequest> _decoded_request(
+      std::move(_request_buffer));
+
+  ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
+  SetTransactionHeaderFor::ResponseAsStructRequest(_decoded_request,
+                                                   _context->Txid());
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    ::fidl::internal::ClientBase::ForgetAsyncTxn(_context);
+    return ::fidl::DecodeResult<ResponseAsStructResponse>::FromFailure(
+        std::move(_encode_request_result));
+  }
+
+  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
+    zx_status_t _write_status = ::fidl::Write(
+        _binding->channel(), std::move(_encode_request_result.message));
+    if (_write_status != ZX_OK) {
+      ::fidl::internal::ClientBase::ForgetAsyncTxn(_context);
+      return ::fidl::StatusAndError(_write_status, ::fidl::kErrorWriteFailed);
+    }
+    return ::fidl::StatusAndError(ZX_OK, nullptr);
+  }
+  ::fidl::internal::ClientBase::ForgetAsyncTxn(_context);
+  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+}
+
+WithErrorSyntax::ResultOf::ErrorAsPrimitive
+WithErrorSyntax::ClientImpl::ErrorAsPrimitive_Sync() {
+  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
+    return ResultOf::ErrorAsPrimitive(_binding->channel());
+  }
+  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+}
+
+WithErrorSyntax::UnownedResultOf::ErrorAsPrimitive
+WithErrorSyntax::ClientImpl::ErrorAsPrimitive_Sync(
+    ::fidl::BytePart _response_buffer) {
+  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
+    return UnownedResultOf::ErrorAsPrimitive(_binding->channel(),
+                                             std::move(_response_buffer));
+  }
+  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+}
+
+::fidl::StatusAndError WithErrorSyntax::ClientImpl::ErrorAsPrimitive(
+    ::fit::callback<void(
+        ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Result result)>
+        _cb) {
+  class ManagedResponseContext : public ErrorAsPrimitiveResponseContext {
+   public:
+    ManagedResponseContext(
+        ::fit::callback<
+            void(::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Result
+                     result)>
+            cb)
+        : cb_(std::move(cb)) {}
+
+    void OnReply(
+        ::fidl::DecodedMessage<ErrorAsPrimitiveResponse> msg) override {
+      auto message = msg.message();
+      cb_(std::move(message->result));
+      delete this;
+    }
+
+    void OnError() override { delete this; }
+
+    ::fit::callback<void(
+        ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Result result)>
+        cb_;
+  };
+
+  auto* _context = new ManagedResponseContext(std::move(_cb));
+  auto status_and_error = ErrorAsPrimitive(_context);
+  if (!status_and_error.ok()) {
+    delete _context;
+  }
+  return status_and_error;
+}
+
+::fidl::StatusAndError WithErrorSyntax::ClientImpl::ErrorAsPrimitive(
+    ErrorAsPrimitiveResponseContext* _context) {
+  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(ErrorAsPrimitiveRequest)] = {};
+  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
+  memset(_request_buffer.data(), 0, ErrorAsPrimitiveRequest::PrimarySize);
+  _request_buffer.set_actual(sizeof(ErrorAsPrimitiveRequest));
+  ::fidl::DecodedMessage<ErrorAsPrimitiveRequest> _decoded_request(
+      std::move(_request_buffer));
+
+  ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
+  SetTransactionHeaderFor::ErrorAsPrimitiveRequest(_decoded_request,
+                                                   _context->Txid());
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    ::fidl::internal::ClientBase::ForgetAsyncTxn(_context);
+    return ::fidl::DecodeResult<ErrorAsPrimitiveResponse>::FromFailure(
+        std::move(_encode_request_result));
+  }
+
+  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
+    zx_status_t _write_status = ::fidl::Write(
+        _binding->channel(), std::move(_encode_request_result.message));
+    if (_write_status != ZX_OK) {
+      ::fidl::internal::ClientBase::ForgetAsyncTxn(_context);
+      return ::fidl::StatusAndError(_write_status, ::fidl::kErrorWriteFailed);
+    }
+    return ::fidl::StatusAndError(ZX_OK, nullptr);
+  }
+  ::fidl::internal::ClientBase::ForgetAsyncTxn(_context);
+  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+}
+
+WithErrorSyntax::ResultOf::ErrorAsEnum
+WithErrorSyntax::ClientImpl::ErrorAsEnum_Sync() {
+  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
+    return ResultOf::ErrorAsEnum(_binding->channel());
+  }
+  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+}
+
+WithErrorSyntax::UnownedResultOf::ErrorAsEnum
+WithErrorSyntax::ClientImpl::ErrorAsEnum_Sync(
+    ::fidl::BytePart _response_buffer) {
+  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
+    return UnownedResultOf::ErrorAsEnum(_binding->channel(),
+                                        std::move(_response_buffer));
+  }
+  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+}
+
+::fidl::StatusAndError WithErrorSyntax::ClientImpl::ErrorAsEnum(
+    ::fit::callback<
+        void(::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Result result)>
+        _cb) {
+  class ManagedResponseContext : public ErrorAsEnumResponseContext {
+   public:
+    ManagedResponseContext(
+        ::fit::callback<void(
+            ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Result result)>
+            cb)
+        : cb_(std::move(cb)) {}
+
+    void OnReply(::fidl::DecodedMessage<ErrorAsEnumResponse> msg) override {
+      auto message = msg.message();
+      cb_(std::move(message->result));
+      delete this;
+    }
+
+    void OnError() override { delete this; }
+
+    ::fit::callback<void(
+        ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Result result)>
+        cb_;
+  };
+
+  auto* _context = new ManagedResponseContext(std::move(_cb));
+  auto status_and_error = ErrorAsEnum(_context);
+  if (!status_and_error.ok()) {
+    delete _context;
+  }
+  return status_and_error;
+}
+
+::fidl::StatusAndError WithErrorSyntax::ClientImpl::ErrorAsEnum(
+    ErrorAsEnumResponseContext* _context) {
+  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(ErrorAsEnumRequest)] = {};
+  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
+  memset(_request_buffer.data(), 0, ErrorAsEnumRequest::PrimarySize);
+  _request_buffer.set_actual(sizeof(ErrorAsEnumRequest));
+  ::fidl::DecodedMessage<ErrorAsEnumRequest> _decoded_request(
+      std::move(_request_buffer));
+
+  ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
+  SetTransactionHeaderFor::ErrorAsEnumRequest(_decoded_request,
+                                              _context->Txid());
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    ::fidl::internal::ClientBase::ForgetAsyncTxn(_context);
+    return ::fidl::DecodeResult<ErrorAsEnumResponse>::FromFailure(
+        std::move(_encode_request_result));
+  }
+
+  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
+    zx_status_t _write_status = ::fidl::Write(
+        _binding->channel(), std::move(_encode_request_result.message));
+    if (_write_status != ZX_OK) {
+      ::fidl::internal::ClientBase::ForgetAsyncTxn(_context);
+      return ::fidl::StatusAndError(_write_status, ::fidl::kErrorWriteFailed);
+    }
+    return ::fidl::StatusAndError(ZX_OK, nullptr);
+  }
+  ::fidl::internal::ClientBase::ForgetAsyncTxn(_context);
+  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+}
+
+zx_status_t WithErrorSyntax::ClientImpl::Dispatch(
+    fidl_msg_t* msg, ::fidl::internal::ResponseContext* context) {
+  fidl_message_header_t* hdr =
+      reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+  switch (hdr->ordinal) {
+    case kWithErrorSyntax_ResponseAsStruct_Ordinal:
+    case kWithErrorSyntax_ResponseAsStruct_GenOrdinal: {
+      constexpr uint32_t kTransformerDestSize =
+          ::fidl::internal::ClampedMessageSize<
+              ResponseAsStructResponse, ::fidl::MessageDirection::kReceiving>();
+      ::fidl::internal::ByteStorage<kTransformerDestSize>
+          transformer_dest_storage(::fidl::internal::DelayAllocation);
+      auto result = ::fidl::DecodeAs<ResponseAsStructResponse>(msg);
+      if (result.status != ZX_OK) {
+        context->OnError();
+        return result.status;
+      }
+      static_cast<ResponseAsStructResponseContext*>(context)->OnReply(
+          std::move(result.message));
+      break;
+    }
+    case kWithErrorSyntax_ErrorAsPrimitive_Ordinal:
+    case kWithErrorSyntax_ErrorAsPrimitive_GenOrdinal: {
+      constexpr uint32_t kTransformerDestSize =
+          ::fidl::internal::ClampedMessageSize<
+              ErrorAsPrimitiveResponse, ::fidl::MessageDirection::kReceiving>();
+      ::fidl::internal::ByteStorage<kTransformerDestSize>
+          transformer_dest_storage(::fidl::internal::DelayAllocation);
+      auto result = ::fidl::DecodeAs<ErrorAsPrimitiveResponse>(msg);
+      if (result.status != ZX_OK) {
+        context->OnError();
+        return result.status;
+      }
+      static_cast<ErrorAsPrimitiveResponseContext*>(context)->OnReply(
+          std::move(result.message));
+      break;
+    }
+    case kWithErrorSyntax_ErrorAsEnum_Ordinal:
+    case kWithErrorSyntax_ErrorAsEnum_GenOrdinal: {
+      constexpr uint32_t kTransformerDestSize =
+          ::fidl::internal::ClampedMessageSize<
+              ErrorAsEnumResponse, ::fidl::MessageDirection::kReceiving>();
+      ::fidl::internal::ByteStorage<kTransformerDestSize>
+          transformer_dest_storage(::fidl::internal::DelayAllocation);
+      auto result = ::fidl::DecodeAs<ErrorAsEnumResponse>(msg);
+      if (result.status != ZX_OK) {
+        context->OnError();
+        return result.status;
+      }
+      static_cast<ErrorAsEnumResponseContext*>(context)->OnReply(
+          std::move(result.message));
+      break;
+    }
+    case kFidlOrdinalEpitaph:
+      if (context) return ZX_ERR_INVALID_ARGS;
+      ::fidl::internal::ClientBase::Close(
+          reinterpret_cast<fidl_epitaph_t*>(hdr)->error);
+      break;
+    default:
+      zx_handle_close_many(msg->handles, msg->num_handles);
+      if (context) context->OnError();
+      return ZX_ERR_NOT_SUPPORTED;
+  }
+  return ZX_OK;
+}
+
 bool WithErrorSyntax::TryDispatch(Interface* impl, fidl_msg_t* msg,
                                   ::fidl::Transaction* txn) {
   if (msg->num_bytes < sizeof(fidl_message_header_t)) {
@@ -2362,8 +3393,9 @@ void WithErrorSyntax::Interface::ErrorAsEnumCompleterBase::Reply(
 
 void WithErrorSyntax::SetTransactionHeaderFor::ResponseAsStructRequest(
     const ::fidl::DecodedMessage<WithErrorSyntax::ResponseAsStructRequest>&
-        _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0,
+        _msg,
+    zx_txid_t _txid) {
+  fidl_init_txn_header(&_msg.message()->_hdr, _txid,
                        kWithErrorSyntax_ResponseAsStruct_GenOrdinal);
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
@@ -2377,8 +3409,9 @@ void WithErrorSyntax::SetTransactionHeaderFor::ResponseAsStructResponse(
 
 void WithErrorSyntax::SetTransactionHeaderFor::ErrorAsPrimitiveRequest(
     const ::fidl::DecodedMessage<WithErrorSyntax::ErrorAsPrimitiveRequest>&
-        _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0,
+        _msg,
+    zx_txid_t _txid) {
+  fidl_init_txn_header(&_msg.message()->_hdr, _txid,
                        kWithErrorSyntax_ErrorAsPrimitive_GenOrdinal);
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
@@ -2391,8 +3424,9 @@ void WithErrorSyntax::SetTransactionHeaderFor::ErrorAsPrimitiveResponse(
 }
 
 void WithErrorSyntax::SetTransactionHeaderFor::ErrorAsEnumRequest(
-    const ::fidl::DecodedMessage<WithErrorSyntax::ErrorAsEnumRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0,
+    const ::fidl::DecodedMessage<WithErrorSyntax::ErrorAsEnumRequest>& _msg,
+    zx_txid_t _txid) {
+  fidl_init_txn_header(&_msg.message()->_hdr, _txid,
                        kWithErrorSyntax_ErrorAsEnum_GenOrdinal);
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }

@@ -5,9 +5,11 @@
 #include <lib/fidl/internal.h>
 #include <lib/fidl/llcpp/array.h>
 #include <lib/fidl/llcpp/buffer_allocator.h>
+#include <lib/fidl/llcpp/client.h>
 #include <lib/fidl/llcpp/coding.h>
 #include <lib/fidl/llcpp/connect_service.h>
 #include <lib/fidl/llcpp/envelope.h>
+#include <lib/fidl/llcpp/errors.h>
 #include <lib/fidl/llcpp/memory.h>
 #include <lib/fidl/llcpp/service_handler_interface.h>
 #include <lib/fidl/llcpp/string_view.h>
@@ -20,6 +22,8 @@
 #include <lib/fit/function.h>
 #include <lib/zx/channel.h>
 #include <zircon/fidl.h>
+
+#include <variant>
 
 namespace llcpp {
 
@@ -55,6 +59,8 @@ class SecondProtocol final {
       ~MethodOnSecond_Impl() = default;
       MethodOnSecond_Impl(MethodOnSecond_Impl&& other) = default;
       MethodOnSecond_Impl& operator=(MethodOnSecond_Impl&& other) = default;
+      MethodOnSecond_Impl(::fidl::internal::StatusAndError&& other)
+          : Super(std::move(other)) {}
       using Super::error;
       using Super::ok;
       using Super::status;
@@ -78,6 +84,8 @@ class SecondProtocol final {
       ~MethodOnSecond_Impl() = default;
       MethodOnSecond_Impl(MethodOnSecond_Impl&& other) = default;
       MethodOnSecond_Impl& operator=(MethodOnSecond_Impl&& other) = default;
+      MethodOnSecond_Impl(::fidl::internal::StatusAndError&& other)
+          : Super(std::move(other)) {}
       using Super::error;
       using Super::ok;
       using Super::status;
@@ -130,6 +138,9 @@ class SecondProtocol final {
         ::zx::unowned_channel _client_end);
   };
 
+  struct AsyncEventHandlers;
+  class ClientImpl;
+
   // Pure-virtual interface to be implemented by a server.
   class Interface {
    public:
@@ -174,7 +185,8 @@ class SecondProtocol final {
    public:
     static void MethodOnSecondRequest(
         const ::fidl::DecodedMessage<SecondProtocol::MethodOnSecondRequest>&
-            _msg);
+            _msg,
+        zx_txid_t _txid = 0);
   };
 };
 
@@ -201,6 +213,8 @@ class FirstProtocol final {
       ~MethodOnFirst_Impl() = default;
       MethodOnFirst_Impl(MethodOnFirst_Impl&& other) = default;
       MethodOnFirst_Impl& operator=(MethodOnFirst_Impl&& other) = default;
+      MethodOnFirst_Impl(::fidl::internal::StatusAndError&& other)
+          : Super(std::move(other)) {}
       using Super::error;
       using Super::ok;
       using Super::status;
@@ -224,6 +238,8 @@ class FirstProtocol final {
       ~MethodOnFirst_Impl() = default;
       MethodOnFirst_Impl(MethodOnFirst_Impl&& other) = default;
       MethodOnFirst_Impl& operator=(MethodOnFirst_Impl&& other) = default;
+      MethodOnFirst_Impl(::fidl::internal::StatusAndError&& other)
+          : Super(std::move(other)) {}
       using Super::error;
       using Super::ok;
       using Super::status;
@@ -276,6 +292,9 @@ class FirstProtocol final {
         ::zx::unowned_channel _client_end);
   };
 
+  struct AsyncEventHandlers;
+  class ClientImpl;
+
   // Pure-virtual interface to be implemented by a server.
   class Interface {
    public:
@@ -319,8 +338,8 @@ class FirstProtocol final {
 
    public:
     static void MethodOnFirstRequest(
-        const ::fidl::DecodedMessage<FirstProtocol::MethodOnFirstRequest>&
-            _msg);
+        const ::fidl::DecodedMessage<FirstProtocol::MethodOnFirstRequest>& _msg,
+        zx_txid_t _txid = 0);
   };
 };
 
@@ -628,3 +647,60 @@ class MultiHeterogeneousMemberService final {
 }  // namespace llcpp
 
 namespace fidl {}  // namespace fidl
+
+namespace llcpp {
+
+namespace test {
+namespace name {
+
+struct SecondProtocol::AsyncEventHandlers {};
+
+class SecondProtocol::ClientImpl final : private ::fidl::internal::ClientBase {
+ public:
+  // Allocates 16 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  ::fidl::StatusAndError MethodOnSecond();
+
+ private:
+  friend class ::fidl::Client<SecondProtocol>;
+
+  ClientImpl(::zx::channel client_end, async_dispatcher_t* dispatcher,
+             ::fidl::internal::TypeErasedOnUnboundFn on_unbound,
+             AsyncEventHandlers handlers)
+      : ::fidl::internal::ClientBase(std::move(client_end), dispatcher,
+                                     std::move(on_unbound)),
+        handlers_(std::move(handlers)) {}
+
+  zx_status_t Dispatch(fidl_msg_t* msg,
+                       ::fidl::internal::ResponseContext* context) override;
+
+  AsyncEventHandlers handlers_;
+};
+
+struct FirstProtocol::AsyncEventHandlers {};
+
+class FirstProtocol::ClientImpl final : private ::fidl::internal::ClientBase {
+ public:
+  // Allocates 16 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  ::fidl::StatusAndError MethodOnFirst();
+
+ private:
+  friend class ::fidl::Client<FirstProtocol>;
+
+  ClientImpl(::zx::channel client_end, async_dispatcher_t* dispatcher,
+             ::fidl::internal::TypeErasedOnUnboundFn on_unbound,
+             AsyncEventHandlers handlers)
+      : ::fidl::internal::ClientBase(std::move(client_end), dispatcher,
+                                     std::move(on_unbound)),
+        handlers_(std::move(handlers)) {}
+
+  zx_status_t Dispatch(fidl_msg_t* msg,
+                       ::fidl::internal::ResponseContext* context) override;
+
+  AsyncEventHandlers handlers_;
+};
+
+}  // namespace name
+}  // namespace test
+}  // namespace llcpp

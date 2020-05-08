@@ -73,11 +73,47 @@ Interface::ResultOf::Method Interface::Call::Method(
   zx_status_t _write_status = ::fidl::Write(
       std::move(_client_end), std::move(_encode_request_result.message));
   if (_write_status != ZX_OK) {
-    return ::fidl::internal::StatusAndError(
-        _write_status, ::fidl::internal::kErrorWriteFailed);
+    return ::fidl::internal::StatusAndError(_write_status,
+                                            ::fidl::kErrorWriteFailed);
   } else {
     return ::fidl::internal::StatusAndError(ZX_OK, nullptr);
   }
+}
+
+::fidl::StatusAndError Interface::ClientImpl::Method() {
+  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
+    auto _res = ResultOf::Method(_binding->channel());
+    return ::fidl::StatusAndError(_res.status(), _res.error());
+  }
+  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+}
+
+zx_status_t Interface::ClientImpl::Dispatch(
+    fidl_msg_t* msg, ::fidl::internal::ResponseContext* context) {
+  fidl_message_header_t* hdr =
+      reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+  switch (hdr->ordinal) {
+    case kInterface_OnEvent_Ordinal:
+    case kInterface_OnEvent_GenOrdinal: {
+      auto result = ::fidl::DecodeAs<OnEventResponse>(msg);
+      if (result.status != ZX_OK) {
+        return result.status;
+      }
+      if (!handlers_.on_event) return ZX_ERR_NOT_SUPPORTED;
+      handlers_.on_event();
+      break;
+    }
+    case kFidlOrdinalEpitaph:
+      if (context) return ZX_ERR_INVALID_ARGS;
+      ::fidl::internal::ClientBase::Close(
+          reinterpret_cast<fidl_epitaph_t*>(hdr)->error);
+      break;
+    default:
+      zx_handle_close_many(msg->handles, msg->num_handles);
+      if (context) context->OnError();
+      return ZX_ERR_NOT_SUPPORTED;
+  }
+  return ZX_OK;
 }
 
 zx_status_t Interface::SyncClient::HandleEvents(
@@ -218,8 +254,10 @@ zx_status_t Interface::SendOnEventEvent(::zx::unowned_channel _chan) {
 }
 
 void Interface::SetTransactionHeaderFor::MethodRequest(
-    const ::fidl::DecodedMessage<Interface::MethodRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kInterface_Method_GenOrdinal);
+    const ::fidl::DecodedMessage<Interface::MethodRequest>& _msg,
+    zx_txid_t _txid) {
+  fidl_init_txn_header(&_msg.message()->_hdr, _txid,
+                       kInterface_Method_GenOrdinal);
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 

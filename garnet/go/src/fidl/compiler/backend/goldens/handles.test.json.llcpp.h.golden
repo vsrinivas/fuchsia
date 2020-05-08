@@ -5,9 +5,11 @@
 #include <lib/fidl/internal.h>
 #include <lib/fidl/llcpp/array.h>
 #include <lib/fidl/llcpp/buffer_allocator.h>
+#include <lib/fidl/llcpp/client.h>
 #include <lib/fidl/llcpp/coding.h>
 #include <lib/fidl/llcpp/connect_service.h>
 #include <lib/fidl/llcpp/envelope.h>
+#include <lib/fidl/llcpp/errors.h>
 #include <lib/fidl/llcpp/memory.h>
 #include <lib/fidl/llcpp/service_handler_interface.h>
 #include <lib/fidl/llcpp/string_view.h>
@@ -46,6 +48,8 @@
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
 #include <zircon/fidl.h>
+
+#include <variant>
 
 namespace llcpp {
 
@@ -186,6 +190,9 @@ class SomeProtocol final {
    public:
   };
 
+  struct AsyncEventHandlers;
+  class ClientImpl;
+
   // Helper functions to fill in the transaction header in a
   // |DecodedMessage<TransactionalMessage>|.
   class SetTransactionHeaderFor final {
@@ -275,3 +282,34 @@ static_assert(sizeof(::llcpp::fidl::test::handles::Handles) ==
               ::llcpp::fidl::test::handles::Handles::PrimarySize);
 
 }  // namespace fidl
+
+namespace llcpp {
+
+namespace fidl {
+namespace test {
+namespace handles {
+
+struct SomeProtocol::AsyncEventHandlers {};
+
+class SomeProtocol::ClientImpl final : private ::fidl::internal::ClientBase {
+ public:
+ private:
+  friend class ::fidl::Client<SomeProtocol>;
+
+  ClientImpl(::zx::channel client_end, async_dispatcher_t* dispatcher,
+             ::fidl::internal::TypeErasedOnUnboundFn on_unbound,
+             AsyncEventHandlers handlers)
+      : ::fidl::internal::ClientBase(std::move(client_end), dispatcher,
+                                     std::move(on_unbound)),
+        handlers_(std::move(handlers)) {}
+
+  zx_status_t Dispatch(fidl_msg_t* msg,
+                       ::fidl::internal::ResponseContext* context) override;
+
+  AsyncEventHandlers handlers_;
+};
+
+}  // namespace handles
+}  // namespace test
+}  // namespace fidl
+}  // namespace llcpp

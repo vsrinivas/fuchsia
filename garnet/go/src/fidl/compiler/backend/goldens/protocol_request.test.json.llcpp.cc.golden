@@ -222,7 +222,7 @@ Parent::UnownedResultOf::TakeChild_Impl::TakeChild_Impl(
     ::zx::channel c) {
   if (_request_buffer.capacity() < TakeChildRequest::PrimarySize) {
     Super::status_ = ZX_ERR_BUFFER_TOO_SMALL;
-    Super::error_ = ::fidl::internal::kErrorRequestBufferTooSmall;
+    Super::error_ = ::fidl::kErrorRequestBufferTooSmall;
     return;
   }
   memset(_request_buffer.data(), 0, TakeChildRequest::PrimarySize);
@@ -260,8 +260,8 @@ Parent::UnownedResultOf::TakeChild Parent::Call::TakeChild(
   zx_status_t _write_status = ::fidl::Write(
       std::move(_client_end), std::move(_encode_request_result.message));
   if (_write_status != ZX_OK) {
-    return ::fidl::internal::StatusAndError(
-        _write_status, ::fidl::internal::kErrorWriteFailed);
+    return ::fidl::internal::StatusAndError(_write_status,
+                                            ::fidl::kErrorWriteFailed);
   } else {
     return ::fidl::internal::StatusAndError(ZX_OK, nullptr);
   }
@@ -301,7 +301,7 @@ Parent::UnownedResultOf::TakeChildRequest_Impl::TakeChildRequest_Impl(
     ::zx::channel r) {
   if (_request_buffer.capacity() < TakeChildRequestRequest::PrimarySize) {
     Super::status_ = ZX_ERR_BUFFER_TOO_SMALL;
-    Super::error_ = ::fidl::internal::kErrorRequestBufferTooSmall;
+    Super::error_ = ::fidl::kErrorRequestBufferTooSmall;
     return;
   }
   memset(_request_buffer.data(), 0, TakeChildRequestRequest::PrimarySize);
@@ -341,11 +341,234 @@ Parent::UnownedResultOf::TakeChildRequest Parent::Call::TakeChildRequest(
   zx_status_t _write_status = ::fidl::Write(
       std::move(_client_end), std::move(_encode_request_result.message));
   if (_write_status != ZX_OK) {
-    return ::fidl::internal::StatusAndError(
-        _write_status, ::fidl::internal::kErrorWriteFailed);
+    return ::fidl::internal::StatusAndError(_write_status,
+                                            ::fidl::kErrorWriteFailed);
   } else {
     return ::fidl::internal::StatusAndError(ZX_OK, nullptr);
   }
+}
+
+Parent::ResultOf::GetChild Parent::ClientImpl::GetChild_Sync() {
+  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
+    return ResultOf::GetChild(_binding->channel());
+  }
+  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+}
+
+Parent::UnownedResultOf::GetChild Parent::ClientImpl::GetChild_Sync(
+    ::fidl::BytePart _response_buffer) {
+  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
+    return UnownedResultOf::GetChild(_binding->channel(),
+                                     std::move(_response_buffer));
+  }
+  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+}
+
+::fidl::StatusAndError Parent::ClientImpl::GetChild(
+    ::fit::callback<void(::zx::channel c)> _cb) {
+  class ManagedResponseContext : public GetChildResponseContext {
+   public:
+    ManagedResponseContext(::fit::callback<void(::zx::channel c)> cb)
+        : cb_(std::move(cb)) {}
+
+    void OnReply(::fidl::DecodedMessage<GetChildResponse> msg) override {
+      auto message = msg.message();
+      cb_(std::move(message->c));
+      delete this;
+    }
+
+    void OnError() override { delete this; }
+
+    ::fit::callback<void(::zx::channel c)> cb_;
+  };
+
+  auto* _context = new ManagedResponseContext(std::move(_cb));
+  auto status_and_error = GetChild(_context);
+  if (!status_and_error.ok()) {
+    delete _context;
+  }
+  return status_and_error;
+}
+
+::fidl::StatusAndError Parent::ClientImpl::GetChild(
+    GetChildResponseContext* _context) {
+  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetChildRequest)] = {};
+  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
+  memset(_request_buffer.data(), 0, GetChildRequest::PrimarySize);
+  _request_buffer.set_actual(sizeof(GetChildRequest));
+  ::fidl::DecodedMessage<GetChildRequest> _decoded_request(
+      std::move(_request_buffer));
+
+  ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
+  SetTransactionHeaderFor::GetChildRequest(_decoded_request, _context->Txid());
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    ::fidl::internal::ClientBase::ForgetAsyncTxn(_context);
+    return ::fidl::DecodeResult<GetChildResponse>::FromFailure(
+        std::move(_encode_request_result));
+  }
+
+  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
+    zx_status_t _write_status = ::fidl::Write(
+        _binding->channel(), std::move(_encode_request_result.message));
+    if (_write_status != ZX_OK) {
+      ::fidl::internal::ClientBase::ForgetAsyncTxn(_context);
+      return ::fidl::StatusAndError(_write_status, ::fidl::kErrorWriteFailed);
+    }
+    return ::fidl::StatusAndError(ZX_OK, nullptr);
+  }
+  ::fidl::internal::ClientBase::ForgetAsyncTxn(_context);
+  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+}
+
+Parent::ResultOf::GetChildRequest Parent::ClientImpl::GetChildRequest_Sync() {
+  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
+    return ResultOf::GetChildRequest(_binding->channel());
+  }
+  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+}
+
+Parent::UnownedResultOf::GetChildRequest
+Parent::ClientImpl::GetChildRequest_Sync(::fidl::BytePart _response_buffer) {
+  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
+    return UnownedResultOf::GetChildRequest(_binding->channel(),
+                                            std::move(_response_buffer));
+  }
+  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+}
+
+::fidl::StatusAndError Parent::ClientImpl::GetChildRequest(
+    ::fit::callback<void(::zx::channel r)> _cb) {
+  class ManagedResponseContext : public GetChildRequestResponseContext {
+   public:
+    ManagedResponseContext(::fit::callback<void(::zx::channel r)> cb)
+        : cb_(std::move(cb)) {}
+
+    void OnReply(::fidl::DecodedMessage<GetChildRequestResponse> msg) override {
+      auto message = msg.message();
+      cb_(std::move(message->r));
+      delete this;
+    }
+
+    void OnError() override { delete this; }
+
+    ::fit::callback<void(::zx::channel r)> cb_;
+  };
+
+  auto* _context = new ManagedResponseContext(std::move(_cb));
+  auto status_and_error = GetChildRequest(_context);
+  if (!status_and_error.ok()) {
+    delete _context;
+  }
+  return status_and_error;
+}
+
+::fidl::StatusAndError Parent::ClientImpl::GetChildRequest(
+    GetChildRequestResponseContext* _context) {
+  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetChildRequestRequest)] = {};
+  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
+  memset(_request_buffer.data(), 0, GetChildRequestRequest::PrimarySize);
+  _request_buffer.set_actual(sizeof(GetChildRequestRequest));
+  ::fidl::DecodedMessage<GetChildRequestRequest> _decoded_request(
+      std::move(_request_buffer));
+
+  ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
+  SetTransactionHeaderFor::GetChildRequestRequest(_decoded_request,
+                                                  _context->Txid());
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    ::fidl::internal::ClientBase::ForgetAsyncTxn(_context);
+    return ::fidl::DecodeResult<GetChildRequestResponse>::FromFailure(
+        std::move(_encode_request_result));
+  }
+
+  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
+    zx_status_t _write_status = ::fidl::Write(
+        _binding->channel(), std::move(_encode_request_result.message));
+    if (_write_status != ZX_OK) {
+      ::fidl::internal::ClientBase::ForgetAsyncTxn(_context);
+      return ::fidl::StatusAndError(_write_status, ::fidl::kErrorWriteFailed);
+    }
+    return ::fidl::StatusAndError(ZX_OK, nullptr);
+  }
+  ::fidl::internal::ClientBase::ForgetAsyncTxn(_context);
+  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+}
+
+::fidl::StatusAndError Parent::ClientImpl::TakeChild(::zx::channel c) {
+  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
+    auto _res = ResultOf::TakeChild(_binding->channel(), std::move(c));
+    return ::fidl::StatusAndError(_res.status(), _res.error());
+  }
+  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+}
+
+::fidl::StatusAndError Parent::ClientImpl::TakeChild(
+    ::fidl::BytePart _request_buffer, ::zx::channel c) {
+  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
+    auto _res = UnownedResultOf::TakeChild(
+        _binding->channel(), std::move(_request_buffer), std::move(c));
+    return ::fidl::StatusAndError(_res.status(), _res.error());
+  }
+  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+}
+
+::fidl::StatusAndError Parent::ClientImpl::TakeChildRequest(::zx::channel r) {
+  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
+    auto _res = ResultOf::TakeChildRequest(_binding->channel(), std::move(r));
+    return ::fidl::StatusAndError(_res.status(), _res.error());
+  }
+  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+}
+
+::fidl::StatusAndError Parent::ClientImpl::TakeChildRequest(
+    ::fidl::BytePart _request_buffer, ::zx::channel r) {
+  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
+    auto _res = UnownedResultOf::TakeChildRequest(
+        _binding->channel(), std::move(_request_buffer), std::move(r));
+    return ::fidl::StatusAndError(_res.status(), _res.error());
+  }
+  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+}
+
+zx_status_t Parent::ClientImpl::Dispatch(
+    fidl_msg_t* msg, ::fidl::internal::ResponseContext* context) {
+  fidl_message_header_t* hdr =
+      reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+  switch (hdr->ordinal) {
+    case kParent_GetChild_Ordinal:
+    case kParent_GetChild_GenOrdinal: {
+      auto result = ::fidl::DecodeAs<GetChildResponse>(msg);
+      if (result.status != ZX_OK) {
+        context->OnError();
+        return result.status;
+      }
+      static_cast<GetChildResponseContext*>(context)->OnReply(
+          std::move(result.message));
+      break;
+    }
+    case kParent_GetChildRequest_Ordinal:
+    case kParent_GetChildRequest_GenOrdinal: {
+      auto result = ::fidl::DecodeAs<GetChildRequestResponse>(msg);
+      if (result.status != ZX_OK) {
+        context->OnError();
+        return result.status;
+      }
+      static_cast<GetChildRequestResponseContext*>(context)->OnReply(
+          std::move(result.message));
+      break;
+    }
+    case kFidlOrdinalEpitaph:
+      if (context) return ZX_ERR_INVALID_ARGS;
+      ::fidl::internal::ClientBase::Close(
+          reinterpret_cast<fidl_epitaph_t*>(hdr)->error);
+      break;
+    default:
+      zx_handle_close_many(msg->handles, msg->num_handles);
+      if (context) context->OnError();
+      return ZX_ERR_NOT_SUPPORTED;
+  }
+  return ZX_OK;
 }
 
 bool Parent::TryDispatch(Interface* impl, fidl_msg_t* msg,
@@ -504,8 +727,10 @@ void Parent::Interface::GetChildRequestCompleterBase::Reply(
 }
 
 void Parent::SetTransactionHeaderFor::GetChildRequest(
-    const ::fidl::DecodedMessage<Parent::GetChildRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kParent_GetChild_GenOrdinal);
+    const ::fidl::DecodedMessage<Parent::GetChildRequest>& _msg,
+    zx_txid_t _txid) {
+  fidl_init_txn_header(&_msg.message()->_hdr, _txid,
+                       kParent_GetChild_GenOrdinal);
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Parent::SetTransactionHeaderFor::GetChildResponse(
@@ -515,8 +740,9 @@ void Parent::SetTransactionHeaderFor::GetChildResponse(
 }
 
 void Parent::SetTransactionHeaderFor::GetChildRequestRequest(
-    const ::fidl::DecodedMessage<Parent::GetChildRequestRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0,
+    const ::fidl::DecodedMessage<Parent::GetChildRequestRequest>& _msg,
+    zx_txid_t _txid) {
+  fidl_init_txn_header(&_msg.message()->_hdr, _txid,
                        kParent_GetChildRequest_GenOrdinal);
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
@@ -528,19 +754,27 @@ void Parent::SetTransactionHeaderFor::GetChildRequestResponse(
 }
 
 void Parent::SetTransactionHeaderFor::TakeChildRequest(
-    const ::fidl::DecodedMessage<Parent::TakeChildRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kParent_TakeChild_GenOrdinal);
+    const ::fidl::DecodedMessage<Parent::TakeChildRequest>& _msg,
+    zx_txid_t _txid) {
+  fidl_init_txn_header(&_msg.message()->_hdr, _txid,
+                       kParent_TakeChild_GenOrdinal);
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Parent::SetTransactionHeaderFor::TakeChildRequestRequest(
-    const ::fidl::DecodedMessage<Parent::TakeChildRequestRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0,
+    const ::fidl::DecodedMessage<Parent::TakeChildRequestRequest>& _msg,
+    zx_txid_t _txid) {
+  fidl_init_txn_header(&_msg.message()->_hdr, _txid,
                        kParent_TakeChildRequest_GenOrdinal);
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 namespace {}  // namespace
+
+zx_status_t Child::ClientImpl::Dispatch(fidl_msg_t*,
+                                        ::fidl::internal::ResponseContext*) {
+  return ZX_OK;
+}
 
 }  // namespace name
 }  // namespace test

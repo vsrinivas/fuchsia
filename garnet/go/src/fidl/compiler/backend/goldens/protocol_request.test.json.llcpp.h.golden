@@ -5,9 +5,11 @@
 #include <lib/fidl/internal.h>
 #include <lib/fidl/llcpp/array.h>
 #include <lib/fidl/llcpp/buffer_allocator.h>
+#include <lib/fidl/llcpp/client.h>
 #include <lib/fidl/llcpp/coding.h>
 #include <lib/fidl/llcpp/connect_service.h>
 #include <lib/fidl/llcpp/envelope.h>
+#include <lib/fidl/llcpp/errors.h>
 #include <lib/fidl/llcpp/memory.h>
 #include <lib/fidl/llcpp/service_handler_interface.h>
 #include <lib/fidl/llcpp/string_view.h>
@@ -20,6 +22,8 @@
 #include <lib/fit/function.h>
 #include <lib/zx/channel.h>
 #include <zircon/fidl.h>
+
+#include <variant>
 
 namespace llcpp {
 
@@ -131,6 +135,8 @@ class Parent final {
       ~GetChild_Impl() = default;
       GetChild_Impl(GetChild_Impl&& other) = default;
       GetChild_Impl& operator=(GetChild_Impl&& other) = default;
+      GetChild_Impl(::fidl::internal::StatusAndError&& other)
+          : Super(std::move(other)) {}
       using Super::error;
       using Super::ok;
       using Super::status;
@@ -149,6 +155,8 @@ class Parent final {
       ~GetChildRequest_Impl() = default;
       GetChildRequest_Impl(GetChildRequest_Impl&& other) = default;
       GetChildRequest_Impl& operator=(GetChildRequest_Impl&& other) = default;
+      GetChildRequest_Impl(::fidl::internal::StatusAndError&& other)
+          : Super(std::move(other)) {}
       using Super::error;
       using Super::ok;
       using Super::status;
@@ -165,6 +173,8 @@ class Parent final {
       ~TakeChild_Impl() = default;
       TakeChild_Impl(TakeChild_Impl&& other) = default;
       TakeChild_Impl& operator=(TakeChild_Impl&& other) = default;
+      TakeChild_Impl(::fidl::internal::StatusAndError&& other)
+          : Super(std::move(other)) {}
       using Super::error;
       using Super::ok;
       using Super::status;
@@ -178,6 +188,8 @@ class Parent final {
       ~TakeChildRequest_Impl() = default;
       TakeChildRequest_Impl(TakeChildRequest_Impl&& other) = default;
       TakeChildRequest_Impl& operator=(TakeChildRequest_Impl&& other) = default;
+      TakeChildRequest_Impl(::fidl::internal::StatusAndError&& other)
+          : Super(std::move(other)) {}
       using Super::error;
       using Super::ok;
       using Super::status;
@@ -207,6 +219,8 @@ class Parent final {
       ~GetChild_Impl() = default;
       GetChild_Impl(GetChild_Impl&& other) = default;
       GetChild_Impl& operator=(GetChild_Impl&& other) = default;
+      GetChild_Impl(::fidl::internal::StatusAndError&& other)
+          : Super(std::move(other)) {}
       using Super::error;
       using Super::ok;
       using Super::status;
@@ -226,6 +240,8 @@ class Parent final {
       ~GetChildRequest_Impl() = default;
       GetChildRequest_Impl(GetChildRequest_Impl&& other) = default;
       GetChildRequest_Impl& operator=(GetChildRequest_Impl&& other) = default;
+      GetChildRequest_Impl(::fidl::internal::StatusAndError&& other)
+          : Super(std::move(other)) {}
       using Super::error;
       using Super::ok;
       using Super::status;
@@ -243,6 +259,8 @@ class Parent final {
       ~TakeChild_Impl() = default;
       TakeChild_Impl(TakeChild_Impl&& other) = default;
       TakeChild_Impl& operator=(TakeChild_Impl&& other) = default;
+      TakeChild_Impl(::fidl::internal::StatusAndError&& other)
+          : Super(std::move(other)) {}
       using Super::error;
       using Super::ok;
       using Super::status;
@@ -257,6 +275,8 @@ class Parent final {
       ~TakeChildRequest_Impl() = default;
       TakeChildRequest_Impl(TakeChildRequest_Impl&& other) = default;
       TakeChildRequest_Impl& operator=(TakeChildRequest_Impl&& other) = default;
+      TakeChildRequest_Impl(::fidl::internal::StatusAndError&& other)
+          : Super(std::move(other)) {}
       using Super::error;
       using Super::ok;
       using Super::status;
@@ -390,6 +410,11 @@ class Parent final {
         ::fidl::DecodedMessage<TakeChildRequestRequest> params);
   };
 
+  struct AsyncEventHandlers;
+  class GetChildResponseContext;
+  class GetChildRequestResponseContext;
+  class ClientImpl;
+
   // Pure-virtual interface to be implemented by a server.
   class Interface {
    public:
@@ -468,17 +493,21 @@ class Parent final {
 
    public:
     static void GetChildRequest(
-        const ::fidl::DecodedMessage<Parent::GetChildRequest>& _msg);
+        const ::fidl::DecodedMessage<Parent::GetChildRequest>& _msg,
+        zx_txid_t _txid = 0);
     static void GetChildResponse(
         const ::fidl::DecodedMessage<Parent::GetChildResponse>& _msg);
     static void GetChildRequestRequest(
-        const ::fidl::DecodedMessage<Parent::GetChildRequestRequest>& _msg);
+        const ::fidl::DecodedMessage<Parent::GetChildRequestRequest>& _msg,
+        zx_txid_t _txid = 0);
     static void GetChildRequestResponse(
         const ::fidl::DecodedMessage<Parent::GetChildRequestResponse>& _msg);
     static void TakeChildRequest(
-        const ::fidl::DecodedMessage<Parent::TakeChildRequest>& _msg);
+        const ::fidl::DecodedMessage<Parent::TakeChildRequest>& _msg,
+        zx_txid_t _txid = 0);
     static void TakeChildRequestRequest(
-        const ::fidl::DecodedMessage<Parent::TakeChildRequestRequest>& _msg);
+        const ::fidl::DecodedMessage<Parent::TakeChildRequestRequest>& _msg,
+        zx_txid_t _txid = 0);
   };
 };
 
@@ -535,6 +564,9 @@ class Child final {
 
    public:
   };
+
+  struct AsyncEventHandlers;
+  class ClientImpl;
 
   // Helper functions to fill in the transaction header in a
   // |DecodedMessage<TransactionalMessage>|.
@@ -596,3 +628,127 @@ static_assert(offsetof(::llcpp::test::name::Parent::TakeChildRequestRequest,
                        r) == 16);
 
 }  // namespace fidl
+
+namespace llcpp {
+
+namespace test {
+namespace name {
+
+struct Parent::AsyncEventHandlers {};
+
+class Parent::GetChildResponseContext
+    : public ::fidl::internal::ResponseContext {
+ public:
+  virtual ~GetChildResponseContext() = default;
+  virtual void OnReply(::fidl::DecodedMessage<GetChildResponse> msg) = 0;
+
+ protected:
+  GetChildResponseContext() = default;
+};
+
+class Parent::GetChildRequestResponseContext
+    : public ::fidl::internal::ResponseContext {
+ public:
+  virtual ~GetChildRequestResponseContext() = default;
+  virtual void OnReply(::fidl::DecodedMessage<GetChildRequestResponse> msg) = 0;
+
+ protected:
+  GetChildRequestResponseContext() = default;
+};
+
+class Parent::ClientImpl final : private ::fidl::internal::ClientBase {
+ public:
+  // Asynchronous variant of |Parent.GetChild()|. Allocates 16 bytes of request
+  // buffer on the stack. The callback is stored on the heap.
+  ::fidl::StatusAndError GetChild(::fit::callback<void(::zx::channel c)> _cb);
+
+  // Asynchronous variant of |Parent.GetChild()|. Caller provides the backing
+  // storage for FIDL message via request and response buffers. Ownership of
+  // _context is given unsafely to the binding until OnError() or OnReply() are
+  // called on it.
+  ::fidl::StatusAndError GetChild(GetChildResponseContext* _context);
+  // Synchronous variant of |Parent.GetChild()|. Allocates 40 bytes of message
+  // buffer on the stack. No heap allocation necessary.
+  ResultOf::GetChild GetChild_Sync();
+
+  // Synchronous variant of |Parent.GetChild()|. Caller provides the backing
+  // storage for FIDL message via request and response buffers.
+  UnownedResultOf::GetChild GetChild_Sync(::fidl::BytePart _response_buffer);
+
+  // Asynchronous variant of |Parent.GetChildRequest()|. Allocates 16 bytes of
+  // request buffer on the stack. The callback is stored on the heap.
+  ::fidl::StatusAndError GetChildRequest(
+      ::fit::callback<void(::zx::channel r)> _cb);
+
+  // Asynchronous variant of |Parent.GetChildRequest()|. Caller provides the
+  // backing storage for FIDL message via request and response buffers.
+  // Ownership of _context is given unsafely to the binding until OnError() or
+  // OnReply() are called on it.
+  ::fidl::StatusAndError GetChildRequest(
+      GetChildRequestResponseContext* _context);
+  // Synchronous variant of |Parent.GetChildRequest()|. Allocates 40 bytes of
+  // message buffer on the stack. No heap allocation necessary.
+  ResultOf::GetChildRequest GetChildRequest_Sync();
+
+  // Synchronous variant of |Parent.GetChildRequest()|. Caller provides the
+  // backing storage for FIDL message via request and response buffers.
+  UnownedResultOf::GetChildRequest GetChildRequest_Sync(
+      ::fidl::BytePart _response_buffer);
+
+  // Allocates 24 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  ::fidl::StatusAndError TakeChild(::zx::channel c);
+
+  // Caller provides the backing storage for FIDL message via request and
+  // response buffers.
+  ::fidl::StatusAndError TakeChild(::fidl::BytePart _request_buffer,
+                                   ::zx::channel c);
+
+  // Allocates 24 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  ::fidl::StatusAndError TakeChildRequest(::zx::channel r);
+
+  // Caller provides the backing storage for FIDL message via request and
+  // response buffers.
+  ::fidl::StatusAndError TakeChildRequest(::fidl::BytePart _request_buffer,
+                                          ::zx::channel r);
+
+ private:
+  friend class ::fidl::Client<Parent>;
+
+  ClientImpl(::zx::channel client_end, async_dispatcher_t* dispatcher,
+             ::fidl::internal::TypeErasedOnUnboundFn on_unbound,
+             AsyncEventHandlers handlers)
+      : ::fidl::internal::ClientBase(std::move(client_end), dispatcher,
+                                     std::move(on_unbound)),
+        handlers_(std::move(handlers)) {}
+
+  zx_status_t Dispatch(fidl_msg_t* msg,
+                       ::fidl::internal::ResponseContext* context) override;
+
+  AsyncEventHandlers handlers_;
+};
+
+struct Child::AsyncEventHandlers {};
+
+class Child::ClientImpl final : private ::fidl::internal::ClientBase {
+ public:
+ private:
+  friend class ::fidl::Client<Child>;
+
+  ClientImpl(::zx::channel client_end, async_dispatcher_t* dispatcher,
+             ::fidl::internal::TypeErasedOnUnboundFn on_unbound,
+             AsyncEventHandlers handlers)
+      : ::fidl::internal::ClientBase(std::move(client_end), dispatcher,
+                                     std::move(on_unbound)),
+        handlers_(std::move(handlers)) {}
+
+  zx_status_t Dispatch(fidl_msg_t* msg,
+                       ::fidl::internal::ResponseContext* context) override;
+
+  AsyncEventHandlers handlers_;
+};
+
+}  // namespace name
+}  // namespace test
+}  // namespace llcpp

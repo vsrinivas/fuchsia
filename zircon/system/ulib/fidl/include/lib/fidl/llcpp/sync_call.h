@@ -25,19 +25,26 @@ namespace internal {
 class StatusAndError : public FromFailureMixin<StatusAndError> {
  public:
   StatusAndError() = default;
-  StatusAndError(zx_status_t status, const char* error) : status_(status), error_(error) {}
+  StatusAndError(zx_status_t status, const char* error) : status_(status), error_(error) {
+    ZX_DEBUG_ASSERT(!(status_ == ZX_OK && error_));
+  }
 
   StatusAndError(const StatusAndError&) = delete;
   StatusAndError& operator=(const StatusAndError&) = delete;
+
+  StatusAndError(StatusAndError&&) = default;
+  StatusAndError& operator=(StatusAndError&&) = default;
+
+  template <typename SomeResult>
+  StatusAndError(SomeResult failure) : StatusAndError(failure.status, failure.error) {
+    ZX_DEBUG_ASSERT(status_ != ZX_OK);
+  }
 
   [[nodiscard]] zx_status_t status() const { return status_; }
   [[nodiscard]] const char* error() const { return error_; }
   [[nodiscard]] bool ok() const { return status_ == ZX_OK; }
 
  protected:
-  StatusAndError(StatusAndError&&) = default;
-  StatusAndError& operator=(StatusAndError&&) = default;
-
   // Initialize ourself from one of EncodeResult, DecodeResult, LinearizeResult, in the case of
   // error hence there is no message.
   template <typename SomeResult>
@@ -59,6 +66,8 @@ class SyncCallBase : private StatusAndError {
  public:
   SyncCallBase(const SyncCallBase&) = delete;
   SyncCallBase& operator=(const SyncCallBase&) = delete;
+
+  SyncCallBase(StatusAndError&& other) : StatusAndError(std::move(other)) {}
 
   using StatusAndError::error;
   using StatusAndError::ok;
@@ -155,6 +164,8 @@ class OwnedSyncCallBase : private SyncCallBase<ResponseType> {
     return *this;
   }
 
+  OwnedSyncCallBase(StatusAndError&& other) : SyncCallBase<ResponseType>(std::move(other)) {}
+
   using Super::error;
   using Super::ok;
   using Super::status;
@@ -232,6 +243,8 @@ template <typename ResponseType>
 using UnownedSyncCallBase = SyncCallBase<ResponseType>;
 
 }  // namespace internal
+
+using internal::StatusAndError;
 
 // An buffer holding data inline, sized specifically for |FidlType|.
 // It can be used to allocate request/response buffers when using the caller-allocate or in-place

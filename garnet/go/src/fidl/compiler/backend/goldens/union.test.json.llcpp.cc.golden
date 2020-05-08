@@ -353,6 +353,245 @@ TestProtocol::InPlace::FlexibleXUnionHenceResponseMustBeHeapAllocated(
   return ::fidl::Decode(std::move(_call_result.message));
 }
 
+TestProtocol::ResultOf::StrictXUnionHenceResponseMayBeStackAllocated
+TestProtocol::ClientImpl::StrictXUnionHenceResponseMayBeStackAllocated_Sync() {
+  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
+    return ResultOf::StrictXUnionHenceResponseMayBeStackAllocated(
+        _binding->channel());
+  }
+  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+}
+
+TestProtocol::UnownedResultOf::StrictXUnionHenceResponseMayBeStackAllocated
+TestProtocol::ClientImpl::StrictXUnionHenceResponseMayBeStackAllocated_Sync(
+    ::fidl::BytePart _response_buffer) {
+  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
+    return UnownedResultOf::StrictXUnionHenceResponseMayBeStackAllocated(
+        _binding->channel(), std::move(_response_buffer));
+  }
+  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+}
+
+::fidl::StatusAndError
+TestProtocol::ClientImpl::StrictXUnionHenceResponseMayBeStackAllocated(
+    ::fit::callback<void(::llcpp::fidl::test::json::StrictBoundedXUnion xu)>
+        _cb) {
+  class ManagedResponseContext
+      : public StrictXUnionHenceResponseMayBeStackAllocatedResponseContext {
+   public:
+    ManagedResponseContext(
+        ::fit::callback<void(::llcpp::fidl::test::json::StrictBoundedXUnion xu)>
+            cb)
+        : cb_(std::move(cb)) {}
+
+    void OnReply(::fidl::DecodedMessage<
+                 StrictXUnionHenceResponseMayBeStackAllocatedResponse>
+                     msg) override {
+      auto message = msg.message();
+      cb_(std::move(message->xu));
+      delete this;
+    }
+
+    void OnError() override { delete this; }
+
+    ::fit::callback<void(::llcpp::fidl::test::json::StrictBoundedXUnion xu)>
+        cb_;
+  };
+
+  auto* _context = new ManagedResponseContext(std::move(_cb));
+  auto status_and_error =
+      StrictXUnionHenceResponseMayBeStackAllocated(_context);
+  if (!status_and_error.ok()) {
+    delete _context;
+  }
+  return status_and_error;
+}
+
+::fidl::StatusAndError
+TestProtocol::ClientImpl::StrictXUnionHenceResponseMayBeStackAllocated(
+    StrictXUnionHenceResponseMayBeStackAllocatedResponseContext* _context) {
+  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(
+      StrictXUnionHenceResponseMayBeStackAllocatedRequest)] = {};
+  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
+  memset(_request_buffer.data(), 0,
+         StrictXUnionHenceResponseMayBeStackAllocatedRequest::PrimarySize);
+  _request_buffer.set_actual(
+      sizeof(StrictXUnionHenceResponseMayBeStackAllocatedRequest));
+  ::fidl::DecodedMessage<StrictXUnionHenceResponseMayBeStackAllocatedRequest>
+      _decoded_request(std::move(_request_buffer));
+
+  ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
+  SetTransactionHeaderFor::StrictXUnionHenceResponseMayBeStackAllocatedRequest(
+      _decoded_request, _context->Txid());
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    ::fidl::internal::ClientBase::ForgetAsyncTxn(_context);
+    return ::fidl::DecodeResult<
+        StrictXUnionHenceResponseMayBeStackAllocatedResponse>::
+        FromFailure(std::move(_encode_request_result));
+  }
+
+  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
+    zx_status_t _write_status = ::fidl::Write(
+        _binding->channel(), std::move(_encode_request_result.message));
+    if (_write_status != ZX_OK) {
+      ::fidl::internal::ClientBase::ForgetAsyncTxn(_context);
+      return ::fidl::StatusAndError(_write_status, ::fidl::kErrorWriteFailed);
+    }
+    return ::fidl::StatusAndError(ZX_OK, nullptr);
+  }
+  ::fidl::internal::ClientBase::ForgetAsyncTxn(_context);
+  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+}
+
+TestProtocol::ResultOf::FlexibleXUnionHenceResponseMustBeHeapAllocated
+TestProtocol::ClientImpl::
+    FlexibleXUnionHenceResponseMustBeHeapAllocated_Sync() {
+  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
+    return ResultOf::FlexibleXUnionHenceResponseMustBeHeapAllocated(
+        _binding->channel());
+  }
+  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+}
+
+TestProtocol::UnownedResultOf::FlexibleXUnionHenceResponseMustBeHeapAllocated
+TestProtocol::ClientImpl::FlexibleXUnionHenceResponseMustBeHeapAllocated_Sync(
+    ::fidl::BytePart _response_buffer) {
+  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
+    return UnownedResultOf::FlexibleXUnionHenceResponseMustBeHeapAllocated(
+        _binding->channel(), std::move(_response_buffer));
+  }
+  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+}
+
+::fidl::StatusAndError
+TestProtocol::ClientImpl::FlexibleXUnionHenceResponseMustBeHeapAllocated(
+    ::fit::callback<void(::llcpp::fidl::test::json::OlderSimpleUnion xu)> _cb) {
+  class ManagedResponseContext
+      : public FlexibleXUnionHenceResponseMustBeHeapAllocatedResponseContext {
+   public:
+    ManagedResponseContext(
+        ::fit::callback<void(::llcpp::fidl::test::json::OlderSimpleUnion xu)>
+            cb)
+        : cb_(std::move(cb)) {}
+
+    void OnReply(::fidl::DecodedMessage<
+                 FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse>
+                     msg) override {
+      auto message = msg.message();
+      cb_(std::move(message->xu));
+      delete this;
+    }
+
+    void OnError() override { delete this; }
+
+    ::fit::callback<void(::llcpp::fidl::test::json::OlderSimpleUnion xu)> cb_;
+  };
+
+  auto* _context = new ManagedResponseContext(std::move(_cb));
+  auto status_and_error =
+      FlexibleXUnionHenceResponseMustBeHeapAllocated(_context);
+  if (!status_and_error.ok()) {
+    delete _context;
+  }
+  return status_and_error;
+}
+
+::fidl::StatusAndError
+TestProtocol::ClientImpl::FlexibleXUnionHenceResponseMustBeHeapAllocated(
+    FlexibleXUnionHenceResponseMustBeHeapAllocatedResponseContext* _context) {
+  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(
+      FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest)] = {};
+  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
+  memset(_request_buffer.data(), 0,
+         FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest::PrimarySize);
+  _request_buffer.set_actual(
+      sizeof(FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest));
+  ::fidl::DecodedMessage<FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest>
+      _decoded_request(std::move(_request_buffer));
+
+  ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
+  SetTransactionHeaderFor::
+      FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest(_decoded_request,
+                                                            _context->Txid());
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    ::fidl::internal::ClientBase::ForgetAsyncTxn(_context);
+    return ::fidl::DecodeResult<
+        FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse>::
+        FromFailure(std::move(_encode_request_result));
+  }
+
+  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
+    zx_status_t _write_status = ::fidl::Write(
+        _binding->channel(), std::move(_encode_request_result.message));
+    if (_write_status != ZX_OK) {
+      ::fidl::internal::ClientBase::ForgetAsyncTxn(_context);
+      return ::fidl::StatusAndError(_write_status, ::fidl::kErrorWriteFailed);
+    }
+    return ::fidl::StatusAndError(ZX_OK, nullptr);
+  }
+  ::fidl::internal::ClientBase::ForgetAsyncTxn(_context);
+  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+}
+
+zx_status_t TestProtocol::ClientImpl::Dispatch(
+    fidl_msg_t* msg, ::fidl::internal::ResponseContext* context) {
+  fidl_message_header_t* hdr =
+      reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+  switch (hdr->ordinal) {
+    case kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal:
+    case kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_GenOrdinal: {
+      constexpr uint32_t kTransformerDestSize =
+          ::fidl::internal::ClampedMessageSize<
+              StrictXUnionHenceResponseMayBeStackAllocatedResponse,
+              ::fidl::MessageDirection::kReceiving>();
+      ::fidl::internal::ByteStorage<kTransformerDestSize>
+          transformer_dest_storage(::fidl::internal::DelayAllocation);
+      auto result = ::fidl::DecodeAs<
+          StrictXUnionHenceResponseMayBeStackAllocatedResponse>(msg);
+      if (result.status != ZX_OK) {
+        context->OnError();
+        return result.status;
+      }
+      static_cast<StrictXUnionHenceResponseMayBeStackAllocatedResponseContext*>(
+          context)
+          ->OnReply(std::move(result.message));
+      break;
+    }
+    case kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal:
+    case kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_GenOrdinal: {
+      constexpr uint32_t kTransformerDestSize =
+          ::fidl::internal::ClampedMessageSize<
+              FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse,
+              ::fidl::MessageDirection::kReceiving>();
+      ::fidl::internal::ByteStorage<kTransformerDestSize>
+          transformer_dest_storage(::fidl::internal::DelayAllocation);
+      auto result = ::fidl::DecodeAs<
+          FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse>(msg);
+      if (result.status != ZX_OK) {
+        context->OnError();
+        return result.status;
+      }
+      static_cast<
+          FlexibleXUnionHenceResponseMustBeHeapAllocatedResponseContext*>(
+          context)
+          ->OnReply(std::move(result.message));
+      break;
+    }
+    case kFidlOrdinalEpitaph:
+      if (context) return ZX_ERR_INVALID_ARGS;
+      ::fidl::internal::ClientBase::Close(
+          reinterpret_cast<fidl_epitaph_t*>(hdr)->error);
+      break;
+    default:
+      zx_handle_close_many(msg->handles, msg->num_handles);
+      if (context) context->OnError();
+      return ZX_ERR_NOT_SUPPORTED;
+  }
+  return ZX_OK;
+}
+
 bool TestProtocol::TryDispatch(Interface* impl, fidl_msg_t* msg,
                                ::fidl::Transaction* txn) {
   if (msg->num_bytes < sizeof(fidl_message_header_t)) {
@@ -551,9 +790,10 @@ void TestProtocol::SetTransactionHeaderFor::
     StrictXUnionHenceResponseMayBeStackAllocatedRequest(
         const ::fidl::DecodedMessage<
             TestProtocol::StrictXUnionHenceResponseMayBeStackAllocatedRequest>&
-            _msg) {
+            _msg,
+        zx_txid_t _txid) {
   fidl_init_txn_header(
-      &_msg.message()->_hdr, 0,
+      &_msg.message()->_hdr, _txid,
       kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_GenOrdinal);
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
@@ -572,9 +812,10 @@ void TestProtocol::SetTransactionHeaderFor::
     FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest(
         const ::fidl::DecodedMessage<
             TestProtocol::
-                FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest>& _msg) {
+                FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest>& _msg,
+        zx_txid_t _txid) {
   fidl_init_txn_header(
-      &_msg.message()->_hdr, 0,
+      &_msg.message()->_hdr, _txid,
       kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_GenOrdinal);
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }

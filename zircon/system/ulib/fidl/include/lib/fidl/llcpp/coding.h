@@ -22,10 +22,6 @@ namespace fidl {
 
 namespace internal {
 
-// Predefined error messages in the binding
-constexpr char kErrorRequestBufferTooSmall[] = "request buffer too small";
-constexpr char kErrorWriteFailed[] = "failed writing to the underlying transport";
-
 template <typename Sub>
 struct FromFailureMixin {
   // Initialize ourself from one of EncodeResult, DecodeResult, LinearizeResult, in the case of

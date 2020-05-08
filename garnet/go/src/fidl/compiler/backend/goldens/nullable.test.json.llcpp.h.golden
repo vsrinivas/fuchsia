@@ -5,9 +5,11 @@
 #include <lib/fidl/internal.h>
 #include <lib/fidl/llcpp/array.h>
 #include <lib/fidl/llcpp/buffer_allocator.h>
+#include <lib/fidl/llcpp/client.h>
 #include <lib/fidl/llcpp/coding.h>
 #include <lib/fidl/llcpp/connect_service.h>
 #include <lib/fidl/llcpp/envelope.h>
+#include <lib/fidl/llcpp/errors.h>
 #include <lib/fidl/llcpp/memory.h>
 #include <lib/fidl/llcpp/service_handler_interface.h>
 #include <lib/fidl/llcpp/string_view.h>
@@ -21,6 +23,8 @@
 #include <lib/zx/channel.h>
 #include <lib/zx/vmo.h>
 #include <zircon/fidl.h>
+
+#include <variant>
 
 namespace llcpp {
 
@@ -302,6 +306,8 @@ class SimpleProtocol final {
       ~Add_Impl() = default;
       Add_Impl(Add_Impl&& other) = default;
       Add_Impl& operator=(Add_Impl&& other) = default;
+      Add_Impl(::fidl::internal::StatusAndError&& other)
+          : Super(std::move(other)) {}
       using Super::error;
       using Super::ok;
       using Super::status;
@@ -333,6 +339,8 @@ class SimpleProtocol final {
       ~Add_Impl() = default;
       Add_Impl(Add_Impl&& other) = default;
       Add_Impl& operator=(Add_Impl&& other) = default;
+      Add_Impl(::fidl::internal::StatusAndError&& other)
+          : Super(std::move(other)) {}
       using Super::error;
       using Super::ok;
       using Super::status;
@@ -403,6 +411,10 @@ class SimpleProtocol final {
         ::fidl::BytePart response_buffer);
   };
 
+  struct AsyncEventHandlers;
+  class AddResponseContext;
+  class ClientImpl;
+
   // Pure-virtual interface to be implemented by a server.
   class Interface {
    public:
@@ -456,7 +468,8 @@ class SimpleProtocol final {
 
    public:
     static void AddRequest(
-        const ::fidl::DecodedMessage<SimpleProtocol::AddRequest>& _msg);
+        const ::fidl::DecodedMessage<SimpleProtocol::AddRequest>& _msg,
+        zx_txid_t _txid = 0);
     static void AddResponse(
         const ::fidl::DecodedMessage<SimpleProtocol::AddResponse>& _msg);
   };
@@ -605,3 +618,64 @@ static_assert(sizeof(::llcpp::fidl::test::nullable::Int32Wrapper) ==
               ::llcpp::fidl::test::nullable::Int32Wrapper::PrimarySize);
 
 }  // namespace fidl
+
+namespace llcpp {
+
+namespace fidl {
+namespace test {
+namespace nullable {
+
+struct SimpleProtocol::AsyncEventHandlers {};
+
+class SimpleProtocol::AddResponseContext
+    : public ::fidl::internal::ResponseContext {
+ public:
+  virtual ~AddResponseContext() = default;
+  virtual void OnReply(::fidl::DecodedMessage<AddResponse> msg) = 0;
+
+ protected:
+  AddResponseContext() = default;
+};
+
+class SimpleProtocol::ClientImpl final : private ::fidl::internal::ClientBase {
+ public:
+  // Asynchronous variant of |SimpleProtocol.Add()|. Allocates 24 bytes of
+  // request buffer on the stack. The callback is stored on the heap.
+  ::fidl::StatusAndError Add(int32_t a, int32_t b,
+                             ::fit::callback<void(int32_t sum)> _cb);
+
+  // Asynchronous variant of |SimpleProtocol.Add()|. Caller provides the backing
+  // storage for FIDL message via request and response buffers. Ownership of
+  // _context is given unsafely to the binding until OnError() or OnReply() are
+  // called on it.
+  ::fidl::StatusAndError Add(::fidl::BytePart _request_buffer, int32_t a,
+                             int32_t b, AddResponseContext* _context);
+  // Synchronous variant of |SimpleProtocol.Add()|. Allocates 48 bytes of
+  // message buffer on the stack. No heap allocation necessary.
+  ResultOf::Add Add_Sync(int32_t a, int32_t b);
+
+  // Synchronous variant of |SimpleProtocol.Add()|. Caller provides the backing
+  // storage for FIDL message via request and response buffers.
+  UnownedResultOf::Add Add_Sync(::fidl::BytePart _request_buffer, int32_t a,
+                                int32_t b, ::fidl::BytePart _response_buffer);
+
+ private:
+  friend class ::fidl::Client<SimpleProtocol>;
+
+  ClientImpl(::zx::channel client_end, async_dispatcher_t* dispatcher,
+             ::fidl::internal::TypeErasedOnUnboundFn on_unbound,
+             AsyncEventHandlers handlers)
+      : ::fidl::internal::ClientBase(std::move(client_end), dispatcher,
+                                     std::move(on_unbound)),
+        handlers_(std::move(handlers)) {}
+
+  zx_status_t Dispatch(fidl_msg_t* msg,
+                       ::fidl::internal::ResponseContext* context) override;
+
+  AsyncEventHandlers handlers_;
+};
+
+}  // namespace nullable
+}  // namespace test
+}  // namespace fidl
+}  // namespace llcpp

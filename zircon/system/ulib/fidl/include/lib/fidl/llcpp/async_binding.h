@@ -63,16 +63,10 @@ class AsyncBinding {
       TypeErasedServerDispatchFn dispatch_fn, TypeErasedOnUnboundFn on_unbound_fn);
 
   static std::shared_ptr<AsyncBinding> CreateClientBinding(
-      async_dispatcher_t* dispatcher, zx::channel channel, TypeErasedOnUnboundFn on_unbound_fn);
+      async_dispatcher_t* dispatcher, zx::channel channel, void* impl, DispatchFn dispatch_fn,
+      TypeErasedOnUnboundFn on_unbound_fn);
 
   ~AsyncBinding();
-
-  void SetInterface(void* impl, DispatchFn dispatch_fn) {
-    std::scoped_lock lock(lock_);
-    ZX_ASSERT(!begun_);
-    interface_ = impl;
-    dispatch_fn_ = std::move(dispatch_fn);
-  }
 
   zx_status_t BeginWait() __TA_EXCLUDES(lock_);
 
@@ -149,7 +143,7 @@ class AsyncBinding {
   zx::channel channel_ = {};
   void* interface_ = nullptr;
   TypeErasedOnUnboundFn on_unbound_fn_ = {};
-  DispatchFn dispatch_fn_;
+  const DispatchFn dispatch_fn_;
   std::shared_ptr<AsyncBinding> keep_alive_ = {};
   zx::channel* out_channel_ = nullptr;
   const bool is_server_;

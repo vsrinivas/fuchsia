@@ -491,6 +491,11 @@ zx_vmo_read
 zx_vmo_set_cache_policy
 zx_vmo_write
 
+# libsync
+_zx_futex_requeue
+_zx_futex_wait
+_zx_futex_wake
+
 # ZX_PANIC_LIB
 __zx_panic
 

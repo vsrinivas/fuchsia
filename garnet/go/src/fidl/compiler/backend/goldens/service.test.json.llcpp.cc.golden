@@ -65,11 +65,24 @@ SecondProtocol::ResultOf::MethodOnSecond SecondProtocol::Call::MethodOnSecond(
   zx_status_t _write_status = ::fidl::Write(
       std::move(_client_end), std::move(_encode_request_result.message));
   if (_write_status != ZX_OK) {
-    return ::fidl::internal::StatusAndError(
-        _write_status, ::fidl::internal::kErrorWriteFailed);
+    return ::fidl::internal::StatusAndError(_write_status,
+                                            ::fidl::kErrorWriteFailed);
   } else {
     return ::fidl::internal::StatusAndError(ZX_OK, nullptr);
   }
+}
+
+::fidl::StatusAndError SecondProtocol::ClientImpl::MethodOnSecond() {
+  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
+    auto _res = ResultOf::MethodOnSecond(_binding->channel());
+    return ::fidl::StatusAndError(_res.status(), _res.error());
+  }
+  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+}
+
+zx_status_t SecondProtocol::ClientImpl::Dispatch(
+    fidl_msg_t*, ::fidl::internal::ResponseContext*) {
+  return ZX_OK;
 }
 
 bool SecondProtocol::TryDispatch(Interface* impl, fidl_msg_t* msg,
@@ -114,8 +127,9 @@ bool SecondProtocol::Dispatch(Interface* impl, fidl_msg_t* msg,
 }
 
 void SecondProtocol::SetTransactionHeaderFor::MethodOnSecondRequest(
-    const ::fidl::DecodedMessage<SecondProtocol::MethodOnSecondRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0,
+    const ::fidl::DecodedMessage<SecondProtocol::MethodOnSecondRequest>& _msg,
+    zx_txid_t _txid) {
+  fidl_init_txn_header(&_msg.message()->_hdr, _txid,
                        kSecondProtocol_MethodOnSecond_GenOrdinal);
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
@@ -176,11 +190,24 @@ FirstProtocol::ResultOf::MethodOnFirst FirstProtocol::Call::MethodOnFirst(
   zx_status_t _write_status = ::fidl::Write(
       std::move(_client_end), std::move(_encode_request_result.message));
   if (_write_status != ZX_OK) {
-    return ::fidl::internal::StatusAndError(
-        _write_status, ::fidl::internal::kErrorWriteFailed);
+    return ::fidl::internal::StatusAndError(_write_status,
+                                            ::fidl::kErrorWriteFailed);
   } else {
     return ::fidl::internal::StatusAndError(ZX_OK, nullptr);
   }
+}
+
+::fidl::StatusAndError FirstProtocol::ClientImpl::MethodOnFirst() {
+  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
+    auto _res = ResultOf::MethodOnFirst(_binding->channel());
+    return ::fidl::StatusAndError(_res.status(), _res.error());
+  }
+  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+}
+
+zx_status_t FirstProtocol::ClientImpl::Dispatch(
+    fidl_msg_t*, ::fidl::internal::ResponseContext*) {
+  return ZX_OK;
 }
 
 bool FirstProtocol::TryDispatch(Interface* impl, fidl_msg_t* msg,
@@ -225,8 +252,9 @@ bool FirstProtocol::Dispatch(Interface* impl, fidl_msg_t* msg,
 }
 
 void FirstProtocol::SetTransactionHeaderFor::MethodOnFirstRequest(
-    const ::fidl::DecodedMessage<FirstProtocol::MethodOnFirstRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0,
+    const ::fidl::DecodedMessage<FirstProtocol::MethodOnFirstRequest>& _msg,
+    zx_txid_t _txid) {
+  fidl_init_txn_header(&_msg.message()->_hdr, _txid,
                        kFirstProtocol_MethodOnFirst_GenOrdinal);
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }

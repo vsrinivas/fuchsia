@@ -58,9 +58,15 @@ func NewGenerator() *Generator {
 			}
 			return out
 		},
+		"StackUse": func(props cpp.LLContextProps) int {
+			return props.StackUseRequest + props.StackUseResponse
+		},
 	})
 	templates := []string{
 		fragments.Bits,
+		fragments.Client,
+		fragments.ClientAsyncMethods,
+		fragments.ClientSyncMethods,
 		fragments.Const,
 		fragments.Enum,
 		fragments.Helpers,

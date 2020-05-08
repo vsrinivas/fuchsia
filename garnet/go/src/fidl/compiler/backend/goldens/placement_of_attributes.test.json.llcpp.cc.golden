@@ -53,7 +53,7 @@ ExampleProtocol::UnownedResultOf::Method_Impl::Method_Impl(
     ::llcpp::exampleusing::Empty arg) {
   if (_request_buffer.capacity() < MethodRequest::PrimarySize) {
     Super::status_ = ZX_ERR_BUFFER_TOO_SMALL;
-    Super::error_ = ::fidl::internal::kErrorRequestBufferTooSmall;
+    Super::error_ = ::fidl::kErrorRequestBufferTooSmall;
     return;
   }
   memset(_request_buffer.data(), 0, MethodRequest::PrimarySize);
@@ -91,11 +91,35 @@ ExampleProtocol::UnownedResultOf::Method ExampleProtocol::Call::Method(
   zx_status_t _write_status = ::fidl::Write(
       std::move(_client_end), std::move(_encode_request_result.message));
   if (_write_status != ZX_OK) {
-    return ::fidl::internal::StatusAndError(
-        _write_status, ::fidl::internal::kErrorWriteFailed);
+    return ::fidl::internal::StatusAndError(_write_status,
+                                            ::fidl::kErrorWriteFailed);
   } else {
     return ::fidl::internal::StatusAndError(ZX_OK, nullptr);
   }
+}
+
+::fidl::StatusAndError ExampleProtocol::ClientImpl::Method(
+    ::llcpp::exampleusing::Empty arg) {
+  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
+    auto _res = ResultOf::Method(_binding->channel(), std::move(arg));
+    return ::fidl::StatusAndError(_res.status(), _res.error());
+  }
+  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+}
+
+::fidl::StatusAndError ExampleProtocol::ClientImpl::Method(
+    ::fidl::BytePart _request_buffer, ::llcpp::exampleusing::Empty arg) {
+  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
+    auto _res = UnownedResultOf::Method(
+        _binding->channel(), std::move(_request_buffer), std::move(arg));
+    return ::fidl::StatusAndError(_res.status(), _res.error());
+  }
+  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+}
+
+zx_status_t ExampleProtocol::ClientImpl::Dispatch(
+    fidl_msg_t*, ::fidl::internal::ResponseContext*) {
+  return ZX_OK;
 }
 
 bool ExampleProtocol::TryDispatch(Interface* impl, fidl_msg_t* msg,
@@ -142,8 +166,9 @@ bool ExampleProtocol::Dispatch(Interface* impl, fidl_msg_t* msg,
 }
 
 void ExampleProtocol::SetTransactionHeaderFor::MethodRequest(
-    const ::fidl::DecodedMessage<ExampleProtocol::MethodRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0,
+    const ::fidl::DecodedMessage<ExampleProtocol::MethodRequest>& _msg,
+    zx_txid_t _txid) {
+  fidl_init_txn_header(&_msg.message()->_hdr, _txid,
                        kExampleProtocol_Method_GenOrdinal);
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }

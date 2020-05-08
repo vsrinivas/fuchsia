@@ -5,7 +5,6 @@
 #include <lib/async/time.h>
 #include <lib/fidl/llcpp/async_binding.h>
 #include <lib/fidl/llcpp/async_transaction.h>
-#include <lib/fidl/llcpp/client_base.h>
 #include <lib/fidl/epitaph.h>
 #include <zircon/syscalls.h>
 
@@ -241,9 +240,11 @@ std::shared_ptr<AsyncBinding> AsyncBinding::CreateServerBinding(
 }
 
 std::shared_ptr<AsyncBinding> AsyncBinding::CreateClientBinding(
-    async_dispatcher_t* dispatcher, zx::channel channel, TypeErasedOnUnboundFn on_unbound_fn) {
+    async_dispatcher_t* dispatcher, zx::channel channel, void* impl, DispatchFn dispatch_fn,
+    TypeErasedOnUnboundFn on_unbound_fn) {
   auto ret = std::shared_ptr<AsyncBinding>(new AsyncBinding(
-      dispatcher, std::move(channel), nullptr, false, std::move(on_unbound_fn), nullptr));
+      dispatcher, std::move(channel), impl, false, std::move(on_unbound_fn),
+      std::move(dispatch_fn)));
   ret->keep_alive_ = ret;  // Keep the binding alive until an unbind operation or channel error.
   return ret;
 }

@@ -5,9 +5,11 @@
 #include <lib/fidl/internal.h>
 #include <lib/fidl/llcpp/array.h>
 #include <lib/fidl/llcpp/buffer_allocator.h>
+#include <lib/fidl/llcpp/client.h>
 #include <lib/fidl/llcpp/coding.h>
 #include <lib/fidl/llcpp/connect_service.h>
 #include <lib/fidl/llcpp/envelope.h>
+#include <lib/fidl/llcpp/errors.h>
 #include <lib/fidl/llcpp/memory.h>
 #include <lib/fidl/llcpp/service_handler_interface.h>
 #include <lib/fidl/llcpp/string_view.h>
@@ -20,6 +22,8 @@
 #include <lib/fit/function.h>
 #include <lib/zx/channel.h>
 #include <zircon/fidl.h>
+
+#include <variant>
 
 namespace llcpp {
 
@@ -2443,6 +2447,9 @@ class TestProtocol final {
           StrictXUnionHenceResponseMayBeStackAllocated_Impl&& other) = default;
       StrictXUnionHenceResponseMayBeStackAllocated_Impl& operator=(
           StrictXUnionHenceResponseMayBeStackAllocated_Impl&& other) = default;
+      StrictXUnionHenceResponseMayBeStackAllocated_Impl(
+          ::fidl::internal::StatusAndError&& other)
+          : Super(std::move(other)) {}
       using Super::error;
       using Super::ok;
       using Super::status;
@@ -2466,6 +2473,9 @@ class TestProtocol final {
       FlexibleXUnionHenceResponseMustBeHeapAllocated_Impl& operator=(
           FlexibleXUnionHenceResponseMustBeHeapAllocated_Impl&& other) =
           default;
+      FlexibleXUnionHenceResponseMustBeHeapAllocated_Impl(
+          ::fidl::internal::StatusAndError&& other)
+          : Super(std::move(other)) {}
       using Super::error;
       using Super::ok;
       using Super::status;
@@ -2503,6 +2513,9 @@ class TestProtocol final {
           StrictXUnionHenceResponseMayBeStackAllocated_Impl&& other) = default;
       StrictXUnionHenceResponseMayBeStackAllocated_Impl& operator=(
           StrictXUnionHenceResponseMayBeStackAllocated_Impl&& other) = default;
+      StrictXUnionHenceResponseMayBeStackAllocated_Impl(
+          ::fidl::internal::StatusAndError&& other)
+          : Super(std::move(other)) {}
       using Super::error;
       using Super::ok;
       using Super::status;
@@ -2526,6 +2539,9 @@ class TestProtocol final {
       FlexibleXUnionHenceResponseMustBeHeapAllocated_Impl& operator=(
           FlexibleXUnionHenceResponseMustBeHeapAllocated_Impl&& other) =
           default;
+      FlexibleXUnionHenceResponseMustBeHeapAllocated_Impl(
+          ::fidl::internal::StatusAndError&& other)
+          : Super(std::move(other)) {}
       using Super::error;
       using Super::ok;
       using Super::status;
@@ -2631,6 +2647,11 @@ class TestProtocol final {
         ::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
   };
 
+  struct AsyncEventHandlers;
+  class StrictXUnionHenceResponseMayBeStackAllocatedResponseContext;
+  class FlexibleXUnionHenceResponseMustBeHeapAllocatedResponseContext;
+  class ClientImpl;
+
   // Pure-virtual interface to be implemented by a server.
   class Interface {
    public:
@@ -2716,7 +2737,8 @@ class TestProtocol final {
     static void StrictXUnionHenceResponseMayBeStackAllocatedRequest(
         const ::fidl::DecodedMessage<
             TestProtocol::StrictXUnionHenceResponseMayBeStackAllocatedRequest>&
-            _msg);
+            _msg,
+        zx_txid_t _txid = 0);
     static void StrictXUnionHenceResponseMayBeStackAllocatedResponse(
         const ::fidl::DecodedMessage<
             TestProtocol::StrictXUnionHenceResponseMayBeStackAllocatedResponse>&
@@ -2724,7 +2746,8 @@ class TestProtocol final {
     static void FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest(
         const ::fidl::DecodedMessage<
             TestProtocol::
-                FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest>& _msg);
+                FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest>& _msg,
+        zx_txid_t _txid = 0);
     static void FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse(
         const ::fidl::DecodedMessage<
             TestProtocol::
@@ -2958,3 +2981,118 @@ static_assert(std::is_standard_layout_v<
               ::llcpp::fidl::test::json::XUnionContainingEmptyStruct>);
 
 }  // namespace fidl
+
+namespace llcpp {
+
+namespace fidl {
+namespace test {
+namespace json {
+
+struct TestProtocol::AsyncEventHandlers {};
+
+class TestProtocol::StrictXUnionHenceResponseMayBeStackAllocatedResponseContext
+    : public ::fidl::internal::ResponseContext {
+ public:
+  virtual ~StrictXUnionHenceResponseMayBeStackAllocatedResponseContext() =
+      default;
+  virtual void OnReply(::fidl::DecodedMessage<
+                       StrictXUnionHenceResponseMayBeStackAllocatedResponse>
+                           msg) = 0;
+
+ protected:
+  StrictXUnionHenceResponseMayBeStackAllocatedResponseContext() = default;
+};
+
+class TestProtocol::
+    FlexibleXUnionHenceResponseMustBeHeapAllocatedResponseContext
+    : public ::fidl::internal::ResponseContext {
+ public:
+  virtual ~FlexibleXUnionHenceResponseMustBeHeapAllocatedResponseContext() =
+      default;
+  virtual void OnReply(::fidl::DecodedMessage<
+                       FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse>
+                           msg) = 0;
+
+ protected:
+  FlexibleXUnionHenceResponseMustBeHeapAllocatedResponseContext() = default;
+};
+
+class TestProtocol::ClientImpl final : private ::fidl::internal::ClientBase {
+ public:
+  // Asynchronous variant of
+  // |TestProtocol.StrictXUnionHenceResponseMayBeStackAllocated()|. Allocates 16
+  // bytes of request buffer on the stack. The callback is stored on the heap.
+  ::fidl::StatusAndError StrictXUnionHenceResponseMayBeStackAllocated(
+      ::fit::callback<void(::llcpp::fidl::test::json::StrictBoundedXUnion xu)>
+          _cb);
+
+  // Asynchronous variant of
+  // |TestProtocol.StrictXUnionHenceResponseMayBeStackAllocated()|. Caller
+  // provides the backing storage for FIDL message via request and response
+  // buffers. Ownership of _context is given unsafely to the binding until
+  // OnError() or OnReply() are called on it.
+  ::fidl::StatusAndError StrictXUnionHenceResponseMayBeStackAllocated(
+      StrictXUnionHenceResponseMayBeStackAllocatedResponseContext* _context);
+  // Synchronous variant of
+  // |TestProtocol.StrictXUnionHenceResponseMayBeStackAllocated()|. Allocates 88
+  // bytes of message buffer on the stack. No heap allocation necessary.
+  ResultOf::StrictXUnionHenceResponseMayBeStackAllocated
+  StrictXUnionHenceResponseMayBeStackAllocated_Sync();
+
+  // Synchronous variant of
+  // |TestProtocol.StrictXUnionHenceResponseMayBeStackAllocated()|. Caller
+  // provides the backing storage for FIDL message via request and response
+  // buffers.
+  UnownedResultOf::StrictXUnionHenceResponseMayBeStackAllocated
+  StrictXUnionHenceResponseMayBeStackAllocated_Sync(
+      ::fidl::BytePart _response_buffer);
+
+  // Asynchronous variant of
+  // |TestProtocol.FlexibleXUnionHenceResponseMustBeHeapAllocated()|. Allocates
+  // 16 bytes of request buffer on the stack. The callback is stored on the
+  // heap.
+  ::fidl::StatusAndError FlexibleXUnionHenceResponseMustBeHeapAllocated(
+      ::fit::callback<void(::llcpp::fidl::test::json::OlderSimpleUnion xu)>
+          _cb);
+
+  // Asynchronous variant of
+  // |TestProtocol.FlexibleXUnionHenceResponseMustBeHeapAllocated()|. Caller
+  // provides the backing storage for FIDL message via request and response
+  // buffers. Ownership of _context is given unsafely to the binding until
+  // OnError() or OnReply() are called on it.
+  ::fidl::StatusAndError FlexibleXUnionHenceResponseMustBeHeapAllocated(
+      FlexibleXUnionHenceResponseMustBeHeapAllocatedResponseContext* _context);
+  // Synchronous variant of
+  // |TestProtocol.FlexibleXUnionHenceResponseMustBeHeapAllocated()|. Allocates
+  // 16 bytes of request buffer on the stack. Response is heap-allocated.
+  ResultOf::FlexibleXUnionHenceResponseMustBeHeapAllocated
+  FlexibleXUnionHenceResponseMustBeHeapAllocated_Sync();
+
+  // Synchronous variant of
+  // |TestProtocol.FlexibleXUnionHenceResponseMustBeHeapAllocated()|. Caller
+  // provides the backing storage for FIDL message via request and response
+  // buffers.
+  UnownedResultOf::FlexibleXUnionHenceResponseMustBeHeapAllocated
+  FlexibleXUnionHenceResponseMustBeHeapAllocated_Sync(
+      ::fidl::BytePart _response_buffer);
+
+ private:
+  friend class ::fidl::Client<TestProtocol>;
+
+  ClientImpl(::zx::channel client_end, async_dispatcher_t* dispatcher,
+             ::fidl::internal::TypeErasedOnUnboundFn on_unbound,
+             AsyncEventHandlers handlers)
+      : ::fidl::internal::ClientBase(std::move(client_end), dispatcher,
+                                     std::move(on_unbound)),
+        handlers_(std::move(handlers)) {}
+
+  zx_status_t Dispatch(fidl_msg_t* msg,
+                       ::fidl::internal::ResponseContext* context) override;
+
+  AsyncEventHandlers handlers_;
+};
+
+}  // namespace json
+}  // namespace test
+}  // namespace fidl
+}  // namespace llcpp

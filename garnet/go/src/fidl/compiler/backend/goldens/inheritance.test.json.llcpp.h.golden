@@ -5,9 +5,11 @@
 #include <lib/fidl/internal.h>
 #include <lib/fidl/llcpp/array.h>
 #include <lib/fidl/llcpp/buffer_allocator.h>
+#include <lib/fidl/llcpp/client.h>
 #include <lib/fidl/llcpp/coding.h>
 #include <lib/fidl/llcpp/connect_service.h>
 #include <lib/fidl/llcpp/envelope.h>
+#include <lib/fidl/llcpp/errors.h>
 #include <lib/fidl/llcpp/memory.h>
 #include <lib/fidl/llcpp/service_handler_interface.h>
 #include <lib/fidl/llcpp/string_view.h>
@@ -20,6 +22,8 @@
 #include <lib/fit/function.h>
 #include <lib/zx/channel.h>
 #include <zircon/fidl.h>
+
+#include <variant>
 
 namespace llcpp {
 
@@ -88,6 +92,8 @@ class super final {
       ~foo_Impl() = default;
       foo_Impl(foo_Impl&& other) = default;
       foo_Impl& operator=(foo_Impl&& other) = default;
+      foo_Impl(::fidl::internal::StatusAndError&& other)
+          : Super(std::move(other)) {}
       using Super::error;
       using Super::ok;
       using Super::status;
@@ -119,6 +125,8 @@ class super final {
       ~foo_Impl() = default;
       foo_Impl(foo_Impl&& other) = default;
       foo_Impl& operator=(foo_Impl&& other) = default;
+      foo_Impl(::fidl::internal::StatusAndError&& other)
+          : Super(std::move(other)) {}
       using Super::error;
       using Super::ok;
       using Super::status;
@@ -190,6 +198,10 @@ class super final {
         ::fidl::BytePart response_buffer);
   };
 
+  struct AsyncEventHandlers;
+  class fooResponseContext;
+  class ClientImpl;
+
   // Pure-virtual interface to be implemented by a server.
   class Interface {
    public:
@@ -243,7 +255,8 @@ class super final {
 
    public:
     static void fooRequest(
-        const ::fidl::DecodedMessage<super::fooRequest>& _msg);
+        const ::fidl::DecodedMessage<super::fooRequest>& _msg,
+        zx_txid_t _txid = 0);
     static void fooResponse(
         const ::fidl::DecodedMessage<super::fooResponse>& _msg);
   };
@@ -307,6 +320,8 @@ class sub final {
       ~foo_Impl() = default;
       foo_Impl(foo_Impl&& other) = default;
       foo_Impl& operator=(foo_Impl&& other) = default;
+      foo_Impl(::fidl::internal::StatusAndError&& other)
+          : Super(std::move(other)) {}
       using Super::error;
       using Super::ok;
       using Super::status;
@@ -338,6 +353,8 @@ class sub final {
       ~foo_Impl() = default;
       foo_Impl(foo_Impl&& other) = default;
       foo_Impl& operator=(foo_Impl&& other) = default;
+      foo_Impl(::fidl::internal::StatusAndError&& other)
+          : Super(std::move(other)) {}
       using Super::error;
       using Super::ok;
       using Super::status;
@@ -409,6 +426,10 @@ class sub final {
         ::fidl::BytePart response_buffer);
   };
 
+  struct AsyncEventHandlers;
+  class fooResponseContext;
+  class ClientImpl;
+
   // Pure-virtual interface to be implemented by a server.
   class Interface {
    public:
@@ -461,7 +482,8 @@ class sub final {
     SetTransactionHeaderFor() = delete;
 
    public:
-    static void fooRequest(const ::fidl::DecodedMessage<sub::fooRequest>& _msg);
+    static void fooRequest(const ::fidl::DecodedMessage<sub::fooRequest>& _msg,
+                           zx_txid_t _txid = 0);
     static void fooResponse(
         const ::fidl::DecodedMessage<sub::fooResponse>& _msg);
   };
@@ -515,3 +537,116 @@ static_assert(sizeof(::llcpp::fidl::test::json::sub::fooResponse) ==
 static_assert(offsetof(::llcpp::fidl::test::json::sub::fooResponse, y) == 16);
 
 }  // namespace fidl
+
+namespace llcpp {
+
+namespace fidl {
+namespace test {
+namespace json {
+
+struct super::AsyncEventHandlers {};
+
+class super::fooResponseContext : public ::fidl::internal::ResponseContext {
+ public:
+  virtual ~fooResponseContext() = default;
+  virtual void OnReply(::fidl::DecodedMessage<fooResponse> msg) = 0;
+
+ protected:
+  fooResponseContext() = default;
+};
+
+class super::ClientImpl final : private ::fidl::internal::ClientBase {
+ public:
+  // Asynchronous variant of |super.foo()|. The request and callback are
+  // allocated on the heap.
+  ::fidl::StatusAndError foo(::fidl::StringView s,
+                             ::fit::callback<void(int64_t y)> _cb);
+
+  // Asynchronous variant of |super.foo()|. Caller provides the backing storage
+  // for FIDL message via request and response buffers. Ownership of _context is
+  // given unsafely to the binding until OnError() or OnReply() are called on
+  // it.
+  ::fidl::StatusAndError foo(::fidl::BytePart _request_buffer,
+                             ::fidl::StringView s,
+                             fooResponseContext* _context);
+  // Synchronous variant of |super.foo()|. Allocates 24 bytes of response buffer
+  // on the stack. Request is heap-allocated.
+  ResultOf::foo foo_Sync(::fidl::StringView s);
+
+  // Synchronous variant of |super.foo()|. Caller provides the backing storage
+  // for FIDL message via request and response buffers.
+  UnownedResultOf::foo foo_Sync(::fidl::BytePart _request_buffer,
+                                ::fidl::StringView s,
+                                ::fidl::BytePart _response_buffer);
+
+ private:
+  friend class ::fidl::Client<super>;
+
+  ClientImpl(::zx::channel client_end, async_dispatcher_t* dispatcher,
+             ::fidl::internal::TypeErasedOnUnboundFn on_unbound,
+             AsyncEventHandlers handlers)
+      : ::fidl::internal::ClientBase(std::move(client_end), dispatcher,
+                                     std::move(on_unbound)),
+        handlers_(std::move(handlers)) {}
+
+  zx_status_t Dispatch(fidl_msg_t* msg,
+                       ::fidl::internal::ResponseContext* context) override;
+
+  AsyncEventHandlers handlers_;
+};
+
+struct sub::AsyncEventHandlers {};
+
+class sub::fooResponseContext : public ::fidl::internal::ResponseContext {
+ public:
+  virtual ~fooResponseContext() = default;
+  virtual void OnReply(::fidl::DecodedMessage<fooResponse> msg) = 0;
+
+ protected:
+  fooResponseContext() = default;
+};
+
+class sub::ClientImpl final : private ::fidl::internal::ClientBase {
+ public:
+  // Asynchronous variant of |sub.foo()|. The request and callback are allocated
+  // on the heap.
+  ::fidl::StatusAndError foo(::fidl::StringView s,
+                             ::fit::callback<void(int64_t y)> _cb);
+
+  // Asynchronous variant of |sub.foo()|. Caller provides the backing storage
+  // for FIDL message via request and response buffers. Ownership of _context is
+  // given unsafely to the binding until OnError() or OnReply() are called on
+  // it.
+  ::fidl::StatusAndError foo(::fidl::BytePart _request_buffer,
+                             ::fidl::StringView s,
+                             fooResponseContext* _context);
+  // Synchronous variant of |sub.foo()|. Allocates 24 bytes of response buffer
+  // on the stack. Request is heap-allocated.
+  ResultOf::foo foo_Sync(::fidl::StringView s);
+
+  // Synchronous variant of |sub.foo()|. Caller provides the backing storage for
+  // FIDL message via request and response buffers.
+  UnownedResultOf::foo foo_Sync(::fidl::BytePart _request_buffer,
+                                ::fidl::StringView s,
+                                ::fidl::BytePart _response_buffer);
+
+ private:
+  friend class ::fidl::Client<sub>;
+
+  ClientImpl(::zx::channel client_end, async_dispatcher_t* dispatcher,
+             ::fidl::internal::TypeErasedOnUnboundFn on_unbound,
+             AsyncEventHandlers handlers)
+      : ::fidl::internal::ClientBase(std::move(client_end), dispatcher,
+                                     std::move(on_unbound)),
+        handlers_(std::move(handlers)) {}
+
+  zx_status_t Dispatch(fidl_msg_t* msg,
+                       ::fidl::internal::ResponseContext* context) override;
+
+  AsyncEventHandlers handlers_;
+};
+
+}  // namespace json
+}  // namespace test
+}  // namespace fidl
+}  // namespace llcpp

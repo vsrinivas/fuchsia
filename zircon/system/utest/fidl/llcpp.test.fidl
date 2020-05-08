@@ -8,3 +8,8 @@ protocol Llcpp {
     Action() -> (int32 v);
 };
 
+protocol Example {
+    TwoWay(string in) -> (string out);
+    OneWay(string in);
+    -> OnEvent(string out);
+};

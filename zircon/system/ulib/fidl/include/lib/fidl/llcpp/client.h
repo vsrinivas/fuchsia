@@ -12,71 +12,73 @@ namespace fidl {
 // Invoked from a dispatcher thread after the channel is unbound.
 using OnClientUnboundFn = fit::callback<void(UnboundReason, zx_status_t, zx::channel)>;
 
-template <typename Client>
-class ClientPtr final {
+template <typename Protocol>
+class Client final {
  public:
-  // Create uninitialized ClientPtr.
-  ClientPtr() = default;
+  // Create uninitialized Client.
+  Client() = default;
 
-  // Create initialized ClientPtr which manages the binding of the client end of a channel to a
+  // Create initialized Client which manages the binding of the client end of a channel to a
   // dispatcher.
-  ClientPtr(zx::channel client_end, async_dispatcher_t* dispatcher,
-            typename Client::EventHandlers handlers = {}) {
+  Client(zx::channel client_end, async_dispatcher_t* dispatcher,
+            typename Protocol::AsyncEventHandlers handlers = {}) {
     auto status = Bind(std::move(client_end), dispatcher, std::move(handlers));
     ZX_ASSERT_MSG(status == ZX_OK, "%s: Failed Bind() with status %d.", __func__, status);
   }
 
-  ClientPtr(zx::channel client_end, async_dispatcher_t* dispatcher, OnClientUnboundFn on_unbound,
-            typename Client::EventHandlers handlers = {}) {
+  Client(zx::channel client_end, async_dispatcher_t* dispatcher, OnClientUnboundFn on_unbound,
+            typename Protocol::AsyncEventHandlers handlers = {}) {
     auto status = Bind(std::move(client_end), dispatcher, std::move(on_unbound),
                        std::move(handlers));
     ZX_ASSERT_MSG(status == ZX_OK, "%s: Failed Bind() with status %d.", __func__, status);
   }
 
-  ~ClientPtr() { Unbind(); }
+  ~Client() { Unbind(); }
 
   // Move-only.
-  ClientPtr(const ClientPtr& other) = delete;
-  ClientPtr& operator=(const ClientPtr& other) = delete;
-  ClientPtr(ClientPtr&& other) = default;
-  ClientPtr& operator=(ClientPtr&& other) = default;
+  Client(const Client& other) = delete;
+  Client& operator=(const Client& other) = delete;
+  Client(Client&& other) = default;
+  Client& operator=(Client&& other) = default;
 
-  // Bind the channel to the dispatcher. May only be called on an uninitialized ClientPtr() and
+  // Bind the channel to the dispatcher. May only be called on an uninitialized Client() and
   // at most once.
   zx_status_t Bind(zx::channel client_end, async_dispatcher_t* dispatcher,
-                   OnClientUnboundFn on_unbound, typename Client::EventHandlers handlers = {}) {
-    ZX_ASSERT(!binding_);
-    binding_ = std::make_unique<internal::ClientBase>(
+                   OnClientUnboundFn on_unbound,
+                   typename Protocol::AsyncEventHandlers handlers = {}) {
+    ZX_ASSERT(!client_);
+    client_ = std::unique_ptr<typename Protocol::ClientImpl>(new typename Protocol::ClientImpl(
         std::move(client_end), dispatcher,
         [fn = std::move(on_unbound)](void*, UnboundReason reason, zx_status_t status,
                                      zx::channel channel) mutable {
           fn(reason, status, std::move(channel));
-        });
-    client_ = std::make_unique<Client>(binding_.get(), std::move(handlers));
-    return binding_->Bind();
+        }, std::move(handlers)));
+    return client_->Bind();
   }
 
   zx_status_t Bind(zx::channel client_end, async_dispatcher_t* dispatcher,
-                   typename Client::EventHandlers handlers = {}) {
-    ZX_ASSERT(!binding_);
-    binding_ = std::make_unique<internal::ClientBase>(std::move(client_end), dispatcher, nullptr);
-    client_ = std::make_unique<Client>(binding_.get(), std::move(handlers));
-    return binding_->Bind();
+                   typename Protocol::AsyncEventHandlers handlers = {}) {
+    ZX_ASSERT(!client_);
+    client_ = std::unique_ptr<typename Protocol::ClientImpl>(
+        new typename Protocol::ClientImpl(std::move(client_end), dispatcher, nullptr,
+                                          std::move(handlers)));
+    return client_->Bind();
   }
 
-  // Unbind the channel from the dispatcher. If provided, invoke the OnUnboundFn on a dispatcher
-  // thread.
-  void Unbind() { binding_->Unbind(); }
+  // Unbind the channel from the dispatcher. May be called from any thread. If provided, the
+  // OnClientUnboundFn is invoked asynchronously on a dispatcher thread.
+  // WARNING: While it is safe to invoke Unbind() from any thread, it is unsafe to wait on the
+  // OnClinetUnboundFn from a dispatcher thread, as that will likely deadlock.
+  void Unbind() { if (client_) client_->internal::ClientBase::Unbind(); }
 
   // Return the Client interface for making outgoing FIDL calls. If the client has been unbound,
   // calls on the interface return error with status ZX_ERR_CANCELED.
-  Client* get() const { return client_.get(); }
-  Client* operator->() const { return get(); }
-  Client& operator*() const { return *get(); }
+  typename Protocol::ClientImpl* get() const { return client_.get(); }
+  typename Protocol::ClientImpl* operator->() const { return get(); }
+  typename Protocol::ClientImpl& operator*() const { return *get(); }
 
  private:
-  std::unique_ptr<internal::ClientBase> binding_;
-  std::unique_ptr<Client> client_;
+  std::unique_ptr<typename Protocol::ClientImpl> client_;
 };
 
 }  // namespace fidl

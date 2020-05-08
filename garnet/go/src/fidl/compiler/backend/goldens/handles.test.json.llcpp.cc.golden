@@ -12,6 +12,11 @@ namespace handles {
 
 namespace {}  // namespace
 
+zx_status_t SomeProtocol::ClientImpl::Dispatch(
+    fidl_msg_t*, ::fidl::internal::ResponseContext*) {
+  return ZX_OK;
+}
+
 }  // namespace handles
 }  // namespace test
 }  // namespace fidl

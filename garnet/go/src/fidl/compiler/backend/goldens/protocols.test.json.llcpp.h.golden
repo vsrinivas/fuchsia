@@ -5,9 +5,11 @@
 #include <lib/fidl/internal.h>
 #include <lib/fidl/llcpp/array.h>
 #include <lib/fidl/llcpp/buffer_allocator.h>
+#include <lib/fidl/llcpp/client.h>
 #include <lib/fidl/llcpp/coding.h>
 #include <lib/fidl/llcpp/connect_service.h>
 #include <lib/fidl/llcpp/envelope.h>
+#include <lib/fidl/llcpp/errors.h>
 #include <lib/fidl/llcpp/memory.h>
 #include <lib/fidl/llcpp/service_handler_interface.h>
 #include <lib/fidl/llcpp/string_view.h>
@@ -21,6 +23,8 @@
 #include <lib/zx/channel.h>
 #include <lib/zx/socket.h>
 #include <zircon/fidl.h>
+
+#include <variant>
 
 namespace llcpp {
 
@@ -609,6 +613,8 @@ class ChannelProtocol final {
       ~MethodA_Impl() = default;
       MethodA_Impl(MethodA_Impl&& other) = default;
       MethodA_Impl& operator=(MethodA_Impl&& other) = default;
+      MethodA_Impl(::fidl::internal::StatusAndError&& other)
+          : Super(std::move(other)) {}
       using Super::error;
       using Super::ok;
       using Super::status;
@@ -623,6 +629,8 @@ class ChannelProtocol final {
       ~MethodB_Impl() = default;
       MethodB_Impl(MethodB_Impl&& other) = default;
       MethodB_Impl& operator=(MethodB_Impl&& other) = default;
+      MethodB_Impl(::fidl::internal::StatusAndError&& other)
+          : Super(std::move(other)) {}
       using Super::error;
       using Super::ok;
       using Super::status;
@@ -641,6 +649,8 @@ class ChannelProtocol final {
       ~MutateSocket_Impl() = default;
       MutateSocket_Impl(MutateSocket_Impl&& other) = default;
       MutateSocket_Impl& operator=(MutateSocket_Impl&& other) = default;
+      MutateSocket_Impl(::fidl::internal::StatusAndError&& other)
+          : Super(std::move(other)) {}
       using Super::error;
       using Super::ok;
       using Super::status;
@@ -671,6 +681,8 @@ class ChannelProtocol final {
       ~MethodA_Impl() = default;
       MethodA_Impl(MethodA_Impl&& other) = default;
       MethodA_Impl& operator=(MethodA_Impl&& other) = default;
+      MethodA_Impl(::fidl::internal::StatusAndError&& other)
+          : Super(std::move(other)) {}
       using Super::error;
       using Super::ok;
       using Super::status;
@@ -687,6 +699,8 @@ class ChannelProtocol final {
       ~MethodB_Impl() = default;
       MethodB_Impl(MethodB_Impl&& other) = default;
       MethodB_Impl& operator=(MethodB_Impl&& other) = default;
+      MethodB_Impl(::fidl::internal::StatusAndError&& other)
+          : Super(std::move(other)) {}
       using Super::error;
       using Super::ok;
       using Super::status;
@@ -707,6 +721,8 @@ class ChannelProtocol final {
       ~MutateSocket_Impl() = default;
       MutateSocket_Impl(MutateSocket_Impl&& other) = default;
       MutateSocket_Impl& operator=(MutateSocket_Impl&& other) = default;
+      MutateSocket_Impl(::fidl::internal::StatusAndError&& other)
+          : Super(std::move(other)) {}
       using Super::error;
       using Super::ok;
       using Super::status;
@@ -845,6 +861,11 @@ class ChannelProtocol final {
         ::fidl::BytePart response_buffer);
   };
 
+  struct AsyncEventHandlers;
+  class MethodBResponseContext;
+  class MutateSocketResponseContext;
+  class ClientImpl;
+
   // Pure-virtual interface to be implemented by a server.
   class Interface {
    public:
@@ -932,16 +953,19 @@ class ChannelProtocol final {
 
    public:
     static void MethodARequest(
-        const ::fidl::DecodedMessage<ChannelProtocol::MethodARequest>& _msg);
+        const ::fidl::DecodedMessage<ChannelProtocol::MethodARequest>& _msg,
+        zx_txid_t _txid = 0);
     static void EventAResponse(
         const ::fidl::DecodedMessage<ChannelProtocol::EventAResponse>& _msg);
     static void MethodBRequest(
-        const ::fidl::DecodedMessage<ChannelProtocol::MethodBRequest>& _msg);
+        const ::fidl::DecodedMessage<ChannelProtocol::MethodBRequest>& _msg,
+        zx_txid_t _txid = 0);
     static void MethodBResponse(
         const ::fidl::DecodedMessage<ChannelProtocol::MethodBResponse>& _msg);
     static void MutateSocketRequest(
         const ::fidl::DecodedMessage<ChannelProtocol::MutateSocketRequest>&
-            _msg);
+            _msg,
+        zx_txid_t _txid = 0);
     static void MutateSocketResponse(
         const ::fidl::DecodedMessage<ChannelProtocol::MutateSocketResponse>&
             _msg);
@@ -1126,6 +1150,8 @@ class WithAndWithoutRequestResponse final {
       NoRequestNoResponse_Impl(NoRequestNoResponse_Impl&& other) = default;
       NoRequestNoResponse_Impl& operator=(NoRequestNoResponse_Impl&& other) =
           default;
+      NoRequestNoResponse_Impl(::fidl::internal::StatusAndError&& other)
+          : Super(std::move(other)) {}
       using Super::error;
       using Super::ok;
       using Super::status;
@@ -1142,6 +1168,8 @@ class WithAndWithoutRequestResponse final {
           default;
       NoRequestEmptyResponse_Impl& operator=(
           NoRequestEmptyResponse_Impl&& other) = default;
+      NoRequestEmptyResponse_Impl(::fidl::internal::StatusAndError&& other)
+          : Super(std::move(other)) {}
       using Super::error;
       using Super::ok;
       using Super::status;
@@ -1161,6 +1189,8 @@ class WithAndWithoutRequestResponse final {
       NoRequestWithResponse_Impl(NoRequestWithResponse_Impl&& other) = default;
       NoRequestWithResponse_Impl& operator=(
           NoRequestWithResponse_Impl&& other) = default;
+      NoRequestWithResponse_Impl(::fidl::internal::StatusAndError&& other)
+          : Super(std::move(other)) {}
       using Super::error;
       using Super::ok;
       using Super::status;
@@ -1180,6 +1210,8 @@ class WithAndWithoutRequestResponse final {
       WithRequestNoResponse_Impl(WithRequestNoResponse_Impl&& other) = default;
       WithRequestNoResponse_Impl& operator=(
           WithRequestNoResponse_Impl&& other) = default;
+      WithRequestNoResponse_Impl(::fidl::internal::StatusAndError&& other)
+          : Super(std::move(other)) {}
       using Super::error;
       using Super::ok;
       using Super::status;
@@ -1197,6 +1229,8 @@ class WithAndWithoutRequestResponse final {
           default;
       WithRequestEmptyResponse_Impl& operator=(
           WithRequestEmptyResponse_Impl&& other) = default;
+      WithRequestEmptyResponse_Impl(::fidl::internal::StatusAndError&& other)
+          : Super(std::move(other)) {}
       using Super::error;
       using Super::ok;
       using Super::status;
@@ -1218,6 +1252,8 @@ class WithAndWithoutRequestResponse final {
           default;
       WithRequestWithResponse_Impl& operator=(
           WithRequestWithResponse_Impl&& other) = default;
+      WithRequestWithResponse_Impl(::fidl::internal::StatusAndError&& other)
+          : Super(std::move(other)) {}
       using Super::error;
       using Super::ok;
       using Super::status;
@@ -1256,6 +1292,8 @@ class WithAndWithoutRequestResponse final {
       NoRequestNoResponse_Impl(NoRequestNoResponse_Impl&& other) = default;
       NoRequestNoResponse_Impl& operator=(NoRequestNoResponse_Impl&& other) =
           default;
+      NoRequestNoResponse_Impl(::fidl::internal::StatusAndError&& other)
+          : Super(std::move(other)) {}
       using Super::error;
       using Super::ok;
       using Super::status;
@@ -1273,6 +1311,8 @@ class WithAndWithoutRequestResponse final {
           default;
       NoRequestEmptyResponse_Impl& operator=(
           NoRequestEmptyResponse_Impl&& other) = default;
+      NoRequestEmptyResponse_Impl(::fidl::internal::StatusAndError&& other)
+          : Super(std::move(other)) {}
       using Super::error;
       using Super::ok;
       using Super::status;
@@ -1293,6 +1333,8 @@ class WithAndWithoutRequestResponse final {
       NoRequestWithResponse_Impl(NoRequestWithResponse_Impl&& other) = default;
       NoRequestWithResponse_Impl& operator=(
           NoRequestWithResponse_Impl&& other) = default;
+      NoRequestWithResponse_Impl(::fidl::internal::StatusAndError&& other)
+          : Super(std::move(other)) {}
       using Super::error;
       using Super::ok;
       using Super::status;
@@ -1313,6 +1355,8 @@ class WithAndWithoutRequestResponse final {
       WithRequestNoResponse_Impl(WithRequestNoResponse_Impl&& other) = default;
       WithRequestNoResponse_Impl& operator=(
           WithRequestNoResponse_Impl&& other) = default;
+      WithRequestNoResponse_Impl(::fidl::internal::StatusAndError&& other)
+          : Super(std::move(other)) {}
       using Super::error;
       using Super::ok;
       using Super::status;
@@ -1332,6 +1376,8 @@ class WithAndWithoutRequestResponse final {
           default;
       WithRequestEmptyResponse_Impl& operator=(
           WithRequestEmptyResponse_Impl&& other) = default;
+      WithRequestEmptyResponse_Impl(::fidl::internal::StatusAndError&& other)
+          : Super(std::move(other)) {}
       using Super::error;
       using Super::ok;
       using Super::status;
@@ -1355,6 +1401,8 @@ class WithAndWithoutRequestResponse final {
           default;
       WithRequestWithResponse_Impl& operator=(
           WithRequestWithResponse_Impl&& other) = default;
+      WithRequestWithResponse_Impl(::fidl::internal::StatusAndError&& other)
+          : Super(std::move(other)) {}
       using Super::error;
       using Super::ok;
       using Super::status;
@@ -1548,6 +1596,13 @@ class WithAndWithoutRequestResponse final {
         ::fidl::BytePart response_buffer);
   };
 
+  struct AsyncEventHandlers;
+  class NoRequestEmptyResponseResponseContext;
+  class NoRequestWithResponseResponseContext;
+  class WithRequestEmptyResponseResponseContext;
+  class WithRequestWithResponseResponseContext;
+  class ClientImpl;
+
   // Pure-virtual interface to be implemented by a server.
   class Interface {
    public:
@@ -1677,29 +1732,33 @@ class WithAndWithoutRequestResponse final {
    public:
     static void NoRequestNoResponseRequest(
         const ::fidl::DecodedMessage<
-            WithAndWithoutRequestResponse::NoRequestNoResponseRequest>& _msg);
+            WithAndWithoutRequestResponse::NoRequestNoResponseRequest>& _msg,
+        zx_txid_t _txid = 0);
     static void NoRequestEmptyResponseRequest(
         const ::fidl::DecodedMessage<
-            WithAndWithoutRequestResponse::NoRequestEmptyResponseRequest>&
-            _msg);
+            WithAndWithoutRequestResponse::NoRequestEmptyResponseRequest>& _msg,
+        zx_txid_t _txid = 0);
     static void NoRequestEmptyResponseResponse(
         const ::fidl::DecodedMessage<
             WithAndWithoutRequestResponse::NoRequestEmptyResponseResponse>&
             _msg);
     static void NoRequestWithResponseRequest(
         const ::fidl::DecodedMessage<
-            WithAndWithoutRequestResponse::NoRequestWithResponseRequest>& _msg);
+            WithAndWithoutRequestResponse::NoRequestWithResponseRequest>& _msg,
+        zx_txid_t _txid = 0);
     static void NoRequestWithResponseResponse(
         const ::fidl::DecodedMessage<
             WithAndWithoutRequestResponse::NoRequestWithResponseResponse>&
             _msg);
     static void WithRequestNoResponseRequest(
         const ::fidl::DecodedMessage<
-            WithAndWithoutRequestResponse::WithRequestNoResponseRequest>& _msg);
+            WithAndWithoutRequestResponse::WithRequestNoResponseRequest>& _msg,
+        zx_txid_t _txid = 0);
     static void WithRequestEmptyResponseRequest(
         const ::fidl::DecodedMessage<
             WithAndWithoutRequestResponse::WithRequestEmptyResponseRequest>&
-            _msg);
+            _msg,
+        zx_txid_t _txid = 0);
     static void WithRequestEmptyResponseResponse(
         const ::fidl::DecodedMessage<
             WithAndWithoutRequestResponse::WithRequestEmptyResponseResponse>&
@@ -1707,7 +1766,8 @@ class WithAndWithoutRequestResponse final {
     static void WithRequestWithResponseRequest(
         const ::fidl::DecodedMessage<
             WithAndWithoutRequestResponse::WithRequestWithResponseRequest>&
-            _msg);
+            _msg,
+        zx_txid_t _txid = 0);
     static void WithRequestWithResponseResponse(
         const ::fidl::DecodedMessage<
             WithAndWithoutRequestResponse::WithRequestWithResponseResponse>&
@@ -1807,6 +1867,8 @@ class WithErrorSyntax final {
       ~ResponseAsStruct_Impl() = default;
       ResponseAsStruct_Impl(ResponseAsStruct_Impl&& other) = default;
       ResponseAsStruct_Impl& operator=(ResponseAsStruct_Impl&& other) = default;
+      ResponseAsStruct_Impl(::fidl::internal::StatusAndError&& other)
+          : Super(std::move(other)) {}
       using Super::error;
       using Super::ok;
       using Super::status;
@@ -1825,6 +1887,8 @@ class WithErrorSyntax final {
       ~ErrorAsPrimitive_Impl() = default;
       ErrorAsPrimitive_Impl(ErrorAsPrimitive_Impl&& other) = default;
       ErrorAsPrimitive_Impl& operator=(ErrorAsPrimitive_Impl&& other) = default;
+      ErrorAsPrimitive_Impl(::fidl::internal::StatusAndError&& other)
+          : Super(std::move(other)) {}
       using Super::error;
       using Super::ok;
       using Super::status;
@@ -1843,6 +1907,8 @@ class WithErrorSyntax final {
       ~ErrorAsEnum_Impl() = default;
       ErrorAsEnum_Impl(ErrorAsEnum_Impl&& other) = default;
       ErrorAsEnum_Impl& operator=(ErrorAsEnum_Impl&& other) = default;
+      ErrorAsEnum_Impl(::fidl::internal::StatusAndError&& other)
+          : Super(std::move(other)) {}
       using Super::error;
       using Super::ok;
       using Super::status;
@@ -1875,6 +1941,8 @@ class WithErrorSyntax final {
       ~ResponseAsStruct_Impl() = default;
       ResponseAsStruct_Impl(ResponseAsStruct_Impl&& other) = default;
       ResponseAsStruct_Impl& operator=(ResponseAsStruct_Impl&& other) = default;
+      ResponseAsStruct_Impl(::fidl::internal::StatusAndError&& other)
+          : Super(std::move(other)) {}
       using Super::error;
       using Super::ok;
       using Super::status;
@@ -1894,6 +1962,8 @@ class WithErrorSyntax final {
       ~ErrorAsPrimitive_Impl() = default;
       ErrorAsPrimitive_Impl(ErrorAsPrimitive_Impl&& other) = default;
       ErrorAsPrimitive_Impl& operator=(ErrorAsPrimitive_Impl&& other) = default;
+      ErrorAsPrimitive_Impl(::fidl::internal::StatusAndError&& other)
+          : Super(std::move(other)) {}
       using Super::error;
       using Super::ok;
       using Super::status;
@@ -1913,6 +1983,8 @@ class WithErrorSyntax final {
       ~ErrorAsEnum_Impl() = default;
       ErrorAsEnum_Impl(ErrorAsEnum_Impl&& other) = default;
       ErrorAsEnum_Impl& operator=(ErrorAsEnum_Impl&& other) = default;
+      ErrorAsEnum_Impl(::fidl::internal::StatusAndError&& other)
+          : Super(std::move(other)) {}
       using Super::error;
       using Super::ok;
       using Super::status;
@@ -2023,6 +2095,12 @@ class WithErrorSyntax final {
         ::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
   };
 
+  struct AsyncEventHandlers;
+  class ResponseAsStructResponseContext;
+  class ErrorAsPrimitiveResponseContext;
+  class ErrorAsEnumResponseContext;
+  class ClientImpl;
+
   // Pure-virtual interface to be implemented by a server.
   class Interface {
    public:
@@ -2128,19 +2206,21 @@ class WithErrorSyntax final {
    public:
     static void ResponseAsStructRequest(
         const ::fidl::DecodedMessage<WithErrorSyntax::ResponseAsStructRequest>&
-            _msg);
+            _msg,
+        zx_txid_t _txid = 0);
     static void ResponseAsStructResponse(
         const ::fidl::DecodedMessage<WithErrorSyntax::ResponseAsStructResponse>&
             _msg);
     static void ErrorAsPrimitiveRequest(
         const ::fidl::DecodedMessage<WithErrorSyntax::ErrorAsPrimitiveRequest>&
-            _msg);
+            _msg,
+        zx_txid_t _txid = 0);
     static void ErrorAsPrimitiveResponse(
         const ::fidl::DecodedMessage<WithErrorSyntax::ErrorAsPrimitiveResponse>&
             _msg);
     static void ErrorAsEnumRequest(
-        const ::fidl::DecodedMessage<WithErrorSyntax::ErrorAsEnumRequest>&
-            _msg);
+        const ::fidl::DecodedMessage<WithErrorSyntax::ErrorAsEnumRequest>& _msg,
+        zx_txid_t _txid = 0);
     static void ErrorAsEnumResponse(
         const ::fidl::DecodedMessage<WithErrorSyntax::ErrorAsEnumResponse>&
             _msg);
@@ -2437,3 +2517,406 @@ static_assert(
              result) == 16);
 
 }  // namespace fidl
+
+namespace llcpp {
+
+namespace test {
+namespace name {
+
+struct ChannelProtocol::AsyncEventHandlers {
+  std::variant<
+      ::fit::function<void(int64_t a, int64_t b)>,
+      ::fit::function<void(::fidl::DecodedMessage<EventAResponse> msg)>>
+      event_a;
+};
+
+class ChannelProtocol::MethodBResponseContext
+    : public ::fidl::internal::ResponseContext {
+ public:
+  virtual ~MethodBResponseContext() = default;
+  virtual void OnReply(::fidl::DecodedMessage<MethodBResponse> msg) = 0;
+
+ protected:
+  MethodBResponseContext() = default;
+};
+
+class ChannelProtocol::MutateSocketResponseContext
+    : public ::fidl::internal::ResponseContext {
+ public:
+  virtual ~MutateSocketResponseContext() = default;
+  virtual void OnReply(::fidl::DecodedMessage<MutateSocketResponse> msg) = 0;
+
+ protected:
+  MutateSocketResponseContext() = default;
+};
+
+class ChannelProtocol::ClientImpl final : private ::fidl::internal::ClientBase {
+ public:
+  // Allocates 32 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  ::fidl::StatusAndError MethodA(int64_t a, int64_t b);
+
+  // Caller provides the backing storage for FIDL message via request and
+  // response buffers.
+  ::fidl::StatusAndError MethodA(::fidl::BytePart _request_buffer, int64_t a,
+                                 int64_t b);
+
+  // Asynchronous variant of |ChannelProtocol.MethodB()|. Allocates 32 bytes of
+  // request buffer on the stack. The callback is stored on the heap.
+  ::fidl::StatusAndError MethodB(int64_t a, int64_t b,
+                                 ::fit::callback<void(int64_t result)> _cb);
+
+  // Asynchronous variant of |ChannelProtocol.MethodB()|. Caller provides the
+  // backing storage for FIDL message via request and response buffers.
+  // Ownership of _context is given unsafely to the binding until OnError() or
+  // OnReply() are called on it.
+  ::fidl::StatusAndError MethodB(::fidl::BytePart _request_buffer, int64_t a,
+                                 int64_t b, MethodBResponseContext* _context);
+  // Synchronous variant of |ChannelProtocol.MethodB()|. Allocates 56 bytes of
+  // message buffer on the stack. No heap allocation necessary.
+  ResultOf::MethodB MethodB_Sync(int64_t a, int64_t b);
+
+  // Synchronous variant of |ChannelProtocol.MethodB()|. Caller provides the
+  // backing storage for FIDL message via request and response buffers.
+  UnownedResultOf::MethodB MethodB_Sync(::fidl::BytePart _request_buffer,
+                                        int64_t a, int64_t b,
+                                        ::fidl::BytePart _response_buffer);
+
+  // Asynchronous variant of |ChannelProtocol.MutateSocket()|. Allocates 24
+  // bytes of request buffer on the stack. The callback is stored on the heap.
+  ::fidl::StatusAndError MutateSocket(
+      ::zx::socket a, ::fit::callback<void(::zx::socket b)> _cb);
+
+  // Asynchronous variant of |ChannelProtocol.MutateSocket()|. Caller provides
+  // the backing storage for FIDL message via request and response buffers.
+  // Ownership of _context is given unsafely to the binding until OnError() or
+  // OnReply() are called on it.
+  ::fidl::StatusAndError MutateSocket(::fidl::BytePart _request_buffer,
+                                      ::zx::socket a,
+                                      MutateSocketResponseContext* _context);
+  // Synchronous variant of |ChannelProtocol.MutateSocket()|. Allocates 48 bytes
+  // of message buffer on the stack. No heap allocation necessary.
+  ResultOf::MutateSocket MutateSocket_Sync(::zx::socket a);
+
+  // Synchronous variant of |ChannelProtocol.MutateSocket()|. Caller provides
+  // the backing storage for FIDL message via request and response buffers.
+  UnownedResultOf::MutateSocket MutateSocket_Sync(
+      ::fidl::BytePart _request_buffer, ::zx::socket a,
+      ::fidl::BytePart _response_buffer);
+
+ private:
+  friend class ::fidl::Client<ChannelProtocol>;
+
+  ClientImpl(::zx::channel client_end, async_dispatcher_t* dispatcher,
+             ::fidl::internal::TypeErasedOnUnboundFn on_unbound,
+             AsyncEventHandlers handlers)
+      : ::fidl::internal::ClientBase(std::move(client_end), dispatcher,
+                                     std::move(on_unbound)),
+        handlers_(std::move(handlers)) {}
+
+  zx_status_t Dispatch(fidl_msg_t* msg,
+                       ::fidl::internal::ResponseContext* context) override;
+
+  AsyncEventHandlers handlers_;
+};
+
+struct WithAndWithoutRequestResponse::AsyncEventHandlers {
+  ::fit::function<void()> on_empty_response;
+
+  std::variant<
+      ::fit::function<void(::fidl::StringView ret)>,
+      ::fit::function<void(::fidl::DecodedMessage<OnWithResponseResponse> msg)>>
+      on_with_response;
+};
+
+class WithAndWithoutRequestResponse::NoRequestEmptyResponseResponseContext
+    : public ::fidl::internal::ResponseContext {
+ public:
+  virtual ~NoRequestEmptyResponseResponseContext() = default;
+  virtual void OnReply() = 0;
+
+ protected:
+  NoRequestEmptyResponseResponseContext() = default;
+};
+
+class WithAndWithoutRequestResponse::NoRequestWithResponseResponseContext
+    : public ::fidl::internal::ResponseContext {
+ public:
+  virtual ~NoRequestWithResponseResponseContext() = default;
+  virtual void OnReply(
+      ::fidl::DecodedMessage<NoRequestWithResponseResponse> msg) = 0;
+
+ protected:
+  NoRequestWithResponseResponseContext() = default;
+};
+
+class WithAndWithoutRequestResponse::WithRequestEmptyResponseResponseContext
+    : public ::fidl::internal::ResponseContext {
+ public:
+  virtual ~WithRequestEmptyResponseResponseContext() = default;
+  virtual void OnReply() = 0;
+
+ protected:
+  WithRequestEmptyResponseResponseContext() = default;
+};
+
+class WithAndWithoutRequestResponse::WithRequestWithResponseResponseContext
+    : public ::fidl::internal::ResponseContext {
+ public:
+  virtual ~WithRequestWithResponseResponseContext() = default;
+  virtual void OnReply(
+      ::fidl::DecodedMessage<WithRequestWithResponseResponse> msg) = 0;
+
+ protected:
+  WithRequestWithResponseResponseContext() = default;
+};
+
+class WithAndWithoutRequestResponse::ClientImpl final
+    : private ::fidl::internal::ClientBase {
+ public:
+  // Allocates 16 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  ::fidl::StatusAndError NoRequestNoResponse();
+
+  // Asynchronous variant of
+  // |WithAndWithoutRequestResponse.NoRequestEmptyResponse()|. Allocates 16
+  // bytes of request buffer on the stack. The callback is stored on the heap.
+  ::fidl::StatusAndError NoRequestEmptyResponse(::fit::callback<void()> _cb);
+
+  // Asynchronous variant of
+  // |WithAndWithoutRequestResponse.NoRequestEmptyResponse()|. Caller provides
+  // the backing storage for FIDL message via request and response buffers.
+  // Ownership of _context is given unsafely to the binding until OnError() or
+  // OnReply() are called on it.
+  ::fidl::StatusAndError NoRequestEmptyResponse(
+      NoRequestEmptyResponseResponseContext* _context);
+  // Synchronous variant of
+  // |WithAndWithoutRequestResponse.NoRequestEmptyResponse()|. Allocates 32
+  // bytes of message buffer on the stack. No heap allocation necessary.
+  ResultOf::NoRequestEmptyResponse NoRequestEmptyResponse_Sync();
+
+  // Asynchronous variant of
+  // |WithAndWithoutRequestResponse.NoRequestWithResponse()|. Allocates 16 bytes
+  // of request buffer on the stack. The callback is stored on the heap.
+  ::fidl::StatusAndError NoRequestWithResponse(
+      ::fit::callback<void(::fidl::StringView ret)> _cb);
+
+  // Asynchronous variant of
+  // |WithAndWithoutRequestResponse.NoRequestWithResponse()|. Caller provides
+  // the backing storage for FIDL message via request and response buffers.
+  // Ownership of _context is given unsafely to the binding until OnError() or
+  // OnReply() are called on it.
+  ::fidl::StatusAndError NoRequestWithResponse(
+      NoRequestWithResponseResponseContext* _context);
+  // Synchronous variant of
+  // |WithAndWithoutRequestResponse.NoRequestWithResponse()|. Allocates 16 bytes
+  // of request buffer on the stack. Response is heap-allocated.
+  ResultOf::NoRequestWithResponse NoRequestWithResponse_Sync();
+
+  // Synchronous variant of
+  // |WithAndWithoutRequestResponse.NoRequestWithResponse()|. Caller provides
+  // the backing storage for FIDL message via request and response buffers.
+  UnownedResultOf::NoRequestWithResponse NoRequestWithResponse_Sync(
+      ::fidl::BytePart _response_buffer);
+
+  // Request is heap-allocated.
+  ::fidl::StatusAndError WithRequestNoResponse(::fidl::StringView arg);
+
+  // Caller provides the backing storage for FIDL message via request and
+  // response buffers.
+  ::fidl::StatusAndError WithRequestNoResponse(::fidl::BytePart _request_buffer,
+                                               ::fidl::StringView arg);
+
+  // Asynchronous variant of
+  // |WithAndWithoutRequestResponse.WithRequestEmptyResponse()|. The request and
+  // callback are allocated on the heap.
+  ::fidl::StatusAndError WithRequestEmptyResponse(::fidl::StringView arg,
+                                                  ::fit::callback<void()> _cb);
+
+  // Asynchronous variant of
+  // |WithAndWithoutRequestResponse.WithRequestEmptyResponse()|. Caller provides
+  // the backing storage for FIDL message via request and response buffers.
+  // Ownership of _context is given unsafely to the binding until OnError() or
+  // OnReply() are called on it.
+  ::fidl::StatusAndError WithRequestEmptyResponse(
+      ::fidl::BytePart _request_buffer, ::fidl::StringView arg,
+      WithRequestEmptyResponseResponseContext* _context);
+  // Synchronous variant of
+  // |WithAndWithoutRequestResponse.WithRequestEmptyResponse()|. Allocates 16
+  // bytes of response buffer on the stack. Request is heap-allocated.
+  ResultOf::WithRequestEmptyResponse WithRequestEmptyResponse_Sync(
+      ::fidl::StringView arg);
+
+  // Synchronous variant of
+  // |WithAndWithoutRequestResponse.WithRequestEmptyResponse()|. Caller provides
+  // the backing storage for FIDL message via request and response buffers.
+  UnownedResultOf::WithRequestEmptyResponse WithRequestEmptyResponse_Sync(
+      ::fidl::BytePart _request_buffer, ::fidl::StringView arg,
+      ::fidl::BytePart _response_buffer);
+
+  // Asynchronous variant of
+  // |WithAndWithoutRequestResponse.WithRequestWithResponse()|. The request and
+  // callback are allocated on the heap.
+  ::fidl::StatusAndError WithRequestWithResponse(
+      ::fidl::StringView arg,
+      ::fit::callback<void(::fidl::StringView ret)> _cb);
+
+  // Asynchronous variant of
+  // |WithAndWithoutRequestResponse.WithRequestWithResponse()|. Caller provides
+  // the backing storage for FIDL message via request and response buffers.
+  // Ownership of _context is given unsafely to the binding until OnError() or
+  // OnReply() are called on it.
+  ::fidl::StatusAndError WithRequestWithResponse(
+      ::fidl::BytePart _request_buffer, ::fidl::StringView arg,
+      WithRequestWithResponseResponseContext* _context);
+  // Synchronous variant of
+  // |WithAndWithoutRequestResponse.WithRequestWithResponse()|. Request is
+  // heap-allocated. Response is heap-allocated.
+  ResultOf::WithRequestWithResponse WithRequestWithResponse_Sync(
+      ::fidl::StringView arg);
+
+  // Synchronous variant of
+  // |WithAndWithoutRequestResponse.WithRequestWithResponse()|. Caller provides
+  // the backing storage for FIDL message via request and response buffers.
+  UnownedResultOf::WithRequestWithResponse WithRequestWithResponse_Sync(
+      ::fidl::BytePart _request_buffer, ::fidl::StringView arg,
+      ::fidl::BytePart _response_buffer);
+
+ private:
+  friend class ::fidl::Client<WithAndWithoutRequestResponse>;
+
+  ClientImpl(::zx::channel client_end, async_dispatcher_t* dispatcher,
+             ::fidl::internal::TypeErasedOnUnboundFn on_unbound,
+             AsyncEventHandlers handlers)
+      : ::fidl::internal::ClientBase(std::move(client_end), dispatcher,
+                                     std::move(on_unbound)),
+        handlers_(std::move(handlers)) {}
+
+  zx_status_t Dispatch(fidl_msg_t* msg,
+                       ::fidl::internal::ResponseContext* context) override;
+
+  AsyncEventHandlers handlers_;
+};
+
+struct WithErrorSyntax::AsyncEventHandlers {};
+
+class WithErrorSyntax::ResponseAsStructResponseContext
+    : public ::fidl::internal::ResponseContext {
+ public:
+  virtual ~ResponseAsStructResponseContext() = default;
+  virtual void OnReply(
+      ::fidl::DecodedMessage<ResponseAsStructResponse> msg) = 0;
+
+ protected:
+  ResponseAsStructResponseContext() = default;
+};
+
+class WithErrorSyntax::ErrorAsPrimitiveResponseContext
+    : public ::fidl::internal::ResponseContext {
+ public:
+  virtual ~ErrorAsPrimitiveResponseContext() = default;
+  virtual void OnReply(
+      ::fidl::DecodedMessage<ErrorAsPrimitiveResponse> msg) = 0;
+
+ protected:
+  ErrorAsPrimitiveResponseContext() = default;
+};
+
+class WithErrorSyntax::ErrorAsEnumResponseContext
+    : public ::fidl::internal::ResponseContext {
+ public:
+  virtual ~ErrorAsEnumResponseContext() = default;
+  virtual void OnReply(::fidl::DecodedMessage<ErrorAsEnumResponse> msg) = 0;
+
+ protected:
+  ErrorAsEnumResponseContext() = default;
+};
+
+class WithErrorSyntax::ClientImpl final : private ::fidl::internal::ClientBase {
+ public:
+  // Asynchronous variant of |WithErrorSyntax.ResponseAsStruct()|. Allocates 16
+  // bytes of request buffer on the stack. The callback is stored on the heap.
+  ::fidl::StatusAndError ResponseAsStruct(
+      ::fit::callback<void(
+          ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Result result)>
+          _cb);
+
+  // Asynchronous variant of |WithErrorSyntax.ResponseAsStruct()|. Caller
+  // provides the backing storage for FIDL message via request and response
+  // buffers. Ownership of _context is given unsafely to the binding until
+  // OnError() or OnReply() are called on it.
+  ::fidl::StatusAndError ResponseAsStruct(
+      ResponseAsStructResponseContext* _context);
+  // Synchronous variant of |WithErrorSyntax.ResponseAsStruct()|. Allocates 80
+  // bytes of message buffer on the stack. No heap allocation necessary.
+  ResultOf::ResponseAsStruct ResponseAsStruct_Sync();
+
+  // Synchronous variant of |WithErrorSyntax.ResponseAsStruct()|. Caller
+  // provides the backing storage for FIDL message via request and response
+  // buffers.
+  UnownedResultOf::ResponseAsStruct ResponseAsStruct_Sync(
+      ::fidl::BytePart _response_buffer);
+
+  // Asynchronous variant of |WithErrorSyntax.ErrorAsPrimitive()|. Allocates 16
+  // bytes of request buffer on the stack. The callback is stored on the heap.
+  ::fidl::StatusAndError ErrorAsPrimitive(
+      ::fit::callback<void(
+          ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Result result)>
+          _cb);
+
+  // Asynchronous variant of |WithErrorSyntax.ErrorAsPrimitive()|. Caller
+  // provides the backing storage for FIDL message via request and response
+  // buffers. Ownership of _context is given unsafely to the binding until
+  // OnError() or OnReply() are called on it.
+  ::fidl::StatusAndError ErrorAsPrimitive(
+      ErrorAsPrimitiveResponseContext* _context);
+  // Synchronous variant of |WithErrorSyntax.ErrorAsPrimitive()|. Allocates 64
+  // bytes of message buffer on the stack. No heap allocation necessary.
+  ResultOf::ErrorAsPrimitive ErrorAsPrimitive_Sync();
+
+  // Synchronous variant of |WithErrorSyntax.ErrorAsPrimitive()|. Caller
+  // provides the backing storage for FIDL message via request and response
+  // buffers.
+  UnownedResultOf::ErrorAsPrimitive ErrorAsPrimitive_Sync(
+      ::fidl::BytePart _response_buffer);
+
+  // Asynchronous variant of |WithErrorSyntax.ErrorAsEnum()|. Allocates 16 bytes
+  // of request buffer on the stack. The callback is stored on the heap.
+  ::fidl::StatusAndError ErrorAsEnum(
+      ::fit::callback<
+          void(::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Result result)>
+          _cb);
+
+  // Asynchronous variant of |WithErrorSyntax.ErrorAsEnum()|. Caller provides
+  // the backing storage for FIDL message via request and response buffers.
+  // Ownership of _context is given unsafely to the binding until OnError() or
+  // OnReply() are called on it.
+  ::fidl::StatusAndError ErrorAsEnum(ErrorAsEnumResponseContext* _context);
+  // Synchronous variant of |WithErrorSyntax.ErrorAsEnum()|. Allocates 64 bytes
+  // of message buffer on the stack. No heap allocation necessary.
+  ResultOf::ErrorAsEnum ErrorAsEnum_Sync();
+
+  // Synchronous variant of |WithErrorSyntax.ErrorAsEnum()|. Caller provides the
+  // backing storage for FIDL message via request and response buffers.
+  UnownedResultOf::ErrorAsEnum ErrorAsEnum_Sync(
+      ::fidl::BytePart _response_buffer);
+
+ private:
+  friend class ::fidl::Client<WithErrorSyntax>;
+
+  ClientImpl(::zx::channel client_end, async_dispatcher_t* dispatcher,
+             ::fidl::internal::TypeErasedOnUnboundFn on_unbound,
+             AsyncEventHandlers handlers)
+      : ::fidl::internal::ClientBase(std::move(client_end), dispatcher,
+                                     std::move(on_unbound)),
+        handlers_(std::move(handlers)) {}
+
+  zx_status_t Dispatch(fidl_msg_t* msg,
+                       ::fidl::internal::ResponseContext* context) override;
+
+  AsyncEventHandlers handlers_;
+};
+
+}  // namespace name
+}  // namespace test
+}  // namespace llcpp

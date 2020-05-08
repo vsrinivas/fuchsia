@@ -5,9 +5,11 @@
 #include <lib/fidl/internal.h>
 #include <lib/fidl/llcpp/array.h>
 #include <lib/fidl/llcpp/buffer_allocator.h>
+#include <lib/fidl/llcpp/client.h>
 #include <lib/fidl/llcpp/coding.h>
 #include <lib/fidl/llcpp/connect_service.h>
 #include <lib/fidl/llcpp/envelope.h>
+#include <lib/fidl/llcpp/errors.h>
 #include <lib/fidl/llcpp/memory.h>
 #include <lib/fidl/llcpp/service_handler_interface.h>
 #include <lib/fidl/llcpp/string_view.h>
@@ -19,6 +21,8 @@
 #include <lib/fidl/txn_header.h>
 #include <lib/fit/function.h>
 #include <zircon/fidl.h>
+
+#include <variant>
 
 namespace llcpp {
 
@@ -829,3 +833,12 @@ struct IsFidlType<::llcpp::fidl::test::json::EmptyTable>
 static_assert(std::is_standard_layout_v<::llcpp::fidl::test::json::EmptyTable>);
 
 }  // namespace fidl
+
+namespace llcpp {
+
+namespace fidl {
+namespace test {
+namespace json {}  // namespace json
+}  // namespace test
+}  // namespace fidl
+}  // namespace llcpp

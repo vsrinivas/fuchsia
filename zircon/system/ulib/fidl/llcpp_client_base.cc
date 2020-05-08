@@ -43,17 +43,16 @@ void ClientBase::Close(zx_status_t epitaph) {
 
 ClientBase::ClientBase(zx::channel channel, async_dispatcher_t* dispatcher,
                        TypeErasedOnUnboundFn on_unbound)
-    : binding_(AsyncBinding::CreateClientBinding(dispatcher, std::move(channel),
-                                                 std::move(on_unbound))) {}
+    : binding_(AsyncBinding::CreateClientBinding(
+          dispatcher, std::move(channel), this,
+          [this](std::shared_ptr<AsyncBinding>&, fidl_msg_t* msg, bool*, zx_status_t* status) {
+            *status = Dispatch(msg);
+          },
+          std::move(on_unbound))) {}
 
 zx_status_t ClientBase::Bind() {
-  if (auto binding = binding_.lock()) {
-    binding->SetInterface(this, [this](std::shared_ptr<AsyncBinding>&, fidl_msg_t* msg,
-                                       bool*, zx_status_t* status) {
-                                  *status = Dispatch(msg);
-                                });
+  if (auto binding = binding_.lock())
     return binding->BeginWait();
-  }
   return ZX_ERR_CANCELED;
 }
 
@@ -111,7 +110,7 @@ zx_status_t ClientBase::Dispatch(fidl_msg_t* msg) {
   }
 
   // Dispatch the message
-  return dispatch_(msg, context);
+  return Dispatch(msg, context);
 }
 
 }  // namespace internal

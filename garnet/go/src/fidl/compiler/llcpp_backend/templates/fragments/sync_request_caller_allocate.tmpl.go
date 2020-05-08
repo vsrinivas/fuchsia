@@ -31,10 +31,10 @@ const SyncRequestCallerAllocate = `
   {{- else }}
   if (_request_buffer.capacity() < {{ .Name }}Request::PrimarySize) {
     {{- if .HasResponse }}
-    Super::SetFailure(::fidl::DecodeResult<{{ .Name }}Response>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
+    Super::SetFailure(::fidl::DecodeResult<{{ .Name }}Response>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::kErrorRequestBufferTooSmall));
     {{- else }}
     Super::status_ = ZX_ERR_BUFFER_TOO_SMALL;
-    Super::error_ = ::fidl::internal::kErrorRequestBufferTooSmall;
+    Super::error_ = ::fidl::kErrorRequestBufferTooSmall;
     {{- end }}
     return;
   }

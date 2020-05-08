@@ -5,9 +5,11 @@
 #include <lib/fidl/internal.h>
 #include <lib/fidl/llcpp/array.h>
 #include <lib/fidl/llcpp/buffer_allocator.h>
+#include <lib/fidl/llcpp/client.h>
 #include <lib/fidl/llcpp/coding.h>
 #include <lib/fidl/llcpp/connect_service.h>
 #include <lib/fidl/llcpp/envelope.h>
+#include <lib/fidl/llcpp/errors.h>
 #include <lib/fidl/llcpp/memory.h>
 #include <lib/fidl/llcpp/service_handler_interface.h>
 #include <lib/fidl/llcpp/string_view.h>
@@ -20,6 +22,8 @@
 #include <lib/fit/function.h>
 #include <lib/zx/channel.h>
 #include <zircon/fidl.h>
+
+#include <variant>
 
 namespace llcpp {
 
@@ -348,6 +352,9 @@ class Protocol final {
           RequestStrictResponseFlexible_Impl&& other) = default;
       RequestStrictResponseFlexible_Impl& operator=(
           RequestStrictResponseFlexible_Impl&& other) = default;
+      RequestStrictResponseFlexible_Impl(
+          ::fidl::internal::StatusAndError&& other)
+          : Super(std::move(other)) {}
       using Super::error;
       using Super::ok;
       using Super::status;
@@ -370,6 +377,9 @@ class Protocol final {
           RequestFlexibleResponseStrict_Impl&& other) = default;
       RequestFlexibleResponseStrict_Impl& operator=(
           RequestFlexibleResponseStrict_Impl&& other) = default;
+      RequestFlexibleResponseStrict_Impl(
+          ::fidl::internal::StatusAndError&& other)
+          : Super(std::move(other)) {}
       using Super::error;
       using Super::ok;
       using Super::status;
@@ -407,6 +417,9 @@ class Protocol final {
           RequestStrictResponseFlexible_Impl&& other) = default;
       RequestStrictResponseFlexible_Impl& operator=(
           RequestStrictResponseFlexible_Impl&& other) = default;
+      RequestStrictResponseFlexible_Impl(
+          ::fidl::internal::StatusAndError&& other)
+          : Super(std::move(other)) {}
       using Super::error;
       using Super::ok;
       using Super::status;
@@ -430,6 +443,9 @@ class Protocol final {
           RequestFlexibleResponseStrict_Impl&& other) = default;
       RequestFlexibleResponseStrict_Impl& operator=(
           RequestFlexibleResponseStrict_Impl&& other) = default;
+      RequestFlexibleResponseStrict_Impl(
+          ::fidl::internal::StatusAndError&& other)
+          : Super(std::move(other)) {}
       using Super::error;
       using Super::ok;
       using Super::status;
@@ -537,6 +553,11 @@ class Protocol final {
         ::fidl::BytePart response_buffer);
   };
 
+  struct AsyncEventHandlers;
+  class RequestStrictResponseFlexibleResponseContext;
+  class RequestFlexibleResponseStrictResponseContext;
+  class ClientImpl;
+
   // Pure-virtual interface to be implemented by a server.
   class Interface {
    public:
@@ -615,13 +636,15 @@ class Protocol final {
    public:
     static void RequestStrictResponseFlexibleRequest(
         const ::fidl::DecodedMessage<
-            Protocol::RequestStrictResponseFlexibleRequest>& _msg);
+            Protocol::RequestStrictResponseFlexibleRequest>& _msg,
+        zx_txid_t _txid = 0);
     static void RequestStrictResponseFlexibleResponse(
         const ::fidl::DecodedMessage<
             Protocol::RequestStrictResponseFlexibleResponse>& _msg);
     static void RequestFlexibleResponseStrictRequest(
         const ::fidl::DecodedMessage<
-            Protocol::RequestFlexibleResponseStrictRequest>& _msg);
+            Protocol::RequestFlexibleResponseStrictRequest>& _msg,
+        zx_txid_t _txid = 0);
     static void RequestFlexibleResponseStrictResponse(
         const ::fidl::DecodedMessage<
             Protocol::RequestFlexibleResponseStrictResponse>& _msg);
@@ -711,3 +734,109 @@ static_assert(offsetof(::llcpp::fidl::test::json::Protocol::
                        f) == 16);
 
 }  // namespace fidl
+
+namespace llcpp {
+
+namespace fidl {
+namespace test {
+namespace json {
+
+struct Protocol::AsyncEventHandlers {};
+
+class Protocol::RequestStrictResponseFlexibleResponseContext
+    : public ::fidl::internal::ResponseContext {
+ public:
+  virtual ~RequestStrictResponseFlexibleResponseContext() = default;
+  virtual void OnReply(
+      ::fidl::DecodedMessage<RequestStrictResponseFlexibleResponse> msg) = 0;
+
+ protected:
+  RequestStrictResponseFlexibleResponseContext() = default;
+};
+
+class Protocol::RequestFlexibleResponseStrictResponseContext
+    : public ::fidl::internal::ResponseContext {
+ public:
+  virtual ~RequestFlexibleResponseStrictResponseContext() = default;
+  virtual void OnReply(
+      ::fidl::DecodedMessage<RequestFlexibleResponseStrictResponse> msg) = 0;
+
+ protected:
+  RequestFlexibleResponseStrictResponseContext() = default;
+};
+
+class Protocol::ClientImpl final : private ::fidl::internal::ClientBase {
+ public:
+  // Asynchronous variant of |Protocol.RequestStrictResponseFlexible()|. The
+  // request and callback are allocated on the heap.
+  ::fidl::StatusAndError RequestStrictResponseFlexible(
+      ::llcpp::fidl::test::json::StrictFoo s,
+      ::fit::callback<void(::llcpp::fidl::test::json::FlexibleFoo f)> _cb);
+
+  // Asynchronous variant of |Protocol.RequestStrictResponseFlexible()|. Caller
+  // provides the backing storage for FIDL message via request and response
+  // buffers. Ownership of _context is given unsafely to the binding until
+  // OnError() or OnReply() are called on it.
+  ::fidl::StatusAndError RequestStrictResponseFlexible(
+      ::fidl::BytePart _request_buffer, ::llcpp::fidl::test::json::StrictFoo s,
+      RequestStrictResponseFlexibleResponseContext* _context);
+  // Synchronous variant of |Protocol.RequestStrictResponseFlexible()|. Request
+  // is heap-allocated. Response is heap-allocated.
+  ResultOf::RequestStrictResponseFlexible RequestStrictResponseFlexible_Sync(
+      ::llcpp::fidl::test::json::StrictFoo s);
+
+  // Synchronous variant of |Protocol.RequestStrictResponseFlexible()|. Caller
+  // provides the backing storage for FIDL message via request and response
+  // buffers.
+  UnownedResultOf::RequestStrictResponseFlexible
+  RequestStrictResponseFlexible_Sync(::fidl::BytePart _request_buffer,
+                                     ::llcpp::fidl::test::json::StrictFoo s,
+                                     ::fidl::BytePart _response_buffer);
+
+  // Asynchronous variant of |Protocol.RequestFlexibleResponseStrict()|. The
+  // request and callback are allocated on the heap.
+  ::fidl::StatusAndError RequestFlexibleResponseStrict(
+      ::llcpp::fidl::test::json::FlexibleFoo s,
+      ::fit::callback<void(::llcpp::fidl::test::json::StrictFoo f)> _cb);
+
+  // Asynchronous variant of |Protocol.RequestFlexibleResponseStrict()|. Caller
+  // provides the backing storage for FIDL message via request and response
+  // buffers. Ownership of _context is given unsafely to the binding until
+  // OnError() or OnReply() are called on it.
+  ::fidl::StatusAndError RequestFlexibleResponseStrict(
+      ::fidl::BytePart _request_buffer,
+      ::llcpp::fidl::test::json::FlexibleFoo s,
+      RequestFlexibleResponseStrictResponseContext* _context);
+  // Synchronous variant of |Protocol.RequestFlexibleResponseStrict()|. Request
+  // is heap-allocated. Response is heap-allocated.
+  ResultOf::RequestFlexibleResponseStrict RequestFlexibleResponseStrict_Sync(
+      ::llcpp::fidl::test::json::FlexibleFoo s);
+
+  // Synchronous variant of |Protocol.RequestFlexibleResponseStrict()|. Caller
+  // provides the backing storage for FIDL message via request and response
+  // buffers.
+  UnownedResultOf::RequestFlexibleResponseStrict
+  RequestFlexibleResponseStrict_Sync(::fidl::BytePart _request_buffer,
+                                     ::llcpp::fidl::test::json::FlexibleFoo s,
+                                     ::fidl::BytePart _response_buffer);
+
+ private:
+  friend class ::fidl::Client<Protocol>;
+
+  ClientImpl(::zx::channel client_end, async_dispatcher_t* dispatcher,
+             ::fidl::internal::TypeErasedOnUnboundFn on_unbound,
+             AsyncEventHandlers handlers)
+      : ::fidl::internal::ClientBase(std::move(client_end), dispatcher,
+                                     std::move(on_unbound)),
+        handlers_(std::move(handlers)) {}
+
+  zx_status_t Dispatch(fidl_msg_t* msg,
+                       ::fidl::internal::ResponseContext* context) override;
+
+  AsyncEventHandlers handlers_;
+};
+
+}  // namespace json
+}  // namespace test
+}  // namespace fidl
+}  // namespace llcpp

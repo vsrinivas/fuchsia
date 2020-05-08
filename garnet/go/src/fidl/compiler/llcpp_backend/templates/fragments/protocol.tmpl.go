@@ -25,7 +25,7 @@ class {{ .Name }};
 
 {{- define "ClientAllocationComment" -}}
 {{- $context := .LLProps.ClientContext }}
-{{- if $context.StackUse }} Allocates {{ $context.StackUse }} bytes of {{ "" }}
+{{- if StackUse $context }} Allocates {{ StackUse $context }} bytes of {{ "" }}
 {{- if not $context.StackAllocRequest -}} response {{- else -}}
   {{- if not $context.StackAllocResponse -}} request {{- else -}} message {{- end -}}
 {{- end }} buffer on the stack. {{- end }}
@@ -154,6 +154,7 @@ class {{ .Name }} final {
       ~{{ .Name }}_Impl() = default;
       {{ .Name }}_Impl({{ .Name }}_Impl&& other) = default;
       {{ .Name }}_Impl& operator=({{ .Name }}_Impl&& other) = default;
+    {{ .Name }}_Impl(::fidl::internal::StatusAndError&& other) : Super(std::move(other)) {}
       using Super::status;
       using Super::error;
       using Super::ok;
@@ -193,6 +194,7 @@ class {{ .Name }} final {
       ~{{ .Name }}_Impl() = default;
       {{ .Name }}_Impl({{ .Name }}_Impl&& other) = default;
       {{ .Name }}_Impl& operator=({{ .Name }}_Impl&& other) = default;
+      {{ .Name }}_Impl(::fidl::internal::StatusAndError&& other) : Super(std::move(other)) {}
       using Super::status;
       using Super::error;
       using Super::ok;
@@ -305,6 +307,8 @@ class {{ .Name }} final {
     {{- end }}
   };
 
+{{ template "ClientForwardDeclaration" . }}
+
   {{- if .Methods }}
 {{ "" }}
   // Pure-virtual interface to be implemented by a server.
@@ -409,7 +413,7 @@ class {{ .Name }} final {
    public:
   {{- range .Methods }}
     {{- if .HasRequest }}
-    static void {{ template "SetTransactionHeaderForRequestMethodSignature" . }};
+    static void {{ template "SetTransactionHeaderForRequestMethodDeclarationSignature" . }};
     {{- end }}
     {{- if .HasResponse }}
     static void {{ template "SetTransactionHeaderForResponseMethodSignature" . }};
@@ -500,6 +504,23 @@ extern "C" const fidl_type_t {{ .ResponseTypeName }};
   {{- template "StaticCallSyncRequestInPlaceMethodDefinition" . }}
 {{ "" }}
 {{- end }}
+
+{{- range FilterMethodsWithoutReqs .Methods }}
+{{ "" }}
+  {{- template "ClientSyncRequestManagedMethodDefinition" . }}
+  {{- if or .Request .Response }}
+{{ "" }}
+    {{- template "ClientSyncRequestCallerAllocateMethodDefinition" . }}
+  {{- end }}
+  {{- if .HasResponse }}
+{{ "" }}
+    {{- template "ClientAsyncRequestManagedMethodDefinition" . }}
+{{ "" }}
+    {{- template "ClientAsyncRequestCallerAllocateMethodDefinition" . }}
+  {{- end }}
+{{- end }}
+{{ template "ClientDispatchDefinition" . }}
+{{ "" }}
 
 {{- if .HasEvents }}
   {{- template "SyncEventHandlerMethodDefinition" . }}

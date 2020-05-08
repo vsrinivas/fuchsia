@@ -42,8 +42,8 @@ class ResponseContext : public fbl::WAVLTreeContainable<ResponseContext*>, priva
 
   // Invoked if an error occurs handling the response message prior to invoking the user-specified
   // callback or if the ClientBase is destroyed with the transaction outstanding. Note that
-  // OnError() may be invoked within ~ClientBase(), so the user must ensure that a ClientBase is not
-  // destroyed while holding any locks OnError() would take.
+  // OnError() may be invoked within ~ClientBase(), so the user must ensure that a ClientBase
+  // is not destroyed while holding any locks OnError() would take.
   virtual void OnError() = 0;
 
  private:
@@ -64,10 +64,6 @@ class ResponseContext : public fbl::WAVLTreeContainable<ResponseContext*>, priva
 // with this class.
 class ClientBase {
  public:
-  // Generated client dispatch function. If the ResponseContext* is non-null, the message is a
-  // response to an asynchronous transaction. Otherwise, it is an event.
-  using ClientDispatchFn = fit::function<zx_status_t(fidl_msg_t*, ResponseContext*)>;
-
   // Transfer ownership of the channel to a new client, initializing state.
   ClientBase(zx::channel channel, async_dispatcher_t* dispatcher, TypeErasedOnUnboundFn on_unbound);
 
@@ -81,9 +77,6 @@ class ClientBase {
   ClientBase& operator=(const ClientBase& other) = delete;
   ClientBase(ClientBase&& other) = delete;
   ClientBase& operator=(ClientBase&& other) = delete;
-
-  // Set the generated client dispatch function. Must be called before Bind().
-  void SetDispatchFn(ClientDispatchFn dispatch) { dispatch_ = std::move(dispatch); }
 
   // Bind the channel to the dispatcher. Invoke on_unbound on error or unbinding.
   zx_status_t Bind();
@@ -112,14 +105,16 @@ class ClientBase {
     return contexts_.size();
   }
 
+  // Generated client dispatch function. If the ResponseContext* is non-null, the message is a
+  // response to an asynchronous transaction. Otherwise, it is an event.
+  virtual zx_status_t Dispatch(fidl_msg_t* msg, ResponseContext* context) = 0;
+
  private:
-  // Dispatch function invoked by AsyncBinding on incoming message.
+  // Dispatch function invoked by AsyncBinding on incoming message. Invokes the virtual Dispatch().
   zx_status_t Dispatch(fidl_msg_t* msg);
 
   // Weak reference to the internal binding state.
   std::weak_ptr<AsyncBinding> binding_;
-
-  ClientDispatchFn dispatch_;  // Invoked by Dispatch().
 
   // State for tracking outstanding transactions.
   std::mutex lock_;

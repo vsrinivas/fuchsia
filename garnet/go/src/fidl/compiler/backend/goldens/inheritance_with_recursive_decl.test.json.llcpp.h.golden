@@ -5,9 +5,11 @@
 #include <lib/fidl/internal.h>
 #include <lib/fidl/llcpp/array.h>
 #include <lib/fidl/llcpp/buffer_allocator.h>
+#include <lib/fidl/llcpp/client.h>
 #include <lib/fidl/llcpp/coding.h>
 #include <lib/fidl/llcpp/connect_service.h>
 #include <lib/fidl/llcpp/envelope.h>
+#include <lib/fidl/llcpp/errors.h>
 #include <lib/fidl/llcpp/memory.h>
 #include <lib/fidl/llcpp/service_handler_interface.h>
 #include <lib/fidl/llcpp/string_view.h>
@@ -20,6 +22,8 @@
 #include <lib/fit/function.h>
 #include <lib/zx/channel.h>
 #include <zircon/fidl.h>
+
+#include <variant>
 
 namespace llcpp {
 
@@ -69,6 +73,8 @@ class Parent final {
       ~First_Impl() = default;
       First_Impl(First_Impl&& other) = default;
       First_Impl& operator=(First_Impl&& other) = default;
+      First_Impl(::fidl::internal::StatusAndError&& other)
+          : Super(std::move(other)) {}
       using Super::error;
       using Super::ok;
       using Super::status;
@@ -93,6 +99,8 @@ class Parent final {
       ~First_Impl() = default;
       First_Impl(First_Impl&& other) = default;
       First_Impl& operator=(First_Impl&& other) = default;
+      First_Impl(::fidl::internal::StatusAndError&& other)
+          : Super(std::move(other)) {}
       using Super::error;
       using Super::ok;
       using Super::status;
@@ -157,6 +165,9 @@ class Parent final {
         ::fidl::DecodedMessage<FirstRequest> params);
   };
 
+  struct AsyncEventHandlers;
+  class ClientImpl;
+
   // Pure-virtual interface to be implemented by a server.
   class Interface {
    public:
@@ -201,7 +212,8 @@ class Parent final {
 
    public:
     static void FirstRequest(
-        const ::fidl::DecodedMessage<Parent::FirstRequest>& _msg);
+        const ::fidl::DecodedMessage<Parent::FirstRequest>& _msg,
+        zx_txid_t _txid = 0);
   };
 };
 
@@ -265,6 +277,8 @@ class Child final {
       ~First_Impl() = default;
       First_Impl(First_Impl&& other) = default;
       First_Impl& operator=(First_Impl&& other) = default;
+      First_Impl(::fidl::internal::StatusAndError&& other)
+          : Super(std::move(other)) {}
       using Super::error;
       using Super::ok;
       using Super::status;
@@ -277,6 +291,8 @@ class Child final {
       ~Second_Impl() = default;
       Second_Impl(Second_Impl&& other) = default;
       Second_Impl& operator=(Second_Impl&& other) = default;
+      Second_Impl(::fidl::internal::StatusAndError&& other)
+          : Super(std::move(other)) {}
       using Super::error;
       using Super::ok;
       using Super::status;
@@ -302,6 +318,8 @@ class Child final {
       ~First_Impl() = default;
       First_Impl(First_Impl&& other) = default;
       First_Impl& operator=(First_Impl&& other) = default;
+      First_Impl(::fidl::internal::StatusAndError&& other)
+          : Super(std::move(other)) {}
       using Super::error;
       using Super::ok;
       using Super::status;
@@ -315,6 +333,8 @@ class Child final {
       ~Second_Impl() = default;
       Second_Impl(Second_Impl&& other) = default;
       Second_Impl& operator=(Second_Impl&& other) = default;
+      Second_Impl(::fidl::internal::StatusAndError&& other)
+          : Super(std::move(other)) {}
       using Super::error;
       using Super::ok;
       using Super::status;
@@ -404,6 +424,9 @@ class Child final {
         ::fidl::DecodedMessage<SecondRequest> params);
   };
 
+  struct AsyncEventHandlers;
+  class ClientImpl;
+
   // Pure-virtual interface to be implemented by a server.
   class Interface {
    public:
@@ -453,9 +476,11 @@ class Child final {
 
    public:
     static void FirstRequest(
-        const ::fidl::DecodedMessage<Child::FirstRequest>& _msg);
+        const ::fidl::DecodedMessage<Child::FirstRequest>& _msg,
+        zx_txid_t _txid = 0);
     static void SecondRequest(
-        const ::fidl::DecodedMessage<Child::SecondRequest>& _msg);
+        const ::fidl::DecodedMessage<Child::SecondRequest>& _msg,
+        zx_txid_t _txid = 0);
   };
 };
 
@@ -500,3 +525,81 @@ static_assert(offsetof(::llcpp::fidl::test::json::Child::SecondRequest,
                        request) == 16);
 
 }  // namespace fidl
+
+namespace llcpp {
+
+namespace fidl {
+namespace test {
+namespace json {
+
+struct Parent::AsyncEventHandlers {};
+
+class Parent::ClientImpl final : private ::fidl::internal::ClientBase {
+ public:
+  // Allocates 24 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  ::fidl::StatusAndError First(::zx::channel request);
+
+  // Caller provides the backing storage for FIDL message via request and
+  // response buffers.
+  ::fidl::StatusAndError First(::fidl::BytePart _request_buffer,
+                               ::zx::channel request);
+
+ private:
+  friend class ::fidl::Client<Parent>;
+
+  ClientImpl(::zx::channel client_end, async_dispatcher_t* dispatcher,
+             ::fidl::internal::TypeErasedOnUnboundFn on_unbound,
+             AsyncEventHandlers handlers)
+      : ::fidl::internal::ClientBase(std::move(client_end), dispatcher,
+                                     std::move(on_unbound)),
+        handlers_(std::move(handlers)) {}
+
+  zx_status_t Dispatch(fidl_msg_t* msg,
+                       ::fidl::internal::ResponseContext* context) override;
+
+  AsyncEventHandlers handlers_;
+};
+
+struct Child::AsyncEventHandlers {};
+
+class Child::ClientImpl final : private ::fidl::internal::ClientBase {
+ public:
+  // Allocates 24 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  ::fidl::StatusAndError First(::zx::channel request);
+
+  // Caller provides the backing storage for FIDL message via request and
+  // response buffers.
+  ::fidl::StatusAndError First(::fidl::BytePart _request_buffer,
+                               ::zx::channel request);
+
+  // Allocates 24 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  ::fidl::StatusAndError Second(::zx::channel request);
+
+  // Caller provides the backing storage for FIDL message via request and
+  // response buffers.
+  ::fidl::StatusAndError Second(::fidl::BytePart _request_buffer,
+                                ::zx::channel request);
+
+ private:
+  friend class ::fidl::Client<Child>;
+
+  ClientImpl(::zx::channel client_end, async_dispatcher_t* dispatcher,
+             ::fidl::internal::TypeErasedOnUnboundFn on_unbound,
+             AsyncEventHandlers handlers)
+      : ::fidl::internal::ClientBase(std::move(client_end), dispatcher,
+                                     std::move(on_unbound)),
+        handlers_(std::move(handlers)) {}
+
+  zx_status_t Dispatch(fidl_msg_t* msg,
+                       ::fidl::internal::ResponseContext* context) override;
+
+  AsyncEventHandlers handlers_;
+};
+
+}  // namespace json
+}  // namespace test
+}  // namespace fidl
+}  // namespace llcpp

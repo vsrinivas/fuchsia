@@ -5,9 +5,11 @@
 #include <lib/fidl/internal.h>
 #include <lib/fidl/llcpp/array.h>
 #include <lib/fidl/llcpp/buffer_allocator.h>
+#include <lib/fidl/llcpp/client.h>
 #include <lib/fidl/llcpp/coding.h>
 #include <lib/fidl/llcpp/connect_service.h>
 #include <lib/fidl/llcpp/envelope.h>
+#include <lib/fidl/llcpp/errors.h>
 #include <lib/fidl/llcpp/memory.h>
 #include <lib/fidl/llcpp/service_handler_interface.h>
 #include <lib/fidl/llcpp/string_view.h>
@@ -20,6 +22,8 @@
 #include <lib/fit/function.h>
 #include <lib/zx/channel.h>
 #include <zircon/fidl.h>
+
+#include <variant>
 
 namespace llcpp {
 
@@ -383,6 +387,8 @@ class Interface final {
       ~Method_Impl() = default;
       Method_Impl(Method_Impl&& other) = default;
       Method_Impl& operator=(Method_Impl&& other) = default;
+      Method_Impl(::fidl::internal::StatusAndError&& other)
+          : Super(std::move(other)) {}
       using Super::error;
       using Super::ok;
       using Super::status;
@@ -406,6 +412,8 @@ class Interface final {
       ~Method_Impl() = default;
       Method_Impl(Method_Impl&& other) = default;
       Method_Impl& operator=(Method_Impl&& other) = default;
+      Method_Impl(::fidl::internal::StatusAndError&& other)
+          : Super(std::move(other)) {}
       using Super::error;
       using Super::ok;
       using Super::status;
@@ -481,6 +489,9 @@ class Interface final {
         ::zx::unowned_channel _client_end);
   };
 
+  struct AsyncEventHandlers;
+  class ClientImpl;
+
   // Pure-virtual interface to be implemented by a server.
   class Interface {
    public:
@@ -529,7 +540,8 @@ class Interface final {
 
    public:
     static void MethodRequest(
-        const ::fidl::DecodedMessage<Interface::MethodRequest>& _msg);
+        const ::fidl::DecodedMessage<Interface::MethodRequest>& _msg,
+        zx_txid_t _txid = 0);
     static void OnEventResponse(
         const ::fidl::DecodedMessage<Interface::OnEventResponse>& _msg);
   };
@@ -642,3 +654,44 @@ static_assert(std::is_standard_layout_v<::llcpp::test::name::MyBits>);
 static_assert(sizeof(::llcpp::test::name::MyBits) == sizeof(uint32_t));
 
 }  // namespace fidl
+
+namespace llcpp {
+
+namespace test {
+namespace name {
+
+struct Interface::AsyncEventHandlers {
+  // event comment #1
+  //
+  // event comment #3
+  ::fit::function<void()> on_event;
+};
+
+class Interface::ClientImpl final : private ::fidl::internal::ClientBase {
+ public:
+  // method comment #1
+  //
+  // method comment #3
+  // Allocates 16 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  ::fidl::StatusAndError Method();
+
+ private:
+  friend class ::fidl::Client<Interface>;
+
+  ClientImpl(::zx::channel client_end, async_dispatcher_t* dispatcher,
+             ::fidl::internal::TypeErasedOnUnboundFn on_unbound,
+             AsyncEventHandlers handlers)
+      : ::fidl::internal::ClientBase(std::move(client_end), dispatcher,
+                                     std::move(on_unbound)),
+        handlers_(std::move(handlers)) {}
+
+  zx_status_t Dispatch(fidl_msg_t* msg,
+                       ::fidl::internal::ResponseContext* context) override;
+
+  AsyncEventHandlers handlers_;
+};
+
+}  // namespace name
+}  // namespace test
+}  // namespace llcpp

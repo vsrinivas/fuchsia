@@ -13,15 +13,20 @@ const Helpers = `
               {{ .Name }}Response::PrimarySize)));
 {{- end }}
 
-{{- define "SetTransactionHeaderForRequestMethodSignature" }}
+{{- define "SetTransactionHeaderForRequestMethodDeclarationSignature" }}
 {{- $protocol_name := .LLProps.ProtocolName -}}
-{{- .Name }}Request(const ::fidl::DecodedMessage<{{ $protocol_name}}::{{ .Name }}Request>& _msg)
+{{- .Name }}Request(const ::fidl::DecodedMessage<{{ $protocol_name}}::{{ .Name }}Request>& _msg, zx_txid_t _txid = 0)
+{{- end }}
+
+{{- define "SetTransactionHeaderForRequestMethodDefinitionSignature" }}
+{{- $protocol_name := .LLProps.ProtocolName -}}
+{{- .Name }}Request(const ::fidl::DecodedMessage<{{ $protocol_name}}::{{ .Name }}Request>& _msg, zx_txid_t _txid)
 {{- end }}
 
 {{- define "SetTransactionHeaderForRequestMethodDefinition" -}}
 {{- $protocol_name := .LLProps.ProtocolName -}}
-void {{ $protocol_name }}::SetTransactionHeaderFor::{{ template "SetTransactionHeaderForRequestMethodSignature" . }} {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, {{ .Ordinals.Write.Name }});
+void {{ $protocol_name }}::SetTransactionHeaderFor::{{ template "SetTransactionHeaderForRequestMethodDefinitionSignature" . }} {
+  fidl_init_txn_header(&_msg.message()->_hdr, _txid, {{ .Ordinals.Write.Name }});
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 {{- end }}

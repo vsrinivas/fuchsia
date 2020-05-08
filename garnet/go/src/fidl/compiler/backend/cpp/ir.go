@@ -279,8 +279,10 @@ type LLContextProps struct {
 	StackAllocRequest bool
 	// Should the response be allocated on the stack, in the managed flavor.
 	StackAllocResponse bool
-	// Total number of bytes of stack used by storing the request and response.
-	StackUse int
+	// Total number of bytes of stack used for storing the request.
+	StackUseRequest int
+	// Total number of bytes of stack used for storing the response.
+	StackUseResponse int
 }
 
 // LLProps contain properties of a method specific to llcpp
@@ -803,17 +805,19 @@ func (m Method) NewLLContextProps(context LLContext) LLContextProps {
 		stackAllocResponse = len(m.Response) == 0 || (m.ResponseSize+m.ResponseMaxOutOfLine) < llcppMaxStackAllocSize
 	}
 
-	stackUse := 0
+	stackUseRequest := 0
+	stackUseResponse := 0
 	if stackAllocRequest {
-		stackUse += m.RequestSize + m.RequestMaxOutOfLine
+		stackUseRequest = m.RequestSize + m.RequestMaxOutOfLine
 	}
 	if stackAllocResponse {
-		stackUse += m.ResponseSize + m.ResponseMaxOutOfLine
+		stackUseResponse = m.ResponseSize + m.ResponseMaxOutOfLine
 	}
 	return LLContextProps{
 		StackAllocRequest:  stackAllocRequest,
 		StackAllocResponse: stackAllocResponse,
-		StackUse:           stackUse,
+		StackUseRequest:    stackUseRequest,
+		StackUseResponse:   stackUseResponse,
 	}
 }
 

@@ -90,6 +90,108 @@ Top::UnownedResultOf::GetFoo Top::Call::GetFoo(
   return ::fidl::Decode(std::move(_call_result.message));
 }
 
+Top::ResultOf::GetFoo Top::ClientImpl::GetFoo_Sync() {
+  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
+    return ResultOf::GetFoo(_binding->channel());
+  }
+  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+}
+
+Top::UnownedResultOf::GetFoo Top::ClientImpl::GetFoo_Sync(
+    ::fidl::BytePart _response_buffer) {
+  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
+    return UnownedResultOf::GetFoo(_binding->channel(),
+                                   std::move(_response_buffer));
+  }
+  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+}
+
+::fidl::StatusAndError Top::ClientImpl::GetFoo(
+    ::fit::callback<void(::llcpp::bottom::Foo foo)> _cb) {
+  class ManagedResponseContext : public GetFooResponseContext {
+   public:
+    ManagedResponseContext(::fit::callback<void(::llcpp::bottom::Foo foo)> cb)
+        : cb_(std::move(cb)) {}
+
+    void OnReply(::fidl::DecodedMessage<GetFooResponse> msg) override {
+      auto message = msg.message();
+      cb_(std::move(message->foo));
+      delete this;
+    }
+
+    void OnError() override { delete this; }
+
+    ::fit::callback<void(::llcpp::bottom::Foo foo)> cb_;
+  };
+
+  auto* _context = new ManagedResponseContext(std::move(_cb));
+  auto status_and_error = GetFoo(_context);
+  if (!status_and_error.ok()) {
+    delete _context;
+  }
+  return status_and_error;
+}
+
+::fidl::StatusAndError Top::ClientImpl::GetFoo(
+    GetFooResponseContext* _context) {
+  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetFooRequest)] = {};
+  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
+  memset(_request_buffer.data(), 0, GetFooRequest::PrimarySize);
+  _request_buffer.set_actual(sizeof(GetFooRequest));
+  ::fidl::DecodedMessage<GetFooRequest> _decoded_request(
+      std::move(_request_buffer));
+
+  ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
+  SetTransactionHeaderFor::GetFooRequest(_decoded_request, _context->Txid());
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    ::fidl::internal::ClientBase::ForgetAsyncTxn(_context);
+    return ::fidl::DecodeResult<GetFooResponse>::FromFailure(
+        std::move(_encode_request_result));
+  }
+
+  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
+    zx_status_t _write_status = ::fidl::Write(
+        _binding->channel(), std::move(_encode_request_result.message));
+    if (_write_status != ZX_OK) {
+      ::fidl::internal::ClientBase::ForgetAsyncTxn(_context);
+      return ::fidl::StatusAndError(_write_status, ::fidl::kErrorWriteFailed);
+    }
+    return ::fidl::StatusAndError(ZX_OK, nullptr);
+  }
+  ::fidl::internal::ClientBase::ForgetAsyncTxn(_context);
+  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+}
+
+zx_status_t Top::ClientImpl::Dispatch(
+    fidl_msg_t* msg, ::fidl::internal::ResponseContext* context) {
+  fidl_message_header_t* hdr =
+      reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+  switch (hdr->ordinal) {
+    case kTop_GetFoo_Ordinal:
+    case kTop_GetFoo_GenOrdinal: {
+      auto result = ::fidl::DecodeAs<GetFooResponse>(msg);
+      if (result.status != ZX_OK) {
+        context->OnError();
+        return result.status;
+      }
+      static_cast<GetFooResponseContext*>(context)->OnReply(
+          std::move(result.message));
+      break;
+    }
+    case kFidlOrdinalEpitaph:
+      if (context) return ZX_ERR_INVALID_ARGS;
+      ::fidl::internal::ClientBase::Close(
+          reinterpret_cast<fidl_epitaph_t*>(hdr)->error);
+      break;
+    default:
+      zx_handle_close_many(msg->handles, msg->num_handles);
+      if (context) context->OnError();
+      return ZX_ERR_NOT_SUPPORTED;
+  }
+  return ZX_OK;
+}
+
 bool Top::TryDispatch(Interface* impl, fidl_msg_t* msg,
                       ::fidl::Transaction* txn) {
   if (msg->num_bytes < sizeof(fidl_message_header_t)) {
@@ -170,8 +272,8 @@ void Top::Interface::GetFooCompleterBase::Reply(
 }
 
 void Top::SetTransactionHeaderFor::GetFooRequest(
-    const ::fidl::DecodedMessage<Top::GetFooRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kTop_GetFoo_GenOrdinal);
+    const ::fidl::DecodedMessage<Top::GetFooRequest>& _msg, zx_txid_t _txid) {
+  fidl_init_txn_header(&_msg.message()->_hdr, _txid, kTop_GetFoo_GenOrdinal);
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Top::SetTransactionHeaderFor::GetFooResponse(
