@@ -114,7 +114,7 @@ struct Color {
 FIDL supports integer, floating point, boolean, string, and enumeration literals, using
 a simplified syntax familiar to C programmers (see below for examples).
 
-### Constants
+### Constants {#constants}
 
 FIDL supports the following constant types: bits, booleans, signed and unsigned
 integers, floating point values, strings, and enumerations.
@@ -178,7 +178,7 @@ There is a subtlety about the semantics and what defaults mean:
 FIDL uses the semi-colon **';'** to separate adjacent declarations within the
 file, much like C.
 
-## Libraries
+## Libraries {#libraries}
 
 Libraries are named containers of FIDL declarations.
 
@@ -256,7 +256,7 @@ struct Sprite {
 };
 ```
 
-### Bits
+### Bits {#bits}
 
 *   Named bit types.
 *   Discrete subset of bit values chosen from an underlying integer primitive
@@ -278,7 +278,7 @@ bits InfoFeatures : uint32 {
 };
 ```
 
-### Enums
+### Enums {#enums}
 
 *   Proper enumerated types.
 *   Discrete subset of named values chosen from an underlying integer primitive
@@ -465,7 +465,7 @@ struct Record {
 };
 ```
 
-### Structs
+### Structs {#structs}
 
 *   Record type consisting of a sequence of typed fields.
 *   Declaration is not intended to be modified once deployed; use protocol
@@ -504,7 +504,7 @@ struct Circle {
 };
 ```
 
-### Tables
+### Tables {#tables}
 
 *   Record type consisting of a sequence of typed fields with ordinals.
 *   Declaration is intended for forward and backward compatibility in the face of schema changes.
@@ -547,7 +547,7 @@ table Profile {
 };
 ```
 
-### Unions
+### Unions {#unions}
 
 *   Record type consisting of an ordinal and an envelope.
 *   Ordinal indicates member selection, envelope holds contents.
@@ -600,7 +600,7 @@ still receive a union from a server which has been updated to contain the larger
 set of variants. If the union is of the unknown variant, the data is exposed as
 unknown data by the bindings.
 
-### Protocols
+### Protocols {#protocols}
 
 *   Describe methods which can be invoked by sending messages over a channel.
 *   Methods are identified by their ordinal index. The compiler calculates the ordinal by
@@ -677,7 +677,7 @@ struct Record {
 };
 ```
 
-### Protocol Composition
+### Protocol Composition {#protocol-composition}
 
 A protocol can include methods from other protocols.
 This is called composition: you compose one protocol from other protocols.

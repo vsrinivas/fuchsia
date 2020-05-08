@@ -619,8 +619,6 @@ reference][language-reference], or the [contributing doc][fidl-contributing].
 [bindings-reference]: /docs/reference/fidl/language/language.md
 [wire-format]: /docs/reference/fidl/language/wire-format
 [language-spec]: /docs/reference/fidl/language/language.md
-<!-- TODO: CLI page? -->
-[developer-guides]: /docs/development/languages/fidl/guides/
+[developer-guides]: /docs/development/languages/fidl/
 [fidl-contributing]: /docs/community/contribute/contributing_to_fidl.md
-<!-- TODO: CLI page? -->
 [compiler-spec]: /docs/development/languages/fidl/guides/
