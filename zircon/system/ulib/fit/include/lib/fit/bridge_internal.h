@@ -306,9 +306,9 @@ void bridge_state<V, E>::drop_consumption_ref(bool was_consumed) {
 
 template <typename V, typename E>
 void bridge_state<V, E>::drop_ref_and_maybe_delete_self() {
-  uint32_t count = ref_count_.fetch_sub(1u, std::memory_order_release) - 1u;
-  assert(count >= 0);
-  if (count == 0) {
+  uint32_t count = ref_count_.fetch_sub(1u, std::memory_order_release);
+  assert(count > 0);
+  if (count == 1) {
     std::atomic_thread_fence(std::memory_order_acquire);
     delete this;
   }
