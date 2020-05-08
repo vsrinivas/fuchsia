@@ -155,6 +155,7 @@ driver_module("test-i2c") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "test/i2c.cc" ]
   deps = [
+    "//sdk/banjo/ddk.protocol.i2c",
     "//sdk/banjo/ddk.protocol.i2cimpl",
     "//sdk/banjo/ddk.protocol.platform.bus",
     "//sdk/banjo/ddk.protocol.platform.device",
@@ -163,7 +164,6 @@ driver_module("test-i2c") {
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
-    "//zircon/system/banjo/ddk.protocol.i2c",
   ]
 }
 
@@ -238,6 +238,7 @@ foreach(driver, simple_drivers) {
       "//sdk/banjo/ddk.protocol.codec",
       "//sdk/banjo/ddk.protocol.composite",
       "//sdk/banjo/ddk.protocol.gpio",
+      "//sdk/banjo/ddk.protocol.i2c",
       "//sdk/banjo/ddk.protocol.platform.device",
       "//sdk/banjo/ddk.protocol.power",
       "//sdk/banjo/ddk.protocol.pwm",
@@ -245,7 +246,6 @@ foreach(driver, simple_drivers) {
       "//src/devices/lib/driver",
       "//zircon/public/lib/ddk",
       "//zircon/public/lib/sync",
-      "//zircon/system/banjo/ddk.protocol.i2c",
       "//zircon/system/dev/lib/device-protocol-i2c",
     ]
   }

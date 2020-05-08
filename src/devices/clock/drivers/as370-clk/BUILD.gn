@@ -18,6 +18,7 @@ driver_module("as370-clk") {
     "//sdk/banjo/ddk.protocol.clock",
     "//sdk/banjo/ddk.protocol.clockimpl",
     "//sdk/banjo/ddk.protocol.gpio",
+    "//sdk/banjo/ddk.protocol.i2c",
     "//sdk/banjo/ddk.protocol.platform.bus",
     "//sdk/banjo/ddk.protocol.platform.device",
     "//src/devices/bus/lib/device-protocol-pdev",
@@ -30,7 +31,6 @@ driver_module("as370-clk") {
     "//zircon/public/lib/mmio",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
-    "//zircon/system/banjo/ddk.protocol.i2c",
   ]
 }
 
@@ -45,6 +45,7 @@ test("as370-clk-test") {
     "//sdk/banjo/ddk.protocol.clock",
     "//sdk/banjo/ddk.protocol.clockimpl",
     "//sdk/banjo/ddk.protocol.gpio",
+    "//sdk/banjo/ddk.protocol.i2c",
     "//sdk/banjo/ddk.protocol.platform.bus",
     "//sdk/banjo/ddk.protocol.platform.device",
     "//src/devices/bus/lib/device-protocol-pdev",
@@ -60,7 +61,6 @@ test("as370-clk-test") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/banjo/ddk.protocol.i2c",
   ]
 }
 

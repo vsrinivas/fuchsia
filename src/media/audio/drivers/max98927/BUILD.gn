@@ -15,6 +15,7 @@ driver_module("max98927") {
   }
   sources = [ "max98927.cc" ]
   deps = [
+    "//sdk/banjo/ddk.protocol.i2c",
     "//sdk/banjo/ddk.protocol.pci",
     "//sdk/fidl/fuchsia.hardware.audiocodec:fuchsia.hardware.audiocodec_c",
     "//src/devices/lib/driver",
@@ -23,7 +24,6 @@ driver_module("max98927") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
-    "//zircon/system/banjo/ddk.protocol.i2c",
     "//zircon/system/dev/lib/device-protocol-i2c",
     "//zircon/system/ulib/fidl-utils",
   ]

@@ -25,7 +25,7 @@ and the protocol user.
 ## A simple example
 
 As a first step, let's take a look at a relatively simple Banjo specification.
-This is the file [`//zircon/system/banjo/ddk.protocol.i2c/i2c.banjo`](/zircon/system/banjo/ddk.protocol.i2c/i2c.banjo):
+This is the file [`//sdk/banjo/ddk.protocol.i2c/i2c.banjo`](/sdk/banjo/ddk.protocol.i2c/i2c.banjo):
 
 > Note that the line numbers in the code samples throughout this tutorial are not part of the files.
 
@@ -133,7 +133,7 @@ The C implementation is relatively straightforward:
 * Some helper functions are also generated.
 
 The C version is generated into
-`//zircon/build-`_TARGET_`/system/banjo/ddk-protocol-i2c/gen/include/ddk/protocol/i2c.h`,
+`$BUILD_DIR/banjoing/gen/ddk/protocol/i2c.h`,
 where _TARGET_ is the target architecture, e.g., `arm64`.
 
 The file is relatively long, so we'll look at it in several parts.
@@ -148,7 +148,7 @@ The first part has some boilerplate which we'll show without further comment:
 [03] // found in the LICENSE file.
 [04]
 [05] // WARNING: THIS FILE IS MACHINE GENERATED. DO NOT EDIT.
-[06] //          MODIFY system/banjo/ddk-protocol-i2c/i2c.banjo INSTEAD.
+[06] //          MODIFY sdk/banjo/ddk.protocol.i2c/i2c.banjo INSTEAD.
 [07]
 [08] #pragma once
 [09]
@@ -297,7 +297,7 @@ Let's take a look.
 
 The Banjo transpiler generates three files:
 the first is the C file discussed above, and the other two are under
-`//zircon/build-`_TARGET_`/system/banjo/ddk-protocol-i2c/gen/include/ddktl/protocol/`:
+`$BUILD_DIR/banjoing/gen/ddktl/protocol/i2c.h`:
 
 * `i2c.h` &mdash; the file your program should include, and
 * `i2c-internal.h` &mdash; an internal file, included by `i2c.h`
@@ -327,7 +327,7 @@ The boilerplate is pretty much what you'd expect:
 [003] // found in the LICENSE file.
 [004]
 [005] // WARNING: THIS FILE IS MACHINE GENERATED. DO NOT EDIT.
-[006] //          MODIFY system/banjo/ddk-protocol-i2c/i2c.banjo INSTEAD.
+[006] //          MODIFY sdk/banjo/ddk.protocol.i2c/i2c.banjo INSTEAD.
 [007]
 [008] #pragma once
 [009]

@@ -17,6 +17,7 @@ driver_module("tas5805") {
   deps = [
     "//sdk/banjo/ddk.protocol.codec",
     "//sdk/banjo/ddk.protocol.composite",
+    "//sdk/banjo/ddk.protocol.i2c",
     "//sdk/banjo/ddk.protocol.platform.device",
     "//src/devices/i2c/lib/device-protocol-i2c-channel",
     "//src/devices/lib/driver",
@@ -25,7 +26,6 @@ driver_module("tas5805") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
-    "//zircon/system/banjo/ddk.protocol.i2c",
   ]
 }
 
@@ -39,6 +39,7 @@ test("tas5805-test") {
   deps = [
     "//sdk/banjo/ddk.protocol.codec",
     "//sdk/banjo/ddk.protocol.composite",
+    "//sdk/banjo/ddk.protocol.i2c",
     "//src/devices/i2c/lib/device-protocol-i2c-channel",
     "//src/devices/i2c/testing/mock-i2c",
     "//src/devices/testing/fake_ddk",
@@ -49,7 +50,6 @@ test("tas5805-test") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/banjo/ddk.protocol.i2c",
   ]
 }
 

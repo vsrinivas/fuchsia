@@ -15,6 +15,7 @@ driver_module("dsi-mt") {
   deps = [
     "//sdk/banjo/ddk.protocol.dsiimpl",
     "//sdk/banjo/ddk.protocol.gpio",
+    "//sdk/banjo/ddk.protocol.i2c",
     "//sdk/banjo/ddk.protocol.platform.bus",
     "//sdk/banjo/ddk.protocol.platform.device",
     "//sdk/banjo/ddk.protocol.sysmem",
@@ -31,7 +32,6 @@ driver_module("dsi-mt") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
-    "//zircon/system/banjo/ddk.protocol.i2c",
     "//zircon/system/ulib/mipi-dsi",
   ]
 }

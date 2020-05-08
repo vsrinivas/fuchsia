@@ -66,6 +66,7 @@ test("usb-video-test") {
     "uvc_format_test.cc",
   ]
   deps = [
+    "//sdk/banjo/ddk.protocol.i2c",
     "//sdk/fidl/fuchsia.camera",
     "//sdk/fidl/fuchsia.hardware.camera:fuchsia.hardware.camera_c",
     "//sdk/fidl/fuchsia.hardware.i2c:fuchsia.hardware.i2c_llcpp",
@@ -77,7 +78,6 @@ test("usb-video-test") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/banjo/ddk.protocol.i2c",
     "//zircon/system/dev/lib/device-protocol-i2c",
     "//zircon/system/dev/lib/fake_ddk",
   ]
