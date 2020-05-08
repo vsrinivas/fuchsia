@@ -10,12 +10,91 @@ import 'package:sl4f/sl4f.dart' as sl4f;
 
 const _timeout = Timeout(Duration(minutes: 5));
 
+/// Formats an IP address so that fidlcat can understand it (removes % part,
+/// adds brackets around it.)
+String formatTarget(Logger log, String target) {
+  log.info('$target: target');
+  try {
+    Uri.parseIPv4Address(target);
+    return target;
+  } on FormatException {
+    try {
+      Uri.parseIPv6Address(target);
+      return '[$target]';
+    } on FormatException {
+      try {
+        Uri.parseIPv6Address(target.split('%')[0]);
+        return '[$target]';
+      } on FormatException {
+        return null;
+      }
+    }
+  }
+}
+
+class RunFidlcat {
+  String target;
+  int port;
+  Future<ProcessResult> agentResult;
+  String stdout;
+  String stderr;
+  String additionalResult;
+
+  Future<void> run(Logger log, sl4f.Sl4f sl4fDriver, String path,
+      List<String> extraArguments) async {
+    port = await sl4fDriver.ssh.pickUnusedPort();
+    log.info('Chose port: $port');
+
+    /// fuchsia-pkg URL for the debug agent.
+    const String debugAgentUrl =
+        'fuchsia-pkg://fuchsia.com/debug_agent#meta/debug_agent.cmx';
+
+    agentResult = sl4fDriver.ssh.run('run $debugAgentUrl --port=$port');
+    target = formatTarget(log, sl4fDriver.ssh.target);
+    log.info('Target: $target');
+
+    List<String> arguments;
+    final String symbolPath = Platform.script
+        .resolve('runtime_deps/echo_client_cpp.debug')
+        .toFilePath();
+    // We have to list all of the IR we need explicitly, here and in the BUILD.gn file. The
+    // two lists must be kept in sync: if you add an IR here, you must also add it to the
+    // BUILD.gn file.
+    final String echoIr =
+        Platform.script.resolve('runtime_deps/echo.fidl.json').toFilePath();
+    final String ioIr = Platform.script
+        .resolve('runtime_deps/fuchsia-io.fidl.json')
+        .toFilePath();
+    final String sysIr = Platform.script
+        .resolve('runtime_deps/fuchsia.sys.fidl.json')
+        .toFilePath();
+    arguments = [
+      '--connect=$target:$port',
+      '--quit-agent-on-exit',
+      '--fidl-ir-path=$echoIr',
+      '--fidl-ir-path=$ioIr',
+      '--fidl-ir-path=$sysIr',
+      '-s',
+      '$symbolPath',
+    ]
+      ..addAll(extraArguments)
+      ..addAll([
+        'run',
+        'fuchsia-pkg://fuchsia.com/echo_client_cpp#meta/echo_client_cpp.cmx',
+      ]);
+    ProcessResult processResult;
+    do {
+      processResult = await Process.run(path, arguments);
+    } while (processResult.exitCode == 2); // 2 means can't connect (yet).
+
+    stdout = processResult.stdout.toString();
+    stderr = processResult.stderr.toString();
+    additionalResult = 'stderr ===\n$stderr\nstdout ===\n$stdout';
+  }
+}
+
 void main(List<String> arguments) {
   final log = Logger('fidlcat_test');
-
-  /// fuchsia-pkg URL for the debug agent.
-  const String debugAgentUrl =
-      'fuchsia-pkg://fuchsia.com/debug_agent#meta/debug_agent.cmx';
 
   /// Location of the fidlcat executable.
   final String fidlcatPath =
@@ -33,76 +112,20 @@ void main(List<String> arguments) {
     sl4fDriver.close();
   });
 
-  /// Formats an IP address so that fidlcat can understand it (removes % part,
-  /// adds brackets around it.)
-  String formatTarget(String target) {
-    log.info('$target: target');
-    try {
-      Uri.parseIPv4Address(target);
-      return target;
-    } on FormatException {
-      try {
-        Uri.parseIPv6Address(target);
-        return '[$target]';
-      } on FormatException {
-        try {
-          Uri.parseIPv6Address(target.split('%')[0]);
-          return '[$target]';
-        } on FormatException {
-          return null;
-        }
-      }
-    }
-  }
-
   /// Simple test to ensure that fidlcat can run the echo client, and that some of the expected
   /// output is present.  It starts the agent on the target, and then launches fidlcat with the
   /// correct parameters.
   group('fidlcat', () {
     test('Simple test of echo client output and shutdown', () async {
-      int port = await sl4fDriver.ssh.pickUnusedPort();
-      log.info('Chose port: $port');
-      Future<ProcessResult> agentResult =
-          sl4fDriver.ssh.run('run $debugAgentUrl --port=$port');
-      String target = formatTarget(sl4fDriver.ssh.target);
-      log.info('Target: $target');
+      var instance = RunFidlcat();
+      await instance.run(log, sl4fDriver, fidlcatPath, []);
 
-      final String symbolPath = Platform.script
-          .resolve('runtime_deps/echo_client_cpp.debug')
-          .toFilePath();
-      // We have to list all of the IR we need explicitly, here and in the BUILD.gn file. The
-      // two lists must be kept in sync: if you add an IR here, you must also add it to the
-      // BUILD.gn file.
-      final String echoIr =
-          Platform.script.resolve('runtime_deps/echo.fidl.json').toFilePath();
-      final String ioIr = Platform.script
-          .resolve('runtime_deps/fuchsia-io.fidl.json')
-          .toFilePath();
-      final String sysIr = Platform.script
-          .resolve('runtime_deps/fuchsia.sys.fidl.json')
-          .toFilePath();
-      ProcessResult processResult;
-      do {
-        processResult = await Process.run(fidlcatPath, [
-          '--connect=$target:$port',
-          '--quit-agent-on-exit',
-          '--fidl-ir-path=$echoIr',
-          '--fidl-ir-path=$ioIr',
-          '--fidl-ir-path=$sysIr',
-          '-s',
-          '$symbolPath',
-          'run',
-          'fuchsia-pkg://fuchsia.com/echo_client_cpp#meta/echo_client_cpp.cmx',
-        ]);
-      } while (processResult.exitCode == 2); // 2 means can't connect (yet).
-      String additionalResult =
-          'stderr ===\n${processResult.stderr.toString()}\nstdout ===\n${processResult.stdout.toString()}';
       expect(
-          processResult.stdout.toString(),
+          instance.stdout,
           contains(
               'sent request fidl.examples.echo/Echo.EchoString = {"value":"hello world"}'),
-          reason: additionalResult);
-      await agentResult;
+          reason: instance.additionalResult);
+      await instance.agentResult;
     });
   }, timeout: _timeout);
 }
