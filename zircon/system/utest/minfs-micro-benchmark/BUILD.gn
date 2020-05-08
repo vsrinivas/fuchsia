@@ -27,6 +27,7 @@ test("minfs-micro-benchmark") {
     "minfs-tests.cc",
   ]
   deps = [
+    "//sdk/fidl/fuchsia.minfs:fuchsia.minfs_c",
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-default",
@@ -48,7 +49,6 @@ test("minfs-micro-benchmark") {
     "//zircon/system/fidl/fuchsia-hardware-block:c",
     "//zircon/system/fidl/fuchsia-io:c",
     "//zircon/system/fidl/fuchsia-io:c",
-    "//zircon/system/fidl/fuchsia-minfs:c",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fs-management",
     "//zircon/system/ulib/fs-test-utils",

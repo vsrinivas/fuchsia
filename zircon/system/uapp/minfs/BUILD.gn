@@ -26,6 +26,7 @@ executable("minfs") {
   }
   sources = [ "main.cc" ]
   deps = [
+    "//sdk/fidl/fuchsia.minfs:fuchsia.minfs_c",
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-default",
@@ -44,7 +45,6 @@ executable("minfs") {
     "//zircon/public/lib/zx",
     "//zircon/system/fidl/fuchsia-hardware-block:c",
     "//zircon/system/fidl/fuchsia-io:c",
-    "//zircon/system/fidl/fuchsia-minfs:c",
     "//zircon/system/ulib/block-client",
     "//zircon/system/ulib/minfs",
   ]

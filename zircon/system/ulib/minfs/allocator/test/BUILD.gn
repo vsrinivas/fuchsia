@@ -35,8 +35,8 @@ test("minfs-allocator-unit") {
     "main.cc",
   ]
   deps = [
+    "//sdk/fidl/fuchsia.minfs:fuchsia.minfs_c",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/fidl/fuchsia-minfs:c",
     "//zircon/system/ulib/block-client",
     "//zircon/system/ulib/minfs",
   ]

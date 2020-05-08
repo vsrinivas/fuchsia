@@ -97,14 +97,15 @@ zx_library("minfs") {
   if (is_fuchsia) {
     public_deps += [
       "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_c",
+      "//sdk/fidl/fuchsia.minfs:fuchsia.minfs_llcpp",
       "//zircon/public/lib/fzl",
       "//zircon/public/lib/zx",
       "//zircon/system/fidl/fuchsia-hardware-block:c",
-      "//zircon/system/fidl/fuchsia-minfs:llcpp",
       "//zircon/system/ulib/block-client",
       "//zircon/system/ulib/storage-metrics",
     ]
     deps += [
+      "//sdk/fidl/fuchsia.minfs:fuchsia.minfs_llcpp",
       "//zircon/public/lib/async",
       "//zircon/public/lib/async-cpp",
       "//zircon/public/lib/async-default",
@@ -122,7 +123,6 @@ zx_library("minfs") {
       "//zircon/system/fidl/fuchsia-device:c",
       "//zircon/system/fidl/fuchsia-device:llcpp",
       "//zircon/system/fidl/fuchsia-io:llcpp",
-      "//zircon/system/fidl/fuchsia-minfs:llcpp",
       "//zircon/system/ulib/fdio-caller",
       "//zircon/system/ulib/fidl-utils",
       "//zircon/system/ulib/fs/journal",

@@ -21,21 +21,21 @@ zx_library("storage-metrics") {
   sdk_headers = [ "storage-metrics/storage-metrics.h" ]
   sources = [ "storage-metrics.cc" ]
   public_deps = [
+    "//sdk/fidl/fuchsia.minfs:fuchsia.minfs_c",
+    "//sdk/fidl/fuchsia.minfs:fuchsia.minfs_llcpp",
     "//zircon/public/lib/fbl",
     "//zircon/system/fidl/fuchsia-hardware-block:c",
     "//zircon/system/fidl/fuchsia-hardware-block:llcpp",
-    "//zircon/system/fidl/fuchsia-minfs:c",
-    "//zircon/system/fidl/fuchsia-minfs:llcpp",
     "//zircon/system/fidl/fuchsia-storage-metrics:c",
     "//zircon/system/fidl/fuchsia-storage-metrics:llcpp",
   ]
   deps = [
     "//sdk/banjo/ddk.protocol.block",
+    "//sdk/fidl/fuchsia.minfs:fuchsia.minfs_c",
+    "//sdk/fidl/fuchsia.minfs:fuchsia.minfs_llcpp",
     "//zircon/public/lib/fbl",
     "//zircon/system/fidl/fuchsia-hardware-block:c",
     "//zircon/system/fidl/fuchsia-hardware-block:llcpp",
-    "//zircon/system/fidl/fuchsia-minfs:c",
-    "//zircon/system/fidl/fuchsia-minfs:llcpp",
     "//zircon/system/fidl/fuchsia-storage-metrics:c",
     "//zircon/system/fidl/fuchsia-storage-metrics:llcpp",
   ]

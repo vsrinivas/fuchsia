@@ -79,6 +79,7 @@ test("fs") {
   }
 
   deps = [
+    "//sdk/fidl/fuchsia.minfs:fuchsia.minfs_c",
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-default",
@@ -104,7 +105,6 @@ test("fs") {
     "//zircon/system/fidl/fuchsia-hardware-block:c",
     "//zircon/system/fidl/fuchsia-io:llcpp",
     "//zircon/system/fidl/fuchsia-mem:c",
-    "//zircon/system/fidl/fuchsia-minfs:c",
     "//zircon/system/ulib/block-client",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fs-management",
