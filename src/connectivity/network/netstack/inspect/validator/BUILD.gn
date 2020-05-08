@@ -1,0 +1,57 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/go/go_binary.gni")
+import("//build/go/go_library.gni")
+import("//build/go/toolchain.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+go_library("lib") {
+  name = "fuchsia.googlesource.com/inspect/validator"
+
+  deps = [
+    "//src/connectivity/network/netstack:netstack_lib",
+    "//src/diagnostics/inspect_validator/fidl:validate($go_toolchain)",
+    "//src/lib/component/go/src/app",
+  ]
+}
+
+go_binary("puppet") {
+  gopackage = "fuchsia.googlesource.com/inspect/validator"
+
+  deps = [ ":lib" ]
+}
+
+test_package("inspect-validator-test-go") {
+  deps = [
+    ":puppet",
+    "//src/diagnostics/inspect_validator:validator_bin",
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/puppet.cmx")
+      dest = "puppet.cmx"
+    },
+  ]
+
+  binaries = [
+    {
+      name = "puppet"
+    },
+  ]
+
+  tests = [
+    {
+      name = "validator"
+      environments = [ qemu_env ]
+    },
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":inspect-validator-test-go" ]
+}

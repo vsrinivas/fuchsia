@@ -1,0 +1,28 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.diagnostics.ArchiveAccessor": "fuchsia-pkg://fuchsia.com/archivist#meta/observer.cmx"
+            }
+        }
+    },
+    "program": {
+        "args": [
+            "--url",
+            "fuchsia-pkg://fuchsia.com/inspect-validator-test-go#meta/puppet.cmx",
+            "--output",
+            "text",
+            "--test-archive"
+        ],
+        "binary": "test/validator"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.diagnostics.ArchiveAccessor",
+            "fuchsia.logger.LogSink",
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Launcher",
+            "fuchsia.sys.Loader"
+        ]
+    }
+}

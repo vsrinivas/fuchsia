@@ -336,6 +336,7 @@ func (dirState *directoryState) Watch(_ fidl.Context, mask uint32, options uint3
 
 type File interface {
 	GetReader() (Reader, uint64)
+	GetVMO() zx.VMO
 }
 
 var _ File = (*pprofFile)(nil)
@@ -352,6 +353,10 @@ func (p *pprofFile) GetReader() (Reader, uint64) {
 	return bytes.NewReader(b.Bytes()), uint64(b.Len())
 }
 
+func (*pprofFile) GetVMO() zx.VMO {
+	return zx.VMO(zx.HandleInvalid)
+}
+
 var _ Node = (*FileWrapper)(nil)
 
 type FileWrapper struct {
@@ -364,6 +369,7 @@ func (file *FileWrapper) getFile() fidlio.FileWithCtx {
 		FileWrapper: file,
 		reader:      reader,
 		size:        size,
+		vmo:         file.File.GetVMO(),
 	}
 }
 
@@ -402,6 +408,7 @@ type fileState struct {
 	*FileWrapper
 	reader Reader
 	size   uint64
+	vmo    zx.VMO
 }
 
 func (fState *fileState) Clone(ctx fidl.Context, flags uint32, req fidlio.NodeWithCtxInterfaceRequest) error {
@@ -414,7 +421,19 @@ func (fState *fileState) Close(fidl.Context) (int32, error) {
 
 func (fState *fileState) Describe(fidl.Context) (fidlio.NodeInfo, error) {
 	var nodeInfo fidlio.NodeInfo
-	nodeInfo.SetFile(fidlio.FileObject{})
+	if fState.vmo.Handle().IsValid() {
+		h, err := fState.vmo.Handle().Duplicate(zx.RightSameRights)
+		if err != nil {
+			return nodeInfo, err
+		}
+		nodeInfo.SetVmofile(fidlio.Vmofile{
+			Vmo:    zx.VMO(h),
+			Offset: 0,
+			Length: fState.size,
+		})
+	} else {
+		nodeInfo.SetFile(fidlio.FileObject{})
+	}
 	return nodeInfo, nil
 }
 

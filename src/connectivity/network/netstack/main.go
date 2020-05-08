@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"reflect"
 	"runtime"
 	"strconv"
@@ -26,6 +27,7 @@ import (
 	"netstack/connectivity"
 	"netstack/dns"
 	"netstack/filter"
+	"netstack/pprof"
 	"networking_metrics_golib"
 	"syslog"
 
@@ -304,6 +306,30 @@ func Main() {
 			}).asService,
 		},
 	})
+
+	// Minimal support for the inspect VMO format allows our profile protos to be
+	// picked up by bug reports.
+	//
+	// To extract these serialized protos from inspect.json, jq can be used:
+	//
+	// cat iquery.json | \
+	// jq '.[] | select(.path | contains("/pprof/")) | .contents.root.pprof.goroutine[4:]' | \
+	// xargs echo | base64 --decode > goroutine
+	pprofCache := filepath.Join("", "cache", "pprof")
+	if err := os.MkdirAll(pprofCache, os.ModePerm); err != nil {
+		syslog.Fatalf("%s", err)
+	}
+
+	dir, run, err := pprof.Setup(pprofCache)
+	if err != nil {
+		syslog.Fatalf("%s", err)
+	}
+	appCtx.OutgoingService.AddDiagnostics("pprof", dir)
+	go func() {
+		if err := run(); err != nil {
+			_ = syslog.Errorf("%s", err)
+		}
+	}()
 
 	appCtx.OutgoingService.AddService(
 		netstack.NetstackName,
