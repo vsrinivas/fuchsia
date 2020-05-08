@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    crate::wlancfg_helper::{start_ap_and_wait_for_confirmation, NetworkConfigBuilder},
     fidl_fuchsia_wlan_service::WlanMarker,
     fidl_fuchsia_wlan_tap as wlantap,
     fuchsia_async::{Time, Timer},
@@ -69,16 +70,31 @@ where
 
 impl TestHelper {
     pub async fn begin_test(config: wlantap::WlantapPhyConfig) -> Self {
+        let mut helper = TestHelper::create_phy_and_helper(config);
+        helper.wait_for_wlanmac_start().await;
+        helper
+    }
+
+    pub async fn begin_ap_test(
+        config: wlantap::WlantapPhyConfig,
+        network_config: NetworkConfigBuilder,
+    ) -> Self {
+        let mut helper = TestHelper::create_phy_and_helper(config);
+        start_ap_and_wait_for_confirmation(network_config).await;
+        helper.wait_for_wlanmac_start().await;
+        helper
+    }
+
+    fn create_phy_and_helper(config: wlantap::WlantapPhyConfig) -> Self {
         // If injected, wlancfg does not start automatically in a test component.
         // Connecting to the service to start wlancfg so that it can create new interfaces.
         let _wlan_proxy = connect_to_service::<WlanMarker>().expect("starting wlancfg");
 
         let wlantap = Wlantap::open_from_isolated_devmgr().expect("Failed to open wlantapctl");
         let proxy = wlantap.create_phy(config).expect("Failed to create wlantap PHY");
+
         let event_stream = Some(proxy.take_event_stream());
-        let mut helper = TestHelper { _wlantap: wlantap, proxy: Arc::new(proxy), event_stream };
-        helper.wait_for_wlanmac_start().await;
-        helper
+        TestHelper { _wlantap: wlantap, proxy: Arc::new(proxy), event_stream }
     }
 
     async fn wait_for_wlanmac_start(&mut self) {

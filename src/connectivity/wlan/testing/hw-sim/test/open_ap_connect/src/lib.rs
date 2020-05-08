@@ -3,22 +3,12 @@
 // found in the LICENSE file.
 
 use {
-    fidl_fuchsia_wlan_device::MacRole::Ap,
-    fidl_fuchsia_wlan_device_service::DeviceServiceMarker,
-    fidl_fuchsia_wlan_sme::{ApConfig, StartApResultCode},
     fidl_fuchsia_wlan_tap::WlantapPhyEvent,
-    fuchsia_component::client::connect_to_service,
     fuchsia_zircon::DurationNum,
     futures::channel::oneshot,
     hex,
     std::panic,
-    wlan_common::{
-        assert_variant,
-        channel::{Cbw, Phy},
-        mac,
-        test_utils::ExpectWithin,
-        RadioConfig,
-    },
+    wlan_common::{assert_variant, mac},
     wlan_hw_sim::*,
 };
 
@@ -39,33 +29,10 @@ async fn open_ap_connect() {
     let assoc_req = hex::decode(ASSOC_REQ_HEX).expect("fail to parse assoc req hex");
     // -- end test data block
 
-    // Connect to WLAN device service and start watching for new device
-    let wlan_service =
-        connect_to_service::<DeviceServiceMarker>().expect("Failed to connect to wlan service");
-
-    // Create wlantap PHY
-    let mut helper = test_utils::TestHelper::begin_test(default_wlantap_config_ap()).await;
-
-    // Wait until iface is created from wlantap PHY
-    let iface_id = get_first_matching_iface_id(&wlan_service, |iface| iface.role == Ap)
-        .expect_within(5.seconds(), "No AP iface found in time")
-        .await;
-
-    let sme = get_ap_sme(&wlan_service, iface_id)
-        .expect_within(5.seconds(), "timeout retrieving ap sme")
-        .await;
-
-    // Stop AP in case it was already started
-    let () = sme.stop().await.expect("stopping any existing AP");
-
-    // Start AP
-    let mut config = ApConfig {
-        ssid: String::from("fuchsia").into_bytes(),
-        password: vec![],
-        radio_cfg: RadioConfig::new(Phy::Ht, Cbw::Cbw20, CHANNEL.primary).to_fidl(),
-    };
-    let result_code = sme.start(&mut config).await.expect("expect start ap result code");
-    assert_eq!(result_code, StartApResultCode::Success);
+    // Start up the AP
+    let network_config = NetworkConfigBuilder::open().ssid(&b"fuchsia".to_vec());
+    let mut helper =
+        test_utils::TestHelper::begin_ap_test(default_wlantap_config_ap(), network_config).await;
 
     // (client->ap) send a mock auth req
     let proxy = helper.proxy();

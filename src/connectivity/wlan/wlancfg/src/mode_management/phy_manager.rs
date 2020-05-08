@@ -6,6 +6,7 @@
 
 use {
     async_trait::async_trait,
+    eui48::MacAddress,
     fidl_fuchsia_wlan_device::{self as fidl_device, MacRole},
     fidl_fuchsia_wlan_device_service as fidl_service, fuchsia_zircon,
     log::{info, warn},
@@ -78,6 +79,9 @@ pub(crate) trait PhyManagerApi {
 
     /// Destroys all AP interfaces.
     async fn destroy_all_ap_ifaces(&mut self) -> Result<(), PhyManagerError>;
+
+    /// Sets a suggested MAC address to be used by new AP interfaces.
+    fn suggest_ap_mac(&mut self, mac: MacAddress);
 }
 
 /// Maintains a record of all PHYs that are present and their associated interfaces.
@@ -85,6 +89,7 @@ pub(crate) struct PhyManager {
     phys: HashMap<u16, PhyContainer>,
     device_service: fidl_service::DeviceServiceProxy,
     client_connections_enabled: bool,
+    suggested_ap_mac: Option<MacAddress>,
 }
 
 impl PhyContainer {
@@ -106,7 +111,12 @@ impl PhyManager {
     /// Internally stores a DeviceServiceProxy to query PHY and interface properties and create and
     /// destroy interfaces as requested.
     pub fn new(device_service: fidl_service::DeviceServiceProxy) -> Self {
-        PhyManager { phys: HashMap::new(), device_service, client_connections_enabled: false }
+        PhyManager {
+            phys: HashMap::new(),
+            device_service,
+            client_connections_enabled: false,
+            suggested_ap_mac: None,
+        }
     }
     /// Verifies that a given PHY ID is accounted for and, if not, adds a new entry for it.
     async fn ensure_phy(&mut self, phy_id: u16) -> Result<&mut PhyContainer, PhyManagerError> {
@@ -173,7 +183,8 @@ impl PhyManagerApi for PhyManager {
             if self.client_connections_enabled
                 && phy_container.phy_info.mac_roles.contains(&MacRole::Client)
             {
-                let iface_id = create_iface(&self.device_service, phy_id, MacRole::Client).await?;
+                let iface_id =
+                    create_iface(&self.device_service, phy_id, MacRole::Client, None).await?;
                 phy_container.client_ifaces.insert(iface_id);
             }
 
@@ -230,7 +241,7 @@ impl PhyManagerApi for PhyManager {
                 self.phys.get_mut(&client_phy).ok_or(PhyManagerError::PhyQueryFailure)?;
             if phy_container.client_ifaces.is_empty() {
                 let iface_id =
-                    create_iface(&self.device_service, *client_phy, MacRole::Client).await?;
+                    create_iface(&self.device_service, *client_phy, MacRole::Client, None).await?;
                 phy_container.client_ifaces.insert(iface_id);
             }
         }
@@ -291,7 +302,12 @@ impl PhyManagerApi for PhyManager {
             let phy_container =
                 self.phys.get_mut(&ap_phy_id).ok_or(PhyManagerError::PhyQueryFailure)?;
             if phy_container.ap_ifaces.is_empty() {
-                let iface_id = create_iface(&self.device_service, *ap_phy_id, MacRole::Ap).await?;
+                let mac = match self.suggested_ap_mac {
+                    Some(mac) => Some(mac.as_bytes().to_vec()),
+                    None => None,
+                };
+                let iface_id =
+                    create_iface(&self.device_service, *ap_phy_id, MacRole::Ap, mac).await?;
 
                 phy_container.ap_ifaces.insert(iface_id);
                 return Ok(Some(iface_id));
@@ -356,6 +372,10 @@ impl PhyManagerApi for PhyManager {
         }
         result
     }
+
+    fn suggest_ap_mac(&mut self, mac: MacAddress) {
+        self.suggested_ap_mac = Some(mac);
+    }
 }
 
 /// Creates an interface of the requested role for the requested PHY ID.  Returns either the
@@ -364,9 +384,9 @@ async fn create_iface(
     proxy: &fidl_service::DeviceServiceProxy,
     phy_id: u16,
     role: MacRole,
+    mac: Option<Vec<u8>>,
 ) -> Result<u16, PhyManagerError> {
-    // TODO: For now the initial MAC address is set to none, pass a valid value when everything is ready.
-    let mut request = fidl_service::CreateIfaceRequest { phy_id, role, mac_addr: None };
+    let mut request = fidl_service::CreateIfaceRequest { phy_id, role, mac_addr: mac };
     let create_iface_response = match proxy.create_iface(&mut request).await {
         Ok((status, iface_response)) => {
             if fuchsia_zircon::ok(status).is_err() || iface_response.is_none() {
@@ -1438,5 +1458,103 @@ mod tests {
 
         let phy_container = phy_manager.phys.get(&fake_phy_id).unwrap();
         assert!(phy_container.client_ifaces.contains(&fake_iface_id));
+    }
+
+    /// Verifies that setting a suggested AP MAC address results in that MAC address being used as
+    /// a part of the request to create an AP interface.  Ensures that this does not affect client
+    /// interface requests.
+    #[test]
+    fn test_suggest_ap_mac() {
+        let mut exec = Executor::new().expect("failed to create an executor");
+        let mut test_values = test_setup();
+        let mut phy_manager = PhyManager::new(test_values.proxy);
+
+        // Create an initial PhyContainer to be inserted into the test PhyManager before the fake
+        // iface is added.
+        let fake_iface_id = 1;
+        let fake_phy_id = 1;
+        let fake_mac_roles = vec![fidl_fuchsia_wlan_device::MacRole::Ap];
+
+        let phy_info = fake_phy_info(fake_phy_id, fake_mac_roles);
+        let phy_container = PhyContainer::new(phy_info);
+
+        phy_manager.phys.insert(fake_phy_id, phy_container);
+
+        // Insert the fake iface
+        let phy_container = phy_manager.phys.get_mut(&fake_phy_id).unwrap();
+        phy_container.client_ifaces.insert(fake_iface_id);
+
+        // Suggest an AP MAC
+        let mac = MacAddress::from_bytes(&[1, 2, 3, 4, 5, 6]).unwrap();
+        phy_manager.suggest_ap_mac(mac.clone());
+
+        let get_ap_future = phy_manager.create_or_get_ap_iface();
+        pin_mut!(get_ap_future);
+        assert_variant!(exec.run_until_stalled(&mut get_ap_future), Poll::Pending);
+
+        // Verify that the suggested MAC is included in the request
+        assert_variant!(
+            exec.run_until_stalled(&mut test_values.stream.next()),
+            Poll::Ready(Some(Ok(
+                fidl_service::DeviceServiceRequest::CreateIface {
+                    req,
+                    responder,
+                }
+            ))) => {
+                let requested_mac = match req.mac_addr {
+                    Some(mac) => MacAddress::from_bytes(&mac).unwrap(),
+                    None => panic!("requested mac is None")
+                };
+                assert_eq!(requested_mac, mac);
+                let mut response = fidl_service::CreateIfaceResponse { iface_id: fake_iface_id };
+                let response = Some(&mut response);
+                responder.send(ZX_OK, response).expect("sending fake iface id");
+            }
+        );
+        assert_variant!(exec.run_until_stalled(&mut get_ap_future), Poll::Ready(_));
+    }
+
+    #[test]
+    fn test_suggested_mac_does_not_apply_to_client() {
+        let mut exec = Executor::new().expect("failed to create an executor");
+        let mut test_values = test_setup();
+        let mut phy_manager = PhyManager::new(test_values.proxy);
+
+        // Create an initial PhyContainer to be inserted into the test PhyManager before the fake
+        // iface is added.
+        let fake_iface_id = 1;
+        let fake_phy_id = 1;
+        let fake_mac_roles = vec![fidl_fuchsia_wlan_device::MacRole::Client];
+
+        let phy_info = fake_phy_info(fake_phy_id, fake_mac_roles);
+        let phy_container = PhyContainer::new(phy_info);
+
+        phy_manager.phys.insert(fake_phy_id, phy_container);
+
+        // Suggest an AP MAC
+        let mac = MacAddress::from_bytes(&[1, 2, 3, 4, 5, 6]);
+        phy_manager.suggest_ap_mac(mac.clone().unwrap());
+
+        // Start client connections so that an IfaceRequest is issued for the client.
+        let start_client_future = phy_manager.create_all_client_ifaces();
+        pin_mut!(start_client_future);
+        assert_variant!(exec.run_until_stalled(&mut start_client_future), Poll::Pending);
+
+        // Verify that the suggested MAC is NOT included in the request
+        assert_variant!(
+            exec.run_until_stalled(&mut test_values.stream.next()),
+            Poll::Ready(Some(Ok(
+                fidl_service::DeviceServiceRequest::CreateIface {
+                    req,
+                    responder,
+                }
+            ))) => {
+                assert!(req.mac_addr.is_none());
+                let mut response = fidl_service::CreateIfaceResponse { iface_id: fake_iface_id };
+                let response = Some(&mut response);
+                responder.send(ZX_OK, response).expect("sending fake iface id");
+            }
+        );
+        assert_variant!(exec.run_until_stalled(&mut start_client_future), Poll::Ready(_));
     }
 }

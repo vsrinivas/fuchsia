@@ -29,6 +29,7 @@ async fn serve_fidl(
     client_ref: client::ClientPtr,
     mut ap: access_point::AccessPoint,
     legacy_client_ref: legacy::shim::ClientRef,
+    configurator: legacy::deprecated_configuration::DeprecatedConfigurator,
     saved_networks: Arc<SavedNetworksManager>,
 ) -> Result<Void, Error> {
     let mut fs = ServiceFs::new();
@@ -63,6 +64,9 @@ async fn serve_fidl(
         .add_fidl_service(move |reqs| fasync::spawn(ap.clone().serve_provider_requests(reqs)))
         .add_fidl_service(move |reqs| {
             fasync::spawn(second_ap.clone().serve_listener_requests(reqs))
+        })
+        .add_fidl_service(move |reqs| {
+            fasync::spawn(configurator.clone().serve_deprecated_configuration(reqs))
         });
     fs.take_and_serve_directory_handle()?;
     let service_fut = fs.collect::<()>().fuse();
@@ -102,13 +106,20 @@ fn main() -> Result<(), Error> {
     let saved_networks = Arc::new(executor.run_singlethreaded(SavedNetworksManager::new())?);
     let legacy_client = legacy::shim::ClientRef::new();
     let client = Arc::new(Mutex::new(client::Client::new_empty()));
-    let ap = access_point::AccessPoint::new_empty();
-    let fidl_fut =
-        serve_fidl(client.clone(), ap.clone(), legacy_client.clone(), Arc::clone(&saved_networks));
+    let ap = access_point::AccessPoint::new_empty(phy_manager.clone(), wlan_svc.clone());
+    let configurator =
+        legacy::deprecated_configuration::DeprecatedConfigurator::new(phy_manager.clone());
+    let fidl_fut = serve_fidl(
+        client.clone(),
+        ap,
+        legacy_client.clone(),
+        configurator,
+        Arc::clone(&saved_networks),
+    );
 
     let (watcher_proxy, watcher_server_end) = fidl::endpoints::create_proxy()?;
     wlan_svc.watch_devices(watcher_server_end)?;
-    let listener = legacy::device::Listener::new(wlan_svc, legacy_client, phy_manager, client, ap);
+    let listener = legacy::device::Listener::new(wlan_svc, legacy_client, phy_manager, client);
     let fut = watcher_proxy
         .take_event_stream()
         .try_for_each(|evt| {

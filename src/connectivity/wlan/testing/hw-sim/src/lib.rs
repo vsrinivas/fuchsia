@@ -28,11 +28,13 @@ use {
 pub mod test_utils;
 pub use eth_helper::*;
 pub use event_handler_helper::*;
+pub use wlancfg_helper::*;
 pub use wlanstack_helper::*;
 
 mod config;
 mod eth_helper;
 mod event_handler_helper;
+mod wlancfg_helper;
 mod wlanstack_helper;
 
 pub const CLIENT_MAC_ADDR: [u8; 6] = [0x67, 0x62, 0x6f, 0x6e, 0x69, 0x6b];
