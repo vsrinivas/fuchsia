@@ -2,11 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+mod cache;
 mod pkgfs;
 mod resolver;
 mod updater;
+
 use {
-    crate::{pkgfs::Pkgfs, resolver::Resolver, updater::Updater},
+    crate::{cache::Cache, pkgfs::Pkgfs, resolver::Resolver, updater::Updater},
     fidl::endpoints::{ClientEnd, Proxy, ServerEnd},
     fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy},
     fuchsia_async as fasync,
@@ -18,7 +20,10 @@ pub enum UpdateError {
     #[error("error launching pkgfs")]
     PkgfsLaunchError(#[source] anyhow::Error),
 
-    #[error("error launching pkg-resolver and pkg-cache")]
+    #[error("error launching pkg-cache")]
+    PkgCacheLaunchError(#[source] anyhow::Error),
+
+    #[error("error launching pkg-resolver")]
     PkgResolverLaunchError(#[source] anyhow::Error),
 
     #[error("error launching system-updater and installing update")]
@@ -60,7 +65,8 @@ pub async fn download_and_apply_update(
         .map_err(UpdateError::FidlError)?;
 
     let pkgfs = Pkgfs::launch(blobfs_clone).map_err(UpdateError::PkgfsLaunchError)?;
-    let resolver = Resolver::launch(&pkgfs, repository_config_file, channel_name)
+    let cache = Cache::launch(&pkgfs).map_err(UpdateError::PkgCacheLaunchError)?;
+    let resolver = Resolver::launch(&pkgfs, &cache, repository_config_file, channel_name)
         .map_err(UpdateError::PkgResolverLaunchError)?;
 
     let (blobfs_clone, remote) =
@@ -68,7 +74,7 @@ pub async fn download_and_apply_update(
     blobfs_proxy
         .clone(fidl_fuchsia_io::CLONE_FLAG_SAME_RIGHTS, ServerEnd::from(remote.into_channel()))
         .map_err(UpdateError::FidlError)?;
-    Updater::launch(blobfs_clone, paver_connector, &resolver, &board_name)
+    Updater::launch(blobfs_clone, paver_connector, &cache, &resolver, &board_name)
         .await
         .map_err(UpdateError::InstallError)?;
     Ok(())

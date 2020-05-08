@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use {
-    crate::resolver::Resolver,
+    crate::{cache::Cache, resolver::Resolver},
     anyhow::{Context, Error},
     fidl::endpoints::{ClientEnd, DiscoverableService},
     fidl_fuchsia_io::DirectoryMarker,
     fidl_fuchsia_paver::{BootManagerMarker, Configuration, PaverMarker},
-    fidl_fuchsia_pkg::PackageResolverMarker,
+    fidl_fuchsia_pkg::{PackageCacheMarker, PackageResolverMarker},
     fuchsia_async as fasync,
     fuchsia_component::{
         client::{AppBuilder, Output},
@@ -27,12 +27,19 @@ impl Updater {
     pub async fn launch(
         blobfs: ClientEnd<DirectoryMarker>,
         paver: ClientEnd<DirectoryMarker>,
+        cache: &Cache,
         resolver: &Resolver,
         board_name: &str,
     ) -> Result<(), Error> {
-        let output =
-            Updater::launch_with_components(blobfs, paver, resolver, board_name, UPDATER_URL)
-                .await?;
+        let output = Updater::launch_with_components(
+            blobfs,
+            paver,
+            cache,
+            resolver,
+            board_name,
+            UPDATER_URL,
+        )
+        .await?;
         output.ok().context("Running the updater")?;
         Ok(())
     }
@@ -40,6 +47,7 @@ impl Updater {
     async fn launch_with_components(
         blobfs: ClientEnd<DirectoryMarker>,
         paver: ClientEnd<DirectoryMarker>,
+        cache: &Cache,
         resolver: &Resolver,
         board_name: &str,
         updater_url: &str,
@@ -62,6 +70,7 @@ impl Updater {
         let mut fs: ServiceFs<ServiceObj<'_, ()>> = ServiceFs::new();
         let paver = Arc::new(paver.into_channel());
         fs.add_proxy_service_to::<PaverMarker, _>(Arc::clone(&paver))
+            .add_proxy_service_to::<PackageCacheMarker, _>(cache.directory_request())
             .add_proxy_service_to::<PackageResolverMarker, _>(resolver.directory_request());
 
         let env = fs.create_salted_nested_environment("isolated-ota-updater-env")?;
@@ -215,13 +224,15 @@ mod tests {
             let resolver = ResolverForTest::new(repo, TEST_REPO_URL, Some(TEST_CHANNEL.to_owned()))
                 .await
                 .expect("Creating resolver");
+
             let (client, server) = zx::Channel::create().expect("creating channel");
             fs.serve_connection(server).expect("Failed to start mock paver");
             fasync::spawn(fs.collect());
 
             let output = Updater::launch_with_components(
-                resolver.pkgfs.blobfs.root_dir_handle().expect("getting blobfs root handle"),
+                resolver.cache.pkgfs.blobfs.root_dir_handle().expect("getting blobfs root handle"),
                 ClientEnd::from(client),
+                &resolver.cache.cache,
                 &resolver.resolver,
                 "test",
                 TEST_UPDATER_URL,
@@ -251,7 +262,7 @@ mod tests {
                 // we deliberately avoid the package resolver here,
                 // as we want to make sure that the system-updater retrieved all the correct blobs.
                 let client = pkgfs::packages::Client::open_from_pkgfs_root(
-                    &self.resolver.pkgfs.root_proxy()?,
+                    &self.resolver.cache.pkgfs.root_proxy()?,
                 )
                 .context("opening pkgfs")?;
                 let dir =

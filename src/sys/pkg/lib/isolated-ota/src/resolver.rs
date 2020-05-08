@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::pkgfs::Pkgfs,
+    crate::{cache::Cache, pkgfs::Pkgfs},
     anyhow::{Context, Error},
     fidl_fuchsia_boot::{ArgumentsRequest, ArgumentsRequestStream},
     fidl_fuchsia_pkg::PackageCacheMarker,
@@ -18,7 +18,6 @@ use {
     std::sync::Arc,
 };
 
-const CACHE_URL: &str = "fuchsia-pkg://fuchsia.com/isolated-swd#meta/pkg-cache-isolated.cmx";
 const RESOLVER_URL: &str = "fuchsia-pkg://fuchsia.com/isolated-swd#meta/pkg-resolver-isolated.cmx";
 const SSL_CERTS_PATH: &str = "/config/ssl";
 
@@ -48,35 +47,36 @@ impl IsolatedBootArgs {
 }
 
 pub struct Resolver {
-    _pkg_cache: App,
     _pkg_resolver: App,
     pkg_resolver_directory: Arc<zx::Channel>,
     _env: NestedEnvironment,
 }
 
 impl Resolver {
-    pub fn launch(pkgfs: &Pkgfs, repo_config: std::fs::File, channel: &str) -> Result<Self, Error> {
+    pub fn launch(
+        pkgfs: &Pkgfs,
+        cache: &Cache,
+        repo_config: std::fs::File,
+        channel: &str,
+    ) -> Result<Self, Error> {
         Resolver::launch_with_components(
             pkgfs,
+            cache,
             repo_config,
             Some(channel.to_owned()),
             std::fs::File::open(SSL_CERTS_PATH).context("opening ssl directory")?,
-            CACHE_URL,
             RESOLVER_URL,
         )
     }
 
     fn launch_with_components(
         pkgfs: &Pkgfs,
+        cache: &Cache,
         repo_config: std::fs::File,
         channel: Option<String>,
         ssl_dir: std::fs::File,
-        cache_url: &str,
         resolver_url: &str,
     ) -> Result<Self, Error> {
-        let mut pkg_cache = AppBuilder::new(cache_url)
-            .add_handle_to_namespace("/pkgfs".to_owned(), pkgfs.root_handle()?.into_handle());
-
         let mut pkg_resolver = AppBuilder::new(resolver_url)
             .add_handle_to_namespace("/pkgfs".to_owned(), pkgfs.root_handle()?.into_handle())
             .add_dir_to_namespace("/config/data/repositories".to_owned(), repo_config)?
@@ -88,10 +88,9 @@ impl Resolver {
         fs.add_proxy_service::<fidl_fuchsia_net::NameLookupMarker, _>()
             .add_proxy_service::<fidl_fuchsia_posix_socket::ProviderMarker, _>()
             .add_proxy_service::<fidl_fuchsia_logger::LogSinkMarker, _>()
-            .add_proxy_service::<fidl_fuchsia_tracing_provider::RegistryMarker, _>();
-        fs.add_proxy_service_to::<PackageCacheMarker, _>(
-            pkg_cache.directory_request().unwrap().clone(),
-        );
+            .add_proxy_service::<fidl_fuchsia_tracing_provider::RegistryMarker, _>()
+            .add_proxy_service_to::<PackageCacheMarker, _>(cache.directory_request());
+
         fs.add_fidl_service(move |stream: ArgumentsRequestStream| {
             fasync::spawn(Arc::clone(&boot_args).serve(stream))
         });
@@ -102,16 +101,10 @@ impl Resolver {
 
         let directory =
             pkg_resolver.directory_request().context("getting directory request")?.clone();
-        let pkg_cache = pkg_cache.spawn(env.launcher()).context("launching package cache")?;
         let pkg_resolver =
             pkg_resolver.spawn(env.launcher()).context("launching package resolver")?;
 
-        Ok(Resolver {
-            _pkg_cache: pkg_cache,
-            _pkg_resolver: pkg_resolver,
-            pkg_resolver_directory: directory,
-            _env: env,
-        })
+        Ok(Resolver { _pkg_resolver: pkg_resolver, pkg_resolver_directory: directory, _env: env })
     }
 
     pub fn directory_request(&self) -> Arc<fuchsia_zircon::Channel> {
@@ -123,7 +116,7 @@ impl Resolver {
 pub mod tests {
     use {
         super::*,
-        crate::pkgfs::tests::PkgfsForTest,
+        crate::cache::tests::CacheForTest,
         fidl_fuchsia_io::DirectoryProxy,
         fidl_fuchsia_pkg::{PackageResolverMarker, UpdatePolicy},
         fidl_fuchsia_pkg_ext::RepositoryConfigs,
@@ -133,7 +126,7 @@ pub mod tests {
     };
 
     pub struct ResolverForTest {
-        pub pkgfs: PkgfsForTest,
+        pub cache: CacheForTest,
         pub resolver: Resolver,
         _served_repo: ServedRepository,
     }
@@ -148,7 +141,7 @@ pub mod tests {
             repo_path: &'static str,
             channel: Option<String>,
         ) -> Result<Self, Error> {
-            let pkgfs = PkgfsForTest::new().context("Launching pkgfs")?;
+            let cache = CacheForTest::new().context("launching cache")?;
 
             // Set up the repository config for pkg-resolver.
             let served_repo = Arc::clone(&repo).server().start()?;
@@ -172,16 +165,16 @@ pub mod tests {
             let ssl_certs =
                 std::fs::File::open(SSL_TEST_CERTS_PATH).context("opening ssl certificates dir")?;
             let resolver = Resolver::launch_with_components(
-                &pkgfs.pkgfs,
+                &cache.pkgfs.pkgfs,
+                &cache.cache,
                 repo_dir,
                 channel,
                 ssl_certs,
-                "fuchsia-pkg://fuchsia.com/isolated-ota-tests#meta/pkg-cache.cmx",
                 "fuchsia-pkg://fuchsia.com/isolated-ota-tests#meta/pkg-resolver.cmx",
             )
             .context("launching resolver")?;
 
-            Ok(ResolverForTest { pkgfs, resolver, _served_repo: served_repo })
+            Ok(ResolverForTest { cache, resolver, _served_repo: served_repo })
         }
 
         pub async fn resolve_package(&self, url: &str) -> Result<DirectoryProxy, Error> {

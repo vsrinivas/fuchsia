@@ -1,0 +1,90 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+use {
+    crate::pkgfs::Pkgfs,
+    anyhow::{Context, Error},
+    fuchsia_async as fasync,
+    fuchsia_component::{
+        client::{App, AppBuilder},
+        server::{NestedEnvironment, ServiceFs, ServiceObj},
+    },
+    fuchsia_zircon::{self as zx, HandleBased},
+    futures::prelude::*,
+    std::sync::Arc,
+};
+
+const CACHE_URL: &str = "fuchsia-pkg://fuchsia.com/isolated-swd#meta/pkg-cache-isolated.cmx";
+
+pub struct Cache {
+    _pkg_cache: App,
+    pkg_cache_directory: Arc<zx::Channel>,
+    _env: NestedEnvironment,
+}
+
+impl Cache {
+    pub fn launch(pkgfs: &Pkgfs) -> Result<Self, Error> {
+        Self::launch_with_components(pkgfs, CACHE_URL)
+    }
+
+    fn launch_with_components(pkgfs: &Pkgfs, cache_url: &str) -> Result<Self, Error> {
+        let mut pkg_cache = AppBuilder::new(cache_url)
+            .add_handle_to_namespace("/pkgfs".to_owned(), pkgfs.root_handle()?.into_handle());
+
+        let mut fs: ServiceFs<ServiceObj<'_, ()>> = ServiceFs::new();
+        fs.add_proxy_service::<fidl_fuchsia_net::NameLookupMarker, _>()
+            .add_proxy_service::<fidl_fuchsia_posix_socket::ProviderMarker, _>()
+            .add_proxy_service::<fidl_fuchsia_logger::LogSinkMarker, _>()
+            .add_proxy_service::<fidl_fuchsia_tracing_provider::RegistryMarker, _>();
+
+        // We use a salt so the unit tests work as expected.
+        let env = fs.create_salted_nested_environment("isolated-ota-env")?;
+        fasync::spawn(fs.collect());
+
+        let directory = pkg_cache.directory_request().context("getting directory request")?.clone();
+        let pkg_cache = pkg_cache.spawn(env.launcher()).context("launching package cache")?;
+
+        Ok(Cache { _pkg_cache: pkg_cache, pkg_cache_directory: directory, _env: env })
+    }
+
+    pub fn directory_request(&self) -> Arc<fuchsia_zircon::Channel> {
+        self.pkg_cache_directory.clone()
+    }
+}
+
+#[cfg(test)]
+pub mod tests {
+    use {super::*, crate::pkgfs::tests::PkgfsForTest};
+
+    pub struct CacheForTest {
+        pub pkgfs: PkgfsForTest,
+        pub cache: Cache,
+    }
+
+    impl CacheForTest {
+        pub fn new() -> Result<Self, Error> {
+            let pkgfs = PkgfsForTest::new().context("Launching pkgfs")?;
+            let cache = Cache::launch_with_components(
+                &pkgfs.pkgfs,
+                "fuchsia-pkg://fuchsia.com/isolated-ota-tests#meta/pkg-cache.cmx",
+            )
+            .context("launching cache")?;
+
+            Ok(CacheForTest { pkgfs, cache })
+        }
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    pub async fn test_cache_handles_sync() {
+        let cache = CacheForTest::new().expect("launching cache");
+
+        let proxy = cache
+            .cache
+            ._pkg_cache
+            .connect_to_service::<fidl_fuchsia_pkg::PackageCacheMarker>()
+            .expect("connecting to pkg cache");
+
+        assert_eq!(proxy.sync().await.unwrap(), fuchsia_zircon::Status::OK.into_raw());
+    }
+}

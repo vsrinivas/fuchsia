@@ -10,7 +10,9 @@ use {
         self as paver, BootManagerRequest, BootManagerRequestStream, PaverRequest,
         PaverRequestStream,
     },
-    fidl_fuchsia_pkg::{PackageResolverRequestStream, PackageResolverResolveResponder},
+    fidl_fuchsia_pkg::{
+        PackageCacheRequestStream, PackageResolverRequestStream, PackageResolverResolveResponder,
+    },
     fidl_fuchsia_update::{
         CheckNotStartedReason, CheckOptions, CheckingForUpdatesData, ErrorCheckingForUpdateData,
         Initiator, InstallationErrorData, InstallationProgress, InstallingData, ManagerMarker,
@@ -81,6 +83,7 @@ impl Mounts {
     }
 }
 struct Proxies {
+    _cache: Arc<MockCache>,
     paver: Arc<MockPaver>,
     resolver: Arc<MockResolver>,
     update_manager: ManagerProxy,
@@ -140,6 +143,13 @@ impl TestEnvBuilder {
             fasync::spawn(resolver_clone.run_resolver_service(stream))
         });
 
+        let cache = Arc::new(MockCache::new());
+        let cache_clone = cache.clone();
+        fs.add_fidl_service(move |stream: PackageCacheRequestStream| {
+            let cache_clone = cache_clone.clone();
+            fasync::spawn(cache_clone.run_cache_service(stream))
+        });
+
         let nested_environment_label = Self::make_nested_environment_label();
         let env = fs
             .create_nested_environment(&nested_environment_label)
@@ -164,6 +174,7 @@ impl TestEnvBuilder {
             _env: env,
             mounts,
             proxies: Proxies {
+                _cache: cache,
                 paver,
                 resolver,
                 update_manager: omaha_client
@@ -397,6 +408,24 @@ impl MockResolver {
 
     fn mock_package_result(&self, url: impl Into<String>, response: Result<PathBuf, Status>) {
         self.expectations.lock().insert(url.into(), response);
+    }
+}
+
+struct MockCache;
+
+impl MockCache {
+    fn new() -> Self {
+        Self {}
+    }
+    async fn run_cache_service(self: Arc<Self>, mut stream: PackageCacheRequestStream) {
+        while let Some(event) = stream.try_next().await.unwrap() {
+            match event {
+                fidl_fuchsia_pkg::PackageCacheRequest::Sync { responder } => {
+                    responder.send(Status::OK.into_raw()).unwrap();
+                }
+                other => panic!("unsupported PackageCache request: {:?}", other),
+            }
+        }
     }
 }
 
