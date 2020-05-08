@@ -14,10 +14,8 @@ use async_trait::async_trait;
 use fidl_fuchsia_cobalt::HistogramBucket;
 use fuchsia_async as fasync;
 use fuchsia_cobalt::{CobaltConnector, CobaltSender, ConnectionType};
-use fuchsia_inspect::{
-    self as inspect, ArrayProperty, HistogramProperty, LinearHistogramParams, Property,
-};
-use fuchsia_syslog::fx_log_info;
+use fuchsia_inspect::{self as inspect, HistogramProperty, LinearHistogramParams, Property};
+use fuchsia_syslog::{fx_log_err, fx_log_info};
 use fuchsia_zircon as zx;
 use futures::prelude::*;
 use power_manager_metrics::power_manager_metrics as power_metrics_registry;
@@ -38,6 +36,8 @@ use std::rc::Rc;
 ///     - ReadTemperature
 ///     - SetMaxPowerConsumption
 ///     - SystemShutdown
+///     - UpdateThermalLoad
+///     - FileCrashReport
 ///
 /// FIDL dependencies: N/A
 
@@ -67,7 +67,6 @@ impl<'a> ThermalPolicyBuilder<'a> {
 
         #[derive(Deserialize)]
         struct NodeConfig {
-            thermal_limiting_range: Vec<f64>,
             thermal_shutdown_temperature: f64,
             controller_params: ControllerConfig,
             throttle_end_delay: f64,
@@ -113,10 +112,6 @@ impl<'a> ThermalPolicyBuilder<'a> {
                     proportional_gain: data.config.controller_params.proportional_gain,
                     integral_gain: data.config.controller_params.integral_gain,
                 },
-                thermal_limiting_range: [
-                    Celsius(data.config.thermal_limiting_range[0]),
-                    Celsius(data.config.thermal_limiting_range[1]),
-                ],
                 thermal_shutdown_temperature: Celsius(data.config.thermal_shutdown_temperature),
                 throttle_end_delay: Seconds(data.config.throttle_end_delay),
             },
@@ -206,10 +201,6 @@ pub struct ThermalPolicyParams {
     /// The thermal control loop parameters
     pub controller_params: ThermalControllerParams,
 
-    /// The temperature at which to begin limiting external subsystems which are not managed by the
-    /// thermal feedback controller
-    pub thermal_limiting_range: [Celsius; 2],
-
     /// If temperature reaches or exceeds this value, the policy will command a system shutdown
     pub thermal_shutdown_temperature: Celsius,
 
@@ -226,22 +217,22 @@ pub struct ThermalControllerParams {
     /// Time constant for the low-pass filter used for smoothing the temperature input signal
     pub filter_time_constant: Seconds,
 
-    /// Target temperature for the PID control calculation
+    /// Target temperature for the PI control calculation
     pub target_temperature: Celsius,
 
-    /// Minimum integral error [degC * s] for the PID control calculation
+    /// Minimum integral error [degC * s] for the PI control calculation
     pub e_integral_min: f64,
 
-    /// Maximum integral error [degC * s] for the PID control calculation
+    /// Maximum integral error [degC * s] for the PI control calculation
     pub e_integral_max: f64,
 
     /// The available power when there is no temperature error
     pub sustainable_power: Watts,
 
-    /// The proportional gain [W / degC] for the PID control calculation
+    /// The proportional gain [W / degC] for the PI control calculation
     pub proportional_gain: f64,
 
-    /// The integral gain [W / (degC * s)] for the PID control calculation
+    /// The integral gain [W / (degC * s)] for the PI control calculation
     pub integral_gain: f64,
 }
 
@@ -304,16 +295,15 @@ impl ThermalPolicy {
     /// following steps will be taken:
     ///     1. Read the current temperature from the temperature driver specified in ThermalConfig
     ///     2. Filter the raw temperature value using a low-pass filter
-    ///     3. Use the new filtered temperature value as input to the PID control algorithm
-    ///     4. The PID algorithm outputs the available power limit to impose in the system
-    ///     5. Distribute the available power to the power actors (initially this is only the CPU)
+    ///     3. Use the new filtered temperature to calculate the proportional error and integral
+    ///        error of temperature relative to the configured target temperature
+    ///     4. Use the proportional error and integral error to derive thermal load and available
+    ///        power values
+    ///     5. Update the relevant nodes with the new thermal load and available power information
     pub async fn iterate_thermal_control(&self) -> Result<(), Error> {
         fuchsia_trace::duration!("power_manager", "ThermalPolicy::iterate_thermal_control");
 
         let raw_temperature = self.get_temperature().await?;
-        self.thermal_metrics.borrow_mut().log_raw_temperature(raw_temperature);
-
-        // Record the timestamp for this iteration now that we have all the data we need to proceed
         let timestamp = Nanoseconds(fasync::Time::now().into_nanos());
 
         // We should have run the iteration at least once before proceeding
@@ -325,13 +315,84 @@ impl ThermalPolicy {
             return Ok(());
         }
 
+        let time_delta = self.get_time_delta(timestamp);
+        let filtered_temperature = self.get_filtered_temperature(raw_temperature, time_delta);
+        let (error_proportional, error_integral) =
+            self.get_temperature_error(filtered_temperature, time_delta);
+        let thermal_load = Self::calculate_thermal_load(
+            error_integral,
+            self.config.policy_params.controller_params.e_integral_min,
+            self.config.policy_params.controller_params.e_integral_max,
+        );
+
+        self.log_thermal_iteration_metrics(
+            timestamp,
+            time_delta,
+            raw_temperature,
+            filtered_temperature,
+            error_integral,
+            thermal_load,
+        );
+
+        // If the new temperature is above the critical threshold then shut down the system
+        let result = self.check_critical_temperature(timestamp, filtered_temperature).await;
+        log_if_err!(result, "Error checking critical temperature");
+        fuchsia_trace::instant!(
+            "power_manager",
+            "ThermalPolicy::check_critical_temperature_result",
+            fuchsia_trace::Scope::Thread,
+            "result" => format!("{:?}", result).as_str()
+        );
+
+        // Update the ThermalLimiter node with the latest thermal load
+        let result = self.update_thermal_load(timestamp, thermal_load).await;
+        log_if_err!(result, "Error updating thermal load");
+        fuchsia_trace::instant!(
+            "power_manager",
+            "ThermalPolicy::update_thermal_load_result",
+            fuchsia_trace::Scope::Thread,
+            "result" => format!("{:?}", result).as_str()
+        );
+
+        // Update the power allocation according to the new temperature error readings
+        let result = self.update_power_allocation(error_proportional, error_integral).await;
+        log_if_err!(result, "Error running thermal feedback controller");
+        fuchsia_trace::instant!(
+            "power_manager",
+            "ThermalPolicy::update_power_allocation_result",
+            fuchsia_trace::Scope::Thread,
+            "result" => format!("{:?}", result).as_str()
+        );
+
+        Ok(())
+    }
+
+    /// Queries the current temperature from the temperature handler node
+    async fn get_temperature(&self) -> Result<Celsius, Error> {
+        fuchsia_trace::duration!("power_manager", "ThermalPolicy::get_temperature");
+        match self.send_message(&self.config.temperature_node, &Message::ReadTemperature).await {
+            Ok(MessageReturn::ReadTemperature(t)) => Ok(t),
+            Ok(r) => Err(format_err!("ReadTemperature had unexpected return value: {:?}", r)),
+            Err(e) => Err(format_err!("ReadTemperature failed: {:?}", e)),
+        }
+    }
+
+    /// Gets the time delta from the previous call to this function using the provided timestamp.
+    /// Logs the largest delta into Inspect.
+    fn get_time_delta(&self, timestamp: Nanoseconds) -> Seconds {
         let time_delta = Seconds::from_nanos(timestamp.0 - self.state.prev_timestamp.get().0);
         if time_delta.0 > self.state.max_time_delta.get().0 {
             self.state.max_time_delta.set(time_delta);
             self.inspect.max_time_delta.set(time_delta.0);
         }
         self.state.prev_timestamp.set(timestamp);
+        time_delta
+    }
 
+    /// Calculates a filtered temperature using the provided input temperature and time delta, and
+    /// using the previous temperature from the recorded state. Updates the previous temperature
+    /// state with the new input temperature.
+    fn get_filtered_temperature(&self, raw_temperature: Celsius, time_delta: Seconds) -> Celsius {
         let filtered_temperature = Celsius(low_pass_filter(
             raw_temperature.0,
             self.state.prev_temperature.get().0,
@@ -339,7 +400,35 @@ impl ThermalPolicy {
             self.config.policy_params.controller_params.filter_time_constant.0,
         ));
         self.state.prev_temperature.set(filtered_temperature);
+        filtered_temperature
+    }
 
+    /// Calculates proportional error and integral error of temperature using the provided input
+    /// temperature and time delta. Stores the new integral error and logs it to Inspect.
+    fn get_temperature_error(&self, temperature: Celsius, time_delta: Seconds) -> (f64, f64) {
+        let controller_params = &self.config.policy_params.controller_params;
+        let error_proportional = controller_params.target_temperature.0 - temperature.0;
+        let error_integral = num_traits::clamp(
+            self.state.error_integral.get() + error_proportional * time_delta.0,
+            controller_params.e_integral_min,
+            controller_params.e_integral_max,
+        );
+        self.state.error_integral.set(error_integral);
+        self.inspect.error_integral.set(error_integral);
+        (error_proportional, error_integral)
+    }
+
+    /// Logs various state data that is updated on each iteration of the thermal policy.
+    fn log_thermal_iteration_metrics(
+        &self,
+        timestamp: Nanoseconds,
+        time_delta: Seconds,
+        raw_temperature: Celsius,
+        filtered_temperature: Celsius,
+        temperature_error_integral: f64,
+        thermal_load: ThermalLoad,
+    ) {
+        self.thermal_metrics.borrow_mut().log_raw_temperature(raw_temperature);
         self.inspect.timestamp.set(timestamp.0);
         self.inspect.time_delta.set(time_delta.0);
         self.inspect.temperature_raw.set(raw_temperature.0);
@@ -362,48 +451,17 @@ impl ThermalPolicy {
             0,
             "filtered_temperature" => filtered_temperature.0
         );
-
-        // If the new temperature is above the critical threshold then shutdown the system
-        let result = self.check_critical_temperature(timestamp, filtered_temperature).await;
-        log_if_err!(result, "Error checking critical temperature");
-        fuchsia_trace::instant!(
+        fuchsia_trace::counter!(
             "power_manager",
-            "ThermalPolicy::check_critical_temperature_result",
-            fuchsia_trace::Scope::Thread,
-            "result" => format!("{:?}", result).as_str()
+            "ThermalPolicy error_integral", 0,
+            "error_integral" => temperature_error_integral
         );
-
-        // Update the ThermalLimiter node with the latest thermal load
-        let result = self.update_thermal_load(timestamp, filtered_temperature).await;
-        log_if_err!(result, "Error updating thermal load");
-        fuchsia_trace::instant!(
+        fuchsia_trace::counter!(
             "power_manager",
-            "ThermalPolicy::update_thermal_load_result",
-            fuchsia_trace::Scope::Thread,
-            "result" => format!("{:?}", result).as_str()
+            "ThermalPolicy thermal_load",
+            0,
+            "thermal_load" => thermal_load.0
         );
-
-        // Run the thermal feedback controller
-        let result = self.iterate_controller(filtered_temperature, time_delta).await;
-        log_if_err!(result, "Error running thermal feedback controller");
-        fuchsia_trace::instant!(
-            "power_manager",
-            "ThermalPolicy::iterate_controller_result",
-            fuchsia_trace::Scope::Thread,
-            "result" => format!("{:?}", result).as_str()
-        );
-
-        Ok(())
-    }
-
-    /// Query the current temperature from the temperature handler node
-    async fn get_temperature(&self) -> Result<Celsius, Error> {
-        fuchsia_trace::duration!("power_manager", "ThermalPolicy::get_temperature");
-        match self.send_message(&self.config.temperature_node, &Message::ReadTemperature).await {
-            Ok(MessageReturn::ReadTemperature(t)) => Ok(t),
-            Ok(r) => Err(format_err!("ReadTemperature had unexpected return value: {:?}", r)),
-            Err(e) => Err(format_err!("ReadTemperature failed: {:?}", e)),
-        }
     }
 
     /// Compares the supplied temperature with the thermal config thermal shutdown temperature. If
@@ -447,37 +505,27 @@ impl ThermalPolicy {
                 ),
             )
             .await
-            .map_err(|e| format_err!("Failed to shutdown the system: {}", e))?;
+            .map_err(|e| format_err!("Failed to shut down the system: {}", e))?;
         }
 
         Ok(())
     }
 
-    /// Determines the current thermal load. If there is a change from the cached thermal_load,
-    /// then the new value is sent out to the ThermalLimiter node.
+    /// Process a new thermal load value. If there is a change from the cached thermal_load, then
+    /// the new value is sent out to the ThermalLimiter node.
     async fn update_thermal_load(
         &self,
         timestamp: Nanoseconds,
-        temperature: Celsius,
+        thermal_load: ThermalLoad,
     ) -> Result<(), Error> {
         fuchsia_trace::duration!(
             "power_manager",
             "ThermalPolicy::update_thermal_load",
-            "temperature" => temperature.0
+            "timestamp" => timestamp.0,
+            "thermal_load" => thermal_load.0
         );
 
         let mut return_val = Ok(());
-        let thermal_load = Self::calculate_thermal_load(
-            temperature,
-            &self.config.policy_params.thermal_limiting_range,
-        );
-
-        fuchsia_trace::counter!(
-            "power_manager",
-            "ThermalPolicy thermal_load",
-            0,
-            "thermal_load" => thermal_load.0
-        );
 
         if thermal_load != self.state.thermal_load.get() {
             fuchsia_trace::instant!(
@@ -536,35 +584,65 @@ impl ThermalPolicy {
     }
 
     /// Calculates the thermal load which is a value in the range [0 - MAX_THERMAL_LOAD] defined as
-    /// ((temperature - range_start) / (range_end - range_start) * MAX_THERMAL_LOAD)
-    fn calculate_thermal_load(temperature: Celsius, range: &[Celsius; 2]) -> ThermalLoad {
-        let range_start = range[0];
-        let range_end = range[1];
-        if temperature.0 < range_start.0 {
-            ThermalLoad(0)
-        } else if temperature.0 > range_end.0 {
+    /// ((error_integral - range_start) / (range_end - range_start) * MAX_THERMAL_LOAD), where the
+    /// range is defined by the maximum and minimum integral error according to the controller
+    /// parameters.
+    fn calculate_thermal_load(
+        error_integral: f64,
+        error_integral_min: f64,
+        error_integral_max: f64,
+    ) -> ThermalLoad {
+        debug_assert!(
+            error_integral >= error_integral_min,
+            format!(
+                "error_integral ({}) less than error_integral_min ({})",
+                error_integral, error_integral_min
+            )
+        );
+        debug_assert!(
+            error_integral <= error_integral_max,
+            format!(
+                "error_integral ({}) greater than error_integral_max ({})",
+                error_integral, error_integral_max
+            )
+        );
+
+        if error_integral < error_integral_min {
+            fx_log_err!(
+                "error_integral {} less than error_integral_min {}",
+                error_integral,
+                error_integral_min
+            );
             thermal_limiter::MAX_THERMAL_LOAD
+        } else if error_integral > error_integral_max {
+            fx_log_err!(
+                "error_integral {} greater than error_integral_max {}",
+                error_integral,
+                error_integral_max
+            );
+            ThermalLoad(0)
         } else {
             ThermalLoad(
-                ((temperature.0 - range_start.0) / (range_end.0 - range_start.0)
+                ((error_integral - error_integral_max) / (error_integral_min - error_integral_max)
                     * thermal_limiter::MAX_THERMAL_LOAD.0 as f64) as u32,
             )
         }
     }
 
-    /// Execute the thermal feedback control loop
-    async fn iterate_controller(
+    /// Updates the power allocation according to the provided proportional error and integral error
+    /// of temperature.
+    async fn update_power_allocation(
         &self,
-        filtered_temperature: Celsius,
-        time_delta: Seconds,
+        error_proportional: f64,
+        error_integral: f64,
     ) -> Result<(), Error> {
         fuchsia_trace::duration!(
             "power_manager",
-            "ThermalPolicy::iterate_controller",
-            "filtered_temperature" => filtered_temperature.0,
-            "time_delta" => time_delta.0
+            "ThermalPolicy::update_power_allocation",
+            "error_proportional" => error_proportional,
+            "error_integral" => error_integral
         );
-        let available_power = self.calculate_available_power(filtered_temperature, time_delta);
+        let available_power = self.calculate_available_power(error_proportional, error_integral);
         self.inspect.throttle_history().record_available_power(available_power);
         fuchsia_trace::counter!(
             "power_manager",
@@ -576,32 +654,18 @@ impl ThermalPolicy {
         self.distribute_power(available_power).await
     }
 
-    /// A PID control algorithm that uses temperature as the measured process variable, and
-    /// available power as the control variable. Each call to the function will also
-    /// update the state variable `error_integral` to be used on subsequent iterations.
-    fn calculate_available_power(&self, temperature: Celsius, time_delta: Seconds) -> Watts {
+    /// A PI control algorithm that uses temperature as the measured process variable, and
+    /// available power as the control variable.
+    fn calculate_available_power(&self, error_proportional: f64, error_integral: f64) -> Watts {
         fuchsia_trace::duration!(
             "power_manager",
             "ThermalPolicy::calculate_available_power",
-            "temperature" => temperature.0,
-            "time_delta" => time_delta.0
-        );
-        let controller_params = &self.config.policy_params.controller_params;
-        let temperature_error = controller_params.target_temperature.0 - temperature.0;
-        let error_integral = num_traits::clamp(
-            self.state.error_integral.get() + temperature_error * time_delta.0,
-            controller_params.e_integral_min,
-            controller_params.e_integral_max,
-        );
-        self.state.error_integral.set(error_integral);
-        self.inspect.error_integral.set(error_integral);
-        fuchsia_trace::counter!(
-            "power_manager",
-            "ThermalPolicy error_integral", 0,
+            "error_proportional" => error_proportional,
             "error_integral" => error_integral
         );
 
-        let p_term = temperature_error * controller_params.proportional_gain;
+        let controller_params = &self.config.policy_params.controller_params;
+        let p_term = error_proportional * controller_params.proportional_gain;
         let i_term = error_integral * controller_params.integral_gain;
         let power_available =
             f64::max(0.0, controller_params.sustainable_power.0 + p_term + i_term);
@@ -610,7 +674,7 @@ impl ThermalPolicy {
     }
 
     /// This function is responsible for distributing the available power (as determined by the
-    /// prior PID calculation) to the various power actors that are included in this closed loop
+    /// prior PI calculation) to the various power actors that are included in this closed loop
     /// system. Initially, CPU is the only power actor. In later versions of the thermal policy,
     /// there may be more power actors with associated "weights" for distributing power amongst
     /// them.
@@ -744,11 +808,6 @@ impl InspectData {
         ctrl_params_node.record_double("proportional_gain", params.proportional_gain);
         ctrl_params_node.record_double("integral_gain", params.integral_gain);
         policy_params_node.record(ctrl_params_node);
-
-        let thermal_range = policy_params_node.create_double_array("thermal_limiting_range (C)", 2);
-        thermal_range.set(0, config.policy_params.thermal_limiting_range[0].0);
-        thermal_range.set(1, config.policy_params.thermal_limiting_range[1].0);
-        policy_params_node.record(thermal_range);
 
         self.root_node.record(policy_params_node);
     }
@@ -1039,12 +1098,12 @@ pub mod tests {
                 proportional_gain: 0.0,
                 integral_gain: 0.2,
             },
-            thermal_limiting_range: [Celsius(75.0), Celsius(85.0)],
             thermal_shutdown_temperature: Celsius(95.0),
             throttle_end_delay: Seconds(0.0),
         }
     }
 
+    /// Tests the low_pass_filter function for correctness.
     #[test]
     fn test_low_pass_filter() {
         let y_0 = 0.0;
@@ -1054,39 +1113,103 @@ pub mod tests {
         assert_eq!(low_pass_filter(y_1, y_0, time_delta, time_constant), 1.0);
     }
 
+    /// Tests the calculate_thermal_load function for correctness.
     #[test]
     fn test_calculate_thermal_load() {
-        let thermal_limiting_range = [Celsius(85.0), Celsius(95.0)];
+        // These tests using invalid error integral values will panic on debug builds and the
+        // `test_calculate_thermal_load_error_integral_*` tests will verify that. For now (non-debug
+        // build), just test that the invalid values are clamped to a valid ThermalLoad value.
+        if cfg!(not(debug_assertions)) {
+            // An invalid error_integral greater than e_integral_max should clamp at ThermalLoad(0)
+            assert_eq!(ThermalPolicy::calculate_thermal_load(5.0, -20.0, 0.0), ThermalLoad(0));
 
-        struct TestCase {
-            temperature: Celsius,      // observed temperature
-            thermal_load: ThermalLoad, // expected thermal load
-        };
-
-        let test_cases = vec![
-            // before thermal limit range
-            TestCase { temperature: Celsius(50.0), thermal_load: ThermalLoad(0) },
-            // start of thermal limit range
-            TestCase { temperature: Celsius(85.0), thermal_load: ThermalLoad(0) },
-            // arbitrary point within thermal limit range
-            TestCase { temperature: Celsius(88.0), thermal_load: ThermalLoad(30) },
-            // arbitrary point within thermal limit range
-            TestCase { temperature: Celsius(93.0), thermal_load: ThermalLoad(80) },
-            // end of thermal limit range
-            TestCase { temperature: Celsius(95.0), thermal_load: ThermalLoad(100) },
-            // beyond thermal limit range
-            TestCase { temperature: Celsius(100.0), thermal_load: ThermalLoad(100) },
-        ];
-
-        for test_case in test_cases {
-            assert_eq!(
-                ThermalPolicy::calculate_thermal_load(
-                    test_case.temperature,
-                    &thermal_limiting_range,
-                ),
-                test_case.thermal_load
-            );
+            // An invalid error_integral less than e_integral_min should clamp at ThermalLoad(100)
+            assert_eq!(ThermalPolicy::calculate_thermal_load(-25.0, -20.0, 0.0), ThermalLoad(100));
         }
+
+        // Test some error_integral values ranging from e_integral_max to e_integral_min
+        assert_eq!(ThermalPolicy::calculate_thermal_load(0.0, -20.0, 0.0), ThermalLoad(0));
+        assert_eq!(ThermalPolicy::calculate_thermal_load(-10.0, -20.0, 0.0), ThermalLoad(50));
+        assert_eq!(ThermalPolicy::calculate_thermal_load(-20.0, -20.0, 0.0), ThermalLoad(100));
+    }
+
+    /// Tests that an invalid low error integral value will cause a panic on debug builds.
+    #[test]
+    #[should_panic = "error_integral (-25) less than error_integral_min (-20)"]
+    #[cfg(debug_assertions)]
+    fn test_calculate_thermal_load_error_integral_low_panic() {
+        assert_eq!(ThermalPolicy::calculate_thermal_load(-25.0, -20.0, 0.0), ThermalLoad(100));
+    }
+
+    /// Tests that an invalid high error integral value will cause a panic on debug builds.
+    #[test]
+    #[should_panic = "error_integral (5) greater than error_integral_max (0)"]
+    #[cfg(debug_assertions)]
+    fn test_calculate_thermal_load_error_integral_high_panic() {
+        assert_eq!(ThermalPolicy::calculate_thermal_load(5.0, -20.0, 0.0), ThermalLoad(0));
+    }
+
+    /// Tests that the `get_time_delta` function correctly calculates time delta while updating the
+    /// `max_time_delta` state variable.
+    #[fasync::run_singlethreaded(test)]
+    async fn test_get_time_delta() {
+        let thermal_config = ThermalConfig {
+            temperature_node: create_dummy_node(),
+            cpu_control_nodes: vec![create_dummy_node()],
+            sys_pwr_handler: create_dummy_node(),
+            thermal_limiter_node: create_dummy_node(),
+            crash_report_handler: create_dummy_node(),
+            policy_params: default_policy_params(),
+        };
+        let node = ThermalPolicyBuilder::new(thermal_config).build().unwrap();
+
+        assert_eq!(node.get_time_delta(Nanoseconds(Seconds(1.5).into_nanos())), Seconds(1.5));
+        assert_eq!(node.get_time_delta(Nanoseconds(Seconds(2.0).into_nanos())), Seconds(0.5));
+        assert_eq!(node.state.max_time_delta.get(), Seconds(1.5));
+    }
+
+    /// Tests that the `get_filtered_temperature` function correctly calculates filtered
+    /// temperature.
+    #[fasync::run_singlethreaded(test)]
+    async fn test_get_filtered_temperature() {
+        let mut policy_params = default_policy_params();
+        policy_params.controller_params.filter_time_constant = Seconds(10.0);
+        let thermal_config = ThermalConfig {
+            temperature_node: create_dummy_node(),
+            cpu_control_nodes: vec![create_dummy_node()],
+            sys_pwr_handler: create_dummy_node(),
+            thermal_limiter_node: create_dummy_node(),
+            crash_report_handler: create_dummy_node(),
+            policy_params,
+        };
+        let node = ThermalPolicyBuilder::new(thermal_config).build().unwrap();
+
+        assert_eq!(node.get_filtered_temperature(Celsius(40.0), Seconds(1.0)), Celsius(4.0));
+        assert_eq!(node.get_filtered_temperature(Celsius(40.0), Seconds(1.0)), Celsius(7.6));
+    }
+
+    /// Tests that the `get_temperature_error` function correctly calculates proportional error and
+    /// integral error.
+    #[fasync::run_singlethreaded(test)]
+    async fn test_get_temperature_error() {
+        let mut policy_params = default_policy_params();
+        policy_params.controller_params.target_temperature = Celsius(80.0);
+        policy_params.controller_params.e_integral_min = -20.0;
+        policy_params.controller_params.e_integral_max = 0.0;
+
+        let thermal_config = ThermalConfig {
+            temperature_node: create_dummy_node(),
+            cpu_control_nodes: vec![create_dummy_node()],
+            sys_pwr_handler: create_dummy_node(),
+            thermal_limiter_node: create_dummy_node(),
+            crash_report_handler: create_dummy_node(),
+            policy_params,
+        };
+        let node = ThermalPolicyBuilder::new(thermal_config).build().unwrap();
+
+        assert_eq!(node.get_temperature_error(Celsius(40.0), Seconds(1.0)), (40.0, 0.0));
+        assert_eq!(node.get_temperature_error(Celsius(90.0), Seconds(1.0)), (-10.0, -10.0));
+        assert_eq!(node.get_temperature_error(Celsius(90.0), Seconds(1.0)), (-10.0, -20.0));
     }
 
     /// Tests that the ThermalPolicy will correctly divide total available power amongst multiple
@@ -1187,10 +1310,6 @@ pub mod tests {
                     stats: contains {},
                     throttle_history: contains {},
                     policy_params: {
-                        "thermal_limiting_range (C)": vec![
-                                policy_params.thermal_limiting_range[0].0,
-                                policy_params.thermal_limiting_range[1].0
-                            ],
                         controller_params: {
                             "sample_interval (s)":
                                 policy_params.controller_params.sample_interval.0,
@@ -1220,17 +1339,10 @@ pub mod tests {
         policy_params.controller_params.sustainable_power = Watts(1.0);
         policy_params.controller_params.proportional_gain = 0.0;
         policy_params.controller_params.integral_gain = 0.0;
-        policy_params.thermal_limiting_range[0] = Celsius(80.0);
-        policy_params.thermal_limiting_range[1] = Celsius(100.0);
-        let idle_temperature = Celsius(50.0);
-        let throttle_temperature = Celsius(90.0);
 
         // Calculate the values that we expect to be reported by the thermal policy based on the
         // parameters chosen above
-        let thermal_load = ThermalPolicy::calculate_thermal_load(
-            throttle_temperature,
-            &policy_params.thermal_limiting_range,
-        );
+        let thermal_load = ThermalLoad(50);
         let throttle_available_power = policy_params.controller_params.sustainable_power;
         let throttle_available_power_cpu1 = throttle_available_power;
         let throttle_cpu1_power_used = throttle_available_power_cpu1 - Watts(0.3); // arbitrary
@@ -1271,14 +1383,14 @@ pub mod tests {
             .unwrap();
 
         // Causes Inspect to receive throttle_start_time and one reading into thermal_load_hist
-        let _ = node.update_thermal_load(throttle_start_time, throttle_temperature).await;
+        let _ = node.update_thermal_load(throttle_start_time, thermal_load).await;
 
         // Causes Inspect to receive one reading into available_power_hist and one reading into both
         // entries of cpu_power_usage
-        let _ = node.iterate_controller(throttle_temperature, Seconds(0.0)).await;
+        let _ = node.update_power_allocation(0.0, 0.0).await;
 
         // Causes Inspect to receive throttle_end_time
-        let _ = node.update_thermal_load(throttle_end_time, idle_temperature).await;
+        let _ = node.update_thermal_load(throttle_end_time, ThermalLoad(0)).await;
 
         // TODO(fxb/49483): The `assert_inspect_tree!` macro really needs better support for testing
         // histogram correctness. Since that doesn't exist today, the only option is to recreate the
@@ -1399,7 +1511,6 @@ pub mod tests {
             "type": "ThermalPolicy",
             "name": "thermal_policy",
             "config": {
-                "thermal_limiting_range": [77.0, 84.0],
                 "thermal_shutdown_temperature": 95.0,
                 "throttle_end_delay": 0.0,
                 "controller_params": {
@@ -1437,10 +1548,6 @@ pub mod tests {
     /// thermal_limit_result metrics after successful thermal mitigation.
     #[fasync::run_singlethreaded(test)]
     async fn test_cobalt_metrics_throttle_elapsed_time() {
-        // Specify the idle and throttle temperatures and throttle duration
-        let policy_params = default_policy_params();
-        let idle_temperature = policy_params.thermal_limiting_range[0] - Celsius(1.0);
-        let throttle_temperature = policy_params.thermal_limiting_range[0] + Celsius(1.0);
         let throttle_duration = Nanoseconds(1e9 as i64); // 1s
 
         // Set up the ThermalPolicy node
@@ -1450,7 +1557,7 @@ pub mod tests {
             sys_pwr_handler: create_dummy_node(),
             thermal_limiter_node: create_dummy_node(),
             crash_report_handler: create_dummy_node(),
-            policy_params,
+            policy_params: default_policy_params(),
         };
 
         let (sender, mut receiver) = futures::channel::mpsc::channel(10);
@@ -1461,10 +1568,10 @@ pub mod tests {
             .unwrap();
 
         // Cause the thermal policy to begin thermal limiting
-        let _ = node.update_thermal_load(Nanoseconds(0), throttle_temperature).await;
+        let _ = node.update_thermal_load(Nanoseconds(0), ThermalLoad(50)).await;
 
         // Cause the thermal policy to end thermal limiting
-        let _ = node.update_thermal_load(throttle_duration, idle_temperature).await;
+        let _ = node.update_thermal_load(throttle_duration, ThermalLoad(0)).await;
 
         // Verify the expected Cobalt event for the thermal_limiting_elapsed_time metric
         assert_eq!(
@@ -1496,7 +1603,6 @@ pub mod tests {
     /// thermal_limit_result metrics in the case of a thermal shutdown.
     #[fasync::run_singlethreaded(test)]
     async fn test_cobalt_metrics_thermal_shutdown() {
-        // Specify the thermal shutdown temperature
         let policy_params = default_policy_params();
         let shutdown_temperature = policy_params.thermal_shutdown_temperature + Celsius(1.0);
 
@@ -1544,7 +1650,7 @@ pub mod tests {
 
         // The number of temperature readings that the test will perform and are expected to be
         // reported in the Cobalt histogram event
-        let num_temperature_readings = CobaltMetrics::NUM_TEMPERATURE_READINGS;
+        let num_temperature_readings = CobaltMetrics::NUM_TEMPERATURE_READINGS + 1;
 
         // Mock temperature node that responds to `num_temperature_readings` number of
         // ReadTemperature messages with a `test_temperature` reading
@@ -1558,14 +1664,13 @@ pub mod tests {
         );
 
         // Set up the ThermalPolicy node
-        let policy_params = default_policy_params();
         let thermal_config = ThermalConfig {
             temperature_node,
             cpu_control_nodes: vec![create_dummy_node()],
             sys_pwr_handler: create_dummy_node(),
             thermal_limiter_node: create_dummy_node(),
             crash_report_handler: create_dummy_node(),
-            policy_params,
+            policy_params: default_policy_params(),
         };
         let (sender, mut receiver) = futures::channel::mpsc::channel(10);
         let cobalt_metrics = CobaltMetrics::new_with_cobalt_sender(CobaltSender::new(sender));
@@ -1586,7 +1691,7 @@ pub mod tests {
             num_buckets: power_metrics_registry::RAW_TEMPERATURE_INT_BUCKETS_NUM_BUCKETS,
             step_size: power_metrics_registry::RAW_TEMPERATURE_INT_BUCKETS_STEP_SIZE,
         });
-        for _ in 0..num_temperature_readings {
+        for _ in 0..num_temperature_readings - 1 {
             expected_histogram.add_data(test_temperature.0 as i64);
         }
 
@@ -1630,8 +1735,6 @@ pub mod tests {
         let mut policy_params = default_policy_params();
         let throttle_end_delay = Seconds(60.0);
         policy_params.throttle_end_delay = throttle_end_delay;
-        let idle_temperature = policy_params.thermal_limiting_range[0] - Celsius(1.0);
-        let throttle_temperature = policy_params.thermal_limiting_range[0] + Celsius(1.0);
         let initial_throttle_duration = Nanoseconds(1e9 as i64); // 1s
         let total_throttle_duration =
             initial_throttle_duration + Nanoseconds(throttle_end_delay.into_nanos());
@@ -1654,17 +1757,17 @@ pub mod tests {
             .unwrap();
 
         // Cause the thermal policy to begin thermal limiting
-        let _ = node.update_thermal_load(Nanoseconds(0), throttle_temperature).await;
+        let _ = node.update_thermal_load(Nanoseconds(0), ThermalLoad(50)).await;
 
         // Cause the thermal policy to end thermal limiting, but the deadline timer should still be
         // active
-        let _ = node.update_thermal_load(initial_throttle_duration, idle_temperature).await;
+        let _ = node.update_thermal_load(initial_throttle_duration, ThermalLoad(0)).await;
 
         // Verify there were no dispatched Cobalt events because the deadline timer is still running
         assert!(receiver.try_next().is_err());
 
         // Cause the deadline timer to expire
-        let _ = node.update_thermal_load(total_throttle_duration, idle_temperature).await;
+        let _ = node.update_thermal_load(total_throttle_duration, ThermalLoad(0)).await;
 
         // Verify the expected Cobalt event for the thermal_limiting_elapsed_time metric
         assert_eq!(
@@ -1699,10 +1802,6 @@ pub mod tests {
         // Define the test parameters
         let mut policy_params = default_policy_params();
         policy_params.throttle_end_delay = Seconds(0.0);
-        policy_params.thermal_limiting_range[0] = Celsius(80.0);
-        policy_params.thermal_limiting_range[1] = Celsius(100.0);
-        let idle_temperature = Celsius(50.0);
-        let throttle_temperature = Celsius(90.0);
 
         // Set up the ThermalPolicy node
         let thermal_config = ThermalConfig {
@@ -1723,7 +1822,7 @@ pub mod tests {
 
         // Enter and then exit thermal throttling. The mock crash_report_handler node will assert if
         // it does not receive a FileCrashReport message.
-        let _ = node.update_thermal_load(Nanoseconds(0), throttle_temperature).await;
-        let _ = node.update_thermal_load(Nanoseconds(0), idle_temperature).await;
+        let _ = node.update_thermal_load(Nanoseconds(0), ThermalLoad(50)).await;
+        let _ = node.update_thermal_load(Nanoseconds(0), ThermalLoad(0)).await;
     }
 }

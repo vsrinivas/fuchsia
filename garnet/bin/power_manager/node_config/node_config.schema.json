@@ -213,24 +213,6 @@
           "config": {
             "type": "object",
             "properties": {
-              "thermal_limiting_range": {
-                "type": "array",
-                "minItems": 2,
-                "maxItems": 2,
-                "items": [
-                  {
-                    "type": "number",
-                    "minimum": 30.0,
-                    "maximum": 110.0
-                  },
-                  {
-                    "type": "number",
-                    "minimum": 30.0,
-                    "maximum": 110.0
-                  }
-                ],
-                "additionalItems": false
-              },
               "thermal_shutdown_temperature": {
                 "type": "number"
               },
@@ -292,7 +274,6 @@
             },
             "additionalProperties": false,
             "required": [
-              "thermal_limiting_range",
               "thermal_shutdown_temperature",
               "controller_params"
             ]

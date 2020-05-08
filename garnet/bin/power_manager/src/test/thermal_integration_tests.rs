@@ -424,7 +424,6 @@ fn default_policy_params() -> ThermalPolicyParams {
             proportional_gain: 0.0,
             integral_gain: 0.2,
         },
-        thermal_limiting_range: [Celsius(75.0), Celsius(85.0)],
         thermal_shutdown_temperature: Celsius(95.0),
         throttle_end_delay: Seconds(0.0),
     }
