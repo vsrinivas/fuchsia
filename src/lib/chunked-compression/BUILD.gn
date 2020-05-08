@@ -102,6 +102,16 @@ fuzzer("header-reader-fuzzer") {
   ]
 }
 
+fuzzer("decompressor-fuzzer") {
+  sources = [ "decompressor-fuzztest.cc" ]
+  dictionary = "test_data/archive.dict"
+  deps = [
+    ":chunked-compression",
+    ":chunked-compression-testutils",
+    "//src/lib/fxl",
+  ]
+}
+
 fuzzer("compress-decompress-fuzzer") {
   sources = [ "compress-decompress-fuzztest.cc" ]
   deps = [
@@ -114,6 +124,7 @@ fuzzers_package("chunked-compression-fuzzers-package") {
   package_name = "chunked-compression-fuzzers"
   fuzzers = [
     ":compress-decompress-fuzzer",
+    ":decompressor-fuzzer",
     ":header-reader-fuzzer",
   ]
 }
