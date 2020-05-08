@@ -8,7 +8,9 @@
 #include <stdint.h>
 #include <zircon/assert.h>
 
-#include "../main.h"
+#include "test-main.h"
+
+const char Symbolize::kProgramName_[] = "start-test";
 
 namespace {
 
@@ -21,18 +23,9 @@ bool StackAligned(void* ptr) {
   return reinterpret_cast<uintptr_t>(ptr) % kStackAlignment == 0;
 }
 
-[[gnu::noinline, noreturn]] void Spin() {
-  while (true) {
-    // Do something the compiler doesn't recognize as "nothing".  In C++ an
-    // infinite loop that does nothing is technically undefined behavior and
-    // so the compiler is allowed to do silly things.
-    __asm__ volatile("");
-  }
-}
-
 }  // namespace
 
-void PhysMain(void*, arch::EarlyTicks) {
+int TestMain(void*, arch::EarlyTicks) {
   void* machine_stack = __builtin_frame_address(0);
   ZX_ASSERT(StackAligned(machine_stack));
 
@@ -41,10 +34,5 @@ void PhysMain(void*, arch::EarlyTicks) {
   ZX_ASSERT(StackAligned(unsafe_stack));
 #endif
 
-  // TODO(46879): There's no I/O or shutdown implemented yet, so this is
-  // "tested" just by observing in the debugger that it's spinning here
-  // and didn't crash or assert first.  When serial output is working,
-  // this will morph into a "hello world" test and later be replaced
-  // or augmented by a variety of test programs.
-  Spin();
+  return 0;
 }

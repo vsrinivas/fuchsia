@@ -36,6 +36,10 @@ if (current_toolchain == default_toolchain) {
         "$zx/public/gn/config/instrumentation:ubsan-trap",
       ]
 
+      # Always enable frame pointers.
+      configs -= [ "$zx/public/gn/config:default_frame_pointers" ]
+      configs += [ "$zx/public/gn/config:frame_pointers" ]
+
       tags = [
         "physmem",
         "standalone",
@@ -74,12 +78,19 @@ if (current_toolchain == default_toolchain) {
   # This is used implicitly by phys_executable() targets.
   source_set("phys_executable.deps") {
     sources = [
+      "frame-pointer.cc",
+      "frame-pointer.h",
       "panic.cc",
       "stack.cc",
+      "stack.h",
+      "symbolize.cc",
+      "symbolize.h",
     ]
     deps = [
       ":main",
       "$zx/kernel/arch/$zircon_cpu/phys",
+      "$zx/kernel/lib/ktl",
+      "$zx/kernel/lib/libc",
     ]
   }
 

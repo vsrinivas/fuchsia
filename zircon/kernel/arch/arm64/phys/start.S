@@ -65,7 +65,8 @@
   mov sp, x12
 
 #if __has_feature(shadow_call_stack)
-  adr_global shadow_call_sp, boot_shadow_call_stack + BOOT_SHADOW_CALL_STACK_SIZE
+  // Shadow call stack grows up.
+  adr_global shadow_call_sp, boot_shadow_call_stack
 #endif
 
   // Now the full C++ ABI is available.  This could theoretically be a tail

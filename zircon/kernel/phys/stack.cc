@@ -15,3 +15,9 @@ BootStack boot_unsafe_stack;
 #if __has_feature(shadow_call_stack)
 uintptr_t boot_shadow_call_stack[BOOT_SHADOW_CALL_STACK_SIZE / sizeof(uintptr_t)];
 #endif  // __has_feature(shadow_call_stack)
+
+// This considers the limit to be "on".
+bool IsOnStack(uintptr_t sp) {
+  const auto base = reinterpret_cast<uintptr_t>(&boot_stack);
+  return base <= sp && sp - base <= sizeof(boot_stack);
+}

@@ -50,6 +50,7 @@ template("phys_qemu_test") {
                              "output_dir",
                              "output_extension",
                              "output_name",
+                             "tags",
                              "testonly",
                            ])
     linker_script = "../phys.ld"
@@ -68,6 +69,9 @@ template("phys_qemu_test") {
     cpu = ""
     deps = []
     tags = [ "incomplete" ]
+    if (defined(invoker.tags)) {
+      tags += invoker.tags
+    }
 
     # The special kernel is all that really matters for this test.
     qemu_kernel = ":$executable_target"
@@ -92,20 +96,20 @@ phys_qemu_test("hello-world-test") {
   deps = [ "$zx/kernel/lib/libc" ]
 }
 
+phys_qemu_test("backtrace-test") {
+  sources = [ "backtrace-test.cc" ]
+  deps = [ "$zx/kernel/lib/libc" ]
+}
+
 # Ideally we'd test all four combinations on arm64 and both combinations on
 # x86.  But the common library code is always compiled with shadow-call-stack
 # on arm64 so we can't disable the ABI support for it and with safe-stack on
 # x86 so we can't disable the ABI support for it there.  The start.S code only
 # enables extra stack support conditionally so as not to waste space, so there
 # isn't a good way to test non-default configurations.
-phys_executable("start-test") {
-  testonly = true
-  linker_script = "../phys.ld"
+phys_qemu_test("start-test") {
   sources = [ "start-test.cc" ]
-  deps = [
-    ":qemu-header",
-    "$zx/kernel/lib/arch",
-  ]
+  deps = [ "$zx/kernel/lib/libc" ]
 }
 
 group("test") {
@@ -114,6 +118,7 @@ group("test") {
   # TODO(46879): Get it building for x86 too.
   if (current_cpu == "arm64") {
     deps = [
+      ":backtrace-test",
       ":hello-world-test",
       ":start-test",
     ]

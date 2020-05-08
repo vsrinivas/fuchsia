@@ -4,13 +4,11 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <stdio.h>
+#include "frame-pointer.h"
 
-#include "test-main.h"
+#include "stack.h"
 
-const char Symbolize::kProgramName_[] = "hello-world-test";
-
-int TestMain(void*, arch::EarlyTicks) {
-  printf("Hello, world!\n");
-  return 0;
+FramePointer& FramePointer::operator++() {
+  *this = IsOnStack(reinterpret_cast<uintptr_t>(fp_)) ? *fp_ : end();
+  return *this;
 }
