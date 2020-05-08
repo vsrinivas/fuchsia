@@ -7,6 +7,7 @@
 
 BT_FILE_DEPS=(
   "scripts/fx"
+  "tools/devshell/lib/fx-cmd-locator.sh"
   "tools/devshell/lib/vars.sh"
   "tools/devshell/lib/prebuilt.sh"
   "tools/devshell/run-test"

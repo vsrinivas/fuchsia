@@ -1,0 +1,57 @@
+#!/bin/bash
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### Test expected behavior of fx vendor
+
+BT_FILE_DEPS=(
+  "scripts/fx"
+  "tools/devshell/lib/fx-cmd-locator.sh"
+  "tools/devshell/lib/vars.sh"
+  "tools/devshell/lib/prebuilt.sh"
+  "tools/devshell/vendor"
+)
+
+declare fx
+
+BT_SET_UP() {
+  source "${BT_TEMP_DIR}/tools/devshell/tests/lib/fuchsia-mock.sh"
+  fx="$(btf::setup_fx)"
+}
+
+# Test that 'fx vendor company1 mycommand' works
+TEST_fxvendor_exec() {
+  local cmd_path="${BT_TEMP_DIR}/vendor/company1/scripts/devshell/mycommand"
+  btf::make_mock "$cmd_path"
+
+  BT_EXPECT ${fx} vendor company1 mycommand arg1 arg2
+  # ensure that 'mycommand arg1 arg2' was called
+  btf::expect-mock-args "${cmd_path}" "arg1" "arg2"
+}
+
+# Test that 'fx vendor company1 mycommand' works for a metadata mycommand.fx file
+TEST_fxvendor_metadata() {
+  local binary_path="${BT_TEMP_DIR}/prebuilt/mytool/binary"
+  btf::make_mock "$binary_path"
+  local metadata_path="${BT_TEMP_DIR}/vendor/company1/scripts/devshell/mycommand.fx"
+  mkdir -p "$(dirname "${metadata_path}")"
+  echo '#### EXECUTABLE=${FUCHSIA_DIR}/prebuilt/mytool/binary' > "${metadata_path}"
+
+  BT_EXPECT ${fx} vendor company1 mycommand arg1 arg2
+  # ensure that 'binary arg1 arg2' was called
+  btf::expect-mock-args "${binary_path}" "arg1" "arg2"
+}
+
+# Test that 'fx vendor company1 nonvendorcommand' fails
+TEST_fxvendor_nonvendorcmd() {
+  btf::make_mock "${BT_TEMP_DIR}/vendor/company1/scripts/devshell/vendorcmd"
+
+  local nonvendor_path="${BT_TEMP_DIR}/tools/devshell/nonvendorcmd"
+  btf::make_mock "$nonvendor_path"
+
+  BT_EXPECT_FAIL ${fx} vendor company1 nonvendorcmd \>\& _stderr
+}
+
+BT_RUN_TESTS "$@"
+
