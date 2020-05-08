@@ -58,7 +58,7 @@ Appmgr::Appmgr(async_dispatcher_t* dispatcher, AppmgrArgs args)
   status = fdio_service_connect_at(svc_client_chan.get(), "fuchsia.tracing.provider.Registry",
                                    args.trace_server_channel.release());
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "failed to connect to tracing: " << status;
+    FX_LOGS(WARNING) << "failed to connect to tracing: " << status;
     // In test environments the tracing registry may not be available. If this
     // fails, let's still proceed.
   }
@@ -78,14 +78,14 @@ Appmgr::Appmgr(async_dispatcher_t* dispatcher, AppmgrArgs args)
     sysmgr_.events().OnTerminated = [this](zx_status_t status,
                                            TerminationReason termination_reason) {
       if (termination_reason != TerminationReason::EXITED) {
-        FX_LOGS(ERROR) << "sysmgr launch failed: "
+        FX_LOGS(WARNING) << "sysmgr launch failed: "
                        << sys::TerminationReasonToString(termination_reason);
         sysmgr_permanently_failed_ = true;
       } else if (status == ZX_ERR_INVALID_ARGS) {
-        FX_LOGS(ERROR) << "sysmgr reported invalid arguments";
+        FX_LOGS(WARNING) << "sysmgr reported invalid arguments";
         sysmgr_permanently_failed_ = true;
       } else {
-        FX_LOGS(ERROR) << "sysmgr exited with status " << status;
+        FX_LOGS(INFO) << "sysmgr exited with status " << status;
       }
 
       if (!sysmgr_retry_crashes_) {
@@ -112,7 +112,7 @@ Appmgr::Appmgr(async_dispatcher_t* dispatcher, AppmgrArgs args)
       }
 
       auto delay_duration = sysmgr_backoff_.GetNext();
-      FX_LOGS(ERROR) << fxl::StringPrintf("sysmgr failed, restarting in %.3fs",
+      FX_LOGS(WARNING) << fxl::StringPrintf("sysmgr failed, restarting in %.3fs",
                                           .001f * delay_duration.to_msecs());
       async::PostDelayedTask(dispatcher, run_sysmgr, delay_duration);
     };
