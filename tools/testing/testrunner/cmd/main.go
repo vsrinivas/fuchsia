@@ -123,6 +123,23 @@ func main() {
 	}
 }
 
+func validateTest(test testsharder.Test) error {
+	if test.Name == "" {
+		return fmt.Errorf("one or more tests missing `name` field")
+	}
+	if test.OS == "" {
+		return fmt.Errorf("one or more tests missing `os` field")
+	}
+	if test.Runs <= 0 {
+		return fmt.Errorf("one or more tests with invalid `runs` field")
+	}
+	// UniqueName() ensures that the required Path or PackageURL is set.
+	if util.UniqueName(test.Test) == "" {
+		return fmt.Errorf("one or more tests with invalid path/packageurl")
+	}
+	return nil
+}
+
 func loadTests(path string) ([]testsharder.Test, error) {
 	bytes, err := ioutil.ReadFile(path)
 	if err != nil {
@@ -134,9 +151,9 @@ func loadTests(path string) ([]testsharder.Test, error) {
 		return nil, fmt.Errorf("failed to unmarshal %q: %w", path, err)
 	}
 
-	for i := range tests {
-		if tests[i].Runs <= 0 {
-			return nil, fmt.Errorf("one or more tests with invalid `runs` field")
+	for _, test := range tests {
+		if err := validateTest(test); err != nil {
+			return nil, err
 		}
 	}
 

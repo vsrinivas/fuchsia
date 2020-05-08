@@ -37,6 +37,98 @@ func assertEqual(t1, t2 *testrunner.TestResult) bool {
 	return t1.Name == t2.Name && t1.Result == t2.Result && t1.RunIndex == t2.RunIndex
 }
 
+func TestValidateTest(t *testing.T) {
+	cases := []struct {
+		name      string
+		test      testsharder.Test
+		expectErr bool
+	}{
+		{
+			name: "missing name",
+			test: testsharder.Test{
+				Test: build.Test{
+					OS:   "linux",
+					Path: "/foo/bar",
+				},
+				Runs: 1,
+			},
+			expectErr: true,
+		}, {
+			name: "missing OS",
+			test: testsharder.Test{
+				Test: build.Test{
+					Name: "test1",
+					Path: "/foo/bar",
+				},
+				Runs: 1,
+			},
+			expectErr: true,
+		}, {
+			name: "missing required path",
+			test: testsharder.Test{
+				Test: build.Test{
+					Name:       "test1",
+					OS:         "linux",
+					PackageURL: "fuchsia-pkg://test1",
+				},
+				Runs: 1,
+			},
+			expectErr: true,
+		}, {
+			name: "missing required packageurl",
+			test: testsharder.Test{
+				Test: build.Test{
+					Name: "test1",
+					OS:   "fuchsia",
+					Path: "/foo/bar",
+				},
+				Runs: 1,
+			},
+			expectErr: true,
+		}, {
+			name: "missing runs",
+			test: testsharder.Test{
+				Test: build.Test{
+					Name: "test1",
+					OS:   "linux",
+					Path: "/foo/bar",
+				},
+			},
+			expectErr: true,
+		}, {
+			name: "valid test with path",
+			test: testsharder.Test{
+				Test: build.Test{
+					Name: "test1",
+					OS:   "linux",
+					Path: "/foo/bar",
+				},
+				Runs: 1,
+			},
+			expectErr: false,
+		}, {
+			name: "valid test with packageurl",
+			test: testsharder.Test{
+				Test: build.Test{
+					Name:       "test1",
+					OS:         "fuchsia",
+					PackageURL: "fuchsia-pkg://test1",
+				},
+				Runs: 5,
+			},
+			expectErr: false,
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			err := validateTest(c.test)
+			if c.expectErr != (err != nil) {
+				t.Errorf("got error: %v, expectErr: %v", err, c.expectErr)
+			}
+		})
+	}
+}
+
 func TestRunTest(t *testing.T) {
 	cases := []struct {
 		name           string
