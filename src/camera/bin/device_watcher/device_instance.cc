@@ -91,7 +91,7 @@ fit::result<std::unique_ptr<DeviceInstance>, zx_status_t> DeviceInstance::Create
   });
 
   // Start the loop.
-  ZX_ASSERT(instance->loop_.StartThread("Camera Device Component Instance Thread") == ZX_OK);
+  ZX_ASSERT(instance->loop_.StartThread("Camera Device Instance") == ZX_OK);
 
   return fit::ok(std::move(instance));
 }

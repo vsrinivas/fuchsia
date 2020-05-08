@@ -20,7 +20,7 @@ DeviceImpl::Client::Client(DeviceImpl& device, uint64_t id,
   FX_LOGS(DEBUG) << "Device client " << id << " connected.";
   binding_.set_error_handler(fit::bind_member(this, &DeviceImpl::Client::OnClientDisconnected));
   std::ostringstream oss;
-  oss << "Camera Device Thread (Client ID = " << id << ")";
+  oss << "Camera Device Client " << id;
   ZX_ASSERT(loop_.StartThread(oss.str().c_str()) == ZX_OK);
 }
 
