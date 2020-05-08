@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"go.fuchsia.dev/fuchsia/tools/build/lib"
+	"go.fuchsia.dev/fuchsia/tools/integration/testsharder/lib"
 	"go.fuchsia.dev/fuchsia/tools/lib/retry"
 	"go.fuchsia.dev/fuchsia/tools/net/sshutil"
 	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
@@ -108,7 +109,7 @@ func TestSubprocessTester(t *testing.T) {
 					t.Errorf("Close returned error: %v", err)
 				}
 			}()
-			_, err := tester.Test(context.Background(), c.test, ioutil.Discard, ioutil.Discard)
+			_, err := tester.Test(context.Background(), testsharder.Test{Test: c.test}, ioutil.Discard, ioutil.Discard)
 			if gotErr := (err != nil); gotErr != c.wantErr {
 				t.Errorf("tester.Test got error: %v, want error: %t", err, c.wantErr)
 			}
@@ -194,7 +195,7 @@ func TestSSHTester(t *testing.T) {
 			}()
 			wantReconnCalls := len(c.reconErrs)
 			wantRunCalls := len(c.runErrs)
-			_, err := tester.Test(context.Background(), build.Test{}, ioutil.Discard, ioutil.Discard)
+			_, err := tester.Test(context.Background(), testsharder.Test{}, ioutil.Discard, ioutil.Discard)
 			if err == nil {
 				if c.wantErr {
 					t.Errorf("tester.Test got nil error, want non-nil error")
@@ -220,7 +221,7 @@ func TestSSHTester(t *testing.T) {
 func TestSetCommand(t *testing.T) {
 	cases := []struct {
 		name        string
-		test        build.Test
+		test        testsharder.Test
 		useRuntests bool
 		timeout     time.Duration
 		expected    []string
@@ -228,81 +229,90 @@ func TestSetCommand(t *testing.T) {
 		{
 			name:        "specified command is respected",
 			useRuntests: false,
-			test: build.Test{
-				Path:    "/path/to/test",
-				Command: []string{"a", "b", "c"},
-			},
+			test: testsharder.Test{
+				Test: build.Test{
+					Path:    "/path/to/test",
+					Command: []string{"a", "b", "c"},
+				}},
 			expected: []string{"a", "b", "c"},
 		},
 		{
 			name:        "use runtests URL",
 			useRuntests: true,
-			test: build.Test{
-				Path:       "/path/to/test",
-				PackageURL: "fuchsia-pkg://example.com/test.cmx",
-			},
+			test: testsharder.Test{
+				Test: build.Test{
+					Path:       "/path/to/test",
+					PackageURL: "fuchsia-pkg://example.com/test.cmx",
+				}},
 			expected: []string{"runtests", "-t", "fuchsia-pkg://example.com/test.cmx", "-o", "REMOTE_DIR"},
 		},
 		{
 			name:        "use runtests path",
 			useRuntests: true,
-			test: build.Test{
-				Path: "/path/to/test",
-			},
+			test: testsharder.Test{
+				Test: build.Test{
+					Path: "/path/to/test",
+				}},
 			expected: []string{"runtests", "-t", "test", "/path/to", "-o", "REMOTE_DIR"},
 		},
 		{
 			name:        "use runtests timeout",
 			useRuntests: true,
-			test: build.Test{
-				Path: "/path/to/test",
-			},
+			test: testsharder.Test{
+				Test: build.Test{
+					Path: "/path/to/test",
+				}},
 			timeout:  time.Second,
 			expected: []string{"runtests", "-t", "test", "/path/to", "-o", "REMOTE_DIR", "-i", "1"},
 		},
 		{
 			name:        "system path",
 			useRuntests: false,
-			test: build.Test{
-				Path: "/path/to/test",
-			},
+			test: testsharder.Test{
+				Test: build.Test{
+					Path: "/path/to/test",
+				}},
 			expected: []string{"/path/to/test"},
 		},
 		{
 			name:        "components v1",
 			useRuntests: false,
-			test: build.Test{
-				Path:       "/path/to/test",
-				PackageURL: "fuchsia-pkg://example.com/test.cmx",
-			},
+			test: testsharder.Test{
+				Test: build.Test{
+					Path:       "/path/to/test",
+					PackageURL: "fuchsia-pkg://example.com/test.cmx",
+				}},
 			expected: []string{"run-test-component", "--restrict-logs", "fuchsia-pkg://example.com/test.cmx"},
 		},
 		{
 			name:        "components v1 timeout",
 			useRuntests: false,
-			test: build.Test{
-				Path:       "/path/to/test",
-				PackageURL: "fuchsia-pkg://example.com/test.cmx",
-			},
+			test: testsharder.Test{
+				Test: build.Test{
+					Path:       "/path/to/test",
+					PackageURL: "fuchsia-pkg://example.com/test.cmx",
+				}},
 			timeout:  time.Second,
 			expected: []string{"run-test-component", "--restrict-logs", "--timeout=1", "fuchsia-pkg://example.com/test.cmx"},
 		},
 		{
 			name:        "components v2",
 			useRuntests: false,
-			test: build.Test{
-				Path:       "/path/to/test",
-				PackageURL: "fuchsia-pkg://example.com/test.cm",
-			},
+			test: testsharder.Test{
+				Test: build.Test{
+					Path:       "/path/to/test",
+					PackageURL: "fuchsia-pkg://example.com/test.cm",
+				}},
 			expected: []string{"run-test-suite", "fuchsia-pkg://example.com/test.cm"},
 		},
 		{
 			name:        "components v2 timeout",
 			useRuntests: false,
-			test: build.Test{
-				Path:       "/path/to/test",
-				PackageURL: "fuchsia-pkg://example.com/test.cm",
-			},
+			test: testsharder.Test{
+				Test: build.Test{
+					Path:       "/path/to/test",
+					PackageURL: "fuchsia-pkg://example.com/test.cm",
+				}},
 			timeout:  time.Second,
 			expected: []string{"run-test-suite", "--timeout", "1", "fuchsia-pkg://example.com/test.cm"},
 		},

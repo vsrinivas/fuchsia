@@ -18,7 +18,7 @@ type Shard struct {
 	Name string `json:"name"`
 
 	// Tests is the set of tests to be executed in this shard.
-	Tests []build.Test `json:"tests"`
+	Tests []Test `json:"tests"`
 
 	// Env is a generalized notion of the execution environment for the shard.
 	Env build.Environment `json:"environment"`
@@ -74,9 +74,9 @@ func MakeShards(specs []build.TestSpec, opts *ShardOptions) []*Shard {
 		sort.Slice(specs, func(i, j int) bool {
 			return specs[i].Test.Name < specs[j].Test.Name
 		})
-		var tests []build.Test
+		var tests []Test
 		for _, spec := range specs {
-			tests = append(tests, spec.Test)
+			tests = append(tests, Test{spec.Test, 1})
 		}
 		shards = append(shards, &Shard{
 			Name:  environmentName(env),

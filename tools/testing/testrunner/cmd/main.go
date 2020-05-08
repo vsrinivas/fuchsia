@@ -16,11 +16,10 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"regexp"
 	"runtime"
 	"time"
 
-	build "go.fuchsia.dev/fuchsia/tools/build/lib"
+	testsharder "go.fuchsia.dev/fuchsia/tools/integration/testsharder/lib"
 	"go.fuchsia.dev/fuchsia/tools/lib/color"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"go.fuchsia.dev/fuchsia/tools/net/sshutil"
@@ -124,28 +123,34 @@ func main() {
 	}
 }
 
-func loadTests(path string) ([]build.Test, error) {
+func loadTests(path string) ([]testsharder.Test, error) {
 	bytes, err := ioutil.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read %q: %w", path, err)
 	}
 
-	var tests []build.Test
+	var tests []testsharder.Test
 	if err := json.Unmarshal(bytes, &tests); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal %q: %w", path, err)
+	}
+
+	for i := range tests {
+		if tests[i].Runs <= 0 {
+			return nil, fmt.Errorf("one or more tests with invalid `runs` field")
+		}
 	}
 
 	return tests, nil
 }
 
 type tester interface {
-	Test(context.Context, build.Test, io.Writer, io.Writer) (runtests.DataSinkReference, error)
+	Test(context.Context, testsharder.Test, io.Writer, io.Writer) (runtests.DataSinkReference, error)
 	Close() error
 	CopySinks(context.Context, []runtests.DataSinkReference) error
 }
 
-func execute(ctx context.Context, tests []build.Test, outputs *testOutputs, nodename, sshKeyFile string) error {
-	var localTests, fuchsiaTests []build.Test
+func execute(ctx context.Context, tests []testsharder.Test, outputs *testOutputs, nodename, sshKeyFile string) error {
+	var localTests, fuchsiaTests []testsharder.Test
 	for _, test := range tests {
 		switch test.OS {
 		case "fuchsia":
@@ -197,22 +202,24 @@ func execute(ctx context.Context, tests []build.Test, outputs *testOutputs, node
 	return runTests(ctx, fuchsiaTests, t, outputs)
 }
 
-func runTests(ctx context.Context, tests []build.Test, t tester, outputs *testOutputs) error {
+func runTests(ctx context.Context, tests []testsharder.Test, t tester, outputs *testOutputs) error {
 	var sinks []runtests.DataSinkReference
 	for _, test := range tests {
-		result, err := runTest(ctx, test, t)
-		if errors.Is(err, sshutil.ConnectionError) {
-			return err
+		for i := 0; i < test.Runs; i++ {
+			result, err := runTest(ctx, test, i, t)
+			if errors.Is(err, sshutil.ConnectionError) {
+				return err
+			}
+			if err := outputs.record(*result); err != nil {
+				return err
+			}
+			sinks = append(sinks, result.DataSinks)
 		}
-		if err := outputs.record(*result); err != nil {
-			return err
-		}
-		sinks = append(sinks, result.DataSinks)
 	}
 	return t.CopySinks(ctx, sinks)
 }
 
-func runTest(ctx context.Context, test build.Test, t tester) (*testrunner.TestResult, error) {
+func runTest(ctx context.Context, test testsharder.Test, runIndex int, t tester) (*testrunner.TestResult, error) {
 	result := runtests.TestSuccess
 	stdout := new(bytes.Buffer)
 	stderr := new(bytes.Buffer)
@@ -232,15 +239,7 @@ func runTest(ctx context.Context, test build.Test, t tester) (*testrunner.TestRe
 
 	endTime := time.Now()
 
-	name := util.UniqueName(test)
-
-	// If test is a multiplier test, the name should end in a number.
-	// Re-append that to the result name.
-	re := regexp.MustCompile(`\([0-9]+\)$`)
-	index := re.FindString(test.Name)
-	if index != "" {
-		name += "-" + index
-	}
+	name := util.UniqueName(test.Test)
 
 	// Record the test details in the summary.
 	return &testrunner.TestResult{
@@ -253,5 +252,6 @@ func runTest(ctx context.Context, test build.Test, t tester) (*testrunner.TestRe
 		StartTime: startTime,
 		EndTime:   endTime,
 		DataSinks: dataSinks,
+		RunIndex:  runIndex,
 	}, nil
 }

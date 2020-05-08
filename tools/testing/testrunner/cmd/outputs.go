@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"go.fuchsia.dev/fuchsia/tools/lib/osmisc"
@@ -35,7 +36,7 @@ func createTestOutputs(producer *tap.Producer, outDir string) (*testOutputs, err
 
 // Record writes the test result to initialized outputs.
 func (o *testOutputs) record(result testrunner.TestResult) error {
-	outputRelPath := filepath.Join(result.Name, runtests.TestOutputFilename)
+	outputRelPath := filepath.Join(result.Name, strconv.Itoa(result.RunIndex), runtests.TestOutputFilename)
 	// Strip any leading //.
 	outputRelPath = strings.TrimLeft(outputRelPath, "//")
 

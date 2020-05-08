@@ -28,6 +28,9 @@ type TestResult struct {
 	// DataSinks gives the data sinks attached to a test.
 	DataSinks runtests.DataSinkReference
 
+	// RunIndex is the index of this test run among all the runs of the same test.
+	RunIndex int
+
 	Stdout    []byte
 	Stderr    []byte
 	StartTime time.Time

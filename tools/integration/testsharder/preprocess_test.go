@@ -43,9 +43,9 @@ func TestValidation(t *testing.T) {
 
 	genericTestSpec := build.TestSpec{
 		Test: build.Test{
-			Name: "//src/foo:tests",
-			Path: "path/to/test",
-			OS:   "fuchsia",
+			Name:       "//src/foo:tests",
+			Path:       "path/to/test",
+			OS:         "fuchsia",
 			PackageURL: "URL",
 		},
 		Envs: []build.Environment{
