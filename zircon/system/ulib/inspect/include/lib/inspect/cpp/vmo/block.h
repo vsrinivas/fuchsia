@@ -75,7 +75,7 @@ using BlockIndex = uint64_t;
 // Returns the smallest order such that (kMinOrderSize << order) >= size.
 // Size must be non-zero.
 constexpr BlockOrder FitOrder(size_t size) {
-  auto ret = 64 - __builtin_clzl(size - 1) - kMinOrderShift;
+  auto ret = static_cast<size_t>(64 - __builtin_clzl(size - 1)) - kMinOrderShift;
   return static_cast<BlockOrder>(ret);
 }
 

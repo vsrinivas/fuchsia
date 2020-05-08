@@ -155,13 +155,21 @@ class ticks final {
     return ticks(x);
   }
 
-  constexpr ticks operator/(uint64_t divisor) const { return ticks(value_ / divisor); }
+  constexpr ticks operator/(uint64_t divisor) const {
+    return ticks(static_cast<int64_t>(static_cast<uint64_t>(value_) / divisor));
+  }
 
-  constexpr uint64_t operator/(ticks other) const { return value_ / other.value_; }
+  constexpr uint64_t operator/(ticks other) const {
+    return static_cast<uint64_t>(value_ / other.value_);
+  }
 
-  constexpr ticks operator%(uint64_t divisor) const { return ticks(value_ % divisor); }
+  constexpr ticks operator%(uint64_t divisor) const {
+    return ticks(static_cast<int64_t>(static_cast<uint64_t>(value_) % divisor));
+  }
 
-  constexpr uint64_t operator%(ticks other) const { return value_ % other.value_; }
+  constexpr uint64_t operator%(ticks other) const {
+    return static_cast<uint64_t>(value_ % other.value_);
+  }
 
   constexpr ticks& operator+=(ticks other) {
     *this = *this + other;

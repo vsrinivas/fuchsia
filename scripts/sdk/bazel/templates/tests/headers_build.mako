@@ -8,4 +8,7 @@ cc_binary(
     deps = [
         "@fuchsia_sdk${data['dep']}",
     ],
+    copts = [
+        "-Wsign-conversion"
+    ],
 )

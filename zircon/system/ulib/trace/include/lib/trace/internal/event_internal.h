@@ -375,7 +375,7 @@ static inline void trace_internal_make_duration_scope(trace_internal_duration_sc
                                                       size_t num_args) {
   scope->category_literal = category_literal;
   scope->name_literal = name_literal;
-  scope->start_time = zx_ticks_get();
+  scope->start_time = (trace_ticks_t)zx_ticks_get();
   scope->args = args;
   scope->num_args = num_args;
 }

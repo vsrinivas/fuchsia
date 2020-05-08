@@ -28,7 +28,7 @@ static_assert((CONTESTED_BIT & ZX_HANDLE_FIXED_BITS_MASK) == CONTESTED_BIT,
               "mutex implementation requires that it's contested state storage "
               "bit be one of the zx_handle_t's guaranteed-to-be-one bits.");
 
-static_assert((~CONTESTED_BIT & ZX_HANDLE_FIXED_BITS_MASK) != 0,
+static_assert((~CONTESTED_BIT & (zx_futex_storage_t)ZX_HANDLE_FIXED_BITS_MASK) != 0,
               "mutex implementation requires at least two guaranteed-to-be-one "
               "bits in zx_handle_t's");
 
