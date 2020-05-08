@@ -23,7 +23,6 @@ zx_library("ddk") {
     "ddk/mmio-buffer.h",
     "ddk/phys-iter.h",
     "ddk/physiter.h",
-    "ddk/platform-defs.h",
     "ddk/protodefs.h",
     "hw/arch_ops.h",
     "hw/inout.h",
@@ -49,6 +48,8 @@ zx_library("ddk") {
     "$zx/system/fidl/fuchsia-device:c.headers",
     "$zx/system/fidl/fuchsia-hardware-usb-peripheral:c.headers",
     "$zx/system/ulib/syslog:headers",
+
+    "$zx/system/ulib/ddk-platform-defs:headers",
 
     # TODO(BLD-353): Exporting this dependency causes problems in the legacy
     # build.  Instead, users of the ddk library that actually use this header

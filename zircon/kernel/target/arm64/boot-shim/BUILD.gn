@@ -46,7 +46,7 @@ template("boot_shim") {
       configs += [ ":boot_shim_config" ]
       deps = [
         ":common",
-        "$zx/system/ulib/ddk:headers",
+        "$zx/system/ulib/ddk-platform-defs:headers",
         "$zx/system/ulib/libzbi",
       ]
       sources = [
