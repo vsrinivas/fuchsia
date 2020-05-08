@@ -293,6 +293,10 @@ static zx_status_t gic_configure_interrupt(unsigned int vector, enum interrupt_t
   }
   GICREG(0, GICD_ICFGR(reg)) = val;
 
+  const uint32_t clear_reg = vector / 32;
+  const uint32_t clear_mask = 1 << (vector % 32);
+  GICREG(0, GICD_ICPENDR(clear_reg)) = clear_mask;
+
   return ZX_OK;
 }
 
