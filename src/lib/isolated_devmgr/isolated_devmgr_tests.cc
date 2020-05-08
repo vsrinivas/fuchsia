@@ -215,6 +215,11 @@ TEST_F(DevmgrTest, DiagnosticsFiles) {
                        devmgr->devfs_root(), "diagnostics/driver_manager", &fd));
   ASSERT_EQ(ZX_OK, devmgr_integration_test::RecursiveWaitForFileReadOnly(
                        devmgr->devfs_root(), "diagnostics/driver_manager/dm.inspect", &fd));
+  ASSERT_EQ(ZX_OK, devmgr_integration_test::RecursiveWaitForFileReadOnly(
+                       devmgr->devfs_root(), "diagnostics/driver_manager/driver_host", &fd));
+
+  // TODO(50569): Add test for root,sys,misc,test driver_host files once koids are available via
+  // dm.inspect
 }
 
 }  // namespace testing

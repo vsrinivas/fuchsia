@@ -706,6 +706,14 @@ int main(int argc, char** argv) {
     return status;
   }
 
+  status = ctx.inspect().Serve(zx::channel(zx_take_startup_handle(PA_DIRECTORY_REQUEST)),
+                               ctx.loop().dispatcher());
+  if (status != ZX_OK) {
+    LOGF(WARNING, "driver_host: error serving diagnostics directory: %s\n",
+         zx_status_get_string(status));
+    // This is not a fatal error
+  }
+
   status = ctx.SetupEventWaiter();
   if (status != ZX_OK) {
     LOGF(ERROR, "Failed to setup event watcher: %s", zx_status_get_string(status));

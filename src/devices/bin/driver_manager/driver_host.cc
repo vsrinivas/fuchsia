@@ -7,10 +7,13 @@
 #include <lib/fdio/spawn.h>
 #include <zircon/status.h>
 
+#include <fs/remote_dir.h>
+
 #include "coordinator.h"
 #include "src/devices/lib/log/log.h"
 
-DriverHost::DriverHost(Coordinator* coordinator, zx::channel rpc, zx::process proc)
+DriverHost::DriverHost(Coordinator* coordinator, zx::channel rpc, zx::channel diagnostics,
+                       zx::process proc)
     : coordinator_(coordinator), hrpc_(std::move(rpc)), proc_(std::move(proc)) {
   // cache the process's koid
   zx_info_handle_basic_t info;
@@ -20,10 +23,16 @@ DriverHost::DriverHost(Coordinator* coordinator, zx::channel rpc, zx::process pr
   }
 
   coordinator_->RegisterDriverHost(this);
+  driver_host_dir_ = coordinator_->inspect_manager().driver_host_dir();
+  if (diagnostics.is_valid()) {
+    driver_host_dir_->AddEntry(std::to_string(koid_),
+                               fbl::MakeRefCounted<fs::RemoteDir>(std::move(diagnostics)));
+  }
 }
 
 DriverHost::~DriverHost() {
   coordinator_->UnregisterDriverHost(this);
+  driver_host_dir_->RemoveEntry(std::to_string(koid_));
   proc_.kill();
   LOGF(INFO, "Destroyed driver_host %p", this);
 }
@@ -36,6 +45,12 @@ zx_status_t DriverHost::Launch(Coordinator* coordinator,
                                fbl::RefPtr<DriverHost>* out) {
   zx::channel hrpc, dh_hrpc;
   zx_status_t status = zx::channel::create(0, &hrpc, &dh_hrpc);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  zx::channel diagnostics_client, diagnostics_server;
+  status = zx::channel::create(0, &diagnostics_client, &diagnostics_server);
   if (status != ZX_OK) {
     return status;
   }
@@ -57,7 +72,7 @@ zx_status_t DriverHost::Launch(Coordinator* coordinator,
     return status;
   }
 
-  constexpr size_t kMaxActions = 5;
+  constexpr size_t kMaxActions = 6;
   fdio_spawn_action_t actions[kMaxActions];
   size_t actions_count = 0;
   actions[actions_count++] =
@@ -82,6 +97,10 @@ zx_status_t DriverHost::Launch(Coordinator* coordinator,
       .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
       .h = {.id = PA_HND(PA_LDSVC_LOADER, 0), .handle = loader_connection.release()},
   };
+  actions[actions_count++] = fdio_spawn_action_t{
+      .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
+      .h = {.id = PA_DIRECTORY_REQUEST, .handle = diagnostics_server.release()},
+  };
   ZX_ASSERT(actions_count <= kMaxActions);
 
   zx::process proc;
@@ -99,7 +118,8 @@ zx_status_t DriverHost::Launch(Coordinator* coordinator,
     return status;
   }
 
-  auto host = fbl::MakeRefCounted<DriverHost>(coordinator, std::move(dh_hrpc), std::move(proc));
+  auto host = fbl::MakeRefCounted<DriverHost>(coordinator, std::move(dh_hrpc),
+                                              std::move(diagnostics_client), std::move(proc));
   LOGF(INFO, "Launching driver_host '%s' (pid %zu)", proc_name, host->koid());
   *out = std::move(host);
   return ZX_OK;

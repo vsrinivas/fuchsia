@@ -32,6 +32,7 @@ source_set("common") {
     "driver_host.cc",
     "driver_host_context.cc",
     "env.cc",
+    "inspect.cc",
     "proxy_iostate.cc",
     "scheduler_profile.cc",
     "tracing.cc",
@@ -50,6 +51,7 @@ source_set("common") {
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/fidl-async",
     "//zircon/public/lib/fs",
+    "//zircon/public/lib/inspect",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/trace",
     "//zircon/public/lib/trace-provider-with-fdio",
@@ -81,6 +83,7 @@ test("driver_host_test") {
     "device_controller_connection_test.cc",
     "device_controller_integration_test.cc",
     "driver_host_test.cc",
+    "inspect_test.cc",
     "proxy_iostate_test.cc",
   ]
 

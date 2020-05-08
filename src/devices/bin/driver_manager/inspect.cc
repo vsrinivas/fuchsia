@@ -10,14 +10,17 @@ InspectManager::InspectManager(async_dispatcher_t* dispatcher) {
   inspect_vmo_ = inspect_.DuplicateVmo();
 
   diagnostics_dir_ = fbl::MakeRefCounted<fs::PseudoDir>();
-  driver_manager_dir_ = fbl::MakeRefCounted<fs::PseudoDir>();
-  diagnostics_dir_->AddEntry("driver_manager", driver_manager_dir_);
+  auto driver_manager_dir = fbl::MakeRefCounted<fs::PseudoDir>();
+  diagnostics_dir_->AddEntry("driver_manager", driver_manager_dir);
+
+  driver_host_dir_ = fbl::MakeRefCounted<fs::PseudoDir>();
+  driver_manager_dir->AddEntry("driver_host", driver_host_dir_);
 
   uint64_t vmo_size;
   ZX_ASSERT(inspect_vmo_.get_size(&vmo_size) == ZX_OK);
 
   auto vmo_file = fbl::MakeRefCounted<fs::VmoFile>(inspect_vmo_, 0, vmo_size);
-  driver_manager_dir_->AddEntry("dm.inspect", vmo_file);
+  driver_manager_dir->AddEntry("dm.inspect", vmo_file);
 
   if (dispatcher) {
     zx::channel local;
