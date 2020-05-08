@@ -10,6 +10,7 @@
 
 #include <unordered_set>
 
+#include "src/media/audio/audio_core/audio_device_manager.h"
 #include "src/media/audio/audio_core/context.h"
 #include "src/media/audio/audio_core/loudness_transform.h"
 #include "src/media/audio/audio_core/process_config.h"
@@ -21,10 +22,16 @@ namespace media::audio {
 class UsageGainReporterImpl : public fuchsia::media::UsageGainReporter {
  public:
   explicit UsageGainReporterImpl(Context* context)
-      : process_config_(context->process_config()),
-        stream_volume_manager_(context->volume_manager()) {
+      : UsageGainReporterImpl(context->device_manager(), context->volume_manager(),
+                              context->process_config()) {
     FX_DCHECK(context);
   }
+
+  UsageGainReporterImpl(DeviceRegistry& device_registry, StreamVolumeManager& stream_volume_manager,
+                        const ProcessConfig& process_config)
+      : device_registry_(device_registry),
+        stream_volume_manager_(stream_volume_manager),
+        process_config_(process_config) {}
 
   fidl::InterfaceRequestHandler<fuchsia::media::UsageGainReporter> GetFidlRequestHandler();
 
@@ -36,9 +43,10 @@ class UsageGainReporterImpl : public fuchsia::media::UsageGainReporter {
  private:
   class Listener final : public StreamVolume {
    public:
-    Listener(std::shared_ptr<LoudnessTransform> loudness_transform, fuchsia::media::Usage usage,
-             fuchsia::media::UsageGainListenerPtr usage_gain_listener)
-        : loudness_transform_(loudness_transform),
+    Listener(const DeviceConfig::OutputDeviceProfile& output_device_profile,
+             fuchsia::media::Usage usage, fuchsia::media::UsageGainListenerPtr usage_gain_listener)
+        : loudness_transform_(output_device_profile.loudness_transform()),
+          independent_volume_control_(output_device_profile.independent_volume_control()),
           usage_(std::move(usage)),
           usage_gain_listener_(std::move(usage_gain_listener)) {}
 
@@ -49,6 +57,7 @@ class UsageGainReporterImpl : public fuchsia::media::UsageGainReporter {
     void RealizeVolume(VolumeCommand volume_command) final;
 
     std::shared_ptr<LoudnessTransform> loudness_transform_;
+    bool independent_volume_control_;
     fuchsia::media::Usage usage_;
     fuchsia::media::UsageGainListenerPtr usage_gain_listener_;
     size_t unacked_messages_ = 0;
@@ -57,8 +66,11 @@ class UsageGainReporterImpl : public fuchsia::media::UsageGainReporter {
   // TODO(50074): Queue a function on the async loop to periodically execute and
   // clean up any listeners with too many unacked messages
 
-  const ProcessConfig& process_config_;
+  // TODO(50596): Disconnect listeners upon device removal
+
+  DeviceRegistry& device_registry_;
   StreamVolumeManager& stream_volume_manager_;
+  const ProcessConfig& process_config_;
   std::unordered_set<std::unique_ptr<Listener>> listeners_;
   fidl::BindingSet<fuchsia::media::UsageGainReporter, UsageGainReporterImpl*> bindings_;
 };

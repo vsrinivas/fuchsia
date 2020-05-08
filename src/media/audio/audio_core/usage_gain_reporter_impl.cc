@@ -14,12 +14,27 @@ UsageGainReporterImpl::GetFidlRequestHandler() {
 void UsageGainReporterImpl::RegisterListener(
     std::string device_unique_id, fuchsia::media::Usage usage,
     fidl::InterfaceHandle<fuchsia::media::UsageGainListener> usage_gain_listener_handler) {
+  const auto deserialize_result = AudioDevice::UniqueIdFromString(device_unique_id);
+  if (deserialize_result.is_error()) {
+    FX_LOGS(WARNING) << "UsageGainReporter client provided invalid device id";
+    return;
+  }
+  const auto& deserialized_id = deserialize_result.value();
+
+  auto devices = device_registry_.GetDeviceInfos();
+  const auto it = std::find_if(devices.begin(), devices.end(), [&device_unique_id](auto candidate) {
+    return candidate.unique_id == device_unique_id;
+  });
+  if (it == devices.end()) {
+    FX_LOGS(WARNING) << "UsageGainReporter client cannot listen: device id not found";
+    return;
+  }
+
   auto usage_gain_listener = usage_gain_listener_handler.Bind();
 
-  // TODO(50077): Verify the device exists and grab its output device
-  // profile.
-  const auto loudness_transform = process_config_.default_loudness_transform();
-  auto listener = std::make_unique<Listener>(loudness_transform, std::move(usage),
+  const auto& device_config = process_config_.device_config();
+  const auto& output_device_profile = device_config.output_device_profile(deserialized_id);
+  auto listener = std::make_unique<Listener>(output_device_profile, std::move(usage),
                                              std::move(usage_gain_listener));
   stream_volume_manager_.AddStream(listener.get());
 
@@ -27,12 +42,14 @@ void UsageGainReporterImpl::RegisterListener(
 }
 
 void UsageGainReporterImpl::Listener::RealizeVolume(VolumeCommand volume_command) {
-  const auto gain_db = loudness_transform_->Evaluate<2>(
-      {VolumeValue{volume_command.volume}, GainDbFsValue{volume_command.gain_db_adjustment}});
+  if (!independent_volume_control_) {
+    const auto gain_db = loudness_transform_->Evaluate<2>(
+        {VolumeValue{volume_command.volume}, GainDbFsValue{volume_command.gain_db_adjustment}});
 
-  unacked_messages_++;
-  usage_gain_listener_->OnGainMuteChanged(/*muted=*/false, gain_db,
-                                          [this]() { unacked_messages_--; });
+    unacked_messages_++;
+    usage_gain_listener_->OnGainMuteChanged(/*muted=*/false, gain_db,
+                                            [this]() { unacked_messages_--; });
+  }
 }
 
 }  // namespace media::audio

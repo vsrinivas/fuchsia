@@ -70,6 +70,7 @@ class AudioDeviceManager : public fuchsia::media::AudioDeviceEnumerator, public 
   void RemoveDevice(const std::shared_ptr<AudioDevice>& device) override;
   void OnPlugStateChanged(const std::shared_ptr<AudioDevice>& device, bool plugged,
                           zx::time plug_time) override;
+  std::vector<fuchsia::media::AudioDeviceInfo> GetDeviceInfos() override;
 
   // |fuchsia::media::AudioDeviceEnumerator|
   void GetDevices(GetDevicesCallback cbk) final;

@@ -183,7 +183,7 @@ void AudioDeviceManager::OnPlugStateChanged(const std::shared_ptr<AudioDevice>& 
   }
 }
 
-void AudioDeviceManager::GetDevices(GetDevicesCallback cbk) {
+std::vector<fuchsia::media::AudioDeviceInfo> AudioDeviceManager::GetDeviceInfos() {
   TRACE_DURATION("audio", "AudioDeviceManager::GetDevices");
   std::vector<fuchsia::media::AudioDeviceInfo> ret;
 
@@ -197,8 +197,10 @@ void AudioDeviceManager::GetDevices(GetDevicesCallback cbk) {
     }
   }
 
-  cbk(std::move(ret));
+  return ret;
 }
+
+void AudioDeviceManager::GetDevices(GetDevicesCallback cbk) { cbk(GetDeviceInfos()); }
 
 void AudioDeviceManager::GetDeviceGain(uint64_t device_token, GetDeviceGainCallback cbk) {
   TRACE_DURATION("audio", "AudioDeviceManager::GetDeviceGain");

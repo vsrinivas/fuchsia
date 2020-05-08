@@ -31,6 +31,9 @@ class DeviceRegistry {
   // Handles a plugged/unplugged state change for the supplied audio device.
   virtual void OnPlugStateChanged(const std::shared_ptr<AudioDevice>& device, bool plugged,
                                   zx::time plug_time) = 0;
+
+  // Provides the set of devices in the registry.
+  virtual std::vector<fuchsia::media::AudioDeviceInfo> GetDeviceInfos() = 0;
 };
 
 }  // namespace media::audio
