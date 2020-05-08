@@ -24,7 +24,10 @@ executable("log_validator_cpp_puppet_bin") {
 }
 
 test_package("log-validator-test-cpp") {
-  deps = [ ":log_validator_cpp_puppet_bin" ]
+  deps = [
+    ":log_validator_cpp_puppet_bin",
+    "//src/diagnostics/log-validator:log-validator-bin",
+  ]
   meta = [
     {
       path = rebase_path("meta/log_validator_cpp_puppet.cmx")
@@ -35,6 +38,13 @@ test_package("log-validator-test-cpp") {
   binaries = [
     {
       name = "log_validator_cpp_puppet"
+    },
+  ]
+
+  tests = [
+    {
+      name = "log_validator"
+      environments = basic_envs
     },
   ]
 }

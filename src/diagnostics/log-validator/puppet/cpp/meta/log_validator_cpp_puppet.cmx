@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/log_validator_cpp_puppet"
+        "binary": "bin/log_validator_cpp_puppet"
     },
     "sandbox": {
         "services": [
