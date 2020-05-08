@@ -23,13 +23,13 @@ driver_module("aml-cpu") {
     "//src/devices/lib/amlogic",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
-    "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/system/fidl/fuchsia-device:llcpp",
+    "//zircon/system/ulib/ddktl",
   ]
 }
 
@@ -61,7 +61,6 @@ test("aml-cpu-test") {
     "//src/devices/lib/amlogic",
     "//src/devices/testing/fake_ddk",
     "//zircon/public/lib/ddk",
-    "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/mock-function",
@@ -70,6 +69,7 @@ test("aml-cpu-test") {
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/fidl/fuchsia-device:llcpp",
+    "//zircon/system/ulib/ddktl",
   ]
 }
 

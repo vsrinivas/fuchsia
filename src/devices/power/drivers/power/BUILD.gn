@@ -19,9 +19,9 @@ driver_module("power") {
     "//sdk/banjo/ddk.protocol.powerimpl",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
-    "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/ddktl",
   ]
 }
 
@@ -41,11 +41,11 @@ test("power-test") {
     "//sdk/banjo/ddk.protocol.powerimpl",
     "//src/devices/testing/fake_ddk",
     "//zircon/public/lib/ddk",
-    "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/ddktl",
   ]
 }
 

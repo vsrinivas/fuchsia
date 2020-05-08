@@ -36,7 +36,6 @@ source_set("common") {
     "//src/devices/lib/mt8167",
     "//src/devices/usb/lib/usb",
     "//zircon/public/lib/ddk",
-    "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/hwreg",
@@ -44,6 +43,7 @@ source_set("common") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/ddktl",
   ]
 }
 

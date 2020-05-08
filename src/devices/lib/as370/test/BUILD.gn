@@ -32,7 +32,6 @@ test("syn-audio-in-test") {
     "//src/devices/testing/fake_ddk",
     "//src/devices/testing/mock-mmio-reg",
     "//zircon/public/lib/ddk",
-    "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/hwreg",
@@ -40,6 +39,7 @@ test("syn-audio-in-test") {
     "//zircon/public/lib/mock-function",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/ddktl",
   ]
 }
 

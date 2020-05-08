@@ -22,11 +22,11 @@ test("nand-unittest") {
     "//src/devices/lib/dev-operation",
     "//src/devices/testing/fake_ddk",
     "//zircon/public/lib/ddk",
-    "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/ddktl",
   ]
 }
 
@@ -46,13 +46,13 @@ source_set("common") {
     "//sdk/banjo/ddk.protocol.rawnand",
     "//src/devices/lib/dev-operation",
     "//zircon/public/lib/ddk",
-    "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/system/fidl/fuchsia-hardware-nand:c",
+    "//zircon/system/ulib/ddktl",
   ]
 }
 

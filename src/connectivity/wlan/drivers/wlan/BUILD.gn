@@ -30,9 +30,9 @@ driver_module("wlan_driver") {
     "//src/devices/lib/dev-operation",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
-    "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/ddktl",
   ]
 
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]

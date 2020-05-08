@@ -70,11 +70,11 @@ driver_module("driver") {
     "//src/devices/lib/driver",
     "//src/devices/usb/lib/usb",
     "//zircon/public/lib/ddk",
-    "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/ddktl",
   ]
 
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]

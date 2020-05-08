@@ -23,11 +23,11 @@ driver_module("nand-broker") {
     "//sdk/fidl/fuchsia.nand:fuchsia.nand_c",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
-    "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
     "//zircon/system/fidl/fuchsia-hardware-nand:c",
+    "//zircon/system/ulib/ddktl",
   ]
 }
 

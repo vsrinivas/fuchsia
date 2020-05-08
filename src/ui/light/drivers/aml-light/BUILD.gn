@@ -22,11 +22,11 @@ driver_module("aml-light") {
     "//src/devices/lib/amlogic",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
-    "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/ddktl",
   ]
 }
 
@@ -48,7 +48,6 @@ test("aml-light-test") {
     "//src/devices/testing/fake_ddk",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/ddk",
-    "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/fidl-async-cpp",
@@ -56,6 +55,7 @@ test("aml-light-test") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/ddktl",
   ]
 }
 

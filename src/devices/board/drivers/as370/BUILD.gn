@@ -36,12 +36,12 @@ driver_module("as370") {
     "//src/devices/lib/driver",
     "//src/devices/usb/lib/usb",
     "//zircon/public/lib/ddk",
-    "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/mmio",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/ddktl",
   ]
 
   # TODO(47406): restore some form of data dependency on as370 and visalia

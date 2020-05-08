@@ -181,9 +181,9 @@ source_set("core") {
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-loop",
     "//zircon/public/lib/async-loop-default",
-    "//zircon/public/lib/ddktl",
     "//zircon/public/lib/sync",
     "//zircon/system/public",
+    "//zircon/system/ulib/ddktl",
   ]
   friend = [ "test/*" ]
 }

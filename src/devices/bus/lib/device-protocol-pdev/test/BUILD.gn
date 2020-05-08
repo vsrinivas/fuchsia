@@ -35,7 +35,7 @@ test("device-protocol-pdev-test") {
     "//zircon/public/lib/ddk",
 
     # Banjo protocols have #include <ddktl/device-internal.h>.
-    "//zircon/public/lib/ddktl",
+    "//zircon/system/ulib/ddktl",
   ]
 
   deps = [

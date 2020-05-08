@@ -16,8 +16,8 @@ driver_module("ddk-runcompatibilityhook-test") {
   deps = [
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
-    "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fdio",
+    "//zircon/system/ulib/ddktl",
   ]
 }
 
@@ -31,8 +31,8 @@ driver_module("ddk-runcompatibilityhook-test-child") {
   deps = [
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
-    "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fdio",
+    "//zircon/system/ulib/ddktl",
   ]
 }
 

@@ -21,8 +21,8 @@ driver_module("integration-test") {
     "//sdk/banjo/ddk.protocol.platform.device",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
-    "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/ddktl",
   ]
 }
 

@@ -13,13 +13,13 @@ source_set("shared") {
   public_deps = [
     "//sdk/banjo/ddk.protocol.i2c",
     "//src/devices/i2c/lib/device-protocol-i2c-channel",
-    "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
     "//zircon/system/dev/lib/device-protocol-i2c",
+    "//zircon/system/ulib/ddktl",
   ]
 }
 

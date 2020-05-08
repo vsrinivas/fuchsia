@@ -19,10 +19,10 @@ test("ftdi-i2c-test") {
     "//src/devices/testing/fake_ddk",
     "//src/devices/usb/lib/usb",
     "//zircon/public/lib/ddk",
-    "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/ddktl",
   ]
 }
 
@@ -47,8 +47,8 @@ source_set("common") {
     "//sdk/fidl/fuchsia.hardware.ftdi:fuchsia.hardware.ftdi_llcpp",
     "//src/devices/usb/lib/usb",
     "//zircon/public/lib/ddk",
-    "//zircon/public/lib/ddktl",
     "//zircon/public/lib/sync",
+    "//zircon/system/ulib/ddktl",
   ]
 }
 

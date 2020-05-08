@@ -1,5 +1,10 @@
 [
   {
+    "label": "//zircon/system/ulib/ddktl:ddktl",
+    "name": "ddktl",
+    "sdk": false
+  },
+  {
     "label": "//zircon/system/ulib/devmgr-integration-test:devmgr-integration-test",
     "name": "devmgr-integration-test",
     "sdk": false

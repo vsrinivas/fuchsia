@@ -17,8 +17,8 @@ driver_module("test") {
     "//sdk/fidl/fuchsia.device.test:fuchsia.device.test_c",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
-    "//zircon/public/lib/ddktl",
     "//zircon/public/lib/zircon-internal",
+    "//zircon/system/ulib/ddktl",
   ]
 }
 

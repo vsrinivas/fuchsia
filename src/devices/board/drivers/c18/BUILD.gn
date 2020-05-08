@@ -26,9 +26,9 @@ driver_module("c18") {
     "//src/devices/lib/driver",
     "//src/devices/lib/mt8167",
     "//src/devices/lib/mt8183",
-    "//zircon/public/lib/ddktl",
     "//zircon/public/lib/mmio",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/ddktl",
   ]
 
   # TODO(47406): restore some form of data dependency on c18

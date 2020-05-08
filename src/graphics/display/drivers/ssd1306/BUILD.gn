@@ -19,10 +19,10 @@ driver_module("ssd1306") {
     "//src/devices/i2c/lib/device-protocol-i2c-channel",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
-    "//zircon/public/lib/ddktl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/system/dev/lib/device-protocol-i2c",
+    "//zircon/system/ulib/ddktl",
   ]
 }
 

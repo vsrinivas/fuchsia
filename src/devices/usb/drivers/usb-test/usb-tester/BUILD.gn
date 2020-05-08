@@ -22,8 +22,8 @@ driver_module("usb-tester") {  # TODO: test_driver?
     "//sdk/fidl/fuchsia.hardware.usb.tester:fuchsia.hardware.usb.tester_c",
     "//src/devices/lib/driver",
     "//src/devices/usb/lib/usb",
-    "//zircon/public/lib/ddktl",
     "//zircon/public/lib/sync",
+    "//zircon/system/ulib/ddktl",
   ]
 }
 

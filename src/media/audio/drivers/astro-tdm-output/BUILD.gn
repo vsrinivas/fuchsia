@@ -27,7 +27,6 @@ driver_module("astro-tdm-output") {
     "//src/devices/lib/driver",
     "//src/media/audio/lib/simple-audio-stream",
     "//zircon/public/lib/ddk",
-    "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/mmio",
@@ -35,6 +34,7 @@ driver_module("astro-tdm-output") {
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/audio-driver-proto",
     "//zircon/system/ulib/audio-proto-utils",
+    "//zircon/system/ulib/ddktl",
   ]
 }
 

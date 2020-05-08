@@ -17,10 +17,10 @@ driver_module("hidctl") {
     "//sdk/fidl/fuchsia.hardware.hidctl:fuchsia.hardware.hidctl_c",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
-    "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/pretty",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/ddktl",
   ]
 }
 

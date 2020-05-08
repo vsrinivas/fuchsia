@@ -16,7 +16,7 @@ zx_library("device-protocol-pdev") {
     "//zircon/public/lib/ddk",
 
     # Banjo protocols have #include <ddktl/device-internal.h>.
-    "//zircon/public/lib/ddktl",
+    "//zircon/system/ulib/ddktl",
   ]
 
   deps = [

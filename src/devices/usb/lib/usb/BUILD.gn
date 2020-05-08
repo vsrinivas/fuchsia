@@ -30,7 +30,7 @@ zx_library("usb") {
     "//sdk/banjo/ddk.protocol.usb.composite",
     "//sdk/banjo/ddk.protocol.usb.request",
     "//zircon/public/lib/ddk",
-    "//zircon/public/lib/ddktl",
     "//zircon/public/lib/zircon-internal",
+    "//zircon/system/ulib/ddktl",
   ]
 }

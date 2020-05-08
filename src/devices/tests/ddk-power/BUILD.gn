@@ -23,8 +23,8 @@ driver_module("ddk-power-test") {
     ":fuchsia.device.power.test_llcpp",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
-    "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fdio",
+    "//zircon/system/ulib/ddktl",
   ]
 }
 
@@ -39,8 +39,8 @@ driver_module("ddk-power-test-child") {
     ":fuchsia.device.power.test_llcpp",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
-    "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fdio",
+    "//zircon/system/ulib/ddktl",
   ]
 }
 

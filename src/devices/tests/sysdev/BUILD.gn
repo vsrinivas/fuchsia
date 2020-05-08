@@ -16,11 +16,11 @@ driver_module("sysdev") {
   deps = [
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
-    "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/zx",
     "//zircon/system/fidl/fuchsia-boot:c",
+    "//zircon/system/ulib/ddktl",
   ]
 }
 

@@ -18,8 +18,8 @@ driver_module("isolateddevmgr-test") {
     "//sdk/fidl/fuchsia.device.manager.test:fuchsia.device.manager.test_c",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
-    "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fdio",
+    "//zircon/system/ulib/ddktl",
   ]
 }
 

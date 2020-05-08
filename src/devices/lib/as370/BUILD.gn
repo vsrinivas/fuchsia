@@ -33,12 +33,12 @@ zx_library("as370") {
   deps = [
     "//sdk/banjo/ddk.protocol.shareddma",
     "//zircon/public/lib/ddk",
-    "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/mmio",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/ddktl",
   ]
   public_deps = [ "//zircon/system/ulib/hwreg-i2c" ]
 }

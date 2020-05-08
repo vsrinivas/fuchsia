@@ -18,8 +18,8 @@ driver_module("msm8998") {
     "//sdk/banjo/ddk.protocol.platform.bus",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
-    "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/ddktl",
   ]
 
   # TODO(47406): restore some form of data dependency on msm8998

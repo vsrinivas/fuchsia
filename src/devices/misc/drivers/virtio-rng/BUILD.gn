@@ -21,10 +21,9 @@ driver_module("virtio_rng") {
   deps = [
     "//src/devices/bus/lib/virtio",
     "//src/devices/lib/driver",
-    "//zircon/public/lib/ddktl",
+    "//zircon/system/ulib/ddktl",
   ]
 }
-
 
 migrated_manifest("virtio_rng-manifest") {
   deps = [ ":virtio_rng" ]

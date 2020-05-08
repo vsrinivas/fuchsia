@@ -18,7 +18,6 @@ zx_library("fake_ddk") {
     "//zircon/public/lib/async-loop",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/ddk",
-    "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/fidl-async",
@@ -26,6 +25,7 @@ zx_library("fake_ddk") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/ddktl",
   ]
   public_deps = [
     # <lib/fake_ddk/fidl-helper.h> has #include <lib/async-loop/cpp/loop.h>.

@@ -17,7 +17,7 @@ source_set("virtio_ethernet_lib") {
     "//sdk/banjo/ddk.protocol.ethernet",
     "//src/devices/bus/lib/virtio",
     "//src/devices/lib/dev-operation",
-    "//zircon/public/lib/ddktl",
+    "//zircon/system/ulib/ddktl",
   ]
 }
 

@@ -22,13 +22,13 @@ driver_module("as370-power") {
     "//src/devices/lib/as370",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
-    "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
     "//zircon/system/dev/lib/device-protocol-i2c",
+    "//zircon/system/ulib/ddktl",
   ]
 }
 
@@ -52,7 +52,6 @@ test("as370-power-test") {
     "//src/devices/lib/as370",
     "//src/devices/testing/fake_ddk",
     "//zircon/public/lib/ddk",
-    "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/hwreg",
@@ -61,6 +60,7 @@ test("as370-power-test") {
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/dev/lib/device-protocol-i2c",
+    "//zircon/system/ulib/ddktl",
   ]
 }
 

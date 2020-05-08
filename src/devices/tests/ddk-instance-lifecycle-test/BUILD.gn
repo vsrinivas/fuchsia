@@ -29,9 +29,9 @@ driver_module("driver") {
     ":fuchsia.device.instancelifecycle.test_llcpp",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
-    "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/sync",
+    "//zircon/system/ulib/ddktl",
   ]
   visibility = [ ":*" ]
 }

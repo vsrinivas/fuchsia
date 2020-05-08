@@ -25,8 +25,8 @@ driver_module("virtio_input") {
     "//sdk/banjo/ddk.protocol.hidbus",
     "//src/devices/bus/lib/virtio",
     "//src/devices/lib/driver",
-    "//zircon/public/lib/ddktl",
     "//zircon/system/fidl/fuchsia-hardware-pty:c",
+    "//zircon/system/ulib/ddktl",
     "//zircon/system/ulib/hid",
   ]
 }
