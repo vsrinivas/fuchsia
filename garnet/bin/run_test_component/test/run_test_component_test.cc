@@ -184,7 +184,7 @@ TEST_F(RunFixture, TestTimeout) {
 }
 
 void run_component(const std::string& component_url, std::vector<const char*>& args,
-                   std::string* output) {
+                   int64_t expected_exit_code, std::string* output) {
   std::vector<const char*> run_d_command_argv = {"/bin/run-test-component"};
   if (!args.empty()) {
     run_d_command_argv.insert(run_d_command_argv.end(), args.begin(), args.end());
@@ -246,7 +246,7 @@ void run_component(const std::string& component_url, std::vector<const char*>& a
       process.get_info(ZX_INFO_PROCESS, &process_info, sizeof(process_info), nullptr, nullptr),
       ZX_OK);
 
-  EXPECT_EQ(process_info.return_code, 0);
+  EXPECT_EQ(process_info.return_code, expected_exit_code);
 
   char buf[4096] = {0};
 
@@ -263,8 +263,8 @@ void run_logging_component(std::string log_level, std::string* output) {
   if (!log_level.empty()) {
     args.push_back(log_severity.c_str());
   }
-  return run_component(
-      "fuchsia-pkg://fuchsia.com/run_test_component_test#meta/logging_component.cmx", args, output);
+  run_component("fuchsia-pkg://fuchsia.com/run_test_component_test#meta/logging_component.cmx",
+                args, 0, output);
 }
 
 TEST_F(RunFixture, TestIsolatedLogsWithDefaultSeverity) {
@@ -296,10 +296,93 @@ TEST_F(RunFixture, TestOutput) {
   std::vector<const char*> empty = {};
   run_component(
       "fuchsia-pkg://fuchsia.com/run_test_component_test#meta/component_to_test_standard_out.cmx",
-      empty, &got);
+      empty, 0, &got);
   EXPECT_NE(got.find("writing to stdout\n"), std::string::npos) << "got: " << got;
   EXPECT_NE(got.find("writing to stderr\n"), std::string::npos) << "got: " << got;
   EXPECT_NE(got.find("writing second message to stdout\n"), std::string::npos) << "got: " << got;
   EXPECT_NE(got.find("INFO: my info message."), std::string::npos) << "got: " << got;
   EXPECT_NE(got.find("WARNING: my warn message."), std::string::npos) << "got: " << got;
+}
+
+// This tests that our config and flag works to restrict logs more than default(WARN).
+TEST_F(RunFixture, MaxSeverityInfo) {
+  std::string got;
+  std::vector<const char*> arg = {"--restrict-logs"};
+  std::vector<const char*> empty = {};
+
+  run_component(
+      "fuchsia-pkg://fuchsia.com/run_test_component_test#meta/"
+      "logging_component_max_severity_info.cmx",
+      arg, 0, &got);
+  EXPECT_NE(got.find("WARNING: my warn message."), std::string::npos) << "got: " << got;
+  auto err_start = got.find("unexpected high-severity logs:");
+  // flip switch in next CL when we actuially start failing tests.
+  if (true) {
+    ASSERT_EQ(err_start, std::string::npos) << "got: " << got;
+  } else {
+    ASSERT_NE(err_start, std::string::npos) << "got: " << got;
+    // make sure that we again see this message in error logs
+    EXPECT_NE(got.find("WARNING: my warn message.", err_start), std::string::npos)
+        << "got: " << got;
+  }
+
+  // make sure it doesn't fail when flag is not passed.
+  run_component(
+      "fuchsia-pkg://fuchsia.com/run_test_component_test#meta/"
+      "logging_component_max_severity_info.cmx",
+      empty, 0, &got);
+  EXPECT_NE(got.find("WARNING: my warn message."), std::string::npos) << "got: " << got;
+  EXPECT_EQ(got.find("unexpected high-severity logs:"), std::string::npos) << "got: " << got;
+}
+
+// This tests that our flag and configured max severity works.
+TEST_F(RunFixture, MaxSeverityError) {
+  std::string got;
+  std::vector<const char*> arg = {"--restrict-logs"};
+  std::vector<const char*> empty = {};
+
+  run_component(
+      "fuchsia-pkg://fuchsia.com/run_test_component_test#meta/"
+      "logging_component_max_severity_error.cmx",
+      arg, 0, &got);
+  EXPECT_NE(got.find("my error message."), std::string::npos) << "got: " << got;
+  EXPECT_EQ(got.find("unexpected high-severity logs:"), std::string::npos) << "got: " << got;
+
+  // make sure it doesn't fail when flag is not passed.
+  run_component(
+      "fuchsia-pkg://fuchsia.com/run_test_component_test#meta/"
+      "logging_component_max_severity_error.cmx",
+      empty, 0, &got);
+  EXPECT_NE(got.find("my error message."), std::string::npos) << "got: " << got;
+  EXPECT_EQ(got.find("unexpected high-severity logs:"), std::string::npos) << "got: " << got;
+}
+
+// This tests that our flag and default max severity works.
+TEST_F(RunFixture, MaxSeverityWarn) {
+  std::string got;
+  std::vector<const char*> arg = {"--restrict-logs"};
+  std::vector<const char*> empty = {};
+
+  run_component(
+      "fuchsia-pkg://fuchsia.com/run_test_component_test#meta/"
+      "logging_component_max_severity_warn.cmx",
+      arg, 0, &got);
+  EXPECT_NE(got.find("my error message."), std::string::npos) << "got: " << got;
+  auto err_start = got.find("unexpected high-severity logs:");
+  // flip switch in next CL when we actuially start failing tests.
+  if (true) {
+    ASSERT_EQ(err_start, std::string::npos) << "got: " << got;
+  } else {
+    ASSERT_NE(err_start, std::string::npos) << "got: " << got;
+    // make sure that we again see this message in error logs
+    EXPECT_NE(got.find("my error message.", err_start), std::string::npos) << "got: " << got;
+  }
+
+  // make sure it doesn't fail when flag is not passed.
+  run_component(
+      "fuchsia-pkg://fuchsia.com/run_test_component_test#meta/"
+      "logging_component_max_severity_warn.cmx",
+      empty, 0, &got);
+  EXPECT_NE(got.find("my error message."), std::string::npos) << "got: " << got;
+  EXPECT_EQ(got.find("unexpected high-severity logs:"), std::string::npos) << "got: " << got;
 }

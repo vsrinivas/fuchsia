@@ -30,6 +30,7 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "garnet/bin/run_test_component/component.h"
 #include "garnet/bin/run_test_component/env_config.h"
@@ -38,6 +39,7 @@
 #include "garnet/bin/run_test_component/run_test_component.h"
 #include "garnet/bin/run_test_component/test_metadata.h"
 #include "lib/fidl/cpp/interface_request.h"
+#include "lib/zx/object_traits.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/glob.h"
 #include "src/lib/fxl/strings/string_printf.h"
@@ -53,10 +55,9 @@ const uint64_t kNanosInSec = 1000000000UL;
 const std::string max_severity_config_path =
     "/pkgfs/packages/config-data/0/data/run_test_component";
 
-// TODO(anmittal): Doucment --restrict-logs, once it is implemented.
 void PrintUsage() {
   fprintf(stderr, R"(
-Usage: run_test_component [--realm-label=<label>] [--timeout=<seconds>] [--min-severity-logs=string]<test_url>|<test_matcher> [arguments...]
+Usage: run_test_component [--realm-label=<label>] [--timeout=<seconds>] [--min-severity-logs=string] [--restrict-logs] <test_url>|<test_matcher> [arguments...]
 
        *test_url* takes the form of component manifest URL which uniquely
        identifies a test component. Example:
@@ -80,6 +81,9 @@ Usage: run_test_component [--realm-label=<label>] [--timeout=<seconds>] [--min-s
 
        If --timeout is specified, test would be killed in <timeout> secs and
        run_test_component will exit with -ZX_ERR_TIMED_OUT.
+
+       If --restrict-logs is specified then tests will fail by default if they produce ERROR logs.
+       For more information see: https://fuchsia.googlesource.com/fuchsia/+/master/docs/concepts/testing/test_component.md#restricting-log-severity
 
        By default when installing log listener, all logs more than severity INFO are collected.
        To enable verbose logs or to filter by higher severity please pass severity:
@@ -170,11 +174,24 @@ std::unique_ptr<run::Component> launch_observer(const fuchsia::sys::LauncherPtr&
   return run::Component::Launch(launcher, std::move(launch_info), dispatcher);
 }
 
+void print_log_message(const std::shared_ptr<fuchsia::logger::LogMessage>& log) {
+  auto time = log->time;
+  printf("[%05ld.%06ld][%ld][%ld][%s] %s: %s\n", time / kNanosInSec,
+         (time / kMillisInSec) % kMicrosInSec, log->pid, log->tid, join_tags(log->tags).c_str(),
+         log_level(log->severity).c_str(), log->msg.c_str());
+}
+
 }  // namespace
 
 int main(int argc, const char** argv) {
   // Get and store config. We will use it later.
   auto max_severity_config = run::MaxSeverityConfig::ParseFromDirectory(max_severity_config_path);
+
+  if (max_severity_config.HasError()) {
+    fprintf(stderr, "max_severity config file(s) are broken: %s",
+            max_severity_config.Error().c_str());
+    return 1;
+  }
 
   // Services which we get from /svc. They might be different depending on in which shell this
   // binary is launched from, so can't use it to create underlying environment.
@@ -250,14 +267,29 @@ int main(int argc, const char** argv) {
   std::unique_ptr<sys::testing::EnclosingEnvironment> enclosing_env;
 
   run::EnvironmentConfig config;
+  std::vector<std::shared_ptr<fuchsia::logger::LogMessage>> restricted_logs;
+  auto max_severity_allowed = FX_LOG_FATAL;
+  bool restrict_logs = false;
+  // flip switch in next CL to make this change easily revertible.
+  // bool restrict_logs = parse_result.restrict_logs;
+  if (restrict_logs) {
+    max_severity_allowed = FX_LOG_WARNING;
+    auto it = max_severity_config.config().find(program_name);
+    if (it != max_severity_config.config().end()) {
+      max_severity_allowed = it->second;
+    }
+  }
+
   auto log_collector = std::make_unique<run::LogCollector>(
-      [dispather = loop.dispatcher()](fuchsia::logger::LogMessage log) {
-        async::PostTask(dispather, [log = std::move(log)]() mutable {
-          auto time = log.time;
-          printf("[%05ld.%06ld][%ld][%ld][%s] %s: %s\n", time / kNanosInSec,
-                 (time / kMillisInSec) % kMicrosInSec, log.pid, log.tid,
-                 join_tags(std::move(log.tags)).c_str(), log_level(log.severity).c_str(),
-                 log.msg.c_str());
+      [dispather = loop.dispatcher(), restrict_logs, max_severity_allowed,
+       &restricted_logs](fuchsia::logger::LogMessage log) {
+        auto log_wrapper = std::make_shared<fuchsia::logger::LogMessage>(std::move(log));
+
+        if (restrict_logs && log_wrapper->severity > max_severity_allowed) {
+          restricted_logs.push_back(log_wrapper);
+        }
+        async::PostTask(dispather, [log = std::move(log_wrapper)]() mutable {
+          print_log_message(log);
           fflush(stdout);
         });
       });
@@ -427,6 +459,21 @@ int main(int argc, const char** argv) {
 
     // now that observer is dead, make sure to collect its output
     loop.RunUntilIdle();
+  }
+
+  if (!restricted_logs.empty() && ret_code == 0) {
+    printf("\nTest %s produced unexpected high-severity logs:\n", program_name.c_str());
+    printf("----------------xxxxx----------------\n");
+    for (const auto& log : restricted_logs) {
+      print_log_message(log);
+    }
+    printf("----------------xxxxx----------------\n");
+    printf(
+        "Failing this test. See "
+        "https://fuchsia.googlesource.com/fuchsia/+/master/docs/concepts/testing/"
+        "test_component.md#restricting-log-severity for guidance.\n");
+    fflush(stdout);
+    ret_code = 1;
   }
 
   return ret_code;

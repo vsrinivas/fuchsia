@@ -230,14 +230,18 @@ TEST(RunTest, ParseArgs) {
 
   {
     std::vector<std::string> expected_urls = {
-        "fuchsia-pkg://fuchsia.com/run_test_component_test#meta/"
-        "run_test_component_test.cmx",
         "fuchsia-pkg://fuchsia.com/run_test_component_unittests#meta/"
         "run_test_component_unittests.cmx",
-        "fuchsia-pkg://fuchsia.com/run_test_component_test#meta/"
-        "coverage_component.cmx",
+        "fuchsia-pkg://fuchsia.com/run_test_component_test#meta/coverage_component.cmx",
+        "fuchsia-pkg://fuchsia.com/run_test_component_test#meta/logging_component.cmx",
         "fuchsia-pkg://fuchsia.com/run_test_component_test#meta/component_to_test_standard_out.cmx",
-        "fuchsia-pkg://fuchsia.com/run_test_component_test#meta/logging_component.cmx"};
+        "fuchsia-pkg://fuchsia.com/run_test_component_test#meta/"
+        "logging_component_max_severity_error.cmx",
+        "fuchsia-pkg://fuchsia.com/run_test_component_test#meta/"
+        "logging_component_max_severity_info.cmx",
+        "fuchsia-pkg://fuchsia.com/run_test_component_test#meta/"
+        "logging_component_max_severity_warn.cmx",
+        "fuchsia-pkg://fuchsia.com/run_test_component_test#meta/run_test_component_test.cmx"};
     const char* argv[] = {kBinName, "run_test_component"};
     auto result = ParseArgs(env_services, 2, argv);
     EXPECT_FALSE(result.error) << result.error_msg;
