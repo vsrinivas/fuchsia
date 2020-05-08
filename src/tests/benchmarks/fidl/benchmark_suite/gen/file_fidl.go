@@ -23,6 +23,7 @@ var fidlTmpl = template.Must(template.New("fidlTmpl").Parse(
 // GENERATED FILE: Regen with $(fx get-build-dir)/host-tools/regen_fidl_benchmark_suite
 
 library benchmarkfidl;
+{{ .ExtraDefinition -}}
 {{ range .Definitions -}}
 {{ .Comment }}
 {{ .Body }}
@@ -30,8 +31,9 @@ library benchmarkfidl;
 `))
 
 type fidlTmplInput struct {
-	Year        int
-	Definitions []fidlTmplDefinition
+	Year            int
+	ExtraDefinition string
+	Definitions     []fidlTmplDefinition
 }
 
 type fidlTmplDefinition struct {
@@ -53,7 +55,7 @@ func genFidlFile(filepath string, fidl config.FidlFile) error {
 				strs[i] = string(binding)
 			}
 			attribute := "[BindingsDenylist = \"" + strings.Join(strs, ", ") + "\"]"
-			body = attribute + "\n" + body
+			body = attribute + body
 		}
 		definitions = append(definitions, fidlTmplDefinition{
 			Body:    formatObj(0, body),
@@ -67,8 +69,9 @@ func genFidlFile(filepath string, fidl config.FidlFile) error {
 	}
 	defer f.Close()
 	return fidlTmpl.Execute(f, fidlTmplInput{
-		Year:        time.Now().Year(),
-		Definitions: definitions,
+		Year:            time.Now().Year(),
+		ExtraDefinition: formatObj(0, fidl.ExtraDefinition),
+		Definitions:     definitions,
 	})
 }
 

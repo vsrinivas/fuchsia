@@ -55,9 +55,10 @@ type Benchmark struct {
 }
 
 type FidlFile struct {
-	Filename    string
-	Gen         func(Config) (string, error)
-	Definitions []Definition
+	Filename        string
+	Gen             func(Config) (string, error)
+	ExtraDefinition string
+	Definitions     []Definition
 }
 
 type Definition struct {

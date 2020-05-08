@@ -1,0 +1,1038 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// GENERATED FILE: Regen with $(fx get-build-dir)/host-tools/regen_fidl_benchmark_suite
+
+// 256 element array of structs
+benchmark("StructArray/256") {
+    value = StructArray256{
+        elems: [
+
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+            StructArrayElement{
+                a: 1,
+                b: 2
+            },
+        ]
+    },
+}
