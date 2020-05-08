@@ -39,10 +39,16 @@ int main(int argc, char* argv[]) {
     FX_PLOGS(ERROR, status) << "Failed to request Scenic service.";
     return EXIT_FAILURE;
   }
+  fuchsia::ui::policy::DeviceListenerRegistryHandle registry;
+  status = context->svc()->Connect(registry.NewRequest());
+  if (status != ZX_OK) {
+    FX_PLOGS(ERROR, status) << "Failed to request Registry service.";
+    return EXIT_FAILURE;
+  }
 
   // Create the collage.
-  auto collage_result =
-      camera::BufferCollage::Create(std::move(scenic), std::move(allocator), [&] { loop.Quit(); });
+  auto collage_result = camera::BufferCollage::Create(std::move(scenic), std::move(allocator),
+                                                      std::move(registry), [&] { loop.Quit(); });
   if (collage_result.is_error()) {
     FX_PLOGS(ERROR, collage_result.error()) << "Failed to create BufferCollage.";
     return EXIT_FAILURE;
@@ -86,41 +92,6 @@ int main(int argc, char* argv[]) {
         collage->PostShowBuffer(collection_id, buffer_index, std::move(release_fence),
                                 std::nullopt);
       });
-
-  // Connect to the device registry to listen for mute events.
-  fuchsia::ui::policy::DeviceListenerRegistryPtr registry;
-  registry.set_error_handler([](zx_status_t status) {
-    FX_PLOGS(WARNING, status) << "DeviceListenerRegistry disconnected unexpectedly.";
-  });
-  status = context->svc()->Connect(registry.NewRequest());
-  if (status != ZX_OK) {
-    FX_PLOGS(ERROR, status) << "Failed to request DeviceListenerRegistry service.";
-    return EXIT_FAILURE;
-  }
-  class Listener : public fuchsia::ui::policy::MediaButtonsListener {
-   public:
-    Listener(async_dispatcher_t* dispatcher, fit::function<void(bool)> on_mute_state_changed)
-        : dispatcher_(dispatcher),
-          binding_(this),
-          on_mute_state_changed_(std::move(on_mute_state_changed)) {}
-    fuchsia::ui::policy::MediaButtonsListenerHandle NewBinding() {
-      return binding_.NewBinding(dispatcher_);
-    }
-
-   private:
-    // |fuchsia::ui::policy::MediaButtonsListener|
-    void OnMediaButtonsEvent(fuchsia::ui::input::MediaButtonsEvent event) override {
-      if (event.has_mic_mute()) {
-        bool muted = event.mic_mute();
-        FX_LOGS(INFO) << "Mic and Camera are " << (muted ? "muted" : "unmuted") << ".";
-        on_mute_state_changed_(muted);
-      }
-    }
-    async_dispatcher_t* dispatcher_;
-    fidl::Binding<fuchsia::ui::policy::MediaButtonsListener> binding_;
-    fit::function<void(bool)> on_mute_state_changed_;
-  } listener(loop.dispatcher(), [&](bool muted) { collage->PostSetVisibility(!muted); });
-  registry->RegisterMediaButtonsListener(listener.NewBinding());
 
   // Publish the view service.
   context->outgoing()->AddPublicService(collage->GetHandler());

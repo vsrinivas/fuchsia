@@ -58,7 +58,9 @@ fit::result<zx::event, zx_status_t> MakeEventBridge(async_dispatcher_t* dispatch
 }
 
 BufferCollage::BufferCollage()
-    : loop_(&kAsyncLoopConfigNoAttachToCurrentThread), view_provider_binding_(this) {
+    : loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
+      button_listener_binding_(this),
+      view_provider_binding_(this) {
   SetStopOnError(scenic_);
   SetStopOnError(allocator_);
   view_provider_binding_.set_error_handler([this](zx_status_t status) {
@@ -76,7 +78,7 @@ BufferCollage::~BufferCollage() {
 
 fit::result<std::unique_ptr<BufferCollage>, zx_status_t> BufferCollage::Create(
     fuchsia::ui::scenic::ScenicHandle scenic, fuchsia::sysmem::AllocatorHandle allocator,
-    fit::closure stop_callback) {
+    fuchsia::ui::policy::DeviceListenerRegistryHandle registry, fit::closure stop_callback) {
   auto collage = std::unique_ptr<BufferCollage>(new BufferCollage);
 
   // Bind interface handles and save the stop callback.
@@ -90,6 +92,11 @@ fit::result<std::unique_ptr<BufferCollage>, zx_status_t> BufferCollage::Create(
     FX_PLOGS(ERROR, status);
     return fit::error(status);
   }
+  status = collage->registry_.Bind(std::move(registry), collage->loop_.dispatcher());
+  if (status != ZX_OK) {
+    FX_PLOGS(ERROR, status);
+    return fit::error(status);
+  }
   collage->stop_callback_ = std::move(stop_callback);
 
   // Create a scenic session and set its event handlers.
@@ -99,6 +106,10 @@ fit::result<std::unique_ptr<BufferCollage>, zx_status_t> BufferCollage::Create(
       fit::bind_member(collage.get(), &BufferCollage::OnScenicError));
   collage->session_->set_event_handler(
       fit::bind_member(collage.get(), &BufferCollage::OnScenicEvent));
+
+  // Register the class as a button listener.
+  collage->registry_->RegisterMediaButtonsListener(
+      collage->button_listener_binding_.NewBinding(collage->loop_.dispatcher()));
 
   // Start a thread and begin processing messages.
   status = collage->loop_.StartThread("BufferCollage Loop");
@@ -231,18 +242,6 @@ void BufferCollage::PostShowBuffer(uint32_t collection_id, uint32_t buffer_index
   });
 }
 
-void BufferCollage::PostSetVisibility(bool visible) {
-  uint8_t channel_value = visible ? 255 : 0;
-  async::PostTask(loop_.dispatcher(), [this, channel_value] {
-    for (auto& view : collection_views_) {
-      if (view.second.material) {
-        view.second.material->SetColor(channel_value, channel_value, channel_value, 255);
-      }
-    }
-    session_->Present(zx::clock::get_monotonic(), [](fuchsia::images::PresentationInfo info) {});
-  });
-}
-
 void BufferCollage::OnNewRequest(fidl::InterfaceRequest<fuchsia::ui::app::ViewProvider> request) {
   if (view_provider_binding_.is_bound()) {
     FX_LOGS(ERROR) << "Camera Gym only supports one view provider instance.";
@@ -260,6 +259,7 @@ void BufferCollage::Stop() {
   }
   scenic_ = nullptr;
   allocator_ = nullptr;
+  registry_ = nullptr;
   view_ = nullptr;
   collection_views_.clear();
   loop_.Quit();
@@ -373,6 +373,9 @@ void BufferCollage::UpdateLayout() {
   for (auto& [id, view] : collection_views_) {
     view.material = std::make_unique<scenic::Material>(session_.get());
     view.material->SetTexture(view.image_pipe_id);
+    if (camera_muted_) {
+      view.material->SetColor(0, 0, 0, 0);
+    }
     auto [element_width, element_height] = ScaleToFit(
         view.image_format.coded_width, view.image_format.coded_height, cell_width, cell_height);
     view.rectangle =
@@ -407,6 +410,14 @@ void BufferCollage::OnScenicEvent(std::vector<fuchsia::ui::scenic::Event> events
       }
       UpdateLayout();
     }
+  }
+}
+
+void BufferCollage::OnMediaButtonsEvent(fuchsia::ui::input::MediaButtonsEvent event) {
+  if (event.has_mic_mute()) {
+    camera_muted_ = event.mic_mute();
+    FX_LOGS(INFO) << "Mic and Camera are " << (camera_muted_ ? "muted" : "unmuted") << ".";
+    UpdateLayout();
   }
 }
 

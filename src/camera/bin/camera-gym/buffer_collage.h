@@ -9,6 +9,7 @@
 #include <fuchsia/sysmem/cpp/fidl.h>
 #include <fuchsia/ui/app/cpp/fidl.h>
 #include <fuchsia/ui/gfx/cpp/fidl.h>
+#include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fidl/cpp/binding.h>
@@ -35,7 +36,8 @@ struct CollectionView {
 // This class takes ownership of the display and presents the contents of buffer collections in a
 // grid pattern. Unless otherwise noted, public methods are thread-safe and private methods must
 // only be called from the loop's thread.
-class BufferCollage : public fuchsia::ui::app::ViewProvider {
+class BufferCollage : public fuchsia::ui::app::ViewProvider,
+                      public fuchsia::ui::policy::MediaButtonsListener {
  public:
   ~BufferCollage() override;
 
@@ -44,6 +46,7 @@ class BufferCollage : public fuchsia::ui::app::ViewProvider {
   // invoked exactly once if non-null.
   static fit::result<std::unique_ptr<BufferCollage>, zx_status_t> Create(
       fuchsia::ui::scenic::ScenicHandle scenic, fuchsia::sysmem::AllocatorHandle allocator,
+      fuchsia::ui::policy::DeviceListenerRegistryHandle registry,
       fit::closure stop_callback = nullptr);
 
   // Returns the view request handler.
@@ -64,9 +67,6 @@ class BufferCollage : public fuchsia::ui::app::ViewProvider {
   // non-null, |subregion| specifies what sub-region of the buffer to display.
   void PostShowBuffer(uint32_t collection_id, uint32_t buffer_index, zx::eventpair release_fence,
                       std::optional<fuchsia::math::Rect> subregion);
-
-  // Sets the collage to be visible (default), or hidden (black screen).
-  void PostSetVisibility(bool visible);
 
  private:
   BufferCollage();
@@ -97,15 +97,21 @@ class BufferCollage : public fuchsia::ui::app::ViewProvider {
                   fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> incoming_services,
                   fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> outgoing_services) override;
 
+  // |fuchsia::ui::policy::MediaButtonsListener|
+  void OnMediaButtonsEvent(fuchsia::ui::input::MediaButtonsEvent event) override;
+
   async::Loop loop_;
   fuchsia::ui::scenic::ScenicPtr scenic_;
   fuchsia::sysmem::AllocatorPtr allocator_;
+  fuchsia::ui::policy::DeviceListenerRegistryPtr registry_;
+  fidl::Binding<fuchsia::ui::policy::MediaButtonsListener> button_listener_binding_;
   fit::closure stop_callback_;
   std::unique_ptr<scenic::Session> session_;
   std::unique_ptr<scenic::View> view_;
   fidl::Binding<fuchsia::ui::app::ViewProvider> view_provider_binding_;
   std::optional<fuchsia::ui::gfx::BoundingBox> view_extents_;
   std::map<uint32_t, CollectionView> collection_views_;
+  bool camera_muted_;
   uint32_t next_collection_id_ = 1;
 };
 
