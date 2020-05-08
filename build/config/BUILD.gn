@@ -299,9 +299,18 @@ config("optimize_none") {
 }
 
 config("optimize_debug") {
-  cflags = [ "-Og" ]
-  ldflags = cflags
-  rustflags = [ "-Copt-level=1" ]
+  if (false) {
+    # TODO(phosek): consider different settings to improve performance.
+    # -Og is what the compiler documents as "optimize the debugging
+    # experience", but zxdb team has reported Clang's -Og is problematic.
+    # This should have a bug# for a detailed bug about -Og and/or Rust-O1
+    # making debugging difficult in known specific reproducible ways.
+    cflags = [ "-Og" ]
+    ldflags = cflags
+    rustflags = [ "-Copt-level=1" ]
+  } else {
+    configs = [ ":optimize_none" ]
+  }
 }
 
 config("optimize_default") {

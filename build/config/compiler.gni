@@ -3,8 +3,7 @@
 # found in the LICENSE file.
 
 if (is_debug) {
-  # TODO(phosek): consider using "debug" in debug mode to improve performance.
-  default_optimize = "none"
+  default_optimize = "debug"
 } else {
   # TODO(phosek): consider using "size" in release mode to reduce size.
   default_optimize = "speed"
