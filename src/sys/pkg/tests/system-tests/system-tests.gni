@@ -141,7 +141,6 @@ template("system_test_upgrade_suite") {
     }
 
     test_spec(_spec_target_name) {
-      name = test
       target = _main_target_name
       path = _test_binary
       command = _command
@@ -233,7 +232,6 @@ template("system_test_reboot_suite") {
     }
 
     test_spec(_spec_target_name) {
-      name = test
       target = _main_target_name
       path = _test_binary
       command = _command

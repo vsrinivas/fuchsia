@@ -152,7 +152,6 @@ template("dart_test") {
 
   _invocation = "$root_out_dir/$_main_target_name"
   test_spec(_spec_target_name) {
-    name = _main_target_name
     target = _main_target_name
     path = _invocation
 

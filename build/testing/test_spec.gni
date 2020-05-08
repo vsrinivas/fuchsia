@@ -12,9 +12,6 @@ import("//build/testing/platforms.gni")
 #
 # Parameters
 #
-#   name (required)
-#     [string] The test name.
-#
 #   path (optional for fuchsia; required for host)
 #     [string]: The path on the target OS at which the test will be installed.
 #
@@ -52,7 +49,9 @@ import("//build/testing/platforms.gni")
 template("test_spec") {
   testonly = true
 
-  assert(defined(invoker.name), "name must be defined.")
+  # Supress "Assignment had no effect" errors.
+  # TODO(fxbug.dev/50400): Remove once all callers stop setting name.
+  not_needed(invoker, [ "name" ])
 
   if (is_host) {
     assert(defined(invoker.path), "path is required for host-side tests")
@@ -178,7 +177,7 @@ template("test_spec") {
   # dependencies of the test; record them to a file.
   runtime_deps_file = ""
   if (defined(invoker.deps) && invoker.deps != []) {
-    test_name = get_path_info(invoker.name, "name")
+    test_name = get_path_info(invoker.target, "name")
     runtime_deps_file = "$target_gen_dir/${test_name}.deps.json"
     runtime_deps_target_name = "${target_name}_deps"
 
@@ -244,17 +243,20 @@ template("test_spec") {
       forward_variables_from(invoker,
                              [
                                "command",
-                               "name",
                                "path",
                                "package_url",
                              ])
       label = get_label_info(":${invoker.target}", "label_with_toolchain")
 
-      if (defined(path)) {
+      if (defined(package_url)) {
+        name = package_url
+      } else {
+        assert(defined(path), "path or package_url must be defined.")
         if (is_linux || is_mac) {
           # Trim leading //.
           path = rebase_path(path, root_build_dir)
         }
+        name = path
       }
       os = current_os
       cpu = current_cpu

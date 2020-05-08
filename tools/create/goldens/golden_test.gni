@@ -129,7 +129,6 @@ template("golden_test") {
   test_name = target_name
   target_test_spec = "${target_name}_spec"
   test_spec(target_test_spec) {
-    name = test_name
     target = test_name
     path = test_exec  # contrary to the docs, path IS required in CQ
     command = test_command

@@ -422,7 +422,6 @@ template("package") {
         pkg.deps += [ ":$test_spec_name" ]
 
         test_spec(test_spec_name) {
-          name = test.name
           target = main_target_name
           path = path
           if (!bootfs_only) {
