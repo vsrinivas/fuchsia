@@ -17,7 +17,7 @@ assert(current_toolchain == default_toolchain,
 toolchain_with_tools("stub") {
   tools = []
 
-  # This is needed for $zx/public/gn/banjo.gni et al.
+  # This is needed for $zx/vdso et al.
   propagates_configs = true
 }
 

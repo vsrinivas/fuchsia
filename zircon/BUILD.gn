@@ -464,7 +464,6 @@ if (current_toolchain == default_toolchain) {
       walk_keys = [ "legacy_barrier" ]
       deps = [
         ":all-ulib-$cpu",
-        "$zx/system/banjo",
         "$zx/system/fidl",
         "tools",
       ]
