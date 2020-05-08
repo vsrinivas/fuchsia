@@ -40,6 +40,7 @@ test("fs-vnode") {
     "pseudo_dir_tests.cc",
     "pseudo_file_tests.cc",
     "remote_dir_tests.cc",
+    "remote_file_tests.cc",
     "service_tests.cc",
     "teardown_tests.cc",
     "tracked_remote_dir_tests.cc",
