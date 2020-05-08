@@ -46,6 +46,31 @@ class PDev : public PDevProtocolClient {
   }
 };
 
+// This helper is marked weak because it is sometimes necessary to provide a
+// test-only version that allows for MMIO fakes or mocks to reach the driver under test.
+// For example say you have a fake Protocol device that needs to smuggle a fake MMIO:
+//
+//  class FakePDev : public ddk::PDevProtocol<FakePDev, ddk::base_protocol> {
+//    .....
+//    zx_status_t PDevGetMmio(uint32_t index, pdev_mmio_t* out_mmio) {
+//      out_mmio->offset = reinterpret_cast<size_t>(this);
+//      return ZX_OK;
+//    }
+//    .....
+//  };
+//
+// The actual implementation expects a real {size, offset, VMO} and therefore it will
+// fail. But works if a replacement PDevMakeMmioBufferWeak in the test is provided:
+//
+//  zx_status_t PDevMakeMmioBufferWeak(
+//      const pdev_mmio_t& pdev_mmio, std::optional<MmioBuffer>* mmio) {
+//    auto* test_harness = reinterpret_cast<FakePDev*>(pdev_mmio.offset);
+//    mmio->emplace(test_harness->fake_mmio());
+//    return ZX_OK;
+//  }
+//
+zx_status_t PDevMakeMmioBufferWeak(const pdev_mmio_t& pdev_mmio, std::optional<MmioBuffer>* mmio);
+
 }  // namespace ddk
 
 #endif  // SRC_DEVICES_BUS_LIB_DEVICE_PROTOCOL_PDEV_INCLUDE_LIB_DEVICE_PROTOCOL_PDEV_H_
