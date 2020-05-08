@@ -8,7 +8,6 @@ import (
 	"context"
 	"fmt"
 	"math"
-	"math/bits"
 	"reflect"
 	"sync"
 	"syscall/zx"
@@ -16,6 +15,7 @@ import (
 	"unsafe"
 
 	"netstack/link"
+	"netstack/link/fifo"
 	"syslog"
 
 	"fidl/fuchsia/hardware/ethernet"
@@ -110,75 +110,22 @@ func (iob *IOBuffer) Close() error {
 const FifoMaxSize = C.ZX_FIFO_MAX_SIZE_BYTES
 
 type entries struct {
-	// len(storage) must be a power of two; we rely on this fact to enable
-	// masking instead of modulus operations.
+	fifo.Entries
 	storage []FifoEntry
-
-	// sent, queued, readied are indices modulo (len(storage) << 1). They
-	// implement a ring buffer with 3 regions:
-	//
-	// - sent:queued: entries describing populated buffers, ready to be
-	// sent to the driver
-	//
-	// - queued:readied: entries describing unpopulated buffers, ready to
-	// accept outbound data
-	//
-	// - readied:sent: entries describing buffers currently owned by the
-	// driver, not yet returned
-	sent, queued, readied uint16
 }
 
-func (e *entries) init(depth uint32) {
-	*e = entries{}
-
-	// Round up to the next power of two.
-	power := bits.Len32(depth-1) + 1
-	size := uint32(1 << power)
-	e.storage = make([]FifoEntry, size)
-}
-
-func (e *entries) mask(val uint16) uint16 {
-	return val & uint16(len(e.storage)-1)
-}
-
-func (e *entries) mask2(val uint16) uint16 {
-	return val & uint16((len(e.storage)<<1)-1)
-}
-
-func (e *entries) incrementSent(delta uint16) {
-	e.sent = e.mask2(e.sent + delta)
-}
-
-func (e *entries) incrementQueued(delta uint16) {
-	e.queued = e.mask2(e.queued + delta)
-}
-
-func (e *entries) incrementReadied(delta uint16) {
-	e.readied = e.mask2(e.readied + delta)
-}
-
-func (e *entries) haveQueued() bool {
-	return e.sent != e.queued
+func (e *entries) init(depth uint16) {
+	// Reserve double the depth entries.
+	capacity := e.Entries.Init(depth * 2)
+	e.storage = make([]FifoEntry, capacity)
 }
 
 func (e *entries) getReadied() *FifoEntry {
-	return &e.storage[e.mask(e.queued)]
-}
-
-func (e *entries) haveReadied() bool {
-	return e.queued != e.readied
-}
-
-func (e *entries) inFlight() uint16 {
-	if readied, sent := e.mask(e.readied), e.mask(e.sent); readied > sent {
-		return uint16(len(e.storage)) - (readied - sent)
-	} else {
-		return sent - readied
-	}
+	return &e.storage[e.GetReadiedIndex()]
 }
 
 func (e *entries) addReadied(src []FifoEntry) int {
-	if readied, sent := e.mask(e.readied), e.mask(e.sent); readied < sent {
+	if readied, sent := e.GetInFlightRange(); readied < sent {
 		return copy(e.storage[readied:sent], src)
 	} else {
 		n := copy(e.storage[readied:], src)
@@ -188,7 +135,7 @@ func (e *entries) addReadied(src []FifoEntry) int {
 }
 
 func (e *entries) getQueued(dst []FifoEntry) int {
-	if sent, queued := e.mask(e.sent), e.mask(e.queued); sent < queued {
+	if sent, queued := e.GetQueuedRange(); sent < queued {
 		return copy(dst, e.storage[sent:queued])
 	} else {
 		n := copy(dst, e.storage[sent:])
@@ -306,8 +253,8 @@ func NewClient(clientName string, topopath, filepath string, device ethernet.Dev
 		filepath: filepath,
 	}
 
-	c.rx.init(fifos.RxDepth)
-	c.tx.mu.entries.init(fifos.TxDepth)
+	c.rx.init(uint16(fifos.RxDepth))
+	c.tx.mu.entries.init(uint16(fifos.TxDepth))
 
 	{
 		vmo, err := zx.NewVMO(bufferSize*uint64(len(c.rx.storage)+len(c.tx.mu.entries.storage)), 0)
@@ -341,14 +288,14 @@ func NewClient(clientName string, topopath, filepath string, device ethernet.Dev
 		b := c.iob.buffer(bufferIndex)
 		bufferIndex++
 		c.rx.storage[i] = c.iob.entry(b)
-		c.rx.incrementReadied(1)
-		c.rx.incrementQueued(1)
+		c.rx.IncrementReadied(1)
+		c.rx.IncrementQueued(1)
 	}
 	for i := range c.tx.mu.entries.storage {
 		b := c.iob.buffer(bufferIndex)
 		bufferIndex++
 		c.tx.mu.entries.storage[i] = c.iob.entry(b)
-		c.tx.mu.entries.incrementReadied(1)
+		c.tx.mu.entries.IncrementReadied(1)
 	}
 	c.tx.cond.L = &c.tx.mu.Mutex
 
@@ -384,7 +331,7 @@ func (c *Client) write(pkts stack.PacketBufferList) (int, *tcpip.Error) {
 				return i, tcpip.ErrClosedForSend
 			}
 
-			if c.tx.mu.entries.haveReadied() {
+			if c.tx.mu.entries.HaveReadied() {
 				break
 			}
 
@@ -405,11 +352,11 @@ func (c *Client) write(pkts stack.PacketBufferList) (int, *tcpip.Error) {
 				used += copy(b[used:], v)
 			}
 			*entry = c.iob.entry(b[:used])
-			c.tx.mu.entries.incrementQueued(1)
+			c.tx.mu.entries.IncrementQueued(1)
 
 			i++
 			pkt = pkt.Next()
-			if pkt == nil || !c.tx.mu.entries.haveReadied() {
+			if pkt == nil || !c.tx.mu.entries.HaveReadied() {
 				break
 			}
 		}
@@ -469,7 +416,7 @@ func (c *Client) Attach(dispatcher stack.NetworkDispatcher) {
 					c.Stats.Tx.Reads(count).Increment()
 					c.tx.mu.Lock()
 					n := c.tx.mu.entries.addReadied(scratch[:count])
-					c.tx.mu.entries.incrementReadied(uint16(n))
+					c.tx.mu.entries.IncrementReadied(uint16(n))
 					c.tx.mu.Unlock()
 					c.tx.cond.Broadcast()
 
@@ -508,9 +455,9 @@ func (c *Client) Attach(dispatcher stack.NetworkDispatcher) {
 						c.tx.mu.Unlock()
 						return nil
 					}
-					if batchSize := len(scratch) - int(c.tx.mu.entries.inFlight()); batchSize != 0 {
-						if c.tx.mu.entries.haveQueued() {
-							if c.tx.mu.waiters == 0 || !c.tx.mu.entries.haveReadied() {
+					if batchSize := len(scratch) - int(c.tx.mu.entries.InFlight()); batchSize != 0 {
+						if c.tx.mu.entries.HaveQueued() {
+							if c.tx.mu.waiters == 0 || !c.tx.mu.entries.HaveReadied() {
 								// No application threads are waiting OR application threads are waiting on the
 								// reader.
 								//
@@ -526,7 +473,7 @@ func (c *Client) Attach(dispatcher stack.NetworkDispatcher) {
 					c.tx.cond.Wait()
 				}
 				n := c.tx.mu.entries.getQueued(batch)
-				c.tx.mu.entries.incrementSent(uint16(n))
+				c.tx.mu.entries.IncrementSent(uint16(n))
 				c.tx.mu.Unlock()
 
 				switch status, count := FifoWrite(c.fifos.Tx, batch[:n]); status {
@@ -559,9 +506,9 @@ func (c *Client) Attach(dispatcher stack.NetworkDispatcher) {
 		if err := func() error {
 			scratch := make([]FifoEntry, c.fifos.RxDepth)
 			for {
-				if batchSize := len(scratch) - int(c.rx.inFlight()); batchSize != 0 && c.rx.haveQueued() {
+				if batchSize := len(scratch) - int(c.rx.InFlight()); batchSize != 0 && c.rx.HaveQueued() {
 					n := c.rx.getQueued(scratch[:batchSize])
-					c.rx.incrementSent(uint16(n))
+					c.rx.IncrementSent(uint16(n))
 
 					status, count := FifoWrite(c.fifos.Rx, scratch[:n])
 					switch status {
@@ -575,7 +522,7 @@ func (c *Client) Attach(dispatcher stack.NetworkDispatcher) {
 					}
 				}
 
-				for c.rx.haveReadied() {
+				for c.rx.HaveReadied() {
 					entry := c.rx.getReadied()
 
 					var emptyLinkAddress tcpip.LinkAddress
@@ -585,12 +532,12 @@ func (c *Client) Attach(dispatcher stack.NetworkDispatcher) {
 
 					// This entry is going back to the driver; it can be reused.
 					entry.SetLength(bufferSize)
-					c.rx.incrementQueued(1)
+					c.rx.IncrementQueued(1)
 				}
 
 				for {
 					signals := zx.Signals(zx.SignalFIFOReadable | zx.SignalFIFOPeerClosed | ethernet.SignalStatus)
-					if int(c.rx.inFlight()) != len(scratch) && c.rx.haveQueued() {
+					if int(c.rx.InFlight()) != len(scratch) && c.rx.HaveQueued() {
 						signals |= zx.SignalFIFOWritable
 					}
 					obs, err := zxwait.Wait(c.fifos.Rx, signals, zx.TimensecInfinite)
@@ -609,7 +556,7 @@ func (c *Client) Attach(dispatcher stack.NetworkDispatcher) {
 						case zx.ErrOk:
 							c.Stats.Rx.Reads(count).Increment()
 							n := c.rx.addReadied(scratch[:count])
-							c.rx.incrementReadied(uint16(n))
+							c.rx.IncrementReadied(uint16(n))
 
 							if n := uint32(n); count != n {
 								return fmt.Errorf("fifoRead(RX): tx_depth invariant violation; observed=%d expected=%d", c.fifos.RxDepth-n+count, c.fifos.RxDepth)
