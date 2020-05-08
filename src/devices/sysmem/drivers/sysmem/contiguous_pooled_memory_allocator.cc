@@ -4,17 +4,20 @@
 
 #include "contiguous_pooled_memory_allocator.h"
 
+#include <ddk/trace/event.h>
+
 #include "macros.h"
 
 namespace sysmem_driver {
 
 ContiguousPooledMemoryAllocator::ContiguousPooledMemoryAllocator(Owner* parent_device,
                                                                  const char* allocation_name,
-                                                                 uint64_t size,
+                                                                 uint64_t pool_id, uint64_t size,
                                                                  bool is_cpu_accessible,
                                                                  bool is_ready)
     : parent_device_(parent_device),
       allocation_name_(allocation_name),
+      pool_id_(pool_id),
       region_allocator_(RegionAllocator::RegionPool::Create(std::numeric_limits<size_t>::max())),
       size_(size),
       is_cpu_accessible_(is_cpu_accessible),
@@ -151,6 +154,8 @@ zx_status_t ContiguousPooledMemoryAllocator::Allocate(uint64_t size, zx::vmo* pa
     return status;
   }
 
+  TracePoolSize();
+
   // The result_parent_vmo created here is a VMO window to a sub-region of contiguous_vmo_.
   status = contiguous_vmo_.create_child(ZX_VMO_CHILD_SLICE, region->base, size, &result_parent_vmo);
   if (status != ZX_OK) {
@@ -179,10 +184,12 @@ zx_status_t ContiguousPooledMemoryAllocator::SetupChildVmo(const zx::vmo& parent
 }
 
 void ContiguousPooledMemoryAllocator::Delete(zx::vmo parent_vmo) {
+  TRACE_DURATION("gfx", "ContiguousPooledMemoryAllocator::Delete");
   auto it = regions_.find(parent_vmo.get());
   ZX_ASSERT(it != regions_.end());
   regions_.erase(it);
-  // ~parent_vmo
+  parent_vmo.reset();
+  TracePoolSize();
 }
 
 void ContiguousPooledMemoryAllocator::set_ready() { is_ready_ = true; }
@@ -204,6 +211,15 @@ void ContiguousPooledMemoryAllocator::DumpPoolStats() {
       "AllocatedRegionCount(): %zu AvailableRegionCount(): %zu",
       allocation_name_, unused_size, max_free_size, region_allocator_.AllocatedRegionCount(),
       region_allocator_.AvailableRegionCount());
+}
+
+void ContiguousPooledMemoryAllocator::TracePoolSize() {
+  uint64_t used_size = 0;
+  region_allocator_.WalkAllocatedRegions([&used_size](const ralloc_region_t* r) -> bool {
+    used_size += r->size;
+    return true;
+  });
+  TRACE_COUNTER("gfx", "Contiguous pool size", pool_id_, "size", used_size);
 }
 
 }  // namespace sysmem_driver

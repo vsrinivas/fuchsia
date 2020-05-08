@@ -7,6 +7,10 @@
 #include <lib/fidl-utils/bind.h>
 #include <zircon/compiler.h>
 
+#include <atomic>
+
+#include <ddk/trace/event.h>
+
 #include "fuchsia/sysmem/c/fidl.h"
 #include "logical_buffer_collection.h"
 
@@ -55,6 +59,8 @@ const fuchsia_sysmem_BufferCollection_ops_t BufferCollection::kOps = {
 };
 
 BufferCollection::~BufferCollection() {
+  TRACE_DURATION("gfx", "BufferCollection::~BufferCollection", "this", this, "parent",
+                 parent_.get());
   // Close() the SimpleBinding<> before deleting the list of pending Txn(s),
   // so that ~Txn doesn't complain about being deleted without being
   // completed.
@@ -109,6 +115,7 @@ zx_status_t BufferCollection::Sync(fidl_txn_t* txn) {
 
 zx_status_t BufferCollection::SetConstraints(
     bool has_constraints, const fuchsia_sysmem_BufferCollectionConstraints* constraints_param) {
+  TRACE_DURATION("gfx", "BufferCollection::SetConstraints", "this", this, "parent", parent_.get());
   // Regardless of has_constraints or not, we need to unconditionally take
   // ownership of any handles in constraints_param.  Not that there are
   // necessarily any handles in here currently, but to avoid being fragile re.
@@ -145,6 +152,8 @@ zx_status_t BufferCollection::SetConstraints(
 }
 
 zx_status_t BufferCollection::WaitForBuffersAllocated(fidl_txn_t* txn_param) {
+  TRACE_DURATION("gfx", "BufferCollection::WaitForBuffersAllocated", "this", this, "parent",
+                 parent_.get());
   BindingType::Txn::RecognizeTxn(txn_param);
   if (is_done_) {
     FailAsync(ZX_ERR_BAD_STATE,
@@ -154,7 +163,11 @@ zx_status_t BufferCollection::WaitForBuffersAllocated(fidl_txn_t* txn_param) {
   }
   // In general we're handling this async, so take ownership of the txn.
   std::unique_ptr<BindingType::Txn> txn = BindingType::Txn::TakeTxn(txn_param);
-  pending_wait_for_buffers_allocated_.emplace_back(std::move(txn));
+  trace_async_id_t current_event_id = TRACE_NONCE();
+  TRACE_ASYNC_BEGIN("gfx", "BufferCollection::WaitForBuffersAllocated async", current_event_id,
+                    "this", this, "parent", parent_.get());
+  pending_wait_for_buffers_allocated_.emplace_back(
+      std::make_pair(current_event_id, std::move(txn)));
   // The allocation is a one-shot (once true, remains true) and may already be
   // done, in which case this immediately completes txn.
   MaybeCompleteWaitForBuffersAllocated();
@@ -293,6 +306,8 @@ bool BufferCollection::is_done() { return is_done_; }
 BufferCollection::BufferCollection(fbl::RefPtr<LogicalBufferCollection> parent)
     : FidlServer(parent->parent_device()->dispatcher(), "BufferCollection", kConcurrencyCap),
       parent_(parent) {
+  TRACE_DURATION("gfx", "BufferCollection::BufferCollection", "this", this, "parent",
+                 parent_.get());
   ZX_DEBUG_ASSERT(parent_);
 }
 
@@ -355,7 +370,7 @@ void BufferCollection::MaybeCompleteWaitForBuffersAllocated() {
     return;
   }
   while (!pending_wait_for_buffers_allocated_.empty()) {
-    std::unique_ptr<BindingType::Txn> txn = std::move(pending_wait_for_buffers_allocated_.front());
+    auto [async_id, txn] = std::move(pending_wait_for_buffers_allocated_.front());
     pending_wait_for_buffers_allocated_.pop_front();
     BufferCollectionInfo to_send(BufferCollectionInfo::Default);
     ZX_DEBUG_ASSERT(allocation_result.buffer_collection_info || allocation_result.status != ZX_OK);
@@ -366,6 +381,8 @@ void BufferCollection::MaybeCompleteWaitForBuffersAllocated() {
         return;
       }
     }
+    TRACE_ASYNC_END("gfx", "BufferCollection::WaitForBuffersAllocated async", async_id, "this",
+                    this, "parent", parent_.get());
     // Ownership of handles in to_send are transferred to _reply().
     zx_status_t reply_status = fuchsia_sysmem_BufferCollectionWaitForBuffersAllocated_reply(
         &txn->raw_txn(), allocation_result.status, to_send.release());

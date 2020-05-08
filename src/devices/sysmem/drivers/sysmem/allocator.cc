@@ -11,6 +11,8 @@
 #include <lib/zx/event.h>
 #include <zircon/fidl.h>
 
+#include <ddk/trace/event.h>
+
 #include "logical_buffer_collection.h"
 
 namespace sysmem_driver {
@@ -37,6 +39,7 @@ Allocator::Allocator(Device* parent_device)
 Allocator::~Allocator() { LogInfo("~Allocator"); }
 
 zx_status_t Allocator::AllocateNonSharedCollection(zx_handle_t buffer_collection_request_param) {
+  TRACE_DURATION("gfx", "Allocator::AllocateNonSharedCollection");
   zx::channel buffer_collection_request(buffer_collection_request_param);
 
   // The AllocateCollection() message skips past the token stage because the
@@ -85,6 +88,7 @@ zx_status_t Allocator::AllocateNonSharedCollection(zx_handle_t buffer_collection
 }
 
 zx_status_t Allocator::AllocateSharedCollection(zx_handle_t token_request_param) {
+  TRACE_DURATION("gfx", "Allocator::AllocateSharedCollection");
   zx::channel token_request(token_request_param);
 
   // The LogicalBufferCollection is self-owned / owned by all the channels it
@@ -104,6 +108,7 @@ zx_status_t Allocator::AllocateSharedCollection(zx_handle_t token_request_param)
 
 zx_status_t Allocator::BindSharedCollection(zx_handle_t token_param,
                                             zx_handle_t buffer_collection_request_param) {
+  TRACE_DURATION("gfx", "Allocator::BindSharedCollection");
   zx::channel token(token_param);
   zx::channel buffer_collection_request(buffer_collection_request_param);
 

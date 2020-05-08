@@ -33,7 +33,7 @@ class FakeOwner : public MemoryAllocator::Owner {
 class ContiguousPooledSystem : public zxtest::Test {
  public:
   ContiguousPooledSystem()
-      : allocator_(&fake_owner_, kVmoName, kVmoSize * kVmoCount,
+      : allocator_(&fake_owner_, kVmoName, 0u, kVmoSize * kVmoCount,
                    true,     // is_cpu_accessible
                    false) {  // is_ready
     // nothing else to do here

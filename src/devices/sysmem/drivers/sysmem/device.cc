@@ -277,7 +277,8 @@ zx_status_t Device::Bind() {
     constexpr bool kIsCpuAccessible = true;
     constexpr bool kIsReady = true;
     auto pooled_allocator = std::make_unique<ContiguousPooledMemoryAllocator>(
-        this, "SysmemContiguousPool", contiguous_memory_size, kIsCpuAccessible, kIsReady);
+        this, "SysmemContiguousPool", fuchsia_sysmem_HeapType_SYSTEM_RAM, contiguous_memory_size,
+        kIsCpuAccessible, kIsReady);
     if (pooled_allocator->Init() != ZX_OK) {
       DRIVER_ERROR("Contiguous system ram allocator initialization failed");
       return ZX_ERR_NO_MEMORY;
@@ -292,7 +293,8 @@ zx_status_t Device::Bind() {
     constexpr bool kIsCpuAccessible = false;
     constexpr bool kIsReady = false;
     auto amlogic_allocator = std::make_unique<ContiguousPooledMemoryAllocator>(
-        this, "SysmemAmlogicProtectedPool", protected_memory_size, kIsCpuAccessible, kIsReady);
+        this, "SysmemAmlogicProtectedPool", fuchsia_sysmem_HeapType_AMLOGIC_SECURE,
+        protected_memory_size, kIsCpuAccessible, kIsReady);
     // Request 64kB alignment because the hardware can only modify protections along 64kB
     // boundaries.
     status = amlogic_allocator->Init(16);
@@ -494,7 +496,8 @@ zx_status_t Device::SysmemRegisterSecureMem(zx::channel secure_mem_connection) {
           constexpr bool kIsCpuAccessible = false;
           constexpr bool kIsReady = true;
           auto secure_allocator = std::make_unique<ContiguousPooledMemoryAllocator>(
-              this, "tee_secure", heap.size_bytes, kIsCpuAccessible, kIsReady);
+              this, "tee_secure", static_cast<uint64_t>(heap.heap), heap.size_bytes,
+              kIsCpuAccessible, kIsReady);
           status = secure_allocator->InitPhysical(heap.physical_address);
           // A failing status is fatal for now.
           ZX_ASSERT(status == ZX_OK);

@@ -6,6 +6,8 @@
 
 #include <lib/fidl-utils/bind.h>
 
+#include <ddk/trace/event.h>
+
 namespace sysmem_driver {
 
 namespace {
@@ -21,6 +23,8 @@ const fuchsia_sysmem_BufferCollectionToken_ops_t BufferCollectionToken::kOps = {
 };
 
 BufferCollectionToken::~BufferCollectionToken() {
+  TRACE_DURATION("gfx", "BufferCollectionToken::~BufferCollectionToken", "this", this, "parent",
+                 parent_.get());
   // zx_koid_t values are never re-used during lifetime of running system, so
   // it's fine that the channel is already closed (no possibility of re-use
   // of value in the tracked set of values).
@@ -31,6 +35,7 @@ BufferCollectionToken::~BufferCollectionToken() {
 
 zx_status_t BufferCollectionToken::Duplicate(uint32_t rights_attenuation_mask,
                                              zx_handle_t buffer_collection_token_request_param) {
+  TRACE_DURATION("gfx", "BufferCollectionToken::Duplicate", "this", this, "parent", parent_.get());
   zx::channel buffer_collection_token_request(buffer_collection_token_request_param);
   LogInfo("BufferCollectionToken::Duplicate()");
   if (is_done_) {
@@ -49,6 +54,7 @@ zx_status_t BufferCollectionToken::Duplicate(uint32_t rights_attenuation_mask,
 }
 
 zx_status_t BufferCollectionToken::Sync(fidl_txn_t* txn) {
+  TRACE_DURATION("gfx", "BufferCollectionToken::Sync", "this", this, "parent", parent_.get());
   BindingType::Txn::RecognizeTxn(txn);
   if (is_done_) {
     // Probably a Close() followed by Sync(), which is illegal and
@@ -113,6 +119,8 @@ BufferCollectionToken::BufferCollectionToken(Device* parent_device,
       parent_device_(parent_device),
       parent_(parent),
       rights_attenuation_mask_(rights_attenuation_mask) {
+  TRACE_DURATION("gfx", "BufferCollectionToken::BufferCollectionToken", "this", this, "parent",
+                 parent_.get());
   ZX_DEBUG_ASSERT(parent_device_);
   ZX_DEBUG_ASSERT(parent_);
 }

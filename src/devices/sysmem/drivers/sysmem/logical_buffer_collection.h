@@ -201,6 +201,8 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
     zx::vmo TakeVmo();
     [[nodiscard]] const zx::vmo& vmo() const;
 
+    void set_child_koid(zx_koid_t koid) { child_koid_ = koid; }
+
     TrackedParentVmo(const TrackedParentVmo&) = delete;
     TrackedParentVmo(TrackedParentVmo&&) = delete;
     TrackedParentVmo& operator=(const TrackedParentVmo&) = delete;
@@ -211,6 +213,7 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
                         const zx_packet_signal_t* signal);
     fbl::RefPtr<LogicalBufferCollection> buffer_collection_;
     zx::vmo vmo_;
+    zx_koid_t child_koid_{};
     DoDelete do_delete_;
     async::WaitMethod<TrackedParentVmo, &TrackedParentVmo::OnZeroChildren> zero_children_wait_;
     // Only for asserts:

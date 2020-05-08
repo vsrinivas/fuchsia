@@ -17,8 +17,9 @@ namespace sysmem_driver {
 
 class ContiguousPooledMemoryAllocator : public MemoryAllocator {
  public:
-  ContiguousPooledMemoryAllocator(Owner* parent_device, const char* allocation_name, uint64_t size,
-                                  bool is_cpu_accessible, bool is_ready);
+  ContiguousPooledMemoryAllocator(Owner* parent_device, const char* allocation_name,
+                                  uint64_t pool_id, uint64_t size, bool is_cpu_accessible,
+                                  bool is_ready);
 
   // Default to page alignment.
   zx_status_t Init(uint32_t alignment_log2 = ZX_PAGE_SHIFT);
@@ -48,8 +49,10 @@ class ContiguousPooledMemoryAllocator : public MemoryAllocator {
  private:
   zx_status_t InitCommon(zx::vmo local_contiguous_vmo);
   void DumpPoolStats();
+  void TracePoolSize();
   Owner* const parent_device_{};
   const char* const allocation_name_{};
+  const uint64_t pool_id_{};
   char child_name_[ZX_MAX_NAME_LEN] = {};
   zx::vmo contiguous_vmo_;
   RegionAllocator region_allocator_;

@@ -11,6 +11,7 @@
 
 #include <limits>  // std::numeric_limits
 
+#include <ddk/trace/event.h>
 #include <fbl/algorithm.h>
 
 #include "buffer_collection.h"
@@ -294,11 +295,13 @@ LogicalBufferCollection::AllocationResult LogicalBufferCollection::allocation_re
 
 LogicalBufferCollection::LogicalBufferCollection(Device* parent_device)
     : parent_device_(parent_device), constraints_(Constraints::Null) {
+  TRACE_DURATION("gfx", "LogicalBufferCollection::LogicalBufferCollection", "this", this);
   LogInfo("LogicalBufferCollection::LogicalBufferCollection()");
   // nothing else to do here
 }
 
 LogicalBufferCollection::~LogicalBufferCollection() {
+  TRACE_DURATION("gfx", "LogicalBufferCollection::~LogicalBufferCollection", "this", this);
   LogInfo("~LogicalBufferCollection");
   // Every entry in these collections keeps a
   // fbl::RefPtr<LogicalBufferCollection>, so these should both already be
@@ -404,6 +407,7 @@ void LogicalBufferCollection::MaybeAllocate() {
 
 // This only runs on a clean stack.
 void LogicalBufferCollection::TryAllocate() {
+  TRACE_DURATION("gfx", "LogicalBufferCollection::TryAllocate", "this", this);
   // If we're here it means we still have collection_views_, because if the
   // last collection view disappeared we would have run ~this which would have
   // cleared the Post() canary so this method woudn't be running.
@@ -1329,6 +1333,7 @@ static bool GetCoherencyDomain(const fuchsia_sysmem_BufferCollectionConstraints*
 
 BufferCollection::BufferCollectionInfo LogicalBufferCollection::Allocate(
     zx_status_t* allocation_result) {
+  TRACE_DURATION("gfx", "LogicalBufferCollection:Allocate", "this", this);
   ZX_DEBUG_ASSERT(constraints_);
   ZX_DEBUG_ASSERT(allocation_result);
 
@@ -1570,6 +1575,8 @@ BufferCollection::BufferCollectionInfo LogicalBufferCollection::Allocate(
 zx_status_t LogicalBufferCollection::AllocateVmo(
     MemoryAllocator* allocator, const fuchsia_sysmem_SingleBufferSettings* settings,
     zx::vmo* child_vmo) {
+  TRACE_DURATION("gfx", "LogicalBufferCollection::AllocateVmo", "size_bytes",
+                 settings->buffer_settings.size_bytes);
   // Physical VMOs only support slices where the size (and offset) are page_size aligned,
   // so we should also round up when allocating.
   auto rounded_size_bytes = fbl::round_up(settings->buffer_settings.size_bytes, ZX_PAGE_SIZE);
@@ -1664,6 +1671,11 @@ zx_status_t LogicalBufferCollection::AllocateVmo(
     LogError("zx::vmo::create_child() failed - status: %d", status);
     return status;
   }
+
+  zx_info_handle_basic_t child_info{};
+  local_child_vmo.get_info(ZX_INFO_HANDLE_BASIC, &child_info, sizeof(child_info), nullptr, nullptr);
+  tracked_parent_vmo->set_child_koid(child_info.koid);
+  TRACE_INSTANT("gfx", "Child VMO created", TRACE_SCOPE_THREAD, "koid", child_info.koid);
 
   // Now that we know at least one child of raw_parent_vmo exists, we can StartWait() and add to
   // map.  From this point, ZX_VMO_ZERO_CHILDREN is the only way that allocator->Delete() gets
@@ -1813,6 +1825,8 @@ void LogicalBufferCollection::TrackedParentVmo::OnZeroChildren(async_dispatcher_
                                                                async::WaitBase* wait,
                                                                zx_status_t status,
                                                                const zx_packet_signal_t* signal) {
+  TRACE_DURATION("gfx", "LogicalBufferCollection::TrackedParentVmo::OnZeroChildren",
+                 "buffer_collection", buffer_collection_.get(), "child_koid", child_koid_);
   LogInfo("LogicalBufferCollection::TrackedParentVmo::OnZeroChildren()");
   ZX_DEBUG_ASSERT(waiting_);
   waiting_ = false;

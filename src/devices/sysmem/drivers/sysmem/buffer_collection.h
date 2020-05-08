@@ -115,7 +115,8 @@ class BufferCollection
   // potentially via multiple participants.
   uint32_t client_rights_attenuation_mask_ = std::numeric_limits<uint32_t>::max();
 
-  std::list<std::unique_ptr<BindingType::Txn>> pending_wait_for_buffers_allocated_;
+  std::list<std::pair</*async_id*/ uint64_t, std::unique_ptr<BindingType::Txn>>>
+      pending_wait_for_buffers_allocated_;
 
   bool is_done_ = false;
 };
