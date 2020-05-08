@@ -44,6 +44,8 @@ class Client {
 
   static zx_status_t AbrResultToZxStatus(AbrResult status);
 
+  virtual zx_status_t Flush() const = 0;
+
  private:
   AbrOps abr_ops_;
 

@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "test/paver-test-common.h"
 #include "netboot.h"
 #include "netsvc.h"
+#include "test/paver-test-common.h"
 
 extern "C" {
 void update_timeouts() {}
@@ -14,7 +14,7 @@ const char* nodename() { return "test"; }
 void netboot_run_cmd(const char* cmd) {}
 
 void udp6_recv(void* data, size_t len, const ip6_addr_t* daddr, uint16_t dport,
-    const ip6_addr_t* saddr, uint16_t sport) {}
+               const ip6_addr_t* saddr, uint16_t sport) {}
 
 void netifc_recv(void* data, size_t len) {}
 bool netifc_send_pending() { return false; }
@@ -23,7 +23,7 @@ bool netifc_send_pending() { return false; }
 // We attempt to write more data than we have memory to ensure we are not keeping the file in memory
 // the entire time.
 TEST_F(PaverTest, WriteFvmManyLargeWrites) {
-  constexpr size_t kChunkSize = 1 << 20; // 1MiB
+  constexpr size_t kChunkSize = 1 << 20;  // 1MiB
   auto fake_data = std::make_unique<uint8_t[]>(kChunkSize);
   memset(fake_data.get(), 0x4F, kChunkSize);
 
@@ -46,5 +46,5 @@ TEST_F(PaverTest, WriteFvmManyLargeWrites) {
   paver_.Close();
   Wait();
   ASSERT_OK(paver_.exit_code());
-  ASSERT_EQ(fake_svc_.fake_paver().last_command(), Command::kWriteVolumes);
+  ASSERT_EQ(fake_svc_.fake_paver().GetCommandTrace(), std::vector<Command>{Command::kWriteVolumes});
 }

@@ -117,6 +117,10 @@ class DataSink : public ::llcpp::fuchsia::paver::DataSink::Interface {
 
   void WipeVolume(WipeVolumeCompleter::Sync completer) override;
 
+  void Flush(FlushCompleter::Sync completer) override {
+    completer.Reply(sink_.partitioner()->Flush());
+  }
+
  private:
   DataSinkImpl sink_;
 };
@@ -161,6 +165,10 @@ class DynamicDataSink : public ::llcpp::fuchsia::paver::DynamicDataSink::Interfa
 
   void WipeVolume(WipeVolumeCompleter::Sync completer) override;
 
+  void Flush(FlushCompleter::Sync completer) override {
+    completer.Reply(sink_.partitioner()->Flush());
+  }
+
  private:
   DataSinkImpl sink_;
 };
@@ -185,6 +193,8 @@ class BootManager : public ::llcpp::fuchsia::paver::BootManager::Interface {
 
   void SetActiveConfigurationHealthy(
       SetActiveConfigurationHealthyCompleter::Sync completer) override;
+
+  void Flush(FlushCompleter::Sync completer) override { completer.Reply(abr_client_->Flush()); }
 
  private:
   std::unique_ptr<abr::Client> abr_client_;

@@ -20,6 +20,7 @@
 
 #include <algorithm>
 #include <memory>
+#include <vector>
 
 #include <fs/pseudo_dir.h>
 #include <fs/service.h>
@@ -47,6 +48,8 @@ enum class Command {
   kWipeVolume,
   kInitPartitionTables,
   kWipePartitionTables,
+  kDataSinkFlush,
+  kBootManagerFlush,
 };
 
 struct AbrSlotData {
@@ -104,7 +107,7 @@ class FakePaver : public ::llcpp::fuchsia::paver::Paver::Interface,
 
   void FindBootManager(zx::channel boot_manager,
                        FindBootManagerCompleter::Sync _completer) override {
-    last_command_ = Command::kInitializeAbr;
+    AppendCommand(Command::kInitializeAbr);
     if (abr_supported_) {
       fidl::Bind<::llcpp::fuchsia::paver::BootManager::Interface>(dispatcher_,
                                                                   std::move(boot_manager), this);
@@ -112,19 +115,19 @@ class FakePaver : public ::llcpp::fuchsia::paver::Paver::Interface,
   }
 
   void QueryActiveConfiguration(QueryActiveConfigurationCompleter::Sync completer) override {
-    last_command_ = Command::kQueryActiveConfiguration;
+    AppendCommand(Command::kQueryActiveConfiguration);
     completer.ReplySuccess(::llcpp::fuchsia::paver::Configuration::A);
   }
 
   void QueryConfigurationStatus(::llcpp::fuchsia::paver::Configuration configuration,
                                 QueryConfigurationStatusCompleter::Sync completer) override {
-    last_command_ = Command::kQueryConfigurationStatus;
+    AppendCommand(Command::kQueryConfigurationStatus);
     completer.ReplySuccess(::llcpp::fuchsia::paver::ConfigurationStatus::HEALTHY);
   }
 
   void SetConfigurationActive(::llcpp::fuchsia::paver::Configuration configuration,
                               SetConfigurationActiveCompleter::Sync completer) override {
-    last_command_ = Command::kSetConfigurationActive;
+    AppendCommand(Command::kSetConfigurationActive);
     zx_status_t status;
     switch (configuration) {
       case ::llcpp::fuchsia::paver::Configuration::A:
@@ -148,7 +151,7 @@ class FakePaver : public ::llcpp::fuchsia::paver::Paver::Interface,
 
   void SetConfigurationUnbootable(::llcpp::fuchsia::paver::Configuration configuration,
                                   SetConfigurationUnbootableCompleter::Sync completer) override {
-    last_command_ = Command::kSetConfigurationUnbootable;
+    AppendCommand(Command::kSetConfigurationUnbootable);
     zx_status_t status;
     switch (configuration) {
       case ::llcpp::fuchsia::paver::Configuration::A:
@@ -170,21 +173,33 @@ class FakePaver : public ::llcpp::fuchsia::paver::Paver::Interface,
 
   void SetActiveConfigurationHealthy(
       SetActiveConfigurationHealthyCompleter::Sync completer) override {
-    last_command_ = Command::kSetActiveConfigurationHealthy;
+    AppendCommand(Command::kSetActiveConfigurationHealthy);
+    completer.Reply(ZX_OK);
+  }
+
+  void Flush(::llcpp::fuchsia::paver::DynamicDataSink::Interface::FlushCompleter::Sync completer)
+      override {
+    AppendCommand(Command::kDataSinkFlush);
+    completer.Reply(ZX_OK);
+  }
+
+  void Flush(
+      ::llcpp::fuchsia::paver::BootManager::Interface::FlushCompleter::Sync completer) override {
+    AppendCommand(Command::kBootManagerFlush);
     completer.Reply(ZX_OK);
   }
 
   void ReadAsset(::llcpp::fuchsia::paver::Configuration configuration,
                  ::llcpp::fuchsia::paver::Asset asset,
                  ReadAssetCompleter::Sync completer) override {
-    last_command_ = Command::kReadAsset;
+    AppendCommand(Command::kReadAsset);
     completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
   }
 
   void WriteAsset(::llcpp::fuchsia::paver::Configuration configuration,
                   ::llcpp::fuchsia::paver::Asset asset, ::llcpp::fuchsia::mem::Buffer payload,
                   WriteAssetCompleter::Sync completer) override {
-    last_command_ = Command::kWriteAsset;
+    AppendCommand(Command::kWriteAsset);
     auto status = payload.size == expected_payload_size_ ? ZX_OK : ZX_ERR_INVALID_ARGS;
     completer.Reply(status);
   }
@@ -192,8 +207,7 @@ class FakePaver : public ::llcpp::fuchsia::paver::Paver::Interface,
   void WriteFirmware(fidl::StringView type, ::llcpp::fuchsia::mem::Buffer payload,
                      WriteFirmwareCompleter::Sync completer) override {
     using ::llcpp::fuchsia::paver::WriteFirmwareResult;
-
-    last_command_ = Command::kWriteFirmware;
+    AppendCommand(Command::kWriteFirmware);
     last_firmware_type_ = std::string(type.data(), type.size());
 
     // Reply varies depending on whether we support |type| or not.
@@ -207,7 +221,7 @@ class FakePaver : public ::llcpp::fuchsia::paver::Paver::Interface,
   }
 
   void WriteVolumes(zx::channel payload_stream, WriteVolumesCompleter::Sync completer) override {
-    last_command_ = Command::kWriteVolumes;
+    AppendCommand(Command::kWriteVolumes);
     // Register VMO.
     zx::vmo vmo;
     auto status = zx::vmo::create(1024, 0, &vmo);
@@ -261,30 +275,30 @@ class FakePaver : public ::llcpp::fuchsia::paver::Paver::Interface,
 
   void WriteBootloader(::llcpp::fuchsia::mem::Buffer payload,
                        WriteBootloaderCompleter::Sync completer) override {
-    last_command_ = Command::kWriteBootloader;
+    AppendCommand(Command::kWriteBootloader);
     auto status = payload.size == expected_payload_size_ ? ZX_OK : ZX_ERR_INVALID_ARGS;
     completer.Reply(status);
   }
 
   void WriteDataFile(fidl::StringView filename, ::llcpp::fuchsia::mem::Buffer payload,
                      WriteDataFileCompleter::Sync completer) override {
-    last_command_ = Command::kWriteDataFile;
+    AppendCommand(Command::kWriteDataFile);
     auto status = payload.size == expected_payload_size_ ? ZX_OK : ZX_ERR_INVALID_ARGS;
     completer.Reply(status);
   }
 
   void WipeVolume(WipeVolumeCompleter::Sync completer) override {
-    last_command_ = Command::kWipeVolume;
+    AppendCommand(Command::kWipeVolume);
     completer.ReplySuccess({});
   }
 
   void InitializePartitionTables(InitializePartitionTablesCompleter::Sync completer) override {
-    last_command_ = Command::kInitPartitionTables;
+    AppendCommand(Command::kInitPartitionTables);
     completer.Reply(ZX_OK);
   }
 
   void WipePartitionTables(WipePartitionTablesCompleter::Sync completer) override {
-    last_command_ = Command::kWipePartitionTables;
+    AppendCommand(Command::kWipePartitionTables);
     completer.Reply(ZX_OK);
   }
 
@@ -295,7 +309,8 @@ class FakePaver : public ::llcpp::fuchsia::paver::Paver::Interface,
     sync_completion_reset(&done_signal_);
   }
 
-  Command last_command() const { return last_command_; }
+  const std::vector<Command> GetCommandTrace() { return command_trace_; }
+
   const std::string& last_firmware_type() const { return last_firmware_type_; }
 
   void set_expected_payload_size(size_t size) { expected_payload_size_ = size; }
@@ -312,7 +327,6 @@ class FakePaver : public ::llcpp::fuchsia::paver::Paver::Interface,
   sync_completion_t done_signal_;
   std::atomic<size_t> signal_size_;
 
-  Command last_command_ = Command::kUnknown;
   std::string last_firmware_type_;
 
   size_t expected_payload_size_ = 0;
@@ -322,6 +336,9 @@ class FakePaver : public ::llcpp::fuchsia::paver::Paver::Interface,
   AbrData abr_data_ = kInitAbrData;
 
   async_dispatcher_t* dispatcher_ = nullptr;
+
+  std::vector<Command> command_trace_;
+  void AppendCommand(Command cmd) { command_trace_.push_back(cmd); }
 };
 
 class FakeSvc {

@@ -245,6 +245,15 @@ zx_status_t Paver::WriteAsset(::llcpp::fuchsia::paver::DataSink::SyncClient data
   // We assume that verified boot metadata asset will only be written after the kernel asset.
   if (!boot_manager || configuration_ == ::llcpp::fuchsia::paver::Configuration::RECOVERY ||
       asset_ != ::llcpp::fuchsia::paver::Asset::VERIFIED_BOOT_METADATA) {
+    if (boot_manager) {
+      auto res = boot_manager->Flush();
+      auto status_sync = res.ok() ? res->status : res.status();
+      if (status_sync != ZX_OK) {
+        fprintf(stderr, "netsvc: failed to sync A/B/R configuration. %s\n",
+                zx_status_get_string(status_sync));
+        return status_sync;
+      }
+    }
     return ZX_OK;
   }
   {
@@ -267,6 +276,30 @@ zx_status_t Paver::WriteAsset(::llcpp::fuchsia::paver::DataSink::SyncClient data
       return status;
     }
   }
+
+  // TODO(47505): The following two syncs are called everytime WriteAsset is called, which is not
+  // optimal for reducing NAND PE cycles. Ideally, we want to sync when
+  // all assets, A/B configuration have been written to buffer. Find a safe time and place
+  // for sync.
+  {
+    auto res = data_sink.Flush();
+    auto status = res.ok() ? res->status : res.status();
+    if (status != ZX_OK) {
+      fprintf(stderr, "netsvc: failed to flush data_sink. %s\n", zx_status_get_string(status));
+      return status;
+    }
+  }
+
+  if (boot_manager) {
+    auto res = boot_manager->Flush();
+    auto status = res.ok() ? res->status : res.status();
+    if (status != ZX_OK) {
+      fprintf(stderr, "netsvc: failed to flush A/B/R configuration. %s\n",
+              zx_status_get_string(status));
+      return status;
+    }
+  }
+
   return ClearSysconfig(devfs_root_);
 }
 

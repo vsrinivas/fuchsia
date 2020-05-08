@@ -344,6 +344,9 @@ impl MockPaver {
                 paver::DataSinkRequest::WriteBootloader { responder, .. } => {
                     responder.send(Status::OK.into_raw()).expect("paver response to send");
                 }
+                paver::DataSinkRequest::Flush { responder, .. } => {
+                    responder.send(Status::OK.into_raw()).expect("paver response to send");
+                }
                 request => panic!("Unhandled method Paver::{}", request.method_name()),
             }
         }

@@ -71,6 +71,7 @@ enum PaverEvent {
     SetActiveConfigurationHealthy,
     QueryActiveConfiguration,
     SetConfigurationUnbootable { config: Configuration },
+    Flush,
 }
 
 trait PaverService: Sync + Send {
@@ -131,6 +132,10 @@ impl PaverServiceSupportsABR {
                             .push(PaverEvent::SetConfigurationUnbootable { config: configuration });
                         responder.send(Status::OK.into_raw()).expect("send ok");
                     }
+                    BootManagerRequest::Flush { responder } => {
+                        self.state.lock().events.push(PaverEvent::Flush);
+                        responder.send(Status::OK.into_raw()).expect("send ok");
+                    }
                     req => panic!("unhandled paver request: {:?}", req),
                 }
             }
@@ -180,7 +185,8 @@ async fn test_calls_set_configuration_unbootable() {
             PaverEvent::FindBootManager,
             PaverEvent::SetActiveConfigurationHealthy,
             PaverEvent::QueryActiveConfiguration,
-            PaverEvent::SetConfigurationUnbootable { config: Configuration::B }
+            PaverEvent::SetConfigurationUnbootable { config: Configuration::B },
+            PaverEvent::Flush
         ]
     );
 
@@ -194,7 +200,8 @@ async fn test_calls_set_configuration_unbootable() {
             PaverEvent::FindBootManager,
             PaverEvent::SetActiveConfigurationHealthy,
             PaverEvent::QueryActiveConfiguration,
-            PaverEvent::SetConfigurationUnbootable { config: Configuration::A }
+            PaverEvent::SetConfigurationUnbootable { config: Configuration::A },
+            PaverEvent::Flush
         ]
     );
 }

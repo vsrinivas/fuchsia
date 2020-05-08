@@ -691,6 +691,8 @@ async fn test_system_update_force_recovery() {
             PaverEvent::QueryActiveConfiguration,
             PaverEvent::SetConfigurationUnbootable { configuration: paver::Configuration::A },
             PaverEvent::SetConfigurationUnbootable { configuration: paver::Configuration::B },
+            PaverEvent::DataSinkFlush,
+            PaverEvent::BootManagerFlush,
         ]
     );
     assert_eq!(*env.cache_service.called.lock(), 1);
@@ -1132,6 +1134,8 @@ async fn test_writes_bootloader() {
                 payload: b"fake zbi".to_vec(),
             },
             PaverEvent::SetConfigurationActive { configuration: paver::Configuration::B },
+            PaverEvent::DataSinkFlush,
+            PaverEvent::BootManagerFlush
         ]
     );
 
@@ -1177,6 +1181,8 @@ async fn test_writes_recovery() {
                 payload: b"new recovery".to_vec(),
             },
             PaverEvent::SetConfigurationActive { configuration: paver::Configuration::B },
+            PaverEvent::DataSinkFlush,
+            PaverEvent::BootManagerFlush
         ]
     );
 
@@ -1228,6 +1234,8 @@ async fn test_writes_recovery_vbmeta() {
                 payload: b"new recovery vbmeta".to_vec(),
             },
             PaverEvent::SetConfigurationActive { configuration: paver::Configuration::B },
+            PaverEvent::DataSinkFlush,
+            PaverEvent::BootManagerFlush
         ]
     );
 
@@ -1273,6 +1281,8 @@ async fn test_writes_fuchsia_vbmeta() {
                 payload: b"fake zbi vbmeta".to_vec(),
             },
             PaverEvent::SetConfigurationActive { configuration: paver::Configuration::B },
+            PaverEvent::DataSinkFlush,
+            PaverEvent::BootManagerFlush
         ]
     );
 
@@ -1314,6 +1324,8 @@ async fn test_skips_recovery_vbmeta() {
                 payload: b"fake zbi".to_vec(),
             },
             PaverEvent::SetConfigurationActive { configuration: paver::Configuration::B },
+            PaverEvent::DataSinkFlush,
+            PaverEvent::BootManagerFlush,
         ]
     );
 
@@ -1370,6 +1382,8 @@ async fn do_test_working_image_write_with_abr(
                 payload: b"fake_zbi".to_vec(),
             },
             PaverEvent::SetConfigurationActive { configuration: target_config },
+            PaverEvent::DataSinkFlush,
+            PaverEvent::BootManagerFlush
         ]
     );
 
@@ -1437,7 +1451,8 @@ async fn test_working_image_with_unsupported_abr() {
                 configuration: paver::Configuration::B,
                 asset: paver::Asset::Kernel,
                 payload: b"fake_zbi".to_vec(),
-            }
+            },
+            PaverEvent::DataSinkFlush
         ]
     );
 
@@ -1653,6 +1668,8 @@ async fn test_writes_firmware() {
                 payload: b"fake zbi".to_vec(),
             },
             PaverEvent::SetConfigurationActive { configuration: paver::Configuration::B },
+            PaverEvent::DataSinkFlush,
+            PaverEvent::BootManagerFlush,
         ]
     );
 
@@ -1714,6 +1731,8 @@ async fn test_writes_multiple_firmware_types() {
                 payload: b"fake zbi".to_vec(),
             },
             PaverEvent::SetConfigurationActive { configuration: paver::Configuration::B },
+            PaverEvent::DataSinkFlush,
+            PaverEvent::BootManagerFlush,
         ]
     );
 
@@ -1763,6 +1782,8 @@ async fn test_unsupported_firmware_type() {
                 payload: b"fake zbi".to_vec(),
             },
             PaverEvent::SetConfigurationActive { configuration: paver::Configuration::B },
+            PaverEvent::DataSinkFlush,
+            PaverEvent::BootManagerFlush,
         ]
     );
 

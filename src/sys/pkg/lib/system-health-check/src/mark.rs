@@ -57,5 +57,13 @@ async fn set_active_configuration_healthy_impl() -> Result<(), anyhow::Error> {
         Configuration::Recovery => return Err(format_err!("Recovery should not be active")),
     };
     Status::ok(boot_manager.set_configuration_unbootable(inactive_config).await?)?;
+
+    match boot_manager.flush().await.map(Status::from_raw) {
+        Ok(_) => (),
+        Err(err) => {
+            return Err(format_err!("failed to flush {:?}", err));
+        }
+    };
+
     Ok(())
 }

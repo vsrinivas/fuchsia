@@ -120,6 +120,8 @@ class MockDevicePartitioner : public FakeDevicePartitioner {
     return ZX_OK;
   }
 
+  zx_status_t Flush() const override { return ZX_OK; }
+
  private:
   MockUserPager* pager_;
 };

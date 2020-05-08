@@ -130,6 +130,9 @@ class DevicePartitioner {
   // This analysis is best-effort only, providing only basic safety checks.
   virtual zx_status_t ValidatePayload(const PartitionSpec& spec,
                                       fbl::Span<const uint8_t> data) const = 0;
+
+  // Flush all buffered write to persistant storage.
+  virtual zx_status_t Flush() const = 0;
 };
 
 // Useful for when a GPT table is available (e.g. x86 devices). Provides common
@@ -243,6 +246,8 @@ class EfiDevicePartitioner : public DevicePartitioner {
   zx_status_t ValidatePayload(const PartitionSpec& spec,
                               fbl::Span<const uint8_t> data) const override;
 
+  zx_status_t Flush() const override { return ZX_OK; }
+
  private:
   EfiDevicePartitioner(Arch arch, std::unique_ptr<GptDevicePartitioner> gpt)
       : gpt_(std::move(gpt)), arch_(arch) {}
@@ -279,6 +284,8 @@ class CrosDevicePartitioner : public DevicePartitioner {
   zx_status_t ValidatePayload(const PartitionSpec& spec,
                               fbl::Span<const uint8_t> data) const override;
 
+  zx_status_t Flush() const override { return ZX_OK; }
+
  private:
   CrosDevicePartitioner(std::unique_ptr<GptDevicePartitioner> gpt) : gpt_(std::move(gpt)) {}
 
@@ -314,6 +321,8 @@ class FixedDevicePartitioner : public DevicePartitioner {
 
   zx_status_t ValidatePayload(const PartitionSpec& spec,
                               fbl::Span<const uint8_t> data) const override;
+
+  zx_status_t Flush() const override { return ZX_OK; }
 
  private:
   FixedDevicePartitioner(fbl::unique_fd devfs_root) : devfs_root_(std::move(devfs_root)) {}
@@ -369,6 +378,8 @@ class AstroPartitioner : public DevicePartitioner {
   zx_status_t ValidatePayload(const PartitionSpec& spec,
                               fbl::Span<const uint8_t> data) const override;
 
+  zx_status_t Flush() const override { return ZX_OK; }
+
  private:
   AstroPartitioner(std::unique_ptr<SkipBlockDevicePartitioner> skip_block)
       : skip_block_(std::move(skip_block)) {}
@@ -401,6 +412,8 @@ class As370Partitioner : public DevicePartitioner {
 
   zx_status_t ValidatePayload(const PartitionSpec& spec,
                               fbl::Span<const uint8_t> data) const override;
+
+  zx_status_t Flush() const override { return ZX_OK; }
 
  private:
   As370Partitioner(std::unique_ptr<SkipBlockDevicePartitioner> skip_block)
@@ -435,6 +448,8 @@ class SherlockPartitioner : public DevicePartitioner {
 
   zx_status_t ValidatePayload(const PartitionSpec& spec,
                               fbl::Span<const uint8_t> data) const override;
+
+  zx_status_t Flush() const override { return ZX_OK; }
 
  private:
   SherlockPartitioner(std::unique_ptr<GptDevicePartitioner> gpt) : gpt_(std::move(gpt)) {}

@@ -500,6 +500,44 @@ func WriteImgs(dataSink *paver.DataSinkWithCtxInterface, bootManager *paver.Boot
 		}
 	}
 
+	if err = flushDataSink(dataSink); err != nil {
+		return fmt.Errorf("img_writer: failed to flush data sink. %v", err)
+	}
+
+	if targetConfig != nil {
+		if err = flushBootManager(bootManager); err != nil {
+			return fmt.Errorf("img_writer: failed to flush boot manager. %v", err)
+		}
+	}
+
+	return nil
+}
+
+func flushDataSink(dataSink *paver.DataSinkWithCtxInterface) error {
+	status, err := dataSink.Flush(context.Background())
+
+	if err != nil {
+		return err
+	}
+
+	if statusErr := zx.Status(status); statusErr != zx.ErrOk {
+		return &zx.Error{Status: statusErr}
+	}
+
+	return nil
+}
+
+func flushBootManager(bootManager *paver.BootManagerWithCtxInterface) error {
+	status, err := bootManager.Flush(context.Background())
+
+	if err != nil {
+		return err
+	}
+
+	if statusErr := zx.Status(status); statusErr != zx.ErrOk {
+		return &zx.Error{Status: statusErr}
+	}
+
 	return nil
 }
 

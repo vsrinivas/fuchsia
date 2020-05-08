@@ -342,6 +342,7 @@ mod tests {
                     asset: Asset::VerifiedBootMetadata,
                     payload: data.to_vec()
                 },
+                PaverEvent::DataSinkFlush,
                 PaverEvent::QueryActiveConfiguration,
                 PaverEvent::SetConfigurationActive { configuration: Configuration::A },
             ]

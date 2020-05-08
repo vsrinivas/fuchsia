@@ -12,9 +12,9 @@
 #include <string.h>
 #include <zircon/status.h>
 
-#include <libabr/libabr.h>
-
 #include <string_view>
+
+#include <libabr/libabr.h>
 
 #include "device-partitioner.h"
 #include "partition-client.h"
@@ -94,6 +94,8 @@ class PartitionClient : public Client {
   zx_status_t Read(uint8_t* buffer, size_t size) override;
 
   zx_status_t Write(const uint8_t* buffer, size_t size) override;
+
+  zx_status_t Flush() const override { return partition_->Flush(); }
 };
 
 zx_status_t PartitionClient::Create(std::unique_ptr<paver::PartitionClient> partition,

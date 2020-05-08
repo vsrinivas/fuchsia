@@ -101,6 +101,21 @@ protocol Paver {
     FindBootManager(request<BootManager> boot_manager);
 };
 
+/// Some platforms may implement the Flush() fidl interface of DataSink/BootManager. For these
+/// platforms, the update of some system images and A/B configuration is not persisted to storage
+/// immediately and only buffered internally when the write fidl interfaces return. The data is
+/// guaranteed to be persisted only after the Flush() interfaces are called.
+///
+/// If not implemented, Flush() is no-op and system images and A/B configuration will be persisted
+/// to storage immediately after the write fidl interfaces return.
+///
+/// For all platforms, it is guaranteed that if DataSink.Flush() is implemented, BootManager.Flush()
+/// is implemented as well. Therefore, in the context of system update, both of the following update
+/// sequences are safe in the sense that, new A/B configuration will not be persisted to storage
+/// before new system images.
+/// DataSink.Write[...]() --> DataSink.Flush() --> BootManager.Set[...]() --> BootManager.Flush()
+/// DataSink.Write[...]() --> BootManager.Set[...]() --> DataSink.Flush() --> BootManager.Flush()
+///
 /// Protocol for reading and writing boot partitions.
 protocol DataSink {
     /// Reads partition corresponding to `configuration` and `asset` into a
@@ -162,6 +177,9 @@ protocol DataSink {
     ///
     /// On success, returns a channel to the initialized FVM volume.
     WipeVolume() -> (request<fuchsia.hardware.block.volume.VolumeManager> volume) error zx.status;
+
+    /// Flush all previously buffered writes to persistent storage.
+    Flush() -> (zx.status status);
 };
 
 /// Specialized DataSink with dynamic partition tables.
@@ -183,6 +201,7 @@ protocol DynamicDataSink {
 ///
 /// All functions will first check the A/B/R metadata and reset it to
 /// the default state if it's invalid.
+/// The new configuration is not guaranteed to persist to storage before Flush() is called.
 protocol BootManager {
     /// Queries active configuration.
     QueryActiveConfiguration() -> (Configuration configuration) error zx.status;
@@ -221,4 +240,7 @@ protocol BootManager {
     ///
     /// If the configuration is already marked healthy, no action is taken.
     SetActiveConfigurationHealthy() -> (zx.status status);
+
+    /// Flush all previously buffered writes to persistent storage.
+    Flush() -> (zx.status status);
 };

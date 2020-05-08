@@ -85,6 +85,14 @@ TEST_F(PaverTest, TimeoutPartialWrite) {
   ASSERT_NE(paver_.exit_code(), ZX_OK);
 }
 
+void ValidateCommandTrace(const std::vector<Command>& actual,
+                          const std::vector<Command>& expected) {
+  ASSERT_EQ(actual.size(), expected.size());
+  for (size_t i = 0; i < actual.size(); i++) {
+    EXPECT_EQ(actual[i], expected[i], "Command #%zu different from expected", i);
+  }
+}
+
 TEST_F(PaverTest, WriteCompleteSingle) {
   size_t size = sizeof(kFakeData);
   fake_svc_.fake_paver().set_expected_payload_size(size);
@@ -94,7 +102,8 @@ TEST_F(PaverTest, WriteCompleteSingle) {
   paver_.Close();
   Wait();
   ASSERT_OK(paver_.exit_code());
-  ASSERT_EQ(fake_svc_.fake_paver().last_command(), Command::kWriteFirmware);
+
+  ValidateCommandTrace(fake_svc_.fake_paver().GetCommandTrace(), {Command::kWriteFirmware});
 }
 
 TEST_F(PaverTest, WriteCompleteManySmallWrites) {
@@ -143,7 +152,9 @@ TEST_F(PaverTest, WriteZirconA) {
   paver_.Close();
   Wait();
   ASSERT_OK(paver_.exit_code());
-  ASSERT_EQ(fake_svc_.fake_paver().last_command(), Command::kWriteAsset);
+
+  ValidateCommandTrace(fake_svc_.fake_paver().GetCommandTrace(),
+                       {Command::kInitializeAbr, Command::kWriteAsset});
 }
 
 TEST_F(PaverTest, WriteVbMetaA) {
@@ -155,7 +166,9 @@ TEST_F(PaverTest, WriteVbMetaA) {
   paver_.Close();
   Wait();
   ASSERT_OK(paver_.exit_code());
-  ASSERT_EQ(fake_svc_.fake_paver().last_command(), Command::kWriteAsset);
+
+  ValidateCommandTrace(fake_svc_.fake_paver().GetCommandTrace(),
+                       {Command::kInitializeAbr, Command::kWriteAsset});
 }
 
 TEST_F(PaverTest, WriteZirconAWithABRSupported) {
@@ -168,7 +181,15 @@ TEST_F(PaverTest, WriteZirconAWithABRSupported) {
   paver_.Close();
   Wait();
   ASSERT_OK(paver_.exit_code());
-  ASSERT_EQ(fake_svc_.fake_paver().last_command(), Command::kWriteAsset);
+
+  ValidateCommandTrace(fake_svc_.fake_paver().GetCommandTrace(),
+                       {
+                           Command::kInitializeAbr,
+                           Command::kQueryActiveConfiguration,
+                           Command::kSetConfigurationUnbootable,
+                           Command::kWriteAsset,
+                           Command::kBootManagerFlush,
+                       });
 }
 
 TEST_F(PaverTest, WriteZirconBWithABRSupported) {
@@ -181,7 +202,15 @@ TEST_F(PaverTest, WriteZirconBWithABRSupported) {
   paver_.Close();
   Wait();
   ASSERT_OK(paver_.exit_code());
-  ASSERT_EQ(fake_svc_.fake_paver().last_command(), Command::kWriteAsset);
+
+  ValidateCommandTrace(fake_svc_.fake_paver().GetCommandTrace(),
+                       {
+                           Command::kInitializeAbr,
+                           Command::kQueryActiveConfiguration,
+                           Command::kSetConfigurationUnbootable,
+                           Command::kWriteAsset,
+                           Command::kBootManagerFlush,
+                       });
 }
 
 TEST_F(PaverTest, WriteZirconRWithABRSupported) {
@@ -194,7 +223,14 @@ TEST_F(PaverTest, WriteZirconRWithABRSupported) {
   paver_.Close();
   Wait();
   ASSERT_OK(paver_.exit_code());
-  ASSERT_EQ(fake_svc_.fake_paver().last_command(), Command::kWriteAsset);
+
+  ValidateCommandTrace(fake_svc_.fake_paver().GetCommandTrace(),
+                       {
+                           Command::kInitializeAbr,
+                           Command::kQueryActiveConfiguration,
+                           Command::kWriteAsset,
+                           Command::kBootManagerFlush,
+                       });
 }
 
 TEST_F(PaverTest, WriteVbMetaAWithABRSupported) {
@@ -207,7 +243,18 @@ TEST_F(PaverTest, WriteVbMetaAWithABRSupported) {
   paver_.Close();
   Wait();
   ASSERT_OK(paver_.exit_code());
-  ASSERT_EQ(fake_svc_.fake_paver().last_command(), Command::kSetConfigurationUnbootable);
+
+  ValidateCommandTrace(fake_svc_.fake_paver().GetCommandTrace(),
+                       {
+                           Command::kInitializeAbr,
+                           Command::kQueryActiveConfiguration,
+                           Command::kSetConfigurationUnbootable,
+                           Command::kWriteAsset,
+                           Command::kSetConfigurationActive,
+                           Command::kSetConfigurationUnbootable,
+                           Command::kDataSinkFlush,
+                           Command::kBootManagerFlush,
+                       });
   ASSERT_FALSE(fake_svc_.fake_paver().abr_data().slot_a.unbootable);
   ASSERT_TRUE(fake_svc_.fake_paver().abr_data().slot_a.active);
   ASSERT_TRUE(fake_svc_.fake_paver().abr_data().slot_b.unbootable);
@@ -223,7 +270,18 @@ TEST_F(PaverTest, WriteVbMetaBWithABRSupported) {
   paver_.Close();
   Wait();
   ASSERT_OK(paver_.exit_code());
-  ASSERT_EQ(fake_svc_.fake_paver().last_command(), Command::kSetConfigurationUnbootable);
+
+  ValidateCommandTrace(fake_svc_.fake_paver().GetCommandTrace(),
+                       {
+                           Command::kInitializeAbr,
+                           Command::kQueryActiveConfiguration,
+                           Command::kSetConfigurationUnbootable,
+                           Command::kWriteAsset,
+                           Command::kSetConfigurationActive,
+                           Command::kSetConfigurationUnbootable,
+                           Command::kDataSinkFlush,
+                           Command::kBootManagerFlush,
+                       });
   ASSERT_FALSE(fake_svc_.fake_paver().abr_data().slot_b.unbootable);
   ASSERT_TRUE(fake_svc_.fake_paver().abr_data().slot_b.active);
   ASSERT_TRUE(fake_svc_.fake_paver().abr_data().slot_a.unbootable);
@@ -239,13 +297,28 @@ TEST_F(PaverTest, WriteVbMetaRWithABRSupported) {
   paver_.Close();
   Wait();
   ASSERT_OK(paver_.exit_code());
-  ASSERT_EQ(fake_svc_.fake_paver().last_command(), Command::kWriteAsset);
+
+  ValidateCommandTrace(fake_svc_.fake_paver().GetCommandTrace(),
+                       {
+                           Command::kInitializeAbr,
+                           Command::kQueryActiveConfiguration,
+                           Command::kWriteAsset,
+                           Command::kBootManagerFlush,
+                       });
 }
 
 TEST_F(PaverTest, WriteZirconAWithABRSupportedTwice) {
   size_t size = sizeof(kFakeData);
   fake_svc_.fake_paver().set_abr_supported(true);
   fake_svc_.fake_paver().set_expected_payload_size(size);
+  std::vector<Command> expected_per_time = {
+      Command::kInitializeAbr,
+      Command::kQueryActiveConfiguration,
+      Command::kSetConfigurationUnbootable,
+      Command::kWriteAsset,
+      Command::kBootManagerFlush,
+  };
+  std::vector<Command> expected_accumulative;
   for (int i = 0; i < 2; i++) {
     ASSERT_EQ(paver_.OpenWrite(NB_ZIRCONA_FILENAME, size), TFTP_NO_ERROR);
     ASSERT_EQ(paver_.Write(kFakeData, &size, 0), TFTP_NO_ERROR);
@@ -253,7 +326,9 @@ TEST_F(PaverTest, WriteZirconAWithABRSupportedTwice) {
     paver_.Close();
     Wait();
     ASSERT_OK(paver_.exit_code());
-    ASSERT_EQ(fake_svc_.fake_paver().last_command(), Command::kWriteAsset);
+    expected_accumulative.insert(expected_accumulative.end(), expected_per_time.begin(),
+                                 expected_per_time.end());
+    ValidateCommandTrace(fake_svc_.fake_paver().GetCommandTrace(), expected_accumulative);
   }
 }
 
@@ -266,7 +341,7 @@ TEST_F(PaverTest, WriteSshAuth) {
   paver_.Close();
   Wait();
   ASSERT_OK(paver_.exit_code());
-  ASSERT_EQ(fake_svc_.fake_paver().last_command(), Command::kWriteDataFile);
+  ValidateCommandTrace(fake_svc_.fake_paver().GetCommandTrace(), {Command::kWriteDataFile});
 }
 
 TEST_F(PaverTest, WriteFvm) {
@@ -278,7 +353,7 @@ TEST_F(PaverTest, WriteFvm) {
   paver_.Close();
   Wait();
   ASSERT_OK(paver_.exit_code());
-  ASSERT_EQ(fake_svc_.fake_paver().last_command(), Command::kWriteVolumes);
+  ValidateCommandTrace(fake_svc_.fake_paver().GetCommandTrace(), {Command::kWriteVolumes});
 }
 
 TEST_F(PaverTest, WriteFvmManySmallWrites) {
@@ -293,7 +368,7 @@ TEST_F(PaverTest, WriteFvmManySmallWrites) {
   paver_.Close();
   Wait();
   ASSERT_OK(paver_.exit_code());
-  ASSERT_EQ(fake_svc_.fake_paver().last_command(), Command::kWriteVolumes);
+  ValidateCommandTrace(fake_svc_.fake_paver().GetCommandTrace(), {Command::kWriteVolumes});
 }
 
 TEST_F(PaverTest, InitializePartitionTables) {
@@ -310,7 +385,7 @@ TEST_F(PaverTest, InitializePartitionTables) {
   paver_.Close();
   Wait();
   ASSERT_OK(paver_.exit_code());
-  ASSERT_EQ(fake_svc_.fake_paver().last_command(), Command::kInitPartitionTables);
+  ValidateCommandTrace(fake_svc_.fake_paver().GetCommandTrace(), {Command::kInitPartitionTables});
 }
 
 TEST_F(PaverTest, WipePartitionTables) {
@@ -327,7 +402,7 @@ TEST_F(PaverTest, WipePartitionTables) {
   paver_.Close();
   Wait();
   ASSERT_OK(paver_.exit_code());
-  ASSERT_EQ(fake_svc_.fake_paver().last_command(), Command::kWipePartitionTables);
+  ValidateCommandTrace(fake_svc_.fake_paver().GetCommandTrace(), {Command::kWipePartitionTables});
 }
 
 TEST_F(PaverTest, WriteFirmwareNoType) {
@@ -340,7 +415,7 @@ TEST_F(PaverTest, WriteFirmwareNoType) {
   Wait();
   ASSERT_OK(paver_.exit_code());
 
-  EXPECT_EQ(fake_svc_.fake_paver().last_command(), Command::kWriteFirmware);
+  ValidateCommandTrace(fake_svc_.fake_paver().GetCommandTrace(), {Command::kWriteFirmware});
   EXPECT_EQ(fake_svc_.fake_paver().last_firmware_type(), "");
 }
 
@@ -356,7 +431,7 @@ TEST_F(PaverTest, WriteFirmwareSupportedType) {
   Wait();
   ASSERT_OK(paver_.exit_code());
 
-  EXPECT_EQ(fake_svc_.fake_paver().last_command(), Command::kWriteFirmware);
+  ValidateCommandTrace(fake_svc_.fake_paver().GetCommandTrace(), {Command::kWriteFirmware});
   EXPECT_EQ(fake_svc_.fake_paver().last_firmware_type(), "foo");
 }
 
@@ -373,7 +448,7 @@ TEST_F(PaverTest, WriteFirmwareUnsupportedType) {
   // This should still return OK so that we just skip unknown firmware types.
   ASSERT_OK(paver_.exit_code());
 
-  EXPECT_EQ(fake_svc_.fake_paver().last_command(), Command::kWriteFirmware);
+  ValidateCommandTrace(fake_svc_.fake_paver().GetCommandTrace(), {Command::kWriteFirmware});
   EXPECT_EQ(fake_svc_.fake_paver().last_firmware_type(), "bar");
 }
 
@@ -390,7 +465,7 @@ TEST_F(PaverTest, WriteFirmwareFailure) {
   // This should not return OK since an actual error occurred.
   ASSERT_NOT_OK(paver_.exit_code());
 
-  EXPECT_EQ(fake_svc_.fake_paver().last_command(), Command::kWriteFirmware);
+  ValidateCommandTrace(fake_svc_.fake_paver().GetCommandTrace(), {Command::kWriteFirmware});
 }
 
 TEST_F(PaverTest, WriteFirmwareTypeMaxLength) {
@@ -406,7 +481,7 @@ TEST_F(PaverTest, WriteFirmwareTypeMaxLength) {
   Wait();
   ASSERT_OK(paver_.exit_code());
 
-  EXPECT_EQ(fake_svc_.fake_paver().last_command(), Command::kWriteFirmware);
+  ValidateCommandTrace(fake_svc_.fake_paver().GetCommandTrace(), {Command::kWriteFirmware});
   EXPECT_EQ(fake_svc_.fake_paver().last_firmware_type(), type);
 }
 
@@ -421,7 +496,7 @@ TEST_F(PaverTest, WriteFirmwareTypeTooLong) {
   Wait();
 
   // Make sure the WriteFirmware() call was never made.
-  EXPECT_NE(fake_svc_.fake_paver().last_command(), Command::kWriteFirmware);
+  ValidateCommandTrace(fake_svc_.fake_paver().GetCommandTrace(), {});
 }
 
 TEST_F(PaverTest, BootloaderUsesWriteFirmware) {
@@ -435,7 +510,7 @@ TEST_F(PaverTest, BootloaderUsesWriteFirmware) {
   ASSERT_OK(paver_.exit_code());
 
   // Legacy BOOTLOADER file should use WriteFirmare() FIDL with empty type.
-  EXPECT_EQ(fake_svc_.fake_paver().last_command(), Command::kWriteFirmware);
+  ValidateCommandTrace(fake_svc_.fake_paver().GetCommandTrace(), {Command::kWriteFirmware});
   EXPECT_EQ(fake_svc_.fake_paver().last_firmware_type(), "");
 }
 

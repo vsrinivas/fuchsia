@@ -35,6 +35,8 @@ pub enum PaverEvent {
     QueryActiveConfiguration,
     SetConfigurationActive { configuration: paver::Configuration },
     SetConfigurationUnbootable { configuration: paver::Configuration },
+    BootManagerFlush,
+    DataSinkFlush,
 }
 
 pub struct MockPaverServiceBuilder {
@@ -166,6 +168,12 @@ impl MockPaverService {
                     self.events.lock().push(event);
                     responder.send(&mut result).expect("paver response to send");
                 }
+                paver::DataSinkRequest::Flush { responder } => {
+                    let event = PaverEvent::DataSinkFlush {};
+                    let status = (*self.call_hook)(&event);
+                    self.events.lock().push(event);
+                    responder.send(status.into_raw()).expect("paver response to send");
+                }
                 request => panic!("Unhandled method Paver::{}", request.method_name()),
             }
         }
@@ -208,6 +216,12 @@ impl MockPaverService {
                     responder,
                 } => {
                     let event = PaverEvent::SetConfigurationUnbootable { configuration };
+                    let status = (*self.call_hook)(&event);
+                    self.events.lock().push(event);
+                    responder.send(status.into_raw()).expect("paver response to send");
+                }
+                paver::BootManagerRequest::Flush { responder } => {
+                    let event = PaverEvent::BootManagerFlush;
                     let status = (*self.call_hook)(&event);
                     self.events.lock().push(event);
                     responder.send(status.into_raw()).expect("paver response to send");
