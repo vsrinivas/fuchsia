@@ -9,11 +9,11 @@
 #include <soc/synaptics/gpio.h>
 #include <soc/vs680/vs680-gpio.h>
 
-#include "luis.h"
+#include "vs680-evk.h"
 
-namespace board_luis {
+namespace board_vs680_evk {
 
-zx_status_t Luis::GpioInit() {
+zx_status_t Vs680Evk::GpioInit() {
   constexpr synaptics::PinmuxMetadata
       pinmux_metadata =
           {
@@ -556,4 +556,4 @@ zx_status_t Luis::GpioInit() {
   return ZX_OK;
 }
 
-}  // namespace board_luis
+}  // namespace board_vs680_evk

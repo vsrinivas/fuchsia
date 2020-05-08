@@ -120,8 +120,8 @@ fbl::String GetTestFilter() {
     return "*C18*";
   } else if (!strcmp(board_name, "nelson")) {
     return "*Nelson*";
-  } else if (!strcmp(board_name, "luis")) {
-    return "*Luis*";
+  } else if (!strcmp(board_name, "vs680-evk")) {
+    return "*Vs680Evk*";
   }
 
   return "Unknown";
@@ -547,9 +547,9 @@ TEST_F(DeviceEnumerationTest, As370Test) {
   EXPECT_EQ(zx_system_get_num_cpus(), 4);
 }
 
-TEST_F(DeviceEnumerationTest, LuisTest) {
+TEST_F(DeviceEnumerationTest, Vs680EvkTest) {
   static const char* kDevicePaths[] = {
-      "sys/platform/luis",
+      "sys/platform/vs680-evk",
       "sys/platform/14:02:1/as370-gpio",
       "sys/platform/14:02:b/vs680-sdhci/sdhci/sdmmc/sdmmc-mmc/user/block/part-000",
       "sys/platform/14:02:b/vs680-sdhci/sdhci/sdmmc/sdmmc-mmc/user/block/part-001",

@@ -9,11 +9,11 @@
 #include <soc/vs680/vs680-clk.h>
 #include <soc/vs680/vs680-hw.h>
 
-#include "luis.h"
+#include "vs680-evk.h"
 
-namespace board_luis {
+namespace board_vs680_evk {
 
-zx_status_t Luis::ClockInit() {
+zx_status_t Vs680Evk::ClockInit() {
   constexpr pbus_mmio_t clock_mmios[] = {
       {
           .base = vs680::kChipCtrlBase,
@@ -60,4 +60,4 @@ zx_status_t Luis::ClockInit() {
   return ZX_OK;
 }
 
-}  // namespace board_luis
+}  // namespace board_vs680_evk

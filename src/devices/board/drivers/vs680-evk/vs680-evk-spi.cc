@@ -12,9 +12,9 @@
 #include <fbl/algorithm.h>
 #include <soc/vs680/vs680-spi.h>
 
-#include "luis.h"
+#include "vs680-evk.h"
 
-namespace board_luis {
+namespace board_vs680_evk {
 
 static const pbus_mmio_t spi_mmios[] = {
     {
@@ -70,7 +70,7 @@ static pbus_dev_t spi_dev = []() {
   return dev;
 }();
 
-zx_status_t Luis::SpiInit() {
+zx_status_t Vs680Evk::SpiInit() {
   ddk::GpioImplProtocolClient gpio(parent());
   if (!gpio.is_valid()) {
     zxlogf(ERROR, "%s: Failed to create GPIO protocol client", __PRETTY_FUNCTION__);
@@ -96,4 +96,4 @@ zx_status_t Luis::SpiInit() {
   return ZX_OK;
 }
 
-}  // namespace board_luis
+}  // namespace board_vs680_evk

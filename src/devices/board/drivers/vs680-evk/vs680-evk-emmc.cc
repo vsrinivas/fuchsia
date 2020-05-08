@@ -12,9 +12,9 @@
 #include <soc/vs680/vs680-gpio.h>
 #include <soc/vs680/vs680-hw.h>
 
-#include "luis.h"
+#include "vs680-evk.h"
 
-namespace board_luis {
+namespace board_vs680_evk {
 
 constexpr guid_map_t guid_map[] = {
     {"rootfs_a", GUID_ZIRCON_A_VALUE},
@@ -23,7 +23,7 @@ constexpr guid_map_t guid_map[] = {
     {"cache", GUID_FVM_VALUE},
 };
 
-zx_status_t Luis::EmmcInit() {
+zx_status_t Vs680Evk::EmmcInit() {
   zx_status_t status;
 
   constexpr pbus_mmio_t emmc_mmios[] = {
@@ -77,4 +77,4 @@ zx_status_t Luis::EmmcInit() {
   return status;
 }
 
-}  // namespace board_luis
+}  // namespace board_vs680_evk

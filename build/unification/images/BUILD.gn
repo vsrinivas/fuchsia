@@ -576,7 +576,6 @@ aggregate_manifest("migrated-image") {
         "//src/devices/board/drivers/gauss:gauss-manifest",
         "//src/devices/board/drivers/hikey960:hi3660-i2c-test-manifest",
         "//src/devices/board/drivers/hikey960:hikey960-manifest",
-        "//src/devices/board/drivers/luis:luis-manifest",
         "//src/devices/board/drivers/msm8998:msm8998-manifest",
         "//src/devices/board/drivers/msm8x53-som:msm8x53-som-manifest",
         "//src/devices/board/drivers/mt8167s_ref:mt8167s_ref-manifest",
@@ -585,6 +584,7 @@ aggregate_manifest("migrated-image") {
         "//src/devices/board/drivers/sherlock:sherlock-manifest",
         "//src/devices/board/drivers/vim2:vim2-manifest",
         "//src/devices/board/drivers/vim3:vim3-manifest",
+        "//src/devices/board/drivers/vs680-evk:vs680-evk-manifest",
       ]
     }
   }

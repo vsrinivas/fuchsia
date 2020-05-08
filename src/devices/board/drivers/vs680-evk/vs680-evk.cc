@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "luis.h"
+#include "vs680-evk.h"
 
 #include <zircon/status.h>
 #include <zircon/threads.h>
@@ -12,9 +12,9 @@
 #include <ddk/platform-defs.h>
 #include <fbl/alloc_checker.h>
 
-namespace board_luis {
+namespace board_vs680_evk {
 
-zx_status_t Luis::Create(void* ctx, zx_device_t* parent) {
+zx_status_t Vs680Evk::Create(void* ctx, zx_device_t* parent) {
   ddk::PBusProtocolClient pbus(parent);
   if (!pbus.is_valid()) {
     zxlogf(ERROR, "%s: Failed to get ZX_PROTOCOL_PBUS", __func__);
@@ -29,12 +29,12 @@ zx_status_t Luis::Create(void* ctx, zx_device_t* parent) {
   }
 
   fbl::AllocChecker ac;
-  auto board = fbl::make_unique_checked<Luis>(&ac, parent, pbus, board_info);
+  auto board = fbl::make_unique_checked<Vs680Evk>(&ac, parent, pbus, board_info);
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
 
-  if ((status = board->DdkAdd("luis", DEVICE_ADD_NON_BINDABLE)) != ZX_OK) {
+  if ((status = board->DdkAdd("vs680-evk", DEVICE_ADD_NON_BINDABLE)) != ZX_OK) {
     zxlogf(ERROR, "%s: DdkAdd failed %s", __func__, zx_status_get_string(status));
     return status;
   }
@@ -47,13 +47,13 @@ zx_status_t Luis::Create(void* ctx, zx_device_t* parent) {
   return ZX_OK;
 }
 
-zx_status_t Luis::Start() {
-  auto cb = [](void* arg) -> int { return reinterpret_cast<Luis*>(arg)->Thread(); };
-  int rc = thrd_create_with_name(&thread_, cb, this, "luis-start-thread");
+zx_status_t Vs680Evk::Start() {
+  auto cb = [](void* arg) -> int { return reinterpret_cast<Vs680Evk*>(arg)->Thread(); };
+  int rc = thrd_create_with_name(&thread_, cb, this, "vs680-evk-start-thread");
   return thrd_status_to_zx_status(rc);
 }
 
-int Luis::Thread() {
+int Vs680Evk::Thread() {
   if (ClockInit() != ZX_OK) {
     zxlogf(ERROR, "%s: ClockInit() failed", __func__);
     return thrd_error;
@@ -97,19 +97,19 @@ int Luis::Thread() {
 
   return 0;
 }
-}  // namespace board_luis
+}  // namespace board_vs680_evk
 
 static constexpr zx_driver_ops_t driver_ops = []() {
   zx_driver_ops_t ops = {};
   ops.version = DRIVER_OPS_VERSION;
-  ops.bind = board_luis::Luis::Create;
+  ops.bind = board_vs680_evk::Vs680Evk::Create;
   return ops;
 }();
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(luis, driver_ops, "zircon", "0.1", 3)
+ZIRCON_DRIVER_BEGIN(vs680_evk, driver_ops, "zircon", "0.1", 3)
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PBUS),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GOOGLE),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_LUIS),
-ZIRCON_DRIVER_END(luis)
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_VS680_EVK),
+ZIRCON_DRIVER_END(vs680_evk)
 //clang-format on

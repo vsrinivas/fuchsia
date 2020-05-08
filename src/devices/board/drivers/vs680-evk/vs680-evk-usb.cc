@@ -18,9 +18,9 @@
 #include <soc/vs680/vs680-usb.h>
 #include <usb/dwc2/metadata.h>
 
-#include "luis.h"
+#include "vs680-evk.h"
 
-namespace board_luis {
+namespace board_vs680_evk {
 
 constexpr pbus_mmio_t dwc2_mmios[] = {
     {
@@ -149,7 +149,7 @@ static const device_fragment_t dwc2_fragments[] = {
     {countof(dwc2_phy_fragment), dwc2_phy_fragment},
 };
 
-zx_status_t Luis::UsbInit() {
+zx_status_t Vs680Evk::UsbInit() {
   auto status = pbus_.DeviceAdd(&usb_phy_dev);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: DeviceAdd failed %d", __func__, status);
@@ -189,4 +189,4 @@ zx_status_t Luis::UsbInit() {
   return ZX_OK;
 }
 
-}  // namespace board_luis
+}  // namespace board_vs680_evk

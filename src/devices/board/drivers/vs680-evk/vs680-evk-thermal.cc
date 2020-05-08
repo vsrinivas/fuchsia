@@ -10,11 +10,11 @@
 #include <soc/vs680/vs680-hw.h>
 #include <soc/vs680/vs680-power.h>
 
-#include "luis.h"
+#include "vs680-evk.h"
 
-namespace board_luis {
+namespace board_vs680_evk {
 
-zx_status_t Luis::ThermalInit() {
+zx_status_t Vs680Evk::ThermalInit() {
   constexpr pbus_mmio_t thermal_mmios[] = {
       {
           .base = vs680::kCpuWrpBase,
@@ -77,4 +77,4 @@ zx_status_t Luis::ThermalInit() {
   return ZX_OK;
 }
 
-}  // namespace board_luis
+}  // namespace board_vs680_evk

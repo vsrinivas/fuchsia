@@ -11,11 +11,11 @@
 #include <fbl/algorithm.h>
 #include <soc/vs680/vs680-i2c.h>
 
-#include "luis.h"
+#include "vs680-evk.h"
 
-namespace board_luis {
+namespace board_vs680_evk {
 
-zx_status_t Luis::I2cInit() {
+zx_status_t Vs680Evk::I2cInit() {
   ddk::GpioImplProtocolClient gpio(parent());
   if (!gpio.is_valid()) {
     zxlogf(ERROR, "%s: Failed to create GPIO protocol client", __func__);
@@ -108,4 +108,4 @@ zx_status_t Luis::I2cInit() {
   return ZX_OK;
 }
 
-}  // namespace board_luis
+}  // namespace board_vs680_evk

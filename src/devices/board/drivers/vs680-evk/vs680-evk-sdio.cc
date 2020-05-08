@@ -10,11 +10,11 @@
 #include <soc/vs680/vs680-clk.h>
 #include <soc/vs680/vs680-hw.h>
 
-#include "luis.h"
+#include "vs680-evk.h"
 
-namespace board_luis {
+namespace board_vs680_evk {
 
-zx_status_t Luis::SdioInit() {
+zx_status_t Vs680Evk::SdioInit() {
   constexpr zx_bind_inst_t root_match[] = {
       BI_MATCH(),
   };
@@ -99,4 +99,4 @@ zx_status_t Luis::SdioInit() {
   return status;
 }
 
-}  // namespace board_luis
+}  // namespace board_vs680_evk

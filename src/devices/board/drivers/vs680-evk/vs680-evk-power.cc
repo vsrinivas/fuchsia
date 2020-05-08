@@ -10,11 +10,11 @@
 #include <fbl/algorithm.h>
 #include <soc/vs680/vs680-power.h>
 
-#include "luis.h"
+#include "vs680-evk.h"
 
-namespace board_luis {
+namespace board_vs680_evk {
 
-zx_status_t Luis::PowerInit() {
+zx_status_t Vs680Evk::PowerInit() {
   constexpr zx_bind_inst_t root_match[] = {
       BI_MATCH(),
   };
@@ -100,4 +100,4 @@ zx_status_t Luis::PowerInit() {
   return ZX_OK;
 }
 
-}  // namespace board_luis
+}  // namespace board_vs680_evk

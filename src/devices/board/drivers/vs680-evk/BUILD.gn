@@ -5,7 +5,7 @@
 import("//build/config/fuchsia/rules.gni")
 import("//build/unification/images/migrated_manifest.gni")
 
-driver_module("luis") {
+driver_module("vs680-evk") {
   defines = [ "_ALL_SOURCE" ]
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
@@ -14,16 +14,16 @@ driver_module("luis") {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
   sources = [
-    "luis-clock.cc",
-    "luis-emmc.cc",
-    "luis-gpio.cc",
-    "luis-i2c.cc",
-    "luis-power.cc",
-    "luis-sdio.cc",
-    "luis-spi.cc",
-    "luis-thermal.cc",
-    "luis-usb.cc",
-    "luis.cc",
+    "vs680-evk-clock.cc",
+    "vs680-evk-emmc.cc",
+    "vs680-evk-gpio.cc",
+    "vs680-evk-i2c.cc",
+    "vs680-evk-power.cc",
+    "vs680-evk-sdio.cc",
+    "vs680-evk-spi.cc",
+    "vs680-evk-thermal.cc",
+    "vs680-evk-usb.cc",
+    "vs680-evk.cc",
   ]
   deps = [
     "//sdk/banjo/ddk.protocol.gpioimpl",
@@ -42,6 +42,6 @@ driver_module("luis") {
   ]
 }
 
-migrated_manifest("luis-manifest") {
-  deps = [ ":luis" ]
+migrated_manifest("vs680-evk-manifest") {
+  deps = [ ":vs680-evk" ]
 }
