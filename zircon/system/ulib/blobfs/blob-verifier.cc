@@ -104,7 +104,8 @@ zx_status_t BlobVerifier::Verify(const void* data, size_t data_size, size_t buff
     FS_TRACE_ERROR("blobfs: VerifyTailZeroed(%lu, %lu) failed: %s\n", data_size, buffer_size,
                    zx_status_get_string(status));
   }
-  metrics_->UpdateMerkleVerify(data_size, tree_verifier_.GetTreeLength(), ticker.End());
+  metrics_->verification_metrics().Increment(data_size, tree_verifier_.GetTreeLength(),
+                                             ticker.End());
   return status;
 }
 
@@ -125,7 +126,7 @@ zx_status_t BlobVerifier::VerifyPartial(const void* data, size_t length, size_t 
                      buffer_size, zx_status_get_string(status));
     }
   }
-  metrics_->UpdateMerkleVerify(length, tree_verifier_.GetTreeLength(), ticker.End());
+  metrics_->verification_metrics().Increment(length, tree_verifier_.GetTreeLength(), ticker.End());
   return status;
 }
 

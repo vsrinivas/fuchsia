@@ -7,10 +7,6 @@
 #ifndef ZIRCON_SYSTEM_ULIB_BLOBFS_METRICS_H_
 #define ZIRCON_SYSTEM_ULIB_BLOBFS_METRICS_H_
 
-#ifndef __Fuchsia__
-#error Fuchsia-only Header
-#endif
-
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/inspect/cpp/inspect.h>
@@ -24,11 +20,15 @@
 #include <fs/metrics/histograms.h>
 #include <fs/ticker.h>
 
+#include "read-metrics.h"
+#include "verification-metrics.h"
+
 namespace blobfs {
 
 // Alias for the LatencyEvent used in blobfs.
 using LatencyEvent = fs_metrics::CompositeLatencyEvent;
 
+// This class is not thread-safe except for the read_metrics() and verification_metrics() accessors.
 class BlobfsMetrics {
  public:
   ~BlobfsMetrics();
@@ -37,7 +37,7 @@ class BlobfsMetrics {
   //
   // TODO(ZX-1999): This is a stop-gap solution; long-term, this information
   // should be extracted from devices.
-  void Dump() const;
+  void Dump();
 
   // Begin collecting blobfs metrics. Metrics collection is not implicitly enabled
   // with the creation of a "BlobfsMetrics" object.
@@ -62,20 +62,6 @@ class BlobfsMetrics {
   // to the underlying storage driver.
   void UpdateWriteback(uint64_t size, const fs::Duration& duration);
 
-  // Updates aggregate information about reading blobs from storage
-  // since mounting.
-  void UpdateMerkleDiskRead(uint64_t size, const fs::Duration& duration);
-
-  // Updates aggregate information about decompressing blobs from storage
-  // since mounting.
-  void UpdateMerkleDecompress(uint64_t size_compressed, uint64_t size_uncompressed,
-                              const fs::Duration& read_duration,
-                              const fs::Duration& decompress_duration);
-
-  // Updates aggregate information about general verification info
-  // since mounting.
-  void UpdateMerkleVerify(uint64_t size_data, uint64_t size_merkle, const fs::Duration& duration);
-
   // Returns a new Latency event for the given event. This requires the event to be backed up by
   // an histogram in both cobalt metrics and Inspect.
   LatencyEvent NewLatencyEvent(fs_metrics::Event event) {
@@ -85,6 +71,12 @@ class BlobfsMetrics {
   // Increments Cobalt metrics tracking compression formats. Extracts the compression format from
   // the |inode| header, and increments the counter for that format with the inode's |blob_size|.
   void IncrementCompressionFormatMetric(const Inode& inode);
+
+  // Accessors for read and verification metrics. The metrics objects returned are thread-safe.
+  // Used to increment relevant metrics from the blobfs main thread and the user pager thread.
+  // The |BlobfsMetrics| class is not thread-safe except for these accessors.
+  ReadMetrics& read_metrics() { return read_metrics_; }
+  VerificationMetrics& verification_metrics() { return verification_metrics_; }
 
  private:
   // Returns the underlying collector of cobalt metrics.
@@ -116,23 +108,15 @@ class BlobfsMetrics {
 
   // LOOKUP STATS
 
-  // Total time waiting for reads from disk.
-  zx::ticks total_read_from_disk_time_ticks_ = {};
-  uint64_t bytes_read_from_disk_ = 0;
-
-  zx::ticks total_read_compressed_time_ticks_ = {};
-  zx::ticks total_decompress_time_ticks_ = {};
-  uint64_t bytes_compressed_read_from_disk_ = 0;
-  uint64_t bytes_decompressed_from_disk_ = 0;
-
   // Opened via "LookupBlob".
   uint64_t blobs_opened_ = 0;
   uint64_t blobs_opened_total_size_ = 0;
-  // Verified blob data (includes both blobs read and written).
-  uint64_t blobs_verified_ = 0;
-  uint64_t blobs_verified_total_size_data_ = 0;
-  uint64_t blobs_verified_total_size_merkle_ = 0;
-  zx::ticks total_verification_time_ticks_ = {};
+
+  // READ STATS
+  ReadMetrics read_metrics_;
+
+  // VERIFICATION STATS
+  VerificationMetrics verification_metrics_;
 
   // FVM STATS
   // TODO(smklein)

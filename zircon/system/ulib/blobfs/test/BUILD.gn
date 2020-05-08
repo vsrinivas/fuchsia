@@ -98,6 +98,7 @@ test("blobfs-unit") {
     "unit/format-test.cc",
     "unit/fsck-test.cc",
     "unit/get-allocated-regions-test.cc",
+    "unit/metrics-test.cc",
     "unit/node-populator-test.cc",
     "unit/node-reserver-test.cc",
     "unit/parser_test.cc",

@@ -45,8 +45,11 @@ source_set("private_headers") {
       "compression/zstd-seekable-blob-collection.h",
       "compression/zstd-seekable-blob.h",
       "iterator/node-populator.h",
+      "metrics.h",
       "pager/page-watcher.h",
       "pager/user-pager.h",
+      "read-metrics.h",
+      "verification-metrics.h",
     ]
   }
   public_configs = [ ":headers_config" ]
@@ -145,7 +148,9 @@ zx_library("blobfs") {
       "pager/page-watcher.cc",
       "pager/user-pager.cc",
       "query.cc",
+      "read-metrics.cc",
       "runner.cc",
+      "verification-metrics.cc",
     ]
     public_deps += [
       "//sdk/fidl/fuchsia.blobfs:fuchsia.blobfs_llcpp",

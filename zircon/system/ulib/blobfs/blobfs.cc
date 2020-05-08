@@ -840,7 +840,7 @@ zx_status_t Blobfs::PopulateTransferVmo(uint64_t offset, uint64_t length, UserPa
                    zx_status_get_string(status));
     return status;
   }
-  metrics_.UpdateMerkleDiskRead(block_count * kBlobfsBlockSize, ticker.End());
+  metrics_.read_metrics().IncrementDiskRead(block_count * kBlobfsBlockSize, ticker.End());
   return ZX_OK;
 }
 
