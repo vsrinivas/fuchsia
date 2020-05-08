@@ -7,8 +7,6 @@
 
 #include <fuchsia/feedback/cpp/fidl.h>
 
-#include <optional>
-
 #include "src/developer/feedback/feedback_data/annotations/types.h"
 
 namespace feedback {

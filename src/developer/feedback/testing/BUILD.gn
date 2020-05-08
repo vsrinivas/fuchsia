@@ -43,6 +43,7 @@ source_set("gpretty_printers") {
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/lib/syslog/cpp",
     "//src/developer/feedback/feedback_data/annotations:types",
+    "//src/developer/feedback/feedback_data/attachments:types",
     "//src/developer/feedback/utils:errors",
     "//src/developer/feedback/utils/cobalt",
     "//src/lib/fsl",

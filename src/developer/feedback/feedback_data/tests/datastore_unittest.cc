@@ -20,7 +20,7 @@
 #include <gtest/gtest.h>
 
 #include "src/developer/feedback/feedback_data/annotations/types.h"
-#include "src/developer/feedback/feedback_data/attachments/aliases.h"
+#include "src/developer/feedback/feedback_data/attachments/types.h"
 #include "src/developer/feedback/feedback_data/constants.h"
 #include "src/developer/feedback/feedback_data/device_id_provider.h"
 #include "src/developer/feedback/testing/cobalt_test_fixture.h"
@@ -412,7 +412,7 @@ TEST_F(DatastoreTest, GetAttachments_Inspect) {
   ::fit::result<Attachments> attachments = GetAttachments();
   ASSERT_TRUE(attachments.is_ok());
   EXPECT_THAT(attachments.take_value(),
-              ElementsAreArray({Pair(kAttachmentInspect, Eq("[\nfoo\n]"))}));
+              ElementsAreArray({Pair(kAttachmentInspect, AttachmentValue("[\nfoo\n]"))}));
 
   EXPECT_THAT(GetStaticAttachments(), IsEmpty());
 }
@@ -425,10 +425,12 @@ TEST_F(DatastoreTest, GetAttachments_PreviousSyslog) {
   ::fit::result<Attachments> attachments = GetAttachments();
   ASSERT_TRUE(attachments.is_ok());
   EXPECT_THAT(attachments.take_value(),
-              ElementsAreArray({Pair(kAttachmentLogSystemPrevious, Eq(previous_log_contents))}));
+              ElementsAreArray(
+                  {Pair(kAttachmentLogSystemPrevious, AttachmentValue(previous_log_contents))}));
 
   EXPECT_THAT(GetStaticAttachments(),
-              ElementsAreArray({Pair(kAttachmentLogSystemPrevious, Eq(previous_log_contents))}));
+              ElementsAreArray(
+                  {Pair(kAttachmentLogSystemPrevious, AttachmentValue(previous_log_contents))}));
 
   ASSERT_TRUE(files::DeletePath(kPreviousLogsFilePath, /*recursive=*/false));
   for (const auto& file : kCurrentLogsFilePaths) {
@@ -444,10 +446,12 @@ TEST_F(DatastoreTest, GetAttachments_PreviousSyslogAlreadyCached) {
   ::fit::result<Attachments> attachments = GetAttachments();
   ASSERT_TRUE(attachments.is_ok());
   EXPECT_THAT(attachments.take_value(),
-              ElementsAreArray({Pair(kAttachmentLogSystemPrevious, Eq(previous_log_contents))}));
+              ElementsAreArray(
+                  {Pair(kAttachmentLogSystemPrevious, AttachmentValue(previous_log_contents))}));
 
   EXPECT_THAT(GetStaticAttachments(),
-              ElementsAreArray({Pair(kAttachmentLogSystemPrevious, Eq(previous_log_contents))}));
+              ElementsAreArray(
+                  {Pair(kAttachmentLogSystemPrevious, AttachmentValue(previous_log_contents))}));
 
   ASSERT_TRUE(files::DeletePath(kPreviousLogsFilePath, /*recursive=*/false));
 }
@@ -464,8 +468,9 @@ TEST_F(DatastoreTest, GetAttachments_SysLog) {
   ::fit::result<Attachments> attachments = GetAttachments();
   ASSERT_TRUE(attachments.is_ok());
   EXPECT_THAT(attachments.take_value(),
-              ElementsAreArray({Pair(kAttachmentLogSystem,
-                                     Eq("[15604.000][07559][07687][foo] INFO: log message\n"))}));
+              ElementsAreArray(
+                  {Pair(kAttachmentLogSystem,
+                        AttachmentValue("[15604.000][07559][07687][foo] INFO: log message\n"))}));
 
   EXPECT_THAT(GetStaticAttachments(), IsEmpty());
 }
@@ -502,7 +507,13 @@ TEST_F(DatastoreTest, GetAttachments_CobaltLogsTimeouts) {
   SetUpLoggerServer(std::make_unique<stubs::LoggerBindsToLogListenerButNeverCalls>());
 
   ::fit::result<Attachments> attachments = GetAttachments();
-  ASSERT_TRUE(attachments.is_error());
+
+  ASSERT_TRUE(attachments.is_ok());
+  EXPECT_THAT(attachments.take_value(),
+              ElementsAreArray({
+                  Pair(kAttachmentInspect, AttachmentValue(Error::kTimeout)),
+                  Pair(kAttachmentLogSystem, AttachmentValue(Error::kTimeout)),
+              }));
 
   EXPECT_THAT(ReceivedCobaltEvents(), UnorderedElementsAreArray({
                                           cobalt::Event(cobalt::TimedOutData::kInspect),

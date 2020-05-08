@@ -70,7 +70,7 @@ source_set("config") {
 
   public_deps = [
     "//src/developer/feedback/feedback_data/annotations:types",
-    "//src/developer/feedback/feedback_data/attachments:aliases",
+    "//src/developer/feedback/feedback_data/attachments:types",
     "//zircon/public/lib/zx",
   ]
 
@@ -117,8 +117,8 @@ source_set("data_provider") {
     "//sdk/lib/syslog/cpp",
     "//src/developer/feedback/feedback_data/annotations:types",
     "//src/developer/feedback/feedback_data/annotations:utils",
-    "//src/developer/feedback/feedback_data/attachments:aliases",
     "//src/developer/feedback/feedback_data/attachments:attachment_providers",
+    "//src/developer/feedback/feedback_data/attachments:types",
     "//src/developer/feedback/feedback_data/attachments:utils",
     "//src/developer/feedback/utils:archive",
     "//src/developer/feedback/utils/fit",
@@ -138,7 +138,7 @@ source_set("datastore") {
   public_deps = [
     "//sdk/lib/sys/cpp",
     "//src/developer/feedback/feedback_data/annotations:types",
-    "//src/developer/feedback/feedback_data/attachments:aliases",
+    "//src/developer/feedback/feedback_data/attachments:types",
     "//src/developer/feedback/utils/cobalt",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fit",

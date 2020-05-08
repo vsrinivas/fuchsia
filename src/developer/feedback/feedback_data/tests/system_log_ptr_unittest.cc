@@ -16,10 +16,11 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "src/developer/feedback/feedback_data/attachments/aliases.h"
+#include "src/developer/feedback/feedback_data/attachments/types.h"
 #include "src/developer/feedback/testing/gpretty_printers.h"
 #include "src/developer/feedback/testing/stubs/logger.h"
 #include "src/developer/feedback/testing/unit_test_fixture.h"
+#include "src/developer/feedback/utils/errors.h"
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/logging.h"
 
@@ -79,8 +80,9 @@ TEST_F(CollectSystemLogTest, Succeed_BasicCase) {
 
   ASSERT_TRUE(result.is_ok());
   AttachmentValue logs = result.take_value();
-  EXPECT_STREQ(logs.c_str(),
-               R"([15604.000][07559][07687][] INFO: line 1
+
+  ASSERT_EQ(logs.State(), AttachmentValue::State::kComplete);
+  EXPECT_STREQ(logs.Value().c_str(), R"([15604.000][07559][07687][] INFO: line 1
 [15604.001][07559][07687][] WARN: line 2
 [15604.002][07559][07687][] ERROR: line 3
 [15604.003][07559][07687][] FATAL: line 4
@@ -104,8 +106,11 @@ TEST_F(CollectSystemLogTest, Succeed_LoggerUnbindsFromLogListenerAfterOneMessage
 
   ASSERT_TRUE(result.is_ok());
   AttachmentValue logs = result.take_value();
-  EXPECT_STREQ(logs.c_str(),
-               "[15604.000][07559][07687][] INFO: this line should appear in the partial logs\n");
+
+  EXPECT_EQ(logs,
+            AttachmentValue(
+                "[15604.000][07559][07687][] INFO: this line should appear in the partial logs\n",
+                Error::kConnectionError));
 }
 
 TEST_F(CollectSystemLogTest, Succeed_LogCollectionTimesOut) {
@@ -128,8 +133,11 @@ TEST_F(CollectSystemLogTest, Succeed_LogCollectionTimesOut) {
   // First, we check that the log collection terminated with partial logs after the timeout.
   ASSERT_TRUE(result.is_ok());
   AttachmentValue logs = result.take_value();
-  EXPECT_STREQ(logs.c_str(),
-               "[15604.000][07559][07687][] INFO: this line should appear in the partial logs\n");
+
+  EXPECT_EQ(logs,
+            AttachmentValue(
+                "[15604.000][07559][07687][] INFO: this line should appear in the partial logs\n",
+                Error::kTimeout));
   EXPECT_TRUE(did_timeout_);
 }
 
@@ -138,7 +146,8 @@ TEST_F(CollectSystemLogTest, Fail_EmptyLog) {
 
   ::fit::result<AttachmentValue> result = CollectSystemLog();
 
-  ASSERT_TRUE(result.is_error());
+  ASSERT_TRUE(result.is_ok());
+  EXPECT_EQ(result.value(), AttachmentValue(Error::kMissingValue));
 }
 
 TEST_F(CollectSystemLogTest, Fail_LoggerNotAvailable) {
@@ -146,7 +155,8 @@ TEST_F(CollectSystemLogTest, Fail_LoggerNotAvailable) {
 
   ::fit::result<AttachmentValue> result = CollectSystemLog();
 
-  ASSERT_TRUE(result.is_error());
+  ASSERT_TRUE(result.is_ok());
+  EXPECT_EQ(result.value(), AttachmentValue(Error::kConnectionError));
 }
 
 TEST_F(CollectSystemLogTest, Fail_LoggerClosesConnection) {
@@ -154,7 +164,8 @@ TEST_F(CollectSystemLogTest, Fail_LoggerClosesConnection) {
 
   ::fit::result<AttachmentValue> result = CollectSystemLog();
 
-  ASSERT_TRUE(result.is_error());
+  ASSERT_TRUE(result.is_ok());
+  EXPECT_EQ(result.value(), AttachmentValue(Error::kConnectionError));
 }
 
 TEST_F(CollectSystemLogTest, Fail_LoggerNeverBindsToLogListener) {
@@ -162,7 +173,8 @@ TEST_F(CollectSystemLogTest, Fail_LoggerNeverBindsToLogListener) {
 
   ::fit::result<AttachmentValue> result = CollectSystemLog();
 
-  ASSERT_TRUE(result.is_error());
+  ASSERT_TRUE(result.is_ok());
+  EXPECT_EQ(result.value(), AttachmentValue(Error::kConnectionError));
 }
 
 TEST_F(CollectSystemLogTest, Fail_LoggerNeverCallsLogManyBeforeDone) {
@@ -170,7 +182,8 @@ TEST_F(CollectSystemLogTest, Fail_LoggerNeverCallsLogManyBeforeDone) {
 
   ::fit::result<AttachmentValue> result = CollectSystemLog();
 
-  ASSERT_TRUE(result.is_error());
+  ASSERT_TRUE(result.is_ok());
+  EXPECT_EQ(result.value(), AttachmentValue(Error::kMissingValue));
 }
 
 TEST_F(CollectSystemLogTest, Fail_LogCollectionTimesOut) {
@@ -178,7 +191,8 @@ TEST_F(CollectSystemLogTest, Fail_LogCollectionTimesOut) {
 
   ::fit::result<AttachmentValue> result = CollectSystemLog();
 
-  ASSERT_TRUE(result.is_error());
+  ASSERT_TRUE(result.is_ok());
+  EXPECT_EQ(result.value(), AttachmentValue(Error::kTimeout));
 }
 
 class LogListenerTest : public UnitTestFixture {
@@ -200,11 +214,11 @@ TEST_F(LogListenerTest, Succeed_LoggerClosesConnectionAfterSuccessfulFlow) {
   // Since we are using a test loop with a fake clock, the actual duration doesn't matter so we can
   // set it arbitrary long.
   const zx::duration timeout = zx::sec(1);
-  ::fit::result<void> result;
+  ::fit::result<AttachmentValue> result;
   LogListener log_listener(dispatcher(), services());
   executor_.schedule_task(
       log_listener.CollectLogs(fit::Timeout(timeout))
-          .then([&result](const ::fit::result<void>& res) { result = std::move(res); }));
+          .then([&result](const ::fit::result<AttachmentValue>& res) { result = std::move(res); }));
   RunLoopFor(timeout);
 
   // First, we check we have had a successful flow.

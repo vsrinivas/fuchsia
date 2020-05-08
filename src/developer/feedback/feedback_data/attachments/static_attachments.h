@@ -5,7 +5,7 @@
 #ifndef SRC_DEVELOPER_FEEDBACK_FEEDBACK_DATA_ATTACHMENTS_STATIC_ATTACHMENTS_H_
 #define SRC_DEVELOPER_FEEDBACK_FEEDBACK_DATA_ATTACHMENTS_STATIC_ATTACHMENTS_H_
 
-#include "src/developer/feedback/feedback_data/attachments/aliases.h"
+#include "src/developer/feedback/feedback_data/attachments/types.h"
 
 namespace feedback {
 

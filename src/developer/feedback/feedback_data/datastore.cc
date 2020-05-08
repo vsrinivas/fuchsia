@@ -12,11 +12,11 @@
 #include "src/developer/feedback/feedback_data/annotations/annotation_provider_factory.h"
 #include "src/developer/feedback/feedback_data/annotations/static_annotations.h"
 #include "src/developer/feedback/feedback_data/annotations/types.h"
-#include "src/developer/feedback/feedback_data/attachments/aliases.h"
 #include "src/developer/feedback/feedback_data/attachments/inspect_ptr.h"
 #include "src/developer/feedback/feedback_data/attachments/kernel_log_ptr.h"
 #include "src/developer/feedback/feedback_data/attachments/static_attachments.h"
 #include "src/developer/feedback/feedback_data/attachments/system_log_ptr.h"
+#include "src/developer/feedback/feedback_data/attachments/types.h"
 #include "src/developer/feedback/feedback_data/constants.h"
 #include "src/developer/feedback/utils/cobalt/metrics.h"
 #include "src/lib/fxl/strings/string_printf.h"
@@ -133,7 +133,7 @@ Datastore::Datastore(async_dispatcher_t* dispatcher,
         for (auto& result : attachments) {
           if (result.is_ok()) {
             Attachment attachment = result.take_value();
-            ok_attachments[attachment.first] = attachment.second;
+            ok_attachments.insert({attachment.first, attachment.second});
           }
         }
 

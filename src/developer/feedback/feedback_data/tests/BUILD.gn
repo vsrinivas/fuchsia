@@ -250,7 +250,7 @@ executable("data_provider_unittest") {
     "//src/developer/feedback/feedback_data:data_provider",
     "//src/developer/feedback/feedback_data:device_id_provider",
     "//src/developer/feedback/feedback_data/annotations:types",
-    "//src/developer/feedback/feedback_data/attachments:aliases",
+    "//src/developer/feedback/feedback_data/attachments:types",
     "//src/developer/feedback/testing:cobalt_test_fixture",
     "//src/developer/feedback/testing:gmatchers",
     "//src/developer/feedback/testing:gpretty_printers",
@@ -296,7 +296,7 @@ executable("datastore_unittest") {
     "//src/developer/feedback/feedback_data:datastore",
     "//src/developer/feedback/feedback_data:device_id_provider",
     "//src/developer/feedback/feedback_data/annotations:types",
-    "//src/developer/feedback/feedback_data/attachments:aliases",
+    "//src/developer/feedback/feedback_data/attachments:types",
     "//src/developer/feedback/testing:cobalt_test_fixture",
     "//src/developer/feedback/testing:gmatchers",
     "//src/developer/feedback/testing:gtest_with_syslog_main",
@@ -413,11 +413,13 @@ executable("inspect_ptr_unittest") {
 
   deps = [
     "//sdk/lib/sys/cpp/testing:integration",
-    "//src/developer/feedback/feedback_data/attachments:aliases",
     "//src/developer/feedback/feedback_data/attachments:attachment_providers",
+    "//src/developer/feedback/feedback_data/attachments:types",
+    "//src/developer/feedback/testing:gpretty_printers",
     "//src/developer/feedback/testing:gtest_with_syslog_main",
     "//src/developer/feedback/testing:unit_test_fixture",
     "//src/developer/feedback/testing/stubs:inspect",
+    "//src/developer/feedback/utils:errors",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]
@@ -430,8 +432,9 @@ executable("kernel_log_ptr_integration_test") {
 
   deps = [
     "//sdk/lib/sys/cpp/testing:integration",
-    "//src/developer/feedback/feedback_data/attachments:aliases",
     "//src/developer/feedback/feedback_data/attachments:attachment_providers",
+    "//src/developer/feedback/feedback_data/attachments:types",
+    "//src/developer/feedback/utils:errors",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
@@ -454,6 +457,7 @@ executable("product_info_provider_unittest") {
     "//src/developer/feedback/testing:unit_test_fixture",
     "//src/developer/feedback/testing/stubs:cobalt",
     "//src/developer/feedback/testing/stubs:product_info_provider",
+    "//src/developer/feedback/utils:errors",
     "//src/lib/fxl",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
@@ -488,13 +492,14 @@ executable("system_log_ptr_unittest") {
 
   deps = [
     "//garnet/public/lib/fostr/fidl/fuchsia.mem",
-    "//src/developer/feedback/feedback_data/attachments:aliases",
     "//src/developer/feedback/feedback_data/attachments:attachment_providers",
+    "//src/developer/feedback/feedback_data/attachments:types",
     "//src/developer/feedback/testing:gmatchers",
     "//src/developer/feedback/testing:gpretty_printers",
     "//src/developer/feedback/testing:gtest_with_syslog_main",
     "//src/developer/feedback/testing:unit_test_fixture",
     "//src/developer/feedback/testing/stubs:logger",
+    "//src/developer/feedback/utils:errors",
     "//src/lib/fxl",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
@@ -509,13 +514,14 @@ executable("system_log_recorder_unittest") {
   sources = [ "system_log_recorder_unittest.cc" ]
 
   deps = [
-    "//src/developer/feedback/feedback_data/attachments:aliases",
+    "//src/developer/feedback/feedback_data/attachments:types",
     "//src/developer/feedback/feedback_data/system_log_recorder:src",
     "//src/developer/feedback/testing:gmatchers",
     "//src/developer/feedback/testing:gpretty_printers",
     "//src/developer/feedback/testing:gtest_with_syslog_main",
     "//src/developer/feedback/testing:unit_test_fixture",
     "//src/developer/feedback/testing/stubs:logger",
+    "//src/developer/feedback/utils:errors",
     "//src/developer/feedback/utils:files",
     "//src/lib/files",
     "//src/lib/fxl",

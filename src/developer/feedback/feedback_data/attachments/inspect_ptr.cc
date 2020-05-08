@@ -49,21 +49,22 @@ Inspect::Inspect(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDir
   // We wait on one way to finish the flow, joining whichever data has been collected.
   return archive_.WaitForDone(std::move(timeout))
       .then([this](::fit::result<void, Error>& result) -> ::fit::result<AttachmentValue> {
-        if (!result.is_ok()) {
-          FX_LOGS(WARNING)
-              << "Inspect data collection was interrupted - Inspect data may be partial or missing";
-        }
-
         if (inspect_data_.empty()) {
           FX_LOGS(WARNING) << "Empty Inspect data";
-          return ::fit::error();
+          AttachmentValue value = (result.is_ok()) ? AttachmentValue(Error::kMissingValue)
+                                                   : AttachmentValue(result.error());
+          return ::fit::ok(std::move(value));
         }
 
         std::string joined_data = "[\n";
         joined_data += fxl::JoinStrings(inspect_data_, ",\n");
         joined_data += "\n]";
 
-        return ::fit::ok(joined_data);
+        AttachmentValue value = (result.is_ok())
+                                    ? AttachmentValue(std::move(joined_data))
+                                    : AttachmentValue(std::move(joined_data), result.error());
+
+        return ::fit::ok(std::move(value));
       });
 }
 
@@ -74,7 +75,7 @@ void Inspect::SetUp() {
     }
 
     FX_PLOGS(ERROR, status) << "Lost connection to fuchsia.diagnostics.BatchIterator";
-    archive_.CompleteError(Error::kDefault);
+    archive_.CompleteError(Error::kConnectionError);
   });
 }
 
@@ -97,7 +98,9 @@ void Inspect::AppendNextInspectBatch() {
 
     if (result.is_err()) {
       FX_LOGS(ERROR) << "Failed to retrieve next Inspect batch: " << result.err();
-      archive_.CompleteError(Error::kDefault);
+      // TODO(51658): don't complete the flow on an error. The API says we should continue making
+      // calls instead.
+      archive_.CompleteError(Error::kBadValue);
       return;
     }
 

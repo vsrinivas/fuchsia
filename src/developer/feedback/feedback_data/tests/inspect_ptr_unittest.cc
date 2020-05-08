@@ -17,10 +17,12 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "src/developer/feedback/feedback_data/attachments/aliases.h"
+#include "src/developer/feedback/feedback_data/attachments/types.h"
+#include "src/developer/feedback/testing/gpretty_printers.h"
 #include "src/developer/feedback/testing/stubs/inspect_archive.h"
 #include "src/developer/feedback/testing/stubs/inspect_batch_iterator.h"
 #include "src/developer/feedback/testing/unit_test_fixture.h"
+#include "src/developer/feedback/utils/errors.h"
 
 namespace feedback {
 namespace {
@@ -44,14 +46,13 @@ class CollectInspectDataTest : public UnitTestFixture {
     ::fit::result<AttachmentValue> result;
     executor_.schedule_task(
         feedback::CollectInspectData(dispatcher(), services(),
-                                     fit::Timeout(timeout, /*action=*/[&] { did_timeout_ = true; }))
+                                     fit::Timeout(timeout, /*action=*/[] {}))
             .then([&result](::fit::result<AttachmentValue>& res) { result = std::move(res); }));
     RunLoopFor(timeout);
     return result;
   }
 
   async::Executor executor_;
-  bool did_timeout_ = false;
 
  private:
   std::unique_ptr<stubs::InspectArchiveBase> inspect_server_;
@@ -69,13 +70,12 @@ TEST_F(CollectInspectDataTest, Succeed_AllInspectData) {
   ASSERT_TRUE(result.is_ok());
 
   const AttachmentValue& inspect = result.value();
-  ASSERT_STREQ(inspect.c_str(), R"([
+  ASSERT_EQ(inspect.State(), AttachmentValue::State::kComplete);
+  ASSERT_STREQ(inspect.Value().c_str(), R"([
 foo1,
 foo2,
 bar1
 ])");
-
-  EXPECT_FALSE(did_timeout_);
 }
 
 TEST_F(CollectInspectDataTest, Succeed_PartialInspectData) {
@@ -87,22 +87,21 @@ TEST_F(CollectInspectDataTest, Succeed_PartialInspectData) {
   ASSERT_TRUE(result.is_ok());
 
   const AttachmentValue& inspect = result.value();
-  ASSERT_STREQ(inspect.c_str(), R"([
+  ASSERT_EQ(inspect.State(), AttachmentValue::State::kPartial);
+  EXPECT_STREQ(inspect.Value().c_str(), R"([
 foo1,
 foo2
 ])");
-
-  EXPECT_TRUE(did_timeout_);
+  EXPECT_EQ(inspect.Error(), Error::kTimeout);
 }
 
-TEST_F(CollectInspectDataTest, Fail_NoInspectData) {
+TEST_F(CollectInspectDataTest, Succeed_NoInspectData) {
   SetUpInspectServer(std::make_unique<stubs::InspectArchive>(
       std::make_unique<stubs::InspectBatchIterator>(std::vector<std::vector<std::string>>({{}}))));
 
   ::fit::result<AttachmentValue> result = CollectInspectData();
-  ASSERT_TRUE(result.is_error());
-
-  EXPECT_FALSE(did_timeout_);
+  ASSERT_TRUE(result.is_ok());
+  EXPECT_EQ(result.value(), AttachmentValue(Error::kMissingValue));
 }
 
 TEST_F(CollectInspectDataTest, Fail_BatchIteratorReturnsError) {
@@ -110,8 +109,9 @@ TEST_F(CollectInspectDataTest, Fail_BatchIteratorReturnsError) {
       std::make_unique<stubs::InspectBatchIteratorReturnsError>()));
 
   ::fit::result<AttachmentValue> result = CollectInspectData();
-  ASSERT_TRUE(result.is_error());
-  EXPECT_FALSE(did_timeout_);
+  ASSERT_TRUE(result.is_ok());
+
+  EXPECT_EQ(result.value(), AttachmentValue(Error::kBadValue));
 }
 
 TEST_F(CollectInspectDataTest, Fail_BatchIteratorNeverResponds) {
@@ -119,18 +119,16 @@ TEST_F(CollectInspectDataTest, Fail_BatchIteratorNeverResponds) {
       std::make_unique<stubs::InspectBatchIteratorNeverResponds>()));
 
   ::fit::result<AttachmentValue> result = CollectInspectData();
-  ASSERT_TRUE(result.is_error());
-
-  EXPECT_TRUE(did_timeout_);
+  ASSERT_TRUE(result.is_ok());
+  EXPECT_EQ(result.value(), AttachmentValue(Error::kTimeout));
 }
 
 TEST_F(CollectInspectDataTest, Fail_ArchiveClosesIteratorClosesConnection) {
   SetUpInspectServer(std::make_unique<stubs::InspectArchiveClosesIteratorConnection>());
 
   ::fit::result<AttachmentValue> result = CollectInspectData();
-  ASSERT_TRUE(result.is_error());
-
-  EXPECT_FALSE(did_timeout_);
+  ASSERT_TRUE(result.is_ok());
+  EXPECT_EQ(result.value(), AttachmentValue(Error::kConnectionError));
 }
 
 }  // namespace

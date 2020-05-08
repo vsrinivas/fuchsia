@@ -18,6 +18,7 @@
 #include <vector>
 
 #include "src/developer/feedback/utils/errors.h"
+#include "src/developer/feedback/utils/fit/promise.h"
 #include "src/developer/feedback/utils/log_format.h"
 #include "src/lib/fxl/logging.h"
 
@@ -28,29 +29,18 @@ namespace feedback {
                                                  fit::Timeout timeout) {
   std::unique_ptr<LogListener> log_listener = std::make_unique<LogListener>(dispatcher, services);
 
-  return log_listener->CollectLogs(std::move(timeout))
-      .then([log_listener = std::move(log_listener)](
-                const ::fit::result<void>& result) -> ::fit::result<AttachmentValue> {
-        if (!result.is_ok()) {
-          FX_LOGS(WARNING) << "System log collection was interrupted - "
-                              "logs may be partial or missing";
-        }
-
-        const std::string logs = log_listener->CurrentLogs();
-        if (logs.empty()) {
-          FX_LOGS(WARNING) << "Empty system log";
-          return ::fit::error();
-        }
-
-        return ::fit::ok(logs);
-      });
+  // We must store the promise in a variable due to the fact that the order of evaluation of
+  // function parameters is undefined.
+  auto logs = log_listener->CollectLogs(std::move(timeout));
+  return fit::ExtendArgsLifetimeBeyondPromise(/*promise=*/std::move(logs),
+                                              /*args=*/std::move(log_listener));
 }
 
 LogListener::LogListener(async_dispatcher_t* dispatcher,
                          std::shared_ptr<sys::ServiceDirectory> services)
     : binding_(this), logger_(dispatcher, services) {}
 
-::fit::promise<void> LogListener::CollectLogs(fit::Timeout timeout) {
+::fit::promise<AttachmentValue> LogListener::CollectLogs(fit::Timeout timeout) {
   ::fidl::InterfaceHandle<fuchsia::logger::LogListenerSafe> log_listener_h;
   binding_.Bind(log_listener_h.NewRequest());
   binding_.set_error_handler([this](zx_status_t status) {
@@ -58,8 +48,8 @@ LogListener::LogListener(async_dispatcher_t* dispatcher,
       return;
     }
 
-    FX_PLOGS(ERROR, status) << "LogListenerSafe error";
-    logger_.CompleteError(Error::kDefault);
+    FX_PLOGS(ERROR, status) << "Lost connection with fuchsia.logger.LogListenerSafe";
+    logger_.CompleteError(Error::kConnectionError);
   });
 
   // Resets |log_many_called_| for the new call to DumpLogs().
@@ -67,13 +57,21 @@ LogListener::LogListener(async_dispatcher_t* dispatcher,
   logger_->DumpLogsSafe(std::move(log_listener_h), /*options=*/nullptr);
 
   return logger_.WaitForDone(std::move(timeout))
-      .then([this](::fit::result<void, Error>& result) -> ::fit::result<void> {
+      .then([this](::fit::result<void, Error>& result) -> ::fit::result<AttachmentValue> {
         binding_.Close(ZX_OK);
-        if (result.is_ok()) {
-          return ::fit::ok();
-        } else {
-          return ::fit::error();
+
+        if (logs_.empty()) {
+          FX_LOGS(WARNING) << "Empty system log";
+          AttachmentValue value = (result.is_ok()) ? AttachmentValue(Error::kMissingValue)
+                                                   : AttachmentValue(result.error());
+          return ::fit::ok(std::move(value));
         }
+
+        AttachmentValue value = (result.is_ok())
+                                    ? AttachmentValue(std::move(logs_))
+                                    : AttachmentValue(std::move(logs_), result.error());
+
+        return ::fit::ok(std::move(value));
       });
 }
 

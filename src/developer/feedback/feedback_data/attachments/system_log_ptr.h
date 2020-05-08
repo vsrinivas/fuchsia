@@ -14,7 +14,7 @@
 #include <cinttypes>
 #include <vector>
 
-#include "src/developer/feedback/feedback_data/attachments/aliases.h"
+#include "src/developer/feedback/feedback_data/attachments/types.h"
 #include "src/developer/feedback/utils/fidl/oneshot_ptr.h"
 #include "src/developer/feedback/utils/fit/timeout.h"
 
@@ -37,10 +37,7 @@ class LogListener : public fuchsia::logger::LogListenerSafe {
                        std::shared_ptr<sys::ServiceDirectory> services);
 
   // Collects the logs and returns a promise to when the collection is done or the timeout over.
-  ::fit::promise<void> CollectLogs(fit::Timeout timeout);
-
-  // Returns the logs that have been collected so far.
-  std::string CurrentLogs() { return logs_; }
+  ::fit::promise<AttachmentValue> CollectLogs(fit::Timeout timeout);
 
  private:
   // |fuchsia::logger::LogListenerSafe|

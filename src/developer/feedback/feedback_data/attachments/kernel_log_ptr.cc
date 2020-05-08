@@ -55,16 +55,19 @@ BootLog::BootLog(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDir
 
     if (kernel_log.empty()) {
       FX_LOGS(ERROR) << "Empty kernel log";
-      log_ptr_.CompleteError(Error::kDefault);
+      log_ptr_.CompleteError(Error::kMissingValue);
       return;
     }
 
     log_ptr_.CompleteOk(kernel_log);
   });
 
-  return log_ptr_.WaitForDone(std::move(timeout)).or_else([](const Error& error) {
-    return ::fit::error();
-  });
+  return log_ptr_.WaitForDone(std::move(timeout))
+      .then([](const ::fit::result<std::string, Error>& result) {
+        AttachmentValue value =
+            (result.is_ok()) ? AttachmentValue(result.value()) : AttachmentValue(result.error());
+        return ::fit::ok(std::move(value));
+      });
 }
 
 }  // namespace feedback

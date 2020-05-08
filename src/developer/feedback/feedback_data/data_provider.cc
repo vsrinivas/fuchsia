@@ -18,12 +18,10 @@
 
 #include "src/developer/feedback/feedback_data/annotations/types.h"
 #include "src/developer/feedback/feedback_data/annotations/utils.h"
-#include "src/developer/feedback/feedback_data/attachments/aliases.h"
 #include "src/developer/feedback/feedback_data/attachments/screenshot_ptr.h"
+#include "src/developer/feedback/feedback_data/attachments/types.h"
 #include "src/developer/feedback/feedback_data/attachments/utils.h"
 #include "src/developer/feedback/feedback_data/image_conversion.h"
-#include "src/lib/fsl/vmo/sized_vmo.h"
-#include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace feedback {
@@ -50,27 +48,6 @@ DataProvider::DataProvider(async_dispatcher_t* dispatcher,
       datastore_(datastore),
       executor_(dispatcher_) {}
 
-namespace {
-
-std::vector<fuchsia::feedback::Attachment> ToAttachmentVector(const Attachments& attachments) {
-  std::vector<fuchsia::feedback::Attachment> vec;
-  for (const auto& [key, value] : attachments) {
-    fsl::SizedVmo vmo;
-    if (!fsl::VmoFromString(value, &vmo)) {
-      FX_LOGS(ERROR) << fxl::StringPrintf("Failed to convert attachment %s to VMO", key.c_str());
-      continue;
-    }
-
-    fuchsia::feedback::Attachment attachment;
-    attachment.key = key;
-    attachment.value = std::move(vmo).ToTransport();
-    vec.push_back(std::move(attachment));
-  }
-  return vec;
-}
-
-}  // namespace
-
 void DataProvider::GetData(GetDataCallback callback) {
   const uint64_t timer_id = cobalt_->StartTimer();
 
@@ -91,7 +68,7 @@ void DataProvider::GetData(GetDataCallback callback) {
 
             auto& attachments_or_error = std::get<1>(annotations_and_attachments);
             if (attachments_or_error.is_ok()) {
-              attachments = ToAttachmentVector(attachments_or_error.take_value());
+              attachments = ToFeedbackAttachmentVector(attachments_or_error.take_value());
             } else {
               FX_LOGS(WARNING) << "Failed to retrieve any attachments";
             }

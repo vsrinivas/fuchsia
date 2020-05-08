@@ -23,7 +23,7 @@
 
 #include "garnet/public/lib/fostr/fidl/fuchsia/math/formatting.h"
 #include "src/developer/feedback/feedback_data/annotations/types.h"
-#include "src/developer/feedback/feedback_data/attachments/aliases.h"
+#include "src/developer/feedback/feedback_data/attachments/types.h"
 #include "src/developer/feedback/feedback_data/constants.h"
 #include "src/developer/feedback/feedback_data/device_id_provider.h"
 #include "src/developer/feedback/testing/cobalt_test_fixture.h"

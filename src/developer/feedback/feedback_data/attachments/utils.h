@@ -9,7 +9,14 @@
 
 #include <vector>
 
+#include "src/developer/feedback/feedback_data/attachments/types.h"
+
 namespace feedback {
+
+// Each attachment in |attachments| that has a value will be converted into a
+// fuchshia::feedback::Attachment
+std::vector<fuchsia::feedback::Attachment> ToFeedbackAttachmentVector(
+    const Attachments& attachments);
 
 // Adds the |annotations| as an extra JSON attachment to |attachments|.
 void AddAnnotationsAsExtraAttachment(const std::vector<fuchsia::feedback::Annotation>& annotations,

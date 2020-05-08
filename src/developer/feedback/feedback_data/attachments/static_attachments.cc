@@ -7,10 +7,9 @@
 #include <lib/syslog/cpp/macros.h>
 
 #include <filesystem>
-#include <optional>
 #include <string>
 
-#include "src/developer/feedback/feedback_data/attachments/aliases.h"
+#include "src/developer/feedback/feedback_data/attachments/types.h"
 #include "src/developer/feedback/feedback_data/constants.h"
 #include "src/developer/feedback/utils/rotating_file_set.h"
 #include "src/lib/files/file.h"
@@ -19,18 +18,23 @@
 namespace feedback {
 namespace {
 
-std::optional<std::string> ReadStringFromFilepath(const std::string& filepath) {
+const std::set<AttachmentKey> kStaticAttachmentKeys = {
+    kAttachmentBuildSnapshot,
+    kAttachmentLogSystemPrevious,
+};
+
+AttachmentValue ReadStringFromFilepath(const std::string& filepath) {
   std::string content;
   if (!files::ReadFileToString(filepath, &content)) {
-    return std::nullopt;
+    return AttachmentValue(Error::kFileReadFailure);
   }
-  return content;
+  return AttachmentValue(content);
 }
 
-std::optional<AttachmentValue> ReadAttachmentValueFromFilepath(const AttachmentKey& key,
-                                                               const std::string& filepath) {
+AttachmentValue ReadAttachmentValueFromFilepath(const AttachmentKey& key,
+                                                const std::string& filepath) {
   const auto value = ReadStringFromFilepath(filepath);
-  if (!value.has_value()) {
+  if (!value.HasValue()) {
     FX_LOGS(WARNING) << "Failed to build attachment " << key;
   }
   return value;
@@ -51,7 +55,7 @@ void CreatePreviousLogsFile() {
   }
 }
 
-std::optional<AttachmentValue> BuildAttachmentValue(const AttachmentKey& key) {
+AttachmentValue BuildAttachmentValue(const AttachmentKey& key) {
   if (key == kAttachmentBuildSnapshot) {
     return ReadAttachmentValueFromFilepath(key, "/config/build-info/snapshot");
   } else if (key == kAttachmentLogSystemPrevious) {
@@ -68,18 +72,25 @@ std::optional<AttachmentValue> BuildAttachmentValue(const AttachmentKey& key) {
     return ReadAttachmentValueFromFilepath(key, kPreviousLogsFilePath);
   }
   // There are non-static attachments in the allowlist that we just skip here.
-  return std::nullopt;
+  FX_LOGS(FATAL) << "Invalid attachment key used: " << key;
+  return AttachmentValue(Error::kNotSet);
+}
+
+AttachmentKeys RestrictAllowlist(const AttachmentKeys& allowlist) {
+  AttachmentKeys intersection;
+  std::set_intersection(allowlist.begin(), allowlist.end(), kStaticAttachmentKeys.begin(),
+                        kStaticAttachmentKeys.end(),
+                        std::inserter(intersection, intersection.begin()));
+
+  return intersection;
 }
 
 }  // namespace
 
 Attachments GetStaticAttachments(const AttachmentKeys& allowlist) {
   Attachments attachments;
-  for (const auto& key : allowlist) {
-    const auto value = BuildAttachmentValue(key);
-    if (value.has_value()) {
-      attachments[key] = value.value();
-    }
+  for (const auto& key : RestrictAllowlist(allowlist)) {
+    attachments.insert({key, BuildAttachmentValue(key)});
   }
   return attachments;
 }

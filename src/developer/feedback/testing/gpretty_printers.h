@@ -15,6 +15,7 @@
 #include <ostream>
 
 #include "src/developer/feedback/feedback_data/annotations/types.h"
+#include "src/developer/feedback/feedback_data/attachments/types.h"
 #include "src/developer/feedback/utils/errors.h"
 #include "src/lib/fsl/vmo/strings.h"
 
@@ -49,6 +50,25 @@ void PrintTo(const AnnotationOr& value, std::ostream* os) {
     *os << "HAS VALUE : " << value.Value();
   } else {
     *os << "MISSING : " << ToString(value.Error());
+  }
+  *os << " }";
+  *os << fostr::Outdent;
+}
+
+void PrintTo(const AttachmentValue& value, std::ostream* os) {
+  *os << fostr::Indent;
+  *os << "{ ";
+  switch (value.State()) {
+    case AttachmentValue::State::kComplete:
+      *os << "VALUE : " << value.Value();
+      break;
+    case AttachmentValue::State::kPartial:
+      *os << "VALUE : " << value.Value();
+      *os << ", ERROR : " << ToString(value.Error());
+      break;
+    case AttachmentValue::State::kMissing:
+      *os << "ERROR : " << ToString(value.Error());
+      break;
   }
   *os << " }";
   *os << fostr::Outdent;

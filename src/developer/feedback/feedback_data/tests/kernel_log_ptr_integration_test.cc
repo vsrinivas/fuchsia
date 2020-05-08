@@ -18,8 +18,8 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "src/developer/feedback/feedback_data/attachments/aliases.h"
 #include "src/developer/feedback/feedback_data/attachments/kernel_log_ptr.h"
+#include "src/developer/feedback/feedback_data/attachments/types.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
@@ -34,9 +34,8 @@ class CollectKernelLogTest : public sys::testing::TestWithEnvironment {
 
   void SetUp() override { environment_services_ = sys::ServiceDirectory::CreateFromNamespace(); }
 
-  ::fit::result<AttachmentValue> GetKernelLog() {
+  ::fit::result<AttachmentValue> GetKernelLog(const zx::duration timeout = zx::sec(10)) {
     ::fit::result<AttachmentValue> result;
-    const zx::duration timeout(zx::sec(10));
     bool done = false;
     executor_.schedule_task(
         CollectKernelLog(dispatcher(), environment_services_, fit::Timeout(timeout))
@@ -73,7 +72,9 @@ TEST_F(CollectKernelLogTest, Succeed_BasicCase) {
   ::fit::result<AttachmentValue> result = GetKernelLog();
   ASSERT_TRUE(result.is_ok());
   AttachmentValue logs = result.take_value();
-  EXPECT_THAT(logs, testing::HasSubstr(output));
+
+  ASSERT_TRUE(logs.HasValue());
+  EXPECT_THAT(logs.Value(), testing::HasSubstr(output));
 }
 
 TEST_F(CollectKernelLogTest, Succeed_TwoRetrievals) {
@@ -86,24 +87,27 @@ TEST_F(CollectKernelLogTest, Succeed_TwoRetrievals) {
   ::fit::result<AttachmentValue> result = GetKernelLog();
   ASSERT_TRUE(result.is_ok());
   AttachmentValue logs = result.take_value();
-  EXPECT_THAT(logs, testing::HasSubstr(output));
+
+  ASSERT_TRUE(logs.HasValue());
+  EXPECT_THAT(logs.Value(), testing::HasSubstr(output));
 
   ::fit::result<AttachmentValue> second_result = GetKernelLog();
   ASSERT_TRUE(second_result.is_ok());
   AttachmentValue second_logs = second_result.take_value();
-  EXPECT_THAT(second_logs, testing::HasSubstr(output));
+
+  ASSERT_TRUE(second_logs.HasValue());
+  EXPECT_THAT(second_logs.Value(), testing::HasSubstr(output));
 }
 
 TEST_F(CollectKernelLogTest, Check_RecordsTimeout) {
-  bool did_timeout = false;
-
   // Set the timeout to 0 so kernel log collection always times out.
   const zx::duration timeout = zx::sec(0);
-  executor_.schedule_task(
-      CollectKernelLog(dispatcher(), environment_services_,
-                       fit::Timeout(timeout, /*action=*/[&] { did_timeout = true; })));
+  ::fit::result<AttachmentValue> result = GetKernelLog(timeout);
+  ASSERT_TRUE(result.is_ok());
+  AttachmentValue logs = result.take_value();
 
-  RunLoopUntil([&] { return did_timeout; });
+  ASSERT_EQ(logs.State(), AttachmentValue::State::kMissing);
+  EXPECT_THAT(logs, AttachmentValue(Error::kTimeout));
 }
 
 }  // namespace

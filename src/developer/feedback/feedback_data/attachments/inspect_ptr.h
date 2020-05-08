@@ -14,7 +14,7 @@
 #include <string>
 #include <vector>
 
-#include "src/developer/feedback/feedback_data/attachments/aliases.h"
+#include "src/developer/feedback/feedback_data/attachments/types.h"
 #include "src/developer/feedback/utils/fidl/oneshot_ptr.h"
 #include "src/developer/feedback/utils/fit/timeout.h"
 #include "src/lib/fxl/macros.h"

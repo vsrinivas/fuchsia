@@ -12,7 +12,7 @@
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/zx/debuglog.h>
 
-#include "src/developer/feedback/feedback_data/attachments/aliases.h"
+#include "src/developer/feedback/feedback_data/attachments/types.h"
 #include "src/developer/feedback/utils/fidl/oneshot_ptr.h"
 #include "src/developer/feedback/utils/fit/timeout.h"
 #include "src/lib/fxl/macros.h"
@@ -37,7 +37,7 @@ class BootLog {
   ::fit::promise<AttachmentValue> GetLog(fit::Timeout timeout);
 
  private:
-  fidl::OneShotPtr<fuchsia::boot::ReadOnlyLog, AttachmentValue> log_ptr_;
+  fidl::OneShotPtr<fuchsia::boot::ReadOnlyLog, std::string> log_ptr_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(BootLog);
 };
