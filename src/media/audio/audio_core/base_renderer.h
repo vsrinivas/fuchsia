@@ -24,7 +24,7 @@
 #include "src/media/audio/audio_core/route_graph.h"
 #include "src/media/audio/audio_core/usage_settings.h"
 #include "src/media/audio/audio_core/utils.h"
-#include "src/media/audio/lib/wav_writer/wav_writer.h"
+#include "src/media/audio/lib/wav/wav_writer.h"
 
 namespace media::audio {
 

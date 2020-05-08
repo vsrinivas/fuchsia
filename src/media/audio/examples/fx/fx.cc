@@ -35,7 +35,7 @@
 #include <fbl/algorithm.h>
 
 #include "src/lib/fsl/tasks/fd_waiter.h"
-#include "src/media/audio/lib/wav_writer/wav_writer.h"
+#include "src/media/audio/lib/wav/wav_writer.h"
 
 constexpr bool kWavWriterEnabled = false;
 

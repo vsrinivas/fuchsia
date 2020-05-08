@@ -11,7 +11,7 @@
 #include "src/media/audio/audio_core/audio_driver.h"
 #include "src/media/audio/audio_core/audio_output.h"
 #include "src/media/audio/audio_core/mixer/output_producer.h"
-#include "src/media/audio/lib/wav_writer/wav_writer.h"
+#include "src/media/audio/lib/wav/wav_writer.h"
 
 namespace media::audio {
 

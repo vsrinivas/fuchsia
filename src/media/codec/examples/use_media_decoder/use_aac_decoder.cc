@@ -12,7 +12,7 @@
 
 #include <thread>
 
-#include "src/media/audio/lib/wav_writer/wav_writer.h"
+#include "src/media/audio/lib/wav/wav_writer.h"
 #include "util.h"
 
 // Re. this example and threading:

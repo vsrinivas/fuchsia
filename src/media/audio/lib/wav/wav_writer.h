@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_MEDIA_AUDIO_LIB_WAV_WRITER_WAV_WRITER_H_
-#define SRC_MEDIA_AUDIO_LIB_WAV_WRITER_WAV_WRITER_H_
+#ifndef SRC_MEDIA_AUDIO_LIB_WAV_WAV_WRITER_H_
+#define SRC_MEDIA_AUDIO_LIB_WAV_WAV_WRITER_H_
 
 #include <fuchsia/media/cpp/fidl.h>
 #include <stdint.h>
@@ -85,4 +85,4 @@ class WavWriter<false> {
 }  // namespace audio
 }  // namespace media
 
-#endif  // SRC_MEDIA_AUDIO_LIB_WAV_WRITER_WAV_WRITER_H_
+#endif  // SRC_MEDIA_AUDIO_LIB_WAV_WAV_WRITER_H_

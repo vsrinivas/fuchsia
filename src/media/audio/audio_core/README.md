@@ -80,5 +80,37 @@ sent to the device.
 
 ## Input Pipelines
 
-There is no complex processing in AudioCapturers other than a simple mixer to
-merge multiple inputs.
+There is no complex processing in AudioCapturers other than a simple mixer.
+
+## Inspecting final output from the system mixer
+
+In development builds of the Fuchsia OS, the WavWriter can be used to examine
+the audio streams emitted by the system mixer (of course, this functionality is
+removed from official production builds where this might pose a media security
+or overall resource consumption risk).
+
+To enable the WavWriter support in the system audio mixer, change the bool
+(kWavWriterEnabled) found toward the top of driver_output.cc to 'true'. The
+Fuchsia system mixer produces a final mix output stream (potentially
+multi-channel) for every audio output device found. Thus, enabling the WavWriter
+will cause an audio file to be created for each output device.
+
+These files are created on the target (Fuchsia) device at location
+`/tmp/r/sys/<pkg>/wav_writer_N.wav`, where N is a unique integer for each output
+and `<pkg>` is the name of the `audio_core` package (such as
+`fuchsia.com:audio_core:0#meta:audio_core.cmx`). One can copy these files back
+to the host with: `fx scp <ip of fuchsia device>:/tmp/.../wav_writer_*.wav
+~/Desktop/` At this time, once audio playback begins on any device, the system
+audio mixer produces audio for ALL audio output devices (even if no client is
+playing audio to that device). The wave files for these devices will, naturally,
+contain silence.
+
+Additionally, at this time Fuchsia continues mixing (once it has started) to
+output devices indefinitely, even after all clients have closed. This will
+change in the future. Until then, however, the most effective way to use this
+tracing feature is to `killall audio_core` on the target, once playback is
+complete. (The _audio_core_ process restarts automatically when needed, so this
+is benign.) The mixer calls `UpdateHeader` to update the 'length' parameter in
+both RIFF Chunk and WAV header after every successive file write, so the files
+should be complete and usable even if you kill audio_core during audio playback
+(which means that `Close` is never called).

@@ -10,7 +10,7 @@
 #include <lib/sys/cpp/component_context.h>
 #include <lib/zx/clock.h>
 
-#include "src/media/audio/lib/wav_writer/wav_writer.h"
+#include "src/media/audio/lib/wav/wav_writer.h"
 
 namespace {
 constexpr float kUnityGainDb = 0.0f;

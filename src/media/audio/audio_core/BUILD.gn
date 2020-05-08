@@ -196,7 +196,7 @@ source_set("audio_core_lib") {
     "//src/media/audio/lib/clock",
     "//src/media/audio/lib/effects_loader",
     "//src/media/audio/lib/logging",
-    "//src/media/audio/lib/wav_writer:wav_writer",
+    "//src/media/audio/lib/wav",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fbl",

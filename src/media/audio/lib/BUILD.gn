@@ -8,7 +8,7 @@ group("lib") {
     "clock",
     "logging",
     "test",
-    "wav_writer",
+    "wav",
   ]
 }
 
@@ -17,6 +17,6 @@ group("tests") {
   deps = [
     "clock:tests",
     "effects_loader:tests",
-    "wav_writer:tests",
+    "wav:tests",
   ]
 }

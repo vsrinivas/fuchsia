@@ -31,7 +31,7 @@ executable("wav_rec_bin") {
     "//src/lib/fsl",
     "//src/media/audio/lib/clock",
     "//src/media/audio/lib/logging:cli",
-    "//src/media/audio/lib/wav_writer:wav_writer",
+    "//src/media/audio/lib/wav",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
   ]

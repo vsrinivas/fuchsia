@@ -40,7 +40,6 @@ source_set("frame_sink") {
   deps = [
     "//sdk/fidl/fuchsia.mediacodec",
     "//sdk/lib/ui/scenic/cpp",
-    "//src/media/audio/lib/wav_writer:wav_writer",
     "//src/media/lib/codec_impl:fourcc",
     "//src/media/lib/raw_video_writer:raw_video_writer",
   ]
