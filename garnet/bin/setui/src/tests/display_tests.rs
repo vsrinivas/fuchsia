@@ -7,7 +7,6 @@ use {
     crate::agent::restore_agent::RestoreAgent,
     crate::registry::device_storage::testing::*,
     crate::switchboard::base::{DisplayInfo, SettingType},
-    crate::tests::fakes::brightness_service::BrightnessService,
     crate::tests::fakes::service_registry::ServiceRegistry,
     crate::EnvironmentBuilder,
     anyhow::format_err,
@@ -123,9 +122,6 @@ async fn test_display_restore() {
 
 async fn validate_restore(manual_brightness: f32, auto_brightness: bool) {
     let service_registry = ServiceRegistry::create();
-    let brightness_service_handle = BrightnessService::create();
-    service_registry.lock().await.register_service(brightness_service_handle.clone());
-
     let storage_factory = InMemoryStorageFactory::create();
     {
         let store = storage_factory
@@ -139,22 +135,23 @@ async fn validate_restore(manual_brightness: f32, auto_brightness: bool) {
         assert!(store.lock().await.write(&info, false).await.is_ok());
     }
 
-    assert!(EnvironmentBuilder::new(storage_factory)
+    let env = EnvironmentBuilder::new(storage_factory)
         .service(Box::new(ServiceRegistry::serve(service_registry)))
         .agents(&[Arc::new(RestoreAgent::create)])
         .settings(&[SettingType::Display])
-        .spawn_nested(ENV_NAME)
+        .spawn_and_get_nested_environment(ENV_NAME)
         .await
-        .is_ok());
+        .ok();
+
+    assert!(env.is_some());
+
+    let display_proxy = env.unwrap().connect_to_service::<DisplayMarker>().unwrap();
+    let settings = display_proxy.watch().await.expect("watch completed").expect("watch successful");
 
     if auto_brightness {
-        let service_auto_brightness =
-            brightness_service_handle.lock().await.get_auto_brightness().lock().await.unwrap();
-        assert_eq!(service_auto_brightness, auto_brightness);
+        assert_eq!(settings.auto_brightness, Some(auto_brightness));
     } else {
-        let service_manual_brightness =
-            brightness_service_handle.lock().await.get_manual_brightness().lock().await.unwrap();
-        assert_eq!(service_manual_brightness, manual_brightness);
+        assert_eq!(settings.brightness_value, Some(manual_brightness));
     }
 }
 

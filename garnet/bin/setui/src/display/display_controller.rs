@@ -9,8 +9,7 @@ use crate::registry::setting_handler::persist::{
 };
 use crate::registry::setting_handler::{controller, ControllerError};
 use crate::switchboard::base::{
-    DisplayInfo, SettingRequest, SettingResponse, SettingResponseResult, SettingType,
-    SwitchboardError,
+    DisplayInfo, SettingRequest, SettingResponse, SettingResponseResult,
 };
 use async_trait::async_trait;
 
@@ -24,27 +23,13 @@ impl DeviceStorageCompatible for DisplayInfo {
 
 pub struct DisplayController {
     client: ClientProxy<DisplayInfo>,
-    brightness_service: fidl_fuchsia_ui_brightness::ControlProxy,
 }
 
 #[async_trait]
 impl data_controller::Create<DisplayInfo> for DisplayController {
     /// Creates the controller
     async fn create(client: ClientProxy<DisplayInfo>) -> Result<Self, ControllerError> {
-        if let Ok(brightness_service) = client
-            .get_service_context()
-            .await
-            .lock()
-            .await
-            .connect::<fidl_fuchsia_ui_brightness::ControlMarker>()
-            .await
-        {
-            return Ok(Self { client: client, brightness_service: brightness_service });
-        }
-
-        Err(ControllerError::InitFailure {
-            description: "could not connect to brightness service".to_string(),
-        })
+        Ok(Self { client })
     }
 }
 
@@ -57,20 +42,12 @@ impl controller::Handle for DisplayController {
                 // Load and set value
                 // TODO(fxb/35004): Listen to changes using hanging
                 // get as well
-                Some(
-                    set_brightness(
-                        self.client.read().await,
-                        &self.brightness_service,
-                        &self.client,
-                    )
-                    .await,
-                )
+                Some(store_brightness(self.client.read().await, &self.client).await)
             }
             SettingRequest::SetBrightness(brightness_value) => {
                 Some(
-                    set_brightness(
+                    store_brightness(
                         DisplayInfo::new(false /*auto_brightness_enabled*/, brightness_value),
-                        &self.brightness_service,
                         &self.client,
                     )
                     .await,
@@ -83,9 +60,8 @@ impl controller::Handle for DisplayController {
                     brightness_value = stored_value.manual_brightness_value;
                 }
                 Some(
-                    set_brightness(
+                    store_brightness(
                         DisplayInfo::new(auto_brightness_enabled, brightness_value),
-                        &self.brightness_service,
                         &self.client,
                     )
                     .await,
@@ -101,28 +77,11 @@ impl controller::Handle for DisplayController {
     async fn change_state(&mut self, _state: State) {}
 }
 
-async fn set_brightness(
+// This does not send the brightness value on anywhere, it simply stores it.
+// Ambient EQ will pick up the value and set it on the brightness manager.
+async fn store_brightness(
     info: DisplayInfo,
-    brightness_service: &fidl_fuchsia_ui_brightness::ControlProxy,
     client: &ClientProxy<DisplayInfo>,
 ) -> SettingResponseResult {
-    if let Err(e) = write(&client, info, false).await {
-        return Err(e);
-    }
-
-    let result = if info.auto_brightness {
-        brightness_service.set_auto_brightness()
-    } else {
-        brightness_service.set_manual_brightness(info.manual_brightness_value)
-    };
-
-    if result.is_ok() {
-        Ok(None)
-    } else {
-        Err(SwitchboardError::ExternalFailure {
-            setting_type: SettingType::Display,
-            dependency: "brightness_service".to_string(),
-            request: "set_brightness".to_string(),
-        })
-    }
+    write(&client, info, false).await
 }
