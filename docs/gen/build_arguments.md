@@ -1817,9 +1817,9 @@ From //build/unification/images/BUILD.gn:20
 * `sanitizer`: optimized for sanitizers (ASan, etc.)
 * `profile`: optimized for coverage/profile data collection
 
-**Current value (from the default):** `"none"`
+**Current value (from the default):** `"debug"`
 
-From //build/config/compiler.gni:34
+From //build/config/compiler.gni:33
 
 ### output_breakpad_syms
 Sets if we should output breakpad symbols for Fuchsia binaries.
@@ -2180,7 +2180,7 @@ appear when using this level.
 
 **Current value (from the default):** `2`
 
-From //build/config/compiler.gni:21
+From //build/config/compiler.gni:20
 
 ### syzkaller_dir
 Used by syz-ci to build with own syz-executor source.
