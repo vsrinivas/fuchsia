@@ -14,7 +14,6 @@
 
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
-#include <fbl/deleter.h>
 #include <fbl/intrusive_single_list.h>
 #include <fbl/mutex.h>
 #include <fbl/null_lock.h>
