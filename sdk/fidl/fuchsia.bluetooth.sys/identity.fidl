@@ -46,6 +46,7 @@ struct LeConnectionParameters {
 
 table LeData {
     /// The identity address of the peer.
+    [Deprecated = "Use fuchsia.bluetooth.sys/BondingData.address instead"]
     1: bt.Address address;
 
     /// The peer's preferred connection parameters, if known.
@@ -54,7 +55,15 @@ table LeData {
     /// Known GATT service UUIDs.
     3: vector<bt.Uuid> services;
 
-    /// The LE long-term key. Present if the link was encrypted.
+    /// The LE long-term key. Present if the link was encrypted. This field is superseded by the
+    /// `peer_ltk` and `local_ltk` fields. It is invalid for the `ltk` field to be present
+    /// simultaneously with the `peer_ltk` and `local_ltk` fields. In particular:
+    ///
+    ///   - LeData generated and notified by the Bluetooth system no longer populates this field.
+    ///   - LeData supplied by a client of the Bluetooth system (e.g.
+    ///     [`fuchsia.bluetooth.sys/Bootstrap`]) can continue to use this field but is encouraged to
+    ///     migrate to the new fields.
+    [Deprecated]
     4: Ltk ltk;
 
     /// Identity Resolving RemoteKey used to generate and resolve random addresses.
@@ -62,10 +71,29 @@ table LeData {
 
     /// Connection Signature Resolving RemoteKey used for data signing without encryption.
     6: PeerKey csrk;
+
+    /// LE long-term key used to encrypt a connection when the peer is in the LE
+    /// Peripheral role.
+    ///
+    /// In legacy pairing (`peer_ltk.security.secure_connections` is false),
+    /// this key corresponds to the key distributed by the peer. In Secure
+    /// Connections pairing there is only one LTK and `peer_ltk` is the same as
+    /// `local_ltk`.
+    7: Ltk peer_ltk;
+
+    /// LE long-term key used to encrypt a connection when the peer is in the LE
+    /// Central role.
+    ///
+    /// In legacy pairing (`local_ltk.security.secure_connections` is false),
+    /// this key corresponds to the key distributed by the local device. In Secure
+    /// Connections pairing there is only one LTK and `local_ltk` is the same as
+    /// `peer_ltk`.
+    8: Ltk local_ltk;
 };
 
 table BredrData {
     /// The public device address of the peer.
+    [Deprecated = "Use fuchsia.bluetooth.sys/BondingData.address instead"]
     1: bt.Address address;
 
     /// The peer's preferred piconet role. This is determined by role switch procedures. Paging and
@@ -97,6 +125,9 @@ table BondingData {
 
     /// Bonding data that is present when this peer is paired on the BR/EDR transport.
     5: BredrData bredr;
+
+    /// The identity address of the peer.
+    6: bt.Address address;
 };
 
 /// Represents persistent local host data.

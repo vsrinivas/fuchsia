@@ -352,6 +352,8 @@ impl From<LeData> for sys::LeData {
             ltk: src.ltk,
             irk: src.irk,
             csrk: src.csrk,
+            peer_ltk: None,
+            local_ltk: None,
         }
     }
 }
@@ -480,6 +482,7 @@ impl From<BondingData> for sys::BondingData {
             name: bd.name,
             le,
             bredr,
+            address: None,
         }
     }
 }
