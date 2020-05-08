@@ -24,6 +24,7 @@ driver_module("aml-gxl-gpio") {
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/mmio",
+    "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
   ]
 }

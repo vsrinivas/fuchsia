@@ -7,6 +7,7 @@
 
 #include <inttypes.h>
 #include <lib/mmio/mmio.h>
+#include <lib/zircon-internal/thread_annotations.h>
 
 #include <utility>
 
@@ -81,8 +82,7 @@ class AmlGxlGpio : public DeviceType, public ddk::GpioImplProtocol<AmlGxlGpio, d
   AmlGxlGpio(zx_device_t* parent, const pdev_protocol_t& pdev, ddk::MmioBuffer mmio_gpio,
              ddk::MmioBuffer mmio_gpio_a0, ddk::MmioBuffer mmio_interrupt,
              const AmlGpioBlock* gpio_blocks, const AmlGpioInterrupt* gpio_interrupt,
-             const AmlPinMuxBlock* pinmux_blocks, size_t block_count,
-             fbl::Array<fbl::Mutex> block_locks, fbl::Array<uint16_t> irq_info)
+             const AmlPinMuxBlock* pinmux_blocks, size_t block_count, fbl::Array<uint16_t> irq_info)
       : DeviceType(parent),
         pdev_(pdev),
         mmios_{std::move(mmio_gpio), std::move(mmio_gpio_a0)},
@@ -91,7 +91,6 @@ class AmlGxlGpio : public DeviceType, public ddk::GpioImplProtocol<AmlGxlGpio, d
         gpio_interrupt_(gpio_interrupt),
         pinmux_blocks_(pinmux_blocks),
         block_count_(block_count),
-        block_locks_(std::move(block_locks)),
         irq_info_(std::move(irq_info)),
         irq_status_(0) {}
 
@@ -102,38 +101,37 @@ class AmlGxlGpio : public DeviceType, public ddk::GpioImplProtocol<AmlGxlGpio, d
   // out_block and out_lock are owned by the AmlGxlGpio instance and should not be deleted by
   // callers.
   zx_status_t AmlPinToBlock(const uint32_t pin, const AmlGpioBlock** out_block,
-                            uint32_t* out_pin_index, fbl::Mutex** out_lock) const;
+                            uint32_t* out_pin_index) const;
 
   void Bind(const pbus_protocol_t& pbus);
 
-  inline uint32_t Read32GpioReg(int index, uint32_t offset) {
+  uint32_t Read32GpioReg(int index, uint32_t offset) TA_REQ(mmio_lock_) {
     return mmios_[index].Read32(offset << 2);
   }
 
-  inline void Write32GpioReg(int index, uint32_t offset, uint32_t value) {
+  void Write32GpioReg(int index, uint32_t offset, uint32_t value) TA_REQ(mmio_lock_) {
     mmios_[index].Write32(value, offset << 2);
   }
 
-  inline uint32_t Read32GpioInterruptReg(uint32_t offset) {
+  uint32_t Read32GpioInterruptReg(uint32_t offset) TA_REQ(mmio_lock_) {
     return mmio_interrupt_.Read32(offset << 2);
   }
 
-  inline void Write32GpioInterruptReg(uint32_t offset, uint32_t value) {
+  void Write32GpioInterruptReg(uint32_t offset, uint32_t value) TA_REQ(mmio_lock_) {
     mmio_interrupt_.Write32(value, offset << 2);
   }
 
   pdev_protocol_t pdev_;
-  ddk::MmioBuffer mmios_[2];  // separate MMIO for AO domain
-  ddk::MmioBuffer mmio_interrupt_;
+  fbl::Mutex mmio_lock_;
+  ddk::MmioBuffer mmios_[2] TA_GUARDED(mmio_lock_);  // separate MMIO for AO domain
+  ddk::MmioBuffer mmio_interrupt_ TA_GUARDED(mmio_lock_);
   const AmlGpioBlock* gpio_blocks_;
   const AmlGpioInterrupt* gpio_interrupt_;
   const AmlPinMuxBlock* pinmux_blocks_;
   size_t block_count_;
-  const fbl::Array<fbl::Mutex> block_locks_;
-  fbl::Mutex interrupt_lock_;
-  fbl::Mutex pinmux_lock_;
-  fbl::Array<uint16_t> irq_info_;
-  uint8_t irq_status_;
+  fbl::Mutex irq_lock_ TA_ACQ_BEFORE(mmio_lock_);
+  fbl::Array<uint16_t> irq_info_ TA_GUARDED(irq_lock_);
+  uint8_t irq_status_ TA_GUARDED(irq_lock_);
 };
 
 }  // namespace gpio

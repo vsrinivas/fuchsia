@@ -22,8 +22,6 @@
 namespace gpio {
 
 struct AmlGpioBlock {
-  fbl::Mutex block_lock;  // Protects the regions of the MMIO determined by the fields below
-
   uint32_t start_pin;
   uint32_t pin_block;
   uint32_t pin_count;
@@ -40,9 +38,6 @@ struct AmlGpioBlock {
 };
 
 struct AmlGpioInterrupt {
-  fbl::Mutex interrupt_lock;  // Protects content in fields below
-                              // and info_, irq_info_, irq_status_
-
   uint32_t pin_select_offset;
   uint32_t edge_polarity_offset;
   uint32_t filter_select_offset;
@@ -72,7 +67,7 @@ class AmlAxgGpio : public DeviceType, public ddk::GpioImplProtocol<AmlAxgGpio, d
   // for AmlAxgGpioTest
   explicit AmlAxgGpio(pdev_protocol_t* proto, ddk::MmioBuffer mmio_gpio,
                       ddk::MmioBuffer mmio_gpio_a0, ddk::MmioBuffer mmio_interrupt,
-                      AmlGpioBlock* gpio_blocks, AmlGpioInterrupt* gpio_interrupt,
+                      const AmlGpioBlock* gpio_blocks, const AmlGpioInterrupt* gpio_interrupt,
                       size_t block_count, pdev_device_info_t info, fbl::Array<uint16_t> irq_info)
       : DeviceType(nullptr),
         pdev_(proto),
@@ -87,9 +82,9 @@ class AmlAxgGpio : public DeviceType, public ddk::GpioImplProtocol<AmlAxgGpio, d
 
  private:
   explicit AmlAxgGpio(zx_device_t* parent, ddk::MmioBuffer mmio_gpio, ddk::MmioBuffer mmio_gpio_a0,
-                      ddk::MmioBuffer mmio_interrupt, AmlGpioBlock* gpio_blocks,
-                      AmlGpioInterrupt* gpio_interrupt, size_t block_count, pdev_device_info_t info,
-                      fbl::Array<uint16_t> irq_info)
+                      ddk::MmioBuffer mmio_interrupt, const AmlGpioBlock* gpio_blocks,
+                      const AmlGpioInterrupt* gpio_interrupt, size_t block_count,
+                      pdev_device_info_t info, fbl::Array<uint16_t> irq_info)
       : DeviceType(parent),
         pdev_(parent),
         mmios_{std::move(mmio_gpio), std::move(mmio_gpio_a0)},
@@ -101,19 +96,22 @@ class AmlAxgGpio : public DeviceType, public ddk::GpioImplProtocol<AmlAxgGpio, d
         irq_info_(std::move(irq_info)),
         irq_status_(0) {}
 
-  zx_status_t AmlPinToBlock(uint32_t pin, AmlGpioBlock** out_block, uint32_t* out_pin_index) const;
+  zx_status_t AmlPinToBlock(uint32_t pin, const AmlGpioBlock** out_block,
+                            uint32_t* out_pin_index) const;
 
   void Bind(const pbus_protocol_t& pbus);
 
   ddk::PDev pdev_;
-  std::array<ddk::MmioBuffer, 2> mmios_;  // separate MMIO for AO domain
-  ddk::MmioBuffer mmio_interrupt_;
-  AmlGpioBlock* gpio_blocks_;
-  AmlGpioInterrupt* gpio_interrupt_;
+  fbl::Mutex mmio_lock_;
+  std::array<ddk::MmioBuffer, 2> mmios_ TA_GUARDED(mmio_lock_);  // separate MMIO for AO domain
+  ddk::MmioBuffer mmio_interrupt_ TA_GUARDED(mmio_lock_);
+  const AmlGpioBlock* gpio_blocks_;
+  const AmlGpioInterrupt* gpio_interrupt_;
   size_t block_count_;
-  pdev_device_info_t info_ TA_GUARDED(gpio_interrupt_->interrupt_lock);
-  fbl::Array<uint16_t> irq_info_ TA_GUARDED(gpio_interrupt_->interrupt_lock);
-  uint8_t irq_status_ TA_GUARDED(gpio_interrupt_->interrupt_lock);
+  const pdev_device_info_t info_;
+  fbl::Mutex irq_lock_ TA_ACQ_BEFORE(mmio_lock_);  // Protects content in fields below
+  fbl::Array<uint16_t> irq_info_ TA_GUARDED(irq_lock_);
+  uint8_t irq_status_ TA_GUARDED(irq_lock_);
 };
 
 }  // namespace gpio

@@ -46,8 +46,8 @@ class FakeAmlAxgGpio : public AmlAxgGpio {
   static FakeAmlAxgGpio *Create(pdev_device_info info, ddk_mock::MockMmioRegRegion *mock_mmio_gpio,
                                 ddk_mock::MockMmioRegRegion *mock_mmio_gpio_a0,
                                 ddk_mock::MockMmioRegRegion *mock_mmio_interrupt) {
-    AmlGpioBlock *gpio_blocks;
-    AmlGpioInterrupt *gpio_interrupt;
+    const AmlGpioBlock *gpio_blocks;
+    const AmlGpioInterrupt *gpio_interrupt;
     size_t block_count;
 
     switch (info.pid) {
@@ -96,8 +96,8 @@ class FakeAmlAxgGpio : public AmlAxgGpio {
 
  private:
   explicit FakeAmlAxgGpio(ddk::MmioBuffer mock_mmio_gpio, ddk::MmioBuffer mock_mmio_gpio_a0,
-                          ddk::MmioBuffer mock_mmio_interrupt, AmlGpioBlock *gpio_blocks,
-                          AmlGpioInterrupt *gpio_interrupt, size_t block_count,
+                          ddk::MmioBuffer mock_mmio_interrupt, const AmlGpioBlock *gpio_blocks,
+                          const AmlGpioInterrupt *gpio_interrupt, size_t block_count,
                           pdev_device_info_t info, fbl::Array<uint16_t> irq_info)
       : AmlAxgGpio(&fake_proto, std::move(mock_mmio_gpio), std::move(mock_mmio_gpio_a0),
                    std::move(mock_mmio_interrupt), gpio_blocks, gpio_interrupt, block_count,

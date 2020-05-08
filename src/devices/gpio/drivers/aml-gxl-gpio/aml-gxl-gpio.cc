@@ -118,16 +118,9 @@ zx_status_t AmlGxlGpio::Create(zx_device_t* parent) {
     return ZX_ERR_NO_MEMORY;
   }
 
-  fbl::Array<fbl::Mutex> block_locks(new (&ac) fbl::Mutex[block_count], block_count);
-  if (!ac.check()) {
-    zxlogf(ERROR, "AmlGxlGpio::Create: block locks alloc failed");
-    return ZX_ERR_NO_MEMORY;
-  }
-
-  std::unique_ptr<AmlGxlGpio> device(
-      new (&ac) AmlGxlGpio(parent, pdev, std::move(mmio_gpio), std::move(mmio_gpio_a0),
-                           std::move(mmio_interrupt), gpio_blocks, gpio_interrupt, pinmux_blocks,
-                           block_count, std::move(block_locks), std::move(irq_info)));
+  std::unique_ptr<AmlGxlGpio> device(new (&ac) AmlGxlGpio(
+      parent, pdev, std::move(mmio_gpio), std::move(mmio_gpio_a0), std::move(mmio_interrupt),
+      gpio_blocks, gpio_interrupt, pinmux_blocks, block_count, std::move(irq_info)));
   if (!ac.check()) {
     zxlogf(ERROR, "AmlGxlGpio::Create: device object alloc failed");
     return ZX_ERR_NO_MEMORY;
@@ -155,7 +148,7 @@ void AmlGxlGpio::Bind(const pbus_protocol_t& pbus) {
 }
 
 zx_status_t AmlGxlGpio::AmlPinToBlock(const uint32_t pin, const AmlGpioBlock** out_block,
-                                      uint32_t* out_pin_index, fbl::Mutex** out_lock) const {
+                                      uint32_t* out_pin_index) const {
   ZX_DEBUG_ASSERT(out_block && out_pin_index);
 
   uint32_t block_index = pin / kPinsPerBlock;
@@ -170,7 +163,6 @@ zx_status_t AmlGxlGpio::AmlPinToBlock(const uint32_t pin, const AmlGpioBlock** o
   pin_index += block->output_shift;
   *out_block = block;
   *out_pin_index = pin_index;
-  *out_lock = &block_locks_[block_index];
   return ZX_OK;
 }
 
@@ -179,38 +171,39 @@ zx_status_t AmlGxlGpio::GpioImplConfigIn(uint32_t index, uint32_t flags) {
 
   const AmlGpioBlock* block;
   uint32_t pin_index;
-  fbl::Mutex* block_lock;
-  if ((status = AmlPinToBlock(index, &block, &pin_index, &block_lock)) != ZX_OK) {
+  if ((status = AmlPinToBlock(index, &block, &pin_index)) != ZX_OK) {
     zxlogf(ERROR, "AmGxlGpio::GpioImplConfigIn: pin not found %u", index);
     return status;
   }
 
   // Set the GPIO as IN or OUT
-  fbl::AutoLock al(block_lock);
-  uint32_t regval = Read32GpioReg(block->mmio_index, block->oen_offset);
-  // Set the GPIO as pull-up or pull-down
-  uint32_t pull_reg_val = Read32GpioReg(block->mmio_index, block->pull_offset);
-  uint32_t pull_en_reg_val = Read32GpioReg(block->mmio_index, block->pull_en_offset);
-  uint32_t pull_pin_index = pin_index;
-  if (block->output_write_shift) {
-    // Handling special case where output_offset is
-    // different for OEN/OUT/PU-PD for GPIOA0 block
-    pull_pin_index += block->output_write_shift;
-  }
-  if (flags & GPIO_NO_PULL) {
-    pull_en_reg_val &= ~(1 << pin_index);
-  } else {
-    if (flags & GPIO_PULL_UP) {
-      pull_reg_val |= (1 << pull_pin_index);
-    } else {
-      pull_reg_val &= ~(1 << pull_pin_index);
+  {
+    fbl::AutoLock al(&mmio_lock_);
+    uint32_t regval = Read32GpioReg(block->mmio_index, block->oen_offset);
+    // Set the GPIO as pull-up or pull-down
+    uint32_t pull_reg_val = Read32GpioReg(block->mmio_index, block->pull_offset);
+    uint32_t pull_en_reg_val = Read32GpioReg(block->mmio_index, block->pull_en_offset);
+    uint32_t pull_pin_index = pin_index;
+    if (block->output_write_shift) {
+      // Handling special case where output_offset is
+      // different for OEN/OUT/PU-PD for GPIOA0 block
+      pull_pin_index += block->output_write_shift;
     }
-    pull_en_reg_val |= (1 << pin_index);
+    if (flags & GPIO_NO_PULL) {
+      pull_en_reg_val &= ~(1 << pin_index);
+    } else {
+      if (flags & GPIO_PULL_UP) {
+        pull_reg_val |= (1 << pull_pin_index);
+      } else {
+        pull_reg_val &= ~(1 << pull_pin_index);
+      }
+      pull_en_reg_val |= (1 << pin_index);
+    }
+    Write32GpioReg(block->mmio_index, block->pull_offset, pull_reg_val);
+    Write32GpioReg(block->mmio_index, block->pull_en_offset, pull_en_reg_val);
+    regval |= (1 << pin_index);
+    Write32GpioReg(block->mmio_index, block->oen_offset, regval);
   }
-  Write32GpioReg(block->mmio_index, block->pull_offset, pull_reg_val);
-  Write32GpioReg(block->mmio_index, block->pull_en_offset, pull_en_reg_val);
-  regval |= (1 << pin_index);
-  Write32GpioReg(block->mmio_index, block->oen_offset, regval);
 
   return ZX_OK;
 }
@@ -220,28 +213,29 @@ zx_status_t AmlGxlGpio::GpioImplConfigOut(uint32_t index, uint8_t initial_value)
 
   const AmlGpioBlock* block;
   uint32_t pin_index;
-  fbl::Mutex* block_lock;
-  if ((status = AmlPinToBlock(index, &block, &pin_index, &block_lock)) != ZX_OK) {
+  if ((status = AmlPinToBlock(index, &block, &pin_index)) != ZX_OK) {
     zxlogf(ERROR, "AmlGxlGpio::GpioImplConfigOut: pin not found %u", index);
     return status;
   }
 
-  fbl::AutoLock al(block_lock);
+  {
+    fbl::AutoLock al(&mmio_lock_);
 
-  // Set value before configuring for output
-  uint32_t regval = Read32GpioReg(block->mmio_index, block->output_offset);
-  // output_write_shift is handling special case where output_offset is
-  // different for OEN/OUT for GPIOA0 block
-  if (initial_value) {
-    regval |= (1 << (pin_index + block->output_write_shift));
-  } else {
-    regval &= ~(1 << (pin_index + block->output_write_shift));
+    // Set value before configuring for output
+    uint32_t regval = Read32GpioReg(block->mmio_index, block->output_offset);
+    // output_write_shift is handling special case where output_offset is
+    // different for OEN/OUT for GPIOA0 block
+    if (initial_value) {
+      regval |= (1 << (pin_index + block->output_write_shift));
+    } else {
+      regval &= ~(1 << (pin_index + block->output_write_shift));
+    }
+    Write32GpioReg(block->mmio_index, block->output_offset, regval);
+
+    regval = Read32GpioReg(block->mmio_index, block->oen_offset);
+    regval &= ~(1 << pin_index);
+    Write32GpioReg(block->mmio_index, block->oen_offset, regval);
   }
-  Write32GpioReg(block->mmio_index, block->output_offset, regval);
-
-  regval = Read32GpioReg(block->mmio_index, block->oen_offset);
-  regval &= ~(1 << pin_index);
-  Write32GpioReg(block->mmio_index, block->oen_offset, regval);
 
   return ZX_OK;
 }
@@ -260,21 +254,23 @@ zx_status_t AmlGxlGpio::GpioImplSetAltFunction(uint32_t pin, uint64_t function) 
   const AmlPinMux* mux = &block->mux[pin_index];
 
   const AmlGpioBlock* gpio_block = &gpio_blocks_[block_index];
-  fbl::AutoLock al(&pinmux_lock_);
 
-  for (uint64_t i = 0; i < kAltFunctionMax; i++) {
-    uint32_t reg_index = mux->regs[i];
+  {
+    fbl::AutoLock al(&mmio_lock_);
+    for (uint64_t i = 0; i < kAltFunctionMax; i++) {
+      uint32_t reg_index = mux->regs[i];
 
-    if (reg_index) {
-      uint32_t mask = (1 << mux->bits[i]);
-      uint32_t regval = Read32GpioReg(gpio_block->mmio_index, reg_index);
+      if (reg_index) {
+        uint32_t mask = (1 << mux->bits[i]);
+        uint32_t regval = Read32GpioReg(gpio_block->mmio_index, reg_index);
 
-      if (i == function - 1) {
-        regval |= mask;
-      } else {
-        regval &= ~mask;
+        if (i == function - 1) {
+          regval |= mask;
+        } else {
+          regval &= ~mask;
+        }
+        Write32GpioReg(gpio_block->mmio_index, reg_index, regval);
       }
-      Write32GpioReg(gpio_block->mmio_index, reg_index, regval);
     }
   }
 
@@ -286,19 +282,18 @@ zx_status_t AmlGxlGpio::GpioImplRead(uint32_t pin, uint8_t* out_value) {
 
   const AmlGpioBlock* block;
   uint32_t pin_index;
-  fbl::Mutex* block_lock;
-  if ((status = AmlPinToBlock(pin, &block, &pin_index, &block_lock)) != ZX_OK) {
+  if ((status = AmlPinToBlock(pin, &block, &pin_index)) != ZX_OK) {
     zxlogf(ERROR, "AmGxlGpio::GpioImplRead: pin not found %u", pin);
     return status;
   }
 
+  uint32_t regval = 0;
+  {
+    fbl::AutoLock al(&mmio_lock_);
+    regval = Read32GpioReg(block->mmio_index, block->input_offset);
+  }
+
   const uint32_t readmask = 1 << pin_index;
-  block_lock->Acquire();
-
-  const uint32_t regval = Read32GpioReg(block->mmio_index, block->input_offset);
-
-  block_lock->Release();
-
   if (regval & readmask) {
     *out_value = 1;
   } else {
@@ -313,8 +308,7 @@ zx_status_t AmlGxlGpio::GpioImplWrite(uint32_t pin, uint8_t value) {
 
   const AmlGpioBlock* block;
   uint32_t pin_index;
-  fbl::Mutex* block_lock;
-  if ((status = AmlPinToBlock(pin, &block, &pin_index, &block_lock)) != ZX_OK) {
+  if ((status = AmlPinToBlock(pin, &block, &pin_index)) != ZX_OK) {
     zxlogf(ERROR, "AmlGxlGpio::GpioImplWrite: pin not found %u", pin);
     return status;
   }
@@ -325,15 +319,16 @@ zx_status_t AmlGxlGpio::GpioImplWrite(uint32_t pin, uint8_t value) {
     pin_index += block->output_write_shift;
   }
 
-  fbl::AutoLock al(block_lock);
-
-  uint32_t regval = Read32GpioReg(block->mmio_index, block->output_offset);
-  if (value) {
-    regval |= (1 << pin_index);
-  } else {
-    regval &= ~(1 << pin_index);
+  {
+    fbl::AutoLock al(&mmio_lock_);
+    uint32_t regval = Read32GpioReg(block->mmio_index, block->output_offset);
+    if (value) {
+      regval |= (1 << pin_index);
+    } else {
+      regval &= ~(1 << pin_index);
+    }
+    Write32GpioReg(block->mmio_index, block->output_offset, regval);
   }
-  Write32GpioReg(block->mmio_index, block->output_offset, regval);
 
   return ZX_OK;
 }
@@ -343,7 +338,7 @@ zx_status_t AmlGxlGpio::GpioImplGetInterrupt(uint32_t pin, uint32_t flags, zx::i
     return ZX_ERR_INVALID_ARGS;
   }
 
-  fbl::AutoLock al(&interrupt_lock_);
+  fbl::AutoLock al(&irq_lock_);
 
   uint32_t index = GetUnusedIrqIndex(irq_status_);
   if (index > irq_info_.size()) {
@@ -362,8 +357,7 @@ zx_status_t AmlGxlGpio::GpioImplGetInterrupt(uint32_t pin, uint32_t flags, zx::i
   zx_status_t status;
   const AmlGpioBlock* block;
   uint32_t pin_index;
-  fbl::Mutex* block_lock;
-  if ((status = AmlPinToBlock(pin, &block, &pin_index, &block_lock)) != ZX_OK) {
+  if ((status = AmlPinToBlock(pin, &block, &pin_index)) != ZX_OK) {
     zxlogf(ERROR, "AmlGxlGpio::GpioImplGetInterrupt: pin not found %u", pin);
     return status;
   }
@@ -376,43 +370,46 @@ zx_status_t AmlGxlGpio::GpioImplGetInterrupt(uint32_t pin, uint32_t flags, zx::i
     flags_ = ZX_INTERRUPT_MODE_LEVEL_HIGH;
   }
 
-  // Configure GPIO Interrupt EDGE and Polarity
-  uint32_t mode_reg_val = Read32GpioInterruptReg(gpio_interrupt_->edge_polarity_offset);
+  {
+    fbl::AutoLock al(&mmio_lock_);
+    // Configure GPIO Interrupt EDGE and Polarity
+    uint32_t mode_reg_val = Read32GpioInterruptReg(gpio_interrupt_->edge_polarity_offset);
 
-  switch (flags & ZX_INTERRUPT_MODE_MASK) {
-    case ZX_INTERRUPT_MODE_EDGE_LOW:
-      mode_reg_val = mode_reg_val | (1 << index);
-      mode_reg_val = mode_reg_val | ((1 << index) << kGpioInterruptPolarityShift);
-      break;
-    case ZX_INTERRUPT_MODE_EDGE_HIGH:
-      mode_reg_val = mode_reg_val | (1 << index);
-      mode_reg_val = mode_reg_val & ~((1 << index) << kGpioInterruptPolarityShift);
-      break;
-    case ZX_INTERRUPT_MODE_LEVEL_LOW:
-      mode_reg_val = mode_reg_val & ~(1 << index);
-      mode_reg_val = mode_reg_val | ((1 << index) << kGpioInterruptPolarityShift);
-      break;
-    case ZX_INTERRUPT_MODE_LEVEL_HIGH:
-      mode_reg_val = mode_reg_val & ~(1 << index);
-      mode_reg_val = mode_reg_val & ~((1 << index) << kGpioInterruptPolarityShift);
-      break;
-    default:
-      return ZX_ERR_INVALID_ARGS;
+    switch (flags & ZX_INTERRUPT_MODE_MASK) {
+      case ZX_INTERRUPT_MODE_EDGE_LOW:
+        mode_reg_val = mode_reg_val | (1 << index);
+        mode_reg_val = mode_reg_val | ((1 << index) << kGpioInterruptPolarityShift);
+        break;
+      case ZX_INTERRUPT_MODE_EDGE_HIGH:
+        mode_reg_val = mode_reg_val | (1 << index);
+        mode_reg_val = mode_reg_val & ~((1 << index) << kGpioInterruptPolarityShift);
+        break;
+      case ZX_INTERRUPT_MODE_LEVEL_LOW:
+        mode_reg_val = mode_reg_val & ~(1 << index);
+        mode_reg_val = mode_reg_val | ((1 << index) << kGpioInterruptPolarityShift);
+        break;
+      case ZX_INTERRUPT_MODE_LEVEL_HIGH:
+        mode_reg_val = mode_reg_val & ~(1 << index);
+        mode_reg_val = mode_reg_val & ~((1 << index) << kGpioInterruptPolarityShift);
+        break;
+      default:
+        return ZX_ERR_INVALID_ARGS;
+    }
+    Write32GpioInterruptReg(gpio_interrupt_->edge_polarity_offset, mode_reg_val);
+
+    // Configure Interrupt Select Filter
+    uint32_t regval = Read32GpioInterruptReg(gpio_interrupt_->filter_select_offset);
+    Write32GpioInterruptReg(gpio_interrupt_->filter_select_offset,
+                            regval | (0x7 << (index * kBitsPerFilterSelect)));
+
+    // Configure GPIO interrupt
+    const uint32_t pin_select_bit = index * kBitsPerGpioInterrupt;
+    const uint32_t pin_select_offset = gpio_interrupt_->pin_select_offset + (pin_select_bit / 32);
+    const uint32_t pin_select_index = pin_select_bit % 32;
+    // Select GPIO IRQ(index) and program it to the requested GPIO PIN
+    mmio_interrupt_.ModifyBits((pin % kPinsPerBlock) + block->pin_start, pin_select_index,
+                               kBitsPerGpioInterrupt, pin_select_offset * sizeof(uint32_t));
   }
-  Write32GpioInterruptReg(gpio_interrupt_->edge_polarity_offset, mode_reg_val);
-
-  // Configure Interrupt Select Filter
-  uint32_t regval = Read32GpioInterruptReg(gpio_interrupt_->filter_select_offset);
-  Write32GpioInterruptReg(gpio_interrupt_->filter_select_offset,
-                          regval | (0x7 << (index * kBitsPerFilterSelect)));
-
-  // Configure GPIO interrupt
-  const uint32_t pin_select_bit = index * kBitsPerGpioInterrupt;
-  const uint32_t pin_select_offset = gpio_interrupt_->pin_select_offset + (pin_select_bit / 32);
-  const uint32_t pin_select_index = pin_select_bit % 32;
-  // Select GPIO IRQ(index) and program it to the requested GPIO PIN
-  mmio_interrupt_.ModifyBits((pin % kPinsPerBlock) + block->pin_start, pin_select_index,
-                             kBitsPerGpioInterrupt, pin_select_offset * sizeof(uint32_t));
 
   // Create Interrupt Object
   if ((status = pdev_get_interrupt(&pdev_, index, flags_, out_irq->reset_and_get_address())) !=
@@ -428,7 +425,7 @@ zx_status_t AmlGxlGpio::GpioImplGetInterrupt(uint32_t pin, uint32_t flags, zx::i
 }
 
 zx_status_t AmlGxlGpio::GpioImplReleaseInterrupt(uint32_t pin) {
-  fbl::AutoLock al(&interrupt_lock_);
+  fbl::AutoLock al(&irq_lock_);
 
   for (uint32_t i = 0; i < irq_info_.size(); i++) {
     if (irq_info_[i] == pin) {
@@ -447,6 +444,8 @@ zx_status_t AmlGxlGpio::GpioImplSetPolarity(uint32_t pin, uint32_t polarity) {
     return ZX_ERR_INVALID_ARGS;
   }
 
+  fbl::AutoLock al(&irq_lock_);
+
   for (uint32_t i = 0; i < irq_info_.size(); i++) {
     if (irq_info_[i] == pin) {
       irq_index = i;
@@ -458,17 +457,18 @@ zx_status_t AmlGxlGpio::GpioImplSetPolarity(uint32_t pin, uint32_t polarity) {
     return ZX_ERR_NOT_FOUND;
   }
 
-  fbl::AutoLock al(&interrupt_lock_);
+  {
+    fbl::AutoLock al(&mmio_lock_);
 
-  // Configure GPIO Interrupt EDGE and Polarity
-  uint32_t mode_reg_val = Read32GpioInterruptReg(gpio_interrupt_->edge_polarity_offset);
-  if (polarity == GPIO_POLARITY_HIGH) {
-    mode_reg_val &= ~((1 << irq_index) << kGpioInterruptPolarityShift);
-  } else {
-    mode_reg_val |= ((1 << irq_index) << kGpioInterruptPolarityShift);
+    // Configure GPIO Interrupt EDGE and Polarity
+    uint32_t mode_reg_val = Read32GpioInterruptReg(gpio_interrupt_->edge_polarity_offset);
+    if (polarity == GPIO_POLARITY_HIGH) {
+      mode_reg_val &= ~((1 << irq_index) << kGpioInterruptPolarityShift);
+    } else {
+      mode_reg_val |= ((1 << irq_index) << kGpioInterruptPolarityShift);
+    }
+    Write32GpioInterruptReg(gpio_interrupt_->edge_polarity_offset, mode_reg_val);
   }
-
-  Write32GpioInterruptReg(gpio_interrupt_->edge_polarity_offset, mode_reg_val);
 
   return ZX_OK;
 }

@@ -5,19 +5,15 @@
 #ifndef SRC_DEVICES_GPIO_DRIVERS_AML_AXG_GPIO_A113_BLOCKS_H_
 #define SRC_DEVICES_GPIO_DRIVERS_AML_AXG_GPIO_A113_BLOCKS_H_
 
-#include <threads.h>
-
 #include <soc/aml-a113/a113-gpio.h>
 
 #include "aml-axg-gpio.h"
 
 namespace gpio {
 
-static AmlGpioBlock a113_gpio_blocks[] = {
+constexpr AmlGpioBlock a113_gpio_blocks[] = {
     // GPIO X Block
     {
-        .block_lock = MTX_INIT,
-
         .start_pin = (A113_GPIOX_START + 0),
         .pin_block = A113_GPIOX_START,
         .pin_count = 8,
@@ -33,8 +29,6 @@ static AmlGpioBlock a113_gpio_blocks[] = {
         .ds_offset = 0,  // not used, required by compiler
     },
     {
-        .block_lock = MTX_INIT,
-
         .start_pin = (A113_GPIOX_START + 8),
         .pin_block = A113_GPIOX_START,
         .pin_count = 8,
@@ -50,8 +44,6 @@ static AmlGpioBlock a113_gpio_blocks[] = {
         .ds_offset = 0,  // not used, required by compiler
     },
     {
-        .block_lock = MTX_INIT,
-
         .start_pin = (A113_GPIOX_START + 16),
         .pin_block = A113_GPIOX_START,
         .pin_count = 7,
@@ -69,8 +61,6 @@ static AmlGpioBlock a113_gpio_blocks[] = {
 
     // GPIO A Block
     {
-        .block_lock = MTX_INIT,
-
         .start_pin = (A113_GPIOA_START + 0),
         .pin_block = A113_GPIOA_START,
         .pin_count = 8,
@@ -86,8 +76,6 @@ static AmlGpioBlock a113_gpio_blocks[] = {
         .ds_offset = 0,  // not used, required by compiler
     },
     {
-        .block_lock = MTX_INIT,
-
         .start_pin = (A113_GPIOA_START + 8),
         .pin_block = A113_GPIOA_START,
         .pin_count = 8,
@@ -103,8 +91,6 @@ static AmlGpioBlock a113_gpio_blocks[] = {
         .ds_offset = 0,  // not used, required by compiler
     },
     {
-        .block_lock = MTX_INIT,
-
         .start_pin = (A113_GPIOA_START + 16),
         .pin_block = A113_GPIOA_START,
         .pin_count = 5,
@@ -122,8 +108,6 @@ static AmlGpioBlock a113_gpio_blocks[] = {
 
     // GPIO Boot Block
     {
-        .block_lock = MTX_INIT,
-
         .start_pin = (A113_GPIOBOOT_START + 0),
         .pin_block = A113_GPIOBOOT_START,
         .pin_count = 8,
@@ -139,8 +123,6 @@ static AmlGpioBlock a113_gpio_blocks[] = {
         .ds_offset = 0,  // not used, required by compiler
     },
     {
-        .block_lock = MTX_INIT,
-
         .start_pin = (A113_GPIOBOOT_START + 8),
         .pin_block = A113_GPIOBOOT_START,
         .pin_count = 7,
@@ -158,8 +140,6 @@ static AmlGpioBlock a113_gpio_blocks[] = {
 
     // GPIO Y Block
     {
-        .block_lock = MTX_INIT,
-
         .start_pin = (A113_GPIOY_START + 0),
         .pin_block = A113_GPIOY_START,
         .pin_count = 8,
@@ -175,8 +155,6 @@ static AmlGpioBlock a113_gpio_blocks[] = {
         .ds_offset = 0,  // not used, required by compiler
     },
     {
-        .block_lock = MTX_INIT,
-
         .start_pin = (A113_GPIOY_START + 8),
         .pin_block = A113_GPIOY_START,
         .pin_count = 8,
@@ -194,8 +172,6 @@ static AmlGpioBlock a113_gpio_blocks[] = {
 
     // GPIO Z Block
     {
-        .block_lock = MTX_INIT,
-
         .start_pin = (A113_GPIOZ_START + 0),
         .pin_block = A113_GPIOZ_START,
         .pin_count = 8,
@@ -211,8 +187,6 @@ static AmlGpioBlock a113_gpio_blocks[] = {
         .ds_offset = 0,  // not used, required by compiler
     },
     {
-        .block_lock = MTX_INIT,
-
         .start_pin = (A113_GPIOZ_START + 8),
         .pin_block = A113_GPIOZ_START,
         .pin_count = 3,
@@ -232,8 +206,6 @@ static AmlGpioBlock a113_gpio_blocks[] = {
     // NOTE: The GPIO AO block has a separate control block than the other
     //       GPIO blocks.
     {
-        .block_lock = MTX_INIT,
-
         .start_pin = (A113_GPIOAO_START + 0),
         .pin_block = A113_GPIOAO_START,
         .pin_count = 8,
@@ -249,8 +221,6 @@ static AmlGpioBlock a113_gpio_blocks[] = {
         .ds_offset = 0,  // not used, required by compiler
     },
     {
-        .block_lock = MTX_INIT,
-
         .start_pin = (A113_GPIOAO_START + 8),
         .pin_block = A113_GPIOAO_START,
         .pin_count = 6,
@@ -267,9 +237,7 @@ static AmlGpioBlock a113_gpio_blocks[] = {
     },
 };
 
-static AmlGpioInterrupt a113_interrupt_block = {
-    .interrupt_lock = MTX_INIT,
-
+constexpr AmlGpioInterrupt a113_interrupt_block = {
     .pin_select_offset = A113_GPIO_0_3_PIN_SELECT,
     .edge_polarity_offset = A113_GPIO_INT_EDGE_POLARITY,
     .filter_select_offset = A113_GPIO_FILTER_SELECT,

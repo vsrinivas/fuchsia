@@ -77,8 +77,8 @@ zx_status_t AmlAxgGpio::Create(void* ctx, zx_device_t* parent) {
     return status;
   }
 
-  AmlGpioBlock* gpio_blocks;
-  AmlGpioInterrupt* gpio_interrupt;
+  const AmlGpioBlock* gpio_blocks;
+  const AmlGpioInterrupt* gpio_interrupt;
   size_t block_count;
 
   switch (info.pid) {
@@ -141,12 +141,12 @@ void AmlAxgGpio::Bind(const pbus_protocol_t& pbus) {
   pbus_register_protocol(&pbus, ZX_PROTOCOL_GPIO_IMPL, &gpio_proto, sizeof(gpio_proto));
 }
 
-zx_status_t AmlAxgGpio::AmlPinToBlock(const uint32_t pin, AmlGpioBlock** out_block,
+zx_status_t AmlAxgGpio::AmlPinToBlock(const uint32_t pin, const AmlGpioBlock** out_block,
                                       uint32_t* out_pin_index) const {
   ZX_DEBUG_ASSERT(out_block && out_pin_index);
 
   for (size_t i = 0; i < block_count_; i++) {
-    AmlGpioBlock& gpio_block = gpio_blocks_[i];
+    const AmlGpioBlock& gpio_block = gpio_blocks_[i];
     const uint32_t end_pin = gpio_block.start_pin + gpio_block.pin_count;
     if (pin >= gpio_block.start_pin && pin < end_pin) {
       *out_block = &gpio_block;
@@ -161,7 +161,7 @@ zx_status_t AmlAxgGpio::AmlPinToBlock(const uint32_t pin, AmlGpioBlock** out_blo
 zx_status_t AmlAxgGpio::GpioImplConfigIn(uint32_t index, uint32_t flags) {
   zx_status_t status;
 
-  AmlGpioBlock* block;
+  const AmlGpioBlock* block;
   uint32_t pinindex;
   if ((status = AmlPinToBlock(index, &block, &pinindex)) != ZX_OK) {
     zxlogf(ERROR, "AmlAxgGpio::GpioImplConfigIn: pin not found %u", index);
@@ -170,29 +170,31 @@ zx_status_t AmlAxgGpio::GpioImplConfigIn(uint32_t index, uint32_t flags) {
 
   const uint32_t pinmask = 1 << pinindex;
 
-  fbl::AutoLock al(&(block->block_lock));
+  {
+    fbl::AutoLock al(&mmio_lock_);
 
-  uint32_t regval = mmios_[block->mmio_index].Read32(block->oen_offset * sizeof(uint32_t));
-  // Set the GPIO as pull-up or pull-down
-  uint32_t pull = flags & GPIO_PULL_MASK;
-  uint32_t pull_reg_val = mmios_[block->mmio_index].Read32(block->pull_offset * sizeof(uint32_t));
-  uint32_t pull_en_reg_val =
-      mmios_[block->mmio_index].Read32(block->pull_en_offset * sizeof(uint32_t));
-  if (pull & GPIO_NO_PULL) {
-    pull_en_reg_val &= ~pinmask;
-  } else {
-    if (pull & GPIO_PULL_UP) {
-      pull_reg_val |= pinmask;
+    uint32_t regval = mmios_[block->mmio_index].Read32(block->oen_offset * sizeof(uint32_t));
+    // Set the GPIO as pull-up or pull-down
+    uint32_t pull = flags & GPIO_PULL_MASK;
+    uint32_t pull_reg_val = mmios_[block->mmio_index].Read32(block->pull_offset * sizeof(uint32_t));
+    uint32_t pull_en_reg_val =
+        mmios_[block->mmio_index].Read32(block->pull_en_offset * sizeof(uint32_t));
+    if (pull & GPIO_NO_PULL) {
+      pull_en_reg_val &= ~pinmask;
     } else {
-      pull_reg_val &= ~pinmask;
+      if (pull & GPIO_PULL_UP) {
+        pull_reg_val |= pinmask;
+      } else {
+        pull_reg_val &= ~pinmask;
+      }
+      pull_en_reg_val |= pinmask;
     }
-    pull_en_reg_val |= pinmask;
-  }
 
-  mmios_[block->mmio_index].Write32(pull_reg_val, block->pull_offset * sizeof(uint32_t));
-  mmios_[block->mmio_index].Write32(pull_en_reg_val, block->pull_en_offset * sizeof(uint32_t));
-  regval |= pinmask;
-  mmios_[block->mmio_index].Write32(regval, block->oen_offset * sizeof(uint32_t));
+    mmios_[block->mmio_index].Write32(pull_reg_val, block->pull_offset * sizeof(uint32_t));
+    mmios_[block->mmio_index].Write32(pull_en_reg_val, block->pull_en_offset * sizeof(uint32_t));
+    regval |= pinmask;
+    mmios_[block->mmio_index].Write32(regval, block->oen_offset * sizeof(uint32_t));
+  }
 
   return ZX_OK;
 }
@@ -200,7 +202,7 @@ zx_status_t AmlAxgGpio::GpioImplConfigIn(uint32_t index, uint32_t flags) {
 zx_status_t AmlAxgGpio::GpioImplConfigOut(uint32_t index, uint8_t initial_value) {
   zx_status_t status;
 
-  AmlGpioBlock* block;
+  const AmlGpioBlock* block;
   uint32_t pinindex;
   if ((status = AmlPinToBlock(index, &block, &pinindex)) != ZX_OK) {
     zxlogf(ERROR, "AmlAxgGpio::GpioImplConfigOut: pin not found %u", index);
@@ -209,20 +211,22 @@ zx_status_t AmlAxgGpio::GpioImplConfigOut(uint32_t index, uint8_t initial_value)
 
   const uint32_t pinmask = 1 << pinindex;
 
-  fbl::AutoLock al(&(block->block_lock));
+  {
+    fbl::AutoLock al(&mmio_lock_);
 
-  // Set value before configuring for output
-  uint32_t regval = mmios_[block->mmio_index].Read32(block->output_offset * sizeof(uint32_t));
-  if (initial_value) {
-    regval |= pinmask;
-  } else {
+    // Set value before configuring for output
+    uint32_t regval = mmios_[block->mmio_index].Read32(block->output_offset * sizeof(uint32_t));
+    if (initial_value) {
+      regval |= pinmask;
+    } else {
+      regval &= ~pinmask;
+    }
+    mmios_[block->mmio_index].Write32(regval, block->output_offset * sizeof(uint32_t));
+
+    regval = mmios_[block->mmio_index].Read32(block->oen_offset * sizeof(uint32_t));
     regval &= ~pinmask;
+    mmios_[block->mmio_index].Write32(regval, block->oen_offset * sizeof(uint32_t));
   }
-  mmios_[block->mmio_index].Write32(regval, block->output_offset * sizeof(uint32_t));
-
-  regval = mmios_[block->mmio_index].Read32(block->oen_offset * sizeof(uint32_t));
-  regval &= ~pinmask;
-  mmios_[block->mmio_index].Write32(regval, block->oen_offset * sizeof(uint32_t));
 
   return ZX_OK;
 }
@@ -230,17 +234,15 @@ zx_status_t AmlAxgGpio::GpioImplConfigOut(uint32_t index, uint8_t initial_value)
 // Configure a pin for an alternate function specified by fn
 zx_status_t AmlAxgGpio::GpioImplSetAltFunction(const uint32_t pin, const uint64_t fn) {
   if (fn > kAltFnMax) {
-    zxlogf(ERROR,
-           "AmlAxgGpio::GpioImplSetAltFunction: pin mux alt config out of range %lu",
-           fn);
+    zxlogf(ERROR, "AmlAxgGpio::GpioImplSetAltFunction: pin mux alt config out of range %lu", fn);
     return ZX_ERR_OUT_OF_RANGE;
   }
 
   zx_status_t status;
 
-  AmlGpioBlock* block;
-  uint32_t pin_index;
-  if ((status = AmlPinToBlock(pin, &block, &pin_index)) != ZX_OK) {
+  const AmlGpioBlock* block;
+  uint32_t pinindex;
+  if ((status = AmlPinToBlock(pin, &block, &pinindex)) != ZX_OK) {
     zxlogf(ERROR, "AmlAxgGpio::GpioImplSetAltFunction: pin not found %u", pin);
     return status;
   }
@@ -257,12 +259,14 @@ zx_status_t AmlAxgGpio::GpioImplSetAltFunction(const uint32_t pin, const uint64_
   const uint32_t mux_mask = ~(0x0F << pin_shift);
   const auto fn_val = static_cast<uint32_t>(fn << pin_shift);
 
-  fbl::AutoLock al(&(block->block_lock));
+  {
+    fbl::AutoLock al(&mmio_lock_);
 
-  uint32_t regval = mmios_[block->mmio_index].Read32(block->mux_offset * sizeof(uint32_t));
-  regval &= mux_mask;  // Remove the previous value for the mux
-  regval |= fn_val;    // Assign the new value to the mux
-  mmios_[block->mmio_index].Write32(regval, block->mux_offset * sizeof(uint32_t));
+    uint32_t regval = mmios_[block->mmio_index].Read32(block->mux_offset * sizeof(uint32_t));
+    regval &= mux_mask;  // Remove the previous value for the mux
+    regval |= fn_val;    // Assign the new value to the mux
+    mmios_[block->mmio_index].Write32(regval, block->mux_offset * sizeof(uint32_t));
+  }
 
   return ZX_OK;
 }
@@ -270,18 +274,20 @@ zx_status_t AmlAxgGpio::GpioImplSetAltFunction(const uint32_t pin, const uint64_
 zx_status_t AmlAxgGpio::GpioImplRead(uint32_t index, uint8_t* out_value) {
   zx_status_t status;
 
-  AmlGpioBlock* block;
+  const AmlGpioBlock* block;
   uint32_t pinindex;
   if ((status = AmlPinToBlock(index, &block, &pinindex)) != ZX_OK) {
     zxlogf(ERROR, "AmlAxgGpio::GpioImplRead: pin not found %u", index);
     return status;
   }
 
+  uint32_t regval = 0;
+  {
+    fbl::AutoLock al(&mmio_lock_);
+    regval = mmios_[block->mmio_index].Read32(block->input_offset * sizeof(uint32_t));
+  }
+
   const uint32_t readmask = 1 << pinindex;
-  fbl::AutoLock al(&(block->block_lock));
-
-  const uint32_t regval = mmios_[block->mmio_index].Read32(block->input_offset * sizeof(uint32_t));
-
   if (regval & readmask) {
     *out_value = 1;
   } else {
@@ -294,22 +300,24 @@ zx_status_t AmlAxgGpio::GpioImplRead(uint32_t index, uint8_t* out_value) {
 zx_status_t AmlAxgGpio::GpioImplWrite(uint32_t index, uint8_t value) {
   zx_status_t status;
 
-  AmlGpioBlock* block;
+  const AmlGpioBlock* block;
   uint32_t pinindex;
   if ((status = AmlPinToBlock(index, &block, &pinindex)) != ZX_OK) {
     zxlogf(ERROR, "AmlAxgGpio::GpioImplWrite: pin not found %u", index);
     return status;
   }
 
-  fbl::AutoLock al(&(block->block_lock));
+  {
+    fbl::AutoLock al(&mmio_lock_);
 
-  uint32_t regval = mmios_[block->mmio_index].Read32(block->output_offset * sizeof(uint32_t));
-  if (value) {
-    regval |= 1 << pinindex;
-  } else {
-    regval &= ~(1 << pinindex);
+    uint32_t regval = mmios_[block->mmio_index].Read32(block->output_offset * sizeof(uint32_t));
+    if (value) {
+      regval |= 1 << pinindex;
+    } else {
+      regval &= ~(1 << pinindex);
+    }
+    mmios_[block->mmio_index].Write32(regval, block->output_offset * sizeof(uint32_t));
   }
-  mmios_[block->mmio_index].Write32(regval, block->output_offset * sizeof(uint32_t));
 
   return ZX_OK;
 }
@@ -321,7 +329,8 @@ zx_status_t AmlAxgGpio::GpioImplGetInterrupt(uint32_t pin, uint32_t flags, zx::i
     return ZX_ERR_INVALID_ARGS;
   }
 
-  fbl::AutoLock al(&(gpio_interrupt_->interrupt_lock));
+  fbl::AutoLock al(&irq_lock_);
+
   uint32_t index = GetUnusedIrqIndex(irq_status_);
   if (index > info_.irq_count) {
     zxlogf(ERROR, "No free IRQ indicies %u, irq_count = %u", (int)index, (int)info_.irq_count);
@@ -335,9 +344,9 @@ zx_status_t AmlAxgGpio::GpioImplGetInterrupt(uint32_t pin, uint32_t flags, zx::i
     }
   }
   zxlogf(TRACE, "GPIO Interrupt index %d allocated", (int)index);
-  AmlGpioBlock* block;
-  uint32_t pin_index;
-  if ((status = AmlPinToBlock(pin, &block, &pin_index)) != ZX_OK) {
+  const AmlGpioBlock* block;
+  uint32_t pinindex;
+  if ((status = AmlPinToBlock(pin, &block, &pinindex)) != ZX_OK) {
     zxlogf(ERROR, "AmlAxgGpio::GpioImplGetInterrupt: pin not found %u", pin);
     return status;
   }
@@ -349,43 +358,46 @@ zx_status_t AmlAxgGpio::GpioImplGetInterrupt(uint32_t pin, uint32_t flags, zx::i
     flags_ = ZX_INTERRUPT_MODE_LEVEL_HIGH;
   }
 
-  // Configure GPIO Interrupt EDGE and Polarity
-  uint32_t mode_reg_val =
-      mmio_interrupt_.Read32(gpio_interrupt_->edge_polarity_offset * sizeof(uint32_t));
+  {
+    fbl::AutoLock al(&mmio_lock_);
+    // Configure GPIO Interrupt EDGE and Polarity
+    uint32_t mode_reg_val =
+        mmio_interrupt_.Read32(gpio_interrupt_->edge_polarity_offset * sizeof(uint32_t));
 
-  switch (flags & ZX_INTERRUPT_MODE_MASK) {
-    case ZX_INTERRUPT_MODE_EDGE_LOW:
-      mode_reg_val |= (1 << index);
-      mode_reg_val |= ((1 << index) << kGpioInterruptPolarityShift);
-      break;
-    case ZX_INTERRUPT_MODE_EDGE_HIGH:
-      mode_reg_val |= (1 << index);
-      mode_reg_val &= ~((1 << index) << kGpioInterruptPolarityShift);
-      break;
-    case ZX_INTERRUPT_MODE_LEVEL_LOW:
-      mode_reg_val &= ~(1 << index);
-      mode_reg_val |= ((1 << index) << kGpioInterruptPolarityShift);
-      break;
-    case ZX_INTERRUPT_MODE_LEVEL_HIGH:
-      mode_reg_val &= ~(1 << index);
-      mode_reg_val &= ~((1 << index) << kGpioInterruptPolarityShift);
-      break;
-    default:
-      return ZX_ERR_INVALID_ARGS;
+    switch (flags & ZX_INTERRUPT_MODE_MASK) {
+      case ZX_INTERRUPT_MODE_EDGE_LOW:
+        mode_reg_val |= (1 << index);
+        mode_reg_val |= ((1 << index) << kGpioInterruptPolarityShift);
+        break;
+      case ZX_INTERRUPT_MODE_EDGE_HIGH:
+        mode_reg_val |= (1 << index);
+        mode_reg_val &= ~((1 << index) << kGpioInterruptPolarityShift);
+        break;
+      case ZX_INTERRUPT_MODE_LEVEL_LOW:
+        mode_reg_val &= ~(1 << index);
+        mode_reg_val |= ((1 << index) << kGpioInterruptPolarityShift);
+        break;
+      case ZX_INTERRUPT_MODE_LEVEL_HIGH:
+        mode_reg_val &= ~(1 << index);
+        mode_reg_val &= ~((1 << index) << kGpioInterruptPolarityShift);
+        break;
+      default:
+        return ZX_ERR_INVALID_ARGS;
+    }
+    mmio_interrupt_.Write32(mode_reg_val, gpio_interrupt_->edge_polarity_offset * sizeof(uint32_t));
+
+    // Configure Interrupt Select Filter
+    mmio_interrupt_.SetBits32(0x7 << (index * kBitsPerFilterSelect),
+                              gpio_interrupt_->filter_select_offset * sizeof(uint32_t));
+
+    // Configure GPIO interrupt
+    const uint32_t pin_select_bit = index * kBitsPerGpioInterrupt;
+    const uint32_t pin_select_offset = gpio_interrupt_->pin_select_offset + (pin_select_bit / 32);
+    const uint32_t pin_select_index = pin_select_bit % 32;
+    // Select GPIO IRQ(index) and program it to the requested GPIO PIN
+    mmio_interrupt_.ModifyBits32((pin - block->pin_block) + block->pin_start, pin_select_index,
+                                 kBitsPerGpioInterrupt, pin_select_offset * sizeof(uint32_t));
   }
-  mmio_interrupt_.Write32(mode_reg_val, gpio_interrupt_->edge_polarity_offset * sizeof(uint32_t));
-
-  // Configure Interrupt Select Filter
-  mmio_interrupt_.SetBits32(0x7 << (index * kBitsPerFilterSelect),
-                            gpio_interrupt_->filter_select_offset * sizeof(uint32_t));
-
-  // Configure GPIO interrupt
-  const uint32_t pin_select_bit = index * kBitsPerGpioInterrupt;
-  const uint32_t pin_select_offset = gpio_interrupt_->pin_select_offset + (pin_select_bit / 32);
-  const uint32_t pin_select_index = pin_select_bit % 32;
-  // Select GPIO IRQ(index) and program it to the requested GPIO PIN
-  mmio_interrupt_.ModifyBits32((pin - block->pin_block) + block->pin_start, pin_select_index,
-                               kBitsPerGpioInterrupt, pin_select_offset * sizeof(uint32_t));
 
   // Create Interrupt Object
   if ((status = pdev_.GetInterrupt(index, flags_, out_irq)) != ZX_OK) {
@@ -400,7 +412,7 @@ zx_status_t AmlAxgGpio::GpioImplGetInterrupt(uint32_t pin, uint32_t flags, zx::i
 }
 
 zx_status_t AmlAxgGpio::GpioImplReleaseInterrupt(uint32_t pin) {
-  fbl::AutoLock al(&(gpio_interrupt_->interrupt_lock));
+  fbl::AutoLock al(&irq_lock_);
   for (uint32_t i = 0; i < info_.irq_count; i++) {
     if (irq_info_[i] == pin) {
       irq_status_ &= static_cast<uint8_t>(~(1 << i));
@@ -412,13 +424,12 @@ zx_status_t AmlAxgGpio::GpioImplReleaseInterrupt(uint32_t pin) {
 }
 
 zx_status_t AmlAxgGpio::GpioImplSetPolarity(uint32_t pin, uint32_t polarity) {
-  AmlGpioInterrupt* interrupt = gpio_interrupt_;
   int irq_index = -1;
   if (pin > kMaxGpioIndex) {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  fbl::AutoLock al(&(gpio_interrupt_->interrupt_lock));
+  fbl::AutoLock al(&irq_lock_);
   for (uint32_t i = 0; i < info_.irq_count; i++) {
     if (irq_info_[i] == pin) {
       irq_index = i;
@@ -429,13 +440,16 @@ zx_status_t AmlAxgGpio::GpioImplSetPolarity(uint32_t pin, uint32_t polarity) {
     return ZX_ERR_NOT_FOUND;
   }
 
-  // Configure GPIO Interrupt EDGE and Polarity
-  if (polarity) {
-    mmio_interrupt_.ClearBits32(((1 << irq_index) << kGpioInterruptPolarityShift),
-                                interrupt->edge_polarity_offset * sizeof(uint32_t));
-  } else {
-    mmio_interrupt_.SetBits32(((1 << irq_index) << kGpioInterruptPolarityShift),
-                              interrupt->edge_polarity_offset * sizeof(uint32_t));
+  {
+    fbl::AutoLock al(&mmio_lock_);
+    // Configure GPIO Interrupt EDGE and Polarity
+    if (polarity) {
+      mmio_interrupt_.ClearBits32(((1 << irq_index) << kGpioInterruptPolarityShift),
+                                  gpio_interrupt_->edge_polarity_offset * sizeof(uint32_t));
+    } else {
+      mmio_interrupt_.SetBits32(((1 << irq_index) << kGpioInterruptPolarityShift),
+                                gpio_interrupt_->edge_polarity_offset * sizeof(uint32_t));
+    }
   }
   return ZX_OK;
 }
@@ -446,7 +460,6 @@ zx_status_t AmlAxgGpio::GpioImplSetPolarity(uint32_t pin, uint32_t polarity) {
 zx_status_t AmlAxgGpio::GpioImplSetDriveStrength(uint32_t pin, uint8_t m_a) {
   zx_status_t status;
 
-  fbl::AutoLock al(&(gpio_interrupt_->interrupt_lock));
   if (info_.pid == PDEV_PID_AMLOGIC_A113) {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -455,7 +468,7 @@ zx_status_t AmlAxgGpio::GpioImplSetDriveStrength(uint32_t pin, uint8_t m_a) {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  AmlGpioBlock* block;
+  const AmlGpioBlock* block;
   uint32_t pinindex;
   if ((status = AmlPinToBlock(pin, &block, &pinindex)) != ZX_OK) {
     zxlogf(ERROR, "AmlAxgGpio::GpioImplSetDriveStrength: pin not found %u", pin);
@@ -467,13 +480,15 @@ zx_status_t AmlAxgGpio::GpioImplSetDriveStrength(uint32_t pin, uint8_t m_a) {
     pinindex = pinindex % kMaxPinsInDSReg;
   }
 
-  uint32_t regval = mmios_[block->mmio_index].Read32(block->ds_offset * sizeof(uint32_t));
-
   // 2 bits for each pin
-  uint32_t shift = pinindex * 2;
-  uint32_t mask = ~(0x3 << shift);
-  regval = (regval & mask) | (m_a << shift);
-  mmios_[block->mmio_index].Write32(regval, block->ds_offset * sizeof(uint32_t));
+  const uint32_t shift = pinindex * 2;
+  const uint32_t mask = ~(0x3 << shift);
+  {
+    fbl::AutoLock al(&mmio_lock_);
+    uint32_t regval = mmios_[block->mmio_index].Read32(block->ds_offset * sizeof(uint32_t));
+    regval = (regval & mask) | (m_a << shift);
+    mmios_[block->mmio_index].Write32(regval, block->ds_offset * sizeof(uint32_t));
+  }
 
   return ZX_OK;
 }
