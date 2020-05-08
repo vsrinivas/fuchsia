@@ -124,8 +124,8 @@ void InputNode::OnShutdown(fit::function<void(void)> shutdown_callback) {
 
   isp_stream_shutdown_callback_t isp_stream_shutdown_cb = {
       .shutdown_complete =
-          [](void* ctx, zx_status_t status) {
-            auto input_node = static_cast<decltype(this)>(ctx);
+          [](void* ctx, zx_status_t /*status*/) {
+            auto* input_node = static_cast<decltype(this)>(ctx);
             input_node->node_callback_received_ = true;
             input_node->OnCallbackReceived();
           },

@@ -13,7 +13,9 @@
 
 namespace camera {
 
+namespace {
 constexpr auto kTag = "camera_controller";
+}  // namespace
 
 ControllerImpl::ControllerImpl(zx_device_t* device,
                                fidl::InterfaceRequest<fuchsia::camera2::hal::Controller> control,
@@ -114,7 +116,7 @@ void ControllerImpl::CreateStream(uint32_t config_index, uint32_t stream_index,
   }
 
   // Check the Input Stream Type and see if it is already created
-  auto stream_config_node =
+  auto* stream_config_node =
       GetStreamConfigNode(internal_config, stream_config.properties.stream_type());
   if (stream_config_node == nullptr) {
     FX_LOGST(ERROR, kTag) << "Unable to get Internal stream config node";

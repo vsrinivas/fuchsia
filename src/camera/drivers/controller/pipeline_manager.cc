@@ -95,7 +95,7 @@ fit::result<std::unique_ptr<InputNode>, zx_status_t> PipelineManager::ConfigureS
     return fit::error(output_node_result.error());
   }
 
-  auto output_node = output_node_result.value();
+  auto* output_node = output_node_result.value();
   auto stream_configured = info->stream_config->properties.stream_type();
 
   auto status = output_node->Attach(stream.TakeChannel(), [this, stream_configured]() {
@@ -126,8 +126,8 @@ PipelineManager::FindNodeToAttachNewStream(StreamCreationData* info,
     if (child_node->is_stream_supported(requested_stream_type)) {
       // If we find a child node which supports the requested stream type,
       // we move on to that child node.
-      auto next_internal_node = GetNextNodeInPipeline(info->stream_config->properties.stream_type(),
-                                                      current_internal_node);
+      const auto* next_internal_node = GetNextNodeInPipeline(
+          info->stream_config->properties.stream_type(), current_internal_node);
       if (!next_internal_node) {
         FX_LOGS(ERROR) << "Failed to get next node for requested stream";
         return fit::error(ZX_ERR_INTERNAL);
@@ -155,7 +155,7 @@ zx_status_t PipelineManager::AppendToExistingGraph(
   // If the next node is an output node, we currently do not support
   // this. Currently we expect that the clients would request for streams in a fixed order.
   // TODO(42241): Remove this check when 42241 is fixed.
-  auto next_node_internal =
+  const auto* next_node_internal =
       GetNextNodeInPipeline(info->stream_config->properties.stream_type(), result.value().first);
   if (!next_node_internal) {
     FX_PLOGS(ERROR, ZX_ERR_INTERNAL) << "Failed to get next node";
@@ -168,14 +168,14 @@ zx_status_t PipelineManager::AppendToExistingGraph(
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  auto node_to_be_appended = result.value().second;
+  auto* node_to_be_appended = result.value().second;
   auto output_node_result = CreateGraph(info, result.value().first, node_to_be_appended);
   if (output_node_result.is_error()) {
     FX_PLOGS(ERROR, output_node_result.error()) << "Failed to CreateGraph";
     return output_node_result.error();
   }
 
-  auto output_node = output_node_result.value();
+  auto* output_node = output_node_result.value();
   auto stream_configured = info->stream_config->properties.stream_type();
   auto status = output_node->Attach(stream.TakeChannel(), [this, stream_configured]() {
     FX_LOGS(DEBUG) << "Stream client disconnected";
@@ -188,7 +188,7 @@ zx_status_t PipelineManager::AppendToExistingGraph(
 
   // Push this new requested stream to all pre-existing nodes |configured_streams| vector
   auto requested_stream_type = info->stream_config->properties.stream_type();
-  auto current_node = node_to_be_appended;
+  auto* current_node = node_to_be_appended;
   while (current_node) {
     current_node->configured_streams().push_back(requested_stream_type);
     current_node = current_node->parent_node();
@@ -310,7 +310,7 @@ void PipelineManager::DeleteGraphForDisconnectedStream(
       if (it->get()->configured_streams().size() == 1) {
         it = child_nodes.erase(it);
 
-        auto current_node = graph_head;
+        auto* current_node = graph_head;
         while (current_node) {
           // Remove entry from configured streams.
           RemoveStreamType(current_node->configured_streams(), stream_to_disconnect);

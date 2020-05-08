@@ -10,6 +10,8 @@
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
+#include <utility>
+
 #include <fbl/auto_call.h>
 
 #include "fake_gdc.h"
@@ -145,7 +147,7 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
   zx_status_t SetupStream(uint32_t config, fuchsia::camera2::CameraStreamType stream_type,
                           fuchsia::camera2::StreamPtr& stream) {
     async::PostTask(dispatcher(), [this, config, stream_type, &stream]() {
-      auto stream_config_node = GetStreamConfigNode(config, stream_type);
+      auto* stream_config_node = GetStreamConfigNode(config, stream_type);
       StreamCreationData info;
       stream_config_.properties.set_stream_type(stream_type);
       info.stream_config = &stream_config_;
@@ -166,7 +168,7 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     std::vector<fuchsia::sysmem::ImageFormat_2> output_formats;
     stream->GetImageFormats([&](std::vector<fuchsia::sysmem::ImageFormat_2> formats) {
       callback_called = true;
-      output_formats = formats;
+      output_formats = std::move(formats);
     });
     RunLoopUntilIdle();
     EXPECT_TRUE(callback_called);
@@ -200,12 +202,12 @@ TEST_F(ControllerProtocolTest, ConfigureOutputNodeDebugConfig) {
   auto stream_type = kStreamTypeFR;
   ASSERT_EQ(ZX_OK, SetupStream(kDebugConfig, stream_type, stream));
 
-  auto fr_head_node = pipeline_manager_->full_resolution_stream();
+  auto* fr_head_node = pipeline_manager_->full_resolution_stream();
   EXPECT_EQ(fr_head_node->type(), NodeType::kInputStream);
   EXPECT_TRUE(HasAllStreams(fr_head_node->configured_streams(), {stream_type}));
   EXPECT_TRUE(fr_head_node->is_stream_supported(stream_type));
 
-  auto output_node = static_cast<OutputNode*>(fr_head_node->child_nodes().at(0).get());
+  auto* output_node = static_cast<OutputNode*>(fr_head_node->child_nodes().at(0).get());
   EXPECT_EQ(output_node->type(), NodeType::kOutputStream);
   EXPECT_TRUE(HasAllStreams(output_node->configured_streams(), {stream_type}));
   EXPECT_TRUE(output_node->is_stream_supported(stream_type));
@@ -222,8 +224,8 @@ TEST_F(ControllerProtocolTest, TestConfigureMonitorConfigStreamFR) {
   auto stream_type2 = kStreamTypeFR | kStreamTypeML;
   ASSERT_EQ(ZX_OK, SetupStream(kMonitorConfig, stream_type2, stream));
 
-  auto fr_head_node = pipeline_manager_->full_resolution_stream();
-  auto output_node = static_cast<OutputNode*>(fr_head_node->child_nodes().at(0).get());
+  auto* fr_head_node = pipeline_manager_->full_resolution_stream();
+  auto* output_node = static_cast<OutputNode*>(fr_head_node->child_nodes().at(0).get());
 
   // Check if all nodes were created.
   EXPECT_EQ(NodeType::kInputStream, fr_head_node->type());
@@ -249,9 +251,9 @@ TEST_F(ControllerProtocolTest, TestConfigureMonitorConfigStreamDS) {
   fuchsia::camera2::StreamPtr stream;
   ASSERT_EQ(ZX_OK, SetupStream(kMonitorConfig, stream_type1, stream));
 
-  auto fr_head_node = pipeline_manager_->full_resolution_stream();
-  auto gdc_node = static_cast<GdcNode*>(fr_head_node->child_nodes().at(0).get());
-  auto output_node = static_cast<OutputNode*>(gdc_node->child_nodes().at(0).get());
+  auto* fr_head_node = pipeline_manager_->full_resolution_stream();
+  auto* gdc_node = static_cast<GdcNode*>(fr_head_node->child_nodes().at(0).get());
+  auto* output_node = static_cast<OutputNode*>(gdc_node->child_nodes().at(0).get());
 
   // Check if all nodes were created.
   EXPECT_EQ(NodeType::kGdc, gdc_node->type());
@@ -283,12 +285,12 @@ TEST_F(ControllerProtocolTest, TestConfigureVideoConfigStream1) {
   fuchsia::camera2::StreamPtr stream_video;
   ASSERT_EQ(ZX_OK, SetupStream(kVideoConfig, kStreamTypeVideo, stream_video));
 
-  auto fr_head_node = pipeline_manager_->full_resolution_stream();
-  auto gdc1_node = static_cast<GdcNode*>(fr_head_node->child_nodes().at(0).get());
-  auto gdc2_node = static_cast<GdcNode*>(gdc1_node->child_nodes().at(0).get());
-  auto output_node = static_cast<OutputNode*>(gdc2_node->child_nodes().at(0).get());
-  auto ge2d_node = static_cast<Ge2dNode*>(gdc1_node->child_nodes().at(1).get());
-  auto output_node_video = static_cast<OutputNode*>(ge2d_node->child_nodes().at(0).get());
+  auto* fr_head_node = pipeline_manager_->full_resolution_stream();
+  auto* gdc1_node = static_cast<GdcNode*>(fr_head_node->child_nodes().at(0).get());
+  auto* gdc2_node = static_cast<GdcNode*>(gdc1_node->child_nodes().at(0).get());
+  auto* output_node = static_cast<OutputNode*>(gdc2_node->child_nodes().at(0).get());
+  auto* ge2d_node = static_cast<Ge2dNode*>(gdc1_node->child_nodes().at(1).get());
+  auto* output_node_video = static_cast<OutputNode*>(ge2d_node->child_nodes().at(0).get());
 
   // Check if all nodes were created appropriately.
   EXPECT_EQ(NodeType::kGdc, gdc1_node->type());
@@ -342,7 +344,7 @@ TEST_F(ControllerProtocolTest, TestHasStreamType) {
 }
 
 TEST_F(ControllerProtocolTest, TestNextNodeInPipeline) {
-  auto stream_config_node = GetStreamConfigNode(kMonitorConfig, kStreamTypeDS | kStreamTypeML);
+  auto* stream_config_node = GetStreamConfigNode(kMonitorConfig, kStreamTypeDS | kStreamTypeML);
   ASSERT_NE(nullptr, stream_config_node);
 
   StreamCreationData info;
@@ -355,8 +357,8 @@ TEST_F(ControllerProtocolTest, TestNextNodeInPipeline) {
   EXPECT_EQ(NodeType::kInputStream, stream_config_node->type);
 
   // Using ML|DS stream in Monitor configuration for test here.
-  auto next_node = camera::GetNextNodeInPipeline(info.stream_config->properties.stream_type(),
-                                                 *stream_config_node);
+  auto* next_node = camera::GetNextNodeInPipeline(info.stream_config->properties.stream_type(),
+                                                  *stream_config_node);
   ASSERT_NE(nullptr, next_node);
 
   // Expecting 2nd node to be input node.
@@ -375,8 +377,8 @@ TEST_F(ControllerProtocolTest, TestMultipleStartStreaming) {
   fuchsia::camera2::StreamPtr stream;
   ASSERT_EQ(ZX_OK, SetupStream(kDebugConfig, stream_type, stream));
 
-  auto fr_head_node = pipeline_manager_->full_resolution_stream();
-  auto output_node = static_cast<OutputNode*>(fr_head_node->child_nodes().at(0).get());
+  auto* fr_head_node = pipeline_manager_->full_resolution_stream();
+  auto* output_node = static_cast<OutputNode*>(fr_head_node->child_nodes().at(0).get());
 
   // Set streaming on.
   auto initial_start_count = fake_isp_.start_stream_counter();
@@ -393,8 +395,8 @@ TEST_F(ControllerProtocolTest, TestMultipleStopStreaming) {
   fuchsia::camera2::StreamPtr stream;
   ASSERT_EQ(ZX_OK, SetupStream(kDebugConfig, stream_type, stream));
 
-  auto fr_head_node = pipeline_manager_->full_resolution_stream();
-  auto output_node = static_cast<OutputNode*>(fr_head_node->child_nodes().at(0).get());
+  auto* fr_head_node = pipeline_manager_->full_resolution_stream();
+  auto* output_node = static_cast<OutputNode*>(fr_head_node->child_nodes().at(0).get());
 
   // Set streaming off.
   auto initial_stop_count = fake_isp_.stop_stream_counter();
@@ -429,10 +431,10 @@ TEST_F(ControllerProtocolTest, TestMonitorMultiStreamFR) {
   ASSERT_EQ(ZX_OK, SetupStream(kMonitorConfig, stream_type2, stream2));
   ASSERT_EQ(ZX_OK, SetupStream(kMonitorConfig, stream_type1, stream1));
 
-  auto fr_head_node = pipeline_manager_->full_resolution_stream();
-  auto fr_ml_output_node = static_cast<OutputNode*>(fr_head_node->child_nodes().at(0).get());
-  auto gdc_node = static_cast<GdcNode*>(fr_head_node->child_nodes().at(1).get());
-  auto ds_ml_output_node = static_cast<OutputNode*>(gdc_node->child_nodes().at(0).get());
+  auto* fr_head_node = pipeline_manager_->full_resolution_stream();
+  auto* fr_ml_output_node = static_cast<OutputNode*>(fr_head_node->child_nodes().at(0).get());
+  auto* gdc_node = static_cast<GdcNode*>(fr_head_node->child_nodes().at(1).get());
+  auto* ds_ml_output_node = static_cast<OutputNode*>(gdc_node->child_nodes().at(0).get());
 
   // Validate input node.
   EXPECT_TRUE(HasAllStreams(fr_head_node->configured_streams(), {stream_type1, stream_type2}));
@@ -491,7 +493,7 @@ TEST_F(ControllerProtocolTest, TestInUseBufferCounts) {
     frame_received = true;
   };
 
-  auto fr_head_node = pipeline_manager_->full_resolution_stream();
+  auto* fr_head_node = pipeline_manager_->full_resolution_stream();
 
   // Start streaming.
   async::PostTask(dispatcher(), [&stream]() { stream->Start(); });
@@ -537,7 +539,7 @@ TEST_F(ControllerProtocolTest, TestInUseBufferCounts) {
 
 TEST_F(ControllerProtocolTest, TestOutputNode) {
   auto stream_type = kStreamTypeFR;
-  auto stream_config_node = GetStreamConfigNode(kDebugConfig, stream_type);
+  auto* stream_config_node = GetStreamConfigNode(kDebugConfig, stream_type);
   ASSERT_NE(nullptr, stream_config_node);
   StreamCreationData info;
   fuchsia::camera2::hal::StreamConfig stream_config;
@@ -570,7 +572,7 @@ TEST_F(ControllerProtocolTest, TestOutputNode) {
 }
 
 TEST_F(ControllerProtocolTest, TestGdcNode) {
-  auto stream_config_node = GetStreamConfigNode(kMonitorConfig, kStreamTypeDS | kStreamTypeML);
+  auto* stream_config_node = GetStreamConfigNode(kMonitorConfig, kStreamTypeDS | kStreamTypeML);
   ASSERT_NE(nullptr, stream_config_node);
   StreamCreationData info;
   fuchsia::camera2::hal::StreamConfig stream_config;
@@ -581,7 +583,7 @@ TEST_F(ControllerProtocolTest, TestGdcNode) {
 
   auto input_result = GetInputNode(allocator, &info);
   // Testing successful creation of |GdcNode|.
-  auto next_node_internal = GetNextNodeInPipeline(kStreamTypeDS | kStreamTypeML, info.node);
+  auto* next_node_internal = GetNextNodeInPipeline(kStreamTypeDS | kStreamTypeML, info.node);
   ASSERT_NE(nullptr, next_node_internal);
   auto gdc_result = GdcNode::CreateGdcNode(allocator, dispatcher(), fake_ddk::kFakeParent, gdc_,
                                            &info, input_result.value().get(), *next_node_internal);
@@ -599,9 +601,9 @@ TEST_F(ControllerProtocolTest, TestReleaseAfterStopStreaming) {
   async::PostTask(dispatcher(), [&stream]() { stream->Start(); });
   RunLoopUntilIdle();
 
-  auto fr_head_node = pipeline_manager_->full_resolution_stream();
-  auto gdc_node = static_cast<GdcNode*>(fr_head_node->child_nodes().at(0).get());
-  auto ds_ml_output_node = static_cast<OutputNode*>(gdc_node->child_nodes().at(0).get());
+  auto* fr_head_node = pipeline_manager_->full_resolution_stream();
+  auto* gdc_node = static_cast<GdcNode*>(fr_head_node->child_nodes().at(0).get());
+  auto* ds_ml_output_node = static_cast<OutputNode*>(gdc_node->child_nodes().at(0).get());
 
   EXPECT_FALSE(fake_isp_.frame_released());
 
@@ -655,10 +657,10 @@ TEST_F(ControllerProtocolTest, TestEnabledDisableStreaming) {
   async::PostTask(dispatcher(), [&stream_ds]() { stream_ds->Start(); });
   RunLoopUntilIdle();
 
-  auto fr_head_node = pipeline_manager_->full_resolution_stream();
-  auto fr_ml_output_node = static_cast<OutputNode*>(fr_head_node->child_nodes().at(0).get());
-  auto gdc_node = static_cast<GdcNode*>(fr_head_node->child_nodes().at(1).get());
-  auto ds_ml_output_node = static_cast<OutputNode*>(gdc_node->child_nodes().at(0).get());
+  auto* fr_head_node = pipeline_manager_->full_resolution_stream();
+  auto* fr_ml_output_node = static_cast<OutputNode*>(fr_head_node->child_nodes().at(0).get());
+  auto* gdc_node = static_cast<GdcNode*>(fr_head_node->child_nodes().at(1).get());
+  auto* ds_ml_output_node = static_cast<OutputNode*>(gdc_node->child_nodes().at(0).get());
 
   EXPECT_TRUE(fr_head_node->enabled());
   EXPECT_TRUE(fr_ml_output_node->enabled());
@@ -713,8 +715,8 @@ TEST_F(ControllerProtocolTest, TestMultipleFrameRates) {
     ds_frame_count++;
   };
 
-  auto fr_head_node = pipeline_manager_->full_resolution_stream();
-  auto ds_head_node = pipeline_manager_->downscaled_resolution_stream();
+  auto* fr_head_node = pipeline_manager_->full_resolution_stream();
+  auto* ds_head_node = pipeline_manager_->downscaled_resolution_stream();
 
   // Start streaming.
   async::PostTask(dispatcher(), [&fr_stream]() { fr_stream->Start(); });
@@ -777,10 +779,10 @@ TEST_F(ControllerProtocolTest, TestResolutionChange) {
   fuchsia::camera2::StreamPtr ds_stream;
   ASSERT_EQ(ZX_OK, SetupStream(kMonitorConfig, ds_stream_type, ds_stream));
 
-  auto ds_head_node = pipeline_manager_->downscaled_resolution_stream();
-  auto gdc_node = static_cast<GdcNode*>(ds_head_node->child_nodes().at(0).get());
-  auto ge2d_node = static_cast<GdcNode*>(gdc_node->child_nodes().at(0).get());
-  auto output_node = static_cast<GdcNode*>(ge2d_node->child_nodes().at(0).get());
+  auto* ds_head_node = pipeline_manager_->downscaled_resolution_stream();
+  auto* gdc_node = static_cast<GdcNode*>(ds_head_node->child_nodes().at(0).get());
+  auto* ge2d_node = static_cast<GdcNode*>(gdc_node->child_nodes().at(0).get());
+  auto* output_node = static_cast<GdcNode*>(ge2d_node->child_nodes().at(0).get());
 
   bool ds_stream_alive = true;
   ds_stream.set_error_handler([&](zx_status_t /*status*/) { ds_stream_alive = false; });

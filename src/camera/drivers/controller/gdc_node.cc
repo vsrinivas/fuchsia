@@ -84,7 +84,7 @@ fit::result<ProcessNode*, zx_status_t> GdcNode::CreateGdcNode(
 
   // Convert the formats to C type
   std::vector<fuchsia_sysmem_ImageFormat_2> output_image_formats_c;
-  for (auto& format : internal_gdc_node.image_formats) {
+  for (const auto& format : internal_gdc_node.image_formats) {
     output_image_formats_c.push_back(GetImageFormatFromBufferCollection(
         *output_buffer_collection_helper.GetC(), format.coded_width, format.coded_height));
   }
@@ -98,7 +98,7 @@ fit::result<ProcessNode*, zx_status_t> GdcNode::CreateGdcNode(
 
   // Get the GDC configurations loaded
   std::vector<gdc_config_info> config_vmos_info;
-  for (auto& config : internal_gdc_node.gdc_info.config_type) {
+  for (const auto& config : internal_gdc_node.gdc_info.config_type) {
     auto gdc_config = LoadGdcConfiguration(device, config);
     if (gdc_config.is_error()) {
       FX_LOGST(ERROR, kTag) << "Failed to load GDC configuration";
