@@ -7,6 +7,8 @@
 
 #include <lib/sync/completion.h>
 
+#include <optional>
+
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/fragment-device.h>

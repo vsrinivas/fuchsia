@@ -113,7 +113,7 @@ TEST_F(ControllerDeviceTest, GetChannel) {
   camera_protocol_->GetChannel(controller_protocol_.NewRequest().TakeChannel());
   RunLoopUntilIdle();
   WaitForChannelClosure(controller_protocol_.channel());
-  WaitForInterfaceClosure(camera_protocol_, ZX_ERR_PEER_CLOSED);
+  WaitForInterfaceClosure(camera_protocol_, ZX_ERR_INTERNAL);
 }
 
 // Verifies that GetChannel2 works correctly.

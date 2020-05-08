@@ -413,7 +413,16 @@ zx_status_t device_get_deadline_profile(zx_device_t* device, uint64_t capacity, 
 
 __EXPORT
 void device_fidl_transaction_take_ownership(fidl_txn_t* txn, device_fidl_txn_t* new_txn) {
-  *new_txn = {*txn, 0};
+  auto fidl_txn = fake_ddk::FromDdkInternalTransaction(ddk::internal::Transaction::FromTxn(txn));
+
+  ZX_ASSERT_MSG(std::holds_alternative<fidl::Transaction*>(fidl_txn),
+                "Can only take ownership of transaction once\n");
+
+  auto result = std::get<fidl::Transaction*>(fidl_txn)->TakeOwnership();
+  // We call this to mimic what devhost does.
+  result->EnableNextDispatch();
+  auto new_ddk_txn = fake_ddk::MakeDdkInternalTransaction(std::move(result));
+  *new_txn = *new_ddk_txn.DeviceFidlTxn();
 }
 
 __EXPORT __WEAK zx_status_t load_firmware(zx_device_t* device, const char* path, zx_handle_t* fw,
