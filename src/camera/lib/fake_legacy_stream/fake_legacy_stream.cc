@@ -105,6 +105,10 @@ class FakeLegacyStreamImpl : public FakeLegacyStream, public fuchsia::camera2::S
 
   bool IsStreaming() override { return !stopped_; }
 
+  bool IsOutstanding(uint32_t buffer_id) override {
+    return outstanding_buffer_ids_.find(buffer_id) != outstanding_buffer_ids_.end();
+  };
+
  private:
   std::stringstream& ClientErrors() {
     if (client_error_count_ > 0) {

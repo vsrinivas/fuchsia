@@ -36,6 +36,9 @@ class FakeLegacyStream {
 
   // Indicates the streaming state.
   virtual bool IsStreaming() = 0;
+
+  // Returns true iff the given buffer ID is held by a client.
+  virtual bool IsOutstanding(uint32_t buffer_id) = 0;
 };
 
 }  // namespace camera

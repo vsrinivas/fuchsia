@@ -175,16 +175,17 @@ TEST_F(DeviceTest, GetFrames) {
   fuchsia::sysmem::BufferCollectionPtr collection;
   collection.set_error_handler(MakeErrorHandler("Buffer Collection"));
   allocator_->BindSharedCollection(std::move(received_token), collection.NewRequest());
-  collection->SetConstraints(
-      true, {.usage{.cpu = fuchsia::sysmem::cpuUsageRead},
-             .min_buffer_count_for_camping = 2,
-             .image_format_constraints_count = 1,
-             .image_format_constraints{
-                 {{.pixel_format{.type = fuchsia::sysmem::PixelFormatType::NV12},
-                   .color_spaces_count = 1,
-                   .color_space{{{.type = fuchsia::sysmem::ColorSpaceType::REC601_NTSC}}},
-                   .min_coded_width = 1,
-                   .min_coded_height = 1}}}});
+  constexpr fuchsia::sysmem::BufferCollectionConstraints constraints{
+      .usage{.cpu = fuchsia::sysmem::cpuUsageRead},
+      .min_buffer_count_for_camping = 2,
+      .image_format_constraints_count = 1,
+      .image_format_constraints{
+          {{.pixel_format{.type = fuchsia::sysmem::PixelFormatType::NV12},
+            .color_spaces_count = 1,
+            .color_space{{{.type = fuchsia::sysmem::ColorSpaceType::REC601_NTSC}}},
+            .min_coded_width = 1,
+            .min_coded_height = 1}}}};
+  collection->SetConstraints(true, constraints);
   bool buffers_allocated_returned = false;
   collection->WaitForBuffersAllocated(
       [&](zx_status_t status, fuchsia::sysmem::BufferCollectionInfo_2 buffers) {
@@ -220,6 +221,20 @@ TEST_F(DeviceTest, GetFrames) {
   while (!HasFailure() && (!frame1_received || !frame2_received)) {
     RunLoopUntilIdle();
   }
+
+  // Make sure the stream recycles frames once its camping allocation is exhausted.
+  constexpr uint32_t kNumFrames = 17;
+  for (uint32_t i = 0; i < kNumFrames; ++i) {
+    fuchsia::camera2::FrameAvailableInfo frame_info{.buffer_id = i};
+    frame_info.metadata.set_timestamp(0);
+    ASSERT_EQ(legacy_stream_fake->SendFrameAvailable(std::move(frame_info)), ZX_OK);
+    if (i >= constraints.min_buffer_count_for_camping) {
+      uint32_t recycled_buffer_id = i - constraints.min_buffer_count_for_camping;
+      RunLoopUntil(
+          [&] { return HasFailure() || !legacy_stream_fake->IsOutstanding(recycled_buffer_id); });
+    }
+  }
+
   auto client_result = legacy_stream_fake->StreamClientStatus();
   EXPECT_TRUE(client_result.is_ok()) << client_result.error();
   stream = nullptr;
