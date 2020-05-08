@@ -8,7 +8,7 @@ use {
         Options,
     },
     anyhow::{Context as _, Error},
-    triage::{analyze, ActionResults, ActionResultFormatter},
+    triage::{analyze, ActionResultFormatter, ActionResults},
 };
 
 /// The entry point for the CLI app.
@@ -89,7 +89,7 @@ mod tests {
         run_result.write_report(&mut dest)?;
 
         let output = String::from_utf8(dest)?;
-        assert_eq!("Warnings for foo\n\n", output);
+        assert_eq!("No actions were triggered. All targets OK.\n", output);
 
         Ok(())
     }
@@ -106,7 +106,7 @@ mod tests {
         run_result.write_report(&mut dest)?;
 
         let output = String::from_utf8(dest)?;
-        assert_eq!("Warnings for foo\nfail\n\n", output);
+        assert_eq!("Warnings for target foo\n-----------------------\nfail\n\n", output);
 
         Ok(())
     }
