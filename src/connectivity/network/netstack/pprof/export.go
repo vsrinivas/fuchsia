@@ -30,7 +30,7 @@ func Setup(path string) (appcontext.Node, func() error, error) {
 	return &appcontext.DirectoryWrapper{
 			Directory: mapDir,
 		}, func() error {
-			t := time.NewTicker(10 * time.Minute)
+			t := time.NewTicker(time.Minute)
 			defer t.Stop()
 
 			for {
@@ -44,6 +44,9 @@ func Setup(path string) (appcontext.Node, func() error, error) {
 					}
 					sort.Strings(filenames)
 					for _, filename := range filenames[:len(filenames)-maxProfiles] {
+						if err := mapDir.mu.m[filename].File.(*sliceFile).Close(); err != nil {
+							return err
+						}
 						delete(mapDir.mu.m, filename)
 					}
 				}
@@ -74,7 +77,7 @@ var _ appcontext.Directory = (*mapDirectory)(nil)
 type mapDirectory struct {
 	mu struct {
 		sync.Mutex
-		m map[string]appcontext.Node
+		m map[string]*appcontext.FileWrapper
 	}
 }
 
@@ -91,7 +94,7 @@ func mapDirFromPath(path string) (*mapDirectory, error) {
 		return nil, err
 	}
 
-	m := make(map[string]appcontext.Node)
+	m := make(map[string]*appcontext.FileWrapper)
 	for _, filename := range filenames {
 		f, err := os.Open(filepath.Join(path, filename))
 		if err != nil {
@@ -141,11 +144,8 @@ func (md *mapDirectory) ForEach(fn func(string, appcontext.Node)) {
 var _ appcontext.File = (*sliceFile)(nil)
 
 type sliceFile struct {
-	b    []byte
-	once struct {
-		sync.Once
-		vmo zx.VMO
-	}
+	b   []byte
+	vmo zx.VMO
 }
 
 func (sf *sliceFile) GetReader() (appcontext.Reader, uint64) {
@@ -154,17 +154,24 @@ func (sf *sliceFile) GetReader() (appcontext.Reader, uint64) {
 }
 
 func (sf *sliceFile) GetVMO() zx.VMO {
-	sf.once.Do(func() {
+	if !sf.vmo.Handle().IsValid() {
 		vmo, err := zx.NewVMO(uint64(len(sf.b)), 0)
 		if err != nil {
-			return
+			return zx.VMO(zx.HandleInvalid)
 		}
 		if err := vmo.Write(sf.b, 0); err != nil {
-			return
+			return zx.VMO(zx.HandleInvalid)
 		}
-		sf.once.vmo = vmo
-	})
-	return sf.once.vmo
+		sf.vmo = vmo
+	}
+	return sf.vmo
+}
+
+func (sf *sliceFile) Close() error {
+	if sf.vmo.Handle().IsValid() {
+		return sf.vmo.Close()
+	}
+	return nil
 }
 
 var _ appcontext.File = (*pprofFile)(nil)
