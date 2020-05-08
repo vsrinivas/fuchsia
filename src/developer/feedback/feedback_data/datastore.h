@@ -8,6 +8,7 @@
 #include <lib/async/dispatcher.h>
 #include <lib/fit/promise.h>
 #include <lib/sys/cpp/service_directory.h>
+#include <lib/zx/time.h>
 
 #include "src/developer/feedback/feedback_data/annotations/types.h"
 #include "src/developer/feedback/feedback_data/attachments/aliases.h"
@@ -37,8 +38,8 @@ class Datastore {
             cobalt::Logger* cobalt, const AnnotationKeys& annotation_allowlist,
             const AttachmentKeys& attachment_allowlist, DeviceIdProvider* device_id_provider);
 
-  ::fit::promise<Annotations> GetAnnotations();
-  ::fit::promise<Attachments> GetAttachments();
+  ::fit::promise<Annotations> GetAnnotations(zx::duration timeout);
+  ::fit::promise<Attachments> GetAttachments(zx::duration timeout);
 
   // Returns whether the extra annotations were actually set as there is a cap on the number of
   // extra annotations.
@@ -52,7 +53,10 @@ class Datastore {
   const Annotations& GetExtraAnnotations() const { return extra_annotations_; }
 
  private:
-  fit::Timeout MakeCobaltTimeout(cobalt::TimedOutData data);
+  ::fit::promise<Attachment> BuildAttachment(const AttachmentKey& key, zx::duration timeout);
+  ::fit::promise<AttachmentValue> BuildAttachmentValue(const AttachmentKey& key,
+                                                       zx::duration timeout);
+  fit::Timeout MakeCobaltTimeout(cobalt::TimedOutData data, zx::duration timeout);
 
   async_dispatcher_t* dispatcher_;
   const std::shared_ptr<sys::ServiceDirectory> services_;
@@ -64,9 +68,6 @@ class Datastore {
   const Attachments static_attachments_;
 
   Annotations extra_annotations_;
-
-  ::fit::promise<Attachment> BuildAttachment(const AttachmentKey& key);
-  ::fit::promise<AttachmentValue> BuildAttachmentValue(const AttachmentKey& key);
 };
 
 }  // namespace feedback

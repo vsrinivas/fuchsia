@@ -6,7 +6,6 @@
 
 #include <lib/fit/promise.h>
 #include <lib/syslog/cpp/macros.h>
-#include <lib/zx/time.h>
 
 #include <utility>
 
@@ -23,12 +22,6 @@
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace feedback {
-namespace {
-
-// Timeout for a single asynchronous piece of data, e.g., syslog collection.
-const zx::duration kTimeout = zx::sec(30);
-
-}  // namespace
 
 Datastore::Datastore(async_dispatcher_t* dispatcher,
                      std::shared_ptr<sys::ServiceDirectory> services, cobalt::Logger* cobalt,
@@ -69,13 +62,13 @@ Datastore::Datastore(async_dispatcher_t* dispatcher,
       static_annotations_({}),
       static_attachments_({}) {}
 
-::fit::promise<Annotations> Datastore::GetAnnotations() {
+::fit::promise<Annotations> Datastore::GetAnnotations(const zx::duration timeout) {
   if (annotation_allowlist_.empty() && extra_annotations_.empty()) {
     return ::fit::make_result_promise<Annotations>(::fit::error());
   }
 
   std::vector<::fit::promise<Annotations>> annotations;
-  for (auto& provider : GetProviders(dispatcher_, services_, kTimeout, cobalt_)) {
+  for (auto& provider : GetProviders(dispatcher_, services_, timeout, cobalt_)) {
     annotations.push_back(provider->GetAnnotations(annotation_allowlist_));
   }
 
@@ -120,14 +113,14 @@ Datastore::Datastore(async_dispatcher_t* dispatcher,
       });
 }
 
-::fit::promise<Attachments> Datastore::GetAttachments() {
+::fit::promise<Attachments> Datastore::GetAttachments(const zx::duration timeout) {
   if (attachment_allowlist_.empty()) {
     return ::fit::make_result_promise<Attachments>(::fit::error());
   }
 
   std::vector<::fit::promise<Attachment>> attachments;
   for (const auto& key : attachment_allowlist_) {
-    attachments.push_back(BuildAttachment(key));
+    attachments.push_back(BuildAttachment(key, timeout));
   }
 
   return ::fit::join_promise_vector(std::move(attachments))
@@ -152,23 +145,25 @@ Datastore::Datastore(async_dispatcher_t* dispatcher,
       });
 }
 
-::fit::promise<Attachment> Datastore::BuildAttachment(const AttachmentKey& key) {
-  return BuildAttachmentValue(key).and_then(
-      [key](AttachmentValue& value) -> ::fit::result<Attachment> {
+::fit::promise<Attachment> Datastore::BuildAttachment(const AttachmentKey& key,
+                                                      const zx::duration timeout) {
+  return BuildAttachmentValue(key, timeout)
+      .and_then([key](AttachmentValue& value) -> ::fit::result<Attachment> {
         return ::fit::ok(Attachment(key, value));
       });
 }
 
-::fit::promise<AttachmentValue> Datastore::BuildAttachmentValue(const AttachmentKey& key) {
+::fit::promise<AttachmentValue> Datastore::BuildAttachmentValue(const AttachmentKey& key,
+                                                                const zx::duration timeout) {
   if (key == kAttachmentLogKernel) {
     return CollectKernelLog(dispatcher_, services_,
-                            MakeCobaltTimeout(cobalt::TimedOutData::kKernelLog));
+                            MakeCobaltTimeout(cobalt::TimedOutData::kKernelLog, timeout));
   } else if (key == kAttachmentLogSystem) {
     return CollectSystemLog(dispatcher_, services_,
-                            MakeCobaltTimeout(cobalt::TimedOutData::kSystemLog));
+                            MakeCobaltTimeout(cobalt::TimedOutData::kSystemLog, timeout));
   } else if (key == kAttachmentInspect) {
     return CollectInspectData(dispatcher_, services_,
-                              MakeCobaltTimeout(cobalt::TimedOutData::kInspect));
+                              MakeCobaltTimeout(cobalt::TimedOutData::kInspect, timeout));
   }
   // There are static attachments in the allowlist that we just skip here.
   return ::fit::make_result_promise<AttachmentValue>(::fit::error());
@@ -186,8 +181,8 @@ bool Datastore::TrySetExtraAnnotations(const Annotations& extra_annotations) {
   }
 }
 
-fit::Timeout Datastore::MakeCobaltTimeout(cobalt::TimedOutData data) {
-  return fit::Timeout(kTimeout,
+fit::Timeout Datastore::MakeCobaltTimeout(cobalt::TimedOutData data, const zx::duration timeout) {
+  return fit::Timeout(timeout,
                       /*action=*/[cobalt = cobalt_, data] { cobalt->LogOccurrence(data); });
 }
 

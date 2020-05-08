@@ -51,7 +51,6 @@ using testing::Not;
 using testing::Pair;
 using testing::UnorderedElementsAreArray;
 
-// Keep in sync with the internal Datastore value.
 constexpr zx::duration kTimeout = zx::sec(30);
 
 // Allowlist to use in test cases where the annotations don't matter, but where we want to avoid
@@ -158,7 +157,7 @@ class DatastoreTest : public UnitTestFixture, public CobaltTestFixture {
     FX_CHECK(datastore_);
 
     ::fit::result<Annotations> result;
-    executor_.schedule_task(datastore_->GetAnnotations().then(
+    executor_.schedule_task(datastore_->GetAnnotations(kTimeout).then(
         [&result](::fit::result<Annotations>& res) { result = std::move(res); }));
     RunLoopFor(kTimeout);
     return result;
@@ -168,7 +167,7 @@ class DatastoreTest : public UnitTestFixture, public CobaltTestFixture {
     FX_CHECK(datastore_);
 
     ::fit::result<Attachments> result;
-    executor_.schedule_task(datastore_->GetAttachments().then(
+    executor_.schedule_task(datastore_->GetAttachments(kTimeout).then(
         [&result](::fit::result<Attachments>& res) { result = std::move(res); }));
     RunLoopFor(kTimeout);
     return result;

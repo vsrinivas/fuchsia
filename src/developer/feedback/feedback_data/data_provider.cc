@@ -33,6 +33,9 @@ using fuchsia::feedback::Data;
 using fuchsia::feedback::ImageEncoding;
 using fuchsia::feedback::Screenshot;
 
+// Timeout for a single asynchronous piece of data, e.g., syslog collection.
+const zx::duration kDataTimeout = zx::sec(30);
+
 // Timeout for requesting the screenshot from Scenic.
 const zx::duration kScreenshotTimeout = zx::sec(10);
 
@@ -72,7 +75,8 @@ void DataProvider::GetData(GetDataCallback callback) {
   const uint64_t timer_id = cobalt_->StartTimer();
 
   auto promise =
-      ::fit::join_promises(datastore_->GetAnnotations(), datastore_->GetAttachments())
+      ::fit::join_promises(datastore_->GetAnnotations(kDataTimeout),
+                           datastore_->GetAttachments(kDataTimeout))
           .and_then([](std::tuple<::fit::result<Annotations>, ::fit::result<Attachments>>&
                            annotations_and_attachments) {
             Data data;
