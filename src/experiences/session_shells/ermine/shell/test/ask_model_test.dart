@@ -4,7 +4,6 @@
 
 import 'dart:async';
 
-import 'package:fidl_fuchsia_modular/fidl_async.dart' as modular;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'
     show RawKeyDownEvent, RawKeyEventDataFuchsia;
@@ -112,5 +111,3 @@ void main() {
 
 // Mock classes.
 class MockSuggestionService extends Mock implements SuggestionService {}
-
-class MockPuppetMaster extends Mock implements modular.PuppetMaster {}

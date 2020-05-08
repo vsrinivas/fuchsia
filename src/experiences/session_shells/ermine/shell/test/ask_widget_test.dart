@@ -4,7 +4,6 @@
 
 import 'dart:async';
 
-import 'package:fidl_fuchsia_modular/fidl_async.dart' as modular;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
@@ -94,5 +93,3 @@ class MockSuggestionService extends Mock implements SuggestionService {
             ]
           : [];
 }
-
-class MockPuppetMaster extends Mock implements modular.PuppetMaster {}

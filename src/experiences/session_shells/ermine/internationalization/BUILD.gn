@@ -34,6 +34,5 @@ dart_library("internationalization") {
     "//third_party/dart-pkg/git/flutter/packages/flutter_localizations",
     "//third_party/dart/third_party/pkg/intl",
     "//topaz/public/dart/fuchsia_internationalization_flutter",
-    "//topaz/public/dart/widgets:lib.widgets",
   ]
 }
