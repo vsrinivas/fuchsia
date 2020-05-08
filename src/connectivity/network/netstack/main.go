@@ -10,6 +10,7 @@ import (
 	"encoding/base64"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"path/filepath"
@@ -98,6 +99,28 @@ const (
 	//
 	// As per RFC 7217 section, 3 is the default maximum number of retries.
 	autoGenAddressConflictRetries = 3
+
+	// maxTempAddrValidLifetime is the maximum amount of time a temporary SLAAC
+	// address may be valid for from creation.
+	//
+	// As per RFC 4941 section 5, 7 days is the default max valid lifetime.
+	maxTempAddrValidLifetime = 7 * 24 * time.Hour
+
+	// maxTempAddrPreferredLifetime is the maximum amount of time a temporary
+	// SLAAC address may be preferred for from creation.
+	//
+	// As per RFC 4941 section 5, 1 day is the default max preferred lifetime.
+	maxTempAddrPreferredLifetime = 24 * time.Hour
+
+	// regenAdvanceDuration is duration before the deprecation of a temporary
+	// address when a new address will be generated.
+	//
+	// As per RFC 4941 section 5, 5s is the default duration. We make the duration
+	// the default duration plus the maximum amount of time for an address to
+	// resolve DAD if all but the last regeneration attempts fail. This is to
+	// guarantee that if a new address is generated, it will be assigned for at
+	// least 5s before the original address is deprecated.
+	regenAdvanceDuration = 5*time.Second + dadTransmits*dadRetransmitTimer*(1+autoGenAddressConflictRetries)
 )
 
 type bindingSetCounterStat struct {
@@ -177,6 +200,11 @@ func Main() {
 		panic(fmt.Sprintf("failed to get secret key for opaque IIDs: %s", err))
 	}
 
+	tempIIDSeed, err := newSecretKey(header.IIDSize)
+	if err != nil {
+		panic(fmt.Sprintf("failed to get temp IID seed: %s", err))
+	}
+
 	ndpDisp := newNDPDispatcher()
 
 	stk := tcpipstack.New(tcpipstack.Options{
@@ -204,6 +232,10 @@ func Main() {
 			DiscoverOnLinkPrefixes:        true,
 			AutoGenGlobalAddresses:        true,
 			AutoGenAddressConflictRetries: autoGenAddressConflictRetries,
+			AutoGenTempGlobalAddresses:    true,
+			MaxTempAddrValidLifetime:      maxTempAddrValidLifetime,
+			MaxTempAddrPreferredLifetime:  maxTempAddrPreferredLifetime,
+			RegenAdvanceDuration:          regenAdvanceDuration,
 		},
 		NDPDisp: ndpDisp,
 
@@ -223,6 +255,7 @@ func Main() {
 			},
 			SecretKey: secretKeyForOpaqueIID,
 		},
+		TempIIDSeed: tempIIDSeed,
 	})
 	if err := stk.SetTransportProtocolOption(tcp.ProtocolNumber, tcp.SACKEnabled(true)); err != nil {
 		syslog.Fatalf("method SetTransportProtocolOption(%v, tcp.SACKEnabled(true)) failed: %v", tcp.ProtocolNumber, err)
@@ -462,18 +495,18 @@ func Main() {
 	wg.Wait()
 }
 
-// newSecretKeyForOpaqueIID returns a new secret key for opaque IID generation.
-func newSecretKeyForOpaqueIID() ([]byte, error) {
-	var secretKeyBuf [header.OpaqueIIDSecretKeyMinBytes]byte
-	secretKey := secretKeyBuf[:]
-	n, err := rand.Read(secretKey)
-	if err != nil {
-		return nil, fmt.Errorf("failed to populate a new secret key for opaque IIDs: %s", err)
-	}
-	if n != header.OpaqueIIDSecretKeyMinBytes {
-		return nil, fmt.Errorf("failed to populate a new secret key for opaque IIDs: got rand.Read(_) = %d, want = %d", n, header.OpaqueIIDSecretKeyMinBytes)
+// newSecretKey returns a new secret key.
+func newSecretKey(keyLen int) ([]byte, error) {
+	secretKey := make([]byte, keyLen)
+	if _, err := io.ReadFull(rand.Reader, secretKey); err != nil {
+		return nil, fmt.Errorf("failed to populate a new secret key of %d bytes: %s", keyLen, err)
 	}
 	return secretKey, nil
+}
+
+// newSecretKeyForOpaqueIID returns a new secret key for opaque IID generation.
+func newSecretKeyForOpaqueIID() ([]byte, error) {
+	return newSecretKey(header.OpaqueIIDSecretKeyMinBytes)
 }
 
 // getSecretKeyForOpaqueIID gets a secret key for opaque IID generation from the
