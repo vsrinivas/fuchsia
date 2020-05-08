@@ -18,6 +18,8 @@ class CobaltControllerImpl : public fuchsia::cobalt::Controller {
   // All of the pointers passed to the constructor must be non-null.
   CobaltControllerImpl(async_dispatcher_t* dispatcher, CobaltServiceInterface* cobalt_service);
 
+  void OnSystemClockBecomesAccurate();
+
  private:
   void RequestSendSoon(RequestSendSoonCallback callback) override;
 
@@ -34,8 +36,12 @@ class CobaltControllerImpl : public fuchsia::cobalt::Controller {
   void GenerateAggregatedObservations(uint32_t day_index, std::vector<uint32_t> report_ids,
                                       GenerateAggregatedObservationsCallback callback) override;
 
+  void ListenForInitialized(ListenForInitializedCallback callback) override;
+
   async_dispatcher_t* const dispatcher_;
   CobaltServiceInterface* cobalt_service_;  // not owned
+  bool system_clock_is_accurate_ = false;
+  std::vector<ListenForInitializedCallback> accurate_clock_callbacks_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(CobaltControllerImpl);
 };

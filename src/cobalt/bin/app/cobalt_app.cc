@@ -159,6 +159,7 @@ CobaltApp::CobaltApp(std::unique_ptr<sys::ComponentContext> context, async_dispa
     // Now that the clock is accurate, notify CobaltService.
     cobalt_service_->SystemClockIsAccurate(std::make_unique<util::SystemClock>(),
                                            start_event_aggregator_worker);
+    controller_impl_->OnSystemClockBecomesAccurate();
   });
 
   // Create LoggerFactory protocol implementation and start serving it.

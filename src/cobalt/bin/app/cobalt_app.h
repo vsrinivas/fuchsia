@@ -117,7 +117,7 @@ class CobaltApp {
 
   TimerManager timer_manager_;
 
-  std::unique_ptr<fuchsia::cobalt::Controller> controller_impl_;
+  std::unique_ptr<CobaltControllerImpl> controller_impl_;
   fidl::BindingSet<fuchsia::cobalt::Controller> controller_bindings_;
 
   std::unique_ptr<fuchsia::cobalt::LoggerFactory> logger_factory_impl_;

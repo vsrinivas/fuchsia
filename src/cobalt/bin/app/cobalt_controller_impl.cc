@@ -63,4 +63,20 @@ void CobaltControllerImpl::GenerateAggregatedObservations(
   callback(num_new_obs);
 }
 
+void CobaltControllerImpl::ListenForInitialized(ListenForInitializedCallback callback) {
+  if (system_clock_is_accurate_) {
+    callback();
+    return;
+  }
+  accurate_clock_callbacks_.emplace_back(std::move(callback));
+}
+
+void CobaltControllerImpl::OnSystemClockBecomesAccurate() {
+  system_clock_is_accurate_ = true;
+  for (auto& callback : accurate_clock_callbacks_) {
+    callback();
+  }
+  accurate_clock_callbacks_.clear();
+}
+
 }  // namespace cobalt

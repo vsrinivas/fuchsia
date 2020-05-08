@@ -186,6 +186,7 @@ executable("cobalt_app_unittests") {
 
   sources = [
     "cobalt_app_test.cc",
+    "cobalt_controller_impl_test.cc",
     "configuration_data_test.cc",
     "logger_impl_test.cc",
     "metric_event_logger_impl_test.cc",

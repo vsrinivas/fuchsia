@@ -152,6 +152,8 @@ class CobaltAppTest : public gtest::TestLoopFixture {
     return logger;
   }
 
+  fuchsia::cobalt::Controller* GetCobaltController() { return cobalt_app_.controller_impl_.get(); }
+
   sys::testing::ComponentContextProvider context_provider_;
   testapp::FakeTimekeeper timekeeper_;
   FuchsiaSystemClock* clock_;
@@ -195,9 +197,14 @@ TEST_F(CobaltAppTest, CreateLoggerForNonFuchsiaCustomer) {
 }
 
 TEST_F(CobaltAppTest, SystemClockIsAccurate) {
+  bool callback_invoked = false;
+  GetCobaltController()->ListenForInitialized([&callback_invoked]() { callback_invoked = true; });
+  EXPECT_FALSE(callback_invoked);
+
   // Give the fake_timekeeper/clock time to become accurate.
   RunLoopUntilIdle();
   EXPECT_EQ(fake_service_->system_clock_is_accurate(), true);
+  EXPECT_TRUE(callback_invoked);
 }
 
 TEST_F(CobaltAppTest, LogEvent) {

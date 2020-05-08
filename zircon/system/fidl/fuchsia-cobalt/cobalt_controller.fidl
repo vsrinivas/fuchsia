@@ -51,4 +51,23 @@ protocol Controller {
     /// is the empty vector, then an empty vector is returned.
     GenerateAggregatedObservations(uint32 day_index, vector<uint32>:MAX report_ids)
         -> (vector<uint64>:MAX num_obs);
+
+    /// Requests that the caller be notified after the Cobalt FIDL service
+    /// is in the fully-initialized state.
+    ///
+    /// Cobalt starts serving requests before it is fully initialized. In this
+    /// pre-initialized state it will buffer incoming log events in memory
+    /// but not complete their processing. After Cobalt becomes fully
+    /// initialized the events in the bufer are fully processed.
+    ///
+    /// A partial list of things that must happen before Cobalt enters the
+    /// fully-initialized state are:
+    ///
+    /// - Cobalt must by notified by the timekeeper service that the system
+    ///   clock has become accurate--usually because the time has been
+    ///   fetched from a trusted network resource.
+    ///
+    /// The callback to this method will be invoked after Cobalt transistions
+    // to the fully-initialized state. This may never happen.
+    ListenForInitialized() -> ();
 };
