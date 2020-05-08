@@ -94,15 +94,12 @@ impl ControlMock {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use {fuchsia_zircon::DurationNum, futures::join};
-
-    fn timeout() -> Duration {
-        20.seconds()
-    }
+    use {crate::timeout_duration, futures::join};
 
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_expect_disconnect() {
-        let (proxy, mut mock) = ControlMock::new(timeout()).expect("failed to create mock");
+        let (proxy, mut mock) =
+            ControlMock::new(timeout_duration()).expect("failed to create mock");
         let peer_id = "1".to_string();
 
         let disconnect = proxy.disconnect(&peer_id);
@@ -115,7 +112,8 @@ mod tests {
 
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_expect_forget() {
-        let (proxy, mut mock) = ControlMock::new(timeout()).expect("failed to create mock");
+        let (proxy, mut mock) =
+            ControlMock::new(timeout_duration()).expect("failed to create mock");
         let peer_id = "1".to_string();
 
         let forget = proxy.forget(&peer_id);
