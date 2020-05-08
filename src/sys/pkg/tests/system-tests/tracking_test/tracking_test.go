@@ -57,11 +57,21 @@ func TestOTA(t *testing.T) {
 	l.SetFlags(logger.Ldate | logger.Ltime | logger.LUTC | logger.Lshortfile)
 	ctx = logger.WithLogger(ctx, l)
 
-	device, err := c.deviceConfig.NewDeviceClient(ctx)
+	deviceClient, err := c.deviceConfig.NewDeviceClient(ctx)
 	if err != nil {
 		t.Fatalf("failed to create ota test client: %s", err)
 	}
-	defer device.Close()
+	defer deviceClient.Close()
+
+	l = logger.NewLogger(
+		logger.TraceLevel,
+		color.NewColor(color.ColorAuto),
+		os.Stdout,
+		os.Stderr,
+		device.NewEstimatedMonotonicTime(deviceClient, "tracking-test: "),
+	)
+	l.SetFlags(logger.Ldate | logger.Ltime | logger.LUTC | logger.Lshortfile)
+	ctx = logger.WithLogger(ctx, l)
 
 	// Creating a sl4f.Client requires knowing the build currently running
 	// on the device, which not all test cases know during start. Store the
@@ -80,7 +90,7 @@ func TestOTA(t *testing.T) {
 	if c.shouldRepaveDevice() {
 		ch := make(chan *sl4f.Client, 1)
 		if err := util.RunWithTimeout(ctx, c.paveTimeout, func() error {
-			rpcClient, err = paveDevice(ctx, device)
+			rpcClient, err = paveDevice(ctx, deviceClient)
 			ch <- rpcClient
 			return err
 		}); err != nil {
@@ -89,7 +99,7 @@ func TestOTA(t *testing.T) {
 		rpcClient = <-ch
 	}
 
-	testTrackingOTAs(t, ctx, device, &rpcClient)
+	testTrackingOTAs(t, ctx, deviceClient, &rpcClient)
 }
 
 func testTrackingOTAs(t *testing.T, ctx context.Context, device *device.Client, rpcClient **sl4f.Client) {

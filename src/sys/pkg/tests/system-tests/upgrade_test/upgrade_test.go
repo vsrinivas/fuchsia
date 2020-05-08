@@ -65,11 +65,21 @@ func TestOTA(t *testing.T) {
 	}
 	defer cleanup()
 
-	device, err := c.deviceConfig.NewDeviceClient(ctx)
+	deviceClient, err := c.deviceConfig.NewDeviceClient(ctx)
 	if err != nil {
 		logger.Fatalf(ctx, "failed to create ota test client: %s", err)
 	}
-	defer device.Close()
+	defer deviceClient.Close()
+
+	l = logger.NewLogger(
+		logger.TraceLevel,
+		color.NewColor(color.ColorAuto),
+		os.Stdout,
+		os.Stderr,
+		device.NewEstimatedMonotonicTime(deviceClient, "upgrade-test: "),
+	)
+	l.SetFlags(logger.Ldate | logger.Ltime | logger.LUTC | logger.Lshortfile)
+	ctx = logger.WithLogger(ctx, l)
 
 	downgradeBuild, err := c.getDowngradeBuild(ctx, outputDir)
 	if err != nil {
@@ -83,7 +93,7 @@ func TestOTA(t *testing.T) {
 
 	ch := make(chan *sl4f.Client, 1)
 	if err := util.RunWithTimeout(ctx, c.paveTimeout, func() error {
-		rpcClient, err := initializeDevice(ctx, device, downgradeBuild)
+		rpcClient, err := initializeDevice(ctx, deviceClient, downgradeBuild)
 		ch <- rpcClient
 		return err
 	}); err != nil {
@@ -97,7 +107,7 @@ func TestOTA(t *testing.T) {
 		}
 	}()
 
-	testOTAs(ctx, device, upgradeBuild, &rpcClient)
+	testOTAs(ctx, deviceClient, upgradeBuild, &rpcClient)
 }
 
 func testOTAs(

@@ -62,11 +62,21 @@ func TestReboot(t *testing.T) {
 	}
 	defer cleanup()
 
-	device, err := c.deviceConfig.NewDeviceClient(ctx)
+	deviceClient, err := c.deviceConfig.NewDeviceClient(ctx)
 	if err != nil {
 		logger.Fatalf(ctx, "faied to create ota test client: %s", err)
 	}
-	defer device.Close()
+	defer deviceClient.Close()
+
+	l = logger.NewLogger(
+		logger.TraceLevel,
+		color.NewColor(color.ColorAuto),
+		os.Stdout,
+		os.Stderr,
+		device.NewEstimatedMonotonicTime(deviceClient, "reboot-test: "),
+	)
+	l.SetFlags(logger.Ldate | logger.Ltime | logger.LUTC | logger.Lshortfile)
+	ctx = logger.WithLogger(ctx, l)
 
 	build, err := c.getBuild(ctx, outputDir)
 	if err != nil {
@@ -75,7 +85,7 @@ func TestReboot(t *testing.T) {
 
 	ch := make(chan *sl4f.Client, 1)
 	if err := util.RunWithTimeout(ctx, c.paveTimeout, func() error {
-		rpcClient, err := initializeDevice(ctx, device, build)
+		rpcClient, err := initializeDevice(ctx, deviceClient, build)
 		ch <- rpcClient
 		return err
 	}); err != nil {
@@ -89,7 +99,7 @@ func TestReboot(t *testing.T) {
 		}
 	}()
 
-	testReboot(ctx, device, build, &rpcClient)
+	testReboot(ctx, deviceClient, build, &rpcClient)
 }
 
 func testReboot(

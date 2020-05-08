@@ -14,6 +14,7 @@ import (
 	"io/ioutil"
 	"net"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -41,9 +42,10 @@ const (
 
 // Client manages the connection to the device.
 type Client struct {
-	Name           string
-	deviceHostname string
-	sshClient      *sshutil.Client
+	Name                 string
+	deviceHostname       string
+	sshClient            *sshutil.Client
+	initialMonotonicTime time.Time
 }
 
 // NewClient creates a new Client.
@@ -62,11 +64,19 @@ func NewClient(ctx context.Context, deviceHostname string, name string, privateK
 		return nil, err
 	}
 
-	return &Client{
+	c := &Client{
 		Name:           name,
 		deviceHostname: deviceHostname,
 		sshClient:      sshClient,
-	}, nil
+	}
+
+	if err := c.setInitialMonotonicTime(ctx); err != nil {
+		c.Close()
+		return nil, err
+
+	}
+
+	return c, nil
 }
 
 // Construct a new `ssh.ClientConfig` for a given key file, or return an error if
@@ -90,7 +100,48 @@ func (c *Client) Close() {
 }
 
 func (c *Client) Reconnect(ctx context.Context) error {
-	return c.sshClient.Reconnect(ctx)
+	if err := c.sshClient.Reconnect(ctx); err != nil {
+		return err
+	}
+
+	return c.setInitialMonotonicTime(ctx)
+}
+
+func (c *Client) setInitialMonotonicTime(ctx context.Context) error {
+	var b bytes.Buffer
+	cmd := []string{"/boot/bin/clock", "--monotonic"}
+
+	// Get the device's monotonic time.
+	t0 := time.Now()
+	err := c.sshClient.Run(ctx, cmd, &b, os.Stderr)
+	t1 := time.Now()
+
+	if err != nil {
+		c.initialMonotonicTime = time.Time{}
+		return err
+	}
+
+	// Estimate the latency as half the time to execute the command.
+	latency := t1.Sub(t0) / 2
+
+	t, err := strconv.Atoi(strings.TrimSpace(b.String()))
+	if err != nil {
+		c.initialMonotonicTime = time.Time{}
+		return err
+	}
+
+	// The output from `clock --monotonic` is in nanoseconds.
+	monotonicTime := (time.Duration(t) * time.Nanosecond) - latency
+	c.initialMonotonicTime = time.Now().Add(-monotonicTime)
+
+	return nil
+}
+
+func (c *Client) getEstimatedMonotonicTime() time.Duration {
+	if c.initialMonotonicTime.IsZero() {
+		return 0
+	}
+	return time.Since(c.initialMonotonicTime)
 }
 
 // Run a command to completion on the remote device and write STDOUT and STDERR
