@@ -224,6 +224,11 @@ class Mixer {
   Bookkeeping& bookkeeping() { return bookkeeping_; }
   const Bookkeeping& bookkeeping() const { return bookkeeping_; }
 
+  // Eagerly precompute any needed data. If not called, that data should be lazily computed
+  // on the first call to Mix().
+  // TODO(45074): This is for tests only and can be removed once filter creation is eager.
+  virtual void EagerlyPrepare() {}
+
  protected:
   Mixer(uint32_t pos_filter_width, uint32_t neg_filter_width);
 

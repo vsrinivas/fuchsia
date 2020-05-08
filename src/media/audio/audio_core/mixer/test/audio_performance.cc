@@ -47,7 +47,7 @@ void AudioPerformance::ProfileMixers() {
 }
 
 void AudioPerformance::DisplayMixerCreationColumnHeader() {
-  printf("\nCreation config \t\t     Mean\t    First\t     Best\t    Worst\n");
+  printf("\nCreation config \t\t     Mean\t    First\t     Best\t    Worst\tMean Cached\n");
 }
 
 void AudioPerformance::ProfileMixerCreation() {
@@ -136,25 +136,34 @@ void AudioPerformance::ProfileMixerCreationTypeChanFormat(
 void AudioPerformance::ProfileMixerCreationTypeChanFormatRate(
     Mixer::Resampler sampler_type, uint32_t num_input_chans, uint32_t num_output_chans,
     fuchsia::media::AudioSampleFormat sample_format, uint32_t source_rate, uint32_t dest_rate) {
-  zx::duration first, worst, best, total_elapsed{0};
+  zx::duration first, worst, best, total_elapsed{0}, total_elapsed_cached{0};
 
   for (uint32_t i = 0; i < kNumMixerCreationRuns; ++i) {
-    auto start_time = zx::clock::get_monotonic();
+    auto t0 = zx::clock::get_monotonic();
 
-    auto mixer = SelectMixer(sample_format, num_input_chans, source_rate, num_output_chans,
-                             dest_rate, sampler_type);
+    auto mixer1 = SelectMixer(sample_format, num_input_chans, source_rate, num_output_chans,
+                              dest_rate, sampler_type);
+    mixer1->EagerlyPrepare();
+    auto t1 = zx::clock::get_monotonic();
 
-    auto elapsed = zx::clock::get_monotonic() - start_time;
-
-    if (i > 0) {
-      worst = std::max(worst, elapsed);
-      best = std::min(best, elapsed);
-    } else {
-      first = elapsed;
-      worst = elapsed;
-      best = elapsed;
+    {
+      auto elapsed = t1 - t0;
+      if (i > 0) {
+        worst = std::max(worst, elapsed);
+        best = std::min(best, elapsed);
+      } else {
+        first = elapsed;
+        worst = elapsed;
+        best = elapsed;
+      }
+      total_elapsed += elapsed;
     }
-    total_elapsed += elapsed;
+
+    auto mixer2 = SelectMixer(sample_format, num_input_chans, source_rate, num_output_chans,
+                              dest_rate, sampler_type);
+    mixer2->EagerlyPrepare();
+    auto t2 = zx::clock::get_monotonic();
+    total_elapsed_cached += t2 - t1;
   }
 
   char sampler_ch;
@@ -191,8 +200,10 @@ void AudioPerformance::ProfileMixerCreationTypeChanFormatRate(
          source_rate, dest_rate);
 
   auto mean = total_elapsed / kNumMixerCreationRuns;
-  printf("\t%10.3lf\t%10.3lf\t%10.3lf\t%10.3lf\n", to_frac_usecs(mean), to_frac_usecs(first),
-         to_frac_usecs(best), to_frac_usecs(worst));
+  auto mean_cached = total_elapsed_cached / kNumMixerCreationRuns;
+  printf("\t%10.3lf\t%10.3lf\t%10.3lf\t%10.3lf\t%10.3lf\n", to_frac_usecs(mean),
+         to_frac_usecs(first), to_frac_usecs(best), to_frac_usecs(worst),
+         to_frac_usecs(mean_cached));
 }
 
 void AudioPerformance::DisplayMixerColumnHeader() {

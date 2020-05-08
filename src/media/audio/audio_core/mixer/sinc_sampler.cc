@@ -54,6 +54,8 @@ class SincSamplerImpl : public SincSampler {
     working_data_.Clear();
   }
 
+  virtual void EagerlyPrepare() override { filter_.EagerlyPrepare(); }
+
  private:
   template <ScalerType ScaleType, bool DoAccumulate, bool HasModulo>
   inline bool Mix(float* dest, uint32_t dest_frames, uint32_t* dest_offset, const void* src,
