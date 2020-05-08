@@ -972,24 +972,28 @@ void Minfs::BlockSwap(Transaction* transaction, blk_t in_bno, blk_t* out_bno) {
 #endif
 
 void InitializeDirectory(void* bdata, ino_t ino_self, ino_t ino_parent) {
-#define DE0_SIZE DirentSize(1)
+  // The self directory is named "." (name length = 1).
+  constexpr auto kSelfSize = DirentSize(1);
+  DirentBuffer self;
+  self.dirent.ino = ino_self;
+  self.dirent.reclen = kSelfSize;
+  self.dirent.namelen = 1;
+  self.dirent.type = kMinfsTypeDir;
+  self.dirent.name[0] = '.';
 
-  // directory entry for self
-  Dirent* de = (Dirent*)bdata;
-  de->ino = ino_self;
-  de->reclen = DE0_SIZE;
-  de->namelen = 1;
-  de->type = kMinfsTypeDir;
-  de->name[0] = '.';
+  // The parent directory is named ".." (name length = 2).
+  constexpr auto kParentSize = DirentSize(2);
+  DirentBuffer parent;
+  parent.dirent.ino = ino_parent;
+  parent.dirent.reclen = kParentSize | kMinfsReclenLast;
+  parent.dirent.namelen = 2;
+  parent.dirent.type = kMinfsTypeDir;
+  parent.dirent.name[0] = '.';
+  parent.dirent.name[1] = '.';
 
-  // directory entry for parent
-  de = (Dirent*)((uintptr_t)bdata + DE0_SIZE);
-  de->ino = ino_parent;
-  de->reclen = DirentSize(2) | kMinfsReclenLast;
-  de->namelen = 2;
-  de->type = kMinfsTypeDir;
-  de->name[0] = '.';
-  de->name[1] = '.';
+  // Construct the output buffer by appending the two entries.
+  memcpy(bdata, self.raw, kSelfSize);
+  memcpy(&static_cast<uint8_t*>(bdata)[kSelfSize], parent.raw, kParentSize);
 }
 
 zx_status_t Minfs::ReadInitialBlocks(const Superblock& info, std::unique_ptr<Bcache> bc,

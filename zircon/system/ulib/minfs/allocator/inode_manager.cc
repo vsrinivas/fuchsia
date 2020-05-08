@@ -63,7 +63,7 @@ zx_status_t InodeManager::Create(block_client::BlockDevice* device, SuperblockMa
 }
 
 void InodeManager::Update(PendingWork* transaction, ino_t ino, const Inode* inode) {
-  // Obtain the offset of the inode within its containing block
+  // Obtain the offset of the inode within its containing block.
   const uint32_t off_of_ino = (ino % kMinfsInodesPerBlock) * kMinfsInodeSize;
   const blk_t inoblock_rel = ino / kMinfsInodesPerBlock;
   const blk_t inoblock_abs = inoblock_rel + start_block_;
@@ -85,7 +85,7 @@ void InodeManager::Update(PendingWork* transaction, ino_t ino, const Inode* inod
 const Allocator* InodeManager::GetInodeAllocator() const { return inode_allocator_.get(); }
 
 void InodeManager::Load(ino_t ino, Inode* out) const {
-  // obtain the block of the inode table we need
+  // Obtain the block of the inode table we need.
   uint32_t off_of_ino = (ino % kMinfsInodesPerBlock) * kMinfsInodeSize;
   const char* inodata = reinterpret_cast<const char*>(inode_table_.start()) +
                         ino / kMinfsInodesPerBlock * kMinfsBlockSize;

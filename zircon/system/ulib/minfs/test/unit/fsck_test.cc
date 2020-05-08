@@ -252,11 +252,12 @@ void ConsistencyCheckerFixtureVerbose::MarkDirectoryEntryMissing(
 
   destroy_fs(bcache);
 
-  uint8_t data[kMinfsBlockSize];
-  ASSERT_OK((*bcache)->Readblk(root_dir_block, data));
-  Dirent* de = reinterpret_cast<Dirent*>(&data[0] + offset);
-  de->ino = 0;
-  ASSERT_OK((*bcache)->Writeblk(root_dir_block, data));
+  // Need this buffer to be a full block.
+  DirentBuffer<kMinfsBlockSize> dirent_buffer;
+
+  ASSERT_OK((*bcache)->Readblk(root_dir_block, dirent_buffer.raw));
+  dirent_buffer.dirent.ino = 0;
+  ASSERT_OK((*bcache)->Writeblk(root_dir_block, dirent_buffer.raw));
 }
 
 TEST_F(ConsistencyCheckerFixtureVerbose, MissingDotEntry) {
@@ -288,17 +289,19 @@ void CreateUnlinkedDirectoryWithEntry(
     ino = child->GetIno();
     ASSERT_GT(kMinfsInodesPerBlock, ino);
 
+    // Need this buffer to be a full block.
+    DirentBuffer<kMinfsBlockSize> dirent_buffer;
+
     uint8_t data[kMinfsBlockSize];
-    Dirent* de = reinterpret_cast<Dirent*>(&data[0]);
-    de->ino = ino;
-    de->reclen = DirentSize(1);
-    de->namelen = 1;
-    de->type = kMinfsTypeDir;
-    de->name[0] = '.';
+    dirent_buffer.dirent.ino = ino;
+    dirent_buffer.dirent.reclen = DirentSize(1);
+    dirent_buffer.dirent.namelen = 1;
+    dirent_buffer.dirent.type = kMinfsTypeDir;
+    dirent_buffer.dirent.name[0] = '.';
 
     size_t written;
-    ASSERT_OK(child->Write(data, de->reclen, 0, &written));
-    ASSERT_EQ(written, de->reclen);
+    ASSERT_OK(child->Write(data, dirent_buffer.dirent.reclen, 0, &written));
+    ASSERT_EQ(written, dirent_buffer.dirent.reclen);
 
     ASSERT_OK(root->Unlink("foo", false));
 

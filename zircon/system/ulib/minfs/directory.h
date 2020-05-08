@@ -26,10 +26,10 @@ struct DirectoryOffset {
 
 struct DirArgs {
   fbl::StringPiece name;
-  ino_t ino;
-  uint32_t type;
-  uint32_t reclen;
-  Transaction* transaction;
+  ino_t ino = 0;
+  uint32_t type = 0;
+  uint32_t reclen = 0;
+  Transaction* transaction = nullptr;
   DirectoryOffset offs;
 };
 

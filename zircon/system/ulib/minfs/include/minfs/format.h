@@ -177,26 +177,34 @@ static_assert(sizeof(Inode) == kMinfsInodeSize,
               "minfs inode size is wrong");
 
 struct Dirent {
-    ino_t ino;                      // inode number
-    uint32_t reclen;                // Low 28 bits: Length of record
-                                    // High 4 bits: Flags
-    uint8_t namelen;                // length of the filename
-    uint8_t type;                   // kMinfsType*
-    char name[];                    // name does not have trailing \0
+  ino_t ino;        // Inode number.
+  uint32_t reclen;  // Low 28 bits: Length of record. High 4 bits: Flags
+  uint8_t namelen;  // Length of the filename.
+  uint8_t type;     // One of kMinfsType*.
+  char name[];      // The name bytes follow immediately. There is no trailing null.
 };
 
-constexpr uint32_t MINFS_DIRENT_SIZE = sizeof(Dirent);
+constexpr uint32_t kMinfsDirentSize = sizeof(Dirent);
 
+// Returns the length of the Dirent structure required to hold a name of the given length.
 constexpr uint32_t DirentSize(uint8_t namelen) {
-    return MINFS_DIRENT_SIZE + ((namelen + 3) & (~3));
+  return kMinfsDirentSize + ((namelen + 3) & (~3));
 }
 
 constexpr uint8_t kMinfsMaxNameSize       = 255;
-// The largest acceptable value of DirentSize(dirent->namelen).
-// The 'dirent->reclen' field may be larger after coalescing
-// entries.
+
+// The largest acceptable value of DirentSize(dirent->namelen). The 'dirent->reclen' field may be
+// larger after coalescing entries.
 constexpr uint32_t kMinfsMaxDirentSize    = DirentSize(kMinfsMaxNameSize);
 constexpr uint32_t kMinfsMaxDirectorySize = (((1 << 20) - 1) & (~3));
+
+// Storage for a Dirent padded out to the size for the maximum length. This is used as a buffer to
+// read into with the correct alignment.
+template<size_t max_size = kMinfsMaxDirentSize>
+union DirentBuffer {
+  uint8_t raw[max_size];
+  Dirent dirent;
+};
 
 static_assert(kMinfsMaxNameSize >= NAME_MAX,
               "MinFS names must be large enough to hold NAME_MAX characters");

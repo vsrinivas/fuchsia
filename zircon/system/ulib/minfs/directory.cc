@@ -39,6 +39,8 @@
 namespace minfs {
 namespace {
 
+// Possible non-error return values for DirentCallback:
+//
 // Immediately stop iterating over the directory.
 constexpr zx_status_t kDirIteratorDone = 0;
 // Access the next direntry in the directory. Offsets updated.
@@ -48,14 +50,14 @@ constexpr zx_status_t kDirIteratorSaveSync = 2;
 
 zx_status_t ValidateDirent(Dirent* de, size_t bytes_read, size_t off) {
   uint32_t reclen = static_cast<uint32_t>(MinfsReclen(de, off));
-  if ((bytes_read < MINFS_DIRENT_SIZE) || (reclen < MINFS_DIRENT_SIZE)) {
+  if ((bytes_read < kMinfsDirentSize) || (reclen < kMinfsDirentSize)) {
     FS_TRACE_ERROR("vn_dir: Could not read dirent at offset: %zd\n", off);
     return ZX_ERR_IO;
   } else if ((off + reclen > kMinfsMaxDirectorySize) || (reclen & 3)) {
     FS_TRACE_ERROR("vn_dir: bad reclen %u > %u\n", reclen, kMinfsMaxDirectorySize);
     return ZX_ERR_IO;
   } else if (de->ino != 0) {
-    if ((de->namelen == 0) || (de->namelen > (reclen - MINFS_DIRENT_SIZE))) {
+    if ((de->namelen == 0) || (de->namelen > (reclen - kMinfsDirentSize))) {
       FS_TRACE_ERROR("vn_dir: bad namelen %u / %u\n", de->namelen, reclen);
       return ZX_ERR_IO;
     }
@@ -150,7 +152,6 @@ zx_status_t Directory::UnlinkChild(Transaction* transaction, fbl::RefPtr<VnodeMi
   size_t off_prev = offs->off_prev;
   size_t off = offs->off;
   size_t off_next = off + MinfsReclen(de, off);
-  Dirent de_prev, de_next;
   zx_status_t status;
 
   // Read the direntries we're considering merging with.
@@ -159,7 +160,8 @@ zx_status_t Directory::UnlinkChild(Transaction* transaction, fbl::RefPtr<VnodeMi
   // Coalesce with "next" first, so the kMinfsReclenLast bit can easily flow
   // back to "de" and "de_prev".
   if (!(de->reclen & kMinfsReclenLast)) {
-    size_t len = MINFS_DIRENT_SIZE;
+    Dirent de_next;
+    size_t len = kMinfsDirentSize;
     if ((status = ReadExactInternal(transaction, &de_next, len, off_next)) != ZX_OK) {
       FS_TRACE_ERROR("unlink: Failed to read next dirent\n");
       return status;
@@ -174,7 +176,8 @@ zx_status_t Directory::UnlinkChild(Transaction* transaction, fbl::RefPtr<VnodeMi
     }
   }
   if (off_prev != off) {
-    size_t len = MINFS_DIRENT_SIZE;
+    Dirent de_prev;
+    size_t len = kMinfsDirentSize;
     if ((status = ReadExactInternal(transaction, &de_prev, len, off_prev)) != ZX_OK) {
       FS_TRACE_ERROR("unlink: Failed to read previous dirent\n");
       return status;
@@ -197,14 +200,14 @@ zx_status_t Directory::UnlinkChild(Transaction* transaction, fbl::RefPtr<VnodeMi
   de->reclen =
       static_cast<uint32_t>(coalesced_size & kMinfsReclenMask) | (de->reclen & kMinfsReclenLast);
   // Erase dirent (replace with 'empty' dirent)
-  if ((status = WriteExactInternal(transaction, de, MINFS_DIRENT_SIZE, off)) != ZX_OK) {
+  if ((status = WriteExactInternal(transaction, de, kMinfsDirentSize, off)) != ZX_OK) {
     return status;
   }
 
   if (de->reclen & kMinfsReclenLast) {
     // Truncating the directory merely removed unused space; if it fails,
     // the directory contents are still valid.
-    TruncateInternal(transaction, off + MINFS_DIRENT_SIZE);
+    TruncateInternal(transaction, off + kMinfsDirentSize);
   }
 
   inode_.dirent_count--;
@@ -355,11 +358,12 @@ zx_status_t Directory::DirentCallbackFindSpace(fbl::RefPtr<Directory> vndir, Dir
 }
 
 zx_status_t Directory::AppendDirent(DirArgs* args) {
-  char data[kMinfsMaxDirentSize];
-  Dirent* de = reinterpret_cast<Dirent*>(data);
+  DirentBuffer dirent_buffer;
+  Dirent* de = &dirent_buffer.dirent;
+
   size_t r;
   zx_status_t status =
-      ReadInternal(args->transaction, data, kMinfsMaxDirentSize, args->offs.off, &r);
+      ReadInternal(args->transaction, de, kMinfsMaxDirentSize, args->offs.off, &r);
   if (status != ZX_OK) {
     return status;
   } else if ((status = ValidateDirent(de, r, args->offs.off)) != ZX_OK) {
@@ -430,15 +434,16 @@ zx_status_t Directory::AppendDirent(DirArgs* args) {
 //          Since 'func' may create / remove surrounding dirents, it is responsible for
 //          updating the offset information to access the next dirent.
 zx_status_t Directory::ForEachDirent(DirArgs* args, const DirentCallback func) {
-  char data[kMinfsMaxDirentSize];
-  Dirent* de = (Dirent*)data;
+  DirentBuffer dirent_buffer;
+  Dirent* de = &dirent_buffer.dirent;
+
   args->offs.off = 0;
   args->offs.off_prev = 0;
-  while (args->offs.off + MINFS_DIRENT_SIZE < kMinfsMaxDirectorySize) {
+  while (args->offs.off + kMinfsDirentSize < kMinfsMaxDirectorySize) {
     FS_TRACE_DEBUG("Reading dirent at offset %zd\n", args->offs.off);
     size_t r;
     zx_status_t status =
-        ReadInternal(args->transaction, data, kMinfsMaxDirentSize, args->offs.off, &r);
+        ReadInternal(args->transaction, de, kMinfsMaxDirentSize, args->offs.off, &r);
     if (status != ZX_OK) {
       return status;
     } else if ((status = ValidateDirent(de, r, args->offs.off)) != ZX_OK) {
@@ -454,7 +459,10 @@ zx_status_t Directory::ForEachDirent(DirArgs* args, const DirentCallback func) {
         args->transaction->PinVnode(fbl::RefPtr(this));
         return ZX_OK;
       case kDirIteratorDone:
+        return ZX_OK;
       default:
+        // All errors. The callback should not be returning any other non-error (positive) values.
+        ZX_DEBUG_ASSERT(status < 0);
         return status;
     }
   }
@@ -484,23 +492,23 @@ zx_status_t Directory::Lookup(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name
 }
 
 zx_status_t Directory::LookupInternal(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name) {
-  DirArgs args = DirArgs();
+  DirArgs args;
   args.name = name;
-  zx_status_t status;
+
   bool success = false;
   fs::Ticker ticker(fs_->StartTicker());
   auto get_metrics = fbl::MakeAutoCall(
       [&ticker, &success, this]() { fs_->UpdateLookupMetrics(success, ticker.End()); });
-  if ((status = ForEachDirent(&args, DirentCallbackFind)) < 0) {
+
+  if (zx_status_t status = ForEachDirent(&args, DirentCallbackFind); status != ZX_OK) {
     return status;
   }
   fbl::RefPtr<VnodeMinfs> vn;
-  if ((status = fs_->VnodeGet(&vn, args.ino)) < 0) {
+  if (zx_status_t status = fs_->VnodeGet(&vn, args.ino); status != ZX_OK) {
     return status;
   }
   *out = std::move(vn);
-  success = (status == ZX_OK);
-  return status;
+  return ZX_OK;
 }
 
 struct DirCookie {
@@ -527,8 +535,9 @@ zx_status_t Directory::Readdir(fs::vdircookie_t* cookie, void* dirents, size_t l
 
   size_t off = dc->off;
   size_t r;
-  char data[kMinfsMaxDirentSize];
-  Dirent* de = (Dirent*)data;
+
+  DirentBuffer dirent_buffer;
+  Dirent* de = &dirent_buffer.dirent;
 
   if (off != 0 && dc->seqno != inode_.seq_num) {
     // The offset *might* be invalid, if we called Readdir after a directory
@@ -537,7 +546,7 @@ zx_status_t Directory::Readdir(fs::vdircookie_t* cookie, void* dirents, size_t l
 
     size_t off_recovered = 0;
     while (off_recovered < off) {
-      if (off_recovered + MINFS_DIRENT_SIZE >= kMinfsMaxDirectorySize) {
+      if (off_recovered + kMinfsDirentSize >= kMinfsMaxDirectorySize) {
         FS_TRACE_ERROR("minfs: Readdir: Corrupt dirent; dirent reclen too large\n");
         goto fail;
       }
@@ -551,7 +560,7 @@ zx_status_t Directory::Readdir(fs::vdircookie_t* cookie, void* dirents, size_t l
     off = off_recovered;
   }
 
-  while (off + MINFS_DIRENT_SIZE < kMinfsMaxDirectorySize) {
+  while (off + kMinfsDirentSize < kMinfsMaxDirectorySize) {
     zx_status_t status = ReadInternal(nullptr, de, kMinfsMaxDirentSize, off, &r);
     if (status != ZX_OK) {
       FS_TRACE_ERROR("minfs: Readdir: Unreadable dirent %d\n", status);
@@ -600,15 +609,16 @@ zx_status_t Directory::Create(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name
     return ZX_ERR_BAD_STATE;
   }
 
-  DirArgs args = DirArgs();
+  DirArgs args;
   args.name = name;
-  // ensure file does not exist
+
+  // Ensure file does not exist.
   zx_status_t status;
   if ((status = ForEachDirent(&args, DirentCallbackFind)) != ZX_ERR_NOT_FOUND) {
     return ZX_ERR_ALREADY_EXISTS;
   }
 
-  // creating a directory?
+  // Creating a directory?
   uint32_t type = S_ISDIR(mode) ? kMinfsTypeDir : kMinfsTypeFile;
 
   // Ensure that we have enough space to write the new vnode's direntry
@@ -689,10 +699,12 @@ zx_status_t Directory::Unlink(fbl::StringPiece name, bool must_be_dir) {
   if ((status = fs_->BeginTransaction(0, 0, &transaction)) != ZX_OK) {
     return status;
   }
-  DirArgs args = DirArgs();
+
+  DirArgs args;
   args.name = name;
   args.type = must_be_dir ? kMinfsTypeDir : 0;
   args.transaction = transaction.get();
+
   status = ForEachDirent(&args, DirentCallbackUnlink);
   if (status != ZX_OK) {
     return status;
@@ -738,7 +750,7 @@ zx_status_t Directory::Rename(fbl::RefPtr<fs::Vnode> _newdir, fbl::StringPiece o
 
   auto newdir_minfs = fbl::RefPtr<VnodeMinfs>::Downcast(_newdir);
 
-  // ensure that the vnodes containing oldname and newname are directories
+  // Ensure that the vnodes containing oldname and newname are directories.
   if (!(newdir_minfs->IsDirectory())) {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -749,8 +761,9 @@ zx_status_t Directory::Rename(fbl::RefPtr<fs::Vnode> _newdir, fbl::StringPiece o
 
   zx_status_t status;
   fbl::RefPtr<VnodeMinfs> oldvn = nullptr;
-  // acquire the 'oldname' node (it must exist)
-  DirArgs args = DirArgs();
+
+  // Acquire the 'oldname' node (it must exist).
+  DirArgs args;
   args.name = oldname;
   if ((status = ForEachDirent(&args, DirentCallbackFind)) < 0) {
     return status;
@@ -810,7 +823,7 @@ zx_status_t Directory::Rename(fbl::RefPtr<fs::Vnode> _newdir, fbl::StringPiece o
   args.ino = oldvn->GetIno();
   status = newdir->ForEachDirent(&args, DirentCallbackAttemptRename);
   if (status == ZX_ERR_NOT_FOUND) {
-    // if 'newname' does not exist, create it
+    // If 'newname' does not exist, create it.
     args.offs = append_offs;
     if ((status = newdir->AppendDirent(&args)) != ZX_OK) {
       return status;
@@ -819,8 +832,8 @@ zx_status_t Directory::Rename(fbl::RefPtr<fs::Vnode> _newdir, fbl::StringPiece o
     return status;
   }
 
-  // update the oldvn's entry for '..' if (1) it was a directory, and (2) it
-  // moved to a new directory
+  // Update the oldvn's entry for '..' if (1) it was a directory, and (2) it moved to a new
+  // directory.
   if ((args.type == kMinfsTypeDir) && (GetIno() != newdir->GetIno())) {
     fbl::RefPtr<fs::Vnode> vn_fs;
     if ((status = newdir->Lookup(&vn_fs, newname)) < 0) {
@@ -834,8 +847,8 @@ zx_status_t Directory::Rename(fbl::RefPtr<fs::Vnode> _newdir, fbl::StringPiece o
     }
   }
 
-  // at this point, the oldvn exists with multiple names (or the same name in
-  // different directories)
+  // At this point, the oldvn exists with multiple names (or the same name in different
+  // directories).
   oldvn->AddLink();
 
   // finally, remove oldname from its original position
@@ -865,7 +878,7 @@ zx_status_t Directory::Link(fbl::StringPiece name, fbl::RefPtr<fs::Vnode> _targe
   }
 
   // The destination should not exist
-  DirArgs args = DirArgs();
+  DirArgs args;
   args.name = name;
   zx_status_t status;
   if ((status = ForEachDirent(&args, DirentCallbackFind)) != ZX_ERR_NOT_FOUND) {

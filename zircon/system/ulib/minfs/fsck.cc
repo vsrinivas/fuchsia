@@ -255,14 +255,14 @@ zx_status_t MinfsChecker::CheckDirectory(Inode* inode, ino_t ino, ino_t parent, 
 
   size_t off = 0;
   while (true) {
-    uint32_t data[MINFS_DIRENT_SIZE];
+    DirentBuffer dirent_buffer;
     size_t actual;
-    status = vn->ReadInternal(nullptr, data, MINFS_DIRENT_SIZE, off, &actual);
+    status = vn->ReadInternal(nullptr, &dirent_buffer.dirent, kMinfsDirentSize, off, &actual);
     if (status == ZX_OK && actual == 0 && inode->link_count == 0 && parent == 0) {
       // This is OK as it's an unlinked directory.
       break;
     }
-    if (status != ZX_OK || actual != MINFS_DIRENT_SIZE) {
+    if (status != ZX_OK || actual != kMinfsDirentSize) {
       FS_TRACE_ERROR("check: ino#%u: Could not read de[%u] at %zd\n", eno, ino, off);
       if (inode->dirent_count >= 2 && inode->dirent_count == eno - 1) {
         // So we couldn't read the last direntry, for whatever reason, but our
@@ -272,11 +272,12 @@ zx_status_t MinfsChecker::CheckDirectory(Inode* inode, ino_t ino, ino_t parent, 
       }
       return status != ZX_OK ? status : ZX_ERR_IO;
     }
-    Dirent* de = reinterpret_cast<Dirent*>(data);
+
+    Dirent* de = &dirent_buffer.dirent;
     uint32_t rlen = static_cast<uint32_t>(MinfsReclen(de, off));
     uint32_t dlen = DirentSize(de->namelen);
     bool is_last = de->reclen & kMinfsReclenLast;
-    if (!is_last && ((rlen < MINFS_DIRENT_SIZE) || (dlen > rlen) || (dlen > kMinfsMaxDirentSize) ||
+    if (!is_last && ((rlen < kMinfsDirentSize) || (dlen > rlen) || (dlen > kMinfsMaxDirentSize) ||
                      (rlen & 3))) {
       FS_TRACE_ERROR("check: ino#%u: de[%u]: bad dirent reclen (%u)\n", ino, eno, rlen);
       return ZX_ERR_IO_DATA_INTEGRITY;
@@ -296,7 +297,7 @@ zx_status_t MinfsChecker::CheckDirectory(Inode* inode, ino_t ino, ino_t parent, 
       de = reinterpret_cast<Dirent*>(record_full);
       bool dot_or_dotdot = false;
 
-      if ((de->namelen == 0) || (de->namelen > (rlen - MINFS_DIRENT_SIZE))) {
+      if ((de->namelen == 0) || (de->namelen > (rlen - kMinfsDirentSize))) {
         FS_TRACE_ERROR("check: ino#%u: de[%u]: invalid namelen %u\n", ino, eno, de->namelen);
         return ZX_ERR_IO_DATA_INTEGRITY;
       }
