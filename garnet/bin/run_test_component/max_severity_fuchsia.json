@@ -1,0 +1,400 @@
+{
+   "tests": [
+      {
+         "url": "fuchsia-pkg://fuchsia.com/a11y_lib_tests#meta/gesture_recognizers_tests.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/a11y_lib_tests#meta/screen_reader_tests.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/a11y_lib_tests#meta/semantics_tests.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/a11y_tests#meta/a11y_manager_apptests.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/adaptation_tests#meta/configuration_manager_unittests.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/audio_admin_tests#meta/audio_admin_tests.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/audio_core_unittests#meta/audio_core_unittests.cmx",
+         "max_severity": "FATAL"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/audio_device_service_tests#meta/audio_device_service_tests.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/audio_device_tests#meta/audio_device_tests.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/audio_fidl_tests#meta/audio_fidl_tests.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/audio_pipeline_tests#meta/audio_pipeline_tests.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/brightness_manager_tests#meta/brightness_manager_test.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/bt-a2dp-manager-tests#meta/bt-a2dp-manager-unittests.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/camera_tests#meta/controller-test.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/camera_tests#meta/device_watcher_test.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/camera_tests#meta/fake_camera_test.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/camera_tests#meta/fake_stream_test.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/camera_tests#meta/image_writer_test.cmx",
+         "max_severity": "FATAL"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/camera_tests#meta/stream_utils_test.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/camera_tests#meta/virtual_camera_driver_test.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/cobalt_tests#meta/cobalt_testapp_no_network.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/codec_impl_unit_tests#meta/codec_impl_unit_tests.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/crash-reports-tests#meta/config_unittest.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/crash-reports-tests#meta/crash_reporter_unittest.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/crash-reports-tests#meta/crash_reports_integration_test.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/crash-reports-tests#meta/crash_reports_integration_test_invalid_override_config.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/crash-reports-tests#meta/crash_reports_integration_test_valid_override_config.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/crash-reports-tests#meta/database_unittest.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/crash-reports-tests#meta/inspect_manager_unittest.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/crash-reports-tests#meta/main_service_unittest.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/crash-reports-tests#meta/privacy_settings_ptr_unittest.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/crash-reports-tests#meta/queue_unittest.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/decryptor_adapter_tests#meta/decryptor_adapter_tests.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/dhcpd-cli-tests#meta/dhcpd_cli_test.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/escher_tests#meta/escher_unittests.cmx",
+         "max_severity": "FATAL"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/exception_broker_tests#meta/exception_broker_unittest.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/factory_store_providers_ext4_tests#meta/factory_store_providers_ext4_test.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/factory_store_providers_tests#meta/factory_store_providers_test.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/feedback-data-tests#meta/channel_provider_unittest.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/feedback-data-tests#meta/config_unittest.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/feedback-data-tests#meta/data_provider_unittest.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/feedback-data-tests#meta/device_id_provider_unittest.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/feedback-data-tests#meta/feedback_data_integration_test.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/feedback-data-tests#meta/inspect_ptr_unittest.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/feedback-data-tests#meta/screenshot_ptr_unittest.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/feedback-data-tests#meta/system_log_ptr_unittest.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/feedback_utils_tests#meta/cobalt_unittest.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/feedback_utils_tests#meta/data_provider_ptr_unittest.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/feedback_utils_tests#meta/device_id_provider_ptr_unittest.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/feedback_utils_tests#meta/oneshot_ptr_unittest.cmx",
+         "max_severity": "FATAL"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/fuchsia_modular_package_integration_tests#meta/fuchsia_modular_package_integration_tests.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/fuchsia_modular_testing_package_integration_tests#meta/fuchsia_modular_testing_package_integration_tests.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/google_audio_effects_tests#meta/google_audio_effects_tests.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/h264_decoder_fuzzer_test#meta/h264_decoder_fuzzer_test.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/hwinfo_negative_tests#meta/hwinfo_negative_test.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/inspect_validator_test_rust#meta/validator.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/intl_property_manager_tests#meta/intl_property_manager_bin_test.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/intl_services_tests#meta/intl_services_test.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/magma_abi_conformance_tests#meta/magma_abi_conformance_tests.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/magma_intel_gen_integration_tests#meta/msd_intel_gen_integration_tests.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/magma_intel_gen_nonhardware_tests#meta/msd_intel_gen_nonhardware_tests.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/magma_nonhardware_tests#meta/magma_unit_tests.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/mediaplayer_tests#meta/mediaplayer_graph_tests.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/mediaplayer_tests#meta/mediaplayer_tests.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/msd-arm-mali-integration-tests#meta/msd_arm_mali_integration_tests.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/msd_arm_mali_nonhardware_tests#meta/msd_arm_mali_nonhardware_tests.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/msd_img_rgx_integration_tests#meta/msd_img_rgx_no_hardware_integration_tests.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/msd_vsl_gc_nonhardware_tests#meta/msd_vsl_gc_nonhardware_tests.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/netdev-client-tests#meta/cpp-test.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/netemul_lib_test#meta/network_test.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/sandbox_service.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/netstack_integration_tests#meta/netstack_fidl_integration_test.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/omaha-client-integration-tests#meta/omaha-client-integration-test.cmx",
+         "max_severity": "FATAL"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/pkg-cache-integration-tests#meta/pkg-cache-integration-test.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/pkg-resolver-integration-tests#meta/dynamic-repositories-disabled.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/pkg-resolver-integration-tests#meta/dynamic-rewrite-disabled.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/pkg-resolver-integration-tests#meta/get-hash.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/pkg-resolver-integration-tests#meta/metrics.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/pkg-resolver-integration-tests#meta/resolve-propagates-pkgfs-failure.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/pkg-resolver-integration-tests#meta/resolve-recovers-from-http-errors.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/pkg-resolver-integration-tests#meta/resolve-succeeds-with-broken-minfs.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/pkg-resolver-integration-tests#meta/resolve-succeeds.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/pkg-resolver-integration-tests#meta/system-cache-fallback.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/reboot-info-tests#meta/reboot_log_handler_unittest.cmx",
+         "max_severity": "FATAL"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/reboot-info-tests#meta/reboot_log_unittest.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/rights_integration_test#meta/rights_integration_test.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/scenic_tests#meta/flatland_renderer_unittests.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/scenic_tests#meta/flatland_unittests.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/scenic_tests#meta/gfx_apptests.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/scenic_tests#meta/gfx_pixeltests.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/scenic_tests#meta/gfx_viewstate_apptests.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/scenic_tests#meta/input_unittests.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/scenic_tests#meta/scenic_unittests.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/scenic_tests#meta/scheduling_unittests.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/system-update-checker-integration-tests#meta/system-update-checker-integration-test.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/system-updater-integration-tests#meta/system-updater-v2-test.cmx",
+         "max_severity": "FATAL"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/telephony-tests#meta/tel_fake_at_query.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/vulkan-tests#meta/vkloop.cmx",
+         "max_severity": "ERROR"
+      },
+      {
+         "url": "fuchsia-pkg://fuchsia.com/weavestack_unittests#meta/weavestack_unittests.cmx",
+         "max_severity": "ERROR"
+      }
+   ]
+}

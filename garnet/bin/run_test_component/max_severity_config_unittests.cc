@@ -29,7 +29,7 @@ TEST(MaxSeverityErrors, NoUrl) {
 
   auto config = run::MaxSeverityConfig::ParseFromDirectory(path);
   ASSERT_TRUE(config.HasError());
-  ASSERT_EQ(config.Error(), "no_url.config: 'url' not found");
+  ASSERT_EQ(config.Error(), "no_url.json: 'url' not found");
 }
 
 TEST(MaxSeverityErrors, InvalidUrl) {
@@ -37,7 +37,7 @@ TEST(MaxSeverityErrors, InvalidUrl) {
 
   auto config = run::MaxSeverityConfig::ParseFromDirectory(path);
   ASSERT_TRUE(config.HasError());
-  ASSERT_EQ(config.Error(), "invalid_url.config: 'url' is not a string");
+  ASSERT_EQ(config.Error(), "invalid_url.json: 'url' is not a string");
 }
 
 TEST(MaxSeverityErrors, NoSeverity) {
@@ -45,7 +45,7 @@ TEST(MaxSeverityErrors, NoSeverity) {
 
   auto config = run::MaxSeverityConfig::ParseFromDirectory(path);
   ASSERT_TRUE(config.HasError());
-  ASSERT_EQ(config.Error(), "no_severity.config: 'max_severity' not found");
+  ASSERT_EQ(config.Error(), "no_severity.json: 'max_severity' not found");
 }
 
 TEST(MaxSeverityErrors, Invalideverity) {
@@ -54,7 +54,7 @@ TEST(MaxSeverityErrors, Invalideverity) {
   auto config = run::MaxSeverityConfig::ParseFromDirectory(path);
   ASSERT_TRUE(config.HasError());
   ASSERT_EQ(config.Error(),
-            "invalid_severity.config: 'INVALID' is not a valid severity for some_url. Must be one "
+            "invalid_severity.json: 'INVALID' is not a valid severity for some_url. Must be one "
             "of: [TRACE, DEBUG, INFO, WARN, ERROR, FATAL]");
 }
 
@@ -63,5 +63,5 @@ TEST(MaxSeverityErrors, UrlConflict) {
 
   auto config = run::MaxSeverityConfig::ParseFromDirectory(path);
   ASSERT_TRUE(config.HasError());
-  ASSERT_EQ(config.Error(), "url_conflict.config: test some_url configured twice.");
+  ASSERT_EQ(config.Error(), "url_conflict.json: test some_url configured twice.");
 }

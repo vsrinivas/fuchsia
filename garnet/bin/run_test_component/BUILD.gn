@@ -133,36 +133,36 @@ test_package("run_test_component_unittests") {
 
   resources = [
     {
-      path = "test_configs/max_severity/valid1.config"
-      dest = "max_severity/valid/1.config"
+      path = "test_configs/max_severity/valid1.json"
+      dest = "max_severity/valid/1.json"
     },
     {
-      path = "test_configs/max_severity/valid2.config"
-      dest = "max_severity/valid/2.config"
+      path = "test_configs/max_severity/valid2.json"
+      dest = "max_severity/valid/2.json"
     },
     {
-      path = "test_configs/max_severity/valid3.config"
-      dest = "max_severity/valid/3.config"
+      path = "test_configs/max_severity/valid3.json"
+      dest = "max_severity/valid/3.json"
     },
     {
-      path = "test_configs/max_severity/no_url.config"
-      dest = "max_severity/no_url/no_url.config"
+      path = "test_configs/max_severity/no_url.json"
+      dest = "max_severity/no_url/no_url.json"
     },
     {
-      path = "test_configs/max_severity/invalid_url.config"
-      dest = "max_severity/invalid_url/invalid_url.config"
+      path = "test_configs/max_severity/invalid_url.json"
+      dest = "max_severity/invalid_url/invalid_url.json"
     },
     {
-      path = "test_configs/max_severity/no_severity.config"
-      dest = "max_severity/no_severity/no_severity.config"
+      path = "test_configs/max_severity/no_severity.json"
+      dest = "max_severity/no_severity/no_severity.json"
     },
     {
-      path = "test_configs/max_severity/invalid_severity.config"
-      dest = "max_severity/invalid_severity/invalid_severity.config"
+      path = "test_configs/max_severity/invalid_severity.json"
+      dest = "max_severity/invalid_severity/invalid_severity.json"
     },
     {
-      path = "test_configs/max_severity/url_conflict.config"
-      dest = "max_severity/url_conflict/url_conflict.config"
+      path = "test_configs/max_severity/url_conflict.json"
+      dest = "max_severity/url_conflict/url_conflict.json"
     },
   ]
 }
@@ -170,7 +170,7 @@ test_package("run_test_component_unittests") {
 config_data("max_severity") {
   testonly = true
   for_pkg = "run_test_component"
-  sources = [ "max_severity_fuchsia.config" ]
+  sources = [ "max_severity_fuchsia.json" ]
 }
 
 group("run_test_component") {
