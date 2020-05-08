@@ -42,10 +42,10 @@ std::set<uint64_t> AddressRange(uint64_t start, uint64_t len) {
 // data source (rather than a block device).
 class FakeUserPager : public UserPager {
  public:
-  FakeUserPager() { InitPager(); }
+  FakeUserPager() { ASSERT_OK(InitPager()); }
   FakeUserPager(const char* data, size_t len) : data_(new uint8_t[len], len) {
     memcpy(data_.get(), data, len);
-    InitPager();
+    ASSERT_OK(InitPager());
   }
 
   // HACK: We don't have a good interface for propagating failure to satisfy a page request back
@@ -90,8 +90,8 @@ class FakeUserPager : public UserPager {
     return ZX_OK;
   }
 
-  zx_status_t VerifyTransferVmo(uint64_t offset, uint64_t length, const zx::vmo& transfer_vmo,
-                                UserPagerInfo* info) override {
+  zx_status_t VerifyTransferVmo(uint64_t offset, uint64_t length, uint64_t buffer_size,
+                                const zx::vmo& transfer_vmo, UserPagerInfo* info) override {
     if (offset + length > data_.size()) {
       AbortMainThread();
       return ZX_ERR_OUT_OF_RANGE;
@@ -100,12 +100,13 @@ class FakeUserPager : public UserPager {
     // Map the transfer VMO in order to pass the verifier a pointer to the data.
     fzl::VmoMapper mapping;
     auto unmap = fbl::MakeAutoCall([&]() { mapping.Unmap(); });
-    zx_status_t status = mapping.Map(transfer_vmo, 0, length, ZX_VM_PERM_READ);
+    zx_status_t status = mapping.Map(transfer_vmo, 0, buffer_size, ZX_VM_PERM_READ);
     if (status != ZX_OK) {
       AbortMainThread();
       return status;
     }
-    if ((status = info->verifier->VerifyPartial(mapping.start(), length, offset)) != ZX_OK) {
+    if ((status = info->verifier->VerifyPartial(mapping.start(), length, offset, buffer_size)) !=
+        ZX_OK) {
       AbortMainThread();
       return status;
     }

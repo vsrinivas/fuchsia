@@ -31,6 +31,7 @@
 #include <fs/metrics/events.h>
 #include <fs/transaction/writeback.h>
 #include <fs/vfs_types.h>
+#include <safemath/checked_math.h>
 
 #include "blob-verifier.h"
 #include "blobfs.h"
@@ -87,7 +88,7 @@ zx_status_t Blob::Verify() const {
     }
   }
 
-  return verifier->Verify(GetDataBuffer(), inode_.blob_size);
+  return verifier->Verify(data_mapping_.start(), inode_.blob_size, data_mapping_.size());
 }
 
 uint64_t Blob::SizeData() const {
@@ -98,10 +99,7 @@ uint64_t Blob::SizeData() const {
 }
 
 Blob::Blob(Blobfs* bs, const Digest& digest)
-    : CacheNode(digest),
-      blobfs_(bs),
-      flags_(kBlobStateEmpty),
-      clone_watcher_(this) {}
+    : CacheNode(digest), blobfs_(bs), flags_(kBlobStateEmpty), clone_watcher_(this) {}
 
 Blob::Blob(Blobfs* bs, uint32_t node_index, const Inode& inode)
     : CacheNode(Digest(inode.merkle_root_hash)),
@@ -272,8 +270,7 @@ fit::promise<void, zx_status_t> Blob::WriteMetadata() {
     ZX_ASSERT(populator.Walk(on_node, on_extent) == ZX_OK);
 
     // Ensure all non-allocation flags are propagated to the inode.
-    const uint16_t non_allocation_flags =
-        kBlobFlagMaskAnyCompression;
+    const uint16_t non_allocation_flags = kBlobFlagMaskAnyCompression;
     mapped_inode->header.flags |= (inode_.header.flags & non_allocation_flags);
   } else {
     // Special case: Empty node.
@@ -289,6 +286,16 @@ fit::promise<void, zx_status_t> Blob::WriteMetadata() {
   return blobfs_->journal()
       ->WriteMetadata(operations.TakeOperations())
       .and_then([blob = fbl::RefPtr(this)]() { blob->CompleteSync(); });
+}
+
+[[nodiscard]] static zx_status_t ZeroTail(zx_handle_t vmo, uint64_t end) {
+  uint64_t vmo_size;
+  zx_status_t status = zx_vmo_get_size(vmo, &vmo_size);
+  if (status != ZX_OK) {
+    return status;
+  }
+  const uint64_t tail_len = safemath::CheckSub(vmo_size, end).ValueOrDie();
+  return tail_len > 0 ? zx_vmo_op_range(vmo, ZX_VMO_OP_ZERO, end, tail_len, nullptr, 0) : ZX_OK;
 }
 
 zx_status_t Blob::WriteInternal(const void* data, size_t len, size_t* actual) {
@@ -398,6 +405,12 @@ zx_status_t Blob::WriteInternal(const void* data, size_t len, size_t* actual) {
   }
 
   if (write_info_->compressor) {
+    // This shouldn't be necessary because it should already be zeroed, but just in case:
+    status = ZeroTail(write_info_->compressor->Vmo().get(), write_info_->compressor->Size());
+    if (status != ZX_OK) {
+      return status;
+    }
+
     uint64_t blocks64 =
         fbl::round_up(write_info_->compressor->Size(), kBlobfsBlockSize) / kBlobfsBlockSize;
     ZX_DEBUG_ASSERT(blocks64 <= std::numeric_limits<uint32_t>::max());
@@ -429,6 +442,12 @@ zx_status_t Blob::WriteInternal(const void* data, size_t len, size_t* actual) {
         CompressionInodeHeaderFlags(blobfs_->write_compression_algorithm());
     inode_.header.flags |= compression_inode_header_flags;
   } else {
+    // This shouldn't be necessary because it should already be zeroed, but just in case:
+    status = ZeroTail(data_mapping_.vmo().get(), inode_.blob_size);
+    if (status != ZX_OK) {
+      return status;
+    }
+
     uint64_t blocks64 = fbl::round_up(inode_.blob_size, kBlobfsBlockSize) / kBlobfsBlockSize;
     ZX_DEBUG_ASSERT(blocks64 <= std::numeric_limits<uint32_t>::max());
     uint32_t blocks = static_cast<uint32_t>(blocks64);

@@ -7,11 +7,12 @@
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/zx/pager.h>
 #include <limits.h>
-#include <threads.h>
 
 #include <array>
 #include <cstdint>
 #include <memory>
+#include <random>
+#include <thread>
 
 #include <blobfs/format.h>
 #include <digest/digest.h>
@@ -27,11 +28,11 @@
 namespace blobfs {
 namespace {
 
-constexpr uint64_t kPagedVmoSize = 10 * ZX_PAGE_SIZE;
+constexpr size_t kPagedVmoSize = 10 * ZX_PAGE_SIZE;
 // kBlobSize is intentionally not page-aligned to exercise edge cases.
-constexpr uint64_t kBlobSize = kPagedVmoSize - 42;
-constexpr uint64_t kNumReadRequests = 100;
-constexpr uint64_t kNumThreads = 10;
+constexpr size_t kBlobSize = kPagedVmoSize - 42;
+constexpr int kNumReadRequests = 100;
+constexpr int kNumThreads = 10;
 
 // Like a Blob w.r.t. the pager - creates a VMO linked to the pager and issues reads on it.
 class MockBlob {
@@ -42,8 +43,7 @@ class MockBlob {
 
     size_t tree_len;
     Digest root;
-    ASSERT_OK(
-        digest::MerkleTreeCreator::Create(data, kBlobSize, &merkle_tree_, &tree_len, &root));
+    ASSERT_OK(digest::MerkleTreeCreator::Create(data, kBlobSize, &merkle_tree_, &tree_len, &root));
 
     std::unique_ptr<BlobVerifier> verifier;
     ASSERT_OK(BlobVerifier::Create(std::move(root), metrics, merkle_tree_.get(), tree_len,
@@ -103,7 +103,7 @@ class MockBlob {
 // mock blobs can be verified.
 class MockPager : public UserPager {
  public:
-  MockPager() { InitPager(); }
+  MockPager() { ASSERT_OK(InitPager()); }
 
  private:
   zx_status_t AttachTransferVmo(const zx::vmo& transfer_vmo) override {
@@ -122,20 +122,24 @@ class MockPager : public UserPager {
         return status;
       }
     }
-    return ZX_OK;
+    // Zero the tail.
+    memset(text, 0, kBlobfsBlockSize);
+    return vmo_->write(text, length, fbl::round_up(length, kBlobfsBlockSize) - length);
   }
 
-  zx_status_t VerifyTransferVmo(uint64_t offset, uint64_t length, const zx::vmo& transfer_vmo,
-                                UserPagerInfo* info) override {
+  zx_status_t VerifyTransferVmo(uint64_t offset, uint64_t length, size_t buffer_size,
+                                const zx::vmo& transfer_vmo, UserPagerInfo* info) override {
+    // buffer_size should always be rounded up to a page.
+    EXPECT_EQ(fbl::round_up(length, unsigned{PAGE_SIZE}), buffer_size);
     fzl::VmoMapper mapping;
     auto unmap = fbl::MakeAutoCall([&]() { mapping.Unmap(); });
 
     // Map the transfer VMO in order to pass the verifier a pointer to the data.
-    zx_status_t status = mapping.Map(transfer_vmo, 0, length, ZX_VM_PERM_READ);
+    zx_status_t status = mapping.Map(transfer_vmo, 0, buffer_size, ZX_VM_PERM_READ);
     if (status != ZX_OK) {
       return status;
     }
-    return info->verifier->VerifyPartial(mapping.start(), length, offset);
+    return info->verifier->VerifyPartial(mapping.start(), length, offset, buffer_size);
   }
 
   zx::unowned_vmo vmo_;
@@ -156,45 +160,52 @@ class BlobfsPagerTest : public zxtest::Test {
   BlobfsMetrics metrics_;
 };
 
-void GetRandomOffsetAndLength(unsigned int* seed, uint64_t* offset, uint64_t* length) {
-  *offset = rand_r(seed) % kPagedVmoSize;
-  *length = 1 + (rand_r(seed) % (kPagedVmoSize - *offset));
-}
+class RandomBlobReader {
+ public:
+  using Seed = std::default_random_engine::result_type;
 
-struct ReadBlobFnArgs {
-  MockBlob* blob;
-  unsigned int seed = zxtest::Runner::GetInstance()->random_seed();
-};
+  RandomBlobReader() : random_engine_(zxtest::Runner::GetInstance()->random_seed()) {}
+  RandomBlobReader(Seed seed) : random_engine_(seed) {}
 
-int ReadBlobFn(void* args) {
-  auto fnArgs = static_cast<ReadBlobFnArgs*>(args);
+  RandomBlobReader(const RandomBlobReader& other) = default;
+  RandomBlobReader& operator=(const RandomBlobReader& other) = default;
 
-  uint64_t offset, length;
-  for (uint64_t i = 0; i < kNumReadRequests; i++) {
-    GetRandomOffsetAndLength(&fnArgs->seed, &offset, &length);
-    fnArgs->blob->Read(offset, length);
+  void ReadOnce(MockBlob* blob) {
+    auto [offset, length] = GetRandomOffsetAndLength();
+    blob->Read(offset, length);
   }
 
-  return 0;
-}
+  // Reads the blob kNumReadRequests times. Provided as an operator overload to make it convenient
+  // to start a thread with an instance of RandomBlobReader.
+  void operator()(MockBlob* blob) {
+    for (int i = 0; i < kNumReadRequests; ++i) {
+      ReadOnce(blob);
+    }
+  }
+
+ private:
+  std::pair<uint64_t, uint64_t> GetRandomOffsetAndLength() {
+    uint64_t offset = std::uniform_int_distribution<uint64_t>(0, kBlobSize)(random_engine_);
+    return std::make_pair(
+        offset, std::uniform_int_distribution<uint64_t>(0, kBlobSize - offset)(random_engine_));
+  }
+
+  std::default_random_engine random_engine_;
+};
 
 TEST_F(BlobfsPagerTest, CreateBlob) { auto blob = CreateBlob(); }
 
 TEST_F(BlobfsPagerTest, ReadSequential) {
   auto blob = CreateBlob();
-  blob->Read(0, kPagedVmoSize);
+  blob->Read(0, kBlobSize);
   // Issue a repeated read on the same range.
-  blob->Read(0, kPagedVmoSize);
+  blob->Read(0, kBlobSize);
 }
 
 TEST_F(BlobfsPagerTest, ReadRandom) {
   auto blob = CreateBlob();
-  uint64_t offset, length;
-  unsigned int seed = zxtest::Runner::GetInstance()->random_seed();
-  for (uint64_t i = 0; i < kNumReadRequests; i++) {
-    GetRandomOffsetAndLength(&seed, &offset, &length);
-    blob->Read(offset, length);
-  }
+  RandomBlobReader reader;
+  reader(blob.get());
 }
 
 TEST_F(BlobfsPagerTest, CreateMultipleBlobs) {
@@ -204,53 +215,45 @@ TEST_F(BlobfsPagerTest, CreateMultipleBlobs) {
 }
 
 TEST_F(BlobfsPagerTest, ReadRandomMultipleBlobs) {
-  std::unique_ptr<MockBlob> blobs[3] = {CreateBlob('x'), CreateBlob('y'), CreateBlob('z')};
-
-  uint64_t offset, length;
-  unsigned int seed = zxtest::Runner::GetInstance()->random_seed();
-  for (uint64_t i = 0; i < kNumReadRequests; i++) {
-    uint64_t index = rand() % 3;
-    GetRandomOffsetAndLength(&seed, &offset, &length);
-    blobs[index]->Read(offset, length);
+  constexpr int kBlobCount = 3;
+  std::array<std::unique_ptr<MockBlob>, kBlobCount> blobs = {CreateBlob('x'), CreateBlob('y'),
+                                                             CreateBlob('z')};
+  RandomBlobReader reader;
+  std::default_random_engine random_engine(zxtest::Runner::GetInstance()->random_seed());
+  std::uniform_int_distribution distribution(0, kBlobCount - 1);
+  for (int i = 0; i < kNumReadRequests; i++) {
+    reader.ReadOnce(blobs[distribution(random_engine)].get());
   }
 }
 
 TEST_F(BlobfsPagerTest, ReadRandomMultithreaded) {
   auto blob = CreateBlob();
-  std::array<thrd_t, kNumThreads> threads;
-  std::array<ReadBlobFnArgs, kNumThreads> args;
+  std::array<std::thread, kNumThreads> threads;
 
   // All the threads will issue reads on the same blob.
-  for (uint64_t i = 0; i < kNumThreads; i++) {
-    args[i].blob = blob.get();
-    args[i].seed = static_cast<unsigned int>(i);
-    ASSERT_EQ(thrd_create(&threads[i], ReadBlobFn, &args[i]), thrd_success);
+  for (int i = 0; i < kNumThreads; i++) {
+    threads[i] =
+        std::thread(RandomBlobReader(zxtest::Runner::GetInstance()->random_seed() + i), blob.get());
   }
 
-  for (uint64_t i = 0; i < kNumThreads; i++) {
-    int res;
-    ASSERT_EQ(thrd_join(threads[i], &res), thrd_success);
-    ASSERT_EQ(res, 0);
+  for (auto& thread : threads) {
+    thread.join();
   }
 }
 
 TEST_F(BlobfsPagerTest, ReadRandomMultipleBlobsMultithreaded) {
-  constexpr uint64_t kNumBlobs = 3;
+  constexpr int kNumBlobs = 3;
   std::unique_ptr<MockBlob> blobs[kNumBlobs] = {CreateBlob('x'), CreateBlob('y'), CreateBlob('z')};
-  std::array<thrd_t, kNumBlobs> threads;
-  std::array<ReadBlobFnArgs, kNumThreads> args;
+  std::array<std::thread, kNumBlobs> threads;
 
   // Each thread will issue reads on a different blob.
-  for (uint64_t i = 0; i < kNumBlobs; i++) {
-    args[i].blob = blobs[i].get();
-    args[i].seed = static_cast<unsigned int>(i);
-    ASSERT_EQ(thrd_create(&threads[i], ReadBlobFn, &args[i]), thrd_success);
+  for (int i = 0; i < kNumBlobs; i++) {
+    threads[i] = std::thread(RandomBlobReader(zxtest::Runner::GetInstance()->random_seed() + i),
+                             blobs[i].get());
   }
 
-  for (uint64_t i = 0; i < kNumBlobs; i++) {
-    int res;
-    ASSERT_EQ(thrd_join(threads[i], &res), thrd_success);
-    ASSERT_EQ(res, 0);
+  for (auto& thread : threads) {
+    thread.join();
   }
 }
 

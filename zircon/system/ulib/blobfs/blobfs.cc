@@ -150,10 +150,9 @@ zx_status_t Blobfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<Block
 
   // Construct the Blobfs object, without intensive validation, since it
   // may require upgrades / journal replays to become valid.
-  auto fs = std::unique_ptr<Blobfs>(new Blobfs(dispatcher, std::move(device), superblock,
-                                               options->writability,
-                                               options->write_compression_algorithm,
-                                               std::move(vmex_resource)));
+  auto fs = std::unique_ptr<Blobfs>(
+      new Blobfs(dispatcher, std::move(device), superblock, options->writability,
+                 options->write_compression_algorithm, std::move(vmex_resource)));
   fs->block_info_ = std::move(block_info);
 
   if (options->pager) {
@@ -560,7 +559,7 @@ zx_status_t Blobfs::AddInodes(Allocator* allocator) {
   WriteInfo(&builder);
   if (zeroed_nodes_blocks > 0) {
     storage::UnbufferedOperation operation = {
-      .vmo = zx::unowned_vmo(allocator->GetNodeMapVmo().get()),
+        .vmo = zx::unowned_vmo(allocator->GetNodeMapVmo().get()),
         {
             .type = storage::OperationType::kWrite,
             .vmo_offset = inoblks_old,
@@ -845,8 +844,8 @@ zx_status_t Blobfs::PopulateTransferVmo(uint64_t offset, uint64_t length, UserPa
   return ZX_OK;
 }
 
-zx_status_t Blobfs::VerifyTransferVmo(uint64_t offset, uint64_t length, const zx::vmo& transfer_vmo,
-                                      UserPagerInfo* info) {
+zx_status_t Blobfs::VerifyTransferVmo(uint64_t offset, uint64_t length, uint64_t buffer_size,
+                                      const zx::vmo& transfer_vmo, UserPagerInfo* info) {
   if (!info) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -857,13 +856,13 @@ zx_status_t Blobfs::VerifyTransferVmo(uint64_t offset, uint64_t length, const zx
   auto unmap = fbl::MakeAutoCall([&]() { mapping.Unmap(); });
 
   // Map the transfer VMO in order to pass the verifier a pointer to the data.
-  zx_status_t status = mapping.Map(transfer_vmo, 0, length, ZX_VM_PERM_READ);
+  zx_status_t status = mapping.Map(transfer_vmo, 0, buffer_size, ZX_VM_PERM_READ);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("blobfs: Failed to map transfer buffer: %s\n", zx_status_get_string(status));
     return status;
   }
 
-  status = info->verifier->VerifyPartial(mapping.start(), length, offset);
+  status = info->verifier->VerifyPartial(mapping.start(), length, offset, buffer_size);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("blobfs: Verification failure: %s\n", zx_status_get_string(status));
   }

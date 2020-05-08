@@ -204,10 +204,12 @@ class Blobfs : public TransactionManager, public UserPager, public BlockIterator
   //
   // Allows populating (and verifying) the pager transfer buffer with a blob's blocks
   // from the block device.
-  zx_status_t AttachTransferVmo(const zx::vmo& transfer_vmo) final;
-  zx_status_t PopulateTransferVmo(uint64_t offset, uint64_t length, UserPagerInfo* info) final;
-  zx_status_t VerifyTransferVmo(uint64_t offset, uint64_t length, const zx::vmo& transfer_vmo,
-                                UserPagerInfo* info) final;
+  [[nodiscard]] zx_status_t AttachTransferVmo(const zx::vmo& transfer_vmo) final;
+  [[nodiscard]] zx_status_t PopulateTransferVmo(uint64_t offset, uint64_t length,
+                                                UserPagerInfo* info) final;
+  [[nodiscard]] zx_status_t VerifyTransferVmo(uint64_t offset, uint64_t length,
+                                              uint64_t buffer_length, const zx::vmo& transfer_vmo,
+                                              UserPagerInfo* info) final;
 
   Blobfs(async_dispatcher_t* dispatcher, std::unique_ptr<BlockDevice> device,
          const Superblock* info, Writability writable,
@@ -224,7 +226,7 @@ class Blobfs : public TransactionManager, public UserPager, public BlockIterator
   // By executing this function at mount, we can quickly assert
   // either the presence or absence of a blob on the system without
   // further scanning.
-  zx_status_t InitializeVnodes();
+  [[nodiscard]] zx_status_t InitializeVnodes();
 
   // Frees blocks from the allocated map (if allocated) and updates disk if necessary.
   void FreeExtent(const Extent& extent, storage::UnbufferedOperationsBuilder* operations,
@@ -253,11 +255,11 @@ class Blobfs : public TransactionManager, public UserPager, public BlockIterator
 
   // Creates an unique identifier for this instance. This is to be called only during
   // "construction".
-  zx_status_t CreateFsId();
+  [[nodiscard]] zx_status_t CreateFsId();
 
   // Loads the blob with inode |node_index| and verifies that the contents of the blob are valid.
   // Discards the blob's data after performing verification.
-  zx_status_t LoadAndVerifyBlob(uint32_t node_index);
+  [[nodiscard]] zx_status_t LoadAndVerifyBlob(uint32_t node_index);
 
   // Updates the flags field in superblock.
   void UpdateFlags(storage::UnbufferedOperationsBuilder* operations, uint32_t flags, bool set);

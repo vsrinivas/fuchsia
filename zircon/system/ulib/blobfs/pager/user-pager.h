@@ -62,12 +62,12 @@ class UserPager {
   // [|offset|, |offset| + |length|) for the inode associated with |info->identifier| into the
   // |transfer_buffer_|, and then moves those pages to the destination |vmo|. If |verifier_info| is
   // not null, uses it to verify the pages prior to transferring them to the destination vmo.
-  zx_status_t TransferPagesToVmo(uint64_t offset, uint64_t length, const zx::vmo& vmo,
-                                 UserPagerInfo* info);
+  [[nodiscard]] zx_status_t TransferPagesToVmo(uint64_t offset, uint64_t length, const zx::vmo& vmo,
+                                               UserPagerInfo* info);
 
  protected:
   // Sets up the transfer buffer, creates the pager and starts the pager thread.
-  zx_status_t InitPager();
+  [[nodiscard]] zx_status_t InitPager();
 
   // Protected for unit test access.
   zx::pager pager_;
@@ -97,18 +97,22 @@ class UserPager {
 
   // Attaches the transfer buffer to the underlying block device, so that blocks can be read into it
   // from storage.
-  virtual zx_status_t AttachTransferVmo(const zx::vmo& transfer_vmo) = 0;
+  [[nodiscard]] virtual zx_status_t AttachTransferVmo(const zx::vmo& transfer_vmo) = 0;
 
   // Reads data for the inode corresponding to |info->identifier| into the transfer buffer for the
   // byte range specified by [|offset|, |offset| + |length|).
-  virtual zx_status_t PopulateTransferVmo(uint64_t offset, uint64_t length,
-                                          UserPagerInfo* info) = 0;
+  [[nodiscard]] virtual zx_status_t PopulateTransferVmo(uint64_t offset, uint64_t length,
+                                                        UserPagerInfo* info) = 0;
 
   // Verifies the data read in to |transfer_vmo| (i.e. the transfer buffer) via
   // |PopulateTransferVmo|. Data in the range [|offset|, |offset| + |length|) is verified using the
-  // |info| provided.
-  virtual zx_status_t VerifyTransferVmo(uint64_t offset, uint64_t length,
-                                        const zx::vmo& transfer_vmo, UserPagerInfo* info) = 0;
+  // |info| provided. |buffer_length| might be larger than |length| e.g. for the tail where
+  // |length| might not be aligned, in which case the range between |length| and |buffer_length|
+  // should be verified to be zero.
+  [[nodiscard]] virtual zx_status_t VerifyTransferVmo(uint64_t offset, uint64_t length,
+                                                      uint64_t buffer_length,
+                                                      const zx::vmo& transfer_vmo,
+                                                      UserPagerInfo* info) = 0;
 
   // Scratch buffer for pager transfers.
   // NOTE: Per the constraints imposed by |zx_pager_supply_pages|, this needs to be unmapped before

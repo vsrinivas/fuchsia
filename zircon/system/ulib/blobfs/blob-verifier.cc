@@ -9,6 +9,7 @@
 #include <digest/digest.h>
 #include <digest/merkle-tree.h>
 #include <fs/trace.h>
+#include <safemath/checked_math.h>
 
 namespace blobfs {
 
@@ -61,27 +62,68 @@ zx_status_t BlobVerifier::CreateWithoutTree(digest::Digest digest, BlobfsMetrics
   return ZX_OK;
 }
 
-zx_status_t BlobVerifier::Verify(const void* data, size_t data_size) {
+zx_status_t BlobVerifier::VerifyTailZeroed(const void* data, size_t data_size, size_t buffer_size) {
+  size_t tail;
+  if (!safemath::CheckSub(buffer_size, data_size).AssignIfValid(&tail)) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  if (tail == 0) {
+    return ZX_OK;
+  }
+  // Check unaligned part first.
+  const uint8_t* u8_ptr = static_cast<const uint8_t*>(data) + data_size;
+  while (tail & 7) {
+    if (*u8_ptr) {
+      return ZX_ERR_IO_DATA_INTEGRITY;
+    }
+    ++u8_ptr;
+    --tail;
+  }
+  // Check remaining aligned part.
+  const uint64_t* u64_ptr = reinterpret_cast<const uint64_t*>(u8_ptr);
+  while (tail > 0) {
+    if (*u64_ptr) {
+      return ZX_ERR_IO_DATA_INTEGRITY;
+    }
+    ++u64_ptr;
+    tail -= 8;
+  }
+  return ZX_OK;
+}
+
+zx_status_t BlobVerifier::Verify(const void* data, size_t data_size, size_t buffer_size) {
   TRACE_DURATION("blobfs", "BlobVerifier::Verify", "data_size", data_size);
   fs::Ticker ticker(metrics_->Collecting());
 
   zx_status_t status = tree_verifier_.Verify(data, data_size, 0);
   if (status != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: Verify(%s, %lu) failed: %s\n", digest_.ToString().c_str(), data_size,
+    FS_TRACE_ERROR("blobfs: Verify(%s, %lu, %lu) failed: %s\n", digest_.ToString().c_str(),
+                   data_size, buffer_size, zx_status_get_string(status));
+  } else {
+    status = VerifyTailZeroed(data, data_size, buffer_size);
+    FS_TRACE_ERROR("blobfs: VerifyTailZeroed(%lu, %lu) failed: %s\n", data_size, buffer_size,
                    zx_status_get_string(status));
   }
   metrics_->UpdateMerkleVerify(data_size, tree_verifier_.GetTreeLength(), ticker.End());
   return status;
 }
 
-zx_status_t BlobVerifier::VerifyPartial(const void* data, size_t length, size_t data_offset) {
+zx_status_t BlobVerifier::VerifyPartial(const void* data, size_t length, size_t data_offset,
+                                        size_t buffer_size) {
   TRACE_DURATION("blobfs", "BlobVerifier::VerifyPartial", "length", length, "offset", data_offset);
   fs::Ticker ticker(metrics_->Collecting());
 
   zx_status_t status = tree_verifier_.Verify(data, length, data_offset);
   if (status != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: Verify(%s, %lu, %lu) failed: %s\n", digest_.ToString().c_str(),
-                   data_offset, length, zx_status_get_string(status));
+    FS_TRACE_ERROR("blobfs: VerifyPartial(%s, %lu, %lu, %lu) failed: %s\n",
+                   digest_.ToString().c_str(), data_offset, length, buffer_size,
+                   zx_status_get_string(status));
+  } else {
+    status = VerifyTailZeroed(data, length, buffer_size);
+    if (status != ZX_OK) {
+      FS_TRACE_ERROR("blobfs: VerifyTailZeroed(%lu, %lu, %lu) failed: %s\n", data_offset, length,
+                     buffer_size, zx_status_get_string(status));
+    }
   }
   metrics_->UpdateMerkleVerify(length, tree_verifier_.GetTreeLength(), ticker.End());
   return status;

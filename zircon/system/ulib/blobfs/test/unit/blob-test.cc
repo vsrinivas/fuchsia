@@ -113,5 +113,65 @@ TEST_F(BlobTest, SyncBehavior) {
   });
 }
 
+TEST_F(BlobTest, ReadingBlobVerifiesTail) {
+  // Remount without compression so that we can manipulate the data that is loaded.
+  MountOptions options = {
+      .write_compression_algorithm = CompressionAlgorithm::UNCOMPRESSED,
+  };
+  ASSERT_OK(Blobfs::Create(loop_.dispatcher(), Blobfs::Destroy(std::move(fs_)), &options,
+                           zx::resource(), &fs_));
+
+  std::unique_ptr<BlobInfo> info;
+  uint64_t block;
+  {
+    auto root = OpenRoot();
+    ASSERT_NO_FAILURES(GenerateRandomBlob("", 64, &info));
+    fbl::RefPtr<fs::Vnode> file;
+    ASSERT_OK(root->Create(&file, info->path + 1, 0));
+    size_t out_actual = 0;
+    EXPECT_OK(file->Truncate(info->size_data));
+    EXPECT_OK(file->Write(info->data.get(), info->size_data, 0, &out_actual));
+    EXPECT_EQ(out_actual, info->size_data);
+    {
+      auto blob = fbl::RefPtr<Blob>::Downcast(file);
+      block = fs_->GetNode(blob->Ino())->extents[0].Start() + DataStartBlock(fs_->Info());
+    }
+  }
+
+  // Unmount.
+  std::unique_ptr<block_client::BlockDevice> device = Blobfs::Destroy(std::move(fs_));
+
+  // Read the block that contains the blob.
+  storage::VmoBuffer buffer;
+  ASSERT_OK(buffer.Initialize(device.get(), 1, kBlobfsBlockSize, "test_buffer"));
+  block_fifo_request_t request = {
+      .opcode = BLOCKIO_READ,
+      .vmoid = buffer.vmoid(),
+      .length = kBlobfsBlockSize / kBlockSize,
+      .vmo_offset = 0,
+      .dev_offset = block * kBlobfsBlockSize / kBlockSize,
+  };
+  ASSERT_OK(device->FifoTransaction(&request, 1));
+
+  // Corrupt the end of the block.
+  static_cast<uint8_t*>(buffer.Data(0))[kBlobfsBlockSize - 1] = 1;
+
+  // Write the block back.
+  request.opcode = BLOCKIO_WRITE;
+  ASSERT_OK(device->FifoTransaction(&request, 1));
+
+  // Remount and try and read the blob.
+  ASSERT_OK(Blobfs::Create(loop_.dispatcher(), std::move(device), &options, zx::resource(), &fs_));
+
+  auto root = OpenRoot();
+  fbl::RefPtr<fs::Vnode> file;
+  ASSERT_OK(root->Lookup(&file, info->path + 1));
+
+  // Trying to read from the blob should fail with an error.
+  size_t actual;
+  uint8_t data;
+  EXPECT_STATUS(file->Read(&data, 1, 0, &actual), ZX_ERR_IO_DATA_INTEGRITY);
+}
+
 }  // namespace
 }  // namespace blobfs

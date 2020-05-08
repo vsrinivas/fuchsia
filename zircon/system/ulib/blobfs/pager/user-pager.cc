@@ -88,8 +88,8 @@ zx_status_t UserPager::TransferPagesToVmo(uint64_t requested_offset, uint64_t re
 
   size_t end;
   if (add_overflow(requested_offset, requested_length, &end)) {
-    FS_TRACE_ERROR("blobfs: Transfer range would overflow (off=%lu, len=%lu)\n",
-                   requested_offset, requested_length);
+    FS_TRACE_ERROR("blobfs: Transfer range would overflow (off=%lu, len=%lu)\n", requested_offset,
+                   requested_length);
     return ZX_ERR_OUT_OF_RANGE;
   }
   const auto [offset, length] = ExtendReadRange(info, requested_offset, requested_length);
@@ -111,7 +111,8 @@ zx_status_t UserPager::TransferPagesToVmo(uint64_t requested_offset, uint64_t re
   }
 
   // Verify the pages read in.
-  status = VerifyTransferVmo(offset, length, transfer_buffer_, info);
+  const uint64_t rounded_length = fbl::round_up<uint64_t, uint64_t>(length, PAGE_SIZE);
+  status = VerifyTransferVmo(offset, length, rounded_length, transfer_buffer_, info);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("blobfs: Failed to verify transfer vmo: %s\n", zx_status_get_string(status));
     return status;
@@ -119,8 +120,7 @@ zx_status_t UserPager::TransferPagesToVmo(uint64_t requested_offset, uint64_t re
 
   ZX_DEBUG_ASSERT(offset % PAGE_SIZE == 0);
   // Move the pages from the transfer buffer to the destination VMO.
-  status = pager_.supply_pages(vmo, offset, fbl::round_up<uint64_t, uint64_t>(length, PAGE_SIZE),
-                               transfer_buffer_, 0);
+  status = pager_.supply_pages(vmo, offset, rounded_length, transfer_buffer_, 0);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("blobfs: Failed to supply pages to paged VMO: %s\n",
                    zx_status_get_string(status));

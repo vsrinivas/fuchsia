@@ -24,14 +24,13 @@
 
 namespace blobfs {
 
-BlobLoader::BlobLoader(
-      TransactionManager* txn_manager,
-      BlockIteratorProvider* block_iter_provider,
-      NodeFinder* node_finder,
-      UserPager* pager,
-      BlobfsMetrics* metrics) :
-    txn_manager_(txn_manager), block_iter_provider_(block_iter_provider), node_finder_(node_finder),
-    pager_(pager), metrics_(metrics) {}
+BlobLoader::BlobLoader(TransactionManager* txn_manager, BlockIteratorProvider* block_iter_provider,
+                       NodeFinder* node_finder, UserPager* pager, BlobfsMetrics* metrics)
+    : txn_manager_(txn_manager),
+      block_iter_provider_(block_iter_provider),
+      node_finder_(node_finder),
+      pager_(pager),
+      metrics_(metrics) {}
 
 zx_status_t BlobLoader::LoadBlob(uint32_t node_index, fzl::OwnedVmoMapper* data_out,
                                  fzl::OwnedVmoMapper* merkle_out) {
@@ -75,14 +74,13 @@ zx_status_t BlobLoader::LoadBlob(uint32_t node_index, fzl::OwnedVmoMapper* data_
                    zx_status_get_string(status));
     return status;
   }
-  status = inode->IsCompressed()
-      ? LoadAndDecompressData(node_index, *inode, data_mapper)
-      : LoadData(node_index, *inode, data_mapper);
+  status = inode->IsCompressed() ? LoadAndDecompressData(node_index, *inode, data_mapper)
+                                 : LoadData(node_index, *inode, data_mapper);
   if (status != ZX_OK) {
     return status;
   }
 
-  if ((status = verifier->Verify(data_mapper.start(), inode->blob_size)) != ZX_OK) {
+  if ((status = verifier->Verify(data_mapper.start(), inode->blob_size, data_vmo_size)) != ZX_OK) {
     return status;
   }
 
@@ -163,8 +161,8 @@ zx_status_t BlobLoader::InitMerkleVerifier(uint32_t node_index, const Inode& ino
                                            std::unique_ptr<BlobVerifier>* out_verifier) {
   uint64_t num_merkle_blocks = ComputeNumMerkleTreeBlocks(inode);
   if (num_merkle_blocks == 0) {
-    return BlobVerifier::CreateWithoutTree(digest::Digest(inode.merkle_root_hash),
-                                           metrics_, inode.blob_size, out_verifier);
+    return BlobVerifier::CreateWithoutTree(digest::Digest(inode.merkle_root_hash), metrics_,
+                                           inode.blob_size, out_verifier);
   }
 
   fzl::OwnedVmoMapper merkle_mapper;
@@ -222,8 +220,7 @@ zx_status_t BlobLoader::LoadMerkle(uint32_t node_index, const Inode& inode,
   BlockIterator block_iter = block_iter_provider_->BlockIteratorByNodeIndex(node_index);
   status = StreamBlocks(&block_iter, merkle_blocks,
                         [&](uint64_t vmo_offset, uint64_t dev_offset, uint32_t length) {
-                          txn.Enqueue(vmoid.get(), vmo_offset, kDataStart + dev_offset,
-                                      length);
+                          txn.Enqueue(vmoid.get(), vmo_offset, kDataStart + dev_offset, length);
                           return ZX_OK;
                         });
   if (status != ZX_OK) {
@@ -253,8 +250,7 @@ zx_status_t BlobLoader::LoadData(uint32_t node_index, const Inode& inode,
   return ZX_OK;
 }
 
-zx_status_t BlobLoader::LoadAndDecompressData(uint32_t node_index,
-                                              const Inode& inode,
+zx_status_t BlobLoader::LoadAndDecompressData(uint32_t node_index, const Inode& inode,
                                               const fzl::OwnedVmoMapper& vmo) const {
   CompressionAlgorithm algorithm;
   if (inode.header.flags & kBlobFlagLZ4Compressed) {
@@ -320,15 +316,13 @@ zx_status_t BlobLoader::LoadAndDecompressData(uint32_t node_index,
     return ZX_ERR_IO_DATA_INTEGRITY;
   }
 
-  metrics_->UpdateMerkleDecompress(compressed_size, inode.blob_size, read_duration,
-                                             ticker.End());
+  metrics_->UpdateMerkleDecompress(compressed_size, inode.blob_size, read_duration, ticker.End());
 
   return ZX_OK;
 }
 
 zx_status_t BlobLoader::LoadDataInternal(uint32_t node_index, const Inode& inode,
-                                         const fzl::OwnedVmoMapper& vmo,
-                                         fs::Duration* out_duration,
+                                         const fzl::OwnedVmoMapper& vmo, fs::Duration* out_duration,
                                          uint64_t* out_bytes_read) const {
   TRACE_DURATION("blobfs", "BlobLoader::LoadDataInternal");
   fs::Ticker ticker(metrics_->Collecting());
@@ -354,12 +348,11 @@ zx_status_t BlobLoader::LoadDataInternal(uint32_t node_index, const Inode& inode
     return status;
   }
 
-  status = StreamBlocks(&block_iter, data_blocks,
-                        [&](uint64_t vmo_offset, uint64_t dev_offset, uint32_t length) {
-                          txn.Enqueue(vmoid.get(), vmo_offset - merkle_blocks,
-                                      kDataStart + dev_offset, length);
-                          return ZX_OK;
-                        });
+  status = StreamBlocks(
+      &block_iter, data_blocks, [&](uint64_t vmo_offset, uint64_t dev_offset, uint32_t length) {
+        txn.Enqueue(vmoid.get(), vmo_offset - merkle_blocks, kDataStart + dev_offset, length);
+        return ZX_OK;
+      });
   if (status != ZX_OK) {
     return status;
   }
