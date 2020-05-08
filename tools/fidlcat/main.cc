@@ -78,7 +78,7 @@ void EnqueueStartup(InterceptionWorkflow* workflow, const CommandLineOptions& op
   }
 
   auto attach = [workflow, process_koids, remote_name = options.remote_name,
-                 params](const zxdb::Err& err) {
+                 extra_name = options.extra_name, params](const zxdb::Err& err) {
     if (!err.ok()) {
       fprintf(stderr, "Unable to connect: %s", err.msg().c_str());
       exit(2);
@@ -87,7 +87,7 @@ void EnqueueStartup(InterceptionWorkflow* workflow, const CommandLineOptions& op
     if (!process_koids.empty()) {
       workflow->Attach(process_koids);
     }
-    if (remote_name.empty()) {
+    if (remote_name.empty() && extra_name.empty()) {
       if (std::find(params.begin(), params.end(), "run") != params.end()) {
         zxdb::Target* target = workflow->GetNewTarget();
         workflow->Launch(target, params);
@@ -97,7 +97,8 @@ void EnqueueStartup(InterceptionWorkflow* workflow, const CommandLineOptions& op
       if (std::find(params.begin(), params.end(), "run") != params.end()) {
         workflow->Launch(target, params);
       }
-      workflow->Filter(remote_name);
+      workflow->Filter(remote_name, /*main_filter=*/true);
+      workflow->Filter(extra_name, /*main_filter=*/false);
     }
   };
 

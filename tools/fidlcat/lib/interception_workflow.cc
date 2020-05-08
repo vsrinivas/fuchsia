@@ -306,33 +306,43 @@ void InterceptionWorkflow::ProcessDetached(zx_koid_t koid) {
 }
 
 void InterceptionWorkflow::Detach() {
-  if (configured_processes_.empty()) {
-    if (!shutdown_done_) {
-      shutdown_done_ = true;
-      Shutdown();
+  for (const auto& configured_process : configured_processes_) {
+    if (configured_process.second.main_process) {
+      // One main process is still running => don't shutdown fidlcat.
+      return;
     }
+  }
+  if (!shutdown_done_) {
+    shutdown_done_ = true;
+    Shutdown();
   }
 }
 
-void InterceptionWorkflow::Filter(const std::vector<std::string>& filter) {
-  std::set<std::string> filter_set(filter.begin(), filter.end());
+void InterceptionWorkflow::Filter(const std::vector<std::string>& filter, bool main_filter) {
+  if (filter.empty()) {
+    return;
+  }
 
-  for (auto it = filters_.begin(); it != filters_.end();) {
-    if (filter_set.find((*it)->pattern()) != filter_set.end()) {
-      filter_set.erase((*it)->pattern());
-      ++it;
-    } else {
-      session_->system().DeleteFilter(*it);
-      it = filters_.erase(it);
+  std::set<std::string> filter_set(filter.begin(), filter.end());
+  // Only add filters not already added.
+  for (auto it = filters_.begin(); it != filters_.end(); ++it) {
+    if (filter_set.find(it->filter->pattern()) != filter_set.end()) {
+      filter_set.erase(it->filter->pattern());
     }
   }
 
   zxdb::JobContext* default_job = session_->system().GetJobContexts()[0];
 
+  if (!filter_set.empty() && !main_filter) {
+    // We have an extra filter => wait for a main process to be started to start decoding events.
+    decode_events_ = false;
+  }
+
   for (const auto& pattern : filter_set) {
-    filters_.push_back(session_->system().CreateNewFilter());
-    filters_.back()->SetPattern(pattern);
-    filters_.back()->SetJob(default_job);
+    filters_.push_back(
+        ProcessFilter{.filter = session_->system().CreateNewFilter(), .main_filter = main_filter});
+    filters_.back().filter->SetPattern(pattern);
+    filters_.back().filter->SetJob(default_job);
   }
 }
 
@@ -384,8 +394,39 @@ void InterceptionWorkflow::SetBreakpoints(zxdb::Process* process) {
   if (configured_processes_.find(process->GetKoid()) != configured_processes_.end()) {
     return;
   }
-  configured_processes_.emplace(process->GetKoid());
 
+  bool main_process = false;
+  for (const auto& filter : filters_) {
+    if (process->GetName().find(filter.filter->pattern()) != std::string::npos) {
+      main_process = filter.main_filter;
+      break;
+    }
+  }
+
+  if (main_process) {
+    if (!decode_events_) {
+      // One main process has started => start decoding events.
+      decode_events_ = true;
+
+      // Configure breakpoints for all the secondary processes already launched.
+      for (const auto& configured_process : configured_processes_) {
+        auto tmp = configured_process.second.process.get();
+        if (tmp != nullptr) {
+          DoSetBreakpoints(tmp);
+        }
+      }
+    }
+  }
+
+  configured_processes_.emplace(
+      std::pair(process->GetKoid(), ConfiguredProcess(process->GetWeakPtr(), main_process)));
+
+  if (decode_events_) {
+    DoSetBreakpoints(process);
+  }
+}
+
+void InterceptionWorkflow::DoSetBreakpoints(zxdb::Process* process) {
   syscall_decoder_dispatcher()->ProcessMonitored(process->GetName(), process->GetKoid(),
                                                  process->GetWeakPtr(), "");
 

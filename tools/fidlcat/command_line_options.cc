@@ -55,6 +55,14 @@ const char* const kRemoteNameHelp = R"(  --remote-name=<regexp>
           --remote-name echo_client
       Multiple filters can be specified to match more than one process.)";
 
+const char* const kExtraNameHelp = R"(  --extra-name=<regexp>
+      Like --remote-name, it monitors some processes. However, for these
+      processes, monitoring starts only when one of of the "--remote-name"
+      process is launched. Also, fidlcat stops when the last "--remote-name"
+      process stops (even if some "--extra-name" processes are still
+      monitored). You must specify at least one filter with --remote-name if
+      you use this option (without --remote-name, nothing would be displayed).)";
+
 const char* const kFidlIrPathHelp = R"(  --fidl-ir-path=<path>|@argfile
       Adds the given path as a repository for FIDL IR, in the form of .fidl.json
       files.  Passing a file adds the given file.  Passing a directory adds all
@@ -207,6 +215,7 @@ std::string ParseCommandLine(int argc, const char* argv[], CommandLineOptions* o
   parser.AddSwitch("connect", 'r', kRemoteHostHelp, &CommandLineOptions::connect);
   parser.AddSwitch("remote-pid", 'p', kRemotePidHelp, &CommandLineOptions::remote_pid);
   parser.AddSwitch("remote-name", 'f', kRemoteNameHelp, &CommandLineOptions::remote_name);
+  parser.AddSwitch("extra-name", 0, kExtraNameHelp, &CommandLineOptions::extra_name);
   parser.AddSwitch("fidl-ir-path", 0, kFidlIrPathHelp, &CommandLineOptions::fidl_ir_paths);
   parser.AddSwitch("symbol-path", 's', kSymbolPathHelp, &CommandLineOptions::symbol_paths);
   parser.AddSwitch("symbol-repo-path", 0, kSymbolRepoPathHelp,
@@ -242,8 +251,10 @@ std::string ParseCommandLine(int argc, const char* argv[], CommandLineOptions* o
     return status.error_message();
   }
 
-  if (requested_help || (options->remote_name.empty() && options->remote_pid.empty() &&
-                         std::find(params->begin(), params->end(), "run") == params->end())) {
+  if (requested_help ||
+      (options->remote_name.empty() && options->remote_pid.empty() &&
+       std::find(params->begin(), params->end(), "run") == params->end()) ||
+      (!options->extra_name.empty() && options->remote_name.empty())) {
     status = cmdline::Status::Error(kHelpIntro + parser.GetHelp());
     if (status.has_error()) {
       return status.error_message();

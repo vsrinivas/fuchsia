@@ -65,7 +65,12 @@
 ##    --remote-name         A set of comma-separated regexes. Fidlcat will monitor all existing
 ##                          and future processes whose names match one of the regexes.
 ##                          Can be provided multiple times for multiple regexes.
-##    --symbol-path=<path>  An extra location where fildcat can find debug symbols.      
+##    --extra-name          Like --remote-name, it monitors some processes. However, for these
+##                          processes, monitoring starts only when one of of the "--remote-name"
+##                          process is launched. Also, fidlcat stops when the last "--remote-name"
+##                          process stops (even if some "--extra-name" processes are still
+##                          monitored).
+##    --symbol-path=<path>  An extra location where fidlcat can find debug symbols.
 ##    --fidl-ir-path=<path> An extra location where fidlcat can find FIDL compiled files.
 ##    --gdb                 Launch fidlcat using gdb. This is only useful to be able to debug
 ##                          fidlcat. When this option is used, the string you have to type within
@@ -173,6 +178,9 @@ while [[ $# -gt 0 ]]; do
       arguments+=("$1")
       ;;
     --remote-name=*)
+      arguments+=("$1")
+      ;;
+    --extra-name=*)
       arguments+=("$1")
       ;;
     --symbol-path=*)

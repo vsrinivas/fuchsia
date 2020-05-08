@@ -9,7 +9,7 @@ For information about launching fidlcat: [fidlcat](/docs/development/monitor/fid
 >> #  Notice
 >>
 >> This file only renders correctly from fuchsia.dev. Please navigate to
->> https://fuchsia.dev/fuchsia-src/development/tools/fidl_inspecting/fidlcat_usage.md to see the examples correctly!
+>> https://fuchsia.dev/fuchsia-src/development/monitor/fidlcat/fidlcat_usage.md to see the examples correctly!
 
 {% dynamic endif %}
 

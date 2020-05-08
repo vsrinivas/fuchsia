@@ -68,6 +68,21 @@ class InterceptingProcessObserver : public zxdb::ProcessObserver {
 using SimpleErrorFunction = std::function<void(const zxdb::Err&)>;
 using KoidFunction = std::function<void(const zxdb::Err&, zx_koid_t)>;
 
+struct ProcessFilter {
+  zxdb::Filter* filter;
+  bool main_filter;
+};
+
+struct ConfiguredProcess {
+  fxl::WeakPtr<zxdb::Process> process;
+  // True if the process is a main process (monitored with --remote-name) and false if the process
+  // is secondary (monitored with --extra-name).
+  bool main_process;
+
+  ConfiguredProcess(fxl::WeakPtr<zxdb::Process> process, bool main_process)
+      : process(process), main_process(main_process) {}
+};
+
 // Controls the interactions with the debug agent.
 //
 // Most of the operations on this API are synchronous.  They expect a loop
@@ -121,11 +136,15 @@ class InterceptionWorkflow {
 
   // Run when a process matching the given |filter| regexp is started.  Must be
   // connected.  |and_then| is posted to the loop on completion.
-  void Filter(const std::vector<std::string>& filter);
+  void Filter(const std::vector<std::string>& filter, bool main_filter);
 
   // Sets breakpoints for the various methods we intercept (zx_channel_*, etc)
-  // for the given |target|
+  // for the given |process|. If the process is secondary and no main process is already monitored,
+  // postpone the breakpoints' setting.
   void SetBreakpoints(zxdb::Process* process);
+
+  // Actually set the breakpoints.
+  void DoSetBreakpoints(zxdb::Process* process);
 
   // Starts running the loop.  Returns when loop is (asynchronously) terminated.
   static void Go();
@@ -143,7 +162,8 @@ class InterceptionWorkflow {
   std::vector<zxdb::SymbolServer*> GetSymbolServers() const;
 
   zxdb::Session* session() const { return session_; }
-  std::unordered_set<zx_koid_t>& configured_processes() { return configured_processes_; }
+  bool decode_events() const { return decode_events_; }
+  std::map<zx_koid_t, ConfiguredProcess>& configured_processes() { return configured_processes_; }
   SyscallDecoderDispatcher* syscall_decoder_dispatcher() const {
     return syscall_decoder_dispatcher_.get();
   }
@@ -160,14 +180,15 @@ class InterceptionWorkflow {
  private:
   debug_ipc::BufferedFD buffer_;
   zxdb::Session* session_;
-  std::vector<zxdb::Filter*> filters_;
+  std::vector<ProcessFilter> filters_;
   bool delete_session_;
   debug_ipc::MessageLoop* loop_;
   bool delete_loop_;
+  bool decode_events_ = true;
   bool shutdown_done_ = false;
 
   // All the processes for which the breapoints have been set.
-  std::unordered_set<zx_koid_t> configured_processes_;
+  std::map<zx_koid_t, ConfiguredProcess> configured_processes_;
 
   std::unique_ptr<SyscallDecoderDispatcher> syscall_decoder_dispatcher_;
 

@@ -125,6 +125,27 @@ void main(List<String> arguments) {
           contains(
               'sent request fidl.examples.echo/Echo.EchoString = {"value":"hello world"}'),
           reason: instance.additionalResult);
+
+      await instance.agentResult;
+    });
+
+    test('Test --extra-name', () async {
+      var instance = RunFidlcat();
+      await instance.run(log, sl4fDriver, fidlcatPath,
+          ['--remote-name=echo_server', '--extra-name=echo_client']);
+
+      final lines = instance.stdout.split('\n\n');
+
+      /// If we had use --remote-name twice, we would have a lot of messages between
+      /// "Monitoring echo_client" and "Monitoring echo_server".
+      /// With --extra-name for echo_client, we wait for echo_server before monitoring echo_client.
+      /// Therefore, both line are one after the other.
+      expect(lines[1], contains('Monitoring echo_client_cpp.cmx koid='),
+          reason: instance.additionalResult);
+
+      expect(lines[2], contains('Monitoring echo_server_cpp.cmx koid='),
+          reason: instance.additionalResult);
+
       await instance.agentResult;
     });
   }, timeout: _timeout);

@@ -135,6 +135,17 @@ Run echo_client and monitor echo_client and echo_server.
 fx fidlcat --remote-name=echo_client --remote-name=echo_server run echo_client_cpp.cmx
 ```
 
+### Monitoring a service
+
+If you want to monitor a service, you should use --extra-name instead of --remote-name. The option
+--extra-name also monitors some processes. However, for these processes, monitoring starts only
+when one of of the "--remote-name" process is launched. Also, fidlcat stops when the last
+"--remote-name" process stops (even if some "--extra-name" processes are still monitored).
+
+```sh
+fx fidlcat --remote-name=echo --extra-name=appmgr run echo_client_cpp.cmx
+```
+
 ## Running without the fx tool
 
 Note that fidlcat needs two sources of information to work:

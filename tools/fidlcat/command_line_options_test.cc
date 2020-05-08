@@ -185,10 +185,10 @@ TEST_F(CommandLineOptionsTest, SimpleParseCommandLineTest) {
   ASSERT_TRUE(std::find(params.begin(), params.end(), "args") != params.end());
 }
 
-TEST_F(CommandLineOptionsTest, CantHavePidAndFilter) {
+TEST_F(CommandLineOptionsTest, CanHavePidAndFilter) {
   std::string remote_pid = "3141";
   std::string filter = "echo_client";
-  std::vector<const char*> argv = {"fakebinary",   "--remote_name",    filter.c_str(),
+  std::vector<const char*> argv = {"fakebinary",   "--remote-name",    filter.c_str(),
                                    "--remote-pid", remote_pid.c_str(), "leftover",
                                    "args"};
   CommandLineOptions options;
@@ -197,7 +197,45 @@ TEST_F(CommandLineOptionsTest, CantHavePidAndFilter) {
   std::vector<std::string> params;
   auto error = ParseCommandLine(argv.size(), argv.data(), &options, &decode_options,
                                 &display_options, &params);
+  ASSERT_TRUE(error.empty());
+  ASSERT_EQ(1U, options.remote_name.size());
+  ASSERT_EQ("echo_client", options.remote_name[0]);
+  ASSERT_EQ(1U, options.remote_pid.size());
+  ASSERT_EQ("3141", options.remote_pid[0]);
+}
+
+TEST_F(CommandLineOptionsTest, CanHaveRemoteAndExtra) {
+  std::string remote_filter = "echo_client";
+  std::string extra_filter = "appmgr";
+  std::vector<const char*> argv = {"fakebinary",   "--remote-name",      remote_filter.c_str(),
+                                   "--extra-name", extra_filter.c_str(), "leftover",
+                                   "args"};
+  CommandLineOptions options;
+  DecodeOptions decode_options;
+  DisplayOptions display_options;
+  std::vector<std::string> params;
+  auto error = ParseCommandLine(argv.size(), argv.data(), &options, &decode_options,
+                                &display_options, &params);
+  ASSERT_TRUE(error.empty());
+  ASSERT_EQ(1U, options.remote_name.size());
+  ASSERT_EQ("echo_client", options.remote_name[0]);
+  ASSERT_EQ(1U, options.extra_name.size());
+  ASSERT_EQ("appmgr", options.extra_name[0]);
+}
+
+TEST_F(CommandLineOptionsTest, MustHaveRemoteWithExtra) {
+  std::string extra_filter = "appmgr";
+  std::vector<const char*> argv = {"fakebinary", "--extra-name", extra_filter.c_str(), "leftover",
+                                   "args"};
+  CommandLineOptions options;
+  DecodeOptions decode_options;
+  DisplayOptions display_options;
+  std::vector<std::string> params;
+  auto error = ParseCommandLine(argv.size(), argv.data(), &options, &decode_options,
+                                &display_options, &params);
   ASSERT_TRUE(!error.empty());
+  ASSERT_EQ(1U, options.extra_name.size());
+  ASSERT_EQ("appmgr", options.extra_name[0]);
 }
 
 // Test to ensure that help is printed when no action is requested
