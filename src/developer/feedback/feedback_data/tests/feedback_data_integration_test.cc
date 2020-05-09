@@ -41,12 +41,14 @@ namespace feedback {
 namespace {
 
 using fuchsia::feedback::Attachment;
+using fuchsia::feedback::Bugreport;
 using fuchsia::feedback::ComponentDataRegisterSyncPtr;
 using fuchsia::feedback::Data;
 using fuchsia::feedback::DataProvider_GetData_Result;
 using fuchsia::feedback::DataProviderSyncPtr;
 using fuchsia::feedback::DeviceIdProvider_GetId_Result;
 using fuchsia::feedback::DeviceIdProviderSyncPtr;
+using fuchsia::feedback::GetBugreportParameters;
 using fuchsia::feedback::ImageEncoding;
 using fuchsia::feedback::Screenshot;
 using fuchsia::hwinfo::BoardInfo;
@@ -250,8 +252,8 @@ constexpr char kInspectJsonSchema[] = R"({
   "uniqueItems": true
 })";
 
-TEST_F(FeedbackDataIntegrationTest, DataProvider_GetData_CheckKeys) {
-  // We make sure the components serving the services GetData() connects to are up and running.
+TEST_F(FeedbackDataIntegrationTest, DataProvider_GetBugreport_CheckKeys) {
+  // We make sure the components serving the services GetBugreport() connects to are up and running.
   WaitForLogger();
   WaitForChannelProvider();
   WaitForInspect();
@@ -261,45 +263,39 @@ TEST_F(FeedbackDataIntegrationTest, DataProvider_GetData_CheckKeys) {
   DataProviderSyncPtr data_provider;
   environment_services_->Connect(data_provider.NewRequest());
 
-  DataProvider_GetData_Result out_result;
-  ASSERT_EQ(data_provider->GetData(&out_result), ZX_OK);
-
-  ::fit::result<Data, zx_status_t> result = std::move(out_result);
-  ASSERT_TRUE(result.is_ok());
-
-  const Data& data = result.value();
+  Bugreport bugreport;
+  ASSERT_EQ(data_provider->GetBugreport(GetBugreportParameters(), &bugreport), ZX_OK);
 
   // We cannot expect a particular value for each annotation or attachment because values might
   // depend on which device the test runs (e.g., board name) or what happened prior to running this
   // test (e.g., logs). But we should expect the keys to be present.
-  ASSERT_TRUE(data.has_annotations());
-  EXPECT_THAT(data.annotations(), testing::ElementsAreArray({
-                                      MatchesKey(kAnnotationBuildBoard),
-                                      MatchesKey(kAnnotationBuildIsDebug),
-                                      MatchesKey(kAnnotationBuildLatestCommitDate),
-                                      MatchesKey(kAnnotationBuildProduct),
-                                      MatchesKey(kAnnotationBuildVersion),
-                                      MatchesKey(kAnnotationDeviceBoardName),
-                                      MatchesKey(kAnnotationDeviceFeedbackId),
-                                      MatchesKey(kAnnotationDeviceUptime),
-                                      MatchesKey(kAnnotationDeviceUTCTime),
-                                      MatchesKey(kAnnotationHardwareBoardName),
-                                      MatchesKey(kAnnotationHardwareBoardRevision),
-                                      MatchesKey(kAnnotationHardwareProductLanguage),
-                                      MatchesKey(kAnnotationHardwareProductLocaleList),
-                                      MatchesKey(kAnnotationHardwareProductManufacturer),
-                                      MatchesKey(kAnnotationHardwareProductModel),
-                                      MatchesKey(kAnnotationHardwareProductName),
-                                      MatchesKey(kAnnotationHardwareProductRegulatoryDomain),
-                                      MatchesKey(kAnnotationHardwareProductSKU),
-                                      MatchesKey(kAnnotationSystemUpdateChannelCurrent),
-                                  }));
+  ASSERT_TRUE(bugreport.has_annotations());
+  EXPECT_THAT(bugreport.annotations(), testing::ElementsAreArray({
+                                           MatchesKey(kAnnotationBuildBoard),
+                                           MatchesKey(kAnnotationBuildIsDebug),
+                                           MatchesKey(kAnnotationBuildLatestCommitDate),
+                                           MatchesKey(kAnnotationBuildProduct),
+                                           MatchesKey(kAnnotationBuildVersion),
+                                           MatchesKey(kAnnotationDeviceBoardName),
+                                           MatchesKey(kAnnotationDeviceFeedbackId),
+                                           MatchesKey(kAnnotationDeviceUptime),
+                                           MatchesKey(kAnnotationDeviceUTCTime),
+                                           MatchesKey(kAnnotationHardwareBoardName),
+                                           MatchesKey(kAnnotationHardwareBoardRevision),
+                                           MatchesKey(kAnnotationHardwareProductLanguage),
+                                           MatchesKey(kAnnotationHardwareProductLocaleList),
+                                           MatchesKey(kAnnotationHardwareProductManufacturer),
+                                           MatchesKey(kAnnotationHardwareProductModel),
+                                           MatchesKey(kAnnotationHardwareProductName),
+                                           MatchesKey(kAnnotationHardwareProductRegulatoryDomain),
+                                           MatchesKey(kAnnotationHardwareProductSKU),
+                                           MatchesKey(kAnnotationSystemUpdateChannelCurrent),
+                                       }));
 
-  ASSERT_TRUE(data.has_attachment_bundle());
-  const auto& attachment_bundle = data.attachment_bundle();
-  EXPECT_STREQ(attachment_bundle.key.c_str(), kAttachmentBundle);
+  ASSERT_TRUE(bugreport.has_bugreport());
+  EXPECT_STREQ(bugreport.bugreport().key.c_str(), kBugreportFilename);
   std::vector<Attachment> unpacked_attachments;
-  ASSERT_TRUE(Unpack(attachment_bundle.value, &unpacked_attachments));
+  ASSERT_TRUE(Unpack(bugreport.bugreport().value, &unpacked_attachments));
   ASSERT_THAT(unpacked_attachments, testing::UnorderedElementsAreArray({
                                         MatchesKey(kAttachmentAnnotations),
                                         MatchesKey(kAttachmentBuildSnapshot),
@@ -353,8 +349,8 @@ TEST_F(FeedbackDataIntegrationTest, DataProvider_GetData_CheckKeys) {
   EXPECT_TRUE(has_entry_for_test_app);
 }
 
-TEST_F(FeedbackDataIntegrationTest, DataProvider_GetData_CheckCobalt) {
-  // We make sure the components serving the services GetData() connects to are up and running.
+TEST_F(FeedbackDataIntegrationTest, DataProvider_GetBugreport_CheckCobalt) {
+  // We make sure the components serving the services GetBugreport() connects to are up and running.
   WaitForLogger();
   WaitForChannelProvider();
   WaitForInspect();
@@ -364,11 +360,10 @@ TEST_F(FeedbackDataIntegrationTest, DataProvider_GetData_CheckCobalt) {
   DataProviderSyncPtr data_provider;
   environment_services_->Connect(data_provider.NewRequest());
 
-  DataProvider_GetData_Result out_result;
-  ASSERT_EQ(data_provider->GetData(&out_result), ZX_OK);
+  Bugreport bugreport;
+  ASSERT_EQ(data_provider->GetBugreport(GetBugreportParameters(), &bugreport), ZX_OK);
 
-  ::fit::result<Data, zx_status_t> result = std::move(out_result);
-  ASSERT_TRUE(result.is_ok());
+  ASSERT_FALSE(bugreport.IsEmpty());
   EXPECT_THAT(fake_cobalt_->GetAllEventsOfType<cobalt::BugreportGenerationFlow>(
                   /*num_expected=*/1u, fuchsia::cobalt::test::LogMethod::LOG_ELAPSED_TIME),
               UnorderedElementsAreArray({
@@ -377,8 +372,8 @@ TEST_F(FeedbackDataIntegrationTest, DataProvider_GetData_CheckCobalt) {
 }
 
 TEST_F(FeedbackDataIntegrationTest,
-       DataProvider_GetData_ExtraAnnotationsFromComponentDataRegister) {
-  // We make sure the components serving the services GetData() connects to are up and running.
+       DataProvider_GetBugreport_ExtraAnnotationsFromComponentDataRegister) {
+  // We make sure the components serving the services GetBugreport() connects to are up and running.
   WaitForLogger();
   WaitForChannelProvider();
   WaitForInspect();
@@ -398,15 +393,27 @@ TEST_F(FeedbackDataIntegrationTest,
   });
   ASSERT_EQ(data_register->Upsert(std::move(extra_data)), ZX_OK);
 
+  Bugreport bugreport;
+  ASSERT_EQ(data_provider->GetBugreport(GetBugreportParameters(), &bugreport), ZX_OK);
+
+  ASSERT_TRUE(bugreport.has_annotations());
+  EXPECT_THAT(bugreport.annotations(), testing::Contains(MatchesAnnotation("namespace.k", "v")));
+}
+
+// TOOD(41004): remove once no longer in the API.
+TEST_F(FeedbackDataIntegrationTest, DataProvider_GetData_SmokeTest) {
+  // We make sure the components serving the services GetData() connects to are up and running.
+  WaitForLogger();
+  WaitForChannelProvider();
+  WaitForInspect();
+  WaitForBoardProvider();
+  WaitForProductProvider();
+
+  DataProviderSyncPtr data_provider;
+  environment_services_->Connect(data_provider.NewRequest());
+
   DataProvider_GetData_Result out_result;
   ASSERT_EQ(data_provider->GetData(&out_result), ZX_OK);
-
-  ::fit::result<Data, zx_status_t> result = std::move(out_result);
-  ASSERT_TRUE(result.is_ok());
-
-  const Data& data = result.value();
-  ASSERT_TRUE(data.has_annotations());
-  EXPECT_THAT(data.annotations(), testing::Contains(MatchesAnnotation("namespace.k", "v")));
 }
 
 TEST_F(FeedbackDataIntegrationTest, DeviceIdProvider_GetId_CheckValue) {

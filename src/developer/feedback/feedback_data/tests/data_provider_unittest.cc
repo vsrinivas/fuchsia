@@ -47,6 +47,7 @@ namespace feedback {
 namespace {
 
 using fuchsia::feedback::Attachment;
+using fuchsia::feedback::Bugreport;
 using fuchsia::feedback::Data;
 using fuchsia::feedback::ImageEncoding;
 using fuchsia::feedback::Screenshot;
@@ -180,29 +181,29 @@ class DataProviderTest : public UnitTestFixture, public CobaltTestFixture {
     return out_response;
   }
 
-  ::fit::result<Data, zx_status_t> GetData(
-      zx::duration bugreport_flow_duration = kDefaultBugReportFlowDuration) {
+  Bugreport GetBugreport(zx::duration bugreport_flow_duration = kDefaultBugReportFlowDuration) {
     FX_CHECK(data_provider_ && clock_);
 
-    ::fit::result<Data, zx_status_t> out_result;
+    Bugreport bugreport;
 
     // We can set |clock_|'s start and end times because the call to start the timer happens
     // independently of the loop while the call to end it happens in a task that is posted on the
     // loop. So, as long the end time is set before the loop is run, a non-zero duration will be
     // recorded.
     clock_->Set(zx::time(0));
-    data_provider_->GetData(
-        [&out_result](::fit::result<Data, zx_status_t> result) { out_result = std::move(result); });
+    data_provider_->GetBugreport(fuchsia::feedback::GetBugreportParameters(),
+                                 [&bugreport](Bugreport res) { bugreport = std::move(res); });
     clock_->Set(zx::time(0) + bugreport_flow_duration);
     RunLoopUntilIdle();
-    return out_result;
+    return bugreport;
   }
 
-  void UnpackAttachmentBundle(const Data& data, std::vector<Attachment>* unpacked_attachments) {
-    ASSERT_TRUE(data.has_attachment_bundle());
-    const auto& attachment_bundle = data.attachment_bundle();
-    EXPECT_STREQ(attachment_bundle.key.c_str(), kAttachmentBundle);
-    ASSERT_TRUE(Unpack(attachment_bundle.value, unpacked_attachments));
+  std::vector<Attachment> UnpackBugreport(const Bugreport& bugreport) {
+    FX_CHECK(bugreport.has_bugreport());
+    FX_CHECK(bugreport.bugreport().key == kBugreportFilename);
+    std::vector<Attachment> unpacked_attachments;
+    FX_CHECK(Unpack(bugreport.bugreport().value, &unpacked_attachments));
+    return unpacked_attachments;
   }
 
  private:
@@ -328,21 +329,17 @@ TEST_F(DataProviderTest, GetScreenshot_ParallelRequests) {
   }
 }
 
-TEST_F(DataProviderTest, GetData_SmokeTest) {
+TEST_F(DataProviderTest, GetBugreport_SmokeTest) {
   SetUpDataProvider();
 
-  ::fit::result<Data, zx_status_t> result = GetData();
-
-  ASSERT_TRUE(result.is_ok());
+  Bugreport bugreport = GetBugreport();
 
   // There is not much we can assert here as no missing annotation nor attachment is fatal and we
   // cannot expect annotations or attachments to be present.
 
-  const Data& data = result.value();
-
-  // If there are annotations, there should also be the attachment bundle.
-  if (data.has_annotations()) {
-    ASSERT_TRUE(data.has_attachment_bundle());
+  // If there are annotations, there should also be the bugreport.
+  if (bugreport.has_annotations()) {
+    ASSERT_TRUE(bugreport.has_bugreport());
   }
 
   EXPECT_THAT(ReceivedCobaltEvents(), UnorderedElementsAreArray({
@@ -351,18 +348,13 @@ TEST_F(DataProviderTest, GetData_SmokeTest) {
                                       }));
 }
 
-TEST_F(DataProviderTest, GetData_AnnotationsAsAttachment) {
+TEST_F(DataProviderTest, GetBugreport_AnnotationsAsAttachment) {
   SetUpDataProvider();
 
-  ::fit::result<Data, zx_status_t> result = GetData();
+  Bugreport bugreport = GetBugreport();
+  std::vector<Attachment> unpacked_attachments = UnpackBugreport(bugreport);
 
-  ASSERT_TRUE(result.is_ok());
-
-  const Data& data = result.value();
-
-  // There should be an "annotations.json" attachment present in the attachment bundle.
-  std::vector<Attachment> unpacked_attachments;
-  UnpackAttachmentBundle(data, &unpacked_attachments);
+  // There should be an "annotations.json" attachment present in the bugreport.
   bool found_annotations_attachment = false;
   std::string annotations_json;
   for (const auto& attachment : unpacked_attachments) {
@@ -423,27 +415,19 @@ TEST_F(DataProviderTest, GetData_AnnotationsAsAttachment) {
   EXPECT_TRUE(found_annotations_attachment);
 }
 
-TEST_F(DataProviderTest, GetData_SingleAttachmentOnEmptyAttachmentAllowlist) {
+TEST_F(DataProviderTest, GetBugreport_SingleAttachmentOnEmptyAttachmentAllowlist) {
   SetUpDataProvider(kDefaultAnnotations, /*attachment_allowlist=*/{});
 
-  ::fit::result<Data, zx_status_t> result = GetData();
-  ASSERT_TRUE(result.is_ok());
-
-  const Data& data = result.value();
-  std::vector<Attachment> unpacked_attachments;
-  UnpackAttachmentBundle(data, &unpacked_attachments);
+  Bugreport bugreport = GetBugreport();
+  std::vector<Attachment> unpacked_attachments = UnpackBugreport(bugreport);
   EXPECT_THAT(unpacked_attachments, testing::Contains(MatchesKey(kAttachmentAnnotations)));
 }
 
-TEST_F(DataProviderTest, GetData_NoDataOnEmptyAllowlists) {
+TEST_F(DataProviderTest, GetBugreport_NoDataOnEmptyAllowlists) {
   SetUpDataProvider(/*annotation_allowlist=*/{}, /*attachment_allowlist=*/{});
 
-  ::fit::result<Data, zx_status_t> result = GetData();
-  ASSERT_TRUE(result.is_ok());
-
-  const Data& data = result.value();
-  EXPECT_FALSE(data.has_annotations());
-  EXPECT_FALSE(data.has_attachment_bundle());
+  Bugreport bugreport = GetBugreport();
+  EXPECT_TRUE(bugreport.IsEmpty());
 }
 
 }  // namespace

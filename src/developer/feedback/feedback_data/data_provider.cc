@@ -27,12 +27,14 @@
 namespace feedback {
 namespace {
 
+using fuchsia::feedback::Bugreport;
 using fuchsia::feedback::Data;
 using fuchsia::feedback::ImageEncoding;
 using fuchsia::feedback::Screenshot;
 
-// Timeout for a single asynchronous piece of data, e.g., syslog collection.
-const zx::duration kDataTimeout = zx::sec(30);
+// Timeout for a single asynchronous piece of data, e.g., syslog collection if the client didn't
+// specify one.
+const zx::duration kDefaultDataTimeout = zx::sec(30);
 
 // Timeout for requesting the screenshot from Scenic.
 const zx::duration kScreenshotTimeout = zx::sec(10);
@@ -48,20 +50,25 @@ DataProvider::DataProvider(async_dispatcher_t* dispatcher,
       datastore_(datastore),
       executor_(dispatcher_) {}
 
-void DataProvider::GetData(GetDataCallback callback) {
+void DataProvider::GetBugreport(fuchsia::feedback::GetBugreportParameters params,
+                                GetBugreportCallback callback) {
+  const zx::duration timeout = (params.has_collection_timeout_per_data())
+                                   ? zx::duration(params.collection_timeout_per_data())
+                                   : kDefaultDataTimeout;
+
   const uint64_t timer_id = cobalt_->StartTimer();
 
   auto promise =
-      ::fit::join_promises(datastore_->GetAnnotations(kDataTimeout),
-                           datastore_->GetAttachments(kDataTimeout))
+      ::fit::join_promises(datastore_->GetAnnotations(timeout), datastore_->GetAttachments(timeout))
           .and_then([](std::tuple<::fit::result<Annotations>, ::fit::result<Attachments>>&
                            annotations_and_attachments) {
-            Data data;
+            Bugreport bugreport;
             std::vector<fuchsia::feedback::Attachment> attachments;
 
             auto& annotations_or_error = std::get<0>(annotations_and_attachments);
             if (annotations_or_error.is_ok()) {
-              data.set_annotations(ToFeedbackAnnotationVector(annotations_or_error.take_value()));
+              bugreport.set_annotations(
+                  ToFeedbackAnnotationVector(annotations_or_error.take_value()));
             } else {
               FX_LOGS(WARNING) << "Failed to retrieve any annotations";
             }
@@ -76,8 +83,8 @@ void DataProvider::GetData(GetDataCallback callback) {
             // We also add the annotations as a single extra attachment.
             // This is useful for clients that surface the annotations differentily in the UI
             // but still want all the annotations to be easily downloadable in one file.
-            if (data.has_annotations()) {
-              AddAnnotationsAsExtraAttachment(data.annotations(), &attachments);
+            if (bugreport.has_annotations()) {
+              AddAnnotationsAsExtraAttachment(bugreport.annotations(), &attachments);
             }
 
             // We bundle the attachments into a single attachment.
@@ -85,24 +92,37 @@ void DataProvider::GetData(GetDataCallback callback) {
             if (!attachments.empty()) {
               fuchsia::feedback::Attachment bundle;
               if (BundleAttachments(attachments, &bundle)) {
-                data.set_attachment_bundle(std::move(bundle));
+                bugreport.set_bugreport(std::move(bundle));
               }
             }
 
-            return ::fit::ok(std::move(data));
+            return ::fit::ok(std::move(bugreport));
           })
-          .or_else([]() { return ::fit::error(ZX_ERR_INTERNAL); })
-          .then([this, callback = std::move(callback),
-                 timer_id](::fit::result<Data, zx_status_t>& result) {
+          .then([this, callback = std::move(callback), timer_id](::fit::result<Bugreport>& result) {
             if (result.is_error()) {
               cobalt_->LogElapsedTime(cobalt::BugreportGenerationFlow::kFailure, timer_id);
+              callback(Bugreport());
             } else {
               cobalt_->LogElapsedTime(cobalt::BugreportGenerationFlow::kSuccess, timer_id);
+              callback(result.take_value());
             }
-            callback(std::move(result));
           });
 
   executor_.schedule_task(std::move(promise));
+}
+
+void DataProvider::GetData(GetDataCallback callback) {
+  GetBugreport(fuchsia::feedback::GetBugreportParameters(),
+               [callback = std::move(callback)](Bugreport bugreport) {
+                 Data data;
+                 if (bugreport.has_annotations()) {
+                   data.set_annotations(bugreport.annotations());
+                 }
+                 if (bugreport.has_bugreport()) {
+                   data.set_attachment_bundle(std::move(*bugreport.mutable_bugreport()));
+                 }
+                 callback(::fit::ok(std::move(data)));
+               });
 }
 
 void DataProvider::GetScreenshot(ImageEncoding encoding, GetScreenshotCallback callback) {

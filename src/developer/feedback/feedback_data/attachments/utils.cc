@@ -71,7 +71,7 @@ bool BundleAttachments(const std::vector<fuchsia::feedback::Attachment>& attachm
     FX_LOGS(ERROR) << "Failed to archive attachments into one bundle";
     return false;
   }
-  bundle->key = kAttachmentBundle;
+  bundle->key = kBugreportFilename;
   return true;
 }
 

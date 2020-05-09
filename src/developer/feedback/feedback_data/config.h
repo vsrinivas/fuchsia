@@ -16,10 +16,10 @@ namespace feedback {
 
 // Feedback data provider configuration.
 struct Config {
-  // Set of annotation keys to return data for in fuchsia.feedback.DataProvider.GetData().
+  // Set of annotation keys to return data for in fuchsia.feedback.DataProvider/GetBugreport.
   AnnotationKeys annotation_allowlist;
 
-  // Set of attachment keys to return data for in fuchsia.feedback.DataProvider.GetData().
+  // Set of attachment keys to return data for in fuchsia.feedback.DataProvider/GetBugreport.
   AttachmentKeys attachment_allowlist;
 };
 
