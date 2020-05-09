@@ -184,14 +184,15 @@ void print_log_message(const std::shared_ptr<fuchsia::logger::LogMessage>& log) 
 }  // namespace
 
 int main(int argc, const char** argv) {
-  // Get and store config. We will use it later.
   auto max_severity_config = run::MaxSeverityConfig::ParseFromDirectory(max_severity_config_path);
-
-  if (max_severity_config.HasError()) {
-    fprintf(stderr, "max_severity config file(s) are broken: %s",
+  // fxb/49735: we have not turned on this feature yet, but this change was breaking people who did
+  // not update thier device because of missing configuration. Commenting this out for now. Will
+  // comment this out in next CL.
+  /* if (max_severity_config.HasError()) {
+     fprintf(stderr, "max_severity config file(s) are broken: %s",
             max_severity_config.Error().c_str());
     return 1;
-  }
+   }*/
 
   // Services which we get from /svc. They might be different depending on in which shell this
   // binary is launched from, so can't use it to create underlying environment.
