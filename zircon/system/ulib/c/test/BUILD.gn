@@ -2,6 +2,19 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/test.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
 default_stack_size_cases = [
   {
     # This uses the compiled-in default.
@@ -16,12 +29,26 @@ default_stack_size_cases = [
 ]
 
 foreach(case, default_stack_size_cases) {
-  zx_test("default-stack-size-${case.name}") {
+  test("default-stack-size-${case.name}") {
+    # Dependent manifests unfortunately cannot be marked as `testonly`.
+    # TODO(44278): Remove when converting this file to proper GN build idioms.
+    if (is_fuchsia) {
+      testonly = false
+    }
+    if (is_fuchsia) {
+      configs += [ "//build/unification/config:zircon-migrated" ]
+    }
+    if (is_fuchsia) {
+      fdio_config = [ "//build/config/fuchsia:fdio_config" ]
+      if (configs + fdio_config - fdio_config != configs) {
+        configs -= fdio_config
+      }
+    }
     sources = [ "default-stack-size-test.cc" ]
     deps = [
-      "$zx/system/ulib/fdio",
-      "$zx/system/ulib/zircon-internal",
-      "$zx/system/ulib/zxtest",
+      "//zircon/public/lib/fdio",
+      "//zircon/public/lib/zircon-internal",
+      "//zircon/public/lib/zxtest",
     ]
     if (defined(case.size)) {
       defines = [ "STACK_TEST_EXPECTED_SIZE=${case.size}" ]
@@ -30,52 +57,105 @@ foreach(case, default_stack_size_cases) {
   }
 }
 
-zx_executable("debugdata-test-helper") {
-  testonly = true
+executable("debugdata-test-helper") {
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+  if (is_fuchsia) {
+    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
+    if (configs + fdio_config - fdio_config != configs) {
+      configs -= fdio_config
+    }
+  }
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Flip back to true.
+  testonly = false
   sources = [ "debugdata-test-helper.cc" ]
-  deps = [ "$zx/system/ulib/zx" ]
+  deps = [ "//zircon/public/lib/zx" ]
 }
 
-zx_test("debugdata") {
+test("debugdata") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  if (is_fuchsia) {
+    testonly = false
+  }
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+  if (is_fuchsia) {
+    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
+    if (configs + fdio_config - fdio_config != configs) {
+      configs -= fdio_config
+    }
+  }
   test_group = "c"
   sources = [ "debugdata.cc" ]
   data_deps = [ ":debugdata-test-helper" ]
   deps = [
-    "$zx/system/fidl/fuchsia-debugdata:llcpp",
-    "$zx/system/ulib/async",
-    "$zx/system/ulib/async:async-cpp",
-    "$zx/system/ulib/async-loop",
-    "$zx/system/ulib/async-loop:async-loop-cpp",
-    "$zx/system/ulib/async-loop:async-loop-default.static",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/fidl",
-    "$zx/system/ulib/fidl-async",
-    "$zx/system/ulib/fidl-async:fidl-async-cpp",
-    "$zx/system/ulib/fs",
-    "$zx/system/ulib/zircon-internal",
-    "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxtest",
+    "//zircon/public/lib/async",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/async-loop",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/fidl",
+    "//zircon/public/lib/fidl-async",
+    "//zircon/public/lib/fidl-async-cpp",
+    "//zircon/public/lib/fs",
+    "//zircon/public/lib/zircon-internal",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/fidl/fuchsia-debugdata:llcpp",
   ]
+  output_dir = "$root_out_dir/zircon-migrated"
 }
 
-zx_test("posix-clocks") {
+test("posix-clocks") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  if (is_fuchsia) {
+    testonly = false
+  }
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+  if (is_fuchsia) {
+    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
+    if (configs + fdio_config - fdio_config != configs) {
+      configs -= fdio_config
+    }
+  }
   test_group = "c"
   sources = [ "posix-clocks.cc" ]
   deps = [
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxtest",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
   ]
 }
 
-zx_test("atexit") {
+test("atexit") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  if (is_fuchsia) {
+    testonly = false
+  }
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+  if (is_fuchsia) {
+    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
+    if (configs + fdio_config - fdio_config != configs) {
+      configs -= fdio_config
+    }
+  }
   test_group = "c"
   sources = [ "atexit.cc" ]
   deps = [
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/zxtest",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/zxtest",
   ]
 }
 
@@ -88,5 +168,27 @@ group("test") {
   ]
   foreach(case, default_stack_size_cases) {
     deps += [ ":default-stack-size-${case.name}" ]
+  }
+}
+
+migrated_manifest("debugdata-test-helper-manifest") {
+  deps = [ ":debugdata-test-helper" ]
+}
+
+migrated_manifest("debugdata-manifest") {
+  deps = [ ":debugdata" ]
+}
+
+migrated_manifest("posix-clocks-manifest") {
+  deps = [ ":posix-clocks" ]
+}
+
+migrated_manifest("atexit-manifest") {
+  deps = [ ":atexit" ]
+}
+
+foreach(case, default_stack_size_cases) {
+  migrated_manifest("default-stack-size-${case.name}-manifest") {
+    deps = [ ":default-stack-size-${case.name}" ]
   }
 }

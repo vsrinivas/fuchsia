@@ -71,15 +71,9 @@ aggregate_manifest("legacy-image") {
 aggregate_manifest("legacy-aux") {
   deps = [
     ":bin.accept-child",
-    ":bin.debugdata-test-helper",
     ":bin.null-namespace-child",
     ":hermetic.decompress-lz4f",
     ":hermetic.decompress-zstd",
-    ":test.c.atexit-test",
-    ":test.c.debugdata-test",
-    ":test.c.posix-clocks-test",
-    ":test.sys.default-stack-size-default-test",
-    ":test.sys.default-stack-size-phdr-test",
     ":test.sys.fdio-test",
     ":test.sys.hermetic-compute-module-test",
     ":test.sys.mmio-ptr-unittest-test",
@@ -175,13 +169,7 @@ aggregate_manifest("legacy-aux") {
 # dependencies to it.
 aggregate_manifest("legacy-tests") {
   deps = [
-    ":bin.debugdata-test-helper",
     ":bin.null-namespace-child",
-    ":test.c.atexit-test",
-    ":test.c.debugdata-test",
-    ":test.c.posix-clocks-test",
-    ":test.sys.default-stack-size-default-test",
-    ":test.sys.default-stack-size-phdr-test",
     ":test.sys.fdio-test",
     ":test.sys.hermetic-compute-module-test",
     ":test.sys.mmio-ptr-unittest-test",
@@ -599,7 +587,6 @@ aggregate_manifest("migrated-aux") {
 #------------------
     "//zircon/system/uapp/blobfs:blobfs-manifest",
 #------------------
-    #":bin.debugdata-test-helper",
 #------------------
     "//zircon/system/ulib/elf-search/test:elf-search-test-helper-manifest",
     "//zircon/system/utest/evil:evil-manifest",
@@ -621,13 +608,13 @@ aggregate_manifest("migrated-aux") {
     "//src/devices/tests/sysdev:sysdev-manifest",
     "//src/devices/tests/mock-device:mock-device-manifest",
 #------------------
-    #":test.c.atexit-test",
+    "//zircon/system/ulib/c/test:atexit-manifest",
 #------------------
 #------------------
-    #":test.c.debugdata-test",
+    "//zircon/system/ulib/c/test:debugdata-manifest",
 #------------------
 #------------------
-    #":test.c.posix-clocks-test",
+    "//zircon/system/ulib/c/test:posix-clocks-manifest",
 #------------------
 #------------------
     "//zircon/system/utest/core:c11-condvar-manifest",
@@ -724,10 +711,10 @@ aggregate_manifest("migrated-aux") {
     "//src/devices/tests/ddk-runcompatibilityhook:ddk-runcompatibilityhook-test-manifest",
     "//src/devices/tests/ddk-schedule-work:ddk-schedule-work-manifest",
 #------------------
-    #":test.sys.default-stack-size-default-test",
+    "//zircon/system/ulib/c/test:default-stack-size-default-manifest",
 #------------------
 #------------------
-    #":test.sys.default-stack-size-phdr-test",
+    "//zircon/system/ulib/c/test:default-stack-size-phdr-manifest",
 #------------------
     "//src/devices/pci/lib/device-protocol-pci/test:device-protocol-pci-test-manifest",
     "//src/devices/bus/lib/device-protocol-pdev/test:device-protocol-pdev-test-manifest",
@@ -815,9 +802,6 @@ aggregate_manifest("migrated-aux") {
     "//src/devices/sysmem/drivers/sysmem:sysmem-unittest-manifest",
     "//zircon/system/ulib/tftp/test:tftp-test-manifest",
     "//src/devices/thermal/bin/thermal-cli:thermal-cli-manifest",
-#------------------
-    #":test.sys.ti-lp8556-test",
-#------------------
     "//src/ui/backlight/drivers/ti-lp8556:ti-lp8556-test-manifest",
     "//zircon/system/utest/time:time-manifest",
     "//zircon/system/ulib/trace-engine/test:hash-table-test-manifest",
@@ -862,7 +846,6 @@ aggregate_manifest("migrated-tests") {
     # unsorted to avoid trivial rebase collisions.
     "//zircon/system/uapp/blobfs:blobfs-manifest",
 #------------------
-    #":bin.debugdata-test-helper",
 #------------------
     "//zircon/system/utest/evil:evil-manifest",
     "//zircon/system/uapp/minfs:minfs-manifest",
@@ -877,13 +860,13 @@ aggregate_manifest("migrated-tests") {
     "//src/devices/tests/sysdev:sysdev-manifest",
     "//src/devices/tests/mock-device:mock-device-manifest",
 #------------------
-    #":test.c.atexit-test",
+    "//zircon/system/ulib/c/test:atexit-manifest",
 #------------------
 #------------------
-    #":test.c.debugdata-test",
+    "//zircon/system/ulib/c/test:debugdata-manifest",
 #------------------
 #------------------
-    #":test.c.posix-clocks-test",
+    "//zircon/system/ulib/c/test:posix-clocks-manifest",
 #------------------
     "//zircon/system/utest/core:c11-condvar-manifest",
     "//zircon/system/utest/core:c11-mutex-manifest",
@@ -979,10 +962,10 @@ aggregate_manifest("migrated-tests") {
     "//src/devices/tests/ddk-runcompatibilityhook:ddk-runcompatibilityhook-test-manifest",
     "//src/devices/tests/ddk-schedule-work:ddk-schedule-work-manifest",
 #------------------
-    #":test.sys.default-stack-size-default-test",
+    "//zircon/system/ulib/c/test:default-stack-size-default-manifest",
 #------------------
 #------------------
-    #":test.sys.default-stack-size-phdr-test",
+    "//zircon/system/ulib/c/test:default-stack-size-phdr-manifest",
 #------------------
     "//src/devices/pci/lib/device-protocol-pci/test:device-protocol-pci-test-manifest",
     "//src/devices/bus/lib/device-protocol-pdev/test:device-protocol-pdev-test-manifest",
