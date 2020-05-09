@@ -8,12 +8,16 @@ use {
     crate::ui::{PointerEventResponse, ScrollContext, TerminalScene},
     anyhow::{Context as _, Error},
     carnelian::{
+        color::Color,
         input::{self},
-        make_message, AnimationMode, AppContext, Message, Size, ViewAssistant,
-        ViewAssistantContext, ViewKey, ViewMessages,
+        make_message,
+        render::Context as RenderContext,
+        AnimationMode, AppContext, Message, Size, ViewAssistant, ViewAssistantContext, ViewKey,
+        ViewMessages,
     },
     fidl_fuchsia_hardware_pty::WindowSize,
     fuchsia_async as fasync, fuchsia_trace as ftrace,
+    fuchsia_zircon::{AsHandleRef, Signals},
     futures::{channel::mpsc, io::AsyncReadExt, select, FutureExt, StreamExt},
     std::{cell::RefCell, ffi::CStr, fs::File, io::prelude::*, rc::Rc},
     term_model::{
@@ -199,7 +203,7 @@ impl TerminalViewAssistant {
             last_known_size_info: size_info,
             pty_context: None,
             term: Rc::new(RefCell::new(term)),
-            terminal_scene: TerminalScene::default(),
+            terminal_scene: TerminalScene::new(Color::new()),
             app_context,
             view_key,
             spawn_command: None,
@@ -386,8 +390,13 @@ impl ViewAssistant for TerminalViewAssistant {
         Ok(())
     }
 
-    fn update(&mut self, context: &ViewAssistantContext<'_>) -> Result<(), Error> {
-        ftrace::duration!("terminal", "TerminalViewAssistant:update");
+    fn render(
+        &mut self,
+        render_context: &mut RenderContext,
+        ready_event: fuchsia_zircon::Event,
+        context: &ViewAssistantContext<'_>,
+    ) -> Result<(), Error> {
+        ftrace::duration!("terminal", "TerminalViewAssistant:render");
 
         // we need to call spawn in this update block because calling it in the
         // setup method causes us to receive write events before the view is
@@ -396,7 +405,6 @@ impl ViewAssistant for TerminalViewAssistant {
         self.resize_if_needed(&context.size, &context.metrics)?;
 
         // Tell the termnial scene to render the values
-        let canvas = &mut context.canvas.as_ref().unwrap().borrow_mut();
         let config = TerminalConfig::default();
         let term = self.term.borrow();
 
@@ -416,7 +424,8 @@ impl ViewAssistant for TerminalViewAssistant {
 
         drop(grid);
 
-        self.terminal_scene.render(canvas, iter);
+        self.terminal_scene.render(render_context, context, iter);
+        ready_event.as_handle_ref().signal(Signals::NONE, Signals::EVENT_SIGNALED)?;
         Ok(())
     }
 

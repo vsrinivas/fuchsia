@@ -5,7 +5,7 @@
 use {
     crate::terminal_view::TerminalViewAssistant,
     anyhow::Error,
-    carnelian::{AppAssistant, AppContext, ViewAssistantPtr, ViewKey, ViewMode},
+    carnelian::{AppAssistant, AppContext, RenderOptions, ViewAssistantPtr, ViewKey, ViewMode},
 };
 
 pub struct TerminalAssistant {
@@ -29,7 +29,7 @@ impl AppAssistant for TerminalAssistant {
         Ok(())
     }
 
-    fn create_view_assistant_canvas(
+    fn create_view_assistant_render(
         &mut self,
         view_key: ViewKey,
     ) -> Result<ViewAssistantPtr, Error> {
@@ -37,7 +37,7 @@ impl AppAssistant for TerminalAssistant {
     }
 
     fn get_mode(&self) -> ViewMode {
-        ViewMode::Canvas
+        ViewMode::Render(RenderOptions::default())
     }
 }
 
@@ -46,16 +46,10 @@ mod tests {
     use super::*;
     use fuchsia_async as fasync;
 
-    #[test]
-    fn app_runs_in_canvas_mode() {
-        let app = TerminalAssistant::new_for_test();
-        assert_eq!(app.get_mode(), ViewMode::Canvas);
-    }
-
     #[fasync::run_singlethreaded(test)]
     async fn creates_terminal_view() -> Result<(), Error> {
         let mut app = TerminalAssistant::new_for_test();
-        app.create_view_assistant_canvas(1)?;
+        app.create_view_assistant_render(1)?;
         Ok(())
     }
 }

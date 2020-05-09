@@ -5,10 +5,13 @@
 use {
     carnelian::{
         color::Color,
-        drawing::{FontDescription, FontFace, Paint},
-        Canvas, Coord, MappingPixelSink, Point, Rect, Size,
+        drawing::{path_for_rectangle, FontFace, Glyph},
+        render::{BlendMode, Context as RenderContext, Fill, FillRule, Layer, Raster, Style},
+        Coord, Point, Rect, Size,
     },
+    euclid::default::Vector2D,
     fuchsia_trace as ftrace,
+    rusttype::Scale,
     term_model::{
         ansi::CursorStyle,
         term::{CursorKey, RenderableCellContent, RenderableCellsIter},
@@ -27,77 +30,105 @@ const SCROLL_BAR_MOVEMENT_THRESHOLD: f32 = 1.0;
 static FONT_DATA: &'static [u8] =
     include_bytes!("../../../../../prebuilt/third_party/fonts/robotomono/RobotoMono-Regular.ttf");
 
-pub struct BackgroundView {
-    pub color: Color,
-    pub frame: Rect,
+fn make_color(term_color: &term_model::term::color::Rgb) -> Color {
+    Color { r: term_color.r, g: term_color.g, b: term_color.b, a: 0xFF }
 }
 
-impl BackgroundView {
-    pub fn new(color: Color) -> BackgroundView {
-        BackgroundView { color: color, ..BackgroundView::default() }
-    }
-
-    pub fn render(&self, canvas: &mut Canvas<MappingPixelSink>) {
-        ftrace::duration!("terminal", "Views:BackgroundView:render");
-        canvas.fill_rect(&self.frame, self.color);
-    }
-}
-
-impl Default for BackgroundView {
-    fn default() -> Self {
-        BackgroundView { color: Color::new(), frame: Rect::zero() }
-    }
+fn raster_for_rectangle(bounds: &Rect, render_context: &mut RenderContext) -> Raster {
+    let mut raster_builder = render_context.raster_builder().expect("raster_builder");
+    raster_builder.add(&path_for_rectangle(bounds, render_context), None);
+    raster_builder.build()
 }
 
 pub struct GridView {
     font: FontFace<'static>,
+    background_color: Color,
     pub frame: Rect,
     pub cell_size: Size,
 }
 
 impl Default for GridView {
     fn default() -> Self {
-        GridView {
-            frame: Rect::zero(),
-            font: FontFace::new(FONT_DATA).expect("unable to load font data"),
-            cell_size: Size::zero(),
-        }
+        GridView::new(&Color::new())
     }
 }
 
 impl GridView {
+    pub fn new(background_color: &Color) -> GridView {
+        GridView {
+            frame: Rect::zero(),
+            background_color: *background_color,
+            font: FontFace::new(FONT_DATA).expect("unable to load font data"),
+            cell_size: Size::zero(),
+        }
+    }
+
     pub fn render<'a, C>(
         &self,
-        canvas: &mut Canvas<MappingPixelSink>,
+        render_context: &mut RenderContext,
         cells: RenderableCellsIter<'a, C>,
-    ) {
-        ftrace::duration!("terminal", "Views:GridView:render");
-
+    ) -> Vec<Layer> {
         let size = self.cell_size;
+
+        let font = &self.font;
 
         let font_size = size.height * 0.9;
         let baseline = font_size * 0.9;
-        let mut font_description =
-            FontDescription { face: &self.font, size: font_size as u32, baseline: baseline as i32 };
+        let scale = Scale::uniform(font_size);
+        let background_color = self.background_color;
+        let (mut layers, maybe_bg_layers): (Vec<_>, Vec<_>) = cells
+            .filter_map(|cell| {
+                if let Some(character) = maybe_char_for_renderable_cell_content(cell.inner) {
+                    let cell_position = Point::new(
+                        size.width * cell.column.0 as f32,
+                        size.height * cell.line.0 as f32,
+                    );
+                    let char_position = cell_position + Vector2D::new(0.0, baseline);
+                    let g = font.font.glyph(character);
+                    let g = g.scaled(scale);
+                    let id = g.id();
+                    let glyph = Glyph::new(render_context, &self.font, font_size, id);
+                    let pos_vec = char_position.to_vector().to_i32();
+                    let cell_bounds = Rect::new(cell_position, size);
+                    let fg_raster = if glyph.bounding_box.is_empty() {
+                        raster_for_rectangle(&cell_bounds, render_context)
+                    } else {
+                        glyph.raster.translate(pos_vec)
+                    };
+                    let cell_background_color = make_color(&cell.bg);
+                    let bg_layer = if cell_background_color != background_color {
+                        let bg_raster = raster_for_rectangle(&cell_bounds, render_context);
+                        Some(Layer {
+                            raster: bg_raster,
+                            style: Style {
+                                fill_rule: FillRule::NonZero,
+                                fill: Fill::Solid(cell_background_color),
+                                blend_mode: BlendMode::Over,
+                            },
+                        })
+                    } else {
+                        None
+                    };
 
-        for cell in cells {
-            let character = match maybe_char_for_renderable_cell_content(cell.inner) {
-                Some(character) => character,
-                None => continue,
-            };
-
-            let mut buffer = [0u8; 4];
-            canvas.fill_text_cells(
-                character.encode_utf8(&mut buffer),
-                Point::new(size.width * cell.column.0 as f32, size.height * cell.line.0 as f32),
-                size,
-                &mut font_description,
-                &Paint {
-                    fg: Color { r: cell.fg.r, g: cell.fg.g, b: cell.fg.b, a: 0xFF },
-                    bg: Color { r: cell.bg.r, g: cell.bg.g, b: cell.bg.b, a: 0xFF },
-                },
-            )
-        }
+                    Some((
+                        Layer {
+                            raster: fg_raster,
+                            style: Style {
+                                fill_rule: FillRule::NonZero,
+                                fill: Fill::Solid(make_color(&cell.fg)),
+                                blend_mode: BlendMode::Over,
+                            },
+                        },
+                        bg_layer,
+                    ))
+                } else {
+                    None
+                }
+            })
+            .unzip();
+        let bg_layers: Vec<Layer> = maybe_bg_layers.into_iter().filter_map(|a| a).collect();
+        layers.extend(bg_layers);
+        layers
     }
 }
 
@@ -152,11 +183,10 @@ impl Default for ScrollBar {
 }
 
 impl ScrollBar {
-    pub fn render(&self, canvas: &mut Canvas<MappingPixelSink>) {
-        ftrace::duration!("terminal", "Views:ScrollBar:render");
-        if let Some(thumb_frame) = &self.thumb_frame {
-            Self::draw_checkered_pattern(canvas, thumb_frame);
-        }
+    pub fn render(&self, render_context: &mut RenderContext) -> Option<Layer> {
+        ftrace::duration!("terminal", "Views:ScrollBar:render2");
+        self.thumb_frame
+            .and_then(|thumb_frame| Some(Self::render_thumb_pattern(render_context, &thumb_frame)))
     }
 
     /// This method must be called after the client has updated
@@ -237,22 +267,16 @@ impl ScrollBar {
         }
     }
 
-    fn draw_checkered_pattern(canvas: &mut Canvas<MappingPixelSink>, frame: &Rect) {
-        let size = Size::new(1.0, 1.0);
-        let mut row = 0;
-        let mut rect = Rect::new(frame.origin, size);
-        while rect.origin.y < (frame.origin.y + frame.size.height - size.height) {
-            let mut draw_black = if row % 2 == 0 { true } else { false };
-            rect.origin.x = frame.origin.x;
-
-            while rect.origin.x < (frame.origin.x + frame.size.width - size.width) {
-                let color = if draw_black { Color::new() } else { Color::white() };
-                canvas.fill_rect(&rect, color);
-                draw_black = !draw_black;
-                rect.origin.x += size.width;
-            }
-            rect.origin.y += size.height;
-            row += 1;
+    fn render_thumb_pattern(render_context: &mut RenderContext, frame: &Rect) -> Layer {
+        let white = Color::white();
+        let raster = raster_for_rectangle(&frame, render_context);
+        Layer {
+            raster: raster,
+            style: Style {
+                fill_rule: FillRule::NonZero,
+                fill: Fill::Solid(white),
+                blend_mode: BlendMode::Over,
+            },
         }
     }
 

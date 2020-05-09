@@ -4,18 +4,20 @@
 
 #![allow(dead_code)]
 use {
-    crate::ui::terminal_views::{BackgroundView, GridView, ScrollBar},
+    crate::ui::terminal_views::{GridView, ScrollBar},
     carnelian::{
         color::Color,
         input::{self},
-        Canvas, Coord, MappingPixelSink, Rect, Size, ViewAssistantContext,
+        render::{Composition, Context as RenderContext, PreClear, RenderExt},
+        Coord, Rect, Size, ViewAssistantContext,
     },
     fuchsia_trace as ftrace,
     term_model::term::RenderableCellsIter,
 };
 
 pub struct TerminalScene {
-    background_view: BackgroundView,
+    composition: Composition,
+    background_color: Color,
     grid_view: GridView,
     scroll_bar: ScrollBar,
     size: Size,
@@ -35,14 +37,12 @@ pub enum PointerEventResponse {
 
 impl TerminalScene {
     pub fn new(background_color: Color) -> TerminalScene {
-        TerminalScene {
-            background_view: BackgroundView::new(background_color),
-            ..TerminalScene::default()
-        }
+        let composition = Composition::new(background_color);
+        TerminalScene { background_color, composition, ..TerminalScene::default() }
     }
 
     pub fn update_background_color(&mut self, new_color: Color) {
-        self.background_view.color = new_color;
+        self.background_color = new_color;
     }
 
     pub fn calculate_term_size_from_size(size: &Size) -> Size {
@@ -50,14 +50,24 @@ impl TerminalScene {
     }
 
     pub fn render<'a, C>(
-        &self,
-        canvas: &mut Canvas<MappingPixelSink>,
+        &mut self,
+        render_context: &mut RenderContext,
+        context: &ViewAssistantContext<'_>,
         cells: RenderableCellsIter<'a, C>,
     ) {
-        ftrace::duration!("terminal", "Scene:TerminalScene:render");
-        self.background_view.render(canvas);
-        self.grid_view.render(canvas, cells);
-        self.scroll_bar.render(canvas);
+        ftrace::duration!("terminal", "Scene:TerminalScene:render2");
+        let image = render_context.get_current_image(context);
+        let ext = RenderExt {
+            pre_clear: Some(PreClear { color: self.background_color }),
+            ..Default::default()
+        };
+
+        let grid_layers = self.grid_view.render(render_context, cells);
+        let scroll_bar_layers = self.scroll_bar.render(render_context);
+
+        self.composition.replace(.., grid_layers.into_iter().chain(scroll_bar_layers));
+
+        render_context.render(&self.composition, None, image, &ext);
     }
 
     pub fn update_size(&mut self, new_size: Size, cell_size: Size) {
@@ -65,7 +75,6 @@ impl TerminalScene {
 
         self.grid_view.cell_size = cell_size;
         self.size = new_size;
-        self.background_view.frame = Rect::from_size(new_size);
 
         self.grid_view.frame =
             Rect::from_size(TerminalScene::calculate_term_size_from_size(&new_size));
@@ -164,10 +173,13 @@ impl TerminalScene {
 
 impl Default for TerminalScene {
     fn default() -> Self {
+        let background_color = Color::new();
+        let composition = Composition::new(background_color);
         TerminalScene {
-            background_view: BackgroundView::default(),
+            composition,
+            background_color,
             size: Size::zero(),
-            grid_view: GridView::default(),
+            grid_view: GridView::new(&background_color),
             scroll_bar: ScrollBar::default(),
             scroll_context: ScrollContext::default(),
         }
@@ -254,14 +266,14 @@ mod tests {
     #[test]
     fn new_with_color_sets_background_color() {
         let scene = TerminalScene::new(Color { r: 255, ..Color::new() });
-        assert_eq!(scene.background_view.color.r, 255);
+        assert_eq!(scene.background_color.r, 255);
     }
 
     #[test]
     fn update_background_color_sets_color_of_bg_view() {
         let mut scene = TerminalScene::default();
         scene.update_background_color(Color { g: 255, ..Color::new() });
-        assert_eq!(scene.background_view.color.g, 255);
+        assert_eq!(scene.background_color.g, 255);
     }
 
     #[test]
@@ -286,7 +298,6 @@ mod tests {
         let size = Size::new(100.0, 100.0);
         scene.update_size(size, Size::zero());
 
-        assert_eq!(scene.background_view.frame, Rect::new(Point::zero(), Size::new(100.0, 100.0)));
         assert_eq!(scene.grid_view.frame, Rect::new(Point::zero(), Size::new(84.0, 100.0)));
         assert_eq!(
             scene.scroll_bar.frame,
