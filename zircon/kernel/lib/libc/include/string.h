@@ -46,6 +46,10 @@ int strncasecmp(char const *, char const *, size_t) __PURE;
 int strnicmp(char const *, char const *, size_t) __PURE;
 size_t strnlen(char const *s, size_t count) __PURE;
 
+// Used by address sanitizer.
+__typeof(memcpy) __unsanitized_memcpy;
+__typeof(memset) __unsanitized_memset;
+
 __END_CDECLS
 
 #endif  // ZIRCON_KERNEL_LIB_LIBC_INCLUDE_STRING_H_

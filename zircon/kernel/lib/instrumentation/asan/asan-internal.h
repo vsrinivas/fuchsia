@@ -12,8 +12,12 @@
 #include <stdint.h>
 
 #include <arch/kernel_aspace.h>
+#include <ktl/atomic.h>
+#include <vm/physmap.h>
 
 #ifdef __x86_64__
+
+extern ktl::atomic<bool> g_asan_initialized;
 
 inline constexpr size_t kAsanShift = 3;
 inline constexpr size_t kAsanShadowSize = KERNEL_ASPACE_SIZE >> kAsanShift;
@@ -22,6 +26,10 @@ inline constexpr size_t kAsanShadowSize = KERNEL_ASPACE_SIZE >> kAsanShift;
 inline constexpr uint8_t kAsanSmallestPoisonedValue = 0x08;
 
 static_assert(X86_KERNEL_KASAN_PDP_ENTRIES * 1024ul * 1024ul * 1024ul == kAsanShadowSize);
+
+// The current implementation of asan only checks accesses within the physmap.
+inline constexpr vaddr_t kAsanStartAddress = PHYSMAP_BASE;
+inline constexpr vaddr_t kAsanEndAddress = PHYSMAP_BASE + PHYSMAP_SIZE;
 
 // Returns the address of the shadow byte corresponding to |address|.
 static inline uint8_t* addr2shadow(uintptr_t address) {
@@ -33,6 +41,10 @@ static inline uint8_t* addr2shadow(uintptr_t address) {
       kasan_shadow_map + ((address - KERNEL_ASPACE_BASE) >> kAsanShift);
   return shadow_byte_address;
 }
+
+// Checks the validity of an entire region. This function panics and prints an
+// error message if any part of [address, address+bytes) is poisoned.
+void asan_check(uintptr_t address, size_t bytes, void* caller);
 
 #endif  // __x86_64__
 

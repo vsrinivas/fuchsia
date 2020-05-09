@@ -66,4 +66,19 @@ real memory. We then replace the early boot zero page mappings with
 mappings to the newly allocated shadow pages. All the remaining early
 boot mappings remain the same.
 
+## Runtime
+
+### Poisoning
+
+This version of asan exposes an interface for callers to poison and check the
+validity of memory via the following functions:
+
+* `asan_poison_shadow`
+* `asan_region_is_poisoned`
+* `asan_address_is_poisoned`
+
+Memory allocators should use `asan_poison_shadow` to mark regions of memory as
+valid or invalid, specifying different poison values for different types of
+memory.
+
 [address-sanitizer]: https://clang.llvm.org/docs/AddressSanitizer.html

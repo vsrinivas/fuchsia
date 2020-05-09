@@ -16,9 +16,9 @@
 namespace {
 
 void asan_early_init(unsigned int arg) {
-  arch_asan_reallocate_shadow(
-      reinterpret_cast<uintptr_t>(addr2shadow(PHYSMAP_BASE)),
-      reinterpret_cast<uintptr_t>(addr2shadow(PHYSMAP_BASE + PHYSMAP_SIZE)));
+  arch_asan_reallocate_shadow(reinterpret_cast<uintptr_t>(addr2shadow(kAsanStartAddress)),
+                              reinterpret_cast<uintptr_t>(addr2shadow(kAsanEndAddress)));
+  g_asan_initialized.store(true);
 }
 
 void asan_late_init(unsigned int arg) {

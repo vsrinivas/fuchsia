@@ -39,6 +39,7 @@ if (is_asan) {
     configs += [ "$zx/public/gn/config:frame_pointers" ]
     sources = [
       "asan-init.cc",
+      "asan-poisoning.cc",
       "asan-stubs.cc",
     ]
     sources += [ "asan-init-$zircon_cpu.cc" ]
