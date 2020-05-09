@@ -186,9 +186,7 @@ void Linter::NewFile(const raw::File& element) {
     file_is_in_platform_source_tree_ = std::ifstream(filename_.c_str()).good();
   }
 
-  // TODO(fxb/42717): Remove zz once
-  // https://fuchsia-review.googlesource.com/c/fuchsia/+/343788 has landed.
-  if (library_prefix_ == "zz" || library_prefix_ == "zx") {
+  if (library_prefix_ == "zx") {
     lint_style_ = LintStyle::CStyle;
     invalid_case_for_decl_name_ =
         DefineCheck("invalid-case-for-decl-name", "${TYPE} must be named in lower_snake_case");
