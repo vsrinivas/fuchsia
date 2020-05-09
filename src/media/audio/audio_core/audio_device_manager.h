@@ -83,7 +83,7 @@ class AudioDeviceManager : public fuchsia::media::AudioDeviceEnumerator, public 
                           bool is_input) final;
   void AddDeviceByChannel2(
       std::string device_name, bool is_input,
-      fidl::InterfaceRequest<fuchsia::hardware::audio::StreamConfig> channel) final;
+      fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig> channel) final;
   void AddDeviceByVersion(zx::channel device_channel, std::string device_name, bool is_input,
                           AudioDriverVersion version);
 

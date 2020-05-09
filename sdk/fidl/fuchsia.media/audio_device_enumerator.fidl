@@ -109,5 +109,5 @@ protocol AudioDeviceEnumerator {
     AddDeviceByChannel(handle<channel> device_channel, string:256 device_name,
                        bool is_input);
     AddDeviceByChannel2(string:256 device_name, bool is_input,
-                        request<fuchsia.hardware.audio.StreamConfig> channel);
+                        fuchsia.hardware.audio.StreamConfig channel);
 };

@@ -24,7 +24,7 @@ std::shared_ptr<AudioInput> AudioInput::Create(zx::channel channel, ThreadingMod
 
 // static
 std::shared_ptr<AudioInput> AudioInput::Create(
-    fidl::InterfaceRequest<fuchsia::hardware::audio::StreamConfig> stream_config,
+    fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig> stream_config,
     ThreadingModel* threading_model, DeviceRegistry* registry, LinkMatrix* link_matrix) {
   return std::make_shared<AudioInput>(std::move(stream_config), threading_model, registry,
                                       link_matrix);
@@ -36,7 +36,7 @@ AudioInput::AudioInput(zx::channel channel, ThreadingModel* threading_model,
                   std::make_unique<AudioDriverV1>(this)),
       initial_stream_channel_(std::move(channel)) {}
 
-AudioInput::AudioInput(fidl::InterfaceRequest<fuchsia::hardware::audio::StreamConfig> stream_config,
+AudioInput::AudioInput(fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig> stream_config,
                        ThreadingModel* threading_model, DeviceRegistry* registry,
                        LinkMatrix* link_matrix)
     : AudioDevice(Type::Input, threading_model, registry, link_matrix,

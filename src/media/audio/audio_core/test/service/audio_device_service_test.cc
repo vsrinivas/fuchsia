@@ -44,7 +44,7 @@ class AudioDeviceServiceTest : public HermeticAudioTest {
 
   template <>
   void EnumeratorAddDevice<testing::FakeAudioDriverV2>(zx::channel remote_channel) {
-    fidl::InterfaceRequest<fuchsia::hardware::audio::StreamConfig> stream_config = {};
+    fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig> stream_config = {};
     stream_config.set_channel(std::move(remote_channel));
     audio_device_enumerator_->AddDeviceByChannel2("test device", false, std::move(stream_config));
   }

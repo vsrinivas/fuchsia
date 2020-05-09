@@ -48,7 +48,7 @@ std::shared_ptr<AudioOutput> DriverOutput::Create(zx::channel stream_channel,
 }
 
 std::shared_ptr<AudioOutput> DriverOutput::Create(
-    fidl::InterfaceRequest<fuchsia::hardware::audio::StreamConfig> channel,
+    fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig> channel,
     ThreadingModel* threading_model, DeviceRegistry* registry, LinkMatrix* link_matrix) {
   return std::make_shared<DriverOutput>(threading_model, registry, std::move(channel), link_matrix);
 }
@@ -59,7 +59,7 @@ DriverOutput::DriverOutput(ThreadingModel* threading_model, DeviceRegistry* regi
       initial_stream_channel_(std::move(initial_stream_channel)) {}
 
 DriverOutput::DriverOutput(ThreadingModel* threading_model, DeviceRegistry* registry,
-                           fidl::InterfaceRequest<fuchsia::hardware::audio::StreamConfig> channel,
+                           fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig> channel,
                            LinkMatrix* link_matrix)
     : AudioOutput(threading_model, registry, link_matrix, std::make_unique<AudioDriverV2>(this)),
       initial_stream_channel_(channel.TakeChannel()) {}

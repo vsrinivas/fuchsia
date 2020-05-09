@@ -334,7 +334,7 @@ void AudioDeviceManager::AddDeviceByVersion(zx::channel device_channel, std::str
       AddDeviceByChannel(std::move(device_channel), std::move(device_name), is_input);
       break;
     case AudioDriverVersion::V2:
-      fidl::InterfaceRequest<fuchsia::hardware::audio::StreamConfig> stream_config = {};
+      fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig> stream_config = {};
       stream_config.set_channel(std::move(device_channel));
       AddDeviceByChannel2(std::move(device_name), is_input, std::move(stream_config));
       break;
@@ -367,7 +367,7 @@ void AudioDeviceManager::AddDeviceByChannel(zx::channel device_channel, std::str
 
 void AudioDeviceManager::AddDeviceByChannel2(
     std::string device_name, bool is_input,
-    fidl::InterfaceRequest<fuchsia::hardware::audio::StreamConfig> stream_config) {
+    fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig> stream_config) {
   TRACE_DURATION("audio", "AudioDeviceManager::AddDeviceByChannel2");
   AUD_VLOG(TRACE) << " adding2 " << (is_input ? "input" : "output") << " '" << device_name << "'";
 

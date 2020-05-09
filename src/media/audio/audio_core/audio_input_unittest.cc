@@ -129,7 +129,7 @@ class AudioInputTestDriverV2 : public testing::ThreadingModelFixture,
         std::move(c1), threading_model().FidlDomain().dispatcher());
     ASSERT_NE(remote_driver_, nullptr);
 
-    fidl::InterfaceRequest<fuchsia::hardware::audio::StreamConfig> stream_config = {};
+    fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig> stream_config = {};
     stream_config.set_channel(std::move(c2));
     input_ = AudioInput::Create(std::move(stream_config), &threading_model(),
                                 &context().device_manager(), &context().link_matrix());

@@ -130,7 +130,7 @@ TEST_F(AudioCapturerTest, RegistersWithRouteGraphIfHasUsageStreamTypeAndBuffersD
 
   zx::channel c1, c2;
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &c1, &c2));
-  fidl::InterfaceRequest<fuchsia::hardware::audio::StreamConfig> stream_config = {};
+  fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig> stream_config = {};
   stream_config.set_channel(zx::channel());
   auto input = AudioInput::Create(std::move(stream_config), &threading_model(),
                                   &context().device_manager(), &context().link_matrix());

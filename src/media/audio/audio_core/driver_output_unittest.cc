@@ -415,7 +415,7 @@ class DriverV2OutputTest : public testing::ThreadingModelFixture {
     ASSERT_NE(driver_, nullptr);
     driver_->Start();
 
-    fidl::InterfaceRequest<fuchsia::hardware::audio::StreamConfig> stream_config = {};
+    fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig> stream_config = {};
     stream_config.set_channel(std::move(c2));
     output_ = DriverOutput::Create(std::move(stream_config), &threading_model(),
                                    &context().device_manager(), &context().link_matrix());
