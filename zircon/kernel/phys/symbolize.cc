@@ -22,7 +22,7 @@ static constexpr uintptr_t kLinkTimeAddress = 0;
 // Arbitrary, but larger than any known format in use.
 static constexpr size_t kMaxBuildIdSize = 32;
 
-struct BuildIdNote {
+struct BuildIdNote final {
   static constexpr char kName_[] = "GNU";
   static constexpr uint32_t kType_ = 3;  // NT_GNU_BUILD_ID
 
@@ -57,7 +57,7 @@ class BuildId {
   }
 
   auto begin() const { return note_->build_id; }
-  auto end() const { return &note_->build_id[note_->n_descsz]; }
+  auto end() const { return begin() + size(); }
   size_t size() const { return note_->n_descsz; }
 
   ktl::string_view Print() {
