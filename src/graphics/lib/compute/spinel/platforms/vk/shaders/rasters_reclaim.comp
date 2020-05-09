@@ -311,9 +311,9 @@ main()
             node_id = node_next;
           }
 
-      //
-      // DEBUG -- dump the node block
-      //
+          //
+          // DEBUG -- dump the node block
+          //
 #if 0
       {
         uint debug_base = 0;

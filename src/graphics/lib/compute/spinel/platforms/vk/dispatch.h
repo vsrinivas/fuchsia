@@ -214,21 +214,28 @@
 // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 //
 
+#define SPN_DISPATCH_STAGES()                                                                      \
+  SPN_DISPATCH_STAGE(STATUS)                                                                       \
+  SPN_DISPATCH_STAGE(BLOCK_POOL)                                                                   \
+  SPN_DISPATCH_STAGE(PATH_BUILDER)                                                                 \
+  SPN_DISPATCH_STAGE(RASTER_BUILDER_1)                                                             \
+  SPN_DISPATCH_STAGE(RASTER_BUILDER_2)                                                             \
+  SPN_DISPATCH_STAGE(COMPOSITION_RESET)                                                            \
+  SPN_DISPATCH_STAGE(COMPOSITION_PLACE)                                                            \
+  SPN_DISPATCH_STAGE(COMPOSITION_SEAL_1)                                                           \
+  SPN_DISPATCH_STAGE(COMPOSITION_SEAL_2)                                                           \
+  SPN_DISPATCH_STAGE(STYLING)                                                                      \
+  SPN_DISPATCH_STAGE(RENDER)                                                                       \
+  SPN_DISPATCH_STAGE(RECLAIM_PATHS)                                                                \
+  SPN_DISPATCH_STAGE(RECLAIM_RASTERS)
+
 typedef enum spn_dispatch_stage_e
 {
-  SPN_DISPATCH_STAGE_STATUS,
-  SPN_DISPATCH_STAGE_BLOCK_POOL,
-  SPN_DISPATCH_STAGE_PATH_BUILDER,
-  SPN_DISPATCH_STAGE_RASTER_BUILDER_1,
-  SPN_DISPATCH_STAGE_RASTER_BUILDER_2,
-  SPN_DISPATCH_STAGE_COMPOSITION_RESET,
-  SPN_DISPATCH_STAGE_COMPOSITION_PLACE,
-  SPN_DISPATCH_STAGE_COMPOSITION_SEAL_1,
-  SPN_DISPATCH_STAGE_COMPOSITION_SEAL_2,
-  SPN_DISPATCH_STAGE_STYLING,
-  SPN_DISPATCH_STAGE_RENDER,
-  SPN_DISPATCH_STAGE_RECLAIM_PATHS,
-  SPN_DISPATCH_STAGE_RECLAIM_RASTERS
+#undef SPN_DISPATCH_STAGE
+#define SPN_DISPATCH_STAGE(e_) SPN_DISPATCH_STAGE_##e_,
+
+  SPN_DISPATCH_STAGES()
+
 } spn_dispatch_stage_e;
 
 //
@@ -280,7 +287,7 @@ spn_device_dispatch_dispose(struct spn_device * const device);
 spn_result_t
 spn_device_dispatch_acquire(struct spn_device * const  device,
                             spn_dispatch_stage_e const stage,
-                            spn_dispatch_id_t * const  id);
+                            spn_dispatch_id_t * const  p_id);
 
 //
 // Get/set dispatch attributes

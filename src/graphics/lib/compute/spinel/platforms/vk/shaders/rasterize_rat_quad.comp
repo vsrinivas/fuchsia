@@ -90,6 +90,7 @@
     {                                                                                              \
       const uint s_src = spn_scan_max(s_inc, s_exc);                                               \
                                                                                                    \
+      /* NOTE: highp = 1 + mediump - highp */                                                      \
       const uint s_delta = 1 + gl_SubgroupInvocationID - subgroupShuffle(s_exc, s_src);            \
       const uint s_count = subgroupShuffle(s_segs, s_src);                                         \
                                                                                                    \

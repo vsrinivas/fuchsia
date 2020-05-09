@@ -82,8 +82,13 @@ spn_raster_builder_add(spn_raster_builder_t      raster_builder,
 {
   SPN_ASSERT_STATE_ASSERT(SPN_RASTER_BUILDER_STATE_BUILDING, raster_builder);
 
-  return raster_builder
-    ->add(raster_builder->impl, paths, transform_weakrefs, transforms, clip_weakrefs, clips, count);
+  return raster_builder->add(raster_builder->impl,  //
+                             paths,
+                             transform_weakrefs,
+                             transforms,
+                             clip_weakrefs,
+                             clips,
+                             count);
 }
 
 //

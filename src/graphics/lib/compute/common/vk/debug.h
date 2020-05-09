@@ -30,6 +30,10 @@ vk_debug_compute_props(FILE * file, VkPhysicalDeviceProperties const * const pdp
 void
 vk_debug_subgroup_props(FILE * file, VkPhysicalDeviceSubgroupProperties const * const pdsp);
 
+//
+// Deprecated -- only for Vulkan 1.0 applications
+//
+
 VkBool32 VKAPI_PTR
 vk_debug_report_cb(VkDebugReportFlagsEXT      flags,
                    VkDebugReportObjectTypeEXT objectType,

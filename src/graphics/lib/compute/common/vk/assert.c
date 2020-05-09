@@ -88,7 +88,7 @@ vk_assert(VkResult const result, char const * const file, int const line, bool c
       char const * const vk_result_str = vk_get_result_string(result);
 
       fprintf(stderr,
-              "\"%s\", line %d: vk_assert( %d ) = \"%s\"",
+              "\"%s\", line %d: vk_assert( %d ) = \"%s\"\n",
               file,
               line,
               result,

@@ -96,7 +96,7 @@ spn_assert_n(char const * const file,
       char const * const spn_result_t_str = spn_result_t_to_string(result);
 
       fprintf(stderr,
-              "\"%s\", line %d: spn_assert(%d) = \"%s\"\n",
+              "\"%s\", line %d: spn_assert( %d ) = \"%s\"\n",
               file,
               line,
               result,
