@@ -80,9 +80,24 @@ executable("syz-executor") {
     "-DHOSTGOOS_${HOSTGOOS}=1",
     "-DGIT_REVISION=\"${GIT_REVISION}\"",
   ]
+  configs -= [ "//build/config:default_warnings" ]
+  configs += [ ":warnings" ]
   deps = [
     "//src/devices/lib/driver",
     "//zircon/public/lib/fdio",
     "//zircon/system/ulib/ddk",
+  ]
+}
+
+# Match the warnings enabled for Fuchsia builds in syzkaller/sys/targets/targets.go.
+config("warnings") {
+  cflags = [
+    "-Wall",
+    "-Werror",
+    "-Wparentheses",
+    "-Wunused-const-variable",
+    "-Wframe-larger-than=16384",
+    "-Wunused-const-variable",
+    "-Wno-deprecated",
   ]
 }
