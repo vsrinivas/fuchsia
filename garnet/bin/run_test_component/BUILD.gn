@@ -28,6 +28,7 @@ source_set("lib") {
 
   public_deps = [
     "//garnet/public/lib/json",
+    "//sdk/fidl/fuchsia.boot",
     "//sdk/fidl/fuchsia.camera2",
     "//sdk/fidl/fuchsia.kernel",
     "//sdk/fidl/fuchsia.media",
@@ -46,7 +47,6 @@ source_set("lib") {
     "//src/lib/pkg_url",
     "//src/sys/component_index/fidl:index",
     "//third_party/rapidjson",
-    "//zircon/system/fidl/fuchsia-boot",
     "//zircon/system/fidl/fuchsia-device",
     "//zircon/system/fidl/fuchsia-hardware-pty",
     "//zircon/system/fidl/fuchsia-logger",

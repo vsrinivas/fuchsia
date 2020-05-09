@@ -61,12 +61,12 @@ executable("bootsvc-integration-test") {
   sources = [ "integration-test.cc" ]
   deps = [
     "..:util",
+    "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/safemath",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/fidl/fuchsia-boot:c",
     "//zircon/system/fidl/fuchsia-io:llcpp",
   ]
 }
@@ -97,13 +97,13 @@ zbi_input("integration-test-deps") {
     # Pull in the dependencies of devcoordinator so that we can test
     # requesting libdriver.so from the bootsvc loader service.
     # This could possibly be smaller, but seems pretty reasonable.
-    "//zircon/system/core/netsvc:device-name-provider",
-    "//zircon/system/core/miscsvc",
-    "//zircon/system/core/netsvc",
-    "//zircon/system/core/pwrbtn-monitor",
-    "//zircon/system/core/svchost",
     "//zircon/system/core/devmgr/fragment",
     "//zircon/system/core/devmgr/fragment:fragment.proxy",
+    "//zircon/system/core/miscsvc",
+    "//zircon/system/core/netsvc",
+    "//zircon/system/core/netsvc:device-name-provider",
+    "//zircon/system/core/pwrbtn-monitor",
+    "//zircon/system/core/svchost",
   ]
 }
 

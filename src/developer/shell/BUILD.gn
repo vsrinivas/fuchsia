@@ -17,8 +17,9 @@ action("generate_fidl_json") {
     "//garnet/examples/fidl/services:echo",
     "//sdk:core",
     "//sdk:core_fidl_json",
+    "//sdk/fidl/fuchsia.boot",
     "//sdk/fidl/fuchsia.kernel",
-    "//sdk/fidl/fuchsia.power:fuchsia.power",
+    "//sdk/fidl/fuchsia.power",
     "//third_party/quickjs:qjs($host_toolchain)",
     "//zircon/system/fidl/fuchsia-device-manager",
   ]
@@ -40,7 +41,7 @@ action("generate_fidl_json") {
         "$root_build_dir/fidling/gen/zircon/system/fidl/fuchsia-device-manager/fuchsia-device-manager.fidl.json",
         root_build_dir),
     rebase_path(
-        "$root_build_dir/fidling/gen/zircon/system/fidl/fuchsia-boot/fuchsia-boot.fidl.json",
+        "$root_build_dir/fidling/gen/sdk/fidl/fuchsia.boot/fuchsia.boot.fidl.json",
         root_build_dir),
   ]
 }

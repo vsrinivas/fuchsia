@@ -431,6 +431,7 @@ executable("kernel_log_ptr_integration_test") {
   sources = [ "kernel_log_ptr_integration_test.cc" ]
 
   deps = [
+    "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
     "//sdk/lib/sys/cpp/testing:integration",
     "//src/developer/feedback/feedback_data/attachments:attachment_providers",
     "//src/developer/feedback/feedback_data/attachments:types",
@@ -440,7 +441,6 @@ executable("kernel_log_ptr_integration_test") {
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/zx",
-    "//zircon/system/fidl/fuchsia-boot:fuchsia-boot_c",
   ]
 }
 

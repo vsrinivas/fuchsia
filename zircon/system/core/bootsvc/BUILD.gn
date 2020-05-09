@@ -49,6 +49,7 @@ executable("bin") {
   ]
   deps = [
     ":util",
+    "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
     "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_llcpp",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-default",
@@ -64,7 +65,6 @@ executable("bin") {
     "//zircon/public/lib/trace",
     "//zircon/public/lib/trace-engine",
     "//zircon/public/lib/zx",
-    "//zircon/system/fidl/fuchsia-boot:c",
     "//zircon/system/fidl/fuchsia-io:llcpp",
     "//zircon/system/ulib/bootfs",
     "//zircon/system/ulib/launchpad",

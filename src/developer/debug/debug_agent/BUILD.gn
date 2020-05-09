@@ -84,6 +84,7 @@ static_library("lib") {
 
   public_deps = [
     "//garnet/lib/process",
+    "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
     "//sdk/fidl/fuchsia.exception",
     "//src/developer/debug/ipc:agent",
     "//src/developer/debug/ipc:client",
@@ -96,7 +97,6 @@ static_library("lib") {
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/ngunwind",
-    "//zircon/system/fidl/fuchsia-boot:fuchsia-boot_c",
   ]
 }
 

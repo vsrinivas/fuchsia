@@ -40,6 +40,7 @@ test("zxio") {
     "zxio-test.cc",
   ]
   deps = [
+    "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fdio",
@@ -48,7 +49,6 @@ test("zxio") {
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxio",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/fidl/fuchsia-boot:c",
     "//zircon/system/fidl/fuchsia-io:llcpp",
     "//zircon/system/fidl/fuchsia-io2:llcpp",
   ]

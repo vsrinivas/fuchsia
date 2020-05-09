@@ -25,6 +25,7 @@ rustc_binary("bin") {
     ":mos_metrics_registry_rustlib",
     "//garnet/lib/rust/sysconfig-client",
     "//garnet/public/rust/fuchsia-hyper",
+    "//sdk/fidl/fuchsia.boot:fuchsia.boot-rustc",
     "//sdk/fidl/fuchsia.stash:fuchsia.stash-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//sdk/fidl/fuchsia.update:fuchsia.update-rustc",
@@ -53,7 +54,6 @@ rustc_binary("bin") {
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:thiserror",
-    "//zircon/system/fidl/fuchsia-boot:fuchsia-boot-rustc",
     "//zircon/system/fidl/fuchsia-cobalt:fuchsia-cobalt-rustc",
     "//zircon/system/fidl/fuchsia-device-manager:fuchsia-device-manager-rustc",
   ]

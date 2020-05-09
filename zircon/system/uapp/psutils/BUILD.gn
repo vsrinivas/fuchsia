@@ -34,9 +34,9 @@ source_set("ps_internal") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "ps_internal.c" ]
   deps = [
+    "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/pretty",
-    "//zircon/system/fidl/fuchsia-boot:c",
     "//zircon/system/ulib/task-utils",
   ]
 }
@@ -48,9 +48,9 @@ source_set("handles_internal") {
     "object-utils.cc",
   ]
   deps = [
+    "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/pretty",
-    "//zircon/system/fidl/fuchsia-boot:c",
     "//zircon/system/ulib/task-utils",
   ]
 }
@@ -61,9 +61,9 @@ executable("ps") {
   sources = [ "ps.c" ]
   deps = [
     ":ps_internal",
+    "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/pretty",
-    "//zircon/system/fidl/fuchsia-boot:c",
     "//zircon/system/ulib/task-utils",
   ]
 }
@@ -72,9 +72,9 @@ executable("top") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "top.c" ]
   deps = [
+    "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/pretty",
-    "//zircon/system/fidl/fuchsia-boot:c",
     "//zircon/system/ulib/task-utils",
   ]
 }
@@ -83,8 +83,8 @@ executable("kill") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "kill.c" ]
   deps = [
+    "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
     "//zircon/public/lib/fdio",
-    "//zircon/system/fidl/fuchsia-boot:c",
     "//zircon/system/ulib/task-utils",
   ]
 }
@@ -93,8 +93,8 @@ executable("killall") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "killall.c" ]
   deps = [
+    "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
     "//zircon/public/lib/fdio",
-    "//zircon/system/fidl/fuchsia-boot:c",
     "//zircon/system/ulib/task-utils",
   ]
 }
@@ -103,9 +103,9 @@ executable("vmaps") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "vmaps.c" ]
   deps = [
+    "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/pretty",
-    "//zircon/system/fidl/fuchsia-boot:c",
     "//zircon/system/ulib/task-utils",
   ]
 }
@@ -117,9 +117,9 @@ executable("vmos") {
     "vmos.cc",
   ]
   deps = [
+    "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/pretty",
-    "//zircon/system/fidl/fuchsia-boot:c",
     "//zircon/system/ulib/task-utils",
   ]
 }
@@ -135,8 +135,8 @@ executable("memgraph") {
   include_dirs = [ target_gen_dir ]
   deps = [
     ":gen-memgraph-schema",
+    "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
     "//zircon/public/lib/fdio",
-    "//zircon/system/fidl/fuchsia-boot:c",
     "//zircon/system/ulib/task-utils",
   ]
 }
@@ -157,9 +157,9 @@ executable("kstats") {
     "resources.c",
   ]
   deps = [
+    "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/pretty",
-    "//zircon/system/fidl/fuchsia-boot:c",
   ]
 }
 
@@ -167,11 +167,11 @@ executable("threads") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "threads.cc" ]
   deps = [
+    "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/inspector",
     "//zircon/public/lib/pretty",
-    "//zircon/system/fidl/fuchsia-boot:c",
     "//zircon/system/ulib/task-utils",
   ]
 }
@@ -180,8 +180,8 @@ executable("signal") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "signal.c" ]
   deps = [
+    "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
     "//zircon/public/lib/fdio",
-    "//zircon/system/fidl/fuchsia-boot:c",
     "//zircon/system/ulib/task-utils",
   ]
 }
@@ -192,8 +192,8 @@ executable("handles") {
   sources = [ "handles.cc" ]
   deps = [
     ":handles_internal",
+    "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
     "//zircon/public/lib/fdio",
-    "//zircon/system/fidl/fuchsia-boot:c",
     "//zircon/system/ulib/task-utils",
   ]
 }

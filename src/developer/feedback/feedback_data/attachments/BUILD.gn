@@ -19,6 +19,7 @@ source_set("attachment_providers") {
 
   public_deps = [
     ":types",
+    "//sdk/fidl/fuchsia.boot",
     "//sdk/fidl/fuchsia.diagnostics",
     "//sdk/fidl/fuchsia.images",
     "//sdk/fidl/fuchsia.ui.scenic",
@@ -30,7 +31,6 @@ source_set("attachment_providers") {
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/zx",
-    "//zircon/system/fidl/fuchsia-boot",
     "//zircon/system/fidl/fuchsia-logger",
   ]
 

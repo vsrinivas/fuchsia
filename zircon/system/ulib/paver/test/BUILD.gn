@@ -53,6 +53,7 @@ test("paver-test") {
     "..",
   ]
   deps = [
+    "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
     "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_llcpp",
     "//sdk/fidl/fuchsia.hardware.skipblock:fuchsia.hardware.skipblock_llcpp",
     "//sdk/fidl/fuchsia.paver:fuchsia.paver_llcpp",
@@ -67,7 +68,6 @@ test("paver-test") {
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/gpt",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/fidl/fuchsia-boot:llcpp",
     "//zircon/system/fidl/fuchsia-device:llcpp",
     "//zircon/system/fidl/fuchsia-hardware-block:llcpp",
     "//zircon/system/fidl/fuchsia-hardware-nand:c",
@@ -94,11 +94,11 @@ fuzzer("paver-validation-fuzzer") {
   sources = [ "validation-fuzzer.cc" ]
 
   deps = [
+    "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
     "//sdk/fidl/fuchsia.hardware.skipblock:fuchsia.hardware.skipblock_llcpp",
     "//sdk/fidl/fuchsia.paver:fuchsia.paver_llcpp",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/gpt",
-    "//zircon/system/fidl/fuchsia-boot:llcpp.headers",
     "//zircon/system/fidl/fuchsia-device:llcpp.headers",
     "//zircon/system/fidl/fuchsia-hardware-block:llcpp.headers",
     "//zircon/system/ulib/block-client",

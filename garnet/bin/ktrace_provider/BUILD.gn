@@ -43,6 +43,7 @@ executable("bin") {
 
   deps = [
     ":importer",
+    "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
     "//sdk/fidl/fuchsia.tracing.kernel:fuchsia.tracing.kernel_c",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
@@ -52,7 +53,6 @@ executable("bin") {
     "//zircon/public/lib/trace",
     "//zircon/public/lib/trace-provider-with-fdio",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/system/fidl/fuchsia-boot:fuchsia-boot_c",
   ]
 }
 

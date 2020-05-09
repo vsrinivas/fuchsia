@@ -35,6 +35,7 @@ if (is_fuchsia) {
     ]
     public_deps = [ "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_c" ]
     deps = [
+      "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
       "//sdk/fidl/fuchsia.fshost:fuchsia.fshost_llcpp",
       "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_c",
       "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_c",
@@ -46,7 +47,6 @@ if (is_fuchsia) {
       "//zircon/public/lib/gpt",
       "//zircon/public/lib/pretty",
       "//zircon/public/lib/zx",
-      "//zircon/system/fidl/fuchsia-boot:llcpp",
       "//zircon/system/fidl/fuchsia-hardware-block:c",
       "//zircon/system/fidl/fuchsia-hardware-block:llcpp",
       "//zircon/system/fidl/fuchsia-io:llcpp",

@@ -16,6 +16,7 @@ rustc_binary("bin") {
   deps = [
     "//garnet/lib/rust/files_async",
     "//garnet/lib/rust/io_util",
+    "//sdk/fidl/fuchsia.boot:fuchsia.boot-rustc",
     "//sdk/fidl/fuchsia.factory:fuchsia.factory-rustc",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
@@ -27,7 +28,6 @@ rustc_binary("bin") {
     "//third_party/rust_crates:nom",
     "//third_party/rust_crates:structopt",
     "//third_party/rust_crates:thiserror",
-    "//zircon/system/fidl/fuchsia-boot:fuchsia-boot-rustc",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
 

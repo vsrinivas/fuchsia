@@ -39,6 +39,8 @@ zx_library("devmgr-integration-test") {
     "//zircon/public/lib/zx",
   ]
   deps = [
+    "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
+    "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fdio",
@@ -48,8 +50,6 @@ zx_library("devmgr-integration-test") {
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/syslog",
     "//zircon/public/lib/zx",
-    "//zircon/system/fidl/fuchsia-boot:c",
-    "//zircon/system/fidl/fuchsia-boot:llcpp",
     "//zircon/system/fidl/fuchsia-process:c",
     "//zircon/system/fidl/fuchsia-scheduler:c",
     "//zircon/system/ulib/ddk",

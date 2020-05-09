@@ -20,10 +20,10 @@ zx_library("mock-boot-arguments") {
   sources = [ "server.cc" ]
 
   deps = [
+    "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
     "//zircon/public/lib/async",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/fidl-async",
-    "//zircon/system/fidl/fuchsia-boot:llcpp",
   ]
 }

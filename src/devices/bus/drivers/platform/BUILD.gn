@@ -35,6 +35,7 @@ driver_module("platform-bus") {
     "//sdk/banjo/ddk.protocol.platform.device",
     "//sdk/banjo/ddk.protocol.powerimpl",
     "//sdk/banjo/ddk.protocol.sysmem",
+    "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
     "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo_llcpp",
     "//src/devices/lib/driver",
     "//zircon/public/lib/fbl",
@@ -42,7 +43,6 @@ driver_module("platform-bus") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
-    "//zircon/system/fidl/fuchsia-boot:c",
     "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/ddktl",
   ]

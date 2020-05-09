@@ -19,6 +19,7 @@ rustc_binary("bin") {
     "//garnet/lib/rust/io_util",
     "//garnet/lib/rust/sysconfig-client",
     "//garnet/public/rust/fuchsia-hyper",
+    "//sdk/fidl/fuchsia.boot:fuchsia.boot-rustc",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
     "//sdk/fidl/fuchsia.pkg.rewrite:fuchsia.pkg.rewrite-rustc",
     "//src/lib/cobalt/rust:fuchsia-cobalt",
@@ -62,7 +63,6 @@ rustc_binary("bin") {
     "//third_party/rust_crates:tempfile",
     "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:url",
-    "//zircon/system/fidl/fuchsia-boot:fuchsia-boot-rustc",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
 
