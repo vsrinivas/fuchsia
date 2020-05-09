@@ -138,8 +138,7 @@ async fn run_tests<W: Write>(
     }
     writeln!(writer, "Running tests...")?;
     let (remote, test_fut) =
-        run_tests_and_collect(suite_proxy, sender, suite_url.to_string(), invocations)
-            .remote_handle();
+        run_tests_and_collect(suite_proxy, sender, invocations).remote_handle();
     hoist::spawn(remote);
     let successful_completion = collect_events(writer, recv).await;
     test_fut.await.map_err(|e| format_err!("Error running test: {}", e))?;

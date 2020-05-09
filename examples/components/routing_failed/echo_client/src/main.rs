@@ -4,11 +4,14 @@
 
 use {
     fidl, fidl_fidl_examples_routing_echo as fecho, fuchsia_async as fasync,
-    fuchsia_component::client, fuchsia_zircon as zx, futures::prelude::*, matches::assert_matches,
+    fuchsia_component::client, fuchsia_syslog as syslog, fuchsia_zircon as zx, futures::prelude::*,
+    log::*, matches::assert_matches,
 };
 
 #[fasync::run_singlethreaded]
 async fn main() {
+    syslog::init_with_tags(&["routing_failed_echo_client"]).expect("failed to init logger");
+
     // The `echo` channel should be closed with an epitaph because routing failed (see
     // echo_realm.cml)
     //
@@ -21,8 +24,15 @@ async fn main() {
     // > `/svc/fidl.examples.routing.echo.Echo`, but no matching `offer` declaration was found in
     // > the parent
     let echo = client::connect_to_service::<fecho::EchoMarker>().expect("error connecting to echo");
-    echo.echo_string(Some("Hippos rule!")).await.expect_err("echo_string should have failed");
+    let err =
+        echo.echo_string(Some("Hippos rule!")).await.expect_err("echo_string should have failed");
     let epitaph = echo.take_event_stream().next().await.expect("no epitaph");
+    info!("Connecting to Echo protocol failed with error \"{}\" and epitaph {:?}", err, epitaph);
+    assert_matches!(
+        err,
+        fidl::Error::ClientWrite(zx::Status::PEER_CLOSED)
+            | fidl::Error::ClientChannelClosed(zx::Status::UNAVAILABLE)
+    );
     assert_matches!(epitaph, Err(fidl::Error::ClientChannelClosed(zx::Status::UNAVAILABLE)));
 
     // The `echo2` channel should be closed because routing succeeded but the runner failed to
@@ -40,8 +50,13 @@ async fn main() {
         "/svc/fidl.examples.routing.echo.Echo2",
     )
     .expect("error connecting to echo");
-    assert!(
-        echo2.take_event_stream().next().await.is_none(),
-        "has message or epitaph when none were expected"
+    let err =
+        echo2.echo_string(Some("Hippos rule!")).await.expect_err("echo_string should have failed");
+    info!("Connecting to Echo2 protocol failed with error \"{}\"", err);
+    assert_matches!(
+        err,
+        fidl::Error::ClientWrite(zx::Status::PEER_CLOSED)
+            | fidl::Error::ClientChannelClosed(zx::Status::PEER_CLOSED)
     );
+    assert_matches!(echo2.take_event_stream().next().await, None);
 }

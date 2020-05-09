@@ -158,7 +158,7 @@ pub async fn run_test<W: Write>(
     if timed_out {
         outcome = Outcome::Timedout;
     } else {
-        test_fut.await.map_err(|e| format_err!("Error running test: {}", e))?;
+        test_fut.await?;
     }
 
     let mut test_cases_in_progress: Vec<String> = test_cases_in_progress.into_iter().collect();

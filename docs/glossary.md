@@ -245,7 +245,7 @@ instance's moniker may change, its instance ID remains the same.
 Instance IDs are assigned to component instances using a [component ID
 index](/docs/development/components/component_id_index.md).
 
-### **Component URL**
+### **Component URL** {#component-url}
 
 A [URL][component-url] that identifies a component, most often used when
 instantiating a component, for example

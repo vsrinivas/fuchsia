@@ -35,6 +35,14 @@
                 "#echo_server_bad",
             ],
         },
+        {
+            protocol: "/svc/fuchsia.logger.LogSink",
+            from: "realm",
+            to: [
+                "#echo_client",
+                "#echo_server",
+            ],
+        },
 
         // Failed routing! The `.oops` suffix shouldn't be there.
         {

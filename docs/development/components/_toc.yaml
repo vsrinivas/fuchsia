@@ -6,3 +6,5 @@ toc:
   path: /docs/development/components/config_data.md
 - title: "Define an index of components which use storage"
   path: /docs/development/components/component_id_index.md
+- title: "Troubleshooting components"
+  path: /docs/development/components/troubleshooting.md

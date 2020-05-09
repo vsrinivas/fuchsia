@@ -13,6 +13,7 @@ use {
         RunListenerRequest::{OnFinished, OnTestCaseStarted},
     },
     fidl_fuchsia_test_manager::{HarnessProxy, LaunchOptions},
+    fuchsia_zircon_status as zx_status,
     futures::{
         channel::mpsc,
         future::join_all,
@@ -22,6 +23,7 @@ use {
         ready,
         task::{Context, Poll},
     },
+    log::*,
     std::{cell::RefCell, marker::Unpin, pin::Pin},
 };
 
@@ -192,7 +194,7 @@ impl TestCaseProcessor {
 
         let mut ls = match LoggerStream::new(logger_socket) {
             Err(e) => {
-                log::error!("Logger: Failed to create fuchsia async socket: {:?}", e);
+                error!("Logger: Failed to create fuchsia async socket: {:?}", e);
                 return None;
             }
             Ok(ls) => ls,
@@ -230,15 +232,19 @@ impl TestCaseProcessor {
 pub async fn run_and_collect_results(
     suite: fidl_fuchsia_test::SuiteProxy,
     sender: mpsc::Sender<TestEvent>,
-    test_url: String,
 ) -> Result<(), anyhow::Error> {
-    log::debug!("enumerating tests");
+    debug!("enumerating tests");
     let (case_iterator, server_end) = fidl::endpoints::create_proxy()?;
-    suite.get_tests(server_end).map_err(|e| format_err!("Error getting test steps: {}", e))?;
+    suite
+        .get_tests(server_end)
+        .map_err(|e| format_err!("Error getting test cases: {}", suite_error(e)))?;
 
     let mut invocations = Vec::<Invocation>::new();
     loop {
-        let cases = case_iterator.get_next().await?;
+        let cases = case_iterator
+            .get_next()
+            .await
+            .map_err(|e| format_err!("Error getting test cases: {}", suite_error(e)))?;
         if cases.is_empty() {
             break;
         }
@@ -246,18 +252,17 @@ pub async fn run_and_collect_results(
             invocations.push(Invocation { name: Some(case.name.unwrap()), tag: None });
         }
     }
-    log::debug!("invocations: {:#?}", invocations);
-    run_and_collect_results_for_invocations(suite, sender, test_url, invocations).await
+    debug!("invocations: {:#?}", invocations);
+    run_and_collect_results_for_invocations(suite, sender, invocations).await
 }
 
 /// Runs the test component using `suite` and collects logs and results.
 pub async fn run_and_collect_results_for_invocations(
     suite: fidl_fuchsia_test::SuiteProxy,
     mut sender: mpsc::Sender<TestEvent>,
-    test_url: String,
     invocations: Vec<Invocation>,
 ) -> Result<(), anyhow::Error> {
-    log::debug!("running tests");
+    debug!("running tests");
     let mut successful_completion = true; // will remain true, if there are no tests to run.
     let mut invocations_iter = invocations.into_iter();
     loop {
@@ -267,14 +272,14 @@ pub async fn run_and_collect_results_for_invocations(
             break;
         }
         successful_completion &= run_invocations(&suite, chunk, &mut sender)
-            .map_err(|e| format_err!("Error running tests in '{}': {}", test_url, e))
-            .await?;
+            .await
+            .map_err(move |e| format_err!("Error running test cases: {}", e))?;
     }
     if successful_completion {
         sender
             .send(TestEvent::test_finished())
-            .map_err(|e| format_err!("Error while sending TestFinished event: {}", e))
-            .await?;
+            .await
+            .map_err(move |e| format_err!("Error while sending TestFinished event: {}", e))?;
     }
     Ok(())
 }
@@ -342,16 +347,16 @@ pub async fn run_v1_test_component(
         ));
     }
 
-    log::debug!("launching test component {}", test_url);
+    debug!("launching test component {}", test_url);
     let app = fuchsia_component::client::launch(&launcher, test_url.clone(), None)
         .map_err(|e| format_err!("Not able to launch v1 test:{}: {}", test_url, e))?;
 
-    log::debug!("connecting to test service");
+    debug!("connecting to test service");
     let suite = app
         .connect_to_service::<fidl_fuchsia_test::SuiteMarker>()
         .map_err(|e| format_err!("Error connecting to test service: {}", e))?;
 
-    run_and_collect_results(suite, sender, test_url).await?;
+    run_and_collect_results(suite, sender).await?;
 
     Ok(())
 }
@@ -371,16 +376,29 @@ pub async fn run_v2_test_component(
     let (suite_proxy, suite_server_end) = fidl::endpoints::create_proxy().unwrap();
     let (_controller_proxy, controller_server_end) = fidl::endpoints::create_proxy().unwrap();
 
-    log::debug!("launching test component {}", test_url);
+    debug!("Launching test component `{}`", test_url);
     harness
         .launch_suite(&test_url, LaunchOptions {}, suite_server_end, controller_server_end)
         .await
         .context("launch_test call failed")?
         .map_err(|e| format_err!("error launching test: {:?}", e))?;
 
-    run_and_collect_results(suite_proxy, sender, test_url).await?;
+    run_and_collect_results(suite_proxy, sender).await?;
 
     Ok(())
+}
+
+fn suite_error(err: fidl::Error) -> anyhow::Error {
+    match err {
+        // Could get `ClientWrite` or `ClientChannelClosed` error depending on whether the request
+        // was sent before or after the channel was closed.
+        fidl::Error::ClientWrite(zx_status::Status::PEER_CLOSED)
+        | fidl::Error::ClientChannelClosed(_) => format_err!(
+            "The test protocol was closed. This may mean `fuchsia.test.Suite` was not \
+            configured correctly. Refer to //docs/development/components/debugging.md#debug-test"
+        ),
+        _ => format_err!("{}", err),
+    }
 }
 
 /// The full test coverage of this library lives at //garnet/bin/sl4f/tests/test_framework

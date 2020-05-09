@@ -47,7 +47,7 @@ pub async fn run_test_manager(
             } => {
                 let controller = match controller.into_stream() {
                     Err(e) => {
-                        fx_log_err!("invalid controller channel {}: {}", test_url, e);
+                        fx_log_err!("invalid controller channel for `{}`: {}", test_url, e);
                         responder
                             .send(&mut Err(LaunchError::InvalidArgs))
                             .map_err(TestManagerError::Response)?;
@@ -62,7 +62,7 @@ pub async fn run_test_manager(
                         responder.send(&mut Ok(())).map_err(TestManagerError::Response)?;
                         fasync::spawn(async move {
                             test.serve_controller(controller).await.unwrap_or_else(|e| {
-                                fx_log_err!("serve_controller failed for {}: {}", test_url, e)
+                                fx_log_err!("serve_controller failed for `{}`: {}", test_url, e)
                             });
                         });
                     }
@@ -144,19 +144,19 @@ impl RunningTest {
             .create_child(&mut collection_ref, child_decl)
             .await
             .map_err(|e| {
-                fx_log_err!("error calling create_child: {:?}", e);
+                fx_log_err!("Failed to call realm to instantiate test component `{}`: {}", test_url, e);
                 LaunchError::InternalError
             })?
             .map_err(|e| match e {
                 ComponentError::InvalidArguments
                 | ComponentError::CollectionNotFound
                 | ComponentError::InstanceAlreadyExists => {
-                    fx_log_err!("Create child failed: {:?}", e);
+                    fx_log_err!("Failed to instantiate test component `{}` because an instance with the same name already exists (this should not happen)", test_url);
                     LaunchError::InternalError
                 }
                 ComponentError::ResourceUnavailable => LaunchError::ResourceUnavailable,
                 e => {
-                    fx_log_err!("This error should not happen while calling create_child: {:?}", e);
+                    fx_log_err!("Failed to instantiate test component `{}` due to an unexpected error: {:?}", test_url, e);
                     LaunchError::InternalError
                 }
             })?;
@@ -169,25 +169,29 @@ impl RunningTest {
             .bind_child(&mut child_ref, server_end)
             .await
             .map_err(|e| {
-                fx_log_err!("error calling bind_child: {}", e);
+                fx_log_err!("Failed to call realm to bind to test component `{}`: {}", test_url, e);
                 LaunchError::InternalError
             })?
             .map_err(|e| match e {
                 ComponentError::InvalidArguments
                 | ComponentError::InstanceNotFound
                 | ComponentError::InstanceCannotStart => {
-                    fx_log_err!("Bind child failed: {:?}", e);
+                    fx_log_err!("Test component `{}` could not be started", test_url);
                     LaunchError::InternalError
                 }
                 ComponentError::InstanceCannotResolve => LaunchError::InstanceCannotResolve,
                 e => {
-                    fx_log_err!("This error should not happen while calling bind_child: {:?}", e);
+                    fx_log_err!("Test component `{}` could not be resolved: {:?}", test_url, e);
                     LaunchError::InternalError
                 }
             })?;
 
         client::connect_request_to_protocol_at_dir(&dir, suite_request).map_err(|e| {
-            fx_log_err!("error calling connect_request_to_protocol_at_dir: {:?}", e);
+            fx_log_err!(
+                "Failed to connect to `fuchsia.test.Suite` protocol for `{}`: {}",
+                test_url,
+                e
+            );
             LaunchError::InternalError
         })?;
         Ok(RunningTest {
