@@ -11,8 +11,9 @@ use fuchsia_async as fasync;
 use fuchsia_component::client::{launch, App};
 use fuchsia_component::server::*;
 use fuchsia_zircon::{self as zx, prelude::AsHandleRef};
-use futures::{channel::oneshot, StreamExt};
+use futures::{channel::oneshot, future, join, select, StreamExt};
 use std::{fs::File, vec::Vec};
+use test_util::assert_matches;
 
 const SOUNDPLAYER_URL: &str = "fuchsia-pkg://fuchsia.com/soundplayer#meta/soundplayer.cmx";
 const PAYLOAD_SIZE: usize = 1024;
@@ -39,6 +40,7 @@ async fn integration_buffer() -> Result<()> {
             },
             stream_type: stream_type.clone(),
             usage: USAGE,
+            block_play: false,
         }],
     );
 
@@ -84,6 +86,7 @@ async fn integration_file() -> Result<()> {
                 frames_per_second: 44100,
             },
             usage: USAGE,
+            block_play: false,
         }],
     );
 
@@ -129,6 +132,7 @@ async fn integration_file_twice() -> Result<()> {
                     frames_per_second: 44100,
                 },
                 usage: USAGE,
+                block_play: false,
             },
             RendererExpectations {
                 vmo_koid: None,
@@ -147,6 +151,7 @@ async fn integration_file_twice() -> Result<()> {
                     frames_per_second: 44100,
                 },
                 usage: USAGE,
+                block_play: false,
             },
         ],
     );
@@ -174,17 +179,198 @@ async fn integration_file_twice() -> Result<()> {
     receiver.await.map_err(|_| anyhow::format_err!("Error awaiting test completion"))
 }
 
+#[fasync::run_singlethreaded]
+#[test]
+async fn integration_file_stop() -> Result<()> {
+    let (sender, receiver) = oneshot::channel::<()>();
+
+    let service = TestService::new(
+        sender,
+        vec![RendererExpectations {
+            vmo_koid: None,
+            packet: StreamPacket {
+                pts: 0,
+                payload_buffer_id: 0,
+                payload_offset: 0,
+                payload_size: FILE_PAYLOAD_SIZE,
+                flags: 0,
+                buffer_config: 0,
+                stream_segment_id: 0,
+            },
+            stream_type: AudioStreamType {
+                sample_format: AudioSampleFormat::Signed16,
+                channels: 1,
+                frames_per_second: 44100,
+            },
+            usage: USAGE,
+            block_play: true,
+        }],
+    );
+
+    let duration = service
+        .sound_player
+        .add_sound_from_file(0, resource_file("sfx.wav").expect("Reading sound file"))
+        .await
+        .context("Calling add_sound_from_file")?;
+    assert!(duration == Ok(DURATION));
+    let play_sound = service.sound_player.play_sound(0, USAGE);
+    let stop_sound = future::ready(service.sound_player.stop_playing_sound(0));
+
+    // Call play_sound followed immediately by stop_playing_sound. The former will return a Stopped
+    // error. The latter will succeed.
+    let results = join! { play_sound, stop_sound };
+    assert_matches!(results.0, Ok(Err(PlaySoundError::Stopped)));
+    assert_matches!(results.1, Ok(()));
+
+    service.sound_player.remove_sound(0).expect("Calling remove_sound");
+
+    receiver.await.map_err(|_| anyhow::format_err!("Error awaiting test completion"))
+}
+
+#[fasync::run_singlethreaded]
+#[test]
+async fn integration_file_stop_second() -> Result<()> {
+    let (sender, receiver) = oneshot::channel::<()>();
+
+    let service = TestService::new(
+        sender,
+        vec![
+            RendererExpectations {
+                vmo_koid: None,
+                packet: StreamPacket {
+                    pts: 0,
+                    payload_buffer_id: 0,
+                    payload_offset: 0,
+                    payload_size: FILE_PAYLOAD_SIZE,
+                    flags: 0,
+                    buffer_config: 0,
+                    stream_segment_id: 0,
+                },
+                stream_type: AudioStreamType {
+                    sample_format: AudioSampleFormat::Signed16,
+                    channels: 1,
+                    frames_per_second: 44100,
+                },
+                usage: USAGE,
+                block_play: true,
+            },
+            RendererExpectations {
+                vmo_koid: None,
+                packet: StreamPacket {
+                    pts: 0,
+                    payload_buffer_id: 0,
+                    payload_offset: 0,
+                    payload_size: FILE_PAYLOAD_SIZE,
+                    flags: 0,
+                    buffer_config: 0,
+                    stream_segment_id: 0,
+                },
+                stream_type: AudioStreamType {
+                    sample_format: AudioSampleFormat::Signed16,
+                    channels: 1,
+                    frames_per_second: 44100,
+                },
+                usage: USAGE,
+                block_play: true,
+            },
+        ],
+    );
+
+    let duration = service
+        .sound_player
+        .add_sound_from_file(0, resource_file("sfx.wav").expect("Reading sound file"))
+        .await
+        .context("Calling add_sound_from_file")?;
+    assert!(duration == Ok(DURATION));
+    let mut first_play_sound = service.sound_player.play_sound(0, USAGE);
+    let second_play_sound = service.sound_player.play_sound(0, USAGE);
+    let stop_sound = future::ready(service.sound_player.stop_playing_sound(0));
+
+    // Call play_sound twice followed immediately by stop_playing_sound. The second play_sound will
+    // return a Stopped error. stop_playing_sound will succeed. The first play_sound should not
+    // terminate.
+    select! {
+        _ = first_play_sound => {
+            assert!(false);
+        }
+        results = future::join(second_play_sound, stop_sound) => {
+            assert_matches!(results.0, Ok(Err(PlaySoundError::Stopped)));
+            assert_matches!(results.1, Ok(()));
+        }
+    }
+
+    service.sound_player.remove_sound(0).expect("Calling remove_sound");
+
+    receiver.await.map_err(|_| anyhow::format_err!("Error awaiting test completion"))
+}
+
+#[fasync::run_singlethreaded]
+#[test]
+async fn integration_file_bogus_stops() -> Result<()> {
+    let (sender, receiver) = oneshot::channel::<()>();
+
+    let service = TestService::new(
+        sender,
+        vec![RendererExpectations {
+            vmo_koid: None,
+            packet: StreamPacket {
+                pts: 0,
+                payload_buffer_id: 0,
+                payload_offset: 0,
+                payload_size: FILE_PAYLOAD_SIZE,
+                flags: 0,
+                buffer_config: 0,
+                stream_segment_id: 0,
+            },
+            stream_type: AudioStreamType {
+                sample_format: AudioSampleFormat::Signed16,
+                channels: 1,
+                frames_per_second: 44100,
+            },
+            usage: USAGE,
+            block_play: false,
+        }],
+    );
+
+    let duration = service
+        .sound_player
+        .add_sound_from_file(0, resource_file("sfx.wav").expect("Reading sound file"))
+        .await
+        .context("Calling add_sound_from_file")?;
+    assert!(duration == Ok(DURATION));
+
+    // Stop a sound that hasn't been played.
+    service.sound_player.stop_playing_sound(0)?;
+
+    // Play the sound.
+    service
+        .sound_player
+        .play_sound(0, USAGE)
+        .await
+        .context("Calling play_sound")?
+        .map_err(|err| anyhow::format_err!("Error playing sound: {:?}", err))?;
+
+    // Stop a sound that done playing.
+    service.sound_player.stop_playing_sound(0)?;
+
+    // Stop a sound that doesn't exist.
+    service.sound_player.stop_playing_sound(1)?;
+
+    service.sound_player.remove_sound(0).expect("Calling remove_sound");
+
+    // Stop a sound that no longer exists.
+    service.sound_player.stop_playing_sound(0)?;
+
+    receiver.await.map_err(|_| anyhow::format_err!("Error awaiting test completion"))
+}
+
 /// Creates a file channel from a resource file.
 fn resource_file(name: &str) -> Result<fidl::endpoints::ClientEnd<fidl_fuchsia_io::FileMarker>> {
     // We try two paths here, because normal components see their package data resources in
     // /pkg/data and shell tools see them in /pkgfs/packages/<pkg>>/0/data.
     Ok(fidl::endpoints::ClientEnd::<fidl_fuchsia_io::FileMarker>::new(zx::Channel::from(
         fdio::transfer_fd(
-            File::open(format!("/pkg/data/{}", name))
-                .or_else(|_| {
-                    File::open(format!("/pkgfs/packages/soundplayer_example/0/data/{}", name))
-                })
-                .context("Opening package data file")?,
+            File::open(format!("/pkg/data/{}", name)).context("Opening package data file")?,
         )?,
     )))
 }
@@ -243,16 +429,16 @@ fn test_sound(size: usize) -> (fidl_fuchsia_mem::Buffer, zx::Koid, AudioStreamTy
     (fidl_fuchsia_mem::Buffer { vmo: vmo, size: size as u64 }, koid, stream_type)
 }
 
-#[derive(Copy, Clone)]
 struct RendererExpectations {
     vmo_koid: Option<zx::Koid>,
     packet: StreamPacket,
     stream_type: AudioStreamType,
     usage: AudioRenderUsage,
+    block_play: bool,
 }
 
 struct FakeAudio {
-    renderer_expectations: RendererExpectations,
+    renderer_expectations: Option<RendererExpectations>,
     sender: Option<oneshot::Sender<()>>,
 }
 
@@ -261,7 +447,7 @@ impl FakeAudio {
         renderer_expectations: RendererExpectations,
         sender: Option<oneshot::Sender<()>>,
     ) -> Self {
-        Self { renderer_expectations, sender }
+        Self { renderer_expectations: Some(renderer_expectations), sender }
     }
 
     async fn serve(mut self, mut request_stream: AudioRequestStream) -> Result<()> {
@@ -269,8 +455,11 @@ impl FakeAudio {
             match request? {
                 AudioRequest::CreateAudioRenderer { audio_renderer_request, .. } => {
                     spawn_log_error(
-                        FakeAudioRenderer::new(self.renderer_expectations, self.sender.take())
-                            .serve(audio_renderer_request.into_stream()?),
+                        FakeAudioRenderer::new(
+                            self.renderer_expectations.take().unwrap(),
+                            self.sender.take(),
+                        )
+                        .serve(audio_renderer_request.into_stream()?),
                     );
                 }
                 _ => {
@@ -299,13 +488,12 @@ impl FakeAudioRenderer {
     async fn serve(mut self, mut request_stream: AudioRendererRequestStream) -> Result<()> {
         let mut payload_id: Option<u32> = None;
         let mut send_packet_responder_option: Option<AudioRendererSendPacketResponder> = None;
+        let mut play_responder_option: Option<AudioRendererPlayResponder> = None;
 
         let mut add_payload_buffer_called = false;
-        let mut remove_payload_buffer_called = false;
         let mut send_packet_called = false;
         let mut set_pcm_stream_type_called = false;
         let mut play_called = false;
-        let mut pause_no_reply_called = false;
         let mut set_usage_called = false;
 
         while let Some(request) = request_stream.next().await {
@@ -319,17 +507,6 @@ impl FakeAudioRenderer {
                     payload_id.replace(id);
                     if let Some(vmo_koid) = self.renderer_expectations.vmo_koid {
                         assert!(payload_buffer.get_koid().expect("Getting vmo koid") == vmo_koid);
-                    }
-                }
-                AudioRendererRequest::RemovePayloadBuffer { id, .. } => {
-                    assert!(pause_no_reply_called);
-                    assert!(!remove_payload_buffer_called);
-                    remove_payload_buffer_called = true;
-
-                    assert!(id == payload_id.expect("RemovePayloadBuffer called with no buffer"));
-                    let _ = payload_id.take();
-                    if let Some(sender) = self.sender.take() {
-                        sender.send(()).expect("Sending on completion channel");
                     }
                 }
                 AudioRendererRequest::SendPacket { packet, responder, .. } => {
@@ -355,19 +532,23 @@ impl FakeAudioRenderer {
                     play_called = true;
 
                     assert!(media_time == 0);
-                    responder.send(0, 0).expect("Sending Play response");
-
                     assert!(send_packet_responder_option.is_some());
-                    send_packet_responder_option
-                        .take()
-                        .expect("Play called before SendPacket")
-                        .send()
-                        .expect("Sending SendPacket response");
-                }
-                AudioRendererRequest::PauseNoReply { .. } => {
-                    assert!(play_called);
-                    assert!(!pause_no_reply_called);
-                    pause_no_reply_called = true;
+
+                    if self.renderer_expectations.block_play {
+                        // Keep this method pending for the rest of the renderer's lifetime.
+                        play_responder_option.replace(responder);
+                    } else {
+                        responder.send(0, 0).expect("Sending Play response");
+                        send_packet_responder_option
+                            .take()
+                            .expect("Play called before SendPacket")
+                            .send()
+                            .expect("Sending SendPacket response");
+                    }
+
+                    if let Some(sender) = self.sender.take() {
+                        sender.send(()).expect("Sending on completion channel");
+                    }
                 }
                 AudioRendererRequest::SetUsage { usage, .. } => {
                     assert!(!set_usage_called);

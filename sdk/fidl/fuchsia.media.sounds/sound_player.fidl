@@ -41,9 +41,18 @@ protocol Player {
 
     /// Plays the existing sound identified by `id` using a renderer with usage `usage`. The
     /// sound is played as soon as possible. The reply is sent when the sound is finished playing.
-    /// If `id` doesn't identify an existing sound in the collection, the method return
-    /// `PlaySoundError.NO_SUCH_SOUND`.
+    /// If `id` doesn't identify an existing sound in the collection, the method returns
+    /// `PlaySoundError.NO_SUCH_SOUND`. The most recent `PlaySound` call for a given valid id can
+    /// be stopped using `StopPlayingSound`, in which case, this method returns
+    /// `PlaySoundError.STOPPED`.
     PlaySound(uint32 id, fuchsia.media.AudioRenderUsage usage) -> () error PlaySoundError;
+
+    /// Stops playback of the sound identified by `id` invoked by the the most recent call to
+    /// `PlaySound` for that sound. If `id` doesn't identify an existing sound in the collection
+    /// or if the sound is not currently playing, this method does nothing. If more than one
+    /// `PlaySound` method is currently pending for that sound, only the most recent is stopped.
+    [Transitional]
+    StopPlayingSound(uint32 id);
 };
 
 /// Error type for `Player.PlaySound`.
@@ -53,4 +62,7 @@ enum PlaySoundError {
 
     /// Underlying audio renderer failed.
     RENDERER_FAILED = 2;
+
+    /// Playback of the sound was interrupted by a |StopPlayingSound| method call.
+    STOPPED = 3;
 };

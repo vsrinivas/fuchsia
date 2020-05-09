@@ -11,7 +11,7 @@ use fidl_fuchsia_media::*;
 use fidl_fuchsia_media_sounds::*;
 use fuchsia_component as component;
 use fuchsia_zircon::{self as zx, HandleBased};
-use futures::{self, join, prelude::*, stream::FuturesUnordered};
+use futures::{channel::oneshot, future::FutureExt, prelude::*, select, stream::FuturesUnordered};
 use std::{collections::HashMap, io::BufReader};
 
 /// Implements `fuchsia.media.sounds.Player`.
@@ -28,10 +28,10 @@ impl SoundPlayer {
         let mut futures = FuturesUnordered::new();
 
         loop {
-            futures::select! {
+            select! {
                 request = request_stream.select_next_some() => {
                     match request? {
-                        PlayerRequest::AddSoundFromFile { id, file, responder} => {
+                        PlayerRequest::AddSoundFromFile { id, file, responder } => {
                             match Sound::from_file_channel(id, file) {
                                 Ok(sound) => {
                                     let duration = sound.duration();
@@ -60,17 +60,17 @@ impl SoundPlayer {
                             }
                         }
                         PlayerRequest::PlaySound { id, usage, responder } => {
-                            if let Some(sound) = self.sounds_by_id.get(&id) {
+                            if let Some(mut sound) = self.sounds_by_id.get_mut(&id) {
                                 if let Ok(renderer) = Renderer::new(usage) {
-                                    match renderer.prepare_packet(sound) {
-                                        Ok(packet) =>
-                                            futures.push(renderer.play_packet(packet)
-                                                .map_err(move |error| {
-                                                    fuchsia_syslog::fx_log_err!("Unable to play sound {}: {}", id, error)
-                                                })
-                                                .map(|renderer| {
-                                                    responder.send(&mut Ok(())).unwrap_or(());
-                                                })),
+                                    match renderer.prepare_packet(&sound) {
+                                        Ok(packet) => {
+                                            let (sender, receiver) = oneshot::channel::<()>();
+                                            sound.stop_sender.replace(sender);
+                                            futures.push((renderer.play_packet(packet, receiver)
+                                                .map(move |mut result| {
+                                                    responder.send(&mut result).unwrap_or(());
+                                                })).boxed())
+                                        }
                                         Err(error) => {
                                             fuchsia_syslog::fx_log_err!("Unable to play sound {}: {}", id, error);
                                             responder.send(&mut Err(PlaySoundError::RendererFailed)).unwrap_or(());
@@ -81,6 +81,13 @@ impl SoundPlayer {
                                 }
                             } else {
                                 responder.send(&mut Err(PlaySoundError::NoSuchSound)).unwrap_or(());
+                            }
+                        }
+                        PlayerRequest::StopPlayingSound { id, control_handle } => {
+                            if let Some(mut sound) = self.sounds_by_id.get_mut(&id) {
+                                if sound.stop_sender.is_some() {
+                                    sound.stop_sender.take().unwrap().send(()).unwrap_or(());
+                                }
                             }
                         }
                     };
@@ -99,11 +106,12 @@ struct Sound {
     vmo: zx::Vmo,
     size: u64,
     stream_type: AudioStreamType,
+    stop_sender: Option<oneshot::Sender<()>>,
 }
 
 impl Sound {
     fn new(id: u32, buffer: fidl_fuchsia_mem::Buffer, stream_type: AudioStreamType) -> Self {
-        Self { id, vmo: buffer.vmo, size: buffer.size, stream_type }
+        Self { id, vmo: buffer.vmo, size: buffer.size, stream_type, stop_sender: None }
     }
 
     fn from_file_channel(
@@ -115,7 +123,13 @@ impl Sound {
         )?))
         .map_err(|_| zx::Status::INVALID_ARGS)?;
 
-        Ok(Self { id, vmo: wav.vmo, size: wav.size, stream_type: wav.stream_type })
+        Ok(Self {
+            id,
+            vmo: wav.vmo,
+            size: wav.size,
+            stream_type: wav.stream_type,
+            stop_sender: None,
+        })
     }
 
     fn duration(&self) -> zx::Duration {
@@ -156,7 +170,6 @@ impl Renderer {
     fn prepare_packet(&self, sound: &Sound) -> Result<StreamPacket> {
         self.proxy.set_pcm_stream_type(&mut sound.stream_type.clone())?;
 
-        // This buffer is removed in play_packet.
         self.proxy.add_payload_buffer(
             sound.id,
             sound.vmo.duplicate_handle(zx::Rights::BASIC | zx::Rights::READ | zx::Rights::MAP)?,
@@ -173,23 +186,58 @@ impl Renderer {
         })
     }
 
-    async fn play_packet(self, mut packet: StreamPacket) -> Result<Self> {
-        let send_packet = self.proxy.send_packet(&mut packet).map(|_| {
-            self.proxy.pause_no_reply()?;
-            self.proxy.remove_payload_buffer(packet.payload_buffer_id)?;
-            Ok(())
+    async fn play_packet(
+        self,
+        mut packet: StreamPacket,
+        stop_receiver: oneshot::Receiver<()>,
+    ) -> PlayerPlaySoundResult {
+        // We're discarding |self| when this method returns, so there's no need
+        // to clean up (e.g. remove the payload buffer, pause playback). If
+        // we wanted to cache renderers, we'd need to add that.
+
+        let mut send_packet = self.proxy.send_packet(&mut packet).map_err(|e| {
+            fuchsia_syslog::fx_log_err!("AudioRenderer.SendPacket failed: {}", e);
+            e
         });
 
-        let play = self.proxy.play(NO_TIMESTAMP, 0);
+        let mut play = self.proxy.play(NO_TIMESTAMP, 0).map_err(|e| {
+            fuchsia_syslog::fx_log_err!("AudioRenderer.Play failed: {}", e);
+            e
+        });
 
-        let results = join!(send_packet, play);
-        if let Err(e) = results.0 {
-            return Err(e);
-        }
-        if let Err(e) = results.1 {
-            return Err(anyhow::format_err!("AudioRenderer.Play failed: {}", e));
-        }
+        let mut stop_receiver = stop_receiver.fuse();
 
-        Ok(self)
+        let mut completed_one = true;
+
+        // Wait for send_packet and play to complete, or for stop_receiver to receive successfully.
+        loop {
+            select! {
+                result = send_packet => {
+                    if result.is_err() {
+                        return Err(PlaySoundError::RendererFailed);
+                    }
+                    if (completed_one) {
+                        return Ok(());
+                    }
+                    completed_one = true;
+                }
+                result = play => {
+                    if result.is_err() {
+                        return Err(PlaySoundError::RendererFailed);
+                    }
+                    if (completed_one) {
+                        return Ok(());
+                    }
+                    completed_one = true;
+                }
+                result = stop_receiver => {
+                    // stop_recevier will return an error if the sender is discarded. This will
+                    // happen if the same sound is played again while this one is still playing.
+                    if result.is_ok() {
+                        return Err(PlaySoundError::Stopped);
+                    }
+                }
+            }
+        }
     }
 }
