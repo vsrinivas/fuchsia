@@ -64,7 +64,8 @@ void OutputCollector::Handler(async_dispatcher_t* dispatcher, async::WaitBase* w
   if (signal->observed & ZX_SOCKET_READABLE) {
     std::vector<uint8_t> data(OC_DATA_BUFFER_SIZE);
     zx_status_t status;
-    do {
+
+    while (true) {
       size_t len;
       status = log_socket_.read(0, data.data(), data.size(), &len);
 
@@ -80,9 +81,9 @@ void OutputCollector::Handler(async_dispatcher_t* dispatcher, async::WaitBase* w
       ZX_ASSERT_MSG(ZX_OK == status, "Error occured while collecting output: %s",
                     zx_status_get_string(status));
 
-      // buffer by '\n'
       if (len == 0) {
-        continue;
+        ZX_ASSERT(ZX_OK == wait->Begin(dispatcher));
+        return;
       }
 
       // Flush buffer up to the last '\n' seen or up to a max threshold. In case of threshold we
@@ -106,7 +107,14 @@ void OutputCollector::Handler(async_dispatcher_t* dispatcher, async::WaitBase* w
       } else {
         buf_.insert(buf_.end(), data.begin(), data.begin() + len);
       }
-    } while (status == ZX_OK);
+      if (len != OC_DATA_BUFFER_SIZE) {
+        // lazy read
+        ZX_ASSERT(ZX_OK == wait->Begin(dispatcher));
+        return;
+      }
+
+      // eagerly read only when last read filled full buffer.
+    }
   }
   ZX_ASSERT(signal->observed & ZX_SOCKET_PEER_CLOSED);
   Close();
