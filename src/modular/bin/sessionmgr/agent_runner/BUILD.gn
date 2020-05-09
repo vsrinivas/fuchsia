@@ -59,7 +59,6 @@ executable("agent_runner_unittest") {
     "//src/lib/testing/loop_fixture",
     "//src/modular/lib/fidl:array_to_string",
     "//src/modular/lib/pseudo_dir",
-    "//src/modular/lib/testing:mock_base",
     "//src/modular/tests:fuchsia.testing.modular",
     "//zircon/public/lib/fs",
     "//zircon/public/lib/trace",

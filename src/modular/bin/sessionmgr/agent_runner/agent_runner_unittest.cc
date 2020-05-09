@@ -25,7 +25,6 @@
 #include "src/lib/fxl/macros.h"
 #include "src/modular/lib/fidl/array_to_string.h"
 #include "src/modular/lib/pseudo_dir/pseudo_dir_server.h"
-#include "src/modular/lib/testing/mock_base.h"
 
 namespace modular_testing {
 namespace {
@@ -80,8 +79,7 @@ static zx_koid_t get_object_koid(zx_handle_t handle) {
 }
 
 class TestAgent : fuchsia::modular::Agent,
-                  public fuchsia::sys::ComponentController,
-                  public modular_testing::MockBase {
+                  public fuchsia::sys::ComponentController {
  public:
   TestAgent(zx::channel directory_request,
             fidl::InterfaceRequest<fuchsia::sys::ComponentController> ctrl,
@@ -101,18 +99,18 @@ class TestAgent : fuchsia::modular::Agent,
 
   void KillApplication() { controller_.Unbind(); }
 
-  size_t GetCallCount(const std::string func) { return counts.count(func); }
+  int connect_call_count() { return connect_call_count_; }
 
  private:
   // |ComponentController|
-  void Kill() override { ++counts["Kill"]; }
+  void Kill() override { FX_NOTREACHED(); }
   // |ComponentController|
-  void Detach() override { ++counts["Detach"]; }
+  void Detach() override { FX_NOTREACHED(); }
 
   // |fuchsia::modular::Agent|
-  void Connect(std::string /*requestor_url*/,
+  void Connect(std::string requestor_url,
                fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> outgoing_services) override {
-    ++counts["Connect"];
+    ++connect_call_count_;
     if (services_ptr_) {
       services_ptr_->AddBinding(std::move(outgoing_services));
     }
@@ -127,6 +125,9 @@ class TestAgent : fuchsia::modular::Agent,
   // `services_ptr_`) so that it is guaranteed to be destroyed *before* `agent_binding_` to protect
   // access to `services_ptr_`. See fxb/49304.
   std::unique_ptr<modular::PseudoDirServer> outgoing_dir_server_;
+
+  // The number of times Connect() has been called.
+  int connect_call_count_ = 0;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TestAgent);
 };
@@ -269,10 +270,9 @@ TEST_F(AgentRunnerTest, ConnectToAgent) {
                                  agent_controller.NewRequest());
 
   RunLoopWithTimeoutOrUntil(
-      [&test_agent] { return test_agent && test_agent->GetCallCount("Connect") > 0; });
+      [&test_agent] { return test_agent && test_agent->connect_call_count() > 0; });
   EXPECT_EQ(1, agent_launch_count);
-  test_agent->ExpectCalledOnce("Connect");
-  test_agent->ExpectNoOtherCalls();
+  EXPECT_EQ(1, test_agent->connect_call_count());
 
   // Connecting to the same agent again shouldn't launch a new instance and
   // shouldn't re-initialize the existing instance of the agent application,
@@ -283,10 +283,9 @@ TEST_F(AgentRunnerTest, ConnectToAgent) {
   agent_runner()->ConnectToAgent("requestor_url2", kTestAgentUrl, incoming_services2.NewRequest(),
                                  agent_controller2.NewRequest());
   RunLoopWithTimeoutOrUntil(
-      [&test_agent] { return test_agent && test_agent->GetCallCount("Connect"); });
+      [&test_agent] { return test_agent && test_agent->connect_call_count() > 1; });
   EXPECT_EQ(1, agent_launch_count);
-  test_agent->ExpectCalledOnce("Connect");
-  test_agent->ExpectNoOtherCalls();
+  EXPECT_EQ(2, test_agent->connect_call_count());
 }
 
 // Test that if an agent application dies, it is removed from agent runner
