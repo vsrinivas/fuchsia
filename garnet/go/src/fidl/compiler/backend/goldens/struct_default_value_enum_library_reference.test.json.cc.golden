@@ -5,8 +5,8 @@
 #include "lib/fidl/cpp/internal/implementation.h"
 namespace example {
 
-extern "C" const fidl_type_t v1_example_FooTable;
-const fidl_type_t* Foo::FidlType = &v1_example_FooTable;
+extern "C" const fidl_type_t example_FooTable;
+const fidl_type_t* Foo::FidlType = &example_FooTable;
 
 void Foo::Encode(::fidl::Encoder* _encoder, size_t _offset) {
   ::fidl::Encode(_encoder, &field, _offset + 0);

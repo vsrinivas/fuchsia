@@ -10,8 +10,8 @@ namespace json {
 #ifdef __Fuchsia__
 namespace {
 
-extern "C" const fidl_type_t v1_fidl_test_json_superfooRequestTable;
-extern "C" const fidl_type_t v1_fidl_test_json_superfooResponseTable;
+extern "C" const fidl_type_t fidl_test_json_superfooRequestTable;
+extern "C" const fidl_type_t fidl_test_json_superfooResponseTable;
 
 }  // namespace
 
@@ -23,7 +23,7 @@ const fidl_type_t* super_RequestDecoder::GetType(uint64_t ordinal,
     case internal::ksuper_foo_Ordinal:
     case internal::ksuper_foo_GenOrdinal:
       *out_needs_response = true;
-      return &v1_fidl_test_json_superfooRequestTable;
+      return &fidl_test_json_superfooRequestTable;
     default:
       *out_needs_response = false;
       return nullptr;
@@ -34,7 +34,7 @@ const fidl_type_t* super_ResponseDecoder::GetType(uint64_t ordinal) {
   switch (ordinal) {
     case internal::ksuper_foo_Ordinal:
     case internal::ksuper_foo_GenOrdinal:
-      return &v1_fidl_test_json_superfooResponseTable;
+      return &fidl_test_json_superfooResponseTable;
     default:
       return nullptr;
   }
@@ -76,10 +76,10 @@ class super_foo_ResponseHandler final
   zx_status_t OnMessage(::fidl::Message message) override {
     const char* error_msg = nullptr;
     zx_status_t status =
-        message.Decode(&v1_fidl_test_json_superfooResponseTable, &error_msg);
+        message.Decode(&fidl_test_json_superfooResponseTable, &error_msg);
     if (status != ZX_OK) {
-      FIDL_REPORT_DECODING_ERROR(
-          message, &v1_fidl_test_json_superfooResponseTable, error_msg);
+      FIDL_REPORT_DECODING_ERROR(message, &fidl_test_json_superfooResponseTable,
+                                 error_msg);
       return status;
     }
     ::fidl::Decoder decoder(std::move(message));
@@ -100,7 +100,7 @@ class super_foo_ResponseHandler final
 void super_Proxy::foo(::std::string s, fooCallback callback) {
   ::fidl::Encoder _encoder(internal::ksuper_foo_GenOrdinal);
   controller_->Send(
-      &v1_fidl_test_json_superfooRequestTable,
+      &fidl_test_json_superfooRequestTable,
       super_RequestEncoder::foo(&_encoder, &s),
       std::make_unique<super_foo_ResponseHandler>(std::move(callback)));
 }
@@ -118,7 +118,7 @@ class super_foo_Responder final {
 
   void operator()(int64_t y) {
     ::fidl::Encoder _encoder(internal::ksuper_foo_GenOrdinal);
-    response_.Send(&v1_fidl_test_json_superfooResponseTable,
+    response_.Send(&fidl_test_json_superfooResponseTable,
                    super_ResponseEncoder::foo(&_encoder, &y));
   }
 
@@ -179,8 +179,8 @@ zx_status_t super_SyncProxy::foo(::std::string s, int64_t* out_y) {
   ::fidl::MessageBuffer buffer_;
   ::fidl::Message response_ = buffer_.CreateEmptyMessage();
   zx_status_t status_ =
-      proxy_.Call(&v1_fidl_test_json_superfooRequestTable,
-                  &v1_fidl_test_json_superfooResponseTable,
+      proxy_.Call(&fidl_test_json_superfooRequestTable,
+                  &fidl_test_json_superfooResponseTable,
                   super_RequestEncoder::foo(&_encoder, &s), &response_);
   if (status_ != ZX_OK) return status_;
   ::fidl::Decoder decoder_(std::move(response_));
@@ -193,8 +193,8 @@ zx_status_t super_SyncProxy::foo(::std::string s, int64_t* out_y) {
 #ifdef __Fuchsia__
 namespace {
 
-extern "C" const fidl_type_t v1_fidl_test_json_subfooRequestTable;
-extern "C" const fidl_type_t v1_fidl_test_json_subfooResponseTable;
+extern "C" const fidl_type_t fidl_test_json_subfooRequestTable;
+extern "C" const fidl_type_t fidl_test_json_subfooResponseTable;
 
 }  // namespace
 
@@ -206,7 +206,7 @@ const fidl_type_t* sub_RequestDecoder::GetType(uint64_t ordinal,
     case internal::ksub_foo_Ordinal:
     case internal::ksub_foo_GenOrdinal:
       *out_needs_response = true;
-      return &v1_fidl_test_json_subfooRequestTable;
+      return &fidl_test_json_subfooRequestTable;
     default:
       *out_needs_response = false;
       return nullptr;
@@ -217,7 +217,7 @@ const fidl_type_t* sub_ResponseDecoder::GetType(uint64_t ordinal) {
   switch (ordinal) {
     case internal::ksub_foo_Ordinal:
     case internal::ksub_foo_GenOrdinal:
-      return &v1_fidl_test_json_subfooResponseTable;
+      return &fidl_test_json_subfooResponseTable;
     default:
       return nullptr;
   }
@@ -257,10 +257,10 @@ class sub_foo_ResponseHandler final : public ::fidl::internal::MessageHandler {
   zx_status_t OnMessage(::fidl::Message message) override {
     const char* error_msg = nullptr;
     zx_status_t status =
-        message.Decode(&v1_fidl_test_json_subfooResponseTable, &error_msg);
+        message.Decode(&fidl_test_json_subfooResponseTable, &error_msg);
     if (status != ZX_OK) {
-      FIDL_REPORT_DECODING_ERROR(
-          message, &v1_fidl_test_json_subfooResponseTable, error_msg);
+      FIDL_REPORT_DECODING_ERROR(message, &fidl_test_json_subfooResponseTable,
+                                 error_msg);
       return status;
     }
     ::fidl::Decoder decoder(std::move(message));
@@ -280,7 +280,7 @@ class sub_foo_ResponseHandler final : public ::fidl::internal::MessageHandler {
 void sub_Proxy::foo(::std::string s, fooCallback callback) {
   ::fidl::Encoder _encoder(internal::ksub_foo_GenOrdinal);
   controller_->Send(
-      &v1_fidl_test_json_subfooRequestTable,
+      &fidl_test_json_subfooRequestTable,
       sub_RequestEncoder::foo(&_encoder, &s),
       std::make_unique<sub_foo_ResponseHandler>(std::move(callback)));
 }
@@ -298,7 +298,7 @@ class sub_foo_Responder final {
 
   void operator()(int64_t y) {
     ::fidl::Encoder _encoder(internal::ksub_foo_GenOrdinal);
-    response_.Send(&v1_fidl_test_json_subfooResponseTable,
+    response_.Send(&fidl_test_json_subfooResponseTable,
                    sub_ResponseEncoder::foo(&_encoder, &y));
   }
 
@@ -358,10 +358,9 @@ zx_status_t sub_SyncProxy::foo(::std::string s, int64_t* out_y) {
   ::fidl::Encoder _encoder(internal::ksub_foo_GenOrdinal);
   ::fidl::MessageBuffer buffer_;
   ::fidl::Message response_ = buffer_.CreateEmptyMessage();
-  zx_status_t status_ =
-      proxy_.Call(&v1_fidl_test_json_subfooRequestTable,
-                  &v1_fidl_test_json_subfooResponseTable,
-                  sub_RequestEncoder::foo(&_encoder, &s), &response_);
+  zx_status_t status_ = proxy_.Call(
+      &fidl_test_json_subfooRequestTable, &fidl_test_json_subfooResponseTable,
+      sub_RequestEncoder::foo(&_encoder, &s), &response_);
   if (status_ != ZX_OK) return status_;
   ::fidl::Decoder decoder_(std::move(response_));
   *out_y = ::fidl::DecodeAs<int64_t>(&decoder_, 16);

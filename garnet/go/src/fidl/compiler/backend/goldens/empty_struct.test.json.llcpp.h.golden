@@ -34,10 +34,10 @@ namespace json {
 struct Empty;
 class EmptyProtocol;
 
-extern "C" const fidl_type_t v1_fidl_test_json_EmptyTable;
+extern "C" const fidl_type_t fidl_test_json_EmptyTable;
 
 struct Empty {
-  static constexpr const fidl_type_t* Type = &v1_fidl_test_json_EmptyTable;
+  static constexpr const fidl_type_t* Type = &fidl_test_json_EmptyTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
@@ -46,14 +46,14 @@ struct Empty {
   uint8_t __reserved = {};
 };
 
-extern "C" const fidl_type_t v1_fidl_test_json_EmptyProtocolSendRequestTable;
-extern "C" const fidl_type_t v1_fidl_test_json_EmptyProtocolSendResponseTable;
-extern "C" const fidl_type_t v1_fidl_test_json_EmptyProtocolReceiveRequestTable;
-extern "C" const fidl_type_t v1_fidl_test_json_EmptyProtocolReceiveEventTable;
+extern "C" const fidl_type_t fidl_test_json_EmptyProtocolSendRequestTable;
+extern "C" const fidl_type_t fidl_test_json_EmptyProtocolSendResponseTable;
+extern "C" const fidl_type_t fidl_test_json_EmptyProtocolReceiveRequestTable;
+extern "C" const fidl_type_t fidl_test_json_EmptyProtocolReceiveEventTable;
 extern "C" const fidl_type_t
-    v1_fidl_test_json_EmptyProtocolSendAndReceiveRequestTable;
+    fidl_test_json_EmptyProtocolSendAndReceiveRequestTable;
 extern "C" const fidl_type_t
-    v1_fidl_test_json_EmptyProtocolSendAndReceiveResponseTable;
+    fidl_test_json_EmptyProtocolSendAndReceiveResponseTable;
 
 class EmptyProtocol final {
   EmptyProtocol() = delete;
@@ -65,7 +65,7 @@ class EmptyProtocol final {
     ::llcpp::fidl::test::json::Empty e;
 
     static constexpr const fidl_type_t* Type =
-        &v1_fidl_test_json_EmptyProtocolSendRequestTable;
+        &fidl_test_json_EmptyProtocolSendRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -73,7 +73,6 @@ class EmptyProtocol final {
     static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool HasPointer = false;
-    static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
   };
@@ -84,13 +83,12 @@ class EmptyProtocol final {
     ::llcpp::fidl::test::json::Empty e;
 
     static constexpr const fidl_type_t* Type =
-        &v1_fidl_test_json_EmptyProtocolReceiveEventTable;
+        &fidl_test_json_EmptyProtocolReceiveEventTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool HasPointer = false;
-    static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
   };
@@ -100,13 +98,12 @@ class EmptyProtocol final {
     ::llcpp::fidl::test::json::Empty e;
 
     static constexpr const fidl_type_t* Type =
-        &v1_fidl_test_json_EmptyProtocolSendAndReceiveResponseTable;
+        &fidl_test_json_EmptyProtocolSendAndReceiveResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool HasPointer = false;
-    static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
   };
@@ -116,7 +113,7 @@ class EmptyProtocol final {
     ::llcpp::fidl::test::json::Empty e;
 
     static constexpr const fidl_type_t* Type =
-        &v1_fidl_test_json_EmptyProtocolSendAndReceiveRequestTable;
+        &fidl_test_json_EmptyProtocolSendAndReceiveRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -124,7 +121,6 @@ class EmptyProtocol final {
     static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool HasPointer = false;
-    static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
     using ResponseType = SendAndReceiveResponse;

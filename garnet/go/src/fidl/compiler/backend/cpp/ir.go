@@ -242,34 +242,32 @@ type ServiceMember struct {
 type Method struct {
 	types.Attributes
 	types.Ordinals
-	Name                  string
-	NameInLowerSnakeCase  string
-	HasRequest            bool
-	Request               []Parameter
-	RequestSize           int
-	RequestTypeName       string
-	RequestMaxHandles     int
-	RequestMaxOutOfLine   int
-	RequestPadding        bool
-	RequestFlexible       bool
-	RequestHasPointer     bool
-	RequestContainsUnion  bool
-	HasResponse           bool
-	Response              []Parameter
-	ResponseSize          int
-	ResponseTypeName      string
-	ResponseMaxHandles    int
-	ResponseMaxOutOfLine  int
-	ResponsePadding       bool
-	ResponseFlexible      bool
-	ResponseHasPointer    bool
-	ResponseContainsUnion bool
-	CallbackType          string
-	ResponseHandlerType   string
-	ResponderType         string
-	Transitional          bool
-	Result                *Result
-	LLProps               LLProps
+	Name                 string
+	NameInLowerSnakeCase string
+	HasRequest           bool
+	Request              []Parameter
+	RequestSize          int
+	RequestTypeName      string
+	RequestMaxHandles    int
+	RequestMaxOutOfLine  int
+	RequestPadding       bool
+	RequestFlexible      bool
+	RequestHasPointer    bool
+	HasResponse          bool
+	Response             []Parameter
+	ResponseSize         int
+	ResponseTypeName     string
+	ResponseMaxHandles   int
+	ResponseMaxOutOfLine int
+	ResponsePadding      bool
+	ResponseFlexible     bool
+	ResponseHasPointer   bool
+	CallbackType         string
+	ResponseHandlerType  string
+	ResponderType        string
+	Transitional         bool
+	Result               *Result
+	LLProps              LLProps
 }
 
 // LLContextProps contain context-dependent properties of a method specific to llcpp.
@@ -874,33 +872,31 @@ func (c *compiler) compileProtocol(val types.Protocol) Protocol {
 				fmt.Sprintf("k%s_%s_Ordinal", r.Name, v.Name),
 				fmt.Sprintf("k%s_%s_GenOrdinal", r.Name, v.Name),
 			),
-			Name:                  name,
-			NameInLowerSnakeCase:  common.ToSnakeCase(name),
-			HasRequest:            v.HasRequest,
-			Request:               c.compileParameterArray(v.Request),
-			RequestSize:           v.RequestTypeShapeV1.InlineSize,
-			RequestTypeName:       fmt.Sprintf("v1_%s_%s%sRequestTable", c.symbolPrefix, r.Name, v.Name),
-			RequestMaxHandles:     v.RequestTypeShapeV1.MaxHandles,
-			RequestMaxOutOfLine:   v.RequestTypeShapeV1.MaxOutOfLine,
-			RequestPadding:        v.RequestTypeShapeV1.HasPadding,
-			RequestFlexible:       v.RequestTypeShapeV1.HasFlexibleEnvelope,
-			RequestHasPointer:     v.RequestTypeShapeV1.Depth > 0,
-			RequestContainsUnion:  v.RequestTypeShapeV1.ContainsUnion,
-			HasResponse:           v.HasResponse,
-			Response:              c.compileParameterArray(v.Response),
-			ResponseSize:          v.ResponseTypeShapeV1.InlineSize,
-			ResponseTypeName:      fmt.Sprintf("v1_%s_%s%s%s", c.symbolPrefix, r.Name, v.Name, responseTypeNameSuffix),
-			ResponseMaxHandles:    v.ResponseTypeShapeV1.MaxHandles,
-			ResponseMaxOutOfLine:  v.ResponseTypeShapeV1.MaxOutOfLine,
-			ResponsePadding:       v.ResponseTypeShapeV1.HasPadding,
-			ResponseFlexible:      v.ResponseTypeShapeV1.HasFlexibleEnvelope,
-			ResponseHasPointer:    v.ResponseTypeShapeV1.Depth > 0,
-			ResponseContainsUnion: v.ResponseTypeShapeV1.ContainsUnion,
-			CallbackType:          callbackType,
-			ResponseHandlerType:   fmt.Sprintf("%s_%s_ResponseHandler", r.Name, v.Name),
-			ResponderType:         fmt.Sprintf("%s_%s_Responder", r.Name, v.Name),
-			Transitional:          v.IsTransitional(),
-			Result:                result,
+			Name:                 name,
+			NameInLowerSnakeCase: common.ToSnakeCase(name),
+			HasRequest:           v.HasRequest,
+			Request:              c.compileParameterArray(v.Request),
+			RequestSize:          v.RequestTypeShapeV1.InlineSize,
+			RequestTypeName:      fmt.Sprintf("%s_%s%sRequestTable", c.symbolPrefix, r.Name, v.Name),
+			RequestMaxHandles:    v.RequestTypeShapeV1.MaxHandles,
+			RequestMaxOutOfLine:  v.RequestTypeShapeV1.MaxOutOfLine,
+			RequestPadding:       v.RequestTypeShapeV1.HasPadding,
+			RequestFlexible:      v.RequestTypeShapeV1.HasFlexibleEnvelope,
+			RequestHasPointer:    v.RequestTypeShapeV1.Depth > 0,
+			HasResponse:          v.HasResponse,
+			Response:             c.compileParameterArray(v.Response),
+			ResponseSize:         v.ResponseTypeShapeV1.InlineSize,
+			ResponseTypeName:     fmt.Sprintf("%s_%s%s%s", c.symbolPrefix, r.Name, v.Name, responseTypeNameSuffix),
+			ResponseMaxHandles:   v.ResponseTypeShapeV1.MaxHandles,
+			ResponseMaxOutOfLine: v.ResponseTypeShapeV1.MaxOutOfLine,
+			ResponsePadding:      v.ResponseTypeShapeV1.HasPadding,
+			ResponseFlexible:     v.ResponseTypeShapeV1.HasFlexibleEnvelope,
+			ResponseHasPointer:   v.ResponseTypeShapeV1.Depth > 0,
+			CallbackType:         callbackType,
+			ResponseHandlerType:  fmt.Sprintf("%s_%s_ResponseHandler", r.Name, v.Name),
+			ResponderType:        fmt.Sprintf("%s_%s_Responder", r.Name, v.Name),
+			Transitional:         v.IsTransitional(),
+			Result:               result,
 		}
 
 		m.LLProps = m.NewLLProps(r, v.RequestTypeShapeV1, v.ResponseTypeShapeV1)
@@ -958,7 +954,7 @@ func (c *compiler) compileStruct(val types.Struct, appendNamespace string) Struc
 		Attributes:   val.Attributes,
 		Namespace:    c.namespace,
 		Name:         name,
-		TableType:    "v1_" + tableType,
+		TableType:    tableType,
 		Members:      []StructMember{},
 		InlineSize:   val.TypeShapeV1.InlineSize,
 		MaxHandles:   val.TypeShapeV1.MaxHandles,
@@ -1031,7 +1027,7 @@ func (c *compiler) compileTable(val types.Table, appendNamespace string) Table {
 		Attributes:     val.Attributes,
 		Namespace:      c.namespace,
 		Name:           name,
-		TableType:      "v1_" + tableType,
+		TableType:      tableType,
 		Members:        nil,
 		InlineSize:     val.TypeShapeV1.InlineSize,
 		BiggestOrdinal: 0,
@@ -1085,7 +1081,7 @@ func (c *compiler) compileUnion(val types.Union) Union {
 		Attributes:   val.Attributes,
 		Namespace:    c.namespace,
 		Name:         name,
-		TableType:    "v1_" + tableType,
+		TableType:    tableType,
 		InlineSize:   val.TypeShapeV1.InlineSize,
 		MaxHandles:   val.TypeShapeV1.MaxHandles,
 		MaxOutOfLine: val.TypeShapeV1.MaxOutOfLine,

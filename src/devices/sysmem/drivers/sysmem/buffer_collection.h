@@ -27,7 +27,7 @@ class BufferCollection
  public:
   using Constraints =
       FidlStruct<fuchsia_sysmem_BufferCollectionConstraints,
-                 &llcpp::fuchsia::sysmem::v1_fuchsia_sysmem_BufferCollectionConstraintsTable>;
+                 &llcpp::fuchsia::sysmem::fuchsia_sysmem_BufferCollectionConstraintsTable>;
 
   ~BufferCollection();
 
@@ -53,7 +53,7 @@ class BufferCollection
 
   using BufferCollectionInfo =
       FidlStruct<fuchsia_sysmem_BufferCollectionInfo_2,
-                 &llcpp::fuchsia::sysmem::v1_fuchsia_sysmem_BufferCollectionInfo_2Table>;
+                 &llcpp::fuchsia::sysmem::fuchsia_sysmem_BufferCollectionInfo_2Table>;
 
   void OnBuffersAllocated();
 

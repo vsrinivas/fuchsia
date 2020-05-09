@@ -38,8 +38,6 @@
 //
 // |T::HasFlexibleEnvelope| is a bool specifying if this message contains a flexible xunion or
 //                          a flexible table.
-// |T::ContainsUnion|       is a bool specifying if this message transitively contains any unions.
-//                          If this false, transforming wire formats can be avoided
 // |T::MessageKind|         identifies if this message is a request or a response. If undefined,
 //                          the type may be used either as a request or a response.
 //

@@ -16,7 +16,7 @@ static_assert(std::is_standard_layout<FidlStructField>::value, "");
 static_assert(std::is_standard_layout<FidlTableField>::value, "");
 static_assert(std::is_standard_layout<FidlTypeTag>::value, "");
 static_assert(std::is_standard_layout<FidlCodedStruct>::value, "");
-static_assert(std::is_standard_layout<FidlCodedUnion>::value, "");
+static_assert(std::is_standard_layout<FidlCodedXUnion>::value, "");
 static_assert(std::is_standard_layout<FidlCodedArray>::value, "");
 static_assert(std::is_standard_layout<FidlCodedVector>::value, "");
 static_assert(std::is_standard_layout<FidlCodedString>::value, "");

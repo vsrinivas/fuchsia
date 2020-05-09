@@ -34,11 +34,11 @@
 
 namespace {
 
-// This is a hand-rolled struct to mirror the FIDL `OnOpen` event from
-// fuchsia-io: see zircon/system/fidl/fuchsia-io/io.fidl. We are hand-rolling
-// this because the OnOpen event contains a `NodeInfo?`, i.e. a nullable
-// NodeInfo union, which is not supported by the C FIDL bindings, and migrating
-// this code to LLCPP is out-of-scope for now.
+// On OpenMsg and Describe Msg are hand-rolled structs to mirror the `OnOpen`
+// event and `Describe` method from fuchsia-io: see
+// zircon/system/fidl/fuchsia-io/io.fidl. We are hand-rolling this because these
+// methods contain NodeInfo unions which is not supported by the C FIDL
+// bindings, and migrating this code to LLCPP is out-of-scope for now.
 struct OnOpenMsg {
   FIDL_ALIGNDECL
 
@@ -66,6 +66,39 @@ struct OnOpenMsg {
   // union member needed in this definition.
   fuchsia_io_DirectoryObject directory;
 };
+
+// This is a hand-rolled FIDL struct, see OnOpenMsg
+struct DescribeMsg {
+  FIDL_ALIGNDECL
+
+  // This is the inline, or primary, part of the FIDL message.
+  struct {
+    fidl_message_header_t hdr;
+    fidl_xunion_t node_info;
+  } primary;
+
+  fuchsia_io_DirectoryObject directory;
+};
+
+// Sets |node_info| to be a Directory, in the encoded form. It is the caller's
+// responsibility to ensure that the directory object is zeroed out.
+void SetNodeInfoAsDirectory(fidl_xunion_t* node_info) {
+  // kNodeInfoTagDirectory below is intentionally hard-coded to the ordinal
+  // for NodeInfo.directory. We could also look this up in the coding
+  // tables, but doing that is arguably less performant and less safe, since
+  // we need to search the NodeInfo coding table's fields for the directory
+  // union member, and there's questions around what to do if the field
+  // isn't found. Given that a union member ordinal is part of its ABI, it's
+  // extremely unlikely to ever change, so it's safe enough to hard-code it
+  // here. See
+  // <https://fuchsia-review.googlesource.com/c/fuchsia/+/383902/2/src/devices/bin/driver_manager/devfs.cc#495>
+  // for more context.
+  constexpr fidl_xunion_tag_t kNodeInfoTagDirectory = 3ul;
+  node_info->tag = kNodeInfoTagDirectory;
+
+  node_info->envelope.num_bytes = FIDL_ALIGN(sizeof(fuchsia_io_DirectoryObject));
+  node_info->envelope.presence = FIDL_ALLOC_PRESENT;
+}
 
 zx_status_t SendOnOpenEvent(zx_handle_t ch, OnOpenMsg msg, zx_handle_t* handles,
                             uint32_t num_handles) {
@@ -500,21 +533,7 @@ void devfs_open(Devnode* dirdn, async_dispatcher_t* dispatcher, zx_handle_t h, c
       msg.primary.hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
       msg.primary.s = ZX_OK;
 
-      // kNodeInfoTagDirectory below is intentionally hard-coded to the ordinal
-      // for NodeInfo.directory. We could also look this up in the coding
-      // tables, but doing that is arguably less performant and less safe, since
-      // we need to search the NodeInfo coding table's fields for the directory
-      // union member, and there's questions around what to do if the field
-      // isn't found. Given that a union member ordinal is part of its ABI, it's
-      // extremely unlikely to ever change, so it's safe enough to hard-code it
-      // here. See
-      // <https://fuchsia-review.googlesource.com/c/fuchsia/+/383902/2/src/devices/bin/driver_manager/devfs.cc#495>
-      // for more context.
-      constexpr fidl_xunion_tag_t kNodeInfoTagDirectory = 3ul;
-      msg.primary.node_info.tag = kNodeInfoTagDirectory;
-
-      msg.primary.node_info.envelope.num_bytes = FIDL_ALIGN(sizeof(fuchsia_io_DirectoryObject));
-      msg.primary.node_info.envelope.presence = FIDL_ALLOC_PRESENT;
+      SetNodeInfoAsDirectory(&msg.primary.node_info);
 
       // We don't need to set the union member (i.e. the directory)'s data here,
       // because Directory is an empty struct and has no data. The empty struct
@@ -766,10 +785,20 @@ zx_status_t DcIostate::DevfsFidlHandler(fidl_msg_t* msg, fidl_txn_t* txn, void* 
   } else if (ordinal == fuchsia_io_NodeDescribeOrdinal ||
              ordinal == fuchsia_io_NodeDescribeGenOrdinal) {
     DECODE_REQUEST(msg, NodeDescribe);
-    fuchsia_io_NodeInfo info;
-    memset(&info, 0, sizeof(info));
-    info.tag = fuchsia_io_NodeInfoTag_directory;
-    return fuchsia_io_NodeDescribe_reply(txn, &info);
+
+    DescribeMsg msg;
+    memset(&msg, 0, sizeof(msg));
+    fidl_init_txn_header(&msg.primary.hdr, 0, fuchsia_io_NodeDescribeGenOrdinal);
+    msg.primary.hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
+    SetNodeInfoAsDirectory(&msg.primary.node_info);
+
+    fidl_msg_t raw_msg = {
+        .bytes = reinterpret_cast<uint8_t*>(&msg),
+        .handles = nullptr,
+        .num_bytes = sizeof(msg),
+        .num_handles = 0,
+    };
+    return txn->reply(txn, &raw_msg);
   } else if (ordinal == fuchsia_io_DirectoryOpenOrdinal ||
              ordinal == fuchsia_io_DirectoryOpenGenOrdinal) {
     DECODE_REQUEST(msg, DirectoryOpen);

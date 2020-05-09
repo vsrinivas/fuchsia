@@ -573,7 +573,7 @@ bool linearize_xunion_empty_invariant_empty() {
   const char* error = nullptr;
   zx_status_t status;
   uint32_t actual_num_bytes = 0;
-  status = fidl_linearize(&v1_fidl_test_coding_SampleNullableXUnionStructTable, &xunion, buffer,
+  status = fidl_linearize(&fidl_test_coding_SampleNullableXUnionStructTable, &xunion, buffer,
                           buf_size, &actual_num_bytes, &error);
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
   EXPECT_NONNULL(error);
@@ -596,7 +596,7 @@ bool linearize_xunion_empty_invariant_zero_ordinal() {
   const char* error = nullptr;
   zx_status_t status;
   uint32_t actual_num_bytes = 0;
-  status = fidl_linearize(&v1_fidl_test_coding_SampleNullableXUnionStructTable, &xunion, buffer,
+  status = fidl_linearize(&fidl_test_coding_SampleNullableXUnionStructTable, &xunion, buffer,
                           buf_size, &actual_num_bytes, &error);
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
   EXPECT_NONNULL(error);
@@ -618,7 +618,7 @@ bool linearize_xunion_primitive_field() {
   const char* error = nullptr;
   zx_status_t status;
   uint32_t actual_num_bytes = 0;
-  status = fidl_linearize(&v1_fidl_test_coding_SampleXUnionStructTable, &xunion, buffer, buf_size,
+  status = fidl_linearize(&fidl_test_coding_SampleXUnionStructTable, &xunion, buffer, buf_size,
                           &actual_num_bytes, &error);
   EXPECT_EQ(status, ZX_OK);
   EXPECT_NULL(error, error);
@@ -656,8 +656,8 @@ bool linearize_union_tracking_ptr_unowned() {
   uint8_t buffer[kBufSize];
   const char* error = nullptr;
   uint32_t actual_num_bytes = 0;
-  auto status = fidl_linearize(&v1_fidl_test_coding_LLCPPStyleUnionStructTable, &str, buffer,
-                               kBufSize, &actual_num_bytes, &error);
+  auto status = fidl_linearize(&fidl_test_coding_LLCPPStyleUnionStructTable, &str, buffer, kBufSize,
+                               &actual_num_bytes, &error);
   EXPECT_EQ(status, ZX_OK);
 
   fidl_xunion_t* written_xunion = reinterpret_cast<fidl_xunion_t*>(buffer);
@@ -681,8 +681,8 @@ bool linearize_union_tracking_ptr_heap_allocate() {
   uint8_t buffer[kBufSize];
   const char* error = nullptr;
   uint32_t actual_num_bytes = 0;
-  auto status = fidl_linearize(&v1_fidl_test_coding_LLCPPStyleUnionStructTable, &str, buffer,
-                               kBufSize, &actual_num_bytes, &error);
+  auto status = fidl_linearize(&fidl_test_coding_LLCPPStyleUnionStructTable, &str, buffer, kBufSize,
+                               &actual_num_bytes, &error);
   EXPECT_EQ(status, ZX_OK);
 
   fidl_xunion_t* written_xunion = reinterpret_cast<fidl_xunion_t*>(buffer);
@@ -711,7 +711,7 @@ bool linearize_vector_view_tracking_ptr_unowned() {
   uint8_t buffer[kBufSize];
   const char* error = nullptr;
   uint32_t actual_num_bytes = 0;
-  auto status = fidl_linearize(&v1_fidl_test_coding_Uint32VectorStructTable, &str, buffer, kBufSize,
+  auto status = fidl_linearize(&fidl_test_coding_Uint32VectorStructTable, &str, buffer, kBufSize,
                                &actual_num_bytes, &error);
   EXPECT_EQ(status, ZX_OK);
 
@@ -742,7 +742,7 @@ bool linearize_vector_view_tracking_ptr_heap_allocate() {
   uint8_t buffer[kBufSize];
   const char* error = nullptr;
   uint32_t actual_num_bytes = 0;
-  auto status = fidl_linearize(&v1_fidl_test_coding_Uint32VectorStructTable, &str, buffer, kBufSize,
+  auto status = fidl_linearize(&fidl_test_coding_Uint32VectorStructTable, &str, buffer, kBufSize,
                                &actual_num_bytes, &error);
   EXPECT_EQ(status, ZX_OK);
 
@@ -767,7 +767,7 @@ bool linearize_string_view_tracking_ptr_unowned() {
   uint8_t buffer[kBufSize];
   const char* error = nullptr;
   uint32_t actual_num_bytes = 0;
-  auto status = fidl_linearize(&v1_fidl_test_coding_StringStructTable, &str, buffer, kBufSize,
+  auto status = fidl_linearize(&fidl_test_coding_StringStructTable, &str, buffer, kBufSize,
                                &actual_num_bytes, &error);
   EXPECT_EQ(status, ZX_OK);
 
@@ -792,7 +792,7 @@ bool linearize_string_view_tracking_ptr_heap_allocate() {
   uint8_t buffer[kBufSize];
   const char* error = nullptr;
   uint32_t actual_num_bytes = 0;
-  auto status = fidl_linearize(&v1_fidl_test_coding_StringStructTable, &str, buffer, kBufSize,
+  auto status = fidl_linearize(&fidl_test_coding_StringStructTable, &str, buffer, kBufSize,
                                &actual_num_bytes, &error);
   EXPECT_EQ(status, ZX_OK);
 

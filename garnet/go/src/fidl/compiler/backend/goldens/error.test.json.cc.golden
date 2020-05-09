@@ -7,9 +7,9 @@ namespace fidl {
 namespace test {
 namespace json {
 
-extern "C" const fidl_type_t v1_fidl_test_json_Example_foo_ResponseTable;
+extern "C" const fidl_type_t fidl_test_json_Example_foo_ResponseTable;
 const fidl_type_t* Example_foo_Response::FidlType =
-    &v1_fidl_test_json_Example_foo_ResponseTable;
+    &fidl_test_json_Example_foo_ResponseTable;
 
 void Example_foo_Response::Encode(::fidl::Encoder* _encoder, size_t _offset) {
   ::fidl::Encode(_encoder, &y, _offset + 0);
@@ -25,9 +25,9 @@ zx_status_t Example_foo_Response::Clone(Example_foo_Response* _result) const {
   if (_status != ZX_OK) return _status;
   return ZX_OK;
 }
-extern "C" const fidl_type_t v1_fidl_test_json_Example_foo_ResultTable;
+extern "C" const fidl_type_t fidl_test_json_Example_foo_ResultTable;
 const fidl_type_t* Example_foo_Result::FidlType =
-    &v1_fidl_test_json_Example_foo_ResultTable;
+    &fidl_test_json_Example_foo_ResultTable;
 
 Example_foo_Result::Example_foo_Result() {}
 
@@ -202,8 +202,8 @@ void Example_foo_Result::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
 #ifdef __Fuchsia__
 namespace {
 
-extern "C" const fidl_type_t v1_fidl_test_json_ExamplefooRequestTable;
-extern "C" const fidl_type_t v1_fidl_test_json_ExamplefooResponseTable;
+extern "C" const fidl_type_t fidl_test_json_ExamplefooRequestTable;
+extern "C" const fidl_type_t fidl_test_json_ExamplefooResponseTable;
 
 }  // namespace
 
@@ -215,7 +215,7 @@ const fidl_type_t* Example_RequestDecoder::GetType(uint64_t ordinal,
     case internal::kExample_foo_Ordinal:
     case internal::kExample_foo_GenOrdinal:
       *out_needs_response = true;
-      return &v1_fidl_test_json_ExamplefooRequestTable;
+      return &fidl_test_json_ExamplefooRequestTable;
     default:
       *out_needs_response = false;
       return nullptr;
@@ -226,7 +226,7 @@ const fidl_type_t* Example_ResponseDecoder::GetType(uint64_t ordinal) {
   switch (ordinal) {
     case internal::kExample_foo_Ordinal:
     case internal::kExample_foo_GenOrdinal:
-      return &v1_fidl_test_json_ExamplefooResponseTable;
+      return &fidl_test_json_ExamplefooResponseTable;
     default:
       return nullptr;
   }
@@ -268,10 +268,10 @@ class Example_foo_ResponseHandler final
   zx_status_t OnMessage(::fidl::Message message) override {
     const char* error_msg = nullptr;
     zx_status_t status =
-        message.Decode(&v1_fidl_test_json_ExamplefooResponseTable, &error_msg);
+        message.Decode(&fidl_test_json_ExamplefooResponseTable, &error_msg);
     if (status != ZX_OK) {
       FIDL_REPORT_DECODING_ERROR(
-          message, &v1_fidl_test_json_ExamplefooResponseTable, error_msg);
+          message, &fidl_test_json_ExamplefooResponseTable, error_msg);
       return status;
     }
     ::fidl::Decoder decoder(std::move(message));
@@ -292,7 +292,7 @@ class Example_foo_ResponseHandler final
 void Example_Proxy::foo(::std::string s, fooCallback callback) {
   ::fidl::Encoder _encoder(internal::kExample_foo_GenOrdinal);
   controller_->Send(
-      &v1_fidl_test_json_ExamplefooRequestTable,
+      &fidl_test_json_ExamplefooRequestTable,
       Example_RequestEncoder::foo(&_encoder, &s),
       std::make_unique<Example_foo_ResponseHandler>(std::move(callback)));
 }
@@ -310,7 +310,7 @@ class Example_foo_Responder final {
 
   void operator()(Example_foo_Result result) {
     ::fidl::Encoder _encoder(internal::kExample_foo_GenOrdinal);
-    response_.Send(&v1_fidl_test_json_ExamplefooResponseTable,
+    response_.Send(&fidl_test_json_ExamplefooResponseTable,
                    Example_ResponseEncoder::foo(&_encoder, &result));
   }
 
@@ -372,8 +372,8 @@ zx_status_t Example_SyncProxy::foo(::std::string s,
   ::fidl::MessageBuffer buffer_;
   ::fidl::Message response_ = buffer_.CreateEmptyMessage();
   zx_status_t status_ =
-      proxy_.Call(&v1_fidl_test_json_ExamplefooRequestTable,
-                  &v1_fidl_test_json_ExamplefooResponseTable,
+      proxy_.Call(&fidl_test_json_ExamplefooRequestTable,
+                  &fidl_test_json_ExamplefooResponseTable,
                   Example_RequestEncoder::foo(&_encoder, &s), &response_);
   if (status_ != ZX_OK) return status_;
   ::fidl::Decoder decoder_(std::move(response_));

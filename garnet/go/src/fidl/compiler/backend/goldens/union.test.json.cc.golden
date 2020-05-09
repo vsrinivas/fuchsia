@@ -7,8 +7,8 @@ namespace fidl {
 namespace test {
 namespace json {
 
-extern "C" const fidl_type_t v1_fidl_test_json_UnionTable;
-const fidl_type_t* Union::FidlType = &v1_fidl_test_json_UnionTable;
+extern "C" const fidl_type_t fidl_test_json_UnionTable;
+const fidl_type_t* Union::FidlType = &fidl_test_json_UnionTable;
 
 Union::Union() {}
 
@@ -225,9 +225,9 @@ void Union::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     }
   }
 }
-extern "C" const fidl_type_t v1_fidl_test_json_StructWithNullableXUnionTable;
+extern "C" const fidl_type_t fidl_test_json_StructWithNullableXUnionTable;
 const fidl_type_t* StructWithNullableXUnion::FidlType =
-    &v1_fidl_test_json_StructWithNullableXUnionTable;
+    &fidl_test_json_StructWithNullableXUnionTable;
 
 void StructWithNullableXUnion::Encode(::fidl::Encoder* _encoder,
                                       size_t _offset) {
@@ -246,8 +246,8 @@ zx_status_t StructWithNullableXUnion::Clone(
   if (_status != ZX_OK) return _status;
   return ZX_OK;
 }
-extern "C" const fidl_type_t v1_fidl_test_json_StrictUnionTable;
-const fidl_type_t* StrictUnion::FidlType = &v1_fidl_test_json_StrictUnionTable;
+extern "C" const fidl_type_t fidl_test_json_StrictUnionTable;
+const fidl_type_t* StrictUnion::FidlType = &fidl_test_json_StrictUnionTable;
 
 StrictUnion::StrictUnion() {}
 
@@ -465,9 +465,9 @@ void StrictUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     }
   }
 }
-extern "C" const fidl_type_t v1_fidl_test_json_StrictSimpleXUnionTable;
+extern "C" const fidl_type_t fidl_test_json_StrictSimpleXUnionTable;
 const fidl_type_t* StrictSimpleXUnion::FidlType =
-    &v1_fidl_test_json_StrictSimpleXUnionTable;
+    &fidl_test_json_StrictSimpleXUnionTable;
 
 StrictSimpleXUnion::StrictSimpleXUnion() {}
 
@@ -669,8 +669,8 @@ void StrictSimpleXUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     }
   }
 }
-extern "C" const fidl_type_t v1_fidl_test_json_StrictFooTable;
-const fidl_type_t* StrictFoo::FidlType = &v1_fidl_test_json_StrictFooTable;
+extern "C" const fidl_type_t fidl_test_json_StrictFooTable;
+const fidl_type_t* StrictFoo::FidlType = &fidl_test_json_StrictFooTable;
 
 StrictFoo::StrictFoo() {}
 
@@ -838,9 +838,9 @@ void StrictFoo::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     }
   }
 }
-extern "C" const fidl_type_t v1_fidl_test_json_StrictBoundedXUnionTable;
+extern "C" const fidl_type_t fidl_test_json_StrictBoundedXUnionTable;
 const fidl_type_t* StrictBoundedXUnion::FidlType =
-    &v1_fidl_test_json_StrictBoundedXUnionTable;
+    &fidl_test_json_StrictBoundedXUnionTable;
 
 StrictBoundedXUnion::StrictBoundedXUnion() {}
 
@@ -978,9 +978,9 @@ void StrictBoundedXUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     }
   }
 }
-extern "C" const fidl_type_t v1_fidl_test_json_ReverseOrdinalUnionTable;
+extern "C" const fidl_type_t fidl_test_json_ReverseOrdinalUnionTable;
 const fidl_type_t* ReverseOrdinalUnion::FidlType =
-    &v1_fidl_test_json_ReverseOrdinalUnionTable;
+    &fidl_test_json_ReverseOrdinalUnionTable;
 
 ReverseOrdinalUnion::ReverseOrdinalUnion() {}
 
@@ -1145,8 +1145,8 @@ void ReverseOrdinalUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     }
   }
 }
-extern "C" const fidl_type_t v1_fidl_test_json_PizzaTable;
-const fidl_type_t* Pizza::FidlType = &v1_fidl_test_json_PizzaTable;
+extern "C" const fidl_type_t fidl_test_json_PizzaTable;
+const fidl_type_t* Pizza::FidlType = &fidl_test_json_PizzaTable;
 
 void Pizza::Encode(::fidl::Encoder* _encoder, size_t _offset) {
   ::fidl::Encode(_encoder, &toppings, _offset + 0);
@@ -1161,8 +1161,8 @@ zx_status_t Pizza::Clone(Pizza* _result) const {
   if (_status != ZX_OK) return _status;
   return ZX_OK;
 }
-extern "C" const fidl_type_t v1_fidl_test_json_PastaTable;
-const fidl_type_t* Pasta::FidlType = &v1_fidl_test_json_PastaTable;
+extern "C" const fidl_type_t fidl_test_json_PastaTable;
+const fidl_type_t* Pasta::FidlType = &fidl_test_json_PastaTable;
 
 void Pasta::Encode(::fidl::Encoder* _encoder, size_t _offset) {
   ::fidl::Encode(_encoder, &sauce, _offset + 0);
@@ -1177,9 +1177,9 @@ zx_status_t Pasta::Clone(Pasta* _result) const {
   if (_status != ZX_OK) return _status;
   return ZX_OK;
 }
-extern "C" const fidl_type_t v1_fidl_test_json_StrictPizzaOrPastaTable;
+extern "C" const fidl_type_t fidl_test_json_StrictPizzaOrPastaTable;
 const fidl_type_t* StrictPizzaOrPasta::FidlType =
-    &v1_fidl_test_json_StrictPizzaOrPastaTable;
+    &fidl_test_json_StrictPizzaOrPastaTable;
 
 StrictPizzaOrPasta::StrictPizzaOrPasta() {}
 
@@ -1353,9 +1353,8 @@ void StrictPizzaOrPasta::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     }
   }
 }
-extern "C" const fidl_type_t v1_fidl_test_json_PizzaOrPastaTable;
-const fidl_type_t* PizzaOrPasta::FidlType =
-    &v1_fidl_test_json_PizzaOrPastaTable;
+extern "C" const fidl_type_t fidl_test_json_PizzaOrPastaTable;
+const fidl_type_t* PizzaOrPasta::FidlType = &fidl_test_json_PizzaOrPastaTable;
 
 PizzaOrPasta::PizzaOrPasta() {}
 
@@ -1528,9 +1527,9 @@ void PizzaOrPasta::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     }
   }
 }
-extern "C" const fidl_type_t v1_fidl_test_json_FlexiblePizzaOrPastaTable;
+extern "C" const fidl_type_t fidl_test_json_FlexiblePizzaOrPastaTable;
 const fidl_type_t* FlexiblePizzaOrPasta::FidlType =
-    &v1_fidl_test_json_FlexiblePizzaOrPastaTable;
+    &fidl_test_json_FlexiblePizzaOrPastaTable;
 
 FlexiblePizzaOrPasta::FlexiblePizzaOrPasta() {}
 
@@ -1723,9 +1722,9 @@ void FlexiblePizzaOrPasta::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     }
   }
 }
-extern "C" const fidl_type_t v1_fidl_test_json_ExplicitPizzaOrPastaTable;
+extern "C" const fidl_type_t fidl_test_json_ExplicitPizzaOrPastaTable;
 const fidl_type_t* ExplicitPizzaOrPasta::FidlType =
-    &v1_fidl_test_json_ExplicitPizzaOrPastaTable;
+    &fidl_test_json_ExplicitPizzaOrPastaTable;
 
 ExplicitPizzaOrPasta::ExplicitPizzaOrPasta() {}
 
@@ -1900,9 +1899,9 @@ void ExplicitPizzaOrPasta::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     }
   }
 }
-extern "C" const fidl_type_t v1_fidl_test_json_OlderSimpleUnionTable;
+extern "C" const fidl_type_t fidl_test_json_OlderSimpleUnionTable;
 const fidl_type_t* OlderSimpleUnion::FidlType =
-    &v1_fidl_test_json_OlderSimpleUnionTable;
+    &fidl_test_json_OlderSimpleUnionTable;
 
 OlderSimpleUnion::OlderSimpleUnion() {}
 
@@ -2088,14 +2087,14 @@ void OlderSimpleUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
 namespace {
 
 extern "C" const fidl_type_t
-    v1_fidl_test_json_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequestTable;
+    fidl_test_json_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequestTable;
 extern "C" const fidl_type_t
-    v1_fidl_test_json_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable;
+    fidl_test_json_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable;
 
 extern "C" const fidl_type_t
-    v1_fidl_test_json_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequestTable;
+    fidl_test_json_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequestTable;
 extern "C" const fidl_type_t
-    v1_fidl_test_json_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable;
+    fidl_test_json_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable;
 
 }  // namespace
 
@@ -2109,13 +2108,13 @@ const fidl_type_t* TestProtocol_RequestDecoder::GetType(
     case internal::
         kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_GenOrdinal:
       *out_needs_response = true;
-      return &v1_fidl_test_json_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequestTable;
+      return &fidl_test_json_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequestTable;
     case internal::
         kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal:
     case internal::
         kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_GenOrdinal:
       *out_needs_response = true;
-      return &v1_fidl_test_json_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequestTable;
+      return &fidl_test_json_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequestTable;
     default:
       *out_needs_response = false;
       return nullptr;
@@ -2128,12 +2127,12 @@ const fidl_type_t* TestProtocol_ResponseDecoder::GetType(uint64_t ordinal) {
         kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal:
     case internal::
         kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_GenOrdinal:
-      return &v1_fidl_test_json_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable;
+      return &fidl_test_json_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable;
     case internal::
         kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal:
     case internal::
         kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_GenOrdinal:
-      return &v1_fidl_test_json_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable;
+      return &fidl_test_json_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable;
     default:
       return nullptr;
   }
@@ -2180,12 +2179,12 @@ class TestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_ResponseHandler
   zx_status_t OnMessage(::fidl::Message message) override {
     const char* error_msg = nullptr;
     zx_status_t status = message.Decode(
-        &v1_fidl_test_json_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable,
+        &fidl_test_json_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable,
         &error_msg);
     if (status != ZX_OK) {
       FIDL_REPORT_DECODING_ERROR(
           message,
-          &v1_fidl_test_json_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable,
+          &fidl_test_json_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable,
           error_msg);
       return status;
     }
@@ -2214,7 +2213,7 @@ void TestProtocol_Proxy::StrictXUnionHenceResponseMayBeStackAllocated(
       internal::
           kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_GenOrdinal);
   controller_->Send(
-      &v1_fidl_test_json_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequestTable,
+      &fidl_test_json_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequestTable,
       TestProtocol_RequestEncoder::StrictXUnionHenceResponseMayBeStackAllocated(
           &_encoder),
       std::make_unique<
@@ -2240,12 +2239,12 @@ class
   zx_status_t OnMessage(::fidl::Message message) override {
     const char* error_msg = nullptr;
     zx_status_t status = message.Decode(
-        &v1_fidl_test_json_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable,
+        &fidl_test_json_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable,
         &error_msg);
     if (status != ZX_OK) {
       FIDL_REPORT_DECODING_ERROR(
           message,
-          &v1_fidl_test_json_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable,
+          &fidl_test_json_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable,
           error_msg);
       return status;
     }
@@ -2275,7 +2274,7 @@ void TestProtocol_Proxy::FlexibleXUnionHenceResponseMustBeHeapAllocated(
       internal::
           kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_GenOrdinal);
   controller_->Send(
-      &v1_fidl_test_json_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequestTable,
+      &fidl_test_json_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequestTable,
       TestProtocol_RequestEncoder::
           FlexibleXUnionHenceResponseMustBeHeapAllocated(&_encoder),
       std::make_unique<
@@ -2303,7 +2302,7 @@ class TestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Responder
         internal::
             kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_GenOrdinal);
     response_.Send(
-        &v1_fidl_test_json_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable,
+        &fidl_test_json_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable,
         TestProtocol_ResponseEncoder::
             StrictXUnionHenceResponseMayBeStackAllocated(&_encoder, &xu));
   }
@@ -2324,7 +2323,7 @@ class TestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Responder
         internal::
             kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_GenOrdinal);
     response_.Send(
-        &v1_fidl_test_json_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable,
+        &fidl_test_json_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable,
         TestProtocol_ResponseEncoder::
             FlexibleXUnionHenceResponseMustBeHeapAllocated(&_encoder, &xu));
   }
@@ -2401,8 +2400,8 @@ TestProtocol_SyncProxy::StrictXUnionHenceResponseMayBeStackAllocated(
   ::fidl::MessageBuffer buffer_;
   ::fidl::Message response_ = buffer_.CreateEmptyMessage();
   zx_status_t status_ = proxy_.Call(
-      &v1_fidl_test_json_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequestTable,
-      &v1_fidl_test_json_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable,
+      &fidl_test_json_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequestTable,
+      &fidl_test_json_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable,
       TestProtocol_RequestEncoder::StrictXUnionHenceResponseMayBeStackAllocated(
           &_encoder),
       &response_);
@@ -2421,8 +2420,8 @@ TestProtocol_SyncProxy::FlexibleXUnionHenceResponseMustBeHeapAllocated(
   ::fidl::MessageBuffer buffer_;
   ::fidl::Message response_ = buffer_.CreateEmptyMessage();
   zx_status_t status_ = proxy_.Call(
-      &v1_fidl_test_json_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequestTable,
-      &v1_fidl_test_json_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable,
+      &fidl_test_json_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequestTable,
+      &fidl_test_json_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable,
       TestProtocol_RequestEncoder::
           FlexibleXUnionHenceResponseMustBeHeapAllocated(&_encoder),
       &response_);
@@ -2434,9 +2433,9 @@ TestProtocol_SyncProxy::FlexibleXUnionHenceResponseMustBeHeapAllocated(
 
 #endif  // __Fuchsia__
 
-extern "C" const fidl_type_t v1_fidl_test_json_NullableUnionStructTable;
+extern "C" const fidl_type_t fidl_test_json_NullableUnionStructTable;
 const fidl_type_t* NullableUnionStruct::FidlType =
-    &v1_fidl_test_json_NullableUnionStructTable;
+    &fidl_test_json_NullableUnionStructTable;
 
 void NullableUnionStruct::Encode(::fidl::Encoder* _encoder, size_t _offset) {
   ::fidl::Encode(_encoder, &the_union, _offset + 0);
@@ -2452,9 +2451,9 @@ zx_status_t NullableUnionStruct::Clone(NullableUnionStruct* _result) const {
   if (_status != ZX_OK) return _status;
   return ZX_OK;
 }
-extern "C" const fidl_type_t v1_fidl_test_json_NewerSimpleUnionTable;
+extern "C" const fidl_type_t fidl_test_json_NewerSimpleUnionTable;
 const fidl_type_t* NewerSimpleUnion::FidlType =
-    &v1_fidl_test_json_NewerSimpleUnionTable;
+    &fidl_test_json_NewerSimpleUnionTable;
 
 NewerSimpleUnion::NewerSimpleUnion() {}
 
@@ -2680,9 +2679,8 @@ void NewerSimpleUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     }
   }
 }
-extern "C" const fidl_type_t v1_fidl_test_json_FlexibleUnionTable;
-const fidl_type_t* FlexibleUnion::FidlType =
-    &v1_fidl_test_json_FlexibleUnionTable;
+extern "C" const fidl_type_t fidl_test_json_FlexibleUnionTable;
+const fidl_type_t* FlexibleUnion::FidlType = &fidl_test_json_FlexibleUnionTable;
 
 FlexibleUnion::FlexibleUnion() {}
 
@@ -2918,8 +2916,8 @@ void FlexibleUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     }
   }
 }
-extern "C" const fidl_type_t v1_fidl_test_json_FlexibleFooTable;
-const fidl_type_t* FlexibleFoo::FidlType = &v1_fidl_test_json_FlexibleFooTable;
+extern "C" const fidl_type_t fidl_test_json_FlexibleFooTable;
+const fidl_type_t* FlexibleFoo::FidlType = &fidl_test_json_FlexibleFooTable;
 
 FlexibleFoo::FlexibleFoo() {}
 
@@ -3105,9 +3103,9 @@ void FlexibleFoo::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     }
   }
 }
-extern "C" const fidl_type_t v1_fidl_test_json_FieldCollisionTable;
+extern "C" const fidl_type_t fidl_test_json_FieldCollisionTable;
 const fidl_type_t* FieldCollision::FidlType =
-    &v1_fidl_test_json_FieldCollisionTable;
+    &fidl_test_json_FieldCollisionTable;
 
 FieldCollision::FieldCollision() {}
 
@@ -3237,9 +3235,9 @@ void FieldCollision::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     }
   }
 }
-extern "C" const fidl_type_t v1_fidl_test_json_ExplicitXUnionTable;
+extern "C" const fidl_type_t fidl_test_json_ExplicitXUnionTable;
 const fidl_type_t* ExplicitXUnion::FidlType =
-    &v1_fidl_test_json_ExplicitXUnionTable;
+    &fidl_test_json_ExplicitXUnionTable;
 
 ExplicitXUnion::ExplicitXUnion() {}
 
@@ -3420,9 +3418,8 @@ void ExplicitXUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     }
   }
 }
-extern "C" const fidl_type_t v1_fidl_test_json_ExplicitUnionTable;
-const fidl_type_t* ExplicitUnion::FidlType =
-    &v1_fidl_test_json_ExplicitUnionTable;
+extern "C" const fidl_type_t fidl_test_json_ExplicitUnionTable;
+const fidl_type_t* ExplicitUnion::FidlType = &fidl_test_json_ExplicitUnionTable;
 
 ExplicitUnion::ExplicitUnion() {}
 
@@ -3591,9 +3588,9 @@ void ExplicitUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     }
   }
 }
-extern "C" const fidl_type_t v1_fidl_test_json_ExplicitStrictFooTable;
+extern "C" const fidl_type_t fidl_test_json_ExplicitStrictFooTable;
 const fidl_type_t* ExplicitStrictFoo::FidlType =
-    &v1_fidl_test_json_ExplicitStrictFooTable;
+    &fidl_test_json_ExplicitStrictFooTable;
 
 ExplicitStrictFoo::ExplicitStrictFoo() {}
 
@@ -3762,8 +3759,8 @@ void ExplicitStrictFoo::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     }
   }
 }
-extern "C" const fidl_type_t v1_fidl_test_json_ExplicitFooTable;
-const fidl_type_t* ExplicitFoo::FidlType = &v1_fidl_test_json_ExplicitFooTable;
+extern "C" const fidl_type_t fidl_test_json_ExplicitFooTable;
+const fidl_type_t* ExplicitFoo::FidlType = &fidl_test_json_ExplicitFooTable;
 
 ExplicitFoo::ExplicitFoo() {}
 
@@ -3949,8 +3946,8 @@ void ExplicitFoo::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     }
   }
 }
-extern "C" const fidl_type_t v1_fidl_test_json_EmptyTable;
-const fidl_type_t* Empty::FidlType = &v1_fidl_test_json_EmptyTable;
+extern "C" const fidl_type_t fidl_test_json_EmptyTable;
+const fidl_type_t* Empty::FidlType = &fidl_test_json_EmptyTable;
 
 void Empty::Encode(::fidl::Encoder* _encoder, size_t _offset) {
   ::fidl::Encode(_encoder, &__reserved, _offset + 0);
@@ -3965,9 +3962,9 @@ zx_status_t Empty::Clone(Empty* _result) const {
   if (_status != ZX_OK) return _status;
   return ZX_OK;
 }
-extern "C" const fidl_type_t v1_fidl_test_json_XUnionContainingEmptyStructTable;
+extern "C" const fidl_type_t fidl_test_json_XUnionContainingEmptyStructTable;
 const fidl_type_t* XUnionContainingEmptyStruct::FidlType =
-    &v1_fidl_test_json_XUnionContainingEmptyStructTable;
+    &fidl_test_json_XUnionContainingEmptyStructTable;
 
 XUnionContainingEmptyStruct::XUnionContainingEmptyStruct() {}
 

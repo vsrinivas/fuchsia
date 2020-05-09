@@ -2,10 +2,6 @@
 
 #include <lib/fidl/internal.h>
 
-// Forward declarations for old <-> V1 mappings
-
-
-// Coding tables for old wire format.
 
 extern const fidl_type_t test_name_EnumTypeTable;
 extern const fidl_type_t test_name_BitsTypeTable;
@@ -17,17 +13,4 @@ const fidl_type_t test_name_EnumTypeTable = {.type_tag=kFidlTypeEnum, {.coded_en
 
 static bool EnumValidatorFor_test_name_BitsType(uint64_t v) { return (v == 1ul) || false; }
 const fidl_type_t test_name_BitsTypeTable = {.type_tag=kFidlTypeEnum, {.coded_enum={.underlying_type=kFidlCodedPrimitive_Int32, .validate=&EnumValidatorFor_test_name_BitsType, .name="test.name/BitsType"}}};
-
-// Coding tables for v1 wire format.
-
-extern const fidl_type_t v1_test_name_EnumTypeTable;
-extern const fidl_type_t v1_test_name_BitsTypeTable;
-
-
-
-static bool EnumValidatorFor_v1_test_name_EnumType(uint64_t v) { return (v == 1ul) || false; }
-const fidl_type_t v1_test_name_EnumTypeTable = {.type_tag=kFidlTypeEnum, {.coded_enum={.underlying_type=kFidlCodedPrimitive_Int32, .validate=&EnumValidatorFor_v1_test_name_EnumType, .name="test.name/EnumType"}}};
-
-static bool EnumValidatorFor_v1_test_name_BitsType(uint64_t v) { return (v == 1ul) || false; }
-const fidl_type_t v1_test_name_BitsTypeTable = {.type_tag=kFidlTypeEnum, {.coded_enum={.underlying_type=kFidlCodedPrimitive_Int32, .validate=&EnumValidatorFor_v1_test_name_BitsType, .name="test.name/BitsType"}}};
 

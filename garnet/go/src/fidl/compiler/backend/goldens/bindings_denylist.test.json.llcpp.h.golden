@@ -31,7 +31,7 @@ namespace name {
 
 class OnlyLlcpp;
 
-extern "C" const fidl_type_t v1_test_name_OnlyLlcppTable;
+extern "C" const fidl_type_t test_name_OnlyLlcppTable;
 
 class OnlyLlcpp {
  public:
@@ -74,7 +74,7 @@ class OnlyLlcpp {
     return static_cast<Tag>(ordinal_);
   }
 
-  static constexpr const fidl_type_t* Type = &v1_test_name_OnlyLlcppTable;
+  static constexpr const fidl_type_t* Type = &test_name_OnlyLlcppTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;

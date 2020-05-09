@@ -7,8 +7,8 @@ namespace fidl {
 namespace test {
 namespace handles {
 
-extern "C" const fidl_type_t v1_fidl_test_handles_HandlesTable;
-const fidl_type_t* Handles::FidlType = &v1_fidl_test_handles_HandlesTable;
+extern "C" const fidl_type_t fidl_test_handles_HandlesTable;
+const fidl_type_t* Handles::FidlType = &fidl_test_handles_HandlesTable;
 
 void Handles::Encode(::fidl::Encoder* _encoder, size_t _offset) {
   ::fidl::Encode(_encoder, &plain_handle, _offset + 0);

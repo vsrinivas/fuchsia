@@ -16,22 +16,22 @@ namespace {
     0x1109a64200000000lu;
 [[maybe_unused]] constexpr uint64_t kEmptyProtocol_Send_GenOrdinal =
     0x7a2963cbd88da03lu;
-extern "C" const fidl_type_t v1_fidl_test_json_EmptyProtocolSendRequestTable;
-extern "C" const fidl_type_t v1_fidl_test_json_EmptyProtocolSendResponseTable;
+extern "C" const fidl_type_t fidl_test_json_EmptyProtocolSendRequestTable;
+extern "C" const fidl_type_t fidl_test_json_EmptyProtocolSendResponseTable;
 [[maybe_unused]] constexpr uint64_t kEmptyProtocol_Receive_Ordinal =
     0x172c2b6f00000000lu;
 [[maybe_unused]] constexpr uint64_t kEmptyProtocol_Receive_GenOrdinal =
     0x63ba2e5c5fdb4895lu;
-extern "C" const fidl_type_t v1_fidl_test_json_EmptyProtocolReceiveRequestTable;
-extern "C" const fidl_type_t v1_fidl_test_json_EmptyProtocolReceiveEventTable;
+extern "C" const fidl_type_t fidl_test_json_EmptyProtocolReceiveRequestTable;
+extern "C" const fidl_type_t fidl_test_json_EmptyProtocolReceiveEventTable;
 [[maybe_unused]] constexpr uint64_t kEmptyProtocol_SendAndReceive_Ordinal =
     0x7b7cca3c00000000lu;
 [[maybe_unused]] constexpr uint64_t kEmptyProtocol_SendAndReceive_GenOrdinal =
     0x1e59efe8b1bbd615lu;
 extern "C" const fidl_type_t
-    v1_fidl_test_json_EmptyProtocolSendAndReceiveRequestTable;
+    fidl_test_json_EmptyProtocolSendAndReceiveRequestTable;
 extern "C" const fidl_type_t
-    v1_fidl_test_json_EmptyProtocolSendAndReceiveResponseTable;
+    fidl_test_json_EmptyProtocolSendAndReceiveResponseTable;
 
 }  // namespace
 

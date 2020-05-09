@@ -35,10 +35,7 @@ void WithCodingTableFor(const fidl::Encoder& enc, Callback callback) {
       {.coded_struct = {.fields = fake_interface_fields,
                         .field_count = 1,
                         .size = static_cast<uint32_t>(sizeof(fidl_message_header_t) + encoded_size),
-                        .max_out_of_line = UINT32_MAX,
-                        .contains_union = true,
-                        .name = "Input",
-                        .alt_type = &fake_interface_struct}},
+                        .name = "Input"}},
   };
 
   callback(encoded_size, &fake_interface_struct);
@@ -79,10 +76,7 @@ Output DecodedBytes(std::vector<uint8_t> input) {
            .field_count = 1u,
            .size = static_cast<uint32_t>(sizeof(fidl_message_header_t) +
                                          FIDL_ALIGN(Output::FidlType->coded_struct.size)),
-           .max_out_of_line = UINT32_MAX,
-           .contains_union = true,
-           .name = "",
-           .alt_type = &obj_with_header_v1}}};
+           .name = ""}}};
   Message message(BytePart(input.data(), input.capacity(), input.size()), HandlePart());
 
   const char* error = nullptr;

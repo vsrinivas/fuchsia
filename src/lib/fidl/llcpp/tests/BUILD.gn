@@ -76,7 +76,6 @@ executable("fidl_llcpp_types_test_bin") {
     "protocol_test.cc",
     "table_test.cc",
     "test_utils.cc",
-    "transformer_integration_test.cc",
     "transitional_test.cc",
     "xunion_test.cc",
   ]
@@ -86,7 +85,6 @@ executable("fidl_llcpp_types_test_bin") {
     ":llcpptest.flexible.test_llcpp",
     ":llcpptest.protocol.test_llcpp",
     ":llcpptest.transitional.test_llcpp",
-    "//sdk/lib/fidl/cpp:transformerintegration.test_llcpp",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/async-loop-cpp",

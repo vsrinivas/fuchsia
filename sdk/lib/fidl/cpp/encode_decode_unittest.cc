@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <lib/fidl/cpp/test/test_util.h>
-#include <lib/fidl/transformer.h>
 #include <zircon/types.h>
 
 #include <string>

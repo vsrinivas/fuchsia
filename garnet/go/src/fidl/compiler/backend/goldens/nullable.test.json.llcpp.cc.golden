@@ -16,10 +16,8 @@ namespace {
     0x11fe4d2400000000lu;
 [[maybe_unused]] constexpr uint64_t kSimpleProtocol_Add_GenOrdinal =
     0x113010d7832f175dlu;
-extern "C" const fidl_type_t
-    v1_fidl_test_nullable_SimpleProtocolAddRequestTable;
-extern "C" const fidl_type_t
-    v1_fidl_test_nullable_SimpleProtocolAddResponseTable;
+extern "C" const fidl_type_t fidl_test_nullable_SimpleProtocolAddRequestTable;
+extern "C" const fidl_type_t fidl_test_nullable_SimpleProtocolAddResponseTable;
 
 }  // namespace
 template <>

@@ -72,16 +72,12 @@ constexpr uint32_t TypeSize(const fidl_type_t* type) {
     case kFidlTypeBits:
       return PrimitiveSize(type->coded_bits.underlying_type);
     case kFidlTypeStructPointer:
-    case kFidlTypeUnionPointer:
-      return sizeof(uint64_t);
     case kFidlTypeHandle:
       return sizeof(zx_handle_t);
     case kFidlTypeStruct:
       return type->coded_struct.size;
     case kFidlTypeTable:
       return sizeof(fidl_vector_t);
-    case kFidlTypeUnion:
-      return type->coded_union.size;
     case kFidlTypeXUnion:
       return sizeof(fidl_xunion_t);
     case kFidlTypeString:
@@ -171,17 +167,6 @@ class Walker final {
           table_state.present_count = 0;
           table_state.ordinal = 0;
           break;
-        case kFidlTypeUnion:
-          state = kStateUnion;
-          union_state.fields = fidl_type->coded_union.fields;
-          union_state.field_count = fidl_type->coded_union.field_count;
-          union_state.data_offset = fidl_type->coded_union.data_offset;
-          union_state.union_size = fidl_type->coded_union.size;
-          break;
-        case kFidlTypeUnionPointer:
-          state = kStateUnionPointer;
-          union_pointer_state.union_type = fidl_type->coded_union_pointer.union_type;
-          break;
         case kFidlTypeXUnion:
           state = kStateXUnion;
           xunion_state.fields = fidl_type->coded_xunion.fields;
@@ -237,14 +222,6 @@ class Walker final {
       table_state.ordinal = 0;
     }
 
-    Frame(const FidlCodedUnion* coded_union, Position position) : position(position) {
-      state = kStateUnion;
-      union_state.fields = coded_union->fields;
-      union_state.field_count = coded_union->field_count;
-      union_state.data_offset = coded_union->data_offset;
-      union_state.union_size = coded_union->size;
-    }
-
     Frame(const FidlCodedXUnion* coded_xunion, Position position)
         : state(kStateXUnion), position(position) {
       // This initialization is done in the ctor body instead of in an
@@ -297,8 +274,6 @@ class Walker final {
       kStateStruct,
       kStateStructPointer,
       kStateTable,
-      kStateUnion,
-      kStateUnionPointer,
       kStateXUnion,
       kStateArray,
       kStateString,
@@ -349,21 +324,6 @@ class Walker final {
         // |EnterEnvelope| was successful.
         bool inside_envelope;
       } table_state;
-      struct {
-        // Array of coding table corresponding to each union variant.
-        // The union tag counts upwards from 0 without breaks; hence it can be used to
-        // index into the |fields| array.
-        const FidlUnionField* fields;
-        // Size of the |fields| array. Equal to the number of tags.
-        uint32_t field_count;
-        // Offset of the payload in the wire format (size of tag + padding).
-        uint32_t data_offset;
-        // Size of the entire union.
-        uint32_t union_size;
-      } union_state;
-      struct {
-        const FidlCodedUnion* union_type;
-      } union_pointer_state;
       struct {
         const FidlXUnionField* fields;
         // Number of known ordinals declared in the coding table
@@ -655,48 +615,6 @@ void Walker<VisitorImpl>::Walk(VisitorImpl& visitor) {
             FIDL_STATUS_GUARD_NO_POP(Status::kConstraintViolationError);
           }
         }
-        continue;
-      }
-      case Frame::kStateUnion: {
-        auto union_tag = *PtrTo<fidl_union_tag_t>(frame->position);
-        if (union_tag >= frame->union_state.field_count) {
-          visitor.OnError("Bad union discriminant");
-          FIDL_STATUS_GUARD(Status::kConstraintViolationError);
-        }
-        auto variant = frame->union_state.fields[union_tag];
-        if (variant.padding > 0) {
-          Position padding_position =
-              frame->position + (frame->union_state.union_size - variant.padding);
-          auto status = visitor.VisitInternalPadding(padding_position, variant.padding);
-          FIDL_STATUS_GUARD(status);
-        }
-        auto data_offset = frame->union_state.data_offset;
-        ZX_DEBUG_ASSERT(data_offset == 4 || data_offset == 8);
-        if (data_offset == 8) {
-          // There is an additional 4 byte of padding after the tag.
-          auto status = visitor.VisitInternalPadding(frame->position + 4, 4);
-          FIDL_STATUS_GUARD(status);
-        }
-        const fidl_type_t* member = variant.type;
-        if (!member) {
-          Pop();
-          continue;
-        }
-        frame->position += data_offset;
-        *frame = Frame(member, frame->position);
-        continue;
-      }
-      case Frame::kStateUnionPointer: {
-        if (*PtrTo<Ptr<fidl_union_tag_t>>(frame->position) == nullptr) {
-          Pop();
-          continue;
-        }
-        auto status = visitor.VisitPointer(
-            frame->position, VisitorImpl::PointeeType::kOther, PtrTo<Ptr<void>>(frame->position),
-            frame->union_pointer_state.union_type->size, &frame->position);
-        FIDL_STATUS_GUARD(status);
-        const FidlCodedUnion* coded_union = frame->union_pointer_state.union_type;
-        *frame = Frame(coded_union, frame->position);
         continue;
       }
       case Frame::kStateXUnion: {

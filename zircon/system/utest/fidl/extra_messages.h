@@ -29,15 +29,10 @@ extern const fidl_type_t fidl_test_coding_SimpleTableTable;
 extern const fidl_type_t fidl_test_coding_SmallerTableOfStructWithHandleTable;
 extern const fidl_type_t fidl_test_coding_SampleUnionTable;
 extern const fidl_type_t fidl_test_coding_SampleXUnionTable;
-extern const fidl_type_t v1_fidl_test_coding_SampleXUnionTable;
 extern const fidl_type_t fidl_test_coding_SampleStrictXUnionTable;
-extern const fidl_type_t v1_fidl_test_coding_SampleStrictXUnionTable;
 extern const fidl_type_t fidl_test_coding_SampleXUnionStructTable;
-extern const fidl_type_t v1_fidl_test_coding_SampleXUnionStructTable;
 extern const fidl_type_t fidl_test_coding_SampleStrictXUnionStructTable;
-extern const fidl_type_t v1_fidl_test_coding_SampleStrictXUnionStructTable;
 extern const fidl_type_t fidl_test_coding_SampleNullableXUnionStructTable;
-extern const fidl_type_t v1_fidl_test_coding_SampleNullableXUnionStructTable;
 
 extern const fidl_type_t fidl_test_coding_Int32BitsTable;
 extern const fidl_type_t fidl_test_coding_Int32BitsStructTable;
@@ -57,10 +52,10 @@ extern const fidl_type_t fidl_test_coding_Uint64EnumStructTable;
 extern const fidl_type_t fidl_test_coding_LinearizerTestVectorOfUint32RequestTable;
 extern const fidl_type_t fidl_test_coding_LinearizerTestVectorOfStringRequestTable;
 
-extern const fidl_type_t v1_fidl_test_coding_LLCPPStyleUnionStructTable;
+extern const fidl_type_t fidl_test_coding_LLCPPStyleUnionStructTable;
 
-extern const fidl_type_t v1_fidl_test_coding_Uint32VectorStructTable;
-extern const fidl_type_t v1_fidl_test_coding_StringStructTable;
+extern const fidl_type_t fidl_test_coding_Uint32VectorStructTable;
+extern const fidl_type_t fidl_test_coding_StringStructTable;
 
 #if defined(__cplusplus)
 }

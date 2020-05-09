@@ -13,8 +13,8 @@ namespace {
 [[maybe_unused]] constexpr uint64_t kTop_GetFoo_Ordinal = 0xb3385a000000000lu;
 [[maybe_unused]] constexpr uint64_t kTop_GetFoo_GenOrdinal =
     0x6ae8d19bc98f3d92lu;
-extern "C" const fidl_type_t v1_top_TopGetFooRequestTable;
-extern "C" const fidl_type_t v1_top_TopGetFooResponseTable;
+extern "C" const fidl_type_t top_TopGetFooRequestTable;
+extern "C" const fidl_type_t top_TopGetFooResponseTable;
 
 }  // namespace
 template <>

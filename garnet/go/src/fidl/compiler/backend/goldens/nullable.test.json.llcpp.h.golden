@@ -43,7 +43,7 @@ class SimpleProtocol;
 class SimpleUnion;
 struct Int32Wrapper;
 
-extern "C" const fidl_type_t v1_fidl_test_nullable_SimpleUnionTable;
+extern "C" const fidl_type_t fidl_test_nullable_SimpleUnionTable;
 
 class SimpleUnion {
  public:
@@ -110,7 +110,7 @@ class SimpleUnion {
   }
 
   static constexpr const fidl_type_t* Type =
-      &v1_fidl_test_nullable_SimpleUnionTable;
+      &fidl_test_nullable_SimpleUnionTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
@@ -148,12 +148,11 @@ class SimpleUnion {
   ::fidl::Envelope<void> envelope_;
 };
 
-extern "C" const fidl_type_t
-    v1_fidl_test_nullable_StructWithNullableVectorTable;
+extern "C" const fidl_type_t fidl_test_nullable_StructWithNullableVectorTable;
 
 struct StructWithNullableVector {
   static constexpr const fidl_type_t* Type =
-      &v1_fidl_test_nullable_StructWithNullableVectorTable;
+      &fidl_test_nullable_StructWithNullableVectorTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -162,11 +161,11 @@ struct StructWithNullableVector {
   ::fidl::VectorView<int32_t> val = {};
 };
 
-extern "C" const fidl_type_t v1_fidl_test_nullable_StructWithNullableUnionTable;
+extern "C" const fidl_type_t fidl_test_nullable_StructWithNullableUnionTable;
 
 struct StructWithNullableUnion {
   static constexpr const fidl_type_t* Type =
-      &v1_fidl_test_nullable_StructWithNullableUnionTable;
+      &fidl_test_nullable_StructWithNullableUnionTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
@@ -175,12 +174,11 @@ struct StructWithNullableUnion {
   ::llcpp::fidl::test::nullable::SimpleUnion val = {};
 };
 
-extern "C" const fidl_type_t
-    v1_fidl_test_nullable_StructWithNullableStructTable;
+extern "C" const fidl_type_t fidl_test_nullable_StructWithNullableStructTable;
 
 struct StructWithNullableStruct {
   static constexpr const fidl_type_t* Type =
-      &v1_fidl_test_nullable_StructWithNullableStructTable;
+      &fidl_test_nullable_StructWithNullableStructTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 8;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
@@ -189,12 +187,11 @@ struct StructWithNullableStruct {
   ::fidl::tracking_ptr<::llcpp::fidl::test::nullable::Int32Wrapper> val = {};
 };
 
-extern "C" const fidl_type_t
-    v1_fidl_test_nullable_StructWithNullableStringTable;
+extern "C" const fidl_type_t fidl_test_nullable_StructWithNullableStringTable;
 
 struct StructWithNullableString {
   static constexpr const fidl_type_t* Type =
-      &v1_fidl_test_nullable_StructWithNullableStringTable;
+      &fidl_test_nullable_StructWithNullableStringTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -203,12 +200,11 @@ struct StructWithNullableString {
   ::fidl::StringView val = {};
 };
 
-extern "C" const fidl_type_t
-    v1_fidl_test_nullable_StructWithNullableRequestTable;
+extern "C" const fidl_type_t fidl_test_nullable_StructWithNullableRequestTable;
 
 struct StructWithNullableRequest {
   static constexpr const fidl_type_t* Type =
-      &v1_fidl_test_nullable_StructWithNullableRequestTable;
+      &fidl_test_nullable_StructWithNullableRequestTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 4;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
@@ -217,12 +213,11 @@ struct StructWithNullableRequest {
   ::zx::channel val = {};
 };
 
-extern "C" const fidl_type_t
-    v1_fidl_test_nullable_StructWithNullableProtocolTable;
+extern "C" const fidl_type_t fidl_test_nullable_StructWithNullableProtocolTable;
 
 struct StructWithNullableProtocol {
   static constexpr const fidl_type_t* Type =
-      &v1_fidl_test_nullable_StructWithNullableProtocolTable;
+      &fidl_test_nullable_StructWithNullableProtocolTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 4;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
@@ -231,12 +226,11 @@ struct StructWithNullableProtocol {
   ::zx::channel val = {};
 };
 
-extern "C" const fidl_type_t
-    v1_fidl_test_nullable_StructWithNullableHandleTable;
+extern "C" const fidl_type_t fidl_test_nullable_StructWithNullableHandleTable;
 
 struct StructWithNullableHandle {
   static constexpr const fidl_type_t* Type =
-      &v1_fidl_test_nullable_StructWithNullableHandleTable;
+      &fidl_test_nullable_StructWithNullableHandleTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 4;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
@@ -245,10 +239,8 @@ struct StructWithNullableHandle {
   ::zx::vmo val = {};
 };
 
-extern "C" const fidl_type_t
-    v1_fidl_test_nullable_SimpleProtocolAddRequestTable;
-extern "C" const fidl_type_t
-    v1_fidl_test_nullable_SimpleProtocolAddResponseTable;
+extern "C" const fidl_type_t fidl_test_nullable_SimpleProtocolAddRequestTable;
+extern "C" const fidl_type_t fidl_test_nullable_SimpleProtocolAddResponseTable;
 
 class SimpleProtocol final {
   SimpleProtocol() = delete;
@@ -260,13 +252,12 @@ class SimpleProtocol final {
     int32_t sum;
 
     static constexpr const fidl_type_t* Type =
-        &v1_fidl_test_nullable_SimpleProtocolAddResponseTable;
+        &fidl_test_nullable_SimpleProtocolAddResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool HasPointer = false;
-    static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
   };
@@ -277,7 +268,7 @@ class SimpleProtocol final {
     int32_t b;
 
     static constexpr const fidl_type_t* Type =
-        &v1_fidl_test_nullable_SimpleProtocolAddRequestTable;
+        &fidl_test_nullable_SimpleProtocolAddRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -285,7 +276,6 @@ class SimpleProtocol final {
     static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool HasPointer = false;
-    static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
     using ResponseType = AddResponse;
@@ -475,11 +465,11 @@ class SimpleProtocol final {
   };
 };
 
-extern "C" const fidl_type_t v1_fidl_test_nullable_Int32WrapperTable;
+extern "C" const fidl_type_t fidl_test_nullable_Int32WrapperTable;
 
 struct Int32Wrapper {
   static constexpr const fidl_type_t* Type =
-      &v1_fidl_test_nullable_Int32WrapperTable;
+      &fidl_test_nullable_Int32WrapperTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 4;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;

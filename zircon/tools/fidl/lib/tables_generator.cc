@@ -60,8 +60,6 @@ constexpr auto kIndent = "    ";
 
 void Emit(std::ostream* file, std::string_view data) { *file << data; }
 
-void EmitBool(std::ostream* file, bool value) { *file << (value ? "true" : "false"); }
-
 void EmitNewlineAndIndent(std::ostream* file, size_t indent_level) {
   *file << "\n";
   while (indent_level--)
@@ -103,19 +101,7 @@ void Emit(std::ostream* file, types::Strictness strictness) {
   }
 }
 
-template <typename T>
-std::string AltTableDeclaration(const T& type, bool is_static) {
-  return std::string(is_static ? "static " : "extern ") + "const fidl_type_t " +
-         NameTable(type.coded_name) + ";\n";
-}
-
 }  // namespace
-
-template <class T>
-std::string TablesGenerator::AltTableReference(const T& type) const {
-  const coded::Type* alt_type = AltType(&type);
-  return "&" + NameTable(alt_type->coded_name);
-}
 
 template <typename Collection>
 void TablesGenerator::GenerateArray(const Collection& collection) {
@@ -178,8 +164,6 @@ void TablesGenerator::Generate(const coded::StructType& struct_type) {
   GenerateArray(struct_type.fields);
   Emit(&tables_file_, ";\n");
 
-  Emit(&forward_decls_, AltTableDeclaration(struct_type, /*is_static=*/false));
-
   Emit(&tables_file_, "const fidl_type_t ");
   Emit(&tables_file_, NameTable(struct_type.coded_name));
   Emit(&tables_file_, " = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=");
@@ -188,15 +172,9 @@ void TablesGenerator::Generate(const coded::StructType& struct_type) {
   Emit(&tables_file_, static_cast<uint32_t>(struct_type.fields.size()));
   Emit(&tables_file_, ", .size=");
   Emit(&tables_file_, struct_type.size);
-  Emit(&tables_file_, ", .max_out_of_line=");
-  Emit(&tables_file_, struct_type.max_out_of_line);
-  Emit(&tables_file_, ", .contains_union=");
-  EmitBool(&tables_file_, struct_type.contains_union);
   Emit(&tables_file_, ", .name=\"");
   Emit(&tables_file_, struct_type.qname);
-  Emit(&tables_file_, "\", .alt_type=");
-  Emit(&tables_file_, AltTableReference(struct_type));
-  Emit(&tables_file_, "}}};\n\n");
+  Emit(&tables_file_, "\"}}};\n\n");
 }
 
 void TablesGenerator::Generate(const coded::TableType& table_type) {
@@ -217,35 +195,7 @@ void TablesGenerator::Generate(const coded::TableType& table_type) {
   Emit(&tables_file_, "\"}}};\n\n");
 }
 
-void TablesGenerator::Generate(const coded::UnionType& union_type) {
-  Emit(&tables_file_, "static const struct FidlUnionField ");
-  Emit(&tables_file_, NameFields(union_type.coded_name));
-  Emit(&tables_file_, "[] = ");
-  GenerateArray(union_type.members);
-  Emit(&tables_file_, ";\n");
-
-  Emit(&forward_decls_, AltTableDeclaration(union_type, /*is_static=*/false));
-
-  Emit(&tables_file_, "const fidl_type_t ");
-  Emit(&tables_file_, NameTable(union_type.coded_name));
-  Emit(&tables_file_, " = {.type_tag=kFidlTypeUnion, {.coded_union={.fields=");
-  Emit(&tables_file_, NameFields(union_type.coded_name));
-  Emit(&tables_file_, ", .field_count=");
-  Emit(&tables_file_, static_cast<uint32_t>(union_type.members.size()));
-  Emit(&tables_file_, ", .data_offset=");
-  Emit(&tables_file_, union_type.data_offset);
-  Emit(&tables_file_, ", .size=");
-  Emit(&tables_file_, union_type.size);
-  Emit(&tables_file_, ", .name=\"");
-  Emit(&tables_file_, union_type.qname);
-  Emit(&tables_file_, "\", .alt_type=");
-  Emit(&tables_file_, AltTableReference(union_type));
-  Emit(&tables_file_, "}}};\n\n");
-}
-
 void TablesGenerator::Generate(const coded::XUnionType& xunion_type) {
-  Emit(&forward_decls_, AltTableDeclaration(xunion_type, /*is_static=*/false));
-
   Emit(&tables_file_, "static const struct FidlXUnionField ");
   Emit(&tables_file_, NameFields(xunion_type.coded_name));
   Emit(&tables_file_, "[] = ");
@@ -264,8 +214,6 @@ void TablesGenerator::Generate(const coded::XUnionType& xunion_type) {
   Emit(&tables_file_, xunion_type.qname);
   Emit(&tables_file_, "\", .strictness=");
   Emit(&tables_file_, xunion_type.strictness);
-  Emit(&tables_file_, ", .alt_type=");
-  Emit(&tables_file_, AltTableReference(xunion_type));
   Emit(&tables_file_, "}}};\n");
 }
 
@@ -276,17 +224,6 @@ void TablesGenerator::Generate(const coded::StructPointerType& pointer) {
        " = {.type_tag=kFidlTypeStructPointer, {.coded_struct_pointer={.struct_type=");
   Generate(pointer.element_type);
   Emit(&tables_file_, ".coded_struct}}};\n");
-}
-
-void TablesGenerator::Generate(const coded::UnionPointerType& pointer) {
-  Emit(&tables_file_, "static const fidl_type_t ");
-  Emit(&tables_file_, NameTable(pointer.coded_name));
-  // Since we always generate union pointers they may be unused
-  Emit(&tables_file_,
-       " __attribute__((unused)) = {.type_tag=kFidlTypeUnionPointer, "
-       "{.coded_union_pointer={.union_type=");
-  Generate(pointer.element_type);
-  Emit(&tables_file_, ".coded_union}}};\n");
 }
 
 void TablesGenerator::Generate(const coded::MessageType& message_type) {
@@ -300,8 +237,6 @@ void TablesGenerator::Generate(const coded::MessageType& message_type) {
   GenerateArray(message_type.fields);
   Emit(&tables_file_, ";\n");
 
-  Emit(&forward_decls_, AltTableDeclaration(message_type, /*is_static=*/false));
-
   Emit(&tables_file_, "const fidl_type_t ");
   Emit(&tables_file_, NameTable(message_type.coded_name));
   Emit(&tables_file_, " = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=");
@@ -310,15 +245,9 @@ void TablesGenerator::Generate(const coded::MessageType& message_type) {
   Emit(&tables_file_, static_cast<uint32_t>(message_type.fields.size()));
   Emit(&tables_file_, ", .size=");
   Emit(&tables_file_, message_type.size);
-  Emit(&tables_file_, ", .max_out_of_line=");
-  Emit(&tables_file_, message_type.max_out_of_line);
-  Emit(&tables_file_, ", .contains_union=");
-  EmitBool(&tables_file_, message_type.contains_union);
   Emit(&tables_file_, ", .name=\"");
   Emit(&tables_file_, message_type.qname);
-  Emit(&tables_file_, "\", .alt_type=");
-  Emit(&tables_file_, AltTableReference(message_type));
-  Emit(&tables_file_, "}}};\n\n");
+  Emit(&tables_file_, "\"}}};\n\n");
 }
 
 void TablesGenerator::Generate(const coded::HandleType& handle_type) {
@@ -354,8 +283,6 @@ void TablesGenerator::Generate(const coded::ProtocolHandleType& protocol_type) {
 }
 
 void TablesGenerator::Generate(const coded::ArrayType& array_type) {
-  Emit(&forward_decls_, AltTableDeclaration(array_type, /*is_static=*/true));
-
   Emit(&tables_file_, "static const fidl_type_t ");
   Emit(&tables_file_, NameTable(array_type.coded_name));
   Emit(&tables_file_, " = {.type_tag=kFidlTypeArray, {.coded_array={.element=");
@@ -364,8 +291,6 @@ void TablesGenerator::Generate(const coded::ArrayType& array_type) {
   Emit(&tables_file_, array_type.size);
   Emit(&tables_file_, ", .element_size=");
   Emit(&tables_file_, array_type.element_size);
-  Emit(&tables_file_, ", .alt_type=");
-  Emit(&tables_file_, AltTableReference(array_type));
   Emit(&tables_file_, "}}};\n\n");
 }
 
@@ -380,8 +305,6 @@ void TablesGenerator::Generate(const coded::StringType& string_type) {
 }
 
 void TablesGenerator::Generate(const coded::VectorType& vector_type) {
-  Emit(&forward_decls_, AltTableDeclaration(vector_type, /*is_static=*/true));
-
   Emit(&tables_file_, "static const fidl_type_t ");
   Emit(&tables_file_, NameTable(vector_type.coded_name));
   Emit(&tables_file_, " = {.type_tag=kFidlTypeVector, {.coded_vector={.element=");
@@ -392,8 +315,6 @@ void TablesGenerator::Generate(const coded::VectorType& vector_type) {
   Emit(&tables_file_, vector_type.element_size);
   Emit(&tables_file_, ", .nullable=");
   Emit(&tables_file_, vector_type.nullability);
-  Emit(&tables_file_, ", .alt_type=");
-  Emit(&tables_file_, AltTableReference(vector_type));
   Emit(&tables_file_, "}}};\n\n");
 }
 
@@ -419,16 +340,6 @@ void TablesGenerator::Generate(const coded::StructField& field) {
   }
   Emit(&tables_file_, ", .padding=");
   Emit(&tables_file_, field.padding);
-  Emit(&tables_file_, "}");
-}
-
-void TablesGenerator::Generate(const coded::UnionField& field) {
-  Emit(&tables_file_, "/*FidlUnionField*/{.type=");
-  Generate(field.type);
-  Emit(&tables_file_, ", .padding=");
-  Emit(&tables_file_, field.padding);
-  Emit(&tables_file_, ", .xunion_ordinal=");
-  Emit(&tables_file_, field.xunion_ordinal);
   Emit(&tables_file_, "}");
 }
 
@@ -470,10 +381,6 @@ void TablesGenerator::GenerateForward(const coded::TableType& table_type) {
   Emit(&tables_file_, ForwardDecls(table_type));
 }
 
-void TablesGenerator::GenerateForward(const coded::UnionType& union_type) {
-  Emit(&tables_file_, ForwardDecls(union_type));
-}
-
 void TablesGenerator::GenerateForward(const coded::XUnionType& xunion_type) {
   Emit(&tables_file_, ForwardDecls(xunion_type));
 }
@@ -496,9 +403,6 @@ void TablesGenerator::Produce(CodedTypesGenerator* coded_types_generator) {
         break;
       case coded::Type::Kind::kTable:
         GenerateForward(*static_cast<const coded::TableType*>(coded_type));
-        break;
-      case coded::Type::Kind::kUnion:
-        GenerateForward(*static_cast<const coded::UnionType*>(coded_type));
         break;
       case coded::Type::Kind::kXUnion: {
         // Generate forward declarations for both the non-nullable and nullable variants
@@ -524,13 +428,6 @@ void TablesGenerator::Produce(CodedTypesGenerator* coded_types_generator) {
       case coded::Type::Kind::kStruct: {
         const auto& struct_type = *static_cast<const coded::StructType*>(coded_type);
         if (auto pointer_type = struct_type.maybe_reference_type; pointer_type) {
-          Generate(*pointer_type);
-        }
-        break;
-      }
-      case coded::Type::Kind::kUnion: {
-        const auto& union_type = *static_cast<const coded::UnionType*>(coded_type);
-        if (auto pointer_type = union_type.maybe_reference_type; pointer_type) {
           Generate(*pointer_type);
         }
         break;
@@ -561,9 +458,7 @@ void TablesGenerator::Produce(CodedTypesGenerator* coded_types_generator) {
       case coded::Type::Kind::kBits:
       case coded::Type::Kind::kStruct:
       case coded::Type::Kind::kTable:
-      case coded::Type::Kind::kUnion:
       case coded::Type::Kind::kStructPointer:
-      case coded::Type::Kind::kUnionPointer:
       case coded::Type::Kind::kXUnion:
         // These are generated in the next phase.
         break;
@@ -623,9 +518,6 @@ void TablesGenerator::Produce(CodedTypesGenerator* coded_types_generator) {
       case coded::Type::Kind::kTable:
         Generate(*static_cast<const coded::TableType*>(coded_type));
         break;
-      case coded::Type::Kind::kUnion:
-        Generate(*static_cast<const coded::UnionType*>(coded_type));
-        break;
       case coded::Type::Kind::kXUnion: {
         const auto& xunion_type = *static_cast<const coded::XUnionType*>(coded_type);
         Generate(xunion_type);
@@ -642,32 +534,8 @@ void TablesGenerator::Produce(CodedTypesGenerator* coded_types_generator) {
 }
 
 std::ostringstream TablesGenerator::Produce() {
-  Emit(&forward_decls_, "// Forward declarations for old <-> V1 mappings\n\n");
-
-  CodedTypesGenerator ctg_old(library_);
   CodedTypesGenerator ctg_v1(library_);
-
-  ctg_old.CompileCodedTypes(WireFormat::kOld);
   ctg_v1.CompileCodedTypes(WireFormat::kV1NoEe);
-
-  auto old_coded_types = ctg_old.AllCodedTypes();
-  auto v1_coded_types = ctg_v1.AllCodedTypes();
-  assert(old_coded_types.size() == v1_coded_types.size());
-
-  for (size_t i = 0; i < old_coded_types.size(); i++) {
-    const coded::Type* old = old_coded_types[i];
-    const coded::Type* v1 = v1_coded_types[i];
-
-    assert((old && v1) || (!old && !v1));
-
-    alt_type_mapping_[old] = v1;
-    alt_type_mapping_[v1] = old;
-  }
-
-  Emit(&tables_file_, "// Coding tables for old wire format.\n\n");
-  Produce(&ctg_old);
-
-  Emit(&tables_file_, "// Coding tables for v1 wire format.\n\n");
   Produce(&ctg_v1);
 
   std::ostringstream result;
@@ -679,9 +547,4 @@ std::ostringstream TablesGenerator::Produce() {
   return result;
 }
 
-const coded::Type* TablesGenerator::AltType(const coded::Type* type) const {
-  auto it = alt_type_mapping_.find(type);
-  assert(it != alt_type_mapping_.end());
-  return it->second;
-}
 }  // namespace fidl

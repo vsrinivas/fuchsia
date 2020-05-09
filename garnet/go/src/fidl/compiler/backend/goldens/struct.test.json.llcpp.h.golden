@@ -33,10 +33,10 @@ namespace json {
 struct Simple;
 struct BasicStruct;
 
-extern "C" const fidl_type_t v1_fidl_test_json_SimpleTable;
+extern "C" const fidl_type_t fidl_test_json_SimpleTable;
 
 struct Simple {
-  static constexpr const fidl_type_t* Type = &v1_fidl_test_json_SimpleTable;
+  static constexpr const fidl_type_t* Type = &fidl_test_json_SimpleTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 2;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
@@ -47,11 +47,10 @@ struct Simple {
   bool f2 = {};
 };
 
-extern "C" const fidl_type_t v1_fidl_test_json_BasicStructTable;
+extern "C" const fidl_type_t fidl_test_json_BasicStructTable;
 
 struct BasicStruct {
-  static constexpr const fidl_type_t* Type =
-      &v1_fidl_test_json_BasicStructTable;
+  static constexpr const fidl_type_t* Type = &fidl_test_json_BasicStructTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;

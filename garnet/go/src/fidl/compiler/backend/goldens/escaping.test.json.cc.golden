@@ -5,9 +5,9 @@
 #include "lib/fidl/cpp/internal/implementation.h"
 namespace escapeme {
 
-extern "C" const fidl_type_t v1_escapeme_DocCommentWithQuotesTable;
+extern "C" const fidl_type_t escapeme_DocCommentWithQuotesTable;
 const fidl_type_t* DocCommentWithQuotes::FidlType =
-    &v1_escapeme_DocCommentWithQuotesTable;
+    &escapeme_DocCommentWithQuotesTable;
 
 void DocCommentWithQuotes::Encode(::fidl::Encoder* _encoder, size_t _offset) {
   ::fidl::Encode(_encoder, &__reserved, _offset + 0);

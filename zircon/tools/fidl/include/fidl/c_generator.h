@@ -58,10 +58,8 @@ class CGenerator {
   struct NamedMessage {
     std::string c_name;
     std::string coded_name;
-    std::string alt_coded_name;
     const std::vector<flat::Struct::Member>& parameters;
     const TypeShape typeshape;
-    const TypeShape alt_typeshape;
   };
 
   struct NamedMethod {

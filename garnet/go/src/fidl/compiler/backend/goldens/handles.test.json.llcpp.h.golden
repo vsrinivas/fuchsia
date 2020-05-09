@@ -60,10 +60,10 @@ namespace handles {
 struct Handles;
 class SomeProtocol;
 
-extern "C" const fidl_type_t v1_fidl_test_handles_HandlesTable;
+extern "C" const fidl_type_t fidl_test_handles_HandlesTable;
 
 struct Handles {
-  static constexpr const fidl_type_t* Type = &v1_fidl_test_handles_HandlesTable;
+  static constexpr const fidl_type_t* Type = &fidl_test_handles_HandlesTable;
   static constexpr uint32_t MaxNumHandles = 33;
   static constexpr uint32_t PrimarySize = 132;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;

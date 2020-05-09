@@ -36,7 +36,6 @@ if (is_fuchsia) {
     ]
     include_dirs = [ "generated" ]
     public_deps = [
-      ":example_c",
       ":fidl.test.coding_llcpp",
       "//zircon/public/lib/async",
       "//zircon/public/lib/async-loop",
@@ -99,12 +98,10 @@ if (is_fuchsia) {
       "formatting_tests.cc",
       "message_tests.cc",
       "run_with_handle_policy_tests.cc",
-      "transformer_tests.c",
       "validating_tests.cc",
     ]
     deps = [
       ":common",
-      ":example_c",
       ":fidl-handle-policy-test-app",
     ]
 
@@ -151,14 +148,6 @@ if (is_fuchsia) {
       "//zircon/public/lib/unittest-static",
     ]
   }
-}
-
-fidl("example") {
-  visibility = [
-    ":*",
-    "//zircon/system/utest/fidl-simple:*",
-  ]
-  sources = [ "transformer.test.fidl" ]
 }
 
 fidl("fidl.test.coding") {

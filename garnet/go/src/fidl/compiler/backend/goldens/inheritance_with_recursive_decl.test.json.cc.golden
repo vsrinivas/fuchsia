@@ -10,7 +10,7 @@ namespace json {
 #ifdef __Fuchsia__
 namespace {
 
-extern "C" const fidl_type_t v1_fidl_test_json_ParentFirstRequestTable;
+extern "C" const fidl_type_t fidl_test_json_ParentFirstRequestTable;
 
 }  // namespace
 
@@ -22,7 +22,7 @@ const fidl_type_t* Parent_RequestDecoder::GetType(uint64_t ordinal,
     case internal::kParent_First_Ordinal:
     case internal::kParent_First_GenOrdinal:
       *out_needs_response = false;
-      return &v1_fidl_test_json_ParentFirstRequestTable;
+      return &fidl_test_json_ParentFirstRequestTable;
     default:
       *out_needs_response = false;
       return nullptr;
@@ -60,7 +60,7 @@ zx_status_t Parent_Proxy::Dispatch_(::fidl::Message message) {
 
 void Parent_Proxy::First(::fidl::InterfaceRequest<Parent> request) {
   ::fidl::Encoder _encoder(internal::kParent_First_GenOrdinal);
-  controller_->Send(&v1_fidl_test_json_ParentFirstRequestTable,
+  controller_->Send(&fidl_test_json_ParentFirstRequestTable,
                     Parent_RequestEncoder::First(&_encoder, &request), nullptr);
 }
 
@@ -119,7 +119,7 @@ Parent_SyncProxy::~Parent_SyncProxy() = default;
 
 zx_status_t Parent_SyncProxy::First(::fidl::InterfaceRequest<Parent> request) {
   ::fidl::Encoder _encoder(internal::kParent_First_GenOrdinal);
-  return proxy_.Send(&v1_fidl_test_json_ParentFirstRequestTable,
+  return proxy_.Send(&fidl_test_json_ParentFirstRequestTable,
                      Parent_RequestEncoder::First(&_encoder, &request));
 }
 
@@ -128,9 +128,9 @@ zx_status_t Parent_SyncProxy::First(::fidl::InterfaceRequest<Parent> request) {
 #ifdef __Fuchsia__
 namespace {
 
-extern "C" const fidl_type_t v1_fidl_test_json_ChildFirstRequestTable;
+extern "C" const fidl_type_t fidl_test_json_ChildFirstRequestTable;
 
-extern "C" const fidl_type_t v1_fidl_test_json_ChildSecondRequestTable;
+extern "C" const fidl_type_t fidl_test_json_ChildSecondRequestTable;
 
 }  // namespace
 
@@ -142,11 +142,11 @@ const fidl_type_t* Child_RequestDecoder::GetType(uint64_t ordinal,
     case internal::kChild_First_Ordinal:
     case internal::kChild_First_GenOrdinal:
       *out_needs_response = false;
-      return &v1_fidl_test_json_ChildFirstRequestTable;
+      return &fidl_test_json_ChildFirstRequestTable;
     case internal::kChild_Second_Ordinal:
     case internal::kChild_Second_GenOrdinal:
       *out_needs_response = false;
-      return &v1_fidl_test_json_ChildSecondRequestTable;
+      return &fidl_test_json_ChildSecondRequestTable;
     default:
       *out_needs_response = false;
       return nullptr;
@@ -184,12 +184,12 @@ zx_status_t Child_Proxy::Dispatch_(::fidl::Message message) {
 
 void Child_Proxy::First(::fidl::InterfaceRequest<Parent> request) {
   ::fidl::Encoder _encoder(internal::kChild_First_GenOrdinal);
-  controller_->Send(&v1_fidl_test_json_ChildFirstRequestTable,
+  controller_->Send(&fidl_test_json_ChildFirstRequestTable,
                     Child_RequestEncoder::First(&_encoder, &request), nullptr);
 }
 void Child_Proxy::Second(::fidl::InterfaceRequest<Parent> request) {
   ::fidl::Encoder _encoder(internal::kChild_Second_GenOrdinal);
-  controller_->Send(&v1_fidl_test_json_ChildSecondRequestTable,
+  controller_->Send(&fidl_test_json_ChildSecondRequestTable,
                     Child_RequestEncoder::Second(&_encoder, &request), nullptr);
 }
 
@@ -256,13 +256,13 @@ Child_SyncProxy::~Child_SyncProxy() = default;
 
 zx_status_t Child_SyncProxy::First(::fidl::InterfaceRequest<Parent> request) {
   ::fidl::Encoder _encoder(internal::kChild_First_GenOrdinal);
-  return proxy_.Send(&v1_fidl_test_json_ChildFirstRequestTable,
+  return proxy_.Send(&fidl_test_json_ChildFirstRequestTable,
                      Child_RequestEncoder::First(&_encoder, &request));
 }
 
 zx_status_t Child_SyncProxy::Second(::fidl::InterfaceRequest<Parent> request) {
   ::fidl::Encoder _encoder(internal::kChild_Second_GenOrdinal);
-  return proxy_.Send(&v1_fidl_test_json_ChildSecondRequestTable,
+  return proxy_.Send(&fidl_test_json_ChildSecondRequestTable,
                      Child_RequestEncoder::Second(&_encoder, &request));
 }
 

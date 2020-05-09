@@ -1123,210 +1123,6 @@ bool validate_present_nullable_bounded_vector_of_uint32_short_error() {
   END_TEST;
 }
 
-bool validate_bad_tagged_union_error() {
-  BEGIN_TEST;
-
-  nonnullable_handle_union_message_layout message = {};
-  message.inline_struct.data.tag = 43u;
-  message.inline_struct.data.handle = FIDL_HANDLE_PRESENT;
-
-  zx_handle_t handles[] = {
-      dummy_handle_0,
-  };
-
-  const char* error = nullptr;
-  auto status = fidl_validate(&nonnullable_handle_union_message_type, &message, sizeof(message),
-                              ArrayCount(handles), &error);
-
-  EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
-  EXPECT_NONNULL(error);
-
-  END_TEST;
-}
-
-bool validate_single_membered_present_nonnullable_union() {
-  BEGIN_TEST;
-
-  nonnullable_handle_union_message_layout message = {};
-  message.inline_struct.data.tag = nonnullable_handle_union_kHandle;
-  message.inline_struct.data.handle = FIDL_HANDLE_PRESENT;
-
-  zx_handle_t handles[] = {
-      dummy_handle_0,
-  };
-
-  const char* error = nullptr;
-  auto status = fidl_validate(&nonnullable_handle_union_message_type, &message, sizeof(message),
-                              ArrayCount(handles), &error);
-
-  EXPECT_EQ(status, ZX_OK);
-  EXPECT_NULL(error, error);
-  EXPECT_EQ(message.inline_struct.data.tag, nonnullable_handle_union_kHandle);
-  EXPECT_EQ(message.inline_struct.data.handle, FIDL_HANDLE_PRESENT);
-
-  END_TEST;
-}
-
-bool validate_many_membered_present_nonnullable_union() {
-  BEGIN_TEST;
-
-  array_of_nonnullable_handles_union_message_layout message;
-  memset(&message, 0, sizeof(message));
-
-  message.inline_struct.data.tag = array_of_nonnullable_handles_union_kArrayOfArrayOfHandles;
-  message.inline_struct.data.array_of_array_of_handles[0][0] = FIDL_HANDLE_PRESENT;
-  message.inline_struct.data.array_of_array_of_handles[0][1] = FIDL_HANDLE_PRESENT;
-  message.inline_struct.data.array_of_array_of_handles[1][0] = FIDL_HANDLE_PRESENT;
-  message.inline_struct.data.array_of_array_of_handles[1][1] = FIDL_HANDLE_PRESENT;
-
-  zx_handle_t handles[] = {
-      dummy_handle_0,
-      dummy_handle_1,
-      dummy_handle_2,
-      dummy_handle_3,
-  };
-
-  const char* error = nullptr;
-  auto status = fidl_validate(&array_of_nonnullable_handles_union_message_type, &message,
-                              sizeof(message), ArrayCount(handles), &error);
-
-  EXPECT_EQ(status, ZX_OK);
-  EXPECT_NULL(error, error);
-
-  END_TEST;
-}
-
-bool validate_many_membered_present_nonnullable_union_check_padding() {
-  BEGIN_TEST;
-
-  // 4 bytes tag + 16 bytes largest variant + 4 bytes padding = 24
-  constexpr size_t kUnionSize = 24;
-  static_assert(sizeof(array_of_nonnullable_handles_union_message_layout::inline_struct.data) ==
-                kUnionSize);
-  // The union comes after the 16 byte message header.
-  constexpr size_t kUnionOffset = 16;
-  // 4 bytes tag
-  constexpr size_t kHandleOffset = 4;
-
-  // Any single padding byte being non-zero should result in an error.
-  for (size_t i = kHandleOffset + sizeof(zx_handle_t); i < kUnionSize; i++) {
-    constexpr size_t kBufferSize = sizeof(array_of_nonnullable_handles_union_message_layout);
-    array_of_nonnullable_handles_union_message_layout message;
-    uint8_t* buffer = reinterpret_cast<uint8_t*>(&message);
-    memset(buffer, 0, kBufferSize);
-
-    ASSERT_EQ(reinterpret_cast<uint8_t*>(&message.inline_struct.data) -
-                  reinterpret_cast<uint8_t*>(&message),
-              kUnionOffset);
-    ASSERT_EQ(reinterpret_cast<uint8_t*>(&message.inline_struct.data.handle) -
-                  reinterpret_cast<uint8_t*>(&message.inline_struct.data),
-              kHandleOffset);
-
-    message.inline_struct.data.tag = array_of_nonnullable_handles_union_kHandle;
-    message.inline_struct.data.handle = FIDL_HANDLE_PRESENT;
-    constexpr uint32_t kNumHandles = 1;
-
-    buffer[kUnionOffset + i] = 0xAA;
-
-    const char* error = nullptr;
-    auto status = fidl_validate(&array_of_nonnullable_handles_union_message_type, &message,
-                                kBufferSize, kNumHandles, &error);
-
-    EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
-    EXPECT_STR_EQ(error, "non-zero padding bytes detected");
-  }
-
-  END_TEST;
-}
-
-bool validate_single_membered_present_nullable_union() {
-  BEGIN_TEST;
-
-  nonnullable_handle_union_ptr_message_layout message = {};
-  message.inline_struct.data = reinterpret_cast<nonnullable_handle_union*>(FIDL_ALLOC_PRESENT);
-  message.data.tag = nonnullable_handle_union_kHandle;
-  message.data.handle = FIDL_HANDLE_PRESENT;
-
-  zx_handle_t handles[] = {
-      dummy_handle_0,
-  };
-
-  const char* error = nullptr;
-  auto status = fidl_validate(&nonnullable_handle_union_ptr_message_type, &message, sizeof(message),
-                              ArrayCount(handles), &error);
-
-  EXPECT_EQ(status, ZX_OK);
-  EXPECT_NULL(error, error);
-
-  END_TEST;
-}
-
-bool validate_many_membered_present_nullable_union() {
-  BEGIN_TEST;
-
-  array_of_nonnullable_handles_union_ptr_message_layout message;
-  memset(&message, 0, sizeof(message));
-
-  message.inline_struct.data =
-      reinterpret_cast<array_of_nonnullable_handles_union*>(FIDL_ALLOC_PRESENT);
-  message.data.tag = array_of_nonnullable_handles_union_kArrayOfArrayOfHandles;
-  message.data.array_of_array_of_handles[0][0] = FIDL_HANDLE_PRESENT;
-  message.data.array_of_array_of_handles[0][1] = FIDL_HANDLE_PRESENT;
-  message.data.array_of_array_of_handles[1][0] = FIDL_HANDLE_PRESENT;
-  message.data.array_of_array_of_handles[1][1] = FIDL_HANDLE_PRESENT;
-
-  zx_handle_t handles[] = {
-      dummy_handle_0,
-      dummy_handle_1,
-      dummy_handle_2,
-      dummy_handle_3,
-  };
-
-  const char* error = nullptr;
-  auto status = fidl_validate(&array_of_nonnullable_handles_union_ptr_message_type, &message,
-                              sizeof(message), ArrayCount(handles), &error);
-
-  EXPECT_EQ(status, ZX_OK);
-  EXPECT_NULL(error, error);
-
-  END_TEST;
-}
-
-bool validate_single_membered_absent_nullable_union() {
-  BEGIN_TEST;
-
-  nonnullable_handle_union_ptr_message_layout message = {};
-  message.inline_struct.data = reinterpret_cast<nonnullable_handle_union*>(FIDL_ALLOC_ABSENT);
-
-  const char* error = nullptr;
-  auto status = fidl_validate(&nonnullable_handle_union_ptr_message_type, &message,
-                              sizeof(message.inline_struct), 0u, &error);
-
-  EXPECT_EQ(status, ZX_OK);
-  EXPECT_NULL(error, error);
-  EXPECT_NULL(message.inline_struct.data);
-
-  END_TEST;
-}
-
-bool validate_many_membered_absent_nullable_union() {
-  BEGIN_TEST;
-
-  array_of_nonnullable_handles_union_ptr_message_layout message = {};
-  message.inline_struct.data =
-      reinterpret_cast<array_of_nonnullable_handles_union*>(FIDL_ALLOC_ABSENT);
-
-  const char* error = nullptr;
-  auto status = fidl_validate(&array_of_nonnullable_handles_union_ptr_message_type, &message,
-                              sizeof(message.inline_struct), 0u, &error);
-
-  EXPECT_EQ(status, ZX_OK);
-  EXPECT_NULL(error, error);
-  EXPECT_NULL(message.inline_struct.data);
-
-  END_TEST;
-}
-
 bool validate_nested_nonnullable_structs() {
   BEGIN_TEST;
 
@@ -1507,134 +1303,13 @@ bool validate_nested_nullable_structs() {
   END_TEST;
 }
 
-void SetUpRecursionMessage(recursion_message_layout* message) {
-  message->inline_struct.inline_union.tag = maybe_recurse_union_kMore;
-  message->inline_struct.inline_union.more =
-      reinterpret_cast<recursion_inline_data*>(FIDL_ALLOC_PRESENT);
-  message->depth_0.inline_union.tag = maybe_recurse_union_kMore;
-  message->depth_0.inline_union.more = reinterpret_cast<recursion_inline_data*>(FIDL_ALLOC_PRESENT);
-  message->depth_1.inline_union.tag = maybe_recurse_union_kMore;
-  message->depth_1.inline_union.more = reinterpret_cast<recursion_inline_data*>(FIDL_ALLOC_PRESENT);
-  message->depth_2.inline_union.tag = maybe_recurse_union_kMore;
-  message->depth_2.inline_union.more = reinterpret_cast<recursion_inline_data*>(FIDL_ALLOC_PRESENT);
-  message->depth_3.inline_union.tag = maybe_recurse_union_kMore;
-  message->depth_3.inline_union.more = reinterpret_cast<recursion_inline_data*>(FIDL_ALLOC_PRESENT);
-  message->depth_4.inline_union.tag = maybe_recurse_union_kMore;
-  message->depth_4.inline_union.more = reinterpret_cast<recursion_inline_data*>(FIDL_ALLOC_PRESENT);
-  message->depth_5.inline_union.tag = maybe_recurse_union_kMore;
-  message->depth_5.inline_union.more = reinterpret_cast<recursion_inline_data*>(FIDL_ALLOC_PRESENT);
-  message->depth_6.inline_union.tag = maybe_recurse_union_kMore;
-  message->depth_6.inline_union.more = reinterpret_cast<recursion_inline_data*>(FIDL_ALLOC_PRESENT);
-  message->depth_7.inline_union.tag = maybe_recurse_union_kMore;
-  message->depth_7.inline_union.more = reinterpret_cast<recursion_inline_data*>(FIDL_ALLOC_PRESENT);
-  message->depth_8.inline_union.tag = maybe_recurse_union_kMore;
-  message->depth_8.inline_union.more = reinterpret_cast<recursion_inline_data*>(FIDL_ALLOC_PRESENT);
-  message->depth_9.inline_union.tag = maybe_recurse_union_kMore;
-  message->depth_9.inline_union.more = reinterpret_cast<recursion_inline_data*>(FIDL_ALLOC_PRESENT);
-  message->depth_10.inline_union.tag = maybe_recurse_union_kMore;
-  message->depth_10.inline_union.more =
-      reinterpret_cast<recursion_inline_data*>(FIDL_ALLOC_PRESENT);
-  message->depth_11.inline_union.tag = maybe_recurse_union_kMore;
-  message->depth_11.inline_union.more =
-      reinterpret_cast<recursion_inline_data*>(FIDL_ALLOC_PRESENT);
-  message->depth_12.inline_union.tag = maybe_recurse_union_kMore;
-  message->depth_12.inline_union.more =
-      reinterpret_cast<recursion_inline_data*>(FIDL_ALLOC_PRESENT);
-  message->depth_13.inline_union.tag = maybe_recurse_union_kMore;
-  message->depth_13.inline_union.more =
-      reinterpret_cast<recursion_inline_data*>(FIDL_ALLOC_PRESENT);
-  message->depth_14.inline_union.tag = maybe_recurse_union_kMore;
-  message->depth_14.inline_union.more =
-      reinterpret_cast<recursion_inline_data*>(FIDL_ALLOC_PRESENT);
-  message->depth_15.inline_union.tag = maybe_recurse_union_kMore;
-  message->depth_15.inline_union.more =
-      reinterpret_cast<recursion_inline_data*>(FIDL_ALLOC_PRESENT);
-  message->depth_16.inline_union.tag = maybe_recurse_union_kMore;
-  message->depth_16.inline_union.more =
-      reinterpret_cast<recursion_inline_data*>(FIDL_ALLOC_PRESENT);
-  message->depth_17.inline_union.tag = maybe_recurse_union_kMore;
-  message->depth_17.inline_union.more =
-      reinterpret_cast<recursion_inline_data*>(FIDL_ALLOC_PRESENT);
-  message->depth_18.inline_union.tag = maybe_recurse_union_kMore;
-  message->depth_18.inline_union.more =
-      reinterpret_cast<recursion_inline_data*>(FIDL_ALLOC_PRESENT);
-  message->depth_19.inline_union.tag = maybe_recurse_union_kMore;
-  message->depth_19.inline_union.more =
-      reinterpret_cast<recursion_inline_data*>(FIDL_ALLOC_PRESENT);
-  message->depth_20.inline_union.tag = maybe_recurse_union_kMore;
-  message->depth_20.inline_union.more =
-      reinterpret_cast<recursion_inline_data*>(FIDL_ALLOC_PRESENT);
-  message->depth_21.inline_union.tag = maybe_recurse_union_kMore;
-  message->depth_21.inline_union.more =
-      reinterpret_cast<recursion_inline_data*>(FIDL_ALLOC_PRESENT);
-  message->depth_22.inline_union.tag = maybe_recurse_union_kMore;
-  message->depth_22.inline_union.more =
-      reinterpret_cast<recursion_inline_data*>(FIDL_ALLOC_PRESENT);
-  message->depth_23.inline_union.tag = maybe_recurse_union_kMore;
-  message->depth_23.inline_union.more =
-      reinterpret_cast<recursion_inline_data*>(FIDL_ALLOC_PRESENT);
-  message->depth_24.inline_union.tag = maybe_recurse_union_kMore;
-  message->depth_24.inline_union.more =
-      reinterpret_cast<recursion_inline_data*>(FIDL_ALLOC_PRESENT);
-  message->depth_25.inline_union.tag = maybe_recurse_union_kMore;
-  message->depth_25.inline_union.more =
-      reinterpret_cast<recursion_inline_data*>(FIDL_ALLOC_PRESENT);
-  message->depth_26.inline_union.tag = maybe_recurse_union_kMore;
-  message->depth_26.inline_union.more =
-      reinterpret_cast<recursion_inline_data*>(FIDL_ALLOC_PRESENT);
-  message->depth_27.inline_union.tag = maybe_recurse_union_kMore;
-  message->depth_27.inline_union.more =
-      reinterpret_cast<recursion_inline_data*>(FIDL_ALLOC_PRESENT);
-}
-
-bool validate_nested_struct_recursion_too_deep_error() {
-  BEGIN_TEST;
-
-  recursion_message_layout message;
-  memset(&message, 0, sizeof(message));
-
-  // First we check that FIDL_RECURSION_DEPTH - 1 levels of recursion is OK.
-  SetUpRecursionMessage(&message);
-  message.depth_28.inline_union.tag = maybe_recurse_union_kDone;
-  message.depth_28.inline_union.handle = FIDL_HANDLE_PRESENT;
-
-  zx_handle_t handles[] = {
-      dummy_handle_0,
-  };
-
-  const char* error = nullptr;
-  auto status =
-      fidl_validate(&recursion_message_type, &message,
-                    // Tell it to ignore everything after we stop recursion.
-                    offsetof(recursion_message_layout, depth_29), ArrayCount(handles), &error);
-  EXPECT_EQ(status, ZX_OK);
-  EXPECT_NULL(error, error);
-
-  // Now add another level of recursion.
-  SetUpRecursionMessage(&message);
-  message.depth_28.inline_union.tag = maybe_recurse_union_kMore;
-  message.depth_28.inline_union.more = reinterpret_cast<recursion_inline_data*>(FIDL_ALLOC_PRESENT);
-  message.depth_29.inline_union.tag = maybe_recurse_union_kDone;
-  message.depth_29.inline_union.handle = FIDL_HANDLE_PRESENT;
-
-  error = nullptr;
-  status = fidl_validate(&recursion_message_type, &message, sizeof(message), ArrayCount(handles),
-                         &error);
-  EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
-  EXPECT_NONNULL(error);
-  const char expected_error_msg[] = "recursion depth exceeded processing struct";
-  EXPECT_STR_EQ(expected_error_msg, error, "wrong error msg");
-
-  END_TEST;
-}
-
 bool validate_valid_empty_nullable_xunion() {
   BEGIN_TEST;
 
   SampleNullableXUnionStruct message = {};
 
   const char* error = nullptr;
-  auto status = fidl_validate(&v1_fidl_test_coding_SampleNullableXUnionStructTable, &message,
+  auto status = fidl_validate(&fidl_test_coding_SampleNullableXUnionStructTable, &message,
                               sizeof(fidl_xunion_t), 0, &error);
   EXPECT_EQ(status, ZX_OK);
   EXPECT_NULL(error, error);
@@ -1648,7 +1323,7 @@ bool validate_empty_nonnullable_xunion() {
   SampleXUnionStruct message = {};
 
   const char* error = nullptr;
-  auto status = fidl_validate(&v1_fidl_test_coding_SampleXUnionStructTable, &message,
+  auto status = fidl_validate(&fidl_test_coding_SampleXUnionStructTable, &message,
                               sizeof(fidl_xunion_t), 0, &error);
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
   EXPECT_NONNULL(error);
@@ -1664,7 +1339,7 @@ bool validate_empty_nullable_xunion_nonzero_ordinal() {
   message.opt_xu.header.tag = kSampleXUnionIntStructOrdinal;
 
   const char* error = nullptr;
-  auto status = fidl_validate(&v1_fidl_test_coding_SampleNullableXUnionStructTable, &message,
+  auto status = fidl_validate(&fidl_test_coding_SampleNullableXUnionStructTable, &message,
                               sizeof(fidl_xunion_t), 0, &error);
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
   EXPECT_NONNULL(error);
@@ -1681,7 +1356,7 @@ bool validate_nonempty_xunion_zero_ordinal() {
       (fidl_envelope_t){.num_bytes = 8, .num_handles = 0, .presence = FIDL_ALLOC_PRESENT};
 
   const char* error = nullptr;
-  auto status = fidl_validate(&v1_fidl_test_coding_SampleXUnionStructTable, &message,
+  auto status = fidl_validate(&fidl_test_coding_SampleXUnionStructTable, &message,
                               sizeof(SampleXUnionStruct), 0, &error);
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
   EXPECT_NONNULL(error);
@@ -1698,7 +1373,7 @@ bool validate_nonempty_nullable_xunion_zero_ordinal() {
       (fidl_envelope_t){.num_bytes = 8, .num_handles = 0, .presence = FIDL_ALLOC_PRESENT};
 
   const char* error = nullptr;
-  auto status = fidl_validate(&v1_fidl_test_coding_SampleNullableXUnionStructTable, &message,
+  auto status = fidl_validate(&fidl_test_coding_SampleNullableXUnionStructTable, &message,
                               sizeof(SampleNullableXUnionStruct), 0, &error);
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
   EXPECT_NONNULL(error);
@@ -1721,8 +1396,8 @@ bool validate_strict_xunion_unknown_ordinal() {
   };
 
   const char* error = nullptr;
-  auto status = fidl_validate(&v1_fidl_test_coding_SampleStrictXUnionStructTable, bytes,
-                              sizeof(bytes), 0, &error);
+  auto status = fidl_validate(&fidl_test_coding_SampleStrictXUnionStructTable, bytes, sizeof(bytes),
+                              0, &error);
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
   EXPECT_NONNULL(error);
   EXPECT_STR_EQ(error, "strict xunion has unknown ordinal");
@@ -1745,7 +1420,7 @@ bool validate_flexible_xunion_unknown_ordinal() {
 
   const char* error = nullptr;
   auto status =
-      fidl_validate(&v1_fidl_test_coding_SampleXUnionStructTable, bytes, sizeof(bytes), 0, &error);
+      fidl_validate(&fidl_test_coding_SampleXUnionStructTable, bytes, sizeof(bytes), 0, &error);
   EXPECT_EQ(status, ZX_OK);
   EXPECT_NULL(error);
 
@@ -2039,10 +1714,7 @@ bool validate_primitives_struct() {
       {.coded_struct = {.fields = kFields,
                         .field_count = 11u,
                         .size = 48u,
-                        .max_out_of_line = 0u,
-                        .contains_union = false,
-                        .name = "fidl.test.coding/PrimitiveStruct",
-                        .alt_type = &kPrimitiveStructCodingTable}}};
+                        .name = "fidl.test.coding/PrimitiveStruct"}}};
 
   uint8_t data[kPrimitiveStructCodingTable.coded_struct.size];
   memset(data, 0, sizeof(data));
@@ -2117,22 +1789,10 @@ RUN_TEST(validate_present_nonnullable_bounded_vector_of_uint32_short_error)
 RUN_TEST(validate_present_nullable_bounded_vector_of_uint32_short_error)
 END_TEST_CASE(vectors)
 
-BEGIN_TEST_CASE(unions)
-RUN_TEST(validate_bad_tagged_union_error)
-RUN_TEST(validate_single_membered_present_nonnullable_union)
-RUN_TEST(validate_many_membered_present_nonnullable_union)
-RUN_TEST(validate_many_membered_present_nonnullable_union_check_padding)
-RUN_TEST(validate_single_membered_present_nullable_union)
-RUN_TEST(validate_many_membered_present_nullable_union)
-RUN_TEST(validate_single_membered_absent_nullable_union)
-RUN_TEST(validate_many_membered_absent_nullable_union)
-END_TEST_CASE(unions)
-
 BEGIN_TEST_CASE(structs)
 RUN_TEST(validate_nested_nonnullable_structs)
 RUN_TEST(validate_nested_nonnullable_structs_check_padding)
 RUN_TEST(validate_nested_nullable_structs)
-RUN_TEST(validate_nested_struct_recursion_too_deep_error)
 END_TEST_CASE(structs)
 
 BEGIN_TEST_CASE(xunions)

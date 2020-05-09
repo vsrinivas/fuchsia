@@ -24,7 +24,6 @@ import (
 	gidlllcpp "gidl/llcpp"
 	gidlparser "gidl/parser"
 	gidlrust "gidl/rust"
-	gidltransformer "gidl/transformer"
 	giidlwalker "gidl/walker"
 )
 
@@ -33,12 +32,11 @@ import (
 type Generator func(io.Writer, gidlir.All, fidlir.Root) error
 
 var conformanceGenerators = map[string]Generator{
-	"go":          gidlgolang.GenerateConformanceTests,
-	"llcpp":       gidlllcpp.GenerateConformanceTests,
-	"cpp":         gidlcpp.GenerateConformanceTests,
-	"dart":        gidldart.Generate,
-	"rust":        gidlrust.GenerateConformanceTests,
-	"transformer": gidltransformer.Generate,
+	"go":    gidlgolang.GenerateConformanceTests,
+	"llcpp": gidlllcpp.GenerateConformanceTests,
+	"cpp":   gidlcpp.GenerateConformanceTests,
+	"dart":  gidldart.Generate,
+	"rust":  gidlrust.GenerateConformanceTests,
 }
 
 var benchmarkGenerators = map[string]Generator{

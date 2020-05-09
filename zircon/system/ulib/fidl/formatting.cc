@@ -86,14 +86,6 @@ void FormatStructName(StringBuilder* str, const FidlCodedStruct* coded_struct) {
   }
 }
 
-void FormatUnionName(StringBuilder* str, const FidlCodedUnion* coded_union) {
-  if (coded_union->name) {
-    str->Append(coded_union->name);
-  } else {
-    str->Append("union");
-  }
-}
-
 void FormatTableName(StringBuilder* str, const FidlCodedTable* coded_table) {
   if (coded_table->name) {
     str->Append(coded_table->name);
@@ -134,13 +126,6 @@ void FormatTypeName(StringBuilder* str, const fidl_type_t* type) {
       break;
     case kFidlTypeStructPointer:
       FormatStructName(str, type->coded_struct_pointer.struct_type);
-      str->Append("?");
-      break;
-    case kFidlTypeUnion:
-      FormatUnionName(str, &type->coded_union);
-      break;
-    case kFidlTypeUnionPointer:
-      FormatUnionName(str, type->coded_union_pointer.union_type);
       str->Append("?");
       break;
     case kFidlTypeArray:

@@ -83,12 +83,6 @@ struct FidlStructField {
 #endif  // __cplusplus
 };
 
-struct FidlUnionField {
-  const fidl_type_t* type;
-  uint32_t padding;
-  uint32_t xunion_ordinal;
-};
-
 struct FidlTableField {
   const fidl_type_t* type;
   uint32_t ordinal;
@@ -96,6 +90,7 @@ struct FidlTableField {
 
 struct FidlXUnionField {
   const fidl_type_t* type;
+  // TODO(fxb/51783): Remove these fields.
   uint32_t ordinal;
   uint32_t hashed_ordinal;
   uint32_t explicit_ordinal;
@@ -151,16 +146,7 @@ struct FidlCodedStruct {
   const struct FidlStructField* const fields;
   const uint32_t field_count;
   const uint32_t size;
-  // The max_out_of_line and contains_union fields are only used by the HLCPP bindings for
-  // optimizations when validating v1 bytes of a transactional message before sending.
-  const uint32_t max_out_of_line;
-  const bool contains_union;
   const char* name;  // may be nullptr if omitted at compile time
-
-  // Pointer to the alternate ("alt") version of this FidlCodedStruct, which is the v1 version of
-  // the struct if this is the old struct; or the old version of the struct if this is the v1
-  // version.
-  const fidl_type_t* const alt_type;
 };
 
 struct FidlCodedStructPointer {
@@ -173,34 +159,12 @@ struct FidlCodedTable {
   const char* name;  // may be nullptr if omitted at compile time
 };
 
-// On-the-wire unions begin with a tag which is an index into |fields|.
-// |data_offset| is the offset of the data in the wire format (tag + padding).
-struct FidlCodedUnion {
-  const struct FidlUnionField* const fields;
-  const uint32_t field_count;
-  const uint32_t data_offset;
-  const uint32_t size;
-  const char* name;  // may be nullptr if omitted at compile time
-
-  // Pointer to the alternate ("alt") version of this FidlCodedUnion, which is a FidlCodedXUnion
-  // if this is an old wire-format union.
-  const fidl_type_t* const alt_type;
-};
-
-struct FidlCodedUnionPointer {
-  const struct FidlCodedUnion* const union_type;
-};
-
 struct FidlCodedXUnion {
   const uint32_t field_count;
   const struct FidlXUnionField* const fields;
   const FidlNullability nullable;
   const char* name;  // may be nullptr if omitted at compile time
   const FidlStrictness strictness;
-
-  // Pointer to the alternate ("alt") version of this FidlCodedXUnion, which a FidlCodedUnion if
-  // this is a static union, or the same FidlCodedXUnion if this is an extensible union.
-  const fidl_type_t* const alt_type;
 };
 
 // An array is essentially a struct with |array_size / element_size| of the same field, named at
@@ -209,11 +173,6 @@ struct FidlCodedArray {
   const fidl_type_t* const element;
   const uint32_t array_size;
   const uint32_t element_size;
-
-  // Pointer to the alternate ("alt") version of this FidlCodedArray, which is the v1 version of the
-  // array if this is for the old wire format; or the old version of the array if this is the v1
-  // version.
-  const fidl_type_t* const alt_type;
 };
 
 // TODO(fxb/39388): Switch to using this more ergonomic coding table for arrays.
@@ -222,8 +181,6 @@ struct FidlCodedArrayNew {
   const uint64_t element_count;
   const uint32_t element_size;
   const uint32_t element_padding;
-
-  const fidl_type_t* const alt_type;
 };
 
 struct FidlCodedHandle {
@@ -247,11 +204,6 @@ struct FidlCodedVector {
   const uint32_t max_count;
   const uint32_t element_size;
   const FidlNullability nullable;
-
-  // Pointer to the alternate ("alt") version of this FidlCodedVector, which is the v1 version of
-  // the vector if this is the old wire format; or the old version of the vector if this is the v1
-  // version.
-  const fidl_type_t* const alt_type;
 };
 
 struct fidl_type {
@@ -263,8 +215,6 @@ struct fidl_type {
     const struct FidlCodedStruct coded_struct;
     const struct FidlCodedStructPointer coded_struct_pointer;
     const struct FidlCodedTable coded_table;
-    const struct FidlCodedUnion coded_union;
-    const struct FidlCodedUnionPointer coded_union_pointer;
     const struct FidlCodedXUnion coded_xunion;
     const struct FidlCodedHandle coded_handle;
     const struct FidlCodedString coded_string;

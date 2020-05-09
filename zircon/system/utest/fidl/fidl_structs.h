@@ -286,60 +286,6 @@ struct multiple_nullable_vectors_of_uint32_message_layout {
   alignas(FIDL_ALIGNMENT) uint32_t uint32_2[4];
 };
 
-// Union types.
-#define nonnullable_handle_union_kHandle UINT32_C(0)
-struct nonnullable_handle_union {
-  alignas(FIDL_ALIGNMENT) fidl_union_tag_t tag;
-  union {
-    zx_handle_t handle;
-  };
-};
-struct nonnullable_handle_union_inline_data {
-  alignas(FIDL_ALIGNMENT) fidl_message_header_t header;
-  nonnullable_handle_union data;
-};
-struct nonnullable_handle_union_message_layout {
-  alignas(FIDL_ALIGNMENT) nonnullable_handle_union_inline_data inline_struct;
-};
-
-#define array_of_nonnullable_handles_union_kHandle UINT32_C(0)
-#define array_of_nonnullable_handles_union_kArrayOfHandles UINT32_C(1)
-#define array_of_nonnullable_handles_union_kArrayOfArrayOfHandles UINT32_C(2)
-struct array_of_nonnullable_handles_union {
-  alignas(FIDL_ALIGNMENT) fidl_union_tag_t tag;
-  union {
-    zx_handle_t handle;
-    zx_handle_t array_of_handles[2];
-    zx_handle_t array_of_array_of_handles[2][2];
-  };
-};
-struct array_of_nonnullable_handles_union_inline_data {
-  alignas(FIDL_ALIGNMENT) fidl_message_header_t header;
-  array_of_nonnullable_handles_union data;
-};
-struct array_of_nonnullable_handles_union_message_layout {
-  alignas(FIDL_ALIGNMENT) array_of_nonnullable_handles_union_inline_data inline_struct;
-};
-
-// Union pointer types.
-struct nonnullable_handle_union_ptr_inline_data {
-  alignas(FIDL_ALIGNMENT) fidl_message_header_t header;
-  nonnullable_handle_union* data;
-};
-struct nonnullable_handle_union_ptr_message_layout {
-  alignas(FIDL_ALIGNMENT) nonnullable_handle_union_ptr_inline_data inline_struct;
-  alignas(FIDL_ALIGNMENT) nonnullable_handle_union data;
-};
-
-struct array_of_nonnullable_handles_union_ptr_inline_data {
-  alignas(FIDL_ALIGNMENT) fidl_message_header_t header;
-  array_of_nonnullable_handles_union* data;
-};
-struct array_of_nonnullable_handles_union_ptr_message_layout {
-  alignas(FIDL_ALIGNMENT) array_of_nonnullable_handles_union_ptr_inline_data inline_struct;
-  alignas(FIDL_ALIGNMENT) array_of_nonnullable_handles_union data;
-};
-
 // Struct alignas(FIDL_ALIGNMENT) types.
 struct struct_level_3 {
   alignas(FIDL_ALIGNMENT) uint32_t padding_3;
@@ -417,55 +363,6 @@ struct nested_struct_ptrs_message_layout {
   alignas(FIDL_ALIGNMENT) struct_ptr_level_2 out_out_out_2;
   alignas(FIDL_ALIGNMENT) struct_ptr_level_3 out_out_out_out_3;
   alignas(FIDL_ALIGNMENT) struct_ptr_level_3 out_out_in_out_3;
-};
-
-// Recursive types.
-#define maybe_recurse_union_kDone UINT32_C(0)
-#define maybe_recurse_union_kMore UINT32_C(1)
-struct recursion_inline_data;
-struct maybe_recurse {
-  alignas(FIDL_ALIGNMENT) fidl_union_tag_t tag;
-  union {
-    zx_handle_t handle;
-    recursion_inline_data* more;
-  };
-};
-struct recursion_inline_data {
-  alignas(FIDL_ALIGNMENT) fidl_message_header_t header;
-  maybe_recurse inline_union;
-};
-struct recursion_message_layout {
-  alignas(FIDL_ALIGNMENT) recursion_inline_data inline_struct;
-  alignas(FIDL_ALIGNMENT) recursion_inline_data depth_0;
-  alignas(FIDL_ALIGNMENT) recursion_inline_data depth_1;
-  alignas(FIDL_ALIGNMENT) recursion_inline_data depth_2;
-  alignas(FIDL_ALIGNMENT) recursion_inline_data depth_3;
-  alignas(FIDL_ALIGNMENT) recursion_inline_data depth_4;
-  alignas(FIDL_ALIGNMENT) recursion_inline_data depth_5;
-  alignas(FIDL_ALIGNMENT) recursion_inline_data depth_6;
-  alignas(FIDL_ALIGNMENT) recursion_inline_data depth_7;
-  alignas(FIDL_ALIGNMENT) recursion_inline_data depth_8;
-  alignas(FIDL_ALIGNMENT) recursion_inline_data depth_9;
-  alignas(FIDL_ALIGNMENT) recursion_inline_data depth_10;
-  alignas(FIDL_ALIGNMENT) recursion_inline_data depth_11;
-  alignas(FIDL_ALIGNMENT) recursion_inline_data depth_12;
-  alignas(FIDL_ALIGNMENT) recursion_inline_data depth_13;
-  alignas(FIDL_ALIGNMENT) recursion_inline_data depth_14;
-  alignas(FIDL_ALIGNMENT) recursion_inline_data depth_15;
-  alignas(FIDL_ALIGNMENT) recursion_inline_data depth_16;
-  alignas(FIDL_ALIGNMENT) recursion_inline_data depth_17;
-  alignas(FIDL_ALIGNMENT) recursion_inline_data depth_18;
-  alignas(FIDL_ALIGNMENT) recursion_inline_data depth_19;
-  alignas(FIDL_ALIGNMENT) recursion_inline_data depth_20;
-  alignas(FIDL_ALIGNMENT) recursion_inline_data depth_21;
-  alignas(FIDL_ALIGNMENT) recursion_inline_data depth_22;
-  alignas(FIDL_ALIGNMENT) recursion_inline_data depth_23;
-  alignas(FIDL_ALIGNMENT) recursion_inline_data depth_24;
-  alignas(FIDL_ALIGNMENT) recursion_inline_data depth_25;
-  alignas(FIDL_ALIGNMENT) recursion_inline_data depth_26;
-  alignas(FIDL_ALIGNMENT) recursion_inline_data depth_27;
-  alignas(FIDL_ALIGNMENT) recursion_inline_data depth_28;
-  alignas(FIDL_ALIGNMENT) recursion_inline_data depth_29;
 };
 
 #endif  // ZIRCON_SYSTEM_UTEST_FIDL_FIDL_STRUCTS_H_

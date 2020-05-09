@@ -132,9 +132,9 @@ namespace {
     kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_GenOrdinal =
         0x728fedeed6ef99dalu;
 extern "C" const fidl_type_t
-    v1_fidl_test_json_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequestTable;
+    fidl_test_json_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequestTable;
 extern "C" const fidl_type_t
-    v1_fidl_test_json_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable;
+    fidl_test_json_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable;
 [[maybe_unused]] constexpr uint64_t
     kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal =
         0x176e085800000000lu;
@@ -142,9 +142,9 @@ extern "C" const fidl_type_t
     kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_GenOrdinal =
         0xfd2ba0109faffe3lu;
 extern "C" const fidl_type_t
-    v1_fidl_test_json_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequestTable;
+    fidl_test_json_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequestTable;
 extern "C" const fidl_type_t
-    v1_fidl_test_json_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable;
+    fidl_test_json_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable;
 
 }  // namespace
 template <>
@@ -542,12 +542,6 @@ zx_status_t TestProtocol::ClientImpl::Dispatch(
   switch (hdr->ordinal) {
     case kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal:
     case kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_GenOrdinal: {
-      constexpr uint32_t kTransformerDestSize =
-          ::fidl::internal::ClampedMessageSize<
-              StrictXUnionHenceResponseMayBeStackAllocatedResponse,
-              ::fidl::MessageDirection::kReceiving>();
-      ::fidl::internal::ByteStorage<kTransformerDestSize>
-          transformer_dest_storage(::fidl::internal::DelayAllocation);
       auto result = ::fidl::DecodeAs<
           StrictXUnionHenceResponseMayBeStackAllocatedResponse>(msg);
       if (result.status != ZX_OK) {
@@ -561,12 +555,6 @@ zx_status_t TestProtocol::ClientImpl::Dispatch(
     }
     case kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal:
     case kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_GenOrdinal: {
-      constexpr uint32_t kTransformerDestSize =
-          ::fidl::internal::ClampedMessageSize<
-              FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse,
-              ::fidl::MessageDirection::kReceiving>();
-      ::fidl::internal::ByteStorage<kTransformerDestSize>
-          transformer_dest_storage(::fidl::internal::DelayAllocation);
       auto result = ::fidl::DecodeAs<
           FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse>(msg);
       if (result.status != ZX_OK) {

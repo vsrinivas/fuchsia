@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <lib/fidl/cpp/message.h>
-#include <lib/fidl/transformer.h>
 #include <lib/fidl/txn_header.h>
 #include <zircon/fidl.h>
 #include <zircon/types.h>
@@ -283,19 +282,26 @@ void MultipleDeviceTestCase::CheckUnbindReceived(const zx::channel& remote, zx_t
 // Sends a response with the given return_status. This can be used to reply to a
 // request received by |CheckUnbindReceived|.
 void MultipleDeviceTestCase::SendUnbindReply(const zx::channel& remote, zx_txid_t txid) {
-  fuchsia_device_manager_DeviceControllerUnbindResponse resp;
-  memset(&resp, 0, sizeof(resp));
-  fidl_init_txn_header(&resp.hdr, txid, fuchsia_device_manager_DeviceControllerUnbindGenOrdinal);
-  resp.hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
-  resp.result = fuchsia_device_manager_DeviceController_Unbind_Result{
-      .tag = 0,
-      .response = {},
-  };
-  uint32_t resp_size = sizeof(resp);
-  fidl::Message msg(fidl::BytePart(reinterpret_cast<uint8_t*>(&resp), resp_size, resp_size),
-                    fidl::HandlePart(nullptr, 0));
-  ASSERT_OK(msg.WriteTransformV1(remote.get(), 0,
-                                 &fuchsia_device_manager_DeviceControllerUnbindResponseTable));
+  namespace fdm = ::llcpp::fuchsia::device::manager;
+  fidl::aligned<fdm::DeviceController_Unbind_Response> result_resp;
+  auto result = fdm::DeviceController_Unbind_Result::WithResponse(fidl::unowned_ptr(&result_resp));
+  constexpr uint32_t kWriteAllocSize =
+      fidl::internal::ClampedMessageSize<fdm::DeviceController::UnbindResponse,
+                                         fidl::MessageDirection::kSending>();
+  FIDL_ALIGNDECL uint8_t write_bytes[kWriteAllocSize];
+  fdm::DeviceController::UnbindResponse resp;
+  fdm::DeviceController::SetTransactionHeaderFor::UnbindResponse(
+      fidl::DecodedMessage<fdm::DeviceController::UnbindResponse>(fidl::BytePart(
+          reinterpret_cast<uint8_t*>(&resp), fdm::DeviceController::UnbindResponse::PrimarySize,
+          fdm::DeviceController::UnbindResponse::PrimarySize)));
+  resp._hdr.txid = txid;
+  resp.result = std::move(result);
+  auto linearize_result = fidl::Linearize(&resp, fidl::BytePart(write_bytes, kWriteAllocSize));
+  ASSERT_OK(linearize_result.status);
+  auto encode_result = fidl::Encode(std::move(linearize_result.message));
+  ASSERT_OK(encode_result.status);
+  auto msg = encode_result.message.ToAnyMessage();
+  ASSERT_OK(msg.Write(remote.get(), 0));
 }
 
 void MultipleDeviceTestCase::CheckUnbindReceivedAndReply(const zx::channel& remote) {
@@ -331,20 +337,28 @@ void MultipleDeviceTestCase::CheckRemoveReceived(const zx::channel& remote, zx_t
 // Sends a response with the given return_status. This can be used to reply to a
 // request received by |CheckRemoveReceived|.
 void MultipleDeviceTestCase::SendRemoveReply(const zx::channel& remote, zx_txid_t txid) {
-  fuchsia_device_manager_DeviceControllerCompleteRemovalResponse resp;
-  memset(&resp, 0, sizeof(resp));
-  fidl_init_txn_header(&resp.hdr, txid,
-                       fuchsia_device_manager_DeviceControllerCompleteRemovalGenOrdinal);
-  resp.hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
-  resp.result = fuchsia_device_manager_DeviceController_CompleteRemoval_Result{
-      .tag = 0,
-      .response = {},
-  };
-  auto resp_size = sizeof(resp);
-  fidl::Message msg(fidl::BytePart(reinterpret_cast<uint8_t*>(&resp), resp_size, resp_size),
-                    fidl::HandlePart(nullptr, 0));
-  ASSERT_OK(msg.WriteTransformV1(
-      remote.get(), 0, &fuchsia_device_manager_DeviceControllerCompleteRemovalResponseTable));
+  namespace fdm = ::llcpp::fuchsia::device::manager;
+  fidl::aligned<fdm::DeviceController_CompleteRemoval_Response> result_resp;
+  auto result =
+      fdm::DeviceController_CompleteRemoval_Result::WithResponse(fidl::unowned_ptr(&result_resp));
+  constexpr uint32_t kWriteAllocSize =
+      fidl::internal::ClampedMessageSize<fdm::DeviceController::CompleteRemovalResponse,
+                                         fidl::MessageDirection::kSending>();
+  FIDL_ALIGNDECL uint8_t write_bytes[kWriteAllocSize];
+  fdm::DeviceController::CompleteRemovalResponse resp;
+  fdm::DeviceController::SetTransactionHeaderFor::CompleteRemovalResponse(
+      fidl::DecodedMessage<fdm::DeviceController::CompleteRemovalResponse>(
+          fidl::BytePart(reinterpret_cast<uint8_t*>(&resp),
+                         fdm::DeviceController::CompleteRemovalResponse::PrimarySize,
+                         fdm::DeviceController::CompleteRemovalResponse::PrimarySize)));
+  resp._hdr.txid = txid;
+  resp.result = std::move(result);
+  auto linearize_result = fidl::Linearize(&resp, fidl::BytePart(write_bytes, kWriteAllocSize));
+  ASSERT_OK(linearize_result.status);
+  auto encode_result = fidl::Encode(std::move(linearize_result.message));
+  ASSERT_OK(encode_result.status);
+  auto msg = encode_result.message.ToAnyMessage();
+  ASSERT_OK(msg.Write(remote.get(), 0));
 }
 
 void MultipleDeviceTestCase::CheckRemoveReceivedAndReply(const zx::channel& remote) {

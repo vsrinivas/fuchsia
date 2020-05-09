@@ -47,7 +47,7 @@ class WithErrorSyntax_ErrorAsEnum_Result;
 class WithErrorSyntax;
 
 extern "C" const fidl_type_t
-    v1_test_name_WithErrorSyntax_ResponseAsStruct_ResultTable;
+    test_name_WithErrorSyntax_ResponseAsStruct_ResultTable;
 
 class WithErrorSyntax_ResponseAsStruct_Result {
  public:
@@ -130,7 +130,7 @@ class WithErrorSyntax_ResponseAsStruct_Result {
   }
 
   static constexpr const fidl_type_t* Type =
-      &v1_test_name_WithErrorSyntax_ResponseAsStruct_ResultTable;
+      &test_name_WithErrorSyntax_ResponseAsStruct_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 24;
@@ -173,7 +173,7 @@ class WithErrorSyntax_ResponseAsStruct_Result {
 };
 
 extern "C" const fidl_type_t
-    v1_test_name_WithErrorSyntax_ErrorAsPrimitive_ResultTable;
+    test_name_WithErrorSyntax_ErrorAsPrimitive_ResultTable;
 
 class WithErrorSyntax_ErrorAsPrimitive_Result {
  public:
@@ -256,7 +256,7 @@ class WithErrorSyntax_ErrorAsPrimitive_Result {
   }
 
   static constexpr const fidl_type_t* Type =
-      &v1_test_name_WithErrorSyntax_ErrorAsPrimitive_ResultTable;
+      &test_name_WithErrorSyntax_ErrorAsPrimitive_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
@@ -298,8 +298,7 @@ class WithErrorSyntax_ErrorAsPrimitive_Result {
   ::fidl::Envelope<void> envelope_;
 };
 
-extern "C" const fidl_type_t
-    v1_test_name_WithErrorSyntax_ErrorAsEnum_ResultTable;
+extern "C" const fidl_type_t test_name_WithErrorSyntax_ErrorAsEnum_ResultTable;
 
 class WithErrorSyntax_ErrorAsEnum_Result {
  public:
@@ -380,7 +379,7 @@ class WithErrorSyntax_ErrorAsEnum_Result {
   }
 
   static constexpr const fidl_type_t* Type =
-      &v1_test_name_WithErrorSyntax_ErrorAsEnum_ResultTable;
+      &test_name_WithErrorSyntax_ErrorAsEnum_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
@@ -422,11 +421,11 @@ class WithErrorSyntax_ErrorAsEnum_Result {
 };
 
 extern "C" const fidl_type_t
-    v1_test_name_WithErrorSyntax_ResponseAsStruct_ResponseTable;
+    test_name_WithErrorSyntax_ResponseAsStruct_ResponseTable;
 
 struct WithErrorSyntax_ResponseAsStruct_Response {
   static constexpr const fidl_type_t* Type =
-      &v1_test_name_WithErrorSyntax_ResponseAsStruct_ResponseTable;
+      &test_name_WithErrorSyntax_ResponseAsStruct_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
@@ -440,11 +439,11 @@ struct WithErrorSyntax_ResponseAsStruct_Response {
 };
 
 extern "C" const fidl_type_t
-    v1_test_name_WithErrorSyntax_ErrorAsPrimitive_ResponseTable;
+    test_name_WithErrorSyntax_ErrorAsPrimitive_ResponseTable;
 
 struct WithErrorSyntax_ErrorAsPrimitive_Response {
   static constexpr const fidl_type_t* Type =
-      &v1_test_name_WithErrorSyntax_ErrorAsPrimitive_ResponseTable;
+      &test_name_WithErrorSyntax_ErrorAsPrimitive_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
@@ -454,11 +453,11 @@ struct WithErrorSyntax_ErrorAsPrimitive_Response {
 };
 
 extern "C" const fidl_type_t
-    v1_test_name_WithErrorSyntax_ErrorAsEnum_ResponseTable;
+    test_name_WithErrorSyntax_ErrorAsEnum_ResponseTable;
 
 struct WithErrorSyntax_ErrorAsEnum_Response {
   static constexpr const fidl_type_t* Type =
-      &v1_test_name_WithErrorSyntax_ErrorAsEnum_ResponseTable;
+      &test_name_WithErrorSyntax_ErrorAsEnum_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
@@ -467,16 +466,14 @@ struct WithErrorSyntax_ErrorAsEnum_Response {
   uint8_t __reserved = {};
 };
 
-extern "C" const fidl_type_t v1_test_name_ChannelProtocolMethodARequestTable;
-extern "C" const fidl_type_t v1_test_name_ChannelProtocolMethodAResponseTable;
-extern "C" const fidl_type_t v1_test_name_ChannelProtocolEventARequestTable;
-extern "C" const fidl_type_t v1_test_name_ChannelProtocolEventAEventTable;
-extern "C" const fidl_type_t v1_test_name_ChannelProtocolMethodBRequestTable;
-extern "C" const fidl_type_t v1_test_name_ChannelProtocolMethodBResponseTable;
-extern "C" const fidl_type_t
-    v1_test_name_ChannelProtocolMutateSocketRequestTable;
-extern "C" const fidl_type_t
-    v1_test_name_ChannelProtocolMutateSocketResponseTable;
+extern "C" const fidl_type_t test_name_ChannelProtocolMethodARequestTable;
+extern "C" const fidl_type_t test_name_ChannelProtocolMethodAResponseTable;
+extern "C" const fidl_type_t test_name_ChannelProtocolEventARequestTable;
+extern "C" const fidl_type_t test_name_ChannelProtocolEventAEventTable;
+extern "C" const fidl_type_t test_name_ChannelProtocolMethodBRequestTable;
+extern "C" const fidl_type_t test_name_ChannelProtocolMethodBResponseTable;
+extern "C" const fidl_type_t test_name_ChannelProtocolMutateSocketRequestTable;
+extern "C" const fidl_type_t test_name_ChannelProtocolMutateSocketResponseTable;
 
 class ChannelProtocol final {
   ChannelProtocol() = delete;
@@ -489,7 +486,7 @@ class ChannelProtocol final {
     int64_t b;
 
     static constexpr const fidl_type_t* Type =
-        &v1_test_name_ChannelProtocolMethodARequestTable;
+        &test_name_ChannelProtocolMethodARequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -497,7 +494,6 @@ class ChannelProtocol final {
     static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool HasPointer = false;
-    static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
   };
@@ -509,13 +505,12 @@ class ChannelProtocol final {
     int64_t b;
 
     static constexpr const fidl_type_t* Type =
-        &v1_test_name_ChannelProtocolEventAEventTable;
+        &test_name_ChannelProtocolEventAEventTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool HasPointer = false;
-    static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
   };
@@ -525,13 +520,12 @@ class ChannelProtocol final {
     int64_t result;
 
     static constexpr const fidl_type_t* Type =
-        &v1_test_name_ChannelProtocolMethodBResponseTable;
+        &test_name_ChannelProtocolMethodBResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool HasPointer = false;
-    static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
   };
@@ -542,7 +536,7 @@ class ChannelProtocol final {
     int64_t b;
 
     static constexpr const fidl_type_t* Type =
-        &v1_test_name_ChannelProtocolMethodBRequestTable;
+        &test_name_ChannelProtocolMethodBRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -550,7 +544,6 @@ class ChannelProtocol final {
     static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool HasPointer = false;
-    static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
     using ResponseType = MethodBResponse;
@@ -562,13 +555,12 @@ class ChannelProtocol final {
     ::zx::socket b;
 
     static constexpr const fidl_type_t* Type =
-        &v1_test_name_ChannelProtocolMutateSocketResponseTable;
+        &test_name_ChannelProtocolMutateSocketResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool HasPointer = false;
-    static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
   };
@@ -578,7 +570,7 @@ class ChannelProtocol final {
     ::zx::socket a;
 
     static constexpr const fidl_type_t* Type =
-        &v1_test_name_ChannelProtocolMutateSocketRequestTable;
+        &test_name_ChannelProtocolMutateSocketRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -586,7 +578,6 @@ class ChannelProtocol final {
     static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool HasPointer = false;
-    static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
     using ResponseType = MutateSocketResponse;
@@ -973,37 +964,37 @@ class ChannelProtocol final {
 };
 
 extern "C" const fidl_type_t
-    v1_test_name_WithAndWithoutRequestResponseNoRequestNoResponseRequestTable;
+    test_name_WithAndWithoutRequestResponseNoRequestNoResponseRequestTable;
 extern "C" const fidl_type_t
-    v1_test_name_WithAndWithoutRequestResponseNoRequestNoResponseResponseTable;
+    test_name_WithAndWithoutRequestResponseNoRequestNoResponseResponseTable;
 extern "C" const fidl_type_t
-    v1_test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseRequestTable;
+    test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseRequestTable;
 extern "C" const fidl_type_t
-    v1_test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseResponseTable;
+    test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseResponseTable;
 extern "C" const fidl_type_t
-    v1_test_name_WithAndWithoutRequestResponseNoRequestWithResponseRequestTable;
+    test_name_WithAndWithoutRequestResponseNoRequestWithResponseRequestTable;
 extern "C" const fidl_type_t
-    v1_test_name_WithAndWithoutRequestResponseNoRequestWithResponseResponseTable;
+    test_name_WithAndWithoutRequestResponseNoRequestWithResponseResponseTable;
 extern "C" const fidl_type_t
-    v1_test_name_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable;
+    test_name_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable;
 extern "C" const fidl_type_t
-    v1_test_name_WithAndWithoutRequestResponseWithRequestNoResponseResponseTable;
+    test_name_WithAndWithoutRequestResponseWithRequestNoResponseResponseTable;
 extern "C" const fidl_type_t
-    v1_test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable;
+    test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable;
 extern "C" const fidl_type_t
-    v1_test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseResponseTable;
+    test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseResponseTable;
 extern "C" const fidl_type_t
-    v1_test_name_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable;
+    test_name_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable;
 extern "C" const fidl_type_t
-    v1_test_name_WithAndWithoutRequestResponseWithRequestWithResponseResponseTable;
+    test_name_WithAndWithoutRequestResponseWithRequestWithResponseResponseTable;
 extern "C" const fidl_type_t
-    v1_test_name_WithAndWithoutRequestResponseOnEmptyResponseRequestTable;
+    test_name_WithAndWithoutRequestResponseOnEmptyResponseRequestTable;
 extern "C" const fidl_type_t
-    v1_test_name_WithAndWithoutRequestResponseOnEmptyResponseEventTable;
+    test_name_WithAndWithoutRequestResponseOnEmptyResponseEventTable;
 extern "C" const fidl_type_t
-    v1_test_name_WithAndWithoutRequestResponseOnWithResponseRequestTable;
+    test_name_WithAndWithoutRequestResponseOnWithResponseRequestTable;
 extern "C" const fidl_type_t
-    v1_test_name_WithAndWithoutRequestResponseOnWithResponseEventTable;
+    test_name_WithAndWithoutRequestResponseOnWithResponseEventTable;
 
 class WithAndWithoutRequestResponse final {
   WithAndWithoutRequestResponse() = delete;
@@ -1020,13 +1011,12 @@ class WithAndWithoutRequestResponse final {
     ::fidl::StringView ret;
 
     static constexpr const fidl_type_t* Type =
-        &v1_test_name_WithAndWithoutRequestResponseNoRequestWithResponseResponseTable;
+        &test_name_WithAndWithoutRequestResponseNoRequestWithResponseResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 4294967295;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool HasPointer = true;
-    static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
   };
@@ -1038,7 +1028,7 @@ class WithAndWithoutRequestResponse final {
     ::fidl::StringView arg;
 
     static constexpr const fidl_type_t* Type =
-        &v1_test_name_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable;
+        &test_name_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -1046,7 +1036,6 @@ class WithAndWithoutRequestResponse final {
     static constexpr uint32_t AltMaxOutOfLine = 4294967295;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool HasPointer = true;
-    static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
   };
@@ -1058,7 +1047,7 @@ class WithAndWithoutRequestResponse final {
     ::fidl::StringView arg;
 
     static constexpr const fidl_type_t* Type =
-        &v1_test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable;
+        &test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -1066,7 +1055,6 @@ class WithAndWithoutRequestResponse final {
     static constexpr uint32_t AltMaxOutOfLine = 4294967295;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool HasPointer = true;
-    static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
   };
@@ -1077,13 +1065,12 @@ class WithAndWithoutRequestResponse final {
     ::fidl::StringView ret;
 
     static constexpr const fidl_type_t* Type =
-        &v1_test_name_WithAndWithoutRequestResponseWithRequestWithResponseResponseTable;
+        &test_name_WithAndWithoutRequestResponseWithRequestWithResponseResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 4294967295;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool HasPointer = true;
-    static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
   };
@@ -1093,7 +1080,7 @@ class WithAndWithoutRequestResponse final {
     ::fidl::StringView arg;
 
     static constexpr const fidl_type_t* Type =
-        &v1_test_name_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable;
+        &test_name_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -1101,7 +1088,6 @@ class WithAndWithoutRequestResponse final {
     static constexpr uint32_t AltMaxOutOfLine = 4294967295;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool HasPointer = true;
-    static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
     using ResponseType = WithRequestWithResponseResponse;
@@ -1114,13 +1100,12 @@ class WithAndWithoutRequestResponse final {
     ::fidl::StringView ret;
 
     static constexpr const fidl_type_t* Type =
-        &v1_test_name_WithAndWithoutRequestResponseOnWithResponseEventTable;
+        &test_name_WithAndWithoutRequestResponseOnWithResponseEventTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 4294967295;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool HasPointer = true;
-    static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
   };
@@ -1782,17 +1767,15 @@ class WithAndWithoutRequestResponse final {
 };
 
 extern "C" const fidl_type_t
-    v1_test_name_WithErrorSyntaxResponseAsStructRequestTable;
+    test_name_WithErrorSyntaxResponseAsStructRequestTable;
 extern "C" const fidl_type_t
-    v1_test_name_WithErrorSyntaxResponseAsStructResponseTable;
+    test_name_WithErrorSyntaxResponseAsStructResponseTable;
 extern "C" const fidl_type_t
-    v1_test_name_WithErrorSyntaxErrorAsPrimitiveRequestTable;
+    test_name_WithErrorSyntaxErrorAsPrimitiveRequestTable;
 extern "C" const fidl_type_t
-    v1_test_name_WithErrorSyntaxErrorAsPrimitiveResponseTable;
-extern "C" const fidl_type_t
-    v1_test_name_WithErrorSyntaxErrorAsEnumRequestTable;
-extern "C" const fidl_type_t
-    v1_test_name_WithErrorSyntaxErrorAsEnumResponseTable;
+    test_name_WithErrorSyntaxErrorAsPrimitiveResponseTable;
+extern "C" const fidl_type_t test_name_WithErrorSyntaxErrorAsEnumRequestTable;
+extern "C" const fidl_type_t test_name_WithErrorSyntaxErrorAsEnumResponseTable;
 
 class WithErrorSyntax final {
   WithErrorSyntax() = delete;
@@ -1804,13 +1787,12 @@ class WithErrorSyntax final {
     ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Result result;
 
     static constexpr const fidl_type_t* Type =
-        &v1_test_name_WithErrorSyntaxResponseAsStructResponseTable;
+        &test_name_WithErrorSyntaxResponseAsStructResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 24;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool HasPointer = true;
-    static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
   };
@@ -1822,13 +1804,12 @@ class WithErrorSyntax final {
     ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Result result;
 
     static constexpr const fidl_type_t* Type =
-        &v1_test_name_WithErrorSyntaxErrorAsPrimitiveResponseTable;
+        &test_name_WithErrorSyntaxErrorAsPrimitiveResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool HasPointer = true;
-    static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
   };
@@ -1840,13 +1821,12 @@ class WithErrorSyntax final {
     ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Result result;
 
     static constexpr const fidl_type_t* Type =
-        &v1_test_name_WithErrorSyntaxErrorAsEnumResponseTable;
+        &test_name_WithErrorSyntaxErrorAsEnumResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool HasPointer = true;
-    static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
   };

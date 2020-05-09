@@ -5,8 +5,8 @@
 #include "lib/fidl/cpp/internal/implementation.h"
 namespace example {
 
-extern "C" const fidl_type_t v1_example_ByteAndBytesTable;
-const fidl_type_t* ByteAndBytes::FidlType = &v1_example_ByteAndBytesTable;
+extern "C" const fidl_type_t example_ByteAndBytesTable;
+const fidl_type_t* ByteAndBytes::FidlType = &example_ByteAndBytesTable;
 
 void ByteAndBytes::Encode(::fidl::Encoder* _encoder, size_t _offset) {
   ::fidl::Encode(_encoder, &single_byte, _offset + 0);

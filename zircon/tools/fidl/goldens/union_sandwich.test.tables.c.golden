@@ -2,196 +2,90 @@
 
 #include <lib/fidl/internal.h>
 
-// Forward declarations for old <-> V1 mappings
 
-static const fidl_type_t Array32_5uint8Table;
-static const fidl_type_t Array6_5uint8Table;
 extern const fidl_type_t test_fidl_unionsandwich_UnionSize8Alignment4Table;
+extern const fidl_type_t test_fidl_unionsandwich_UnionSize8Alignment4NullableRefTable;
 extern const fidl_type_t test_fidl_unionsandwich_SandwichUnionSize8Alignment4Table;
 extern const fidl_type_t test_fidl_unionsandwich_UnionSize36Alignment4Table;
+extern const fidl_type_t test_fidl_unionsandwich_UnionSize36Alignment4NullableRefTable;
 extern const fidl_type_t test_fidl_unionsandwich_SandwichUnionSize36Alignment4Table;
 extern const fidl_type_t test_fidl_unionsandwich_UnionSize12Alignment4Table;
+extern const fidl_type_t test_fidl_unionsandwich_UnionSize12Alignment4NullableRefTable;
 extern const fidl_type_t test_fidl_unionsandwich_SandwichUnionSize12Alignment4Table;
 extern const fidl_type_t test_fidl_unionsandwich_StructSize16Alignment8Table;
 extern const fidl_type_t test_fidl_unionsandwich_UnionSize24Alignment8Table;
-extern const fidl_type_t test_fidl_unionsandwich_SandwichUnionSize24Alignment8Table;
-static const fidl_type_t v1_Array32_5uint8Table;
-static const fidl_type_t v1_Array6_5uint8Table;
-extern const fidl_type_t v1_test_fidl_unionsandwich_UnionSize8Alignment4Table;
-extern const fidl_type_t v1_test_fidl_unionsandwich_UnionSize8Alignment4NullableRefTable;
-extern const fidl_type_t v1_test_fidl_unionsandwich_SandwichUnionSize8Alignment4Table;
-extern const fidl_type_t v1_test_fidl_unionsandwich_UnionSize36Alignment4Table;
-extern const fidl_type_t v1_test_fidl_unionsandwich_UnionSize36Alignment4NullableRefTable;
-extern const fidl_type_t v1_test_fidl_unionsandwich_SandwichUnionSize36Alignment4Table;
-extern const fidl_type_t v1_test_fidl_unionsandwich_UnionSize12Alignment4Table;
-extern const fidl_type_t v1_test_fidl_unionsandwich_UnionSize12Alignment4NullableRefTable;
-extern const fidl_type_t v1_test_fidl_unionsandwich_SandwichUnionSize12Alignment4Table;
-extern const fidl_type_t v1_test_fidl_unionsandwich_StructSize16Alignment8Table;
-extern const fidl_type_t v1_test_fidl_unionsandwich_UnionSize24Alignment8Table;
-extern const fidl_type_t v1_test_fidl_unionsandwich_UnionSize24Alignment8NullableRefTable;
-extern const fidl_type_t v1_test_fidl_unionsandwich_SandwichUnionSize24Alignment8Table;
-
-// Coding tables for old wire format.
-
-extern const fidl_type_t test_fidl_unionsandwich_UnionSize8Alignment4Table;
-extern const fidl_type_t test_fidl_unionsandwich_SandwichUnionSize8Alignment4Table;
-extern const fidl_type_t test_fidl_unionsandwich_UnionSize36Alignment4Table;
-extern const fidl_type_t test_fidl_unionsandwich_SandwichUnionSize36Alignment4Table;
-extern const fidl_type_t test_fidl_unionsandwich_UnionSize12Alignment4Table;
-extern const fidl_type_t test_fidl_unionsandwich_SandwichUnionSize12Alignment4Table;
-extern const fidl_type_t test_fidl_unionsandwich_StructSize16Alignment8Table;
-extern const fidl_type_t test_fidl_unionsandwich_UnionSize24Alignment8Table;
+extern const fidl_type_t test_fidl_unionsandwich_UnionSize24Alignment8NullableRefTable;
 extern const fidl_type_t test_fidl_unionsandwich_SandwichUnionSize24Alignment8Table;
 
-static const fidl_type_t Pointer44test_fidl_unionsandwich_UnionSize8Alignment4Table __attribute__((unused)) = {.type_tag=kFidlTypeUnionPointer, {.coded_union_pointer={.union_type=&test_fidl_unionsandwich_UnionSize8Alignment4Table.coded_union}}};
-static const fidl_type_t Pointer45test_fidl_unionsandwich_UnionSize36Alignment4Table __attribute__((unused)) = {.type_tag=kFidlTypeUnionPointer, {.coded_union_pointer={.union_type=&test_fidl_unionsandwich_UnionSize36Alignment4Table.coded_union}}};
-static const fidl_type_t Pointer45test_fidl_unionsandwich_UnionSize12Alignment4Table __attribute__((unused)) = {.type_tag=kFidlTypeUnionPointer, {.coded_union_pointer={.union_type=&test_fidl_unionsandwich_UnionSize12Alignment4Table.coded_union}}};
-static const fidl_type_t Pointer45test_fidl_unionsandwich_UnionSize24Alignment8Table __attribute__((unused)) = {.type_tag=kFidlTypeUnionPointer, {.coded_union_pointer={.union_type=&test_fidl_unionsandwich_UnionSize24Alignment8Table.coded_union}}};
 
-static const fidl_type_t Array32_5uint8Table = {.type_tag=kFidlTypeArray, {.coded_array={.element=NULL, .array_size=32u, .element_size=1u, .alt_type=&v1_Array32_5uint8Table}}};
+static const fidl_type_t Array32_5uint8Table = {.type_tag=kFidlTypeArray, {.coded_array={.element=NULL, .array_size=32u, .element_size=1u}}};
 
-static const fidl_type_t Array6_5uint8Table = {.type_tag=kFidlTypeArray, {.coded_array={.element=NULL, .array_size=6u, .element_size=1u, .alt_type=&v1_Array6_5uint8Table}}};
+static const fidl_type_t Array6_5uint8Table = {.type_tag=kFidlTypeArray, {.coded_array={.element=NULL, .array_size=6u, .element_size=1u}}};
 
 
-static const struct FidlUnionField Fields44test_fidl_unionsandwich_UnionSize8Alignment4[] = {
-    /*FidlUnionField*/{.type=NULL, .padding=0u, .xunion_ordinal=1u}
+static const struct FidlXUnionField Fields44test_fidl_unionsandwich_UnionSize8Alignment4[] = {
+    /*FidlXUnionField*/{.type=&fidl_internal_kUint32Table, .ordinal=1u}
 };
-const fidl_type_t test_fidl_unionsandwich_UnionSize8Alignment4Table = {.type_tag=kFidlTypeUnion, {.coded_union={.fields=Fields44test_fidl_unionsandwich_UnionSize8Alignment4, .field_count=1u, .data_offset=4u, .size=8u, .name="test.fidl.unionsandwich/UnionSize8Alignment4", .alt_type=&v1_test_fidl_unionsandwich_UnionSize8Alignment4Table}}};
-
+const fidl_type_t test_fidl_unionsandwich_UnionSize8Alignment4Table = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=1u, .fields=Fields44test_fidl_unionsandwich_UnionSize8Alignment4, .nullable=kFidlNullability_Nonnullable, .name="test.fidl.unionsandwich/UnionSize8Alignment4", .strictness=kFidlStrictness_Strict}}};
+static const struct FidlXUnionField Fields55test_fidl_unionsandwich_UnionSize8Alignment4NullableRef[] = {
+    /*FidlXUnionField*/{.type=&fidl_internal_kUint32Table, .ordinal=1u}
+};
+const fidl_type_t test_fidl_unionsandwich_UnionSize8Alignment4NullableRefTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=1u, .fields=Fields55test_fidl_unionsandwich_UnionSize8Alignment4NullableRef, .nullable=kFidlNullability_Nullable, .name="test.fidl.unionsandwich/UnionSize8Alignment4", .strictness=kFidlStrictness_Strict}}};
 static const struct FidlStructField Fields52test_fidl_unionsandwich_SandwichUnionSize8Alignment4[] = {
-    /*FidlStructField*/{.type=NULL, .padding_offset=4u, .padding=0u},
-    /*FidlStructField*/{.type=&test_fidl_unionsandwich_UnionSize8Alignment4Table, .offset=4u, .padding=0u},
-    /*FidlStructField*/{.type=NULL, .padding_offset=16u, .padding=0u}
+    /*FidlStructField*/{.type=NULL, .padding_offset=4u, .padding=4u},
+    /*FidlStructField*/{.type=&test_fidl_unionsandwich_UnionSize8Alignment4Table, .offset=8u, .padding=0u},
+    /*FidlStructField*/{.type=NULL, .padding_offset=36u, .padding=4u}
 };
-const fidl_type_t test_fidl_unionsandwich_SandwichUnionSize8Alignment4Table = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields52test_fidl_unionsandwich_SandwichUnionSize8Alignment4, .field_count=3u, .size=16u, .max_out_of_line=0u, .contains_union=true, .name="test.fidl.unionsandwich/SandwichUnionSize8Alignment4", .alt_type=&v1_test_fidl_unionsandwich_SandwichUnionSize8Alignment4Table}}};
+const fidl_type_t test_fidl_unionsandwich_SandwichUnionSize8Alignment4Table = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields52test_fidl_unionsandwich_SandwichUnionSize8Alignment4, .field_count=3u, .size=40u, .name="test.fidl.unionsandwich/SandwichUnionSize8Alignment4"}}};
 
-static const struct FidlUnionField Fields45test_fidl_unionsandwich_UnionSize36Alignment4[] = {
-    /*FidlUnionField*/{.type=&Array32_5uint8Table, .padding=0u, .xunion_ordinal=1u}
+static const struct FidlXUnionField Fields45test_fidl_unionsandwich_UnionSize36Alignment4[] = {
+    /*FidlXUnionField*/{.type=&Array32_5uint8Table, .ordinal=1u}
 };
-const fidl_type_t test_fidl_unionsandwich_UnionSize36Alignment4Table = {.type_tag=kFidlTypeUnion, {.coded_union={.fields=Fields45test_fidl_unionsandwich_UnionSize36Alignment4, .field_count=1u, .data_offset=4u, .size=36u, .name="test.fidl.unionsandwich/UnionSize36Alignment4", .alt_type=&v1_test_fidl_unionsandwich_UnionSize36Alignment4Table}}};
-
+const fidl_type_t test_fidl_unionsandwich_UnionSize36Alignment4Table = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=1u, .fields=Fields45test_fidl_unionsandwich_UnionSize36Alignment4, .nullable=kFidlNullability_Nonnullable, .name="test.fidl.unionsandwich/UnionSize36Alignment4", .strictness=kFidlStrictness_Strict}}};
+static const struct FidlXUnionField Fields56test_fidl_unionsandwich_UnionSize36Alignment4NullableRef[] = {
+    /*FidlXUnionField*/{.type=&Array32_5uint8Table, .ordinal=1u}
+};
+const fidl_type_t test_fidl_unionsandwich_UnionSize36Alignment4NullableRefTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=1u, .fields=Fields56test_fidl_unionsandwich_UnionSize36Alignment4NullableRef, .nullable=kFidlNullability_Nullable, .name="test.fidl.unionsandwich/UnionSize36Alignment4", .strictness=kFidlStrictness_Strict}}};
 static const struct FidlStructField Fields53test_fidl_unionsandwich_SandwichUnionSize36Alignment4[] = {
-    /*FidlStructField*/{.type=NULL, .padding_offset=4u, .padding=0u},
-    /*FidlStructField*/{.type=&test_fidl_unionsandwich_UnionSize36Alignment4Table, .offset=4u, .padding=0u},
-    /*FidlStructField*/{.type=NULL, .padding_offset=44u, .padding=0u}
+    /*FidlStructField*/{.type=NULL, .padding_offset=4u, .padding=4u},
+    /*FidlStructField*/{.type=&test_fidl_unionsandwich_UnionSize36Alignment4Table, .offset=8u, .padding=0u},
+    /*FidlStructField*/{.type=NULL, .padding_offset=36u, .padding=4u}
 };
-const fidl_type_t test_fidl_unionsandwich_SandwichUnionSize36Alignment4Table = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields53test_fidl_unionsandwich_SandwichUnionSize36Alignment4, .field_count=3u, .size=44u, .max_out_of_line=0u, .contains_union=true, .name="test.fidl.unionsandwich/SandwichUnionSize36Alignment4", .alt_type=&v1_test_fidl_unionsandwich_SandwichUnionSize36Alignment4Table}}};
+const fidl_type_t test_fidl_unionsandwich_SandwichUnionSize36Alignment4Table = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields53test_fidl_unionsandwich_SandwichUnionSize36Alignment4, .field_count=3u, .size=40u, .name="test.fidl.unionsandwich/SandwichUnionSize36Alignment4"}}};
 
-static const struct FidlUnionField Fields45test_fidl_unionsandwich_UnionSize12Alignment4[] = {
-    /*FidlUnionField*/{.type=&Array6_5uint8Table, .padding=2u, .xunion_ordinal=1u}
+static const struct FidlXUnionField Fields45test_fidl_unionsandwich_UnionSize12Alignment4[] = {
+    /*FidlXUnionField*/{.type=&Array6_5uint8Table, .ordinal=1u}
 };
-const fidl_type_t test_fidl_unionsandwich_UnionSize12Alignment4Table = {.type_tag=kFidlTypeUnion, {.coded_union={.fields=Fields45test_fidl_unionsandwich_UnionSize12Alignment4, .field_count=1u, .data_offset=4u, .size=12u, .name="test.fidl.unionsandwich/UnionSize12Alignment4", .alt_type=&v1_test_fidl_unionsandwich_UnionSize12Alignment4Table}}};
-
+const fidl_type_t test_fidl_unionsandwich_UnionSize12Alignment4Table = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=1u, .fields=Fields45test_fidl_unionsandwich_UnionSize12Alignment4, .nullable=kFidlNullability_Nonnullable, .name="test.fidl.unionsandwich/UnionSize12Alignment4", .strictness=kFidlStrictness_Strict}}};
+static const struct FidlXUnionField Fields56test_fidl_unionsandwich_UnionSize12Alignment4NullableRef[] = {
+    /*FidlXUnionField*/{.type=&Array6_5uint8Table, .ordinal=1u}
+};
+const fidl_type_t test_fidl_unionsandwich_UnionSize12Alignment4NullableRefTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=1u, .fields=Fields56test_fidl_unionsandwich_UnionSize12Alignment4NullableRef, .nullable=kFidlNullability_Nullable, .name="test.fidl.unionsandwich/UnionSize12Alignment4", .strictness=kFidlStrictness_Strict}}};
 static const struct FidlStructField Fields53test_fidl_unionsandwich_SandwichUnionSize12Alignment4[] = {
-    /*FidlStructField*/{.type=NULL, .padding_offset=4u, .padding=0u},
-    /*FidlStructField*/{.type=&test_fidl_unionsandwich_UnionSize12Alignment4Table, .offset=4u, .padding=0u},
-    /*FidlStructField*/{.type=NULL, .padding_offset=20u, .padding=0u}
+    /*FidlStructField*/{.type=NULL, .padding_offset=4u, .padding=4u},
+    /*FidlStructField*/{.type=&test_fidl_unionsandwich_UnionSize12Alignment4Table, .offset=8u, .padding=0u},
+    /*FidlStructField*/{.type=NULL, .padding_offset=36u, .padding=4u}
 };
-const fidl_type_t test_fidl_unionsandwich_SandwichUnionSize12Alignment4Table = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields53test_fidl_unionsandwich_SandwichUnionSize12Alignment4, .field_count=3u, .size=20u, .max_out_of_line=0u, .contains_union=true, .name="test.fidl.unionsandwich/SandwichUnionSize12Alignment4", .alt_type=&v1_test_fidl_unionsandwich_SandwichUnionSize12Alignment4Table}}};
+const fidl_type_t test_fidl_unionsandwich_SandwichUnionSize12Alignment4Table = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields53test_fidl_unionsandwich_SandwichUnionSize12Alignment4, .field_count=3u, .size=40u, .name="test.fidl.unionsandwich/SandwichUnionSize12Alignment4"}}};
 
 static const struct FidlStructField Fields46test_fidl_unionsandwich_StructSize16Alignment8[] = {
     /*FidlStructField*/{.type=NULL, .padding_offset=8u, .padding=0u},
     /*FidlStructField*/{.type=NULL, .padding_offset=16u, .padding=0u}
 };
-const fidl_type_t test_fidl_unionsandwich_StructSize16Alignment8Table = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields46test_fidl_unionsandwich_StructSize16Alignment8, .field_count=2u, .size=16u, .max_out_of_line=0u, .contains_union=false, .name="test.fidl.unionsandwich/StructSize16Alignment8", .alt_type=&v1_test_fidl_unionsandwich_StructSize16Alignment8Table}}};
+const fidl_type_t test_fidl_unionsandwich_StructSize16Alignment8Table = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields46test_fidl_unionsandwich_StructSize16Alignment8, .field_count=2u, .size=16u, .name="test.fidl.unionsandwich/StructSize16Alignment8"}}};
 
-static const struct FidlUnionField Fields45test_fidl_unionsandwich_UnionSize24Alignment8[] = {
-    /*FidlUnionField*/{.type=&test_fidl_unionsandwich_StructSize16Alignment8Table, .padding=0u, .xunion_ordinal=1u}
+static const struct FidlXUnionField Fields45test_fidl_unionsandwich_UnionSize24Alignment8[] = {
+    /*FidlXUnionField*/{.type=&test_fidl_unionsandwich_StructSize16Alignment8Table, .ordinal=1u}
 };
-const fidl_type_t test_fidl_unionsandwich_UnionSize24Alignment8Table = {.type_tag=kFidlTypeUnion, {.coded_union={.fields=Fields45test_fidl_unionsandwich_UnionSize24Alignment8, .field_count=1u, .data_offset=8u, .size=24u, .name="test.fidl.unionsandwich/UnionSize24Alignment8", .alt_type=&v1_test_fidl_unionsandwich_UnionSize24Alignment8Table}}};
-
+const fidl_type_t test_fidl_unionsandwich_UnionSize24Alignment8Table = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=1u, .fields=Fields45test_fidl_unionsandwich_UnionSize24Alignment8, .nullable=kFidlNullability_Nonnullable, .name="test.fidl.unionsandwich/UnionSize24Alignment8", .strictness=kFidlStrictness_Strict}}};
+static const struct FidlXUnionField Fields56test_fidl_unionsandwich_UnionSize24Alignment8NullableRef[] = {
+    /*FidlXUnionField*/{.type=&test_fidl_unionsandwich_StructSize16Alignment8Table, .ordinal=1u}
+};
+const fidl_type_t test_fidl_unionsandwich_UnionSize24Alignment8NullableRefTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=1u, .fields=Fields56test_fidl_unionsandwich_UnionSize24Alignment8NullableRef, .nullable=kFidlNullability_Nullable, .name="test.fidl.unionsandwich/UnionSize24Alignment8", .strictness=kFidlStrictness_Strict}}};
 static const struct FidlStructField Fields53test_fidl_unionsandwich_SandwichUnionSize24Alignment8[] = {
     /*FidlStructField*/{.type=NULL, .padding_offset=4u, .padding=4u},
     /*FidlStructField*/{.type=&test_fidl_unionsandwich_UnionSize24Alignment8Table, .offset=8u, .padding=0u},
     /*FidlStructField*/{.type=NULL, .padding_offset=36u, .padding=4u}
 };
-const fidl_type_t test_fidl_unionsandwich_SandwichUnionSize24Alignment8Table = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields53test_fidl_unionsandwich_SandwichUnionSize24Alignment8, .field_count=3u, .size=40u, .max_out_of_line=0u, .contains_union=true, .name="test.fidl.unionsandwich/SandwichUnionSize24Alignment8", .alt_type=&v1_test_fidl_unionsandwich_SandwichUnionSize24Alignment8Table}}};
-
-// Coding tables for v1 wire format.
-
-extern const fidl_type_t v1_test_fidl_unionsandwich_UnionSize8Alignment4Table;
-extern const fidl_type_t v1_test_fidl_unionsandwich_UnionSize8Alignment4NullableRefTable;
-extern const fidl_type_t v1_test_fidl_unionsandwich_SandwichUnionSize8Alignment4Table;
-extern const fidl_type_t v1_test_fidl_unionsandwich_UnionSize36Alignment4Table;
-extern const fidl_type_t v1_test_fidl_unionsandwich_UnionSize36Alignment4NullableRefTable;
-extern const fidl_type_t v1_test_fidl_unionsandwich_SandwichUnionSize36Alignment4Table;
-extern const fidl_type_t v1_test_fidl_unionsandwich_UnionSize12Alignment4Table;
-extern const fidl_type_t v1_test_fidl_unionsandwich_UnionSize12Alignment4NullableRefTable;
-extern const fidl_type_t v1_test_fidl_unionsandwich_SandwichUnionSize12Alignment4Table;
-extern const fidl_type_t v1_test_fidl_unionsandwich_StructSize16Alignment8Table;
-extern const fidl_type_t v1_test_fidl_unionsandwich_UnionSize24Alignment8Table;
-extern const fidl_type_t v1_test_fidl_unionsandwich_UnionSize24Alignment8NullableRefTable;
-extern const fidl_type_t v1_test_fidl_unionsandwich_SandwichUnionSize24Alignment8Table;
-
-
-static const fidl_type_t v1_Array32_5uint8Table = {.type_tag=kFidlTypeArray, {.coded_array={.element=NULL, .array_size=32u, .element_size=1u, .alt_type=&Array32_5uint8Table}}};
-
-static const fidl_type_t v1_Array6_5uint8Table = {.type_tag=kFidlTypeArray, {.coded_array={.element=NULL, .array_size=6u, .element_size=1u, .alt_type=&Array6_5uint8Table}}};
-
-
-static const struct FidlXUnionField Fields47v1_test_fidl_unionsandwich_UnionSize8Alignment4[] = {
-    /*FidlXUnionField*/{.type=&fidl_internal_kUint32Table, .ordinal=1u}
-};
-const fidl_type_t v1_test_fidl_unionsandwich_UnionSize8Alignment4Table = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=1u, .fields=Fields47v1_test_fidl_unionsandwich_UnionSize8Alignment4, .nullable=kFidlNullability_Nonnullable, .name="test.fidl.unionsandwich/UnionSize8Alignment4", .strictness=kFidlStrictness_Strict, .alt_type=&test_fidl_unionsandwich_UnionSize8Alignment4Table}}};
-static const struct FidlXUnionField Fields58v1_test_fidl_unionsandwich_UnionSize8Alignment4NullableRef[] = {
-    /*FidlXUnionField*/{.type=&fidl_internal_kUint32Table, .ordinal=1u}
-};
-const fidl_type_t v1_test_fidl_unionsandwich_UnionSize8Alignment4NullableRefTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=1u, .fields=Fields58v1_test_fidl_unionsandwich_UnionSize8Alignment4NullableRef, .nullable=kFidlNullability_Nullable, .name="test.fidl.unionsandwich/UnionSize8Alignment4", .strictness=kFidlStrictness_Strict, .alt_type=&Pointer44test_fidl_unionsandwich_UnionSize8Alignment4Table}}};
-static const struct FidlStructField Fields55v1_test_fidl_unionsandwich_SandwichUnionSize8Alignment4[] = {
-    /*FidlStructField*/{.type=NULL, .padding_offset=4u, .padding=4u},
-    /*FidlStructField*/{.type=&v1_test_fidl_unionsandwich_UnionSize8Alignment4Table, .offset=8u, .padding=0u},
-    /*FidlStructField*/{.type=NULL, .padding_offset=36u, .padding=4u}
-};
-const fidl_type_t v1_test_fidl_unionsandwich_SandwichUnionSize8Alignment4Table = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields55v1_test_fidl_unionsandwich_SandwichUnionSize8Alignment4, .field_count=3u, .size=40u, .max_out_of_line=8u, .contains_union=true, .name="test.fidl.unionsandwich/SandwichUnionSize8Alignment4", .alt_type=&test_fidl_unionsandwich_SandwichUnionSize8Alignment4Table}}};
-
-static const struct FidlXUnionField Fields48v1_test_fidl_unionsandwich_UnionSize36Alignment4[] = {
-    /*FidlXUnionField*/{.type=&v1_Array32_5uint8Table, .ordinal=1u}
-};
-const fidl_type_t v1_test_fidl_unionsandwich_UnionSize36Alignment4Table = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=1u, .fields=Fields48v1_test_fidl_unionsandwich_UnionSize36Alignment4, .nullable=kFidlNullability_Nonnullable, .name="test.fidl.unionsandwich/UnionSize36Alignment4", .strictness=kFidlStrictness_Strict, .alt_type=&test_fidl_unionsandwich_UnionSize36Alignment4Table}}};
-static const struct FidlXUnionField Fields59v1_test_fidl_unionsandwich_UnionSize36Alignment4NullableRef[] = {
-    /*FidlXUnionField*/{.type=&v1_Array32_5uint8Table, .ordinal=1u}
-};
-const fidl_type_t v1_test_fidl_unionsandwich_UnionSize36Alignment4NullableRefTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=1u, .fields=Fields59v1_test_fidl_unionsandwich_UnionSize36Alignment4NullableRef, .nullable=kFidlNullability_Nullable, .name="test.fidl.unionsandwich/UnionSize36Alignment4", .strictness=kFidlStrictness_Strict, .alt_type=&Pointer45test_fidl_unionsandwich_UnionSize36Alignment4Table}}};
-static const struct FidlStructField Fields56v1_test_fidl_unionsandwich_SandwichUnionSize36Alignment4[] = {
-    /*FidlStructField*/{.type=NULL, .padding_offset=4u, .padding=4u},
-    /*FidlStructField*/{.type=&v1_test_fidl_unionsandwich_UnionSize36Alignment4Table, .offset=8u, .padding=0u},
-    /*FidlStructField*/{.type=NULL, .padding_offset=36u, .padding=4u}
-};
-const fidl_type_t v1_test_fidl_unionsandwich_SandwichUnionSize36Alignment4Table = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields56v1_test_fidl_unionsandwich_SandwichUnionSize36Alignment4, .field_count=3u, .size=40u, .max_out_of_line=32u, .contains_union=true, .name="test.fidl.unionsandwich/SandwichUnionSize36Alignment4", .alt_type=&test_fidl_unionsandwich_SandwichUnionSize36Alignment4Table}}};
-
-static const struct FidlXUnionField Fields48v1_test_fidl_unionsandwich_UnionSize12Alignment4[] = {
-    /*FidlXUnionField*/{.type=&v1_Array6_5uint8Table, .ordinal=1u}
-};
-const fidl_type_t v1_test_fidl_unionsandwich_UnionSize12Alignment4Table = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=1u, .fields=Fields48v1_test_fidl_unionsandwich_UnionSize12Alignment4, .nullable=kFidlNullability_Nonnullable, .name="test.fidl.unionsandwich/UnionSize12Alignment4", .strictness=kFidlStrictness_Strict, .alt_type=&test_fidl_unionsandwich_UnionSize12Alignment4Table}}};
-static const struct FidlXUnionField Fields59v1_test_fidl_unionsandwich_UnionSize12Alignment4NullableRef[] = {
-    /*FidlXUnionField*/{.type=&v1_Array6_5uint8Table, .ordinal=1u}
-};
-const fidl_type_t v1_test_fidl_unionsandwich_UnionSize12Alignment4NullableRefTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=1u, .fields=Fields59v1_test_fidl_unionsandwich_UnionSize12Alignment4NullableRef, .nullable=kFidlNullability_Nullable, .name="test.fidl.unionsandwich/UnionSize12Alignment4", .strictness=kFidlStrictness_Strict, .alt_type=&Pointer45test_fidl_unionsandwich_UnionSize12Alignment4Table}}};
-static const struct FidlStructField Fields56v1_test_fidl_unionsandwich_SandwichUnionSize12Alignment4[] = {
-    /*FidlStructField*/{.type=NULL, .padding_offset=4u, .padding=4u},
-    /*FidlStructField*/{.type=&v1_test_fidl_unionsandwich_UnionSize12Alignment4Table, .offset=8u, .padding=0u},
-    /*FidlStructField*/{.type=NULL, .padding_offset=36u, .padding=4u}
-};
-const fidl_type_t v1_test_fidl_unionsandwich_SandwichUnionSize12Alignment4Table = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields56v1_test_fidl_unionsandwich_SandwichUnionSize12Alignment4, .field_count=3u, .size=40u, .max_out_of_line=8u, .contains_union=true, .name="test.fidl.unionsandwich/SandwichUnionSize12Alignment4", .alt_type=&test_fidl_unionsandwich_SandwichUnionSize12Alignment4Table}}};
-
-static const struct FidlStructField Fields49v1_test_fidl_unionsandwich_StructSize16Alignment8[] = {
-    /*FidlStructField*/{.type=NULL, .padding_offset=8u, .padding=0u},
-    /*FidlStructField*/{.type=NULL, .padding_offset=16u, .padding=0u}
-};
-const fidl_type_t v1_test_fidl_unionsandwich_StructSize16Alignment8Table = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields49v1_test_fidl_unionsandwich_StructSize16Alignment8, .field_count=2u, .size=16u, .max_out_of_line=0u, .contains_union=false, .name="test.fidl.unionsandwich/StructSize16Alignment8", .alt_type=&test_fidl_unionsandwich_StructSize16Alignment8Table}}};
-
-static const struct FidlXUnionField Fields48v1_test_fidl_unionsandwich_UnionSize24Alignment8[] = {
-    /*FidlXUnionField*/{.type=&v1_test_fidl_unionsandwich_StructSize16Alignment8Table, .ordinal=1u}
-};
-const fidl_type_t v1_test_fidl_unionsandwich_UnionSize24Alignment8Table = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=1u, .fields=Fields48v1_test_fidl_unionsandwich_UnionSize24Alignment8, .nullable=kFidlNullability_Nonnullable, .name="test.fidl.unionsandwich/UnionSize24Alignment8", .strictness=kFidlStrictness_Strict, .alt_type=&test_fidl_unionsandwich_UnionSize24Alignment8Table}}};
-static const struct FidlXUnionField Fields59v1_test_fidl_unionsandwich_UnionSize24Alignment8NullableRef[] = {
-    /*FidlXUnionField*/{.type=&v1_test_fidl_unionsandwich_StructSize16Alignment8Table, .ordinal=1u}
-};
-const fidl_type_t v1_test_fidl_unionsandwich_UnionSize24Alignment8NullableRefTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=1u, .fields=Fields59v1_test_fidl_unionsandwich_UnionSize24Alignment8NullableRef, .nullable=kFidlNullability_Nullable, .name="test.fidl.unionsandwich/UnionSize24Alignment8", .strictness=kFidlStrictness_Strict, .alt_type=&Pointer45test_fidl_unionsandwich_UnionSize24Alignment8Table}}};
-static const struct FidlStructField Fields56v1_test_fidl_unionsandwich_SandwichUnionSize24Alignment8[] = {
-    /*FidlStructField*/{.type=NULL, .padding_offset=4u, .padding=4u},
-    /*FidlStructField*/{.type=&v1_test_fidl_unionsandwich_UnionSize24Alignment8Table, .offset=8u, .padding=0u},
-    /*FidlStructField*/{.type=NULL, .padding_offset=36u, .padding=4u}
-};
-const fidl_type_t v1_test_fidl_unionsandwich_SandwichUnionSize24Alignment8Table = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields56v1_test_fidl_unionsandwich_SandwichUnionSize24Alignment8, .field_count=3u, .size=40u, .max_out_of_line=16u, .contains_union=true, .name="test.fidl.unionsandwich/SandwichUnionSize24Alignment8", .alt_type=&test_fidl_unionsandwich_SandwichUnionSize24Alignment8Table}}};
+const fidl_type_t test_fidl_unionsandwich_SandwichUnionSize24Alignment8Table = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields53test_fidl_unionsandwich_SandwichUnionSize24Alignment8, .field_count=3u, .size=40u, .name="test.fidl.unionsandwich/SandwichUnionSize24Alignment8"}}};
 

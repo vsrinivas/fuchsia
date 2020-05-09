@@ -122,23 +122,6 @@ bool bits_types() {
   END_TEST;
 }
 
-bool union_types() {
-  BEGIN_TEST;
-
-  EXPECT_NAME_EQ("nonnullable_handle_union", &nonnullable_handle_union_type, 1024);
-  EXPECT_NAME_EQ("fidl.test.coding/SampleUnion", &fidl_test_coding_SampleUnionTable, 1024);
-
-  END_TEST;
-}
-
-bool union_ptr_types() {
-  BEGIN_TEST;
-
-  EXPECT_NAME_EQ("nonnullable_handle_union?", &nonnullable_handle_union_ptr, 1024);
-
-  END_TEST;
-}
-
 bool struct_types() {
   BEGIN_TEST;
 
@@ -182,8 +165,6 @@ RUN_TEST(string_types)
 RUN_TEST(vector_types)
 RUN_TEST(enum_types)
 RUN_TEST(bits_types)
-RUN_TEST(union_types)
-RUN_TEST(union_ptr_types)
 RUN_TEST(struct_types)
 RUN_TEST(struct_ptr_types)
 RUN_TEST(xunion_types)

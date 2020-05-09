@@ -5,8 +5,8 @@
 #include "lib/fidl/cpp/internal/implementation.h"
 namespace top {
 
-extern "C" const fidl_type_t v1_top_BazTable;
-const fidl_type_t* Baz::FidlType = &v1_top_BazTable;
+extern "C" const fidl_type_t top_BazTable;
+const fidl_type_t* Baz::FidlType = &top_BazTable;
 
 void Baz::Encode(::fidl::Encoder* _encoder, size_t _offset) {
   ::fidl::Encode(_encoder, &g, _offset + 0);

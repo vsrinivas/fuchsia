@@ -78,8 +78,7 @@ std::string echo_service = R"({
             "max_handles": 0,
             "max_out_of_line": 4294967295,
             "has_padding": true,
-            "has_flexible_envelope": false,
-            "contains_union": false
+            "has_flexible_envelope": false
           },
           "has_response": true,
           "maybe_response": [
@@ -108,8 +107,7 @@ std::string echo_service = R"({
             "max_handles": 0,
             "max_out_of_line": 4294967295,
             "has_padding": true,
-            "has_flexible_envelope": false,
-            "contains_union": false
+            "has_flexible_envelope": false
           },
           "is_composed": false
         },
@@ -132,8 +130,7 @@ std::string echo_service = R"({
             "max_handles": 0,
             "max_out_of_line": 0,
             "has_padding": false,
-            "has_flexible_envelope": false,
-            "contains_union": false
+            "has_flexible_envelope": false
           },
           "is_composed": false
         }
@@ -175,8 +172,7 @@ std::string echo_service = R"({
         "max_handles": 0,
         "max_out_of_line": 4294967295,
         "has_padding": true,
-        "has_flexible_envelope": false,
-        "contains_union": false
+        "has_flexible_envelope": false
       }
     },
     {
@@ -212,8 +208,7 @@ std::string echo_service = R"({
         "max_handles": 0,
         "max_out_of_line": 4294967295,
         "has_padding": true,
-        "has_flexible_envelope": false,
-        "contains_union": false
+        "has_flexible_envelope": false
       }
     }
   ],

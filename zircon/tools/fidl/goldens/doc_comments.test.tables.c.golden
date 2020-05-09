@@ -2,42 +2,32 @@
 
 #include <lib/fidl/internal.h>
 
-// Forward declarations for old <-> V1 mappings
-
-extern const fidl_type_t test_name_InterfaceMethodRequestTable;
-extern const fidl_type_t test_name_InterfaceOnEventEventTable;
-extern const fidl_type_t test_name_UnionTable;
-extern const fidl_type_t test_name_StructTable;
-extern const fidl_type_t v1_test_name_InterfaceMethodRequestTable;
-extern const fidl_type_t v1_test_name_InterfaceOnEventEventTable;
-extern const fidl_type_t v1_test_name_UnionTable;
-extern const fidl_type_t v1_test_name_UnionNullableRefTable;
-extern const fidl_type_t v1_test_name_StructTable;
-
-// Coding tables for old wire format.
 
 extern const fidl_type_t test_name_UnionTable;
+extern const fidl_type_t test_name_UnionNullableRefTable;
 extern const fidl_type_t test_name_TableTable;
 extern const fidl_type_t test_name_StructTable;
 extern const fidl_type_t test_name_MyEnumTable;
 extern const fidl_type_t test_name_MyBitsTable;
 
-static const fidl_type_t Pointer15test_name_UnionTable __attribute__((unused)) = {.type_tag=kFidlTypeUnionPointer, {.coded_union_pointer={.union_type=&test_name_UnionTable.coded_union}}};
 
 extern const fidl_type_t test_name_InterfaceMethodRequestTable;
 static const struct FidlStructField Fields32test_name_InterfaceMethodRequest[] = {};
-const fidl_type_t test_name_InterfaceMethodRequestTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields32test_name_InterfaceMethodRequest, .field_count=0u, .size=16u, .max_out_of_line=0u, .contains_union=false, .name="test.name/InterfaceMethodRequest", .alt_type=&v1_test_name_InterfaceMethodRequestTable}}};
+const fidl_type_t test_name_InterfaceMethodRequestTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields32test_name_InterfaceMethodRequest, .field_count=0u, .size=16u, .name="test.name/InterfaceMethodRequest"}}};
 
 extern const fidl_type_t test_name_InterfaceOnEventEventTable;
 static const struct FidlStructField Fields31test_name_InterfaceOnEventEvent[] = {};
-const fidl_type_t test_name_InterfaceOnEventEventTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields31test_name_InterfaceOnEventEvent, .field_count=0u, .size=16u, .max_out_of_line=0u, .contains_union=false, .name="test.name/InterfaceOnEventEvent", .alt_type=&v1_test_name_InterfaceOnEventEventTable}}};
+const fidl_type_t test_name_InterfaceOnEventEventTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields31test_name_InterfaceOnEventEvent, .field_count=0u, .size=16u, .name="test.name/InterfaceOnEventEvent"}}};
 
 
-static const struct FidlUnionField Fields15test_name_Union[] = {
-    /*FidlUnionField*/{.type=NULL, .padding=0u, .xunion_ordinal=1u}
+static const struct FidlXUnionField Fields15test_name_Union[] = {
+    /*FidlXUnionField*/{.type=&fidl_internal_kInt32Table, .ordinal=1u}
 };
-const fidl_type_t test_name_UnionTable = {.type_tag=kFidlTypeUnion, {.coded_union={.fields=Fields15test_name_Union, .field_count=1u, .data_offset=4u, .size=8u, .name="test.name/Union", .alt_type=&v1_test_name_UnionTable}}};
-
+const fidl_type_t test_name_UnionTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=1u, .fields=Fields15test_name_Union, .nullable=kFidlNullability_Nonnullable, .name="test.name/Union", .strictness=kFidlStrictness_Strict}}};
+static const struct FidlXUnionField Fields26test_name_UnionNullableRef[] = {
+    /*FidlXUnionField*/{.type=&fidl_internal_kInt32Table, .ordinal=1u}
+};
+const fidl_type_t test_name_UnionNullableRefTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=1u, .fields=Fields26test_name_UnionNullableRef, .nullable=kFidlNullability_Nullable, .name="test.name/Union", .strictness=kFidlStrictness_Strict}}};
 static const struct FidlTableField Fields15test_name_Table[] = {
     /*FidlTableField*/{.type=&fidl_internal_kInt32Table, .ordinal=1u}
 };
@@ -46,52 +36,10 @@ const fidl_type_t test_name_TableTable = {.type_tag=kFidlTypeTable, {.coded_tabl
 static const struct FidlStructField Fields16test_name_Struct[] = {
     /*FidlStructField*/{.type=NULL, .padding_offset=4u, .padding=0u}
 };
-const fidl_type_t test_name_StructTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields16test_name_Struct, .field_count=1u, .size=4u, .max_out_of_line=0u, .contains_union=false, .name="test.name/Struct", .alt_type=&v1_test_name_StructTable}}};
+const fidl_type_t test_name_StructTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields16test_name_Struct, .field_count=1u, .size=4u, .name="test.name/Struct"}}};
 
 static bool EnumValidatorFor_test_name_MyEnum(uint64_t v) { return (v == 1ul) || (v == 2ul) || false; }
 const fidl_type_t test_name_MyEnumTable = {.type_tag=kFidlTypeEnum, {.coded_enum={.underlying_type=kFidlCodedPrimitive_Uint32, .validate=&EnumValidatorFor_test_name_MyEnum, .name="test.name/MyEnum"}}};
 
 const fidl_type_t test_name_MyBitsTable = {.type_tag=kFidlTypeBits, {.coded_bits={.underlying_type=kFidlCodedPrimitive_Uint32, .mask=3ul, .name="test.name/MyBits"}}};
-
-// Coding tables for v1 wire format.
-
-extern const fidl_type_t v1_test_name_UnionTable;
-extern const fidl_type_t v1_test_name_UnionNullableRefTable;
-extern const fidl_type_t v1_test_name_TableTable;
-extern const fidl_type_t v1_test_name_StructTable;
-extern const fidl_type_t v1_test_name_MyEnumTable;
-extern const fidl_type_t v1_test_name_MyBitsTable;
-
-
-extern const fidl_type_t v1_test_name_InterfaceMethodRequestTable;
-static const struct FidlStructField Fields35v1_test_name_InterfaceMethodRequest[] = {};
-const fidl_type_t v1_test_name_InterfaceMethodRequestTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields35v1_test_name_InterfaceMethodRequest, .field_count=0u, .size=16u, .max_out_of_line=0u, .contains_union=false, .name="test.name/InterfaceMethodRequest", .alt_type=&test_name_InterfaceMethodRequestTable}}};
-
-extern const fidl_type_t v1_test_name_InterfaceOnEventEventTable;
-static const struct FidlStructField Fields34v1_test_name_InterfaceOnEventEvent[] = {};
-const fidl_type_t v1_test_name_InterfaceOnEventEventTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields34v1_test_name_InterfaceOnEventEvent, .field_count=0u, .size=16u, .max_out_of_line=0u, .contains_union=false, .name="test.name/InterfaceOnEventEvent", .alt_type=&test_name_InterfaceOnEventEventTable}}};
-
-
-static const struct FidlXUnionField Fields18v1_test_name_Union[] = {
-    /*FidlXUnionField*/{.type=&fidl_internal_kInt32Table, .ordinal=1u}
-};
-const fidl_type_t v1_test_name_UnionTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=1u, .fields=Fields18v1_test_name_Union, .nullable=kFidlNullability_Nonnullable, .name="test.name/Union", .strictness=kFidlStrictness_Strict, .alt_type=&test_name_UnionTable}}};
-static const struct FidlXUnionField Fields29v1_test_name_UnionNullableRef[] = {
-    /*FidlXUnionField*/{.type=&fidl_internal_kInt32Table, .ordinal=1u}
-};
-const fidl_type_t v1_test_name_UnionNullableRefTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=1u, .fields=Fields29v1_test_name_UnionNullableRef, .nullable=kFidlNullability_Nullable, .name="test.name/Union", .strictness=kFidlStrictness_Strict, .alt_type=&Pointer15test_name_UnionTable}}};
-static const struct FidlTableField Fields18v1_test_name_Table[] = {
-    /*FidlTableField*/{.type=&fidl_internal_kInt32Table, .ordinal=1u}
-};
-const fidl_type_t v1_test_name_TableTable = {.type_tag=kFidlTypeTable, {.coded_table={.fields=Fields18v1_test_name_Table, .field_count=1u, .name="test.name/Table"}}};
-
-static const struct FidlStructField Fields19v1_test_name_Struct[] = {
-    /*FidlStructField*/{.type=NULL, .padding_offset=4u, .padding=0u}
-};
-const fidl_type_t v1_test_name_StructTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields19v1_test_name_Struct, .field_count=1u, .size=4u, .max_out_of_line=0u, .contains_union=false, .name="test.name/Struct", .alt_type=&test_name_StructTable}}};
-
-static bool EnumValidatorFor_v1_test_name_MyEnum(uint64_t v) { return (v == 1ul) || (v == 2ul) || false; }
-const fidl_type_t v1_test_name_MyEnumTable = {.type_tag=kFidlTypeEnum, {.coded_enum={.underlying_type=kFidlCodedPrimitive_Uint32, .validate=&EnumValidatorFor_v1_test_name_MyEnum, .name="test.name/MyEnum"}}};
-
-const fidl_type_t v1_test_name_MyBitsTable = {.type_tag=kFidlTypeBits, {.coded_bits={.underlying_type=kFidlCodedPrimitive_Uint32, .mask=3ul, .name="test.name/MyBits"}}};
 

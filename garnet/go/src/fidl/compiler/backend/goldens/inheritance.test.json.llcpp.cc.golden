@@ -15,8 +15,8 @@ namespace {
 [[maybe_unused]] constexpr uint64_t ksuper_foo_Ordinal = 0x2f16c1bc00000000lu;
 [[maybe_unused]] constexpr uint64_t ksuper_foo_GenOrdinal =
     0x4f6c089228ba7c92lu;
-extern "C" const fidl_type_t v1_fidl_test_json_superfooRequestTable;
-extern "C" const fidl_type_t v1_fidl_test_json_superfooResponseTable;
+extern "C" const fidl_type_t fidl_test_json_superfooRequestTable;
+extern "C" const fidl_type_t fidl_test_json_superfooResponseTable;
 
 }  // namespace
 template <>
@@ -324,8 +324,8 @@ namespace {
 
 [[maybe_unused]] constexpr uint64_t ksub_foo_Ordinal = 0x2f16c1bc00000000lu;
 [[maybe_unused]] constexpr uint64_t ksub_foo_GenOrdinal = 0x4f6c089228ba7c92lu;
-extern "C" const fidl_type_t v1_fidl_test_json_subfooRequestTable;
-extern "C" const fidl_type_t v1_fidl_test_json_subfooResponseTable;
+extern "C" const fidl_type_t fidl_test_json_subfooRequestTable;
+extern "C" const fidl_type_t fidl_test_json_subfooResponseTable;
 
 }  // namespace
 template <>

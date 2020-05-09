@@ -42,17 +42,17 @@ namespace {
 [[maybe_unused]] constexpr uint64_t
     kProtocol_RequestStrictResponseFlexible_GenOrdinal = 0x72b1a46e5e2af282lu;
 extern "C" const fidl_type_t
-    v1_fidl_test_json_ProtocolRequestStrictResponseFlexibleRequestTable;
+    fidl_test_json_ProtocolRequestStrictResponseFlexibleRequestTable;
 extern "C" const fidl_type_t
-    v1_fidl_test_json_ProtocolRequestStrictResponseFlexibleResponseTable;
+    fidl_test_json_ProtocolRequestStrictResponseFlexibleResponseTable;
 [[maybe_unused]] constexpr uint64_t
     kProtocol_RequestFlexibleResponseStrict_Ordinal = 0x3136aeff00000000lu;
 [[maybe_unused]] constexpr uint64_t
     kProtocol_RequestFlexibleResponseStrict_GenOrdinal = 0x42a34ad5c4a1d952lu;
 extern "C" const fidl_type_t
-    v1_fidl_test_json_ProtocolRequestFlexibleResponseStrictRequestTable;
+    fidl_test_json_ProtocolRequestFlexibleResponseStrictRequestTable;
 extern "C" const fidl_type_t
-    v1_fidl_test_json_ProtocolRequestFlexibleResponseStrictResponseTable;
+    fidl_test_json_ProtocolRequestFlexibleResponseStrictResponseTable;
 
 }  // namespace
 template <>
@@ -489,12 +489,6 @@ zx_status_t Protocol::ClientImpl::Dispatch(
   switch (hdr->ordinal) {
     case kProtocol_RequestStrictResponseFlexible_Ordinal:
     case kProtocol_RequestStrictResponseFlexible_GenOrdinal: {
-      constexpr uint32_t kTransformerDestSize =
-          ::fidl::internal::ClampedMessageSize<
-              RequestStrictResponseFlexibleResponse,
-              ::fidl::MessageDirection::kReceiving>();
-      ::fidl::internal::ByteStorage<kTransformerDestSize>
-          transformer_dest_storage(::fidl::internal::DelayAllocation);
       auto result =
           ::fidl::DecodeAs<RequestStrictResponseFlexibleResponse>(msg);
       if (result.status != ZX_OK) {
@@ -507,12 +501,6 @@ zx_status_t Protocol::ClientImpl::Dispatch(
     }
     case kProtocol_RequestFlexibleResponseStrict_Ordinal:
     case kProtocol_RequestFlexibleResponseStrict_GenOrdinal: {
-      constexpr uint32_t kTransformerDestSize =
-          ::fidl::internal::ClampedMessageSize<
-              RequestFlexibleResponseStrictResponse,
-              ::fidl::MessageDirection::kReceiving>();
-      ::fidl::internal::ByteStorage<kTransformerDestSize>
-          transformer_dest_storage(::fidl::internal::DelayAllocation);
       auto result =
           ::fidl::DecodeAs<RequestFlexibleResponseStrictResponse>(msg);
       if (result.status != ZX_OK) {

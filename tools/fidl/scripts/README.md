@@ -10,11 +10,3 @@ documented in this file.
 This script analyzes all `.fidl` files in the fuchsia repository and reports
 occurrences of nullable fields in unions.
 
-# transformer_tests_porting_status.sh
-
-This script compares the following files:
-
-- tools/fidl/gidl-conformance-suite/transformer.gidl
-- zircon/system/utest/fidl/transformer_tests.cc
-
-It lists tests and reports which ones are only found in one location.

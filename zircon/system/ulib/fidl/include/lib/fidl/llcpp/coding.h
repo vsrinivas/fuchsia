@@ -9,7 +9,6 @@
 #include <lib/fidl/llcpp/encoded_message.h>
 #include <lib/fidl/llcpp/response_storage.h>
 #include <lib/fidl/llcpp/traits.h>
-#include <lib/fidl/transformer.h>
 #include <lib/fidl/txn_header.h>
 #include <zircon/fidl.h>
 
@@ -46,7 +45,6 @@ struct AnyZeroArgMessage final {
   static constexpr uint32_t MaxOutOfLine = 0;
   static constexpr bool HasFlexibleEnvelope = false;
   static constexpr bool HasPointer = false;
-  static constexpr bool ContainsUnion = false;
 };
 
 template <>

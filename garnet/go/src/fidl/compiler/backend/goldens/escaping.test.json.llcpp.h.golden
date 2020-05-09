@@ -30,12 +30,12 @@ namespace escapeme {
 
 struct DocCommentWithQuotes;
 
-extern "C" const fidl_type_t v1_escapeme_DocCommentWithQuotesTable;
+extern "C" const fidl_type_t escapeme_DocCommentWithQuotesTable;
 
 // "pleaseescapethisdocommentproperly"
 struct DocCommentWithQuotes {
   static constexpr const fidl_type_t* Type =
-      &v1_escapeme_DocCommentWithQuotesTable;
+      &escapeme_DocCommentWithQuotesTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;

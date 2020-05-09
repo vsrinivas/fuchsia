@@ -51,10 +51,8 @@ class TablesGenerator {
   void Generate(const coded::BitsType& struct_type);
   void Generate(const coded::StructType& struct_type);
   void Generate(const coded::TableType& table_type);
-  void Generate(const coded::UnionType& union_type);
   void Generate(const coded::XUnionType& xunion_type);
   void Generate(const coded::StructPointerType& pointer);
-  void Generate(const coded::UnionPointerType& pointer);
   void Generate(const coded::MessageType& message_type);
   void Generate(const coded::HandleType& handle_type);
   void Generate(const coded::ProtocolHandleType& protocol_type);
@@ -65,7 +63,6 @@ class TablesGenerator {
 
   void Generate(const coded::Type* type);
   void Generate(const coded::StructField& field);
-  void Generate(const coded::UnionField& field);
   void Generate(const coded::TableField& field);
   void Generate(const coded::XUnionField& field);
 
@@ -73,20 +70,17 @@ class TablesGenerator {
   void GenerateForward(const coded::BitsType& bits_type);
   void GenerateForward(const coded::StructType& struct_type);
   void GenerateForward(const coded::TableType& table_type);
-  void GenerateForward(const coded::UnionType& union_type);
   void GenerateForward(const coded::XUnionType& xunion_type);
+
+  void GenerateTypedef(const coded::EnumType& enum_type);
+  void GenerateTypedef(const coded::BitsType& bits_type);
+  void GenerateTypedef(const coded::StructType& struct_type);
+  void GenerateTypedef(const coded::TableType& table_type);
+  void GenerateTypedef(const coded::XUnionType& xunion_type);
 
   void Produce(CodedTypesGenerator* coded_types_generator);
 
-  template <class T>
-  std::string AltTableReference(const T& type) const;
-  const coded::Type* AltType(const coded::Type* type) const;
-
   const flat::Library* library_;
-
-  // Mappings from old <-> V1 types, in both directions. i.e. both old and V1
-  // types appear on both the LHS and RHS.
-  std::map<const coded::Type*, const coded::Type*> alt_type_mapping_;
 
   // These will be empty after calling Produce(), since Produce() std::moves
   // them into the result.

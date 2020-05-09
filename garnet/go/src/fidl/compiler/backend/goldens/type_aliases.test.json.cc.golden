@@ -5,9 +5,9 @@
 #include "lib/fidl/cpp/internal/implementation.h"
 namespace example {
 
-extern "C" const fidl_type_t v1_example_ExampleOfUseOfAliasesTable;
+extern "C" const fidl_type_t example_ExampleOfUseOfAliasesTable;
 const fidl_type_t* ExampleOfUseOfAliases::FidlType =
-    &v1_example_ExampleOfUseOfAliasesTable;
+    &example_ExampleOfUseOfAliasesTable;
 
 void ExampleOfUseOfAliases::Encode(::fidl::Encoder* _encoder, size_t _offset) {
   ::fidl::Encode(_encoder, &field_of_u32, _offset + 0);

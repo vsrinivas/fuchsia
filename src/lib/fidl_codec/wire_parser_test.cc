@@ -1554,8 +1554,7 @@ TEST_F(WireParserTest, BadSchemaPrintHex) {
             "max_handles": 0,
             "max_out_of_line": 0,
             "has_padding": true,
-            "has_flexible_envelope": false,
-            "contains_union": false
+            "has_flexible_envelope": false
           },
           "maybe_request_type_shape_v1": {
             "inline_size": 24,
@@ -1564,8 +1563,7 @@ TEST_F(WireParserTest, BadSchemaPrintHex) {
             "max_handles": 0,
             "max_out_of_line": 0,
             "has_padding": true,
-            "has_flexible_envelope": false,
-            "contains_union": false
+            "has_flexible_envelope": false
           },
           "has_response": false,
           "is_composed": false

@@ -77,7 +77,6 @@ TEST(SimpleTable, SerializeAndDeserialize) {
 }
 
 #ifndef FIDL_EXPERIMENTAL_WRITE_V1_WIREFORMAT_DISABLE_TEST
-// TODO(fxb/41371): Fix the transformer assert that occurs in this test.
 TEST(SimpleTable, SerializeAndDeserializeWithReserved) {
   SimpleTable input;
   input.set_y(1);

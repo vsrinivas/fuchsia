@@ -7,10 +7,11 @@
 #include <lib/zx/channel.h>
 #include <limits.h>
 #include <stddef.h>
-#include <unittest/unittest.h>
 #include <zircon/syscalls.h>
 
 #include <new>
+
+#include <unittest/unittest.h>
 
 #include "fidl_coded_types.h"
 #include "fidl_structs.h"
@@ -254,8 +255,7 @@ const fidl_type_t unbounded_too_large_nullable_vector_of_handles = {
     {.coded_vector = {.element = &nullable_handle,
                       .max_count = FIDL_MAX_SIZE,
                       .element_size = sizeof(zx_handle_t),
-                      .nullable = kFidlNullability_Nullable,
-                      .alt_type = nullptr}}};
+                      .nullable = kFidlNullability_Nullable}}};
 static const FidlStructField unbounded_too_large_nullable_vector_of_handles_fields[] = {
     FidlStructField(&unbounded_too_large_nullable_vector_of_handles,
                     offsetof(unbounded_too_large_nullable_vector_of_handles_message_layout,
@@ -268,10 +268,7 @@ const fidl_type_t unbounded_too_large_nullable_vector_of_handles_message_type = 
          .fields = unbounded_too_large_nullable_vector_of_handles_fields,
          .field_count = ArrayCount(unbounded_too_large_nullable_vector_of_handles_fields),
          .size = sizeof(unbounded_too_large_nullable_vector_of_handles_inline_data),
-         .max_out_of_line = UINT32_MAX,
-         .contains_union = true,
-         .name = "unbounded_too_large_nullable_vector_of_handles_message",
-         .alt_type = nullptr}}};
+         .name = "unbounded_too_large_nullable_vector_of_handles_message"}}};
 
 bool close_present_too_large_nullable_vector_of_handles() {
   BEGIN_TEST;

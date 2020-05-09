@@ -6,8 +6,8 @@
 namespace test {
 namespace name {
 
-extern "C" const fidl_type_t v1_test_name_UnionTable;
-const fidl_type_t* Union::FidlType = &v1_test_name_UnionTable;
+extern "C" const fidl_type_t test_name_UnionTable;
+const fidl_type_t* Union::FidlType = &test_name_UnionTable;
 
 Union::Union() {}
 
@@ -136,8 +136,8 @@ void Union::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     }
   }
 }
-extern "C" const fidl_type_t v1_test_name_TableTable;
-const fidl_type_t* Table::FidlType = &v1_test_name_TableTable;
+extern "C" const fidl_type_t test_name_TableTable;
+const fidl_type_t* Table::FidlType = &test_name_TableTable;
 
 Table::Table() : has_Field_(false) {}
 
@@ -240,8 +240,8 @@ zx_status_t Table::Clone(Table* result) const {
   }
   return ZX_OK;
 }
-extern "C" const fidl_type_t v1_test_name_StructTable;
-const fidl_type_t* Struct::FidlType = &v1_test_name_StructTable;
+extern "C" const fidl_type_t test_name_StructTable;
+const fidl_type_t* Struct::FidlType = &test_name_StructTable;
 
 void Struct::Encode(::fidl::Encoder* _encoder, size_t _offset) {
   ::fidl::Encode(_encoder, &Field, _offset + 0);
@@ -259,9 +259,9 @@ zx_status_t Struct::Clone(Struct* _result) const {
 #ifdef __Fuchsia__
 namespace {
 
-extern "C" const fidl_type_t v1_test_name_InterfaceMethodRequestTable;
+extern "C" const fidl_type_t test_name_InterfaceMethodRequestTable;
 
-extern "C" const fidl_type_t v1_test_name_InterfaceOnEventEventTable;
+extern "C" const fidl_type_t test_name_InterfaceOnEventEventTable;
 
 }  // namespace
 
@@ -273,7 +273,7 @@ const fidl_type_t* Interface_RequestDecoder::GetType(uint64_t ordinal,
     case internal::kInterface_Method_Ordinal:
     case internal::kInterface_Method_GenOrdinal:
       *out_needs_response = false;
-      return &v1_test_name_InterfaceMethodRequestTable;
+      return &test_name_InterfaceMethodRequestTable;
     default:
       *out_needs_response = false;
       return nullptr;
@@ -284,7 +284,7 @@ const fidl_type_t* Interface_ResponseDecoder::GetType(uint64_t ordinal) {
   switch (ordinal) {
     case internal::kInterface_OnEvent_Ordinal:
     case internal::kInterface_OnEvent_GenOrdinal:
-      return &v1_test_name_InterfaceOnEventEventTable;
+      return &test_name_InterfaceOnEventEventTable;
     default:
       return nullptr;
   }
@@ -312,10 +312,10 @@ zx_status_t Interface_Proxy::Dispatch_(::fidl::Message message) {
       }
       const char* error_msg = nullptr;
       status =
-          message.Decode(&v1_test_name_InterfaceOnEventEventTable, &error_msg);
+          message.Decode(&test_name_InterfaceOnEventEventTable, &error_msg);
       if (status != ZX_OK) {
         FIDL_REPORT_DECODING_ERROR(
-            message, &v1_test_name_InterfaceOnEventEventTable, error_msg);
+            message, &test_name_InterfaceOnEventEventTable, error_msg);
         break;
       }
       OnEvent();
@@ -331,7 +331,7 @@ zx_status_t Interface_Proxy::Dispatch_(::fidl::Message message) {
 
 void Interface_Proxy::Method() {
   ::fidl::Encoder _encoder(internal::kInterface_Method_GenOrdinal);
-  controller_->Send(&v1_test_name_InterfaceMethodRequestTable,
+  controller_->Send(&test_name_InterfaceMethodRequestTable,
                     Interface_RequestEncoder::Method(&_encoder), nullptr);
 }
 
@@ -383,7 +383,7 @@ zx_status_t Interface_Stub::Dispatch_(
 }
 void Interface_Stub::OnEvent() {
   ::fidl::Encoder _encoder(internal::kInterface_OnEvent_GenOrdinal);
-  sender_()->Send(&v1_test_name_InterfaceOnEventEventTable,
+  sender_()->Send(&test_name_InterfaceOnEventEventTable,
                   Interface_ResponseEncoder::OnEvent(&_encoder));
 }
 
@@ -394,7 +394,7 @@ Interface_SyncProxy::~Interface_SyncProxy() = default;
 
 zx_status_t Interface_SyncProxy::Method() {
   ::fidl::Encoder _encoder(internal::kInterface_Method_GenOrdinal);
-  return proxy_.Send(&v1_test_name_InterfaceMethodRequestTable,
+  return proxy_.Send(&test_name_InterfaceMethodRequestTable,
                      Interface_RequestEncoder::Method(&_encoder));
 }
 

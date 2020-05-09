@@ -56,10 +56,7 @@ const fidl_type_t NonnullableChannelMessageType = {
     {.coded_struct = {.fields = NonnullableChannelMessageFields,
                       .field_count = 1,
                       .size = sizeof(NonnullableChannelMessage),
-                      .max_out_of_line = UINT32_MAX,
-                      .contains_union = true,
-                      .name = "NonnullableChannelMessage",
-                      .alt_type = nullptr}}};
+                      .name = "NonnullableChannelMessage"}}};
 
 extern const fidl_type_t InlinePODStructType;
 
@@ -87,10 +84,7 @@ const fidl_type_t InlinePODStructType = {.type_tag = kFidlTypeStruct,
                                          {.coded_struct = {.fields = InlinePODStructStructFields,
                                                            .field_count = 0,
                                                            .size = sizeof(InlinePODStruct),
-                                                           .max_out_of_line = UINT32_MAX,
-                                                           .contains_union = true,
-                                                           .name = "InlinePODStruct",
-                                                           .alt_type = nullptr}}};
+                                                           .name = "InlinePODStruct"}}};
 
 extern const fidl_type_t OutOfLineMessageType;
 
@@ -125,10 +119,7 @@ const fidl_type_t OutOfLineMessageType = {.type_tag = kFidlTypeStruct,
                                           {.coded_struct = {.fields = OutOfLineMessageTypeFields,
                                                             .field_count = 1,
                                                             .size = sizeof(OutOfLineMessage),
-                                                            .max_out_of_line = UINT32_MAX,
-                                                            .contains_union = true,
-                                                            .name = "OutOfLineMessage",
-                                                            .alt_type = nullptr}}};
+                                                            .name = "OutOfLineMessage"}}};
 
 extern const fidl_type_t LargeStructType;
 
@@ -157,10 +148,7 @@ const fidl_type_t LargeStructType = {.type_tag = kFidlTypeStruct,
                                      {.coded_struct = {.fields = LargeStructStructFields,
                                                        .field_count = 0,
                                                        .size = sizeof(LargeStruct),
-                                                       .max_out_of_line = UINT32_MAX,
-                                                       .contains_union = true,
-                                                       .name = "LargeStruct",
-                                                       .alt_type = nullptr}}};
+                                                       .name = "LargeStruct"}}};
 
 // These two structs are used to test the stack/heap allocation selection in
 // fidl::internal::ResponseStorage

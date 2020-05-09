@@ -58,7 +58,7 @@ class ExplicitFoo;
 struct Empty;
 class XUnionContainingEmptyStruct;
 
-extern "C" const fidl_type_t v1_fidl_test_json_UnionTable;
+extern "C" const fidl_type_t fidl_test_json_UnionTable;
 
 class Union {
  public:
@@ -159,7 +159,7 @@ class Union {
     return static_cast<Tag>(ordinal_);
   }
 
-  static constexpr const fidl_type_t* Type = &v1_fidl_test_json_UnionTable;
+  static constexpr const fidl_type_t* Type = &fidl_test_json_UnionTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -206,7 +206,7 @@ class Union {
   ::fidl::Envelope<void> envelope_;
 };
 
-extern "C" const fidl_type_t v1_fidl_test_json_StrictUnionTable;
+extern "C" const fidl_type_t fidl_test_json_StrictUnionTable;
 
 class StrictUnion {
  public:
@@ -307,8 +307,7 @@ class StrictUnion {
     return static_cast<Tag>(ordinal_);
   }
 
-  static constexpr const fidl_type_t* Type =
-      &v1_fidl_test_json_StrictUnionTable;
+  static constexpr const fidl_type_t* Type = &fidl_test_json_StrictUnionTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -355,7 +354,7 @@ class StrictUnion {
   ::fidl::Envelope<void> envelope_;
 };
 
-extern "C" const fidl_type_t v1_fidl_test_json_StrictSimpleXUnionTable;
+extern "C" const fidl_type_t fidl_test_json_StrictSimpleXUnionTable;
 
 class StrictSimpleXUnion {
  public:
@@ -446,7 +445,7 @@ class StrictSimpleXUnion {
   }
 
   static constexpr const fidl_type_t* Type =
-      &v1_fidl_test_json_StrictSimpleXUnionTable;
+      &fidl_test_json_StrictSimpleXUnionTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -491,7 +490,7 @@ class StrictSimpleXUnion {
   ::fidl::Envelope<void> envelope_;
 };
 
-extern "C" const fidl_type_t v1_fidl_test_json_StrictFooTable;
+extern "C" const fidl_type_t fidl_test_json_StrictFooTable;
 
 class StrictFoo {
  public:
@@ -557,7 +556,7 @@ class StrictFoo {
     return static_cast<Tag>(ordinal_);
   }
 
-  static constexpr const fidl_type_t* Type = &v1_fidl_test_json_StrictFooTable;
+  static constexpr const fidl_type_t* Type = &fidl_test_json_StrictFooTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -596,7 +595,7 @@ class StrictFoo {
   ::fidl::Envelope<void> envelope_;
 };
 
-extern "C" const fidl_type_t v1_fidl_test_json_StrictBoundedXUnionTable;
+extern "C" const fidl_type_t fidl_test_json_StrictBoundedXUnionTable;
 
 class StrictBoundedXUnion {
  public:
@@ -641,7 +640,7 @@ class StrictBoundedXUnion {
   }
 
   static constexpr const fidl_type_t* Type =
-      &v1_fidl_test_json_StrictBoundedXUnionTable;
+      &fidl_test_json_StrictBoundedXUnionTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 32;
@@ -673,7 +672,7 @@ class StrictBoundedXUnion {
   ::fidl::Envelope<void> envelope_;
 };
 
-extern "C" const fidl_type_t v1_fidl_test_json_ReverseOrdinalUnionTable;
+extern "C" const fidl_type_t fidl_test_json_ReverseOrdinalUnionTable;
 
 class ReverseOrdinalUnion {
  public:
@@ -740,7 +739,7 @@ class ReverseOrdinalUnion {
   }
 
   static constexpr const fidl_type_t* Type =
-      &v1_fidl_test_json_ReverseOrdinalUnionTable;
+      &fidl_test_json_ReverseOrdinalUnionTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
@@ -779,7 +778,7 @@ class ReverseOrdinalUnion {
   ::fidl::Envelope<void> envelope_;
 };
 
-extern "C" const fidl_type_t v1_fidl_test_json_StrictPizzaOrPastaTable;
+extern "C" const fidl_type_t fidl_test_json_StrictPizzaOrPastaTable;
 
 class StrictPizzaOrPasta {
  public:
@@ -854,7 +853,7 @@ class StrictPizzaOrPasta {
   }
 
   static constexpr const fidl_type_t* Type =
-      &v1_fidl_test_json_StrictPizzaOrPastaTable;
+      &fidl_test_json_StrictPizzaOrPastaTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -893,7 +892,7 @@ class StrictPizzaOrPasta {
   ::fidl::Envelope<void> envelope_;
 };
 
-extern "C" const fidl_type_t v1_fidl_test_json_PizzaOrPastaTable;
+extern "C" const fidl_type_t fidl_test_json_PizzaOrPastaTable;
 
 class PizzaOrPasta {
  public:
@@ -967,8 +966,7 @@ class PizzaOrPasta {
     return static_cast<Tag>(ordinal_);
   }
 
-  static constexpr const fidl_type_t* Type =
-      &v1_fidl_test_json_PizzaOrPastaTable;
+  static constexpr const fidl_type_t* Type = &fidl_test_json_PizzaOrPastaTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -1007,7 +1005,7 @@ class PizzaOrPasta {
   ::fidl::Envelope<void> envelope_;
 };
 
-extern "C" const fidl_type_t v1_fidl_test_json_FlexiblePizzaOrPastaTable;
+extern "C" const fidl_type_t fidl_test_json_FlexiblePizzaOrPastaTable;
 
 class FlexiblePizzaOrPasta {
  public:
@@ -1084,7 +1082,7 @@ class FlexiblePizzaOrPasta {
   Tag which() const;
 
   static constexpr const fidl_type_t* Type =
-      &v1_fidl_test_json_FlexiblePizzaOrPastaTable;
+      &fidl_test_json_FlexiblePizzaOrPastaTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -1123,7 +1121,7 @@ class FlexiblePizzaOrPasta {
   ::fidl::Envelope<void> envelope_;
 };
 
-extern "C" const fidl_type_t v1_fidl_test_json_ExplicitPizzaOrPastaTable;
+extern "C" const fidl_type_t fidl_test_json_ExplicitPizzaOrPastaTable;
 
 class ExplicitPizzaOrPasta {
  public:
@@ -1198,7 +1196,7 @@ class ExplicitPizzaOrPasta {
   }
 
   static constexpr const fidl_type_t* Type =
-      &v1_fidl_test_json_ExplicitPizzaOrPastaTable;
+      &fidl_test_json_ExplicitPizzaOrPastaTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -1237,7 +1235,7 @@ class ExplicitPizzaOrPasta {
   ::fidl::Envelope<void> envelope_;
 };
 
-extern "C" const fidl_type_t v1_fidl_test_json_OlderSimpleUnionTable;
+extern "C" const fidl_type_t fidl_test_json_OlderSimpleUnionTable;
 
 class OlderSimpleUnion {
  public:
@@ -1306,7 +1304,7 @@ class OlderSimpleUnion {
   Tag which() const;
 
   static constexpr const fidl_type_t* Type =
-      &v1_fidl_test_json_OlderSimpleUnionTable;
+      &fidl_test_json_OlderSimpleUnionTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
@@ -1344,7 +1342,7 @@ class OlderSimpleUnion {
   ::fidl::Envelope<void> envelope_;
 };
 
-extern "C" const fidl_type_t v1_fidl_test_json_NewerSimpleUnionTable;
+extern "C" const fidl_type_t fidl_test_json_NewerSimpleUnionTable;
 
 class NewerSimpleUnion {
  public:
@@ -1441,7 +1439,7 @@ class NewerSimpleUnion {
   Tag which() const;
 
   static constexpr const fidl_type_t* Type =
-      &v1_fidl_test_json_NewerSimpleUnionTable;
+      &fidl_test_json_NewerSimpleUnionTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -1488,7 +1486,7 @@ class NewerSimpleUnion {
   ::fidl::Envelope<void> envelope_;
 };
 
-extern "C" const fidl_type_t v1_fidl_test_json_FlexibleUnionTable;
+extern "C" const fidl_type_t fidl_test_json_FlexibleUnionTable;
 
 class FlexibleUnion {
  public:
@@ -1591,8 +1589,7 @@ class FlexibleUnion {
   }
   Tag which() const;
 
-  static constexpr const fidl_type_t* Type =
-      &v1_fidl_test_json_FlexibleUnionTable;
+  static constexpr const fidl_type_t* Type = &fidl_test_json_FlexibleUnionTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -1639,7 +1636,7 @@ class FlexibleUnion {
   ::fidl::Envelope<void> envelope_;
 };
 
-extern "C" const fidl_type_t v1_fidl_test_json_FlexibleFooTable;
+extern "C" const fidl_type_t fidl_test_json_FlexibleFooTable;
 
 class FlexibleFoo {
  public:
@@ -1707,8 +1704,7 @@ class FlexibleFoo {
   }
   Tag which() const;
 
-  static constexpr const fidl_type_t* Type =
-      &v1_fidl_test_json_FlexibleFooTable;
+  static constexpr const fidl_type_t* Type = &fidl_test_json_FlexibleFooTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -1747,7 +1743,7 @@ class FlexibleFoo {
   ::fidl::Envelope<void> envelope_;
 };
 
-extern "C" const fidl_type_t v1_fidl_test_json_FieldCollisionTable;
+extern "C" const fidl_type_t fidl_test_json_FieldCollisionTable;
 
 class FieldCollision {
  public:
@@ -1794,7 +1790,7 @@ class FieldCollision {
   }
 
   static constexpr const fidl_type_t* Type =
-      &v1_fidl_test_json_FieldCollisionTable;
+      &fidl_test_json_FieldCollisionTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
@@ -1826,7 +1822,7 @@ class FieldCollision {
   ::fidl::Envelope<void> envelope_;
 };
 
-extern "C" const fidl_type_t v1_fidl_test_json_ExplicitXUnionTable;
+extern "C" const fidl_type_t fidl_test_json_ExplicitXUnionTable;
 
 class ExplicitXUnion {
  public:
@@ -1895,7 +1891,7 @@ class ExplicitXUnion {
   Tag which() const;
 
   static constexpr const fidl_type_t* Type =
-      &v1_fidl_test_json_ExplicitXUnionTable;
+      &fidl_test_json_ExplicitXUnionTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
@@ -1933,7 +1929,7 @@ class ExplicitXUnion {
   ::fidl::Envelope<void> envelope_;
 };
 
-extern "C" const fidl_type_t v1_fidl_test_json_ExplicitUnionTable;
+extern "C" const fidl_type_t fidl_test_json_ExplicitUnionTable;
 
 class ExplicitUnion {
  public:
@@ -2003,8 +1999,7 @@ class ExplicitUnion {
     return static_cast<Tag>(ordinal_);
   }
 
-  static constexpr const fidl_type_t* Type =
-      &v1_fidl_test_json_ExplicitUnionTable;
+  static constexpr const fidl_type_t* Type = &fidl_test_json_ExplicitUnionTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -2043,7 +2038,7 @@ class ExplicitUnion {
   ::fidl::Envelope<void> envelope_;
 };
 
-extern "C" const fidl_type_t v1_fidl_test_json_ExplicitStrictFooTable;
+extern "C" const fidl_type_t fidl_test_json_ExplicitStrictFooTable;
 
 class ExplicitStrictFoo {
  public:
@@ -2111,7 +2106,7 @@ class ExplicitStrictFoo {
   }
 
   static constexpr const fidl_type_t* Type =
-      &v1_fidl_test_json_ExplicitStrictFooTable;
+      &fidl_test_json_ExplicitStrictFooTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -2150,7 +2145,7 @@ class ExplicitStrictFoo {
   ::fidl::Envelope<void> envelope_;
 };
 
-extern "C" const fidl_type_t v1_fidl_test_json_ExplicitFooTable;
+extern "C" const fidl_type_t fidl_test_json_ExplicitFooTable;
 
 class ExplicitFoo {
  public:
@@ -2218,8 +2213,7 @@ class ExplicitFoo {
   }
   Tag which() const;
 
-  static constexpr const fidl_type_t* Type =
-      &v1_fidl_test_json_ExplicitFooTable;
+  static constexpr const fidl_type_t* Type = &fidl_test_json_ExplicitFooTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -2258,7 +2252,7 @@ class ExplicitFoo {
   ::fidl::Envelope<void> envelope_;
 };
 
-extern "C" const fidl_type_t v1_fidl_test_json_XUnionContainingEmptyStructTable;
+extern "C" const fidl_type_t fidl_test_json_XUnionContainingEmptyStructTable;
 
 class XUnionContainingEmptyStruct {
  public:
@@ -2309,7 +2303,7 @@ class XUnionContainingEmptyStruct {
   Tag which() const;
 
   static constexpr const fidl_type_t* Type =
-      &v1_fidl_test_json_XUnionContainingEmptyStructTable;
+      &fidl_test_json_XUnionContainingEmptyStructTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
@@ -2341,11 +2335,11 @@ class XUnionContainingEmptyStruct {
   ::fidl::Envelope<void> envelope_;
 };
 
-extern "C" const fidl_type_t v1_fidl_test_json_StructWithNullableXUnionTable;
+extern "C" const fidl_type_t fidl_test_json_StructWithNullableXUnionTable;
 
 struct StructWithNullableXUnion {
   static constexpr const fidl_type_t* Type =
-      &v1_fidl_test_json_StructWithNullableXUnionTable;
+      &fidl_test_json_StructWithNullableXUnionTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
@@ -2354,10 +2348,10 @@ struct StructWithNullableXUnion {
   ::llcpp::fidl::test::json::OlderSimpleUnion x1 = {};
 };
 
-extern "C" const fidl_type_t v1_fidl_test_json_PizzaTable;
+extern "C" const fidl_type_t fidl_test_json_PizzaTable;
 
 struct Pizza {
-  static constexpr const fidl_type_t* Type = &v1_fidl_test_json_PizzaTable;
+  static constexpr const fidl_type_t* Type = &fidl_test_json_PizzaTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -2366,10 +2360,10 @@ struct Pizza {
   ::fidl::VectorView<::fidl::StringView> toppings = {};
 };
 
-extern "C" const fidl_type_t v1_fidl_test_json_PastaTable;
+extern "C" const fidl_type_t fidl_test_json_PastaTable;
 
 struct Pasta {
-  static constexpr const fidl_type_t* Type = &v1_fidl_test_json_PastaTable;
+  static constexpr const fidl_type_t* Type = &fidl_test_json_PastaTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 16;
@@ -2379,13 +2373,13 @@ struct Pasta {
 };
 
 extern "C" const fidl_type_t
-    v1_fidl_test_json_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequestTable;
+    fidl_test_json_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequestTable;
 extern "C" const fidl_type_t
-    v1_fidl_test_json_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable;
+    fidl_test_json_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable;
 extern "C" const fidl_type_t
-    v1_fidl_test_json_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequestTable;
+    fidl_test_json_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequestTable;
 extern "C" const fidl_type_t
-    v1_fidl_test_json_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable;
+    fidl_test_json_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable;
 
 class TestProtocol final {
   TestProtocol() = delete;
@@ -2397,13 +2391,12 @@ class TestProtocol final {
     ::llcpp::fidl::test::json::StrictBoundedXUnion xu;
 
     static constexpr const fidl_type_t* Type =
-        &v1_fidl_test_json_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable;
+        &fidl_test_json_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 32;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool HasPointer = true;
-    static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
   };
@@ -2416,13 +2409,12 @@ class TestProtocol final {
     ::llcpp::fidl::test::json::OlderSimpleUnion xu;
 
     static constexpr const fidl_type_t* Type =
-        &v1_fidl_test_json_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable;
+        &fidl_test_json_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = true;
     static constexpr bool HasPointer = true;
-    static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
   };
@@ -2755,11 +2747,11 @@ class TestProtocol final {
   };
 };
 
-extern "C" const fidl_type_t v1_fidl_test_json_NullableUnionStructTable;
+extern "C" const fidl_type_t fidl_test_json_NullableUnionStructTable;
 
 struct NullableUnionStruct {
   static constexpr const fidl_type_t* Type =
-      &v1_fidl_test_json_NullableUnionStructTable;
+      &fidl_test_json_NullableUnionStructTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -2768,10 +2760,10 @@ struct NullableUnionStruct {
   ::llcpp::fidl::test::json::Union the_union = {};
 };
 
-extern "C" const fidl_type_t v1_fidl_test_json_EmptyTable;
+extern "C" const fidl_type_t fidl_test_json_EmptyTable;
 
 struct Empty {
-  static constexpr const fidl_type_t* Type = &v1_fidl_test_json_EmptyTable;
+  static constexpr const fidl_type_t* Type = &fidl_test_json_EmptyTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;

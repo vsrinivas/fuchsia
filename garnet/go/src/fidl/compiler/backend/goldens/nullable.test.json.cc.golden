@@ -7,10 +7,9 @@ namespace fidl {
 namespace test {
 namespace nullable {
 
-extern "C" const fidl_type_t
-    v1_fidl_test_nullable_StructWithNullableVectorTable;
+extern "C" const fidl_type_t fidl_test_nullable_StructWithNullableVectorTable;
 const fidl_type_t* StructWithNullableVector::FidlType =
-    &v1_fidl_test_nullable_StructWithNullableVectorTable;
+    &fidl_test_nullable_StructWithNullableVectorTable;
 
 void StructWithNullableVector::Encode(::fidl::Encoder* _encoder,
                                       size_t _offset) {
@@ -29,9 +28,9 @@ zx_status_t StructWithNullableVector::Clone(
   if (_status != ZX_OK) return _status;
   return ZX_OK;
 }
-extern "C" const fidl_type_t v1_fidl_test_nullable_StructWithNullableUnionTable;
+extern "C" const fidl_type_t fidl_test_nullable_StructWithNullableUnionTable;
 const fidl_type_t* StructWithNullableUnion::FidlType =
-    &v1_fidl_test_nullable_StructWithNullableUnionTable;
+    &fidl_test_nullable_StructWithNullableUnionTable;
 
 void StructWithNullableUnion::Encode(::fidl::Encoder* _encoder,
                                      size_t _offset) {
@@ -50,10 +49,9 @@ zx_status_t StructWithNullableUnion::Clone(
   if (_status != ZX_OK) return _status;
   return ZX_OK;
 }
-extern "C" const fidl_type_t
-    v1_fidl_test_nullable_StructWithNullableStructTable;
+extern "C" const fidl_type_t fidl_test_nullable_StructWithNullableStructTable;
 const fidl_type_t* StructWithNullableStruct::FidlType =
-    &v1_fidl_test_nullable_StructWithNullableStructTable;
+    &fidl_test_nullable_StructWithNullableStructTable;
 
 void StructWithNullableStruct::Encode(::fidl::Encoder* _encoder,
                                       size_t _offset) {
@@ -72,10 +70,9 @@ zx_status_t StructWithNullableStruct::Clone(
   if (_status != ZX_OK) return _status;
   return ZX_OK;
 }
-extern "C" const fidl_type_t
-    v1_fidl_test_nullable_StructWithNullableStringTable;
+extern "C" const fidl_type_t fidl_test_nullable_StructWithNullableStringTable;
 const fidl_type_t* StructWithNullableString::FidlType =
-    &v1_fidl_test_nullable_StructWithNullableStringTable;
+    &fidl_test_nullable_StructWithNullableStringTable;
 
 void StructWithNullableString::Encode(::fidl::Encoder* _encoder,
                                       size_t _offset) {
@@ -94,10 +91,9 @@ zx_status_t StructWithNullableString::Clone(
   if (_status != ZX_OK) return _status;
   return ZX_OK;
 }
-extern "C" const fidl_type_t
-    v1_fidl_test_nullable_StructWithNullableRequestTable;
+extern "C" const fidl_type_t fidl_test_nullable_StructWithNullableRequestTable;
 const fidl_type_t* StructWithNullableRequest::FidlType =
-    &v1_fidl_test_nullable_StructWithNullableRequestTable;
+    &fidl_test_nullable_StructWithNullableRequestTable;
 
 void StructWithNullableRequest::Encode(::fidl::Encoder* _encoder,
                                        size_t _offset) {
@@ -116,10 +112,9 @@ zx_status_t StructWithNullableRequest::Clone(
   if (_status != ZX_OK) return _status;
   return ZX_OK;
 }
-extern "C" const fidl_type_t
-    v1_fidl_test_nullable_StructWithNullableProtocolTable;
+extern "C" const fidl_type_t fidl_test_nullable_StructWithNullableProtocolTable;
 const fidl_type_t* StructWithNullableProtocol::FidlType =
-    &v1_fidl_test_nullable_StructWithNullableProtocolTable;
+    &fidl_test_nullable_StructWithNullableProtocolTable;
 
 void StructWithNullableProtocol::Encode(::fidl::Encoder* _encoder,
                                         size_t _offset) {
@@ -138,10 +133,9 @@ zx_status_t StructWithNullableProtocol::Clone(
   if (_status != ZX_OK) return _status;
   return ZX_OK;
 }
-extern "C" const fidl_type_t
-    v1_fidl_test_nullable_StructWithNullableHandleTable;
+extern "C" const fidl_type_t fidl_test_nullable_StructWithNullableHandleTable;
 const fidl_type_t* StructWithNullableHandle::FidlType =
-    &v1_fidl_test_nullable_StructWithNullableHandleTable;
+    &fidl_test_nullable_StructWithNullableHandleTable;
 
 void StructWithNullableHandle::Encode(::fidl::Encoder* _encoder,
                                       size_t _offset) {
@@ -163,10 +157,8 @@ zx_status_t StructWithNullableHandle::Clone(
 #ifdef __Fuchsia__
 namespace {
 
-extern "C" const fidl_type_t
-    v1_fidl_test_nullable_SimpleProtocolAddRequestTable;
-extern "C" const fidl_type_t
-    v1_fidl_test_nullable_SimpleProtocolAddResponseTable;
+extern "C" const fidl_type_t fidl_test_nullable_SimpleProtocolAddRequestTable;
+extern "C" const fidl_type_t fidl_test_nullable_SimpleProtocolAddResponseTable;
 
 }  // namespace
 
@@ -178,7 +170,7 @@ const fidl_type_t* SimpleProtocol_RequestDecoder::GetType(
     case internal::kSimpleProtocol_Add_Ordinal:
     case internal::kSimpleProtocol_Add_GenOrdinal:
       *out_needs_response = true;
-      return &v1_fidl_test_nullable_SimpleProtocolAddRequestTable;
+      return &fidl_test_nullable_SimpleProtocolAddRequestTable;
     default:
       *out_needs_response = false;
       return nullptr;
@@ -189,7 +181,7 @@ const fidl_type_t* SimpleProtocol_ResponseDecoder::GetType(uint64_t ordinal) {
   switch (ordinal) {
     case internal::kSimpleProtocol_Add_Ordinal:
     case internal::kSimpleProtocol_Add_GenOrdinal:
-      return &v1_fidl_test_nullable_SimpleProtocolAddResponseTable;
+      return &fidl_test_nullable_SimpleProtocolAddResponseTable;
     default:
       return nullptr;
   }
@@ -232,10 +224,10 @@ class SimpleProtocol_Add_ResponseHandler final
   zx_status_t OnMessage(::fidl::Message message) override {
     const char* error_msg = nullptr;
     zx_status_t status = message.Decode(
-        &v1_fidl_test_nullable_SimpleProtocolAddResponseTable, &error_msg);
+        &fidl_test_nullable_SimpleProtocolAddResponseTable, &error_msg);
     if (status != ZX_OK) {
       FIDL_REPORT_DECODING_ERROR(
-          message, &v1_fidl_test_nullable_SimpleProtocolAddResponseTable,
+          message, &fidl_test_nullable_SimpleProtocolAddResponseTable,
           error_msg);
       return status;
     }
@@ -257,7 +249,7 @@ class SimpleProtocol_Add_ResponseHandler final
 }  // namespace
 void SimpleProtocol_Proxy::Add(int32_t a, int32_t b, AddCallback callback) {
   ::fidl::Encoder _encoder(internal::kSimpleProtocol_Add_GenOrdinal);
-  controller_->Send(&v1_fidl_test_nullable_SimpleProtocolAddRequestTable,
+  controller_->Send(&fidl_test_nullable_SimpleProtocolAddRequestTable,
                     SimpleProtocol_RequestEncoder::Add(&_encoder, &a, &b),
                     std::make_unique<SimpleProtocol_Add_ResponseHandler>(
                         std::move(callback)));
@@ -279,7 +271,7 @@ class SimpleProtocol_Add_Responder final {
 
   void operator()(int32_t sum) {
     ::fidl::Encoder _encoder(internal::kSimpleProtocol_Add_GenOrdinal);
-    response_.Send(&v1_fidl_test_nullable_SimpleProtocolAddResponseTable,
+    response_.Send(&fidl_test_nullable_SimpleProtocolAddResponseTable,
                    SimpleProtocol_ResponseEncoder::Add(&_encoder, &sum));
   }
 
@@ -343,8 +335,8 @@ zx_status_t SimpleProtocol_SyncProxy::Add(int32_t a, int32_t b,
   ::fidl::MessageBuffer buffer_;
   ::fidl::Message response_ = buffer_.CreateEmptyMessage();
   zx_status_t status_ = proxy_.Call(
-      &v1_fidl_test_nullable_SimpleProtocolAddRequestTable,
-      &v1_fidl_test_nullable_SimpleProtocolAddResponseTable,
+      &fidl_test_nullable_SimpleProtocolAddRequestTable,
+      &fidl_test_nullable_SimpleProtocolAddResponseTable,
       SimpleProtocol_RequestEncoder::Add(&_encoder, &a, &b), &response_);
   if (status_ != ZX_OK) return status_;
   ::fidl::Decoder decoder_(std::move(response_));
@@ -354,9 +346,8 @@ zx_status_t SimpleProtocol_SyncProxy::Add(int32_t a, int32_t b,
 
 #endif  // __Fuchsia__
 
-extern "C" const fidl_type_t v1_fidl_test_nullable_SimpleUnionTable;
-const fidl_type_t* SimpleUnion::FidlType =
-    &v1_fidl_test_nullable_SimpleUnionTable;
+extern "C" const fidl_type_t fidl_test_nullable_SimpleUnionTable;
+const fidl_type_t* SimpleUnion::FidlType = &fidl_test_nullable_SimpleUnionTable;
 
 SimpleUnion::SimpleUnion() {}
 
@@ -519,9 +510,9 @@ void SimpleUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     }
   }
 }
-extern "C" const fidl_type_t v1_fidl_test_nullable_Int32WrapperTable;
+extern "C" const fidl_type_t fidl_test_nullable_Int32WrapperTable;
 const fidl_type_t* Int32Wrapper::FidlType =
-    &v1_fidl_test_nullable_Int32WrapperTable;
+    &fidl_test_nullable_Int32WrapperTable;
 
 void Int32Wrapper::Encode(::fidl::Encoder* _encoder, size_t _offset) {
   ::fidl::Encode(_encoder, &val, _offset + 0);

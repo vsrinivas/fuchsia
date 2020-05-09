@@ -31,10 +31,10 @@ namespace top {
 
 struct Baz;
 
-extern "C" const fidl_type_t v1_top_BazTable;
+extern "C" const fidl_type_t top_BazTable;
 
 struct Baz {
-  static constexpr const fidl_type_t* Type = &v1_top_BazTable;
+  static constexpr const fidl_type_t* Type = &top_BazTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 4;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;

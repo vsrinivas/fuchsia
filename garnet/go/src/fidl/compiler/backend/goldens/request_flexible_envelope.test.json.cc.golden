@@ -7,8 +7,8 @@ namespace fidl {
 namespace test {
 namespace json {
 
-extern "C" const fidl_type_t v1_fidl_test_json_StrictFooTable;
-const fidl_type_t* StrictFoo::FidlType = &v1_fidl_test_json_StrictFooTable;
+extern "C" const fidl_type_t fidl_test_json_StrictFooTable;
+const fidl_type_t* StrictFoo::FidlType = &fidl_test_json_StrictFooTable;
 
 StrictFoo::StrictFoo() {}
 
@@ -176,8 +176,8 @@ void StrictFoo::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     }
   }
 }
-extern "C" const fidl_type_t v1_fidl_test_json_FlexibleFooTable;
-const fidl_type_t* FlexibleFoo::FidlType = &v1_fidl_test_json_FlexibleFooTable;
+extern "C" const fidl_type_t fidl_test_json_FlexibleFooTable;
+const fidl_type_t* FlexibleFoo::FidlType = &fidl_test_json_FlexibleFooTable;
 
 FlexibleFoo::FlexibleFoo() {}
 
@@ -367,14 +367,14 @@ void FlexibleFoo::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
 namespace {
 
 extern "C" const fidl_type_t
-    v1_fidl_test_json_ProtocolRequestStrictResponseFlexibleRequestTable;
+    fidl_test_json_ProtocolRequestStrictResponseFlexibleRequestTable;
 extern "C" const fidl_type_t
-    v1_fidl_test_json_ProtocolRequestStrictResponseFlexibleResponseTable;
+    fidl_test_json_ProtocolRequestStrictResponseFlexibleResponseTable;
 
 extern "C" const fidl_type_t
-    v1_fidl_test_json_ProtocolRequestFlexibleResponseStrictRequestTable;
+    fidl_test_json_ProtocolRequestFlexibleResponseStrictRequestTable;
 extern "C" const fidl_type_t
-    v1_fidl_test_json_ProtocolRequestFlexibleResponseStrictResponseTable;
+    fidl_test_json_ProtocolRequestFlexibleResponseStrictResponseTable;
 
 }  // namespace
 
@@ -386,11 +386,11 @@ const fidl_type_t* Protocol_RequestDecoder::GetType(uint64_t ordinal,
     case internal::kProtocol_RequestStrictResponseFlexible_Ordinal:
     case internal::kProtocol_RequestStrictResponseFlexible_GenOrdinal:
       *out_needs_response = true;
-      return &v1_fidl_test_json_ProtocolRequestStrictResponseFlexibleRequestTable;
+      return &fidl_test_json_ProtocolRequestStrictResponseFlexibleRequestTable;
     case internal::kProtocol_RequestFlexibleResponseStrict_Ordinal:
     case internal::kProtocol_RequestFlexibleResponseStrict_GenOrdinal:
       *out_needs_response = true;
-      return &v1_fidl_test_json_ProtocolRequestFlexibleResponseStrictRequestTable;
+      return &fidl_test_json_ProtocolRequestFlexibleResponseStrictRequestTable;
     default:
       *out_needs_response = false;
       return nullptr;
@@ -401,10 +401,10 @@ const fidl_type_t* Protocol_ResponseDecoder::GetType(uint64_t ordinal) {
   switch (ordinal) {
     case internal::kProtocol_RequestStrictResponseFlexible_Ordinal:
     case internal::kProtocol_RequestStrictResponseFlexible_GenOrdinal:
-      return &v1_fidl_test_json_ProtocolRequestStrictResponseFlexibleResponseTable;
+      return &fidl_test_json_ProtocolRequestStrictResponseFlexibleResponseTable;
     case internal::kProtocol_RequestFlexibleResponseStrict_Ordinal:
     case internal::kProtocol_RequestFlexibleResponseStrict_GenOrdinal:
-      return &v1_fidl_test_json_ProtocolRequestFlexibleResponseStrictResponseTable;
+      return &fidl_test_json_ProtocolRequestFlexibleResponseStrictResponseTable;
     default:
       return nullptr;
   }
@@ -448,12 +448,12 @@ class Protocol_RequestStrictResponseFlexible_ResponseHandler final
   zx_status_t OnMessage(::fidl::Message message) override {
     const char* error_msg = nullptr;
     zx_status_t status = message.Decode(
-        &v1_fidl_test_json_ProtocolRequestStrictResponseFlexibleResponseTable,
+        &fidl_test_json_ProtocolRequestStrictResponseFlexibleResponseTable,
         &error_msg);
     if (status != ZX_OK) {
       FIDL_REPORT_DECODING_ERROR(
           message,
-          &v1_fidl_test_json_ProtocolRequestStrictResponseFlexibleResponseTable,
+          &fidl_test_json_ProtocolRequestStrictResponseFlexibleResponseTable,
           error_msg);
       return status;
     }
@@ -478,7 +478,7 @@ void Protocol_Proxy::RequestStrictResponseFlexible(
   ::fidl::Encoder _encoder(
       internal::kProtocol_RequestStrictResponseFlexible_GenOrdinal);
   controller_->Send(
-      &v1_fidl_test_json_ProtocolRequestStrictResponseFlexibleRequestTable,
+      &fidl_test_json_ProtocolRequestStrictResponseFlexibleRequestTable,
       Protocol_RequestEncoder::RequestStrictResponseFlexible(&_encoder, &s),
       std::make_unique<Protocol_RequestStrictResponseFlexible_ResponseHandler>(
           std::move(callback)));
@@ -499,12 +499,12 @@ class Protocol_RequestFlexibleResponseStrict_ResponseHandler final
   zx_status_t OnMessage(::fidl::Message message) override {
     const char* error_msg = nullptr;
     zx_status_t status = message.Decode(
-        &v1_fidl_test_json_ProtocolRequestFlexibleResponseStrictResponseTable,
+        &fidl_test_json_ProtocolRequestFlexibleResponseStrictResponseTable,
         &error_msg);
     if (status != ZX_OK) {
       FIDL_REPORT_DECODING_ERROR(
           message,
-          &v1_fidl_test_json_ProtocolRequestFlexibleResponseStrictResponseTable,
+          &fidl_test_json_ProtocolRequestFlexibleResponseStrictResponseTable,
           error_msg);
       return status;
     }
@@ -529,7 +529,7 @@ void Protocol_Proxy::RequestFlexibleResponseStrict(
   ::fidl::Encoder _encoder(
       internal::kProtocol_RequestFlexibleResponseStrict_GenOrdinal);
   controller_->Send(
-      &v1_fidl_test_json_ProtocolRequestFlexibleResponseStrictRequestTable,
+      &fidl_test_json_ProtocolRequestFlexibleResponseStrictRequestTable,
       Protocol_RequestEncoder::RequestFlexibleResponseStrict(&_encoder, &s),
       std::make_unique<Protocol_RequestFlexibleResponseStrict_ResponseHandler>(
           std::move(callback)));
@@ -553,7 +553,7 @@ class Protocol_RequestStrictResponseFlexible_Responder final {
     ::fidl::Encoder _encoder(
         internal::kProtocol_RequestStrictResponseFlexible_GenOrdinal);
     response_.Send(
-        &v1_fidl_test_json_ProtocolRequestStrictResponseFlexibleResponseTable,
+        &fidl_test_json_ProtocolRequestStrictResponseFlexibleResponseTable,
         Protocol_ResponseEncoder::RequestStrictResponseFlexible(&_encoder, &f));
   }
 
@@ -571,7 +571,7 @@ class Protocol_RequestFlexibleResponseStrict_Responder final {
     ::fidl::Encoder _encoder(
         internal::kProtocol_RequestFlexibleResponseStrict_GenOrdinal);
     response_.Send(
-        &v1_fidl_test_json_ProtocolRequestFlexibleResponseStrictResponseTable,
+        &fidl_test_json_ProtocolRequestFlexibleResponseStrictResponseTable,
         Protocol_ResponseEncoder::RequestFlexibleResponseStrict(&_encoder, &f));
   }
 
@@ -645,8 +645,8 @@ zx_status_t Protocol_SyncProxy::RequestStrictResponseFlexible(
   ::fidl::MessageBuffer buffer_;
   ::fidl::Message response_ = buffer_.CreateEmptyMessage();
   zx_status_t status_ = proxy_.Call(
-      &v1_fidl_test_json_ProtocolRequestStrictResponseFlexibleRequestTable,
-      &v1_fidl_test_json_ProtocolRequestStrictResponseFlexibleResponseTable,
+      &fidl_test_json_ProtocolRequestStrictResponseFlexibleRequestTable,
+      &fidl_test_json_ProtocolRequestStrictResponseFlexibleResponseTable,
       Protocol_RequestEncoder::RequestStrictResponseFlexible(&_encoder, &s),
       &response_);
   if (status_ != ZX_OK) return status_;
@@ -662,8 +662,8 @@ zx_status_t Protocol_SyncProxy::RequestFlexibleResponseStrict(
   ::fidl::MessageBuffer buffer_;
   ::fidl::Message response_ = buffer_.CreateEmptyMessage();
   zx_status_t status_ = proxy_.Call(
-      &v1_fidl_test_json_ProtocolRequestFlexibleResponseStrictRequestTable,
-      &v1_fidl_test_json_ProtocolRequestFlexibleResponseStrictResponseTable,
+      &fidl_test_json_ProtocolRequestFlexibleResponseStrictRequestTable,
+      &fidl_test_json_ProtocolRequestFlexibleResponseStrictResponseTable,
       Protocol_RequestEncoder::RequestFlexibleResponseStrict(&_encoder, &s),
       &response_);
   if (status_ != ZX_OK) return status_;

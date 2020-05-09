@@ -24,8 +24,8 @@ namespace {
 [[maybe_unused]] constexpr uint64_t kExample_foo_Ordinal = 0x51a3dcd800000000lu;
 [[maybe_unused]] constexpr uint64_t kExample_foo_GenOrdinal =
     0xbaf4e613e45f29blu;
-extern "C" const fidl_type_t v1_fidl_test_json_ExamplefooRequestTable;
-extern "C" const fidl_type_t v1_fidl_test_json_ExamplefooResponseTable;
+extern "C" const fidl_type_t fidl_test_json_ExamplefooRequestTable;
+extern "C" const fidl_type_t fidl_test_json_ExamplefooResponseTable;
 
 }  // namespace
 template <>
@@ -221,11 +221,6 @@ zx_status_t Example::ClientImpl::Dispatch(
   switch (hdr->ordinal) {
     case kExample_foo_Ordinal:
     case kExample_foo_GenOrdinal: {
-      constexpr uint32_t kTransformerDestSize =
-          ::fidl::internal::ClampedMessageSize<
-              fooResponse, ::fidl::MessageDirection::kReceiving>();
-      ::fidl::internal::ByteStorage<kTransformerDestSize>
-          transformer_dest_storage(::fidl::internal::DelayAllocation);
       auto result = ::fidl::DecodeAs<fooResponse>(msg);
       if (result.status != ZX_OK) {
         context->OnError();

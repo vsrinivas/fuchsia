@@ -34,8 +34,8 @@ namespace json {
 class super;
 class sub;
 
-extern "C" const fidl_type_t v1_fidl_test_json_superfooRequestTable;
-extern "C" const fidl_type_t v1_fidl_test_json_superfooResponseTable;
+extern "C" const fidl_type_t fidl_test_json_superfooRequestTable;
+extern "C" const fidl_type_t fidl_test_json_superfooResponseTable;
 
 class super final {
   super() = delete;
@@ -47,13 +47,12 @@ class super final {
     int64_t y;
 
     static constexpr const fidl_type_t* Type =
-        &v1_fidl_test_json_superfooResponseTable;
+        &fidl_test_json_superfooResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool HasPointer = false;
-    static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
   };
@@ -63,7 +62,7 @@ class super final {
     ::fidl::StringView s;
 
     static constexpr const fidl_type_t* Type =
-        &v1_fidl_test_json_superfooRequestTable;
+        &fidl_test_json_superfooRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -71,7 +70,6 @@ class super final {
     static constexpr uint32_t AltMaxOutOfLine = 4294967295;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool HasPointer = true;
-    static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
     using ResponseType = fooResponse;
@@ -262,8 +260,8 @@ class super final {
   };
 };
 
-extern "C" const fidl_type_t v1_fidl_test_json_subfooRequestTable;
-extern "C" const fidl_type_t v1_fidl_test_json_subfooResponseTable;
+extern "C" const fidl_type_t fidl_test_json_subfooRequestTable;
+extern "C" const fidl_type_t fidl_test_json_subfooResponseTable;
 
 class sub final {
   sub() = delete;
@@ -275,13 +273,12 @@ class sub final {
     int64_t y;
 
     static constexpr const fidl_type_t* Type =
-        &v1_fidl_test_json_subfooResponseTable;
+        &fidl_test_json_subfooResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool HasPointer = false;
-    static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
   };
@@ -291,7 +288,7 @@ class sub final {
     ::fidl::StringView s;
 
     static constexpr const fidl_type_t* Type =
-        &v1_fidl_test_json_subfooRequestTable;
+        &fidl_test_json_subfooRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -299,7 +296,6 @@ class sub final {
     static constexpr uint32_t AltMaxOutOfLine = 4294967295;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool HasPointer = true;
-    static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
     using ResponseType = fooResponse;

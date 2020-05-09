@@ -8,8 +8,8 @@ namespace top {
 #ifdef __Fuchsia__
 namespace {
 
-extern "C" const fidl_type_t v1_top_TopGetFooRequestTable;
-extern "C" const fidl_type_t v1_top_TopGetFooResponseTable;
+extern "C" const fidl_type_t top_TopGetFooRequestTable;
+extern "C" const fidl_type_t top_TopGetFooResponseTable;
 
 }  // namespace
 
@@ -21,7 +21,7 @@ const fidl_type_t* Top_RequestDecoder::GetType(uint64_t ordinal,
     case internal::kTop_GetFoo_Ordinal:
     case internal::kTop_GetFoo_GenOrdinal:
       *out_needs_response = true;
-      return &v1_top_TopGetFooRequestTable;
+      return &top_TopGetFooRequestTable;
     default:
       *out_needs_response = false;
       return nullptr;
@@ -32,7 +32,7 @@ const fidl_type_t* Top_ResponseDecoder::GetType(uint64_t ordinal) {
   switch (ordinal) {
     case internal::kTop_GetFoo_Ordinal:
     case internal::kTop_GetFoo_GenOrdinal:
-      return &v1_top_TopGetFooResponseTable;
+      return &top_TopGetFooResponseTable;
     default:
       return nullptr;
   }
@@ -74,9 +74,9 @@ class Top_GetFoo_ResponseHandler final
   zx_status_t OnMessage(::fidl::Message message) override {
     const char* error_msg = nullptr;
     zx_status_t status =
-        message.Decode(&v1_top_TopGetFooResponseTable, &error_msg);
+        message.Decode(&top_TopGetFooResponseTable, &error_msg);
     if (status != ZX_OK) {
-      FIDL_REPORT_DECODING_ERROR(message, &v1_top_TopGetFooResponseTable,
+      FIDL_REPORT_DECODING_ERROR(message, &top_TopGetFooResponseTable,
                                  error_msg);
       return status;
     }
@@ -98,7 +98,7 @@ class Top_GetFoo_ResponseHandler final
 void Top_Proxy::GetFoo(GetFooCallback callback) {
   ::fidl::Encoder _encoder(internal::kTop_GetFoo_GenOrdinal);
   controller_->Send(
-      &v1_top_TopGetFooRequestTable, Top_RequestEncoder::GetFoo(&_encoder),
+      &top_TopGetFooRequestTable, Top_RequestEncoder::GetFoo(&_encoder),
       std::make_unique<Top_GetFoo_ResponseHandler>(std::move(callback)));
 }
 
@@ -115,7 +115,7 @@ class Top_GetFoo_Responder final {
 
   void operator()(::bottom::Foo foo) {
     ::fidl::Encoder _encoder(internal::kTop_GetFoo_GenOrdinal);
-    response_.Send(&v1_top_TopGetFooResponseTable,
+    response_.Send(&top_TopGetFooResponseTable,
                    Top_ResponseEncoder::GetFoo(&_encoder, &foo));
   }
 
@@ -174,7 +174,7 @@ zx_status_t Top_SyncProxy::GetFoo(::bottom::Foo* out_foo) {
   ::fidl::MessageBuffer buffer_;
   ::fidl::Message response_ = buffer_.CreateEmptyMessage();
   zx_status_t status_ =
-      proxy_.Call(&v1_top_TopGetFooRequestTable, &v1_top_TopGetFooResponseTable,
+      proxy_.Call(&top_TopGetFooRequestTable, &top_TopGetFooResponseTable,
                   Top_RequestEncoder::GetFoo(&_encoder), &response_);
   if (status_ != ZX_OK) return status_;
   ::fidl::Decoder decoder_(std::move(response_));

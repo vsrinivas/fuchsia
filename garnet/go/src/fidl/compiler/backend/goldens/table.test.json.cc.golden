@@ -7,8 +7,8 @@ namespace fidl {
 namespace test {
 namespace json {
 
-extern "C" const fidl_type_t v1_fidl_test_json_SimpleTableTable;
-const fidl_type_t* SimpleTable::FidlType = &v1_fidl_test_json_SimpleTableTable;
+extern "C" const fidl_type_t fidl_test_json_SimpleTableTable;
+const fidl_type_t* SimpleTable::FidlType = &fidl_test_json_SimpleTableTable;
 
 SimpleTable::SimpleTable() : has_x_(false), has_y_(false) {}
 
@@ -167,9 +167,9 @@ zx_status_t SimpleTable::Clone(SimpleTable* result) const {
   }
   return ZX_OK;
 }
-extern "C" const fidl_type_t v1_fidl_test_json_ReverseOrdinalTableTable;
+extern "C" const fidl_type_t fidl_test_json_ReverseOrdinalTableTable;
 const fidl_type_t* ReverseOrdinalTable::FidlType =
-    &v1_fidl_test_json_ReverseOrdinalTableTable;
+    &fidl_test_json_ReverseOrdinalTableTable;
 
 ReverseOrdinalTable::ReverseOrdinalTable()
     : has_z_(false), has_y_(false), has_x_(false) {}
@@ -386,9 +386,9 @@ zx_status_t ReverseOrdinalTable::Clone(ReverseOrdinalTable* result) const {
   }
   return ZX_OK;
 }
-extern "C" const fidl_type_t v1_fidl_test_json_OlderSimpleTableTable;
+extern "C" const fidl_type_t fidl_test_json_OlderSimpleTableTable;
 const fidl_type_t* OlderSimpleTable::FidlType =
-    &v1_fidl_test_json_OlderSimpleTableTable;
+    &fidl_test_json_OlderSimpleTableTable;
 
 OlderSimpleTable::OlderSimpleTable() : has_x_(false) {}
 
@@ -491,9 +491,9 @@ zx_status_t OlderSimpleTable::Clone(OlderSimpleTable* result) const {
   }
   return ZX_OK;
 }
-extern "C" const fidl_type_t v1_fidl_test_json_NewerSimpleTableTable;
+extern "C" const fidl_type_t fidl_test_json_NewerSimpleTableTable;
 const fidl_type_t* NewerSimpleTable::FidlType =
-    &v1_fidl_test_json_NewerSimpleTableTable;
+    &fidl_test_json_NewerSimpleTableTable;
 
 NewerSimpleTable::NewerSimpleTable()
     : has_x_(false), has_y_(false), has_z_(false) {}
@@ -709,8 +709,8 @@ zx_status_t NewerSimpleTable::Clone(NewerSimpleTable* result) const {
   }
   return ZX_OK;
 }
-extern "C" const fidl_type_t v1_fidl_test_json_EmptyTableTable;
-const fidl_type_t* EmptyTable::FidlType = &v1_fidl_test_json_EmptyTableTable;
+extern "C" const fidl_type_t fidl_test_json_EmptyTableTable;
+const fidl_type_t* EmptyTable::FidlType = &fidl_test_json_EmptyTableTable;
 
 EmptyTable::EmptyTable() {}
 

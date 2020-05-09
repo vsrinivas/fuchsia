@@ -336,7 +336,6 @@ success("InlineXUnionInStruct") {
             ),
         ],
     },
-    bindings_denylist = [transformer],
 }
 
 success("OptionalXUnionInStructAbsent") {
@@ -366,7 +365,6 @@ success("OptionalXUnionInStructAbsent") {
             ),
         ],
     },
-    bindings_denylist = [transformer],
 }
 
 success("OptionalXUnionInStructPresent") {
@@ -401,7 +399,6 @@ success("OptionalXUnionInStructPresent") {
             ),
         ],
     },
-    bindings_denylist = [transformer],
 }
 
 success("XUnionInTableXUnionAbsent") {
@@ -500,7 +497,6 @@ success("XUnionInTableXUnionPresent") {
             ),
         ],
     },
-    bindings_denylist = [transformer],
 }
 
 success("Flexible XUnion Field Unknown") {
@@ -542,7 +538,6 @@ success("StrictXUnion") {
             ),
         ],
     },
-    bindings_denylist = [transformer],
 }
 
 encode_failure("StrictXUnion Field Not Set") {
@@ -574,8 +569,7 @@ decode_failure("StrictXUnion Field Unknown") {
 success("RecursiveVectorUnionStruct") {
     // TODO(fxb/38191): Fix stack overflow and enable for Go.
     // TODO(fxb/7644): Fix self-references and enable for Dart.
-    // TODO(fxb/51443): Transformer should not assume that old == v1.
-    bindings_denylist = [go,dart,transformer],
+    bindings_denylist = [go,dart],
     value = RecursiveVectorUnionStruct {
         u: RecursiveVectorUnion {
             vec: [
@@ -610,8 +604,7 @@ success("RecursiveVectorUnionStruct") {
 success("MutualRecursionUnionStruct") {
     // TODO(fxb/38191): Fix stack overflow and enable for Go.
     // TODO(fxb/7644): Fix self-references and enable for Dart.
-    // TODO(fxb/51443): Transformer should not assume that old == v1.
-    bindings_denylist = [go,dart,transformer],
+    bindings_denylist = [go,dart],
     value = MutualRecursionUnionStruct {
         u: MutualRecursionUnion {
             s: MutualRecursionUnionStruct {

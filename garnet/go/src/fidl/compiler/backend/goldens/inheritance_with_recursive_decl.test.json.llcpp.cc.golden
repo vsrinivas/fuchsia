@@ -16,8 +16,8 @@ namespace {
     0x66a95ddc00000000lu;
 [[maybe_unused]] constexpr uint64_t kParent_First_GenOrdinal =
     0x239f8fdea8de880clu;
-extern "C" const fidl_type_t v1_fidl_test_json_ParentFirstRequestTable;
-extern "C" const fidl_type_t v1_fidl_test_json_ParentFirstResponseTable;
+extern "C" const fidl_type_t fidl_test_json_ParentFirstRequestTable;
+extern "C" const fidl_type_t fidl_test_json_ParentFirstResponseTable;
 
 }  // namespace
 
@@ -176,13 +176,13 @@ namespace {
 [[maybe_unused]] constexpr uint64_t kChild_First_Ordinal = 0x66a95ddc00000000lu;
 [[maybe_unused]] constexpr uint64_t kChild_First_GenOrdinal =
     0x239f8fdea8de880clu;
-extern "C" const fidl_type_t v1_fidl_test_json_ChildFirstRequestTable;
-extern "C" const fidl_type_t v1_fidl_test_json_ChildFirstResponseTable;
+extern "C" const fidl_type_t fidl_test_json_ChildFirstRequestTable;
+extern "C" const fidl_type_t fidl_test_json_ChildFirstResponseTable;
 [[maybe_unused]] constexpr uint64_t kChild_Second_Ordinal = 0x1240cb600000000lu;
 [[maybe_unused]] constexpr uint64_t kChild_Second_GenOrdinal =
     0x24799ea8916d88aflu;
-extern "C" const fidl_type_t v1_fidl_test_json_ChildSecondRequestTable;
-extern "C" const fidl_type_t v1_fidl_test_json_ChildSecondResponseTable;
+extern "C" const fidl_type_t fidl_test_json_ChildSecondRequestTable;
+extern "C" const fidl_type_t fidl_test_json_ChildSecondResponseTable;
 
 }  // namespace
 

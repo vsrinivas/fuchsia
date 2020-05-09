@@ -14,8 +14,8 @@ namespace {
     0x42fd6a1b00000000lu;
 [[maybe_unused]] constexpr uint64_t kExampleProtocol_Method_GenOrdinal =
     0x1b489f95492fd90elu;
-extern "C" const fidl_type_t v1_example_ExampleProtocolMethodRequestTable;
-extern "C" const fidl_type_t v1_example_ExampleProtocolMethodResponseTable;
+extern "C" const fidl_type_t example_ExampleProtocolMethodRequestTable;
+extern "C" const fidl_type_t example_ExampleProtocolMethodResponseTable;
 
 }  // namespace
 

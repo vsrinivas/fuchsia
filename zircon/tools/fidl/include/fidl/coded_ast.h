@@ -74,15 +74,6 @@ struct TableField {
   const uint32_t ordinal;
 };
 
-struct UnionField {
-  UnionField(const Type* type, uint32_t padding, uint32_t xunion_ordinal)
-      : type(type), padding(padding), xunion_ordinal(xunion_ordinal) {}
-
-  const Type* type;
-  const uint32_t padding;
-  const uint32_t xunion_ordinal;
-};
-
 struct XUnionField {
   XUnionField(const Type* type, uint32_t ordinal) : type(type), ordinal(ordinal) {}
 
@@ -102,10 +93,8 @@ struct Type {
     kRequestHandle,
     kStruct,
     kTable,
-    kUnion,
     kXUnion,
     kStructPointer,
-    kUnionPointer,
     kMessage,
     kProtocol,
     kArray,
@@ -187,16 +176,11 @@ struct RequestHandleType : public Type {
 struct StructPointerType;
 
 struct StructType : public Type {
-  StructType(std::string name, std::vector<StructField> fields, uint32_t size,
-             uint32_t max_out_of_line, bool contains_union, std::string qname)
+  StructType(std::string name, std::vector<StructField> fields, uint32_t size, std::string qname)
       : Type(Kind::kStruct, std::move(name), size, true),
-        max_out_of_line(max_out_of_line),
-        contains_union(contains_union),
         fields(std::move(fields)),
         qname(std::move(qname)) {}
 
-  uint32_t max_out_of_line;
-  bool contains_union;
   std::vector<StructField> fields;
   std::string qname;
   StructPointerType* maybe_reference_type = nullptr;
@@ -210,32 +194,6 @@ struct StructPointerType : public Type {
   }
 
   const StructType* element_type;
-};
-
-struct UnionPointerType;
-
-struct UnionType : public Type {
-  UnionType(std::string name, std::vector<UnionField> members, uint32_t data_offset, uint32_t size,
-            std::string qname)
-      : Type(Kind::kUnion, std::move(name), size, true),
-        members(std::move(members)),
-        data_offset(data_offset),
-        qname(std::move(qname)) {}
-
-  std::vector<UnionField> members;
-  const uint32_t data_offset;
-  std::string qname;
-  UnionPointerType* maybe_reference_type = nullptr;
-};
-
-struct UnionPointerType : public Type {
-  UnionPointerType(std::string name, const Type* type, const uint32_t pointer_size)
-      : Type(Kind::kUnionPointer, std::move(name), pointer_size, true),
-        element_type(static_cast<const UnionType*>(type)) {
-    assert(type->kind == Type::Kind::kUnion);
-  }
-
-  const UnionType* element_type;
 };
 
 struct TableType : public Type {
@@ -265,16 +223,11 @@ struct XUnionType : public Type {
 };
 
 struct MessageType : public Type {
-  MessageType(std::string name, std::vector<StructField> fields, uint32_t size,
-              uint32_t max_out_of_line, bool contains_union, std::string qname)
+  MessageType(std::string name, std::vector<StructField> fields, uint32_t size, std::string qname)
       : Type(Kind::kMessage, std::move(name), size, true),
-        max_out_of_line(max_out_of_line),
-        contains_union(contains_union),
         fields(std::move(fields)),
         qname(std::move(qname)) {}
 
-  uint32_t max_out_of_line;
-  bool contains_union;
   std::vector<StructField> fields;
   std::string qname;
 };

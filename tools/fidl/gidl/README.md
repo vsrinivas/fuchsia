@@ -47,11 +47,6 @@ for each language / binding.
     * Build: `fx build topaz/bin/fidl_bindings_test/test:fidl_bindings_test`
     * Run: `fx run-test fidl_bindings_test`
 
-* Transformer:
-    * Build: `fx build src/tests/fidl_transformer:tests`
-    * Run: `fx run-test fidl_transformer_conformance`
-    * Run (host): `fx run-host-tests fidl_transformer_host_tests`
-
 ## Writing Conformance Tests
 
 There are three kinds of tests which can be expressed. We describe them below.

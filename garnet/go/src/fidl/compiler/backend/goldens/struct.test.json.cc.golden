@@ -7,8 +7,8 @@ namespace fidl {
 namespace test {
 namespace json {
 
-extern "C" const fidl_type_t v1_fidl_test_json_SimpleTable;
-const fidl_type_t* Simple::FidlType = &v1_fidl_test_json_SimpleTable;
+extern "C" const fidl_type_t fidl_test_json_SimpleTable;
+const fidl_type_t* Simple::FidlType = &fidl_test_json_SimpleTable;
 
 void Simple::Encode(::fidl::Encoder* _encoder, size_t _offset) {
   ::fidl::Encode(_encoder, &f1, _offset + 0);
@@ -27,8 +27,8 @@ zx_status_t Simple::Clone(Simple* _result) const {
   if (_status != ZX_OK) return _status;
   return ZX_OK;
 }
-extern "C" const fidl_type_t v1_fidl_test_json_BasicStructTable;
-const fidl_type_t* BasicStruct::FidlType = &v1_fidl_test_json_BasicStructTable;
+extern "C" const fidl_type_t fidl_test_json_BasicStructTable;
+const fidl_type_t* BasicStruct::FidlType = &fidl_test_json_BasicStructTable;
 
 void BasicStruct::Encode(::fidl::Encoder* _encoder, size_t _offset) {
   ::fidl::Encode(_encoder, &x, _offset + 0);

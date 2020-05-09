@@ -483,8 +483,6 @@ fx build
 | go bindings tests        | `fx test go_fidl_tests`                       | third_party/go/syscall/zx/fidl third_party/go/syscall/zx/fidl/fidl_test |
 | dart bindings tests      | `fx test fidl_bindings_test`                  | topaz/public/dart/fidl                                                  |
 | rust bindings            | `fx test rust_fidl_tests`                     | src/lib/fidl/rust/fidl                                                  |
-| transformer host tests   | fx run-host-tests fidl_transformer_host_tests | zircon/system/ulib/fidl/transformer.cc                                  |
-| transformer tests        | fx run-host-tests fidl_tests                  | zircon/system/ulib/fidl/transformer.cc                                  |
 | measure tape test        | `fx test measure-tape-tests`                  | //tools/fidl/measure-tape                        |
 
 The following requires: `fx set bringup.x64 --with-base //garnet/packages/tests:zircon`

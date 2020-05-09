@@ -41,7 +41,4 @@ const fidl_type_t unbounded_nonnullable_string_message_type = {
     {.coded_struct = {.fields = unbounded_nonnullable_string_fields,
                       .field_count = ArrayCount(unbounded_nonnullable_string_fields),
                       .size = sizeof(unbounded_nonnullable_string_inline_data),
-                      .max_out_of_line = 0xFFFFFFFF,
-                      .contains_union = false,
-                      .name = "unbounded_nonnullable_string_message",
-                      .alt_type = &unbounded_nonnullable_string_message_type}}};
+                      .name = "unbounded_nonnullable_string_message"}}};

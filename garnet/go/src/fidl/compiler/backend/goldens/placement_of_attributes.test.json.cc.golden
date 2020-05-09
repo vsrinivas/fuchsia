@@ -8,7 +8,7 @@ namespace example {
 #ifdef __Fuchsia__
 namespace {
 
-extern "C" const fidl_type_t v1_example_ExampleProtocolMethodRequestTable;
+extern "C" const fidl_type_t example_ExampleProtocolMethodRequestTable;
 
 }  // namespace
 
@@ -20,7 +20,7 @@ const fidl_type_t* ExampleProtocol_RequestDecoder::GetType(
     case internal::kExampleProtocol_Method_Ordinal:
     case internal::kExampleProtocol_Method_GenOrdinal:
       *out_needs_response = false;
-      return &v1_example_ExampleProtocolMethodRequestTable;
+      return &example_ExampleProtocolMethodRequestTable;
     default:
       *out_needs_response = false;
       return nullptr;
@@ -59,7 +59,7 @@ zx_status_t ExampleProtocol_Proxy::Dispatch_(::fidl::Message message) {
 
 void ExampleProtocol_Proxy::Method(::exampleusing::Empty arg) {
   ::fidl::Encoder _encoder(internal::kExampleProtocol_Method_GenOrdinal);
-  controller_->Send(&v1_example_ExampleProtocolMethodRequestTable,
+  controller_->Send(&example_ExampleProtocolMethodRequestTable,
                     ExampleProtocol_RequestEncoder::Method(&_encoder, &arg),
                     nullptr);
 }
@@ -121,14 +121,14 @@ ExampleProtocol_SyncProxy::~ExampleProtocol_SyncProxy() = default;
 
 zx_status_t ExampleProtocol_SyncProxy::Method(::exampleusing::Empty arg) {
   ::fidl::Encoder _encoder(internal::kExampleProtocol_Method_GenOrdinal);
-  return proxy_.Send(&v1_example_ExampleProtocolMethodRequestTable,
+  return proxy_.Send(&example_ExampleProtocolMethodRequestTable,
                      ExampleProtocol_RequestEncoder::Method(&_encoder, &arg));
 }
 
 #endif  // __Fuchsia__
 
-extern "C" const fidl_type_t v1_example_ExampleXUnionTable;
-const fidl_type_t* ExampleXUnion::FidlType = &v1_example_ExampleXUnionTable;
+extern "C" const fidl_type_t example_ExampleXUnionTable;
+const fidl_type_t* ExampleXUnion::FidlType = &example_ExampleXUnionTable;
 
 ExampleXUnion::ExampleXUnion() {}
 
@@ -276,8 +276,8 @@ void ExampleXUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     }
   }
 }
-extern "C" const fidl_type_t v1_example_ExampleUnionTable;
-const fidl_type_t* ExampleUnion::FidlType = &v1_example_ExampleUnionTable;
+extern "C" const fidl_type_t example_ExampleUnionTable;
+const fidl_type_t* ExampleUnion::FidlType = &example_ExampleUnionTable;
 
 ExampleUnion::ExampleUnion() {}
 
@@ -407,8 +407,8 @@ void ExampleUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     }
   }
 }
-extern "C" const fidl_type_t v1_example_ExampleTableTable;
-const fidl_type_t* ExampleTable::FidlType = &v1_example_ExampleTableTable;
+extern "C" const fidl_type_t example_ExampleTableTable;
+const fidl_type_t* ExampleTable::FidlType = &example_ExampleTableTable;
 
 ExampleTable::ExampleTable() : has_member_(false) {}
 
@@ -512,8 +512,8 @@ zx_status_t ExampleTable::Clone(ExampleTable* result) const {
   }
   return ZX_OK;
 }
-extern "C" const fidl_type_t v1_example_ExampleStructTable;
-const fidl_type_t* ExampleStruct::FidlType = &v1_example_ExampleStructTable;
+extern "C" const fidl_type_t example_ExampleStructTable;
+const fidl_type_t* ExampleStruct::FidlType = &example_ExampleStructTable;
 
 void ExampleStruct::Encode(::fidl::Encoder* _encoder, size_t _offset) {
   ::fidl::Encode(_encoder, &member, _offset + 0);

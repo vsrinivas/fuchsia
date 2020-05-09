@@ -6,9 +6,8 @@
 namespace test {
 namespace name {
 
-extern "C" const fidl_type_t v1_test_name_UnionWithHandleTable;
-const fidl_type_t* UnionWithHandle::FidlType =
-    &v1_test_name_UnionWithHandleTable;
+extern "C" const fidl_type_t test_name_UnionWithHandleTable;
+const fidl_type_t* UnionWithHandle::FidlType = &test_name_UnionWithHandleTable;
 
 UnionWithHandle::UnionWithHandle() {}
 
@@ -161,9 +160,8 @@ void UnionWithHandle::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     }
   }
 }
-extern "C" const fidl_type_t v1_test_name_TableWithHandleTable;
-const fidl_type_t* TableWithHandle::FidlType =
-    &v1_test_name_TableWithHandleTable;
+extern "C" const fidl_type_t test_name_TableWithHandleTable;
+const fidl_type_t* TableWithHandle::FidlType = &test_name_TableWithHandleTable;
 
 TableWithHandle::TableWithHandle() : has_h_(false) {}
 
@@ -266,8 +264,8 @@ zx_status_t TableWithHandle::Clone(TableWithHandle* result) const {
   }
   return ZX_OK;
 }
-extern "C" const fidl_type_t v1_test_name_HandlesInTypesTable;
-const fidl_type_t* HandlesInTypes::FidlType = &v1_test_name_HandlesInTypesTable;
+extern "C" const fidl_type_t test_name_HandlesInTypesTable;
+const fidl_type_t* HandlesInTypes::FidlType = &test_name_HandlesInTypesTable;
 
 void HandlesInTypes::Encode(::fidl::Encoder* _encoder, size_t _offset) {
   ::fidl::Encode(_encoder, &normal_handle, _offset + 0);

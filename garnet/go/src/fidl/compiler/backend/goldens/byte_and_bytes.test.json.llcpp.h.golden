@@ -30,10 +30,10 @@ namespace example {
 
 struct ByteAndBytes;
 
-extern "C" const fidl_type_t v1_example_ByteAndBytesTable;
+extern "C" const fidl_type_t example_ByteAndBytesTable;
 
 struct ByteAndBytes {
-  static constexpr const fidl_type_t* Type = &v1_example_ByteAndBytesTable;
+  static constexpr const fidl_type_t* Type = &example_ByteAndBytesTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 56;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;

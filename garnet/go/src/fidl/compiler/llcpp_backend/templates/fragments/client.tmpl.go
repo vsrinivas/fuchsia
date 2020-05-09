@@ -98,13 +98,6 @@ zx_status_t {{ .Name }}::ClientImpl::Dispatch(
     case {{ .Name }}:
     {{- end }}
     {
-      {{- if .ResponseContainsUnion }}
-      constexpr uint32_t kTransformerDestSize =
-          ::fidl::internal::ClampedMessageSize<{{ .Name }}Response,
-                                               ::fidl::MessageDirection::kReceiving>();
-      ::fidl::internal::ByteStorage<kTransformerDestSize>
-          transformer_dest_storage(::fidl::internal::DelayAllocation);
-      {{- end }}
       auto result = ::fidl::DecodeAs<{{ .Name }}Response>(msg);
       if (result.status != ZX_OK) {
         {{- if .HasRequest }}

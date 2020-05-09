@@ -79,8 +79,6 @@ bool HasPadding(const flat::Object& object, const WireFormat wire_format);
 [[maybe_unused]] bool HasPadding(const flat::Object* object, const WireFormat wire_format);
 bool HasFlexibleEnvelope(const flat::Object& object, const WireFormat wire_format);
 [[maybe_unused]] bool HasFlexibleEnvelope(const flat::Object* object, const WireFormat wire_format);
-bool ContainsUnion(const flat::Object& object);
-[[maybe_unused]] bool ContainsUnion(const flat::Object* object);
 
 DataSize AlignedSize(const flat::Object& object, const WireFormat wire_format) {
   return AlignTo(UnalignedSize(object, wire_format), Alignment(object, wire_format));
@@ -746,7 +744,7 @@ class MaxOutOfLineVisitor final : public TypeShapeVisitor<DataSize> {
 
     // The maximum number of envelopes is determined by the maximum _unreserved_ ordinal.
     // Any trailing reserved ordinals MUST NOT be present in the array of envelopes.
-    // For example, a table that looks like 
+    // For example, a table that looks like
     // "table T { 1: int32 i; 2: reserved; 3: uint32 u; 4: reserved; }"
     // has an envelope array size of 3, not 4.
     assert(object.members.size() <= INT32_MAX);
@@ -1064,90 +1062,6 @@ class HasFlexibleEnvelopeVisitor final : public TypeShapeVisitor<bool> {
   std::any Visit(const flat::Protocol& object) override { return false; }
 };
 
-class ContainsUnionVisitor final : public flat::Object::Visitor<bool> {
- public:
-  std::any Visit(const flat::ArrayType& object) override {
-    return ContainsUnion(object.element_type);
-  }
-
-  std::any Visit(const flat::VectorType& object) override {
-    return ContainsUnion(object.element_type);
-  }
-
-  std::any Visit(const flat::StringType& object) override { return false; }
-
-  std::any Visit(const flat::HandleType& object) override { return false; }
-
-  std::any Visit(const flat::PrimitiveType& object) override { return false; }
-
-  std::any Visit(const flat::IdentifierType& object) override {
-    thread_local RecursionDetector recursion_detector;
-
-    auto guard = recursion_detector.Enter(&object);
-    if (!guard) {
-      return false;
-    }
-
-    return ContainsUnion(object.type_decl);
-  }
-
-  std::any Visit(const flat::RequestHandleType& object) override { return false; }
-
-  std::any Visit(const flat::Enum& object) override {
-    return ContainsUnion(object.subtype_ctor->type);
-  }
-
-  std::any Visit(const flat::Bits& object) override {
-    return ContainsUnion(object.subtype_ctor->type);
-  }
-
-  std::any Visit(const flat::Service& object) override { return false; }
-
-  std::any Visit(const flat::Struct& object) override {
-    for (const auto& member : object.members) {
-      if (ContainsUnion(member)) {
-        return true;
-      }
-    }
-
-    return false;
-  }
-
-  std::any Visit(const flat::Struct::Member& object) override {
-    return ContainsUnion(object.type_ctor->type);
-  }
-
-  std::any Visit(const flat::Table& object) override {
-    for (const auto& member : object.members) {
-      if (ContainsUnion(member)) {
-        return true;
-      }
-    }
-
-    return false;
-  }
-
-  std::any Visit(const flat::Table::Member& object) override {
-    return object.maybe_used ? ContainsUnion(*object.maybe_used) : false;
-  }
-
-  std::any Visit(const flat::Table::Member::Used& object) override {
-    return ContainsUnion(object.type_ctor->type);
-  }
-
-  std::any Visit(const flat::Union& object) override { return true; }
-
-  std::any Visit(const flat::Union::Member& object) override {
-    return object.maybe_used ? ContainsUnion(*object.maybe_used) : false;
-  }
-
-  std::any Visit(const flat::Union::Member::Used& object) override {
-    return ContainsUnion(object.type_ctor->type);
-  }
-
-  std::any Visit(const flat::Protocol& object) override { return false; }
-};
-
 DataSize UnalignedSize(const flat::Object& object, const WireFormat wire_format) {
   UnalignedSizeVisitor v(wire_format);
   return object.Accept(&v);
@@ -1210,13 +1124,6 @@ bool HasFlexibleEnvelope(const flat::Object& object, const WireFormat wire_forma
   return HasFlexibleEnvelope(*object, wire_format);
 }
 
-bool ContainsUnion(const flat::Object& object) {
-  ContainsUnionVisitor v;
-  return object.Accept(&v);
-}
-
-[[maybe_unused]] bool ContainsUnion(const flat::Object* object) { return ContainsUnion(*object); }
-
 }  // namespace
 
 namespace fidl {
@@ -1228,8 +1135,7 @@ TypeShape::TypeShape(const flat::Object& object, WireFormat wire_format)
       max_handles(::MaxHandles(object)),
       max_out_of_line(::MaxOutOfLine(object, wire_format)),
       has_padding(::HasPadding(object, wire_format)),
-      has_flexible_envelope(::HasFlexibleEnvelope(object, wire_format)),
-      contains_union(::ContainsUnion(object)) {}
+      has_flexible_envelope(::HasFlexibleEnvelope(object, wire_format)) {}
 
 TypeShape::TypeShape(const flat::Object* object, WireFormat wire_format)
     : TypeShape(*object, wire_format) {}

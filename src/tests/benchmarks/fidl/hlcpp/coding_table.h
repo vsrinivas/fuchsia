@@ -24,10 +24,7 @@ fidl_type_t FidlTypeWithHeader = {
                       .field_count = 1,
                       .size = static_cast<uint32_t>(sizeof(fidl_message_header_t) +
                                                     EncodedSize<FidlType>),
-                      .max_out_of_line = UINT32_MAX,
-                      .contains_union = true,
-                      .name = "Input",
-                      .alt_type = nullptr}},
+                      .name = "Input"}},
 };
 
 }  // namespace hlcpp_benchmarks

@@ -35,7 +35,7 @@ struct Example_foo_Response;
 class Example_foo_Result;
 class Example;
 
-extern "C" const fidl_type_t v1_fidl_test_json_Example_foo_ResultTable;
+extern "C" const fidl_type_t fidl_test_json_Example_foo_ResultTable;
 
 class Example_foo_Result {
  public:
@@ -108,7 +108,7 @@ class Example_foo_Result {
   }
 
   static constexpr const fidl_type_t* Type =
-      &v1_fidl_test_json_Example_foo_ResultTable;
+      &fidl_test_json_Example_foo_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
@@ -148,11 +148,11 @@ class Example_foo_Result {
   ::fidl::Envelope<void> envelope_;
 };
 
-extern "C" const fidl_type_t v1_fidl_test_json_Example_foo_ResponseTable;
+extern "C" const fidl_type_t fidl_test_json_Example_foo_ResponseTable;
 
 struct Example_foo_Response {
   static constexpr const fidl_type_t* Type =
-      &v1_fidl_test_json_Example_foo_ResponseTable;
+      &fidl_test_json_Example_foo_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 8;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
@@ -161,8 +161,8 @@ struct Example_foo_Response {
   int64_t y = {};
 };
 
-extern "C" const fidl_type_t v1_fidl_test_json_ExamplefooRequestTable;
-extern "C" const fidl_type_t v1_fidl_test_json_ExamplefooResponseTable;
+extern "C" const fidl_type_t fidl_test_json_ExamplefooRequestTable;
+extern "C" const fidl_type_t fidl_test_json_ExamplefooResponseTable;
 
 class Example final {
   Example() = delete;
@@ -174,13 +174,12 @@ class Example final {
     ::llcpp::fidl::test::json::Example_foo_Result result;
 
     static constexpr const fidl_type_t* Type =
-        &v1_fidl_test_json_ExamplefooResponseTable;
+        &fidl_test_json_ExamplefooResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool HasPointer = true;
-    static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
   };
@@ -190,7 +189,7 @@ class Example final {
     ::fidl::StringView s;
 
     static constexpr const fidl_type_t* Type =
-        &v1_fidl_test_json_ExamplefooRequestTable;
+        &fidl_test_json_ExamplefooRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -198,7 +197,6 @@ class Example final {
     static constexpr uint32_t AltMaxOutOfLine = 4294967295;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool HasPointer = true;
-    static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
     using ResponseType = fooResponse;

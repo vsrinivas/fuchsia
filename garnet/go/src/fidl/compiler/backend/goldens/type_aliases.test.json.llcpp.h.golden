@@ -32,11 +32,11 @@ namespace example {
 
 struct ExampleOfUseOfAliases;
 
-extern "C" const fidl_type_t v1_example_ExampleOfUseOfAliasesTable;
+extern "C" const fidl_type_t example_ExampleOfUseOfAliasesTable;
 
 struct ExampleOfUseOfAliases {
   static constexpr const fidl_type_t* Type =
-      &v1_example_ExampleOfUseOfAliasesTable;
+      &example_ExampleOfUseOfAliasesTable;
   static constexpr uint32_t MaxNumHandles = 3;
   static constexpr uint32_t PrimarySize = 120;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;

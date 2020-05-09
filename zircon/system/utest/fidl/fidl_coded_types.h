@@ -79,21 +79,11 @@ extern const fidl_type_t bounded_32_nullable_vector_of_uint32_message_type;
 extern const fidl_type_t multiple_nonnullable_vectors_of_uint32_message_type;
 extern const fidl_type_t multiple_nullable_vectors_of_uint32_message_type;
 
-extern const fidl_type_t nonnullable_handle_union_type;
-extern const fidl_type_t nonnullable_handle_union_message_type;
-extern const fidl_type_t array_of_nonnullable_handles_union_message_type;
-extern const fidl_type_t nonnullable_handle_union_ptr;
-extern const fidl_type_t nonnullable_handle_union_ptr_message_type;
-extern const fidl_type_t array_of_nonnullable_handles_union_ptr_message_type;
-
 extern const fidl_type_t struct_level_0_struct;
 extern const fidl_type_t nested_structs_message_type;
 
 extern const fidl_type_t struct_ptr_level_0_struct_pointer;
 extern const fidl_type_t nested_struct_ptrs_message_type;
-
-extern const fidl_type_t maybe_recurse_type;
-extern const fidl_type_t recursion_message_type;
 
 #if defined(__cplusplus)
 }

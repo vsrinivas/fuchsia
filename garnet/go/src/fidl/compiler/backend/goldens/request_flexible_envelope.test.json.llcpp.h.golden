@@ -35,7 +35,7 @@ class StrictFoo;
 class FlexibleFoo;
 class Protocol;
 
-extern "C" const fidl_type_t v1_fidl_test_json_StrictFooTable;
+extern "C" const fidl_type_t fidl_test_json_StrictFooTable;
 
 class StrictFoo {
  public:
@@ -101,7 +101,7 @@ class StrictFoo {
     return static_cast<Tag>(ordinal_);
   }
 
-  static constexpr const fidl_type_t* Type = &v1_fidl_test_json_StrictFooTable;
+  static constexpr const fidl_type_t* Type = &fidl_test_json_StrictFooTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -140,7 +140,7 @@ class StrictFoo {
   ::fidl::Envelope<void> envelope_;
 };
 
-extern "C" const fidl_type_t v1_fidl_test_json_FlexibleFooTable;
+extern "C" const fidl_type_t fidl_test_json_FlexibleFooTable;
 
 class FlexibleFoo {
  public:
@@ -208,8 +208,7 @@ class FlexibleFoo {
   }
   Tag which() const;
 
-  static constexpr const fidl_type_t* Type =
-      &v1_fidl_test_json_FlexibleFooTable;
+  static constexpr const fidl_type_t* Type = &fidl_test_json_FlexibleFooTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -249,13 +248,13 @@ class FlexibleFoo {
 };
 
 extern "C" const fidl_type_t
-    v1_fidl_test_json_ProtocolRequestStrictResponseFlexibleRequestTable;
+    fidl_test_json_ProtocolRequestStrictResponseFlexibleRequestTable;
 extern "C" const fidl_type_t
-    v1_fidl_test_json_ProtocolRequestStrictResponseFlexibleResponseTable;
+    fidl_test_json_ProtocolRequestStrictResponseFlexibleResponseTable;
 extern "C" const fidl_type_t
-    v1_fidl_test_json_ProtocolRequestFlexibleResponseStrictRequestTable;
+    fidl_test_json_ProtocolRequestFlexibleResponseStrictRequestTable;
 extern "C" const fidl_type_t
-    v1_fidl_test_json_ProtocolRequestFlexibleResponseStrictResponseTable;
+    fidl_test_json_ProtocolRequestFlexibleResponseStrictResponseTable;
 
 class Protocol final {
   Protocol() = delete;
@@ -267,13 +266,12 @@ class Protocol final {
     ::llcpp::fidl::test::json::FlexibleFoo f;
 
     static constexpr const fidl_type_t* Type =
-        &v1_fidl_test_json_ProtocolRequestStrictResponseFlexibleResponseTable;
+        &fidl_test_json_ProtocolRequestStrictResponseFlexibleResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 4294967295;
     static constexpr bool HasFlexibleEnvelope = true;
     static constexpr bool HasPointer = true;
-    static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
   };
@@ -283,7 +281,7 @@ class Protocol final {
     ::llcpp::fidl::test::json::StrictFoo s;
 
     static constexpr const fidl_type_t* Type =
-        &v1_fidl_test_json_ProtocolRequestStrictResponseFlexibleRequestTable;
+        &fidl_test_json_ProtocolRequestStrictResponseFlexibleRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -291,7 +289,6 @@ class Protocol final {
     static constexpr uint32_t AltMaxOutOfLine = 4294967295;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool HasPointer = true;
-    static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
     using ResponseType = RequestStrictResponseFlexibleResponse;
@@ -303,13 +300,12 @@ class Protocol final {
     ::llcpp::fidl::test::json::StrictFoo f;
 
     static constexpr const fidl_type_t* Type =
-        &v1_fidl_test_json_ProtocolRequestFlexibleResponseStrictResponseTable;
+        &fidl_test_json_ProtocolRequestFlexibleResponseStrictResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 4294967295;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool HasPointer = true;
-    static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
   };
@@ -319,7 +315,7 @@ class Protocol final {
     ::llcpp::fidl::test::json::FlexibleFoo s;
 
     static constexpr const fidl_type_t* Type =
-        &v1_fidl_test_json_ProtocolRequestFlexibleResponseStrictRequestTable;
+        &fidl_test_json_ProtocolRequestFlexibleResponseStrictRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -327,7 +323,6 @@ class Protocol final {
     static constexpr uint32_t AltMaxOutOfLine = 4294967295;
     static constexpr bool HasFlexibleEnvelope = true;
     static constexpr bool HasPointer = true;
-    static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
     using ResponseType = RequestFlexibleResponseStrictResponse;
