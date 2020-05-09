@@ -82,14 +82,14 @@ fn unique_id_from_peer(peer_id: &PeerId) -> [u8; 16] {
     unique_id
 }
 
-const LOCAL_MONOTONIC_CLOCK_DOMAIN: i32 = 0;
+const LOCAL_MONOTONIC_CLOCK_DOMAIN: u32 = 0;
 impl AudioOutStream {
     pub fn new(
         peer_id: &PeerId,
         pcm_format: PcmFormat,
     ) -> Result<fuchsia_audio_device_output::driver::AudioFrameStream, Error> {
         let id = unique_id_from_peer(peer_id);
-        let (chan, frame_stream) = SoftPcmOutput::build(
+        let (client, frame_stream) = SoftPcmOutput::build(
             &id,
             "Google",
             "Bluetooth A2DP",
@@ -100,7 +100,7 @@ impl AudioOutStream {
 
         let svc = fuchsia_component::client::connect_to_service::<AudioDeviceEnumeratorMarker>()
             .context("Failed to connect to AudioDeviceEnumerator")?;
-        let _ = svc.add_device_by_channel(chan, "Bluetooth A2DP", false)?;
+        svc.add_device_by_channel2("Bluetooth A2DP", false, client)?;
 
         Ok(frame_stream)
     }

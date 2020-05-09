@@ -13,8 +13,5 @@ mod types;
 /// Software Audio Driver
 pub mod driver;
 
-/// Audio Driver Stream Commands / Responses
-mod stream;
-
-/// Ring Buffer Commands / Responses
-mod ring_buffer;
+/// Frame VMO Helper
+mod frame_vmo;

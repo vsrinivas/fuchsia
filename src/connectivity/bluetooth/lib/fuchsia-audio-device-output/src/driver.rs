@@ -3,32 +3,32 @@
 // found in the LICENSE file.
 
 use {
+    anyhow::format_err,
+    fidl::endpoints::ClientEnd,
+    fidl::endpoints::RequestStream,
+    fidl_fuchsia_hardware_audio::*,
     fidl_fuchsia_media, fuchsia_async as fasync,
     fuchsia_syslog::{fx_log_info, fx_log_warn},
     fuchsia_zircon::{self as zx, DurationNum},
     futures::{
-        future::{AbortHandle, Abortable},
         select,
         stream::{FusedStream, Stream},
         task::{Context, Poll},
-        Future, FutureExt, StreamExt,
+        Future, StreamExt,
     },
     parking_lot::Mutex,
-    std::{convert::TryInto, pin::Pin, slice, sync::Arc},
+    std::{pin::Pin, sync::Arc},
 };
 
-use crate::types::{
-    AudioSampleFormat, AudioStreamFormatRange, ChannelInner, Error, MaybeStream, RequestStream,
-    Result,
-};
-use crate::{ring_buffer, stream};
+use crate::frame_vmo;
+use crate::types::{AudioSampleFormat, Error, MaybeStream, Result};
 
 /// A Stream that produces audio frames.
 /// Usually acquired via SoftPcmOutput::take_frame_stream().
 // TODO: return the time that the first frame is meant to be presented?
 pub struct AudioFrameStream {
     /// The VMO that is receiving the frames.
-    frame_vmo: Arc<Mutex<ring_buffer::FrameVmo>>,
+    frame_vmo: Arc<Mutex<frame_vmo::FrameVmo>>,
     /// A timer to set the waiter to poll when there are no frames available.
     timer: fasync::Timer,
     /// The last time we received frames.
@@ -38,21 +38,21 @@ pub struct AudioFrameStream {
     /// This must be longer than the duration of one frame.
     min_packet_duration: zx::Duration,
     /// Handle to remove the audio device processing future when this is dropped.
-    device_finish: AbortHandle,
+    control_handle: StreamConfigControlHandle,
 }
 
 impl AudioFrameStream {
     fn new(
-        frame_vmo: Arc<Mutex<ring_buffer::FrameVmo>>,
+        frame_vmo: Arc<Mutex<frame_vmo::FrameVmo>>,
         min_packet_duration: zx::Duration,
-        device_finish: AbortHandle,
+        control_handle: StreamConfigControlHandle,
     ) -> AudioFrameStream {
         AudioFrameStream {
             frame_vmo,
             timer: fasync::Timer::new(fasync::Time::INFINITE_PAST),
             last_frame_time: Some(fasync::Time::now()),
             min_packet_duration,
-            device_finish,
+            control_handle,
         }
     }
 }
@@ -106,7 +106,7 @@ impl FusedStream for AudioFrameStream {
 
 impl Drop for AudioFrameStream {
     fn drop(&mut self) {
-        self.device_finish.abort();
+        self.control_handle.shutdown();
     }
 }
 
@@ -133,10 +133,7 @@ pub(crate) fn frames_from_duration(frames_per_second: usize, duration: zx::Durat
 /// as defined in //docs/concepts/drivers/driver_interfaces/audio_streaming.md
 pub struct SoftPcmOutput {
     /// The Stream channel handles format negotiation, plug detection, and gain
-    stream: Arc<ChannelInner<stream::Request>>,
-
-    /// The RingBuffer command channel handles audio buffers and buffer notifications
-    rb_chan: Option<Arc<ChannelInner<ring_buffer::Request>>>,
+    stream_config_stream: StreamConfigRequestStream,
 
     /// The Unique ID that this stream will present to the system
     unique_id: [u8; 16],
@@ -145,11 +142,11 @@ pub struct SoftPcmOutput {
     /// A product description for the hardware for the stream
     product: String,
     /// The clock domain that this stream will present to the system
-    clock_domain: i32,
+    clock_domain: u32,
 
     /// The supported format of this output.
     /// Currently only support one format per output is supported.
-    supported_format: AudioStreamFormatRange,
+    supported_formats: PcmSupportedFormats,
 
     /// The minimum amount of time between audio frames output from the frame stream.
     /// Used to calculate minimum audio buffer sizes.
@@ -159,10 +156,16 @@ pub struct SoftPcmOutput {
     current_format: Option<(u32, AudioSampleFormat, u16)>,
 
     /// The request stream for the ringbuffer.
-    rb_requests: MaybeStream<RequestStream<ring_buffer::Request>>,
+    ring_buffer_stream: MaybeStream<RingBufferRequestStream>,
 
     /// A pointer to the ring buffer for this stream
-    frame_vmo: Arc<Mutex<ring_buffer::FrameVmo>>,
+    frame_vmo: Arc<Mutex<frame_vmo::FrameVmo>>,
+
+    /// Replied to plugged state watch.
+    plug_state_replied: bool,
+
+    /// Replied to gain state watch.
+    gain_state_replied: bool,
 }
 
 impl SoftPcmOutput {
@@ -179,205 +182,236 @@ impl SoftPcmOutput {
         unique_id: &[u8; 16],
         manufacturer: &str,
         product: &str,
-        clock_domain: i32,
+        clock_domain: u32,
         pcm_format: fidl_fuchsia_media::PcmFormat,
         min_packet_duration: zx::Duration,
-    ) -> Result<(zx::Channel, AudioFrameStream)> {
-        let (client_channel, stream_channel) =
-            zx::Channel::create().or_else(|e| Err(Error::IOError(e)))?;
+    ) -> Result<(ClientEnd<StreamConfigMarker>, AudioFrameStream)> {
+        if pcm_format.bits_per_sample % 8 != 0 {
+            // Non-byte-aligned format not allowed.
+            return Err(Error::InvalidArgs);
+        }
+        let (client, request_stream) =
+            fidl::endpoints::create_request_stream::<StreamConfigMarker>()
+                .expect("Error creating stream config endpoint");
 
-        let supported_format = pcm_format.try_into()?;
+        let number_of_channels = pcm_format.channel_map.len() as u8;
+        let supported_formats = PcmSupportedFormats {
+            number_of_channels: vec![number_of_channels],
+            sample_formats: vec![SampleFormat::PcmSigned],
+            bytes_per_sample: vec![(pcm_format.bits_per_sample / 8) as u8],
+            valid_bits_per_sample: vec![pcm_format.bits_per_sample as u8],
+            frame_rates: vec![pcm_format.frames_per_second],
+        };
 
         let stream = SoftPcmOutput {
-            stream: Arc::new(ChannelInner::new(stream_channel)?),
-            rb_chan: None,
+            stream_config_stream: request_stream,
             unique_id: unique_id.clone(),
             manufacturer: manufacturer.to_string(),
             product: product.to_string(),
             clock_domain,
-            supported_format,
+            supported_formats,
             min_packet_duration,
             current_format: None,
-            rb_requests: Default::default(),
-            frame_vmo: Arc::new(Mutex::new(ring_buffer::FrameVmo::new()?)),
+            ring_buffer_stream: Default::default(),
+            frame_vmo: Arc::new(Mutex::new(frame_vmo::FrameVmo::new()?)),
+            plug_state_replied: false,
+            gain_state_replied: false,
         };
 
         let rb = stream.frame_vmo.clone();
-        let device_events_fut = stream.process_events();
-        let (abort_handle, abort_registration) = AbortHandle::new_pair();
-        let device_events_fut = Abortable::new(device_events_fut, abort_registration);
-        fuchsia_async::spawn(device_events_fut.map(|_| ()));
-        Ok((client_channel, AudioFrameStream::new(rb, min_packet_duration, abort_handle)))
+        let control = stream.stream_config_stream.control_handle().clone();
+        fasync::spawn(stream.process_requests());
+        Ok((client, AudioFrameStream::new(rb, min_packet_duration, control)))
     }
 
-    fn take_stream_requests(&self) -> RequestStream<stream::Request> {
-        ChannelInner::take_request_stream(self.stream.clone())
-    }
-
-    fn take_ringbuffer_requests(&self) -> RequestStream<ring_buffer::Request> {
-        let s = self.rb_chan.as_ref().expect("should exist when you take requests").clone();
-        ChannelInner::take_request_stream(s)
-    }
-
-    fn handle_control_request(&mut self, request: stream::Request) -> Result<()> {
-        match request {
-            stream::Request::GetFormats { responder } => {
-                responder.reply(slice::from_ref(&self.supported_format))
-            }
-            stream::Request::SetFormat {
-                responder,
-                frames_per_second,
-                sample_format,
-                channels,
-            } => match self.set_format(frames_per_second, sample_format, channels) {
-                Ok(channel) => {
-                    self.rb_requests.set(self.take_ringbuffer_requests());
-                    // TODO: make a way to pass the external expected delay and add it here
-                    responder.reply(
-                        zx::Status::OK,
-                        self.min_packet_duration.into_nanos() as u64,
-                        Some(channel),
-                    )
-                }
-                Err(e) => responder.reply(zx::Status::NOT_SUPPORTED, 0, None).and(Err(e)),
-            },
-            // TODO(####): Implement a client to this inteface for gain control
-            stream::Request::GetGain { responder } => {
-                responder.reply(None, None, 0.0, [0.0, 0.0], 0.0)
-            }
-            stream::Request::SetGain { mute, agc, gain, responder } => {
-                if mute.is_some() || agc.is_some() {
-                    // We don't support setting mute or agc
-                    return responder.reply(zx::Status::INVALID_ARGS, false, false, 0.0);
-                } else if let Some(db) = gain {
-                    if db == 0.0 {
-                        return responder.reply(zx::Status::OK, false, false, 0.0);
+    async fn process_requests(mut self) {
+        loop {
+            select! {
+                stream_config_request = self.stream_config_stream.next() => {
+                    match stream_config_request {
+                        Some(Ok(r)) => {
+                            if let Err(e) = self.handle_stream_request(r) {
+                                fx_log_warn!("stream config request error: {:?}", e)
+                            }
+                        },
+                        Some(Err(e)) => {
+                            fx_log_warn!("stream config error: {:?}, stopping", e);
+                            return
+                        },
+                        None => {
+                            fx_log_warn!("no stream config error, stopping");
+                            return
+                        },
                     }
                 }
-                responder.reply(zx::Status::INVALID_ARGS, false, false, 0.0)
+                ring_buffer_request = self.ring_buffer_stream.next() => {
+                    match ring_buffer_request {
+                        Some(Ok(r)) => {
+                            if let Err(e) = self.handle_ring_buffer_request(r) {
+                                fx_log_warn!("ring buffer request error: {:?}", e)
+                            }
+                        },
+                        Some(Err(e)) => {
+                            fx_log_warn!("ring buffer error: {:?}, stopping", e);
+                            return
+                        },
+                        None => {
+                            fx_log_warn!("no ring buffer error, stopping");
+                            return
+                        },
+                    }
+                }
             }
-            stream::Request::PlugDetect { responder, .. } => {
-                responder.reply(stream::PlugState::Hardwired, zx::Time::get(zx::ClockId::Monotonic))
-            }
-            stream::Request::GetUniqueId { responder } => responder.reply(&self.unique_id),
-            stream::Request::GetString { id, responder } => {
-                let s = match id {
-                    stream::StringId::Manufacturer => &self.manufacturer,
-                    stream::StringId::Product => &self.product,
-                };
-                responder.reply(s)
-            }
-            stream::Request::GetClockDomain { responder } => responder.reply(self.clock_domain),
         }
     }
 
-    fn handle_ring_buffer_request(&self, request: ring_buffer::Request) -> Result<()> {
+    fn handle_stream_request(
+        &mut self,
+        request: StreamConfigRequest,
+    ) -> std::result::Result<(), anyhow::Error> {
         match request {
-            ring_buffer::Request::GetFifoDepth { responder } => {
-                // We will never read beyond the nominal playback position.
-                responder.reply(zx::Status::OK, 0)
+            StreamConfigRequest::GetProperties { responder } => {
+                #[rustfmt::skip]
+                let prop = StreamProperties {
+                    unique_id:                Some(self.unique_id),
+                    is_input:                 Some(false),
+                    can_mute:                 Some(false),
+                    can_agc:                  Some(false),
+                    min_gain_db:              Some(0f32),
+                    max_gain_db:              Some(0f32),
+                    gain_step_db:             Some(0f32),
+                    plug_detect_capabilities: Some(PlugDetectCapabilities::Hardwired),
+                    clock_domain:             Some(self.clock_domain),
+                    manufacturer:             Some(self.manufacturer.to_string()),
+                    product:                  Some(self.product.to_string()),
+                };
+                responder.send(prop)?;
             }
-            ring_buffer::Request::GetBuffer {
-                min_ring_buffer_frames,
-                position_responder,
+            StreamConfigRequest::GetSupportedFormats { responder } => {
+                let pcm_formats = self.supported_formats.clone();
+                let formats_vector =
+                    vec![SupportedFormats { pcm_supported_formats: Some(pcm_formats) }];
+                responder.send(&mut formats_vector.into_iter())?;
+            }
+            StreamConfigRequest::CreateRingBuffer { format, ring_buffer, control_handle: _ } => {
+                let pcm = (format.pcm_format.ok_or(format_err!("No pcm_format included")))?;
+                self.ring_buffer_stream.set(ring_buffer.into_stream()?);
+                self.current_format =
+                    Some((pcm.frame_rate, pcm.into(), pcm.number_of_channels.into()))
+            }
+            StreamConfigRequest::WatchGainState { responder } => {
+                if self.gain_state_replied == true {
+                    // We will never change gain state.
+                    responder.drop_without_shutdown();
+                    return Ok(());
+                }
+                let gain_state = GainState {
+                    muted: Some(false),
+                    agc_enabled: Some(false),
+                    gain_db: Some(0.0f32),
+                };
+                responder.send(gain_state)?;
+                self.gain_state_replied = true
+            }
+            StreamConfigRequest::WatchPlugState { responder } => {
+                if self.plug_state_replied == true {
+                    // We will never change plug state.
+                    responder.drop_without_shutdown();
+                    return Ok(());
+                }
+                let time = fasync::Time::now();
+                let plug_state = PlugState {
+                    plugged: Some(true),
+                    plug_state_time: Some(time.into_nanos() as i64),
+                };
+                responder.send(plug_state)?;
+                self.plug_state_replied = true;
+            }
+            StreamConfigRequest::SetGain { target_state, control_handle: _ } => {
+                if let Some(true) = target_state.muted {
+                    fx_log_warn!("Mute is not supported");
+                }
+                if let Some(true) = target_state.agc_enabled {
+                    fx_log_warn!("AGC is not supported");
+                }
+                if let Some(gain) = target_state.gain_db {
+                    if gain != 0.0 {
+                        fx_log_warn!("Non-zero gain setting not supported");
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
+
+    fn handle_ring_buffer_request(
+        &mut self,
+        request: RingBufferRequest,
+    ) -> std::result::Result<(), anyhow::Error> {
+        match request {
+            RingBufferRequest::GetProperties { responder } => {
+                let prop = RingBufferProperties {
+                    // TODO(51726): Set external_delay and fifo_depth from outside the crate.
+                    external_delay: Some(0),
+                    fifo_depth: Some(0),
+                    needs_cache_flush_or_invalidate: Some(false),
+                };
+                responder.send(prop)?;
+            }
+            RingBufferRequest::GetVmo {
+                min_frames,
+                clock_recovery_notifications_per_ring,
                 responder,
             } => {
                 let (fps, format, channels) = match &self.current_format {
                     None => {
-                        responder.reply(zx::Status::BAD_STATE, 0, None)?;
-                        return Err(Error::InvalidState);
+                        let mut error = Err(GetVmoError::InternalError);
+                        if let Err(e) = responder.send(&mut error) {
+                            fx_log_warn!("Error on get vmo error send: {:?}", e);
+                        }
+                        return Ok(());
                     }
                     Some(x) => x.clone(),
                 };
                 // Require a minimum amount of frames for three fetches of packets.
                 let min_frames_from_duration =
                     3 * frames_from_duration(fps as usize, self.min_packet_duration) as u32;
-                let ring_buffer_frames = min_ring_buffer_frames.max(min_frames_from_duration);
+                let ring_buffer_frames = min_frames.max(min_frames_from_duration);
                 match self.frame_vmo.lock().set_format(
                     fps,
                     format,
                     channels,
                     ring_buffer_frames as usize,
-                    position_responder,
+                    clock_recovery_notifications_per_ring,
                 ) {
-                    Err(e) => {
-                        let audio_err = match e {
-                            Error::IOError(zx_err) => zx_err,
-                            _ => zx::Status::BAD_STATE,
-                        };
-                        responder.reply(audio_err, 0, None).and(Err(e))
+                    Err(_) => {
+                        let mut error = Err(GetVmoError::InternalError);
+                        responder.send(&mut error)?;
                     }
-                    Ok(vmo_handle) => responder.reply(
-                        zx::Status::OK,
-                        min_ring_buffer_frames,
-                        Some(vmo_handle.into()),
-                    ),
+                    Ok(vmo_handle) => {
+                        let mut result = Ok((min_frames, vmo_handle.into()));
+                        responder.send(&mut result)?;
+                    }
                 }
             }
-            ring_buffer::Request::Start { responder } => {
+            RingBufferRequest::Start { responder } => {
                 let time = fasync::Time::now();
-                match self.frame_vmo.lock().start(time.into()) {
-                    Err(_) => responder.reply(zx::Status::BAD_STATE, 0),
-                    Ok(_) => responder.reply(zx::Status::OK, time.into_nanos() as u64),
+                if let Err(e) = self.frame_vmo.lock().start(time.into()) {
+                    fx_log_warn!("Error on frame vmo start: {:?}", e);
                 }
+                responder.send(time.into_nanos() as i64)?;
             }
-            ring_buffer::Request::Stop { responder } => {
-                if self.frame_vmo.lock().stop() {
-                    responder.reply(zx::Status::OK)
-                } else {
-                    responder.reply(zx::Status::BAD_STATE)
+            RingBufferRequest::Stop { responder } => {
+                if self.frame_vmo.lock().stop() == false {
+                    fx_log_warn!("Stopping a not started ring buffer");
                 }
+                responder.send()?;
             }
-        }
-    }
-
-    async fn process_events(mut self) {
-        let mut requests: RequestStream<stream::Request> = self.take_stream_requests();
-
-        loop {
-            let mut rb_request_fut = self.rb_requests.next();
-            select! {
-                request = requests.next() => {
-                    let res = match request {
-                        None => Err(Error::PeerRead(zx::Status::UNAVAILABLE)),
-                        Some(Err(e)) => Err(e),
-                        Some(Ok(r)) => self.handle_control_request(r),
-                    };
-                    if let Err(e) = res {
-                        fx_log_warn!("Audio Control Error: {:?}, stopping", e);
-                        return;
-                    }
-                }
-                rb_request = rb_request_fut => {
-                    let res = match rb_request {
-                        None => Err(Error::PeerRead(zx::Status::UNAVAILABLE)),
-                        Some(Err(e)) => Err(e),
-                        Some(Ok(r)) => self.handle_ring_buffer_request(r),
-                    };
-                    if let Err(e) = res {
-                        fx_log_warn!("Ring Buffer Error: {:?}, stopping", e);
-                        return;
-                    }
-                }
-                complete => break,
+            RingBufferRequest::WatchClockRecoveryPositionInfo { responder } => {
+                self.frame_vmo.lock().set_position_responder(responder);
             }
         }
-
-        fx_log_info!("All Streams ended, stopping processing...");
-    }
-
-    fn set_format(
-        &mut self,
-        frames_per_second: u32,
-        sample_format: AudioSampleFormat,
-        channels: u16,
-    ) -> Result<zx::Channel> {
-        // TODO: validate against the self.supported_sample_format
-        self.current_format = Some((frames_per_second, sample_format, channels));
-        let (client_rb_channel, rb_channel) =
-            zx::Channel::create().or_else(|e| Err(Error::IOError(e)))?;
-        self.rb_chan = Some(Arc::new(ChannelInner::new(rb_channel)?));
-        Ok(client_rb_channel)
+        Ok(())
     }
 }
 
@@ -386,8 +420,30 @@ mod tests {
     use super::*;
 
     use fidl_fuchsia_media::{AudioChannelId, AudioPcmMode, PcmFormat};
-    use fuchsia_zircon::HandleBased;
+
     use futures::future;
+
+    const TEST_UNIQUE_ID: &[u8; 16] = &[5; 16];
+    const TEST_CLOCK_DOMAIN: u32 = 0x00010203;
+
+    fn setup() -> (StreamConfigProxy, AudioFrameStream) {
+        let format = PcmFormat {
+            pcm_mode: AudioPcmMode::Linear,
+            bits_per_sample: 16,
+            frames_per_second: 44100,
+            channel_map: vec![AudioChannelId::Lf, AudioChannelId::Rf],
+        };
+        let (client, frame_stream) = SoftPcmOutput::build(
+            TEST_UNIQUE_ID,
+            "Google",
+            "UnitTest",
+            TEST_CLOCK_DOMAIN,
+            format,
+            zx::Duration::from_millis(100),
+        )
+        .expect("should always build");
+        (client.into_proxy().expect("channel should be available"), frame_stream)
+    }
 
     #[test]
     fn test_frames_from_duration() {
@@ -412,35 +468,6 @@ mod tests {
         assert_eq!(72000 - 1, frames_from_duration(FPS, 1500.millis()));
 
         assert_eq!(10660, frames_from_duration(FPS, 222084000.nanos()));
-    }
-
-    const TEST_UNIQUE_ID: &[u8; 16] = &[5; 16];
-    const TEST_CLOCK_DOMAIN: i32 = 0x00010203;
-
-    // Receive a message from the client channel.  Wait and expect a response that starts with the
-    // expected bytes.  Returns handles that were sent in the response.
-    fn recv_and_expect_response(
-        exec: &mut fasync::Executor,
-        client_chan: &zx::Channel,
-        request: &[u8],
-        expected: &[u8],
-    ) -> Vec<zx::Handle> {
-        assert_eq!(Ok(()), client_chan.write(request, &mut Vec::new()));
-
-        assert_eq!(Poll::Pending, exec.run_until_stalled(&mut future::pending::<()>()));
-
-        let mut buf = zx::MessageBuf::new();
-        assert_eq!(Ok(()), client_chan.read(&mut buf));
-
-        let sent = buf.bytes();
-        assert!(sent.len() >= expected.len());
-        assert_eq!(expected, &sent[0..expected.len()]);
-
-        let mut handles = Vec::new();
-        while let Some(h) = buf.take_handle(handles.len()) {
-            handles.push(h)
-        }
-        handles
     }
 
     #[test]
@@ -468,214 +495,89 @@ mod tests {
         assert_eq!(Poll::Pending, exec.run_until_stalled(&mut future::pending::<()>()));
 
         // The audio client should be dropped (normally this causes audio to remove the device)
-        assert_eq!(Err(zx::Status::PEER_CLOSED), client.write(&[0], &mut Vec::new()));
+        assert_eq!(Err(zx::Status::PEER_CLOSED), client.channel().write(&[0], &mut Vec::new()));
     }
 
     #[test]
+    #[rustfmt::skip]
     fn soft_pcm_audio_out() {
-        let format = PcmFormat {
-            pcm_mode: AudioPcmMode::Linear,
-            bits_per_sample: 16,
-            frames_per_second: 48000,
-            channel_map: vec![AudioChannelId::Lf, AudioChannelId::Rf],
+        let mut exec = fasync::Executor::new_with_fake_time().expect("executor should build");
+        let (stream_config, mut frame_stream) = setup();
+
+        let result = exec.run_until_stalled(&mut stream_config.get_properties());
+        assert!(result.is_ready());
+        let props1 = match result {
+            Poll::Ready(Ok(v)) => v,
+            _ => panic!("stream config get properties error"),
         };
 
-        let mut exec = fasync::Executor::new_with_fake_time().expect("executor should build");
-        let (client, mut frame_stream) = SoftPcmOutput::build(
-            TEST_UNIQUE_ID,
-            &"Google".to_string(),
-            &"UnitTest".to_string(),
-            TEST_CLOCK_DOMAIN,
-            format,
-            zx::Duration::from_millis(100),
-        )
-        .expect("should always build");
+        assert_eq!(props1.unique_id.unwrap(),                *TEST_UNIQUE_ID);
+        assert_eq!(props1.is_input.unwrap(),                 false);
+        assert_eq!(props1.can_mute.unwrap(),                 false);
+        assert_eq!(props1.can_agc.unwrap(),                  false);
+        assert_eq!(props1.min_gain_db.unwrap(),              0f32);
+        assert_eq!(props1.max_gain_db.unwrap(),              0f32);
+        assert_eq!(props1.gain_step_db.unwrap(),             0f32);
+        assert_eq!(props1.plug_detect_capabilities.unwrap(), PlugDetectCapabilities::Hardwired);
+        assert_eq!(props1.manufacturer.unwrap(),             "Google");
+        assert_eq!(props1.product.unwrap(),                  "UnitTest");
+        assert_eq!(props1.clock_domain.unwrap(),             TEST_CLOCK_DOMAIN);
 
-        // Canned requests and checked responses
-        // GET_UNIQUE_ID
-        let request: &[u8] = &[
-            0xF0, 0x0D, 0x00, 0x00, // transaction id
-            0x05, 0x10, 0x00, 0x00, // get_unique_id
-        ];
-        let expected: &[u8] = &[
-            0xF0, 0x0D, 0x00, 0x00, // transaction id
-            0x05, 0x10, 0x00, 0x00, // get_unique_id
-            0x05, 0x05, 0x05, 0x05, 0x05, 0x05, 0x05, 0x05, 0x05, 0x05, 0x05, 0x05, 0x05, 0x05,
-            0x05, 0x05, // Unique ID is all 5's
-        ];
+        let result = exec.run_until_stalled(&mut stream_config.get_supported_formats());
+        assert!(result.is_ready());
 
-        recv_and_expect_response(&mut exec, &client, request, expected);
+        let formats = match result {
+            Poll::Ready(Ok(v)) => v,
+            _ => panic!("get supported formats error"),
+        };
 
-        // GET_STRING x2
-        let request: &[u8] = &[
-            0xF0, 0x0D, 0x00, 0x00, // transaction id
-            0x06, 0x10, 0x00, 0x00, // get_string
-            0x00, 0x00, 0x00, 0x80, // string_id: manufacturer
-        ];
+        let first = formats.first().to_owned().expect("supported formats to be present");
+        let pcm = first.pcm_supported_formats.to_owned().expect("pcm format to be present");
+        assert_eq!(pcm.number_of_channels[0],    2u8);
+        assert_eq!(pcm.sample_formats[0],        SampleFormat::PcmSigned);
+        assert_eq!(pcm.bytes_per_sample[0],      2u8);
+        assert_eq!(pcm.valid_bits_per_sample[0], 16u8);
+        assert_eq!(pcm.frame_rates[0],           44100);
 
-        let expected: &[u8] = &[
-            0xF0, 0x0D, 0x00, 0x00, // transaction id
-            0x06, 0x10, 0x00, 0x00, // get_string
-            0x00, 0x00, 0x00, 0x00, // status: OK
-            0x00, 0x00, 0x00, 0x80, // string_id: manufacturer
-            0x06, 0x00, 0x00, 0x00, // string_len: 6
-            0x47, 0x6F, 0x6F, 0x67, 0x6C, 0x65, // string: Google
-        ];
+        let (ring_buffer, server) = fidl::endpoints::create_proxy::<RingBufferMarker>()
+            .expect("creating ring buffer endpoint error");
 
-        recv_and_expect_response(&mut exec, &client, request, expected);
+        let format = Format {
+            pcm_format: Some(fidl_fuchsia_hardware_audio::PcmFormat {
+                number_of_channels:      2u8,
+                channels_to_use_bitmask: 3u64,
+                sample_format:           SampleFormat::PcmSigned,
+                bytes_per_sample:        2u8,
+                valid_bits_per_sample:   16u8,
+                frame_rate:              44100,
+            }),
+        };
 
-        let request: &[u8] = &[
-            0xF0, 0x0D, 0x00, 0x00, // transaction id
-            0x06, 0x10, 0x00, 0x00, // get_string
-            0x01, 0x00, 0x00, 0x80, // string_id: product
-        ];
+        stream_config.create_ring_buffer(format, server).expect("ring buffer error");
 
-        let expected: &[u8] = &[
-            0xF0, 0x0D, 0x00, 0x00, // transaction id
-            0x06, 0x10, 0x00, 0x00, // get_string
-            0x00, 0x00, 0x00, 0x00, // status: OK
-            0x01, 0x00, 0x00, 0x80, // string_id: product
-            0x08, 0x00, 0x00, 0x00, // string_len: 8
-            0x55, 0x6E, 0x69, 0x74, 0x54, 0x65, 0x73, 0x74, // string: UnitTest
-        ];
+        let props2 = match exec.run_until_stalled(&mut ring_buffer.get_properties()) {
+            Poll::Ready(Ok(v)) => v,
+            x => panic!("expected Ready Ok from get_properties, got {:?}", x),
+        };
+        assert_eq!(props2.external_delay, Some(0i64));
+        assert_eq!(props2.fifo_depth, Some(0u32));
+        assert_eq!(props2.needs_cache_flush_or_invalidate, Some(false));
 
-        recv_and_expect_response(&mut exec, &client, request, expected);
+        let result = exec.run_until_stalled(&mut ring_buffer.get_vmo(88200, 0)); // 2 seconds.
+        assert!(result.is_ready());
+        let reply = match result {
+            Poll::Ready(Ok(Ok(v))) => v,
+            _ => panic!("ring buffer get vmo error"),
+        };
+        let audio_vmo = reply.1;
 
-        // GET_FORMATS
-        let request: &[u8] = &[
-            0xF0, 0x0D, 0x00, 0x00, // transaction id
-            0x00, 0x10, 0x00, 0x00, // get_formats
-        ];
-        let expected: &[u8] = &[
-            0xF0, 0x0D, 0x00, 0x00, // transaction_id
-            0x00, 0x10, 0x00, 0x00, // get_formats
-            0x00, 0x00, 0x00, 0x00, // pad
-            0x01, 0x00, // format_range_count
-            0x00, 0x00, // first_format_range_index
-            0x04, 0x00, 0x00, 0x00, // 0: sample_formats (16-bit PCM)
-            0x80, 0xBB, 0x00, 0x00, // 0: min_frames_per_second (48000)
-            0x80, 0xBB, 0x00, 0x00, // 0: max_frames_per_second (48000)
-            0x02, 0x02, // 0: min_channels, max_channels (2)
-            0x01, 0x00, // 0: flags (FPS_CONTINUOUS)
-        ]; // rest of bytes are not mattering
-        recv_and_expect_response(&mut exec, &client, request, expected);
-
-        // GET_GAIN
-        let request: &[u8] = &[
-            0xF0, 0x0D, 0x00, 0x00, // transaction id
-            0x02, 0x10, 0x00, 0x00, // get_gain
-        ];
-        let expected: &[u8] = &[
-            0xF0, 0x0D, 0x00, 0x00, // transaction_id
-            0x02, 0x10, 0x00, 0x00, // get_gain
-            0x00, // cur_mute: false
-            0x00, // cur_agc: false
-            0x00, 0x00, // 2x padding bytes that I don't care about
-            0x00, 0x00, 0x00, 0x00, // 0.0 db current gain
-            0x00, // can_mute: false
-            0x00, // can_agc: false
-            0x00, 0x00, // 2x padding bytes that I don't care about
-            0x00, 0x00, 0x00, 0x00, // 0.0 min_gain
-            0x00, 0x00, 0x00, 0x00, // 0.0 max_gain
-            0x00, 0x00, 0x00, 0x00, // 0.0 gain_step
-        ];
-        recv_and_expect_response(&mut exec, &client, request, expected);
-
-        // SET_GAIN
-        let request: &[u8] = &[
-            0xF0, 0x0D, 0x00, 0x00, // transaction id
-            0x03, 0x10, 0x00, 0x00, // set_gain
-            0x04, 0x00, 0x00, 0x00, // gain_flags: only gain valif
-            0x00, 0x00, 0x00, 0x00, // cur_gain: 0.0
-        ];
-        let expected: &[u8] = &[
-            0xF0, 0x0D, 0x00, 0x00, // transaction_id
-            0x03, 0x10, 0x00, 0x00, // set_gain
-            0x00, 0x00, 0x00, 0x00, // status: OK
-            0x00, // mute: false
-            0x00, // agc: false
-            0x00, 0x00, // 2x padding bytes (set to 0)
-            0x00, 0x00, 0x00, 0x00, // 0.0 db current gain
-        ];
-        recv_and_expect_response(&mut exec, &client, request, expected);
-
-        // SET_FORMAT
-        let request: &[u8] = &[
-            0xF0, 0x0D, 0x00, 0x00, // transaction id
-            0x01, 0x10, 0x00, 0x00, // set_format
-            0x44, 0xAC, 0x00, 0x00, // frames_per_second (44100)
-            0x04, 0x00, 0x00, 0x00, // 16 bit PCM
-            0x02, 0x00, // channels: 2
-        ];
-        let expected: &[u8] = &[
-            0xF0, 0x0D, 0x00, 0x00, // transaction id
-            0x01, 0x10, 0x00, 0x00, // set_format
-            0x00, 0x00, 0x00, 0x00, // zx::status::ok
-            0x00, 0x00, 0x00, 0x00, // padding
-            0x00, 0xE1, 0xF5, 0x05, // minimum packet duration (100ms) from the construction
-            // is used as external delay (0x05F5E100)
-            0x00, 0x00, 0x00, 0x00,
-        ];
-
-        let mut handles = recv_and_expect_response(&mut exec, &client, request, expected);
-        assert_eq!(1, handles.len());
-
-        // GET_CLOCK_DOMAIN
-        let request: &[u8] = &[
-            0xF0, 0x0D, 0x00, 0x00, // transaction id
-            0x07, 0x10, 0x00, 0x00, // get_clock_domain
-        ];
-        let expected: &[u8] = &[
-            0xF0, 0x0D, 0x00, 0x00, // transaction_id
-            0x07, 0x10, 0x00, 0x00, // get_clock_domain
-            0x03, 0x02, 0x01, 0x00, // 0x00010203 clock_domain
-        ];
-        recv_and_expect_response(&mut exec, &client, request, expected);
-
-        let rb = zx::Channel::from_handle(handles.pop().unwrap());
-
-        // RB GET FIFO DEPTH
-        let request: &[u8] = &[
-            0xFA, 0xCE, 0xBA, 0xD0, // transaction id
-            0x00, 0x30, 0x00, 0x00, // get_fifo_depth
-        ];
-
-        let expected: &[u8] = &[
-            0xFA, 0xCE, 0xBA, 0xD0, // transaction id
-            0x00, 0x30, 0x00, 0x00, // get_fifo_depth
-            0x00, 0x00, 0x00, 0x00, // ZX_OK
-            0x00, 0x00, 0x00, 0x00, // 0 bytes
-        ];
-
-        recv_and_expect_response(&mut exec, &rb, request, expected);
-
-        // RB GET BUFFER
-        // Request a minimum of one second of audio frame buffer
-        let request: &[u8] = &[
-            0xFA, 0xCE, 0xBA, 0xD0, // transaction id
-            0x01, 0x30, 0x00, 0x00, // get_buffer
-            0x88, 0x58, 0x01, 0x00, // min_ring_buffer_frames (two seconds worth) (88200)
-            0x00, 0x00, 0x00, 0x00, // notifications_per_ring (none)
-        ];
-        let expected: &[u8] = &[
-            0xFA, 0xCE, 0xBA, 0xD0, // transaction id
-            0x01, 0x30, 0x00, 0x00, // get_buffer
-            0x00, 0x00, 0x00, 0x00, // ZX_OK
-            0x88, 0x58, 0x01, 0x00, // 88200 frames
-        ];
-
-        let mut handles = recv_and_expect_response(&mut exec, &rb, request, expected);
-        assert_eq!(1, handles.len());
-
-        let audio_vmo = zx::Vmo::from_handle(handles.pop().expect("should receive a handle"));
-
-        // Frames * bytes per sample * channels per sample
+        // Frames * bytes per sample * channels per sample.
         let bytes_per_second = 44100 * 2 * 2;
         assert!(
             bytes_per_second <= audio_vmo.get_size().expect("should always exist after getbuffer")
         );
 
-        // Put "audio" in buffer
+        // Put "audio" in buffer.
         let mut sent_audio = Vec::new();
         let mut x: u8 = 0x01;
         sent_audio.resize_with(bytes_per_second as usize, || {
@@ -685,60 +587,129 @@ mod tests {
 
         assert_eq!(Ok(()), audio_vmo.write(&sent_audio, 0));
 
-        // RB START
-        exec.set_fake_time(fasync::Time::from_nanos(27));
+        exec.set_fake_time(fasync::Time::from_nanos(42));
+        exec.wake_expired_timers();
+        let start_time = exec.run_until_stalled(&mut ring_buffer.start());
+        if let Poll::Ready(s) = start_time {
+            assert_eq!(s.expect("start time error"), 42);
+        } else {
+            panic!("start error");
+        }
 
-        let request: &[u8] = &[
-            0xFA, 0xCE, 0xBA, 0xD0, // transaction id
-            0x02, 0x30, 0x00, 0x00, // start
-        ];
-        let expected: &[u8] = &[
-            0xFA, 0xCE, 0xBA, 0xD0, // transaction id
-            0x02, 0x30, 0x00, 0x00, // start
-            0x00, 0x00, 0x00, 0x00, // ZX_OK
-            0x00, 0x00, 0x00, 0x00, // padding
-            0x1B, 0x00, 0x00, 0x00, // Started at 27 (0x1B)
-            0x00, 0x00, 0x00, 0x00,
-        ];
-
-        recv_and_expect_response(&mut exec, &rb, request, expected);
-
-        // Advance time enough for data to exist, but not far enough to hit min_packet_duration
-        exec.set_fake_time(fasync::Time::after(zx::Duration::from_millis(50)));
-
-        // No data should be ready yet
         let mut frame_fut = frame_stream.next();
         let result = exec.run_until_stalled(&mut frame_fut);
         assert!(!result.is_ready());
 
-        // Now advance to after min_packet_duration, to 1 second + 1 nanos
-        exec.set_fake_time(fasync::Time::after(
-            zx::Duration::from_seconds(1) + zx::Duration::from_nanos(1)
-                - zx::Duration::from_millis(50),
-        ));
+        // Run the ring buffer for a bit over 1 second.
+        exec.set_fake_time(fasync::Time::after(zx::Duration::from_millis(1001)));
+        exec.wake_expired_timers();
 
         let result = exec.run_until_stalled(&mut frame_fut);
         assert!(result.is_ready());
+        let mut audio_recv = match result {
+            Poll::Ready(Some(Ok(v))) => v,
+            x => panic!("expected Ready Ok from frame stream, got {:?}", x),
+        };
 
-        // Read audio out, it should match
-        if let Poll::Ready(Some(Ok(audio_recv))) = result {
-            assert_eq!(bytes_per_second as usize, audio_recv.len());
-            assert_eq!(&sent_audio, &audio_recv);
+        // We receive a bit more than 1 second of byte, resize to match and compare.
+        audio_recv.resize(bytes_per_second as usize, 0);
+        assert_eq!(&sent_audio, &audio_recv);
+
+        let result = exec.run_until_stalled(&mut ring_buffer.stop());
+        assert!(result.is_ready());
+
+        // Watch gain only replies once.
+        let result = exec.run_until_stalled(&mut stream_config.watch_gain_state());
+        assert!(result.is_ready());
+        let result = exec.run_until_stalled(&mut stream_config.watch_gain_state());
+        assert!(!result.is_ready());
+
+        // Watch plug state only replies once.
+        let result = exec.run_until_stalled(&mut stream_config.watch_plug_state());
+        assert!(result.is_ready());
+        let result = exec.run_until_stalled(&mut stream_config.watch_plug_state());
+        assert!(!result.is_ready());
+    }
+
+    #[test]
+    fn send_positions() {
+        let mut exec = fasync::Executor::new_with_fake_time().expect("executor should build");
+        let (stream_config, mut frame_stream) = setup();
+        let _stream_config_properties = exec.run_until_stalled(&mut stream_config.get_properties());
+        let _formats = exec.run_until_stalled(&mut stream_config.get_supported_formats());
+        let (ring_buffer, server) = fidl::endpoints::create_proxy::<RingBufferMarker>()
+            .expect("creating ring buffer endpoint error");
+
+        #[rustfmt::skip]
+        let format = Format {
+            pcm_format: Some(fidl_fuchsia_hardware_audio::PcmFormat {
+                number_of_channels:      2u8,
+                channels_to_use_bitmask: 3u64,
+                sample_format:           SampleFormat::PcmSigned,
+                bytes_per_sample:        2u8,
+                valid_bits_per_sample:   16u8,
+                frame_rate:              44100,
+            }),
+        };
+
+        let result = stream_config.create_ring_buffer(format, server);
+        assert!(result.is_ok());
+
+        let _ring_buffer_properties = exec.run_until_stalled(&mut ring_buffer.get_properties());
+
+        let clock_recovery_notifications_per_ring = 10u32;
+        let _ = exec.run_until_stalled(
+            &mut ring_buffer.get_vmo(88200, clock_recovery_notifications_per_ring),
+        ); // 2 seconds.
+
+        exec.set_fake_time(fasync::Time::from_nanos(42));
+        exec.wake_expired_timers();
+        let start_time = exec.run_until_stalled(&mut ring_buffer.start());
+        if let Poll::Ready(s) = start_time {
+            assert_eq!(s.expect("start time error"), 42);
         } else {
-            panic!("Expected Ready(Some(data)) got {:?}", result);
+            panic!("start error");
         }
 
-        // RB STOP
-        let request: &[u8] = &[
-            0xFA, 0xCE, 0xBA, 0xD0, // transaction id
-            0x03, 0x30, 0x00, 0x00, // stop
-        ];
-        let expected: &[u8] = &[
-            0xFA, 0xCE, 0xBA, 0xD0, // transaction id
-            0x03, 0x30, 0x00, 0x00, // stop
-            0x00, 0x00, 0x00, 0x00, // ZX_OK
-        ];
+        // Watch number 1.
+        let mut position_info = ring_buffer.watch_clock_recovery_position_info();
+        let result = exec.run_until_stalled(&mut position_info);
+        assert!(!result.is_ready());
 
-        recv_and_expect_response(&mut exec, &rb, request, expected);
+        let mut frame_fut = frame_stream.next();
+
+        // Now advance in between notifications, with a 2 seconds total in the ring buffer
+        // and 10 notifications per ring we can get watch notifications every 200 msecs.
+        exec.set_fake_time(fasync::Time::after(zx::Duration::from_millis(201)));
+        exec.wake_expired_timers();
+        let result = exec.run_until_stalled(&mut frame_fut);
+        assert!(result.is_ready());
+        let result = exec.run_until_stalled(&mut position_info);
+        assert!(result.is_ready());
+
+        // Watch number 2.
+        let mut position_info = ring_buffer.watch_clock_recovery_position_info();
+        let result = exec.run_until_stalled(&mut position_info);
+        assert!(!result.is_ready());
+        exec.set_fake_time(fasync::Time::after(zx::Duration::from_millis(201)));
+        exec.wake_expired_timers();
+        let result = exec.run_until_stalled(&mut frame_fut);
+        assert!(result.is_ready());
+        let result = exec.run_until_stalled(&mut position_info);
+        assert!(result.is_ready());
+
+        // Watch number 3.
+        let mut position_info = ring_buffer.watch_clock_recovery_position_info();
+        let result = exec.run_until_stalled(&mut position_info);
+        assert!(!result.is_ready());
+        exec.set_fake_time(fasync::Time::after(zx::Duration::from_millis(201)));
+        exec.wake_expired_timers();
+        let result = exec.run_until_stalled(&mut frame_fut);
+        assert!(result.is_ready());
+        let result = exec.run_until_stalled(&mut position_info);
+        assert!(result.is_ready());
+
+        let result = exec.run_until_stalled(&mut ring_buffer.stop());
+        assert!(result.is_ready());
     }
 }
