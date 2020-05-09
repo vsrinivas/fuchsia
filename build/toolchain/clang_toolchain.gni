@@ -224,9 +224,12 @@ template("clang_toolchain") {
       if (use_strip) {
         if (invoker.toolchain_os == "mac") {
           command += " && $strip \"$unstripped_outfile\" -o \"$outfile\""
-        } else {
+        } else if (invoker.toolchain_os == "fuchsia") {
           command +=
               " && $strip --strip-sections \"$unstripped_outfile\" \"$outfile\""
+        } else {
+          command +=
+              " && $strip --strip-all \"$unstripped_outfile\" \"$outfile\""
         }
         if (invoker.toolchain_os != "mac" && invoker.toolchain_os != "win") {
           command +=
@@ -487,10 +490,14 @@ template("clang_toolchain") {
       if (use_strip) {
         if (invoker.toolchain_os == "mac") {
           command += " && $strip \"$unstripped_outfile\" -o \"$outfile\""
+        } else if (invoker.toolchain_os == "fuchsia") {
+          command +=
+              " && $strip --strip-sections \"$unstripped_outfile\" \"$outfile\""
         } else {
-          command += " && " + "$strip --strip-sections" +
-                     " \"$unstripped_outfile\" \"$outfile\""
-
+          command +=
+              " && $strip --strip-all \"$unstripped_outfile\" \"$outfile\""
+        }
+        if (invoker.toolchain_os != "mac") {
           command +=
               " && $buildidtool -build-id-dir .build-id" +
               " -stamp \"$outfile.build-id.stamp\"" + " -entry \"=$outfile\"" +
