@@ -5,6 +5,8 @@
 #ifndef LIB_FIDL_LLCPP_FAILOVER_ALLOCATOR_H_
 #define LIB_FIDL_LLCPP_FAILOVER_ALLOCATOR_H_
 
+#include <zircon/assert.h>
+
 #include "allocator.h"
 
 namespace fidl {
@@ -13,7 +15,8 @@ namespace fidl {
 // If no space is available, it heap allocates the object.
 // InnerAllocator must implement Allocator.
 // Here is an example of a allocator with a 2Kb buffer before it touches the heap:
-//   FailoverHeapAllocator<BufferAllocator<2048>>()
+//   FailoverHeapAllocator<UnsafeBufferAllocator<2048>>()
+// (aka BufferThenHeapAllocator<2048>)
 template <typename InnerAllocatorType, typename... Args>
 class FailoverHeapAllocator : public Allocator {
  public:
@@ -34,20 +37,29 @@ class FailoverHeapAllocator : public Allocator {
     if (result.data != nullptr) {
       return result;
     }
-
-    switch (type) {
-      case AllocationType::kNonArray:
-        return allocation_result{
-            .data = ::operator new(obj_size, std::nothrow),
-            .requires_delete = true,
-        };
-      case AllocationType::kArray:
-        return allocation_result{
-            .data = ::operator new[](obj_size* count, std::nothrow),
-            .requires_delete = true,
-        };
-    }
+    ZX_DEBUG_ASSERT(!result.data);
+    return allocation_result{
+        .data = nullptr,
+        // Regardless of what result from delegate allocator said, have fidl::Allocator perform heap
+        // allocation compatible with later delete/delete[].  The heap allocation needs to be
+        // performed by fidl::Allocator::make<T>() because make<>() has the type T, which is needed
+        // by the new/new[] expression, which is needed to be compatible with delete/delete[] in the
+        // general case.
+        .heap_allocate = true,
+    };
   }
+};
+
+template <typename T, typename... Args>
+class FailoverHeapAllocator<FailoverHeapAllocator<T>, Args...> {
+ private:
+  // This is intentionally impossible to create, since nesting FailoverHeapAllocator within
+  // FailoverHeapAllocator isn't what anyone actually wants (so far at least).
+  FailoverHeapAllocator() = delete;
+  FailoverHeapAllocator(const FailoverHeapAllocator& to_copy) = delete;
+  FailoverHeapAllocator& operator=(const FailoverHeapAllocator& to_copy) = delete;
+  FailoverHeapAllocator(FailoverHeapAllocator&& to_move) = delete;
+  FailoverHeapAllocator& operator=(FailoverHeapAllocator&& to_move) = delete;
 };
 
 }  // namespace fidl

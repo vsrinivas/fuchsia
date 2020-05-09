@@ -3,24 +3,24 @@
 // found in the LICENSE file.
 
 #include <lib/fidl/llcpp/aligned.h>
-#include <lib/fidl/llcpp/buffer_allocator.h>
+#include <lib/fidl/llcpp/buffer_then_heap_allocator.h>
 
 #include <gtest/gtest.h>
 
-TEST(BufferAllocator, MultipleArgumentMake) {
+TEST(UnsafeBufferAllocator, MultipleArgumentMake) {
   struct A {
     A(int64_t x, bool y) : x(x), y(y) {}
     int64_t x;
     bool y;
   };
-  fidl::BufferAllocator<2048> allocator;
+  fidl::UnsafeBufferAllocator<2048> allocator;
   fidl::tracking_ptr<A> ptr = allocator.make<A>(1, true);
   EXPECT_EQ(ptr->x, 1);
   EXPECT_EQ(ptr->y, true);
 }
 
-TEST(BufferAllocator, AllocationLayout) {
-  fidl::BufferAllocator<2048> allocator;
+TEST(UnsafeBufferAllocator, AllocationLayout) {
+  fidl::UnsafeBufferAllocator<2048> allocator;
   fidl::tracking_ptr<uint8_t> ptr1 = allocator.make<uint8_t>();
   fidl::tracking_ptr<uint8_t> ptr2 = allocator.make<uint8_t>();
   fidl::tracking_ptr<uint64_t[]> ptr3 = allocator.make<uint64_t[]>(2);
@@ -46,12 +46,12 @@ struct DestructCounter {
   int* count;
 };
 
-TEST(BufferAllocator, SingleItemDestructor) {
+TEST(UnsafeBufferAllocator, SingleItemDestructor) {
   int destructCountA = 0;
   int destructCountB = 0;
   int destructCountC = 0;
   {
-    fidl::BufferAllocator<2048> allocator;
+    fidl::UnsafeBufferAllocator<2048> allocator;
     {
       allocator.make<DestructCounter>(&destructCountA);
       allocator.make<DestructCounter>(&destructCountB);
@@ -66,13 +66,13 @@ TEST(BufferAllocator, SingleItemDestructor) {
   EXPECT_EQ(destructCountC, 1);
 }
 
-TEST(BufferAllocator, ResetDestructor) {
+TEST(UnsafeBufferAllocator, ResetDestructor) {
   int destructCountA = 0;
   int destructCountB = 0;
   int destructCountC = 0;
 
   {
-    fidl::BufferAllocator<2048> allocator;
+    fidl::UnsafeBufferAllocator<2048> allocator;
 
     allocator.make<DestructCounter>(&destructCountA);
     allocator.make<DestructCounter>(&destructCountB);
@@ -101,11 +101,11 @@ TEST(BufferAllocator, ResetDestructor) {
   EXPECT_EQ(destructCountC, 2);
 }
 
-TEST(BufferAllocator, ArrayDestructor) {
+TEST(UnsafeBufferAllocator, ArrayDestructor) {
   constexpr int n = 3;
   int destructCounts[n] = {};
   {
-    fidl::BufferAllocator<2048> allocator;
+    fidl::UnsafeBufferAllocator<2048> allocator;
     {
       fidl::tracking_ptr<DestructCounter[]> ptr = allocator.make<DestructCounter[]>(n);
       for (int i = 0; i < n; i++) {
@@ -121,9 +121,9 @@ TEST(BufferAllocator, ArrayDestructor) {
   }
 }
 
-TEST(BufferAllocator, PrimitiveEightBytesEach) {
+TEST(UnsafeBufferAllocator, PrimitiveEightBytesEach) {
   // Primitives will each use 8 bytes because allocations maintain FIDL_ALIGNMENT.
-  fidl::BufferAllocator<64> allocator;
+  fidl::UnsafeBufferAllocator<64> allocator;
   uint8_t* last_ptr = nullptr;
   for (int i = 0; i < 8; i++) {
     fidl::tracking_ptr<uint16_t> ptr = allocator.make<uint16_t>();
@@ -134,20 +134,20 @@ TEST(BufferAllocator, PrimitiveEightBytesEach) {
   }
 }
 
-TEST(BufferAllocator, PrimitiveArrayFullSpace) {
+TEST(UnsafeBufferAllocator, PrimitiveArrayFullSpace) {
   // Primitives using at least 2 byte alignment should be able to allocate the
   // full space. There should be no metadata.
   // Currently (in the name of keeping the allocator interface simple), there is
   // no way to verify the internal allocator state, in that all 32 bytes were
   // consumed.
-  fidl::BufferAllocator<32> allocator;
+  fidl::UnsafeBufferAllocator<32> allocator;
   fidl::tracking_ptr<uint16_t[]> ptr = allocator.make<uint16_t[]>(16);
   for (int i = 0; i < 16; i++)
     EXPECT_EQ(ptr[i], 0);
 }
 
-TEST(BufferAllocator, EmptyAllocator) {
+TEST(UnsafeBufferAllocator, EmptyAllocator) {
   // In some implementations, it might be possible for uninitialized fields to trigger bad behavior
   // for instance, uninitialized destructor metadata could be misinterpreted.
-  fidl::BufferAllocator<2048> allocator;
+  fidl::UnsafeBufferAllocator<2048> allocator;
 }

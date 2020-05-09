@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/fidl/llcpp/buffer_allocator.h>
+#include <lib/fidl/llcpp/buffer_then_heap_allocator.h>
 #include <lib/fidl/llcpp/memory.h>
 
 #include <fbl/string.h>
@@ -58,7 +58,7 @@ TEST(Memory, VectorViewHeapCopyStdVector) {
 }
 
 TEST(Memory, VectorViewCopyArray) {
-  fidl::BufferAllocator<2048> allocator;
+  fidl::BufferThenHeapAllocator<2048> allocator;
   uint32_t obj[1] = {1};
   fidl::VectorView<uint32_t> vv = fidl::copy_vec(allocator, obj);
   EXPECT_EQ(vv.count(), std::size(obj));
@@ -66,7 +66,7 @@ TEST(Memory, VectorViewCopyArray) {
   EXPECT_EQ(vv.data()[0], std::data(obj)[0]);
 }
 TEST(Memory, VectorViewCopyFidlArray) {
-  fidl::BufferAllocator<2048> allocator;
+  fidl::BufferThenHeapAllocator<2048> allocator;
   fidl::Array<uint32_t, 1> obj = {1};
   fidl::VectorView<uint32_t> vv = fidl::copy_vec(allocator, obj);
   EXPECT_EQ(vv.count(), std::size(obj));
@@ -74,7 +74,7 @@ TEST(Memory, VectorViewCopyFidlArray) {
   EXPECT_EQ(vv.data()[0], std::data(obj)[0]);
 }
 TEST(Memory, VectorViewCopyStdVector) {
-  fidl::BufferAllocator<2048> allocator;
+  fidl::BufferThenHeapAllocator<2048> allocator;
   std::vector<uint32_t> obj;
   obj.push_back(1);
   fidl::VectorView<uint32_t> vv = fidl::copy_vec(allocator, obj);
@@ -148,7 +148,7 @@ TEST(Memory, StringViewHeapCopyCharPtrLength) {
 }
 
 TEST(Memory, StringViewCopyStdString) {
-  fidl::BufferAllocator<2048> allocator;
+  fidl::BufferThenHeapAllocator<2048> allocator;
   std::string str = "abcd";
   fidl::StringView sv = fidl::copy_str(allocator, str);
   EXPECT_EQ(sv.size(), str.size());
@@ -158,7 +158,7 @@ TEST(Memory, StringViewCopyStdString) {
   }
 }
 TEST(Memory, StringViewCopyFblString) {
-  fidl::BufferAllocator<2048> allocator;
+  fidl::BufferThenHeapAllocator<2048> allocator;
   fbl::String str = "abcd";
   fidl::StringView sv = fidl::copy_str(allocator, str);
   EXPECT_EQ(sv.size(), str.size());
@@ -168,7 +168,7 @@ TEST(Memory, StringViewCopyFblString) {
   }
 }
 TEST(Memory, StringViewCopyStdStringView) {
-  fidl::BufferAllocator<2048> allocator;
+  fidl::BufferThenHeapAllocator<2048> allocator;
   std::string_view str = "abcd";
   fidl::StringView sv = fidl::copy_str(allocator, str);
   EXPECT_EQ(sv.size(), str.size());
@@ -178,7 +178,7 @@ TEST(Memory, StringViewCopyStdStringView) {
   }
 }
 TEST(Memory, StringViewCopyCharPtrLength) {
-  fidl::BufferAllocator<2048> allocator;
+  fidl::BufferThenHeapAllocator<2048> allocator;
   const char* str = "abcd";
   constexpr size_t len = 2;
   fidl::StringView sv = fidl::copy_str(allocator, str, len);

@@ -695,13 +695,33 @@ fidl::StringView sv = heap_copy_str(str);
 
 #### Allocators
 FIDL provides an `Allocator` API that enables creating `tracking_ptr`s to LLCPP objects through a
-number of allocation algorithms. Currently, `BufferAllocator` is the only implementation, which
-allocates a fixed size buffer for stack allocation.
+number of allocation algorithms. Currently, `BufferThenHeapAllocator`, `UnsafeBufferAllocator`, and
+`HeapAllocator` are available in fidl namespace.
+
+The `BufferThenHeapAllocator` allocates from an in-band fixed-size buffer (can be used for stack
+allocation), but falls back to heap allocation if the in-band buffer has been exhausted (to avoid
+unnecessary unfortunate surprises).  Be aware that excessive stack usage can cause its own problems,
+so consider using a buffer size that comfortably fits on the stack, or consider putting the whole
+BufferThenHeapAllocator on the heap if the buffer needs to be larger than fits on the stack, or
+consider using HeapAllocator.  Allocations must be assumed to be gone upon destruction of the
+`BufferThenHeapAllocator` used to make them.
+
+The `HeapAllocator` always allocates from the heap, and is unique among allocators (so far) in that
+any/all of the `HeapAllocator` allocations can out-live the `HeapAllocator` instance used to make
+them.
+
+The `UnsafeBufferAllocator` is unsafe in the sense that it lacks heap failover, so risks creating
+unfortunate data-dependent surprises unless the buffer size is absolutely guaranteed to be large
+enough including the internal destructor-tracking overhead.  If the internal buffer is exhausted,
+make<>() will panic the entire process.  Consider using `BufferThenHeapAllocator` instead.  Do not
+use `UnsafeBufferAllocator` without rigorously testing that the worst-case set of cumulative
+allocations made via the allocator all fit without a panic, and consider how the rigor will be
+maintained as code and FIDL tables are changed.
 
 Example:
 
 ```
-BufferAllocator<2048> allocator;
+BufferThenHeapAllocator<2048> allocator;
 MyStruct s;
 s.opt_uint32_field = allocator.make<uint32_t>(123);
 ```
@@ -710,7 +730,7 @@ The arguments to `allocator.make` are identical to the arguments to `std::make_u
 This also applies to VectorViews.
 
 ```
-BufferAllocator<2048> allocator;
+BufferThenHeapAllocator<2048> allocator;
 fidl::VectorView<uint32_t> vec;
 vec.set_data(allocator.make<uint32_t[]>(10));
 ```
@@ -718,7 +738,7 @@ vec.set_data(allocator.make<uint32_t[]>(10));
 To copy a collection to a `VectorView` using an allocator, use `copy_vec`.
 
 ```
-BufferAllocator<2048> allocator;
+BufferThenHeapAllocator<2048> allocator;
 std::vector<uint32_t> vec;
 fidl::VectorView<uint32_t> vv = fidl::copy_vec(allocator, vec);
 ```
@@ -726,7 +746,7 @@ fidl::VectorView<uint32_t> vv = fidl::copy_vec(allocator, vec);
 To create a copy of a string using an allocator, use `copy_str`.
 
 ```
-BufferAllocator<2048> allocator;
+BufferThenHeapAllocator<2048> allocator;
 std::string_view str = "hello world";
 fidl::StringView sv = fidl::copy_str(allocator, str);
 ```

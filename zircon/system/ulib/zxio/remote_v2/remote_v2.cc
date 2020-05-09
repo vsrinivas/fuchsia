@@ -206,7 +206,7 @@ zx_status_t zxio_remote_v2_attr_get(zxio_t* io, zxio_node_attributes_t* out_attr
 }
 
 zx_status_t zxio_remote_v2_attr_set(zxio_t* io, const zxio_node_attributes_t* attr) {
-  fidl::BufferAllocator<1024> allocator;
+  fidl::BufferThenHeapAllocator<1024> allocator;
   auto attributes = ToIo2NodeAttributes(allocator, *attr);
   RemoteV2 rio(io);
   auto result = fio2::Node::Call::UpdateAttributes(rio.control(), std::move(attributes));

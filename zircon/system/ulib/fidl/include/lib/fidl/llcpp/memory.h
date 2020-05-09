@@ -177,7 +177,7 @@ StringView heap_copy_str(const char* str, size_t len) {
 // fidl::Allocator-allocated array.
 //
 // Example:
-// fidl::BufferAllocator<2048> allocator;
+// fidl::BufferThenHeapAllocator<2048> allocator;
 // std::string str;
 // StringView sv = fidl::copy_str(allocator, str);
 template <typename T, typename = decltype(std::data(std::declval<T&>())),
@@ -190,7 +190,7 @@ StringView copy_str(fidl::Allocator& allocator, T& container) {
 // Construct a StringView from a c-string using a fidl::Allocator-allocated array.
 //
 // Example:
-// fidl::BufferAllocator<2048> allocator;
+// fidl::BufferThenHeapAllocator<2048> allocator;
 // char * str = "hello world";
 // StringView sv = fidl::heap_copy_str(allocator, str, 2);
 template <typename = std::enable_if_t<true>>  // avoid symbol-redefinition

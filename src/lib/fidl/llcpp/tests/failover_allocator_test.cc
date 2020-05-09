@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/fidl/llcpp/aligned.h>
-#include <lib/fidl/llcpp/buffer_allocator.h>
+#include <lib/fidl/llcpp/buffer_then_heap_allocator.h>
 #include <lib/fidl/llcpp/failover_allocator.h>
 
 #include "gtest/gtest.h"
@@ -20,7 +20,7 @@ struct DestructCounterBuffer {
 TEST(FailoverAllocator, InnerAllocatorTest) {
   int destructCount = 0;
   {
-    fidl::FailoverHeapAllocator<fidl::BufferAllocator<2048>> allocator;
+    fidl::FailoverHeapAllocator<fidl::UnsafeBufferAllocator<2048>> allocator;
     {
       auto destruct_counter = allocator.make<DestructCounterBuffer<100>>(&destructCount);
 
@@ -40,7 +40,7 @@ TEST(FailoverAllocator, FailoverAllocationTest) {
   {
     fidl::tracking_ptr<DestructCounterBuffer<2048>> destruct_counter;
     {
-      fidl::FailoverHeapAllocator<fidl::BufferAllocator<10>> allocator;
+      fidl::FailoverHeapAllocator<fidl::UnsafeBufferAllocator<10>> allocator;
       // Make this big enough so it has to be heap allocated.
       destruct_counter = allocator.make<DestructCounterBuffer<2048>>(&destructCount);
 
@@ -59,13 +59,13 @@ TEST(FailoverAllocator, FailoverAllocationTest) {
 }
 
 TEST(FailoverAllocator, AccessInnerAllocator) {
-  fidl::FailoverHeapAllocator<fidl::BufferAllocator<2048>> allocator;
+  fidl::FailoverHeapAllocator<fidl::UnsafeBufferAllocator<2048>> allocator;
   allocator.inner_allocator().make<uint8_t>(1);
 }
 
 TEST(FailoverAllocator, FailoverArrayAllocation) {
   constexpr size_t kArraySize = 1000;
-  fidl::FailoverHeapAllocator<fidl::BufferAllocator<10>> allocator;
+  fidl::FailoverHeapAllocator<fidl::UnsafeBufferAllocator<10>> allocator;
   auto array = allocator.make<uint64_t[]>(kArraySize);
   // Write to each so ASAN can pick up on bad accesses.
   for (size_t i = 0; i < kArraySize; i++) {
@@ -74,7 +74,7 @@ TEST(FailoverAllocator, FailoverArrayAllocation) {
 }
 
 TEST(FailoverAllocator, FailoverSingleArrayAllocation) {
-  fidl::FailoverHeapAllocator<fidl::BufferAllocator<0>> allocator;
+  fidl::FailoverHeapAllocator<fidl::UnsafeBufferAllocator<0>> allocator;
   auto array = allocator.make<uint64_t[]>(1);
   array[0] = 0xabc;
 }
