@@ -24,7 +24,7 @@ use {
     serde_json::json,
     std::{
         collections::HashMap,
-        fs::{create_dir, File},
+        fs::{self, create_dir, File},
         io::Write,
         path::{Path, PathBuf},
         sync::Arc,
@@ -133,6 +133,9 @@ impl TestEnvBuilder {
         let config_path = test_dir.path().join("config");
         create_dir(&config_path).expect("create config dir");
 
+        let misc_path = test_dir.path().join("misc");
+        create_dir(&misc_path).expect("create misc dir");
+
         TestEnv {
             env,
             resolver,
@@ -146,6 +149,7 @@ impl TestEnvBuilder {
             blobfs_path,
             fake_path,
             config_path,
+            misc_path,
         }
     }
 }
@@ -163,6 +167,7 @@ struct TestEnv {
     blobfs_path: PathBuf,
     fake_path: PathBuf,
     config_path: PathBuf,
+    misc_path: PathBuf,
 }
 
 impl TestEnv {
@@ -187,6 +192,21 @@ impl TestEnv {
         // Write the "board" file into the directory.
         let mut file = File::create(build_info_dir.join("board")).expect("create board file");
         file.write_all(board.as_ref().as_bytes()).expect("write board file");
+    }
+
+    fn set_target_channel(&self, contents: impl AsRef<[u8]>) {
+        let misc_ota_dir = self.misc_path.join("ota");
+        fs::create_dir_all(&misc_ota_dir).unwrap();
+
+        fs::write(misc_ota_dir.join("target_channel.json"), contents.as_ref()).unwrap();
+    }
+
+    fn verify_current_channel(&self, expected: Option<&[u8]>) {
+        match fs::read(self.misc_path.join("ota/current_channel.json")) {
+            Ok(bytes) => assert_eq!(bytes, expected.unwrap()),
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => assert_eq!(expected, None),
+            Err(e) => panic!(e),
+        }
     }
 
     fn register_package(&mut self, name: impl AsRef<str>, merkle: impl AsRef<str>) -> TestPackage {
@@ -234,6 +254,7 @@ impl TestEnv {
         let blobfs_dir = File::open(&self.blobfs_path).expect("open blob dir");
         let fake_dir = File::open(&self.fake_path).expect("open fake stimulus dir");
         let config_dir = File::open(&self.config_path).expect("open config dir");
+        let misc_dir = File::open(&self.misc_path).expect("open misc dir");
 
         let system_updater = AppBuilder::new(
             "fuchsia-pkg://fuchsia.com/system-updater-integration-tests#meta/system_updater_isolated.cmx",
@@ -244,6 +265,8 @@ impl TestEnv {
         .expect("/fake to mount")
         .add_dir_to_namespace("/config".to_string(), config_dir)
         .expect("/config to mount")
+        .add_dir_to_namespace("/misc".to_string(), misc_dir)
+        .expect("/misc to mount")
         .args(args);
 
         let output = system_updater
@@ -1818,4 +1841,98 @@ async fn test_write_firmware_failure() {
     })
     .await
     .expect_err("update should fail");
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn promotes_target_channel_as_current_channel() {
+    let mut env = TestEnv::new();
+
+    env.set_target_channel("target-channel");
+
+    env.register_package("update", "upd4t3")
+        .add_file(
+            "packages",
+            "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
+        )
+        .add_file("zbi", "fake zbi");
+
+    env.run_system_updater(SystemUpdaterArgs {
+        initiator: "manual",
+        target: "m3rk13",
+        update: None,
+        reboot: None,
+        skip_recovery: None,
+    })
+    .await
+    .unwrap();
+
+    env.verify_current_channel(Some(b"target-channel"));
+
+    // even if current channel already exists.
+
+    env.set_target_channel("target-channel-2");
+
+    env.run_system_updater(SystemUpdaterArgs {
+        initiator: "manual",
+        target: "m3rk13",
+        update: None,
+        reboot: None,
+        skip_recovery: None,
+    })
+    .await
+    .unwrap();
+
+    env.verify_current_channel(Some(b"target-channel-2"));
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn succeeds_even_if_target_channel_does_not_exist() {
+    let mut env = TestEnv::new();
+
+    env.register_package("update", "upd4t3")
+        .add_file(
+            "packages",
+            "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
+        )
+        .add_file("zbi", "fake zbi");
+
+    env.run_system_updater(SystemUpdaterArgs {
+        initiator: "manual",
+        target: "m3rk13",
+        update: None,
+        reboot: None,
+        skip_recovery: None,
+    })
+    .await
+    .unwrap();
+
+    env.verify_current_channel(None);
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn does_not_promote_target_channel_on_failure() {
+    let mut env =
+        TestEnv::builder().paver_service(|builder| builder.call_hook(|_| Status::INTERNAL)).build();
+
+    env.set_target_channel("target-channel");
+
+    env.register_package("update", "upd4t3")
+        .add_file(
+            "packages",
+            "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
+        )
+        .add_file("zbi", "fake zbi");
+
+    let result = env
+        .run_system_updater(SystemUpdaterArgs {
+            initiator: "manual",
+            target: "m3rk13",
+            update: None,
+            reboot: None,
+            skip_recovery: None,
+        })
+        .await;
+    assert!(result.is_err(), "system_updater succeeded when it should fail");
+
+    env.verify_current_channel(None);
 }

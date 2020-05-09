@@ -10,6 +10,7 @@ use {
 };
 
 mod args;
+mod channel;
 mod images;
 mod paver;
 
