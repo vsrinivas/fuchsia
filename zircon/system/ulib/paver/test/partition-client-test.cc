@@ -425,7 +425,7 @@ void Read(std::unique_ptr<paver::PartitionClient> client, std::string* data, siz
   ASSERT_OK(vmo.read(data->data(), 0, data->size()));
 }
 
-TEST_F(SherlockBootloaderPartitionClientTest, BootloaderPartitionSize) {
+TEST_F(SherlockBootloaderPartitionClientTest, DISABLED_BootloaderPartitionSize) {
   size_t size = 0;
 
   ASSERT_OK(RawClient()->GetPartitionSize(&size));
@@ -436,7 +436,7 @@ TEST_F(SherlockBootloaderPartitionClientTest, BootloaderPartitionSize) {
   ASSERT_EQ(512, size);
 }
 
-TEST_F(SherlockBootloaderPartitionClientTest, ReadBootloaderPartition) {
+TEST_F(SherlockBootloaderPartitionClientTest, DISABLED_ReadBootloaderPartition) {
   const std::string block0(512, '0');
   const std::string firmware(512, 'F');
 
@@ -448,7 +448,7 @@ TEST_F(SherlockBootloaderPartitionClientTest, ReadBootloaderPartition) {
   ASSERT_EQ(firmware, actual);
 }
 
-TEST_F(SherlockBootloaderPartitionClientTest, WriteBootloaderPartition) {
+TEST_F(SherlockBootloaderPartitionClientTest, DISABLED_WriteBootloaderPartition) {
   const std::string block0(512, '0');
   const std::string firmware(512, 'F');
 

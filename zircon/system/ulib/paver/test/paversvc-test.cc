@@ -1132,7 +1132,7 @@ TEST_F(PaverServiceBlockTest, DISABLED_WipePartitionTables) {
   ASSERT_OK(wipe_result->status);
 }
 
-TEST_F(PaverServiceBlockTest, WipeVolume) {
+TEST_F(PaverServiceBlockTest, DISABLED_WipeVolume) {
   std::unique_ptr<BlockDevice> gpt_dev;
   // 32GiB disk.
   constexpr uint64_t block_count = (32LU << 30) / kBlockSize;
