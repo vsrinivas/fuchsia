@@ -24,9 +24,14 @@ class Library(object):
 
     def __init__(self, name):
         self.name = name
-        self.base_label = '//zircon/system/' + name
-        self.build_path = os.path.join(FUCHSIA_ROOT, 'zircon', 'system', name,
-                                       'BUILD.gn')
+        if name.startswith('third_party'):
+          self.base_label = '//zircon/' + name
+          self.build_path = os.path.join(FUCHSIA_ROOT, 'zircon', name,
+                                         'BUILD.gn')
+        else:
+          self.base_label = '//zircon/system/' + name
+          self.build_path = os.path.join(FUCHSIA_ROOT, 'zircon', 'system', name,
+                                         'BUILD.gn')
         self.stats = get_library_stats(self.build_path)
         self.build_files = []
         self.cross_project = False
