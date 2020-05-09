@@ -435,7 +435,7 @@ int count = CountPlanets(result.Unwrap()->planets);
 > consider pre-allocating a buffer in the outer-most function and use the
 > caller-allocating flavor.
 
-### In-place calls
+### In-place calls {#inplace}
 
 Both the *managed flavor* and the *caller-allocating flavor* will copy the
 arguments into the request buffer. When there is out-of-line data involved,
@@ -576,7 +576,7 @@ defines up to three overloads of a `Reply()` function
 The completer always defines a `Close(zx_status_t)` function, to close the
 connection with a specified epitaph.
 
-### Responding asynchronously
+### Responding asynchronously {#async-server}
 
 Notice that the type for the completer `ScanForPlanetsCompleter::Sync` has
 `::Sync`. This indicates the default mode of operation: the server must
@@ -639,7 +639,7 @@ void DirectedScan(int16_t heading, ScanForPlanetsCompleter::Sync completer) over
 *   Reuse encoders, decoders, and coding tables generated for C language
     bindings.
 
-## Pointers and memory ownership
+## Pointers and memory ownership {#memory-ownership}
 
 LLCPP objects use special smart pointers called `tracking_ptr` to keep track of memory ownership.
 With `tracking_ptr`, LLCPP makes it possible for your code to easily set a value and forget

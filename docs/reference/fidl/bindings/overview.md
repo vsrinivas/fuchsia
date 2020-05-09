@@ -1,7 +1,7 @@
 # Bindings Reference
 
 This section contains reference documentation for working with FIDL in
-C++ ([HLCPP][hlcpp-bindings] and LCPP),
+C++ ([HLCPP][hlcpp-bindings] and [LLCPP][llcpp-bindings]),
 C, [Rust][rust-bindings], Go, and Dart.
 The documentation for each language includes (where available):
 
@@ -15,3 +15,4 @@ of choice - for details, see the [bindings spec][bindings-spec]
 [bindings-spec]: /docs/reference/fidl/bindings/bindings-spec.md
 [hlcpp-bindings]: /docs/reference/fidl/bindings/hlcpp-bindings.md
 [rust-bindings]: /docs/reference/fidl/bindings/rust-bindings.md
+[llcpp-bindings]: /docs/reference/fidl/bindings/llcpp-bindings.md
