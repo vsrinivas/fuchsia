@@ -26,6 +26,15 @@ std::vector<char*> AsCStrings(const std::vector<std::string>& strings) {
 }  // namespace
 
 fit::result<std::unique_ptr<Lookup>, Lookup::Status> Lookup::NewForTest(
+    const std::vector<std::string>& locale_ids) {
+  return Lookup::NewForTest(locale_ids, intl_lookup_ops_t{
+                                            .op_new = intl_lookup_new_fake_for_test,
+                                            .op_delete = intl_lookup_delete_fake_for_test,
+                                            .op_string = intl_lookup_string_fake_for_test,
+                                        });
+}
+
+fit::result<std::unique_ptr<Lookup>, Lookup::Status> Lookup::NewForTest(
     const std::vector<std::string>& locale_ids, intl_lookup_ops_t ops) {
   auto status = Lookup::Status::OK;
   std::vector<char*> cstrings = AsCStrings(locale_ids);

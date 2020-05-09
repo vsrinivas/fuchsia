@@ -25,6 +25,12 @@ const intl_lookup_ops_t OPS = intl_lookup_ops_t{
     .op_string = intl_lookup_string_fake_for_test,
 };
 
+TEST(Intl, CreateErrorWithoutSeparateOps) {
+  std::vector<std::string> locale_ids = {"en-US"};
+  auto result = Lookup::NewForTest(locale_ids);
+  EXPECT_TRUE(result.is_error());
+}
+
 TEST(Intl, CreateError) {
   std::vector<std::string> locale_ids = {"en-US"};
   auto result = Lookup::NewForTest(locale_ids, OPS);

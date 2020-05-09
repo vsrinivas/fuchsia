@@ -28,17 +28,35 @@ impl From<str::Utf8Error> for LookupStatus {
     }
 }
 
-// A fake implementation of Lookup that (1) always returns an error on creation if the passed-in
-// locale includes "en-US".  It also returns an error on intl_lookup_string's message ID being an
-// odd number.  On an even number, it always returns "Hello world!".
+/// Instantiates a fake Lookup instance, which is useful for tests that don't
+/// want to make a full end-to-end localization setup.  
+///
+/// The fake is simplistic and it is the intention that it provides you with
+/// some default fake behaviors.  The behaviors are as follows at the moment,
+/// and more could be added if needed.
+///
+/// - If `locale_ids` contains the string `en-US`, the constructor function
+///   in the FFI layer will return [LookupStatus::Unavailable].
+/// - If the message ID pased to `Lookup::String()` is exactly 1, the fake
+///   returns `Hello {person}!`, so that you can test 1-parameter formatting.
+/// - Otherwise, for an even mesage ID it returns "Hello world!", or for
+///   an odd message ID returns [LookupStatus::Unavailable].
+///
+/// The implementation of the fake itself is done in rust behind a FFI ABI,
+/// see the package //src/lib/intl/lookup/rust for details.
 pub struct FakeLookup {
     hello: ffi::CString,
+    hello_person: ffi::CString,
 }
 
 impl FakeLookup {
     /// Create a new `FakeLookup`.
     pub fn new() -> FakeLookup {
-        FakeLookup { hello: ffi::CString::new("Hello world!").unwrap() }
+        let hello =
+            ffi::CString::new("Hello world!").expect("CString from known value should never fail");
+        let hello_person = ffi::CString::new("Hello {person}!")
+            .expect("CString from known value should never fail");
+        FakeLookup { hello, hello_person }
     }
 }
 
@@ -48,6 +66,9 @@ impl API for FakeLookup {
     /// Returns "Hello world" if passed an even `message_id`, and `LookupStatus::UNAVAILABLE` when
     /// passed an odd message_id. Used to test the FFI.
     fn string(&self, message_id: u64) -> Result<&ffi::CStr, LookupStatus> {
+        if message_id == 1 {
+            return Ok(self.hello_person.as_c_str());
+        }
         match message_id % 2 == 0 {
             true => Ok(self.hello.as_c_str()),
             false => Err(LookupStatus::Unavailable),
@@ -183,9 +204,13 @@ mod tests {
         Ok(())
     }
 
+    // Exercises the fake behaviors which are part of the fake spec.  The fake
+    // behaviors may evolve in the future, but this test gives out the ones that
+    // currently exist.
     #[test]
     fn test_fake_lookup() -> Result<(), LookupStatus> {
         let l = FakeLookup::new();
+        assert_eq!("Hello {person}!", l.string(1)?.to_str()?);
         assert_eq!("Hello world!", l.string(10)?.to_str()?);
         assert_eq!("Hello world!", l.string(12)?.to_str()?);
         assert_eq!(LookupStatus::Unavailable, l.string(11).unwrap_err());
