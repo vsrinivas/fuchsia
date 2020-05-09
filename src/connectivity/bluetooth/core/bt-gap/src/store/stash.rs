@@ -542,19 +542,13 @@ mod tests {
     }
 
     fn default_le_data() -> LeData {
-        LeData {
-            address: Address::Public([1, 0, 0, 0, 0, 0]),
-            connection_parameters: None,
-            services: vec![],
-            ltk: None,
-            irk: None,
-            csrk: None,
-        }
+        LeData { connection_parameters: None, services: vec![], ltk: None, irk: None, csrk: None }
     }
 
     fn bond_data_1() -> BondingData {
         BondingData {
             identifier: PeerId(1),
+            address: Address::Public([3, 0, 0, 0, 0, 0]),
             local_address: Address::Public([1, 0, 0, 0, 0, 0]),
             name: Some("Test Device 1".to_string()),
             data: OneOrBoth::Left(default_le_data()),
@@ -563,6 +557,7 @@ mod tests {
     fn bond_data_2() -> BondingData {
         BondingData {
             identifier: PeerId(2),
+            address: Address::Public([3, 0, 0, 0, 0, 0]),
             local_address: Address::Public([1, 0, 0, 0, 0, 0]),
             name: Some("Test Device 2".to_string()),
             data: OneOrBoth::Left(default_le_data()),
@@ -572,6 +567,7 @@ mod tests {
     fn bond_data_3() -> BondingData {
         BondingData {
             identifier: PeerId(3),
+            address: Address::Public([3, 0, 0, 0, 0, 0]),
             local_address: Address::Public([2, 0, 0, 0, 0, 0]),
             name: None,
             data: OneOrBoth::Left(default_le_data()),
@@ -581,7 +577,7 @@ mod tests {
     fn bond_entry_1() -> Value {
         Value::Stringval(
                 "{\"identifier\":\"0000000000000001\",\"localAddress\":\"00:00:00:00:00:01\",\"name\":\"Test Device 1\",\
-                \"le\":{\"address\":\"00:00:00:00:00:01\",\"addressType\":\"lePublic\",\"connectionParameters\":null,\"services\":[],\"ltk\":null,\"irk\":null,\"csrk\":null},\
+                \"le\":{\"address\":\"00:00:00:00:00:03\",\"addressType\":\"lePublic\",\"connectionParameters\":null,\"services\":[],\"ltk\":null,\"irk\":null,\"csrk\":null},\
                 \"bredr\":null}".to_string()
         )
     }
@@ -594,7 +590,7 @@ mod tests {
             "localAddress": "00:00:00:00:00:01",
             "name": "Test Device 2",
             "le": {
-                "address": "00:00:00:00:00:01",
+                "address": "00:00:00:00:00:03",
                 "addressType": "lePublic",
                 "connectionParameters": null,
                 "services": [],
@@ -615,7 +611,7 @@ mod tests {
             "localAddress": "00:00:00:00:00:02",
             "name": null,
             "le": {
-                "address": "00:00:00:00:00:01",
+                "address": "00:00:00:00:00:03",
                 "addressType": "lePublic",
                 "connectionParameters": null,
                 "services": [],

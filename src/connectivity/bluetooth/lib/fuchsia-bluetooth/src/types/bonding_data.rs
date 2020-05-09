@@ -21,7 +21,6 @@ use crate::{
 #[derive(Debug)]
 struct LeInspect {
     _inspect: inspect::Node,
-    _address_type: inspect::StringProperty,
     _services: inspect::StringProperty,
     _connection_interval: Option<inspect::UintProperty>,
     _connection_latency: Option<inspect::UintProperty>,
@@ -40,7 +39,6 @@ struct LeInspect {
 impl LeInspect {
     fn new(d: &LeData, inspect: inspect::Node) -> LeInspect {
         LeInspect {
-            _address_type: inspect.create_string("address_type", d.address.address_type_string()),
             _services: inspect.create_string("services", d.services.to_property()),
 
             _connection_interval: d
@@ -143,6 +141,7 @@ impl BredrInspect {
 #[derive(Debug)]
 pub struct BondingDataInspect {
     _inspect: inspect::Node,
+    _address_type: inspect::StringProperty,
     _le_inspect: Option<LeInspect>,
     _bredr_inspect: Option<BredrInspect>,
 }
@@ -150,6 +149,7 @@ pub struct BondingDataInspect {
 impl InspectData<BondingData> for BondingDataInspect {
     fn new(bd: &BondingData, inspect: inspect::Node) -> BondingDataInspect {
         BondingDataInspect {
+            _address_type: inspect.create_string("address_type", bd.address.address_type_string()),
             _le_inspect: bd.le().map(|d| LeInspect::new(d, inspect.create_child("le"))),
             _bredr_inspect: bd.bredr().map(|d| BredrInspect::new(d, inspect.create_child("bredr"))),
             _inspect: inspect,
@@ -164,8 +164,6 @@ impl IsInspectable for BondingData {
 /// Bluetooth Low Energy specific bonding data
 #[derive(Clone, Debug, PartialEq)]
 pub struct LeData {
-    /// The identity address of the peer.
-    pub address: Address,
     /// The peer's preferred connection parameters, if known.
     pub connection_parameters: Option<sys::LeConnectionParameters>,
     /// Known GATT service UUIDs.
@@ -177,11 +175,30 @@ pub struct LeData {
     /// Connection Signature Resolving RemoteKey used for data signing without encryption.
     pub csrk: Option<sys::PeerKey>,
 }
+
+impl LeData {
+    fn into_control(src: LeData, address: &Address) -> control::LeData {
+        let address_type = match address {
+            Address::Public(_) => control::AddressType::LePublic,
+            Address::Random(_) => control::AddressType::LeRandom,
+        };
+        control::LeData {
+            address: address.to_string(),
+            address_type,
+            connection_parameters: src
+                .connection_parameters
+                .map(|b| Box::new(compat::sys_conn_params_to_control(b))),
+            services: src.services.into_iter().map(|uuid| uuid.to_string()).collect(),
+            ltk: src.ltk.map(|k| Box::new(compat::ltk_to_control(k))),
+            irk: src.irk.map(|k| Box::new(compat::peer_key_to_control(k))),
+            csrk: src.csrk.map(|k| Box::new(compat::peer_key_to_control(k))),
+        }
+    }
+}
+
 /// Bluetooth BR/EDR (Classic) specific bonding data
 #[derive(Clone, Debug, PartialEq)]
 pub struct BredrData {
-    /// The public device address of the peer.
-    pub address: Address,
     /// True if the peer prefers to lead the piconet. This is determined by role switch procedures.
     /// Paging and connecting from a peer does not automatically set this flag.
     pub role_preference: Option<bt::ConnectionRole>,
@@ -190,6 +207,26 @@ pub struct BredrData {
     /// The semi-permanent BR/EDR key. Present if link was paired with Secure Simple Pairing or
     /// stronger.
     pub link_key: Option<sys::PeerKey>,
+}
+
+impl BredrData {
+    fn into_control(src: BredrData, address: &Address) -> control::BredrData {
+        let address = address.to_string();
+        let piconet_leader =
+            src.role_preference.map_or(false, |role| role == bt::ConnectionRole::Leader);
+        let services = src.services.into_iter().map(|uuid| uuid.to_string()).collect();
+        let link_key = src.link_key.map(|key| {
+            Box::new(control::Ltk {
+                key: compat::peer_key_to_control(key),
+                key_size: key.security.encryption_key_size,
+                // These values are LE-only, unused for Br/Edr. In sys::BredrData they are not stored,
+                // but control::BredrData expects them
+                ediv: 0,
+                rand: 0,
+            })
+        });
+        control::BredrData { address, piconet_leader, services, link_key }
+    }
 }
 
 /// TODO(36378) - Compatibility functions to convert from the to-be-deprecated Control api types
@@ -261,18 +298,20 @@ mod compat {
     }
 }
 
+fn address_from_ctrl_le_data(src: &control::LeData) -> Result<Address, anyhow::Error> {
+    match src.address_type {
+        control::AddressType::LePublic => Ok(Address::public_from_str(&src.address)?),
+        control::AddressType::LeRandom => Ok(Address::random_from_str(&src.address)?),
+        _ => Err(format_err!("Invalid address type, expected LE_PUBLIC or LE_RANDOM")),
+    }
+}
+
 impl TryFrom<control::LeData> for LeData {
     type Error = anyhow::Error;
     fn try_from(src: control::LeData) -> Result<LeData, Self::Error> {
-        let address = match src.address_type {
-            LE_PUBLIC => Address::public_from_str(&src.address)?,
-            LE_RANDOM => Address::random_from_str(&src.address)?,
-            _ => return Err(format_err!("Invalid address type, expected LE_PUBLIC or LE_RANDOM")),
-        };
         let services: Result<Vec<Uuid>, uuid::parser::ParseError> =
             src.services.iter().map(|s| s.parse::<Uuid>()).collect();
         Ok(LeData {
-            address,
             connection_parameters: src
                 .connection_parameters
                 .map(|params| compat::sys_conn_params_from_control(*params)),
@@ -287,7 +326,6 @@ impl TryFrom<sys::LeData> for LeData {
     type Error = anyhow::Error;
     fn try_from(src: sys::LeData) -> Result<LeData, Self::Error> {
         Ok(LeData {
-            address: src.address.ok_or(format_err!("No address"))?.into(),
             connection_parameters: src.connection_parameters,
             services: src.services.unwrap_or(vec![]).iter().map(|uuid| uuid.into()).collect(),
             ltk: src.ltk,
@@ -300,7 +338,6 @@ impl TryFrom<sys::LeData> for LeData {
 impl TryFrom<control::BredrData> for BredrData {
     type Error = anyhow::Error;
     fn try_from(src: control::BredrData) -> Result<BredrData, Self::Error> {
-        let address = Address::public_from_str(&src.address)?;
         let role_preference = Some(if src.piconet_leader {
             bt::ConnectionRole::Leader
         } else {
@@ -308,14 +345,13 @@ impl TryFrom<control::BredrData> for BredrData {
         });
         let services = src.services.iter().map(|uuid_str| uuid_str.parse()).collect_results()?;
         let link_key = src.link_key.map(|ltk| compat::peer_key_from_control(ltk.key));
-        Ok(BredrData { address, role_preference, services, link_key })
+        Ok(BredrData { role_preference, services, link_key })
     }
 }
 impl TryFrom<sys::BredrData> for BredrData {
     type Error = anyhow::Error;
     fn try_from(src: sys::BredrData) -> Result<BredrData, Self::Error> {
         Ok(BredrData {
-            address: src.address.ok_or(format_err!("No address"))?.into(),
             role_preference: src.role_preference,
             services: src.services.unwrap_or(vec![]).iter().map(|uuid| uuid.into()).collect(),
             link_key: src.link_key,
@@ -323,30 +359,10 @@ impl TryFrom<sys::BredrData> for BredrData {
     }
 }
 
-impl From<LeData> for control::LeData {
-    fn from(src: LeData) -> control::LeData {
-        let address_type = match &src.address {
-            Address::Public(_) => control::AddressType::LePublic,
-            Address::Random(_) => control::AddressType::LeRandom,
-        };
-        control::LeData {
-            address: src.address.to_string(),
-            address_type,
-            connection_parameters: src
-                .connection_parameters
-                .map(|b| Box::new(compat::sys_conn_params_to_control(b))),
-            services: src.services.into_iter().map(|uuid| uuid.to_string()).collect(),
-            ltk: src.ltk.map(|k| Box::new(compat::ltk_to_control(k))),
-            irk: src.irk.map(|k| Box::new(compat::peer_key_to_control(k))),
-            csrk: src.csrk.map(|k| Box::new(compat::peer_key_to_control(k))),
-        }
-    }
-}
-
 impl From<LeData> for sys::LeData {
     fn from(src: LeData) -> sys::LeData {
         sys::LeData {
-            address: Some(src.address.into()),
+            address: None,
             connection_parameters: src.connection_parameters,
             services: Some(src.services.into_iter().map(|uuid| uuid.into()).collect()),
             ltk: src.ltk,
@@ -358,30 +374,10 @@ impl From<LeData> for sys::LeData {
     }
 }
 
-impl From<BredrData> for control::BredrData {
-    fn from(src: BredrData) -> control::BredrData {
-        let address = src.address.to_string();
-        let piconet_leader =
-            src.role_preference.map_or(false, |role| role == bt::ConnectionRole::Leader);
-        let services = src.services.into_iter().map(|uuid| uuid.to_string()).collect();
-        let link_key = src.link_key.map(|key| {
-            Box::new(control::Ltk {
-                key: compat::peer_key_to_control(key),
-                key_size: key.security.encryption_key_size,
-                // These values are LE-only, unused for Br/Edr. In sys::BredrData they are not stored,
-                // but control::BredrData expects them
-                ediv: 0,
-                rand: 0,
-            })
-        });
-        control::BredrData { address, piconet_leader, services, link_key }
-    }
-}
-
 impl From<BredrData> for sys::BredrData {
     fn from(src: BredrData) -> sys::BredrData {
         sys::BredrData {
-            address: Some(src.address.into()),
+            address: None,
             role_preference: src.role_preference,
             services: Some(src.services.into_iter().map(|uuid| uuid.into()).collect()),
             link_key: src.link_key,
@@ -392,10 +388,19 @@ impl From<BredrData> for sys::BredrData {
 /// Data required to store a bond between a Peer and the system, so the bond can be restored later
 #[derive(Clone, Debug, PartialEq)]
 pub struct BondingData {
+    /// The persisted unique identifier for this peer.
     pub identifier: PeerId,
+
+    /// The identity address of the peer.
+    pub address: Address,
+
+    /// The local bt-host identity address that this bond is associated with.
     pub local_address: Address,
+
+    /// The device name obtained using general discovery and name discovery procedures.
     pub name: Option<String>,
-    // Valid Bonding Data must include at least one of LeData or BredrData
+
+    /// Valid Bonding Data must include at least one of LeData or BredrData
     pub data: OneOrBoth<LeData, BredrData>,
 }
 
@@ -413,16 +418,34 @@ impl TryFrom<control::BondingData> for BondingData {
     fn try_from(fidl: control::BondingData) -> Result<BondingData, Self::Error> {
         let le = fidl.le.map(|le| *le);
         let bredr = fidl.bredr.map(|bredr| *bredr);
-        let data = match (le, bredr) {
-            (Some(le), Some(bredr)) => OneOrBoth::Both(le.try_into()?, bredr.try_into()?),
-            (Some(le), None) => OneOrBoth::Left(le.try_into()?),
-            (None, Some(bredr)) => OneOrBoth::Right(bredr.try_into()?),
+        let (data, address) = match (le, bredr) {
+            (Some(le), Some(bredr)) => {
+                // If bonding data for both transports is present, then their transport-specific
+                // addresses must be identical and present for this to be a valid dual-mode peer.
+                let le_addr = address_from_ctrl_le_data(&le)?;
+                let bredr_addr = Address::public_from_str(&bredr.address)?;
+                if le_addr != bredr_addr {
+                    return Err(format_err!(
+                        "LE and BR/EDR addresses for dual-mode bond do not match!"
+                    ));
+                }
+                (OneOrBoth::Both(le.try_into()?, bredr.try_into()?), le_addr)
+            }
+            (Some(le), None) => {
+                let addr = address_from_ctrl_le_data(&le)?;
+                (OneOrBoth::Left(le.try_into()?), addr)
+            }
+            (None, Some(bredr)) => {
+                let addr = Address::public_from_str(&bredr.address)?;
+                (OneOrBoth::Right(bredr.try_into()?), addr)
+            }
             (None, None) => {
                 return Err(format_err!("Cannot store bond with neither LE nor Classic data"))
             }
         };
         Ok(BondingData {
             identifier: fidl.identifier.parse::<PeerId>()?,
+            address,
             local_address: Address::public_from_str(&fidl.local_address)?,
             name: fidl.name,
             data,
@@ -432,8 +455,9 @@ impl TryFrom<control::BondingData> for BondingData {
 
 impl From<BondingData> for control::BondingData {
     fn from(bd: BondingData) -> control::BondingData {
-        let le = bd.le().map(|le| Box::new(le.clone().into()));
-        let bredr = bd.bredr().map(|bredr| Box::new(bredr.clone().into()));
+        let le = bd.le().map(|le| Box::new(LeData::into_control(le.clone(), &bd.address)));
+        let bredr =
+            bd.bredr().map(|bredr| Box::new(BredrData::into_control(bredr.clone(), &bd.address)));
         control::BondingData {
             identifier: bd.identifier.to_string(),
             local_address: bd.local_address.to_string(),
@@ -444,31 +468,62 @@ impl From<BondingData> for control::BondingData {
     }
 }
 
+impl TryFrom<sys::BondingData> for BondingData {
+    type Error = anyhow::Error;
+    fn try_from(fidl: sys::BondingData) -> Result<BondingData, Self::Error> {
+        let (data, transport_address) = match (fidl.le, fidl.bredr) {
+            (Some(le), Some(bredr)) => {
+                // If bonding data for both transports is present, then their transport-specific
+                // addresses must be identical and present for this to be a valid dual-mode peer.
+                if le.address != bredr.address {
+                    return Err(format_err!("LE and BR/EDR addresses do not match"));
+                }
+                let addr = le.address.clone();
+                (OneOrBoth::Both(le.try_into()?, bredr.try_into()?), addr)
+            }
+            (Some(le), None) => {
+                let addr = le.address.clone();
+                (OneOrBoth::Left(le.try_into()?), addr)
+            }
+            (None, Some(bredr)) => {
+                let addr = bredr.address.clone();
+                (OneOrBoth::Right(bredr.try_into()?), addr)
+            }
+            (None, None) => {
+                return Err(format_err!("transport-specific data missing"));
+            }
+        };
+
+        // If |fidl| contains a non-transport specific address then we always use that. Otherwise,
+        // we fallback to the per-transport address for backwards compatibility with older clients.
+        let address = match fidl.address {
+            Some(address) => address,
+            None => transport_address.ok_or(format_err!("address missing"))?,
+        };
+
+        Ok(BondingData {
+            identifier: fidl.identifier.ok_or(format_err!("identifier missing"))?.into(),
+            address: address.into(),
+            local_address: fidl.local_address.ok_or(format_err!("local address missing"))?.into(),
+            name: fidl.name,
+            data,
+        })
+    }
+}
+
 /// To convert an external BondingData to an internal Fuchsia bonding data, we must provide a
 /// fuchsia PeerId to be used if the external source is missing one (for instance, it is being
 /// migrated from a previous, non-Fuchsia system)
 impl TryFrom<(sys::BondingData, PeerId)> for BondingData {
     type Error = anyhow::Error;
     fn try_from(from: (sys::BondingData, PeerId)) -> Result<BondingData, Self::Error> {
-        let bond = from.0;
-        let ident = from.1;
-        let data = match (bond.le, bond.bredr) {
-            (Some(le), Some(bredr)) => OneOrBoth::Both(le.try_into()?, bredr.try_into()?),
-            (Some(le), None) => OneOrBoth::Left(le.try_into()?),
-            (None, Some(bredr)) => OneOrBoth::Right(bredr.try_into()?),
-            (None, None) => {
-                return Err(format_err!("Cannot store bond with neither LE nor Classic data"))
-            }
+        let mut bond = from.0;
+        let id = match bond.identifier {
+            Some(id) => id.into(),
+            None => from.1,
         };
-        match bond.local_address {
-            Some(local_address) => Ok(BondingData {
-                identifier: bond.identifier.map(|id| id.into()).unwrap_or(ident),
-                local_address: Address::from(local_address),
-                name: bond.name,
-                data,
-            }),
-            _ => Err(format_err!("No local address")),
-        }
+        bond.identifier = Some(id.into());
+        bond.try_into()
     }
 }
 
@@ -478,11 +533,11 @@ impl From<BondingData> for sys::BondingData {
         let bredr = bd.bredr().map(|bredr| bredr.clone().into());
         sys::BondingData {
             identifier: Some(bd.identifier.into()),
+            address: Some(bd.address.into()),
             local_address: Some(bd.local_address.into()),
             name: bd.name,
             le,
             bredr,
-            address: None,
         }
     }
 }
@@ -529,11 +584,11 @@ mod tests {
 
         BondingData {
             identifier: PeerId(42),
+            address: Address::Public([0, 0, 0, 0, 0, 0]),
             local_address: Address::Public([0, 0, 0, 0, 0, 0]),
             name: Some("name".into()),
             data: OneOrBoth::Both(
                 LeData {
-                    address: Address::Public([0, 0, 0, 0, 0, 0]),
                     connection_parameters: Some(sys::LeConnectionParameters {
                         connection_interval: 0,
                         connection_latency: 1,
@@ -545,7 +600,6 @@ mod tests {
                     csrk: Some(remote_key.clone()),
                 },
                 BredrData {
-                    address: Address::Public([0, 0, 0, 0, 0, 0]),
                     role_preference: Some(bt::ConnectionRole::Leader),
                     services: vec![],
                     link_key: Some(remote_key.clone()),
@@ -564,124 +618,550 @@ mod tests {
         )
     }
 
-    fn any_security_properties() -> impl Strategy<Value = sys::SecurityProperties> {
-        any::<(bool, bool, u8)>().prop_map(
-            |(authenticated, secure_connections, encryption_key_size)| sys::SecurityProperties {
-                authenticated,
-                secure_connections,
-                encryption_key_size,
-            },
-        )
+    // Tests for conversions from fuchsia.bluetooth.sys API
+    mod from_sys {
+        use super::*;
+
+        fn empty_data() -> sys::BondingData {
+            sys::BondingData {
+                identifier: None,
+                address: None,
+                local_address: None,
+                name: None,
+                le: None,
+                bredr: None,
+            }
+        }
+
+        fn empty_bredr_data() -> sys::BredrData {
+            sys::BredrData { address: None, role_preference: None, link_key: None, services: None }
+        }
+
+        fn empty_le_data() -> sys::LeData {
+            sys::LeData {
+                address: None,
+                services: None,
+                connection_parameters: None,
+                ltk: None,
+                peer_ltk: None,
+                local_ltk: None,
+                irk: None,
+                csrk: None,
+            }
+        }
+
+        #[test]
+        fn id_missing() {
+            let src = sys::BondingData {
+                identifier: None,
+                address: Some(bt::Address {
+                    type_: bt::AddressType::Random,
+                    bytes: [1, 2, 3, 4, 5, 6],
+                }),
+                le: Some(empty_le_data()),
+                ..empty_data()
+            };
+            let result = BondingData::try_from(src);
+            assert_eq!(
+                Err("identifier missing".to_string()),
+                result.map_err(|e| format!("{:?}", e))
+            );
+        }
+
+        #[test]
+        fn address_missing_le() {
+            let src = sys::BondingData {
+                identifier: Some(bt::PeerId { value: 1 }),
+                le: Some(empty_le_data()),
+                ..empty_data()
+            };
+            let result = BondingData::try_from(src);
+            assert_eq!(Err("address missing".to_string()), result.map_err(|e| format!("{:?}", e)));
+        }
+
+        #[test]
+        fn address_missing_bredr() {
+            let src = sys::BondingData {
+                identifier: Some(bt::PeerId { value: 1 }),
+                bredr: Some(empty_bredr_data()),
+                ..empty_data()
+            };
+            let result = BondingData::try_from(src);
+            assert_eq!(Err("address missing".to_string()), result.map_err(|e| format!("{:?}", e)));
+        }
+
+        #[test]
+        fn address_missing_dual_mode() {
+            let src = sys::BondingData {
+                identifier: Some(bt::PeerId { value: 1 }),
+                le: Some(empty_le_data()),
+                bredr: Some(empty_bredr_data()),
+                ..empty_data()
+            };
+            let result = BondingData::try_from(src);
+            assert_eq!(Err("address missing".to_string()), result.map_err(|e| format!("{:?}", e)));
+        }
+
+        #[test]
+        fn dual_mode_address_mismatch() {
+            let src = sys::BondingData {
+                identifier: Some(bt::PeerId { value: 1 }),
+                le: Some(sys::LeData {
+                    address: Some(bt::Address {
+                        type_: bt::AddressType::Public,
+                        bytes: [1, 2, 3, 4, 5, 6],
+                    }),
+                    ..empty_le_data()
+                }),
+                bredr: Some(sys::BredrData {
+                    address: Some(bt::Address {
+                        type_: bt::AddressType::Public,
+                        bytes: [6, 5, 4, 3, 2, 1],
+                    }),
+                    ..empty_bredr_data()
+                }),
+                ..empty_data()
+            };
+            let result = BondingData::try_from(src);
+            assert_eq!(
+                Err("LE and BR/EDR addresses do not match".to_string()),
+                result.map_err(|e| format!("{:?}", e))
+            );
+        }
+
+        #[test]
+        fn default_to_transport_address_le() {
+            let addr = bt::Address { type_: bt::AddressType::Public, bytes: [1, 2, 3, 4, 5, 6] };
+            let src = sys::BondingData {
+                identifier: Some(bt::PeerId { value: 1 }),
+                local_address: Some(bt::Address {
+                    type_: bt::AddressType::Public,
+                    bytes: [1, 0, 0, 0, 0, 0],
+                }),
+                le: Some(sys::LeData { address: Some(addr.clone()), ..empty_le_data() }),
+                ..empty_data()
+            };
+            let result =
+                BondingData::try_from(src).expect("failed to convert from sys.BondingData");
+            assert_eq!(result.address, addr.into());
+        }
+
+        #[test]
+        fn default_to_transport_address_bredr() {
+            let addr = bt::Address { type_: bt::AddressType::Public, bytes: [1, 2, 3, 4, 5, 6] };
+            let src = sys::BondingData {
+                identifier: Some(bt::PeerId { value: 1 }),
+                local_address: Some(bt::Address {
+                    type_: bt::AddressType::Public,
+                    bytes: [1, 0, 0, 0, 0, 0],
+                }),
+                bredr: Some(sys::BredrData { address: Some(addr.clone()), ..empty_bredr_data() }),
+                ..empty_data()
+            };
+            let result =
+                BondingData::try_from(src).expect("failed to convert from sys.BondingData");
+            assert_eq!(result.address, addr.into());
+        }
+
+        #[test]
+        fn default_to_transport_address_dual_mode() {
+            let addr = bt::Address { type_: bt::AddressType::Public, bytes: [1, 2, 3, 4, 5, 6] };
+            let src = sys::BondingData {
+                identifier: Some(bt::PeerId { value: 1 }),
+                local_address: Some(bt::Address {
+                    type_: bt::AddressType::Public,
+                    bytes: [1, 0, 0, 0, 0, 0],
+                }),
+                le: Some(sys::LeData { address: Some(addr.clone()), ..empty_le_data() }),
+                bredr: Some(sys::BredrData { address: Some(addr.clone()), ..empty_bredr_data() }),
+                ..empty_data()
+            };
+            let result =
+                BondingData::try_from(src).expect("failed to convert from sys.BondingData");
+            assert_eq!(result.address, addr.into());
+        }
+
+        #[test]
+        fn use_top_level_address() {
+            let addr = bt::Address { type_: bt::AddressType::Public, bytes: [1, 2, 3, 4, 5, 6] };
+            let src = sys::BondingData {
+                identifier: Some(bt::PeerId { value: 1 }),
+                address: Some(addr.clone()),
+                local_address: Some(bt::Address {
+                    type_: bt::AddressType::Public,
+                    bytes: [1, 0, 0, 0, 0, 0],
+                }),
+                le: Some(sys::LeData { ..empty_le_data() }),
+                bredr: Some(sys::BredrData { ..empty_bredr_data() }),
+                ..empty_data()
+            };
+            let result =
+                BondingData::try_from(src).expect("failed to convert from sys.BondingData");
+            assert_eq!(result.address, addr.into());
+        }
+
+        #[test]
+        fn use_top_level_address_when_transport_address_present() {
+            let addr = bt::Address { type_: bt::AddressType::Public, bytes: [1, 2, 3, 4, 5, 6] };
+            // Assign a different transport address. This should not get used.
+            let transport_addr =
+                bt::Address { type_: bt::AddressType::Public, bytes: [6, 5, 4, 3, 2, 1] };
+            let src = sys::BondingData {
+                identifier: Some(bt::PeerId { value: 1 }),
+                address: Some(addr.clone()),
+                local_address: Some(bt::Address {
+                    type_: bt::AddressType::Public,
+                    bytes: [1, 0, 0, 0, 0, 0],
+                }),
+                le: Some(sys::LeData { address: Some(transport_addr.clone()), ..empty_le_data() }),
+                bredr: Some(sys::BredrData { address: Some(transport_addr), ..empty_bredr_data() }),
+                ..empty_data()
+            };
+            let result =
+                BondingData::try_from(src).expect("failed to convert from sys.BondingData");
+            assert_eq!(result.address, addr.into());
+        }
     }
 
-    fn any_key() -> impl Strategy<Value = sys::Key> {
-        any::<[u8; 16]>().prop_map(|value| sys::Key { value })
-    }
+    // Tests for conversions from fuchsia.bluetooth.control API
+    mod from_control {
+        use super::*;
 
-    fn any_peer_key() -> impl Strategy<Value = sys::PeerKey> {
-        (any_security_properties(), any_key())
-            .prop_map(|(security, data)| sys::PeerKey { security, data })
-    }
+        fn default_data() -> control::BondingData {
+            control::BondingData {
+                identifier: "".to_string(),
+                local_address: "".to_string(),
+                name: None,
+                le: None,
+                bredr: None,
+            }
+        }
 
-    fn any_ltk() -> impl Strategy<Value = sys::Ltk> {
-        (any_peer_key(), any::<u16>(), any::<u64>()).prop_map(|(key, ediv, rand)| sys::Ltk {
-            key,
-            ediv,
-            rand,
-        })
-    }
-
-    fn any_connection_params() -> impl Strategy<Value = sys::LeConnectionParameters> {
-        (any::<u16>(), any::<u16>(), any::<u16>()).prop_map(
-            |(connection_interval, connection_latency, supervision_timeout)| {
-                sys::LeConnectionParameters {
-                    connection_interval,
-                    connection_latency,
-                    supervision_timeout,
-                }
-            },
-        )
-    }
-
-    fn any_connection_role() -> impl Strategy<Value = bt::ConnectionRole> {
-        prop_oneof![Just(bt::ConnectionRole::Leader), Just(bt::ConnectionRole::Follower)]
-    }
-
-    // TODO(36378) Note: We don't generate data with a None role_preference, as these can't be
-    // safely roundtripped to control::BredrData. This can be removed when the control api is
-    // retired.
-    fn any_bredr_data() -> impl Strategy<Value = BredrData> {
-        (any_public_address(), any_connection_role(), option::of(any_peer_key())).prop_map(
-            |(address, role_preference, link_key)| {
-                let role_preference = Some(role_preference);
-                BredrData { address, role_preference, services: vec![], link_key }
-            },
-        )
-    }
-
-    fn any_le_data() -> impl Strategy<Value = LeData> {
-        (
-            any_public_address(),
-            option::of(any_connection_params()),
-            option::of(any_ltk()),
-            option::of(any_peer_key()),
-            option::of(any_peer_key()),
-        )
-            .prop_map(|(address, connection_parameters, ltk, irk, csrk)| LeData {
-                address,
-                connection_parameters,
+        fn default_le_data() -> control::LeData {
+            control::LeData {
+                address: "".to_string(),
+                address_type: control::AddressType::LePublic,
+                connection_parameters: None,
                 services: vec![],
-                ltk,
-                irk,
-                csrk,
-            })
+                ltk: None,
+                irk: None,
+                csrk: None,
+            }
+        }
+
+        fn default_bredr_data() -> control::BredrData {
+            control::BredrData {
+                address: "".to_string(),
+                piconet_leader: true,
+                services: vec![],
+                link_key: None,
+            }
+        }
+
+        #[test]
+        fn id_malformed() {
+            let src = control::BondingData { identifier: "derp".to_string(), ..default_data() };
+            let result = BondingData::try_from(src);
+            assert!(result.is_err());
+        }
+
+        #[test]
+        fn le_address_malformed() {
+            let src = control::BondingData {
+                identifier: "123".to_string(),
+                local_address: "00:00:00:00:00:00".to_string(),
+                le: Some(Box::new(control::LeData {
+                    address: "derp".to_string(),
+                    ..default_le_data()
+                })),
+                ..default_data()
+            };
+            let result = BondingData::try_from(src);
+            assert!(result.is_err());
+        }
+
+        #[test]
+        fn bredr_address_malformed() {
+            let src = control::BondingData {
+                identifier: "123".to_string(),
+                local_address: "00:00:00:00:00:00".to_string(),
+                bredr: Some(Box::new(control::BredrData {
+                    address: "derp".to_string(),
+                    ..default_bredr_data()
+                })),
+                ..default_data()
+            };
+            let result = BondingData::try_from(src);
+            assert!(result.is_err());
+        }
+
+        #[test]
+        fn dual_mode_le_address_malformed() {
+            let src = control::BondingData {
+                identifier: "123".to_string(),
+                local_address: "00:00:00:00:00:00".to_string(),
+                le: Some(Box::new(control::LeData {
+                    address: "derp".to_string(),
+                    ..default_le_data()
+                })),
+                bredr: Some(Box::new(control::BredrData {
+                    address: "00:00:00:00:00:01".to_string(),
+                    ..default_bredr_data()
+                })),
+                ..default_data()
+            };
+            let result = BondingData::try_from(src);
+            assert!(result.is_err());
+        }
+
+        #[test]
+        fn dual_mode_bredr_address_malformed() {
+            let src = control::BondingData {
+                identifier: "123".to_string(),
+                local_address: "00:00:00:00:00:00".to_string(),
+                le: Some(Box::new(control::LeData {
+                    address: "00:00:00:00:00:01".to_string(),
+                    ..default_le_data()
+                })),
+                bredr: Some(Box::new(control::BredrData {
+                    address: "derp".to_string(),
+                    ..default_bredr_data()
+                })),
+                ..default_data()
+            };
+            let result = BondingData::try_from(src);
+            assert!(result.is_err());
+        }
+
+        #[test]
+        fn dual_mode_address_mismatch() {
+            let src = control::BondingData {
+                identifier: "123".to_string(),
+                local_address: "00:00:00:00:00:00".to_string(),
+                le: Some(Box::new(control::LeData {
+                    address: "00:00:00:00:00:01".to_string(),
+                    ..default_le_data()
+                })),
+                bredr: Some(Box::new(control::BredrData {
+                    address: "00:00:00:00:00:02".to_string(),
+                    ..default_bredr_data()
+                })),
+                ..default_data()
+            };
+            let result = BondingData::try_from(src);
+            assert!(result.is_err());
+        }
+
+        #[test]
+        fn dual_mode_address_type_mismatch() {
+            let src = control::BondingData {
+                identifier: "123".to_string(),
+                local_address: "00:00:00:00:00:00".to_string(),
+                le: Some(Box::new(control::LeData {
+                    address: "00:00:00:00:00:01".to_string(),
+                    address_type: control::AddressType::LeRandom,
+                    ..default_le_data()
+                })),
+                bredr: Some(Box::new(control::BredrData {
+                    address: "00:00:00:00:00:01".to_string(),
+                    ..default_bredr_data()
+                })),
+                ..default_data()
+            };
+            let result = BondingData::try_from(src);
+            assert!(result.is_err());
+        }
+
+        #[test]
+        fn use_le_address() {
+            let addr = "00:00:00:00:00:01".to_string();
+            let src = control::BondingData {
+                identifier: "123".to_string(),
+                local_address: "00:00:00:00:00:00".to_string(),
+                le: Some(Box::new(control::LeData {
+                    address: addr.clone(),
+                    address_type: control::AddressType::LeRandom,
+                    ..default_le_data()
+                })),
+                ..default_data()
+            };
+            let result =
+                BondingData::try_from(src).expect("failed to convert from control.BondingData");
+            let addr = Address::random_from_str(&addr).expect("failed to convert address");
+            assert_eq!(result.address, addr);
+        }
+
+        #[test]
+        fn use_bredr_address() {
+            let addr = "00:00:00:00:00:01".to_string();
+            let src = control::BondingData {
+                identifier: "123".to_string(),
+                local_address: "00:00:00:00:00:00".to_string(),
+                bredr: Some(Box::new(control::BredrData {
+                    address: addr.clone(),
+                    ..default_bredr_data()
+                })),
+                ..default_data()
+            };
+            let result =
+                BondingData::try_from(src).expect("failed to convert from control.BondingData");
+            let addr = Address::public_from_str(&addr).expect("failed to convert address");
+            assert_eq!(result.address, addr);
+        }
+
+        #[test]
+        fn dual_mode_address() {
+            let addr = "00:00:00:00:00:01".to_string();
+            let src = control::BondingData {
+                identifier: "123".to_string(),
+                local_address: "00:00:00:00:00:00".to_string(),
+                le: Some(Box::new(control::LeData { address: addr.clone(), ..default_le_data() })),
+                bredr: Some(Box::new(control::BredrData {
+                    address: addr.clone(),
+                    ..default_bredr_data()
+                })),
+                ..default_data()
+            };
+            let result =
+                BondingData::try_from(src).expect("failed to convert from control.BondingData");
+            let addr = Address::public_from_str(&addr).expect("failed to convert address");
+            assert_eq!(result.address, addr);
+        }
     }
 
-    fn any_bonding_data() -> impl Strategy<Value = BondingData> {
-        let any_data = prop_oneof![
-            any_le_data().prop_map(OneOrBoth::Left),
-            any_bredr_data().prop_map(OneOrBoth::Right),
-            (any_le_data(), any_bredr_data()).prop_map(|(le, bredr)| OneOrBoth::Both(le, bredr)),
-        ];
-        (any::<u64>(), any_public_address(), option::of("[a-zA-Z][a-zA-Z0-9_]*"), any_data)
-            .prop_map(|(ident, local_address, name, data)| {
-                let identifier = PeerId(ident);
-                BondingData { identifier, local_address, name, data }
+    // The test cases below use proptest to exercise round-trip conversions between FIDL and the
+    // library type across several permutations.
+    mod roundtrip {
+        use super::*;
+
+        fn any_security_properties() -> impl Strategy<Value = sys::SecurityProperties> {
+            any::<(bool, bool, u8)>().prop_map(
+                |(authenticated, secure_connections, encryption_key_size)| {
+                    sys::SecurityProperties {
+                        authenticated,
+                        secure_connections,
+                        encryption_key_size,
+                    }
+                },
+            )
+        }
+
+        fn any_key() -> impl Strategy<Value = sys::Key> {
+            any::<[u8; 16]>().prop_map(|value| sys::Key { value })
+        }
+
+        fn any_peer_key() -> impl Strategy<Value = sys::PeerKey> {
+            (any_security_properties(), any_key())
+                .prop_map(|(security, data)| sys::PeerKey { security, data })
+        }
+
+        fn any_ltk() -> impl Strategy<Value = sys::Ltk> {
+            (any_peer_key(), any::<u16>(), any::<u64>()).prop_map(|(key, ediv, rand)| sys::Ltk {
+                key,
+                ediv,
+                rand,
             })
-    }
-
-    proptest! {
-        #[test]
-        fn bredr_data_sys_roundtrip(data in any_bredr_data()) {
-            let sys_bredr_data: sys::BredrData = data.clone().into();
-            assert_eq!(Ok(data), sys_bredr_data.try_into().map_err(|e: anyhow::Error| e.to_string()));
-        }
-        #[test]
-        fn bredr_data_control_roundtrip(data in any_bredr_data()) {
-            let control_bredr_data: control::BredrData = data.clone().into();
-            assert_eq!(Ok(data), control_bredr_data.try_into().map_err(|e: anyhow::Error| e.to_string()));
         }
 
-        #[test]
-        fn le_data_sys_roundtrip(data in any_le_data()) {
-            let sys_le_data: sys::LeData = data.clone().into();
-            assert_eq!(Ok(data), sys_le_data.try_into().map_err(|e: anyhow::Error| e.to_string()));
+        fn any_connection_params() -> impl Strategy<Value = sys::LeConnectionParameters> {
+            (any::<u16>(), any::<u16>(), any::<u16>()).prop_map(
+                |(connection_interval, connection_latency, supervision_timeout)| {
+                    sys::LeConnectionParameters {
+                        connection_interval,
+                        connection_latency,
+                        supervision_timeout,
+                    }
+                },
+            )
         }
-        #[test]
-        fn le_data_control_roundtrip(data in any_le_data()) {
-            let control_le_data: control::LeData = data.clone().into();
-            assert_eq!(Ok(data), control_le_data.try_into().map_err(|e: anyhow::Error| e.to_string()));
+
+        fn any_connection_role() -> impl Strategy<Value = bt::ConnectionRole> {
+            prop_oneof![Just(bt::ConnectionRole::Leader), Just(bt::ConnectionRole::Follower)]
         }
-        #[test]
-        fn bonding_data_sys_roundtrip(data in any_bonding_data()) {
-            let peer_id = data.identifier;
-            let sys_bonding_data: sys::BondingData = data.clone().into();
-            assert_eq!(Ok(data), (sys_bonding_data, peer_id).try_into().map_err(|e: anyhow::Error| e.to_string()));
+
+        // TODO(36378) Note: We don't generate data with a None role_preference, as these can't be
+        // safely roundtripped to control::BredrData. This can be removed when the control api is
+        // retired.
+        fn any_bredr_data() -> impl Strategy<Value = BredrData> {
+            (any_connection_role(), option::of(any_peer_key())).prop_map(
+                |(role_preference, link_key)| {
+                    let role_preference = Some(role_preference);
+                    BredrData { role_preference, services: vec![], link_key }
+                },
+            )
         }
-        #[test]
-        fn bonding_data_control_roundtrip(data in any_bonding_data()) {
-            let control_bonding_data: control::BondingData = data.clone().into();
-            assert_eq!(Ok(data), control_bonding_data.try_into().map_err(|e: anyhow::Error| e.to_string()));
+
+        fn any_le_data() -> impl Strategy<Value = LeData> {
+            (
+                option::of(any_connection_params()),
+                option::of(any_ltk()),
+                option::of(any_peer_key()),
+                option::of(any_peer_key()),
+            )
+                .prop_map(|(connection_parameters, ltk, irk, csrk)| LeData {
+                    connection_parameters,
+                    services: vec![],
+                    ltk,
+                    irk,
+                    csrk,
+                })
+        }
+
+        fn any_bonding_data() -> impl Strategy<Value = BondingData> {
+            let any_data = prop_oneof![
+                any_le_data().prop_map(OneOrBoth::Left),
+                any_bredr_data().prop_map(OneOrBoth::Right),
+                (any_le_data(), any_bredr_data())
+                    .prop_map(|(le, bredr)| OneOrBoth::Both(le, bredr)),
+            ];
+            (
+                any::<u64>(),
+                any_public_address(),
+                any_public_address(),
+                option::of("[a-zA-Z][a-zA-Z0-9_]*"),
+                any_data,
+            )
+                .prop_map(|(ident, address, local_address, name, data)| {
+                    let identifier = PeerId(ident);
+                    BondingData { identifier, address, local_address, name, data }
+                })
+        }
+
+        proptest! {
+            #[test]
+            fn bredr_data_sys_roundtrip(data in any_bredr_data()) {
+                let sys_bredr_data: sys::BredrData = data.clone().into();
+                assert_eq!(Ok(data), sys_bredr_data.try_into().map_err(|e: anyhow::Error| e.to_string()));
+            }
+            #[test]
+            fn bredr_data_control_roundtrip((address, data) in (any_public_address(), any_bredr_data())) {
+                let control_bredr_data = BredrData::into_control(data.clone(), &address);
+                assert_eq!(address.to_string(), control_bredr_data.address);
+                assert_eq!(Ok(data), control_bredr_data.try_into().map_err(|e: anyhow::Error| e.to_string()));
+            }
+
+            #[test]
+            fn le_data_sys_roundtrip(data in any_le_data()) {
+                let sys_le_data: sys::LeData = data.clone().into();
+                assert_eq!(Ok(data), sys_le_data.try_into().map_err(|e: anyhow::Error| e.to_string()));
+            }
+            #[test]
+            fn le_data_control_roundtrip((address, data) in (any_public_address(), any_le_data())) {
+                let control_le_data = LeData::into_control(data.clone(), &address);
+                assert_eq!(address.to_string(), control_le_data.address);
+                assert_eq!(Ok(data), control_le_data.try_into().map_err(|e: anyhow::Error| e.to_string()));
+            }
+            #[test]
+            fn bonding_data_sys_roundtrip(data in any_bonding_data()) {
+                let peer_id = data.identifier;
+                let sys_bonding_data: sys::BondingData = data.clone().into();
+                assert_eq!(Ok(data), (sys_bonding_data, peer_id).try_into().map_err(|e: anyhow::Error| e.to_string()));
+            }
+            #[test]
+            fn bonding_data_control_roundtrip(data in any_bonding_data()) {
+                let control_bonding_data: control::BondingData = data.clone().into();
+                assert_eq!(Ok(data), control_bonding_data.try_into().map_err(|e: anyhow::Error| e.to_string()));
+            }
         }
     }
 }

@@ -22,6 +22,7 @@ use crate::{
 fn example_emulator_identity() -> Identity {
     // Hci Emulators currently default to address 0
     let emulator_address = Address::Public([0, 0, 0, 0, 0, 0]);
+    let peer_address = Address::Random([1, 0, 0, 0, 0, 0]);
 
     let host_data = sys::HostData {
         irk: Some(sys::Key { value: [16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1] }),
@@ -35,7 +36,6 @@ fn example_emulator_identity() -> Identity {
         },
     };
     let le_data = LeData {
-        address: emulator_address,
         connection_parameters: None,
         services: vec![],
         ltk: None,
@@ -44,6 +44,7 @@ fn example_emulator_identity() -> Identity {
     };
     let bonds = vec![BondingData {
         identifier: PeerId(42),
+        address: peer_address,
         local_address: emulator_address,
         name: None,
         data: OneOrBoth::Left(le_data),
