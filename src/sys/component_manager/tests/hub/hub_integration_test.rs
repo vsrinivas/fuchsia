@@ -254,14 +254,14 @@ async fn advanced_routing() -> Result<(), Error> {
     test_runner
         .verify_directory_listing_externally(
             scoped_hub_dir.as_str(),
-            vec!["expose", "in", "out", "resolved_url", "runtime", "used"],
+            vec!["expose", "in", "out", "resolved_url", "runtime"],
         )
         .await;
 
     test_runner
         .verify_directory_listing_locally(
             "/hub",
-            vec!["expose", "in", "out", "resolved_url", "runtime", "used"],
+            vec!["expose", "in", "out", "resolved_url", "runtime"],
         )
         .await
         .send()?;
@@ -282,61 +282,7 @@ async fn advanced_routing() -> Result<(), Error> {
         .await
         .send()?;
 
-    // Verify that reporter used the HubReport service.
-    // The test used the Echo service, so that should also be marked.
-    let used_dir = "children/reporter/exec/used";
-    let svc_dir = format!("{}/{}", used_dir, "svc");
-    test_runner
-        .verify_directory_listing_externally(
-            svc_dir.as_str(),
-            vec![echo_service_name, hub_report_service_name],
-        )
-        .await;
-
     test_runner.wait_for_component_stop().await;
-
-    Ok(())
-}
-
-#[fasync::run_singlethreaded(test)]
-async fn used_service_test() -> Result<(), Error> {
-    let echo_service_name = "fidl.examples.routing.echo.Echo";
-    let hub_report_service_name = "fuchsia.test.hub.HubReport";
-    let event_source_service_name = "fuchsia.sys2.BlockingEventSource";
-
-    let (test_runner, _) = TestRunner::start(
-        "fuchsia-pkg://fuchsia.com/hub_integration_test#meta/used_service_echo_realm.cm",
-        3,
-        vec![],
-    )
-    .await?;
-
-    // Verify that the hub shows the HubReport service and BlockingEventSource service in use
-    test_runner
-        .verify_directory_listing_locally(
-            "/hub/exec/used/svc",
-            vec![event_source_service_name, hub_report_service_name],
-        )
-        .await
-        .send()?;
-
-    // Verify that the hub now shows the Echo capability as in use
-    test_runner
-        .verify_directory_listing_locally(
-            "/hub/exec/used/svc",
-            vec![echo_service_name, event_source_service_name, hub_report_service_name],
-        )
-        .await
-        .send()?;
-
-    // Verify that the hub does not change
-    test_runner
-        .verify_directory_listing_locally(
-            "/hub/exec/used/svc",
-            vec![echo_service_name, event_source_service_name, hub_report_service_name],
-        )
-        .await
-        .send()?;
 
     Ok(())
 }

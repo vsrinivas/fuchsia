@@ -27,7 +27,6 @@ pub struct Component {
     in_services: Vec<String>,
     out_services: Vec<String>,
     exposed_services: Vec<String>,
-    used_services: Vec<String>,
 }
 
 impl Component {
@@ -45,7 +44,6 @@ impl Component {
         let in_services = get_services(exec_path.join("in"));
         let out_services = get_services(exec_path.join("out"));
         let exposed_services = get_services(exec_path.join("exposed"));
-        let used_services = get_services(exec_path.join("used"));
 
         // Recurse on the children
         let child_path = hub_path.join("children");
@@ -67,7 +65,6 @@ impl Component {
             in_services,
             out_services,
             exposed_services,
-            used_services,
         }
     }
 
@@ -105,7 +102,6 @@ impl Component {
         generate_services("Exposed Services", &self.exposed_services, lines);
         generate_services("Incoming Services", &self.in_services, lines);
         generate_services("Outgoing Services", &self.out_services, lines);
-        generate_services("Used Services", &self.used_services, lines);
 
         // Recurse on children
         let prefix = format!("{}/", moniker);

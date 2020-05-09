@@ -50,7 +50,6 @@ async fn empty_component() -> Result<(), Error> {
             "- Exposed Services (0)",
             "- Incoming Services (0)",
             "- Outgoing Services (0)",
-            "- Used Services (0)",
         ],
     );
     Ok(())
@@ -93,7 +92,6 @@ async fn tree() -> Result<(), Error> {
             "- Exposed Services (0)",
             "- Incoming Services (0)",
             "- Outgoing Services (0)",
-            "- Used Services (0)",
             "",
             "<root>:0/bar:0",
             "- URL: fuchsia-pkg://fuchsia.com/cs2_test#meta/bar.cm",
@@ -101,7 +99,6 @@ async fn tree() -> Result<(), Error> {
             "- Exposed Services (0)",
             "- Incoming Services (0)",
             "- Outgoing Services (0)",
-            "- Used Services (0)",
             "",
             "<root>:0/bar:0/baz:0",
             "- URL: fuchsia-pkg://fuchsia.com/cs2_test#meta/baz.cm",
@@ -109,7 +106,6 @@ async fn tree() -> Result<(), Error> {
             "- Exposed Services (0)",
             "- Incoming Services (0)",
             "- Outgoing Services (0)",
-            "- Used Services (0)",
             "",
             "<root>:0/foo:0",
             "- URL: fuchsia-pkg://fuchsia.com/cs2_test#meta/foo.cm",
@@ -117,7 +113,6 @@ async fn tree() -> Result<(), Error> {
             "- Exposed Services (0)",
             "- Incoming Services (0)",
             "- Outgoing Services (0)",
-            "- Used Services (0)",
             "",
             "<root>:0/foo:0/bar:0",
             "- URL: fuchsia-pkg://fuchsia.com/cs2_test#meta/bar.cm",
@@ -125,7 +120,6 @@ async fn tree() -> Result<(), Error> {
             "- Exposed Services (0)",
             "- Incoming Services (0)",
             "- Outgoing Services (0)",
-            "- Used Services (0)",
             "",
             "<root>:0/foo:0/bar:0/baz:0",
             "- URL: fuchsia-pkg://fuchsia.com/cs2_test#meta/baz.cm",
@@ -133,7 +127,6 @@ async fn tree() -> Result<(), Error> {
             "- Exposed Services (0)",
             "- Incoming Services (0)",
             "- Outgoing Services (0)",
-            "- Used Services (0)",
             "",
             "<root>:0/foo:0/baz:0",
             "- URL: fuchsia-pkg://fuchsia.com/cs2_test#meta/baz.cm",
@@ -141,7 +134,6 @@ async fn tree() -> Result<(), Error> {
             "- Exposed Services (0)",
             "- Incoming Services (0)",
             "- Outgoing Services (0)",
-            "- Used Services (0)",
         ],
     );
     Ok(())
@@ -178,7 +170,6 @@ async fn echo_realm() -> Result<(), Error> {
             "- Exposed Services (0)",
             "- Incoming Services (0)",
             "- Outgoing Services (0)",
-            "- Used Services (0)",
             "",
             "<root>:0/echo_client:0",
             "- URL: fuchsia-pkg://fuchsia.com/cs2_test#meta/echo_client.cm",
@@ -188,8 +179,6 @@ async fn echo_realm() -> Result<(), Error> {
             "  - fidl.examples.routing.echo.Echo",
             "  - fuchsia.logger.LogSink",
             "- Outgoing Services (0)",
-            "- Used Services (1)",
-            "  - fidl.examples.routing.echo.Echo",
             "",
             "<root>:0/echo_server:0",
             "- URL: fuchsia-pkg://fuchsia.com/cs2_test#meta/echo_server.cm",
@@ -198,7 +187,6 @@ async fn echo_realm() -> Result<(), Error> {
             "- Incoming Services (0)",
             "- Outgoing Services (1)",
             "  - fidl.examples.routing.echo.Echo",
-            "- Used Services (0)",
         ],
     );
 

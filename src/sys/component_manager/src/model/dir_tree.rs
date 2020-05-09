@@ -3,91 +3,15 @@
 // found in the LICENSE file.
 
 use {
-    crate::{
-        capability::CapabilitySource,
-        model::{
-            addable_directory::{AddableDirectory, AddableDirectoryWithResult},
-            error::ModelError,
-            moniker::AbsoluteMoniker,
-            realm::WeakRealm,
-            routing_fns::route_capability_source,
-        },
+    crate::model::{
+        addable_directory::AddableDirectory, error::ModelError, moniker::AbsoluteMoniker,
+        realm::WeakRealm,
     },
     cm_rust::{CapabilityPath, ComponentDecl, ExposeDecl, UseDecl},
     directory_broker::{DirectoryBroker, RoutingFn},
     std::collections::HashMap,
-    std::sync::Arc,
     vfs::directory::immutable::simple as pfs,
 };
-
-type Directory = Arc<pfs::Simple>;
-
-pub(super) struct CapabilityUsageTree {
-    directory_nodes: HashMap<String, CapabilityUsageTree>,
-    dir: Box<Directory>,
-}
-
-impl CapabilityUsageTree {
-    pub fn new(dir: Directory) -> Self {
-        Self { directory_nodes: HashMap::new(), dir: Box::new(dir) }
-    }
-
-    pub async fn mark_capability_used(
-        &mut self,
-        target_realm: WeakRealm,
-        source: CapabilitySource,
-    ) -> Result<(), ModelError> {
-        // Do nothing for capabilities without paths
-        let path = {
-            match source.path() {
-                Some(path) => path,
-                None => return Ok(()),
-            }
-        };
-        let basename = path.basename.to_string();
-        let tree = self.to_directory_node(path, &target_realm.moniker).await?;
-        // TODO(44746): This is probably not correct. The capability source lacks crucial
-        // information about the capability routing, such as rights to apply on a directory. Could
-        // possibly use `route_use_fn_factory` instead.
-        let routing_fn = route_capability_source(target_realm.clone(), source);
-
-        let node = DirectoryBroker::new(routing_fn);
-
-        // Adding a node to the Hub can fail
-        tree.dir.add_node(&basename, node, &target_realm.moniker).unwrap_or_else(|_| {
-            // TODO(xbhatnag): The error received is not granular enough to know if the node
-            // already exists, so treat this as a success for now. Ideally, pseudo_vfs should
-            // have an exists() operation.
-        });
-        Ok(())
-    }
-
-    async fn to_directory_node(
-        &mut self,
-        path: &CapabilityPath,
-        abs_moniker: &AbsoluteMoniker,
-    ) -> Result<&mut CapabilityUsageTree, ModelError> {
-        let components = path.dirname.split("/");
-        let mut tree = self;
-        for component in components {
-            if !component.is_empty() {
-                // If the next component does not exist in the tree, create it.
-                if !tree.directory_nodes.contains_key(component) {
-                    let dir_node = pfs::simple();
-                    let child_tree = CapabilityUsageTree::new(dir_node.clone());
-                    tree.dir.add_node(component, dir_node, abs_moniker)?;
-                    tree.directory_nodes.insert(component.to_string(), child_tree);
-                }
-
-                tree = tree
-                    .directory_nodes
-                    .get_mut(component)
-                    .expect("to_directory_node: it is impossible for this tree to not exist.");
-            }
-        }
-        Ok(tree)
-    }
-}
 
 /// Represents the directory hierarchy of the exposed directory, not including the nodes for the
 /// capabilities themselves.
@@ -214,7 +138,10 @@ mod tests {
         fidl_fuchsia_io2 as fio2,
         fuchsia_async::EHandle,
         fuchsia_zircon as zx,
-        std::convert::TryFrom,
+        std::{
+            convert::TryFrom,
+            sync::Arc,
+        },
         vfs::{directory::entry::DirectoryEntry, execution_scope::ExecutionScope, path},
     };
 
