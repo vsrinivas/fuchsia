@@ -1053,7 +1053,7 @@ template("standard_environments") {
         testonly = true
         environment_label = ":$env_name"
         forward_variables_from(target, "*")
-        deps = [ "$zx/system/ulib/c/test:noop-tests" ]
+        deps = [ "$zx/system/ulib/c/test/noop:noop-tests" ]
         direct = true
       }
     }
