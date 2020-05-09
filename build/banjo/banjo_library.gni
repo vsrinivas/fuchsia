@@ -260,12 +260,12 @@ template("banjo_library") {
     output = target[4]
 
     if (backend != "rust") {
-      action(target_name) {
+      compiled_action(target_name) {
         forward_variables_from(invoker, [ "testonly" ])
 
         visibility = [ ":*" ]
 
-        script = "//prebuilt/tools/banjo/${host_platform}/banjo_bin"
+        tool = "//src/devices/tools/banjo:banjo_bin"
 
         inputs = [
           response_file,
