@@ -28,6 +28,7 @@ group("tests") {
     "//src/lib/fidl/llcpp/tests:fidl_llcpp_types_test",
     "//src/lib/fidl/rust/fidl:fidl_test($host_toolchain)",
     "//src/lib/fidl/rust/fidl:tests",
+    "//src/tests/benchmarks/fidl/runner:tests",
     "//third_party/go:go_fidl_tests",
     "//tools/fidl/fidldoc:tests($host_toolchain)",
     "//tools/fidl/fidlgen_go:fidlgen_go_test($host_toolchain)",
