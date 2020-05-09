@@ -27,6 +27,28 @@ constexpr fuchsia_hardware_thermal_ThermalTemperatureInfo TripPointInfo(
           .gpu_clk_freq_source = 0};
 }
 
+// vim2 thermal device info.
+constexpr fuchsia_hardware_thermal_ThermalDeviceInfo kDeviceInfo = {
+      .active_cooling = true,
+      .passive_cooling = true,
+      .gpu_throttling = true,
+      .num_trip_points = 8,
+      .big_little = true,
+      .critical_temp_celsius = 81.0f,
+      .trip_point_info =
+          {
+              TripPointInfo(2.0f, 0.0f, 6, 4),
+              TripPointInfo(65.0f, 63.0f, 6, 4),
+              TripPointInfo(70.0f, 68.0f, 6, 4),
+              TripPointInfo(75.0f, 73.0f, 6, 4),
+              TripPointInfo(82.0f, 79.0f, 5, 4),
+              TripPointInfo(87.0f, 84.0f, 4, 4),
+              TripPointInfo(92.0f, 89.0f, 3, 3),
+              TripPointInfo(96.0f, 93.0f, 2, 2),
+          },
+      .opps = {},
+  };
+
 }  // namespace
 
 namespace thermal {
@@ -105,7 +127,7 @@ TEST_F(AmlThermalTest, GetDvfsInfo) {
       .count = 3};
 
   MockScpi scpi;
-  AmlThermal dut(nullptr, {}, {}, *scpi.GetProto(), 0, zx::port());
+  AmlThermal dut(nullptr, {}, {}, *scpi.GetProto(), 0, zx::port(), fake_ddk::kFakeDevice);
 
   ASSERT_NO_FATAL_FAILURES(StartFidlServer(&dut));
 
@@ -141,7 +163,7 @@ TEST_F(AmlThermalTest, GetDvfsInfo) {
 
 TEST_F(AmlThermalTest, DvfsOperatingPoint) {
   MockScpi scpi;
-  AmlThermal dut(nullptr, {}, {}, *scpi.GetProto(), 0, zx::port());
+  AmlThermal dut(nullptr, {}, {}, *scpi.GetProto(), 0, zx::port(), fake_ddk::kFakeDevice);
 
   ASSERT_NO_FATAL_FAILURES(StartFidlServer(&dut));
 
@@ -219,7 +241,8 @@ TEST_F(AmlThermalTest, DvfsOperatingPoint) {
 
 TEST_F(AmlThermalTest, FanLevel) {
   ddk::MockGpio fan0, fan1;
-  AmlThermal dut(nullptr, *fan0.GetProto(), *fan1.GetProto(), {}, 0, zx::port());
+  AmlThermal dut(nullptr, *fan0.GetProto(), *fan1.GetProto(), {}, 0, zx::port(),
+                 fake_ddk::kFakeDevice);
 
   ASSERT_NO_FATAL_FAILURES(StartFidlServer(&dut));
 
@@ -277,28 +300,6 @@ TEST_F(AmlThermalTest, FanLevel) {
 }
 
 TEST_F(AmlThermalTest, TripPointThread) {
-  // vim2 thermal device info.
-  constexpr fuchsia_hardware_thermal_ThermalDeviceInfo kDeviceInfo = {
-      .active_cooling = true,
-      .passive_cooling = true,
-      .gpu_throttling = true,
-      .num_trip_points = 8,
-      .big_little = true,
-      .critical_temp_celsius = 81.0f,
-      .trip_point_info =
-          {
-              TripPointInfo(2.0f, 0.0f, 6, 4),
-              TripPointInfo(65.0f, 63.0f, 6, 4),
-              TripPointInfo(70.0f, 68.0f, 6, 4),
-              TripPointInfo(75.0f, 73.0f, 6, 4),
-              TripPointInfo(82.0f, 79.0f, 5, 4),
-              TripPointInfo(87.0f, 84.0f, 4, 4),
-              TripPointInfo(92.0f, 89.0f, 3, 3),
-              TripPointInfo(96.0f, 93.0f, 2, 2),
-          },
-      .opps = {},
-  };
-
   fake_ddk::Bind ddk;
   ddk.SetMetadata(&kDeviceInfo, sizeof(kDeviceInfo));
 
@@ -309,7 +310,7 @@ TEST_F(AmlThermalTest, TripPointThread) {
   ASSERT_OK(zx::port::create(0, &port));
 
   AmlThermal dut(fake_ddk::kFakeDevice, *fan0.GetProto(), *fan1.GetProto(), *scpi.GetProto(), 1234,
-                 std::move(port), zx::msec(10));
+                 std::move(port), fake_ddk::kFakeDevice, zx::msec(10));
 
   ASSERT_NO_FATAL_FAILURES(StartFidlServer(&dut));
 
@@ -428,12 +429,36 @@ TEST_F(AmlThermalTest, TripPointThread) {
 
 TEST_F(AmlThermalTest, DdkLifecycle) {
   fake_ddk::Bind ddk;
-  AmlThermal dut(fake_ddk::kFakeParent, {}, {}, {}, 0, zx::port());
+  ddk.SetMetadata(&kDeviceInfo, sizeof(kDeviceInfo));
 
-  dut.DdkAdd("vim-thermal", DEVICE_ADD_INVISIBLE);
+  ddk::MockGpio fan0, fan1;
+  MockScpi scpi;
+
+  zx::port port;
+  ASSERT_OK(zx::port::create(0, &port));
+
+  AmlThermal dut(fake_ddk::kFakeParent, *fan0.GetProto(), *fan1.GetProto(), *scpi.GetProto(), 1234,
+                 std::move(port), fake_ddk::kFakeDevice, zx::msec(10));
+
+  fan0.ExpectConfigOut(ZX_OK, 0);
+  fan1.ExpectConfigOut(ZX_OK, 0);
+
+  scpi.ExpectGetDvfsInfo(ZX_OK, fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN, {})
+      .ExpectGetDvfsInfo(ZX_OK, fuchsia_hardware_thermal_PowerDomain_LITTLE_CLUSTER_POWER_DOMAIN,
+                         {});
+
+  // The DdkInit hook will run after DdkAdd.
+  dut.DdkAdd("vim-thermal");
   dut.DdkAsyncRemove();
 
   EXPECT_TRUE(ddk.Ok());
+
+  // Join the worker thread spawned during the DdkInit hook.
+  dut.JoinWorkerThread();
+
+  fan0.VerifyAndClear();
+  fan1.VerifyAndClear();
+  scpi.VerifyAndClear();
 }
 
 }  // namespace thermal

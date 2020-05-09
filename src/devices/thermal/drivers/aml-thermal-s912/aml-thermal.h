@@ -37,20 +37,23 @@ enum FanLevel {
 };
 
 class AmlThermal;
-using DeviceType = ddk::Device<AmlThermal, ddk::Messageable, ddk::UnbindableNew>;
+using DeviceType = ddk::Device<AmlThermal, ddk::Initializable, ddk::Messageable,
+                               ddk::UnbindableNew>;
 
 // AmlThermal implements the s912 AmLogic thermal driver.
 class AmlThermal : public DeviceType, public ddk::ThermalProtocol<AmlThermal, ddk::base_protocol> {
  public:
   AmlThermal(zx_device_t* device, const gpio_protocol_t& fan0_gpio_proto,
              const gpio_protocol_t& fan1_gpio_proto, const scpi_protocol_t& scpi_proto,
-             const uint32_t sensor_id, zx::port port, zx::duration duration = kDuration)
+             const uint32_t sensor_id, zx::port port, zx_device_t* scpi_dev,
+             zx::duration duration = kDuration)
       : DeviceType(device),
         fan0_gpio_(&fan0_gpio_proto),
         fan1_gpio_(&fan1_gpio_proto),
         scpi_(&scpi_proto),
         sensor_id_(sensor_id),
         port_(std::move(port)),
+        scpi_dev_(scpi_dev),
         duration_(duration) {}
 
   // Create and bind a driver instance.
@@ -60,6 +63,7 @@ class AmlThermal : public DeviceType, public ddk::ThermalProtocol<AmlThermal, dd
   zx_status_t Init(zx_device_t* dev);
 
   // Ddk-required methods.
+  void DdkInit(ddk::InitTxn txn);
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
   void DdkUnbindNew(ddk::UnbindTxn txn);
   void DdkRelease();
@@ -118,6 +122,8 @@ class AmlThermal : public DeviceType, public ddk::ThermalProtocol<AmlThermal, dd
 
   uint32_t sensor_id_;
   zx::port port_;
+
+  zx_device_t* scpi_dev_;
 
   thrd_t worker_ = {};
   fuchsia_hardware_thermal_ThermalDeviceInfo info_ = {};

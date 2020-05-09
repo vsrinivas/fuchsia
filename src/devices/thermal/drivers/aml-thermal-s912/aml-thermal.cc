@@ -88,24 +88,13 @@ zx_status_t AmlThermal::Create(void* ctx, zx_device_t* device) {
   }
 
   auto thermal = std::make_unique<AmlThermal>(device, fan0_gpio_proto, fan1_gpio_proto, scpi_proto,
-                                              sensor_id, std::move(port));
+                                              sensor_id, std::move(port), fragments[FRAGMENT_SCPI]);
 
-  status = thermal->DdkAdd("vim-thermal", DEVICE_ADD_INVISIBLE);
+  status = thermal->DdkAdd("vim-thermal");
   if (status != ZX_OK) {
     THERMAL_ERROR("could not add driver: %d\n", status);
     return status;
   }
-
-  // Perform post-construction initialization before device is made visible.
-  status = thermal->Init(fragments[FRAGMENT_SCPI]);
-  if (status != ZX_OK) {
-    THERMAL_ERROR("could not initialize thermal driver: %d\n", status);
-    thermal->DdkAsyncRemove();
-    return status;
-  }
-
-  thermal->DdkMakeVisible();
-
   // devmgr is now in charge of this device.
   __UNUSED auto _ = thermal.release();
   return ZX_OK;
@@ -215,6 +204,11 @@ void AmlThermal::DdkRelease() {
 void AmlThermal::DdkUnbindNew(ddk::UnbindTxn txn) {
   sync_completion_signal(&quit_);
   txn.Reply();
+}
+
+void AmlThermal::DdkInit(ddk::InitTxn txn) {
+  zx_status_t status = Init(scpi_dev_);
+  txn.Reply(status);
 }
 
 zx_status_t AmlThermal::Init(zx_device_t* dev) {
