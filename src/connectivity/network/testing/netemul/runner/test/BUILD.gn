@@ -265,6 +265,9 @@ test_package("netemul_guest_test") {
 
       # TODO(48129): test hangs w/ ASan. Fix and switch to [ nuc_env ].
       environments = nuc_env_fails_on_asan
+
+      # TODO(51063): test fails with ThinLTO.
+      disabled = true
     },
   ]
 }
