@@ -114,13 +114,29 @@ class UniqueOp {
   StreamOp* op_ = nullptr;
 };
 
+// Tag Types used to manage the different intrusive containers that a StreamOp
+// can exist in.
+namespace internal {
+struct StreamOpOpListTag {};
+struct StreamOpDeferredListTag {};
+}  // namespace internal
+
 // class StreamOp.
 // The library schedules operations, or ops of type StreamOp. An IO operation is a discrete
 // unit of IO that is meaningful to the client. StreamOps are allocated and freed by the client.
 // The Scheduler interacts with these via the SchedulerClient interface. A reference to each op
 // acquired through this interface is retained until the Release() method is called.
-class StreamOp {
+class StreamOp
+    : public fbl::ContainableBaseClasses<
+          fbl::TaggedDoublyLinkedListable<StreamOp*, internal::StreamOpOpListTag>,
+          fbl::TaggedDoublyLinkedListable<StreamOp*, internal::StreamOpDeferredListTag>> {
  public:
+  using OpListTag = internal::StreamOpOpListTag;
+  using DeferredListTag = internal::StreamOpDeferredListTag;
+
+  using OpList = fbl::TaggedDoublyLinkedList<StreamOp*, OpListTag>;
+  using DeferredList = fbl::TaggedDoublyLinkedList<StreamOp*, DeferredListTag>;
+
   StreamOp() { StreamOp(OpType::kOpTypeUnknown, 0, kOpGroupNone, 0, nullptr); }
 
   StreamOp(OpType type, uint32_t stream_id, uint32_t group_id, uint32_t group_members, void* cookie)
@@ -156,23 +172,7 @@ class StreamOp {
   void set_flags(uint32_t flags) { flags_ = flags; }
   bool is_deferred() { return flags_ & kOpFlagDeferred; }
 
-  // List support.
-  using ListNodeState = fbl::DoublyLinkedListNodeState<StreamOp*>;
-  struct OpListTraits {
-    static ListNodeState& node_state(StreamOp& s) { return s.node_; }
-  };
-  using OpList = fbl::DoublyLinkedList<StreamOp*, OpListTraits>;
-
-  struct DeferredListTraits {
-    static ListNodeState& node_state(StreamOp& s) { return s.deferred_node_; }
-  };
-  using DeferredList = fbl::DoublyLinkedList<StreamOp*, DeferredListTraits>;
-
-
  private:
-  ListNodeState node_;
-  ListNodeState deferred_node_;
-
   OpType type_;             // Type of operation.
   uint32_t stream_id_;      // Stream into which this op is queued.
   uint32_t group_id_;       // Group of operations.
