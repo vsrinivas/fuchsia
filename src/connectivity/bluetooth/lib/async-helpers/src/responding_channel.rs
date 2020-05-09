@@ -37,6 +37,12 @@ pub struct Sender<Req, Resp> {
     inner: mpsc::Sender<(Req, Responder<Resp>)>,
 }
 
+impl<Req, Resp> Clone for Sender<Req, Resp> {
+    fn clone(&self) -> Self {
+        Self { inner: self.inner.clone() }
+    }
+}
+
 impl<Req, Resp> Sender<Req, Resp> {
     /// Send a request on the channel and wait for a response from the responding end of the
     /// channel.
@@ -140,6 +146,45 @@ mod tests {
         assert!(ex.run_until_stalled(&mut received).is_pending());
 
         let request = sender.request(());
+        pin_mut!(request);
+        assert!(ex.run_until_stalled(&mut request).is_pending());
+
+        let ((), responder) = unwrap_ready!(ex.run_until_stalled(&mut received)).unwrap();
+
+        assert!(ex.run_until_stalled(&mut request).is_pending());
+
+        responder.respond(()).unwrap();
+
+        unwrap_ready!(ex.run_until_stalled(&mut request)).unwrap();
+    }
+
+    #[test]
+    fn cloned_senders_go_to_same_receiver() {
+        let mut ex = fasync::Executor::new().unwrap();
+        let (mut sender, mut receiver) = channel(0);
+        let mut sender2 = sender.clone();
+
+        let received = receiver.next();
+        pin_mut!(received);
+        assert!(ex.run_until_stalled(&mut received).is_pending());
+
+        let request = sender.request(());
+        pin_mut!(request);
+        assert!(ex.run_until_stalled(&mut request).is_pending());
+
+        let ((), responder) = unwrap_ready!(ex.run_until_stalled(&mut received)).unwrap();
+
+        assert!(ex.run_until_stalled(&mut request).is_pending());
+
+        responder.respond(()).unwrap();
+
+        unwrap_ready!(ex.run_until_stalled(&mut request)).unwrap();
+
+        let received = receiver.next();
+        pin_mut!(received);
+        assert!(ex.run_until_stalled(&mut received).is_pending());
+
+        let request = sender2.request(());
         pin_mut!(request);
         assert!(ex.run_until_stalled(&mut request).is_pending());
 
