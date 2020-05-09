@@ -5,16 +5,14 @@
 // Internal implementation of <trace/event_args.h>.
 // This is not part of the public API: use <trace/event_args.h> instead.
 
-#ifndef ZIRCON_SYSTEM_ULIB_LIB_TRACE_INTERNAL_EVENT_ARGS_H_
-#define ZIRCON_SYSTEM_ULIB_LIB_TRACE_INTERNAL_EVENT_ARGS_H_
+#ifndef LIB_TRACE_INTERNAL_EVENT_ARGS_H_
+#define LIB_TRACE_INTERNAL_EVENT_ARGS_H_
 
 #include <assert.h>
-
-#include <zircon/compiler.h>
-
 #include <lib/trace-engine/context.h>
 #include <lib/trace-engine/types.h>
 #include <lib/trace/internal/pairs_internal.h>
+#include <zircon/compiler.h>
 
 #define TRACE_INTERNAL_NUM_ARGS(variable_name) (sizeof(variable_name) / sizeof((variable_name)[0]))
 
@@ -84,6 +82,7 @@ __END_CDECLS
 #ifdef __cplusplus
 
 #include <lib/trace/internal/string_traits.h>
+
 #include <type_traits>
 
 namespace trace {
@@ -121,8 +120,7 @@ struct ArgumentValueMaker<
 template <typename T>
 struct ArgumentValueMaker<
     T, typename std::enable_if<!is_bool<T>::value && std::is_unsigned<T>::value &&
-                               !std::is_enum<T>::value &&
-                               (sizeof(T) <= sizeof(uint32_t))>::type> {
+                               !std::is_enum<T>::value && (sizeof(T) <= sizeof(uint32_t))>::type> {
   static trace_arg_value_t Make(uint32_t value) { return trace_make_uint32_arg_value(value); }
 };
 
@@ -136,8 +134,7 @@ struct ArgumentValueMaker<
 
 template <typename T>
 struct ArgumentValueMaker<
-    T, typename std::enable_if<std::is_unsigned<T>::value &&
-                               !std::is_enum<T>::value &&
+    T, typename std::enable_if<std::is_unsigned<T>::value && !std::is_enum<T>::value &&
                                (sizeof(T) > sizeof(uint32_t)) &&
                                (sizeof(T) <= sizeof(uint64_t))>::type> {
   static trace_arg_value_t Make(uint64_t value) { return trace_make_uint64_arg_value(value); }
@@ -199,4 +196,4 @@ trace_arg_value_t MakeArgumentValue(const T& value) {
 
 #endif  // __cplusplus
 
-#endif  // ZIRCON_SYSTEM_ULIB_LIB_TRACE_INTERNAL_EVENT_ARGS_H_
+#endif  // LIB_TRACE_INTERNAL_EVENT_ARGS_H_

@@ -6,8 +6,8 @@
 // events. Most trace events support adding up to 15 additional name/value
 // pairs to provide additional data about the event.
 
-#ifndef ZIRCON_SYSTEM_ULIB_LIB_TRACE_EVENT_ARGS_H_
-#define ZIRCON_SYSTEM_ULIB_LIB_TRACE_EVENT_ARGS_H_
+#ifndef LIB_TRACE_EVENT_ARGS_H_
+#define LIB_TRACE_EVENT_ARGS_H_
 
 #include <lib/trace/internal/event_args.h>
 
@@ -161,4 +161,4 @@
 // Return the number of arguments in |variable_name|.
 #define TRACE_NUM_ARGS(variable_name) TRACE_INTERNAL_NUM_ARGS(variable_name)
 
-#endif  // ZIRCON_SYSTEM_ULIB_LIB_TRACE_EVENT_ARGS_H_
+#endif  // LIB_TRACE_EVENT_ARGS_H_

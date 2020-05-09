@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <lib/trace/observer.h>
-
 #include <zircon/assert.h>
 
 #include <utility>

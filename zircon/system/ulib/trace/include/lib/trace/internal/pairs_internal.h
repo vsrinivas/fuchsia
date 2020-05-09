@@ -7,8 +7,8 @@
 // This is not part of the public API: use <trace/event.h> instead.
 //
 
-#ifndef ZIRCON_SYSTEM_ULIB_LIB_TRACE_INTERNAL_PAIRS_INTERNAL_H_
-#define ZIRCON_SYSTEM_ULIB_LIB_TRACE_INTERNAL_PAIRS_INTERNAL_H_
+#ifndef LIB_TRACE_INTERNAL_PAIRS_INTERNAL_H_
+#define LIB_TRACE_INTERNAL_PAIRS_INTERNAL_H_
 
 // Count the number of pairs of arguments passed to it without evaluating them.
 // When the number of arguments is uneven, rounds down.
@@ -208,4 +208,4 @@
     fn(vn, 13, k13, v13), fn(vn, 14, k14, v14), fn(vn, 15, k15, v15)
 // clang-format on
 
-#endif  // ZIRCON_SYSTEM_ULIB_LIB_TRACE_INTERNAL_PAIRS_INTERNAL_H_
+#endif  // LIB_TRACE_INTERNAL_PAIRS_INTERNAL_H_
