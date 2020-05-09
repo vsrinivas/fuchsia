@@ -317,6 +317,7 @@ mod tests {
             LogSinkProxy,
         },
         fuchsia_inspect::assert_inspect_tree,
+        fuchsia_inspect_derive::WithInspect,
         fuchsia_zircon as zx,
         validating_log_listener::{validate_log_dump, validate_log_stream},
     };
@@ -817,8 +818,8 @@ mod tests {
                 inspect_node: inspect::Node::default(),
             }));
 
-            let mut log_manager = LogManager { inner };
-            log_manager.iattach(inspector.root(), "log_stats").unwrap();
+            let log_manager =
+                LogManager { inner }.with_inspect(inspector.root(), "log_stats").unwrap();
 
             let (log_proxy, log_stream) =
                 fidl::endpoints::create_proxy_and_stream::<LogMarker>().unwrap();
@@ -920,8 +921,7 @@ mod tests {
             inspect_node: inspect::Node::default(),
         }));
 
-        let mut lm = LogManager { inner };
-        lm.iattach(inspector.root(), "log_stats").unwrap();
+        let lm = LogManager { inner }.with_inspect(inspector.root(), "log_stats").unwrap();
         let (log_proxy, log_stream) =
             fidl::endpoints::create_proxy_and_stream::<LogMarker>().unwrap();
         lm.spawn_log_handler(log_stream);

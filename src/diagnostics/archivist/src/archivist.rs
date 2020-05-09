@@ -14,7 +14,7 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::server::{ServiceFs, ServiceObj},
     fuchsia_inspect::{component, health::Reporter},
-    fuchsia_inspect_derive::Inspect,
+    fuchsia_inspect_derive::WithInspect,
     fuchsia_zircon as zx,
     futures::{
         channel::mpsc,
@@ -148,8 +148,7 @@ impl Archivist {
     /// Also installs `fuchsia.diagnostics.Archive` service.
     /// Call `install_logger_services`, `add_event_source`.
     pub fn new(archivist_configuration: configs::Config) -> Result<Self, Error> {
-        let mut log_manager = logs::LogManager::new();
-        log_manager.iattach(diagnostics::root(), "log_stats")?;
+        let log_manager = logs::LogManager::new().with_inspect(diagnostics::root(), "log_stats")?;
 
         let mut fs = ServiceFs::new();
         diagnostics::serve(&mut fs)?;

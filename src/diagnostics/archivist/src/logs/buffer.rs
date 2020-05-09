@@ -65,6 +65,7 @@ where
 mod tests {
     use super::*;
     use fuchsia_inspect::assert_inspect_tree;
+    use fuchsia_inspect_derive::WithInspect;
 
     impl Accounted for (i32, usize) {
         fn bytes_used(&self) -> usize {
@@ -75,8 +76,8 @@ mod tests {
     #[test]
     fn test_simple() {
         let inspector = inspect::Inspector::new();
-        let mut m = MemoryBoundedBuffer::new(12);
-        m.iattach(inspector.root(), "buffer_stats").unwrap();
+        let mut m =
+            MemoryBoundedBuffer::new(12).with_inspect(inspector.root(), "buffer_stats").unwrap();
         m.push((1, 4));
         m.push((2, 4));
         m.push((3, 4));
@@ -92,8 +93,8 @@ mod tests {
     #[test]
     fn test_bound() {
         let inspector = inspect::Inspector::new();
-        let mut m = MemoryBoundedBuffer::new(12);
-        m.iattach(inspector.root(), "buffer_stats").unwrap();
+        let mut m =
+            MemoryBoundedBuffer::new(12).with_inspect(inspector.root(), "buffer_stats").unwrap();
         m.push((1, 4));
         m.push((2, 4));
         m.push((3, 5));
