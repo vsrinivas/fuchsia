@@ -10,6 +10,7 @@ import("//tools/fidl/gidl/gidl.gni")
 benchmark_suite_fidl_files = [
   "byte_array.gen.test.fidl",
   "byte_vector.test.fidl",
+  "byte_vector_limit.gen.test.fidl",
   "gpu_magma.test.fidl",
   "hardware_display.test.fidl",
   "inline.test.fidl",
