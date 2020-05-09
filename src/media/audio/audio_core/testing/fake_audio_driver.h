@@ -67,7 +67,7 @@ class FakeAudioDriverV1 {
   void set_formats(std::vector<audio_stream_format_range_t> formats) {
     formats_ = std::move(formats);
   }
-  void set_clock_domain(int32_t clock_domain) { clock_domain_ = clock_domain; }
+  void set_clock_domain(uint32_t clock_domain) { clock_domain_ = clock_domain; }
   void set_hardwired(bool hardwired) { hardwired_ = hardwired; }
   void set_plugged(bool plugged) { plugged_ = plugged; }
   void set_fifo_depth(uint32_t fifo_depth) { fifo_depth_ = fifo_depth; }
@@ -118,7 +118,8 @@ class FakeAudioDriverV1 {
       .max_channels = 2,
       .flags = ASF_RANGE_FLAG_FPS_48000_FAMILY,
   }};
-  int32_t clock_domain_ = 0;
+  // fuchsia::hardware::audio::CLOCK_DOMAIN_MONOTONIC is not defined for AudioDriverV1 types.
+  uint32_t clock_domain_ = 0;
 
   size_t ring_buffer_size_;
   zx::vmo ring_buffer_;
@@ -166,7 +167,7 @@ class FakeAudioDriverV2 : public fuchsia::hardware::audio::StreamConfig,
   void set_formats(fuchsia::hardware::audio::PcmSupportedFormats formats) {
     formats_ = std::move(formats);
   }
-  void set_clock_domain(int32_t clock_domain) { clock_domain_ = clock_domain; }
+  void set_clock_domain(uint32_t clock_domain) { clock_domain_ = clock_domain; }
   void set_plugged(bool plugged) { plugged_ = plugged; }
   void set_fifo_depth(uint32_t fifo_depth) { fifo_depth_ = fifo_depth; }
   void set_external_delay(zx::duration external_delay) { external_delay_ = external_delay; }
@@ -215,7 +216,7 @@ class FakeAudioDriverV2 : public fuchsia::hardware::audio::StreamConfig,
   bool plug_state_sent_ = false;
   bool gain_state_sent_ = false;
   fuchsia::hardware::audio::PcmSupportedFormats formats_ = {};
-  int32_t clock_domain_ = 0;
+  uint32_t clock_domain_ = fuchsia::hardware::audio::CLOCK_DOMAIN_MONOTONIC;
   size_t ring_buffer_size_;
   zx::vmo ring_buffer_;
 

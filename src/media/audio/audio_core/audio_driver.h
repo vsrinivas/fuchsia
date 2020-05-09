@@ -291,8 +291,6 @@ class AudioDriverV1 : public AudioDriver {
   HwGainState hw_gain_state_;
   std::vector<audio_stream_format_range_t> format_ranges_;
 
-  int32_t clock_domain_;
-
   // Configuration state.
   zx::time start_time_;
   zx::duration external_delay_;
@@ -337,6 +335,9 @@ class AudioDriverV1 : public AudioDriver {
   zx::time plug_time_ FXL_GUARDED_BY(plugged_lock_);
 
   zx::time driver_last_timeout_ = zx::time::infinite();
+
+  // fuchsia::hardware::audio::CLOCK_DOMAIN_MONOTONIC is not defined for AudioDriverV1 types.
+  uint32_t clock_domain_ = 0;
 };
 
 class AudioDriverV2 : public AudioDriver {
@@ -475,8 +476,6 @@ class AudioDriverV2 : public AudioDriver {
   HwGainState hw_gain_state_;
   std::vector<audio_stream_format_range_t> format_ranges_;
 
-  int32_t clock_domain_;
-
   // Configuration state.
   zx::time start_time_;
   zx::duration external_delay_;
@@ -526,6 +525,8 @@ class AudioDriverV2 : public AudioDriver {
   // FIDL interface pointers.
   fidl::InterfacePtr<fuchsia::hardware::audio::StreamConfig> stream_config_fidl_;
   fidl::InterfacePtr<fuchsia::hardware::audio::RingBuffer> ring_buffer_fidl_;
+
+  uint32_t clock_domain_ = fuchsia::hardware::audio::CLOCK_DOMAIN_MONOTONIC;
 };
 
 }  // namespace media::audio
