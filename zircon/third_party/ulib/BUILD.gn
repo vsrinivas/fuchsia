@@ -8,7 +8,6 @@ group("ulib") {
   deps = [
     "boringssl",
     "cksum",
-    "linenoise",
     "lz4",
     "ngunwind",
     "safemath",
