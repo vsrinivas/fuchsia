@@ -36,8 +36,8 @@ source_set("pcie") {
   ]
   public_deps = [
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
-    "//zircon/public/lib/ddk",
     "//zircon/system/public",
+    "//zircon/system/ulib/ddk",
   ]
   public_configs = [ ":config_pcie" ]
   friend = [
@@ -59,7 +59,7 @@ source_set("pcie_driver_test") {
     "//zircon/public/lib/mmio",
   ]
   public_deps = [
-    "//zircon/public/lib/ddk",
     "//zircon/system/public",
+    "//zircon/system/ulib/ddk",
   ]
 }

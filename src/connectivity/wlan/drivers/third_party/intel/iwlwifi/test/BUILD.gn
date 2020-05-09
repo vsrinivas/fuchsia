@@ -30,7 +30,7 @@ source_set("iwlwifi_sim_trans_ss") {
     "//sdk/banjo/ddk.protocol.wlanphyimpl",
     "//src/devices/lib/driver",
     "//src/devices/testing/fake_ddk",
-    "//zircon/public/lib/ddk",
+    "//zircon/system/ulib/ddk",
   ]
 
   public_deps = [

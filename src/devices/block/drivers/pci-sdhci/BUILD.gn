@@ -18,8 +18,8 @@ driver_module("pci-sdhci") {
     "//sdk/banjo/ddk.protocol.sdhci",
     "//src/devices/lib/driver",
     "//src/devices/pci/lib/device-protocol-pci",
-    "//zircon/public/lib/ddk",
     "//zircon/public/lib/sync",
+    "//zircon/system/ulib/ddk",
   ]
 }
 

@@ -34,13 +34,13 @@ driver_module("aml-securemem") {
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
-    "//zircon/public/lib/ddk",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl-async-cpp",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/safemath",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/closure-queue",
+    "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/tee-client-api:tee-client-api-headers",
   ]
 }

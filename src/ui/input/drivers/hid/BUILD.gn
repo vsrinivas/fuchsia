@@ -23,9 +23,9 @@ driver_module("hid") {
     "//sdk/banjo/ddk.protocol.hiddevice",
     "//sdk/fidl/fuchsia.hardware.input:fuchsia.hardware.input_llcpp",
     "//src/devices/lib/driver",
-    "//zircon/public/lib/ddk",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/trace-driver",
+    "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/hid",
     "//zircon/system/ulib/hid-parser",
   ]
@@ -44,10 +44,10 @@ test("hid-test") {
     "//sdk/banjo/ddk.protocol.hiddevice",
     "//sdk/fidl/fuchsia.hardware.input:fuchsia.hardware.input_llcpp",
     "//src/devices/testing/fake_ddk",
-    "//zircon/public/lib/ddk",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/trace-driver",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/hid",
     "//zircon/system/ulib/hid-parser",
   ]

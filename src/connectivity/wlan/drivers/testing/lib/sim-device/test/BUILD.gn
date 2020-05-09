@@ -22,7 +22,7 @@ executable("sim_add_test") {
   deps = [
     "//src/connectivity/wlan/drivers/testing/lib/sim-device",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/lib/ddk",
+    "//zircon/system/ulib/ddk",
   ]
 }
 

@@ -20,11 +20,11 @@ driver_module("ethertap") {
     "//sdk/fidl/fuchsia.hardware.ethertap:fuchsia.hardware.ethertap_c",
     "//src/devices/lib/dev-operation",
     "//src/devices/lib/driver",
-    "//zircon/public/lib/ddk",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/pretty",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/ddktl",
   ]
 }
@@ -42,11 +42,11 @@ test("ethertap-unittest") {
     "//sdk/fidl/fuchsia.hardware.ethertap:fuchsia.hardware.ethertap_c",
     "//src/devices/lib/dev-operation",
     "//src/devices/testing/fake_ddk",
-    "//zircon/public/lib/ddk",
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/pretty",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/ddktl",
     "//zircon/system/ulib/fidl-utils",
   ]

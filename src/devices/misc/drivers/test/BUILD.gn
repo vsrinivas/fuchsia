@@ -16,8 +16,8 @@ driver_module("test") {
     "//sdk/banjo/ddk.protocol.test",
     "//sdk/fidl/fuchsia.device.test:fuchsia.device.test_c",
     "//src/devices/lib/driver",
-    "//zircon/public/lib/ddk",
     "//zircon/public/lib/zircon-internal",
+    "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/ddktl",
   ]
 }

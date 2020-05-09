@@ -35,12 +35,12 @@ driver_module("as370") {
     "//src/devices/lib/as370",
     "//src/devices/lib/driver",
     "//src/devices/usb/lib/usb",
-    "//zircon/public/lib/ddk",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/mmio",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/ddktl",
   ]
 

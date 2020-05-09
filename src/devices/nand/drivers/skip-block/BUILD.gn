@@ -37,9 +37,9 @@ source_set("common") {
     "//sdk/banjo/ddk.protocol.nand",
     "//sdk/fidl/fuchsia.hardware.skipblock:fuchsia.hardware.skipblock_llcpp",
     "//src/devices/lib/dev-operation",
-    "//zircon/public/lib/ddk",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zircon-internal",
+    "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/ddktl",
   ]
 }

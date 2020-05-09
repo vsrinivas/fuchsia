@@ -31,10 +31,10 @@ zx_library("hisi") {
     "//sdk/banjo/ddk.protocol.platform.device",
     "//src/devices/bus/lib/device-protocol-pdev",
     "//src/devices/bus/lib/device-protocol-platform-device",
-    "//zircon/public/lib/ddk",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/mmio",
     "//zircon/public/lib/sync",
+    "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/ddktl",
   ]
 }

@@ -115,8 +115,6 @@ group("ulib") {
     "cobalt-client:in-memory-logger",
 #------------------
 #------------------
-    "ddk",
-    "ddk:ddk-device-headers",
 #------------------
 #------------------
     "ddk-platform-defs",

@@ -18,10 +18,10 @@ driver_module("gpt") {
     "//sdk/banjo/ddk.protocol.block.partition",
     "//src/devices/lib/driver",
     "//zircon/public/lib/cksum",
-    "//zircon/public/lib/ddk",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/gpt",
     "//zircon/public/lib/sync",
+    "//zircon/system/ulib/ddk",
   ]
 }
 
@@ -40,13 +40,13 @@ test("gpt-device-test") {
     "//sdk/banjo/ddk.protocol.block.partition",
     "//src/devices/testing/fake_ddk",
     "//zircon/public/lib/cksum",
-    "//zircon/public/lib/ddk",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/gpt",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/ddktl",
   ]
 }

@@ -18,7 +18,7 @@ driver_module("builtin") {
   ]
   deps = [
     "//src/devices/lib/driver",
-    "//zircon/public/lib/ddk",
+    "//zircon/system/ulib/ddk",
   ]
 }
 

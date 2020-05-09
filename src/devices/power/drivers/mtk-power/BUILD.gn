@@ -23,13 +23,13 @@ driver_module("mtk-power") {
     "//src/devices/bus/lib/device-protocol-pdev",
     "//src/devices/lib/driver",
     "//src/devices/lib/mt8167",
-    "//zircon/public/lib/ddk",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/mmio",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/ddktl",
   ]
 }
@@ -49,7 +49,6 @@ test("mtk-power-test") {
     "//src/devices/lib/mt8167",
     "//src/devices/testing/fake_ddk",
     "//src/devices/testing/mock-mmio-reg",
-    "//zircon/public/lib/ddk",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/hwreg",
@@ -57,6 +56,7 @@ test("mtk-power-test") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/ddktl",
   ]
 }

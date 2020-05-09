@@ -47,12 +47,12 @@ driver_module("mt8167s_ref") {
     "//src/devices/lib/focaltech",
     "//src/devices/lib/mt8167",
     "//src/graphics/display/lib/device-protocol-display",
-    "//zircon/public/lib/ddk",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/mmio",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/ddktl",
   ]
 
@@ -108,7 +108,6 @@ test("mt8167s_ref-test") {
     "//src/devices/lib/focaltech",
     "//src/devices/lib/mt8167",
     "//src/graphics/display/lib/device-protocol-display",
-    "//zircon/public/lib/ddk",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/hwreg",
@@ -116,6 +115,7 @@ test("mt8167s_ref-test") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/ddktl",
   ]
 }

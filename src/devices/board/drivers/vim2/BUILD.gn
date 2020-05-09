@@ -47,10 +47,10 @@ driver_module("vim2") {
     "//src/devices/lib/amlogic",
     "//src/devices/lib/broadcom",
     "//src/devices/lib/driver",
-    "//zircon/public/lib/ddk",
     "//zircon/public/lib/mmio",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/ddktl",
   ]
 }

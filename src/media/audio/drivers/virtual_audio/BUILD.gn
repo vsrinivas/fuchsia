@@ -37,10 +37,10 @@ driver_module("virtual_audio_driver") {
     "//src/media/audio/lib/simple-audio-stream",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-loop-default",
-    "//zircon/public/lib/ddk",
     "//zircon/public/lib/fzl",
     "//zircon/system/ulib/audio-driver-proto",
     "//zircon/system/ulib/closure-queue",
+    "//zircon/system/ulib/ddk",
   ]
 
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]

@@ -35,13 +35,13 @@ source_set("user_pci") {
   public_deps = [
     "//sdk/banjo/ddk.protocol.pci",
     "//sdk/banjo/ddk.protocol.pciroot",
-    "//zircon/public/lib/ddk",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/pretty",
     "//zircon/public/lib/region-alloc",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/ddktl",
 
     # TODO(ZX-4062): This shouldn't be here if the mmio code is actually
@@ -56,9 +56,9 @@ source_set("user_pci.proxy") {
   public_deps = [
     "//sdk/banjo/ddk.protocol.pci",
     "//src/devices/lib/driver",
-    "//zircon/public/lib/ddk",
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/pretty",
+    "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/ddktl",
   ]
 }
@@ -105,8 +105,8 @@ if (enable_user_pci) {
       "//sdk/banjo/ddk.protocol.platform.device",
       "//sdk/banjo/ddk.protocol.sysmem",
       "//src/devices/lib/driver",
-      "//zircon/public/lib/ddk",
       "//zircon/public/lib/fidl",
+      "//zircon/system/ulib/ddk",
       "//zircon/system/ulib/ddktl",
     ]
   }
@@ -126,7 +126,7 @@ if (enable_user_pci) {
       "//sdk/banjo/ddk.protocol.platform.device",
       "//sdk/banjo/ddk.protocol.sysmem",
       "//src/devices/lib/driver",
-      "//zircon/public/lib/ddk",
+      "//zircon/system/ulib/ddk",
       "//zircon/system/ulib/ddktl",
     ]
   }

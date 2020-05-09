@@ -24,7 +24,6 @@ driver_module("aml-uart") {
     "//src/devices/bus/lib/device-protocol-platform-device",
     "//src/devices/lib/amlogic",
     "//src/devices/lib/driver",
-    "//zircon/public/lib/ddk",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/hwreg",
@@ -32,6 +31,7 @@ driver_module("aml-uart") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/ddktl",
   ]
 }
@@ -56,7 +56,6 @@ test("aml-uart-test") {
     "//src/devices/lib/amlogic",
     "//src/devices/testing/fake-mmio-reg",
     "//src/devices/testing/fake_ddk",
-    "//zircon/public/lib/ddk",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/hwreg",
@@ -65,6 +64,7 @@ test("aml-uart-test") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/ddktl",
   ]
 }

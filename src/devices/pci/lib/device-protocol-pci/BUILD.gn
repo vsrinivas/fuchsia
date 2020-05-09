@@ -9,8 +9,8 @@ zx_library("device-protocol-pci") {
   sdk_headers = [ "lib/device-protocol/pci.h" ]
   sources = [ "pci.cc" ]
   deps = [
-    "//zircon/public/lib/ddk",
     "//zircon/public/lib/mmio",
+    "//zircon/system/ulib/ddk",
   ]
   public_deps = [
     # <lib/device-protocol/pci.h> has #include <ddk/protocol/pci.h>

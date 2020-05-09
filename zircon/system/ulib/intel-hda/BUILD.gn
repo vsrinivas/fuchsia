@@ -48,13 +48,13 @@ zx_library("intel-hda") {
   ]
   deps = [
     "//sdk/fidl/fuchsia.hardware.audio:fuchsia.hardware.audio_llcpp",
-    "//zircon/public/lib/ddk",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/abs_clock",
     "//zircon/system/ulib/audio-driver-proto",
     "//zircon/system/ulib/audio-proto-utils",
+    "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/dispatcher-pool",
   ]
 }

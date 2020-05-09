@@ -30,13 +30,13 @@ zx_library("ddktl") {
     "//zircon/public/lib/zx",
 
     # <ddktl/fidl.h> has #include <ddk/device.h>
-    "//zircon/public/lib/ddk",
+    "//zircon/system/ulib/ddk",
   ]
   deps = [
-    "//zircon/public/lib/ddk",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/mmio",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/ddk",
   ]
 }

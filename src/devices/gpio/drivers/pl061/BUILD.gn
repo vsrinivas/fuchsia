@@ -10,7 +10,7 @@ source_set("pl061") {
     "//sdk/banjo/ddk.protocol.gpio",
     "//sdk/banjo/ddk.protocol.gpioimpl",
     "//sdk/banjo/ddk.protocol.platform.device",
-    "//zircon/public/lib/ddk",
+    "//zircon/system/ulib/ddk",
   ]
 
   include_dirs = [ "//src/devices/gpio/drivers/pl061/include" ]

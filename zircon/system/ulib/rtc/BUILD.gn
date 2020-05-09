@@ -21,6 +21,6 @@ zx_library("rtc") {
   deps = [
     "//sdk/fidl/fuchsia.hardware.rtc:fuchsia.hardware.rtc_c",
     "//src/devices/lib/driver",
-    "//zircon/public/lib/ddk",
+    "//zircon/system/ulib/ddk",
   ]
 }

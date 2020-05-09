@@ -57,7 +57,7 @@ zx_library("hid") {
   ]
   deps = [
     "//sdk/fidl/fuchsia.hardware.input:fuchsia.hardware.input_c",
-    "//zircon/public/lib/ddk",
+    "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/ddktl",
   ]
 }

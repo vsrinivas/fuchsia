@@ -34,13 +34,13 @@ executable("tests") {
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
-    "//zircon/public/lib/ddk",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/inspector",
     "//zircon/system/fidl/fuchsia-device",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io",
+    "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/devmgr-integration-test",
   ]
 }

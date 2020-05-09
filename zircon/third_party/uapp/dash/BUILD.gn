@@ -67,13 +67,13 @@ executable("dash") {
   ]
   deps = [
     "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_c",
-    "//zircon/public/lib/ddk-device-headers",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/linenoise",
     "//zircon/public/lib/pretty",
     "//zircon/public/lib/zircon-internal",
     "//zircon/system/fidl/fuchsia-device-manager:c",
     "//zircon/system/fidl/fuchsia-hardware-pty:c",
+    "//zircon/system/ulib/ddk:ddk-device-headers",
   ]
 
   # TODO(41901): UBSan has found an instance of undefined behavior in this target.

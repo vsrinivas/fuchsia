@@ -19,7 +19,6 @@ source_set("virtio") {
   public_deps = [
     "//sdk/banjo/ddk.protocol.pci",
     "//src/devices/pci/lib/device-protocol-pci",
-    "//zircon/public/lib/ddk",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/hwreg",
@@ -28,6 +27,7 @@ source_set("virtio") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/ddktl",
     "//zircon/system/ulib/hid",
     "//zircon/system/ulib/virtio",

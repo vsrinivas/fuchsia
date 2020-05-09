@@ -26,11 +26,11 @@ zx_library("simplehid") {
     "//zircon/public/lib/zircon-internal",
   ]
   deps = [
-    "//zircon/public/lib/ddk",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/ddktl",
   ]
 }

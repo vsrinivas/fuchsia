@@ -22,8 +22,8 @@ driver_module("devhost-test") {
   deps = [
     ":fuchsia.device.devhost.test_llcpp",
     "//src/devices/lib/driver",
-    "//zircon/public/lib/ddk",
     "//zircon/public/lib/fdio",
+    "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/ddktl",
   ]
 
@@ -42,8 +42,8 @@ driver_module("devhost-test-manual") {
   deps = [
     ":fuchsia.device.devhost.test_llcpp",
     "//src/devices/lib/driver",
-    "//zircon/public/lib/ddk",
     "//zircon/public/lib/fdio",
+    "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/ddktl",
   ]
 
@@ -61,8 +61,8 @@ driver_module("devhost-test-child") {
   sources = [ "test-driver-child.cc" ]
   deps = [
     "//src/devices/lib/driver",
-    "//zircon/public/lib/ddk",
     "//zircon/public/lib/fdio",
+    "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/ddktl",
   ]
 

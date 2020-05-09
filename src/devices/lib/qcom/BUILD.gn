@@ -8,5 +8,5 @@ zx_library("qcom") {
   sdk = "source"
   sdk_headers = [ "qcom/smc.h" ]
   sources = [ "qcom-smc.cc" ]
-  deps = [ "//zircon/public/lib/ddk" ]
+  deps = [ "//zircon/system/ulib/ddk" ]
 }

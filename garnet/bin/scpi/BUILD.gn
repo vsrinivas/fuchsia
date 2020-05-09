@@ -19,8 +19,8 @@ source_set("lib") {
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
-    "//zircon/public/lib/ddk",
     "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/ddk",
   ]
 }
 

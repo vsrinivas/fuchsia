@@ -8,7 +8,7 @@ static_library("sim-fake-ap") {
     "sim-fake-ap.h",
   ]
 
-  deps = [ "//zircon/public/lib/ddk" ]
+  deps = [ "//zircon/system/ulib/ddk" ]
 
   public_deps = [
     "//garnet/lib/wlan/protocol:protocol",

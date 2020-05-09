@@ -17,8 +17,8 @@ driver_module("bootpart") {
     "//sdk/banjo/ddk.protocol.block.partition",
     "//src/devices/lib/driver",
     "//zircon/public/lib/cksum",
-    "//zircon/public/lib/ddk",
     "//zircon/public/lib/sync",
+    "//zircon/system/ulib/ddk",
   ]
 }
 

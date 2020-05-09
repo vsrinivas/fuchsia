@@ -24,11 +24,11 @@ driver_module("aml-sd-emmc") {
     "//src/devices/bus/lib/device-protocol-platform-device",
     "//src/devices/lib/amlogic",
     "//src/devices/lib/driver",
-    "//zircon/public/lib/ddk",
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/mmio",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
+    "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/ddktl",
   ]
 }
@@ -49,13 +49,13 @@ test("aml-sd-emmc-test") {
     "//src/devices/bus/lib/device-protocol-platform-device",
     "//src/devices/lib/amlogic",
     "//src/devices/testing/fake_ddk",
-    "//zircon/public/lib/ddk",
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/mmio",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/ddktl",
   ]
 }

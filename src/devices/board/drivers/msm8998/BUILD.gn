@@ -17,8 +17,8 @@ driver_module("msm8998") {
   deps = [
     "//sdk/banjo/ddk.protocol.platform.bus",
     "//src/devices/lib/driver",
-    "//zircon/public/lib/ddk",
     "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/ddktl",
   ]
 

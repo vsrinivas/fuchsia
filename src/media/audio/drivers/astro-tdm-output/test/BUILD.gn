@@ -29,7 +29,6 @@ test("astro-audio-out-test") {
     "//src/devices/testing/fake_ddk",
     "//src/devices/testing/mock-mmio-reg",
     "//src/media/audio/lib/simple-audio-stream",
-    "//zircon/public/lib/ddk",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/mmio",
@@ -40,6 +39,7 @@ test("astro-audio-out-test") {
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/audio-driver-proto",
     "//zircon/system/ulib/audio-proto-utils",
+    "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/ddktl",
   ]
 }

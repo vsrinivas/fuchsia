@@ -23,10 +23,10 @@ driver_module("driver") {
     "//src/connectivity/bluetooth/core/bt-host/hci",
     "//src/devices/lib/driver",
     "//src/devices/usb/lib/usb",
-    "//zircon/public/lib/ddk",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/ddktl",
   ]
 

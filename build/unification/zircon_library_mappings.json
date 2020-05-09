@@ -1,5 +1,15 @@
 [
   {
+    "label": "//zircon/system/ulib/ddk:ddk",
+    "name": "ddk",
+    "sdk": false
+  },
+  {
+    "label": "//zircon/system/ulib/ddk:ddk-device-headers",
+    "name": "ddk-device-headers",
+    "sdk": false
+  },
+  {
     "label": "//zircon/system/ulib/ddktl:ddktl",
     "name": "ddktl",
     "sdk": false

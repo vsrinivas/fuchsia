@@ -22,7 +22,6 @@ driver_module("dwc2") {
     "//src/devices/bus/lib/device-protocol-pdev",
     "//src/devices/lib/driver",
     "//src/devices/usb/lib/usb",
-    "//zircon/public/lib/ddk",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/hwreg",
@@ -30,6 +29,7 @@ driver_module("dwc2") {
     "//zircon/public/lib/pretty",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/ddktl",
   ]
 }

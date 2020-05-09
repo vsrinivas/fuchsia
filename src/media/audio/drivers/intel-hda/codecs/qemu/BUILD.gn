@@ -23,11 +23,11 @@ driver_module("qemu-audio-codec") {
     "//sdk/banjo/ddk.protocol.intelhda.codec",
     "//sdk/banjo/ddk.protocol.pci",
     "//src/devices/lib/driver",
-    "//zircon/public/lib/ddk",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/audio-driver-proto",
     "//zircon/system/ulib/audio-proto-utils",
+    "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/dispatcher-pool",
     "//zircon/system/ulib/intel-hda",
   ]

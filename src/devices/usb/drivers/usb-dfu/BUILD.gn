@@ -19,12 +19,12 @@ driver_module("usb-dfu") {
     "//sdk/fidl/fuchsia.hardware.usb.fwloader:fuchsia.hardware.usb.fwloader_c",
     "//src/devices/lib/driver",
     "//src/devices/usb/lib/usb",
-    "//zircon/public/lib/ddk",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
     "//zircon/system/fidl/fuchsia-mem:c",
+    "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/ddktl",
   ]
 }

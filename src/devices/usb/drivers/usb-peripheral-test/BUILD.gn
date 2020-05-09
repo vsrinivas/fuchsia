@@ -23,9 +23,9 @@ if (is_fuchsia) {
       "//sdk/banjo/ddk.protocol.usb.request",
       "//src/devices/lib/driver",
       "//src/devices/usb/lib/usb",
-      "//zircon/public/lib/ddk",
       "//zircon/public/lib/fbl",
       "//zircon/public/lib/sync",
+      "//zircon/system/ulib/ddk",
     ]
   }
 

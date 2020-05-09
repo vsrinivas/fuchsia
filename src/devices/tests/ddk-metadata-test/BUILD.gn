@@ -17,15 +17,13 @@ driver_module("driver") {
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
-  sources = [
-    "metadata-test.cc",
-  ]
+  sources = [ "metadata-test.cc" ]
   deps = [
     "//src/devices/lib/driver",
-    "//zircon/public/lib/ddk",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/ddk",
   ]
 
   visibility = [ ":*" ]

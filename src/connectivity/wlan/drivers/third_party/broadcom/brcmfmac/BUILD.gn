@@ -46,8 +46,8 @@ source_set("debug") {
   sources = [ "debug.cc" ]
   public = [ "debug.h" ]
   public_deps = [
-    "//zircon/public/lib/ddk",
     "//zircon/system/public",
+    "//zircon/system/ulib/ddk",
   ]
 }
 
@@ -170,7 +170,7 @@ source_set("core") {
     ":debug",
     "//sdk/banjo/ddk.hw.wlan.wlaninfo",
     "//src/connectivity/wlan/lib/common/cpp:common",
-    "//zircon/public/lib/ddk",
+    "//zircon/system/ulib/ddk",
   ]
   public_deps = [
     ":linuxisms",

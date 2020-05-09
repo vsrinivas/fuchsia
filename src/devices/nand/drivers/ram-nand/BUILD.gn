@@ -20,13 +20,13 @@ driver_module("ram-nand") {
     ":common",
     "//sdk/banjo/ddk.protocol.nand",
     "//src/devices/lib/driver",
-    "//zircon/public/lib/ddk",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/system/fidl/fuchsia-hardware-nand:c",
+    "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/ddktl",
   ]
 }
@@ -36,10 +36,10 @@ source_set("common") {
   sources = [ "ram-nand.cc" ]
   deps = [
     "//sdk/banjo/ddk.protocol.nand",
-    "//zircon/public/lib/ddk",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/system/fidl/fuchsia-hardware-nand:c",
+    "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/ddktl",
   ]
 }
@@ -59,7 +59,6 @@ test("ram-nand-test") {
     ":common",
     "//sdk/banjo/ddk.protocol.nand",
     "//src/devices/testing/fake_ddk",
-    "//zircon/public/lib/ddk",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/fzl",
@@ -69,6 +68,7 @@ test("ram-nand-test") {
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/fidl/fuchsia-hardware-nand:c",
+    "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/ddktl",
     "//zircon/system/ulib/devmgr-integration-test",
     "//zircon/system/ulib/devmgr-launcher",

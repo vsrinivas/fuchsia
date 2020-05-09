@@ -22,12 +22,12 @@ test("platform-bus") {
   sources = [ "main.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo_llcpp",
-    "//zircon/public/lib/ddk",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/libzbi",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/devmgr-integration-test",
     "//zircon/system/ulib/devmgr-launcher",
   ]
@@ -81,8 +81,8 @@ driver_module("test-board") {
     "//sdk/banjo/ddk.protocol.platform.device",
     "//src/devices/lib/amlogic",
     "//src/devices/lib/driver",
-    "//zircon/public/lib/ddk",
     "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/ddktl",
   ]
 }
@@ -100,9 +100,9 @@ driver_module("test-gpio") {
     "//sdk/banjo/ddk.protocol.platform.bus",
     "//sdk/banjo/ddk.protocol.platform.device",
     "//src/devices/lib/driver",
-    "//zircon/public/lib/ddk",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/ddktl",
   ]
 }
@@ -120,9 +120,9 @@ driver_module("test-power") {
     "//sdk/banjo/ddk.protocol.power",
     "//sdk/banjo/ddk.protocol.powerimpl",
     "//src/devices/lib/driver",
-    "//zircon/public/lib/ddk",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/ddktl",
   ]
 }
@@ -140,9 +140,9 @@ driver_module("test-clock") {
     "//sdk/banjo/ddk.protocol.platform.bus",
     "//sdk/banjo/ddk.protocol.platform.device",
     "//src/devices/lib/driver",
-    "//zircon/public/lib/ddk",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/ddktl",
   ]
 }
@@ -160,9 +160,9 @@ driver_module("test-i2c") {
     "//sdk/banjo/ddk.protocol.platform.bus",
     "//sdk/banjo/ddk.protocol.platform.device",
     "//src/devices/lib/driver",
-    "//zircon/public/lib/ddk",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/ddktl",
   ]
 }
@@ -180,9 +180,9 @@ driver_module("test-spi") {
     "//sdk/banjo/ddk.protocol.spi",
     "//sdk/banjo/ddk.protocol.spiimpl",
     "//src/devices/lib/driver",
-    "//zircon/public/lib/ddk",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/ddktl",
   ]
 }
@@ -199,9 +199,9 @@ driver_module("test-audio-codec") {
     "//sdk/banjo/ddk.protocol.platform.bus",
     "//sdk/banjo/ddk.protocol.platform.device",
     "//src/devices/lib/driver",
-    "//zircon/public/lib/ddk",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/ddktl",
   ]
 }
@@ -218,9 +218,9 @@ driver_module("test-pwm") {
     "//sdk/banjo/ddk.protocol.platform.device",
     "//sdk/banjo/ddk.protocol.pwm",
     "//src/devices/lib/driver",
-    "//zircon/public/lib/ddk",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/ddktl",
   ]
 }
@@ -244,9 +244,9 @@ foreach(driver, simple_drivers) {
       "//sdk/banjo/ddk.protocol.pwm",
       "//sdk/banjo/ddk.protocol.spi",
       "//src/devices/lib/driver",
-      "//zircon/public/lib/ddk",
       "//zircon/public/lib/sync",
       "//zircon/system/dev/lib/device-protocol-i2c",
+      "//zircon/system/ulib/ddk",
     ]
   }
 

@@ -73,7 +73,7 @@ if (target_cpu == "arm64") {
   source_set("test_support") {
     deps = [
       "//src/devices/lib/driver",
-      "//zircon/public/lib/ddk",
+      "//zircon/system/ulib/ddk",
     ]
     sources = [ "tests/test_support.h" ]
   }
@@ -154,7 +154,6 @@ if (target_cpu == "arm64") {
       "//zircon/public/lib/async-cpp",
       "//zircon/public/lib/async-loop-cpp",
       "//zircon/public/lib/async-loop-default",
-      "//zircon/public/lib/ddk",
       "//zircon/public/lib/fbl",
       "//zircon/public/lib/fit",
       "//zircon/public/lib/hwreg",
@@ -163,6 +162,7 @@ if (target_cpu == "arm64") {
       "//zircon/public/lib/sync",
       "//zircon/public/lib/trace-driver",
       "//zircon/public/lib/zx",
+      "//zircon/system/ulib/ddk",
       "//zircon/system/ulib/ddktl",
       "//zircon/system/ulib/tee-client-api",
     ]
