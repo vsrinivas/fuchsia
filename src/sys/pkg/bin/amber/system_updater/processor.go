@@ -18,14 +18,14 @@ import (
 	"syscall"
 	"syscall/zx"
 	"syscall/zx/fdio"
-	zxio "syscall/zx/io"
 
 	fuchsiaio "fidl/fuchsia/io"
 	"fidl/fuchsia/mem"
 	"fidl/fuchsia/paver"
 	"fidl/fuchsia/pkg"
+
 	"fuchsia.googlesource.com/component"
-	"syslog"
+	"fuchsia.googlesource.com/syslog"
 )
 
 // When this suffix is found in the "images" file, it indicates a typed image
@@ -789,7 +789,7 @@ func bufferForFile(f *os.File) (*mem.Buffer, error) {
 		return nil, fmt.Errorf("not fdio file")
 	}
 
-	status, buffer, err := fio.GetBuffer(zxio.VmoFlagRead)
+	status, buffer, err := fio.GetBuffer(fuchsiaio.VmoFlagRead)
 	if err != nil {
 		return nil, fmt.Errorf("GetBuffer fidl error: %q", err)
 	}

@@ -17,7 +17,7 @@ go_library("metrics_lib") {
   name = "metrics"
   source_dir = "metrics"
   deps = [
-    "//garnet/public/lib/syslog/go/src/syslog",
+    "//src/lib/syslog/go",
     "//zircon/system/fidl/fuchsia-cobalt($go_toolchain)",
     "//zircon/system/fidl/fuchsia-mem($go_toolchain)",
   ]
@@ -26,12 +26,12 @@ go_library("metrics_lib") {
 go_library("lib") {
   name = "amber"
   deps = [
-    "//garnet/public/lib/syslog/go/src/syslog",
     "//sdk/fidl/fuchsia.pkg($go_toolchain)",
     "//sdk/fidl/fuchsia.pkg.rewrite($go_toolchain)",
     "//sdk/fidl/fuchsia.space($go_toolchain)",
     "//sdk/fidl/fuchsia.sys($go_toolchain)",
     "//sdk/fidl/fuchsia.update($go_toolchain)",
+    "//src/lib/syslog/go",
   ]
 }
 

@@ -100,7 +100,6 @@ group("all") {
     "//garnet/public/lib/inspect_deprecated/query/tests:inspect_query_unittests",
     "//garnet/public/lib/inspect_deprecated/tests:inspect_unittests",
     "//garnet/public/lib/syslog/cpp:tests",
-    "//garnet/public/lib/syslog/go/src/syslog:syslog_gotests",
     "//garnet/public/rust:rust-crates-tests",
     "//garnet/public/rust/fuchsia-bootfs:fuchsia-bootfs-tests",
     "//garnet/public/rust/fuchsia-hyper:fuchsia-hyper-tests",

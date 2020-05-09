@@ -443,7 +443,6 @@ group("deprecated_package_underscore") {
     "//src/lib/storage:vfs_tests",
     "//src/lib/streammap:streammap_tests",
     "//src/lib/syslog/cpp:cpp-tests",
-    "//src/lib/syslog/go/src/syslog:syslog_gotests",
     "//src/lib/test_executor/rust:test_executor_unittests",
     "//src/lib/test_util:rust_test_util_tests",
     "//src/lib/testing/loop_fixture:loop_fixture_tests",

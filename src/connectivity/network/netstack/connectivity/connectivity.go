@@ -11,7 +11,7 @@ import (
 	"syscall/zx/fidl"
 
 	"fuchsia.googlesource.com/component"
-	"syslog"
+	"fuchsia.googlesource.com/syslog"
 
 	"netstack/fidlconv"
 	"netstack/util"

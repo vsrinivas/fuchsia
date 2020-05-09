@@ -11,9 +11,10 @@ import (
 	"os"
 	"strings"
 	"syscall/zx"
-	"syslog"
 	"testing"
 	"unicode/utf8"
+
+	"fuchsia.googlesource.com/syslog"
 )
 
 var pid = uint64(os.Getpid())

@@ -9,7 +9,7 @@ import (
 	"net"
 	"syscall/zx/fidl"
 
-	"syslog"
+	"fuchsia.googlesource.com/syslog"
 
 	"netstack/dns"
 

@@ -12,7 +12,6 @@ import (
 	"syscall/zx/fdio"
 
 	"fuchsia.googlesource.com/component"
-
 	"fuchsia.googlesource.com/pmd/pkgfs"
 )
 

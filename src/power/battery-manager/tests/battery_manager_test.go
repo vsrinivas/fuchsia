@@ -8,14 +8,14 @@ import (
 	"context"
 	"sync"
 	"sync/atomic"
+	"syscall/zx/dispatch"
+	"syscall/zx/fidl"
 	"testing"
 	"time"
 
-	"fuchsia.googlesource.com/component"
-	"syscall/zx/dispatch"
-	"syscall/zx/fidl"
-
 	"fidl/fuchsia/power"
+
+	"fuchsia.googlesource.com/component"
 )
 
 type ClientMock struct {

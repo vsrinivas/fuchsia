@@ -120,7 +120,6 @@ go_library("netstack_lib") {
   deps = [
     ":networking_metrics_golib",
     "//garnet/go/src/fidlext/fuchsia/hardware/ethernet:fidlext_fuchsia_hardware_ethernet_fake_lib($go_toolchain)",
-    "//garnet/public/lib/syslog/go/src/syslog",
     "//sdk/fidl/fuchsia.hardware.ethernet($go_toolchain)",
     "//sdk/fidl/fuchsia.inspect.deprecated($go_toolchain)",
     "//sdk/fidl/fuchsia.net.dhcp($go_toolchain)",
@@ -131,6 +130,7 @@ go_library("netstack_lib") {
     "//sdk/fidl/fuchsia.stash($go_toolchain)",
     "//sdk/fidl/fuchsia.sys($go_toolchain)",
     "//src/lib/component/go",
+    "//src/lib/syslog/go",
     "//third_party/golibs:github.com/google/btree",
     "//third_party/golibs:github.com/google/go-cmp",
     "//third_party/golibs:golang.org/x/net",

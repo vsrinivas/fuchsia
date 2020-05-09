@@ -12,7 +12,7 @@ import (
 	"syscall/zx/fidl"
 	"syscall/zx/zxwait"
 
-	"syslog"
+	"fuchsia.googlesource.com/syslog"
 
 	"netstack/fidlconv"
 	"netstack/link"

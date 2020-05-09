@@ -17,9 +17,9 @@ import (
 	devmgr "fidl/fuchsia/device/manager"
 	"fidl/fuchsia/pkg"
 	"fidl/fuchsia/space"
-	"fuchsia.googlesource.com/component"
-	"syslog"
 
+	"fuchsia.googlesource.com/component"
+	"fuchsia.googlesource.com/syslog"
 	"metrics"
 )
 

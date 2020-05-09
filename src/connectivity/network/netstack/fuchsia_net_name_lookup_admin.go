@@ -7,9 +7,9 @@ package netstack
 import (
 	"syscall/zx/fidl"
 
+	"fuchsia.googlesource.com/syslog"
 	"netstack/dns"
 	"netstack/fidlconv"
-	"syslog"
 
 	"fidl/fuchsia/net"
 	"fidl/fuchsia/net/name"

@@ -13,7 +13,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"syslog"
+	"fuchsia.googlesource.com/syslog"
 
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/header"

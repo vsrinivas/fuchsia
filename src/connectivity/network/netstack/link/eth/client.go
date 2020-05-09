@@ -14,9 +14,9 @@ import (
 	"syscall/zx/zxwait"
 	"unsafe"
 
+	"fuchsia.googlesource.com/syslog"
 	"netstack/link"
 	"netstack/link/fifo"
-	"syslog"
 
 	"fidl/fuchsia/hardware/ethernet"
 

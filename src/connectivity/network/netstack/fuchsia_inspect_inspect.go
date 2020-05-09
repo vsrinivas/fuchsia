@@ -14,10 +14,10 @@ import (
 	"syscall/zx/fidl"
 
 	"fuchsia.googlesource.com/component"
+	"fuchsia.googlesource.com/syslog"
 	"netstack/dhcp"
 	"netstack/link"
 	"netstack/link/eth"
-	"syslog"
 
 	"fidl/fuchsia/hardware/ethernet"
 	inspect "fidl/fuchsia/inspect/deprecated"

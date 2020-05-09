@@ -8,16 +8,17 @@ import (
 	"bytes"
 	"crypto/rand"
 	"fmt"
-	"fuchsia.googlesource.com/component"
 	"io/ioutil"
 	"log"
 	"math/big"
 	"os"
 	"os/exec"
 	"strings"
-	"syslog"
 	"testing"
 	"time"
+
+	"fuchsia.googlesource.com/component"
+	"fuchsia.googlesource.com/syslog"
 )
 
 const (

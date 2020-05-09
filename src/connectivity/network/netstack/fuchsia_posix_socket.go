@@ -18,7 +18,7 @@ import (
 	"syscall/zx/zxsocket"
 	"syscall/zx/zxwait"
 
-	"syslog"
+	"fuchsia.googlesource.com/syslog"
 
 	"fidl/fuchsia/io"
 	"fidl/fuchsia/posix/socket"

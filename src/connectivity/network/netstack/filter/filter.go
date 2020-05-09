@@ -8,7 +8,7 @@ package filter
 import (
 	"sync/atomic"
 
-	"syslog"
+	"fuchsia.googlesource.com/syslog"
 
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/buffer"

@@ -7,8 +7,8 @@ package netstack
 import (
 	"context"
 	"fmt"
+	"fuchsia.googlesource.com/syslog"
 	"sync"
-	"syslog"
 	"time"
 
 	"gvisor.dev/gvisor/pkg/tcpip"

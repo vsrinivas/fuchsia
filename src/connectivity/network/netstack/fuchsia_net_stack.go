@@ -9,7 +9,7 @@ import (
 	"sort"
 	"syscall/zx/fidl"
 
-	"syslog"
+	"fuchsia.googlesource.com/syslog"
 
 	"netstack/fidlconv"
 	"netstack/link"

@@ -12,7 +12,7 @@ import (
 	"strings"
 	"sync"
 
-	"syslog"
+	"fuchsia.googlesource.com/syslog"
 
 	"netstack/util"
 

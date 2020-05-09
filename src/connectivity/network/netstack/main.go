@@ -25,12 +25,12 @@ import (
 	"time"
 
 	"fuchsia.googlesource.com/component"
+	"fuchsia.googlesource.com/syslog"
 	"netstack/connectivity"
 	"netstack/dns"
 	"netstack/filter"
 	"netstack/pprof"
 	"networking_metrics_golib"
-	"syslog"
 
 	"fidl/fuchsia/cobalt"
 	"fidl/fuchsia/device"

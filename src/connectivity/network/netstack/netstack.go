@@ -14,7 +14,7 @@ import (
 	"syscall/zx/dispatch"
 	"time"
 
-	"syslog"
+	"fuchsia.googlesource.com/syslog"
 
 	"netstack/connectivity"
 	"netstack/dhcp"

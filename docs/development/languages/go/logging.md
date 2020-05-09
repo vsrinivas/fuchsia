@@ -14,7 +14,7 @@ The necessary packages can be included with an addition to `deps` in `BUILD.gn`:
 ```
 deps = [
     "//src/lib/component/go",
-    "//src/lib/syslog/go/src/syslog",
+    "//src/lib/syslog/go",
 ]
 ```
 

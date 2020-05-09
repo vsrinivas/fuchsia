@@ -25,12 +25,13 @@ import (
 	"time"
 	"unicode"
 
-	"amber/urlscope"
 	fuchsiaio "fidl/fuchsia/io"
 	"fidl/fuchsia/pkg"
 	"fidl/fuchsia/pkg/rewrite"
 	"fidl/fuchsia/space"
 	"fidl/fuchsia/update"
+
+	"amber/urlscope"
 	"fuchsia.googlesource.com/component"
 )
 
