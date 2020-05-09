@@ -123,12 +123,12 @@ test_package("camera_tests") {
     },
     {
       name = "stream_provider_test"
-      manifest = "examples/camera_display/stream_provider/test/test.cmx"
+      manifest = "examples/camera_display/stream_provider/test/stream_provider_test.cmx"
       environments = [ sherlock_env ]
     },
     {
       name = "fake_legacy_stream_test"
-      manifest = "lib/fake_legacy_stream/test/test.cmx"
+      manifest = "lib/fake_legacy_stream/test/fake_legacy_stream_test.cmx"
       environments = basic_envs
     },
     {
@@ -138,32 +138,33 @@ test_package("camera_tests") {
     },
     {
       name = "device_watcher_test"
-      manifest = "//src/camera/bin/device_watcher/test/test.cmx"
+      manifest = "//src/camera/bin/device_watcher/test/device_watcher_test.cmx"
       environments = [ sherlock_env ]
     },
     {
       name = "device_test"
-      manifest = "//src/camera/bin/device/test/test.cmx"
+      manifest = "//src/camera/bin/device/test/device_test.cmx"
       environments = basic_envs
     },
     {
       name = "fake_stream_test"
-      manifest = "//src/camera/lib/fake_stream/test/test.cmx"
+      manifest = "//src/camera/lib/fake_stream/test/fake_stream_test.cmx"
       environments = basic_envs
     },
     {
       name = "fake_camera_test"
-      manifest = "//src/camera/lib/fake_camera/test/test.cmx"
+      manifest = "//src/camera/lib/fake_camera/test/fake_camera_test.cmx"
       environments = basic_envs
     },
     {
       name = "virtual_camera_test"
-      manifest = "//src/camera/lib/virtual_camera/test/test.cmx"
+      manifest = "//src/camera/lib/virtual_camera/test/virtual_camera_test.cmx"
       environments = basic_envs
     },
     {
       name = "hanging_get_helper_test"
-      manifest = "//src/camera/lib/hanging_get_helper/test/test.cmx"
+      manifest =
+          "//src/camera/lib/hanging_get_helper/test/hanging_get_helper_test.cmx"
       environments = basic_envs
     },
 

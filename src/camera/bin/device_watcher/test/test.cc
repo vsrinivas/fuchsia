@@ -117,7 +117,8 @@ TEST_F(DeviceWatcherTest, WatchDevicesFindsCameras) {
 
 TEST_F(DeviceWatcherTest, InstanceLaunches) {
   sys::testing::FakeLauncher fake_launcher;
-  constexpr auto kCameraDeviceUrl = "fuchsia-pkg://fuchsia.com/camera_device#meta/manifest.cmx";
+  constexpr auto kCameraDeviceUrl =
+      "fuchsia-pkg://fuchsia.com/camera_device#meta/camera_device.cmx";
   bool camera_launched = false;
   fake_launcher.RegisterComponent(
       kCameraDeviceUrl, [&](fuchsia::sys::LaunchInfo launch_info,

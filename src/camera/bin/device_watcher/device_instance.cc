@@ -14,7 +14,7 @@
 #include "lib/sys/cpp/service_directory.h"
 
 // Known path for the camera_device package manifest.
-constexpr auto kCameraDeviceUrl = "fuchsia-pkg://fuchsia.com/camera_device#meta/manifest.cmx";
+constexpr auto kCameraDeviceUrl = "fuchsia-pkg://fuchsia.com/camera_device#meta/camera_device.cmx";
 
 // Arbitrary string identifying the camera device protocol. The protocol does not have a fixed name
 // because it is not marked as [Discoverable].

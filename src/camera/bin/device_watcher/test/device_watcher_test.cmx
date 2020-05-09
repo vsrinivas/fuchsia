@@ -2,8 +2,8 @@
     "facets": {
         "fuchsia.test": {
             "injected-services": {
-                "fuchsia.camera.test.DeviceWatcherTester": "fuchsia-pkg://fuchsia.com/camera_device_watcher#meta/manifest.cmx",
-                "fuchsia.camera3.DeviceWatcher": "fuchsia-pkg://fuchsia.com/camera_device_watcher#meta/manifest.cmx"
+                "fuchsia.camera.test.DeviceWatcherTester": "fuchsia-pkg://fuchsia.com/camera_device_watcher#meta/camera_device_watcher.cmx",
+                "fuchsia.camera3.DeviceWatcher": "fuchsia-pkg://fuchsia.com/camera_device_watcher#meta/camera_device_watcher.cmx"
             }
         }
     },
