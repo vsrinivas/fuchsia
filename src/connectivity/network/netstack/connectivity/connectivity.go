@@ -10,7 +10,7 @@ import (
 	"syscall/zx/dispatch"
 	"syscall/zx/fidl"
 
-	"app/context"
+	"fuchsia.googlesource.com/component"
 	"syslog"
 
 	"netstack/fidlconv"
@@ -24,7 +24,7 @@ var service = &net.ConnectivityService{}
 var reachable = false
 var mu sync.Mutex
 
-func AddOutgoingService(ctx *context.Context) error {
+func AddOutgoingService(ctx *component.Context) error {
 	ctx.OutgoingService.AddService(
 		net.ConnectivityName,
 		&net.ConnectivityWithCtxStub{Impl: struct{}{}},

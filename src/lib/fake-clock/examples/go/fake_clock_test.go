@@ -16,7 +16,7 @@ import (
 	"syscall/zx/zxwait"
 	"testing"
 
-	appcontext "app/context"
+	"fuchsia.googlesource.com/component"
 
 	mock_clock "fidl/fuchsia/testing"
 )
@@ -30,7 +30,7 @@ type FakeClockTest struct {
 // starts in the same state.
 func setup(t *testing.T) FakeClockTest {
 	service, control, _ := mock_clock.NewFakeClockControlWithCtxInterfaceRequest()
-	appcontext.CreateFromStartupInfo().ConnectToEnvService(service)
+	component.NewContextFromStartupInfo().ConnectToEnvService(service)
 
 	// Always pause the fake clock before the test starts.
 	if err := control.Pause(context.Background()); err != nil {

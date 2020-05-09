@@ -13,7 +13,7 @@ import (
 	"syscall/zx/dispatch"
 	"syscall/zx/fidl"
 
-	"app/context"
+	"fuchsia.googlesource.com/component"
 	"netstack/dhcp"
 	"netstack/link"
 	"netstack/link/eth"
@@ -76,8 +76,8 @@ func (impl *inspectImpl) OpenChild(ctx fidl.Context, childName string, childChan
 	return false, nil
 }
 
-func (impl *inspectImpl) asService() *context.Service {
-	return &context.Service{
+func (impl *inspectImpl) asService() *component.Service {
+	return &component.Service{
 		Stub: &inspect.InspectWithCtxStub{Impl: impl},
 		AddFn: func(s fidl.Stub, c zx.Channel, ctx fidl.Context) error {
 			d, ok := dispatch.GetDispatcher(ctx)
@@ -92,20 +92,20 @@ func (impl *inspectImpl) asService() *context.Service {
 
 // Inspect implementations are exposed as directories containing a node called "inspect".
 
-var _ context.Directory = (*inspectDirectory)(nil)
+var _ component.Directory = (*inspectDirectory)(nil)
 
 type inspectDirectory struct {
-	asService func() *context.Service
+	asService func() *component.Service
 }
 
-func (dir *inspectDirectory) Get(name string) (context.Node, bool) {
+func (dir *inspectDirectory) Get(name string) (component.Node, bool) {
 	if name == inspect.InspectName {
 		return dir.asService(), true
 	}
 	return nil, false
 }
 
-func (dir *inspectDirectory) ForEach(fn func(string, context.Node)) {
+func (dir *inspectDirectory) ForEach(fn func(string, component.Node)) {
 	fn(inspect.InspectName, dir.asService())
 }
 

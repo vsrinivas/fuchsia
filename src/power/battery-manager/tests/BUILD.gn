@@ -16,7 +16,7 @@ go_library("battery_manager_lib") {
     "//garnet/public/lib/syslog/go/src/syslog",
     "//sdk/fidl/fuchsia.power($go_toolchain)",
     "//sdk/fidl/fuchsia.sys($go_toolchain)",
-    "//src/lib/component/go/src/app",
+    "//src/lib/component/go",
   ]
 }
 

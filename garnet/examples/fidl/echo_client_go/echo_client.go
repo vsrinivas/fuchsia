@@ -12,7 +12,7 @@ import (
 	"syscall/zx/fdio"
 	"syscall/zx/io"
 
-	appcontext "app/context"
+	"fuchsia.googlesource.com/component"
 
 	"fidl/fidl/examples/echo"
 	"fidl/fuchsia/sys"
@@ -24,7 +24,7 @@ func main() {
 
 	flag.Parse()
 
-	ctx := appcontext.CreateFromStartupInfo()
+	ctx := component.NewContextFromStartupInfo()
 
 	directoryReq, directoryInterface, err := io.NewDirectoryWithCtxInterfaceRequest()
 	if err != nil {

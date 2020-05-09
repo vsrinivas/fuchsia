@@ -18,7 +18,7 @@ import (
 	"syscall/zx"
 	"unicode/utf8"
 
-	appcontext "app/context"
+	"fuchsia.googlesource.com/component"
 
 	"fidl/fuchsia/logger"
 
@@ -122,7 +122,7 @@ func (l *Writer) Write(data []byte) (n int, err error) {
 	return origLen, nil
 }
 
-func ConnectToLogger(c *appcontext.Connector) (zx.Socket, error) {
+func ConnectToLogger(c *component.Connector) (zx.Socket, error) {
 	localS, peerS, err := zx.NewSocket(zx.SocketDatagram)
 	if err != nil {
 		return zx.Socket(zx.HandleInvalid), err
@@ -174,7 +174,7 @@ func NewLogger(options LogInitOptions) (*Logger, error) {
 	}, nil
 }
 
-func NewLoggerWithDefaults(c *appcontext.Connector, tags ...string) (*Logger, error) {
+func NewLoggerWithDefaults(c *component.Connector, tags ...string) (*Logger, error) {
 	s, err := ConnectToLogger(c)
 	if err != nil {
 		return nil, err

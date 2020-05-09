@@ -8,7 +8,7 @@ import (
 	"context"
 	"testing"
 
-	appcontext "app/context"
+	"fuchsia.googlesource.com/component"
 
 	"fidl/fuchsia/devicesettings"
 )
@@ -18,7 +18,7 @@ const (
 )
 
 func TestDeviceSettingsSimple(t *testing.T) {
-	ctx := appcontext.CreateFromStartupInfo()
+	ctx := component.NewContextFromStartupInfo()
 	req, dm, err := devicesettings.NewDeviceSettingsManagerWithCtxInterfaceRequest()
 	if err != nil {
 		t.Fatal(err)

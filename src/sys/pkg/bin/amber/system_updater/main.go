@@ -14,10 +14,10 @@ import (
 	"syscall/zx/fidl"
 	"time"
 
-	appcontext "app/context"
 	devmgr "fidl/fuchsia/device/manager"
 	"fidl/fuchsia/pkg"
 	"fidl/fuchsia/space"
+	"fuchsia.googlesource.com/component"
 	"syslog"
 
 	"metrics"
@@ -33,7 +33,7 @@ var (
 	skipRecovery  bool
 )
 
-func run(ctx *appcontext.Context) (err error) {
+func run(ctx *component.Context) (err error) {
 	syslog.Infof("starting system update at %s", startTime)
 	syslog.Infof("initiator: %s", initiator)
 	if sourceVersion != "" {
@@ -225,7 +225,7 @@ func SendReboot() {
 	}
 }
 
-func syncBlobfs(ctx *appcontext.Context) error {
+func syncBlobfs(ctx *component.Context) error {
 	req, pxy, err := pkg.NewPackageCacheWithCtxInterfaceRequest()
 	if err != nil {
 		syslog.Errorf("cache control interface could not be acquired: %s", err)
@@ -246,7 +246,7 @@ func syncBlobfs(ctx *appcontext.Context) error {
 	return nil
 }
 
-func GcPackages(ctx *appcontext.Context) {
+func GcPackages(ctx *component.Context) {
 	req, pxy, err := space.NewManagerWithCtxInterfaceRequest()
 	if err != nil {
 		syslog.Errorf("Error creating space Manager request: %s", err)
@@ -279,7 +279,7 @@ func (i InitiatorValue) Set(s string) error {
 }
 
 func Main() {
-	ctx := appcontext.CreateFromStartupInfo()
+	ctx := component.NewContextFromStartupInfo()
 
 	{
 		if l, err := syslog.NewLoggerWithDefaults(ctx.Connector(), "system-updater"); err != nil {

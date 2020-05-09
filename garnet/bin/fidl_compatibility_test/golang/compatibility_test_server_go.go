@@ -13,7 +13,7 @@ import (
 	"syscall/zx/fidl"
 	"syscall/zx/io"
 
-	appcontext "app/context"
+	"fuchsia.googlesource.com/component"
 
 	"fidl/fidl/test/compatibility"
 	"fidl/fuchsia/sys"
@@ -22,7 +22,7 @@ import (
 var _ compatibility.EchoWithCtx = (*echoImpl)(nil)
 
 type echoImpl struct {
-	ctx *appcontext.Context
+	ctx *component.Context
 }
 
 func (echo *echoImpl) getServer(url string) (*compatibility.EchoWithCtxInterface, error) {
@@ -290,7 +290,7 @@ func (echo *echoImpl) EchoXunionsWithError(_ fidl.Context, value []compatibility
 var echoService compatibility.EchoService
 
 func main() {
-	ctx := appcontext.CreateFromStartupInfo()
+	ctx := component.NewContextFromStartupInfo()
 
 	ctx.OutgoingService.AddService(
 		compatibility.EchoName,

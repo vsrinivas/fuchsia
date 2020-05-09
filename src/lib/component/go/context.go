@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-package context
+package component
 
 import (
 	"context"
@@ -91,9 +91,9 @@ type Context struct {
 	OutgoingService   OutDirectory
 }
 
-// CreateFromStartupInfo connects to the service root directory and registers
+// NewContextFromStartupInfo connects to the service root directory and registers
 // debug services.
-func CreateFromStartupInfo() *Context {
+func NewContextFromStartupInfo() *Context {
 	c0, c1, err := zx.NewChannel(0)
 	if err != nil {
 		panic(err)

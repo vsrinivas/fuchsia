@@ -12,7 +12,7 @@ import (
 	"syscall/zx/dispatch"
 	"syscall/zx/fidl"
 
-	appcontext "app/context"
+	"fuchsia.googlesource.com/component"
 	"netstack/inspect"
 
 	fidlinspect "fidl/fuchsia/inspect"
@@ -84,24 +84,24 @@ type impl struct {
 
 const inspectName = "root.inspect"
 
-var _ appcontext.Directory = (*impl)(nil)
+var _ component.Directory = (*impl)(nil)
 
-func (i *impl) Get(name string) (appcontext.Node, bool) {
+func (i *impl) Get(name string) (component.Node, bool) {
 	if i.published && name == inspectName {
-		return &appcontext.FileWrapper{File: i}, true
+		return &component.FileWrapper{File: i}, true
 	}
 	return nil, false
 }
 
-func (i *impl) ForEach(fn func(string, appcontext.Node)) {
+func (i *impl) ForEach(fn func(string, component.Node)) {
 	if i.published {
-		fn(inspectName, &appcontext.FileWrapper{File: i})
+		fn(inspectName, &component.FileWrapper{File: i})
 	}
 }
 
-var _ appcontext.File = (*impl)(nil)
+var _ component.File = (*impl)(nil)
 
-func (i *impl) GetReader() (appcontext.Reader, uint64) {
+func (i *impl) GetReader() (component.Reader, uint64) {
 	h, err := i.vmo.Handle().Duplicate(zx.RightSameRights)
 	if err != nil {
 		panic(err)
@@ -218,7 +218,7 @@ func main() {
 		panic(err)
 	}
 
-	appCtx := appcontext.CreateFromStartupInfo()
+	appCtx := component.NewContextFromStartupInfo()
 
 	i := impl{
 		nodes: make(map[uint32]uint32),
@@ -235,7 +235,7 @@ func main() {
 			return err
 		},
 	)
-	appCtx.OutgoingService.AddDiagnostics("root", &appcontext.DirectoryWrapper{
+	appCtx.OutgoingService.AddDiagnostics("root", &component.DirectoryWrapper{
 		Directory: &i,
 	})
 

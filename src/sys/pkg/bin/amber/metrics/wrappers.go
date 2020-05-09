@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	appcontext "app/context"
+	"fuchsia.googlesource.com/component"
 
 	"fidl/fuchsia/cobalt"
 )
@@ -19,13 +19,13 @@ const (
 )
 
 var (
-	ctx              *appcontext.Context
+	ctx              *component.Context
 	logger           *cobalt.LoggerWithCtxInterface
 	setTargetChannel chan string
 )
 
 // Register uses an app context to connect to the cobalt service and configure the sw_delivery project
-func Register(c *appcontext.Context) {
+func Register(c *component.Context) {
 	ctx = c
 	ensureConnection()
 	setTargetChannel = startReleaseChannelUpdater(ctx)

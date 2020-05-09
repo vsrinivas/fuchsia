@@ -8,7 +8,7 @@ import (
 	"log"
 	"os"
 
-	appcontext "app/context"
+	"fuchsia.googlesource.com/component"
 
 	"syscall/zx"
 	"syscall/zx/dispatch"
@@ -31,7 +31,7 @@ func (echo *echoImpl) EchoString(_ fidl.Context, inValue *string) (outValue *str
 func main() {
 	quiet := (len(os.Args) > 1) && os.Args[1] == "-q"
 	var echoService echo.EchoService
-	c := appcontext.CreateFromStartupInfo()
+	c := component.NewContextFromStartupInfo()
 	c.OutgoingService.AddService(
 		echo.EchoName,
 		&echo.EchoWithCtxStub{Impl: &echoImpl{quiet: quiet}},

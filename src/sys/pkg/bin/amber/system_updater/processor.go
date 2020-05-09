@@ -20,11 +20,11 @@ import (
 	"syscall/zx/fdio"
 	zxio "syscall/zx/io"
 
-	appcontext "app/context"
 	fuchsiaio "fidl/fuchsia/io"
 	"fidl/fuchsia/mem"
 	"fidl/fuchsia/paver"
 	"fidl/fuchsia/pkg"
+	"fuchsia.googlesource.com/component"
 	"syslog"
 )
 
@@ -32,7 +32,7 @@ import (
 // that looks for all matches within the update package.
 const ImageTypeSuffix = "[_type]"
 
-func ConnectToPackageResolver(ctx *appcontext.Context) (*pkg.PackageResolverWithCtxInterface, error) {
+func ConnectToPackageResolver(ctx *component.Context) (*pkg.PackageResolverWithCtxInterface, error) {
 	req, pxy, err := pkg.NewPackageResolverWithCtxInterfaceRequest()
 
 	if err != nil {
@@ -44,7 +44,7 @@ func ConnectToPackageResolver(ctx *appcontext.Context) (*pkg.PackageResolverWith
 	return pxy, nil
 }
 
-func ConnectToPaver(ctx *appcontext.Context) (*paver.DataSinkWithCtxInterface, *paver.BootManagerWithCtxInterface, error) {
+func ConnectToPaver(ctx *component.Context) (*paver.DataSinkWithCtxInterface, *paver.BootManagerWithCtxInterface, error) {
 	req, pxy, err := paver.NewPaverWithCtxInterfaceRequest()
 
 	if err != nil {

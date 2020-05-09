@@ -9,7 +9,7 @@ import (
 	"syscall/zx/dispatch"
 	"syscall/zx/fidl"
 
-	"app/context"
+	"fuchsia.googlesource.com/component"
 	"syslog"
 
 	"fidl/fuchsia/net/filter"
@@ -21,7 +21,7 @@ type filterImpl struct {
 
 var filterService filter.FilterService
 
-func AddOutgoingService(ctx *context.Context, f *Filter) error {
+func AddOutgoingService(ctx *component.Context, f *Filter) error {
 	ctx.OutgoingService.AddService(
 		filter.FilterName,
 		&filter.FilterWithCtxStub{Impl: &filterImpl{filter: f}},

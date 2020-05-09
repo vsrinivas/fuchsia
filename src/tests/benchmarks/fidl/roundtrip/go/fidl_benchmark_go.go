@@ -9,7 +9,7 @@ import (
 	"syscall/zx/dispatch"
 	"syscall/zx/fidl"
 
-	"app/context"
+	"fuchsia.googlesource.com/component"
 
 	"fidl/fidl/benchmarks"
 )
@@ -37,7 +37,7 @@ func (b *impl) EchoHandles(ctx fidl.Context, handles []zx.Handle) ([]zx.Handle, 
 var benchmarkService benchmarks.BindingsUnderTestService
 
 func main() {
-	ctx := context.CreateFromStartupInfo()
+	ctx := component.NewContextFromStartupInfo()
 
 	dispatcher, err := dispatch.NewDispatcher()
 	if err != nil {

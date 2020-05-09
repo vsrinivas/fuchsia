@@ -13,7 +13,7 @@ import (
 	"strings"
 	"syscall/zx"
 
-	appcontext "app/context"
+	"fuchsia.googlesource.com/component"
 	"netstack/fidlconv"
 
 	"fidl/fuchsia/hardware/ethernet"
@@ -26,7 +26,7 @@ import (
 )
 
 type netstackClientApp struct {
-	ctx      *appcontext.Context
+	ctx      *component.Context
 	netstack *netstack.NetstackWithCtxInterface
 	wlan     *service.WlanWithCtxInterface
 }
@@ -443,7 +443,7 @@ func usage() {
 }
 
 func main() {
-	a := &netstackClientApp{ctx: appcontext.CreateFromStartupInfo()}
+	a := &netstackClientApp{ctx: component.NewContextFromStartupInfo()}
 	req, pxy, err := netstack.NewNetstackWithCtxInterfaceRequest()
 	if err != nil {
 		panic(err.Error())

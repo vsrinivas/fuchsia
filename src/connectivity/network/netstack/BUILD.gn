@@ -130,7 +130,7 @@ go_library("netstack_lib") {
     "//sdk/fidl/fuchsia.netstack($go_toolchain)",
     "//sdk/fidl/fuchsia.stash($go_toolchain)",
     "//sdk/fidl/fuchsia.sys($go_toolchain)",
-    "//src/lib/component/go/src/app",
+    "//src/lib/component/go",
     "//third_party/golibs:github.com/google/btree",
     "//third_party/golibs:github.com/google/go-cmp",
     "//third_party/golibs:golang.org/x/net",

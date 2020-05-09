@@ -9,18 +9,18 @@ import (
 	"os"
 	"time"
 
-	appcontext "app/context"
+	"fuchsia.googlesource.com/component"
 
 	"fidl/fuchsia/cobalt"
 )
 
 type releaseChannelUpdater struct {
 	in             chan string
-	ctx            *appcontext.Context
+	ctx            *component.Context
 	currentChannel *string
 }
 
-func startReleaseChannelUpdater(ctx *appcontext.Context) chan string {
+func startReleaseChannelUpdater(ctx *component.Context) chan string {
 	cc := readCurrentChannel()
 	in := make(chan string)
 	u := releaseChannelUpdater{in: in, ctx: ctx, currentChannel: cc}

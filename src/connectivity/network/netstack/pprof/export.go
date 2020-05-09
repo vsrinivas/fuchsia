@@ -15,19 +15,19 @@ import (
 	"syscall/zx"
 	"time"
 
-	appcontext "app/context"
+	"fuchsia.googlesource.com/component"
 	"netstack/inspect"
 )
 
 const pprofName = "pprof"
 
-func Setup(path string) (appcontext.Node, func() error, error) {
+func Setup(path string) (component.Node, func() error, error) {
 	mapDir, err := mapDirFromPath(path)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	return &appcontext.DirectoryWrapper{
+	return &component.DirectoryWrapper{
 			Directory: mapDir,
 		}, func() error {
 			t := time.NewTicker(time.Minute)
@@ -58,7 +58,7 @@ func Setup(path string) (appcontext.Node, func() error, error) {
 					return err
 				}
 				mapDir.mu.Lock()
-				mapDir.mu.m[filename] = &appcontext.FileWrapper{
+				mapDir.mu.m[filename] = &component.FileWrapper{
 					File: &sliceFile{
 						b: b,
 					},
@@ -72,12 +72,12 @@ func Setup(path string) (appcontext.Node, func() error, error) {
 		}, nil
 }
 
-var _ appcontext.Directory = (*mapDirectory)(nil)
+var _ component.Directory = (*mapDirectory)(nil)
 
 type mapDirectory struct {
 	mu struct {
 		sync.Mutex
-		m map[string]*appcontext.FileWrapper
+		m map[string]*component.FileWrapper
 	}
 }
 
@@ -94,7 +94,7 @@ func mapDirFromPath(path string) (*mapDirectory, error) {
 		return nil, err
 	}
 
-	m := make(map[string]*appcontext.FileWrapper)
+	m := make(map[string]*component.FileWrapper)
 	for _, filename := range filenames {
 		f, err := os.Open(filepath.Join(path, filename))
 		if err != nil {
@@ -107,7 +107,7 @@ func mapDirFromPath(path string) (*mapDirectory, error) {
 		if err := f.Close(); err != nil {
 			return nil, err
 		}
-		m[filename] = &appcontext.FileWrapper{
+		m[filename] = &component.FileWrapper{
 			File: &sliceFile{
 				b: b,
 			},
@@ -120,9 +120,9 @@ func mapDirFromPath(path string) (*mapDirectory, error) {
 
 const nowName = "now.inspect"
 
-var nowFile = appcontext.FileWrapper{File: &pprofFile{}}
+var nowFile = component.FileWrapper{File: &pprofFile{}}
 
-func (md *mapDirectory) Get(nodeName string) (appcontext.Node, bool) {
+func (md *mapDirectory) Get(nodeName string) (component.Node, bool) {
 	if nodeName == nowName {
 		return &nowFile, true
 	}
@@ -132,7 +132,7 @@ func (md *mapDirectory) Get(nodeName string) (appcontext.Node, bool) {
 	return value, ok
 }
 
-func (md *mapDirectory) ForEach(fn func(string, appcontext.Node)) {
+func (md *mapDirectory) ForEach(fn func(string, component.Node)) {
 	fn(nowName, &nowFile)
 	md.mu.Lock()
 	for nodeName, node := range md.mu.m {
@@ -141,14 +141,14 @@ func (md *mapDirectory) ForEach(fn func(string, appcontext.Node)) {
 	md.mu.Unlock()
 }
 
-var _ appcontext.File = (*sliceFile)(nil)
+var _ component.File = (*sliceFile)(nil)
 
 type sliceFile struct {
 	b   []byte
 	vmo zx.VMO
 }
 
-func (sf *sliceFile) GetReader() (appcontext.Reader, uint64) {
+func (sf *sliceFile) GetReader() (component.Reader, uint64) {
 	r := bytes.NewReader(sf.b)
 	return r, uint64(r.Len())
 }
@@ -174,7 +174,7 @@ func (sf *sliceFile) Close() error {
 	return nil
 }
 
-var _ appcontext.File = (*pprofFile)(nil)
+var _ component.File = (*pprofFile)(nil)
 
 type pprofFile struct{}
 
@@ -200,7 +200,7 @@ func getProfilesInspectVMOBytes() ([]byte, error) {
 	return b.Bytes(), nil
 }
 
-func (p *pprofFile) GetReader() (appcontext.Reader, uint64) {
+func (p *pprofFile) GetReader() (component.Reader, uint64) {
 	b, err := getProfilesInspectVMOBytes()
 	if err != nil {
 		panic(err)

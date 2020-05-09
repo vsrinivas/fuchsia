@@ -26,12 +26,12 @@ import (
 	"unicode"
 
 	"amber/urlscope"
-	appcontext "app/context"
 	fuchsiaio "fidl/fuchsia/io"
 	"fidl/fuchsia/pkg"
 	"fidl/fuchsia/pkg/rewrite"
 	"fidl/fuchsia/space"
 	"fidl/fuchsia/update"
+	"fuchsia.googlesource.com/component"
 )
 
 const usage = `usage: %s <command> [opts]
@@ -104,7 +104,7 @@ type Services struct {
 	updateManager *update.ManagerWithCtxInterface
 }
 
-func connectToPackageResolver(ctx *appcontext.Context) *pkg.PackageResolverWithCtxInterface {
+func connectToPackageResolver(ctx *component.Context) *pkg.PackageResolverWithCtxInterface {
 	req, pxy, err := pkg.NewPackageResolverWithCtxInterfaceRequest()
 	if err != nil {
 		panic(err)
@@ -113,7 +113,7 @@ func connectToPackageResolver(ctx *appcontext.Context) *pkg.PackageResolverWithC
 	return pxy
 }
 
-func connectToRepositoryManager(ctx *appcontext.Context) *pkg.RepositoryManagerWithCtxInterface {
+func connectToRepositoryManager(ctx *component.Context) *pkg.RepositoryManagerWithCtxInterface {
 	req, pxy, err := pkg.NewRepositoryManagerWithCtxInterfaceRequest()
 	if err != nil {
 		panic(err)
@@ -122,7 +122,7 @@ func connectToRepositoryManager(ctx *appcontext.Context) *pkg.RepositoryManagerW
 	return pxy
 }
 
-func connectToRewriteEngine(ctx *appcontext.Context) *rewrite.EngineWithCtxInterface {
+func connectToRewriteEngine(ctx *component.Context) *rewrite.EngineWithCtxInterface {
 	req, pxy, err := rewrite.NewEngineWithCtxInterfaceRequest()
 	if err != nil {
 		panic(err)
@@ -131,7 +131,7 @@ func connectToRewriteEngine(ctx *appcontext.Context) *rewrite.EngineWithCtxInter
 	return pxy
 }
 
-func connectToSpace(ctx *appcontext.Context) *space.ManagerWithCtxInterface {
+func connectToSpace(ctx *component.Context) *space.ManagerWithCtxInterface {
 	req, pxy, err := space.NewManagerWithCtxInterfaceRequest()
 	if err != nil {
 		panic(err)
@@ -140,7 +140,7 @@ func connectToSpace(ctx *appcontext.Context) *space.ManagerWithCtxInterface {
 	return pxy
 }
 
-func connectToUpdateManager(ctx *appcontext.Context) *update.ManagerWithCtxInterface {
+func connectToUpdateManager(ctx *component.Context) *update.ManagerWithCtxInterface {
 	req, pxy, err := update.NewManagerWithCtxInterfaceRequest()
 	if err != nil {
 		panic(err)
@@ -676,7 +676,7 @@ func Main() {
 		fmt.Println(`Warning: -x is no longer supported.`)
 	}
 
-	ctx := appcontext.CreateFromStartupInfo()
+	ctx := component.NewContextFromStartupInfo()
 
 	var services Services
 

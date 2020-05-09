@@ -11,7 +11,7 @@ import (
 	"os"
 	"time"
 
-	appcontext "app/context"
+	"fuchsia.googlesource.com/component"
 	"netstack/fidlconv"
 
 	"fidl/fuchsia/net"
@@ -19,12 +19,12 @@ import (
 )
 
 type testApp struct {
-	ctx      *appcontext.Context
+	ctx      *component.Context
 	netstack *netstack.NetstackWithCtxInterface
 }
 
 func main() {
-	a := &testApp{ctx: appcontext.CreateFromStartupInfo()}
+	a := &testApp{ctx: component.NewContextFromStartupInfo()}
 
 	var listen bool
 	flag.BoolVar(&listen, "listen", false, "Listen for notifications and print interfaces every time they change")

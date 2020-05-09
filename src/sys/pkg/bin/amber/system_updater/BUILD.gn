@@ -18,7 +18,7 @@ go_library("lib") {
     "//sdk/fidl/fuchsia.pkg($go_toolchain)",
     "//sdk/fidl/fuchsia.space($go_toolchain)",
     "//sdk/fidl/fuchsia.sys($go_toolchain)",
-    "//src/lib/component/go/src/app",
+    "//src/lib/component/go",
     "//src/sys/pkg/bin/amber:metrics_lib",
     "//zircon/system/fidl/fuchsia-device-manager($go_toolchain)",
     "//zircon/system/fidl/fuchsia-io($go_toolchain)",

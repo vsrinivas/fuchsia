@@ -24,7 +24,7 @@ import (
 	"syscall/zx/fidl"
 	"time"
 
-	appcontext "app/context"
+	"fuchsia.googlesource.com/component"
 	"netstack/connectivity"
 	"netstack/dns"
 	"netstack/filter"
@@ -181,7 +181,7 @@ func Main() {
 		panic(err)
 	}
 
-	appCtx := appcontext.CreateFromStartupInfo()
+	appCtx := component.NewContextFromStartupInfo()
 
 	l, err := syslog.NewLogger(syslog.LogInitOptions{
 		LogLevel:                      logLevel,
@@ -306,7 +306,7 @@ func Main() {
 	}
 
 	var inspectService deprecatedInspect.InspectService
-	appCtx.OutgoingService.AddDiagnostics("counters", &appcontext.DirectoryWrapper{
+	appCtx.OutgoingService.AddDiagnostics("counters", &component.DirectoryWrapper{
 		Directory: &inspectDirectory{
 			asService: (&inspectImpl{
 				inner: &statCounterInspectImpl{
@@ -317,10 +317,10 @@ func Main() {
 			}).asService,
 		},
 	})
-	appCtx.OutgoingService.AddDiagnostics("interfaces", &appcontext.DirectoryWrapper{
+	appCtx.OutgoingService.AddDiagnostics("interfaces", &component.DirectoryWrapper{
 		Directory: &inspectDirectory{
 			// asService is late-bound so that each call retrieves fresh NIC info.
-			asService: func() *appcontext.Service {
+			asService: func() *component.Service {
 				return (&inspectImpl{
 					inner:   &nicInfoMapInspectImpl{value: ns.getIfStateInfo(stk.NICInfo())},
 					service: &inspectService,
@@ -329,7 +329,7 @@ func Main() {
 		},
 	})
 
-	appCtx.OutgoingService.AddDiagnostics("sockets", &appcontext.DirectoryWrapper{
+	appCtx.OutgoingService.AddDiagnostics("sockets", &component.DirectoryWrapper{
 		Directory: &inspectDirectory{
 			asService: (&inspectImpl{
 				inner: &socketInfoMapInspectImpl{
@@ -512,7 +512,7 @@ func newSecretKeyForOpaqueIID() ([]byte, error) {
 // getSecretKeyForOpaqueIID gets a secret key for opaque IID generation from the
 // secure stash store service, or attempts to create one. If the stash service
 // is unavailable, a temporary secret key will be returned.
-func getSecretKeyForOpaqueIID(appCtx *appcontext.Context) ([]byte, error) {
+func getSecretKeyForOpaqueIID(appCtx *component.Context) ([]byte, error) {
 	syslog.VLogf(syslog.DebugVerbosity, "getting or creating secret key for opaque IID from secure stash store")
 
 	// Connect to the secure stash store service.
@@ -602,7 +602,7 @@ func getSecretKeyForOpaqueIID(appCtx *appcontext.Context) ([]byte, error) {
 	}
 }
 
-func connectCobaltLogger(ctx *appcontext.Context) (*cobalt.LoggerWithCtxInterface, error) {
+func connectCobaltLogger(ctx *component.Context) (*cobalt.LoggerWithCtxInterface, error) {
 	freq, cobaltLoggerFactory, err := cobalt.NewLoggerFactoryWithCtxInterfaceRequest()
 	if err != nil {
 		return nil, fmt.Errorf("could not connect to cobalt logger factory service: %s", err)

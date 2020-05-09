@@ -5,10 +5,10 @@
 package main
 
 import (
-	"app/context"
 	"bytes"
 	"crypto/rand"
 	"fmt"
+	"fuchsia.googlesource.com/component"
 	"io/ioutil"
 	"log"
 	"math/big"
@@ -31,7 +31,7 @@ func TestFullStack(t *testing.T) {
 
 	tag := genTag()
 
-	ctx := context.CreateFromStartupInfo()
+	ctx := component.NewContextFromStartupInfo()
 	{
 		l, err := syslog.NewLoggerWithDefaults(ctx.Connector(), tag)
 		if err != nil {

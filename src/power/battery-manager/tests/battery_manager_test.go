@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	appcontext "app/context"
+	"fuchsia.googlesource.com/component"
 	"syscall/zx/dispatch"
 	"syscall/zx/fidl"
 
@@ -32,7 +32,7 @@ func (pmw *WatcherMock) OnChangeBatteryInfo(_ fidl.Context, bi power.BatteryInfo
 }
 
 func TestPowerManager(t *testing.T) {
-	ctx := appcontext.CreateFromStartupInfo()
+	ctx := component.NewContextFromStartupInfo()
 	req, iface, err := power.NewBatteryManagerWithCtxInterfaceRequest()
 	if err != nil {
 		t.Fatal(err)
@@ -48,7 +48,7 @@ func TestPowerManager(t *testing.T) {
 }
 
 func TestBatteryInfoWatcher(t *testing.T) {
-	ctx := appcontext.CreateFromStartupInfo()
+	ctx := component.NewContextFromStartupInfo()
 	dispatcher, err := dispatch.NewDispatcher()
 	if err != nil {
 		t.Fatalf("couldn't initialize FIDL dispatcher: %s", err)
