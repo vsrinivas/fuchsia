@@ -51,7 +51,7 @@ template("banjo_c_target") {
     # The generated headers #include <ddk/*.h> and #include <ddktl/*.h>
     # files from the libraries (that aren't generated).
     public_deps = [
-      "//zircon/public/lib/ddk",
+      "//zircon/system/ulib/ddk",
       "//zircon/system/ulib/ddktl",
     ]
 
