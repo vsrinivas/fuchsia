@@ -1,0 +1,16 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+/// Protocols and types related to sensors.
+library fuchsia.location.sensor;
+
+using fuchsia.wlan.policy;
+
+/// Passively accepts WLAN scan results.
+[Discoverable]
+protocol WlanBaseStationWatcher {
+    /// Provides a handle with which to enumerate the stations currently visible
+    /// to the device.
+    ReportCurrentStations(fuchsia.wlan.policy.ScanResultIterator stations);
+};
