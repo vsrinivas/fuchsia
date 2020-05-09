@@ -26,8 +26,9 @@ use {
     fidl_fuchsia_io::{self as fio, DirectoryProxy},
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     fuchsia_zircon::{self as zx, AsHandleRef},
+    futures::future::TryFutureExt,
     futures::{
-        future::{join_all, BoxFuture, Either, FutureExt},
+        future::{join_all, AbortHandle, Abortable, BoxFuture, Either, FutureExt},
         lock::{MappedMutexGuard, Mutex, MutexGuard},
     },
     std::convert::TryInto,
@@ -37,6 +38,7 @@ use {
         clone::Clone,
         collections::{HashMap, HashSet},
         fmt,
+        ops::Drop,
         path::PathBuf,
         sync::{Arc, Weak},
         time::Duration,
@@ -898,6 +900,11 @@ pub struct Runtime {
 
     /// Approximates when the component was started.
     pub timestamp: zx::Time,
+
+    /// Allows the spawned background context, which is watching for the
+    /// controller channel to close, to be aborted when the `Runtime` is
+    /// dropped.
+    exit_listener: Option<AbortHandle>,
 }
 
 #[derive(Debug, PartialEq)]
@@ -954,7 +961,36 @@ impl Runtime {
             exposed_dir,
             controller,
             timestamp,
+            exit_listener: None,
         })
+    }
+
+    /// If the Runtime has a controller this creates a background context which
+    /// watches for the controller's channel to close. If the channel closes,
+    /// the background context attempts to use the WeakRealm to stop the
+    /// component.
+    pub fn watch_for_exit(&mut self, realm: WeakRealm) {
+        if let Some(controller) = &self.controller {
+            let controller_clone = controller.clone();
+            let (abort_client, abort_server) = AbortHandle::new_pair();
+            let watcher = Abortable::new(
+                async move {
+                    if let Ok(_) = fasync::OnSignals::new(
+                        &controller_clone.as_handle_ref(),
+                        zx::Signals::CHANNEL_PEER_CLOSED,
+                    )
+                    .await
+                    {
+                        if let Ok(realm) = realm.upgrade() {
+                            let _ = realm.stop_instance(false).await;
+                        }
+                    }
+                },
+                abort_server,
+            );
+            fasync::spawn(watcher.unwrap_or_else(|_| ()));
+            self.exit_listener = Some(abort_client);
+        }
     }
 
     pub async fn wait_on_channel_close(&mut self) {
@@ -985,6 +1021,14 @@ impl Runtime {
         } else {
             // TODO(jmatt) Need test coverage
             Ok(StopComponentSuccess::NoController)
+        }
+    }
+}
+
+impl Drop for Runtime {
+    fn drop(&mut self) {
+        if let Some(watcher) = &self.exit_listener {
+            watcher.abort();
         }
     }
 }
@@ -1022,12 +1066,12 @@ async fn do_runner_stop<'a>(
             }
         }
     }
+
     let channel_close = Box::pin(async move {
         fasync::OnSignals::new(&controller.as_handle_ref(), zx::Signals::CHANNEL_PEER_CLOSED)
             .await
             .expect("failed waiting for channel to close");
     });
-
     // Wait for either the timer to fire or the channel to close
     match futures::future::select(stop_timer, channel_close).await {
         Either::Left(((), _channel_close)) => None,
@@ -1085,7 +1129,10 @@ pub mod tests {
             testing::{
                 mocks::{ControlMessage, ControllerActionResponse, MockController},
                 routing_test_helpers::RoutingTest,
-                test_helpers::{self, ComponentDeclBuilder},
+                test_helpers::{
+                    self, component_decl_with_test_runner, ActionsTest, ComponentDeclBuilder,
+                    ComponentInfo, TEST_RUNNER_NAME,
+                },
             },
         },
         fidl::endpoints,
@@ -1641,6 +1688,87 @@ pub mod tests {
         let realm = bind_handle.await;
         let realm_timestamp = realm.lock_execution().await.runtime.as_ref().unwrap().timestamp;
         assert_eq!(realm_timestamp, started_timestamp);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    /// Validate that if the ComponentController channel is closed that the
+    /// the component is stopped.
+    async fn test_early_component_exit() {
+        let components = vec![
+            (
+                "root",
+                ComponentDeclBuilder::new()
+                    .add_eager_child("a")
+                    .offer_runner_to_children(TEST_RUNNER_NAME)
+                    .build(),
+            ),
+            (
+                "a",
+                ComponentDeclBuilder::new()
+                    .add_eager_child("b")
+                    .offer_runner_to_children(TEST_RUNNER_NAME)
+                    .build(),
+            ),
+            ("b", component_decl_with_test_runner()),
+        ];
+        let test = ActionsTest::new("root", components, None).await;
+
+        let mut event_source = test
+            .builtin_environment
+            .event_source_factory
+            .create_for_debug(SyncMode::Async)
+            .await
+            .expect("failed creating event source");
+        let mut stop_event_stream = event_source
+            .subscribe(vec![EventType::Stopped.into()])
+            .await
+            .expect("couldn't susbscribe to event stream");
+
+        event_source.start_component_tree().await;
+        let a_moniker: AbsoluteMoniker = vec!["a:0"].into();
+        let b_moniker: AbsoluteMoniker = vec!["a:0", "b:0"].into();
+
+        let realm_b = test.look_up(b_moniker.clone()).await;
+
+        // Bind to the root so it and its eager children start
+        let _root = test
+            .model
+            .bind(&vec![].into(), &BindReason::Root)
+            .await
+            .expect("failed to bind to root realm");
+
+        // Check that the eagerly-started 'b' has a runtime, which indicates
+        // it is running.
+        assert!(realm_b.lock_execution().await.runtime.is_some());
+
+        let b_info = ComponentInfo::new(realm_b.clone()).await;
+        b_info.check_not_shut_down(&test.runner).await;
+
+        // Tell the runner to close the controller channel
+        test.runner.abort_controller(&b_info.channel_id);
+
+        // Verify that we get a stop event as a result of the controller
+        // channel close being observed.
+        let stop_event = stop_event_stream
+            .wait_until(EventType::Stopped, b_moniker.clone())
+            .await
+            .unwrap()
+            .event;
+        assert_eq!(stop_event.target_moniker, b_moniker.clone());
+
+        // Verify that a parent of the exited component can still be stopped
+        // properly.
+        ActionSet::register(test.look_up(a_moniker.clone()).await, Action::Shutdown)
+            .await
+            .await
+            .expect("Couldn't trigger shutdown");
+        // Check that we get a stop even which corresponds to the parent.
+        let parent_stop = stop_event_stream
+            .wait_until(EventType::Stopped, a_moniker.clone())
+            .await
+            .unwrap()
+            .event;
+        assert_eq!(parent_stop.target_moniker, a_moniker.clone());
     }
 
     async fn wait_until_event_get_timestamp(

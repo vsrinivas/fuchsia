@@ -39,7 +39,7 @@ use {
 
 pub struct ComponentInfo {
     pub realm: Arc<Realm>,
-    channel_id: Koid,
+    pub channel_id: Koid,
 }
 
 impl ComponentInfo {

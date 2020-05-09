@@ -75,7 +75,7 @@ pub(super) async fn do_start(
     }
     .await;
 
-    let start_context = match result {
+    let mut start_context = match result {
         Ok(start_context) => {
             let event = Event::new_with_timestamp(
                 realm.abs_moniker.clone(),
@@ -108,6 +108,7 @@ pub(super) async fn do_start(
         if let Some(res) = should_return_early(&execution, &realm.abs_moniker) {
             return res;
         }
+        start_context.pending_runtime.watch_for_exit(realm.as_weak());
         execution.runtime = Some(start_context.pending_runtime);
     }
 
