@@ -248,7 +248,6 @@
     "multiple_components",
     "restricted_global_data",
     "appmgr_mock_runner",
-    "cobalt_fake_timekeeper",
     "device_name_provider",
     "fake_channel_writer",
     "mock_device_settings",

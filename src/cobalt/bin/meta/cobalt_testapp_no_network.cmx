@@ -2,7 +2,7 @@
     "facets": {
         "fuchsia.test": {
             "injected-services": {
-                "fuchsia.time.Utc": "fuchsia-pkg://fuchsia.com/cobalt_fake_timekeeper#meta/cobalt_fake_timekeeper.cmx"
+                "fuchsia.time.Utc": "fuchsia-pkg://fuchsia.com/cobalt_tests#meta/cobalt_fake_timekeeper.cmx"
             }
         }
     },

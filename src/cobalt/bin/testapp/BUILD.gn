@@ -7,11 +7,9 @@ import("//third_party/cobalt/metrics_registry.gni")
 
 group("testapp") {
   testonly = true
-  deps = [
-    ":cobalt_fake_timekeeper",
+  public_deps = [
     ":cobalt_testapp",
-    ":prober_metrics_registry",
-    ":testapp_metrics_registry",
+    ":fake_timekeeper",
   ]
 }
 
@@ -80,7 +78,6 @@ source_set("fake_timekeeper_lib") {
 }
 
 executable("fake_timekeeper") {
-  output_name = "fake_timekeeper"
   sources = [ "fake_timekeeper_main.cc" ]
 
   deps = [
@@ -92,22 +89,5 @@ executable("fake_timekeeper") {
     "//src/sys/timekeeper:fuchsia.time",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
-  ]
-}
-
-package("cobalt_fake_timekeeper") {
-  deps = [ ":fake_timekeeper" ]
-
-  binaries = [
-    {
-      name = "fake_timekeeper"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/timekeeper.cmx")
-      dest = "cobalt_fake_timekeeper.cmx"
-    },
   ]
 }

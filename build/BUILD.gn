@@ -217,7 +217,6 @@ group("deprecated_package_underscore") {
     "//src/camera:camera_tests",
     "//src/chromium/web_runner_tests:web_runner_tests",
     "//src/cobalt/bin/system-metrics:cobalt_system_metrics",
-    "//src/cobalt/bin/testapp:cobalt_fake_timekeeper",
     "//src/cobalt/bin/testing/mock_cobalt:mock_cobalt",
     "//src/cobalt/bin:cobalt_fuzzers_pkg",
     "//src/cobalt/bin:cobalt_tests",
