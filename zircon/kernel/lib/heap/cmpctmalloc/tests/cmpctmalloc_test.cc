@@ -8,6 +8,7 @@
 
 #include <lib/heap.h>
 #include <lib/zircon-internal/align.h>
+#include <math.h>
 
 #include <algorithm>
 #include <random>
@@ -21,6 +22,16 @@ namespace {
 
 constexpr uint32_t kRandomSeed = 101;
 
+// In the tests below, we wish to allocate until a certain threshold is met.
+// Expressing this threshold in terms of the number of allocations made is not
+// particularily meaningful, especially as the allocation sizes are random and
+// are sensitive to the above seed. Instead, we express this in terms of the
+// number of times that we see the heap grow.
+//
+// The current value is picked due to its roundness and the fact that an order
+// more in magnitude would make for a test too slow for automation.
+constexpr size_t kHeapGrowthCount = 10;
+
 // A convenience class that allows us to allocate memory of random sizes, and
 // then free that memory in various orders.
 class RandomAllocator {
@@ -31,16 +42,28 @@ class RandomAllocator {
     kRandom = 2,
   };
 
-  RandomAllocator() : generator_(kRandomSeed), distribution_(1, kHeapMaxAllocSize) {}
+  RandomAllocator()
+      : generator_(kRandomSeed),
+        sizes_(1, kHeapMaxAllocSize),
+        alignment_exponents_(kMinAlignmentExponent, kMaxAlignmentExponent) {}
   ~RandomAllocator() { ZX_ASSERT(allocated_.empty()); }
 
-  void Allocate(size_t num) {
-    for (size_t i = 0; i < num; i++) {
-      void* p = cmpct_alloc(distribution_(generator_));
-      ASSERT_NOT_NULL(p);
-      EXPECT_TRUE(ZX_IS_ALIGNED(p, HEAP_DEFAULT_ALIGNMENT));
-      allocated_.push_back(p);
-    }
+  void Allocate() {
+    size_t size = sizes_(generator_);
+    void* p = cmpct_alloc(size);
+    ASSERT_NOT_NULL(p);
+    EXPECT_TRUE(ZX_IS_ALIGNED(p, HEAP_DEFAULT_ALIGNMENT));
+    allocated_.push_back(p);
+  }
+
+  void AllocateAligned() {
+    size_t size = sizes_(generator_);
+    size_t exponent = alignment_exponents_(generator_);
+    size_t alignment = 1 << exponent;
+    void* p = cmpct_memalign(size, alignment);
+    ASSERT_NOT_NULL(p);
+    EXPECT_TRUE(ZX_IS_ALIGNED(p, alignment));
+    allocated_.push_back(p);
   }
 
   void Free(FreeOrder order) {
@@ -61,8 +84,15 @@ class RandomAllocator {
   }
 
  private:
+  // memalign is only required to accept alignment specifications that are
+  // powers of two and multiples of sizeof(void*) (guaranteed itself to be a
+  // power of 2).
+  const size_t kMinAlignmentExponent = log2(sizeof(void*));
+  const size_t kMaxAlignmentExponent = log2(ZX_PAGE_SIZE);
+
   std::default_random_engine generator_;
-  std::uniform_int_distribution<size_t> distribution_;
+  std::uniform_int_distribution<size_t> sizes_;
+  std::uniform_int_distribution<size_t> alignment_exponents_;
   std::vector<void*> allocated_;
 };
 
@@ -138,11 +168,31 @@ TEST_F(CmpctmallocTest, CanAllocAndFree) {
   };
   for (const auto& order : orders) {
     RandomAllocator ra;
-    // Allocate until we grow the heap ten times.
+    // Allocate until we grow the heap a sufficient number of times.
     size_t times_grown = 0;
-    while (times_grown < 10) {
+    while (times_grown < kHeapGrowthCount) {
       size_t before = heap_used_bytes();
-      ra.Allocate(1);
+      ra.Allocate();
+      size_t after = heap_used_bytes();
+      times_grown += (after > before);
+    }
+    ra.Free(order);
+  }
+}
+
+TEST_F(CmpctmallocTest, CanMemalignAndFree) {
+  RandomAllocator::FreeOrder orders[] = {
+      RandomAllocator::FreeOrder::kChronological,
+      RandomAllocator::FreeOrder::kReverseChronological,
+      RandomAllocator::FreeOrder::kRandom,
+  };
+  for (const auto& order : orders) {
+    RandomAllocator ra;
+    // Allocate until we grow the heap a sufficient number of times.
+    size_t times_grown = 0;
+    while (times_grown < kHeapGrowthCount) {
+      size_t before = heap_used_bytes();
+      ra.AllocateAligned();
       size_t after = heap_used_bytes();
       times_grown += (after > before);
     }
@@ -153,16 +203,18 @@ TEST_F(CmpctmallocTest, CanAllocAndFree) {
 TEST_F(CmpctmallocTest, LargeAllocsAreNull) {
   void* p = cmpct_alloc(kHeapMaxAllocSize);
   EXPECT_NOT_NULL(p);
+  cmpct_free(p);
   p = cmpct_alloc(kHeapMaxAllocSize + 1);
   EXPECT_NULL(p);
 }
 
 TEST_F(CmpctmallocTest, CachedAllocationIsEfficientlyUsed) {
+  constexpr size_t kAllocSize = 1000;
   std::vector<void*> allocations;
   bool grown = false;
   while (!grown) {
     size_t before = heap_used_bytes();
-    allocations.push_back(cmpct_alloc(1000));
+    allocations.push_back(cmpct_alloc(kAllocSize));
     size_t after = heap_used_bytes();
     grown = (after > before);
   }
@@ -175,7 +227,7 @@ TEST_F(CmpctmallocTest, CachedAllocationIsEfficientlyUsed) {
     allocations.pop_back();
     EXPECT_GT(heap_cached_bytes(), 0);
 
-    allocations.push_back(cmpct_alloc(1000));
+    allocations.push_back(cmpct_alloc(kAllocSize));
     EXPECT_EQ(0, heap_cached_bytes());
   }
 
@@ -186,9 +238,5 @@ TEST_F(CmpctmallocTest, CachedAllocationIsEfficientlyUsed) {
   }
   EXPECT_GT(heap_cached_bytes(), 0);
 }
-
-// TODO(fxbug.dev/49123): Add cases to cover
-// * cmpct_realloc();
-// * cmpct_memalign();
 
 }  // namespace
