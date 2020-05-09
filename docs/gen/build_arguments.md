@@ -638,7 +638,7 @@ This defaults to JIT, use `fx set <ARCH> --args
 
 **Current value (from the default):** `"dart_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/7e8051f3a954b5c2436a927ec115565e58fd1ac3/runtime/dart/dart_component.gni#19)
+From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/d6970e5f49d4b9d725a89d8e8f0b35e6fe91678b/runtime/dart/dart_component.gni#19)
 
 ### dart_enable_wasm
 Whether dart:wasm should be enabled.
@@ -653,7 +653,7 @@ we use to build products.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/7e8051f3a954b5c2436a927ec115565e58fd1ac3/runtime/dart/config.gni#10)
+From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/d6970e5f49d4b9d725a89d8e8f0b35e6fe91678b/runtime/dart/config.gni#10)
 
 ### dart_lib_export_symbols
 Whether libdart should export the symbols of the Dart API.
@@ -703,7 +703,7 @@ Whether experimental space dart mode is enabled for Dart applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:35](https://fuchsia.googlesource.com/topaz/+/7e8051f3a954b5c2436a927ec115565e58fd1ac3/runtime/dart/dart_component.gni#35)
+From [//topaz/runtime/dart/dart_component.gni:35](https://fuchsia.googlesource.com/topaz/+/d6970e5f49d4b9d725a89d8e8f0b35e6fe91678b/runtime/dart/dart_component.gni#35)
 
 ### dart_target_arch
 Explicitly set the target architecture to use a simulator.
@@ -1015,7 +1015,7 @@ From //build/images/args.gni:68
 
 **Current value (from the default):** `"flutter_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/7e8051f3a954b5c2436a927ec115565e58fd1ac3/runtime/dart/dart_component.gni#12)
+From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/d6970e5f49d4b9d725a89d8e8f0b35e6fe91678b/runtime/dart/dart_component.gni#12)
 
 ### flutter_driver_enabled
 Enables/Disables flutter driver using '--args=flutter_driver_enabled=[true/false]'
@@ -1030,14 +1030,14 @@ From //build/testing/flutter_driver.gni:9
 
 **Current value (from the default):** `true`
 
-From [//topaz/runtime/dart/dart_component.gni:26](https://fuchsia.googlesource.com/topaz/+/7e8051f3a954b5c2436a927ec115565e58fd1ac3/runtime/dart/dart_component.gni#26)
+From [//topaz/runtime/dart/dart_component.gni:26](https://fuchsia.googlesource.com/topaz/+/d6970e5f49d4b9d725a89d8e8f0b35e6fe91678b/runtime/dart/dart_component.gni#26)
 
 ### flutter_space_dart
 Whether experimental space dart mode is enabled for Flutter applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/7e8051f3a954b5c2436a927ec115565e58fd1ac3/runtime/dart/dart_component.gni#32)
+From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/d6970e5f49d4b9d725a89d8e8f0b35e6fe91678b/runtime/dart/dart_component.gni#32)
 
 ### font_catalog_paths
 
@@ -1897,7 +1897,7 @@ ignore warnings.
 
 **Current value (from the default):** `"deny"`
 
-From //build/rust/config.gni:40
+From //build/rust/config.gni:35
 
 ### rust_lto
 Sets the default LTO type for rustc bulids.
@@ -1913,7 +1913,7 @@ Valid values are "none", "thin", and "fat".
 
 **Current value (from the default):** `""`
 
-From //build/rust/config.gni:50
+From //build/rust/config.gni:45
 
 ### rust_override_opt
 Overrides the optimization level for all Rust builds, regardless of
@@ -1922,16 +1922,7 @@ Valid values are 0-3, o, and z.
 
 **Current value (from the default):** `""`
 
-From //build/rust/config.gni:45
-
-### rust_panic
-DEPRECATED: Sets the panic type for Rust on fuchsia.
-Valid values are "unwind" and "abort".
-This arg will be removed soon, and we will always use "abort".
-
-**Current value (from the default):** `"abort"`
-
-From //build/rust/config.gni:32
+From //build/rust/config.gni:40
 
 ### rust_sysroot
 Sets a custom base directory for where rust tooling
@@ -1946,7 +1937,7 @@ Sets the fuchsia toolchain target triple suffix (after arch)
 
 **Current value (from the default):** `"fuchsia"`
 
-From //build/rust/config.gni:35
+From //build/rust/config.gni:30
 
 ### rustc_prefix
 Sets a custom base directory for `rustc` and `cargo`.
@@ -3052,7 +3043,7 @@ Enable debug output in the ACPI library (used by the ACPI bus driver).
 
 **Current value (from the default):** `false`
 
-From [//third_party/acpica/BUILD.gn:9](https://fuchsia.googlesource.com/third_party/acpica/+/64b87a9e7794b69d50d17bae8c40b0e0c5adf02e/BUILD.gn#9)
+From [//third_party/acpica/BUILD.gn:9](https://fuchsia.googlesource.com/third_party/acpica/+/0194bb9d7222c3b5c30573763d2043a62e11838c/BUILD.gn#9)
 
 ### platform_enable_user_pci
 Setting this config to true only makes sense if the zircon enable_user_pci config is also true.
