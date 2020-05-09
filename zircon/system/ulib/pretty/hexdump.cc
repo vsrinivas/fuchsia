@@ -4,12 +4,12 @@
 
 #include <ctype.h>
 #include <inttypes.h>
+#include <lib/zircon-internal/align.h>
 #include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
 
 #include <pretty/hexdump.h>
-#include <lib/zircon-internal/align.h>
 
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
 
@@ -20,6 +20,18 @@ void hexdump_stdio_printf(void* printf_arg, const char* fmt, ...) {
   va_end(args);
 }
 
+// In the kernel, these are used in panic and debugging paths where the
+// buffers passed might be suspect and it would be worse to get a sanitizer
+// fault reading them than to display some garbage.  The other functions
+// here (and their callees) have normal instrumentation since they don't
+// derference pointers into the suspect buffer.
+#if defined(__clang__) && _KERNEL
+#define MAYBE_NO_ASAN [[clang::no_sanitize("address")]]
+#else
+#define MAYBE_NO_ASAN
+#endif
+
+MAYBE_NO_ASAN
 void hexdump_very_ex(const void* ptr, size_t len, uint64_t disp_addr,
                      hexdump_printf_func_t* printf_func, void* printf_arg) {
   uintptr_t address = (uintptr_t)ptr;
@@ -59,6 +71,7 @@ void hexdump_very_ex(const void* ptr, size_t len, uint64_t disp_addr,
   }
 }
 
+MAYBE_NO_ASAN
 void hexdump8_very_ex(const void* ptr, size_t len, uint64_t disp_addr,
                       hexdump_printf_func_t* printf_func, void* printf_arg) {
   uintptr_t address = (uintptr_t)ptr;
