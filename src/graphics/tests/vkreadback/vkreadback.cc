@@ -456,8 +456,7 @@ bool VkReadbackTest::Exec(VkFence fence) {
   if (!Submit(fence)) {
     return false;
   }
-  Wait();
-  return true;
+  return Wait();
 }
 
 bool VkReadbackTest::Submit(VkFence fence) {
@@ -480,7 +479,13 @@ bool VkReadbackTest::Submit(VkFence fence) {
   return true;
 }
 
-void VkReadbackTest::Wait() { vkQueueWaitIdle(vk_queue_); }
+bool VkReadbackTest::Wait() {
+  VkResult result = vkQueueWaitIdle(vk_queue_);
+  if (result != VK_SUCCESS) {
+    RTN_MSG(false, "vkQueueWaitIdle failed: %d\n", result);
+  }
+  return true;
+}
 
 bool VkReadbackTest::Readback() {
   VkResult result;

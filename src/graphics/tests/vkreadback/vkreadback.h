@@ -30,7 +30,7 @@ class VkReadbackTest {
   bool Initialize();
   bool Exec(VkFence fence = VK_NULL_HANDLE);
   bool Submit(VkFence fence);
-  void Wait();
+  bool Wait();
   bool Readback();
 
   uint32_t get_device_memory_handle() const { return device_memory_handle_; }

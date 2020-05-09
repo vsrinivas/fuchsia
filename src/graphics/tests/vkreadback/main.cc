@@ -89,7 +89,7 @@ TEST(Vulkan, ReadbackLoopWithFenceWait) {
       cond_var.notify_one();
     }
 
-    test.Wait();
+    EXPECT_TRUE(test.Wait());
   }
 
   thread.join();
