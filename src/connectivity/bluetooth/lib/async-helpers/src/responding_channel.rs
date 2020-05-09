@@ -19,15 +19,22 @@
 //! to prevent further messages from being sent into the channel. Then, the receiver can handle all
 //! messages in the channel and be dropped.
 
-use anyhow::{anyhow, Error};
-use futures::{
-    channel::{mpsc, oneshot},
-    SinkExt, StreamExt,
+use {
+    anyhow::Error,
+    futures::{
+        channel::{mpsc, oneshot},
+        stream::{FusedStream, Stream},
+        SinkExt,
+    },
+    std::{
+        pin::Pin,
+        task::{Context, Poll},
+    },
 };
 
 /// The requesting end of a channel.
 pub struct Sender<Req, Resp> {
-    inner: mpsc::Sender<(Req, oneshot::Sender<Resp>)>,
+    inner: mpsc::Sender<(Req, Responder<Resp>)>,
 }
 
 impl<Req, Resp> Sender<Req, Resp> {
@@ -37,7 +44,7 @@ impl<Req, Resp> Sender<Req, Resp> {
     /// `Responder` for this request.
     pub async fn request(&mut self, value: Req) -> Result<Resp, Error> {
         let (responder, response) = oneshot::channel();
-        self.inner.send((value, responder)).await?;
+        self.inner.send((value, Responder { inner: responder })).await?;
         Ok(response.await?)
     }
 }
@@ -58,19 +65,10 @@ impl<Resp> Responder<Resp> {
 
 /// The responding end of a channel.
 pub struct Receiver<Req, Resp> {
-    inner: mpsc::Receiver<(Req, oneshot::Sender<Resp>)>,
+    inner: mpsc::Receiver<(Req, Responder<Resp>)>,
 }
 
 impl<Req, Resp> Receiver<Req, Resp> {
-    /// Receive a request and `Responder`.
-    ///
-    /// This async method will wait until a message arrives or the the requesting end of the
-    /// channel is closed.
-    pub async fn receive(&mut self) -> Result<(Req, Responder<Resp>), Error> {
-        let (value, response_chan) = self.inner.next().await.ok_or(anyhow!("sender hung up"))?;
-        Ok((value, Responder { inner: response_chan }))
-    }
-
     /// Close the responding end of the channel.
     ///
     /// This prevents further messages from being sent on the channel while still enabling the
@@ -85,9 +83,23 @@ impl<Req, Resp> Receiver<Req, Resp> {
     /// returned an `Err`.
     pub fn try_receive(&mut self) -> Result<Option<(Req, Responder<Resp>)>, Error> {
         match self.inner.try_next()? {
-            Some((value, response_chan)) => Ok(Some((value, Responder { inner: response_chan }))),
+            Some((value, responder)) => Ok(Some((value, responder))),
             None => Ok(None),
         }
+    }
+}
+
+impl<Req, Resp> Stream for Receiver<Req, Resp> {
+    type Item = (Req, Responder<Resp>);
+
+    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        Pin::new(&mut self.inner).poll_next(cx)
+    }
+}
+
+impl<Req, Resp> FusedStream for Receiver<Req, Resp> {
+    fn is_terminated(&self) -> bool {
+        self.inner.is_terminated()
     }
 }
 
@@ -102,7 +114,12 @@ pub fn channel<Req, Resp>(buffer: usize) -> (Sender<Req, Resp>, Receiver<Req, Re
 
 #[cfg(test)]
 mod tests {
-    use {super::*, fuchsia_async as fasync, futures::pin_mut, std::task::Poll};
+    use {
+        super::*,
+        fuchsia_async as fasync,
+        futures::{pin_mut, StreamExt},
+        std::task::Poll,
+    };
 
     macro_rules! unwrap_ready {
         ($poll:expr) => {
@@ -118,7 +135,7 @@ mod tests {
         let mut ex = fasync::Executor::new().unwrap();
         let (mut sender, mut receiver) = channel(0);
 
-        let received = receiver.receive();
+        let received = receiver.next();
         pin_mut!(received);
         assert!(ex.run_until_stalled(&mut received).is_pending());
 
@@ -158,7 +175,7 @@ mod tests {
         pin_mut!(request);
         assert!(ex.run_until_stalled(&mut request).is_pending());
 
-        let received = receiver.receive();
+        let received = receiver.next();
         pin_mut!(received);
         let ((), responder) = unwrap_ready!(ex.run_until_stalled(&mut received)).unwrap();
 
@@ -173,13 +190,13 @@ mod tests {
         let mut ex = fasync::Executor::new().unwrap();
         let (sender, mut receiver) = channel::<(), ()>(0);
 
-        let received = receiver.receive();
+        let received = receiver.next();
         pin_mut!(received);
         assert!(ex.run_until_stalled(&mut received).is_pending());
 
         drop(sender);
 
-        assert!(unwrap_ready!(ex.run_until_stalled(&mut received)).is_err());
+        assert!(unwrap_ready!(ex.run_until_stalled(&mut received)).is_none());
     }
 
     #[test]
@@ -193,7 +210,7 @@ mod tests {
             assert!(ex.run_until_stalled(&mut request).is_pending());
         } // request is dropped at the end of the block
 
-        let received = receiver.receive();
+        let received = receiver.next();
         pin_mut!(received);
         let ((), responder) = unwrap_ready!(ex.run_until_stalled(&mut received)).unwrap();
 
