@@ -1398,55 +1398,6 @@ VKAPI_ATTR VkResult VKAPI_CALL vkEnumeratePhysicalDeviceGroupsKHR(
     uint32_t*                                   pPhysicalDeviceGroupCount,
     VkPhysicalDeviceGroupPropertiesKHR*         pPhysicalDeviceGroupProperties) { return VK_SUCCESS; }
 
-VKAPI_ATTR void VKAPI_CALL vkCmdProcessCommandsNVX(
-    VkCommandBuffer                             commandBuffer,
-    const VkCmdProcessCommandsInfoNVX*          pProcessCommandsInfo) {}
-
-VKAPI_ATTR void VKAPI_CALL vkCmdReserveSpaceForCommandsNVX(
-    VkCommandBuffer                             commandBuffer,
-    const VkCmdReserveSpaceForCommandsInfoNVX*  pReserveSpaceInfo) {}
-
-VKAPI_ATTR VkResult VKAPI_CALL vkCreateIndirectCommandsLayoutNVX(
-    VkDevice                                    device,
-    const VkIndirectCommandsLayoutCreateInfoNVX* pCreateInfo,
-    const VkAllocationCallbacks*                pAllocator,
-    VkIndirectCommandsLayoutNVX*                pIndirectCommandsLayout) { return VK_SUCCESS; }
-
-VKAPI_ATTR void VKAPI_CALL vkDestroyIndirectCommandsLayoutNVX(
-    VkDevice                                    device,
-    VkIndirectCommandsLayoutNVX                 indirectCommandsLayout,
-    const VkAllocationCallbacks*                pAllocator) {}
-
-VKAPI_ATTR VkResult VKAPI_CALL vkCreateObjectTableNVX(
-    VkDevice                                    device,
-    const VkObjectTableCreateInfoNVX*           pCreateInfo,
-    const VkAllocationCallbacks*                pAllocator,
-    VkObjectTableNVX*                           pObjectTable) { return VK_SUCCESS; }
-
-VKAPI_ATTR void VKAPI_CALL vkDestroyObjectTableNVX(
-    VkDevice                                    device,
-    VkObjectTableNVX                            objectTable,
-    const VkAllocationCallbacks*                pAllocator) {}
-
-VKAPI_ATTR VkResult VKAPI_CALL vkRegisterObjectsNVX(
-    VkDevice                                    device,
-    VkObjectTableNVX                            objectTable,
-    uint32_t                                    objectCount,
-    const VkObjectTableEntryNVX* const*         ppObjectTableEntries,
-    const uint32_t*                             pObjectIndices) { return VK_SUCCESS; }
-
-VKAPI_ATTR VkResult VKAPI_CALL vkUnregisterObjectsNVX(
-    VkDevice                                    device,
-    VkObjectTableNVX                            objectTable,
-    uint32_t                                    objectCount,
-    const VkObjectEntryTypeNVX*                 pObjectEntryTypes,
-    const uint32_t*                             pObjectIndices) { return VK_SUCCESS; }
-
-VKAPI_ATTR void VKAPI_CALL vkGetPhysicalDeviceGeneratedCommandsPropertiesNVX(
-    VkPhysicalDevice                            physicalDevice,
-    VkDeviceGeneratedCommandsFeaturesNVX*       pFeatures,
-    VkDeviceGeneratedCommandsLimitsNVX*         pLimits) {}
-
 VKAPI_ATTR void VKAPI_CALL vkCmdSetViewportWScalingNV(
     VkCommandBuffer                             commandBuffer,
     uint32_t                                    firstViewport,
