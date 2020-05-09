@@ -37,7 +37,7 @@ class UnsafeBufferAllocator final : public Allocator {
         // Point last_destructor_metadata_ so the first metadata is past the end of the
         // buffer -- this is intentional. The metadata pointer will decrease from there.
         last_destructor_metadata_(reinterpret_cast<DestructorMetadata*>(buf_ + NBytes)) {}
-  ~UnsafeBufferAllocator() { cleanup_destructor_metadata(); }
+  ~UnsafeBufferAllocator() override { cleanup_destructor_metadata(); }
 
   // Remove copy and move constructors becuase the allocator is inherently meant
   // to create pointers to objects inside of it and moving/copying allocators

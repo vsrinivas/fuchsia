@@ -25,7 +25,7 @@ namespace fidl {
 // Allocator is intended to work with fidl::tracking_ptr, fidl::unowned_ptr_t and fidl::aligned
 // and can be used to build LLCPP objects. Example of building tables:
 // BufferThenHeapAllocator<2048> allocator;
-// MyTable table = MyTable::Builder(allocator.make<MyTable::Frame)
+// MyTable table = MyTable::Builder(allocator.make<MyTable::Frame>())
 //                 .set_some_field(allocator.make<uint64_t>(1234))
 //                 .build();
 // In the above example, each out-of-line element is allocated using an Allocator.
@@ -87,7 +87,7 @@ class Allocator {
 
  protected:
   Allocator() {}
-  ~Allocator() {}
+  virtual ~Allocator() {}
 
   // Use a raw function pointer rather than std::function to ensure we don't
   // accidentally heap allocate.
