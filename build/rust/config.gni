@@ -26,11 +26,6 @@ declare_args() {
   # Sets the default LTO type for rustc bulids.
   rust_lto = ""
 
-  # DEPRECATED: Sets the panic type for Rust on fuchsia.
-  # Valid values are "unwind" and "abort".
-  # This arg will be removed soon, and we will always use "abort".
-  rust_panic = "abort"
-
   # Sets the fuchsia toolchain target triple suffix (after arch)
   rust_toolchain_triple_suffix = "fuchsia"
 
@@ -50,11 +45,10 @@ declare_args() {
   rust_override_lto = ""
 }
 
-assert(rust_panic == "unwind" || rust_panic == "abort",
-       "rust_panic was neither 'unwind' nor 'panic'")
-
-# Always use panic=unwind on host, or proc macros won't work.
-if (!is_fuchsia) {
+if (is_fuchsia) {
+  rust_panic = "abort"
+} else {
+  # Always use panic=unwind on host, or proc macros won't work.
   rust_panic = "unwind"
 }
 

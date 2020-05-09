@@ -1,5 +1,7 @@
 import("//build/rust/config.gni")
 
+assert(is_fuchsia)
+
 # When panic=abort, the Rust libtest framework requires sys.process.Launcher in
 # every test manifest. This is so it can launch a subprocess for each unit
 # test.
@@ -12,14 +14,12 @@ import("//build/rust/config.gni")
 # This group is included in every Rust test.
 group("rust_test_metadata") {
   metadata = {
-    if (rust_panic == "abort") {
-      cmx_patches_data = [
-        {
-          sandbox = {
-            services = [ "fuchsia.process.Launcher" ]
-          }
-        },
-      ]
-    }
+    cmx_patches_data = [
+      {
+        sandbox = {
+          services = [ "fuchsia.process.Launcher" ]
+        }
+      },
+    ]
   }
 }
