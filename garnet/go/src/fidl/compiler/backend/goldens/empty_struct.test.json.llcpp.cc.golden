@@ -37,18 +37,19 @@ extern "C" const fidl_type_t
 
 EmptyProtocol::ResultOf::Send_Impl::Send_Impl(
     ::zx::unowned_channel _client_end, ::llcpp::fidl::test::json::Empty e) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<
-      SendRequest, ::fidl::MessageDirection::kSending>();
-  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
-  auto& _write_bytes_array = _write_bytes_inlined;
-  uint8_t* _write_bytes = _write_bytes_array.view().data();
-  memset(_write_bytes, 0, SendRequest::PrimarySize);
-  auto& _request = *reinterpret_cast<SendRequest*>(_write_bytes);
+  // Destructors can't be called because it will lead to handle double close
+  // (here and in fidl::Encode).
+  FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(SendRequest)]{};
+  auto& _request = *reinterpret_cast<SendRequest*>(_request_buffer);
   _request.e = std::move(e);
-  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize,
-                                  sizeof(SendRequest));
-  ::fidl::DecodedMessage<SendRequest> _decoded_request(
-      std::move(_request_bytes));
+  auto _linearized = ::fidl::internal::Linearized<SendRequest>(&_request);
+  auto& _linearize_result = _linearized.result();
+  if (_linearize_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_linearize_result));
+    return;
+  }
+  ::fidl::DecodedMessage<SendRequest> _decoded_request =
+      std::move(_linearize_result.message);
   Super::operator=(EmptyProtocol::InPlace::Send(std::move(_client_end),
                                                 std::move(_decoded_request)));
 }
@@ -118,18 +119,20 @@ EmptyProtocol::ResultOf::SendAndReceive_Impl<
     EmptyProtocol::SendAndReceiveResponse>::
     SendAndReceive_Impl(::zx::unowned_channel _client_end,
                         ::llcpp::fidl::test::json::Empty e) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<
-      SendAndReceiveRequest, ::fidl::MessageDirection::kSending>();
-  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
-  auto& _write_bytes_array = _write_bytes_inlined;
-  uint8_t* _write_bytes = _write_bytes_array.view().data();
-  memset(_write_bytes, 0, SendAndReceiveRequest::PrimarySize);
-  auto& _request = *reinterpret_cast<SendAndReceiveRequest*>(_write_bytes);
+  // Destructors can't be called because it will lead to handle double close
+  // (here and in fidl::Encode).
+  FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(SendAndReceiveRequest)]{};
+  auto& _request = *reinterpret_cast<SendAndReceiveRequest*>(_request_buffer);
   _request.e = std::move(e);
-  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize,
-                                  sizeof(SendAndReceiveRequest));
-  ::fidl::DecodedMessage<SendAndReceiveRequest> _decoded_request(
-      std::move(_request_bytes));
+  auto _linearized =
+      ::fidl::internal::Linearized<SendAndReceiveRequest>(&_request);
+  auto& _linearize_result = _linearized.result();
+  if (_linearize_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_linearize_result));
+    return;
+  }
+  ::fidl::DecodedMessage<SendAndReceiveRequest> _decoded_request =
+      std::move(_linearize_result.message);
   Super::SetResult(EmptyProtocol::InPlace::SendAndReceive(
       std::move(_client_end), std::move(_decoded_request),
       Super::response_buffer()));
@@ -503,20 +506,22 @@ bool EmptyProtocol::Dispatch(Interface* impl, fidl_msg_t* msg,
 
 zx_status_t EmptyProtocol::SendReceiveEvent(
     ::zx::unowned_channel _chan, ::llcpp::fidl::test::json::Empty e) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<
-      ReceiveResponse, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<ReceiveResponse*>(_write_bytes);
+  // Destructors can't be called because it will lead to handle double close
+  // (here and in fidl::Encode).
+  FIDL_ALIGNDECL uint8_t _response_buffer[sizeof(ReceiveResponse)]{};
+  auto& _response = *reinterpret_cast<ReceiveResponse*>(_response_buffer);
   EmptyProtocol::SetTransactionHeaderFor::ReceiveResponse(
       ::fidl::DecodedMessage<ReceiveResponse>(::fidl::BytePart(
           reinterpret_cast<uint8_t*>(&_response), ReceiveResponse::PrimarySize,
           ReceiveResponse::PrimarySize)));
   _response.e = std::move(e);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize,
-                                   sizeof(ReceiveResponse));
-  return ::fidl::Write(
-      ::zx::unowned_channel(_chan),
-      ::fidl::DecodedMessage<ReceiveResponse>(std::move(_response_bytes)));
+  auto _linearized = ::fidl::internal::Linearized<ReceiveResponse>(&_response);
+  auto& _linearize_result = _linearized.result();
+  if (_linearize_result.status != ZX_OK) {
+    return _linearize_result.status;
+  }
+  return ::fidl::Write(::zx::unowned_channel(_chan),
+                       std::move(_linearize_result.message));
 }
 
 zx_status_t EmptyProtocol::SendReceiveEvent(
@@ -546,20 +551,25 @@ zx_status_t EmptyProtocol::SendReceiveEvent(
 
 void EmptyProtocol::Interface::SendAndReceiveCompleterBase::Reply(
     ::llcpp::fidl::test::json::Empty e) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<
-      SendAndReceiveResponse, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<SendAndReceiveResponse*>(_write_bytes);
+  // Destructors can't be called because it will lead to handle double close
+  // (here and in fidl::Encode).
+  FIDL_ALIGNDECL uint8_t _response_buffer[sizeof(SendAndReceiveResponse)]{};
+  auto& _response =
+      *reinterpret_cast<SendAndReceiveResponse*>(_response_buffer);
   EmptyProtocol::SetTransactionHeaderFor::SendAndReceiveResponse(
       ::fidl::DecodedMessage<SendAndReceiveResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
                            SendAndReceiveResponse::PrimarySize,
                            SendAndReceiveResponse::PrimarySize)));
   _response.e = std::move(e);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize,
-                                   sizeof(SendAndReceiveResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<SendAndReceiveResponse>(
-      std::move(_response_bytes)));
+  auto _linearized =
+      ::fidl::internal::Linearized<SendAndReceiveResponse>(&_response);
+  auto& _linearize_result = _linearized.result();
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 
 void EmptyProtocol::Interface::SendAndReceiveCompleterBase::Reply(

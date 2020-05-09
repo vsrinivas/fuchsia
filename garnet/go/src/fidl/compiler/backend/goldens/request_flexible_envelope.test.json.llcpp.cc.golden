@@ -60,16 +60,12 @@ Protocol::ResultOf::RequestStrictResponseFlexible_Impl<
     Protocol::RequestStrictResponseFlexibleResponse>::
     RequestStrictResponseFlexible_Impl(::zx::unowned_channel _client_end,
                                        ::llcpp::fidl::test::json::StrictFoo s) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<
-      RequestStrictResponseFlexibleRequest,
-      ::fidl::MessageDirection::kSending>();
-  std::unique_ptr _write_bytes_boxed =
-      std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
-  auto& _write_bytes_array = *_write_bytes_boxed;
   RequestStrictResponseFlexibleRequest _request = {};
   _request.s = std::move(s);
-  auto _linearize_result =
-      ::fidl::Linearize(&_request, _write_bytes_array.view());
+  auto _linearized =
+      ::fidl::internal::Linearized<RequestStrictResponseFlexibleRequest>(
+          &_request);
+  auto& _linearize_result = _linearized.result();
   if (_linearize_result.status != ZX_OK) {
     Super::SetFailure(std::move(_linearize_result));
     return;
@@ -173,16 +169,12 @@ Protocol::ResultOf::RequestFlexibleResponseStrict_Impl<
     RequestFlexibleResponseStrict_Impl(
         ::zx::unowned_channel _client_end,
         ::llcpp::fidl::test::json::FlexibleFoo s) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<
-      RequestFlexibleResponseStrictRequest,
-      ::fidl::MessageDirection::kSending>();
-  std::unique_ptr _write_bytes_boxed =
-      std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
-  auto& _write_bytes_array = *_write_bytes_boxed;
   RequestFlexibleResponseStrictRequest _request = {};
   _request.s = std::move(s);
-  auto _linearize_result =
-      ::fidl::Linearize(&_request, _write_bytes_array.view());
+  auto _linearized =
+      ::fidl::internal::Linearized<RequestFlexibleResponseStrictRequest>(
+          &_request);
+  auto& _linearize_result = _linearized.result();
   if (_linearize_result.status != ZX_OK) {
     Super::SetFailure(std::move(_linearize_result));
     return;
@@ -583,12 +575,6 @@ bool Protocol::Dispatch(Interface* impl, fidl_msg_t* msg,
 
 void Protocol::Interface::RequestStrictResponseFlexibleCompleterBase::Reply(
     ::llcpp::fidl::test::json::FlexibleFoo f) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<
-      RequestStrictResponseFlexibleResponse,
-      ::fidl::MessageDirection::kSending>();
-  std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(
-      new uint8_t[_kWriteAllocSize]);
-  uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
   RequestStrictResponseFlexibleResponse _response = {};
   Protocol::SetTransactionHeaderFor::RequestStrictResponseFlexibleResponse(
       ::fidl::DecodedMessage<RequestStrictResponseFlexibleResponse>(
@@ -597,8 +583,10 @@ void Protocol::Interface::RequestStrictResponseFlexibleCompleterBase::Reply(
               RequestStrictResponseFlexibleResponse::PrimarySize,
               RequestStrictResponseFlexibleResponse::PrimarySize)));
   _response.f = std::move(f);
-  auto _linearize_result = ::fidl::Linearize(
-      &_response, ::fidl::BytePart(_write_bytes, _kWriteAllocSize));
+  auto _linearized =
+      ::fidl::internal::Linearized<RequestStrictResponseFlexibleResponse>(
+          &_response);
+  auto& _linearize_result = _linearized.result();
   if (_linearize_result.status != ZX_OK) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
@@ -637,12 +625,6 @@ void Protocol::Interface::RequestStrictResponseFlexibleCompleterBase::Reply(
 
 void Protocol::Interface::RequestFlexibleResponseStrictCompleterBase::Reply(
     ::llcpp::fidl::test::json::StrictFoo f) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<
-      RequestFlexibleResponseStrictResponse,
-      ::fidl::MessageDirection::kSending>();
-  std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(
-      new uint8_t[_kWriteAllocSize]);
-  uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
   RequestFlexibleResponseStrictResponse _response = {};
   Protocol::SetTransactionHeaderFor::RequestFlexibleResponseStrictResponse(
       ::fidl::DecodedMessage<RequestFlexibleResponseStrictResponse>(
@@ -651,8 +633,10 @@ void Protocol::Interface::RequestFlexibleResponseStrictCompleterBase::Reply(
               RequestFlexibleResponseStrictResponse::PrimarySize,
               RequestFlexibleResponseStrictResponse::PrimarySize)));
   _response.f = std::move(f);
-  auto _linearize_result = ::fidl::Linearize(
-      &_response, ::fidl::BytePart(_write_bytes, _kWriteAllocSize));
+  auto _linearized =
+      ::fidl::internal::Linearized<RequestFlexibleResponseStrictResponse>(
+          &_response);
+  auto& _linearize_result = _linearized.result();
   if (_linearize_result.status != ZX_OK) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;

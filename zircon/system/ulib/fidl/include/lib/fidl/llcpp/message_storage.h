@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_FIDL_LLCPP_RESPONSE_STORAGE_H_
-#define LIB_FIDL_LLCPP_RESPONSE_STORAGE_H_
+#ifndef LIB_FIDL_LLCPP_MESSAGE_STORAGE_H_
+#define LIB_FIDL_LLCPP_MESSAGE_STORAGE_H_
 
 #include <lib/fidl/cpp/message_part.h>
 #include <lib/fidl/llcpp/traits.h>
@@ -86,7 +86,8 @@ struct ByteStorage<kSize, std::enable_if_t<(kSize <= kMaxStackAllocSize)>> {
   explicit ByteStorage(DelayAllocationTag) {}
   ~ByteStorage() = default;
 
-  void Allocate() { /* No-op when |storage| is in stack, since everything is already allocated */ }
+  void Allocate() { /* No-op when |storage| is in stack, since everything is already allocated */
+  }
 
   ByteStorage(const ByteStorage&) = delete;
   ByteStorage& operator=(const ByteStorage&) = delete;
@@ -105,10 +106,11 @@ struct ResponseStorage
     : private ByteStorage<ClampedMessageSize<FidlType, MessageDirection::kReceiving>()> {
  private:
   using Super = ByteStorage<ClampedMessageSize<FidlType, MessageDirection::kReceiving>()>;
+
  public:
+  using Super::buffer;
   using Super::kBufferSize;
   using Super::kWillCopyBufferDuringMove;
-  using Super::buffer;
 
   ResponseStorage() = default;
   ~ResponseStorage() = default;
@@ -123,4 +125,4 @@ struct ResponseStorage
 }  // namespace internal
 }  // namespace fidl
 
-#endif  // LIB_FIDL_LLCPP_RESPONSE_STORAGE_H_
+#endif  // LIB_FIDL_LLCPP_MESSAGE_STORAGE_H_

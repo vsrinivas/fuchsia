@@ -10,8 +10,6 @@
 
 #include <perftest/perftest.h>
 
-#include "linearize_util.h"
-
 namespace {
 
 struct Position;
@@ -103,9 +101,8 @@ bool WalkerBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
   static_assert(fidl::IsFidlType<FidlType>::value, "FIDL type required");
 
   fidl::aligned<FidlType> aligned_value = builder();
-  uint8_t linearize_buffer[BufferSize<FidlType>];
-  auto benchmark_linearize_result = Linearize(nullptr, &aligned_value.value, linearize_buffer);
-  auto& linearize_result = benchmark_linearize_result.result;
+  auto linearized = fidl::internal::Linearized<FidlType>(&aligned_value.value);
+  auto& linearize_result = linearized.result();
   ZX_ASSERT(linearize_result.status == ZX_OK && linearize_result.error == nullptr);
   fidl::BytePart bytes = linearize_result.message.Release();
 

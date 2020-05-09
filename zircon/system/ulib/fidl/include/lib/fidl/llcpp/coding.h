@@ -7,7 +7,7 @@
 
 #include <lib/fidl/llcpp/decoded_message.h>
 #include <lib/fidl/llcpp/encoded_message.h>
-#include <lib/fidl/llcpp/response_storage.h>
+#include <lib/fidl/llcpp/message_storage.h>
 #include <lib/fidl/llcpp/traits.h>
 #include <lib/fidl/txn_header.h>
 #include <zircon/fidl.h>

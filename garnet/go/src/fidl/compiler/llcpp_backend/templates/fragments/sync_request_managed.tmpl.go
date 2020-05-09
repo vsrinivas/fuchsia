@@ -29,38 +29,28 @@ const SyncRequestManaged = `
 {{ if .HasResponse -}} template <> {{- end }}
 {{ .LLProps.ProtocolName }}::ResultOf::{{ .Name }}_Impl {{- if .HasResponse -}} <{{ .LLProps.ProtocolName }}::{{ .Name }}Response> {{- end }}::{{ .Name }}_Impl(
   {{- template "StaticCallSyncRequestManagedMethodArguments" . }}) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<{{ .Name }}Request, ::fidl::MessageDirection::kSending>();
-
-  {{- if .LLProps.ClientContext.StackAllocRequest }}
-  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
-  auto& _write_bytes_array = _write_bytes_inlined;
-  {{- else }}
-  std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
-  auto& _write_bytes_array = *_write_bytes_boxed;
-  {{- end }}
 
   {{- if .LLProps.LinearizeRequest }}
+  {{/* tracking_ptr destructors will be called when _response goes out of scope */}}
   {{ .Name }}Request _request = {};
   {{- else }}
-  uint8_t* _write_bytes = _write_bytes_array.view().data();
-  memset(_write_bytes, 0, {{ .Name }}Request::PrimarySize);
-    {{- if .Request }}
-  auto& _request = *reinterpret_cast<{{ .Name }}Request*>(_write_bytes);
-    {{- end }}
+  {{/* tracking_ptrs won't free allocated memory because destructors aren't called.
+  This is ok because there are no tracking_ptrs, since LinearizeResponse is true when
+  there are pointers in the object. */}}
+  // Destructors can't be called because it will lead to handle double close
+  // (here and in fidl::Encode).
+  FIDL_ALIGNDECL uint8_t _request_buffer[sizeof({{ .Name }}Request)]{};
+  auto& _request = *reinterpret_cast<{{ .Name }}Request*>(_request_buffer);
   {{- end }}
   {{- template "FillRequestStructMembers" .Request -}}
 
-  {{- if .LLProps.LinearizeRequest }}
-  auto _linearize_result = ::fidl::Linearize(&_request, _write_bytes_array.view());
+  auto _linearized = ::fidl::internal::Linearized<{{ .Name }}Request>(&_request);
+  auto& _linearize_result = _linearized.result();
   if (_linearize_result.status != ZX_OK) {
     Super::SetFailure(std::move(_linearize_result));
     return;
   }
   ::fidl::DecodedMessage<{{ .Name }}Request> _decoded_request = std::move(_linearize_result.message);
-  {{- else }}
-  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof({{ .Name }}Request));
-  ::fidl::DecodedMessage<{{ .Name }}Request> _decoded_request(std::move(_request_bytes));
-  {{- end }}
 
   {{- if .HasResponse }}
   Super::SetResult(

@@ -22,15 +22,10 @@ extern "C" const fidl_type_t fidl_test_json_superfooResponseTable;
 template <>
 super::ResultOf::foo_Impl<super::fooResponse>::foo_Impl(
     ::zx::unowned_channel _client_end, ::fidl::StringView s) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<
-      fooRequest, ::fidl::MessageDirection::kSending>();
-  std::unique_ptr _write_bytes_boxed =
-      std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
-  auto& _write_bytes_array = *_write_bytes_boxed;
   fooRequest _request = {};
   _request.s = std::move(s);
-  auto _linearize_result =
-      ::fidl::Linearize(&_request, _write_bytes_array.view());
+  auto _linearized = ::fidl::internal::Linearized<fooRequest>(&_request);
+  auto& _linearize_result = _linearized.result();
   if (_linearize_result.status != ZX_OK) {
     Super::SetFailure(std::move(_linearize_result));
     return;
@@ -271,19 +266,22 @@ bool super::Dispatch(Interface* impl, fidl_msg_t* msg,
 }
 
 void super::Interface::fooCompleterBase::Reply(int64_t y) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<
-      fooResponse, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<fooResponse*>(_write_bytes);
+  // Destructors can't be called because it will lead to handle double close
+  // (here and in fidl::Encode).
+  FIDL_ALIGNDECL uint8_t _response_buffer[sizeof(fooResponse)]{};
+  auto& _response = *reinterpret_cast<fooResponse*>(_response_buffer);
   super::SetTransactionHeaderFor::fooResponse(
       ::fidl::DecodedMessage<fooResponse>(::fidl::BytePart(
           reinterpret_cast<uint8_t*>(&_response), fooResponse::PrimarySize,
           fooResponse::PrimarySize)));
   _response.y = std::move(y);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize,
-                                   sizeof(fooResponse));
-  CompleterBase::SendReply(
-      ::fidl::DecodedMessage<fooResponse>(std::move(_response_bytes)));
+  auto _linearized = ::fidl::internal::Linearized<fooResponse>(&_response);
+  auto& _linearize_result = _linearized.result();
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 
 void super::Interface::fooCompleterBase::Reply(::fidl::BytePart _buffer,
@@ -331,15 +329,10 @@ extern "C" const fidl_type_t fidl_test_json_subfooResponseTable;
 template <>
 sub::ResultOf::foo_Impl<sub::fooResponse>::foo_Impl(
     ::zx::unowned_channel _client_end, ::fidl::StringView s) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<
-      fooRequest, ::fidl::MessageDirection::kSending>();
-  std::unique_ptr _write_bytes_boxed =
-      std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
-  auto& _write_bytes_array = *_write_bytes_boxed;
   fooRequest _request = {};
   _request.s = std::move(s);
-  auto _linearize_result =
-      ::fidl::Linearize(&_request, _write_bytes_array.view());
+  auto _linearized = ::fidl::internal::Linearized<fooRequest>(&_request);
+  auto& _linearize_result = _linearized.result();
   if (_linearize_result.status != ZX_OK) {
     Super::SetFailure(std::move(_linearize_result));
     return;
@@ -580,18 +573,21 @@ bool sub::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
 }
 
 void sub::Interface::fooCompleterBase::Reply(int64_t y) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<
-      fooResponse, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<fooResponse*>(_write_bytes);
+  // Destructors can't be called because it will lead to handle double close
+  // (here and in fidl::Encode).
+  FIDL_ALIGNDECL uint8_t _response_buffer[sizeof(fooResponse)]{};
+  auto& _response = *reinterpret_cast<fooResponse*>(_response_buffer);
   sub::SetTransactionHeaderFor::fooResponse(::fidl::DecodedMessage<fooResponse>(
       ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
                        fooResponse::PrimarySize, fooResponse::PrimarySize)));
   _response.y = std::move(y);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize,
-                                   sizeof(fooResponse));
-  CompleterBase::SendReply(
-      ::fidl::DecodedMessage<fooResponse>(std::move(_response_bytes)));
+  auto _linearized = ::fidl::internal::Linearized<fooResponse>(&_response);
+  auto& _linearize_result = _linearized.result();
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 
 void sub::Interface::fooCompleterBase::Reply(::fidl::BytePart _buffer,

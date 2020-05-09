@@ -21,6 +21,7 @@ const Header = `
 #include <lib/fidl/llcpp/connect_service.h>
 #include <lib/fidl/llcpp/envelope.h>
 #include <lib/fidl/llcpp/errors.h>
+#include <lib/fidl/llcpp/linearized.h>
 #include <lib/fidl/llcpp/memory.h>
 #include <lib/fidl/llcpp/service_handler_interface.h>
 #include <lib/fidl/llcpp/string_view.h>

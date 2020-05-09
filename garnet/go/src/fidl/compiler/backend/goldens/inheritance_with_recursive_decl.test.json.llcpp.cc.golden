@@ -23,18 +23,19 @@ extern "C" const fidl_type_t fidl_test_json_ParentFirstResponseTable;
 
 Parent::ResultOf::First_Impl::First_Impl(::zx::unowned_channel _client_end,
                                          ::zx::channel request) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<
-      FirstRequest, ::fidl::MessageDirection::kSending>();
-  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
-  auto& _write_bytes_array = _write_bytes_inlined;
-  uint8_t* _write_bytes = _write_bytes_array.view().data();
-  memset(_write_bytes, 0, FirstRequest::PrimarySize);
-  auto& _request = *reinterpret_cast<FirstRequest*>(_write_bytes);
+  // Destructors can't be called because it will lead to handle double close
+  // (here and in fidl::Encode).
+  FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(FirstRequest)]{};
+  auto& _request = *reinterpret_cast<FirstRequest*>(_request_buffer);
   _request.request = std::move(request);
-  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize,
-                                  sizeof(FirstRequest));
-  ::fidl::DecodedMessage<FirstRequest> _decoded_request(
-      std::move(_request_bytes));
+  auto _linearized = ::fidl::internal::Linearized<FirstRequest>(&_request);
+  auto& _linearize_result = _linearized.result();
+  if (_linearize_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_linearize_result));
+    return;
+  }
+  ::fidl::DecodedMessage<FirstRequest> _decoded_request =
+      std::move(_linearize_result.message);
   Super::operator=(Parent::InPlace::First(std::move(_client_end),
                                           std::move(_decoded_request)));
 }
@@ -188,18 +189,19 @@ extern "C" const fidl_type_t fidl_test_json_ChildSecondResponseTable;
 
 Child::ResultOf::First_Impl::First_Impl(::zx::unowned_channel _client_end,
                                         ::zx::channel request) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<
-      FirstRequest, ::fidl::MessageDirection::kSending>();
-  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
-  auto& _write_bytes_array = _write_bytes_inlined;
-  uint8_t* _write_bytes = _write_bytes_array.view().data();
-  memset(_write_bytes, 0, FirstRequest::PrimarySize);
-  auto& _request = *reinterpret_cast<FirstRequest*>(_write_bytes);
+  // Destructors can't be called because it will lead to handle double close
+  // (here and in fidl::Encode).
+  FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(FirstRequest)]{};
+  auto& _request = *reinterpret_cast<FirstRequest*>(_request_buffer);
   _request.request = std::move(request);
-  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize,
-                                  sizeof(FirstRequest));
-  ::fidl::DecodedMessage<FirstRequest> _decoded_request(
-      std::move(_request_bytes));
+  auto _linearized = ::fidl::internal::Linearized<FirstRequest>(&_request);
+  auto& _linearize_result = _linearized.result();
+  if (_linearize_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_linearize_result));
+    return;
+  }
+  ::fidl::DecodedMessage<FirstRequest> _decoded_request =
+      std::move(_linearize_result.message);
   Super::operator=(Child::InPlace::First(std::move(_client_end),
                                          std::move(_decoded_request)));
 }
@@ -266,18 +268,19 @@ Child::UnownedResultOf::First Child::Call::First(
 
 Child::ResultOf::Second_Impl::Second_Impl(::zx::unowned_channel _client_end,
                                           ::zx::channel request) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<
-      SecondRequest, ::fidl::MessageDirection::kSending>();
-  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
-  auto& _write_bytes_array = _write_bytes_inlined;
-  uint8_t* _write_bytes = _write_bytes_array.view().data();
-  memset(_write_bytes, 0, SecondRequest::PrimarySize);
-  auto& _request = *reinterpret_cast<SecondRequest*>(_write_bytes);
+  // Destructors can't be called because it will lead to handle double close
+  // (here and in fidl::Encode).
+  FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(SecondRequest)]{};
+  auto& _request = *reinterpret_cast<SecondRequest*>(_request_buffer);
   _request.request = std::move(request);
-  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize,
-                                  sizeof(SecondRequest));
-  ::fidl::DecodedMessage<SecondRequest> _decoded_request(
-      std::move(_request_bytes));
+  auto _linearized = ::fidl::internal::Linearized<SecondRequest>(&_request);
+  auto& _linearize_result = _linearized.result();
+  if (_linearize_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_linearize_result));
+    return;
+  }
+  ::fidl::DecodedMessage<SecondRequest> _decoded_request =
+      std::move(_linearize_result.message);
   Super::operator=(Child::InPlace::Second(std::move(_client_end),
                                           std::move(_decoded_request)));
 }

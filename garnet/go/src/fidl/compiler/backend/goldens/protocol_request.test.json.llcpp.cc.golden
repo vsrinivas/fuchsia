@@ -40,16 +40,18 @@ extern "C" const fidl_type_t test_name_ParentTakeChildRequestResponseTable;
 template <>
 Parent::ResultOf::GetChild_Impl<Parent::GetChildResponse>::GetChild_Impl(
     ::zx::unowned_channel _client_end) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<
-      GetChildRequest, ::fidl::MessageDirection::kSending>();
-  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
-  auto& _write_bytes_array = _write_bytes_inlined;
-  uint8_t* _write_bytes = _write_bytes_array.view().data();
-  memset(_write_bytes, 0, GetChildRequest::PrimarySize);
-  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize,
-                                  sizeof(GetChildRequest));
-  ::fidl::DecodedMessage<GetChildRequest> _decoded_request(
-      std::move(_request_bytes));
+  // Destructors can't be called because it will lead to handle double close
+  // (here and in fidl::Encode).
+  FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(GetChildRequest)]{};
+  auto& _request = *reinterpret_cast<GetChildRequest*>(_request_buffer);
+  auto _linearized = ::fidl::internal::Linearized<GetChildRequest>(&_request);
+  auto& _linearize_result = _linearized.result();
+  if (_linearize_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_linearize_result));
+    return;
+  }
+  ::fidl::DecodedMessage<GetChildRequest> _decoded_request =
+      std::move(_linearize_result.message);
   Super::SetResult(Parent::InPlace::GetChild(std::move(_client_end),
                                              Super::response_buffer()));
 }
@@ -114,16 +116,19 @@ Parent::UnownedResultOf::GetChild Parent::Call::GetChild(
 template <>
 Parent::ResultOf::GetChildRequest_Impl<Parent::GetChildRequestResponse>::
     GetChildRequest_Impl(::zx::unowned_channel _client_end) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<
-      GetChildRequestRequest, ::fidl::MessageDirection::kSending>();
-  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
-  auto& _write_bytes_array = _write_bytes_inlined;
-  uint8_t* _write_bytes = _write_bytes_array.view().data();
-  memset(_write_bytes, 0, GetChildRequestRequest::PrimarySize);
-  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize,
-                                  sizeof(GetChildRequestRequest));
-  ::fidl::DecodedMessage<GetChildRequestRequest> _decoded_request(
-      std::move(_request_bytes));
+  // Destructors can't be called because it will lead to handle double close
+  // (here and in fidl::Encode).
+  FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(GetChildRequestRequest)]{};
+  auto& _request = *reinterpret_cast<GetChildRequestRequest*>(_request_buffer);
+  auto _linearized =
+      ::fidl::internal::Linearized<GetChildRequestRequest>(&_request);
+  auto& _linearize_result = _linearized.result();
+  if (_linearize_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_linearize_result));
+    return;
+  }
+  ::fidl::DecodedMessage<GetChildRequestRequest> _decoded_request =
+      std::move(_linearize_result.message);
   Super::SetResult(Parent::InPlace::GetChildRequest(std::move(_client_end),
                                                     Super::response_buffer()));
 }
@@ -191,18 +196,19 @@ Parent::InPlace::GetChildRequest(::zx::unowned_channel _client_end,
 
 Parent::ResultOf::TakeChild_Impl::TakeChild_Impl(
     ::zx::unowned_channel _client_end, ::zx::channel c) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<
-      TakeChildRequest, ::fidl::MessageDirection::kSending>();
-  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
-  auto& _write_bytes_array = _write_bytes_inlined;
-  uint8_t* _write_bytes = _write_bytes_array.view().data();
-  memset(_write_bytes, 0, TakeChildRequest::PrimarySize);
-  auto& _request = *reinterpret_cast<TakeChildRequest*>(_write_bytes);
+  // Destructors can't be called because it will lead to handle double close
+  // (here and in fidl::Encode).
+  FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(TakeChildRequest)]{};
+  auto& _request = *reinterpret_cast<TakeChildRequest*>(_request_buffer);
   _request.c = std::move(c);
-  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize,
-                                  sizeof(TakeChildRequest));
-  ::fidl::DecodedMessage<TakeChildRequest> _decoded_request(
-      std::move(_request_bytes));
+  auto _linearized = ::fidl::internal::Linearized<TakeChildRequest>(&_request);
+  auto& _linearize_result = _linearized.result();
+  if (_linearize_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_linearize_result));
+    return;
+  }
+  ::fidl::DecodedMessage<TakeChildRequest> _decoded_request =
+      std::move(_linearize_result.message);
   Super::operator=(Parent::InPlace::TakeChild(std::move(_client_end),
                                               std::move(_decoded_request)));
 }
@@ -269,18 +275,20 @@ Parent::UnownedResultOf::TakeChild Parent::Call::TakeChild(
 
 Parent::ResultOf::TakeChildRequest_Impl::TakeChildRequest_Impl(
     ::zx::unowned_channel _client_end, ::zx::channel r) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<
-      TakeChildRequestRequest, ::fidl::MessageDirection::kSending>();
-  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
-  auto& _write_bytes_array = _write_bytes_inlined;
-  uint8_t* _write_bytes = _write_bytes_array.view().data();
-  memset(_write_bytes, 0, TakeChildRequestRequest::PrimarySize);
-  auto& _request = *reinterpret_cast<TakeChildRequestRequest*>(_write_bytes);
+  // Destructors can't be called because it will lead to handle double close
+  // (here and in fidl::Encode).
+  FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(TakeChildRequestRequest)]{};
+  auto& _request = *reinterpret_cast<TakeChildRequestRequest*>(_request_buffer);
   _request.r = std::move(r);
-  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize,
-                                  sizeof(TakeChildRequestRequest));
-  ::fidl::DecodedMessage<TakeChildRequestRequest> _decoded_request(
-      std::move(_request_bytes));
+  auto _linearized =
+      ::fidl::internal::Linearized<TakeChildRequestRequest>(&_request);
+  auto& _linearize_result = _linearized.result();
+  if (_linearize_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_linearize_result));
+    return;
+  }
+  ::fidl::DecodedMessage<TakeChildRequestRequest> _decoded_request =
+      std::move(_linearize_result.message);
   Super::operator=(Parent::InPlace::TakeChildRequest(
       std::move(_client_end), std::move(_decoded_request)));
 }
@@ -647,19 +655,22 @@ bool Parent::Dispatch(Interface* impl, fidl_msg_t* msg,
 }
 
 void Parent::Interface::GetChildCompleterBase::Reply(::zx::channel c) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<
-      GetChildResponse, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<GetChildResponse*>(_write_bytes);
+  // Destructors can't be called because it will lead to handle double close
+  // (here and in fidl::Encode).
+  FIDL_ALIGNDECL uint8_t _response_buffer[sizeof(GetChildResponse)]{};
+  auto& _response = *reinterpret_cast<GetChildResponse*>(_response_buffer);
   Parent::SetTransactionHeaderFor::GetChildResponse(
       ::fidl::DecodedMessage<GetChildResponse>(::fidl::BytePart(
           reinterpret_cast<uint8_t*>(&_response), GetChildResponse::PrimarySize,
           GetChildResponse::PrimarySize)));
   _response.c = std::move(c);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize,
-                                   sizeof(GetChildResponse));
-  CompleterBase::SendReply(
-      ::fidl::DecodedMessage<GetChildResponse>(std::move(_response_bytes)));
+  auto _linearized = ::fidl::internal::Linearized<GetChildResponse>(&_response);
+  auto& _linearize_result = _linearized.result();
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 
 void Parent::Interface::GetChildCompleterBase::Reply(::fidl::BytePart _buffer,
@@ -686,20 +697,25 @@ void Parent::Interface::GetChildCompleterBase::Reply(
 }
 
 void Parent::Interface::GetChildRequestCompleterBase::Reply(::zx::channel r) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<
-      GetChildRequestResponse, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<GetChildRequestResponse*>(_write_bytes);
+  // Destructors can't be called because it will lead to handle double close
+  // (here and in fidl::Encode).
+  FIDL_ALIGNDECL uint8_t _response_buffer[sizeof(GetChildRequestResponse)]{};
+  auto& _response =
+      *reinterpret_cast<GetChildRequestResponse*>(_response_buffer);
   Parent::SetTransactionHeaderFor::GetChildRequestResponse(
       ::fidl::DecodedMessage<GetChildRequestResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
                            GetChildRequestResponse::PrimarySize,
                            GetChildRequestResponse::PrimarySize)));
   _response.r = std::move(r);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize,
-                                   sizeof(GetChildRequestResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<GetChildRequestResponse>(
-      std::move(_response_bytes)));
+  auto _linearized =
+      ::fidl::internal::Linearized<GetChildRequestResponse>(&_response);
+  auto& _linearize_result = _linearized.result();
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 
 void Parent::Interface::GetChildRequestCompleterBase::Reply(

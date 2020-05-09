@@ -11,35 +11,28 @@ Reply({{ template "Params" .Response }})
 
 {{- define "ReplyCFlavorMethodDefinition" }}
 void {{ .LLProps.ProtocolName }}::Interface::{{ .Name }}CompleterBase::{{ template "ReplyCFlavorMethodSignature" . }} {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<{{ .Name }}Response, ::fidl::MessageDirection::kSending>();
-
-  {{- if .LLProps.ClientContext.StackAllocResponse }}
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] {{- if not .LLProps.LinearizeResponse }} = {} {{- end }};
-  {{- else }}
-  std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
-  uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
-  {{- end }}
-
   {{- if .LLProps.LinearizeResponse }}
+  {{/* tracking_ptr destructors will be called when _response goes out of scope */}}
   {{ .Name }}Response _response = {};
   {{- else }}
-  auto& _response = *reinterpret_cast<{{ .Name }}Response*>(_write_bytes);
+  {{/* tracking_ptrs won't free allocated memory because destructors aren't called.
+  This is ok because there are no tracking_ptrs, since LinearizeResponse is true when
+  there are pointers in the object. */}}
+  // Destructors can't be called because it will lead to handle double close
+  // (here and in fidl::Encode).
+  FIDL_ALIGNDECL uint8_t _response_buffer[sizeof({{ .Name }}Response)]{};
+  auto& _response = *reinterpret_cast<{{ .Name }}Response*>(_response_buffer);
   {{- end }}
   {{- template "SetTransactionHeaderForResponse" . }}
   {{- template "FillResponseStructMembers" .Response -}}
 
-  {{- if .LLProps.LinearizeResponse }}
-  auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
-                                                                          _kWriteAllocSize));
+  auto _linearized = ::fidl::internal::Linearized<{{ .Name }}Response>(&_response);
+  auto& _linearize_result = _linearized.result();
   if (_linearize_result.status != ZX_OK) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
   CompleterBase::SendReply(std::move(_linearize_result.message));
-  {{- else }}
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof({{ .Name }}Response));
-  CompleterBase::SendReply(::fidl::DecodedMessage<{{ .Name }}Response>(std::move(_response_bytes)));
-  {{- end }}
 }
 {{- end }}
 

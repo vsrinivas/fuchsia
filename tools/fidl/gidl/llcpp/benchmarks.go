@@ -47,7 +47,8 @@ bool BenchmarkBuilder{{ .Name }}Heap(perftest::RepeatState* state) {
 	return llcpp_benchmarks::BuilderBenchmark(state, Build{{ .Name }}Heap);
 }
 bool BenchmarkBuilder{{ .Name }}Allocator(perftest::RepeatState* state) {
-	using AllocatorType = fidl::BufferAllocator<MessageSize<{{ .Type }}>>;
+	using AllocatorType = fidl::BufferAllocator<
+		fidl::internal::ClampedMessageSize<{{ .Type }}, fidl::MessageDirection::kSending>()>;
 	return llcpp_benchmarks::BuilderBenchmark<AllocatorType>(state, Build{{ .Name }}Allocator);
 }
 bool BenchmarkBuilder{{ .Name }}Unowned(perftest::RepeatState* state) {

@@ -5,7 +5,14 @@
 #ifndef SRC_TESTS_BENCHMARKS_FIDL_LLCPP_DECODE_BENCHMARK_UTIL_H_
 #define SRC_TESTS_BENCHMARKS_FIDL_LLCPP_DECODE_BENCHMARK_UTIL_H_
 
-#include "encode_benchmark_util.h"
+#include <lib/fidl/llcpp/coding.h>
+#include <zircon/status.h>
+#include <zircon/types.h>
+
+#include <algorithm>
+#include <type_traits>
+
+#include <perftest/perftest.h>
 
 namespace llcpp_benchmarks {
 
@@ -16,9 +23,8 @@ bool DecodeBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
 
   // Encode the value.
   fidl::aligned<FidlType> aligned_value = builder();
-  uint8_t linearize_buffer[BufferSize<FidlType>];
-  auto benchmark_linearize_result = Linearize(&aligned_value.value, linearize_buffer);
-  auto& linearize_result = benchmark_linearize_result.result;
+  auto linearized = fidl::internal::Linearized<FidlType>(&aligned_value.value);
+  auto& linearize_result = linearized.result();
   ZX_ASSERT(linearize_result.status == ZX_OK && linearize_result.error == nullptr);
   auto encode_result = fidl::Encode(std::move(linearize_result.message));
   ZX_ASSERT(encode_result.status == ZX_OK && encode_result.error == nullptr);

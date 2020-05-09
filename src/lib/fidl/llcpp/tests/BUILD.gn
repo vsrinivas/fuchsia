@@ -53,6 +53,10 @@ fidl("fidl.llcpp.types.test") {
   sources = [ "types.test.fidl" ]
 }
 
+fidl("fidl.llcpp.linearized.test") {
+  sources = [ "linearized.test.fidl" ]
+}
+
 fidl("llcpptest.flexible.test") {
   sources = [ "flexible.test.fidl" ]
 }
@@ -73,6 +77,7 @@ executable("fidl_llcpp_types_test_bin") {
   sources = [
     "bits_test.cc",
     "flexible_test.cc",
+    "linearized_test.cc",
     "protocol_test.cc",
     "table_test.cc",
     "test_utils.cc",
@@ -81,6 +86,7 @@ executable("fidl_llcpp_types_test_bin") {
   ]
 
   deps = [
+    ":fidl.llcpp.linearized.test_llcpp",
     ":fidl.llcpp.types.test_llcpp",
     ":llcpptest.flexible.test_llcpp",
     ":llcpptest.protocol.test_llcpp",
