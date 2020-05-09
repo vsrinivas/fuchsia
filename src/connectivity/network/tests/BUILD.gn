@@ -21,7 +21,7 @@ group("tests") {
   ]
 }
 
-rustc_test("netstack_fidl_integration_test") {
+rustc_test("netstack_integration_test") {
   edition = "2018"
 
   deps = [
@@ -126,7 +126,7 @@ test_package("netstack_integration_tests_inner") {
   package_name = "netstack_integration_tests"
   deps = [
     ":netstack_cobalt_integration_test",
-    ":netstack_fidl_integration_test",
+    ":netstack_integration_test",
   ]
 
   visibility = [ ":*" ]
@@ -137,7 +137,7 @@ test_package("netstack_integration_tests_inner") {
       environments = [ qemu_env ]
     },
     {
-      name = "netstack_fidl_integration_test"
+      name = "netstack_integration_test"
       environments = [ qemu_env ]
     },
   ]
