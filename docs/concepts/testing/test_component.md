@@ -92,53 +92,6 @@ When you're done exploring the contents of the directory, you may want to
 delete it to free up space or prevent it from interfering with the results of
 future tests.
 
-### Restricting log severity
-
-By default, a test component fails when the component's test environment produces [ERROR/FATAL logs][syslogs].
-
-If the test is supposed to log errors (for example: the test might be testing some failure conditions),
-or if you would like your test to not produce some other severity of logs (eg WARNING, INFO),
-the test should be added to the following configurations files.
-
-- **fuchsia**: [//garnet/bin/run_test_component/max_severity_fuchsia.json][max-severity-fuchsia]
-- **petals**: //tests/config/max_severity_\<petal\>.json
-
-For example: **experiences**: [//tests/config/max_severity_experiences.json][max-severity-experiences]
-
-To allow the test to produce **ERROR** logs, following configuration should be added to above files.
-
-```json
-{
-   "tests":[
-      {
-         "url":"fuchsia-pkg://fuchsia.com/my_package#meta/my_test.cmx",
-         "max_severity":"ERROR"
-      },
-      ...
-   ]
-}
-```
-
-To restrict the logs further, following configuration may be added to above files.
-
-```json
-{
-   "tests":[
-      {
-         "url":"fuchsia-pkg://fuchsia.com/my_package#meta/my_test.cmx",
-         "max_severity":"INFO"
-      },
-      ...
-   ]
-}
-```
-
-Above example will fail the test if it produces **WARNING** or higher level logs.
-
-After updating config files, developers need to run `fx update` or `fx ota` so that the device can get updated configuration.
-
-`max_severity` can be one of `[TRACE, DEBUG, INFO, WARN, ERROR, FATAL]`.
-
 ## Ambient Services
 
 All test components are started in a new hermetic environment. By default, this
@@ -156,6 +109,55 @@ Tests can use these services by mentioning them in their `sandbox > services`.
 ## Logger Service
 
 Tests and the components launched in a hermetic environment will have access to system's `fuchsia.logger.LogSink` service if it is included in their sandbox. For tests to inject Logger, the tests must use `injected-services` (see below). Then, the injected Logger service takes precedence.
+
+### Restricting log severity
+
+By default, a test component fails when the component's test environment produces [ERROR/FATAL logs][syslogs].
+
+A test might expect to log errors. For instance, the test might be covering a
+failure condition & recovery steps. Other tests might expect not to log anything
+more severe than INFO. The common case and default behavior is for errors above
+WARN level to be considered failures, but there are configuration files for
+overrides here:
+
+- **fuchsia**: [//garnet/bin/run_test_component/max_severity_fuchsia.json][max-severity-fuchsia]
+- **petals**: //tests/config/max_severity_\<petal\>.json
+
+For example, *experiences*: [//tests/config/max_severity_experiences.json][max-severity-experiences]
+
+For instance, to allow a test to produce **ERROR** logs, add the following:
+
+```json
+{
+   "tests": [
+      {
+         "url": "fuchsia-pkg://fuchsia.com/my-package#meta/my-test.cmx",
+         "max_severity": "ERROR"
+      },
+      ...
+   ]
+}
+```
+
+To cause the same test to fail on any log message more severe than **INFO**:
+
+```json
+{
+   "tests": [
+      {
+         "url": "fuchsia-pkg://fuchsia.com/my-package#meta/my-test.cmx",
+         "max_severity": "INFO"
+      },
+      ...
+   ]
+}
+```
+
+Valid values for `max_severity`: `TRACE`, `DEBUG`, `INFO`, `WARN`, `ERROR`, `FATAL`.
+
+Changes to configuration take effect *only after an update*, for instance with `fx
+update` or `fx ota`, or by rebuilding and restarting `fx qemu`.
+
 
 ## Run external services
 
