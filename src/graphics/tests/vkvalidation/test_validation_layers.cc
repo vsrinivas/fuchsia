@@ -13,17 +13,13 @@ TEST(ValidationLayers, InstanceLayers) {
   std::vector<VkLayerProperties> layers(layer_count);
   EXPECT_EQ(VK_SUCCESS, vkEnumerateInstanceLayerProperties(&layer_count, layers.data()));
 
-  bool found_std_validation = false;
   bool found_khronos_validation = false;
 
   for (auto& layer : layers) {
-    if (strcmp(layer.layerName, "VK_LAYER_LUNARG_standard_validation") == 0)
-      found_std_validation = true;
-    else if (strcmp(layer.layerName, "VK_LAYER_KHRONOS_validation") == 0)
+    if (strcmp(layer.layerName, "VK_LAYER_KHRONOS_validation") == 0)
       found_khronos_validation = true;
   }
 
-  EXPECT_TRUE(found_std_validation);
   EXPECT_TRUE(found_khronos_validation);
 }
 
@@ -158,9 +154,5 @@ void test_validation_layer(const char* layer_name) {
 }
 
 }  // namespace
-
-TEST(ValidationLayers, StandardValidation) {
-  test_validation_layer("VK_LAYER_LUNARG_standard_validation");
-}
 
 TEST(ValidationLayers, KhronosValidation) { test_validation_layer("VK_LAYER_KHRONOS_validation"); }
