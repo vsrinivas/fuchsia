@@ -123,12 +123,33 @@ pub fn convert_debuglog_to_log_message(buf: &[u8]) -> Option<Message> {
         contents.pop();
     }
 
+    // TODO(fxb/32998): Once we support structured logs we won't need this
+    // hack to match a string in klogs.
+    const MAX_STRING_SEARCH_SIZE: usize = 100;
+    let last = contents
+        .char_indices()
+        .nth(MAX_STRING_SEARCH_SIZE)
+        .map(|(i, _)| i)
+        .unwrap_or(contents.len());
+
+    // Don't look beyond the 100th character in the substring to limit the cost
+    // of the substring search operation.
+    let early_contents = &contents[..last];
+
+    let severity = if early_contents.contains("ERROR:") {
+        Severity::Error
+    } else if early_contents.contains("WARNING:") {
+        Severity::Warn
+    } else {
+        Severity::Info
+    };
+
     Some(Message {
         size: METADATA_SIZE + 5/*tag*/ + contents.len() + 1,
         time,
         pid,
         tid,
-        severity: Severity::Info,
+        severity,
         dropped_logs: 0,
         tags: vec![String::from("klog")],
         contents,
@@ -352,5 +373,48 @@ pub mod tests {
         let mut log_stream = Box::pin(log_bridge.listen());
         let log_message = log_stream.try_next().await.unwrap().unwrap();
         assert_eq!(&log_message.contents, "test log");
+    }
+
+    #[fasync::run_until_stalled(test)]
+    async fn severity_parsed_from_log() {
+        let debug_log = TestDebugLog::new();
+        debug_log.enqueue_read_entry(&TestDebugEntry::new("ERROR: first log".as_bytes()));
+        // We look for the string 'ERROR:' to label this as a Severity::Error.
+        debug_log.enqueue_read_entry(&TestDebugEntry::new("first log error".as_bytes()));
+        debug_log.enqueue_read_entry(&TestDebugEntry::new("WARNING: second log".as_bytes()));
+        debug_log.enqueue_read_entry(&TestDebugEntry::new("INFO: third log".as_bytes()));
+        debug_log.enqueue_read_entry(&TestDebugEntry::new("fourth log".as_bytes()));
+        // Create a string padded with UTF-8 codepoints at the beginning so it's not labeled
+        // as an error log.
+        let long_padding = (0..100).map(|_| "\u{10FF}").collect::<String>();
+        let long_log = format!("{}ERROR: fifth log", long_padding);
+        debug_log.enqueue_read_entry(&TestDebugEntry::new(long_log.as_bytes()));
+
+        let log_bridge = DebugLogBridge::create(debug_log);
+        let mut log_stream = Box::pin(log_bridge.listen());
+
+        let log_message = log_stream.try_next().await.unwrap().unwrap();
+        assert_eq!(&log_message.contents, "ERROR: first log");
+        assert_eq!(log_message.severity, Severity::Error);
+
+        let log_message = log_stream.try_next().await.unwrap().unwrap();
+        assert_eq!(&log_message.contents, "first log error");
+        assert_eq!(log_message.severity, Severity::Info);
+
+        let log_message = log_stream.try_next().await.unwrap().unwrap();
+        assert_eq!(&log_message.contents, "WARNING: second log");
+        assert_eq!(log_message.severity, Severity::Warn);
+
+        let log_message = log_stream.try_next().await.unwrap().unwrap();
+        assert_eq!(&log_message.contents, "INFO: third log");
+        assert_eq!(log_message.severity, Severity::Info);
+
+        let log_message = log_stream.try_next().await.unwrap().unwrap();
+        assert_eq!(&log_message.contents, "fourth log");
+        assert_eq!(log_message.severity, Severity::Info);
+
+        let log_message = log_stream.try_next().await.unwrap().unwrap();
+        assert_eq!(&log_message.contents, &long_log);
+        assert_eq!(log_message.severity, Severity::Info);
     }
 }
