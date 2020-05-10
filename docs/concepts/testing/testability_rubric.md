@@ -281,6 +281,7 @@ difficulty this are the test target's CPU speed, number of cores, and system
 load along with environmental factors like temperature.
 
 *   Avoid something like:
+
     ```c++
     // Check if the callback was called.
     zx_nanosleep(zx_deadline_after(ZX_MSEC(100)));
@@ -288,6 +289,7 @@ load along with environmental factors like temperature.
     ```
 
 *   Instead, explicitly wait for the condition:
+
     ```c++
     // In callback
     callback() {
