@@ -1209,7 +1209,8 @@ class ParameterizedYuvPixelTest
       public ::testing::WithParamInterface<fuchsia::sysmem::PixelFormatType> {};
 
 // Test that exercies sampling from YUV textures.
-TEST_P(ParameterizedYuvPixelTest, YuvImagesOnImagePipe2) {
+// TODO(fxb/51772): Re-enable after solving flakiness.
+TEST_P(ParameterizedYuvPixelTest, DISABLED_YuvImagesOnImagePipe2) {
   auto test_session = SetUpTestSession();
   scenic::Session* const session = &test_session->session;
   const auto [display_width, display_height] = test_session->display_dimensions;
