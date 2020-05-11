@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::message::action_fuse::{ActionFuse, ActionFuseHandle};
+use crate::message::action_fuse::{ActionFuse, ActionFuseBuilder, ActionFuseHandle};
 use crate::message::base::{Address, Message, MessageType, Payload, Signature};
-use crate::message::beacon::Beacon;
+use crate::message::beacon::BeaconBuilder;
 use crate::message::message_builder::MessageBuilder;
 use crate::message::messenger::Messenger;
 use crate::message::receptor::Receptor;
@@ -32,9 +32,11 @@ impl<P: Payload + 'static, A: Address + 'static> MessageClient<P, A> {
         MessageClient {
             message: message.clone(),
             messenger: messenger.clone(),
-            forwarder: ActionFuse::create(Box::new(move || {
-                fuse_messenger_clone.forward(fuse_message_clone.clone(), None);
-            })),
+            forwarder: ActionFuseBuilder::new()
+                .add_action(Box::new(move || {
+                    fuse_messenger_clone.forward(fuse_message_clone.clone(), None);
+                }))
+                .build(),
         }
     }
 
@@ -53,7 +55,7 @@ impl<P: Payload + 'static, A: Address + 'static> MessageClient<P, A> {
     /// Marks this client's Messenger as an active participant in any return
     /// communication.
     pub fn observe(&mut self) -> Receptor<P, A> {
-        let (beacon, receptor) = Beacon::create(self.messenger.clone(), None);
+        let (beacon, receptor) = BeaconBuilder::new(self.messenger.clone()).build();
         self.messenger.forward(self.message.clone(), Some(beacon));
         ActionFuse::defuse(self.forwarder.clone());
 

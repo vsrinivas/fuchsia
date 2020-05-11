@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::message::action_fuse::ActionFuse;
+use crate::message::action_fuse::ActionFuseBuilder;
 use crate::message::base::{
     ActionSender, Address, Audience, DeliveryStatus, Fingerprint, Message, MessageAction,
     MessageError, MessageType, MessengerAction, MessengerActionSender, MessengerId, MessengerType,
     Payload, Signature,
 };
-use crate::message::beacon::Beacon;
+use crate::message::beacon::{Beacon, BeaconBuilder};
 use crate::message::messenger::{Messenger, MessengerClient, MessengerFactory};
 use fuchsia_async as fasync;
 use futures::lock::Mutex;
@@ -280,14 +280,17 @@ impl<P: Payload + 'static, A: Address + 'static> MessageHub<P, A> {
                 let messenger_tx_clone = self.messenger_tx.clone();
 
                 // Create fuse to delete Messenger.
-                let fuse = ActionFuse::create(Box::new(move || {
-                    messenger_tx_clone
-                        .unbounded_send(MessengerAction::Delete(messenger_clone.clone()))
-                        .ok();
-                }));
+                let fuse = ActionFuseBuilder::new()
+                    .add_action(Box::new(move || {
+                        messenger_tx_clone
+                            .unbounded_send(MessengerAction::Delete(messenger_clone.clone()))
+                            .ok();
+                    }))
+                    .build();
 
                 self.next_id += 1;
-                let (beacon, receptor) = Beacon::create(messenger.clone(), Some(fuse.clone()));
+                let (beacon, receptor) =
+                    BeaconBuilder::new(messenger.clone()).add_fuse(fuse.clone()).build();
                 self.beacons.insert(id, beacon.clone());
 
                 match messenger_type {

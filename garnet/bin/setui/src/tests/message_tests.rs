@@ -2,12 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::message::action_fuse::ActionFuseBuilder;
 use crate::message::base::*;
 use crate::message::message_client::MessageClient;
 use crate::message::message_hub::MessageHub;
 use crate::message::receptor::*;
 use futures::future::BoxFuture;
 use futures::lock::Mutex;
+use futures::StreamExt;
 use std::fmt::Debug;
 use std::hash::Hash;
 use std::sync::Arc;
@@ -410,4 +412,50 @@ async fn test_next_payload() {
         let receptor_result = receptor.next_payload().await;
         assert!(receptor_result.is_err());
     }
+}
+
+/// Exercises basic action fuse behavior.
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_action_fuse() {
+    // Channel to send the message from the fuse.
+    let (tx, mut rx) = futures::channel::mpsc::unbounded::<()>();
+
+    {
+        let _ = ActionFuseBuilder::new()
+            .add_action(Box::new(move || {
+                tx.unbounded_send(()).ok();
+            }))
+            .build();
+    }
+
+    assert!(!rx.next().await.is_none());
+}
+
+/// Exercises chained action fuse behavior
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_chained_action_fuse() {
+    // Channel to send the message from the fuse.
+    let (tx, mut rx) = futures::channel::mpsc::unbounded::<()>();
+    let (tx2, mut rx2) = futures::channel::mpsc::unbounded::<()>();
+
+    {
+        let _ = ActionFuseBuilder::new()
+            .add_action(Box::new(move || {
+                tx.unbounded_send(()).ok();
+            }))
+            .chain_fuse(
+                ActionFuseBuilder::new()
+                    .add_action(Box::new(move || {
+                        tx2.unbounded_send(()).ok();
+                    }))
+                    .build(),
+            )
+            .build();
+    }
+
+    // Root should fire first
+    assert!(!rx.next().await.is_none());
+
+    // Then chain reaction
+    assert!(!rx2.next().await.is_none());
 }

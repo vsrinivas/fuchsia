@@ -4,7 +4,7 @@
 
 use crate::message::action_fuse::{ActionFuse, ActionFuseHandle};
 use crate::message::base::{Address, MessageAction, MessageType, Payload};
-use crate::message::beacon::Beacon;
+use crate::message::beacon::BeaconBuilder;
 use crate::message::messenger::Messenger;
 use crate::message::receptor::Receptor;
 
@@ -45,7 +45,7 @@ impl<P: Payload + 'static, A: Address + 'static> MessageBuilder<P, A> {
 
     /// Consumes the MessageBuilder and sends the message to the MessageHub.
     pub fn send(self) -> Receptor<P, A> {
-        let (beacon, receptor) = Beacon::create(self.messenger.clone(), None);
+        let (beacon, receptor) = BeaconBuilder::new(self.messenger.clone()).build();
         self.messenger.transmit(MessageAction::Send(self.payload, self.message_type), Some(beacon));
 
         if let Some(forwarder) = self.forwarder {
