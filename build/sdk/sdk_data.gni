@@ -46,7 +46,7 @@ template("sdk_data") {
 
     meta = {
       schema = "data"
-      dest = "${file_base}/${invoker.name}.json"
+      dest = "data/${invoker.type}/${invoker.name}.json"
       value = {
         type = "${invoker.type}"
         name = invoker.name
