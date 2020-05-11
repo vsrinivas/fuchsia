@@ -69,13 +69,23 @@ mod tests {
         },
     };
 
+    async fn run_input_session(ordering: Ordering, expected_events: Vec<EventMatcher>) {
+        let event_source = EventSource::new_sync().unwrap();
+        event_source.start_component_tree().await.unwrap();
+
+        let expectation = event_source.expect_events(ordering, expected_events).await.unwrap();
+
+        let session_url = "fuchsia-pkg://fuchsia.com/input_session#meta/input_session.cm";
+        session_manager_lib::startup::launch_session(&session_url)
+            .await
+            .expect("Failed starting input session");
+
+        expectation.await.unwrap();
+    }
+
     /// Verifies that the session is routed the expected capabilities.
     #[fasync::run_singlethreaded(test)]
     async fn test_capability_routing() {
-        let event_source = EventSource::new_sync().unwrap();
-
-        event_source.start_component_tree().await.unwrap();
-
         let expected_events = vec![
             EventMatcher::new()
                 .expect_type::<CapabilityRouted>()
@@ -91,36 +101,17 @@ mod tests {
                 .expect_capability_id("/dev/class/input-report"),
         ];
 
-        let expectation =
-            event_source.expect_events(Ordering::Unordered, expected_events).await.unwrap();
-
-        let session_url = "fuchsia-pkg://fuchsia.com/input_session#meta/input_session.cm";
-        session_manager_lib::startup::launch_session(&session_url)
-            .await
-            .expect("Failed starting input session");
-
-        expectation.await.unwrap();
+        run_input_session(Ordering::Unordered, expected_events).await;
     }
 
     /// Verifies that the session is correctly resolved and launched with out errors.
     #[fasync::run_singlethreaded(test)]
     async fn test_session_lifecycle() {
-        let event_source = EventSource::new_sync().unwrap();
-        event_source.start_component_tree().await.unwrap();
-
         let expected_events = vec![
             EventMatcher::new().expect_type::<Resolved>().expect_moniker("./session:session:*"),
             EventMatcher::new().expect_type::<Started>().expect_moniker("./session:session:*"),
         ];
 
-        let expectation =
-            event_source.expect_events(Ordering::Ordered, expected_events).await.unwrap();
-
-        let session_url = "fuchsia-pkg://fuchsia.com/input_session#meta/input_session.cm";
-        session_manager_lib::startup::launch_session(&session_url)
-            .await
-            .expect("Failed starting input session");
-
-        expectation.await.unwrap();
+        run_input_session(Ordering::Ordered, expected_events).await;
     }
 }
