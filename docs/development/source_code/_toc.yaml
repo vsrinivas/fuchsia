@@ -6,9 +6,11 @@ toc:
   path: /docs/development/source_code
 - title: "Contribute changes"
   path: /docs/development/source_code/contribute_changes.md
-- title: "Upload changes from multiple repositories"
-  path: /docs/development/source_code/upload_changes_from_multiple_repositories.md
-- title: "Make changes across different petals"
-  path: /docs/development/source_code/working_across_petals.md
 - title: "Workflow tips and questions"
   path: /docs/development/source_code/workflow_tips_and_faq.md
+- title: "Advanced"
+  section:
+  - title: "Upload changes from multiple repositories"
+    path: /docs/development/source_code/upload_changes_from_multiple_repositories.md
+  - title: "Make changes across different petals"
+    path: /docs/development/source_code/working_across_petals.md
