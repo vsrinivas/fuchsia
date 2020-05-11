@@ -178,7 +178,6 @@ static zx_status_t kpci_connect_sysmem(pci_msg_t* req, kpci_device_t* device, zx
       return status;
     }
   } else {
-    zx_handle_close(ch);
     return ZX_ERR_NOT_SUPPORTED;
   }
   return pci_rpc_reply(ch, ZX_OK, NULL, req, &resp);
