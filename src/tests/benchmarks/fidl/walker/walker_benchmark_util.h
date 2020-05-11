@@ -10,7 +10,8 @@
 
 #include <perftest/perftest.h>
 
-namespace {
+namespace walker_benchmarks {
+namespace internal {
 
 struct Position;
 
@@ -91,9 +92,7 @@ void Walk(const fidl_type_t* fidl_type, uint8_t* data) {
   ZX_ASSERT(visitor.error() == nullptr);
 }
 
-}  // namespace
-
-namespace walker_benchmarks {
+}  // namespace internal
 
 template <typename BuilderFunc>
 bool WalkerBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
@@ -107,7 +106,7 @@ bool WalkerBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
   fidl::BytePart bytes = linearize_result.message.Release();
 
   while (state->KeepRunning()) {
-    Walk(FidlType::Type, bytes.data());
+    internal::Walk(FidlType::Type, bytes.data());
   }
 
   return true;
