@@ -8,7 +8,7 @@ use crate::ok;
 use crate::{object_get_info, ObjectQuery, Topic};
 use crate::{AsHandleRef, Handle, HandleBased, HandleRef, Status};
 use bitflags::bitflags;
-use fuchsia_zircon_sys::{self as sys, ZX_MAX_NAME_LEN};
+use fuchsia_zircon_sys::{self as sys, zx_duration_t, ZX_MAX_NAME_LEN};
 
 /// An object representing a Zircon resource.
 ///
@@ -18,13 +18,93 @@ use fuchsia_zircon_sys::{self as sys, ZX_MAX_NAME_LEN};
 pub struct Resource(Handle);
 impl_handle_based!(Resource);
 
+sys::zx_info_kmem_stats_t!(MemStats);
+sys::zx_info_cpu_stats_t!(PerCpuStats);
 sys::zx_info_resource_t!(ResourceInfo);
+
+impl From<sys::zx_info_kmem_stats_t> for MemStats {
+    fn from(info: sys::zx_info_kmem_stats_t) -> MemStats {
+        let sys::zx_info_kmem_stats_t {
+            total_bytes,
+            free_bytes,
+            wired_bytes,
+            total_heap_bytes,
+            free_heap_bytes,
+            vmo_bytes,
+            mmu_overhead_bytes,
+            ipc_bytes,
+            other_bytes,
+        } = info;
+        MemStats {
+            total_bytes,
+            free_bytes,
+            wired_bytes,
+            total_heap_bytes,
+            free_heap_bytes,
+            vmo_bytes,
+            mmu_overhead_bytes,
+            ipc_bytes,
+            other_bytes,
+        }
+    }
+}
+
+impl From<sys::zx_info_cpu_stats_t> for PerCpuStats {
+    fn from(info: sys::zx_info_cpu_stats_t) -> PerCpuStats {
+        let sys::zx_info_cpu_stats_t {
+            cpu_number,
+            flags,
+            idle_time,
+            reschedules,
+            context_switches,
+            irq_preempts,
+            preempts,
+            yields,
+            ints,
+            timer_ints,
+            timers,
+            page_faults,
+            exceptions,
+            syscalls,
+            reschedule_ipis,
+            generic_ipis,
+        } = info;
+        PerCpuStats {
+            cpu_number,
+            flags,
+            idle_time,
+            reschedules,
+            context_switches,
+            irq_preempts,
+            preempts,
+            yields,
+            ints,
+            timer_ints,
+            timers,
+            page_faults,
+            exceptions,
+            syscalls,
+            reschedule_ipis,
+            generic_ipis,
+        }
+    }
+}
 
 impl From<sys::zx_info_resource_t> for ResourceInfo {
     fn from(info: sys::zx_info_resource_t) -> ResourceInfo {
         let sys::zx_info_resource_t { kind, flags, base, size, name } = info;
         ResourceInfo { kind, flags, base, size, name }
     }
+}
+
+unsafe impl ObjectQuery for MemStats {
+    const TOPIC: Topic = Topic::KMEM_STATS;
+    type InfoTy = MemStats;
+}
+
+unsafe impl ObjectQuery for PerCpuStats {
+    const TOPIC: Topic = Topic::CPU_STATS;
+    type InfoTy = PerCpuStats;
 }
 
 unsafe impl ObjectQuery for ResourceInfo {
@@ -98,6 +178,25 @@ impl Resource {
         object_get_info::<ResourceInfo>(self.as_handle_ref(), std::slice::from_mut(&mut info))
             .map(|_| info)
     }
+
+    /// Wraps the
+    /// [zx_object_get_info](https://fuchsia.dev/fuchsia-src/reference/syscalls/object_get_info.md)
+    /// syscall for the ZX_INFO_CPU_STATS topic.
+    pub fn cpu_stats(&self) -> Result<(usize, Vec<PerCpuStats>), Status> {
+        let num_cpu = unsafe { sys::zx_system_get_num_cpus() };
+        let mut info = vec![PerCpuStats::default(); num_cpu as usize];
+        object_get_info::<PerCpuStats>(self.as_handle_ref(), &mut info[..])
+            .map(|(actual, _)| (actual, info[..actual].to_vec()))
+    }
+
+    /// Wraps the
+    /// [zx_object_get_info](https://fuchsia.dev/fuchsia-src/reference/syscalls/object_get_info.md)
+    /// syscall for the ZX_INFO_KMEM_STATS topic.
+    pub fn mem_stats(&self) -> Result<MemStats, Status> {
+        let mut info = MemStats::default();
+        object_get_info::<MemStats>(self.as_handle_ref(), std::slice::from_mut(&mut info))
+            .map(|_| info)
+    }
 }
 
 #[cfg(test)]
@@ -111,5 +210,17 @@ mod tests {
             invalid_resource.create_child(ResourceKind::VMEX, None, 0, 0, b"vmex"),
             Err(Status::BAD_HANDLE)
         );
+    }
+
+    #[test]
+    fn cpu_stats() {
+        let invalid_resource = Resource::from(Handle::invalid());
+        assert_eq!(invalid_resource.cpu_stats(), Err(Status::BAD_HANDLE));
+    }
+
+    #[test]
+    fn mem_stats() {
+        let invalid_resource = Resource::from(Handle::invalid());
+        assert_eq!(invalid_resource.mem_stats(), Err(Status::BAD_HANDLE));
     }
 }
