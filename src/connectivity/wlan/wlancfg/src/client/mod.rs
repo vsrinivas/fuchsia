@@ -212,8 +212,15 @@ async fn handle_provider_request(
 ) -> Result<(), fidl::Error> {
     match req {
         fidl_policy::ClientProviderRequest::GetController { requests, updates, .. } => {
-            register_listener(update_sender, updates.into_proxy()?);
-            handle_client_requests(client, internal_msg_sink, saved_networks, requests).await?;
+            register_listener(update_sender.clone(), updates.into_proxy()?);
+            handle_client_requests(
+                update_sender,
+                client,
+                internal_msg_sink,
+                saved_networks,
+                requests,
+            )
+            .await?;
             Ok(())
         }
     }
@@ -239,6 +246,7 @@ fn log_client_request(request: &fidl_policy::ClientControllerRequest) {
 
 /// Handles all incoming requests from a ClientController.
 async fn handle_client_requests(
+    update_sender: listener::ClientMessageSender,
     client: ClientPtr,
     internal_msg_sink: InternalMsgSink,
     saved_networks: SavedNetworksPtr,
@@ -250,6 +258,7 @@ async fn handle_client_requests(
         match request {
             fidl_policy::ClientControllerRequest::Connect { id, responder, .. } => {
                 match handle_client_request_connect(
+                    update_sender.clone(),
                     Arc::clone(&client),
                     Arc::clone(&saved_networks),
                     &id,
@@ -258,7 +267,6 @@ async fn handle_client_requests(
                 {
                     Ok((cred, txn)) => {
                         responder.send(fidl_common::RequestStatus::Acknowledged)?;
-                        // TODO(hahnr): Send connecting update.
                         let _ignored = internal_msg_sink
                             .unbounded_send(InternalMsg::NewPendingConnectRequest(id, cred, txn));
                     }
@@ -315,38 +323,44 @@ async fn handle_sme_connect_response(
     saved_networks: SavedNetworksPtr,
 ) {
     match txn_event {
-        fidl_sme::ConnectTransactionEvent::OnFinished { code } => match code {
-            fidl_sme::ConnectResultCode::Success => {
+        fidl_sme::ConnectTransactionEvent::OnFinished { code } => {
+            use fidl_policy::ConnectionState as policy_state;
+            use fidl_policy::DisconnectStatus as policy_dc_status;
+            use fidl_sme::ConnectResultCode as sme_code;
+            if code == sme_code::Success {
                 info!("connection request successful to: {:?}", String::from_utf8_lossy(&id.ssid));
                 saved_networks.record_connect_success(id.clone(), &credential);
-                let update = listener::ClientStateUpdate {
-                    state: None,
-                    networks: vec![listener::ClientNetworkState {
-                        id: id.into(),
-                        state: fidl_policy::ConnectionState::Connected,
-                        status: None,
-                    }],
-                };
-                let _ignored =
-                    update_sender.unbounded_send(listener::Message::NotifyListeners(update));
             }
-            // No-op. Connect request was replaced.
-            fidl_sme::ConnectResultCode::Canceled => (),
-            error_code => {
-                error!(
-                    "connection request failed to: {:?} - {:?}",
-                    String::from_utf8_lossy(&id.ssid),
-                    error_code
-                );
-                // TODO(mnck): Send failure update.
-            }
-        },
+            let update = listener::ClientStateUpdate {
+                state: None,
+                networks: vec![listener::ClientNetworkState {
+                    id: id.into(),
+                    state: match code {
+                        sme_code::Success => policy_state::Connected,
+                        sme_code::Canceled => policy_state::Disconnected,
+                        sme_code::Failed => policy_state::Failed,
+                        sme_code::BadCredentials => policy_state::Failed,
+                    },
+                    status: match code {
+                        sme_code::Success => None,
+                        sme_code::Canceled => Some(policy_dc_status::ConnectionStopped),
+                        sme_code::Failed => Some(policy_dc_status::ConnectionFailed),
+                        sme_code::BadCredentials => Some(policy_dc_status::CredentialsFailed),
+                    },
+                }],
+            };
+            if let Err(e) = update_sender.unbounded_send(listener::Message::NotifyListeners(update))
+            {
+                error!("failed to send update to listener: {:?}", e);
+            };
+        }
     }
 }
 
 /// Attempts to issue a new connect request to the currently active Client.
 /// The network's configuration must have been stored before issuing a connect request.
 async fn handle_client_request_connect(
+    update_sender: listener::ClientMessageSender,
     client: ClientPtr,
     saved_networks: SavedNetworksPtr,
     network: &fidl_policy::NetworkIdentifier,
@@ -390,6 +404,18 @@ async fn handle_client_request_connect(
     client_sme.connect(&mut request, Some(remote)).map_err(|e| {
         RequestError::new().with_cause(format_err!("failed to connect to sme: {:?}", e))
     })?;
+
+    let update = listener::ClientStateUpdate {
+        state: None,
+        networks: vec![listener::ClientNetworkState {
+            id: network.clone(),
+            state: fidl_policy::ConnectionState::Connecting,
+            status: None,
+        }],
+    };
+    if let Err(e) = update_sender.unbounded_send(listener::Message::NotifyListeners(update)) {
+        error!("failed to send update to listener: {:?}", e);
+    };
 
     Ok((network_config.credential, local))
 }
@@ -820,6 +846,24 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
         assert_variant!(exec.run_until_stalled(&mut connect_fut), Poll::Ready(Ok(_)));
 
+        // Verify status update.
+        let summary = assert_variant!(
+            exec.run_until_stalled(&mut test_values.listener_updates.next()),
+            Poll::Ready(Some(listener::Message::NotifyListeners(summary))) => summary
+        );
+        let expected_summary = listener::ClientStateUpdate {
+            state: None,
+            networks: vec![listener::ClientNetworkState {
+                id: fidl_policy::NetworkIdentifier {
+                    ssid: b"foobar".to_vec(),
+                    type_: fidl_policy::SecurityType::None,
+                },
+                state: fidl_policy::ConnectionState::Connecting,
+                status: None,
+            }],
+        };
+        assert_eq!(summary, expected_summary);
+
         assert_variant!(
             exec.run_until_stalled(&mut test_values.sme_stream.next()),
             Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Connect {
@@ -899,6 +943,24 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
         assert_variant!(exec.run_until_stalled(&mut connect_fut), Poll::Ready(Ok(_)));
 
+        // Verify status update.
+        let summary = assert_variant!(
+            exec.run_until_stalled(&mut test_values.listener_updates.next()),
+            Poll::Ready(Some(listener::Message::NotifyListeners(summary))) => summary
+        );
+        let expected_summary = listener::ClientStateUpdate {
+            state: None,
+            networks: vec![listener::ClientNetworkState {
+                id: fidl_policy::NetworkIdentifier {
+                    ssid: b"foobar".to_vec(),
+                    type_: fidl_policy::SecurityType::None,
+                },
+                state: fidl_policy::ConnectionState::Connecting,
+                status: None,
+            }],
+        };
+        assert_eq!(summary, expected_summary);
+
         assert_variant!(
             exec.run_until_stalled(&mut test_values.sme_stream.next()),
             Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Connect {
@@ -915,11 +977,120 @@ mod tests {
         // Process SME result.
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
 
-        // Verify status was not updated.
+        // Verify status update.
+        let summary = assert_variant!(
+            exec.run_until_stalled(&mut test_values.listener_updates.next()),
+            Poll::Ready(Some(listener::Message::NotifyListeners(summary))) => summary
+        );
+        let expected_summary = listener::ClientStateUpdate {
+            state: None,
+            networks: vec![listener::ClientNetworkState {
+                id: fidl_policy::NetworkIdentifier {
+                    ssid: b"foobar".to_vec(),
+                    type_: fidl_policy::SecurityType::None,
+                },
+                state: fidl_policy::ConnectionState::Failed,
+                status: Some(fidl_policy::DisconnectStatus::ConnectionFailed),
+            }],
+        };
+        assert_eq!(summary, expected_summary);
+
+        // Verify network config reflects that we still have not connected successfully
+        let cfg = get_config(
+            test_values.saved_networks,
+            NetworkIdentifier::new(b"foobar".to_vec(), SecurityType::None),
+            Credential::None,
+        );
+        assert_variant!(cfg, Some(cfg) => {
+            assert_eq!(false, cfg.has_ever_connected);
+        });
+    }
+
+    #[test]
+    fn connect_request_bad_password() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut test_values = test_setup("connect_request_bad_password", &mut exec);
+        let serve_fut = serve_provider_requests(
+            test_values.client,
+            test_values.update_sender,
+            Arc::clone(&test_values.saved_networks),
+            test_values.requests,
+        );
+        pin_mut!(serve_fut);
+
+        // No request has been sent yet. Future should be idle.
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+
+        // Request a new controller.
+        let (controller, _update_stream) = request_controller(&test_values.provider);
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
         assert_variant!(
             exec.run_until_stalled(&mut test_values.listener_updates.next()),
-            Poll::Pending
+            Poll::Ready(_)
         );
+
+        // Issue connect request.
+        let connect_fut = controller.connect(&mut fidl_policy::NetworkIdentifier {
+            ssid: b"foobar".to_vec(),
+            type_: fidl_policy::SecurityType::None,
+        });
+        pin_mut!(connect_fut);
+
+        // Process connect request and verify connect response.
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+        assert_variant!(exec.run_until_stalled(&mut connect_fut), Poll::Ready(Ok(_)));
+
+        // Verify status update.
+        let summary = assert_variant!(
+            exec.run_until_stalled(&mut test_values.listener_updates.next()),
+            Poll::Ready(Some(listener::Message::NotifyListeners(summary))) => summary
+        );
+        let expected_summary = listener::ClientStateUpdate {
+            state: None,
+            networks: vec![listener::ClientNetworkState {
+                id: fidl_policy::NetworkIdentifier {
+                    ssid: b"foobar".to_vec(),
+                    type_: fidl_policy::SecurityType::None,
+                },
+                state: fidl_policy::ConnectionState::Connecting,
+                status: None,
+            }],
+        };
+        assert_eq!(summary, expected_summary);
+
+        assert_variant!(
+            exec.run_until_stalled(&mut test_values.sme_stream.next()),
+            Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Connect {
+                txn, ..
+            }))) => {
+                // Send failed connection response.
+                let (_stream, ctrl) = txn.expect("connect txn unused")
+                    .into_stream_and_control_handle().expect("error accessing control handle");
+                ctrl.send_on_finished(fidl_sme::ConnectResultCode::BadCredentials)
+                    .expect("failed to send connection completion");
+            }
+        );
+
+        // Process SME result.
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+
+        // Verify status update.
+        let summary = assert_variant!(
+            exec.run_until_stalled(&mut test_values.listener_updates.next()),
+            Poll::Ready(Some(listener::Message::NotifyListeners(summary))) => summary
+        );
+        let expected_summary = listener::ClientStateUpdate {
+            state: None,
+            networks: vec![listener::ClientNetworkState {
+                id: fidl_policy::NetworkIdentifier {
+                    ssid: b"foobar".to_vec(),
+                    type_: fidl_policy::SecurityType::None,
+                },
+                state: fidl_policy::ConnectionState::Failed,
+                status: Some(fidl_policy::DisconnectStatus::CredentialsFailed),
+            }],
+        };
+        assert_eq!(summary, expected_summary);
 
         // Verify network config reflects that we still have not connected successfully
         let cfg = get_config(
