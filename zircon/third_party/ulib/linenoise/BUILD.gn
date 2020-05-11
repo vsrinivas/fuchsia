@@ -20,7 +20,7 @@ zx_library("linenoise") {
   sources = [ "linenoise.c" ]
   include_dirs = [ "include/linenoise" ]
   deps = [
+    "//sdk/fidl/fuchsia.hardware.pty:fuchsia.hardware.pty_c",
     "//zircon/public/lib/fdio",
-    "//zircon/system/fidl/fuchsia-hardware-pty:c",
   ]
 }

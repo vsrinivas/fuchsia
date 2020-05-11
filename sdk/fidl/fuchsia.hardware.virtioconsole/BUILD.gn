@@ -5,6 +5,6 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.hardware.virtioconsole") {
-  public_deps = [ "//zircon/system/fidl/fuchsia-hardware-pty" ]
+  public_deps = [ "//sdk/fidl/fuchsia.hardware.pty" ]
   sources = [ "virtioconsole.fidl" ]
 }

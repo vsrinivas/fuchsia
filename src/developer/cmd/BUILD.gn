@@ -44,6 +44,7 @@ source_set("lib") {
   ]
 
   public_deps = [
+    "//sdk/fidl/fuchsia.hardware.pty:fuchsia.hardware.pty_c",
     "//src/developer/cmd/legacy",
     "//src/lib/fsl",
     "//src/lib/line_input",
@@ -52,7 +53,6 @@ source_set("lib") {
     "//zircon/public/lib/fit",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
-    "//zircon/system/fidl/fuchsia-hardware-pty:c",
   ]
 }
 

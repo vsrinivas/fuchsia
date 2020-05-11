@@ -19,11 +19,11 @@ test("pty") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "pty-test.cc" ]
   deps = [
+    "//sdk/fidl/fuchsia.hardware.pty:fuchsia.hardware.pty_c",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/unittest",
     "//zircon/public/lib/zx",
-    "//zircon/system/fidl/fuchsia-hardware-pty:c",
     "//zircon/system/ulib/fdio-caller",
   ]
 }

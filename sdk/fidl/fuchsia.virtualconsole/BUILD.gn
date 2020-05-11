@@ -6,5 +6,5 @@ import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.virtualconsole") {
   sources = [ "session-manager.fidl" ]
-  public_deps = [ "//zircon/system/fidl/fuchsia-hardware-pty" ]
+  public_deps = [ "//sdk/fidl/fuchsia.hardware.pty" ]
 }

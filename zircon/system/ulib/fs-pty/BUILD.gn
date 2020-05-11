@@ -29,11 +29,11 @@ zx_library("fs-pty") {
   ]
   include_dirs = [ "include" ]
   public_deps = [
+    "//sdk/fidl/fuchsia.hardware.pty:fuchsia.hardware.pty_llcpp",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/fs",
     "//zircon/public/lib/zx",
-    "//zircon/system/fidl/fuchsia-hardware-pty:llcpp",
     "//zircon/system/fidl/fuchsia-io:llcpp",
   ]
 

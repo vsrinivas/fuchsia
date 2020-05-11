@@ -26,6 +26,7 @@ rustc_library("lib") {
   deps = [
     "third_party/term-model",
     "//garnet/bin/terminal/third_party/term-model",
+    "//sdk/fidl/fuchsia.hardware.pty:fuchsia.hardware.pty-rustc",
     "//sdk/fidl/fuchsia.images:fuchsia.images-rustc",
     "//sdk/fidl/fuchsia.math:fuchsia.math-rustc",
     "//sdk/fidl/fuchsia.ui.app:fuchsia.ui.app-rustc",
@@ -51,7 +52,6 @@ rustc_library("lib") {
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:rusttype",
     "//third_party/rust_crates:thiserror",
-    "//zircon/system/fidl/fuchsia-hardware-pty:fuchsia-hardware-pty-rustc",
   ]
 }
 
