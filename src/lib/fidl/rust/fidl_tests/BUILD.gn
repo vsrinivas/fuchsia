@@ -26,7 +26,7 @@ gidl("generate_conformance_test") {
   testonly = true
 }
 
-rustc_test("fidl_conformance_tests") {
+rustc_test("fidl_rust_conformance_tests") {
   edition = "2018"
   source_root = conformance_test_source
   deps = [

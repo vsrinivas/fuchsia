@@ -41,7 +41,7 @@ for each language / binding.
 
 * Rust:
     * Build: `fx build src/lib/fidl/rust/fidl_tests`
-    * Run: `fx run-test rust_fidl_tests`
+    * Run: `fx run-test fidl_rust_conformance_tests`
 
 * Dart:
     * Build: `fx build topaz/bin/fidl_bindings_test/test:fidl_bindings_test`
