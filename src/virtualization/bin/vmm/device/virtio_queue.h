@@ -137,9 +137,6 @@ class VirtioQueue {
   zx_status_t NextAvailLocked(uint16_t* index) __TA_REQUIRES(mutex_);
   bool HasAvailLocked() const __TA_REQUIRES(mutex_);
 
-  // Returns a circular index into a Virtio ring.
-  uint32_t RingIndexLocked(uint32_t index) const __TA_REQUIRES(mutex_);
-
   mutable std::mutex mutex_;
   const PhysMem* phys_mem_ = nullptr;
   InterruptFn interrupt_;

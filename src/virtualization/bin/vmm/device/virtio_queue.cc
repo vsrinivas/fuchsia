@@ -39,14 +39,29 @@ bool VirtioQueue::NextChain(VirtioChain* chain) {
   uint16_t head;
   {
     std::lock_guard<std::mutex> lock(mutex_);
-    if (!HasAvailLocked()) {
+    // Validate that we have been configured before proceeding.
+    if (ring_.avail == nullptr) {
       return false;
     }
-    head = ring_.avail->ring[RingIndexLocked(ring_.index++)];
+    uint16_t avail_index = __atomic_load_n(&ring_.avail->idx, __ATOMIC_ACQUIRE);
+    uint16_t length = avail_index - ring_.index;
+    // Validate that:
+    //  1. We have not exceeded the queue length. This protects us from faulty
+    //     clients that have an invalid available index, which can occur if the
+    //     guest driver crashes.
+    //  2. We have not exceeded the available index. This protects us from
+    //     excessive queue notifications from guest drivers, which can occur in
+    //     normal operation as we process the queue asynchronously.
+    if (length > ring_.size || avail_index == ring_.index) {
+      return false;
+    }
+    // Validate that the head of the chain does not exceed the queue length.
+    head = ring_.avail->ring[ring_.index % ring_.size];
     if (head >= ring_.size) {
       return false;
     }
-    if (use_event_index_ && ring_.avail_event) {
+    ring_.index++;
+    if (use_event_index_) {
       *ring_.avail_event = ring_.index;
     }
   }
@@ -59,14 +74,15 @@ zx_status_t VirtioQueue::NextAvailLocked(uint16_t* index) {
     return ZX_ERR_SHOULD_WAIT;
   }
 
-  *index = ring_.avail->ring[RingIndexLocked(ring_.index++)];
+  *index = ring_.avail->ring[ring_.index % ring_.size];
   if (*index >= ring_.size) {
     return ZX_ERR_INTERNAL;
   }
+  ring_.index++;
 
   // If we have event indices enabled, update the avail-event to notify us
   // when we have sufficient descriptors available.
-  if (use_event_index_ && ring_.avail_event) {
+  if (use_event_index_) {
     *ring_.avail_event = ring_.index;
   }
 
@@ -84,8 +100,6 @@ bool VirtioQueue::HasAvailLocked() const {
   return ring_.avail != nullptr &&
          __atomic_load_n(&ring_.avail->idx, __ATOMIC_ACQUIRE) != ring_.index;
 }
-
-uint32_t VirtioQueue::RingIndexLocked(uint32_t index) const { return index % ring_.size; }
 
 zx_status_t VirtioQueue::Notify() {
   std::lock_guard<std::mutex> lock(mutex_);
@@ -116,8 +130,7 @@ zx_status_t VirtioQueue::Return(uint16_t index, uint32_t len, uint8_t actions) {
   bool needs_interrupt = false;
   {
     std::lock_guard<std::mutex> lock(mutex_);
-    volatile struct vring_used_elem* used = &ring_.used->ring[RingIndexLocked(ring_.used->idx)];
-
+    struct vring_used_elem* used = &ring_.used->ring[ring_.used->idx % ring_.size];
     used->id = index;
     used->len = len;
     // Update the used index with a release to ensure that all our previous writes are
@@ -135,7 +148,7 @@ zx_status_t VirtioQueue::Return(uint16_t index, uint32_t len, uint8_t actions) {
       //    - If flags is 1, the device SHOULD NOT send an interrupt.
       //    - If flags is 0, the device MUST send an interrupt.
       needs_interrupt = ring_.avail->flags == 0;
-    } else if (ring_.used_event) {
+    } else {
       // Otherwise, if the VIRTIO_F_EVENT_IDX feature bit is negotiated:
       //
       //  - The device MUST ignore the lower bit of flags.
