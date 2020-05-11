@@ -1,0 +1,47 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// GENERATED FILE: Regen with $(fx get-build-dir)/host-tools/regen_fidl_benchmark_suite
+
+library benchmarkfidl;
+
+struct StructTree1 {
+    uint8 a;
+    // 8 byte padding
+    uint8 b;
+};
+struct StructTree2 {
+    StructTree1 left;
+    StructTree1 right;
+};
+
+struct StructTree3 {
+    StructTree2 left;
+    StructTree2 right;
+};
+
+struct StructTree4 {
+    StructTree3 left;
+    StructTree3 right;
+};
+
+struct StructTree5 {
+    StructTree4 left;
+    StructTree4 right;
+};
+
+struct StructTree6 {
+    StructTree5 left;
+    StructTree5 right;
+};
+
+struct StructTree7 {
+    StructTree6 left;
+    StructTree6 right;
+};
+
+struct StructTree8 {
+    StructTree7 left;
+    StructTree7 right;
+};

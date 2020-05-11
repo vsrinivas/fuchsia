@@ -1,0 +1,775 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// GENERATED FILE: Regen with $(fx get-build-dir)/host-tools/regen_fidl_benchmark_suite
+
+// Binary tree with depth 8 (255 elements)
+benchmark("StructTree/Depth8") {
+    value = StructTree8{
+        left:StructTree7{
+            left:StructTree6{
+                left:StructTree5{
+                    left:StructTree4{
+                        left:StructTree3{
+                            left:StructTree2{
+                                left:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                                right:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                            },
+                            right:StructTree2{
+                                left:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                                right:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                            },
+                        },
+                        right:StructTree3{
+                            left:StructTree2{
+                                left:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                                right:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                            },
+                            right:StructTree2{
+                                left:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                                right:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                            },
+                        },
+                    },
+                    right:StructTree4{
+                        left:StructTree3{
+                            left:StructTree2{
+                                left:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                                right:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                            },
+                            right:StructTree2{
+                                left:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                                right:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                            },
+                        },
+                        right:StructTree3{
+                            left:StructTree2{
+                                left:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                                right:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                            },
+                            right:StructTree2{
+                                left:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                                right:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                            },
+                        },
+                    },
+                },
+                right:StructTree5{
+                    left:StructTree4{
+                        left:StructTree3{
+                            left:StructTree2{
+                                left:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                                right:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                            },
+                            right:StructTree2{
+                                left:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                                right:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                            },
+                        },
+                        right:StructTree3{
+                            left:StructTree2{
+                                left:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                                right:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                            },
+                            right:StructTree2{
+                                left:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                                right:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                            },
+                        },
+                    },
+                    right:StructTree4{
+                        left:StructTree3{
+                            left:StructTree2{
+                                left:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                                right:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                            },
+                            right:StructTree2{
+                                left:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                                right:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                            },
+                        },
+                        right:StructTree3{
+                            left:StructTree2{
+                                left:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                                right:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                            },
+                            right:StructTree2{
+                                left:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                                right:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+            right:StructTree6{
+                left:StructTree5{
+                    left:StructTree4{
+                        left:StructTree3{
+                            left:StructTree2{
+                                left:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                                right:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                            },
+                            right:StructTree2{
+                                left:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                                right:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                            },
+                        },
+                        right:StructTree3{
+                            left:StructTree2{
+                                left:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                                right:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                            },
+                            right:StructTree2{
+                                left:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                                right:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                            },
+                        },
+                    },
+                    right:StructTree4{
+                        left:StructTree3{
+                            left:StructTree2{
+                                left:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                                right:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                            },
+                            right:StructTree2{
+                                left:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                                right:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                            },
+                        },
+                        right:StructTree3{
+                            left:StructTree2{
+                                left:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                                right:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                            },
+                            right:StructTree2{
+                                left:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                                right:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                            },
+                        },
+                    },
+                },
+                right:StructTree5{
+                    left:StructTree4{
+                        left:StructTree3{
+                            left:StructTree2{
+                                left:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                                right:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                            },
+                            right:StructTree2{
+                                left:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                                right:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                            },
+                        },
+                        right:StructTree3{
+                            left:StructTree2{
+                                left:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                                right:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                            },
+                            right:StructTree2{
+                                left:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                                right:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                            },
+                        },
+                    },
+                    right:StructTree4{
+                        left:StructTree3{
+                            left:StructTree2{
+                                left:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                                right:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                            },
+                            right:StructTree2{
+                                left:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                                right:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                            },
+                        },
+                        right:StructTree3{
+                            left:StructTree2{
+                                left:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                                right:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                            },
+                            right:StructTree2{
+                                left:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                                right:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+        right:StructTree7{
+            left:StructTree6{
+                left:StructTree5{
+                    left:StructTree4{
+                        left:StructTree3{
+                            left:StructTree2{
+                                left:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                                right:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                            },
+                            right:StructTree2{
+                                left:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                                right:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                            },
+                        },
+                        right:StructTree3{
+                            left:StructTree2{
+                                left:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                                right:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                            },
+                            right:StructTree2{
+                                left:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                                right:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                            },
+                        },
+                    },
+                    right:StructTree4{
+                        left:StructTree3{
+                            left:StructTree2{
+                                left:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                                right:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                            },
+                            right:StructTree2{
+                                left:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                                right:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                            },
+                        },
+                        right:StructTree3{
+                            left:StructTree2{
+                                left:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                                right:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                            },
+                            right:StructTree2{
+                                left:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                                right:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                            },
+                        },
+                    },
+                },
+                right:StructTree5{
+                    left:StructTree4{
+                        left:StructTree3{
+                            left:StructTree2{
+                                left:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                                right:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                            },
+                            right:StructTree2{
+                                left:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                                right:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                            },
+                        },
+                        right:StructTree3{
+                            left:StructTree2{
+                                left:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                                right:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                            },
+                            right:StructTree2{
+                                left:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                                right:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                            },
+                        },
+                    },
+                    right:StructTree4{
+                        left:StructTree3{
+                            left:StructTree2{
+                                left:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                                right:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                            },
+                            right:StructTree2{
+                                left:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                                right:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                            },
+                        },
+                        right:StructTree3{
+                            left:StructTree2{
+                                left:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                                right:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                            },
+                            right:StructTree2{
+                                left:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                                right:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+            right:StructTree6{
+                left:StructTree5{
+                    left:StructTree4{
+                        left:StructTree3{
+                            left:StructTree2{
+                                left:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                                right:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                            },
+                            right:StructTree2{
+                                left:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                                right:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                            },
+                        },
+                        right:StructTree3{
+                            left:StructTree2{
+                                left:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                                right:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                            },
+                            right:StructTree2{
+                                left:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                                right:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                            },
+                        },
+                    },
+                    right:StructTree4{
+                        left:StructTree3{
+                            left:StructTree2{
+                                left:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                                right:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                            },
+                            right:StructTree2{
+                                left:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                                right:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                            },
+                        },
+                        right:StructTree3{
+                            left:StructTree2{
+                                left:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                                right:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                            },
+                            right:StructTree2{
+                                left:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                                right:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                            },
+                        },
+                    },
+                },
+                right:StructTree5{
+                    left:StructTree4{
+                        left:StructTree3{
+                            left:StructTree2{
+                                left:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                                right:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                            },
+                            right:StructTree2{
+                                left:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                                right:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                            },
+                        },
+                        right:StructTree3{
+                            left:StructTree2{
+                                left:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                                right:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                            },
+                            right:StructTree2{
+                                left:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                                right:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                            },
+                        },
+                    },
+                    right:StructTree4{
+                        left:StructTree3{
+                            left:StructTree2{
+                                left:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                                right:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                            },
+                            right:StructTree2{
+                                left:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                                right:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                            },
+                        },
+                        right:StructTree3{
+                            left:StructTree2{
+                                left:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                                right:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                            },
+                            right:StructTree2{
+                                left:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                                right:StructTree1{
+                                    a: 1,
+                                    b: 2,
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+    },
+}

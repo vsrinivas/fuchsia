@@ -6,6 +6,7 @@
 
 library benchmarkfidl;
 
+
 struct Table1Struct {
     Table1 value;
 };

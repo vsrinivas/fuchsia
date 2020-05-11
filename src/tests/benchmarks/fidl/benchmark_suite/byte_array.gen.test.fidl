@@ -6,6 +6,7 @@
 
 library benchmarkfidl;
 
+
 struct ByteArray16 {
     array<uint8>:16 bytes;
 };

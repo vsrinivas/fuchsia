@@ -6,6 +6,7 @@
 
 library benchmarkfidl;
 
+
 struct Union1Struct {
     Union1 u;
 };

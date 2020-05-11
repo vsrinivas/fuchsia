@@ -6,6 +6,7 @@
 
 library benchmarkfidl;
 
+
 struct TableReserved16Struct {
     TableReserved16 value;
 };

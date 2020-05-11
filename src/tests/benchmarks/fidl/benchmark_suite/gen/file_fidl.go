@@ -23,6 +23,7 @@ var fidlTmpl = template.Must(template.New("fidlTmpl").Parse(
 // GENERATED FILE: Regen with $(fx get-build-dir)/host-tools/regen_fidl_benchmark_suite
 
 library benchmarkfidl;
+
 {{ .ExtraDefinition -}}
 {{ range .Definitions -}}
 {{ .Comment }}

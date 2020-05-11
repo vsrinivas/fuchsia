@@ -15,6 +15,7 @@ benchmark_suite_gidl_files = [
   "//src/tests/benchmarks/fidl/benchmark_suite/string.gidl",
   "//src/tests/benchmarks/fidl/benchmark_suite/struct_array.gen.gidl",
   "//src/tests/benchmarks/fidl/benchmark_suite/struct_field.gen.gidl",
+  "//src/tests/benchmarks/fidl/benchmark_suite/struct_tree.gen.gidl",
   "//src/tests/benchmarks/fidl/benchmark_suite/struct_vector.gen.gidl",
   "//src/tests/benchmarks/fidl/benchmark_suite/table_all_set.gen.gidl",
   "//src/tests/benchmarks/fidl/benchmark_suite/table_all_unset.gen.gidl",

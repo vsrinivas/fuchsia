@@ -20,6 +20,7 @@ benchmark_suite_fidl_files = [
   "string.test.fidl",
   "struct_array.gen.test.fidl",
   "struct_field.gen.test.fidl",
+  "struct_tree.gen.test.fidl",
   "struct_vector.test.fidl",
   "table.gen.test.fidl",
   "table_reserved.gen.test.fidl",
