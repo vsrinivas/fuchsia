@@ -43,7 +43,7 @@ rustc_test("ot-radio-ncp-ver-query") {
     "//src/lib/fuchsia-async",
     "//src/lib/syslog/rust:syslog",
   ]
-  non_rust_deps = [ "//zircon/public/lib/syslog" ]
+  non_rust_deps = [ "//zircon/system/ulib/syslog" ]
 }
 
 rustc_test("ot-stack-ncp-ver-query") {
@@ -56,7 +56,7 @@ rustc_test("ot-stack-ncp-ver-query") {
     "//src/lib/fuchsia-async",
     "//src/lib/syslog/rust:syslog",
   ]
-  non_rust_deps = [ "//zircon/public/lib/syslog" ]
+  non_rust_deps = [ "//zircon/system/ulib/syslog" ]
 }
 
 rustc_test("ot-stack-soft-reset") {
@@ -70,7 +70,7 @@ rustc_test("ot-stack-soft-reset") {
     "//src/lib/fuchsia-component",
     "//src/lib/syslog/rust:syslog",
   ]
-  non_rust_deps = [ "//zircon/public/lib/syslog" ]
+  non_rust_deps = [ "//zircon/system/ulib/syslog" ]
 }
 
 test_package("ot-radio-component-tests") {
@@ -110,7 +110,7 @@ rustc_test("ot-stack-ncp-ver-query-mock") {
     "//src/lib/fuchsia-async",
     "//src/lib/syslog/rust:syslog",
   ]
-  non_rust_deps = [ "//zircon/public/lib/syslog" ]
+  non_rust_deps = [ "//zircon/system/ulib/syslog" ]
 }
 
 rustc_test("ot-stack-soft-reset-mock") {
@@ -124,7 +124,7 @@ rustc_test("ot-stack-soft-reset-mock") {
     "//src/lib/fuchsia-async",
     "//src/lib/syslog/rust:syslog",
   ]
-  non_rust_deps = [ "//zircon/public/lib/syslog" ]
+  non_rust_deps = [ "//zircon/system/ulib/syslog" ]
 }
 
 rustc_test("ot-radio-ncp-ver-query-mock") {
@@ -138,5 +138,5 @@ rustc_test("ot-radio-ncp-ver-query-mock") {
     "//src/lib/fuchsia-async",
     "//src/lib/syslog/rust:syslog",
   ]
-  non_rust_deps = [ "//zircon/public/lib/syslog" ]
+  non_rust_deps = [ "//zircon/system/ulib/syslog" ]
 }

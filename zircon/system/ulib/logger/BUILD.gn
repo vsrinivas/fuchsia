@@ -26,9 +26,9 @@ zx_library("logger") {
   ]
   deps = [
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/syslog",
     "//zircon/public/lib/zx",
     "//zircon/system/fidl/fuchsia-logger:c",
+    "//zircon/system/ulib/syslog",
   ]
   public_deps = [
     # <lib/logger/logger.h> has #include <lib/fidl/cpp/message_buffer.h>.

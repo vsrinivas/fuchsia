@@ -15,5 +15,5 @@ source_set("log") {
     "//zircon/public/lib/fdio",
   ]
 
-  public_deps = [ "//zircon/public/lib/syslog" ]
+  public_deps = [ "//zircon/system/ulib/syslog" ]
 }

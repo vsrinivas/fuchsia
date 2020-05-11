@@ -20,8 +20,8 @@ executable("logs_integration_cpp_tests") {
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/syslog",
     "//zircon/system/fidl/fuchsia-logger",
+    "//zircon/system/ulib/syslog",
   ]
 
   # TODO(46532): Fix the leaks and remove this.

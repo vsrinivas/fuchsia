@@ -104,7 +104,7 @@ executable("vkcube_on_scenic") {
     "$zircon_build_root/public/lib/trace-provider-with-fdio",
     "//src/lib/vulkan",
     "//src/lib/vulkan/imagepipe_view",
-    "//zircon/public/lib/syslog",
+    "//zircon/system/ulib/syslog",
   ]
   public_configs = [ "//build/config:Wno-reorder-init-list" ]
 }
@@ -124,7 +124,7 @@ executable("vkcube_on_fb") {
     "$zircon_build_root/public/lib/trace",
     "$zircon_build_root/public/lib/trace-provider-with-fdio",
     "//src/lib/vulkan",
-    "//zircon/public/lib/syslog",
+    "//zircon/system/ulib/syslog",
   ]
   public_deps = [ "//zircon/public/lib/fit" ]
   public_configs = [ "//build/config:Wno-reorder-init-list" ]
@@ -148,7 +148,7 @@ executable("vkcube_skip_present") {
     "$zircon_build_root/public/lib/trace",
     "$zircon_build_root/public/lib/trace-provider",
     "//src/lib/vulkan",
-    "//zircon/public/lib/syslog",
+    "//zircon/system/ulib/syslog",
   ]
   public_deps = [ "//zircon/public/lib/fit" ]
   public_configs = [ "//build/config:Wno-reorder-init-list" ]

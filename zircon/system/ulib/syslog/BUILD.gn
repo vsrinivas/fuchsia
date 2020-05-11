@@ -2,6 +2,18 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36548.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/unification/zx_library.gni")
+
 syslog_headers = [
   "lib/syslog/global.h",
   "lib/syslog/logger.h",
@@ -20,14 +32,12 @@ zx_library("syslog") {
     "logger.cc",
   ]
   deps = [
-    "$zx/system/fidl/fuchsia-logger:llcpp",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/fidl",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zx",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/fidl",
+    "//zircon/public/lib/zx",
+    "//zircon/system/fidl/fuchsia-logger:llcpp",
   ]
-  configs += [ "$zx_build/public/gn/config:static-libc++" ]
 }
 
 # This static library should have no shared library dependencies,
@@ -44,9 +54,8 @@ zx_library("syslog-static") {
     "logger.cc",
   ]
   deps = [
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zx",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/zx",
   ]
   defines = [ "SYSLOG_STATIC" ]
 }

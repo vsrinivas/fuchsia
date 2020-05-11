@@ -26,7 +26,7 @@ executable("test") {
     "//zircon/public/lib/fit",
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/syslog",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/syslog",
   ]
 }

@@ -41,7 +41,7 @@ source_set("src") {
     "//zircon/public/lib/fit",
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/syslog",
+    "//zircon/system/ulib/syslog",
   ]
 }
 

@@ -15,5 +15,5 @@ rustc_test("fake-at-driver-test") {
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:futures",
   ]
-  non_rust_deps = [ "//zircon/public/lib/syslog" ]
+  non_rust_deps = [ "//zircon/system/ulib/syslog" ]
 }

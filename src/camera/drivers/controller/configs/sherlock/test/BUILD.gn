@@ -38,10 +38,10 @@ executable("test") {
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/syslog",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/fidl-utils",
     "//zircon/system/ulib/image-format",
+    "//zircon/system/ulib/syslog",
   ]
 
   # Increase the default stack size from 256 KB because creating the configs can take up a very

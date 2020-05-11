@@ -13,6 +13,6 @@ source_set("imagepipe_view") {
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/ui/scenic/cpp",
-    "//zircon/public/lib/syslog",
+    "//zircon/system/ulib/syslog",
   ]
 }

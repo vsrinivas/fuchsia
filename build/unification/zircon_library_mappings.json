@@ -50,6 +50,16 @@
     "sdk": false
   },
   {
+    "label": "//zircon/system/ulib/syslog:syslog",
+    "name": "syslog",
+    "sdk": true
+  },
+  {
+    "label": "//zircon/system/ulib/syslog:syslog-static",
+    "name": "syslog-static",
+    "sdk": false
+  },
+  {
     "label": "//zircon/system/ulib/tee-client-api:tee-client-api",
     "name": "tee-client-api",
     "sdk": false

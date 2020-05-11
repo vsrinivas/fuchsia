@@ -264,12 +264,12 @@ sdk_molecule("core_lib") {
     "//zircon/public/lib/fdio:fdio_sdk",
     "//zircon/public/lib/inspect:inspect_sdk",
     "//zircon/public/lib/sync:sync_sdk",
-    "//zircon/public/lib/syslog:syslog_sdk",
     "//zircon/public/lib/trace:trace_sdk",
     "//zircon/public/lib/trace-engine:trace-engine_sdk",
     "//zircon/public/lib/trace-provider-so:trace-provider-so_sdk",
     "//zircon/system/ulib/async-testing:async-testing_sdk",
     "//zircon/system/ulib/memfs:memfs_sdk",
+    "//zircon/system/ulib/syslog:syslog_sdk",
   ]
 }
 

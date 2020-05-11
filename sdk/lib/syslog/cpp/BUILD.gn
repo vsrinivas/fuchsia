@@ -27,8 +27,8 @@ sdk_source_set("cpp") {
     sources += [ "logging_backend_fuchsia.cc" ]
     libs = [ "zircon" ]
     public_deps = [
-      "//zircon/public/lib/syslog",
       "//zircon/public/lib/zx",
+      "//zircon/system/ulib/syslog",
     ]
   } else {
     sources += [ "logging_backend_host.cc" ]

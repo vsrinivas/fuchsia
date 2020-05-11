@@ -19,7 +19,7 @@ executable("test") {
     "//src/camera/lib/image_writer:image_format_rgba",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/fzl",
-    "//zircon/public/lib/syslog",
     "//zircon/system/ulib/image-format",
+    "//zircon/system/ulib/syslog",
   ]
 }

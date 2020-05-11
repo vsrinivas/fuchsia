@@ -21,11 +21,11 @@ source_set("fake-buffer-collection") {
   public_deps = [
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/syslog",
     "//zircon/public/lib/zircon-internal",
     "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/ddktl",
     "//zircon/system/ulib/image-format",
+    "//zircon/system/ulib/syslog",
   ]
 }
 

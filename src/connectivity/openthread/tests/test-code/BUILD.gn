@@ -12,5 +12,5 @@ rustc_library("test-code") {
     "//src/connectivity/openthread/tests/lib",
     "//src/lib/syslog/rust:syslog",
   ]
-  non_rust_deps = [ "//zircon/public/lib/syslog" ]
+  non_rust_deps = [ "//zircon/system/ulib/syslog" ]
 }

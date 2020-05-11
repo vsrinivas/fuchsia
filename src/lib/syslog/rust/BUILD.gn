@@ -18,7 +18,7 @@ rustc_library("syslog") {
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:tempfile",
   ]
-  non_rust_deps = [ "//zircon/public/lib/syslog" ]
+  non_rust_deps = [ "//zircon/system/ulib/syslog" ]
 }
 
 rustc_library("syslog-listener") {
