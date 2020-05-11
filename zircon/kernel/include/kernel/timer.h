@@ -126,4 +126,7 @@ struct TimerQueue {
   static void ThawPercpu();
 };
 
+// Prints the contents of all timer queues into |buf| of length |len| and null terminates |buf|.
+void PrintTimerQueues(char* buf, size_t len);
+
 #endif  // ZIRCON_KERNEL_INCLUDE_KERNEL_TIMER_H_

@@ -15,6 +15,7 @@
 #include <zircon/types.h>
 
 #include <fbl/algorithm.h>
+#include <fbl/auto_call.h>
 #include <kernel/auto_lock.h>
 #include <kernel/event.h>
 #include <kernel/mp.h>
@@ -477,6 +478,43 @@ static bool trylock_or_cancel_get_lock() {
   END_TEST;
 }
 
+static bool print_timer_queues() {
+  BEGIN_TEST;
+
+  // Allocate a bunch of timers and a small buffer.  Set the timers then see that |PrintTimerQueues|
+  // doesn't overflow the buffer.
+  constexpr size_t kNumTimers = 1000;
+  fbl::AllocChecker ac;
+  auto timers = ktl::unique_ptr<Timer[]>(new (&ac) Timer[kNumTimers]);
+  ASSERT_TRUE(ac.check());
+  constexpr size_t kBufferSize = 4096;
+  auto buffer = ktl::unique_ptr<char[]>(new (&ac) char[kBufferSize]);
+  ASSERT_TRUE(ac.check());
+  // Fill the buffer with a pattern so we can detect overflow.
+  memset(buffer.get(), 'X', kBufferSize);
+
+  for (size_t i = 0; i < kNumTimers; ++i) {
+    timers[i].Set(
+        Deadline::infinite(), [](Timer*, zx_time_t, void*) {}, nullptr);
+  }
+  auto cleanup = fbl::MakeAutoCall([&]() {
+    for (size_t i = 0; i < kNumTimers; ++i) {
+      timers[i].Cancel();
+    }
+  });
+
+  // Tell |PrintTimerQueues| the buffer is one less than it really is.
+  PrintTimerQueues(buffer.get(), kBufferSize - 1);
+
+  // See that our sentinel was not overwritten.
+  ASSERT_EQ('X', buffer[kBufferSize - 1]);
+
+  // See that a null terminator was written to the last available position.
+  ASSERT_EQ(0, buffer[kBufferSize - 2]);
+
+  END_TEST;
+}
+
 UNITTEST_START_TESTCASE(timer_tests)
 UNITTEST("cancel_before_deadline", cancel_before_deadline)
 UNITTEST("cancel_after_fired", cancel_after_fired)
@@ -484,4 +522,5 @@ UNITTEST("cancel_from_callback", cancel_from_callback)
 UNITTEST("set_from_callback", set_from_callback)
 UNITTEST("trylock_or_cancel_canceled", trylock_or_cancel_canceled)
 UNITTEST("trylock_or_cancel_get_lock", trylock_or_cancel_get_lock)
+UNITTEST("print_timer_queues", print_timer_queues)
 UNITTEST_END_TESTCASE(timer_tests, "timer", "timer tests")

@@ -518,8 +518,7 @@ void TimerQueue::ThawPercpu(void) {
   update_platform_timer(cpu, deadline);
 }
 
-// print a timer queue dump into the passed in buffer
-static void dump_timer_queues(char* buf, size_t len) {
+void PrintTimerQueues(char* buf, size_t len) {
   size_t ptr = 0;
   zx_time_t now = current_time();
 
@@ -527,7 +526,9 @@ static void dump_timer_queues(char* buf, size_t len) {
   for (uint i = 0; i < percpu::processor_count(); i++) {
     if (mp_is_cpu_online(i)) {
       ptr += snprintf(buf + ptr, len - ptr, "cpu %u:\n", i);
-
+      if (ptr >= len) {
+        return;
+      }
       Timer* t;
       zx_time_t last = now;
       list_for_every_entry (&percpu::Get(i).timer_queue, t, Timer, node_) {
@@ -537,6 +538,9 @@ static void dump_timer_queues(char* buf, size_t len) {
                         "\ttime %" PRIi64 " delta_now %" PRIi64 " delta_last %" PRIi64
                         " func %p arg %p\n",
                         t->scheduled_time_, delta_now, delta_last, t->callback_, t->arg_);
+        if (ptr >= len) {
+          return;
+        }
         last = t->scheduled_time_;
       }
     }
@@ -555,7 +559,7 @@ static int cmd_timers(int argc, const cmd_args* argv, uint32_t flags) {
     return ZX_ERR_NO_MEMORY;
   }
 
-  dump_timer_queues(buf, timer_buffer_size);
+  PrintTimerQueues(buf, timer_buffer_size);
 
   printf("%s", buf);
 
