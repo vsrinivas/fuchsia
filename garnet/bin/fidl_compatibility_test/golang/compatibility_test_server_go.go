@@ -11,11 +11,11 @@ import (
 	"syscall/zx/dispatch"
 	"syscall/zx/fdio"
 	"syscall/zx/fidl"
-	"syscall/zx/io"
 
 	"fuchsia.googlesource.com/component"
 
 	"fidl/fidl/test/compatibility"
+	"fidl/fuchsia/io"
 	"fidl/fuchsia/sys"
 )
 

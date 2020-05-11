@@ -12,10 +12,11 @@ import (
 	"syscall"
 	"syscall/zx"
 	"syscall/zx/fdio"
-	"syscall/zx/io"
 	"syscall/zx/zxwait"
 
 	"fuchsia.googlesource.com/pmd/iou"
+
+	"fidl/fuchsia/io"
 )
 
 // Manager wraps operations for reading and writing to blobfs, and will later

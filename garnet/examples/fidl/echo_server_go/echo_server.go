@@ -7,14 +7,13 @@ package main
 import (
 	"log"
 	"os"
-
-	"fuchsia.googlesource.com/component"
-
 	"syscall/zx"
 	"syscall/zx/dispatch"
 	"syscall/zx/fidl"
 
-	echo "fidl/fidl/examples/echo"
+	"fuchsia.googlesource.com/component"
+
+	"fidl/fidl/examples/echo"
 )
 
 type echoImpl struct {

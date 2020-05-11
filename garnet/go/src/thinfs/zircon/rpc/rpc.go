@@ -12,16 +12,16 @@ import (
 	"os"
 	"sync"
 	"syscall"
+	"syscall/zx"
+	"syscall/zx/dispatch"
+	"syscall/zx/fidl"
 	"time"
 	"unsafe"
 
 	"thinfs/fs"
 
-	"syscall/zx"
-	"syscall/zx/dispatch"
-	"syscall/zx/fidl"
-	"syscall/zx/io"
-	"syscall/zx/mem"
+	"fidl/fuchsia/io"
+	"fidl/fuchsia/mem"
 )
 
 const (

@@ -20,8 +20,9 @@ import (
 	"syscall"
 	"syscall/zx"
 	"syscall/zx/fdio"
-	zxio "syscall/zx/io"
 	"testing"
+
+	zxio "syscall/zx/io"
 
 	"fuchsia.googlesource.com/pm/build"
 	"fuchsia.googlesource.com/pmd/iou"

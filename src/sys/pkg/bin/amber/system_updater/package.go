@@ -10,9 +10,10 @@ import (
 	"os"
 	"syscall"
 	"syscall/zx/fdio"
+
 	zxio "syscall/zx/io"
 
-	fuchsiaio "fidl/fuchsia/io"
+	"fidl/fuchsia/io"
 )
 
 // UpdatePackage represents a handle to the update package.
@@ -21,7 +22,7 @@ type UpdatePackage struct {
 }
 
 // NewUpdatePackage creates an UpdatePackage from a fidl interface
-func NewUpdatePackage(proxy *fuchsiaio.DirectoryWithCtxInterface) (*UpdatePackage, error) {
+func NewUpdatePackage(proxy *io.DirectoryWithCtxInterface) (*UpdatePackage, error) {
 	updateDir := fdio.NewDirectoryWithCtx((*zxio.DirectoryAdminWithCtxInterface)(proxy))
 	updateDirFile := os.NewFile(uintptr(syscall.OpenFDIO(updateDir)), "update")
 	return &UpdatePackage{dir: updateDirFile}, nil

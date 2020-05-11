@@ -10,8 +10,9 @@ import (
 	"syscall/zx/dispatch"
 	"syscall/zx/fidl"
 
-	"fidl/fuchsia/net/name"
 	"netstack/dns"
+
+	"fidl/fuchsia/net/name"
 )
 
 type broadcastChannel struct {

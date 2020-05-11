@@ -7,11 +7,11 @@ package system_updater
 import (
 	"context"
 	"fmt"
-
 	"syscall"
 	"syscall/zx"
 	"syscall/zx/fidl"
-	"syscall/zx/io"
+
+	"fidl/fuchsia/io"
 )
 
 // Blobfs exposes the admin interface of /blob.

@@ -7,7 +7,7 @@ package pkgfs
 import (
 	"thinfs/fs"
 
-	"syscall/zx/io"
+	"fidl/fuchsia/io"
 )
 
 type dirDirEnt string

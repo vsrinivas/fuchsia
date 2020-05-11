@@ -10,11 +10,11 @@ import (
 	"fmt"
 	"syscall/zx"
 	"syscall/zx/fdio"
-	"syscall/zx/io"
 
 	"fuchsia.googlesource.com/component"
 
 	"fidl/fidl/examples/echo"
+	"fidl/fuchsia/io"
 	"fidl/fuchsia/sys"
 )
 
