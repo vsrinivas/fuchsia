@@ -18,7 +18,6 @@
             "vulkan"
         ],
         "services": [
-            "fuchsia.feedback.DataProvider",
             "fuchsia.intl.PropertyProvider",
             "fuchsia.logger.LogSink",
             "fuchsia.sysmem.Allocator",
