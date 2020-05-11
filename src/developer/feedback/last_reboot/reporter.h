@@ -14,7 +14,7 @@
 #include <memory>
 #include <string>
 
-#include "src/developer/feedback/reboot_info/reboot_log.h"
+#include "src/developer/feedback/last_reboot/reboot_log.h"
 #include "src/developer/feedback/utils/cobalt/logger.h"
 #include "src/developer/feedback/utils/fidl/oneshot_ptr.h"
 #include "src/lib/fxl/functional/cancelable_callback.h"

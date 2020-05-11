@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/feedback/reboot_info/last_reboot_info_provider.h"
+#include "src/developer/feedback/last_reboot/last_reboot_info_provider.h"
 
 #include <optional>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "src/developer/feedback/reboot_info/last_reboot_info_provider.h"
-#include "src/developer/feedback/reboot_info/reboot_log.h"
-#include "src/developer/feedback/reboot_info/reboot_reason.h"
+#include "src/developer/feedback/last_reboot/last_reboot_info_provider.h"
+#include "src/developer/feedback/last_reboot/reboot_log.h"
+#include "src/developer/feedback/last_reboot/reboot_reason.h"
 #include "src/developer/feedback/testing/gpretty_printers.h"
 
 namespace feedback {

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/feedback/reboot_info/reporter.h"
+#include "src/developer/feedback/last_reboot/reporter.h"
 
 #include <lib/async/cpp/task.h>
 #include <lib/fit/result.h>
@@ -13,7 +13,7 @@
 #include <string>
 #include <vector>
 
-#include "src/developer/feedback/reboot_info/reboot_reason.h"
+#include "src/developer/feedback/last_reboot/reboot_reason.h"
 #include "src/developer/feedback/utils/errors.h"
 #include "src/lib/files/file.h"
 #include "src/lib/fsl/vmo/file.h"

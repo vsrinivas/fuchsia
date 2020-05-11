@@ -7,7 +7,7 @@
 
 #include <fuchsia/feedback/cpp/fidl.h>
 
-#include "src/developer/feedback/reboot_info/reboot_log.h"
+#include "src/developer/feedback/last_reboot/reboot_log.h"
 
 namespace feedback {
 

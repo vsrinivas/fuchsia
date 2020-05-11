@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "bin/reboot_info"
+        "binary": "bin/last_reboot"
     },
     "sandbox": {
         "boot": [

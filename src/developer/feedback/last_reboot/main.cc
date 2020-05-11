@@ -13,9 +13,9 @@
 
 #include <string>
 
-#include "src/developer/feedback/reboot_info/main_service.h"
-#include "src/developer/feedback/reboot_info/reboot_log.h"
-#include "src/developer/feedback/reboot_info/reporter.h"
+#include "src/developer/feedback/last_reboot/main_service.h"
+#include "src/developer/feedback/last_reboot/reboot_log.h"
+#include "src/developer/feedback/last_reboot/reporter.h"
 
 int main(int argc, char** argv) {
   syslog::SetTags({"feedback"});

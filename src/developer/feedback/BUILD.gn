@@ -13,7 +13,7 @@ group("feedback") {
     "bugreport",
     "crash_reports:crash-reports",
     "feedback_data:feedback_agent",
-    "reboot_info:reboot-info",
+    "last_reboot:last-reboot",
   ]
 }
 
@@ -24,7 +24,7 @@ group("tests") {
     "bugreport/tests",
     "crash_reports/tests",
     "feedback_data/tests",
-    "reboot_info/tests",
+    "last_reboot/tests",
     "utils/tests",
   ]
 }

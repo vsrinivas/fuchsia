@@ -8,7 +8,7 @@
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
 
-#include "src/developer/feedback/reboot_info/last_reboot_info_provider.h"
+#include "src/developer/feedback/last_reboot/last_reboot_info_provider.h"
 
 namespace feedback {
 

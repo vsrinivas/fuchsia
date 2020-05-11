@@ -8,19 +8,19 @@ import("//build/package.gni")
 ###############################################################################
 # PACKAGES
 ###############################################################################
-package("reboot-info") {
+package("last-reboot") {
   deps = [ ":main" ]
 
   binaries = [
     {
-      name = "reboot_info"
+      name = "last_reboot"
     },
   ]
 
   meta = [
     {
-      path = "meta/reboot_info.cmx"
-      dest = "reboot_info.cmx"
+      path = "meta/last_reboot.cmx"
+      dest = "last_reboot.cmx"
     },
   ]
 }
@@ -29,7 +29,7 @@ package("reboot-info") {
 # EXECUTABLES
 ###############################################################################
 executable("main") {
-  output_name = "reboot_info"
+  output_name = "last_reboot"
 
   sources = [ "main.cc" ]
 
@@ -106,7 +106,7 @@ source_set("reboot_reason") {
 
   deps = [ "//sdk/lib/syslog/cpp" ]
 
-  visibility = [ "//src/developer/feedback/reboot_info/*" ]
+  visibility = [ "//src/developer/feedback/last_reboot/*" ]
 }
 
 source_set("reporter") {

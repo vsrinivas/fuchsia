@@ -10,13 +10,13 @@ import("//build/test/test_package.gni")
 group("tests") {
   testonly = true
 
-  public_deps = [ ":reboot-info-tests" ]
+  public_deps = [ ":last-reboot-tests" ]
 }
 
 ###############################################################################
 # PACKAGES
 ###############################################################################
-test_package("reboot-info-tests") {
+test_package("last-reboot-tests") {
   tests = [
     {
       name = "last_reboot_info_provider_unittest"
@@ -50,8 +50,8 @@ executable("last_reboot_info_provider_unittest") {
 
   deps = [
     "//sdk/fidl/fuchsia.feedback",
-    "//src/developer/feedback/reboot_info:last_reboot_info_provider",
-    "//src/developer/feedback/reboot_info:reboot_reason",
+    "//src/developer/feedback/last_reboot:last_reboot_info_provider",
+    "//src/developer/feedback/last_reboot:reboot_reason",
     "//src/developer/feedback/testing:gpretty_printers",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
@@ -66,7 +66,7 @@ executable("reboot_log_unittest") {
 
   deps = [
     "//sdk/lib/syslog/cpp",
-    "//src/developer/feedback/reboot_info:reboot_log",
+    "//src/developer/feedback/last_reboot:reboot_log",
     "//src/developer/feedback/testing:gpretty_printers",
     "//src/developer/feedback/testing:gtest_with_syslog_main",
     "//src/lib/files",
@@ -84,7 +84,7 @@ executable("reboot_reason_unittest") {
 
   deps = [
     "//sdk/fidl/fuchsia.feedback",
-    "//src/developer/feedback/reboot_info:reboot_reason",
+    "//src/developer/feedback/last_reboot:reboot_reason",
     "//src/developer/feedback/utils/cobalt",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
@@ -98,7 +98,7 @@ executable("reporter_unittest") {
   sources = [ "reporter_unittest.cc" ]
 
   deps = [
-    "//src/developer/feedback/reboot_info:reporter",
+    "//src/developer/feedback/last_reboot:reporter",
     "//src/developer/feedback/testing:cobalt_test_fixture",
     "//src/developer/feedback/testing:gpretty_printers",
     "//src/developer/feedback/testing:gtest_with_syslog_main",

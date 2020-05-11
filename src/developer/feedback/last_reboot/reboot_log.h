@@ -10,7 +10,7 @@
 #include <optional>
 #include <string>
 
-#include "src/developer/feedback/reboot_info/reboot_reason.h"
+#include "src/developer/feedback/last_reboot/reboot_reason.h"
 
 namespace feedback {
 
