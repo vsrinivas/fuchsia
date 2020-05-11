@@ -45,9 +45,9 @@ pub mod controller {
     }
 
     #[async_trait]
-    pub trait Handle {
+    pub trait Handle: Send {
         async fn handle(&self, request: SettingRequest) -> Option<SettingResponseResult>;
-        async fn change_state(&mut self, state: State);
+        async fn change_state(&mut self, _state: State) {}
     }
 }
 

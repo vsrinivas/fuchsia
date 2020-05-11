@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 use crate::switchboard::base::SettingResponseResult;
 
-use crate::registry::base::State;
 use crate::registry::device_storage::DeviceStorageCompatible;
 use crate::registry::setting_handler::persist::{
     controller as data_controller, write, ClientProxy,
@@ -52,6 +51,4 @@ impl controller::Handle for DoNotDisturbController {
             _ => None,
         }
     }
-
-    async fn change_state(&mut self, _state: State) {}
 }

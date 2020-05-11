@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::registry::base::State;
 use crate::registry::device_storage::DeviceStorageCompatible;
 use crate::registry::setting_handler::persist::{
     controller as data_controller, write, ClientProxy,
@@ -50,6 +49,4 @@ impl controller::Handle for NightModeController {
             _ => None,
         }
     }
-
-    async fn change_state(&mut self, _state: State) {}
 }

@@ -1,4 +1,7 @@
-use crate::registry::base::State;
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
 use crate::registry::setting_handler::{controller, ClientProxy, ControllerError};
 use crate::switchboard::base::{
     DeviceInfo, SettingRequest, SettingResponse, SettingResponseResult,
@@ -32,6 +35,4 @@ impl controller::Handle for DeviceController {
             _ => None,
         }
     }
-
-    async fn change_state(&mut self, _state: State) {}
 }

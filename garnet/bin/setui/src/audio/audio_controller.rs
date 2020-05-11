@@ -9,7 +9,6 @@ use async_trait::async_trait;
 use {
     crate::audio::{default_audio_info, StreamVolumeControl},
     crate::input::monitor_media_buttons,
-    crate::registry::base::State,
     crate::switchboard::base::*,
     anyhow::Error,
     fidl_fuchsia_ui_input::MediaButtonsEvent,
@@ -239,6 +238,4 @@ impl controller::Handle for AudioController {
             _ => None,
         }
     }
-
-    async fn change_state(&mut self, _: State) {}
 }

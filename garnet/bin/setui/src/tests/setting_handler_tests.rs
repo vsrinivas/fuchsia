@@ -79,8 +79,6 @@ impl<C: Control + Sync + Send + 'static> controller::Handle for Controller<C> {
     async fn handle(&self, _: SettingRequest) -> Option<SettingResponseResult> {
         return None;
     }
-
-    async fn change_state(&mut self, _: State) {}
 }
 
 /// The DataController is a controller implementation with storage that
@@ -108,8 +106,6 @@ impl<C: Control + Sync + Send + 'static, S: Storage> controller::Handle for Data
     async fn handle(&self, _: SettingRequest) -> Option<SettingResponseResult> {
         return None;
     }
-
-    async fn change_state(&mut self, _: State) {}
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
@@ -243,8 +239,6 @@ impl controller::Handle for StubController {
     async fn handle(&self, _: SettingRequest) -> Option<SettingResponseResult> {
         return None;
     }
-
-    async fn change_state(&mut self, _: State) {}
 }
 
 /// Ensures that the correct unimplemented error is returned when the controller

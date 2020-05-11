@@ -1,7 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-use crate::registry::base::State;
 use crate::registry::device_storage::DeviceStorageCompatible;
 use crate::registry::setting_handler::persist::{
     controller as data_controller, write, ClientProxy,
@@ -52,6 +51,4 @@ impl controller::Handle for AccessibilityController {
             _ => None,
         }
     }
-
-    async fn change_state(&mut self, _: State) {}
 }

@@ -4,7 +4,6 @@
 
 use async_trait::async_trait;
 use {
-    crate::registry::base::State,
     crate::registry::setting_handler::{controller, ClientProxy, ControllerError},
     crate::service_context::ServiceContextHandle,
     crate::switchboard::base::*,
@@ -45,6 +44,4 @@ impl controller::Handle for PowerController {
             _ => return None,
         }
     }
-
-    async fn change_state(&mut self, _state: State) {}
 }

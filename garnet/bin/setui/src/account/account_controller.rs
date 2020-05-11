@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::registry::base::State;
 use crate::registry::setting_handler::{controller, ClientProxy, ControllerError};
 use crate::service_context::ServiceContextHandle;
 use crate::switchboard::base::{
@@ -38,8 +37,6 @@ impl controller::Handle for AccountController {
             _ => None,
         }
     }
-
-    async fn change_state(&mut self, _: State) {}
 }
 
 async fn schedule_clear_accounts(
