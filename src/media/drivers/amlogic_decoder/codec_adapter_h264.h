@@ -57,6 +57,7 @@ class CodecAdapterH264 : public CodecAdapter, public VideoDecoder::Client {
       uint64_t new_output_format_details_version_ordinal) override;
   void CoreCodecMidStreamOutputBufferReConfigPrepare() override;
   void CoreCodecMidStreamOutputBufferReConfigFinish() override;
+  std::string CoreCodecGetName() override { return "AmlH264"; }
 
   // VideoDecoder::Client implementation;
   void OnError() override;

@@ -414,8 +414,10 @@ class ZirconPlatformSysmemConnection : public PlatformSysmemConnection {
     }
     constraints.image_format_constraints_count = 0;
 
+    const char* kBufferName =
+        (flags & MAGMA_SYSMEM_FLAG_PROTECTED) ? "MagmaProtectedSysmem" : "MagmaUnprotectedSysmem";
     llcpp::fuchsia::sysmem::BufferCollectionInfo_2 info;
-    magma_status_t result = AllocateBufferCollection(constraints, &info);
+    magma_status_t result = AllocateBufferCollection(constraints, std::string(kBufferName), &info);
     if (result != MAGMA_STATUS_OK)
       return DRET(result);
 
@@ -426,9 +428,6 @@ class ZirconPlatformSysmemConnection : public PlatformSysmemConnection {
     if (!info.buffers[0].vmo) {
       return DRET(MAGMA_STATUS_INTERNAL_ERROR);
     }
-    const char* kBufferName =
-        (flags & MAGMA_SYSMEM_FLAG_PROTECTED) ? "MagmaProtectedSysmem" : "MagmaUnprotectedSysmem";
-    info.buffers[0].vmo.set_property(ZX_PROP_NAME, kBufferName, strlen(kBufferName));
 
     *buffer_out = magma::PlatformBuffer::Import(info.buffers[0].vmo.release());
     if (!buffer_out) {
@@ -476,7 +475,7 @@ class ZirconPlatformSysmemConnection : public PlatformSysmemConnection {
 
  private:
   magma_status_t AllocateBufferCollection(
-      const llcpp::fuchsia::sysmem::BufferCollectionConstraints& constraints,
+      const llcpp::fuchsia::sysmem::BufferCollectionConstraints& constraints, std::string name,
       llcpp::fuchsia::sysmem::BufferCollectionInfo_2* info_out) {
     zx::channel h1;
     zx::channel h2;
@@ -490,6 +489,9 @@ class ZirconPlatformSysmemConnection : public PlatformSysmemConnection {
 
     llcpp::fuchsia::sysmem::BufferCollection::SyncClient collection(std::move(h1));
 
+    if (!name.empty()) {
+      collection.SetName(10, fidl::unowned_str(name));
+    }
     status = collection.SetConstraints(true, std::move(constraints)).status();
     if (status != ZX_OK)
       return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "Failed to set constraints: %d", status);

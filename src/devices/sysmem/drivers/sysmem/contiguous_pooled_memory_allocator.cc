@@ -136,7 +136,9 @@ keepGoing:;
   return ZX_OK;
 }
 
-zx_status_t ContiguousPooledMemoryAllocator::Allocate(uint64_t size, zx::vmo* parent_vmo) {
+zx_status_t ContiguousPooledMemoryAllocator::Allocate(uint64_t size,
+                                                      std::optional<std::string> name,
+                                                      zx::vmo* parent_vmo) {
   if (!is_ready_) {
     DRIVER_ERROR("allocation_name_: %s is not ready_, failing", allocation_name_);
     return ZX_ERR_BAD_STATE;
@@ -171,7 +173,12 @@ zx_status_t ContiguousPooledMemoryAllocator::Allocate(uint64_t size, zx::vmo* pa
     return status;
   }
 
-  regions_.emplace(std::make_pair(result_parent_vmo.get(), std::move(region)));
+  if (!name) {
+    name = "Unknown";
+  }
+
+  regions_.emplace(
+      std::make_pair(result_parent_vmo.get(), std::make_pair(*std::move(name), std::move(region))));
   *parent_vmo = std::move(result_parent_vmo);
 
   return ZX_OK;
@@ -211,6 +218,9 @@ void ContiguousPooledMemoryAllocator::DumpPoolStats() {
       "AllocatedRegionCount(): %zu AvailableRegionCount(): %zu",
       allocation_name_, unused_size, max_free_size, region_allocator_.AllocatedRegionCount(),
       region_allocator_.AvailableRegionCount());
+  for (auto& [vmo, region] : regions_) {
+    DRIVER_ERROR("Region name %s size %zu", region.first.c_str(), region.second->size);
+  }
 }
 
 void ContiguousPooledMemoryAllocator::TracePoolSize() {

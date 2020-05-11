@@ -415,6 +415,9 @@ class CodecAdapter {
   // the new stream starting.
   virtual void CoreCodecMidStreamOutputBufferReConfigFinish() = 0;
 
+  // Returns a name for the codec that's used for debugging.
+  virtual std::string CoreCodecGetName() { return ""; }
+
  protected:
   // See comment on the constructor re. sharing this lock with the caller of
   // CodecAdapter methods, at least for now.

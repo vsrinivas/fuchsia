@@ -46,6 +46,7 @@ class BufferCollection
   zx_status_t WaitForSingleBufferAllocated(uint64_t buffer_index, fidl_txn_t* txn);
   zx_status_t CheckSingleBufferAllocated(uint64_t buffer_index);
   zx_status_t Close();
+  zx_status_t SetName(uint32_t priority, const char* name_data, size_t name_size);
 
   //
   // LogicalBufferCollection uses these:

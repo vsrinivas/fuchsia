@@ -1677,6 +1677,20 @@ void CodecImpl::SetBufferSettingsCommon(
                 // instance for the 2nd try.
                 UnbindLocked();
               });
+          std::string buffer_name = codec_adapter_->CoreCodecGetName();
+          switch (port) {
+            case kInputPort:
+              buffer_name += "Input";
+              break;
+            case kOutputPort:
+              buffer_name += "Output";
+              break;
+            default:
+              buffer_name += "Unknown";
+              break;
+          }
+          port_settings_[port]->buffer_collection()->SetName(11, buffer_name);
+
           port_settings_[port]->buffer_collection()->SetConstraints(
               true, std::move(buffer_collection_constraints));
           port_settings_[port]->buffer_collection()->WaitForBuffersAllocated(

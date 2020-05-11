@@ -57,7 +57,7 @@ TEST_F(ContiguousPooledSystem, VmoNamesAreSet) {
   EXPECT_EQ(0u, strcmp(kVmoName, name));
 
   zx::vmo vmo;
-  EXPECT_OK(allocator_.Allocate(kVmoSize, &vmo));
+  EXPECT_OK(allocator_.Allocate(kVmoSize, {}, &vmo));
   EXPECT_OK(vmo.get_property(ZX_PROP_NAME, name, sizeof(name)));
   EXPECT_EQ(0u, strcmp("test-pool-child", name));
 }
@@ -69,16 +69,16 @@ TEST_F(ContiguousPooledSystem, Full) {
   std::vector<zx::vmo> vmos;
   for (uint32_t i = 0; i < kVmoCount; ++i) {
     zx::vmo vmo;
-    EXPECT_OK(allocator_.Allocate(kVmoSize, &vmo));
+    EXPECT_OK(allocator_.Allocate(kVmoSize, {}, &vmo));
     vmos.push_back(std::move(vmo));
   }
 
   zx::vmo vmo;
-  EXPECT_NOT_OK(allocator_.Allocate(kVmoSize, &vmo));
+  EXPECT_NOT_OK(allocator_.Allocate(kVmoSize, {}, &vmo));
 
   allocator_.Delete(std::move(vmos[0]));
 
-  EXPECT_OK(allocator_.Allocate(kVmoSize, &vmos[0]));
+  EXPECT_OK(allocator_.Allocate(kVmoSize, {}, &vmos[0]));
 
   // Destroy half of all vmos.
   for (uint32_t i = 0; i < kVmoCount; i += 2) {
@@ -91,7 +91,7 @@ TEST_F(ContiguousPooledSystem, Full) {
   // being laid out sequentially, so isn't a fundamental check - if the
   // allocator's layout strategy changes this check might start to fail
   // without there necessarily being a real problem.
-  EXPECT_NOT_OK(allocator_.Allocate(kVmoSize + 1, &vmo));
+  EXPECT_NOT_OK(allocator_.Allocate(kVmoSize + 1, {}, &vmo));
 }
 
 TEST_F(ContiguousPooledSystem, GetPhysicalMemoryInfo) {
@@ -117,17 +117,17 @@ TEST_F(ContiguousPooledSystem, InitPhysical) {
   EXPECT_EQ(size, kVmoSize * kVmoCount);
 
   zx::vmo vmo;
-  EXPECT_OK(allocator_.Allocate(kVmoSize, &vmo));
+  EXPECT_OK(allocator_.Allocate(kVmoSize, {}, &vmo));
 }
 
 TEST_F(ContiguousPooledSystem, SetReady) {
   EXPECT_OK(allocator_.Init());
   EXPECT_FALSE(allocator_.is_ready());
   zx::vmo vmo;
-  EXPECT_EQ(ZX_ERR_BAD_STATE, allocator_.Allocate(kVmoSize, &vmo));
+  EXPECT_EQ(ZX_ERR_BAD_STATE, allocator_.Allocate(kVmoSize, {}, &vmo));
   allocator_.set_ready();
   EXPECT_TRUE(allocator_.is_ready());
-  EXPECT_OK(allocator_.Allocate(kVmoSize, &vmo));
+  EXPECT_OK(allocator_.Allocate(kVmoSize, {}, &vmo));
 }
 
 }  // namespace

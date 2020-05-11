@@ -667,6 +667,75 @@ TEST(Sysmem, MinBufferCount) {
   ASSERT_EQ(buffer_collection_info->buffer_count, 5, "");
 }
 
+TEST(Sysmem, BufferName) {
+  zx_status_t status;
+  zx::channel allocator_client;
+  status = connect_to_sysmem_driver(&allocator_client);
+  ASSERT_EQ(status, ZX_OK, "");
+
+  zx::channel token_client;
+  zx::channel token_server;
+  status = zx::channel::create(0, &token_client, &token_server);
+  ASSERT_EQ(status, ZX_OK, "");
+
+  status = fuchsia_sysmem_AllocatorAllocateSharedCollection(allocator_client.get(),
+                                                            token_server.release());
+  ASSERT_EQ(status, ZX_OK, "");
+
+  zx::channel collection_client;
+  zx::channel collection_server;
+  status = zx::channel::create(0, &collection_client, &collection_server);
+  ASSERT_EQ(status, ZX_OK, "");
+
+  ASSERT_NE(token_client.get(), ZX_HANDLE_INVALID, "");
+  status = fuchsia_sysmem_AllocatorBindSharedCollection(
+      allocator_client.get(), token_client.release(), collection_server.release());
+  ASSERT_EQ(status, ZX_OK, "");
+
+  const char kSysmemName[] = "abcdefghijkl\0mnopqrstuvwxyz";
+  fuchsia_sysmem_BufferCollectionSetName(collection_client.get(), 10, kSysmemName,
+                                         sizeof(kSysmemName));
+  const char kLowPrioName[] = "low_pri";
+  fuchsia_sysmem_BufferCollectionSetName(collection_client.get(), 0, kLowPrioName,
+                                         sizeof(kLowPrioName));
+  BufferCollectionConstraints constraints(BufferCollectionConstraints::Default);
+  constraints->usage.cpu = fuchsia_sysmem_cpuUsageReadOften | fuchsia_sysmem_cpuUsageWriteOften;
+  constraints->min_buffer_count = 1;
+  constraints->has_buffer_memory_constraints = true;
+  constraints->buffer_memory_constraints = fuchsia_sysmem_BufferMemoryConstraints{
+      .min_size_bytes = 4 * 1024,
+      .physically_contiguous_required = false,
+      .secure_required = false,
+      .ram_domain_supported = false,
+      .cpu_domain_supported = true,
+      .inaccessible_domain_supported = false,
+      .heap_permitted_count = 0,
+      .heap_permitted = {},
+  };
+  ZX_DEBUG_ASSERT(constraints->image_format_constraints_count == 0);
+  status = fuchsia_sysmem_BufferCollectionSetConstraints(collection_client.get(), true,
+                                                         constraints.release());
+  ASSERT_EQ(status, ZX_OK, "");
+
+  zx_status_t allocation_status;
+  BufferCollectionInfo buffer_collection_info(BufferCollectionInfo::Default);
+  status = fuchsia_sysmem_BufferCollectionWaitForBuffersAllocated(
+      collection_client.get(), &allocation_status, buffer_collection_info.get());
+  // This is the first round-trip to/from sysmem.  A failure here can be due
+  // to any step above failing async.
+  ASSERT_EQ(status, ZX_OK, "");
+  ASSERT_EQ(allocation_status, ZX_OK, "");
+
+  ASSERT_EQ(buffer_collection_info->buffer_count, 1, "");
+  zx_handle_t vmo = buffer_collection_info->buffers[0].vmo;
+  char vmo_name[ZX_MAX_NAME_LEN];
+  ASSERT_EQ(ZX_OK, zx_object_get_property(vmo, ZX_PROP_NAME, vmo_name, sizeof(vmo_name)));
+
+  // Should be equal up to the first null.
+  EXPECT_EQ(std::string(kSysmemName), std::string(vmo_name));
+  EXPECT_EQ(0u, vmo_name[ZX_MAX_NAME_LEN - 1]);
+}
+
 TEST(Sysmem, NoToken) {
   zx_status_t status;
   zx::channel allocator2_client;

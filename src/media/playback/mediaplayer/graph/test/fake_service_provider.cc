@@ -80,6 +80,11 @@ void FakeBufferCollection::Close() {
   EXPECT_TRUE(false);
 }
 
+void FakeBufferCollection::SetName(uint32_t priority, std::string name) {
+  // Not used.
+  EXPECT_TRUE(false);
+}
+
 //////////////////////////////////////////////////////////////////////////////////////////////
 // FakeBufferCollectionToken implementation.
 

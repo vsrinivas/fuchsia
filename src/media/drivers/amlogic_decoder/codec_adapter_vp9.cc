@@ -624,13 +624,6 @@ void CodecAdapterVp9::CoreCodecResetStreamAfterCurrentFrame() {
 }
 
 void CodecAdapterVp9::CoreCodecAddBuffer(CodecPort port, const CodecBuffer* buffer) {
-  if (port == kInputPort) {
-    const char* kInputBufferName = "VP9InputBuffer";
-    buffer->vmo().set_property(ZX_PROP_NAME, kInputBufferName, strlen(kInputBufferName));
-  } else if (port == kOutputPort) {
-    const char* kOutputBufferName = "VP9OutputBuffer";
-    buffer->vmo().set_property(ZX_PROP_NAME, kOutputBufferName, strlen(kOutputBufferName));
-  }
   if (port != kOutputPort) {
     return;
   }

@@ -203,6 +203,7 @@ zx_status_t InternalBuffer::Init(const char* name, fuchsia::sysmem::AllocatorSyn
   // InternalBuffer(s) don't need any image format constraints, as they don't store image data.
   ZX_DEBUG_ASSERT(constraints.image_format_constraints_count == 0);
 
+  buffer_collection->SetName(10u, name);
   buffer_collection->SetConstraints(true, std::move(constraints));
 
   // There's only one participant, and we've already called SetConstraints(), so this should be
@@ -223,12 +224,6 @@ zx_status_t InternalBuffer::Init(const char* name, fuchsia::sysmem::AllocatorSyn
 
   ZX_DEBUG_ASSERT(out_buffer_collection_info.buffers[0].vmo_usable_start % ZX_PAGE_SIZE == 0);
   zx::vmo vmo = std::move(out_buffer_collection_info.buffers[0].vmo);
-
-  status = vmo.set_property(ZX_PROP_NAME, name, strlen(name));
-  if (status != ZX_OK) {
-    LOG(ERROR, "vmo_.set_property(ZX_PROP_NAME) failed - status: %d", status);
-    return status;
-  }
 
   uintptr_t virt_base = 0;
   if (is_mapping_needed_) {

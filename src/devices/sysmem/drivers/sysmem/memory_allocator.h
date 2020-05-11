@@ -25,7 +25,8 @@ class MemoryAllocator {
 
   virtual ~MemoryAllocator();
 
-  virtual zx_status_t Allocate(uint64_t size, zx::vmo* parent_vmo) = 0;
+  virtual zx_status_t Allocate(uint64_t size, std::optional<std::string> name,
+                               zx::vmo* parent_vmo) = 0;
   // The callee must not create long-lived duplicate handles to child_vmo, as
   // that would prevent ZX_VMO_ZERO_CHILDREN from being signaled on parent_vmo
   // which would prevent Delete() from ever getting called even if all sysmem

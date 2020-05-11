@@ -56,6 +56,8 @@ class FakeBufferCollection : public fuchsia::sysmem::BufferCollection {
 
   void Close() override;
 
+  void SetName(uint32_t priority, std::string name) override;
+
   FakeServiceProvider* owner_;
   fidl::BindingSet<fuchsia::sysmem::BufferCollection> bindings_;
   std::vector<fuchsia::sysmem::BufferCollectionConstraints> constraints_;

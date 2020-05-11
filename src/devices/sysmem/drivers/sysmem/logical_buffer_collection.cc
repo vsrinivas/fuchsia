@@ -279,6 +279,12 @@ void LogicalBufferCollection::OnSetConstraints() {
   return;
 }
 
+void LogicalBufferCollection::SetName(uint32_t priority, std::string name) {
+  if (!name_ || (priority > name_->first)) {
+    name_ = std::make_pair(priority, name);
+  }
+}
+
 LogicalBufferCollection::AllocationResult LogicalBufferCollection::allocation_result() {
   ZX_DEBUG_ASSERT(has_allocation_result_ ||
                   (allocation_result_status_ == ZX_OK && !allocation_result_info_));
@@ -1592,7 +1598,10 @@ zx_status_t LogicalBufferCollection::AllocateVmo(
   // avoids races with handle close, and means there also aren't any
   // mappings left).
   zx::vmo raw_parent_vmo;
-  zx_status_t status = allocator->Allocate(rounded_size_bytes, &raw_parent_vmo);
+  std::optional<std::string> name;
+  if (name_)
+    name = name_->second;
+  zx_status_t status = allocator->Allocate(rounded_size_bytes, name, &raw_parent_vmo);
   if (status != ZX_OK) {
     LogError(
         "allocator->Allocate failed - size_bytes: %u "
@@ -1699,6 +1708,9 @@ zx_status_t LogicalBufferCollection::AllocateVmo(
     // which will call allocator->Delete() via above do_delete lambda passed to
     // ParentVmo::ParentVmo().
     return status;
+  }
+  if (name_) {
+    local_child_vmo.set_property(ZX_PROP_NAME, name_->second.c_str(), name_->second.size());
   }
 
   *child_vmo = std::move(local_child_vmo);

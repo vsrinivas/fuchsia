@@ -64,6 +64,7 @@ class CodecAdapterVp9 : public CodecAdapter,
       uint64_t new_output_format_details_version_ordinal) override;
   void CoreCodecMidStreamOutputBufferReConfigPrepare() override;
   void CoreCodecMidStreamOutputBufferReConfigFinish() override;
+  std::string CoreCodecGetName() override { return "AmlVp9"; }
 
   void ReadMoreInputData(Vp9Decoder* decoder) override;
   void ReadMoreInputDataFromReschedule(Vp9Decoder* decoder) override;

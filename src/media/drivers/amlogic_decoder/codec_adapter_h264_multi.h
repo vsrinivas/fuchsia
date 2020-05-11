@@ -61,6 +61,7 @@ class CodecAdapterH264Multi : public CodecAdapter,
   void CoreCodecMidStreamOutputBufferReConfigPrepare() override;
   void CoreCodecMidStreamOutputBufferReConfigFinish() override;
   void CoreCodecResetStreamAfterCurrentFrame() override;
+  std::string CoreCodecGetName() override { return "AmlH264Multi"; }
 
   // VideoDecoder::Client implementation;
   void OnError() override;

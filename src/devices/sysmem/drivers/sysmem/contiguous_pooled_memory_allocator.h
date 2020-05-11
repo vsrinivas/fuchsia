@@ -29,7 +29,8 @@ class ContiguousPooledMemoryAllocator : public MemoryAllocator {
   // This uses a physical VMO as the parent VMO.
   zx_status_t InitPhysical(zx_paddr_t paddr);
 
-  zx_status_t Allocate(uint64_t size, zx::vmo* parent_vmo) override;
+  zx_status_t Allocate(uint64_t size, std::optional<std::string> name,
+                       zx::vmo* parent_vmo) override;
   zx_status_t SetupChildVmo(const zx::vmo& parent_vmo, const zx::vmo& child_vmo) override;
   void Delete(zx::vmo parent_vmo) override;
 
@@ -57,7 +58,7 @@ class ContiguousPooledMemoryAllocator : public MemoryAllocator {
   zx::vmo contiguous_vmo_;
   RegionAllocator region_allocator_;
   // From parent_vmo handle to std::unique_ptr<>
-  std::map<zx_handle_t, RegionAllocator::Region::UPtr> regions_;
+  std::map<zx_handle_t, std::pair<std::string /*name*/, RegionAllocator::Region::UPtr>> regions_;
   uint64_t start_{};
   uint64_t size_{};
   bool is_cpu_accessible_{};

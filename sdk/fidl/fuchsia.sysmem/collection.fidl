@@ -297,6 +297,11 @@ protocol BufferCollection {
     /// BufferCollection channel.  If this is the last BufferCollection view, the
     /// LogicalBufferCollection will still go away.
     Close();
+
+    /// Set a name for VMOs in this buffer collection. The name may be truncated shorter. The name
+    /// only affects VMOs allocated after it's set - this call does not rename existing VMOs. If
+    /// multiple clients set different names then the larger priority value will win.
+    SetName(uint32 priority, string:64 name);
 };
 
 /// This interface intentionally doesn't include any event for

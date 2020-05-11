@@ -72,6 +72,8 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
 
   void OnSetConstraints();
 
+  void SetName(uint32_t priority, std::string name);
+
   struct AllocationResult {
     const fuchsia_sysmem_BufferCollectionInfo_2* buffer_collection_info = nullptr;
     const zx_status_t status = ZX_OK;
@@ -174,6 +176,7 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
   BufferCollectionInfo allocation_result_info_{BufferCollectionInfo::Null};
 
   MemoryAllocator* memory_allocator_ = nullptr;
+  std::optional<std::pair<uint32_t /*priority*/, std::string>> name_;
 
   // We keep LogicalBufferCollection alive as long as there are child VMOs
   // outstanding (no revoking of child VMOs for now).

@@ -9,6 +9,7 @@
 #include <lib/async-loop/default.h>
 #include <lib/fake-bti/bti.h>
 #include <lib/fidl-async/cpp/bind.h>
+#include <lib/mock-sysmem/mock-buffer-collection.h>
 
 #include <ddk/protocol/display/controller.h>
 #include <zxtest/zxtest.h>
@@ -20,12 +21,8 @@ namespace sysmem = llcpp::fuchsia::sysmem;
 namespace {
 // Use a stub buffer collection instead of the real sysmem since some tests may
 // require things that aren't available on the current system.
-class StubBufferCollection : public sysmem::BufferCollection::Interface {
+class StubBufferCollection : public mock_sysmem::MockBufferCollection {
  public:
-  void SetEventSink(::zx::channel events, SetEventSinkCompleter::Sync _completer) override {
-    EXPECT_TRUE(false);
-  }
-  void Sync(SyncCompleter::Sync _completer) override { EXPECT_TRUE(false); }
   void SetConstraints(bool has_constraints, sysmem::BufferCollectionConstraints constraints,
                       SetConstraintsCompleter::Sync _completer) override {
     auto& image_constraints = constraints.image_format_constraints[0];
@@ -46,27 +43,6 @@ class StubBufferCollection : public sysmem::BufferCollection::Interface {
     constraints.bytes_per_row_divisor = 1;
     _completer.Reply(ZX_OK, std::move(info));
   }
-  void CheckBuffersAllocated(CheckBuffersAllocatedCompleter::Sync _completer) override {
-    EXPECT_TRUE(false);
-  }
-
-  void CloseSingleBuffer(uint64_t buffer_index,
-                         CloseSingleBufferCompleter::Sync _completer) override {
-    EXPECT_TRUE(false);
-  }
-  void AllocateSingleBuffer(uint64_t buffer_index,
-                            AllocateSingleBufferCompleter::Sync _completer) override {
-    EXPECT_TRUE(false);
-  }
-  void WaitForSingleBufferAllocated(
-      uint64_t buffer_index, WaitForSingleBufferAllocatedCompleter::Sync _completer) override {
-    EXPECT_TRUE(false);
-  }
-  void CheckSingleBufferAllocated(uint64_t buffer_index,
-                                  CheckSingleBufferAllocatedCompleter::Sync _completer) override {
-    EXPECT_TRUE(false);
-  }
-  void Close(CloseCompleter::Sync _completer) override { EXPECT_TRUE(false); }
 };
 
 class FakeGpuBackend : public virtio::FakeBackend {

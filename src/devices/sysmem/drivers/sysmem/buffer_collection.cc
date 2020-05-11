@@ -56,6 +56,7 @@ const fuchsia_sysmem_BufferCollection_ops_t BufferCollection::kOps = {
     fidl::Binder<BufferCollection>::BindMember<&BufferCollection::WaitForSingleBufferAllocated>,
     fidl::Binder<BufferCollection>::BindMember<&BufferCollection::CheckSingleBufferAllocated>,
     fidl::Binder<BufferCollection>::BindMember<&BufferCollection::Close>,
+    fidl::Binder<BufferCollection>::BindMember<&BufferCollection::SetName>,
 };
 
 BufferCollection::~BufferCollection() {
@@ -251,6 +252,11 @@ zx_status_t BufferCollection::Close() {
   // do a FailAsync() if is_done_ is seen to be set while handling any other
   // message.
   is_done_ = true;
+  return ZX_OK;
+}
+
+zx_status_t BufferCollection::SetName(uint32_t priority, const char* name_data, size_t name_size) {
+  parent_->SetName(priority, std::string(name_data, name_size));
   return ZX_OK;
 }
 

@@ -35,7 +35,8 @@ namespace {
 
 class SystemRamMemoryAllocator : public MemoryAllocator {
  public:
-  zx_status_t Allocate(uint64_t size, zx::vmo* parent_vmo) override {
+  zx_status_t Allocate(uint64_t size, std::optional<std::string> name,
+                       zx::vmo* parent_vmo) override {
     zx_status_t status = zx::vmo::create(size, 0, parent_vmo);
     if (status != ZX_OK) {
       return status;
@@ -60,7 +61,8 @@ class ContiguousSystemRamMemoryAllocator : public MemoryAllocator {
   explicit ContiguousSystemRamMemoryAllocator(Owner* parent_device)
       : parent_device_(parent_device) {}
 
-  zx_status_t Allocate(uint64_t size, zx::vmo* parent_vmo) override {
+  zx_status_t Allocate(uint64_t size, std::optional<std::string> name,
+                       zx::vmo* parent_vmo) override {
     zx::vmo result_parent_vmo;
     // This code is unlikely to work after running for a while and physical
     // memory is more fragmented than early during boot. The
@@ -111,7 +113,8 @@ class ExternalMemoryAllocator : public MemoryAllocator {
   ExternalMemoryAllocator(zx::channel connection, std::unique_ptr<async::Wait> wait_for_close)
       : connection_(std::move(connection)), wait_for_close_(std::move(wait_for_close)) {}
 
-  zx_status_t Allocate(uint64_t size, zx::vmo* parent_vmo) override {
+  zx_status_t Allocate(uint64_t size, std::optional<std::string> name,
+                       zx::vmo* parent_vmo) override {
     zx::vmo result_vmo;
     zx_status_t status2 = ZX_OK;
     zx_status_t status = fuchsia_sysmem_HeapAllocateVmo(connection_.get(), size, &status2,
