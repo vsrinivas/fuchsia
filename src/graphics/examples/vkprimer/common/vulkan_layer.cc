@@ -60,7 +60,8 @@ bool VulkanLayer::Init() {
   }
 
   const auto &instance = *instance_->instance();
-  dispatch_loader_ = vk::DispatchLoaderDynamic(instance, /*device*/ vk::Device());
+  dispatch_loader_ = vk::DispatchLoaderDynamic();
+  dispatch_loader_.init(instance);
 
   vk::DebugUtilsMessengerCreateInfoEXT info;
   info.messageSeverity = vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose |
