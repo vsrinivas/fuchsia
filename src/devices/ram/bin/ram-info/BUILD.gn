@@ -19,6 +19,7 @@ executable("ram-info") {
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxc",
   ]
 }
 
@@ -39,6 +40,7 @@ test("ram-info-test") {
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/fidl-async-cpp",
     "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxc",
     "//zircon/public/lib/zxtest",
   ]
 }

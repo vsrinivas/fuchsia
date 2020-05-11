@@ -98,7 +98,7 @@ TEST_F(RamInfoTest, Errors) {
   fclose(output_file);
 }
 
-TEST_F(RamInfoTest, FourChannelsDefaultPrinter) {
+TEST_F(RamInfoTest, DefaultPrinter) {
   constexpr RamDeviceInfo kDeviceInfo = {
       .counter_to_bandwidth_mbs = [](uint64_t counter) -> double {
         return static_cast<double>(counter) / 4.0;
@@ -129,6 +129,72 @@ TEST_F(RamInfoTest, FourChannelsDefaultPrinter) {
       "channel3 (rw) \t\t 10\n"
       "total (rw) \t\t 25\n";
   EXPECT_BYTES_EQ(output_buffer, kExpectedOutput, strlen(kExpectedOutput));
+}
+
+TEST_F(RamInfoTest, CsvPrinter) {
+  constexpr RamDeviceInfo kDeviceInfo = {
+      .counter_to_bandwidth_mbs = [](uint64_t counter) -> double {
+        return static_cast<double>(counter) / 4.0;
+      },
+  };
+
+  char output_buffer[512];
+  FILE* output_file = fmemopen(output_buffer, sizeof(output_buffer), "w");
+  ASSERT_NOT_NULL(output_file);
+
+  CsvPrinter printer(output_file, kDeviceInfo);
+  printer.AddChannelName(0, "channel0");
+  printer.AddChannelName(1, "channel1");
+  printer.AddChannelName(2, "channel2");
+  printer.AddChannelName(3, "channel3");
+
+  ram_metrics::BandwidthMeasurementConfig config = {};
+  config.cycles_to_measure = 1024;
+
+  EXPECT_OK(MeasureBandwith(&printer, std::move(client_), config));
+  fclose(output_file);
+
+  constexpr char kExpectedOutput[] =
+      "time,\"channel0\",\"channel1\",\"channel2\",\"channel3\"\n"
+      "1234,2.5,5,7.5,10\n";
+  EXPECT_BYTES_EQ(output_buffer, kExpectedOutput, strlen(kExpectedOutput));
+}
+
+TEST_F(RamInfoTest, ParseChannelString) {
+  auto result = ParseChannelString("1234, 0x1234,  01234");
+  ASSERT_TRUE(result.is_ok());
+
+  std::array<uint64_t, 8> expected_values = {1234, 0x1234, 01234};
+  for (size_t i = 0; i < expected_values.size(); i++) {
+    EXPECT_EQ(result.value()[i], expected_values[i]);
+  }
+
+  result = ParseChannelString("0x10000000000000000");
+  EXPECT_FALSE(result.is_ok());
+
+  result = ParseChannelString("0xffffffffffffffff");
+  ASSERT_TRUE(result.is_ok());
+  EXPECT_EQ(result.value()[0], 0xffff'ffff'ffff'ffff);
+
+  result = ParseChannelString("1,2,3,4,5,6,7,8,");
+  ASSERT_TRUE(result.is_ok());
+
+  expected_values = {1, 2, 3, 4, 5, 6, 7, 8};
+  for (size_t i = 0; i < expected_values.size(); i++) {
+    EXPECT_EQ(result.value()[i], expected_values[i]);
+  }
+
+  result = ParseChannelString("1,2,3,4,5,6,7,8a");
+  EXPECT_FALSE(result.is_ok());
+
+  result = ParseChannelString("1,2,3,4,5,6,7,8,9");
+  EXPECT_FALSE(result.is_ok());
+
+  result = ParseChannelString("");
+  EXPECT_FALSE(result.is_ok());
+
+  result = ParseChannelString("z");
+  EXPECT_FALSE(result.is_ok());
 }
 
 }  // namespace ram_info

@@ -6,9 +6,12 @@
 #define SRC_DEVICES_RAM_BIN_RAM_INFO_RAM_INFO_H_
 
 #include <fuchsia/hardware/ram/metrics/llcpp/fidl.h>
+#include <lib/zx/status.h>
 #include <stdio.h>
 
+#include <array>
 #include <string>
+#include <string_view>
 #include <tuple>
 #include <vector>
 
@@ -50,6 +53,15 @@ class DefaultPrinter : public Printer {
   DefaultPrinter(FILE* file, const RamDeviceInfo& device_info) : Printer(file, device_info) {}
   void Print(const ::llcpp::fuchsia::hardware::ram::metrics::BandwidthInfo& info) const override;
 };
+
+class CsvPrinter : public Printer {
+ public:
+  CsvPrinter(FILE* file, const RamDeviceInfo& device_info) : Printer(file, device_info) {}
+  void Print(const ::llcpp::fuchsia::hardware::ram::metrics::BandwidthInfo& info) const override;
+};
+
+zx::status<std::array<uint64_t, ::llcpp::fuchsia::hardware::ram::metrics::MAX_COUNT_CHANNELS>>
+ParseChannelString(std::string_view str);
 
 std::tuple<zx::channel, ram_info::RamDeviceInfo> ConnectToRamDevice();
 

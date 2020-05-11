@@ -5,6 +5,7 @@
 #include "ram-info.h"
 
 #include <lib/fdio/fdio.h>
+#include <stdlib.h>
 
 #include <fbl/unique_fd.h>
 #include <soc/aml-common/aml-ram.h>
@@ -51,19 +52,96 @@ namespace ram_info {
 void DefaultPrinter::Print(const ram_metrics::BandwidthInfo& info) const {
   fprintf(file_, "channel \t\t usage (MB/s)  time: %lu ms\n", info.timestamp / ZX_MSEC(1));
   size_t ix = 0;
-  double total_bandwith_rw = 0;
+  double total_bandwidth_rw = 0;
   for (const auto& row : rows_) {
     if (row.empty()) {
       continue;
     }
     // We discard read-only and write-only counters as they are not supported
     // by current hardware.
-    double bandwith_rw = device_info_.counter_to_bandwidth_mbs(info.channels[ix].readwrite_cycles);
-    total_bandwith_rw += bandwith_rw;
-    fprintf(file_, "%s (rw) \t\t %g\n", row.c_str(), bandwith_rw);
+    double bandwidth_rw = device_info_.counter_to_bandwidth_mbs(info.channels[ix].readwrite_cycles);
+    total_bandwidth_rw += bandwidth_rw;
+    fprintf(file_, "%s (rw) \t\t %g\n", row.c_str(), bandwidth_rw);
     ++ix;
   }
-  fprintf(file_, "total (rw) \t\t %g\n", total_bandwith_rw);
+  fprintf(file_, "total (rw) \t\t %g\n", total_bandwidth_rw);
+}
+
+void CsvPrinter::Print(const ram_metrics::BandwidthInfo& info) const {
+  size_t row_count = 0;
+  for (const auto& row : rows_) {
+    if (!row.empty()) {
+      row_count++;
+    }
+  }
+
+  fprintf(file_, "time,");
+
+  size_t ix = 0;
+  for (const auto& row : rows_) {
+    if (row.empty()) {
+      continue;
+    }
+
+    fprintf(file_, "\"%s\"%s", row.c_str(), (ix < row_count - 1) ? "," : "");
+    ix++;
+  }
+
+  fprintf(file_, "\n%lu,", info.timestamp / ZX_MSEC(1));
+
+  ix = 0;
+  for (const auto& row : rows_) {
+    if (row.empty()) {
+      continue;
+    }
+
+    double bandwidth_rw = device_info_.counter_to_bandwidth_mbs(info.channels[ix].readwrite_cycles);
+    fprintf(file_, "%g%s", bandwidth_rw, (ix < row_count - 1) ? "," : "\n");
+    ix++;
+  }
+}
+
+zx::status<std::array<uint64_t, ram_metrics::MAX_COUNT_CHANNELS>> ParseChannelString(
+    std::string_view str) {
+  if (str[0] == '\0') {
+    return zx::error(ZX_ERR_INVALID_ARGS);
+  }
+
+  std::array<uint64_t, ram_metrics::MAX_COUNT_CHANNELS> channels = {};
+  std::string_view next_channel = str;
+
+  for (uint64_t& channel : channels) {
+    errno = 0;
+    char* endptr;
+    channel = strtoul(next_channel.data(), &endptr, 0);
+    if (endptr > &(*next_channel.cend())) {
+      return zx::error_status(ZX_ERR_BAD_STATE);
+    }
+
+    next_channel = endptr;
+
+    if (channel == ULONG_MAX && errno == ERANGE) {
+      return zx::error(ZX_ERR_OUT_OF_RANGE);
+    }
+
+    if (next_channel[0] == '\0') {
+      break;
+    }
+
+    // Only a comma separator is allowed.
+    if (next_channel[0] != ',') {
+      return zx::error_status(ZX_ERR_INVALID_ARGS);
+    }
+
+    next_channel = next_channel.data() + 1;
+  }
+
+  // Make sure there are no trailing characters.
+  if (next_channel[0] != '\0') {
+    return zx::error_status(ZX_ERR_INVALID_ARGS);
+  }
+
+  return zx::ok(channels);
 }
 
 std::tuple<zx::channel, ram_info::RamDeviceInfo> ConnectToRamDevice() {
