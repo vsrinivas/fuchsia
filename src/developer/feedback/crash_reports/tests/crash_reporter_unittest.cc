@@ -882,7 +882,7 @@ TEST_F(CrashReporterTest, Succeed_OnNoFeedbackAnnotations) {
 TEST_F(CrashReporterTest, Succeed_OnNoFeedbackData) {
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
   SetUpChannelProviderServer(std::make_unique<stubs::ChannelProvider>(kDefaultChannel));
-  SetUpDataProviderServer(std::make_unique<stubs::DataProviderReturnsNoData>());
+  SetUpDataProviderServer(std::make_unique<stubs::DataProviderReturnsEmptyBugreport>());
   SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
   SetUpUtcProviderServer({kExternalResponse});
 

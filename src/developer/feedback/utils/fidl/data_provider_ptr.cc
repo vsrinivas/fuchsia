@@ -7,6 +7,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/fit/result.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/zx/time.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
@@ -17,7 +18,7 @@ namespace feedback {
 namespace fidl {
 namespace {
 
-using fuchsia::feedback::Data;
+using fuchsia::feedback::Bugreport;
 
 }  // namespace
 
@@ -25,43 +26,44 @@ DataProviderPtr::DataProviderPtr(async_dispatcher_t* dispatcher,
                                  std::shared_ptr<sys::ServiceDirectory> services)
     : services_(services), pending_calls_(dispatcher) {}
 
-::fit::promise<Data> DataProviderPtr::GetData(const zx::duration timeout) {
+::fit::promise<Bugreport> DataProviderPtr::GetBugreport(const zx::duration timeout) {
   if (!connection_) {
     Connect();
   }
 
   const uint64_t id = pending_calls_.NewBridgeForTask("Feedback data collection");
 
-  connection_->GetData([id, this](::fit::result<Data, zx_status_t> result) {
-    if (pending_calls_.IsAlreadyDone(id)) {
-      return;
-    }
+  connection_->GetBugreport(
+      // We give 5s for the packaging of the bugreport and the round-trip between the client and the
+      // server and the rest is given to each data collection.
+      std::move(fuchsia::feedback::GetBugreportParameters().set_collection_timeout_per_data(
+          (timeout - zx::sec(5) /* cost of making the call and packaging the bugreport */).get())),
+      [id, this](Bugreport bugreport) {
+        if (pending_calls_.IsAlreadyDone(id)) {
+          return;
+        }
 
-    if (result.is_error()) {
-      FX_PLOGS(WARNING, result.error()) << "Failed to fetch feedback data";
-      pending_calls_.CompleteError(id, Error::kDefault);
-    } else {
-      pending_calls_.CompleteOk(id, result.take_value());
-    }
-  });
+        pending_calls_.CompleteOk(id, std::move(bugreport));
+      });
 
   return pending_calls_.WaitForDone(id, fit::Timeout(timeout))
-      .then([id, this](::fit::result<Data, Error>& result) -> ::fit::result<Data> {
+      .then([id, this](::fit::result<Bugreport, Error>& result) -> ::fit::result<Bugreport> {
         // We need to move the result before erasing the bridge because |result| is passed as a
         // reference.
-        ::fit::result<Data, Error> data = std::move(result);
+        ::fit::result<Bugreport, Error> bugreport = std::move(result);
 
         pending_calls_.Delete(id);
 
-        // Close the connection if we were the last pending call to GetData().
+        // Close the connection if we were the last pending call to GetBugreport().
         if (pending_calls_.IsEmpty()) {
           connection_.Unbind();
         }
 
-        if (data.is_error()) {
+        if (bugreport.is_error()) {
+          // Swallow the Error.
           return ::fit::error();
         } else {
-          return ::fit::ok(data.take_value());
+          return ::fit::ok(bugreport.take_value());
         }
       });
 }
@@ -76,7 +78,7 @@ void DataProviderPtr::Connect() {
   connection_.set_error_handler([this](zx_status_t status) {
     FX_PLOGS(ERROR, status) << "Lost connection to fuchsia.feedback.DataProvider";
 
-    pending_calls_.CompleteAllError(Error::kDefault);
+    pending_calls_.CompleteAllError(Error::kConnectionError);
   });
 }
 

@@ -33,16 +33,16 @@ class BugReporterTest : public gtest::TestLoopFixture {
   void SetUp() override {
     // We run the service directory provider in a different loop and thread so that the
     // MakeBugReport can connect to the stub feedback data provider synchronously.
-    ASSERT_EQ(service_directory_provider_loop_.StartThread("service directory provider thread"),
-              ZX_OK);
+    FX_CHECK(service_directory_provider_loop_.StartThread("service directory provider thread") ==
+             ZX_OK);
 
-    ASSERT_TRUE(tmp_dir_.NewTempFile(&bugreport_path_));
+    FX_CHECK(tmp_dir_.NewTempFile(&bugreport_path_));
   }
 
  protected:
-  void SetUpDataProviderServer(fuchsia::feedback::Attachment attachment_bundle) {
+  void SetUpDataProviderServer(fuchsia::feedback::Attachment bugreport) {
     data_provider_server_ =
-        std::make_unique<stubs::DataProviderBundleAttachment>(std::move(attachment_bundle));
+        std::make_unique<stubs::DataProviderBugreportOnly>(std::move(bugreport));
     FX_CHECK(service_directory_provider_.AddService(data_provider_server_->GetHandler()) == ZX_OK);
   }
 
@@ -61,17 +61,17 @@ class BugReporterTest : public gtest::TestLoopFixture {
 TEST_F(BugReporterTest, Basic) {
   const std::string payload = "technically a ZIP archive, but it doesn't matter for the unit test";
 
-  fuchsia::feedback::Attachment attachment_bundle;
-  attachment_bundle.key = "unused";
-  ASSERT_TRUE(fsl::VmoFromString(payload, &attachment_bundle.value));
-  SetUpDataProviderServer(std::move(attachment_bundle));
+  fuchsia::feedback::Attachment bugreport;
+  bugreport.key = "unused";
+  ASSERT_TRUE(fsl::VmoFromString(payload, &bugreport.value));
+  SetUpDataProviderServer(std::move(bugreport));
 
   ASSERT_TRUE(
       MakeBugReport(service_directory_provider_.service_directory(), bugreport_path_.data()));
 
-  std::string bugreport;
-  ASSERT_TRUE(files::ReadFileToString(bugreport_path_, &bugreport));
-  EXPECT_STREQ(bugreport.c_str(), payload.c_str());
+  std::string bugreport_str;
+  ASSERT_TRUE(files::ReadFileToString(bugreport_path_, &bugreport_str));
+  EXPECT_STREQ(bugreport_str.c_str(), payload.c_str());
 }
 
 }  // namespace

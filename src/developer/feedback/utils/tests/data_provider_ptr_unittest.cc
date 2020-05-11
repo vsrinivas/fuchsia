@@ -12,13 +12,14 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "fuchsia/feedback/cpp/fidl.h"
 #include "src/developer/feedback/testing/stubs/data_provider.h"
 #include "src/developer/feedback/testing/unit_test_fixture.h"
 
 namespace feedback {
 namespace {
 
-using fuchsia::feedback::Data;
+using fuchsia::feedback::Bugreport;
 
 constexpr zx::duration kDefaultTimeout = zx::sec(35);
 
@@ -39,13 +40,12 @@ class DataProviderPtrTest : public UnitTestFixture {
 
   bool is_server_bound() { return data_provider_server_->IsBound(); }
 
-  std::vector<::fit::result<Data>> GetFeedbackData(size_t num_parallel_calls) {
-    std::vector<::fit::result<Data>> results(num_parallel_calls);
+  std::vector<::fit::result<Bugreport>> GetBugreport(const size_t num_parallel_calls) {
+    std::vector<::fit::result<Bugreport>> results(num_parallel_calls);
     for (auto& result : results) {
       executor_.schedule_task(
-          data_provider_ptr_.GetData(kDefaultTimeout).then([&](::fit::result<Data>& data) {
-            result = std::move(data);
-          }));
+          data_provider_ptr_.GetBugreport(kDefaultTimeout)
+              .then([&](::fit::result<Bugreport>& bugreport) { result = std::move(bugreport); }));
     }
     RunLoopUntilIdle();
     return results;
@@ -61,15 +61,13 @@ class DataProviderPtrTest : public UnitTestFixture {
 
 TEST_F(DataProviderPtrTest, Check_ConnectionIsReused) {
   const size_t num_calls = 5u;
-  // We use a stub that returns no data as we are not interested in the payload, just the number of
-  // different connections to the stub.
   SetUpDataProviderServer(std::make_unique<stubs::DataProviderTracksNumConnections>(1u));
 
-  const std::vector<::fit::result<Data>> results = GetFeedbackData(num_calls);
+  const std::vector<::fit::result<Bugreport>> results = GetBugreport(num_calls);
 
   ASSERT_EQ(results.size(), num_calls);
   for (const auto& result : results) {
-    EXPECT_TRUE(result.is_error());
+    EXPECT_TRUE(result.is_ok());
   }
 
   EXPECT_FALSE(is_server_bound());
@@ -77,25 +75,23 @@ TEST_F(DataProviderPtrTest, Check_ConnectionIsReused) {
 
 TEST_F(DataProviderPtrTest, Check_ReconnectsCorrectly) {
   const size_t num_calls = 5u;
-  // We use a stub that returns no data as we are not interested in the payload, just the number of
-  // different connections to the stub.
   SetUpDataProviderServer(std::make_unique<stubs::DataProviderTracksNumConnections>(2u));
 
-  std::vector<::fit::result<Data>> results = GetFeedbackData(num_calls);
+  std::vector<::fit::result<Bugreport>> results = GetBugreport(num_calls);
 
   ASSERT_EQ(results.size(), num_calls);
   for (const auto& result : results) {
-    EXPECT_TRUE(result.is_error());
+    EXPECT_TRUE(result.is_ok());
   }
 
   EXPECT_FALSE(is_server_bound());
 
   results.clear();
-  results = GetFeedbackData(num_calls);
+  results = GetBugreport(num_calls);
 
   ASSERT_EQ(results.size(), num_calls);
   for (const auto& result : results) {
-    EXPECT_TRUE(result.is_error());
+    EXPECT_TRUE(result.is_ok());
   }
 
   EXPECT_FALSE(is_server_bound());
@@ -107,7 +103,7 @@ TEST_F(DataProviderPtrTest, Fail_OnNoServer) {
   // We pass a nullptr stub so there will be no fuchsia.feedback.DataProvider service to connect to.
   SetUpDataProviderServer(nullptr);
 
-  std::vector<::fit::result<Data>> results = GetFeedbackData(num_calls);
+  std::vector<::fit::result<Bugreport>> results = GetBugreport(num_calls);
   ASSERT_EQ(results.size(), num_calls);
   EXPECT_TRUE(results[0].is_error());
 }
@@ -117,7 +113,7 @@ TEST_F(DataProviderPtrTest, Fail_OnServerTakingTooLong) {
 
   SetUpDataProviderServer(std::make_unique<stubs::DataProviderNeverReturning>());
 
-  std::vector<::fit::result<Data>> results = GetFeedbackData(num_calls);
+  std::vector<::fit::result<Bugreport>> results = GetBugreport(num_calls);
   RunLoopFor(kDefaultTimeout);
 
   ASSERT_EQ(results.size(), num_calls);

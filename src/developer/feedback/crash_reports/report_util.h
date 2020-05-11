@@ -26,16 +26,15 @@ bool AddAttachment(const std::string& filename, const fuchsia::mem::Buffer& cont
 
 // Builds the final set of annotations and attachments to attach to the Crashpad report.
 //
-// * Most annotations are shared across all crash reports, e.g., |feedback_data|.annotations().
+// * Most annotations are shared across all crash reports, e.g., |bugreport|.annotations().
 // * Some annotations are report-specific, e.g., Dart exception type.
 // * Adds any annotations from |report|.
 //
-// * Most attachments are shared across all crash reports, e.g.,
-//   |feedback_data|.attachment_bundle().
+// * Most attachments are shared across all crash reports, e.g., |bugreport|.bugreport().
 // * Some attachments are report-specific, e.g., Dart exception stack trace.
 // * Adds any attachments from |report|.
 void BuildAnnotationsAndAttachments(fuchsia::feedback::CrashReport report,
-                                    fuchsia::feedback::Data feedback_data,
+                                    fuchsia::feedback::Bugreport bugreport,
                                     const std::optional<zx::time_utc>& current_time,
                                     const std::optional<std::string>& device_id,
                                     const std::string& build_version,

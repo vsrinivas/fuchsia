@@ -19,7 +19,7 @@ namespace {
 
 using fuchsia::feedback::Annotation;
 using fuchsia::feedback::Attachment;
-using fuchsia::feedback::Data;
+using fuchsia::feedback::Bugreport;
 
 std::vector<Annotation> BuildAnnotations(const std::map<std::string, std::string>& annotations) {
   std::vector<Annotation> ret_annotations;
@@ -38,27 +38,27 @@ Attachment BuildAttachment(const std::string& key) {
 
 }  // namespace
 
-void DataProvider::GetData(GetDataCallback callback) {
-  Data data;
-  data.set_annotations(BuildAnnotations(annotations_));
-  data.set_attachment_bundle(BuildAttachment(attachment_bundle_key_));
-  callback(::fit::ok(std::move(data)));
+void DataProvider::GetBugreport(fuchsia::feedback::GetBugreportParameters params,
+                                GetBugreportCallback callback) {
+  Bugreport bugreport;
+  bugreport.set_annotations(BuildAnnotations(annotations_));
+  bugreport.set_bugreport(BuildAttachment(bugreport_key_));
+  callback(std::move(bugreport));
 }
 
-void DataProviderReturnsNoAnnotation::GetData(GetDataCallback callback) {
-  Data data;
-  data.set_attachment_bundle(BuildAttachment(attachment_bundle_key_));
-  callback(::fit::ok(std::move(data)));
+void DataProviderReturnsNoAnnotation::GetBugreport(fuchsia::feedback::GetBugreportParameters params,
+                                                   GetBugreportCallback callback) {
+  callback(std::move(Bugreport().set_bugreport(BuildAttachment(bugreport_key_))));
 }
 
-void DataProviderReturnsNoAttachment::GetData(GetDataCallback callback) {
-  Data data;
-  data.set_annotations(BuildAnnotations(annotations_));
-  callback(::fit::ok(std::move(data)));
+void DataProviderReturnsNoAttachment::GetBugreport(fuchsia::feedback::GetBugreportParameters params,
+                                                   GetBugreportCallback callback) {
+  callback(std::move(Bugreport().set_annotations(BuildAnnotations(annotations_))));
 }
 
-void DataProviderReturnsNoData::GetData(GetDataCallback callback) {
-  callback(::fit::error(ZX_ERR_INTERNAL));
+void DataProviderReturnsEmptyBugreport::GetBugreport(
+    fuchsia::feedback::GetBugreportParameters params, GetBugreportCallback callback) {
+  callback(Bugreport());
 }
 
 DataProviderTracksNumConnections::~DataProviderTracksNumConnections() {
@@ -67,13 +67,14 @@ DataProviderTracksNumConnections::~DataProviderTracksNumConnections() {
       << "Made " << num_connections_ << " connections";
 }
 
-void DataProviderTracksNumConnections::GetData(GetDataCallback callback) {
-  callback(::fit::error(ZX_ERR_INTERNAL));
+void DataProviderTracksNumConnections::GetBugreport(
+    fuchsia::feedback::GetBugreportParameters params, GetBugreportCallback callback) {
+  callback(Bugreport());
 }
 
-void DataProviderBundleAttachment::GetData(GetDataCallback callback) {
-  callback(::fit::ok(
-      std::move(fuchsia::feedback::Data().set_attachment_bundle(std::move(attachment_bundle_)))));
+void DataProviderBugreportOnly::GetBugreport(fuchsia::feedback::GetBugreportParameters params,
+                                             GetBugreportCallback callback) {
+  callback(std::move(Bugreport().set_bugreport(std::move(bugreport_))));
 }
 
 }  // namespace stubs

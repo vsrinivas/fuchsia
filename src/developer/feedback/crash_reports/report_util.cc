@@ -183,29 +183,29 @@ void AddCrashServerAnnotations(const std::string& program_name,
   (*annotations)["should_process"] = should_process ? "true" : "false";
 }
 
-void AddFeedbackAnnotations(const fuchsia::feedback::Data& feedback_data,
-                            std::map<std::string, std::string>* annotations) {
-  if (!feedback_data.has_annotations()) {
+void AddBugreportAnnotations(const fuchsia::feedback::Bugreport& bugreport,
+                             std::map<std::string, std::string>* annotations) {
+  if (!bugreport.has_annotations()) {
     return;
   }
-  for (const auto& annotation : feedback_data.annotations()) {
+  for (const auto& annotation : bugreport.annotations()) {
     (*annotations)[annotation.key] = annotation.value;
   }
 }
 
-void AddFeedbackAttachments(fuchsia::feedback::Data feedback_data,
-                            std::map<std::string, fuchsia::mem::Buffer>* attachments) {
-  if (!feedback_data.has_attachment_bundle()) {
+void AddBugreportAttachments(fuchsia::feedback::Bugreport bugreport,
+                             std::map<std::string, fuchsia::mem::Buffer>* attachments) {
+  if (!bugreport.has_bugreport()) {
     return;
   }
-  auto* attachment_bundle = feedback_data.mutable_attachment_bundle();
-  (*attachments)[attachment_bundle->key] = std::move(attachment_bundle->value);
+  auto* bugreport_attachment = bugreport.mutable_bugreport();
+  (*attachments)[bugreport_attachment->key] = std::move(bugreport_attachment->value);
 }
 
 }  // namespace
 
 void BuildAnnotationsAndAttachments(fuchsia::feedback::CrashReport report,
-                                    fuchsia::feedback::Data feedback_data,
+                                    fuchsia::feedback::Bugreport bugreport,
                                     const std::optional<zx::time_utc>& current_time,
                                     const std::optional<std::string>& device_id,
                                     const std::string& build_version,
@@ -226,10 +226,10 @@ void BuildAnnotationsAndAttachments(fuchsia::feedback::CrashReport report,
                             should_process, annotations);
 
   // Feedback annotations common to all crash reports.
-  AddFeedbackAnnotations(feedback_data, annotations);
+  AddBugreportAnnotations(bugreport, annotations);
 
   // Feedback attachments common to all crash reports.
-  AddFeedbackAttachments(std::move(feedback_data), attachments);
+  AddBugreportAttachments(std::move(bugreport), attachments);
 }
 
 }  // namespace feedback

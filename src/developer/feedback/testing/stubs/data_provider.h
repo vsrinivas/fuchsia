@@ -26,39 +26,43 @@ using DataProviderBase = SINGLE_BINDING_STUB_FIDL_SERVER(fuchsia::feedback, Data
 class DataProvider : public DataProviderBase {
  public:
   DataProvider(const std::map<std::string, std::string>& annotations,
-               const std::string& attachment_bundle_key)
-      : annotations_(annotations), attachment_bundle_key_(attachment_bundle_key) {}
+               const std::string& bugreport_key)
+      : annotations_(annotations), bugreport_key_(bugreport_key) {}
 
   // |fuchsia::feedback::DataProvider|
-  void GetData(GetDataCallback callback) override;
+  void GetBugreport(fuchsia::feedback::GetBugreportParameters params,
+                    GetBugreportCallback callback) override;
 
  protected:
   const std::map<std::string, std::string> annotations_;
-  const std::string attachment_bundle_key_;
+  const std::string bugreport_key_;
 };
 
 class DataProviderReturnsNoAnnotation : public DataProvider {
  public:
-  DataProviderReturnsNoAnnotation(const std::string& attachment_bundle_key)
-      : DataProvider(/*annotations=*/{}, attachment_bundle_key) {}
+  DataProviderReturnsNoAnnotation(const std::string& bugreport_key)
+      : DataProvider(/*annotations=*/{}, bugreport_key) {}
 
   // |fuchsia::feedback::DataProvider|
-  void GetData(GetDataCallback callback) override;
+  void GetBugreport(fuchsia::feedback::GetBugreportParameters params,
+                    GetBugreportCallback callback) override;
 };
 
 class DataProviderReturnsNoAttachment : public DataProvider {
  public:
   DataProviderReturnsNoAttachment(const std::map<std::string, std::string>& annotations)
-      : DataProvider(annotations, /*attachment_bundle_key=*/"") {}
+      : DataProvider(annotations, /*bugreport_key=*/"") {}
 
   // |fuchsia::feedback::DataProvider|
-  void GetData(GetDataCallback callback) override;
+  void GetBugreport(fuchsia::feedback::GetBugreportParameters params,
+                    GetBugreportCallback callback) override;
 };
 
-class DataProviderReturnsNoData : public DataProviderBase {
+class DataProviderReturnsEmptyBugreport : public DataProviderBase {
  public:
   // |fuchsia::feedback::DataProvider|
-  void GetData(GetDataCallback callback) override;
+  void GetBugreport(fuchsia::feedback::GetBugreportParameters params,
+                    GetBugreportCallback callback) override;
 };
 
 class DataProviderTracksNumConnections : public DataProviderBase {
@@ -76,7 +80,8 @@ class DataProviderTracksNumConnections : public DataProviderBase {
   }
 
   // |fuchsia::feedback::DataProvider|
-  void GetData(GetDataCallback callback) override;
+  void GetBugreport(fuchsia::feedback::GetBugreportParameters params,
+                    GetBugreportCallback callback) override;
 
  private:
   const size_t expected_num_connections_;
@@ -87,19 +92,21 @@ class DataProviderTracksNumConnections : public DataProviderBase {
 class DataProviderNeverReturning : public DataProviderBase {
  public:
   // |fuchsia::feedback::DataProvider|
-  STUB_METHOD_DOES_NOT_RETURN(GetData, GetDataCallback);
+  STUB_METHOD_DOES_NOT_RETURN(GetBugreport, fuchsia::feedback::GetBugreportParameters,
+                              GetBugreportCallback);
 };
 
-class DataProviderBundleAttachment : public DataProviderBase {
+class DataProviderBugreportOnly : public DataProviderBase {
  public:
-  DataProviderBundleAttachment(fuchsia::feedback::Attachment attachment_bundle)
-      : attachment_bundle_(std::move(attachment_bundle)) {}
+  DataProviderBugreportOnly(fuchsia::feedback::Attachment bugreport)
+      : bugreport_(std::move(bugreport)) {}
 
   // |fuchsia::feedback::DataProvider|
-  void GetData(GetDataCallback callback) override;
+  void GetBugreport(fuchsia::feedback::GetBugreportParameters params,
+                    GetBugreportCallback callback) override;
 
  private:
-  fuchsia::feedback::Attachment attachment_bundle_;
+  fuchsia::feedback::Attachment bugreport_;
 };
 
 }  // namespace stubs

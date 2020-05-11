@@ -5,6 +5,7 @@
 #include "src/developer/feedback/bugreport/bug_reporter.h"
 
 #include <fuchsia/feedback/cpp/fidl.h>
+#include <lib/zx/time.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
 
@@ -16,30 +17,27 @@ bool MakeBugReport(std::shared_ptr<sys::ServiceDirectory> services, const char* 
   fuchsia::feedback::DataProviderSyncPtr feedback_data_provider;
   services->Connect(feedback_data_provider.NewRequest());
 
-  fuchsia::feedback::DataProvider_GetData_Result result;
-  const zx_status_t get_data_status = feedback_data_provider->GetData(&result);
+  fuchsia::feedback::Bugreport bugreport;
+  const zx_status_t get_data_status = feedback_data_provider->GetBugreport(
+      std::move(fuchsia::feedback::GetBugreportParameters().set_collection_timeout_per_data(
+          zx::min(5).get())),
+      &bugreport);
   if (get_data_status != ZX_OK) {
     fprintf(stderr, "Failed to get data from fuchsia.feedback.DataProvider: %d (%s)\n",
             get_data_status, zx_status_get_string(get_data_status));
     return false;
   }
 
-  if (result.is_err()) {
-    fprintf(stderr, "fuchsia.feedback.DataProvider failed to get data: %d (%s) ", result.err(),
-            zx_status_get_string(result.err()));
+  if (!bugreport.has_bugreport()) {
+    fprintf(stderr, "Failed to get bugreport from fuchsia.feedback.DataProvider");
     return false;
   }
 
-  if (!result.response().data.has_attachment_bundle()) {
-    fprintf(stderr, "Failed to get attachment bundle from fuchsia.feedback.DataProvider");
-    return false;
-  }
-
-  const auto& attachment = result.response().data.attachment_bundle();
-  auto data = std::make_unique<uint8_t[]>(attachment.value.size);
-  if (zx_status_t status = attachment.value.vmo.read(data.get(), 0u, attachment.value.size);
+  const auto size = bugreport.bugreport().value.size;
+  auto data = std::make_unique<uint8_t[]>(bugreport.bugreport().value.size);
+  if (const zx_status_t status = bugreport.bugreport().value.vmo.read(data.get(), 0u, size);
       status != ZX_OK) {
-    fprintf(stderr, "Failed to read VMO attachment from fuchsia.feedback.DataProvider");
+    fprintf(stderr, "Failed to read VMO bugreport from fuchsia.feedback.DataProvider");
     return false;
   }
 
@@ -49,11 +47,11 @@ bool MakeBugReport(std::shared_ptr<sys::ServiceDirectory> services, const char* 
       fprintf(stderr, "Failed to open output file %s\n", out_filename);
       return false;
     }
-    fwrite(data.get(), 1, attachment.value.size, out_file);
+    fwrite(data.get(), 1, size, out_file);
     fclose(out_file);
     return true;
   } else {
-    fwrite(data.get(), 1, attachment.value.size, stdout);
+    fwrite(data.get(), 1, size, stdout);
     return true;
   }
 }

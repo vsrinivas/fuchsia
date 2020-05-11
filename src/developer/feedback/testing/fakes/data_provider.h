@@ -10,13 +10,14 @@
 namespace feedback {
 namespace fakes {
 
-// Fake handler for fuchsia.feedback.DataProvider, returns valid payloads for GetData() and
+// Fake handler for fuchsia.feedback.DataProvider, returns valid payloads for GetBugreport() and
 // GetScreenshot(). Tests should not have hard expectations on these payloads as they're subject to
 // change.
 class DataProvider : public fuchsia::feedback::DataProvider {
  public:
   // |fuchsia::feedback::DataProvider|
-  void GetData(GetDataCallback callback) override;
+  void GetBugreport(fuchsia::feedback::GetBugreportParameters parms,
+                    GetBugreportCallback callback) override;
   void GetScreenshot(fuchsia::feedback::ImageEncoding encoding,
                      GetScreenshotCallback callback) override;
 };

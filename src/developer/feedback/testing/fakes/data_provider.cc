@@ -41,7 +41,7 @@ std::vector<Annotation> CreateAnnotations() {
   };
 }
 
-Attachment CreateBundleAttachment() {
+Attachment CreateBugreport() {
   std::vector<Attachment> attachments;
 
   fsl::SizedVmo vmo;
@@ -59,11 +59,11 @@ Attachment CreateBundleAttachment() {
       .value = std::move(vmo).ToTransport(),
   });
 
-  Attachment bundle;
-  bundle.key = "attachment_bundle.zip";
-  Archive(attachments, &bundle.value);
+  Attachment bugreport;
+  bugreport.key = "bugreport.zip";
+  Archive(attachments, &bugreport.value);
 
-  return bundle;
+  return bugreport;
 }
 
 std::unique_ptr<Screenshot> LoadPngScreenshot() {
@@ -85,12 +85,10 @@ std::unique_ptr<Screenshot> LoadPngScreenshot() {
 
 }  // namespace
 
-void DataProvider::GetData(GetDataCallback callback) {
-  Data data;
-  data.set_annotations(CreateAnnotations()).set_attachment_bundle(CreateBundleAttachment());
-
-  DataProvider_GetData_Response response(std::move(data));
-  callback(DataProvider_GetData_Result::WithResponse(std::move(response)));
+void DataProvider::GetBugreport(fuchsia::feedback::GetBugreportParameters parms,
+                                GetBugreportCallback callback) {
+  callback(
+      std::move(Bugreport().set_annotations(CreateAnnotations()).set_bugreport(CreateBugreport())));
 }
 
 void DataProvider::GetScreenshot(ImageEncoding encoding, GetScreenshotCallback callback) {

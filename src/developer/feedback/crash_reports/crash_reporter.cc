@@ -30,16 +30,13 @@
 namespace feedback {
 namespace {
 
+using fuchsia::feedback::Bugreport;
 using fuchsia::feedback::CrashReport;
-using fuchsia::feedback::Data;
 
 // Most of the time spent generating a crash report is spent collecting annotations and attachments
-// from other services. The timeout should be kept higher than how long any of these services might
-// take as we pay the extra price on top of that timeout for making the request (establishing the
-// connection, potentially spawning the serving component for the first time, getting the response,
-// etc.).
-constexpr zx::duration kCrashReportGenerationTimeout =
-    zx::sec(30) /*fuchsia.feedback.DataProvider*/ + zx::sec(5) /*some slack*/;
+// from other services. The timeout represents how long we give each of these services.
+// TODO(41004): increase it to 2 minutes.
+constexpr zx::duration kCrashReportGenerationTimeout = zx::sec(35);
 
 }  // namespace
 
@@ -131,16 +128,16 @@ void CrashReporter::File(fuchsia::feedback::CrashReport report, FileCallback cal
 
   auto channel_promise =
       fidl::GetCurrentChannel(dispatcher_, services_, fit::Timeout(kCrashReportGenerationTimeout));
-  auto data_promise = data_provider_ptr_.GetData(kCrashReportGenerationTimeout);
+  auto bugreport_promise = data_provider_ptr_.GetBugreport(kCrashReportGenerationTimeout);
   auto device_id_promise = device_id_provider_ptr_.GetId(kCrashReportGenerationTimeout);
 
   auto promise =
-      ::fit::join_promises(std::move(channel_promise), std::move(data_promise),
+      ::fit::join_promises(std::move(channel_promise), std::move(bugreport_promise),
                            std::move(device_id_promise))
           .then([this, report = std::move(report)](
-                    ::fit::result<std::tuple<::fit::result<std::string, Error>, ::fit::result<Data>,
-                                             ::fit::result<std::string>>>& results) mutable
-                -> ::fit::result<void> {
+                    ::fit::result<std::tuple<::fit::result<std::string, Error>,
+                                             ::fit::result<Bugreport>, ::fit::result<std::string>>>&
+                        results) mutable -> ::fit::result<void> {
             if (results.is_error()) {
               return ::fit::error();
             }
@@ -151,10 +148,10 @@ void CrashReporter::File(fuchsia::feedback::CrashReport report, FileCallback cal
               channel = channel_result.take_value();
             }
 
-            auto data_result = std::move(std::get<1>(results.value()));
-            Data feedback_data;
-            if (data_result.is_ok()) {
-              feedback_data = data_result.take_value();
+            auto bugreport_result = std::move(std::get<1>(results.value()));
+            Bugreport bugreport;
+            if (bugreport_result.is_ok()) {
+              bugreport = bugreport_result.take_value();
             }
 
             auto device_id_result = std::move(std::get<2>(results.value()));
@@ -168,7 +165,7 @@ void CrashReporter::File(fuchsia::feedback::CrashReport report, FileCallback cal
             std::map<std::string, std::string> annotations;
             std::map<std::string, fuchsia::mem::Buffer> attachments;
             std::optional<fuchsia::mem::Buffer> minidump;
-            BuildAnnotationsAndAttachments(std::move(report), std::move(feedback_data),
+            BuildAnnotationsAndAttachments(std::move(report), std::move(bugreport),
                                            utc_provider_.CurrentTime(), device_id, build_version_,
                                            channel, &annotations, &attachments, &minidump);
 
