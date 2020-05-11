@@ -40,6 +40,7 @@ source_set("common") {
 
   public_deps = [
     "//sdk/banjo/ddk.protocol.composite",
+    "//sdk/fidl/fuchsia.scheduler:fuchsia.scheduler_c",
     "//src/devices/lib/log",
     "//src/storage/deprecated-fs-fidl-handler",
     "//zircon/public/lib/async-loop-cpp",
@@ -59,7 +60,6 @@ source_set("common") {
     "//zircon/system/fidl/fuchsia-device-manager:c",
     "//zircon/system/fidl/fuchsia-device-manager:llcpp",
     "//zircon/system/fidl/fuchsia-io:c",
-    "//zircon/system/fidl/fuchsia-scheduler:c",
     "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/ddktl",
   ]

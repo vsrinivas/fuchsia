@@ -23,6 +23,7 @@ source_set("lib") {
   ]
   public_deps = [
     "//sdk/fidl/fuchsia.boot",
+    "//sdk/fidl/fuchsia.scheduler",
     "//src/lib/files",
     "//src/lib/fxl",
     "//third_party/rapidjson",
@@ -32,7 +33,6 @@ source_set("lib") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
-    "//zircon/system/fidl/fuchsia-scheduler",
   ]
 }
 

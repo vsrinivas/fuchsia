@@ -29,6 +29,7 @@ executable("fx_bin") {
 
   deps = [
     "//sdk/fidl/fuchsia.media",
+    "//sdk/fidl/fuchsia.scheduler",
     "//sdk/lib/media/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
@@ -38,7 +39,6 @@ executable("fx_bin") {
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/fzl",
-    "//zircon/system/fidl/fuchsia-scheduler",
     "//zircon/system/ulib/audio-utils",
   ]
 }
