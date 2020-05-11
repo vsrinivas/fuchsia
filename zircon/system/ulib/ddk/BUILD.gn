@@ -64,7 +64,7 @@ zx_library("ddk") {
     # <ddk/io-buffer.h> has #include <zircon/syscalls.h>.
 
     # <ddk/protocol/rawnand.h> has #include <fuchsia/hardware/nand/c/fidl.h>.
-    "//zircon/system/fidl/fuchsia-hardware-nand:c",
+    "//sdk/fidl/fuchsia.hardware.nand:fuchsia.hardware.nand_c",
 
     # <ddk/usb-peripheral-config.h> has #include <fuchsia/hardware/usb/peripheral/c/fidl.h>.
     "//zircon/system/fidl/fuchsia-device:c",

@@ -26,6 +26,7 @@ source_set("common") {
   public_deps = [
     "//sdk/banjo/ddk.protocol.platform.device",
     "//sdk/banjo/ddk.protocol.rawnand",
+    "//sdk/fidl/fuchsia.hardware.nand:fuchsia.hardware.nand_c",
     "//src/devices/bus/lib/device-protocol-pdev",
     "//src/devices/bus/lib/device-protocol-platform-device",
     "//src/devices/lib/amlogic",
@@ -34,7 +35,6 @@ source_set("common") {
     "//zircon/public/lib/mmio",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
-    "//zircon/system/fidl/fuchsia-hardware-nand:c",
     "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/ddktl",
   ]

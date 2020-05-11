@@ -16,6 +16,7 @@ driver_module("nand") {
     "//sdk/banjo/ddk.protocol.nand",
     "//sdk/banjo/ddk.protocol.platform.device",
     "//sdk/banjo/ddk.protocol.rawnand",
+    "//sdk/fidl/fuchsia.hardware.nand:fuchsia.hardware.nand_c",
     "//src/devices/lib/dev-operation",
     "//src/devices/lib/driver",
     "//zircon/public/lib/fbl",
@@ -23,7 +24,6 @@ driver_module("nand") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
-    "//zircon/system/fidl/fuchsia-hardware-nand:c",
     "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/ddktl",
   ]

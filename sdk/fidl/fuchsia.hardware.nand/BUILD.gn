@@ -4,7 +4,10 @@
 
 import("//build/fidl/fidl.gni")
 
-fidl("fuchsia.nand") {
-  sources = [ "broker.fidl" ]
-  public_deps = [ "//sdk/fidl/fuchsia.hardware.nand" ]
+fidl("fuchsia.hardware.nand") {
+  sources = [
+    "nand.fidl",
+    "ram-nand.fidl",
+  ]
+  public_deps = [ "$zx/vdso/zx" ]
 }

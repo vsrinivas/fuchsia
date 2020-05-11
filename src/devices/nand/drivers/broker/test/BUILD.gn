@@ -14,6 +14,7 @@ source_set("common") {
   ]
   public_deps = [
     "//sdk/banjo/ddk.protocol.nand",
+    "//sdk/fidl/fuchsia.hardware.nand:fuchsia.hardware.nand_c",
     "//sdk/fidl/fuchsia.nand:fuchsia.nand_c",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
@@ -21,7 +22,6 @@ source_set("common") {
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/fidl/fuchsia-device:llcpp",
-    "//zircon/system/fidl/fuchsia-hardware-nand:c",
     "//zircon/system/ulib/devmgr-integration-test",
     "//zircon/system/ulib/devmgr-launcher",
     "//zircon/system/ulib/fdio-caller",

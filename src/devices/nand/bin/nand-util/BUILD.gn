@@ -24,13 +24,13 @@ executable("nand-util") {
   ]
   deps = [
     ":common",
+    "//sdk/fidl/fuchsia.hardware.nand:fuchsia.hardware.nand_c",
     "//zircon/public/lib/cksum",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/pretty",
     "//zircon/public/lib/zx",
-    "//zircon/system/fidl/fuchsia-hardware-nand:c",
   ]
 }
 
@@ -42,13 +42,13 @@ source_set("common") {
   ]
   deps = [ "//zircon/public/lib/pretty" ]
   public_deps = [
+    "//sdk/fidl/fuchsia.hardware.nand:fuchsia.hardware.nand_c",
     "//sdk/fidl/fuchsia.nand:fuchsia.nand_c",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/fzl",
     "//zircon/system/fidl/fuchsia-device:c",
     "//zircon/system/fidl/fuchsia-device:llcpp",
-    "//zircon/system/fidl/fuchsia-hardware-nand:c",
   ]
 
   # TODO(41887): UBSan has found an instance of undefined behavior in this target.

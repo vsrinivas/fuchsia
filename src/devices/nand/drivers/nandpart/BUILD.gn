@@ -23,13 +23,13 @@ driver_module("nandpart") {
   deps = [
     "//sdk/banjo/ddk.protocol.badblock",
     "//sdk/banjo/ddk.protocol.nand",
+    "//sdk/fidl/fuchsia.hardware.nand:fuchsia.hardware.nand_c",
     "//src/devices/lib/dev-operation",
     "//src/devices/lib/driver",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
-    "//zircon/system/fidl/fuchsia-hardware-nand:c",
     "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/ddktl",
   ]
@@ -50,6 +50,7 @@ test("nandpart-test") {
   include_dirs = [ "." ]
   deps = [
     "//sdk/banjo/ddk.protocol.nand",
+    "//sdk/fidl/fuchsia.hardware.nand:fuchsia.hardware.nand_c",
     "//src/devices/testing/fake_ddk",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
@@ -58,7 +59,6 @@ test("nandpart-test") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/fidl/fuchsia-hardware-nand:c",
     "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/ddktl",
   ]
