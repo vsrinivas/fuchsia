@@ -90,6 +90,7 @@ mod tests {
         let (sin, sout) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
         let mut packet: fx_log_packet_t = Default::default();
         packet.metadata.pid = 1;
+        packet.metadata.severity = 0x30; // INFO
         packet.data[0] = 5;
         packet.fill_data(1..6, 'A' as _);
         packet.fill_data(7..12, 'B' as _);

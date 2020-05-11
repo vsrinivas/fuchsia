@@ -29,8 +29,8 @@
 namespace media::audio {
 
 // Custom FX_VLOGS levels
-constexpr auto TRACE = 1;
-constexpr auto SPEW = 2;
+constexpr auto TRACE = 1;  // DEBUG
+constexpr auto SPEW = 2;   // TRACE
 
 class Logging {
  public:
@@ -38,7 +38,7 @@ class Logging {
 
   static void Init(const fx_log_severity_t log_level,
                    const std::initializer_list<std::string>& tags) {
-    fxl::LogSettings settings = {.min_log_level = log_level};
+    fxl::LogSettings settings = {.min_log_level = int8_t(log_level)};
     fxl::SetLogSettings(settings, tags);
   }
 };

@@ -148,6 +148,10 @@ std::string join_tags(std::vector<std::string> tags) {
 
 std::string log_level(int32_t severity) {
   switch (severity) {
+    case FX_LOG_TRACE:
+      return "TRACE";
+    case FX_LOG_DEBUG:
+      return "DEBUG";
     case FX_LOG_INFO:
       return "INFO";
     case FX_LOG_WARNING:
@@ -157,12 +161,12 @@ std::string log_level(int32_t severity) {
     case FX_LOG_FATAL:
       return "FATAL";
   }
-  if (severity > 3) {
-    return "INVALID";
+  if (severity > FX_LOG_DEBUG && severity < FX_LOG_INFO) {
+    std::ostringstream stream;
+    stream << "VLOG(" << -(FX_LOG_INFO - severity) << ")";
+    return stream.str();
   }
-  std::ostringstream stream;
-  stream << "VLOG(" << -severity << ")";
-  return stream.str();
+  return "INVALID";
 }
 
 std::unique_ptr<run::Component> launch_observer(const fuchsia::sys::LauncherPtr& launcher,
@@ -376,13 +380,8 @@ int main(int argc, const char** argv) {
 
       fidl::InterfaceHandle<fuchsia::logger::LogListenerSafe> log_listener;
       auto options = std::make_unique<fuchsia::logger::LogFilterOptions>();
-      if (parse_result.min_log_severity < 0) {
-        // TODO(42169): Change these once fxr/375515 lands
-        options->verbosity = -parse_result.min_log_severity;
-      } else {
-        options->min_severity =
-            static_cast<fuchsia::logger::LogLevelFilter>(parse_result.min_log_severity);
-      }
+      options->min_severity =
+          static_cast<fuchsia::logger::LogLevelFilter>(parse_result.min_log_severity);
 
       log_collector->Bind(log_listener.NewRequest(), loop.dispatcher());
       log_ptr->ListenSafe(std::move(log_listener), std::move(options));

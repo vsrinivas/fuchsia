@@ -64,7 +64,7 @@ bool test_log_enabled_macro(void) {
                                .tags = nullptr,
                                .num_tags = 0};
   EXPECT_EQ(ZX_OK, fx_log_reconfigure(&config), "");
-  if (FX_VLOG_IS_ENABLED(1)) {
+  if (FX_VLOG_IS_ENABLED(4)) {
     EXPECT_TRUE(false, "control should not reach this line");
   }
   if (!FX_LOG_IS_ENABLED(INFO)) {
@@ -262,13 +262,13 @@ bool test_vlog_simple_write(void) {
   int pipefd[2];
   EXPECT_NE(pipe2(pipefd, O_NONBLOCK), -1, "");
   EXPECT_EQ(ZX_OK, init_helper(pipefd[0], NULL, 0), "");
-  FX_LOG_SET_VERBOSITY(1);
-  FX_VLOG(1, NULL, "test message");
+  FX_LOG_SET_VERBOSITY(5);  // INFO - 5
+  FX_VLOG(5, NULL, "test message");
   char buf[256];
   size_t n = read(pipefd[1], buf, sizeof(buf));
   EXPECT_GT(n, 0u, "");
   buf[n] = 0;
-  EXPECT_TRUE(ends_with(buf, "VLOG(1): test message\n"), buf);
+  EXPECT_TRUE(ends_with(buf, "VLOG(5): test message\n"), buf);
   close(pipefd[1]);
   fx_log_reset_global_for_testing();
   END_TEST;
@@ -280,7 +280,7 @@ bool test_vlog_write(void) {
   int pipefd[2];
   EXPECT_NE(pipe2(pipefd, O_NONBLOCK), -1, "");
   EXPECT_EQ(ZX_OK, init_helper(pipefd[0], NULL, 0), "");
-  FX_LOG_SET_VERBOSITY(1);
+  FX_LOG_SET_VERBOSITY(1);  // INFO - 1
   FX_VLOGF(1, NULL, "%d, %s", 10, "just some number");
   char buf[256];
   size_t n = read(pipefd[1], buf, sizeof(buf));

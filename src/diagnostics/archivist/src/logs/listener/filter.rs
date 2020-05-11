@@ -58,10 +58,17 @@ impl MessageFilter {
             }
 
             if options.verbosity > 0 {
-                let verbosity = options.verbosity as i32;
-                this.min_severity = Some(Severity::try_from(-verbosity)?);
+                // verbosity scale sits in the interstitial space between
+                // INFO and DEBUG
+                let raw_level: i32 = std::cmp::max(
+                    fidl_fuchsia_logger::LogLevelFilter::Debug as i32 + 1,
+                    fidl_fuchsia_logger::LogLevelFilter::Info as i32
+                        - (options.verbosity as i32
+                            * fidl_fuchsia_logger::LOG_VERBOSITY_STEP_SIZE as i32),
+                );
+                this.min_severity = Some(Severity::try_from(raw_level as i32)?);
             } else if options.min_severity != LogLevelFilter::None {
-                this.min_severity = Some(Severity::from(options.min_severity));
+                this.min_severity = Some(Severity::try_from(options.min_severity as i32)?);
             }
         }
 

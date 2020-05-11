@@ -16,10 +16,10 @@ TEST(MaxSeverity, ValidConfigs) {
   auto config = run::MaxSeverityConfig::ParseFromDirectory(path);
   ASSERT_FALSE(config.HasError()) << config.Error();
   std::map<std::string, int32_t> expected = {
-      {"valid-1-url-1", FX_LOG_ERROR},    {"valid-1-url-2", FX_LOG_WARNING},
-      {"valid-1-url-3", FX_LOG_ERROR},    {"valid-2-url-1", FX_LOG_INFO},
-      {"valid-2-url-2", FX_LOG_WARNING},  {"valid-2-url-3", FX_LOG_ERROR},
-      {"valid-3-url-1", FX_LOG_INFO - 1}, {"valid-3-url-2", FX_LOG_INFO - 2},
+      {"valid-1-url-1", FX_LOG_ERROR},   {"valid-1-url-2", FX_LOG_WARNING},
+      {"valid-1-url-3", FX_LOG_ERROR},   {"valid-2-url-1", FX_LOG_INFO},
+      {"valid-2-url-2", FX_LOG_WARNING}, {"valid-2-url-3", FX_LOG_ERROR},
+      {"valid-3-url-1", FX_LOG_DEBUG},   {"valid-3-url-2", FX_LOG_TRACE},
       {"valid-3-url-3", FX_LOG_FATAL}};
   ASSERT_EQ(expected, config.config());
 }

@@ -79,6 +79,7 @@ impl ComponentLogStats {
             Severity::Warn => self.warning_logs.add(1),
             Severity::Error => self.error_logs.add(1),
             Severity::Fatal => self.fatal_logs.add(1),
+            Severity::Verbose(_) => {} // drop records
         }
     }
 }
@@ -110,6 +111,7 @@ impl LogManagerStats {
             Severity::Warn => self.warning_logs.add(1),
             Severity::Error => self.error_logs.add(1),
             Severity::Fatal => self.fatal_logs.add(1),
+            Severity::Verbose(_) => {} // drop records
         }
     }
 

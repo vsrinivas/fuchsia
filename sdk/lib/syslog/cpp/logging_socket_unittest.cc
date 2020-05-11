@@ -102,9 +102,9 @@ TEST_F(LoggingSocketTest, VLog) {
   FX_VLOGS(1) << kMsg1;
   CheckSocketEmpty();
 
-  SetLogSettings({.min_log_level = -1, .log_file = ""}, {});
+  SetLogSettings({.min_log_level = (LOG_INFO - 1), .log_file = ""}, {});
   FX_VLOGS(1) << kMsg2;
-  ReadPacketAndCompare(-1, kMsg2);
+  ReadPacketAndCompare((LOG_INFO - 1), kMsg2);
   CheckSocketEmpty();
 
   FX_VLOGS(2) << kMsg3;
@@ -124,10 +124,9 @@ TEST_F(LoggingSocketTest, VLogWithTag) {
   FX_VLOGST(1, kTag1) << kMsg1;
   CheckSocketEmpty();
 
-  SetLogSettings({.min_log_level = -1}, {});
-
+  SetLogSettings({.min_log_level = (LOG_INFO - 1)}, {});
   FX_VLOGST(1, kTag2) << kMsg2;
-  ReadPacketAndCompare(-1, kMsg2, {kTag2});
+  ReadPacketAndCompare((LOG_INFO - 1), kMsg2, {kTag2});
   CheckSocketEmpty();
 }
 

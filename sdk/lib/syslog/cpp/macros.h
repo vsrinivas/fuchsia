@@ -120,11 +120,29 @@ bool ShouldCreateLogMessage(LogSeverity severity);
       ::syslog::LogMessage(::syslog::LOG_FATAL, __FILE__, __LINE__, #condition, tag).stream(), \
       !(condition))
 
-#define FX_VLOG_IS_ON(verbose_level) ((verbose_level) <= ::syslog::GetVlogVerbosity())
+// The VLOG macros log with translated verbosities
 
-// The VLOG macros log with negative verbosities.
-#define FX_VLOG_STREAM(verbose_level, tag) \
-  ::syslog::LogMessage(-verbose_level, __FILE__, __LINE__, nullptr, tag).stream()
+// Get the severity corresponding to the given verbosity. Note that
+// verbosity relative to the default severity and can be thought of
+// as incrementally "more vebose than" the baseline.
+static inline int GetSeverityFromVerbosity(int verbosity) {
+  if (verbosity < 0) {
+    verbosity = 0;
+  }
+  // verbosity scale sits in the interstitial space between INFO and DEBUG
+  int severity = syslog::LOG_INFO - (verbosity * syslog::LogVerbosityStepSize);
+  if (severity < syslog::LOG_DEBUG + 1) {
+    return syslog::LOG_DEBUG + 1;
+  }
+  return severity;
+}
+
+#define FX_VLOG_IS_ON(verbose_level) \
+  (GetSeverityFromVerbosity(verbose_level) <= ::syslog::GetVlogVerbosity())
+
+#define FX_VLOG_STREAM(verbose_level, tag)                                                        \
+  ::syslog::LogMessage(GetSeverityFromVerbosity(verbose_level), __FILE__, __LINE__, nullptr, tag) \
+      .stream()
 
 #define FX_VLOGS(verbose_level) \
   FX_LAZY_STREAM(FX_VLOG_STREAM(verbose_level, nullptr), FX_VLOG_IS_ON(verbose_level))

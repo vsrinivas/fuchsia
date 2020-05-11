@@ -3,8 +3,7 @@
 
 fn main() {
     fuchsia_syslog::init_with_tags(&["logging component"]).expect("initializing logging");
-    // TODO(42169): Change these once fxr/375515 lands
-    fuchsia_syslog::set_verbosity(1);
+    fuchsia_syslog::set_severity(fuchsia_syslog::levels::DEBUG);
     log::debug!("my debug message.");
     log::info!("my info message.");
     log::warn!("my warn message.");

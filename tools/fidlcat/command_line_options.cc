@@ -171,16 +171,23 @@ const char* const kHelpHelp = R"(  --help
 // setting will be multiplied (basically, -1 for verbose and 1 for quiet), and
 // |settings| contains the output.
 bool SetLogSettings(const std::string& level, int multiplier, fxl::LogSettings* settings) {
-  if (level == "info") {
-    settings->min_log_level = fxl::LOG_INFO;
+  if (level == "trace") {
+    settings->min_log_level = syslog::LOG_TRACE;
+  } else if (level == "debug") {
+    settings->min_log_level = syslog::LOG_DEBUG;
+  } else if (level == "info") {
+    settings->min_log_level = syslog::LOG_INFO;
   } else if (level == "warning") {
-    settings->min_log_level = fxl::LOG_WARNING;
+    settings->min_log_level = syslog::LOG_WARNING;
   } else if (level == "error") {
-    settings->min_log_level = fxl::LOG_ERROR;
+    settings->min_log_level = syslog::LOG_ERROR;
   } else if (level == "fatal") {
-    settings->min_log_level = fxl::LOG_FATAL;
+    settings->min_log_level = syslog::LOG_FATAL;
   } else if (fxl::StringToNumberWithError(level, &settings->min_log_level)) {
-    settings->min_log_level *= multiplier;
+    settings->min_log_level =
+        syslog::LOG_INFO + (multiplier * (multiplier > 0 ? syslog::LogSeverityStepSize
+                                                         : syslog::LogVerbosityStepSize));
+
   } else {
     return false;
   }

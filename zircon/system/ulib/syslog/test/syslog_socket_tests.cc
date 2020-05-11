@@ -283,9 +283,9 @@ bool TestVlogSimpleWrite(void) {
   EXPECT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
   ASSERT_EQ(ZX_OK, init_helper(remote.release(), nullptr, 0));
   const char* msg = "test message";
-  FX_LOG_SET_VERBOSITY(1);
+  FX_LOG_SET_VERBOSITY(1);  // INFO - 1
   FX_VLOG(1, nullptr, msg);
-  output_compare_helper(std::move(local), -1, msg, nullptr, 0);
+  output_compare_helper(std::move(local), (FX_LOG_INFO - 1), msg, nullptr, 0);
   END_TEST;
 }
 
@@ -295,9 +295,9 @@ bool TestVlogWrite(void) {
   zx::socket local, remote;
   EXPECT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
   ASSERT_EQ(ZX_OK, init_helper(remote.release(), nullptr, 0));
-  FX_LOG_SET_VERBOSITY(1);
+  FX_LOG_SET_VERBOSITY(1);  // INFO - 1
   FX_VLOGF(1, nullptr, "%d, %s", 10, "just some number");
-  output_compare_helper(std::move(local), -1, "10, just some number", nullptr, 0);
+  output_compare_helper(std::move(local), (FX_LOG_INFO - 1), "10, just some number", nullptr, 0);
   END_TEST;
 }
 
@@ -307,10 +307,10 @@ bool TestVlogWriteWithTag(void) {
   zx::socket local, remote;
   EXPECT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
   ASSERT_EQ(ZX_OK, init_helper(remote.release(), nullptr, 0));
-  FX_LOG_SET_VERBOSITY(1);
-  FX_VLOGF(1, "tag", "%d, %s", 10, "just some string");
+  FX_LOG_SET_VERBOSITY(5);  // INFO - 5
+  FX_VLOGF(5, "tag", "%d, %s", 10, "just some string");
   const char* tags[] = {"tag"};
-  output_compare_helper(std::move(local), -1, "10, just some string", tags, 1);
+  output_compare_helper(std::move(local), (FX_LOG_INFO - 5), "10, just some string", tags, 1);
   END_TEST;
 }
 
@@ -321,7 +321,7 @@ bool TestLogVerbosity(void) {
   EXPECT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
   ASSERT_EQ(ZX_OK, init_helper(remote.release(), nullptr, 0));
 
-  FX_VLOGF(1, nullptr, "%d, %s", 10, "just some number");
+  FX_VLOGF(10, nullptr, "%d, %s", 10, "just some number");
   size_t outstanding_bytes = 10u;  // init to non zero value.
   ASSERT_EQ(ZX_OK, GetAvailableBytes(local, &outstanding_bytes));
   EXPECT_EQ(0u, outstanding_bytes);
@@ -331,9 +331,9 @@ bool TestLogVerbosity(void) {
   ASSERT_EQ(ZX_OK, GetAvailableBytes(local, &outstanding_bytes));
   EXPECT_EQ(0u, outstanding_bytes);
 
-  FX_LOG_SET_VERBOSITY(2);
+  FX_LOG_SET_VERBOSITY(1);  // INFO - 1
   FX_VLOGF(1, nullptr, "%d, %s", 10, "just some number");
-  output_compare_helper(std::move(local), -1, "10, just some number", nullptr, 0);
+  output_compare_helper(std::move(local), (FX_LOG_INFO - 1), "10, just some number", nullptr, 0);
   END_TEST;
 }
 

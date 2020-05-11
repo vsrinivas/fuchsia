@@ -270,7 +270,7 @@ void run_logging_component(std::string log_level, std::string* output) {
 TEST_F(RunFixture, TestIsolatedLogsWithDefaultSeverity) {
   std::string got;
   run_logging_component("", &got);
-  EXPECT_EQ(got.find("VLOG(1): my debug message."), std::string::npos) << "got: " << got;
+  EXPECT_EQ(got.find("DEBUG: my debug message."), std::string::npos) << "got: " << got;
   EXPECT_NE(got.find("INFO: my info message."), std::string::npos) << "got: " << got;
   EXPECT_NE(got.find("WARNING: my warn message."), std::string::npos) << "got: " << got;
 }
@@ -278,7 +278,7 @@ TEST_F(RunFixture, TestIsolatedLogsWithDefaultSeverity) {
 TEST_F(RunFixture, TestIsolatedLogsWithHigherSeverity) {
   std::string got;
   run_logging_component("WARN", &got);
-  EXPECT_EQ(got.find("VLOG(1): my debug message."), std::string::npos) << "got: " << got;
+  EXPECT_EQ(got.find("DEBUG: my debug message."), std::string::npos) << "got: " << got;
   EXPECT_EQ(got.find("INFO: my info message."), std::string::npos) << "got: " << got;
   EXPECT_NE(got.find("WARNING: my warn message."), std::string::npos) << "got: " << got;
 }
@@ -286,7 +286,7 @@ TEST_F(RunFixture, TestIsolatedLogsWithHigherSeverity) {
 TEST_F(RunFixture, TestIsolatedLogsWithLowerSeverity) {
   std::string got;
   run_logging_component("DEBUG", &got);
-  EXPECT_NE(got.find("VLOG(1): my debug message."), std::string::npos) << "got: " << got;
+  EXPECT_NE(got.find("DEBUG: my debug message."), std::string::npos) << "got: " << got;
   EXPECT_NE(got.find("INFO: my info message."), std::string::npos) << "got: " << got;
   EXPECT_NE(got.find("WARNING: my warn message."), std::string::npos) << "got: " << got;
 }

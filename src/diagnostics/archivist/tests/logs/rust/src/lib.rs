@@ -13,7 +13,7 @@ use fuchsia_component::{
 };
 use fuchsia_syslog::{
     self as syslog, fx_log_info,
-    levels::{INFO, WARN},
+    levels::{DEBUG, INFO, WARN},
 };
 use fuchsia_syslog_listener::{self as syslog_listener, run_log_listener_with_proxy, LogProcessor};
 use fuchsia_zircon as zx;
@@ -184,7 +184,7 @@ async fn test_observer_stop_api() {
     assert_eq!(
         logs,
         vec![
-            (-1, "my debug message.".to_owned()),
+            (DEBUG, "my debug message.".to_owned()),
             (INFO, "my info message.".to_owned()),
             (WARN, "my warn message.".to_owned()),
         ]

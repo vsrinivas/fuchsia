@@ -16,7 +16,7 @@ namespace testing {
 constexpr uint64_t kDummyTid = 0xAA;
 constexpr uint64_t kDummyPid = 0xBB;
 constexpr int64_t kDummyTime = 0xCCAACC;
-constexpr int32_t kDummySeverity = 3;
+constexpr int32_t kDummySeverity = static_cast<int32_t>(fuchsia::logger::LogLevelFilter::FATAL);
 
 class TestListener : public fuchsia::logger::LogListenerSafe {
  public:

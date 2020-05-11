@@ -99,7 +99,7 @@ TEST(Logger, LogSeverity) {
   EXPECT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
   ASSERT_EQ(ZX_OK, init_helper(remote.release(), nullptr, 0));
 
-  FX_VLOGS(1) << "just some msg";
+  FX_VLOGS(1) << "just some msg";  // default is INFO, V(1) = Verbose
   size_t outstanding_bytes = 10u;  // init to non zero value.
   ASSERT_EQ(ZX_OK, GetAvailableBytes(local, &outstanding_bytes));
   EXPECT_EQ(0u, outstanding_bytes);
@@ -152,19 +152,19 @@ TEST(Logger, VLog) {
   EXPECT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
   ASSERT_EQ(ZX_OK, init_helper(remote.release(), nullptr, 0));
   const char* msg = "test message";
-  FX_VLOGS(1) << msg;
+  FX_VLOGS(1) << msg;              // default is INFO, V(1) = INFO - 1
   size_t outstanding_bytes = 10u;  // init to non zero value.
   ASSERT_EQ(ZX_OK, GetAvailableBytes(local, &outstanding_bytes));
   EXPECT_EQ(0u, outstanding_bytes);
 
-  fxl::SetLogSettings({.min_log_level = -1}, {});
-  FX_VLOGS(2) << msg;
+  syslog::SetLogSettings({.min_log_level = (syslog::LOG_INFO - 1)}, {});
+  FX_VLOGS(2) << msg;       // V(2) == INFO - 2
   outstanding_bytes = 10u;  // init to non zero value.
   ASSERT_EQ(ZX_OK, GetAvailableBytes(local, &outstanding_bytes));
   EXPECT_EQ(0u, outstanding_bytes);
 
   FX_VLOGS(1) << msg;
-  output_compare_helper(std::move(local), -1, msg, nullptr, 0);
+  output_compare_helper(std::move(local), (FX_LOG_INFO - 1), msg, nullptr, 0);
 }
 
 TEST(Logger, VLogWithTag) {
@@ -174,19 +174,19 @@ TEST(Logger, VLogWithTag) {
   ASSERT_EQ(ZX_OK, init_helper(remote.release(), nullptr, 0));
   const char* msg = "test message";
   const char* tags[] = {"tag"};
-  FX_VLOGST(1, tags[0]) << msg;
+  FX_VLOGST(1, tags[0]) << msg;    // default is INFO, V(1) = INFO - 1
   size_t outstanding_bytes = 10u;  // init to non zero value.
   ASSERT_EQ(ZX_OK, GetAvailableBytes(local, &outstanding_bytes));
   EXPECT_EQ(0u, outstanding_bytes);
 
-  fxl::SetLogSettings({.min_log_level = -1}, {});
-  FX_VLOGST(2, tags[0]) << msg;
-  outstanding_bytes = 10u;  // init to non zero value.
+  fxl::SetLogSettings({.min_log_level = (FX_LOG_INFO - 1)}, {});
+  FX_VLOGST(2, tags[0]) << msg;  // V(2) = INFO - 2
+  outstanding_bytes = 10u;       // init to non zero value.
   ASSERT_EQ(ZX_OK, GetAvailableBytes(local, &outstanding_bytes));
   EXPECT_EQ(0u, outstanding_bytes);
 
   FX_VLOGST(1, tags[0]) << msg;
-  output_compare_helper(std::move(local), -1, msg, tags, 1);
+  output_compare_helper(std::move(local), (FX_LOG_INFO - 1), msg, tags, 1);
 }
 
 // We invoke FX_LOGS_FIRST_N(msg, 31) 100 times and check that the message

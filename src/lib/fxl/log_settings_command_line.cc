@@ -13,16 +13,25 @@ namespace fxl {
 bool ParseLogSettings(const fxl::CommandLine& command_line, LogSettings* out_settings) {
   LogSettings settings = *out_settings;
 
+  // Don't clobber existing settings, but ensure min log level is initialized.
+  // Note that legacy INFO level is also 0.
+  if (settings.min_log_level == 0) {
+    settings.min_log_level = syslog::DefaultLogLevel;
+  }
+
   // --verbose=<level>
   // (always parse this even if --quiet is present)
   std::string verbosity;
   if (command_line.GetOptionValue("verbose", &verbosity)) {
     int level = 1;
     if (!verbosity.empty() && (!fxl::StringToNumberWithError(verbosity, &level) || level < 0)) {
-      FX_LOGS(ERROR) << "Error parsing --verbose option.";
+      FX_LOGS(ERROR) << "Error parsing --verbose option: " << verbosity;
       return false;
     }
-    settings.min_log_level = -level;
+
+    // verbosity scale sits in the interstitial space between INFO and DEBUG
+    settings.min_log_level =
+        std::max(int(syslog::LOG_DEBUG) + 1, LOG_INFO - (level * syslog::LogVerbosityStepSize));
   }
 
   // --quiet=<level>
@@ -30,10 +39,14 @@ bool ParseLogSettings(const fxl::CommandLine& command_line, LogSettings* out_set
   if (command_line.GetOptionValue("quiet", &quietness)) {
     int level = 1;
     if (!quietness.empty() && (!fxl::StringToNumberWithError(quietness, &level) || level < 0)) {
-      FX_LOGS(ERROR) << "Error parsing --quiet option.";
+      FX_LOGS(ERROR) << "Error parsing --quiet option: " << quietness;
       return false;
     }
-    settings.min_log_level = level;
+    // Max quiet steps from INFO > WARN > ERROR > FATAL
+    if (level > 3) {
+      level = 3;
+    }
+    settings.min_log_level = LOG_INFO + (level * syslog::LogSeverityStepSize);
   }
 
   // --log-file=<file>
@@ -68,10 +81,11 @@ std::vector<std::string> LogSettingsToArgv(const LogSettings& settings) {
 
   if (settings.min_log_level != LOG_INFO) {
     std::string arg;
-    if (settings.min_log_level < 0) {
-      arg = StringPrintf("--verbose=%d", -settings.min_log_level);
+    if (settings.min_log_level < LOG_INFO) {
+      arg = StringPrintf("--verbose=%d", (LOG_INFO - settings.min_log_level));
     } else {
-      arg = StringPrintf("--quiet=%d", settings.min_log_level);
+      arg = StringPrintf("--quiet=%d",
+                         -(LOG_INFO - settings.min_log_level) / syslog::LogSeverityStepSize);
     }
     result.push_back(arg);
   }

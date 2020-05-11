@@ -627,7 +627,7 @@ mod tests {
         let mut p3 = p.clone();
         p3.metadata.severity = LogLevelFilter::Info.into_primitive().into();
         let mut p4 = p.clone();
-        p4.metadata.severity = -22;
+        p4.metadata.severity = 0x70; // custom
         let mut p5 = p.clone();
         p5.metadata.severity = LogLevelFilter::Fatal.into_primitive().into();
         let lm = LogMessage {

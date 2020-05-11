@@ -36,13 +36,7 @@ func (e *ErrMsgTooLong) Error() string {
 }
 
 const (
-	MaxGlobalTags      = 4
-	MaxTagLength       = 63
-	SocketBufferLength = 2032
-)
-
-const (
-	_ int = iota
+	_ = iota
 	DebugVerbosity
 	TraceVerbosity
 )
@@ -50,15 +44,14 @@ const (
 type LogLevel int32
 
 const (
-	TraceLevel = LogLevel(-TraceVerbosity)
-	DebugLevel = LogLevel(-DebugVerbosity)
-)
-
-const (
-	InfoLevel LogLevel = iota
-	WarningLevel
-	ErrorLevel
-	FatalLevel
+	AllLevel     = LogLevel(logger.LogLevelFilterAll)
+	TraceLevel   = LogLevel(logger.LogLevelFilterTrace)
+	DebugLevel   = LogLevel(logger.LogLevelFilterDebug)
+	InfoLevel    = LogLevel(logger.LogLevelFilterInfo)
+	WarningLevel = LogLevel(logger.LogLevelFilterWarn)
+	ErrorLevel   = LogLevel(logger.LogLevelFilterError)
+	FatalLevel   = LogLevel(logger.LogLevelFilterFatal)
+	NoneLevel    = LogLevel(logger.LogLevelFilterNone)
 )
 
 var _ flag.Value = (*LogLevel)(nil)
@@ -66,11 +59,10 @@ var _ flag.Value = (*LogLevel)(nil)
 // Set implements the flag.Value interface.
 func (ll *LogLevel) Set(s string) error {
 	s = strings.ToUpper(s)
-	for sev := TraceLevel; sev <= FatalLevel; sev++ {
-		if s == sev.String() {
-			*ll = sev
-			return nil
-		}
+	lls := logLevelFromString(s)
+	if lls != NoneLevel {
+		*ll = lls
+		return nil
 	}
 	v, err := strconv.Atoi(s)
 	if err != nil {
@@ -80,8 +72,31 @@ func (ll *LogLevel) Set(s string) error {
 	return nil
 }
 
+func logLevelFromString(s string) LogLevel {
+	switch s {
+	case "ALL":
+		return AllLevel
+	case "TRACE":
+		return TraceLevel
+	case "DEBUG":
+		return DebugLevel
+	case "INFO":
+		return InfoLevel
+	case "WARNING":
+		return WarningLevel
+	case "ERROR":
+		return ErrorLevel
+	case "FATAL":
+		return FatalLevel
+	default:
+		return NoneLevel
+	}
+}
+
 func (ll LogLevel) String() string {
 	switch ll {
+	case AllLevel:
+		return "ALL"
 	case TraceLevel:
 		return "TRACE"
 	case DebugLevel:
@@ -95,10 +110,7 @@ func (ll LogLevel) String() string {
 	case FatalLevel:
 		return "FATAL"
 	default:
-		if ll < 0 {
-			return fmt.Sprintf("VLOG(%d)", -ll)
-		}
-		return fmt.Sprintf("INVALID(%d)", ll)
+		return fmt.Sprintf("LOG(%d)", ll)
 	}
 }
 
@@ -160,12 +172,12 @@ type Logger struct {
 }
 
 func NewLogger(options LogInitOptions) (*Logger, error) {
-	if len(options.Tags) > MaxGlobalTags {
-		return nil, errors.Errorf("too many tags: %d/%d", len(options.Tags), MaxGlobalTags)
+	if l, max := len(options.Tags), int(logger.MaxTags); l > max {
+		return nil, errors.Errorf("too many tags: %d/%d", l, max)
 	}
 	for _, tag := range options.Tags {
-		if len(tag) > MaxTagLength {
-			return nil, errors.Errorf("tag too long: %d/%d", len(tag), MaxTagLength)
+		if l, max := len(tag), int(logger.MaxTagLenBytes); l > max {
+			return nil, errors.Errorf("tag too long: %d/%d", l, max)
 		}
 	}
 	return &Logger{
@@ -191,7 +203,7 @@ func (l *Logger) logToWriter(writer io.Writer, time zx.Time, logLevel LogLevel, 
 	if writer == nil {
 		writer = os.Stderr
 	}
-	var tagsStorage [MaxGlobalTags + 1]string
+	var tagsStorage [logger.MaxTags + 1]string
 	tags := tagsStorage[:0]
 	for _, tag := range l.options.Tags {
 		if len(tag) > 0 {
@@ -201,7 +213,7 @@ func (l *Logger) logToWriter(writer io.Writer, time zx.Time, logLevel LogLevel, 
 	if len(tag) > 0 {
 		tags = append(tags, tag)
 	}
-	var buffer [(MaxGlobalTags + 1) * MaxTagLength]byte
+	var buffer [int(logger.MaxTags+1) * int(logger.MaxTagLenBytes)]byte
 	pos := 0
 	for i, tag := range tags {
 		if i > 0 {
@@ -216,7 +228,7 @@ func (l *Logger) logToWriter(writer io.Writer, time zx.Time, logLevel LogLevel, 
 func (l *Logger) logToSocket(time zx.Time, logLevel LogLevel, tag, msg string) error {
 	const golangThreadID = 0
 
-	var buffer [SocketBufferLength]byte
+	var buffer [logger.MaxDatagramLenBytes]byte
 
 	pos := 0
 	for _, i := range [...]uint64{
@@ -311,8 +323,8 @@ func (l *Logger) logf(callDepth int, logLevel LogLevel, tag string, format strin
 		}
 		msg = fmt.Sprintf("%s(%d): %s ", file, line, msg)
 	}
-	if len(tag) > MaxTagLength {
-		tag = tag[:MaxTagLength]
+	if len(tag) > int(logger.MaxTagLenBytes) {
+		tag = tag[:logger.MaxTagLenBytes]
 	}
 	if logLevel == FatalLevel {
 		defer os.Exit(1)
@@ -337,8 +349,32 @@ func (l *Logger) SetSeverity(logLevel LogLevel) {
 	atomic.StoreInt32((*int32)(&l.options.LogLevel), int32(logLevel))
 }
 
+// severityFromVerbosity provides the severity corresponding to the given
+// verbosity. Note that verbosity relative to the default severity and can
+// be thought of as incrementally "more vebose than" the baseline.
+func severityFromVerbosity(verbosity int) LogLevel {
+	if verbosity < 0 {
+		verbosity = 0
+	}
+
+	level := InfoLevel - LogLevel(uint8(verbosity)*logger.LogVerbosityStepSize)
+	// verbosity scale sits in the interstitial space between INFO and DEBUG
+	if level < (DebugLevel + 1) {
+		return DebugLevel + 1
+	}
+	return level
+}
+
 func (l *Logger) SetVerbosity(verbosity int) {
-	atomic.StoreInt32((*int32)(&l.options.LogLevel), int32(-verbosity))
+	atomic.StoreInt32((*int32)(&l.options.LogLevel), int32(severityFromVerbosity(verbosity)))
+}
+
+func (l *Logger) Tracef(format string, a ...interface{}) error {
+	return l.logf(2, TraceLevel, "", format, a...)
+}
+
+func (l *Logger) Debugf(format string, a ...interface{}) error {
+	return l.logf(2, DebugLevel, "", format, a...)
 }
 
 func (l *Logger) Infof(format string, a ...interface{}) error {
@@ -358,7 +394,15 @@ func (l *Logger) Fatalf(format string, a ...interface{}) error {
 }
 
 func (l *Logger) VLogf(verbosity int, format string, a ...interface{}) error {
-	return l.logf(2, LogLevel(-verbosity), "", format, a...)
+	return l.logf(2, severityFromVerbosity(verbosity), "", format, a...)
+}
+
+func (l *Logger) TraceTf(tag, format string, a ...interface{}) error {
+	return l.logf(2, TraceLevel, tag, format, a...)
+}
+
+func (l *Logger) DebugTf(tag, format string, a ...interface{}) error {
+	return l.logf(2, DebugLevel, tag, format, a...)
 }
 
 func (l *Logger) InfoTf(tag, format string, a ...interface{}) error {
@@ -378,7 +422,7 @@ func (l *Logger) FatalTf(tag, format string, a ...interface{}) error {
 }
 
 func (l *Logger) VLogTf(verbosity int, tag, format string, a ...interface{}) error {
-	return l.logf(2, LogLevel(-verbosity), tag, format, a...)
+	return l.logf(2, severityFromVerbosity(verbosity), tag, format, a...)
 }
 
 var defaultLogger = &Logger{
@@ -415,8 +459,16 @@ func SetSeverity(logLevel LogLevel) {
 
 func SetVerbosity(verbosity int) {
 	if l := GetDefaultLogger(); l != nil {
-		atomic.StoreInt32((*int32)(&l.options.LogLevel), int32(-verbosity))
+		atomic.StoreInt32((*int32)(&l.options.LogLevel), int32(severityFromVerbosity(verbosity)))
 	}
+}
+
+func Tracef(format string, a ...interface{}) error {
+	return logf(2, TraceLevel, "", format, a...)
+}
+
+func Debugf(format string, a ...interface{}) error {
+	return logf(2, DebugLevel, "", format, a...)
 }
 
 func Infof(format string, a ...interface{}) error {
@@ -436,7 +488,15 @@ func Fatalf(format string, a ...interface{}) error {
 }
 
 func VLogf(verbosity int, format string, a ...interface{}) error {
-	return logf(2, LogLevel(-verbosity), "", format, a...)
+	return logf(2, severityFromVerbosity(verbosity), "", format, a...)
+}
+
+func TraceTf(tag, format string, a ...interface{}) error {
+	return logf(2, TraceLevel, tag, format, a...)
+}
+
+func DebugTf(tag, format string, a ...interface{}) error {
+	return logf(2, DebugLevel, tag, format, a...)
 }
 
 func InfoTf(tag, format string, a ...interface{}) error {
@@ -456,5 +516,5 @@ func FatalTf(tag, format string, a ...interface{}) error {
 }
 
 func VLogTf(verbosity int, tag, format string, a ...interface{}) error {
-	return logf(2, LogLevel(-verbosity), tag, format, a...)
+	return logf(2, severityFromVerbosity(verbosity), tag, format, a...)
 }

@@ -344,7 +344,7 @@ fn help(name: &str) -> String {
         --tid <integer>:
             tid for the program to filter on.
 
-        --severity <INFO|WARN|ERROR|FATAL>:
+        --severity <TRACE|DEBUG|INFO|WARN|ERROR|FATAL>:
             Minimum severity to filter on.
             Defaults to INFO.
 
@@ -463,6 +463,8 @@ fn parse_flags(args: &[String]) -> Result<LogListenerOptions, String> {
                 }
                 severity_passed = true;
                 match args[i + 1].as_ref() {
+                    "TRACE" => options.filter.min_severity = LogLevelFilter::Trace,
+                    "DEBUG" => options.filter.min_severity = LogLevelFilter::Debug,
                     "INFO" => options.filter.min_severity = LogLevelFilter::Info,
                     "WARN" => options.filter.min_severity = LogLevelFilter::Warn,
                     "ERROR" => options.filter.min_severity = LogLevelFilter::Error,
@@ -475,12 +477,6 @@ fn parse_flags(args: &[String]) -> Result<LogListenerOptions, String> {
                     if severity_passed {
                         return Err("Invalid arguments: Cannot pass both severity and verbosity"
                             .to_string());
-                    }
-                    if v == 0 {
-                        return Err(format!(
-                            "Invalid verbosity: '{}', should be positive integer greater than 0.",
-                            args[i + 1]
-                        ));
                     }
                     options.filter.min_severity = LogLevelFilter::None;
                     options.filter.verbosity = v;
@@ -725,18 +721,18 @@ where
 }
 
 fn get_log_level(level: i32) -> String {
+    // note levels align with syslog logger.h definitions
     match level {
-        0 => "INFO".to_string(),
-        1 => "WARNING".to_string(),
-        2 => "ERROR".to_string(),
-        3 => "FATAL".to_string(),
-        l => {
-            if l > 3 {
-                "INVALID".to_string()
-            } else {
-                format!("VLOG({})", -l)
-            }
+        l if (l == LogLevelFilter::Trace as i32) => "TRACE".to_string(),
+        l if (l == LogLevelFilter::Debug as i32) => "DEBUG".to_string(),
+        l if (l < LogLevelFilter::Info as i32 && l > LogLevelFilter::Debug as i32) => {
+            format!("VLOG({})", -(l - LogLevelFilter::Info as i32))
         }
+        l if (l == LogLevelFilter::Info as i32) => "INFO".to_string(),
+        l if (l == LogLevelFilter::Warn as i32) => "WARNING".to_string(),
+        l if (l == LogLevelFilter::Error as i32) => "ERROR".to_string(),
+        l if (l == LogLevelFilter::Fatal as i32) => "FATAL".to_string(),
+        l => format!("INVALID({})", l),
     }
 }
 
@@ -827,27 +823,26 @@ mod tests {
         let mut message = LogMessage {
             pid: 123,
             tid: 321,
-            severity: 0,
+            severity: LogLevelFilter::Trace as i32,
             time: 76352234564,
             msg: "hello".to_string(),
             dropped_logs: 0,
             tags: vec![],
         };
+        // start with TRACE message
         l.log(copy_log_message(&message));
-
-        for level in vec![1, 2, 3, 4, 11, -1, -3] {
+        // add messages with varying severity
+        for level in vec![0x20, 0x30, 0x40, 0x50, 0x60] {
             message.severity = level;
             l.log(copy_log_message(&message));
         }
         let mut expected = "".to_string();
-        for level in
-            &["INFO", "WARNING", "ERROR", "FATAL", "INVALID", "INVALID", "VLOG(1)", "VLOG(3)"]
-        {
+        for level in &["TRACE", "DEBUG", "INFO", "WARNING", "ERROR", "FATAL"] {
             expected.push_str(&format!("[00076.352234][123][321][] {}: hello\n", level));
         }
 
         // test tags
-        message.severity = 0;
+        message.severity = LogLevelFilter::Info as i32;
         message.tags = vec!["tag1".to_string()];
         l.log(copy_log_message(&message));
         expected.push_str("[00076.352234][123][321][tag1] INFO: hello\n");
@@ -913,7 +908,7 @@ mod tests {
         let mut message2 = LogMessage {
             pid: 123,
             tid: 321,
-            severity: 0,
+            severity: LogLevelFilter::Info as i32,
             time: 76352234564,
             msg: "this is an interesting log".to_string(),
             dropped_logs: 0,
@@ -958,7 +953,7 @@ mod tests {
         let mut message3 = LogMessage {
             pid: 0,
             tid: 0,
-            severity: 0,
+            severity: LogLevelFilter::Info as i32,
             time: 0,
             msg: String::default(),
             dropped_logs: 0,
@@ -1011,7 +1006,7 @@ mod tests {
         let mut msg = LogMessage {
             pid: 0,
             tid: 0,
-            severity: 0,
+            severity: LogLevelFilter::Info as i32,
             time: 0,
             msg: String::default(),
             dropped_logs: 0,
@@ -1356,28 +1351,43 @@ mod tests {
         #[test]
         fn severity() {
             let mut expected = LogListenerOptions::default();
-            expected.filter.min_severity = LogLevelFilter::None;
-            for s in vec!["INFO", "WARN", "ERROR", "FATAL"] {
+            expected.filter.min_severity = LogLevelFilter::Trace;
+            for s in vec!["TRACE", "DEBUG", "INFO", "WARN", "ERROR", "FATAL"] {
                 let args = vec!["--severity".to_string(), s.to_string()];
-                expected.filter.min_severity = LogLevelFilter::from_primitive(
-                    expected.filter.min_severity.into_primitive() + 1,
-                )
-                .unwrap();
+                expected.filter.min_severity = match s {
+                    "TRACE" => LogLevelFilter::Trace,
+                    "DEBUG" => LogLevelFilter::Debug,
+                    "INFO" => LogLevelFilter::Info,
+                    "WARN" => LogLevelFilter::Warn,
+                    "ERROR" => LogLevelFilter::Error,
+                    "FATAL" => LogLevelFilter::Fatal,
+                    _ => LogLevelFilter::None,
+                };
                 parse_flag_test_helper(&args, Some(&expected));
             }
         }
 
         #[test]
         fn severity_error() {
-            let args = vec!["--severity".to_string(), "DEBUG".to_string()];
+            let args = vec!["--severity".to_string(), "NONE".to_string()];
             parse_flag_test_helper(&args, None);
         }
 
         #[test]
         fn verbosity() {
-            let args = vec!["--verbosity".to_string(), "2".to_string()];
+            let args = vec!["--verbosity".to_string(), "1".to_string()];
             let mut expected = LogListenerOptions::default();
-            expected.filter.verbosity = 2;
+            expected.filter.verbosity = 1;
+            expected.filter.min_severity = LogLevelFilter::None;
+            parse_flag_test_helper(&args, Some(&expected));
+        }
+
+        #[test]
+        fn legacy_verbosity() {
+            // handling legacy expectations
+            let args = vec!["--verbosity".to_string(), "10".to_string()];
+            let mut expected = LogListenerOptions::default();
+            expected.filter.verbosity = 10;
             expected.filter.min_severity = LogLevelFilter::None;
             parse_flag_test_helper(&args, Some(&expected));
         }
@@ -1386,7 +1396,7 @@ mod tests {
         fn severity_verbosity_together() {
             let args = vec![
                 "--verbosity".to_string(),
-                "2".to_string(),
+                "1".to_string(),
                 "--severity".to_string(),
                 "DEBUG".to_string(),
             ];
@@ -1396,7 +1406,7 @@ mod tests {
                 "--severity".to_string(),
                 "DEBUG".to_string(),
                 "--verbosity".to_string(),
-                "2".to_string(),
+                "1".to_string(),
             ];
             parse_flag_test_helper(&args, None);
         }
@@ -1409,7 +1419,7 @@ mod tests {
             args[1] = "str".to_string();
             parse_flag_test_helper(&args, None);
 
-            args[1] = "0".to_string();
+            args[1] = "DEBUG".to_string();
             parse_flag_test_helper(&args, None);
         }
 

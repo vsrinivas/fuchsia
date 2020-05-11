@@ -7,6 +7,8 @@
 #include <lib/syslog/global.h>
 #include <lib/zx/process.h>
 
+static_assert(syslog::LOG_TRACE == FX_LOG_TRACE);
+static_assert(syslog::LOG_DEBUG == FX_LOG_DEBUG);
 static_assert(syslog::LOG_INFO == FX_LOG_INFO);
 static_assert(syslog::LOG_WARNING == FX_LOG_WARNING);
 static_assert(syslog::LOG_ERROR == FX_LOG_ERROR);

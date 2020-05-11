@@ -21,11 +21,29 @@ namespace syslog {
 namespace {
 
 #ifndef __Fuchsia__
-const char* const kLogSeverityNames[LOG_NUM_SEVERITIES] = {"INFO", "WARNING", "ERROR", "FATAL"};
 
-const char* GetNameForLogSeverity(LogSeverity severity) {
-  if (severity >= LOG_INFO && severity < LOG_NUM_SEVERITIES)
-    return kLogSeverityNames[severity];
+const std::string GetNameForLogSeverity(LogSeverity severity) {
+  switch (severity) {
+    case LOG_TRACE:
+      return "TRACE";
+    case LOG_DEBUG:
+      return "DEBUG";
+    case LOG_INFO:
+      return "INFO";
+    case LOG_WARNING:
+      return "WARNING";
+    case LOG_ERROR:
+      return "ERROR";
+    case LOG_FATAL:
+      return "FATAL";
+  }
+
+  if (severity > LOG_DEBUG && severity < LOG_INFO) {
+    std::ostringstream stream;
+    stream << "VLOG(" << (LOG_INFO - severity) << ")";
+    return stream.str();
+  }
+
   return "UNKNOWN";
 }
 #endif
@@ -70,11 +88,7 @@ LogMessage::LogMessage(LogSeverity severity, const char* file, int line, const c
   // With syslog the severity is included in the metadata so no need to add it
   // to the log message itself.
 #ifndef __Fuchsia__
-  if (severity >= LOG_INFO)
-    stream_ << GetNameForLogSeverity(severity);
-  else
-    stream_ << "VERBOSE" << -severity;
-  stream_ << ":";
+  stream_ << GetNameForLogSeverity(severity) << ":";
 #endif
   stream_ << (severity > LOG_INFO ? StripDots(file_) : StripPath(file_)) << "(" << line_ << ")] ";
 
@@ -132,7 +146,7 @@ bool LogFirstNState::ShouldLog(uint32_t n) {
   return counter_value < n;
 }
 
-int GetVlogVerbosity() { return std::max(-1, LOG_INFO - GetMinLogLevel()); }
+int GetVlogVerbosity() { return std::max(int8_t(LOG_DEBUG + 1), int8_t(GetMinLogLevel())); }
 
 bool ShouldCreateLogMessage(LogSeverity severity) { return severity >= GetMinLogLevel(); }
 

@@ -55,9 +55,9 @@ void MaxSeverityConfig::ParseDocument(rapidjson::Document document) {
         std::string severity = test[kMaxSeverity].GetString();
         int32_t log_severity;
         if (severity == "TRACE") {
-          log_severity = FX_LOG_INFO - 2;
+          log_severity = FX_LOG_TRACE;
         } else if (severity == "DEBUG") {
-          log_severity = FX_LOG_INFO - 1;
+          log_severity = FX_LOG_DEBUG;
         } else if (severity == "INFO") {
           log_severity = FX_LOG_INFO;
         } else if (severity == "WARN") {

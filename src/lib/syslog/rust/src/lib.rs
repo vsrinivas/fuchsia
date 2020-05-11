@@ -23,6 +23,15 @@ pub mod levels {
     /// Defines log levels for clients.
     pub type LogLevel = i32;
 
+    /// ALL log level
+    pub const ALL: LogLevel = syslog::FX_LOG_ALL;
+
+    /// TRACE log level
+    pub const TRACE: LogLevel = syslog::FX_LOG_TRACE;
+
+    /// DEBUG log level
+    pub const DEBUG: LogLevel = syslog::FX_LOG_DEBUG;
+
     /// INFO log level
     pub const INFO: LogLevel = syslog::FX_LOG_INFO;
 
@@ -31,36 +40,43 @@ pub mod levels {
 
     /// ERROR log level
     pub const ERROR: LogLevel = syslog::FX_LOG_ERROR;
+
+    /// FATAL log level
+    pub const FATAL: LogLevel = syslog::FX_LOG_FATAL;
 }
 
 /// Convenient re-export of macros for globed imports Rust Edition 2018
 pub mod macros {
     pub use crate::fx_log;
+    pub use crate::fx_log_debug;
     pub use crate::fx_log_err;
     pub use crate::fx_log_info;
+    pub use crate::fx_log_trace;
     pub use crate::fx_log_warn;
 }
 
 /// Maps log crate log levels to syslog severity levels.
 fn get_fx_logger_severity(level: Level) -> syslog::fx_log_severity_t {
     match level {
+        Level::Trace => syslog::FX_LOG_TRACE,
+        Level::Debug => syslog::FX_LOG_DEBUG,
         Level::Info => syslog::FX_LOG_INFO,
         Level::Warn => syslog::FX_LOG_WARN,
         Level::Error => syslog::FX_LOG_ERROR,
-        Level::Debug => -1,
-        Level::Trace => -2,
     }
 }
 
 /// Maps syslog severity levels to  log crate log filters.
 fn get_log_filter(level: levels::LogLevel) -> LevelFilter {
     match level {
+        syslog::FX_LOG_ALL => LevelFilter::Trace, // log::LevelFilter fidelity
+        syslog::FX_LOG_TRACE => LevelFilter::Trace,
+        syslog::FX_LOG_DEBUG => LevelFilter::Debug,
         syslog::FX_LOG_INFO => LevelFilter::Info,
         syslog::FX_LOG_WARN => LevelFilter::Warn,
         syslog::FX_LOG_ERROR => LevelFilter::Error,
-        -1 => LevelFilter::Debug,
-        -2 => LevelFilter::Trace,
-        _ => LevelFilter::Trace, // return trace for all other levels
+        syslog::FX_LOG_FATAL => LevelFilter::Error, // log::LevelFilter fidelity
+        _ => LevelFilter::Off,                      // return for all other levels
     }
 }
 
@@ -138,6 +154,42 @@ macro_rules! fx_log_info {
     )
 }
 
+/// Convenience macro to log debug info.
+///
+/// Example:
+///
+/// ```rust
+/// fx_log_debug!(tag: "my_tag", "print integer {}", 10);
+/// fx_log_debug!("print integer {}", 10);
+/// ```
+#[macro_export]
+macro_rules! fx_log_debug {
+    (tag: $tag:expr, $($arg:tt)*) => (
+        $crate::fx_log!(tag: $tag, $crate::levels::DEBUG, $($arg)*);
+    );
+    ($($arg:tt)*) => (
+        $crate::fx_log_debug!(tag: "", $($arg)*);
+    )
+}
+
+/// Convenience macro to log trace info.
+///
+/// Example:
+///
+/// ```rust
+/// fx_log_trace!(tag: "my_tag", "print integer {}", 10);
+/// fx_log_trace!("print integer {}", 10);
+/// ```
+#[macro_export]
+macro_rules! fx_log_trace {
+    (tag: $tag:expr, $($arg:tt)*) => (
+        $crate::fx_log!(tag: $tag, $crate::levels::TRACE, $($arg)*);
+    );
+    ($($arg:tt)*) => (
+        $crate::fx_log_trace!(tag: "", $($arg)*);
+    )
+}
+
 /// Convenience macro to log verbose messages.
 ///
 /// Example:
@@ -149,7 +201,7 @@ macro_rules! fx_log_info {
 #[macro_export]
 macro_rules! fx_vlog {
     (tag: $tag:expr, $verbosity:expr, $($arg:tt)*) => (
-        $crate::fx_log!(tag: $tag, -$verbosity, $($arg)*);
+        $crate::fx_log!(tag: $tag, $crate::get_severity_from_verbosity($verbosity), $($arg)*);
     );
     ($verbosity:expr, $($arg:tt)*) => (
          $crate::fx_vlog!(tag: "", $verbosity, $($arg)*);
@@ -268,7 +320,7 @@ fn init_with_tags_and_handle(handle: zx_handle_t, tags: &[&str]) -> Result<(), z
         .collect();
     let c_tags: Vec<*const c_char> = cstr_vec.iter().map(|x| x.as_ptr()).collect();
     let config = syslog::fx_logger_config_t {
-        severity: levels::INFO,
+        severity: syslog::FX_LOG_SEVERITY_DEFAULT,
         fd: -1,
         log_service_channel: handle,
         tags: c_tags.as_ptr(),
@@ -277,7 +329,7 @@ fn init_with_tags_and_handle(handle: zx_handle_t, tags: &[&str]) -> Result<(), z
     let status = unsafe { syslog::fx_log_reconfigure(&config) };
     if status == zx::Status::OK.into_raw() {
         log::set_logger(&*LOGGER).expect("Attempted to initialize multiple loggers");
-        log::set_max_level(log::LevelFilter::Info);
+        log::set_max_level(get_log_filter(config.severity));
     }
     zx::ok(status)
 }
@@ -309,10 +361,23 @@ pub fn set_severity(severity: levels::LogLevel) {
     }
 }
 
+/// Get the severity corresponding to the given verbosity. Note that
+/// verbosity relative to the default severity and can be thought of
+/// as incrementally "more vebose than" the baseline.
+pub fn get_severity_from_verbosity(mut verbosity: i32) -> i32 {
+    verbosity = std::cmp::max(0, verbosity);
+
+    // verbosity scale sits in the interstitial space between INFO and DEBUG
+    std::cmp::max(
+        syslog::FX_LOG_DEBUG + 1,
+        syslog::FX_LOG_INFO - (verbosity * syslog::FX_LOG_VERBOSITY_STEP_SIZE),
+    )
+}
+
 /// Set default logger verbosity.
 #[inline]
 pub fn set_verbosity(verbosity: u16) {
-    set_severity(-(verbosity as i32));
+    set_severity(get_severity_from_verbosity(verbosity as i32));
 }
 
 /// Checks if default logger is enabled for given log level.
@@ -379,8 +444,8 @@ mod test {
 
         // test log crate
         log::set_logger(&*LOGGER).expect("Attempted to initialize multiple loggers");
-        log::set_max_level(get_log_filter(-1));
 
+        set_severity(levels::DEBUG);
         info!("log info: {}", 10);
         let tag = "fuchsia_syslog_lib_test::test";
         expected.push(format!("[{}] INFO: log info: 10", tag));
@@ -393,13 +458,13 @@ mod test {
         expected.push(format!("[{}] ERROR: {}({}): log err: 10", tag, file!(), line));
 
         debug!("log debug: {}", 10);
-        expected.push(format!("[{}] VLOG(1): log debug: 10", tag));
+        expected.push(format!("[{}] DEBUG: log debug: 10", tag));
 
         trace!("log trace: {}", 10); // will not log
 
-        set_verbosity(2);
+        set_severity(levels::TRACE);
         trace!("log trace2: {}", 10);
-        expected.push(format!("[{}] VLOG(2): log trace2: 10", tag));
+        expected.push(format!("[{}] TRACE: log trace2: 10", tag));
 
         // test set_severity
         set_severity(levels::WARN);

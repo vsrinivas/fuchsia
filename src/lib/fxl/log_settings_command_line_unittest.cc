@@ -39,24 +39,26 @@ TEST(LogSettings, ParseValidOptions) {
   EXPECT_EQ(LOG_FATAL, settings.min_log_level);
 
   EXPECT_TRUE(ParseLogSettings(CommandLineFromInitializerList({"argv0", "--verbose"}), &settings));
-  EXPECT_EQ(-1, settings.min_log_level);
+  // verbosity scaled between INFO & DEBUG
+  EXPECT_EQ(LOG_INFO - 1, settings.min_log_level);
 
   EXPECT_TRUE(
       ParseLogSettings(CommandLineFromInitializerList({"argv0", "--verbose=0"}), &settings));
-  EXPECT_EQ(0, settings.min_log_level);
+  EXPECT_EQ(LOG_INFO, settings.min_log_level);
 
   EXPECT_TRUE(
-      ParseLogSettings(CommandLineFromInitializerList({"argv0", "--verbose=3"}), &settings));
-  EXPECT_EQ(-3, settings.min_log_level);
+      ParseLogSettings(CommandLineFromInitializerList({"argv0", "--verbose=5"}), &settings));
+  // verbosity scaled between INFO & DEBUG
+  EXPECT_EQ(LOG_INFO - 5, settings.min_log_level);
 
   EXPECT_TRUE(ParseLogSettings(CommandLineFromInitializerList({"argv0", "--quiet=0"}), &settings));
-  EXPECT_EQ(0, settings.min_log_level);
+  EXPECT_EQ(LOG_INFO, settings.min_log_level);
 
   EXPECT_TRUE(ParseLogSettings(CommandLineFromInitializerList({"argv0", "--quiet"}), &settings));
-  EXPECT_EQ(1, settings.min_log_level);
+  EXPECT_EQ(LOG_WARNING, settings.min_log_level);
 
   EXPECT_TRUE(ParseLogSettings(CommandLineFromInitializerList({"argv0", "--quiet=3"}), &settings));
-  EXPECT_EQ(3, settings.min_log_level);
+  EXPECT_EQ(LOG_FATAL, settings.min_log_level);
 
   EXPECT_TRUE(ParseLogSettings(
       CommandLineFromInitializerList({"argv0", "--log-file=/tmp/custom.log"}), &settings));
@@ -87,8 +89,8 @@ TEST(LogSettings, ParseInvalidOptions) {
 TEST_F(LogSettingsFixture, SetValidOptions) {
   EXPECT_TRUE(
       SetLogSettingsFromCommandLine(CommandLineFromInitializerList({"argv0", "--verbose=20"})));
-
-  EXPECT_EQ(-20, GetMinLogLevel());
+  // verbosity scaled between INFO & DEBUG, but capped at 15 levels
+  EXPECT_EQ(syslog::LOG_DEBUG + 1, GetMinLogLevel());
 }
 
 TEST_F(LogSettingsFixture, SetInvalidOptions) {
@@ -114,8 +116,13 @@ TEST_F(LogSettingsFixture, ToArgv) {
   EXPECT_TRUE(LogSettingsToArgv(settings) == std::vector<std::string>{"--verbose=1"});
 
   EXPECT_TRUE(
-      ParseLogSettings(CommandLineFromInitializerList({"argv0", "--verbose=3"}), &settings));
-  EXPECT_TRUE(LogSettingsToArgv(settings) == std::vector<std::string>{"--verbose=3"});
+      ParseLogSettings(CommandLineFromInitializerList({"argv0", "--verbose=10"}), &settings));
+  EXPECT_TRUE(LogSettingsToArgv(settings) == std::vector<std::string>{"--verbose=10"});
+
+  EXPECT_TRUE(
+      ParseLogSettings(CommandLineFromInitializerList({"argv0", "--verbose=20"}), &settings));
+  EXPECT_TRUE(LogSettingsToArgv(settings) ==
+              std::vector<std::string>{"--verbose=15"});  // verbosity capped
 
   // Reset |settings| back to defaults so we don't pick up previous tests.
   settings = LogSettings{};

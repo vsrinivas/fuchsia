@@ -17,11 +17,11 @@ struct LogSettings {
   // Anything at or above this level will be logged (if applicable).
   // Anything below this level will be silently ignored.
   //
-  // The log level defaults to 0 (LOG_INFO).
+  // The log level defaults to LOG_INFO.
   //
-  // Log messages for FX_VLOGS(x) (from macros.h) are logged at level -x, so setting the min log
-  // level to negative values enables verbose logging.
-  LogSeverity min_log_level = LOG_INFO;
+  // Log messages for FX_VLOGS(x) (from macros.h) log verbosities in
+  // the range between INFO and DEBUG
+  LogSeverity min_log_level = DefaultLogLevel;
 
   // The name of a file to which the log should be written.
   // When non-empty, the previous log output is closed and logging is

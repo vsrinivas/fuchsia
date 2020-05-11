@@ -21,7 +21,7 @@ fx_logger_t* MakeDefaultLogger() {
   if (status != ZX_OK)
     process_name[0] = '\0';
 
-  fx_logger_config_t config = {.min_severity = FX_LOG_INFO,
+  fx_logger_config_t config = {.min_severity = FX_LOG_SEVERITY_DEFAULT,
                                .console_fd = -1,
                                .log_service_channel = ZX_HANDLE_INVALID,
                                .tags = &tag,

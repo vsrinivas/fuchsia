@@ -18,10 +18,10 @@ class CommandLine;
 // Parses log settings from standard command-line options.
 //
 // Recognizes the following options:
-//   --verbose         : sets |min_log_level| to -1
-//   --verbose=<level> : sets |min_log_level| to -level
-//   --quiet           : sets |min_log_level| to +1 (LOG_WARNING)
-//   --quiet=<level>   : sets |min_log_level| to +level
+//   --verbose         : sets |min_log_level| to (LOG_INFO - 1)
+//   --verbose=<level> : sets |min_log_level| incrementally lower than INFO
+//   --quiet           : sets |min_log_level| to LOG_WARNING
+//   --quiet=<level>   : sets |min_log_level| incrementally higher than INFO
 //   --log-file=<file> : sets |log_file| to file, uses default output if empty
 //
 // Quiet supersedes verbose if both are specified.

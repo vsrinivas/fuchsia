@@ -18,13 +18,29 @@
 // Max individual tag length including terminating character.
 #define FX_LOG_MAX_TAG_LEN (64)
 
-// Log entry severity.
-// Used for coarse filtering of log messages
+// Step size between discrete values that define log severity.
+#define FX_LOG_SEVERITY_STEP_SIZE (16)
+
+// Step size between discrete values that define log verbosity.
+#define FX_LOG_VERBOSITY_STEP_SIZE (1)
+
+// Log entry severity. Used for coarse filtering of log messages.
 typedef int fx_log_severity_t;
-#define FX_LOG_INFO (0)
-#define FX_LOG_WARNING (1)
-#define FX_LOG_ERROR (2)
-#define FX_LOG_FATAL (3)
+#define FX_LOG_ALL (-0x7F)
+#define FX_LOG_TRACE (0x10)    // 1 * FX_LOG_SEVERITY_STEP_SIZE
+#define FX_LOG_DEBUG (0x20)    // 2 * FX_LOG_SEVERITY_STEP_SIZE
+#define FX_LOG_INFO (0x30)     // 3 * FX_LOG_SEVERITY_STEP_SIZE
+#define FX_LOG_WARNING (0x40)  // 4 * FX_LOG_SEVERITY_STEP_SIZE
+#define FX_LOG_ERROR (0x50)    // 5 * FX_LOG_SEVERITY_STEP_SIZE
+#define FX_LOG_FATAL (0x60)    // 6 * FX_LOG_SEVERITY_STEP_SIZE
+#define FX_LOG_NONE (0x7F)
+
+#define FX_LOG_SEVERITY_MAX (6)  // FX_LOG_FATAL
+
+// Default log severity used in the standard logger config. To create a
+// build that uses a higher/lower level of severity as the threshold
+// for printed logs, redefine this on the command line.
+#define FX_LOG_SEVERITY_DEFAULT (FX_LOG_INFO)
 
 __BEGIN_CDECLS
 

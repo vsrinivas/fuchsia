@@ -14,6 +14,7 @@ import (
 	"testing"
 	"unicode/utf8"
 
+	"fidl/fuchsia/logger"
 	"fuchsia.googlesource.com/syslog"
 )
 
@@ -72,6 +73,7 @@ func setup(t *testing.T, tags ...string) (zx.Socket, *syslog.Logger) {
 		t.Fatal(err)
 	}
 	log, err := syslog.NewLogger(syslog.LogInitOptions{
+		LogLevel:                      syslog.InfoLevel,
 		MinSeverityForFileAndLineInfo: syslog.ErrorLevel,
 		Socket:                        sout,
 		Tags:                          tags,
@@ -83,7 +85,7 @@ func setup(t *testing.T, tags ...string) (zx.Socket, *syslog.Logger) {
 }
 
 func checkoutput(t *testing.T, sin zx.Socket, expectedMsg string, severity syslog.LogLevel, tags ...string) {
-	var data [syslog.SocketBufferLength]byte
+	var data [logger.MaxDatagramLenBytes]byte
 	if n, err := sin.Read(data[:], 0); err != nil {
 		t.Fatal(err)
 	} else {
@@ -176,22 +178,22 @@ func TestLoggerSeverity(t *testing.T) {
 func TestLoggerVerbosity(t *testing.T) {
 	sin, log := setup(t)
 	format := "integer: %d"
-	log.VLogf(syslog.TraceVerbosity, format, 10)
+	log.VLogf(syslog.DebugVerbosity, format, 10)
 	_, err := sin.Read(make([]byte, 0), 0)
 	if err, ok := err.(*zx.Error); !ok || err.Status != zx.ErrShouldWait {
 		t.Fatal(err)
 	}
-	log.SetVerbosity(2)
-	log.VLogf(syslog.TraceVerbosity, format, 10)
+	log.SetVerbosity(syslog.DebugVerbosity)
+	log.VLogf(syslog.DebugVerbosity, format, 10)
 	expectedMsg := fmt.Sprintf(format, 10)
-	checkoutput(t, sin, expectedMsg, syslog.LogLevel(-2))
+	checkoutput(t, sin, expectedMsg, (syslog.InfoLevel - 1))
 }
 
 func TestGlobalTagLimits(t *testing.T) {
 	options := syslog.LogInitOptions{
 		Writer: os.Stdout,
 	}
-	var tags [syslog.MaxGlobalTags + 1]string
+	var tags [logger.MaxTags + 1]string
 	for i := 0; i < len(tags); i++ {
 		tags[i] = "a"
 	}
@@ -199,8 +201,8 @@ func TestGlobalTagLimits(t *testing.T) {
 	if _, err := syslog.NewLogger(options); err == nil || !strings.Contains(err.Error(), "too many tags") {
 		t.Fatalf("unexpected error: %s", err)
 	}
-	options.Tags = tags[:syslog.MaxGlobalTags]
-	var tag [syslog.MaxTagLength + 1]byte
+	options.Tags = tags[:logger.MaxTags]
+	var tag [logger.MaxTagLenBytes + 1]byte
 	for i := 0; i < len(tag); i++ {
 		tag[i] = 65
 	}
@@ -213,13 +215,13 @@ func TestGlobalTagLimits(t *testing.T) {
 func TestLocalTagLimits(t *testing.T) {
 	sin, log := setup(t)
 	format := "integer: %d"
-	var tag [syslog.MaxTagLength + 1]byte
+	var tag [logger.MaxTagLenBytes + 1]byte
 	for i := 0; i < len(tag); i++ {
 		tag[i] = 65
 	}
 	log.InfoTf(string(tag[:]), format, 10)
 	expectedMsg := fmt.Sprintf(format, 10)
-	checkoutput(t, sin, expectedMsg, syslog.InfoLevel, string(tag[:syslog.MaxTagLength]))
+	checkoutput(t, sin, expectedMsg, syslog.InfoLevel, string(tag[:logger.MaxTagLenBytes]))
 }
 
 func TestLogToWriterWhenSocketCloses(t *testing.T) {
@@ -251,7 +253,7 @@ func TestLogToWriterWhenSocketCloses(t *testing.T) {
 func TestMessageLenLimit(t *testing.T) {
 	sin, log := setup(t)
 	// 1 for starting and ending null bytes.
-	msgLen := syslog.SocketBufferLength - 32 - 1 - 1
+	msgLen := int(logger.MaxDatagramLenBytes) - 32 - 1 - 1
 
 	const stripped = '𠜎'
 	// Ensure only part of stripped fits.

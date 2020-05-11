@@ -66,11 +66,10 @@ ParseArgsResult ParseArgs(const std::shared_ptr<sys::ServiceDirectory>& services
     }
     if (argument.substr(0, kSeverityArgPrefixLength) == kSeverityArgPrefix) {
       std::string level = argument.substr(kSeverityArgPrefixLength);
-      // TODO(42169): Change these once fxr/375515 lands
       if (level == "TRACE") {
-        result.min_log_severity = FX_LOG_INFO - 2;
+        result.min_log_severity = FX_LOG_TRACE;
       } else if (level == "DEBUG") {
-        result.min_log_severity = FX_LOG_INFO - 1;
+        result.min_log_severity = FX_LOG_DEBUG;
       } else if (level == "INFO") {
         result.min_log_severity = FX_LOG_INFO;
       } else if (level == "WARN") {

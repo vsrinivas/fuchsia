@@ -87,7 +87,8 @@ bool StubLogListener::ListenFiltered(const std::shared_ptr<sys::ServiceDirectory
   auto options = fuchsia::logger::LogFilterOptions::New();
   options->filter_by_pid = true;
   options->pid = pid;
-  options->verbosity = 10;
+  options->verbosity = 0;
+  options->min_severity = fuchsia::logger::LogLevelFilter::TRACE;
   options->tags = {tag};
   log_service->ListenSafe(std::move(log_listener_), std::move(options));
   return true;
@@ -108,19 +109,45 @@ using LoggerIntegrationTest = sys::testing::TestWithEnvironment;
 TEST_F(LoggerIntegrationTest, ListenFiltered) {
   // Make sure there is one syslog message coming from that pid and with a tag
   // unique to this test case.
+
   auto pid = fsl::GetCurrentProcessKoid();
   auto tag = "logger_integration_cpp_test.ListenFiltered";
   auto message = "my message";
-  std::vector<int> severities_in_use = {
-      -10,             // V=10, "sigh, ktrace" TRACE
-      -5,              // V=5, "hey buddy, you doing ok?" TRACE
-      -4,              // V=4, "super secret" TRACE
-      -3,              // V=3, "secret" TRACE
-      -2,              // V=2, TRACE
-      -1,              // V=1, DEBUG
-      FX_LOG_INFO,     // 0
-      FX_LOG_WARNING,  // 1
-      FX_LOG_ERROR,    // 2
+  // severities "in the wild" including both those from the
+  // legacy syslog severities and the new.
+  std::vector<int8_t> severities_in_use = {
+      -10,             // Legacy "verbosity" (v=10)
+      -5,              // Legacy "verbosity" (v=5)
+      -4,              // Legacy "verbosity" (v=4)
+      -3,              // Legacy "verbosity" (v=3)
+      -2,              // Legacy "verbosity" (v=2)
+      -1,              // Legacy "verbosity" (v=1)
+      0,               // Legacy severity (INFO)
+      1,               // Legacy severity (WARNING)
+      2,               // Legacy severity (ERROR)
+      FX_LOG_TRACE,    // 0x10
+      FX_LOG_DEBUG,    // 0x20
+      FX_LOG_INFO,     // 0x30
+      FX_LOG_WARNING,  // 0x40
+      FX_LOG_ERROR,    // 0x50
+  };
+
+  // expected severities (sorted), factoring in legacy transforms
+  std::vector<int8_t> expected_severities = {
+      FX_LOG_TRACE,      // Legacy "verbosity" (v=2)
+      FX_LOG_TRACE,      // 0x10
+      FX_LOG_DEBUG,      // 0x20
+      FX_LOG_DEBUG,      // Legacy "verbosity" (v=1)
+      FX_LOG_INFO - 10,  // Legacy "verbosity" (v=10)
+      FX_LOG_INFO - 5,   // Legacy "verbosity" (v=5)
+      FX_LOG_INFO - 4,   // Legacy "verbosity" (v=4)
+      FX_LOG_INFO - 3,   // Legacy "verbosity" (v=3)
+      FX_LOG_INFO,       // Legacy severity (INFO)
+      FX_LOG_INFO,       // 0x30
+      FX_LOG_WARNING,    // 0x40
+      FX_LOG_WARNING,    // Legacy severity (WARNING)
+      FX_LOG_ERROR,      // Legacy severity (ERROR)
+      FX_LOG_ERROR,      // 0x50
   };
 
   fxl::LogSettings settings = {.min_log_level = severities_in_use[0]};
@@ -134,21 +161,19 @@ TEST_F(LoggerIntegrationTest, ListenFiltered) {
   StubLogListener log_listener;
   ASSERT_TRUE(log_listener.ListenFiltered(sys::ServiceDirectory::CreateFromNamespace(), pid, tag));
   auto& logs = log_listener.GetLogs();
-  RunLoopUntil(
-      [&logs, expected_size = severities_in_use.size()] { return logs.size() >= expected_size; });
+  RunLoopWithTimeoutOrUntil(
+      [&logs, expected_size = severities_in_use.size()] { return logs.size() >= expected_size; },
+      zx::min(2));
 
   std::vector<fuchsia::logger::LogMessage> sorted_by_severity(logs.begin(), logs.end());
   std::sort(sorted_by_severity.begin(), sorted_by_severity.end(),
             [](auto a, auto b) { return a.severity < b.severity; });
 
-  ASSERT_EQ(sorted_by_severity.size(), severities_in_use.size());
+  ASSERT_EQ(sorted_by_severity.size(), expected_severities.size());
   for (auto i = 0ul; i < logs.size(); i++) {
-    // anything at -2 or below gets rewritten to TRACE
-    auto expected_severity = std::max(severities_in_use[i], -2);
-
     ASSERT_EQ(sorted_by_severity[i].tags.size(), 1u);
     EXPECT_EQ(sorted_by_severity[i].tags[0], tag);
-    EXPECT_EQ(sorted_by_severity[i].severity, expected_severity);
+    EXPECT_EQ(sorted_by_severity[i].severity, expected_severities[i]);
     EXPECT_EQ(sorted_by_severity[i].pid, pid);
     EXPECT_THAT(sorted_by_severity[i].msg, testing::EndsWith(message));
   }

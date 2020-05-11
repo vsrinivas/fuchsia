@@ -55,7 +55,7 @@ impl Accounted for Message {
 impl Message {
     /// Parse the provided buffer as if it implements the [logger/syslog wire format].
     ///
-    /// Note that this is distinct from the parsing we perform for the debuglog log, which aslo
+    /// Note that this is distinct from the parsing we perform for the debuglog log, which also
     /// takes a `&[u8]` and is why we don't implement this as `TryFrom`.
     ///
     /// [logger/syslog wire format]: https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/ulib/syslog/include/lib/syslog/wire_format.h
@@ -142,28 +142,27 @@ impl Message {
 }
 
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
-#[repr(u8)]
+#[repr(i8)]
 pub enum Severity {
-    // giving these variants concrete discriminants creates a straightforward derived Ord impl
-    // TODO(fxrev.dev/375515) use the new constants defined in FIDL
-    Trace = 0x10,
-    Debug = 0x20,
-    Info = 0x30,
-    Warn = 0x40,
-    Error = 0x50,
-    Fatal = 0x60,
+    Trace,
+    Debug,
+    Verbose(i8),
+    Info,
+    Warn,
+    Error,
+    Fatal,
 }
 
 impl Severity {
     fn for_listener(self) -> fx_log_severity_t {
         match self {
-            // TODO(fxrev.dev/375515) update these to match new constants
-            Severity::Trace => -2,
-            Severity::Debug => -1,
+            Severity::Trace => LogLevelFilter::Trace as _,
+            Severity::Debug => LogLevelFilter::Debug as _,
             Severity::Info => LogLevelFilter::Info as _,
             Severity::Warn => LogLevelFilter::Warn as _,
             Severity::Error => LogLevelFilter::Error as _,
             Severity::Fatal => LogLevelFilter::Fatal as _,
+            Severity::Verbose(v) => (LogLevelFilter::Info as i8 - v) as _,
         }
     }
 }
@@ -172,27 +171,41 @@ impl TryFrom<fx_log_severity_t> for Severity {
     type Error = StreamError;
 
     fn try_from(raw: fx_log_severity_t) -> Result<Self, StreamError> {
-        if let Some(filter) = LogLevelFilter::from_primitive(raw as i8) {
-            Ok(Severity::from(filter))
-        } else if -10 <= raw && raw <= -2 {
-            // legacy values supported for high "verbosity" in our c++ frontends
-            // see //src/diagnostics/archivist/tests/logs/cpp/logs_tests.cc for examples
+        // Handle legacy/deprecated level filter values.
+        if -10 <= raw && raw <= -3 {
+            Ok(Severity::Verbose(-raw as i8))
+        } else if raw == -2 {
+            // legacy values from trace verbosity
             Ok(Severity::Trace)
+        } else if raw == -1 {
+            // legacy value from debug verbosity
+            Ok(Severity::Debug)
+        } else if raw == 0 {
+            // legacy value for INFO
+            Ok(Severity::Info)
+        } else if raw == 1 {
+            // legacy value for WARNING
+            Ok(Severity::Warn)
+        } else if raw == 2 {
+            // legacy value for ERROR
+            Ok(Severity::Error)
+        } else if raw < LogLevelFilter::Info as i32 && raw > LogLevelFilter::Debug as i32 {
+            // Verbosity scale exists as incremental steps between INFO & DEBUG
+            Ok(Severity::Verbose(LogLevelFilter::Info as i8 - raw as i8))
+        } else if let Some(level) = LogLevelFilter::from_primitive(raw as i8) {
+            // Handle current level filter values.
+            match level {
+                // Match defined severities at their given filter level.
+                LogLevelFilter::Trace => Ok(Severity::Trace),
+                LogLevelFilter::Debug => Ok(Severity::Debug),
+                LogLevelFilter::Info => Ok(Severity::Info),
+                LogLevelFilter::Warn => Ok(Severity::Warn),
+                LogLevelFilter::Error => Ok(Severity::Error),
+                LogLevelFilter::Fatal => Ok(Severity::Fatal),
+                _ => Err(StreamError::InvalidSeverity { provided: raw }),
+            }
         } else {
             Err(StreamError::InvalidSeverity { provided: raw })
-        }
-    }
-}
-
-impl From<LogLevelFilter> for Severity {
-    fn from(filter: LogLevelFilter) -> Self {
-        match filter {
-            // None here == -1, which is one level below Info==0
-            LogLevelFilter::None => Severity::Debug,
-            LogLevelFilter::Info => Severity::Info,
-            LogLevelFilter::Warn => Severity::Warn,
-            LogLevelFilter::Error => Severity::Error,
-            LogLevelFilter::Fatal => Severity::Fatal,
         }
     }
 }
@@ -297,7 +310,7 @@ mod tests {
         packet.metadata.pid = 1;
         packet.metadata.tid = 2;
         packet.metadata.time = 3;
-        packet.metadata.severity = -1;
+        packet.metadata.severity = LogLevelFilter::Debug as i32;
         packet.metadata.dropped_logs = 10;
         packet
     }
@@ -556,5 +569,110 @@ mod tests {
                 contents: String::from("AA"),
             }
         );
+    }
+
+    #[test]
+    fn message_severity() {
+        let mut packet = test_packet();
+        packet.metadata.severity = LogLevelFilter::Info as i32;
+        packet.data[0] = 0; // tag size
+        packet.data[1] = 0; // null terminated
+
+        let mut buffer = &packet.as_bytes()[..METADATA_SIZE + 2]; // tag size + null
+        let mut parsed = Message::from_logger(buffer).unwrap();
+        let mut expected_message = Message {
+            size: METADATA_SIZE + 1,
+            pid: packet.metadata.pid,
+            tid: packet.metadata.tid,
+            time: zx::Time::from_nanos(packet.metadata.time),
+            severity: Severity::Info,
+            dropped_logs: packet.metadata.dropped_logs as usize,
+            tags: vec![],
+            contents: String::new(),
+        };
+
+        assert_eq!(parsed, expected_message);
+
+        packet.metadata.severity = LogLevelFilter::Trace as i32;
+        buffer = &packet.as_bytes()[..METADATA_SIZE + 2];
+        parsed = Message::from_logger(buffer).unwrap();
+        expected_message.severity = Severity::Trace;
+
+        assert_eq!(parsed, expected_message);
+
+        packet.metadata.severity = LogLevelFilter::Debug as i32;
+        buffer = &packet.as_bytes()[..METADATA_SIZE + 2];
+        parsed = Message::from_logger(buffer).unwrap();
+        expected_message.severity = Severity::Debug;
+
+        assert_eq!(parsed, expected_message);
+
+        packet.metadata.severity = LogLevelFilter::Warn as i32;
+        buffer = &packet.as_bytes()[..METADATA_SIZE + 2];
+        parsed = Message::from_logger(buffer).unwrap();
+        expected_message.severity = Severity::Warn;
+
+        assert_eq!(parsed, expected_message);
+
+        packet.metadata.severity = LogLevelFilter::Error as i32;
+        buffer = &packet.as_bytes()[..METADATA_SIZE + 2];
+        parsed = Message::from_logger(buffer).unwrap();
+        expected_message.severity = Severity::Error;
+
+        assert_eq!(parsed, expected_message);
+    }
+
+    #[test]
+    fn legacy_message_severity() {
+        let mut packet = test_packet();
+        // legacy verbosity where v=10
+        packet.metadata.severity = LogLevelFilter::Info as i32 - 10;
+        packet.data[0] = 0; // tag size
+        packet.data[1] = 0; // null terminated
+
+        let mut buffer = &packet.as_bytes()[..METADATA_SIZE + 2]; // tag size + null
+        let mut parsed = Message::from_logger(buffer).unwrap();
+        let mut expected_message = Message {
+            size: METADATA_SIZE + 1,
+            pid: packet.metadata.pid,
+            tid: packet.metadata.tid,
+            time: zx::Time::from_nanos(packet.metadata.time),
+            severity: Severity::Verbose(10),
+            dropped_logs: packet.metadata.dropped_logs as usize,
+            tags: vec![],
+            contents: String::new(),
+        };
+
+        assert_eq!(parsed, expected_message);
+
+        // legacy verbosity where v=2
+        packet.metadata.severity = LogLevelFilter::Info as i32 - 2;
+        buffer = &packet.as_bytes()[..METADATA_SIZE + 2];
+        parsed = Message::from_logger(buffer).unwrap();
+        expected_message.severity = Severity::Verbose(2);
+
+        assert_eq!(parsed, expected_message);
+
+        // legacy verbosity where v=1
+        packet.metadata.severity = LogLevelFilter::Info as i32 - 1;
+        buffer = &packet.as_bytes()[..METADATA_SIZE + 2];
+        parsed = Message::from_logger(buffer).unwrap();
+        expected_message.severity = Severity::Verbose(1);
+
+        assert_eq!(parsed, expected_message);
+
+        packet.metadata.severity = 0; // legacy severity
+        buffer = &packet.as_bytes()[..METADATA_SIZE + 2];
+        parsed = Message::from_logger(buffer).unwrap();
+        expected_message.severity = Severity::Info;
+
+        assert_eq!(parsed, expected_message);
+
+        packet.metadata.severity = 1; // legacy severity
+        buffer = &packet.as_bytes()[..METADATA_SIZE + 2];
+        parsed = Message::from_logger(buffer).unwrap();
+        expected_message.severity = Severity::Warn;
+
+        assert_eq!(parsed, expected_message);
     }
 }

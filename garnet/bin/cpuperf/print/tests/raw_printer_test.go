@@ -39,7 +39,7 @@ func TestRawPrinter(t *testing.T) {
 
 	// Pass --quiet so INFO lines, which contain source line numbers
 	// and the output path prefix, won't cause erroneous failures.
-	args := []string{"--session=" + sessionSpecPath, "--quiet"}
+	args := []string{"--session=" + sessionSpecPath, "--quiet", "--log-file=test.log"}
 	err = runCommandWithOutputToFile(printerProgramPath, args,
 		outputFile)
 	if err != nil {

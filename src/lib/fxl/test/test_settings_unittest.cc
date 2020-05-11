@@ -10,6 +10,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "sdk/lib/syslog/cpp/log_level.h"
 #include "src/lib/files/unique_fd.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings.h"
@@ -57,13 +58,13 @@ TEST_F(TestSettingsFixture, RandomSeed) {
 }
 
 TEST_F(TestSettingsFixture, LogLevel) {
-  EXPECT_TRUE(SetTestSettings(CommandLineFromInitializerList({"argv0", "--verbose=21"})));
-  EXPECT_EQ(GetMinLogLevel(), -21);
+  EXPECT_TRUE(SetTestSettings(CommandLineFromInitializerList({"argv0", "--verbose=10"})));
+  EXPECT_EQ(GetMinLogLevel(), 0x26);  // INFO(0x30) - 10
   // The value for --quiet needs to be smaller than LOG_FATAL because
   // min_log_level is capped at LOG_FATAL.
   const char *argv[] = {"argv0", "--quiet=2", nullptr};
   EXPECT_TRUE(SetTestSettings(2, argv));
-  EXPECT_EQ(GetMinLogLevel(), 2);
+  EXPECT_EQ(GetMinLogLevel(), LOG_ERROR);
 }
 
 }  // namespace

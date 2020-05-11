@@ -65,6 +65,7 @@ zx_status_t fx_logger::Reconfigure(const fx_logger_config_t* config) {
     // We don't expect to have a console fd and a socket at the same time.
     ZX_DEBUG_ASSERT(fd_to_close_ != socket_.is_valid());
   }
+
   SetSeverity(config->min_severity);
   return SetTags(config->tags, config->num_tags);
 }
@@ -167,6 +168,12 @@ zx_status_t fx_logger::VLogWriteToFd(int fd, fx_log_severity_t severity, const c
   }
   buf.Append("]");
   switch (severity) {
+    case FX_LOG_TRACE:
+      buf.Append(" TRACE");
+      break;
+    case FX_LOG_DEBUG:
+      buf.Append(" DEBUG");
+      break;
     case FX_LOG_INFO:
       buf.Append(" INFO");
       break;
@@ -180,7 +187,7 @@ zx_status_t fx_logger::VLogWriteToFd(int fd, fx_log_severity_t severity, const c
       buf.Append(" FATAL");
       break;
     default:
-      buf.AppendPrintf(" VLOG(%d)", -severity);
+      buf.AppendPrintf(" VLOG(%d)", (FX_LOG_INFO - severity));
   }
   buf.Append(": ");
 
@@ -203,7 +210,7 @@ zx_status_t fx_logger::VLogWriteToFd(int fd, fx_log_severity_t severity, const c
 
 zx_status_t fx_logger::VLogWrite(fx_log_severity_t severity, const char* tag, const char* msg,
                                  va_list args, bool perform_format) {
-  if (msg == NULL || severity > FX_LOG_FATAL) {
+  if (msg == NULL || severity > (FX_LOG_SEVERITY_MAX * FX_LOG_SEVERITY_STEP_SIZE)) {
     return ZX_ERR_INVALID_ARGS;
   }
   if (GetSeverity() > severity) {

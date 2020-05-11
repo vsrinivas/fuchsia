@@ -211,7 +211,7 @@ TEST(RunTest, ParseArgs) {
     EXPECT_EQ(argv[3], result.launch_info.arguments->at(0));
     EXPECT_EQ(argv[4], result.launch_info.arguments->at(1));
     EXPECT_EQ("", result.realm_label);
-    EXPECT_EQ(-2, result.min_log_severity);
+    EXPECT_EQ(FX_LOG_TRACE, result.min_log_severity);
     EXPECT_FALSE(result.restrict_logs);
   }
 

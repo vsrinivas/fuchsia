@@ -7,7 +7,7 @@ declare_args() {
 }
 
 if (camera_debug) {
-  camera_debug_define = "LOG_DEBUG=LOG_LEVEL(0)"
+  camera_debug_define = "FX_LOG_SEVERITY_DEFAULT=(FX_LOG_DEBUG)"
 } else {
-  camera_debug_define = "LOG_DEBUG=LOG_LEVEL(-1)"
+  camera_debug_define = "FX_LOG_SEVERITY_DEFAULT=(FX_LOG_INFO)"
 }

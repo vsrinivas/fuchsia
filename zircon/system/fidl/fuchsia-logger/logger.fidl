@@ -6,13 +6,43 @@ library fuchsia.logger;
 
 using zx;
 
+/// Log levels used with log related filtering.
+/// Filtering uses a heuristic based on a threshold of
+/// minimum severity level - with any log equal to or
+/// greater than the threshold being included in the
+/// printable logs.
 enum LogLevelFilter : int8 {
-    NONE = -1;
-    INFO = 0;
-    WARN = 1;
-    ERROR = 2;
-    FATAL = 3;
+    [Deprecated = "Use NONE instead"]
+    DEPRECATED_NONE = -1;
+    [Deprecated = "Use INFO instead"]
+    DEPRECATED_INFO = 0;
+    [Deprecated = "Use WARN instead"]
+    DEPRECATED_WARN = 1;
+    [Deprecated = "Use ERROR instead"]
+    DEPRECATED_ERROR = 2;
+    [Deprecated = "Use FATAL instead"]
+    DEPRECATED_FATAL = 3;
+    ALL = -0x7F;
+    TRACE = 0x10;
+    DEBUG = 0x20;
+    INFO = 0x30;
+    WARN = 0x40;
+    ERROR = 0x50;
+    FATAL = 0x60;
+    NONE = 0x7F;
 };
+
+/// The interval between discrete log severity levels
+const uint8 LOG_SEVERITY_STEP_SIZE = 0x10;
+
+/// Maximum available log severity.
+const uint8 LOG_SEVERITY_MAX_STEP = 6;
+
+/// The interval between discrete log verbosity levels
+const uint8 LOG_VERBOSITY_STEP_SIZE = 0x1;
+
+/// Default log level used to initialize loggers.
+const uint8 LOG_LEVEL_DEFAULT = 0x30; // LogLevel.INFO
 
 /// Max number of tags that can be passed to filter by listener.
 const uint8 MAX_TAGS = 5;
@@ -31,6 +61,7 @@ struct LogFilterOptions {
     /// `min_severity` would be ignored.
     uint8 verbosity;
 
+    /// Severity used as threshold to determine logging level.
     LogLevelFilter min_severity;
 
     /// If non-empty, return all messages which contain at least one specified
