@@ -19,7 +19,7 @@ const MAX_NAME_LENGTH: usize = 100;
 const MAX_URL_LENGTH: usize = 4096;
 
 /// Enum type that can represent any error encountered during validation.
-#[derive(Debug, Error)]
+#[derive(Debug, Error, PartialEq)]
 pub enum Error {
     #[error("{} missing {}", .0.decl, .0.field)]
     MissingField(DeclField),
@@ -51,8 +51,8 @@ pub enum Error {
     MultipleRunnersSpecified(String),
     #[error("a dependency cycle exists between resolver registrations")]
     ResolverDependencyCycle,
-    #[error("a dependency cycle exists between offer declarations")]
-    OfferDependencyCycle,
+    #[error("dependency cycle(s) exists between offer declarations: {0}")]
+    OfferDependencyCycle(String),
     #[error("{} \"{}\" path overlaps with {} \"{}\"", decl, path, other_decl, other_path)]
     InvalidPathOverlap { decl: DeclField, path: String, other_decl: DeclField, other_path: String },
 }
@@ -167,8 +167,9 @@ impl Error {
         Error::ResolverDependencyCycle
     }
 
-    pub fn offer_dependency_cycle() -> Self {
-        Error::OfferDependencyCycle
+    pub fn offer_dependency_cycle(error: directed_graph::Error<&str>) -> Self {
+        // Convert the &strs into Strings
+        Error::OfferDependencyCycle(error.format_cycle())
     }
 
     pub fn invalid_path_overlap(
@@ -186,7 +187,7 @@ impl Error {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct DeclField {
     pub decl: String,
     pub field: String,
@@ -199,7 +200,7 @@ impl fmt::Display for DeclField {
 }
 
 /// Represents a list of errors encountered durlng validation.
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct ErrorList {
     errs: Vec<Error>,
 }
@@ -366,8 +367,8 @@ impl<'a> ValidationContext<'a> {
             for offer in offers.iter() {
                 self.validate_offers_decl(&offer);
             }
-            if let Err(_) = self.strong_dependencies.topological_sort() {
-                self.errors.push(Error::offer_dependency_cycle());
+            if let Err(e) = self.strong_dependencies.topological_sort() {
+                self.errors.push(Error::offer_dependency_cycle(e));
             }
         }
 
@@ -1766,7 +1767,7 @@ mod tests {
 
     fn validate_test(input: ComponentDecl, expected_res: Result<(), ErrorList>) {
         let res = validate(&input);
-        assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
+        assert_eq!(res, expected_res);
     }
 
     fn validate_test_any_result(input: ComponentDecl, expected_res: Vec<Result<(), ErrorList>>) {
@@ -1940,7 +1941,8 @@ mod tests {
                     decl.offers = Some(offers);
                     decl.children = Some(children);
                     let result = Err(ErrorList::new(vec![
-                        Error::offer_dependency_cycle(),
+                        Error::offer_dependency_cycle(
+                            directed_graph::Error::CyclesDetected([vec!["a", "b", "a"]].iter().cloned().collect())),
                     ]));
                     validate_test(decl, result);
                 }
@@ -4047,7 +4049,7 @@ mod tests {
                 decl
             },
             result = Err(ErrorList::new(vec![
-                Error::offer_dependency_cycle(),
+                Error::offer_dependency_cycle(directed_graph::Error::CyclesDetected([vec!["a", "b", "c", "a"], vec!["b", "d", "b"]].iter().cloned().collect())),
             ])),
         },
 
