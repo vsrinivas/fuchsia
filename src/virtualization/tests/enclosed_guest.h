@@ -197,7 +197,11 @@ class TerminaEnclosedGuest : public EnclosedGuest, public vm_tools::StartupListe
 
 // Termina guests should be added here once they're stable in CQ.
 using AllGuestTypes =
-    ::testing::Types<ZirconEnclosedGuest, SingleCpuEnclosedGuest<ZirconEnclosedGuest>,
-                     DebianEnclosedGuest, SingleCpuEnclosedGuest<DebianEnclosedGuest>>;
+    ::testing::Types<ZirconEnclosedGuest, SingleCpuEnclosedGuest<ZirconEnclosedGuest>
+#if __x86_64__
+                     ,
+                     DebianEnclosedGuest, SingleCpuEnclosedGuest<DebianEnclosedGuest>
+#endif  // __x86_64__
+                     >;
 
 #endif  // SRC_VIRTUALIZATION_TESTS_ENCLOSED_GUEST_H_

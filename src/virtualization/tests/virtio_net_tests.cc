@@ -40,30 +40,7 @@ static constexpr fuchsia::virtualization::NetSpec kSecondNicNetSpec = {
 };
 static constexpr char kDefaultMacString[] = "02:1a:11:00:01:00";
 static constexpr char kSecondNicMacString[] = "02:1a:11:00:01:01";
-static constexpr char kHostMacString[] = "02:1a:11:00:00:00";
-
-class VirtioNetMultipleInterfacesZirconGuest : public ZirconEnclosedGuest {
- public:
-  zx_status_t LaunchInfo(fuchsia::virtualization::LaunchInfo* launch_info) override {
-    launch_info->url = kZirconGuestUrl;
-    launch_info->guest_config.set_virtio_gpu(false);
-    // Disable netsvc to avoid spamming the net device with logs.
-    launch_info->guest_config.mutable_cmdline_add()->push_back(
-        "kernel.serial=none netsvc.disable=true");
-    launch_info->guest_config.mutable_net_devices()->emplace_back(kSecondNicNetSpec);
-    return ZX_OK;
-  }
-};
-
-class VirtioNetMultipleInterfacesDebianGuest : public DebianEnclosedGuest {
- public:
-  zx_status_t LaunchInfo(fuchsia::virtualization::LaunchInfo* launch_info) override {
-    launch_info->url = kDebianGuestUrl;
-    launch_info->guest_config.set_virtio_gpu(false);
-    launch_info->guest_config.mutable_net_devices()->emplace_back(kSecondNicNetSpec);
-    return ZX_OK;
-  }
-};
+__UNUSED static constexpr char kHostMacString[] = "02:1a:11:00:00:00";
 
 static void TestThread(fuchsia::hardware::ethernet::MacAddress mac_addr, FakeNetstack* netstack,
                        uint8_t receive_byte, uint8_t send_byte, bool use_raw_packets) {
@@ -104,6 +81,66 @@ static void TestThread(fuchsia::hardware::ethernet::MacAddress mac_addr, FakeNet
   auto result = fit::run_single_threaded(std::move(promise));
   ASSERT_TRUE(result.is_ok());
 }
+
+class VirtioNetMultipleInterfacesZirconGuest : public ZirconEnclosedGuest {
+ public:
+  zx_status_t LaunchInfo(fuchsia::virtualization::LaunchInfo* launch_info) override {
+    launch_info->url = kZirconGuestUrl;
+    launch_info->guest_config.set_virtio_gpu(false);
+    // Disable netsvc to avoid spamming the net device with logs.
+    launch_info->guest_config.mutable_cmdline_add()->push_back(
+        "kernel.serial=none netsvc.disable=true");
+    launch_info->guest_config.mutable_net_devices()->emplace_back(kSecondNicNetSpec);
+    return ZX_OK;
+  }
+};
+
+using VirtioNetMultipleInterfacesZirconGuestTest =
+    GuestTest<VirtioNetMultipleInterfacesZirconGuest>;
+
+TEST_F(VirtioNetMultipleInterfacesZirconGuestTest, ReceiveAndSend) {
+  // Loop back some data over the default network interface to verify that it is functional.
+  auto handle = std::async(std::launch::async, [this] {
+    FakeNetstack* netstack = this->GetEnclosedGuest()->GetNetstack();
+    TestThread(kDefaultMacAddress, netstack, 0xab, 0xba, true /* use_raw_packets */);
+  });
+
+  std::string result;
+  EXPECT_EQ(this->RunUtil(kVirtioNetUtil,
+                          {fxl::StringPrintf("%u", 0xab), fxl::StringPrintf("%u", 0xba),
+                           fxl::StringPrintf("%zu", kTestPacketSize), kDefaultMacString},
+                          &result),
+            ZX_OK);
+  EXPECT_THAT(result, HasSubstr("PASS"));
+
+  handle.wait();
+
+  // Ensure that the guest's second NIC works as well.
+  handle = std::async(std::launch::async, [this] {
+    FakeNetstack* netstack = this->GetEnclosedGuest()->GetNetstack();
+    TestThread(kSecondNicMacAddress, netstack, 0xcd, 0xdc, true /* use_raw_packets */);
+  });
+
+  EXPECT_EQ(this->RunUtil(kVirtioNetUtil,
+                          {fxl::StringPrintf("%u", 0xcd), fxl::StringPrintf("%u", 0xdc),
+                           fxl::StringPrintf("%zu", kTestPacketSize), kSecondNicMacString},
+                          &result),
+            ZX_OK);
+  EXPECT_THAT(result, HasSubstr("PASS"));
+
+  handle.wait();
+}
+
+#if __x86_64__
+class VirtioNetMultipleInterfacesDebianGuest : public DebianEnclosedGuest {
+ public:
+  zx_status_t LaunchInfo(fuchsia::virtualization::LaunchInfo* launch_info) override {
+    launch_info->url = kDebianGuestUrl;
+    launch_info->guest_config.set_virtio_gpu(false);
+    launch_info->guest_config.mutable_net_devices()->emplace_back(kSecondNicNetSpec);
+    return ZX_OK;
+  }
+};
 
 using VirtioNetMultipleInterfacesDebianGuestTest =
     GuestTest<VirtioNetMultipleInterfacesDebianGuest>;
@@ -184,39 +221,4 @@ TEST_F(VirtioNetMultipleInterfacesDebianGuestTest, ReceiveAndSend) {
 
   handle.wait();
 }
-
-using VirtioNetMultipleInterfacesZirconGuestTest =
-    GuestTest<VirtioNetMultipleInterfacesZirconGuest>;
-
-TEST_F(VirtioNetMultipleInterfacesZirconGuestTest, ReceiveAndSend) {
-  // Loop back some data over the default network interface to verify that it is functional.
-  auto handle = std::async(std::launch::async, [this] {
-    FakeNetstack* netstack = this->GetEnclosedGuest()->GetNetstack();
-    TestThread(kDefaultMacAddress, netstack, 0xab, 0xba, true /* use_raw_packets */);
-  });
-
-  std::string result;
-  EXPECT_EQ(this->RunUtil(kVirtioNetUtil,
-                          {fxl::StringPrintf("%u", 0xab), fxl::StringPrintf("%u", 0xba),
-                           fxl::StringPrintf("%zu", kTestPacketSize), kDefaultMacString},
-                          &result),
-            ZX_OK);
-  EXPECT_THAT(result, HasSubstr("PASS"));
-
-  handle.wait();
-
-  // Ensure that the guest's second NIC works as well.
-  handle = std::async(std::launch::async, [this] {
-    FakeNetstack* netstack = this->GetEnclosedGuest()->GetNetstack();
-    TestThread(kSecondNicMacAddress, netstack, 0xcd, 0xdc, true /* use_raw_packets */);
-  });
-
-  EXPECT_EQ(this->RunUtil(kVirtioNetUtil,
-                          {fxl::StringPrintf("%u", 0xcd), fxl::StringPrintf("%u", 0xdc),
-                           fxl::StringPrintf("%zu", kTestPacketSize), kSecondNicMacString},
-                          &result),
-            ZX_OK);
-  EXPECT_THAT(result, HasSubstr("PASS"));
-
-  handle.wait();
-}
+#endif  // __x86_64__

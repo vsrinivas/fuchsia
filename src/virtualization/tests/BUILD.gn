@@ -281,7 +281,7 @@ test_package("guest_integration_tests") {
       name = "guest_integration_tests"
 
       # TODO(fxbug.dev/50820): Fix on ASan and switch back to [ nuc_env ].
-      environments = nuc_env_fails_on_asan
+      environments = nuc_env_fails_on_asan + [ sherlock_env ]
     },
   ]
 }

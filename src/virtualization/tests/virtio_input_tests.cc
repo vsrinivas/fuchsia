@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <gtest/gtest.h>
-
 #include <string>
+
+#include <gtest/gtest.h>
 
 #include "src/virtualization/tests/enclosed_guest.h"
 #include "src/virtualization/tests/fake_scenic.h"
@@ -12,6 +12,7 @@
 
 namespace {
 
+#if __x86_64__
 // Create an alias, as "TEST_F" requires the fixture name to be a valid C token.
 using VirtioInputDebianGuestTest = GuestTest<DebianEnclosedGuest>;
 
@@ -38,5 +39,6 @@ TEST_F(VirtioInputDebianGuestTest, Input) {
   std::string result;
   EXPECT_EQ(guest_console->WaitForMarker("PASS", &result), ZX_OK);
 }
+#endif  // __x86_64__
 
 }  // namespace
