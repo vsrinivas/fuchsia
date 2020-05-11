@@ -7,8 +7,8 @@ package main
 import (
 	"context"
 	"log"
+	"sync"
 	"syscall/zx"
-	"syscall/zx/dispatch"
 	"syscall/zx/fdio"
 	"syscall/zx/fidl"
 
@@ -107,21 +107,21 @@ func (echo *echoImpl) EchoStructNoRetVal(_ fidl.Context, value compatibility.Str
 					log.Fatalf("ExpectEchoEvent failed: %s while communicating with %s", err, forwardURL)
 					return
 				}
-				for _, key := range echoService.BindingKeys() {
-					if pxy, ok := echoService.EventProxyFor(key); ok {
-						pxy.EchoEvent(value)
-					}
+				mu.Lock()
+				for pxy := range mu.proxies {
+					_ = pxy.EchoEvent(value)
 				}
+				mu.Unlock()
 				break
 			}
 		}()
 		echoWithCtxInterface.EchoStructNoRetVal(context.Background(), value, "")
 	} else {
-		for _, key := range echoService.BindingKeys() {
-			if pxy, ok := echoService.EventProxyFor(key); ok {
-				pxy.EchoEvent(value)
-			}
+		mu.Lock()
+		for pxy := range mu.proxies {
+			_ = pxy.EchoEvent(value)
 		}
+		mu.Unlock()
 	}
 	return nil
 }
@@ -287,27 +287,43 @@ func (echo *echoImpl) EchoXunionsWithError(_ fidl.Context, value []compatibility
 	return response, nil
 }
 
-var echoService compatibility.EchoService
+var mu struct {
+	sync.Mutex
+
+	proxies map[*compatibility.EchoEventProxy]struct{}
+}
+
+func init() {
+	mu.proxies = make(map[*compatibility.EchoEventProxy]struct{})
+}
 
 func main() {
+	log.SetFlags(log.Lshortfile)
+
 	ctx := component.NewContextFromStartupInfo()
 
+	stub := compatibility.EchoWithCtxStub{Impl: &echoImpl{ctx: ctx}}
 	ctx.OutgoingService.AddService(
 		compatibility.EchoName,
-		&compatibility.EchoWithCtxStub{Impl: &echoImpl{ctx: ctx}},
-		func(s fidl.Stub, c zx.Channel, ctx fidl.Context) error {
-			d, ok := dispatch.GetDispatcher(ctx)
-			if !ok {
-				panic("no dispatcher on FIDL context")
-			}
-			_, err := echoService.BindingSet.AddToDispatcher(s, c, d, nil)
-			return err
+		func(ctx fidl.Context, c zx.Channel) error {
+			pxy := compatibility.EchoEventProxy{Channel: c}
+			mu.Lock()
+			mu.proxies[&pxy] = struct{}{}
+			mu.Unlock()
+
+			go func() {
+				defer func() {
+					mu.Lock()
+					delete(mu.proxies, &pxy)
+					mu.Unlock()
+				}()
+				component.ServeExclusive(ctx, &stub, c, func(err error) {
+					log.Print(err)
+				})
+			}()
+			return nil
 		},
 	)
-	d, err := dispatch.NewDispatcher()
-	if err != nil {
-		log.Fatalf("couldn't initialize FIDL dispatcher: %s", err)
-	}
-	ctx.BindStartupHandle(d)
-	d.Serve()
+
+	ctx.BindStartupHandle(context.Background())
 }

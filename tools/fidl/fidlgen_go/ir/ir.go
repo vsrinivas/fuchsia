@@ -20,7 +20,6 @@ const (
 	ProxySuffix            = "Interface"
 	StubSuffix             = "Stub"
 	EventProxySuffix       = "EventProxy"
-	ServiceSuffix          = "Service"
 	TransitionalBaseSuffix = "TransitionalBase"
 	ServiceNameSuffix      = "Name"
 	RequestSuffix          = "InterfaceRequest"
@@ -322,9 +321,6 @@ type Protocol struct {
 
 	// RequestName is the name of the protocol request type for this FIDL protocol.
 	RequestName string
-
-	// ServerName is the name of the server type for this FIDL protocol.
-	ServerName string
 
 	// ServiceNameString is the string service name for this FIDL protocol.
 	ServiceNameString string
@@ -974,7 +970,6 @@ func (c *compiler) compileProtocol(val types.Protocol) Protocol {
 		StubName:             c.compileCompoundIdentifier(val.Name, true, WithCtxSuffix+StubSuffix),
 		RequestName:          c.compileCompoundIdentifier(val.Name, true, WithCtxSuffix+RequestSuffix),
 		EventProxyName:       c.compileCompoundIdentifier(val.Name, true, EventProxySuffix),
-		ServerName:           c.compileCompoundIdentifier(val.Name, true, ServiceSuffix),
 		ServiceNameConstant:  c.compileCompoundIdentifier(val.Name, true, ServiceNameSuffix),
 		ServiceNameString:    val.GetServiceName(),
 	}

@@ -216,13 +216,4 @@ func (s_ *SimpleProtocolWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bi
 	return nil, false, _bindings.ErrUnknownOrdinal
 }
 
-type SimpleProtocolService struct {
-	_bindings.BindingSet
-}
-
-func (s *SimpleProtocolService) EventProxyFor(key _bindings.BindingKey) (*SimpleProtocolEventProxy, bool) {
-	pxy, err := s.BindingSet.ProxyFor(key)
-	return (*SimpleProtocolEventProxy)(pxy), err
-}
-
 type SimpleProtocolEventProxy _bindings.ChannelProxy

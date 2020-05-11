@@ -519,15 +519,6 @@ func (s_ *WithAndWithoutRequestResponseWithCtxStub) Dispatch(args_ _bindings.Dis
 	return nil, false, _bindings.ErrUnknownOrdinal
 }
 
-type WithAndWithoutRequestResponseService struct {
-	_bindings.BindingSet
-}
-
-func (s *WithAndWithoutRequestResponseService) EventProxyFor(key _bindings.BindingKey) (*WithAndWithoutRequestResponseEventProxy, bool) {
-	pxy, err := s.BindingSet.ProxyFor(key)
-	return (*WithAndWithoutRequestResponseEventProxy)(pxy), err
-}
-
 type WithAndWithoutRequestResponseEventProxy _bindings.ChannelProxy
 
 func (p *WithAndWithoutRequestResponseEventProxy) OnEmptyResponse() error {
@@ -617,15 +608,6 @@ func (s_ *WithErrorSyntaxWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_b
 		return &out_, true, err_
 	}
 	return nil, false, _bindings.ErrUnknownOrdinal
-}
-
-type WithErrorSyntaxService struct {
-	_bindings.BindingSet
-}
-
-func (s *WithErrorSyntaxService) EventProxyFor(key _bindings.BindingKey) (*WithErrorSyntaxEventProxy, bool) {
-	pxy, err := s.BindingSet.ProxyFor(key)
-	return (*WithErrorSyntaxEventProxy)(pxy), err
 }
 
 type WithErrorSyntaxEventProxy _bindings.ChannelProxy
@@ -743,15 +725,6 @@ func (s_ *ChannelProtocolWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_b
 		return &out_, true, err_
 	}
 	return nil, false, _bindings.ErrUnknownOrdinal
-}
-
-type ChannelProtocolService struct {
-	_bindings.BindingSet
-}
-
-func (s *ChannelProtocolService) EventProxyFor(key _bindings.BindingKey) (*ChannelProtocolEventProxy, bool) {
-	pxy, err := s.BindingSet.ProxyFor(key)
-	return (*ChannelProtocolEventProxy)(pxy), err
 }
 
 type ChannelProtocolEventProxy _bindings.ChannelProxy

@@ -104,15 +104,6 @@ func (s_ *SuperWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Me
 	return nil, false, _bindings.ErrUnknownOrdinal
 }
 
-type SuperService struct {
-	_bindings.BindingSet
-}
-
-func (s *SuperService) EventProxyFor(key _bindings.BindingKey) (*SuperEventProxy, bool) {
-	pxy, err := s.BindingSet.ProxyFor(key)
-	return (*SuperEventProxy)(pxy), err
-}
-
 type SuperEventProxy _bindings.ChannelProxy
 
 const (
@@ -167,15 +158,6 @@ func (s_ *SubWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Mess
 		return &out_, true, err_
 	}
 	return nil, false, _bindings.ErrUnknownOrdinal
-}
-
-type SubService struct {
-	_bindings.BindingSet
-}
-
-func (s *SubService) EventProxyFor(key _bindings.BindingKey) (*SubEventProxy, bool) {
-	pxy, err := s.BindingSet.ProxyFor(key)
-	return (*SubEventProxy)(pxy), err
 }
 
 type SubEventProxy _bindings.ChannelProxy

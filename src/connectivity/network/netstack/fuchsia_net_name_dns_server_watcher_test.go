@@ -7,7 +7,6 @@ package netstack
 import (
 	"context"
 	"sync"
-	"syscall/zx/dispatch"
 	"testing"
 	"time"
 
@@ -58,8 +57,8 @@ func makeDnsServer(address net.SocketAddress, source name.DnsServerSource) name.
 	return s
 }
 
-func createCollection(dispatcher *dispatch.Dispatcher) *dnsServerWatcherCollection {
-	watcherCollection := newDnsServerWatcherCollection(dispatcher, dns.NewClient(nil))
+func createCollection() *dnsServerWatcherCollection {
+	watcherCollection := newDnsServerWatcherCollection(dns.NewClient(nil))
 	watcherCollection.dnsClient.SetOnServersChanged(watcherCollection.NotifyServersChanged)
 	return watcherCollection
 }
@@ -76,24 +75,7 @@ func bindWatcher(t *testing.T, watcherCollection *dnsServerWatcherCollection) *n
 }
 
 func TestDnsWatcherResolvesAndBlocks(t *testing.T) {
-	dispatcher, err := dispatch.NewDispatcher()
-	if err != nil {
-		t.Fatal(err)
-	}
-	var wg sync.WaitGroup
-	defer func() {
-		dispatcher.Close()
-		wg.Wait()
-	}()
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-
-		dispatcher.Serve()
-	}()
-
-	watcherCollection := createCollection(dispatcher)
+	watcherCollection := createCollection()
 	watcherCollection.dnsClient.SetDefaultServers([]tcpip.Address{defaultServerIpv4, defaultServerIpv6})
 
 	watcher := bindWatcher(t, watcherCollection)
@@ -147,17 +129,11 @@ func TestDnsWatcherResolvesAndBlocks(t *testing.T) {
 }
 
 func TestDnsWatcherCancelledContext(t *testing.T) {
-	dispatcher, err := dispatch.NewDispatcher()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer dispatcher.Close()
+	watcherCollection := createCollection()
 
-	watcherCollection := createCollection(dispatcher)
 	watcher := dnsServerWatcher{
-		dnsClient:  watcherCollection.dnsClient,
-		dispatcher: watcherCollection.dispatcher,
-		broadcast:  &watcherCollection.broadcast,
+		dnsClient: watcherCollection.dnsClient,
+		broadcast: &watcherCollection.broadcast,
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -179,12 +155,7 @@ func TestDnsWatcherCancelledContext(t *testing.T) {
 
 func TestDnsWatcherDisallowMultiplePending(t *testing.T) {
 	t.Skip("Go bindings don't currently support simultaneous calls, test is invalid.")
-	dispatcher, err := dispatch.NewDispatcher()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer dispatcher.Close()
-	watcherCollection := createCollection(dispatcher)
+	watcherCollection := createCollection()
 
 	watcher := bindWatcher(t, watcherCollection)
 	defer func() {
@@ -197,34 +168,17 @@ func TestDnsWatcherDisallowMultiplePending(t *testing.T) {
 	for i := 0; i < 2; i++ {
 		wg.Add(1)
 		go func() {
-			defer wg.Done()
 			_, err := watcher.WatchServers(context.Background())
 			if err == nil {
 				t.Errorf("non-nil error watching servers, expected error")
 			}
+			wg.Done()
 		}()
 	}
 }
 
 func TestDnsWatcherMultipleWatchers(t *testing.T) {
-	dispatcher, err := dispatch.NewDispatcher()
-	if err != nil {
-		t.Fatal(err)
-	}
-	var wg sync.WaitGroup
-	defer func() {
-		dispatcher.Close()
-		wg.Wait()
-	}()
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-
-		dispatcher.Serve()
-	}()
-
-	watcherCollection := createCollection(dispatcher)
+	watcherCollection := createCollection()
 
 	watcher1 := bindWatcher(t, watcherCollection)
 	defer func() {
@@ -236,31 +190,27 @@ func TestDnsWatcherMultipleWatchers(t *testing.T) {
 		_ = watcher2.Close()
 	}()
 
-	func() {
-		// Wait for these goroutines to do their thing before allowing the outer
-		// defers to tear down the watchers.
-		var wg sync.WaitGroup
-		defer wg.Wait()
+	var wg sync.WaitGroup
+	defer wg.Wait()
 
-		for _, watcher := range []*name.DnsServerWatcherWithCtxInterface{watcher1, watcher2} {
-			wg.Add(1)
-			go func(watcher *name.DnsServerWatcherWithCtxInterface) {
-				defer wg.Done()
-				servers, err := watcher.WatchServers(context.Background())
-				if err != nil {
-					t.Errorf("WatchServers failed: %s", err)
-					return
-				}
-				if diff := cmp.Diff([]name.DnsServer{
-					makeDnsServer(defaultServerIPv4SocketAddress, staticDnsSource),
-				}, servers, cmpopts.IgnoreTypes(struct{}{})); diff != "" {
-					t.Errorf("WatchServers() mismatch (-want +got):\n%s", diff)
-				}
-			}(watcher)
-		}
+	for _, watcher := range []*name.DnsServerWatcherWithCtxInterface{watcher1, watcher2} {
+		wg.Add(1)
+		go func(watcher *name.DnsServerWatcherWithCtxInterface) {
+			defer wg.Done()
+			servers, err := watcher.WatchServers(context.Background())
+			if err != nil {
+				t.Errorf("WatchServers failed: %s", err)
+				return
+			}
+			if diff := cmp.Diff([]name.DnsServer{
+				makeDnsServer(defaultServerIPv4SocketAddress, staticDnsSource),
+			}, servers, cmpopts.IgnoreTypes(struct{}{})); diff != "" {
+				t.Errorf("WatchServers() mismatch (-want +got):\n%s", diff)
+			}
+		}(watcher)
+	}
 
-		watcherCollection.dnsClient.SetDefaultServers([]tcpip.Address{defaultServerIpv4})
-	}()
+	watcherCollection.dnsClient.SetDefaultServers([]tcpip.Address{defaultServerIpv4})
 }
 
 func TestDnsWatcherServerListEquality(t *testing.T) {
@@ -303,24 +253,7 @@ func TestDnsWatcherServerListEquality(t *testing.T) {
 }
 
 func TestDnsWatcherDifferentAddressTypes(t *testing.T) {
-	dispatcher, err := dispatch.NewDispatcher()
-	if err != nil {
-		t.Fatal(err)
-	}
-	var wg sync.WaitGroup
-	defer func() {
-		dispatcher.Close()
-		wg.Wait()
-	}()
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-
-		dispatcher.Serve()
-	}()
-
-	watcherCollection := createCollection(dispatcher)
+	watcherCollection := createCollection()
 	watcher := bindWatcher(t, watcherCollection)
 	defer func() {
 		_ = watcher.Close()

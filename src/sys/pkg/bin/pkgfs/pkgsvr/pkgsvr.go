@@ -5,6 +5,7 @@
 package pkgsvr
 
 import (
+	"context"
 	"flag"
 	"log"
 	"syscall"
@@ -71,4 +72,5 @@ func Main() {
 	if err := fs.Serve(zx.Channel(h)); err != nil {
 		log.Fatalf("pkgfs: serve failed on startup handle: %s", err)
 	}
+	component.NewContextFromStartupInfo().BindStartupHandle(context.Background())
 }

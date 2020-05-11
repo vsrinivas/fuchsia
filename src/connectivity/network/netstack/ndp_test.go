@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"netstack/dns"
 	"syscall/zx"
-	"syscall/zx/dispatch"
 	"syscall/zx/zxwait"
 	"testing"
 	"time"
@@ -123,11 +122,6 @@ func TestSendingOnInterfacesChangedEvent(t *testing.T) {
 			ndpDisp := newNDPDispatcherForTest()
 			ns := newNetstackWithNDPDispatcher(t, ndpDisp)
 			ndpDisp.start(ctx)
-			dispatcher, err := dispatch.NewDispatcher()
-			if err != nil {
-				t.Fatalf("couldn't create FIDL dispatcher: %s", err)
-			}
-			defer dispatcher.Close()
 
 			eth := deviceForAddEth(ethernet.Info{}, t)
 			ifs, err := ns.addEth("/path", netstack.InterfaceConfig{Name: "name"}, &eth)
@@ -142,10 +136,16 @@ func TestSendingOnInterfacesChangedEvent(t *testing.T) {
 			if err != nil {
 				t.Fatalf("netstack.NewNetstackWithCtxInterfaceRequest(): %s", err)
 			}
-			defer cli.Close()
-			if _, err := ns.netstackService.BindingSet.AddToDispatcher(&netstack.NetstackWithCtxStub{Impl: &netstackImpl{ns: ns}}, req.ToChannel(), dispatcher, nil); err != nil {
-				t.Fatalf("netstackService.BindingSet.Add(_, _, nil): %s", err)
+			defer func() {
+				_ = cli.Close()
+			}()
+
+			pxy := netstack.NetstackEventProxy{Channel: req.Channel}
+			ns.netstackService.mu.Lock()
+			ns.netstackService.mu.proxies = map[*netstack.NetstackEventProxy]struct{}{
+				&pxy: {},
 			}
+			ns.netstackService.mu.Unlock()
 
 			// Send an event to ndpDisp that should trigger an OnInterfacesChanged
 			// event from the netstack.

@@ -146,15 +146,6 @@ func (s_ *EmptyProtocolWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bin
 	return nil, false, _bindings.ErrUnknownOrdinal
 }
 
-type EmptyProtocolService struct {
-	_bindings.BindingSet
-}
-
-func (s *EmptyProtocolService) EventProxyFor(key _bindings.BindingKey) (*EmptyProtocolEventProxy, bool) {
-	pxy, err := s.BindingSet.ProxyFor(key)
-	return (*EmptyProtocolEventProxy)(pxy), err
-}
-
 type EmptyProtocolEventProxy _bindings.ChannelProxy
 
 func (p *EmptyProtocolEventProxy) Receive(e Empty) error {

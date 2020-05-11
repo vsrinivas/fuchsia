@@ -11,7 +11,6 @@ import (
 	"sync"
 	"sync/atomic"
 	"syscall/zx"
-	"syscall/zx/dispatch"
 	"time"
 
 	"fuchsia.googlesource.com/syslog"
@@ -74,7 +73,7 @@ func ipv6LinkLocalOnLinkRoute(nicID tcpip.NICID) tcpip.Route {
 
 type stats struct {
 	tcpip.Stats
-	SocketCount      bindingSetCounterStat
+	SocketCount      tcpip.StatCounter
 	SocketsCreated   tcpip.StatCounter
 	SocketsDestroyed tcpip.StatCounter
 }
@@ -240,14 +239,18 @@ func (m *endpointsMap) Range(f func(key zx.Handle, value tcpip.Endpoint) bool) {
 
 // A Netstack tracks all of the running state of the network stack.
 type Netstack struct {
-	dnsClient       *dns.Client
-	nameProvider    *device.NameProviderWithCtxInterface
-	netstackService netstack.NetstackService
+	dnsClient    *dns.Client
+	nameProvider *device.NameProviderWithCtxInterface
+
+	netstackService struct {
+		mu struct {
+			sync.Mutex
+			proxies map[*netstack.NetstackEventProxy]struct{}
+		}
+	}
 
 	stack      *stack.Stack
 	routeTable routes.RouteTable
-
-	dispatcher *dispatch.Dispatcher
 
 	mu struct {
 		sync.Mutex
@@ -351,13 +354,13 @@ func (ns *Netstack) onInterfacesChanged() {
 	// TODO(NET-2078): Switch to the new NetInterface struct once Chromium stops
 	// using netstack.fidl.
 	interfaces := interfaces2ListToInterfacesList(interfaces2)
-	for _, key := range ns.netstackService.BindingKeys() {
-		if p, ok := ns.netstackService.EventProxyFor(key); ok {
-			if err := p.OnInterfacesChanged(interfaces); err != nil {
-				syslog.Warnf("OnInterfacesChanged failed: %v", err)
-			}
+	ns.netstackService.mu.Lock()
+	for pxy := range ns.netstackService.mu.proxies {
+		if err := pxy.OnInterfacesChanged(interfaces); err != nil {
+			syslog.Warnf("OnInterfacesChanged failed: %v", err)
 		}
 	}
+	ns.netstackService.mu.Unlock()
 }
 
 // AddRoute adds a single route to the route table in a sorted fashion.
@@ -807,8 +810,8 @@ func (ns *Netstack) Bridge(nics []tcpip.NICID) (*ifState, error) {
 	}, b, b, false, defaultInterfaceMetric, false /* enabled */)
 }
 
-func (ns *Netstack) addEth(topological_path string, config netstack.InterfaceConfig, device ethernet.DeviceWithCtx) (*ifState, error) {
-	client, err := eth.NewClient("netstack", topological_path, config.Filepath, device)
+func (ns *Netstack) addEth(topopath string, config netstack.InterfaceConfig, device ethernet.DeviceWithCtx) (*ifState, error) {
+	client, err := eth.NewClient("netstack", topopath, config.Filepath, device)
 	if err != nil {
 		return nil, err
 	}

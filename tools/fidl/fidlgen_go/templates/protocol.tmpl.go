@@ -228,17 +228,6 @@ func (s_ *{{ .StubName }}) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Mes
 	return nil, false, _bindings.ErrUnknownOrdinal
 }
 
-{{- if eq .ProxyType "ChannelProxy" }}
-type {{ .ServerName }} struct {
-	_bindings.BindingSet
-}
-
-func (s *{{ .ServerName }}) EventProxyFor(key _bindings.BindingKey) (*{{ .EventProxyName }}, bool) {
-	pxy, err := s.BindingSet.ProxyFor(key)
-	return (*{{ .EventProxyName }})(pxy), err
-}
-{{- end }}
-
 type {{ .EventProxyName }} _bindings.{{ .ProxyType }}
 {{ range .Methods }}
 {{- if .IsEvent }}

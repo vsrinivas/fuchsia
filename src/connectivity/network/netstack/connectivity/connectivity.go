@@ -7,7 +7,6 @@ package connectivity
 import (
 	"sync"
 	"syscall/zx"
-	"syscall/zx/dispatch"
 	"syscall/zx/fidl"
 
 	"fuchsia.googlesource.com/component"
@@ -20,40 +19,62 @@ import (
 	"fidl/fuchsia/netstack"
 )
 
-var service = &net.ConnectivityService{}
-var reachable = false
-var mu sync.Mutex
+var mu struct {
+	sync.Mutex
+	reachable bool
+	proxies   map[*net.ConnectivityEventProxy]struct{}
+}
 
-func AddOutgoingService(ctx *component.Context) error {
+func init() {
+	mu.proxies = make(map[*net.ConnectivityEventProxy]struct{})
+}
+
+func AddOutgoingService(ctx *component.Context) {
+	stub := net.ConnectivityWithCtxStub{Impl: struct{}{}}
 	ctx.OutgoingService.AddService(
 		net.ConnectivityName,
-		&net.ConnectivityWithCtxStub{Impl: struct{}{}},
-		func(s fidl.Stub, c zx.Channel, ctx fidl.Context) error {
-			d, ok := dispatch.GetDispatcher(ctx)
-			if !ok {
-				panic("no dispatcher on FIDL context")
+		func(ctx fidl.Context, c zx.Channel) error {
+			mu.Lock()
+			reachable := mu.reachable
+			mu.Unlock()
+
+			pxy := net.ConnectivityEventProxy{Channel: c}
+			if err := pxy.OnNetworkReachable(reachable); err != nil {
+				return err
 			}
-			k, err := service.BindingSet.AddToDispatcher(s, c, d, nil)
-			// Let clients know the status of the network when they get added.
-			if p, ok := service.EventProxyFor(k); ok {
-				p.OnNetworkReachable(reachable)
-			}
-			return err
+			mu.Lock()
+			mu.proxies[&pxy] = struct{}{}
+			mu.Unlock()
+
+			go func() {
+				defer func() {
+					mu.Lock()
+					delete(mu.proxies, &pxy)
+					mu.Unlock()
+				}()
+				component.ServeExclusive(ctx, &stub, c, func(err error) {
+					_ = syslog.Warnf("%s", err)
+				})
+			}()
+			return nil
 		},
 	)
-	return nil
 }
 
 // TODO(NET-1001): extract into a separate reachability service based on a
 // better network reachability signal.
 func InferAndNotify(ifs []netstack.NetInterface2) {
 	syslog.VLogf(syslog.TraceVerbosity, "inferring network reachability")
-	mu.Lock()
 	current := inferReachability(ifs)
-	if current != reachable {
+
+	mu.Lock()
+	if current != mu.reachable {
 		syslog.VLogf(syslog.TraceVerbosity, "notifying clients of new reachability status: %t", current)
-		reachable = current
-		notify(reachable)
+		mu.reachable = current
+
+		for pxy := range mu.proxies {
+			_ = pxy.OnNetworkReachable(current)
+		}
 	}
 	mu.Unlock()
 }
@@ -69,12 +90,4 @@ func inferReachability(ifs []netstack.NetInterface2) bool {
 		}
 	}
 	return false
-}
-
-func notify(reachable bool) {
-	for _, key := range service.BindingKeys() {
-		if p, ok := service.EventProxyFor(key); ok {
-			p.OnNetworkReachable(reachable)
-		}
-	}
 }

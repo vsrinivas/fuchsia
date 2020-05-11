@@ -303,17 +303,12 @@ func (f *Filesystem) DevicePath() string {
 // Serve starts a Directory protocol RPC server on the given channel.
 func (f *Filesystem) Serve(c zx.Channel) error {
 	// rpc.NewServer takes ownership of the Handle and will close it on error.
-	vfs, err := rpc.NewServer(f, zx.Handle(c))
+	_, err := rpc.NewServer(f, c)
 	if err != nil {
 		return fmt.Errorf("vfs server creation: %s", err)
 	}
 	f.mountInfo.serveChannel = c
 
-	// TODO(raggi): serve has no quit/shutdown path.
-	for i := runtime.NumCPU(); i > 1; i-- {
-		go vfs.Serve()
-	}
-	vfs.Serve()
 	return nil
 }
 

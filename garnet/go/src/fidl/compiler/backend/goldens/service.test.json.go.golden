@@ -47,15 +47,6 @@ func (s_ *FirstProtocolWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bin
 	return nil, false, _bindings.ErrUnknownOrdinal
 }
 
-type FirstProtocolService struct {
-	_bindings.BindingSet
-}
-
-func (s *FirstProtocolService) EventProxyFor(key _bindings.BindingKey) (*FirstProtocolEventProxy, bool) {
-	pxy, err := s.BindingSet.ProxyFor(key)
-	return (*FirstProtocolEventProxy)(pxy), err
-}
-
 type FirstProtocolEventProxy _bindings.ChannelProxy
 
 const (
@@ -97,15 +88,6 @@ func (s_ *SecondProtocolWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bi
 		return nil, false, err_
 	}
 	return nil, false, _bindings.ErrUnknownOrdinal
-}
-
-type SecondProtocolService struct {
-	_bindings.BindingSet
-}
-
-func (s *SecondProtocolService) EventProxyFor(key _bindings.BindingKey) (*SecondProtocolEventProxy, bool) {
-	pxy, err := s.BindingSet.ProxyFor(key)
-	return (*SecondProtocolEventProxy)(pxy), err
 }
 
 type SecondProtocolEventProxy _bindings.ChannelProxy

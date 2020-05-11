@@ -76,15 +76,6 @@ func (s_ *ChildWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Me
 	return nil, false, _bindings.ErrUnknownOrdinal
 }
 
-type ChildService struct {
-	_bindings.BindingSet
-}
-
-func (s *ChildService) EventProxyFor(key _bindings.BindingKey) (*ChildEventProxy, bool) {
-	pxy, err := s.BindingSet.ProxyFor(key)
-	return (*ChildEventProxy)(pxy), err
-}
-
 type ChildEventProxy _bindings.ChannelProxy
 
 const (
@@ -194,15 +185,6 @@ func (s_ *ParentWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.M
 		return nil, false, err_
 	}
 	return nil, false, _bindings.ErrUnknownOrdinal
-}
-
-type ParentService struct {
-	_bindings.BindingSet
-}
-
-func (s *ParentService) EventProxyFor(key _bindings.BindingKey) (*ParentEventProxy, bool) {
-	pxy, err := s.BindingSet.ProxyFor(key)
-	return (*ParentEventProxy)(pxy), err
 }
 
 type ParentEventProxy _bindings.ChannelProxy

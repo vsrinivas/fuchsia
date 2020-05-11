@@ -15,12 +15,9 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
-	"runtime"
 	"strconv"
-	"sync"
 	"sync/atomic"
 	"syscall/zx"
-	"syscall/zx/dispatch"
 	"syscall/zx/fidl"
 	"time"
 
@@ -34,7 +31,6 @@ import (
 
 	"fidl/fuchsia/cobalt"
 	"fidl/fuchsia/device"
-	deprecatedInspect "fidl/fuchsia/inspect/deprecated"
 	"fidl/fuchsia/net"
 	"fidl/fuchsia/net/name"
 	"fidl/fuchsia/net/stack"
@@ -122,18 +118,6 @@ const (
 	// least 5s before the original address is deprecated.
 	regenAdvanceDuration = 5*time.Second + dadTransmits*dadRetransmitTimer*(1+autoGenAddressConflictRetries)
 )
-
-type bindingSetCounterStat struct {
-	bindingSets []*fidl.BindingSet
-}
-
-func (s *bindingSetCounterStat) Value() uint64 {
-	var sum int
-	for _, s := range s.bindingSets {
-		sum += s.Size()
-	}
-	return uint64(sum)
-}
 
 type atomicBool uint32
 
@@ -276,6 +260,8 @@ func Main() {
 		stack:        stk,
 	}
 
+	ns.netstackService.mu.proxies = make(map[*netstack.NetstackEventProxy]struct{})
+
 	ndpDisp.ns = ns
 	ndpDisp.start(ctx)
 
@@ -283,29 +269,14 @@ func Main() {
 		syslog.Fatalf("loopback: %s", err)
 	}
 
-	{
-		dispatcher, err := dispatch.NewDispatcher()
-		if err != nil {
-			syslog.Fatalf("could not initialize dispatcher: %s", err)
-		}
-		ns.dispatcher = dispatcher
-	}
-
-	dnsWatchers := newDnsServerWatcherCollection(ns.dispatcher, ns.dnsClient)
+	dnsWatchers := newDnsServerWatcherCollection(ns.dnsClient)
 	ns.dnsClient.SetOnServersChanged(dnsWatchers.NotifyServersChanged)
-
-	var posixSocketProviderService socket.ProviderService
 
 	socketProviderImpl := providerImpl{ns: ns}
 	ns.stats = stats{
 		Stats: stk.Stats(),
-		SocketCount: bindingSetCounterStat{bindingSets: []*fidl.BindingSet{
-			&socketProviderImpl.datagramSocketService.BindingSet,
-			&socketProviderImpl.streamSocketService.BindingSet,
-		}},
 	}
 
-	var inspectService deprecatedInspect.InspectService
 	appCtx.OutgoingService.AddDiagnostics("counters", &component.DirectoryWrapper{
 		Directory: &inspectDirectory{
 			asService: (&inspectImpl{
@@ -313,7 +284,6 @@ func Main() {
 					name:  "Networking Stat Counters",
 					value: reflect.ValueOf(ns.stats),
 				},
-				service: &inspectService,
 			}).asService,
 		},
 	})
@@ -322,8 +292,7 @@ func Main() {
 			// asService is late-bound so that each call retrieves fresh NIC info.
 			asService: func() *component.Service {
 				return (&inspectImpl{
-					inner:   &nicInfoMapInspectImpl{value: ns.getIfStateInfo(stk.NICInfo())},
-					service: &inspectService,
+					inner: &nicInfoMapInspectImpl{value: ns.getIfStateInfo(stk.NICInfo())},
 				}).asService()
 			},
 		},
@@ -335,7 +304,6 @@ func Main() {
 				inner: &socketInfoMapInspectImpl{
 					value: &ns.endpoints,
 				},
-				service: &inspectService,
 			}).asService,
 		},
 	})
@@ -364,23 +332,15 @@ func Main() {
 		}
 	}()
 
-	appCtx.OutgoingService.AddService(
-		netstack.NetstackName,
-		&netstack.NetstackWithCtxStub{Impl: &netstackImpl{
-			ns: ns,
-		}},
-		func(s fidl.Stub, c zx.Channel, ctx fidl.Context) error {
-			k, err := ns.netstackService.BindingSet.AddToDispatcher(s, c, ns.dispatcher, nil)
-			if err != nil {
-				syslog.Fatalf("%v", err)
-			}
-			// Send a synthetic InterfacesChanged event to each client when they join
-			// Prevents clients from having to race GetInterfaces / InterfacesChanged.
-			if p, ok := ns.netstackService.EventProxyFor(k); ok {
-				interfaces2 := ns.getNetInterfaces2()
-				interfaces := interfaces2ListToInterfacesList(interfaces2)
-
-				if err := p.OnInterfacesChanged(interfaces); err != nil {
+	{
+		stub := netstack.NetstackWithCtxStub{Impl: &netstackImpl{ns: ns}}
+		appCtx.OutgoingService.AddService(
+			netstack.NetstackName,
+			func(ctx fidl.Context, c zx.Channel) error {
+				pxy := netstack.NetstackEventProxy{Channel: c}
+				// Send a synthetic InterfacesChanged event to each client when they join
+				// Prevents clients from having to race GetInterfaces / InterfacesChanged.
+				if err := pxy.OnInterfacesChanged(interfaces2ListToInterfacesList(ns.getNetInterfaces2())); err != nil {
 					warn := true
 					if err, ok := err.(*zx.Error); ok {
 						switch err.Status {
@@ -397,62 +357,94 @@ func Main() {
 					if warn {
 						syslog.Warnf("OnInterfacesChanged failed: %v", err)
 					}
+					return err
 				}
-			}
-			return nil
-		},
-	)
+				go func() {
+					defer func() {
+						ns.netstackService.mu.Lock()
+						delete(ns.netstackService.mu.proxies, &pxy)
+						ns.netstackService.mu.Unlock()
+					}()
+					component.ServeExclusive(ctx, &stub, c, func(err error) {
+						_ = syslog.WarnTf(tag, "%s", err)
+					})
+				}()
 
-	var nameLookupAdminService name.LookupAdminService
-	appCtx.OutgoingService.AddService(
-		name.LookupAdminName,
-		&name.LookupAdminWithCtxStub{Impl: &nameLookupAdminImpl{ns: ns}},
-		func(s fidl.Stub, c zx.Channel, ctx fidl.Context) error {
-			_, err := nameLookupAdminService.BindingSet.AddToDispatcher(s, c, ns.dispatcher, nil)
-			return err
-		},
-	)
+				ns.netstackService.mu.Lock()
+				ns.netstackService.mu.proxies[&pxy] = struct{}{}
+				ns.netstackService.mu.Unlock()
 
-	var stackService stack.StackService
-	appCtx.OutgoingService.AddService(
-		stack.StackName,
-		&stack.StackWithCtxStub{Impl: &stackImpl{
+				return nil
+			},
+		)
+	}
+
+	{
+		stub := name.LookupAdminWithCtxStub{Impl: &nameLookupAdminImpl{ns: ns}}
+		appCtx.OutgoingService.AddService(
+			name.LookupAdminName,
+			func(ctx fidl.Context, c zx.Channel) error {
+				go component.ServeExclusive(ctx, &stub, c, func(err error) {
+					_ = syslog.WarnTf(tag, "%s", err)
+				})
+				return nil
+			},
+		)
+	}
+
+	{
+		stub := stack.StackWithCtxStub{Impl: &stackImpl{
 			ns:          ns,
 			dnsWatchers: dnsWatchers,
-		}},
-		func(s fidl.Stub, c zx.Channel, ctx fidl.Context) error {
-			_, err := stackService.BindingSet.AddToDispatcher(s, c, ns.dispatcher, nil)
-			return err
-		},
-	)
+		}}
+		appCtx.OutgoingService.AddService(
+			stack.StackName,
+			func(ctx fidl.Context, c zx.Channel) error {
+				go component.ServeExclusive(ctx, &stub, c, func(err error) {
+					_ = syslog.WarnTf(tag, "%s", err)
+				})
+				return nil
+			},
+		)
+	}
 
-	var logService stack.LogService
-	appCtx.OutgoingService.AddService(
-		stack.LogName,
-		&stack.LogWithCtxStub{Impl: &logImpl{logger: l}},
-		func(s fidl.Stub, c zx.Channel, ctx fidl.Context) error {
-			_, err := logService.BindingSet.AddToDispatcher(s, c, ns.dispatcher, nil)
-			return err
-		})
+	{
+		stub := stack.LogWithCtxStub{Impl: &logImpl{logger: l}}
+		appCtx.OutgoingService.AddService(
+			stack.LogName,
+			func(ctx fidl.Context, c zx.Channel) error {
+				go component.ServeExclusive(ctx, &stub, c, func(err error) {
+					_ = syslog.WarnTf(tag, "%s", err)
+				})
+				return nil
+			})
+	}
 
-	var nameLookupService net.NameLookupService
-	appCtx.OutgoingService.AddService(
-		net.NameLookupName,
-		&net.NameLookupWithCtxStub{Impl: &nameLookupImpl{dnsClient: ns.dnsClient}},
-		func(s fidl.Stub, c zx.Channel, ctx fidl.Context) error {
-			_, err := nameLookupService.BindingSet.AddToDispatcher(s, c, ns.dispatcher, nil)
-			return err
-		},
-	)
+	{
+		stub := net.NameLookupWithCtxStub{Impl: &nameLookupImpl{dnsClient: ns.dnsClient}}
+		appCtx.OutgoingService.AddService(
+			net.NameLookupName,
+			func(ctx fidl.Context, c zx.Channel) error {
+				go component.ServeExclusive(ctx, &stub, c, func(err error) {
+					_ = syslog.WarnTf(tag, "%s", err)
+				})
+				return nil
+			},
+		)
+	}
 
-	appCtx.OutgoingService.AddService(
-		socket.ProviderName,
-		&socket.ProviderWithCtxStub{Impl: &socketProviderImpl},
-		func(s fidl.Stub, c zx.Channel, ctx fidl.Context) error {
-			_, err := posixSocketProviderService.BindingSet.AddToDispatcher(s, c, ns.dispatcher, nil)
-			return err
-		},
-	)
+	{
+		stub := socket.ProviderWithCtxStub{Impl: &socketProviderImpl}
+		appCtx.OutgoingService.AddService(
+			socket.ProviderName,
+			func(ctx fidl.Context, c zx.Channel) error {
+				go component.ServeExclusive(ctx, &stub, c, func(err error) {
+					_ = syslog.WarnTf(tag, "%s", err)
+				})
+				return nil
+			},
+		)
+	}
 
 	if cobaltLogger, err := connectCobaltLogger(appCtx); err != nil {
 		syslog.Warnf("could not initialize cobalt client: %s", err)
@@ -464,35 +456,12 @@ func Main() {
 		}()
 	}
 
-	if err := connectivity.AddOutgoingService(appCtx); err != nil {
-		syslog.Fatalf("%v", err)
-	}
+	connectivity.AddOutgoingService(appCtx)
 
-	f := filter.New(stk.PortManager)
-	if err := filter.AddOutgoingService(appCtx, f); err != nil {
-		syslog.Fatalf("%v", err)
-	}
-	ns.filter = f
+	ns.filter = filter.New(stk.PortManager)
+	filter.AddOutgoingService(appCtx, ns.filter)
 
-	var wg sync.WaitGroup
-	for i := 0; i < runtime.NumCPU(); i++ {
-		wg.Add(1)
-		go func() {
-			ns.dispatcher.Serve()
-			wg.Done()
-		}()
-	}
-	appCtxDispatcher, err := dispatch.NewDispatcher()
-	if err != nil {
-		syslog.Fatalf("could not initialize dispatcher: %s", err)
-	}
-	appCtx.BindStartupHandle(appCtxDispatcher)
-	wg.Add(1)
-	go func() {
-		appCtxDispatcher.Serve()
-		wg.Done()
-	}()
-	wg.Wait()
+	appCtx.BindStartupHandle(context.Background())
 }
 
 // newSecretKey returns a new secret key.

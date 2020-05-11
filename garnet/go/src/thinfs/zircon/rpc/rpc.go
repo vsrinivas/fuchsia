@@ -9,15 +9,16 @@ package rpc
 import (
 	"context"
 	"fmt"
+	"log"
 	"os"
 	"sync"
 	"syscall"
 	"syscall/zx"
-	"syscall/zx/dispatch"
 	"syscall/zx/fidl"
 	"time"
 	"unsafe"
 
+	"fuchsia.googlesource.com/component"
 	"thinfs/fs"
 
 	"fidl/fuchsia/io"
@@ -29,13 +30,13 @@ const (
 	rightFlags  = uint32(syscall.FsRightReadable | syscall.FsRightWritable | syscall.FsFlagPath)
 )
 
+type key uint64
+
 type ThinVFS struct {
 	sync.Mutex
-	DirectoryService io.DirectoryService
-	dirs             map[fidl.BindingKey]*directoryWrapper
-	FileService      io.FileService
-	fs               fs.FileSystem
-	dispatcher       *dispatch.Dispatcher
+	dirs      map[key]*directoryWrapper
+	nextToken key
+	fs        fs.FileSystem
 }
 
 type VFSQueryInfo struct {
@@ -46,80 +47,65 @@ type VFSQueryInfo struct {
 }
 
 // NewServer creates a new ThinVFS server. Serve must be called to begin servicing the filesystem.
-func NewServer(filesys fs.FileSystem, h zx.Handle) (*ThinVFS, error) {
-	d, err := dispatch.NewDispatcher()
-	if err != nil {
-		return nil, fmt.Errorf("failed to create dispatcher for ThinVFS: %w", err)
-	}
+func NewServer(filesys fs.FileSystem, c zx.Channel) (*ThinVFS, error) {
 	vfs := &ThinVFS{
-		dirs:       make(map[fidl.BindingKey]*directoryWrapper),
-		fs:         filesys,
-		dispatcher: d,
+		dirs: make(map[key]*directoryWrapper),
+		fs:   filesys,
 	}
-	ireq := io.NodeWithCtxInterfaceRequest(fidl.InterfaceRequest{Channel: zx.Channel(h)})
-	if _, err := vfs.addDirectory(filesys.RootDirectory(), ireq); err != nil {
-		h.Close()
-		return nil, err
-	}
+	ireq := io.NodeWithCtxInterfaceRequest{Channel: c}
+	vfs.addDirectory(filesys.RootDirectory(), ireq)
 	// Signal that we're ready to serve.
+	h := zx.Handle(c)
 	if err := h.SignalPeer(0, zx.SignalUser0); err != nil {
-		h.Close()
+		_ = h.Close()
 		return nil, err
 	}
 	return vfs, nil
 }
 
-// Serve begins dispatching fidl requests. Serve blocks, so callers will normally want to run it in a new goroutine.
-func (vfs *ThinVFS) Serve() {
-	vfs.dispatcher.Serve()
-}
-
-func (vfs *ThinVFS) addDirectory(dir fs.Directory, node io.NodeWithCtxInterfaceRequest) (fidl.BindingKey, error) {
-	d := &directoryWrapper{vfs: vfs, dir: dir, cookies: make(map[uint64]uint64)}
-
+func (vfs *ThinVFS) addDirectory(dir fs.Directory, node io.NodeWithCtxInterfaceRequest) {
+	d := directoryWrapper{vfs: vfs, dir: dir, cookies: make(map[uint64]uint64)}
 	vfs.Lock()
-	defer vfs.Unlock()
-	tok, err := d.vfs.DirectoryService.BindingSet.AddToDispatcher(
-		&io.DirectoryWithCtxStub{Impl: d},
-		(fidl.InterfaceRequest(node)).Channel,
-		vfs.dispatcher,
-		func(err error) {
-			vfs.Lock()
-			defer vfs.Unlock()
-			delete(vfs.dirs, d.token)
-		},
-	)
-	if err != nil {
-		return 0, err
-	}
+	tok := vfs.nextToken
+	vfs.nextToken++
+	vfs.dirs[tok] = &d
+	vfs.Unlock()
 	d.token = tok
-	vfs.dirs[tok] = d
-	return tok, nil
+	go func() {
+		defer func() {
+			vfs.Lock()
+			delete(vfs.dirs, d.token)
+			vfs.Unlock()
+		}()
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		d.cancel = cancel
+		stub := io.DirectoryWithCtxStub{Impl: &d}
+		component.ServeExclusive(ctx, &stub, node.Channel, func(err error) { log.Print(err) })
+	}()
 }
 
-func (vfs *ThinVFS) addFile(file fs.File, node io.NodeWithCtxInterfaceRequest) (fidl.BindingKey, error) {
-	f := &fileWrapper{vfs: vfs, file: file}
-
-	vfs.Lock()
-	defer vfs.Unlock()
-	tok, err := vfs.FileService.BindingSet.AddToDispatcher(
-		&io.FileWithCtxStub{Impl: f},
-		(fidl.InterfaceRequest(node)).Channel,
-		vfs.dispatcher,
-		nil,
-	)
-	if err != nil {
-		return 0, err
-	}
-	f.token = tok
-	return tok, nil
+func (vfs *ThinVFS) addFile(file fs.File, node io.NodeWithCtxInterfaceRequest) {
+	go func() {
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		f := fileWrapper{
+			vfs:    vfs,
+			cancel: cancel,
+			file:   file,
+		}
+		stub := io.FileWithCtxStub{Impl: &f}
+		component.ServeExclusive(ctx, &stub, node.Channel, func(err error) { log.Print(err) })
+	}()
 }
 
 // TODO(fxb/37419): Remove TransitionalBase after methods landed.
 type directoryWrapper struct {
 	*io.DirectoryWithCtxTransitionalBase
 	vfs     *ThinVFS
-	token   fidl.BindingKey
+	token   key
+	cancel  context.CancelFunc
 	dir     fs.Directory
 	dirents []fs.Dirent
 	reading bool
@@ -153,10 +139,7 @@ func (d *directoryWrapper) Clone(_ fidl.Context, flags uint32, node io.NodeWithC
 	newDir, err := d.dir.Dup()
 	zxErr := errorToZx(err)
 	if zxErr == zx.ErrOk {
-		_, err := d.vfs.addDirectory(newDir, node)
-		if err != nil {
-			return err
-		}
+		d.vfs.addDirectory(newDir, node)
 	}
 	// Only send an OnOpen message if OpenFlagDescribe is set.
 	if flags&io.OpenFlagDescribe != 0 {
@@ -172,11 +155,8 @@ func (d *directoryWrapper) Clone(_ fidl.Context, flags uint32, node io.NodeWithC
 func (d *directoryWrapper) Close(fidl.Context) (int32, error) {
 	err := d.dir.Close()
 
-	d.vfs.Lock()
-	defer d.vfs.Unlock()
+	d.cancel()
 	d.clearCookie()
-	d.vfs.DirectoryService.Remove(d.token)
-	delete(d.vfs.dirs, d.token)
 
 	return int32(errorToZx(err)), nil
 }
@@ -236,14 +216,10 @@ func (d *directoryWrapper) Open(_ fidl.Context, inFlags, inMode uint32, path str
 	// Handle the file and directory cases. They're mostly the same, except where noted.
 	zxErr := errorToZx(err)
 	if zxErr == zx.ErrOk {
-		var err error
 		if fsFile != nil {
-			_, err = d.vfs.addFile(fsFile, node)
+			d.vfs.addFile(fsFile, node)
 		} else {
-			_, err = d.vfs.addDirectory(fsDir, node)
-		}
-		if err != nil {
-			return err
+			d.vfs.addDirectory(fsDir, node)
 		}
 	} else {
 		// We got an error, so we want to make sure we close the channel.
@@ -370,7 +346,7 @@ func (d *directoryWrapper) Rename(_ fidl.Context, src string, token zx.Handle, d
 	if cookie == 0 {
 		return int32(zx.ErrInvalidArgs), nil
 	}
-	dir, ok := d.vfs.dirs[fidl.BindingKey(cookie)]
+	dir, ok := d.vfs.dirs[key(cookie)]
 	if !ok {
 		return int32(zx.ErrInvalidArgs), nil
 	}
@@ -402,10 +378,6 @@ func (d *directoryWrapper) Unmount(fidl.Context) (int32, error) {
 	if err != nil {
 		fmt.Printf("error unmounting filesystem: %#v\n", err)
 	}
-	// While normally this would explode as the bindings will fail to
-	// send a response, we exit immediately after, so it's OK.
-	d.vfs.FileService.Close()
-	d.vfs.DirectoryService.Close()
 	os.Exit(0)
 	return int32(zx.ErrOk), nil
 }
@@ -439,19 +411,16 @@ func (d *directoryWrapper) QueryFilesystem(fidl.Context) (int32, *io.FilesystemI
 // TODO(fxb/37419): Remove TransitionalBase after methods landed.
 type fileWrapper struct {
 	*io.FileWithCtxTransitionalBase
-	vfs   *ThinVFS
-	token fidl.BindingKey
-	file  fs.File
+	vfs    *ThinVFS
+	cancel context.CancelFunc
+	file   fs.File
 }
 
 func (f *fileWrapper) Clone(_ fidl.Context, flags uint32, node io.NodeWithCtxInterfaceRequest) error {
 	newFile, err := f.file.Dup()
 	zxErr := errorToZx(err)
 	if zxErr == zx.ErrOk {
-		_, err := f.vfs.addFile(newFile, node)
-		if err != nil {
-			return err
-		}
+		f.vfs.addFile(newFile, node)
 	}
 	// Only send an OnOpen message if OpenFlagDescribe is set.
 	if flags&io.OpenFlagDescribe != 0 {
@@ -469,9 +438,7 @@ func (f *fileWrapper) Clone(_ fidl.Context, flags uint32, node io.NodeWithCtxInt
 func (f *fileWrapper) Close(fidl.Context) (int32, error) {
 	err := f.file.Close()
 
-	f.vfs.Lock()
-	defer f.vfs.Unlock()
-	f.vfs.FileService.Remove(f.token)
+	f.cancel()
 
 	return int32(errorToZx(err)), nil
 }

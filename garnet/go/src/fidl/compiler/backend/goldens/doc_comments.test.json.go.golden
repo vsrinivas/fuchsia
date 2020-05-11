@@ -206,15 +206,6 @@ func (s_ *InterfaceWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_binding
 	return nil, false, _bindings.ErrUnknownOrdinal
 }
 
-type InterfaceService struct {
-	_bindings.BindingSet
-}
-
-func (s *InterfaceService) EventProxyFor(key _bindings.BindingKey) (*InterfaceEventProxy, bool) {
-	pxy, err := s.BindingSet.ProxyFor(key)
-	return (*InterfaceEventProxy)(pxy), err
-}
-
 type InterfaceEventProxy _bindings.ChannelProxy
 
 func (p *InterfaceEventProxy) OnEvent() error {

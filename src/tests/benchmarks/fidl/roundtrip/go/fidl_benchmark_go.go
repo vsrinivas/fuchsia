@@ -5,8 +5,9 @@
 package main
 
 import (
+	"context"
+	"log"
 	"syscall/zx"
-	"syscall/zx/dispatch"
 	"syscall/zx/fidl"
 
 	"fuchsia.googlesource.com/component"
@@ -34,23 +35,21 @@ func (b *impl) EchoHandles(ctx fidl.Context, handles []zx.Handle) ([]zx.Handle, 
 	return handles, nil
 }
 
-var benchmarkService benchmarks.BindingsUnderTestService
-
 func main() {
+	log.SetFlags(log.Lshortfile)
+
 	ctx := component.NewContextFromStartupInfo()
 
-	dispatcher, err := dispatch.NewDispatcher()
-	if err != nil {
-		panic("could not initialize FIDL dispatcher: " + err.Error())
-	}
+	stub := benchmarks.BindingsUnderTestWithCtxStub{Impl: &impl{}}
 	ctx.OutgoingService.AddService(
 		benchmarks.BindingsUnderTestName,
-		&benchmarks.BindingsUnderTestWithCtxStub{Impl: &impl{}},
-		func(s fidl.Stub, c zx.Channel, _ fidl.Context) error {
-			_, err := benchmarkService.BindingSet.AddToDispatcher(s, c, dispatcher, nil)
-			return err
+		func(ctx fidl.Context, c zx.Channel) error {
+			go component.ServeExclusive(ctx, &stub, c, func(err error) {
+				log.Print(err)
+			})
+			return nil
 		},
 	)
-	ctx.BindStartupHandle(dispatcher)
-	dispatcher.Serve()
+
+	ctx.BindStartupHandle(context.Background())
 }

@@ -5,10 +5,10 @@
 package main
 
 import (
+	"context"
 	"log"
 	"os"
 	"syscall/zx"
-	"syscall/zx/dispatch"
 	"syscall/zx/fidl"
 
 	"fuchsia.googlesource.com/component"
@@ -28,25 +28,22 @@ func (echo *echoImpl) EchoString(_ fidl.Context, inValue *string) (outValue *str
 }
 
 func main() {
+	log.SetFlags(log.Lshortfile)
+
 	quiet := (len(os.Args) > 1) && os.Args[1] == "-q"
-	var echoService echo.EchoService
-	c := component.NewContextFromStartupInfo()
-	c.OutgoingService.AddService(
+
+	ctx := component.NewContextFromStartupInfo()
+
+	stub := echo.EchoWithCtxStub{Impl: &echoImpl{quiet: quiet}}
+	ctx.OutgoingService.AddService(
 		echo.EchoName,
-		&echo.EchoWithCtxStub{Impl: &echoImpl{quiet: quiet}},
-		func(s fidl.Stub, c zx.Channel, ctx fidl.Context) error {
-			d, ok := dispatch.GetDispatcher(ctx)
-			if !ok {
-				log.Fatal("no dispatcher provided on FIDL context")
-			}
-			_, err := echoService.BindingSet.AddToDispatcher(s, c, d, nil)
-			return err
+		func(ctx fidl.Context, c zx.Channel) error {
+			go component.ServeExclusive(ctx, &stub, c, func(err error) {
+				log.Print(err)
+			})
+			return nil
 		},
 	)
-	d, err := dispatch.NewDispatcher()
-	if err != nil {
-		log.Fatalf("couldn't initialize FIDL dispatcher: %s", err)
-	}
-	c.BindStartupHandle(d)
-	d.Serve()
+
+	ctx.BindStartupHandle(context.Background())
 }

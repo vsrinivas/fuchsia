@@ -24,7 +24,7 @@ func TestCookies(t *testing.T) {
 	defer c1.Close()
 	defer c2.Close()
 
-	vfs, err := NewServer(&dummyFs{}, zx.Handle(c2))
+	vfs, err := NewServer(&dummyFs{}, c2)
 	if err != nil {
 		t.Fatalf("failed to create server: %v", err)
 	}

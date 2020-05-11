@@ -136,13 +136,4 @@ func (s_ *ExampleWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.
 	return nil, false, _bindings.ErrUnknownOrdinal
 }
 
-type ExampleService struct {
-	_bindings.BindingSet
-}
-
-func (s *ExampleService) EventProxyFor(key _bindings.BindingKey) (*ExampleEventProxy, bool) {
-	pxy, err := s.BindingSet.ProxyFor(key)
-	return (*ExampleEventProxy)(pxy), err
-}
-
 type ExampleEventProxy _bindings.ChannelProxy

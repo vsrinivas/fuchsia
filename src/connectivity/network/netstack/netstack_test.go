@@ -9,8 +9,6 @@ import (
 	"net"
 	"sort"
 	"syscall/zx"
-	"syscall/zx/dispatch"
-	"syscall/zx/fidl"
 	"testing"
 	"time"
 
@@ -162,89 +160,6 @@ func TestStackNICRemove(t *testing.T) {
 		t.Fatalf("ep (= %T) does not implement tcpipstack.LinkEndpoint", ep)
 	}
 	ep.Wait()
-}
-
-func TestBindingSetCounterStat_Value(t *testing.T) {
-	d, err := dispatch.NewDispatcher()
-	if err != nil {
-		t.Fatalf("couldn't initialize dispatcher: %s", err)
-	}
-	defer d.Close()
-	s := bindingSetCounterStat{bindingSets: []*fidl.BindingSet{
-		new(fidl.BindingSet),
-		new(fidl.BindingSet),
-	}}
-	defer func() {
-		for _, b := range s.bindingSets {
-			b.Close()
-		}
-	}()
-
-	// Create a pair of channels for each call to (*fidl.BindingSet).Add;
-	// (*fidl.BindingSet).Remove closes the channel being removed, which causes
-	// its peer to return ZX_ERR_PEER_CLOSED, which in turn would cause the peer
-	// to be removed from any fidl.BindingSet to which it has been added, which
-	// would cause this test to flake (if some other test has started the FIDL
-	// dispatcher).
-	type Pair struct {
-		ch, peer zx.Channel
-	}
-	var pairs []Pair
-	defer func() {
-		for _, pair := range pairs {
-			// Explicitly ignore the errors; if the test runs past the
-			// (*fidl.BindingSet).Remove calls below, these channels will have been
-			// closed, and these Close calls will return ErrBadHandle. If the test
-			// does not, then these Close calls will return nil. Either way, that's
-			// not what we're testing here.
-			_ = pair.ch.Close()
-			_ = pair.peer.Close()
-		}
-	}()
-
-	var want uint64
-	if got := s.Value(); got != want {
-		t.Errorf("got s.Value() = %d want = %d", got, want)
-	}
-	for _, b := range s.bindingSets {
-		for i := 0; i < 2; i++ {
-			ch, peer, err := zx.NewChannel(0)
-			if err != nil {
-				t.Fatal("zx.NewChannel(...) failed:", err)
-			}
-			pairs = append(pairs, Pair{ch: ch, peer: peer})
-
-			if _, err := b.AddToDispatcher(nil, ch, d, nil); err != nil {
-				t.Fatalf("%T.Add(...) failed: %s", b, err)
-			}
-			want++
-
-			if got := s.Value(); got != want {
-				t.Errorf("got s.Value() = %d want = %d", got, want)
-			}
-		}
-	}
-
-	for _, b := range s.bindingSets {
-		for _, key := range b.BindingKeys() {
-			if !b.Remove(key) {
-				t.Fatalf("got %T.Remove(...) = false want = true", b)
-			}
-			want--
-
-			if got := s.Value(); got != want {
-				t.Errorf("got s.Value() = %d want = %d", got, want)
-			}
-		}
-	}
-	if got := s.Value(); got != want {
-		t.Errorf("got s.Value() = %d want = %d", got, want)
-	}
-
-	// Ensure the test is self-consistent.
-	if want != 0 {
-		t.Errorf("got `want` = %d want = 0", want)
-	}
 }
 
 func containsRoute(rs []tcpip.Route, r tcpip.Route) bool {

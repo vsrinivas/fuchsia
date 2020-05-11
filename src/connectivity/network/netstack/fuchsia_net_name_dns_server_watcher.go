@@ -5,11 +5,13 @@
 package netstack
 
 import (
+	"context"
 	"fmt"
 	"sync"
-	"syscall/zx/dispatch"
 	"syscall/zx/fidl"
 
+	"fuchsia.googlesource.com/component"
+	"fuchsia.googlesource.com/syslog"
 	"netstack/dns"
 
 	"fidl/fuchsia/net/name"
@@ -39,10 +41,9 @@ func (c *broadcastChannel) getChannel() <-chan struct{} {
 }
 
 type dnsServerWatcher struct {
-	dnsClient  *dns.Client
-	dispatcher *dispatch.Dispatcher
-	broadcast  *broadcastChannel
-	mu         struct {
+	dnsClient *dns.Client
+	broadcast *broadcastChannel
+	mu        struct {
 		sync.Mutex
 		isHanging    bool
 		isDead       bool
@@ -78,9 +79,6 @@ func (w *dnsServerWatcher) WatchServers(ctx fidl.Context) ([]name.DnsServer, err
 	for !w.mu.isDead && serverListEquals(servers, w.mu.lastObserved) {
 		w.mu.isHanging = true
 
-		// Spawn a new goroutine serving on the dispatcher because we're blocking the current one.
-		go w.dispatcher.Serve()
-
 		w.mu.Unlock()
 
 		var err error
@@ -90,9 +88,6 @@ func (w *dnsServerWatcher) WatchServers(ctx fidl.Context) ([]name.DnsServer, err
 			err = fmt.Errorf("context cancelled during hanging get: %w", ctx.Err())
 		}
 		w.mu.Lock()
-
-		// Reap one goroutine from the dispatcher to return to the previous value.
-		_ = w.dispatcher.ShutdownOne()
 
 		w.mu.isHanging = false
 
@@ -118,19 +113,17 @@ func (w *dnsServerWatcher) WatchServers(ctx fidl.Context) ([]name.DnsServer, err
 }
 
 type dnsServerWatcherCollection struct {
-	dnsClient  *dns.Client
-	dispatcher *dispatch.Dispatcher
-	broadcast  broadcastChannel
+	dnsClient *dns.Client
+	broadcast broadcastChannel
 }
 
 // newDnsServerWatcherCollection creates a new dnsServerWatcherCollection that will observe the
 // server configuration of dnsClient.
 // Callers are responsible for installing the notification callback on dnsClient and calling
 // NotifyServersChanged when changes to the client's configuration occur.
-func newDnsServerWatcherCollection(dispatcher *dispatch.Dispatcher, dnsClient *dns.Client) *dnsServerWatcherCollection {
+func newDnsServerWatcherCollection(dnsClient *dns.Client) *dnsServerWatcherCollection {
 	collection := dnsServerWatcherCollection{
-		dnsClient:  dnsClient,
-		dispatcher: dispatcher,
+		dnsClient: dnsClient,
 	}
 	collection.broadcast.mu.channel = make(chan struct{})
 	return &collection
@@ -139,25 +132,28 @@ func newDnsServerWatcherCollection(dispatcher *dispatch.Dispatcher, dnsClient *d
 // Bind binds a new fuchsia.net.name.DnsServerWatcher request to the collection of watchers and
 // starts serving on its channel.
 func (c *dnsServerWatcherCollection) Bind(request name.DnsServerWatcherWithCtxInterfaceRequest) error {
-	watcher := dnsServerWatcher{
-		dnsClient:  c.dnsClient,
-		dispatcher: c.dispatcher,
-		broadcast:  &c.broadcast,
-	}
+	go func() {
+		watcher := dnsServerWatcher{
+			dnsClient: c.dnsClient,
+			broadcast: &c.broadcast,
+		}
 
-	// This should be a fidl.Binding, but it isn't possible to construct one with
-	// a non-nil context.  Oops. Hopefully goroutine-oriented dispatch obviates
-	// this soon.
-	var service name.DnsServerWatcherService
-	_, err := service.AddToDispatcher(&name.DnsServerWatcherWithCtxStub{
-		Impl: &watcher,
-	}, request.Channel, c.dispatcher, func(error) {
-		watcher.mu.Lock()
-		watcher.mu.isDead = true
-		watcher.mu.Unlock()
-		watcher.broadcast.broadcast()
-	})
-	return err
+		defer func() {
+			watcher.mu.Lock()
+			watcher.mu.isDead = true
+			watcher.mu.Unlock()
+			watcher.broadcast.broadcast()
+		}()
+
+		stub := name.DnsServerWatcherWithCtxStub{
+			Impl: &watcher,
+		}
+		component.ServeExclusive(context.Background(), &stub, request.Channel, func(err error) {
+			_ = syslog.WarnTf(tag, "%s", err)
+		})
+	}()
+
+	return nil
 }
 
 // NotifyServersChanged notifies all bound fuchsia.net.name.DnsServerWatchers that the list of DNS

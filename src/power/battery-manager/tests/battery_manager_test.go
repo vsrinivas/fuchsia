@@ -7,98 +7,76 @@ package main
 import (
 	"context"
 	"sync"
-	"sync/atomic"
-	"syscall/zx/dispatch"
 	"syscall/zx/fidl"
 	"testing"
-	"time"
 
 	"fidl/fuchsia/power"
 
 	"fuchsia.googlesource.com/component"
 )
 
-type ClientMock struct {
-	pm *power.BatteryManagerWithCtxInterface
-}
-
 type WatcherMock struct {
-	called uint32
+	called chan struct{}
 }
 
-func (pmw *WatcherMock) OnChangeBatteryInfo(_ fidl.Context, bi power.BatteryInfo) error {
-	atomic.AddUint32(&pmw.called, 1)
+func (pmw *WatcherMock) OnChangeBatteryInfo(fidl.Context, power.BatteryInfo) error {
+	select {
+	case pmw.called <- struct{}{}:
+	default:
+	}
 	return nil
 }
 
+var ctx = component.NewContextFromStartupInfo()
+
 func TestPowerManager(t *testing.T) {
-	ctx := component.NewContextFromStartupInfo()
 	req, iface, err := power.NewBatteryManagerWithCtxInterfaceRequest()
 	if err != nil {
 		t.Fatal(err)
 	}
-	pmClient := &ClientMock{}
-	pmClient.pm = iface
+	defer func() {
+		_ = iface.Close()
+	}()
 	ctx.ConnectToEnvService(req)
-	_, err = pmClient.pm.GetBatteryInfo(context.Background())
-	if err != nil {
+	if _, err := iface.GetBatteryInfo(context.Background()); err != nil {
 		t.Fatal(err)
 	}
-	pmClient.pm.Close()
 }
 
 func TestBatteryInfoWatcher(t *testing.T) {
-	ctx := component.NewContextFromStartupInfo()
-	dispatcher, err := dispatch.NewDispatcher()
-	if err != nil {
-		t.Fatalf("couldn't initialize FIDL dispatcher: %s", err)
-	}
-	var wg sync.WaitGroup
-	defer func() {
-		dispatcher.Close()
-		wg.Wait()
-	}()
-	wg.Add(1)
-	go func() {
-		dispatcher.Serve()
-		wg.Done()
-	}()
 	r, p, err := power.NewBatteryManagerWithCtxInterfaceRequest()
 	if err != nil {
 		t.Fatal(err)
 	}
-	pmClient := &ClientMock{}
-	pmClient.pm = p
+	defer func() {
+		_ = p.Close()
+	}()
 	ctx.ConnectToEnvService(r)
+
+	var wg sync.WaitGroup
+	defer wg.Wait()
 
 	rw, pw, err := power.NewBatteryInfoWatcherWithCtxInterfaceRequest()
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	pmWatcher := &WatcherMock{called: 0}
-	s := power.BatteryInfoWatcherWithCtxStub{Impl: pmWatcher}
-	bi := fidl.BindingSet{}
-	bi.AddToDispatcher(&s, rw.Channel, dispatcher, nil)
-
-	err = pmClient.pm.Watch(context.Background(), *pw)
-	if err != nil {
+	defer func() {
+		_ = rw.Close()
+	}()
+	if err := p.Watch(context.Background(), *pw); err != nil {
 		t.Fatal(err)
 	}
 
-	timeToWait := 5000 // in ms
-	timeToSleep := 500 // in ms
-	val := uint32(0)
-	for i := 0; i < timeToWait/timeToSleep; i++ {
-		val = atomic.LoadUint32(&pmWatcher.called)
-		if val == 0 {
-			time.Sleep(time.Duration(timeToSleep) * time.Millisecond)
-		} else {
-			break
-		}
-	}
+	pmWatcher := WatcherMock{called: make(chan struct{})}
 
-	if val == 0 {
-		t.Fatalf("Watcher should have been called by now")
-	}
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+
+		component.ServeExclusive(context.Background(), &power.BatteryInfoWatcherWithCtxStub{
+			Impl: &pmWatcher,
+		}, rw.Channel, func(err error) { t.Log(err) })
+	}()
+
+	<-pmWatcher.called
 }

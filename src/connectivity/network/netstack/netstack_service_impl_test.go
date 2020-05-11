@@ -8,9 +8,7 @@ import (
 	"context"
 	"net"
 	"netstack/fidlconv"
-	"sync"
 	"syscall/zx"
-	"syscall/zx/dispatch"
 	"testing"
 
 	"fidl/fuchsia/hardware/ethernet"
@@ -42,21 +40,6 @@ func TestRouteTableTransactions(t *testing.T) {
 		// Create a basic netstack instance with a single interface. We need at
 		// least one interface in order to add routes.
 		netstackServiceImpl := netstackImpl{ns: newNetstack(t)}
-		dispatcher, err := dispatch.NewDispatcher()
-		if err != nil {
-			t.Fatalf("can't create dispatcher: %s", err)
-		}
-		netstackServiceImpl.ns.dispatcher = dispatcher
-		var wg sync.WaitGroup
-		wg.Add(1)
-		go func() {
-			dispatcher.Serve()
-			wg.Done()
-		}()
-		defer func() {
-			dispatcher.Close()
-			wg.Wait()
-		}()
 		eth := deviceForAddEth(ethernet.Info{}, t)
 		ifs, err := netstackServiceImpl.ns.addEth("/fake/ethernet/device", netstack.InterfaceConfig{Name: "testdevice"}, &eth)
 		if err != nil {
@@ -69,8 +52,11 @@ func TestRouteTableTransactions(t *testing.T) {
 
 		req, transactionInterface, err := netstack.NewRouteTableTransactionWithCtxInterfaceRequest()
 		AssertNoError(t, err)
+		defer func() {
+			_ = req.Close()
+			_ = transactionInterface.Close()
+		}()
 
-		defer transactionInterface.Close()
 		success, err := netstackServiceImpl.StartRouteTableTransaction(context.Background(), req)
 		// We've given req away, it's important that we don't mess with it anymore!
 		AssertNoError(t, err)
@@ -142,30 +128,19 @@ func TestRouteTableTransactions(t *testing.T) {
 	})
 
 	t.Run("contentions", func(t *testing.T) {
-		dispatcher, err := dispatch.NewDispatcher()
-		if err != nil {
-			t.Fatalf("can't create dispatcher: %s", err)
-		}
-		var wg sync.WaitGroup
-		wg.Add(1)
-		go func() {
-			dispatcher.Serve()
-			wg.Done()
-		}()
-		defer func() {
-			dispatcher.Close()
-			wg.Wait()
-		}()
 		netstackServiceImpl := netstackImpl{
 			ns: &Netstack{
-				stack:      stack.New(stack.Options{}),
-				dispatcher: dispatcher,
+				stack: stack.New(stack.Options{}),
 			},
 		}
 		{
 			req, transactionInterface, err := netstack.NewRouteTableTransactionWithCtxInterfaceRequest()
 			AssertNoError(t, err)
-			defer transactionInterface.Close()
+			defer func() {
+				_ = req.Close()
+				_ = transactionInterface.Close()
+			}()
+
 			success, err := netstackServiceImpl.StartRouteTableTransaction(context.Background(), req)
 			AssertNoError(t, err)
 			if zx.Status(success) != zx.ErrOk {
@@ -174,19 +149,26 @@ func TestRouteTableTransactions(t *testing.T) {
 
 			req2, transactionInterface2, err := netstack.NewRouteTableTransactionWithCtxInterfaceRequest()
 			AssertNoError(t, err)
-			defer transactionInterface2.Close()
+			defer func() {
+				_ = req2.Close()
+				_ = transactionInterface2.Close()
+			}()
+
 			success, err = netstackServiceImpl.StartRouteTableTransaction(context.Background(), req2)
 			AssertNoError(t, err)
 			if zx.Status(success) != zx.ErrShouldWait {
 				t.Errorf("expected failure when trying to start concurrent transactions")
 			}
 			// Simulate client crashing (the kernel will close all open handles).
-			transactionInterface.Close()
-			transactionInterface2.Close()
+			_ = transactionInterface.Close()
+			_ = transactionInterface2.Close()
 		}
 		req, transactionInterface, err := netstack.NewRouteTableTransactionWithCtxInterfaceRequest()
 		AssertNoError(t, err)
-		defer transactionInterface.Close()
+		defer func() {
+			_ = req.Close()
+			_ = transactionInterface.Close()
+		}()
 		success, err := netstackServiceImpl.StartRouteTableTransaction(context.Background(), req)
 		AssertNoError(t, err)
 		if zx.Status(success) != zx.ErrOk {

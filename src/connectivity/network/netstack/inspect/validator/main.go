@@ -6,10 +6,10 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"syscall/zx"
-	"syscall/zx/dispatch"
 	"syscall/zx/fidl"
 
 	"fuchsia.googlesource.com/component"
@@ -213,32 +213,24 @@ func (*impl) ActLazy(fidl.Context, validate.LazyAction) (validate.TestResult, er
 }
 
 func main() {
-	dispatcher, err := dispatch.NewDispatcher()
-	if err != nil {
-		panic(err)
-	}
-
 	appCtx := component.NewContextFromStartupInfo()
 
 	i := impl{
 		nodes: make(map[uint32]uint32),
 	}
-
-	var service validate.ValidateService
-	appCtx.OutgoingService.AddService(
-		validate.ValidateName,
-		&validate.ValidateWithCtxStub{
-			Impl: &i,
-		},
-		func(s fidl.Stub, c zx.Channel, ctx fidl.Context) error {
-			_, err := service.AddToDispatcher(s, c, dispatcher, nil)
-			return err
-		},
-	)
 	appCtx.OutgoingService.AddDiagnostics("root", &component.DirectoryWrapper{
 		Directory: &i,
 	})
+	stub := validate.ValidateWithCtxStub{Impl: &i}
+	appCtx.OutgoingService.AddService(
+		validate.ValidateName,
+		func(ctx fidl.Context, c zx.Channel) error {
+			go component.ServeExclusive(ctx, &stub, c, func(err error) {
+				panic(err)
+			})
+			return nil
+		},
+	)
 
-	appCtx.BindStartupHandle(dispatcher)
-	dispatcher.Serve()
+	appCtx.BindStartupHandle(context.Background())
 }

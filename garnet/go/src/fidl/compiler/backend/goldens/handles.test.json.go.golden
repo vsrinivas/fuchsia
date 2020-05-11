@@ -76,13 +76,4 @@ func (s_ *SomeProtocolWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bind
 	return nil, false, _bindings.ErrUnknownOrdinal
 }
 
-type SomeProtocolService struct {
-	_bindings.BindingSet
-}
-
-func (s *SomeProtocolService) EventProxyFor(key _bindings.BindingKey) (*SomeProtocolEventProxy, bool) {
-	pxy, err := s.BindingSet.ProxyFor(key)
-	return (*SomeProtocolEventProxy)(pxy), err
-}
-
 type SomeProtocolEventProxy _bindings.ChannelProxy

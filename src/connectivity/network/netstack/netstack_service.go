@@ -5,15 +5,15 @@
 package netstack
 
 import (
+	"context"
 	"net"
 	"sort"
 	"syscall/zx"
-	"syscall/zx/dispatch"
 	"syscall/zx/fidl"
 	"syscall/zx/zxwait"
 
+	"fuchsia.googlesource.com/component"
 	"fuchsia.googlesource.com/syslog"
-
 	"netstack/fidlconv"
 	"netstack/link"
 	"netstack/link/eth"
@@ -35,8 +35,7 @@ import (
 const zeroIpAddr = header.IPv4Any
 
 type netstackImpl struct {
-	ns                *Netstack
-	dhcpClientService dhcp.ClientService
+	ns *Netstack
 }
 
 // interfaces2ListToInterfacesList converts a NetInterface2 list into a
@@ -261,17 +260,11 @@ func (ni *netstackImpl) StartRouteTableTransaction(_ fidl.Context, req netstack.
 		}
 		ni.ns.mu.transactionRequest = &req
 	}
-	var routeTableService netstack.RouteTableTransactionService
-	transaction := netstack.RouteTableTransactionWithCtxStub{Impl: &routeTableTransactionImpl{ni: ni}}
-	// We don't use the error handler to free the channel because it's
-	// possible that the peer closes the channel before our service has
-	// finished processing.
-	c := req.Channel
-	_, err := routeTableService.AddToDispatcher(&transaction, c, ni.ns.dispatcher, nil)
-	if err != nil {
-		return int32(zx.ErrShouldWait), err
-	}
-	return int32(zx.ErrOk), err
+	stub := netstack.RouteTableTransactionWithCtxStub{Impl: &routeTableTransactionImpl{ni: ni}}
+	go component.ServeExclusive(context.Background(), &stub, req.Channel, func(err error) {
+		_ = syslog.WarnTf(tag, "%s", err)
+	})
+	return int32(zx.ErrOk), nil
 }
 
 // Add address to the given network interface.
@@ -377,21 +370,16 @@ func (ni *netstackImpl) GetDhcpClient(ctx fidl.Context, id uint32, request dhcp.
 		result.SetErr(int32(zx.ErrNotFound))
 		return result, nil
 	}
-	d, ok := dispatch.GetDispatcher(ctx)
-	if !ok {
-		panic("no dispatcher on FIDL context")
-	}
-	s := &dhcp.ClientWithCtxStub{Impl: &clientImpl{ns: ni.ns, nicid: nicid}}
-	if _, err := ni.dhcpClientService.BindingSet.AddToDispatcher(s, request.Channel, d, nil); err != nil {
-		result.SetErr(int32(zx.ErrInternal))
-		return result, nil
-	}
+	stub := dhcp.ClientWithCtxStub{Impl: &clientImpl{ns: ni.ns, nicid: nicid}}
+	go component.ServeExclusive(context.Background(), &stub, request.Channel, func(err error) {
+		_ = syslog.WarnTf(tag, "%s", err)
+	})
 	result.SetResponse(netstack.NetstackGetDhcpClientResponse{})
 	return result, nil
 }
 
-func (ns *netstackImpl) AddEthernetDevice(_ fidl.Context, topological_path string, interfaceConfig netstack.InterfaceConfig, device ethernet.DeviceWithCtxInterface) (uint32, error) {
-	ifs, err := ns.ns.addEth(topological_path, interfaceConfig, &device)
+func (ns *netstackImpl) AddEthernetDevice(_ fidl.Context, topopath string, interfaceConfig netstack.InterfaceConfig, device ethernet.DeviceWithCtxInterface) (uint32, error) {
+	ifs, err := ns.ns.addEth(topopath, interfaceConfig, &device)
 	if err != nil {
 		return 0, err
 	}

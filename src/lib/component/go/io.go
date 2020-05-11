@@ -9,11 +9,11 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
+	"log"
 	"runtime/pprof"
 	"strings"
 	"syscall"
 	"syscall/zx"
-	"syscall/zx/dispatch"
 	"syscall/zx/fdio"
 	"syscall/zx/fidl"
 	"unsafe"
@@ -41,17 +41,20 @@ func respond(ctx fidl.Context, flags uint32, req fidlio.NodeWithCtxInterfaceRequ
 	return nil
 }
 
+func logError(err error) {
+	log.Print(err)
+}
+
 type Node interface {
 	getIO() fidlio.NodeWithCtx
 	addConnection(ctx fidl.Context, flags, mode uint32, req fidlio.NodeWithCtxInterfaceRequest) error
 }
 
-type addFn func(fidl.Stub, zx.Channel, fidl.Context) error
+type addFn func(fidl.Context, zx.Channel) error
 
 // TODO(fxb/37419): Remove TransitionalBase after methods landed.
 type Service struct {
 	*fidlio.NodeWithCtxTransitionalBase
-	Stub  fidl.Stub
 	AddFn addFn
 }
 
@@ -64,23 +67,13 @@ func (s *Service) getIO() fidlio.NodeWithCtx {
 
 func (s *Service) addConnection(ctx fidl.Context, flags, mode uint32, req fidlio.NodeWithCtxInterfaceRequest) error {
 	// TODO(ZX-3805): this does not implement the node protocol correctly,
-	// but matches the behaviour of SDK FVS.
+	// but matches the behaviour of SDK VFS.
 	if flags&fidlio.OpenFlagNodeReference != 0 {
-		b := fidl.Binding{
-			Stub:    &fidlio.NodeWithCtxStub{Impl: s},
-			Channel: req.Channel,
-		}
-		d, ok := dispatch.GetDispatcher(ctx)
-		if !ok {
-			panic("no dispatcher found on FIDL context")
-		}
-		return respond(ctx, flags, req, b.InitWithDispatcher(d, func(error) {
-			if err := b.Close(); err != nil {
-				panic(err)
-			}
-		}), s)
+		stub := fidlio.NodeWithCtxStub{Impl: s}
+		go ServeExclusive(ctx, &stub, req.Channel, logError)
+		return respond(ctx, flags, req, nil, s)
 	}
-	return respond(ctx, flags, req, s.AddFn(s.Stub, req.Channel, ctx), s)
+	return respond(ctx, flags, req, s.AddFn(ctx, req.Channel), s)
 }
 
 func (s *Service) Clone(ctx fidl.Context, flags uint32, req fidlio.NodeWithCtxInterfaceRequest) error {
@@ -174,19 +167,9 @@ func (dir *DirectoryWrapper) getIO() fidlio.NodeWithCtx {
 
 func (dir *DirectoryWrapper) addConnection(ctx fidl.Context, flags, mode uint32, req fidlio.NodeWithCtxInterfaceRequest) error {
 	ioDir := dir.GetDirectory()
-	b := fidl.Binding{
-		Stub:    &fidlio.DirectoryWithCtxStub{Impl: ioDir},
-		Channel: req.Channel,
-	}
-	d, ok := dispatch.GetDispatcher(ctx)
-	if !ok {
-		panic("no dispatcher found on FIDL context")
-	}
-	return respond(ctx, flags, req, b.InitWithDispatcher(d, func(error) {
-		if err := b.Close(); err != nil {
-			panic(err)
-		}
-	}), ioDir)
+	stub := fidlio.DirectoryWithCtxStub{Impl: ioDir}
+	go ServeExclusive(ctx, &stub, req.Channel, logError)
+	return respond(ctx, flags, req, nil, ioDir)
 }
 
 var _ fidlio.DirectoryWithCtx = (*directoryState)(nil)
@@ -329,7 +312,7 @@ func (dirState *directoryState) Link(_ fidl.Context, src string, dstParentToken 
 
 func (dirState *directoryState) Watch(_ fidl.Context, mask uint32, options uint32, watcher zx.Channel) (int32, error) {
 	if err := watcher.Close(); err != nil {
-		_ = err
+		logError(err)
 	}
 	return int32(zx.ErrNotSupported), nil
 }
@@ -379,19 +362,9 @@ func (file *FileWrapper) getIO() fidlio.NodeWithCtx {
 
 func (file *FileWrapper) addConnection(ctx fidl.Context, flags, mode uint32, req fidlio.NodeWithCtxInterfaceRequest) error {
 	ioFile := file.getFile()
-	b := fidl.Binding{
-		Stub:    &fidlio.FileWithCtxStub{Impl: ioFile},
-		Channel: req.Channel,
-	}
-	d, ok := dispatch.GetDispatcher(ctx)
-	if !ok {
-		panic("no dispatcher found on FIDL context")
-	}
-	return respond(ctx, flags, req, b.InitWithDispatcher(d, func(error) {
-		if err := b.Close(); err != nil {
-			panic(err)
-		}
-	}), ioFile)
+	stub := fidlio.FileWithCtxStub{Impl: ioFile}
+	go ServeExclusive(ctx, &stub, req.Channel, logError)
+	return respond(ctx, flags, req, nil, ioFile)
 }
 
 var _ fidlio.FileWithCtx = (*fileState)(nil)

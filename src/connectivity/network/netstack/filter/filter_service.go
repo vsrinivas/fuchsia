@@ -6,7 +6,6 @@ package filter
 
 import (
 	"syscall/zx"
-	"syscall/zx/dispatch"
 	"syscall/zx/fidl"
 
 	"fuchsia.googlesource.com/component"
@@ -19,22 +18,17 @@ type filterImpl struct {
 	filter *Filter
 }
 
-var filterService filter.FilterService
-
-func AddOutgoingService(ctx *component.Context, f *Filter) error {
+func AddOutgoingService(ctx *component.Context, f *Filter) {
+	stub := filter.FilterWithCtxStub{Impl: &filterImpl{filter: f}}
 	ctx.OutgoingService.AddService(
 		filter.FilterName,
-		&filter.FilterWithCtxStub{Impl: &filterImpl{filter: f}},
-		func(s fidl.Stub, c zx.Channel, ctx fidl.Context) error {
-			d, ok := dispatch.GetDispatcher(ctx)
-			if !ok {
-				panic("no dispatcher on FIDL context")
-			}
-			_, err := filterService.BindingSet.AddToDispatcher(s, c, d, nil)
-			return err
+		func(ctx fidl.Context, c zx.Channel) error {
+			go component.ServeExclusive(ctx, &stub, c, func(err error) {
+				_ = syslog.WarnTf(tag, "%s", err)
+			})
+			return nil
 		},
 	)
-	return nil
 }
 
 func (fi *filterImpl) Enable(_ fidl.Context, trueOrFalse bool) (filter.Status, error) {

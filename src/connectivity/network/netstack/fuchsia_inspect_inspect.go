@@ -10,7 +10,6 @@ import (
 	"sort"
 	"strconv"
 	"syscall/zx"
-	"syscall/zx/dispatch"
 	"syscall/zx/fidl"
 
 	"fuchsia.googlesource.com/component"
@@ -53,8 +52,6 @@ var _ inspect.InspectWithCtx = (*inspectImpl)(nil)
 
 type inspectImpl struct {
 	inner inspectInner
-
-	service *inspect.InspectService
 }
 
 func (impl *inspectImpl) ReadData(fidl.Context) (inspect.Object, error) {
@@ -68,24 +65,21 @@ func (impl *inspectImpl) ListChildren(fidl.Context) ([]string, error) {
 func (impl *inspectImpl) OpenChild(ctx fidl.Context, childName string, childChannel inspect.InspectWithCtxInterfaceRequest) (bool, error) {
 	if child := impl.inner.GetChild(childName); child != nil {
 		svc := (&inspectImpl{
-			inner:   child,
-			service: impl.service,
+			inner: child,
 		}).asService()
-		return true, svc.AddFn(svc.Stub, childChannel.Channel, ctx)
+		return true, svc.AddFn(ctx, childChannel.Channel)
 	}
 	return false, nil
 }
 
 func (impl *inspectImpl) asService() *component.Service {
+	stub := inspect.InspectWithCtxStub{Impl: impl}
 	return &component.Service{
-		Stub: &inspect.InspectWithCtxStub{Impl: impl},
-		AddFn: func(s fidl.Stub, c zx.Channel, ctx fidl.Context) error {
-			d, ok := dispatch.GetDispatcher(ctx)
-			if !ok {
-				panic("no dispatcher provided for FIDL context")
-			}
-			_, err := impl.service.BindingSet.AddToDispatcher(s, c, d, nil)
-			return err
+		AddFn: func(ctx fidl.Context, c zx.Channel) error {
+			go component.ServeExclusive(ctx, &stub, c, func(err error) {
+				_ = syslog.WarnTf(tag, "%s", err)
+			})
+			return nil
 		},
 	}
 }

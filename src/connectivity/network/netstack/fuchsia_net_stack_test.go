@@ -7,7 +7,6 @@ package netstack
 import (
 	"context"
 	"fmt"
-	"syscall/zx/dispatch"
 	"testing"
 
 	"netstack/fidlconv"
@@ -262,15 +261,7 @@ func TestFuchsiaNetStack(t *testing.T) {
 
 func TestDnsServerWatcher(t *testing.T) {
 	ns := newNetstack(t)
-	{
-		dispatcher, err := dispatch.NewDispatcher()
-		if err != nil {
-			t.Fatal(err)
-		}
-		defer dispatcher.Close()
-		ns.dispatcher = dispatcher
-	}
-	watcherCollection := newDnsServerWatcherCollection(ns.dispatcher, ns.dnsClient)
+	watcherCollection := newDnsServerWatcherCollection(ns.dnsClient)
 	ni := stackImpl{ns: ns, dnsWatchers: watcherCollection}
 	request, watcher, err := name.NewDnsServerWatcherWithCtxInterfaceRequest()
 	if err != nil {

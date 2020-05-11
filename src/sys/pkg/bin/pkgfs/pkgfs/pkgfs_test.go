@@ -94,10 +94,7 @@ func tmain(m *testing.M) int {
 	panicerr(err)
 
 	pkgfsDir = fdio.NewDirectoryWithCtx(&zxio.DirectoryAdminWithCtxInterface{Channel: nc})
-
-	go func() {
-		panicerr(pkgfs.Serve(sc))
-	}()
+	panicerr(pkgfs.Serve(sc))
 	return m.Run()
 }
 

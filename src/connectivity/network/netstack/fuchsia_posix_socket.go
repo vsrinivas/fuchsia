@@ -5,6 +5,7 @@
 package netstack
 
 import (
+	"context"
 	"encoding/binary"
 	"fmt"
 	"net"
@@ -18,6 +19,7 @@ import (
 	"syscall/zx/zxsocket"
 	"syscall/zx/zxwait"
 
+	"fuchsia.googlesource.com/component"
 	"fuchsia.googlesource.com/syslog"
 
 	"fidl/fuchsia/io"
@@ -861,8 +863,8 @@ func (eps *endpointWithSocket) loopRead(inCh <-chan struct{}, initCh chan<- stru
 
 type datagramSocketImpl struct {
 	*endpointWithEvent
-	bindingKey fidl.BindingKey
-	service    *socket.DatagramSocketService
+
+	cancel context.CancelFunc
 }
 
 var _ socket.DatagramSocketWithCtx = (*datagramSocketImpl)(nil)
@@ -870,9 +872,9 @@ var _ socket.DatagramSocketWithCtx = (*datagramSocketImpl)(nil)
 func (s *datagramSocketImpl) close() {
 	clones := s.endpointWithEvent.close()
 
-	removed := s.service.Remove(s.bindingKey)
+	s.cancel()
 
-	syslog.VLogTf(syslog.DebugVerbosity, "close", "%p: clones=%d key=%d removed=%t", s.endpointWithEvent, clones, s.bindingKey, removed)
+	syslog.VLogTf(syslog.DebugVerbosity, "close", "%p: clones=%d", s.endpointWithEvent, clones)
 }
 
 func (s *datagramSocketImpl) Close(fidl.Context) (int32, error) {
@@ -885,14 +887,24 @@ func (s *datagramSocketImpl) Clone(_ fidl.Context, flags uint32, object io.NodeW
 	{
 		sCopy := *s
 		s := &sCopy
-		bindingKey, err := s.service.AddToDispatcher(&socket.DatagramSocketWithCtxStub{
-			Impl: s,
-		}, object.Channel, s.ns.dispatcher, func(error) { s.close() })
-		sCopy.bindingKey = bindingKey
 
-		syslog.VLogTf(syslog.DebugVerbosity, "Clone", "%p: clones=%d flags=%b key=%d err=%v", s.endpointWithEvent, clones, flags, bindingKey, err)
+		s.ns.stats.SocketCount.Increment()
+		go func() {
+			defer s.ns.stats.SocketCount.Decrement()
+			defer s.close()
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
 
-		return err
+			s.cancel = cancel
+			stub := socket.DatagramSocketWithCtxStub{Impl: s}
+			component.ServeExclusive(ctx, &stub, object.Channel, func(err error) {
+				_ = syslog.WarnTf(tag, "%s", err)
+			})
+		}()
+
+		syslog.VLogTf(syslog.DebugVerbosity, "Clone", "%p: clones=%d flags=%b", s.endpointWithEvent, clones, flags)
+
+		return nil
 	}
 }
 
@@ -998,20 +1010,19 @@ func (s *datagramSocketImpl) SendMsg2(_ fidl.Context, addr []uint8, data []uint8
 
 type streamSocketImpl struct {
 	*endpointWithSocket
-	bindingKey fidl.BindingKey
-	service    *socket.StreamSocketService
+
+	cancel context.CancelFunc
 }
 
 var _ socket.StreamSocketWithCtx = (*streamSocketImpl)(nil)
 
-func newStreamSocket(eps *endpointWithSocket, service *socket.StreamSocketService) (socket.StreamSocketWithCtxInterface, error) {
+func newStreamSocket(eps *endpointWithSocket) (socket.StreamSocketWithCtxInterface, error) {
 	localC, peerC, err := zx.NewChannel(0)
 	if err != nil {
 		return socket.StreamSocketWithCtxInterface{}, err
 	}
 	s := &streamSocketImpl{
 		endpointWithSocket: eps,
-		service:            service,
 	}
 	if err := s.Clone(nil, 0, io.NodeWithCtxInterfaceRequest{Channel: localC}); err != nil {
 		s.close()
@@ -1023,9 +1034,9 @@ func newStreamSocket(eps *endpointWithSocket, service *socket.StreamSocketServic
 func (s *streamSocketImpl) close() {
 	clones := s.endpointWithSocket.close(s.loopReadDone, s.loopWriteDone)
 
-	removed := s.service.Remove(s.bindingKey)
+	s.cancel()
 
-	syslog.VLogTf(syslog.DebugVerbosity, "close", "%p: clones=%d key=%d removed=%t", s.endpointWithSocket, clones, s.bindingKey, removed)
+	syslog.VLogTf(syslog.DebugVerbosity, "close", "%p: clones=%d", s.endpointWithSocket, clones)
 }
 
 func (s *streamSocketImpl) Close(fidl.Context) (int32, error) {
@@ -1038,14 +1049,24 @@ func (s *streamSocketImpl) Clone(_ fidl.Context, flags uint32, object io.NodeWit
 	{
 		sCopy := *s
 		s := &sCopy
-		bindingKey, err := s.service.AddToDispatcher(&socket.StreamSocketWithCtxStub{
-			Impl: s,
-		}, object.Channel, s.ns.dispatcher, func(error) { s.close() })
-		sCopy.bindingKey = bindingKey
 
-		syslog.VLogTf(syslog.DebugVerbosity, "Clone", "%p: clones=%d flags=%b key=%d err=%v", s.endpointWithSocket, clones, flags, bindingKey, err)
+		s.ns.stats.SocketCount.Increment()
+		go func() {
+			defer s.ns.stats.SocketCount.Decrement()
+			defer s.close()
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
 
-		return err
+			s.cancel = cancel
+			stub := socket.StreamSocketWithCtxStub{Impl: s}
+			component.ServeExclusive(ctx, &stub, object.Channel, func(err error) {
+				_ = syslog.WarnTf(tag, "%s", err)
+			})
+		}()
+
+		syslog.VLogTf(syslog.DebugVerbosity, "Clone", "%p: clones=%d flags=%b", s.endpointWithSocket, clones, flags)
+
+		return nil
 	}
 }
 
@@ -1068,7 +1089,7 @@ func (s *streamSocketImpl) Accept(ctx fidl.Context, flags int16) (socket.StreamS
 	if code != 0 {
 		return socket.StreamSocketAcceptResultWithErr(code), nil
 	}
-	streamSocketInterface, err := newStreamSocket(eps, s.service)
+	streamSocketInterface, err := newStreamSocket(eps)
 	if err != nil {
 		return socket.StreamSocketAcceptResult{}, err
 	}
@@ -1096,9 +1117,7 @@ func (ns *Netstack) onRemoveEndpoint(handle zx.Handle) {
 }
 
 type providerImpl struct {
-	datagramSocketService socket.DatagramSocketService
-	streamSocketService   socket.StreamSocketService
-	ns                    *Netstack
+	ns *Netstack
 }
 
 var _ socket.ProviderWithCtx = (*providerImpl)(nil)
@@ -1165,7 +1184,7 @@ func (sp *providerImpl) Socket2(ctx fidl.Context, domain, typ, protocol int16) (
 		if err != nil {
 			return socket.ProviderSocket2Result{}, err
 		}
-		streamSocketInterface, err := newStreamSocket(ep, &sp.streamSocketService)
+		streamSocketInterface, err := newStreamSocket(ep)
 		if err != nil {
 			return socket.ProviderSocket2Result{}, err
 		}
@@ -1193,7 +1212,6 @@ func (sp *providerImpl) Socket2(ctx fidl.Context, domain, typ, protocol int16) (
 				local: localE,
 				peer:  peerE,
 			},
-			service: &sp.datagramSocketService,
 		}
 
 		s.entry.Callback = callback(func(*waiter.Entry) {

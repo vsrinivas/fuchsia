@@ -62,13 +62,4 @@ func (s_ *TopWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Mess
 	return nil, false, _bindings.ErrUnknownOrdinal
 }
 
-type TopService struct {
-	_bindings.BindingSet
-}
-
-func (s *TopService) EventProxyFor(key _bindings.BindingKey) (*TopEventProxy, bool) {
-	pxy, err := s.BindingSet.ProxyFor(key)
-	return (*TopEventProxy)(pxy), err
-}
-
 type TopEventProxy _bindings.ChannelProxy
