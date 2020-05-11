@@ -161,9 +161,6 @@ void CobaltTestApp::Connect(uint32_t schedule_interval_seconds, uint32_t min_int
 
   sys::ServiceDirectory services(std::move(directory));
 
-  // Delay to give the fake timekeeper service time to start and return that the clock is accurate.
-  sleep(1);
-
   fuchsia::cobalt::LoggerFactorySyncPtr logger_factory;
   services.Connect(logger_factory.NewRequest());
 
@@ -184,6 +181,12 @@ void CobaltTestApp::Connect(uint32_t schedule_interval_seconds, uint32_t min_int
   SetChannel("devhost");
 
   services.Connect(cobalt_controller_.NewRequest());
+
+  // Block until the Cobalt service has been fully initialized. This includes
+  // being notified by the timekeeper service that the system clock is accurate.
+  FX_LOGS(INFO) << "Blocking until the Cobalt service is fully initialized.";
+  cobalt_controller_->ListenForInitialized();
+  FX_LOGS(INFO) << "Continuing because the Cobalt service is fully initialzied.";
 }
 
 }  // namespace testapp
