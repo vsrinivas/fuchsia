@@ -219,12 +219,21 @@ static void memory_pressure_init() {
     mem_watermarks[PressureLevel::kCritical] =
         gCmdline.GetUInt64("kernel.oom.critical-mb", 150) * MB;
     mem_watermarks[PressureLevel::kWarning] = gCmdline.GetUInt64("kernel.oom.warning-mb", 300) * MB;
+    uint64_t watermark_debounce = gCmdline.GetUInt64("kernel.oom.debounce-mb", 1) * MB;
 
-    zx_status_t status = pmm_init_reclamation(&mem_watermarks[PressureLevel::kOutOfMemory],
-                                              kNumWatermarks, MB, mem_avail_state_updated_cb);
+    zx_status_t status =
+        pmm_init_reclamation(&mem_watermarks[PressureLevel::kOutOfMemory], kNumWatermarks,
+                             watermark_debounce, mem_avail_state_updated_cb);
     if (status != ZX_OK) {
       panic("failed to initialize pmm reclamation: %d\n", status);
     }
+
+    printf(
+        "OOM: memory watermarks - OutOfMemory: %zuMB, Critical: %zuMB, Warning: %zuMB, "
+        "Debounce: %zuMB\n",
+        mem_watermarks[PressureLevel::kOutOfMemory] / MB,
+        mem_watermarks[PressureLevel::kCritical] / MB, mem_watermarks[PressureLevel::kWarning] / MB,
+        watermark_debounce / MB);
 
     auto thread = Thread::Create("oom-thread", oom_thread, nullptr, HIGH_PRIORITY);
     DEBUG_ASSERT(thread);

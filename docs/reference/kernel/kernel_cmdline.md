@@ -384,6 +384,9 @@ Refer to `kernel.oom.outofmemory-mb`, `kernel.oom.critical-mb`,
 `kernel.oom.warning-mb`, and `zx_system_get_event()` for further details on
 memory pressure state transitions.
 
+The current memory availability state can be queried with the command
+`k pmm mem_avail_state info`.
+
 ## kernel.oom.outofmemory-mb=\<num>
 
 This option (50 MB by default) specifies the free-memory threshold at which the
@@ -401,6 +404,21 @@ signaling that processes should free up memory.
 This option (300 MB by default) specifies the free-memory threshold at which the
 out-of-memory (OOM) thread will trigger a warning memory pressure event,
 signaling that processes should slow down memory allocations.
+
+## kernel.oom.debounce-mb=\<num>
+
+This option (1 MB by default) specifies the memory debounce value used when
+computing the memory pressure state based on the free-memory thresholds
+(`kernel.oom.outofmemory-mb`, `kernel.oom.critical-mb` and
+`kernel.oom.warning-mb`). Transitions between memory availability states are
+debounced by not leaving a state until the amount of free memory is at least
+`kernel.oom.debounce-mb` outside of that state.
+
+For example, consider the case where `kernel.oom.critical-mb` is set to 100 MB
+and `kernel.oom.debounce-mb` set to 5 MB. If we currently have 90 MB of free
+memory on the system, i.e. we're in the Critical state, free memory will have to
+increase to at least 105 MB (100 MB + 5 MB) for the state to change from
+Critical to Warning.
 
 ## kernel.root-job.behavior=\<string>
 
