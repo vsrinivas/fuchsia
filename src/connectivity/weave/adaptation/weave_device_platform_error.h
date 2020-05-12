@@ -15,4 +15,7 @@
 // The configuration file is invalid or has an unsupported format.
 #define WEAVE_DEVICE_PLATFORM_ERROR_CONFIG_INVALID _WEAVE_DEVICE_PLATFORM_ERROR(2)
 
+// An error occurred on a request made to a FIDL connection.
+#define WEAVE_DEVICE_PLATFORM_ERROR_FIDL_ERROR _WEAVE_DEVICE_PLATFORM_ERROR(3)
+
 #endif  // SRC_CONNECTIVITY_WEAVE_ADAPTATION_WEAVE_DEVICE_PLATFORM_ERROR_H_

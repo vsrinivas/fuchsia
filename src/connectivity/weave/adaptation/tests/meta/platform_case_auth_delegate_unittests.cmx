@@ -1,6 +1,13 @@
 {
+    "facets": {
+        "fuchsia.test": {
+            "system-services": [
+                "fuchsia.boot.FactoryItems"
+            ]
+        }
+    },
     "program": {
-        "binary": "bin/weavestack"
+        "binary": "test/platform_case_auth_delegate_unittests"
     },
     "sandbox": {
         "features": [
@@ -13,7 +20,6 @@
             "fuchsia.logger.LogSink",
             "fuchsia.posix.socket.Provider",
             "fuchsia.weave.FactoryDataManager",
-            "fuchsia.weave.Signer",
             "fuchsia.wlan.device.service.DeviceService"
         ]
     }
