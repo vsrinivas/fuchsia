@@ -38,7 +38,6 @@ Display::Display(const fhd::Info& info) {
   horizontal_size_mm_ = info.horizontal_size_mm;
   vertical_size_mm_ = info.vertical_size_mm;
   using_fallback_sizes_ = info.using_fallback_size;
-  vsync_acknowledge_rate_ = info.vsync_acknowledge_rate;
 }
 
 void Display::Dump() {
@@ -46,7 +45,6 @@ void Display::Dump() {
   printf("\tManufacturer name = \"%s\"\n", manufacturer_name_.c_str());
   printf("\tMonitor name = \"%s\"\n", monitor_name_.c_str());
   printf("\tMonitor serial = \"%s\"\n", monitor_serial_.c_str());
-  printf("\tVSync Acknowledge Rate: %d\n", vsync_acknowledge_rate_);
 
   printf("\tSupported pixel formats:\n");
   for (unsigned i = 0; i < pixel_formats_.size(); i++) {

@@ -25,7 +25,6 @@ TestFidlClient::Display::Display(const fhd::Info& info) {
   manufacturer_name_ = fbl::String(info.manufacturer_name.data());
   monitor_name_ = fbl::String(info.monitor_name.data());
   monitor_serial_ = fbl::String(info.monitor_serial.data());
-  vsync_acknowledge_rate_ = info.vsync_acknowledge_rate;
   image_config_.height = modes_[0].vertical_resolution;
   image_config_.width = modes_[0].horizontal_resolution;
   image_config_.pixel_format = pixel_formats_[0];
@@ -139,7 +138,9 @@ void TestFidlClient::OnEventMsgAsync(async_dispatcher_t* dispatcher, async::Wait
           [this](uint64_t, uint64_t, ::fidl::VectorView<uint64_t>, uint64_t cookie)
               TA_NO_THREAD_SAFETY_ANALYSIS {
                 vsync_count_++;
-                cookie_ = cookie;
+                if (cookie) {
+                  cookie_ = cookie;
+                }
                 return ZX_OK;
               },
       .on_client_ownership_change = [](bool) { return ZX_OK; },
@@ -250,8 +251,8 @@ zx_status_t TestFidlClient::ImportImageWithSysmemLocked(const fhd::ImageConfig& 
   }
   if (auto result = dc_->ImportBufferCollection(display_collection_id, std::move(display_token));
       !result.ok() || result->res != ZX_OK) {
-    zxlogf(ERROR, "Failed to import buffer collection %lu (fidl=%d, res=%d)",
-           display_collection_id, result.status(), result->res);
+    zxlogf(ERROR, "Failed to import buffer collection %lu (fidl=%d, res=%d)", display_collection_id,
+           result.status(), result->res);
     return result.ok() ? result->res : result.status();
   }
 

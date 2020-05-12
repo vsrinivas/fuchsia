@@ -34,8 +34,6 @@ class TestFidlClient {
     fbl::String monitor_name_;
     fbl::String monitor_serial_;
 
-    uint32_t vsync_acknowledge_rate_;
-
     ::llcpp::fuchsia::hardware::display::ImageConfig image_config_;
   };
 
@@ -73,7 +71,7 @@ class TestFidlClient {
   mutable fbl::Mutex mtx_;
   async_dispatcher_t* dispatcher_ = nullptr;
   uint64_t vsync_count_ TA_GUARDED(mtx()) = 0;
-  uint64_t cookie_;
+  uint64_t cookie_ = 0;
 
   zx_status_t ImportImageWithSysmemLocked(
       const ::llcpp::fuchsia::hardware::display::ImageConfig& image_config, uint64_t* image_id)

@@ -22,6 +22,7 @@
 #include <zircon/listnode.h>
 #include <zircon/types.h>
 
+#include <cstdint>
 #include <map>
 #include <memory>
 #include <vector>
@@ -292,8 +293,26 @@ class ClientProxy : public ClientParent {
   // Test helpers
   size_t TEST_imported_images_count() const { return handler_.TEST_imported_images_count(); }
 
-  // define this constant here so we can access it for test
+  // Define these constants here so we can access it for test
+
   static constexpr uint32_t kVsyncBufferSize = 10;
+
+  // Maximum number of vsync messages sent before an acknowledgement is required.
+  // Half of this limit is provided to clients as part of display info. Assuming a
+  // frame rate of 60hz, clients will be required to acknowledge at least once a second
+  // and driver will stop sending messages after 2 seconds of no acknowledgement
+
+  // TODO(bug 50889): Set kMaxVsyncMessages to 120 to enforce cookie acknowledgement
+  // static constexpr uint32_t kMaxVsyncMessages = 120;
+  static constexpr uint32_t kMaxVsyncMessages = static_cast<uint32_t>(-1);
+  // TODO(bug 50889): Set kVsyncMessagesWatermark to (kMaxVsyncMessages / 2)
+  // static constexpr uint32_t kVsyncMessagesWatermark = (kMaxVsyncMessages / 2);
+  static constexpr uint32_t kVsyncMessagesWatermark = 60;
+  // At the moment, maximum image handles returned by any driver is 4 which is
+  // equal to number of hardware layers. 8 should be more than enough to allow for
+  // a simple statically allocated array of image_ids for vsync events that are being
+  // stored due to client non-acknowledgement.
+  static constexpr uint32_t kMaxImageHandles = 8;
 
  protected:
   void CloseOnControllerLoop();
@@ -320,15 +339,17 @@ class ClientProxy : public ClientParent {
   using vsync_msg_t = struct vsync_msg {
     uint64_t display_id;
     zx_time_t timestamp;
-    uint64_t* image_ids;
+    uint64_t image_ids[kMaxImageHandles];
     size_t count;
-    uint64_t cookie;
   };
 
   fbl::RingBuffer<vsync_msg_t, kVsyncBufferSize> buffered_vsync_messages_;
-  uint64_t last_cookie_sequence_sent_ = 0;
   uint64_t initial_cookie_ = 0;
   uint64_t cookie_sequence_ = 0;
+
+  uint64_t number_of_vsyncs_sent_ = 0;
+  uint64_t last_cookie_sent_ = 0;
+  bool acknowledge_request_sent_ = false;
 };
 
 }  // namespace display

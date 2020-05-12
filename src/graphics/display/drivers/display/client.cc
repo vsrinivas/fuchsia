@@ -18,6 +18,7 @@
 #include <zircon/types.h>
 
 #include <algorithm>
+#include <cstdint>
 #include <memory>
 #include <random>
 #include <type_traits>
@@ -52,17 +53,6 @@ bool frame_contains(const frame_t& a, const frame_t& b) {
 // We allocate some variable sized stack allocations based on the number of
 // layers, so we limit the total number of layers to prevent blowing the stack.
 static constexpr uint64_t kMaxLayers = 65536;
-
-// Maximum number of vsync messages sent before an acknowledgement is required.
-// Half of this limit is provided to clients as part of display info. Assuming a
-// frame rate of 60hz, clients will be required to acknowledge at least once a second
-// and driver will stop sending messages after 2 seconds of no acknowledgement
-
-// TODO(bug:50889): set kMaxVsyncMessages to 120 enforce vsync acknowledgement
-constexpr uint32_t kMaxVsyncMessages = static_cast<uint32_t>(-1);
-// TODO(bug:50889): Delete below constant once vsync acknowledgement is mandatory. For now,
-// provide the following to display clients if they wish to acknowledge vsync events
-constexpr uint32_t kOptionalVsyncAckRate = 60;
 }  // namespace
 
 namespace display {
@@ -1238,12 +1228,6 @@ void Client::OnDisplaysChanged(const uint64_t* displays_added, size_t added_coun
     info.monitor_name = fidl::unowned_str(monitor_name, strlen(monitor_name));
     info.monitor_serial = fidl::unowned_str(monitor_serial, strlen(monitor_serial));
 
-    // Provide client with half the value of maximum vsync acknowledgement rate.
-    // TODO(bug:50889): set kMaxVsyncMessages to (kMaxVsyncMessages / 2) to enforce vsync
-    // acknowledgement.
-    // info.vsync_acknowledge_rate = kMaxVsyncMessages >> 1;
-    info.vsync_acknowledge_rate = kOptionalVsyncAckRate;
-
     coded_configs.push_back(std::move(info));
   }
 
@@ -1529,40 +1513,53 @@ zx_status_t ClientProxy::OnDisplayVsync(uint64_t display_id, zx_time_t timestamp
   }
   zx_status_t status = ZX_OK;
 
-  // let's check the last acknowledged cookied and extract sequence number from it
-  uint64_t acked_cookie_sequence = handler_.LatestAckedCookie();
-  if (acked_cookie_sequence != 0) {
-    acked_cookie_sequence ^= initial_cookie_;
+  uint64_t cookie = 0;
+  if (number_of_vsyncs_sent_ >= (kVsyncMessagesWatermark - 1)) {
+    // Number of  vsync events sent exceed the watermark level.
+    // Check to see if client has been notified already that acknowledgement is needed
+    if (!acknowledge_request_sent_) {
+      // We have not sent a (new) cookie to client for acknowledgement. Let's do it now
+      // First increment cookie sequence
+      cookie_sequence_++;
+      // Generate new cookie by xor'ing initial cookie with sequence number.
+      cookie = initial_cookie_ ^ cookie_sequence_;
+    } else {
+      // Client has already been notified. let's check if client has acknowledged it
+      ZX_DEBUG_ASSERT(last_cookie_sent_ != 0);
+      if (handler_.LatestAckedCookie() == last_cookie_sent_) {
+        // Client has acknowledged cookie. Reset vsync tracking states
+        number_of_vsyncs_sent_ = 0;
+        acknowledge_request_sent_ = false;
+        last_cookie_sent_ = 0;
+      }
+    }
   }
 
-  if (acked_cookie_sequence > last_cookie_sequence_sent_) {
-    zxlogf(ERROR, "Invalid cookie sent\n");
-    return ZX_ERR_INVALID_ARGS;
-  }
-
-  // increment cookie sequence
-  cookie_sequence_++;
-  // generate new cookie by xor'ing initial cookie with sequence number.
-  uint64_t cookie = initial_cookie_ ^ cookie_sequence_;
-
-  if ((last_cookie_sequence_sent_ - acked_cookie_sequence) >= kMaxVsyncMessages) {
+  if (number_of_vsyncs_sent_ >= kMaxVsyncMessages) {
+    // We have reached/exceeded maximum allowed vsyncs without any acknowledgement. At this point,
+    // start storing them
     zxlogf(SPEW, "Vsync not sent due to none acknowledgment.\n");
+    ZX_DEBUG_ASSERT(cookie == 0);  // cookie should be zero!
     if (buffered_vsync_messages_.full()) {
       buffered_vsync_messages_.pop();  // discard
     }
     vsync_msg_t v = {
         .display_id = display_id,
         .timestamp = timestamp,
-        .image_ids = image_ids,
         .count = count,
-        .cookie = cookie,
     };
+    ZX_DEBUG_ASSERT(count <= kMaxImageHandles);
+    for (uint64_t i = 0; i < count; i++) {
+      v.image_ids[i] = image_ids[i];
+    }
     buffered_vsync_messages_.push(v);
     return ZX_ERR_BAD_STATE;
   }
 
   auto cleanup = fbl::MakeAutoCall([&]() {
-    cookie_sequence_--;
+    if (cookie) {
+      cookie_sequence_--;
+    }
     // Make sure status is not ZX_ERR_BAD_HANDLE, otherwise, depending on
     // policy setting channel write will crash
     ZX_DEBUG_ASSERT(status != ZX_ERR_BAD_HANDLE);
@@ -1588,12 +1585,12 @@ zx_status_t ClientProxy::OnDisplayVsync(uint64_t display_id, zx_time_t timestamp
     buffered_vsync_messages_.pop();
     status = fhd::Controller::SendOnVsyncEvent(
         zx::unowned_channel(server_channel_), v.display_id, v.timestamp,
-        fidl::VectorView(fidl::unowned_ptr(v.image_ids), v.count), v.cookie);
+        fidl::VectorView(fidl::unowned_ptr(v.image_ids), v.count), 0);
     if (status != ZX_OK) {
       zxlogf(ERROR, "Failed to send all buffered vsync messages %d\n", status);
       return status;
     }
-    last_cookie_sequence_sent_ = v.cookie ^ initial_cookie_;
+    number_of_vsyncs_sent_++;
   }
 
   // Send the latest vsync event
@@ -1604,8 +1601,12 @@ zx_status_t ClientProxy::OnDisplayVsync(uint64_t display_id, zx_time_t timestamp
     return status;
   }
 
-  // update the latest cookie sent through channel
-  last_cookie_sequence_sent_ = cookie ^ initial_cookie_;
+  // Update vsync tracking states
+  if (cookie) {
+    acknowledge_request_sent_ = true;
+    last_cookie_sent_ = cookie;
+  }
+  number_of_vsyncs_sent_++;
   cleanup.cancel();
   return ZX_OK;
 }  // namespace display

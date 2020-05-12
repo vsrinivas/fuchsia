@@ -9,6 +9,7 @@
 #include <fuchsia/sysmem/llcpp/fidl.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fidl/cpp/message.h>
+#include <lib/zircon-internal/align.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -30,7 +31,6 @@
 #include <fbl/string_buffer.h>
 #include <fbl/unique_fd.h>
 #include <fbl/vector.h>
-#include <lib/zircon-internal/align.h>
 
 #include "ddk/driver.h"
 #include "fuchsia/hardware/display/llcpp/fidl.h"
@@ -59,9 +59,6 @@ uint64_t capture_id = 0;
 zx::event client_event_;
 std::unique_ptr<sysmem::BufferCollection::SyncClient> collection_;
 zx::vmo capture_vmo;
-
-uint64_t vsync_count_ = 0;
-uint32_t vsync_ack_rate_ = 0;
 
 enum TestBundle {
   SIMPLE = 0,  // BUNDLE0
@@ -240,6 +237,11 @@ zx_status_t wait_for_vsync(const fbl::Vector<std::unique_ptr<VirtualLayer>>& lay
       .on_vsync =
           [&layers](uint64_t display_id, uint64_t timestamp, ::fidl::VectorView<uint64_t> images,
                     uint64_t cookie) {
+            // Acknowledge cookie if non-zero
+            if (cookie) {
+              dc->AcknowledgeVsync(cookie);
+            }
+
             for (auto& layer : layers) {
               uint64_t id = layer->image_id(display_id);
               if (id == 0) {
@@ -256,11 +258,6 @@ zx_status_t wait_for_vsync(const fbl::Vector<std::unique_ptr<VirtualLayer>>& lay
               if (!layer->is_done()) {
                 return ZX_ERR_NEXT;
               }
-            }
-            // ack
-            if (++vsync_count_ >= vsync_ack_rate_) {
-              dc->AcknowledgeVsync(cookie);
-              vsync_count_ = 0;
             }
             return ZX_OK;
           },
@@ -688,8 +685,6 @@ int main(int argc, const char* argv[]) {
   for (unsigned i = 0; i < displays.size(); i++) {
     display_layers.push_back(fbl::Vector<uint64_t>());
   }
-
-  vsync_ack_rate_ = displays[0].get_vsync_ack_rate();
 
   argc--;
   argv++;

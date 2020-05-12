@@ -76,10 +76,6 @@ struct Info {
     /// This flag is set if fallback horizontal and vertical sizes were used as opposed
     /// to actual values reported by the display.
     bool using_fallback_size;
-    /// Maximum number of vsync messages sent by driver before acknowledge is needed
-    /// To acknowledge, client needs to use AcknowledgeVsync API and provide the cookie
-    /// that was provided as part of the receive vsync message
-    uint32 vsync_acknowledge_rate;
 };
 
 // An ImageConfig accompanies image data and defines how to interpret that data.
@@ -439,11 +435,10 @@ protocol Controller {
     // to false.
     EnableVsync(bool enable);
 
-    // This API is used by the client to acknowledge receipt of vsync messages. The
-    // expected rate of acknowledgement is communicated as part of display info
-    //(i.e vsync_acknowledge_rate)
+    // This API is used by the client to acknowledge receipt of vsync messages.
     // The cookie sent should match the cookie received via vsync message (OnVsync).
-    // Ideally clients should send the cookie from the most recent vsync event
+    // A cookie can only be acknowledged once. Using invalid cookies, or previously
+    // acknowledged cookies will not be accepted by the driver.
     AcknowledgeVsync(uint64 cookie);
 
     // Event sent for every vsync.
@@ -451,14 +446,15 @@ protocol Controller {
     // display_id is the identifies the display on which the vsync occurred, and
     // timestamp indicates the time the vsync occurred. images is a (possibly
     // empty) vector of all images that were actively being displayed. cookie is a unique
-    // number returned by the driver. The cookie is used to acknowledge the receipt of vsync
-    // event using AcknowledgeVsync API.
-    // Not all the vsyncs need to be acknowledged. Clients only need to acknowledge one vsync
-    // out of vsync_acknowledge_rate received vsyncs. Vsync events are delivered to clients that
-    // acknowledge 1 vsync per vsync_acknowledge_rate regardless of whether they have applied
-    // a (new) configuration or not (via ApplyConfig).
-    // If a client fails to acknowledge vsyncs for a period longer than vsync_acknowledge_rate,
-    // the driver will store incoming hardware-generated vsyncs in a circular buffer and send them
+    // number returned by the driver.
+    // Cookie is used to acknowledge the receipt of vsync events using AcknowledgeVsync API.
+    // When cookie has a value of zero, no acknowledgement is required by the client. A non-zero
+    // valued cookie requires immediate acknowledgement by client. Failure to acknowledge
+    // vsync events will result in driver suspending vsync event notification. All vsync
+    // messages containing a non-zero cookie require acknowledgement regardless of whether
+    // client has applied a (new) configuration or not (via ApplyConfig).
+    // If a client fails to acknowledge vsync messages, the driver will store incoming
+    // hardware-generated vsyncs in a circular buffer and send them
     // to the client once it resumes acknowledgement. Due to limited size of buffer, only the most
     // recently received vsyncs will be stored and older ones will be dropped.
     -> OnVsync(uint64 display_id, uint64 timestamp, vector<uint64>:MAX images, uint64 cookie);
