@@ -29,7 +29,7 @@ void free(void* ptr);
 
 // inner function used when stats gathering is enabled
 void* malloc_debug_caller_(size_t size, void* caller);
-void* memalign_debug_caller_(size_t size, size_t align, void* caller);
+void* memalign_debug_caller_(size_t align, size_t size, void* caller);
 
 // alternate version of malloc where the caller is passed in
 __MALLOC static inline void* malloc_debug_caller(size_t size, void* caller) {
@@ -39,9 +39,9 @@ __MALLOC static inline void* malloc_debug_caller(size_t size, void* caller) {
     return malloc(size);
   }
 }
-__MALLOC static inline void* memalign_debug_caller(size_t size, size_t align, void* caller) {
+__MALLOC static inline void* memalign_debug_caller(size_t align, size_t size, void* caller) {
   if (HEAP_COLLECT_STATS) {
-    return memalign_debug_caller_(size, align, caller);
+    return memalign_debug_caller_(align, size, caller);
   } else {
     return memalign(align, size);
   }

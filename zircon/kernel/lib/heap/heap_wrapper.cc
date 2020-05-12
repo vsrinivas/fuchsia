@@ -171,14 +171,14 @@ void* malloc_debug_caller_(size_t size, void* caller) {
   return ptr;
 }
 
-void* memalign_debug_caller_(size_t size, size_t align, void* caller) {
+void* memalign_debug_caller_(size_t align, size_t size, void* caller) {
   DEBUG_ASSERT(!arch_blocking_disallowed());
 
   LTRACEF("size %zu\n", size);
 
   add_stat(caller, size);
 
-  void* ptr = cmpct_memalign(size, align);
+  void* ptr = cmpct_memalign(align, size);
   if (unlikely(heap_trace)) {
     printf("caller %p malloc %zu -> %p\n", caller, size, ptr);
   }
@@ -197,7 +197,7 @@ void* memalign(size_t boundary, size_t size) {
 
   add_stat(__GET_CALLER(), size);
 
-  void* ptr = cmpct_memalign(size, boundary);
+  void* ptr = cmpct_memalign(boundary, size);
   if (unlikely(heap_trace)) {
     printf("caller %p memalign %zu, %zu -> %p\n", __GET_CALLER(), boundary, size, ptr);
   }

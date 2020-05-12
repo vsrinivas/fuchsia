@@ -940,7 +940,7 @@ void cmpct_free(void* payload) {
   }
 }
 
-void* cmpct_memalign(size_t size, size_t alignment) {
+void* cmpct_memalign(size_t alignment, size_t size) {
   if (alignment < 8) {
     return cmpct_alloc(size);
   }
@@ -1065,7 +1065,7 @@ void cmpct_test(void) {
       ptr[index] = 0;
     }
     unsigned int align = 1 << ((unsigned int)rand() % 8);
-    ptr[index] = cmpct_memalign((unsigned int)rand() % 32768, align);
+    ptr[index] = cmpct_memalign(align, (unsigned int)rand() % 32768);
     // printf("ptr[0x%x] = %p, align 0x%x\n", index, ptr[index], align);
 
     ZX_DEBUG_ASSERT(((uintptr_t)ptr[index] % align) == 0);

@@ -80,7 +80,7 @@ void* operator new(size_t size, fbl::AllocChecker* ac) noexcept {
 
 void* operator new(size_t size, std::align_val_t align, fbl::AllocChecker* ac) noexcept {
   return fbl::checked(size, ac,
-                      memalign_debug_caller(size, static_cast<size_t>(align), __GET_CALLER()));
+                      memalign_debug_caller(static_cast<size_t>(align), size, __GET_CALLER()));
 }
 
 void* operator new[](size_t size, fbl::AllocChecker* ac) noexcept {
@@ -89,7 +89,7 @@ void* operator new[](size_t size, fbl::AllocChecker* ac) noexcept {
 
 void* operator new[](size_t size, std::align_val_t align, fbl::AllocChecker* ac) noexcept {
   return fbl::checked(size, ac,
-                      memalign_debug_caller(size, static_cast<size_t>(align), __GET_CALLER()));
+                      memalign_debug_caller(static_cast<size_t>(align), size, __GET_CALLER()));
 }
 
 #endif  // !_KERNEL

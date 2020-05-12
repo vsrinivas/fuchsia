@@ -60,7 +60,7 @@ class RandomAllocator {
     size_t size = sizes_(generator_);
     size_t exponent = alignment_exponents_(generator_);
     size_t alignment = 1 << exponent;
-    void* p = cmpct_memalign(size, alignment);
+    void* p = cmpct_memalign(alignment, size);
     ASSERT_NOT_NULL(p);
     EXPECT_TRUE(ZX_IS_ALIGNED(p, alignment));
     allocated_.push_back(p);
