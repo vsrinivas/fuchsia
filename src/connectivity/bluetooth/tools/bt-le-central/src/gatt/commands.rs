@@ -110,6 +110,7 @@ gen_commands! {
         WriteDesc = ("write-desc", [], ["id", "value"], "Write to a characteristic descriptor"),
         WriteLongDesc = ("write-long-desc", [], ["id", "offset", "value"],
                         "Write to a long characteristic descriptor"),
+        ReadByType = ("read-by-type", [], ["uuid"], "Read a characteristic or descriptor by UUID"),
         EnableNotify = ("enable-notify", [], ["id"], "Enable characteristic notifications"),
         DisableNotify = ("disable-notify", [], ["id"], "Disable characteristic notifications"),
         Quit = ("quit", [], [], "Quit and disconnect the peripheral"),

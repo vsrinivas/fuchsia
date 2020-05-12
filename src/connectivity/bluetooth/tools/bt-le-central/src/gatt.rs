@@ -6,14 +6,17 @@ use {
     anyhow::Error,
     fidl::encoding::Decodable as FidlDecodable,
     fidl::endpoints,
+    fidl_fuchsia_bluetooth,
     fidl_fuchsia_bluetooth_gatt::{
         Characteristic as FidlCharacteristic, ClientProxy, ReliableMode, RemoteServiceEvent,
         RemoteServiceProxy, ServiceInfo, WriteOptions,
     },
     fuchsia_async as fasync,
     fuchsia_bluetooth::error::Error as BTError,
+    fuchsia_bluetooth::types::Uuid,
     futures::{TryFutureExt, TryStreamExt},
     parking_lot::RwLock,
+    std::str::FromStr,
     std::sync::Arc,
 };
 
@@ -599,6 +602,69 @@ async fn do_write_long_desc<'a>(
     }
 }
 
+fn print_read_by_type_result(result: &fidl_fuchsia_bluetooth_gatt::ReadByTypeResult) {
+    match (result.value.as_ref(), result.error.as_ref()) {
+        (Some(value), None) => {
+            println!(
+                "[id: {}, value: {:X?} {}]",
+                result.id.as_ref().expect("read by value response id"),
+                value,
+                decoded_string_value(value)
+            );
+        }
+        (None, Some(error)) => {
+            println!(
+                "[id: {}, error: {:?}]",
+                result.id.as_ref().expect("read by value response id"),
+                error
+            );
+        }
+        _ => {
+            println!("Invalid FIDL response");
+        }
+    }
+}
+
+async fn do_read_by_type<'a>(args: &'a [&'a str], client: &'a GattClientPtr) -> Result<(), Error> {
+    if args.len() != 1 {
+        println!("usage: {}", Cmd::ReadByType.cmd_help());
+        return Ok(());
+    }
+
+    let uuid = match Uuid::from_str(args[0]) {
+        Err(_) => {
+            println!("invalid uuid: {}", args[0]);
+            return Ok(());
+        }
+        Ok(u) => u,
+    };
+
+    let mut fidl_uuid = fidl_fuchsia_bluetooth::Uuid::from(uuid);
+    match &client.read().active_proxy {
+        Some(svc) => match svc.read_by_type(&mut fidl_uuid).await {
+            Ok(Ok(results)) => {
+                if results.len() == 0 {
+                    println!("No results received.");
+                } else {
+                    for res in results.into_iter() {
+                        print_read_by_type_result(&res);
+                    }
+                }
+            }
+            Ok(Err(e)) => {
+                println!("read by type error result: {:?}", e);
+            }
+            Err(e) => {
+                println!("read by type FIDL error: {:?}", BTError::from(e));
+            }
+        },
+        None => {
+            println!("no service connected");
+        }
+    }
+    Ok(())
+}
+
 async fn do_enable_notify<'a>(args: &'a [&'a str], client: &'a GattClientPtr) -> Result<(), Error> {
     if args.len() != 1 {
         println!("usage: {}", Cmd::EnableNotify.cmd_help());
@@ -676,5 +742,41 @@ fn decoded_string_value(value: &[u8]) -> String {
         decoded_value.replace("�", ".")
     } else {
         String::new()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use {
+        bt_fidl_mocks::gatt::RemoteServiceMock,
+        fidl::endpoints::create_proxy_and_stream,
+        fidl_fuchsia_bluetooth_gatt::{ClientMarker, RemoteServiceReadByTypeResult},
+        fuchsia_zircon::DurationNum,
+        futures::join,
+    };
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_read_by_type() -> Result<(), Error> {
+        let (client, _stream) = create_proxy_and_stream::<ClientMarker>()?;
+        let gatt_client = GattClient::new(client);
+
+        let args = vec!["0000180d-0000-1000-8000-00805f9b34fb"];
+        let read_fut = do_read_by_type(&args, &gatt_client);
+
+        let (service_proxy, mut service_mock) =
+            RemoteServiceMock::new(20.seconds()).expect("failed to create mock");
+
+        gatt_client.write().active_proxy = Some(service_proxy);
+
+        let expected_uuid = Uuid::new16(0x180d);
+        let result: RemoteServiceReadByTypeResult = Ok(vec![]);
+        let expect_fut = service_mock.expect_read_by_type(expected_uuid, result);
+
+        let (read_result, expect_result) = join!(read_fut, expect_fut);
+        let _ = read_result.expect("do read by type failed");
+        let _ = expect_result.expect("read by type expectation not satisfied");
+        Ok(())
     }
 }

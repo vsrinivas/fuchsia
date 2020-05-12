@@ -59,6 +59,15 @@ Read a long characteristic descriptor.
 Write to a characteristic descriptor.
 ##### `write-long-desc <id> <offset> <value>`
 Write to a long characteristic descriptor.
+##### `read-by-type <uuid>`
+Read a characteristic or descriptor by its UUID.
+###### Example
+```
+GATT> read-by-type 9ec813b4-256b-4090-93a8-a4f0e9107733
+all values read successfully: true
+[id: 3, value: [0, 0, 0, 0, 0, 0]]
+```
+
 ##### `enable-notify <id>`
 Enable characteristic notifications.
 ##### `disable-notify <id>`
