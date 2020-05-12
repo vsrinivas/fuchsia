@@ -1,6 +1,7 @@
 ### General file patterns
 *~
 .DS_Store
+.flutter_tool_state
 .vscode
 *_BACKUP_*
 *_REMOTE_*
