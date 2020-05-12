@@ -418,11 +418,10 @@ template("package") {
 
       if (!is_disabled) {
         test_spec_name = "${pkg.package_name}_${dest}_test_spec"
-        main_target_name = target_name
         pkg.deps += [ ":$test_spec_name" ]
 
         test_spec(test_spec_name) {
-          target = main_target_name
+          target = ":${invoker.target_name}"
           path = path
           if (!bootfs_only) {
             package_url = url

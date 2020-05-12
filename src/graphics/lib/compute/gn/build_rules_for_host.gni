@@ -38,13 +38,11 @@ template("graphics_compute_executable_rule") {
 # Accepts same variables as GN executable() rule, as well as:
 #   needs_vulkan: Optional flag. Set to true to add Vulkan dependencies.
 template("graphics_compute_test_rule") {
-  _target_name = target_name
-
   # Generate the executable
   _binary_target = "bin_${target_name}"
   graphics_compute_executable_rule(_binary_target) {
     testonly = true
-    output_name = _target_name
+    output_name = invoker.target_name
     forward_variables_from(invoker, "*", [ "target_name" ])
   }
 
@@ -54,15 +52,15 @@ template("graphics_compute_test_rule") {
   if (_is_fuchsia_tree) {
     _test_spec_target_name = "${target_name}__test_spec"
     test_spec(_test_spec_target_name) {
-      target = _target_name
-      path = "${root_out_dir}/${_target_name}"
+      target = ":${invoker.target_name}"
+      path = "${root_out_dir}/${invoker.target_name}"
       command = [ rebase_path(path, root_build_dir) ]
     }
 
     _deps += [ ":${_test_spec_target_name}" ]
   }
 
-  group(_target_name) {
+  group(target_name) {
     testonly = true
     deps = _deps
   }

@@ -49,10 +49,9 @@ template("prebuilt_test_package") {
         false,
         "unexpected runner \"${invoker.runner}; must be one of \"run\" or \"run_test_component\"")
   }
-  main_target_name = target_name
   spec_target_name = "${target_name}_${invoker.component_name}_spec"
   test_spec(spec_target_name) {
-    target = main_target_name
+    target = ":${invoker.target_name}"
     package_url = "fuchsia-pkg://fuchsia.com/${package_name}#meta/${invoker.component_name}.cmx"
     command = [
       "${invoker.runner}",

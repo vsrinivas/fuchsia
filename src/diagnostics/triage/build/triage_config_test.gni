@@ -69,7 +69,7 @@ template("triage_config_test") {
 
   # Create a test spec to run this test
   test_spec(test_spec_target) {
-    target = invoker.target_name
+    target = ":${invoker.target_name}"
 
     # This path needs to be passed like this because the test_spec
     # will rebase the path against the root_build_dir and pass it

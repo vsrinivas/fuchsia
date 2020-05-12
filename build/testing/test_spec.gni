@@ -16,7 +16,7 @@ import("//build/testing/platforms.gni")
 #     [string]: The path on the target OS at which the test will be installed.
 #
 #   target (required)
-#     [string]: The test target.
+#     [label]: The test target.
 #
 #   command (optional)
 #     [list of strings]: Command to invoke to run the test. If unset, path is
@@ -173,7 +173,7 @@ template("test_spec") {
   # dependencies of the test; record them to a file.
   runtime_deps_file = ""
   if (defined(invoker.deps) && invoker.deps != []) {
-    test_name = get_path_info(invoker.target, "name")
+    test_name = get_label_info(invoker.target, "name")
     runtime_deps_file = "$target_gen_dir/${test_name}.deps.json"
     runtime_deps_target_name = "${target_name}_deps"
 
@@ -242,7 +242,7 @@ template("test_spec") {
                                "path",
                                "package_url",
                              ])
-      label = get_label_info(":${invoker.target}", "label_with_toolchain")
+      label = get_label_info(invoker.target, "label_with_toolchain")
 
       if (defined(package_url)) {
         name = package_url
