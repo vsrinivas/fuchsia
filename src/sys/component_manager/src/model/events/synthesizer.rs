@@ -8,11 +8,13 @@ use {
         events::{event::Event, registry::RoutedEvent},
         hooks::{Event as HookEvent, EventPayload},
         model::Model,
+        moniker::AbsoluteMoniker,
+        realm::Realm,
     },
     fuchsia_async as fasync,
-    futures::{channel::mpsc, SinkExt},
+    futures::{channel::mpsc, stream, SinkExt, StreamExt},
     log::error,
-    std::{collections::HashSet, sync::Weak},
+    std::{collections::HashSet, sync::Arc, sync::Weak},
 };
 
 pub struct EventSynthesizer {
@@ -52,44 +54,65 @@ async fn synthesize(
         Some(scopes) => scopes,
     };
     let model = model.upgrade().ok_or(ModelError::ModelNotAvailable)?;
-    let mut visited_realms = HashSet::new();
-    for scope in scopes {
-        let realm = model.look_up_realm(&scope.moniker).await?;
-        let mut pending_realms = vec![realm];
 
-        while let Some(curr_realm) = pending_realms.pop() {
-            if visited_realms.contains(&curr_realm.abs_moniker) {
-                continue;
-            }
-            let started_time = match &curr_realm.lock_execution().await.runtime {
+    let mut visited_realms = HashSet::new();
+
+    for scope in scopes {
+        let root_realm = model.look_up_realm(&scope.moniker).await?;
+        let mut realm_stream = get_subrealms(root_realm, visited_realms.clone());
+        while let Some(realm) = realm_stream.next().await {
+            let started_time = match &realm.lock_execution().await.runtime {
                 Some(runtime) => runtime.timestamp,
                 // No runtime means the component is not running.
                 None => continue,
             };
             let event = HookEvent::new_with_timestamp(
-                curr_realm.abs_moniker.clone(),
+                realm.abs_moniker.clone(),
                 Ok(EventPayload::Running),
                 started_time,
             );
             let event = Event { event, scope_moniker: scope.moniker.clone(), responder: None };
-
             if let Err(_) = sender.send(event).await {
                 // Ignore this error. This can occur when the event stream is closed in the middle
                 // of synthesis.
                 return Ok(());
             }
-
-            visited_realms.insert(curr_realm.abs_moniker.clone());
-
-            let state_guard = curr_realm.lock_state().await;
-            if let Some(state) = state_guard.as_ref() {
-                for (_, child_realm) in state.live_child_realms() {
-                    pending_realms.push(child_realm.clone());
-                }
-            }
+            visited_realms.insert(realm.abs_moniker.clone());
         }
     }
     Ok(())
+}
+
+/// Returns all realms that are under the given `root` realm. Skips the ones whose moniker is
+/// contained in the `visited` set.
+/// The visited set is included for early pruning of a tree branch.
+fn get_subrealms(
+    root: Arc<Realm>,
+    visited: HashSet<AbsoluteMoniker>,
+) -> stream::BoxStream<'static, Arc<Realm>> {
+    let pending = vec![root];
+    stream::unfold((pending, visited), move |(mut pending, mut visited)| async move {
+        loop {
+            match pending.pop() {
+                None => return None,
+                Some(curr_realm) => {
+                    if visited.contains(&curr_realm.abs_moniker) {
+                        continue;
+                    }
+                    let state_guard = curr_realm.lock_state().await;
+                    if let Some(state) = state_guard.as_ref() {
+                        for (_, child_realm) in state.live_child_realms() {
+                            pending.push(child_realm.clone());
+                        }
+                    }
+                    drop(state_guard);
+                    visited.insert(curr_realm.abs_moniker.clone());
+                    return Some((curr_realm, (pending, visited)));
+                }
+            }
+        }
+    })
+    .boxed()
 }
 
 #[cfg(test)]
