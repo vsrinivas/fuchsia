@@ -50,7 +50,7 @@ bool Session::ShouldTakeOverPrimary(const Session* current_primary) const {
 }
 
 zx_status_t Session::Create(async_dispatcher_t* dispatcher, netdev::SessionInfo info,
-                            const char* name, DeviceInterface* parent, zx::channel control,
+                            fidl::StringView name, DeviceInterface* parent, zx::channel control,
                             std::unique_ptr<Session>* out_session, netdev::Fifos* out_fifos) {
   fbl::AllocChecker checker;
 
@@ -64,21 +64,24 @@ zx_status_t Session::Create(async_dispatcher_t* dispatcher, netdev::SessionInfo 
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  std::unique_ptr<Session> session(new (&checker) Session(dispatcher, &info, name, parent));
+  std::unique_ptr<Session> session(new (&checker)
+                                       Session(dispatcher, &info, std::move(name), parent));
   if (!checker.check()) {
-    LOGF_ERROR("network-device: Failed to allocate session %s", name);
+    LOGF_ERROR("network-device: Failed to allocate session");
     return ZX_ERR_NO_MEMORY;
   }
 
   zx_status_t status;
   if ((status = session->Init(out_fifos)) != ZX_OK) {
-    LOGF_ERROR("network-device: Failed to init session %s: %s", name, zx_status_get_string(status));
+    LOGF_ERROR("network-device: Failed to init session %s: %s", session->name(),
+               zx_status_get_string(status));
     out_session->reset(nullptr);
     return status;
   }
 
   if ((status = session->Bind(std::move(control))) != ZX_OK) {
-    LOGF_ERROR("network-device: Failed to bind session %s: %s", name, zx_status_get_string(status));
+    LOGF_ERROR("network-device: Failed to bind session %s: %s", session->name(),
+               zx_status_get_string(status));
     return status;
   }
 
@@ -91,7 +94,7 @@ zx_status_t Session::Create(async_dispatcher_t* dispatcher, netdev::SessionInfo 
   return ZX_OK;
 }
 
-Session::Session(async_dispatcher_t* dispatcher, netdev::SessionInfo* info, const char* name,
+Session::Session(async_dispatcher_t* dispatcher, netdev::SessionInfo* info, fidl::StringView name,
                  DeviceInterface* parent)
     : dispatcher_(dispatcher),
       vmo_descriptors_(std::move(info->descriptors)),
@@ -105,8 +108,9 @@ Session::Session(async_dispatcher_t* dispatcher, netdev::SessionInfo* info, cons
   for (uint32_t i = 0; i < frame_type_count_; i++) {
     frame_types_[i] = static_cast<uint8_t>(info->rx_frames[i]);
   }
-  strncpy(name_.data(), name, netdev::MAX_SESSION_NAME);
-  name_[netdev::MAX_SESSION_NAME] = 0;
+
+  auto* end = std::copy(name.begin(), name.end(), name_.begin());
+  *end = '\0';
 }
 
 Session::~Session() {

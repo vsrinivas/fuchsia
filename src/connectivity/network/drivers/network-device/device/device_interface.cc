@@ -240,7 +240,7 @@ void DeviceInterface::GetStatus(GetStatusCompleter::Sync completer) {
 void DeviceInterface::OpenSession(::fidl::StringView session_name, netdev::SessionInfo session_info,
                                   OpenSessionCompleter::Sync completer) {
   netdev::Device_OpenSession_Response rsp;
-  zx_status_t status = OpenSession(session_name.data(), std::move(session_info), &rsp);
+  zx_status_t status = OpenSession(std::move(session_name), std::move(session_info), &rsp);
   netdev::Device_OpenSession_Result result;
   if (status != ZX_OK) {
     result.set_err(fidl::unowned_ptr(&status));
@@ -292,7 +292,7 @@ void DeviceInterface::GetStatusWatcher(zx::channel watcher, uint32_t buffer,
   watchers_.push_back(std::move(n_watcher));
 }
 
-zx_status_t DeviceInterface::OpenSession(const char* name, netdev::SessionInfo session_info,
+zx_status_t DeviceInterface::OpenSession(fidl::StringView name, netdev::SessionInfo session_info,
                                          netdev::Device_OpenSession_Response* rsp) {
   {
     fbl::AutoLock teardown_lock(&teardown_lock_);
@@ -309,8 +309,8 @@ zx_status_t DeviceInterface::OpenSession(const char* name, netdev::SessionInfo s
     return status;
   }
   std::unique_ptr<Session> session;
-  if ((status = Session::Create(dispatcher_, std::move(session_info), name, this, std::move(req),
-                                &session, &rsp->fifos)) != ZX_OK) {
+  if ((status = Session::Create(dispatcher_, std::move(session_info), std::move(name), this,
+                                std::move(req), &session, &rsp->fifos)) != ZX_OK) {
     return status;
   }
 

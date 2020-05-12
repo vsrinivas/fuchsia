@@ -9,6 +9,7 @@
 #include <zxtest/cpp/zxtest.h>
 #include <zxtest/zxtest.h>
 
+#include "device_interface.h"
 #include "log.h"
 #include "test_util.h"
 
@@ -895,6 +896,33 @@ TEST_F(NetworkDeviceTest, RejectsInvalidRxTypes) {
       OpenSession(&session, netdev::SessionFlags::PRIMARY, kDefaultDescriptorCount,
                   kDefaultBufferLength, fidl::VectorView(fidl::unowned_ptr(&frame_type), 1)),
       ZX_ERR_INVALID_ARGS);
+}
+
+// Regression test for session name not respecting fidl::StringView lack of null termination
+// character.
+TEST_F(NetworkDeviceTest, SessionNameRespectsStringView) {
+  ASSERT_OK(CreateDevice());
+  // Cast to internal implementation to access methods directly.
+  auto* dev = static_cast<internal::DeviceInterface*>(device_.get());
+
+  netdev::SessionInfo info;
+  TestSession test_session;
+  ASSERT_OK(test_session.Init(kDefaultDescriptorCount, kDefaultBufferLength));
+  ASSERT_OK(test_session.GetInfo(&info));
+
+  const char* name_str = "hello world";
+  // String view only contains "hello".
+  fidl::StringView name(fidl::unowned_ptr(name_str), 5u);
+
+  zx::channel req, ch;
+  ASSERT_OK(zx::channel::create(0, &req, &ch));
+
+  netdev::Device_OpenSession_Response rsp;
+  ASSERT_OK(dev->OpenSession(std::move(name), std::move(info), &rsp));
+
+  const auto& session = dev->sessions_unsafe().front();
+
+  ASSERT_STR_EQ("hello", session.name());
 }
 
 }  // namespace testing

@@ -113,6 +113,10 @@ class DeviceInterface : public netdev::Device::Interface,
   void GetStatusWatcher(zx::channel watcher, uint32_t buffer,
                         GetStatusWatcherCompleter::Sync completer) override;
 
+  // Serves the OpenSession FIDL handle method synchronously.
+  zx_status_t OpenSession(fidl::StringView name, netdev::SessionInfo session_info,
+                          netdev::Device_OpenSession_Response* rsp);
+
  private:
   // Helper class to keep track of clients bound to DeviceInterface.
   class Binding : public fbl::DoublyLinkedListable<std::unique_ptr<Binding>> {
@@ -137,9 +141,6 @@ class DeviceInterface : public netdev::Device::Interface,
                                   nullptr},
             fit::nullopt}) {}
   zx_status_t Init(const char* parent_name);
-  // Serves the OpenSession FIDL handle method synchronously.
-  zx_status_t OpenSession(const char* name, netdev::SessionInfo session_info,
-                          netdev::Device_OpenSession_Response* rsp);
 
   // Starts the data path with the device implementation.
   void StartDevice();
@@ -230,8 +231,10 @@ class DeviceInterface : public netdev::Device::Interface,
   DeviceStatus device_status_ = DeviceStatus::STOPPED;
 
  public:
-  /// event hooks used in tests:
+  // Event hooks used in tests:
   fit::function<void(const char*)> evt_session_started;
+  // Unsafe accessors used in tests:
+  const SessionList& sessions_unsafe() const { return sessions_; }
 };
 
 }  // namespace network::internal

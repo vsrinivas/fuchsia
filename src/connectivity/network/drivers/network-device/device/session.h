@@ -53,7 +53,7 @@ class Session : public fbl::DoublyLinkedListable<std::unique_ptr<Session>>,
   // The resulting session is stored in `out_session`, and the created FIFO objects used for the
   // data path are stored in `out_fifos` upon successful creation.
   static zx_status_t Create(async_dispatcher_t* dispatcher, netdev::SessionInfo info,
-                            const char* name, DeviceInterface* parent, zx::channel control,
+                            fidl::StringView name, DeviceInterface* parent, zx::channel control,
                             std::unique_ptr<Session>* out_session, netdev::Fifos* out_fifos);
   bool IsPrimary() const;
   bool IsListen() const;
@@ -116,7 +116,7 @@ class Session : public fbl::DoublyLinkedListable<std::unique_ptr<Session>>,
 
  private:
   enum class FetchResult { OK, OVERRUN, SHOULD_WAIT, FAILED };
-  Session(async_dispatcher_t* dispatcher, netdev::SessionInfo* info, const char* name,
+  Session(async_dispatcher_t* dispatcher, netdev::SessionInfo* info, fidl::StringView name,
           DeviceInterface* parent);
   zx_status_t Init(netdev::Fifos* out);
   zx_status_t Bind(zx::channel channel);
