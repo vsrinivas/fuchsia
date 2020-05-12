@@ -32,6 +32,7 @@ group("tests") {
     "ram:tests",
     "serial:tests",
     "shareddma:tests",
+    "testing:tests",
     "tests",
     "tests:tests",
     "thermal:tests",

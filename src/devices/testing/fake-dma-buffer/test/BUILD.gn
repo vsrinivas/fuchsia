@@ -5,11 +5,6 @@
 import("//build/test.gni")
 import("//build/test/test_package.gni")
 
-group("test") {
-  testonly = true
-  deps = [ ":fake-dma-buffer" ]
-}
-
 test("fake-dma-buffer") {
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
