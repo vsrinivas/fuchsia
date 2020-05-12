@@ -40,6 +40,7 @@ class PciRoot : public UpstreamNode {
   PciAllocator& mmio_regions() final { return mmio_regions_; }
   PciAllocator& pf_mmio_regions() final { return pf_mmio_regions_; }
   PciAllocator& pio_regions() final { return pio_regions_; }
+  zx_status_t EnableBusMasterUpstream(bool) override { return ZX_OK; }
 
  protected:
   // PciRootAllocators can be trivially constructed because they only need

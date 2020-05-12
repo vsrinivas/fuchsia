@@ -56,6 +56,7 @@ class Bridge : public pci::Device, public UpstreamNode {
  protected:
   zx_status_t ConfigureBars() final TA_EXCL(dev_lock_);
   zx_status_t AllocateBridgeWindowsLocked() TA_REQ(dev_lock_);
+  zx_status_t EnableBusMasterUpstream(bool enabled) override;
   void Disable() final TA_EXCL(dev_lock_);
 
  private:
@@ -69,13 +70,14 @@ class Bridge : public pci::Device, public UpstreamNode {
   PciRegionAllocator pf_mmio_regions_;
   PciRegionAllocator pio_regions_;
 
-  uint64_t pf_mem_base_;
-  uint64_t pf_mem_limit_;
-  uint32_t mem_base_;
-  uint32_t mem_limit_;
-  uint32_t io_base_;
-  uint32_t io_limit_;
-  bool supports_32bit_pio_;
+  uint64_t pf_mem_base_ = 0;
+  uint64_t pf_mem_limit_ = 0;
+  uint32_t mem_base_ = 0;
+  uint32_t mem_limit_ = 0;
+  uint32_t io_base_ = 0;
+  uint32_t io_limit_ = 0;
+  uint32_t downstream_bus_mastering_cnt_ = 0;
+  bool supports_32bit_pio_ = 0;
 };
 
 }  // namespace pci

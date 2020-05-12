@@ -47,6 +47,7 @@ class UpstreamNode {
 
   void LinkDevice(pci::Device* device) { downstream_.push_back(device); }
   void UnlinkDevice(pci::Device* device) { downstream_.erase(*device); }
+  virtual zx_status_t EnableBusMasterUpstream(bool enabled) = 0;
 
  protected:
   friend FakeBusDriver;

@@ -271,6 +271,35 @@ zx_status_t Bridge::AllocateBridgeWindowsLocked() {
   return ZX_OK;
 }
 
+zx_status_t Bridge::EnableBusMasterUpstream(bool enabled) {
+  // If being asked to disable Bus Mastering then we should ensure that no other
+  // devices downstream of this bridge still have it enabled. If any do then we
+  // leave BusMastering enabled.
+  {
+    fbl::AutoLock dev_lock(&dev_lock_);
+    if (enabled) {
+      downstream_bus_mastering_cnt_++;
+    } else {
+      if (downstream_bus_mastering_cnt_ == 0) {
+        return ZX_ERR_BAD_STATE;
+      }
+      downstream_bus_mastering_cnt_--;
+    }
+  }
+
+  // Only make a change to the bridge's configuration in a case where the
+  // state of the children has changed meaningfully.
+  if (downstream_bus_mastering_cnt_ == 0) {
+    return pci::Device::EnableBusMaster(false);
+  }
+
+  if (downstream_bus_mastering_cnt_ == 1 && enabled) {
+    return pci::Device::EnableBusMaster(true);
+  }
+
+  return ZX_OK;
+}
+
 void Bridge::Disable() {
   // Immediately enter the device lock and enter the disabled state.  We want
   // to be outside of the device lock as we disable our downstream devices,

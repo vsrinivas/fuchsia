@@ -219,8 +219,13 @@ zx_status_t Device::EnableBusMaster(bool enabled) {
     return ZX_ERR_BAD_STATE;
   }
 
-  return ModifyCmd(enabled ? 0 : PCI_COMMAND_BUS_MASTER_EN,
-                   enabled ? PCI_COMMAND_BUS_MASTER_EN : 0);
+  zx_status_t st =
+      ModifyCmd(enabled ? 0 : PCI_COMMAND_BUS_MASTER_EN, enabled ? PCI_COMMAND_BUS_MASTER_EN : 0);
+  if (st != ZX_OK) {
+    return st;
+  }
+
+  return upstream_->EnableBusMasterUpstream(enabled);
 }
 
 zx_status_t Device::ProbeBar(uint32_t bar_id) {

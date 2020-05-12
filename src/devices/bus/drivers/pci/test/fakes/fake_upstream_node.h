@@ -19,8 +19,8 @@ class FakeUpstreamNode : public UpstreamNode {
   PciAllocator& pio_regions() final { return pio_alloc_; }
 
   void UnplugDownstream() final { UpstreamNode::UnplugDownstream(); }
-
   void DisableDownstream() final { UpstreamNode::DisableDownstream(); }
+  zx_status_t EnableBusMasterUpstream(bool) { return ZX_OK; }
 
   PCI_IMPLEMENT_REFCOUNTED;
 
