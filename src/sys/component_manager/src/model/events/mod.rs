@@ -11,3 +11,4 @@ pub(crate) mod serve;
 pub mod source;
 pub mod source_factory;
 pub mod stream;
+pub mod synthesizer;

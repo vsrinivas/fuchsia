@@ -9,6 +9,7 @@ use {
             dispatcher::{EventDispatcher, ScopeMetadata},
             event::SyncMode,
             stream::EventStream,
+            synthesizer::EventSynthesizer,
         },
         hooks::{Event as ComponentEvent, EventType, HasEventType, Hook, HooksRegistration},
         model::Model,
@@ -31,12 +32,13 @@ pub struct RoutedEvent {
 /// Subscribes to events from multiple tasks and sends events to all of them.
 pub struct EventRegistry {
     dispatcher_map: Arc<Mutex<HashMap<CapabilityName, Vec<Weak<EventDispatcher>>>>>,
-    model: Weak<Model>,
+    event_synthesizer: EventSynthesizer,
 }
 
 impl EventRegistry {
     pub fn new(model: Weak<Model>) -> Self {
-        Self { dispatcher_map: Arc::new(Mutex::new(HashMap::new())), model }
+        let event_synthesizer = EventSynthesizer::new(model);
+        Self { dispatcher_map: Arc::new(Mutex::new(HashMap::new())), event_synthesizer }
     }
 
     pub fn hooks(self: &Arc<Self>) -> Vec<HooksRegistration> {
@@ -61,24 +63,17 @@ impl EventRegistry {
         let mut event_stream = EventStream::new();
 
         let mut dispatcher_map = self.dispatcher_map.lock().await;
-        let mut synthesize_scopes = Vec::new();
         let running_name: CapabilityName = EventType::Running.to_string().into();
-        for event in events {
-            if event.source_name == running_name {
-                synthesize_scopes.extend(event.scopes);
-            } else {
-                let dispatchers = dispatcher_map.entry(event.source_name).or_insert(vec![]);
-                let dispatcher = event_stream.create_dispatcher(sync_mode.clone(), event.scopes);
+        for event in events.iter() {
+            if event.source_name != running_name {
+                let dispatchers = dispatcher_map.entry(event.source_name.clone()).or_insert(vec![]);
+                let dispatcher =
+                    event_stream.create_dispatcher(sync_mode.clone(), event.scopes.clone());
                 dispatchers.push(dispatcher);
             }
         }
 
-        // TODO(fxb/50387): consider alternative proposed: creating a new internal-only event type
-        // such as EventSourceSubscribed, and define a SynthesizeRunning hook on that.
-        // The advantage of the hook is that it would decouple the subscribe() call from the
-        // implementation details of synthesized events. We could add new synthesized events in the
-        // future without changing the implementation of the event registry.
-        event_stream.spawn_synthesis(self.model.clone(), synthesize_scopes);
+        self.event_synthesizer.spawn_synthesis(event_stream.sender(), events);
 
         Ok(event_stream)
     }
