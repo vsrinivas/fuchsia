@@ -28,7 +28,7 @@ source_set("guid-test") {
   # Because gpt is fuchsia only, this is required.
   if (is_fuchsia) {
     sources += [ "guid_test_fuchsia.cc" ]
-    deps += [ "//zircon/public/lib/gpt" ]
+    deps += [ "//zircon/system/ulib/gpt" ]
   }
 }
 

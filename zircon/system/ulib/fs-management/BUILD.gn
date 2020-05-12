@@ -43,7 +43,6 @@ if (is_fuchsia) {
       "//zircon/public/lib/digest",
       "//zircon/public/lib/fbl",
       "//zircon/public/lib/fzl",
-      "//zircon/public/lib/gpt",
       "//zircon/public/lib/pretty",
       "//zircon/public/lib/zx",
       "//zircon/system/fidl/fuchsia-hardware-block:c",
@@ -52,6 +51,7 @@ if (is_fuchsia) {
       "//zircon/system/ulib/fdio-caller",
       "//zircon/system/ulib/fs",
       "//zircon/system/ulib/fvm",
+      "//zircon/system/ulib/gpt",
     ]
     configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
 

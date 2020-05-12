@@ -37,7 +37,6 @@ source_set("shared") {
     "//zircon/public/lib/digest",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fzl",
-    "//zircon/public/lib/gpt",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
@@ -47,6 +46,7 @@ source_set("shared") {
     "//zircon/system/ulib/fidl-utils",
     "//zircon/system/ulib/fs",
     "//zircon/system/ulib/fvm",
+    "//zircon/system/ulib/gpt",
   ]
 }
 

@@ -21,7 +21,7 @@ zx_library("chromeos-disk-setup") {
   public_deps = [ "//zircon/system/fidl/fuchsia-hardware-block:c" ]
   deps = [
     "//zircon/public/lib/fit",
-    "//zircon/public/lib/gpt",
     "//zircon/system/fidl/fuchsia-hardware-block:c",
+    "//zircon/system/ulib/gpt",
   ]
 }

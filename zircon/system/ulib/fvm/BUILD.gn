@@ -42,7 +42,7 @@ zx_library("fvm") {
     "//zircon/public/lib/digest",
 
     # <fvm/fvm.h> has #include <gpt/gpt.h>.
-    "//zircon/public/lib/gpt",
+    "//zircon/system/ulib/gpt",
 
     # <fvm/sparse-reader.h> has #include <lz4/lz4frame.h>.
     "//zircon/public/lib/lz4",
@@ -53,10 +53,10 @@ zx_library("fvm") {
     deps += [
       "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_c",
       "//zircon/public/lib/fzl",
-      "//zircon/public/lib/gpt",
       "//zircon/public/lib/sync",
       "//zircon/public/lib/zx",
       "//zircon/system/ulib/block-client",
+      "//zircon/system/ulib/gpt",
     ]
   } else {
     # fvm-check.cpp has #include <zircon/status.h> even when built for host.

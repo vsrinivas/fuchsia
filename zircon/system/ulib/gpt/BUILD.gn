@@ -2,6 +2,18 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36548.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/unification/zx_library.gni")
+
 zx_library("gpt") {
   sdk = "source"
   sdk_headers = [
@@ -10,24 +22,25 @@ zx_library("gpt") {
     "gpt/gpt.h",
     "gpt/guid.h",
   ]
-  sources = [
-    "cros.cc",
-    "gpt.cc",
-    "guid.cc",
-  ]
-  public_deps = [ "$zx/system/ulib/fbl:headers" ]
-  deps = [
-    "$zx/system/fidl/fuchsia-hardware-block:c",
-    "$zx/system/ulib/fit",
-    "$zx/system/ulib/fzl",
-    "$zx/system/ulib/mbr",
-    "$zx/system/ulib/range",
-    "$zx/system/ulib/zircon",
-    "$zx/third_party/ulib/cksum",
-  ]
+  public_deps = [ "//zircon/public/lib/fbl" ]
+
+  if (is_fuchsia) {
+    sources = [
+      "cros.cc",
+      "gpt.cc",
+      "guid.cc",
+    ]
+    deps = [
+      "//zircon/public/lib/cksum",
+      "//zircon/public/lib/fit",
+      "//zircon/public/lib/mbr",
+      "//zircon/public/lib/range",
+      "//zircon/system/fidl/fuchsia-hardware-block:c",
+    ]
+  }
 
   # TODO(41890): UBSan has found an instance of undefined behavior in this target.
   # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
   configs +=
-      [ "$zx_build/public/gn/config:temporarily_disable_ubsan_do_not_use" ]
+      [ "//build/config:temporarily_disable_ubsan_do_not_use" ]
 }

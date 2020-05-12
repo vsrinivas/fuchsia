@@ -19,9 +19,9 @@ driver_module("gpt") {
     "//src/devices/lib/driver",
     "//zircon/public/lib/cksum",
     "//zircon/public/lib/fit",
-    "//zircon/public/lib/gpt",
     "//zircon/public/lib/sync",
     "//zircon/system/ulib/ddk",
+    "//zircon/system/ulib/gpt",
   ]
 }
 
@@ -41,13 +41,13 @@ test("gpt-device-test") {
     "//src/devices/testing/fake_ddk",
     "//zircon/public/lib/cksum",
     "//zircon/public/lib/fit",
-    "//zircon/public/lib/gpt",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/ddktl",
+    "//zircon/system/ulib/gpt",
   ]
 }
 
