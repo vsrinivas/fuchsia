@@ -3926,29 +3926,6 @@ static zx_status_t brcmf_notify_connect_status_ap(struct brcmf_cfg80211_info* cf
     BRCMF_DBG(CONN, "AP mode link down\n");
     sync_completion_signal(&cfg->vif_disabled);
     return ZX_OK;
-  }
-
-  // Client has authenticated
-  if ((event == BRCMF_E_AUTH_IND) && (reason == BRCMF_E_STATUS_SUCCESS)) {
-    wlanif_auth_ind_t auth_ind_params;
-    memset(&auth_ind_params, 0, sizeof(auth_ind_params));
-    memcpy(auth_ind_params.peer_sta_address, e->addr, ETH_ALEN);
-    // We always authenticate as an open system for WPA
-    auth_ind_params.auth_type = WLAN_AUTH_TYPE_OPEN_SYSTEM;
-
-    BRCMF_DBG(
-        WLANIF, "Sending auth indication to SME. address: " MAC_FMT_STR ", type: %s\n",
-        MAC_FMT_ARGS(auth_ind_params.peer_sta_address),
-        auth_ind_params.auth_type == WLAN_AUTH_TYPE_OPEN_SYSTEM
-            ? "open"
-            : auth_ind_params.auth_type == WLAN_AUTH_TYPE_SHARED_KEY
-                  ? "shared key"
-                  : auth_ind_params.auth_type == WLAN_AUTH_TYPE_FAST_BSS_TRANSITION
-                        ? "fast bss transition"
-                        : auth_ind_params.auth_type == WLAN_AUTH_TYPE_SAE ? "SAE" : "unknown");
-
-    wlanif_impl_ifc_auth_ind(&ndev->if_proto, &auth_ind_params);
-
   } else if (((event == BRCMF_E_ASSOC_IND) || (event == BRCMF_E_REASSOC_IND)) &&
              (reason == BRCMF_E_STATUS_SUCCESS)) {
     if (data == NULL || e->datalen == 0) {
@@ -4030,6 +4007,47 @@ static zx_status_t brcmf_notify_connect_status_ap(struct brcmf_cfg80211_info* cf
               deauth_ind_params.reason_code);
 
     wlanif_impl_ifc_deauth_ind(&ndev->if_proto, &deauth_ind_params);
+  }
+  return ZX_OK;
+}
+
+// AUTH_IND handler. AUTH_IND is meant only for SoftAP IF
+static zx_status_t brcmf_process_auth_ind_event(struct brcmf_if* ifp,
+                                                const struct brcmf_event_msg* e, void* data) {
+  BRCMF_DBG(CONN, "IF: %d event %s (%u) status %d reason %d auth %d flags 0x%x\n", ifp->ifidx,
+            brcmf_fweh_event_name(static_cast<brcmf_fweh_event_code>(e->event_code)), e->event_code,
+            e->status, e->reason, e->auth_type, e->flags);
+  ZX_DEBUG_ASSERT(brcmf_is_apmode(ifp->vif));
+
+  if (e->reason == BRCMF_E_STATUS_SUCCESS) {
+    struct net_device* ndev = ifp->ndev;
+    wlanif_auth_ind_t auth_ind_params;
+    const char* auth_type;
+
+    memset(&auth_ind_params, 0, sizeof(auth_ind_params));
+    memcpy(auth_ind_params.peer_sta_address, e->addr, ETH_ALEN);
+    // We always authenticate as an open system for WPA
+    auth_ind_params.auth_type = WLAN_AUTH_TYPE_OPEN_SYSTEM;
+    switch (auth_ind_params.auth_type) {
+      case WLAN_AUTH_TYPE_OPEN_SYSTEM:
+        auth_type = "open";
+        break;
+      case WLAN_AUTH_TYPE_SHARED_KEY:
+        auth_type = "shared key";
+        break;
+      case WLAN_AUTH_TYPE_FAST_BSS_TRANSITION:
+        auth_type = "fast bss transition";
+        break;
+      case WLAN_AUTH_TYPE_SAE:
+        auth_type = "SAE";
+        break;
+      default:
+        auth_type = "unknown";
+    }
+    BRCMF_DBG(WLANIF, "Sending auth indication to SME. address: " MAC_FMT_STR ", type: %s\n",
+              MAC_FMT_ARGS(auth_ind_params.peer_sta_address), auth_type);
+
+    wlanif_impl_ifc_auth_ind(&ndev->if_proto, &auth_ind_params);
   }
   return ZX_OK;
 }
@@ -4215,7 +4233,7 @@ static void brcmf_init_conf(struct brcmf_cfg80211_conf* conf) {
 
 static void brcmf_register_event_handlers(struct brcmf_cfg80211_info* cfg) {
   brcmf_fweh_register(cfg->pub, BRCMF_E_LINK, brcmf_notify_connect_status);
-  brcmf_fweh_register(cfg->pub, BRCMF_E_AUTH_IND, brcmf_notify_connect_status);
+  brcmf_fweh_register(cfg->pub, BRCMF_E_AUTH_IND, brcmf_process_auth_ind_event);
   brcmf_fweh_register(cfg->pub, BRCMF_E_DEAUTH_IND, brcmf_notify_connect_status);
   brcmf_fweh_register(cfg->pub, BRCMF_E_DEAUTH, brcmf_notify_connect_status);
   brcmf_fweh_register(cfg->pub, BRCMF_E_DISASSOC_IND, brcmf_notify_connect_status);
