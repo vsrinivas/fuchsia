@@ -11,10 +11,10 @@ rustc_library("validating-log-listener") {
   with_unit_tests = true
 
   deps = [
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//third_party/rust_crates:futures",
-    "//zircon/system/fidl/fuchsia-logger:fuchsia-logger-rustc",
   ]
 }
 

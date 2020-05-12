@@ -28,6 +28,7 @@ rustc_library("syslog-listener") {
   source_root = "syslog-listener/src/lib.rs"
   deps = [
     ":syslog",
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
@@ -35,7 +36,6 @@ rustc_library("syslog-listener") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:thiserror",
-    "//zircon/system/fidl/fuchsia-logger:fuchsia-logger-rustc",
   ]
 }
 

@@ -16,9 +16,9 @@ executable("tts_manager_tests") {
     "//garnet/public/lib/gtest",
     "//garnet/public/lib/syslog/cpp",
     "//sdk/fidl/fuchsia.accessibility.tts",
+    "//sdk/fidl/fuchsia.logger",
     "//sdk/lib/sys/cpp/testing:integration",
     "//src/lib/fxl/test:gtest_main",
     "//src/ui/a11y/lib/tts",
-    "//zircon/system/fidl/fuchsia-logger",
   ]
 }

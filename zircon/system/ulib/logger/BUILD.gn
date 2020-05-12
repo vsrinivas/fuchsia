@@ -25,9 +25,9 @@ zx_library("logger") {
     "provider.cc",
   ]
   deps = [
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger_c",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
-    "//zircon/system/fidl/fuchsia-logger:c",
     "//zircon/system/ulib/syslog",
   ]
   public_deps = [

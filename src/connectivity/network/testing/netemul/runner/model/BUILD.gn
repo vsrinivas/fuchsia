@@ -32,11 +32,11 @@ source_set("model") {
   ]
 
   deps = [
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger",
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/lib/pkg_url",
     "//third_party/rapidjson",
-    "//zircon/system/fidl/fuchsia-logger:fuchsia-logger",
   ]
 }
 

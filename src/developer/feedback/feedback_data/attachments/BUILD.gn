@@ -22,6 +22,7 @@ source_set("attachment_providers") {
     "//sdk/fidl/fuchsia.boot",
     "//sdk/fidl/fuchsia.diagnostics",
     "//sdk/fidl/fuchsia.images",
+    "//sdk/fidl/fuchsia.logger",
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
@@ -31,7 +32,6 @@ source_set("attachment_providers") {
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/zx",
-    "//zircon/system/fidl/fuchsia-logger",
   ]
 
   deps = [

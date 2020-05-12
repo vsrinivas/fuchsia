@@ -19,6 +19,7 @@ test("logger") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "test.cc" ]
   deps = [
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger_c",
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-default",
@@ -30,7 +31,6 @@ test("logger") {
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/unittest",
     "//zircon/public/lib/zx",
-    "//zircon/system/fidl/fuchsia-logger:c",
     "//zircon/system/ulib/logger",
     "//zircon/system/ulib/syslog",
   ]

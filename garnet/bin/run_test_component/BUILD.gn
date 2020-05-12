@@ -32,6 +32,7 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.camera2",
     "//sdk/fidl/fuchsia.hardware.pty",
     "//sdk/fidl/fuchsia.kernel",
+    "//sdk/fidl/fuchsia.logger",
     "//sdk/fidl/fuchsia.media",
     "//sdk/fidl/fuchsia.net.stack",
     "//sdk/fidl/fuchsia.netstack",
@@ -51,7 +52,6 @@ source_set("lib") {
     "//src/sys/timekeeper:fuchsia.time",
     "//third_party/rapidjson",
     "//zircon/system/fidl/fuchsia-device",
-    "//zircon/system/fidl/fuchsia-logger",
     "//zircon/system/fidl/fuchsia-net",
     "//zircon/system/fidl/fuchsia-posix-socket",
   ]
@@ -65,6 +65,7 @@ executable("bin") {
 
   deps = [
     ":lib",
+    "//sdk/fidl/fuchsia.logger",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:enclosing_environment",
@@ -73,7 +74,6 @@ executable("bin") {
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/system/fidl/fuchsia-debugdata",
-    "//zircon/system/fidl/fuchsia-logger",
     "//zircon/system/fidl/fuchsia-process",
   ]
 }

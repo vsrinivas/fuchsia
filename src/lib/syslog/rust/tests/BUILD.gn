@@ -43,11 +43,11 @@ rustc_test("panic_is_logged") {
   edition = "2018"
   source_root = "panic_is_logged.rs"
   deps = [
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//src/diagnostics/lib/validating-log-listener",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
-    "//zircon/system/fidl/fuchsia-logger:fuchsia-logger-rustc",
   ]
 }
 

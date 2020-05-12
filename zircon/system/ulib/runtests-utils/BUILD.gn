@@ -54,12 +54,13 @@ zx_library("runtests-utils") {
       "//zircon/public/lib/fidl",
 
       # <runtests-utils/log-exporter.h> has #include <fuchsia/logger/c/fidl.h>.
-      "//zircon/system/fidl/fuchsia-logger:c",
+      "//sdk/fidl/fuchsia.logger:fuchsia.logger_c",
 
       # <runtests-utils/log-exporter.h> has #include <lib/async-loop/cpp/loop.h>.
       "//zircon/public/lib/async-loop-cpp",
     ]
     deps += [
+      "//sdk/fidl/fuchsia.logger:fuchsia.logger_c",
       "//zircon/public/lib/async",
       "//zircon/public/lib/async-cpp",
       "//zircon/public/lib/async-loop",
@@ -73,7 +74,6 @@ zx_library("runtests-utils") {
       "//zircon/public/lib/unittest",
       "//zircon/public/lib/zx",
       "//zircon/system/fidl/fuchsia-io:llcpp",
-      "//zircon/system/fidl/fuchsia-logger:c",
       "//zircon/system/ulib/debugdata",
       "//zircon/system/ulib/loader-service",
     ]

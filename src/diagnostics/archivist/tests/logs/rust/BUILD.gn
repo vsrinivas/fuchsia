@@ -15,6 +15,7 @@ group("rust") {
 rustc_test("bin") {
   name = "logs_integration_rust_tests"
   deps = [
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//src/diagnostics/archivist/fidl:controller-rustc",
     "//src/diagnostics/archivist/tests/logs/rust/fidl:stdio-rustc",
@@ -31,6 +32,5 @@ rustc_test("bin") {
     "//third_party/rust_crates:rand",
     "//third_party/rust_crates:tempfile",
     "//third_party/rust_crates:thiserror",
-    "//zircon/system/fidl/fuchsia-logger:fuchsia-logger-rustc",
   ]
 }

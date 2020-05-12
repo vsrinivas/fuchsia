@@ -12,6 +12,7 @@ rustc_test("driver") {
   edition = "2018"
 
   deps = [
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
     "//sdk/fidl/fuchsia.space:fuchsia.space-rustc",
     "//src/lib/fdio/rust:fdio",
@@ -40,7 +41,6 @@ rustc_test("driver") {
     "//third_party/rust_crates:openat",
     "//third_party/rust_crates:tempfile",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
-    "//zircon/system/fidl/fuchsia-logger:fuchsia-logger-rustc",
     "//zircon/system/fidl/fuchsia-tracing-provider:fuchsia-tracing-provider-rustc",
   ]
 }

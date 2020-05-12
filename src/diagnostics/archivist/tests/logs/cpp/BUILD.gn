@@ -13,6 +13,7 @@ executable("logs_integration_cpp_tests") {
   sources = [ "logs_tests.cc" ]
   deps = [
     "//garnet/public/lib/gtest",
+    "//sdk/fidl/fuchsia.logger",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration",
     "//sdk/lib/syslog/cpp",
@@ -20,7 +21,6 @@ executable("logs_integration_cpp_tests") {
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
-    "//zircon/system/fidl/fuchsia-logger",
     "//zircon/system/ulib/syslog",
   ]
 

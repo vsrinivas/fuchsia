@@ -33,8 +33,8 @@ fidl("environment") {
 
   public_deps = [
     ":network",
+    "//sdk/fidl/fuchsia.logger",
     "//sdk/fidl/fuchsia.sys",
-    "//zircon/system/fidl/fuchsia-logger",
   ]
 }
 

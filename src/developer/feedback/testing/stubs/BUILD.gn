@@ -168,9 +168,9 @@ source_set("logger") {
 
   public_deps = [
     ":fidl_server",
+    "//sdk/fidl/fuchsia.logger",
     "//zircon/public/lib/async",
     "//zircon/public/lib/zx",
-    "//zircon/system/fidl/fuchsia-logger",
   ]
 
   deps = [ "//sdk/lib/syslog/cpp" ]

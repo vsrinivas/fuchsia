@@ -61,12 +61,12 @@ executable("service_startup_test") {
     ":interface",
     "//garnet/examples/fidl/services:echo",
     "//garnet/public/lib/gtest",
+    "//sdk/fidl/fuchsia.logger",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//src/sys/appmgr:appmgr_for_test",
     "//third_party/googletest:gmock",
-    "//zircon/system/fidl/fuchsia-logger",
   ]
 
   # TODO(46846): Fix the leaks and remove this.

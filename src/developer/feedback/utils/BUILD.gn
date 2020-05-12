@@ -73,7 +73,7 @@ source_set("logs") {
     "log_format.h",
   ]
 
-  public_deps = [ "//zircon/system/fidl/fuchsia-logger" ]
+  public_deps = [ "//sdk/fidl/fuchsia.logger" ]
 
   deps = [
     "//sdk/lib/syslog/cpp",

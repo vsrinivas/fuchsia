@@ -14,6 +14,7 @@ rustc_library("isolated-ota") {
 
   deps = [
     "//sdk/fidl/fuchsia.boot:fuchsia.boot-rustc",
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
     "//sdk/fidl/fuchsia.paver:fuchsia.paver-rustc",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
     "//src/lib/fdio/rust:fdio",
@@ -29,7 +30,6 @@ rustc_library("isolated-ota") {
     "//third_party/rust_crates:tempfile",
     "//third_party/rust_crates:thiserror",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
-    "//zircon/system/fidl/fuchsia-logger:fuchsia-logger-rustc",
     "//zircon/system/fidl/fuchsia-net:fuchsia-net-rustc",
     "//zircon/system/fidl/fuchsia-posix-socket:fuchsia-posix-socket-rustc",
     "//zircon/system/fidl/fuchsia-tracing-provider:fuchsia-tracing-provider-rustc",
