@@ -40,8 +40,11 @@ END_FUNCTION(memcpy_quad)
 
 FUNCTION(memcpy)
     jmp memcpy_erms
-    APPLY_CODE_PATCH_FUNC_WITH_DEFAULT(x86_memcpy_select, memcpy, 2)
+    APPLY_CODE_PATCH_FUNC_WITH_DEFAULT(x86_memcpy_select, __unsanitized_memcpy, 2)
 END_FUNCTION(memcpy)
+
+// Declare a weak alias so asan can override this function.
+.weak memcpy
 
 .globl __unsanitized_memcpy
 .hidden __unsanitized_memcpy

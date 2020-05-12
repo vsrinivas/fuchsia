@@ -15,9 +15,12 @@ source_set("arm64") {
     ]
     deps = [ "$zx/kernel/lib/libc:headers" ]
   } else {
+    # These use '#include "third_party/lib/cortex-strings/src/aarch64/..."'.
+    # and '#include "third_party/lib/cortex-strings/no-neon/src/aarch64/..."'.
+    include_dirs = [ "$zx/" ]
     sources = [
-      "$zx/third_party/lib/cortex-strings/no-neon/src/aarch64/memset.S",
-      "$zx/third_party/lib/cortex-strings/src/aarch64/memcpy.S",
+      "memcpy.S",
+      "memset.S",
     ]
   }
 }

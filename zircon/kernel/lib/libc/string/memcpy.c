@@ -14,7 +14,8 @@ typedef long word;
 #define lsize sizeof(word)
 #define lmask (lsize - 1)
 
-void *memcpy(void *dest, const void *src, size_t count) {
+__attribute__((no_sanitize_address)) void *__unsanitized_memcpy(void *dest, const void *src,
+                                                                size_t count) {
   char *d = (char *)dest;
   const char *s = (const char *)src;
   int len;
@@ -43,5 +44,8 @@ void *memcpy(void *dest, const void *src, size_t count) {
 
   return dest;
 }
+
+// Make the function a weak symbol so asan can override it.
+__typeof(__unsanitized_memcpy) memcpy __attribute__((weak, alias("__unsanitized_memcpy")));
 
 #endif

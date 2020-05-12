@@ -14,7 +14,8 @@ typedef long word;
 #define lsize sizeof(word)
 #define lmask (lsize - 1)
 
-void *memmove(void *dest, void const *src, size_t count) {
+__attribute__((no_sanitize_address)) void *__unsanitized_memmove(void *dest, void const *src,
+                                                                 size_t count) {
   char *d = (char *)dest;
   const char *s = (const char *)src;
   int len;
@@ -66,5 +67,8 @@ void *memmove(void *dest, void const *src, size_t count) {
 
   return dest;
 }
+
+// Make the function a weak symbol so asan can override it.
+__typeof(__unsanitized_memmove) memmove __attribute__((weak, alias("__unsanitized_memmove")));
 
 #endif

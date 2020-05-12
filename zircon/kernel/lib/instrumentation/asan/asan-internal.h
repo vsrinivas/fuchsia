@@ -46,6 +46,11 @@ static inline uint8_t* addr2shadow(uintptr_t address) {
 // error message if any part of [address, address+bytes) is poisoned.
 void asan_check(uintptr_t address, size_t bytes, void* caller);
 
+// Checks whether the two memory ranges defined by [offseta, offseta+lena) and
+// [offsetb, offsetb + lenb) overlap. This function panics and prints an error message if
+// the two memory ranges overlap.
+void asan_check_memory_overlap(uintptr_t offseta, size_t lena, uintptr_t offsetb, size_t lenb);
+
 #endif  // __x86_64__
 
 void arch_asan_reallocate_shadow(uintptr_t physmap_shadow_begin, uintptr_t physmap_shadow_end);

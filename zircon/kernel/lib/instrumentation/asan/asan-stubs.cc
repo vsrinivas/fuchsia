@@ -24,19 +24,36 @@
 
 extern "C" {
 
-extern decltype(memcpy) __unsanitized_memcpy;
-extern decltype(memset) __unsanitized_memset;
-
 void* __asan_memcpy(void* dst, const void* src, size_t n) {
-  asan_check(reinterpret_cast<uintptr_t>(src), n, __builtin_return_address(0));
-  asan_check(reinterpret_cast<uintptr_t>(dst), n, __builtin_return_address(0));
+  if (n == 0)
+    return dst;
+  auto dstptr = reinterpret_cast<uintptr_t>(dst);
+  auto srcptr = reinterpret_cast<uintptr_t>(src);
+
+  asan_check_memory_overlap(dstptr, n, srcptr, n);
+  asan_check(srcptr, n, __builtin_return_address(0));
+  asan_check(dstptr, n, __builtin_return_address(0));
   return __unsanitized_memcpy(dst, src, n);
 }
 
 void* __asan_memset(void* dst, int c, size_t n) {
+  if (n == 0)
+    return dst;
   asan_check(reinterpret_cast<uintptr_t>(dst), n, __builtin_return_address(0));
   return __unsanitized_memset(dst, c, n);
 }
+
+void* __asan_memmove(void* dst, const void* src, size_t n) {
+  if (n == 0)
+    return dst;
+  asan_check(reinterpret_cast<uintptr_t>(src), n, __builtin_return_address(0));
+  asan_check(reinterpret_cast<uintptr_t>(dst), n, __builtin_return_address(0));
+  return __unsanitized_memmove(dst, src, n);
+}
+
+decltype(__asan_memcpy) memcpy [[gnu::alias("__asan_memcpy")]];
+decltype(__asan_memmove) memmove [[gnu::alias("__asan_memmove")]];
+decltype(__asan_memset) memset [[gnu::alias("__asan_memset")]];
 
 // This is referenced by generated code to decide whether to call
 // __asan_stack_malloc_* instead of doing normal stack allocation.

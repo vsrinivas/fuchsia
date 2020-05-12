@@ -10,7 +10,7 @@
 #include <stdint.h>
 #include <string.h>
 
-void *memset(void *s, int c, size_t count) {
+__attribute__((no_sanitize_address)) void *__unsanitized_memset(void *s, int c, size_t count) {
   char *xs = (char *)s;
   size_t len = (-(size_t)s) & (sizeof(size_t) - 1);
   size_t cc = c & 0xff;
@@ -41,3 +41,6 @@ void *memset(void *s, int c, size_t count) {
 
   return s;
 }
+
+// Make the function a weak symbol so asan can override it.
+__typeof(__unsanitized_memset) memset __attribute__((weak, alias("__unsanitized_memset")));

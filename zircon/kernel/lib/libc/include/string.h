@@ -48,6 +48,7 @@ size_t strnlen(char const *s, size_t count) __PURE;
 
 // Used by address sanitizer.
 __typeof(memcpy) __unsanitized_memcpy;
+__typeof(memmove) __unsanitized_memmove;
 __typeof(memset) __unsanitized_memset;
 
 __END_CDECLS

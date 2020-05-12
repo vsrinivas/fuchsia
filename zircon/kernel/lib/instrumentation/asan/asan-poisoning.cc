@@ -93,6 +93,10 @@ void print_error_shadow(uintptr_t address, size_t bytes, void* caller, uintptr_t
   paddr_to_vm_page(vaddr_to_paddr(reinterpret_cast<void*>(address)))->dump();
 }
 
+inline bool RangesOverlap(uintptr_t offset1, size_t len1, uintptr_t offset2, size_t len2) {
+  return !((offset1 + len1 <= offset2) || (offset2 + len2 <= offset1));
+}
+
 }  // namespace
 
 // Checks whether a memory |address| is poisoned.
@@ -147,6 +151,16 @@ void asan_check(uintptr_t address, size_t bytes, void* caller) {
   }
   platform_panic_start();
   print_error_shadow(address, bytes, caller, poisoned_addr);
+  panic("kasan\n");
+}
+
+void asan_check_memory_overlap(uintptr_t offset1, size_t len1, uintptr_t offset2, size_t len2) {
+  if (!RangesOverlap(offset1, len1, offset2, len2))
+    return;
+  platform_panic_start();
+  printf("KASAN detected a memory range overlap error.\n");
+  printf("ptr: 0x%016lx size: %#zx overlaps with ptr: 0x%016lx size: %#zx\n", offset1, len1,
+         offset2, len2);
   panic("kasan\n");
 }
 
