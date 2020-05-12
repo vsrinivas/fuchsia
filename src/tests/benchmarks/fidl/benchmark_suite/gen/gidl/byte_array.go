@@ -24,24 +24,20 @@ func init() {
 				},
 			},
 			{
-				Name: "ByteArray/256",
-				Comment: `
-			256 byte array in a struct
-			Disabled on HLCPP / LLCPP due to clang performance issues`,
+				Name:    "ByteArray/256",
+				Comment: `256 byte array in a struct`,
 				Config: config.Config{
 					"size": 256,
 				},
-				Denylist: []config.Binding{config.HLCPP, config.LLCPP, config.Walker},
 			},
 			{
 				Name: "ByteArray/4096",
 				Comment: `
-			4096 byte array in a struct
-			Disabled on HLCPP / LLCPP due to clang performance issues`,
+			4096 byte array in a struct`,
 				Config: config.Config{
 					"size": 4096,
 				},
-				Denylist: []config.Binding{config.HLCPP, config.LLCPP, config.Rust, config.Walker},
+				Denylist: []config.Binding{config.Rust},
 			},
 			{
 				Name: "ByteArray/65536",

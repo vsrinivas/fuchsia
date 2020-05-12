@@ -24,22 +24,18 @@ func init() {
 				},
 			},
 			{
-				Name: "ByteVector/256",
-				Comment: `256 byte vector in a struct
-			Disabled on HLCPP / LLCPP due to clang performance issues`,
+				Name:    "ByteVector/256",
+				Comment: `256 byte vector in a struct`,
 				Config: config.Config{
 					"size": 256,
 				},
-				Denylist: []config.Binding{config.HLCPP, config.LLCPP, config.Walker},
 			},
 			{
-				Name: "ByteVector/4096",
-				Comment: `4096 byte vector in a struct
-			Disabled on HLCPP / LLCPP due to clang performance issues`,
+				Name:    "ByteVector/4096",
+				Comment: `4096 byte vector in a struct`,
 				Config: config.Config{
 					"size": 4096,
 				},
-				Denylist: []config.Binding{config.HLCPP, config.LLCPP, config.Walker},
 			},
 			{
 				Name: "ByteVector/65536",

@@ -55,30 +55,39 @@ func primitiveTypeName(subtype fidlir.PrimitiveSubtype) string {
 	}
 }
 
+func int64String(value int64) string {
+	if value == -9223372036854775808 {
+		return "(-9223372036854775807ll - 1)"
+	}
+	return fmt.Sprintf("%dll", value)
+}
+
+func uint64String(value uint64) string {
+	return fmt.Sprintf("%dll", value)
+}
+
+func float64String(value float64) string {
+	return fmt.Sprintf("%g", value)
+}
+
 func (b *llcppValueBuilder) OnInt64(value int64, typ fidlir.PrimitiveSubtype) {
 	newVar := b.newVar()
-	if value == -9223372036854775808 {
-		// There are no negative integer literals in C++, so need to use arithmetic to create the minimum value.
-		// FIDL_ALIGNDECL is needed to avoid tracking_ptrs that don't have an LSB of 0.
-		b.Builder.WriteString(fmt.Sprintf("FIDL_ALIGNDECL %s %s = -9223372036854775807ll - 1;\n", primitiveTypeName(typ), newVar))
-	} else {
-		// FIDL_ALIGNDECL is needed to avoid tracking_ptrs that don't have an LSB of 0.
-		b.Builder.WriteString(fmt.Sprintf("FIDL_ALIGNDECL %s %s = %dll;\n", primitiveTypeName(typ), newVar, value))
-	}
+	// FIDL_ALIGNDECL is needed to avoid tracking_ptrs that don't have an LSB of 0.
+	b.Builder.WriteString(fmt.Sprintf("FIDL_ALIGNDECL %s %s = %s;\n", primitiveTypeName(typ), newVar, int64String(value)))
 	b.lastVar = newVar
 }
 
 func (b *llcppValueBuilder) OnUint64(value uint64, subtype fidlir.PrimitiveSubtype) {
 	newVar := b.newVar()
 	// FIDL_ALIGNDECL is needed to avoid tracking_ptrs that don't have an LSB of 0.
-	b.Builder.WriteString(fmt.Sprintf("FIDL_ALIGNDECL %s %s = %dull;\n", primitiveTypeName(subtype), newVar, value))
+	b.Builder.WriteString(fmt.Sprintf("FIDL_ALIGNDECL %s %s = %s;\n", primitiveTypeName(subtype), newVar, uint64String(value)))
 	b.lastVar = newVar
 }
 
 func (b *llcppValueBuilder) OnFloat64(value float64, subtype fidlir.PrimitiveSubtype) {
 	newVar := b.newVar()
 	// FIDL_ALIGNDECL is needed to avoid tracking_ptrs that don't have an LSB of 0.
-	b.Builder.WriteString(fmt.Sprintf("FIDL_ALIGNDECL %s %s = %g;\n", primitiveTypeName(subtype), newVar, value))
+	b.Builder.WriteString(fmt.Sprintf("FIDL_ALIGNDECL %s %s = %s;\n", primitiveTypeName(subtype), newVar, float64String(value)))
 	b.lastVar = newVar
 }
 
@@ -186,13 +195,27 @@ func (b *llcppValueBuilder) OnUnion(value gidlir.Record, decl *gidlmixer.UnionDe
 	b.lastVar = containerVar
 }
 
-func (b *llcppValueBuilder) OnArray(value []interface{}, decl *gidlmixer.ArrayDecl) {
+func (b *llcppValueBuilder) buildListItems(value []interface{}, decl gidlmixer.ListDeclaration) []string {
 	var elements []string
 	elemDecl := decl.Elem()
 	for _, item := range value {
-		gidlmixer.Visit(b, item, elemDecl)
-		elements = append(elements, fmt.Sprintf("std::move(%s)", b.lastVar))
+		switch item := item.(type) {
+		case int64:
+			elements = append(elements, int64String(item))
+		case uint64:
+			elements = append(elements, uint64String(item))
+		case float64:
+			elements = append(elements, float64String(item))
+		default:
+			gidlmixer.Visit(b, item, elemDecl)
+			elements = append(elements, fmt.Sprintf("std::move(%s)", b.lastVar))
+		}
 	}
+	return elements
+}
+
+func (b *llcppValueBuilder) OnArray(value []interface{}, decl *gidlmixer.ArrayDecl) {
+	elements := b.buildListItems(value, decl)
 	sliceVar := b.newVar()
 	b.Builder.WriteString(fmt.Sprintf("FIDL_ALIGNDECL auto %s = %s{%s};\n",
 		sliceVar, typeName(decl), strings.Join(elements, ", ")))
@@ -208,15 +231,10 @@ func (b *llcppValueBuilder) OnVector(value []interface{}, decl *gidlmixer.Vector
 		return
 
 	}
-	var elements []string
-	elemDecl := decl.Elem()
-	for _, item := range value {
-		gidlmixer.Visit(b, item, elemDecl)
-		elements = append(elements, fmt.Sprintf("std::move(%s)", b.lastVar))
-	}
+	elements := b.buildListItems(value, decl)
 	arrayVar := b.newVar()
 	b.Builder.WriteString(fmt.Sprintf("auto %s = fidl::Array<%s, %d>{%s};\n",
-		arrayVar, typeName(elemDecl), len(elements), strings.Join(elements, ", ")))
+		arrayVar, typeName(decl.Elem()), len(elements), strings.Join(elements, ", ")))
 	sliceVar := b.newVar()
 	b.Builder.WriteString(fmt.Sprintf("auto %s = %s(fidl::unowned_ptr(%s.data()), %d);\n",
 		sliceVar, typeName(decl), arrayVar, len(elements)))
