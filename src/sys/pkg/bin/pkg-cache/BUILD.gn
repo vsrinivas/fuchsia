@@ -16,6 +16,7 @@ rustc_binary("bin") {
   deps = [
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
     "//sdk/fidl/fuchsia.space:fuchsia.space-rustc",
+    "//src/lib/cobalt/rust:fuchsia-cobalt",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fidl/rust/fidl",
@@ -28,6 +29,7 @@ rustc_binary("bin") {
     "//src/lib/trace/rust:trace-provider",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/sys/lib/fidl-fuchsia-pkg-ext",
+    "//src/sys/pkg/bin/amber:cobalt_sw_delivery_registry_rustlib",
     "//src/sys/pkg/lib/fuchsia-merkle",
     "//src/sys/pkg/lib/fuchsia-pkg",
     "//src/sys/pkg/lib/pkgfs",

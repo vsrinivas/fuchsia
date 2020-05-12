@@ -6,11 +6,12 @@ use {
     crate::blob_location::BlobLocation,
     crate::pkgfs_inspect::PkgfsInspectState,
     anyhow::{anyhow, Context as _, Error},
-    fuchsia_async as fasync,
+    cobalt_sw_delivery_registry as metrics, fuchsia_async as fasync,
+    fuchsia_cobalt::{CobaltConnector, ConnectionType},
     fuchsia_component::server::ServiceFs,
     fuchsia_inspect as finspect,
     fuchsia_syslog::{self, fx_log_err, fx_log_info},
-    futures::{future, StreamExt, TryFutureExt},
+    futures::{future, prelude::*, stream::FuturesUnordered, StreamExt, TryFutureExt},
     std::sync::Arc,
     system_image::StaticPackages,
 };
@@ -19,6 +20,8 @@ mod blob_location;
 mod cache_service;
 mod gc_service;
 mod pkgfs_inspect;
+
+const COBALT_CONNECTOR_BUFFER_SIZE: usize = 1000;
 
 fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&["pkg-cache"]).expect("can't init logger");
@@ -31,6 +34,11 @@ fn main() -> Result<(), Error> {
 
 async fn main_inner_async() -> Result<(), Error> {
     let inspector = finspect::Inspector::new();
+    let futures = FuturesUnordered::new();
+
+    let (cobalt_sender, cobalt_fut) = CobaltConnector { buffer_size: COBALT_CONNECTOR_BUFFER_SIZE }
+        .serve(ConnectionType::project_id(metrics::PROJECT_ID));
+    futures.push(cobalt_fut.boxed_local());
 
     let pkgfs_system =
         pkgfs::system::Client::open_from_namespace().context("error opening /pkgfs/system")?;
@@ -44,12 +52,14 @@ async fn main_inner_async() -> Result<(), Error> {
     let cache_cb = {
         let pkgfs_ctl = Clone::clone(&pkgfs_ctl);
         move |stream| {
+            let cobalt_sender = cobalt_sender.clone();
             fasync::spawn(
                 cache_service::serve(
                     Clone::clone(&pkgfs_versions),
                     Clone::clone(&pkgfs_ctl),
                     static_packages.clone(),
                     stream,
+                    cobalt_sender,
                 )
                 .unwrap_or_else(|e| {
                     fx_log_err!("error handling PackageCache connection {:#}", anyhow!(e))
@@ -81,7 +91,9 @@ async fn main_inner_async() -> Result<(), Error> {
     inspector.serve(&mut fs)?;
 
     fs.take_and_serve_directory_handle()?;
-    fs.collect::<()>().await;
+    futures.push(fs.collect().boxed_local());
+
+    futures.collect::<()>().await;
 
     Ok(())
 }

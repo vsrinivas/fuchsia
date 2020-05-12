@@ -4,6 +4,7 @@
 
 use {
     anyhow::{anyhow, Error},
+    cobalt_sw_delivery_registry as metrics,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::DirectoryMarker,
     fidl_fuchsia_pkg::{
@@ -13,6 +14,7 @@ use {
     },
     fidl_fuchsia_pkg_ext::{BlobId, BlobInfo},
     fuchsia_async as fasync,
+    fuchsia_cobalt::CobaltSender,
     fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn},
     fuchsia_trace as trace,
     fuchsia_zircon::Status,
@@ -27,10 +29,12 @@ pub async fn serve(
     pkgfs_ctl: pkgfs::control::Client,
     static_packages: Arc<StaticPackages>,
     stream: PackageCacheRequestStream,
+    cobalt_sender: CobaltSender,
 ) -> Result<(), Error> {
     stream
         .map_err(anyhow::Error::new)
         .try_for_each_concurrent(None, |event| async {
+            let cobalt_sender = cobalt_sender.clone();
             match event {
                 PackageCacheRequest::Get {
                     meta_far_blob,
@@ -42,8 +46,15 @@ pub async fn serve(
                     let meta_far_blob: BlobInfo = meta_far_blob.into();
                     trace::duration_begin!("app", "cache_get",
                     "meta_far_blob_id" => meta_far_blob.blob_id.to_string().as_str());
-                    let status =
-                        get(&pkgfs_versions, meta_far_blob, selectors, needed_blobs, dir).await;
+                    let status = get(
+                        &pkgfs_versions,
+                        meta_far_blob,
+                        selectors,
+                        needed_blobs,
+                        dir,
+                        cobalt_sender,
+                    )
+                    .await;
                     trace::duration_end!("app", "cache_get",
                     "status" => Status::from(status).to_string().as_str());
                     responder.send(Status::from(status).into_raw())?;
@@ -52,7 +63,9 @@ pub async fn serve(
                     let meta_far_blob_id: BlobId = meta_far_blob_id.into();
                     trace::duration_begin!("app", "cache_open",
                     "meta_far_blob_id" => meta_far_blob_id.to_string().as_str());
-                    let status = open(&pkgfs_versions, meta_far_blob_id, selectors, dir).await;
+                    let status =
+                        open(&pkgfs_versions, meta_far_blob_id, selectors, dir, cobalt_sender)
+                            .await;
                     trace::duration_end!("app", "cache_open",
                     "status" => Status::from(status).to_string().as_str());
                     responder.send(Status::from(status).into_raw())?;
@@ -88,11 +101,13 @@ async fn get<'a>(
     selectors: Vec<String>,
     _needed_blobs: ServerEnd<NeededBlobsMarker>,
     dir_request: Option<ServerEnd<DirectoryMarker>>,
+    cobalt_sender: CobaltSender,
 ) -> Result<(), Status> {
     fx_log_info!("fetching {:?} with the selectors {:?}", meta_far_blob, selectors);
 
     if let Some(dir_request) = dir_request {
-        open(pkgfs_versions, meta_far_blob.blob_id, selectors.clone(), dir_request).await?;
+        open(pkgfs_versions, meta_far_blob.blob_id, selectors.clone(), dir_request, cobalt_sender)
+            .await?;
 
         Ok(())
     } else {
@@ -106,6 +121,7 @@ async fn open<'a>(
     meta_far_blob_id: BlobId,
     selectors: Vec<String>,
     dir_request: ServerEnd<DirectoryMarker>,
+    mut cobalt_sender: CobaltSender,
 ) -> Result<(), Status> {
     // FIXME: need to implement selectors.
     if !selectors.is_empty() {
@@ -114,8 +130,22 @@ async fn open<'a>(
 
     let pkg =
         pkgfs_versions.open_package(&meta_far_blob_id.into()).await.map_err(|err| match err {
-            pkgfs::package::OpenError::NotFound => Status::NOT_FOUND,
+            pkgfs::package::OpenError::NotFound => {
+                cobalt_sender.log_event_count(
+                    metrics::PKG_CACHE_OPEN_METRIC_ID,
+                    metrics::PkgCacheOpenMetricDimensionResult::NotFound,
+                    0,
+                    1,
+                );
+                Status::NOT_FOUND
+            }
             err => {
+                cobalt_sender.log_event_count(
+                    metrics::PKG_CACHE_OPEN_METRIC_ID,
+                    metrics::PkgCacheOpenMetricDimensionResult::Io,
+                    0,
+                    1,
+                );
                 fx_log_err!("error opening {}: {:?}", meta_far_blob_id, err);
                 Status::INTERNAL
             }
@@ -123,8 +153,22 @@ async fn open<'a>(
 
     pkg.reopen(dir_request).map_err(|err| {
         fx_log_err!("error opening {}: {:#}", meta_far_blob_id, anyhow!(err));
+        cobalt_sender.log_event_count(
+            metrics::PKG_CACHE_OPEN_METRIC_ID,
+            metrics::PkgCacheOpenMetricDimensionResult::Io,
+            0,
+            1,
+        );
         Status::INTERNAL
-    })
+    })?;
+
+    cobalt_sender.log_event_count(
+        metrics::PKG_CACHE_OPEN_METRIC_ID,
+        metrics::PkgCacheOpenMetricDimensionResult::Success,
+        0,
+        1,
+    );
+    Ok(())
 }
 
 /// Serves the `PackageIndexIteratorRequest` with `LIST_CHUNK_SIZE` entries per request.

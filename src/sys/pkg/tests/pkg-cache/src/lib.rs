@@ -6,7 +6,8 @@
 use {
     anyhow::Error,
     fidl::endpoints::ClientEnd,
-    fidl_fuchsia_io::DirectoryMarker,
+    fidl_fuchsia_cobalt::CobaltEvent,
+    fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy},
     fidl_fuchsia_pkg::{PackageCacheMarker, PackageCacheProxy},
     fidl_fuchsia_pkg_ext::BlobId,
     fidl_fuchsia_space::{ManagerMarker as SpaceManagerMarker, ManagerProxy as SpaceManagerProxy},
@@ -19,10 +20,13 @@ use {
     fuchsia_pkg_testing::get_inspect_hierarchy,
     fuchsia_zircon as zx,
     futures::prelude::*,
+    parking_lot::Mutex,
     pkgfs_ramdisk::PkgfsRamdisk,
+    std::sync::Arc,
 };
 
 mod base_pkg_index;
+mod cobalt;
 mod inspect;
 mod space;
 mod sync;
@@ -42,12 +46,17 @@ struct Proxies {
     package_cache: PackageCacheProxy,
 }
 
+pub struct Mocks {
+    pub logger_factory: Arc<MockLoggerFactory>,
+}
+
 struct TestEnv<P = PkgfsRamdisk> {
     _env: NestedEnvironment,
     pkgfs: P,
     proxies: Proxies,
     pkg_cache: App,
     nested_environment_label: String,
+    pub mocks: Mocks,
 }
 
 impl TestEnv<PkgfsRamdisk> {
@@ -61,11 +70,95 @@ impl TestEnv<PkgfsRamdisk> {
     }
 }
 
+struct MockLogger {
+    cobalt_events: Mutex<Vec<CobaltEvent>>,
+}
+
+impl MockLogger {
+    fn new() -> Self {
+        Self { cobalt_events: Mutex::new(vec![]) }
+    }
+
+    async fn run_logger(self: Arc<Self>, mut stream: fidl_fuchsia_cobalt::LoggerRequestStream) {
+        while let Some(event) = stream.try_next().await.unwrap() {
+            match event {
+                fidl_fuchsia_cobalt::LoggerRequest::LogCobaltEvent { event, responder } => {
+                    self.cobalt_events.lock().push(event);
+                    let _ = responder.send(fidl_fuchsia_cobalt::Status::Ok);
+                }
+                _ => {
+                    panic!("unhandled Logger method {:?}", event);
+                }
+            }
+        }
+    }
+}
+
+pub struct MockLoggerFactory {
+    loggers: Mutex<Vec<Arc<MockLogger>>>,
+}
+
+impl MockLoggerFactory {
+    fn new() -> Self {
+        Self { loggers: Mutex::new(vec![]) }
+    }
+
+    async fn run_logger_factory(
+        self: Arc<Self>,
+        mut stream: fidl_fuchsia_cobalt::LoggerFactoryRequestStream,
+    ) {
+        while let Some(event) = stream.try_next().await.unwrap() {
+            match event {
+                fidl_fuchsia_cobalt::LoggerFactoryRequest::CreateLoggerFromProjectId {
+                    project_id,
+                    logger,
+                    responder,
+                } => {
+                    assert_eq!(project_id, cobalt_sw_delivery_registry::PROJECT_ID);
+                    let mock_logger = Arc::new(MockLogger::new());
+                    self.loggers.lock().push(mock_logger.clone());
+                    fasync::spawn(mock_logger.run_logger(logger.into_stream().unwrap()));
+                    let _ = responder.send(fidl_fuchsia_cobalt::Status::Ok);
+                }
+                _ => {
+                    panic!("unhandled LoggerFactory method: {:?}", event);
+                }
+            }
+        }
+    }
+
+    pub async fn wait_for_at_least_n_events_with_metric_id(
+        &self,
+        n: usize,
+        id: u32,
+    ) -> Vec<CobaltEvent> {
+        loop {
+            let events: Vec<CobaltEvent> = self
+                .loggers
+                .lock()
+                .iter()
+                .flat_map(|logger| logger.cobalt_events.lock().clone().into_iter())
+                .filter(|CobaltEvent { metric_id, .. }| *metric_id == id)
+                .collect();
+            if events.len() >= n {
+                return events;
+            }
+            fasync::Timer::new(fasync::Time::after(zx::Duration::from_millis(10))).await;
+        }
+    }
+}
+
 impl<P: PkgFs> TestEnv<P> {
     fn new(pkgfs: P) -> Self {
         let mut fs = ServiceFs::new();
         fs.add_proxy_service::<fidl_fuchsia_logger::LogSinkMarker, _>()
             .add_proxy_service::<fidl_fuchsia_tracing_provider::RegistryMarker, _>();
+
+        let logger_factory = Arc::new(MockLoggerFactory::new());
+        let logger_factory_clone = Arc::clone(&logger_factory);
+        fs.add_fidl_service(move |stream| {
+            fasync::spawn(Arc::clone(&logger_factory_clone).run_logger_factory(stream))
+        });
 
         let pkg_cache = AppBuilder::new(
             "fuchsia-pkg://fuchsia.com/pkg-cache-integration-tests#meta/pkg-cache-without-pkgfs.cmx".to_string(),
@@ -88,7 +181,14 @@ impl<P: PkgFs> TestEnv<P> {
             package_cache: pkg_cache.connect_to_service::<PackageCacheMarker>().unwrap(),
         };
 
-        Self { _env: env, pkgfs, proxies, pkg_cache, nested_environment_label }
+        Self {
+            _env: env,
+            pkgfs,
+            proxies,
+            pkg_cache,
+            nested_environment_label,
+            mocks: Mocks { logger_factory },
+        }
     }
 
     async fn inspect_hierarchy(&self) -> NodeHierarchy {
@@ -99,6 +199,19 @@ impl<P: PkgFs> TestEnv<P> {
         let mut salt = [0; 4];
         zx::cprng_draw(&mut salt[..]).expect("zx_cprng_draw does not fail");
         format!("pkg-cache-env_{}", hex::encode(&salt))
+    }
+
+    pub async fn open_package(&self, merkle: &str) -> Result<DirectoryProxy, zx::Status> {
+        let (package, server_end) = fidl::endpoints::create_proxy().unwrap();
+        let status_fut = self.proxies.package_cache.open(
+            &mut merkle.parse::<BlobId>().unwrap().into(),
+            &mut vec![].into_iter(),
+            server_end,
+        );
+
+        let status = status_fut.await.expect("package cache open fidl call");
+        zx::Status::ok(status)?;
+        Ok(package)
     }
 
     async fn block_until_started(&self) {
