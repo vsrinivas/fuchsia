@@ -17,6 +17,13 @@ class Sensor : public Device {
 
   ParseResult ParseInputReport(const uint8_t* data, size_t len, InputReport* report) override;
 
+  ParseResult CreateDescriptor(
+      fidl::Allocator* allocator,
+      fuchsia_input_report::DeviceDescriptor::Builder* descriptor) override;
+
+  ParseResult ParseInputReport(const uint8_t* data, size_t len, fidl::Allocator* allocator,
+                               fuchsia_input_report::InputReport::Builder* report) override;
+
   uint8_t InputReportId() const override { return report_id_; }
 
   DeviceType GetDeviceType() const override { return DeviceType::kSensor; }

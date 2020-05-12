@@ -10,33 +10,40 @@
 
 #include "src/ui/input/lib/hid-input-report/consumer_control.h"
 #include "src/ui/input/lib/hid-input-report/device.h"
+#include "src/ui/input/lib/hid-input-report/test/test.h"
+
+namespace fuchsia_input_report = ::llcpp::fuchsia::input::report;
 
 TEST(ConsumerControlTest, HidButtonsTest) {
-  const uint8_t* descriptor;
-  size_t descriptor_size = get_buttons_report_desc(&descriptor);
+  const uint8_t* descriptor_data;
+  size_t descriptor_size = get_buttons_report_desc(&descriptor_data);
 
   hid::DeviceDescriptor* dev_desc = nullptr;
-  auto parse_res = hid::ParseReportDescriptor(descriptor, descriptor_size, &dev_desc);
+  auto parse_res = hid::ParseReportDescriptor(descriptor_data, descriptor_size, &dev_desc);
   ASSERT_EQ(hid::ParseResult::kParseOk, parse_res);
 
   hid_input_report::ConsumerControl consumer_control;
   EXPECT_EQ(hid_input_report::ParseResult::kOk,
             consumer_control.ParseReportDescriptor(dev_desc->report[0]));
-  hid_input_report::ReportDescriptor report_descriptor = consumer_control.GetDescriptor();
 
-  hid_input_report::ConsumerControlDescriptor* consumer_control_descriptor =
-      std::get_if<hid_input_report::ConsumerControlDescriptor>(&report_descriptor.descriptor);
-  ASSERT_NOT_NULL(consumer_control_descriptor);
+  hid_input_report::TestDescriptorAllocator descriptor_allocator;
+  auto descriptor_builder = fuchsia_input_report::DeviceDescriptor::Builder(
+      descriptor_allocator.make<fuchsia_input_report::DeviceDescriptor::Frame>());
+  EXPECT_EQ(hid_input_report::ParseResult::kOk,
+            consumer_control.CreateDescriptor(&descriptor_allocator, &descriptor_builder));
+  fuchsia_input_report::DeviceDescriptor descriptor = descriptor_builder.build();
+  EXPECT_TRUE(descriptor.has_consumer_control());
+  EXPECT_TRUE(descriptor.consumer_control().has_input());
 
   // Test the descriptor.
-  EXPECT_EQ(consumer_control_descriptor->input->num_buttons, 4U);
-  EXPECT_EQ(consumer_control_descriptor->input->buttons[0],
+  EXPECT_EQ(descriptor.consumer_control().input().buttons().count(), 4U);
+  EXPECT_EQ(descriptor.consumer_control().input().buttons()[0],
             llcpp::fuchsia::input::report::ConsumerControlButton::VOLUME_UP);
-  EXPECT_EQ(consumer_control_descriptor->input->buttons[1],
+  EXPECT_EQ(descriptor.consumer_control().input().buttons()[1],
             llcpp::fuchsia::input::report::ConsumerControlButton::VOLUME_DOWN);
-  EXPECT_EQ(consumer_control_descriptor->input->buttons[2],
+  EXPECT_EQ(descriptor.consumer_control().input().buttons()[2],
             llcpp::fuchsia::input::report::ConsumerControlButton::REBOOT);
-  EXPECT_EQ(consumer_control_descriptor->input->buttons[3],
+  EXPECT_EQ(descriptor.consumer_control().input().buttons()[3],
             llcpp::fuchsia::input::report::ConsumerControlButton::MIC_MUTE);
 
   // Test a report parses correctly.
@@ -46,20 +53,21 @@ TEST(ConsumerControlTest, HidButtonsTest) {
   fill_button_in_report(BUTTONS_ID_FDR, true, &report);
   fill_button_in_report(BUTTONS_ID_MIC_MUTE, true, &report);
 
-  hid_input_report::InputReport input_report = {};
+  hid_input_report::TestReportAllocator report_allocator;
+  auto report_builder = fuchsia_input_report::InputReport::Builder(
+      report_allocator.make<fuchsia_input_report::InputReport::Frame>());
   EXPECT_EQ(hid_input_report::ParseResult::kOk,
             consumer_control.ParseInputReport(reinterpret_cast<uint8_t*>(&report), sizeof(report),
-                                              &input_report));
-  hid_input_report::ConsumerControlInputReport* consumer_control_report =
-      std::get_if<hid_input_report::ConsumerControlInputReport>(&input_report.report);
-  ASSERT_NOT_NULL(consumer_control_report);
+                                              &report_allocator, &report_builder));
 
-  EXPECT_EQ(consumer_control_report->num_pressed_buttons, 3U);
-  EXPECT_EQ(consumer_control_report->pressed_buttons[0],
+  fuchsia_input_report::InputReport input_report = report_builder.build();
+
+  EXPECT_EQ(input_report.consumer_control().pressed_buttons().count(), 3U);
+  EXPECT_EQ(input_report.consumer_control().pressed_buttons()[0],
             llcpp::fuchsia::input::report::ConsumerControlButton::VOLUME_UP);
-  EXPECT_EQ(consumer_control_report->pressed_buttons[1],
+  EXPECT_EQ(input_report.consumer_control().pressed_buttons()[1],
             llcpp::fuchsia::input::report::ConsumerControlButton::REBOOT);
-  EXPECT_EQ(consumer_control_report->pressed_buttons[2],
+  EXPECT_EQ(input_report.consumer_control().pressed_buttons()[2],
             llcpp::fuchsia::input::report::ConsumerControlButton::MIC_MUTE);
 }
 

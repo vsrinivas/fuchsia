@@ -9,6 +9,7 @@
 #include <stdint.h>
 
 #include <hid-parser/parser.h>
+#include <hid-parser/report.h>
 #include <hid-parser/units.h>
 
 #include "src/ui/input/lib/hid-input-report/descriptors.h"
@@ -34,6 +35,16 @@ enum class DeviceType : uint32_t {
   kConsumerControl = 5,
 };
 
+template <typename T>
+fidl::tracking_ptr<T> Extract(const uint8_t* data, size_t len, hid::Attributes attr,
+                              fidl::Allocator* allocator) {
+  double value;
+  if (!hid::ExtractAsUnitType(data, len, attr, &value)) {
+    return nullptr;
+  }
+  return allocator->make<T>(value);
+}
+
 class Device {
  public:
   virtual ~Device() = default;
@@ -45,6 +56,16 @@ class Device {
 
   virtual ParseResult SetOutputReport(const fuchsia_input_report::OutputReport* report,
                                       uint8_t* data, size_t data_size, size_t* data_out_size) {
+    return ParseResult::kNotImplemented;
+  }
+
+  virtual ParseResult CreateDescriptor(
+      fidl::Allocator* allocator, fuchsia_input_report::DeviceDescriptor::Builder* descriptor) {
+    return ParseResult::kNotImplemented;
+  }
+
+  virtual ParseResult ParseInputReport(const uint8_t* data, size_t len, fidl::Allocator* allocator,
+                                       fuchsia_input_report::InputReport::Builder* report) {
     return ParseResult::kNotImplemented;
   }
 

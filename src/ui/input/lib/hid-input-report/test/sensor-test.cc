@@ -11,6 +11,7 @@
 #include <zxtest/zxtest.h>
 
 #include "src/ui/input/lib/hid-input-report/device.h"
+#include "src/ui/input/lib/hid-input-report/test/test.h"
 
 // Each test parses the report descriptor for the mouse and then sends one
 // report to ensure that it has been parsed correctly.
@@ -29,35 +30,37 @@ TEST(SensorTest, AmbientLight) {
 
   // Parse the descriptor.
   EXPECT_EQ(hid_input_report::ParseResult::kOk, sensor.ParseReportDescriptor(dev_desc->report[1]));
-  hid_input_report::ReportDescriptor report_descriptor = sensor.GetDescriptor();
 
-  hid_input_report::SensorDescriptor* sensor_descriptor =
-      std::get_if<hid_input_report::SensorDescriptor>(&report_descriptor.descriptor);
-  ASSERT_NOT_NULL(sensor_descriptor);
-  hid_input_report::SensorInputDescriptor* sensor_input_descriptor =
-      &sensor_descriptor->input.value();
+  hid_input_report::TestDescriptorAllocator descriptor_allocator;
+  auto descriptor_builder = fuchsia_input_report::DeviceDescriptor::Builder(
+      descriptor_allocator.make<fuchsia_input_report::DeviceDescriptor::Frame>());
+  EXPECT_EQ(hid_input_report::ParseResult::kOk,
+            sensor.CreateDescriptor(&descriptor_allocator, &descriptor_builder));
+  fuchsia_input_report::DeviceDescriptor descriptor = descriptor_builder.build();
+  EXPECT_TRUE(descriptor.has_sensor());
+  EXPECT_TRUE(descriptor.sensor().has_input());
 
   // Check the descriptor.
-  ASSERT_EQ(4, sensor_input_descriptor->num_values);
+  ASSERT_EQ(4, descriptor.sensor().input().values().count());
 
-  ASSERT_EQ(sensor_input_descriptor->values[0].type,
+  ASSERT_EQ(descriptor.sensor().input().values()[0].type,
             ::llcpp::fuchsia::input::report::SensorType::LIGHT_ILLUMINANCE);
-  ASSERT_EQ(sensor_input_descriptor->values[0].axis.unit,
+  ASSERT_EQ(descriptor.sensor().input().values()[0].axis.unit,
             ::llcpp::fuchsia::input::report::Unit::NONE);
 
-  ASSERT_EQ(sensor_input_descriptor->values[1].type,
+  ASSERT_EQ(descriptor.sensor().input().values()[1].type,
             ::llcpp::fuchsia::input::report::SensorType::LIGHT_RED);
-  ASSERT_EQ(sensor_input_descriptor->values[1].axis.unit,
+  ASSERT_EQ(descriptor.sensor().input().values()[1].axis.unit,
             ::llcpp::fuchsia::input::report::Unit::NONE);
 
-  ASSERT_EQ(sensor_input_descriptor->values[2].type,
+  ASSERT_EQ(descriptor.sensor().input().values()[2].type,
             ::llcpp::fuchsia::input::report::SensorType::LIGHT_BLUE);
-  ASSERT_EQ(sensor_input_descriptor->values[2].axis.unit,
+  ASSERT_EQ(descriptor.sensor().input().values()[2].axis.unit,
             ::llcpp::fuchsia::input::report::Unit::NONE);
 
-  ASSERT_EQ(sensor_input_descriptor->values[3].type,
+  ASSERT_EQ(descriptor.sensor().input().values()[3].type,
             ::llcpp::fuchsia::input::report::SensorType::LIGHT_GREEN);
-  ASSERT_EQ(sensor_input_descriptor->values[3].axis.unit,
+  ASSERT_EQ(descriptor.sensor().input().values()[3].axis.unit,
             ::llcpp::fuchsia::input::report::Unit::NONE);
 
   // Create the report.
@@ -74,22 +77,24 @@ TEST(SensorTest, AmbientLight) {
   report_data.green = kGreenTestVal;
 
   // Parse the report.
-  hid_input_report::InputReport report = {};
+  hid_input_report::TestReportAllocator report_allocator;
+  auto report_builder = fuchsia_input_report::InputReport::Builder(
+      report_allocator.make<fuchsia_input_report::InputReport::Frame>());
+
   EXPECT_EQ(hid_input_report::ParseResult::kOk,
             sensor.ParseInputReport(reinterpret_cast<uint8_t*>(&report_data), sizeof(report_data),
-                                    &report));
+                                    &report_allocator, &report_builder));
 
-  hid_input_report::SensorInputReport* sensor_report =
-      std::get_if<hid_input_report::SensorInputReport>(&report.report);
-  ASSERT_NOT_NULL(sensor_report);
-  EXPECT_EQ(4, sensor_report->num_values);
+  fuchsia_input_report::InputReport input_report = report_builder.build();
+  ASSERT_TRUE(input_report.has_sensor());
+  EXPECT_EQ(4, input_report.sensor().values().count());
 
   // Check the report.
   // These will always match the ordering in the descriptor.
-  EXPECT_EQ(kIlluminanceTestVal, sensor_report->values[0]);
-  EXPECT_EQ(kRedTestVal, sensor_report->values[1]);
-  EXPECT_EQ(kBlueTestVal, sensor_report->values[2]);
-  EXPECT_EQ(kGreenTestVal, sensor_report->values[3]);
+  EXPECT_EQ(kIlluminanceTestVal, input_report.sensor().values()[0]);
+  EXPECT_EQ(kRedTestVal, input_report.sensor().values()[1]);
+  EXPECT_EQ(kBlueTestVal, input_report.sensor().values()[2]);
+  EXPECT_EQ(kGreenTestVal, input_report.sensor().values()[3]);
 }
 
 TEST(SensorTest, DeviceType) {

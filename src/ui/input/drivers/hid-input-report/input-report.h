@@ -12,15 +12,10 @@
 #include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
 
+#include "instance.h"
 #include "src/ui/input/lib/hid-input-report/device.h"
-#include "src/ui/input/lib/input-report-instance-driver/instance.h"
 
 namespace hid_input_report_dev {
-
-namespace fuchsia_input_report = ::llcpp::fuchsia::input::report;
-
-using ::input_report_instance::InputReportBase;
-using ::input_report_instance::InputReportInstance;
 
 class InputReport;
 using DeviceType = ddk::Device<InputReport, ddk::UnbindableNew, ddk::Openable>;
@@ -42,13 +37,11 @@ class InputReport : public DeviceType,
                                       zx_time_t report_time);
 
   void RemoveInstanceFromList(InputReportInstance* instance) override;
-  const hid_input_report::ReportDescriptor* GetDescriptors(size_t* size) override;
+  void CreateDescriptor(fidl::Allocator* allocator,
+                        fuchsia_input_report::DeviceDescriptor::Builder* descriptor) override;
   zx_status_t SendOutputReport(fuchsia_input_report::OutputReport report) override;
 
  private:
-  zx_status_t GetReport(hid_input_report::Device* device,
-                        hid_input_report::InputReport* out_input_report);
-
   bool ParseHidInputReportDescriptor(const hid::ReportDescriptor* report_desc);
 
   ddk::HidDeviceProtocolClient hiddev_;
@@ -58,7 +51,6 @@ class InputReport : public DeviceType,
   // Unmanaged linked-list because the HidInstances free themselves through DdkRelease.
   fbl::DoublyLinkedList<InputReportInstance*> instance_list_ __TA_GUARDED(instance_lock_);
 
-  std::vector<hid_input_report::ReportDescriptor> descriptors_;
   std::vector<std::unique_ptr<hid_input_report::Device>> devices_;
 };
 

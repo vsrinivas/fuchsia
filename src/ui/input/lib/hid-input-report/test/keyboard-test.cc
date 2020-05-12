@@ -13,7 +13,10 @@
 #include <zxtest/zxtest.h>
 
 #include "src/ui/input/lib/hid-input-report/device.h"
+#include "src/ui/input/lib/hid-input-report/test/test.h"
 #include "src/ui/lib/key_util/key_util.h"
+
+namespace fuchsia_input_report = ::llcpp::fuchsia::input::report;
 
 namespace {
 
@@ -102,13 +105,17 @@ TEST(KeyboardTest, BootKeyboard) {
 
   EXPECT_EQ(hid_input_report::ParseResult::kOk,
             keyboard.ParseReportDescriptor(dev_desc->report[0]));
-  hid_input_report::ReportDescriptor report_descriptor = keyboard.GetDescriptor();
 
-  hid_input_report::KeyboardDescriptor* keyboard_descriptor =
-      std::get_if<hid_input_report::KeyboardDescriptor>(&report_descriptor.descriptor);
-  ASSERT_NOT_NULL(keyboard_descriptor);
-
-  EXPECT_EQ(keyboard_descriptor->input->num_keys, 105U);
+  hid_input_report::TestDescriptorAllocator descriptor_allocator;
+  auto descriptor_builder = fuchsia_input_report::DeviceDescriptor::Builder(
+      descriptor_allocator.make<fuchsia_input_report::DeviceDescriptor::Frame>());
+  EXPECT_EQ(hid_input_report::ParseResult::kOk,
+            keyboard.CreateDescriptor(&descriptor_allocator, &descriptor_builder));
+  fuchsia_input_report::DeviceDescriptor descriptor = descriptor_builder.build();
+  EXPECT_TRUE(descriptor.has_keyboard());
+  EXPECT_TRUE(descriptor.keyboard().has_input());
+  EXPECT_TRUE(descriptor.keyboard().input().has_keys());
+  EXPECT_EQ(105, descriptor.keyboard().input().keys().count());
 
   // Test a report parses correctly.
   hid_boot_kbd_report kbd_report = {};
@@ -117,20 +124,23 @@ TEST(KeyboardTest, BootKeyboard) {
   kbd_report.usage[1] = HID_USAGE_KEY_NON_US_BACKSLASH;
   kbd_report.usage[2] = HID_USAGE_KEY_UP;
 
-  hid_input_report::InputReport report = {};
+  hid_input_report::TestReportAllocator report_allocator;
+  auto report_builder = fuchsia_input_report::InputReport::Builder(
+      report_allocator.make<fuchsia_input_report::InputReport::Frame>());
   EXPECT_EQ(hid_input_report::ParseResult::kOk,
             keyboard.ParseInputReport(reinterpret_cast<uint8_t*>(&kbd_report), sizeof(kbd_report),
-                                      &report));
+                                      &report_allocator, &report_builder));
 
-  hid_input_report::KeyboardInputReport* keyboard_report =
-      std::get_if<hid_input_report::KeyboardInputReport>(&report.report);
-  ASSERT_NOT_NULL(keyboard_report);
-  ASSERT_EQ(keyboard_report->num_pressed_keys, 5U);
-  EXPECT_EQ(keyboard_report->pressed_keys[0], llcpp::fuchsia::ui::input2::Key::LEFT_SHIFT);
-  EXPECT_EQ(keyboard_report->pressed_keys[1], llcpp::fuchsia::ui::input2::Key::RIGHT_META);
-  EXPECT_EQ(keyboard_report->pressed_keys[2], llcpp::fuchsia::ui::input2::Key::A);
-  EXPECT_EQ(keyboard_report->pressed_keys[3], llcpp::fuchsia::ui::input2::Key::NON_US_BACKSLASH);
-  EXPECT_EQ(keyboard_report->pressed_keys[4], llcpp::fuchsia::ui::input2::Key::UP);
+  fuchsia_input_report::InputReport input_report = report_builder.build();
+  ASSERT_TRUE(input_report.has_keyboard());
+
+  ASSERT_EQ(input_report.keyboard().pressed_keys().count(), 5U);
+  EXPECT_EQ(input_report.keyboard().pressed_keys()[0], llcpp::fuchsia::ui::input2::Key::LEFT_SHIFT);
+  EXPECT_EQ(input_report.keyboard().pressed_keys()[1], llcpp::fuchsia::ui::input2::Key::RIGHT_META);
+  EXPECT_EQ(input_report.keyboard().pressed_keys()[2], llcpp::fuchsia::ui::input2::Key::A);
+  EXPECT_EQ(input_report.keyboard().pressed_keys()[3],
+            llcpp::fuchsia::ui::input2::Key::NON_US_BACKSLASH);
+  EXPECT_EQ(input_report.keyboard().pressed_keys()[4], llcpp::fuchsia::ui::input2::Key::UP);
 }
 
 TEST(KeyboardTest, OutputDescriptor) {
@@ -145,23 +155,24 @@ TEST(KeyboardTest, OutputDescriptor) {
 
   EXPECT_EQ(hid_input_report::ParseResult::kOk,
             keyboard.ParseReportDescriptor(dev_desc->report[0]));
-  hid_input_report::ReportDescriptor report_descriptor = keyboard.GetDescriptor();
 
-  hid_input_report::KeyboardDescriptor* keyboard_descriptor =
-      std::get_if<hid_input_report::KeyboardDescriptor>(&report_descriptor.descriptor);
-  ASSERT_NOT_NULL(keyboard_descriptor);
-  ASSERT_TRUE(keyboard_descriptor->output);
+  hid_input_report::TestDescriptorAllocator descriptor_allocator;
+  auto descriptor_builder = fuchsia_input_report::DeviceDescriptor::Builder(
+      descriptor_allocator.make<fuchsia_input_report::DeviceDescriptor::Frame>());
+  EXPECT_EQ(hid_input_report::ParseResult::kOk,
+            keyboard.CreateDescriptor(&descriptor_allocator, &descriptor_builder));
+  fuchsia_input_report::DeviceDescriptor descriptor = descriptor_builder.build();
 
-  ASSERT_EQ(keyboard_descriptor->output->num_leds, 5);
-  EXPECT_EQ(keyboard_descriptor->output->leds[0],
+  ASSERT_EQ(descriptor.keyboard().output().leds().count(), 5);
+  EXPECT_EQ(descriptor.keyboard().output().leds()[0],
             hid_input_report::fuchsia_input_report::LedType::NUM_LOCK);
-  EXPECT_EQ(keyboard_descriptor->output->leds[1],
+  EXPECT_EQ(descriptor.keyboard().output().leds()[1],
             hid_input_report::fuchsia_input_report::LedType::CAPS_LOCK);
-  EXPECT_EQ(keyboard_descriptor->output->leds[2],
+  EXPECT_EQ(descriptor.keyboard().output().leds()[2],
             hid_input_report::fuchsia_input_report::LedType::SCROLL_LOCK);
-  EXPECT_EQ(keyboard_descriptor->output->leds[3],
+  EXPECT_EQ(descriptor.keyboard().output().leds()[3],
             hid_input_report::fuchsia_input_report::LedType::COMPOSE);
-  EXPECT_EQ(keyboard_descriptor->output->leds[4],
+  EXPECT_EQ(descriptor.keyboard().output().leds()[4],
             hid_input_report::fuchsia_input_report::LedType::KANA);
 }
 
@@ -177,26 +188,15 @@ TEST(KeyboardTest, DoubleCountingKeys) {
 
   EXPECT_EQ(hid_input_report::ParseResult::kOk,
             keyboard.ParseReportDescriptor(dev_desc->report[0]));
-  hid_input_report::ReportDescriptor report_descriptor = keyboard.GetDescriptor();
 
-  hid_input_report::KeyboardDescriptor* keyboard_descriptor =
-      std::get_if<hid_input_report::KeyboardDescriptor>(&report_descriptor.descriptor);
-  ASSERT_NOT_NULL(keyboard_descriptor);
+  hid_input_report::TestDescriptorAllocator descriptor_allocator;
+  auto descriptor_builder = fuchsia_input_report::DeviceDescriptor::Builder(
+      descriptor_allocator.make<fuchsia_input_report::DeviceDescriptor::Frame>());
+  EXPECT_EQ(hid_input_report::ParseResult::kOk,
+            keyboard.CreateDescriptor(&descriptor_allocator, &descriptor_builder));
+  fuchsia_input_report::DeviceDescriptor descriptor = descriptor_builder.build();
 
-  EXPECT_EQ(keyboard_descriptor->input->num_keys, 105U);
-
-  // Test that all of the expected keys are here.
-  for (size_t i = 0; i < 97; i++) {
-    EXPECT_EQ(*key_util::fuchsia_key_to_hid_key(
-                  static_cast<fuchsia::ui::input2::Key>(keyboard_descriptor->input->keys[i])),
-              i + 4);
-  }
-
-  for (size_t i = 97; i < 105; i++) {
-    EXPECT_EQ(*key_util::fuchsia_key_to_hid_key(
-                  static_cast<fuchsia::ui::input2::Key>(keyboard_descriptor->input->keys[i])),
-              0xE0 + (i - 97));
-  }
+  EXPECT_EQ(descriptor.keyboard().input().keys().count(), 105U);
 }
 
 TEST(KeyboardTest, BootKeyboardOutputReport) {
@@ -239,13 +239,15 @@ TEST(KeyboardTest, FullKeysKeyboard) {
 
   EXPECT_EQ(hid_input_report::ParseResult::kOk,
             keyboard.ParseReportDescriptor(dev_desc->report[0]));
-  hid_input_report::ReportDescriptor report_descriptor = keyboard.GetDescriptor();
 
-  hid_input_report::KeyboardDescriptor* keyboard_descriptor =
-      std::get_if<hid_input_report::KeyboardDescriptor>(&report_descriptor.descriptor);
-  ASSERT_NOT_NULL(keyboard_descriptor);
+  hid_input_report::TestDescriptorAllocator descriptor_allocator;
+  auto descriptor_builder = fuchsia_input_report::DeviceDescriptor::Builder(
+      descriptor_allocator.make<fuchsia_input_report::DeviceDescriptor::Frame>());
+  EXPECT_EQ(hid_input_report::ParseResult::kOk,
+            keyboard.CreateDescriptor(&descriptor_allocator, &descriptor_builder));
+  fuchsia_input_report::DeviceDescriptor descriptor = descriptor_builder.build();
 
-  EXPECT_EQ(keyboard_descriptor->input->num_keys, 107);
+  EXPECT_EQ(descriptor.keyboard().input().keys().count(), 107);
 
   // Test a report parses correctly.
   hid_boot_kbd_report kbd_report = {};
@@ -254,20 +256,21 @@ TEST(KeyboardTest, FullKeysKeyboard) {
   kbd_report.usage[1] = HID_USAGE_KEY_NON_US_BACKSLASH;
   kbd_report.usage[2] = HID_USAGE_KEY_UP;
 
-  hid_input_report::InputReport report = {};
+  hid_input_report::TestReportAllocator report_allocator;
+  auto report_builder = fuchsia_input_report::InputReport::Builder(
+      report_allocator.make<fuchsia_input_report::InputReport::Frame>());
   EXPECT_EQ(hid_input_report::ParseResult::kOk,
             keyboard.ParseInputReport(reinterpret_cast<uint8_t*>(&kbd_report), sizeof(kbd_report),
-                                      &report));
+                                      &report_allocator, &report_builder));
+  fuchsia_input_report::InputReport input_report = report_builder.build();
 
-  hid_input_report::KeyboardInputReport* keyboard_report =
-      std::get_if<hid_input_report::KeyboardInputReport>(&report.report);
-  ASSERT_NOT_NULL(keyboard_report);
-  ASSERT_EQ(keyboard_report->num_pressed_keys, 5U);
-  EXPECT_EQ(keyboard_report->pressed_keys[0], llcpp::fuchsia::ui::input2::Key::LEFT_SHIFT);
-  EXPECT_EQ(keyboard_report->pressed_keys[1], llcpp::fuchsia::ui::input2::Key::RIGHT_META);
-  EXPECT_EQ(keyboard_report->pressed_keys[2], llcpp::fuchsia::ui::input2::Key::A);
-  EXPECT_EQ(keyboard_report->pressed_keys[3], llcpp::fuchsia::ui::input2::Key::NON_US_BACKSLASH);
-  EXPECT_EQ(keyboard_report->pressed_keys[4], llcpp::fuchsia::ui::input2::Key::UP);
+  ASSERT_EQ(input_report.keyboard().pressed_keys().count(), 5U);
+  EXPECT_EQ(input_report.keyboard().pressed_keys()[0], llcpp::fuchsia::ui::input2::Key::LEFT_SHIFT);
+  EXPECT_EQ(input_report.keyboard().pressed_keys()[1], llcpp::fuchsia::ui::input2::Key::RIGHT_META);
+  EXPECT_EQ(input_report.keyboard().pressed_keys()[2], llcpp::fuchsia::ui::input2::Key::A);
+  EXPECT_EQ(input_report.keyboard().pressed_keys()[3],
+            llcpp::fuchsia::ui::input2::Key::NON_US_BACKSLASH);
+  EXPECT_EQ(input_report.keyboard().pressed_keys()[4], llcpp::fuchsia::ui::input2::Key::UP);
 }
 
 TEST(KeyboardTest, DeviceType) {

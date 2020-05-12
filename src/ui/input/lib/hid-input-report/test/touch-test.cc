@@ -10,6 +10,9 @@
 #include <zxtest/zxtest.h>
 
 #include "src/ui/input/lib/hid-input-report/device.h"
+#include "src/ui/input/lib/hid-input-report/test/test.h"
+
+namespace fuchsia_input_report = ::llcpp::fuchsia::input::report;
 
 // Each test parses the report descriptor for the touchscreen and then sends one
 // report to ensure that it has been parsed correctly.
@@ -42,23 +45,25 @@ TEST(TouchscreenTest, ParadiseV1) {
 
   hid_input_report::Touch touch;
   EXPECT_EQ(hid_input_report::ParseResult::kOk, touch.ParseReportDescriptor(*hid_report_desc));
-  hid_input_report::ReportDescriptor report_descriptor = touch.GetDescriptor();
 
-  hid_input_report::TouchDescriptor* touch_descriptor =
-      std::get_if<hid_input_report::TouchDescriptor>(&report_descriptor.descriptor);
-  ASSERT_NOT_NULL(touch_descriptor);
+  hid_input_report::TestDescriptorAllocator descriptor_allocator;
+  auto descriptor_builder = fuchsia_input_report::DeviceDescriptor::Builder(
+      descriptor_allocator.make<fuchsia_input_report::DeviceDescriptor::Frame>());
+  EXPECT_EQ(hid_input_report::ParseResult::kOk,
+            touch.CreateDescriptor(&descriptor_allocator, &descriptor_builder));
+  fuchsia_input_report::DeviceDescriptor descriptor = descriptor_builder.build();
+  EXPECT_TRUE(descriptor.has_touch());
+  EXPECT_TRUE(descriptor.touch().has_input());
 
-  EXPECT_EQ(5UL, touch_descriptor->input->num_contacts);
-  EXPECT_TRUE(touch_descriptor->input->contacts[0].contact_id);
-  EXPECT_TRUE(touch_descriptor->input->contacts[0].is_pressed);
+  EXPECT_EQ(5UL, descriptor.touch().input().contacts().count());
 
-  EXPECT_TRUE(touch_descriptor->input->contacts[0].position_x);
-  EXPECT_EQ(0, touch_descriptor->input->contacts[0].position_x->range.min);
-  EXPECT_EQ(259200, touch_descriptor->input->contacts[0].position_x->range.max);
+  EXPECT_TRUE(descriptor.touch().input().contacts()[0].has_position_x());
+  EXPECT_EQ(0, descriptor.touch().input().contacts()[0].position_x().range.min);
+  EXPECT_EQ(259200, descriptor.touch().input().contacts()[0].position_x().range.max);
 
-  EXPECT_TRUE(touch_descriptor->input->contacts[0].position_y);
-  EXPECT_EQ(0, touch_descriptor->input->contacts[0].position_y->range.min);
-  EXPECT_EQ(172800, touch_descriptor->input->contacts[0].position_y->range.max);
+  EXPECT_TRUE(descriptor.touch().input().contacts()[0].has_position_y());
+  EXPECT_EQ(0, descriptor.touch().input().contacts()[0].position_y().range.min);
+  EXPECT_EQ(172800, descriptor.touch().input().contacts()[0].position_y().range.max);
 
   // Now use the parsed descriptor to interpret a touchpad report.
   paradise_touch_t touch_v1_report = {};
@@ -69,28 +74,28 @@ TEST(TouchscreenTest, ParadiseV1) {
   touch_v1_report.fingers[1].x = 100;
   touch_v1_report.fingers[1].y = 200;
 
-  hid_input_report::InputReport report = {};
+  hid_input_report::TestReportAllocator report_allocator;
+  auto report_builder = fuchsia_input_report::InputReport::Builder(
+      report_allocator.make<fuchsia_input_report::InputReport::Frame>());
   EXPECT_EQ(hid_input_report::ParseResult::kOk,
             touch.ParseInputReport(reinterpret_cast<uint8_t*>(&touch_v1_report),
-                                   sizeof(touch_v1_report), &report));
+                                   sizeof(touch_v1_report), &report_allocator, &report_builder));
+  fuchsia_input_report::InputReport input_report = report_builder.build();
+  ASSERT_TRUE(input_report.has_touch());
 
-  hid_input_report::TouchInputReport* touch_report =
-      std::get_if<hid_input_report::TouchInputReport>(&report.report);
-  ASSERT_NOT_NULL(touch_report);
-
-  EXPECT_EQ(1UL, touch_report->num_contacts);
+  EXPECT_EQ(1UL, input_report.touch().contacts().count());
 
   // The expected values below have been manually converted from logical to physical units based
   // on the report descriptor.
 
-  EXPECT_TRUE(touch_report->contacts[0].contact_id);
-  EXPECT_EQ(1U, *touch_report->contacts[0].contact_id);
+  EXPECT_TRUE(input_report.touch().contacts()[0].has_contact_id());
+  EXPECT_EQ(1U, input_report.touch().contacts()[0].contact_id());
 
-  EXPECT_TRUE(touch_report->contacts[0].position_x);
-  EXPECT_EQ(2500, *touch_report->contacts[0].position_x);
+  EXPECT_TRUE(input_report.touch().contacts()[0].has_position_x());
+  EXPECT_EQ(2500, input_report.touch().contacts()[0].position_x());
 
-  EXPECT_TRUE(touch_report->contacts[0].position_y);
-  EXPECT_EQ(5000, *touch_report->contacts[0].position_y);
+  EXPECT_TRUE(input_report.touch().contacts()[0].has_position_y());
+  EXPECT_EQ(5000, input_report.touch().contacts()[0].position_y());
 }
 
 TEST(TouchscreenTest, ParadiseV1Touchpad) {
@@ -103,26 +108,28 @@ TEST(TouchscreenTest, ParadiseV1Touchpad) {
 
   hid_input_report::Touch touch;
   EXPECT_EQ(hid_input_report::ParseResult::kOk, touch.ParseReportDescriptor(*hid_report_desc));
-  hid_input_report::ReportDescriptor report_descriptor = touch.GetDescriptor();
 
-  hid_input_report::TouchDescriptor* touch_descriptor =
-      std::get_if<hid_input_report::TouchDescriptor>(&report_descriptor.descriptor);
-  ASSERT_NOT_NULL(touch_descriptor);
+  hid_input_report::TestDescriptorAllocator descriptor_allocator;
+  auto descriptor_builder = fuchsia_input_report::DeviceDescriptor::Builder(
+      descriptor_allocator.make<fuchsia_input_report::DeviceDescriptor::Frame>());
+  EXPECT_EQ(hid_input_report::ParseResult::kOk,
+            touch.CreateDescriptor(&descriptor_allocator, &descriptor_builder));
+  fuchsia_input_report::DeviceDescriptor descriptor = descriptor_builder.build();
+  EXPECT_TRUE(descriptor.has_touch());
+  EXPECT_TRUE(descriptor.touch().has_input());
 
-  EXPECT_EQ(5UL, touch_descriptor->input->num_contacts);
-  EXPECT_TRUE(touch_descriptor->input->contacts[0].contact_id);
-  EXPECT_TRUE(touch_descriptor->input->contacts[0].is_pressed);
+  EXPECT_EQ(5UL, descriptor.touch().input().contacts().count());
 
-  EXPECT_TRUE(touch_descriptor->input->contacts[0].position_x);
-  EXPECT_EQ(0, touch_descriptor->input->contacts[0].position_x->range.min);
-  EXPECT_EQ(103000, touch_descriptor->input->contacts[0].position_x->range.max);
+  EXPECT_TRUE(descriptor.touch().input().contacts()[0].has_position_x());
+  EXPECT_EQ(0, descriptor.touch().input().contacts()[0].position_x().range.min);
+  EXPECT_EQ(103000, descriptor.touch().input().contacts()[0].position_x().range.max);
 
-  EXPECT_TRUE(touch_descriptor->input->contacts[0].position_y);
-  EXPECT_EQ(0, touch_descriptor->input->contacts[0].position_y->range.min);
-  EXPECT_EQ(68000, touch_descriptor->input->contacts[0].position_y->range.max);
+  EXPECT_TRUE(descriptor.touch().input().contacts()[0].has_position_y());
+  EXPECT_EQ(0, descriptor.touch().input().contacts()[0].position_y().range.min);
+  EXPECT_EQ(68000, descriptor.touch().input().contacts()[0].position_y().range.max);
 
-  EXPECT_EQ(1, touch_descriptor->input->num_buttons = 1);
-  EXPECT_EQ(1, touch_descriptor->input->buttons[0]);
+  EXPECT_EQ(1, descriptor.touch().input().buttons().count());
+  EXPECT_EQ(1, descriptor.touch().input().buttons()[0]);
 
   // Now use the parsed descriptor to interpret a touchpad report.
   paradise_touchpad_v1_t touch_report = {};
@@ -134,31 +141,24 @@ TEST(TouchscreenTest, ParadiseV1Touchpad) {
   touch_report.fingers[0].x = 200;
   touch_report.fingers[0].y = 100;
 
-  hid_input_report::InputReport report = {};
+  hid_input_report::TestReportAllocator report_allocator;
+  auto report_builder = fuchsia_input_report::InputReport::Builder(
+      report_allocator.make<fuchsia_input_report::InputReport::Frame>());
   EXPECT_EQ(hid_input_report::ParseResult::kOk,
             touch.ParseInputReport(reinterpret_cast<uint8_t*>(&touch_report), sizeof(touch_report),
-                                   &report));
+                                   &report_allocator, &report_builder));
+  fuchsia_input_report::InputReport input_report = report_builder.build();
+  ASSERT_TRUE(input_report.has_touch());
 
-  hid_input_report::TouchInputReport* touch_input_report =
-      std::get_if<hid_input_report::TouchInputReport>(&report.report);
-  ASSERT_NOT_NULL(touch_input_report);
-
-  EXPECT_EQ(1UL, touch_input_report->num_contacts);
+  EXPECT_EQ(1UL, input_report.touch().contacts().count());
 
   // The expected values below have been manually converted from logical to physical units based
   // on the report descriptor.
-
-  EXPECT_TRUE(touch_input_report->contacts[0].contact_id);
-  EXPECT_EQ(5U, *touch_input_report->contacts[0].contact_id);
-
-  EXPECT_TRUE(touch_input_report->contacts[0].position_x);
-  EXPECT_EQ(1562, *touch_input_report->contacts[0].position_x);
-
-  EXPECT_TRUE(touch_input_report->contacts[0].position_y);
-  EXPECT_EQ(781, *touch_input_report->contacts[0].position_y);
-
-  EXPECT_EQ(1, touch_input_report->num_pressed_buttons);
-  EXPECT_EQ(1, touch_input_report->pressed_buttons[0]);
+  EXPECT_EQ(5U, input_report.touch().contacts()[0].contact_id());
+  EXPECT_EQ(1562, input_report.touch().contacts()[0].position_x());
+  EXPECT_EQ(781, input_report.touch().contacts()[0].position_y());
+  EXPECT_EQ(1, input_report.touch().pressed_buttons().count());
+  EXPECT_EQ(1, input_report.touch().pressed_buttons()[0]);
 }
 
 TEST(TouchscreenTest, DeviceType) {

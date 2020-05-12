@@ -30,27 +30,6 @@ namespace hid_input_report_dev {
 
 void InputReport::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
 
-zx_status_t InputReport::GetReport(hid_input_report::Device* device,
-                                   hid_input_report::InputReport* out_input_report) {
-  std::array<uint8_t, HID_MAX_REPORT_LEN> report_data;
-  size_t report_size = 0;
-  zx_status_t status = hiddev_.GetReport(HID_REPORT_TYPE_INPUT, device->InputReportId(),
-                                         report_data.data(), report_data.size(), &report_size);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "hid-input-report: Failed to GET report (%s)", zx_status_get_string(status));
-    return status;
-  }
-
-  if (device->ParseInputReport(report_data.data(), report_size, out_input_report) !=
-      hid_input_report::ParseResult::kOk) {
-    zxlogf(ERROR, "ReceiveReport: Device failed to parse GET report correctly");
-    return ZX_ERR_INTERNAL;
-  }
-  out_input_report->time = zx_clock_get_monotonic();
-
-  return ZX_OK;
-}
-
 zx_status_t InputReport::DdkOpen(zx_device_t** dev_out, uint32_t flags) {
   auto inst = std::make_unique<InputReportInstance>(zxdev(), next_instance_id_++);
   zx_status_t status = inst->Bind(this);
@@ -67,12 +46,14 @@ zx_status_t InputReport::DdkOpen(zx_device_t** dev_out, uint32_t flags) {
   // since the client needs the device's state.
   for (auto& device : devices_) {
     if (device->GetDeviceType() == hid_input_report::DeviceType::kConsumerControl) {
-      hid_input_report::InputReport report = {};
-      status = GetReport(device.get(), &report);
+      std::array<uint8_t, HID_MAX_REPORT_LEN> report_data;
+      size_t report_size = 0;
+      zx_status_t status = hiddev_.GetReport(HID_REPORT_TYPE_INPUT, device->InputReportId(),
+                                             report_data.data(), report_data.size(), &report_size);
       if (status != ZX_OK) {
         continue;
       }
-      inst->ReceiveReport(report);
+      inst->ReceiveReport(report_data.data(), report_size, zx_clock_get_monotonic(), device.get());
     }
   }
 
@@ -86,23 +67,16 @@ zx_status_t InputReport::DdkOpen(zx_device_t** dev_out, uint32_t flags) {
 void InputReport::HidReportListenerReceiveReport(const uint8_t* report, size_t report_size,
                                                  zx_time_t report_time) {
   for (auto& device : devices_) {
+    // Find the matching device.
     if (device->InputReportId() != 0 && device->InputReportId() != report[0]) {
       continue;
     }
 
-    hid_input_report::InputReport input_report = {};
-    input_report.time = report_time;
-
-    if (device->ParseInputReport(report, report_size, &input_report) !=
-        hid_input_report::ParseResult::kOk) {
-      zxlogf(ERROR, "ReceiveReport: Device failed to parse report correctly");
-      continue;
-    }
-
+    // Send to each instance.
     {
       fbl::AutoLock lock(&instance_lock_);
       for (auto& instance : instance_list_) {
-        instance.ReceiveReport(input_report);
+        instance.ReceiveReport(report, report_size, report_time, device.get());
       }
     }
   }
@@ -125,15 +99,15 @@ bool InputReport::ParseHidInputReportDescriptor(const hid::ReportDescriptor* rep
   if (result != hid_input_report::ParseResult::kOk) {
     return false;
   }
-
-  descriptors_.push_back(device->GetDescriptor());
   devices_.push_back(std::move(device));
   return true;
 }
 
-const hid_input_report::ReportDescriptor* InputReport::GetDescriptors(size_t* size) {
-  *size = descriptors_.size();
-  return descriptors_.data();
+void InputReport::CreateDescriptor(fidl::Allocator* allocator,
+                                   fuchsia_input_report::DeviceDescriptor::Builder* descriptor) {
+  for (auto& device : devices_) {
+    device->CreateDescriptor(allocator, descriptor);
+  }
 }
 
 zx_status_t InputReport::SendOutputReport(fuchsia_input_report::OutputReport report) {

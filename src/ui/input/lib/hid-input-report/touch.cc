@@ -37,9 +37,11 @@ ParseResult Touch::ParseReportDescriptor(const hid::ReportDescriptor& hid_report
   if (main_collection->usage ==
       hid::USAGE(hid::usage::Page::kDigitizer, hid::usage::Digitizer::kTouchScreen)) {
     descriptor.touch_type = fuchsia_input_report::TouchType::TOUCHSCREEN;
+    touch_type_ = fuchsia_input_report::TouchType::TOUCHSCREEN;
   } else if (main_collection->usage ==
              hid::USAGE(hid::usage::Page::kDigitizer, hid::usage::Digitizer::kTouchPad)) {
     descriptor.touch_type = fuchsia_input_report::TouchType::TOUCHPAD;
+    touch_type_ = fuchsia_input_report::TouchType::TOUCHPAD;
   } else {
     return ParseResult::kNoCollection;
   }
@@ -84,37 +86,37 @@ ParseResult Touch::ParseReportDescriptor(const hid::ReportDescriptor& hid_report
     if (field.attr.usage ==
         hid::USAGE(hid::usage::Page::kDigitizer, hid::usage::Digitizer::kContactID)) {
       contact->contact_id = field.attr;
-      contact_descriptor->contact_id = LlcppAxisFromAttribute(contact->contact_id);
+      contact_descriptor->contact_id = LlcppAxisFromAttribute(*contact->contact_id);
     }
     if (field.attr.usage ==
         hid::USAGE(hid::usage::Page::kDigitizer, hid::usage::Digitizer::kTipSwitch)) {
       contact->tip_switch = field.attr;
-      contact_descriptor->is_pressed = LlcppAxisFromAttribute(contact->tip_switch);
+      contact_descriptor->is_pressed = LlcppAxisFromAttribute(*contact->tip_switch);
     }
     if (field.attr.usage ==
         hid::USAGE(hid::usage::Page::kGenericDesktop, hid::usage::GenericDesktop::kX)) {
       contact->position_x = field.attr;
-      contact_descriptor->position_x = LlcppAxisFromAttribute(contact->position_x);
+      contact_descriptor->position_x = LlcppAxisFromAttribute(*contact->position_x);
     }
     if (field.attr.usage ==
         hid::USAGE(hid::usage::Page::kGenericDesktop, hid::usage::GenericDesktop::kY)) {
       contact->position_y = field.attr;
-      contact_descriptor->position_y = LlcppAxisFromAttribute(contact->position_y);
+      contact_descriptor->position_y = LlcppAxisFromAttribute(*contact->position_y);
     }
     if (field.attr.usage ==
         hid::USAGE(hid::usage::Page::kDigitizer, hid::usage::Digitizer::kTipPressure)) {
       contact->pressure = field.attr;
-      contact_descriptor->pressure = LlcppAxisFromAttribute(contact->pressure);
+      contact_descriptor->pressure = LlcppAxisFromAttribute(*contact->pressure);
     }
     if (field.attr.usage ==
         hid::USAGE(hid::usage::Page::kDigitizer, hid::usage::Digitizer::kWidth)) {
       contact->contact_width = field.attr;
-      contact_descriptor->contact_width = LlcppAxisFromAttribute(contact->contact_width);
+      contact_descriptor->contact_width = LlcppAxisFromAttribute(*contact->contact_width);
     }
     if (field.attr.usage ==
         hid::USAGE(hid::usage::Page::kDigitizer, hid::usage::Digitizer::kHeight)) {
       contact->contact_height = field.attr;
-      contact_descriptor->contact_height = LlcppAxisFromAttribute(contact->contact_height);
+      contact_descriptor->contact_height = LlcppAxisFromAttribute(*contact->contact_height);
     }
   }
 
@@ -122,6 +124,7 @@ ParseResult Touch::ParseReportDescriptor(const hid::ReportDescriptor& hid_report
   for (size_t i = 0; i < num_contacts; i++) {
     contacts_[i] = contacts[i];
   }
+  num_contacts_ = num_contacts;
   for (size_t i = 0; i < num_buttons; i++) {
     buttons_[i] = buttons[i];
   }
@@ -142,6 +145,69 @@ ReportDescriptor Touch::GetDescriptor() {
   ReportDescriptor report_descriptor = {};
   report_descriptor.descriptor = descriptor_;
   return report_descriptor;
+}
+
+ParseResult Touch::CreateDescriptor(fidl::Allocator* allocator,
+                                    fuchsia_input_report::DeviceDescriptor::Builder* descriptor) {
+  auto input = fuchsia_input_report::TouchInputDescriptor::Builder(
+      allocator->make<fuchsia_input_report::TouchInputDescriptor::Frame>());
+
+  input.set_touch_type(allocator->make<fuchsia_input_report::TouchType>(touch_type_));
+
+  auto input_contacts =
+      allocator->make<fuchsia_input_report::ContactInputDescriptor[]>(num_contacts_);
+
+  for (size_t i = 0; i < num_contacts_; i++) {
+    const ContactConfig& config = contacts_[i];
+    auto contact = fuchsia_input_report::ContactInputDescriptor::Builder(
+        allocator->make<fuchsia_input_report::ContactInputDescriptor::Frame>());
+
+    if (config.position_x) {
+      contact.set_position_x(
+          allocator->make<fuchsia_input_report::Axis>(LlcppAxisFromAttribute(*config.position_x)));
+    }
+    if (config.position_y) {
+      contact.set_position_y(
+          allocator->make<fuchsia_input_report::Axis>(LlcppAxisFromAttribute(*config.position_y)));
+    }
+    if (config.pressure) {
+      contact.set_pressure(
+          allocator->make<fuchsia_input_report::Axis>(LlcppAxisFromAttribute(*config.pressure)));
+    }
+    if (config.contact_width) {
+      contact.set_contact_width(allocator->make<fuchsia_input_report::Axis>(
+          LlcppAxisFromAttribute(*config.contact_width)));
+    }
+    if (config.contact_height) {
+      contact.set_contact_height(allocator->make<fuchsia_input_report::Axis>(
+          LlcppAxisFromAttribute(*config.contact_height)));
+    }
+
+    input_contacts[i] = contact.build();
+  }
+
+  input.set_contacts(
+      allocator->make<fidl::VectorView<fuchsia_input_report::ContactInputDescriptor>>(
+          std::move(input_contacts), num_contacts_));
+
+  // Set the buttons array.
+  {
+    auto buttons = allocator->make<uint8_t[]>(num_buttons_);
+    size_t index = 0;
+    for (auto& button : buttons_) {
+      buttons[index++] = button.usage.usage;
+    }
+    auto buttons_view =
+        allocator->make<fidl::VectorView<uint8_t>>(std::move(buttons), num_buttons_);
+    input.set_buttons(std::move(buttons_view));
+  }
+
+  auto touch = fuchsia_input_report::TouchDescriptor::Builder(
+      allocator->make<fuchsia_input_report::TouchDescriptor::Frame>());
+  touch.set_input(allocator->make<fuchsia_input_report::TouchInputDescriptor>(input.build()));
+  descriptor->set_touch(allocator->make<fuchsia_input_report::TouchDescriptor>(touch.build()));
+
+  return ParseResult::kOk;
 }
 
 ParseResult Touch::ParseInputReport(const uint8_t* data, size_t len, InputReport* report) {
@@ -169,7 +235,7 @@ ParseResult Touch::ParseInputReport(const uint8_t* data, size_t len, InputReport
   for (size_t i = 0; i < descriptor_.input->num_contacts; i++) {
     ContactInputReport& contact = touch_report.contacts[contact_num];
     if (descriptor_.input->contacts[i].is_pressed) {
-      if (hid::ExtractAsUnitType(data, len, contacts_[i].tip_switch, &value_out)) {
+      if (hid::ExtractAsUnitType(data, len, *contacts_[i].tip_switch, &value_out)) {
         contact.is_pressed = static_cast<bool>(value_out);
         if (!*contact.is_pressed) {
           continue;
@@ -182,32 +248,32 @@ ParseResult Touch::ParseInputReport(const uint8_t* data, size_t len, InputReport
       // tip switch and then never reset the range for the contact id. For this reason,
       // we have to do an "unconverted" extraction.
       uint32_t contact_id;
-      if (hid::ExtractUint(data, len, contacts_[i].contact_id, &contact_id)) {
+      if (hid::ExtractUint(data, len, *contacts_[i].contact_id, &contact_id)) {
         contact.contact_id = contact_id;
       }
     }
     if (descriptor_.input->contacts[i].position_x) {
-      if (hid::ExtractAsUnitType(data, len, contacts_[i].position_x, &value_out)) {
+      if (hid::ExtractAsUnitType(data, len, *contacts_[i].position_x, &value_out)) {
         contact.position_x = static_cast<int64_t>(value_out);
       }
     }
     if (descriptor_.input->contacts[i].position_y) {
-      if (hid::ExtractAsUnitType(data, len, contacts_[i].position_y, &value_out)) {
+      if (hid::ExtractAsUnitType(data, len, *contacts_[i].position_y, &value_out)) {
         contact.position_y = static_cast<int64_t>(value_out);
       }
     }
     if (descriptor_.input->contacts[i].pressure) {
-      if (hid::ExtractAsUnitType(data, len, contacts_[i].pressure, &value_out)) {
+      if (hid::ExtractAsUnitType(data, len, *contacts_[i].pressure, &value_out)) {
         contact.pressure = static_cast<int64_t>(value_out);
       }
     }
     if (descriptor_.input->contacts[i].contact_width) {
-      if (hid::ExtractAsUnitType(data, len, contacts_[i].contact_width, &value_out)) {
+      if (hid::ExtractAsUnitType(data, len, *contacts_[i].contact_width, &value_out)) {
         contact.contact_width = static_cast<int64_t>(value_out);
       }
     }
     if (descriptor_.input->contacts[i].contact_height) {
-      if (hid::ExtractAsUnitType(data, len, contacts_[i].contact_height, &value_out)) {
+      if (hid::ExtractAsUnitType(data, len, *contacts_[i].contact_height, &value_out)) {
         contact.contact_height = static_cast<int64_t>(value_out);
       }
     }
@@ -216,6 +282,106 @@ ParseResult Touch::ParseInputReport(const uint8_t* data, size_t len, InputReport
 
   // Now that we can't fail, set the real report.
   report->report = touch_report;
+
+  return ParseResult::kOk;
+}
+
+ParseResult Touch::ParseInputReport(const uint8_t* data, size_t len, fidl::Allocator* allocator,
+                                    fuchsia_input_report::InputReport::Builder* report) {
+  if (len != report_size_) {
+    return ParseResult::kReportSizeMismatch;
+  }
+  auto touch = fuchsia_input_report::TouchInputReport::Builder(
+      allocator->make<fuchsia_input_report::TouchInputReport::Frame>());
+
+  // Calculate the number of active contacts.
+  size_t num_active_contacts = 0;
+  for (size_t i = 0; i < num_contacts_; i++) {
+    if (!contacts_[i].tip_switch) {
+      num_active_contacts = num_contacts_;
+      break;
+    }
+    double val_out_double;
+    if (!ExtractAsUnitType(data, len, *contacts_[i].tip_switch, &val_out_double)) {
+      continue;
+    }
+    if (static_cast<uint32_t>(val_out_double) != 0) {
+      num_active_contacts++;
+    }
+  }
+
+  auto input_contacts = allocator->make<fuchsia_input_report::ContactInputReport[]>(num_contacts_);
+
+  size_t contact_index = 0;
+  for (size_t i = 0; i < num_contacts_; i++) {
+    double val_out;
+
+    if (contacts_[i].tip_switch) {
+      if (ExtractAsUnitType(data, len, *contacts_[i].tip_switch, &val_out)) {
+        if (static_cast<uint32_t>(val_out) == 0) {
+          continue;
+        }
+      }
+    }
+
+    auto contact = fuchsia_input_report::ContactInputReport::Builder(
+        allocator->make<fuchsia_input_report::ContactInputReport::Frame>());
+
+    if (contacts_[i].contact_id) {
+      // Some touchscreens we support mistakenly set the logical range to 0-1 for the
+      // tip switch and then never reset the range for the contact id. For this reason,
+      // we have to do an "unconverted" extraction.
+      uint32_t contact_id;
+      if (hid::ExtractUint(data, len, *contacts_[i].contact_id, &contact_id)) {
+        contact.set_contact_id(allocator->make<uint32_t>(contact_id));
+      }
+    }
+
+    if (contacts_[i].position_x) {
+      contact.set_position_x(Extract<int64_t>(data, len, *contacts_[i].position_x, allocator));
+    }
+    if (contacts_[i].position_y) {
+      contact.set_position_y(Extract<int64_t>(data, len, *contacts_[i].position_y, allocator));
+    }
+    if (contacts_[i].pressure) {
+      contact.set_pressure(Extract<int64_t>(data, len, *contacts_[i].pressure, allocator));
+    }
+    if (contacts_[i].contact_width) {
+      contact.set_contact_width(
+          Extract<int64_t>(data, len, *contacts_[i].contact_width, allocator));
+    }
+    if (contacts_[i].contact_height) {
+      contact.set_contact_height(
+          Extract<int64_t>(data, len, *contacts_[i].contact_height, allocator));
+    }
+
+    input_contacts[contact_index++] = contact.build();
+  }
+
+  touch.set_contacts(allocator->make<fidl::VectorView<fuchsia_input_report::ContactInputReport>>(
+      std::move(input_contacts), num_active_contacts));
+
+  // Parse Buttons.
+  std::array<uint8_t, fuchsia_input_report::MOUSE_MAX_NUM_BUTTONS> buttons;
+  size_t buttons_size = 0;
+  for (size_t i = 0; i < num_buttons_; i++) {
+    double value_out;
+    if (hid::ExtractAsUnitType(data, len, buttons_[i], &value_out)) {
+      uint8_t pressed = (value_out > 0) ? 1 : 0;
+      if (pressed) {
+        buttons[buttons_size++] = static_cast<uint8_t>(buttons_[i].usage.usage);
+      }
+    }
+  }
+
+  auto fidl_buttons = allocator->make<uint8_t[]>(buttons_size);
+  for (size_t i = 0; i < buttons_size; i++) {
+    fidl_buttons[i] = buttons[i];
+  }
+  touch.set_pressed_buttons(
+      allocator->make<fidl::VectorView<uint8_t>>(std::move(fidl_buttons), buttons_size));
+
+  report->set_touch(allocator->make<fuchsia_input_report::TouchInputReport>(touch.build()));
 
   return ParseResult::kOk;
 }

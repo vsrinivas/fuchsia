@@ -603,7 +603,7 @@ TEST_F(HidDevTest, ConsumerControlTest) {
 
   // Get the reports.
   fuchsia_input_report::InputDevice::ResultOf::GetReports report_result = sync_client.GetReports();
-  ASSERT_OK(result.status());
+  ASSERT_OK(report_result.status());
 
   fidl::VectorView<fuchsia_input_report::InputReport>& reports = report_result->reports;
   ASSERT_EQ(2, reports.count());

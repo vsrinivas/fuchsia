@@ -15,6 +15,13 @@ class Touch : public Device {
   ParseResult ParseReportDescriptor(const hid::ReportDescriptor& hid_report_descriptor) override;
   ReportDescriptor GetDescriptor() override;
 
+  ParseResult CreateDescriptor(
+      fidl::Allocator* allocator,
+      fuchsia_input_report::DeviceDescriptor::Builder* descriptor) override;
+
+  ParseResult ParseInputReport(const uint8_t* data, size_t len, fidl::Allocator* allocator,
+                               fuchsia_input_report::InputReport::Builder* report) override;
+
   ParseResult ParseInputReport(const uint8_t* data, size_t len, InputReport* report) override;
 
   uint8_t InputReportId() const override { return report_id_; }
@@ -23,20 +30,21 @@ class Touch : public Device {
 
  private:
   struct ContactConfig {
-    hid::Attributes contact_id;
-    hid::Attributes tip_switch;
-    hid::Attributes position_x;
-    hid::Attributes position_y;
-    hid::Attributes pressure;
-    hid::Attributes confidence;
-    hid::Attributes azimuth;
-    hid::Attributes contact_width;
-    hid::Attributes contact_height;
+    std::optional<hid::Attributes> contact_id;
+    std::optional<hid::Attributes> tip_switch;
+    std::optional<hid::Attributes> position_x;
+    std::optional<hid::Attributes> position_y;
+    std::optional<hid::Attributes> pressure;
+    std::optional<hid::Attributes> contact_width;
+    std::optional<hid::Attributes> contact_height;
   };
   ContactConfig contacts_[fuchsia_input_report::TOUCH_MAX_CONTACTS] = {};
+  size_t num_contacts_ = 0;
 
   hid::Attributes buttons_[fuchsia_input_report::TOUCH_MAX_NUM_BUTTONS] = {};
   size_t num_buttons_ = 0;
+
+  fuchsia_input_report::TouchType touch_type_;
 
   TouchDescriptor descriptor_ = {};
 
