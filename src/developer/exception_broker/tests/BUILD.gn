@@ -8,15 +8,17 @@ group("tests") {
   testonly = true
 
   public_deps = [
-    ":exception_broker_tests",
+    # ExceptionBrokerConfig.FilterArray fails
+    #":exception-broker-config-tests",
+    ":exception-broker-tests",
 
     # Packages for the components that we are injecting in the integration tests.
     "//src/developer/exception_broker",
-    "//src/developer/feedback/testing/fakes:fake_crash_reporter",
+    "//src/developer/feedback/testing/fakes:fake-crash-reporter",
   ]
 }
 
-test_package("exception_broker_config_tests") {
+test_package("exception-broker-config-tests") {
   tests = [
     {
       name = "exception_broker_config_test"
@@ -33,7 +35,7 @@ test_package("exception_broker_config_tests") {
   ]
 }
 
-test_package("exception_broker_tests") {
+test_package("exception-broker-tests") {
   tests = [
     {
       name = "exception_broker_unittest"

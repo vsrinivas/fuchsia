@@ -10,13 +10,13 @@ import("//build/test/test_package.gni")
 group("tests") {
   testonly = true
 
-  public_deps = [ ":feedback_utils_tests" ]
+  public_deps = [ ":feedback-utils-tests" ]
 }
 
 ###############################################################################
 # PACKAGES
 ###############################################################################
-test_package("feedback_utils_tests") {
+test_package("feedback-utils-tests") {
   tests = [
     {
       name = "archive_unittest"

@@ -9,7 +9,7 @@ visibility = [ "//src/developer/feedback/*" ]
 ###############################################################################
 # PACKAGES
 ###############################################################################
-package("fake_crash_reporter") {
+package("fake-crash-reporter") {
   binary = "fake_crash_reporter"
 
   meta = [
@@ -24,7 +24,7 @@ package("fake_crash_reporter") {
   visibility += [ "//src/developer/exception_broker/tests" ]
 }
 
-package("fake_data_provider") {
+package("fake-data-provider") {
   binary = "fake_data_provider"
 
   meta = [

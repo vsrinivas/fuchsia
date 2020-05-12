@@ -12,17 +12,17 @@ group("tests") {
   testonly = true
 
   public_deps = [
-    ":bugreport_tests",
+    ":bugreport-tests",
 
     # Packages for the components that we are injecting in the integration tests.
-    "//src/developer/feedback/testing/fakes:fake_data_provider",
+    "//src/developer/feedback/testing/fakes:fake-data-provider",
   ]
 }
 
 ###############################################################################
 # PACKAGES
 ###############################################################################
-test_package("bugreport_tests") {
+test_package("bugreport-tests") {
   tests = [
     {
       name = "bugreport_integration_test"
