@@ -141,7 +141,7 @@ class TxStream : public StreamBase {
         static bool warned = false;
         if (!warned) {
           warned = true;
-          FX_LOGS(ERROR) << "Transmit packet and header must be on a single descriptor";
+          FX_LOGS(WARNING) << "Transmit packet and header must be on a single descriptor";
         }
         continue;
       }
