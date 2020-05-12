@@ -56,6 +56,7 @@ fxl::RefPtr<VulkanInstance> VulkanInstance::New(Params params) {
   }
 
   vk::ApplicationInfo app_info;
+  app_info.pApplicationName = "Escher";
   app_info.apiVersion = api_version;
 
   vk::InstanceCreateInfo info;
