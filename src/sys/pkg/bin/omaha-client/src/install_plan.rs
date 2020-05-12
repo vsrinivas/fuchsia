@@ -114,7 +114,7 @@ impl Plan for FuchsiaInstallPlan {
                 Ok(FuchsiaInstallPlan { url, install_source: request_params.source.clone() })
             }
             Err(err) => {
-                error!("Failed to parse {} to PkgUrl: {}", url.codebase, err);
+                error!("Failed to parse {} to PkgUrl: {}", full_url, err);
                 Err(InstallPlanErrors::Failed)
             }
         }
