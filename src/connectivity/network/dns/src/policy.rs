@@ -54,6 +54,11 @@ impl Clone for Server {
                         source_interface: ndp.source_interface.clone(),
                     })
                 }
+                name::DnsServerSource::Dhcpv6(dhcpv6) => {
+                    name::DnsServerSource::Dhcpv6(name::Dhcpv6DnsServerSource {
+                        source_interface: dhcpv6.source_interface.clone(),
+                    })
+                }
             },
         }
     }

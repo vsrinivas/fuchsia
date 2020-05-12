@@ -10,7 +10,7 @@ using fuchsia.net;
 table StaticDnsServerSource {
 };
 
-/// Extra information about DNS servers discovered through DHCP.
+/// Extra information about DNS servers discovered through DHCPv4.
 table DhcpDnsServerSource {
     /// The interface index over which this server was discovered.
     1: uint64 source_interface;
@@ -22,15 +22,23 @@ table NdpDnsServerSource {
     1: uint64 source_interface;
 };
 
+/// Extra information about DNS servers discovered through DHCPv6.
+table Dhcpv6DnsServerSource {
+    /// The interface index over which this server was discovered.
+    1: uint64 source_interface;
+};
+
 /// The configuration source for a [`fuchsia.net.name/DnsServer`].
 union DnsServerSource {
     /// The server is statically configured through
     /// [`fuchsia.net.name/LookupAdmin.SetDefaultServers`].
     1: StaticDnsServerSource static_source;
-    /// The server was discovered through DHCP.
+    /// The server was discovered through DHCPv4.
     2: DhcpDnsServerSource dhcp;
     /// The server was discovered through an NDP Router Advertisement.
     3: NdpDnsServerSource ndp;
+    /// The server was discovered through DHCPv6.
+    4: Dhcpv6DnsServerSource dhcpv6;
 };
 
 /// A DNS server configuration.

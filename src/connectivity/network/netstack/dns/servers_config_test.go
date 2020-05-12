@@ -440,7 +440,8 @@ func TestGetServersCache(t *testing.T) {
 	if diff := cmp.Diff(servers, d.GetServersCache(), cmpopts.IgnoreUnexported(name.DnsServerSource{},
 		name.StaticDnsServerSource{},
 		name.DhcpDnsServerSource{},
-		name.NdpDnsServerSource{})); diff != "" {
+		name.NdpDnsServerSource{},
+		name.Dhcpv6DnsServerSource{})); diff != "" {
 		t.Errorf("d.GetServersCache() mismatch (-want +got):\n%s", diff)
 	}
 

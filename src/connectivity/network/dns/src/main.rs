@@ -440,6 +440,7 @@ fn add_config_state_inspect(
                     fname::DnsServerSource::StaticSource(_static_source) => ("static", None),
                     fname::DnsServerSource::Dhcp(dhcp) => ("DHCP", dhcp.source_interface),
                     fname::DnsServerSource::Ndp(ndp) => ("NDP", ndp.source_interface),
+                    fname::DnsServerSource::Dhcpv6(dhcpv6) => ("DHCPv6", dhcpv6.source_interface),
                 };
                 let () = source.record_string("type", name);
                 if let Some(source_interface) = source_interface {
@@ -590,6 +591,21 @@ mod tests {
         })),
         source: Some(fname::DnsServerSource::Ndp(fname::NdpDnsServerSource {
             source_interface: Some(2),
+        })),
+    };
+    const DHCPV6_SERVER: fname::DnsServer_ = fname::DnsServer_ {
+        address: Some(fnet::SocketAddress::Ipv6(fnet::Ipv6SocketAddress {
+            address: fnet::Ipv6Address {
+                addr: [
+                    0x20, 0x02, 0x48, 0x60, 0x48, 0x60, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                    0x00, 0x44, 0x44,
+                ],
+            },
+            port: DEFAULT_PORT,
+            zone_index: 3,
+        })),
+        source: Some(fname::DnsServerSource::Dhcpv6(fname::Dhcpv6DnsServerSource {
+            source_interface: Some(3),
         })),
     };
 
@@ -1063,7 +1079,11 @@ mod tests {
                 .await
                 .unwrap();
             let () = sink
-                .send(dns::policy::ServerConfig::DynamicServers(vec![NDP_SERVER, DHCP_SERVER]))
+                .send(dns::policy::ServerConfig::DynamicServers(vec![
+                    NDP_SERVER,
+                    DHCP_SERVER,
+                    DHCPV6_SERVER,
+                ]))
                 .await
                 .unwrap();
         })
@@ -1076,6 +1096,7 @@ mod tests {
                 vec![
                     NDP_SERVER,
                     DHCP_SERVER,
+                    DHCPV6_SERVER,
                     fname::DnsServer_ {
                         address: Some(fnet::SocketAddress::Ipv4(fnet::Ipv4SocketAddress {
                             address: STATIC_SERVER_IPV4,
@@ -1106,7 +1127,11 @@ mod tests {
                 .await
                 .unwrap();
             let () = sink
-                .send(dns::policy::ServerConfig::DynamicServers(vec![NDP_SERVER, DHCP_SERVER]))
+                .send(dns::policy::ServerConfig::DynamicServers(vec![
+                    NDP_SERVER,
+                    DHCP_SERVER,
+                    DHCPV6_SERVER,
+                ]))
                 .await
                 .unwrap();
         })
@@ -1128,6 +1153,13 @@ mod tests {
                     }
                 },
                 "2": {
+                    address: "[2002:4860:4860::4444]:53",
+                    source: {
+                        "type": "DHCPv6",
+                        interface: 3u64
+                    }
+                },
+                "3": {
                     address: "8.8.8.8:53",
                     source: {
                         "type": "static",
