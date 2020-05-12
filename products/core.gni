@@ -77,9 +77,6 @@ base_package_labels += [
   "//src/sys/stash:pkg",
   "//src/sys/timekeeper",
   "//third_party/openssh-portable/fuchsia/developer-keys:ssh_config",
-
-  # TODO remove when third party is built by GN
-  "//build/rust:cargo_toml_gen",
 ]
 
 # Tools to control the pkg subsystem are in the base package set by default

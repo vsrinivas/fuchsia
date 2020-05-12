@@ -34,7 +34,7 @@ A `Cargo.toml` file can be automatically generated for `rustc_library` and
 `rustc_binary` targets based on their .gn file definitions by running:
 
 ```sh
-$ scripts/gn_to_cargo.py out/default/project.json
+$ fx set --cargo-toml-gen <other flags and product config ...>
 $ fx gen-cargo path/from/fuchsia/root/to/target:label
 ```
 

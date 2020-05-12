@@ -99,6 +99,7 @@
 ##                         Multiple labels can be provided delimited by commas
 ##                         or the --with-base argument can be provided multiple
 ##                         times.
+##   --cargo-toml-gen      Enable generation of Cargo.toml files
 ##
 ## Example:
 ##
@@ -190,6 +191,8 @@ function main {
   local use_goma
   local goma_dir
   local ensure_goma=1
+  # TODO(bwb) disable this by default to prevent project.json gen
+  local cargo_toml_gen=1
   local ccache
   while [[ $# -ne 0 ]]; do
     case "$1" in
@@ -224,6 +227,10 @@ function main {
 
         IFS=, universe+=("$2")
         shift
+        ;;
+      --cargo-toml-gen)
+        cargo_toml_gen=1
+        gn_switches+=("--ide=json")
         ;;
       --netboot)
         gn_after_args+=" enable_netboot=true"
@@ -416,6 +423,10 @@ universe_package_labels+=["
 
   if [[ -n "${variant}" ]]; then
     gn_args+=" select_variant=[${variant}]"
+  fi
+
+  if [[ "${cargo_toml_gen}" -eq 1 ]]; then
+    gn_args+=" base_package_labels += [ \"//build/rust:cargo_toml_gen\" ]"
   fi
 
   gn_args+="${gn_after_args}"

@@ -43,11 +43,11 @@ action("cargo_toml_gen") {
     "//:additional_cache_packages",
     "//:additional_universe_packages",
   ]
-  script = "//scripts/gn_to_cargo.py"
+  script = "//scripts/generate_cargo.py"
   sources = []
   inputs = []
 
-  outputs = [ "$root_build_dir/cargo/gn_to_cargo.stamp" ]
-  depfile = "$root_build_dir/cargo/gn_to_cargo.stamp.d"
+  outputs = [ "$root_build_dir/cargo/generate_cargo.stamp" ]
+  depfile = "$root_build_dir/cargo/generate_cargo.stamp.d"
   args = [ rebase_path("$root_build_dir/project.json", "") ]
 }

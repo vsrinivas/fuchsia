@@ -63,6 +63,7 @@ def rebase_gn_path(root_path, location, directory=False):
     target = os.path.dirname(path) if directory else path
     return os.path.join(root_path, target)
 
+
 class FeatureSpec(object):
 
     def __init__(self, features, default_features):
@@ -176,7 +177,8 @@ def write_toml_file(fout, metadata, project, target, lookup):
             fout.write("[dependencies.\"%s\"]\n" % crate_name)
             fout.write("version = \"%s\"\n" % version)
             if feature_spec:
-                fout.write("features = %s\n" % json.dumps(feature_spec.features))
+                fout.write(
+                    "features = %s\n" % json.dumps(feature_spec.features))
                 if feature_spec.default_features is False:
                     fout.write("default-features = false\n")
         # this is a in-tree rust target
@@ -191,6 +193,7 @@ def write_toml_file(fout, metadata, project, target, lookup):
                     "crate_path": dep_dir,
                     "crate_name": crate_name,
                 })
+
 
 def main():
     # TODO(tmandry): Remove all hardcoded paths and replace with args.
@@ -228,8 +231,8 @@ def main():
             if isinstance(info, str) or isinstance(info, unicode):
                 continue
             project.third_party_features[dep] = FeatureSpec(
-                    info.get("features", []),
-                    info.get("default-features", True))
+                info.get("features", []), info.get("default-features", True))
+
     collect_features(cargo_toml["dependencies"])
     for target_info in cargo_toml["target"].itervalues():
         collect_features(target_info.get("dependencies", {}))
@@ -249,12 +252,12 @@ def main():
     os.makedirs(gn_cargo_dir)
     # Write a stamp file with a predictable name so the build system knows the
     # step ran successfully.
-    with open(os.path.join(gn_cargo_dir, "gn_to_cargo.stamp"), "w") as f:
+    with open(os.path.join(gn_cargo_dir, "generate_cargo.stamp"), "w") as f:
         f.truncate()
     # And a depfile so GN knows to run this script again when the json file
     # changes. Dependencies on the third-party build are tracked within GN.
-    with open(os.path.join(gn_cargo_dir, "gn_to_cargo.stamp.d"), "w") as f:
-        f.write("cargo/gn_to_cargo.stamp: %s\n" % json_path)
+    with open(os.path.join(gn_cargo_dir, "generate_cargo.stamp.d"), "w") as f:
+        f.write("cargo/generate_cargo.stamp: %s\n" % json_path)
 
     for target in project.rust_targets():
         cargo_toml_dir = rebase_gn_path(
