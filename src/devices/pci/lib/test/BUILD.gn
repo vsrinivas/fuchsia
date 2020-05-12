@@ -34,8 +34,8 @@ test("pci-roothost") {
 
   deps = [
     "//sdk/banjo/ddk.protocol.pciroot",
+    "//src/devices/testing/fake_ddk",
     "//zircon/public/lib/fake-resource",
-    "//zircon/public/lib/fake_ddk",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/region-alloc",
     "//zircon/public/lib/zxtest",

@@ -32,8 +32,8 @@ executable("cfg80211_test") {
   sources = [ "cfg80211_test.cc" ]
   deps = [
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
+    "//src/devices/testing/fake_ddk",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/system/dev/lib/fake_ddk",
   ]
 }
 
@@ -119,7 +119,6 @@ executable("netbuf_test") {
     "//src/devices/testing/fake_ddk",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/system/dev/lib/fake_ddk",
   ]
 }
 

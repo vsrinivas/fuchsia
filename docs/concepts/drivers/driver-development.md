@@ -313,7 +313,7 @@ zxtest and handles logging for you.
 ### Integration tests
 
 Driver authors can use several means for writing integration tests.  For simple cases,
-the [fake-ddk](/zircon/system/dev/lib/fake_ddk) library is recommended.  For more complicated ones,
+the [fake-ddk](/src/devices/testing/fake_ddk) library is recommended.  For more complicated ones,
 [driver-integration-test](/zircon/system/ulib/driver-integration-test) is recommended.
 
 TODO(fxb/51320): Fill out more detail here.
