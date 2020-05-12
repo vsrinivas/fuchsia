@@ -13,7 +13,7 @@ taking the last component of the FIDL library name.
 
 The package can be imported using the path:
 
-```go
+```golang
 import tictactoe "fidl/games/tictactoe"
 ```
 
@@ -29,7 +29,7 @@ const string NAME = "Tic-Tac-Toe";
 
 Are generated as:
 
-```go
+```golanglang
 const (
   BoardSize uint8  = 9
   Name      string = "Tic-Tac-Toe"
@@ -102,7 +102,7 @@ bits FileMode : uint16 {
 FIDL generates a type alias for the underyling type (or `uint32` if not
 specified) and constants for each bits member:
 
-```go
+```golang
 type FileMode uint16
 
 const (
@@ -132,7 +132,7 @@ enum Color {
 FIDL generates a type alias for the underyling type (or `uint32` if not
 specified) and constants for each enum member:
 
-```go
+```golang
 type Color uint32
 
 const (
@@ -159,7 +159,7 @@ struct Person {
 
 The FIDL toolchain generates a `Person` struct with matching fields:
 
-```go
+```golang
 type Person struct {
   Id   uint32
   Name string
@@ -189,7 +189,7 @@ union JsonValue {
 
 FIDL generates an alias and associated constants representing the union tag:
 
-```go
+```golang
 type I_jsonValueTag uint64
 
 const (
@@ -201,7 +201,7 @@ const (
 as well as a `JsonValue` struct with fields for the tag and each variant of the
 union:
 
-```go
+```golang
 type JsonValue struct {
   I_jsonValueTag
   IntValue       int32
@@ -228,7 +228,7 @@ of `JsonValue`:
 `flexible` keyword in their FIDL definition) have an extra variant in the
 generated tag class:
 
-```go
+```golang
 const (
   JsonValue_unknownData = 0
   // other tags omitted...
@@ -260,7 +260,7 @@ table User {
 The FIDL toolchain generates a `User` struct that with presence fields for each
 non-reserved field:
 
-```go
+```golang
 type User struct {
   Age         uint8
   AgePresent  bool
@@ -295,13 +295,13 @@ protocol TicTacToe {
 ```
 
 Note: The `MakeMove` method above returns a bool representing success, and a
-nullable response value. This is considered un-idiomatic - using an [error
-type][#protocol-results] is preferred.
+nullable response value. This is considered un-idiomatic, you should use an [error type](#protocols-results)
+instead.
 
 FIDL generates a `TicTacToeWithCtx` interface which is used by clients when
 proxying calls to the server, and by the server for implementing the protocol:
 
-```go
+```golang
 type TicTacToeWithCtx interface {
   StartGame(ctx_ fidl.Context, startFirst bool) error
   MakeMove(ctx_ fidl.Context, row uint8, col uint8) (bool, *GameState, error)
@@ -317,7 +317,7 @@ the response parameters followed by an `error`.
 The entry point to interacting with the `TicTacToe` protocol is the following
 function:
 
-```go
+```golang
 func NewTicTacToeWithCtxInterfaceRequest() (TicTacToeWithCtxInterfaceRequest, *TicTacToeWithCtxInterface, error)
 ```
 
@@ -382,7 +382,7 @@ protocol TicTacToe {
 The method signature for `MakeMove` on the [`TicTacToeWithCtx`
 interface](#protocols) is:
 
-```go
+```golang
 MakeMove(ctx_ fidl.Context, row uint8, col uint8) (TicTacToeMakeMoveResult, error)
 ```
 

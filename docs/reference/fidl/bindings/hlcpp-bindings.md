@@ -322,7 +322,7 @@ protocol TicTacToe {
 ```
 
 Note: The `MakeMove` method above returns a bool representing success, and a
-nullable response value. This is considered un-idiomatic, you should use an [error type][#protocol-results]
+nullable response value. This is considered un-idiomatic, you should use an [error type](#protocols-results)
 instead.
 
 FIDL generates a `TicTacToe` class, which acts as an entry point for interacting
