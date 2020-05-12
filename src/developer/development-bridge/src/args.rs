@@ -47,9 +47,9 @@ pub enum Subcommand {
     Daemon(DaemonCommand),
     Echo(EchoCommand),
     List(ListCommand),
-    RunComponent(RunComponentCommand),
+    RunComponentCommand(RunComponentCommand),
     Config(ConfigCommand),
-    Test(TestCommand),
+    TestCommand(TestCommand),
     Quit(QuitCommand),
 }
 

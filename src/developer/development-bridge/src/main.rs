@@ -9,8 +9,6 @@ use {
     ffx_args::{Ffx, Subcommand},
     ffx_config::command::exec_config,
     ffx_core::constants::DAEMON,
-    ffx_run_component::run_component,
-    ffx_test::test,
     ffxlib::find_and_connect,
     fidl::endpoints::create_proxy,
     fidl_fuchsia_developer_bridge::DaemonProxy,
@@ -25,6 +23,7 @@ mod logger;
 mod mdns;
 mod net;
 mod onet;
+mod plugins;
 mod ssh;
 mod target;
 mod util;
@@ -53,14 +52,8 @@ impl Cli {
         Ok(find_and_connect().await?.expect("No daemon found."))
     }
 
-    pub async fn exec(&self, subcommand: Subcommand) -> Result<(), Error> {
-        if let Subcommand::RunComponent(c) = subcommand {
-            run_component(self.get_remote_proxy().await?, c).await
-        } else if let Subcommand::Test(t) = subcommand {
-            test(self.get_remote_proxy().await?, t).await
-        } else {
-            Err(anyhow!("no matching integration"))
-        }
+    pub async fn exec_plugins(&self, subcommand: Subcommand) -> Result<(), Error> {
+        plugins!(self.get_remote_proxy().await?, subcommand)
     }
 
     pub async fn echo(&self, text: Option<String>) -> Result<String, Error> {
@@ -165,7 +158,7 @@ async fn async_main() -> Result<(), Error> {
         }
         Subcommand::Daemon(_) => start_daemon().await,
         Subcommand::Config(c) => exec_config(c, writer).await,
-        _ => Cli::new().await.unwrap().exec(app.subcommand).await,
+        _ => Cli::new().await.unwrap().exec_plugins(app.subcommand).await,
     }
 }
 

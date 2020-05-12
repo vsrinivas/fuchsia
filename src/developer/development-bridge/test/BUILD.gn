@@ -2,53 +2,15 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/rust/rustc_library.gni")
+import("../build/ffx_plugin.gni")
 
-if (host_toolchain == current_toolchain) {
-  rustc_library("lib") {
-    name = "ffx_test"
-    version = "0.1.0"
-    edition = "2018"
-    with_unit_tests = true
-
-    deps = [
-      ":args_lib",
-      "../args:lib",
-      "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol-rustc",
-      "//sdk/fidl/fuchsia.test:fuchsia.test-rustc",
-      "//sdk/fidl/fuchsia.test.manager:fuchsia.test.manager-rustc",
-      "//src/connectivity/overnet/lib/hoist",
-      "//src/lib/fidl/rust/fidl",
-      "//src/lib/test_executor/rust:test_executor",
-      "//third_party/rust_crates:anyhow",
-      "//third_party/rust_crates:argh",
-      "//third_party/rust_crates:futures",
-      "//third_party/rust_crates:log",
-      "//third_party/rust_crates:regex",
-    ]
-    non_rust_deps = [ "//third_party/boringssl" ]
-  }
-
-  rustc_library("args_lib") {
-    name = "ffx_test_args"
-    version = "0.1.0"
-    edition = "2018"
-    with_unit_tests = true
-
-    source_root = "./src/args.rs"
-
-    deps = [
-      "../core:lib",
-      "//third_party/rust_crates:argh",
-    ]
-    non_rust_deps = [ "//third_party/boringssl" ]
-  }
-}
-
-group("tests") {
-  testonly = true
+ffx_plugin("ffx_test") {
+  version = "0.1.0"
+  edition = "2018"
+  with_unit_tests = true
   deps = [
-    ":args_lib($host_toolchain)",
-    ":lib_test($host_toolchain)",
+    "//sdk/fidl/fuchsia.test.manager:fuchsia.test.manager-rustc",
+    "//src/lib/test_executor/rust:test_executor",
+    "//third_party/rust_crates:regex",
   ]
 }

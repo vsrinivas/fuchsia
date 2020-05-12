@@ -1,0 +1,74 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_library.gni")
+
+# Defines a FFX plugin
+#
+template("ffx_plugin") {
+  if (host_toolchain == current_toolchain) {
+    output_name = target_name
+    if (defined(invoker.name)) {
+      output_name = invoker.name
+    }
+
+    args = output_name + "_args"
+
+    rustc_library(args) {
+      source_root = "./src/args.rs"
+      deps = [
+        "//src/developer/development-bridge/core:lib",
+        "//third_party/rust_crates:argh",
+      ]
+      non_rust_deps = [ "//third_party/boringssl" ]
+      forward_variables_from(invoker,
+                             "*",
+                             [
+                               "name",
+                               "deps",
+                               "source_root",
+                               "non_rust_deps",
+                               "target_name",
+                             ])
+    }
+
+    lib_deps = [
+      ":" + args,
+      "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol-rustc",
+      "//sdk/fidl/fuchsia.test:fuchsia.test-rustc",
+      "//src/connectivity/overnet/lib/hoist",
+      "//src/developer/development-bridge:args_lib",
+      "//src/lib/fidl/rust/fidl",
+      "//third_party/rust_crates:anyhow",
+      "//third_party/rust_crates:argh",
+      "//third_party/rust_crates:futures",
+      "//third_party/rust_crates:log",
+    ]
+
+    if (defined(invoker.deps)) {
+      lib_deps += invoker.deps
+    }
+
+    rustc_library(output_name) {
+      deps = lib_deps
+      non_rust_deps = [ "//third_party/boringssl" ]
+      forward_variables_from(invoker,
+                             "*",
+                             [
+                               "name",
+                               "deps",
+                               "non_rust_deps",
+                               "target_name",
+                             ])
+    }
+  }
+
+  group("tests") {
+    testonly = true
+    deps = [
+      ":" + args + "_test($host_toolchain)",
+      ":" + output_name + "_test($host_toolchain)",
+    ]
+  }
+}

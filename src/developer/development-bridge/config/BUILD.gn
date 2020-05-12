@@ -13,7 +13,7 @@ if (host_toolchain == current_toolchain) {
 
     deps = [
       ":args_lib",
-      "../args:lib",
+      "../:args_lib",
       "../core:lib",
       "macro:config-macros",
       "//src/connectivity/overnet/lib/hoist",
