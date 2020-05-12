@@ -179,12 +179,12 @@ void Sdhci::CompleteRequestLocked(sdmmc_req_t* req, zx_status_t status) {
 }
 
 void Sdhci::CmdStageCompleteLocked() {
-  zxlogf(TRACE, "sdhci: got CMD_CPLT interrupt");
-
   if (!cmd_req_) {
     zxlogf(TRACE, "sdhci: spurious CMD_CPLT interrupt!");
     return;
   }
+
+  zxlogf(TRACE, "sdhci: got CMD_CPLT interrupt");
 
   const uint32_t response_0 = Response::Get(0).ReadFrom(&regs_mmio_buffer_).reg_value();
   const uint32_t response_1 = Response::Get(1).ReadFrom(&regs_mmio_buffer_).reg_value();
@@ -222,12 +222,12 @@ void Sdhci::CmdStageCompleteLocked() {
 }
 
 void Sdhci::DataStageReadReadyLocked() {
-  zxlogf(TRACE, "sdhci: got BUFF_READ_READY interrupt");
-
   if (!data_req_ || !SdmmcCmdHasData(data_req_->cmd_flags)) {
     zxlogf(TRACE, "sdhci: spurious BUFF_READ_READY interrupt!");
     return;
   }
+
+  zxlogf(TRACE, "sdhci: got BUFF_READ_READY interrupt");
 
   if ((data_req_->cmd_idx == MMC_SEND_TUNING_BLOCK) ||
       (data_req_->cmd_idx == SD_SEND_TUNING_BLOCK)) {
@@ -245,12 +245,12 @@ void Sdhci::DataStageReadReadyLocked() {
 }
 
 void Sdhci::DataStageWriteReadyLocked() {
-  zxlogf(TRACE, "sdhci: got BUFF_WRITE_READY interrupt");
-
   if (!data_req_ || !SdmmcCmdHasData(data_req_->cmd_flags)) {
     zxlogf(TRACE, "sdhci: spurious BUFF_WRITE_READY interrupt!");
     return;
   }
+
+  zxlogf(TRACE, "sdhci: got BUFF_WRITE_READY interrupt");
 
   // Sequentially write each block.
   const uint32_t* const virt_buffer = reinterpret_cast<uint32_t*>(data_req_->virt_buffer) +
@@ -262,11 +262,13 @@ void Sdhci::DataStageWriteReadyLocked() {
 }
 
 void Sdhci::TransferCompleteLocked() {
-  zxlogf(TRACE, "sdhci: got XFER_CPLT interrupt");
   if (!data_req_) {
     zxlogf(TRACE, "sdhci: spurious XFER_CPLT interrupt!");
     return;
   }
+
+  zxlogf(TRACE, "sdhci: got XFER_CPLT interrupt");
+
   if (cmd_req_) {
     data_done_ = true;
   } else {

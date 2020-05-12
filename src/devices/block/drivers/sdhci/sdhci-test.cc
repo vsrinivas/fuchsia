@@ -85,6 +85,9 @@ class TestSdhci : public Sdhci {
             status.set_buffer_write_ready(1).WriteTo(&regs_mmio_buffer_);
           }
           return ZX_OK;
+        case RequestStatus::BUSY_RESPONSE:
+          status.set_transfer_complete(1).WriteTo(&regs_mmio_buffer_);
+          return ZX_OK;
         default:
           break;
       }

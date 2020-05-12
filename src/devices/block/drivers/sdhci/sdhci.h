@@ -87,6 +87,7 @@ class Sdhci : public DeviceType, public ddk::SdmmcProtocol<Sdhci, ddk::base_prot
     TRANSFER_DATA_DMA,
     READ_DATA_PIO,
     WRITE_DATA_PIO,
+    BUSY_RESPONSE,
   };
 
   virtual zx_status_t WaitForReset(const SoftwareReset mask);
@@ -99,13 +100,21 @@ class Sdhci : public DeviceType, public ddk::SdmmcProtocol<Sdhci, ddk::base_prot
       return RequestStatus::COMMAND;
     }
     if (data_req_ != nullptr) {
-      if (data_req_->use_dma) {
-        return RequestStatus::TRANSFER_DATA_DMA;
-      }
-      if ((data_req_->cmd_flags & SDMMC_CMD_READ) == 0) {
+      const bool has_data = data_req_->cmd_flags & SDMMC_RESP_DATA_PRESENT;
+      const bool busy_response = data_req_->cmd_flags & SDMMC_RESP_LEN_48B;
+
+      if (has_data) {
+        if (data_req_->use_dma) {
+          return RequestStatus::TRANSFER_DATA_DMA;
+        }
+        if (data_req_->cmd_flags & SDMMC_CMD_READ) {
+          return RequestStatus::READ_DATA_PIO;
+        }
         return RequestStatus::WRITE_DATA_PIO;
       }
-      return RequestStatus::READ_DATA_PIO;
+      if (busy_response) {
+        return RequestStatus::BUSY_RESPONSE;
+      }
     }
     return RequestStatus::IDLE;
   }
