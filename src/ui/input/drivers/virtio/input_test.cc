@@ -154,17 +154,18 @@ TEST_F(VirtioInputTest, KeyboardTest) {
   // Parse the HID report.
   size_t report_size;
   const uint8_t* report = hid_keyboard.GetReport(&report_size);
-  hid_input_report::InputReport input_report;
-  ASSERT_EQ(hid_input_report::ParseResult::kOk,
-            keyboard.ParseInputReport(report, report_size, &input_report));
 
-  // Check the input report.
-  hid_input_report::KeyboardInputReport* keyboard_report =
-      std::get_if<hid_input_report::KeyboardInputReport>(&input_report.report);
-  ASSERT_NOT_NULL(keyboard_report);
-  ASSERT_EQ(keyboard_report->num_pressed_keys, 2U);
-  EXPECT_EQ(keyboard_report->pressed_keys[0], llcpp::fuchsia::ui::input2::Key::LEFT_SHIFT);
-  EXPECT_EQ(keyboard_report->pressed_keys[1], llcpp::fuchsia::ui::input2::Key::A);
+  fidl::BufferThenHeapAllocator<2048> report_allocator;
+  auto report_builder = hid_input_report::fuchsia_input_report::InputReport::Builder(
+      report_allocator.make<hid_input_report::fuchsia_input_report::InputReport::Frame>());
+
+  EXPECT_EQ(hid_input_report::ParseResult::kOk,
+            keyboard.ParseInputReport(report, report_size, &report_allocator, &report_builder));
+  hid_input_report::fuchsia_input_report::InputReport input_report = report_builder.build();
+
+  ASSERT_EQ(input_report.keyboard().pressed_keys().count(), 2U);
+  EXPECT_EQ(input_report.keyboard().pressed_keys()[0], llcpp::fuchsia::ui::input2::Key::LEFT_SHIFT);
+  EXPECT_EQ(input_report.keyboard().pressed_keys()[1], llcpp::fuchsia::ui::input2::Key::A);
 }
 
 }  // namespace virtio
