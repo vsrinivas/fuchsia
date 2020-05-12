@@ -52,6 +52,45 @@ static void dump_iframe(const arm64_iframe_t* iframe) {
   printf("spsr %#18" PRIx64 "\n", iframe->spsr);
 }
 
+// clang-format off
+static const char* dfsc_to_string(uint32_t dfsc) {
+  switch (dfsc) {
+    case 0b000000: return "Address Size Fault, Level 0";
+    case 0b000001: return "Address Size Fault, Level 1";
+    case 0b000010: return "Address Size Fault, Level 2";
+    case 0b000011: return "Address Size Fault, Level 3";
+    case 0b000100: return "Translation Fault, Level 0";
+    case 0b000101: return "Translation Fault, Level 1";
+    case 0b000110: return "Translation Fault, Level 2";
+    case 0b000111: return "Translation Fault, Level 3";
+    case 0b001001: return "Access Flag Fault, Level 1";
+    case 0b001010: return "Access Flag Fault, Level 2";
+    case 0b001011: return "Access Flag Fault, Level 3";
+    case 0b001101: return "Permission Fault, Level 1";
+    case 0b001110: return "Permission Fault, Level 2";
+    case 0b001111: return "Permission Fault, Level 3";
+    case 0b010000: return "Synchronous External Abort";
+    case 0b010001: return "Synchronous Tag Check Fail";
+    case 0b010100: return "Synchronous External Abort, Level 0";
+    case 0b010101: return "Synchronous External Abort, Level 1";
+    case 0b010110: return "Synchronous External Abort, Level 2";
+    case 0b010111: return "Synchronous External Abort, Level 3";
+    case 0b011000: return "Synchronous Parity or ECC Abort";
+    case 0b011100: return "Synchronous Parity or ECC Abort, Level 0";
+    case 0b011101: return "Synchronous Parity or ECC Abort, Level 1";
+    case 0b011110: return "Synchronous Parity or ECC Abort, Level 2";
+    case 0b011111: return "Synchronous Parity or ECC Abort, Level 3";
+    case 0b100001: return "Alignment Fault";
+    case 0b110000: return "TLB Conflict Abort";
+    case 0b110100: return "Implementation Defined, Lockdown";
+    case 0b110101: return "Implementation Defined, Unsupported exclusive or atomic";
+    case 0b111101: return "Section Domain Fault";
+    case 0b111110: return "Page Domain Fault";
+    default: return "Unknown";
+  }
+}
+// clang-format on
+
 KCOUNTER(exceptions_brkpt, "exceptions.breakpoint")
 KCOUNTER(exceptions_hw_brkpt, "exceptions.hw_breakpoint")
 KCOUNTER(exceptions_hw_wp, "exceptions.hw_watchpoint")
@@ -97,7 +136,7 @@ __NO_RETURN static void exception_die(arm64_iframe_t* iframe, uint32_t esr, cons
   uint32_t iss = BITS(esr, 24, 0);
 
   /* fatal exception, die here */
-  printf("ESR 0x%x: ec 0x%x, il 0x%x, iss 0x%x\n", esr, ec, il, iss);
+  printf("ESR %#x: ec %#x, il %#x, iss %#x\n", esr, ec, il, iss);
   dump_iframe(iframe);
   crashlog.iframe = iframe;
 
@@ -184,8 +223,7 @@ static void arm64_instruction_abort_handler(arm64_iframe_t* iframe, uint excepti
     pf_flags |= VMM_PF_FLAG_NOT_PRESENT;
   }
 
-  LTRACEF("instruction abort: PC at %#" PRIx64 ", is_user %d, FAR %" PRIx64
-          ", esr 0x%x, iss 0x%x\n",
+  LTRACEF("instruction abort: PC at %#" PRIx64 ", is_user %d, FAR %" PRIx64 ", esr %#x, iss %#x\n",
           iframe->elr, is_user, far, esr, iss);
 
   arch_enable_ints();
@@ -229,7 +267,7 @@ static void arm64_data_abort_handler(arm64_iframe_t* iframe, uint exception_flag
     pf_flags |= VMM_PF_FLAG_NOT_PRESENT;
   }
 
-  LTRACEF("data fault: PC at %#" PRIx64 ", is_user %d, FAR %#" PRIx64 ", esr 0x%x, iss 0x%x\n",
+  LTRACEF("data fault: PC at %#" PRIx64 ", is_user %d, FAR %#" PRIx64 ", esr %#x, iss %#x\n",
           iframe->elr, is_user, far, esr, iss);
 
   uint64_t dfr = Thread::Current::Get()->arch_.data_fault_resume;
@@ -283,15 +321,13 @@ static void arm64_data_abort_handler(arm64_iframe_t* iframe, uint exception_flag
     }
   }
 
-  /* decode the iss */
-  if (BIT(iss, 24)) { /* ISV bit */
-    exception_die(iframe, esr,
-                  "data fault: PC at %#" PRIx64 ", FAR %#" PRIx64 ", iss %#x (DFSC %#x)\n",
-                  iframe->elr, far, iss, BITS(iss, 5, 0));
-  } else {
-    exception_die(iframe, esr, "data fault: PC at %#" PRIx64 ", FAR %#" PRIx64 ", iss 0x%x\n",
-                  iframe->elr, far, iss);
-  }
+  // Print the data fault and stop the kernel.
+  exception_die(iframe, esr,
+                "data fault: PC at %#" PRIx64 ", FAR %#" PRIx64
+                "\n"
+                "ISS %#x (WnR %d CM %d)\n"
+                "DFSC %#x (%s)\n",
+                iframe->elr, far, iss, WnR, CM, dfsc, dfsc_to_string(dfsc));
 }
 
 static inline void fix_exception_percpu_pointer(uint32_t exception_flags, uint64_t* regs) {
@@ -311,11 +347,6 @@ extern "C" void arm64_sync_exception(arm64_iframe_t* iframe, uint exception_flag
     case 0b000000: /* unknown reason */
       kcounter_add(exceptions_unknown, 1);
       arm64_unknown_handler(iframe, exception_flags, esr);
-      break;
-    case 0b111000: /* BRK from arm32 */
-    case 0b111100: /* BRK from arm64 */
-      kcounter_add(exceptions_brkpt, 1);
-      arm64_brk_handler(iframe, exception_flags, esr);
       break;
     case 0b000111: /* floating point */
       kcounter_add(exceptions_fpu, 1);
@@ -347,6 +378,11 @@ extern "C" void arm64_sync_exception(arm64_iframe_t* iframe, uint exception_flag
       kcounter_add(exceptions_hw_wp, 1);
       arm64_watchpoint_exception_handler(iframe, exception_flags, esr);
       break;
+    case 0b111000: /* BRK from arm32 */
+    case 0b111100: /* BRK from arm64 */
+      kcounter_add(exceptions_brkpt, 1);
+      arm64_brk_handler(iframe, exception_flags, esr);
+      break;
     default: {
       /* TODO: properly decode more of these */
       if (unlikely((exception_flags & ARM64_EXCEPTION_FLAG_LOWER_EL) == 0)) {
@@ -376,7 +412,7 @@ extern "C" void arm64_sync_exception(arm64_iframe_t* iframe, uint exception_flag
 
 /* called from assembly */
 extern "C" void arm64_irq(iframe_t* iframe, uint exception_flags) {
-  LTRACEF("iframe %p, flags 0x%x\n", iframe, exception_flags);
+  LTRACEF("iframe %p, flags %#x\n", iframe, exception_flags);
 
   int_handler_saved_state_t state;
   int_handler_start(&state);
@@ -404,7 +440,7 @@ extern "C" void arm64_irq(iframe_t* iframe, uint exception_flags) {
 
 /* called from assembly */
 extern "C" void arm64_invalid_exception(arm64_iframe_t* iframe, unsigned int which) {
-  printf("invalid exception, which 0x%x\n", which);
+  printf("invalid exception, which %#x\n", which);
   dump_iframe(iframe);
 
   platform_halt(HALT_ACTION_HALT, ZirconCrashReason::Panic);
@@ -446,7 +482,7 @@ void arch_dump_exception_context(const arch_exception_context_t* context) {
   if (is_user_address(context->frame->usp)) {
     uint8_t buf[256];
     if (arch_copy_from_user(buf, (void*)context->frame->usp, sizeof(buf)) == ZX_OK) {
-      printf("bottom of user stack at 0x%lx:\n", (vaddr_t)context->frame->usp);
+      printf("bottom of user stack at %#lx:\n", (vaddr_t)context->frame->usp);
       hexdump_ex(buf, sizeof(buf), context->frame->usp);
     }
   }
