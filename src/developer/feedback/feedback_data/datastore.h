@@ -10,6 +10,7 @@
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/zx/time.h>
 
+#include "src/developer/feedback/feedback_data/annotations/annotation_provider.h"
 #include "src/developer/feedback/feedback_data/annotations/types.h"
 #include "src/developer/feedback/feedback_data/attachments/types.h"
 #include "src/developer/feedback/feedback_data/device_id_provider.h"
@@ -67,6 +68,8 @@ class Datastore {
 
   const Annotations static_annotations_;
   const Attachments static_attachments_;
+
+  std::vector<std::unique_ptr<AnnotationProvider>> reusable_annotation_providers_;
 
   Annotations non_platform_annotations_;
 };

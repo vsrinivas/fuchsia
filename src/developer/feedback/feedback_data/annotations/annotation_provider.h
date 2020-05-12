@@ -6,6 +6,7 @@
 #define SRC_DEVELOPER_FEEDBACK_FEEDBACK_DATA_ANNOTATIONS_ANNOTATION_PROVIDER_H_
 
 #include <lib/fit/promise.h>
+#include <lib/zx/time.h>
 
 #include "src/developer/feedback/feedback_data/annotations/types.h"
 
@@ -22,7 +23,8 @@ class AnnotationProvider {
  public:
   virtual ~AnnotationProvider() = default;
 
-  virtual ::fit::promise<Annotations> GetAnnotations(const AnnotationKeys& allowlist) = 0;
+  virtual ::fit::promise<Annotations> GetAnnotations(zx::duration timeout,
+                                                     const AnnotationKeys& allowlist) = 0;
 };
 
 }  // namespace feedback

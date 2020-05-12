@@ -63,8 +63,8 @@ class ProductInfoProviderTest
     SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
     cobalt::Logger cobalt(dispatcher(), services());
 
-    ProductInfoProvider provider(dispatcher(), services(), timeout, &cobalt);
-    auto promise = provider.GetAnnotations(allowlist);
+    ProductInfoProvider provider(dispatcher(), services(), &cobalt);
+    auto promise = provider.GetAnnotations(timeout, allowlist);
 
     Annotations annotations;
     executor_.schedule_task(

@@ -39,22 +39,23 @@ const AnnotationKeys kSupportedAnnotations = {
 
 ProductInfoProvider::ProductInfoProvider(async_dispatcher_t* dispatcher,
                                          std::shared_ptr<sys::ServiceDirectory> services,
-                                         zx::duration timeout, cobalt::Logger* cobalt)
-    : dispatcher_(dispatcher), services_(services), timeout_(timeout), cobalt_(cobalt) {}
+                                         cobalt::Logger* cobalt)
+    : dispatcher_(dispatcher),
+      services_(services),
+      cobalt_(cobalt),
+      product_ptr_(dispatcher_, services_, [this] { GetInfo(); }) {}
 
-::fit::promise<Annotations> ProductInfoProvider::GetAnnotations(const AnnotationKeys& allowlist) {
+::fit::promise<Annotations> ProductInfoProvider::GetAnnotations(zx::duration timeout,
+                                                                const AnnotationKeys& allowlist) {
   const AnnotationKeys annotations_to_get = RestrictAllowlist(allowlist, kSupportedAnnotations);
   if (annotations_to_get.empty()) {
     return ::fit::make_result_promise<Annotations>(::fit::ok<Annotations>({}));
   }
 
-  auto product_info_ptr = std::make_unique<internal::ProductInfoPtr>(dispatcher_, services_);
-
-  auto product_info = product_info_ptr->GetProductInfo(fit::Timeout(
-      timeout_, /*action=*/[=] { cobalt_->LogOccurrence(cobalt::TimedOutData::kProductInfo); }));
-
-  return fit::ExtendArgsLifetimeBeyondPromise(std::move(product_info),
-                                              /*args=*/std::move(product_info_ptr))
+  return product_ptr_
+      .GetValue(fit::Timeout(
+          timeout,
+          /*action*/ [=] { cobalt_->LogOccurrence(cobalt::TimedOutData::kProductInfo); }))
       .then([=](const ::fit::result<std::map<AnnotationKey, std::string>, Error>& result) {
         Annotations annotations;
 
@@ -104,19 +105,8 @@ std::optional<std::string> Join(const std::vector<LocaleId>& locale_list) {
 
 }  // namespace
 
-namespace internal {
-
-ProductInfoPtr::ProductInfoPtr(async_dispatcher_t* dispatcher,
-                               std::shared_ptr<sys::ServiceDirectory> services)
-    : product_ptr_(dispatcher, services) {}
-
-::fit::promise<std::map<AnnotationKey, std::string>, Error> ProductInfoPtr::GetProductInfo(
-    fit::Timeout timeout) {
+void ProductInfoProvider::GetInfo() {
   product_ptr_->GetInfo([this](ProductInfo info) {
-    if (product_ptr_.IsAlreadyDone()) {
-      return;
-    }
-
     std::map<AnnotationKey, std::string> product_info;
 
     if (info.has_sku()) {
@@ -153,11 +143,8 @@ ProductInfoPtr::ProductInfoPtr(async_dispatcher_t* dispatcher,
       product_info[kAnnotationHardwareProductManufacturer] = info.manufacturer();
     }
 
-    product_ptr_.CompleteOk(std::move(product_info));
+    product_ptr_.SetValue(product_info);
   });
-
-  return product_ptr_.WaitForDone(std::move(timeout));
 }
 
-}  // namespace internal
 }  // namespace feedback

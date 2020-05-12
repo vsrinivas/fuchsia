@@ -16,10 +16,18 @@
 
 namespace feedback {
 
-// Get the annotation providers that will collect the annotations in |allowlist_|.
-std::vector<std::unique_ptr<AnnotationProvider>> GetProviders(
+// Get the annotations providers that can  be used safely to collect annotations multiple times,
+// this includes providers that are caching asynchronous static annotations as well as providers
+// offering dynamic annotations that don't require connecting to a service.
+std::vector<std::unique_ptr<AnnotationProvider>> GetReusableProviders(
     async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-    zx::duration timeout, cobalt::Logger* cobalt);
+    cobalt::Logger* cobalt);
+
+// Get the annotations providers that can only be used once to collect annotations, typically
+// providers that have a one-shot connection to a service.
+std::vector<std::unique_ptr<AnnotationProvider>> GetSingleUseProviders(
+    async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
+    cobalt::Logger* cobalt);
 
 }  // namespace feedback
 

@@ -13,7 +13,7 @@
 
 #include "src/developer/feedback/feedback_data/annotations/annotation_provider.h"
 #include "src/developer/feedback/utils/cobalt/logger.h"
-#include "src/developer/feedback/utils/fidl/oneshot_ptr.h"
+#include "src/developer/feedback/utils/fidl/caching_ptr.h"
 #include "src/developer/feedback/utils/fit/timeout.h"
 #include "src/lib/fxl/macros.h"
 
@@ -24,37 +24,21 @@ class ProductInfoProvider : public AnnotationProvider {
  public:
   // fuchsia.hwinfo.Product is expected to be in |services|.
   ProductInfoProvider(async_dispatcher_t* dispatcher,
-                      std::shared_ptr<sys::ServiceDirectory> services, zx::duration timeout,
-                      cobalt::Logger* cobalt);
+                      std::shared_ptr<sys::ServiceDirectory> services, cobalt::Logger* cobalt);
 
-  ::fit::promise<Annotations> GetAnnotations(const AnnotationKeys& allowlist) override;
+  ::fit::promise<Annotations> GetAnnotations(zx::duration timeout,
+                                             const AnnotationKeys& allowlist) override;
 
  private:
+  void GetInfo();
+
   async_dispatcher_t* dispatcher_;
   const std::shared_ptr<sys::ServiceDirectory> services_;
-  const zx::duration timeout_;
   cobalt::Logger* cobalt_;
+
+  fidl::CachingPtr<fuchsia::hwinfo::Product, std::map<AnnotationKey, std::string>> product_ptr_;
 };
 
-namespace internal {
-
-// Wraps around fuchsia::hwinfo::ProductPtr to handle establishing the connection, losing
-// the connection, waiting for the callback, enforcing a timeout, etc.
-//
-// Will ever only make one call to fuchsia::hwinfo::Product::GetInfo.
-class ProductInfoPtr {
- public:
-  ProductInfoPtr(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services);
-
-  ::fit::promise<std::map<AnnotationKey, std::string>, Error> GetProductInfo(fit::Timeout timeout);
-
- private:
-  fidl::OneShotPtr<fuchsia::hwinfo::Product, std::map<AnnotationKey, std::string>> product_ptr_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(ProductInfoPtr);
-};
-
-}  // namespace internal
 }  // namespace feedback
 
 #endif  // SRC_DEVELOPER_FEEDBACK_FEEDBACK_DATA_ANNOTATIONS_PRODUCT_INFO_PROVIDER_H_

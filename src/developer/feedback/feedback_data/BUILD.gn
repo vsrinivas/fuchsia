@@ -137,6 +137,7 @@ source_set("datastore") {
 
   public_deps = [
     "//sdk/lib/sys/cpp",
+    "//src/developer/feedback/feedback_data/annotations:annotation_providers",
     "//src/developer/feedback/feedback_data/annotations:types",
     "//src/developer/feedback/feedback_data/attachments:types",
     "//src/developer/feedback/utils/cobalt",

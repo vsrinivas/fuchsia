@@ -48,8 +48,8 @@ class ChannelProviderTest : public UnitTestFixture, public CobaltTestFixture {
     SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
     cobalt::Logger cobalt(dispatcher(), services());
 
-    ChannelProvider provider(dispatcher(), services(), timeout, &cobalt);
-    auto promise = provider.GetAnnotations(allowlist);
+    ChannelProvider provider(dispatcher(), services(), &cobalt);
+    auto promise = provider.GetAnnotations(timeout, allowlist);
 
     bool was_called = false;
     std::optional<AnnotationOr> channel;

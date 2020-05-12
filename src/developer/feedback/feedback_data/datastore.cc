@@ -35,7 +35,8 @@ Datastore::Datastore(async_dispatcher_t* dispatcher,
       attachment_allowlist_(attachment_allowlist),
       static_annotations_(
           feedback::GetStaticAnnotations(annotation_allowlist_, device_id_provider)),
-      static_attachments_(feedback::GetStaticAttachments(attachment_allowlist_)) {
+      static_attachments_(feedback::GetStaticAttachments(attachment_allowlist_)),
+      reusable_annotation_providers_(GetReusableProviders(dispatcher_, services_, cobalt_)) {
   FX_CHECK(annotation_allowlist_.size() <= kMaxNumPlatformAnnotations)
       << "Requesting more platform annotations than the maximum number of platform annotations "
          "allowed";
@@ -60,7 +61,8 @@ Datastore::Datastore(async_dispatcher_t* dispatcher,
       annotation_allowlist_({}),
       attachment_allowlist_({}),
       static_annotations_({}),
-      static_attachments_({}) {}
+      static_attachments_({}),
+      reusable_annotation_providers_(GetReusableProviders(dispatcher_, services_, cobalt_)) {}
 
 ::fit::promise<Annotations> Datastore::GetAnnotations(const zx::duration timeout) {
   if (annotation_allowlist_.empty() && non_platform_annotations_.empty()) {
@@ -68,8 +70,12 @@ Datastore::Datastore(async_dispatcher_t* dispatcher,
   }
 
   std::vector<::fit::promise<Annotations>> annotations;
-  for (auto& provider : GetProviders(dispatcher_, services_, timeout, cobalt_)) {
-    annotations.push_back(provider->GetAnnotations(annotation_allowlist_));
+  for (auto& provider : reusable_annotation_providers_) {
+    annotations.push_back(provider->GetAnnotations(timeout, annotation_allowlist_));
+  }
+
+  for (auto& provider : GetSingleUseProviders(dispatcher_, services_, cobalt_)) {
+    annotations.push_back(provider->GetAnnotations(timeout, annotation_allowlist_));
   }
 
   return ::fit::join_promise_vector(std::move(annotations))

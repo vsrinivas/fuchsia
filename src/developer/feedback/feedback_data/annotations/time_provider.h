@@ -20,7 +20,8 @@ class TimeProvider : public AnnotationProvider {
  public:
   TimeProvider(std::unique_ptr<timekeeper::Clock> clock);
 
-  ::fit::promise<Annotations> GetAnnotations(const AnnotationKeys& allowlis) override;
+  ::fit::promise<Annotations> GetAnnotations(zx::duration timeout,
+                                             const AnnotationKeys& allowlist) override;
 
  private:
   std::unique_ptr<timekeeper::Clock> clock_;

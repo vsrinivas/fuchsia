@@ -6,7 +6,10 @@
 # SOURCES
 ###############################################################################
 source_set("annotation_providers") {
-  public = [ "annotation_provider_factory.h" ]
+  public = [
+    "annotation_provider.h",
+    "annotation_provider_factory.h",
+  ]
 
   sources = [
     "annotation_provider.h",
@@ -49,7 +52,7 @@ source_set("board_info_provider") {
     "//sdk/fidl/fuchsia.hwinfo",
     "//src/developer/feedback/utils:errors",
     "//src/developer/feedback/utils/cobalt",
-    "//src/developer/feedback/utils/fidl:oneshot_ptr",
+    "//src/developer/feedback/utils/fidl:caching_ptr",
   ]
 
   deps = [
@@ -107,7 +110,7 @@ source_set("product_info_provider") {
     "//sdk/fidl/fuchsia.hwinfo",
     "//src/developer/feedback/utils:errors",
     "//src/developer/feedback/utils/cobalt",
-    "//src/developer/feedback/utils/fidl:oneshot_ptr",
+    "//src/developer/feedback/utils/fidl:caching_ptr",
   ]
 
   deps = [

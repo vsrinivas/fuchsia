@@ -32,22 +32,23 @@ const AnnotationKeys kSupportedAnnotations = {
 
 BoardInfoProvider::BoardInfoProvider(async_dispatcher_t* dispatcher,
                                      std::shared_ptr<sys::ServiceDirectory> services,
-                                     zx::duration timeout, cobalt::Logger* cobalt)
-    : dispatcher_(dispatcher), services_(services), timeout_(timeout), cobalt_(cobalt) {}
+                                     cobalt::Logger* cobalt)
+    : dispatcher_(dispatcher),
+      services_(services),
+      cobalt_(cobalt),
+      board_ptr_(dispatcher_, services_, [this] { GetInfo(); }) {}
 
-::fit::promise<Annotations> BoardInfoProvider::GetAnnotations(const AnnotationKeys& allowlist) {
+::fit::promise<Annotations> BoardInfoProvider::GetAnnotations(zx::duration timeout,
+                                                              const AnnotationKeys& allowlist) {
   const AnnotationKeys annotations_to_get = RestrictAllowlist(allowlist, kSupportedAnnotations);
   if (annotations_to_get.empty()) {
     return ::fit::make_result_promise<Annotations>(::fit::ok<Annotations>({}));
   }
 
-  auto board_info_ptr = std::make_unique<internal::BoardInfoPtr>(dispatcher_, services_);
-
-  auto board_info = board_info_ptr->GetBoardInfo(fit::Timeout(
-      timeout_, /*action=*/[=] { cobalt_->LogOccurrence(cobalt::TimedOutData::kBoardInfo); }));
-
-  return fit::ExtendArgsLifetimeBeyondPromise(std::move(board_info),
-                                              /*args=*/std::move(board_info_ptr))
+  return board_ptr_
+      .GetValue(fit::Timeout(
+          timeout,
+          /*action*/ [=] { cobalt_->LogOccurrence(cobalt::TimedOutData::kBoardInfo); }))
       .then([=](const ::fit::result<std::map<AnnotationKey, std::string>, Error>& result) {
         Annotations annotations;
 
@@ -69,18 +70,8 @@ BoardInfoProvider::BoardInfoProvider(async_dispatcher_t* dispatcher,
       });
 }
 
-namespace internal {
-BoardInfoPtr::BoardInfoPtr(async_dispatcher_t* dispatcher,
-                           std::shared_ptr<sys::ServiceDirectory> services)
-    : board_ptr_(dispatcher, services) {}
-
-::fit::promise<std::map<AnnotationKey, std::string>, Error> BoardInfoPtr::GetBoardInfo(
-    fit::Timeout timeout) {
+void BoardInfoProvider::GetInfo() {
   board_ptr_->GetInfo([this](BoardInfo info) {
-    if (board_ptr_.IsAlreadyDone()) {
-      return;
-    }
-
     std::map<AnnotationKey, std::string> board_info;
 
     if (info.has_name()) {
@@ -91,11 +82,8 @@ BoardInfoPtr::BoardInfoPtr(async_dispatcher_t* dispatcher,
       board_info[kAnnotationHardwareBoardRevision] = info.revision();
     }
 
-    board_ptr_.CompleteOk(std::move(board_info));
+    board_ptr_.SetValue(board_info);
   });
-
-  return board_ptr_.WaitForDone(std::move(timeout));
 }
 
-}  // namespace internal
 }  // namespace feedback

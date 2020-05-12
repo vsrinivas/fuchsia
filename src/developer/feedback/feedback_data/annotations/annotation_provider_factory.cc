@@ -19,18 +19,25 @@
 
 namespace feedback {
 
-std::vector<std::unique_ptr<AnnotationProvider>> GetProviders(
+// Get the annotation providers that will collect the annotations in |allowlist_|.
+std::vector<std::unique_ptr<AnnotationProvider>> GetReusableProviders(
     async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-    const zx::duration timeout, cobalt::Logger* cobalt) {
+    cobalt::Logger* cobalt) {
   std::vector<std::unique_ptr<AnnotationProvider>> providers;
 
-  providers.push_back(std::make_unique<ChannelProvider>(dispatcher, services, timeout, cobalt));
-  providers.push_back(std::make_unique<BoardInfoProvider>(dispatcher, services, timeout, cobalt));
-  providers.push_back(std::make_unique<ProductInfoProvider>(dispatcher, services, timeout, cobalt));
+  providers.push_back(std::make_unique<BoardInfoProvider>(dispatcher, services, cobalt));
   providers.push_back(std::make_unique<TimeProvider>(std::make_unique<timekeeper::SystemClock>()));
+  providers.push_back(std::make_unique<ProductInfoProvider>(dispatcher, services, cobalt));
 
-  // We don't warn on annotations present in the allowlist that were not collected as there could
-  // be static annotations.
+  return providers;
+}
+
+std::vector<std::unique_ptr<AnnotationProvider>> GetSingleUseProviders(
+    async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
+    cobalt::Logger* cobalt) {
+  std::vector<std::unique_ptr<AnnotationProvider>> providers;
+
+  providers.push_back(std::make_unique<ChannelProvider>(dispatcher, services, cobalt));
 
   return providers;
 }

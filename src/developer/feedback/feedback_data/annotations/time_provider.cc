@@ -50,7 +50,8 @@ AnnotationOr GetUTCTime(const Clock& clock) {
 
 TimeProvider::TimeProvider(std::unique_ptr<Clock> clock) : clock_(std::move(clock)) {}
 
-::fit::promise<Annotations> TimeProvider::GetAnnotations(const AnnotationKeys& allowlist) {
+::fit::promise<Annotations> TimeProvider::GetAnnotations(zx::duration timeout,
+                                                         const AnnotationKeys& allowlist) {
   const AnnotationKeys annotations_to_get = RestrictAllowlist(allowlist, kSupportedAnnotations);
   if (annotations_to_get.empty()) {
     return ::fit::make_result_promise<Annotations>(::fit::ok<Annotations>({}));

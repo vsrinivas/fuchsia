@@ -57,8 +57,8 @@ class BoardInfoProviderTest : public UnitTestFixture, public CobaltTestFixture {
     SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
     cobalt::Logger cobalt(dispatcher(), services());
 
-    BoardInfoProvider provider(dispatcher(), services(), timeout, &cobalt);
-    auto promise = provider.GetAnnotations(allowlist);
+    BoardInfoProvider provider(dispatcher(), services(), &cobalt);
+    auto promise = provider.GetAnnotations(timeout, allowlist);
 
     Annotations annotations;
     executor_.schedule_task(

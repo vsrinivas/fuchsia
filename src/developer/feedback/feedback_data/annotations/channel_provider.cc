@@ -21,10 +21,11 @@ const AnnotationKeys kSupportedAnnotations = {
 
 ChannelProvider::ChannelProvider(async_dispatcher_t* dispatcher,
                                  std::shared_ptr<sys::ServiceDirectory> services,
-                                 zx::duration timeout, cobalt::Logger* cobalt)
-    : dispatcher_(dispatcher), services_(services), timeout_(timeout), cobalt_(cobalt) {}
+                                 cobalt::Logger* cobalt)
+    : dispatcher_(dispatcher), services_(services), cobalt_(cobalt) {}
 
-::fit::promise<Annotations> ChannelProvider::GetAnnotations(const AnnotationKeys& allowlist) {
+::fit::promise<Annotations> ChannelProvider::GetAnnotations(zx::duration timeout,
+                                                            const AnnotationKeys& allowlist) {
   if (RestrictAllowlist(allowlist, kSupportedAnnotations).empty()) {
     return ::fit::make_result_promise<Annotations>(::fit::ok<Annotations>({}));
   }
@@ -32,7 +33,7 @@ ChannelProvider::ChannelProvider(async_dispatcher_t* dispatcher,
   return fidl::GetCurrentChannel(
              dispatcher_, services_,
              fit::Timeout(
-                 timeout_,
+                 timeout,
                  /*action=*/
                  [cobalt = cobalt_] { cobalt->LogOccurrence(cobalt::TimedOutData::kChannel); }))
       .then([](const ::fit::result<std::string, Error>& result) {

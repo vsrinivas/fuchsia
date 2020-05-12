@@ -22,14 +22,14 @@ class ChannelProvider : public AnnotationProvider {
  public:
   // fuchsia.update.channel.Provider is expected to be in |services|.
   ChannelProvider(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-                  zx::duration timeout, cobalt::Logger* cobalt);
+                  cobalt::Logger* cobalt);
 
-  ::fit::promise<Annotations> GetAnnotations(const AnnotationKeys& allowlist) override;
+  ::fit::promise<Annotations> GetAnnotations(zx::duration timeout,
+                                             const AnnotationKeys& allowlist) override;
 
  private:
   async_dispatcher_t* dispatcher_;
   const std::shared_ptr<sys::ServiceDirectory> services_;
-  const zx::duration timeout_;
   cobalt::Logger* cobalt_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ChannelProvider);
