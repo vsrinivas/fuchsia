@@ -33,6 +33,12 @@ class Ringbuffer : public magma::Ringbuffer<GpuMapping> {
   // from the ringbuffer before trying again.
   bool ReserveContiguous(uint32_t want_bytes);
 
+  // Returns the number of bytes between the ringbuffer head and tail.
+  uint32_t UsedSize() { return tail() >= head() ? tail() - head() : size() - head() + tail(); }
+
+  // Returns the underlying buffer containing the ringbuffer contents.
+  uint32_t* Buffer() { return vaddr(); }
+
   friend class RingbufferTest;
   friend class RingbufferTest_OffsetPopulatedHeadBeforeTail_Test;
   friend class RingbufferTest_OffsetPopulatedTailBeforeHead_Test;

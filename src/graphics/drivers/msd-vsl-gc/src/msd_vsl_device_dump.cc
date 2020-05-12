@@ -5,12 +5,61 @@
 #include <memory>
 #include <string>
 
+#include "address_space_layout.h"
 #include "command_buffer.h"
 #include "msd_vsl_context.h"
 #include "msd_vsl_device.h"
 #include "registers.h"
 
 namespace {
+
+class InstructionDecoder {
+ public:
+  enum Command {
+    LOAD_STATE = 0x801,
+    END = 0x1000,
+    WAIT = 0x3800,
+    LINK = 0x4000,
+    STALL = 0x4800,
+  };
+
+  enum RegisterIndex {
+    EVENT = 0xE01,
+    SEMAPHORE = 0xE02,
+  };
+
+  static const char* name(Command command, uint16_t value) {
+    switch (command) {
+      case END:
+        return "END";
+      case LINK:
+        return "LINK";
+      case LOAD_STATE:
+        switch (value) {
+          case EVENT:
+            return "EVENT";
+          case SEMAPHORE:
+            return "SEMAPHORE";
+        }
+        return "LOAD_STATE";
+      case STALL:
+        return "STALL";
+      case WAIT:
+        return "WAIT";
+    }
+    return "UNKNOWN";
+  }
+
+  static void Decode(uint32_t dword, Command* command_out, uint16_t* value_out,
+                     uint32_t* dword_count_out) {
+    uint16_t command = dword >> 16;
+    uint16_t value = dword & 0xffff;
+    // Currently all supported instructions appear to be 8-byte aligned.
+    *dword_count_out = 2;
+    *command_out = static_cast<Command>(command);
+    *value_out = value;
+  }
+};
 
 const char* FaultTypeToString(uint32_t mmu_status) {
   switch (mmu_status) {
@@ -65,6 +114,42 @@ void MsdVslDevice::OutputFormattedString(std::vector<std::string>* dump_out, con
   va_end(args);
 }
 
+void MsdVslDevice::DumpDecodedBuffer(std::vector<std::string>* dump_out, uint32_t* buf,
+                                     uint32_t buf_size_dwords, uint32_t start_dword,
+                                     uint32_t dword_count, uint32_t active_head_dword) {
+  DASSERT(buf_size_dwords > 0);
+
+  uint32_t dwords_remaining = 0;
+  const char* fmt = "";
+  for (unsigned int i = 0; i < dword_count; i++) {
+    unsigned int buf_idx = start_dword + i;
+    // Support circular buffers.
+    if (buf_idx >= buf_size_dwords) {
+      buf_idx -= buf_size_dwords;
+    }
+    if (dwords_remaining == 0) {
+      InstructionDecoder::Command command;
+      uint16_t value;
+      InstructionDecoder::Decode(buf[buf_idx], &command, &value, &dwords_remaining);
+      fmt = "%-25s [0x%x]";
+      OutputFormattedString(dump_out, fmt, InstructionDecoder::name(command, value),
+                            buf_idx * sizeof(uint32_t));
+    }
+
+    const char* prefix = "";
+    const char* suffix = ",";
+    if (buf_idx == active_head_dword) {
+      prefix = "===> ";
+      suffix = " <===,";
+    }
+    if (dwords_remaining) {
+      --dwords_remaining;
+    }
+    fmt = "  %s0x%08lx%s";
+    OutputFormattedString(dump_out, fmt, prefix, buf[buf_idx], suffix);
+  }
+}
+
 void MsdVslDevice::FormatDump(DumpState* dump_state, std::vector<std::string>* dump_out) {
   dump_out->clear();
 
@@ -82,11 +167,23 @@ void MsdVslDevice::FormatDump(DumpState* dump_state, std::vector<std::string>* d
   fmt = "idle: %s";
   OutputFormattedString(dump_out, fmt, dump_state->idle ? "true" : "false");
 
+  const char* gpu_addr_location_desc = "client address";
+  bool in_ringbuffer = false;
+  if (!AddressSpaceLayout::IsValidClientGpuRange(dump_state->exec_addr, dump_state->exec_addr)) {
+    uint32_t offset = dump_state->exec_addr - AddressSpaceLayout::system_gpu_addr_base();
+    if (offset < AddressSpaceLayout::ringbuffer_size()) {
+      in_ringbuffer = true;
+      gpu_addr_location_desc = "in ringbuffer";
+    } else {
+      gpu_addr_location_desc = "past end of ringbuffer";
+    }
+  }
+
   // We are only interested in the execution address if the device has started executing batches
   // and the page table arrays have been enabled.
   if (dump_state->page_table_arrays_enabled) {
-    fmt = "current_execution_address: 0x%x";
-    OutputFormattedString(dump_out, fmt, dump_state->exec_addr);
+    fmt = "current_execution_address: 0x%x (%s)";
+    OutputFormattedString(dump_out, fmt, dump_state->exec_addr, gpu_addr_location_desc);
   } else {
     dump_out->push_back("current_execution_address: N/A (page table arrays not yet enabled)");
   }
@@ -176,6 +273,22 @@ void MsdVslDevice::FormatDump(DumpState* dump_state, std::vector<std::string>* d
                             closest_mapping->gpu_addr() + closest_mapping->length(),
                             closest_mapping->length(), closest_mapping->BufferSize());
     }
+  }
+
+  if (in_ringbuffer) {
+    dump_out->push_back("Ringbuffer dump from last completed event:");
+
+    uint32_t rb_offset = dump_state->exec_addr - AddressSpaceLayout::system_gpu_addr_base();
+    DASSERT(rb_offset % sizeof(uint32_t) == 0);
+    uint32_t active_head_dword = rb_offset / sizeof(uint32_t);
+
+    uint32_t dword_count = ringbuffer_->UsedSize() / sizeof(uint32_t);
+    fmt = "(base 0x%x, dump starts at offset 0x%x)";
+    OutputFormattedString(dump_out, fmt, AddressSpaceLayout::system_gpu_addr_base(),
+                          ringbuffer_->head());
+    DumpDecodedBuffer(dump_out, ringbuffer_->Buffer(), ringbuffer_->size() / sizeof(uint32_t),
+                      ringbuffer_->head() / sizeof(uint32_t) /* start_dword */, dword_count,
+                      active_head_dword);
   }
 
   dump_out->push_back("---- GPU dump end ----");

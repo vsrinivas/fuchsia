@@ -157,3 +157,38 @@ TEST_F(RingbufferTest, ReserveContiguous) {
   EXPECT_TRUE(ringbuffer->ReserveContiguous(head_offset - sizeof(uint32_t)));
   EXPECT_EQ(ringbuffer->tail(), 0u);
 }
+
+TEST_F(RingbufferTest, UsedSize) {
+  const uint32_t kRingbufferSize = magma::page_size();
+
+  auto ringbuffer =
+      std::make_unique<Ringbuffer>(MsdVslBuffer::Create(kRingbufferSize, "ringbuffer"));
+  EXPECT_NE(ringbuffer, nullptr);
+
+  MockAddressSpaceOwner owner;
+  std::shared_ptr<AddressSpace> address_space = AddressSpace::Create(&owner, 0);
+  ASSERT_NE(nullptr, address_space);
+  auto context =
+      MsdVslContext::Create(std::weak_ptr<MsdVslConnection>(), address_space, ringbuffer.get());
+  EXPECT_TRUE(context->MapRingbuffer(ringbuffer.get()));
+
+  const uint32_t max_capacity = ringbuffer->size() - sizeof(uint32_t);
+  // Fill the ringbuffer.
+  for (unsigned int i = 0; i < max_capacity; i += sizeof(uint32_t)) {
+    EXPECT_EQ(ringbuffer->UsedSize(), i);
+    ringbuffer->Write32(0xFFFFFFFF /* value */);
+  }
+  EXPECT_EQ(ringbuffer->UsedSize(), max_capacity);
+
+  // Update the head and verify the used size is updated.
+  constexpr uint32_t new_head = 0x500;
+  ringbuffer->update_head(new_head);
+  EXPECT_EQ(ringbuffer->UsedSize(), max_capacity - new_head);
+
+  // Fill the ringbuffer again.
+  for (unsigned int i = 0; i < new_head; i += sizeof(uint32_t)) {
+    EXPECT_EQ(ringbuffer->UsedSize(), max_capacity - new_head + i);
+    ringbuffer->Write32(0xFFFFFFFF /* value */);
+  }
+  EXPECT_EQ(ringbuffer->UsedSize(), max_capacity);
+}

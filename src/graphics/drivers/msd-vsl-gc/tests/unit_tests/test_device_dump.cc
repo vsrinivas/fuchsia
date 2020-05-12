@@ -6,6 +6,7 @@
 
 #include <gtest/gtest.h>
 
+#include "src/graphics/drivers/msd-vsl-gc/src/address_space_layout.h"
 #include "src/graphics/drivers/msd-vsl-gc/src/command_buffer.h"
 #include "test_command_buffer.h"
 
@@ -314,5 +315,64 @@ TEST_F(TestDeviceDump, DumpCommandBufferMultipleResources) {
       FormattedString("Fault address is 0x%lx past the end of mapping %p",
                       dump_state.fault_gpu_address - mapping_end, mappings[1]),
   };
+  ASSERT_TRUE(FindStrings(dump_string, match_strings));
+}
+
+// Tests the decoding for each instruction type.
+TEST_F(TestDeviceDump, DumpDecodedBuffer) {
+  constexpr uint32_t link_addr = 0x10000;
+
+  constexpr uint32_t buf_size_dwords = 7 * kInstructionDwords;
+  uint32_t buf[buf_size_dwords];
+  BufferWriter buf_writer(buf, buf_size_dwords * sizeof(uint32_t), 0);
+
+  MiLink::write(&buf_writer, 8 /* prefetch */, link_addr);
+  MiWait::write(&buf_writer);
+  MiLoadState::write(&buf_writer, 1, 2);
+  MiEvent::write(&buf_writer, 1);
+  MiSemaphore::write(&buf_writer, 1, 2, 3);
+  MiStall::write(&buf_writer, 1, 2, 3);
+  MiEnd::write(&buf_writer);
+
+  std::vector<std::string> dump_string;
+  device_->DumpDecodedBuffer(&dump_string, buf, buf_size_dwords, 0 /* start_dword */,
+                             buf_size_dwords /* dword_count */, 4 /* active_head_dword */);
+
+  std::vector<FormattedString> match_strings = {
+      FormattedString("LINK"),  FormattedString("%08lx", link_addr),
+      FormattedString("WAIT"),  FormattedString("LOAD_STATE"),
+      FormattedString("===>"),  // matches active_head_dword
+      FormattedString("EVENT"), FormattedString("SEMAPHORE"),
+      FormattedString("STALL"), FormattedString("END")};
+  ASSERT_TRUE(FindStrings(dump_string, match_strings));
+}
+
+TEST_F(TestDeviceDump, DumpRingbufferWithWraparound) {
+  // Ringbuffer layout:
+  // SEMAPHORE STALL END ....... EVENT LINK
+  //             |                 |
+  //            active_head      last_completed_event
+  const uint32_t active_head = AddressSpaceLayout::system_gpu_addr_base() + 0x8;
+  // Start the ringbuffer at 2 instructions from the end.
+  device_->ringbuffer_->Reset(4080);
+  MiEvent::write(device_->ringbuffer_.get(), 1);
+  MiLink::write(device_->ringbuffer_.get(), 8, 0x10000);
+  MiSemaphore::write(device_->ringbuffer_.get(), 1, 2, 3);
+  MiStall::write(device_->ringbuffer_.get(), 1, 2, 3);
+  MiEnd::write(device_->ringbuffer_.get());
+  // Update the head past the event.
+  device_->ringbuffer_->update_head(4088);
+
+  MsdVslDevice::DumpState dump_state;
+  dump_state.exec_addr = active_head;
+  dump_state.page_table_arrays_enabled = true;
+
+  std::vector<std::string> dump_string;
+  device_->FormatDump(&dump_state, &dump_string);
+
+  std::vector<FormattedString> match_strings = {
+      FormattedString("LINK"), FormattedString("SEMAPHORE"), FormattedString("STALL"),
+      FormattedString("===>"),  // matches active_head_dword
+      FormattedString("END")};
   ASSERT_TRUE(FindStrings(dump_string, match_strings));
 }

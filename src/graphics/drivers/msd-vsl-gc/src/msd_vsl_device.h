@@ -134,6 +134,12 @@ class MsdVslDevice : public msd_device_t,
   void OutputFormattedString(std::vector<std::string>* dump_out, const char* fmt, ...);
   // Populates |dump_out| with a formatted representation of |dump_state|.
   void FormatDump(DumpState* dump_state, std::vector<std::string>* dump_out);
+  // Populates |dump_out| with a formatted representation of |buf|, starting from |start_dword|
+  // for |dword_count| number of elements, wrapping around if it reaches the end of the buffer.
+  // The element corresponding to |active_head_dword| will be specially annotated.
+  void DumpDecodedBuffer(std::vector<std::string>* dump_out, uint32_t* buf,
+                         uint32_t buf_size_dwords, uint32_t start_dword, uint32_t dword_count,
+                         uint32_t active_head_dword);
 
   void StartDeviceThread();
   int DeviceThreadLoop();
@@ -264,7 +270,9 @@ class MsdVslDevice : public msd_device_t,
   friend class TestDeviceDump_DumpCommandBuffer_Test;
   friend class TestDeviceDump_DumpCommandBufferMultipleResources_Test;
   friend class TestDeviceDump_DumpCommandBufferWithFault_Test;
+  friend class TestDeviceDump_DumpDecodedBuffer_Test;
   friend class TestDeviceDump_DumpEventBatch_Test;
+  friend class TestDeviceDump_DumpRingbufferWithWraparound_Test;
   friend class TestExec;
   friend class TestExec_Backlog_Test;
   friend class TestExec_BacklogWithInvalidBatch_Test;
