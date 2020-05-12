@@ -11,6 +11,7 @@ type ErrorCode string
 const (
 	_                          ErrorCode = ""
 	StringTooLong                        = "STRING_TOO_LONG"
+	StringNotUtf8                        = "STRING_NOT_UTF8"
 	NonEmptyStringWithNullBody           = "NON_EMPTY_STRING_WITH_NULL_BODY"
 	StrictUnionFieldNotSet               = "STRICT_UNION_FIELD_NOT_SET"
 	StrictUnionUnknownField              = "STRICT_UNION_UNKNOWN_FIELD"
@@ -20,6 +21,7 @@ const (
 
 var AllErrorCodes = map[ErrorCode]struct{}{
 	StringTooLong:              {},
+	StringNotUtf8:              {},
 	NonEmptyStringWithNullBody: {},
 	StrictUnionFieldNotSet:     {},
 	StrictUnionUnknownField:    {},

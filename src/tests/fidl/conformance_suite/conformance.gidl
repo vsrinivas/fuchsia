@@ -895,28 +895,6 @@ success("Vectors") {
     },
 }
 
-encode_failure("StringExceedsLimit") {
-    // TODO(fxb/37304) Enforce size bounds in rust
-    bindings_denylist = [rust],
-    value = Length2StringWrapper {
-        length_2_string: "abc", // exceeds the string length
-    },
-    err = STRING_TOO_LONG,
-}
-
-decode_failure("NonEmptyStringWithNullPtrBody") {
-    type = StringWrapper,
-    bytes = {
-        old, v1 = [
-            16:raw(
-                0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // length of string data
-                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // invalid null pointer to content
-            ),
-        ],
-    },
-    err = NON_EMPTY_STRING_WITH_NULL_BODY,
-}
-
 success("StrictBitsKnownValue") {
     value = StrictBitsStruct {
         b: 1,

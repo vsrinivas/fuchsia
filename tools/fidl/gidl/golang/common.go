@@ -181,6 +181,7 @@ func identifierName(qualifiedName string) string {
 // Go errors are defined in third_party/go/src/syscall/zx/fidl/errors.go
 var goErrorCodeNames = map[gidlir.ErrorCode]string{
 	gidlir.StringTooLong:              "ErrStringTooLong",
+	gidlir.StringNotUtf8:              "ErrStringNotUTF8",
 	gidlir.NonEmptyStringWithNullBody: "ErrUnexpectedNullRef",
 	gidlir.StrictUnionFieldNotSet:     "ErrInvalidXUnionTag",
 	gidlir.StrictUnionUnknownField:    "ErrInvalidXUnionTag",

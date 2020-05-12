@@ -369,6 +369,7 @@ func onList(value []interface{}, decl gidlmixer.ListDeclaration) string {
 // Dart error codes defined in: topaz/public/dart/fidl/lib/src/error.dart.
 var dartErrorCodeNames = map[gidlir.ErrorCode]string{
 	gidlir.StringTooLong:              "fidlStringTooLong",
+	gidlir.StringNotUtf8:              "unknown",
 	gidlir.NonEmptyStringWithNullBody: "fidlNonNullableTypeWithNullValue",
 	gidlir.StrictUnionFieldNotSet:     "fidlStrictXUnionFieldNotSet",
 	gidlir.StrictUnionUnknownField:    "fidlStrictXUnionUnknownField",

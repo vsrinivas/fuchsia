@@ -269,6 +269,7 @@ func bytesBuilder(bytes []byte) string {
 // Rust errors are defined in src/lib/fidl/rust/fidl/src/error.rs
 var rustErrorCodeNames = map[gidlir.ErrorCode]string{
 	gidlir.StringTooLong:              "OutOfRange",
+	gidlir.StringNotUtf8:              "Utf8Error",
 	gidlir.NonEmptyStringWithNullBody: "UnexpectedNullRef",
 	gidlir.StrictUnionFieldNotSet:     "UnknownUnionTag",
 	gidlir.StrictUnionUnknownField:    "UnknownUnionTag",
