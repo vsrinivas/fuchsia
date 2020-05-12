@@ -6,7 +6,9 @@ use {
     anyhow::{format_err, Context as _, Error},
     fidl_fuchsia_bluetooth_sys as sys,
     fuchsia_bluetooth::expectation::{asynchronous::ExpectableStateExt, Predicate as P},
-    fuchsia_bluetooth::types::{Address, BondingData, Identity, LeData, OneOrBoth, PeerId},
+    fuchsia_bluetooth::types::{
+        Address, BondingData, HostData, Identity, LeData, OneOrBoth, PeerId,
+    },
     std::collections::HashSet,
 };
 
@@ -24,7 +26,7 @@ fn example_emulator_identity() -> Identity {
     let emulator_address = Address::Public([0, 0, 0, 0, 0, 0]);
     let peer_address = Address::Random([1, 0, 0, 0, 0, 0]);
 
-    let host_data = sys::HostData {
+    let host_data = HostData {
         irk: Some(sys::Key { value: [16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1] }),
     };
     let csrk = sys::PeerKey {

@@ -8,9 +8,7 @@ use {
     fidl::endpoints::{self, ServerEnd},
     fidl_fuchsia_bluetooth::{Appearance, DeviceClass, Error as FidlError, ErrorCode},
     fidl_fuchsia_bluetooth_bredr::ProfileMarker,
-    fidl_fuchsia_bluetooth_control::{
-        self as control, ControlControlHandle, HostData, LocalKey, PairingOptions,
-    },
+    fidl_fuchsia_bluetooth_control::{self as control, ControlControlHandle, PairingOptions},
     fidl_fuchsia_bluetooth_gatt::{LocalServiceDelegateRequest, Server_Marker, Server_Proxy},
     fidl_fuchsia_bluetooth_host::HostProxy,
     fidl_fuchsia_bluetooth_le::{CentralMarker, PeripheralMarker},
@@ -20,7 +18,7 @@ use {
     fuchsia_bluetooth::{
         self as bt,
         inspect::{DebugExt, Inspectable, ToProperty},
-        types::{Address, BondingData, HostId, HostInfo, Identity, Peer, PeerId},
+        types::{Address, BondingData, HostData, HostId, HostInfo, Identity, Peer, PeerId},
     },
     fuchsia_inspect::{self as inspect, unique_name, Property},
     fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn, fx_vlog},
@@ -1007,10 +1005,10 @@ async fn try_restore_bonds(
     })
 }
 
-fn generate_irk() -> Result<LocalKey, zx::Status> {
+fn generate_irk() -> Result<sys::Key, zx::Status> {
     let mut buf: [u8; 16] = [0; 16];
     zx::cprng_draw(&mut buf)?;
-    Ok(LocalKey { value: buf })
+    Ok(sys::Key { value: buf })
 }
 
 async fn assign_host_data(
@@ -1027,7 +1025,7 @@ async fn assign_host_data(
         None => {
             // Generate a new IRK.
             fx_vlog!(1, "generating new IRK");
-            let new_data = HostData { irk: Some(Box::new(generate_irk()?)) };
+            let new_data = HostData { irk: Some(generate_irk()?) };
 
             if let Err(e) = hd.stash().store_host_data(address.clone(), new_data.clone()).await {
                 fx_log_err!("failed to persist local IRK");

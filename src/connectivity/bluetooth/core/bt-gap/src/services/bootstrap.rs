@@ -78,5 +78,5 @@ fn validate(src: sys::Identity) -> Result<Identity, Error> {
     // silently dropping individual bonding datas
     let bonds =
         bonds.into_iter().zip(generate_random_ids).map(BondingData::try_from).collect_results()?;
-    Ok(Identity { host, bonds })
+    Ok(Identity { host: host.into(), bonds })
 }

@@ -5,7 +5,6 @@
 use {
     anyhow::{format_err, Error},
     fidl::endpoints::create_proxy,
-    fidl_fuchsia_bluetooth_control::HostData,
     fidl_fuchsia_stash::{
         GetIteratorMarker, StoreAccessorMarker, StoreAccessorProxy, StoreMarker, Value,
     },
@@ -13,7 +12,7 @@ use {
     fuchsia_bluetooth::{
         error::Error as BtError,
         inspect::Inspectable,
-        types::{Address, BondingData, PeerId},
+        types::{Address, BondingData, HostData, PeerId},
     },
     fuchsia_inspect,
     fuchsia_syslog::{fx_log_err, fx_log_info},
@@ -304,7 +303,7 @@ impl StashInner {
         fx_log_info!("store_host_data (local address: {})", local_addr);
 
         // Persist the serialized blob.
-        let serialized = serde_json::to_string(&HostDataSerializer(&data))?;
+        let serialized = serde_json::to_string(&HostDataSerializer(&data.clone().into()))?;
         self.proxy.set_value(&host_data_key(local_addr), &mut Value::Stringval(serialized))?;
         self.proxy.flush().await?.map_err(|e| format_err!("Failed to flush to stash: {:?}", e))?;
 
@@ -375,7 +374,7 @@ impl StashInner {
                 if let Value::Stringval(json) = key_value.val {
                     let host_data: HostDataDeserializer = serde_json::from_str(&json)?;
                     let host_data = host_data.contents();
-                    host_data_map.insert(host_address, host_data);
+                    host_data_map.insert(host_address, host_data.into());
                 } else {
                     fx_log_err!("stash malformed: host data should be a string");
                     return Err(BtError::new("failed to initialize stash").into());
@@ -429,7 +428,7 @@ fn build_stash(inner: StashInner) -> (Stash, impl Future<Output = Result<(), Err
 mod tests {
     use super::*;
     use {
-        core::hash::Hash, fidl_fuchsia_bluetooth_control::LocalKey,
+        core::hash::Hash, fidl_fuchsia_bluetooth_sys::Key,
         fuchsia_component::client::connect_to_service, futures::select, pin_utils::pin_mut,
     };
 
@@ -515,17 +514,13 @@ mod tests {
 
     fn host_data_1() -> HostData {
         HostData {
-            irk: Some(Box::new(LocalKey {
-                value: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
-            })),
+            irk: Some(Key { value: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16] }),
         }
     }
 
     fn host_data_2() -> HostData {
         HostData {
-            irk: Some(Box::new(LocalKey {
-                value: [16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1],
-            })),
+            irk: Some(Key { value: [16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1] }),
         }
     }
 

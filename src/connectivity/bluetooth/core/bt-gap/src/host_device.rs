@@ -6,13 +6,13 @@ use {
     anyhow::format_err,
     fidl::endpoints::ClientEnd,
     fidl_fuchsia_bluetooth::{self as fbt, DeviceClass},
-    fidl_fuchsia_bluetooth_control::{self as control, HostData, PairingOptions},
+    fidl_fuchsia_bluetooth_control::{self as control, PairingOptions},
     fidl_fuchsia_bluetooth_host::{HostEvent, HostProxy},
     fidl_fuchsia_bluetooth_sys::{InputCapability, OutputCapability, PairingDelegateMarker},
     fidl_fuchsia_mem::Buffer,
     fuchsia_bluetooth::{
         inspect::Inspectable,
-        types::{BondingData, HostInfo, Peer, PeerId},
+        types::{BondingData, HostData, HostInfo, Peer, PeerId},
     },
     fuchsia_syslog::{fx_log_err, fx_log_info},
     futures::{Future, FutureExt, StreamExt, TryFutureExt},
@@ -119,7 +119,8 @@ impl HostDevice {
         self.host.set_discoverable(discoverable).map(from_fidl_result)
     }
 
-    pub fn set_local_data(&self, mut data: HostData) -> types::Result<()> {
+    pub fn set_local_data(&self, data: HostData) -> types::Result<()> {
+        let mut data = data.into();
         self.host.set_local_data(&mut data).map_err(|e| e.into())
     }
 

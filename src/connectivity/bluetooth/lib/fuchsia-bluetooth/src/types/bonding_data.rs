@@ -293,6 +293,14 @@ mod compat {
         }
     }
 
+    pub fn local_key_from_control(src: control::LocalKey) -> sys::Key {
+        sys::Key { value: src.value }
+    }
+
+    pub fn local_key_to_control(src: sys::Key) -> control::LocalKey {
+        control::LocalKey { value: src.value }
+    }
+
     pub fn ltk_to_control(src: sys::Ltk) -> control::Ltk {
         control::Ltk {
             key: peer_key_to_control(src.key),
@@ -599,15 +607,47 @@ impl From<BondingData> for sys::BondingData {
     }
 }
 
+/// Persisted data for a local bt-host.
+#[derive(Clone, Debug, PartialEq)]
+pub struct HostData {
+    /// A local IRK that is distributed to peers and used to generate RPAs when in LE peripheral
+    /// mode.
+    pub irk: Option<sys::Key>,
+}
+
+impl From<HostData> for sys::HostData {
+    fn from(src: HostData) -> sys::HostData {
+        sys::HostData { irk: src.irk }
+    }
+}
+
+impl From<sys::HostData> for HostData {
+    fn from(src: sys::HostData) -> HostData {
+        HostData { irk: src.irk }
+    }
+}
+
+impl From<control::HostData> for HostData {
+    fn from(src: control::HostData) -> HostData {
+        HostData { irk: src.irk.map(|k| compat::local_key_from_control(*k)) }
+    }
+}
+
+impl From<HostData> for control::HostData {
+    fn from(src: HostData) -> control::HostData {
+        control::HostData { irk: src.irk.map(|k| Box::new(compat::local_key_to_control(k))) }
+    }
+}
+
 pub struct Identity {
-    pub host: sys::HostData,
+    pub host: HostData,
     pub bonds: Vec<BondingData>,
 }
 
 impl From<Identity> for sys::Identity {
     fn from(src: Identity) -> sys::Identity {
         sys::Identity {
-            host: Some(src.host),
+            host: Some(src.host.into()),
             bonds: Some(src.bonds.into_iter().map(|i| i.into()).collect()),
         }
     }
@@ -664,6 +704,26 @@ mod tests {
                 },
             ),
         }
+    }
+
+    #[test]
+    fn host_data_to_control() {
+        let host_data = HostData {
+            irk: Some(sys::Key { value: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16] }),
+        };
+        let expected = control::HostData {
+            irk: Some(Box::new(control::LocalKey {
+                value: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
+            })),
+        };
+        assert_eq!(expected, host_data.into());
+    }
+
+    #[test]
+    fn empty_host_data_to_control() {
+        let host_data = HostData { irk: None };
+        let expected = control::HostData { irk: None };
+        assert_eq!(expected, host_data.into());
     }
 
     #[test]
