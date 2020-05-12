@@ -99,8 +99,6 @@ class SimStation : public wlan::simulation::StationIfc {
     }
   }
 
-  void ReceiveNotification(void* payload) override {}
-
   static uint8_t instance_count;
   common::MacAddr mac_addr_;
   bool beacon_seen_ = false;

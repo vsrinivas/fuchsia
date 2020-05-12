@@ -654,9 +654,9 @@ void SimFirmware::AuthStart(uint16_t ifidx) {
   common::MacAddr srcAddr(mac_addr_);
   common::MacAddr bssid(assoc_state_.opts->bssid);
 
-  auto callback = new std::function<void()>;
+  auto callback = std::make_unique<std::function<void()>>();
   *callback = std::bind(&SimFirmware::AssocHandleFailure, this);
-  hw_.RequestCallback(callback, kAuthTimeout, &auth_state_.auth_timer_id);
+  hw_.RequestCallback(std::move(callback), kAuthTimeout, &auth_state_.auth_timer_id);
 
   ZX_ASSERT(auth_state_.state == AuthState::NOT_AUTHENTICATED);
   simulation::SimAuthType auth_type;
@@ -738,9 +738,9 @@ void SimFirmware::RxAuthResp(const simulation::SimAuthFrame* frame) {
       }
       // If we receive the second auth frame when we are expecting it, we send out the third one and
       // set another timer for it.
-      auto callback = new std::function<void()>;
+      auto callback = std::make_unique<std::function<void()>>();
       *callback = std::bind(&SimFirmware::AssocHandleFailure, this);
-      hw_.RequestCallback(callback, kAuthTimeout, &auth_state_.auth_timer_id);
+      hw_.RequestCallback(std::move(callback), kAuthTimeout, &auth_state_.auth_timer_id);
 
       auth_state_.state = AuthState::EXPECTING_FOURTH;
 
@@ -803,9 +803,9 @@ void SimFirmware::RxDeauthReq(const simulation::SimDeauthFrame* frame) {
 void SimFirmware::AssocStart() {
   common::MacAddr srcAddr(mac_addr_);
 
-  auto callback = new std::function<void()>;
+  auto callback = std::make_unique<std::function<void()>>();
   *callback = std::bind(&SimFirmware::AssocHandleFailure, this);
-  hw_.RequestCallback(callback, kAssocTimeout, &assoc_state_.assoc_timer_id);
+  hw_.RequestCallback(std::move(callback), kAssocTimeout, &assoc_state_.assoc_timer_id);
 
   // We can't use assoc_state_.opts->bssid directly because it may get free'd during TxAssocReq
   // handling if a response is sent.
@@ -1432,9 +1432,9 @@ zx_status_t SimFirmware::ScanStart(std::unique_ptr<ScanOpts> opts, uint16_t ifid
   }
   hw_.EnableRx();
 
-  std::function<void()>* callback = new std::function<void()>;
+  auto callback = std::make_unique<std::function<void()>>();
   *callback = std::bind(&SimFirmware::ScanNextChannel, this);
-  hw_.RequestCallback(callback, scan_state_.opts->dwell_time);
+  hw_.RequestCallback(std::move(callback), scan_state_.opts->dwell_time);
   return ZX_OK;
 }
 
@@ -1475,9 +1475,9 @@ void SimFirmware::ScanNextChannel() {
           simulation::SimProbeReqFrame probe_req_frame(pfn_mac_addr_);
           hw_.Tx(&probe_req_frame);
         }
-        std::function<void()>* callback = new std::function<void()>;
+        auto callback = std::make_unique<std::function<void()>>();
         *callback = std::bind(&SimFirmware::ScanNextChannel, this);
-        hw_.RequestCallback(callback, scan_state_.opts->dwell_time);
+        hw_.RequestCallback(std::move(callback), scan_state_.opts->dwell_time);
       }
   }
 }
@@ -1639,9 +1639,9 @@ void SimFirmware::RxDataFrame(const simulation::SimDataFrame* data_frame,
 void SimFirmware::RestartBeaconWatchdog() {
   DisableBeaconWatchdog();
   assoc_state_.is_beacon_watchdog_active = true;
-  auto handler = new std::function<void()>;
+  auto handler = std::make_unique<std::function<void()>>();
   *handler = std::bind(&SimFirmware::HandleBeaconTimeout, this);
-  hw_.RequestCallback(handler, beacon_timeout_, &assoc_state_.beacon_watchdog_id_);
+  hw_.RequestCallback(std::move(handler), beacon_timeout_, &assoc_state_.beacon_watchdog_id_);
 }
 
 void SimFirmware::DisableBeaconWatchdog() {
@@ -1737,10 +1737,10 @@ void SimFirmware::RxBeacon(const wlan_channel_t& channel, const simulation::SimB
         channel.primary = csa_ie->new_channel_number_;
       }
 
-      auto callback = new std::function<void()>;
+      auto callback = std::make_unique<std::function<void()>>();
       *callback = std::bind(&SimFirmware::ConductChannelSwitch, this, channel,
                             csa_ie->channel_switch_mode_);
-      hw_.RequestCallback(callback, SwitchDelay, &channel_switch_state_.switch_timer_id);
+      hw_.RequestCallback(std::move(callback), SwitchDelay, &channel_switch_state_.switch_timer_id);
     }
   }
 }

@@ -46,7 +46,6 @@ class AuthTest : public ::testing::Test, public simulation::StationIfc {
 
  private:
   void Rx(const simulation::SimFrame* frame, simulation::WlanRxInfo& info) override;
-  void ReceiveNotification(void* payload) override;
 };
 
 void AuthTest::ValidateAuthResp(uint16_t expect_seq_num, simulation::SimAuthType expect_auth_type,
@@ -77,18 +76,12 @@ void AuthTest::Rx(const simulation::SimFrame* frame, simulation::WlanRxInfo& inf
                                     auth_resp_frame->status_);
 }
 
-void AuthTest::ReceiveNotification(void* payload) {
-  auto handler = static_cast<std::function<void()>*>(payload);
-  (*handler)();
-  delete handler;
-}
-
 TEST_F(AuthTest, OpenSystemBasicUse) {
-  auto handler = new std::function<void()>;
+  auto handler = std::make_unique<std::function<void()>>();
   simulation::SimAuthFrame auth_req_frame(kClientMacAddr, kApBssid, 1, simulation::AUTH_TYPE_OPEN,
                                           WLAN_STATUS_CODE_SUCCESS);
   *handler = std::bind(&simulation::Environment::Tx, &env_, &auth_req_frame, kDefaultTxInfo, this);
-  env_.ScheduleNotification(this, zx::sec(1), static_cast<void*>(handler));
+  env_.ScheduleNotification(std::move(handler), zx::sec(1));
 
   env_.Run();
 
@@ -100,17 +93,17 @@ TEST_F(AuthTest, OpenSystemBasicUse) {
 TEST_F(AuthTest, SharedKeyBasicUse) {
   ap_.SetSecurity({.auth_handling_mode = simulation::AUTH_TYPE_SHARED_KEY});
 
-  auto handler = new std::function<void()>;
+  auto handler = std::make_unique<std::function<void()>>();
   simulation::SimAuthFrame auth_req_frame1(
       kClientMacAddr, kApBssid, 1, simulation::AUTH_TYPE_SHARED_KEY, WLAN_STATUS_CODE_SUCCESS);
   *handler = std::bind(&simulation::Environment::Tx, &env_, &auth_req_frame1, kDefaultTxInfo, this);
-  env_.ScheduleNotification(this, zx::sec(1), static_cast<void*>(handler));
+  env_.ScheduleNotification(std::move(handler), zx::sec(1));
 
-  handler = new std::function<void()>;
+  handler = std::make_unique<std::function<void()>>();
   simulation::SimAuthFrame auth_req_frame2(
       kClientMacAddr, kApBssid, 3, simulation::AUTH_TYPE_SHARED_KEY, WLAN_STATUS_CODE_SUCCESS);
   *handler = std::bind(&simulation::Environment::Tx, &env_, &auth_req_frame2, kDefaultTxInfo, this);
-  env_.ScheduleNotification(this, zx::sec(2), static_cast<void*>(handler));
+  env_.ScheduleNotification(std::move(handler), zx::sec(2));
 
   env_.Run();
 
@@ -123,30 +116,30 @@ TEST_F(AuthTest, SharedKeyBasicUse) {
 TEST_F(AuthTest, OpenSystemIgnoreTest) {
   ap_.SetSecurity({.auth_handling_mode = simulation::AUTH_TYPE_OPEN});
 
-  auto handler = new std::function<void()>;
+  auto handler = std::make_unique<std::function<void()>>();
   simulation::SimAuthFrame auth_req_frame1(kClientMacAddr, kApBssid, 3, simulation::AUTH_TYPE_OPEN,
                                            WLAN_STATUS_CODE_SUCCESS);
   *handler = std::bind(&simulation::Environment::Tx, &env_, &auth_req_frame1, kDefaultTxInfo, this);
-  env_.ScheduleNotification(this, zx::sec(1), static_cast<void*>(handler));
+  env_.ScheduleNotification(std::move(handler), zx::sec(1));
 
   // Associated station will be ignored
-  handler = new std::function<void()>;
+  handler = std::make_unique<std::function<void()>>();
   simulation::SimAuthFrame auth_req_frame(kClientMacAddr, kApBssid, 1, simulation::AUTH_TYPE_OPEN,
                                           WLAN_STATUS_CODE_SUCCESS);
   *handler = std::bind(&simulation::Environment::Tx, &env_, &auth_req_frame, kDefaultTxInfo, this);
-  env_.ScheduleNotification(this, zx::sec(2), static_cast<void*>(handler));
+  env_.ScheduleNotification(std::move(handler), zx::sec(2));
 
-  handler = new std::function<void()>;
+  handler = std::make_unique<std::function<void()>>();
   simulation::SimAssocReqFrame assoc_req_frame(kClientMacAddr, kApBssid, kApSsid);
   *handler = std::bind(&simulation::Environment::Tx, &env_, &assoc_req_frame, kDefaultTxInfo, this);
-  env_.ScheduleNotification(this, zx::sec(3), static_cast<void*>(handler));
+  env_.ScheduleNotification(std::move(handler), zx::sec(3));
 
-  handler = new std::function<void()>;
+  handler = std::make_unique<std::function<void()>>();
   simulation::SimAuthFrame auth_after_assoc(kClientMacAddr, kApBssid, 1, simulation::AUTH_TYPE_OPEN,
                                             WLAN_STATUS_CODE_SUCCESS);
   *handler =
       std::bind(&simulation::Environment::Tx, &env_, &auth_after_assoc, kDefaultTxInfo, this);
-  env_.ScheduleNotification(this, zx::sec(4), static_cast<void*>(handler));
+  env_.ScheduleNotification(std::move(handler), zx::sec(4));
 
   env_.Run();
   // The second resp will be ignored
@@ -156,55 +149,55 @@ TEST_F(AuthTest, OpenSystemIgnoreTest) {
 TEST_F(AuthTest, SharedKeyIgnoreTest) {
   ap_.SetSecurity({.auth_handling_mode = simulation::AUTH_TYPE_SHARED_KEY});
   // Wrong bssid frame should be ignore
-  auto handler = new std::function<void()>;
+  auto handler = std::make_unique<std::function<void()>>();
   simulation::SimAuthFrame wrong_bssid_frame(
       kClientMacAddr, kWrongBssid, 1, simulation::AUTH_TYPE_SHARED_KEY, WLAN_STATUS_CODE_SUCCESS);
   *handler =
       std::bind(&simulation::Environment::Tx, &env_, &wrong_bssid_frame, kDefaultTxInfo, this);
-  env_.ScheduleNotification(this, zx::sec(1), static_cast<void*>(handler));
+  env_.ScheduleNotification(std::move(handler), zx::sec(1));
 
   // Wrong channel frame should be ignore
-  handler = new std::function<void()>;
+  handler = std::make_unique<std::function<void()>>();
   simulation::SimAuthFrame wrong_channel_frame(
       kClientMacAddr, kApBssid, 1, simulation::AUTH_TYPE_SHARED_KEY, WLAN_STATUS_CODE_SUCCESS);
   *handler = std::bind(&simulation::Environment::Tx, &env_, &wrong_channel_frame,
                        kWrongChannelTxInfo, this);
-  env_.ScheduleNotification(this, zx::sec(2), static_cast<void*>(handler));
+  env_.ScheduleNotification(std::move(handler), zx::sec(2));
 
   // auth req with status WLAN_STATUS_CODE_REFUSED should be ignored
-  handler = new std::function<void()>;
+  handler = std::make_unique<std::function<void()>>();
   simulation::SimAuthFrame refuse_frame(kClientMacAddr, kApBssid, 1,
                                         simulation::AUTH_TYPE_SHARED_KEY, WLAN_STATUS_CODE_REFUSED);
   *handler = std::bind(&simulation::Environment::Tx, &env_, &refuse_frame, kDefaultTxInfo, this);
-  env_.ScheduleNotification(this, zx::sec(3), static_cast<void*>(handler));
+  env_.ScheduleNotification(std::move(handler), zx::sec(3));
 
   // auth req with sequence number 2 should be ignored
-  handler = new std::function<void()>;
+  handler = std::make_unique<std::function<void()>>();
   simulation::SimAuthFrame seq_num_two_frame(
       kClientMacAddr, kApBssid, 2, simulation::AUTH_TYPE_SHARED_KEY, WLAN_STATUS_CODE_SUCCESS);
   *handler =
       std::bind(&simulation::Environment::Tx, &env_, &seq_num_two_frame, kDefaultTxInfo, this);
-  env_.ScheduleNotification(this, zx::sec(4), static_cast<void*>(handler));
+  env_.ScheduleNotification(std::move(handler), zx::sec(4));
 
   // auth req with sequence number 4 should be ignored
-  handler = new std::function<void()>;
+  handler = std::make_unique<std::function<void()>>();
   simulation::SimAuthFrame seq_num_four_frame(
       kClientMacAddr, kApBssid, 4, simulation::AUTH_TYPE_SHARED_KEY, WLAN_STATUS_CODE_SUCCESS);
   *handler =
       std::bind(&simulation::Environment::Tx, &env_, &seq_num_four_frame, kDefaultTxInfo, this);
-  env_.ScheduleNotification(this, zx::sec(5), static_cast<void*>(handler));
+  env_.ScheduleNotification(std::move(handler), zx::sec(5));
 
   env_.Run();
   EXPECT_EQ(auth_resps_received_.empty(), true);
 }
 
 TEST_F(AuthTest, OpenSystemRefuseTest) {
-  auto handler = new std::function<void()>;
+  auto handler = std::make_unique<std::function<void()>>();
   simulation::SimAuthFrame wrong_type_frame(
       kClientMacAddr, kApBssid, 1, simulation::AUTH_TYPE_SHARED_KEY, WLAN_STATUS_CODE_SUCCESS);
   *handler =
       std::bind(&simulation::Environment::Tx, &env_, &wrong_type_frame, kDefaultTxInfo, this);
-  env_.ScheduleNotification(this, zx::sec(3), static_cast<void*>(handler));
+  env_.ScheduleNotification(std::move(handler), zx::sec(3));
   env_.Run();
   // The auth type in frame is the same as that in auth req frame, and if auth type in quth req is
   // different from that in AP's auth_handling_mode, it will reply a refuse auth resp frame.
@@ -216,12 +209,12 @@ TEST_F(AuthTest, OpenSystemRefuseTest) {
 TEST_F(AuthTest, SharedKeyRefuseTest) {
   ap_.SetSecurity({.auth_handling_mode = simulation::AUTH_TYPE_SHARED_KEY});
 
-  auto handler = new std::function<void()>;
+  auto handler = std::make_unique<std::function<void()>>();
   simulation::SimAuthFrame wrong_type_frame(kClientMacAddr, kApBssid, 1, simulation::AUTH_TYPE_OPEN,
                                             WLAN_STATUS_CODE_SUCCESS);
   *handler =
       std::bind(&simulation::Environment::Tx, &env_, &wrong_type_frame, kDefaultTxInfo, this);
-  env_.ScheduleNotification(this, zx::sec(3), static_cast<void*>(handler));
+  env_.ScheduleNotification(std::move(handler), zx::sec(3));
   env_.Run();
 
   ValidateAuthResp(2, simulation::AUTH_TYPE_OPEN, WLAN_STATUS_CODE_REFUSED);

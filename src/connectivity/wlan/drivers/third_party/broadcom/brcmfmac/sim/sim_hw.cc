@@ -38,14 +38,6 @@ void SimHardware::Rx(const simulation::SimFrame* frame, simulation::WlanRxInfo& 
   event_handlers_.rx_handler(frame, info);
 }
 
-// For now, all sim-env notifications are simple callbacks. If we need something more flexible
-// in the future, we could always wrap the callback into a struct with a void* for associated data.
-void SimHardware::ReceiveNotification(void* payload) {
-  auto callback = static_cast<std::function<void()>*>(payload);
-  (*callback)();
-  delete callback;
-}
-
 void SimHardware::GetRevInfo(brcmf_rev_info_le* rev_info) {
   // Settings were copied from traces on a VIM2
   rev_info->vendorid = BRCM_PCIE_VENDOR_ID_BROADCOM;
@@ -67,17 +59,12 @@ void SimHardware::GetRevInfo(brcmf_rev_info_le* rev_info) {
   rev_info->nvramrev = 0x5b2b4;
 }
 
-void SimHardware::RequestCallback(std::function<void()>* callback, zx::duration delay,
-                                  uint64_t* id_out) {
-  env_->ScheduleNotification(this, delay, static_cast<void*>(callback), id_out);
+void SimHardware::RequestCallback(std::unique_ptr<std::function<void()>> callback,
+                                  zx::duration delay, uint64_t* id_out) {
+  env_->ScheduleNotification(std::move(callback), delay, id_out);
 }
 
-void SimHardware::CancelCallback(uint64_t id) {
-  void* payload = nullptr;
-  env_->CancelNotification(this, id, &payload);
-  auto handler = static_cast<std::function<void()>*>(payload);
-  delete handler;
-}
+void SimHardware::CancelCallback(uint64_t id) { env_->CancelNotification(id); }
 
 void SimHardware::Tx(const simulation::SimFrame* frame) {
   simulation::WlanTxInfo info = {.channel = channel_};

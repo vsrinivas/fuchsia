@@ -60,9 +60,6 @@ class ChannelSwitchTest : public SimTest {
   std::list<uint8_t> new_channel_list_;
 
  private:
-  // StationIfc overrides
-  void ReceiveNotification(void* payload) override;
-
   static wlanif_impl_ifc_protocol_ops_t sme_ops_;
   wlanif_impl_ifc_protocol sme_protocol_ = {.ops = &sme_ops_, .ctx = this};
 
@@ -108,12 +105,6 @@ wlanif_impl_ifc_protocol_ops_t ChannelSwitchTest::sme_ops_ = {
           // Ignore
         },
 };
-
-void ChannelSwitchTest::ReceiveNotification(void* payload) {
-  auto fn = static_cast<std::function<void()>*>(payload);
-  (*fn)();
-  delete fn;
-}
 
 void ChannelSwitchTest::SendFakeCSABeacon(wlan_channel_t& dst_channel) {
   constexpr simulation::WlanTxInfo kDefaultTxInfo = {.channel = kDefaultChannel};
@@ -189,17 +180,17 @@ void ChannelSwitchTest::StartAssoc() {
 }
 
 void ChannelSwitchTest::ScheduleCall(void (ChannelSwitchTest::*fn)(), zx::duration when) {
-  auto cb_fn = new std::function<void()>;
+  auto cb_fn = std::make_unique<std::function<void()>>();
   *cb_fn = std::bind(fn, this);
-  env_->ScheduleNotification(this, when, cb_fn);
+  env_->ScheduleNotification(std::move(cb_fn), when);
 }
 
 // This function schedules a Setchannel() event for the first AP in AP list.
 void ChannelSwitchTest::ScheduleChannelSwitch(const wlan_channel_t& new_channel,
                                               zx::duration when) {
-  auto cb_fn = new std::function<void()>;
+  auto cb_fn = std::make_unique<std::function<void()>>();
   *cb_fn = std::bind(&simulation::FakeAp::SetChannel, aps_.front(), new_channel);
-  env_->ScheduleNotification(this, when, cb_fn);
+  env_->ScheduleNotification(std::move(cb_fn), when);
 }
 
 TEST_F(ChannelSwitchTest, ChannelSwitch) {
@@ -322,9 +313,9 @@ TEST_F(ChannelSwitchTest, StopStillSwitch) {
   ScheduleChannelSwitch(kSwitchedChannel, zx::msec(500));
 
   // Schedule DisableBeacon for sim-fake-ap
-  std::function<void()>* callback = new std::function<void()>;
+  auto callback = std::make_unique<std::function<void()>>();
   *callback = std::bind(&simulation::FakeAp::DisableBeacon, aps_.front());
-  env_->ScheduleNotification(this, zx::msec(600), static_cast<void*>(callback));
+  env_->ScheduleNotification(std::move(callback), zx::msec(600));
 
   env_->Run();
 
@@ -345,9 +336,9 @@ TEST_F(ChannelSwitchTest, ChannelSwitchToSameChannel) {
   ScheduleCall(&ChannelSwitchTest::StartAssoc, zx::msec(10));
 
   // SendFakeCSABeacon() is using the ssid and bssid of the AP which client is associated to.
-  std::function<void()>* callback = new std::function<void()>;
+  auto callback = std::make_unique<std::function<void()>>();
   *callback = std::bind(&ChannelSwitchTest::SendFakeCSABeacon, this, kDefaultChannel);
-  env_->ScheduleNotification(this, zx::msec(540), static_cast<void*>(callback));
+  env_->ScheduleNotification(std::move(callback), zx::msec(540));
 
   env_->Run();
 
@@ -365,13 +356,13 @@ TEST_F(ChannelSwitchTest, ChannelSwitchWhileScanning) {
 
   ScheduleCall(&ChannelSwitchTest::StartAssoc, zx::msec(10));
 
-  auto scan_handler = new std::function<void()>;
+  auto scan_handler = std::make_unique<std::function<void()>>();
   *scan_handler = std::bind(&ChannelSwitchTest::StartScan, this);
-  env_->ScheduleNotification(this, zx::msec(20), scan_handler);
+  env_->ScheduleNotification(std::move(scan_handler), zx::msec(20));
 
-  std::function<void()>* callback = new std::function<void()>;
+  auto callback = std::make_unique<std::function<void()>>();
   *callback = std::bind(&ChannelSwitchTest::SendFakeCSABeacon, this, kSwitchedChannel);
-  env_->ScheduleNotification(this, zx::msec(100), static_cast<void*>(callback));
+  env_->ScheduleNotification(std::move(callback), zx::msec(100));
 
   env_->Run();
 

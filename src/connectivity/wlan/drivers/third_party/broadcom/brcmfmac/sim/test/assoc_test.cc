@@ -124,7 +124,6 @@ class AssocTest : public SimTest {
  private:
   // StationIfc overrides
   void Rx(const simulation::SimFrame* frame, simulation::WlanRxInfo& info) override;
-  void ReceiveNotification(void* payload) override;
 
   // SME callbacks
   static wlanif_impl_ifc_protocol_ops_t sme_ops_;
@@ -180,12 +179,6 @@ wlanif_impl_ifc_protocol_ops_t AssocTest::sme_ops_ = {
         },
 };
 
-void AssocTest::ReceiveNotification(void* payload) {
-  auto fn = static_cast<std::function<void()>*>(payload);
-  (*fn)();
-  delete fn;
-}
-
 void AssocTest::Rx(const simulation::SimFrame* frame, simulation::WlanRxInfo& info) {
   ASSERT_EQ(frame->FrameType(), simulation::SimFrame::FRAME_TYPE_MGMT);
 
@@ -193,9 +186,9 @@ void AssocTest::Rx(const simulation::SimFrame* frame, simulation::WlanRxInfo& in
   // If a handler has been installed, call it
   if (mgmt_frame->MgmtFrameType() == simulation::SimManagementFrame::FRAME_TYPE_ASSOC_REQ) {
     if (context_.on_assoc_req_callback) {
-      std::function<void()>* callback = new std::function<void()>;
+      auto callback = std::make_unique<std::function<void()>>();
       *callback = context_.on_assoc_req_callback.value();
-      env_->ScheduleNotification(this, zx::msec(1), static_cast<void*>(callback));
+      env_->ScheduleNotification(std::move(callback), zx::msec(1));
     }
   }
 
@@ -213,9 +206,9 @@ void AssocTest::Rx(const simulation::SimFrame* frame, simulation::WlanRxInfo& in
     // When we receive a authentication request, try to call the callback.
     if (auth_frame->seq_num_ == 1) {
       if (context_.on_auth_req_callback) {
-        std::function<void()>* callback = new std::function<void()>;
+        auto callback = std::make_unique<std::function<void()>>();
         *callback = context_.on_auth_req_callback.value();
-        env_->ScheduleNotification(this, zx::msec(1), static_cast<void*>(callback));
+        env_->ScheduleNotification(std::move(callback), zx::msec(1));
       }
       return;
     }
@@ -275,13 +268,13 @@ void AssocTest::OnAssocConf(const wlanif_assoc_confirm_t* resp) {
   EXPECT_EQ(resp->result_code, context_.expected_results.front());
   context_.expected_results.pop_front();
   if (start_disassoc_) {
-    std::function<void()>* callback = new std::function<void()>;
+    auto callback = std::make_unique<std::function<void()>>();
     *callback = std::bind(&AssocTest::StartDisassoc, this);
-    env_->ScheduleNotification(this, zx::msec(100), static_cast<void*>(callback));
+    env_->ScheduleNotification(std::move(callback), zx::msec(100));
   } else if (start_deauth_) {
-    std::function<void()>* callback = new std::function<void()>;
+    auto callback = std::make_unique<std::function<void()>>();
     *callback = std::bind(&AssocTest::StartDeauth, this);
-    env_->ScheduleNotification(this, zx::msec(100), static_cast<void*>(callback));
+    env_->ScheduleNotification(std::move(callback), zx::msec(100));
   }
 }
 
@@ -310,9 +303,9 @@ void AssocTest::StartAssoc() {
 }
 
 void AssocTest::ScheduleCall(void (AssocTest::*fn)(), zx::duration when) {
-  auto cb_fn = new std::function<void()>;
+  auto cb_fn = std::make_unique<std::function<void()>>();
   *cb_fn = std::bind(fn, this);
-  env_->ScheduleNotification(this, when, cb_fn);
+  env_->ScheduleNotification(std::move(cb_fn), when);
 }
 
 void AssocTest::StartDisassoc() {

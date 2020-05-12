@@ -60,9 +60,6 @@ class ScanTest : public SimTest {
   size_t scans_remaining_ = kTotalScanCount;
 
  private:
-  // RxBeacon handler not needed because the test doesn't need to observe them
-  void ReceiveNotification(void* payload) override;
-
   // This is the interface we will use for our single client interface
   std::unique_ptr<SimInterface> client_ifc_;
 
@@ -126,12 +123,6 @@ void ScanTest::StartScan() {
   scans_remaining_--;
 }
 
-void ScanTest::ReceiveNotification(void* payload) {
-  auto fn = static_cast<std::function<void()>*>(payload);
-  (*fn)();
-  delete fn;
-}
-
 // Keep track of which AP we received the scan result for, using the BSSID as a unique identifier.
 void ScanTest::OnScanResult(const wlanif_scan_result_t* result) {
   ASSERT_NE(result, nullptr);
@@ -149,9 +140,9 @@ void ScanTest::OnScanEnd(const wlanif_scan_end_t* end) {
   if (scans_remaining_ > 0) {
     // Schedule next scan
     ap_info_->beacons_seen_count_ = 0;
-    auto scan_handler = new std::function<void()>;
+    auto scan_handler = std::make_unique<std::function<void()>>();
     *scan_handler = std::bind(&ScanTest::StartScan, this);
-    env_->ScheduleNotification(this, kScanGapTime, scan_handler);
+    env_->ScheduleNotification(std::move(scan_handler), kScanGapTime);
   }
 }
 
@@ -166,14 +157,14 @@ TEST_F(ScanTest, PassiveDwellTime) {
   StartFakeAp(kDefaultBssid, kDefaultSsid, kDefaultChannel, kBeaconInterval);
 
   // Start scans
-  auto scan_handler = new std::function<void()>;
+  auto scan_handler = std::make_unique<std::function<void()>>();
   *scan_handler = std::bind(&ScanTest::StartScan, this);
-  env_->ScheduleNotification(this, kScanStartTime, scan_handler);
+  env_->ScheduleNotification(std::move(scan_handler), kScanStartTime);
 
   // Request a future notification so we can shut down the test
-  auto end_handler = new std::function<void()>;
+  auto end_handler = std::make_unique<std::function<void()>>();
   *end_handler = std::bind(&ScanTest::EndSimulation, this);
-  env_->ScheduleNotification(this, kDefaultTestDuration, end_handler);
+  env_->ScheduleNotification(std::move(end_handler), kDefaultTestDuration);
 
   env_->Run();
 

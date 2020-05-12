@@ -45,9 +45,6 @@ class PassiveScanTest : public SimTest {
   void OnScanEnd(const wlanif_scan_end_t* end);
 
  private:
-  // RxBeacon handler not needed because the test doesn't need to observe them
-  void ReceiveNotification(void* payload) override;
-
   // This is the interface we will use for our single client interface
   std::unique_ptr<SimInterface> client_ifc_;
 
@@ -112,12 +109,6 @@ void PassiveScanTest::StartScan() {
   scan_state_ = RUNNING;
 }
 
-void PassiveScanTest::ReceiveNotification(void* payload) {
-  auto fn = static_cast<std::function<void()>*>(payload);
-  (*fn)();
-  delete fn;
-}
-
 // Keep track of which AP we received the scan result for, using the BSSID as a unique identifier.
 void PassiveScanTest::OnScanResult(const wlanif_scan_result_t* result) {
   int matches_seen = 0;
@@ -179,14 +170,14 @@ TEST_F(PassiveScanTest, BasicFunctionality) {
   StartFakeAp(kDefaultBssid, kDefaultSsid, kDefaultChannel);
 
   // Request a future scan
-  auto scan_handler = new std::function<void()>;
+  auto scan_handler = std::make_unique<std::function<void()>>();
   *scan_handler = std::bind(&PassiveScanTest::StartScan, this);
-  env_->ScheduleNotification(this, kScanStartTime, scan_handler);
+  env_->ScheduleNotification(std::move(scan_handler), kScanStartTime);
 
   // Request a future notification so we can shut down the test
-  auto end_handler = new std::function<void()>;
+  auto end_handler = std::make_unique<std::function<void()>>();
   *end_handler = std::bind(&PassiveScanTest::EndSimulation, this);
-  env_->ScheduleNotification(this, kDefaultTestDuration, end_handler);
+  env_->ScheduleNotification(std::move(end_handler), kDefaultTestDuration);
 
   env_->Run();
 

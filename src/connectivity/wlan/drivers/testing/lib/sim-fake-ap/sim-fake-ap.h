@@ -98,7 +98,6 @@ class FakeAp : public StationIfc {
   // StationIfc operations - these are the functions that allow the simulated AP to be used
   // inside of a sim-env environment.
   void Rx(const SimFrame* frame, WlanRxInfo& info) override;
-  void ReceiveNotification(void* payload) override;
 
  private:
   void CancelNotification(uint64_t id);

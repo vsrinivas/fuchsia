@@ -21,7 +21,7 @@ void Environment::Run() {
     ZX_ASSERT(event->time >= time_);
     time_ = event->time;
     // Send event to client who requested it
-    event->requester->ReceiveNotification(event->payload);
+    (*(event->fn))();
   }
 }
 
@@ -40,8 +40,8 @@ void Environment::Tx(const SimFrame* frame, const WlanTxInfo& tx_info, StationIf
   }
 }
 
-zx_status_t Environment::ScheduleNotification(StationIfc* sta, zx::duration delay, void* payload,
-                                              uint64_t* id_out) {
+zx_status_t Environment::ScheduleNotification(std::unique_ptr<std::function<void()>> fn,
+                                              zx::duration delay, uint64_t* id_out) {
   uint64_t id = event_count_++;
 
   // Disallow past events
@@ -52,8 +52,7 @@ zx_status_t Environment::ScheduleNotification(StationIfc* sta, zx::duration dela
   auto event = std::make_unique<EnvironmentEvent>();
   event->id = id;
   event->time = time_ + delay;
-  event->requester = sta;
-  event->payload = payload;
+  event->fn = std::move(fn);
 
   // Keep our events sorted in ascending order of absolute time. When multiple events are
   // scheduled for the same time, the first requested will be processed first.
@@ -71,11 +70,9 @@ zx_status_t Environment::ScheduleNotification(StationIfc* sta, zx::duration dela
 }
 
 // Since all events are processed synchronously, we don't have to worry about locking.
-zx_status_t Environment::CancelNotification(StationIfc* sta, uint64_t id, void** payload_out) {
+zx_status_t Environment::CancelNotification(uint64_t id) {
   for (auto& event_iter : events_) {
-    if (event_iter->requester == sta && event_iter->id == id) {
-      if (payload_out != nullptr)
-        *payload_out = event_iter->payload;
+    if (event_iter->id == id) {
       events_.remove(event_iter);
       return ZX_OK;
     }

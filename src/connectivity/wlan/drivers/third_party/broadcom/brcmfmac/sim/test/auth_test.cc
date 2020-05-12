@@ -75,7 +75,6 @@ class AuthTest : public SimTest {
  private:
   // Stationifc overrides
   void Rx(const simulation::SimFrame* frame, simulation::WlanRxInfo& info) override;
-  void ReceiveNotification(void* payload) override;
 
   // SME callbacks
   static wlanif_impl_ifc_protocol_ops_t sme_ops_;
@@ -100,12 +99,6 @@ void AuthTest::Rx(const simulation::SimFrame* frame, simulation::WlanRxInfo& inf
   auto auth_frame = static_cast<const simulation::SimAuthFrame*>(mgmt_frame);
   auth_frame_count_++;
   rx_auth_frames_.emplace_back(auth_frame->seq_num_, auth_frame->auth_type_, auth_frame->status_);
-}
-
-void AuthTest::ReceiveNotification(void* payload) {
-  auto handler = static_cast<std::function<void()>*>(payload);
-  (*handler)();
-  delete handler;
 }
 
 wlanif_impl_ifc_protocol_ops_t AuthTest::sme_ops_ = {
@@ -189,9 +182,9 @@ void AuthTest::StartAuth() {
 void AuthTest::StopBeacon() { ap_.DisableBeacon(); }
 
 void AuthTest::ScheduleEvent(void (AuthTest::*fn)(), zx::duration delay) {
-  auto handler = new std::function<void()>;
+  auto handler = std::make_unique<std::function<void()>>();
   *handler = std::bind(fn, this);
-  env_->ScheduleNotification(this, delay, handler);
+  env_->ScheduleNotification(std::move(handler), delay);
 }
 
 void AuthTest::OnScanResult(const wlanif_scan_result_t* result) {

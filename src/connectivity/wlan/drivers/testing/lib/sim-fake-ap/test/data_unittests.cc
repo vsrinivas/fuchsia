@@ -40,8 +40,6 @@ class DataTest : public ::testing::Test, public simulation::StationIfc {
  private:
   // StationIfc methods
   void Rx(const simulation::SimFrame* frame, simulation::WlanRxInfo& info) override;
-
-  void ReceiveNotification(void* payload) override;
 };
 
 std::vector<uint8_t> DataTest::CreateEthernetFrame(common::MacAddr dstAddr, common::MacAddr srcAddr,
@@ -93,12 +91,6 @@ void DataTest::Rx(const simulation::SimFrame* frame, simulation::WlanRxInfo& inf
   }
 }
 
-void DataTest::ReceiveNotification(void* payload) {
-  auto handler = static_cast<std::function<void()>*>(payload);
-  (*handler)();
-  delete handler;
-}
-
 // Send a authentication request frame at the beginning to make the status for kSrcClientMacAddr is
 // AUTHENTICATED in AP.
 void DataTest::FinishAuth(common::MacAddr addr) {
@@ -114,9 +106,9 @@ void DataTest::FinishAssoc(common::MacAddr addr) {
 
 void DataTest::ScheduleTx(common::MacAddr apAddr, common::MacAddr srcAddr, common::MacAddr dstAddr,
                           std::vector<uint8_t>& ethFrame, zx::duration delay) {
-  auto handler = new std::function<void()>;
+  auto handler = std::make_unique<std::function<void()>>();
   *handler = std::bind(&DataTest::Tx, this, apAddr, srcAddr, dstAddr, ethFrame);
-  env_.ScheduleNotification(this, delay, static_cast<void*>(handler));
+  env_.ScheduleNotification(std::move(handler), delay);
 }
 
 void DataTest::Tx(common::MacAddr apAddr, common::MacAddr srcAddr, common::MacAddr dstAddr,

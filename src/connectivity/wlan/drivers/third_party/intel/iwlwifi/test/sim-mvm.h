@@ -37,7 +37,6 @@ class SimMvm : public ::wlan::simulation::StationIfc {
 
   // StationIfc operations
   void Rx(const simulation::SimFrame* frame, simulation::WlanRxInfo& info) override {}
-  void ReceiveNotification(void* payload) override {}
 
  private:
   // The buffer size should be determined by the max response size.

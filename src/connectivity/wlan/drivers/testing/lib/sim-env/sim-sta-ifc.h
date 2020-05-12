@@ -23,9 +23,6 @@ class StationIfc {
   // Handler for different frames.
   virtual void Rx(const SimFrame* frame, WlanRxInfo& info) = 0;
 
-  // Receive notification of a simulation event
-  virtual void ReceiveNotification(void* payload) = 0;
-
   // Change station's receiver sensitivity
   void setRxSensitivity(double rxSensitivity) { rx_sensitivity_ = rxSensitivity; }
 

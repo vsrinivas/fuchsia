@@ -34,7 +34,6 @@ class CreateSoftAPTest : public SimTest {
   void ScheduleCleanup(zx::duration when);
   void ScheduleVerifyAssoc(zx::duration when);
   void ScheduleVerifyDisassoc(zx::duration when);
-  void ReceiveNotification(void* payload) override;
   void CleanupInterface();
   void VerifyAssoc();
   void VerifyDisassoc();
@@ -228,27 +227,27 @@ void CreateSoftAPTest::TxDisassocReq() {
 }
 
 void CreateSoftAPTest::ScheduleAssocReq(zx::duration when) {
-  auto start_assoc_fn = new std::function<void()>;
+  auto start_assoc_fn = std::make_unique<std::function<void()>>();
   *start_assoc_fn = std::bind(&CreateSoftAPTest::TxAssocReq, this);
-  env_->ScheduleNotification(this, when, start_assoc_fn);
+  env_->ScheduleNotification(std::move(start_assoc_fn), when);
 }
 
 void CreateSoftAPTest::ScheduleAssocDisassocReq(zx::duration when) {
-  auto start_disassoc_fn = new std::function<void()>;
+  auto start_disassoc_fn = std::make_unique<std::function<void()>>();
   *start_disassoc_fn = std::bind(&CreateSoftAPTest::TxDisassocReq, this);
-  env_->ScheduleNotification(this, when, start_disassoc_fn);
+  env_->ScheduleNotification(std::move(start_disassoc_fn), when);
 }
 
 void CreateSoftAPTest::ScheduleVerifyAssoc(zx::duration when) {
-  auto verify_assoc_fn = new std::function<void()>;
+  auto verify_assoc_fn = std::make_unique<std::function<void()>>();
   *verify_assoc_fn = std::bind(&CreateSoftAPTest::VerifyAssoc, this);
-  env_->ScheduleNotification(this, when, verify_assoc_fn);
+  env_->ScheduleNotification(std::move(verify_assoc_fn), when);
 }
 
 void CreateSoftAPTest::ScheduleVerifyDisassoc(zx::duration when) {
-  auto verify_disassoc_fn = new std::function<void()>;
+  auto verify_disassoc_fn = std::make_unique<std::function<void()>>();
   *verify_disassoc_fn = std::bind(&CreateSoftAPTest::VerifyDisassoc, this);
-  env_->ScheduleNotification(this, when, verify_disassoc_fn);
+  env_->ScheduleNotification(std::move(verify_disassoc_fn), when);
 }
 
 void CreateSoftAPTest::VerifyAssoc() {
@@ -273,9 +272,9 @@ void CreateSoftAPTest::VerifyDisassoc() {
   ASSERT_EQ(num_clients, 0);
 }
 void CreateSoftAPTest::ScheduleCleanup(zx::duration when) {
-  auto cleanup_fn = new std::function<void()>;
+  auto cleanup_fn = std::make_unique<std::function<void()>>();
   *cleanup_fn = std::bind(&CreateSoftAPTest::CleanupInterface, this);
-  env_->ScheduleNotification(this, when, cleanup_fn);
+  env_->ScheduleNotification(std::move(cleanup_fn), when);
 }
 
 void CreateSoftAPTest::CleanupInterface() {
@@ -283,11 +282,6 @@ void CreateSoftAPTest::CleanupInterface() {
   DeleteInterface();
 }
 
-void CreateSoftAPTest::ReceiveNotification(void* payload) {
-  auto fn = static_cast<std::function<void()>*>(payload);
-  (*fn)();
-  delete fn;
-}
 TEST_F(CreateSoftAPTest, SetDefault) {
   Init();
   CreateInterface();
@@ -314,7 +308,7 @@ TEST_F(CreateSoftAPTest, CreateSecureSoftAP) {
   // Start SoftAP in secure mode
   StartSoftAP(true);
   StopSoftAP();
-// Restart SoftAP in open mode
+  // Restart SoftAP in open mode
   StartSoftAP(true);
   StopSoftAP();
   DeleteInterface();

@@ -79,11 +79,11 @@ class Environment {
 
   // Ask for a future notification, time is relative to current time. If 'id' is non-null, it will
   // be given a unique identifier for reference in future notification-related operations.
-  zx_status_t ScheduleNotification(StationIfc* sta, zx::duration delay, void* payload,
-                                   uint64_t* id_out = nullptr);
+  zx_status_t ScheduleNotification(std::unique_ptr<std::function<void()>> handler,
+                                   zx::duration delay, uint64_t* id_out = nullptr);
 
   // Cancel a future notification, return scheduled payload for station to handle
-  zx_status_t CancelNotification(StationIfc* sta, uint64_t id, void** payload_out = nullptr);
+  zx_status_t CancelNotification(uint64_t id);
 
   // Get simulation absolute time
   zx::time GetTime() { return time_; }
@@ -94,8 +94,7 @@ class Environment {
   struct EnvironmentEvent {
     uint64_t id;
     zx::time time;  // The absolute time to fire
-    StationIfc* requester;
-    void* payload;
+    std::unique_ptr<std::function<void()>> fn;
   };
 
   // All registered stations

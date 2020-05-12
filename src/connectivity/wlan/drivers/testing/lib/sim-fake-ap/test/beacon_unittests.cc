@@ -66,7 +66,6 @@ class BeaconTest : public ::testing::Test, public simulation::StationIfc {
 
  private:
   // StationIfc methods
-  void ReceiveNotification(void* payload) override;
   void Rx(const simulation::SimFrame* frame, simulation::WlanRxInfo& info) override;
 };
 
@@ -94,12 +93,6 @@ void BeaconTest::Rx(const simulation::SimFrame* frame, simulation::WlanRxInfo& i
   }
 }
 
-void BeaconTest::ReceiveNotification(void* payload) {
-  auto handler = static_cast<std::function<void()>*>(payload);
-  (*handler)();
-  delete handler;
-}
-
 // Some Useful defaults
 constexpr zx::duration kStartTime = zx::msec(50);
 constexpr zx::duration kEndTime = zx::sec(3);
@@ -111,18 +104,18 @@ constexpr wlan_ssid_t kDefaultSsid = {.ssid = "Fuchsia Fake AP", .len = 15};
 const common::MacAddr kDefaultBssid({0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc});
 
 void BeaconTest::ScheduleCall(void (BeaconTest::*fn)(), zx::duration when) {
-  auto cb_fn = new std::function<void()>;
+  auto cb_fn = std::make_unique<std::function<void()>>();
   *cb_fn = std::bind(fn, this);
-  env_.ScheduleNotification(this, when, cb_fn);
+  env_.ScheduleNotification(std::move(cb_fn), when);
 }
 
 void BeaconTest::ScheduleChannelSwitchCall(void (BeaconTest::*fn)(wlan_channel_t& channel,
                                                                   zx::duration& interval),
                                            zx::duration when, const wlan_channel_t& channel,
                                            const zx::duration& interval) {
-  auto cb_fn = new std::function<void()>;
+  auto cb_fn = std::make_unique<std::function<void()>>();
   *cb_fn = std::bind(fn, this, channel, interval);
-  env_.ScheduleNotification(this, when, cb_fn);
+  env_.ScheduleNotification(std::move(cb_fn), when);
 }
 
 void BeaconTest::ScheduleSetSecurityCall(
@@ -130,9 +123,9 @@ void BeaconTest::ScheduleSetSecurityCall(
     ieee80211_cipher_suite cipher) {
   simulation::FakeAp::Security sec = {.auth_handling_mode = simulation::AUTH_TYPE_OPEN,
                                       .cipher_suite = cipher};
-  auto cb_fn = new std::function<void()>;
+  auto cb_fn = std::make_unique<std::function<void()>>();
   *cb_fn = std::bind(fn, this, sec);
-  env_.ScheduleNotification(this, when, cb_fn);
+  env_.ScheduleNotification(std::move(cb_fn), when);
 }
 
 /*** StartStop test ***/

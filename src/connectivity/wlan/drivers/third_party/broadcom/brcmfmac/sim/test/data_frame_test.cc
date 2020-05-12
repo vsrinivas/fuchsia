@@ -154,7 +154,6 @@ class DataFrameTest : public SimTest {
  private:
   // StationIfc overrides
   void Rx(const simulation::SimFrame* frame, simulation::WlanRxInfo& info) override;
-  void ReceiveNotification(void* payload) override;
 
   // SME callbacks
   static wlanif_impl_ifc_protocol_ops_t sme_ops_;
@@ -246,9 +245,9 @@ void DataFrameTest::Finish() {
 }
 
 void DataFrameTest::ScheduleCall(void (DataFrameTest::*fn)(), zx::duration when) {
-  auto cb_fn = new std::function<void()>;
+  auto cb_fn = std::make_unique<std::function<void()>>();
   *cb_fn = std::bind(fn, this);
-  env_->ScheduleNotification(this, when, cb_fn);
+  env_->ScheduleNotification(std::move(cb_fn), when);
 }
 
 std::vector<uint8_t> DataFrameTest::CreateEthernetFrame(common::MacAddr dstAddr,
@@ -320,16 +319,16 @@ void DataFrameTest::StartAssoc() {
 }
 
 void DataFrameTest::ScheduleTx(std::vector<uint8_t>& ethFrame, zx::duration when) {
-  auto fn = new std::function<void()>;
+  auto fn = std::make_unique<std::function<void()>>();
   *fn = std::bind(&DataFrameTest::Tx, this, ethFrame);
-  env_->ScheduleNotification(this, when, fn);
+  env_->ScheduleNotification(std::move(fn), when);
 }
 
 void DataFrameTest::ScheduleEapolRequest(common::MacAddr dstAddr, common::MacAddr srcAddr,
                                          const std::vector<uint8_t>& eapol, zx::duration when) {
-  auto fn = new std::function<void()>;
+  auto fn = std::make_unique<std::function<void()>>();
   *fn = std::bind(&DataFrameTest::TxEapolRequest, this, dstAddr, srcAddr, eapol);
-  env_->ScheduleNotification(this, when, fn);
+  env_->ScheduleNotification(std::move(fn), when);
 }
 
 void DataFrameTest::TxComplete(void* ctx, zx_status_t status, ethernet_netbuf_t* netbuf) {
@@ -370,9 +369,9 @@ void DataFrameTest::TxEapolRequest(common::MacAddr dstAddr, common::MacAddr srcA
 
 void DataFrameTest::ScheduleClientTx(common::MacAddr dstAddr, common::MacAddr srcAddr,
                                      std::vector<uint8_t>& ethFrame, zx::duration when) {
-  auto fn = new std::function<void()>;
+  auto fn = std::make_unique<std::function<void()>>();
   *fn = std::bind(&DataFrameTest::ClientTx, this, dstAddr, srcAddr, ethFrame);
-  env_->ScheduleNotification(this, when, fn);
+  env_->ScheduleNotification(std::move(fn), when);
 }
 
 void DataFrameTest::ClientAuth() {
@@ -392,12 +391,6 @@ void DataFrameTest::ClientTx(common::MacAddr dstAddr, common::MacAddr srcAddr,
   env_->Tx(&dataFrame, kDefaultTxInfo, this);
 }
 
-void DataFrameTest::ReceiveNotification(void* payload) {
-  auto fn = static_cast<std::function<void()>*>(payload);
-  (*fn)();
-  delete fn;
-}
-
 void DataFrameTest::Rx(const simulation::SimFrame* frame, simulation::WlanRxInfo& info) {
   switch (frame->FrameType()) {
     case simulation::SimFrame::FRAME_TYPE_DATA: {
@@ -405,9 +398,9 @@ void DataFrameTest::Rx(const simulation::SimFrame* frame, simulation::WlanRxInfo
       if (data_frame->DataFrameType() == simulation::SimDataFrame::FRAME_TYPE_QOS_DATA) {
         auto qos_data_frame = static_cast<const simulation::SimQosDataFrame*>(data_frame);
         if (data_frame->addr1_ == recv_addr_capture_filter) {
-          env_data_frame_capture_.emplace_back(
-              qos_data_frame->toDS_, qos_data_frame->fromDS_, qos_data_frame->addr1_,
-              qos_data_frame->addr2_, qos_data_frame->addr3_, qos_data_frame->payload_);
+          env_data_frame_capture_.emplace_back(qos_data_frame->toDS_, qos_data_frame->fromDS_,
+                                               qos_data_frame->addr1_, qos_data_frame->addr2_,
+                                               qos_data_frame->addr3_, qos_data_frame->payload_);
         }
       }
       break;

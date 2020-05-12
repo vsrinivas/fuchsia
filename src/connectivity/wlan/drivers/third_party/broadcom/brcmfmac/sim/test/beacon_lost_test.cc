@@ -78,7 +78,6 @@ class BeaconLostTest : public SimTest {
  private:
   // StationIfc overrides
   void Rx(const simulation::SimFrame* frame, simulation::WlanRxInfo& info) override;
-  void ReceiveNotification(void* payload) override;
 
   // SME callbacks
   static wlanif_impl_ifc_protocol_ops_t sme_ops_;
@@ -126,12 +125,6 @@ wlanif_impl_ifc_protocol_ops_t BeaconLostTest::sme_ops_ = {
           // ignore
         },
 };
-
-void BeaconLostTest::ReceiveNotification(void* payload) {
-  auto fn = static_cast<std::function<void()>*>(payload);
-  (*fn)();
-  delete fn;
-}
 
 void BeaconLostTest::Rx(const simulation::SimFrame* frame, simulation::WlanRxInfo& info) {
   ASSERT_EQ(frame->FrameType(), simulation::SimFrame::FRAME_TYPE_MGMT);
@@ -200,9 +193,9 @@ void BeaconLostTest::StartAssoc() {
 }
 
 void BeaconLostTest::ScheduleCall(void (BeaconLostTest::*fn)(), zx::duration when) {
-  auto cb_fn = new std::function<void()>;
+  auto cb_fn = std::make_unique<std::function<void()>>();
   *cb_fn = std::bind(fn, this);
-  env_->ScheduleNotification(this, when, cb_fn);
+  env_->ScheduleNotification(std::move(cb_fn), when);
 }
 
 // Move the client (not the test)
@@ -226,9 +219,9 @@ TEST_F(BeaconLostTest, NoBeaconDisassocTest) {
   ScheduleCall(&BeaconLostTest::StartAssoc, zx::msec(10));
 
   // disable the beacon after association
-  auto cb_fn = new std::function<void()>;
+  auto cb_fn = std::make_unique<std::function<void()>>();
   *cb_fn = std::bind(&simulation::FakeAp::DisableBeacon, &ap);
-  env_->ScheduleNotification(this, zx::sec(1), cb_fn);
+  env_->ScheduleNotification(std::move(cb_fn), zx::sec(1));
 
   env_->Run();
 
@@ -261,9 +254,9 @@ TEST_F(BeaconLostTest, BeaconTooFarDisassocTest) {
   // Associate with fake AP
   ScheduleCall(&BeaconLostTest::StartAssoc, zx::msec(10));
   // Move away from the AP
-  auto cb_fn = new std::function<void()>;
+  auto cb_fn = std::make_unique<std::function<void()>>();
   *cb_fn = std::bind(&BeaconLostTest::MoveClient, this, 150, 0);
-  env_->ScheduleNotification(this, zx::sec(1), cb_fn);
+  env_->ScheduleNotification(std::move(cb_fn), zx::sec(1));
 
   env_->Run();
 
@@ -303,9 +296,9 @@ TEST_F(BeaconLostTest, WrongBeaconLossTest) {
   // Will associate with one AP
   ScheduleCall(&BeaconLostTest::StartAssoc, zx::msec(10));
   // Move away closer to the AP we are associated to. Should not impact connection.
-  auto cb_fn = new std::function<void()>;
+  auto cb_fn = std::make_unique<std::function<void()>>();
   *cb_fn = std::bind(&BeaconLostTest::MoveClient, this, -75, 0);
-  env_->ScheduleNotification(this, zx::sec(1), cb_fn);
+  env_->ScheduleNotification(std::move(cb_fn), zx::sec(1));
 
   env_->Run();
 
@@ -345,14 +338,14 @@ TEST_F(BeaconLostTest, TempBeaconLossTest) {
   // Will associate with one AP
   ScheduleCall(&BeaconLostTest::StartAssoc, zx::msec(10));
   // Move away from the AP we are associated to.
-  auto cb_fn = new std::function<void()>;
+  auto cb_fn = std::make_unique<std::function<void()>>();
   *cb_fn = std::bind(&BeaconLostTest::MoveClient, this, 100, 0);
-  env_->ScheduleNotification(this, zx::sec(1), cb_fn);
+  env_->ScheduleNotification(std::move(cb_fn), zx::sec(1));
 
   // A second later, move back
-  auto cb_fn2 = new std::function<void()>;
+  auto cb_fn2 = std::make_unique<std::function<void()>>();
   *cb_fn2 = std::bind(&BeaconLostTest::MoveClient, this, 0, 0);
-  env_->ScheduleNotification(this, zx::sec(2), cb_fn2);
+  env_->ScheduleNotification(std::move(cb_fn2), zx::sec(2));
 
   env_->Run();
 

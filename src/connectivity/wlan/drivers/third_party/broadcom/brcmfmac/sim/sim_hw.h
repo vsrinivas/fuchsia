@@ -47,13 +47,12 @@ class SimHardware : public simulation::StationIfc {
 
   void GetRevInfo(brcmf_rev_info_le* rev_info);
 
-  void RequestCallback(std::function<void()>* callback, zx::duration delay,
+  void RequestCallback(std::unique_ptr<std::function<void()>> callback, zx::duration delay,
                        uint64_t* id_out = nullptr);
   void CancelCallback(uint64_t id);
 
   // StationIfc methods
   void Rx(const simulation::SimFrame* frame, simulation::WlanRxInfo& info) override;
-  void ReceiveNotification(void* payload) override;
 
   // Operations that are forwarded to the environment
   void Tx(const simulation::SimFrame* frame);

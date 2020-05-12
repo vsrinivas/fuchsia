@@ -99,7 +99,6 @@ class DynamicIfTest : public SimTest {
   bool assoc_ind_recv_ = false;
   // StationIfc overrides
   void Rx(const simulation::SimFrame* frame, simulation::WlanRxInfo& info) override;
-  void ReceiveNotification(void* payload) override;
 
   // SME callbacks
   static wlanif_impl_ifc_protocol_ops_t sme_ops_;
@@ -195,12 +194,6 @@ zx_status_t DynamicIfTest::StartSoftAP() {
   return ZX_OK;
 }
 
-void DynamicIfTest::ReceiveNotification(void* payload) {
-  auto fn = static_cast<std::function<void()>*>(payload);
-  (*fn)();
-  delete fn;
-}
-
 void DynamicIfTest::Rx(const simulation::SimFrame* frame, simulation::WlanRxInfo& info) {
   ASSERT_EQ(frame->FrameType(), simulation::SimFrame::FRAME_TYPE_MGMT);
 
@@ -230,9 +223,9 @@ void DynamicIfTest::Finish() {
 }
 
 void DynamicIfTest::ScheduleTestEnd(zx::duration when) {
-  auto end_test_fn = new std::function<void()>;
+  auto end_test_fn = std::make_unique<std::function<void()>>();
   *end_test_fn = std::bind(&DynamicIfTest::Finish, this);
-  env_->ScheduleNotification(this, when, end_test_fn);
+  env_->ScheduleNotification(std::move(end_test_fn), when);
 }
 
 void DynamicIfTest::OnJoinConf(const wlanif_join_confirm_t* resp) {
@@ -268,15 +261,15 @@ void DynamicIfTest::StartAssoc() {
 }
 
 void DynamicIfTest::ScheduleAssocReq(zx::duration when) {
-  auto start_assoc_fn = new std::function<void()>;
+  auto start_assoc_fn = std::make_unique<std::function<void()>>();
   *start_assoc_fn = std::bind(&DynamicIfTest::StartAssoc, this);
-  env_->ScheduleNotification(this, when, start_assoc_fn);
+  env_->ScheduleNotification(std::move(start_assoc_fn), when);
 }
 
 void DynamicIfTest::ScheduleAssocWithSoftAP(zx::duration when) {
-  auto start_assoc_fn = new std::function<void()>;
+  auto start_assoc_fn = std::make_unique<std::function<void()>>();
   *start_assoc_fn = std::bind(&DynamicIfTest::TxAssocReq, this);
-  env_->ScheduleNotification(this, when, start_assoc_fn);
+  env_->ScheduleNotification(std::move(start_assoc_fn), when);
 }
 
 void DynamicIfTest::TxAssocReq() {
