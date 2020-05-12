@@ -76,11 +76,6 @@ class ParseResult {
                        error_node, frame_);
   }
 
-  // A null parse result for this position indicating no further error alternatives.
-  ParseResult End() {
-    return ParseResult(unit_, offset_, error_insert_, error_delete_, error_internal_);
-  }
-
   // Push a marker frame onto the stack. The next Reduce() call will reduce up to here.
   ParseResult Mark() {
     return ParseResult(unit_, offset_, error_insert_, error_delete_, error_internal_, nullptr,
@@ -110,6 +105,9 @@ class ParseResult {
   }
 
   operator bool() const { return frame_ != nullptr; }
+
+  // A null parse result indicating no further error alternatives.
+  static const ParseResult kEnd;
 
  private:
   friend class ParseResultStream;
@@ -186,7 +184,7 @@ class ParseResultStream {
   explicit ParseResultStream(ParseResult result)
       : ParseResultStream(/*ok=*/true, [result]() mutable {
           auto ret = result;
-          result = result.End();
+          result = ParseResult::kEnd;
           return ret;
         }) {}
 
@@ -241,7 +239,7 @@ ParseResult ParseResult::Reduce(bool pop_marker) {
   std::shared_ptr<Frame> cur;
 
   if (!frame_) {
-    return End();
+    return kEnd;
   }
 
   // We have a dummy marker frame at the bottom of the stack, so we'll always hit the end conditon

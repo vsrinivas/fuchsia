@@ -27,7 +27,7 @@ ParseResultStream FixedTextResult(ParseResult prefix, const std::string& ident, 
   return ParseResultStream(false, [prefix, size, ident, find = std::move(find), done = false,
                                    next = std::optional<ParseResult>()]() mutable {
     if (done) {
-      return prefix.End();
+      return ParseResult::kEnd;
     }
 
     if (next) {

@@ -7,6 +7,9 @@
 #include <deque>
 
 namespace shell::parser {
+
+const ParseResult ParseResult::kEnd("", 0, 0, 0, 0);
+
 namespace {
 
 // Helper class to allow us to fork ParseResultStreams. Forking a stream means we get two streams,
