@@ -455,6 +455,28 @@ void main(List<String> args) {
     expect(aggregatedResults[7].values[0], _closeTo(31.50));
   });
 
+  test('GPU metric', () async {
+    {
+      final model = createModelFromJsonString(gpuUtilizationTraceString);
+      final results = gpuMetricsProcessor(model, {});
+      expect(computeMean(results[0].values), _closeTo(20.43815763249877));
+    }
+
+    {
+      final model =
+          createModelFromJsonString(gpuUtilizationSubSecondTraceString);
+      final results = gpuMetricsProcessor(model, {});
+      expect(computeMean(results[0].values), _closeTo(80.0));
+    }
+
+    {
+      final model =
+          createModelFromJsonString(gpuUtilizationSuperSecondTraceString);
+      final results = gpuMetricsProcessor(model, {});
+      expect(computeMean(results[0].values), _closeTo(70.0));
+    }
+  });
+
   test('Temperature metric', () async {
     final model = createModelFromJsonString(testTemperatureMetricJsonString);
     final results = temperatureMetricsProcessor(model, {});
