@@ -225,6 +225,11 @@ void SdmmcBlockDevice::DdkUnbindNew(ddk::UnbindTxn txn) {
   txn.Reply();
 }
 
+void SdmmcBlockDevice::DdkSuspend(ddk::SuspendTxn txn) {
+  StopWorkerThread();
+  txn.Reply(ZX_OK, txn.requested_state());
+}
+
 void SdmmcBlockDevice::StopWorkerThread() {
   dead_ = true;
 
@@ -236,12 +241,12 @@ void SdmmcBlockDevice::StopWorkerThread() {
 
     thrd_join(worker_thread_, nullptr);
     worker_thread_ = 0;
+  }
 
-    // error out all pending requests
-    fbl::AutoLock lock(&lock_);
-    for (std::optional<BlockOperation> txn = txn_list_.pop(); txn; txn = txn_list_.pop()) {
-      BlockComplete(*txn, ZX_ERR_BAD_STATE);
-    }
+  // error out all pending requests
+  fbl::AutoLock lock(&lock_);
+  for (std::optional<BlockOperation> txn = txn_list_.pop(); txn; txn = txn_list_.pop()) {
+    BlockComplete(*txn, ZX_ERR_BAD_STATE);
   }
 }
 

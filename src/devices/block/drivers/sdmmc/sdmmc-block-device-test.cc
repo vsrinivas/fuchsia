@@ -686,6 +686,82 @@ TEST_F(SdmmcBlockDeviceTest, CompleteTransactions) {
   EXPECT_TRUE(op5->private_storage()->completed);
 }
 
+TEST_F(SdmmcBlockDeviceTest, CompleteTransactionsOnUnbind) {
+  AddDevice();
+  dut_.StopWorkerThread();  // Stop the worker thread so queued requests don't get completed.
+
+  std::optional<block::Operation<OperationContext>> op1;
+  ASSERT_NO_FATAL_FAILURES(MakeBlockOp(BLOCK_OP_WRITE, 1, 0, &op1));
+
+  std::optional<block::Operation<OperationContext>> op2;
+  ASSERT_NO_FATAL_FAILURES(MakeBlockOp(BLOCK_OP_WRITE, 5, 0x8000, &op2));
+
+  std::optional<block::Operation<OperationContext>> op3;
+  ASSERT_NO_FATAL_FAILURES(MakeBlockOp(BLOCK_OP_FLUSH, 0, 0, &op3));
+
+  std::optional<block::Operation<OperationContext>> op4;
+  ASSERT_NO_FATAL_FAILURES(MakeBlockOp(BLOCK_OP_READ, 1, 0x400, &op4));
+
+  std::optional<block::Operation<OperationContext>> op5;
+  ASSERT_NO_FATAL_FAILURES(MakeBlockOp(BLOCK_OP_READ, 10, 0x2000, &op5));
+
+  CallbackContext ctx(5);
+
+  user_.Queue(op1->operation(), OperationCallback, &ctx);
+  user_.Queue(op2->operation(), OperationCallback, &ctx);
+  user_.Queue(op3->operation(), OperationCallback, &ctx);
+  user_.Queue(op4->operation(), OperationCallback, &ctx);
+  user_.Queue(op5->operation(), OperationCallback, &ctx);
+
+  dut_.DdkUnbindNew(ddk::UnbindTxn(dut_.zxdev()));
+
+  EXPECT_OK(sync_completion_wait(&ctx.completion, zx::duration::infinite().get()));
+
+  EXPECT_TRUE(op1->private_storage()->completed);
+  EXPECT_TRUE(op2->private_storage()->completed);
+  EXPECT_TRUE(op3->private_storage()->completed);
+  EXPECT_TRUE(op4->private_storage()->completed);
+  EXPECT_TRUE(op5->private_storage()->completed);
+}
+
+TEST_F(SdmmcBlockDeviceTest, CompleteTransactionsOnSuspend) {
+  AddDevice();
+  dut_.StopWorkerThread();
+
+  std::optional<block::Operation<OperationContext>> op1;
+  ASSERT_NO_FATAL_FAILURES(MakeBlockOp(BLOCK_OP_WRITE, 1, 0, &op1));
+
+  std::optional<block::Operation<OperationContext>> op2;
+  ASSERT_NO_FATAL_FAILURES(MakeBlockOp(BLOCK_OP_WRITE, 5, 0x8000, &op2));
+
+  std::optional<block::Operation<OperationContext>> op3;
+  ASSERT_NO_FATAL_FAILURES(MakeBlockOp(BLOCK_OP_FLUSH, 0, 0, &op3));
+
+  std::optional<block::Operation<OperationContext>> op4;
+  ASSERT_NO_FATAL_FAILURES(MakeBlockOp(BLOCK_OP_READ, 1, 0x400, &op4));
+
+  std::optional<block::Operation<OperationContext>> op5;
+  ASSERT_NO_FATAL_FAILURES(MakeBlockOp(BLOCK_OP_READ, 10, 0x2000, &op5));
+
+  CallbackContext ctx(5);
+
+  user_.Queue(op1->operation(), OperationCallback, &ctx);
+  user_.Queue(op2->operation(), OperationCallback, &ctx);
+  user_.Queue(op3->operation(), OperationCallback, &ctx);
+  user_.Queue(op4->operation(), OperationCallback, &ctx);
+  user_.Queue(op5->operation(), OperationCallback, &ctx);
+
+  dut_.DdkSuspend(ddk::SuspendTxn(dut_.zxdev(), 0, false, 0));
+
+  EXPECT_OK(sync_completion_wait(&ctx.completion, zx::duration::infinite().get()));
+
+  EXPECT_TRUE(op1->private_storage()->completed);
+  EXPECT_TRUE(op2->private_storage()->completed);
+  EXPECT_TRUE(op3->private_storage()->completed);
+  EXPECT_TRUE(op4->private_storage()->completed);
+  EXPECT_TRUE(op5->private_storage()->completed);
+}
+
 TEST_F(SdmmcBlockDeviceTest, ProbeMmcSendStatusRetry) {
   sdmmc_.set_command_callback(MMC_SEND_EXT_CSD, [](sdmmc_req_t* req) {
     uint8_t* const ext_csd = reinterpret_cast<uint8_t*>(req->virt_buffer);

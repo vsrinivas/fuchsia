@@ -76,7 +76,7 @@ class PartitionDevice : public PartitionDeviceType,
 };
 
 class SdmmcBlockDevice;
-using SdmmcBlockDeviceType = ddk::Device<SdmmcBlockDevice, ddk::UnbindableNew>;
+using SdmmcBlockDeviceType = ddk::Device<SdmmcBlockDevice, ddk::UnbindableNew, ddk::Suspendable>;
 
 class SdmmcBlockDevice : public SdmmcBlockDeviceType {
  public:
@@ -95,6 +95,7 @@ class SdmmcBlockDevice : public SdmmcBlockDeviceType {
   zx_status_t AddDevice() TA_EXCL(lock_);
 
   void DdkUnbindNew(ddk::UnbindTxn txn);
+  void DdkSuspend(ddk::SuspendTxn txn);
   void DdkRelease() { delete this; }
 
   // Called by children of this device.
