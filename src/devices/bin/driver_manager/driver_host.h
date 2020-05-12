@@ -52,7 +52,7 @@ class DriverHost : public fbl::RefCounted<DriverHost>,
   zx_koid_t koid() const { return koid_; }
   // Note: this is a non-const reference to make |= etc. ergonomic.
   uint32_t& flags() { return flags_; }
-  fbl::DoublyLinkedList<Device*, Device::DriverHostNode>& devices() { return devices_; }
+  fbl::TaggedDoublyLinkedList<Device*, Device::DriverHostListTag>& devices() { return devices_; }
 
   // Returns a device id that will be unique within this driver_host.
   uint64_t new_device_id() { return next_device_id_++; }
@@ -70,7 +70,7 @@ class DriverHost : public fbl::RefCounted<DriverHost>,
   uint64_t next_device_id_ = 1;
 
   // list of all devices on this driver_host
-  fbl::DoublyLinkedList<Device*, Device::DriverHostNode> devices_;
+  fbl::TaggedDoublyLinkedList<Device*, Device::DriverHostListTag> devices_;
 };
 
 #endif  // SRC_DEVICES_BIN_DRIVER_MANAGER_DRIVER_HOST_H_

@@ -311,8 +311,11 @@ class Coordinator : public power_fidl::statecontrol::Admin::Interface,
 
   fbl::DoublyLinkedList<std::unique_ptr<Driver>>& drivers() { return drivers_; }
   const fbl::DoublyLinkedList<std::unique_ptr<Driver>>& drivers() const { return drivers_; }
-  fbl::DoublyLinkedList<fbl::RefPtr<Device>, Device::AllDevicesNode>& devices() { return devices_; }
-  const fbl::DoublyLinkedList<fbl::RefPtr<Device>, Device::AllDevicesNode>& devices() const {
+  fbl::TaggedDoublyLinkedList<fbl::RefPtr<Device>, Device::AllDevicesListTag>& devices() {
+    return devices_;
+  }
+  const fbl::TaggedDoublyLinkedList<fbl::RefPtr<Device>, Device::AllDevicesListTag>& devices()
+      const {
     return devices_;
   }
 
@@ -379,10 +382,10 @@ class Coordinator : public power_fidl::statecontrol::Admin::Interface,
   fbl::DoublyLinkedList<DriverHost*> driver_hosts_;
 
   // All Devices (excluding static immortal devices)
-  fbl::DoublyLinkedList<fbl::RefPtr<Device>, Device::AllDevicesNode> devices_;
+  fbl::TaggedDoublyLinkedList<fbl::RefPtr<Device>, Device::AllDevicesListTag> devices_;
 
   // All composite devices
-  fbl::DoublyLinkedList<std::unique_ptr<CompositeDevice>, CompositeDevice::Node> composite_devices_;
+  fbl::DoublyLinkedList<std::unique_ptr<CompositeDevice>> composite_devices_;
 
   fbl::RefPtr<Device> root_device_;
   fbl::RefPtr<Device> misc_device_;
@@ -404,7 +407,7 @@ class Coordinator : public power_fidl::statecontrol::Admin::Interface,
                   const zx_packet_signal_t* signal);
   async::WaitMethod<Coordinator, &Coordinator::OnOOMEvent> wait_on_oom_event_{this};
 
-  fbl::DoublyLinkedList<std::unique_ptr<Metadata>, Metadata::Node> published_metadata_;
+  fbl::DoublyLinkedList<std::unique_ptr<Metadata>> published_metadata_;
 
   // Once the special fragment driver is loaded, this will refer to it.  This
   // driver is used for binding against fragments of composite devices

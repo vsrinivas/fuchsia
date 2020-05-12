@@ -11,14 +11,7 @@
 
 #include <fbl/intrusive_double_list.h>
 
-struct Metadata {
-  fbl::DoublyLinkedListNodeState<std::unique_ptr<Metadata>> node;
-  struct Node {
-    static fbl::DoublyLinkedListNodeState<std::unique_ptr<Metadata>>& node_state(Metadata& obj) {
-      return obj.node;
-    }
-  };
-
+struct Metadata : public fbl::DoublyLinkedListable<std::unique_ptr<Metadata>> {
   uint32_t type;
   uint32_t length;
   bool has_path;  // zero terminated string starts at data[length]

@@ -81,10 +81,26 @@ constexpr zx::duration kDefaultTestTimeout = zx::sec(5);
 
 // clang-format on
 
-class Device : public fbl::RefCounted<Device>,
-               public llcpp::fuchsia::device::manager::Coordinator::Interface,
-               public AsyncLoopRefCountedRpcHandler<Device> {
+// Tags used for container membership identification
+namespace internal {
+struct DeviceChildListTag {};
+struct DeviceDriverHostListTag {};
+struct DeviceAllDevicesListTag {};
+}  // namespace internal
+
+class Device
+    : public fbl::RefCounted<Device>,
+      public llcpp::fuchsia::device::manager::Coordinator::Interface,
+      public AsyncLoopRefCountedRpcHandler<Device>,
+      public fbl::ContainableBaseClasses<
+          fbl::TaggedDoublyLinkedListable<Device*, internal::DeviceChildListTag>,
+          fbl::TaggedDoublyLinkedListable<Device*, internal::DeviceDriverHostListTag>,
+          fbl::TaggedDoublyLinkedListable<fbl::RefPtr<Device>, internal::DeviceAllDevicesListTag>> {
  public:
+  using ChildListTag = internal::DeviceChildListTag;
+  using DriverHostListTag = internal::DeviceDriverHostListTag;
+  using AllDevicesListTag = internal::DeviceAllDevicesListTag;
+
   void AddDevice(::zx::channel coordinator, ::zx::channel device_controller,
                  ::fidl::VectorView<llcpp::fuchsia::device::manager::DeviceProperty> props,
                  ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path,
@@ -117,23 +133,6 @@ class Device : public fbl::RefCounted<Device>,
                              RunCompatibilityTestsCompleter::Sync _completer) override;
   void DirectoryWatch(uint32_t mask, uint32_t options, ::zx::channel watcher,
                       DirectoryWatchCompleter::Sync _completer) override;
-
-  // Node for entry in device child list
-  struct Node {
-    static fbl::DoublyLinkedListNodeState<Device*>& node_state(Device& obj) { return obj.node_; }
-  };
-
-  struct DriverHostNode {
-    static fbl::DoublyLinkedListNodeState<Device*>& node_state(Device& obj) {
-      return obj.driver_host_node_;
-    }
-  };
-
-  struct AllDevicesNode {
-    static fbl::DoublyLinkedListNodeState<fbl::RefPtr<Device>>& node_state(Device& obj) {
-      return obj.all_devices_node_;
-    }
-  };
 
   // This iterator provides access to a list of devices that does not provide
   // mechanisms for mutating that list.  With this, a user can get mutable
@@ -236,8 +235,8 @@ class Device : public fbl::RefCounted<Device>,
       }
     }
 
-    using Composite = fbl::DoublyLinkedList<CompositeDeviceFragment*,
-                                            CompositeDeviceFragment::DeviceNode>::iterator;
+    using Composite = fbl::TaggedDoublyLinkedList<CompositeDeviceFragment*,
+                                                  CompositeDeviceFragment::DeviceListTag>::iterator;
     struct Done {
       bool operator==(Done) const { return true; }
     };
@@ -292,9 +291,10 @@ class Device : public fbl::RefCounted<Device>,
   // children are allowed to be mutated.  We manage this by making the
   // iterator opaque.
   using NonConstChildListIterator =
-      ChildListIterator<fbl::DoublyLinkedList<Device*, Node>::iterator, Device>;
+      ChildListIterator<fbl::TaggedDoublyLinkedList<Device*, ChildListTag>::iterator, Device>;
   using ConstChildListIterator =
-      ChildListIterator<fbl::DoublyLinkedList<Device*, Node>::const_iterator, const Device>;
+      ChildListIterator<fbl::TaggedDoublyLinkedList<Device*, ChildListTag>::const_iterator,
+                        const Device>;
   using NonConstChildListIteratorFactory =
       ChildListIteratorFactory<Device, NonConstChildListIterator>;
   using ConstChildListIteratorFactory =
@@ -367,7 +367,7 @@ class Device : public fbl::RefCounted<Device>,
   void push_fragment(CompositeDeviceFragment* fragment) { fragments_.push_back(fragment); }
   bool is_fragments_empty() { return fragments_.is_empty(); }
 
-  fbl::DoublyLinkedList<CompositeDeviceFragment*, CompositeDeviceFragment::DeviceNode>&
+  fbl::TaggedDoublyLinkedList<CompositeDeviceFragment*, CompositeDeviceFragment::DeviceListTag>&
   fragments() {
     return fragments_;
   }
@@ -386,9 +386,7 @@ class Device : public fbl::RefCounted<Device>,
   const fbl::RefPtr<DriverHost>& host() const { return host_; }
   uint64_t local_id() const { return local_id_; }
 
-  const fbl::DoublyLinkedList<std::unique_ptr<Metadata>, Metadata::Node>& metadata() const {
-    return metadata_;
-  }
+  const fbl::DoublyLinkedList<std::unique_ptr<Metadata>>& metadata() const { return metadata_; }
   void AddMetadata(std::unique_ptr<Metadata> md) { metadata_.push_front(std::move(md)); }
 
   // Creates the init task for the device.
@@ -562,25 +560,17 @@ class Device : public fbl::RefCounted<Device>,
 
   async::TaskClosure publish_task_;
 
-  // listnode for this device in its parent's list-of-children
-  fbl::DoublyLinkedListNodeState<Device*> node_;
-
   // List of all child devices of this device, except for composite devices.
   // Composite devices are excluded because their multiple-parent nature
   // precludes using the same intrusive nodes as single-parent devices.
-  fbl::DoublyLinkedList<Device*, Node> children_;
+  fbl::TaggedDoublyLinkedList<Device*, ChildListTag> children_;
 
   // Metadata entries associated to this device.
-  fbl::DoublyLinkedList<std::unique_ptr<Metadata>, Metadata::Node> metadata_;
-
-  // listnode for this device in the all devices list
-  fbl::DoublyLinkedListNodeState<fbl::RefPtr<Device>> all_devices_node_;
-
-  // listnode for this device in its driver_host's list-of-devices
-  fbl::DoublyLinkedListNodeState<Device*> driver_host_node_;
+  fbl::DoublyLinkedList<std::unique_ptr<Metadata>> metadata_;
 
   // list of all fragments that this device bound to.
-  fbl::DoublyLinkedList<CompositeDeviceFragment*, CompositeDeviceFragment::DeviceNode> fragments_;
+  fbl::TaggedDoublyLinkedList<CompositeDeviceFragment*, CompositeDeviceFragment::DeviceListTag>
+      fragments_;
 
   // - If this device is part of a composite device, this is inhabited by
   //   CompositeDeviceFragment* and it points to the fragment that matched it.

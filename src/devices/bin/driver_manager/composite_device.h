@@ -28,12 +28,26 @@ struct FragmentPartDescriptor {
   fbl::Array<const zx_bind_inst_t> match_program;
 };
 
+// Tags used for container membership identification
+namespace internal {
+struct CdfListTag {};
+struct CdfDeviceListTag {};
+}  // namespace internal
+
 // A single device that is part of a composite device.
 // TODO(teisenbe): Should this just be an inner-class of CompositeDevice?
-class CompositeDeviceFragment {
+class CompositeDeviceFragment
+    : public fbl::ContainableBaseClasses<
+          fbl::TaggedDoublyLinkedListable<std::unique_ptr<CompositeDeviceFragment>,
+                                          internal::CdfListTag,
+                                          fbl::NodeOptions::AllowMultiContainerUptr>,
+          fbl::TaggedDoublyLinkedListable<CompositeDeviceFragment*, internal::CdfDeviceListTag>> {
  public:
+  using ListTag = internal::CdfListTag;
+  using DeviceListTag = internal::CdfDeviceListTag;
+
   CompositeDeviceFragment(CompositeDevice* composite, uint32_t index,
-                           fbl::Array<const FragmentPartDescriptor> parts);
+                          fbl::Array<const FragmentPartDescriptor> parts);
 
   CompositeDeviceFragment(CompositeDeviceFragment&&) = delete;
   CompositeDeviceFragment& operator=(CompositeDeviceFragment&&) = delete;
@@ -63,23 +77,6 @@ class CompositeDeviceFragment {
   // "fragment" driver) that bound to bound_device().
   void set_fragment_device(fbl::RefPtr<Device> device) { fragment_device_ = std::move(device); }
 
-  // Used for embedding a fragment in the CompositeDevice's bound and unbound
-  // lists.
-  struct Node {
-    static fbl::DoublyLinkedListNodeState<std::unique_ptr<CompositeDeviceFragment>>& node_state(
-        CompositeDeviceFragment& obj) {
-      return obj.node_;
-    }
-  };
-
-  // Used for embedding this fragment in the bound_device's fragments' list.
-  struct DeviceNode {
-    static fbl::DoublyLinkedListNodeState<CompositeDeviceFragment*>& node_state(
-        CompositeDeviceFragment& obj) {
-      return obj.device_node_;
-    }
-  };
-
  private:
   // The CompositeDevice that this is a part of
   CompositeDevice* const composite_;
@@ -96,13 +93,10 @@ class CompositeDeviceFragment {
   // Once the bound device has the fragment driver attach to it, this points
   // to the device managed by the fragment driver.
   fbl::RefPtr<Device> fragment_device_ = nullptr;
-
-  fbl::DoublyLinkedListNodeState<std::unique_ptr<CompositeDeviceFragment>> node_;
-  fbl::DoublyLinkedListNodeState<CompositeDeviceFragment*> device_node_;
 };
 
 // A device composed of other devices.
-class CompositeDevice {
+class CompositeDevice : public fbl::DoublyLinkedListable<std::unique_ptr<CompositeDevice>> {
  public:
   // Only public because of make_unique.  You probably want Create().
   CompositeDevice(fbl::String name, fbl::Array<const zx_device_prop_t> properties,
@@ -152,16 +146,8 @@ class CompositeDevice {
   // is invoked after this, it will reassemble the device.
   void Remove();
 
-  // Node for list of composite devices the coordinator knows about
-  struct Node {
-    static fbl::DoublyLinkedListNodeState<std::unique_ptr<CompositeDevice>>& node_state(
-        CompositeDevice& obj) {
-      return obj.node_;
-    }
-  };
-
-  using FragmentList = fbl::DoublyLinkedList<std::unique_ptr<CompositeDeviceFragment>,
-                                              CompositeDeviceFragment::Node>;
+  using FragmentList = fbl::TaggedDoublyLinkedList<std::unique_ptr<CompositeDeviceFragment>,
+                                                   CompositeDeviceFragment::ListTag>;
   FragmentList& bound_fragments() { return bound_; }
 
  private:
@@ -173,7 +159,6 @@ class CompositeDevice {
 
   FragmentList unbound_;
   FragmentList bound_;
-  fbl::DoublyLinkedListNodeState<std::unique_ptr<CompositeDevice>> node_;
 
   // Once the composite has been assembled, this refers to the constructed
   // device.
