@@ -9,15 +9,4 @@ definitions under test, for reference.
 On the other hand, certain FIDL constructs are used in the higher layers, but are not supported
 by the C bindings right now, e.g. tables. `fidlc` is able to generate the coding tables for FIDL
 tables, but cannot generate their binding APIs. In order to unit test the table code paths, we will
-generate and check in their coding tables `extra_messages.cc` from `extra_messages.test.fidl`.
-
-The command to generate the contents of generated is:
-
-```bash
-fx build
-fx exec zircon/system/utest/fidl/gen.sh
-```
-
-The manual generation/checking-in should go away once we have a more flexible build process that
-allows a test to declare dependency only on the coding tables, not the C client/server bindings.
-Alternatively we could add tables support to C/low-level C++ bindings (FIDL-431).
+generate and check in their LLCPP bindings `extra_messages.h` from `extra_messages.test.fidl`.

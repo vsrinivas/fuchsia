@@ -141,6 +141,7 @@ fx set terminal.x64 --with //bundles:kitchen_sink \
 To symbolize backtraces, you'll need a symbolizer in scope:
 
 ```sh
+HOST_PLATFORM=linux-x64  # or mac-x64
 export ASAN_SYMBOLIZER_PATH="$FUCHSIA_DIR/prebuilt/third_party/clang/$HOST_PLATFORM/bin/llvm-symbolizer"
 ```
 
@@ -160,11 +161,14 @@ fx set core.x64 --variant=host_asan
 fx build zircon/tools
 ```
 
-If you're doing extensive edit-compile-test cycles on `fidlc`, building with no optimizations can
-make a significant difference in the build speed. To optimize the build, change the `opt_level`
-setting in `zircon/public/gn/config/levels.gni`. But be careful: the kernel is not regularly
-tested with `opt_level` below 2, and it does not support -1 at all (this setting can cause kernel
-panics from stack overflows in the kernel).
+If you're doing extensive edit-compile-test cycles on `fidlc`, building with
+fewer optimizations can make a significant difference in the build speed. To do
+this, change the `optimization` setting in `zircon/public/gn/config/levels.gni`
+from `default` to `debug` or `none`.
+
+Warning: The kernel is not regularly tested with `debug`, and only supports
+`none` for building. Running with `none` can cause kernel panics from stack
+overflows in the kernel.
 
 To avoid accidentally committing this change, run:
 
@@ -185,26 +189,26 @@ git update-index --no-skip-worktree zircon/public/gn/config/levels.gni
 * [//zircon/system/utest/fidl-compiler/][fidlc-compiler-tests].
 * [//zircon/system/utest/fidl/][fidlc-tests].
 * [//src/lib/fidl/c/coding_tables_tests/][fidlc-coding-tables-tests].
-* [//src/lib/fidl/c/simple_tests][fidl-simple](C runtime tests).
+* [//src/lib/fidl/c/simple_tests][fidl-simple] (C runtime tests).
 
 To build and run `fidlc` tests:
 
 ```sh
-fx build system/utest:host
+fx build zircon/tests
 $FUCHSIA_DIR/out/default.zircon/host-x64-linux-clang/obj/system/utest/fidl-compiler/fidl-compiler-test.debug
 ```
 
 To run a specific test case, use the `--case` flag:
 
 ```sh
-fx build system/utest:host
+fx build zircon/tests
 $FUCHSIA_DIR/out/default.zircon/host-x64-linux-clang/obj/system/utest/fidl-compiler/fidl-compiler-test.debug -- --case attributes_tests
 ```
 
 Alternatively, it is faster to invoke ninja targets directly:
 
 ```sh
-ninja -C out/default.zircon \
+fx ninja -C out/default.zircon \
     host-x64-linux-clang/obj/tools/fidl/fidlc \
     host-x64-linux-clang/obj/system/utest/fidl-compiler/fidl-compiler-test
 
@@ -220,16 +224,6 @@ target, or `/system` when you the `core.x64` target.
 fx set bringup.x64 --with-base //garnet/packages/tests:zircon   # optionally append "--variant asan"
 fx build
 fx qemu -k -c zircon.autorun.boot=/boot/bin/runtests+-t+fidl-coding-tables-test
->>>>>>> 6a061a72892... [fidl] Direct ninja targets for fidlc workflow
-```
-
-To regenerate the FIDL definitions used in unit testing, run:
-
-```sh
-fx build zircon/tools
-$FUCHSIA_DIR/out/default.zircon/tools/fidlc \
-  --tables $FUCHSIA_DIR/zircon/system/utest/fidl/fidl/extra_messages.cc \
-  --files $FUCHSIA_DIR/zircon/system/utest/fidl/fidl/extra_messages.test.fidl
 ```
 
 To regenerate the `fidlc` JSON goldens, ensure `fidlc` is built and up to date,
@@ -508,7 +502,7 @@ During this transition, benchmarks should be integrated in both systems.
 Ensure that the benchmarks are included in your build:
 
 ```
-fx set core.x64 --with=//src/tests/benchmarks
+fx set core.x64 --with //src/tests/benchmarks
 ```
 
 You will need to `fx build` and restart `qemu` for the packages to be
@@ -529,7 +523,7 @@ Available benchmarks:
 Ensure that the benchmarks are included in your build:
 
 ```
-fx set core.x64 --with=//src/tests/benchmarks
+fx set core.x64 --with //src/tests/benchmarks
 ```
 
 You will need to `fx build` and restart `qemu` for the packages to be
@@ -724,7 +718,6 @@ fidl fmt --library my_library.fidl -i
 [rtl-dart]: https://fuchsia.googlesource.com/topaz/+/master/public/dart/fidl/
 [rtl-go]: https://fuchsia.googlesource.com/third_party/go/+/master/src/syscall/zx/fidl/
 [rtl-rust]: /src/lib/fidl/rust/fidl/
-[rtl-js]: https://chromium.googlesource.com/chromium/src/+/master/build/fuchsia/fidlgen_js/runtime/
 [getting_started]: /docs/getting_started.md
 [compat_readme]: /garnet/public/lib/fidl/compatibility_test/README.md
 [go-test-flags]: https://golang.org/cmd/go/#hdr-Testing_flags
