@@ -19,13 +19,28 @@ rustc_test("fuchsia_inspect_derive_tests") {
   ]
 }
 
+rustc_test("fuchsia_inspect_derive_import_tests") {
+  edition = "2018"
+  source_root = "src/import.rs"
+
+  deps = [ "//src/lib/inspect/rust/fuchsia-inspect-derive" ]
+}
+
 test_package("fuchsia-inspect-derive-tests") {
-  deps = [ ":fuchsia_inspect_derive_tests" ]
+  deps = [
+    ":fuchsia_inspect_derive_import_tests",
+    ":fuchsia_inspect_derive_tests",
+  ]
 
   tests = [
     {
       name = "fuchsia_inspect_derive_tests"
       dest = "fuchsia-inspect-derive-tests"
+      environments = basic_envs
+    },
+    {
+      name = "fuchsia_inspect_derive_import_tests"
+      dest = "fuchsia-inspect-derive-import-tests"
       environments = basic_envs
     },
   ]

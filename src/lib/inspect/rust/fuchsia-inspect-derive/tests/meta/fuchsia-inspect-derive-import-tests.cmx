@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "test/fuchsia-inspect-derive-import-tests"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}

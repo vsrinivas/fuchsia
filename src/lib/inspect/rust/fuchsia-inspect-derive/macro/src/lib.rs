@@ -64,12 +64,12 @@ impl UnitField {
 
     /// Creates a single field assignment for the inspect data struct initialization.
     ///
-    /// Note that the local variable `_inspect_node` must be defined.
+    /// Note that the local variable `inspect_node` must be defined.
     fn create_struct_expr(&self) -> TokenStream {
         let literal = self.literal();
         let name = &self.name;
         let unit = self.unit_path();
-        quote! { #name: #unit::inspect_create(&self.#name, &_inspect_node, #literal) }
+        quote! { #name: #unit::inspect_create(&self.#name, &inspect_node, #literal) }
     }
 
     /// Creates a single field update assignment statement.
@@ -328,7 +328,7 @@ fn derive_unit_inner(ast: DeriveInput) -> Result<TokenStream, Error> {
         #[derive(Default)]
         struct #inspect_data_ident {
             #(#struct_decls,)*
-            _inspect_node: ::fuchsia_inspect::Node,
+            inspect_node: ::fuchsia_inspect_derive::InspectNode,
         }
 
         impl #impl_generics ::fuchsia_inspect_derive::Unit for #name #ty_generics #where_clause {
@@ -337,13 +337,13 @@ fn derive_unit_inner(ast: DeriveInput) -> Result<TokenStream, Error> {
 
             fn inspect_create(
                 &self,
-                parent: &::fuchsia_inspect::Node,
+                parent: &::fuchsia_inspect_derive::InspectNode,
                 name: impl AsRef<str>
             ) -> Self::Data {
-                let _inspect_node = parent.create_child(name);
+                let inspect_node = parent.create_child(name);
                 #inspect_data_ident {
                     #(#create_struct_exprs,)*
-                    _inspect_node,
+                    inspect_node,
                 }
             }
 
@@ -436,7 +436,7 @@ fn derive_inspect_inner(ast: DeriveInput) -> Result<TokenStream, Error> {
         {
             fn iattach(
                 self,
-                parent: &::fuchsia_inspect::Node,
+                parent: &::fuchsia_inspect_derive::InspectNode,
                 name: impl AsRef<str>
             ) -> std::result::Result<(), fuchsia_inspect_derive::AttachError> {
                 #node_setup_stmt

@@ -18,6 +18,12 @@ use fuchsia_inspect::{
 pub use inspect::{AttachError, Inspect, WithInspect};
 use std::marker::PhantomData;
 
+/// Re-export Node, used by the procedural macros in order to get a canonical,
+/// stable import path. User code does not need `fuchsia_inspect` in their
+/// namespace.
+#[doc(hidden)]
+pub use fuchsia_inspect::Node as InspectNode;
+
 /// The `Unit` derive macro can be applied to named structs in order to generate an
 /// implementation of the `Unit` trait. The name of the field corresponds to the
 /// inspect node or property name, and the type of the field must also implement `Unit`.
