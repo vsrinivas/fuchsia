@@ -14,9 +14,6 @@ zx_test("stdio") {
     "$zx/system/ulib/test-utils",
     "$zx/system/ulib/unittest",
     "$zx/system/ulib/zircon",
-
-    # For unittests of _impl.h headers.
-    "$zx/third_party/ulib/musl:musl_internal_testing",
   ]
 
   # TODO(47392): Fix the leaks and remove this.

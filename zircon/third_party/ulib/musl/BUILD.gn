@@ -41,7 +41,7 @@ group("musl_internal_testing") {
   visibility = [
     "./*",
     "$zx/system/ulib/c/*",
-    "$zx/system/utest/stdio:*",
+    "$zx/system/utest/libc:*",
     "$zx/third_party/ulib/$malloc:*",
   ]
   public_deps = [ ":musl_internal" ]
