@@ -1,0 +1,7 @@
+{
+  "Pkg": "eth",
+  "Handler": "Handler",
+  "Entries": "Entries",
+  "EntryType": "FifoEntry",
+  "Signal": true
+}

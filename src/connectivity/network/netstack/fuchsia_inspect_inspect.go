@@ -406,26 +406,26 @@ func (impl *ethInfoInspectImpl) GetChild(childName string) inspectInner {
 	case rxReads:
 		return &fifoStatsInspectImpl{
 			name:  childName,
-			value: impl.value.Stats.Rx.Reads,
-			size:  impl.value.Stats.Rx.Size(),
+			value: impl.value.RxStats().Reads,
+			size:  impl.value.RxStats().Size(),
 		}
 	case rxWrites:
 		return &fifoStatsInspectImpl{
 			name:  childName,
-			value: impl.value.Stats.Rx.Writes,
-			size:  impl.value.Stats.Rx.Size(),
+			value: impl.value.RxStats().Writes,
+			size:  impl.value.RxStats().Size(),
 		}
 	case txReads:
 		return &fifoStatsInspectImpl{
 			name:  childName,
-			value: impl.value.Stats.Tx.Reads,
-			size:  impl.value.Stats.Tx.Size(),
+			value: impl.value.TxStats().Reads,
+			size:  impl.value.TxStats().Size(),
 		}
 	case txWrites:
 		return &fifoStatsInspectImpl{
 			name:  childName,
-			value: impl.value.Stats.Tx.Writes,
-			size:  impl.value.Stats.Tx.Size(),
+			value: impl.value.TxStats().Writes,
+			size:  impl.value.TxStats().Size(),
 		}
 	default:
 		return nil

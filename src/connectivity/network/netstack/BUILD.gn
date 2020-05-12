@@ -10,6 +10,7 @@ import("//build/package.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 import("//third_party/cobalt/metrics_registry.gni")
+import("gentool/generated.gni")
 
 package("netstack") {
   deps = [ "//garnet/go/src/grand_unified_binary" ]
@@ -114,10 +115,27 @@ test_package("netstack_gotests") {
   ]
 }
 
+generated_go("netstack_gen") {
+  definitions = [
+    {
+      src = "link/eth/handler.json"
+      package = "link/eth"
+      template = "link/fifo/gen/handler.tmpl"
+      copy = [ "link/fifo/gen/fifo_entry.go" ]
+    },
+    {
+      src = "link/eth/entries.json"
+      package = "link/eth"
+      template = "link/fifo/gen/entries.tmpl"
+    },
+  ]
+}
+
 go_library("netstack_lib") {
   name = "netstack"
 
   deps = [
+    ":netstack_gen",
     ":networking_metrics_golib",
     "//garnet/go/src/fidlext/fuchsia/hardware/ethernet:fidlext_fuchsia_hardware_ethernet_fake_lib($go_toolchain)",
     "//sdk/fidl/fuchsia.hardware.ethernet($go_toolchain)",
@@ -168,9 +186,22 @@ go_test("netstack_link_eth_test") {
   deps = [ ":netstack_lib" ]
 }
 
+generated_go("entries_gen_test") {
+  definitions = [
+    {
+      src = "link/fifo/test_entries.json"
+      package = "entries"
+      template = "link/fifo/gen/entries.tmpl"
+    },
+  ]
+}
+
 go_test("netstack_link_fifo_test") {
   gopackages = [ "netstack/link/fifo" ]
-  deps = [ ":netstack_lib" ]
+  deps = [
+    ":entries_gen_test",
+    ":netstack_lib",
+  ]
 }
 
 go_test("netstack_test") {

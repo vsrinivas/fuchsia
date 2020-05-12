@@ -15,6 +15,8 @@ import (
 	"unsafe"
 
 	"netstack/link/eth"
+	"netstack/link/fifo"
+	eth_gen "netstack_gen/link/eth"
 
 	"fidl/fuchsia/hardware/ethernet"
 	ethernetext "fidlext/fuchsia/hardware/ethernet"
@@ -46,7 +48,7 @@ func (ch *dispatcherChan) DeliverNetworkPacket(_ stack.LinkEndpoint, srcLinkAddr
 	}
 }
 
-func fifoReadsTransformer(in eth.FifoStats) []uint64 {
+func fifoReadsTransformer(in *fifo.FifoStats) []uint64 {
 	reads := make([]uint64, in.Size())
 	for i := in.Size(); i > 0; i-- {
 		reads[i-1] = in.Reads(i).Value()
@@ -54,7 +56,7 @@ func fifoReadsTransformer(in eth.FifoStats) []uint64 {
 	return reads
 }
 
-func fifoWritesTransformer(in eth.FifoStats) []uint64 {
+func fifoWritesTransformer(in *fifo.FifoStats) []uint64 {
 	writes := make([]uint64, in.Size())
 	for i := in.Size(); i > 0; i-- {
 		writes[i-1] = in.Writes(i).Value()
@@ -63,12 +65,12 @@ func fifoWritesTransformer(in eth.FifoStats) []uint64 {
 }
 
 func cycleTX(txFifo zx.Handle, size uint32, iob eth.IOBuffer, fn func([]byte)) error {
-	b := make([]eth.FifoEntry, size)
+	b := make([]eth_gen.FifoEntry, size)
 	for toRead := size; toRead != 0; {
 		if _, err := zxwait.Wait(txFifo, zx.SignalFIFOReadable, zx.TimensecInfinite); err != nil {
 			return err
 		}
-		status, read := eth.FifoRead(txFifo, b)
+		status, read := eth_gen.FifoRead(txFifo, b)
 		if status != zx.ErrOk {
 			return &zx.Error{Status: status, Text: "FifoRead"}
 		}
@@ -78,7 +80,7 @@ func cycleTX(txFifo zx.Handle, size uint32, iob eth.IOBuffer, fn func([]byte)) e
 			}
 		}
 		toRead -= read
-		status, wrote := eth.FifoWrite(txFifo, b[:read])
+		status, wrote := eth_gen.FifoWrite(txFifo, b[:read])
 		if status != zx.ErrOk {
 			return &zx.Error{Status: status, Text: "FifoWrite"}
 		}
@@ -98,7 +100,7 @@ func checkTXDone(txFifo zx.Handle) error {
 }
 
 func TestEndpoint(t *testing.T) {
-	const maxDepth = eth.FifoMaxSize / uint(unsafe.Sizeof(eth.FifoEntry{}))
+	const maxDepth = eth_gen.FifoMaxSize / uint(unsafe.Sizeof(eth_gen.FifoEntry{}))
 
 	packetBufferCmpOptions := []cmp.Option{
 		cmpopts.IgnoreTypes(stack.PacketBufferEntry{}),
@@ -114,7 +116,7 @@ func TestEndpoint(t *testing.T) {
 		depth := uint32(1 << i)
 		t.Run(fmt.Sprintf("depth=%d", depth), func(t *testing.T) {
 			var clientTxFifo, deviceTxFifo zx.Handle
-			if status := zx.Sys_fifo_create(uint(depth), uint(unsafe.Sizeof(eth.FifoEntry{})), 0, &clientTxFifo, &deviceTxFifo); status != zx.ErrOk {
+			if status := zx.Sys_fifo_create(uint(depth), uint(unsafe.Sizeof(eth_gen.FifoEntry{})), 0, &clientTxFifo, &deviceTxFifo); status != zx.ErrOk {
 				t.Fatal(status)
 			}
 			defer func() {
@@ -122,7 +124,7 @@ func TestEndpoint(t *testing.T) {
 				_ = deviceTxFifo.Close()
 			}()
 			var clientRxFifo, deviceRxFifo zx.Handle
-			if status := zx.Sys_fifo_create(uint(depth), uint(unsafe.Sizeof(eth.FifoEntry{})), 0, &clientRxFifo, &deviceRxFifo); status != zx.ErrOk {
+			if status := zx.Sys_fifo_create(uint(depth), uint(unsafe.Sizeof(eth_gen.FifoEntry{})), 0, &clientRxFifo, &deviceRxFifo); status != zx.ErrOk {
 				t.Fatal(status)
 			}
 			defer func() {
@@ -132,7 +134,7 @@ func TestEndpoint(t *testing.T) {
 
 			var device struct {
 				iob       eth.IOBuffer
-				rxEntries []eth.FifoEntry
+				rxEntries []eth_gen.FifoEntry
 			}
 			defer func() {
 				_ = device.iob.Close()
@@ -193,11 +195,11 @@ func TestEndpoint(t *testing.T) {
 
 			// Attaching a dispatcher to the client should cause it to fill the device's RX buffer pool.
 			{
-				b := make([]eth.FifoEntry, depth+1)
+				b := make([]eth_gen.FifoEntry, depth+1)
 				if _, err := zxwait.Wait(deviceRxFifo, zx.SignalFIFOReadable, zx.TimensecInfinite); err != nil {
 					t.Fatal(err)
 				}
-				status, count := eth.FifoRead(deviceRxFifo, b)
+				status, count := eth_gen.FifoRead(deviceRxFifo, b)
 				if status != zx.ErrOk {
 					t.Fatal(status)
 				}
@@ -211,8 +213,8 @@ func TestEndpoint(t *testing.T) {
 				for excess := depth; ; excess >>= 1 {
 					t.Run(fmt.Sprintf("excess=%d", excess), func(t *testing.T) {
 						// Grab baseline stats to avoid assumptions about ops done to this point.
-						wantRxReads := fifoReadsTransformer(client.Stats.Rx)
-						wantTxWrites := fifoWritesTransformer(client.Stats.Tx)
+						wantRxReads := fifoReadsTransformer(client.RxStats())
+						wantTxWrites := fifoWritesTransformer(client.TxStats())
 
 						// Compute expectations.
 						for _, want := range [][]uint64{wantRxReads, wantTxWrites} {
@@ -245,21 +247,21 @@ func TestEndpoint(t *testing.T) {
 							if _, err := zxwait.Wait(deviceRxFifo, zx.SignalFIFOWritable, zx.TimensecInfinite); err != nil {
 								t.Fatal(err)
 							}
-							status, count := eth.FifoWrite(deviceRxFifo, b)
+							status, count := eth_gen.FifoWrite(deviceRxFifo, b)
 							if status != zx.ErrOk {
 								t.Fatal(status)
 							}
 							// The maximum number of RX entries we might be holding is equal to the FIFO depth;
 							// we should always be able to write all of them.
 							if l := uint32(len(b)); count != l {
-								t.Fatalf("got eth.FifoWrite(...) = %d, want = %d", count, l)
+								t.Fatalf("got eth_gen.FifoWrite(...) = %d, want = %d", count, l)
 							}
 							toWrite -= count
 							for len(b) != 0 {
 								if _, err := zxwait.Wait(deviceRxFifo, zx.SignalFIFOReadable, zx.TimensecInfinite); err != nil {
 									t.Fatal(err)
 								}
-								status, count := eth.FifoRead(deviceRxFifo, b)
+								status, count := eth_gen.FifoRead(deviceRxFifo, b)
 								if status != zx.ErrOk {
 									t.Fatal(status)
 								}
@@ -268,7 +270,7 @@ func TestEndpoint(t *testing.T) {
 						}
 
 						// NB: only assert on the reads, since RX writes are unsynchronized wrt this test.
-						if diff := cmp.Diff(wantRxReads, fifoReadsTransformer(client.Stats.Rx)); diff != "" {
+						if diff := cmp.Diff(wantRxReads, fifoReadsTransformer(client.RxStats())); diff != "" {
 							t.Errorf("Stats.Rx.Reads mismatch (-want +got):\n%s", diff)
 						}
 
@@ -294,7 +296,7 @@ func TestEndpoint(t *testing.T) {
 						}
 
 						// NB: only assert on the writes, since TX reads are unsynchronized wrt this test.
-						if diff := cmp.Diff(wantTxWrites, fifoWritesTransformer(client.Stats.Tx)); diff != "" {
+						if diff := cmp.Diff(wantTxWrites, fifoWritesTransformer(client.TxStats())); diff != "" {
 							t.Errorf("Stats.Tx.Writes mismatch (-want +got):\n%s", diff)
 						}
 					})
@@ -384,7 +386,7 @@ func TestEndpoint(t *testing.T) {
 					entry.SetLength(sendSize)
 
 					{
-						status, count := eth.FifoWrite(deviceRxFifo, device.rxEntries[:1])
+						status, count := eth_gen.FifoWrite(deviceRxFifo, device.rxEntries[:1])
 						if status != zx.ErrOk {
 							t.Fatal(status)
 						}
@@ -396,7 +398,7 @@ func TestEndpoint(t *testing.T) {
 						t.Fatal(err)
 					}
 					// Assert that we read back only one entry (when depth is greater than 1).
-					status, count := eth.FifoRead(deviceRxFifo, device.rxEntries)
+					status, count := eth_gen.FifoRead(deviceRxFifo, device.rxEntries)
 					if status != zx.ErrOk {
 						t.Fatal(status)
 					}

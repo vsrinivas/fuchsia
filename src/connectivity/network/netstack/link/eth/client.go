@@ -11,12 +11,12 @@ import (
 	"reflect"
 	"sync"
 	"syscall/zx"
-	"syscall/zx/zxwait"
 	"unsafe"
 
 	"fuchsia.googlesource.com/syslog"
 	"netstack/link"
 	"netstack/link/fifo"
+	"netstack_gen/link/eth"
 
 	"fidl/fuchsia/hardware/ethernet"
 
@@ -31,19 +31,7 @@ import "C"
 
 const tag = "eth"
 
-type FifoEntry = C.struct_eth_fifo_entry
-
-func (e FifoEntry) index() int32 {
-	if e.cookie>>32 != cookieMagic {
-		panic(fmt.Sprintf("buffer entry has bad cookie: %x", e.cookie))
-	}
-	return int32(e.cookie)
-}
-
-// SetLength sets the length field. It is exported for use in tests which cannot depend on "C".
-func (e *FifoEntry) SetLength(length int) {
-	e.length = C.uint16_t(length)
-}
+type FifoEntry = eth.FifoEntry
 
 const bufferSize = 2048
 
@@ -87,88 +75,18 @@ func (iob *IOBuffer) index(b Buffer) int {
 	return int((*(*reflect.SliceHeader)(unsafe.Pointer(&b))).Data-uintptr(iob.vaddr)) / bufferSize
 }
 
-const cookieMagic = 0x42420102 // used to fill top 32-bits of FifoEntry.cookie
-
 func (iob *IOBuffer) entry(b Buffer) FifoEntry {
 	i := iob.index(b)
 
-	return FifoEntry{
-		offset: C.uint32_t(i) * bufferSize,
-		length: C.uint16_t(len(b)),
-		cookie: (cookieMagic << 32) | C.uint64_t(i),
-	}
+	return eth.NewFifoEntry(uint32(i*bufferSize), uint16(len(b)), int32(i))
 }
 
 func (iob *IOBuffer) BufferFromEntry(e FifoEntry) Buffer {
-	return iob.buffer(e.index())[:e.length]
+	return iob.buffer(e.Index())[:e.Length()]
 }
 
 func (iob *IOBuffer) Close() error {
 	return zx.VMARRoot.Unmap(iob.vaddr, iob.size)
-}
-
-const FifoMaxSize = C.ZX_FIFO_MAX_SIZE_BYTES
-
-type entries struct {
-	fifo.Entries
-	storage []FifoEntry
-}
-
-func (e *entries) init(depth uint16) {
-	// Reserve double the depth entries.
-	capacity := e.Entries.Init(depth * 2)
-	e.storage = make([]FifoEntry, capacity)
-}
-
-func (e *entries) getReadied() *FifoEntry {
-	return &e.storage[e.GetReadiedIndex()]
-}
-
-func (e *entries) addReadied(src []FifoEntry) int {
-	if readied, sent := e.GetInFlightRange(); readied < sent {
-		return copy(e.storage[readied:sent], src)
-	} else {
-		n := copy(e.storage[readied:], src)
-		n += copy(e.storage[:sent], src[n:])
-		return n
-	}
-}
-
-func (e *entries) getQueued(dst []FifoEntry) int {
-	if sent, queued := e.GetQueuedRange(); sent < queued {
-		return copy(dst, e.storage[sent:queued])
-	} else {
-		n := copy(dst, e.storage[sent:])
-		n += copy(dst[n:], e.storage[:queued])
-		return n
-	}
-}
-
-type rwStats struct {
-	reads, writes tcpip.StatCounter
-}
-
-type FifoStats struct {
-	// batches is an associative array from read/write batch sizes
-	// (indexed at `batchSize-1`) to tcpip.StatCounters of the number of reads
-	// and writes of that batch size.
-	batches []rwStats
-}
-
-func makeFifoStats(depth uint32) FifoStats {
-	return FifoStats{batches: make([]rwStats, depth)}
-}
-
-func (s *FifoStats) Size() uint32 {
-	return uint32(len(s.batches))
-}
-
-func (s *FifoStats) Reads(batchSize uint32) *tcpip.StatCounter {
-	return &s.batches[batchSize-1].reads
-}
-
-func (s *FifoStats) Writes(batchSize uint32) *tcpip.StatCounter {
-	return &s.batches[batchSize-1].writes
 }
 
 var _ link.Controller = (*Client)(nil)
@@ -185,12 +103,7 @@ type Client struct {
 
 	Info ethernet.Info
 
-	Stats struct {
-		Tx, Rx FifoStats
-	}
-
 	device ethernet.DeviceWithCtx
-	fifos  ethernet.Fifos
 
 	iob IOBuffer
 
@@ -202,19 +115,7 @@ type Client struct {
 		stateFunc func(link.State)
 	}
 
-	rx entries
-	tx struct {
-		mu struct {
-			sync.Mutex
-			waiters int
-
-			entries entries
-
-			// detached signals to incoming writes that the receiver is unable to service them.
-			detached bool
-		}
-		cond sync.Cond
-	}
+	handler eth.Handler
 }
 
 // NewClient creates a new ethernet Client.
@@ -248,16 +149,21 @@ func NewClient(clientName string, topopath, filepath string, device ethernet.Dev
 	c := &Client{
 		Info:     info,
 		device:   device,
-		fifos:    *fifos,
 		topopath: topopath,
 		filepath: filepath,
+		handler: eth.Handler{
+			TxDepth: fifos.TxDepth,
+			RxDepth: fifos.RxDepth,
+			RxFifo:  fifos.Rx,
+			TxFifo:  fifos.Tx,
+		},
 	}
 
-	c.rx.init(uint16(fifos.RxDepth))
-	c.tx.mu.entries.init(uint16(fifos.TxDepth))
+	rxStorage := int(c.handler.InitRx(uint16(fifos.RxDepth * 2)))
+	txStorage := int(c.handler.InitTx(uint16(fifos.TxDepth * 2)))
 
 	{
-		vmo, err := zx.NewVMO(bufferSize*uint64(len(c.rx.storage)+len(c.tx.mu.entries.storage)), 0)
+		vmo, err := zx.NewVMO(bufferSize*uint64(rxStorage+txStorage), 0)
 		if err != nil {
 			_ = c.Close()
 			return nil, fmt.Errorf("eth: cannot allocate VMO: %w", err)
@@ -284,23 +190,19 @@ func NewClient(clientName string, topopath, filepath string, device ethernet.Dev
 	}
 
 	var bufferIndex int32
-	for i := range c.rx.storage {
+	for i := 0; i < rxStorage; i++ {
 		b := c.iob.buffer(bufferIndex)
 		bufferIndex++
-		c.rx.storage[i] = c.iob.entry(b)
-		c.rx.IncrementReadied(1)
-		c.rx.IncrementQueued(1)
+		c.handler.PushInitialRx(c.iob.entry(b))
 	}
-	for i := range c.tx.mu.entries.storage {
+	for i := 0; i < txStorage; i++ {
 		b := c.iob.buffer(bufferIndex)
 		bufferIndex++
-		c.tx.mu.entries.storage[i] = c.iob.entry(b)
-		c.tx.mu.entries.IncrementReadied(1)
+		c.handler.PushInitialTx(c.iob.entry(b))
 	}
-	c.tx.cond.L = &c.tx.mu.Mutex
 
-	c.Stats.Tx = makeFifoStats(fifos.TxDepth)
-	c.Stats.Rx = makeFifoStats(fifos.RxDepth)
+	c.handler.Stats.Tx = fifo.MakeFifoStats(fifos.TxDepth)
+	c.handler.Stats.Rx = fifo.MakeFifoStats(fifos.RxDepth)
 
 	return c, nil
 }
@@ -321,50 +223,15 @@ func (c *Client) LinkAddress() tcpip.LinkAddress {
 }
 
 func (c *Client) write(pkts stack.PacketBufferList) (int, *tcpip.Error) {
-	i := 0
-
-	for pkt := pkts.Front(); pkt != nil; {
-		c.tx.mu.Lock()
-		for {
-			if c.tx.mu.detached {
-				c.tx.mu.Unlock()
-				return i, tcpip.ErrClosedForSend
-			}
-
-			if c.tx.mu.entries.HaveReadied() {
-				break
-			}
-
-			c.tx.mu.waiters++
-			c.tx.cond.Wait()
-			c.tx.mu.waiters--
+	return c.handler.ProcessWrite(pkts, func(entry *FifoEntry, pkt *stack.PacketBuffer) {
+		entry.SetLength(bufferSize)
+		b := c.iob.BufferFromEntry(*entry)
+		used := copy(b, pkt.Header.View())
+		for _, v := range pkt.Data.Views() {
+			used += copy(b[used:], v)
 		}
-
-		// Queue as many remaining packets as possible; if we run out of space, we'll return to the
-		// waiting state in the outer loop.
-		for {
-			// This is being reused, reset its length to get an appropriately sized buffer.
-			entry := c.tx.mu.entries.getReadied()
-			entry.SetLength(bufferSize)
-			b := c.iob.BufferFromEntry(*entry)
-			used := copy(b, pkt.Header.View())
-			for _, v := range pkt.Data.Views() {
-				used += copy(b[used:], v)
-			}
-			*entry = c.iob.entry(b[:used])
-			c.tx.mu.entries.IncrementQueued(1)
-
-			i++
-			pkt = pkt.Next()
-			if pkt == nil || !c.tx.mu.entries.HaveReadied() {
-				break
-			}
-		}
-		c.tx.mu.Unlock()
-		c.tx.cond.Broadcast()
-	}
-
-	return i, nil
+		*entry = c.iob.entry(b[:used])
+	})
 }
 
 func (c *Client) WritePacket(_ *stack.Route, _ *stack.GSO, _ tcpip.NetworkProtocolNumber, pkt stack.PacketBuffer) *tcpip.Error {
@@ -398,180 +265,51 @@ func (c *Client) Attach(dispatcher stack.NetworkDispatcher) {
 	c.wg.Add(1)
 	go func() {
 		defer c.wg.Done()
-		if err := func() error {
-			scratch := make([]FifoEntry, c.fifos.TxDepth)
-			for {
-				c.tx.mu.Lock()
-				detached := c.tx.mu.detached
-				c.tx.mu.Unlock()
-				if detached {
-					return nil
-				}
-
-				if err := zxwait.WithRetry(func() error {
-					status, count := FifoRead(c.fifos.Tx, scratch)
-					if status != zx.ErrOk {
-						return &zx.Error{Status: status, Text: "FifoRead(TX)"}
-					}
-					c.Stats.Tx.Reads(count).Increment()
-					c.tx.mu.Lock()
-					n := c.tx.mu.entries.addReadied(scratch[:count])
-					c.tx.mu.entries.IncrementReadied(uint16(n))
-					c.tx.mu.Unlock()
-					c.tx.cond.Broadcast()
-
-					if n := uint32(n); count != n {
-						return fmt.Errorf("fifoRead(TX): tx_depth invariant violation; observed=%d expected=%d", c.fifos.TxDepth-n+count, c.fifos.TxDepth)
-					}
-					return nil
-				}, c.fifos.Tx, zx.SignalFIFOReadable, zx.SignalFIFOPeerClosed); err != nil {
-					return err
-				}
-			}
-		}(); err != nil {
+		if err := c.handler.TxReceiverLoop(); err != nil {
 			c.mu.Lock()
 			closed := c.mu.closed
 			c.mu.Unlock()
 			if !closed {
 				_ = syslog.WarnTf(tag, "TX read loop: %s", err)
 			}
-			c.tx.mu.Lock()
-			c.tx.mu.detached = true
-			c.tx.mu.Unlock()
-			c.tx.cond.Broadcast()
+			c.handler.DetachTx()
 		}
 	}()
 
 	c.wg.Add(1)
 	go func() {
 		defer c.wg.Done()
-		if err := func() error {
-			scratch := make([]FifoEntry, c.fifos.TxDepth)
-			for {
-				var batch []FifoEntry
-				c.tx.mu.Lock()
-				for {
-					if c.tx.mu.detached {
-						c.tx.mu.Unlock()
-						return nil
-					}
-					if batchSize := len(scratch) - int(c.tx.mu.entries.InFlight()); batchSize != 0 {
-						if c.tx.mu.entries.HaveQueued() {
-							if c.tx.mu.waiters == 0 || !c.tx.mu.entries.HaveReadied() {
-								// No application threads are waiting OR application threads are waiting on the
-								// reader.
-								//
-								// This condition is an optimization; if application threads are waiting when
-								// buffers are available then we were probably just woken up by the reader having
-								// retrieved buffers from the fifo. We avoid creating a batch until the application
-								// threads have all been satisfied, or until the buffers have all been used up.
-								batch = scratch[:batchSize]
-								break
-							}
-						}
-					}
-					c.tx.cond.Wait()
-				}
-				n := c.tx.mu.entries.getQueued(batch)
-				c.tx.mu.entries.IncrementSent(uint16(n))
-				c.tx.mu.Unlock()
-
-				switch status, count := FifoWrite(c.fifos.Tx, batch[:n]); status {
-				case zx.ErrOk:
-					if n := uint32(n); count != n {
-						return fmt.Errorf("fifoWrite(TX): tx_depth invariant violation; observed=%d expected=%d", c.fifos.TxDepth-n+count, c.fifos.TxDepth)
-					}
-					c.Stats.Tx.Writes(count).Increment()
-				default:
-					return &zx.Error{Status: status, Text: "fifoWrite(TX)"}
-				}
-			}
-		}(); err != nil {
+		if err := c.handler.TxSenderLoop(); err != nil {
 			c.mu.Lock()
 			closed := c.mu.closed
 			c.mu.Unlock()
 			if !closed {
 				_ = syslog.WarnTf(tag, "TX write loop: %s", err)
 			}
-			c.tx.mu.Lock()
-			c.tx.mu.detached = true
-			c.tx.mu.Unlock()
-			c.tx.cond.Broadcast()
+			c.handler.DetachTx()
 		}
 	}()
 
 	c.wg.Add(1)
 	go func() {
 		defer c.wg.Done()
-		if err := func() error {
-			scratch := make([]FifoEntry, c.fifos.RxDepth)
-			for {
-				if batchSize := len(scratch) - int(c.rx.InFlight()); batchSize != 0 && c.rx.HaveQueued() {
-					n := c.rx.getQueued(scratch[:batchSize])
-					c.rx.IncrementSent(uint16(n))
+		if err := c.handler.RxLoop(func(entry *FifoEntry) {
+			// Process inbound packet.
+			var emptyLinkAddress tcpip.LinkAddress
+			dispatcher.DeliverNetworkPacket(c, emptyLinkAddress, emptyLinkAddress, 0, stack.PacketBuffer{
+				Data: append(buffer.View(nil), c.iob.BufferFromEntry(*entry)...).ToVectorisedView(),
+			})
 
-					status, count := FifoWrite(c.fifos.Rx, scratch[:n])
-					switch status {
-					case zx.ErrOk:
-						c.Stats.Rx.Writes(count).Increment()
-						if n := uint32(n); count != n {
-							return fmt.Errorf("fifoWrite(RX): tx_depth invariant violation; observed=%d expected=%d", c.fifos.RxDepth-n+count, c.fifos.RxDepth)
-						}
-					default:
-						return &zx.Error{Status: status, Text: "fifoWrite(RX)"}
-					}
-				}
-
-				for c.rx.HaveReadied() {
-					entry := c.rx.getReadied()
-
-					var emptyLinkAddress tcpip.LinkAddress
-					dispatcher.DeliverNetworkPacket(c, emptyLinkAddress, emptyLinkAddress, 0, stack.PacketBuffer{
-						Data: append(buffer.View(nil), c.iob.BufferFromEntry(*entry)...).ToVectorisedView(),
-					})
-
-					// This entry is going back to the driver; it can be reused.
-					entry.SetLength(bufferSize)
-					c.rx.IncrementQueued(1)
-				}
-
-				for {
-					signals := zx.Signals(zx.SignalFIFOReadable | zx.SignalFIFOPeerClosed | ethernet.SignalStatus)
-					if int(c.rx.InFlight()) != len(scratch) && c.rx.HaveQueued() {
-						signals |= zx.SignalFIFOWritable
-					}
-					obs, err := zxwait.Wait(c.fifos.Rx, signals, zx.TimensecInfinite)
-					if err != nil {
-						return err
-					}
-					if obs&zx.Signals(ethernet.SignalStatus) != 0 {
-						if err := c.changeState(func() (link.State, error) {
-							return c.getState("FIFO signal")
-						}); err != nil {
-							_ = syslog.WarnTf(tag, "status error: %s", err)
-						}
-					}
-					if obs&zx.SignalFIFOReadable != 0 {
-						switch status, count := FifoRead(c.fifos.Rx, scratch); status {
-						case zx.ErrOk:
-							c.Stats.Rx.Reads(count).Increment()
-							n := c.rx.addReadied(scratch[:count])
-							c.rx.IncrementReadied(uint16(n))
-
-							if n := uint32(n); count != n {
-								return fmt.Errorf("fifoRead(RX): tx_depth invariant violation; observed=%d expected=%d", c.fifos.RxDepth-n+count, c.fifos.RxDepth)
-							}
-						default:
-							return &zx.Error{Status: status, Text: "FifoRead(RX)"}
-						}
-						break
-					}
-					if obs&zx.SignalFIFOWritable != 0 {
-						break
-					}
-				}
+			// This entry is going back to the driver; it can be reused.
+			entry.SetLength(bufferSize)
+		}, zx.Signals(ethernet.SignalStatus), func() {
+			// Process ethernetStatusSignal.
+			if err := c.changeState(func() (link.State, error) {
+				return c.getState("FIFO signal")
+			}); err != nil {
+				_ = syslog.WarnTf(tag, "status error: %s", err)
 			}
-		}(); err != nil {
+		}); err != nil {
 			c.mu.Lock()
 			closed := c.mu.closed
 			c.mu.Unlock()
@@ -670,10 +408,10 @@ func (c *Client) Close() error {
 			err = fmt.Errorf("fuchsia.hardware.ethernet.Device.Stop() for path %q failed: %s", c.topopath, err)
 		}
 
-		if err := c.fifos.Tx.Close(); err != nil {
+		if err := c.handler.TxFifo.Close(); err != nil {
 			_ = syslog.WarnTf(tag, "failed to close tx fifo: %s", err)
 		}
-		if err := c.fifos.Rx.Close(); err != nil {
+		if err := c.handler.RxFifo.Close(); err != nil {
 			_ = syslog.WarnTf(tag, "failed to close rx fifo: %s", err)
 		}
 		if err := c.iob.Close(); err != nil {
@@ -694,20 +432,6 @@ func (c *Client) SetPromiscuousMode(enabled bool) error {
 		return err
 	}
 	return nil
-}
-
-func FifoWrite(handle zx.Handle, b []FifoEntry) (zx.Status, uint32) {
-	var actual uint
-	data := unsafe.Pointer((*reflect.SliceHeader)(unsafe.Pointer(&b)).Data)
-	status := zx.Sys_fifo_write(handle, uint(unsafe.Sizeof(FifoEntry{})), data, uint(len(b)), &actual)
-	return status, uint32(actual)
-}
-
-func FifoRead(handle zx.Handle, b []FifoEntry) (zx.Status, uint32) {
-	var actual uint
-	data := unsafe.Pointer((*reflect.SliceHeader)(unsafe.Pointer(&b)).Data)
-	status := zx.Sys_fifo_read(handle, uint(unsafe.Sizeof(FifoEntry{})), data, uint(len(b)), &actual)
-	return status, uint32(actual)
 }
 
 // ListenTX tells the ethernet driver to reflect all transmitted
@@ -734,4 +458,12 @@ func (c *Client) getState(debugSource string) (link.State, error) {
 		state = link.StateDown
 	}
 	return state, nil
+}
+
+func (c *Client) RxStats() *fifo.FifoStats {
+	return &c.handler.Stats.Rx
+}
+
+func (c *Client) TxStats() *fifo.FifoStats {
+	return &c.handler.Stats.Tx
 }

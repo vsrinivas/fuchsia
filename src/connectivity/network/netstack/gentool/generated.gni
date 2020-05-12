@@ -1,0 +1,121 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/compiled_action.gni")
+import("//build/go/go_library.gni")
+
+# Declares a go library composed of copied and generated files.
+#
+# Parameters
+#  definitions(required) list of definitions to generate templates, in the form:
+#    {
+#      # JSON file applied to the template.
+#      src = "my_definition.json"
+#      # Destination package in the generated library.
+#      package = "eth"
+#      # Path to template definition.
+#      template = "my_template.tmpl"
+#      # copy support files to destination package.
+#      copy = [ "my_support_file.go" ]
+#    },
+#
+#  name, deps, public_deps(optional) forwarded to go_library
+template("generated_go") {
+  gen_files = []
+  gen_names = []
+
+  assert(defined(invoker.definitions), "missing template definitions")
+
+  foreach(f, invoker.definitions) {
+    assert(defined(f.template), "missing template path for generation")
+    assert(defined(f.package), "missing destination package for generation")
+    assert(defined(f.src), "missing source JSON path for generation")
+
+    pkg_label = string_replace(f.package, "/", "_")
+
+    # Name of the source JSON file will be the name of the generated go file.
+    dst_name = get_path_info(f.src, "name")
+
+    # Define a target name for each definition, the generated library will
+    # depend on all the actions we declare.
+    name = "_${target_name}_${pkg_label}_${dst_name}"
+
+    copy_deps = []
+    if (defined(f.copy)) {
+      foreach(c, f.copy) {
+        # Name of the source file to copy.
+        fname = get_path_info(c, "name")
+
+        # Name with extension of the source file.
+        file = get_path_info(c, "file")
+
+        # Declare a target name for the copy target, the compiled_action target
+        # will depend on all copied files.
+        copy_name = "${name}_$fname"
+        copy_deps += [ ":$copy_name" ]
+
+        # The copied file is part of the library, add it to the list of
+        # generated files.
+        gen_files += [ "${f.package}/$file" ]
+        copy(copy_name) {
+          sources = [ c ]
+          outputs = [ "$target_gen_dir/${f.package}/$file" ]
+        }
+      }
+    }
+
+    # The generated file is in the specified package and uses the source JSON
+    # name.
+    gen_file = "${f.package}/${dst_name}.go"
+
+    # The file will be generated in target_gen_dir.
+    gen_dst = "$target_gen_dir/$gen_file"
+
+    # Keep all the generated files and their target labels, the generated
+    # library will depend on them.
+    gen_files += [ gen_file ]
+    gen_names += [ ":$name" ]
+
+    compiled_action(name) {
+      tool = "//src/connectivity/network/netstack/gentool"
+      sources = [
+        f.template,
+        f.src,
+      ]
+      inputs = [
+        f.template,
+        f.src,
+      ]
+      outputs = [ gen_dst ]
+
+      args = [
+        rebase_path(f.template),
+        rebase_path(gen_dst, root_build_dir),
+        rebase_path(f.src),
+      ]
+
+      deps = copy_deps
+    }
+  }
+
+  go_library(target_name) {
+    if (defined(invoker.name)) {
+      name = invoker.name
+    } else {
+      name = target_name
+    }
+
+    # Depend on all the compiled_actions above.
+    non_go_deps = gen_names
+    source_dir = target_gen_dir
+
+    # Specify each of the files composing the library.
+    sources = gen_files
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "public_deps",
+                           ])
+  }
+}
