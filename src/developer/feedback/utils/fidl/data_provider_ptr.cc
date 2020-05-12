@@ -34,10 +34,10 @@ DataProviderPtr::DataProviderPtr(async_dispatcher_t* dispatcher,
   const uint64_t id = pending_calls_.NewBridgeForTask("Feedback data collection");
 
   connection_->GetBugreport(
-      // We give 5s for the packaging of the bugreport and the round-trip between the client and the
-      // server and the rest is given to each data collection.
+      // We give 15s for the packaging of the bugreport and the round-trip between the client and
+      // the server and the rest is given to each data collection.
       std::move(fuchsia::feedback::GetBugreportParameters().set_collection_timeout_per_data(
-          (timeout - zx::sec(5) /* cost of making the call and packaging the bugreport */).get())),
+          (timeout - zx::sec(15) /* cost of making the call and packaging the bugreport */).get())),
       [id, this](Bugreport bugreport) {
         if (pending_calls_.IsAlreadyDone(id)) {
           return;

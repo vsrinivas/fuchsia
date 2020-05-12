@@ -33,10 +33,8 @@ namespace {
 using fuchsia::feedback::Bugreport;
 using fuchsia::feedback::CrashReport;
 
-// Most of the time spent generating a crash report is spent collecting annotations and attachments
-// from other services. The timeout represents how long we give each of these services.
-// TODO(41004): increase it to 2 minutes.
-constexpr zx::duration kCrashReportGenerationTimeout = zx::sec(35);
+constexpr zx::duration kChannelOrDeviceIdTimeout = zx::sec(30);
+constexpr zx::duration kBugreportTimeout = zx::min(2);
 
 }  // namespace
 
@@ -127,9 +125,9 @@ void CrashReporter::File(fuchsia::feedback::CrashReport report, FileCallback cal
   FX_LOGS(INFO) << "Generating crash report for " << report.program_name();
 
   auto channel_promise =
-      fidl::GetCurrentChannel(dispatcher_, services_, fit::Timeout(kCrashReportGenerationTimeout));
-  auto bugreport_promise = data_provider_ptr_.GetBugreport(kCrashReportGenerationTimeout);
-  auto device_id_promise = device_id_provider_ptr_.GetId(kCrashReportGenerationTimeout);
+      fidl::GetCurrentChannel(dispatcher_, services_, fit::Timeout(kChannelOrDeviceIdTimeout));
+  auto bugreport_promise = data_provider_ptr_.GetBugreport(kBugreportTimeout);
+  auto device_id_promise = device_id_provider_ptr_.GetId(kChannelOrDeviceIdTimeout);
 
   auto promise =
       ::fit::join_promises(std::move(channel_promise), std::move(bugreport_promise),
