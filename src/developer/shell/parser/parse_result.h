@@ -95,8 +95,19 @@ class ParseResult {
   // 2) Assorted parsers are run, pushing the children of the node onto the stack as they go.
   // 3) Reduce() is called and turns the nodes between the marker and the stack top into a new
   //    nonterminal.
+  //
+  // If pop_marker is false, we will not remove the marker frame when we pop. This is useful for
+  // building multiple non-terminals from the same reduction point, as the LAssoc combinator will.
   template <typename T>
   ParseResult Reduce(bool pop_marker = true);
+
+  // Remove the marker frame nearest the top of the stack without disturbing the rest of the stack.
+  // This is useful if we call reduce with pop_marker = false.
+  ParseResult DropMarker() {
+    ParseResult ret(unit_, offset_, error_insert_, error_delete_, error_internal_);
+    ret.frame_ = DropMarkerFrame();
+    return ret;
+  }
 
   operator bool() const { return frame_ != nullptr; }
 
@@ -116,6 +127,22 @@ class ParseResult {
               size_t error_internal, std::shared_ptr<ast::Node> node, std::shared_ptr<Frame> prev)
       : ParseResult(unit, offset, error_insert, error_delete, error_internal) {
     frame_ = std::make_shared<Frame>(Frame{.node = std::move(node), .prev = std::move(prev)});
+  }
+
+  // Implement the core of DropMarker by actually walking the stack and deleting the marker frame.
+  std::shared_ptr<Frame> DropMarkerFrame(std::shared_ptr<Frame> frame = nullptr) {
+    if (!frame) {
+      frame = frame_;
+    }
+
+    if (frame->is_stack_bottom()) {
+      return frame;
+    } else if (frame->is_marker_frame()) {
+      return frame->prev;
+    } else {
+      return std::make_shared<Frame>(
+          Frame{.node = frame->node, .prev = DropMarkerFrame(frame->prev)});
+    }
   }
 
   // Position from the beginning of the parsed text.
@@ -181,6 +208,12 @@ class ParseResultStream {
   template <typename T>
   ParseResultStream Reduce(bool pop_marker = true) && {
     return std::move(*this).Map([pop_marker](ParseResult p) { return p.Reduce<T>(pop_marker); });
+  }
+
+  // Drop a marker frame from every result that is output from this stream. See
+  // ParseResult::DropMarker.
+  ParseResultStream DropMarker() && {
+    return std::move(*this).Map([](ParseResult p) { return p.DropMarker(); });
   }
 
   // Fork a parse result stream into two identical streams. Each will yield the same data, and data

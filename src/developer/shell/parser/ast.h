@@ -31,10 +31,12 @@ class EscapeSequence;
 class PathElement;
 class PathEscape;
 class PathSeparator;
+class Operator;
 class String;
 class Object;
 class Field;
 class Path;
+class AddSub;
 
 class NodeVisitor;
 
@@ -101,10 +103,8 @@ class Node {
   const PathElement* AsPathElement() const { return const_cast<Node*>(this)->AsPathElement(); }
   virtual PathEscape* AsPathEscape() { return nullptr; }
   const PathEscape* AsPathEscape() const { return const_cast<Node*>(this)->AsPathEscape(); }
-  virtual PathSeparator* AsPathSeparator() { return nullptr; }
-  const PathSeparator* AsPathSeparator() const {
-    return const_cast<Node*>(this)->AsPathSeparator();
-  }
+  virtual Operator* AsOperator() { return nullptr; }
+  const Operator* AsOperator() const { return const_cast<Node*>(this)->AsOperator(); }
   virtual String* AsString() { return nullptr; }
   const String* AsString() const { return const_cast<Node*>(this)->AsString(); }
   virtual Object* AsObject() { return nullptr; }
@@ -113,6 +113,8 @@ class Node {
   const Field* AsField() const { return const_cast<Node*>(this)->AsField(); }
   virtual Path* AsPath() { return nullptr; }
   const Path* AsPath() const { return const_cast<Node*>(this)->AsPath(); }
+  virtual AddSub* AsAddSub() { return nullptr; }
+  const AddSub* AsAddSub() const { return const_cast<Node*>(this)->AsAddSub(); }
 
   // ID methods for keywords
   virtual bool IsConst() const { return false; }
@@ -297,6 +299,21 @@ class PathSeparator : public Terminal {
   void Visit(NodeVisitor* visitor) const override;
 };
 
+// Terminal representing an operator.
+class Operator : public Terminal {
+ public:
+  Operator(size_t start, size_t size, std::string_view content)
+      : Terminal(start, size, content), operator_(content) {}
+
+  const std::string& op() const { return operator_; }
+
+  Operator* AsOperator() override { return this; }
+  void Visit(NodeVisitor* visitor) const override;
+
+ private:
+  std::string operator_ = "";
+};
+
 // Superclass of all non-terminal nodes in our AST.
 class Nonterminal : public Node {
  public:
@@ -479,6 +496,30 @@ class Path : public Nonterminal {
   std::vector<std::string> elements_;
 };
 
+class AddSub : public Nonterminal {
+ public:
+  enum Type {
+    kAdd,
+    kSubtract,
+  };
+
+  AddSub(size_t start, std::vector<std::shared_ptr<Node>> children);
+
+  Type type() const { return type_; }
+  Node* a() const { return a_; }
+  Node* b() const { return b_; }
+
+  std::string_view Name() const override { return "AddSub"; }
+
+  AddSub* AsAddSub() override { return this; }
+  void Visit(NodeVisitor* visitor) const override;
+
+ private:
+  Type type_ = kAdd;
+  Node* a_ = nullptr;
+  Node* b_ = nullptr;
+};
+
 class Expression : public Nonterminal {
  public:
   Expression(size_t start, std::vector<std::shared_ptr<Node>> children)
@@ -511,10 +552,12 @@ class NodeVisitor {
   friend class PathElement;
   friend class PathEscape;
   friend class PathSeparator;
+  friend class Operator;
   friend class String;
   friend class Object;
   friend class Field;
   friend class Path;
+  friend class AddSub;
 
  protected:
   virtual void VisitNode(const Node& node){};
@@ -540,7 +583,9 @@ class NodeVisitor {
   virtual void VisitPathElement(const PathElement& node) { VisitTerminal(node); };
   virtual void VisitPathEscape(const PathEscape& node) { VisitTerminal(node); };
   virtual void VisitPathSeparator(const PathSeparator& node) { VisitTerminal(node); };
+  virtual void VisitOperator(const Operator& node) { VisitTerminal(node); };
   virtual void VisitPath(const Path& node) { VisitNonterminal(node); };
+  virtual void VisitAddSub(const AddSub& node) { VisitNonterminal(node); };
 };
 
 }  // namespace shell::parser::ast

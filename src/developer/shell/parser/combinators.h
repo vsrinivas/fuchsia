@@ -86,6 +86,42 @@ fit::function<ParseResultStream(ParseResultStream)> NT(
   };
 }
 
+// Parse a left-associative sequence of non-terminals.
+//
+// This is best explained by example. Assume the parser "operand" parses A -> 'a' and the parser
+// "continuation" parses B -> 'b'. If we built the parser:
+//
+//     LAssoc<Q>(operand, continuation)
+//
+// We would expect the following parses:
+//
+//    "a" -> A
+//    "ab" -> Q(A B)
+//    "abb" -> Q(Q(A B) B)
+//    "abbb" -> Q(Q(Q(A B) B) B)
+//
+// Essentially we are parsing the rule:
+//
+//     Q -> Q B / A
+//
+// But that rule would break our combinator framework due to left recursion, so we instead parse:
+//
+//     Q -> A B*
+//
+// but insert some stack cleverness so we get the nonterminal structure we expect.
+template <typename T>
+fit::function<ParseResultStream(ParseResultStream)> LAssoc(
+    fit::function<ParseResultStream(ParseResultStream)> operand,
+    fit::function<ParseResultStream(ParseResultStream)> continuation) {
+  auto combined =
+      Seq(std::move(operand), ZeroPlus(Seq(std::move(continuation), [](ParseResultStream p) {
+            return std::move(p).Reduce<T>(false);
+          })));
+  return [combined = std::move(combined)](ParseResultStream prefixes) {
+    return combined(std::move(prefixes).Mark()).DropMarker();
+  };
+}
+
 }  // namespace shell::parser
 
 #endif  // SRC_DEVELOPER_SHELL_PARSER_COMBINATORS_H_

@@ -217,6 +217,26 @@ Path::Path(size_t start, std::vector<std::shared_ptr<Node>> children)
   }
 }
 
+AddSub::AddSub(size_t start, std::vector<std::shared_ptr<Node>> children)
+    : Nonterminal(start, std::move(children)) {
+  for (const auto& child : Children()) {
+    if (auto op = child->AsOperator()) {
+      if (op->op() == "-") {
+        type_ = kSubtract;
+      } else {
+        FX_DCHECK(op->op() == "+");
+        type_ = kAdd;
+      }
+    } else if (!child->IsError()) {
+      if (!a_) {
+        a_ = child.get();
+      } else {
+        b_ = child.get();
+      }
+    }
+  }
+}
+
 // Visit implementations
 void Terminal::Visit(NodeVisitor* visitor) const { visitor->VisitTerminal(*this); }
 void Error::Visit(NodeVisitor* visitor) const { visitor->VisitError(*this); }
@@ -233,6 +253,7 @@ void EscapeSequence::Visit(NodeVisitor* visitor) const { visitor->VisitEscapeSeq
 void PathElement::Visit(NodeVisitor* visitor) const { visitor->VisitPathElement(*this); }
 void PathEscape::Visit(NodeVisitor* visitor) const { visitor->VisitPathEscape(*this); }
 void PathSeparator::Visit(NodeVisitor* visitor) const { visitor->VisitPathSeparator(*this); }
+void Operator::Visit(NodeVisitor* visitor) const { visitor->VisitOperator(*this); }
 void Nonterminal::Visit(NodeVisitor* visitor) const { visitor->VisitNonterminal(*this); }
 void Program::Visit(NodeVisitor* visitor) const { visitor->VisitProgram(*this); }
 void VariableDecl::Visit(NodeVisitor* visitor) const { visitor->VisitVariableDecl(*this); }
@@ -242,6 +263,7 @@ void Identifier::Visit(NodeVisitor* visitor) const { visitor->VisitIdentifier(*t
 void Object::Visit(NodeVisitor* visitor) const { visitor->VisitObject(*this); }
 void Field::Visit(NodeVisitor* visitor) const { visitor->VisitField(*this); }
 void Path::Visit(NodeVisitor* visitor) const { visitor->VisitPath(*this); }
+void AddSub::Visit(NodeVisitor* visitor) const { visitor->VisitAddSub(*this); }
 void Expression::Visit(NodeVisitor* visitor) const { visitor->VisitExpression(*this); }
 
 }  // namespace shell::parser::ast

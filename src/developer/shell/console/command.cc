@@ -86,6 +86,16 @@ class NodeASTVisitor : public parser::ast::NodeVisitor {
     FX_NOTREACHED() << "Paths are unimplemented.";
   }
 
+  void VisitAddSub(const parser::ast::AddSub& node) override {
+    FX_DCHECK(node.type() == parser::ast::AddSub::kAdd) << "Subtraction is unimplemented.";
+    node.a()->Visit(this);
+    AstBuilder::NodeId a_id = id_;
+    node.b()->Visit(this);
+    AstBuilder::NodeId b_id = id_;
+    // type_ is now from b, and we leak it on purpose
+    id_ = builder_->AddAddition(/*with_exceptions=*/false, a_id, b_id);
+  }
+
   void VisitExpression(const parser::ast::Expression& node) override {
     FX_DCHECK(node.Children().size() > 0);
     node.Children()[0]->Visit(this);

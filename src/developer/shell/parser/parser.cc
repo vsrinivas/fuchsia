@@ -179,8 +179,8 @@ ParseResultStream Atom(ParseResultStream prefixes) {
   return Alt(Identifier, String, Real, Integer, Path)(std::move(prefixes));
 }
 
-ParseResultStream Value(ParseResultStream prefixes);
-const auto& SimpleExpression = Value;
+ParseResultStream LogicalOr(ParseResultStream prefixes);
+const auto& SimpleExpression = LogicalOr;
 
 // Parse a field in an object literal.
 //     foo: 6
@@ -215,6 +215,35 @@ ParseResultStream Value(ParseResultStream prefixes) {
   */
   return Alt(Object, Atom)(std::move(prefixes));
 }
+
+// Unimplemented.
+ParseResultStream Lookup(ParseResultStream prefixes) { return Value(std::move(prefixes)); }
+
+// Unimplemented.
+ParseResultStream Negate(ParseResultStream prefixes) { return Lookup(std::move(prefixes)); }
+
+// Unimplemented.
+ParseResultStream Mul(ParseResultStream prefixes) { return Negate(std::move(prefixes)); }
+
+// Parse an addition expression.
+//     2 + 2
+ParseResultStream Add(ParseResultStream prefixes) {
+  return LAssoc<ast::AddSub>(
+      Seq(Mul, Maybe(Whitespace)),
+      WSSeq(Token<ast::Operator>(AnyChar("+ or -", "+-")), Mul))(std::move(prefixes));
+}
+
+// Unimplemented.
+ParseResultStream Comparison(ParseResultStream prefixes) { return Add(std::move(prefixes)); }
+
+// Unimplemented.
+ParseResultStream LogicalNot(ParseResultStream prefixes) { return Comparison(std::move(prefixes)); }
+
+// Unimplemented.
+ParseResultStream LogicalAnd(ParseResultStream prefixes) { return LogicalNot(std::move(prefixes)); }
+
+// Unimplemented.
+ParseResultStream LogicalOr(ParseResultStream prefixes) { return LogicalAnd(std::move(prefixes)); }
 
 // Parses an expression. This is effectively unimplemented right now.
 ParseResultStream Expression(ParseResultStream prefixes) {

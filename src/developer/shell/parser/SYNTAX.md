@@ -174,15 +174,36 @@ Valid object literals might include:
 { foo: { bar: 6  }, "bar & grill": "Open now"  }
 ```
 
+## Addition and subtraction
+
+Addition is defined as follows:
+
+```
+AddSub ← Value ( [+-] Value )*
+```
+
+It looks as you'd expect:
+
+```
+a + b
+```
+
+## Values
+
+Values are defined as follows:
+
+```
+Value ← Object / Atom
+Atom ← Identifer / String / Real / Integer / Path
+
+```
+
 ## Expressions
 
 Expressions are defined as follows:
 
 ```
-Expression ← Value
-Value ← Object / Atom
-Atom ← Identifer / String / Real / Integer / Path
-
+Expression ← Addition
 ```
 
 ## Programs

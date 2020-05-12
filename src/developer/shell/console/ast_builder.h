@@ -100,7 +100,7 @@ class AstBuilder {
   void OpenObject();
   NodePair CloseObject();
 
-  // Adds a field type
+  // Adds a field node
   NodePair AddField(const std::string& key, NodeId expression_node_id,
                     llcpp::fuchsia::shell::ShellType&& type);
 

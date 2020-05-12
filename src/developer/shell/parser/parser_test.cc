@@ -171,6 +171,34 @@ class Path {
   std::vector<std::string> elements_;
 };
 
+template <typename A, typename B>
+class AddSub {
+ public:
+  AddSub(A a, char op, B b) : op_(op), a_(std::move(a)), b_(std::move(b)) {}
+
+  void Check(ast::Node* node) const {
+    ASSERT_TRUE(op_ == '+' || op_ == '-') << "Operator for AddSub should be + or -";
+    auto add_sub = node->AsAddSub();
+    ASSERT_TRUE(add_sub);
+
+    if (op_ == '+') {
+      EXPECT_EQ(add_sub->type(), ast::AddSub::kAdd);
+    } else {
+      EXPECT_EQ(add_sub->type(), ast::AddSub::kSubtract);
+    }
+
+    ASSERT_TRUE(add_sub->a());
+    a_.Check(add_sub->a());
+    ASSERT_TRUE(add_sub->b());
+    b_.Check(add_sub->b());
+  }
+
+ private:
+  char op_;
+  A a_;
+  B b_;
+};
+
 template <typename... Args>
 class Program {
  public:
@@ -742,6 +770,172 @@ TEST(ParserTest, VariableDeclIdentifierInObject) {
 
   CHECK_NODE(parse, Program(VariableDecl("s", false,
                                          Expression(Object(Field("foo", Identifier("bob")))))));
+}
+
+TEST(ParserTest, VariableDeclAdd) {
+  const auto kTestString = "var s = 1 + 2";
+
+  auto parse = Parse(kTestString);
+  EXPECT_FALSE(parse->HasErrors());
+
+  EXPECT_EQ(
+      "Program(VariableDecl('var' Identifier('s') '=' "
+      "Expression(AddSub(Integer('1') '+' Integer('2')))))",
+      parse->ToString(kTestString));
+
+  CHECK_NODE(parse,
+             Program(VariableDecl("s", false, Expression(AddSub(Integer(1), '+', Integer(2))))));
+}
+
+TEST(ParserTest, VariableDeclSubtract) {
+  const auto kTestString = "var s = 1 - 2";
+
+  auto parse = Parse(kTestString);
+  EXPECT_FALSE(parse->HasErrors());
+
+  EXPECT_EQ(
+      "Program(VariableDecl('var' Identifier('s') '=' "
+      "Expression(AddSub(Integer('1') '-' Integer('2')))))",
+      parse->ToString(kTestString));
+
+  CHECK_NODE(parse,
+             Program(VariableDecl("s", false, Expression(AddSub(Integer(1), '-', Integer(2))))));
+}
+
+TEST(ParserTest, VariableDeclAddStrings) {
+  const auto kTestString = "var s = \"foo\" + \"bar\"";
+
+  auto parse = Parse(kTestString);
+  EXPECT_FALSE(parse->HasErrors());
+
+  EXPECT_EQ(
+      "Program(VariableDecl('var' Identifier('s') '=' "
+      "Expression(AddSub(String('\"' 'foo' '\"') '+' String('\"' 'bar' '\"')))))",
+      parse->ToString(kTestString));
+
+  CHECK_NODE(parse, Program(VariableDecl("s", false,
+                                         Expression(AddSub(String("foo"), '+', String("bar"))))));
+}
+
+TEST(ParserTest, VariableDeclAddStringInt) {
+  const auto kTestString = "var s = \"foo\" + 2";
+
+  auto parse = Parse(kTestString);
+  EXPECT_FALSE(parse->HasErrors());
+
+  EXPECT_EQ(
+      "Program(VariableDecl('var' Identifier('s') '=' "
+      "Expression(AddSub(String('\"' 'foo' '\"') '+' Integer('2')))))",
+      parse->ToString(kTestString));
+
+  CHECK_NODE(parse,
+             Program(VariableDecl("s", false, Expression(AddSub(String("foo"), '+', Integer(2))))));
+}
+
+TEST(ParserTest, VariableDeclAddIntString) {
+  const auto kTestString = "var s = 2 + \"bar\"";
+
+  auto parse = Parse(kTestString);
+  EXPECT_FALSE(parse->HasErrors());
+
+  EXPECT_EQ(
+      "Program(VariableDecl('var' Identifier('s') '=' "
+      "Expression(AddSub(Integer('2') '+' String('\"' 'bar' '\"')))))",
+      parse->ToString(kTestString));
+
+  CHECK_NODE(parse,
+             Program(VariableDecl("s", false, Expression(AddSub(Integer(2), '+', String("bar"))))));
+}
+
+TEST(ParserTest, VariableDeclAddObjectVariable) {
+  const auto kTestString = "var s = foo + { bar: 7 }";
+
+  auto parse = Parse(kTestString);
+  EXPECT_FALSE(parse->HasErrors());
+
+  EXPECT_EQ(
+      "Program(VariableDecl('var' Identifier('s') '=' Expression(AddSub(Identifier('foo') '+' "
+      "Object('{' Field(Identifier('bar') ':' Integer('7')) '}')))))",
+      parse->ToString(kTestString));
+
+  CHECK_NODE(parse, Program(VariableDecl("s", false,
+                                         Expression(AddSub(Identifier("foo"), '+',
+                                                           Object(Field("bar", Integer(7))))))));
+}
+
+TEST(ParserTest, VariableDeclAddVariableObject) {
+  const auto kTestString = "var s = { bar: 7 } + foo";
+
+  auto parse = Parse(kTestString);
+  EXPECT_FALSE(parse->HasErrors());
+
+  EXPECT_EQ(
+      "Program(VariableDecl('var' Identifier('s') '=' "
+      "Expression(AddSub(Object('{' Field(Identifier('bar') ':' Integer('7')) '}') '+' "
+      "Identifier('foo')))))",
+      parse->ToString(kTestString));
+
+  CHECK_NODE(parse, Program(VariableDecl("s", false,
+                                         Expression(AddSub(Object(Field("bar", Integer(7))), '+',
+                                                           Identifier("foo"))))));
+}
+
+TEST(ParserTest, VariableDeclAddSubtractChain) {
+  const auto kTestString = "var s = 1 - 2 + 7";
+
+  auto parse = Parse(kTestString);
+  EXPECT_FALSE(parse->HasErrors());
+
+  EXPECT_EQ(
+      "Program(VariableDecl('var' Identifier('s') '=' "
+      "Expression(AddSub(AddSub(Integer('1') '-' Integer('2')) '+' Integer('7')))))",
+      parse->ToString(kTestString));
+
+  CHECK_NODE(parse, Program(VariableDecl(
+                        "s", false,
+                        Expression(AddSub(AddSub(Integer(1), '-', Integer(2)), '+', Integer(7))))));
+}
+
+TEST(ParserTest, VariableDeclAddSubtractChainInObject) {
+  const auto kTestString = "var s = { foo: 1 - 2 + 7 }";
+
+  auto parse = Parse(kTestString);
+  EXPECT_FALSE(parse->HasErrors());
+
+  EXPECT_EQ(
+      "Program(VariableDecl('var' Identifier('s') '=' "
+      "Expression(Object('{' Field(Identifier('foo') ':' "
+      "AddSub(AddSub(Integer('1') '-' Integer('2')) '+' Integer('7'))) '}'))))",
+      parse->ToString(kTestString));
+
+  CHECK_NODE(parse, Program(VariableDecl(
+                        "s", false,
+                        Expression(Object(Field("foo", AddSub(AddSub(Integer(1), '-', Integer(2)),
+                                                              '+', Integer(7))))))));
+}
+
+TEST(ParserTest, VariableDeclAddSubtractDangle) {
+  const auto kTestString = "var s = 1 - 2 + ";
+
+  auto parse = Parse(kTestString);
+  EXPECT_TRUE(parse->HasErrors());
+
+  EXPECT_EQ(
+      "Program(VariableDecl('var' Identifier('s') '=' "
+      "Expression(AddSub(Integer('1') '-' Integer('2')))) E[Unexpected '+ '])",
+      parse->ToString(kTestString));
+}
+
+TEST(ParserTest, VariableDeclAddSubtractTogether) {
+  const auto kTestString = "var s = 1 - + 2";
+
+  auto parse = Parse(kTestString);
+  EXPECT_TRUE(parse->HasErrors());
+
+  EXPECT_EQ(
+      "Program(VariableDecl('var' Identifier('s') '=' "
+      "Expression(Integer('1'))) E[Unexpected '- + 2'])",
+      parse->ToString(kTestString));
 }
 
 }  // namespace shell::parser
