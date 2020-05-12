@@ -7,6 +7,9 @@
 
 #include <fuchsia/feedback/cpp/fidl.h>
 
+#include <optional>
+#include <string>
+
 #include "src/developer/feedback/feedback_data/annotations/types.h"
 
 namespace feedback {
@@ -18,6 +21,9 @@ AnnotationKeys RestrictAllowlist(const AnnotationKeys& allowlist,
 // fuchshia::feedback::Annotation
 std::vector<fuchsia::feedback::Annotation> ToFeedbackAnnotationVector(
     const Annotations& annotations);
+
+std::optional<std::string> ToJsonString(
+    const std::vector<fuchsia::feedback::Annotation>& annotations);
 
 }  // namespace feedback
 

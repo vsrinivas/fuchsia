@@ -5,7 +5,6 @@
 ###############################################################################
 # SOURCES
 ###############################################################################
-
 source_set("annotation_providers") {
   public = [ "annotation_provider_factory.h" ]
 
@@ -169,4 +168,6 @@ source_set("utils") {
     ":types",
     "//sdk/fidl/fuchsia.feedback",
   ]
+
+  deps = [ "//third_party/rapidjson" ]
 }

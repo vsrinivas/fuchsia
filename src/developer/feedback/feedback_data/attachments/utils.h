@@ -18,9 +18,9 @@ namespace feedback {
 std::vector<fuchsia::feedback::Attachment> ToFeedbackAttachmentVector(
     const Attachments& attachments);
 
-// Adds the |annotations| as an extra JSON attachment to |attachments|.
-void AddAnnotationsAsExtraAttachment(const std::vector<fuchsia::feedback::Annotation>& annotations,
-                                     std::vector<fuchsia::feedback::Attachment>* attachments);
+// Adds <|key|, |value|> to |attachments|.
+void AddToAttachments(const std::string& key, const std::string& value,
+                      std::vector<fuchsia::feedback::Attachment>* attachments);
 
 // Bundles the |attachments| into a single attachment.
 bool BundleAttachments(const std::vector<fuchsia::feedback::Attachment>& attachments,

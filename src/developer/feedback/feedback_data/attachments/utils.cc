@@ -13,8 +13,6 @@
 #include "src/lib/fsl/vmo/sized_vmo.h"
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/strings/string_printf.h"
-#include "third_party/rapidjson/include/rapidjson/document.h"
-#include "third_party/rapidjson/include/rapidjson/prettywriter.h"
 
 namespace feedback {
 
@@ -40,26 +38,12 @@ std::vector<fuchsia::feedback::Attachment> ToFeedbackAttachmentVector(
   return vec;
 }
 
-void AddAnnotationsAsExtraAttachment(const std::vector<fuchsia::feedback::Annotation>& annotations,
-                                     std::vector<fuchsia::feedback::Attachment>* attachments) {
-  rapidjson::Document json;
-  json.SetObject();
-  for (const auto& annotation : annotations) {
-    json.AddMember(rapidjson::StringRef(annotation.key), annotation.value, json.GetAllocator());
-  }
-  rapidjson::StringBuffer buffer;
-  rapidjson::PrettyWriter<rapidjson::StringBuffer> writer(buffer);
-  json.Accept(writer);
-  if (!writer.IsComplete()) {
-    FX_LOGS(WARNING) << "Failed to write annotations as a JSON";
-    return;
-  }
-  std::string json_str(buffer.GetString(), buffer.GetSize());
-
+void AddToAttachments(const std::string& key, const std::string& value,
+                      std::vector<fuchsia::feedback::Attachment>* attachments) {
   fuchsia::feedback::Attachment extra_attachment;
-  extra_attachment.key = kAttachmentAnnotations;
-  if (!fsl::VmoFromString(json_str, &extra_attachment.value)) {
-    FX_LOGS(WARNING) << "Failed to write annotations as an extra attachment";
+  extra_attachment.key = key;
+  if (!fsl::VmoFromString(value, &extra_attachment.value)) {
+    FX_LOGS(WARNING) << "Failed to convert value to VMO for " << key;
     return;
   }
   attachments->push_back(std::move(extra_attachment));

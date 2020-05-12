@@ -21,6 +21,7 @@
 #include "src/developer/feedback/feedback_data/attachments/screenshot_ptr.h"
 #include "src/developer/feedback/feedback_data/attachments/types.h"
 #include "src/developer/feedback/feedback_data/attachments/utils.h"
+#include "src/developer/feedback/feedback_data/constants.h"
 #include "src/developer/feedback/feedback_data/image_conversion.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
@@ -84,7 +85,10 @@ void DataProvider::GetBugreport(fuchsia::feedback::GetBugreportParameters params
             // This is useful for clients that surface the annotations differentily in the UI
             // but still want all the annotations to be easily downloadable in one file.
             if (bugreport.has_annotations()) {
-              AddAnnotationsAsExtraAttachment(bugreport.annotations(), &attachments);
+              const auto annotations_json = ToJsonString(bugreport.annotations());
+              if (annotations_json.has_value()) {
+                AddToAttachments(kAttachmentAnnotations, annotations_json.value(), &attachments);
+              }
             }
 
             // We bundle the attachments into a single attachment.

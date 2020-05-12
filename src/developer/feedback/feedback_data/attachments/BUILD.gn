@@ -88,6 +88,5 @@ source_set("utils") {
     "//src/developer/feedback/utils:archive",
     "//src/lib/fsl",
     "//src/lib/fxl",
-    "//third_party/rapidjson",
   ]
 }

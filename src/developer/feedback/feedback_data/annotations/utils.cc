@@ -6,6 +6,9 @@
 
 #include <algorithm>
 
+#include "third_party/rapidjson/include/rapidjson/document.h"
+#include "third_party/rapidjson/include/rapidjson/prettywriter.h"
+
 namespace feedback {
 
 AnnotationKeys RestrictAllowlist(const AnnotationKeys& allowlist,
@@ -28,6 +31,23 @@ std::vector<fuchsia::feedback::Annotation> ToFeedbackAnnotationVector(
     }
   }
   return vec;
+}
+
+std::optional<std::string> ToJsonString(
+    const std::vector<fuchsia::feedback::Annotation>& annotations) {
+  rapidjson::Document json;
+  json.SetObject();
+  for (const auto& annotation : annotations) {
+    json.AddMember(rapidjson::StringRef(annotation.key), annotation.value, json.GetAllocator());
+  }
+  rapidjson::StringBuffer buffer;
+  rapidjson::PrettyWriter<rapidjson::StringBuffer> writer(buffer);
+  json.Accept(writer);
+  if (!writer.IsComplete()) {
+    FX_LOGS(WARNING) << "Failed to write annotations as a JSON";
+    return std::nullopt;
+  }
+  return std::string(buffer.GetString(), buffer.GetSize());
 }
 
 }  // namespace feedback
