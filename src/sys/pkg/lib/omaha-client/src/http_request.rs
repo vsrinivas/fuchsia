@@ -13,7 +13,6 @@ pub trait HttpRequest {
     ) -> BoxFuture<'_, Result<Response<Body>, hyper::Error>>;
 }
 
-#[cfg(test)]
 pub mod mock;
 
 /// A stub HttpRequest that does nothing and returns an empty response immediately.

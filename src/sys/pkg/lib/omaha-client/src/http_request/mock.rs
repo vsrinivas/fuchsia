@@ -4,12 +4,14 @@
 
 use crate::http_request::HttpRequest;
 use futures::compat::Stream01CompatExt;
-use futures::executor::block_on;
 use futures::future::BoxFuture;
 use futures::prelude::*;
 use hyper::{Body, Request, Response};
 use pretty_assertions::assert_eq;
 use std::{cell::RefCell, collections::VecDeque, rc::Rc};
+
+#[cfg(test)]
+use futures::executor::block_on;
 
 #[derive(Debug, Default)]
 pub struct MockHttpRequest {
@@ -87,6 +89,7 @@ impl MockHttpRequest {
     }
 }
 
+#[cfg(test)]
 async fn response_to_vec(response: Response<Body>) -> Vec<u8> {
     response.into_body().compat().try_concat().await.unwrap().to_vec()
 }
