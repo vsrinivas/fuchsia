@@ -190,19 +190,19 @@ impl BufferLayout {
 mod tests {
     use super::*;
 
+    use std::{collections::HashMap, iter};
+
+    use crate::{
+        painter::{BlendMode, Fill, FillRule, Style},
+        PIXEL_WIDTH,
+    };
+
     #[test]
     fn flusher() {
         macro_rules! seg {
-            ( $j:expr, $i:expr ) => (CompactSegment::new(
-                0,
-                $j,
-                $i,
-                0,
-                0,
-                0,
-                0,
-                0,
-            ));
+            ( $j:expr, $i:expr ) => {
+                CompactSegment::new(0, $j, $i, 0, 0, 0, 0, 0)
+            };
         }
 
         struct WhiteFlusher;
@@ -217,15 +217,120 @@ mod tests {
 
         let size = TILE_SIZE + TILE_SIZE / 2;
         let mut buffer = vec![[0u8; 4]; size * size];
-        let mut buffer_layout = BufferLayoutBuilder::new(size).set_flusher(Box::new(WhiteFlusher)).build(&mut buffer);
+        let mut buffer_layout =
+            BufferLayoutBuilder::new(size).set_flusher(Box::new(WhiteFlusher)).build(&mut buffer);
 
-        buffer_layout.print(&mut buffer, &[
-            seg!(0, 0),
-            seg!(0, 1),
-            seg!(1, 0),
-            seg!(1, 1),
-        ], [0.0; 4], |_| Style::default());
+        buffer_layout.print(
+            &mut buffer,
+            &[seg!(0, 0), seg!(0, 1), seg!(1, 0), seg!(1, 1)],
+            [0.0; 4],
+            |_| Style::default(),
+        );
 
         assert!(buffer.iter().all(|&color| color == [255u8; 4]));
+    }
+
+    #[test]
+    fn skip_opaque_tiles() {
+        const BLACK: [f32; 4] = [0.0, 0.0, 0.0, 1.0];
+        const RED: [f32; 4] = [1.0, 0.0, 0.0, 1.0];
+        const GREEN: [f32; 4] = [0.0, 1.0, 0.0, 1.0];
+        const BLUE: [f32; 4] = [0.0, 0.0, 1.0, 1.0];
+        const BLACK_RGBA: [u8; 4] = [0, 0, 0, 255];
+        const RED_RGBA: [u8; 4] = [255, 0, 0, 255];
+        const GREEN_RGBA: [u8; 4] = [0, 255, 0, 255];
+        const BLUE_RGBA: [u8; 4] = [0, 0, 255, 255];
+
+        let mut buffer = vec![[0u8; 4]; TILE_SIZE * TILE_SIZE * 3];
+        let mut buffer_layout = BufferLayoutBuilder::new(TILE_SIZE * 3).build(&mut buffer);
+
+        let mut segments = vec![];
+        for y in 0..TILE_SIZE {
+            segments.push(CompactSegment::new(
+                0,
+                0,
+                -1,
+                2,
+                y as u8,
+                TILE_SIZE as u8 - 1,
+                0,
+                PIXEL_WIDTH as i8,
+            ));
+        }
+
+        segments.push(CompactSegment::new(
+            0,
+            0,
+            -1,
+            0,
+            0,
+            TILE_SIZE as u8 - 1,
+            0,
+            PIXEL_WIDTH as i8,
+        ));
+        segments.push(CompactSegment::new(0, 0, 0, 1, 1, 0, 0, PIXEL_WIDTH as i8));
+
+        for y in 0..TILE_SIZE {
+            segments.push(CompactSegment::new(
+                0,
+                0,
+                1,
+                2,
+                y as u8,
+                TILE_SIZE as u8 - 1,
+                0,
+                -(PIXEL_WIDTH as i8),
+            ));
+        }
+
+        segments.sort();
+
+        let mut styles = HashMap::new();
+
+        styles.insert(
+            0,
+            Style {
+                fill_rule: FillRule::NonZero,
+                fill: Fill::Solid(BLUE),
+                blend_mode: BlendMode::Over,
+            },
+        );
+        styles.insert(
+            1,
+            Style {
+                fill_rule: FillRule::NonZero,
+                fill: Fill::Solid(GREEN),
+                blend_mode: BlendMode::Over,
+            },
+        );
+        styles.insert(
+            2,
+            Style {
+                fill_rule: FillRule::NonZero,
+                fill: Fill::Solid(RED),
+                blend_mode: BlendMode::Over,
+            },
+        );
+
+        buffer_layout.print(&mut buffer, &segments, BLACK, |layer| styles[&layer]);
+
+        let tiles: Vec<_> =
+            buffer_layout.layout.iter_mut().map(|slice| slice.as_mut_slice().to_owned()).collect();
+
+        assert_eq!(
+            tiles,
+            // First two tiles need to be completely red.
+            iter::repeat(vec![RED_RGBA; TILE_SIZE])
+                .take(TILE_SIZE)
+                .chain(iter::repeat(vec![RED_RGBA; TILE_SIZE]).take(TILE_SIZE))
+                .chain(
+                    // The last tile contains one blue and one green line.
+                    iter::once(vec![BLUE_RGBA; TILE_SIZE])
+                        .chain(iter::once(vec![GREEN_RGBA; TILE_SIZE]))
+                        // Followed by black lines (clear color).
+                        .chain(iter::repeat(vec![BLACK_RGBA; TILE_SIZE]).take(TILE_SIZE - 2))
+                )
+                .collect::<Vec<_>>()
+        );
     }
 }

@@ -103,6 +103,24 @@ fn from_area(area: i32, fill_rule: FillRule) -> f32 {
 }
 
 #[inline]
+fn linear_to_srgb_approx(l: f32) -> f32 {
+    let a = 0.20101772f32;
+    let b = -0.51280147f32;
+    let c = 1.344401f32;
+    let d = -0.030656587f32;
+
+    let s = l.sqrt();
+    let s2 = s * s;
+    let s3 = s2 * s;
+
+    if l <= 0.0031308 {
+        l * 12.92
+    } else {
+        a.mul_add(s3, b.mul_add(s2, c.mul_add(s, d)))
+    }
+}
+
+#[inline]
 fn linear_to_srgb_approx_simd(l: f32x8) -> f32x8 {
     let a = f32x8::splat(0.20101772f32);
     let b = f32x8::splat(-0.51280147f32);
@@ -117,6 +135,23 @@ fn linear_to_srgb_approx_simd(l: f32x8) -> f32x8 {
     let n = a.mul_add(s3, b.mul_add(s2, c.mul_add(s, d)));
 
     f32x8::select(l.le(f32x8::splat(0.0031308)), m, n)
+}
+
+#[inline]
+fn to_byte(n: f32) -> u8 {
+    n.mul_add(255.0, 0.5) as u8
+}
+
+#[inline]
+fn to_bytes(color: [f32; 4]) -> [u8; 4] {
+    let alpha_recip = color[3].recip();
+
+    [
+        to_byte(linear_to_srgb_approx(color[0] * alpha_recip)),
+        to_byte(linear_to_srgb_approx(color[1] * alpha_recip)),
+        to_byte(linear_to_srgb_approx(color[2] * alpha_recip)),
+        to_byte(color[3]),
+    ]
 }
 
 pub struct Painter {
@@ -242,48 +277,47 @@ impl Painter {
         covers
     }
 
-    fn process_layer_segments(&mut self, segments: &[CompactSegment], layer: u16) -> usize {
+    fn for_each_layer_segments<F>(segments: &[CompactSegment], layer: u16, mut f: F) -> usize
+    where
+        F: FnMut(CompactSegment),
+    {
         let mut i = 0;
 
         segments.iter().copied().take_while(|segment| segment.layer() == layer).for_each(
             |segment| {
                 i += 1;
 
-                let x = segment.tile_x() as usize;
-                let y = segment.tile_y() as usize;
-
-                self.areas[entry(x, y)] += segment.area();
-                self.covers[entry(x + 1, y)] += segment.cover();
+                f(segment);
             },
         );
 
         i
     }
 
+    fn next_layer(
+        queue: &VecDeque<CoverCarry>,
+        segment: Option<&CompactSegment>,
+    ) -> Option<Ordering> {
+        match (
+            queue.front().map(|cover_carry| cover_carry.layer),
+            segment.map(|segment| segment.layer()),
+        ) {
+            (Some(layer_cover), Some(layer_segment)) => Some(layer_cover.cmp(&layer_segment)),
+            (Some(_), None) => Some(Ordering::Less),
+            (None, Some(_)) => Some(Ordering::Greater),
+            (None, None) => None,
+        }
+    }
+
     pub fn paint_tile<F>(&mut self, segments: &[CompactSegment], styles: &F)
     where
         F: Fn(u16) -> Style + Send + Sync,
     {
-        fn next_layer(
-            queue: &VecDeque<CoverCarry>,
-            segment: Option<&CompactSegment>,
-        ) -> Option<Ordering> {
-            match (
-                queue.front().map(|cover_carry| cover_carry.layer),
-                segment.map(|segment| segment.layer()),
-            ) {
-                (Some(layer_cover), Some(layer_segment)) => Some(layer_cover.cmp(&layer_segment)),
-                (Some(_), None) => Some(Ordering::Less),
-                (None, Some(_)) => Some(Ordering::Greater),
-                (None, None) => None,
-            }
-        }
-
         let mut i = 0;
 
         self.next_queue.clear();
 
-        while let Some(ordering) = next_layer(&self.queue, segments.get(i)) {
+        while let Some(ordering) = Self::next_layer(&self.queue, segments.get(i)) {
             self.clear_cells();
 
             let layer = if ordering == Ordering::Less || ordering == Ordering::Equal {
@@ -293,7 +327,13 @@ impl Painter {
             };
 
             if ordering != Ordering::Less {
-                i += self.process_layer_segments(&segments[i..], layer);
+                i += Self::for_each_layer_segments(&segments[i..], layer, |segment| {
+                    let x = segment.tile_x() as usize;
+                    let y = segment.tile_y() as usize;
+
+                    self.areas[entry(x, y)] += segment.area();
+                    self.covers[entry(x + 1, y)] += segment.cover();
+                });
             }
 
             let covers = self.paint_layer(styles(layer));
@@ -303,7 +343,72 @@ impl Painter {
         }
     }
 
-    fn covers_left(&mut self, segments: &[CompactSegment]) -> Option<usize> {
+    fn top_carry_layer_solid_opaque<F>(
+        &mut self,
+        segments: &[CompactSegment],
+        styles: &F,
+    ) -> Option<[f32; 4]>
+    where
+        F: Fn(u16) -> Style + Send + Sync,
+    {
+        let top_carry_layer = self
+            .queue
+            .back()
+            .filter(|cover_carry| {
+                cover_carry.covers.iter().all(|&cover| cover == PIXEL_WIDTH as i8)
+            })
+            .map(|cover_carry| cover_carry.layer)?;
+
+        if let Some(segment_layer) = segments.last().map(|segment| segment.layer()) {
+            if segment_layer >= top_carry_layer {
+                return None;
+            }
+        }
+
+        match styles(top_carry_layer).fill {
+            Fill::Solid(color) => {
+                let mut i = 0;
+
+                self.next_queue.clear();
+
+                while let Some(ordering) = Self::next_layer(&self.queue, segments.get(i)) {
+                    match ordering {
+                        Ordering::Less => {
+                            self.next_queue.push_back(self.queue.pop_front().unwrap())
+                        }
+                        Ordering::Equal => {
+                            let mut cover_carry = self.queue.pop_front().unwrap();
+
+                            i += Self::for_each_layer_segments(
+                                &segments[i..],
+                                cover_carry.layer,
+                                |segment| {
+                                    cover_carry.covers[segment.tile_y() as usize] +=
+                                        segment.cover();
+                                },
+                            );
+
+                            self.next_queue.push_back(cover_carry);
+                        }
+                        Ordering::Greater => {
+                            let layer = segments[i].layer();
+                            let mut covers = [0; TILE_SIZE];
+
+                            i += Self::for_each_layer_segments(&segments[i..], layer, |segment| {
+                                covers[segment.tile_y() as usize] += segment.cover();
+                            });
+
+                            self.next_queue.push_back(CoverCarry { covers, layer });
+                        }
+                    }
+                }
+
+                Some(color)
+            }
+        }
+    }
+
+    fn covers_negative_i(&mut self, segments: &[CompactSegment]) -> Option<usize> {
         search_last_by_key(segments, false, |segment| segment.tile_i().is_negative())
             .map(|i| {
                 let i = i + 1;
@@ -367,7 +472,7 @@ impl Painter {
     ) where
         F: Fn(u16) -> Style + Send + Sync,
     {
-        if let Some(end) = self.covers_left(segments) {
+        if let Some(end) = self.covers_negative_i(segments) {
             segments = &segments[..end];
         }
 
@@ -380,28 +485,42 @@ impl Painter {
                         current_segments
                     })
                     .unwrap_or(&[]);
+            let tile_len = tile.len();
 
             if !current_segments.is_empty() || !self.queue.is_empty() {
-                self.clear(clear_color);
+                if let Some(color) = self.top_carry_layer_solid_opaque(current_segments, &styles) {
+                    let tile_color = to_bytes(color);
 
-                self.paint_tile(current_segments, &styles);
-                mem::swap(&mut self.queue, &mut self.next_queue);
+                    for slice in tile.iter_mut().take(tile_len) {
+                        let slice = slice.as_mut_slice();
+                        for color in slice.iter_mut() {
+                            *color = tile_color;
+                        }
+                    }
+                } else {
+                    self.clear(clear_color);
 
-                self.compute_srgb();
+                    self.paint_tile(current_segments, &styles);
+                    self.compute_srgb();
 
-                let len = tile.len();
-                let srgb: &[[u8; 4]] = unsafe {
-                    slice::from_raw_parts(mem::transmute(self.srgb.as_ptr()), self.srgb.len() * 2)
-                };
-                for (y, slice) in tile.iter_mut().enumerate().take(len) {
-                    let slice = slice.as_mut_slice();
-                    for (x, color) in slice.iter_mut().enumerate() {
-                        *color = srgb[entry(x, y)];
+                    let srgb: &[[u8; 4]] = unsafe {
+                        slice::from_raw_parts(
+                            mem::transmute(self.srgb.as_ptr()),
+                            self.srgb.len() * 2,
+                        )
+                    };
+                    for (y, slice) in tile.iter_mut().enumerate().take(tile_len) {
+                        let slice = slice.as_mut_slice();
+                        for (x, color) in slice.iter_mut().enumerate() {
+                            *color = srgb[entry(x, y)];
+                        }
                     }
                 }
 
+                mem::swap(&mut self.queue, &mut self.next_queue);
+
                 if let Some(flusher) = flusher {
-                    for slice in tile.iter_mut().take(len) {
+                    for slice in tile.iter_mut().take(tile_len) {
                         let slice = slice.as_mut_slice();
                         flusher.flush(if let Some(subslice) = slice.get_mut(..TILE_SIZE) {
                             subslice
