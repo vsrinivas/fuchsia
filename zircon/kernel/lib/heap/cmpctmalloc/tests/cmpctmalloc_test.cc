@@ -53,6 +53,7 @@ class RandomAllocator {
     void* p = cmpct_alloc(size);
     ASSERT_NOT_NULL(p);
     EXPECT_TRUE(ZX_IS_ALIGNED(p, HEAP_DEFAULT_ALIGNMENT));
+    memset(p, kAllocFill, size);
     allocated_.push_back(p);
   }
 
@@ -63,6 +64,7 @@ class RandomAllocator {
     void* p = cmpct_memalign(alignment, size);
     ASSERT_NOT_NULL(p);
     EXPECT_TRUE(ZX_IS_ALIGNED(p, alignment));
+    memset(p, kAllocFill, size);
     allocated_.push_back(p);
   }
 
@@ -84,6 +86,11 @@ class RandomAllocator {
   }
 
  private:
+  // Filling allocated buffers with this value helps ensure that cmpctmaloc
+  // is indeed giving us a buffer large enough. For example, were it to give us
+  // anything with overlap with its internal data structures, this fill would
+  // stomp on that and likely result in a large crash.
+  static constexpr int kAllocFill = 0x51;
   // memalign is only required to accept alignment specifications that are
   // powers of two and multiples of sizeof(void*) (guaranteed itself to be a
   // power of 2).
