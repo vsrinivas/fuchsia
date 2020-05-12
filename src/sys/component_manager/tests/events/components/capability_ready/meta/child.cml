@@ -13,8 +13,9 @@
             rights: [ "r*" ],
         },
         {
-            directory: "/bar",
+            directory: "/mar",
             from: "self",
+            as: "/bar",
             to: "framework",
             rights: [ "r*" ],
         },

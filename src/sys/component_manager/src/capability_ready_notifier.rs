@@ -131,22 +131,29 @@ impl CapabilityReadyNotifier {
 
         for expose_decl in expose_decls {
             match expose_decl {
-                ExposeDecl::Directory(ExposeDirectoryDecl { target_path, rights, .. }) => {
+                ExposeDecl::Directory(ExposeDirectoryDecl {
+                    source_path,
+                    target_path,
+                    rights,
+                    ..
+                }) => {
                     self.dispatch_capability_ready(
                         &target_realm,
                         outgoing_dir_result.as_ref(),
                         fio::MODE_TYPE_DIRECTORY,
                         Rights::from(rights.unwrap_or(*READ_RIGHTS)),
+                        source_path,
                         target_path,
                     )
                     .await
                 }
-                ExposeDecl::Protocol(ExposeProtocolDecl { target_path, .. }) => {
+                ExposeDecl::Protocol(ExposeProtocolDecl { source_path, target_path, .. }) => {
                     self.dispatch_capability_ready(
                         &target_realm,
                         outgoing_dir_result.as_ref(),
                         fio::MODE_TYPE_SERVICE,
                         Rights::from(*WRITE_RIGHTS),
+                        source_path,
                         target_path,
                     )
                     .await
@@ -161,21 +168,23 @@ impl CapabilityReadyNotifier {
         Ok(())
     }
 
-    /// Dispatches an event with the directory at the given `target_path` inside the provided
-    /// outgoing directory if the capability is available.
+    /// Dispatches an event with the directory at the given `source_path` inside the provided
+    /// outgoing directory if the capability is available. Renames to `target_path`.
     async fn dispatch_capability_ready(
         &self,
         target_realm: &Arc<Realm>,
         outgoing_dir_result: Result<&DirectoryProxy, &ModelError>,
         mode: u32,
         rights: Rights,
+        source_path: CapabilityPath,
         target_path: CapabilityPath,
     ) -> Result<(), ModelError> {
-        // DirProxy.open fails on absolute paths.
-        let path = target_path.to_string();
-        let canonicalized_path = io_util::canonicalize_path(&path);
+        let target_path = target_path.to_string();
 
         let node_result = async move {
+            // DirProxy.open fails on absolute paths.
+            let source_path = source_path.to_string();
+            let canonicalized_path = io_util::canonicalize_path(&source_path);
             let outgoing_dir = outgoing_dir_result.map_err(|e| e.clone())?;
 
             let (node, server_end) = fidl::endpoints::create_proxy::<NodeMarker>().unwrap();
@@ -190,7 +199,7 @@ impl CapabilityReadyNotifier {
                 .map_err(|_| {
                     ModelError::open_directory_error(
                         target_realm.abs_moniker.clone(),
-                        target_path.to_string(),
+                        source_path.clone(),
                     )
                 })?;
             self.wait_for_on_open(&node, &target_realm.abs_moniker, canonicalized_path.to_string())
@@ -203,14 +212,17 @@ impl CapabilityReadyNotifier {
             Ok(node) => {
                 let event = Event::new(
                     target_realm.abs_moniker.clone(),
-                    Ok(EventPayload::CapabilityReady { path, node }),
+                    Ok(EventPayload::CapabilityReady { path: target_path, node }),
                 );
                 target_realm.hooks.dispatch(&event).await
             }
             Err(e) => {
                 let event = Event::new(
                     target_realm.abs_moniker.clone(),
-                    Err(EventError::new(&e, EventErrorPayload::CapabilityReady { path })),
+                    Err(EventError::new(
+                        &e,
+                        EventErrorPayload::CapabilityReady { path: target_path },
+                    )),
                 );
                 target_realm.hooks.dispatch(&event).await?;
                 return Err(e);
