@@ -299,7 +299,7 @@ class UsbXhci : public UsbXhciType, public ddk::UsbHciProtocol<UsbXhci, ddk::bas
 
   // Initialization thread method. This is invoked from a separate detached thread
   // when xHCI binds
-  zx_status_t InitThread();
+  zx_status_t InitThread(std::unique_ptr<dma_buffer::BufferFactory> buffer_factory);
 
   // Resets the xHCI controller. This should only be called during initialization.
   void ResetController();
@@ -332,6 +332,8 @@ class UsbXhci : public UsbXhciType, public ddk::UsbHciProtocol<UsbXhci, ddk::bas
 
   // Sets the test harness
   void set_test_harness(void* harness) { test_harness_ = harness; }
+
+  dma_buffer::BufferFactory& factory() const { return *buffer_factory_; }
 
  private:
   DISALLOW_COPY_ASSIGN_AND_MOVE(UsbXhci);
@@ -484,16 +486,18 @@ class UsbXhci : public UsbXhciType, public ddk::UsbHciProtocol<UsbXhci, ddk::bas
   uint64_t* dcbaa_;
 
   // IO buffer for the device context base address array
-  std::optional<dma_buffer::PagedBuffer> dcbaa_buffer_;
+  std::unique_ptr<dma_buffer::PagedBuffer> dcbaa_buffer_;
 
   // BTI for retrieving physical memory addresses from IO buffers.
   zx::bti bti_;
 
   // xHCI scratchpad buffers (see xHCI section 4.20)
-  std::unique_ptr<std::optional<dma_buffer::ContiguousBuffer>[]> scratchpad_buffers_;
+  std::unique_ptr<std::unique_ptr<dma_buffer::ContiguousBuffer>[]> scratchpad_buffers_;
 
   // IO buffer for the scratchpad buffer array
-  std::optional<dma_buffer::PagedBuffer> scratchpad_buffer_array_;
+  std::unique_ptr<dma_buffer::PagedBuffer> scratchpad_buffer_array_;
+
+  std::unique_ptr<dma_buffer::BufferFactory> buffer_factory_;
 
   // Page size of the HCI
   size_t page_size_;

@@ -19,13 +19,13 @@ namespace usb_xhci {
 
 zx_status_t EventRingSegmentTable::Init(size_t page_size, const zx::bti& bti, bool is_32bit,
                                         uint32_t erst_max, ERSTSZ erst_size,
-                                        ddk::MmioBuffer* mmio) {
+                                        dma_buffer::BufferFactory* factory, ddk::MmioBuffer* mmio) {
   erst_size_ = erst_size;
   bti_ = &bti;
   page_size_ = page_size;
   is_32bit_ = is_32bit;
   mmio_.emplace(mmio->View(0));
-  zx_status_t status = dma_buffer::PagedBuffer::Create(bti, ZX_PAGE_SIZE, false, &erst_);
+  zx_status_t status = factory->CreatePaged(bti, ZX_PAGE_SIZE, false, &erst_);
   if (status != ZX_OK) {
     return status;
   }
@@ -79,7 +79,7 @@ zx_status_t EventRing::Init(size_t page_size, const zx::bti& bti, ddk::MmioBuffe
   hci_ = hci;
   hcc_params_1_ = hcc_params_1;
   dcbaa_ = dcbaa;
-  return segments_.Init(page_size, bti, is_32bit, erst_max, erst_size, mmio_);
+  return segments_.Init(page_size, bti, is_32bit, erst_max, erst_size, &hci->factory(), mmio_);
 }
 
 void EventRing::RemovePressure() {
@@ -121,14 +121,14 @@ zx_status_t EventRing::AddSegment() {
   }
   std::unique_ptr<dma_buffer::ContiguousBuffer> buffer;
   {
-    std::optional<dma_buffer::ContiguousBuffer> buffer_tmp;
-    zx_status_t status = dma_buffer::ContiguousBuffer::Create(
+    std::unique_ptr<dma_buffer::ContiguousBuffer> buffer_tmp;
+    zx_status_t status = hci_->factory().CreateContiguous(
         *bti_, page_size_, static_cast<uint32_t>(page_size_ == PAGE_SIZE ? 0 : page_size_ >> 12),
         &buffer_tmp);
     if (status != ZX_OK) {
       return status;
     }
-    buffer = std::make_unique<dma_buffer::ContiguousBuffer>(std::move(*buffer_tmp));
+    buffer = std::move(buffer_tmp);
   }
   if (is_32bit_ && (buffer->phys() >= UINT32_MAX)) {
     return ZX_ERR_NO_MEMORY;

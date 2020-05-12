@@ -96,8 +96,9 @@ zx_status_t zx_handle_close(zx_handle_t handle) {
 }
 
 TEST(DmaBufferTests, InitWithCacheEnabled) {
-  std::optional<ContiguousBuffer> buffer;
-  ASSERT_OK(ContiguousBuffer::Create(kFakeBti, ZX_PAGE_SIZE * 4, 2, &buffer));
+  std::unique_ptr<ContiguousBuffer> buffer;
+  auto factory = CreateBufferFactory();
+  ASSERT_OK(factory->CreateContiguous(kFakeBti, ZX_PAGE_SIZE * 4, 2, &buffer));
   auto& state = syscall_state.vmos.begin()->second;
   ASSERT_EQ(state.alignment_log2, 2);
   ASSERT_EQ(state.bti_handle, kFakeBti.get());
@@ -109,8 +110,9 @@ TEST(DmaBufferTests, InitWithCacheEnabled) {
 }
 
 TEST(DmaBufferTests, InitWithCacheDisabled) {
-  std::optional<PagedBuffer> buffer;
-  ASSERT_OK(PagedBuffer::Create(kFakeBti, ZX_PAGE_SIZE, false, &buffer));
+  std::unique_ptr<PagedBuffer> buffer;
+  auto factory = CreateBufferFactory();
+  ASSERT_OK(factory->CreatePaged(kFakeBti, ZX_PAGE_SIZE, false, &buffer));
   auto& state = syscall_state.vmos.begin()->second;
   ASSERT_EQ(state.alignment_log2, 0);
   ASSERT_EQ(state.cache_policy, ZX_CACHE_POLICY_UNCACHED_DEVICE);
@@ -121,8 +123,9 @@ TEST(DmaBufferTests, InitWithCacheDisabled) {
 }
 
 TEST(DmaBufferTests, InitCachedMultiPageBuffer) {
-  std::optional<ContiguousBuffer> buffer;
-  ASSERT_OK(ContiguousBuffer::Create(kFakeBti, ZX_PAGE_SIZE * 4, 0, &buffer));
+  std::unique_ptr<ContiguousBuffer> buffer;
+  auto factory = CreateBufferFactory();
+  ASSERT_OK(factory->CreateContiguous(kFakeBti, ZX_PAGE_SIZE * 4, 0, &buffer));
   auto& state = syscall_state.vmos.begin()->second;
   ASSERT_EQ(state.alignment_log2, 0);
   ASSERT_EQ(state.cache_policy, 0);

@@ -8,5 +8,8 @@ group("lib") {
 
 group("tests") {
   testonly = true
-  deps = [ "driver:tests" ]
+  deps = [
+    "driver:tests",
+    "//src/devices/testing/fake-dma-buffer/test:fake-dma-buffer-package",
+  ]
 }

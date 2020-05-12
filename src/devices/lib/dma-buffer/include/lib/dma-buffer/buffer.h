@@ -23,40 +23,11 @@ namespace dma_buffer {
 // will allow users to create uncached contiguous buffers.
 class ContiguousBuffer : public fbl::DoublyLinkedListable<std::unique_ptr<ContiguousBuffer>> {
  public:
-  ContiguousBuffer(ContiguousBuffer&& other) {
-    size_ = other.size_;
-    virt_ = other.virt_;
-    phys_ = other.phys_;
-    vmo_ = std::move(other.vmo_);
-    pmt_ = std::move(other.pmt_);
-  }
-  ContiguousBuffer& operator=(ContiguousBuffer&& other) {
-    size_ = other.size_;
-    virt_ = other.virt_;
-    phys_ = other.phys_;
-    vmo_ = std::move(other.vmo_);
-    pmt_ = std::move(other.pmt_);
-    return *this;
-  }
-  ContiguousBuffer(const ContiguousBuffer&) = delete;
-  ContiguousBuffer& operator=(const ContiguousBuffer&) = delete;
-  static zx_status_t Create(const zx::bti& bti, size_t size, uint32_t alignment_log2,
-                            std::optional<ContiguousBuffer>* out);
+  virtual size_t size() const = 0;
+  virtual void* virt() const = 0;
 
-  size_t size() { return size_; }
-  void* virt() { return virt_; }
-
-  zx_paddr_t phys() { return phys_; }
-  ~ContiguousBuffer();
-
- private:
-  ContiguousBuffer(size_t size, zx::vmo vmo, void* virt, zx_paddr_t phys, zx::pmt pmt)
-      : size_(size), virt_(virt), phys_(phys), vmo_(std::move(vmo)), pmt_(std::move(pmt)) {}
-  size_t size_;
-  void* virt_;
-  zx_paddr_t phys_;
-  zx::vmo vmo_;
-  zx::pmt pmt_;
+  virtual zx_paddr_t phys() const = 0;
+  virtual ~ContiguousBuffer() = default;
 };
 
 // A paged buffer consisting of 1 or more pages pinned in memory
@@ -64,41 +35,27 @@ class ContiguousBuffer : public fbl::DoublyLinkedListable<std::unique_ptr<Contig
 // in physical memory.
 class PagedBuffer : public fbl::DoublyLinkedListable<std::unique_ptr<PagedBuffer>> {
  public:
-  PagedBuffer(PagedBuffer&& other) {
-    size_ = other.size_;
-    virt_ = other.virt_;
-    phys_ = other.phys_;
-    vmo_ = std::move(other.vmo_);
-    pmt_ = std::move(other.pmt_);
-  }
-  PagedBuffer& operator=(PagedBuffer&& other) {
-    size_ = other.size_;
-    virt_ = other.virt_;
-    phys_ = other.phys_;
-    vmo_ = std::move(other.vmo_);
-    pmt_ = std::move(other.pmt_);
-    return *this;
-  }
-  PagedBuffer(const PagedBuffer&) = delete;
-  PagedBuffer& operator=(const PagedBuffer&) = delete;
-  static zx_status_t Create(const zx::bti& bti, size_t size, bool enable_cache,
-                            std::optional<PagedBuffer>* out);
+  virtual size_t size() const = 0;
+  virtual void* virt() const = 0;
 
-  size_t size() { return size_; }
-  void* virt() { return virt_; }
-
-  zx_paddr_t* phys() { return phys_.data(); }
-  ~PagedBuffer();
-
- private:
-  PagedBuffer(size_t size, zx::vmo vmo, void* virt, std::vector<zx_paddr_t> phys, zx::pmt pmt)
-      : size_(size), virt_(virt), phys_(phys), vmo_(std::move(vmo)), pmt_(std::move(pmt)) {}
-  size_t size_;
-  void* virt_;
-  std::vector<zx_paddr_t> phys_;
-  zx::vmo vmo_;
-  zx::pmt pmt_;
+  virtual const zx_paddr_t* phys() const = 0;
+  virtual ~PagedBuffer() = default;
 };
+
+// Buffer factory -- abstract class used to create DMA buffers.
+// Use CreateBufferFactory() to create a default implementation of a buffer factory.
+// This class exists to allow for tests to override the behavior of DMA buffers.
+// Refer to fake-dma-buffer to create a fake DMA buffer.
+class BufferFactory {
+ public:
+  virtual zx_status_t CreateContiguous(const zx::bti& bti, size_t size, uint32_t alignment_log2,
+                                       std::unique_ptr<ContiguousBuffer>* out) const = 0;
+  virtual zx_status_t CreatePaged(const zx::bti& bti, size_t size, bool enable_cache,
+                                  std::unique_ptr<PagedBuffer>* out) const = 0;
+  virtual ~BufferFactory() = default;
+};
+
+std::unique_ptr<BufferFactory> CreateBufferFactory();
 
 }  // namespace dma_buffer
 

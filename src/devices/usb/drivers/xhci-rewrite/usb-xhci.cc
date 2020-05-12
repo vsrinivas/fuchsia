@@ -133,11 +133,11 @@ fit::promise<OwnedRequest, void> UsbXhci::UsbHciRequestQueue(OwnedRequest usb_re
 
 zx_status_t DeviceState::InitializeSlotBuffer(const UsbXhci& hci, uint8_t slot_id, uint8_t port_id,
                                               const std::optional<HubInfo>& hub_info,
-                                              std::optional<dma_buffer::PagedBuffer>* out) {
+                                              std::unique_ptr<dma_buffer::PagedBuffer>* out) {
   // Section 4.3.3
   // 6.2.5 (Input Context initialization)
-  std::optional<dma_buffer::PagedBuffer> buffer;
-  zx_status_t status = dma_buffer::PagedBuffer::Create(hci.bti(), ZX_PAGE_SIZE, false, &buffer);
+  std::unique_ptr<dma_buffer::PagedBuffer> buffer;
+  zx_status_t status = hci.factory().CreatePaged(hci.bti(), ZX_PAGE_SIZE, false, &buffer);
   if (status != ZX_OK) {
     return status;
   }
@@ -163,7 +163,7 @@ zx_status_t DeviceState::InitializeSlotBuffer(const UsbXhci& hci, uint8_t slot_i
   } else {
     slot_context->set_CONTEXT_ENTRIES(1).set_PORTNO(port_id).set_SPEED(hci.GetPortSpeed(port_id));
   }
-  *out = std::move(*buffer);
+  *out = std::move(buffer);
   return ZX_OK;
 }
 
@@ -212,12 +212,12 @@ zx_status_t DeviceState::InitializeEndpointContext(const UsbXhci& hci, uint8_t s
 
 zx_status_t DeviceState::InitializeOutputContextBuffer(
     const UsbXhci& hci, uint8_t slot_id, uint8_t port_id, const std::optional<HubInfo>& hub_info,
-    uint64_t* dcbaa, std::optional<dma_buffer::PagedBuffer>* out) {
+    uint64_t* dcbaa, std::unique_ptr<dma_buffer::PagedBuffer>* out) {
   // Allocate an output device context data structure (6.2.1)
   // Update the DCBAA entry for this slot.
-  std::optional<dma_buffer::PagedBuffer> output_context_buffer;
+  std::unique_ptr<dma_buffer::PagedBuffer> output_context_buffer;
   zx_status_t status =
-      dma_buffer::PagedBuffer::Create(hci.bti(), ZX_PAGE_SIZE, false, &output_context_buffer);
+      hci.factory().CreatePaged(hci.bti(), ZX_PAGE_SIZE, false, &output_context_buffer);
   if (status != ZX_OK) {
     return status;
   }
@@ -241,8 +241,8 @@ TRBPromise DeviceState::AddressDeviceCommand(UsbXhci* hci, uint8_t slot, uint8_t
   if (!hub_info.has_value()) {
     hci->get_port_state()[port - 1].slot_id = slot;
   }
-  std::optional<dma_buffer::PagedBuffer> slot_context_buffer;
-  std::optional<dma_buffer::PagedBuffer> output_context_buffer;
+  std::unique_ptr<dma_buffer::PagedBuffer> slot_context_buffer;
+  std::unique_ptr<dma_buffer::PagedBuffer> output_context_buffer;
   zx_status_t status = InitializeSlotBuffer(*hci, slot, port, hub_info, &slot_context_buffer);
   if (status != ZX_OK) {
     return hci->ResultToTRBPromise(fit::error(status));
@@ -257,7 +257,7 @@ TRBPromise DeviceState::AddressDeviceCommand(UsbXhci* hci, uint8_t slot, uint8_t
     return fit::make_result_promise(fit::result<TRB*, zx_status_t>(fit::error(status))).box();
   }
 
-  status = InitializeEndpointContext(*hci, slot, port, hub_info, &slot_context_buffer.value());
+  status = InitializeEndpointContext(*hci, slot, port, hub_info, slot_context_buffer.get());
   if (status != ZX_OK) {
     return fit::make_result_promise(fit::result<TRB*, zx_status_t>(fit::error(status))).box();
   }
@@ -852,7 +852,7 @@ void UsbXhci::CommitNormalTransaction(UsbRequestState* state) {
     usb_request_cache_flush_invalidate(state->context->request->request(), 0,
                                        state->context->request->request()->header.length);
   }
-  state->transfer_ring->AssignContext(state->last_trb, std::move(state->context));
+  state->transfer_ring->AssignContext(state->last_trb, std::move(state->context), state->first_trb);
   Control::FromTRB(state->first_trb).set_Cycle(state->first_cycle).ToTrb(state->first_trb);
 
   state->transfer_ring->CommitTransaction(state->transaction);
@@ -1706,7 +1706,7 @@ void UsbXhci::ResetController() {
   }
 }
 
-int UsbXhci::InitThread() {
+int UsbXhci::InitThread(std::unique_ptr<dma_buffer::BufferFactory> factory) {
   fbl::AutoCall call([=]() { DdkAsyncRemove(); });
   fbl::AutoCall init_completer([=]() { sync_completion_signal(&init_complete_); });
   // Initialize either the PCI or MMIO structures first
@@ -1730,6 +1730,7 @@ int UsbXhci::InitThread() {
   // initial state.
   uint8_t cap_length = CapLength::Get().ReadFrom(&mmio_.value()).Length();
   cap_length_ = cap_length;
+  buffer_factory_ = std::move(factory);
   // Perform xHCI reset process
   ResetController();
   // Finish HCI initialization
@@ -1772,7 +1773,7 @@ zx_status_t UsbXhci::HciFinalize() {
     return 0;
   }
   uint32_t align_log2 = 0;
-  if (dma_buffer::PagedBuffer::Create(bti_, ZX_PAGE_SIZE, false, &dcbaa_buffer_) != ZX_OK) {
+  if (buffer_factory_->CreatePaged(bti_, ZX_PAGE_SIZE, false, &dcbaa_buffer_) != ZX_OK) {
     return 0;
   }
   if (is_32bit_ && (dcbaa_buffer_->phys()[0] >= UINT32_MAX)) {
@@ -1785,14 +1786,13 @@ zx_status_t UsbXhci::HciFinalize() {
   runtime_offset_ = offset;
   uint32_t buffers = hcsparams2.MAX_SCRATCHPAD_BUFFERS_LOW() |
                      ((hcsparams2.MAX_SCRATCHPAD_BUFFERS_HIGH() << 5) + 1);
-  scratchpad_buffers_ = std::make_unique<std::optional<dma_buffer::ContiguousBuffer>[]>(buffers);
+  scratchpad_buffers_ = std::make_unique<std::unique_ptr<dma_buffer::ContiguousBuffer>[]>(buffers);
   if (ROUNDUP(buffers * sizeof(uint64_t), ZX_PAGE_SIZE) > ZX_PAGE_SIZE) {
     // We can't create multi-page contiguously physical uncached buffers.
     // This is presently not supported in the kernel.
     return ZX_ERR_NOT_SUPPORTED;
   }
-  if (dma_buffer::PagedBuffer::Create(bti_, ZX_PAGE_SIZE, false, &scratchpad_buffer_array_) !=
-      ZX_OK) {
+  if (buffer_factory_->CreatePaged(bti_, ZX_PAGE_SIZE, false, &scratchpad_buffer_array_) != ZX_OK) {
     return 0;
   }
   if (is_32bit_ && (scratchpad_buffer_array_->phys()[0] >= UINT32_MAX)) {
@@ -1800,8 +1800,8 @@ zx_status_t UsbXhci::HciFinalize() {
   }
   uint64_t* scratchpad_buffer_array = static_cast<uint64_t*>(scratchpad_buffer_array_->virt());
   for (size_t i = 0; i < buffers - 1; i++) {
-    if (dma_buffer::ContiguousBuffer::Create(bti_, page_size, align_log2,
-                                             &scratchpad_buffers_[i]) != ZX_OK) {
+    if (buffer_factory_->CreateContiguous(bti_, page_size, align_log2, &scratchpad_buffers_[i]) !=
+        ZX_OK) {
       return 0;
     }
     if (is_32bit_ && (scratchpad_buffers_[i]->phys() >= UINT32_MAX)) {
@@ -1885,7 +1885,7 @@ zx_status_t UsbXhci::Init() {
           &init_thread,
           [](void* ctx) {
             UsbXhci* hci = static_cast<UsbXhci*>(ctx);
-            return hci->InitThread();
+            return hci->InitThread(dma_buffer::CreateBufferFactory());
           },
           this, "xhci-init-thread") != thrd_success) {
     DdkAsyncRemove();

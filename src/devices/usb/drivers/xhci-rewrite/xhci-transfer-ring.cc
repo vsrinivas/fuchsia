@@ -192,6 +192,7 @@ zx_status_t TransferRing::AssignContext(TRB* trb, std::unique_ptr<TRBContext> co
   if (status != ZX_OK) {
     return status;
   }
+  context->first_trb = first_trb;
   context->trb = trb;
   pending_trbs_.push_back(std::move(context));
   return ZX_OK;
@@ -338,14 +339,14 @@ zx_status_t TransferRing::AllocateTRB(TRB** trb, State* state) {
 zx_status_t TransferRing::AllocBuffer(dma_buffer::ContiguousBuffer** out) {
   std::unique_ptr<dma_buffer::ContiguousBuffer> buffer;
   {
-    std::optional<dma_buffer::ContiguousBuffer> buffer_tmp;
-    zx_status_t status = dma_buffer::ContiguousBuffer::Create(
+    std::unique_ptr<dma_buffer::ContiguousBuffer> buffer_tmp;
+    zx_status_t status = hci_->factory().CreateContiguous(
         *bti_, page_size_, static_cast<uint32_t>(page_size_ == PAGE_SIZE ? 0 : page_size_ >> 12),
         &buffer_tmp);
     if (status != ZX_OK) {
       return status;
     }
-    buffer = std::make_unique<dma_buffer::ContiguousBuffer>(std::move(*buffer_tmp));
+    buffer = std::move(buffer_tmp);
   }
   if (is_32_bit_ && (buffer->phys() >= UINT32_MAX)) {
     return ZX_ERR_NO_MEMORY;

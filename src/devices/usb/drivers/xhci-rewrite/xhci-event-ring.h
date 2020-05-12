@@ -38,7 +38,7 @@ struct ERSTEntry {
 class EventRingSegmentTable {
  public:
   zx_status_t Init(size_t page_size, const zx::bti& bti, bool is_32bit, uint32_t erst_max,
-                   ERSTSZ erst_size, ddk::MmioBuffer* mmio);
+                   ERSTSZ erst_size, dma_buffer::BufferFactory* factory, ddk::MmioBuffer* mmio);
   zx_status_t AddSegment(zx_paddr_t paddr);
   ERSTEntry* entries() { return entries_; }
   zx_paddr_t erst() { return erst_->phys()[0]; }
@@ -52,7 +52,7 @@ class EventRingSegmentTable {
  private:
   size_t erst_pressure_ = 0;
   ERSTSZ erst_size_;
-  std::optional<dma_buffer::PagedBuffer> erst_;
+  std::unique_ptr<dma_buffer::PagedBuffer> erst_;
   // Entries in the event ring segment table.
   // This is valid after Init() is called which
   // allocates the event ring segment table.

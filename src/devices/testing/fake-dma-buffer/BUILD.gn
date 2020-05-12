@@ -1,0 +1,18 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/unification/zx_library.gni")
+
+zx_library("fake-dma-buffer") {
+  sdk = "source"
+  sdk_headers = [ "fake-dma-buffer/fake-dma-buffer.h" ]
+  testonly = true
+  sources = [ "fake-dma-buffer.cc" ]
+  public_deps = [
+    "//src/devices/lib/dma-buffer",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/zx",
+  ]
+}

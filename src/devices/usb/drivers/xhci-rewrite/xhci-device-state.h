@@ -57,11 +57,11 @@ class DeviceState {
     return rings_[endpoint];
   }
 
-  std::optional<dma_buffer::PagedBuffer>& GetInputContext() __TA_REQUIRES(transaction_lock_) {
+  std::unique_ptr<dma_buffer::PagedBuffer>& GetInputContext() __TA_REQUIRES(transaction_lock_) {
     return input_context_;
   }
 
-  std::optional<dma_buffer::PagedBuffer>& GetDeviceContext() __TA_REQUIRES(transaction_lock_) {
+  std::unique_ptr<dma_buffer::PagedBuffer>& GetDeviceContext() __TA_REQUIRES(transaction_lock_) {
     return device_context_;
   }
 
@@ -72,7 +72,7 @@ class DeviceState {
 
   zx_status_t InitializeSlotBuffer(const UsbXhci& hci, uint8_t slot_id, uint8_t port_id,
                                    const std::optional<HubInfo>& hub_info,
-                                   std::optional<dma_buffer::PagedBuffer>* out);
+                                   std::unique_ptr<dma_buffer::PagedBuffer>* out);
 
   zx_status_t InitializeEndpointContext(const UsbXhci& hci, uint8_t slot_id, uint8_t port_id,
                                         const std::optional<HubInfo>& hub_info,
@@ -80,7 +80,7 @@ class DeviceState {
       __TA_REQUIRES(transaction_lock_);
   zx_status_t InitializeOutputContextBuffer(const UsbXhci& hci, uint8_t slot_id, uint8_t port_id,
                                             const std::optional<HubInfo>& hub_info, uint64_t* dcbaa,
-                                            std::optional<dma_buffer::PagedBuffer>* out)
+                                            std::unique_ptr<dma_buffer::PagedBuffer>* out)
       __TA_REQUIRES(transaction_lock_);
 
   fbl::Mutex& transaction_lock() __TA_RETURN_CAPABILITY(transaction_lock_) {
@@ -95,8 +95,8 @@ class DeviceState {
   bool disconnecting_ __TA_GUARDED(transaction_lock_) = false;
   TransferRing tr_ __TA_GUARDED(transaction_lock_);
   TransferRing rings_[kMaxEndpoints] __TA_GUARDED(transaction_lock_);
-  std::optional<dma_buffer::PagedBuffer> input_context_ __TA_GUARDED(transaction_lock_);
-  std::optional<dma_buffer::PagedBuffer> device_context_ __TA_GUARDED(transaction_lock_);
+  std::unique_ptr<dma_buffer::PagedBuffer> input_context_ __TA_GUARDED(transaction_lock_);
+  std::unique_ptr<dma_buffer::PagedBuffer> device_context_ __TA_GUARDED(transaction_lock_);
 };
 }  // namespace usb_xhci
 
