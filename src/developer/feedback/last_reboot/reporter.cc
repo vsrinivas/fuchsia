@@ -104,7 +104,6 @@ fuchsia::feedback::CrashReport CreateCrashReport(const RebootLog& reboot_log) {
       }
 
       if (result.is_error()) {
-        FX_PLOGS(ERROR, result.error()) << "fuchsia.feedback.CrashReporter/File returned an error";
         crash_reporter_.CompleteError(Error::kBadValue);
       } else {
         crash_reporter_.CompleteOk();
@@ -115,7 +114,6 @@ fuchsia::feedback::CrashReport CreateCrashReport(const RebootLog& reboot_log) {
   if (const zx_status_t status = async::PostDelayedTask(
           dispatcher_, [cb = delayed_crash_reporting_.callback()] { cb(); }, delay);
       status != ZX_OK) {
-    FX_PLOGS(ERROR, status) << "Failed to post delayed task, no crash reporting";
     crash_reporter_.CompleteError(Error::kAsyncTaskPostFailure);
   }
 
