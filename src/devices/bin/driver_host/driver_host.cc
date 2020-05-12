@@ -79,10 +79,13 @@ static fx_log_severity_t log_min_severity(const char* flag) {
   if (!strcmp(flag, "info")) {
     return FX_LOG_ERROR;
   }
-  if (!strcmp(flag, "trace")) {
-    return -1;
+  if (!strcmp(flag, "debug")) {
+    return FX_LOG_DEBUG;
   }
-  return -2;
+  if (!strcmp(flag, "trace")) {
+    return FX_LOG_TRACE;
+  }
+  return FX_LOG_ALL;
 }
 
 zx_status_t log_rpc_result(const fbl::RefPtr<zx_device_t>& dev, const char* opname,

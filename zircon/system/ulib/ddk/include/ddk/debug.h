@@ -38,12 +38,12 @@ __BEGIN_CDECLS
 // about what a driver is doing (start/end of transaction, etc)
 // They should aim for terseness, but provide visibility into
 // driver operation.  They are not displayed by default.
-#define DDK_LOG_TRACE (-1)
+#define DDK_LOG_TRACE FX_LOG_DEBUG
 
 // Spew messages are extremely verbose driver state tracing
 // (possibly including register dumps / full state dumps).
 // They are not displayed by default.
-#define DDK_LOG_SPEW (-2)
+#define DDK_LOG_SPEW FX_LOG_TRACE
 
 // Serial messages are intended for low-level debugging, and
 // should always be written to debuglog. They are not displayed
