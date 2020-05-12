@@ -113,9 +113,9 @@ void PackageUpdatingLoader::EnsureConnectedToResolver() {
     // the error handler is consumed when an error is encountered, so if we
     // need to reconnect then it means we need to reinstall the handler too
     resolver_.set_error_handler([this](zx_status_t status) {
-      FX_LOGS(ERROR) << "Package resolver error handler triggered, marking as "
-                        "needing reconnect. status="
-                     << status;
+      FX_LOGS(WARNING) << "Package resolver error handler triggered, marking "
+                          "as needing reconnect. status="
+                       << status;
       needs_reconnect_ = true;
     });
 
