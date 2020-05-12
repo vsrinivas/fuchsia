@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <unistd.h>
 
 #include <cstdarg>
 #include <cstdlib>
@@ -14,7 +15,6 @@
 #include <map>
 #include <memory>
 #include <string>
-#include <unistd.h>
 #include <utility>
 #include <vector>
 
@@ -40,6 +40,7 @@ void Usage() {
          "             [--json JSON_PATH]\n"
          "             [--name LIBRARY_NAME]\n"
          "             [--werror]\n"
+         "             [--format=[text|json]]\n"
          "             [--json-schema]\n"
          "             [--files [FIDL_FILE...]...]\n"
          "             [--help]\n"
@@ -78,6 +79,10 @@ void Usage() {
          "\n"
          " * `--json-schema`. If present, this flag instructs `fidlc` to output the\n"
          "   JSON schema of the intermediate representation.\n"
+         "\n"
+         " * `--format=[text|json]`. If present, this flag sets the output mode of `fidlc`.\n"
+         "    This specifies whether to output errors and warnings, if compilation fails, in\n"
+         "    plain text (the default), or as JSON.\n"
          "\n"
          " * `--werror`. Treats warnings as errors.\n"
          "\n"
@@ -298,6 +303,7 @@ int main(int argc, char* argv[]) {
   std::string library_name;
 
   bool warnings_as_errors = false;
+  std::string format = "text";
   std::vector<std::pair<Behavior, std::string>> outputs;
   fidl::ExperimentalFlags experimental_flags;
   while (args->Remaining()) {
@@ -311,6 +317,16 @@ int main(int argc, char* argv[]) {
       exit(0);
     } else if (behavior_argument == "--werror") {
       warnings_as_errors = true;
+    } else if (behavior_argument.rfind("--format") == 0) {
+      const auto equals = behavior_argument.rfind("=");
+      if (equals == std::string::npos) {
+        FailWithUsage("Unknown value for flag `format`\n");
+      }
+      const auto format_value = behavior_argument.substr(equals + 1, behavior_argument.length());
+      if (format_value != "text" && format_value != "json") {
+        FailWithUsage("Unknown value for flag `format` %s\n", format_value.data());
+      }
+      format = format_value;
     } else if (behavior_argument == "--c-header") {
       std::string path = args->Claim();
       outputs.emplace_back(std::make_pair(Behavior::kCHeader, path));
@@ -361,7 +377,11 @@ int main(int argc, char* argv[]) {
   auto typespace = fidl::flat::Typespace::RootTypes(&error_reporter);
   auto status = compile(&error_reporter, &typespace, library_name, std::move(outputs),
                         source_managers, std::move(experimental_flags));
-  error_reporter.PrintReports();
+  if (format == "json") {
+    error_reporter.PrintReportsJson();
+  } else {
+    error_reporter.PrintReports();
+  }
   return status;
 }
 

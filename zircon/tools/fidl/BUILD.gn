@@ -21,6 +21,7 @@ if (defined(zx)) {
       "lib/attributes.cc",
       "lib/c_generator.cc",
       "lib/coded_types_generator.cc",
+      "lib/diagnostics_json.cc",
       "lib/error_reporter.cc",
       "lib/error_types.cc",
       "lib/experimental_flags.cc",
@@ -186,6 +187,7 @@ if (defined(zx)) {
     sources = [
       "lib/attributes.cc",
       "lib/c_generator.cc",
+      "lib/diagnostics_json.cc",
       "lib/error_reporter.cc",
       "lib/error_types.cc",
       "lib/findings_json.cc",

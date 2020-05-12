@@ -7,7 +7,8 @@
 #include <cassert>
 #include <sstream>
 
-#include "fidl/token.h"
+#include <fidl/diagnostics_json.h>
+#include <fidl/token.h>
 
 namespace fidl {
 namespace error_reporter {
@@ -28,10 +29,10 @@ std::string MakeSquiggle(const std::string& surrounding_line, int column) {
 
 std::string Format(std::string qualifier, const std::optional<SourceSpan>& span,
                    std::string_view message, bool color, size_t squiggle_size) {
-  const std::string_view bold       = color ? "\033[1m"    : "";
-  const std::string_view bold_red   = color ? "\033[1;31m" : "";
+  const std::string_view bold = color ? "\033[1m" : "";
+  const std::string_view bold_red = color ? "\033[1;31m" : "";
   const std::string_view bold_green = color ? "\033[1;32m" : "";
-  const std::string_view reset      = color ? "\033[0m"    : "";
+  const std::string_view reset = color ? "\033[0m" : "";
 
   if (!span) {
     std::stringstream error;
@@ -112,8 +113,7 @@ void ErrorReporter::PrintReports() {
   }
   for (const auto& warning : warnings_) {
     size_t squiggle_size = warning->span ? warning->span.value().data().size() : 0;
-    auto warning_str = Format("warning", warning->span, warning->msg,
-                              enable_color_, squiggle_size);
+    auto warning_str = Format("warning", warning->span, warning->msg, enable_color_, squiggle_size);
     fprintf(stderr, "%s\n", warning_str.c_str());
   }
   if (!errors_.empty() && warnings_.empty()) {
@@ -121,9 +121,13 @@ void ErrorReporter::PrintReports() {
   } else if (errors_.empty() && !warnings_.empty()) {
     fprintf(stderr, "%zu warning(s) reported.\n", warnings_.size());
   } else if (!errors_.empty() && !warnings_.empty()) {
-    fprintf(stderr, "%zu error(s) and %zu warning(s) reported.\n",
-            errors_.size(), warnings_.size());
+    fprintf(stderr, "%zu error(s) and %zu warning(s) reported.\n", errors_.size(),
+            warnings_.size());
   }
+}
+
+void ErrorReporter::PrintReportsJson() {
+  fprintf(stderr, "%s", fidl::DiagnosticsJson(errors_, warnings_).Produce().str().c_str());
 }
 
 }  // namespace error_reporter

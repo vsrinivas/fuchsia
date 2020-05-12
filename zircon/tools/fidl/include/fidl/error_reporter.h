@@ -31,7 +31,7 @@ std::string Format(std::string qualifier, const std::optional<SourceSpan>& span,
 class ErrorReporter {
  public:
   ErrorReporter(bool warnings_as_errors = false, bool enable_color = false)
-    : warnings_as_errors_(warnings_as_errors), enable_color_(enable_color) {}
+      : warnings_as_errors_(warnings_as_errors), enable_color_(enable_color) {}
 
   // Enables temporarily muting reporting.
   enum class ReportingMode {
@@ -76,13 +76,13 @@ class ErrorReporter {
   // std::make_unique to avoid having to specify the Args... template parameters
   // on Error explicitly.
   template <typename... Args>
-  static std::unique_ptr<Error<Args...>> MakeError(
-      const ErrorDef<Args...>& err, const std::optional<SourceSpan>& span, Args... args) {
+  static std::unique_ptr<Error<Args...>> MakeError(const ErrorDef<Args...>& err,
+                                                   const std::optional<SourceSpan>& span,
+                                                   Args... args) {
     return std::make_unique<Error<Args...>>(err, span, args...);
   }
   template <typename... Args>
-  static std::unique_ptr<Error<Args...>> MakeError(
-      const ErrorDef<Args...>& err, Args... args) {
+  static std::unique_ptr<Error<Args...>> MakeError(const ErrorDef<Args...>& err, Args... args) {
     return std::make_unique<Error<Args...>>(err, std::nullopt, args...);
   }
 
@@ -95,8 +95,8 @@ class ErrorReporter {
                    const Args&... args) {
     ReportError(std::move(MakeError(err, span, args...)));
   }
-  template <typename ...Args>
-  void ReportError(const ErrorDef<Args...>& err, const Token& token, const Args& ...args) {
+  template <typename... Args>
+  void ReportError(const ErrorDef<Args...>& err, const Token& token, const Args&... args) {
     ReportError(std::move(MakeError(err, token.span(), args...)));
   }
 
@@ -104,17 +104,18 @@ class ErrorReporter {
 
   template <typename... Args>
   void ReportWarning(const ErrorDef<Args...>& err, const std::optional<SourceSpan>& span,
-                     const Args& ...args) {
+                     const Args&... args) {
     ReportWarning(std::move(MakeError(err, span, args...)));
   }
   template <typename... Args>
-  void ReportWarning(const ErrorDef<Args...>& err, const Token& token, const Args& ...args) {
+  void ReportWarning(const ErrorDef<Args...>& err, const Token& token, const Args&... args) {
     ReportWarning(std::move(MakeError(err, token.span(), args...)));
   }
 
   void ReportWarning(std::unique_ptr<BaseError> err);
 
   void PrintReports();
+  void PrintReportsJson();
   Counts Checkpoint() const { return Counts(this); }
   ScopedReportingMode OverrideMode(ReportingMode mode_override) {
     return ScopedReportingMode(mode_, mode_override);
