@@ -10,6 +10,7 @@ use {
     num_derive::{FromPrimitive, ToPrimitive},
     num_traits::bounds::Bounded,
     regex::RegexSet,
+    selectors,
     std::{
         collections::HashMap,
         convert::{TryFrom, TryInto},

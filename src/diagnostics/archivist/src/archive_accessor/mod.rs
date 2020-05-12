@@ -3,14 +3,19 @@
 // found in the LICENSE file.
 
 use {
-    crate::inspect::{self, InspectDataRepository},
+    crate::{
+        diagnostics,
+        inspect::{self, InspectDataRepository},
+    },
     anyhow::{format_err, Error},
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_diagnostics::{
         ArchiveAccessorRequest, ArchiveAccessorRequestStream, BatchIteratorMarker,
         ClientSelectorConfiguration, DataType, Selector, SelectorArgument,
     },
-    fuchsia_async as fasync, fuchsia_zircon_status as zx_status,
+    fuchsia_async as fasync,
+    fuchsia_inspect::NumericProperty,
+    fuchsia_zircon_status as zx_status,
     futures::{TryFutureExt, TryStreamExt},
     log::{error, warn},
     parking_lot::RwLock,
@@ -25,6 +30,7 @@ pub struct ArchiveAccessor {
     // The inspect repository containing read-only inspect data shared across
     // all inspect reader instances.
     inspect_repo: Arc<RwLock<InspectDataRepository>>,
+    archive_accessor_stats: Arc<diagnostics::ArchiveAccessorStats>,
 }
 
 fn validate_and_parse_selectors(
@@ -52,8 +58,11 @@ impl ArchiveAccessor {
     /// Create a new accessor for interacting with the archivist's data. The inspect_repo
     /// parameter determines which static configurations scope/restrict the visibility of inspect
     /// data accessed by readers spawned by this accessor.
-    pub fn new(inspect_repo: Arc<RwLock<InspectDataRepository>>) -> Self {
-        ArchiveAccessor { inspect_repo: inspect_repo }
+    pub fn new(
+        inspect_repo: Arc<RwLock<InspectDataRepository>>,
+        archive_accessor_stats: Arc<diagnostics::ArchiveAccessorStats>,
+    ) -> Self {
+        ArchiveAccessor { inspect_repo, archive_accessor_stats }
     }
 
     fn handle_stream_inspect(
@@ -61,6 +70,10 @@ impl ArchiveAccessor {
         result_stream: ServerEnd<BatchIteratorMarker>,
         stream_parameters: fidl_fuchsia_diagnostics::StreamParameters,
     ) -> Result<(), Error> {
+        let inspect_reader_server_stats = Arc::new(diagnostics::InspectReaderServerStats::new(
+            self.archive_accessor_stats.clone(),
+        ));
+
         match (
             stream_parameters.stream_mode,
             stream_parameters.format,
@@ -81,6 +94,7 @@ impl ArchiveAccessor {
                             let inspect_reader_server = inspect::ReaderServer::new(
                                 self.inspect_repo.clone(),
                                 Some(selectors),
+                                inspect_reader_server_stats,
                             );
 
                             inspect_reader_server
@@ -107,8 +121,11 @@ impl ArchiveAccessor {
                     }
                 }
                 ClientSelectorConfiguration::SelectAll(_) => {
-                    let inspect_reader_server =
-                        inspect::ReaderServer::new(self.inspect_repo.clone(), None);
+                    let inspect_reader_server = inspect::ReaderServer::new(
+                        self.inspect_repo.clone(),
+                        None,
+                        inspect_reader_server_stats,
+                    );
 
                     inspect_reader_server
                         .stream_inspect(stream_mode, format, result_stream)
@@ -135,33 +152,45 @@ impl ArchiveAccessor {
     /// Spawn an instance `fidl_fuchsia_diagnostics/Archive` that allows clients to open
     /// reader session to diagnostics data.
     pub fn spawn_archive_accessor_server(self, mut stream: ArchiveAccessorRequestStream) {
+        // Self isn't guaranteed to live into the exception handling of the async block. We need to clone self
+        // to have a version that can be referenced in the exception handling.
+        let errorful_archive_accessor_stats = self.archive_accessor_stats.clone();
         fasync::spawn(
             async move {
+                self.archive_accessor_stats.global_archive_accessor_connections_opened.add(1);
                 while let Some(req) = stream.try_next().await? {
                     match req {
                         ArchiveAccessorRequest::StreamDiagnostics {
                             result_stream,
                             stream_parameters,
                             control_handle: _,
-                        } => match stream_parameters.data_type {
-                            Some(DataType::Inspect) => {
-                                self.handle_stream_inspect(result_stream, stream_parameters)?
-                            }
-                            None => {
-                                warn!("Client failed to specify a valid data type.");
+                        } => {
+                            self.archive_accessor_stats.global_stream_diagnostics_requests.add(1);
+                            match stream_parameters.data_type {
+                                Some(DataType::Inspect) => {
+                                    self.handle_stream_inspect(result_stream, stream_parameters)?
+                                }
+                                None => {
+                                    warn!("Client failed to specify a valid data type.");
 
-                                result_stream
-                                    .close_with_epitaph(zx_status::Status::INVALID_ARGS)
-                                    .unwrap_or_else(|e| {
-                                        warn!("Unable to write epitaph to result stream: {:?}", e)
-                                    });
+                                    result_stream
+                                        .close_with_epitaph(zx_status::Status::INVALID_ARGS)
+                                        .unwrap_or_else(|e| {
+                                            warn!(
+                                                "Unable to write epitaph to result stream: {:?}",
+                                                e
+                                            )
+                                        });
+                                }
                             }
-                        },
+                        }
                     }
                 }
+                self.archive_accessor_stats.global_archive_accessor_connections_closed.add(1);
                 Ok(())
             }
-            .unwrap_or_else(|e: anyhow::Error| {
+            .unwrap_or_else(move |e: anyhow::Error| {
+                errorful_archive_accessor_stats.global_archive_accessor_connections_closed.add(1);
                 error!("couldn't run archive accessor service: {:?}", e)
             }),
         );

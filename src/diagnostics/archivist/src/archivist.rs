@@ -196,9 +196,17 @@ impl Archivist {
             writer,
         )?;
 
+        let all_archive_accessor_node =
+            component::inspector().root().create_child("all_archive_accessor_node");
+
+        let all_accessor_stats =
+            Arc::new(diagnostics::ArchiveAccessorStats::new(all_archive_accessor_node));
+
         fs.dir("svc").add_fidl_service(move |stream| {
-            let all_archive_accessor =
-                archive_accessor::ArchiveAccessor::new(all_inspect_repository.clone());
+            let all_archive_accessor = archive_accessor::ArchiveAccessor::new(
+                all_inspect_repository.clone(),
+                all_accessor_stats.clone(),
+            );
             all_archive_accessor.spawn_archive_accessor_server(stream)
         });
 
