@@ -174,7 +174,7 @@ void main() {
       );
       return tr.aggregateTests(
         eventEmitter: _ignoreEvents,
-        exactMatching: testsConfig.flags.exactMatches,
+        matchLength: testsConfig.flags.matchLength,
         testBundleBuilder: cmd.testBundleBuilder,
         testsConfig: testsConfig,
         testDefinitions: testDefs ?? testDefinitions,

@@ -25,7 +25,7 @@ void main() {
         fuchsiaLocator: fuchsiaLocator,
       );
       expect(collector.collect(), [
-        [MatchableTestName.unrestricted('host_x64/gen')]
+        [MatchableArgument.unrestricted('host_x64/gen')]
       ]);
     });
     test('when a duplicate is passed in', () {
@@ -34,8 +34,8 @@ void main() {
         rawArgs: ['asdf', 'asdf', 'xyz'],
       );
       expect(collector.collect(), [
-        [MatchableTestName.unrestricted('asdf')],
-        [MatchableTestName.unrestricted('xyz')]
+        [MatchableArgument.unrestricted('asdf')],
+        [MatchableArgument.unrestricted('xyz')]
       ]);
     });
     test('when a dot and duplicate are passed in', () {
@@ -51,8 +51,8 @@ void main() {
         fuchsiaLocator: fuchsiaLocator,
       );
       expect(collector.collect(), [
-        [MatchableTestName.unrestricted('asdf')],
-        [MatchableTestName.unrestricted('host_x64')]
+        [MatchableArgument.unrestricted('asdf')],
+        [MatchableArgument.unrestricted('host_x64')]
       ]);
     });
 
@@ -68,7 +68,7 @@ void main() {
         fuchsiaLocator: fuchsiaLocator,
       );
       expect(collector.collect(), [
-        [MatchableTestName.unrestricted('.')]
+        [MatchableArgument.unrestricted('.')]
       ]);
     });
   });
@@ -233,7 +233,7 @@ void main() {
         rawTestNames: [],
       );
       expect(collector.collect(), [
-        [MatchableTestName.empty()],
+        [MatchableArgument.empty()],
       ]);
     });
 
@@ -243,7 +243,7 @@ void main() {
         rawTestNames: [],
       );
       expect(collector.collect(), [
-        [MatchableTestName.empty()],
+        [MatchableArgument.empty()],
       ]);
     });
 
@@ -253,7 +253,7 @@ void main() {
         rawTestNames: ['test_one'],
       );
       expect(collector.collect(), [
-        [MatchableTestName.unrestricted('test_one')],
+        [MatchableArgument.unrestricted('test_one')],
       ]);
     });
 
@@ -263,7 +263,7 @@ void main() {
         rawTestNames: ['test_one'],
       );
       expect(collector.collect(), [
-        [MatchableTestName.unrestricted('test_one')],
+        [MatchableArgument.unrestricted('test_one')],
       ]);
     });
 
@@ -273,8 +273,8 @@ void main() {
         rawTestNames: ['test_one', 'test_two'],
       );
       expect(collector.collect(), [
-        [MatchableTestName.unrestricted('test_one')],
-        [MatchableTestName.unrestricted('test_two')]
+        [MatchableArgument.unrestricted('test_one')],
+        [MatchableArgument.unrestricted('test_two')]
       ]);
     });
 
@@ -284,8 +284,8 @@ void main() {
         rawTestNames: ['test_one', 'test_two'],
       );
       expect(collector.collect(), [
-        [MatchableTestName.unrestricted('test_one')],
-        [MatchableTestName.unrestricted('test_two')]
+        [MatchableArgument.unrestricted('test_one')],
+        [MatchableArgument.unrestricted('test_two')]
       ]);
     });
 
@@ -296,8 +296,8 @@ void main() {
       );
       expect(collector.collect(), [
         [
-          MatchableTestName.unrestricted('test_one'),
-          MatchableTestName.unrestricted('filter-two')
+          MatchableArgument.unrestricted('test_one'),
+          MatchableArgument.unrestricted('filter-two')
         ],
       ]);
     });
@@ -309,10 +309,10 @@ void main() {
       );
       expect(collector.collect(), [
         [
-          MatchableTestName.unrestricted('test_one'),
-          MatchableTestName.unrestricted('filter-two')
+          MatchableArgument.unrestricted('test_one'),
+          MatchableArgument.unrestricted('filter-two')
         ],
-        [MatchableTestName.unrestricted('test_two')],
+        [MatchableArgument.unrestricted('test_two')],
       ]);
     });
 
@@ -330,11 +330,11 @@ void main() {
       );
       expect(collector.collect(), [
         [
-          MatchableTestName.unrestricted('test_one'),
-          MatchableTestName.unrestricted('filter-two'),
-          MatchableTestName.unrestricted('filter-three')
+          MatchableArgument.unrestricted('test_one'),
+          MatchableArgument.unrestricted('filter-two'),
+          MatchableArgument.unrestricted('filter-three')
         ],
-        [MatchableTestName.unrestricted('test_two')],
+        [MatchableArgument.unrestricted('test_two')],
       ]);
     });
 
@@ -354,13 +354,13 @@ void main() {
       );
       expect(collector.collect(), [
         [
-          MatchableTestName.unrestricted('test_one'),
-          MatchableTestName.unrestricted('filter-two'),
-          MatchableTestName.unrestricted('filter-three')
+          MatchableArgument.unrestricted('test_one'),
+          MatchableArgument.unrestricted('filter-two'),
+          MatchableArgument.unrestricted('filter-three')
         ],
         [
-          MatchableTestName.unrestricted('test_two'),
-          MatchableTestName.unrestricted('filter-four')
+          MatchableArgument.unrestricted('test_two'),
+          MatchableArgument.unrestricted('filter-four')
         ],
       ]);
     });
@@ -372,8 +372,8 @@ void main() {
       );
       expect(collector.collect(), [
         [
-          MatchableTestName.packageName('test_one'),
-          MatchableTestName.componentName('filter-two')
+          MatchableArgument.packageName('test_one'),
+          MatchableArgument.componentName('filter-two')
         ],
       ]);
     });
@@ -384,8 +384,8 @@ void main() {
         rawTestNames: ['test-two'],
       );
       expect(collector.collect(), [
-        [MatchableTestName.componentName('filter-one')],
-        [MatchableTestName.unrestricted('test-two')],
+        [MatchableArgument.componentName('filter-one')],
+        [MatchableArgument.unrestricted('test-two')],
       ]);
     });
 
@@ -396,14 +396,14 @@ void main() {
       );
       expect(collector.collect(), [
         [
-          MatchableTestName.unrestricted('test-one'),
+          MatchableArgument.unrestricted('test-one'),
         ],
         [
-          MatchableTestName.unrestricted('test-two'),
+          MatchableArgument.unrestricted('test-two'),
         ],
         [
-          MatchableTestName.packageName('pkg-name'),
-          MatchableTestName.componentName('filter-two')
+          MatchableArgument.packageName('pkg-name'),
+          MatchableArgument.componentName('filter-two')
         ],
       ]);
     });
@@ -415,14 +415,14 @@ void main() {
       );
       expect(collector.collect(), [
         [
-          MatchableTestName.packageName('pkg-name'),
-          MatchableTestName.componentName('filter-two')
+          MatchableArgument.packageName('pkg-name'),
+          MatchableArgument.componentName('filter-two')
         ],
         [
-          MatchableTestName.unrestricted('test-one'),
+          MatchableArgument.unrestricted('test-one'),
         ],
         [
-          MatchableTestName.unrestricted('test-two'),
+          MatchableArgument.unrestricted('test-two'),
         ],
       ]);
     });
@@ -444,18 +444,18 @@ void main() {
       );
       expect(collector.collect(), [
         [
-          MatchableTestName.unrestricted('test-zero'),
-          MatchableTestName.unrestricted('filter-zero')
+          MatchableArgument.unrestricted('test-zero'),
+          MatchableArgument.unrestricted('filter-zero')
         ],
         [
-          MatchableTestName.packageName('pkg-name'),
-          MatchableTestName.componentName('filter-two')
+          MatchableArgument.packageName('pkg-name'),
+          MatchableArgument.componentName('filter-two')
         ],
         [
-          MatchableTestName.unrestricted('test-one'),
+          MatchableArgument.unrestricted('test-one'),
         ],
         [
-          MatchableTestName.unrestricted('test-two'),
+          MatchableArgument.unrestricted('test-two'),
         ],
       ]);
     });

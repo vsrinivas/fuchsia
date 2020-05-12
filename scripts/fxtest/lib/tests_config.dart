@@ -25,8 +25,8 @@ class Flags {
   final bool shouldRebuild;
 
   /// Extra tokens to be passed through to individual tests.
-  final bool exactMatches;
   final bool infoOnly;
+  final MatchLength matchLength;
   final bool shouldFailFast;
   final bool simpleOutput;
   final bool shouldOnlyRunDeviceTests;
@@ -42,8 +42,8 @@ class Flags {
     this.limit = 0,
     this.realm,
     this.allOutput = false,
-    this.exactMatches = false,
     this.infoOnly = false,
+    this.matchLength = MatchLength.partial,
     this.simpleOutput = false,
     this.shouldFailFast = false,
     this.shouldOnlyRunDeviceTests = false,
@@ -60,10 +60,10 @@ class Flags {
     return Flags(
       allOutput: argResults['output'],
       dryRun: argResults['info'] || argResults['dry'],
-      exactMatches: argResults['exact'],
       infoOnly: argResults['info'],
       isVerbose: argResults['verbose'] || argResults['output'],
       limit: int.parse(argResults['limit'] ?? '0'),
+      matchLength: argResults['exact'] ? MatchLength.full : MatchLength.partial,
       realm: argResults['realm'],
       simpleOutput: argResults['simple'],
       shouldFailFast: argResults['fail'],
@@ -88,8 +88,8 @@ class Flags {
   limit: $limit
   realm: $realm
   isVerbose: $isVerbose
-  exactMatches: $exactMatches,
   info: $infoOnly,
+  matchLength: ${matchLength.toString()},
   simpleOutput: $simpleOutput,
   shouldOnlyRunDeviceTests: $shouldOnlyRunDeviceTests
   shouldOnlyRunHostTests: $shouldOnlyRunHostTests
@@ -131,12 +131,12 @@ class TestsConfig {
   final List<String> runnerTokens;
   final TestArguments testArguments;
   final FuchsiaLocator fuchsiaLocator;
-  final List<List<MatchableTestName>> testNameGroups;
+  final List<List<MatchableArgument>> testArgumentGroups;
   TestsConfig({
     @required this.flags,
     @required this.runnerTokens,
     @required this.testArguments,
-    @required this.testNameGroups,
+    @required this.testArgumentGroups,
     @required this.fuchsiaLocator,
   });
 
@@ -145,7 +145,7 @@ class TestsConfig {
     FuchsiaLocator fuchsiaLocator,
   }) {
     var _testArguments = TestArguments(rawArgs: rawArgs);
-    var _testNamesCollector = TestNamesCollector(
+    var _testArgumentsCollector = TestNamesCollector(
       rawArgs: _testArguments.parsedArgs.arguments,
       rawTestNames: _testArguments.parsedArgs.rest,
       fuchsiaLocator: fuchsiaLocator,
@@ -159,21 +159,21 @@ class TestsConfig {
           ? ['--realm-label=${flags.realm}', '--restrict-logs']
           : ['--restrict-logs'],
       testArguments: _testArguments,
-      testNameGroups: _testNamesCollector.collect(),
+      testArgumentGroups: _testArgumentsCollector.collect(),
     );
   }
 
   Iterable<PermutatedTestsConfig> get permutations sync* {
     // Check for having zero `testName` instances, which indicates that the
     // developer wants a wide-open run that includes as many tests as possible
-    if (testNameGroups.isEmpty) {
+    if (testArgumentGroups.isEmpty) {
       yield PermutatedTestsConfig(
         flags: flags,
         testNameGroup: null,
       );
       return;
     }
-    for (List<MatchableTestName> testNameGroup in testNameGroups) {
+    for (List<MatchableArgument> testNameGroup in testArgumentGroups) {
       yield PermutatedTestsConfig(
         flags: flags,
         testNameGroup: testNameGroup,
@@ -192,7 +192,7 @@ class TestsConfig {
 /// An expanded set of flags passed to `fx test` against which all available
 /// tests will be examined.
 class PermutatedTestsConfig {
-  final List<MatchableTestName> testNameGroup;
+  final List<MatchableArgument> testNameGroup;
   final Flags flags;
   PermutatedTestsConfig({
     @required this.flags,

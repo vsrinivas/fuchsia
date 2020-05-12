@@ -18,6 +18,11 @@ class TestBundle {
   /// That which actually launches a process to run the test.
   final TestRunner testRunner;
 
+  /// Certainty that this [TestBundle] was appropriately matched. A value of 1
+  /// means total confidence and a value of 0 means this [TestBundle] should
+  /// never have been created.
+  final double confidence;
+
   /// Sink for realtime updates from the running test process.
   final Function(String) _realtimeOutputSink;
 
@@ -58,6 +63,7 @@ class TestBundle {
     @required this.testRunner,
     @required this.timeElapsedSink,
     @required this.workingDirectory,
+    @required this.confidence,
     this.extraFlags = const [],
     this.fxSuffix,
     this.isDryRun = false,
@@ -69,6 +75,15 @@ class TestBundle {
     if (testRunner == null) {
       throw AssertionError('`testRunnerBuilder` must not equal `null`');
     }
+    if (confidence == null) {
+      throw AssertionError('You must supply a confidence value');
+    }
+    if (confidence <= 0) {
+      throw AssertionError('Only confidence values above 0 are allowed');
+    }
+    if (confidence > 1) {
+      throw AssertionError('The maximum valid confidence value is 1');
+    }
   }
 
   factory TestBundle.build({
@@ -77,11 +92,13 @@ class TestBundle {
     @required Function(Duration, String, String) timeElapsedSink,
     @required TestRunner Function(TestsConfig) testRunnerBuilder,
     @required String workingDirectory,
+    double confidence,
     Function(String) realtimeOutputSink,
     String fxSuffix,
   }) =>
       TestBundle(
         testDefinition,
+        confidence: confidence ?? 1,
         extraFlags: testsConfig.testArguments.passThroughArgs,
         isDryRun: testsConfig.flags.dryRun,
         fxSuffix: fxSuffix,

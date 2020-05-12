@@ -143,15 +143,19 @@ class FuchsiaTestCommand {
     );
     return manifestReader.aggregateTests(
       eventEmitter: emitEvent,
-      exactMatching: testsConfig.flags.exactMatches,
+      matchLength: testsConfig.flags.matchLength,
       testBundleBuilder: testBundleBuilder,
       testDefinitions: testDefinitions,
       testsConfig: testsConfig,
     );
   }
 
-  TestBundle testBundleBuilder(TestDefinition testDefinition) =>
+  TestBundle testBundleBuilder(
+    TestDefinition testDefinition, [
+    double confidence,
+  ]) =>
       TestBundle.build(
+        confidence: confidence ?? 1,
         fxSuffix: fuchsiaLocator.fx,
         realtimeOutputSink: (String val) => emitEvent(TestOutputEvent(val)),
         timeElapsedSink: (Duration duration, String cmd, String output) =>
@@ -164,7 +168,8 @@ class FuchsiaTestCommand {
 
   Future<void> runTests(List<TestBundle> testBundles) async {
     // Enforce a limit
-    var _testBundles = testsConfig.flags.limit > 0
+    var _testBundles = testsConfig.flags.limit > 0 &&
+            testsConfig.flags.limit < testBundles.length
         ? testBundles.sublist(0, testsConfig.flags.limit)
         : testBundles;
 

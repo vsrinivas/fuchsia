@@ -35,18 +35,9 @@ class ParsedManifest {
 }
 
 class TestsManifestReader {
-  final TestMatcher matcher;
+  final SingleTestMatcher matcher;
 
-  TestsManifestReader()
-      : matcher = TestMatcher(checkers: [
-          NoArgumentsChecker(),
-          LabelChecker(),
-          NameChecker(),
-          PackageUrlChecker(),
-          PackageNameChecker(),
-          ComponentNameChecker(),
-          PathMatchChecker(),
-        ]);
+  TestsManifestReader() : matcher = SingleTestMatcher();
 
   /// Reads and parses the tests manifest file at `manifestLocation`.
   Future<List<TestDefinition>> loadTestsJson({
@@ -93,7 +84,7 @@ class TestsManifestReader {
     TestsConfig testsConfig,
     Function(TestEvent) eventEmitter,
   ) {
-    String redError = '${wrapWith("Error:", [red])} '
+    String redError = '${testsConfig.wrapWith("Error:", [red])} '
         'Could not parse test:\n$testDefinition';
     if (testsConfig.flags.shouldSilenceUnsupported) {
       if (testsConfig.flags.isVerbose) {
@@ -114,12 +105,14 @@ class TestsManifestReader {
   /// Loops over the provided list of [TestDefinition]s and, based on the
   /// results of all registered [Checker]s, returns a list of [TestBundle]s.
   ParsedManifest aggregateTests({
-    @required TestBundle Function(TestDefinition) testBundleBuilder,
+    @required TestBundle Function(TestDefinition, [double]) testBundleBuilder,
     @required List<TestDefinition> testDefinitions,
     @required void Function(TestEvent) eventEmitter,
     @required TestsConfig testsConfig,
-    bool exactMatching = false,
+    Comparer comparer,
+    MatchLength matchLength = MatchLength.partial,
   }) {
+    comparer ??= StrictComparer();
     List<TestBundle> testBundles = [];
     Set<String> seenPackages = {};
     int numDuplicateTests = 0;
@@ -161,11 +154,14 @@ class TestsManifestReader {
         // more than once.
         if (testIsClaimed) break;
 
-        if (matcher.matches(
+        var comparisonResult = matcher.evaluateTestAgainstArguments(
           testDefinition,
           permutatedTestConfig,
-          exactMatching: exactMatching,
-        )) {
+          matchLength: matchLength,
+          comparer: comparer,
+        );
+
+        if (comparisonResult.isMatch) {
           // Certain test definitions result in multiple entries in `tests.json`,
           // but invoking the test runner on their shared package name already
           // captures all tests. Therefore, any such sibling entry further down
@@ -180,7 +176,12 @@ class TestsManifestReader {
 
           // Now that we know we're seeing this `packageName` for the first
           // time, we can add it to the queue
-          testBundles.add(testBundleBuilder(testDefinition));
+          testBundles.add(
+            testBundleBuilder(
+              testDefinition,
+              comparisonResult.confidence,
+            ),
+          );
 
           // Setting this flag breaks out of the Tier 2 (PermutatedTestFlags)
           // loop
