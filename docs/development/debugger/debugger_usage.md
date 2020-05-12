@@ -510,10 +510,14 @@ Or you can clear the current breakpoint:
 ```
 
 Whenever you create or stop on a breakpoint, that breakpoint becomes the
-default automatically so clear always clears the one you just hit. Note that
-unlike GDB, “clear” takes a breakpoint context before the verb and there are
-never any arguments after it. Support for GDB-like “clear <location>” is
-issue [5452](https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=5452).
+default automatically so clear always clears the one you just hit.
+
+`clear` can also take an optional location just like a `break` command.
+In this way, it will try to clear all breakpoints at that location and ignore
+the default breakpoint context.
+
+> Note for GDB users: `delete <index>` is mapped to `bp <index> clear`, while
+> `clear <number>` behaves the same in GDB and zxdb.
 
 Breakpoints can also be enabled or disabled:
 

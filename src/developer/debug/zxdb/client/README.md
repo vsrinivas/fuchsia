@@ -50,7 +50,7 @@ attached, while a client `Process` object always represents a running process.
 ### Thread
 
 A running thread in a process. It provides a nonempty `Stack` when paused, and
-the main stepping logic is here (see "Thread Conrol" below).
+the main stepping logic is here (see "Thread Control" below).
 
 ### Stack
 
@@ -108,9 +108,9 @@ The main ones are:
   * `StepThreadController` (implements various kinds of "step into")
   * `UntilThreadController`
 
-Thread controllers ares nested so that you can to a "step over", hit an
-exception and do some other stepping, and the thread sill still stop when the
-original "step over" complets.
+Thread controllers are nested so that you can do a "step over", hit an
+exception, complete some other steppings, and have the thread still stop
+when the original "step over" has completed.
 
 ## Expressions
 
