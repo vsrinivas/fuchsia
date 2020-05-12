@@ -107,10 +107,10 @@ For a list of these protocols and what they can be used for, see
 ## Protocol paths {#protocol-paths}
 
 When a protocol capability is `use`d by a component, its path refers to the
-path in the component's [namespace][namespace].
+path in the component's [namespace][glossary-namespace].
 
 When a protocol capability is `offer`ed or `expose`d from itself, its path
-refers to the path in the component's [outgoing directory][outgoing].
+refers to the path in the component's [outgoing directory][glossary-outgoing].
 
 The path also hints to clients which FIDL protocol the server expects clients
 to use, but this is entirely a convention. Protocol capability paths can be
