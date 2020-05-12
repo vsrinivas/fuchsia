@@ -27,8 +27,8 @@ zx_library("mt8167") {
   deps = [
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/hwreg",
-    "//zircon/public/lib/mmio",
     "//zircon/public/lib/zx",
+    "//zircon/system/dev/lib/mmio",
     "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/ddktl",
   ]

@@ -26,9 +26,9 @@ test("device-protocol-pci") {
     "//sdk/banjo/ddk.protocol.pci",
     "//src/devices/pci/lib/device-protocol-pci",
     "//zircon/public/lib/fdio",
-    "//zircon/public/lib/mmio",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/dev/lib/mmio",
   ]
 }
 

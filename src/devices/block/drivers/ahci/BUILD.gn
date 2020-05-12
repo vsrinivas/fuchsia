@@ -60,9 +60,9 @@ source_set("shared") {
     "//sdk/banjo/ddk.protocol.pci",
     "//src/devices/pci/lib/device-protocol-pci",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/mmio",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
+    "//zircon/system/dev/lib/mmio",
     "//zircon/system/ulib/ddk",
   ]
 }

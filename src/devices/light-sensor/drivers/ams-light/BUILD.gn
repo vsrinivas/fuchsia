@@ -52,7 +52,6 @@ test("ams-light-test") {
     "//src/devices/i2c/lib/device-protocol-i2c-channel",
     "//src/devices/i2c/testing/mock-i2c",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/mmio",
     "//zircon/public/lib/mock-function",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
@@ -60,6 +59,7 @@ test("ams-light-test") {
     "//zircon/public/lib/zxtest",
     "//zircon/system/dev/lib/device-protocol-i2c",
     "//zircon/system/dev/lib/fake_ddk",
+    "//zircon/system/dev/lib/mmio",
     "//zircon/system/ulib/ddktl",
     "//zircon/system/ulib/hid",
   ]

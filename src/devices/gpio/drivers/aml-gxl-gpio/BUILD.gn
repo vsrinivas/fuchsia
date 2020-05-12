@@ -21,9 +21,9 @@ driver_module("aml-gxl-gpio") {
     "//src/devices/lib/amlogic",
     "//src/devices/lib/driver",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/mmio",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
+    "//zircon/system/dev/lib/mmio",
     "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/ddktl",
   ]

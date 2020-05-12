@@ -25,7 +25,6 @@ group("ulib") {
     "$zx/kernel/lib/arch/$zircon_cpu",
 #------------------
 #------------------
-    "$zx/system/dev/lib/mmio",
 #------------------
 #------------------
     "$zx/system/dev/lib/uart",

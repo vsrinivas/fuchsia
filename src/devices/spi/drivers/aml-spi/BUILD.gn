@@ -22,8 +22,8 @@ driver_module("aml-spi") {
     "//src/devices/lib/amlogic",
     "//src/devices/lib/driver",
     "//zircon/public/lib/hwreg",
-    "//zircon/public/lib/mmio",
     "//zircon/public/lib/sync",
+    "//zircon/system/dev/lib/mmio",
     "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/ddktl",
   ]

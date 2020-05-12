@@ -43,8 +43,8 @@ test("device-protocol-pdev-test") {
     "//src/devices/bus/lib/device-protocol-pdev",
     "//src/devices/testing/fake_ddk",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/mmio",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/dev/lib/mmio",
   ]
 }
 

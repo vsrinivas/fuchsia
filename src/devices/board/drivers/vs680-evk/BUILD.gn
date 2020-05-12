@@ -34,9 +34,9 @@ driver_module("vs680-evk") {
     "//src/devices/usb/lib/usb",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/hwreg",
-    "//zircon/public/lib/mmio",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
+    "//zircon/system/dev/lib/mmio",
     "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/ddktl",
   ]

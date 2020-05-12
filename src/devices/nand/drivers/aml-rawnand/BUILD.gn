@@ -32,9 +32,9 @@ source_set("common") {
     "//src/devices/lib/amlogic",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fzl",
-    "//zircon/public/lib/mmio",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
+    "//zircon/system/dev/lib/mmio",
     "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/ddktl",
   ]

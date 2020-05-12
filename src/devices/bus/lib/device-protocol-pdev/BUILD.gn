@@ -21,6 +21,6 @@ zx_library("device-protocol-pdev") {
 
   deps = [
     # pdev.cpp has #include <lib/mmio/mmio.h>.
-    "//zircon/public/lib/mmio",
+    "//zircon/system/dev/lib/mmio",
   ]
 }

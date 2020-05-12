@@ -23,10 +23,10 @@ driver_module("sg-micro") {
     "//src/devices/lib/driver",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
-    "//zircon/public/lib/mmio",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
     "//zircon/system/dev/lib/device-protocol-i2c",
+    "//zircon/system/dev/lib/mmio",
     "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/ddktl",
   ]

@@ -62,9 +62,9 @@ zx_library("amlogic") {
     "//sdk/banjo/ddk.protocol.platform.device",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fzl",
-    "//zircon/public/lib/mmio",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
+    "//zircon/system/dev/lib/mmio",
     "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/ddktl",
   ]

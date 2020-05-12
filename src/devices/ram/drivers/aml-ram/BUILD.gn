@@ -19,7 +19,7 @@ driver_module("aml-ram") {
   deps = [
     ":common",
     "//src/devices/lib/driver",
-    "//zircon/public/lib/mmio",
+    "//zircon/system/dev/lib/mmio",
     "//zircon/system/ulib/ddk",
   ]
 }
@@ -49,10 +49,10 @@ group("common") {
     "//src/devices/lib/amlogic",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/hwreg",
-    "//zircon/public/lib/mmio",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
+    "//zircon/system/dev/lib/mmio",
     "//zircon/system/fidl/fuchsia-device:llcpp",
     "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/ddktl",
