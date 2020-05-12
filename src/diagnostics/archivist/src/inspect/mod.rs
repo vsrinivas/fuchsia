@@ -6,7 +6,7 @@ use {
     crate::{
         diagnostics,
         events::types::{ComponentIdentifier, InspectData},
-        formatter::{self, JsonInspectSchema},
+        formatter::{self, JsonSchema},
     },
     anyhow::{format_err, Error},
     fidl::endpoints::DiscoverableService,
@@ -860,7 +860,7 @@ impl ReaderServer {
             .map(|(moniker, hierarchy_data)| {
                 let formatted_string_result = match format {
                     fidl_fuchsia_diagnostics::Format::Json => {
-                        let inspect_schema = JsonInspectSchema::new(
+                        let inspect_schema = JsonSchema::for_inspect(
                             moniker,
                             hierarchy_data.hierarchy,
                             hierarchy_data.timestamp,
