@@ -28,4 +28,7 @@ type Upload struct {
 	// Recursive tells whether to recursively upload all files in Source if
 	// Source is a directory.
 	Recursive bool
+
+	// Metadata contains the metadata to be uploaded with the file.
+	Metadata map[string]string
 }

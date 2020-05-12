@@ -44,7 +44,7 @@ func (s *memSink) objectExistsAt(ctx context.Context, name string) (bool, error)
 	return true, nil
 }
 
-func (s *memSink) write(ctx context.Context, name string, r io.Reader, _ bool) error {
+func (s *memSink) write(ctx context.Context, name string, r io.Reader, _ bool, _ map[string]string) error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	content, err := ioutil.ReadAll(r)
