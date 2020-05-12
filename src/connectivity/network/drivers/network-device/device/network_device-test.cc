@@ -100,10 +100,8 @@ class NetworkDeviceTest : public zxtest::Test {
     session_counter_++;
 
     auto connection = OpenConnection();
-    session->Open(zx::unowned(connection), session_name, flags, num_descriptors, buffer_size,
-                  std::move(frame_types));
-
-    return ZX_OK;
+    return session->Open(zx::unowned(connection), session_name, flags, num_descriptors, buffer_size,
+                         std::move(frame_types));
   }
 
  protected:
@@ -885,6 +883,18 @@ TEST_F(NetworkDeviceTest, ReturnTxInline) {
   uint16_t desc;
   ASSERT_OK(session.FetchTx(&desc));
   EXPECT_EQ(desc, 0x02);
+}
+
+// Test that opening a session with unknown Rx types will fail.
+TEST_F(NetworkDeviceTest, RejectsInvalidRxTypes) {
+  ASSERT_OK(CreateDevice());
+  auto connection = OpenConnection();
+  TestSession session;
+  auto frame_type = netdev::FrameType::IPV4;
+  ASSERT_STATUS(
+      OpenSession(&session, netdev::SessionFlags::PRIMARY, kDefaultDescriptorCount,
+                  kDefaultBufferLength, fidl::VectorView(fidl::unowned_ptr(&frame_type), 1)),
+      ZX_ERR_INVALID_ARGS);
 }
 
 }  // namespace testing

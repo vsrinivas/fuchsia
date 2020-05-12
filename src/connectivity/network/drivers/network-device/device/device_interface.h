@@ -60,7 +60,8 @@ class DeviceInterface : public netdev::Device::Interface,
 
   // Loads rx path descriptors from the primary session into a session transaction.
   zx_status_t LoadRxDescriptors(RxQueue::SessionTransaction* transact);
-  bool IsValidTxFrameType(uint8_t frame_type);
+  bool IsValidRxFrameType(uint8_t frame_type) const;
+  bool IsValidTxFrameType(uint8_t frame_type) const;
 
   // Operates workflow for when a session is started. If the session is eligible to take over the
   // primary spot, it'll be elected the new primary session. If there was no primary session before,

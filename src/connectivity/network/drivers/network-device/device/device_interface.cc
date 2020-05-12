@@ -850,7 +850,17 @@ zx_status_t DeviceInterface::LoadRxDescriptors(RxQueue::SessionTransaction* tran
   return primary_session_->LoadRxDescriptors(transact);
 }
 
-bool DeviceInterface::IsValidTxFrameType(uint8_t frame_type) {
+bool DeviceInterface::IsValidRxFrameType(uint8_t frame_type) const {
+  const auto* end = &device_info_.rx_types_list[device_info_.rx_types_count];
+  for (const auto* rx_types = device_info_.rx_types_list; rx_types != end; rx_types++) {
+    if (*rx_types == frame_type) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool DeviceInterface::IsValidTxFrameType(uint8_t frame_type) const {
   const auto* end = &device_info_.tx_types_list[device_info_.tx_types_count];
   for (const auto* tx_types = device_info_.tx_types_list; tx_types != end; tx_types++) {
     if (tx_types->type == frame_type) {
@@ -869,24 +879,24 @@ zx_status_t DeviceInterface::Binding::Bind(DeviceInterface* interface, zx::chann
     return ZX_ERR_NO_MEMORY;
   }
   auto* binding_ptr = binding.get();
-  auto result = fidl::AsyncBind(interface->dispatcher_, std::move(channel), interface,
-                                fidl::OnUnboundFn<DeviceInterface>(
-                                    [binding_ptr](DeviceInterface* interface, fidl::UnboundReason,
-                                                  zx_status_t, zx::channel) {
-                                      bool bindings_empty;
-                                      interface->teardown_lock_.Acquire();
-                                      {
-                                        fbl::AutoLock lock(&interface->bindings_lock_);
-                                        interface->bindings_.erase(*binding_ptr);
-                                        bindings_empty = interface->bindings_.is_empty();
-                                      }
+  auto result = fidl::AsyncBind(
+      interface->dispatcher_, std::move(channel), interface,
+      fidl::OnUnboundFn<DeviceInterface>(
+          [binding_ptr](DeviceInterface* interface, fidl::UnboundReason, zx_status_t, zx::channel) {
+            bool bindings_empty;
+            interface->teardown_lock_.Acquire();
+            {
+              fbl::AutoLock lock(&interface->bindings_lock_);
+              interface->bindings_.erase(*binding_ptr);
+              bindings_empty = interface->bindings_.is_empty();
+            }
 
-                                      if (bindings_empty) {
-                                        interface->ContinueTeardown(TeardownState::BINDINGS);
-                                      } else {
-                                        interface->teardown_lock_.Release();
-                                      }
-                                    }));
+            if (bindings_empty) {
+              interface->ContinueTeardown(TeardownState::BINDINGS);
+            } else {
+              interface->teardown_lock_.Release();
+            }
+          }));
   if (result.is_ok()) {
     binding->binding_ = result.take_value();
     fbl::AutoLock lock(&interface->bindings_lock_);

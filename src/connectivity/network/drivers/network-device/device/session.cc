@@ -54,6 +54,12 @@ zx_status_t Session::Create(async_dispatcher_t* dispatcher, netdev::SessionInfo 
                             std::unique_ptr<Session>* out_session, netdev::Fifos* out_fifos) {
   fbl::AllocChecker checker;
 
+  for (const auto& rx_request : info.rx_frames) {
+    if (!parent->IsValidRxFrameType(static_cast<uint8_t>(rx_request))) {
+      return ZX_ERR_INVALID_ARGS;
+    }
+  }
+
   if (info.descriptor_version != NETWORK_DEVICE_DESCRIPTOR_VERSION) {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -188,9 +194,7 @@ zx_status_t Session::Bind(zx::channel channel) {
       fidl::AsyncBind(dispatcher_, std::move(channel), this,
                       fidl::OnUnboundFn<Session>(
                           [](Session* self, fidl::UnboundReason reason, zx_status_t,
-                             zx::channel channel) {
-                            self->OnUnbind(reason, std::move(channel));
-                          }));
+                             zx::channel channel) { self->OnUnbind(reason, std::move(channel)); }));
   if (result.is_ok()) {
     binding_ = result.take_value();
     return ZX_OK;
@@ -865,8 +869,8 @@ void Session::CommitRx() {
 }
 
 bool Session::IsSubscribedToFrameType(uint8_t frame_type) {
-  auto end = frame_types_.begin() + frame_type_count_;
-  for (auto i = frame_types_.begin(); i != end; i++) {
+  auto* end = frame_types_.begin() + frame_type_count_;
+  for (auto* i = frame_types_.begin(); i != end; i++) {
     if (*i == frame_type) {
       return true;
     }
