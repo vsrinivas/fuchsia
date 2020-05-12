@@ -5,6 +5,7 @@
 group("subbenchmarks") {
   testonly = true
   deps = [
+    "cpp-allocation-strategy",
     "go",
     "hlcpp",
     "lib-fidl",
