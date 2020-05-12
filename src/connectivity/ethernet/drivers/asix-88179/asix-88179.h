@@ -25,7 +25,7 @@ namespace eth {
 
 class Asix88179Ethernet;
 
-using DeviceType = ddk::Device<Asix88179Ethernet, ddk::UnbindableNew>;
+using DeviceType = ddk::Device<Asix88179Ethernet, ddk::Initializable, ddk::UnbindableNew>;
 
 class Asix88179Ethernet : public DeviceType,
                           public ddk::EthernetImplProtocol<Asix88179Ethernet, ddk::base_protocol> {
@@ -38,6 +38,7 @@ class Asix88179Ethernet : public DeviceType,
   explicit Asix88179Ethernet(zx_device_t* parent) : DeviceType(parent) {}
 
   // DDK Hooks.
+  void DdkInit(ddk::InitTxn txn);
   void DdkRelease();
   void DdkUnbindNew(ddk::UnbindTxn txn);
 
@@ -141,6 +142,8 @@ class Asix88179Ethernet : public DeviceType,
   uint8_t interface_number_ = 0;
 
   size_t parent_req_size_ = 0;
+
+  std::optional<ddk::InitTxn> init_txn_;
 
   thrd_t interrupt_thread_ = {};
 

@@ -793,7 +793,12 @@ int Asix88179Ethernet::InterruptThread() {
     return status;
   }
 
-  DdkMakeVisible();
+  if (init_txn_) {
+    // Replying to the init hook will make the device visible and also able to be unbound.
+    init_txn_->Reply(ZX_OK);
+  } else {
+    zxlogf(ERROR, "ax88179: interrupt thread did not find an init txn to complete");
+  }
 
   while (true) {
     {  // Lock scope
@@ -821,6 +826,25 @@ int Asix88179Ethernet::InterruptThread() {
   }
 
   return 0;
+}
+
+void Asix88179Ethernet::DdkInit(ddk::InitTxn txn) {
+  {
+    fbl::AutoLock lock(&lock_);
+    running_ = true;
+  }
+  // Save the txn so we can reply to it from the interrupt thread.
+  init_txn_ = std::move(txn);
+
+  int ret = thrd_create_with_name(
+      &interrupt_thread_,
+      [](void* arg) -> int { return static_cast<Asix88179Ethernet*>(arg)->InterruptThread(); },
+      this, "asix-88179-thread");
+  if (ret != thrd_success) {
+    zxlogf(ERROR, "ax88179: failed to create interrupt thread: %d", ret);
+    // Inform the device manager initialization failed, so that the device will be unbound,
+    init_txn_->Reply(ZX_ERR_INTERNAL);
+  }
 }
 
 void Asix88179Ethernet::DdkUnbindNew(ddk::UnbindTxn txn) {
@@ -936,18 +960,6 @@ zx_status_t Asix88179Ethernet::Initialize() {
     Shutdown();
     return status;
   }
-
-  running_ = true;
-  int ret = thrd_create_with_name(
-      &interrupt_thread_,
-      [](void* arg) -> int { return static_cast<Asix88179Ethernet*>(arg)->InterruptThread(); },
-      this, "asix-88179-thread");
-  if (ret != thrd_success) {
-    zxlogf(ERROR, "ax88179: failed to create interrupt thread: %d", ret);
-    Shutdown();
-    return ZX_ERR_INTERNAL;
-  }
-
   return ZX_OK;
 }
 
