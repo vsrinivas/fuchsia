@@ -34,18 +34,16 @@
  *
  *****************************************************************************/
 
-#include "time-event.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/time-event.h"
 
-#include <net/mac80211.h>
+#include <zircon/status.h>
 
-#include <linux/jiffies.h>
-
-#include "fw-api.h"
-#include "fw/notif-wait.h"
-#include "iwl-io.h"
-#include "iwl-prph.h"
-#include "iwl-trans.h"
-#include "mvm.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/notif-wait.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-io.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-prph.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-trans.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/fw-api.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"
 
 /*
  * For the high priority TE use a time event type that has similar priority to
@@ -57,17 +55,18 @@
 void iwl_mvm_te_clear_data(struct iwl_mvm* mvm, struct iwl_mvm_time_event_data* te_data) {
   iwl_assert_lock_held(&mvm->time_event_lock);
 
-  if (!te_data->vif) {
+  if (!te_data->mvmvif) {
     return;
   }
 
-  list_del(&te_data->list);
+  list_delete(&te_data->list);
   te_data->running = false;
   te_data->uid = 0;
   te_data->id = TE_MAX;
-  te_data->vif = NULL;
+  te_data->mvmvif = NULL;
 }
 
+#if 0   // NEEDS_PORTING
 void iwl_mvm_roc_done_wk(struct work_struct* wk) {
   struct iwl_mvm* mvm = container_of(wk, struct iwl_mvm, roc_done_wk);
 
@@ -399,19 +398,20 @@ void iwl_mvm_rx_time_event_notif(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* 
 unlock:
   spin_unlock_bh(&mvm->time_event_lock);
 }
+#endif  // NEEDS_PORTING
 
 static bool iwl_mvm_te_notif(struct iwl_notif_wait_data* notif_wait, struct iwl_rx_packet* pkt,
                              void* data) {
-  struct iwl_mvm* mvm = container_of(notif_wait, struct iwl_mvm, notif_wait);
   struct iwl_mvm_time_event_data* te_data = data;
   struct iwl_time_event_notif* resp;
   int resp_len = iwl_rx_packet_payload_len(pkt);
 
-  if (WARN_ON(pkt->hdr.cmd != TIME_EVENT_NOTIFICATION)) {
+  if (pkt->hdr.cmd != TIME_EVENT_NOTIFICATION) {
+    IWL_WARN(notif_wait, "response packet ID is not expected: 0x%02x\n", pkt->hdr.cmd);
     return true;
   }
 
-  if (WARN_ON_ONCE(resp_len != sizeof(*resp))) {
+  if (resp_len != sizeof(*resp)) {
     IWL_ERR(mvm, "Invalid TIME_EVENT_NOTIFICATION response\n");
     return true;
   }
@@ -433,16 +433,16 @@ static bool iwl_mvm_te_notif(struct iwl_notif_wait_data* notif_wait, struct iwl_
 
 static bool iwl_mvm_time_event_response(struct iwl_notif_wait_data* notif_wait,
                                         struct iwl_rx_packet* pkt, void* data) {
-  struct iwl_mvm* mvm = container_of(notif_wait, struct iwl_mvm, notif_wait);
   struct iwl_mvm_time_event_data* te_data = data;
   struct iwl_time_event_resp* resp;
   int resp_len = iwl_rx_packet_payload_len(pkt);
 
-  if (WARN_ON(pkt->hdr.cmd != TIME_EVENT_CMD)) {
+  if (pkt->hdr.cmd != TIME_EVENT_CMD) {
+    IWL_WARN(notif_wait, "time event packet cmd is not exoected: 0x%x\n", pkt->hdr.cmd);
     return true;
   }
 
-  if (WARN_ON_ONCE(resp_len != sizeof(*resp))) {
+  if (resp_len != sizeof(*resp)) {
     IWL_ERR(mvm, "Invalid TIME_EVENT_CMD response\n");
     return true;
   }
@@ -450,7 +450,9 @@ static bool iwl_mvm_time_event_response(struct iwl_notif_wait_data* notif_wait,
   resp = (void*)pkt->data;
 
   /* we should never get a response to another TIME_EVENT_CMD here */
-  if (WARN_ON_ONCE(le32_to_cpu(resp->id) != te_data->id)) {
+  if (le32_to_cpu(resp->id) != te_data->id) {
+    IWL_ERR(notif_wait, "response ID is not expected: %d vs %d\n", le32_to_cpu(resp->id),
+            te_data->id);
     return false;
   }
 
@@ -459,9 +461,10 @@ static bool iwl_mvm_time_event_response(struct iwl_notif_wait_data* notif_wait,
   return true;
 }
 
-static int iwl_mvm_time_event_send_add(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
-                                       struct iwl_mvm_time_event_data* te_data,
-                                       struct iwl_time_event_cmd* te_cmd) {
+static zx_status_t iwl_mvm_time_event_send_add(struct iwl_mvm_vif* mvmvif,
+                                               struct iwl_mvm_time_event_data* te_data,
+                                               struct iwl_time_event_cmd* te_cmd) {
+  struct iwl_mvm* mvm = mvmvif->mvm;
   static const uint16_t time_event_response[] = {TIME_EVENT_CMD};
   struct iwl_notification_wait wait_time_event;
   int ret;
@@ -470,16 +473,17 @@ static int iwl_mvm_time_event_send_add(struct iwl_mvm* mvm, struct ieee80211_vif
 
   IWL_DEBUG_TE(mvm, "Add new TE, duration %d TU\n", le32_to_cpu(te_cmd->duration));
 
-  spin_lock_bh(&mvm->time_event_lock);
-  if (WARN_ON(te_data->id != TE_MAX)) {
-    spin_unlock_bh(&mvm->time_event_lock);
-    return -EIO;
+  mtx_lock(&mvm->time_event_lock);
+  if (te_data->id != TE_MAX) {
+    IWL_WARN(mvmvif, "te_data->id should be TE_MAX(%d), but actually (%d)\n", TE_MAX, te_data->id);
+    mtx_unlock(&mvm->time_event_lock);
+    return ZX_ERR_BAD_STATE;
   }
-  te_data->vif = vif;
+  te_data->mvmvif = mvmvif;
   te_data->duration = le32_to_cpu(te_cmd->duration);
   te_data->id = le32_to_cpu(te_cmd->id);
-  list_add_tail(&te_data->list, &mvm->time_event_list);
-  spin_unlock_bh(&mvm->time_event_lock);
+  list_add_tail(&mvm->time_event_list, &te_data->list);
+  mtx_unlock(&mvm->time_event_lock);
 
   /*
    * Use a notification wait, which really just processes the
@@ -494,29 +498,41 @@ static int iwl_mvm_time_event_send_add(struct iwl_mvm* mvm, struct ieee80211_vif
                              ARRAY_SIZE(time_event_response), iwl_mvm_time_event_response, te_data);
 
   ret = iwl_mvm_send_cmd_pdu(mvm, TIME_EVENT_CMD, 0, sizeof(*te_cmd), te_cmd);
-  if (ret) {
+  if (ret != ZX_OK) {
     IWL_ERR(mvm, "Couldn't send TIME_EVENT_CMD: %d\n", ret);
     iwl_remove_notification(&mvm->notif_wait, &wait_time_event);
     goto out_clear_te;
   }
 
-  /* No need to wait for anything, so just pass 1 (0 isn't valid) */
-  ret = iwl_wait_notification(&mvm->notif_wait, &wait_time_event, 1);
+  /* No need to wait for anything, so just pass a time in the past */
+  ret = iwl_wait_notification(&mvm->notif_wait, &wait_time_event, ZX_TIME_INFINITE_PAST);
   /* should never fail */
-  WARN_ON_ONCE(ret);
-
-  if (ret) {
-  out_clear_te:
-    spin_lock_bh(&mvm->time_event_lock);
-    iwl_mvm_te_clear_data(mvm, te_data);
-    spin_unlock_bh(&mvm->time_event_lock);
+  if (ret != ZX_OK) {
+    IWL_WARN(mvmvif, "wait_time_event failed: %s\n", zx_status_get_string(ret));
   }
+
+out_clear_te:
+  if (ret != ZX_OK) {
+    mtx_lock(&mvm->time_event_lock);
+    iwl_mvm_te_clear_data(mvm, te_data);
+    mtx_unlock(&mvm->time_event_lock);
+  }
+
   return ret;
 }
 
-void iwl_mvm_protect_session(struct iwl_mvm* mvm, struct ieee80211_vif* vif, uint32_t duration,
-                             uint32_t min_duration, uint32_t max_delay, bool wait_for_notif) {
-  struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(vif);
+// Tells firmware to start a time event and waits for the notification.
+//
+// Protect the session to make sure we hear the first beacon on the new channel.
+//
+// Read the time-event.h for more details about what it is and how it works.
+//
+// Args:
+//   duration, min_duration, max_delay: all in beacon time unit
+//
+zx_status_t iwl_mvm_protect_session(struct iwl_mvm* mvm, struct iwl_mvm_vif* mvmvif,
+                                    uint32_t duration, uint32_t min_duration, uint32_t max_delay,
+                                    bool wait_for_notif) {
   struct iwl_mvm_time_event_data* te_data = &mvmvif->time_event_data;
   const uint16_t te_notif_response[] = {TIME_EVENT_NOTIFICATION};
   struct iwl_notification_wait wait_te_notif;
@@ -524,15 +540,15 @@ void iwl_mvm_protect_session(struct iwl_mvm* mvm, struct ieee80211_vif* vif, uin
 
   iwl_assert_lock_held(&mvm->mutex);
 
-  if (te_data->running && time_after(te_data->end_jiffies, TU_TO_EXP_TIME(min_duration))) {
-    IWL_DEBUG_TE(mvm, "We have enough time in the current TE: %u\n",
-                 jiffies_to_msecs(te_data->end_jiffies - jiffies));
-    return;
+  if (te_data->running && te_data->end_time > TU_TO_EXP_TIME(mvm->dispatcher, min_duration)) {
+    IWL_DEBUG_TE(mvm, "We have enough time in the current TE: %lu\n",
+                 zx_time_sub_time(te_data->end_time, NOW_TIME(mvm->dispatcher)));
+    return ZX_OK;
   }
 
   if (te_data->running) {
-    IWL_DEBUG_TE(mvm, "extend 0x%x: only %u ms left\n", te_data->uid,
-                 jiffies_to_msecs(te_data->end_jiffies - jiffies));
+    IWL_DEBUG_TE(mvm, "extend 0x%x: only %lu ms left\n", te_data->uid,
+                 zx_time_sub_time(te_data->end_time, NOW_TIME(mvm->dispatcher)));
     /*
      * we don't have enough time
      * cancel the current TE and issue a new one
@@ -541,7 +557,7 @@ void iwl_mvm_protect_session(struct iwl_mvm* mvm, struct ieee80211_vif* vif, uin
      * channel for a bit. All we need to do, is not to return
      * before we actually begin to be on the channel.
      */
-    iwl_mvm_stop_session_protection(mvm, vif);
+    iwl_mvm_stop_session_protection(mvmvif);
   }
 
   time_cmd.action = cpu_to_le32(FW_CTXT_ACTION_ADD);
@@ -560,8 +576,7 @@ void iwl_mvm_protect_session(struct iwl_mvm* mvm, struct ieee80211_vif* vif, uin
                                 TE_V2_START_IMMEDIATELY);
 
   if (!wait_for_notif) {
-    iwl_mvm_time_event_send_add(mvm, vif, te_data, &time_cmd);
-    return;
+    return iwl_mvm_time_event_send_add(mvmvif, te_data, &time_cmd);
   }
 
   /*
@@ -572,14 +587,22 @@ void iwl_mvm_protect_session(struct iwl_mvm* mvm, struct ieee80211_vif* vif, uin
                              ARRAY_SIZE(te_notif_response), iwl_mvm_te_notif, te_data);
 
   /* If TE was sent OK - wait for the notification that started */
-  if (iwl_mvm_time_event_send_add(mvm, vif, te_data, &time_cmd)) {
-    IWL_ERR(mvm, "Failed to add TE to protect session\n");
+  zx_status_t ret;
+  if (ZX_OK != (ret = iwl_mvm_time_event_send_add(mvmvif, te_data, &time_cmd))) {
+    IWL_ERR(mvm, "Failed to add TE to protect session: %s\n", zx_status_get_string(ret));
     iwl_remove_notification(&mvm->notif_wait, &wait_te_notif);
-  } else if (iwl_wait_notification(&mvm->notif_wait, &wait_te_notif, TU_TO_JIFFIES(max_delay))) {
-    IWL_ERR(mvm, "Failed to protect session until TE\n");
+  } else if (ZX_OK != (ret = iwl_wait_notification(&mvm->notif_wait, &wait_te_notif,
+                                                   TU_TO_DURATION(max_delay)))) {
+    IWL_ERR(mvm, "Failed to protect session until TE: %s\n", zx_status_get_string(ret));
+    ret = ZX_OK;  // TODO(51671): remove this line after fake TIME_EVENT_NOTIFICATION is implemented
   }
+
+  return ret;
 }
 
+// After this function is executed, the time event is guaranteed to be removed -- even in the case
+// of returning false.
+//
 static bool __iwl_mvm_remove_time_event(struct iwl_mvm* mvm,
                                         struct iwl_mvm_time_event_data* te_data, uint32_t* uid) {
   uint32_t id;
@@ -588,7 +611,7 @@ static bool __iwl_mvm_remove_time_event(struct iwl_mvm* mvm,
    * It is possible that by the time we got to this point the time
    * event was already removed.
    */
-  spin_lock_bh(&mvm->time_event_lock);
+  mtx_lock(&mvm->time_event_lock);
 
   /* Save time event uid before clearing its data */
   *uid = te_data->uid;
@@ -598,7 +621,7 @@ static bool __iwl_mvm_remove_time_event(struct iwl_mvm* mvm,
    * The clear_data function handles time events that were already removed
    */
   iwl_mvm_te_clear_data(mvm, te_data);
-  spin_unlock_bh(&mvm->time_event_lock);
+  mtx_unlock(&mvm->time_event_lock);
 
   /*
    * It is possible that by the time we try to remove it, the time event
@@ -613,6 +636,7 @@ static bool __iwl_mvm_remove_time_event(struct iwl_mvm* mvm,
   return true;
 }
 
+#if 0   // NEEDS_PORTING
 /*
  * Explicit request to remove a aux roc time event. The removal of a time
  * event needs to be synchronized with the flow of a time event's end
@@ -639,20 +663,21 @@ static void iwl_mvm_remove_aux_roc_te(struct iwl_mvm* mvm, struct iwl_mvm_vif* m
     return;
   }
 }
+#endif  // NEEDS_PORTING
 
 /*
  * Explicit request to remove a time event. The removal of a time event needs to
  * be synchronized with the flow of a time event's end notification, which also
  * removes the time event from the op mode data structures.
  */
-void iwl_mvm_remove_time_event(struct iwl_mvm* mvm, struct iwl_mvm_vif* mvmvif,
-                               struct iwl_mvm_time_event_data* te_data) {
+zx_status_t iwl_mvm_remove_time_event(struct iwl_mvm_vif* mvmvif,
+                                      struct iwl_mvm_time_event_data* te_data) {
   struct iwl_time_event_cmd time_cmd = {};
   uint32_t uid;
-  int ret;
 
-  if (!__iwl_mvm_remove_time_event(mvm, te_data, &uid)) {
-    return;
+  if (!__iwl_mvm_remove_time_event(mvmvif->mvm, te_data, &uid)) {
+    // The time event had been removed. No need to send another command to remove it.
+    return ZX_OK;
   }
 
   /* When we remove a TE, the UID is to be set in the id field */
@@ -660,32 +685,29 @@ void iwl_mvm_remove_time_event(struct iwl_mvm* mvm, struct iwl_mvm_vif* mvmvif,
   time_cmd.action = cpu_to_le32(FW_CTXT_ACTION_REMOVE);
   time_cmd.id_and_color = cpu_to_le32(FW_CMD_ID_AND_COLOR(mvmvif->id, mvmvif->color));
 
-  IWL_DEBUG_TE(mvm, "Removing TE 0x%x\n", le32_to_cpu(time_cmd.id));
-  ret = iwl_mvm_send_cmd_pdu(mvm, TIME_EVENT_CMD, 0, sizeof(time_cmd), &time_cmd);
-  if (WARN_ON(ret)) {
-    return;
-  }
+  IWL_DEBUG_TE(mvmvif->mvm, "Removing TE 0x%x\n", le32_to_cpu(time_cmd.id));
+  return iwl_mvm_send_cmd_pdu(mvmvif->mvm, TIME_EVENT_CMD, 0, sizeof(time_cmd), &time_cmd);
 }
 
-void iwl_mvm_stop_session_protection(struct iwl_mvm* mvm, struct ieee80211_vif* vif) {
-  struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(vif);
+zx_status_t iwl_mvm_stop_session_protection(struct iwl_mvm_vif* mvmvif) {
   struct iwl_mvm_time_event_data* te_data = &mvmvif->time_event_data;
   uint32_t id;
 
-  iwl_assert_lock_held(&mvm->mutex);
+  iwl_assert_lock_held(&mvmvif->mvm->mutex);
 
-  spin_lock_bh(&mvm->time_event_lock);
+  mtx_lock(&mvmvif->mvm->time_event_lock);
   id = te_data->id;
-  spin_unlock_bh(&mvm->time_event_lock);
+  mtx_unlock(&mvmvif->mvm->time_event_lock);
 
   if (id != TE_BSS_STA_AGGRESSIVE_ASSOC) {
-    IWL_DEBUG_TE(mvm, "don't remove TE with id=%u (not session protection)\n", id);
-    return;
+    IWL_DEBUG_TE(mvmvif->mvm, "don't remove TE with id=%u (not session protection)\n", id);
+    return ZX_ERR_BAD_STATE;
   }
 
-  iwl_mvm_remove_time_event(mvm, mvmvif, te_data);
+  return iwl_mvm_remove_time_event(mvmvif, te_data);
 }
 
+#if 0   // NEEDS_PORTING
 int iwl_mvm_start_p2p_roc(struct iwl_mvm* mvm, struct ieee80211_vif* vif, int duration,
                           enum ieee80211_roc_type type) {
   struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(vif);
@@ -836,3 +858,4 @@ int iwl_mvm_schedule_csa_period(struct iwl_mvm* mvm, struct ieee80211_vif* vif, 
 
   return iwl_mvm_time_event_send_add(mvm, vif, te_data, &time_cmd);
 }
+#endif  // NEEDS_PORTING

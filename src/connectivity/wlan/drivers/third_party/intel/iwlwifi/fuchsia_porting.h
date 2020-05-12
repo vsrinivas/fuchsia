@@ -18,6 +18,7 @@
 #include <lib/backtrace-request/backtrace-request.h>
 #include <netinet/if_ether.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <zircon/assert.h>
@@ -126,6 +127,35 @@ typedef char* acpi_string;
   } while (0);
 
 #define DMA_BIT_MASK(n) (((n) >= 64) ? ~0ULL : ((1ULL << (n)) - 1))
+
+// Converts a WiFi time unit (1024 us) to zx_duration_t.
+//
+// "IEEE Std 802.11-2007" 2007-06-12. p. 14. Retrieved 2010-07-20.
+// time unit (TU): A measurement of time equal to 1024 μs.
+//
+#define TU_TO_DURATION(time_unit) (ZX_USEC(1024) * time_unit)
+
+// Returns the current time.
+//
+// Args:
+//   dispatcher: dispatcher in async. Usually the mvm->dispatcher.
+//
+// Returns:
+//   zx_time_t
+//
+#define NOW_TIME(dispatcher) (async_now(dispatcher))
+
+// Returns the expiring time.
+//
+// Args:
+//   dispatcher: dispatcher in async. Usually the mvm->dispatcher.
+//   time_unit: in TU (time unit)
+//
+// Returns:
+//   zx_time_t
+//
+#define TU_TO_EXP_TIME(dispatcher, time_unit) \
+  zx_time_add_duration(NOW_TIME(dispatcher), TU_TO_DURATION(time_unit))
 
 // NEEDS_PORTING: Below structures are only referenced in function prototype.
 //                Doesn't need a dummy byte.

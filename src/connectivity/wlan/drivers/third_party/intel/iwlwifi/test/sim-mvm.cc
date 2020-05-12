@@ -27,11 +27,24 @@ zx_status_t SimMvm::SendCmd(struct iwl_host_cmd* cmd, bool* notify_wait) {
       switch (opcode) {  // enum iwl_legacy_cmds
         // No state change for the following commands.
 
-        // On real hardware, this command would reply a pakcet to unblock the driver waiting.
+        // On real hardware, this command will reply a pakcet to unblock the driver waiting.
         // In the simulated code, we don't generate the packet. Instead, we unblock it directly.
         case PHY_CONFIGURATION_CMD:
-          *notify_wait = true;
           // passthru
+
+        // The driver code expects 2 notifications from the firmware in this command:
+        //
+        //   1. In iwl_mvm_time_event_send_add(), it waits for the notification of the completion of
+        //      TIME_EVENT_CMD command.
+        //   2. In iwl_mvm_protect_session(), it waits for the TIME_EVENT_NOTIFICATION.
+        //
+        // However, the current sim-mvm code can only unblock the first wait. So added TODO(51671)
+        // to track this.
+        case TIME_EVENT_CMD:
+          // passthru
+
+          // The above commands require unblock the notification.
+          *notify_wait = true;
 
         case SHARED_MEM_CFG:
         case TX_ANT_CONFIGURATION_CMD:

@@ -15,6 +15,7 @@
 
 extern "C" {
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/time-event.h"
 }
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/single-ap-test.h"
@@ -28,6 +29,7 @@ class MvmTest : public SingleApTest {
   MvmTest() TA_NO_THREAD_SAFETY_ANALYSIS {
     mvm_ = iwl_trans_get_mvm(sim_trans_.iwl_trans());
     mvmvif_ = reinterpret_cast<struct iwl_mvm_vif*>(calloc(1, sizeof(struct iwl_mvm_vif)));
+    mvmvif_->mvm = mvm_;
     mvm_->mvmvif[0] = mvmvif_;
     mvmvif_->ifc.ops = reinterpret_cast<wlanmac_ifc_protocol_ops_t*>(
         calloc(1, sizeof(wlanmac_ifc_protocol_ops_t)));
@@ -200,6 +202,9 @@ TEST_F(MvmTest, scanLmacNormal) {
   EXPECT_EQ(0x56, preq[3]);
 }
 
+///////////////////////////////////////////////////////////////////////////////
+//                                  Scan Test
+//
 class ScanTest : public MvmTest {
  public:
   ScanTest() {
@@ -375,6 +380,27 @@ TEST_F(ScanTest, RegPassiveScanParallel) TA_NO_THREAD_SAFETY_ANALYSIS {
   ASSERT_EQ(ZX_OK, iwl_mvm_reg_scan_start(&mvmvif_sta, &scan_config));
   EXPECT_EQ(IWL_MVM_SCAN_REGULAR, mvm_->scan_status & IWL_MVM_SCAN_REGULAR);
   EXPECT_EQ(ZX_ERR_SHOULD_WAIT, iwl_mvm_reg_scan_start(&mvmvif_sta, &scan_config));
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//                             Time Event Test
+//
+class TimeEventTest : public MvmTest {
+ public:
+  TimeEventTest() {
+    // In order to init the mvmvif_->time_event_data.id to TE_MAX.
+    iwl_mvm_mac_ctxt_init(mvmvif_);
+  }
+};
+
+TEST_F(TimeEventTest, NormalCase) {
+  // wait_for_notif is true.
+  ASSERT_EQ(ZX_OK, iwl_mvm_protect_session(mvm_, mvmvif_, 1, 2, 3, true));
+  ASSERT_EQ(ZX_OK, iwl_mvm_stop_session_protection(mvmvif_));
+
+  // wait_for_notif is false.
+  ASSERT_EQ(ZX_OK, iwl_mvm_protect_session(mvm_, mvmvif_, 1, 2, 3, false));
+  ASSERT_EQ(ZX_OK, iwl_mvm_stop_session_protection(mvmvif_));
 }
 
 }  // namespace

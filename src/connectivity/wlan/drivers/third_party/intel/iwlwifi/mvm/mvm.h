@@ -151,10 +151,10 @@ struct iwl_mvm_phy_ctxt {
 };
 
 struct iwl_mvm_time_event_data {
-  struct ieee80211_vif* vif;
+  struct iwl_mvm_vif* mvmvif;
   list_node_t list;
-  unsigned long end_jiffies;
-  uint32_t duration;
+  zx_time_t end_time;
+  uint32_t duration;  // in beacon time unit (TU)
   bool running;
   uint32_t uid;
 

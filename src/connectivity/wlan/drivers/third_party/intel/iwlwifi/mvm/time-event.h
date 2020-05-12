@@ -35,8 +35,8 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_MVM_TIME_EVENT_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_MVM_TIME_EVENT_H_
 
-#include "fw-api.h"
-#include "mvm.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/fw-api.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"
 
 /**
  * DOC: Time Events - what is it?
@@ -89,7 +89,7 @@
 /**
  * iwl_mvm_protect_session - start / extend the session protection.
  * @mvm: the mvm component
- * @vif: the virtual interface for which the session is issued
+ * @mvmvif: the virtual interface for which the session is issued
  * @duration: the duration of the session in TU.
  * @min_duration: will start a new session if the current session will end
  *  in less than min_duration.
@@ -104,8 +104,9 @@
  * This function is meant to be used for BSS association for example, where we
  * want to make sure that the fw stays on the channel during the association.
  */
-void iwl_mvm_protect_session(struct iwl_mvm* mvm, struct ieee80211_vif* vif, uint32_t duration,
-                             uint32_t min_duration, uint32_t max_delay, bool wait_for_notif);
+zx_status_t iwl_mvm_protect_session(struct iwl_mvm* mvm, struct iwl_mvm_vif* mvmvif,
+                                    uint32_t duration, uint32_t min_duration, uint32_t max_delay,
+                                    bool wait_for_notif);
 
 /**
  * iwl_mvm_stop_session_protection - cancel the session protection.
@@ -117,7 +118,7 @@ void iwl_mvm_protect_session(struct iwl_mvm* mvm, struct ieee80211_vif* vif, uin
  * the other bindings wait for the medium during that time.
  * This funtions doesn't sleep.
  */
-void iwl_mvm_stop_session_protection(struct iwl_mvm* mvm, struct ieee80211_vif* vif);
+zx_status_t iwl_mvm_stop_session_protection(struct iwl_mvm_vif* mvmvif);
 
 /*
  * iwl_mvm_rx_time_event_notif - handles %TIME_EVENT_NOTIFICATION.
@@ -164,8 +165,8 @@ void iwl_mvm_stop_roc(struct iwl_mvm* mvm);
  * It is useful for cleaning up time events running before removing an
  * interface.
  */
-void iwl_mvm_remove_time_event(struct iwl_mvm* mvm, struct iwl_mvm_vif* mvmvif,
-                               struct iwl_mvm_time_event_data* te_data);
+zx_status_t iwl_mvm_remove_time_event(struct iwl_mvm_vif* mvmvif,
+                                      struct iwl_mvm_time_event_data* te_data);
 
 /**
  * iwl_mvm_te_clear_data - remove time event from list
