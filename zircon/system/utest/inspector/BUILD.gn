@@ -21,8 +21,8 @@ test("inspector") {
   deps = [
     "//zircon/public/lib/backtrace-request",
     "//zircon/public/lib/fdio",
-    "//zircon/public/lib/inspector",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/inspector",
   ]
 
   # TODO(47869): Fix the leaks and remove this.

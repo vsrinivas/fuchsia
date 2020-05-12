@@ -2,6 +2,18 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36548.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/unification/zx_library.gni")
+
 zx_library("inspector") {
   # This should only ever be used as a shared library because it hides
   # the otherwise problematic ngunwind symbols.
@@ -18,22 +30,20 @@ zx_library("inspector") {
     "registers.cc",
     "utils.cc",
   ]
-  public_deps = [ "$zx/system/ulib/zircon:headers" ]
   deps = [
-    "$zx/system/ulib/backtrace-request:backtrace-request-utils",
-    "$zx/system/ulib/elf-search",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/pretty",
-    "$zx/system/ulib/zircon",
-    "$zx/third_party/ulib/ngunwind",
+    "//zircon/public/lib/backtrace-request-utils",
+    "//zircon/public/lib/elf-search",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/ngunwind",
+    "//zircon/public/lib/pretty",
   ]
-  configs += [ "$zx_build/public/gn/config:static-libc++" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
 
   # Compile this with frame pointers so that if we crash
   # the simplistic unwinder will work.
-  if (configs + [ "$zx_build/public/gn/config:default_frame_pointers" ] -
-      [ "$zx_build/public/gn/config:default_frame_pointers" ] != configs) {
-    configs -= [ "$zx_build/public/gn/config:default_frame_pointers" ]
-    configs += [ "$zx_build/public/gn/config:frame_pointers" ]
+  if (configs + [ "//build/config:default_frame_pointers" ] -
+      [ "//build/config:default_frame_pointers" ] != configs) {
+    configs -= [ "//build/config:default_frame_pointers" ]
+    configs += [ "//build/config:frame_pointers" ]
   }
 }

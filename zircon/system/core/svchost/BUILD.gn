@@ -28,7 +28,7 @@ zx_library("crashsvc") {
     "//zircon/public/lib/backtrace-request-utils",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
-    "//zircon/public/lib/inspector",
+    "//zircon/system/ulib/inspector",
   ]
 
   public_deps = [ "//zircon/public/lib/zx" ]
