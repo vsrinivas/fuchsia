@@ -207,7 +207,7 @@ impl Renderer {
 
         let mut stop_receiver = stop_receiver.fuse();
 
-        let mut completed_one = true;
+        let mut completed_one = false;
 
         // Wait for send_packet and play to complete, or for stop_receiver to receive successfully.
         loop {
