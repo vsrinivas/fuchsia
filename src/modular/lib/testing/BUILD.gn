@@ -7,7 +7,6 @@ group("testing") {
   deps = [
     ":component_base",
     ":component_main",
-    ":mock_base",
     ":session_shell_base",
     ":session_shell_impl",
     ":story_controller_mock",
@@ -133,20 +132,6 @@ source_set("test_with_session_storage") {
     "//third_party/googletest:gtest",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
-  ]
-}
-
-source_set("mock_base") {
-  testonly = true
-
-  sources = [
-    "mock_base.cc",
-    "mock_base.h",
-  ]
-
-  deps = [
-    "//sdk/lib/syslog/cpp",
-    "//third_party/googletest:gtest",
   ]
 }
 
