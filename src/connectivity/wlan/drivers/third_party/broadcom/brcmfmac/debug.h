@@ -35,7 +35,7 @@
 #define BRCMF_DBG(filter, fmt, ...)                        \
   do {                                                     \
     if (BRCMF_IS_ON(filter)) {                             \
-      zxlogf(WARN, "(%s): " fmt, __func__, ##__VA_ARGS__); \
+      zxlogf(INFO, "(%s): " fmt, __func__, ##__VA_ARGS__); \
     }                                                      \
   } while (0)
 
