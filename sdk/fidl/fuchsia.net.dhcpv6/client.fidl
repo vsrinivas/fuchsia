@@ -1,0 +1,54 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.net.dhcpv6;
+
+using fuchsia.net.name;
+
+/// Supported DHCPv6 option codes that can be included in the client's
+/// [Option Request Option](https://tools.ietf.org/html/rfc8415#section-21.7).
+///
+/// See the full list of option codes
+/// [here](https://www.iana.org/assignments/dhcpv6-parameters/dhcpv6-parameters.xhtml#dhcpv6-parameters-2).
+enum RequestableOptionCode {
+    DNS_SERVERS = 23;
+};
+
+/// A DHCPv6 operational model where the client only sends information
+/// requests and handles corresponding replies, as defined in
+/// [RFC 8415, Section 6.1](https://tools.ietf.org/html/rfc8415#section-6.1).
+table Stateless {
+    /// A list of option codes to include in
+    /// [Option Request Option](https://tools.ietf.org/html/rfc8415#section-21.7).
+    1: vector<RequestableOptionCode>:1 options_to_request;
+};
+
+/// Operational models for a client.
+///
+/// The client will run all the provided models in parallel.
+///
+/// See the full list of operational models in
+/// [RFC 8415, Section 6](https://tools.ietf.org/html/rfc8415#section-6).
+table OperationalModels {
+    1: Stateless stateless;
+};
+
+/// Provides a method to create new clients.
+[Discoverable]
+protocol ClientProvider {
+    /// Provides a DHCPv6 client.
+    ///
+    /// + request `interface_id` the id of the interface the client will run on.
+    /// + request `models` the `OperationalModels` the client will start in.
+    ///     Empty or unsupported `models` will cause client creation to fail.
+    /// + request `request` the channel handle that can be used to control the
+    ///     newly created client. Will be closed if a client cannot be created,
+    ///     with an epitaph explaining the reason.
+    NewClient(uint64 interface_id, OperationalModels models, request<Client> request);
+};
+
+/// Provides methods to watch for discovered network configurations.
+protocol Client {
+    compose fuchsia.net.name.DnsServerWatcher;
+};
