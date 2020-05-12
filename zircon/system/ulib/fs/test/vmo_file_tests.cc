@@ -11,7 +11,7 @@
 
 #include <fs/vfs_types.h>
 #include <fs/vmo_file.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 namespace {
 
@@ -37,21 +37,15 @@ zx_rights_t GetRights(zx_handle_t handle) {
   return status == ZX_OK ? info.rights : 0u;
 }
 
-bool FillVmo(const zx::vmo& vmo, size_t offset, size_t length, uint8_t byte) {
-  BEGIN_HELPER;
-
+void FillVmo(const zx::vmo& vmo, size_t offset, size_t length, uint8_t byte) {
   uint8_t data[length];
   memset(data, byte, length);
 
   zx_status_t status = vmo.write(data, offset, length);
   ASSERT_EQ(ZX_OK, status);
-
-  END_HELPER;
 }
 
-bool CheckVmo(const zx::vmo& vmo, size_t offset, size_t length, uint8_t expected_byte) {
-  BEGIN_HELPER;
-
+void CheckVmo(const zx::vmo& vmo, size_t offset, size_t length, uint8_t expected_byte) {
   uint8_t data[length];
 
   zx_status_t status = vmo.read(data, offset, length);
@@ -60,38 +54,26 @@ bool CheckVmo(const zx::vmo& vmo, size_t offset, size_t length, uint8_t expected
   for (size_t i = 0; i < length; i++) {
     ASSERT_EQ(expected_byte, data[i]);
   }
-
-  END_HELPER;
 }
 
-bool CheckData(uint8_t* data, size_t offset, size_t length, uint8_t expected_byte) {
-  BEGIN_HELPER;
-
+void CheckData(uint8_t* data, size_t offset, size_t length, uint8_t expected_byte) {
   for (size_t i = 0; i < length; i++) {
     ASSERT_EQ(expected_byte, data[i + offset]);
   }
-
-  END_HELPER;
 }
 
-bool CreateVmoABC(zx::vmo* out_vmo) {
-  BEGIN_HELPER;
-
+void CreateVmoABC(zx::vmo* out_vmo) {
   zx_status_t status = zx::vmo::create(VMO_SIZE, 0u, out_vmo);
   ASSERT_EQ(ZX_OK, status);
 
-  ASSERT_TRUE(FillVmo(*out_vmo, PAGE_0, PAGE_SIZE, 'A'));
-  ASSERT_TRUE(FillVmo(*out_vmo, PAGE_1, PAGE_SIZE, 'B'));
-  ASSERT_TRUE(FillVmo(*out_vmo, PAGE_2, PAGE_SIZE, 'C'));
-
-  END_HELPER;
+  FillVmo(*out_vmo, PAGE_0, PAGE_SIZE, 'A');
+  FillVmo(*out_vmo, PAGE_1, PAGE_SIZE, 'B');
+  FillVmo(*out_vmo, PAGE_2, PAGE_SIZE, 'C');
 }
 
-bool TestConstructor() {
-  BEGIN_TEST;
-
+TEST(VmoFile, Constructor) {
   zx::vmo abc;
-  ASSERT_TRUE(CreateVmoABC(&abc));
+  CreateVmoABC(&abc);
 
   // default parameters
   {
@@ -112,8 +94,6 @@ bool TestConstructor() {
     EXPECT_TRUE(file.is_writable());
     EXPECT_EQ(fs::VmoFile::VmoSharing::CLONE_COW, file.vmo_sharing());
   }
-
-  END_TEST;
 }
 
 #define EXPECT_RESULT_OK(expr) EXPECT_TRUE((expr).is_ok())
@@ -121,11 +101,9 @@ bool TestConstructor() {
   EXPECT_TRUE((expr).is_error());            \
   EXPECT_EQ(error_val, (expr).error())
 
-bool TestOpen() {
-  BEGIN_TEST;
-
+TEST(VmoFile, Open) {
   zx::vmo abc;
-  ASSERT_TRUE(CreateVmoABC(&abc));
+  CreateVmoABC(&abc);
 
   // read-only
   {
@@ -162,15 +140,11 @@ bool TestOpen() {
     EXPECT_RESULT_ERROR(ZX_ERR_NOT_DIR, file.ValidateOptions(VnodeOptions().set_directory()));
     EXPECT_NULL(redirect);
   }
-
-  END_TEST;
 }
 
-bool TestRead() {
-  BEGIN_TEST;
-
+TEST(VmoFile, Read) {
   zx::vmo abc;
-  ASSERT_TRUE(CreateVmoABC(&abc));
+  CreateVmoABC(&abc);
 
   uint8_t data[VMO_SIZE];
   memset(data, 0, VMO_SIZE);
@@ -229,8 +203,8 @@ bool TestRead() {
     size_t actual = UINT64_MAX;
     EXPECT_EQ(ZX_OK, file.Read(data, 11u, 1u, &actual));
     EXPECT_EQ(9u, actual);
-    EXPECT_TRUE(CheckData(data, 0u, 2u, 'A'));
-    EXPECT_TRUE(CheckData(data, 2u, 7u, 'B'));
+    CheckData(data, 0u, 2u, 'A');
+    CheckData(data, 2u, 7u, 'B');
   }
 
   // full read
@@ -239,19 +213,15 @@ bool TestRead() {
     size_t actual = UINT64_MAX;
     EXPECT_EQ(ZX_OK, file.Read(data, VMO_SIZE, 0u, &actual));
     EXPECT_EQ(VMO_SIZE, actual);
-    EXPECT_TRUE(CheckData(data, PAGE_0, PAGE_SIZE, 'A'));
-    EXPECT_TRUE(CheckData(data, PAGE_1, PAGE_SIZE, 'B'));
-    EXPECT_TRUE(CheckData(data, PAGE_2, PAGE_SIZE, 'C'));
+    CheckData(data, PAGE_0, PAGE_SIZE, 'A');
+    CheckData(data, PAGE_1, PAGE_SIZE, 'B');
+    CheckData(data, PAGE_2, PAGE_SIZE, 'C');
   }
-
-  END_TEST;
 }
 
-bool TestWrite() {
-  BEGIN_TEST;
-
+TEST(VmoFile, Write) {
   zx::vmo abc;
-  ASSERT_TRUE(CreateVmoABC(&abc));
+  CreateVmoABC(&abc);
 
   uint8_t data[VMO_SIZE];
   memset(data, '!', VMO_SIZE);
@@ -262,9 +232,9 @@ bool TestWrite() {
     size_t actual = UINT64_MAX;
     EXPECT_EQ(ZX_OK, file.Write(data, 0u, 0u, &actual));
     EXPECT_EQ(0u, actual);
-    EXPECT_TRUE(CheckVmo(abc, PAGE_0, PAGE_SIZE, 'A'));
-    EXPECT_TRUE(CheckVmo(abc, PAGE_1, PAGE_SIZE, 'B'));
-    EXPECT_TRUE(CheckVmo(abc, PAGE_2, PAGE_SIZE, 'C'));
+    CheckVmo(abc, PAGE_0, PAGE_SIZE, 'A');
+    CheckVmo(abc, PAGE_1, PAGE_SIZE, 'B');
+    CheckVmo(abc, PAGE_2, PAGE_SIZE, 'C');
   }
 
   // non-empty write of empty file
@@ -280,9 +250,9 @@ bool TestWrite() {
     size_t actual = UINT64_MAX;
     EXPECT_EQ(ZX_OK, file.Write(data, 0u, 10u, &actual));
     EXPECT_EQ(0u, actual);
-    EXPECT_TRUE(CheckVmo(abc, PAGE_0, PAGE_SIZE, 'A'));
-    EXPECT_TRUE(CheckVmo(abc, PAGE_1, PAGE_SIZE, 'B'));
-    EXPECT_TRUE(CheckVmo(abc, PAGE_2, PAGE_SIZE, 'C'));
+    CheckVmo(abc, PAGE_0, PAGE_SIZE, 'A');
+    CheckVmo(abc, PAGE_1, PAGE_SIZE, 'B');
+    CheckVmo(abc, PAGE_2, PAGE_SIZE, 'C');
   }
 
   // non-empty write at end of file
@@ -298,9 +268,9 @@ bool TestWrite() {
     size_t actual = UINT64_MAX;
     EXPECT_EQ(ZX_OK, file.Write(data, 0u, 11u, &actual));
     EXPECT_EQ(0u, actual);
-    EXPECT_TRUE(CheckVmo(abc, PAGE_0, PAGE_SIZE, 'A'));
-    EXPECT_TRUE(CheckVmo(abc, PAGE_1, PAGE_SIZE, 'B'));
-    EXPECT_TRUE(CheckVmo(abc, PAGE_2, PAGE_SIZE, 'C'));
+    CheckVmo(abc, PAGE_0, PAGE_SIZE, 'A');
+    CheckVmo(abc, PAGE_1, PAGE_SIZE, 'B');
+    CheckVmo(abc, PAGE_2, PAGE_SIZE, 'C');
   }
 
   // non-empty write beyond end of file
@@ -316,10 +286,10 @@ bool TestWrite() {
     size_t actual = UINT64_MAX;
     EXPECT_EQ(ZX_OK, file.Write(data, 11u, 1u, &actual));
     EXPECT_EQ(9u, actual);
-    EXPECT_TRUE(CheckVmo(abc, PAGE_0, PAGE_SIZE - 2u, 'A'));
-    EXPECT_TRUE(CheckVmo(abc, PAGE_1 - 2u, 9u, '!'));
-    EXPECT_TRUE(CheckVmo(abc, PAGE_1 + 7u, PAGE_SIZE - 7u, 'B'));
-    EXPECT_TRUE(CheckVmo(abc, PAGE_2, PAGE_SIZE, 'C'));
+    CheckVmo(abc, PAGE_0, PAGE_SIZE - 2u, 'A');
+    CheckVmo(abc, PAGE_1 - 2u, 9u, '!');
+    CheckVmo(abc, PAGE_1 + 7u, PAGE_SIZE - 7u, 'B');
+    CheckVmo(abc, PAGE_2, PAGE_SIZE, 'C');
   }
 
   // full write
@@ -328,17 +298,13 @@ bool TestWrite() {
     size_t actual = UINT64_MAX;
     EXPECT_EQ(ZX_OK, file.Write(data, VMO_SIZE, 0u, &actual));
     EXPECT_EQ(VMO_SIZE, actual);
-    EXPECT_TRUE(CheckVmo(abc, 0u, VMO_SIZE, '!'));
+    CheckVmo(abc, 0u, VMO_SIZE, '!');
   }
-
-  END_TEST;
 }
 
-bool TestGetattr() {
-  BEGIN_TEST;
-
+TEST(VmoFile, Getattr) {
   zx::vmo abc;
-  ASSERT_TRUE(CreateVmoABC(&abc));
+  CreateVmoABC(&abc);
 
   // read-only
   {
@@ -361,17 +327,13 @@ bool TestGetattr() {
     EXPECT_EQ(4u * PAGE_SIZE, attr.storage_size);
     EXPECT_EQ(1u, attr.link_count);
   }
-
-  END_TEST;
 }
 
-bool TestGetNodeInfo() {
-  BEGIN_TEST;
-
+TEST(VmoFile, GetNodeInfo) {
   // sharing = VmoSharing::NONE
   {
     zx::vmo abc;
-    ASSERT_TRUE(CreateVmoABC(&abc));
+    CreateVmoABC(&abc);
 
     fs::VnodeRepresentation info;
     fs::VmoFile file(abc, PAGE_1 - 5u, 23u, false, fs::VmoFile::VmoSharing::NONE);
@@ -381,7 +343,7 @@ bool TestGetNodeInfo() {
   // sharing = VmoSharing::DUPLICATE, read only
   {
     zx::vmo abc;
-    ASSERT_TRUE(CreateVmoABC(&abc));
+    CreateVmoABC(&abc);
 
     fs::VnodeRepresentation info;
     fs::VmoFile file(abc, PAGE_1 - 5u, 23u, false, fs::VmoFile::VmoSharing::DUPLICATE);
@@ -395,14 +357,14 @@ bool TestGetNodeInfo() {
     EXPECT_EQ(PAGE_1 - 5u, memory.offset);
     EXPECT_EQ(23u, memory.length);
 
-    EXPECT_TRUE(CheckVmo(vmo, PAGE_1 - 5u, 5u, 'A'));
-    EXPECT_TRUE(CheckVmo(vmo, PAGE_1, 18u, 'B'));
+    CheckVmo(vmo, PAGE_1 - 5u, 5u, 'A');
+    CheckVmo(vmo, PAGE_1, 18u, 'B');
   }
 
   // sharing = VmoSharing::DUPLICATE, read-write
   {
     zx::vmo abc;
-    ASSERT_TRUE(CreateVmoABC(&abc));
+    CreateVmoABC(&abc);
 
     fs::VnodeRepresentation info;
     fs::VmoFile file(abc, PAGE_1 - 5u, 23u, true, fs::VmoFile::VmoSharing::DUPLICATE);
@@ -417,21 +379,21 @@ bool TestGetNodeInfo() {
     EXPECT_EQ(PAGE_1 - 5u, memory.offset);
     EXPECT_EQ(23u, memory.length);
 
-    EXPECT_TRUE(CheckVmo(vmo, PAGE_1 - 5u, 5u, 'A'));
-    EXPECT_TRUE(CheckVmo(vmo, PAGE_1, 18u, 'B'));
+    CheckVmo(vmo, PAGE_1 - 5u, 5u, 'A');
+    CheckVmo(vmo, PAGE_1, 18u, 'B');
 
-    EXPECT_TRUE(FillVmo(vmo, PAGE_1 - 5u, 23u, '!'));
+    FillVmo(vmo, PAGE_1 - 5u, 23u, '!');
 
-    EXPECT_TRUE(CheckVmo(abc, 0u, PAGE_SIZE - 5u, 'A'));
-    EXPECT_TRUE(CheckVmo(abc, PAGE_1 - 5u, 23u, '!'));
-    EXPECT_TRUE(CheckVmo(abc, PAGE_1 + 18u, PAGE_SIZE - 18u, 'B'));
-    EXPECT_TRUE(CheckVmo(abc, PAGE_2, PAGE_SIZE, 'C'));
+    CheckVmo(abc, 0u, PAGE_SIZE - 5u, 'A');
+    CheckVmo(abc, PAGE_1 - 5u, 23u, '!');
+    CheckVmo(abc, PAGE_1 + 18u, PAGE_SIZE - 18u, 'B');
+    CheckVmo(abc, PAGE_2, PAGE_SIZE, 'C');
   }
 
   // sharing = VmoSharing::DUPLICATE, write only
   {
     zx::vmo abc;
-    ASSERT_TRUE(CreateVmoABC(&abc));
+    CreateVmoABC(&abc);
 
     fs::VnodeRepresentation info;
     fs::VmoFile file(abc, PAGE_1 - 5u, 23u, true, fs::VmoFile::VmoSharing::DUPLICATE);
@@ -445,18 +407,18 @@ bool TestGetNodeInfo() {
     EXPECT_EQ(PAGE_1 - 5u, memory.offset);
     EXPECT_EQ(23u, memory.length);
 
-    EXPECT_TRUE(FillVmo(vmo, PAGE_1 - 5u, 23u, '!'));
+    FillVmo(vmo, PAGE_1 - 5u, 23u, '!');
 
-    EXPECT_TRUE(CheckVmo(abc, 0u, PAGE_SIZE - 5u, 'A'));
-    EXPECT_TRUE(CheckVmo(abc, PAGE_1 - 5u, 23u, '!'));
-    EXPECT_TRUE(CheckVmo(abc, PAGE_1 + 18u, PAGE_SIZE - 18u, 'B'));
-    EXPECT_TRUE(CheckVmo(abc, PAGE_2, PAGE_SIZE, 'C'));
+    CheckVmo(abc, 0u, PAGE_SIZE - 5u, 'A');
+    CheckVmo(abc, PAGE_1 - 5u, 23u, '!');
+    CheckVmo(abc, PAGE_1 + 18u, PAGE_SIZE - 18u, 'B');
+    CheckVmo(abc, PAGE_2, PAGE_SIZE, 'C');
   }
 
   // sharing = VmoSharing::CLONE_COW, read only
   {
     zx::vmo abc;
-    ASSERT_TRUE(CreateVmoABC(&abc));
+    CreateVmoABC(&abc);
 
     fs::VnodeRepresentation info;
     fs::VmoFile file(abc, PAGE_2 - 5u, 23u, false, fs::VmoFile::VmoSharing::CLONE_COW);
@@ -474,14 +436,14 @@ bool TestGetNodeInfo() {
     EXPECT_EQ(PAGE_SIZE - 5u, memory.offset);
     EXPECT_EQ(23u, memory.length);
 
-    EXPECT_TRUE(CheckVmo(vmo, PAGE_SIZE - 5u, 5u, 'B'));
-    EXPECT_TRUE(CheckVmo(vmo, PAGE_SIZE, 18u, 'C'));
+    CheckVmo(vmo, PAGE_SIZE - 5u, 5u, 'B');
+    CheckVmo(vmo, PAGE_SIZE, 18u, 'C');
   }
 
   // sharing = VmoSharing::CLONE_COW, read-write
   {
     zx::vmo abc;
-    ASSERT_TRUE(CreateVmoABC(&abc));
+    CreateVmoABC(&abc);
 
     fs::VnodeRepresentation info;
     fs::VmoFile file(abc, PAGE_2 - 5u, 23u, true, fs::VmoFile::VmoSharing::CLONE_COW);
@@ -496,20 +458,20 @@ bool TestGetNodeInfo() {
     EXPECT_EQ(PAGE_SIZE - 5u, memory.offset);
     EXPECT_EQ(23u, memory.length);
 
-    EXPECT_TRUE(CheckVmo(vmo, PAGE_SIZE - 5u, 5u, 'B'));
-    EXPECT_TRUE(CheckVmo(vmo, PAGE_SIZE, 18u, 'C'));
+    CheckVmo(vmo, PAGE_SIZE - 5u, 5u, 'B');
+    CheckVmo(vmo, PAGE_SIZE, 18u, 'C');
 
-    EXPECT_TRUE(FillVmo(vmo, PAGE_SIZE - 5u, 23u, '!'));
+    FillVmo(vmo, PAGE_SIZE - 5u, 23u, '!');
 
-    EXPECT_TRUE(CheckVmo(abc, PAGE_0, PAGE_SIZE, 'A'));
-    EXPECT_TRUE(CheckVmo(abc, PAGE_1, PAGE_SIZE, 'B'));
-    EXPECT_TRUE(CheckVmo(abc, PAGE_2, PAGE_SIZE, 'C'));
+    CheckVmo(abc, PAGE_0, PAGE_SIZE, 'A');
+    CheckVmo(abc, PAGE_1, PAGE_SIZE, 'B');
+    CheckVmo(abc, PAGE_2, PAGE_SIZE, 'C');
   }
 
   // sharing = VmoSharing::CLONE_COW, write only
   {
     zx::vmo abc;
-    ASSERT_TRUE(CreateVmoABC(&abc));
+    CreateVmoABC(&abc);
 
     fs::VnodeRepresentation info;
     fs::VmoFile file(abc, PAGE_2 - 5u, 23u, true, fs::VmoFile::VmoSharing::CLONE_COW);
@@ -523,23 +485,12 @@ bool TestGetNodeInfo() {
     EXPECT_EQ(PAGE_SIZE - 5u, memory.offset);
     EXPECT_EQ(23u, memory.length);
 
-    EXPECT_TRUE(FillVmo(vmo, PAGE_SIZE - 5u, 23u, '!'));
+    FillVmo(vmo, PAGE_SIZE - 5u, 23u, '!');
 
-    EXPECT_TRUE(CheckVmo(abc, PAGE_0, PAGE_SIZE, 'A'));
-    EXPECT_TRUE(CheckVmo(abc, PAGE_1, PAGE_SIZE, 'B'));
-    EXPECT_TRUE(CheckVmo(abc, PAGE_2, PAGE_SIZE, 'C'));
+    CheckVmo(abc, PAGE_0, PAGE_SIZE, 'A');
+    CheckVmo(abc, PAGE_1, PAGE_SIZE, 'B');
+    CheckVmo(abc, PAGE_2, PAGE_SIZE, 'C');
   }
-
-  END_TEST;
 }
 
 }  // namespace
-
-BEGIN_TEST_CASE(vmo_file_tests)
-RUN_TEST(TestConstructor)
-RUN_TEST(TestOpen)
-RUN_TEST(TestRead)
-RUN_TEST(TestWrite)
-RUN_TEST(TestGetattr)
-RUN_TEST(TestGetNodeInfo)
-END_TEST_CASE(vmo_file_tests)

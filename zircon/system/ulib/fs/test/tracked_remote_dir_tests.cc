@@ -8,7 +8,7 @@
 #include <utility>
 
 #include <fs/tracked_remote_dir.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 namespace {
 
@@ -25,9 +25,7 @@ class TestRemoteDir final : public fs::TrackedRemoteDir {
   async::Loop* loop_;
 };
 
-bool TestAddingTrackedDirectory() {
-  BEGIN_TEST;
-
+TEST(TrackedRemoteDir, AddingTrackedDirectory) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   zx::channel server, client;
   ASSERT_EQ(ZX_OK, zx::channel::create(0u, &server, &client));
@@ -56,13 +54,9 @@ bool TestAddingTrackedDirectory() {
   server.reset();
   EXPECT_EQ(ZX_ERR_BAD_STATE, loop.Run());
   EXPECT_EQ(ZX_ERR_NOT_FOUND, dir->Lookup(&node, name));
-
-  END_TEST;
 }
 
-bool TestAddingTrackedDirectoryMultiple() {
-  BEGIN_TEST;
-
+TEST(TrackedRemoteDir, AddingTrackedDirectoryMultiple) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   zx::channel server, client;
   ASSERT_EQ(ZX_OK, zx::channel::create(0u, &server, &client));
@@ -88,13 +82,9 @@ bool TestAddingTrackedDirectoryMultiple() {
   EXPECT_EQ(ZX_ERR_BAD_STATE, loop.Run());
   fbl::RefPtr<fs::Vnode> node;
   EXPECT_EQ(ZX_ERR_NOT_FOUND, dir->Lookup(&node, name));
-
-  END_TEST;
 }
 
-bool TestTrackAddingDifferentVnode() {
-  BEGIN_TEST;
-
+TEST(TrackedRemoteDir, TrackAddingDifferentVnode) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   zx::channel server, client;
   ASSERT_EQ(ZX_OK, zx::channel::create(0u, &server, &client));
@@ -125,14 +115,6 @@ bool TestTrackAddingDifferentVnode() {
 
   // The underlying entry should NOT have been removed.
   EXPECT_EQ(ZX_OK, dir->Lookup(&node, name));
-
-  END_TEST;
 }
 
 }  // namespace
-
-BEGIN_TEST_CASE(tracked_remote_dir_tests)
-RUN_TEST(TestAddingTrackedDirectory)
-RUN_TEST(TestAddingTrackedDirectoryMultiple)
-RUN_TEST(TestTrackAddingDifferentVnode)
-END_TEST_CASE(tracked_remote_dir_tests)

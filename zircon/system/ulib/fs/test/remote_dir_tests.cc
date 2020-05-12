@@ -5,13 +5,11 @@
 #include <utility>
 
 #include <fs/remote_dir.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 namespace {
 
-bool TestRemoteDir() {
-  BEGIN_TEST;
-
+TEST(RemoteDir, ApiTest) {
   zx::channel server, client;
   ASSERT_EQ(ZX_OK, zx::channel::create(0u, &server, &client));
 
@@ -30,12 +28,6 @@ bool TestRemoteDir() {
 
   // detaching the remote mount isn't allowed
   EXPECT_TRUE(!dir->DetachRemote());
-
-  END_TEST;
 }
 
 }  // namespace
-
-BEGIN_TEST_CASE(remote_dir_tests)
-RUN_TEST(TestRemoteDir)
-END_TEST_CASE(remote_dir_tests)

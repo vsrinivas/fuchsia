@@ -14,15 +14,13 @@
 #include <fs/pseudo_dir.h>
 #include <fs/service.h>
 #include <fs/synchronous_vfs.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 namespace {
 
 namespace fio = ::llcpp::fuchsia::io;
 
-bool test_service() {
-  BEGIN_TEST;
-
+TEST(Service, ApiTest) {
   // set up a service which can only be bound once (to make it easy to
   // simulate an error to test error reporting behavior from the connector)
   zx::channel bound_channel;
@@ -63,13 +61,9 @@ bool test_service() {
   // we test that the error is propagated back up through Serve
   EXPECT_EQ(ZX_ERR_IO, vfs.Serve(svc, std::move(c2), options_readable));
   EXPECT_EQ(hc1, bound_channel.get());
-
-  END_TEST;
 }
 
-bool TestServeDirectory() {
-  BEGIN_TEST;
-
+TEST(Service, ServeDirectory) {
   zx::channel client, server;
   EXPECT_EQ(ZX_OK, zx::channel::create(0u, &client, &server));
 
@@ -96,13 +90,9 @@ bool TestServeDirectory() {
 
   EXPECT_EQ(ZX_OK, vfs.ServeDirectory(directory, std::move(server)));
   EXPECT_EQ(ZX_ERR_BAD_STATE, loop.RunUntilIdle());
-
-  END_TEST;
 }
 
-bool TestServiceNodeIsNotDirectory() {
-  BEGIN_TEST;
-
+TEST(Service, ServiceNodeIsNotDirectory) {
   // Set up the server
   zx::channel client_end, server_end;
   ASSERT_EQ(ZX_OK, zx::channel::create(0u, &client_end, &server_end));
@@ -137,26 +127,22 @@ bool TestServiceNodeIsNotDirectory() {
                                      fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
                                  0755, fidl::StringView("abc"), std::move(abc_server_end));
   EXPECT_EQ(open_result.status(), ZX_OK);
-  zx_status_t event_status = fio::Node::Call::HandleEvents(zx::unowned_channel(abc_client_end),
-                                                           fio::Node::EventHandlers{
-      .on_open = [](zx_status_t status, fio::NodeInfo info) {
-        EXPECT_EQ(ZX_ERR_NOT_DIR, status);
-        EXPECT_TRUE(info.has_invalid_tag());
-        return ZX_OK;
-      },
-      .unknown = []() { return ZX_ERR_INVALID_ARGS; }
-  });
+  zx_status_t event_status = fio::Node::Call::HandleEvents(
+      zx::unowned_channel(abc_client_end),
+      fio::Node::EventHandlers{.on_open =
+                                   [](zx_status_t status, fio::NodeInfo info) {
+                                     EXPECT_EQ(ZX_ERR_NOT_DIR, status);
+                                     EXPECT_TRUE(info.has_invalid_tag());
+                                     return ZX_OK;
+                                   },
+                               .unknown = []() { return ZX_ERR_INVALID_ARGS; }});
   // Expect that |on_open| was received
   EXPECT_EQ(ZX_OK, event_status);
 
   loop.Shutdown();
-
-  END_TEST;
 }
 
-bool TestOpeningServiceWithNodeReferenceFlag() {
-  BEGIN_TEST;
-
+TEST(Service, OpeningServiceWithNodeReferenceFlag) {
   // Set up the server
   zx::channel client_end, server_end;
   ASSERT_EQ(ZX_OK, zx::channel::create(0u, &client_end, &server_end));
@@ -189,15 +175,6 @@ bool TestOpeningServiceWithNodeReferenceFlag() {
   ASSERT_EQ(fio::NodeInfo::Tag::kService, describe_result->info.which());
 
   loop.Shutdown();
-
-  END_TEST;
 }
 
 }  // namespace
-
-BEGIN_TEST_CASE(service_tests)
-RUN_TEST(test_service)
-RUN_TEST(TestServeDirectory)
-RUN_TEST(TestServiceNodeIsNotDirectory)
-RUN_TEST(TestOpeningServiceWithNodeReferenceFlag)
-END_TEST_CASE(service_tests)
