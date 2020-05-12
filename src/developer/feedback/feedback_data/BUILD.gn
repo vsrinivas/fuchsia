@@ -233,3 +233,21 @@ source_set("inspect_manager") {
 
   deps = [ "//src/developer/feedback/utils:inspect_protocol_stats" ]
 }
+
+source_set("integrity_reporter") {
+  sources = [
+    "integrity_reporter.cc",
+    "integrity_reporter.h",
+  ]
+
+  public_deps = [
+    "//src/developer/feedback/feedback_data/annotations:types",
+    "//src/developer/feedback/feedback_data/attachments:types",
+    "//zircon/public/lib/fit",
+  ]
+
+  deps = [
+    "//src/developer/feedback/utils:errors",
+    "//third_party/rapidjson",
+  ]
+}

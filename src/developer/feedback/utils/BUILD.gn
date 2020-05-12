@@ -29,6 +29,8 @@ source_set("archive") {
 
 source_set("errors") {
   sources = [ "errors.h" ]
+
+  public_deps = [ "//sdk/lib/syslog/cpp" ]
 }
 
 source_set("files") {

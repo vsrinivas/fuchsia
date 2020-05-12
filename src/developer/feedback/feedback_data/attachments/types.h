@@ -26,10 +26,12 @@ class AttachmentValue {
     kMissing,
   };
 
-  AttachmentValue(const std::string& value) : state_(State::kComplete), value_(value) {}
+  explicit AttachmentValue(const std::string& value)
+      : state_(State::kComplete), value_(value), error_(std::nullopt) {}
   AttachmentValue(const std::string& value, enum Error error)
       : state_(State::kPartial), value_(value), error_(error) {}
-  AttachmentValue(enum Error error) : state_(State::kMissing), error_(error) {}
+  AttachmentValue(enum Error error)
+      : state_(State::kMissing), value_(std::nullopt), error_(error) {}
 
   bool HasValue() const { return value_.has_value(); }
 

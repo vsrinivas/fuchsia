@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/integrity_reporter_unittest"
+    }
+}

@@ -76,6 +76,9 @@ test_package("feedback-data-tests") {
       name = "inspect_ptr_unittest"
     },
     {
+      name = "integrity_reporter_unittest"
+    },
+    {
       name = "kernel_log_ptr_integration_test"
     },
     {
@@ -163,6 +166,7 @@ test_package("feedback-data-tests") {
     ":feedback_data_integration_test",
     ":inspect_exe",
     ":inspect_ptr_unittest",
+    ":integrity_reporter_unittest",
     ":kernel_log_ptr_integration_test",
     ":main_service_unittest",
     ":product_info_provider_unittest",
@@ -422,6 +426,25 @@ executable("inspect_ptr_unittest") {
     "//src/developer/feedback/utils:errors",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
+  ]
+}
+
+executable("integrity_reporter_unittest") {
+  testonly = true
+
+  sources = [ "integrity_reporter_unittest.cc" ]
+
+  deps = [
+    "//sdk/lib/syslog/cpp",
+    "//src/developer/feedback/feedback_data:integrity_reporter",
+    "//src/developer/feedback/feedback_data/annotations:types",
+    "//src/developer/feedback/feedback_data/attachments:types",
+    "//src/developer/feedback/utils:errors",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+    "//third_party/rapidjson",
+    "//zircon/public/lib/fit",
   ]
 }
 
