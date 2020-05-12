@@ -299,13 +299,14 @@ async fn create_app_strategy(
         // TODO: improve scheduling of updates
         fasync::spawn_local(
             async move {
-                while let Some(VSyncMessage { display_id: _, timestamp, .. }) =
+                while let Some(VSyncMessage { display_id: _, timestamp, cookie, .. }) =
                     receiver.next().await
                 {
                     internal_sender
                         .unbounded_send(MessageInternal::HandleVSyncParametersChanged(
                             Time::from_nanos(timestamp as i64),
                             vsync_interval,
+                            cookie,
                         ))
                         .expect("unbounded_send");
                     internal_sender
@@ -385,7 +386,7 @@ pub(crate) enum MessageInternal {
     Update(ViewKey),
     UpdateAllViews,
     ImageFreed(ViewKey, u64, u32),
-    HandleVSyncParametersChanged(Time, Duration),
+    HandleVSyncParametersChanged(Time, Duration, u64),
     TargetedMessage(ViewKey, Message),
     RegisterDevice(DeviceId, hid_input_report::DeviceDescriptor),
     InputReport(DeviceId, ViewKey, hid_input_report::InputReport),
@@ -463,8 +464,9 @@ impl App {
             MessageInternal::ImageFreed(view_id, image_id, collection_id) => {
                 self.image_freed(view_id, image_id, collection_id)
             }
-            MessageInternal::HandleVSyncParametersChanged(phase, interval) => {
+            MessageInternal::HandleVSyncParametersChanged(phase, interval, cookie) => {
                 self.handle_vsync_parameters_changed(phase, interval);
+                self.handle_vsync_cookie(cookie);
             }
             MessageInternal::TargetedMessage(view_id, message) => {
                 let view = self.get_view(view_id);
@@ -808,6 +810,14 @@ impl App {
     fn handle_vsync_parameters_changed(&mut self, phase: Time, interval: Duration) {
         for (_, view_controller) in &mut self.view_controllers {
             view_controller.handle_vsync_parameters_changed(phase, interval);
+        }
+    }
+
+    fn handle_vsync_cookie(&mut self, cookie: u64) {
+        if cookie != 0 {
+            for (_, view_controller) in &mut self.view_controllers {
+                view_controller.handle_vsync_cookie(cookie);
+            }
         }
     }
 }

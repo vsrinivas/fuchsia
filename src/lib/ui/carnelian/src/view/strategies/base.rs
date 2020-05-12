@@ -39,6 +39,8 @@ pub(crate) trait ViewStrategy {
     fn image_freed(&mut self, _image_id: u64, _collection_id: u32) {}
 
     fn handle_vsync_parameters_changed(&mut self, _phase: Time, _interval: Duration) {}
+
+    fn handle_vsync_cookie(&mut self, _cookie: u64) {}
 }
 
 pub(crate) type ViewStrategyPtr = Box<dyn ViewStrategy>;

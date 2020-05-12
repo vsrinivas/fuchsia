@@ -704,4 +704,8 @@ impl ViewController {
     pub fn handle_vsync_parameters_changed(&mut self, phase: Time, interval: Duration) {
         self.strategy.handle_vsync_parameters_changed(phase, interval);
     }
+
+    pub fn handle_vsync_cookie(&mut self, cookie: u64) {
+        self.strategy.handle_vsync_cookie(cookie);
+    }
 }

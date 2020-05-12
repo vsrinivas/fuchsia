@@ -223,4 +223,9 @@ impl ViewStrategy for FrameBufferRenderViewStrategy {
         self.vsync_phase = phase;
         self.vsync_interval = interval;
     }
+
+    fn handle_vsync_cookie(&mut self, cookie: u64) {
+        let mut fb = self.frame_buffer.borrow_mut();
+        fb.acknowledge_vsync(cookie).expect("acknowledge_vsync");
+    }
 }

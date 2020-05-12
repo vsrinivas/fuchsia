@@ -796,6 +796,11 @@ impl FrameBuffer {
     ) -> Result<(), Error> {
         self.present_frame(self.get_first_frame_id(), sender, signal_wait_event)
     }
+
+    pub fn acknowledge_vsync(&mut self, cookie: u64) -> Result<(), Error> {
+        self.controller.acknowledge_vsync(cookie)?;
+        Ok(())
+    }
 }
 
 #[cfg(test)]
