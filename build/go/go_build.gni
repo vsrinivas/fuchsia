@@ -238,6 +238,11 @@ template("go_build") {
         }
       }
 
+      if (is_fuchsia) {
+        # TODO(phosek): drop -Wl,--pack-dyn-relocs=relr once it's the default in Clang.
+        args += [ "--ldflag=-linkmode=external \"-extldflags=-Wl,--pack-dyn-relocs=relr\"" ]
+      }
+
       if (defined(invoker.ldflags)) {
         foreach(ldflag, invoker.ldflags) {
           args += [ "--ldflag=${ldflag}" ]

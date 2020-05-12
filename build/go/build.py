@@ -218,7 +218,7 @@ def main():
     if args.gcflag:
         cmd += ['-gcflags', ' '.join(args.gcflag)]
     if args.ldflag:
-        cmd += ['-ldflags', ' '.join(args.ldflag)]
+        cmd += ['-ldflags=' + ' '.join(args.ldflag)]
     cmd += [
         '-pkgdir',
         os.path.join(project_path, 'pkg'), '-o', args.output_path, args.package
