@@ -4,5 +4,12 @@
 
 group("tests") {
   testonly = true
-  deps = [ "fake-dma-buffer:tests" ]
+  deps = [
+    "fake-bti:tests",
+    "fake-dma-buffer:tests",
+    "fake-mmio-reg:tests",
+    "fake-object:tests",
+    "fake-resource:tests",
+    "mock-mmio-reg:tests",
+  ]
 }

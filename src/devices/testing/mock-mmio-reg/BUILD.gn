@@ -4,6 +4,11 @@
 
 import("//build/unification/zx_library.gni")
 
+group("tests") {
+  testonly = true
+  deps = [ "test:mock-mmio-reg-package" ]
+}
+
 zx_library("mock-mmio-reg") {
   sdk = "source"
   sdk_headers = [ "mock-mmio-reg/mock-mmio-reg.h" ]
