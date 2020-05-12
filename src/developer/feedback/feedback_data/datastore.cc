@@ -63,7 +63,7 @@ Datastore::Datastore(async_dispatcher_t* dispatcher,
       static_attachments_({}) {}
 
 ::fit::promise<Annotations> Datastore::GetAnnotations(const zx::duration timeout) {
-  if (annotation_allowlist_.empty() && extra_annotations_.empty()) {
+  if (annotation_allowlist_.empty() && non_platform_annotations_.empty()) {
     return ::fit::make_result_promise<Annotations>(::fit::error());
   }
 
@@ -87,11 +87,11 @@ Datastore::Datastore(async_dispatcher_t* dispatcher,
           }
         }
 
-        // We then augment the returned annotations with the extra component annotations.
+        // We then augment the returned annotations with the non-platform component annotations.
         // We are guaranteed to have enough space left in the returned annotations to do this as
-        // we cap the number of platform annotations and cap the number of extra annotations to
-        // sum to the max number of annotations we can return.
-        for (const auto& [key, value] : extra_annotations_) {
+        // we cap the number of platform annotations and cap the number of non-platform annotations
+        // to sum to the max number of annotations we can return.
+        for (const auto& [key, value] : non_platform_annotations_) {
           ok_annotations.insert({key, value});
         }
 
@@ -169,14 +169,15 @@ Datastore::Datastore(async_dispatcher_t* dispatcher,
   return ::fit::make_result_promise<AttachmentValue>(::fit::error());
 }
 
-bool Datastore::TrySetExtraAnnotations(const Annotations& extra_annotations) {
-  if (extra_annotations.size() <= kMaxNumExtraAnnotations) {
-    extra_annotations_ = extra_annotations;
+bool Datastore::TrySetNonPlatformAnnotations(const Annotations& non_platform_annotations) {
+  if (non_platform_annotations.size() <= kMaxNumNonPlatformAnnotations) {
+    non_platform_annotations_ = non_platform_annotations;
     return true;
   } else {
     FX_LOGS(WARNING) << fxl::StringPrintf(
-        "Ignoring all %lu new extra annotations as only %u extra annotations are allowed",
-        extra_annotations.size(), kMaxNumExtraAnnotations);
+        "Ignoring all %lu new non-platform annotations as only %u non-platform annotations are "
+        "allowed",
+        non_platform_annotations.size(), kMaxNumNonPlatformAnnotations);
     return false;
   }
 }

@@ -173,8 +173,8 @@ class DatastoreTest : public UnitTestFixture, public CobaltTestFixture {
     return result;
   }
 
-  bool TrySetExtraAnnotations(const Annotations& extra_annotations) {
-    return datastore_->TrySetExtraAnnotations(extra_annotations);
+  bool TrySetNonPlatformAnnotations(const Annotations& non_platform_annotations) {
+    return datastore_->TrySetNonPlatformAnnotations(non_platform_annotations);
   }
   Annotations GetStaticAnnotations() { return datastore_->GetStaticAnnotations(); }
   Attachments GetStaticAttachments() { return datastore_->GetStaticAttachments(); }
@@ -338,31 +338,31 @@ TEST_F(DatastoreTest, GetAnnotations_Time) {
   EXPECT_THAT(GetStaticAnnotations(), IsEmpty());
 }
 
-TEST_F(DatastoreTest, GetAnnotations_ExtraAnnotations) {
+TEST_F(DatastoreTest, GetAnnotations_NonPlatformAnnotations) {
   SetUpDatastore(kDefaultAnnotationsToAvoidSpuriousLogs, kDefaultAttachmentsToAvoidSpuriousLogs);
-  EXPECT_TRUE(TrySetExtraAnnotations({{"extra.k", AnnotationOr("v")}}));
+  EXPECT_TRUE(TrySetNonPlatformAnnotations({{"non-platform.k", AnnotationOr("v")}}));
 
   ::fit::result<Annotations> annotations = GetAnnotations();
   ASSERT_TRUE(annotations.is_ok());
-  EXPECT_THAT(annotations.take_value(), Contains(Pair("extra.k", AnnotationOr("v"))));
+  EXPECT_THAT(annotations.take_value(), Contains(Pair("non-platform.k", AnnotationOr("v"))));
 }
 
-TEST_F(DatastoreTest, GetAnnotations_ExtraAnnotationsAboveLimit) {
+TEST_F(DatastoreTest, GetAnnotations_NonPlatformAboveLimit) {
   // We set one platform annotation in the allowlist and we then check that this is the only
-  // annotation returned as we inject more extra annotations than allowed.
+  // annotation returned as we inject more non-platform annotations than allowed.
   SetUpDatastore(
       {
           kAnnotationBuildIsDebug,
       },
       kDefaultAttachmentsToAvoidSpuriousLogs);
 
-  // We inject more than the limit in extra annotations.
-  Annotations extra_annotations;
-  for (size_t i = 0; i < kMaxNumExtraAnnotations + 1; i++) {
-    extra_annotations.insert(
+  // We inject more than the limit in non-platform annotations.
+  Annotations non_platform_annotations;
+  for (size_t i = 0; i < kMaxNumNonPlatformAnnotations + 1; i++) {
+    non_platform_annotations.insert(
         {fxl::StringPrintf("k%lu", i), AnnotationOr(fxl::StringPrintf("v%lu", i))});
   }
-  EXPECT_FALSE(TrySetExtraAnnotations(extra_annotations));
+  EXPECT_FALSE(TrySetNonPlatformAnnotations(non_platform_annotations));
 
   ::fit::result<Annotations> annotations = GetAnnotations();
   ASSERT_TRUE(annotations.is_ok());
@@ -371,13 +371,14 @@ TEST_F(DatastoreTest, GetAnnotations_ExtraAnnotationsAboveLimit) {
                                         }));
 }
 
-TEST_F(DatastoreTest, GetAnnotations_ExtraAnnotationsOnEmptyAllowlist) {
+TEST_F(DatastoreTest, GetAnnotations_NonPlatformOnEmptyAllowlist) {
   SetUpDatastore({}, kDefaultAttachmentsToAvoidSpuriousLogs);
-  EXPECT_TRUE(TrySetExtraAnnotations({{"extra.k", AnnotationOr("v")}}));
+  EXPECT_TRUE(TrySetNonPlatformAnnotations({{"non-platform.k", AnnotationOr("v")}}));
 
   ::fit::result<Annotations> annotations = GetAnnotations();
   ASSERT_TRUE(annotations.is_ok());
-  EXPECT_THAT(annotations.take_value(), ElementsAreArray({Pair("extra.k", AnnotationOr("v"))}));
+  EXPECT_THAT(annotations.take_value(),
+              ElementsAreArray({Pair("non-platform.k", AnnotationOr("v"))}));
 }
 
 TEST_F(DatastoreTest, GetAnnotations_FailOn_EmptyAnnotationAllowlist) {

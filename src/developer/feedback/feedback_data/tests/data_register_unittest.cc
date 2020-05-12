@@ -52,9 +52,9 @@ TEST_F(DataRegisterTest, Upsert_Basic) {
                                         Pair("k", AnnotationOr("v")),
                                     })),
               }));
-  EXPECT_THAT(datastore_.GetExtraAnnotations(), UnorderedElementsAreArray({
-                                                    Pair("namespace.k", AnnotationOr("v")),
-                                                }));
+  EXPECT_THAT(datastore_.GetNonPlatformAnnotations(), UnorderedElementsAreArray({
+                                                          Pair("namespace.k", AnnotationOr("v")),
+                                                      }));
 }
 
 TEST_F(DataRegisterTest, Upsert_DefaultNamespaceIfNoNamespaceProvided) {
@@ -71,9 +71,9 @@ TEST_F(DataRegisterTest, Upsert_DefaultNamespaceIfNoNamespaceProvided) {
                                    Pair("k", AnnotationOr("v")),
                                })),
               }));
-  EXPECT_THAT(datastore_.GetExtraAnnotations(), UnorderedElementsAreArray({
-                                                    Pair("misc.k", AnnotationOr("v")),
-                                                }));
+  EXPECT_THAT(datastore_.GetNonPlatformAnnotations(), UnorderedElementsAreArray({
+                                                          Pair("misc.k", AnnotationOr("v")),
+                                                      }));
 }
 
 TEST_F(DataRegisterTest, Upsert_NoInsertionsOnEmptyAnnotations) {
@@ -82,7 +82,7 @@ TEST_F(DataRegisterTest, Upsert_NoInsertionsOnEmptyAnnotations) {
   Upsert(std::move(data));
 
   EXPECT_THAT(data_register_.GetNamespacedAnnotations(), testing::IsEmpty());
-  EXPECT_THAT(datastore_.GetExtraAnnotations(), testing::IsEmpty());
+  EXPECT_THAT(datastore_.GetNonPlatformAnnotations(), testing::IsEmpty());
 }
 
 TEST_F(DataRegisterTest, Upsert_NoInsertionsOnReservedNamespace) {
@@ -95,7 +95,7 @@ TEST_F(DataRegisterTest, Upsert_NoInsertionsOnReservedNamespace) {
   Upsert(std::move(data));
 
   EXPECT_THAT(data_register_.GetNamespacedAnnotations(), testing::IsEmpty());
-  EXPECT_THAT(datastore_.GetExtraAnnotations(), testing::IsEmpty());
+  EXPECT_THAT(datastore_.GetNonPlatformAnnotations(), testing::IsEmpty());
 }
 
 TEST_F(DataRegisterTest, Upsert_NoUpdatesOnEmptyAnnotations) {
@@ -113,26 +113,26 @@ TEST_F(DataRegisterTest, Upsert_NoUpdatesOnEmptyAnnotations) {
                                         Pair("k", AnnotationOr("v")),
                                     })),
               }));
-  EXPECT_THAT(datastore_.GetExtraAnnotations(), UnorderedElementsAreArray({
-                                                    Pair("namespace.k", AnnotationOr("v")),
-                                                }));
+  EXPECT_THAT(datastore_.GetNonPlatformAnnotations(), UnorderedElementsAreArray({
+                                                          Pair("namespace.k", AnnotationOr("v")),
+                                                      }));
 
   // We upsert another ComponentData with no annotations.
   ComponentData data2;
 
   Upsert(std::move(data2));
 
-  // We check that the DataRegister's namespaced annotations and Datastore's extra annotations are
-  // still the same.
+  // We check that the DataRegister's namespaced annotations and Datastore's non-platform
+  // annotations are still the same.
   EXPECT_THAT(data_register_.GetNamespacedAnnotations(),
               UnorderedElementsAreArray({
                   Pair("namespace", UnorderedElementsAreArray({
                                         Pair("k", AnnotationOr("v")),
                                     })),
               }));
-  EXPECT_THAT(datastore_.GetExtraAnnotations(), UnorderedElementsAreArray({
-                                                    Pair("namespace.k", AnnotationOr("v")),
-                                                }));
+  EXPECT_THAT(datastore_.GetNonPlatformAnnotations(), UnorderedElementsAreArray({
+                                                          Pair("namespace.k", AnnotationOr("v")),
+                                                      }));
 }
 
 TEST_F(DataRegisterTest, Upsert_InsertIfDifferentNamespaces) {
@@ -150,9 +150,9 @@ TEST_F(DataRegisterTest, Upsert_InsertIfDifferentNamespaces) {
                                         Pair("k", AnnotationOr("v")),
                                     })),
               }));
-  EXPECT_THAT(datastore_.GetExtraAnnotations(), UnorderedElementsAreArray({
-                                                    Pair("namespace.k", AnnotationOr("v")),
-                                                }));
+  EXPECT_THAT(datastore_.GetNonPlatformAnnotations(), UnorderedElementsAreArray({
+                                                          Pair("namespace.k", AnnotationOr("v")),
+                                                      }));
 
   // We upsert another ComponentData with the same annotations, but under a different namespace.
   ComponentData data2;
@@ -172,10 +172,10 @@ TEST_F(DataRegisterTest, Upsert_InsertIfDifferentNamespaces) {
                                          Pair("k", AnnotationOr("v")),
                                      })),
               }));
-  EXPECT_THAT(datastore_.GetExtraAnnotations(), UnorderedElementsAreArray({
-                                                    Pair("namespace.k", AnnotationOr("v")),
-                                                    Pair("namespace2.k", AnnotationOr("v")),
-                                                }));
+  EXPECT_THAT(datastore_.GetNonPlatformAnnotations(), UnorderedElementsAreArray({
+                                                          Pair("namespace.k", AnnotationOr("v")),
+                                                          Pair("namespace2.k", AnnotationOr("v")),
+                                                      }));
 }
 
 TEST_F(DataRegisterTest, Upsert_InsertIfDifferentKey) {
@@ -193,9 +193,9 @@ TEST_F(DataRegisterTest, Upsert_InsertIfDifferentKey) {
                                         Pair("k", AnnotationOr("v")),
                                     })),
               }));
-  EXPECT_THAT(datastore_.GetExtraAnnotations(), UnorderedElementsAreArray({
-                                                    Pair("namespace.k", AnnotationOr("v")),
-                                                }));
+  EXPECT_THAT(datastore_.GetNonPlatformAnnotations(), UnorderedElementsAreArray({
+                                                          Pair("namespace.k", AnnotationOr("v")),
+                                                      }));
 
   // We upsert another ComponentData under the same namespace, but with a different key.
   ComponentData data2;
@@ -213,10 +213,10 @@ TEST_F(DataRegisterTest, Upsert_InsertIfDifferentKey) {
                                         Pair("k2", AnnotationOr("v2")),
                                     })),
               }));
-  EXPECT_THAT(datastore_.GetExtraAnnotations(), UnorderedElementsAreArray({
-                                                    Pair("namespace.k", AnnotationOr("v")),
-                                                    Pair("namespace.k2", AnnotationOr("v2")),
-                                                }));
+  EXPECT_THAT(datastore_.GetNonPlatformAnnotations(), UnorderedElementsAreArray({
+                                                          Pair("namespace.k", AnnotationOr("v")),
+                                                          Pair("namespace.k2", AnnotationOr("v2")),
+                                                      }));
 }
 
 TEST_F(DataRegisterTest, Upsert_UpdateIfSameKey) {
@@ -234,9 +234,9 @@ TEST_F(DataRegisterTest, Upsert_UpdateIfSameKey) {
                                         Pair("k", AnnotationOr("v")),
                                     })),
               }));
-  EXPECT_THAT(datastore_.GetExtraAnnotations(), UnorderedElementsAreArray({
-                                                    Pair("namespace.k", AnnotationOr("v")),
-                                                }));
+  EXPECT_THAT(datastore_.GetNonPlatformAnnotations(), UnorderedElementsAreArray({
+                                                          Pair("namespace.k", AnnotationOr("v")),
+                                                      }));
 
   // We upsert another ComponentData under the same namespace and the same key.
   ComponentData data2;
@@ -253,9 +253,9 @@ TEST_F(DataRegisterTest, Upsert_UpdateIfSameKey) {
                                         Pair("k", AnnotationOr("v2")),
                                     })),
               }));
-  EXPECT_THAT(datastore_.GetExtraAnnotations(), UnorderedElementsAreArray({
-                                                    Pair("namespace.k", AnnotationOr("v2")),
-                                                }));
+  EXPECT_THAT(datastore_.GetNonPlatformAnnotations(), UnorderedElementsAreArray({
+                                                          Pair("namespace.k", AnnotationOr("v2")),
+                                                      }));
 }
 
 }  // namespace

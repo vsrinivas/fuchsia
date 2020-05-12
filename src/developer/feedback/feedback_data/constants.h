@@ -19,11 +19,11 @@ namespace feedback {
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 const uint32_t kMaxNumPlatformAnnotations = 32u;
-const uint32_t kMaxNumExtraAnnotations = 32u;
-static_assert(kMaxNumPlatformAnnotations + kMaxNumExtraAnnotations ==
+const uint32_t kMaxNumNonPlatformAnnotations = 32u;
+static_assert(kMaxNumPlatformAnnotations + kMaxNumNonPlatformAnnotations ==
                   fuchsia::feedback::MAX_NUM_ANNOTATIONS_PROVIDED,
               "The max number of provided annotations has to be split between a max number of "
-              "platform annotations and a max number of extra annotations");
+              "platform annotations and a max number of non-platform annotations");
 
 // Platform annotation keys.
 constexpr char kAnnotationBuildBoard[] = "build.board";
@@ -47,7 +47,7 @@ constexpr char kAnnotationHardwareProductSKU[] = "hardware.product.sku";
 constexpr char kAnnotationSystemUpdateChannelCurrent[] = "system.update-channel.current";
 
 // Reserved namespaces for platform annotations. Components are not allowed to use these namespaces
-// when supplying extra annotations.
+// when supplying non-platform annotations.
 const std::set<const std::string> kReservedAnnotationNamespaces({
     "build",
     "device",

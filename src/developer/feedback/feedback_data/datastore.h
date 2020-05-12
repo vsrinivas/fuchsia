@@ -28,7 +28,8 @@ namespace feedback {
 // * dynamic and collected upon data request, e.g., uptime or logs.
 // * collected synchronously, e.g., build version or uptime.
 // * collected asynchronously, e.g., hardware info or logs.
-// * pushed by other components, we called these "extra" to distinguish them from the "platform".
+// * pushed by other components, we called these "non-platform" to distinguish them from the
+//   "platform".
 //
 // Because of dynamic asynchronous data, the data requests can take some time and return a
 // ::fit::promise.
@@ -41,16 +42,16 @@ class Datastore {
   ::fit::promise<Annotations> GetAnnotations(zx::duration timeout);
   ::fit::promise<Attachments> GetAttachments(zx::duration timeout);
 
-  // Returns whether the extra annotations were actually set as there is a cap on the number of
-  // extra annotations.
-  bool TrySetExtraAnnotations(const Annotations& extra_annotations);
+  // Returns whether the non-platform annotations were actually set as there is a cap on the number
+  // of non-platform annotations.
+  bool TrySetNonPlatformAnnotations(const Annotations& non_platform_annotations);
 
   // Exposed for testing purposes.
   Datastore(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services);
 
   const Annotations& GetStaticAnnotations() const { return static_annotations_; }
   const Attachments& GetStaticAttachments() const { return static_attachments_; }
-  const Annotations& GetExtraAnnotations() const { return extra_annotations_; }
+  const Annotations& GetNonPlatformAnnotations() const { return non_platform_annotations_; }
 
  private:
   ::fit::promise<Attachment> BuildAttachment(const AttachmentKey& key, zx::duration timeout);
@@ -67,7 +68,7 @@ class Datastore {
   const Annotations static_annotations_;
   const Attachments static_attachments_;
 
-  Annotations extra_annotations_;
+  Annotations non_platform_annotations_;
 };
 
 }  // namespace feedback

@@ -33,7 +33,7 @@ DataRegister::DataRegister(Datastore* datastore) : datastore_(datastore) { FX_CH
 
 void DataRegister::Upsert(fuchsia::feedback::ComponentData data, UpsertCallback callback) {
   if (!data.has_annotations()) {
-    FX_LOGS(WARNING) << "No extra annotations to upsert";
+    FX_LOGS(WARNING) << "No non-platform annotations to upsert";
     callback();
     return;
   }
@@ -44,8 +44,8 @@ void DataRegister::Upsert(fuchsia::feedback::ComponentData data, UpsertCallback 
     namespace_ = kDefaultNamespace;
   } else if (kReservedAnnotationNamespaces.find(data.namespace_()) !=
              kReservedAnnotationNamespaces.end()) {
-    FX_LOGS(WARNING) << fxl::StringPrintf("Ignoring extra annotations, %s is a reserved namespace",
-                                          data.namespace_().c_str());
+    FX_LOGS(WARNING) << fxl::StringPrintf(
+        "Ignoring non-platform annotations, %s is a reserved namespace", data.namespace_().c_str());
     // TODO(fxb/48664): close connection with ZX_ERR_INVALID_ARGS instead.
     callback();
     return;
@@ -58,7 +58,7 @@ void DataRegister::Upsert(fuchsia::feedback::ComponentData data, UpsertCallback 
                                                          AnnotationOr(annotation.value));
   }
   // TODO(fxb/48666): close all connections if false.
-  datastore_->TrySetExtraAnnotations(Flatten(namespaced_annotations_));
+  datastore_->TrySetNonPlatformAnnotations(Flatten(namespaced_annotations_));
 
   callback();
 }

@@ -372,7 +372,7 @@ TEST_F(FeedbackDataIntegrationTest, DataProvider_GetBugreport_CheckCobalt) {
 }
 
 TEST_F(FeedbackDataIntegrationTest,
-       DataProvider_GetBugreport_ExtraAnnotationsFromComponentDataRegister) {
+       DataProvider_GetData_NonPlatformAnnotationsFromComponentDataRegister) {
   // We make sure the components serving the services GetBugreport() connects to are up and running.
   WaitForLogger();
   WaitForChannelProvider();
