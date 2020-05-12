@@ -7,7 +7,6 @@
 library fuchsia.device.manager;
 
 using zx;
-
 /// All available suspend flags
 const uint32 SUSPEND_FLAG_REBOOT = 0xdcdc0100;
 const uint32 SUSPEND_FLAG_REBOOT_BOOTLOADER = 0xdcdc0101;
@@ -15,20 +14,6 @@ const uint32 SUSPEND_FLAG_REBOOT_RECOVERY = 0xdcdc0102;
 const uint32 SUSPEND_FLAG_POWEROFF = 0xdcdc0200;
 const uint32 SUSPEND_FLAG_MEXEC = 0xdcdc0300;
 const uint32 SUSPEND_FLAG_SUSPEND_RAM = 0xdcdc0400;
-
-// TODO(ravoorir): When the system power states are properly defined,
-// remove the suspend flags. For now, treat each suspend flag as a system
-// power state.
-enum SystemPowerState : uint8 {
-    SYSTEM_POWER_STATE_FULLY_ON = 1;
-    SYSTEM_POWER_STATE_REBOOT = 2;
-    SYSTEM_POWER_STATE_REBOOT_BOOTLOADER = 3;
-    SYSTEM_POWER_STATE_REBOOT_RECOVERY = 4;
-    SYSTEM_POWER_STATE_POWEROFF = 5;
-    SYSTEM_POWER_STATE_MEXEC = 6;
-    SYSTEM_POWER_STATE_SUSPEND_RAM = 7;
-};
-const uint32 MAX_SYSTEM_POWER_STATES = 7;
 
 /// Provides administration services for the device manager service and the device tree it controls.
 [Discoverable, Layout = "Simple"]
