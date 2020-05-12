@@ -7,6 +7,7 @@
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/clock.h>
 
+#include <cmath>
 #include <iostream>
 
 #include <fbl/algorithm.h>

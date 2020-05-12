@@ -5,6 +5,7 @@
 #ifndef SRC_GRAPHICS_LIB_COMPUTE_TESTS_COMMON_PATH_SINK_TEST_UTILS_H_
 #define SRC_GRAPHICS_LIB_COMPUTE_TESTS_COMMON_PATH_SINK_TEST_UTILS_H_
 
+#include <cmath>
 #include <sstream>
 #include <string>
 #include <vector>

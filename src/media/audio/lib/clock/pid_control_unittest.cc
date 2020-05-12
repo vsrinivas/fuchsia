@@ -4,6 +4,7 @@
 
 #include "src/media/audio/lib/clock/pid_control.h"
 
+#include <cmath>
 #include <lib/syslog/cpp/macros.h>
 
 #include <gtest/gtest.h>
