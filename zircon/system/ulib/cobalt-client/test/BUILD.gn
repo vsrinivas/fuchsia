@@ -38,13 +38,13 @@ source_set("collector-test") {
     "//zircon/public/lib/async-loop",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
-    "//zircon/public/lib/cobalt-collector",
     "//zircon/public/lib/fidl-async-cpp",
     "//zircon/public/lib/fit",
-    "//zircon/public/lib/in-memory-logger",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zxtest",
     "//zircon/system/fidl/fuchsia-cobalt:llcpp",
+    "//zircon/system/ulib/cobalt-client:cobalt-collector",
+    "//zircon/system/ulib/cobalt-client:in-memory-logger",
   ]
 }
 
@@ -62,12 +62,12 @@ source_set("metrics-test") {
   ]
   include_dirs = [ "../include/" ]
   deps = [
-    "//zircon/public/lib/cobalt-collector",
-    "//zircon/public/lib/cobalt-metrics",
-    "//zircon/public/lib/cobalt-types-internal",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/cobalt-client:cobalt-collector",
+    "//zircon/system/ulib/cobalt-client:cobalt-metrics",
+    "//zircon/system/ulib/cobalt-client:cobalt-types-internal",
   ]
 
   # TODO(42493): UBSan has found an instance of undefined behavior in this target.
@@ -85,9 +85,9 @@ source_set("in-memory-logger-test") {
   sources = [ "in_memory_logger_test.cc" ]
   include_dirs = [ "../include/" ]
   deps = [
-    "//zircon/public/lib/cobalt-metrics",
-    "//zircon/public/lib/in-memory-logger",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/cobalt-client:cobalt-metrics",
+    "//zircon/system/ulib/cobalt-client:in-memory-logger",
   ]
 }
 

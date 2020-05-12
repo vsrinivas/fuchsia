@@ -99,19 +99,14 @@ group("ulib") {
     "cmdline",
 #------------------
 #------------------
-    "cobalt-client",
 #------------------
 #------------------
-    "cobalt-client:cobalt-collector",
 #------------------
 #------------------
-    "cobalt-client:cobalt-metrics",
 #------------------
 #------------------
-    "cobalt-client:cobalt-types-internal",
 #------------------
 #------------------
-    "cobalt-client:in-memory-logger",
 #------------------
 #------------------
 #------------------

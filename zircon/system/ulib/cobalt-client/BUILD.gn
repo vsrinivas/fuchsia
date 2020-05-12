@@ -1,73 +1,83 @@
-# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Copyright 2019 The Fuchsia Autcobalt-client/hors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# TODO(36548): turn the next 3 libraries back into source_set's visible only to
-# other targets in this file.
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36548.                         #
+##########################################
 
-zx_library("cobalt-types-internal") {
-  sdk = "source"
-  sdk_headers = [ "cpp/types-internal.h" ]
-  sources = []
-  public_deps = [ "$zx/system/fidl/fuchsia-cobalt:llcpp" ]
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/unification/zx_library.gni")
+
+config("includes") {
+  include_dirs = [ "include" ]
 }
 
-zx_library("cobalt-collector") {
-  sdk = "source"
-  sdk_headers = [
-    "cobalt-client/cpp/collector.h",
-    "cobalt-client/cpp/collector_internal.h",
+source_set("cobalt-types-internal") {
+  visibility = [
+    ":*",
+    "test:*",
+  ]
+  public = [ "include/cobalt-client/cpp/types_internal.h" ]
+  public_deps = [ "//zircon/system/fidl/fuchsia-cobalt:llcpp" ]
+  public_configs = [ ":includes" ]
+}
+
+source_set("cobalt-collector") {
+  visibility = [
+    ":*",
+    "test:*",
+  ]
+  public = [
+    "include/cobalt-client/cpp/collector.h",
+    "include/cobalt-client/cpp/collector_internal.h",
   ]
   sources = [
     "cobalt_logger.cc",
     "collector.cc",
   ]
   public_deps = [
-    "$zx/system/fidl/fuchsia-cobalt:llcpp.headers",
-    "$zx/system/ulib/fit:headers",
-    "$zx/system/ulib/zx:headers",
+    ":cobalt-types-internal",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/zx",
+    "//zircon/system/fidl/fuchsia-cobalt:llcpp",
   ]
   deps = [
-    ":cobalt-types-internal",
-    "$zx/system/fidl/fuchsia-cobalt:llcpp",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/fit",
-    "$zx/system/ulib/zx",
+    "//zircon/public/lib/fdio",
   ]
+  public_configs = [ ":includes" ]
 }
 
-zx_library("cobalt-metrics") {
-  sdk = "source"
-  sdk_headers = [
-    "cobalt-client/cpp/histogram_internal.h",
-    "cobalt-client/cpp/counter.h",
-    "cobalt-client/cpp/histogram.h",
-    "cobalt-client/cpp/counter_internal.h",
-    "cobalt-client/cpp/metric_options.h",
+source_set("cobalt-metrics") {
+  visibility = [
+    ":*",
+    "test:*",
+  ]
+  public = [
+    "include/cobalt-client/cpp/histogram_internal.h",
+    "include/cobalt-client/cpp/counter.h",
+    "include/cobalt-client/cpp/histogram.h",
+    "include/cobalt-client/cpp/counter_internal.h",
+    "include/cobalt-client/cpp/metric_options.h",
   ]
   sources = [
     "counter.cc",
     "histogram.cc",
   ]
   public_deps = [
-    ":cobalt-collector.headers",
-    ":cobalt-types-internal.headers",
-  ]
-  deps = [
     ":cobalt-collector",
     ":cobalt-types-internal",
   ]
+  public_configs = [ ":includes" ]
 }
 
-zx_library("cobalt-client") {
-  sdk = "source"
-  sdk_headers = []
-  sources = []
+group("cobalt-client") {
   public_deps = [
-    ":cobalt-collector.headers",
-    ":cobalt-metrics.headers",
-  ]
-  deps = [
     ":cobalt-collector",
     ":cobalt-metrics",
   ]
@@ -76,16 +86,14 @@ zx_library("cobalt-client") {
 # This library may only be imported from tests.
 zx_library("in-memory-logger") {
   sdk = "source"
-  sdk_headers = [
-    "cobalt-client/cpp/in_memory_logger.h",
-  ]
+  sdk_headers = [ "cobalt-client/cpp/in_memory_logger.h" ]
   testonly = true
   sources = [ "in_memory_logger.cc" ]
   public_deps = [ ":cobalt-metrics" ]
   deps = [
     ":cobalt-types-internal",
-    "$zx/system/ulib/fit:headers",
-    "$zx/system/ulib/zx:headers",
-    "$zx/system/fidl/fuchsia-cobalt:llcpp",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/zx",
+    "//zircon/system/fidl/fuchsia-cobalt:llcpp",
   ]
 }

@@ -20,12 +20,12 @@ zx_library("metrics-cobalt") {
   sdk_headers = [ "fs/metrics/cobalt_metrics.h" ]
   sources = [ "cobalt_metrics.cc" ]
   public_deps = [
-    "//zircon/public/lib/cobalt-client",
     "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/cobalt-client",
   ]
   deps = [
-    "//zircon/public/lib/cobalt-client",
     "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/cobalt-client",
   ]
 }
 
@@ -66,13 +66,13 @@ zx_library("metrics-composite-latency-event") {
   public_deps = [
     ":metrics-cobalt",
     ":metrics-inspect",
-    "//zircon/public/lib/cobalt-client",
+    "//zircon/system/ulib/cobalt-client",
   ]
   deps = [
     ":metrics-cobalt",
     ":metrics-inspect",
-    "//zircon/public/lib/cobalt-client",
     "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/cobalt-client",
   ]
 }
 
