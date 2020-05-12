@@ -82,10 +82,9 @@ class BasemgrImpl : public fuchsia::modular::Lifecycle,
   // 3. Show setup or launch a session.
   void Start();
 
-  // Initializes either the |session_user_provider_impl_| or the
-  // |user_provider_impl_| depending on |kUseAccountManager| flag in
-  // basemgr_impl.cc. These classes provide modular framework the ability to
-  // add/remove/list users and control their participation in sessions.
+  // Initializesthe |session_user_provider_impl_|. This class provides modular
+  // framework the ability to add/remove/list users and control their
+  // participation in sessions.
   void InitializeUserProvider();
 
   // |fuchsia::modular::BaseShellContext|

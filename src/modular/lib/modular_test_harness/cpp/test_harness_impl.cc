@@ -174,8 +174,6 @@ zx_status_t TestHarnessImpl::PopulateEnvServices(sys::testing::EnvironmentServic
   // The default set of component-provided services are all basemgr's hard
   // dependencies. A map of service name => component URL providing the service.
   std::map<std::string, std::string> default_svcs = {
-      {fuchsia::identity::account::AccountManager::Name_,
-       "fuchsia-pkg://fuchsia.com/account_manager#meta/account_manager.cmx"},
       {fuchsia::settings::Intl::Name_,
        "fuchsia-pkg://fuchsia.com/setui_service#meta/setui_service.cmx"},
       {fuchsia::stash::Store::Name_, "fuchsia-pkg://fuchsia.com/stash#meta/stash.cmx"},

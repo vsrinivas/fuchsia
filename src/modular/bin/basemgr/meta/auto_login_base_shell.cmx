@@ -3,8 +3,6 @@
         "binary": "bin/auto_login_base_shell"
     },
     "sandbox": {
-        "services": [
-            "fuchsia.identity.account.AccountManager"
-        ]
+        "services": []
     }
 }

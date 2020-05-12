@@ -109,27 +109,27 @@ TEST_F(TestHarnessImplTest, MakeBasemgrConfigDir) {
 TEST_F(TestHarnessImplTest, DefaultInjectedServices) {
   fuchsia::modular::testing::TestHarnessSpec spec;
 
-  auto generated_accountmgr_url = GenerateFakeUrl();
+  auto generated_devicesettingsmgr_url = GenerateFakeUrl();
 
   spec.mutable_env_services()->mutable_services_from_components()->push_back(
       fuchsia::modular::testing::ComponentService{
-          // Override the default injected AccountManager.
-          .name = fuchsia::identity::account::AccountManager::Name_,
-          .url = generated_accountmgr_url});
+          // Override the default injected DeviceSettingsManager.
+          .name = fuchsia::devicesettings::DeviceSettingsManager::Name_,
+          .url = generated_devicesettingsmgr_url});
 
-  // Intercept the component URL which supplies AccountManager.
+  // Intercept the component URL which supplies DeviceSettingsManager.
   {
     fuchsia::modular::testing::InterceptSpec intercept_spec;
-    intercept_spec.set_component_url(generated_accountmgr_url);
+    intercept_spec.set_component_url(generated_devicesettingsmgr_url);
     spec.mutable_components_to_intercept()->push_back(std::move(intercept_spec));
   }
 
-  bool intercepted_accountmgr = false;
+  bool intercepted_devicesettingsmgr = false;
   test_harness().events().OnNewComponent =
       [&](fuchsia::sys::StartupInfo startup_info,
           fidl::InterfaceHandle<fuchsia::modular::testing::InterceptedComponent> component) {
-        if (startup_info.launch_info.url == generated_accountmgr_url) {
-          intercepted_accountmgr = true;
+        if (startup_info.launch_info.url == generated_devicesettingsmgr_url) {
+          intercepted_devicesettingsmgr = true;
         } else {
           ASSERT_FALSE("Started for no reason.");
         }
@@ -137,11 +137,11 @@ TEST_F(TestHarnessImplTest, DefaultInjectedServices) {
 
   test_harness()->Run(std::move(spec));
 
-  fuchsia::identity::account::AccountManagerPtr accountmgr;
-  test_harness()->ConnectToEnvironmentService(fuchsia::identity::account::AccountManager::Name_,
-                                              accountmgr.NewRequest().TakeChannel());
+  fuchsia::devicesettings::DeviceSettingsManagerPtr devicesettingsmgr;
+  test_harness()->ConnectToEnvironmentService(fuchsia::devicesettings::DeviceSettingsManager::Name_,
+                                              devicesettingsmgr.NewRequest().TakeChannel());
 
-  RunLoopUntil([&] { return intercepted_accountmgr; });
+  RunLoopUntil([&] { return intercepted_devicesettingsmgr; });
 }
 
 // Test that additional injected services are made available, spin up the

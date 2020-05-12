@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <fuchsia/devicesettings/cpp/fidl.h>
-#include <fuchsia/identity/account/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async/default.h>
 #include <lib/sys/cpp/testing/component_interceptor.h>
@@ -26,14 +25,10 @@ class BasemgrLauncherTest : public sys::testing::TestWithEnvironment {
 
  protected:
   void SetUp() override {
-    // Setup an enclosing environment with AccountManager and DeviceSettings services for basemgr.
+    // Setup an enclosing environment DeviceSettings service for basemgr.
     // Add Scenic to ensure that it shuts down nicely when basemgr shuts down.
     // Add Presenter to ensure no false negatives for Scenic being launched.
     auto enclosing_env_services = interceptor_.MakeEnvironmentServices(real_env());
-    enclosing_env_services->AddServiceWithLaunchInfo(
-        fuchsia::sys::LaunchInfo{
-            .url = "fuchsia-pkg://fuchsia.com/account_manager#meta/account_manager.cmx"},
-        fuchsia::identity::account::AccountManager::Name_);
     enclosing_env_services->AddServiceWithLaunchInfo(
         fuchsia::sys::LaunchInfo{.url = "fuchsia-pkg://fuchsia.com/device_settings_manager#meta/"
                                         "device_settings_manager.cmx"},
