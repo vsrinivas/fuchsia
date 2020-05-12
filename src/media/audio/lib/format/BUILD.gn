@@ -7,17 +7,23 @@ import("//build/test/test_package.gni")
 source_set("format") {
   sources = [
     "constants.h",
+    "driver_format.cc",
+    "driver_format.h",
     "format.cc",
     "format.h",
     "frames.h",
   ]
 
   public_deps = [
+    "//sdk/fidl/fuchsia.hardware.audio",
     "//sdk/fidl/fuchsia.media",
     "//sdk/lib/media/cpp:no_converters",
     "//sdk/lib/syslog/cpp",
     "//zircon/public/lib/ffl",
+    "//zircon/public/lib/trace",
   ]
+
+  deps = [ "//zircon/system/ulib/audio-proto-utils" ]
 }
 
 executable("unittest-bin") {

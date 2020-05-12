@@ -13,7 +13,7 @@
 #include <trace/event.h>
 
 #include "src/media/audio/audio_core/audio_driver.h"
-#include "src/media/audio/audio_core/driver_utils.h"
+#include "src/media/audio/lib/format/driver_format.h"
 #include "src/media/audio/lib/logging/logging.h"
 
 namespace media::audio {
@@ -237,7 +237,7 @@ zx_status_t AudioDriverV1::Configure(const Format& format, zx::duration min_ring
 
   // Sanity check arguments.
   audio_sample_format_t driver_format;
-  if (!driver_utils::AudioSampleFormatToDriverSampleFormat(sample_format, &driver_format)) {
+  if (!AudioSampleFormatToDriverSampleFormat(sample_format, &driver_format)) {
     FX_LOGS(ERROR) << "Failed to convert Fmt 0x" << std::hex << static_cast<uint32_t>(sample_format)
                    << " to driver format.";
     return ZX_ERR_INVALID_ARGS;

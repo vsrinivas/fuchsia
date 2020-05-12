@@ -13,7 +13,7 @@
 #include <trace/event.h>
 
 #include "src/media/audio/audio_core/audio_driver.h"
-#include "src/media/audio/audio_core/driver_utils.h"
+#include "src/media/audio/lib/format/driver_format.h"
 #include "src/media/audio/lib/logging/logging.h"
 
 namespace media::audio {
@@ -267,9 +267,8 @@ zx_status_t AudioDriverV2::Configure(const Format& format, zx::duration min_ring
   fidl::InterfaceRequest<fuchsia::hardware::audio::RingBuffer> request = {};
   request.set_channel(std::move(remote_channel));
 
-  driver_utils::DriverSampleFormat driver_format = {};
-  if (!driver_utils::AudioSampleFormatToDriverSampleFormat(format.stream_type().sample_format,
-                                                           &driver_format)) {
+  DriverSampleFormat driver_format = {};
+  if (!AudioSampleFormatToDriverSampleFormat(format.stream_type().sample_format, &driver_format)) {
     FX_LOGS(ERROR) << "Failed to convert Fmt 0x" << std::hex << static_cast<uint32_t>(sample_format)
                    << " to driver format.";
     return ZX_ERR_INVALID_ARGS;

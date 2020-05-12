@@ -13,8 +13,8 @@
 #include <audio-proto-utils/format-utils.h>
 #include <trace/event.h>
 
-#include "src/media/audio/audio_core/driver_utils.h"
 #include "src/media/audio/audio_core/threading_model.h"
+#include "src/media/audio/lib/format/driver_format.h"
 
 namespace media::audio {
 
@@ -60,7 +60,7 @@ bool IsRateInSupported(uint32_t frame_rate,
 bool IsFormatInSupported(
     const fuchsia::media::AudioStreamType& stream_type,
     const std::vector<fuchsia::hardware::audio::PcmSupportedFormats>& supported_formats) {
-  driver_utils::DriverSampleFormat driver_format = {};
+  DriverSampleFormat driver_format = {};
   if (!AudioSampleFormatToDriverSampleFormat(stream_type.sample_format, &driver_format)) {
     return false;
   }
@@ -89,10 +89,9 @@ zx_status_t SelectBestFormat(const std::vector<fuchsia::hardware::audio::PcmSupp
   uint32_t pref_frame_rate = *frames_per_second_inout;
   uint32_t pref_channels = *channels_inout;
 
-  driver_utils::DriverSampleFormat pref_sample_format = {};
+  DriverSampleFormat pref_sample_format = {};
   // Only valid pref_sample_formats are: unsigned-8, signed-16, signed-24in32 or float-32.
-  if (!driver_utils::AudioSampleFormatToDriverSampleFormat(*sample_format_inout,
-                                                           &pref_sample_format)) {
+  if (!AudioSampleFormatToDriverSampleFormat(*sample_format_inout, &pref_sample_format)) {
     FX_LOGS(ERROR) << "Failed to convert FIDL sample format ("
                    << static_cast<uint32_t>(*sample_format_inout) << ") to driver sample format.";
     return ZX_ERR_INVALID_ARGS;
@@ -100,7 +99,7 @@ zx_status_t SelectBestFormat(const std::vector<fuchsia::hardware::audio::PcmSupp
 
   uint32_t best_frame_rate = 0;
   uint32_t best_channels = 0;
-  driver_utils::DriverSampleFormat best_sample_format = {};
+  DriverSampleFormat best_sample_format = {};
   uint32_t best_score = 0;
   uint32_t best_frame_rate_delta = std::numeric_limits<uint32_t>::max();
 
@@ -109,7 +108,7 @@ zx_status_t SelectBestFormat(const std::vector<fuchsia::hardware::audio::PcmSupp
     // signed, 24-bit-in-32 signed and 32-bit float. If this sample format range does not support
     // any of these, just skip it for now. Otherwise, 5 points if you match the requested format, 4
     // for signed-24, 3 for signed-16, 2 for float-32, or 1 for unsigned-8.
-    driver_utils::DriverSampleFormat this_sample_format;
+    DriverSampleFormat this_sample_format;
     int sample_format_score = 0;
 
     // Check for direct match.
@@ -210,7 +209,7 @@ zx_status_t SelectBestFormat(const std::vector<fuchsia::hardware::audio::PcmSupp
   }
 
   __UNUSED bool convert_res =
-      driver_utils::DriverSampleFormatToAudioSampleFormat(best_sample_format, sample_format_inout);
+      DriverSampleFormatToAudioSampleFormat(best_sample_format, sample_format_inout);
   FX_DCHECK(convert_res);
 
   *channels_inout = best_channels;
@@ -232,8 +231,7 @@ zx_status_t SelectBestFormat(const std::vector<audio_stream_format_range_t>& fmt
   uint32_t pref_channels = *channels_inout;
   audio_sample_format_t pref_sample_format;
 
-  if (!driver_utils::AudioSampleFormatToDriverSampleFormat(*sample_format_inout,
-                                                           &pref_sample_format)) {
+  if (!AudioSampleFormatToDriverSampleFormat(*sample_format_inout, &pref_sample_format)) {
     FX_LOGS(WARNING) << "Failed to convert FIDL sample format ("
                      << static_cast<uint32_t>(*sample_format_inout) << ") to driver sample format.";
     return ZX_ERR_INVALID_ARGS;
@@ -421,7 +419,7 @@ zx_status_t SelectBestFormat(const std::vector<audio_stream_format_range_t>& fmt
   }
 
   __UNUSED bool convert_res =
-      driver_utils::DriverSampleFormatToAudioSampleFormat(best_sample_format, sample_format_inout);
+      DriverSampleFormatToAudioSampleFormat(best_sample_format, sample_format_inout);
   FX_DCHECK(convert_res);
 
   *channels_inout = best_channels;

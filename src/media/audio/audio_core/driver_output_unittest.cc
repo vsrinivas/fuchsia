@@ -13,11 +13,11 @@
 
 #include "src/media/audio/audio_core/audio_device_manager.h"
 #include "src/media/audio/audio_core/audio_driver.h"
-#include "src/media/audio/audio_core/driver_utils.h"
 #include "src/media/audio/audio_core/loudness_transform.h"
 #include "src/media/audio/audio_core/testing/fake_audio_driver.h"
 #include "src/media/audio/audio_core/testing/fake_audio_renderer.h"
 #include "src/media/audio/audio_core/testing/threading_model_fixture.h"
+#include "src/media/audio/lib/format/driver_format.h"
 #include "src/media/audio/lib/logging/logging.h"
 
 using testing::Each;
@@ -120,8 +120,8 @@ TEST_F(DriverOutputTest, DriverOutputStartsDriver) {
   EXPECT_EQ(kSupportedChannels, selected_format->channels());
 
   audio_sample_format_t selected_sample_format;
-  ASSERT_TRUE(driver_utils::AudioSampleFormatToDriverSampleFormat(selected_format->sample_format(),
-                                                                  &selected_sample_format));
+  ASSERT_TRUE(AudioSampleFormatToDriverSampleFormat(selected_format->sample_format(),
+                                                    &selected_sample_format));
   EXPECT_EQ(kSupportedSampleFormat, selected_sample_format);
 
   // We expect the driver has filled the buffer with silence. For 16-bit/2-channel audio, we can

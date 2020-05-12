@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/media/audio/audio_core/driver_utils.h"
+#include "src/media/audio/lib/format/driver_format.h"
 
 #include <lib/syslog/cpp/macros.h>
 
@@ -11,7 +11,7 @@
 #include <audio-proto-utils/format-utils.h>
 #include <trace/event.h>
 
-namespace media::driver_utils {
+namespace media::audio {
 
 namespace {
 
@@ -102,4 +102,4 @@ bool DriverSampleFormatToAudioSampleFormat(DriverSampleFormat driver_sample_form
   return false;
 }
 
-}  // namespace media::driver_utils
+}  // namespace media::audio

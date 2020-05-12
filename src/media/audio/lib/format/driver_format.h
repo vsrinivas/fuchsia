@@ -9,7 +9,7 @@
 #include <fuchsia/media/cpp/fidl.h>
 #include <zircon/device/audio.h>
 
-namespace media::driver_utils {
+namespace media::audio {
 
 struct DriverSampleFormat {
   fuchsia::hardware::audio::SampleFormat sample_format;
@@ -31,6 +31,6 @@ bool DriverSampleFormatToAudioSampleFormat(DriverSampleFormat driver_sample_form
 bool DriverSampleFormatToAudioSampleFormat(audio_sample_format_t driver_sample_format,
                                            fuchsia::media::AudioSampleFormat* sample_format_out);
 
-}  // namespace media::driver_utils
+}  // namespace media::audio
 
 #endif  // SRC_MEDIA_AUDIO_AUDIO_CORE_DRIVER_UTILS_H_
