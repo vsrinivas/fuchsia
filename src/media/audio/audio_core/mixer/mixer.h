@@ -11,8 +11,8 @@
 
 #include "lib/media/cpp/timeline_function.h"
 #include "src/media/audio/audio_core/mixer/constants.h"
-#include "src/media/audio/audio_core/mixer/frames.h"
 #include "src/media/audio/audio_core/mixer/gain.h"
+#include "src/media/audio/lib/format/frames.h"
 
 namespace media::audio {
 

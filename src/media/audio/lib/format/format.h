@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_FORMAT_H_
-#define SRC_MEDIA_AUDIO_AUDIO_CORE_FORMAT_H_
+#ifndef SRC_MEDIA_AUDIO_LIB_FORMAT_FORMAT_H_
+#define SRC_MEDIA_AUDIO_LIB_FORMAT_FORMAT_H_
 
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/media/cpp/timeline_rate.h>
@@ -45,4 +45,4 @@ class Format {
 
 }  // namespace media::audio
 
-#endif  // SRC_MEDIA_AUDIO_AUDIO_CORE_FORMAT_H_
+#endif  // SRC_MEDIA_AUDIO_LIB_FORMAT_FORMAT_H_

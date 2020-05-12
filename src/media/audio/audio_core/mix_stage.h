@@ -11,10 +11,10 @@
 #include <lib/zx/time.h>
 
 #include "src/lib/fxl/synchronization/thread_annotations.h"
-#include "src/media/audio/audio_core/format.h"
 #include "src/media/audio/audio_core/mixer/mixer.h"
 #include "src/media/audio/audio_core/stream.h"
 #include "src/media/audio/audio_core/versioned_timeline_function.h"
+#include "src/media/audio/lib/format/format.h"
 
 namespace media::audio {
 

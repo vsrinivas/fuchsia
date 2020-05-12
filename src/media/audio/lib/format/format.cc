@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/media/audio/audio_core/format.h"
+#include "src/media/audio/lib/format/format.h"
 
 #include <lib/syslog/cpp/macros.h>
 
-#include "src/media/audio/audio_core/mixer/frames.h"
+#include "src/media/audio/lib/format/frames.h"
 
 namespace media::audio {
 

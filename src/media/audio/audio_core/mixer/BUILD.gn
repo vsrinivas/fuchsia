@@ -6,6 +6,8 @@ import("//build/testing/environments.gni")
 
 source_set("constants") {
   sources = [ "constants.h" ]
+
+  deps = [ "//src/media/audio/lib/format" ]
 }
 
 source_set("mixer") {
@@ -15,7 +17,6 @@ source_set("mixer") {
     "coefficient_table.h",
     "filter.cc",
     "filter.h",
-    "frames.h",
     "gain.cc",
     "gain.h",
     "linear_sampler.cc",
@@ -48,6 +49,7 @@ source_set("mixer") {
     "//sdk/lib/media/cpp:no_converters",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl:fxl",
+    "//src/media/audio/lib/format",
   ]
 
   # TODO(46722): UBSan has found an instance of undefined behavior in this target.
@@ -95,6 +97,7 @@ executable("unittest_bin") {
   deps = [
     ":mixer",
     "//src/lib/fxl/test:gtest_main",
+    "//src/media/audio/lib/format",
     "//third_party/googletest:gmock",
     "//zircon/public/lib/fbl",
   ]

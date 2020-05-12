@@ -18,12 +18,12 @@
 
 #include "src/media/audio/audio_core/audio_object.h"
 #include "src/media/audio/audio_core/context.h"
-#include "src/media/audio/audio_core/format.h"
 #include "src/media/audio/audio_core/link_matrix.h"
 #include "src/media/audio/audio_core/packet_queue.h"
 #include "src/media/audio/audio_core/route_graph.h"
 #include "src/media/audio/audio_core/usage_settings.h"
 #include "src/media/audio/audio_core/utils.h"
+#include "src/media/audio/lib/format/format.h"
 #include "src/media/audio/lib/wav/wav_writer.h"
 
 namespace media::audio {

@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "test/audio-libformat-unittests"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}

@@ -1,0 +1,52 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test/test_package.gni")
+
+source_set("format") {
+  sources = [
+    "constants.h",
+    "format.cc",
+    "format.h",
+    "frames.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.media",
+    "//sdk/lib/media/cpp:no_converters",
+    "//src/lib/syslog/cpp",
+    "//zircon/public/lib/ffl",
+  ]
+}
+
+executable("unittest-bin") {
+  visibility = [ ":*" ]
+  testonly = true
+  output_name = "audio-libformat-unittests"
+
+  sources = [ "format_unittest.cc" ]
+
+  deps = [
+    ":format",
+    "//src/lib/fxl/test:gtest_main",
+  ]
+
+  libs = [ "zircon" ]
+}
+
+test_package("audio-libformat-unittests") {
+  deps = [ ":unittest-bin" ]
+
+  tests = [
+    {
+      name = "audio-libformat-unittests"
+      environments = basic_envs
+    },
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":audio-libformat-unittests" ]
+}

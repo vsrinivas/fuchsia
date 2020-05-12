@@ -8,11 +8,11 @@
 
 #include "src/media/audio/audio_core/audio_device_manager.h"
 #include "src/media/audio/audio_core/audio_driver.h"
-#include "src/media/audio/audio_core/format.h"
 #include "src/media/audio/audio_core/testing/fake_audio_driver.h"
 #include "src/media/audio/audio_core/testing/fake_audio_renderer.h"
 #include "src/media/audio/audio_core/testing/threading_model_fixture.h"
 #include "src/media/audio/audio_core/usage_settings.h"
+#include "src/media/audio/lib/format/format.h"
 #include "src/media/audio/lib/logging/logging.h"
 
 using testing::IsEmpty;

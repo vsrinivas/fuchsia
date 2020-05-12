@@ -10,9 +10,9 @@
 #include "src/media/audio/audio_core/audio_capturer.h"
 #include "src/media/audio/audio_core/audio_device_manager.h"
 #include "src/media/audio/audio_core/audio_renderer.h"
-#include "src/media/audio/audio_core/format.h"
 #include "src/media/audio/audio_core/process_config.h"
 #include "src/media/audio/audio_core/throttle_output.h"
+#include "src/media/audio/lib/format/format.h"
 #include "src/media/audio/lib/logging/logging.h"
 
 namespace media::audio {

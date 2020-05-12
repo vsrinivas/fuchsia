@@ -29,6 +29,7 @@ source_set("testing") {
     "//sdk/fidl/fuchsia.hardware.audio",
     "//src/media/audio/audio_core:audio_core_lib",
     "//src/media/audio/audio_core/mixer",
+    "//src/media/audio/lib/format",
     "//src/media/audio/lib/test:message_transceiver",
     "//zircon/system/ulib/async-testing",
     "//zircon/system/ulib/audio-proto-utils",

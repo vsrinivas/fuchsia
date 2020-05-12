@@ -11,11 +11,11 @@
 #include <fbl/ref_ptr.h>
 
 #include "src/lib/fxl/synchronization/thread_annotations.h"
-#include "src/media/audio/audio_core/format.h"
 #include "src/media/audio/audio_core/mixer/no_op.h"
 #include "src/media/audio/audio_core/stream.h"
 #include "src/media/audio/audio_core/stream_usage.h"
 #include "src/media/audio/audio_core/volume_curve.h"
+#include "src/media/audio/lib/format/format.h"
 
 namespace media::audio {
 

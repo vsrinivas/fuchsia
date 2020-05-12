@@ -14,8 +14,8 @@
 #include <fbl/slab_allocator.h>
 #include <trace/event.h>
 
-#include "src/media/audio/audio_core/mixer/frames.h"
 #include "src/media/audio/audio_core/utils.h"
+#include "src/media/audio/lib/format/frames.h"
 
 namespace media::audio {
 

@@ -12,8 +12,8 @@
 
 #include <optional>
 
-#include "src/media/audio/audio_core/format.h"
 #include "src/media/audio/audio_core/packet.h"
+#include "src/media/audio/lib/format/format.h"
 
 namespace media::audio {
 
