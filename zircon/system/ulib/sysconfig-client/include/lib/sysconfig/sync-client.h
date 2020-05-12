@@ -95,6 +95,73 @@ class __EXPORT SyncClient {
 
   // Once loaded from storage, the header will be cached here
   std::unique_ptr<sysconfig_header> header_;
+
+  // The friend declaration here is mainly for allowing SynClientBuffered to re-use internal
+  // resources such as read_mapper_, without having to expose them, change access modifier or
+  // create another one. It makes possible the use of class composition method instead of
+  // inheritance, which is usually preferred.
+  friend class SyncClientBuffered;
+};
+
+// SynClientBuffered is a wrapper of SyncClient added with write-caching capability.
+// It buffers all the write to sysconfig partition to an internal buffer first.
+// The bufferred data is written to persistant storage by explicitly calling its Flush() method.
+class SyncClientBuffered {
+ public:
+  using PartitionType = SyncClient::PartitionType;
+
+  SyncClientBuffered(::sysconfig::SyncClient client) : client_(std::move(client)) {}
+
+  virtual ~SyncClientBuffered() = default;
+
+  // Similar public interfaces as synclient
+
+  // The following can be re-implemented by child class.
+  virtual zx_status_t WritePartition(PartitionType partition, const zx::vmo& vmo,
+                                     zx_off_t vmo_offset);
+  virtual zx_status_t ReadPartition(PartitionType partition, const zx::vmo& vmo,
+                                    zx_off_t vmo_offset);
+  virtual zx_status_t Flush();
+
+  zx_status_t GetPartitionSize(PartitionType partition, size_t* size);
+  zx_status_t GetPartitionOffset(PartitionType partition, size_t* size);
+
+  // used for test
+  const uint8_t* GetCacheBuffer(PartitionType partition);
+
+  // No copy.
+  SyncClientBuffered(const SyncClientBuffered&) = delete;
+  SyncClientBuffered& operator=(const SyncClientBuffered&) = delete;
+
+  SyncClientBuffered(SyncClientBuffered&&) = default;
+  SyncClientBuffered& operator=(SyncClientBuffered&&) = default;
+
+ protected:
+  enum CacheBitMask {
+    kSysconfig = 1 << 0,
+    kAbrMetadata = 1 << 1,
+    kVbmetaA = 1 << 2,
+    kVbmetaB = 1 << 3,
+    kVbmetaR = 1 << 4
+  };
+
+  // A bit mask indicating whether the cache is empty
+  // 0 means empty, 1 means non-empty
+  uint32_t cache_modified_flag_ = 0;
+
+  fzl::OwnedVmoMapper cache_;
+
+  SyncClient client_;
+
+  zx_status_t CreateCache();
+  void InvalidateCache();
+  void MarkCacheNonEmpty(PartitionType partition);
+  bool IsCacheEmpty(PartitionType partition);
+  bool IsAllCacheEmpty();
+  zx_status_t WriteCache(PartitionType partition, const zx::vmo& vmo, zx_off_t vmo_offset);
+  zx_status_t ReadCache(PartitionType partition, const zx::vmo& vmo, zx_off_t vmo_offset);
+  uint32_t PartitionTypeToCacheMask(PartitionType partition);
+  zx_status_t GetSubpartitionCacheAddrSize(PartitionType partition, uint8_t** start, size_t* size);
 };
 
 }  // namespace sysconfig
