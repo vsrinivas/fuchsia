@@ -12,7 +12,7 @@ namespace feedback {
 
 LastRebootInfoProvider::LastRebootInfoProvider(const RebootLog& reboot_log) {
   if (reboot_log.HasUptime()) {
-    last_reboot_.set_uptime(reboot_log.Uptime().to_msecs());
+    last_reboot_.set_uptime(reboot_log.Uptime().get());
   }
 
   last_reboot_.set_graceful(IsGraceful(reboot_log.RebootReason()));

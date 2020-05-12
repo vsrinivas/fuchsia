@@ -59,7 +59,7 @@ TEST(LastRebootInfoProviderTest, Succeed_HasUptime) {
   const auto last_reboot = GetLastReboot(RebootReason::kGenericGraceful, uptime);
 
   ASSERT_TRUE(last_reboot.has_uptime());
-  EXPECT_EQ(last_reboot.uptime(), uptime.to_msecs());
+  EXPECT_EQ(last_reboot.uptime(), uptime.to_nsecs());
 }
 
 TEST(LastRebootInfoProviderTest, Succeed_DoesNotHaveUptime) {
