@@ -13,5 +13,26 @@ void ChannelProvider::GetCurrent(GetCurrentCallback callback) { callback(channel
 
 void ChannelProviderReturnsEmptyChannel::GetCurrent(GetCurrentCallback callback) { callback(""); }
 
+void ChannelProviderClosesFirstConnection::GetCurrent(GetCurrentCallback callback) {
+  if (first_call_) {
+    first_call_ = false;
+    CloseAllConnections();
+    return;
+  }
+
+  callback(channel_);
+}
+
+ChannelProviderExpectsOneCall::~ChannelProviderExpectsOneCall() {
+  FX_CHECK(!first_call_) << "No call was made";
+}
+
+void ChannelProviderExpectsOneCall::GetCurrent(GetCurrentCallback callback) {
+  FX_CHECK(first_call_) << "Only one call to GetCurrent should be made";
+  first_call_ = false;
+
+  callback(channel_);
+}
+
 }  // namespace stubs
 }  // namespace feedback

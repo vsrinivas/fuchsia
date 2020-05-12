@@ -25,6 +25,9 @@ test_package("feedback-utils-tests") {
       name = "bridge_unittest"
     },
     {
+      name = "caching_ptr_unittest"
+    },
+    {
       name = "channel_provider_ptr_unittest"
     },
     {
@@ -76,6 +79,7 @@ test_package("feedback-utils-tests") {
   deps = [
     ":archive_unittest",
     ":bridge_unittest",
+    ":caching_ptr_unittest",
     ":channel_provider_ptr_unittest",
     ":cobalt_unittest",
     ":data_provider_ptr_unittest",
@@ -127,6 +131,24 @@ executable("bridge_unittest") {
     "//src/lib/testing/loop_fixture",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
+  ]
+}
+
+executable("caching_ptr_unittest") {
+  testonly = true
+
+  sources = [ "caching_ptr_unittest.cc" ]
+
+  deps = [
+    "//src/developer/feedback/testing:gtest_with_syslog_main",
+    "//src/developer/feedback/testing:unit_test_fixture",
+    "//src/developer/feedback/testing/stubs:channel_provider",
+    "//src/developer/feedback/utils:errors",
+    "//src/developer/feedback/utils/fidl:caching_ptr",
+    "//src/lib/fxl",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/async-cpp",
   ]
 }
 

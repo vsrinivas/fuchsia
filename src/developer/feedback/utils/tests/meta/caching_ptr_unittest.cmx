@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/caching_ptr_unittest"
+    }
+}

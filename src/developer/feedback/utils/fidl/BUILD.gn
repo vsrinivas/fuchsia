@@ -7,6 +7,21 @@ visibility = [ "//src/developer/feedback/*" ]
 ###############################################################################
 # SOURCES
 ###############################################################################
+source_set("caching_ptr") {
+  sources = [ "caching_ptr.h" ]
+
+  public_deps = [
+    "//sdk/lib/sys/cpp",
+    "//src/developer/feedback/utils:errors",
+    "//src/developer/feedback/utils/fit",
+    "//src/lib/backoff",
+    "//zircon/public/lib/async",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/zx",
+  ]
+}
+
 source_set("channel_provider_ptr") {
   sources = [
     "channel_provider_ptr.cc",
@@ -56,21 +71,15 @@ source_set("device_id_provider_ptr") {
   ]
 
   public_deps = [
+    ":caching_ptr",
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/lib/sys/cpp",
-    "//src/developer/feedback/utils/fit",
-    "//src/lib/backoff",
-    "//src/lib/fxl",
     "//zircon/public/lib/async",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/zx",
   ]
 
-  deps = [
-    "//sdk/lib/syslog/cpp",
-    "//src/developer/feedback/utils:errors",
-    "//zircon/public/lib/async-cpp",
-  ]
+  deps = [ "//src/developer/feedback/utils:errors" ]
 }
 
 source_set("oneshot_ptr") {

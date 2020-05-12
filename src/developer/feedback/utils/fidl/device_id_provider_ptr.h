@@ -12,13 +12,9 @@
 #include <lib/zx/time.h>
 
 #include <memory>
-#include <optional>
 #include <string>
 
-#include "src/developer/feedback/utils/fit/bridge_map.h"
-#include "src/lib/backoff/exponential_backoff.h"
-#include "src/lib/fxl/functional/cancelable_callback.h"
-#include "src/lib/fxl/macros.h"
+#include "src/developer/feedback/utils/fidl/caching_ptr.h"
 
 namespace feedback {
 namespace fidl {
@@ -33,27 +29,10 @@ class DeviceIdProviderPtr {
   ::fit::promise<std::string> GetId(zx::duration timeout);
 
  private:
-  void CacheId();
+  // Makes the unique call on |connection_|.
+  void MakeCall();
 
-  // Turns the cached device id into a ::fit::result::ok() if an actual ID is cached, error()
-  // otherwise.
-  ::fit::result<std::string> DeviceIdToResult();
-
-  async_dispatcher_t* dispatcher_;
-  const std::shared_ptr<sys::ServiceDirectory> services_;
-
-  fuchsia::feedback::DeviceIdProviderPtr connection_;
-  fit::BridgeMap<> pending_calls_;
-
-  // The std::unique_ptr<> indicates whether the value is cached, the std::optional<> indicates
-  // whether the cached value is an actual id.
-  std::unique_ptr<std::optional<std::string>> device_id_;
-
-  // We need to be able to cancel a posted retry task when |this| is destroyed.
-  fxl::CancelableClosure cache_id_task_;
-  backoff::ExponentialBackoff cache_id_backoff_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(DeviceIdProviderPtr);
+  CachingPtr<fuchsia::feedback::DeviceIdProvider, std::string> connection_;
 };
 
 }  // namespace fidl

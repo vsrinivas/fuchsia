@@ -63,12 +63,6 @@ class DeviceIdProviderPtrTest : public UnitTestFixture {
   std::unique_ptr<stubs::DeviceIdProviderBase> device_id_provider_server_;
 };
 
-TEST_F(DeviceIdProviderPtrTest, Check_DeviceIsCachedInConstructor) {
-  SetUpDeviceIdProviderServer(
-      std::make_unique<stubs::DeviceIdProviderExpectsOneCall>(kDefaultDeviceId));
-  RunLoopUntilIdle();
-}
-
 TEST_F(DeviceIdProviderPtrTest, Check_CachedDeviceIdReturned) {
   SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
   RunLoopUntilIdle();
@@ -76,67 +70,6 @@ TEST_F(DeviceIdProviderPtrTest, Check_CachedDeviceIdReturned) {
   const std::optional<std::string> id = GetId();
   ASSERT_TRUE(id.has_value());
   EXPECT_EQ(id.value(), kDefaultDeviceId);
-}
-
-TEST_F(DeviceIdProviderPtrTest, Check_ErrorCachedInConstructor) {
-  SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProviderReturnsError>());
-  RunLoopUntilIdle();
-}
-
-TEST_F(DeviceIdProviderPtrTest, Check_CachedErrorReturned) {
-  SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProviderReturnsError>());
-  RunLoopUntilIdle();
-
-  EXPECT_FALSE(GetId().has_value());
-}
-
-TEST_F(DeviceIdProviderPtrTest, Check_ErrorOnTimeout) {
-  SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProviderNeverReturns>());
-
-  bool is_called = false;
-  std::optional<std::string> device_id = std::nullopt;
-  executor_.schedule_task(
-      device_id_provider_ptr_.GetId(kDefaultTimeout).then([&](::fit::result<std::string>& result) {
-        is_called = true;
-
-        if (result.is_ok()) {
-          device_id = result.take_value();
-        }
-      }));
-  RunLoopFor(kDefaultTimeout);
-  FX_CHECK(is_called) << "The promise chain was never executed";
-
-  EXPECT_FALSE(device_id.has_value());
-}
-
-TEST_F(DeviceIdProviderPtrTest, Check_SuccessOnSecondAttempt) {
-  SetUpDeviceIdProviderServer(
-      std::make_unique<stubs::DeviceIdProviderClosesFirstConnection>(kDefaultDeviceId));
-  RunLoopUntilIdle();
-
-  // We need to run the loop for longer than the exponential backoff becuase the backoff is
-  // nondeterministic.
-  RunLoopFor(zx::msec(100) /*minimum backoff*/ * 2);
-  const std::optional<std::string> id = GetId();
-  ASSERT_TRUE(id.has_value());
-  EXPECT_EQ(id.value(), kDefaultDeviceId);
-}
-
-TEST_F(DeviceIdProviderPtrTest, Check_ReturnErrorOnNoServer) {
-  bool is_called = false;
-  std::optional<std::string> device_id = std::nullopt;
-  executor_.schedule_task(
-      device_id_provider_ptr_.GetId(kDefaultTimeout).then([&](::fit::result<std::string>& result) {
-        is_called = true;
-
-        if (result.is_ok()) {
-          device_id = result.take_value();
-        }
-      }));
-  RunLoopFor(kDefaultTimeout);
-  FX_CHECK(is_called) << "The promise chain was never executed";
-
-  EXPECT_FALSE(device_id.has_value());
 }
 
 }  // namespace

@@ -46,6 +46,31 @@ class ChannelProviderNeverReturns : public ChannelProviderBase {
   STUB_METHOD_DOES_NOT_RETURN(GetCurrent, GetCurrentCallback);
 };
 
+class ChannelProviderClosesFirstConnection : public ChannelProviderBase {
+ public:
+  ChannelProviderClosesFirstConnection(const std::string channel) : channel_(channel) {}
+
+  // |fuchsia::update::channel::Provider|.
+  void GetCurrent(GetCurrentCallback callback) override;
+
+ private:
+  bool first_call_ = true;
+  std::string channel_;
+};
+
+class ChannelProviderExpectsOneCall : public ChannelProviderBase {
+ public:
+  ChannelProviderExpectsOneCall(const std::string channel) : channel_(channel) {}
+  ~ChannelProviderExpectsOneCall();
+
+  // |fuchsia::update::channel::Provider|.
+  void GetCurrent(GetCurrentCallback callback) override;
+
+ private:
+  bool first_call_ = true;
+  std::string channel_;
+};
+
 }  // namespace stubs
 }  // namespace feedback
 
