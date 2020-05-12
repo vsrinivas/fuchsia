@@ -3,28 +3,9 @@
 # found in the LICENSE file.
 
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
-
-group("test") {
-  testonly = true
-  deps = [ ":dma-buffer-test" ]
-}
+import("//build/test/test_package.gni")
 
 test("dma-buffer-test") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # TODO(44278): Remove when converting this file to proper GN build idioms.
-  if (is_fuchsia) {
-    testonly = false
-  }
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
-  if (is_fuchsia) {
-    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
-    if (configs + fdio_config - fdio_config != configs) {
-      configs -= fdio_config
-    }
-  }
   output_name = "dma-buffer-test"
   sources = [ "dma-buffer-test.cc" ]
   deps = [
@@ -37,6 +18,14 @@ test("dma-buffer-test") {
   ]
 }
 
-migrated_manifest("dma-buffer-test-manifest") {
+unittest_package("dma-buffer-test-package") {
+  package_name = "dma-buffer-test-test"
   deps = [ ":dma-buffer-test" ]
+
+  tests = [
+    {
+      name = "dma-buffer-test"
+      dest = "dma-buffer-test"
+    },
+  ]
 }

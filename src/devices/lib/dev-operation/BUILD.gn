@@ -7,6 +7,11 @@ import("//build/unification/zx_library.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
 
+group("tests") {
+  testonly = true
+  deps = [ ":operation-test-package" ]
+}
+
 zx_library("dev-operation") {
   sdk = "source"
   sdk_headers = [ "lib/operation/operation.h" ]
@@ -18,7 +23,6 @@ zx_library("dev-operation") {
 }
 
 test("operation-test") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "operation-list-test.cc",
     "operation-pool-test.cc",

@@ -3,10 +3,18 @@
 # found in the LICENSE file.
 
 group("lib") {
-  deps = [ "driver" ]
+  deps = [
+    "dev-operation",
+    "dma-buffer",
+    "driver",
+  ]
 }
 
 group("tests") {
   testonly = true
-  deps = [ "driver:tests" ]
+  deps = [
+    "dev-operation:tests",
+    "dma-buffer:tests",
+    "driver:tests",
+  ]
 }

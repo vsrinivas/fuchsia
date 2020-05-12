@@ -718,7 +718,6 @@ aggregate_manifest("migrated-aux") {
     "//src/devices/bus/lib/device-protocol-pdev/test:device-protocol-pdev-test-manifest",
     "//zircon/system/ulib/disk_inspector/test:disk_inspector_unit-manifest",
     "//zircon/system/utest/dlfcn:dlfcn-manifest",
-    "//src/devices/lib/dma-buffer/test:dma-buffer-test-manifest",
     "//zircon/system/ulib/elf-search/test:elf-search-manifest",
 #------------------
     #":test.sys.fdio-test",
@@ -969,7 +968,6 @@ aggregate_manifest("migrated-tests") {
     "//src/devices/bus/lib/device-protocol-pdev/test:device-protocol-pdev-test-manifest",
     "//zircon/system/ulib/disk_inspector/test:disk_inspector_unit-manifest",
     "//zircon/system/utest/dlfcn:dlfcn-manifest",
-    "//src/devices/lib/dma-buffer/test:dma-buffer-test-manifest",
     "//zircon/system/ulib/elf-search/test:elf-search-manifest",
 #------------------
     #":test.sys.fdio-test",
